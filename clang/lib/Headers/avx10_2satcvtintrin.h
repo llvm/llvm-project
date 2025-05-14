@@ -66,7 +66,7 @@
 
 #define _mm_ipcvts_ph_epi8(A)                                                  \
   ((__m128i)__builtin_ia32_vcvtph2ibs128_mask(                                 \
-      (__v8hf)(__m128h)(A), (__v8hu)_mm_setzero_si128(), (__mmask8) - 1))
+      (__v8hf)(__m128h)(A), (__v8hu)_mm_setzero_si128(), (__mmask8)-1))
 
 #define _mm_mask_ipcvts_ph_epi8(W, U, A)                                       \
   ((__m128i)__builtin_ia32_vcvtph2ibs128_mask((__v8hf)(__m128h)(A),            \
@@ -78,36 +78,20 @@
 
 #define _mm256_ipcvts_ph_epi8(A)                                               \
   ((__m256i)__builtin_ia32_vcvtph2ibs256_mask(                                 \
-      (__v16hf)(__m256h)(A), (__v16hu)_mm256_setzero_si256(), (__mmask16) - 1, \
-      _MM_FROUND_CUR_DIRECTION))
+      (__v16hf)(__m256h)(A), (__v16hu)_mm256_setzero_si256(), (__mmask16)-1))
 
 #define _mm256_mask_ipcvts_ph_epi8(W, U, A)                                    \
   ((__m256i)__builtin_ia32_vcvtph2ibs256_mask((__v16hf)(__m256h)(A),           \
-                                              (__v16hu)(W), (__mmask16)(U),    \
-                                              _MM_FROUND_CUR_DIRECTION))
+                                              (__v16hu)(W), (__mmask16)(U)))
 
 #define _mm256_maskz_ipcvts_ph_epi8(U, A)                                      \
   ((__m256i)__builtin_ia32_vcvtph2ibs256_mask(                                 \
       (__v16hf)(__m256h)(A), (__v16hu)(_mm256_setzero_si256()),                \
-      (__mmask16)(U), _MM_FROUND_CUR_DIRECTION))
-
-#define _mm256_ipcvts_roundph_epi8(A, R)                                       \
-  ((__m256i)__builtin_ia32_vcvtph2ibs256_mask((__v16hf)(__m256h)(A),           \
-                                              (__v16hu)_mm256_setzero_si256(), \
-                                              (__mmask16) - 1, (const int)R))
-
-#define _mm256_mask_ipcvts_roundph_epi8(W, U, A, R)                            \
-  ((__m256i)__builtin_ia32_vcvtph2ibs256_mask(                                 \
-      (__v16hf)(__m256h)(A), (__v16hu)(W), (__mmask16)(U), (const int)R))
-
-#define _mm256_maskz_ipcvts_roundph_epi8(U, A, R)                              \
-  ((__m256i)__builtin_ia32_vcvtph2ibs256_mask((__v16hf)(__m256h)(A),           \
-                                              (__v16hu)_mm256_setzero_si256(), \
-                                              (__mmask16)(U), (const int)R))
+      (__mmask16)(U)))
 
 #define _mm_ipcvts_ph_epu8(A)                                                  \
   ((__m128i)__builtin_ia32_vcvtph2iubs128_mask(                                \
-      (__v8hf)(__m128h)(A), (__v8hu)_mm_setzero_si128(), (__mmask8) - 1))
+      (__v8hf)(__m128h)(A), (__v8hu)_mm_setzero_si128(), (__mmask8)-1))
 
 #define _mm_mask_ipcvts_ph_epu8(W, U, A)                                       \
   ((__m128i)__builtin_ia32_vcvtph2iubs128_mask((__v8hf)(__m128h)(A),           \
@@ -119,36 +103,20 @@
 
 #define _mm256_ipcvts_ph_epu8(A)                                               \
   ((__m256i)__builtin_ia32_vcvtph2iubs256_mask(                                \
-      (__v16hf)(__m256h)(A), (__v16hu)_mm256_setzero_si256(), (__mmask16) - 1, \
-      _MM_FROUND_CUR_DIRECTION))
+      (__v16hf)(__m256h)(A), (__v16hu)_mm256_setzero_si256(), (__mmask16)-1))
 
 #define _mm256_mask_ipcvts_ph_epu8(W, U, A)                                    \
   ((__m256i)__builtin_ia32_vcvtph2iubs256_mask((__v16hf)(__m256h)(A),          \
-                                               (__v16hu)(W), (__mmask16)(U),   \
-                                               _MM_FROUND_CUR_DIRECTION))
+                                               (__v16hu)(W), (__mmask16)(U)))
 
 #define _mm256_maskz_ipcvts_ph_epu8(U, A)                                      \
   ((__m256i)__builtin_ia32_vcvtph2iubs256_mask(                                \
       (__v16hf)(__m256h)(A), (__v16hu)(_mm256_setzero_si256()),                \
-      (__mmask16)(U), _MM_FROUND_CUR_DIRECTION))
-
-#define _mm256_ipcvts_roundph_epu8(A, R)                                       \
-  ((__m256i)__builtin_ia32_vcvtph2iubs256_mask(                                \
-      (__v16hf)(__m256h)(A), (__v16hu)_mm256_setzero_si256(), (__mmask16) - 1, \
-      (const int)R))
-
-#define _mm256_mask_ipcvts_roundph_epu8(W, U, A, R)                            \
-  ((__m256i)__builtin_ia32_vcvtph2iubs256_mask(                                \
-      (__v16hf)(__m256h)(A), (__v16hu)(W), (__mmask16)(U), (const int)R))
-
-#define _mm256_maskz_ipcvts_roundph_epu8(U, A, R)                              \
-  ((__m256i)__builtin_ia32_vcvtph2iubs256_mask(                                \
-      (__v16hf)(__m256h)(A), (__v16hu)_mm256_setzero_si256(), (__mmask16)(U),  \
-      (const int)R))
+      (__mmask16)(U)))
 
 #define _mm_ipcvts_ps_epi8(A)                                                  \
   ((__m128i)__builtin_ia32_vcvtps2ibs128_mask(                                 \
-      (__v4sf)(__m128)(A), (__v4su)_mm_setzero_si128(), (__mmask8) - 1))
+      (__v4sf)(__m128)(A), (__v4su)_mm_setzero_si128(), (__mmask8)-1))
 
 #define _mm_mask_ipcvts_ps_epi8(W, U, A)                                       \
   ((__m128i)__builtin_ia32_vcvtps2ibs128_mask((__v4sf)(__m128)(A),             \
@@ -160,36 +128,19 @@
 
 #define _mm256_ipcvts_ps_epi8(A)                                               \
   ((__m256i)__builtin_ia32_vcvtps2ibs256_mask(                                 \
-      (__v8sf)(__m256)(A), (__v8su)_mm256_setzero_si256(), (__mmask8) - 1,     \
-      _MM_FROUND_CUR_DIRECTION))
+      (__v8sf)(__m256)(A), (__v8su)_mm256_setzero_si256(), (__mmask8)-1))
 
 #define _mm256_mask_ipcvts_ps_epi8(W, U, A)                                    \
   ((__m256i)__builtin_ia32_vcvtps2ibs256_mask((__v8sf)(__m256)(A),             \
-                                              (__v8su)(W), (__mmask8)(U),      \
-                                              _MM_FROUND_CUR_DIRECTION))
+                                              (__v8su)(W), (__mmask8)(U)))
 
 #define _mm256_maskz_ipcvts_ps_epi8(U, A)                                      \
   ((__m256i)__builtin_ia32_vcvtps2ibs256_mask(                                 \
-      (__v8sf)(__m256)(A), (__v8su)(_mm256_setzero_si256()), (__mmask8)(U),    \
-      _MM_FROUND_CUR_DIRECTION))
-
-#define _mm256_ipcvts_roundps_epi8(A, R)                                       \
-  ((__m256i)__builtin_ia32_vcvtps2ibs256_mask((__v8sf)(__m256)(A),             \
-                                              (__v8su)_mm256_setzero_si256(),  \
-                                              (__mmask8) - 1, (const int)R))
-
-#define _mm256_mask_ipcvts_roundps_epi8(W, U, A, R)                            \
-  ((__m256i)__builtin_ia32_vcvtps2ibs256_mask(                                 \
-      (__v8sf)(__m256)(A), (__v8su)(W), (__mmask8)(U), (const int)R))
-
-#define _mm256_maskz_ipcvts_roundps_epi8(U, A, R)                              \
-  ((__m256i)__builtin_ia32_vcvtps2ibs256_mask((__v8sf)(__m256)(A),             \
-                                              (__v8su)_mm256_setzero_si256(),  \
-                                              (__mmask8)(U), (const int)R))
+      (__v8sf)(__m256)(A), (__v8su)(_mm256_setzero_si256()), (__mmask8)(U)))
 
 #define _mm_ipcvts_ps_epu8(A)                                                  \
   ((__m128i)__builtin_ia32_vcvtps2iubs128_mask(                                \
-      (__v4sf)(__m128)(A), (__v4su)_mm_setzero_si128(), (__mmask8) - 1))
+      (__v4sf)(__m128)(A), (__v4su)_mm_setzero_si128(), (__mmask8)-1))
 
 #define _mm_mask_ipcvts_ps_epu8(W, U, A)                                       \
   ((__m128i)__builtin_ia32_vcvtps2iubs128_mask((__v4sf)(__m128)(A),            \
@@ -201,32 +152,15 @@
 
 #define _mm256_ipcvts_ps_epu8(A)                                               \
   ((__m256i)__builtin_ia32_vcvtps2iubs256_mask(                                \
-      (__v8sf)(__m256)(A), (__v8su)_mm256_setzero_si256(), (__mmask8) - 1,     \
-      _MM_FROUND_CUR_DIRECTION))
+      (__v8sf)(__m256)(A), (__v8su)_mm256_setzero_si256(), (__mmask8)-1))
 
 #define _mm256_mask_ipcvts_ps_epu8(W, U, A)                                    \
   ((__m256i)__builtin_ia32_vcvtps2iubs256_mask((__v8sf)(__m256)(A),            \
-                                               (__v8su)(W), (__mmask8)(U),     \
-                                               _MM_FROUND_CUR_DIRECTION))
+                                               (__v8su)(W), (__mmask8)(U)))
 
 #define _mm256_maskz_ipcvts_ps_epu8(U, A)                                      \
   ((__m256i)__builtin_ia32_vcvtps2iubs256_mask(                                \
-      (__v8sf)(__m256)(A), (__v8su)(_mm256_setzero_si256()), (__mmask8)(U),    \
-      _MM_FROUND_CUR_DIRECTION))
-
-#define _mm256_ipcvts_roundps_epu8(A, R)                                       \
-  ((__m256i)__builtin_ia32_vcvtps2iubs256_mask((__v8sf)(__m256)(A),            \
-                                               (__v8su)_mm256_setzero_si256(), \
-                                               (__mmask8) - 1, (const int)R))
-
-#define _mm256_mask_ipcvts_roundps_epu8(W, U, A, R)                            \
-  ((__m256i)__builtin_ia32_vcvtps2iubs256_mask(                                \
-      (__v8sf)(__m256)(A), (__v8su)(W), (__mmask8)(U), (const int)R))
-
-#define _mm256_maskz_ipcvts_roundps_epu8(U, A, R)                              \
-  ((__m256i)__builtin_ia32_vcvtps2iubs256_mask((__v8sf)(__m256)(A),            \
-                                               (__v8su)_mm256_setzero_si256(), \
-                                               (__mmask8)(U), (const int)R))
+      (__v8sf)(__m256)(A), (__v8su)(_mm256_setzero_si256()), (__mmask8)(U)))
 
 #define _mm_ipcvtts_bf16_epi8(A)                                               \
   ((__m128i)__builtin_ia32_vcvttbf162ibs128((__v8bf)(__m128bh)(A)))
@@ -280,7 +214,7 @@
 
 #define _mm_ipcvtts_ph_epi8(A)                                                 \
   ((__m128i)__builtin_ia32_vcvttph2ibs128_mask(                                \
-      (__v8hf)(__m128h)(A), (__v8hu)_mm_setzero_si128(), (__mmask8) - 1))
+      (__v8hf)(__m128h)(A), (__v8hu)_mm_setzero_si128(), (__mmask8)-1))
 
 #define _mm_mask_ipcvtts_ph_epi8(W, U, A)                                      \
   ((__m128i)__builtin_ia32_vcvttph2ibs128_mask((__v8hf)(__m128h)(A),           \
@@ -292,36 +226,20 @@
 
 #define _mm256_ipcvtts_ph_epi8(A)                                              \
   ((__m256i)__builtin_ia32_vcvttph2ibs256_mask(                                \
-      (__v16hf)(__m256h)(A), (__v16hu)_mm256_setzero_si256(), (__mmask16) - 1, \
-      _MM_FROUND_CUR_DIRECTION))
+      (__v16hf)(__m256h)(A), (__v16hu)_mm256_setzero_si256(), (__mmask16)-1))
 
 #define _mm256_mask_ipcvtts_ph_epi8(W, U, A)                                   \
   ((__m256i)__builtin_ia32_vcvttph2ibs256_mask((__v16hf)(__m256h)(A),          \
-                                               (__v16hu)(W), (__mmask16)(U),   \
-                                               _MM_FROUND_CUR_DIRECTION))
+                                               (__v16hu)(W), (__mmask16)(U)))
 
 #define _mm256_maskz_ipcvtts_ph_epi8(U, A)                                     \
   ((__m256i)__builtin_ia32_vcvttph2ibs256_mask(                                \
       (__v16hf)(__m256h)(A), (__v16hu)(_mm256_setzero_si256()),                \
-      (__mmask16)(U), _MM_FROUND_CUR_DIRECTION))
-
-#define _mm256_ipcvtts_roundph_epi8(A, R)                                      \
-  ((__m256i)__builtin_ia32_vcvttph2ibs256_mask(                                \
-      (__v16hf)(__m256h)(A), (__v16hu)_mm256_setzero_si256(), (__mmask16) - 1, \
-      (const int)R))
-
-#define _mm256_mask_ipcvtts_roundph_epi8(W, U, A, R)                           \
-  ((__m256i)__builtin_ia32_vcvttph2ibs256_mask(                                \
-      (__v16hf)(__m256h)(A), (__v16hu)(W), (__mmask16)(U), (const int)R))
-
-#define _mm256_maskz_ipcvtts_roundph_epi8(U, A, R)                             \
-  ((__m256i)__builtin_ia32_vcvttph2ibs256_mask(                                \
-      (__v16hf)(__m256h)(A), (__v16hu)_mm256_setzero_si256(), (__mmask16)(U),  \
-      (const int)R))
+      (__mmask16)(U)))
 
 #define _mm_ipcvtts_ph_epu8(A)                                                 \
   ((__m128i)__builtin_ia32_vcvttph2iubs128_mask(                               \
-      (__v8hf)(__m128h)(A), (__v8hu)_mm_setzero_si128(), (__mmask8) - 1))
+      (__v8hf)(__m128h)(A), (__v8hu)_mm_setzero_si128(), (__mmask8)-1))
 
 #define _mm_mask_ipcvtts_ph_epu8(W, U, A)                                      \
   ((__m128i)__builtin_ia32_vcvttph2iubs128_mask((__v8hf)(__m128h)(A),          \
@@ -333,36 +251,20 @@
 
 #define _mm256_ipcvtts_ph_epu8(A)                                              \
   ((__m256i)__builtin_ia32_vcvttph2iubs256_mask(                               \
-      (__v16hf)(__m256h)(A), (__v16hu)_mm256_setzero_si256(), (__mmask16) - 1, \
-      _MM_FROUND_CUR_DIRECTION))
+      (__v16hf)(__m256h)(A), (__v16hu)_mm256_setzero_si256(), (__mmask16)-1))
 
 #define _mm256_mask_ipcvtts_ph_epu8(W, U, A)                                   \
   ((__m256i)__builtin_ia32_vcvttph2iubs256_mask((__v16hf)(__m256h)(A),         \
-                                                (__v16hu)(W), (__mmask16)(U),  \
-                                                _MM_FROUND_CUR_DIRECTION))
+                                                (__v16hu)(W), (__mmask16)(U)))
 
 #define _mm256_maskz_ipcvtts_ph_epu8(U, A)                                     \
   ((__m256i)__builtin_ia32_vcvttph2iubs256_mask(                               \
       (__v16hf)(__m256h)(A), (__v16hu)(_mm256_setzero_si256()),                \
-      (__mmask16)(U), _MM_FROUND_CUR_DIRECTION))
-
-#define _mm256_ipcvtts_roundph_epu8(A, R)                                      \
-  ((__m256i)__builtin_ia32_vcvttph2iubs256_mask(                               \
-      (__v16hf)(__m256h)(A), (__v16hu)_mm256_setzero_si256(), (__mmask16) - 1, \
-      (const int)R))
-
-#define _mm256_mask_ipcvtts_roundph_epu8(W, U, A, R)                           \
-  ((__m256i)__builtin_ia32_vcvttph2iubs256_mask(                               \
-      (__v16hf)(__m256h)(A), (__v16hu)(W), (__mmask16)(U), (const int)R))
-
-#define _mm256_maskz_ipcvtts_roundph_epu8(U, A, R)                             \
-  ((__m256i)__builtin_ia32_vcvttph2iubs256_mask(                               \
-      (__v16hf)(__m256h)(A), (__v16hu)_mm256_setzero_si256(), (__mmask16)(U),  \
-      (const int)R))
+      (__mmask16)(U)))
 
 #define _mm_ipcvtts_ps_epi8(A)                                                 \
   ((__m128i)__builtin_ia32_vcvttps2ibs128_mask(                                \
-      (__v4sf)(__m128)(A), (__v4su)_mm_setzero_si128(), (__mmask8) - 1))
+      (__v4sf)(__m128)(A), (__v4su)_mm_setzero_si128(), (__mmask8)-1))
 
 #define _mm_mask_ipcvtts_ps_epi8(W, U, A)                                      \
   ((__m128i)__builtin_ia32_vcvttps2ibs128_mask((__v4sf)(__m128)(A),            \
@@ -374,36 +276,19 @@
 
 #define _mm256_ipcvtts_ps_epi8(A)                                              \
   ((__m256i)__builtin_ia32_vcvttps2ibs256_mask(                                \
-      (__v8sf)(__m256)(A), (__v8su)_mm256_setzero_si256(), (__mmask8) - 1,     \
-      _MM_FROUND_CUR_DIRECTION))
+      (__v8sf)(__m256)(A), (__v8su)_mm256_setzero_si256(), (__mmask8)-1))
 
 #define _mm256_mask_ipcvtts_ps_epi8(W, U, A)                                   \
   ((__m256i)__builtin_ia32_vcvttps2ibs256_mask((__v8sf)(__m256)(A),            \
-                                               (__v8su)(W), (__mmask8)(U),     \
-                                               _MM_FROUND_CUR_DIRECTION))
+                                               (__v8su)(W), (__mmask8)(U)))
 
 #define _mm256_maskz_ipcvtts_ps_epi8(U, A)                                     \
   ((__m256i)__builtin_ia32_vcvttps2ibs256_mask(                                \
-      (__v8sf)(__m256)(A), (__v8su)(_mm256_setzero_si256()), (__mmask8)(U),    \
-      _MM_FROUND_CUR_DIRECTION))
-
-#define _mm256_ipcvtts_roundps_epi8(A, R)                                      \
-  ((__m256i)__builtin_ia32_vcvttps2ibs256_mask((__v8sf)(__m256)(A),            \
-                                               (__v8su)_mm256_setzero_si256(), \
-                                               (__mmask8) - 1, (const int)R))
-
-#define _mm256_mask_ipcvtts_roundps_epi8(W, U, A, R)                           \
-  ((__m256i)__builtin_ia32_vcvttps2ibs256_mask(                                \
-      (__v8sf)(__m256)(A), (__v8su)(W), (__mmask8)(U), (const int)R))
-
-#define _mm256_maskz_ipcvtts_roundps_epi8(U, A, R)                             \
-  ((__m256i)__builtin_ia32_vcvttps2ibs256_mask((__v8sf)(__m256)(A),            \
-                                               (__v8su)_mm256_setzero_si256(), \
-                                               (__mmask8)(U), (const int)R))
+      (__v8sf)(__m256)(A), (__v8su)(_mm256_setzero_si256()), (__mmask8)(U)))
 
 #define _mm_ipcvtts_ps_epu8(A)                                                 \
   ((__m128i)__builtin_ia32_vcvttps2iubs128_mask(                               \
-      (__v4sf)(__m128)(A), (__v4su)_mm_setzero_si128(), (__mmask8) - 1))
+      (__v4sf)(__m128)(A), (__v4su)_mm_setzero_si128(), (__mmask8)-1))
 
 #define _mm_mask_ipcvtts_ps_epu8(W, U, A)                                      \
   ((__m128i)__builtin_ia32_vcvttps2iubs128_mask((__v4sf)(__m128)(A),           \
@@ -415,30 +300,13 @@
 
 #define _mm256_ipcvtts_ps_epu8(A)                                              \
   ((__m256i)__builtin_ia32_vcvttps2iubs256_mask(                               \
-      (__v8sf)(__m256)(A), (__v8su)_mm256_setzero_si256(), (__mmask8) - 1,     \
-      _MM_FROUND_CUR_DIRECTION))
+      (__v8sf)(__m256)(A), (__v8su)_mm256_setzero_si256(), (__mmask8)-1))
 
 #define _mm256_mask_ipcvtts_ps_epu8(W, U, A)                                   \
   ((__m256i)__builtin_ia32_vcvttps2iubs256_mask((__v8sf)(__m256)(A),           \
-                                                (__v8su)(W), (__mmask8)(U),    \
-                                                _MM_FROUND_CUR_DIRECTION))
+                                                (__v8su)(W), (__mmask8)(U)))
 
 #define _mm256_maskz_ipcvtts_ps_epu8(U, A)                                     \
   ((__m256i)__builtin_ia32_vcvttps2iubs256_mask(                               \
-      (__v8sf)(__m256)(A), (__v8su)(_mm256_setzero_si256()), (__mmask8)(U),    \
-      _MM_FROUND_CUR_DIRECTION))
-
-#define _mm256_ipcvtts_roundps_epu8(A, R)                                      \
-  ((__m256i)__builtin_ia32_vcvttps2iubs256_mask(                               \
-      (__v8sf)(__m256)(A), (__v8su)_mm256_setzero_si256(), (__mmask8) - 1,     \
-      (const int)R))
-
-#define _mm256_mask_ipcvtts_roundps_epu8(W, U, A, R)                           \
-  ((__m256i)__builtin_ia32_vcvttps2iubs256_mask(                               \
-      (__v8sf)(__m256)(A), (__v8su)(W), (__mmask8)(U), (const int)R))
-
-#define _mm256_maskz_ipcvtts_roundps_epu8(U, A, R)                             \
-  ((__m256i)__builtin_ia32_vcvttps2iubs256_mask(                               \
-      (__v8sf)(__m256)(A), (__v8su)_mm256_setzero_si256(), (__mmask8)(U),      \
-      (const int)R))
+      (__v8sf)(__m256)(A), (__v8su)(_mm256_setzero_si256()), (__mmask8)(U)))
 #endif // __AVX10_2SATCVTINTRIN_H

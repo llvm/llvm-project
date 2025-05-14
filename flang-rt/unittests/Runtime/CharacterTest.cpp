@@ -35,7 +35,7 @@ OwningPtr<Descriptor> CreateDescriptor(const std::vector<SubscriptValue> &shape,
   for (int j{0}; j < rank; ++j) {
     descriptor->GetDimension(j).SetBounds(2, shape[j] + 1);
   }
-  if (descriptor->Allocate() != 0) {
+  if (descriptor->Allocate(kNoAsyncId) != 0) {
     return nullptr;
   }
 
@@ -354,6 +354,7 @@ TYPED_TEST(SearchTests, IndexTests) {
       {"", "a", true, 0},
       {"aa", "a", false, 1},
       {"aa", "a", true, 2},
+      {"aAA", "A", false, 2},
       {"Fortran that I ran", "that I ran", false, 9},
       {"Fortran that I ran", "that I ran", true, 9},
       {"Fortran that you ran", "that I ran", false, 0},

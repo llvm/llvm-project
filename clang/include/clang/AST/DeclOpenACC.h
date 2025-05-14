@@ -18,6 +18,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/OpenACCClause.h"
 #include "clang/Basic/OpenACCKinds.h"
+#include "llvm/ADT/STLExtras.h"
 
 namespace clang {
 
@@ -59,6 +60,8 @@ public:
   }
 
   ArrayRef<const OpenACCClause *> clauses() const { return Clauses; }
+  static bool classof(const Decl *D) { return classofKind(D->getKind()); }
+  static bool classofKind(Kind K);
 };
 
 class OpenACCDeclareDecl final
@@ -73,8 +76,7 @@ class OpenACCDeclareDecl final
     std::uninitialized_value_construct(
         getTrailingObjects<const OpenACCClause *>(),
         getTrailingObjects<const OpenACCClause *>() + NumClauses);
-    setClauseList(MutableArrayRef(getTrailingObjects<const OpenACCClause *>(),
-                                  NumClauses));
+    setClauseList(getTrailingObjects<const OpenACCClause *>(NumClauses));
   }
 
   OpenACCDeclareDecl(DeclContext *DC, SourceLocation StartLoc,
@@ -83,11 +85,10 @@ class OpenACCDeclareDecl final
       : OpenACCConstructDecl(OpenACCDeclare, DC, OpenACCDirectiveKind::Declare,
                              StartLoc, DirLoc, EndLoc) {
     // Initialize the trailing storage.
-    std::uninitialized_copy(Clauses.begin(), Clauses.end(),
-                            getTrailingObjects<const OpenACCClause *>());
+    llvm::uninitialized_copy(Clauses,
+                             getTrailingObjects<const OpenACCClause *>());
 
-    setClauseList(MutableArrayRef(getTrailingObjects<const OpenACCClause *>(),
-                                  Clauses.size()));
+    setClauseList(getTrailingObjects<const OpenACCClause *>(Clauses.size()));
   }
 
 public:
@@ -102,6 +103,8 @@ public:
   static bool classofKind(Kind K) { return K == OpenACCDeclare; }
 };
 
+// Reprents a 'routine' directive with a name. When this has no name, it is
+// represented as an attribute.
 class OpenACCRoutineDecl final
     : public OpenACCConstructDecl,
       private llvm::TrailingObjects<OpenACCRoutineDecl, const OpenACCClause *> {
@@ -117,8 +120,7 @@ class OpenACCRoutineDecl final
     std::uninitialized_value_construct(
         getTrailingObjects<const OpenACCClause *>(),
         getTrailingObjects<const OpenACCClause *>() + NumClauses);
-    setClauseList(MutableArrayRef(getTrailingObjects<const OpenACCClause *>(),
-                                  NumClauses));
+    setClauseList(getTrailingObjects<const OpenACCClause *>(NumClauses));
   }
 
   OpenACCRoutineDecl(DeclContext *DC, SourceLocation StartLoc,
@@ -129,11 +131,12 @@ class OpenACCRoutineDecl final
       : OpenACCConstructDecl(OpenACCRoutine, DC, OpenACCDirectiveKind::Routine,
                              StartLoc, DirLoc, EndLoc),
         FuncRef(FuncRef), ParensLoc(LParenLoc, RParenLoc) {
+    assert(LParenLoc.isValid() &&
+           "Cannot represent implicit name with this declaration");
     // Initialize the trailing storage.
-    std::uninitialized_copy(Clauses.begin(), Clauses.end(),
-                            getTrailingObjects<const OpenACCClause *>());
-    setClauseList(MutableArrayRef(getTrailingObjects<const OpenACCClause *>(),
-                                  Clauses.size()));
+    llvm::uninitialized_copy(Clauses,
+                             getTrailingObjects<const OpenACCClause *>());
+    setClauseList(getTrailingObjects<const OpenACCClause *>(Clauses.size()));
   }
 
 public:
@@ -148,13 +151,10 @@ public:
   static bool classofKind(Kind K) { return K == OpenACCRoutine; }
 
   const Expr *getFunctionReference() const { return FuncRef; }
-
   Expr *getFunctionReference() { return FuncRef; }
 
   SourceLocation getLParenLoc() const { return ParensLoc.getBegin(); }
   SourceLocation getRParenLoc() const { return ParensLoc.getEnd(); }
-
-  bool hasNameSpecified() const { return !ParensLoc.getBegin().isInvalid(); }
 };
 } // namespace clang
 

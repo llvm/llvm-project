@@ -2,6 +2,7 @@ static_library("clang-doc") {
   output_name = "clangDoc"
   configs += [ "//llvm/utils/gn/build:clang_code" ]
   deps = [
+    "support",
     "//clang/lib/AST",
     "//clang/lib/ASTMatchers",
     "//clang/lib/Analysis",

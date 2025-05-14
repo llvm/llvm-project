@@ -223,7 +223,7 @@ void CheckerRegistry::initializeRegistry(const CheckerManager &Mgr) {
       continue;
     }
 
-    Tmp.insert(Deps.begin(), Deps.end());
+    Tmp.insert_range(Deps);
 
     // Enable the checker.
     Tmp.insert(&Checker);

@@ -142,8 +142,8 @@ void X86AsmPrinter::EmitAndCountInstruction(MCInst &Inst) {
 
 X86MCInstLower::X86MCInstLower(const MachineFunction &mf,
                                X86AsmPrinter &asmprinter)
-    : Ctx(mf.getContext()), MF(mf), TM(mf.getTarget()), MAI(*TM.getMCAsmInfo()),
-      AsmPrinter(asmprinter) {}
+    : Ctx(asmprinter.OutContext), MF(mf), TM(mf.getTarget()),
+      MAI(*TM.getMCAsmInfo()), AsmPrinter(asmprinter) {}
 
 MachineModuleInfoMachO &X86MCInstLower::getMachOMMI() const {
   return AsmPrinter.MMI->getObjFileInfo<MachineModuleInfoMachO>();
@@ -349,12 +349,8 @@ MCOperand X86MCInstLower::LowerMachineOperand(const MachineInstr *MI,
     return MCOperand::createImm(MO.getImm());
   case MachineOperand::MO_MachineBasicBlock:
   case MachineOperand::MO_GlobalAddress:
+  case MachineOperand::MO_ExternalSymbol:
     return LowerSymbolOperand(MO, GetSymbolFromOperand(MO));
-  case MachineOperand::MO_ExternalSymbol: {
-    MCSymbol *Sym = GetSymbolFromOperand(MO);
-    Sym->setExternal(true);
-    return LowerSymbolOperand(MO, Sym);
-  }
   case MachineOperand::MO_MCSymbol:
     return LowerSymbolOperand(MO, MO.getMCSymbol());
   case MachineOperand::MO_JumpTableIndex:
@@ -448,7 +444,7 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
     }
     OutMI.setOpcode(NewOpc);
     // Duplicate the destination.
-    unsigned DestReg = OutMI.getOperand(0).getReg();
+    MCRegister DestReg = OutMI.getOperand(0).getReg();
     OutMI.insert(OutMI.begin(), MCOperand::createReg(DestReg));
     break;
   }
@@ -1572,15 +1568,29 @@ static void printConstant(const Constant *COp, unsigned BitWidth,
   if (isa<UndefValue>(COp)) {
     CS << "u";
   } else if (auto *CI = dyn_cast<ConstantInt>(COp)) {
-    printConstant(CI->getValue(), CS, PrintZero);
+    if (auto VTy = dyn_cast<FixedVectorType>(CI->getType())) {
+      for (unsigned I = 0, E = VTy->getNumElements(); I != E; ++I) {
+        if (I != 0)
+          CS << ',';
+        printConstant(CI->getValue(), CS, PrintZero);
+      }
+    } else
+      printConstant(CI->getValue(), CS, PrintZero);
   } else if (auto *CF = dyn_cast<ConstantFP>(COp)) {
-    printConstant(CF->getValueAPF(), CS, PrintZero);
+    if (auto VTy = dyn_cast<FixedVectorType>(CF->getType())) {
+      for (unsigned I = 0, E = VTy->getNumElements(); I != E; ++I) {
+        if (I != 0)
+          CS << ',';
+        printConstant(CF->getValueAPF(), CS, PrintZero);
+      }
+    } else
+      printConstant(CF->getValueAPF(), CS, PrintZero);
   } else if (auto *CDS = dyn_cast<ConstantDataSequential>(COp)) {
     Type *EltTy = CDS->getElementType();
     bool IsInteger = EltTy->isIntegerTy();
     bool IsFP = EltTy->isHalfTy() || EltTy->isFloatTy() || EltTy->isDoubleTy();
     unsigned EltBits = EltTy->getPrimitiveSizeInBits();
-    unsigned E = std::min(BitWidth / EltBits, CDS->getNumElements());
+    unsigned E = std::min(BitWidth / EltBits, (unsigned)CDS->getNumElements());
     if ((BitWidth % EltBits) == 0) {
       for (unsigned I = 0; I != E; ++I) {
         if (I != 0)
@@ -1713,7 +1723,7 @@ static void printZeroExtend(const MachineInstr *MI, MCStreamer &OutStreamer,
 
 void X86AsmPrinter::EmitSEHInstruction(const MachineInstr *MI) {
   assert(MF->hasWinCFI() && "SEH_ instruction in function without WinCFI?");
-  assert(getSubtarget().isOSWindowsOrUEFI() &&
+  assert((getSubtarget().isOSWindows() || getSubtarget().isUEFI()) &&
          "SEH_ instruction Windows and UEFI only");
 
   // Use the .cv_fpo directives if we're emitting CodeView on 32-bit x86.
@@ -1788,6 +1798,14 @@ void X86AsmPrinter::EmitSEHInstruction(const MachineInstr *MI) {
 
   case X86::SEH_EndEpilogue:
     OutStreamer->emitWinCFIEndEpilogue();
+    break;
+
+  case X86::SEH_UnwindV2Start:
+    OutStreamer->emitWinCFIUnwindV2Start();
+    break;
+
+  case X86::SEH_UnwindVersion:
+    OutStreamer->emitWinCFIUnwindVersion(MI->getOperand(0).getImm());
     break;
 
   default:
@@ -2432,6 +2450,8 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
   case X86::SEH_PushFrame:
   case X86::SEH_EndPrologue:
   case X86::SEH_EndEpilogue:
+  case X86::SEH_UnwindV2Start:
+  case X86::SEH_UnwindVersion:
     EmitSEHInstruction(MI);
     return;
 

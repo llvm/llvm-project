@@ -370,7 +370,7 @@ bool ThreadPlanStepInRange::DefaultShouldStopHereCallback(
   if (!should_stop_here)
     return false;
 
-  if (should_stop_here && current_plan->GetKind() == eKindStepInRange &&
+  if (current_plan->GetKind() == eKindStepInRange &&
       operation == eFrameCompareYounger) {
     ThreadPlanStepInRange *step_in_range_plan =
         static_cast<ThreadPlanStepInRange *>(current_plan);

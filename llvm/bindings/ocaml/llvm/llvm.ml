@@ -302,6 +302,8 @@ module AtomicRMWBinOp = struct
   | UDec_Wrap
   | USub_Cond
   | USub_Sat
+  | FMaximum
+  | FMinimum
 end
 
 module ValueKind = struct
@@ -700,6 +702,8 @@ external global_copy_all_metadata : llvalue -> (llmdkind * llmetadata) array
 external is_global_constant : llvalue -> bool = "llvm_is_global_constant"
 external set_global_constant : bool -> llvalue -> unit
                              = "llvm_set_global_constant"
+external global_set_metadata : llvalue -> llmdkind -> llmetadata -> unit
+                             = "llvm_global_set_metadata"
 
 (*--... Operations on global variables .....................................--*)
 external declare_global : lltype -> string -> llmodule -> llvalue

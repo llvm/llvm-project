@@ -21,7 +21,7 @@
 !CHECK-NEXT: %[[CVT0:.*]] = fir.convert %[[ADDR]] 
 !CHECK-NEXT: %[[CNST:.*]] = arith.constant
 !CHECK-NEXT: %[[CALL_BEGIN_IO:.*]] = fir.call @_FortranAioBeginExternalListOutput(%[[UNIT]], %[[CVT0]], %[[CNST]]) {{.*}}: (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
-!CHECK-NEXT: %[[CVT_0_1:.*]] = fir.convert %[[ARG1_PVT_DECL]]#1 
+!CHECK-NEXT: %[[CVT_0_1:.*]] = fir.convert %[[ARG1_PVT_DECL]]#0 
 !CHECK-NEXT: %[[CVT_0_2:.*]] = fir.convert %[[FIVE]]
 !CHECK-NEXT: %[[CALL_OP_ASCII:.*]] = fir.call @_FortranAioOutputAscii(%[[CALL_BEGIN_IO]], %[[CVT_0_1]], %[[CVT_0_2]])
 !CHECK-NEXT: %[[CALL_END_IO:.*]] = fir.call @_FortranAioEndIoStatement(%[[CALL_BEGIN_IO]])

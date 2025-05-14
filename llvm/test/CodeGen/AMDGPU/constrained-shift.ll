@@ -168,26 +168,26 @@ define <4 x i32> @csh_v4i32(<4 x i32> %a, <4 x i32> %b) {
 define amdgpu_ps <4 x i32> @s_csh_v4i32(<4 x i32> inreg %a, <4 x i32> inreg %b) {
 ; CHECK-LABEL: s_csh_v4i32:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_lshl_b32 s8, s0, s4
-; CHECK-NEXT:    s_lshl_b32 s9, s1, s5
-; CHECK-NEXT:    s_lshl_b32 s10, s2, s6
-; CHECK-NEXT:    s_lshl_b32 s11, s3, s7
-; CHECK-NEXT:    s_lshr_b32 s12, s0, s4
-; CHECK-NEXT:    s_lshr_b32 s13, s1, s5
-; CHECK-NEXT:    s_lshr_b32 s14, s2, s6
-; CHECK-NEXT:    s_lshr_b32 s15, s3, s7
-; CHECK-NEXT:    s_ashr_i32 s3, s3, s7
-; CHECK-NEXT:    s_ashr_i32 s2, s2, s6
-; CHECK-NEXT:    s_ashr_i32 s1, s1, s5
+; CHECK-NEXT:    s_lshl_b32 s8, s3, s7
+; CHECK-NEXT:    s_lshl_b32 s9, s2, s6
+; CHECK-NEXT:    s_lshl_b32 s10, s1, s5
+; CHECK-NEXT:    s_lshl_b32 s11, s0, s4
+; CHECK-NEXT:    s_lshr_b32 s12, s3, s7
+; CHECK-NEXT:    s_lshr_b32 s13, s2, s6
+; CHECK-NEXT:    s_lshr_b32 s14, s1, s5
+; CHECK-NEXT:    s_lshr_b32 s15, s0, s4
 ; CHECK-NEXT:    s_ashr_i32 s0, s0, s4
+; CHECK-NEXT:    s_ashr_i32 s1, s1, s5
+; CHECK-NEXT:    s_ashr_i32 s2, s2, s6
+; CHECK-NEXT:    s_ashr_i32 s3, s3, s7
 ; CHECK-NEXT:    s_add_i32 s4, s11, s15
 ; CHECK-NEXT:    s_add_i32 s5, s10, s14
 ; CHECK-NEXT:    s_add_i32 s6, s9, s13
 ; CHECK-NEXT:    s_add_i32 s7, s8, s12
-; CHECK-NEXT:    s_add_i32 s0, s7, s0
-; CHECK-NEXT:    s_add_i32 s1, s6, s1
-; CHECK-NEXT:    s_add_i32 s2, s5, s2
-; CHECK-NEXT:    s_add_i32 s3, s4, s3
+; CHECK-NEXT:    s_add_i32 s3, s7, s3
+; CHECK-NEXT:    s_add_i32 s2, s6, s2
+; CHECK-NEXT:    s_add_i32 s1, s5, s1
+; CHECK-NEXT:    s_add_i32 s0, s4, s0
 ; CHECK-NEXT:    ; return to shader part epilog
 ;
 ; GISEL-LABEL: s_csh_v4i32:

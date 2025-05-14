@@ -61,7 +61,7 @@ char LiveVariablesWrapperPass::ID = 0;
 char &llvm::LiveVariablesID = LiveVariablesWrapperPass::ID;
 INITIALIZE_PASS_BEGIN(LiveVariablesWrapperPass, "livevars",
                       "Live Variable Analysis", false, false)
-INITIALIZE_PASS_DEPENDENCY(UnreachableMachineBlockElim)
+INITIALIZE_PASS_DEPENDENCY(UnreachableMachineBlockElimLegacy)
 INITIALIZE_PASS_END(LiveVariablesWrapperPass, "livevars",
                     "Live Variable Analysis", false, false)
 
@@ -241,10 +241,8 @@ LiveVariables::FindLastPartialDef(Register Reg,
     if (MO.getReg() == 0)
       continue;
     Register DefReg = MO.getReg();
-    if (TRI->isSubRegister(Reg, DefReg)) {
-      for (MCPhysReg SubReg : TRI->subregs_inclusive(DefReg))
-        PartDefRegs.insert(SubReg);
-    }
+    if (TRI->isSubRegister(Reg, DefReg))
+      PartDefRegs.insert_range(TRI->subregs_inclusive(DefReg));
   }
   return LastDef;
 }
@@ -283,8 +281,7 @@ void LiveVariables::HandlePhysRegUse(Register Reg, MachineInstr &MI) {
                                                              false/*IsDef*/,
                                                              true/*IsImp*/));
         PhysRegDef[SubReg] = LastPartialDef;
-        for (MCPhysReg SS : TRI->subregs(SubReg))
-          Processed.insert(SS);
+        Processed.insert_range(TRI->subregs(SubReg));
       }
     }
   } else if (LastDef && !PhysRegUse[Reg.id()] &&
@@ -370,8 +367,7 @@ bool LiveVariables::HandlePhysRegKill(Register Reg, MachineInstr *MI) {
       continue;
     }
     if (MachineInstr *Use = PhysRegUse[SubReg]) {
-      for (MCPhysReg SS : TRI->subregs_inclusive(SubReg))
-        PartUses.insert(SS);
+      PartUses.insert_range(TRI->subregs_inclusive(SubReg));
       unsigned Dist = DistanceMap[Use];
       if (Dist > LastRefOrPartRefDist) {
         LastRefOrPartRefDist = Dist;
@@ -465,8 +461,7 @@ void LiveVariables::HandlePhysRegDef(Register Reg, MachineInstr *MI,
   // What parts of the register are previously defined?
   SmallSet<unsigned, 32> Live;
   if (PhysRegDef[Reg.id()] || PhysRegUse[Reg.id()]) {
-    for (MCPhysReg SubReg : TRI->subregs_inclusive(Reg))
-      Live.insert(SubReg);
+    Live.insert_range(TRI->subregs_inclusive(Reg));
   } else {
     for (MCPhysReg SubReg : TRI->subregs(Reg)) {
       // If a register isn't itself defined, but all parts that make up of it
@@ -477,10 +472,8 @@ void LiveVariables::HandlePhysRegDef(Register Reg, MachineInstr *MI,
       //    = AX
       if (Live.count(SubReg))
         continue;
-      if (PhysRegDef[SubReg] || PhysRegUse[SubReg]) {
-        for (MCPhysReg SS : TRI->subregs_inclusive(SubReg))
-          Live.insert(SS);
-      }
+      if (PhysRegDef[SubReg] || PhysRegUse[SubReg])
+        Live.insert_range(TRI->subregs_inclusive(SubReg));
     }
   }
 
@@ -771,7 +764,7 @@ void LiveVariables::recomputeForSingleDefVirtReg(Register Reg) {
 void LiveVariables::replaceKillInstruction(Register Reg, MachineInstr &OldMI,
                                            MachineInstr &NewMI) {
   VarInfo &VI = getVarInfo(Reg);
-  std::replace(VI.Kills.begin(), VI.Kills.end(), &OldMI, &NewMI);
+  llvm::replace(VI.Kills, &OldMI, &NewMI);
 }
 
 /// removeVirtualRegistersKilled - Remove all killed info for the specified

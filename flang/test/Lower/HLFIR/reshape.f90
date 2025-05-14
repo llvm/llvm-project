@@ -62,20 +62,20 @@ end subroutine test_reshape_optional1
 ! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare {{.*}}{fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest_reshape_optional1Epad"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xf32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xf32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xf32>>>>)
 ! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare {{.*}}{uniq_name = "_QFtest_reshape_optional1Eshape"} : (!fir.ref<!fir.array<4xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<4xi32>>, !fir.ref<!fir.array<4xi32>>)
 ! CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare {{.*}}{uniq_name = "_QFtest_reshape_optional1Esource"} : (!fir.box<!fir.array<?x?x?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?x?xf32>>, !fir.box<!fir.array<?x?x?xf32>>)
-! CHECK:           %[[VAL_16:.*]] = fir.load %[[VAL_6]]#1 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xf32>>>>
+! CHECK:           %[[VAL_16:.*]] = fir.load %[[VAL_6]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xf32>>>>
 ! CHECK:           %[[VAL_17:.*]] = fir.box_addr %[[VAL_16]] : (!fir.box<!fir.ptr<!fir.array<?x?xf32>>>) -> !fir.ptr<!fir.array<?x?xf32>>
 ! CHECK:           %[[VAL_18:.*]] = fir.convert %[[VAL_17]] : (!fir.ptr<!fir.array<?x?xf32>>) -> i64
 ! CHECK:           %[[VAL_19:.*]] = arith.constant 0 : i64
 ! CHECK:           %[[VAL_20:.*]] = arith.cmpi ne, %[[VAL_18]], %[[VAL_19]] : i64
-! CHECK:           %[[VAL_21:.*]] = fir.load %[[VAL_5]]#1 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
+! CHECK:           %[[VAL_21:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 ! CHECK:           %[[VAL_22:.*]] = fir.box_addr %[[VAL_21]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>) -> !fir.ptr<!fir.array<?xi32>>
 ! CHECK:           %[[VAL_23:.*]] = fir.convert %[[VAL_22]] : (!fir.ptr<!fir.array<?xi32>>) -> i64
 ! CHECK:           %[[VAL_24:.*]] = arith.constant 0 : i64
 ! CHECK:           %[[VAL_25:.*]] = arith.cmpi ne, %[[VAL_23]], %[[VAL_24]] : i64
-! CHECK:           %[[VAL_26:.*]] = fir.load %[[VAL_6]]#1 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xf32>>>>
+! CHECK:           %[[VAL_26:.*]] = fir.load %[[VAL_6]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xf32>>>>
 ! CHECK:           %[[VAL_27:.*]] = fir.absent !fir.box<!fir.ptr<!fir.array<?x?xf32>>>
 ! CHECK:           %[[VAL_28:.*]] = arith.select %[[VAL_20]], %[[VAL_26]], %[[VAL_27]] : !fir.box<!fir.ptr<!fir.array<?x?xf32>>>
-! CHECK:           %[[VAL_29:.*]] = fir.load %[[VAL_5]]#1 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
+! CHECK:           %[[VAL_29:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 ! CHECK:           %[[VAL_30:.*]] = fir.absent !fir.box<!fir.ptr<!fir.array<?xi32>>>
 ! CHECK:           %[[VAL_31:.*]] = arith.select %[[VAL_25]], %[[VAL_29]], %[[VAL_30]] : !fir.box<!fir.ptr<!fir.array<?xi32>>>
 ! CHECK:           %[[VAL_32:.*]] = hlfir.reshape %[[VAL_10]]#0 %[[VAL_9]]#0 pad %[[VAL_28]] order %[[VAL_31]] : (!fir.box<!fir.array<?x?x?xf32>>, !fir.ref<!fir.array<4xi32>>, !fir.box<!fir.ptr<!fir.array<?x?xf32>>>, !fir.box<!fir.ptr<!fir.array<?xi32>>>) -> !hlfir.expr<?x?x?x?xf32>
@@ -93,14 +93,14 @@ end subroutine test_reshape_optional2
 ! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare {{.*}}{uniq_name = "_QFtest_reshape_optional2Eshape"} : (!fir.ref<!fir.array<4xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<4xi32>>, !fir.ref<!fir.array<4xi32>>)
 ! CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare {{.*}}{uniq_name = "_QFtest_reshape_optional2Esource"} : (!fir.box<!fir.array<?x?x?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?x?xf32>>, !fir.box<!fir.array<?x?x?xf32>>)
 ! CHECK:           %[[VAL_16:.*]] = fir.is_present %[[VAL_6]]#0 : (!fir.box<!fir.array<?x?xf32>>) -> i1
-! CHECK:           %[[VAL_17:.*]] = fir.load %[[VAL_5]]#1 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
+! CHECK:           %[[VAL_17:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 ! CHECK:           %[[VAL_18:.*]] = fir.box_addr %[[VAL_17]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>) -> !fir.ptr<!fir.array<?xi32>>
 ! CHECK:           %[[VAL_19:.*]] = fir.convert %[[VAL_18]] : (!fir.ptr<!fir.array<?xi32>>) -> i64
 ! CHECK:           %[[VAL_20:.*]] = arith.constant 0 : i64
 ! CHECK:           %[[VAL_21:.*]] = arith.cmpi ne, %[[VAL_19]], %[[VAL_20]] : i64
 ! CHECK:           %[[VAL_22:.*]] = fir.absent !fir.box<!fir.array<?x?xf32>>
 ! CHECK:           %[[VAL_23:.*]] = arith.select %[[VAL_16]], %[[VAL_6]]#1, %[[VAL_22]] : !fir.box<!fir.array<?x?xf32>>
-! CHECK:           %[[VAL_24:.*]] = fir.load %[[VAL_5]]#1 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
+! CHECK:           %[[VAL_24:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 ! CHECK:           %[[VAL_25:.*]] = fir.absent !fir.box<!fir.ptr<!fir.array<?xi32>>>
 ! CHECK:           %[[VAL_26:.*]] = arith.select %[[VAL_21]], %[[VAL_24]], %[[VAL_25]] : !fir.box<!fir.ptr<!fir.array<?xi32>>>
 ! CHECK:           %[[VAL_27:.*]] = hlfir.reshape %[[VAL_10]]#0 %[[VAL_9]]#0 pad %[[VAL_23]] order %[[VAL_26]] : (!fir.box<!fir.array<?x?x?xf32>>, !fir.ref<!fir.array<4xi32>>, !fir.box<!fir.array<?x?xf32>>, !fir.box<!fir.ptr<!fir.array<?xi32>>>) -> !hlfir.expr<?x?x?x?xf32>
