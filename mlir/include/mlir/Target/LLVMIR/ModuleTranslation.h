@@ -149,9 +149,8 @@ public:
   void mapBlockAddress(BlockAddressAttr attr, llvm::BasicBlock *block) {
     auto result = blockAddressToLLVMMapping.try_emplace(attr, block);
     (void)result;
-    assert(
-        result.second &&
-        "attempting to map a blockaddress attribute that is already mapped");
+    assert(result.second &&
+           "attempting to map a blockaddress attribute that is already mapped");
   }
 
   /// Finds the LLVM basic block that corresponds to the given BlockAddressAttr.
