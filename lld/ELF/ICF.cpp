@@ -111,11 +111,11 @@ private:
                   Relocs<RelTy> relsB);
 
   template <class RelTy>
-  bool variableEq(const InputSection *a, Relocs<RelTy> relsA,
-                  const InputSection *b, Relocs<RelTy> relsB);
+  bool variableEq(InputSection *a, Relocs<RelTy> relsA, InputSection *b,
+                  Relocs<RelTy> relsB);
 
   bool equalsConstant(InputSection *a, InputSection *b);
-  bool equalsVariable(const InputSection *a, const InputSection *b);
+  bool equalsVariable(InputSection *a, InputSection *b);
 
   size_t findBoundary(size_t begin, size_t end);
 
@@ -315,7 +315,7 @@ bool ICF<ELFT>::constantEq(InputSection *secA, Relocs<RelTy> ra,
     if (isa<InputSection>(da->section)) {
       if (da->value + addA == db->value + addB) {
         // For non-trivial relocations, if we cannot merge symbols together,
-        // we must not merge them.
+        // we must not merge sections either.
         if (!isTrivialRelocation(secA, sa, *rai) &&
             !canMergeSymbols(addA, addB))
           return false;
@@ -392,8 +392,8 @@ getRelocTargetSyms(const InputSection *sec) {
 // relocations point to the same section in terms of ICF.
 template <class ELFT>
 template <class RelTy>
-bool ICF<ELFT>::variableEq(const InputSection *secA, Relocs<RelTy> ra,
-                           const InputSection *secB, Relocs<RelTy> rb) {
+bool ICF<ELFT>::variableEq(InputSection *secA, Relocs<RelTy> ra,
+                           InputSection *secB, Relocs<RelTy> rb) {
   assert(ra.size() == rb.size());
 
   auto rai = ra.begin(), rae = ra.end(), rbi = rb.begin();
@@ -406,6 +406,15 @@ bool ICF<ELFT>::variableEq(const InputSection *secA, Relocs<RelTy> ra,
 
     auto *da = cast<Defined>(&sa);
     auto *db = cast<Defined>(&sb);
+
+    // Prevent sections containing local symbols from merging into sections with
+    // global symbols, or vice-versa. This is to prevent local-global symbols
+    // getting merged into each other (done later in ICF). We do this as
+    // post-ICF passes cannot handle duplicates when iterating over local
+    // symbols. There are also assertions that prevent this.
+    if ((!da->isGlobal() || !db->isGlobal()) &&
+        !isTrivialRelocation(secA, sa, *rai))
+      return false;
 
     // We already dealt with absolute and non-InputSection symbols in
     // constantEq, and for InputSections we have already checked everything
@@ -430,7 +439,7 @@ bool ICF<ELFT>::variableEq(const InputSection *secA, Relocs<RelTy> ra,
 
 // Compare "moving" part of two InputSections, namely relocation targets.
 template <class ELFT>
-bool ICF<ELFT>::equalsVariable(const InputSection *a, const InputSection *b) {
+bool ICF<ELFT>::equalsVariable(InputSection *a, InputSection *b) {
   const RelsOrRelas<ELFT> ra = a->template relsOrRelas<ELFT>();
   const RelsOrRelas<ELFT> rb = b->template relsOrRelas<ELFT>();
   if (ra.areRelocsCrel() || rb.areRelocsCrel())
@@ -610,9 +619,7 @@ template <class ELFT> void ICF<ELFT>::run() {
       assert(syms.size() == replacedSyms.size() &&
              "Should have same number of syms!");
       for (size_t i = 0; i < syms.size(); i++) {
-        if (syms[i].first == replacedSyms[i].first ||
-            !syms[i].first->isGlobal() || !replacedSyms[i].first->isGlobal() ||
-            !canMergeSymbols(syms[i].second, replacedSyms[i].second))
+        if (!canMergeSymbols(syms[i].second, replacedSyms[i].second))
           continue;
         symbolEquivalence.unionSets(syms[i].first, replacedSyms[i].first);
       }

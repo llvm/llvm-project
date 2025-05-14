@@ -3,7 +3,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple=aarch64 %s -o %t
 # RUN: llvm-mc -filetype=obj -crel -triple=aarch64 %s -o %tcrel
-# RUN: ld.lld %t -o %t2 --icf=all
+# RUN: ld.lld %t -o %t2 --icf=all --print-icf-sections
 # RUN: ld.lld %tcrel -o %tcrel2 --icf=all
 
 # RUN: llvm-objdump --section-headers %t2 | FileCheck %s --check-prefix=EXE
@@ -17,10 +17,32 @@
 
 ## All global g* symbols should merge into a single GOT entry while non-global
 ## gets its own GOT entry.
-# EXE: {{.*}}.got 00000010{{.*}}
+# EXE: {{.*}}.got 00000018{{.*}}
 
 ## When symbols are preemptible in DSO mode, GOT entries wouldn't be merged
-# DSO: {{.*}}.got 00000028{{.*}}
+# DSO: {{.*}}.got 00000030{{.*}}
+
+# 1. Sections containing local symbols (f4, f5) are not merged together.
+# 2. Sections containing global symbols are merged together.
+
+# CHECK: selected section {{.*}}:(.rodata.g0)
+# CHECK-NEXT: removing identical section {{.*}}:(.rodata.g1)
+# CHECK-NEXT: removing identical section {{.*}}:(.rodata.g2)
+# CHECK-NEXT: removing identical section {{.*}}:(.rodata.g3)
+# CHECK-NEXT: removing identical section {{.*}}:(.rodata.g4)
+# CHECK-NEXT: removing identical section {{.*}}:(.rodata.g5)
+# CHECK-NEXT: selected section {{.*}}:(.text.t2_0)
+# CHECK-NEXT: removing identical section {{.*}}:(.text.t2_1)
+# CHECK-NEXT: selected section {{.*}}:(.text.f2_0)
+# CHECK-NEXT: removing identical section {{.*}}:(.text.f2_1)
+# CHECK-NEXT: removing identical section {{.*}}:(.text.f2_2)
+# CHECK-NEXT: removing identical section {{.*}}:(.text.f2_3)
+# CHECK-NEXT: redirecting 'g1' in symtab to 'g0'
+# CHECK-NEXT: redirecting 'g2' in symtab to 'g0'
+# CHECK-NEXT: redirecting 'g3' in symtab to 'g0'
+# CHECK-NEXT: redirecting 'g1' to 'g0'
+# CHECK-NEXT: redirecting 'g2' to 'g0'
+# CHECK-NEXT: redirecting 'g3' to 'g0'
 
 .addrsig
 
@@ -93,3 +115,4 @@ f 1 1
 f 2 1
 f 3 1
 f 4
+f 5
