@@ -103,6 +103,8 @@ public:
   const Stmt *getStmt() const {
     switch (Elem->getKind()) {
     case CFGElement::Initializer:
+      if (Elem->castAs<CFGInitializer>().getInitializer() == nullptr)
+        return nullptr;
       return Elem->castAs<CFGInitializer>().getInitializer()->getInit();
     case CFGElement::ScopeBegin:
       return Elem->castAs<CFGScopeBegin>().getTriggerStmt();
