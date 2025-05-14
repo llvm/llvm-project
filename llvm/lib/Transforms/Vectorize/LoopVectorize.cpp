@@ -2781,7 +2781,7 @@ void InnerLoopVectorizer::fixVectorizedLoop(VPTransformState &State) {
   // Don't apply optimizations below when no (vector) loop remains, as they all
   // require one at the moment.
   VPBasicBlock *HeaderVPBB =
-      vputils::getTopLevelVectorLoopHeader(*State.Plan, State.VPDT);
+      vputils::getFirstLoopHeader(*State.Plan, State.VPDT);
   if (!HeaderVPBB)
     return;
 
@@ -7801,6 +7801,9 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
       TTI.getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector));
   VPlanTransforms::removeDeadRecipes(BestVPlan);
 
+  // Retrieve and store the middle block before dissolving regions. Regions are
+  // dissolved after optimizing for VF and UF, which completely removes unneeded
+  // loop regions first.
   VPBasicBlock *MiddleVPBB =
       BestVPlan.getVectorLoopRegion() ? BestVPlan.getMiddleBlock() : nullptr;
   VPlanTransforms::disolveLoopRegions(BestVPlan);
@@ -7899,8 +7902,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // 2.6. Maintain Loop Hints
   // Keep all loop hints from the original loop on the vector loop (we'll
   // replace the vectorizer-specific hints below).
-  VPBasicBlock *HeaderVPBB =
-      vputils::getTopLevelVectorLoopHeader(BestVPlan, State.VPDT);
+  VPBasicBlock *HeaderVPBB = vputils::getFirstLoopHeader(BestVPlan, State.VPDT);
   if (HeaderVPBB) {
     MDNode *OrigLoopID = OrigLoop->getLoopID();
 

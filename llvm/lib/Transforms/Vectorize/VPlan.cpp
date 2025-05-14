@@ -212,12 +212,22 @@ bool VPBlockUtils::isHeader(const VPBlockBase *VPB,
   auto *VPBB = dyn_cast<VPBasicBlock>(VPB);
   if (!VPBB)
     return false;
+
+  // If VPBB is in a region R, VPBB is a loop header if R is a loop region with
+  // VPBB as its entry, i.e., free of predecessors.
   if (auto *R = VPBB->getParent())
     return !R->isReplicator() && VPBB->getNumPredecessors() == 0;
 
-  assert(!VPB->getParent() && "checking blocks in regions not implemented yet");
+  // A header dominates its second predecessor (the latch), with the other
+  // predecessor being the preheader
   return VPB->getPredecessors().size() == 2 &&
          VPDT.dominates(VPB, VPB->getPredecessors()[1]);
+}
+
+bool VPBlockUtils::isLatch(const VPBlockBase *VPB,
+                           const VPDominatorTree &VPDT) {
+  return VPB->getNumSuccessors() == 2 &&
+         VPBlockUtils::isHeader(VPB->getSuccessors()[1], VPDT);
 }
 
 VPBasicBlock::iterator VPBasicBlock::getFirstNonPhi() {
@@ -435,7 +445,7 @@ void VPBasicBlock::connectToPredecessors(VPTransformState &State) {
 
   auto Preds = to_vector(getHierarchicalPredecessors());
   if (VPBlockUtils::isHeader(this, State.VPDT)) {
-    // There's no block yet for the latch, don't try to connect it yet.
+    // There's no block for the latch yet, connect to the preheader only.
     Preds = {Preds[0]};
   }
 
@@ -443,8 +453,9 @@ void VPBasicBlock::connectToPredecessors(VPTransformState &State) {
   for (VPBlockBase *PredVPBlock : Preds) {
     VPBasicBlock *PredVPBB = PredVPBlock->getExitingBasicBlock();
     auto &PredVPSuccessors = PredVPBB->getHierarchicalSuccessors();
+    assert(CFG.VPBB2IRBB.contains(PredVPBB) &&
+           "Predecessor basic-block not found building successor.");
     BasicBlock *PredBB = CFG.VPBB2IRBB.lookup(PredVPBB);
-    assert(PredBB && "Predecessor basic-block not found building successor.");
     auto *PredBBTerminator = PredBB->getTerminator();
     LLVM_DEBUG(dbgs() << "LV: draw edge from" << PredBB->getName() << '\n');
 
@@ -548,8 +559,7 @@ void VPBasicBlock::execute(VPTransformState *State) {
   executeRecipes(State, NewBB);
 
   // If this block is a latch, update CurrentParentLoop.
-  if (getNumSuccessors() == 2 &&
-      VPBlockUtils::isHeader(getSuccessors()[1], State->VPDT))
+  if (VPBlockUtils::isLatch(this, State->VPDT))
     State->CurrentParentLoop = State->CurrentParentLoop->getParentLoop();
 }
 
@@ -988,8 +998,7 @@ void VPlan::execute(VPTransformState *State) {
   for (VPBlockBase *Block : RPOT)
     Block->execute(State);
 
-  VPBasicBlock *Header =
-      vputils::getTopLevelVectorLoopHeader(*this, State->VPDT);
+  VPBasicBlock *Header = vputils::getFirstLoopHeader(*this, State->VPDT);
   if (!Header)
     return;
 

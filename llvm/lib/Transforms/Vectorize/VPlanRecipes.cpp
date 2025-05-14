@@ -577,7 +577,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
     Value *Cond = State.get(getOperand(0), VPLane(0));
     // Replace the temporary unreachable terminator with a new conditional
     // branch, hooking it up to backward destination (header) for latch blocks
-    // now to forward destination(s) later when they are created.
+    // now, and to forward destination(s) later when they are created.
     BranchInst *CondBr =
         Builder.CreateCondBr(Cond, Builder.GetInsertBlock(), nullptr);
     CondBr->setSuccessor(0, nullptr);
@@ -601,9 +601,9 @@ Value *VPInstruction::generate(VPTransformState &State) {
 
     // Replace the temporary unreachable terminator with a new conditional
     // branch, hooking it up to backward destination (the header) for latch
-    // blocks now forward destination (the exit/middle block) later when it is
-    // created. Note that CreateCondBr expects a valid BB as first argument, so
-    // we need to set it to nullptr later.
+    // blocks now, and to forward destination (the exit/middle block) later when
+    // it is created. Note that CreateCondBr expects a valid BB as first
+    // argument, so we need to set it to nullptr later.
     BranchInst *CondBr = Builder.CreateCondBr(Cond, Builder.GetInsertBlock(),
                                               State.CFG.VPBB2IRBB[Header]);
     CondBr->setSuccessor(0, nullptr);
