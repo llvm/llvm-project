@@ -76,7 +76,7 @@ struct CFIState {
   DWARFRegType CFARegister;
   int CFAOffset;
 
-  CFIState() : CFARegister(-1 /* Change to to max unsigned */), CFAOffset(-1) {}
+  CFIState() : CFARegister(-1), CFAOffset(-1) {}
 
   CFIState(const CFIState &Other) {
     CFARegister = Other.CFARegister;
@@ -147,7 +147,7 @@ struct CFIState {
     case MCCFIInstruction::OpNegateRAStateWithPC:
     case MCCFIInstruction::OpGnuArgsSize:
     case MCCFIInstruction::OpLabel:
-      // TODO it's not supported.
+      // These instructions are not supported.
       return false;
       break;
     }
