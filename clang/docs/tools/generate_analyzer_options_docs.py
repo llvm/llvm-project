@@ -50,7 +50,8 @@ class ErrorHandler:
         # of some analyzer options. As this code is fragile, we record the use
         # of these tweaks and report them if they become obsolete:
         self.unused_tweaks = [
-            "ctu-max-nodes-*",
+            "escape star",
+            "escape underline",
             "accepted values",
             "example file content",
         ]
@@ -60,6 +61,12 @@ class ErrorHandler:
             self.unused_tweaks.remove(tweak_name)
         except ValueError:
             pass
+
+    def replace_as_tweak(self, string, pattern, repl, tweak_name):
+        res = string.replace(pattern, repl)
+        if res != string:
+            self.record_use_of_tweak(tweak_name)
+        return res
 
     def report_error(self, msg):
         print("Error:", msg, file=sys.stderr)
@@ -181,12 +188,11 @@ def cmdflag_to_rst_title(cmdflag_tok):
 
 
 def desc_to_rst_paragraphs(tok):
-    base_desc = string_value(tok)
+    desc = string_value(tok)
 
-    # Escape a star that would act as inline emphasis within RST.
-    desc = base_desc.replace("ctu-max-nodes-*", r"ctu-max-nodes-\*")
-    if desc != base_desc:
-        err_handler.record_use_of_tweak("ctu-max-nodes-*")
+    # Escape some characters that have special meaning in RST:
+    desc = err_handler.replace_as_tweak(desc, '*', r'\*', "escape star")
+    desc = err_handler.replace_as_tweak(desc, '_', r'\_', "escape underline")
 
     # Many descriptions end with "Value: <list of accepted values>", which is
     # OK for a terse command line printout, but should be prettified for web
