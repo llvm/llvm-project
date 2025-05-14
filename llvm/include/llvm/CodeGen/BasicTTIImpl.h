@@ -2408,6 +2408,9 @@ public:
                                           CmpInst::ICMP_ULT, CostKind);
       return Cost;
     }
+    case Intrinsic::experimental_memset_pattern:
+      // This cost is set to match the cost of the memset_pattern16 libcall
+      return TTI::TCC_Basic * 4;
     case Intrinsic::abs:
       ISD = ISD::ABS;
       break;

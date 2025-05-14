@@ -26,10 +26,10 @@ declare void @memset_pattern16(ptr, ptr, i64)
 
 define void @via_intrinsic(ptr %p) {
 ; CHECK-LABEL: 'via_intrinsic'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: call void @llvm.experimental.memset.pattern.p0.i16.i64(ptr align 4 %p, i16 2, i64 100, i1 false)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: call void @llvm.experimental.memset.pattern.p0.i32.i64(ptr align 4 %p, i32 2, i64 50, i1 false)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: call void @llvm.experimental.memset.pattern.p0.i64.i64(ptr align 4 %p, i64 2, i64 25, i1 false)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: call void @llvm.experimental.memset.pattern.p0.i128.i64(ptr align 4 %p, i128 2, i64 12, i1 false)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.experimental.memset.pattern.p0.i16.i64(ptr align 4 %p, i16 2, i64 100, i1 false)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.experimental.memset.pattern.p0.i32.i64(ptr align 4 %p, i32 2, i64 50, i1 false)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.experimental.memset.pattern.p0.i64.i64(ptr align 4 %p, i64 2, i64 25, i1 false)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.experimental.memset.pattern.p0.i128.i64(ptr align 4 %p, i128 2, i64 12, i1 false)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call void @llvm.experimental.memset.pattern(ptr align 4 %p, i16 2, i64 100, i1 false)
