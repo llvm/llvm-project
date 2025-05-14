@@ -416,12 +416,11 @@ llvm::json::Value CreateModule(lldb::SBTarget &target, lldb::SBModule &module,
   } else {
     object.try_emplace("symbolStatus", "Symbols not found.");
   }
-  std::string loaded_addr;
-  llvm::raw_string_ostream os_hex(loaded_addr);
-  os_hex << llvm::format_hex(
-      module.GetObjectFileHeaderAddress().GetLoadAddress(target),
-      sizeof(lldb::addr_t));
-  object.try_emplace("addressRange", loaded_addr);
+  std::string load_address =
+      llvm::formatv("{0:x}",
+                    module.GetObjectFileHeaderAddress().GetLoadAddress(target))
+          .str();
+  object.try_emplace("addressRange", load_address);
   std::string version_str;
   uint32_t version_nums[3];
   uint32_t num_versions =
