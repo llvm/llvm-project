@@ -305,7 +305,7 @@ std::string SymbolInfoMap::SymbolInfo::getValueAndRangeUse(
     auto *operand = cast<NamedTypeConstraint *>(op->getArg(getArgIndex()));
     if (operand->isOptional()) {
       auto repl =
-          formatv(fmt, formatv("({0}.empty() ? Value() : *{0}.begin())", name));
+          formatv(fmt, formatv("({0}.empty() ? ::mlir::Value() : *{0}.begin())", name));
       LLVM_DEBUG(dbgs() << repl << " (OptionalOperand)\n");
       return std::string(repl);
     }
