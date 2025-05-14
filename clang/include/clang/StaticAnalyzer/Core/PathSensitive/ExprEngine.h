@@ -222,8 +222,8 @@ public:
   const Stmt *getStmt() const;
 
   const LocationContext *getRootLocationContext() const {
-    assert(G.roots_begin() != G.roots_end());
-    return (*G.roots_begin())->getLocation().getLocationContext();
+    assert(G.getRoot());
+    return G.getRoot()->getLocation().getLocationContext();
   }
 
   ConstCFGElementRef getCFGElementRef() const {
