@@ -2221,7 +2221,7 @@ bool AMDGPULegalizerInfo::legalizeCustom(
   case TargetOpcode::G_TRAP:
     return legalizeTrap(MI, MRI, B);
   case TargetOpcode::G_DEBUGTRAP:
-  return legalizeDebugUbsanTrap(MI, MRI, B, TargetOpcode::G_DEBUGTRAP);
+    return legalizeDebugUbsanTrap(MI, MRI, B, TargetOpcode::G_DEBUGTRAP);
   case TargetOpcode::G_UBSANTRAP:
     return legalizeDebugUbsanTrap(MI, MRI, B, TargetOpcode::G_UBSANTRAP);
   default:
@@ -7026,22 +7026,23 @@ bool AMDGPULegalizerInfo::legalizeTrapHsa(MachineInstr &MI,
 }
 
 bool AMDGPULegalizerInfo::legalizeDebugUbsanTrap(MachineInstr &MI,
-                                            MachineRegisterInfo &MRI,
-                                            MachineIRBuilder &B, unsigned int Opcode) const {
+                                                 MachineRegisterInfo &MRI,
+                                                 MachineIRBuilder &B,
+                                                 unsigned int Opcode) const {
   // Is non-HSA path or trap-handler disabled? Then, report a warning
   // accordingly
   if (!ST.isTrapHandlerEnabled() ||
       ST.getTrapHandlerAbi() != GCNSubtarget::TrapHandlerAbi::AMDHSA) {
-    DiagnosticInfoUnsupported NoTrap(B.getMF().getFunction(),
-                                     "debugtrap/ubsantrap handler not supported",
-                                     MI.getDebugLoc(), DS_Warning);
+    DiagnosticInfoUnsupported NoTrap(
+        B.getMF().getFunction(), "debugtrap/ubsantrap handler not supported",
+        MI.getDebugLoc(), DS_Warning);
     LLVMContext &Ctx = B.getMF().getFunction().getContext();
     Ctx.diagnose(NoTrap);
-  } else if (Opcode == TargetOpcode::G_DEBUGTRAP){
+  } else if (Opcode == TargetOpcode::G_DEBUGTRAP) {
     // Insert debug-trap instruction
     B.buildInstr(AMDGPU::S_TRAP)
         .addImm(static_cast<unsigned>(GCNSubtarget::TrapID::LLVMAMDHSADebugTrap));
-  } else if (Opcode == TargetOpcode::G_UBSANTRAP){
+  } else if (Opcode == TargetOpcode::G_UBSANTRAP) {
     B.buildInstr(AMDGPU::S_TRAP)
         .addImm(static_cast<unsigned>(GCNSubtarget::TrapID::LLVMAMDHSATrap));
   }
