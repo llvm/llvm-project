@@ -4315,7 +4315,7 @@ private:
   /// bundle being the last instruction in the program order during
   /// vectorization process since the basic blocks are affected, need to
   /// pre-gather them before.
-  DenseMap<const TreeEntry *, Instruction *> EntryToLastInstruction;
+  SmallDenseMap<const TreeEntry *, WeakTrackingVH> EntryToLastInstruction;
 
   /// List of gather nodes, depending on other gather/vector nodes, which should
   /// be emitted after the vector instruction emission process to correctly
@@ -15976,9 +15976,10 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
 }
 
 Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
-  auto &Res = EntryToLastInstruction.try_emplace(E).first->second;
-  if (Res)
-    return *Res;
+  auto It = EntryToLastInstruction.find(E);
+  if (It != EntryToLastInstruction.end())
+    return *cast<Instruction>(It->second);
+  Instruction *Res = nullptr;
   // Get the basic block this bundle is in. All instructions in the bundle
   // should be in this block (except for extractelement-like instructions with
   // constant indices or gathered loads).
@@ -16083,10 +16084,11 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
         auto *I = dyn_cast_or_null<Instruction>(E->VectorizedValue);
         if (!I)
           I = &getLastInstructionInBundle(E);
-        if (Res->comesBefore(I))
+        if (Res->getParent() == I->getParent() && Res->comesBefore(I))
           Res = I;
       }
     }
+    EntryToLastInstruction.try_emplace(E, Res);
     return *Res;
   }
 
@@ -16095,6 +16097,7 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
       E->Idx >= *GatheredLoadsEntriesFirst && !E->isGather() &&
       E->getOpcode() == Instruction::Load) {
     Res = FindFirstInst();
+    EntryToLastInstruction.try_emplace(E, Res);
     return *Res;
   }
 
@@ -16141,6 +16144,7 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
       Res = FindLastInst();
     else
       Res = FindFirstInst();
+    EntryToLastInstruction.try_emplace(E, Res);
     return *Res;
   }
 
@@ -16151,6 +16155,7 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
   if (Bundle) {
     assert(!E->isGather() && "Gathered instructions should not be scheduled");
     Res = Bundle->getBundle().back()->getInst();
+    EntryToLastInstruction.try_emplace(E, Res);
     return *Res;
   }
 
@@ -16175,6 +16180,7 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
   if (!Res)
     Res = FindLastInst();
   assert(Res && "Failed to find last instruction in bundle");
+  EntryToLastInstruction.try_emplace(E, Res);
   return *Res;
 }
 

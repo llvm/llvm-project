@@ -8546,19 +8546,12 @@ VPBlendRecipe *VPRecipeBuilder::tryToBlend(VPWidenPHIRecipe *PhiR) {
   // duplications since this is a simple recursive scan, but future
   // optimizations will clean it up.
 
-  // Map incoming IR BasicBlocks to incoming VPValues, for lookup below.
-  // TODO: Add operands and masks in order from the VPlan predecessors.
-  DenseMap<BasicBlock *, VPValue *> VPIncomingValues;
-  auto *Phi = cast<PHINode>(PhiR->getUnderlyingInstr());
-  for (const auto &[Idx, Pred] : enumerate(predecessors(Phi->getParent())))
-    VPIncomingValues[Pred] = PhiR->getOperand(Idx);
-
   unsigned NumIncoming = PhiR->getNumIncoming();
   SmallVector<VPValue *, 2> OperandsWithMask;
   for (unsigned In = 0; In < NumIncoming; In++) {
-    BasicBlock *Pred = Phi->getIncomingBlock(In);
-    OperandsWithMask.push_back(VPIncomingValues.lookup(Pred));
-    VPValue *EdgeMask = getEdgeMask(Pred, Phi->getParent());
+    OperandsWithMask.push_back(PhiR->getIncomingValue(In));
+    const VPBasicBlock *Pred = PhiR->getIncomingBlock(In);
+    VPValue *EdgeMask = getEdgeMask(Pred, PhiR->getParent());
     if (!EdgeMask) {
       assert(In == 0 && "Both null and non-null edge masks found");
       assert(all_equal(PhiR->operands()) &&
@@ -8567,7 +8560,8 @@ VPBlendRecipe *VPRecipeBuilder::tryToBlend(VPWidenPHIRecipe *PhiR) {
     }
     OperandsWithMask.push_back(EdgeMask);
   }
-  return new VPBlendRecipe(Phi, OperandsWithMask);
+  return new VPBlendRecipe(cast<PHINode>(PhiR->getUnderlyingInstr()),
+                           OperandsWithMask);
 }
 
 VPSingleDefRecipe *VPRecipeBuilder::tryToWidenCall(CallInst *CI,
