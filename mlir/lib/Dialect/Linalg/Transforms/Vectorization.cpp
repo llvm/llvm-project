@@ -1512,13 +1512,13 @@ static SmallVector<int64_t> getTiledPackShape(linalg::PackOp packOp,
 ///   %res = vector.transfer_write %vectorToStore into %dest
 ///
 /// If the leading N dimensions of the destination tensor do not match
-/// `inputVecSizesForLeadingDims`, where=
-///   * N = rank(`inputVecSizesForLeadingDims`)),
+/// `inputVecSizesForLeadingDims` (N = rank(inputVecSizesForLeadingDims)),
 /// masking is applied to ensure correctness:
 ///
-///   %write = vector.transfer_write %vectorToStore into %dest
 ///   %mask = vector.create_mask(%destShape)
-///   %res = vector.mask %mask { %write }
+///   %res = vector.mask %mask {
+///     vector.transfer_write %vectorToStore into %dest
+///   }
 ///
 /// If `useInBoundsInsteadOfMasking` is set to `true`, the `in_bounds` attribute
 /// is used instead of masking:
