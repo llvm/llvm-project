@@ -191,8 +191,8 @@ def desc_to_rst_paragraphs(tok):
     desc = string_value(tok)
 
     # Escape some characters that have special meaning in RST:
-    desc = err_handler.replace_as_tweak(desc, '*', r'\*', "escape star")
-    desc = err_handler.replace_as_tweak(desc, '_', r'\_', "escape underline")
+    desc = err_handler.replace_as_tweak(desc, "*", r"\*", "escape star")
+    desc = err_handler.replace_as_tweak(desc, "_", r"\_", "escape underline")
 
     # Many descriptions end with "Value: <list of accepted values>", which is
     # OK for a terse command line printout, but should be prettified for web
