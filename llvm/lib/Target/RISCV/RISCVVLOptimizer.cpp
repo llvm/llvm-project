@@ -83,8 +83,7 @@ struct OperandInfo {
   OperandInfo() = delete;
 
   static bool EMULAndEEWAreEqual(const OperandInfo &A, const OperandInfo &B) {
-    return A.Log2EEW == B.Log2EEW && A.EMUL->first == B.EMUL->first &&
-           A.EMUL->second == B.EMUL->second;
+    return A.Log2EEW == B.Log2EEW && A.EMUL == B.EMUL;
   }
 
   static bool EEWAreEqual(const OperandInfo &A, const OperandInfo &B) {
@@ -1383,10 +1382,6 @@ RISCVVLOptimizer::checkUsers(const MachineInstr &MI) const {
     // If the operand is used as a scalar operand, then the EEW must be
     // compatible. Otherwise, the EMUL *and* EEW must be compatible.
     bool IsVectorOpUsedAsScalarOp = isVectorOpUsedAsScalarOp(UserOp);
-
-    if (!IsVectorOpUsedAsScalarOp &&
-        (!ConsumerInfo->EMUL || !ProducerInfo->EMUL))
-      return std::nullopt;
 
     if ((IsVectorOpUsedAsScalarOp &&
          !OperandInfo::EEWAreEqual(*ConsumerInfo, *ProducerInfo)) ||
