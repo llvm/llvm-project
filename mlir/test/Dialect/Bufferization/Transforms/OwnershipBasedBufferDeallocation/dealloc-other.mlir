@@ -5,11 +5,11 @@
 // no memref operands.
 
 // CHECK-LABEL: func private @no_interface_no_operands(
-//  CHECK-NEXT:   %[[m:.*]] = bufferization.to_memref
+//  CHECK-NEXT:   %[[m:.*]] = bufferization.to_buffer
 //  CHECK-NEXT:   %[[clone:.*]] = bufferization.clone %[[m]]
 //  CHECK-NEXT:   return %[[clone]]
 func.func private @no_interface_no_operands(%t : tensor<?x?x?xf16>) -> memref<?x?x?xf16> {
-  %0 = bufferization.to_memref %t : tensor<?x?x?xf16> to memref<?x?x?xf16>
+  %0 = bufferization.to_buffer %t : tensor<?x?x?xf16> to memref<?x?x?xf16>
   return %0 : memref<?x?x?xf16>
 }
 
