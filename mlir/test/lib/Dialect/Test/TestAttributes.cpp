@@ -317,6 +317,49 @@ static ParseResult parseCustomFloatAttr(AsmParser &p, StringAttr &typeStrAttr,
 }
 
 //===----------------------------------------------------------------------===//
+// TestCustomStructAttr
+//===----------------------------------------------------------------------===//
+
+static void printCustomStructAttr(AsmPrinter &p, int64_t value) {
+  if (ShapedType::isDynamic(value)) {
+    p << "?";
+  } else {
+    p.printStrippedAttrOrType(value);
+  }
+}
+
+static ParseResult parseCustomStructAttr(AsmParser &p, int64_t &value) {
+  if (succeeded(p.parseOptionalQuestion())) {
+    value = ShapedType::kDynamic;
+    return success();
+  }
+  return p.parseInteger(value);
+}
+
+static void printCustomOptStructFieldAttr(AsmPrinter &p, ArrayAttr attr) {
+  if (attr && attr.size() == 1 && isa<IntegerAttr>(attr[0])) {
+    p << cast<IntegerAttr>(attr[0]).getInt();
+  } else {
+    p.printStrippedAttrOrType(attr);
+  }
+}
+
+static ParseResult parseCustomOptStructFieldAttr(AsmParser &p,
+                                                 ArrayAttr &attr) {
+  int64_t value;
+  OptionalParseResult result = p.parseOptionalInteger(value);
+  if (result.has_value()) {
+    if (failed(result.value()))
+      return failure();
+    attr = ArrayAttr::get(
+        p.getContext(),
+        {IntegerAttr::get(IntegerType::get(p.getContext(), 64), value)});
+    return success();
+  }
+  return p.parseAttribute(attr);
+}
+
+//===----------------------------------------------------------------------===//
 // TestOpAsmAttrInterfaceAttr
 //===----------------------------------------------------------------------===//
 
@@ -331,43 +374,50 @@ TestOpAsmAttrInterfaceAttr::getAlias(::llvm::raw_ostream &os) const {
 // TestConstMemorySpaceAttr
 //===----------------------------------------------------------------------===//
 
-LogicalResult TestConstMemorySpaceAttr::isValidLoad(
+bool TestConstMemorySpaceAttr::isValidLoad(
     Type type, mlir::ptr::AtomicOrdering ordering, IntegerAttr alignment,
     function_ref<InFlightDiagnostic()> emitError) const {
-  return success();
+  return true;
 }
 
-LogicalResult TestConstMemorySpaceAttr::isValidStore(
+bool TestConstMemorySpaceAttr::isValidStore(
     Type type, mlir::ptr::AtomicOrdering ordering, IntegerAttr alignment,
     function_ref<InFlightDiagnostic()> emitError) const {
-  return emitError ? (emitError() << "memory space is read-only") : failure();
+  if (emitError)
+    emitError() << "memory space is read-only";
+  return false;
 }
 
-LogicalResult TestConstMemorySpaceAttr::isValidAtomicOp(
+bool TestConstMemorySpaceAttr::isValidAtomicOp(
     mlir::ptr::AtomicBinOp binOp, Type type, mlir::ptr::AtomicOrdering ordering,
     IntegerAttr alignment, function_ref<InFlightDiagnostic()> emitError) const {
-  return emitError ? (emitError() << "memory space is read-only") : failure();
+  if (emitError)
+    emitError() << "memory space is read-only";
+  return false;
 }
 
-LogicalResult TestConstMemorySpaceAttr::isValidAtomicXchg(
+bool TestConstMemorySpaceAttr::isValidAtomicXchg(
     Type type, mlir::ptr::AtomicOrdering successOrdering,
     mlir::ptr::AtomicOrdering failureOrdering, IntegerAttr alignment,
     function_ref<InFlightDiagnostic()> emitError) const {
-  return emitError ? (emitError() << "memory space is read-only") : failure();
+  if (emitError)
+    emitError() << "memory space is read-only";
+  return false;
 }
 
-LogicalResult TestConstMemorySpaceAttr::isValidAddrSpaceCast(
+bool TestConstMemorySpaceAttr::isValidAddrSpaceCast(
     Type tgt, Type src, function_ref<InFlightDiagnostic()> emitError) const {
-  return emitError
-             ? (emitError() << "memory space doesn't allow addrspace casts")
-             : failure();
+  if (emitError)
+    emitError() << "memory space doesn't allow addrspace casts";
+  return false;
 }
 
-LogicalResult TestConstMemorySpaceAttr::isValidPtrIntCast(
+bool TestConstMemorySpaceAttr::isValidPtrIntCast(
     Type intLikeTy, Type ptrLikeTy,
     function_ref<InFlightDiagnostic()> emitError) const {
-  return emitError ? (emitError() << "memory space doesn't allow int-ptr casts")
-                   : failure();
+  if (emitError)
+    emitError() << "memory space doesn't allow int-ptr casts";
+  return false;
 }
 
 //===----------------------------------------------------------------------===//

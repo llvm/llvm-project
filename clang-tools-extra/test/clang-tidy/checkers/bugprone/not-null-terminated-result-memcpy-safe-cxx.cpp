@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s bugprone-not-null-terminated-result %t -- \
+// RUN: %check_clang_tidy --match-partial-fixes %s bugprone-not-null-terminated-result %t -- \
 // RUN: -- -std=c++11 -I %S/Inputs/not-null-terminated-result
 
 #include "not-null-terminated-result-cxx.h"

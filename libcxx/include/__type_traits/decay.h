@@ -25,7 +25,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if __has_builtin(__decay)
+#if __has_builtin(__decay) && !defined(_LIBCPP_COMPILER_GCC)
 template <class _Tp>
 using __decay_t _LIBCPP_NODEBUG = __decay(_Tp);
 
@@ -50,7 +50,7 @@ public:
 };
 
 template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS decay {
+struct decay {
 private:
   using _Up _LIBCPP_NODEBUG = __libcpp_remove_reference_t<_Tp>;
 

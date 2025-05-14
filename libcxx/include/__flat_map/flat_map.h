@@ -33,6 +33,7 @@
 #include <__functional/invoke.h>
 #include <__functional/is_transparent.h>
 #include <__functional/operations.h>
+#include <__fwd/memory.h>
 #include <__fwd/vector.h>
 #include <__iterator/concepts.h>
 #include <__iterator/distance.h>
@@ -113,7 +114,7 @@ public:
 
   class value_compare {
   private:
-    key_compare __comp_;
+    _LIBCPP_NO_UNIQUE_ADDRESS key_compare __comp_;
     _LIBCPP_HIDE_FROM_ABI value_compare(key_compare __c) : __comp_(__c) {}
     friend flat_map;
 

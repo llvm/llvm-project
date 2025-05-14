@@ -422,9 +422,36 @@ def Saturate : DXILOp<7, unary> {
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }
 
+def IsNaN : DXILOp<8, isSpecialFloat> {
+  let Doc = "Determines if the specified value is NaN.";
+  let arguments = [OverloadTy];
+  let result = Int1Ty;
+  let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
 def IsInf : DXILOp<9, isSpecialFloat> {
   let Doc = "Determines if the specified value is infinite.";
   let intrinsics = [IntrinSelect<int_dx_isinf>];
+  let arguments = [OverloadTy];
+  let result = Int1Ty;
+  let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def IsFinite : DXILOp<10, isSpecialFloat> {
+  let Doc = "Determines if the specified value is finite.";
+  let arguments = [OverloadTy];
+  let result = Int1Ty;
+  let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def IsNormal : DXILOp<11, isSpecialFloat> {
+  let Doc = "Determines if the specified value is normal.";
   let arguments = [OverloadTy];
   let result = Int1Ty;
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
@@ -1075,6 +1102,16 @@ def RawBufferStore : DXILOp<140, rawBufferStore> {
               ]>
   ];
   let stages = [Stages<DXIL1_2, [all_stages]>];
+}
+
+def Dot2AddHalf : DXILOp<162, dot2AddHalf> {
+  let Doc = "2D half dot product with accumulate to float";
+  let intrinsics = [IntrinSelect<int_dx_dot2add>];
+  let arguments = [FloatTy, HalfTy, HalfTy, HalfTy, HalfTy];
+  let result = FloatTy;
+  let overloads = [Overloads<DXIL1_0, []>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }
 
 def Dot4AddI8Packed : DXILOp<163, dot4AddPacked> {

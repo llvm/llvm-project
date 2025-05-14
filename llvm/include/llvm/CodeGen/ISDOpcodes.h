@@ -217,6 +217,9 @@ enum NodeType {
   /// UNDEF - An undefined node.
   UNDEF,
 
+  /// POISON - A poison node.
+  POISON,
+
   /// FREEZE - FREEZE(VAL) returns an arbitrary value if VAL is UNDEF (or
   /// is evaluated to UNDEF), or returns VAL otherwise. Note that each
   /// read of UNDEF can yield different value, but FREEZE(UNDEF) cannot.
@@ -1364,6 +1367,8 @@ enum NodeType {
   ATOMIC_LOAD_FSUB,
   ATOMIC_LOAD_FMAX,
   ATOMIC_LOAD_FMIN,
+  ATOMIC_LOAD_FMAXIMUM,
+  ATOMIC_LOAD_FMINIMUM,
   ATOMIC_LOAD_UINC_WRAP,
   ATOMIC_LOAD_UDEC_WRAP,
   ATOMIC_LOAD_USUB_COND,

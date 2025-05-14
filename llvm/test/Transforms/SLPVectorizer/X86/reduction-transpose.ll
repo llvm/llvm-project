@@ -49,24 +49,10 @@ define i32 @reduce_and4(i32 %acc, <4 x i32> %v1, <4 x i32> %v2, <4 x i32> %v3, <
 ;
 ; AVX512-LABEL: @reduce_and4(
 ; AVX512-NEXT:  entry:
-; AVX512-NEXT:    [[VECEXT:%.*]] = extractelement <4 x i32> [[V1:%.*]], i64 0
-; AVX512-NEXT:    [[VECEXT1:%.*]] = extractelement <4 x i32> [[V1]], i64 1
-; AVX512-NEXT:    [[VECEXT2:%.*]] = extractelement <4 x i32> [[V1]], i64 2
-; AVX512-NEXT:    [[VECEXT4:%.*]] = extractelement <4 x i32> [[V1]], i64 3
-; AVX512-NEXT:    [[VECEXT7:%.*]] = extractelement <4 x i32> [[V2:%.*]], i64 0
-; AVX512-NEXT:    [[VECEXT8:%.*]] = extractelement <4 x i32> [[V2]], i64 1
-; AVX512-NEXT:    [[VECEXT10:%.*]] = extractelement <4 x i32> [[V2]], i64 2
-; AVX512-NEXT:    [[VECEXT12:%.*]] = extractelement <4 x i32> [[V2]], i64 3
-; AVX512-NEXT:    [[TMP0:%.*]] = shufflevector <4 x i32> [[V4:%.*]], <4 x i32> [[V3:%.*]], <16 x i32> <i32 1, i32 0, i32 2, i32 3, i32 5, i32 4, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; AVX512-NEXT:    [[TMP1:%.*]] = insertelement <16 x i32> [[TMP0]], i32 [[VECEXT8]], i32 8
-; AVX512-NEXT:    [[TMP2:%.*]] = insertelement <16 x i32> [[TMP1]], i32 [[VECEXT7]], i32 9
-; AVX512-NEXT:    [[TMP3:%.*]] = insertelement <16 x i32> [[TMP2]], i32 [[VECEXT10]], i32 10
-; AVX512-NEXT:    [[TMP4:%.*]] = insertelement <16 x i32> [[TMP3]], i32 [[VECEXT12]], i32 11
-; AVX512-NEXT:    [[TMP5:%.*]] = insertelement <16 x i32> [[TMP4]], i32 [[VECEXT1]], i32 12
-; AVX512-NEXT:    [[TMP6:%.*]] = insertelement <16 x i32> [[TMP5]], i32 [[VECEXT]], i32 13
-; AVX512-NEXT:    [[TMP7:%.*]] = insertelement <16 x i32> [[TMP6]], i32 [[VECEXT2]], i32 14
-; AVX512-NEXT:    [[TMP8:%.*]] = insertelement <16 x i32> [[TMP7]], i32 [[VECEXT4]], i32 15
-; AVX512-NEXT:    [[OP_RDX:%.*]] = call i32 @llvm.vector.reduce.and.v16i32(<16 x i32> [[TMP8]])
+; AVX512-NEXT:    [[TMP0:%.*]] = shufflevector <4 x i32> [[V4:%.*]], <4 x i32> [[V3:%.*]], <8 x i32> <i32 1, i32 0, i32 2, i32 3, i32 5, i32 4, i32 6, i32 7>
+; AVX512-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[V2:%.*]], <4 x i32> [[V1:%.*]], <8 x i32> <i32 1, i32 0, i32 2, i32 3, i32 5, i32 4, i32 6, i32 7>
+; AVX512-NEXT:    [[RDX_OP:%.*]] = and <8 x i32> [[TMP0]], [[TMP1]]
+; AVX512-NEXT:    [[OP_RDX:%.*]] = call i32 @llvm.vector.reduce.and.v8i32(<8 x i32> [[RDX_OP]])
 ; AVX512-NEXT:    [[OP_RDX1:%.*]] = and i32 [[OP_RDX]], [[ACC:%.*]]
 ; AVX512-NEXT:    ret i32 [[OP_RDX1]]
 ;
@@ -144,24 +130,10 @@ define i32 @reduce_and4_transpose(i32 %acc, <4 x i32> %v1, <4 x i32> %v2, <4 x i
 ; AVX2-NEXT:    ret i32 [[OP_RDX]]
 ;
 ; AVX512-LABEL: @reduce_and4_transpose(
-; AVX512-NEXT:    [[VECEXT:%.*]] = extractelement <4 x i32> [[V1:%.*]], i64 0
-; AVX512-NEXT:    [[VECEXT1:%.*]] = extractelement <4 x i32> [[V2:%.*]], i64 0
-; AVX512-NEXT:    [[VECEXT7:%.*]] = extractelement <4 x i32> [[V1]], i64 1
-; AVX512-NEXT:    [[VECEXT8:%.*]] = extractelement <4 x i32> [[V2]], i64 1
-; AVX512-NEXT:    [[VECEXT15:%.*]] = extractelement <4 x i32> [[V1]], i64 2
-; AVX512-NEXT:    [[VECEXT16:%.*]] = extractelement <4 x i32> [[V2]], i64 2
-; AVX512-NEXT:    [[VECEXT23:%.*]] = extractelement <4 x i32> [[V1]], i64 3
-; AVX512-NEXT:    [[VECEXT24:%.*]] = extractelement <4 x i32> [[V2]], i64 3
-; AVX512-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[V4:%.*]], <4 x i32> [[V3:%.*]], <16 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; AVX512-NEXT:    [[TMP2:%.*]] = insertelement <16 x i32> [[TMP1]], i32 [[VECEXT24]], i32 8
-; AVX512-NEXT:    [[TMP3:%.*]] = insertelement <16 x i32> [[TMP2]], i32 [[VECEXT16]], i32 9
-; AVX512-NEXT:    [[TMP4:%.*]] = insertelement <16 x i32> [[TMP3]], i32 [[VECEXT8]], i32 10
-; AVX512-NEXT:    [[TMP5:%.*]] = insertelement <16 x i32> [[TMP4]], i32 [[VECEXT1]], i32 11
-; AVX512-NEXT:    [[TMP6:%.*]] = insertelement <16 x i32> [[TMP5]], i32 [[VECEXT23]], i32 12
-; AVX512-NEXT:    [[TMP7:%.*]] = insertelement <16 x i32> [[TMP6]], i32 [[VECEXT15]], i32 13
-; AVX512-NEXT:    [[TMP8:%.*]] = insertelement <16 x i32> [[TMP7]], i32 [[VECEXT7]], i32 14
-; AVX512-NEXT:    [[TMP9:%.*]] = insertelement <16 x i32> [[TMP8]], i32 [[VECEXT]], i32 15
-; AVX512-NEXT:    [[OP_RDX:%.*]] = call i32 @llvm.vector.reduce.and.v16i32(<16 x i32> [[TMP9]])
+; AVX512-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[V4:%.*]], <4 x i32> [[V3:%.*]], <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4>
+; AVX512-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[V2:%.*]], <4 x i32> [[V1:%.*]], <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4>
+; AVX512-NEXT:    [[RDX_OP:%.*]] = and <8 x i32> [[TMP1]], [[TMP2]]
+; AVX512-NEXT:    [[OP_RDX:%.*]] = call i32 @llvm.vector.reduce.and.v8i32(<8 x i32> [[RDX_OP]])
 ; AVX512-NEXT:    [[OP_RDX1:%.*]] = and i32 [[OP_RDX]], [[ACC:%.*]]
 ; AVX512-NEXT:    ret i32 [[OP_RDX1]]
 ;

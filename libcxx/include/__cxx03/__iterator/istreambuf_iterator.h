@@ -13,7 +13,6 @@
 #include <__cxx03/__config>
 #include <__cxx03/__fwd/istream.h>
 #include <__cxx03/__fwd/streambuf.h>
-#include <__cxx03/__iterator/default_sentinel.h>
 #include <__cxx03/__iterator/iterator.h>
 #include <__cxx03/__iterator/iterator_traits.h>
 
@@ -26,10 +25,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <class _CharT, class _Traits>
 class _LIBCPP_TEMPLATE_VIS istreambuf_iterator
-#if _LIBCPP_STD_VER <= 14 || !defined(_LIBCPP_ABI_NO_ITERATOR_BASES)
-    : public iterator<input_iterator_tag, _CharT, typename _Traits::off_type, _CharT*, _CharT>
-#endif
-{
+    : public iterator<input_iterator_tag, _CharT, typename _Traits::off_type, _CharT*, _CharT> {
   _LIBCPP_SUPPRESS_DEPRECATED_POP
 
 public:
@@ -65,9 +61,6 @@ private:
 
 public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR istreambuf_iterator() _NOEXCEPT : __sbuf_(nullptr) {}
-#if _LIBCPP_STD_VER >= 20
-  _LIBCPP_HIDE_FROM_ABI constexpr istreambuf_iterator(default_sentinel_t) noexcept : istreambuf_iterator() {}
-#endif // _LIBCPP_STD_VER >= 20
   _LIBCPP_HIDE_FROM_ABI istreambuf_iterator(istream_type& __s) _NOEXCEPT : __sbuf_(__s.rdbuf()) {}
   _LIBCPP_HIDE_FROM_ABI istreambuf_iterator(streambuf_type* __s) _NOEXCEPT : __sbuf_(__s) {}
   _LIBCPP_HIDE_FROM_ABI istreambuf_iterator(const __proxy& __p) _NOEXCEPT : __sbuf_(__p.__sbuf_) {}
@@ -82,12 +75,6 @@ public:
   _LIBCPP_HIDE_FROM_ABI bool equal(const istreambuf_iterator& __b) const {
     return __test_for_eof() == __b.__test_for_eof();
   }
-
-#if _LIBCPP_STD_VER >= 20
-  friend _LIBCPP_HIDE_FROM_ABI bool operator==(const istreambuf_iterator& __i, default_sentinel_t) {
-    return __i.__test_for_eof();
-  }
-#endif // _LIBCPP_STD_VER >= 20
 };
 
 template <class _CharT, class _Traits>
@@ -96,13 +83,11 @@ operator==(const istreambuf_iterator<_CharT, _Traits>& __a, const istreambuf_ite
   return __a.equal(__b);
 }
 
-#if _LIBCPP_STD_VER <= 17
 template <class _CharT, class _Traits>
 inline _LIBCPP_HIDE_FROM_ABI bool
 operator!=(const istreambuf_iterator<_CharT, _Traits>& __a, const istreambuf_iterator<_CharT, _Traits>& __b) {
   return !__a.equal(__b);
 }
-#endif // _LIBCPP_STD_VER <= 17
 
 _LIBCPP_END_NAMESPACE_STD
 

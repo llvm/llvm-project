@@ -380,7 +380,7 @@ void X86LowerAMXType::combineLoadBitcast(LoadInst *LD, BitCastInst *Bitcast) {
   std::array<Value *, 4> Args = {Row, Col, I8Ptr, Stride};
 
   Value *NewInst =
-      Builder.CreateIntrinsic(Intrinsic::x86_tileloadd64_internal, {}, Args);
+      Builder.CreateIntrinsic(Intrinsic::x86_tileloadd64_internal, Args);
   Bitcast->replaceAllUsesWith(NewInst);
 }
 
@@ -405,7 +405,7 @@ void X86LowerAMXType::combineBitcastStore(BitCastInst *Bitcast, StoreInst *ST) {
   Value *Stride = Builder.getInt64(64);
   Value *I8Ptr = ST->getOperand(1);
   std::array<Value *, 5> Args = {Row, Col, I8Ptr, Stride, Tile};
-  Builder.CreateIntrinsic(Intrinsic::x86_tilestored64_internal, {}, Args);
+  Builder.CreateIntrinsic(Intrinsic::x86_tilestored64_internal, Args);
   if (Bitcast->hasOneUse())
     return;
   // %13 = bitcast x86_amx %src to <256 x i32>
@@ -455,7 +455,7 @@ bool X86LowerAMXType::transformBitcast(BitCastInst *Bitcast) {
     std::tie(Row, Col) = SC->getShape(II, OpNo);
     std::array<Value *, 4> Args = {Row, Col, I8Ptr, Stride};
     Value *NewInst =
-        Builder.CreateIntrinsic(Intrinsic::x86_tileloadd64_internal, {}, Args);
+        Builder.CreateIntrinsic(Intrinsic::x86_tileloadd64_internal, Args);
     Bitcast->replaceAllUsesWith(NewInst);
   } else {
     // %2 = bitcast x86_amx %src to <256 x i32>
@@ -472,7 +472,7 @@ bool X86LowerAMXType::transformBitcast(BitCastInst *Bitcast) {
     Value *Row = II->getOperand(0);
     Value *Col = II->getOperand(1);
     std::array<Value *, 5> Args = {Row, Col, I8Ptr, Stride, Src};
-    Builder.CreateIntrinsic(Intrinsic::x86_tilestored64_internal, {}, Args);
+    Builder.CreateIntrinsic(Intrinsic::x86_tilestored64_internal, Args);
     Value *NewInst = Builder.CreateLoad(Bitcast->getType(), AllocaAddr);
     Bitcast->replaceAllUsesWith(NewInst);
   }
@@ -612,7 +612,7 @@ static Instruction *createTileStore(Instruction *TileDef, Value *Ptr) {
   std::array<Value *, 5> Args = {Row, Col, Ptr, Stride, TileDef};
 
   Instruction *TileStore =
-      Builder.CreateIntrinsic(Intrinsic::x86_tilestored64_internal, {}, Args);
+      Builder.CreateIntrinsic(Intrinsic::x86_tilestored64_internal, Args);
   return TileStore;
 }
 
@@ -643,7 +643,7 @@ static void replaceWithTileLoad(Use &U, Value *Ptr, bool IsPHI = false) {
   std::array<Value *, 4> Args = {Row, Col, Ptr, Stride};
 
   Value *TileLoad =
-      Builder.CreateIntrinsic(Intrinsic::x86_tileloadd64_internal, {}, Args);
+      Builder.CreateIntrinsic(Intrinsic::x86_tileloadd64_internal, Args);
   UserI->replaceUsesOfWith(V, TileLoad);
 }
 
@@ -1084,7 +1084,7 @@ bool X86LowerAMXCast::combineCastStore(IntrinsicInst *Cast, StoreInst *ST) {
   assert(Tile->getType()->isX86_AMXTy() && "Not Tile Operand!");
 
   // TODO: Specially handle the multi-use case.
-  if (Tile->getNumUses() != 1)
+  if (!Tile->hasOneUse())
     return false;
 
   // We don't fetch shape from tilestore, we only get shape from tiledef,
@@ -1124,7 +1124,7 @@ bool X86LowerAMXCast::combineCastStore(IntrinsicInst *Cast, StoreInst *ST) {
   Value *Stride = Builder.CreateSExt(Col, Builder.getInt64Ty());
   Value *I8Ptr = Builder.CreateBitCast(ST->getOperand(1), Builder.getPtrTy());
   std::array<Value *, 5> Args = {Row, Col, I8Ptr, Stride, Tile};
-  Builder.CreateIntrinsic(Intrinsic::x86_tilestored64_internal, {}, Args);
+  Builder.CreateIntrinsic(Intrinsic::x86_tilestored64_internal, Args);
   return true;
 }
 
@@ -1169,7 +1169,7 @@ bool X86LowerAMXCast::combineLoadCast(IntrinsicInst *Cast, LoadInst *LD) {
   std::array<Value *, 4> Args = {Row, Col, I8Ptr, Stride};
 
   Value *NewInst =
-      Builder.CreateIntrinsic(Intrinsic::x86_tileloadd64_internal, {}, Args);
+      Builder.CreateIntrinsic(Intrinsic::x86_tileloadd64_internal, Args);
   Cast->replaceAllUsesWith(NewInst);
 
   return EraseLoad;
@@ -1198,7 +1198,6 @@ bool X86LowerAMXCast::combineLdSt(SmallVectorImpl<Instruction *> &Casts) {
       for (auto *Store : DeadStores)
         Store->eraseFromParent();
     } else { // x86_cast_vector_to_tile
-      SmallVector<Instruction *, 2> DeadLoads;
       auto *Load = dyn_cast<LoadInst>(Cast->getOperand(0));
       if (!Load || !Load->hasOneUse())
         continue;
@@ -1357,7 +1356,7 @@ bool X86LowerAMXCast::transformAMXCast(IntrinsicInst *AMXCast) {
     std::array<Value *, 4> Args = {
         Row, Col, I8Ptr, Builder.CreateSExt(Col, Builder.getInt64Ty())};
     Value *NewInst =
-        Builder.CreateIntrinsic(Intrinsic::x86_tileloadd64_internal, {}, Args);
+        Builder.CreateIntrinsic(Intrinsic::x86_tileloadd64_internal, Args);
     AMXCast->replaceAllUsesWith(NewInst);
     AMXCast->eraseFromParent();
   } else {
@@ -1376,7 +1375,7 @@ bool X86LowerAMXCast::transformAMXCast(IntrinsicInst *AMXCast) {
     Value *Col = II->getOperand(1);
     std::array<Value *, 5> Args = {
         Row, Col, I8Ptr, Builder.CreateSExt(Col, Builder.getInt64Ty()), Src};
-    Builder.CreateIntrinsic(Intrinsic::x86_tilestored64_internal, {}, Args);
+    Builder.CreateIntrinsic(Intrinsic::x86_tilestored64_internal, Args);
     Value *NewInst = Builder.CreateLoad(AMXCast->getType(), AllocaAddr);
     AMXCast->replaceAllUsesWith(NewInst);
     AMXCast->eraseFromParent();

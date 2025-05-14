@@ -13,8 +13,8 @@
 #ifndef FORTRAN_OPTIMIZER_TRANSFORMS_DEBUGTYPEGENERATOR_H
 #define FORTRAN_OPTIMIZER_TRANSFORMS_DEBUGTYPEGENERATOR_H
 
-#include "flang/Optimizer/CodeGen/CGOps.h"
 #include "flang/Optimizer/CodeGen/TypeConverter.h"
+#include "flang/Optimizer/Dialect/FIRCG/CGOps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"

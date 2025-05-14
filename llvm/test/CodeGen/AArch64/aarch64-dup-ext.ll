@@ -312,15 +312,14 @@ define <4 x i32> @nonsplat_shuffleinsert2(<4 x i16> %b, i16 %b0, i16 %b1, i16 %b
 ; CHECK-GI-LABEL: nonsplat_shuffleinsert2:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    sxth w8, w0
-; CHECK-GI-NEXT:    sshll v0.4s, v0.4h, #0
-; CHECK-GI-NEXT:    mov v1.s[0], w8
-; CHECK-GI-NEXT:    sxth w8, w1
-; CHECK-GI-NEXT:    mov v1.s[1], w8
+; CHECK-GI-NEXT:    sxth w9, w1
+; CHECK-GI-NEXT:    fmov s1, w8
 ; CHECK-GI-NEXT:    sxth w8, w2
-; CHECK-GI-NEXT:    mov v1.s[2], w8
+; CHECK-GI-NEXT:    mov v1.h[1], w9
+; CHECK-GI-NEXT:    mov v1.h[2], w8
 ; CHECK-GI-NEXT:    sxth w8, w3
-; CHECK-GI-NEXT:    mov v1.s[3], w8
-; CHECK-GI-NEXT:    mul v0.4s, v1.4s, v0.4s
+; CHECK-GI-NEXT:    mov v1.h[3], w8
+; CHECK-GI-NEXT:    smull v0.4s, v1.4h, v0.4h
 ; CHECK-GI-NEXT:    ret
 entry:
   %s0 = sext i16 %b0 to i32
@@ -352,17 +351,16 @@ define void @typei1_orig(i64 %a, ptr %p, ptr %q) {
 ;
 ; CHECK-GI-LABEL: typei1_orig:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ldr q1, [x2]
+; CHECK-GI-NEXT:    ldr q0, [x2]
 ; CHECK-GI-NEXT:    cmp x0, #0
-; CHECK-GI-NEXT:    movi v0.2d, #0xffffffffffffffff
 ; CHECK-GI-NEXT:    cset w8, gt
-; CHECK-GI-NEXT:    neg v1.8h, v1.8h
-; CHECK-GI-NEXT:    dup v2.8h, w8
-; CHECK-GI-NEXT:    mvn v0.16b, v0.16b
-; CHECK-GI-NEXT:    mul v1.8h, v1.8h, v2.8h
-; CHECK-GI-NEXT:    cmeq v1.8h, v1.8h, #0
+; CHECK-GI-NEXT:    neg v0.8h, v0.8h
+; CHECK-GI-NEXT:    dup v1.8h, w8
+; CHECK-GI-NEXT:    mul v0.8h, v0.8h, v1.8h
+; CHECK-GI-NEXT:    movi v1.2d, #0xffffffffffffffff
+; CHECK-GI-NEXT:    cmtst v0.8h, v0.8h, v0.8h
 ; CHECK-GI-NEXT:    mvn v1.16b, v1.16b
-; CHECK-GI-NEXT:    uzp1 v0.16b, v1.16b, v0.16b
+; CHECK-GI-NEXT:    uzp1 v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    shl v0.16b, v0.16b, #7
 ; CHECK-GI-NEXT:    sshr v0.16b, v0.16b, #7
 ; CHECK-GI-NEXT:    str q0, [x1]
