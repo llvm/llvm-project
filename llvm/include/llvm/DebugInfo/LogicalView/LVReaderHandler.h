@@ -13,13 +13,13 @@
 #ifndef LLVM_DEBUGINFO_LOGICALVIEW_READERS_LVREADERHANDLER_H
 #define LLVM_DEBUGINFO_LOGICALVIEW_READERS_LVREADERHANDLER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVReader.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/MachOUniversal.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include <string>
@@ -54,7 +54,7 @@ class LVReaderHandler {
   Error handleBuffer(LVReaders &Readers, StringRef Filename,
                      MemoryBufferRef Buffer, StringRef ExePath = {});
   LLVM_ABI Error handleFile(LVReaders &Readers, StringRef Filename,
-                   StringRef ExePath = {});
+                            StringRef ExePath = {});
   Error handleMach(LVReaders &Readers, StringRef Filename,
                    object::MachOUniversalBinary &Mach);
   Error handleObject(LVReaders &Readers, StringRef Filename,

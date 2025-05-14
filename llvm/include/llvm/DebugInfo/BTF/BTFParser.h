@@ -22,10 +22,10 @@
 #ifndef LLVM_DEBUGINFO_BTF_BTFPARSER_H
 #define LLVM_DEBUGINFO_BTF_BTFPARSER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/DebugInfo/BTF/BTF.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataExtractor.h"
 
 namespace llvm {
@@ -88,13 +88,14 @@ public:
   // Return nullptr if no information found.
   // If information is present, return a pointer to object
   // owned by this class.
-  LLVM_ABI const BTF::BPFFieldReloc *findFieldReloc(SectionedAddress Address) const;
+  LLVM_ABI const BTF::BPFFieldReloc *
+  findFieldReloc(SectionedAddress Address) const;
 
   // Return a human readable representation of the CO-RE relocation
   // record, this is for display purpose only.
   // See implementation for details.
   LLVM_ABI void symbolize(const BTF::BPFFieldReloc *Reloc,
-                 SmallVectorImpl<char> &Result) const;
+                          SmallVectorImpl<char> &Result) const;
 
   // Lookup BTF type definition with a specific index.
   // Return nullptr if no information found.

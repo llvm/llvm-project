@@ -13,9 +13,9 @@
 #ifndef LLVM_DEBUGINFO_PDB_NATIVE_PDBSTRINGTABLEBUILDER_H
 #define LLVM_DEBUGINFO_PDB_NATIVE_PDBSTRINGTABLEBUILDER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/CodeView/DebugStringTableSubsection.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
 

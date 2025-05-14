@@ -9,7 +9,6 @@
 #ifndef LLVM_DEBUGINFO_DWARF_DWARFCONTEXT_H
 #define LLVM_DEBUGINFO_DWARF_DWARFCONTEXT_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
@@ -21,6 +20,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Error.h"
 #include "llvm/TargetParser/Host.h"

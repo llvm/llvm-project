@@ -9,8 +9,8 @@
 #ifndef LLVM_DEBUGINFO_PDB_NATIVE_NATIVERAWSYMBOL_H
 #define LLVM_DEBUGINFO_PDB_NATIVE_NATIVERAWSYMBOL_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/DebugInfo/PDB/IPDBRawSymbol.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <memory>
 

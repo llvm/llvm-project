@@ -9,13 +9,13 @@
 #ifndef LLVM_DEBUGINFO_GSYM_GSYMREADER_H
 #define LLVM_DEBUGINFO_GSYM_GSYMREADER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/DebugInfo/GSYM/FileEntry.h"
 #include "llvm/DebugInfo/GSYM/FunctionInfo.h"
 #include "llvm/DebugInfo/GSYM/Header.h"
 #include "llvm/DebugInfo/GSYM/LineEntry.h"
 #include "llvm/DebugInfo/GSYM/StringTable.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorOr.h"
@@ -114,7 +114,8 @@ public:
   /// \returns An expected FunctionInfo that contains the function info object
   /// or an error object that indicates reason for failing get the function
   /// info object.
-  LLVM_ABI llvm::Expected<FunctionInfo> getFunctionInfoAtIndex(uint64_t AddrIdx) const;
+  LLVM_ABI llvm::Expected<FunctionInfo>
+  getFunctionInfoAtIndex(uint64_t AddrIdx) const;
 
   /// Lookup an address in the a GSYM.
   ///
@@ -150,7 +151,8 @@ public:
   ///
   /// \returns A vector of LookupResult objects, where the first element is the
   /// primary result, followed by results for any merged functions
-  LLVM_ABI llvm::Expected<std::vector<LookupResult>> lookupAll(uint64_t Addr) const;
+  LLVM_ABI llvm::Expected<std::vector<LookupResult>>
+  lookupAll(uint64_t Addr) const;
 
   /// Get a string from the string table.
   ///
@@ -189,7 +191,8 @@ public:
   ///
   /// \param Indent The indentation as number of spaces. Used when dumping as an
   /// item within MergedFunctionsInfo.
-  LLVM_ABI void dump(raw_ostream &OS, const FunctionInfo &FI, uint32_t Indent = 0);
+  LLVM_ABI void dump(raw_ostream &OS, const FunctionInfo &FI,
+                     uint32_t Indent = 0);
 
   /// Dump a MergedFunctionsInfo object.
   ///
@@ -223,7 +226,7 @@ public:
   /// \param Indent The indentation as number of spaces. Used when dumping as an
   /// item from within MergedFunctionsInfo.
   LLVM_ABI void dump(raw_ostream &OS, const CallSiteInfoCollection &CSIC,
-            uint32_t Indent = 0);
+                     uint32_t Indent = 0);
 
   /// Dump a LineTable object.
   ///
@@ -250,7 +253,8 @@ public:
   ///
   /// \param Indent The indentation as number of spaces. Used for recurive
   /// dumping.
-  LLVM_ABI void dump(raw_ostream &OS, const InlineInfo &II, uint32_t Indent = 0);
+  LLVM_ABI void dump(raw_ostream &OS, const InlineInfo &II,
+                     uint32_t Indent = 0);
 
   /// Dump a FileEntry object.
   ///
@@ -362,7 +366,6 @@ protected:
   /// object that indicates reason for failing to read the GSYM.
   LLVM_ABI static llvm::Expected<llvm::gsym::GsymReader>
   create(std::unique_ptr<MemoryBuffer> &MemBuffer);
-
 
   /// Given an address, find the address index.
   ///

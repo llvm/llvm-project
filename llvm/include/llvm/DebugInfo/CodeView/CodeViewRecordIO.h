@@ -9,12 +9,12 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_CODEVIEWRECORDIO_H
 #define LLVM_DEBUGINFO_CODEVIEW_CODEVIEWRECORDIO_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/CodeView/CodeViewError.h"
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/BinaryStreamWriter.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <cassert>
 #include <cstdint>
@@ -138,7 +138,7 @@ public:
   LLVM_ABI Error mapGuid(GUID &Guid, const Twine &Comment = "");
 
   LLVM_ABI Error mapStringZVectorZ(std::vector<StringRef> &Value,
-                          const Twine &Comment = "");
+                                   const Twine &Comment = "");
 
   template <typename SizeType, typename T, typename ElementMapper>
   Error mapVectorN(T &Items, const ElementMapper &Mapper,
@@ -198,9 +198,10 @@ public:
     return Error::success();
   }
 
-  LLVM_ABI Error mapByteVectorTail(ArrayRef<uint8_t> &Bytes, const Twine &Comment = "");
+  LLVM_ABI Error mapByteVectorTail(ArrayRef<uint8_t> &Bytes,
+                                   const Twine &Comment = "");
   LLVM_ABI Error mapByteVectorTail(std::vector<uint8_t> &Bytes,
-                          const Twine &Comment = "");
+                                   const Twine &Comment = "");
 
   LLVM_ABI Error padToAlignment(uint32_t Align);
   LLVM_ABI Error skipPadding();

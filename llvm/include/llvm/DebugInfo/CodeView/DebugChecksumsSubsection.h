@@ -9,7 +9,6 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_DEBUGCHECKSUMSSUBSECTION_H
 #define LLVM_DEBUGINFO_CODEVIEW_DEBUGCHECKSUMSSUBSECTION_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -18,6 +17,7 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/BinaryStreamArray.h"
 #include "llvm/Support/BinaryStreamRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
 #include <vector>
@@ -44,7 +44,7 @@ public:
   using ContextType = void;
 
   LLVM_ABI Error operator()(BinaryStreamRef Stream, uint32_t &Len,
-                   codeview::FileChecksumEntry &Item);
+                            codeview::FileChecksumEntry &Item);
 };
 
 namespace codeview {

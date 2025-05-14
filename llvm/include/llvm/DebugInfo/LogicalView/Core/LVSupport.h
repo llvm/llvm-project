@@ -13,10 +13,10 @@
 #ifndef LLVM_DEBUGINFO_LOGICALVIEW_CORE_LVSUPPORT_H
 #define LLVM_DEBUGINFO_LOGICALVIEW_CORE_LVSUPPORT_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVStringPool.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/Path.h"
@@ -233,7 +233,7 @@ inline std::string formattedNames(StringRef Name1, StringRef Name2) {
 LLVM_ABI LVLexicalComponent getInnerComponent(StringRef Name);
 LLVM_ABI LVStringRefs getAllLexicalComponents(StringRef Name);
 LLVM_ABI std::string getScopedName(const LVStringRefs &Components,
-                          StringRef BaseName = {});
+                                   StringRef BaseName = {});
 
 // These are the values assigned to the debug location record IDs.
 // See DebugInfo/CodeView/CodeViewSymbols.def.

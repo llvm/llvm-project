@@ -9,11 +9,11 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_FORMATTERS_H
 #define LLVM_DEBUGINFO_CODEVIEW_FORMATTERS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/CodeView/GUID.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"

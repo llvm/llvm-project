@@ -13,13 +13,13 @@
 #ifndef LLVM_DEBUGINFO_SYMBOLIZE_SYMBOLIZE_H
 #define LLVM_DEBUGINFO_SYMBOLIZE_SYMBOLIZE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/ADT/simple_ilist.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/BuildID.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <algorithm>
 #include <cstdint>
@@ -78,12 +78,13 @@ public:
   LLVM_ABI ~LLVMSymbolizer();
 
   // Overloads accepting ObjectFile does not support COFF currently
-  LLVM_ABI Expected<DILineInfo> symbolizeCode(const ObjectFile &Obj,
-                                     object::SectionedAddress ModuleOffset);
-  LLVM_ABI Expected<DILineInfo> symbolizeCode(StringRef ModuleName,
-                                     object::SectionedAddress ModuleOffset);
-  LLVM_ABI Expected<DILineInfo> symbolizeCode(ArrayRef<uint8_t> BuildID,
-                                     object::SectionedAddress ModuleOffset);
+  LLVM_ABI Expected<DILineInfo>
+  symbolizeCode(const ObjectFile &Obj, object::SectionedAddress ModuleOffset);
+  LLVM_ABI Expected<DILineInfo>
+  symbolizeCode(StringRef ModuleName, object::SectionedAddress ModuleOffset);
+  LLVM_ABI Expected<DILineInfo>
+  symbolizeCode(ArrayRef<uint8_t> BuildID,
+                object::SectionedAddress ModuleOffset);
   LLVM_ABI Expected<DIInliningInfo>
   symbolizeInlinedCode(const ObjectFile &Obj,
                        object::SectionedAddress ModuleOffset);
@@ -94,12 +95,13 @@ public:
   symbolizeInlinedCode(ArrayRef<uint8_t> BuildID,
                        object::SectionedAddress ModuleOffset);
 
-  LLVM_ABI Expected<DIGlobal> symbolizeData(const ObjectFile &Obj,
-                                   object::SectionedAddress ModuleOffset);
-  LLVM_ABI Expected<DIGlobal> symbolizeData(StringRef ModuleName,
-                                   object::SectionedAddress ModuleOffset);
-  LLVM_ABI Expected<DIGlobal> symbolizeData(ArrayRef<uint8_t> BuildID,
-                                   object::SectionedAddress ModuleOffset);
+  LLVM_ABI Expected<DIGlobal>
+  symbolizeData(const ObjectFile &Obj, object::SectionedAddress ModuleOffset);
+  LLVM_ABI Expected<DIGlobal>
+  symbolizeData(StringRef ModuleName, object::SectionedAddress ModuleOffset);
+  LLVM_ABI Expected<DIGlobal>
+  symbolizeData(ArrayRef<uint8_t> BuildID,
+                object::SectionedAddress ModuleOffset);
   LLVM_ABI Expected<std::vector<DILocal>>
   symbolizeFrame(const ObjectFile &Obj, object::SectionedAddress ModuleOffset);
   LLVM_ABI Expected<std::vector<DILocal>>
@@ -133,7 +135,8 @@ public:
   /// Only one attempt is made to load a module, and errors during loading are
   /// only reported once. Subsequent calls to get module info for a module that
   /// failed to load will return nullptr.
-  LLVM_ABI Expected<SymbolizableModule *> getOrCreateModuleInfo(StringRef ModuleName);
+  LLVM_ABI Expected<SymbolizableModule *>
+  getOrCreateModuleInfo(StringRef ModuleName);
 
 private:
   // Bundles together object file with code/data and object file with

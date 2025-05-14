@@ -9,13 +9,13 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_CONTINUATIONRECORDBUILDER_H
 #define LLVM_DEBUGINFO_CODEVIEW_CONTINUATIONRECORDBUILDER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeRecordMapping.h"
 #include "llvm/Support/BinaryByteStream.h"
 #include "llvm/Support/BinaryStreamWriter.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <vector>
 

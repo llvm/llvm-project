@@ -9,8 +9,8 @@
 #ifndef LLVM_DEBUGINFO_DWARF_DWARFDEBUGRANGELIST_H
 #define LLVM_DEBUGINFO_DWARF_DWARFDEBUGRANGELIST_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/DebugInfo/DWARF/DWARFAddressRange.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <vector>
 

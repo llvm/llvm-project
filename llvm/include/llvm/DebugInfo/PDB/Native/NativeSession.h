@@ -9,13 +9,13 @@
 #ifndef LLVM_DEBUGINFO_PDB_NATIVE_NATIVESESSION_H
 #define LLVM_DEBUGINFO_PDB_NATIVE_NATIVESESSION_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/IntervalMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/PDB/IPDBSession.h"
 #include "llvm/DebugInfo/PDB/Native/SymbolCache.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {

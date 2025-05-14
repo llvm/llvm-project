@@ -9,11 +9,11 @@
 #ifndef LLVM_DEBUGINFO_DWARF_DWARFDEBUGFRAME_H
 #define LLVM_DEBUGINFO_DWARF_DWARFDEBUGFRAME_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/DebugInfo/DWARF/DWARFExpression.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/TargetParser/Triple.h"
 #include <map>
@@ -305,7 +305,7 @@ public:
   /// \param IndentLevel specify the indent level as an integer. The UnwindRow
   /// will be output to the stream preceded by 2 * IndentLevel number of spaces.
   LLVM_ABI void dump(raw_ostream &OS, DIDumpOptions DumpOpts,
-            unsigned IndentLevel = 0) const;
+                     unsigned IndentLevel = 0) const;
 };
 
 LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const UnwindRow &Row);
@@ -350,7 +350,7 @@ public:
   /// \param IndentLevel specify the indent level as an integer. The UnwindRow
   /// will be output to the stream preceded by 2 * IndentLevel number of spaces.
   LLVM_ABI void dump(raw_ostream &OS, DIDumpOptions DumpOpts,
-            unsigned IndentLevel = 0) const;
+                     unsigned IndentLevel = 0) const;
 
   /// Create an UnwindTable from a Common Information Entry (CIE).
   ///
@@ -422,10 +422,10 @@ public:
     std::optional<DWARFExpression> Expression;
 
     LLVM_ABI Expected<uint64_t> getOperandAsUnsigned(const CFIProgram &CFIP,
-                                            uint32_t OperandIdx) const;
+                                                     uint32_t OperandIdx) const;
 
     LLVM_ABI Expected<int64_t> getOperandAsSigned(const CFIProgram &CFIP,
-                                         uint32_t OperandIdx) const;
+                                                  uint32_t OperandIdx) const;
   };
 
   using InstrList = std::vector<Instruction>;
@@ -453,10 +453,12 @@ public:
   /// starting at *Offset and ending at EndOffset. *Offset is updated
   /// to EndOffset upon successful parsing, or indicates the offset
   /// where a problem occurred in case an error is returned.
-  LLVM_ABI Error parse(DWARFDataExtractor Data, uint64_t *Offset, uint64_t EndOffset);
+  LLVM_ABI Error parse(DWARFDataExtractor Data, uint64_t *Offset,
+                       uint64_t EndOffset);
 
-  LLVM_ABI void dump(raw_ostream &OS, DIDumpOptions DumpOpts, unsigned IndentLevel,
-            std::optional<uint64_t> InitialLocation) const;
+  LLVM_ABI void dump(raw_ostream &OS, DIDumpOptions DumpOpts,
+                     unsigned IndentLevel,
+                     std::optional<uint64_t> InitialLocation) const;
 
   void addInstruction(const Instruction &I) { Instructions.push_back(I); }
 
@@ -683,13 +685,13 @@ public:
   // it is a .debug_frame section. EHFrameAddress should be different
   // than zero for correct parsing of .eh_frame addresses when they
   // use a PC-relative encoding.
-  LLVM_ABI DWARFDebugFrame(Triple::ArchType Arch,
-                  bool IsEH = false, uint64_t EHFrameAddress = 0);
+  LLVM_ABI DWARFDebugFrame(Triple::ArchType Arch, bool IsEH = false,
+                           uint64_t EHFrameAddress = 0);
   LLVM_ABI ~DWARFDebugFrame();
 
   /// Dump the section data into the given stream.
   LLVM_ABI void dump(raw_ostream &OS, DIDumpOptions DumpOpts,
-            std::optional<uint64_t> Offset) const;
+                     std::optional<uint64_t> Offset) const;
 
   /// Parse the section from raw data. \p Data is assumed to contain the whole
   /// frame section contents to be parsed.

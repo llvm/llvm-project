@@ -9,10 +9,10 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_CVTYPEVISITOR_H
 #define LLVM_DEBUGINFO_CODEVIEW_CVTYPEVISITOR_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {
@@ -32,23 +32,27 @@ enum VisitorDataSource {
 };
 
 LLVM_ABI Error visitTypeRecord(CVType &Record, TypeIndex Index,
-                      TypeVisitorCallbacks &Callbacks,
-                      VisitorDataSource Source = VDS_BytesPresent);
+                               TypeVisitorCallbacks &Callbacks,
+                               VisitorDataSource Source = VDS_BytesPresent);
 LLVM_ABI Error visitTypeRecord(CVType &Record, TypeVisitorCallbacks &Callbacks,
-                      VisitorDataSource Source = VDS_BytesPresent);
+                               VisitorDataSource Source = VDS_BytesPresent);
 
-LLVM_ABI Error visitMemberRecord(CVMemberRecord Record, TypeVisitorCallbacks &Callbacks,
-                        VisitorDataSource Source = VDS_BytesPresent);
+LLVM_ABI Error visitMemberRecord(CVMemberRecord Record,
+                                 TypeVisitorCallbacks &Callbacks,
+                                 VisitorDataSource Source = VDS_BytesPresent);
 LLVM_ABI Error visitMemberRecord(TypeLeafKind Kind, ArrayRef<uint8_t> Record,
-                        TypeVisitorCallbacks &Callbacks);
+                                 TypeVisitorCallbacks &Callbacks);
 
 LLVM_ABI Error visitMemberRecordStream(ArrayRef<uint8_t> FieldList,
-                              TypeVisitorCallbacks &Callbacks);
+                                       TypeVisitorCallbacks &Callbacks);
 
-LLVM_ABI Error visitTypeStream(const CVTypeArray &Types, TypeVisitorCallbacks &Callbacks,
-                      VisitorDataSource Source = VDS_BytesPresent);
-LLVM_ABI Error visitTypeStream(CVTypeRange Types, TypeVisitorCallbacks &Callbacks);
-LLVM_ABI Error visitTypeStream(TypeCollection &Types, TypeVisitorCallbacks &Callbacks);
+LLVM_ABI Error visitTypeStream(const CVTypeArray &Types,
+                               TypeVisitorCallbacks &Callbacks,
+                               VisitorDataSource Source = VDS_BytesPresent);
+LLVM_ABI Error visitTypeStream(CVTypeRange Types,
+                               TypeVisitorCallbacks &Callbacks);
+LLVM_ABI Error visitTypeStream(TypeCollection &Types,
+                               TypeVisitorCallbacks &Callbacks);
 
 } // end namespace codeview
 } // end namespace llvm

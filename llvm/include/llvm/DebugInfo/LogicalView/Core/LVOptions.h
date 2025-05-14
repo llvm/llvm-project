@@ -14,12 +14,12 @@
 #ifndef LLVM_DEBUGINFO_LOGICALVIEW_CORE_LVOPTIONS_H
 #define LLVM_DEBUGINFO_LOGICALVIEW_CORE_LVOPTIONS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVLine.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVScope.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVSymbol.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVType.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Regex.h"
 #include <set>
 #include <string>

@@ -9,9 +9,9 @@
 #ifndef LLVM_DEBUGINFO_DWARF_DWARFDEBUGLOC_H
 #define LLVM_DEBUGINFO_DWARF_DWARFDEBUGLOC_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Errc.h"
 #include <cstdint>
 
@@ -65,10 +65,11 @@ public:
   /// iff it has successfully reched the end of the list. This means that one
   /// can attempt to parse another list after the current one (\p Offset will be
   /// updated to point past the end of the current list).
-  LLVM_ABI bool dumpLocationList(uint64_t *Offset, raw_ostream &OS,
-                        std::optional<object::SectionedAddress> BaseAddr,
-                        const DWARFObject &Obj, DWARFUnit *U,
-                        DIDumpOptions DumpOpts, unsigned Indent) const;
+  LLVM_ABI bool
+  dumpLocationList(uint64_t *Offset, raw_ostream &OS,
+                   std::optional<object::SectionedAddress> BaseAddr,
+                   const DWARFObject &Obj, DWARFUnit *U, DIDumpOptions DumpOpts,
+                   unsigned Indent) const;
 
   LLVM_ABI Error visitAbsoluteLocationList(
       uint64_t Offset, std::optional<object::SectionedAddress> BaseAddr,

@@ -9,13 +9,13 @@
 #ifndef LLVM_DEBUGINFO_DWARF_DWARFACCELERATORTABLE_H
 #define LLVM_DEBUGINFO_DWARF_DWARFACCELERATORTABLE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <utility>
 
@@ -246,7 +246,7 @@ public:
   public:
     /// Construct a new iterator for the entries at \p DataOffset.
     LLVM_ABI SameNameIterator(const AppleAcceleratorTable &AccelTable,
-                     uint64_t DataOffset);
+                              uint64_t DataOffset);
 
     const Entry &operator*() {
       uint64_t OffsetCopy = Offset;
@@ -866,7 +866,8 @@ struct ObjCSelectorNames {
 /// If `Name` is the AT_name of a DIE which refers to an Objective-C selector,
 /// returns an instance of ObjCSelectorNames. The Selector and ClassName fields
 /// are guaranteed to be non-empty in the result.
-LLVM_ABI std::optional<ObjCSelectorNames> getObjCNamesIfSelector(StringRef Name);
+LLVM_ABI std::optional<ObjCSelectorNames>
+getObjCNamesIfSelector(StringRef Name);
 
 } // end namespace llvm
 

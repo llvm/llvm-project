@@ -14,9 +14,9 @@
 #ifndef LLVM_DEBUGINFO_LOGICALVIEW_CORE_LVELEMENT_H
 #define LLVM_DEBUGINFO_LOGICALVIEW_CORE_LVELEMENT_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVObject.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
 #include <map>
 #include <set>

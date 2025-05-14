@@ -9,8 +9,8 @@
 #ifndef LLVM_DEBUGINFO_GSYM_MERGEDFUNCTIONSINFO_H
 #define LLVM_DEBUGINFO_GSYM_MERGEDFUNCTIONSINFO_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/DebugInfo/GSYM/ExtractRanges.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <stdint.h>
 #include <vector>
@@ -54,8 +54,8 @@ struct MergedFunctionsInfo {
   ///
   /// \returns An MergedFunctionsInfo or an error describing the issue that was
   /// encountered during decoding.
-  LLVM_ABI static llvm::Expected<MergedFunctionsInfo> decode(DataExtractor &Data,
-                                                    uint64_t BaseAddr);
+  LLVM_ABI static llvm::Expected<MergedFunctionsInfo>
+  decode(DataExtractor &Data, uint64_t BaseAddr);
 
   /// Encode this MergedFunctionsInfo object into FileWriter stream.
   ///
@@ -66,7 +66,8 @@ struct MergedFunctionsInfo {
   LLVM_ABI llvm::Error encode(FileWriter &O) const;
 };
 
-LLVM_ABI bool operator==(const MergedFunctionsInfo &LHS, const MergedFunctionsInfo &RHS);
+LLVM_ABI bool operator==(const MergedFunctionsInfo &LHS,
+                         const MergedFunctionsInfo &RHS);
 
 } // namespace gsym
 } // namespace llvm

@@ -9,10 +9,10 @@
 #ifndef LLVM_DEBUGINFO_PDB_PDBSYMBOLDATA_H
 #define LLVM_DEBUGINFO_PDB_PDBSYMBOLDATA_H
 
-#include "llvm/Support/Compiler.h"
 #include "PDBSymbol.h"
 #include "PDBTypes.h"
 #include "llvm/DebugInfo/PDB/IPDBRawSymbol.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

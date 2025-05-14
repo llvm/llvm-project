@@ -9,10 +9,10 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_TYPEHASHING_H
 #define LLVM_DEBUGINFO_CODEVIEW_TYPEHASHING_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeCollection.h"
@@ -104,9 +104,10 @@ struct GloballyHashedType {
   /// this record.  Due to the nature of global hashes incorporating the hashes
   /// of referenced records, this function requires a list of types and ids
   /// that RecordData might reference, indexable by TypeIndex.
-  LLVM_ABI static GloballyHashedType hashType(ArrayRef<uint8_t> RecordData,
-                                     ArrayRef<GloballyHashedType> PreviousTypes,
-                                     ArrayRef<GloballyHashedType> PreviousIds);
+  LLVM_ABI static GloballyHashedType
+  hashType(ArrayRef<uint8_t> RecordData,
+           ArrayRef<GloballyHashedType> PreviousTypes,
+           ArrayRef<GloballyHashedType> PreviousIds);
 
   /// Given a sequence of bytes representing a record, compute a global hash for
   /// this record.  Due to the nature of global hashes incorporating the hashes

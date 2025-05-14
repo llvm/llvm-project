@@ -9,7 +9,6 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_MERGINGTYPETABLEBUILDER_H
 #define LLVM_DEBUGINFO_CODEVIEW_MERGINGTYPETABLEBUILDER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
@@ -18,6 +17,7 @@
 #include "llvm/DebugInfo/CodeView/TypeCollection.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 
 namespace llvm {

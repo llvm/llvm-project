@@ -14,9 +14,9 @@
 #ifndef LLVM_DEBUGINFO_LOGICALVIEW_CORE_LVREADER_H
 #define LLVM_DEBUGINFO_LOGICALVIEW_CORE_LVREADER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVOptions.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVRange.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ScopedPrinter.h"
@@ -43,7 +43,7 @@ public:
 
   LLVM_ABI Error createSplitFolder(StringRef Where);
   LLVM_ABI std::error_code open(std::string Name, std::string Extension,
-                       raw_ostream &OS);
+                                raw_ostream &OS);
   void close() {
     if (OutputFile) {
       OutputFile->os().close();

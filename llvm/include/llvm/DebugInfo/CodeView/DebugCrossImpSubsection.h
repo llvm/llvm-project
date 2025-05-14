@@ -9,13 +9,13 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_DEBUGCROSSIMPSUBSECTION_H
 #define LLVM_DEBUGINFO_CODEVIEW_DEBUGCROSSIMPSUBSECTION_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/DebugSubsection.h"
 #include "llvm/Support/BinaryStreamArray.h"
 #include "llvm/Support/BinaryStreamRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
@@ -39,7 +39,7 @@ public:
   using ContextType = void;
 
   LLVM_ABI Error operator()(BinaryStreamRef Stream, uint32_t &Len,
-                   codeview::CrossModuleImportItem &Item);
+                            codeview::CrossModuleImportItem &Item);
 };
 
 namespace codeview {
@@ -68,7 +68,8 @@ private:
   ReferenceArray References;
 };
 
-class LLVM_ABI DebugCrossModuleImportsSubsection final : public DebugSubsection {
+class LLVM_ABI DebugCrossModuleImportsSubsection final
+    : public DebugSubsection {
 public:
   explicit DebugCrossModuleImportsSubsection(
       DebugStringTableSubsection &Strings)

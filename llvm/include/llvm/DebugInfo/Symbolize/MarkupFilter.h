@@ -15,10 +15,10 @@
 #ifndef LLVM_DEBUGINFO_SYMBOLIZE_MARKUPFILTER_H
 #define LLVM_DEBUGINFO_SYMBOLIZE_MARKUPFILTER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/DebugInfo/Symbolize/Markup.h"
 #include "llvm/Object/BuildID.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <map>
@@ -33,7 +33,7 @@ class LLVMSymbolizer;
 class MarkupFilter {
 public:
   LLVM_ABI MarkupFilter(raw_ostream &OS, LLVMSymbolizer &Symbolizer,
-               std::optional<bool> ColorsEnabled = std::nullopt);
+                        std::optional<bool> ColorsEnabled = std::nullopt);
 
   /// Filters a line containing symbolizer markup and writes the human-readable
   /// results to the output stream.

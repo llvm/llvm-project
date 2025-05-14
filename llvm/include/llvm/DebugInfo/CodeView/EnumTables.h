@@ -9,10 +9,10 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_ENUMTABLES_H
 #define LLVM_DEBUGINFO_CODEVIEW_ENUMTABLES_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 
 namespace llvm {

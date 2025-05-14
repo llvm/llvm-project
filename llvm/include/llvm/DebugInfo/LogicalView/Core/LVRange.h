@@ -14,9 +14,9 @@
 #ifndef LLVM_DEBUGINFO_LOGICALVIEW_CORE_LVRANGE_H
 #define LLVM_DEBUGINFO_LOGICALVIEW_CORE_LVRANGE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/IntervalTree.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVObject.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace logicalview {

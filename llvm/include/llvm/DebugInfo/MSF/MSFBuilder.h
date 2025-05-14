@@ -9,11 +9,11 @@
 #ifndef LLVM_DEBUGINFO_MSF_MSFBUILDER_H
 #define LLVM_DEBUGINFO_MSF_MSFBUILDER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
 #include <utility>
@@ -56,9 +56,9 @@ public:
   /// is specified, or `MinBlockCount` does not leave enough room for the
   /// mandatory reserved blocks required by an MSF file.
   LLVM_ABI static Expected<MSFBuilder> create(BumpPtrAllocator &Allocator,
-                                     uint32_t BlockSize,
-                                     uint32_t MinBlockCount = 0,
-                                     bool CanGrow = true);
+                                              uint32_t BlockSize,
+                                              uint32_t MinBlockCount = 0,
+                                              bool CanGrow = true);
 
   /// Request the block map to be at a specific block address.  This is useful
   /// when editing a MSF and you want the layout to be as stable as possible.
@@ -72,7 +72,8 @@ public:
   /// particular stream to occupy the original set of blocks.  If the given
   /// blocks are already allocated, or if the number of blocks specified is
   /// incorrect for the given stream size, this function will return an Error.
-  LLVM_ABI Expected<uint32_t> addStream(uint32_t Size, ArrayRef<uint32_t> Blocks);
+  LLVM_ABI Expected<uint32_t> addStream(uint32_t Size,
+                                        ArrayRef<uint32_t> Blocks);
 
   /// Add a stream to the MSF file with the given size, occupying any available
   /// blocks that the builder decides to use.  This is useful when building a
@@ -115,7 +116,8 @@ public:
   LLVM_ABI Expected<MSFLayout> generateLayout();
 
   /// Write the MSF layout to the underlying file.
-  LLVM_ABI Expected<FileBufferByteStream> commit(StringRef Path, MSFLayout &Layout);
+  LLVM_ABI Expected<FileBufferByteStream> commit(StringRef Path,
+                                                 MSFLayout &Layout);
 
   BumpPtrAllocator &getAllocator() { return Allocator; }
 

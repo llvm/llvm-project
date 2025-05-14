@@ -14,8 +14,8 @@
 #ifndef LLVM_DEBUGINFO_SYMBOLIZE_DIPRINTER_H
 #define LLVM_DEBUGINFO_SYMBOLIZE_DIPRINTER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/JSON.h"
 #include <memory>
 #include <vector>
@@ -123,7 +123,6 @@ private:
 public:
   GNUPrinter(raw_ostream &OS, ErrorHandler EH, PrinterConfig &Config)
       : PlainPrinterBase(OS, EH, Config) {}
-
 };
 
 class LLVM_ABI JSONPrinter : public DIPrinter {

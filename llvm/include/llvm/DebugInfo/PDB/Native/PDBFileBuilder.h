@@ -9,13 +9,13 @@
 #ifndef LLVM_DEBUGINFO_PDB_NATIVE_PDBFILEBUILDER_H
 #define LLVM_DEBUGINFO_PDB_NATIVE_PDBFILEBUILDER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/DebugInfo/PDB/Native/HashTable.h"
 #include "llvm/DebugInfo/PDB/Native/NamedStreamMap.h"
 #include "llvm/DebugInfo/PDB/Native/PDBStringTableBuilder.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <memory>
@@ -60,7 +60,8 @@ public:
 
   LLVM_ABI Expected<uint32_t> getNamedStreamIndex(StringRef Name) const;
   LLVM_ABI Error addNamedStream(StringRef Name, StringRef Data);
-  LLVM_ABI void addInjectedSource(StringRef Name, std::unique_ptr<MemoryBuffer> Buffer);
+  LLVM_ABI void addInjectedSource(StringRef Name,
+                                  std::unique_ptr<MemoryBuffer> Buffer);
 
 private:
   struct InjectedSourceDescriptor {

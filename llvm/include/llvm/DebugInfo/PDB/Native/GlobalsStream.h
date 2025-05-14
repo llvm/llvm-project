@@ -9,11 +9,11 @@
 #ifndef LLVM_DEBUGINFO_PDB_NATIVE_GLOBALSSTREAM_H
 #define LLVM_DEBUGINFO_PDB_NATIVE_GLOBALSSTREAM_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/PDB/Native/RawTypes.h"
 #include "llvm/Support/BinaryStreamArray.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 
@@ -70,7 +70,8 @@ public:
 
 class GlobalsStream {
 public:
-  LLVM_ABI explicit GlobalsStream(std::unique_ptr<msf::MappedBlockStream> Stream);
+  LLVM_ABI explicit GlobalsStream(
+      std::unique_ptr<msf::MappedBlockStream> Stream);
   LLVM_ABI ~GlobalsStream();
   const GSIHashTable &getGlobalsTable() const { return GlobalsTable; }
   LLVM_ABI Error reload();

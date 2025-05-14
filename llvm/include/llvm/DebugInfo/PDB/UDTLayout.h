@@ -9,7 +9,6 @@
 #ifndef LLVM_DEBUGINFO_PDB_UDTLAYOUT_H
 #define LLVM_DEBUGINFO_PDB_UDTLAYOUT_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -21,6 +20,7 @@
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeFunctionSig.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeUDT.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeVTable.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -74,8 +74,8 @@ protected:
 class VBPtrLayoutItem : public LayoutItemBase {
 public:
   LLVM_ABI VBPtrLayoutItem(const UDTLayoutBase &Parent,
-                  std::unique_ptr<PDBSymbolTypeBuiltin> Sym, uint32_t Offset,
-                  uint32_t Size);
+                           std::unique_ptr<PDBSymbolTypeBuiltin> Sym,
+                           uint32_t Offset, uint32_t Size);
 
   bool isVBPtr() const override { return true; }
 
@@ -86,7 +86,7 @@ private:
 class DataMemberLayoutItem : public LayoutItemBase {
 public:
   LLVM_ABI DataMemberLayoutItem(const UDTLayoutBase &Parent,
-                       std::unique_ptr<PDBSymbolData> DataMember);
+                                std::unique_ptr<PDBSymbolData> DataMember);
 
   LLVM_ABI const PDBSymbolData &getDataMember();
   LLVM_ABI bool hasUDTLayout() const;
@@ -100,7 +100,7 @@ private:
 class VTableLayoutItem : public LayoutItemBase {
 public:
   LLVM_ABI VTableLayoutItem(const UDTLayoutBase &Parent,
-                   std::unique_ptr<PDBSymbolTypeVTable> VTable);
+                            std::unique_ptr<PDBSymbolTypeVTable> VTable);
 
   uint32_t getElementSize() const { return ElementSize; }
 
@@ -118,8 +118,8 @@ public:
                 bool IsElided);
 
   // Explicitly non-copyable.
-  UDTLayoutBase(UDTLayoutBase const&) = delete;
-  UDTLayoutBase& operator=(UDTLayoutBase const&) = delete;
+  UDTLayoutBase(UDTLayoutBase const &) = delete;
+  UDTLayoutBase &operator=(UDTLayoutBase const &) = delete;
 
   uint32_t tailPadding() const override;
   ArrayRef<LayoutItemBase *> layout_items() const { return LayoutItems; }
@@ -154,7 +154,8 @@ protected:
 class BaseClassLayout : public UDTLayoutBase {
 public:
   LLVM_ABI BaseClassLayout(const UDTLayoutBase &Parent, uint32_t OffsetInParent,
-                  bool Elide, std::unique_ptr<PDBSymbolTypeBaseClass> Base);
+                           bool Elide,
+                           std::unique_ptr<PDBSymbolTypeBaseClass> Base);
 
   const PDBSymbolTypeBaseClass &getBase() const { return *Base; }
   bool isVirtualBase() const { return IsVirtualBase; }

@@ -9,13 +9,13 @@
 #ifndef LLVM_DEBUGINFO_PDB_NATIVE_INFOSTREAM_H
 #define LLVM_DEBUGINFO_PDB_NATIVE_INFOSTREAM_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/DebugInfo/CodeView/GUID.h"
 #include "llvm/DebugInfo/PDB/Native/NamedStreamMap.h"
 #include "llvm/DebugInfo/PDB/Native/RawConstants.h"
 #include "llvm/Support/BinaryStream.h"
 #include "llvm/Support/BinaryStreamRef.h"
+#include "llvm/Support/Compiler.h"
 
 #include "llvm/Support/Error.h"
 

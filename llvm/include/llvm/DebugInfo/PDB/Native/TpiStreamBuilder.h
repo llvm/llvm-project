@@ -9,12 +9,12 @@
 #ifndef LLVM_DEBUGINFO_PDB_NATIVE_TPISTREAMBUILDER_H
 #define LLVM_DEBUGINFO_PDB_NATIVE_TPISTREAMBUILDER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/PDB/Native/RawConstants.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/BinaryStreamRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 
 #include <vector>
@@ -46,15 +46,18 @@ public:
   TpiStreamBuilder &operator=(const TpiStreamBuilder &) = delete;
 
   LLVM_ABI void setVersionHeader(PdbRaw_TpiVer Version);
-  LLVM_ABI void addTypeRecord(ArrayRef<uint8_t> Type, std::optional<uint32_t> Hash);
-  LLVM_ABI void addTypeRecords(ArrayRef<uint8_t> Types, ArrayRef<uint16_t> Sizes,
-                      ArrayRef<uint32_t> Hashes);
+  LLVM_ABI void addTypeRecord(ArrayRef<uint8_t> Type,
+                              std::optional<uint32_t> Hash);
+  LLVM_ABI void addTypeRecords(ArrayRef<uint8_t> Types,
+                               ArrayRef<uint16_t> Sizes,
+                               ArrayRef<uint32_t> Hashes);
 
   LLVM_ABI Error finalizeMsfLayout();
 
   uint32_t getRecordCount() const { return TypeRecordCount; }
 
-  LLVM_ABI Error commit(const msf::MSFLayout &Layout, WritableBinaryStreamRef Buffer);
+  LLVM_ABI Error commit(const msf::MSFLayout &Layout,
+                        WritableBinaryStreamRef Buffer);
 
   LLVM_ABI uint32_t calculateSerializedLength();
 

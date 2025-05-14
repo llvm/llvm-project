@@ -9,11 +9,11 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_TYPEDUMPVISITOR_H
 #define LLVM_DEBUGINFO_CODEVIEW_TYPEDUMPVISITOR_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbacks.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class ScopedPrinter;

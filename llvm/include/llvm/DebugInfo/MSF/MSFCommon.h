@@ -9,9 +9,9 @@
 #ifndef LLVM_DEBUGINFO_MSF_MSFCOMMON_H
 #define LLVM_DEBUGINFO_MSF_MSFCOMMON_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MathExtras.h"
@@ -85,8 +85,8 @@ public:
 /// stream spans 1 or more blocks, each at equally spaced intervals throughout
 /// the file.
 LLVM_ABI MSFStreamLayout getFpmStreamLayout(const MSFLayout &Msf,
-                                   bool IncludeUnusedFpmData = false,
-                                   bool AltFpm = false);
+                                            bool IncludeUnusedFpmData = false,
+                                            bool AltFpm = false);
 
 inline bool isValidBlockSize(uint32_t Size) {
   switch (Size) {

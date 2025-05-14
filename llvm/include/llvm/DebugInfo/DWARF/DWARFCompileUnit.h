@@ -9,8 +9,8 @@
 #ifndef LLVM_DEBUGINFO_DWARF_DWARFCOMPILEUNIT_H
 #define LLVM_DEBUGINFO_DWARF_DWARFCOMPILEUNIT_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

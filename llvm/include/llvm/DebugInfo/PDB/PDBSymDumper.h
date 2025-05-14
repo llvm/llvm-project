@@ -9,8 +9,8 @@
 #ifndef LLVM_DEBUGINFO_PDB_PDBSYMDUMPER_H
 #define LLVM_DEBUGINFO_PDB_PDBSYMDUMPER_H
 
-#include "llvm/Support/Compiler.h"
 #include "PDBTypes.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

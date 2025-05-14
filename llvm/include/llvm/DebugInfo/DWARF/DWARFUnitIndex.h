@@ -9,9 +9,9 @@
 #ifndef LLVM_DEBUGINFO_DWARF_DWARFUNITINDEX_H
 #define LLVM_DEBUGINFO_DWARF_DWARFUNITINDEX_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <memory>
 
@@ -89,13 +89,15 @@ inline const char *toString(DWARFSectionKind Kind) {
 /// The conversion depends on the version of the index section.
 /// IndexVersion is expected to be either 2 for pre-standard GNU proposal
 /// or 5 for DWARFv5 package file.
-LLVM_ABI uint32_t serializeSectionKind(DWARFSectionKind Kind, unsigned IndexVersion);
+LLVM_ABI uint32_t serializeSectionKind(DWARFSectionKind Kind,
+                                       unsigned IndexVersion);
 
 /// Convert a value read from an index section to the internal representation.
 ///
 /// The conversion depends on the index section version, which is expected
 /// to be either 2 for pre-standard GNU proposal or 5 for DWARFv5 package file.
-LLVM_ABI DWARFSectionKind deserializeSectionKind(uint32_t Value, unsigned IndexVersion);
+LLVM_ABI DWARFSectionKind deserializeSectionKind(uint32_t Value,
+                                                 unsigned IndexVersion);
 
 class DWARFUnitIndex {
   struct Header {
@@ -136,7 +138,8 @@ public:
     friend class DWARFUnitIndex;
 
   public:
-    LLVM_ABI const SectionContribution *getContribution(DWARFSectionKind Sec) const;
+    LLVM_ABI const SectionContribution *
+    getContribution(DWARFSectionKind Sec) const;
     LLVM_ABI const SectionContribution *getContribution() const;
     LLVM_ABI SectionContribution &getContribution();
 

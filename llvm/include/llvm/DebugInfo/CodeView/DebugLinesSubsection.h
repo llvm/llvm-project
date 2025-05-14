@@ -9,13 +9,13 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_DEBUGLINESSUBSECTION_H
 #define LLVM_DEBUGINFO_CODEVIEW_DEBUGLINESSUBSECTION_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/DebugSubsection.h"
 #include "llvm/DebugInfo/CodeView/Line.h"
 #include "llvm/Support/BinaryStreamArray.h"
 #include "llvm/Support/BinaryStreamRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
@@ -72,7 +72,7 @@ struct LineColumnEntry {
 class LineColumnExtractor {
 public:
   LLVM_ABI Error operator()(BinaryStreamRef Stream, uint32_t &Len,
-                   LineColumnEntry &Item);
+                            LineColumnEntry &Item);
 
   const LineFragmentHeader *Header = nullptr;
 };

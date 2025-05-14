@@ -9,10 +9,10 @@
 #ifndef LLVM_DEBUGINFO_DWARF_DWARFEXPRESSION_H
 #define LLVM_DEBUGINFO_DWARF_DWARFEXPRESSION_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataExtractor.h"
 
 namespace llvm {
@@ -100,14 +100,15 @@ public:
     uint64_t getEndOffset() const { return EndOffset; }
     bool isError() const { return Error; }
     LLVM_ABI bool print(raw_ostream &OS, DIDumpOptions DumpOpts,
-               const DWARFExpression *Expr, DWARFUnit *U) const;
+                        const DWARFExpression *Expr, DWARFUnit *U) const;
 
     /// Verify \p Op. Does not affect the return of \a isError().
     LLVM_ABI static bool verify(const Operation &Op, DWARFUnit *U);
 
   private:
-    LLVM_ABI bool extract(DataExtractor Data, uint8_t AddressSize, uint64_t Offset,
-                 std::optional<dwarf::DwarfFormat> Format);
+    LLVM_ABI bool extract(DataExtractor Data, uint8_t AddressSize,
+                          uint64_t Offset,
+                          std::optional<dwarf::DwarfFormat> Format);
   };
 
   /// An iterator to go through the expression operations.
@@ -154,15 +155,16 @@ public:
   iterator end() const { return iterator(this, Data.getData().size()); }
 
   LLVM_ABI void print(raw_ostream &OS, DIDumpOptions DumpOpts, DWARFUnit *U,
-             bool IsEH = false) const;
+                      bool IsEH = false) const;
 
   /// Print the expression in a format intended to be compact and useful to a
   /// user, but not perfectly unambiguous, or capable of representing every
   /// valid DWARF expression. Returns true if the expression was sucessfully
   /// printed.
-  LLVM_ABI bool printCompact(raw_ostream &OS,
-                    std::function<StringRef(uint64_t RegNum, bool IsEH)>
-                        GetNameForDWARFReg = nullptr);
+  LLVM_ABI bool printCompact(
+      raw_ostream &OS,
+      std::function<StringRef(uint64_t RegNum, bool IsEH)> GetNameForDWARFReg =
+          nullptr);
 
   LLVM_ABI bool verify(DWARFUnit *U);
 
@@ -171,8 +173,9 @@ public:
   StringRef getData() const { return Data.getData(); }
 
   LLVM_ABI static bool prettyPrintRegisterOp(DWARFUnit *U, raw_ostream &OS,
-                                    DIDumpOptions DumpOpts, uint8_t Opcode,
-                                    const ArrayRef<uint64_t> Operands);
+                                             DIDumpOptions DumpOpts,
+                                             uint8_t Opcode,
+                                             const ArrayRef<uint64_t> Operands);
 
 private:
   DataExtractor Data;

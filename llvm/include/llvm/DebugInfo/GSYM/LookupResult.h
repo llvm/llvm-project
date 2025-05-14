@@ -9,9 +9,9 @@
 #ifndef LLVM_DEBUGINFO_GSYM_LOOKUPRESULT_H
 #define LLVM_DEBUGINFO_GSYM_LOOKUPRESULT_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/AddressRanges.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include <inttypes.h>
 #include <vector>
 

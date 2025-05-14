@@ -9,10 +9,10 @@
 #ifndef LLVM_DEBUGINFO_DWARF_DWARFLISTTABLE_H
 #define LLVM_DEBUGINFO_DWARF_DWARFLISTTABLE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
@@ -112,7 +112,7 @@ public:
   }
 
   LLVM_ABI void dump(DataExtractor Data, raw_ostream &OS,
-            DIDumpOptions DumpOpts = {}) const;
+                     DIDumpOptions DumpOpts = {}) const;
   std::optional<uint64_t> getOffsetEntry(DataExtractor Data,
                                          uint32_t Index) const {
     if (Index >= HeaderData.OffsetEntryCount)

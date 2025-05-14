@@ -9,8 +9,8 @@
 #ifndef LLVM_DEBUGINFO_GSYM_FILEWRITER_H
 #define LLVM_DEBUGINFO_GSYM_FILEWRITER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 
 #include <stddef.h>

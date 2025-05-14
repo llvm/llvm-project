@@ -9,12 +9,12 @@
 #ifndef LLVM_DEBUGINFO_DWARF_DWARFDEBUGLINE_H
 #define LLVM_DEBUGINFO_DWARF_DWARFDEBUGLINE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/Path.h"
 #include <cstdint>
@@ -125,8 +125,8 @@ public:
     LLVM_ABI void clear();
     LLVM_ABI void dump(raw_ostream &OS, DIDumpOptions DumpOptions) const;
     LLVM_ABI Error parse(DWARFDataExtractor Data, uint64_t *OffsetPtr,
-                function_ref<void(Error)> RecoverableErrorHandler,
-                const DWARFContext &Ctx, const DWARFUnit *U = nullptr);
+                         function_ref<void(Error)> RecoverableErrorHandler,
+                         const DWARFContext &Ctx, const DWARFUnit *U = nullptr);
   };
 
   /// Standard .debug_line state machine structure.
@@ -245,7 +245,7 @@ public:
     /// Returns the index of the row with file/line info for a given address,
     /// or UnknownRowIndex if there is no such row.
     LLVM_ABI uint32_t lookupAddress(object::SectionedAddress Address,
-                           bool *IsApproximateLine = nullptr) const;
+                                    bool *IsApproximateLine = nullptr) const;
 
     /// Fills the Result argument with the indices of the rows that correspond
     /// to the address range specified by \p Address and \p Size.
@@ -283,24 +283,23 @@ public:
 
     /// Fills the Result argument with the file and line information
     /// corresponding to Address. Returns true on success.
-    LLVM_ABI bool getFileLineInfoForAddress(object::SectionedAddress Address,
-                                   bool Approximate, const char *CompDir,
-                                   DILineInfoSpecifier::FileLineInfoKind Kind,
-                                   DILineInfo &Result) const;
+    LLVM_ABI bool getFileLineInfoForAddress(
+        object::SectionedAddress Address, bool Approximate, const char *CompDir,
+        DILineInfoSpecifier::FileLineInfoKind Kind, DILineInfo &Result) const;
 
     /// Extracts directory name by its Entry in include directories table
     /// in prologue. Returns true on success.
     LLVM_ABI bool getDirectoryForEntry(const FileNameEntry &Entry,
-                              std::string &Directory) const;
+                                       std::string &Directory) const;
 
     LLVM_ABI void dump(raw_ostream &OS, DIDumpOptions DumpOptions) const;
     LLVM_ABI void clear();
 
     /// Parse prologue and all rows.
     LLVM_ABI Error parse(DWARFDataExtractor &DebugLineData, uint64_t *OffsetPtr,
-                const DWARFContext &Ctx, const DWARFUnit *U,
-                function_ref<void(Error)> RecoverableErrorHandler,
-                raw_ostream *OS = nullptr, bool Verbose = false);
+                         const DWARFContext &Ctx, const DWARFUnit *U,
+                         function_ref<void(Error)> RecoverableErrorHandler,
+                         raw_ostream *OS = nullptr, bool Verbose = false);
 
     using RowVector = std::vector<Row>;
     using RowIter = RowVector::const_iterator;
@@ -350,7 +349,7 @@ public:
     using LineToUnitMap = std::map<uint64_t, DWARFUnit *>;
 
     LLVM_ABI SectionParser(DWARFDataExtractor &Data, const DWARFContext &C,
-                  DWARFUnitVector::iterator_range Units);
+                           DWARFUnitVector::iterator_range Units);
 
     /// Get the next line table from the section. Report any issues via the
     /// handlers.
@@ -363,9 +362,10 @@ public:
     /// table as it parses it.
     /// \param Verbose - if true, the parser will print verbose information when
     /// printing to the output.
-    LLVM_ABI LineTable parseNext(function_ref<void(Error)> RecoverableErrorHandler,
-                        function_ref<void(Error)> UnrecoverableErrorHandler,
-                        raw_ostream *OS = nullptr, bool Verbose = false);
+    LLVM_ABI LineTable
+    parseNext(function_ref<void(Error)> RecoverableErrorHandler,
+              function_ref<void(Error)> UnrecoverableErrorHandler,
+              raw_ostream *OS = nullptr, bool Verbose = false);
 
     /// Skip the current line table and go to the following line table (if
     /// present) immediately.
@@ -375,7 +375,7 @@ public:
     /// \param UnrecoverableErrorHandler - report any unrecoverable prologue
     /// parsing issues via this handler.
     LLVM_ABI void skip(function_ref<void(Error)> RecoverableErrorHandler,
-              function_ref<void(Error)> UnrecoverableErrorHandler);
+                       function_ref<void(Error)> UnrecoverableErrorHandler);
 
     /// Indicates if the parser has parsed as much as possible.
     ///
@@ -402,7 +402,7 @@ public:
 private:
   struct ParsingState {
     LLVM_ABI ParsingState(struct LineTable *LT, uint64_t TableOffset,
-                 function_ref<void(Error)> ErrorHandler);
+                          function_ref<void(Error)> ErrorHandler);
 
     LLVM_ABI void resetRowAndSequence(uint64_t Offset);
     LLVM_ABI void appendRowToMatrix();
@@ -415,7 +415,8 @@ private:
     /// Advance the address and op-index by the \p OperationAdvance value.
     /// \returns the amount advanced by.
     LLVM_ABI AddrOpIndexDelta advanceAddrOpIndex(uint64_t OperationAdvance,
-                                        uint8_t Opcode, uint64_t OpcodeOffset);
+                                                 uint8_t Opcode,
+                                                 uint64_t OpcodeOffset);
 
     struct OpcodeAdvanceResults {
       uint64_t AddrDelta;
@@ -426,7 +427,7 @@ private:
     /// Advance the address and op-index as required by the specified \p Opcode.
     /// \returns the amount advanced by and the calculated adjusted opcode.
     LLVM_ABI OpcodeAdvanceResults advanceForOpcode(uint8_t Opcode,
-                                          uint64_t OpcodeOffset);
+                                                   uint64_t OpcodeOffset);
 
     struct SpecialOpcodeDelta {
       uint64_t Address;
@@ -437,7 +438,7 @@ private:
     /// Advance the line, address and op-index as required by the specified
     /// special \p Opcode. \returns the address, op-index and line delta.
     LLVM_ABI SpecialOpcodeDelta handleSpecialOpcode(uint8_t Opcode,
-                                           uint64_t OpcodeOffset);
+                                                    uint64_t OpcodeOffset);
 
     /// Line table we're currently parsing.
     struct LineTable *LineTable;

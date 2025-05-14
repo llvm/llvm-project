@@ -27,7 +27,8 @@ class NamedStreamMap;
 
 class InfoStreamBuilder {
 public:
-  LLVM_ABI InfoStreamBuilder(msf::MSFBuilder &Msf, NamedStreamMap &NamedStreams);
+  LLVM_ABI InfoStreamBuilder(msf::MSFBuilder &Msf,
+                             NamedStreamMap &NamedStreams);
   InfoStreamBuilder(const InfoStreamBuilder &) = delete;
   InfoStreamBuilder &operator=(const InfoStreamBuilder &) = delete;
 
@@ -53,7 +54,7 @@ public:
   LLVM_ABI Error finalizeMsfLayout();
 
   LLVM_ABI Error commit(const msf::MSFLayout &Layout,
-               WritableBinaryStreamRef Buffer) const;
+                        WritableBinaryStreamRef Buffer) const;
 
 private:
   msf::MSFBuilder &Msf;

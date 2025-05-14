@@ -9,11 +9,11 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_DEBUGCROSSEXSUBSECTION_H
 #define LLVM_DEBUGINFO_CODEVIEW_DEBUGCROSSEXSUBSECTION_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/DebugSubsection.h"
 #include "llvm/Support/BinaryStreamArray.h"
 #include "llvm/Support/BinaryStreamRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
 #include <map>
@@ -45,7 +45,8 @@ private:
   FixedStreamArray<CrossModuleExport> References;
 };
 
-class LLVM_ABI DebugCrossModuleExportsSubsection final : public DebugSubsection {
+class LLVM_ABI DebugCrossModuleExportsSubsection final
+    : public DebugSubsection {
 public:
   DebugCrossModuleExportsSubsection()
       : DebugSubsection(DebugSubsectionKind::CrossScopeExports) {}

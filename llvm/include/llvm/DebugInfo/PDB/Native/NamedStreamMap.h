@@ -9,10 +9,10 @@
 #ifndef LLVM_DEBUGINFO_PDB_NATIVE_NAMEDSTREAMMAP_H
 #define LLVM_DEBUGINFO_PDB_NATIVE_NAMEDSTREAMMAP_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/PDB/Native/HashTable.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
 

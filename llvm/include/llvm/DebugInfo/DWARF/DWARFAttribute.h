@@ -9,9 +9,9 @@
 #ifndef LLVM_DEBUGINFO_DWARF_DWARFATTRIBUTE_H
 #define LLVM_DEBUGINFO_DWARF_DWARFATTRIBUTE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 
 namespace llvm {

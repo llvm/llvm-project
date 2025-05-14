@@ -9,9 +9,9 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_SYMBOLRECORDHELPERS_H
 #define LLVM_DEBUGINFO_CODEVIEW_SYMBOLRECORDHELPERS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace codeview {
@@ -55,7 +55,7 @@ LLVM_ABI uint32_t getScopeEndOffset(const CVSymbol &Symbol);
 LLVM_ABI uint32_t getScopeParentOffset(const CVSymbol &Symbol);
 
 LLVM_ABI CVSymbolArray limitSymbolArrayToScope(const CVSymbolArray &Symbols,
-                                      uint32_t ScopeBegin);
+                                               uint32_t ScopeBegin);
 
 } // namespace codeview
 } // namespace llvm
