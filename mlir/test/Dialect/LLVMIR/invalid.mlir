@@ -1853,22 +1853,22 @@ llvm.func @gep_inbounds_flag_usage(%ptr: !llvm.ptr, %idx: i64) {
 
 // -----
 
-llvm.mlir.global @x1() : !llvm.array<2x!llvm.struct<(i32, f32)>> {
-  // expected-error@+1{{'llvm.mlir.constant' op array attribute size does not match array type size in dimension 0: 1 vs. 2}}
+llvm.mlir.global @bad_struct_array_init_size() : !llvm.array<2x!llvm.struct<(i32, f32)>> {
+  // expected-error@below{{'llvm.mlir.constant' op array attribute size does not match array type size in dimension 0: 1 vs. 2}}
   %0 = llvm.mlir.constant([[42 : i32, 1.000000e+00 : f32]]) : !llvm.array<2x!llvm.struct<(i32, f32)>>
   llvm.return %0 : !llvm.array<2x!llvm.struct<(i32, f32)>>
 }
 
 // -----
-llvm.mlir.global @x2() : !llvm.array<1x!llvm.array<1x!llvm.array<1x!llvm.struct<(i32)>>>> {
-  // expected-error@+1{{'llvm.mlir.constant' op array attribute nesting must match array type nesting}}
+llvm.mlir.global @bad_struct_array_init_nesting() : !llvm.array<1x!llvm.array<1x!llvm.array<1x!llvm.struct<(i32)>>>> {
+  // expected-error@below{{'llvm.mlir.constant' op array attribute nesting must match array type nesting}}
   %0 = llvm.mlir.constant([[1 : i32]]) : !llvm.array<1x!llvm.array<1x!llvm.array<1x!llvm.struct<(i32)>>>>
   llvm.return %0 : !llvm.array<1x!llvm.array<1x!llvm.array<1x!llvm.struct<(i32)>>>>
 }
 
 // -----
-llvm.mlir.global @x3() : !llvm.array<1x!llvm.struct<(i32, f32)>> {
-  // expected-error@+1{{'llvm.mlir.constant' op nested attribute must be an array attribute with the same number of elements as the struct type}}
+llvm.mlir.global @bad_struct_array_init_elements() : !llvm.array<1x!llvm.struct<(i32, f32)>> {
+  // expected-error@below{{'llvm.mlir.constant' op nested attribute must be an array attribute with the same number of elements as the struct type}}
   %0 = llvm.mlir.constant([[1 : i32]]) : !llvm.array<1x!llvm.struct<(i32, f32)>>
   llvm.return %0 : !llvm.array<1x!llvm.struct<(i32, f32)>>
 }
