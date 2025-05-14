@@ -507,16 +507,14 @@ namespace llvm {
     /// stream \p OS.
     void print(raw_ostream &OS) const;
 
+    /// Dump the concatenated string represented by this twine to stderr.
+    void dump() const;
+
     /// Write the representation of this twine to the stream \p OS.
     void printRepr(raw_ostream &OS) const;
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-    /// Dump the concatenated string represented by this twine to stderr.
-    LLVM_DUMP_METHOD void dump() const;
-
     /// Dump the representation of this twine to stderr.
-    LLVM_DUMP_METHOD void dumpRepr() const;
-#endif
+    void dumpRepr() const;
 
     /// @}
   };
