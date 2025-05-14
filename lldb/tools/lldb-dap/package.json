@@ -251,6 +251,12 @@
       }
     ],
     "menus": {
+      "commandPalette": [
+        {
+          "command": "lldb-dap.modules.copyProperty",
+          "when": "false"
+        }
+      ],
       "view/item/context": [
         {
           "command": "lldb-dap.modules.copyProperty",
