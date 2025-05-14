@@ -408,9 +408,7 @@ public:
   }
 
   /// Returns true if this is an early exit loop containing a store.
-  bool isConditionCopyRequired() const {
-    return EarlyExitLoad.has_value();
-  }
+  bool isConditionCopyRequired() const { return EarlyExitLoad.has_value(); }
 
   /// Returns the load instruction, if any, nearest to an uncountable early
   /// exit.

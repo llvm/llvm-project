@@ -1210,16 +1210,14 @@ bool LoopVectorizationLegality::canVectorizeMemory() {
     });
   }
 
-  // FIXME: Remove or reduce this restriction. We're in a bit of an odd spot
-  //        since we're (potentially) doing the load out of its normal order
-  //        in the loop and that may throw off dependency checking.
-  //        A forward dependency should be fine, but a backwards dep may not
-  //        be even if LAA thinks it is due to performing the load for the
-  //        vector iteration i+1 in vector iteration i.
-  if (isConditionCopyRequired()) {
-    assert(EarlyExitLoad.has_value() && "EE Store without condition load.");
-
-    if (LAI->canVectorizeMemory()) {
+  if (LAI->canVectorizeMemory()) {
+    // FIXME: Remove or reduce this restriction. We're in a bit of an odd spot
+    //        since we're (potentially) doing the load out of its normal order
+    //        in the loop and that may throw off dependency checking.
+    //        A forward dependency should be fine, but a backwards dep may not
+    //        be even if LAA thinks it is due to performing the load for the
+    //        vector iteration i+1 in vector iteration i.
+    if (isConditionCopyRequired()) {
       const MemoryDepChecker &DepChecker = LAI->getDepChecker();
       const auto *Deps = DepChecker.getDependences();
 
@@ -1238,9 +1236,7 @@ bool LoopVectorizationLegality::canVectorizeMemory() {
         }
       }
     }
-  }
-
-  if (!LAI->canVectorizeMemory())
+  } else if (!isConditionCopyRequired())
     return canVectorizeIndirectUnsafeDependences();
 
   if (LAI->hasLoadStoreDependenceInvolvingLoopInvariantAddress()) {
@@ -1783,7 +1779,8 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
   if (HasStore) {
     // Record load for analysis by isDereferenceableAndAlignedInLoop
     // and later by dependence analysis.
-    if (BranchInst *Br = dyn_cast<BranchInst>(SingleUncountableEdge->first->getTerminator())) {
+    if (BranchInst *Br = dyn_cast<BranchInst>(
+            SingleUncountableEdge->first->getTerminator())) {
       // FIXME: Handle exit conditions with multiple users, more complex exit
       //        conditions than br(icmp(load, loop_inv)).
       ICmpInst *Cmp = dyn_cast<ICmpInst>(Br->getCondition());
@@ -1791,8 +1788,8 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
           TheLoop->isLoopInvariant(Cmp->getOperand(1))) {
         LoadInst *Load = dyn_cast<LoadInst>(Cmp->getOperand(0));
         if (Load && Load->hasOneUse() && !TheLoop->isLoopInvariant(Load)) {
-          if (isDereferenceableAndAlignedInLoop(Load, TheLoop, *PSE.getSE(), *DT, AC,
-                                                &Predicates)) {
+          if (isDereferenceableAndAlignedInLoop(Load, TheLoop, *PSE.getSE(),
+                                                *DT, AC, &Predicates)) {
             ICFLoopSafetyInfo SafetyInfo;
             SafetyInfo.computeLoopSafetyInfo(TheLoop);
             // FIXME: We may have multiple levels of conditional loads, so will
@@ -1801,20 +1798,22 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
               EELoad = Load;
             } else {
               LLVM_DEBUG(
-              dbgs() << "Early exit condition load not guaranteed to execute.\n");
+                  dbgs()
+                  << "Early exit condition load not guaranteed to execute.\n");
               reportVectorizationFailure(
-              "Early exit condition load not guaranteed to execute",
-              "Cannot vectorize early exit loop when condition load is not "
-              "guaranteed to execute",
-              "EarlyExitLoadNotGuaranteed", ORE, TheLoop);
+                  "Early exit condition load not guaranteed to execute",
+                  "Cannot vectorize early exit loop when condition load is not "
+                  "guaranteed to execute",
+                  "EarlyExitLoadNotGuaranteed", ORE, TheLoop);
             }
           } else {
-            LLVM_DEBUG(dbgs() << "Early exit condition load potentially unsafe.\n");
-            reportVectorizationFailure("Uncounted loop condition not known safe",
-             "Cannot vectorize early exit loop with "
-             "possibly unsafe condition load",
-             "PotentiallyFaultingEarlyExitLoop", ORE,
-             TheLoop);
+            LLVM_DEBUG(dbgs()
+                       << "Early exit condition load potentially unsafe.\n");
+            reportVectorizationFailure(
+                "Uncounted loop condition not known safe",
+                "Cannot vectorize early exit loop with "
+                "possibly unsafe condition load",
+                "PotentiallyFaultingEarlyExitLoop", ORE, TheLoop);
             return false;
           }
         }
