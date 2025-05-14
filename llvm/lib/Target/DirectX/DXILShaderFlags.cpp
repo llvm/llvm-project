@@ -270,7 +270,6 @@ void ModuleShaderFlags::initialize(Module &M, DXILResourceTypeMap &DRTM,
 
   ComputedShaderFlags GlobalSFMask;
   gatherGlobalModuleFlags(GlobalSFMask, M, DRM, MMDI);
-  CombinedSFMask.merge(GlobalSFMask);
 
   CallGraph CG(M);
 
