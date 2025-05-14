@@ -91,9 +91,10 @@ FailureOr<scf::ForOp> mlir::scf::upliftWhileToForLoop(RewriterBase &rewriter,
 
   using Pred = arith::CmpIPredicate;
   Pred predicate = cmp.getPredicate();
-  if (predicate != Pred::slt && predicate != Pred::sgt)
+  if (predicate != Pred::slt && predicate != Pred::sgt &&
+      predicate != Pred::ult && predicate != Pred::ugt)
     return rewriter.notifyMatchFailure(loop, [&](Diagnostic &diag) {
-      diag << "Expected 'slt' or 'sgt' predicate: " << *cmp;
+      diag << "Expected 'slt'/'ult' or 'sgt'/'ugt' predicate: " << *cmp;
     });
 
   BlockArgument inductionVar;
@@ -103,24 +104,16 @@ FailureOr<scf::ForOp> mlir::scf::upliftWhileToForLoop(RewriterBase &rewriter,
   // Check if cmp has a suitable form. One of the arguments must be a `before`
   // block arg, other must be defined outside `scf.while` and will be treated
   // as upper bound.
-  for (bool reverse : {false, true}) {
-    auto expectedPred = reverse ? Pred::sgt : Pred::slt;
-    if (cmp.getPredicate() != expectedPred)
-      continue;
+  auto arg1 = cmp.getLhs();
+  auto arg2 = cmp.getRhs();
+  if (predicate == Pred::sgt || predicate == Pred::ugt)
+    std::swap(arg1, arg2);
 
-    auto arg1 = reverse ? cmp.getRhs() : cmp.getLhs();
-    auto arg2 = reverse ? cmp.getLhs() : cmp.getRhs();
-
-    auto blockArg = dyn_cast<BlockArgument>(arg1);
-    if (!blockArg || blockArg.getOwner() != beforeBody)
-      continue;
-
-    if (!dom.properlyDominates(arg2, loop))
-      continue;
-
+  auto blockArg = dyn_cast<BlockArgument>(arg1);
+  if (blockArg && blockArg.getOwner() == beforeBody &&
+      dom.properlyDominates(arg2, loop)) {
     inductionVar = blockArg;
     ub = arg2;
-    break;
   }
 
   if (!inductionVar)
