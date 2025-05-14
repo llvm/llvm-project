@@ -383,6 +383,13 @@ else:
     # Others/can-execute.txt
     config.available_features.add("can-execute")
 
+# Detect Windows Subsystem for Linux (WSL)
+uname_r = platform.uname().release
+if uname_r.endswith("-Microsoft"):
+    config.available_features.add("wsl1")
+elif uname_r.endswith("microsoft-standard-WSL2"):
+    config.available_features.add("wsl2")
+
 # Loadable module
 if config.has_plugins:
     config.available_features.add("plugins")

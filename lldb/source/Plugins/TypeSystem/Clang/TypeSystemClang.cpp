@@ -5355,33 +5355,9 @@ TypeSystemClang::GetNumChildren(lldb::opaque_compiler_type_t type,
       assert(record_decl);
       const clang::CXXRecordDecl *cxx_record_decl =
           llvm::dyn_cast<clang::CXXRecordDecl>(record_decl);
-      if (cxx_record_decl) {
-        if (omit_empty_base_classes) {
-          // Check each base classes to see if it or any of its base classes
-          // contain any fields. This can help limit the noise in variable
-          // views by not having to show base classes that contain no members.
-          clang::CXXRecordDecl::base_class_const_iterator base_class,
-              base_class_end;
-          for (base_class = cxx_record_decl->bases_begin(),
-              base_class_end = cxx_record_decl->bases_end();
-               base_class != base_class_end; ++base_class) {
-            const clang::CXXRecordDecl *base_class_decl =
-                llvm::cast<clang::CXXRecordDecl>(
-                    base_class->getType()
-                        ->getAs<clang::RecordType>()
-                        ->getDecl());
 
-            // Skip empty base classes
-            if (!TypeSystemClang::RecordHasFields(base_class_decl))
-              continue;
-
-            num_children++;
-          }
-        } else {
-          // Include all base classes
-          num_children += cxx_record_decl->getNumBases();
-        }
-      }
+      num_children +=
+          GetNumBaseClasses(cxx_record_decl, omit_empty_base_classes);
       num_children += std::distance(record_decl->field_begin(),
                                record_decl->field_end());
     } else

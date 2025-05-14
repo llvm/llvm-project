@@ -1194,8 +1194,7 @@ bool SendEventRequestHandler::DoExecute(lldb::SBDebugger debugger,
                                    "exited",     "initialize",   "loadedSource",
                                    "module",     "process",      "stopped",
                                    "terminated", "thread"};
-  if (std::find(internal_events.begin(), internal_events.end(), name) !=
-      std::end(internal_events)) {
+  if (llvm::is_contained(internal_events, name)) {
     std::string msg =
         llvm::formatv("Invalid use of lldb-dap send-event, event \"{0}\" "
                       "should be handled by lldb-dap internally.",
