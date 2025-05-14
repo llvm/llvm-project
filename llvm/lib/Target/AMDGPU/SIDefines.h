@@ -379,7 +379,6 @@ enum CPol {
   TH_RT_NT = 5,  // regular (CU, SE), non-temporal (MALL)
   TH_NT_HT = 6,  // non-temporal (CU, SE), high-temporal (MALL)
   TH_NT_WB = 7,  // non-temporal (CU, SE), high-temporal with write-back (MALL)
-  TH_BYPASS = 3, // only to be used with scope = 3
 
   TH_RESERVED = 7, // unused value for load insts
 
