@@ -37,7 +37,7 @@ class SPIRVTargetMachine;
 
 class SPIRVSubtarget : public SPIRVGenSubtargetInfo {
 public:
-  // Enum for the SPIR-V environment: Kernel, Shader or Unkwnown.
+  // Enum for the SPIR-V environment: Kernel, Shader or Unknown.
   enum SPIRVEnvType { Kernel, Shader, Unknown };
 
 private:
