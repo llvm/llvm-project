@@ -29,22 +29,22 @@ class DAPTest : public testing::Test {
 protected:
   Pipe input;
   Pipe output;
-  std::unique_ptr<Transport> toDAP;
-  std::unique_ptr<Transport> fromDAP;
+  std::unique_ptr<Transport> to_dap;
+  std::unique_ptr<Transport> from_dap;
 
   void SetUp() override {
     ASSERT_THAT_ERROR(input.CreateNew(false).ToError(), Succeeded());
     ASSERT_THAT_ERROR(output.CreateNew(false).ToError(), Succeeded());
-    toDAP = std::make_unique<Transport>(
-        "toDAP", nullptr,
+    to_dap = std::make_unique<Transport>(
+        "to_dap", nullptr,
         std::make_shared<NativeFile>(input.GetReadFileDescriptor(),
                                      File::eOpenOptionReadOnly,
                                      NativeFile::Unowned),
         std::make_shared<NativeFile>(output.GetWriteFileDescriptor(),
                                      File::eOpenOptionWriteOnly,
                                      NativeFile::Unowned));
-    fromDAP = std::make_unique<Transport>(
-        "fromDAP", nullptr,
+    from_dap = std::make_unique<Transport>(
+        "from_dap", nullptr,
         std::make_shared<NativeFile>(output.GetReadFileDescriptor(),
                                      File::eOpenOptionReadOnly,
                                      NativeFile::Unowned),
@@ -55,9 +55,9 @@ protected:
 };
 
 TEST_F(DAPTest, SendProtocolMessages) {
-  DAP dap{nullptr, ReplMode::Auto, {}, *toDAP};
+  DAP dap{nullptr, ReplMode::Auto, {}, *to_dap};
   dap.Send(Event{"my-event", std::nullopt});
-  ASSERT_THAT_EXPECTED(fromDAP->Read(std::chrono::milliseconds(1)),
+  ASSERT_THAT_EXPECTED(from_dap->Read(std::chrono::milliseconds(1)),
                        HasValue(testing::VariantWith<Event>(testing::FieldsAre(
                            /*event=*/"my-event", /*body=*/std::nullopt))));
 }
