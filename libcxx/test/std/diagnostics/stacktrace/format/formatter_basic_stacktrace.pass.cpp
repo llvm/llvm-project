@@ -25,7 +25,7 @@ int main(int, char**) {
     output iterator of the context.
   */
 
-  // TODO(stacktrace23): needs `formatter`
+  // TODO: stacktrace formatter: https://github.com/llvm/llvm-project/issues/105257
 
   return 0;
 }
