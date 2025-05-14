@@ -2,9 +2,9 @@
 
 // This file contains some tests of canonicalizations and foldings involving vector.transpose.
 
-// +----------------------------------------
-//  Tests of FoldTransposeBroadcast
-// +----------------------------------------
+// +---------------------------------------------------------------------------
+//  Tests of FoldTransposeBroadcast: transpose(broadcast) -> broadcast
+// +---------------------------------------------------------------------------
 
 // CHECK-LABEL: func @transpose_scalar_broadcast1
 //  CHECK-SAME: (%[[ARG:.+]]: vector<1xf32>)
@@ -256,7 +256,7 @@ func.func @negative_transpose_of_shape_cast(%arg : vector<6xi8>) -> vector<2x3xi
 // -----
 
 // +-----------------------------------
-//  Tests of transpose folding
+//  Tests of TransposeOp::fold
 // +-----------------------------------
 
 //  CHECK-LABEL: transpose_1D_identity
