@@ -854,6 +854,12 @@ def BREAK   : MISC_I15<0x002a0000>;
 def RDTIMEL_W : RDTIME_2R<0x00006000>;
 def RDTIMEH_W : RDTIME_2R<0x00006400>;
 
+// The CPUCFG instruction offers a reliable way to probing CPU features.
+// Although it's undefined on LA32R, adding compiler support enables the
+// Linux kernel to emulate it, making the functionality available to user
+// space applications.
+def CPUCFG : ALU_2R<0x00006c00>;
+
 // Cache Maintenance Instructions
 def CACOP : FmtCACOP<(outs), (ins uimm5:$op, GPR:$rj, simm12:$imm12),
                      "$op, $rj, $imm12">;
@@ -895,9 +901,6 @@ def MASKNEZ : ALU_3R<0x00138000>;
 // Branch Instructions
 def BEQZ : BrCCZ_1RI21<0x40000000>;
 def BNEZ : BrCCZ_1RI21<0x44000000>;
-
-// Other Miscellaneous Instructions
-def CPUCFG : ALU_2R<0x00006c00>;
 } // Predicates = [Has32S]
 
 /// LA64 instructions
