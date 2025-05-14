@@ -2613,9 +2613,8 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
     Diag(Tok, diag::err_omp_unknown_directive);
     return StmtError();
   }
-  if (DKind == OMPD_workshare) {
-    // "workshare" is an executable, Fortran-only directive. Treat it
-    // as unknown.
+  if (!(getDirectiveLanguages(DKind) & SourceLanguage::C)) {
+    // Treat directives that are not allowed in C/C++ as unknown.
     DKind = OMPD_unknown;
   }
 
