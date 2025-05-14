@@ -102,6 +102,7 @@ enum ChecksumAlgorithm : unsigned {
   eChecksumAlgorithmSHA256,
   eChecksumAlgorithmTimestamp
 };
+bool fromJSON(const llvm::json::Value &, ChecksumAlgorithm &, llvm::json::Path);
 llvm::json::Value toJSON(const ChecksumAlgorithm &);
 
 /// Describes one or more type of breakpoint a BreakpointMode applies to. This
@@ -237,7 +238,11 @@ enum AdapterFeature : unsigned {
   /// The debug adapter supports the `terminateDebuggee` attribute on the
   /// `disconnect` request.
   eAdapterFeatureTerminateDebuggee,
+  eAdapterFeatureFirst = eAdapterFeatureANSIStyling,
+  eAdapterFeatureLast = eAdapterFeatureTerminateDebuggee,
 };
+bool fromJSON(const llvm::json::Value &, AdapterFeature &, llvm::json::Path);
+llvm::json::Value toJSON(const AdapterFeature &);
 
 /// Information about the capabilities of a debug adapter.
 struct Capabilities {
@@ -275,13 +280,15 @@ struct Capabilities {
 
   /// @}
 };
+bool fromJSON(const llvm::json::Value &, Capabilities &, llvm::json::Path);
 llvm::json::Value toJSON(const Capabilities &);
 
 enum PresentationHint : unsigned {
   ePresentationHintNormal,
   ePresentationHintEmphasize,
-  ePresentationHintDeemphasize,
+  ePresentationHintDeemphasize
 };
+bool fromJSON(const llvm::json::Value &, PresentationHint &, llvm::json::Path);
 llvm::json::Value toJSON(PresentationHint hint);
 
 /// A `Source` is a descriptor for source code. It is returned from the debug
