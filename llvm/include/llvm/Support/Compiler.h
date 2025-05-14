@@ -716,11 +716,16 @@ void AnnotateIgnoreWritesEnd(const char *file, int line);
 /// to declare such a function in `final` classes without triggering a warning.
 // clang-format off
 // Autoformatting makes this look awful.
+#if defined(__clang__) && __has_warning("-Wunnecessary-virtual-specifier")
 #define LLVM_DECLARE_VIRTUAL_ANCHOR_FUNCTION()                            \
   _Pragma("clang diagnostic push")                                        \
   _Pragma("clang diagnostic ignored \"-Wunnecessary-virtual-specifier\"") \
   virtual void anchor()                                                   \
   _Pragma("clang diagnostic pop")
+#else
+#define LLVM_DECLARE_VIRTUAL_ANCHOR_FUNCTION()                            \
+  virtual void anchor()
+#endif
 // clang-format on
 
 #endif
