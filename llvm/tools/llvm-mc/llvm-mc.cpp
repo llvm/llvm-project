@@ -215,6 +215,10 @@ static cl::opt<bool> NoExecStack("no-exec-stack",
                                  cl::desc("File doesn't need an exec stack"),
                                  cl::cat(MCCategory));
 
+static cl::opt<bool> ValidateCFI("validate-cfi",
+                                 cl::desc("Validate the CFI directives"),
+                                 cl::cat(MCCategory));
+
 enum ActionType {
   AC_AsLex,
   AC_Assemble,
@@ -525,7 +529,12 @@ int main(int argc, char **argv) {
   assert(MCIA && "Unable to create instruction analysis!");
 
   std::unique_ptr<MCInstPrinter> IP;
-  if (FileType == OFT_AssemblyFile) {
+  if (ValidateCFI) {
+    assert(FileType == OFT_Null);
+    auto *CFIAMCS = new CFIAnalysisMCStreamer(Ctx, *MCII, std::move(MCIA));
+    TheTarget->createNullTargetStreamer(*CFIAMCS);
+    Str.reset(CFIAMCS);
+  } else if (FileType == OFT_AssemblyFile) {
     IP.reset(TheTarget->createMCInstPrinter(
         Triple(TripleName), OutputAsmVariant, *MAI, *MCII, *MRI));
 
@@ -569,11 +578,7 @@ int main(int argc, char **argv) {
                                            std::move(CE), std::move(MAB)));
 
   } else if (FileType == OFT_Null) {
-    auto *MyDummyStreamer =
-        new CFIAnalysisMCStreamer(Ctx, *MCII, std::move(MCIA));
-    TheTarget->createNullTargetStreamer(*MyDummyStreamer);
-    Str.reset(MyDummyStreamer);
-    // Str.reset(TheTarget->createNullStreamer(Ctx));
+    Str.reset(TheTarget->createNullStreamer(Ctx));
   } else {
     assert(FileType == OFT_ObjectFile && "Invalid file type!");
 
