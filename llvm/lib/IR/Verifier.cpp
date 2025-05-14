@@ -6553,6 +6553,14 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           &Call);
     break;
   }
+  case Intrinsic::thread_pointer: {
+    Check(Call.getType()->getPointerAddressSpace() ==
+              DL.getDefaultGlobalsAddressSpace(),
+          "llvm.thread.pointer intrinsic return type must be for the globals "
+          "address space",
+          &Call);
+    break;
+  }
   case Intrinsic::threadlocal_address: {
     const Value &Arg0 = *Call.getArgOperand(0);
     Check(isa<GlobalValue>(Arg0),

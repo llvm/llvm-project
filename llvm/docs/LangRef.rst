@@ -3133,6 +3133,9 @@ as follows:
     program memory space defaults to the default address space of 0,
     which corresponds to a Von Neumann architecture that has code
     and data in the same space.
+
+.. _globals_addrspace:
+
 ``G<address space>``
     Specifies the address space to be used by default when creating global
     variables. If omitted, the globals address space defaults to the default
@@ -15061,7 +15064,8 @@ Syntax:
 
 ::
 
-      declare ptr @llvm.thread.pointer()
+      declare ptr @llvm.thread.pointer.p0()
+      declare ptr addrspace(5) @llvm.thread.pointer.p5()
 
 Overview:
 """""""""
@@ -15078,7 +15082,8 @@ specific: it may point to the start of TLS area, to the end, or somewhere
 in the middle.  Depending on the target, this intrinsic may read a register,
 call a helper function, read from an alternate memory space, or perform
 other operations necessary to locate the TLS area.  Not all targets support
-this intrinsic.
+this intrinsic.  The address space must be the :ref:`globals address space
+<globals_addrspace>`.
 
 '``llvm.call.preallocated.setup``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
