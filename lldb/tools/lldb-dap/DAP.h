@@ -35,9 +35,11 @@
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/Threading.h"
@@ -67,7 +69,7 @@ typedef llvm::DenseMap<lldb::addr_t, InstructionBreakpoint>
 using AdapterFeature = protocol::AdapterFeature;
 using ClientFeature = protocol::ClientFeature;
 
-enum class OutputType { Console, Stdout, Stderr, Telemetry };
+enum class OutputType { Console, Important, Stdout, Stderr, Telemetry };
 
 /// Buffer size for handling output events.
 constexpr uint64_t OutputBufferSize = (1u << 12);
@@ -166,8 +168,6 @@ struct DAP {
   lldb::SBTarget target;
   Variables variables;
   lldb::SBBroadcaster broadcaster;
-  std::thread event_thread;
-  std::thread progress_event_thread;
   llvm::StringMap<SourceBreakpointMap> source_breakpoints;
   FunctionBreakpointMap function_breakpoints;
   InstructionBreakpointMap instruction_breakpoints;
@@ -175,9 +175,9 @@ struct DAP {
   llvm::once_flag init_exception_breakpoints_flag;
   // Map step in target id to list of function targets that user can choose.
   llvm::DenseMap<lldb::addr_t, std::string> step_in_targets;
-  // A copy of the last LaunchRequest or AttachRequest so we can reuse its
-  // arguments if we get a RestartRequest.
-  std::optional<llvm::json::Object> last_launch_or_attach_request;
+  // A copy of the last LaunchRequest so we can reuse its arguments if we get a
+  // RestartRequest. Restarting an AttachRequest is not supported.
+  std::optional<protocol::LaunchRequestArguments> last_launch_request;
   lldb::tid_t focus_tid;
   bool disconnecting = false;
   llvm::once_flag terminated_event_flag;
@@ -187,8 +187,7 @@ struct DAP {
   // shutting down the entire adapter. When we're restarting, we keep the id of
   // the old process here so we can detect this case and keep running.
   lldb::pid_t restarting_process_id;
-  bool configuration_done_sent;
-  llvm::StringMap<std::unique_ptr<BaseRequestHandler>> request_handlers;
+  bool configuration_done;
   bool waiting_for_run_in_terminal;
   ProgressEventReporter progress_event_reporter;
   // Keep track of the last stop thread index IDs as threads won't go away
@@ -199,7 +198,6 @@ struct DAP {
   llvm::SmallDenseMap<int64_t, std::unique_ptr<ResponseHandler>>
       inflight_reverse_requests;
   ReplMode repl_mode;
-
   lldb::SBFormat frame_format;
   lldb::SBFormat thread_format;
   // This is used to allow request_evaluate to handle empty expressions
@@ -213,6 +211,13 @@ struct DAP {
 
   /// The initial thread list upon attaching.
   std::optional<llvm::json::Array> initial_thread_list;
+
+  /// Keep track of all the modules our client knows about: either through the
+  /// modules request or the module events.
+  /// @{
+  std::mutex modules_mutex;
+  llvm::StringSet<> modules;
+  /// @}
 
   /// Creates a new DAP sessions.
   ///
@@ -248,6 +253,14 @@ struct DAP {
   /// Stop event handler threads.
   void StopEventHandlers();
 
+  /// Configures the debug adapter for launching/attaching.
+  void SetConfiguration(const protocol::Configuration &confing, bool is_attach);
+
+  void SetConfigurationDone();
+
+  /// Configure source maps based on the current `DAPConfiguration`.
+  void ConfigureSourceMaps();
+
   /// Serialize the JSON value into a string and send the JSON packet to the
   /// "out" stream.
   void SendJSON(const llvm::json::Value &json);
@@ -266,8 +279,10 @@ struct DAP {
 
   ExceptionBreakpoint *GetExceptionBPFromStopReason(lldb::SBThread &thread);
 
+  lldb::SBThread GetLLDBThread(lldb::tid_t id);
   lldb::SBThread GetLLDBThread(const llvm::json::Object &arguments);
 
+  lldb::SBFrame GetLLDBFrame(uint64_t frame_id);
   lldb::SBFrame GetLLDBFrame(const llvm::json::Object &arguments);
 
   llvm::json::Value CreateTopLevelScopes();
@@ -310,8 +325,6 @@ struct DAP {
   void RunTerminateCommands();
 
   /// Create a new SBTarget object from the given request arguments.
-  /// \param[in] arguments
-  ///     Launch configuration arguments.
   ///
   /// \param[out] error
   ///     An SBError object that will contain an error description if
@@ -319,8 +332,7 @@ struct DAP {
   ///
   /// \return
   ///     An SBTarget object.
-  lldb::SBTarget CreateTargetFromArguments(const llvm::json::Object &arguments,
-                                           lldb::SBError &error);
+  lldb::SBTarget CreateTarget(lldb::SBError &error);
 
   /// Set given target object as a current target for lldb-dap and start
   /// listeing for its breakpoint events.
@@ -364,11 +376,6 @@ struct DAP {
     });
   }
 
-  /// Registers a request handler.
-  template <typename Handler> void RegisterRequest() {
-    request_handlers[Handler::GetCommand()] = std::make_unique<Handler>(*this);
-  }
-
   /// The set of capablities supported by this adapter.
   protocol::Capabilities GetCapabilities();
 
@@ -394,7 +401,7 @@ struct DAP {
   ///   The number of seconds to poll the process to wait until it is stopped.
   ///
   /// \return Error if waiting for the process fails, no error if succeeds.
-  lldb::SBError WaitForProcessToStop(uint32_t seconds);
+  lldb::SBError WaitForProcessToStop(std::chrono::seconds seconds);
 
   void SetFrameFormat(llvm::StringRef format);
 
@@ -412,9 +419,32 @@ struct DAP {
 
   lldb::SBMutex GetAPIMutex() const { return target.GetAPIMutex(); }
 
+  void StartEventThread();
+  void StartProgressEventThread();
+
 private:
-  std::mutex m_queue_mutex;
+  /// Registration of request handler.
+  /// @{
+  void RegisterRequests();
+  template <typename Handler> void RegisterRequest() {
+    request_handlers[Handler::GetCommand()] = std::make_unique<Handler>(*this);
+  }
+  llvm::StringMap<std::unique_ptr<BaseRequestHandler>> request_handlers;
+  /// @}
+
+  /// Event threads.
+  /// @{
+  void EventThread();
+  void ProgressEventThread();
+
+  std::thread event_thread;
+  std::thread progress_event_thread;
+  /// @}
+
+  /// Queue for all incoming messages.
   std::deque<protocol::Message> m_queue;
+  std::deque<protocol::Message> m_pending_queue;
+  std::mutex m_queue_mutex;
   std::condition_variable m_queue_cv;
 
   std::mutex m_cancelled_requests_mutex;

@@ -21,6 +21,7 @@
 #include "asan_scariness_score.h"
 #include "asan_stack.h"
 #include "asan_thread.h"
+#include "lsan/lsan_common.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_interface_internal.h"
@@ -149,7 +150,9 @@ class ScopedInErrorReport {
     // 2. Subsequent error reporting avoids nested lock acquisition patterns.
     // 3. Eliminates the lock order inversion risk between libdl and ASan's
     //    thread registry.
+#if CAN_SANITIZE_LEAKS && (SANITIZER_LINUX || SANITIZER_NETBSD)
     Symbolizer::GetOrInit()->GetRefreshedListOfModules();
+#endif
 
     // Make sure the registry and sanitizer report mutexes are locked while
     // we're printing an error report.

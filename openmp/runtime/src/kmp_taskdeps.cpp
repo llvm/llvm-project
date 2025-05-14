@@ -243,10 +243,12 @@ static inline void __kmp_track_dependence(kmp_int32 gtid, kmp_depnode_t *source,
     }
     if (!exists) {
       if (source_info->nsuccessors >= source_info->successors_size) {
+        kmp_uint old_size = source_info->successors_size;
         source_info->successors_size = 2 * source_info->successors_size;
         kmp_int32 *old_succ_ids = source_info->successors;
         kmp_int32 *new_succ_ids = (kmp_int32 *)__kmp_allocate(
             source_info->successors_size * sizeof(kmp_int32));
+        KMP_MEMCPY(new_succ_ids, old_succ_ids, old_size * sizeof(kmp_int32));
         source_info->successors = new_succ_ids;
         __kmp_free(old_succ_ids);
       }
@@ -698,9 +700,9 @@ kmp_int32 __kmpc_omp_task_with_deps(ident_t *loc_ref, kmp_int32 gtid,
       __kmp_tdg_is_recording(new_taskdata->tdg->tdg_status)) {
     kmp_tdg_info_t *tdg = new_taskdata->tdg;
     // extend record_map if needed
-    if (new_taskdata->td_task_id >= tdg->map_size) {
+    if (new_taskdata->td_tdg_task_id >= tdg->map_size) {
       __kmp_acquire_bootstrap_lock(&tdg->graph_lock);
-      if (new_taskdata->td_task_id >= tdg->map_size) {
+      if (new_taskdata->td_tdg_task_id >= tdg->map_size) {
         kmp_uint old_size = tdg->map_size;
         kmp_uint new_size = old_size * 2;
         kmp_node_info_t *old_record = tdg->record_map;

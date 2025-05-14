@@ -11,12 +11,10 @@
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
-#include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
@@ -65,7 +63,7 @@ static LogicalResult transferPreconditions(
     return rewriter.notifyMatchFailure(xferOp, "not a memref source");
 
   Attribute addrSpace = memRefType.getMemorySpace();
-  if (!addrSpace || !dyn_cast<amdgpu::AddressSpaceAttr>(addrSpace))
+  if (!isa_and_nonnull<amdgpu::AddressSpaceAttr>(addrSpace))
     return rewriter.notifyMatchFailure(xferOp, "no address space");
 
   if (dyn_cast<amdgpu::AddressSpaceAttr>(addrSpace).getValue() !=
@@ -120,7 +118,7 @@ static Value createVectorLoadForMaskedLoad(OpBuilder &builder, Location loc,
   Value fill = builder.create<vector::SplatOp>(loc, unbroadcastedVectorType,
                                                readOp.getPadding());
   Value load = builder.create<vector::LoadOp>(
-      loc, unbroadcastedVectorType, readOp.getSource(), readOp.getIndices());
+      loc, unbroadcastedVectorType, readOp.getBase(), readOp.getIndices());
   Value res = builder.create<arith::SelectOp>(loc, unbroadcastedVectorType,
                                               readOp.getMask(), load, fill);
   // Insert a broadcasting op if required.
@@ -151,7 +149,7 @@ struct TransferReadLowering final : OpRewritePattern<vector::TransferReadOp> {
     }
 
     Location loc = readOp.getLoc();
-    Value src = readOp.getSource();
+    Value src = readOp.getBase();
 
     VectorType vectorType = readOp.getVectorType();
     int64_t vectorSize = vectorType.getNumElements();
@@ -164,76 +162,32 @@ struct TransferReadLowering final : OpRewritePattern<vector::TransferReadOp> {
         stridedMetadata.getConstifiedMixedStrides();
     SmallVector<OpFoldResult> sizes = stridedMetadata.getConstifiedMixedSizes();
     OpFoldResult offset = stridedMetadata.getConstifiedMixedOffset();
+    memref::LinearizedMemRefInfo linearizedInfo;
     OpFoldResult linearizedIndices;
-    std::tie(std::ignore, linearizedIndices) =
+    std::tie(linearizedInfo, linearizedIndices) =
         memref::getLinearizedMemRefOffsetAndSize(rewriter, loc, elementBitWidth,
                                                  elementBitWidth, offset, sizes,
                                                  strides, indices);
-
-    // TODO(jerryyin): Fix the getLinearizedMemRefOffsetAndSize() function
-    // Note below doesn't give the correct result for the linearized size.
-    // Value totalSize = getValueOrCreateConstantIndexOp(
-    //    rewriter, loc, linearizedInfo.linearizedSize);
-    // It computes the multiplied sizes of all dimensions instead of taking
-    // the maximum of each dimension size * stride.
-    SmallVector<AffineExpr> productExpressions;
-    SmallVector<Value> productResults;
-    unsigned sourceRank = cast<ShapedType>(src.getType()).getRank();
-
-    SmallVector<AffineExpr> symbols(2 * sourceRank);
-    SmallVector<Value> offsetValues;
-    bindSymbolsList(rewriter.getContext(), MutableArrayRef{symbols});
-
-    size_t symbolIndex = 0;
-    for (size_t i = 0; i < sourceRank; ++i) {
-      AffineExpr strideExpr, sizeExpr;
-      OpFoldResult stride = strides[i];
-      OpFoldResult size = sizes[i];
-      if (auto constantStride = getConstantIntValue(stride)) {
-        strideExpr = rewriter.getAffineConstantExpr(*constantStride);
-      } else {
-        strideExpr = symbols[symbolIndex++];
-        offsetValues.push_back(
-            getValueOrCreateConstantIndexOp(rewriter, loc, stride));
-      }
-
-      if (auto constantSize = getConstantIntValue(size)) {
-        sizeExpr = rewriter.getAffineConstantExpr(*constantSize);
-      } else {
-        sizeExpr = symbols[symbolIndex++];
-        offsetValues.push_back(
-            getValueOrCreateConstantIndexOp(rewriter, loc, size));
-      }
-
-      productExpressions.push_back(strideExpr * sizeExpr);
-    }
-
-    AffineMap maxMap = AffineMap::get(
-        /*dimCount=*/0, /*symbolCount=*/symbolIndex, productExpressions,
-        rewriter.getContext());
-    Value totalSize =
-        rewriter.create<affine::AffineMaxOp>(loc, maxMap, offsetValues);
 
     // delta = bufferSize - linearizedOffset
     Value vectorSizeOffset =
         rewriter.create<arith::ConstantIndexOp>(loc, vectorSize);
     Value linearIndex =
         getValueOrCreateConstantIndexOp(rewriter, loc, linearizedIndices);
+    Value totalSize = getValueOrCreateConstantIndexOp(
+        rewriter, loc, linearizedInfo.linearizedSize);
     Value delta = rewriter.create<arith::SubIOp>(loc, totalSize, linearIndex);
 
     // 1) check if delta < vectorSize
     Value isOutofBounds = rewriter.create<arith::CmpIOp>(
         loc, arith::CmpIPredicate::ult, delta, vectorSizeOffset);
 
-    // 2) check if (detla_bytes % (32 / elementBitwidth) != 0)
-    Value deltaBytes = rewriter.create<arith::MulIOp>(
-        loc, delta,
-        rewriter.create<arith::ConstantIndexOp>(loc, elementBitWidth / 8));
+    // 2) check if (detla % elements_per_word != 0)
     Value elementsPerWord = rewriter.create<arith::ConstantIndexOp>(
         loc, llvm::divideCeil(32, elementBitWidth));
     Value isNotWordAligned = rewriter.create<arith::CmpIOp>(
         loc, arith::CmpIPredicate::ne,
-        rewriter.create<arith::RemUIOp>(loc, deltaBytes, elementsPerWord),
+        rewriter.create<arith::RemUIOp>(loc, delta, elementsPerWord),
         rewriter.create<arith::ConstantIndexOp>(loc, 0));
 
     // We take the fallback of transfer_read default lowering only it is both

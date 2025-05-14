@@ -1936,7 +1936,7 @@ static Value *optimizeDoubleFP(CallInst *CI, IRBuilderBase &B,
   bool IsIntrinsic = CalleeFn->isIntrinsic();
   if (!IsIntrinsic) {
     StringRef CallerName = CI->getFunction()->getName();
-    if (!CallerName.empty() && CallerName.back() == 'f' &&
+    if (CallerName.ends_with('f') &&
         CallerName.size() == (CalleeName.size() + 1) &&
         CallerName.starts_with(CalleeName))
       return nullptr;
@@ -4136,6 +4136,11 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI, IRBuilderBase &Builder) {
       return optimizeMemCpy(CI, Builder);
     case Intrinsic::memmove:
       return optimizeMemMove(CI, Builder);
+    case Intrinsic::sin:
+    case Intrinsic::cos:
+      if (UnsafeFPShrink)
+        return optimizeUnaryDoubleFP(CI, Builder, TLI, /*isPrecise=*/true);
+      return nullptr;
     default:
       return nullptr;
     }

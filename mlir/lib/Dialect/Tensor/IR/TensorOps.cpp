@@ -60,7 +60,6 @@ Operation *TensorDialect::materializeConstant(OpBuilder &builder,
 OpFoldResult tensor::getMixedSize(OpBuilder &builder, Location loc, Value value,
                                   int64_t dim) {
   auto tensorType = llvm::cast<RankedTensorType>(value.getType());
-  SmallVector<OpFoldResult> result;
   if (tensorType.isDynamicDim(dim))
     return builder.createOrFold<tensor::DimOp>(loc, value, dim);
 
@@ -1357,7 +1356,7 @@ RankedTensorType GatherOp::inferResultType(RankedTensorType sourceType,
   SmallVector<int64_t> resultShape(indicesType.getShape().drop_back());
   resultShape.reserve(resultShape.size() + sourceType.getRank());
   for (int64_t idx : llvm::seq<int64_t>(0, sourceType.getRank())) {
-    if (std::binary_search(gatherDims.begin(), gatherDims.end(), idx)) {
+    if (llvm::binary_search(gatherDims, idx)) {
       if (!rankReduced)
         resultShape.push_back(1);
       continue;
@@ -1703,7 +1702,6 @@ OpFoldResult ReshapeOp::fold(FoldAdaptor adaptor) {
       if (auto dimOp = element.getDefiningOp<tensor::DimOp>()) {
         dynamicNoop &= dimOp.getSource() == source;
 
-        APSInt dim;
         auto cst = getConstantIntValue(dimOp.getIndex());
         dynamicNoop &=
             cst.has_value() && cst.value() == static_cast<int64_t>(id);

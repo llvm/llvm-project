@@ -396,6 +396,11 @@ public:
   // TODO: Populate all pass names by using <Target>PassRegistry.def.
   virtual void registerPassBuilderCallbacks(PassBuilder &) {}
 
+  /// Allow the target to register early alias analyses (AA before BasicAA) with
+  /// the AAManager for use with the new pass manager. Only affects the
+  /// "default" AAManager.
+  virtual void registerEarlyDefaultAliasAnalyses(AAManager &) {}
+
   /// Allow the target to register alias analyses with the AAManager for use
   /// with the new pass manager. Only affects the "default" AAManager.
   virtual void registerDefaultAliasAnalyses(AAManager &) {}
@@ -450,6 +455,9 @@ public:
 
   /// Entry point for module splitting. Targets can implement custom module
   /// splitting logic, mainly used by LTO for --lto-partitions.
+  ///
+  /// On success, this guarantees that between 1 and \p NumParts modules were
+  /// created and passed to \p ModuleCallBack.
   ///
   /// \returns `true` if the module was split, `false` otherwise. When  `false`
   /// is returned, it is assumed that \p ModuleCallback has never been called

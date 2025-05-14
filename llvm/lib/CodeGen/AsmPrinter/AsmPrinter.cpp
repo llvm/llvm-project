@@ -382,7 +382,8 @@ Align AsmPrinter::getGVAlignment(const GlobalObject *GV, const DataLayout &DL,
   return Alignment;
 }
 
-AsmPrinter::AsmPrinter(TargetMachine &tm, std::unique_ptr<MCStreamer> Streamer)
+AsmPrinter::AsmPrinter(TargetMachine &tm, std::unique_ptr<MCStreamer> Streamer,
+                       char &ID)
     : MachineFunctionPass(ID), TM(tm), MAI(tm.getMCAsmInfo()),
       OutContext(Streamer->getContext()), OutStreamer(std::move(Streamer)),
       SM(*this) {
@@ -560,7 +561,8 @@ bool AsmPrinter::doInitialization(Module &M) {
 
   if (MAI->doesSupportDebugInformation()) {
     bool EmitCodeView = M.getCodeViewFlag();
-    if (EmitCodeView && TM.getTargetTriple().isOSWindows())
+    if (EmitCodeView &&
+        (TM.getTargetTriple().isOSWindows() || TM.getTargetTriple().isUEFI()))
       Handlers.push_back(std::make_unique<CodeViewDebug>(this));
     if (!EmitCodeView || M.getDwarfVersion()) {
       if (hasDebugInfo()) {
@@ -2398,16 +2400,56 @@ void AsmPrinter::emitRemarksSection(remarks::RemarkStreamer &RS) {
   OutStreamer->emitBinaryData(Buf);
 }
 
+static uint64_t globalSize(const llvm::GlobalVariable &G) {
+  const Constant *Initializer = G.getInitializer();
+  return G.getParent()->getDataLayout().getTypeAllocSize(
+      Initializer->getType());
+}
+
+static bool shouldTagGlobal(const llvm::GlobalVariable &G) {
+  // We used to do this in clang, but there are optimization passes that turn
+  // non-constant globals into constants. So now, clang only tells us whether
+  // it would *like* a global to be tagged, but we still make the decision here.
+  //
+  // For now, don't instrument constant data, as it'll be in .rodata anyway. It
+  // may be worth instrumenting these in future to stop them from being used as
+  // gadgets.
+  if (G.getName().starts_with("llvm.") || G.isThreadLocal() || G.isConstant())
+    return false;
+
+  // Globals can be placed implicitly or explicitly in sections. There's two
+  // different types of globals that meet this criteria that cause problems:
+  //  1. Function pointers that are going into various init arrays (either
+  //     explicitly through `__attribute__((section(<foo>)))` or implicitly
+  //     through `__attribute__((constructor)))`, such as ".(pre)init(_array)",
+  //     ".fini(_array)", ".ctors", and ".dtors". These function pointers end up
+  //     overaligned and overpadded, making iterating over them problematic, and
+  //     each function pointer is individually tagged (so the iteration over
+  //     them causes SIGSEGV/MTE[AS]ERR).
+  //  2. Global variables put into an explicit section, where the section's name
+  //     is a valid C-style identifier. The linker emits a `__start_<name>` and
+  //     `__stop_<name>` symbol for the section, so that you can iterate over
+  //     globals within this section. Unfortunately, again, these globals would
+  //     be tagged and so iteration causes SIGSEGV/MTE[AS]ERR.
+  //
+  // To mitigate both these cases, and because specifying a section is rare
+  // outside of these two cases, disable MTE protection for globals in any
+  // section.
+  if (G.hasSection())
+    return false;
+
+  return globalSize(G) > 0;
+}
+
 static void tagGlobalDefinition(Module &M, GlobalVariable *G) {
-  Constant *Initializer = G->getInitializer();
-  uint64_t SizeInBytes =
-      M.getDataLayout().getTypeAllocSize(Initializer->getType());
+  uint64_t SizeInBytes = globalSize(*G);
 
   uint64_t NewSize = alignTo(SizeInBytes, 16);
   if (SizeInBytes != NewSize) {
     // Pad the initializer out to the next multiple of 16 bytes.
     llvm::SmallVector<uint8_t> Init(NewSize - SizeInBytes, 0);
     Constant *Padding = ConstantDataArray::get(M.getContext(), Init);
+    Constant *Initializer = G->getInitializer();
     Initializer = ConstantStruct::getAnon({Initializer, Padding});
     auto *NewGV = new GlobalVariable(
         M, Initializer->getType(), G->isConstant(), G->getLinkage(),
@@ -2430,6 +2472,12 @@ static void tagGlobalDefinition(Module &M, GlobalVariable *G) {
   G->setUnnamedAddr(GlobalValue::UnnamedAddr::None);
 }
 
+static void removeMemtagFromGlobal(GlobalVariable &G) {
+  auto Meta = G.getSanitizerMetadata();
+  Meta.Memtag = false;
+  G.setSanitizerMetadata(Meta);
+}
+
 bool AsmPrinter::doFinalization(Module &M) {
   // Set the MachineFunction to nullptr so that we can catch attempted
   // accesses to MF specific features at the module level and so that
@@ -2440,6 +2488,12 @@ bool AsmPrinter::doFinalization(Module &M) {
   for (GlobalVariable &G : M.globals()) {
     if (G.isDeclaration() || !G.isTagged())
       continue;
+    if (!shouldTagGlobal(G)) {
+      assert(G.hasSanitizerMetadata()); // because isTagged.
+      removeMemtagFromGlobal(G);
+      assert(!G.isTagged());
+      continue;
+    }
     GlobalsToTag.push_back(&G);
   }
   for (GlobalVariable *G : GlobalsToTag)
@@ -4113,7 +4167,8 @@ const MCExpr *AsmPrinter::lowerBlockAddressConstant(const BlockAddress &BA) {
 
 /// GetCPISymbol - Return the symbol for the specified constant pool entry.
 MCSymbol *AsmPrinter::GetCPISymbol(unsigned CPID) const {
-  if (getSubtargetInfo().getTargetTriple().isWindowsMSVCEnvironment()) {
+  if (getSubtargetInfo().getTargetTriple().isWindowsMSVCEnvironment() ||
+      getSubtargetInfo().getTargetTriple().isUEFI()) {
     const MachineConstantPoolEntry &CPE =
         MF->getConstantPool()->getConstants()[CPID];
     if (!CPE.isMachineConstantPoolEntry()) {
@@ -4667,4 +4722,110 @@ AsmPrinter::getCodeViewJumpTableInfo(int JTI, const MachineInstr *BranchInstr,
   // EK_LabelDifference32 is implemented as an Int32 from the base address.
   return std::make_tuple(Base, 0, BranchLabel,
                          codeview::JumpTableEntrySize::Int32);
+}
+
+void AsmPrinter::emitCOFFReplaceableFunctionData(Module &M) {
+  const Triple &TT = TM.getTargetTriple();
+  assert(TT.isOSBinFormatCOFF());
+
+  bool IsTargetArm64EC = TT.isWindowsArm64EC();
+  SmallVector<char> Buf;
+  SmallVector<MCSymbol *> FuncOverrideDefaultSymbols;
+  bool SwitchedToDirectiveSection = false;
+  for (const Function &F : M.functions()) {
+    if (F.hasFnAttribute("loader-replaceable")) {
+      if (!SwitchedToDirectiveSection) {
+        OutStreamer->switchSection(
+            OutContext.getObjectFileInfo()->getDrectveSection());
+        SwitchedToDirectiveSection = true;
+      }
+
+      StringRef Name = F.getName();
+
+      // For hybrid-patchable targets, strip the prefix so that we can mark
+      // the real function as replaceable.
+      if (IsTargetArm64EC && Name.ends_with(HybridPatchableTargetSuffix)) {
+        Name = Name.drop_back(HybridPatchableTargetSuffix.size());
+      }
+
+      MCSymbol *FuncOverrideSymbol =
+          MMI->getContext().getOrCreateSymbol(Name + "_$fo$");
+      OutStreamer->beginCOFFSymbolDef(FuncOverrideSymbol);
+      OutStreamer->emitCOFFSymbolStorageClass(COFF::IMAGE_SYM_CLASS_EXTERNAL);
+      OutStreamer->emitCOFFSymbolType(COFF::IMAGE_SYM_DTYPE_NULL);
+      OutStreamer->endCOFFSymbolDef();
+
+      MCSymbol *FuncOverrideDefaultSymbol =
+          MMI->getContext().getOrCreateSymbol(Name + "_$fo_default$");
+      OutStreamer->beginCOFFSymbolDef(FuncOverrideDefaultSymbol);
+      OutStreamer->emitCOFFSymbolStorageClass(COFF::IMAGE_SYM_CLASS_EXTERNAL);
+      OutStreamer->emitCOFFSymbolType(COFF::IMAGE_SYM_DTYPE_NULL);
+      OutStreamer->endCOFFSymbolDef();
+      FuncOverrideDefaultSymbols.push_back(FuncOverrideDefaultSymbol);
+
+      OutStreamer->emitBytes((Twine(" /ALTERNATENAME:") +
+                              FuncOverrideSymbol->getName() + "=" +
+                              FuncOverrideDefaultSymbol->getName())
+                                 .toStringRef(Buf));
+      Buf.clear();
+    }
+  }
+
+  if (SwitchedToDirectiveSection)
+    OutStreamer->popSection();
+
+  if (FuncOverrideDefaultSymbols.empty())
+    return;
+
+  // MSVC emits the symbols for the default variables pointing at the start of
+  // the .data section, but doesn't actually allocate any space for them. LLVM
+  // can't do this, so have all of the variables pointing at a single byte
+  // instead.
+  OutStreamer->switchSection(OutContext.getObjectFileInfo()->getDataSection());
+  for (MCSymbol *Symbol : FuncOverrideDefaultSymbols) {
+    OutStreamer->emitLabel(Symbol);
+  }
+  OutStreamer->emitZeros(1);
+  OutStreamer->popSection();
+}
+
+void AsmPrinter::emitCOFFFeatureSymbol(Module &M) {
+  const Triple &TT = TM.getTargetTriple();
+  assert(TT.isOSBinFormatCOFF());
+
+  // Emit an absolute @feat.00 symbol.
+  MCSymbol *S = MMI->getContext().getOrCreateSymbol(StringRef("@feat.00"));
+  OutStreamer->beginCOFFSymbolDef(S);
+  OutStreamer->emitCOFFSymbolStorageClass(COFF::IMAGE_SYM_CLASS_STATIC);
+  OutStreamer->emitCOFFSymbolType(COFF::IMAGE_SYM_DTYPE_NULL);
+  OutStreamer->endCOFFSymbolDef();
+  int64_t Feat00Value = 0;
+
+  if (TT.getArch() == Triple::x86) {
+    // According to the PE-COFF spec, the LSB of this value marks the object
+    // for "registered SEH".  This means that all SEH handler entry points
+    // must be registered in .sxdata.  Use of any unregistered handlers will
+    // cause the process to terminate immediately.  LLVM does not know how to
+    // register any SEH handlers, so its object files should be safe.
+    Feat00Value |= COFF::Feat00Flags::SafeSEH;
+  }
+
+  if (M.getModuleFlag("cfguard")) {
+    // Object is CFG-aware.
+    Feat00Value |= COFF::Feat00Flags::GuardCF;
+  }
+
+  if (M.getModuleFlag("ehcontguard")) {
+    // Object also has EHCont.
+    Feat00Value |= COFF::Feat00Flags::GuardEHCont;
+  }
+
+  if (M.getModuleFlag("ms-kernel")) {
+    // Object is compiled with /kernel.
+    Feat00Value |= COFF::Feat00Flags::Kernel;
+  }
+
+  OutStreamer->emitSymbolAttribute(S, MCSA_Global);
+  OutStreamer->emitAssignment(
+      S, MCConstantExpr::create(Feat00Value, MMI->getContext()));
 }
