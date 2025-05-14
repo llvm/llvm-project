@@ -61,8 +61,7 @@ OpFoldResult FromPtrOp::fold(FoldAdaptor adaptor) {
     if (!toPtr || toPtr.getPtr().getType() != fromPtr.getType())
       return ptrLike;
     Value md = fromPtr.getMetadata();
-    // If there's no metadata in the op, either the cast never requires metadata
-    // or the op has the trivial metadata flag set, therefore fold.
+    // If there's no metadata in the op fold the op.
     if (!md)
       ptrLike = toPtr.getPtr();
     // Fold if the metadata can be verified to be equal.
@@ -83,18 +82,6 @@ LogicalResult FromPtrOp::verify() {
     return emitError()
            << "expected the input and output to have the same memory space";
   }
-  bool hasMD = getMetadata() != Value();
-  bool hasTrivialMD = getHasTrivialMetadata();
-  if (hasMD && hasTrivialMD) {
-    return emitError() << "expected either a metadata argument or the "
-                          "`trivial_metadata` flag, not both";
-  }
-  if (getType().hasPtrMetadata() && !(hasMD || hasTrivialMD)) {
-    return emitError() << "expected either a metadata argument or the "
-                          "`trivial_metadata` flag to be set";
-  }
-  if (!getType().hasPtrMetadata() && (hasMD || hasTrivialMD))
-    return emitError() << "expected no metadata specification";
   return success();
 }
 

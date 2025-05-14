@@ -33,27 +33,24 @@ def Ptr_FromPtrOp : Pointer_Op<"from_ptr", [
     - The memory-space of both the `ptr` and ptr-like object must match.
     - The cast is Pure (no UB and side-effect free).
 
-    If the ptr-like object type has metadata, then the operation expects the
-    metadata as an argument or expects that the flag `trivial_metadata` is set.
-    If `trivial_metadata` is set, then it is assumed that the metadata can be
-    reconstructed statically from the pointer-like type.
+    The optional `metadata` operand exists to provide any ptr-like metadata
+    that might be required to perform the cast.
 
     Example:
 
     ```mlir
     %typed_ptr = ptr.from_ptr %ptr : !ptr.ptr<0> -> !my.ptr<f32, 0>
     %memref = ptr.from_ptr %ptr metadata %md : !ptr.ptr<0> -> memref<f32, 0>
-    %memref = ptr.from_ptr %ptr trivial_metadata : !ptr.ptr<0> -> memref<f32, 0>
+  
+    // Cast the `%ptr` to a memref without utilizing metadata.
+    %memref = ptr.from_ptr %ptr : !ptr.ptr<0> -> memref<f32, 0>
     ```
   }];
 
-  let arguments = (ins Ptr_PtrType:$ptr,
-                       Optional<Ptr_PtrMetadata>:$metadata,
-                       UnitProp:$hasTrivialMetadata);
+  let arguments = (ins Ptr_PtrType:$ptr, Optional<Ptr_PtrMetadata>:$metadata);
   let results = (outs PtrLikeTypeInterface:$result);
   let assemblyFormat = [{
-    $ptr (`metadata` $metadata^)? (`trivial_metadata` $hasTrivialMetadata^)?
-    attr-dict `:` type($ptr) `->` type($result)
+    $ptr (`metadata` $metadata^)? attr-dict `:` type($ptr) `->` type($result)
   }];
   let hasFolder = 1;
   let hasVerifier = 1;
