@@ -491,10 +491,10 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       });
 
   getActionDefinitionsBuilder(G_SITOFP)
-      .legalFor(HasSSE1, {s32, s32})
-      .legalFor(HasSSE1 && Is64Bit, {s32, s64})
-      .legalFor(HasSSE2, {s64, s32})
-      .legalFor(HasSSE2 && Is64Bit, {s64, s64})
+      .legalFor(HasSSE1, {{s32, s32}})
+      .legalFor(HasSSE1 && Is64Bit, {{s32, s64}})
+      .legalFor(HasSSE2, {{s64, s32}})
+      .legalFor(HasSSE2 && Is64Bit, {{s64, s64}})
       .customForCartesianProduct(UseX87, {s32, s64, s80}, {s16, s32, s64})
       .clampScalar(1, (UseX87 && !HasSSE1) ? s16 : s32, sMaxScalar)
       .widenScalarToNextPow2(1)
@@ -502,10 +502,10 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .widenScalarToNextPow2(0);
 
   getActionDefinitionsBuilder(G_FPTOSI)
-      .legalFor(HasSSE1, {s32, s32})
-      .legalFor(HasSSE1 && Is64Bit, {s64, s32})
-      .legalFor(HasSSE2, {s32, s64})
-      .legalFor(HasSSE2 && Is64Bit, {s64, s64})
+      .legalFor(HasSSE1, {{s32, s32}})
+      .legalFor(HasSSE1 && Is64Bit, {{s64, s32}})
+      .legalFor(HasSSE2, {{s32, s64}})
+      .legalFor(HasSSE2 && Is64Bit, {{s64, s64}})
       .customForCartesianProduct(UseX87, {s16, s32, s64}, {s32, s64, s80})
       .clampScalar(0, (UseX87 && !HasSSE1) ? s16 : s32, sMaxScalar)
       .widenScalarToNextPow2(0)
