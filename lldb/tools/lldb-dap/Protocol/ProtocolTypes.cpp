@@ -446,18 +446,48 @@ bool fromJSON(const llvm::json::Value &Params, Breakpoint &BP,
 
 bool fromJSON(const llvm::json::Value &Params, SourceBreakpoint &SB,
               llvm::json::Path P) {
-  json::ObjectMapper O(Params, P);
-  return O && O.map("line", SB.line) && O.map("column", SB.column) &&
-         O.map("condition", SB.condition) &&
-         O.map("hitCondition", SB.hitCondition) &&
-         O.map("logMessage", SB.logMessage) && O.map("mode", SB.mode);
+  llvm::json::ObjectMapper O(Params, P);
+  return O && O.map("line", SB.line) && O.mapOptional("column", SB.column) &&
+         O.mapOptional("condition", SB.condition) &&
+         O.mapOptional("hitCondition", SB.hitCondition) &&
+         O.mapOptional("logMessage", SB.logMessage) &&
+         O.mapOptional("mode", SB.mode);
+}
+
+llvm::json::Value toJSON(const SourceBreakpoint &SB) {
+  llvm::json::Object result{{"line", SB.line}};
+
+  if (SB.column)
+    result.insert({"column", *SB.column});
+  if (SB.condition)
+    result.insert({"condition", *SB.condition});
+  if (SB.hitCondition)
+    result.insert({"hitCondition", *SB.hitCondition});
+  if (SB.logMessage)
+    result.insert({"logMessage", *SB.logMessage});
+  if (SB.mode)
+    result.insert({"mode", *SB.mode});
+
+  return result;
 }
 
 bool fromJSON(const llvm::json::Value &Params, FunctionBreakpoint &FB,
               llvm::json::Path P) {
-  json::ObjectMapper O(Params, P);
-  return O && O.map("name", FB.name) && O.map("condition", FB.condition) &&
-         O.map("hitCondition", FB.hitCondition);
+  llvm::json::ObjectMapper O(Params, P);
+  return O && O.map("name", FB.name) &&
+         O.mapOptional("condition", FB.condition) &&
+         O.mapOptional("hitCondition", FB.hitCondition);
+}
+
+llvm::json::Value toJSON(const FunctionBreakpoint &FB) {
+  llvm::json::Object result{{"name", FB.name}};
+
+  if (FB.condition)
+    result.insert({"condition", *FB.condition});
+  if (FB.hitCondition)
+    result.insert({"hitCondition", *FB.hitCondition});
+
+  return result;
 }
 
 bool fromJSON(const llvm::json::Value &Params, DataBreakpointAccessType &DBAT,
@@ -493,21 +523,36 @@ llvm::json::Value toJSON(const DataBreakpointAccessType &DBAT) {
   llvm_unreachable("unhandled data breakpoint access type.");
 }
 
-bool fromJSON(const llvm::json::Value &Params, DataBreakpointInfo &DBI,
+bool fromJSON(const llvm::json::Value &Params, DataBreakpoint &DBI,
               llvm::json::Path P) {
-  json::ObjectMapper O(Params, P);
+  llvm::json::ObjectMapper O(Params, P);
   return O && O.map("dataId", DBI.dataId) &&
-         O.map("accessType", DBI.accessType) &&
-         O.map("condition", DBI.condition) &&
-         O.map("hitCondition", DBI.hitCondition);
+         O.mapOptional("accessType", DBI.accessType) &&
+         O.mapOptional("condition", DBI.condition) &&
+         O.mapOptional("hitCondition", DBI.hitCondition);
+}
+
+llvm::json::Value toJSON(const DataBreakpoint &DBI) {
+  llvm::json::Object result{{"dataId", DBI.dataId}};
+
+  if (DBI.accessType)
+    result.insert({"accessType", *DBI.accessType});
+  if (DBI.condition)
+    result.insert({"condition", *DBI.condition});
+  if (DBI.hitCondition)
+    result.insert({"hitCondition", *DBI.hitCondition});
+
+  return result;
 }
 
 bool fromJSON(const llvm::json::Value &Params, InstructionBreakpoint &IB,
               llvm::json::Path P) {
-  json::ObjectMapper O(Params, P);
+  llvm::json::ObjectMapper O(Params, P);
   return O && O.map("instructionReference", IB.instructionReference) &&
-         O.map("offset", IB.offset) && O.map("condition", IB.condition) &&
-         O.map("hitCondition", IB.hitCondition) && O.map("mode", IB.mode);
+         O.mapOptional("offset", IB.offset) &&
+         O.mapOptional("condition", IB.condition) &&
+         O.mapOptional("hitCondition", IB.hitCondition) &&
+         O.mapOptional("mode", IB.mode);
 }
 
 } // namespace lldb_dap::protocol

@@ -464,6 +464,7 @@ struct SourceBreakpoint {
   std::optional<std::string> mode;
 };
 bool fromJSON(const llvm::json::Value &, SourceBreakpoint &, llvm::json::Path);
+llvm::json::Value toJSON(const SourceBreakpoint &);
 
 /// Properties of a breakpoint passed to the `setFunctionBreakpoints` request.
 struct FunctionBreakpoint {
@@ -483,6 +484,7 @@ struct FunctionBreakpoint {
 };
 bool fromJSON(const llvm::json::Value &, FunctionBreakpoint &,
               llvm::json::Path);
+llvm::json::Value toJSON(const FunctionBreakpoint &);
 
 /// This enumeration defines all possible access types for data breakpoints.
 /// Values: ‘read’, ‘write’, ‘readWrite’
@@ -496,7 +498,7 @@ bool fromJSON(const llvm::json::Value &, DataBreakpointAccessType &,
 llvm::json::Value toJSON(const DataBreakpointAccessType &);
 
 /// Properties of a data breakpoint passed to the `setDataBreakpoints` request.
-struct DataBreakpointInfo {
+struct DataBreakpoint {
   /// An id representing the data. This id is returned from the
   /// `dataBreakpointInfo` request.
   std::string dataId;
@@ -511,8 +513,8 @@ struct DataBreakpointInfo {
   /// The debug adapter is expected to interpret the expression as needed.
   std::optional<std::string> hitCondition;
 };
-bool fromJSON(const llvm::json::Value &, DataBreakpointInfo &,
-              llvm::json::Path);
+bool fromJSON(const llvm::json::Value &, DataBreakpoint &, llvm::json::Path);
+llvm::json::Value toJSON(const DataBreakpoint &);
 
 /// Properties of a breakpoint passed to the `setInstructionBreakpoints` request
 struct InstructionBreakpoint {
