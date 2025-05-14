@@ -8539,10 +8539,7 @@ VPWidenIntOrFpInductionRecipe *VPRecipeBuilder::tryToOptimizeInductionTruncate(
   return nullptr;
 }
 
-VPBlendRecipe *VPRecipeBuilder::tryToBlend(PHINode *Phi,
-                                           ArrayRef<VPValue *> Operands) {
-  unsigned NumIncoming = Phi->getNumIncomingValues();
-
+VPBlendRecipe *VPRecipeBuilder::tryToBlend(VPWidenPHIRecipe *PhiR) {
   // We know that all PHIs in non-header blocks are converted into selects, so
   // we don't have to worry about the insertion order and we can just use the
   // builder. At this point we generate the predication tree. There may be
@@ -8552,9 +8549,11 @@ VPBlendRecipe *VPRecipeBuilder::tryToBlend(PHINode *Phi,
   // Map incoming IR BasicBlocks to incoming VPValues, for lookup below.
   // TODO: Add operands and masks in order from the VPlan predecessors.
   DenseMap<BasicBlock *, VPValue *> VPIncomingValues;
+  auto *Phi = cast<PHINode>(PhiR->getUnderlyingInstr());
   for (const auto &[Idx, Pred] : enumerate(predecessors(Phi->getParent())))
-    VPIncomingValues[Pred] = Operands[Idx];
+    VPIncomingValues[Pred] = PhiR->getOperand(Idx);
 
+  unsigned NumIncoming = PhiR->getNumIncoming();
   SmallVector<VPValue *, 2> OperandsWithMask;
   for (unsigned In = 0; In < NumIncoming; In++) {
     BasicBlock *Pred = Phi->getIncomingBlock(In);
@@ -8562,7 +8561,7 @@ VPBlendRecipe *VPRecipeBuilder::tryToBlend(PHINode *Phi,
     VPValue *EdgeMask = getEdgeMask(Pred, Phi->getParent());
     if (!EdgeMask) {
       assert(In == 0 && "Both null and non-null edge masks found");
-      assert(all_equal(Operands) &&
+      assert(all_equal(PhiR->operands()) &&
              "Distinct incoming values with one having a full mask");
       break;
     }
@@ -8955,15 +8954,21 @@ bool VPRecipeBuilder::getScaledReductions(
   return false;
 }
 
-VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(
-    Instruction *Instr, ArrayRef<VPValue *> Operands, VFRange &Range) {
+VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(VPSingleDefRecipe *R,
+                                                      VFRange &Range) {
   // First, check for specific widening recipes that deal with inductions, Phi
   // nodes, calls and memory operations.
   VPRecipeBase *Recipe;
-  if (auto *Phi = dyn_cast<PHINode>(Instr)) {
-    if (Phi->getParent() != OrigLoop->getHeader())
-      return tryToBlend(Phi, Operands);
+  Instruction *Instr = R->getUnderlyingInstr();
+  SmallVector<VPValue *, 4> Operands(R->operands());
+  if (auto *PhiR = dyn_cast<VPWidenPHIRecipe>(R)) {
+    VPBasicBlock *Parent = PhiR->getParent();
+    VPRegionBlock *LoopRegionOf = Parent->getEnclosingLoopRegion();
+    // Handle phis in non-header blocks.
+    if (!LoopRegionOf || LoopRegionOf->getEntry() != Parent)
+      return tryToBlend(PhiR);
 
+    auto *Phi = cast<PHINode>(R->getUnderlyingInstr());
     assert(Operands.size() == 2 && "Must have 2 operands for header phis");
     if ((Recipe = tryToOptimizeInductionPHI(Phi, Operands, Range)))
       return Recipe;
@@ -9528,11 +9533,12 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range,
         continue;
       }
 
-      SmallVector<VPValue *, 4> Operands(R.operands());
       VPRecipeBase *Recipe =
-          RecipeBuilder.tryToCreateWidenRecipe(Instr, Operands, Range);
-      if (!Recipe)
+          RecipeBuilder.tryToCreateWidenRecipe(SingleDef, Range);
+      if (!Recipe) {
+        SmallVector<VPValue *, 4> Operands(R.operands());
         Recipe = RecipeBuilder.handleReplication(Instr, Operands, Range);
+      }
 
       RecipeBuilder.setRecipe(Instr, Recipe);
       if (isa<VPWidenIntOrFpInductionRecipe>(Recipe) && isa<TruncInst>(Instr)) {
