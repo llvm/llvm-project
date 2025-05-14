@@ -23,6 +23,7 @@
 #include "clang/Basic/AllDiagnostics.h"
 #include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Basic/DiagnosticOptions.h"
+#include "clang/Basic/Sanitizers.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/OptionUtils.h"
@@ -256,6 +257,82 @@ parseOptimizationRemark(clang::DiagnosticsEngine &diags,
   return result;
 }
 
+static void parseSanitizerKinds(llvm::StringRef FlagName,
+                                const std::vector<std::string> &Sanitizers,
+                                clang::DiagnosticsEngine &Diags,
+                                clang::SanitizerSet &S) {
+  for (const auto &Sanitizer : Sanitizers) {
+    clang::SanitizerMask K =
+        clang::parseSanitizerValue(Sanitizer, /*AllowGroups=*/false);
+    if (K == clang::SanitizerMask())
+      Diags.Report(clang::diag::err_drv_invalid_value) << FlagName << Sanitizer;
+    else
+      S.set(K, true);
+  }
+}
+
+static llvm::SmallVector<llvm::StringRef, 4>
+serializeSanitizerKinds(clang::SanitizerSet S) {
+  llvm::SmallVector<llvm::StringRef, 4> Values;
+  serializeSanitizerSet(S, Values);
+  return Values;
+}
+
+static clang::SanitizerMaskCutoffs
+parseSanitizerWeightedKinds(llvm::StringRef FlagName,
+                            const std::vector<std::string> &Sanitizers,
+                            clang::DiagnosticsEngine &Diags) {
+  clang::SanitizerMaskCutoffs Cutoffs;
+  for (const auto &Sanitizer : Sanitizers) {
+    if (!parseSanitizerWeightedValue(Sanitizer, /*AllowGroups=*/false, Cutoffs))
+      Diags.Report(clang::diag::err_drv_invalid_value) << FlagName << Sanitizer;
+  }
+  return Cutoffs;
+}
+
+static bool parseSanitizerArgs(CompilerInvocation &res,
+                               llvm::opt::ArgList &args,
+                               clang::DiagnosticsEngine &diags) {
+  auto &LangOpts = res.getLangOpts();
+  auto &CodeGenOpts = res.getCodeGenOpts();
+
+  parseSanitizerKinds(
+      "-fsanitize-recover=",
+      args.getAllArgValues(clang::driver::options::OPT_fsanitize_recover_EQ),
+      diags, CodeGenOpts.SanitizeRecover);
+  parseSanitizerKinds(
+      "-fsanitize-trap=",
+      args.getAllArgValues(clang::driver::options::OPT_fsanitize_trap_EQ),
+      diags, CodeGenOpts.SanitizeTrap);
+  parseSanitizerKinds(
+      "-fsanitize-merge=",
+      args.getAllArgValues(
+          clang::driver::options::OPT_fsanitize_merge_handlers_EQ),
+      diags, CodeGenOpts.SanitizeMergeHandlers);
+
+  // Parse -fsanitize-skip-hot-cutoff= arguments.
+  CodeGenOpts.SanitizeSkipHotCutoffs = parseSanitizerWeightedKinds(
+      "-fsanitize-skip-hot-cutoff=",
+      args.getAllArgValues(
+          clang::driver::options::OPT_fsanitize_skip_hot_cutoff_EQ),
+      diags);
+
+  // Parse -fsanitize= arguments.
+  parseSanitizerKinds(
+      "-fsanitize=",
+      args.getAllArgValues(clang::driver::options::OPT_fsanitize_EQ), diags,
+      LangOpts.Sanitize);
+
+  LangOpts.NoSanitizeFiles =
+      args.getAllArgValues(clang::driver::options::OPT_fsanitize_ignorelist_EQ);
+  std::vector<std::string> systemIgnorelists = args.getAllArgValues(
+      clang::driver::options::OPT_fsanitize_system_ignorelist_EQ);
+  LangOpts.NoSanitizeFiles.insert(LangOpts.NoSanitizeFiles.end(),
+                                  systemIgnorelists.begin(),
+                                  systemIgnorelists.end());
+  return true;
+}
+
 static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
                              llvm::opt::ArgList &args,
                              clang::DiagnosticsEngine &diags) {
@@ -394,6 +471,10 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
           args.getLastArg(clang::driver::options::OPT_record_command_line)) {
     opts.RecordCommandLine = a->getValue();
   }
+
+  // -mlink-bitcode-file
+  for (auto *a : args.filtered(clang::driver::options::OPT_mlink_bitcode_file))
+    opts.BuiltinBCLibs.push_back(a->getValue());
 
   // -mlink-builtin-bitcode
   for (auto *a :
@@ -1500,6 +1581,7 @@ bool CompilerInvocation::createFromArgs(
   success &= parseVectorLibArg(invoc.getCodeGenOpts(), args, diags);
   success &= parseSemaArgs(invoc, args, diags);
   success &= parseDialectArgs(invoc, args, diags);
+  success &= parseSanitizerArgs(invoc, args, diags);
   success &= parseOpenMPArgs(invoc, args, diags);
   success &= parseDiagArgs(invoc, args, diags);
 

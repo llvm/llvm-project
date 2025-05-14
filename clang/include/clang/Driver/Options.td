@@ -2339,7 +2339,7 @@ def fsanitize_EQ : CommaJoined<["-"], "fsanitize=">, Group<f_clang_Group>,
                    HelpText<"Turn on runtime checks for various forms of undefined "
                             "or suspicious behavior. See user manual for available checks">;
 def fno_sanitize_EQ : CommaJoined<["-"], "fno-sanitize=">, Group<f_clang_Group>,
-                      Visibility<[ClangOption, CLOption]>;
+                      Visibility<[ClangOption, CLOption, FlangOption]>;
 
 def fsanitize_ignorelist_EQ : Joined<["-"], "fsanitize-ignorelist=">,
   Group<f_clang_Group>, HelpText<"Path to ignorelist file for sanitizers">;
@@ -2349,7 +2349,7 @@ def : Joined<["-"], "fsanitize-blacklist=">,
 
 def fsanitize_system_ignorelist_EQ : Joined<["-"], "fsanitize-system-ignorelist=">,
   HelpText<"Path to system ignorelist file for sanitizers">,
-  Visibility<[ClangOption, CC1Option]>;
+  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>;
 
 def fno_sanitize_ignorelist : Flag<["-"], "fno-sanitize-ignorelist">,
   Group<f_clang_Group>, HelpText<"Don't use ignorelist file for sanitizers">;
@@ -2360,17 +2360,17 @@ def fsanitize_coverage : CommaJoined<["-"], "fsanitize-coverage=">,
   Group<f_clang_Group>,
   HelpText<"Specify the type of coverage instrumentation for Sanitizers">;
 def fno_sanitize_coverage : CommaJoined<["-"], "fno-sanitize-coverage=">,
-  Group<f_clang_Group>, Visibility<[ClangOption, CLOption]>,
+  Group<f_clang_Group>, Visibility<[ClangOption, CLOption, FlangOption]>,
   HelpText<"Disable features of coverage instrumentation for Sanitizers">,
   Values<"func,bb,edge,indirect-calls,trace-bb,trace-cmp,trace-div,trace-gep,"
          "8bit-counters,trace-pc,trace-pc-guard,no-prune,inline-8bit-counters,"
          "inline-bool-flag">;
 def fsanitize_coverage_allowlist : Joined<["-"], "fsanitize-coverage-allowlist=">,
-    Group<f_clang_Group>, Visibility<[ClangOption, CLOption]>,
+    Group<f_clang_Group>, Visibility<[ClangOption, CLOption, FlangOption]>,
     HelpText<"Restrict sanitizer coverage instrumentation exclusively to modules and functions that match the provided special case list, except the blocked ones">,
     MarshallingInfoStringVector<CodeGenOpts<"SanitizeCoverageAllowlistFiles">>;
 def fsanitize_coverage_ignorelist : Joined<["-"], "fsanitize-coverage-ignorelist=">,
-    Group<f_clang_Group>, Visibility<[ClangOption, CLOption]>,
+    Group<f_clang_Group>, Visibility<[ClangOption, CLOption, FlangOption]>,
     HelpText<"Disable sanitizer coverage instrumentation for modules and functions "
              "that match the provided special case list, even the allowed ones">,
     MarshallingInfoStringVector<CodeGenOpts<"SanitizeCoverageIgnorelistFiles">>;
@@ -2385,10 +2385,10 @@ def fexperimental_sanitize_metadata_EQ : CommaJoined<["-"], "fexperimental-sanit
   Group<f_Group>,
   HelpText<"Specify the type of metadata to emit for binary analysis sanitizers">;
 def fno_experimental_sanitize_metadata_EQ : CommaJoined<["-"], "fno-experimental-sanitize-metadata=">,
-  Group<f_Group>, Visibility<[ClangOption, CLOption]>,
+  Group<f_Group>, Visibility<[ClangOption, CLOption,FlangOption]>,
   HelpText<"Disable emitting metadata for binary analysis sanitizers">;
 def fexperimental_sanitize_metadata_ignorelist_EQ : Joined<["-"], "fexperimental-sanitize-metadata-ignorelist=">,
-    Group<f_Group>, Visibility<[ClangOption, CLOption]>,
+    Group<f_Group>, Visibility<[ClangOption, CLOption, FlangOption]>,
     HelpText<"Disable sanitizer metadata for modules and functions that match the provided special case list">,
     MarshallingInfoStringVector<CodeGenOpts<"SanitizeMetadataIgnorelistFiles">>;
 def fsanitize_memory_track_origins_EQ : Joined<["-"], "fsanitize-memory-track-origins=">,
@@ -2401,7 +2401,7 @@ def fsanitize_memory_track_origins : Flag<["-"], "fsanitize-memory-track-origins
                                      HelpText<"Enable origins tracking in MemorySanitizer">;
 def fno_sanitize_memory_track_origins : Flag<["-"], "fno-sanitize-memory-track-origins">,
                                         Group<f_clang_Group>,
-                                        Visibility<[ClangOption, CLOption]>,
+                                        Visibility<[ClangOption, CLOption, FlangOption]>,
                                         HelpText<"Disable origins tracking in MemorySanitizer">;
 def fsanitize_address_outline_instrumentation : Flag<["-"], "fsanitize-address-outline-instrumentation">,
                                                 Group<f_clang_Group>,
@@ -2423,13 +2423,13 @@ def fsanitize_hwaddress_experimental_aliasing
 def fno_sanitize_hwaddress_experimental_aliasing
   : Flag<["-"], "fno-sanitize-hwaddress-experimental-aliasing">,
     Group<f_clang_Group>,
-    Visibility<[ClangOption, CLOption]>,
+    Visibility<[ClangOption, CLOption, FlangOption]>,
     HelpText<"Disable aliasing mode in HWAddressSanitizer">;
 defm sanitize_memory_use_after_dtor : BoolOption<"f", "sanitize-memory-use-after-dtor",
   CodeGenOpts<"SanitizeMemoryUseAfterDtor">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption, CC1Option], "Enable">,
-  NegFlag<SetFalse, [], [ClangOption], "Disable">,
-  BothFlags<[], [ClangOption], " use-after-destroy detection in MemorySanitizer">>,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option, FlangOption, FC1Option], "Enable">,
+  NegFlag<SetFalse, [], [ClangOption, FlangOption], "Disable">,
+  BothFlags<[], [ClangOption, FlangOption], " use-after-destroy detection in MemorySanitizer">>,
   Group<f_clang_Group>;
 def fsanitize_address_field_padding : Joined<["-"], "fsanitize-address-field-padding=">,
                                         Group<f_clang_Group>,
@@ -2437,15 +2437,15 @@ def fsanitize_address_field_padding : Joined<["-"], "fsanitize-address-field-pad
                                         MarshallingInfoInt<LangOpts<"SanitizeAddressFieldPadding">>;
 defm sanitize_address_use_after_scope : BoolOption<"f", "sanitize-address-use-after-scope",
   CodeGenOpts<"SanitizeAddressUseAfterScope">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption], "Enable">,
-  NegFlag<SetFalse, [], [ClangOption, CLOption],
+  PosFlag<SetTrue, [], [ClangOption, FlangOption], "Enable">,
+  NegFlag<SetFalse, [], [ClangOption, CLOption, FlangOption],
           "Disable">,
-  BothFlags<[], [ClangOption], " use-after-scope detection in AddressSanitizer">>,
+  BothFlags<[], [ClangOption, FlangOption], " use-after-scope detection in AddressSanitizer">>,
   Group<f_clang_Group>;
 def sanitize_address_use_after_return_EQ
   : Joined<["-"], "fsanitize-address-use-after-return=">,
     MetaVarName<"<mode>">,
-    Visibility<[ClangOption, CC1Option]>,
+    Visibility<[ClangOption, CC1Option, FlangOption]>,
     HelpText<"Select the mode of detecting stack use-after-return in AddressSanitizer">,
     Group<f_clang_Group>,
     Values<"never,runtime,always">,
@@ -2454,9 +2454,9 @@ def sanitize_address_use_after_return_EQ
     MarshallingInfoEnum<CodeGenOpts<"SanitizeAddressUseAfterReturn">, "Runtime">;
 defm sanitize_address_poison_custom_array_cookie : BoolOption<"f", "sanitize-address-poison-custom-array-cookie",
   CodeGenOpts<"SanitizeAddressPoisonCustomArrayCookie">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption], "Enable">,
-  NegFlag<SetFalse, [], [ClangOption], "Disable">,
-  BothFlags<[], [ClangOption], " poisoning array cookies when using custom operator new[] in AddressSanitizer">>,
+  PosFlag<SetTrue, [], [ClangOption, FlangOption], "Enable">,
+  NegFlag<SetFalse, [], [ClangOption, FlangOption], "Disable">,
+  BothFlags<[], [ClangOption, FlangOption], " poisoning array cookies when using custom operator new[] in AddressSanitizer">>,
   DocBrief<[{Enable "poisoning" array cookies when allocating arrays with a
 custom operator new\[\] in Address Sanitizer, preventing accesses to the
 cookies from user code. An array cookie is a small implementation-defined
@@ -2471,18 +2471,18 @@ functions are always poisoned.}]>,
   Group<f_clang_Group>;
 defm sanitize_address_globals_dead_stripping : BoolOption<"f", "sanitize-address-globals-dead-stripping",
   CodeGenOpts<"SanitizeAddressGlobalsDeadStripping">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption], "Enable linker dead stripping of globals in AddressSanitizer">,
-  NegFlag<SetFalse, [], [ClangOption], "Disable linker dead stripping of globals in AddressSanitizer">>,
+  PosFlag<SetTrue, [], [ClangOption, FlangOption], "Enable linker dead stripping of globals in AddressSanitizer">,
+  NegFlag<SetFalse, [], [ClangOption, FlangOption], "Disable linker dead stripping of globals in AddressSanitizer">>,
   Group<f_clang_Group>;
 defm sanitize_address_use_odr_indicator : BoolOption<"f", "sanitize-address-use-odr-indicator",
   CodeGenOpts<"SanitizeAddressUseOdrIndicator">, DefaultTrue,
-  PosFlag<SetTrue, [], [ClangOption], "Enable ODR indicator globals to avoid false ODR violation"
+  PosFlag<SetTrue, [], [ClangOption, FlangOption], "Enable ODR indicator globals to avoid false ODR violation"
             " reports in partially sanitized programs at the cost of an increase in binary size">,
-  NegFlag<SetFalse, [], [ClangOption], "Disable ODR indicator globals">>,
+  NegFlag<SetFalse, [], [ClangOption, FlangOption], "Disable ODR indicator globals">>,
   Group<f_clang_Group>;
 def sanitize_address_destructor_EQ
     : Joined<["-"], "fsanitize-address-destructor=">,
-      Visibility<[ClangOption, CC1Option]>,
+      Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
       HelpText<"Set the kind of module destructors emitted by "
                "AddressSanitizer instrumentation. These destructors are "
                "emitted to unregister instrumented global variables when "
@@ -2496,9 +2496,9 @@ defm sanitize_memory_param_retval
     : BoolFOption<"sanitize-memory-param-retval",
         CodeGenOpts<"SanitizeMemoryParamRetval">,
         DefaultTrue,
-        PosFlag<SetTrue, [], [ClangOption, CC1Option], "Enable">,
-        NegFlag<SetFalse, [], [ClangOption], "Disable">,
-        BothFlags<[], [ClangOption], " detection of uninitialized parameters and return values">>;
+        PosFlag<SetTrue, [], [ClangOption, CC1Option, FlangOption, FC1Option], "Enable">,
+        NegFlag<SetFalse, [], [ClangOption, FlangOption], "Disable">,
+        BothFlags<[], [ClangOption, FlangOption], " detection of uninitialized parameters and return values">>;
 //// Note: This flag was introduced when it was necessary to distinguish between
 //       ABI for correct codegen.  This is no longer needed, but the flag is
 //       not removed since targeting either ABI will behave the same.
@@ -2514,25 +2514,25 @@ def fsanitize_recover_EQ : CommaJoined<["-"], "fsanitize-recover=">,
                            HelpText<"Enable recovery for specified sanitizers">;
 def fno_sanitize_recover_EQ : CommaJoined<["-"], "fno-sanitize-recover=">,
                               Group<f_clang_Group>,
-                              Visibility<[ClangOption, CLOption]>,
+                              Visibility<[ClangOption, CLOption, FlangOption]>,
                               HelpText<"Disable recovery for specified sanitizers">;
 def fsanitize_recover : Flag<["-"], "fsanitize-recover">, Group<f_clang_Group>,
                         Alias<fsanitize_recover_EQ>, AliasArgs<["all"]>;
 def fno_sanitize_recover : Flag<["-"], "fno-sanitize-recover">,
-                           Visibility<[ClangOption, CLOption]>,
+                           Visibility<[ClangOption, CLOption, FlangOption]>,
                            Group<f_clang_Group>,
                            Alias<fno_sanitize_recover_EQ>, AliasArgs<["all"]>;
 def fsanitize_trap_EQ : CommaJoined<["-"], "fsanitize-trap=">, Group<f_clang_Group>,
                         HelpText<"Enable trapping for specified sanitizers">;
 def fno_sanitize_trap_EQ : CommaJoined<["-"], "fno-sanitize-trap=">, Group<f_clang_Group>,
-                           Visibility<[ClangOption, CLOption]>,
+                           Visibility<[ClangOption, CLOption, FlangOption]>,
                            HelpText<"Disable trapping for specified sanitizers">;
 def fsanitize_trap : Flag<["-"], "fsanitize-trap">, Group<f_clang_Group>,
                      Alias<fsanitize_trap_EQ>, AliasArgs<["all"]>,
                      HelpText<"Enable trapping for all sanitizers">;
 def fno_sanitize_trap : Flag<["-"], "fno-sanitize-trap">, Group<f_clang_Group>,
                         Alias<fno_sanitize_trap_EQ>, AliasArgs<["all"]>,
-                        Visibility<[ClangOption, CLOption]>,
+                        Visibility<[ClangOption, CLOption, FlangOption]>,
                         HelpText<"Disable trapping for all sanitizers">;
 def fsanitize_merge_handlers_EQ
     : CommaJoined<["-"], "fsanitize-merge=">,
@@ -2547,7 +2547,7 @@ def fsanitize_merge_handlers : Flag<["-"], "fsanitize-merge">, Group<f_clang_Gro
                      HelpText<"Allow compiler to merge handlers for all sanitizers">;
 def fno_sanitize_merge_handlers : Flag<["-"], "fno-sanitize-merge">, Group<f_clang_Group>,
                         Alias<fno_sanitize_merge_handlers_EQ>, AliasArgs<["all"]>,
-                        Visibility<[ClangOption, CLOption]>,
+                        Visibility<[ClangOption, CLOption, FlangOption]>,
                         HelpText<"Do not allow compiler to merge handlers for any sanitizers">;
 def fsanitize_annotate_debug_info_EQ
     : CommaJoined<["-"], "fsanitize-annotate-debug-info=">,
@@ -2595,10 +2595,10 @@ def fno_sanitize_link_cxx_runtime : Flag<["-"], "fno-sanitize-link-c++-runtime">
                                     Group<f_clang_Group>;
 defm sanitize_cfi_cross_dso : BoolOption<"f", "sanitize-cfi-cross-dso",
   CodeGenOpts<"SanitizeCfiCrossDso">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption], "Enable">,
-  NegFlag<SetFalse, [], [ClangOption, CLOption],
+  PosFlag<SetTrue, [], [ClangOption, FlangOption], "Enable">,
+  NegFlag<SetFalse, [], [ClangOption, CLOption, FlangOption],
           "Disable">,
-  BothFlags<[], [ClangOption], " control flow integrity (CFI) checks for cross-DSO calls.">>,
+  BothFlags<[], [ClangOption, FlangOption], " control flow integrity (CFI) checks for cross-DSO calls.">>,
   Group<f_clang_Group>;
 def fsanitize_cfi_icall_generalize_pointers : Flag<["-"], "fsanitize-cfi-icall-generalize-pointers">,
                                               Group<f_clang_Group>,
@@ -2610,10 +2610,10 @@ def fsanitize_cfi_icall_normalize_integers : Flag<["-"], "fsanitize-cfi-icall-ex
                                              MarshallingInfoFlag<CodeGenOpts<"SanitizeCfiICallNormalizeIntegers">>;
 defm sanitize_cfi_canonical_jump_tables : BoolOption<"f", "sanitize-cfi-canonical-jump-tables",
   CodeGenOpts<"SanitizeCfiCanonicalJumpTables">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption], "Make">,
-  NegFlag<SetFalse, [], [ClangOption, CLOption],
+  PosFlag<SetTrue, [], [ClangOption, FlangOption], "Make">,
+  NegFlag<SetFalse, [], [ClangOption, CLOption, FlangOption],
           "Do not make">,
-  BothFlags<[], [ClangOption], " the jump table addresses canonical in the symbol table">>,
+  BothFlags<[], [ClangOption, FlangOption], " the jump table addresses canonical in the symbol table">>,
   Group<f_clang_Group>;
 def fsanitize_kcfi_arity : Flag<["-"], "fsanitize-kcfi-arity">,
                            Group<f_clang_Group>,
@@ -2621,14 +2621,14 @@ def fsanitize_kcfi_arity : Flag<["-"], "fsanitize-kcfi-arity">,
                            MarshallingInfoFlag<CodeGenOpts<"SanitizeKcfiArity">>;
 defm sanitize_stats : BoolOption<"f", "sanitize-stats",
   CodeGenOpts<"SanitizeStats">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption], "Enable">,
-  NegFlag<SetFalse, [], [ClangOption, CLOption],
+  PosFlag<SetTrue, [], [ClangOption, FlangOption], "Enable">,
+  NegFlag<SetFalse, [], [ClangOption, CLOption, FlangOption],
           "Disable">,
-  BothFlags<[], [ClangOption], " sanitizer statistics gathering.">>,
+  BothFlags<[], [ClangOption, FlangOption], " sanitizer statistics gathering.">>,
   Group<f_clang_Group>;
 def fsanitize_undefined_ignore_overflow_pattern_EQ : CommaJoined<["-"], "fsanitize-undefined-ignore-overflow-pattern=">,
   HelpText<"Specify the overflow patterns to exclude from arithmetic sanitizer instrumentation">,
-  Visibility<[ClangOption, CC1Option]>,
+  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   Values<"none,all,add-unsigned-overflow-test,add-signed-overflow-test,negated-unsigned-const,unsigned-post-decr-while">,
   MarshallingInfoStringVector<LangOpts<"OverflowPatternExclusionValues">>;
 def fsanitize_thread_memory_access : Flag<["-"], "fsanitize-thread-memory-access">,
@@ -2636,21 +2636,21 @@ def fsanitize_thread_memory_access : Flag<["-"], "fsanitize-thread-memory-access
                                      HelpText<"Enable memory access instrumentation in ThreadSanitizer (default)">;
 def fno_sanitize_thread_memory_access : Flag<["-"], "fno-sanitize-thread-memory-access">,
                                         Group<f_clang_Group>,
-                                        Visibility<[ClangOption, CLOption]>,
+                                        Visibility<[ClangOption, CLOption, FlangOption]>,
                                         HelpText<"Disable memory access instrumentation in ThreadSanitizer">;
 def fsanitize_thread_func_entry_exit : Flag<["-"], "fsanitize-thread-func-entry-exit">,
                                        Group<f_clang_Group>,
                                        HelpText<"Enable function entry/exit instrumentation in ThreadSanitizer (default)">;
 def fno_sanitize_thread_func_entry_exit : Flag<["-"], "fno-sanitize-thread-func-entry-exit">,
                                           Group<f_clang_Group>,
-                                          Visibility<[ClangOption, CLOption]>,
+                                          Visibility<[ClangOption, CLOption, FlangOption]>,
                                           HelpText<"Disable function entry/exit instrumentation in ThreadSanitizer">;
 def fsanitize_thread_atomics : Flag<["-"], "fsanitize-thread-atomics">,
                                Group<f_clang_Group>,
                                HelpText<"Enable atomic operations instrumentation in ThreadSanitizer (default)">;
 def fno_sanitize_thread_atomics : Flag<["-"], "fno-sanitize-thread-atomics">,
                                   Group<f_clang_Group>,
-                                  Visibility<[ClangOption, CLOption]>,
+                                  Visibility<[ClangOption, CLOption, FlangOption]>,
                                   HelpText<"Disable atomic operations instrumentation in ThreadSanitizer">;
 def fsanitize_undefined_strip_path_components_EQ : Joined<["-"], "fsanitize-undefined-strip-path-components=">,
   Group<f_clang_Group>, MetaVarName<"<number>">,
@@ -3448,7 +3448,7 @@ def fno_asm : Flag<["-"], "fno-asm">, Group<f_Group>;
 def fno_asynchronous_unwind_tables : Flag<["-"], "fno-asynchronous-unwind-tables">, Group<f_Group>;
 def fno_assume_sane_operator_new : Flag<["-"], "fno-assume-sane-operator-new">, Group<f_Group>,
   HelpText<"Don't assume that C++'s global operator new can't alias any pointer">,
-  Visibility<[ClangOption, CC1Option]>,
+  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   MarshallingInfoNegativeFlag<CodeGenOpts<"AssumeSaneOperatorNew">>;
 def fno_builtin : Flag<["-"], "fno-builtin">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option, CLOption, DXCOption]>,

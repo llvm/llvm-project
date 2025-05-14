@@ -12,6 +12,7 @@
 
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Driver/Options.h"
+#include "clang/Driver/SanitizerArgs.h"
 #include "llvm/Frontend/Debug/Options.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -141,6 +142,15 @@ void Flang::addOtherOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
     DebugInfoKind = llvm::codegenoptions::NoDebugInfo;
   }
   addDebugInfoKind(CmdArgs, DebugInfoKind);
+}
+
+void Flang::addSanitizerOptions(const ToolChain &TC, const ArgList &Args,
+                                ArgStringList &CmdArgs,
+                                types::ID InputType) const {
+  SanitizerArgs SanArgs = TC.getSanitizerArgs(Args);
+  SanArgs.addArgs(TC, Args, CmdArgs, InputType);
+  // If Tc.getTriple() == amdgpu search for only allow -fsanitize=address for
+  // that target
 }
 
 void Flang::addCodegenOptions(const ArgList &Args,
@@ -868,6 +878,9 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Add Codegen options
   addCodegenOptions(Args, CmdArgs);
+
+  // Add Sanitizer Options
+  addSanitizerOptions(TC, Args, CmdArgs, InputType);
 
   // Add R Group options
   Args.AddAllArgs(CmdArgs, options::OPT_R_Group);

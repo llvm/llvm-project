@@ -26,6 +26,7 @@
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "flang/Semantics/runtime-type-info.h"
 #include "flang/Semantics/unparse-with-symbols.h"
+#include "flang/Support/LangOptions.h"
 #include "flang/Support/default-kinds.h"
 #include "flang/Tools/CrossToolHelpers.h"
 
@@ -67,7 +68,10 @@
 #include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
 #include "llvm/Transforms/IPO/Internalize.h"
+#include "llvm/Transforms/Instrumentation/AddressSanitizer.h"
+#include "llvm/Transforms/Instrumentation/AddressSanitizerOptions.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
+#include <clang/Basic/Sanitizers.h>
 #include <memory>
 #include <system_error>
 
@@ -714,6 +718,7 @@ void CodeGenAction::generateLLVMIR() {
   CompilerInstance &ci = this->getInstance();
   CompilerInvocation &invoc = ci.getInvocation();
   const CodeGenOptions &opts = invoc.getCodeGenOpts();
+  const common::LangOptions &langopts = invoc.getLangOpts();
   const auto &mathOpts = invoc.getLoweringOpts().getMathOptions();
   llvm::OptimizationLevel level = mapToLevel(opts);
   mlir::DefaultTimingManager &timingMgr = ci.getTimingManager();
@@ -785,6 +790,11 @@ void CodeGenAction::generateLLVMIR() {
         clang::DiagnosticsEngine::Error, "failed to create the LLVM module");
     ci.getDiagnostics().Report(diagID);
     return;
+  }
+
+  for (llvm::Function &F : llvmModule->getFunctionList()) {
+    if (langopts.Sanitize.has(clang::SanitizerKind::Address))
+      F.addFnAttr(llvm::Attribute::SanitizeAddress);
   }
 
   // Set PIC/PIE level LLVM module flags.
@@ -899,9 +909,34 @@ static void generateMachineCodeOrAssemblyImpl(clang::DiagnosticsEngine &diags,
   delete tlii;
 }
 
+void addSanitizers(const llvm::Triple &Triple,
+                   const CodeGenOptions &flangCodeGenOpts,
+                   const Fortran::common::LangOptions &flangLangOpts,
+                   llvm::PassBuilder &PB, llvm::ModulePassManager &MPM) {
+  auto ASanPass = [&](clang::SanitizerMask Mask, bool CompileKernel) {
+    if (flangLangOpts.Sanitize.has(Mask)) {
+      bool UseGlobalGC = asanUseGlobalsGC(Triple, flangCodeGenOpts);
+      bool UseOdrIndicator = flangCodeGenOpts.SanitizeAddressUseOdrIndicator;
+      llvm::AsanDtorKind DestructorKind =
+          flangCodeGenOpts.getSanitizeAddressDtor();
+      llvm::AddressSanitizerOptions Opts;
+      Opts.CompileKernel = CompileKernel;
+      Opts.Recover = flangCodeGenOpts.SanitizeRecover.has(Mask);
+      Opts.UseAfterScope = flangCodeGenOpts.SanitizeAddressUseAfterScope;
+      Opts.UseAfterReturn = flangCodeGenOpts.getSanitizeAddressUseAfterReturn();
+      MPM.addPass(llvm::AddressSanitizerPass(Opts, UseGlobalGC, UseOdrIndicator,
+                                             DestructorKind));
+    }
+  };
+  ASanPass(clang::SanitizerKind::Address, false);
+  ASanPass(clang::SanitizerKind::KernelAddress, true);
+}
+
 void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   CompilerInstance &ci = getInstance();
   const CodeGenOptions &opts = ci.getInvocation().getCodeGenOpts();
+  const Fortran::common::LangOptions &langopts =
+      ci.getInvocation().getLangOpts();
   clang::DiagnosticsEngine &diags = ci.getDiagnostics();
   llvm::OptimizationLevel level = mapToLevel(opts);
 
@@ -965,6 +1000,8 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
     mpm = pb.buildThinLTOPreLinkDefaultPipeline(level);
   else
     mpm = pb.buildPerModuleDefaultPipeline(level);
+
+  addSanitizers(triple, opts, langopts, pb, mpm);
 
   if (action == BackendActionTy::Backend_EmitBC)
     mpm.addPass(llvm::BitcodeWriterPass(os));

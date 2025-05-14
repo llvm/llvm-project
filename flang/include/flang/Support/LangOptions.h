@@ -18,10 +18,10 @@
 #include <string>
 #include <vector>
 
+#include "clang/Basic/Sanitizers.h"
 #include "llvm/TargetParser/Triple.h"
 
 namespace Fortran::common {
-
 /// Bitfields of LangOptions, split out from LangOptions to ensure
 /// that this large collection of bitfields is a trivial class type.
 class LangOptionsBase {
@@ -71,6 +71,15 @@ public:
   /// Name of the IR file that contains the result of the OpenMP target
   /// host code generation.
   std::string OMPHostIRFile;
+
+  /// Set of enabled sanitizers.
+  clang::SanitizerSet Sanitize;
+  /// Is at least one coverage instrumentation type enabled.
+  bool SanitizeCoverage = false;
+
+  /// Paths to files specifying which objects
+  /// (files, functions, variables) should not be instrumented.
+  std::vector<std::string> NoSanitizeFiles;
 
   /// List of triples passed in using -fopenmp-targets.
   std::vector<llvm::Triple> OMPTargetTriples;

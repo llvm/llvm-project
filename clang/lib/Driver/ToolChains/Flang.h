@@ -117,6 +117,15 @@ private:
   void addCodegenOptions(const llvm::opt::ArgList &Args,
                          llvm::opt::ArgStringList &CmdArgs) const;
 
+  /// Extract sanitizer options for code generation from the driver arguments
+  /// and add them to the command arguments.
+  ///
+  /// \param [in] Args The list of input driver arguments
+  /// \param [out] CmdArgs The list of output command arguments
+  void addSanitizerOptions(const ToolChain &TC, const llvm::opt::ArgList &Args,
+                           llvm::opt::ArgStringList &CmdArgs,
+                           types::ID InputType) const;
+
   /// Extract other compilation options from the driver arguments and add them
   /// to the command arguments.
   ///
