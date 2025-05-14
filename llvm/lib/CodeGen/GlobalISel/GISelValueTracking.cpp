@@ -940,8 +940,8 @@ GISelValueTrackingPrinterPass::run(MachineFunction &MF,
           continue;
         KnownBits Known = VTA.getKnownBits(Reg);
         unsigned SignedBits = VTA.computeNumSignBits(Reg);
-        OS << "KnownBits:" << Known << " SignBits:" << SignedBits << " for "
-           << MO << '\n';
+        OS << "  " << MO << " KnownBits:" << Known << " SignBits:" << SignedBits
+           << '\n';
       };
     }
   }
