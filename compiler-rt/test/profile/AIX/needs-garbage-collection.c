@@ -16,8 +16,6 @@ const char* get_message(void) {
         return "Hello World!";
 }
 
-int foo(void);
-double bar(void);
 const char* baz();
 
 int printf(const char*, ...);

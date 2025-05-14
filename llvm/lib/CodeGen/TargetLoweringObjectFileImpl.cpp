@@ -2446,7 +2446,7 @@ MCSection *TargetLoweringObjectFileXCOFF::getExplicitSectionGlobal(
     report_fatal_error("XCOFF other section types not yet implemented.");
 
   // The profiling instrumentation symbols are special in that we want to
-  // emit a unique CSECT for each when function sections are enabeld, which
+  // emit a unique CSECT for each when function sections are enabled, which
   // are then renamed back to the CSECT name specified by the explicit section.
   // This is to work around the limitation of not having section groups or a
   // similar feature in XCOFF.
@@ -2456,9 +2456,9 @@ MCSection *TargetLoweringObjectFileXCOFF::getExplicitSectionGlobal(
     std::string ProfilingCounterSectionName =
         getInstrProfSectionName(IPSK_cnts, Triple::XCOFF, false);
     if ((SectionName == ProfilingDataSectionName &&
-         GO->getName().starts_with("__profd_")) ||
+         GO->getName().starts_with(getInstrProfDataVarPrefix())) ||
         (SectionName == ProfilingCounterSectionName &&
-         GO->getName().starts_with("__profc_"))) {
+         GO->getName().starts_with(getInstrProfCountersVarPrefix()))) {
       SectionName += ".";
       SectionName += GO->getName();
     }
