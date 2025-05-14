@@ -553,8 +553,10 @@ static llvm::Constant *convertDenseResourceElementsAttr(
 llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
     llvm::Type *llvmType, Attribute attr, Location loc,
     const ModuleTranslation &moduleTranslation) {
-  if (!attr)
+  if (!attr || isa<UndefAttr>(attr))
     return llvm::UndefValue::get(llvmType);
+  if (isa<ZeroAttr>(attr))
+    return llvm::Constant::getNullValue(llvmType);
   if (auto *structType = dyn_cast<::llvm::StructType>(llvmType)) {
     auto arrayAttr = dyn_cast<ArrayAttr>(attr);
     if (!arrayAttr) {
@@ -723,7 +725,7 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
       llvm::Constant *elementCst = nullptr;
       SmallVector<llvm::Constant *> constants;
       constants.reserve(arrayTy->getNumElements());
-      for (auto elementAttr : arrayAttr) {
+      for (Attribute elementAttr : arrayAttr) {
         // Arrays with a single value or with repeating values are quite common.
         // short-circuit the translation when the element value is the same as
         // the previous one.
