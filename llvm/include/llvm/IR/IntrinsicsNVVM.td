@@ -1115,42 +1115,41 @@ let TargetPrefix = "nvvm" in {
       foreach sign = ["", "u"] in {
 
         def int_nvvm_d2 # sign # i_ # rnd : NVVMBuiltin,
-            DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
+            DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_double_ty]>;
 
         def int_nvvm_ # sign # i2d_ # rnd : NVVMBuiltin,
-          DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_i32_ty], [IntrNoMem, IntrSpeculatable]>;
+          DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_i32_ty]>;
 
         foreach ftz = ["", "_ftz"] in
           def int_nvvm_f2 # sign # i_ # rnd # ftz : NVVMBuiltin,
-              DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
+              DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_float_ty]>;
 
         def int_nvvm_ # sign # i2f_ # rnd : NVVMBuiltin,
-            DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_i32_ty], [IntrNoMem, IntrSpeculatable]>;
+            DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_i32_ty]>;
 
         foreach ftz = ["", "_ftz"] in
           def int_nvvm_f2 # sign # ll_ # rnd # ftz : NVVMBuiltin,
-              DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
+              DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_float_ty]>;
 
         def int_nvvm_d2 # sign # ll_ # rnd : NVVMBuiltin,
-          DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
+          DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_double_ty]>;
 
         def int_nvvm_ # sign # ll2f_ # rnd : NVVMBuiltin,
-            DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_i64_ty], [IntrNoMem, IntrSpeculatable]>;
+            DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_i64_ty]>;
 
         def int_nvvm_ # sign # ll2d_ # rnd : NVVMBuiltin,
-            DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_i64_ty], [IntrNoMem, IntrSpeculatable]>;
+            DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_i64_ty]>;
 
       } // sign
     } // rnd
 
     foreach ftz = ["", "_ftz"] in {
       def int_nvvm_f2h_rn # ftz : NVVMBuiltin,
-          DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
+          DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_float_ty]>;
 
       def int_nvvm_bf2h_rn # ftz : NVVMBuiltin,
-          DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_bfloat_ty], [IntrNoMem, IntrSpeculatable]>;
+          DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_bfloat_ty]>;
     }
-
   }
   let IntrProperties = [IntrNoMem, IntrNoCallback] in {
     foreach rnd = ["rn", "rz"] in {
@@ -1165,7 +1164,6 @@ let TargetPrefix = "nvvm" in {
             Intrinsic<[llvm_bfloat_ty], [llvm_float_ty]>;
       }
     }
-
 
     foreach satfinite = ["", "_satfinite"] in {
       def int_nvvm_f2tf32_rna # satfinite : NVVMBuiltin,
@@ -1537,15 +1535,16 @@ foreach is_unified = [true, false] in {
         def int_nvvm_tex # mode # _cube # array # _grad_ # vec.Name # _f32
           : Intrinsic<vec.Types,
                       !listconcat(addr_args, array_args, !listsplat(llvm_float_ty, 9))>;
-    }
+    } // is_array
 
     foreach comp = ["r", "g", "b", "a"] in {
       def int_nvvm_tld4 # mode # _ # comp # _2d_ # vec.Name # _f32
         : Intrinsic<vec.Types,
                     !listconcat(addr_args, !listsplat(llvm_float_ty, 2))>;
-    }
-  }
-}
+    } // comp
+  } // vec
+} // is_unified
+
 //=== Surface Load
 foreach clamp = ["clamp", "trap", "zero"] in {
   foreach vec = [TV_I8, TV_I16, TV_I32, TV_I64,
@@ -1571,31 +1570,28 @@ foreach clamp = ["clamp", "trap", "zero"] in {
     def int_nvvm_suld_3d_ # vec.Name # _ # clamp
       : Intrinsic<vec.Types,
                   [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty]>;
-  }
-}
+  } // vec
+} // clamp
 
 //===- Texture Query ------------------------------------------------------===//
 
 foreach query = ["channel_order", "channel_data_type", "width", "height",
-                 "depth", "array_size", "num_samples", "num_mipmap_levels"] in {
+                 "depth", "array_size", "num_samples", "num_mipmap_levels"] in
   def int_nvvm_txq_ # query : NVVMBuiltin,
     Intrinsic<[llvm_i32_ty], [llvm_i64_ty], [IntrNoMem]>;
-}
 
 //===- Surface Query ------------------------------------------------------===//
 
 foreach query = ["channel_order", "channel_data_type", "width", "height",
-                 "depth", "array_size"] in {
+                 "depth", "array_size"] in
   def int_nvvm_suq_ # query : NVVMBuiltin,
     Intrinsic<[llvm_i32_ty], [llvm_i64_ty], [IntrNoMem]>;
-}
 
 //===- Handle Query -------------------------------------------------------===//
 
-foreach type = ["sampler", "surface", "texture"] in {
+foreach type = ["sampler", "surface", "texture"] in
   def int_nvvm_istypep_ # type : NVVMBuiltin,
     Intrinsic<[llvm_i1_ty], [llvm_i64_ty], [IntrNoMem]>;
-}
 
 //===- Surface Stores -----------------------------------------------------===//
 
@@ -1617,20 +1613,17 @@ multiclass SurfaceStoreIntrinsics<string clamp, TexVector vec> {
 }
 
 // Unformatted
-foreach clamp = ["clamp", "trap", "zero"] in {
+foreach clamp = ["clamp", "trap", "zero"] in
   foreach vec = [TV_I8, TV_I16, TV_I32, TV_I64,
                  TV_V2I8, TV_V2I16, TV_V2I32, TV_V2I64,
-                 TV_V4I8, TV_V4I16, TV_V4I32] in {
+                 TV_V4I8, TV_V4I16, TV_V4I32] in
     defm int_nvvm_sust_b : SurfaceStoreIntrinsics<clamp, vec>;
-  }
-}
 
 // Formatted
 foreach vec = [TV_I8, TV_I16, TV_I32,
                TV_V2I8, TV_V2I16, TV_V2I32,
-               TV_V4I8, TV_V4I16, TV_V4I32] in {
+               TV_V4I8, TV_V4I16, TV_V4I32] in
   defm int_nvvm_sust_p : SurfaceStoreIntrinsics<"trap", vec>;
-}
 
 // Accessing special registers.
 
