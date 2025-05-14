@@ -3413,9 +3413,9 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
     if (IsUniformMemOpUse(I))
       return true;
 
-    return (
-        WideningDecision == CM_Widen || WideningDecision == CM_Widen_Reverse ||
-        WideningDecision == CM_Strided || WideningDecision == CM_Interleave);
+    return (WideningDecision == CM_Widen ||
+            WideningDecision == CM_Widen_Reverse ||
+            WideningDecision == CM_Interleave);
   };
 
   // Returns true if Ptr is the pointer operand of a memory access instruction
