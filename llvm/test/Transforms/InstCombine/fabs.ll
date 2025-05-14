@@ -1276,3 +1276,112 @@ define <2 x float> @test_select_neg_negx_x_wrong_type(<2 x float> %value) {
   %value.addr.0.i = select i1 %a1, <2 x float> %fneg.i, <2 x float> %value
   ret <2 x float> %value.addr.0.i
 }
+
+define i1 @test_fabs_used_by_fcmp(float %x, float %y) {
+; CHECK-LABEL: @test_fabs_used_by_fcmp(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oge float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[X]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], float [[X]], float [[NEG]]
+; CHECK-NEXT:    [[CMP2:%.*]] = fcmp olt float [[SEL]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP2]]
+;
+  %cmp = fcmp oge float %x, 0.000000e+00
+  %neg = fneg float %x
+  %sel = select i1 %cmp, float %x, float %neg
+  %cmp2 = fcmp olt float %sel, %y
+  ret i1 %cmp2
+}
+
+define float @test_fabs_used_by_fpop_nnan_nsz(float %x, float %y) {
+; CHECK-LABEL: @test_fabs_used_by_fpop_nnan_nsz(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oge float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[X]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], float [[X]], float [[NEG]]
+; CHECK-NEXT:    [[ADD:%.*]] = fadd nnan nsz float [[SEL]], [[Y:%.*]]
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %cmp = fcmp oge float %x, 0.000000e+00
+  %neg = fneg float %x
+  %sel = select i1 %cmp, float %x, float %neg
+  %add = fadd nnan nsz float %sel, %y
+  ret float %add
+}
+
+define i1 @test_fabs_fsub_used_by_fcmp(float %x, float %y) {
+; CHECK-LABEL: @test_fabs_fsub_used_by_fcmp(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[NEG:%.*]] = fsub float 0.000000e+00, [[X]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], float [[X]], float [[NEG]]
+; CHECK-NEXT:    [[CMP2:%.*]] = fcmp olt float [[SEL]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP2]]
+;
+  %cmp = fcmp ogt float %x, 0.000000e+00
+  %neg = fsub float 0.000000e+00, %x
+  %sel = select i1 %cmp, float %x, float %neg
+  %cmp2 = fcmp olt float %sel, %y
+  ret i1 %cmp2
+}
+
+define float @test_fabs_fsub_used_by_fpop_nnan(float %x, float %y) {
+; CHECK-LABEL: @test_fabs_fsub_used_by_fpop_nnan(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[NEG:%.*]] = fsub float 0.000000e+00, [[X]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], float [[X]], float [[NEG]]
+; CHECK-NEXT:    [[ADD:%.*]] = fadd nnan float [[SEL]], [[Y:%.*]]
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %cmp = fcmp ogt float %x, 0.000000e+00
+  %neg = fsub float 0.000000e+00, %x
+  %sel = select i1 %cmp, float %x, float %neg
+  %add = fadd nnan float %sel, %y
+  ret float %add
+}
+
+; Negative tests
+
+define float @test_fabs_used_by_fpop_nnan(float %x, float %y) {
+; CHECK-LABEL: @test_fabs_used_by_fpop_nnan(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oge float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[X]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], float [[X]], float [[NEG]]
+; CHECK-NEXT:    [[ADD:%.*]] = fadd nnan float [[SEL]], [[Y:%.*]]
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %cmp = fcmp oge float %x, 0.000000e+00
+  %neg = fneg float %x
+  %sel = select i1 %cmp, float %x, float %neg
+  %add = fadd nnan float %sel, %y
+  ret float %add
+}
+
+define float @test_fabs_used_by_fpop_nsz(float %x, float %y) {
+; CHECK-LABEL: @test_fabs_used_by_fpop_nsz(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oge float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[X]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], float [[X]], float [[NEG]]
+; CHECK-NEXT:    [[ADD:%.*]] = fadd nsz float [[SEL]], [[Y:%.*]]
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %cmp = fcmp oge float %x, 0.000000e+00
+  %neg = fneg float %x
+  %sel = select i1 %cmp, float %x, float %neg
+  %add = fadd nsz float %sel, %y
+  ret float %add
+}
+
+define i1 @test_fabs_used_by_fcmp_multiuse(float %x, float %y) {
+; CHECK-LABEL: @test_fabs_used_by_fcmp_multiuse(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oge float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[X]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], float [[X]], float [[NEG]]
+; CHECK-NEXT:    [[CMP2:%.*]] = fcmp olt float [[SEL]], [[Y:%.*]]
+; CHECK-NEXT:    call void @use(float [[SEL]])
+; CHECK-NEXT:    ret i1 [[CMP2]]
+;
+  %cmp = fcmp oge float %x, 0.000000e+00
+  %neg = fneg float %x
+  %sel = select i1 %cmp, float %x, float %neg
+  %cmp2 = fcmp olt float %sel, %y
+  call void @use(float %sel)
+  ret i1 %cmp2
+}
