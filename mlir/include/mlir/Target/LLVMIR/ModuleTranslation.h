@@ -142,13 +142,16 @@ public:
     auto result = unresolvedBlockAddressMapping.try_emplace(op, cst);
     (void)result;
     assert(result.second &&
-           "attempting to map a blockaddress that is already mapped");
+           "attempting to map a blockaddress operation that is already mapped");
   }
 
   /// Maps a BlockAddressAttr to its corresponding LLVM basic block.
   void mapBlockAddress(BlockAddressAttr attr, llvm::BasicBlock *block) {
-    assert(!blockAddressToLLVMMapping.count(blockAddressToLLVMMapping));
-    blockAddressToLLVMMapping[attr] = block;
+    auto result = blockAddressToLLVMMapping.try_emplace(attr, block);
+    (void)result;
+    assert(
+        result.second &&
+        "attempting to map a blockaddress attritbute that is already mapped");
   }
 
   /// Finds the LLVM basic block that corresponds to the given BlockAddressAttr.
