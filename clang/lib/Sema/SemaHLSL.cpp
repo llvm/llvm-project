@@ -3325,9 +3325,9 @@ bool SemaHLSL::initGlobalResourceDecl(VarDecl *VD) {
   ASTContext &AST = SemaRef.getASTContext();
   uint64_t UIntTySize = AST.getTypeSize(AST.UnsignedIntTy);
   uint64_t IntTySize = AST.getTypeSize(AST.IntTy);
-  IntegerLiteral *One = IntegerLiteral::Create(AST, llvm::APInt(IntTySize, 1),
-                                               AST.IntTy, SourceLocation());
-  IntegerLiteral *Zero = IntegerLiteral::Create(
+  IntegerLiteral *RangeSize = IntegerLiteral::Create(
+      AST, llvm::APInt(IntTySize, 1), AST.IntTy, SourceLocation());
+  IntegerLiteral *Index = IntegerLiteral::Create(
       AST, llvm::APInt(UIntTySize, 0), AST.UnsignedIntTy, SourceLocation());
   IntegerLiteral *Space =
       IntegerLiteral::Create(AST, llvm::APInt(UIntTySize, SpaceNo),
@@ -3338,7 +3338,7 @@ bool SemaHLSL::initGlobalResourceDecl(VarDecl *VD) {
     IntegerLiteral *RegSlot = IntegerLiteral::Create(
         AST, llvm::APInt(UIntTySize, RegisterSlot.value()), AST.UnsignedIntTy,
         SourceLocation());
-    Expr *Args[] = {RegSlot, Space, One, Zero};
+    Expr *Args[] = {RegSlot, Space, RangeSize, Index};
     return initVarDeclWithCtor(SemaRef, VD, Args);
   }
 
@@ -3346,7 +3346,7 @@ bool SemaHLSL::initGlobalResourceDecl(VarDecl *VD) {
   IntegerLiteral *OrderId = IntegerLiteral::Create(
       AST, llvm::APInt(UIntTySize, getNextImplicitBindingOrderID()),
       AST.UnsignedIntTy, SourceLocation());
-  Expr *Args[] = {Space, One, Zero, OrderId};
+  Expr *Args[] = {Space, RangeSize, Index, OrderId};
   return initVarDeclWithCtor(SemaRef, VD, Args);
 }
 
