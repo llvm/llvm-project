@@ -1,7 +1,5 @@
-; RUN: llc -O0 -verify-machineinstrs -mtriple=spirv-unknown-vulkan %s -o - | FileCheck %s
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-vulkan %s -o - -filetype=obj | spirv-val --target-env spv1.4 %}
-
-; FIXME(#136344): Change --target-env to vulkan1.3 and update this test accordingly once the issue is resolved.
+; RUN: llc -O0 -verify-machineinstrs -mtriple=spirv-vulkan1.3-unknown %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-vulkan1.3-unknown %s -o - -filetype=obj | spirv-val --target-env vulkan1.3 %}
 
 ; Make sure SPIRV operation function calls for faceforward are lowered correctly.
 
@@ -11,7 +9,7 @@
 ; CHECK-DAG: %[[#float_32:]] = OpTypeFloat 32
 ; CHECK-DAG: %[[#vec4_float_32:]] = OpTypeVector %[[#float_32]] 4
 
-define noundef half @faceforward_half(half noundef %a, half noundef %b, half noundef %c) {
+define internal noundef half @faceforward_half(half noundef %a, half noundef %b, half noundef %c) {
 entry:
   ; CHECK: %[[#]] = OpFunction %[[#float_16]] None %[[#]]
   ; CHECK: %[[#arg0:]] = OpFunctionParameter %[[#float_16]]
@@ -22,7 +20,7 @@ entry:
   ret half %spv.faceforward
 }
 
-define noundef float @faceforward_float(float noundef %a, float noundef %b, float noundef %c) {
+define internal noundef float @faceforward_float(float noundef %a, float noundef %b, float noundef %c) {
 entry:
   ; CHECK: %[[#]] = OpFunction %[[#float_32]] None %[[#]]
   ; CHECK: %[[#arg0:]] = OpFunctionParameter %[[#float_32]]
@@ -33,7 +31,7 @@ entry:
   ret float %spv.faceforward
 }
 
-define noundef <4 x half> @faceforward_half4(<4 x half> noundef %a, <4 x half> noundef %b, <4 x half> noundef %c) {
+define internal noundef <4 x half> @faceforward_half4(<4 x half> noundef %a, <4 x half> noundef %b, <4 x half> noundef %c) {
 entry:
   ; CHECK: %[[#]] = OpFunction %[[#vec4_float_16]] None %[[#]]
   ; CHECK: %[[#arg0:]] = OpFunctionParameter %[[#vec4_float_16]]
@@ -44,7 +42,7 @@ entry:
   ret <4 x half> %spv.faceforward
 }
 
-define noundef <4 x float> @faceforward_float4(<4 x float> noundef %a, <4 x float> noundef %b, <4 x float> noundef %c) {
+define internal noundef <4 x float> @faceforward_float4(<4 x float> noundef %a, <4 x float> noundef %b, <4 x float> noundef %c) {
 entry:
   ; CHECK: %[[#]] = OpFunction %[[#vec4_float_32]] None %[[#]]
   ; CHECK: %[[#arg0:]] = OpFunctionParameter %[[#vec4_float_32]]
@@ -55,7 +53,7 @@ entry:
   ret <4 x float> %spv.faceforward
 }
 
-define noundef <4 x float> @faceforward_instcombine_float4(<4 x float> noundef %a, <4 x float> noundef %b, <4 x float> noundef %c) {
+define internal noundef <4 x float> @faceforward_instcombine_float4(<4 x float> noundef %a, <4 x float> noundef %b, <4 x float> noundef %c) {
 entry:
   ; CHECK: %[[#]] = OpFunction %[[#vec4_float_32]] None %[[#]]
   ; CHECK: %[[#arg0:]] = OpFunctionParameter %[[#vec4_float_32]]
@@ -64,13 +62,21 @@ entry:
   ; CHECK: %[[#]] = OpExtInst %[[#vec4_float_32]] %[[#op_ext_glsl]] FaceForward %[[#arg0]] %[[#arg1]] %[[#arg2]]
   %spv.fdot = call float @llvm.spv.fdot.v4f32(<4 x float> %b, <4 x float> %c)
   %fcmp = fcmp olt float %spv.fdot, 0.000000e+00
-  %delta = fneg <4 x float> %a
-  %select = select i1 %fcmp, <4 x float> %a, <4 x float> %delta
+  %fneg = fneg <4 x float> %a
+  %select = select i1 %fcmp, <4 x float> %a, <4 x float> %fneg
   ret <4 x float> %select
  }
+
+; The other fucntions are the test, but a entry point is required to have a valid SPIR-V module.
+define void @main() #1 {
+entry:
+  ret void
+}
 
 declare half @llvm.spv.faceforward.f16(half, half, half)
 declare float @llvm.spv.faceforward.f32(float, float, float)
 
 declare <4 x half> @llvm.spv.faceforward.v4f16(<4 x half>, <4 x half>, <4 x half>)
 declare <4 x float> @llvm.spv.faceforward.v4f32(<4 x float>, <4 x float>, <4 x float>)
+
+attributes #1 = { convergent noinline norecurse "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
