@@ -79,7 +79,10 @@ public:
   unsigned getBitWidth() const { return Val.getBitWidth(); }
 
   void print(raw_ostream &OS) const;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() const;
+#endif
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS, const SlowDynamicAPInt &X) {
