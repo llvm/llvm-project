@@ -29,11 +29,10 @@ can be freely intermixed here because it's easy to recognize that checker
 option names are always prefixed with ``some.groups.NameOfChecker:``.
 
 .. warning::
-   This is an internal interface, Clang does not intend to preserve backwards
-   compatibility or announce breaking changes within the flags accepted by
-   ``clang -cc1``. However, ``-analyzer-config`` survived many years without
-   significant changes and there is no "more official" interface for
-   configuring the analyzer options.
+   This is an internal interface, one should prefer `clang --analyze ...` for
+   regular use. Clang does not intend to preserve backwards compatibility or
+   announce breaking changes within the flags accepted by ``clang -cc1``
+   (but ``-analyzer-config`` survived many years without major changes).
 
 With the clang driver
 ---------------------
