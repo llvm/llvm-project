@@ -45,7 +45,7 @@ public:
     ZA_Mask = 0b111 << ZA_Shift,
     ZT0_Shift = 9,
     ZT0_Mask = 0b111 << ZT0_Shift,
-    Callsite_Flags = ZT0_Undef
+    CallSiteFlags_Mask = ZT0_Undef
   };
 
   enum class InferAttrsFromName { No, Yes };
@@ -133,12 +133,12 @@ public:
 
   SMEAttrs operator|(SMEAttrs Other) const {
     SMEAttrs Merged(*this);
-    Merged.set(Other.Bitmask, /*Enable=*/true);
+    Merged.set(Other.Bitmask);
     return Merged;
   }
 
   SMEAttrs withoutPerCallsiteFlags() const {
-    return (Bitmask & ~Callsite_Flags);
+    return (Bitmask & ~CallSiteFlags_Mask);
   }
 
   bool operator==(SMEAttrs const &Other) const {

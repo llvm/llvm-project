@@ -8642,13 +8642,13 @@ static void analyzeCallOperands(const AArch64TargetLowering &TLI,
 }
 
 static SMECallAttrs
-getSMECallAttrs(const Function &Function,
+getSMECallAttrs(const Function &Caller,
                 const TargetLowering::CallLoweringInfo &CLI) {
   if (CLI.CB)
     return SMECallAttrs(*CLI.CB);
   if (auto *ES = dyn_cast<ExternalSymbolSDNode>(CLI.Callee))
-    return SMECallAttrs(SMEAttrs(Function), SMEAttrs(ES->getSymbol()));
-  return SMECallAttrs(SMEAttrs(Function), SMEAttrs(SMEAttrs::Normal));
+    return SMECallAttrs(SMEAttrs(Caller), SMEAttrs(ES->getSymbol()));
+  return SMECallAttrs(SMEAttrs(Caller), SMEAttrs(SMEAttrs::Normal));
 }
 
 bool AArch64TargetLowering::isEligibleForTailCallOptimization(
@@ -8964,7 +8964,8 @@ static SDValue emitSMEStateSaveRestore(const AArch64TargetLowering &TLI,
   return TLI.LowerCallTo(CLI).second;
 }
 
-static unsigned getSMCondition(const SMECallAttrs &CallAttrs) {
+static AArch64SME::ToggleCondition
+getSMToggleCondition(const SMECallAttrs &CallAttrs) {
   if (!CallAttrs.caller().hasStreamingCompatibleInterface() ||
       CallAttrs.caller().hasStreamingBody())
     return AArch64SME::Always;
@@ -9473,9 +9474,9 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
       InGlue = Chain.getValue(1);
     }
 
-    SDValue NewChain =
-        changeStreamingMode(DAG, DL, CallAttrs.callee().hasStreamingInterface(),
-                            Chain, InGlue, getSMCondition(CallAttrs), PStateSM);
+    SDValue NewChain = changeStreamingMode(
+        DAG, DL, CallAttrs.callee().hasStreamingInterface(), Chain, InGlue,
+        getSMToggleCondition(CallAttrs), PStateSM);
     Chain = NewChain.getValue(0);
     InGlue = NewChain.getValue(1);
   }
@@ -9662,7 +9663,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     assert(PStateSM && "Expected a PStateSM to be set");
     Result = changeStreamingMode(
         DAG, DL, !CallAttrs.callee().hasStreamingInterface(), Result, InGlue,
-        getSMCondition(CallAttrs), PStateSM);
+        getSMToggleCondition(CallAttrs), PStateSM);
 
     if (!Subtarget->isTargetDarwin() || Subtarget->hasSVE()) {
       InGlue = Result.getValue(1);

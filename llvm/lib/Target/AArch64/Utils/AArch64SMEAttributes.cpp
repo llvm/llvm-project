@@ -90,7 +90,7 @@ void SMEAttrs::addKnownFunctionAttrs(StringRef FuncName) {
   if (FuncName == "__arm_sme_save" || FuncName == "__arm_sme_restore" ||
       FuncName == "__arm_sme_state_size")
     KnownAttrs |= SMEAttrs::SM_Compatible | SMEAttrs::SME_ABI_Routine;
-  set(KnownAttrs, /*Enable=*/true);
+  set(KnownAttrs);
 }
 
 bool SMECallAttrs::requiresSMChange() const {
