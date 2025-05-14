@@ -366,13 +366,12 @@ static bool shouldPeelLastIteration(Loop &L, CmpPredicate Pred,
     return false;
 
   const SCEV *BTC = SE.getBackedgeTakenCount(&L);
-  const SCEV *ValAtLastIter =
-      SE.applyLoopGuards(LeftAR->evaluateAtIteration(BTC, SE), &L);
+  const SCEV *ValAtLastIter = LeftAR->evaluateAtIteration(BTC, SE);
   const SCEV *ValAtSecondToLastIter = LeftAR->evaluateAtIteration(
       SE.getMinusSCEV(BTC, SE.getOne(BTC->getType())), SE);
 
   return SE.isKnownPredicate(ICmpInst::getInversePredicate(Pred), ValAtLastIter,
-                             SE.applyLoopGuards(RightSCEV, &L)) &&
+                             RightSCEV) &&
          SE.isKnownPredicate(Pred, ValAtSecondToLastIter, RightSCEV);
 }
 
