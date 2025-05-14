@@ -238,8 +238,7 @@ bool SemaSPIRV::CheckSPIRVBuiltinFunctionCall(const TargetInfo &TI,
     QualType ArgTyC = C.get()->getType();
     if (!ArgTyC->isFloatingType()) {
       SemaRef.Diag(C.get()->getBeginLoc(), diag::err_builtin_invalid_arg_type)
-          << 3 << /* scalar*/ 5 << /* no int */ 0 << /* fp */ 1
-          << ArgTyC;
+          << 3 << /* scalar*/ 5 << /* no int */ 0 << /* fp */ 1 << ArgTyC;
       return true;
     }
 
