@@ -9,9 +9,9 @@ section in the object file.  The ``!callee_type`` metadata is used
 to identify the types of the intended callees of indirect call instructions. The ``!callee_type`` metadata is a
 list of one or more ``!type`` metadata objects (See :doc:`TypeMetadata`) with each ``!type`` metadata
 pointing to a callee's :ref:`type identifier <calleetype-type-identifier>`.
-LLVM's `control flow integrity`_ also uses the ``!type`` metadata in its implementation.
+LLVM's `Control Flow Integrity (CFI)`_ also uses the ``!type`` metadata in its implementation.
 
-.. _Control Flow Integrity(CFI): https://clang.llvm.org/docs/ControlFlowIntegrity.html
+.. _Control Flow Integrity (CFI): https://clang.llvm.org/docs/ControlFlowIntegrity.html
 
 .. _calleetype-type-identifier:
 
