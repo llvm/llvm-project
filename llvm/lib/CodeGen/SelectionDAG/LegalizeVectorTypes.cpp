@@ -466,7 +466,7 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_LOAD(LoadSDNode *N) {
       N->getValueType(0).getVectorElementType(), SDLoc(N), N->getChain(),
       N->getBasePtr(), DAG.getUNDEF(N->getBasePtr().getValueType()),
       N->getPointerInfo(), N->getMemoryVT().getVectorElementType(),
-      N->getOriginalAlign(), N->getMemOperand()->getFlags(), N->getAAInfo());
+      N->getBaseAlign(), N->getMemOperand()->getFlags(), N->getAAInfo());
 
   // Legalize the chain result - switch anything that used the old chain to
   // use the new one.
@@ -1006,13 +1006,12 @@ SDValue DAGTypeLegalizer::ScalarizeVecOp_STORE(StoreSDNode *N, unsigned OpNo){
     return DAG.getTruncStore(
         N->getChain(), dl, GetScalarizedVector(N->getOperand(1)),
         N->getBasePtr(), N->getPointerInfo(),
-        N->getMemoryVT().getVectorElementType(), N->getOriginalAlign(),
+        N->getMemoryVT().getVectorElementType(), N->getBaseAlign(),
         N->getMemOperand()->getFlags(), N->getAAInfo());
 
   return DAG.getStore(N->getChain(), dl, GetScalarizedVector(N->getOperand(1)),
-                      N->getBasePtr(), N->getPointerInfo(),
-                      N->getOriginalAlign(), N->getMemOperand()->getFlags(),
-                      N->getAAInfo());
+                      N->getBasePtr(), N->getPointerInfo(), N->getBaseAlign(),
+                      N->getMemOperand()->getFlags(), N->getAAInfo());
 }
 
 /// If the value to round is a vector that needs to be scalarized, it must be
@@ -2132,14 +2131,14 @@ void DAGTypeLegalizer::SplitVecRes_LOAD(LoadSDNode *LD, SDValue &Lo,
   }
 
   Lo = DAG.getLoad(ISD::UNINDEXED, ExtType, LoVT, dl, Ch, Ptr, Offset,
-                   LD->getPointerInfo(), LoMemVT, LD->getOriginalAlign(),
-                   MMOFlags, AAInfo);
+                   LD->getPointerInfo(), LoMemVT, LD->getBaseAlign(), MMOFlags,
+                   AAInfo);
 
   MachinePointerInfo MPI;
   IncrementPointer(LD, LoMemVT, MPI, Ptr);
 
   Hi = DAG.getLoad(ISD::UNINDEXED, ExtType, HiVT, dl, Ch, Ptr, Offset, MPI,
-                   HiMemVT, LD->getOriginalAlign(), MMOFlags, AAInfo);
+                   HiMemVT, LD->getBaseAlign(), MMOFlags, AAInfo);
 
   // Build a factor node to remember that this load is independent of the
   // other one.
@@ -2163,7 +2162,7 @@ void DAGTypeLegalizer::SplitVecRes_VP_LOAD(VPLoadSDNode *LD, SDValue &Lo,
   SDValue Ptr = LD->getBasePtr();
   SDValue Offset = LD->getOffset();
   assert(Offset.isUndef() && "Unexpected indexed variable-length load offset");
-  Align Alignment = LD->getOriginalAlign();
+  Align Alignment = LD->getBaseAlign();
   SDValue Mask = LD->getMask();
   SDValue EVL = LD->getVectorLength();
   EVT MemoryVT = LD->getMemoryVT();
@@ -2287,7 +2286,7 @@ void DAGTypeLegalizer::SplitVecRes_VP_STRIDED_LOAD(VPStridedLoadSDNode *SLD,
     SDValue Ptr =
         DAG.getNode(ISD::ADD, DL, PtrVT, SLD->getBasePtr(), Increment);
 
-    Align Alignment = SLD->getOriginalAlign();
+    Align Alignment = SLD->getBaseAlign();
     if (LoMemVT.isScalableVector())
       Alignment = commonAlignment(
           Alignment, LoMemVT.getSizeInBits().getKnownMinValue() / 8);
@@ -2326,7 +2325,7 @@ void DAGTypeLegalizer::SplitVecRes_MLOAD(MaskedLoadSDNode *MLD,
   assert(Offset.isUndef() && "Unexpected indexed masked load offset");
   SDValue Mask = MLD->getMask();
   SDValue PassThru = MLD->getPassThru();
-  Align Alignment = MLD->getOriginalAlign();
+  Align Alignment = MLD->getBaseAlign();
   ISD::LoadExtType ExtType = MLD->getExtensionType();
 
   // Split Mask operand
@@ -2418,7 +2417,7 @@ void DAGTypeLegalizer::SplitVecRes_Gather(MemSDNode *N, SDValue &Lo,
   }();
 
   EVT MemoryVT = N->getMemoryVT();
-  Align Alignment = N->getOriginalAlign();
+  Align Alignment = N->getBaseAlign();
 
   // Split Mask operand
   SDValue MaskLo, MaskHi;
@@ -3853,7 +3852,7 @@ SDValue DAGTypeLegalizer::SplitVecOp_VP_STORE(VPStoreSDNode *N, unsigned OpNo) {
   SDValue Mask = N->getMask();
   SDValue EVL = N->getVectorLength();
   SDValue Data = N->getValue();
-  Align Alignment = N->getOriginalAlign();
+  Align Alignment = N->getBaseAlign();
   SDLoc DL(N);
 
   SDValue DataLo, DataHi;
@@ -3977,7 +3976,7 @@ SDValue DAGTypeLegalizer::SplitVecOp_VP_STRIDED_STORE(VPStridedStoreSDNode *N,
                   DAG.getSExtOrTrunc(N->getStride(), DL, PtrVT));
   SDValue Ptr = DAG.getNode(ISD::ADD, DL, PtrVT, N->getBasePtr(), Increment);
 
-  Align Alignment = N->getOriginalAlign();
+  Align Alignment = N->getBaseAlign();
   if (LoMemVT.isScalableVector())
     Alignment = commonAlignment(Alignment,
                                 LoMemVT.getSizeInBits().getKnownMinValue() / 8);
@@ -4006,7 +4005,7 @@ SDValue DAGTypeLegalizer::SplitVecOp_MSTORE(MaskedStoreSDNode *N,
   assert(Offset.isUndef() && "Unexpected indexed masked store offset");
   SDValue Mask = N->getMask();
   SDValue Data = N->getValue();
-  Align Alignment = N->getOriginalAlign();
+  Align Alignment = N->getBaseAlign();
   SDLoc DL(N);
 
   SDValue DataLo, DataHi;
@@ -4081,7 +4080,7 @@ SDValue DAGTypeLegalizer::SplitVecOp_Scatter(MemSDNode *N, unsigned OpNo) {
   SDValue Ch = N->getChain();
   SDValue Ptr = N->getBasePtr();
   EVT MemoryVT = N->getMemoryVT();
-  Align Alignment = N->getOriginalAlign();
+  Align Alignment = N->getBaseAlign();
   SDLoc DL(N);
   struct Operands {
     SDValue Mask;
@@ -4170,7 +4169,7 @@ SDValue DAGTypeLegalizer::SplitVecOp_STORE(StoreSDNode *N, unsigned OpNo) {
   SDValue Ch  = N->getChain();
   SDValue Ptr = N->getBasePtr();
   EVT MemoryVT = N->getMemoryVT();
-  Align Alignment = N->getOriginalAlign();
+  Align Alignment = N->getBaseAlign();
   MachineMemOperand::Flags MMOFlags = N->getMemOperand()->getFlags();
   AAMDNodes AAInfo = N->getAAInfo();
   SDValue Lo, Hi;
@@ -7870,7 +7869,7 @@ SDValue DAGTypeLegalizer::GenWidenVectorLoads(SmallVectorImpl<SDValue> &LdChain,
   }
 
   SDValue LdOp = DAG.getLoad(*FirstVT, dl, Chain, BasePtr, LD->getPointerInfo(),
-                             LD->getOriginalAlign(), MMOFlags, AAInfo);
+                             LD->getBaseAlign(), MMOFlags, AAInfo);
   LdChain.push_back(LdOp.getValue(1));
 
   // Check if we can load the element with one instruction.
@@ -7911,7 +7910,7 @@ SDValue DAGTypeLegalizer::GenWidenVectorLoads(SmallVectorImpl<SDValue> &LdChain,
 
   for (EVT MemVT : MemVTs) {
     Align NewAlign = ScaledOffset == 0
-                         ? LD->getOriginalAlign()
+                         ? LD->getBaseAlign()
                          : commonAlignment(LD->getAlign(), ScaledOffset);
     SDValue L =
         DAG.getLoad(MemVT, dl, Chain, BasePtr, MPI, NewAlign, MMOFlags, AAInfo);
@@ -8021,7 +8020,7 @@ DAGTypeLegalizer::GenWidenVectorExtLoads(SmallVectorImpl<SDValue> &LdChain,
   unsigned Increment = LdEltVT.getSizeInBits() / 8;
   Ops[0] =
       DAG.getExtLoad(ExtType, dl, EltVT, Chain, BasePtr, LD->getPointerInfo(),
-                     LdEltVT, LD->getOriginalAlign(), MMOFlags, AAInfo);
+                     LdEltVT, LD->getBaseAlign(), MMOFlags, AAInfo);
   LdChain.push_back(Ops[0].getValue(1));
   unsigned i = 0, Offset = Increment;
   for (i=1; i < NumElts; ++i, Offset += Increment) {
@@ -8029,7 +8028,7 @@ DAGTypeLegalizer::GenWidenVectorExtLoads(SmallVectorImpl<SDValue> &LdChain,
         DAG.getObjectPtrOffset(dl, BasePtr, TypeSize::getFixed(Offset));
     Ops[i] = DAG.getExtLoad(ExtType, dl, EltVT, Chain, NewBasePtr,
                             LD->getPointerInfo().getWithOffset(Offset), LdEltVT,
-                            LD->getOriginalAlign(), MMOFlags, AAInfo);
+                            LD->getBaseAlign(), MMOFlags, AAInfo);
     LdChain.push_back(Ops[i].getValue(1));
   }
 
@@ -8097,7 +8096,7 @@ bool DAGTypeLegalizer::GenWidenVectorStores(SmallVectorImpl<SDValue> &StChain,
       unsigned NumVTElts = NewVT.getVectorMinNumElements();
       do {
         Align NewAlign = ScaledOffset == 0
-                             ? ST->getOriginalAlign()
+                             ? ST->getBaseAlign()
                              : commonAlignment(ST->getAlign(), ScaledOffset);
         SDValue EOp = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, NewVT, ValOp,
                                   DAG.getVectorIdxConstant(Idx, dl));
@@ -8119,9 +8118,8 @@ bool DAGTypeLegalizer::GenWidenVectorStores(SmallVectorImpl<SDValue> &StChain,
       do {
         SDValue EOp = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, NewVT, VecOp,
                                   DAG.getVectorIdxConstant(Idx++, dl));
-        SDValue PartStore =
-            DAG.getStore(Chain, dl, EOp, BasePtr, MPI, ST->getOriginalAlign(),
-                         MMOFlags, AAInfo);
+        SDValue PartStore = DAG.getStore(Chain, dl, EOp, BasePtr, MPI,
+                                         ST->getBaseAlign(), MMOFlags, AAInfo);
         StChain.push_back(PartStore);
 
         IncrementPointer(cast<StoreSDNode>(PartStore), NewVT, MPI, BasePtr);
