@@ -3399,7 +3399,10 @@ void SelectionDAGBuilder::visitCallBr(const CallBrInst &I) {
     BasicBlock *Dest = I.getIndirectDest(i);
     MachineBasicBlock *Target = FuncInfo.getMBB(Dest);
     Target->setIsInlineAsmBrIndirectTarget();
-    Target->setMachineBlockAddressTaken();
+    // If there was a type of asm goto statement that was permitted to
+    // use an indirect call instruction to jump to its labels, then we
+    // would also have to call Target->setMachineBlockAddressTaken()
+    // here to mark the target block as requiring a BTI.
     Target->setLabelMustBeEmitted();
     // Don't add duplicate machine successors.
     if (Dests.insert(Dest).second)
