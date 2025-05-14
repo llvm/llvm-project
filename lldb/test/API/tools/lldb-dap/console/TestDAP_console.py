@@ -176,9 +176,12 @@ class TestDAP_console(lldbdap_testcase.DAPTestCaseBase):
             f"target create --core  {core}", context="repl"
         )
 
-        output = self.get_important(timeout=2.0)
+        diagnostics = self.collect_important(
+            timeout_secs=self.timeoutval, pattern="minidump file"
+        )
+
         self.assertIn(
             "warning: unable to retrieve process ID from minidump file",
-            output,
+            diagnostics,
             "diagnostic found in important output",
         )
