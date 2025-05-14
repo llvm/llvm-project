@@ -366,6 +366,17 @@ public:
       std::function<swift::Demangle::NodePointer(swift::Demangle::NodePointer)>
           visitor);
 
+  /// Recursively transform the demangle tree starting a \p node by
+  /// doing a post-order traversal and replacing each node with
+  /// fn(node).
+  /// The NodePointer passed to \p fn is guaranteed to be non-null.
+  static llvm::Expected<swift::Demangle::NodePointer>
+  TryTransform(swift::Demangle::Demangler &dem,
+               swift::Demangle::NodePointer node,
+               std::function<llvm::Expected<swift::Demangle::NodePointer>(
+                   swift::Demangle::NodePointer)>
+                   visitor);
+
   /// A left-to-right preorder traversal. Don't visit children if
   /// visitor returns false.
   static void

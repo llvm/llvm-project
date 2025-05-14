@@ -498,8 +498,10 @@ SwiftLanguageRuntime::GetMemberVariableOffsetRemoteMirrors(
   auto frame = instance ? instance->GetExecutionContextRef().GetFrameSP().get()
                         : nullptr;
   auto ti_or_err = GetSwiftRuntimeTypeInfo(instance_type, frame);
-  if (!ti_or_err)
+  if (!ti_or_err) {
     LLDB_LOG_ERRORV(GetLog(LLDBLog::Types), ti_or_err.takeError(), "{0}");
+    return {};
+  }
   auto *ti = &*ti_or_err;
   if (auto *rti =
           llvm::dyn_cast_or_null<swift::reflection::RecordTypeInfo>(ti)) {
@@ -1774,50 +1776,37 @@ CreatePackType(swift::Demangle::Demangler &dem, TypeSystemSwiftTypeRef &ts,
   return pack;
 }
 
-bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Pack(
-    ValueObject &in_value, CompilerType pack_type,
-    lldb::DynamicValueType use_dynamic, TypeAndOrName &pack_type_or_name,
-    Address &address, Value::ValueType &value_type) {
-  Log *log(GetLog(LLDBLog::Types));
+llvm::Expected<CompilerType>
+SwiftLanguageRuntime::BindGenericPackType(StackFrame &frame,
+                                          CompilerType pack_type, bool *is_indirect) {
+  // This mode is used only by GetDynamicTypeAndAddress_Pack(). It would be
+  // cleaner if we could get rid of it.
+  bool rewrite_indirect_packs = (is_indirect != nullptr);
+  swift::Demangle::Demangler dem;
+  Target &target = GetProcess().GetTarget();
+  size_t ptr_size = GetProcess().GetAddressByteSize();
+  ConstString func_name = frame.GetSymbolContext(eSymbolContextFunction)
+                              .GetFunctionName(Mangled::ePreferMangled);
   ThreadSafeReflectionContext reflection_ctx = GetReflectionContext();
   if (!reflection_ctx)
-    return false;
-
-  // Return a tuple type, with one element per pack element and its
-  // type has all DependentGenericParamType that appear in type packs
-  // substituted.
-
-  StackFrameSP frame = in_value.GetExecutionContextRef().GetFrameSP();
-  if (!frame)
-    return false;
-  ConstString func_name = frame->GetSymbolContext(eSymbolContextFunction)
-                              .GetFunctionName(Mangled::ePreferMangled);
+    return llvm::createStringError("no reflection context");
 
   // Extract the generic signature from the function symbol.
   auto ts =
       pack_type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwiftTypeRef>();
   if (!ts)
-    return false;
+    return llvm::createStringError("no type system");
   auto signature =
-    SwiftLanguageRuntime::GetGenericSignature(func_name.GetStringRef(), *ts);
-  if (!signature) {
-    LLDB_LOG(log, "cannot decode pack_expansion type: failed to decode generic "
-                  "signature from function name");
-    return false;
-  }
-  // This type has already been resolved?
-  if (auto info = ts->IsSILPackType(pack_type))
-    if (info->expanded)
-      return false;
+      SwiftLanguageRuntime::GetGenericSignature(func_name.GetStringRef(), *ts);
+  if (!signature)
+    return llvm::createStringError(
+        "cannot decode pack_expansion type: failed to decode generic signature "
+        "from function name");
 
-  Target &target = GetProcess().GetTarget();
-  size_t ptr_size = GetProcess().GetAddressByteSize();
-
-  swift::Demangle::Demangler dem;
-
-  auto expand_pack_type = [&](ConstString mangled_pack_type, bool indirect,
+  auto expand_pack_type = [&](ConstString mangled_pack_type,
+                              bool rewrite_indirect,
                               swift::Mangle::ManglingFlavor flavor)
-      -> swift::Demangle::NodePointer {
+      -> llvm::Expected<swift::Demangle::NodePointer> {
     // Find pack_type in the pack_expansions.
     unsigned i = 0;
     SwiftLanguageRuntime::GenericSignature::PackExpansion *pack_expansion =
@@ -1829,11 +1818,10 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Pack(
       }
       ++i;
     }
-    if (!pack_expansion) {
-      LLDB_LOG(log, "cannot decode pack_expansion type: failed to find a "
-                    "matching type in the function signature");
-      return {};
-    }
+    if (!pack_expansion)
+      return llvm::createStringError(
+          "cannot decode pack_expansion type: failed to find a matching type "
+          "in the function signature");
 
     // Extract the count.
     llvm::SmallString<16> buf;
@@ -1841,14 +1829,12 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Pack(
     os << "$pack_count_" << signature->GetCountForValuePack(i);
     StringRef count_var = os.str();
     std::optional<lldb::addr_t> count =
-        GetTypeMetadataForTypeNameAndFrame(count_var, *frame);
-    if (!count) {
-      LLDB_LOG(log,
-               "cannot decode pack_expansion type: failed to find count "
-               "argument \"%s\" in frame",
-               count_var.str());
-      return {};
-    }
+        GetTypeMetadataForTypeNameAndFrame(count_var, frame);
+    if (!count)
+      return llvm::createStringError(
+          "cannot decode pack_expansion type: failed to find count argument "
+          "\"%s\" in frame",
+          count_var.str().c_str());
 
     // Extract the metadata for the type packs in this value pack.
     llvm::SmallDenseMap<std::pair<unsigned, unsigned>, lldb::addr_t> type_packs;
@@ -1871,13 +1857,13 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Pack(
           os << u8"$\u03C4_" << shape.depth << '_' << shape.index;
           StringRef mds_var = os.str();
           std::optional<lldb::addr_t> mds_ptr =
-              GetTypeMetadataForTypeNameAndFrame(mds_var, *frame);
+              GetTypeMetadataForTypeNameAndFrame(mds_var, frame);
           if (!mds_ptr) {
-            LLDB_LOG(log,
-                      "cannot decode pack_expansion type: failed to find "
-                      "metadata "
-                      "for \"{0}\" in frame",
-                      mds_var.str());
+            LLDB_LOG(GetLog(LLDBLog::Types),
+                     "cannot decode pack_expansion type: failed to find "
+                     "metadata "
+                     "for \"{0}\" in frame",
+                     mds_var.str());
             error = true;
             return;
           }
@@ -1886,7 +1872,7 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Pack(
       }
     });
     if (error)
-      return {};
+      return llvm::createStringError("cannot decode pack_expansion type");
 
     // Walk the type packs.
     std::vector<TypeSystemSwift::TupleElement> elements;
@@ -1903,29 +1889,25 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Pack(
         Status status;
         lldb::addr_t md = LLDB_INVALID_ADDRESS;
         target.ReadMemory(md_ptr, &md, ptr_size, status, true);
-        if (!status.Success()) {
-          LLDB_LOGF(log,
+        if (!status.Success())
+          return llvm::createStringError(
                     "cannot decode pack_expansion type: failed to read type "
                     "pack for type %d/%d of type pack with shape %d %d",
                     j, (unsigned)*count, depth, index);
-          return {};
-        }
 
         auto type_ref_or_err =
             reflection_ctx->ReadTypeFromMetadata(md, ts->GetDescriptorFinder());
-        if (!type_ref_or_err) {
-          LLDB_LOG_ERRORV(GetLog(LLDBLog::Types), type_ref_or_err.takeError(),
-                          "{0}");
-          LLDB_LOGF(log,
-                    "cannot decode pack_expansion type: failed to decode type "
-                    "metadata for type %d/%d of type pack with shape %d %d",
-                    j, (unsigned)*count, depth, index);
-          return {};
-        }
+        if (!type_ref_or_err)
+          return llvm::joinErrors(
+              llvm::createStringError(
+                  "cannot decode pack_expansion type: failed to decode type "
+                  "metadata for type %d/%d of type pack with shape %d %d",
+                  j, (unsigned)*count, depth, index),
+              type_ref_or_err.takeError());
         substitutions.insert({{depth, index}, &*type_ref_or_err});
       }
       if (substitutions.empty())
-        return {};
+        return llvm::createStringError("found no substitutions");
 
       // Replace all pack expansions with a singular type. Otherwise the
       // reflection context won't accept them.
@@ -1942,56 +1924,53 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Pack(
       // Build a TypeRef from the demangle tree.
       auto type_ref_or_err = reflection_ctx->GetTypeRef(
           dem, pack_element, ts->GetDescriptorFinder());
-      if (!type_ref_or_err) {
-        LLDB_LOG_ERRORV(GetLog(LLDBLog::Types), type_ref_or_err.takeError(),
-                        "{0}");
-        return {};
-      }
+      if (!type_ref_or_err)
+        return type_ref_or_err.takeError();
       auto &type_ref = *type_ref_or_err;
 
       // Apply the substitutions.
       auto bound_typeref_or_err = reflection_ctx->ApplySubstitutions(
           type_ref, substitutions, ts->GetDescriptorFinder());
-      if (!bound_typeref_or_err) {
-        LLDB_LOG_ERRORV(GetLog(LLDBLog::Types), bound_typeref_or_err.takeError(),
-                        "{0}");
-        return {};
-      }
+      if (!bound_typeref_or_err)
+        return bound_typeref_or_err.takeError();
       swift::Demangle::NodePointer node = bound_typeref_or_err->getDemangling(dem);
       CompilerType type = ts->RemangleAsType(dem, node, flavor);
 
       // Add the substituted type to the tuple.
       elements.push_back({{}, type});
     }
-    if (indirect) {
+
+    // TODO: Could we get rid of this code path?
+    if (rewrite_indirect) {
       // Create a tuple type with all the concrete types in the pack.
       CompilerType tuple = ts->CreateTupleType(elements);
       // TODO: Remove unnecessary mangling roundtrip.
       // Wrap the type inside a SILPackType to mark it for GetChildAtIndex.
-      CompilerType sil_pack_type = ts->CreateSILPackType(tuple, indirect);
+      CompilerType sil_pack_type = ts->CreateSILPackType(tuple, rewrite_indirect);
       swift::Demangle::NodePointer global =
           dem.demangleSymbol(sil_pack_type.GetMangledTypeName().GetStringRef());
       using Kind = Node::Kind;
       auto *dem_sil_pack_type =
           swift_demangle::ChildAtPath(global, {Kind::TypeMangling, Kind::Type});
       return dem_sil_pack_type;
-    } else {
-      return CreatePackType(dem, *ts, elements);
     }
+    return CreatePackType(dem, *ts, elements);
   };
 
   swift::Demangle::Context dem_ctx;
   auto node = dem_ctx.demangleSymbolAsNode(
       pack_type.GetMangledTypeName().GetStringRef());
 
+  bool indirect = false;
   auto flavor =
       SwiftLanguageRuntime::GetManglingFlavor(pack_type.GetMangledTypeName());
 
   // Expand all the pack types that appear in the incoming type,
   // either at the root level or as arguments of bound generic types.
-  bool indirect = false;
-  auto transformed = TypeSystemSwiftTypeRef::Transform(
-      dem, node, [&](swift::Demangle::NodePointer node) {
+  auto transformed = TypeSystemSwiftTypeRef::TryTransform(
+      dem, node,
+      [&](swift::Demangle::NodePointer node)
+          -> llvm::Expected<swift::Demangle::NodePointer> {
         if (node->getKind() == swift::Demangle::Node::Kind::SILPackIndirect)
           indirect = true;
         if (node->getKind() != swift::Demangle::Node::Kind::SILPackIndirect &&
@@ -2004,17 +1983,51 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Pack(
         node = node->getChild(0);
         CompilerType pack_type = ts->RemangleAsType(dem, node, flavor);
         ConstString mangled_pack_type = pack_type.GetMangledTypeName();
-        LLDB_LOG(log, "decoded pack_expansion type: {0}", mangled_pack_type);
-        auto result = expand_pack_type(mangled_pack_type, indirect, flavor);
-        if (!result) {
-          LLDB_LOG(log, "failed to expand pack type: {0}", mangled_pack_type);
-          return node;
-        }
-        return result;
+        LLDB_LOG(GetLog(LLDBLog::Types), "decoded pack_expansion type: {0}",
+                 mangled_pack_type);
+        return expand_pack_type(mangled_pack_type,
+                                rewrite_indirect_packs && indirect, flavor);
       });
 
-  CompilerType expanded_type = ts->RemangleAsType(dem, transformed, flavor);
-  pack_type_or_name.SetCompilerType(expanded_type);
+  if (!transformed)
+    return transformed.takeError();
+
+  if (is_indirect)
+    *is_indirect = indirect;
+
+  return ts->RemangleAsType(dem, *transformed, flavor);
+}
+
+bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Pack(
+    ValueObject &in_value, CompilerType pack_type,
+    lldb::DynamicValueType use_dynamic, TypeAndOrName &pack_type_or_name,
+    Address &address, Value::ValueType &value_type) {
+  Log *log(GetLog(LLDBLog::Types));
+  // Return a tuple type, with one element per pack element and its
+  // type has all DependentGenericParamType that appear in type packs
+  // substituted.
+
+  StackFrameSP frame = in_value.GetExecutionContextRef().GetFrameSP();
+  if (!frame)
+    return false;
+
+  // This type has already been resolved?
+  auto ts =
+      pack_type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwiftTypeRef>();
+  if (!ts)
+    return false;
+  if (auto info = ts->IsSILPackType(pack_type))
+    if (info->expanded)
+      return false;
+
+  bool indirect = false;
+  llvm::Expected<CompilerType> expanded_type =
+      BindGenericPackType(*frame, pack_type, &indirect);
+  if (!expanded_type) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Types), expanded_type.takeError(), "{0}");
+    return false;
+  }
+  pack_type_or_name.SetCompilerType(*expanded_type);
 
   AddressType address_type;
   lldb::addr_t addr = in_value.GetAddressOf(true, &address_type);
@@ -2024,7 +2037,7 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Pack(
     addr = GetProcess().ReadPointerFromMemory(addr, status);
     if (status.Fail()) {
       LLDB_LOG(log, "failed to dereference indirect pack: {0}",
-               expanded_type.GetMangledTypeName());
+               expanded_type->GetMangledTypeName());
       return false;
     }
   }
@@ -2626,21 +2639,22 @@ CompilerType SwiftLanguageRuntime::BindGenericTypeParameters(
           unbound_type.GetMangledTypeName()));
 }
 
-CompilerType
+llvm::Expected<CompilerType>
 SwiftLanguageRuntime::BindGenericTypeParameters(StackFrame &stack_frame,
                                                 TypeSystemSwiftTypeRef &ts,
                                                 ConstString mangled_name) {
   LLDB_SCOPED_TIMER();
   using namespace swift::Demangle;
 
-  Status error;
   ThreadSafeReflectionContext reflection_ctx = GetReflectionContext();
-  if (!reflection_ctx) {
-    LLDB_LOG(GetLog(LLDBLog::Expressions | LLDBLog::Types),
-             "No reflection context available.");
-    return ts.GetTypeFromMangledTypename(mangled_name);
-  }
+  if (!reflection_ctx)
+    return llvm::createStringError("no reflection context");
 
+  ConstString func_name = stack_frame.GetSymbolContext(eSymbolContextFunction)
+                              .GetFunctionName(Mangled::ePreferMangled);
+  // Extract the generic signature from the function symbol.
+  auto generic_signature =
+      SwiftLanguageRuntime::GetGenericSignature(func_name.GetStringRef(), ts);
   Demangler dem;
 
   NodePointer canonical = TypeSystemSwiftTypeRef::GetStaticSelfType(
@@ -2651,6 +2665,9 @@ SwiftLanguageRuntime::BindGenericTypeParameters(StackFrame &stack_frame,
   swift::reflection::GenericArgumentMap substitutions;
   ForEachGenericParameter(canonical, [&](unsigned depth, unsigned index) {
     if (substitutions.count({depth, index}))
+      return;
+    // Packs will be substituted in a second pass.
+    if (generic_signature && generic_signature->IsPack(depth, index))
       return;
     StreamString mdvar_name;
     mdvar_name.Printf(u8"$\u03C4_%d_%d", depth, index);
@@ -2681,30 +2698,24 @@ SwiftLanguageRuntime::BindGenericTypeParameters(StackFrame &stack_frame,
       return CompilerType();
     return ts.GetTypeFromMangledTypename(ConstString(mangling.result()));
   };
-  if (substitutions.empty())
+  if (substitutions.empty() &&
+      !(generic_signature && generic_signature->HasPacks()))
     return get_canonical();
 
   // Build a TypeRef from the demangle tree.
   auto type_ref_or_err =
       reflection_ctx->GetTypeRef(dem, canonical, ts.GetDescriptorFinder());
-  if (!type_ref_or_err) {
-    LLDB_LOG_ERROR(
-        GetLog(LLDBLog::Expressions | LLDBLog::Types),
-        type_ref_or_err.takeError(),
-        "Couldn't get type ref when binding generic type parameters: {0}");
-    return get_canonical();
-  }
+  if (!type_ref_or_err)
+    return llvm::joinErrors(
+        llvm::createStringError("cannot bind generic parameters"),
+        type_ref_or_err.takeError());
 
   // Apply the substitutions.
   auto bound_type_ref_or_err = reflection_ctx->ApplySubstitutions(
       *type_ref_or_err, substitutions, ts.GetDescriptorFinder());
-  if (!bound_type_ref_or_err) {
-    LLDB_LOG_ERROR(
-        GetLog(LLDBLog::Expressions | LLDBLog::Types),
-        bound_type_ref_or_err.takeError(),
-        "Couldn't get type ref when binding generic type parameters: {0}");
-    return get_canonical();
-  }
+  if (!bound_type_ref_or_err)
+    return bound_type_ref_or_err.takeError();
+
   NodePointer node = bound_type_ref_or_err->getDemangling(dem);
 
   // Import the type into the scratch context. Subsequent conversions
@@ -2716,18 +2727,24 @@ SwiftLanguageRuntime::BindGenericTypeParameters(StackFrame &stack_frame,
   // the original context as to resolve type aliases correctly.
   auto &target = GetProcess().GetTarget();
   auto scratch_ctx = TypeSystemSwiftTypeRefForExpressions::GetForTarget(target);
-  if (!scratch_ctx) {
-    LLDB_LOG(GetLog(LLDBLog::Expressions | LLDBLog::Types),
-             "No scratch context available.");
-    return ts.GetTypeFromMangledTypename(mangled_name);
-  }
+  if (!scratch_ctx)
+    return llvm::createStringError("No scratch context available.");
+
   CompilerType bound_type = scratch_ctx->RemangleAsType(dem, node, flavor);
   LLDB_LOG(GetLog(LLDBLog::Expressions | LLDBLog::Types), "Bound {0} -> {1}.",
            mangled_name, bound_type.GetMangledTypeName());
+
+  if (generic_signature && generic_signature->HasPacks()) {
+    auto bound_type_or_err = BindGenericPackType(stack_frame, bound_type);
+    if (!bound_type_or_err)
+      return bound_type_or_err.takeError();
+    bound_type = *bound_type_or_err;
+  }
+
   return bound_type;
 }
 
-CompilerType
+llvm::Expected<CompilerType>
 SwiftLanguageRuntime::BindGenericTypeParameters(StackFrame &stack_frame,
                                                 CompilerType base_type) {
   // If this is a TypeRef type, bind that.
@@ -3210,7 +3227,9 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress(
       if (!frame)
         return false;
 
-      bound_type = BindGenericTypeParameters(*frame.get(), val_type);
+      bound_type = llvm::expectedToOptional(
+                       BindGenericTypeParameters(*frame.get(), val_type))
+                       .value_or(CompilerType());
       if (!bound_type)
         return false;
     } else {
@@ -3434,7 +3453,6 @@ SwiftLanguageRuntime::GetSwiftRuntimeTypeInfo(
     CompilerType type, ExecutionContextScope *exe_scope,
     swift::reflection::TypeRef const **out_tr) {
   Log *log(GetLog(LLDBLog::Types));
-
   if (log && log->GetVerbose())
     LLDB_LOG(log,
              "[SwiftLanguageRuntime::GetSwiftRuntimeTypeInfo] Getting "
@@ -3456,7 +3474,7 @@ SwiftLanguageRuntime::GetSwiftRuntimeTypeInfo(
     // GetCanonicalType() returned an Expected.
     return llvm::createStringError(
         "could not get canonical type (possibly due to unresolved typealias)");
-}
+  }
 
   // Resolve all generic type parameters in the type for the current
   // frame. Generic parameter binding has to happen in the scratch
@@ -3465,7 +3483,10 @@ SwiftLanguageRuntime::GetSwiftRuntimeTypeInfo(
     if (StackFrame *frame = exe_scope->CalculateStackFrame().get()) {
       ExecutionContext exe_ctx;
       frame->CalculateExecutionContext(exe_ctx);
-      type = BindGenericTypeParameters(*frame, type);
+      auto bound_type_or_err = BindGenericTypeParameters(*frame, type);
+      if (!bound_type_or_err)
+        return bound_type_or_err.takeError();
+      type = *bound_type_or_err;
     }
 
   // BindGenericTypeParameters imports the type into the scratch

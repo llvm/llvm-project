@@ -273,6 +273,9 @@ public:
                                 Address &address, Value::ValueType &value_type,
                                 llvm::ArrayRef<uint8_t> &local_buffer) override;
 
+  llvm::Expected<CompilerType> BindGenericPackType(StackFrame &frame,
+                                                   CompilerType pack_type,
+                                                   bool *indirect = nullptr);
   CompilerType BindGenericTypeParameters(
       CompilerType unbound_type,
       std::function<CompilerType(unsigned, unsigned)> finder);
@@ -343,12 +346,20 @@ public:
     unsigned dependent_generic_param_count = 0;
     unsigned num_counts = 0;
 
-    unsigned GetNumValuePacks() { return count_for_value_pack.size(); }
-    unsigned GetNumTypePacks() { return count_for_type_pack.size(); }
-    unsigned GetCountForValuePack(unsigned i) {
+    unsigned GetNumValuePacks() const { return count_for_value_pack.size(); }
+    unsigned GetNumTypePacks() const { return count_for_type_pack.size(); }
+    unsigned GetCountForValuePack(unsigned i) const {
       return count_for_value_pack[i];
     }
-    unsigned GetCountForTypePack(unsigned i) { return count_for_type_pack[i]; }
+    unsigned GetCountForTypePack(unsigned i) const { return count_for_type_pack[i]; }
+    bool HasPacks() const { return pack_expansions.size(); }
+    bool IsPack(unsigned depth, unsigned index) const {
+      if (HasPacks())
+        for (auto param : generic_params)
+          if (param.depth == depth && param.index == index)
+            return param.is_pack;
+      return false;
+    }
   };
   /// Extract the generic signature out of a mangled Swift function name.
   static std::optional<GenericSignature>
@@ -359,8 +370,8 @@ public:
   /// version of \p base_type that replaces all generic type
   /// parameters with bound generic types. If a generic type parameter
   /// cannot be resolved, the input type is returned.
-  CompilerType BindGenericTypeParameters(StackFrame &stack_frame,
-                                         CompilerType base_type);
+  llvm::Expected<CompilerType>
+  BindGenericTypeParameters(StackFrame &stack_frame, CompilerType base_type);
 
   bool IsStoredInlineInBuffer(CompilerType type) override;
 
@@ -580,13 +591,14 @@ protected:
   GetRemoteASTContext(SwiftASTContext &swift_ast_ctx);
 
   /// Like \p BindGenericTypeParameters but for TypeSystemSwiftTypeRef.
-  CompilerType BindGenericTypeParameters(StackFrame &stack_frame,
-                                         TypeSystemSwiftTypeRef &ts,
-                                         ConstString mangled_name);
+  llvm::Expected<CompilerType>
+  BindGenericTypeParameters(StackFrame &stack_frame, TypeSystemSwiftTypeRef &ts,
+                            ConstString mangled_name);
 
   /// Like \p BindGenericTypeParameters but for RemoteAST.
-  CompilerType BindGenericTypeParametersRemoteAST(StackFrame &stack_frame,
-                                                  CompilerType base_type);
+  llvm::Expected<CompilerType>
+  BindGenericTypeParametersRemoteAST(StackFrame &stack_frame,
+                                     CompilerType base_type);
 
   bool GetDynamicTypeAndAddress_Pack(ValueObject &in_value,
                                      CompilerType pack_type,
