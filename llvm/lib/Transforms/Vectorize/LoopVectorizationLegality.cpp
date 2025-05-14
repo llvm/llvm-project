@@ -1658,7 +1658,6 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
   // Keep a record of all the exiting blocks.
   SmallVector<const SCEVPredicate *, 4> Predicates;
   std::optional<std::pair<BasicBlock *, BasicBlock *>> SingleUncountableEdge;
-  std::optional<LoadInst *> EELoad;
   for (BasicBlock *BB : ExitingBlocks) {
     const SCEV *EC =
         PSE.getSE()->getPredicatedExitCount(TheLoop, BB, &Predicates);
@@ -1686,21 +1685,6 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
             "Cannot vectorize early exit loop with more than one early exit",
             "TooManyUncountableEarlyExits", ORE, TheLoop);
         return false;
-      }
-
-      // For loops with stores.
-      // Record load for analysis by isDereferenceableAndAlignedInLoop
-      // and later by dependence analysis.
-      if (BranchInst *Br = dyn_cast<BranchInst>(BB->getTerminator())) {
-        // FIXME: Handle exit conditions with multiple users, more complex exit
-        //        conditions than br(icmp(load, loop_inv)).
-        ICmpInst *Cmp = dyn_cast<ICmpInst>(Br->getCondition());
-        if (Cmp && Cmp->hasOneUse() &&
-            TheLoop->isLoopInvariant(Cmp->getOperand(1))) {
-          LoadInst *Load = dyn_cast<LoadInst>(Cmp->getOperand(0));
-          if (Load && Load->hasOneUse() && !TheLoop->isLoopInvariant(Load))
-            EELoad = Load;
-        }
       }
 
       SingleUncountableEdge = {BB, ExitBlock};
@@ -1795,39 +1779,56 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
   // TODO: Handle loops that may fault.
   Predicates.clear();
 
-  if (HasStore && EELoad.has_value()) {
-    LoadInst *LI = *EELoad;
-    if (isDereferenceableAndAlignedInLoop(LI, TheLoop, *PSE.getSE(), *DT, AC,
-                                          &Predicates)) {
-      ICFLoopSafetyInfo SafetyInfo;
-      SafetyInfo.computeLoopSafetyInfo(TheLoop);
-      // FIXME: We may have multiple levels of conditional loads, so will
-      //        need to improve on outright rejection at some point.
-      if (!SafetyInfo.isGuaranteedToExecute(*LI, DT, TheLoop)) {
-        LLVM_DEBUG(
-            dbgs() << "Early exit condition load not guaranteed to execute.\n");
-        reportVectorizationFailure(
-            "Early exit condition load not guaranteed to execute",
-            "Cannot vectorize early exit loop when condition load is not "
-            "guaranteed to execute",
-            "EarlyExitLoadNotGuaranteed", ORE, TheLoop);
+  std::optional<LoadInst *> EELoad;
+  if (HasStore) {
+    // Record load for analysis by isDereferenceableAndAlignedInLoop
+    // and later by dependence analysis.
+    if (BranchInst *Br = dyn_cast<BranchInst>(SingleUncountableEdge->first->getTerminator())) {
+      // FIXME: Handle exit conditions with multiple users, more complex exit
+      //        conditions than br(icmp(load, loop_inv)).
+      ICmpInst *Cmp = dyn_cast<ICmpInst>(Br->getCondition());
+      if (Cmp && Cmp->hasOneUse() &&
+          TheLoop->isLoopInvariant(Cmp->getOperand(1))) {
+        LoadInst *Load = dyn_cast<LoadInst>(Cmp->getOperand(0));
+        if (Load && Load->hasOneUse() && !TheLoop->isLoopInvariant(Load)) {
+          if (isDereferenceableAndAlignedInLoop(Load, TheLoop, *PSE.getSE(), *DT, AC,
+                                                &Predicates)) {
+            ICFLoopSafetyInfo SafetyInfo;
+            SafetyInfo.computeLoopSafetyInfo(TheLoop);
+            // FIXME: We may have multiple levels of conditional loads, so will
+            //        need to improve on outright rejection at some point.
+            if (SafetyInfo.isGuaranteedToExecute(*Load, DT, TheLoop)) {
+              EELoad = Load;
+            } else {
+              LLVM_DEBUG(
+              dbgs() << "Early exit condition load not guaranteed to execute.\n");
+              reportVectorizationFailure(
+              "Early exit condition load not guaranteed to execute",
+              "Cannot vectorize early exit loop when condition load is not "
+              "guaranteed to execute",
+              "EarlyExitLoadNotGuaranteed", ORE, TheLoop);
+            }
+          } else {
+            LLVM_DEBUG(dbgs() << "Early exit condition load potentially unsafe.\n");
+            reportVectorizationFailure("Uncounted loop condition not known safe",
+             "Cannot vectorize early exit loop with "
+             "possibly unsafe condition load",
+             "PotentiallyFaultingEarlyExitLoop", ORE,
+             TheLoop);
+            return false;
+          }
+        }
       }
-    } else {
-      LLVM_DEBUG(dbgs() << "Early exit condition load potentially unsafe.\n");
-      reportVectorizationFailure("Uncounted loop condition not known safe",
-                                 "Cannot vectorize early exit loop with "
-                                 "possibly unsafe condition load",
-                                 "PotentiallyFaultingEarlyExitLoop", ORE,
-                                 TheLoop);
+    }
+
+    if (!EELoad.has_value()) {
+      LLVM_DEBUG(dbgs() << "Found early exit store but no condition load.\n");
+      reportVectorizationFailure(
+          "Early exit loop with store but no condition load",
+          "Cannot vectorize early exit loop with store but no condition load",
+          "NoConditionLoadForEarlyExitLoop", ORE, TheLoop);
       return false;
     }
-  } else if (HasStore) {
-    LLVM_DEBUG(dbgs() << "Found early exit store but no condition load.\n");
-    reportVectorizationFailure(
-        "Early exit loop with store but no condition load",
-        "Cannot vectorize early exit loop with store but no condition load",
-        "NoConditionLoadForEarlyExitLoop", ORE, TheLoop);
-    return false;
   } else {
     // Read-only loop.
     // FIXME: as with the loops with stores, only the loads contributing to
