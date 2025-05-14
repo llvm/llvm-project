@@ -388,6 +388,51 @@ bool LoongArchTargetInfo::handleTargetFeatures(
   return true;
 }
 
+ParsedTargetAttr
+LoongArchTargetInfo::parseTargetAttr(StringRef Features) const {
+  ParsedTargetAttr Ret;
+  if (Features == "default")
+    return Ret;
+  SmallVector<StringRef, 1> AttrFeatures;
+  Features.split(AttrFeatures, ",");
+
+  for (auto &Feature : AttrFeatures) {
+    Feature = Feature.trim();
+
+    if (Feature.starts_with("arch=")) {
+      StringRef ArchValue = Feature.split("=").second.trim();
+
+      if (llvm::LoongArch::isValidArchName(ArchValue) ||
+          ArchValue == "la64v1.0" || ArchValue == "la64v1.1") {
+        std::vector<llvm::StringRef> ArchFeatures;
+        if (llvm::LoongArch::getArchFeatures(ArchValue, ArchFeatures)) {
+          Ret.Features.insert(Ret.Features.end(), ArchFeatures.begin(),
+                              ArchFeatures.end());
+        }
+
+        if (!Ret.CPU.empty())
+          Ret.Duplicate = "arch=";
+        else if (ArchValue == "la64v1.0" || ArchValue == "la64v1.1")
+          Ret.CPU = "loongarch64";
+        else
+          Ret.CPU = ArchValue;
+      } else {
+        Ret.Features.push_back("!arch=" + ArchValue.str());
+      }
+    } else if (Feature.starts_with("tune=")) {
+      if (!Ret.Tune.empty())
+        Ret.Duplicate = "tune=";
+      else
+        Ret.Tune = Feature.split("=").second.trim();
+    } else if (Feature.starts_with("no-")) {
+      Ret.Features.push_back("-" + Feature.split("-").second.str());
+    } else {
+      Ret.Features.push_back("+" + Feature.str());
+    }
+  }
+  return Ret;
+}
+
 bool LoongArchTargetInfo::isValidCPUName(StringRef Name) const {
   return llvm::LoongArch::isValidCPUName(Name);
 }
@@ -395,4 +440,8 @@ bool LoongArchTargetInfo::isValidCPUName(StringRef Name) const {
 void LoongArchTargetInfo::fillValidCPUList(
     SmallVectorImpl<StringRef> &Values) const {
   llvm::LoongArch::fillValidCPUList(Values);
+}
+
+bool LoongArchTargetInfo::isValidFeatureName(StringRef Name) const {
+  return llvm::LoongArch::isValidFeatureName(Name);
 }
