@@ -24,10 +24,6 @@
 #include "llvm/ADT/SmallString.h"
 using namespace clang;
 
-
-/// MayBeDesignationStart - Return true if the current token might be the start
-/// of a designator.  If we can tell it is impossible that it is a designator,
-/// return false.
 bool Parser::MayBeDesignationStart() {
   switch (Tok.getKind()) {
   default:
@@ -119,48 +115,6 @@ static void CheckArrayDesignatorSyntax(Parser &P, SourceLocation Loc,
     P.Diag(Loc, diag::err_expected_equal_designator);
 }
 
-/// ParseInitializerWithPotentialDesignator - Parse the 'initializer' production
-/// checking to see if the token stream starts with a designator.
-///
-/// C99:
-///
-///       designation:
-///         designator-list '='
-/// [GNU]   array-designator
-/// [GNU]   identifier ':'
-///
-///       designator-list:
-///         designator
-///         designator-list designator
-///
-///       designator:
-///         array-designator
-///         '.' identifier
-///
-///       array-designator:
-///         '[' constant-expression ']'
-/// [GNU]   '[' constant-expression '...' constant-expression ']'
-///
-/// C++20:
-///
-///       designated-initializer-list:
-///         designated-initializer-clause
-///         designated-initializer-list ',' designated-initializer-clause
-///
-///       designated-initializer-clause:
-///         designator brace-or-equal-initializer
-///
-///       designator:
-///         '.' identifier
-///
-/// We allow the C99 syntax extensions in C++20, but do not allow the C++20
-/// extension (a braced-init-list after the designator with no '=') in C99.
-///
-/// NOTE: [OBC] allows '[ objc-receiver objc-message-args ]' as an
-/// initializer (because it is an expression).  We need to consider this case
-/// when parsing array designators.
-///
-/// \p CodeCompleteCB is called with Designation parsed so far.
 ExprResult Parser::ParseInitializerWithPotentialDesignator(
     DesignatorCompletionInfo DesignatorCompletion) {
   // If this is the old-style GNU extension:
@@ -456,18 +410,6 @@ ExprResult Parser::createEmbedExpr() {
   return Res;
 }
 
-/// ParseBraceInitializer - Called when parsing an initializer that has a
-/// leading open brace.
-///
-///       initializer: [C99 6.7.8]
-///         '{' initializer-list '}'
-///         '{' initializer-list ',' '}'
-/// [C23]   '{' '}'
-///
-///       initializer-list:
-///         designation[opt] initializer ...[opt]
-///         initializer-list ',' designation[opt] initializer ...[opt]
-///
 ExprResult Parser::ParseBraceInitializer() {
   InMessageExpressionRAIIObject InMessage(*this, false);
 
@@ -578,9 +520,6 @@ ExprResult Parser::ParseBraceInitializer() {
   return ExprError(); // an error occurred.
 }
 
-
-// Return true if a comma (or closing brace) is necessary after the
-// __if_exists/if_not_exists statement.
 bool Parser::ParseMicrosoftIfExistsBraceInitializer(ExprVector &InitExprs,
                                                     bool &InitExprsOk) {
   bool trailingComma = false;
