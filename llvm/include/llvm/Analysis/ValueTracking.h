@@ -77,7 +77,7 @@ LLVM_ABI KnownBits computeKnownBits(const Value *V, const APInt &DemandedElts,
 LLVM_ABI KnownBits computeKnownBits(const Value *V, const APInt &DemandedElts,
                            unsigned Depth, const SimplifyQuery &Q);
 
-KnownBits computeKnownBits(const Value *V, unsigned Depth,
+LLVM_ABI KnownBits computeKnownBits(const Value *V, unsigned Depth,
                            const SimplifyQuery &Q);
 
 LLVM_ABI void computeKnownBits(const Value *V, KnownBits &Known, unsigned Depth,

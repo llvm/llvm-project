@@ -23,7 +23,11 @@
 
 namespace llvm {
 
+class DomTreeUpdater;
 class PostDominatorTree;
+
+extern template class LLVM_TEMPLATE_ABI GenericDomTreeUpdater<DomTreeUpdater, DominatorTree,
+                                            PostDominatorTree>;
 
 class DomTreeUpdater
     : public GenericDomTreeUpdater<DomTreeUpdater, DominatorTree,
@@ -114,17 +118,14 @@ private:
   bool forceFlushDeletedBB();
 };
 
-extern template class GenericDomTreeUpdater<DomTreeUpdater, DominatorTree,
-                                            PostDominatorTree>;
-
-extern template void
+extern template LLVM_TEMPLATE_ABI void
 GenericDomTreeUpdater<DomTreeUpdater, DominatorTree,
                       PostDominatorTree>::recalculate(Function &F);
 
-extern template void
+extern template LLVM_TEMPLATE_ABI void
 GenericDomTreeUpdater<DomTreeUpdater, DominatorTree, PostDominatorTree>::
     applyUpdatesImpl</*IsForward=*/true>();
-extern template void
+extern template LLVM_TEMPLATE_ABI void
 GenericDomTreeUpdater<DomTreeUpdater, DominatorTree, PostDominatorTree>::
     applyUpdatesImpl</*IsForward=*/false>();
 } // namespace llvm

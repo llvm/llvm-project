@@ -13,6 +13,7 @@
 #include "llvm/Analysis/MemoryProfileInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Format.h"
 
 using namespace llvm;
@@ -22,7 +23,7 @@ using namespace llvm::memprof;
 
 // Upper bound on lifetime access density (accesses per byte per lifetime sec)
 // for marking an allocation cold.
-cl::opt<float> MemProfLifetimeAccessDensityColdThreshold(
+LLVM_ABI cl::opt<float> MemProfLifetimeAccessDensityColdThreshold(
     "memprof-lifetime-access-density-cold-threshold", cl::init(0.05),
     cl::Hidden,
     cl::desc("The threshold the lifetime access density (accesses per byte per "
@@ -30,20 +31,20 @@ cl::opt<float> MemProfLifetimeAccessDensityColdThreshold(
 
 // Lower bound on lifetime to mark an allocation cold (in addition to accesses
 // per byte per sec above). This is to avoid pessimizing short lived objects.
-cl::opt<unsigned> MemProfAveLifetimeColdThreshold(
+LLVM_ABI cl::opt<unsigned> MemProfAveLifetimeColdThreshold(
     "memprof-ave-lifetime-cold-threshold", cl::init(200), cl::Hidden,
     cl::desc("The average lifetime (s) for an allocation to be considered "
              "cold"));
 
 // Lower bound on average lifetime accesses density (total life time access
 // density / alloc count) for marking an allocation hot.
-cl::opt<unsigned> MemProfMinAveLifetimeAccessDensityHotThreshold(
+LLVM_ABI cl::opt<unsigned> MemProfMinAveLifetimeAccessDensityHotThreshold(
     "memprof-min-ave-lifetime-access-density-hot-threshold", cl::init(1000),
     cl::Hidden,
     cl::desc("The minimum TotalLifetimeAccessDensity / AllocCount for an "
              "allocation to be considered hot"));
 
-cl::opt<bool>
+LLVM_ABI cl::opt<bool>
     MemProfUseHotHints("memprof-use-hot-hints", cl::init(false), cl::Hidden,
                        cl::desc("Enable use of hot hints (only supported for "
                                 "unambigously hot allocations)"));
@@ -55,7 +56,7 @@ cl::opt<bool> MemProfReportHintedSizes(
 // This is useful if we have enabled reporting of hinted sizes, and want to get
 // information from the indexing step for all contexts (especially for testing),
 // or have specified a value less than 100% for -memprof-cloning-cold-threshold.
-cl::opt<bool> MemProfKeepAllNotColdContexts(
+LLVM_ABI cl::opt<bool> MemProfKeepAllNotColdContexts(
     "memprof-keep-all-not-cold-contexts", cl::init(false), cl::Hidden,
     cl::desc("Keep all non-cold contexts (increases cloning overheads)"));
 

@@ -109,9 +109,9 @@ class Module;
 #define DEBUG_TYPE "cgscc"
 
 /// Extern template declaration for the analysis set for this IR unit.
-extern template class AllAnalysesOn<LazyCallGraph::SCC>;
+extern template class LLVM_TEMPLATE_ABI AllAnalysesOn<LazyCallGraph::SCC>;
 
-extern template class AnalysisManager<LazyCallGraph::SCC, LazyCallGraph &>;
+extern template class LLVM_TEMPLATE_ABI AnalysisManager<LazyCallGraph::SCC, LazyCallGraph &>;
 
 /// The CGSCC analysis manager.
 ///
@@ -204,9 +204,9 @@ CGSCCAnalysisManagerModuleProxy::run(Module &M, ModuleAnalysisManager &AM);
 
 // Ensure the \c CGSCCAnalysisManagerModuleProxy is provided as an extern
 // template.
-extern template class InnerAnalysisManagerProxy<CGSCCAnalysisManager, Module>;
+extern template class LLVM_TEMPLATE_ABI InnerAnalysisManagerProxy<CGSCCAnalysisManager, Module>;
 
-extern template class OuterAnalysisManagerProxy<
+extern template class LLVM_TEMPLATE_ABI OuterAnalysisManagerProxy<
     ModuleAnalysisManager, LazyCallGraph::SCC, LazyCallGraph &>;
 
 /// A proxy from a \c ModuleAnalysisManager to an \c SCC.
@@ -402,10 +402,10 @@ public:
 private:
   friend AnalysisInfoMixin<FunctionAnalysisManagerCGSCCProxy>;
 
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 };
 
-extern template class OuterAnalysisManagerProxy<CGSCCAnalysisManager, Function>;
+extern template class LLVM_TEMPLATE_ABI OuterAnalysisManagerProxy<CGSCCAnalysisManager, Function>;
 
 /// A proxy from a \c CGSCCAnalysisManager to a \c Function.
 using CGSCCAnalysisManagerFunctionProxy =

@@ -1968,7 +1968,7 @@ public:
 
 private:
   friend AnalysisInfoMixin<TargetIRAnalysis>;
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
   /// The callback used to produce a result.
   ///

@@ -956,7 +956,7 @@ public:
 private:
   friend AnalysisInfoMixin<AAManager>;
 
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
   SmallVector<void (*)(Function &F, FunctionAnalysisManager &AM,
                        AAResults &AAResults),

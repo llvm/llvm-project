@@ -635,7 +635,7 @@ public:
 
 private:
   friend AnalysisInfoMixin<TargetLibraryAnalysis>;
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
   std::optional<TargetLibraryInfoImpl> BaselineInfoImpl;
 };
