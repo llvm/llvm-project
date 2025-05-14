@@ -171,7 +171,7 @@ bool ObjectFileXCOFF::MagicBytesMatch(DataBufferSP &data_sp,
 bool ObjectFileXCOFF::ParseHeader() {
   if (m_binary->is64Bit())
     return m_binary->fileHeader64()->Magic == XCOFF::XCOFF64;
-  return m_binary->fileHeader64()->Magic == XCOFF::XCOFF32;
+  return m_binary->fileHeader32()->Magic == XCOFF::XCOFF32;
 }
 
 ByteOrder ObjectFileXCOFF::GetByteOrder() const { return eByteOrderBig; }
@@ -271,11 +271,13 @@ UUID ObjectFileXCOFF::GetUUID() { return UUID(); }
 uint32_t ObjectFileXCOFF::GetDependentModules(FileSpecList &files) { return 0; }
 
 ObjectFile::Type ObjectFileXCOFF::CalculateType() {
-  if (m_binary->fileHeader64()->Flags & XCOFF::F_EXEC ||
-      m_binary->fileHeader32()->Flags & XCOFF::F_EXEC)
+
+  const auto flags = m_binary->is64Bit() ? m_binary->fileHeader64()->Flags
+                                         : m_binary->fileHeader32()->Flags;
+
+  if (flags & XCOFF::F_EXEC)
     return eTypeExecutable;
-  else if (m_binary->fileHeader64()->Flags & XCOFF::F_SHROBJ ||
-           m_binary->fileHeader32()->Flags & XCOFF::F_SHROBJ)
+  else if (flags & XCOFF::F_SHROBJ)
     return eTypeSharedLibrary;
   return eTypeUnknown;
 }
