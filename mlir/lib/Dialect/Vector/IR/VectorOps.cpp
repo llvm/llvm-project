@@ -5573,13 +5573,11 @@ LogicalResult ShapeCastOp::verify() {
   return success();
 }
 
-namespace {
-
 /// Return true if `transpose` does not permute a pair of non-unit dims.
 /// By `order preserving` we mean that the flattened versions of the input and
 /// output vectors are (numerically) identical. In other words `transpose` is
 /// effectively a shape cast.
-bool isOrderPreserving(TransposeOp transpose) {
+bool mlir::vector::isOrderPreserving(TransposeOp transpose) {
   ArrayRef<int64_t> permutation = transpose.getPermutation();
   VectorType sourceType = transpose.getSourceVectorType();
   ArrayRef<int64_t> inShape = sourceType.getShape();
@@ -5598,8 +5596,6 @@ bool isOrderPreserving(TransposeOp transpose) {
   }
   return true;
 }
-
-} // namespace
 
 OpFoldResult ShapeCastOp::fold(FoldAdaptor adaptor) {
 
