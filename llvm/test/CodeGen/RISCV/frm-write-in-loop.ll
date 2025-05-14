@@ -7,12 +7,12 @@ define double @foo(double %0, double %1, i64 %n) strictfp {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    fmv.d.x fa5, zero
-; CHECK-NEXT:    fsrmi 3
-; CHECK-NEXT:    fsrmi 0
 ; CHECK-NEXT:  .LBB0_1: # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    fsrmi 3
 ; CHECK-NEXT:    fadd.d fa5, fa5, fa0
 ; CHECK-NEXT:    addi a0, a0, -1
+; CHECK-NEXT:    fsrmi 0
 ; CHECK-NEXT:    fadd.d fa5, fa5, fa1
 ; CHECK-NEXT:    beqz a0, .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %exit
@@ -53,12 +53,12 @@ define double @bar(double %0, double %1, i64 %n) strictfp {
 ; CHECK-NEXT:    fmv.d fs0, fa1
 ; CHECK-NEXT:    fmv.d fs1, fa0
 ; CHECK-NEXT:    fmv.d.x fa0, zero
-; CHECK-NEXT:    fsrmi 3
-; CHECK-NEXT:    fsrmi 0
 ; CHECK-NEXT:  .LBB1_1: # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    fsrmi 3
 ; CHECK-NEXT:    fmv.d fa1, fs1
 ; CHECK-NEXT:    call baz
+; CHECK-NEXT:    fsrmi 0
 ; CHECK-NEXT:    fmv.d fa1, fs0
 ; CHECK-NEXT:    call baz
 ; CHECK-NEXT:    addi s0, s0, -1

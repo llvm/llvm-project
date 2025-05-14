@@ -663,6 +663,7 @@ bool BinaryContext::analyzeJumpTable(const uint64_t Address,
     const BinaryFunction *TargetBF = getBinaryFunctionContainingAddress(Value);
     if (!TargetBF || !areRelatedFragments(TargetBF, &BF)) {
       LLVM_DEBUG(printEntryDiagnostics(dbgs(), TargetBF));
+      (void)printEntryDiagnostics;
       break;
     }
 
@@ -843,6 +844,7 @@ BinaryContext::getOrCreateJumpTable(BinaryFunction &Function, uint64_t Address,
                                &Function, std::placeholders::_1);
     assert(llvm::all_of(JT->Parents, isSibling) &&
            "cannot re-use jump table of a different function");
+    (void)isSibling;
     if (opts::Verbosity > 2) {
       this->outs() << "BOLT-INFO: multiple fragments access the same jump table"
                    << ": " << *JT->Parents[0] << "; " << Function << '\n';

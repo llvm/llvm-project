@@ -260,8 +260,6 @@ Artem Belevich \
 tra@google.com (email), [Artem-B](https://github.com/Artem-B) (GitHub) \
 Alex MacLean \
 amaclean@nvidia.com (email), [AlexMaclean](https://github.com/AlexMaclean) (GitHub) \
-Justin Fargnoli \
-jfargnoli@nvidia.com (email), [justinfargnoli](https://github.com/justinfargnoli) (GitHub)
 
 #### PowerPC backend
 
@@ -399,7 +397,7 @@ min.hsu@sifive.com, min@myhsu.dev (email), [mshockwave](https://github.com/mshoc
 
 Takumi Nakamura \
 geek4civic@gmail.com (email), [chapuni](https://github.com/chapuni) (GitHub) \
-Alan Philipps \
+Alan Phipps \
 a-phipps@ti.com (email), [evodius96](https://github.com/evodius96) (GitHub)
 
 #### Binary Utilities
@@ -511,6 +509,7 @@ Peter Collingbourne (peter@pcc.me.uk, [pcc](https://github.com/pcc)) -- LTO \
 Evan Cheng (evan.cheng@apple.com) -- Parts of code generator not covered by someone else \
 Jake Ehrlich (jakehehrlich@google.com, [jakehehrlich](https://github.com/jakehehrlich)) -- llvm-objcopy and ObjCopy library \
 Hal Finkel (hfinkel@anl.gov, [hfinkel](https://github.com/hfinkel) -- AliasAnalysis \
+Justin Fargnoli (jfargnoli@nvidia.com, [justinfargnoli](https://github.com/justinfargnoli)) -- NVPTX backend \
 Renato Golin (rengolin@systemcall.eu, [rengolin](https://github.com/rengolin)) -- ARM backend \
 Venkatraman Govindaraju (venkatra@cs.wisc.edu, [vegovin](https://github.com/vegovin) -- Sparc backend \
 James Grosbach (grosbach@apple.com) -- MC layer \

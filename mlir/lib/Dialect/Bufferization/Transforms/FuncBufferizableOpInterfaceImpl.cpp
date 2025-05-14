@@ -63,26 +63,42 @@ getBufferizedFunctionArgType(FuncOp funcOp, int64_t index,
   BaseMemRefType memrefType = options.functionArgTypeConverterFn(
       tensorType, *options.defaultMemorySpaceFn(tensorType), funcOp, options);
 
-  auto layoutAttr = funcOp.getArgAttrOfType<AffineMapAttr>(
+  auto layoutAttr = funcOp.getArgAttrOfType<MemRefLayoutAttrInterface>(
       index, BufferizationDialect::kBufferLayoutAttrName);
   if (!layoutAttr)
     return memrefType;
 
   auto rankedMemrefType = dyn_cast<MemRefType>(memrefType);
   assert(rankedMemrefType && "buffer layout not supported on unranked tensors");
-  return MemRefType::get(
-      rankedMemrefType.getShape(), rankedMemrefType.getElementType(),
-      layoutAttr.getValue(), rankedMemrefType.getMemorySpace());
+  return MemRefType::get(rankedMemrefType.getShape(),
+                         rankedMemrefType.getElementType(), layoutAttr,
+                         rankedMemrefType.getMemorySpace());
 }
 
 /// Return the FuncOp called by `callOp`.
-static FuncOp getCalledFunction(CallOpInterface callOp) {
+static FuncOp getCalledFunction(CallOpInterface callOp,
+                                SymbolTableCollection &symbolTables) {
   SymbolRefAttr sym =
       llvm::dyn_cast_if_present<SymbolRefAttr>(callOp.getCallableForCallee());
   if (!sym)
     return nullptr;
   return dyn_cast_or_null<FuncOp>(
-      SymbolTable::lookupNearestSymbolFrom(callOp, sym));
+      symbolTables.lookupNearestSymbolFrom(callOp, sym));
+}
+
+/// Return the FuncOp called by `callOp`.
+static FuncOp getCalledFunction(CallOpInterface callOp,
+                                const AnalysisState &state) {
+  auto &oneShotAnalysisState = static_cast<const OneShotAnalysisState &>(state);
+
+  if (auto *funcAnalysisState =
+          oneShotAnalysisState.getExtension<FuncAnalysisState>()) {
+    // Use the cached symbol tables.
+    return getCalledFunction(callOp, funcAnalysisState->symbolTables);
+  }
+
+  SymbolTableCollection symbolTables;
+  return getCalledFunction(callOp, symbolTables);
 }
 
 /// Get FuncAnalysisState.
@@ -135,7 +151,7 @@ struct CallOpInterface
   bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
                               const AnalysisState &state) const {
     func::CallOp callOp = cast<func::CallOp>(op);
-    FuncOp funcOp = getCalledFunction(callOp);
+    FuncOp funcOp = getCalledFunction(callOp, state);
     assert(funcOp && "expected CallOp to a FuncOp");
 
     if (getFuncOpAnalysisState(state, funcOp) != FuncOpAnalysisState::Analyzed)
@@ -150,7 +166,7 @@ struct CallOpInterface
   bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
                                const AnalysisState &state) const {
     func::CallOp callOp = cast<func::CallOp>(op);
-    FuncOp funcOp = getCalledFunction(callOp);
+    FuncOp funcOp = getCalledFunction(callOp, state);
     assert(funcOp && "expected CallOp to a FuncOp");
 
     if (getFuncOpAnalysisState(state, funcOp) != FuncOpAnalysisState::Analyzed)
@@ -165,7 +181,7 @@ struct CallOpInterface
   AliasingValueList getAliasingValues(Operation *op, OpOperand &opOperand,
                                       const AnalysisState &state) const {
     func::CallOp callOp = cast<func::CallOp>(op);
-    FuncOp funcOp = getCalledFunction(callOp);
+    FuncOp funcOp = getCalledFunction(callOp, state);
     assert(funcOp && "expected CallOp to a FuncOp");
     if (getFuncOpAnalysisState(state, funcOp) != FuncOpAnalysisState::Analyzed)
       // FuncOp not analyzed yet. Any OpResult may be aliasing.
@@ -199,7 +215,11 @@ struct CallOpInterface
   getBufferType(Operation *op, Value value, const BufferizationOptions &options,
                 SmallVector<Value> &invocationStack) const {
     auto callOp = cast<func::CallOp>(op);
-    FuncOp funcOp = getCalledFunction(callOp);
+
+    // TODO Avoid recomputing the symbol tables every time.
+    SymbolTableCollection symbolTable;
+
+    FuncOp funcOp = getCalledFunction(callOp, symbolTable);
     assert(funcOp && "expected CallOp to a FuncOp");
 
     // If the callee was already bufferized, we can directly take the type from
@@ -243,7 +263,11 @@ struct CallOpInterface
     // 2. Rewrite tensor operands as memrefs based on type of the already
     //    bufferized callee.
     SmallVector<Value> newOperands;
-    FuncOp funcOp = getCalledFunction(callOp);
+
+    // TODO Avoid recomputing the symbol tables every time.
+    SymbolTableCollection symbolTable;
+
+    FuncOp funcOp = getCalledFunction(callOp, symbolTable);
     assert(funcOp && "expected CallOp to a FuncOp");
     FunctionType funcType = funcOp.getFunctionType();
 
@@ -275,7 +299,7 @@ struct CallOpInterface
         memRefType = *maybeMemRefType;
       }
 
-      // Since we don't yet have a clear layout story, to_memref may
+      // Since we don't yet have a clear layout story, to_buffer may
       // conservatively turn tensors into more dynamic memref than necessary.
       // If the memref type of the callee fails, introduce an extra memref.cast
       // that will either canonicalize away or fail compilation until we can do
@@ -456,9 +480,9 @@ struct FuncOpInterface
 
         // Note: If `inferFunctionResultLayout = true`, casts are later folded
         // away.
-        Value toMemrefOp = rewriter.create<bufferization::ToMemrefOp>(
+        Value toBufferOp = rewriter.create<bufferization::ToBufferOp>(
             returnOp.getLoc(), bufferizedType, returnVal);
-        returnValues.push_back(toMemrefOp);
+        returnValues.push_back(toBufferOp);
       }
 
       returnOp.getOperandsMutable().assign(returnValues);

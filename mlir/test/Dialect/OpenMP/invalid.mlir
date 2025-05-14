@@ -1711,6 +1711,14 @@ func.func @omp_task(%mem: memref<1xf32>) {
 // -----
 
 func.func @omp_cancel() {
+  // expected-error @below {{Orphaned cancel construct}}
+  omp.cancel cancellation_construct_type(parallel)
+  return
+}
+
+// -----
+
+func.func @omp_cancel() {
   omp.sections {
     // expected-error @below {{cancel parallel must appear inside a parallel region}}
     omp.cancel cancellation_construct_type(parallel)
@@ -1738,6 +1746,18 @@ func.func @omp_cancel2() {
   omp.sections {
     // expected-error @below {{cancel loop must appear inside a worksharing-loop region}}
     omp.cancel cancellation_construct_type(loop)
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func.func @omp_cancel_taskloop() {
+  omp.sections {
+    // expected-error @below {{cancel taskgroup must appear inside a task region}}
+    omp.cancel cancellation_construct_type(taskgroup)
     // CHECK: omp.terminator
     omp.terminator
   }
@@ -1790,6 +1810,14 @@ func.func @omp_cancel5() -> () {
 // -----
 
 func.func @omp_cancellationpoint() {
+  // expected-error @below {{Orphaned cancellation point}}
+  omp.cancellation_point cancellation_construct_type(parallel)
+  return
+}
+
+// -----
+
+func.func @omp_cancellationpoint() {
   omp.sections {
     // expected-error @below {{cancellation point parallel must appear inside a parallel region}}
     omp.cancellation_point cancellation_construct_type(parallel)
@@ -1817,6 +1845,18 @@ func.func @omp_cancellationpoint2() {
   omp.sections {
     // expected-error @below {{cancellation point loop must appear inside a worksharing-loop region}}
     omp.cancellation_point cancellation_construct_type(loop)
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func.func @omp_cancellationpoint_taskgroup() {
+  omp.sections {
+    // expected-error @below {{cancellation point taskgroup must appear inside a task region}}
+    omp.cancellation_point cancellation_construct_type(taskgroup)
     // CHECK: omp.terminator
     omp.terminator
   }

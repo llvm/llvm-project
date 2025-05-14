@@ -167,10 +167,39 @@ struct BubbleUpExpandThroughParallelCollapse
       return failure();
     }
 
-    // Reshapes are parallel to each other if none of the reassociation indices
-    // have greater than 1 index for both reshapes.
+    // Reshapes are parallel to each other (by construction the number of
+    // reassociations specified in the collapse and expand are the same), if at
+    // any position
+    // 1. either the reassociation indices are of the same size, or
+    // 2. either the reassociation in the collapse or the expand is of size 1.
+    ArrayRef<int64_t> staticSourceSize = collapseOp.getSrcType().getShape();
+    ArrayRef<int64_t> staticResultSize = expandOp.getStaticOutputShape();
     for (auto [expandReassociation, collapseReassociation] :
          llvm::zip_equal(expandReInds, collapseReInds)) {
+      if (collapseReassociation.size() == expandReassociation.size()) {
+        // Even if the reassociations are the same, the collapse/expand should
+        // result in the same dimensions. i.e  4x8x2 into 64 should be expanded
+        // into 4x8x2 again. In presense of dynamic dimensions one can only
+        // verify "equality" when there is only one dynamic dimension present,
+        // and all other static dimensions are equal.
+        ArrayRef<int64_t> collapsedStaticShapes = staticSourceSize.slice(
+            collapseReassociation.front(), collapseReassociation.size());
+        int64_t numCollapsedDynamic =
+            llvm::count_if(collapsedStaticShapes,
+                           [](int64_t d) { return ShapedType::isDynamic(d); });
+        ArrayRef<int64_t> expandedStaticShapes = staticResultSize.slice(
+            expandReassociation.front(), expandReassociation.size());
+        int64_t numExpandedDynamic =
+            llvm::count_if(expandedStaticShapes,
+                           [](int64_t d) { return ShapedType::isDynamic(d); });
+        if (numCollapsedDynamic > 1 || numExpandedDynamic > 1 ||
+            collapsedStaticShapes != expandedStaticShapes) {
+          return failure();
+        }
+        continue;
+      }
+      // If the reassociations are not same, one or the other needs to be of
+      // size one.
       if (collapseReassociation.size() != 1 && expandReassociation.size() != 1)
         return failure();
     }
@@ -178,33 +207,60 @@ struct BubbleUpExpandThroughParallelCollapse
     // Compute new reassociation indices and expanded/collaped shapes.
     SmallVector<ReassociationIndices> newExpandReInds, newCollapseReInds;
     Location loc = expandOp->getLoc();
-    SmallVector<OpFoldResult> collapseSizes =
+    SmallVector<OpFoldResult> sourceSizes =
         tensor::getMixedSizes(rewriter, loc, collapseOp.getSrc());
-    SmallVector<OpFoldResult> expandSizes(getMixedValues(
-        expandOp.getStaticOutputShape(), expandOp.getOutputShape(), rewriter));
+    SmallVector<OpFoldResult> resultSizes = expandOp.getMixedOutputShape();
     SmallVector<OpFoldResult> newExpandSizes;
-    int64_t index = 0, expandIndex = 0, collapseIndex = 0;
-    for (auto [idx, collapseReassociation] : llvm::enumerate(collapseReInds)) {
+
+    int64_t newExpandIndex = 0, newCollapseIndex = 0, sourceSizeIndex = 0,
+            resultSizeIndex = 0;
+
+    for (size_t idx = 0, idxEnd = collapseReInds.size(); idx < idxEnd; idx++) {
+      auto &collapseReassociation = collapseReInds[idx];
+      auto &expandReassociation = expandReInds[idx];
+
+      // Case 1. The reassociations are same in the collapse producer
+      // and expand consumer. In the swapped expand, each of the final
+      // dimensions are kept as is in the expand and the collapse. So,
+      // for every element in the `ReassocationIndices` vector add a new
+      // `ReassociationIndices` vector for the swapped expand and collapse
+      // (of size 1).
+      if (collapseReassociation.size() == expandReassociation.size()) {
+        for (size_t i = 0; i < collapseReassociation.size(); ++i) {
+          newCollapseReInds.push_back({newCollapseIndex++});
+          newExpandReInds.push_back({newExpandIndex++});
+          newExpandSizes.push_back(resultSizes[resultSizeIndex++]);
+          sourceSizeIndex++;
+        }
+        continue;
+      }
+
+      // Case 2. The `ReassociationIndices` in the collapse is of size > 1 (and
+      // in the expand is of size == 1). In this case, the original dimensions
+      // are preserved on expansion and collapsed subsequently.
       if (collapseReassociation.size() != 1) {
         ReassociationIndices newCollapseReassociation;
         for (size_t i = 0; i < collapseReassociation.size(); ++i) {
-          newCollapseReassociation.push_back(index);
-          newExpandReInds.push_back({index++});
-          newExpandSizes.push_back(collapseSizes[collapseIndex++]);
+          newCollapseReassociation.push_back(newCollapseIndex++);
+          newExpandReInds.push_back({newExpandIndex++});
+          newExpandSizes.push_back(sourceSizes[sourceSizeIndex++]);
         }
+        resultSizeIndex++;
         newCollapseReInds.push_back(newCollapseReassociation);
-        expandIndex++;
         continue;
       }
+
+      // Case 3. The `ReassociationIndices` in the expand is of size > 1 (and
+      // in the collapse is of size == 1). In this case, the expansion happens
+      // first and the expanded dimensions are preserved on collapse.
       ReassociationIndices newExpandReassociation;
-      auto expandReassociation = expandReInds[idx];
       for (size_t i = 0; i < expandReassociation.size(); ++i) {
-        newExpandReassociation.push_back(index);
-        newCollapseReInds.push_back({index++});
-        newExpandSizes.push_back(expandSizes[expandIndex++]);
+        newExpandReassociation.push_back(newExpandIndex++);
+        newCollapseReInds.push_back({newCollapseIndex++});
+        newExpandSizes.push_back(resultSizes[resultSizeIndex++]);
       }
       newExpandReInds.push_back(newExpandReassociation);
-      collapseIndex++;
+      sourceSizeIndex++;
     }
 
     // Swap reshape order.
@@ -212,11 +268,25 @@ struct BubbleUpExpandThroughParallelCollapse
     SmallVector<int64_t> staticSizes;
     dispatchIndexOpFoldResults(newExpandSizes, dynamicSizes, staticSizes);
     auto expandResultType = expandOp.getResultType().clone(staticSizes);
-    auto newExpand = rewriter.create<tensor::ExpandShapeOp>(
-        loc, expandResultType, collapseOp.getSrc(), newExpandReInds,
-        newExpandSizes);
-    rewriter.replaceOpWithNewOp<tensor::CollapseShapeOp>(
-        expandOp, newExpand.getResult(), newCollapseReInds);
+    Value newCollapseSrc = collapseOp.getSrc();
+    // If the number of reassociation indices in the new `expand_shape` op
+    // matches the number of dimensions of the result, then the expand_shape
+    // is a no-op.
+    if (newExpandReInds.size() != newExpandSizes.size()) {
+      newCollapseSrc = rewriter.create<tensor::ExpandShapeOp>(
+          loc, expandResultType, newCollapseSrc, newExpandReInds,
+          newExpandSizes);
+    }
+
+    // If the number of reassociation indices in the new `collapse_shape` op
+    // matches the number of dimensions of the source, then the collapse_shape
+    // is a no-op.
+    Value replacement = newCollapseSrc;
+    if (newCollapseReInds.size() != newExpandSizes.size()) {
+      replacement = rewriter.create<tensor::CollapseShapeOp>(
+          loc, newCollapseSrc, newCollapseReInds);
+    }
+    rewriter.replaceOp(expandOp, replacement);
     return success();
   }
 };

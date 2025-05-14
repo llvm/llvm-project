@@ -1769,11 +1769,9 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
     // Treat '}' as a valid identifier in this context.
     Lex();
     IDVal = "}";
-  } else if (Lexer.is(AsmToken::Star) &&
-             getTargetParser().starIsStartOfStatement()) {
-    // Accept '*' as a valid start of statement.
+  } else if (getTargetParser().tokenIsStartOfStatement(ID.getKind())) {
     Lex();
-    IDVal = "*";
+    IDVal = ID.getString();
   } else if (parseIdentifier(IDVal)) {
     if (!TheCondState.Ignore) {
       Lex(); // always eat a token
@@ -5284,9 +5282,9 @@ bool AsmParser::parseDirectiveIfdef(SMLoc DirectiveLoc, bool expect_defined) {
     MCSymbol *Sym = getContext().lookupSymbol(Name);
 
     if (expect_defined)
-      TheCondState.CondMet = (Sym && !Sym->isUndefined(false));
+      TheCondState.CondMet = (Sym && !Sym->isUndefined());
     else
-      TheCondState.CondMet = (!Sym || Sym->isUndefined(false));
+      TheCondState.CondMet = (!Sym || Sym->isUndefined());
     TheCondState.Ignore = !TheCondState.CondMet;
   }
 
@@ -6362,8 +6360,7 @@ bool parseAssignmentExpression(StringRef Name, bool allow_redef,
     // FIXME: Diagnose assignment to protected identifier (e.g., register name).
     if (Value->isSymbolUsedInExpression(Sym))
       return Parser.Error(EqualLoc, "Recursive use of '" + Name + "'");
-    else if (Sym->isUndefined(/*SetUsed*/ false) && !Sym->isUsed() &&
-             !Sym->isVariable())
+    else if (Sym->isUndefined() && !Sym->isUsed() && !Sym->isVariable())
       ; // Allow redefinitions of undefined symbols only used in directives.
     else if (Sym->isVariable() && !Sym->isUsed() && allow_redef)
       ; // Allow redefinitions of variables that haven't yet been used.

@@ -90,7 +90,7 @@ public:
                                          : llvm::endianness::big),
         TT(TT) {}
 
-  const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override {
+  MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override {
     const static MCFixupKindInfo InfosBE[PPC::NumTargetFixupKinds] = {
       // name                    offset  bits  flags
       { "fixup_ppc_br24",        6,      24,   MCFixupKindInfo::FKF_IsPCRel },
@@ -120,7 +120,7 @@ public:
 
     // Fixup kinds from .reloc directive are like R_PPC_NONE/R_PPC64_NONE. They
     // do not require any extra processing.
-    if (Kind >= FirstLiteralRelocationKind)
+    if (mc::isRelocation(Kind))
       return MCAsmBackend::getFixupKindInfo(FK_NONE);
 
     if (Kind < FirstTargetFixupKind)
@@ -138,7 +138,7 @@ public:
                   uint64_t Value, bool IsResolved,
                   const MCSubtargetInfo *STI) const override {
     MCFixupKind Kind = Fixup.getKind();
-    if (Kind >= FirstLiteralRelocationKind)
+    if (mc::isRelocation(Kind))
       return;
     Value = adjustFixupValue(Kind, Value);
     if (!Value) return;           // Doesn't change encoding.

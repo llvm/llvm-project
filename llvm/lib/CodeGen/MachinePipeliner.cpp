@@ -237,6 +237,37 @@ INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_END(MachinePipeliner, DEBUG_TYPE,
                     "Modulo Software Pipelining", false, false)
 
+namespace {
+
+/// This class holds an SUnit corresponding to a memory operation and other
+/// information related to the instruction.
+struct SUnitWithMemInfo {
+  SUnit *SU;
+  SmallVector<const Value *, 2> UnderlyingObjs;
+
+  /// The value of a memory operand.
+  const Value *MemOpValue = nullptr;
+
+  /// The offset of a memory operand.
+  int64_t MemOpOffset = 0;
+
+  AAMDNodes AATags;
+
+  /// True if all the underlying objects are identified.
+  bool IsAllIdentified = false;
+
+  SUnitWithMemInfo(SUnit *SU);
+
+  bool isTriviallyDisjoint(const SUnitWithMemInfo &Other) const;
+
+  bool isUnknown() const { return MemOpValue == nullptr; }
+
+private:
+  bool getUnderlyingObjects();
+};
+
+} // end anonymous namespace
+
 /// The "main" function for implementing Swing Modulo Scheduling.
 bool MachinePipeliner::runOnMachineFunction(MachineFunction &mf) {
   if (skipFunction(mf.getFunction()))
@@ -470,9 +501,10 @@ void MachinePipeliner::preprocessPhiNodes(MachineBasicBlock &B) {
 bool MachinePipeliner::swingModuloScheduler(MachineLoop &L) {
   assert(L.getBlocks().size() == 1 && "SMS works on single blocks only.");
 
+  AliasAnalysis *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
   SwingSchedulerDAG SMS(
       *this, L, getAnalysis<LiveIntervalsWrapperPass>().getLIS(), RegClassInfo,
-      II_setByPragma, LI.LoopPipelinerInfo.get());
+      II_setByPragma, LI.LoopPipelinerInfo.get(), AA);
 
   MachineBasicBlock *MBB = L.getHeader();
   // The kernel should not include any terminator instructions.  These
@@ -560,9 +592,8 @@ void SwingSchedulerDAG::setMAX_II() {
 /// We override the schedule function in ScheduleDAGInstrs to implement the
 /// scheduling part of the Swing Modulo Scheduling algorithm.
 void SwingSchedulerDAG::schedule() {
-  AliasAnalysis *AA = &Pass.getAnalysis<AAResultsWrapperPass>().getAAResults();
   buildSchedGraph(AA);
-  addLoopCarriedDependences(AA);
+  addLoopCarriedDependences();
   updatePhiDependences();
   Topo.InitDAGTopologicalSorting();
   changeDependences();
@@ -810,115 +841,126 @@ static bool isDependenceBarrier(MachineInstr &MI) {
           (!MI.mayLoad() || !MI.isDereferenceableInvariantLoad()));
 }
 
-/// Return the underlying objects for the memory references of an instruction.
+SUnitWithMemInfo::SUnitWithMemInfo(SUnit *SU) : SU(SU) {
+  if (!getUnderlyingObjects())
+    return;
+  for (const Value *Obj : UnderlyingObjs)
+    if (!isIdentifiedObject(Obj)) {
+      IsAllIdentified = false;
+      break;
+    }
+}
+
+bool SUnitWithMemInfo::isTriviallyDisjoint(
+    const SUnitWithMemInfo &Other) const {
+  // If all underlying objects are identified objects and there is no overlap
+  // between them, then these two instructions are disjoint.
+  if (!IsAllIdentified || !Other.IsAllIdentified)
+    return false;
+  for (const Value *Obj : UnderlyingObjs)
+    if (llvm::is_contained(Other.UnderlyingObjs, Obj))
+      return false;
+  return true;
+}
+
+/// Collect the underlying objects for the memory references of an instruction.
 /// This function calls the code in ValueTracking, but first checks that the
 /// instruction has a memory operand.
-static void getUnderlyingObjects(const MachineInstr *MI,
-                                 SmallVectorImpl<const Value *> &Objs) {
+/// Returns false if we cannot find the underlying objects.
+bool SUnitWithMemInfo::getUnderlyingObjects() {
+  const MachineInstr *MI = SU->getInstr();
   if (!MI->hasOneMemOperand())
-    return;
+    return false;
   MachineMemOperand *MM = *MI->memoperands_begin();
   if (!MM->getValue())
-    return;
-  getUnderlyingObjects(MM->getValue(), Objs);
-  for (const Value *V : Objs) {
-    if (!isIdentifiedObject(V)) {
-      Objs.clear();
-      return;
+    return false;
+  MemOpValue = MM->getValue();
+  MemOpOffset = MM->getOffset();
+  llvm::getUnderlyingObjects(MemOpValue, UnderlyingObjs);
+
+  // TODO: A no alias scope may be valid only in a single iteration. In this
+  // case we need to peel off it like LoopAccessAnalysis does.
+  AATags = MM->getAAInfo();
+  return true;
+}
+
+/// Returns true if there is a loop-carried order dependency from \p Src to \p
+/// Dst.
+static bool hasLoopCarriedMemDep(const SUnitWithMemInfo &Src,
+                                 const SUnitWithMemInfo &Dst,
+                                 BatchAAResults &BAA,
+                                 const TargetInstrInfo *TII,
+                                 const TargetRegisterInfo *TRI) {
+  if (Src.isTriviallyDisjoint(Dst))
+    return false;
+  if (isSuccOrder(Src.SU, Dst.SU))
+    return false;
+
+  MachineInstr &SrcMI = *Src.SU->getInstr();
+  MachineInstr &DstMI = *Dst.SU->getInstr();
+  // First, perform the cheaper check that compares the base register.
+  // If they are the same and the load offset is less than the store
+  // offset, then mark the dependence as loop carried potentially.
+  const MachineOperand *BaseOp1, *BaseOp2;
+  int64_t Offset1, Offset2;
+  bool Offset1IsScalable, Offset2IsScalable;
+  if (TII->getMemOperandWithOffset(SrcMI, BaseOp1, Offset1, Offset1IsScalable,
+                                   TRI) &&
+      TII->getMemOperandWithOffset(DstMI, BaseOp2, Offset2, Offset2IsScalable,
+                                   TRI)) {
+    if (BaseOp1->isIdenticalTo(*BaseOp2) &&
+        Offset1IsScalable == Offset2IsScalable && (int)Offset1 < (int)Offset2) {
+      assert(TII->areMemAccessesTriviallyDisjoint(SrcMI, DstMI) &&
+             "What happened to the chain edge?");
+      return true;
     }
   }
+
+  // Second, the more expensive check that uses alias analysis on the
+  // base registers. If they alias, and the load offset is less than
+  // the store offset, the mark the dependence as loop carried.
+  if (Src.isUnknown() || Dst.isUnknown())
+    return true;
+  if (Src.MemOpValue == Dst.MemOpValue && Src.MemOpOffset <= Dst.MemOpOffset)
+    return true;
+
+  if (BAA.isNoAlias(
+          MemoryLocation::getBeforeOrAfter(Src.MemOpValue, Src.AATags),
+          MemoryLocation::getBeforeOrAfter(Dst.MemOpValue, Dst.AATags)))
+    return false;
+
+  // AliasAnalysis sometimes gives up on following the underlying
+  // object. In such a case, separate checks for underlying objects may
+  // prove that there are no aliases between two accesses.
+  for (const Value *SrcObj : Src.UnderlyingObjs)
+    for (const Value *DstObj : Dst.UnderlyingObjs)
+      if (!BAA.isNoAlias(MemoryLocation::getBeforeOrAfter(SrcObj, Src.AATags),
+                         MemoryLocation::getBeforeOrAfter(DstObj, Dst.AATags)))
+        return true;
+
+  return false;
 }
 
 /// Add a chain edge between a load and store if the store can be an
 /// alias of the load on a subsequent iteration, i.e., a loop carried
 /// dependence. This code is very similar to the code in ScheduleDAGInstrs
 /// but that code doesn't create loop carried dependences.
-void SwingSchedulerDAG::addLoopCarriedDependences(AliasAnalysis *AA) {
-  MapVector<const Value *, SmallVector<SUnit *, 4>> PendingLoads;
-  Value *UnknownValue =
-    UndefValue::get(Type::getVoidTy(MF.getFunction().getContext()));
+void SwingSchedulerDAG::addLoopCarriedDependences() {
+  SmallVector<SUnitWithMemInfo, 4> PendingLoads;
   for (auto &SU : SUnits) {
     MachineInstr &MI = *SU.getInstr();
     if (isDependenceBarrier(MI))
       PendingLoads.clear();
     else if (MI.mayLoad()) {
-      SmallVector<const Value *, 4> Objs;
-      ::getUnderlyingObjects(&MI, Objs);
-      if (Objs.empty())
-        Objs.push_back(UnknownValue);
-      for (const auto *V : Objs) {
-        SmallVector<SUnit *, 4> &SUs = PendingLoads[V];
-        SUs.push_back(&SU);
-      }
+      PendingLoads.emplace_back(&SU);
     } else if (MI.mayStore()) {
-      SmallVector<const Value *, 4> Objs;
-      ::getUnderlyingObjects(&MI, Objs);
-      if (Objs.empty())
-        Objs.push_back(UnknownValue);
-      for (const auto *V : Objs) {
-        MapVector<const Value *, SmallVector<SUnit *, 4>>::iterator I =
-            PendingLoads.find(V);
-        if (I == PendingLoads.end())
-          continue;
-        for (auto *Load : I->second) {
-          if (isSuccOrder(Load, &SU))
-            continue;
-          MachineInstr &LdMI = *Load->getInstr();
-          // First, perform the cheaper check that compares the base register.
-          // If they are the same and the load offset is less than the store
-          // offset, then mark the dependence as loop carried potentially.
-          const MachineOperand *BaseOp1, *BaseOp2;
-          int64_t Offset1, Offset2;
-          bool Offset1IsScalable, Offset2IsScalable;
-          if (TII->getMemOperandWithOffset(LdMI, BaseOp1, Offset1,
-                                           Offset1IsScalable, TRI) &&
-              TII->getMemOperandWithOffset(MI, BaseOp2, Offset2,
-                                           Offset2IsScalable, TRI)) {
-            if (BaseOp1->isIdenticalTo(*BaseOp2) &&
-                Offset1IsScalable == Offset2IsScalable &&
-                (int)Offset1 < (int)Offset2) {
-              assert(TII->areMemAccessesTriviallyDisjoint(LdMI, MI) &&
-                     "What happened to the chain edge?");
-              SDep Dep(Load, SDep::Barrier);
-              Dep.setLatency(1);
-              SU.addPred(Dep);
-              continue;
-            }
-          }
-          // Second, the more expensive check that uses alias analysis on the
-          // base registers. If they alias, and the load offset is less than
-          // the store offset, the mark the dependence as loop carried.
-          if (!AA) {
-            SDep Dep(Load, SDep::Barrier);
-            Dep.setLatency(1);
-            SU.addPred(Dep);
-            continue;
-          }
-          MachineMemOperand *MMO1 = *LdMI.memoperands_begin();
-          MachineMemOperand *MMO2 = *MI.memoperands_begin();
-          if (!MMO1->getValue() || !MMO2->getValue()) {
-            SDep Dep(Load, SDep::Barrier);
-            Dep.setLatency(1);
-            SU.addPred(Dep);
-            continue;
-          }
-          if (MMO1->getValue() == MMO2->getValue() &&
-              MMO1->getOffset() <= MMO2->getOffset()) {
-            SDep Dep(Load, SDep::Barrier);
-            Dep.setLatency(1);
-            SU.addPred(Dep);
-            continue;
-          }
-          if (!AA->isNoAlias(
-                  MemoryLocation::getAfter(MMO1->getValue(), MMO1->getAAInfo()),
-                  MemoryLocation::getAfter(MMO2->getValue(),
-                                           MMO2->getAAInfo()))) {
-            SDep Dep(Load, SDep::Barrier);
-            Dep.setLatency(1);
-            SU.addPred(Dep);
-          }
+      SUnitWithMemInfo Store(&SU);
+      for (const SUnitWithMemInfo &Load : PendingLoads)
+        if (hasLoopCarriedMemDep(Load, Store, BAA, TII, TRI)) {
+          SDep Dep(Load.SU, SDep::Barrier);
+          Dep.setLatency(1);
+          SU.addPred(Dep);
         }
-      }
     }
   }
 }

@@ -51,6 +51,15 @@ namespace RISCV {
 #include "RISCVGenSearchableTables.inc"
 } // namespace RISCV
 
+// Report an error but don't ask the user to report a bug.
+// TODO: Remove these wrappers.
+[[noreturn]] static void reportError(const char *Reason) {
+  reportFatalUsageError(Reason);
+}
+[[noreturn]] static void reportError(Error Err) {
+  reportFatalUsageError(std::move(Err));
+}
+
 namespace RISCVABI {
 ABI computeTargetABI(const Triple &TT, const FeatureBitset &FeatureBits,
                      StringRef ABIName) {
@@ -87,7 +96,7 @@ ABI computeTargetABI(const Triple &TT, const FeatureBitset &FeatureBits,
   if ((TargetABI == RISCVABI::ABI::ABI_ILP32E ||
        (TargetABI == ABI_Unknown && IsRVE && !IsRV64)) &&
       FeatureBits[RISCV::FeatureStdExtD])
-    report_fatal_error("ILP32E cannot be used with the D ISA extension");
+    reportError("ILP32E cannot be used with the D ISA extension");
 
   if (TargetABI != ABI_Unknown)
     return TargetABI;
@@ -95,7 +104,7 @@ ABI computeTargetABI(const Triple &TT, const FeatureBitset &FeatureBits,
   // If no explicit ABI is given, try to compute the default ABI.
   auto ISAInfo = RISCVFeatures::parseFeatureBits(IsRV64, FeatureBits);
   if (!ISAInfo)
-    report_fatal_error(ISAInfo.takeError());
+    reportError(ISAInfo.takeError());
   return getTargetABI((*ISAInfo)->computeDefaultABI());
 }
 
@@ -127,12 +136,12 @@ namespace RISCVFeatures {
 
 void validate(const Triple &TT, const FeatureBitset &FeatureBits) {
   if (TT.isArch64Bit() && !FeatureBits[RISCV::Feature64Bit])
-    report_fatal_error("RV64 target requires an RV64 CPU");
+    reportError("RV64 target requires an RV64 CPU");
   if (!TT.isArch64Bit() && !FeatureBits[RISCV::Feature32Bit])
-    report_fatal_error("RV32 target requires an RV32 CPU");
+    reportError("RV32 target requires an RV32 CPU");
   if (FeatureBits[RISCV::Feature32Bit] &&
       FeatureBits[RISCV::Feature64Bit])
-    report_fatal_error("RV32 and RV64 can't be combined");
+    reportError("RV32 and RV64 can't be combined");
 }
 
 llvm::Expected<std::unique_ptr<RISCVISAInfo>>

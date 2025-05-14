@@ -275,7 +275,6 @@ public:
   virtual CatchTypeInfo getCatchAllTypeInfo();
 
   virtual bool shouldTypeidBeNullChecked(QualType SrcRecordTy) = 0;
-  virtual bool hasVectorDeletingDtors() = 0;
   virtual void EmitBadTypeidCall(CodeGenFunction &CGF) = 0;
   virtual llvm::Value *EmitTypeid(CodeGenFunction &CGF, QualType SrcRecordTy,
                                   Address ThisPtr,
@@ -575,12 +574,6 @@ public:
                                const CXXDeleteExpr *expr,
                                QualType ElementType, llvm::Value *&NumElements,
                                llvm::Value *&AllocPtr, CharUnits &CookieSize);
-
-  /// Reads the array cookie associated with the given pointer,
-  /// that should have one.
-  void ReadArrayCookie(CodeGenFunction &CGF, Address Ptr, QualType ElementType,
-                       llvm::Value *&NumElements, llvm::Value *&AllocPtr,
-                       CharUnits &CookieSize);
 
   /// Return whether the given global decl needs a VTT parameter.
   virtual bool NeedsVTTParameter(GlobalDecl GD);

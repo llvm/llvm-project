@@ -391,6 +391,8 @@ public:
   void emitWinCFIEndProlog(SMLoc Loc) override;
   void emitWinCFIBeginEpilogue(SMLoc Loc) override;
   void emitWinCFIEndEpilogue(SMLoc Loc) override;
+  void emitWinCFIUnwindV2Start(SMLoc Loc) override;
+  void emitWinCFIUnwindVersion(uint8_t Version, SMLoc Loc) override;
 
   void emitWinEHHandler(const MCSymbol *Sym, bool Unwind, bool Except,
                         SMLoc Loc) override;
@@ -2305,6 +2307,20 @@ void MCAsmStreamer::emitWinCFIEndEpilogue(SMLoc Loc) {
   EmitEOL();
 }
 
+void MCAsmStreamer::emitWinCFIUnwindV2Start(SMLoc Loc) {
+  MCStreamer::emitWinCFIUnwindV2Start(Loc);
+
+  OS << "\t.seh_unwindv2start";
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitWinCFIUnwindVersion(uint8_t Version, SMLoc Loc) {
+  MCStreamer::emitWinCFIUnwindVersion(Version, Loc);
+
+  OS << "\t.seh_unwindversion " << (unsigned)Version;
+  EmitEOL();
+}
+
 void MCAsmStreamer::emitCGProfileEntry(const MCSymbolRefExpr *From,
                                        const MCSymbolRefExpr *To,
                                        uint64_t Count) {
@@ -2338,7 +2354,7 @@ void MCAsmStreamer::AddEncodingComment(const MCInst &Inst,
 
   for (unsigned i = 0, e = Fixups.size(); i != e; ++i) {
     MCFixup &F = Fixups[i];
-    const MCFixupKindInfo &Info =
+    MCFixupKindInfo Info =
         getAssembler().getBackend().getFixupKindInfo(F.getKind());
     for (unsigned j = 0; j != Info.TargetSize; ++j) {
       unsigned Index = F.getOffset() * 8 + Info.TargetOffset + j;
@@ -2399,12 +2415,16 @@ void MCAsmStreamer::AddEncodingComment(const MCInst &Inst,
 
   for (unsigned i = 0, e = Fixups.size(); i != e; ++i) {
     MCFixup &F = Fixups[i];
-    const MCFixupKindInfo &Info =
-        getAssembler().getBackend().getFixupKindInfo(F.getKind());
     OS << "  fixup " << char('A' + i) << " - "
        << "offset: " << F.getOffset() << ", value: ";
     F.getValue()->print(OS, MAI);
-    OS << ", kind: " << Info.Name << "\n";
+    auto Kind = F.getKind();
+    if (mc::isRelocation(Kind))
+      OS << ", relocation type: " << Kind;
+    else
+      OS << ", kind: "
+         << getAssembler().getBackend().getFixupKindInfo(Kind).Name;
+    OS << '\n';
   }
 }
 
