@@ -21,16 +21,16 @@ class raw_ostream;
 namespace mcdxbc {
 
 struct RootParameterInfo {
-  dxbc::RTS0::v0::RootParameterHeader Header;
+  dxbc::RTS0::v1::RootParameterHeader Header;
   size_t Location;
 
   RootParameterInfo() = default;
 
-  RootParameterInfo(dxbc::RTS0::v0::RootParameterHeader H, size_t L)
+  RootParameterInfo(dxbc::RTS0::v1::RootParameterHeader H, size_t L)
       : Header(H), Location(L) {}
 };
-using DescriptorRanges = std::variant<dxbc::RTS0::v0::DescriptorRange,
-                                      dxbc::RTS0::v1::DescriptorRange>;
+using DescriptorRanges = std::variant<dxbc::RTS0::v1::DescriptorRange,
+                                      dxbc::RTS0::v2::DescriptorRange>;
 struct DescriptorTable {
   SmallVector<DescriptorRanges> Ranges;
 
@@ -42,42 +42,42 @@ struct DescriptorTable {
   }
 };
 
-using RootDescriptor = std::variant<dxbc::RTS0::v0::RootDescriptor,
-                                    dxbc::RTS0::v1::RootDescriptor>;
+using RootDescriptor = std::variant<dxbc::RTS0::v1::RootDescriptor,
+                                    dxbc::RTS0::v2::RootDescriptor>;
 
-using ParametersView = std::variant<const dxbc::RTS0::v0::RootConstants *,
-                                    const dxbc::RTS0::v0::RootDescriptor *,
+using ParametersView = std::variant<const dxbc::RTS0::v1::RootConstants *,
                                     const dxbc::RTS0::v1::RootDescriptor *,
+                                    const dxbc::RTS0::v2::RootDescriptor *,
                                     const DescriptorTable *>;
 struct RootParametersContainer {
   SmallVector<RootParameterInfo> ParametersInfo;
-  SmallVector<dxbc::RTS0::v0::RootConstants> Constants;
+  SmallVector<dxbc::RTS0::v1::RootConstants> Constants;
   SmallVector<RootDescriptor> Descriptors;
   SmallVector<DescriptorTable> Tables;
 
-  void addInfo(dxbc::RTS0::v0::RootParameterHeader H, size_t L) {
+  void addInfo(dxbc::RTS0::v1::RootParameterHeader H, size_t L) {
     ParametersInfo.push_back(RootParameterInfo(H, L));
   }
 
-  void addParameter(dxbc::RTS0::v0::RootParameterHeader H,
-                    dxbc::RTS0::v0::RootConstants C) {
+  void addParameter(dxbc::RTS0::v1::RootParameterHeader H,
+                    dxbc::RTS0::v1::RootConstants C) {
     addInfo(H, Constants.size());
     Constants.push_back(C);
   }
 
-  void addParameter(dxbc::RTS0::v0::RootParameterHeader H,
-                    dxbc::RTS0::v0::RootDescriptor D) {
-    addInfo(H, Descriptors.size());
-    Descriptors.push_back(D);
-  }
-
-  void addParameter(dxbc::RTS0::v0::RootParameterHeader H,
+  void addParameter(dxbc::RTS0::v1::RootParameterHeader H,
                     dxbc::RTS0::v1::RootDescriptor D) {
     addInfo(H, Descriptors.size());
     Descriptors.push_back(D);
   }
 
-  void addParameter(dxbc::RTS0::v0::RootParameterHeader H, DescriptorTable D) {
+  void addParameter(dxbc::RTS0::v1::RootParameterHeader H,
+                    dxbc::RTS0::v2::RootDescriptor D) {
+    addInfo(H, Descriptors.size());
+    Descriptors.push_back(D);
+  }
+
+  void addParameter(dxbc::RTS0::v1::RootParameterHeader H, DescriptorTable D) {
     addInfo(H, Tables.size());
     Tables.push_back(D);
   }
@@ -90,11 +90,11 @@ struct RootParametersContainer {
     case llvm::to_underlying(dxbc::RTS0::RootParameterType::SRV):
     case llvm::to_underlying(dxbc::RTS0::RootParameterType::UAV): {
       const RootDescriptor &VersionedParam = Descriptors[H->Location];
-      if (std::holds_alternative<dxbc::RTS0::v0::RootDescriptor>(
+      if (std::holds_alternative<dxbc::RTS0::v1::RootDescriptor>(
               VersionedParam)) {
-        return &std::get<dxbc::RTS0::v0::RootDescriptor>(VersionedParam);
+        return &std::get<dxbc::RTS0::v1::RootDescriptor>(VersionedParam);
       }
-      return &std::get<dxbc::RTS0::v1::RootDescriptor>(VersionedParam);
+      return &std::get<dxbc::RTS0::v2::RootDescriptor>(VersionedParam);
     }
     case llvm::to_underlying(dxbc::RTS0::RootParameterType::DescriptorTable):
       return &Tables[H->Location];
