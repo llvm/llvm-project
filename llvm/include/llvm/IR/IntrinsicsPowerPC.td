@@ -1771,6 +1771,13 @@ let TargetPrefix = "ppc" in {
   defm int_ppc_mma_pmdmxvbf16gerx2 :
        PowerPC_MMA_DMR_Intrinsic<[llvm_v256i1_ty, llvm_v16i8_ty, llvm_i32_ty,
                                      llvm_i32_ty, llvm_i32_ty]>;
+
+  // MMA+ Half-precision Outer Product Intrinsic Definitions.
+  defm int_ppc_mma_dmxvf16gerx2 :
+       PowerPC_MMA_DMR_Intrinsic<[llvm_v256i1_ty, llvm_v16i8_ty]>;
+  defm int_ppc_mma_pmdmxvf16gerx2 :
+       PowerPC_MMA_DMR_Intrinsic<[llvm_v256i1_ty, llvm_v16i8_ty, llvm_i32_ty,
+                                     llvm_i32_ty, llvm_i32_ty]>;
 }
 
 // XL Compat intrinsics.

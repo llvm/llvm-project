@@ -90,6 +90,12 @@ ModulePass *createDXILPrettyPrinterLegacyPass(raw_ostream &OS);
 /// Initializer for DXILPrettyPrinter.
 void initializeDXILPrettyPrinterLegacyPass(PassRegistry &);
 
+/// Initializer for DXILPostOptimizationValidation.
+void initializeDXILPostOptimizationValidationLegacyPass(PassRegistry &);
+
+/// Pass to lowering LLVM intrinsic call to DXIL op function call.
+ModulePass *createDXILPostOptimizationValidationLegacyPass();
+
 /// Initializer for dxil::ShaderFlagsAnalysisWrapper pass.
 void initializeShaderFlagsAnalysisWrapperPass(PassRegistry &);
 

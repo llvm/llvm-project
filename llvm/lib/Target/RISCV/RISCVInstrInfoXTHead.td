@@ -23,16 +23,16 @@ def SDT_StorePair : SDTypeProfile<0, 4, [SDTCisSameAs<0, 1>,
                                          SDTCisPtrTy<2>,
                                          SDTCisVT<3, XLenVT>]>;
 
-def th_lwud : SDNode<"RISCVISD::TH_LWUD", SDT_LoadPair,
-                     [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
-def th_lwd : SDNode<"RISCVISD::TH_LWD", SDT_LoadPair,
-                    [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
-def th_ldd : SDNode<"RISCVISD::TH_LDD", SDT_LoadPair,
-                    [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
-def th_swd : SDNode<"RISCVISD::TH_SWD", SDT_StorePair,
-                    [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
-def th_sdd : SDNode<"RISCVISD::TH_SDD", SDT_StorePair,
-                    [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+def th_lwud : RVSDNode<"TH_LWUD", SDT_LoadPair,
+                       [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def th_lwd : RVSDNode<"TH_LWD", SDT_LoadPair,
+                      [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def th_ldd : RVSDNode<"TH_LDD", SDT_LoadPair,
+                      [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def th_swd : RVSDNode<"TH_SWD", SDT_StorePair,
+                      [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+def th_sdd : RVSDNode<"TH_SDD", SDT_StorePair,
+                      [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 
 def ImmThreeAsmOperand : AsmOperandClass {
   let Name = "ImmThree";

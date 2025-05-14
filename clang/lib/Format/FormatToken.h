@@ -711,6 +711,14 @@ public:
                          tok::objc_package, tok::objc_private);
   }
 
+  bool isObjCLifetimeQualifier(const FormatStyle &Style) const {
+    if (Style.Language != FormatStyle::LK_ObjC || !TokenText.starts_with("__"))
+      return false;
+    const auto Qualifier = TokenText.substr(2);
+    return Qualifier == "autoreleasing" || Qualifier == "strong" ||
+           Qualifier == "weak" || Qualifier == "unsafe_unretained";
+  }
+
   /// Returns whether \p Tok is ([{ or an opening < of a template or in
   /// protos.
   bool opensScope() const {
@@ -1060,6 +1068,7 @@ struct AdditionalKeywords {
     kw_interface = &IdentTable.get("interface");
     kw_native = &IdentTable.get("native");
     kw_package = &IdentTable.get("package");
+    kw_record = &IdentTable.get("record");
     kw_synchronized = &IdentTable.get("synchronized");
     kw_throws = &IdentTable.get("throws");
     kw___except = &IdentTable.get("__except");
@@ -1254,7 +1263,7 @@ struct AdditionalKeywords {
     kw_verilogHashHash = &IdentTable.get("##");
     kw_apostrophe = &IdentTable.get("\'");
 
-    // TableGen keywords
+    // TableGen keywords.
     kw_bit = &IdentTable.get("bit");
     kw_bits = &IdentTable.get("bits");
     kw_code = &IdentTable.get("code");
@@ -1269,8 +1278,7 @@ struct AdditionalKeywords {
     kw_multiclass = &IdentTable.get("multiclass");
     kw_then = &IdentTable.get("then");
 
-    // Keep this at the end of the constructor to make sure everything here
-    // is
+    // Keep this at the end of the constructor to make sure everything here is
     // already initialized.
     JsExtraKeywords = std::unordered_set<IdentifierInfo *>(
         {kw_as, kw_async, kw_await, kw_declare, kw_finally, kw_from,
@@ -1279,19 +1287,14 @@ struct AdditionalKeywords {
          // Keywords from the Java section.
          kw_abstract, kw_extends, kw_implements, kw_instanceof, kw_interface});
 
-    CSharpExtraKeywords = std::unordered_set<IdentifierInfo *>(
-        {kw_base, kw_byte, kw_checked, kw_decimal, kw_delegate, kw_event,
-         kw_fixed, kw_foreach, kw_implicit, kw_in, kw_init, kw_interface,
-         kw_internal, kw_is, kw_lock, kw_null, kw_object, kw_out, kw_override,
-         kw_params, kw_readonly, kw_ref, kw_string, kw_stackalloc, kw_sbyte,
-         kw_sealed, kw_uint, kw_ulong, kw_unchecked, kw_unsafe, kw_ushort,
-         kw_when, kw_where,
-         // Keywords from the JavaScript section.
-         kw_as, kw_async, kw_await, kw_declare, kw_finally, kw_from,
-         kw_function, kw_get, kw_import, kw_is, kw_let, kw_module, kw_readonly,
-         kw_set, kw_type, kw_typeof, kw_var, kw_yield,
-         // Keywords from the Java section.
-         kw_abstract, kw_extends, kw_implements, kw_instanceof, kw_interface});
+    CSharpExtraKeywords = JsExtraKeywords;
+    CSharpExtraKeywords.insert(
+        {kw_base,   kw_byte,     kw_checked, kw_decimal,  kw_delegate,
+         kw_event,  kw_fixed,    kw_foreach, kw_implicit, kw_in,
+         kw_init,   kw_internal, kw_lock,    kw_null,     kw_object,
+         kw_out,    kw_params,   kw_ref,     kw_string,   kw_stackalloc,
+         kw_sbyte,  kw_sealed,   kw_uint,    kw_ulong,    kw_unchecked,
+         kw_unsafe, kw_ushort,   kw_when,    kw_where});
 
     // Some keywords are not included here because they don't need special
     // treatment like `showcancelled` or they should be treated as identifiers
@@ -1409,6 +1412,7 @@ struct AdditionalKeywords {
   IdentifierInfo *kw_interface;
   IdentifierInfo *kw_native;
   IdentifierInfo *kw_package;
+  IdentifierInfo *kw_record;
   IdentifierInfo *kw_synchronized;
   IdentifierInfo *kw_throws;
 
@@ -1698,8 +1702,8 @@ struct AdditionalKeywords {
     }
   }
 
-  /// Returns \c true if \p Tok is a C# keyword, returns
-  /// \c false if it is a anything else.
+  /// Returns \c true if \p Tok is a C# keyword, returns \c false if it is
+  /// anything else.
   bool isCSharpKeyword(const FormatToken &Tok) const {
     if (Tok.isAccessSpecifierKeyword())
       return true;
@@ -1925,7 +1929,7 @@ private:
   /// The JavaScript keywords beyond the C++ keyword set.
   std::unordered_set<IdentifierInfo *> JsExtraKeywords;
 
-  /// The C# keywords beyond the C++ keyword set
+  /// The C# keywords beyond the C++ keyword set.
   std::unordered_set<IdentifierInfo *> CSharpExtraKeywords;
 
   /// The Verilog keywords beyond the C++ keyword set.

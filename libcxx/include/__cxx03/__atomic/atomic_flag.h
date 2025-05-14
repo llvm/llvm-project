@@ -68,12 +68,7 @@ struct atomic_flag {
   _LIBCPP_DEPRECATED_ATOMIC_SYNC _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void notify_all() _NOEXCEPT {
     std::__atomic_notify_all(*this);
   }
-
-#if _LIBCPP_STD_VER >= 20
-  _LIBCPP_HIDE_FROM_ABI constexpr atomic_flag() _NOEXCEPT : __a_(false) {}
-#else
   atomic_flag() _NOEXCEPT = default;
-#endif
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR atomic_flag(bool __b) _NOEXCEPT : __a_(__b) {} // EXTENSION
 

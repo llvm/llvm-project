@@ -16,7 +16,6 @@
 #define LLVM_CLANG_CIR_CIRGENFUNCTIONINFO_H
 
 #include "clang/AST/CanonicalType.h"
-#include "clang/CIR/ABIArgInfo.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/Support/TrailingObjects.h"
 
@@ -24,7 +23,6 @@ namespace clang::CIRGen {
 
 struct CIRGenFunctionInfoArgInfo {
   CanQualType type;
-  cir::ABIArgInfo info;
 };
 
 class CIRGenFunctionInfo final
@@ -33,11 +31,14 @@ class CIRGenFunctionInfo final
                                     CIRGenFunctionInfoArgInfo> {
   using ArgInfo = CIRGenFunctionInfoArgInfo;
 
+  unsigned numArgs;
+
   ArgInfo *getArgsBuffer() { return getTrailingObjects<ArgInfo>(); }
   const ArgInfo *getArgsBuffer() const { return getTrailingObjects<ArgInfo>(); }
 
 public:
-  static CIRGenFunctionInfo *create(CanQualType resultType);
+  static CIRGenFunctionInfo *create(CanQualType resultType,
+                                    llvm::ArrayRef<CanQualType> argTypes);
 
   void operator delete(void *p) { ::operator delete(p); }
 
@@ -45,20 +46,35 @@ public:
   // these have to be public.
   friend class TrailingObjects;
 
+  using const_arg_iterator = const ArgInfo *;
+  using arg_iterator = ArgInfo *;
+
   // This function has to be CamelCase because llvm::FoldingSet requires so.
   // NOLINTNEXTLINE(readability-identifier-naming)
-  static void Profile(llvm::FoldingSetNodeID &id, CanQualType resultType) {
+  static void Profile(llvm::FoldingSetNodeID &id, CanQualType resultType,
+                      llvm::ArrayRef<clang::CanQualType> argTypes) {
     resultType.Profile(id);
+    for (auto i : argTypes)
+      i.Profile(id);
   }
 
   void Profile(llvm::FoldingSetNodeID &id) { getReturnType().Profile(id); }
 
-  CanQualType getReturnType() const { return getArgsBuffer()[0].type; }
-
-  cir::ABIArgInfo &getReturnInfo() { return getArgsBuffer()[0].info; }
-  const cir::ABIArgInfo &getReturnInfo() const {
-    return getArgsBuffer()[0].info;
+  llvm::MutableArrayRef<ArgInfo> arguments() {
+    return llvm::MutableArrayRef<ArgInfo>(arg_begin(), numArgs);
   }
+  llvm::ArrayRef<ArgInfo> arguments() const {
+    return llvm::ArrayRef<ArgInfo>(arg_begin(), numArgs);
+  }
+
+  const_arg_iterator arg_begin() const { return getArgsBuffer() + 1; }
+  const_arg_iterator arg_end() const { return getArgsBuffer() + 1 + numArgs; }
+  arg_iterator arg_begin() { return getArgsBuffer() + 1; }
+  arg_iterator arg_end() { return getArgsBuffer() + 1 + numArgs; }
+
+  unsigned arg_size() const { return numArgs; }
+
+  CanQualType getReturnType() const { return getArgsBuffer()[0].type; }
 };
 
 } // namespace clang::CIRGen

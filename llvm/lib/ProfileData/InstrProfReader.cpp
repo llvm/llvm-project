@@ -1456,16 +1456,6 @@ getMemProfRecordV2(const memprof::IndexedMemProfRecord &IndexedRecord,
   return Record;
 }
 
-static Expected<memprof::MemProfRecord>
-getMemProfRecordV3(const memprof::IndexedMemProfRecord &IndexedRecord,
-                   const unsigned char *FrameBase,
-                   const unsigned char *CallStackBase) {
-  memprof::LinearFrameIdConverter FrameIdConv(FrameBase);
-  memprof::LinearCallStackIdConverter CSIdConv(CallStackBase, FrameIdConv);
-  memprof::MemProfRecord Record = IndexedRecord.toMemProfRecord(CSIdConv);
-  return Record;
-}
-
 Expected<memprof::MemProfRecord>
 IndexedMemProfReader::getMemProfRecord(const uint64_t FuncNameHash) const {
   // TODO: Add memprof specific errors.
@@ -1485,13 +1475,20 @@ IndexedMemProfReader::getMemProfRecord(const uint64_t FuncNameHash) const {
     assert(MemProfCallStackTable && "MemProfCallStackTable must be available");
     return getMemProfRecordV2(IndexedRecord, *MemProfFrameTable,
                               *MemProfCallStackTable);
+  // Combine V3 and V4 cases as the record conversion logic is the same.
   case memprof::Version3:
+  case memprof::Version4:
     assert(!MemProfFrameTable && "MemProfFrameTable must not be available");
     assert(!MemProfCallStackTable &&
            "MemProfCallStackTable must not be available");
     assert(FrameBase && "FrameBase must be available");
     assert(CallStackBase && "CallStackBase must be available");
-    return getMemProfRecordV3(IndexedRecord, FrameBase, CallStackBase);
+    {
+      memprof::LinearFrameIdConverter FrameIdConv(FrameBase);
+      memprof::LinearCallStackIdConverter CSIdConv(CallStackBase, FrameIdConv);
+      memprof::MemProfRecord Record = IndexedRecord.toMemProfRecord(CSIdConv);
+      return Record;
+    }
   }
 
   return make_error<InstrProfError>(
@@ -1505,7 +1502,7 @@ IndexedMemProfReader::getMemProfRecord(const uint64_t FuncNameHash) const {
 DenseMap<uint64_t, SmallVector<memprof::CallEdgeTy, 0>>
 IndexedMemProfReader::getMemProfCallerCalleePairs() const {
   assert(MemProfRecordTable);
-  assert(Version == memprof::Version3);
+  assert(Version == memprof::Version3 || Version == memprof::Version4);
 
   memprof::LinearFrameIdConverter FrameIdConv(FrameBase);
   memprof::CallerCalleePairExtractor Extractor(CallStackBase, FrameIdConv,

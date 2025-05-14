@@ -69,78 +69,6 @@ static unsigned getSEWOpNum(const MachineInstr &MI) {
   return RISCVII::getSEWOpNum(MI.getDesc());
 }
 
-static bool isVectorConfigInstr(const MachineInstr &MI) {
-  return MI.getOpcode() == RISCV::PseudoVSETVLI ||
-         MI.getOpcode() == RISCV::PseudoVSETVLIX0 ||
-         MI.getOpcode() == RISCV::PseudoVSETIVLI;
-}
-
-/// Return true if this is 'vsetvli x0, x0, vtype' which preserves
-/// VL and only sets VTYPE.
-static bool isVLPreservingConfig(const MachineInstr &MI) {
-  if (MI.getOpcode() != RISCV::PseudoVSETVLIX0)
-    return false;
-  assert(RISCV::X0 == MI.getOperand(1).getReg());
-  return RISCV::X0 == MI.getOperand(0).getReg();
-}
-
-static bool isFloatScalarMoveOrScalarSplatInstr(const MachineInstr &MI) {
-  switch (RISCV::getRVVMCOpcode(MI.getOpcode())) {
-  default:
-    return false;
-  case RISCV::VFMV_S_F:
-  case RISCV::VFMV_V_F:
-    return true;
-  }
-}
-
-static bool isVExtractInstr(const MachineInstr &MI) {
-  return RISCV::getRVVMCOpcode(MI.getOpcode()) == RISCV::RI_VEXTRACT;
-}
-
-static bool isScalarExtractInstr(const MachineInstr &MI) {
-  switch (RISCV::getRVVMCOpcode(MI.getOpcode())) {
-  default:
-    return false;
-  case RISCV::VMV_X_S:
-  case RISCV::VFMV_F_S:
-    return true;
-  }
-}
-
-static bool isScalarInsertInstr(const MachineInstr &MI) {
-  switch (RISCV::getRVVMCOpcode(MI.getOpcode())) {
-  default:
-    return false;
-  case RISCV::VMV_S_X:
-  case RISCV::VFMV_S_F:
-    return true;
-  }
-}
-
-static bool isScalarSplatInstr(const MachineInstr &MI) {
-  switch (RISCV::getRVVMCOpcode(MI.getOpcode())) {
-  default:
-    return false;
-  case RISCV::VMV_V_I:
-  case RISCV::VMV_V_X:
-  case RISCV::VFMV_V_F:
-    return true;
-  }
-}
-
-static bool isVSlideInstr(const MachineInstr &MI) {
-  switch (RISCV::getRVVMCOpcode(MI.getOpcode())) {
-  default:
-    return false;
-  case RISCV::VSLIDEDOWN_VX:
-  case RISCV::VSLIDEDOWN_VI:
-  case RISCV::VSLIDEUP_VX:
-  case RISCV::VSLIDEUP_VI:
-    return true;
-  }
-}
-
 /// Get the EEW for a load or store instruction.  Return std::nullopt if MI is
 /// not a load or store which ignores SEW.
 static std::optional<unsigned> getEEWForLoadStore(const MachineInstr &MI) {
@@ -168,13 +96,6 @@ static std::optional<unsigned> getEEWForLoadStore(const MachineInstr &MI) {
   case RISCV::VSSE64_V:
     return 64;
   }
-}
-
-static bool isNonZeroLoadImmediate(const MachineInstr &MI) {
-  return MI.getOpcode() == RISCV::ADDI &&
-    MI.getOperand(1).isReg() && MI.getOperand(2).isImm() &&
-    MI.getOperand(1).getReg() == RISCV::X0 &&
-    MI.getOperand(2).getImm() != 0;
 }
 
 /// Return true if this is an operation on mask registers.  Note that
@@ -462,7 +383,7 @@ DemandedFields getDemanded(const MachineInstr &MI, const RISCVSubtarget *ST) {
   }
 
   // For vmv.s.x and vfmv.s.f, there are only two behaviors, VL = 0 and VL > 0.
-  if (isScalarInsertInstr(MI)) {
+  if (RISCVInstrInfo::isScalarInsertInstr(MI)) {
     Res.LMUL = DemandedFields::LMULNone;
     Res.SEWLMULRatio = false;
     Res.VLAny = false;
@@ -473,7 +394,8 @@ DemandedFields getDemanded(const MachineInstr &MI, const RISCVSubtarget *ST) {
     // tail lanes to either be the original value or -1.  We are writing
     // unknown bits to the lanes here.
     if (hasUndefinedPassthru(MI)) {
-      if (isFloatScalarMoveOrScalarSplatInstr(MI) && !ST->hasVInstructionsF64())
+      if (RISCVInstrInfo::isFloatScalarMoveOrScalarSplatInstr(MI) &&
+          !ST->hasVInstructionsF64())
         Res.SEW = DemandedFields::SEWGreaterThanOrEqualAndLessThan64;
       else
         Res.SEW = DemandedFields::SEWGreaterThanOrEqual;
@@ -482,7 +404,7 @@ DemandedFields getDemanded(const MachineInstr &MI, const RISCVSubtarget *ST) {
   }
 
   // vmv.x.s, and vfmv.f.s are unconditional and ignore everything except SEW.
-  if (isScalarExtractInstr(MI)) {
+  if (RISCVInstrInfo::isScalarExtractInstr(MI)) {
     assert(!RISCVII::hasVLOp(TSFlags));
     Res.LMUL = DemandedFields::LMULNone;
     Res.SEWLMULRatio = false;
@@ -500,8 +422,8 @@ DemandedFields getDemanded(const MachineInstr &MI, const RISCVSubtarget *ST) {
     //   non-zero VL.  We could generalize this if we had a VL > C predicate.
     // * The LMUL1 restriction is for machines whose latency may depend on VL.
     // * As above, this is only legal for tail "undefined" not "agnostic".
-    if (isVSlideInstr(MI) && VLOp.isImm() && VLOp.getImm() == 1 &&
-        hasUndefinedPassthru(MI)) {
+    if (RISCVInstrInfo::isVSlideInstr(MI) && VLOp.isImm() &&
+        VLOp.getImm() == 1 && hasUndefinedPassthru(MI)) {
       Res.VLAny = false;
       Res.VLZeroness = true;
       Res.LMUL = DemandedFields::LMULLessThanOrEqualToM1;
@@ -514,12 +436,13 @@ DemandedFields getDemanded(const MachineInstr &MI, const RISCVSubtarget *ST) {
     // it's place. Since a splat is non-constant time in LMUL, we do need to be
     // careful to not increase the number of active vector registers (unlike for
     // vmv.s.x.)
-    if (isScalarSplatInstr(MI) && VLOp.isImm() && VLOp.getImm() == 1 &&
-        hasUndefinedPassthru(MI)) {
+    if (RISCVInstrInfo::isScalarSplatInstr(MI) && VLOp.isImm() &&
+        VLOp.getImm() == 1 && hasUndefinedPassthru(MI)) {
       Res.LMUL = DemandedFields::LMULLessThanOrEqualToM1;
       Res.SEWLMULRatio = false;
       Res.VLAny = false;
-      if (isFloatScalarMoveOrScalarSplatInstr(MI) && !ST->hasVInstructionsF64())
+      if (RISCVInstrInfo::isFloatScalarMoveOrScalarSplatInstr(MI) &&
+          !ST->hasVInstructionsF64())
         Res.SEW = DemandedFields::SEWGreaterThanOrEqualAndLessThan64;
       else
         Res.SEW = DemandedFields::SEWGreaterThanOrEqual;
@@ -542,7 +465,7 @@ DemandedFields getDemanded(const MachineInstr &MI, const RISCVSubtarget *ST) {
     Res.MaskPolicy = false;
   }
 
-  if (isVExtractInstr(MI)) {
+  if (RISCVInstrInfo::isVExtractInstr(MI)) {
     assert(!RISCVII::hasVLOp(TSFlags));
     // TODO: LMUL can be any larger value (without cost)
     Res.TailPolicy = false;
@@ -661,7 +584,7 @@ public:
       return getAVLImm() > 0;
     if (hasAVLReg()) {
       if (auto *DefMI = getAVLDefMI(LIS))
-        return isNonZeroLoadImmediate(*DefMI);
+        return RISCVInstrInfo::isNonZeroLoadImmediate(*DefMI);
     }
     if (hasAVLVLMAX())
       return true;
@@ -989,7 +912,7 @@ void RISCVInsertVSETVLI::forwardVSETVLIAVL(VSETVLIInfo &Info) const {
   if (!Info.hasAVLReg())
     return;
   const MachineInstr *DefMI = Info.getAVLDefMI(LIS);
-  if (!DefMI || !isVectorConfigInstr(*DefMI))
+  if (!DefMI || !RISCVInstrInfo::isVectorConfigInstr(*DefMI))
     return;
   VSETVLIInfo DefInstrInfo = getInfoForVSETVLI(*DefMI);
   if (!DefInstrInfo.hasSameVLMAX(Info))
@@ -1095,7 +1018,8 @@ RISCVInsertVSETVLI::computeInfoForInstr(const MachineInstr &MI) const {
       InstrInfo.setAVLRegDef(VNI, VLOp.getReg());
     }
   } else {
-    assert(isScalarExtractInstr(MI) || isVExtractInstr(MI));
+    assert(RISCVInstrInfo::isScalarExtractInstr(MI) ||
+           RISCVInstrInfo::isVExtractInstr(MI));
     // Pick a random value for state tracking purposes, will be ignored via
     // the demanded fields mechanism
     InstrInfo.setAVLImm(1);
@@ -1136,7 +1060,7 @@ void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB,
     // same, we can use the X0, X0 form.
     if (Info.hasSameVLMAX(PrevInfo) && Info.hasAVLReg()) {
       if (const MachineInstr *DefMI = Info.getAVLDefMI(LIS);
-          DefMI && isVectorConfigInstr(*DefMI)) {
+          DefMI && RISCVInstrInfo::isVectorConfigInstr(*DefMI)) {
         VSETVLIInfo DefInfo = getInfoForVSETVLI(*DefMI);
         if (DefInfo.hasSameAVL(PrevInfo) && DefInfo.hasSameVLMAX(PrevInfo)) {
           auto MI = BuildMI(MBB, InsertPt, DL, TII->get(RISCV::PseudoVSETVLIX0))
@@ -1314,7 +1238,7 @@ void RISCVInsertVSETVLI::transferBefore(VSETVLIInfo &Info,
 // reflect the changes MI might make.
 void RISCVInsertVSETVLI::transferAfter(VSETVLIInfo &Info,
                                        const MachineInstr &MI) const {
-  if (isVectorConfigInstr(MI)) {
+  if (RISCVInstrInfo::isVectorConfigInstr(MI)) {
     Info = getInfoForVSETVLI(MI);
     return;
   }
@@ -1349,7 +1273,8 @@ bool RISCVInsertVSETVLI::computeVLVTYPEChanges(const MachineBasicBlock &MBB,
   for (const MachineInstr &MI : MBB) {
     transferBefore(Info, MI);
 
-    if (isVectorConfigInstr(MI) || RISCVII::hasSEWOp(MI.getDesc().TSFlags) ||
+    if (RISCVInstrInfo::isVectorConfigInstr(MI) ||
+        RISCVII::hasSEWOp(MI.getDesc().TSFlags) ||
         isVectorCopy(ST->getRegisterInfo(), MI))
       HadVectorOp = true;
 
@@ -1439,7 +1364,7 @@ bool RISCVInsertVSETVLI::needVSETVLIPHI(const VSETVLIInfo &Require,
     if (!Value)
       return true;
     MachineInstr *DefMI = LIS->getInstructionFromIndex(Value->def);
-    if (!DefMI || !isVectorConfigInstr(*DefMI))
+    if (!DefMI || !RISCVInstrInfo::isVectorConfigInstr(*DefMI))
       return true;
 
     // We found a VSET(I)VLI make sure it matches the output of the
@@ -1470,7 +1395,7 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
     transferBefore(CurInfo, MI);
 
     // If this is an explicit VSETVLI or VSETIVLI, update our state.
-    if (isVectorConfigInstr(MI)) {
+    if (RISCVInstrInfo::isVectorConfigInstr(MI)) {
       // Conservatively, mark the VL and VTYPE as live.
       assert(MI.getOperand(3).getReg() == RISCV::VL &&
              MI.getOperand(4).getReg() == RISCV::VTYPE &&
@@ -1677,12 +1602,12 @@ bool RISCVInsertVSETVLI::canMutatePriorConfig(
   // If the VL values aren't equal, return false if either a) the former is
   // demanded, or b) we can't rewrite the former to be the later for
   // implementation reasons.
-  if (!isVLPreservingConfig(MI)) {
+  if (!RISCVInstrInfo::isVLPreservingConfig(MI)) {
     if (Used.VLAny)
       return false;
 
     if (Used.VLZeroness) {
-      if (isVLPreservingConfig(PrevMI))
+      if (RISCVInstrInfo::isVLPreservingConfig(PrevMI))
         return false;
       if (!getInfoForVSETVLI(PrevMI).hasEquallyZeroAVL(getInfoForVSETVLI(MI),
                                                        LIS))
@@ -1733,7 +1658,7 @@ void RISCVInsertVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) const {
 
   for (MachineInstr &MI : make_early_inc_range(reverse(MBB))) {
 
-    if (!isVectorConfigInstr(MI)) {
+    if (!RISCVInstrInfo::isVectorConfigInstr(MI)) {
       Used.doUnion(getDemanded(MI, ST));
       if (MI.isCall() || MI.isInlineAsm() ||
           MI.modifiesRegister(RISCV::VL, /*TRI=*/nullptr) ||
@@ -1757,7 +1682,7 @@ void RISCVInsertVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) const {
       }
 
       if (canMutatePriorConfig(MI, *NextMI, Used)) {
-        if (!isVLPreservingConfig(*NextMI)) {
+        if (!RISCVInstrInfo::isVLPreservingConfig(*NextMI)) {
           Register DefReg = NextMI->getOperand(0).getReg();
 
           MI.getOperand(0).setReg(DefReg);

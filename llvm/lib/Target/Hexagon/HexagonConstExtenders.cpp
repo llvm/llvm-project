@@ -107,11 +107,7 @@ namespace {
       return !operator==(R);
     }
     bool operator<(const OffsetRange &R) const {
-      if (Min != R.Min)
-        return Min < R.Min;
-      if (Max != R.Max)
-        return Max < R.Max;
-      return Align < R.Align;
+      return std::tie(Min, Max, Align) < std::tie(R.Min, R.Max, R.Align);
     }
     static OffsetRange zero() { return {0, 0, 1}; }
   };
@@ -1322,12 +1318,6 @@ void HCE::assignInits(const ExtRoot &ER, unsigned Begin, unsigned End,
 
   // Select the definition points, and generate the assignment between
   // these points and the uses.
-
-  // For each candidate offset, keep a pair CandData consisting of
-  // the total number of ranges containing that candidate, and the
-  // vector of corresponding RangeTree nodes.
-  using CandData = std::pair<unsigned, SmallVector<RangeTree::Node*,8>>;
-  std::map<int32_t, CandData> CandMap;
 
   RangeTree Tree;
   for (const OffsetRange &R : Ranges)

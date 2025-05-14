@@ -170,9 +170,9 @@ static bool run(ArrayRef<const char *> Args, const char *ProgName) {
       [&IF](
           const auto &Attrs,
           std::function<void(InterfaceFile *, StringRef, const Target &)> Add) {
-        for (const auto &Lib : Attrs)
-          for (const auto &T : IF.targets(Lib.getValue()))
-            Add(&IF, Lib.getKey(), T);
+        for (const auto &[Attr, ArchSet] : Attrs.get())
+          for (const auto &T : IF.targets(ArchSet))
+            Add(&IF, Attr, T);
       };
 
   assignLibAttrs(Opts.LinkerOpts.AllowableClients,

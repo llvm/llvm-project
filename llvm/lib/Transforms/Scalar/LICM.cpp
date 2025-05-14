@@ -296,8 +296,7 @@ private:
 PreservedAnalyses LICMPass::run(Loop &L, LoopAnalysisManager &AM,
                                 LoopStandardAnalysisResults &AR, LPMUpdater &) {
   if (!AR.MSSA)
-    report_fatal_error("LICM requires MemorySSA (loop-mssa)",
-                       /*GenCrashDiag*/false);
+    reportFatalUsageError("LICM requires MemorySSA (loop-mssa)");
 
   // For the new PM, we also can't use OptimizationRemarkEmitter as an analysis
   // pass.  Function analyses need to be preserved across loop transformations
@@ -330,8 +329,7 @@ PreservedAnalyses LNICMPass::run(LoopNest &LN, LoopAnalysisManager &AM,
                                  LoopStandardAnalysisResults &AR,
                                  LPMUpdater &) {
   if (!AR.MSSA)
-    report_fatal_error("LNICM requires MemorySSA (loop-mssa)",
-                       /*GenCrashDiag*/false);
+    reportFatalUsageError("LNICM requires MemorySSA (loop-mssa)");
 
   // For the new PM, we also can't use OptimizationRemarkEmitter as an analysis
   // pass.  Function analyses need to be preserved across loop transformations
@@ -2540,6 +2538,7 @@ static bool hoistGEP(Instruction &I, Loop &L, ICFLoopSafetyInfo &SafetyInfo,
                                     IsInBounds);
   GEP->replaceAllUsesWith(NewGEP);
   eraseInstruction(*GEP, SafetyInfo, MSSAU);
+  salvageDebugInfo(*Src);
   eraseInstruction(*Src, SafetyInfo, MSSAU);
   return true;
 }
@@ -2594,7 +2593,10 @@ static bool hoistAdd(ICmpInst::Predicate Pred, Value *VariantLHS,
   ICmp.setPredicate(Pred);
   ICmp.setOperand(0, VariantOp);
   ICmp.setOperand(1, NewCmpOp);
-  eraseInstruction(cast<Instruction>(*VariantLHS), SafetyInfo, MSSAU);
+
+  Instruction &DeadI = cast<Instruction>(*VariantLHS);
+  salvageDebugInfo(DeadI);
+  eraseInstruction(DeadI, SafetyInfo, MSSAU);
   return true;
 }
 
@@ -2672,7 +2674,10 @@ static bool hoistSub(ICmpInst::Predicate Pred, Value *VariantLHS,
   ICmp.setPredicate(Pred);
   ICmp.setOperand(0, VariantOp);
   ICmp.setOperand(1, NewCmpOp);
-  eraseInstruction(cast<Instruction>(*VariantLHS), SafetyInfo, MSSAU);
+
+  Instruction &DeadI = cast<Instruction>(*VariantLHS);
+  salvageDebugInfo(DeadI);
+  eraseInstruction(DeadI, SafetyInfo, MSSAU);
   return true;
 }
 
@@ -2879,8 +2884,10 @@ static bool hoistBOAssociation(Instruction &I, Loop &L,
 
   // (LV op C1) might not be erased if it has more uses than the one we just
   // replaced.
-  if (BO0->use_empty())
+  if (BO0->use_empty()) {
+    salvageDebugInfo(*BO0);
     eraseInstruction(*BO0, SafetyInfo, MSSAU);
+  }
 
   return true;
 }

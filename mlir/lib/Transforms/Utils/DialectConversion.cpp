@@ -2959,7 +2959,7 @@ TypeConverter::convertSignatureArgs(TypeRange types,
 Value TypeConverter::materializeSourceConversion(OpBuilder &builder,
                                                  Location loc, Type resultType,
                                                  ValueRange inputs) const {
-  for (const MaterializationCallbackFn &fn :
+  for (const SourceMaterializationCallbackFn &fn :
        llvm::reverse(sourceMaterializations))
     if (Value result = fn(builder, resultType, inputs, loc))
       return result;

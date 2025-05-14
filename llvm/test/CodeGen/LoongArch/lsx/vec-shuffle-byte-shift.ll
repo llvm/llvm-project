@@ -464,7 +464,8 @@ define <4 x i32> @shuffle_4i32_vbsrl_v_12(<4 x i32> %a) nounwind {
 define <2 x i64> @shuffle_2i64_vbsrl_v_8(<2 x i64> %a) nounwind {
 ; CHECK-LABEL: shuffle_2i64_vbsrl_v_8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vbsrl.v $vr0, $vr0, 8
+; CHECK-NEXT:    vrepli.b $vr1, 0
+; CHECK-NEXT:    vshuf4i.d $vr0, $vr1, 9
 ; CHECK-NEXT:    ret
   %shuffle = shufflevector <2 x i64> %a, <2 x i64> zeroinitializer, <2 x i32> <i32 1, i32 2>
   ret <2 x i64> %shuffle

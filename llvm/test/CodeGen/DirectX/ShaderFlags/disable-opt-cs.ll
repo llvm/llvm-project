@@ -5,7 +5,7 @@
 ; CHECK-NEXT: ; Shader Flags Value: 0x00000001
 
 ; CHECK: ; Note: extra DXIL module flags:
-; CHECK-NEXT: ;       D3D11_1_SB_GLOBAL_FLAG_SKIP_OPTIMIZATION
+; CHECK-NEXT: ;       Disable shader optimizations
 
 ; CHECK: ; Shader Flags for Module Functions
 ; CHECK: ; Function main : 0x00000000

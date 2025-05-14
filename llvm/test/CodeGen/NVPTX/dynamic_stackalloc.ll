@@ -11,7 +11,7 @@
 ; CHECK-LABEL: .visible .func  (.param .b32 func_retval0) test_dynamic_stackalloc(
 ; CHECK-NOT: __local_depot
 
-; CHECK-32:       ld.param.u32  %r[[SIZE:[0-9]]], [test_dynamic_stackalloc_param_0];
+; CHECK-32:       ld.param.b32  %r[[SIZE:[0-9]]], [test_dynamic_stackalloc_param_0];
 ; CHECK-32-NEXT:  add.s32 %r[[SIZE2:[0-9]]], %r[[SIZE]], 7;
 ; CHECK-32-NEXT:  and.b32         %r[[SIZE3:[0-9]]], %r[[SIZE2]], -8;
 ; CHECK-32-NEXT:  alloca.u32  %r[[ALLOCA:[0-9]]], %r[[SIZE3]], 16;
@@ -20,7 +20,7 @@
 ; CHECK-32-NEXT:  .param .b32 param0;
 ; CHECK-32-NEXT:  st.param.b32  [param0], %r[[ALLOCA]];
 
-; CHECK-64:       ld.param.u64  %rd[[SIZE:[0-9]]], [test_dynamic_stackalloc_param_0];
+; CHECK-64:       ld.param.b64  %rd[[SIZE:[0-9]]], [test_dynamic_stackalloc_param_0];
 ; CHECK-64-NEXT:  add.s64 %rd[[SIZE2:[0-9]]], %rd[[SIZE]], 7;
 ; CHECK-64-NEXT:  and.b64 %rd[[SIZE3:[0-9]]], %rd[[SIZE2]], -8;
 ; CHECK-64-NEXT:  alloca.u64  %rd[[ALLOCA:[0-9]]], %rd[[SIZE3]], 16;

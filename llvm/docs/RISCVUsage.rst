@@ -494,10 +494,10 @@ The current vendor extensions supported are:
   LLVM implements `version 0.2 of the Qualcomm uC Sync Delay extension specification <https://github.com/quic/riscv-unified-db/releases/latest>`__ by Qualcomm.  All instructions are prefixed with `qc.` as described in the specification. These instructions are only available for riscv32.
 
 ``Xmipscmov``
-  LLVM implements conditional move for the `p8700 processor <https://mips.com/products/hardware/p8700/>` by MIPS.
+  LLVM implements conditional move for the `p8700 processor <https://mips.com/products/hardware/p8700/>`__ by MIPS.
 
 ``Xmipslsp``
-  LLVM implements load/store pair instructions for the `p8700 processor <https://mips.com/products/hardware/p8700/>` by MIPS.
+  LLVM implements load/store pair instructions for the `p8700 processor <https://mips.com/products/hardware/p8700/>`__ by MIPS.
 
 ``experimental-XRivosVisni``
   LLVM implements `version 0.1 of the Rivos Vector Integer Small New Instructions extension specification <https://github.com/rivosinc/rivos-custom-extensions>`__.
@@ -506,7 +506,10 @@ The current vendor extensions supported are:
   LLVM implements `version 0.1 of the Rivos Vector Register Zips extension specification <https://github.com/rivosinc/rivos-custom-extensions>`__.
 
 ``XAndesPerf``
-  LLVM implements `version 5.0.0 of the Andes Performance Extension specification <https://github.com/andestech/andes-v5-isa/releases/download/ast-v5_4_0-release/AndeStar_V5_ISA_Spec_UM165-v1.5.08-20250317.pdf>` by Andes Technology. All instructions are prefixed with `nds.` as described in the specification.
+  LLVM implements `version 5.0.0 of the Andes Performance Extension specification <https://github.com/andestech/andes-v5-isa/releases/download/ast-v5_4_0-release/AndeStar_V5_ISA_Spec_UM165-v1.5.08-20250317.pdf>`__ by Andes Technology. All instructions are prefixed with `nds.` as described in the specification.
+
+``XAndesVPackFPH``
+  LLVM implements `version 5.0.0 of the Andes Vector Packed FP16 Extension specification <https://github.com/andestech/andes-v5-isa/releases/download/ast-v5_4_0-release/AndeStar_V5_ISA_Spec_UM165-v1.5.08-20250317.pdf>`__ by Andes Technology. All instructions are prefixed with `nds.` as described in the specification.
 
 Experimental C Intrinsics
 =========================
