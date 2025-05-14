@@ -164,7 +164,7 @@ struct UnrollTransferReadPattern
           sliceTransferIndices(elementOffsets, originalIndices,
                                readOp.getPermutationMap(), loc, rewriter);
       auto slicedRead = rewriter.create<vector::TransferReadOp>(
-          loc, targetType, readOp.getSource(), indices,
+          loc, targetType, readOp.getBase(), indices,
           readOp.getPermutationMapAttr(), readOp.getPadding(), readOp.getMask(),
           readOp.getInBoundsAttr());
 
@@ -215,7 +215,7 @@ struct UnrollTransferWritePattern
           sliceTransferIndices(elementOffsets, originalIndices,
                                writeOp.getPermutationMap(), loc, rewriter);
       Operation *slicedWrite = rewriter.create<vector::TransferWriteOp>(
-          loc, slicedVector, resultTensor ? resultTensor : writeOp.getSource(),
+          loc, slicedVector, resultTensor ? resultTensor : writeOp.getBase(),
           indices, writeOp.getPermutationMapAttr(), writeOp.getInBoundsAttr());
       // For the tensor case update the destination for the next transfer write.
       if (!slicedWrite->getResults().empty())

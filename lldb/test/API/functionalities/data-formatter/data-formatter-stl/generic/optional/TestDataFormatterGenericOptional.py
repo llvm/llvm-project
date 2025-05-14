@@ -88,7 +88,7 @@ class GenericOptionalDataFormatterTestCase(TestBase):
         self.expect(
             "frame variable *number_not_engaged",
             error=True,
-            substrs=["not a pointer or reference type"],
+            substrs=["dereference failed: not a pointer, reference or array type"],
         )
 
     @add_test_categories(["libc++"])

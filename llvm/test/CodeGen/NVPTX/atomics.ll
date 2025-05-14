@@ -11,8 +11,8 @@ define i32 @atom0(ptr %addr, i32 %val) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [atom0_param_0];
-; CHECK-NEXT:    ld.param.u32 %r1, [atom0_param_1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [atom0_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [atom0_param_1];
 ; CHECK-NEXT:    atom.add.u32 %r2, [%rd1], %r1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
@@ -27,8 +27,8 @@ define i64 @atom1(ptr %addr, i64 %val) {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [atom1_param_0];
-; CHECK-NEXT:    ld.param.u64 %rd2, [atom1_param_1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [atom1_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd2, [atom1_param_1];
 ; CHECK-NEXT:    atom.add.u64 %rd3, [%rd1], %rd2;
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; CHECK-NEXT:    ret;
@@ -44,8 +44,8 @@ define i32 @atom2(ptr %subr, i32 %val) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [atom2_param_0];
-; CHECK-NEXT:    ld.param.u32 %r1, [atom2_param_1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [atom2_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [atom2_param_1];
 ; CHECK-NEXT:    neg.s32 %r2, %r1;
 ; CHECK-NEXT:    atom.add.u32 %r3, [%rd1], %r2;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
@@ -61,8 +61,8 @@ define i64 @atom3(ptr %subr, i64 %val) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [atom3_param_0];
-; CHECK-NEXT:    ld.param.u64 %rd2, [atom3_param_1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [atom3_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd2, [atom3_param_1];
 ; CHECK-NEXT:    neg.s64 %rd3, %rd2;
 ; CHECK-NEXT:    atom.add.u64 %rd4, [%rd1], %rd3;
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd4;
@@ -79,8 +79,8 @@ define i32 @atom4(ptr %subr, i32 %val) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [atom4_param_0];
-; CHECK-NEXT:    ld.param.u32 %r1, [atom4_param_1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [atom4_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [atom4_param_1];
 ; CHECK-NEXT:    atom.and.b32 %r2, [%rd1], %r1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
@@ -95,8 +95,8 @@ define i64 @atom5(ptr %subr, i64 %val) {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [atom5_param_0];
-; CHECK-NEXT:    ld.param.u64 %rd2, [atom5_param_1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [atom5_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd2, [atom5_param_1];
 ; CHECK-NEXT:    atom.and.b64 %rd3, [%rd1], %rd2;
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; CHECK-NEXT:    ret;
@@ -123,8 +123,8 @@ define i32 @atom8(ptr %subr, i32 %val) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [atom8_param_0];
-; CHECK-NEXT:    ld.param.u32 %r1, [atom8_param_1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [atom8_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [atom8_param_1];
 ; CHECK-NEXT:    atom.or.b32 %r2, [%rd1], %r1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
@@ -139,8 +139,8 @@ define i64 @atom9(ptr %subr, i64 %val) {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [atom9_param_0];
-; CHECK-NEXT:    ld.param.u64 %rd2, [atom9_param_1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [atom9_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd2, [atom9_param_1];
 ; CHECK-NEXT:    atom.or.b64 %rd3, [%rd1], %rd2;
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; CHECK-NEXT:    ret;
@@ -156,8 +156,8 @@ define i32 @atom10(ptr %subr, i32 %val) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [atom10_param_0];
-; CHECK-NEXT:    ld.param.u32 %r1, [atom10_param_1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [atom10_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [atom10_param_1];
 ; CHECK-NEXT:    atom.xor.b32 %r2, [%rd1], %r1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
@@ -172,8 +172,8 @@ define i64 @atom11(ptr %subr, i64 %val) {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [atom11_param_0];
-; CHECK-NEXT:    ld.param.u64 %rd2, [atom11_param_1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [atom11_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd2, [atom11_param_1];
 ; CHECK-NEXT:    atom.xor.b64 %rd3, [%rd1], %rd2;
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; CHECK-NEXT:    ret;
@@ -189,8 +189,8 @@ define i32 @atom12(ptr %subr, i32 %val) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [atom12_param_0];
-; CHECK-NEXT:    ld.param.u32 %r1, [atom12_param_1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [atom12_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [atom12_param_1];
 ; CHECK-NEXT:    atom.max.s32 %r2, [%rd1], %r1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
@@ -205,8 +205,8 @@ define i64 @atom13(ptr %subr, i64 %val) {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [atom13_param_0];
-; CHECK-NEXT:    ld.param.u64 %rd2, [atom13_param_1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [atom13_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd2, [atom13_param_1];
 ; CHECK-NEXT:    atom.max.s64 %rd3, [%rd1], %rd2;
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; CHECK-NEXT:    ret;
@@ -222,8 +222,8 @@ define i32 @atom14(ptr %subr, i32 %val) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [atom14_param_0];
-; CHECK-NEXT:    ld.param.u32 %r1, [atom14_param_1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [atom14_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [atom14_param_1];
 ; CHECK-NEXT:    atom.min.s32 %r2, [%rd1], %r1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
@@ -238,8 +238,8 @@ define i64 @atom15(ptr %subr, i64 %val) {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [atom15_param_0];
-; CHECK-NEXT:    ld.param.u64 %rd2, [atom15_param_1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [atom15_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd2, [atom15_param_1];
 ; CHECK-NEXT:    atom.min.s64 %rd3, [%rd1], %rd2;
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; CHECK-NEXT:    ret;
@@ -255,8 +255,8 @@ define i32 @atom16(ptr %subr, i32 %val) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [atom16_param_0];
-; CHECK-NEXT:    ld.param.u32 %r1, [atom16_param_1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [atom16_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [atom16_param_1];
 ; CHECK-NEXT:    atom.max.u32 %r2, [%rd1], %r1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
@@ -271,8 +271,8 @@ define i64 @atom17(ptr %subr, i64 %val) {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [atom17_param_0];
-; CHECK-NEXT:    ld.param.u64 %rd2, [atom17_param_1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [atom17_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd2, [atom17_param_1];
 ; CHECK-NEXT:    atom.max.u64 %rd3, [%rd1], %rd2;
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; CHECK-NEXT:    ret;
@@ -288,8 +288,8 @@ define i32 @atom18(ptr %subr, i32 %val) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [atom18_param_0];
-; CHECK-NEXT:    ld.param.u32 %r1, [atom18_param_1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [atom18_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [atom18_param_1];
 ; CHECK-NEXT:    atom.min.u32 %r2, [%rd1], %r1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
@@ -304,8 +304,8 @@ define i64 @atom19(ptr %subr, i64 %val) {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [atom19_param_0];
-; CHECK-NEXT:    ld.param.u64 %rd2, [atom19_param_1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [atom19_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd2, [atom19_param_1];
 ; CHECK-NEXT:    atom.min.u64 %rd3, [%rd1], %rd2;
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; CHECK-NEXT:    ret;
@@ -320,8 +320,8 @@ define i32 @atom20(ptr %subr, i32 %val) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [atom20_param_0];
-; CHECK-NEXT:    ld.param.u32 %r1, [atom20_param_1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [atom20_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [atom20_param_1];
 ; CHECK-NEXT:    atom.inc.u32 %r2, [%rd1], %r1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
@@ -336,8 +336,8 @@ define i32 @atom21(ptr %subr, i32 %val) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [atom21_param_0];
-; CHECK-NEXT:    ld.param.u32 %r1, [atom21_param_1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [atom21_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [atom21_param_1];
 ; CHECK-NEXT:    atom.dec.u32 %r2, [%rd1], %r1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
@@ -355,10 +355,10 @@ define float @atomic_add_f32_generic(ptr %addr, float %val) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [atomic_add_f32_generic_param_0];
-; CHECK-NEXT:    ld.param.f32 %f1, [atomic_add_f32_generic_param_1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [atomic_add_f32_generic_param_0];
+; CHECK-NEXT:    ld.param.b32 %f1, [atomic_add_f32_generic_param_1];
 ; CHECK-NEXT:    atom.add.f32 %f2, [%rd1], %f1;
-; CHECK-NEXT:    st.param.f32 [func_retval0], %f2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %f2;
 ; CHECK-NEXT:    ret;
   %ret = call float @llvm.nvvm.atomic.load.add.f32.p0(ptr %addr, float %val)
   ret float %ret
@@ -374,10 +374,10 @@ define float @atomic_add_f32_addrspace1(ptr addrspace(1) %addr, float %val) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [atomic_add_f32_addrspace1_param_0];
-; CHECK-NEXT:    ld.param.f32 %f1, [atomic_add_f32_addrspace1_param_1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [atomic_add_f32_addrspace1_param_0];
+; CHECK-NEXT:    ld.param.b32 %f1, [atomic_add_f32_addrspace1_param_1];
 ; CHECK-NEXT:    atom.global.add.f32 %f2, [%rd1], %f1;
-; CHECK-NEXT:    st.param.f32 [func_retval0], %f2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %f2;
 ; CHECK-NEXT:    ret;
   %ret = call float @llvm.nvvm.atomic.load.add.f32.p1(ptr addrspace(1) %addr, float %val)
   ret float %ret
@@ -393,10 +393,10 @@ define float @atomic_add_f32_addrspace3(ptr addrspace(3) %addr, float %val) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [atomic_add_f32_addrspace3_param_0];
-; CHECK-NEXT:    ld.param.f32 %f1, [atomic_add_f32_addrspace3_param_1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [atomic_add_f32_addrspace3_param_0];
+; CHECK-NEXT:    ld.param.b32 %f1, [atomic_add_f32_addrspace3_param_1];
 ; CHECK-NEXT:    atom.shared.add.f32 %f2, [%rd1], %f1;
-; CHECK-NEXT:    st.param.f32 [func_retval0], %f2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %f2;
 ; CHECK-NEXT:    ret;
   %ret = call float @llvm.nvvm.atomic.load.add.f32.p3(ptr addrspace(3) %addr, float %val)
   ret float %ret
@@ -410,10 +410,10 @@ define float @atomicrmw_add_f32_generic(ptr %addr, float %val) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [atomicrmw_add_f32_generic_param_0];
-; CHECK-NEXT:    ld.param.f32 %f1, [atomicrmw_add_f32_generic_param_1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [atomicrmw_add_f32_generic_param_0];
+; CHECK-NEXT:    ld.param.b32 %f1, [atomicrmw_add_f32_generic_param_1];
 ; CHECK-NEXT:    atom.add.f32 %f2, [%rd1], %f1;
-; CHECK-NEXT:    st.param.f32 [func_retval0], %f2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %f2;
 ; CHECK-NEXT:    ret;
   %ret = atomicrmw fadd ptr %addr, float %val seq_cst
   ret float %ret
@@ -431,7 +431,7 @@ define half @atomicrmw_add_f16_generic(ptr %addr, half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b16 %rs1, [atomicrmw_add_f16_generic_param_1];
-; CHECK-NEXT:    ld.param.u64 %rd2, [atomicrmw_add_f16_generic_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd2, [atomicrmw_add_f16_generic_param_0];
 ; CHECK-NEXT:    and.b64 %rd1, %rd2, -4;
 ; CHECK-NEXT:    cvt.u32.u64 %r6, %rd2;
 ; CHECK-NEXT:    and.b32 %r7, %r6, 3;
@@ -439,7 +439,7 @@ define half @atomicrmw_add_f16_generic(ptr %addr, half %val) {
 ; CHECK-NEXT:    mov.b32 %r8, 65535;
 ; CHECK-NEXT:    shl.b32 %r9, %r8, %r1;
 ; CHECK-NEXT:    not.b32 %r2, %r9;
-; CHECK-NEXT:    ld.u32 %r16, [%rd1];
+; CHECK-NEXT:    ld.b32 %r16, [%rd1];
 ; CHECK-NEXT:    cvt.f32.f16 %f2, %rs1;
 ; CHECK-NEXT:  $L__BB24_1: // %atomicrmw.start
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -474,10 +474,10 @@ define float @atomicrmw_add_f32_addrspace1(ptr addrspace(1) %addr, float %val) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [atomicrmw_add_f32_addrspace1_param_0];
-; CHECK-NEXT:    ld.param.f32 %f1, [atomicrmw_add_f32_addrspace1_param_1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [atomicrmw_add_f32_addrspace1_param_0];
+; CHECK-NEXT:    ld.param.b32 %f1, [atomicrmw_add_f32_addrspace1_param_1];
 ; CHECK-NEXT:    atom.global.add.f32 %f2, [%rd1], %f1;
-; CHECK-NEXT:    st.param.f32 [func_retval0], %f2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %f2;
 ; CHECK-NEXT:    ret;
   %ret = atomicrmw fadd ptr addrspace(1) %addr, float %val seq_cst
   ret float %ret
@@ -491,10 +491,10 @@ define float @atomicrmw_add_f32_addrspace3(ptr addrspace(3) %addr, float %val) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [atomicrmw_add_f32_addrspace3_param_0];
-; CHECK-NEXT:    ld.param.f32 %f1, [atomicrmw_add_f32_addrspace3_param_1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [atomicrmw_add_f32_addrspace3_param_0];
+; CHECK-NEXT:    ld.param.b32 %f1, [atomicrmw_add_f32_addrspace3_param_1];
 ; CHECK-NEXT:    atom.shared.add.f32 %f2, [%rd1], %f1;
-; CHECK-NEXT:    st.param.f32 [func_retval0], %f2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %f2;
 ; CHECK-NEXT:    ret;
   %ret = atomicrmw fadd ptr addrspace(3) %addr, float %val seq_cst
   ret float %ret
@@ -508,10 +508,10 @@ define i32 @atomic_cmpxchg_i32(ptr %addr, i32 %cmp, i32 %new) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [atomic_cmpxchg_i32_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [atomic_cmpxchg_i32_param_0];
 ; CHECK-NEXT:    membar.sys;
-; CHECK-NEXT:    ld.param.u32 %r1, [atomic_cmpxchg_i32_param_1];
-; CHECK-NEXT:    ld.param.u32 %r2, [atomic_cmpxchg_i32_param_2];
+; CHECK-NEXT:    ld.param.b32 %r1, [atomic_cmpxchg_i32_param_1];
+; CHECK-NEXT:    ld.param.b32 %r2, [atomic_cmpxchg_i32_param_2];
 ; CHECK-NEXT:    atom.cas.b32 %r3, [%rd1], %r1, %r2;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
@@ -526,10 +526,10 @@ define i64 @atomic_cmpxchg_i64(ptr %addr, i64 %cmp, i64 %new) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [atomic_cmpxchg_i64_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [atomic_cmpxchg_i64_param_0];
 ; CHECK-NEXT:    membar.sys;
-; CHECK-NEXT:    ld.param.u64 %rd2, [atomic_cmpxchg_i64_param_1];
-; CHECK-NEXT:    ld.param.u64 %rd3, [atomic_cmpxchg_i64_param_2];
+; CHECK-NEXT:    ld.param.b64 %rd2, [atomic_cmpxchg_i64_param_1];
+; CHECK-NEXT:    ld.param.b64 %rd3, [atomic_cmpxchg_i64_param_2];
 ; CHECK-NEXT:    atom.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; CHECK-NEXT:    ret;

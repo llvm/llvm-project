@@ -25,23 +25,25 @@ export class ModulesDataProvider
     }
 
     const tooltip = new vscode.MarkdownString();
-    tooltip.appendMarkdown(`# Module '${module.name}'\n\n`);
-    tooltip.appendMarkdown(`- **id** : ${module.id}\n`);
+    tooltip.appendMarkdown(`# ${module.name}\n\n`);
+    tooltip.appendMarkdown(`- **ID**: ${module.id}\n`);
     if (module.addressRange) {
-      tooltip.appendMarkdown(`- **load address** : ${module.addressRange}\n`);
+      tooltip.appendMarkdown(
+        `- **Load address**: 0x${Number(module.addressRange).toString(16)}\n`,
+      );
     }
     if (module.path) {
-      tooltip.appendMarkdown(`- **path** : ${module.path}\n`);
+      tooltip.appendMarkdown(`- **Path**: ${module.path}\n`);
     }
     if (module.version) {
-      tooltip.appendMarkdown(`- **version** : ${module.version}\n`);
+      tooltip.appendMarkdown(`- **Version**: ${module.version}\n`);
     }
     if (module.symbolStatus) {
-      tooltip.appendMarkdown(`- **symbol status** : ${module.symbolStatus}\n`);
+      tooltip.appendMarkdown(`- **Symbol status**: ${module.symbolStatus}\n`);
     }
     if (module.symbolFilePath) {
       tooltip.appendMarkdown(
-        `- **symbol file path** : ${module.symbolFilePath}\n`,
+        `- **Symbol file path**: ${module.symbolFilePath}\n`,
       );
     }
 

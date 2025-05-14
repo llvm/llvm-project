@@ -56,6 +56,14 @@ VariantValue::VariantValue(const VariantMatcher &matcher)
   value.Matcher = new VariantMatcher(matcher);
 }
 
+VariantValue::VariantValue(int64_t signedValue) : type(ValueType::Signed) {
+  value.Signed = signedValue;
+}
+
+VariantValue::VariantValue(bool setBoolean) : type(ValueType::Boolean) {
+  value.Boolean = setBoolean;
+}
+
 VariantValue::~VariantValue() { reset(); }
 
 VariantValue &VariantValue::operator=(const VariantValue &other) {
@@ -68,6 +76,12 @@ VariantValue &VariantValue::operator=(const VariantValue &other) {
     break;
   case ValueType::Matcher:
     setMatcher(other.getMatcher());
+    break;
+  case ValueType::Signed:
+    setSigned(other.getSigned());
+    break;
+  case ValueType::Boolean:
+    setBoolean(other.getBoolean());
     break;
   case ValueType::Nothing:
     type = ValueType::Nothing;
@@ -85,10 +99,32 @@ void VariantValue::reset() {
     delete value.Matcher;
     break;
   // Cases that do nothing.
+  case ValueType::Signed:
+  case ValueType::Boolean:
   case ValueType::Nothing:
     break;
   }
   type = ValueType::Nothing;
+}
+
+// Signed
+bool VariantValue::isSigned() const { return type == ValueType::Signed; }
+
+int64_t VariantValue::getSigned() const { return value.Signed; }
+
+void VariantValue::setSigned(int64_t newValue) {
+  type = ValueType::Signed;
+  value.Signed = newValue;
+}
+
+// Boolean
+bool VariantValue::isBoolean() const { return type == ValueType::Boolean; }
+
+bool VariantValue::getBoolean() const { return value.Signed; }
+
+void VariantValue::setBoolean(bool newValue) {
+  type = ValueType::Boolean;
+  value.Signed = newValue;
 }
 
 bool VariantValue::isString() const { return type == ValueType::String; }
@@ -123,6 +159,10 @@ std::string VariantValue::getTypeAsString() const {
     return "String";
   case ValueType::Matcher:
     return "Matcher";
+  case ValueType::Signed:
+    return "Signed";
+  case ValueType::Boolean:
+    return "Boolean";
   case ValueType::Nothing:
     return "Nothing";
   }

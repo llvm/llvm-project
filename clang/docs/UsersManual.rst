@@ -2792,6 +2792,9 @@ usual build cycle when using sample profilers for optimization:
 
      $ llvm-profgen --binary=./code --output=code.prof --perfdata=perf.data
 
+   Please note, ``perf.data`` must be collected with ``-b`` flag to Linux ``perf``
+   for the above step to work.
+
    When using SEP the output is in the textual format corresponding to
    ``llvm-profgen --perfscript``. For example:
 

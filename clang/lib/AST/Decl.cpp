@@ -3350,7 +3350,8 @@ bool FunctionDecl::isMSVCRTEntryPoint() const {
   // semantic analysis for these functions remains the same.
 
   // MSVCRT entry points only exist on MSVCRT targets.
-  if (!TUnit->getASTContext().getTargetInfo().getTriple().isOSMSVCRT())
+  if (!TUnit->getASTContext().getTargetInfo().getTriple().isOSMSVCRT() &&
+      !TUnit->getASTContext().getTargetInfo().getTriple().isUEFI())
     return false;
 
   // Nameless functions like constructors cannot be entry points.
@@ -5844,6 +5845,38 @@ HLSLBufferDecl::buffer_decl_iterator HLSLBufferDecl::buffer_decls_end() const {
 
 bool HLSLBufferDecl::buffer_decls_empty() {
   return DefaultBufferDecls.empty() && decls_empty();
+}
+
+//===----------------------------------------------------------------------===//
+// HLSLRootSignatureDecl Implementation
+//===----------------------------------------------------------------------===//
+
+HLSLRootSignatureDecl::HLSLRootSignatureDecl(DeclContext *DC,
+                                             SourceLocation Loc,
+                                             IdentifierInfo *ID,
+                                             unsigned NumElems)
+    : NamedDecl(Decl::Kind::HLSLRootSignature, DC, Loc, DeclarationName(ID)),
+      NumElems(NumElems) {}
+
+HLSLRootSignatureDecl *HLSLRootSignatureDecl::Create(
+    ASTContext &C, DeclContext *DC, SourceLocation Loc, IdentifierInfo *ID,
+    ArrayRef<llvm::hlsl::rootsig::RootElement> RootElements) {
+  HLSLRootSignatureDecl *RSDecl =
+      new (C, DC,
+           additionalSizeToAlloc<llvm::hlsl::rootsig::RootElement>(
+               RootElements.size()))
+          HLSLRootSignatureDecl(DC, Loc, ID, RootElements.size());
+  auto *StoredElems = RSDecl->getElems();
+  std::uninitialized_copy(RootElements.begin(), RootElements.end(),
+                          StoredElems);
+  return RSDecl;
+}
+
+HLSLRootSignatureDecl *
+HLSLRootSignatureDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
+  HLSLRootSignatureDecl *Result = new (C, ID)
+      HLSLRootSignatureDecl(nullptr, SourceLocation(), nullptr, /*NumElems=*/0);
+  return Result;
 }
 
 //===----------------------------------------------------------------------===//

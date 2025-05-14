@@ -1356,7 +1356,7 @@ RankedTensorType GatherOp::inferResultType(RankedTensorType sourceType,
   SmallVector<int64_t> resultShape(indicesType.getShape().drop_back());
   resultShape.reserve(resultShape.size() + sourceType.getRank());
   for (int64_t idx : llvm::seq<int64_t>(0, sourceType.getRank())) {
-    if (std::binary_search(gatherDims.begin(), gatherDims.end(), idx)) {
+    if (llvm::binary_search(gatherDims, idx)) {
       if (!rankReduced)
         resultShape.push_back(1);
       continue;

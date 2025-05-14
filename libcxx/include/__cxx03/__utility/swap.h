@@ -32,16 +32,14 @@ template <class>
 using __swap_result_t = void;
 
 template <class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI __swap_result_t<_Tp> _LIBCPP_CONSTEXPR_SINCE_CXX20 swap(_Tp& __x, _Tp& __y)
-    _NOEXCEPT_(is_nothrow_move_constructible<_Tp>::value&& is_nothrow_move_assignable<_Tp>::value) {
+inline _LIBCPP_HIDE_FROM_ABI __swap_result_t<_Tp> swap(_Tp& __x, _Tp& __y) {
   _Tp __t(std::move(__x));
   __x = std::move(__y);
   __y = std::move(__t);
 }
 
 template <class _Tp, size_t _Np, __enable_if_t<__is_swappable_v<_Tp>, int> >
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void swap(_Tp (&__a)[_Np], _Tp (&__b)[_Np])
-    _NOEXCEPT_(__is_nothrow_swappable_v<_Tp>) {
+inline _LIBCPP_HIDE_FROM_ABI void swap(_Tp (&__a)[_Np], _Tp (&__b)[_Np]) {
   for (size_t __i = 0; __i != _Np; ++__i) {
     swap(__a[__i], __b[__i]);
   }

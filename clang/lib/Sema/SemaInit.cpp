@@ -637,11 +637,11 @@ ExprResult InitListChecker::PerformEmptyInit(SourceLocation Loc,
   }
 
   InitializationSequence InitSeq(SemaRef, Entity, Kind, SubInit);
-  // libstdc++4.6 marks the vector default constructor as explicit in
-  // _GLIBCXX_DEBUG mode, so recover using the C++03 logic in that case.
-  // stlport does so too. Look for std::__debug for libstdc++, and for
-  // std:: for stlport.  This is effectively a compiler-side implementation of
-  // LWG2193.
+  // HACK: libstdc++ prior to 4.9 marks the vector default constructor
+  // as explicit in _GLIBCXX_DEBUG mode, so recover using the C++03 logic
+  // in that case. stlport does so too.
+  // Look for std::__debug for libstdc++, and for std:: for stlport.
+  // This is effectively a compiler-side implementation of LWG2193.
   if (!InitSeq && EmptyInitList && InitSeq.getFailureKind() ==
           InitializationSequence::FK_ExplicitConstructor) {
     OverloadCandidateSet::iterator Best;
@@ -6240,24 +6240,6 @@ static void TryUserDefinedConversion(Sema &S,
   }
 }
 
-/// An egregious hack for compatibility with libstdc++-4.2: in <tr1/hashtable>,
-/// a function with a pointer return type contains a 'return false;' statement.
-/// In C++11, 'false' is not a null pointer, so this breaks the build of any
-/// code using that header.
-///
-/// Work around this by treating 'return false;' as zero-initializing the result
-/// if it's used in a pointer-returning function in a system header.
-static bool isLibstdcxxPointerReturnFalseHack(Sema &S,
-                                              const InitializedEntity &Entity,
-                                              const Expr *Init) {
-  return S.getLangOpts().CPlusPlus11 &&
-         Entity.getKind() == InitializedEntity::EK_Result &&
-         Entity.getType()->isPointerType() &&
-         isa<CXXBoolLiteralExpr>(Init) &&
-         !cast<CXXBoolLiteralExpr>(Init)->getValue() &&
-         S.getSourceManager().isInSystemHeader(Init->getExprLoc());
-}
-
 /// The non-zero enum values here are indexes into diagnostic alternatives.
 enum InvalidICRKind { IIK_okay, IIK_nonlocal, IIK_nonscalar };
 
@@ -6943,12 +6925,10 @@ void InitializationSequence::InitializeFrom(Sema &S,
 
     AddPassByIndirectCopyRestoreStep(DestType, ShouldCopy);
   } else if (ICS.isBad()) {
-    if (isLibstdcxxPointerReturnFalseHack(S, Entity, Initializer))
-      AddZeroInitializationStep(Entity.getType());
-    else if (DeclAccessPair Found;
-             Initializer->getType() == Context.OverloadTy &&
-             !S.ResolveAddressOfOverloadedFunction(Initializer, DestType,
-                                                   /*Complain=*/false, Found))
+    if (DeclAccessPair Found;
+        Initializer->getType() == Context.OverloadTy &&
+        !S.ResolveAddressOfOverloadedFunction(Initializer, DestType,
+                                              /*Complain=*/false, Found))
       SetFailed(InitializationSequence::FK_AddressOfOverloadFailed);
     else if (Initializer->getType()->isFunctionType() &&
              isExprAnUnaddressableFunction(S, Initializer))

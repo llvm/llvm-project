@@ -193,7 +193,7 @@ using ::putwchar _LIBCPP_USING_IF_EXISTS;
 using ::vwprintf _LIBCPP_USING_IF_EXISTS;
 using ::wprintf _LIBCPP_USING_IF_EXISTS;
 
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 size_t __constexpr_wcslen(const wchar_t* __str) {
+inline _LIBCPP_HIDE_FROM_ABI size_t __constexpr_wcslen(const wchar_t* __str) {
 #if __has_builtin(__builtin_wcslen)
   return __builtin_wcslen(__str);
 #else
@@ -207,8 +207,7 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 size_t __constexpr_wc
 #endif
 }
 
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 int
-__constexpr_wmemcmp(const wchar_t* __lhs, const wchar_t* __rhs, size_t __count) {
+inline _LIBCPP_HIDE_FROM_ABI int __constexpr_wmemcmp(const wchar_t* __lhs, const wchar_t* __rhs, size_t __count) {
 #if __has_builtin(__builtin_wmemcmp)
   return __builtin_wmemcmp(__lhs, __rhs, __count);
 #else
@@ -226,7 +225,7 @@ __constexpr_wmemcmp(const wchar_t* __lhs, const wchar_t* __rhs, size_t __count) 
 }
 
 template <class _Tp, class _Up>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp* __constexpr_wmemchr(_Tp* __str, _Up __value, size_t __count) {
+_LIBCPP_HIDE_FROM_ABI _Tp* __constexpr_wmemchr(_Tp* __str, _Up __value, size_t __count) {
   static_assert(sizeof(_Tp) == sizeof(wchar_t)&& _LIBCPP_ALIGNOF(_Tp) >= _LIBCPP_ALIGNOF(wchar_t) &&
                     __libcpp_is_trivially_equality_comparable<_Tp, _Tp>::value,
                 "Calling wmemchr on non-trivially equality comparable types is unsafe.");

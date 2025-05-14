@@ -19,6 +19,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/BinaryFormat/MachO.h"
@@ -769,6 +770,7 @@ bool DwarfLinkerForBinary::linkImpl(
         MaxDWARFVersion = std::max(Unit.getVersion(), MaxDWARFVersion);
       };
 
+  llvm::StringSet<> SwiftModules;
   for (const auto &Obj : Map.objects()) {
     // N_AST objects (swiftmodule files) should get dumped directly into the
     // appropriate DWARF section.
@@ -777,6 +779,9 @@ bool DwarfLinkerForBinary::linkImpl(
         outs() << "DEBUG MAP OBJECT: " << Obj->getObjectFilename() << "\n";
 
       StringRef File = Obj->getObjectFilename();
+      if (!SwiftModules.insert(File).second)
+        continue;
+
       auto ErrorOrMem = MemoryBuffer::getFile(File);
       if (!ErrorOrMem) {
         reportWarning("Could not open '" + File + "'");

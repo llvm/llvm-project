@@ -278,9 +278,9 @@ size_t ELFLinuxPrStatus::GetSize(const lldb_private::ArchSpec &arch) {
   if (arch.IsMIPS()) {
     std::string abi = arch.GetTargetABI();
     assert(!abi.empty() && "ABI is not set");
-    if (!abi.compare("n64"))
+    if (abi == "n64")
       return sizeof(ELFLinuxPrStatus);
-    else if (!abi.compare("o32"))
+    else if (abi == "o32")
       return mips_linux_pr_status_size_o32;
     // N32 ABI
     return mips_linux_pr_status_size_n32;

@@ -14,6 +14,7 @@
 #define LLVM_SUPPORT_FILEOUTPUTBUFFER_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/Error.h"
 
@@ -45,7 +46,7 @@ public:
   /// Otherwise, the file shrinks or grows as necessary based on the value of
   /// \p Size.  It is an error to specify F_modify and Size=-1 if \p FilePath
   /// does not exist.
-  static Expected<std::unique_ptr<FileOutputBuffer>>
+  LLVM_ABI static Expected<std::unique_ptr<FileOutputBuffer>>
   create(StringRef FilePath, size_t Size, unsigned Flags = 0);
 
   /// Returns a pointer to the start of the buffer.

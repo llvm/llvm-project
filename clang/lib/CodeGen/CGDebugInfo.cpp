@@ -4500,8 +4500,7 @@ void CGDebugInfo::emitFunctionStart(GlobalDecl GD, SourceLocation Loc,
 
     Flags |= llvm::DINode::FlagPrototyped;
   }
-  if (Name.starts_with("\01"))
-    Name = Name.substr(1);
+  Name.consume_front("\01");
 
   assert((!D || !isa<VarDecl>(D) ||
           GD.getDynamicInitKind() != DynamicInitKind::NoStub) &&
@@ -4590,8 +4589,7 @@ void CGDebugInfo::EmitFunctionDecl(GlobalDecl GD, SourceLocation Loc,
   } else {
     llvm_unreachable("not a function or ObjC method");
   }
-  if (!Name.empty() && Name[0] == '\01')
-    Name = Name.substr(1);
+  Name.consume_front("\01");
 
   if (D->isImplicit()) {
     Flags |= llvm::DINode::FlagArtificial;

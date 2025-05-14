@@ -2086,8 +2086,8 @@ void PreRARematStage::rematerialize() {
       DAG.updateRegionBoundaries(DAG.Regions[UseRegion->second], InsertPos,
                                  Remat.RematMI);
     }
-    DefMI->eraseFromParent();
     DAG.LIS->RemoveMachineInstrFromMaps(*DefMI);
+    DefMI->eraseFromParent();
 
     // Collect all regions impacted by the rematerialization and update their
     // live-in/RP information.
@@ -2236,8 +2236,8 @@ void PreRARematStage::finalizeGCNSchedStage() {
     DAG.updateRegionBoundaries(DAG.Regions[DefRegion], InsertPos, NewMI);
 
     // Erase rematerialized MI.
-    RematMI.eraseFromParent();
     DAG.LIS->RemoveMachineInstrFromMaps(RematMI);
+    RematMI.eraseFromParent();
 
     // Recompute live interval for the re-rematerialized register
     DAG.LIS->removeInterval(Reg);

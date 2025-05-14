@@ -168,34 +168,21 @@ foreach Gen = [GFX11GenD, GFX12GenD] in {
       defvar yAsmName = getRenamed<YasVC.VOPDName, Gen>.ret;
       defvar isMADK = !or(!eq(x, "V_FMAAK_F32"), !eq(x, "V_FMAMK_F32"),
                           !eq(y, "V_FMAAK_F32"), !eq(y, "V_FMAMK_F32"));
-      // If X or Y is MADK (have a mandatory immediate), all src operands which
-      // may contain an optional literal must use the VSrc_*_Deferred operand
-      // type. Optional literal operands in MADK VOPD components always use this
-      // operand form. If Both X and Y are MADK, the mandatory literal of X
-      // additionally must use an alternate operand format which defers to the
-      // 'real' Y literal
       defvar isOpXMADK = !or(!eq(x, "V_FMAAK_F32"), !eq(x, "V_FMAMK_F32"));
       defvar isOpYMADK = !or(!eq(y, "V_FMAAK_F32"), !eq(y, "V_FMAMK_F32"));
       defvar OpName = "V_DUAL_" # !substr(x,2) # "_X_" # !substr(y,2) # Gen.Suffix;
       defvar outs = (outs VGPRSrc_32:$vdstX, VOPDDstYOperand:$vdstY);
       if !or(isOpXMADK, isOpYMADK) then {
-        if !and(isOpXMADK, isOpYMADK) then {
-          defvar X_MADK_Pfl = !cast<VOP_MADK_Base>(xInst.Pfl);
-          defvar ins = !con(xInst.Pfl.InsVOPDXDeferred, yInst.Pfl.InsVOPDY);
-          defvar asm = xAsmName #" "# X_MADK_Pfl.AsmVOPDXDeferred #" :: "# yAsmName #" "# yInst.Pfl.AsmVOPDY;
-          def OpName : VOPD_MADK<outs, ins, asm, xInst, yInst, XasVC, YasVC, Gen>;
-        } else {
-          defvar asm = xAsmName #" "# xInst.Pfl.AsmVOPDX #" :: "# yAsmName #" "# yInst.Pfl.AsmVOPDY;
-          if isOpXMADK then {
-            assert !not(isOpYMADK), "Expected only OpX as MADK";
-            defvar ins = !con(xInst.Pfl.InsVOPDX, yInst.Pfl.InsVOPDYDeferred);
-            def OpName : VOPD_MADK<outs, ins, asm, xInst, yInst, XasVC, YasVC, Gen>;
-          } else {
-            assert !not(isOpXMADK), "Expected only OpY as MADK";
-            defvar ins = !con(xInst.Pfl.InsVOPDXDeferred, yInst.Pfl.InsVOPDY);
-            def OpName : VOPD_MADK<outs, ins, asm, xInst, yInst, XasVC, YasVC, Gen>;
-          }
-        }
+        // If Both X and Y are MADK, the mandatory literal of X additionally must
+        // use an alternate operand format which defers to the 'real' Y literal.
+        defvar isOpXYMADK = !and(isOpXMADK, isOpYMADK);
+        defvar X_MADK_Pfl = !cast<VOP_MADK_Base>(xInst.Pfl);
+        defvar asm = xAsmName #" "#
+                     !if(isOpXYMADK, X_MADK_Pfl.AsmVOPDX_immX, xInst.Pfl.AsmVOPDX)#
+                     " :: "# yAsmName #" "# yInst.Pfl.AsmVOPDY;
+        defvar ins = !con(!if(isOpXYMADK, xInst.Pfl.InsVOPDX_immX, xInst.Pfl.InsVOPDX),
+                          yInst.Pfl.InsVOPDY);
+        def OpName : VOPD_MADK<outs, ins, asm, xInst, yInst, XasVC, YasVC, Gen>;
       } else {
         defvar ins = !con(xInst.Pfl.InsVOPDX, yInst.Pfl.InsVOPDY);
         defvar asm = xAsmName #" "# xInst.Pfl.AsmVOPDX #" :: "# yAsmName #" "# yInst.Pfl.AsmVOPDY;

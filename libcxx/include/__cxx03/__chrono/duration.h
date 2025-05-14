@@ -68,14 +68,14 @@ struct __duration_cast;
 
 template <class _FromDuration, class _ToDuration, class _Period>
 struct __duration_cast<_FromDuration, _ToDuration, _Period, true, true> {
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _ToDuration operator()(const _FromDuration& __fd) const {
+  _LIBCPP_HIDE_FROM_ABI _ToDuration operator()(const _FromDuration& __fd) const {
     return _ToDuration(static_cast<typename _ToDuration::rep>(__fd.count()));
   }
 };
 
 template <class _FromDuration, class _ToDuration, class _Period>
 struct __duration_cast<_FromDuration, _ToDuration, _Period, true, false> {
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _ToDuration operator()(const _FromDuration& __fd) const {
+  _LIBCPP_HIDE_FROM_ABI _ToDuration operator()(const _FromDuration& __fd) const {
     typedef typename common_type<typename _ToDuration::rep, typename _FromDuration::rep, intmax_t>::type _Ct;
     return _ToDuration(
         static_cast<typename _ToDuration::rep>(static_cast<_Ct>(__fd.count()) / static_cast<_Ct>(_Period::den)));
@@ -84,7 +84,7 @@ struct __duration_cast<_FromDuration, _ToDuration, _Period, true, false> {
 
 template <class _FromDuration, class _ToDuration, class _Period>
 struct __duration_cast<_FromDuration, _ToDuration, _Period, false, true> {
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _ToDuration operator()(const _FromDuration& __fd) const {
+  _LIBCPP_HIDE_FROM_ABI _ToDuration operator()(const _FromDuration& __fd) const {
     typedef typename common_type<typename _ToDuration::rep, typename _FromDuration::rep, intmax_t>::type _Ct;
     return _ToDuration(
         static_cast<typename _ToDuration::rep>(static_cast<_Ct>(__fd.count()) * static_cast<_Ct>(_Period::num)));
@@ -93,7 +93,7 @@ struct __duration_cast<_FromDuration, _ToDuration, _Period, false, true> {
 
 template <class _FromDuration, class _ToDuration, class _Period>
 struct __duration_cast<_FromDuration, _ToDuration, _Period, false, false> {
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _ToDuration operator()(const _FromDuration& __fd) const {
+  _LIBCPP_HIDE_FROM_ABI _ToDuration operator()(const _FromDuration& __fd) const {
     typedef typename common_type<typename _ToDuration::rep, typename _FromDuration::rep, intmax_t>::type _Ct;
     return _ToDuration(static_cast<typename _ToDuration::rep>(
         static_cast<_Ct>(__fd.count()) * static_cast<_Ct>(_Period::num) / static_cast<_Ct>(_Period::den)));
@@ -101,20 +101,22 @@ struct __duration_cast<_FromDuration, _ToDuration, _Period, false, false> {
 };
 
 template <class _ToDuration, class _Rep, class _Period, __enable_if_t<__is_duration<_ToDuration>::value, int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _ToDuration duration_cast(const duration<_Rep, _Period>& __fd) {
+inline _LIBCPP_HIDE_FROM_ABI _ToDuration duration_cast(const duration<_Rep, _Period>& __fd) {
   return __duration_cast<duration<_Rep, _Period>, _ToDuration>()(__fd);
 }
 
 template <class _Rep>
 struct _LIBCPP_TEMPLATE_VIS treat_as_floating_point : is_floating_point<_Rep> {};
 
+// clang-format off
 template <class _Rep>
 struct _LIBCPP_TEMPLATE_VIS duration_values {
 public:
-  _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR _Rep zero() _NOEXCEPT { return _Rep(0); }
-  _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR _Rep max() _NOEXCEPT { return numeric_limits<_Rep>::max(); }
-  _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR _Rep min() _NOEXCEPT { return numeric_limits<_Rep>::lowest(); }
+  _LIBCPP_HIDE_FROM_ABI static _Rep zero() _NOEXCEPT { return _Rep(0); }
+  _LIBCPP_HIDE_FROM_ABI static _Rep max() _NOEXCEPT { return numeric_limits<_Rep>::max(); }
+  _LIBCPP_HIDE_FROM_ABI static _Rep min() _NOEXCEPT { return numeric_limits<_Rep>::lowest(); }
 };
+// clang-format on
 
 // duration
 
@@ -165,7 +167,7 @@ public:
             __enable_if_t<is_convertible<const _Rep2&, rep>::value &&
                               (treat_as_floating_point<rep>::value || !treat_as_floating_point<_Rep2>::value),
                           int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR explicit duration(const _Rep2& __r) : __rep_(__r) {}
+  _LIBCPP_HIDE_FROM_ABI explicit duration(const _Rep2& __r) : __rep_(__r) {}
 
   // conversions
   template <class _Rep2,
@@ -174,69 +176,63 @@ public:
                                                                      (__no_overflow<_Period2, period>::type::den == 1 &&
                                                                       !treat_as_floating_point<_Rep2>::value)),
                           int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR duration(const duration<_Rep2, _Period2>& __d)
+  _LIBCPP_HIDE_FROM_ABI duration(const duration<_Rep2, _Period2>& __d)
       : __rep_(chrono::duration_cast<duration>(__d).count()) {}
 
   // observer
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR rep count() const { return __rep_; }
+  _LIBCPP_HIDE_FROM_ABI rep count() const { return __rep_; }
 
   // arithmetic
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR typename common_type<duration>::type operator+() const {
+  _LIBCPP_HIDE_FROM_ABI typename common_type<duration>::type operator+() const {
     return typename common_type<duration>::type(*this);
   }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR typename common_type<duration>::type operator-() const {
+  _LIBCPP_HIDE_FROM_ABI typename common_type<duration>::type operator-() const {
     return typename common_type<duration>::type(-__rep_);
   }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 duration& operator++() {
+  _LIBCPP_HIDE_FROM_ABI duration& operator++() {
     ++__rep_;
     return *this;
   }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 duration operator++(int) { return duration(__rep_++); }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 duration& operator--() {
+  _LIBCPP_HIDE_FROM_ABI duration operator++(int) { return duration(__rep_++); }
+  _LIBCPP_HIDE_FROM_ABI duration& operator--() {
     --__rep_;
     return *this;
   }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 duration operator--(int) { return duration(__rep_--); }
+  _LIBCPP_HIDE_FROM_ABI duration operator--(int) { return duration(__rep_--); }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 duration& operator+=(const duration& __d) {
+  _LIBCPP_HIDE_FROM_ABI duration& operator+=(const duration& __d) {
     __rep_ += __d.count();
     return *this;
   }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 duration& operator-=(const duration& __d) {
+  _LIBCPP_HIDE_FROM_ABI duration& operator-=(const duration& __d) {
     __rep_ -= __d.count();
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 duration& operator*=(const rep& __rhs) {
+  _LIBCPP_HIDE_FROM_ABI duration& operator*=(const rep& __rhs) {
     __rep_ *= __rhs;
     return *this;
   }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 duration& operator/=(const rep& __rhs) {
+  _LIBCPP_HIDE_FROM_ABI duration& operator/=(const rep& __rhs) {
     __rep_ /= __rhs;
     return *this;
   }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 duration& operator%=(const rep& __rhs) {
+  _LIBCPP_HIDE_FROM_ABI duration& operator%=(const rep& __rhs) {
     __rep_ %= __rhs;
     return *this;
   }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 duration& operator%=(const duration& __rhs) {
+  _LIBCPP_HIDE_FROM_ABI duration& operator%=(const duration& __rhs) {
     __rep_ %= __rhs.count();
     return *this;
   }
 
   // special values
 
-  _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR duration zero() _NOEXCEPT {
-    return duration(duration_values<rep>::zero());
-  }
-  _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR duration min() _NOEXCEPT {
-    return duration(duration_values<rep>::min());
-  }
-  _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR duration max() _NOEXCEPT {
-    return duration(duration_values<rep>::max());
-  }
+  _LIBCPP_HIDE_FROM_ABI static duration zero() _NOEXCEPT { return duration(duration_values<rep>::zero()); }
+  _LIBCPP_HIDE_FROM_ABI static duration min() _NOEXCEPT { return duration(duration_values<rep>::min()); }
+  _LIBCPP_HIDE_FROM_ABI static duration max() _NOEXCEPT { return duration(duration_values<rep>::max()); }
 };
 
 typedef duration<long long, nano> nanoseconds;
@@ -250,7 +246,7 @@ typedef duration< long, ratio<3600> > hours;
 
 template <class _LhsDuration, class _RhsDuration>
 struct __duration_eq {
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool operator()(const _LhsDuration& __lhs, const _RhsDuration& __rhs) const {
+  _LIBCPP_HIDE_FROM_ABI bool operator()(const _LhsDuration& __lhs, const _RhsDuration& __rhs) const {
     typedef typename common_type<_LhsDuration, _RhsDuration>::type _Ct;
     return _Ct(__lhs).count() == _Ct(__rhs).count();
   }
@@ -258,13 +254,13 @@ struct __duration_eq {
 
 template <class _LhsDuration>
 struct __duration_eq<_LhsDuration, _LhsDuration> {
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool operator()(const _LhsDuration& __lhs, const _LhsDuration& __rhs) const {
+  _LIBCPP_HIDE_FROM_ABI bool operator()(const _LhsDuration& __lhs, const _LhsDuration& __rhs) const {
     return __lhs.count() == __rhs.count();
   }
 };
 
 template <class _Rep1, class _Period1, class _Rep2, class _Period2>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool
+inline _LIBCPP_HIDE_FROM_ABI bool
 operator==(const duration<_Rep1, _Period1>& __lhs, const duration<_Rep2, _Period2>& __rhs) {
   return __duration_eq<duration<_Rep1, _Period1>, duration<_Rep2, _Period2> >()(__lhs, __rhs);
 }
@@ -272,7 +268,7 @@ operator==(const duration<_Rep1, _Period1>& __lhs, const duration<_Rep2, _Period
 // Duration !=
 
 template <class _Rep1, class _Period1, class _Rep2, class _Period2>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool
+inline _LIBCPP_HIDE_FROM_ABI bool
 operator!=(const duration<_Rep1, _Period1>& __lhs, const duration<_Rep2, _Period2>& __rhs) {
   return !(__lhs == __rhs);
 }
@@ -281,7 +277,7 @@ operator!=(const duration<_Rep1, _Period1>& __lhs, const duration<_Rep2, _Period
 
 template <class _LhsDuration, class _RhsDuration>
 struct __duration_lt {
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool operator()(const _LhsDuration& __lhs, const _RhsDuration& __rhs) const {
+  _LIBCPP_HIDE_FROM_ABI bool operator()(const _LhsDuration& __lhs, const _RhsDuration& __rhs) const {
     typedef typename common_type<_LhsDuration, _RhsDuration>::type _Ct;
     return _Ct(__lhs).count() < _Ct(__rhs).count();
   }
@@ -289,13 +285,13 @@ struct __duration_lt {
 
 template <class _LhsDuration>
 struct __duration_lt<_LhsDuration, _LhsDuration> {
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool operator()(const _LhsDuration& __lhs, const _LhsDuration& __rhs) const {
+  _LIBCPP_HIDE_FROM_ABI bool operator()(const _LhsDuration& __lhs, const _LhsDuration& __rhs) const {
     return __lhs.count() < __rhs.count();
   }
 };
 
 template <class _Rep1, class _Period1, class _Rep2, class _Period2>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool
+inline _LIBCPP_HIDE_FROM_ABI bool
 operator<(const duration<_Rep1, _Period1>& __lhs, const duration<_Rep2, _Period2>& __rhs) {
   return __duration_lt<duration<_Rep1, _Period1>, duration<_Rep2, _Period2> >()(__lhs, __rhs);
 }
@@ -303,7 +299,7 @@ operator<(const duration<_Rep1, _Period1>& __lhs, const duration<_Rep2, _Period2
 // Duration >
 
 template <class _Rep1, class _Period1, class _Rep2, class _Period2>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool
+inline _LIBCPP_HIDE_FROM_ABI bool
 operator>(const duration<_Rep1, _Period1>& __lhs, const duration<_Rep2, _Period2>& __rhs) {
   return __rhs < __lhs;
 }
@@ -311,7 +307,7 @@ operator>(const duration<_Rep1, _Period1>& __lhs, const duration<_Rep2, _Period2
 // Duration <=
 
 template <class _Rep1, class _Period1, class _Rep2, class _Period2>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool
+inline _LIBCPP_HIDE_FROM_ABI bool
 operator<=(const duration<_Rep1, _Period1>& __lhs, const duration<_Rep2, _Period2>& __rhs) {
   return !(__rhs < __lhs);
 }
@@ -319,7 +315,7 @@ operator<=(const duration<_Rep1, _Period1>& __lhs, const duration<_Rep2, _Period
 // Duration >=
 
 template <class _Rep1, class _Period1, class _Rep2, class _Period2>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool
+inline _LIBCPP_HIDE_FROM_ABI bool
 operator>=(const duration<_Rep1, _Period1>& __lhs, const duration<_Rep2, _Period2>& __rhs) {
   return !(__lhs < __rhs);
 }
@@ -327,8 +323,7 @@ operator>=(const duration<_Rep1, _Period1>& __lhs, const duration<_Rep2, _Period
 // Duration +
 
 template <class _Rep1, class _Period1, class _Rep2, class _Period2>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR
-typename common_type<duration<_Rep1, _Period1>, duration<_Rep2, _Period2> >::type
+inline _LIBCPP_HIDE_FROM_ABI typename common_type<duration<_Rep1, _Period1>, duration<_Rep2, _Period2> >::type
 operator+(const duration<_Rep1, _Period1>& __lhs, const duration<_Rep2, _Period2>& __rhs) {
   typedef typename common_type<duration<_Rep1, _Period1>, duration<_Rep2, _Period2> >::type _Cd;
   return _Cd(_Cd(__lhs).count() + _Cd(__rhs).count());
@@ -337,8 +332,7 @@ operator+(const duration<_Rep1, _Period1>& __lhs, const duration<_Rep2, _Period2
 // Duration -
 
 template <class _Rep1, class _Period1, class _Rep2, class _Period2>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR
-typename common_type<duration<_Rep1, _Period1>, duration<_Rep2, _Period2> >::type
+inline _LIBCPP_HIDE_FROM_ABI typename common_type<duration<_Rep1, _Period1>, duration<_Rep2, _Period2> >::type
 operator-(const duration<_Rep1, _Period1>& __lhs, const duration<_Rep2, _Period2>& __rhs) {
   typedef typename common_type<duration<_Rep1, _Period1>, duration<_Rep2, _Period2> >::type _Cd;
   return _Cd(_Cd(__lhs).count() - _Cd(__rhs).count());
@@ -350,7 +344,7 @@ template <class _Rep1,
           class _Period,
           class _Rep2,
           __enable_if_t<is_convertible<const _Rep2&, typename common_type<_Rep1, _Rep2>::type>::value, int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR duration<typename common_type<_Rep1, _Rep2>::type, _Period>
+inline _LIBCPP_HIDE_FROM_ABI duration<typename common_type<_Rep1, _Rep2>::type, _Period>
 operator*(const duration<_Rep1, _Period>& __d, const _Rep2& __s) {
   typedef typename common_type<_Rep1, _Rep2>::type _Cr;
   typedef duration<_Cr, _Period> _Cd;
@@ -361,7 +355,7 @@ template <class _Rep1,
           class _Period,
           class _Rep2,
           __enable_if_t<is_convertible<const _Rep1&, typename common_type<_Rep1, _Rep2>::type>::value, int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR duration<typename common_type<_Rep1, _Rep2>::type, _Period>
+inline _LIBCPP_HIDE_FROM_ABI duration<typename common_type<_Rep1, _Rep2>::type, _Period>
 operator*(const _Rep1& __s, const duration<_Rep2, _Period>& __d) {
   return __d * __s;
 }
@@ -374,7 +368,7 @@ template <class _Rep1,
           __enable_if_t<!__is_duration<_Rep2>::value &&
                             is_convertible<const _Rep2&, typename common_type<_Rep1, _Rep2>::type>::value,
                         int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR duration<typename common_type<_Rep1, _Rep2>::type, _Period>
+inline _LIBCPP_HIDE_FROM_ABI duration<typename common_type<_Rep1, _Rep2>::type, _Period>
 operator/(const duration<_Rep1, _Period>& __d, const _Rep2& __s) {
   typedef typename common_type<_Rep1, _Rep2>::type _Cr;
   typedef duration<_Cr, _Period> _Cd;
@@ -382,7 +376,7 @@ operator/(const duration<_Rep1, _Period>& __d, const _Rep2& __s) {
 }
 
 template <class _Rep1, class _Period1, class _Rep2, class _Period2>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR typename common_type<_Rep1, _Rep2>::type
+inline _LIBCPP_HIDE_FROM_ABI typename common_type<_Rep1, _Rep2>::type
 operator/(const duration<_Rep1, _Period1>& __lhs, const duration<_Rep2, _Period2>& __rhs) {
   typedef typename common_type<duration<_Rep1, _Period1>, duration<_Rep2, _Period2> >::type _Ct;
   return _Ct(__lhs).count() / _Ct(__rhs).count();
@@ -396,7 +390,7 @@ template <class _Rep1,
           __enable_if_t<!__is_duration<_Rep2>::value &&
                             is_convertible<const _Rep2&, typename common_type<_Rep1, _Rep2>::type>::value,
                         int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR duration<typename common_type<_Rep1, _Rep2>::type, _Period>
+inline _LIBCPP_HIDE_FROM_ABI duration<typename common_type<_Rep1, _Rep2>::type, _Period>
 operator%(const duration<_Rep1, _Period>& __d, const _Rep2& __s) {
   typedef typename common_type<_Rep1, _Rep2>::type _Cr;
   typedef duration<_Cr, _Period> _Cd;
@@ -404,8 +398,7 @@ operator%(const duration<_Rep1, _Period>& __d, const _Rep2& __s) {
 }
 
 template <class _Rep1, class _Period1, class _Rep2, class _Period2>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR
-typename common_type<duration<_Rep1, _Period1>, duration<_Rep2, _Period2> >::type
+inline _LIBCPP_HIDE_FROM_ABI typename common_type<duration<_Rep1, _Period1>, duration<_Rep2, _Period2> >::type
 operator%(const duration<_Rep1, _Period1>& __lhs, const duration<_Rep2, _Period2>& __rhs) {
   typedef typename common_type<_Rep1, _Rep2>::type _Cr;
   typedef typename common_type<duration<_Rep1, _Period1>, duration<_Rep2, _Period2> >::type _Cd;

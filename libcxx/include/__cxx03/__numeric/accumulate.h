@@ -23,15 +23,14 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _InputIterator, class _Tp>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp
-accumulate(_InputIterator __first, _InputIterator __last, _Tp __init) {
+_LIBCPP_HIDE_FROM_ABI _Tp accumulate(_InputIterator __first, _InputIterator __last, _Tp __init) {
   for (; __first != __last; ++__first)
     __init = __init + *__first;
   return __init;
 }
 
 template <class _InputIterator, class _Tp, class _BinaryOperation>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp
+_LIBCPP_HIDE_FROM_ABI _Tp
 accumulate(_InputIterator __first, _InputIterator __last, _Tp __init, _BinaryOperation __binary_op) {
   for (; __first != __last; ++__first)
     __init = __binary_op(__init, *__first);

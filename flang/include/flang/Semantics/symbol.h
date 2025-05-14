@@ -22,6 +22,7 @@
 #include <list>
 #include <optional>
 #include <set>
+#include <variant>
 #include <vector>
 
 namespace llvm {
@@ -127,6 +128,9 @@ private:
 // Device type specific OpenACC routine information
 class OpenACCRoutineDeviceTypeInfo {
 public:
+  explicit OpenACCRoutineDeviceTypeInfo(
+      Fortran::common::OpenACCDeviceType dType)
+      : deviceType_{dType} {}
   bool isSeq() const { return isSeq_; }
   void set_isSeq(bool value = true) { isSeq_ = value; }
   bool isVector() const { return isVector_; }
@@ -137,14 +141,20 @@ public:
   void set_isGang(bool value = true) { isGang_ = value; }
   unsigned gangDim() const { return gangDim_; }
   void set_gangDim(unsigned value) { gangDim_ = value; }
-  const std::string *bindName() const {
-    return bindName_ ? &*bindName_ : nullptr;
+  const std::variant<std::string, SymbolRef> *bindName() const {
+    return bindName_.has_value() ? &*bindName_ : nullptr;
   }
-  void set_bindName(std::string &&name) { bindName_ = std::move(name); }
-  void set_dType(Fortran::common::OpenACCDeviceType dType) {
-    deviceType_ = dType;
+  const std::optional<std::variant<std::string, SymbolRef>> &
+  bindNameOpt() const {
+    return bindName_;
   }
+  void set_bindName(std::string &&name) { bindName_.emplace(std::move(name)); }
+  void set_bindName(SymbolRef symbol) { bindName_.emplace(symbol); }
+
   Fortran::common::OpenACCDeviceType dType() const { return deviceType_; }
+
+  friend llvm::raw_ostream &operator<<(
+      llvm::raw_ostream &, const OpenACCRoutineDeviceTypeInfo &);
 
 private:
   bool isSeq_{false};
@@ -152,7 +162,9 @@ private:
   bool isWorker_{false};
   bool isGang_{false};
   unsigned gangDim_{0};
-  std::optional<std::string> bindName_;
+  // bind("name") -> std::string
+  // bind(sym) -> SymbolRef (requires namemangling in lowering)
+  std::optional<std::variant<std::string, SymbolRef>> bindName_;
   Fortran::common::OpenACCDeviceType deviceType_{
       Fortran::common::OpenACCDeviceType::None};
 };
@@ -162,14 +174,28 @@ private:
 // in as objects in the OpenACCRoutineDeviceTypeInfo list.
 class OpenACCRoutineInfo : public OpenACCRoutineDeviceTypeInfo {
 public:
+  OpenACCRoutineInfo()
+      : OpenACCRoutineDeviceTypeInfo(Fortran::common::OpenACCDeviceType::None) {
+  }
   bool isNohost() const { return isNohost_; }
   void set_isNohost(bool value = true) { isNohost_ = value; }
-  std::list<OpenACCRoutineDeviceTypeInfo> &deviceTypeInfos() {
+  const std::list<OpenACCRoutineDeviceTypeInfo> &deviceTypeInfos() const {
     return deviceTypeInfos_;
   }
-  void add_deviceTypeInfo(OpenACCRoutineDeviceTypeInfo &info) {
-    deviceTypeInfos_.push_back(info);
+
+  OpenACCRoutineDeviceTypeInfo &add_deviceTypeInfo(
+      Fortran::common::OpenACCDeviceType type) {
+    return add_deviceTypeInfo(OpenACCRoutineDeviceTypeInfo(type));
   }
+
+  OpenACCRoutineDeviceTypeInfo &add_deviceTypeInfo(
+      OpenACCRoutineDeviceTypeInfo &&info) {
+    deviceTypeInfos_.push_back(std::move(info));
+    return deviceTypeInfos_.back();
+  }
+
+  friend llvm::raw_ostream &operator<<(
+      llvm::raw_ostream &, const OpenACCRoutineInfo &);
 
 private:
   std::list<OpenACCRoutineDeviceTypeInfo> deviceTypeInfos_;
