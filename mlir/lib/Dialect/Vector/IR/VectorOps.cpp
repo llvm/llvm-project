@@ -2414,8 +2414,8 @@ public:
 
     mlir::OperandRange elements = fromElements.getElements();
     assert(!elements.empty() && "must be at least 1 element");
-
     Value firstElement = elements.front();
+
     ExtractOp extractOp =
         dyn_cast_if_present<vector::ExtractOp>(firstElement.getDefiningOp());
     if (!extractOp) {
