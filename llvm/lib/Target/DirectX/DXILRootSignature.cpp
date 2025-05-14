@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 #include "DXILRootSignature.h"
 #include "DirectX.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
@@ -27,6 +28,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cstddef>
 #include <cstdint>
 #include <optional>
 #include <utility>
@@ -291,35 +293,37 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
     OS << indent(Space) << "NumParameters: " << RS.ParametersContainer.size()
        << "\n";
     Space++;
-    for (auto const &Info : RS.ParametersContainer) {
-      OS << indent(Space) << "- Parameter Type: " << Info.Header.ParameterType
-         << "\n";
+    for (size_t I = 0; I < RS.ParametersContainer.size(); I++) {
+      const auto &[Type, Loc] =
+          RS.ParametersContainer.getTypeAndLocForParameter(I);
+      const dxbc::RootParameterHeader Header =
+          RS.ParametersContainer.getHeader(I);
+
+      OS << indent(Space) << "- Parameter Type: " << Type << "\n";
       OS << indent(Space + 2)
-         << "Shader Visibility: " << Info.Header.ShaderVisibility << "\n";
-      std::optional<mcdxbc::ParametersView> P =
-          RS.ParametersContainer.getParameter(&Info);
-      if (!P)
-        continue;
-      if (std::holds_alternative<const dxbc::RootConstants *>(*P)) {
-        auto *Constants = std::get<const dxbc::RootConstants *>(*P);
+         << "Shader Visibility: " << Header.ShaderVisibility << "\n";
+
+      switch (Type) {
+      case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit): {
+        auto Constants = RS.ParametersContainer.getConstant(Loc);
+        OS << indent(Space + 2) << "Register Space: " << Constants.RegisterSpace
+           << "\n";
         OS << indent(Space + 2)
-           << "Register Space: " << Constants->RegisterSpace << "\n";
+           << "Shader Register: " << Constants.ShaderRegister << "\n";
         OS << indent(Space + 2)
-           << "Shader Register: " << Constants->ShaderRegister << "\n";
-        OS << indent(Space + 2)
-           << "Num 32 Bit Values: " << Constants->Num32BitValues << "\n";
+           << "Num 32 Bit Values: " << Constants.Num32BitValues << "\n";
       }
+      }
+      Space--;
     }
-    Space--;
     OS << indent(Space) << "NumStaticSamplers: " << 0 << "\n";
     OS << indent(Space) << "StaticSamplersOffset: " << RS.StaticSamplersOffset
        << "\n";
 
     Space--;
     // end root signature header
-  }
-
-  return PreservedAnalyses::all();
+}
+return PreservedAnalyses::all();
 }
 
 //===----------------------------------------------------------------------===//

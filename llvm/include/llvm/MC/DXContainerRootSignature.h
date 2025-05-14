@@ -35,7 +35,7 @@ struct RootParametersContainer {
   SmallVector<RootParameterInfo> ParametersInfo;
 
   SmallVector<dxbc::RootConstants> Constants;
-  SmallVector<RootDescriptor> Descriptors;
+  SmallVector<dxbc::RTS0::v2::RootDescriptor> Descriptors;
 
   void addInfo(dxbc::RootParameterHeader H, size_t L) {
     ParametersInfo.push_back(RootParameterInfo(H, L));
@@ -47,33 +47,28 @@ struct RootParametersContainer {
   }
 
   void addParameter(dxbc::RootParameterHeader H,
-                    dxbc::RTS0::v1::RootDescriptor D) {
-    addInfo(H, Descriptors.size());
-    Descriptors.push_back(D);
-  }
-
-  void addParameter(dxbc::RootParameterHeader H,
                     dxbc::RTS0::v2::RootDescriptor D) {
     addInfo(H, Descriptors.size());
     Descriptors.push_back(D);
   }
 
-  std::optional<ParametersView> getParameter(const RootParameterInfo *H) const {
-    switch (H->Header.ParameterType) {
-    case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit):
-      return &Constants[H->Location];
-    case llvm::to_underlying(dxbc::RootParameterType::CBV):
-    case llvm::to_underlying(dxbc::RootParameterType::SRV):
-    case llvm::to_underlying(dxbc::RootParameterType::UAV):
-      const RootDescriptor &VersionedParam = Descriptors[H->Location];
-      if (std::holds_alternative<dxbc::RTS0::v1::RootDescriptor>(
-              VersionedParam)) {
-        return &std::get<dxbc::RTS0::v1::RootDescriptor>(VersionedParam);
-      }
-      return &std::get<dxbc::RTS0::v2::RootDescriptor>(VersionedParam);
-    }
+  const std::pair<uint32_t, uint32_t>
+  getTypeAndLocForParameter(uint32_t Index) const {
+    const RootParameterInfo &Info = ParametersInfo[Index];
+    return {Info.Header.ParameterType, Info.Location};
+  }
 
-    return std::nullopt;
+  const dxbc::RootParameterHeader &getHeader(size_t Index) const {
+    const RootParameterInfo &Info = ParametersInfo[Index];
+    return Info.Header;
+  }
+
+  const dxbc::RootConstants &getConstant(size_t Index) const {
+    return Constants[Index];
+  }
+
+  const dxbc::RTS0::v2::RootDescriptor &getRootDescriptor(size_t Index) const {
+    return Descriptors[Index];
   }
 
   size_t size() const { return ParametersInfo.size(); }
