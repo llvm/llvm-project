@@ -23,7 +23,8 @@ protected:
   void SetUp() override;
 };
 
-/// A base class for tests that need transport configured.
+/// A base class for tests that need transport configured for communicating DAP
+/// messages.
 class TransportBase : public PipeBase {
 protected:
   std::unique_ptr<lldb_dap::Transport> to_dap;
@@ -32,6 +33,7 @@ protected:
   void SetUp() override;
 };
 
+/// A base class for tests that interact with a `lldb_dap::DAP` instance.
 class DAPTestBase : public TransportBase {
 protected:
   std::unique_ptr<lldb_dap::DAP> dap;
