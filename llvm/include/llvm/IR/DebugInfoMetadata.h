@@ -722,6 +722,8 @@ class DIType : public DIScope {
   uint32_t NumExtraInhabitants;
 
 protected:
+  static constexpr unsigned N_OPERANDS = 3;
+
   DIType(LLVMContext &C, unsigned ID, StorageType Storage, unsigned Tag,
          unsigned Line, uint64_t SizeInBits, uint32_t AlignInBits,
          uint64_t OffsetInBits, uint32_t NumExtraInhabitants, DIFlags Flags,
@@ -1050,6 +1052,8 @@ class DIStringType : public DIType {
   friend class LLVMContextImpl;
   friend class MDNode;
 
+  static constexpr unsigned MY_FIRST_OPERAND = DIType::N_OPERANDS;
+
   unsigned Encoding;
 
   DIStringType(LLVMContext &C, StorageType Storage, unsigned Tag,
@@ -1124,11 +1128,15 @@ public:
 
   unsigned getEncoding() const { return Encoding; }
 
-  Metadata *getRawStringLength() const { return getOperand(3); }
+  Metadata *getRawStringLength() const { return getOperand(MY_FIRST_OPERAND); }
 
-  Metadata *getRawStringLengthExp() const { return getOperand(4); }
+  Metadata *getRawStringLengthExp() const {
+    return getOperand(MY_FIRST_OPERAND + 1);
+  }
 
-  Metadata *getRawStringLocationExp() const { return getOperand(5); }
+  Metadata *getRawStringLocationExp() const {
+    return getOperand(MY_FIRST_OPERAND + 2);
+  }
 };
 
 /// Derived types.
@@ -1169,6 +1177,8 @@ public:
 private:
   friend class LLVMContextImpl;
   friend class MDNode;
+
+  static constexpr unsigned MY_FIRST_OPERAND = DIType::N_OPERANDS;
 
   /// The DWARF address space of the memory pointed to or referenced by a
   /// pointer or reference type respectively.
@@ -1246,7 +1256,7 @@ public:
 
   /// Get the base type this is derived from.
   DIType *getBaseType() const { return cast_or_null<DIType>(getRawBaseType()); }
-  Metadata *getRawBaseType() const { return getOperand(3); }
+  Metadata *getRawBaseType() const { return getOperand(MY_FIRST_OPERAND); }
 
   /// \returns The DWARF address space of the memory pointed to or referenced by
   /// a pointer or reference type respectively.
@@ -1266,7 +1276,7 @@ public:
   /// TODO: Separate out types that need this extra operand: pointer-to-member
   /// types and member fields (static members and ivars).
   Metadata *getExtraData() const { return getRawExtraData(); }
-  Metadata *getRawExtraData() const { return getOperand(4); }
+  Metadata *getRawExtraData() const { return getOperand(MY_FIRST_OPERAND + 1); }
 
   /// Get the template parameters from a template alias.
   DITemplateParameterArray getTemplateParams() const {
@@ -1277,7 +1287,9 @@ public:
   DINodeArray getAnnotations() const {
     return cast_or_null<MDTuple>(getRawAnnotations());
   }
-  Metadata *getRawAnnotations() const { return getOperand(5); }
+  Metadata *getRawAnnotations() const {
+    return getOperand(MY_FIRST_OPERAND + 2);
+  }
 
   /// Get casted version of extra data.
   /// @{
@@ -1320,6 +1332,8 @@ public:
 private:
   friend class LLVMContextImpl;
   friend class MDNode;
+
+  static constexpr unsigned MY_FIRST_OPERAND = DIType::N_OPERANDS;
 
   DISubrangeType(LLVMContext &C, StorageType Storage, unsigned Line,
                  uint64_t SizeInBits, uint32_t AlignInBits, DIFlags Flags,
@@ -1374,15 +1388,23 @@ public:
 
   /// Get the base type this is derived from.
   DIType *getBaseType() const { return cast_or_null<DIType>(getRawBaseType()); }
-  Metadata *getRawBaseType() const { return getOperand(3); }
+  Metadata *getRawBaseType() const { return getOperand(MY_FIRST_OPERAND); }
 
-  Metadata *getRawLowerBound() const { return getOperand(4).get(); }
+  Metadata *getRawLowerBound() const {
+    return getOperand(MY_FIRST_OPERAND + 1).get();
+  }
 
-  Metadata *getRawUpperBound() const { return getOperand(5).get(); }
+  Metadata *getRawUpperBound() const {
+    return getOperand(MY_FIRST_OPERAND + 2).get();
+  }
 
-  Metadata *getRawStride() const { return getOperand(6).get(); }
+  Metadata *getRawStride() const {
+    return getOperand(MY_FIRST_OPERAND + 3).get();
+  }
 
-  Metadata *getRawBias() const { return getOperand(7).get(); }
+  Metadata *getRawBias() const {
+    return getOperand(MY_FIRST_OPERAND + 4).get();
+  }
 
   BoundType getLowerBound() const {
     return convertRawToBound(getRawLowerBound());
@@ -1408,6 +1430,8 @@ public:
 class DICompositeType : public DIType {
   friend class LLVMContextImpl;
   friend class MDNode;
+
+  static constexpr unsigned MY_FIRST_OPERAND = DIType::N_OPERANDS;
 
   unsigned RuntimeLang;
   std::optional<uint32_t> EnumKind;
@@ -1570,41 +1594,55 @@ public:
   DITemplateParameterArray getTemplateParams() const {
     return cast_or_null<MDTuple>(getRawTemplateParams());
   }
-  StringRef getIdentifier() const { return getStringOperand(7); }
+  StringRef getIdentifier() const {
+    return getStringOperand(MY_FIRST_OPERAND + 4);
+  }
   unsigned getRuntimeLang() const { return RuntimeLang; }
   std::optional<uint32_t> getEnumKind() const { return EnumKind; }
 
-  Metadata *getRawBaseType() const { return getOperand(3); }
-  Metadata *getRawElements() const { return getOperand(4); }
-  Metadata *getRawVTableHolder() const { return getOperand(5); }
-  Metadata *getRawTemplateParams() const { return getOperand(6); }
-  MDString *getRawIdentifier() const { return getOperandAs<MDString>(7); }
-  Metadata *getRawDiscriminator() const { return getOperand(8); }
-  DIDerivedType *getDiscriminator() const {
-    return getOperandAs<DIDerivedType>(8);
+  Metadata *getRawBaseType() const { return getOperand(MY_FIRST_OPERAND); }
+  Metadata *getRawElements() const { return getOperand(MY_FIRST_OPERAND + 1); }
+  Metadata *getRawVTableHolder() const {
+    return getOperand(MY_FIRST_OPERAND + 2);
   }
-  Metadata *getRawDataLocation() const { return getOperand(9); }
+  Metadata *getRawTemplateParams() const {
+    return getOperand(MY_FIRST_OPERAND + 3);
+  }
+  MDString *getRawIdentifier() const {
+    return getOperandAs<MDString>(MY_FIRST_OPERAND + 4);
+  }
+  Metadata *getRawDiscriminator() const {
+    return getOperand(MY_FIRST_OPERAND + 5);
+  }
+  DIDerivedType *getDiscriminator() const {
+    return getOperandAs<DIDerivedType>(MY_FIRST_OPERAND + 5);
+  }
+  Metadata *getRawDataLocation() const {
+    return getOperand(MY_FIRST_OPERAND + 6);
+  }
   DIVariable *getDataLocation() const {
     return dyn_cast_or_null<DIVariable>(getRawDataLocation());
   }
   DIExpression *getDataLocationExp() const {
     return dyn_cast_or_null<DIExpression>(getRawDataLocation());
   }
-  Metadata *getRawAssociated() const { return getOperand(10); }
+  Metadata *getRawAssociated() const {
+    return getOperand(MY_FIRST_OPERAND + 7);
+  }
   DIVariable *getAssociated() const {
     return dyn_cast_or_null<DIVariable>(getRawAssociated());
   }
   DIExpression *getAssociatedExp() const {
     return dyn_cast_or_null<DIExpression>(getRawAssociated());
   }
-  Metadata *getRawAllocated() const { return getOperand(11); }
+  Metadata *getRawAllocated() const { return getOperand(MY_FIRST_OPERAND + 8); }
   DIVariable *getAllocated() const {
     return dyn_cast_or_null<DIVariable>(getRawAllocated());
   }
   DIExpression *getAllocatedExp() const {
     return dyn_cast_or_null<DIExpression>(getRawAllocated());
   }
-  Metadata *getRawRank() const { return getOperand(12); }
+  Metadata *getRawRank() const { return getOperand(MY_FIRST_OPERAND + 9); }
   ConstantInt *getRankConst() const {
     if (auto *MD = dyn_cast_or_null<ConstantAsMetadata>(getRawRank()))
       return dyn_cast_or_null<ConstantInt>(MD->getValue());
@@ -1614,17 +1652,23 @@ public:
     return dyn_cast_or_null<DIExpression>(getRawRank());
   }
 
-  Metadata *getRawAnnotations() const { return getOperand(13); }
+  Metadata *getRawAnnotations() const {
+    return getOperand(MY_FIRST_OPERAND + 10);
+  }
   DINodeArray getAnnotations() const {
     return cast_or_null<MDTuple>(getRawAnnotations());
   }
 
-  Metadata *getRawSpecification() const { return getOperand(14); }
+  Metadata *getRawSpecification() const {
+    return getOperand(MY_FIRST_OPERAND + 11);
+  }
   DIType *getSpecification() const {
     return cast_or_null<DIType>(getRawSpecification());
   }
 
-  Metadata *getRawBitStride() const { return getOperand(15); }
+  Metadata *getRawBitStride() const {
+    return getOperand(MY_FIRST_OPERAND + 12);
+  }
   ConstantInt *getBitStrideConst() const {
     if (auto *MD = dyn_cast_or_null<ConstantAsMetadata>(getRawBitStride()))
       return dyn_cast_or_null<ConstantInt>(MD->getValue());
@@ -1643,15 +1687,15 @@ public:
       assert(is_contained(Elements->operands(), Op) &&
              "Lost a member during member list replacement");
 #endif
-    replaceOperandWith(4, Elements.get());
+    replaceOperandWith(MY_FIRST_OPERAND + 1, Elements.get());
   }
 
   void replaceVTableHolder(DIType *VTableHolder) {
-    replaceOperandWith(5, VTableHolder);
+    replaceOperandWith(MY_FIRST_OPERAND + 2, VTableHolder);
   }
 
   void replaceTemplateParams(DITemplateParameterArray TemplateParams) {
-    replaceOperandWith(6, TemplateParams.get());
+    replaceOperandWith(MY_FIRST_OPERAND + 3, TemplateParams.get());
   }
   /// @}
 
@@ -1666,6 +1710,8 @@ public:
 class DISubroutineType : public DIType {
   friend class LLVMContextImpl;
   friend class MDNode;
+
+  static constexpr unsigned MY_FIRST_OPERAND = DIType::N_OPERANDS;
 
   /// The calling convention used with DW_AT_calling_convention. Actually of
   /// type dwarf::CallingConvention.
@@ -1712,7 +1758,7 @@ public:
     return cast_or_null<MDTuple>(getRawTypeArray());
   }
 
-  Metadata *getRawTypeArray() const { return getOperand(3); }
+  Metadata *getRawTypeArray() const { return getOperand(MY_FIRST_OPERAND); }
 
   static bool classof(const Metadata *MD) {
     return MD->getMetadataID() == DISubroutineTypeKind;
