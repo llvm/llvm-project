@@ -612,3 +612,51 @@ while.end:
   ret i64 %sub.ptr.sub
 }
 
+define i64 @valid_basic_strlen_with_dbg(ptr %str) {
+; CHECK-LABEL: define i64 @valid_basic_strlen_with_dbg(
+; CHECK-SAME: ptr [[STR:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[STRLEN:%.*]] = call i64 @strlen(ptr [[STR]]), !dbg !{{[0-9]+}}
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[STR]], i64 [[STRLEN]]
+; CHECK-NEXT:    br label %[[WHILE_COND:.*]]
+; CHECK:       [[WHILE_COND]]:
+; CHECK-NEXT:    [[STR_ADDR_0:%.*]] = phi ptr [ [[STR]], %[[ENTRY]] ], [ [[INCDEC_PTR:%.*]], %[[WHILE_COND]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[STR_ADDR_0]], align 1
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i8 [[TMP0]], 0
+; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr i8, ptr [[STR_ADDR_0]], i64 1
+; CHECK-NEXT:    br i1 true, label %[[WHILE_END:.*]], label %[[WHILE_COND]]
+; CHECK:       [[WHILE_END]]:
+; CHECK-NEXT:    [[SUB_PTR_LHS_CAST:%.*]] = ptrtoint ptr [[SCEVGEP]] to i64
+; CHECK-NEXT:    [[SUB_PTR_RHS_CAST:%.*]] = ptrtoint ptr [[STR]] to i64
+; CHECK-NEXT:    [[SUB_PTR_SUB:%.*]] = sub i64 [[SUB_PTR_LHS_CAST]], [[SUB_PTR_RHS_CAST]]
+; CHECK-NEXT:    ret i64 [[SUB_PTR_SUB]]
+;
+entry:
+  br label %while.cond
+
+while.cond:
+  %str.addr.0 = phi ptr [ %str, %entry ], [ %incdec.ptr, %while.cond ]
+  %0 = load i8, ptr %str.addr.0, align 1, !dbg !6
+  %cmp.not = icmp eq i8 %0, 0, !dbg !6
+  %incdec.ptr = getelementptr i8, ptr %str.addr.0, i64 1
+  br i1 %cmp.not, label %while.end, label %while.cond, !dbg !6
+
+while.end:
+  %sub.ptr.lhs.cast = ptrtoint ptr %str.addr.0 to i64
+  %sub.ptr.rhs.cast = ptrtoint ptr %str to i64
+  %sub.ptr.sub = sub i64 %sub.ptr.lhs.cast, %sub.ptr.rhs.cast
+  ret i64 %sub.ptr.sub
+}
+
+
+!llvm.module.flags = !{!7}
+!llvm.dbg.cu = !{!2}
+
+!0 = distinct !DISubprogram(name: "foo", line: 2, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !2, file: !1, scope: !1, type: !3)
+!1 = !DIFile(filename: "strlen.c", directory: "/tmp")
+!2 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 2.9 (trunk 127165:127174)", isOptimized: true, emissionKind: FullDebug, file: !1, enums: !4, retainedTypes: !4)
+!3 = !DISubroutineType(types: !4)
+!4 = !{}
+!5 = distinct !DILexicalBlock(line: 2, column: 21, file: !1, scope: !0)
+!6 = !DILocation(line: 3, column: 3, scope: !5)
+!7 = !{i32 1, !"Debug Info Version", i32 3}

@@ -1778,6 +1778,9 @@ bool LoopIdiomRecognize::recognizeAndInsertStrLen() {
   }
   assert(StrLenFunc && "Failed to emit strlen function.");
 
+  // Set debug location to the start of the loop.
+  cast<Instruction>(StrLenFunc)->setDebugLoc(CurLoop->getStartLoc());
+
   const SCEV *StrlenEv = SE->getSCEV(StrLenFunc);
   SmallVector<PHINode *, 4> Cleanup;
   for (PHINode &PN : LoopExitBB->phis()) {
