@@ -37,8 +37,8 @@ class SPIRVTargetMachine;
 
 class SPIRVSubtarget : public SPIRVGenSubtargetInfo {
 public:
-  // Enum for the SPIR-V environment: OpenCL, Vulkan or Unkwnown.
-  enum SPIRVEnvType { OpenCL, Vulkan, Unknown };
+  // Enum for the SPIR-V environment: Kernel, Shader or Unkwnown.
+  enum SPIRVEnvType { Kernel, Shader, Unknown };
 
 private:
   const unsigned PointerSize;
@@ -90,14 +90,15 @@ public:
     Env = E;
   }
   SPIRVEnvType getEnv() const { return Env; }
-  bool isOpenCLEnv() const { return getEnv() == OpenCL; }
-  bool isVulkanEnv() const { return getEnv() == Vulkan; }
-  // FIXME: This should check the triple arch instead, but a lot of places use
-  // this method now instead of `is[OpenCL/Vulkan]Env()`, and this is a
-  // shortcut to make sure `is[OpenCL/Vulkan]Env()` works as expected. When we
-  // change back all uses of `isLogicalSPIRV()` to `is[OpenCL/Vulkan]Env()`, we
-  // can implement this correctly again.
-  bool isLogicalSPIRV() const { return isVulkanEnv(); }
+  bool isKernelEnv() const { return getEnv() == Kernel; }
+  bool isShaderEnv() const { return getEnv() == Shader; }
+  bool isLogicalSPIRV() const {
+    return TargetTriple.getArch() == Triple::spirv;
+  }
+  bool isPhysicalSPIRV() const {
+    return TargetTriple.getArch() == Triple::spirv32 ||
+           TargetTriple.getArch() == Triple::spirv64;
+  }
   const std::string &getTargetTripleAsStr() const { return TargetTriple.str(); }
   VersionTuple getSPIRVVersion() const { return SPIRVVersion; };
   bool isAtLeastSPIRVVer(VersionTuple VerToCompareTo) const;

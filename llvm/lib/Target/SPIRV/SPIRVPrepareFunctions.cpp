@@ -405,23 +405,13 @@ bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
         Changed = true;
         break;
       case Intrinsic::lifetime_start:
-        // FIXME: OpLifetimeStart requires Kernel capability. However, for now,
-        // both `isVulkanEnv()` and `isOpenCLEnv()` can return true under some
-        // circumstances. Instead, we're using `isLogicalSPIRV()`, but we
-        // should change this when `isVulkanEnv()` and `isOpenCLEnv()` are
-        // precise enough.
-        if (!STI.isLogicalSPIRV()) {
+        if (!STI.isShaderEnv()) {
           Changed |= toSpvOverloadedIntrinsic(
               II, Intrinsic::SPVIntrinsics::spv_lifetime_start, {1});
         }
         break;
       case Intrinsic::lifetime_end:
-        // FIXME: OpLifetimeStop requires Kernel capability. However, for now,
-        // both `isVulkanEnv()` and `isOpenCLEnv()` can return true under some
-        // circumstances. Instead, we're using `isLogicalSPIRV()`, but we
-        // should change this when `isVulkanEnv()` and `isOpenCLEnv()` are
-        // precise enough.
-        if (!STI.isLogicalSPIRV()) {
+        if (!STI.isShaderEnv()) {
           Changed |= toSpvOverloadedIntrinsic(
               II, Intrinsic::SPVIntrinsics::spv_lifetime_end, {1});
         }

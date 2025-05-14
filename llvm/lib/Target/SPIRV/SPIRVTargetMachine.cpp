@@ -191,12 +191,7 @@ TargetPassConfig *SPIRVTargetMachine::createPassConfig(PassManagerBase &PM) {
 void SPIRVPassConfig::addIRPasses() {
   TargetPassConfig::addIRPasses();
 
-  // FIXME: At the moment, there's a possibility that both `isOpenCLEnv()` and
-  // `isVulkanEnv()` return true. This is because the Triple is not always
-  // precise enough. For now, we'll rely instead on `isLogicalSPIRV`, but this
-  // should be changed when `isOpenCLEnv()` and `isVulkanEnv()` cannot be true
-  // at the same time.
-  if (TM.getSubtargetImpl()->isLogicalSPIRV()) {
+  if (TM.getSubtargetImpl()->isShaderEnv()) {
     // Vulkan does not allow address space casts. This pass is run to remove
     // address space casts that can be removed.
     // If an address space cast is not removed while targeting Vulkan, lowering

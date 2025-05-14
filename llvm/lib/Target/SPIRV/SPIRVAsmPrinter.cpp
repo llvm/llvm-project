@@ -533,11 +533,7 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
       Inst.addOperand(MCOperand::createImm(TypeCode));
       outputMCInst(Inst);
     }
-    // FIXME: At the moment, `isOpenCLEnv()` is not precise enough. This is
-    // because the Triple is not always precise enough. For now, we'll rely
-    // instead on `isLogicalSPIRV()`, but this should be changed when
-    // `isOpenCLEnv()` is precise enough.
-    if (!ST->isLogicalSPIRV() && !M.getNamedMetadata("spirv.ExecutionMode") &&
+    if (ST->isKernelEnv() && !M.getNamedMetadata("spirv.ExecutionMode") &&
         !M.getNamedMetadata("opencl.enable.FP_CONTRACT")) {
       MCInst Inst;
       Inst.setOpcode(SPIRV::OpExecutionMode);

@@ -3722,10 +3722,7 @@ bool SPIRVInstructionSelector::selectAllocaArray(Register ResVReg,
                  .addUse(GR.getSPIRVTypeID(ResType))
                  .addUse(I.getOperand(2).getReg())
                  .constrainAllUses(TII, TRI, RBI);
-  // FIXME: Alignment requires Kernel Capabilities, so we only emit it if we are
-  // in OpenCL env. However, that is not good enough at the moment, so we use
-  // `!isLogicalSPIRV()` instead.
-  if (!STI.isLogicalSPIRV()) {
+  if (!STI.isShaderEnv()) {
     unsigned Alignment = I.getOperand(3).getImm();
     buildOpDecorate(ResVReg, I, TII, SPIRV::Decoration::Alignment, {Alignment});
   }
@@ -3744,10 +3741,7 @@ bool SPIRVInstructionSelector::selectFrameIndex(Register ResVReg,
                  .addUse(GR.getSPIRVTypeID(ResType))
                  .addImm(static_cast<uint32_t>(SPIRV::StorageClass::Function))
                  .constrainAllUses(TII, TRI, RBI);
-  // FIXME: Alignment requires Kernel Capabilities, so we only emit it if we are
-  // in OpenCL env. However, that is not good enough at the moment, so we use
-  // `!isLogicalSPIRV()` instead.
-  if (!STI.isLogicalSPIRV()) {
+  if (!STI.isShaderEnv()) {
     unsigned Alignment = I.getOperand(2).getImm();
     buildOpDecorate(ResVReg, *It, TII, SPIRV::Decoration::Alignment,
                     {Alignment});

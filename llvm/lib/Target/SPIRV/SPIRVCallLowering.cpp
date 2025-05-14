@@ -267,15 +267,10 @@ static SPIRVType *getArgSPIRVType(const Function &F, unsigned ArgIdx,
 
 static SPIRV::ExecutionModel::ExecutionModel
 getExecutionModel(const SPIRVSubtarget &STI, const Function &F) {
-  // FIXME: At the moment, there's a possibility that both `isOpenCLEnv()` and
-  // `isVulkanEnv()` return true. This is because the Triple is not always
-  // precise enough. For now, we'll rely instead on `isLogicalSPIRV()`, but this
-  // should be changed when `isOpenCLEnv()` and `isVulkanEnv()` cannot be true
-  // at the same time.
-  if (STI.isOpenCLEnv())
+  if (STI.isKernelEnv())
     return SPIRV::ExecutionModel::Kernel;
 
-  if (STI.isVulkanEnv()) {
+  if (STI.isShaderEnv()) {
     auto attribute = F.getFnAttribute("hlsl.shader");
     if (!attribute.isValid()) {
       report_fatal_error(
@@ -291,18 +286,18 @@ getExecutionModel(const SPIRVSubtarget &STI, const Function &F) {
   }
 
   assert(STI.getEnv() == SPIRVSubtarget::Unknown);
-  // Can we rely on "hlsl.shader" attribute? Is it mandatory for Vulkan env? If
-  // so, we can set Env to Vulkan whenever we find it, and to OpenCL otherwise.
+  // "hlsl.shader" attribute is mandatory for Vulkan, so we can set Env to
+  // Shader whenever we find it, and to Kernel otherwise.
 
   // We will now change the Env based on the attribute, so we need to strip
   // `const` out of the ref to STI.
   SPIRVSubtarget *NonConstSTI = const_cast<SPIRVSubtarget *>(&STI);
   auto attribute = F.getFnAttribute("hlsl.shader");
   if (!attribute.isValid()) {
-    NonConstSTI->setEnv(SPIRVSubtarget::OpenCL);
+    NonConstSTI->setEnv(SPIRVSubtarget::Kernel);
     return SPIRV::ExecutionModel::Kernel;
   }
-  NonConstSTI->setEnv(SPIRVSubtarget::Vulkan);
+  NonConstSTI->setEnv(SPIRVSubtarget::Shader);
 
   const auto value = attribute.getValueAsString();
   if (value == "compute")
