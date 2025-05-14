@@ -3342,7 +3342,7 @@ bool SemaHLSL::initGlobalResourceDecl(VarDecl *VD) {
     return initVarDeclWithCtor(SemaRef, VD, Args);
   }
 
-  // resource with explicit binding
+  // resource with implicit binding
   IntegerLiteral *OrderId = IntegerLiteral::Create(
       AST, llvm::APInt(UIntTySize, getNextImplicitBindingOrderID()),
       AST.UnsignedIntTy, SourceLocation());

@@ -681,7 +681,7 @@ BuiltinTypeDeclBuilder::addHandleConstructorFromImplicitBinding() {
       .addParam("spaceNo", AST.UnsignedIntTy)
       .addParam("range", AST.IntTy)
       .addParam("index", AST.UnsignedIntTy)
-      .addParam("order_id", AST.UnsignedIntTy)
+      .addParam("orderId", AST.UnsignedIntTy)
       .callBuiltin("__builtin_hlsl_resource_handlefromimplicitbinding",
                    HandleType, PH::Handle, PH::_0, PH::_1, PH::_2, PH::_3)
       .assign(PH::Handle, PH::LastStmt)
