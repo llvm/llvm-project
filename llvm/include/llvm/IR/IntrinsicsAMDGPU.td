@@ -13,6 +13,9 @@
 def flat_ptr_ty : LLVMQualPointerType<0>;
 def global_ptr_ty : LLVMQualPointerType<1>;
 def local_ptr_ty : LLVMQualPointerType<3>;
+#ifdef LLPC_BUILD_NPI
+def dds_ptr_ty : LLVMQualPointerType<11>;
+#endif /* LLPC_BUILD_NPI */
 
 // The amdgpu-no-* attributes (ex amdgpu-no-workitem-id-z) typically inferred
 // by the backend cause whole-program undefined behavior when violated, such as
@@ -4281,6 +4284,11 @@ def int_amdgcn_global_tiled_store_half_b128      : AMDGPUTiledStore<llvm_v2i32_t
 def int_amdgcn_global_tiled_store_half_vst2_b128 : AMDGPUTiledStore<llvm_v3i32_ty>;
 def int_amdgcn_global_tiled_store_b128           : AMDGPUTiledStore<llvm_v4i32_ty>;
 def int_amdgcn_global_tiled_store_vst2_b128      : AMDGPUTiledStore<llvm_v7i32_ty>;
+
+def int_amdgcn_query_shared_rank : DefaultAttrsIntrinsic<
+  [llvm_i32_ty],
+  [dds_ptr_ty],
+  [IntrNoMem, ReadNone<ArgIndex<0>>, IntrSpeculatable]>;
 
 #endif /* LLPC_BUILD_NPI */
 //===----------------------------------------------------------------------===//
