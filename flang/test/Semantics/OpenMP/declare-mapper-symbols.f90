@@ -13,7 +13,7 @@ program main
 !! Note, symbols come out in their respective scope, but not in declaration order.
 !CHECK: mymapper: Misc ConstructName
 !CHECK: ty: DerivedType components: x
-!CHECK: ty.default: Misc ConstructName
+!CHECK: ty.omp.default.mapper: Misc ConstructName
 !CHECK: DerivedType scope: ty
 !CHECK: OtherConstruct scope:
 !CHECK: mapped (OmpMapToFrom) {{.*}} ObjectEntity type: TYPE(ty)
