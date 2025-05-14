@@ -576,7 +576,7 @@ struct ConvertUpdateHaloOp : public OpConversionPattern<UpdateHaloOp> {
       auto tensorType = MemRefType::get(
           dstShape, cast<ShapedType>(array.getType()).getElementType());
       array =
-          rewriter.create<bufferization::ToMemrefOp>(loc, tensorType, array);
+          rewriter.create<bufferization::ToBufferOp>(loc, tensorType, array);
     }
     auto rank = cast<ShapedType>(array.getType()).getRank();
     auto opSplitAxes = adaptor.getSplitAxes().getAxes();
