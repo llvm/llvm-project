@@ -981,7 +981,7 @@ def SwitchFlatOp : CIR_Op<"switch.flat", [AttrSizedOperandSegments,
   let description = [{
     The `cir.switch.flat` operation is a region-less and simplified
     version of the `cir.switch`.
-    It's representation is closer to LLVM IR dialect
+    Its representation is closer to LLVM IR dialect
     than the C/C++ language feature.
   }];
 
@@ -989,7 +989,7 @@ def SwitchFlatOp : CIR_Op<"switch.flat", [AttrSizedOperandSegments,
     CIR_IntType:$condition,
     Variadic<AnyType>:$defaultOperands,
     VariadicOfVariadic<AnyType, "case_operand_segments">:$caseOperands,
-    ArrayAttr:$case_values,
+    ArrayAttr:$caseValues,
     DenseI32ArrayAttr:$case_operand_segments
   );
 
@@ -1001,7 +1001,7 @@ def SwitchFlatOp : CIR_Op<"switch.flat", [AttrSizedOperandSegments,
   let assemblyFormat = [{
     $condition `:` type($condition) `,`
     $defaultDestination (`(` $defaultOperands^ `:` type($defaultOperands) `)`)?
-    custom<SwitchFlatOpCases>(ref(type($condition)), $case_values,
+    custom<SwitchFlatOpCases>(ref(type($condition)), $caseValues,
                               $caseDestinations, $caseOperands,
                               type($caseOperands))
     attr-dict

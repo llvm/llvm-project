@@ -275,4 +275,44 @@ module {
 //      CHECK:    cir.return
 //      CHECK:  }
 
+  cir.func @_Z8bigRangei(%arg0: !s32i) {
+    %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init] {alignment = 4 : i64}
+    cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i>
+    cir.scope {
+      %1 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+      cir.switch (%1 : !s32i) {
+        cir.case(range, [#cir.int<3> : !s32i, #cir.int<100> : !s32i]) {
+          cir.break
+        }
+        cir.case(default, []) {
+          cir.break
+        }
+        cir.yield
+      }
+    }
+    cir.return
+  }
+
+// CHECK:  cir.func @_Z8bigRangei(%arg0: !s32i) {
+// CHECK:    cir.switch.flat %[[COND:.*]] : !s32i, ^bb[[#RANGE_BR:]] [
+// CHECK:    ]
+// CHECK:  ^bb[[#NO_PRED_BB:]]:  // no predecessors
+// CHECK:    cir.br ^bb[[#DEFAULT_BB:]]
+// CHECK:  ^bb[[#DEFAULT_BB]]:  // 2 preds: ^bb[[#NO_PRED_BB]], ^bb[[#RANGE_BR]]
+// CHECK:    cir.br ^bb[[#EXIT:]]
+// CHECK:  ^bb[[#RANGE_BR]]:  // pred: ^bb[[#BB2:]]
+// CHECK:    %[[CONST97:.*]] = cir.const #cir.int<97> : !s32i
+// CHECK:    %[[CONST3:.*]] = cir.const #cir.int<3> : !s32i
+// CHECK:    %[[SUB:.*]] = cir.binop(sub, %[[COND]], %[[CONST3]]) : !s32i
+// CHECK:    %[[CAST1:.*]] = cir.cast(integral, %[[SUB]] : !s32i), !u32i
+// CHECK:    %[[CAST2:.*]] = cir.cast(integral, %[[CONST97]] : !s32i), !u32i
+// CHECK:    %[[CMP:.*]] = cir.cmp(le, %[[CAST1]], %[[CAST2]]) : !u32i, !cir.bool
+// CHECK:    cir.brcond %7 ^bb[[#DEFAULT_BB]], ^bb[[#RANGE_BB:]]
+// CHECK:  ^bb[[#RANGE_BB]]:  // pred: ^bb[[#RANGE_BR]]
+// CHECK:    cir.br ^bb[[#EXIT]]
+// CHECK:  ^bb[[#EXIT]]:  // 2 preds: ^bb[[#DEFAULT_BB]], ^bb[[#RANGE_BB]]
+// CHECK:    cir.br ^bb[[#RET_BB:]]
+// CHECK:  ^bb[[#RET_BB]]:  // pred: ^bb[[#EXIT]]
+// CHECK:    cir.return
+// CHECK:  }
 }

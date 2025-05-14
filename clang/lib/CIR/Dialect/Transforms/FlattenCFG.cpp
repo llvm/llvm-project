@@ -247,7 +247,8 @@ public:
     {
       cir::YieldOp switchYield = nullptr;
       // Clear switch operation.
-      for (auto &block : llvm::make_early_inc_range(op.getBody().getBlocks()))
+      for (mlir::Block &block :
+           llvm::make_early_inc_range(op.getBody().getBlocks()))
         if (auto yieldOp = dyn_cast<cir::YieldOp>(block.getTerminator()))
           switchYield = yieldOp;
 
@@ -279,7 +280,7 @@ public:
     mlir::ValueRange defaultOperands = exitBlock->getArguments();
 
     // Digest the case statements values and bodies.
-    for (auto caseOp : cases) {
+    for (cir::CaseOp caseOp : cases) {
       mlir::Region &region = caseOp.getCaseRegion();
 
       // Found default case: save destination and operands.
@@ -300,7 +301,7 @@ public:
       case cir::CaseOpKind::Anyof:
       case cir::CaseOpKind::Equal:
         // AnyOf cases kind can have multiple values, hence the loop below.
-        for (auto &value : caseOp.getValue()) {
+        for (const mlir::Attribute &value : caseOp.getValue()) {
           caseValues.push_back(cast<cir::IntAttr>(value).getValue());
           caseDestinations.push_back(&region.front());
           caseOperands.push_back(caseDestinations.back()->getArguments());
@@ -319,7 +320,7 @@ public:
           });
 
       // Track fallthrough in cases.
-      for (auto &blk : region.getBlocks()) {
+      for (mlir::Block &blk : region.getBlocks()) {
         if (blk.getNumSuccessors())
           continue;
 
@@ -349,7 +350,7 @@ public:
     }
 
     // Remove all cases since we've inlined the regions.
-    for (auto caseOp : cases) {
+    for (cir::CaseOp caseOp : cases) {
       mlir::Block *caseBlock = caseOp->getBlock();
       // Erase the block with no predecessors here to make the generated code
       // simpler a little bit.
@@ -359,9 +360,9 @@ public:
         rewriter.eraseOp(caseOp);
     }
 
-    for (size_t index = 0; index < rangeValues.size(); ++index) {
-      APInt lowerBound = rangeValues[index].first;
-      APInt upperBound = rangeValues[index].second;
+    for (auto [index, rangeVal] : llvm::enumerate(rangeValues)) {
+      APInt lowerBound = rangeVal.first;
+      APInt upperBound = rangeVal.second;
 
       // The case range is unreachable, skip it.
       if (lowerBound.sgt(upperBound))

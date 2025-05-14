@@ -17,7 +17,7 @@ cir.func @FlatSwitchWithoutDefault(%arg0: !s32i) {
 // CHECK-NEXT: ^bb1:
 // CHECK-NEXT:   cir.br ^bb2
 // CHECK-NEXT: ^bb2:
-//CHECK-NEXT:    cir.return
+// CHECK-NEXT:   cir.return
 
 cir.func @FlatSwitchWithDefault(%arg0: !s32i) {
   cir.switch.flat %arg0 : !s32i, ^bb2 [
