@@ -8064,20 +8064,32 @@ bool Sema::CheckNonDependentConversions(
   // A speculative workaround for self-dependent constraint bugs that manifest
   // after CWG2369.
   // FIXME: Add references to the standard once P3606 is adopted.
-  auto MaybeInvolveUserDefinedConversion = [&](QualType ParamType,
+  auto MaybeInvolveUserDefinedConversion = [&](QualType ParmType,
                                                QualType ArgType) {
-    ParamType = ParamType.getNonReferenceType();
+    ParmType = ParmType.getNonReferenceType();
     ArgType = ArgType.getNonReferenceType();
-    bool PointerConv = ParamType->isPointerType() && ArgType->isPointerType();
+    bool PointerConv = ParmType->isPointerType() && ArgType->isPointerType();
     if (PointerConv) {
-      ParamType = ParamType->getPointeeType();
+      ParmType = ParmType->getPointeeType();
       ArgType = ArgType->getPointeeType();
     }
 
-    if (auto *RT = ParamType->getAs<RecordType>())
+    if (auto *RT = ParmType->getAs<RecordType>())
       if (auto *RD = dyn_cast<CXXRecordDecl>(RT->getDecl());
-          RD && RD->hasDefinition() && !RD->isAggregate())
-        return true;
+          RD && RD->hasDefinition()) {
+        if (llvm::any_of(LookupConstructors(RD), [](NamedDecl *ND) {
+              auto Info = getConstructorInfo(ND);
+              if (!Info)
+                return false;
+              CXXConstructorDecl *Ctor = Info.Constructor;
+              /// isConvertingConstructor takes copy/move constructors into
+              /// account!
+              return !Ctor->isCopyOrMoveConstructor() &&
+                     Ctor->isConvertingConstructor(
+                         /*AllowExplicit=*/true);
+            }))
+          return true;
+      }
 
     if (auto *RT = ArgType->getAs<RecordType>())
       if (auto *RD = dyn_cast<CXXRecordDecl>(RT->getDecl());
