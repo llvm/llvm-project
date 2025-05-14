@@ -2307,7 +2307,7 @@ bool SemaOpenMP::isInOpenMPTargetExecutionDirective() const {
 
 bool SemaOpenMP::isOpenMPRebuildMemberExpr(ValueDecl *D) {
   // Only rebuild for Field.
-  if (!dyn_cast<FieldDecl>(D))
+  if (!isa<FieldDecl>(D))
     return false;
   DSAStackTy::DSAVarData DVarPrivate = DSAStack->hasDSA(
       D,

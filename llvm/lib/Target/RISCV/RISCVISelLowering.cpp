@@ -16619,6 +16619,25 @@ NodeExtensionHelper::getSupportedFoldings(const SDNode *Root) {
 }
 } // End anonymous namespace.
 
+static SDValue simplifyOp_VL(SDNode *N) {
+  // TODO: Extend this to other binops using generic identity logic
+  assert(N->getOpcode() == RISCVISD::ADD_VL);
+  SDValue A = N->getOperand(0);
+  SDValue B = N->getOperand(1);
+  SDValue Passthru = N->getOperand(2);
+  if (!Passthru.isUndef())
+    // TODO:This could be a vmerge instead
+    return SDValue();
+  ;
+  if (ISD::isConstantSplatVectorAllZeros(B.getNode()))
+    return A;
+  // Peek through fixed to scalable
+  if (B.getOpcode() == ISD::INSERT_SUBVECTOR && B.getOperand(0).isUndef() &&
+      ISD::isConstantSplatVectorAllZeros(B.getOperand(1).getNode()))
+    return A;
+  return SDValue();
+}
+
 /// Combine a binary or FMA operation to its equivalent VW or VW_W form.
 /// The supported combines are:
 /// add | add_vl | or disjoint | or_vl disjoint -> vwadd(u) | vwadd(u)_w
@@ -18515,20 +18534,10 @@ static SDValue combineVqdotAccum(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   SDValue AccumOp = DotOp.getOperand(2);
-  bool IsNullAdd = ISD::isConstantSplatVectorAllZeros(AccumOp.getNode());
-  // Peek through fixed to scalable
-  if (!IsNullAdd && AccumOp.getOpcode() == ISD::INSERT_SUBVECTOR &&
-      AccumOp.getOperand(0).isUndef())
-    IsNullAdd =
-        ISD::isConstantSplatVectorAllZeros(AccumOp.getOperand(1).getNode());
-
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
-  // The manual constant folding is required, this case is not constant folded
-  // or combined.
-  if (!IsNullAdd)
-    Addend = DAG.getNode(RISCVISD::ADD_VL, DL, VT, AccumOp, Addend,
-                         DAG.getUNDEF(VT), AddMask, AddVL);
+  Addend = DAG.getNode(RISCVISD::ADD_VL, DL, VT, Addend, AccumOp,
+                       DAG.getUNDEF(VT), AddMask, AddVL);
 
   SDValue Ops[] = {DotOp.getOperand(0), DotOp.getOperand(1), Addend,
                    DotOp.getOperand(3), DotOp->getOperand(4)};
@@ -19657,6 +19666,8 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     break;
   }
   case RISCVISD::ADD_VL:
+    if (SDValue V = simplifyOp_VL(N))
+      return V;
     if (SDValue V = combineOp_VLToVWOp_VL(N, DCI, Subtarget))
       return V;
     if (SDValue V = combineVqdotAccum(N, DAG, Subtarget))
@@ -23417,6 +23428,11 @@ bool RISCVTargetLowering::isLegalInterleavedAccessType(
 
   MVT ContainerVT = VT.getSimpleVT();
 
+  // The intrinsics are not (yet) overloaded on pointer type and can only handle
+  // the default address space.
+  if (AddrSpace)
+    return false;
+
   if (auto *FVTy = dyn_cast<FixedVectorType>(VTy)) {
     if (!Subtarget.useRVVForFixedLengthVectors())
       return false;
@@ -23426,11 +23442,6 @@ bool RISCVTargetLowering::isLegalInterleavedAccessType(
       return false;
 
     ContainerVT = getContainerForFixedLengthVector(VT.getSimpleVT());
-  } else {
-    // The intrinsics for scalable vectors are not overloaded on pointer type
-    // and can only handle the default address space.
-    if (AddrSpace)
-      return false;
   }
 
   // Need to make sure that EMUL * NFIELDS ≤ 8

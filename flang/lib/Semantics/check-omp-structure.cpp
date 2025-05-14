@@ -3532,8 +3532,7 @@ void OmpStructureChecker::CheckReductionObjects(
   // names into the lists of their members.
   for (const parser::OmpObject &object : objects.v) {
     auto *symbol{GetObjectSymbol(object)};
-    assert(symbol && "Expecting a symbol for object");
-    if (IsCommonBlock(*symbol)) {
+    if (symbol && IsCommonBlock(*symbol)) {
       auto source{GetObjectSource(object)};
       context_.Say(source ? *source : GetContext().clauseSource,
           "Common block names are not allowed in %s clause"_err_en_US,
