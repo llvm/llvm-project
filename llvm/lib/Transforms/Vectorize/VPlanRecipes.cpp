@@ -456,6 +456,26 @@ Value *VPInstruction::generatePerLane(VPTransformState &State,
                               State.get(getOperand(1), Lane), Name);
 }
 
+/// Create a conditional branch using \p Cond branching to the successors of \p
+/// VPBB. Note that the first successor is always forward (i.e. not created yet)
+/// while the second successor may already have been created (if it is a header
+/// block and VPBB is a header).
+static BranchInst *createCondBranch(Value *Cond, VPBasicBlock *VPBB,
+                                    VPTransformState &State) {
+  // Replace the temporary unreachable terminator with a new conditional
+  // branch, hooking it up to backward destination (header) for latch blocks
+  // now, and to forward destination(s) later when they are created.
+  // Second successor may be backwards - iff it is already in VPBB2IRBB.
+  VPBasicBlock *SecondVPSucc = cast<VPBasicBlock>(VPBB->getSuccessors()[1]);
+  BasicBlock *SecondIRSucc = State.CFG.VPBB2IRBB.lookup(SecondVPSucc);
+  BasicBlock *IRBB = State.CFG.VPBB2IRBB[VPBB];
+  BranchInst *CondBr = State.Builder.CreateCondBr(Cond, IRBB, SecondIRSucc);
+  // First successor is always forward, reset it to nullptr
+  CondBr->setSuccessor(0, nullptr);
+  IRBB->getTerminator()->eraseFromParent();
+  return CondBr;
+}
+
 Value *VPInstruction::generate(VPTransformState &State) {
   IRBuilderBase &Builder = State.Builder;
 
@@ -575,40 +595,14 @@ Value *VPInstruction::generate(VPTransformState &State) {
   }
   case VPInstruction::BranchOnCond: {
     Value *Cond = State.get(getOperand(0), VPLane(0));
-    // Replace the temporary unreachable terminator with a new conditional
-    // branch, hooking it up to backward destination (header) for latch blocks
-    // now, and to forward destination(s) later when they are created.
-    BranchInst *CondBr =
-        Builder.CreateCondBr(Cond, Builder.GetInsertBlock(), nullptr);
-    CondBr->setSuccessor(0, nullptr);
-    Builder.GetInsertBlock()->getTerminator()->eraseFromParent();
-
-    VPBasicBlock *Header = cast<VPBasicBlock>(getParent()->getSuccessors()[1]);
-    if (!State.CFG.VPBB2IRBB.contains(Header))
-      return CondBr;
-
-    CondBr->setSuccessor(1, State.CFG.VPBB2IRBB[Header]);
-    return CondBr;
+    return createCondBranch(Cond, getParent(), State);
   }
   case VPInstruction::BranchOnCount: {
     // First create the compare.
     Value *IV = State.get(getOperand(0), /*IsScalar*/ true);
     Value *TC = State.get(getOperand(1), /*IsScalar*/ true);
     Value *Cond = Builder.CreateICmpEQ(IV, TC);
-
-    // Now create the branch.
-    VPBasicBlock *Header = cast<VPBasicBlock>(getParent()->getSuccessors()[1]);
-
-    // Replace the temporary unreachable terminator with a new conditional
-    // branch, hooking it up to backward destination (the header) for latch
-    // blocks now, and to forward destination (the exit/middle block) later when
-    // it is created. Note that CreateCondBr expects a valid BB as first
-    // argument, so we need to set it to nullptr later.
-    BranchInst *CondBr = Builder.CreateCondBr(Cond, Builder.GetInsertBlock(),
-                                              State.CFG.VPBB2IRBB[Header]);
-    CondBr->setSuccessor(0, nullptr);
-    Builder.GetInsertBlock()->getTerminator()->eraseFromParent();
-    return CondBr;
+    return createCondBranch(Cond, getParent(), State);
   }
   case VPInstruction::Broadcast: {
     return Builder.CreateVectorSplat(

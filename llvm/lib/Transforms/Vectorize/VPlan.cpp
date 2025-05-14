@@ -226,6 +226,9 @@ bool VPBlockUtils::isHeader(const VPBlockBase *VPB,
 
 bool VPBlockUtils::isLatch(const VPBlockBase *VPB,
                            const VPDominatorTree &VPDT) {
+  // A latch has a header as its second successor, with its other successor
+  // leaving the loop. A preheader OTOH has a header as its first (and only)
+  // successor.
   return VPB->getNumSuccessors() == 2 &&
          VPBlockUtils::isHeader(VPB->getSuccessors()[1], VPDT);
 }
@@ -455,7 +458,7 @@ void VPBasicBlock::connectToPredecessors(VPTransformState &State) {
     auto &PredVPSuccessors = PredVPBB->getHierarchicalSuccessors();
     assert(CFG.VPBB2IRBB.contains(PredVPBB) &&
            "Predecessor basic-block not found building successor.");
-    BasicBlock *PredBB = CFG.VPBB2IRBB.lookup(PredVPBB);
+    BasicBlock *PredBB = CFG.VPBB2IRBB[PredVPBB];
     auto *PredBBTerminator = PredBB->getTerminator();
     LLVM_DEBUG(dbgs() << "LV: draw edge from" << PredBB->getName() << '\n');
 
@@ -1406,18 +1409,17 @@ void VPlanPrinter::dumpRegion(const VPRegionBlock *Region) {
 
 #endif
 
-bool VPValue::isDefinedOutsideLoop() const {
-  auto *DefR = getDefiningRecipe();
-  if (!DefR)
-    return true;
-
-  // For non-live-ins, check if is in a region only if the top-level loop region
-  // still exits.
-  const VPBasicBlock *DefVPBB = DefR->getParent();
-  auto *Plan = DefVPBB->getPlan();
-  return Plan->getVectorLoopRegion() && !DefVPBB->getEnclosingLoopRegion();
+/// Returns true if there is a vector loop region and \p VPV is defined in a
+/// loop region.
+static bool isDefinedInsideLoopRegions(const VPValue *VPV) {
+  const VPRecipeBase *DefR = VPV->getDefiningRecipe();
+  return DefR && (!DefR->getParent()->getPlan()->getVectorLoopRegion() ||
+                  DefR->getParent()->getEnclosingLoopRegion());
 }
 
+bool VPValue::isDefinedOutsideLoop() const {
+  return !isDefinedInsideLoopRegions(this);
+}
 void VPValue::replaceAllUsesWith(VPValue *New) {
   replaceUsesWithIf(New, [](VPUser &, unsigned) { return true; });
 }
