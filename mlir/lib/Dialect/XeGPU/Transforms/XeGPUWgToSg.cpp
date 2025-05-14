@@ -1,4 +1,4 @@
-//===- XeGPUWgToSg.cpp - XeGPU WorkGroup to Subgroup Pass -------===//
+//===- XeGPUWgToSg.cpp - XeGPU Workgroup to Subgroup Pass -----------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -25,15 +25,10 @@ namespace xegpu {
 } // namespace xegpu
 } // namespace mlir
 
-#define DEBUG_TYPE "xegpu-wg-to-sg"
-#define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
-#define LDBG(X) LLVM_DEBUG(DBGS() << X << "\n")
-
 using namespace mlir;
 
 namespace {
 
-// clang-format off
 /// This pattern transforms the CreateNdDescOp to create a subgroup descriptor
 /// from a workgroup descriptor. It replaces the offsets and sizes with
 /// appropriate values for the subgroup.
@@ -42,11 +37,14 @@ namespace {
 ///    %tdesc = xegpu.create_nd_tdesc %src[0, 0] : memref<24x24xf32>
 ///       -> !xegpu.tensor_desc<24x24xf32, #xegpu.layout<sg_layout = [4, 4],
 ///           sg_data = [2, 2], lane_layout = [2, 2], lane_data = [1, 1]>>
-/// is converted to 9 subgroup level operations based on the sg_layout & sg_data:
+/// is converted to 9 subgroup level operations based on the sg_layout &
+/// sg_data:
 ///    %tdesc = xegpu.create_nd_tdesc %src[off1, off2] : memref<24x24xf32> ->
-///           !xegpu.tensor_desc<2x2xf32, #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>>
+///           !xegpu.tensor_desc<2x2xf32, #xegpu.layout<lane_layout = [2, 2],
+///           lane_data = [1, 1]>>
 ///
-/// The sg_layout and sg_data attributes are dropped after the pass as they are no longer needed.
+/// The sg_layout and sg_data attributes are dropped after the pass as they are
+/// no longer needed.
 ///
 /// 24x24 matrix distribution example:
 /// sg_layout = [4, 4], sg_data = [2, 2]
@@ -69,9 +67,8 @@ namespace {
 /// | 2x2 2x2 2x2 2x2 |
 /// +------------------------+
 ///
-/// Since the 24x24 matrix is divided into 8x8 distribution units, there will be 9
-/// distribution units (3x3) in total. Hence the 9 subgroup level operations.
-// clang-format on
+/// Since the 24x24 matrix is divided into 8x8 distribution units, there will be
+/// 9 distribution units (3x3) in total. Hence the 9 subgroup level operations.
 struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
   using OpConversionPattern<xegpu::CreateNdDescOp>::OpConversionPattern;
 
