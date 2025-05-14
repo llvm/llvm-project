@@ -10,7 +10,7 @@ set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
 include(${LLVM_COMMON_CMAKE_UTILS}/Modules/CMakePolicy.cmake
   NO_POLICY_SCOPE)
 
-project(LibOrcRT LANGUAGES C CXX ASM)
+project(OrcRT LANGUAGES C CXX ASM)
 
 include(GNUInstallDirs)
 
