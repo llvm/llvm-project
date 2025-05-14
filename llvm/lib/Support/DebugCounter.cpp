@@ -248,8 +248,6 @@ bool DebugCounter::shouldExecuteImpl(unsigned CounterName) {
   return true;
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void DebugCounter::dump() const {
   print(dbgs());
 }
-#endif

@@ -52,6 +52,9 @@ public:
       : BucketSize(BucketSize), MinAddress(MinAddress), MaxAddress(MaxAddress),
         TextSections(TextSections) {}
 
+  uint64_t HotStart{0};
+  uint64_t HotEnd{0};
+
   inline bool ignoreAddress(uint64_t Address) const {
     return (Address > MaxAddress) || (Address < MinAddress);
   }
