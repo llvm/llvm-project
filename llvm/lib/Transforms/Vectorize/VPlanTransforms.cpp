@@ -2380,8 +2380,8 @@ void VPlanTransforms::createInterleaveGroups(
   }
 }
 
-/// Expand a VPWidenIntOrFpInduction into executable recipes. for the initial
-/// value, phi and backedge value. In the followng example:
+/// Expand a VPWidenIntOrFpInduction into executable recipes, for the initial
+/// value, phi and backedge value. In the following example:
 ///
 ///  vector.ph:
 ///  Successor(s): vector loop
@@ -2399,7 +2399,7 @@ void VPlanTransforms::createInterleaveGroups(
 ///  vector.ph:
 ///    ...
 ///    vp<%induction> = ...
-///    vp<%inc> = ...
+///    vp<%induction.increment> = ...
 ///
 ///  Successor(s): vector loop
 ///
@@ -2407,7 +2407,7 @@ void VPlanTransforms::createInterleaveGroups(
 ///    vector.body:
 ///      ir<%i> = WIDEN-PHI vp<%induction>, vp<%vec.ind.next>
 ///      ...
-///      vp<%vec.ind.next> = add ir<%i>, vp<%inc>
+///      vp<%vec.ind.next> = add ir<%i>, vp<%induction.increment>
 ///      EMIT branch-on-count ...
 ///    No successors
 ///  }
@@ -2442,7 +2442,7 @@ expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR,
   // If the phi is truncated, truncate the start and step values.
   VPBuilder Builder(Plan->getVectorPreheader());
   if (isa<TruncInst>(IV)) {
-    assert(Start->getUnderlyingValue()->getType()->isIntegerTy() &&
+    assert(TypeInfo.inferScalarType(Start)->isIntegerTy() &&
            "Truncation requires an integer type");
     Step = Builder.createScalarCast(Instruction::Trunc, Step, Ty, DL);
     Start = Builder.createScalarCast(Instruction::Trunc, Start, Ty, DL);
