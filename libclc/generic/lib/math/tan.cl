@@ -7,9 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/clc.h>
+#include <clc/math/clc_tan.h>
 
-#include <math/clc_tan.h>
-
-#define __CLC_FUNC tan
-#define __CLC_BODY <clc_sw_unary.inc>
+#define FUNCTION tan
+#define __CLC_BODY <clc/shared/unary_def.inc>
 #include <clc/math/gentype.inc>

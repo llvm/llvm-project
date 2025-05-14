@@ -492,16 +492,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
     return Builder.CreateCmp(getPredicate(), A, B, Name);
   }
   case Instruction::PHI: {
-    assert(getParent() ==
-               getParent()->getPlan()->getVectorLoopRegion()->getEntry() &&
-           "VPInstructions with PHI opcodes must be used for header phis only "
-           "at the moment");
-    BasicBlock *VectorPH =
-        State.CFG.VPBB2IRBB.at(getParent()->getCFGPredecessor(0));
-    Value *Start = State.get(getOperand(0), VPLane(0));
-    PHINode *Phi = State.Builder.CreatePHI(Start->getType(), 2, Name);
-    Phi->addIncoming(Start, VectorPH);
-    return Phi;
+    llvm_unreachable("should be handled by VPPhi::execute");
   }
   case Instruction::Select: {
     bool OnlyFirstLaneUsed = vputils::onlyFirstLaneUsed(this);
@@ -1128,6 +1119,30 @@ void VPInstructionWithType::print(raw_ostream &O, const Twine &Indent,
     printOperands(O, SlotTracker);
     O << " to " << *ResultTy;
   }
+}
+#endif
+
+void VPPhi::execute(VPTransformState &State) {
+  State.setDebugLocFrom(getDebugLoc());
+  assert(getParent() ==
+             getParent()->getPlan()->getVectorLoopRegion()->getEntry() &&
+         "VPInstructions with PHI opcodes must be used for header phis only "
+         "at the moment");
+  BasicBlock *VectorPH = State.CFG.VPBB2IRBB.at(getIncomingBlock(0));
+  Value *Start = State.get(getIncomingValue(0), VPLane(0));
+  PHINode *Phi = State.Builder.CreatePHI(Start->getType(), 2, getName());
+  Phi->addIncoming(Start, VectorPH);
+  State.set(this, Phi, VPLane(0));
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPPhi::print(raw_ostream &O, const Twine &Indent,
+                  VPSlotTracker &SlotTracker) const {
+  O << Indent << "EMIT ";
+  printAsOperand(O, SlotTracker);
+  O << " = phi ";
+
+  printPhiOperands(O, SlotTracker);
 }
 #endif
 
@@ -1770,10 +1785,7 @@ InstructionCost VPWidenRecipe::computeCost(ElementCount VF,
     VPValue *RHS = getOperand(1);
     // Certain instructions can be cheaper to vectorize if they have a constant
     // second vector operand. One example of this are shifts on x86.
-    TargetTransformInfo::OperandValueInfo RHSInfo = {
-        TargetTransformInfo::OK_AnyValue, TargetTransformInfo::OP_None};
-    if (RHS->isLiveIn())
-      RHSInfo = Ctx.TTI.getOperandInfo(RHS->getLiveInIRValue());
+    TargetTransformInfo::OperandValueInfo RHSInfo = Ctx.getOperandInfo(RHS);
 
     if (RHSInfo.Kind == TargetTransformInfo::OK_AnyValue &&
         getOperand(1)->isDefinedOutsideLoopRegions())
@@ -2696,6 +2708,40 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
   // VPReplicateRecipe may be cloned as part of an existing VPlan-to-VPlan
   // transform, avoid computing their cost multiple times for now.
   Ctx.SkipCostComputation.insert(UI);
+
+  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+  Type *ResultTy = Ctx.Types.inferScalarType(this);
+  switch (UI->getOpcode()) {
+  case Instruction::GetElementPtr:
+    // We mark this instruction as zero-cost because the cost of GEPs in
+    // vectorized code depends on whether the corresponding memory instruction
+    // is scalarized or not. Therefore, we handle GEPs with the memory
+    // instruction cost.
+    return 0;
+  case Instruction::Add:
+  case Instruction::Sub:
+  case Instruction::FAdd:
+  case Instruction::FSub:
+  case Instruction::Mul:
+  case Instruction::FMul:
+  case Instruction::FDiv:
+  case Instruction::FRem:
+  case Instruction::Shl:
+  case Instruction::LShr:
+  case Instruction::AShr:
+  case Instruction::And:
+  case Instruction::Or:
+  case Instruction::Xor: {
+    auto Op2Info = Ctx.getOperandInfo(getOperand(1));
+    SmallVector<const Value *, 4> Operands(UI->operand_values());
+    return Ctx.TTI.getArithmeticInstrCost(
+               UI->getOpcode(), ResultTy, CostKind,
+               {TargetTransformInfo::OK_AnyValue, TargetTransformInfo::OP_None},
+               Op2Info, Operands, UI, &Ctx.TLI) *
+           (isUniform() ? 1 : VF.getKnownMinValue());
+  }
+  }
+
   return Ctx.getLegacyCost(UI, VF);
 }
 
@@ -2839,8 +2885,9 @@ InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
     Cost +=
         Ctx.TTI.getMaskedMemoryOpCost(Opcode, Ty, Alignment, AS, Ctx.CostKind);
   } else {
-    TTI::OperandValueInfo OpInfo =
-        Ctx.TTI.getOperandInfo(Ingredient.getOperand(0));
+    TTI::OperandValueInfo OpInfo = Ctx.getOperandInfo(
+        isa<VPWidenLoadRecipe, VPWidenLoadEVLRecipe>(this) ? getOperand(0)
+                                                           : getOperand(1));
     Cost += Ctx.TTI.getMemoryOpCost(Opcode, Ty, Alignment, AS, Ctx.CostKind,
                                     OpInfo, &Ingredient);
   }
@@ -2961,7 +3008,7 @@ InstructionCost VPWidenLoadEVLRecipe::computeCost(ElementCount VF,
   unsigned AS =
       getLoadStoreAddressSpace(const_cast<Instruction *>(&Ingredient));
   InstructionCost Cost = Ctx.TTI.getMaskedMemoryOpCost(
-      Ingredient.getOpcode(), Ty, Alignment, AS, Ctx.CostKind);
+      Instruction::Load, Ty, Alignment, AS, Ctx.CostKind);
   if (!Reverse)
     return Cost;
 
@@ -3076,7 +3123,7 @@ InstructionCost VPWidenStoreEVLRecipe::computeCost(ElementCount VF,
   unsigned AS =
       getLoadStoreAddressSpace(const_cast<Instruction *>(&Ingredient));
   InstructionCost Cost = Ctx.TTI.getMaskedMemoryOpCost(
-      Ingredient.getOpcode(), Ty, Alignment, AS, Ctx.CostKind);
+      Instruction::Store, Ty, Alignment, AS, Ctx.CostKind);
   if (!Reverse)
     return Cost;
 

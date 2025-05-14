@@ -3820,10 +3820,10 @@ class OMPReductionClause final
 
   /// Get the list of help private variable reduction flags
   MutableArrayRef<bool> getPrivateVariableReductionFlags() {
-    return MutableArrayRef(getTrailingObjects<bool>(), varlist_size());
+    return getTrailingObjects<bool>(varlist_size());
   }
   ArrayRef<bool> getPrivateVariableReductionFlags() const {
-    return ArrayRef(getTrailingObjects<bool>(), varlist_size());
+    return getTrailingObjects<bool>(varlist_size());
   }
 
   /// Returns the number of Expr* objects in trailing storage
@@ -9660,8 +9660,7 @@ public:
 
   /// Get the clauses storage.
   MutableArrayRef<OMPClause *> getClauses() {
-    return llvm::MutableArrayRef(getTrailingObjects<OMPClause *>(),
-                                     NumClauses);
+    return getTrailingObjects<OMPClause *>(NumClauses);
   }
   ArrayRef<OMPClause *> getClauses() const {
     return const_cast<OMPChildren *>(this)->getClauses();

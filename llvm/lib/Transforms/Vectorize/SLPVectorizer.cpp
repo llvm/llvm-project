@@ -995,7 +995,10 @@ class BinOpSameOpcodeHelper {
       Value *LHS = I->getOperand(1 - Pos);
       Constant *RHS =
           ConstantInt::get(I->getOperand(Pos)->getType(), ToCIValue);
-      if (Pos == 1)
+      // constant + x cannot be -constant - x
+      // instead, it should be x - -constant
+      if (Pos == 1 ||
+          (FromOpcode == Instruction::Add && ToOpcode == Instruction::Sub))
         return SmallVector<Value *>({LHS, RHS});
       return SmallVector<Value *>({RHS, LHS});
     }
@@ -5973,10 +5976,15 @@ static bool isMaskedLoadCompress(
         TTI.getMemoryOpCost(Instruction::Load, LoadVecTy, CommonAlignment,
                             LI->getPointerAddressSpace(), CostKind);
   }
-  if (IsStrided && !IsMasked) {
+  if (IsStrided && !IsMasked && Order.empty()) {
     // Check for potential segmented(interleaved) loads.
-    auto *AlignedLoadVecTy = getWidenedType(
+    VectorType *AlignedLoadVecTy = getWidenedType(
         ScalarTy, getFullVectorNumberOfElements(TTI, ScalarTy, *Diff + 1));
+    if (!isSafeToLoadUnconditionally(
+            Ptr0, AlignedLoadVecTy, CommonAlignment, DL,
+            cast<LoadInst>(Order.empty() ? VL.back() : VL[Order.back()]), &AC,
+            &DT, &TLI))
+      AlignedLoadVecTy = LoadVecTy;
     if (TTI.isLegalInterleavedAccessType(AlignedLoadVecTy, CompressMask[1],
                                          CommonAlignment,
                                          LI->getPointerAddressSpace())) {
@@ -10450,6 +10458,12 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
       case TreeEntry::SplitVectorize:
       case TreeEntry::NeedToGather:
         llvm_unreachable("Unexpected loads state.");
+      }
+      if (!CurrentOrder.empty() && State != TreeEntry::ScatterVectorize) {
+        assert(Operands.size() == 1 && "Expected a single operand only");
+        SmallVector<int> Mask;
+        inversePermutation(CurrentOrder, Mask);
+        reorderScalars(Operands.front(), Mask);
       }
       TE->setOperands(Operands);
       if (State == TreeEntry::ScatterVectorize)
@@ -18217,15 +18231,6 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       if (E->State == TreeEntry::Vectorize) {
         NewLI = Builder.CreateAlignedLoad(VecTy, PO, LI->getAlign());
       } else if (E->State == TreeEntry::CompressVectorize) {
-        SmallVector<Value *> Scalars(E->Scalars.begin(), E->Scalars.end());
-        if (!E->ReorderIndices.empty()) {
-          SmallVector<int> Mask(E->ReorderIndices.begin(),
-                                E->ReorderIndices.end());
-          reorderScalars(Scalars, Mask);
-        }
-        SmallVector<Value *> PointerOps(Scalars.size());
-        for (auto [I, V] : enumerate(Scalars))
-          PointerOps[I] = cast<LoadInst>(V)->getPointerOperand();
         auto [CompressMask, LoadVecTy, InterleaveFactor, IsMasked] =
             CompressEntryToData.at(E);
         Align CommonAlignment = LI->getAlign();

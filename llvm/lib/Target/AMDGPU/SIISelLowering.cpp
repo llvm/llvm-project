@@ -995,18 +995,6 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::FMINIMUM, ISD::FMAXIMUM},
                        {MVT::v4f16, MVT::v8f16, MVT::v16f16, MVT::v32f16},
                        Custom);
-  } else {
-    // FIXME: For nnan fmaximum, emit the fmaximum3 instead of fmaxnum
-    if (Subtarget->hasMinimum3Maximum3F32())
-      setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM}, MVT::f32, Legal);
-
-    if (Subtarget->hasMinimum3Maximum3PKF16()) {
-      setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM}, MVT::v2f16, Legal);
-
-      // If only the vector form is available, we need to widen to a vector.
-      if (!Subtarget->hasMinimum3Maximum3F16())
-        setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM}, MVT::f16, Custom);
-    }
   }
 
   if (Subtarget->hasIntMinMax64())
@@ -4947,17 +4935,15 @@ SDValue SITargetLowering::lowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
   bool IsStrict = Op.getOpcode() == ISD::STRICT_FP_EXTEND;
   SDValue Src = Op.getOperand(IsStrict ? 1 : 0);
   EVT SrcVT = Src.getValueType();
-  EVT DstVT = Op.getValueType();
 
-  if (SrcVT.getScalarType() != MVT::bf16 ||
-      // TODO: Is v_cvt_f32_bf16 useful in any way?
-      (false && Subtarget->hasBF16ConversionInsts() && DstVT == MVT::f32))
+  if (SrcVT.getScalarType() != MVT::bf16)
     return Op;
 
   SDLoc SL(Op);
   SDValue BitCast =
       DAG.getNode(ISD::BITCAST, SL, SrcVT.changeTypeToInteger(), Src);
 
+  EVT DstVT = Op.getValueType();
   if (IsStrict)
     llvm_unreachable("Need STRICT_BF16_TO_FP");
 
@@ -14750,6 +14736,8 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
   case ISD::FMAXNUM_IEEE:
   case ISD::FMINIMUM:
   case ISD::FMAXIMUM:
+  case ISD::FMINIMUMNUM:
+  case ISD::FMAXIMUMNUM:
   case AMDGPUISD::CLAMP:
   case AMDGPUISD::FMED3:
   case AMDGPUISD::FMAX3:
@@ -14914,7 +14902,9 @@ bool SITargetLowering::isCanonicalized(Register Reg, const MachineFunction &MF,
   case AMDGPU::G_FMINNUM_IEEE:
   case AMDGPU::G_FMAXNUM_IEEE:
   case AMDGPU::G_FMINIMUM:
-  case AMDGPU::G_FMAXIMUM: {
+  case AMDGPU::G_FMAXIMUM:
+  case AMDGPU::G_FMINIMUMNUM:
+  case AMDGPU::G_FMAXIMUMNUM: {
     if (Subtarget->supportsMinMaxDenormModes() ||
         // FIXME: denormalsEnabledForType is broken for dynamic
         denormalsEnabledForType(MRI.getType(Reg), MF))

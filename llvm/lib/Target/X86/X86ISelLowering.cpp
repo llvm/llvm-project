@@ -13084,8 +13084,8 @@ static SDValue lowerShuffleAsBroadcast(const SDLoc &DL, MVT VT, SDValue V1,
     // uops even if the original vector load is not eliminated.
 
     // Reduce the vector load and shuffle to a broadcasted scalar load.
-    LoadSDNode *Ld = cast<LoadSDNode>(V);
-    SDValue BaseAddr = Ld->getOperand(1);
+    auto *Ld = cast<LoadSDNode>(V);
+    SDValue BaseAddr = Ld->getBasePtr();
     MVT SVT = VT.getScalarType();
     unsigned Offset = BroadcastIdx * SVT.getStoreSize();
     assert((int)(Offset * 8) == BitOffset && "Unexpected bit-offset");
@@ -24573,9 +24573,11 @@ SDValue X86TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
     if (CC == ISD::SETOEQ || CC == ISD::SETUNE) {
       auto NewCC = (CC == ISD::SETOEQ) ? X86::COND_E : (X86::COND_NE);
       assert(Op0.getSimpleValueType() != MVT::bf16 && "Unsupported Type");
-      if (Op0.getSimpleValueType() != MVT::f80)
-        return getSETCC(
+      if (Op0.getSimpleValueType() != MVT::f80) {
+        SDValue Res = getSETCC(
             NewCC, DAG.getNode(X86ISD::UCOMX, dl, MVT::i32, Op0, Op1), dl, DAG);
+        return IsStrict ? DAG.getMergeValues({Res, Chain}, dl) : Res;
+      }
     }
   }
   // Handle floating point.
@@ -54726,12 +54728,19 @@ SDValue X86TargetLowering::getNegatedExpression(SDValue Op, SelectionDAG &DAG,
     if (!Flags.hasNoSignedZeros())
       break;
 
+    // Because getCheaperNegatedExpression can delete nodes we need a handle to
+    // keep temporary nodes alive.
+    std::list<HandleSDNode> Handles;
+
     // This is always negatible for free but we might be able to remove some
     // extra operand negations as well.
     SmallVector<SDValue, 4> NewOps(Op.getNumOperands(), SDValue());
-    for (int i = 0; i != 3; ++i)
+    for (int i = 0; i != 3; ++i) {
       NewOps[i] = getCheaperNegatedExpression(
           Op.getOperand(i), DAG, LegalOperations, ForCodeSize, Depth + 1);
+      if (!!NewOps[i])
+        Handles.emplace_back(NewOps[i]);
+    }
 
     bool NegA = !!NewOps[0];
     bool NegB = !!NewOps[1];
@@ -56703,6 +56712,34 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
 
   if (DCI.isBeforeLegalize()) {
     unsigned IndexWidth = Index.getScalarValueSizeInBits();
+    // Attempt to move shifted index into the address scale, allows further
+    // index truncation below.
+    if (Index.getOpcode() == ISD::SHL && isa<ConstantSDNode>(Scale)) {
+      unsigned ScaleAmt = Scale->getAsZExtVal();
+      assert(isPowerOf2_32(ScaleAmt) && "Scale must be a power of 2");
+      unsigned Log2ScaleAmt = Log2_32(ScaleAmt);
+      unsigned MaskBits = IndexWidth - Log2ScaleAmt;
+      APInt DemandedBits = APInt::getLowBitsSet(IndexWidth, MaskBits);
+      if (TLI.SimplifyDemandedBits(Index, DemandedBits, DCI)) {
+        if (N->getOpcode() != ISD::DELETED_NODE)
+          DCI.AddToWorklist(N);
+        return SDValue(N, 0);
+      }
+      if (auto MinShAmt = DAG.getValidMinimumShiftAmount(Index)) {
+        if (*MinShAmt >= 1 && (*MinShAmt + Log2ScaleAmt) < 4 &&
+            DAG.ComputeNumSignBits(Index.getOperand(0)) > 1) {
+          SDValue ShAmt = Index.getOperand(1);
+          SDValue NewShAmt =
+              DAG.getNode(ISD::SUB, DL, ShAmt.getValueType(), ShAmt,
+                          DAG.getConstant(1, DL, ShAmt.getValueType()));
+          SDValue NewIndex = DAG.getNode(ISD::SHL, DL, Index.getValueType(),
+                                         Index.getOperand(0), NewShAmt);
+          SDValue NewScale =
+              DAG.getConstant(ScaleAmt * 2, DL, Scale.getValueType());
+          return rebuildGatherScatter(GorS, NewIndex, Base, NewScale, DAG);
+        }
+      }
+    }
 
     // Shrink indices if they are larger than 32-bits.
     // Only do this before legalize types since v2i64 could become v2i32.
@@ -56713,8 +56750,8 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
 
       // FIXME: We could support more than just constant fold, but we need to
       // careful with costing. A truncate that can be optimized out would be
-      // fine. Otherwise we might only want to create a truncate if it avoids a
-      // split.
+      // fine. Otherwise we might only want to create a truncate if it avoids
+      // a split.
       if (SDValue TruncIndex =
               DAG.FoldConstantArithmetic(ISD::TRUNCATE, DL, NewVT, Index))
         return rebuildGatherScatter(GorS, TruncIndex, Base, Scale, DAG);
@@ -56725,6 +56762,12 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
       if ((Index.getOpcode() == ISD::SIGN_EXTEND ||
            Index.getOpcode() == ISD::ZERO_EXTEND) &&
           Index.getOperand(0).getScalarValueSizeInBits() <= 32) {
+        Index = DAG.getNode(ISD::TRUNCATE, DL, NewVT, Index);
+        return rebuildGatherScatter(GorS, Index, Base, Scale, DAG);
+      }
+
+      // Shrink if we remove an illegal type.
+      if (!TLI.isTypeLegal(Index.getValueType()) && TLI.isTypeLegal(NewVT)) {
         Index = DAG.getNode(ISD::TRUNCATE, DL, NewVT, Index);
         return rebuildGatherScatter(GorS, Index, Base, Scale, DAG);
       }
@@ -60822,7 +60865,7 @@ static bool clobbersFlagRegisters(const SmallVector<StringRef, 4> &AsmPieces) {
 bool X86TargetLowering::ExpandInlineAsm(CallInst *CI) const {
   InlineAsm *IA = cast<InlineAsm>(CI->getCalledOperand());
 
-  const std::string &AsmStr = IA->getAsmString();
+  StringRef AsmStr = IA->getAsmString();
 
   IntegerType *Ty = dyn_cast<IntegerType>(CI->getType());
   if (!Ty || Ty->getBitWidth() % 16 != 0)
@@ -60853,7 +60896,7 @@ bool X86TargetLowering::ExpandInlineAsm(CallInst *CI) const {
 
     // rorw $$8, ${0:w}  -->  llvm.bswap.i16
     if (CI->getType()->isIntegerTy(16) &&
-        IA->getConstraintString().compare(0, 5, "=r,0,") == 0 &&
+        IA->getConstraintString().starts_with("=r,0,") &&
         (matchAsm(AsmPieces[0], {"rorw", "$$8,", "${0:w}"}) ||
          matchAsm(AsmPieces[0], {"rolw", "$$8,", "${0:w}"}))) {
       AsmPieces.clear();
@@ -60866,7 +60909,7 @@ bool X86TargetLowering::ExpandInlineAsm(CallInst *CI) const {
     break;
   case 3:
     if (CI->getType()->isIntegerTy(32) &&
-        IA->getConstraintString().compare(0, 5, "=r,0,") == 0 &&
+        IA->getConstraintString().starts_with("=r,0,") &&
         matchAsm(AsmPieces[0], {"rorw", "$$8,", "${0:w}"}) &&
         matchAsm(AsmPieces[1], {"rorl", "$$16,", "$0"}) &&
         matchAsm(AsmPieces[2], {"rorw", "$$8,", "${0:w}"})) {
@@ -62039,7 +62082,7 @@ bool X86TargetLowering::hasStackProbeSymbol(const MachineFunction &MF) const {
 bool X86TargetLowering::hasInlineStackProbe(const MachineFunction &MF) const {
 
   // No inline stack probe for Windows, they have their own mechanism.
-  if (Subtarget.isOSWindows() ||
+  if (Subtarget.isOSWindows() || Subtarget.isUEFI() ||
       MF.getFunction().hasFnAttribute("no-stack-arg-probe"))
     return false;
 
@@ -62065,7 +62108,8 @@ X86TargetLowering::getStackProbeSymbolName(const MachineFunction &MF) const {
 
   // Generally, if we aren't on Windows, the platform ABI does not include
   // support for stack probes, so don't emit them.
-  if (!Subtarget.isOSWindows() || Subtarget.isTargetMachO() ||
+  if ((!Subtarget.isOSWindows() && !Subtarget.isUEFI()) ||
+      Subtarget.isTargetMachO() ||
       MF.getFunction().hasFnAttribute("no-stack-arg-probe"))
     return "";
 

@@ -248,6 +248,23 @@ bool fromJSON(const json::Value &Params, Configuration &C, json::Path P) {
          parseTimeout(Params, C.timeout, P);
 }
 
+bool fromJSON(const json::Value &Params, BreakpointLocationsArguments &BLA,
+              json::Path P) {
+  json::ObjectMapper O(Params, P);
+  return O && O.map("source", BLA.source) && O.map("line", BLA.line) &&
+         O.mapOptional("column", BLA.column) &&
+         O.mapOptional("endLine", BLA.endLine) &&
+         O.mapOptional("endColumn", BLA.endColumn);
+}
+
+llvm::json::Value toJSON(const BreakpointLocationsResponseBody &BLRB) {
+  llvm::json::Array breakpoints_json;
+  for (const auto &breakpoint : BLRB.breakpoints) {
+    breakpoints_json.push_back(toJSON(breakpoint));
+  }
+  return llvm::json::Object{{"breakpoints", std::move(breakpoints_json)}};
+}
+
 bool fromJSON(const json::Value &Params, LaunchRequestArguments &LRA,
               json::Path P) {
   json::ObjectMapper O(Params, P);
@@ -357,6 +374,76 @@ bool fromJSON(const llvm::json::Value &Params, StepOutArguments &SOA,
   return OM && OM.map("threadId", SOA.threadId) &&
          OM.mapOptional("singleThread", SOA.singleThread) &&
          OM.mapOptional("granularity", SOA.granularity);
+}
+
+bool fromJSON(const llvm::json::Value &Params, SetBreakpointsArguments &SBA,
+              llvm::json::Path P) {
+  json::ObjectMapper O(Params, P);
+  return O && O.map("source", SBA.source) &&
+         O.map("breakpoints", SBA.breakpoints) && O.map("lines", SBA.lines) &&
+         O.map("sourceModified", SBA.sourceModified);
+}
+
+llvm::json::Value toJSON(const SetBreakpointsResponseBody &SBR) {
+  json::Object result;
+  result["breakpoints"] = SBR.breakpoints;
+  return result;
+}
+
+bool fromJSON(const llvm::json::Value &Params,
+              SetFunctionBreakpointsArguments &SFBA, llvm::json::Path P) {
+  json::ObjectMapper O(Params, P);
+  return O && O.map("breakpoints", SFBA.breakpoints);
+}
+
+llvm::json::Value toJSON(const SetFunctionBreakpointsResponseBody &SFBR) {
+  json::Object result;
+  result["breakpoints"] = SFBR.breakpoints;
+  return result;
+}
+
+bool fromJSON(const llvm::json::Value &Params,
+              SetInstructionBreakpointsArguments &SIBA, llvm::json::Path P) {
+  json::ObjectMapper O(Params, P);
+  return O && O.map("breakpoints", SIBA.breakpoints);
+}
+
+llvm::json::Value toJSON(const SetInstructionBreakpointsResponseBody &SIBR) {
+  json::Object result;
+  result["breakpoints"] = SIBR.breakpoints;
+  return result;
+}
+
+bool fromJSON(const llvm::json::Value &Params,
+              DataBreakpointInfoArguments &DBIA, llvm::json::Path P) {
+  json::ObjectMapper O(Params, P);
+  return O && O.map("variablesReference", DBIA.variablesReference) &&
+         O.map("name", DBIA.name) && O.map("frameId", DBIA.frameId) &&
+         O.map("bytes", DBIA.bytes) && O.map("asAddress", DBIA.asAddress) &&
+         O.map("mode", DBIA.mode);
+}
+
+llvm::json::Value toJSON(const DataBreakpointInfoResponseBody &DBIRB) {
+  json::Object result;
+  result["dataId"] = DBIRB.dataId ? *DBIRB.dataId : llvm::json::Value(nullptr);
+  result["description"] = DBIRB.description;
+  if (DBIRB.accessTypes)
+    result["accessTypes"] = *DBIRB.accessTypes;
+  if (DBIRB.canPersist)
+    result["canPersist"] = *DBIRB.canPersist;
+  return result;
+}
+
+bool fromJSON(const llvm::json::Value &Params,
+              SetDataBreakpointsArguments &SDBA, llvm::json::Path P) {
+  json::ObjectMapper O(Params, P);
+  return O && O.map("breakpoints", SDBA.breakpoints);
+}
+
+llvm::json::Value toJSON(const SetDataBreakpointsResponseBody &SDBR) {
+  json::Object result;
+  result["breakpoints"] = SDBR.breakpoints;
+  return result;
 }
 
 } // namespace lldb_dap::protocol

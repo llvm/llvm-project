@@ -591,6 +591,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeGCNRegPressurePrinterPass(*PR);
   initializeAMDGPUPreloadKernArgPrologLegacyPass(*PR);
   initializeAMDGPUWaitSGPRHazardsLegacyPass(*PR);
+  initializeAMDGPUPreloadKernelArgumentsLegacyPass(*PR);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -1349,6 +1350,10 @@ void AMDGPUPassConfig::addIRPasses() {
 }
 
 void AMDGPUPassConfig::addCodeGenPrepare() {
+  if (TM->getTargetTriple().isAMDGCN() &&
+      TM->getOptLevel() > CodeGenOptLevel::None)
+    addPass(createAMDGPUPreloadKernelArgumentsLegacyPass(TM));
+
   if (TM->getTargetTriple().isAMDGCN() && EnableLowerKernelArguments)
     addPass(createAMDGPULowerKernelArgumentsPass());
 
@@ -2097,6 +2102,9 @@ void AMDGPUCodeGenPassBuilder::addIRPasses(AddIRPass &addPass) const {
 void AMDGPUCodeGenPassBuilder::addCodeGenPrepare(AddIRPass &addPass) const {
   // AMDGPUAnnotateKernelFeaturesPass is missing here, but it will hopefully be
   // deleted soon.
+
+  if (TM.getOptLevel() > CodeGenOptLevel::None)
+    addPass(AMDGPUPreloadKernelArgumentsPass(TM));
 
   if (EnableLowerKernelArguments)
     addPass(AMDGPULowerKernelArgumentsPass(TM));

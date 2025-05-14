@@ -1307,6 +1307,10 @@ void CodeGenModule::Release() {
     getModule().addModuleFlag(llvm::Module::Warning, "import-call-optimization",
                               1);
 
+  // Enable unwind v2 (epilog).
+  if (CodeGenOpts.WinX64EHUnwindV2)
+    getModule().addModuleFlag(llvm::Module::Warning, "winx64-eh-unwindv2", 1);
+
   // Indicate whether this Module was compiled with -fopenmp
   if (getLangOpts().OpenMP && !getLangOpts().OpenMPSimd)
     getModule().addModuleFlag(llvm::Module::Max, "openmp", LangOpts.OpenMP);
@@ -4057,11 +4061,7 @@ namespace {
         return false;
       std::string BuiltinNameStr = BI.getName(BuiltinID);
       StringRef BuiltinName = BuiltinNameStr;
-      if (BuiltinName.starts_with("__builtin_") &&
-          Name == BuiltinName.slice(strlen("__builtin_"), StringRef::npos)) {
-        return true;
-      }
-      return false;
+      return BuiltinName.consume_front("__builtin_") && Name == BuiltinName;
     }
 
     bool VisitStmt(const Stmt *S) {
@@ -7120,7 +7120,7 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
     }
     // Emit any static data members, they may be definitions.
     for (auto *I : CRD->decls())
-      if (isa<VarDecl>(I) || isa<CXXRecordDecl>(I))
+      if (isa<VarDecl>(I) || isa<CXXRecordDecl>(I) || isa<EnumDecl>(I))
         EmitTopLevelDecl(I);
     break;
   }

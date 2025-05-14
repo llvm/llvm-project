@@ -20,7 +20,6 @@ include( GNUInstallDirs )
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
   amdgcn-amdhsa/lib/SOURCES;
   amdgcn/lib/SOURCES;
-  amdgpu/lib/SOURCES;
   clspv/lib/SOURCES;
   generic/lib/SOURCES;
   ptx-nvidiacl/lib/SOURCES;
