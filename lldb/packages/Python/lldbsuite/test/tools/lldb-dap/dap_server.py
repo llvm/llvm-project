@@ -8,6 +8,7 @@ import pprint
 import socket
 import string
 import subprocess
+import signal
 import sys
 import threading
 import time
@@ -134,7 +135,6 @@ class DebugCommunication(object):
         self.thread_stop_reasons = {}
         self.progress_events = []
         self.reverse_requests = []
-        self.module_events = []
         self.sequence = 1
         self.threads = None
         self.recv_thread.start()
@@ -248,11 +248,6 @@ class DebugCommunication(object):
                 # and 'progressEnd' events. Keep these around in case test
                 # cases want to verify them.
                 self.progress_events.append(packet)
-            elif event == "module":
-                # Module events indicate that some information about a module has changed.
-                self.module_events.append(packet)
-                # no need to add 'module' event packets to our packets list
-                return keepGoing
 
         elif packet_type == "response":
             if packet["command"] == "disconnect":
@@ -1269,7 +1264,7 @@ class DebugAdapterServer(DebugCommunication):
             args,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            stderr=sys.stderr,
             env=adapter_env,
         )
 
@@ -1302,13 +1297,38 @@ class DebugAdapterServer(DebugCommunication):
     def terminate(self):
         super(DebugAdapterServer, self).terminate()
         if self.process is not None:
-            self.process.terminate()
-            try:
-                self.process.wait(timeout=20)
-            except subprocess.TimeoutExpired:
-                self.process.kill()
-                self.process.wait()
+            process = self.process
             self.process = None
+            try:
+                # When we close stdin it should signal the lldb-dap that no
+                # new messages will arrive and it should shutdown on its own.
+                process.stdin.close()
+                process.wait(timeout=20)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait()
+            if process.returncode != 0:
+                raise DebugAdapterProcessError(process.returncode)
+
+
+class DebugAdapterError(Exception):
+    pass
+
+
+class DebugAdapterProcessError(DebugAdapterError):
+    """Raised when the lldb-dap process exits with a non-zero exit status."""
+
+    def __init__(self, returncode):
+        self.returncode = returncode
+
+    def __str__(self):
+        if self.returncode and self.returncode < 0:
+            try:
+                return f"lldb-dap died with {signal.Signals(-self.returncode).name}."
+            except ValueError:
+                return f"lldb-dap died with unknown signal {-self.returncode}."
+        else:
+            return f"lldb-dap returned non-zero exit status {self.returncode}."
 
 
 def attach_options_specified(options):

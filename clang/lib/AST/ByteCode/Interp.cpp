@@ -942,15 +942,6 @@ bool CheckThis(InterpState &S, CodePtr OpPC, const Pointer &This) {
   return false;
 }
 
-bool CheckPure(InterpState &S, CodePtr OpPC, const CXXMethodDecl *MD) {
-  if (!MD->isPureVirtual())
-    return true;
-  const SourceInfo &E = S.Current->getSource(OpPC);
-  S.FFDiag(E, diag::note_constexpr_pure_virtual_call, 1) << MD;
-  S.Note(MD->getLocation(), diag::note_declared_at);
-  return false;
-}
-
 bool CheckFloatResult(InterpState &S, CodePtr OpPC, const Floating &Result,
                       APFloat::opStatus Status, FPOptions FPO) {
   // [expr.pre]p4:
@@ -1260,12 +1251,11 @@ bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm,
 
 void diagnoseEnumValue(InterpState &S, CodePtr OpPC, const EnumDecl *ED,
                        const APSInt &Value) {
-  llvm::APInt Min;
-  llvm::APInt Max;
-
   if (S.EvaluatingDecl && !S.EvaluatingDecl->isConstexpr())
     return;
 
+  llvm::APInt Min;
+  llvm::APInt Max;
   ED->getValueRange(Max, Min);
   --Max;
 
@@ -1511,7 +1501,7 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
   InterpFrame *FrameBefore = S.Current;
   S.Current = NewFrame.get();
 
-  InterpStateCCOverride CCOverride(S, Func->getDecl()->isImmediateFunction());
+  InterpStateCCOverride CCOverride(S, Func->isImmediate());
   // Note that we cannot assert(CallResult.hasValue()) here since
   // Ret() above only sets the APValue if the curent frame doesn't
   // have a caller set.

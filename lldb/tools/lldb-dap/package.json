@@ -30,9 +30,10 @@
   "devDependencies": {
     "@types/node": "^18.19.41",
     "@types/vscode": "1.75.0",
+    "@vscode/debugprotocol": "^1.68.0",
     "@vscode/vsce": "^3.2.2",
-    "prettier-plugin-curly": "^0.3.1",
     "prettier": "^3.4.2",
+    "prettier-plugin-curly": "^0.3.1",
     "typescript": "^5.7.3"
   },
   "activationEvents": [
@@ -552,10 +553,7 @@
                 "description": "Path to the program to attach to."
               },
               "pid": {
-                "type": [
-                  "number",
-                  "string"
-                ],
+                "type": "number",
                 "description": "System process ID to attach to."
               },
               "waitFor": {
@@ -763,6 +761,16 @@
           }
         ]
       }
-    ]
+    ],
+    "views": {
+      "debug": [
+        {
+          "id": "lldb-dap.modules",
+          "name": "Modules",
+          "when": "inDebugMode && debugType == 'lldb-dap'",
+          "icon": "$(symbol-module)"
+        }
+      ]
+    }
   }
 }

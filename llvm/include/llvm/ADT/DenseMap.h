@@ -217,6 +217,16 @@ public:
     return ValueT();
   }
 
+  // Return the entry with the specified key, or \p Default. This variant is
+  // useful, because `lookup` cannot be used with non-default-constructible
+  // values.
+  ValueT lookup_or(const_arg_type_t<KeyT> Val,
+                   const_arg_type_t<ValueT> Default) const {
+    if (const BucketT *Bucket = doFind(Val))
+      return Bucket->getSecond();
+    return Default;
+  }
+
   /// at - Return the entry for the specified key, or abort if no such
   /// entry exists.
   const ValueT &at(const_arg_type_t<KeyT> Val) const {
@@ -340,6 +350,22 @@ public:
     auto Ret = try_emplace(std::move(Key), std::forward<V>(Val));
     if (!Ret.second)
       Ret.first->second = std::forward<V>(Val);
+    return Ret;
+  }
+
+  template <typename... Ts>
+  std::pair<iterator, bool> emplace_or_assign(const KeyT &Key, Ts &&...Args) {
+    auto Ret = try_emplace(Key, std::forward<Ts>(Args)...);
+    if (!Ret.second)
+      Ret.first->second = ValueT(std::forward<Ts>(Args)...);
+    return Ret;
+  }
+
+  template <typename... Ts>
+  std::pair<iterator, bool> emplace_or_assign(KeyT &&Key, Ts &&...Args) {
+    auto Ret = try_emplace(std::move(Key), std::forward<Ts>(Args)...);
+    if (!Ret.second)
+      Ret.first->second = ValueT(std::forward<Ts>(Args)...);
     return Ret;
   }
 

@@ -836,6 +836,24 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
       return TyBits - 1; // Every always-zero bit is a sign bit.
     break;
   }
+  case TargetOpcode::G_BUILD_VECTOR: {
+    // Collect the known bits that are shared by every demanded vector element.
+    FirstAnswer = TyBits;
+    APInt SingleDemandedElt(1, 1);
+    for (unsigned i = 0, e = MI.getNumOperands() - 1; i < e; ++i) {
+      if (!DemandedElts[i])
+        continue;
+
+      unsigned Tmp2 = computeNumSignBits(MI.getOperand(i + 1).getReg(),
+                                         SingleDemandedElt, Depth + 1);
+      FirstAnswer = std::min(FirstAnswer, Tmp2);
+
+      // If we don't know any bits, early out.
+      if (FirstAnswer == 1)
+        break;
+    }
+    break;
+  }
   case TargetOpcode::G_INTRINSIC:
   case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
   case TargetOpcode::G_INTRINSIC_CONVERGENT:

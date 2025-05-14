@@ -21,7 +21,6 @@ class UnknownLoc;
 class FileLineColLoc;
 class FileLineColRange;
 class Type;
-class PrimitiveType;
 class IntegerType;
 class FloatType;
 class FunctionType;

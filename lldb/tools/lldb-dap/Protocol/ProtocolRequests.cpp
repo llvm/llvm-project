@@ -223,26 +223,46 @@ bool fromJSON(const json::Value &Params, InitializeRequestArguments &IRA,
 
 bool fromJSON(const json::Value &Params, Configuration &C, json::Path P) {
   json::ObjectMapper O(Params, P);
-  return O.map("debuggerRoot", C.debuggerRoot) &&
+  return O.mapOptional("debuggerRoot", C.debuggerRoot) &&
          O.mapOptional("enableAutoVariableSummaries",
                        C.enableAutoVariableSummaries) &&
          O.mapOptional("enableSyntheticChildDebugging",
                        C.enableSyntheticChildDebugging) &&
          O.mapOptional("displayExtendedBacktrace",
                        C.displayExtendedBacktrace) &&
+         O.mapOptional("stopOnEntry", C.stopOnEntry) &&
          O.mapOptional("commandEscapePrefix", C.commandEscapePrefix) &&
-         O.map("customFrameFormat", C.customFrameFormat) &&
-         O.map("customThreadFormat", C.customThreadFormat) &&
-         O.map("sourcePath", C.sourcePath) &&
+         O.mapOptional("customFrameFormat", C.customFrameFormat) &&
+         O.mapOptional("customThreadFormat", C.customThreadFormat) &&
+         O.mapOptional("sourcePath", C.sourcePath) &&
          O.mapOptional("initCommands", C.initCommands) &&
          O.mapOptional("preRunCommands", C.preRunCommands) &&
          O.mapOptional("postRunCommands", C.postRunCommands) &&
          O.mapOptional("stopCommands", C.stopCommands) &&
          O.mapOptional("exitCommands", C.exitCommands) &&
          O.mapOptional("terminateCommands", C.terminateCommands) &&
-         O.map("program", C.program) && O.map("targetTriple", C.targetTriple) &&
-         O.map("platformName", C.platformName) &&
-         parseSourceMap(Params, C.sourceMap, P);
+         O.mapOptional("program", C.program) &&
+         O.mapOptional("targetTriple", C.targetTriple) &&
+         O.mapOptional("platformName", C.platformName) &&
+         parseSourceMap(Params, C.sourceMap, P) &&
+         parseTimeout(Params, C.timeout, P);
+}
+
+bool fromJSON(const json::Value &Params, BreakpointLocationsArguments &BLA,
+              json::Path P) {
+  json::ObjectMapper O(Params, P);
+  return O && O.map("source", BLA.source) && O.map("line", BLA.line) &&
+         O.mapOptional("column", BLA.column) &&
+         O.mapOptional("endLine", BLA.endLine) &&
+         O.mapOptional("endColumn", BLA.endColumn);
+}
+
+llvm::json::Value toJSON(const BreakpointLocationsResponseBody &BLRB) {
+  llvm::json::Array breakpoints_json;
+  for (const auto &breakpoint : BLRB.breakpoints) {
+    breakpoints_json.push_back(toJSON(breakpoint));
+  }
+  return llvm::json::Object{{"breakpoints", std::move(breakpoints_json)}};
 }
 
 bool fromJSON(const json::Value &Params, LaunchRequestArguments &LRA,
@@ -251,14 +271,38 @@ bool fromJSON(const json::Value &Params, LaunchRequestArguments &LRA,
   return O && fromJSON(Params, LRA.configuration, P) &&
          O.mapOptional("noDebug", LRA.noDebug) &&
          O.mapOptional("launchCommands", LRA.launchCommands) &&
-         O.map("cwd", LRA.cwd) && O.mapOptional("args", LRA.args) &&
+         O.mapOptional("cwd", LRA.cwd) && O.mapOptional("args", LRA.args) &&
          O.mapOptional("detachOnError", LRA.detachOnError) &&
          O.mapOptional("disableASLR", LRA.disableASLR) &&
          O.mapOptional("disableSTDIO", LRA.disableSTDIO) &&
          O.mapOptional("shellExpandArguments", LRA.shellExpandArguments) &&
-         O.mapOptional("stopOnEntry", LRA.stopOnEntry) &&
+
          O.mapOptional("runInTerminal", LRA.runInTerminal) &&
-         parseEnv(Params, LRA.env, P) && parseTimeout(Params, LRA.timeout, P);
+         parseEnv(Params, LRA.env, P);
+}
+
+bool fromJSON(const json::Value &Params, AttachRequestArguments &ARA,
+              json::Path P) {
+  json::ObjectMapper O(Params, P);
+  return O && fromJSON(Params, ARA.configuration, P) &&
+         O.mapOptional("attachCommands", ARA.attachCommands) &&
+         O.mapOptional("pid", ARA.pid) &&
+         O.mapOptional("waitFor", ARA.waitFor) &&
+         O.mapOptional("gdb-remote-port", ARA.gdbRemotePort) &&
+         O.mapOptional("gdb-remote-hostname", ARA.gdbRemoteHostname) &&
+         O.mapOptional("coreFile", ARA.coreFile);
+}
+
+bool fromJSON(const llvm::json::Value &Params, ContinueArguments &CA,
+              llvm::json::Path P) {
+  json::ObjectMapper O(Params, P);
+  return O && O.map("threadId", CA.threadId) &&
+         O.mapOptional("singleThread", CA.singleThread);
+}
+
+llvm::json::Value toJSON(const ContinueResponseBody &CRB) {
+  json::Object Body{{"allThreadsContinued", CRB.allThreadsContinued}};
+  return std::move(Body);
 }
 
 bool fromJSON(const llvm::json::Value &Params, SetVariableArguments &SVA,
@@ -330,6 +374,76 @@ bool fromJSON(const llvm::json::Value &Params, StepOutArguments &SOA,
   return OM && OM.map("threadId", SOA.threadId) &&
          OM.mapOptional("singleThread", SOA.singleThread) &&
          OM.mapOptional("granularity", SOA.granularity);
+}
+
+bool fromJSON(const llvm::json::Value &Params, SetBreakpointsArguments &SBA,
+              llvm::json::Path P) {
+  json::ObjectMapper O(Params, P);
+  return O && O.map("source", SBA.source) &&
+         O.map("breakpoints", SBA.breakpoints) && O.map("lines", SBA.lines) &&
+         O.map("sourceModified", SBA.sourceModified);
+}
+
+llvm::json::Value toJSON(const SetBreakpointsResponseBody &SBR) {
+  json::Object result;
+  result["breakpoints"] = SBR.breakpoints;
+  return result;
+}
+
+bool fromJSON(const llvm::json::Value &Params,
+              SetFunctionBreakpointsArguments &SFBA, llvm::json::Path P) {
+  json::ObjectMapper O(Params, P);
+  return O && O.map("breakpoints", SFBA.breakpoints);
+}
+
+llvm::json::Value toJSON(const SetFunctionBreakpointsResponseBody &SFBR) {
+  json::Object result;
+  result["breakpoints"] = SFBR.breakpoints;
+  return result;
+}
+
+bool fromJSON(const llvm::json::Value &Params,
+              SetInstructionBreakpointsArguments &SIBA, llvm::json::Path P) {
+  json::ObjectMapper O(Params, P);
+  return O && O.map("breakpoints", SIBA.breakpoints);
+}
+
+llvm::json::Value toJSON(const SetInstructionBreakpointsResponseBody &SIBR) {
+  json::Object result;
+  result["breakpoints"] = SIBR.breakpoints;
+  return result;
+}
+
+bool fromJSON(const llvm::json::Value &Params,
+              DataBreakpointInfoArguments &DBIA, llvm::json::Path P) {
+  json::ObjectMapper O(Params, P);
+  return O && O.map("variablesReference", DBIA.variablesReference) &&
+         O.map("name", DBIA.name) && O.map("frameId", DBIA.frameId) &&
+         O.map("bytes", DBIA.bytes) && O.map("asAddress", DBIA.asAddress) &&
+         O.map("mode", DBIA.mode);
+}
+
+llvm::json::Value toJSON(const DataBreakpointInfoResponseBody &DBIRB) {
+  json::Object result;
+  result["dataId"] = DBIRB.dataId ? *DBIRB.dataId : llvm::json::Value(nullptr);
+  result["description"] = DBIRB.description;
+  if (DBIRB.accessTypes)
+    result["accessTypes"] = *DBIRB.accessTypes;
+  if (DBIRB.canPersist)
+    result["canPersist"] = *DBIRB.canPersist;
+  return result;
+}
+
+bool fromJSON(const llvm::json::Value &Params,
+              SetDataBreakpointsArguments &SDBA, llvm::json::Path P) {
+  json::ObjectMapper O(Params, P);
+  return O && O.map("breakpoints", SDBA.breakpoints);
+}
+
+llvm::json::Value toJSON(const SetDataBreakpointsResponseBody &SDBR) {
+  json::Object result;
+  result["breakpoints"] = SDBR.breakpoints;
+  return result;
 }
 
 } // namespace lldb_dap::protocol

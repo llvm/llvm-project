@@ -104,6 +104,8 @@ struct MissingFeatures {
   static bool opCallExtParameterInfo() { return false; }
   static bool opCallCIRGenFuncInfoParamInfo() { return false; }
   static bool opCallCIRGenFuncInfoExtParamInfo() { return false; }
+  static bool opCallLandingPad() { return false; }
+  static bool opCallContinueBlock() { return false; }
 
   // ScopeOp handling
   static bool opScopeCleanupRegion() { return false; }
@@ -177,6 +179,7 @@ struct MissingFeatures {
   static bool msabi() { return false; }
   static bool typeChecks() { return false; }
   static bool lambdaFieldToName() { return false; }
+  static bool updateCompletedType() { return false; }
   static bool targetSpecificCXXABI() { return false; }
   static bool moduleNameHash() { return false; }
   static bool setDSOLocal() { return false; }
