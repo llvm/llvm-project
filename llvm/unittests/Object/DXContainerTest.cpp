@@ -1086,7 +1086,7 @@ TEST(RootSignature, ParseDescriptorTable) {
     ASSERT_THAT_ERROR(ParamView.takeError(), Succeeded());
 
     auto *DescriptorTableView =
-        dyn_cast<DirectX::DescriptorTableView<dxbc::RTS0::v1::DescriptorRange>>(
+        dyn_cast<DirectX::DescriptorTableView<dxbc::RTS0::v2::DescriptorRange>>(
             &*ParamView);
     ASSERT_TRUE(DescriptorTableView != nullptr);
     auto Table = DescriptorTableView->read();
@@ -1139,7 +1139,7 @@ TEST(RootSignature, ParseDescriptorTable) {
     ASSERT_THAT_ERROR(ParamView.takeError(), Succeeded());
 
     auto *DescriptorTableView =
-        dyn_cast<DirectX::DescriptorTableView<dxbc::RTS0::v0::DescriptorRange>>(
+        dyn_cast<DirectX::DescriptorTableView<dxbc::RTS0::v1::DescriptorRange>>(
             &*ParamView);
     ASSERT_TRUE(DescriptorTableView != nullptr);
     auto Table = DescriptorTableView->read();
@@ -1193,13 +1193,13 @@ TEST(RootSignature, ParseStaticSamplers) {
     ASSERT_EQ(Sampler.AddressV, 2u);
     ASSERT_EQ(Sampler.AddressW, 5u);
     EXPECT_FLOAT_EQ(Sampler.MipLODBias, 1.23);
-    ASSERT_EQ(Sampler.MaxAnisotropy, 20);
-    ASSERT_EQ(Sampler.ComparisonFunc, 4);
-    ASSERT_EQ(Sampler.BorderColor, 0);
+    ASSERT_EQ(Sampler.MaxAnisotropy, 20u);
+    ASSERT_EQ(Sampler.ComparisonFunc, 4u);
+    ASSERT_EQ(Sampler.BorderColor, 0u);
     EXPECT_FLOAT_EQ(Sampler.MinLOD, 4.56);
     EXPECT_FLOAT_EQ(Sampler.MaxLOD, 8.9);
-    ASSERT_EQ(Sampler.ShaderRegister, 31);
-    ASSERT_EQ(Sampler.RegisterSpace, 32);
-    ASSERT_EQ(Sampler.ShaderVisibility, 7);
+    ASSERT_EQ(Sampler.ShaderRegister, 31u);
+    ASSERT_EQ(Sampler.RegisterSpace, 32u);
+    ASSERT_EQ(Sampler.ShaderVisibility, 7u);
   }
 }

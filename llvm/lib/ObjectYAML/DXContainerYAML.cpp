@@ -48,7 +48,7 @@ DXContainerYAML::RootSignatureYamlDesc::create(
   RootSigDesc.RootParametersOffset = Data.getRootParametersOffset();
 
   uint32_t Flags = Data.getFlags();
-  for (const dxbc::RTS0::v0::RootParameterHeader &PH : Data.param_headers()) {
+  for (const dxbc::RTS0::v1::RootParameterHeader &PH : Data.param_headers()) {
 
     if (!dxbc::RTS0::isValidParameterType(PH.ParameterType))
       return createStringError(std::errc::invalid_argument,
@@ -71,7 +71,7 @@ DXContainerYAML::RootSignatureYamlDesc::create(
     object::DirectX::RootParameterView ParamView = ParamViewOrErr.get();
 
     if (auto *RCV = dyn_cast<object::DirectX::RootConstantView>(&ParamView)) {
-      llvm::Expected<dxbc::RTS0::v0::RootConstants> ConstantsOrErr =
+      llvm::Expected<dxbc::RTS0::v1::RootConstants> ConstantsOrErr =
           RCV->read();
       if (Error E = ConstantsOrErr.takeError())
         return std::move(E);
@@ -84,7 +84,7 @@ DXContainerYAML::RootSignatureYamlDesc::create(
       NewP.Data = ConstantYaml;
     } else if (auto *RDV =
                    dyn_cast<object::DirectX::RootDescriptorView>(&ParamView)) {
-      llvm::Expected<dxbc::RTS0::v1::RootDescriptor> DescriptorOrErr =
+      llvm::Expected<dxbc::RTS0::v2::RootDescriptor> DescriptorOrErr =
           RDV->read(Version);
       if (Error E = DescriptorOrErr.takeError())
         return std::move(E);
@@ -101,9 +101,9 @@ DXContainerYAML::RootSignatureYamlDesc::create(
       }
       NewP.Data = YamlDescriptor;
     } else if (auto *TDV = dyn_cast<object::DirectX::DescriptorTableView<
-                   dxbc::RTS0::v0::DescriptorRange>>(&ParamView)) {
+                   dxbc::RTS0::v1::DescriptorRange>>(&ParamView)) {
       llvm::Expected<
-          object::DirectX::DescriptorTable<dxbc::RTS0::v0::DescriptorRange>>
+          object::DirectX::DescriptorTable<dxbc::RTS0::v1::DescriptorRange>>
           TableOrErr = TDV->read();
       if (Error E = TableOrErr.takeError())
         return std::move(E);
@@ -126,9 +126,9 @@ DXContainerYAML::RootSignatureYamlDesc::create(
       }
       NewP.Data = YamlTable;
     } else if (auto *TDV = dyn_cast<object::DirectX::DescriptorTableView<
-                   dxbc::RTS0::v1::DescriptorRange>>(&ParamView)) {
+                   dxbc::RTS0::v2::DescriptorRange>>(&ParamView)) {
       llvm::Expected<
-          object::DirectX::DescriptorTable<dxbc::RTS0::v1::DescriptorRange>>
+          object::DirectX::DescriptorTable<dxbc::RTS0::v2::DescriptorRange>>
           TableOrErr = TDV->read();
       if (Error E = TableOrErr.takeError())
         return std::move(E);

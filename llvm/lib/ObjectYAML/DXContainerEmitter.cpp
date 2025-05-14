@@ -277,7 +277,7 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
       RS.StaticSamplersOffset = P.RootSignature->StaticSamplersOffset;
 
       for (const auto &Param : P.RootSignature->Parameters) {
-        auto Header = dxbc::RTS0::v0::RootParameterHeader{
+        auto Header = dxbc::RTS0::v1::RootParameterHeader{
             Param.Type, Param.Visibility, Param.Offset};
 
         if (std::holds_alternative<DXContainerYAML::RootConstantsYaml>(
@@ -285,7 +285,7 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
           auto ConstantYaml =
               std::get<DXContainerYAML::RootConstantsYaml>(Param.Data);
 
-          dxbc::RTS0::v0::RootConstants Constants;
+          dxbc::RTS0::v1::RootConstants Constants;
           Constants.Num32BitValues = ConstantYaml.Num32BitValues;
           Constants.RegisterSpace = ConstantYaml.RegisterSpace;
           Constants.ShaderRegister = ConstantYaml.ShaderRegister;
@@ -296,12 +296,12 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
               std::get<DXContainerYAML::RootDescriptorYaml>(Param.Data);
 
           if (RS.Version == 1) {
-            dxbc::RTS0::v0::RootDescriptor Descriptor;
+            dxbc::RTS0::v1::RootDescriptor Descriptor;
             Descriptor.RegisterSpace = DescriptorYaml.RegisterSpace;
             Descriptor.ShaderRegister = DescriptorYaml.ShaderRegister;
             RS.ParametersContainer.addParameter(Header, Descriptor);
           } else {
-            dxbc::RTS0::v1::RootDescriptor Descriptor;
+            dxbc::RTS0::v2::RootDescriptor Descriptor;
             Descriptor.RegisterSpace = DescriptorYaml.RegisterSpace;
             Descriptor.ShaderRegister = DescriptorYaml.ShaderRegister;
             Descriptor.Flags = DescriptorYaml.getEncodedFlags();
@@ -315,7 +315,7 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
 
           for (const auto &R : TableYaml.Ranges) {
             if (RS.Version == 1) {
-              dxbc::RTS0::v0::DescriptorRange Range;
+              dxbc::RTS0::v1::DescriptorRange Range;
               Range.RangeType = R.RangeType;
               Range.NumDescriptors = R.NumDescriptors;
               Range.BaseShaderRegister = R.BaseShaderRegister;
@@ -324,7 +324,7 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
                   R.OffsetInDescriptorsFromTableStart;
               Table.Ranges.push_back(Range);
             } else {
-              dxbc::RTS0::v1::DescriptorRange Range;
+              dxbc::RTS0::v2::DescriptorRange Range;
               Range.RangeType = R.RangeType;
               Range.NumDescriptors = R.NumDescriptors;
               Range.BaseShaderRegister = R.BaseShaderRegister;
@@ -343,7 +343,7 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
       }
 
       for (const auto &Param : P.RootSignature->samplers()) {
-        dxbc::RTS0::v0::StaticSampler NewSampler;
+        dxbc::RTS0::v1::StaticSampler NewSampler;
         NewSampler.Filter = Param.Filter;
         NewSampler.AddressU = Param.AddressU;
         NewSampler.AddressV = Param.AddressV;

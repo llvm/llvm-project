@@ -23,25 +23,25 @@ public:
   SizeCalculatorVisitor(uint32_t Version, size_t &SizeRef)
       : Size(SizeRef), Version(Version) {}
 
-  void operator()(const dxbc::RTS0::v0::RootConstants *Value) const {
-    Size += sizeof(dxbc::RTS0::v0::RootConstants);
-  }
-
-  void operator()(const dxbc::RTS0::v0::RootDescriptor *Value) const {
-    Size += sizeof(dxbc::RTS0::v0::RootDescriptor);
+  void operator()(const dxbc::RTS0::v1::RootConstants *Value) const {
+    Size += sizeof(dxbc::RTS0::v1::RootConstants);
   }
 
   void operator()(const dxbc::RTS0::v1::RootDescriptor *Value) const {
     Size += sizeof(dxbc::RTS0::v1::RootDescriptor);
   }
 
+  void operator()(const dxbc::RTS0::v2::RootDescriptor *Value) const {
+    Size += sizeof(dxbc::RTS0::v2::RootDescriptor);
+  }
+
   void operator()(const DescriptorTable *Value) const {
     if (Version == 1)
       Size +=
-          sizeof(dxbc::RTS0::v0::DescriptorRange) * Value->Ranges.size() + 8;
+          sizeof(dxbc::RTS0::v1::DescriptorRange) * Value->Ranges.size() + 8;
     else
       Size +=
-          sizeof(dxbc::RTS0::v1::DescriptorRange) * Value->Ranges.size() + 8;
+          sizeof(dxbc::RTS0::v2::DescriptorRange) * Value->Ranges.size() + 8;
   }
 
 private:
@@ -66,9 +66,9 @@ static void rewriteOffsetToCurrentByte(raw_svector_ostream &Stream,
 
 size_t RootSignatureDesc::getSize() const {
   size_t Size =
-      sizeof(dxbc::RTS0::v0::RootSignatureHeader) +
-      ParametersContainer.size() * sizeof(dxbc::RTS0::v0::RootParameterHeader) +
-      StaticSamplers.size() * sizeof(dxbc::RTS0::v0::StaticSampler);
+      sizeof(dxbc::RTS0::v1::RootSignatureHeader) +
+      ParametersContainer.size() * sizeof(dxbc::RTS0::v1::RootParameterHeader) +
+      StaticSamplers.size() * sizeof(dxbc::RTS0::v1::StaticSampler);
 
   for (const auto &I : ParametersContainer) {
     std::optional<ParametersView> P = ParametersContainer.getParameter(&I);
@@ -112,28 +112,28 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
     auto P = ParametersContainer.getParameter(H);
     if (!P)
       continue;
-    if (std::holds_alternative<const dxbc::RTS0::v0::RootConstants *>(
+    if (std::holds_alternative<const dxbc::RTS0::v1::RootConstants *>(
             P.value())) {
       auto *Constants =
-          std::get<const dxbc::RTS0::v0::RootConstants *>(P.value());
+          std::get<const dxbc::RTS0::v1::RootConstants *>(P.value());
       support::endian::write(BOS, Constants->ShaderRegister,
                              llvm::endianness::little);
       support::endian::write(BOS, Constants->RegisterSpace,
                              llvm::endianness::little);
       support::endian::write(BOS, Constants->Num32BitValues,
                              llvm::endianness::little);
-    } else if (std::holds_alternative<const dxbc::RTS0::v0::RootDescriptor *>(
-                   *P)) {
-      auto *Descriptor =
-          std::get<const dxbc::RTS0::v0::RootDescriptor *>(P.value());
-      support::endian::write(BOS, Descriptor->ShaderRegister,
-                             llvm::endianness::little);
-      support::endian::write(BOS, Descriptor->RegisterSpace,
-                             llvm::endianness::little);
     } else if (std::holds_alternative<const dxbc::RTS0::v1::RootDescriptor *>(
                    *P)) {
       auto *Descriptor =
           std::get<const dxbc::RTS0::v1::RootDescriptor *>(P.value());
+      support::endian::write(BOS, Descriptor->ShaderRegister,
+                             llvm::endianness::little);
+      support::endian::write(BOS, Descriptor->RegisterSpace,
+                             llvm::endianness::little);
+    } else if (std::holds_alternative<const dxbc::RTS0::v2::RootDescriptor *>(
+                   *P)) {
+      auto *Descriptor =
+          std::get<const dxbc::RTS0::v2::RootDescriptor *>(P.value());
 
       support::endian::write(BOS, Descriptor->ShaderRegister,
                              llvm::endianness::little);
@@ -147,8 +147,8 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
                              llvm::endianness::little);
       rewriteOffsetToCurrentByte(BOS, writePlaceholder(BOS));
       for (const auto &R : *Table) {
-        if (std::holds_alternative<dxbc::RTS0::v0::DescriptorRange>(R)) {
-          auto Range = std::get<dxbc::RTS0::v0::DescriptorRange>(R);
+        if (std::holds_alternative<dxbc::RTS0::v1::DescriptorRange>(R)) {
+          auto Range = std::get<dxbc::RTS0::v1::DescriptorRange>(R);
 
           support::endian::write(BOS, Range.RangeType,
                                  llvm::endianness::little);
@@ -161,8 +161,8 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
           support::endian::write(BOS, Range.OffsetInDescriptorsFromTableStart,
                                  llvm::endianness::little);
         } else {
-          if (std::holds_alternative<dxbc::RTS0::v1::DescriptorRange>(R)) {
-            auto Range = std::get<dxbc::RTS0::v1::DescriptorRange>(R);
+          if (std::holds_alternative<dxbc::RTS0::v2::DescriptorRange>(R)) {
+            auto Range = std::get<dxbc::RTS0::v2::DescriptorRange>(R);
 
             support::endian::write(BOS, Range.RangeType,
                                    llvm::endianness::little);
