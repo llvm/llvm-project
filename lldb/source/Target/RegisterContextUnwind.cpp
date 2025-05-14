@@ -1370,7 +1370,7 @@ RegisterContextUnwind::GetAbstractRegisterLocation(uint32_t lldb_regnum,
     // We may have
     //   ra=IsSame {unncessary}
     //   ra=StackAddr {caller's return addr spilled to stack}
-    // or no unwindrule for pc or ra at all, in a frameless function -
+    // or no reg location for pc or ra at all, in a frameless function -
     // the caller's return address is in live ra reg.
     //
     // If a function has been interrupted in a non-call way --
@@ -1426,7 +1426,8 @@ RegisterContextUnwind::GetAbstractRegisterLocation(uint32_t lldb_regnum,
         } else {
           // No unwind rule for the return address reg on frame 0, or an
           // interrupted function, means that the caller's address is still in
-          // RA reg.
+          // RA reg (0th frame) or the trap handler below this one (sigtramp
+          // etc) has a save location for the RA reg.
           if (BehavesLikeZerothFrame()) {
             unwindplan_regloc.SetInRegister(return_address_reg.GetAsKind(kind));
             return unwindplan_regloc;
