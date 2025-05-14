@@ -63,7 +63,8 @@ GCFunctionAnalysis::run(Function &F, FunctionAnalysisManager &FAM) {
       "This pass need module analysis `collector-metadata`!");
   auto &Map =
       *MAMProxy.getCachedResult<CollectorMetadataAnalysis>(*F.getParent());
-  GCFunctionInfo Info(F, Map[F.getGC()]);
+  GCStrategy &S = *Map.try_emplace(F.getGC()).first->second;
+  GCFunctionInfo Info(F, S);
   return Info;
 }
 
