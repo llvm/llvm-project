@@ -389,9 +389,6 @@ protected:
 
   /// The prototype kernel launch environment.
   KernelLaunchEnvironmentTy KernelLaunchEnvironment;
-
-  /// If the kernel is a bare kernel.
-  bool IsBareKernel = false;
 };
 
 /// Information about an allocation, when it has been allocated, and when/if it
