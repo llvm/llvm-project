@@ -167,7 +167,7 @@ public:
 class OptimizationRemarkEmitterAnalysis
     : public AnalysisInfoMixin<OptimizationRemarkEmitterAnalysis> {
   friend AnalysisInfoMixin<OptimizationRemarkEmitterAnalysis>;
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
 public:
   /// Provide the result typedef for this analysis pass.

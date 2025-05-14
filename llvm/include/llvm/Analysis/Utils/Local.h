@@ -14,6 +14,8 @@
 #ifndef LLVM_ANALYSIS_UTILS_LOCAL_H
 #define LLVM_ANALYSIS_UTILS_LOCAL_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 
 class DataLayout;

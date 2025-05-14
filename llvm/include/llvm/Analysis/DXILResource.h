@@ -425,7 +425,7 @@ class DXILResourceTypeAnalysis
     : public AnalysisInfoMixin<DXILResourceTypeAnalysis> {
   friend AnalysisInfoMixin<DXILResourceTypeAnalysis>;
 
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
 public:
   using Result = DXILResourceTypeMap;
@@ -566,7 +566,7 @@ public:
 class DXILResourceAnalysis : public AnalysisInfoMixin<DXILResourceAnalysis> {
   friend AnalysisInfoMixin<DXILResourceAnalysis>;
 
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
 public:
   using Result = DXILResourceMap;
@@ -712,7 +712,7 @@ class DXILResourceBindingAnalysis
     : public AnalysisInfoMixin<DXILResourceBindingAnalysis> {
   friend AnalysisInfoMixin<DXILResourceBindingAnalysis>;
 
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
 public:
   using Result = DXILResourceBindingInfo;

@@ -426,7 +426,7 @@ class BranchProbabilityAnalysis
     : public AnalysisInfoMixin<BranchProbabilityAnalysis> {
   friend AnalysisInfoMixin<BranchProbabilityAnalysis>;
 
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
 public:
   /// Provide the result type for this analysis pass.

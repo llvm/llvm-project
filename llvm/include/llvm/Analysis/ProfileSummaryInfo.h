@@ -379,7 +379,7 @@ public:
 
 private:
   friend AnalysisInfoMixin<ProfileSummaryAnalysis>;
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 };
 
 /// Printer pass that uses \c ProfileSummaryAnalysis.

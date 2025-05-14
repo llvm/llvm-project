@@ -91,7 +91,7 @@ private:
 class LastRunTrackingAnalysis final
     : public AnalysisInfoMixin<LastRunTrackingAnalysis> {
   friend AnalysisInfoMixin<LastRunTrackingAnalysis>;
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
 public:
   using Result = LastRunTrackingInfo;

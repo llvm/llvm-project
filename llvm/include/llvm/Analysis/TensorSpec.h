@@ -126,7 +126,7 @@ LLVM_ABI std::optional<TensorSpec> getTensorSpecFromJSON(LLVMContext &Ctx,
                                                 const json::Value &Value);
 
 #define TFUTILS_GETDATATYPE_DEF(T, Name)                                       \
-  template <> TensorType TensorSpec::getDataType<T>();
+  template <> LLVM_ABI TensorType TensorSpec::getDataType<T>();
 SUPPORTED_TENSOR_TYPES(TFUTILS_GETDATATYPE_DEF)
 
 #undef TFUTILS_GETDATATYPE_DEF

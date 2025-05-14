@@ -153,7 +153,7 @@ private:
 class BasicAA : public AnalysisInfoMixin<BasicAA> {
   friend AnalysisInfoMixin<BasicAA>;
 
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
 public:
   using Result = BasicAAResult;

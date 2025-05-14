@@ -174,7 +174,7 @@ public:
 class AssumptionAnalysis : public AnalysisInfoMixin<AssumptionAnalysis> {
   friend AnalysisInfoMixin<AssumptionAnalysis>;
 
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
 public:
   using Result = AssumptionCache;

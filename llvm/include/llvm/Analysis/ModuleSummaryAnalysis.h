@@ -46,7 +46,7 @@ class ModuleSummaryIndexAnalysis
     : public AnalysisInfoMixin<ModuleSummaryIndexAnalysis> {
   friend AnalysisInfoMixin<ModuleSummaryIndexAnalysis>;
 
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
 public:
   using Result = ModuleSummaryIndex;

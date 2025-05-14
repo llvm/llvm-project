@@ -71,7 +71,7 @@ private:
 class TypeBasedAA : public AnalysisInfoMixin<TypeBasedAA> {
   friend AnalysisInfoMixin<TypeBasedAA>;
 
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
 public:
   using Result = TypeBasedAAResult;

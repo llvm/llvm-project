@@ -929,7 +929,7 @@ protected:
 class MemorySSAAnalysis : public AnalysisInfoMixin<MemorySSAAnalysis> {
   friend AnalysisInfoMixin<MemorySSAAnalysis>;
 
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
 public:
   // Wrap MemorySSA result to ensure address stability of internal MemorySSA

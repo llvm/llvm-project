@@ -104,7 +104,7 @@ private:
 class DemandedBitsAnalysis : public AnalysisInfoMixin<DemandedBitsAnalysis> {
   friend AnalysisInfoMixin<DemandedBitsAnalysis>;
 
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
 public:
   /// Provide the result type for this analysis pass.

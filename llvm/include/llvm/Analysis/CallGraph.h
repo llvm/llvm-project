@@ -286,7 +286,7 @@ private:
 class CallGraphAnalysis : public AnalysisInfoMixin<CallGraphAnalysis> {
   friend AnalysisInfoMixin<CallGraphAnalysis>;
 
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
 public:
   /// A formulaic type to inform clients of the result type.

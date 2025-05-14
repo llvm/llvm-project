@@ -55,7 +55,7 @@ private:
 class ScopedNoAliasAA : public AnalysisInfoMixin<ScopedNoAliasAA> {
   friend AnalysisInfoMixin<ScopedNoAliasAA>;
 
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
 public:
   using Result = ScopedNoAliasAAResult;

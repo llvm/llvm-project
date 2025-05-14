@@ -993,7 +993,7 @@ namespace llvm {
     LLVM_ABI Result run(Function &F, FunctionAnalysisManager &FAM);
 
   private:
-    static AnalysisKey Key;
+    LLVM_ABI static AnalysisKey Key;
     friend struct AnalysisInfoMixin<DependenceAnalysis>;
   }; // class DependenceAnalysis
 

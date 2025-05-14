@@ -933,7 +933,7 @@ public:
 class LoopAccessAnalysis
     : public AnalysisInfoMixin<LoopAccessAnalysis> {
   friend AnalysisInfoMixin<LoopAccessAnalysis>;
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
 public:
   typedef LoopAccessInfoManager Result;

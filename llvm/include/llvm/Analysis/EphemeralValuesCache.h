@@ -49,7 +49,7 @@ public:
 class EphemeralValuesAnalysis
     : public AnalysisInfoMixin<EphemeralValuesAnalysis> {
   friend AnalysisInfoMixin<EphemeralValuesAnalysis>;
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
 public:
   using Result = EphemeralValuesCache;

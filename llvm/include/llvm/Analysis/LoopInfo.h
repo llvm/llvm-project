@@ -33,7 +33,7 @@ class ScalarEvolution;
 class raw_ostream;
 
 // Implementation in Support/GenericLoopInfoImpl.h
-extern template class LoopBase<BasicBlock, Loop>;
+extern template class LLVM_TEMPLATE_ABI LoopBase<BasicBlock, Loop>;
 
 /// Represents a single loop in the control flow graph.  Note that not all SCCs
 /// in the CFG are necessarily loops.
@@ -403,7 +403,7 @@ private:
 };
 
 // Implementation in Support/GenericLoopInfoImpl.h
-extern template class LoopInfoBase<BasicBlock, Loop>;
+extern template class LLVM_TEMPLATE_ABI LoopInfoBase<BasicBlock, Loop>;
 
 class LoopInfo : public LoopInfoBase<BasicBlock, Loop> {
   typedef LoopInfoBase<BasicBlock, Loop> BaseT;
@@ -566,7 +566,7 @@ template <> struct GraphTraits<Loop *> {
 /// Analysis pass that exposes the \c LoopInfo for a function.
 class LoopAnalysis : public AnalysisInfoMixin<LoopAnalysis> {
   friend AnalysisInfoMixin<LoopAnalysis>;
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
 public:
   typedef LoopInfo Result;

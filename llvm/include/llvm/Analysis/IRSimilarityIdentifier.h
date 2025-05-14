@@ -1185,7 +1185,7 @@ public:
 
 private:
   friend AnalysisInfoMixin<IRSimilarityAnalysis>;
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 };
 
 /// Printer pass that uses \c IRSimilarityAnalysis.

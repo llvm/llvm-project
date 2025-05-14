@@ -115,7 +115,7 @@ private:
 /// which will get filled in as it's used.
 class PhiValuesAnalysis : public AnalysisInfoMixin<PhiValuesAnalysis> {
   friend AnalysisInfoMixin<PhiValuesAnalysis>;
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
 public:
   using Result = PhiValues;
