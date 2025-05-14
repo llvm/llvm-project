@@ -271,9 +271,6 @@ p = argparse.ArgumentParser()
 p.add_argument("--options-def", help="path to AnalyzerOptions.def")
 p.add_argument("--template", help="template file")
 p.add_argument("--out", help="output file")
-p.add_argument(
-    "--validate", action="store_true", help="exit with failure on parsing error"
-)
 opts = p.parse_args()
 
 with open(opts.template, encoding="utf-8") as f:
@@ -288,5 +285,5 @@ err_handler.report_unused_tweaks()
 with open(opts.out, "w", newline="", encoding="utf-8") as f:
     f.write(rst_output)
 
-if opts.validate and err_handler.seen_errors:
+if err_handler.seen_errors:
     sys.exit(1)
