@@ -1197,18 +1197,6 @@ static void printASTValidationError(
     LLDB_LOG(log, "  -- {0}", ExtraOpt);
 }
 
-void SwiftASTContext::DiagnoseWarnings(Process &process,
-                                       const SymbolContext &sc) const {
-  if (!sc.module_sp || !HasDiagnostics())
-    return;
-  auto debugger_id = process.GetTarget().GetDebugger().GetID();
-  std::string msg;
-  llvm::raw_string_ostream(msg) << "Cannot load Swift type information for "
-                                << sc.module_sp->GetFileSpec().GetPath();
-  Debugger::ReportWarning(msg, debugger_id, &m_swift_import_warning);
-  StreamAllDiagnostics(debugger_id);
-}
-
 /// Locate the swift-plugin-server for a plugin library,
 /// by converting  ${toolchain}/usr/(local)?/lib/swift/host/plugins
 /// into           ${toolchain}/usr/bin/swift-plugin-server
@@ -3234,35 +3222,6 @@ Status SwiftASTContext::GetAllDiagnostics() const {
         ->Clear();
   }
   return error;
-}
-
-void SwiftASTContext::StreamAllDiagnostics(
-    std::optional<lldb::user_id_t> debugger_id) const {
-  Status error = m_fatal_errors.Clone();
-  if (!error.Success()) {
-    Debugger::ReportWarning(error.AsCString(), debugger_id,
-                            &m_swift_diags_streamed);
-    return;
-  }
-
-  // Retrieve the error message from the DiagnosticConsumer.
-  DiagnosticManager diagnostic_manager;
-  PrintDiagnostics(diagnostic_manager);
-  for (auto &diag : diagnostic_manager.Diagnostics())
-    if (diag) {
-      std::string msg = diag->GetMessage().str();
-      switch (diag->GetSeverity()) {
-      case eSeverityError:
-        Debugger::ReportError(msg, debugger_id, &m_swift_diags_streamed);
-        break;
-      case eSeverityWarning:
-      case eSeverityInfo:
-        Debugger::ReportWarning(msg, debugger_id, &m_swift_warning_streamed);
-        break;
-      }
-    }
-  static_cast<StoringDiagnosticConsumer *>(m_diagnostic_consumer_ap.get())
-      ->Clear();
 }
 
 void SwiftASTContext::LogFatalErrors() const {
@@ -5376,8 +5335,22 @@ bool SwiftASTContext::HasClangImporterErrors() const {
 
 void SwiftASTContext::AddDiagnostic(lldb::Severity severity,
                                     llvm::StringRef message) {
-  assert(m_diagnostic_consumer_ap);
   HEALTH_LOG_PRINTF("%s", message.str().c_str());
+
+  if (auto target_sp = GetTargetWP().lock()) {
+    auto debugger_id = target_sp->GetDebugger().GetID();
+    switch (severity) {
+    case eSeverityError:
+      Debugger::ReportError(message.str(), debugger_id);
+      break;
+    case eSeverityWarning:
+    case eSeverityInfo:
+      Debugger::ReportWarning(message.str(), debugger_id);
+      break;
+    }
+  }
+
+  assert(m_diagnostic_consumer_ap);
   if (!m_diagnostic_consumer_ap.get())
     return;
 

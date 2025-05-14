@@ -578,13 +578,6 @@ public:
   // meaningless type itself, instead preferring to use the dynamic type
   virtual bool IsMeaninglessWithoutDynamicResolution(void *type);
 
-  /// A TypeSystem may belong to more than one debugger, so it doesn't
-  /// have a way to communicate errors. This method can be called by a
-  /// process to tell the TypeSystem to send any diagnostics to the
-  /// process so they can be surfaced to the user.
-  virtual void DiagnoseWarnings(Process &process,
-                                const SymbolContext &sc) const;
-
   virtual std::optional<llvm::json::Value> ReportStatistics();
 
   bool GetHasForcefullyCompletedTypes() const {

@@ -53,10 +53,6 @@
 #include "lldb/ValueObject/ValueObjectConstResult.h"
 #include "lldb/lldb-enumerations.h"
 
-#ifdef LLDB_ENABLE_SWIFT
-#include "Plugins/TypeSystem/Swift/TypeSystemSwiftTypeRef.h"
-#endif
-
 #include <memory>
 #include <optional>
 
@@ -355,19 +351,6 @@ void Thread::FrameSelectedCallback(StackFrame *frame) {
     GetProcess()->PrintWarningToolchainMismatch(sc);
 #endif
   }
-#ifdef LLDB_ENABLE_SWIFT
-  {
-    SymbolContext msc =
-        frame->GetSymbolContext(eSymbolContextFunction | eSymbolContextModule);
-    Status error;
-    ExecutionContext exe_ctx;
-    frame->CalculateExecutionContext(exe_ctx);
-    if (auto target = frame->CalculateTarget())
-      if (auto swift_ast_ctx =
-              TypeSystemSwiftTypeRefForExpressions::GetForTarget(*target))
-        swift_ast_ctx->DiagnoseWarnings(*GetProcess(), msc);
-  }
-#endif
 }
 
 lldb::StopInfoSP Thread::GetStopInfo() {

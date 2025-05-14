@@ -2409,13 +2409,6 @@ Status TypeSystemSwiftTypeRef::IsCompatible() {
   return {};
 }
 
-void TypeSystemSwiftTypeRef::DiagnoseWarnings(Process &process,
-                                              const SymbolContext &sc) const {
-  // This gets called only from Thread::FrameSelectedCallback(StackFrame).
-  if (auto swift_ast_context = GetSwiftASTContextOrNull(sc))
-    swift_ast_context->DiagnoseWarnings(process, sc);
-}
-
 plugin::dwarf::DWARFASTParser *TypeSystemSwiftTypeRef::GetDWARFParser() {
   if (!m_dwarf_ast_parser_up)
     m_dwarf_ast_parser_up.reset(new DWARFASTParserSwift(*this));
