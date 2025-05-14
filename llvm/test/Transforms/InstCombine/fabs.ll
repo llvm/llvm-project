@@ -1279,9 +1279,7 @@ define <2 x float> @test_select_neg_negx_x_wrong_type(<2 x float> %value) {
 
 define i1 @test_fabs_used_by_fcmp(float %x, float %y) {
 ; CHECK-LABEL: @test_fabs_used_by_fcmp(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oge float [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[X]]
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], float [[X]], float [[NEG]]
+; CHECK-NEXT:    [[SEL:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
 ; CHECK-NEXT:    [[CMP2:%.*]] = fcmp olt float [[SEL]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
@@ -1294,9 +1292,7 @@ define i1 @test_fabs_used_by_fcmp(float %x, float %y) {
 
 define float @test_fabs_used_by_fpop_nnan_nsz(float %x, float %y) {
 ; CHECK-LABEL: @test_fabs_used_by_fpop_nnan_nsz(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oge float [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[X]]
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], float [[X]], float [[NEG]]
+; CHECK-NEXT:    [[SEL:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd nnan nsz float [[SEL]], [[Y:%.*]]
 ; CHECK-NEXT:    ret float [[ADD]]
 ;
@@ -1309,9 +1305,7 @@ define float @test_fabs_used_by_fpop_nnan_nsz(float %x, float %y) {
 
 define i1 @test_fabs_fsub_used_by_fcmp(float %x, float %y) {
 ; CHECK-LABEL: @test_fabs_fsub_used_by_fcmp(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt float [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[NEG:%.*]] = fsub float 0.000000e+00, [[X]]
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], float [[X]], float [[NEG]]
+; CHECK-NEXT:    [[SEL:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
 ; CHECK-NEXT:    [[CMP2:%.*]] = fcmp olt float [[SEL]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
@@ -1324,9 +1318,7 @@ define i1 @test_fabs_fsub_used_by_fcmp(float %x, float %y) {
 
 define float @test_fabs_fsub_used_by_fpop_nnan(float %x, float %y) {
 ; CHECK-LABEL: @test_fabs_fsub_used_by_fpop_nnan(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt float [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[NEG:%.*]] = fsub float 0.000000e+00, [[X]]
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], float [[X]], float [[NEG]]
+; CHECK-NEXT:    [[SEL:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd nnan float [[SEL]], [[Y:%.*]]
 ; CHECK-NEXT:    ret float [[ADD]]
 ;
