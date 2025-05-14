@@ -3,7 +3,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefixes=GCN,PREGFX12,GFX10 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefixes=GCN,PREGFX12,GFX10 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefixes=GCN,GFX12PLUS,GFX12 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1300 -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefixes=GCN,GFX12PLUS,GFX13 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1300 -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefixes=GCN,GFX12PLUS %s
 
 ; GCN-LABEL: {{^}}gather4_2d:
 ; GFX6789: image_gather4 v[0:3], v[0:1], s[0:7], s[8:11] dmask:0x1{{$}}
@@ -114,8 +114,7 @@ main_body:
 ; GCN-LABEL: {{^}}gather4_c_b_cl_2d:
 ; GFX6789: image_gather4_c_b_cl v[0:3], v[0:4], s[0:7], s[8:11] dmask:0x1{{$}}
 ; GFX10: image_gather4_c_b_cl v[0:3], v[0:4], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_2D ;
-; GFX12: image_gather4_c_b_cl v[0:3], [v0, v1, v2, v[3:4]], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_2D ;
-; GFX13: image_gather4_c_b_cl v[0:3], [v0, v1, v2, v[4:5]], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_2D ;
+; GFX12PLUS: image_gather4_c_b_cl v[0:3], [v0, v1, v2, v[3:4]], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_2D ;
 define amdgpu_ps <4 x float> @gather4_c_b_cl_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %bias, float %zcompare, float %s, float %t, float %clamp) {
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.gather4.c.b.cl.2d.v4f32.f32.f32(i32 1, float %bias, float %zcompare, float %s, float %t, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)

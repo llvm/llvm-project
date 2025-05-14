@@ -1090,7 +1090,8 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   }
 
-  if (RC == RI.getVGPR64Class() && (SrcRC == RC || RI.isSGPRClass(SrcRC))) {
+  if (RI.getVGPR64Class()->hasSubClassEq(RC) &&
+      (SrcRC == RC || RI.isSGPRClass(SrcRC))) {
     if (ST.hasMovB64()) {
       BuildMI(MBB, MI, DL, get(AMDGPU::V_MOV_B64_e32), DestReg)
         .addReg(SrcReg, getKillRegState(KillSrc));
@@ -1141,9 +1142,11 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
               (SrcRC == RC || RI.isSGPRClass(SrcRC)))) {
     // TODO: In 96-bit case, could do a 64-bit mov and then a 32-bit mov.
     if (ST.hasMovB64()) {
+      assert(Size > 64 && "Expected Size == 64 COPY to already be lowered");
       Opcode = AMDGPU::V_MOV_B64_e32;
       EltSize = 8;
     } else if (ST.hasPkMovB32()) {
+      assert(Size > 64 && "Expected Size == 64 COPY to already be lowered");
       Opcode = AMDGPU::V_PK_MOV_B32;
       EltSize = 8;
     }

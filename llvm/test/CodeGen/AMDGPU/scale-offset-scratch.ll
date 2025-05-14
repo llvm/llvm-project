@@ -286,7 +286,7 @@ define amdgpu_ps void @scratch_store_b32_idxprom(ptr addrspace(5) align 4 inreg 
 ; GCN-LABEL: scratch_store_b32_idxprom:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    v_mov_b32_e32 v1, 1.0
-; GCN-NEXT:    scratch_store_b32 v0, v1, s0 scale_offset
+; GCN-NEXT:    scratch_store_b32 v0, v1, s0 scale_offset scope:SCOPE_SE
 ; GCN-NEXT:    s_endpgm
 entry:
   %idxprom = zext i32 %idx to i64
@@ -299,7 +299,7 @@ define amdgpu_ps void @scratch_store_b16_idxprom(ptr addrspace(5) align 2 inreg 
 ; GCN-LABEL: scratch_store_b16_idxprom:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    v_mov_b32_e32 v1, 1
-; GCN-NEXT:    scratch_store_b16 v0, v1, s0 scale_offset
+; GCN-NEXT:    scratch_store_b16 v0, v1, s0 scale_offset scope:SCOPE_SE
 ; GCN-NEXT:    s_endpgm
 entry:
   %idxprom = zext i32 %idx to i64
@@ -312,14 +312,14 @@ define amdgpu_ps void @scratch_store_b64_idxprom(ptr addrspace(5) align 4 inreg 
 ; GFX1250-LABEL: scratch_store_b64_idxprom:
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    v_mov_b64_e32 v[2:3], 1.0
-; GFX1250-NEXT:    scratch_store_b64 v0, v[2:3], s0 scale_offset
+; GFX1250-NEXT:    scratch_store_b64 v0, v[2:3], s0 scale_offset scope:SCOPE_SE
 ; GFX1250-NEXT:    s_endpgm
 ;
 ; GFX13-LABEL: scratch_store_b64_idxprom:
 ; GFX13:       ; %bb.0: ; %entry
-; GFX13-NEXT:    v_mov_b32_e32 v2, 0
-; GFX13-NEXT:    v_mov_b32_e32 v3, 0x3ff00000
-; GFX13-NEXT:    scratch_store_b64 v0, v[2:3], s0 scale_offset
+; GFX13-NEXT:    v_mov_b32_e32 v1, 0
+; GFX13-NEXT:    v_mov_b32_e32 v2, 0x3ff00000
+; GFX13-NEXT:    scratch_store_b64 v0, v[1:2], s0 scale_offset scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 entry:
   %idxprom = zext i32 %idx to i64

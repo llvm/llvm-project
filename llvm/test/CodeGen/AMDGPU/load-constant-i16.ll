@@ -108,7 +108,7 @@ define amdgpu_kernel void @constant_load_i16(ptr addrspace(1) %out, ptr addrspac
 ; GFX13-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-TRUE16-NEXT:    global_load_d16_b16 v0, v1, s[2:3]
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX13-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1]
+; GFX13-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1] scope:SCOPE_SE
 ; GFX13-TRUE16-NEXT:    s_endpgm
 ;
 ; GFX13-FAKE16-LABEL: constant_load_i16:
@@ -118,7 +118,7 @@ define amdgpu_kernel void @constant_load_i16(ptr addrspace(1) %out, ptr addrspac
 ; GFX13-FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-FAKE16-NEXT:    global_load_u16 v1, v0, s[2:3]
 ; GFX13-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; GFX13-FAKE16-NEXT:    global_store_b16 v0, v1, s[0:1]
+; GFX13-FAKE16-NEXT:    global_store_b16 v0, v1, s[0:1] scope:SCOPE_SE
 ; GFX13-FAKE16-NEXT:    s_endpgm
 entry:
   %ld = load i16, ptr addrspace(4) %in
@@ -199,7 +199,7 @@ define amdgpu_kernel void @constant_load_v2i16(ptr addrspace(1) %out, ptr addrsp
 ; GFX13-NEXT:    s_load_b32 s2, s[2:3], 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; GFX13-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX13-NEXT:    global_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 entry:
   %ld = load <2 x i16>, ptr addrspace(4) %in
@@ -314,8 +314,8 @@ define amdgpu_kernel void @constant_load_v3i16(ptr addrspace(1) %out, ptr addrsp
 ; GFX13-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s3
 ; GFX13-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX13-NEXT:    s_clause 0x1
-; GFX13-NEXT:    global_store_b16 v0, v1, s[0:1] offset:4
-; GFX13-NEXT:    global_store_b32 v0, v2, s[0:1]
+; GFX13-NEXT:    global_store_b16 v0, v1, s[0:1] offset:4 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v0, v2, s[0:1] scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 entry:
   %ld = load <3 x i16>, ptr addrspace(4) %in
@@ -401,7 +401,7 @@ define amdgpu_kernel void @constant_load_v4i16(ptr addrspace(1) %out, ptr addrsp
 ; GFX13-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
-; GFX13-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; GFX13-NEXT:    global_store_b64 v2, v[0:1], s[0:1] scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 entry:
   %ld = load <4 x i16>, ptr addrspace(4) %in
@@ -495,7 +495,7 @@ define amdgpu_kernel void @constant_load_v8i16(ptr addrspace(1) %out, ptr addrsp
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    v_dual_mov_b32 v0, s4 :: v_dual_mov_b32 v3, s7
 ; GFX13-NEXT:    v_dual_mov_b32 v1, s5 :: v_dual_mov_b32 v2, s6
-; GFX13-NEXT:    global_store_b128 v4, v[0:3], s[0:1]
+; GFX13-NEXT:    global_store_b128 v4, v[0:3], s[0:1] scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 entry:
   %ld = load <8 x i16>, ptr addrspace(4) %in
@@ -629,8 +629,8 @@ define amdgpu_kernel void @constant_load_v16i16(ptr addrspace(1) %out, ptr addrs
 ; GFX13-NEXT:    v_dual_mov_b32 v4, s0 :: v_dual_mov_b32 v7, s3
 ; GFX13-NEXT:    v_mov_b32_e32 v6, s2
 ; GFX13-NEXT:    s_clause 0x1
-; GFX13-NEXT:    global_store_b128 v8, v[0:3], s[8:9] offset:16
-; GFX13-NEXT:    global_store_b128 v8, v[4:7], s[8:9]
+; GFX13-NEXT:    global_store_b128 v8, v[0:3], s[8:9] offset:16 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v8, v[4:7], s[8:9] scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 entry:
   %ld = load <16 x i16>, ptr addrspace(4) %in
@@ -941,9 +941,9 @@ define amdgpu_kernel void @constant_load_v16i16_align2(ptr addrspace(4) %ptr0) #
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x7
 ; GFX13-TRUE16-NEXT:    global_load_d16_hi_b16 v4, v8, s[0:1] offset:2
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x4
-; GFX13-TRUE16-NEXT:    global_store_b128 v[0:1], v[0:3], off
+; GFX13-TRUE16-NEXT:    global_store_b128 v[0:1], v[0:3], off scope:SCOPE_SE
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX13-TRUE16-NEXT:    global_store_b128 v[0:1], v[4:7], off
+; GFX13-TRUE16-NEXT:    global_store_b128 v[0:1], v[4:7], off scope:SCOPE_SE
 ; GFX13-TRUE16-NEXT:    s_endpgm
 ;
 ; GFX13-FAKE16-LABEL: constant_load_v16i16_align2:
@@ -977,9 +977,9 @@ define amdgpu_kernel void @constant_load_v16i16_align2(ptr addrspace(4) %ptr0) #
 ; GFX13-FAKE16-NEXT:    s_wait_loadcnt 0x7
 ; GFX13-FAKE16-NEXT:    global_load_d16_hi_b16 v4, v8, s[0:1] offset:2
 ; GFX13-FAKE16-NEXT:    s_wait_loadcnt 0x4
-; GFX13-FAKE16-NEXT:    global_store_b128 v[0:1], v[0:3], off
+; GFX13-FAKE16-NEXT:    global_store_b128 v[0:1], v[0:3], off scope:SCOPE_SE
 ; GFX13-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; GFX13-FAKE16-NEXT:    global_store_b128 v[0:1], v[4:7], off
+; GFX13-FAKE16-NEXT:    global_store_b128 v[0:1], v[4:7], off scope:SCOPE_SE
 ; GFX13-FAKE16-NEXT:    s_endpgm
 entry:
   %ld =  load <16 x i16>, ptr addrspace(4) %ptr0, align 2
@@ -1067,7 +1067,7 @@ define amdgpu_kernel void @constant_zextload_i16_to_i32(ptr addrspace(1) %out, p
 ; GFX13-NEXT:    s_load_u16 s2, s[2:3], 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; GFX13-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX13-NEXT:    global_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
   %a = load i16, ptr addrspace(4) %in
   %ext = zext i16 %a to i32
@@ -1156,7 +1156,7 @@ define amdgpu_kernel void @constant_sextload_i16_to_i32(ptr addrspace(1) %out, p
 ; GFX13-NEXT:    s_load_i16 s2, s[2:3], 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; GFX13-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX13-NEXT:    global_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
   %a = load i16, ptr addrspace(4) %in
   %ext = sext i16 %a to i32
@@ -1244,7 +1244,7 @@ define amdgpu_kernel void @constant_zextload_v1i16_to_v1i32(ptr addrspace(1) %ou
 ; GFX13-NEXT:    s_load_u16 s2, s[2:3], 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; GFX13-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX13-NEXT:    global_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
   %load = load <1 x i16>, ptr addrspace(4) %in
   %ext = zext <1 x i16> %load to <1 x i32>
@@ -1333,7 +1333,7 @@ define amdgpu_kernel void @constant_sextload_v1i16_to_v1i32(ptr addrspace(1) %ou
 ; GFX13-NEXT:    s_load_i16 s2, s[2:3], 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; GFX13-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX13-NEXT:    global_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
   %load = load <1 x i16>, ptr addrspace(4) %in
   %ext = sext <1 x i16> %load to <1 x i32>
@@ -1434,7 +1434,7 @@ define amdgpu_kernel void @constant_zextload_v2i16_to_v2i32(ptr addrspace(1) %ou
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX13-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v1, s2
 ; GFX13-NEXT:    v_mov_b32_e32 v0, s3
-; GFX13-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; GFX13-NEXT:    global_store_b64 v2, v[0:1], s[0:1] scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
   %load = load <2 x i16>, ptr addrspace(4) %in
   %ext = zext <2 x i16> %load to <2 x i32>
@@ -1537,7 +1537,7 @@ define amdgpu_kernel void @constant_sextload_v2i16_to_v2i32(ptr addrspace(1) %ou
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX13-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v1, s2
 ; GFX13-NEXT:    v_mov_b32_e32 v0, s3
-; GFX13-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; GFX13-NEXT:    global_store_b64 v2, v[0:1], s[0:1] scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
   %load = load <2 x i16>, ptr addrspace(4) %in
   %ext = sext <2 x i16> %load to <2 x i32>
@@ -1650,7 +1650,7 @@ define amdgpu_kernel void @constant_zextload_v3i16_to_v3i32(ptr addrspace(1) %ou
 ; GFX13-NEXT:    s_and_b32 s3, 0xffff, s3
 ; GFX13-NEXT:    v_dual_mov_b32 v3, 0 :: v_dual_mov_b32 v0, s2
 ; GFX13-NEXT:    v_dual_mov_b32 v1, s4 :: v_dual_mov_b32 v2, s3
-; GFX13-NEXT:    global_store_b96 v3, v[0:2], s[0:1]
+; GFX13-NEXT:    global_store_b96 v3, v[0:2], s[0:1] scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 entry:
   %ld = load <3 x i16>, ptr addrspace(4) %in
@@ -1768,7 +1768,7 @@ define amdgpu_kernel void @constant_sextload_v3i16_to_v3i32(ptr addrspace(1) %ou
 ; GFX13-NEXT:    s_sext_i32_i16 s4, s4
 ; GFX13-NEXT:    v_dual_mov_b32 v3, 0 :: v_dual_mov_b32 v0, s2
 ; GFX13-NEXT:    v_dual_mov_b32 v1, s4 :: v_dual_mov_b32 v2, s3
-; GFX13-NEXT:    global_store_b96 v3, v[0:2], s[0:1]
+; GFX13-NEXT:    global_store_b96 v3, v[0:2], s[0:1] scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 entry:
   %ld = load <3 x i16>, ptr addrspace(4) %in
@@ -1894,7 +1894,7 @@ define amdgpu_kernel void @constant_zextload_v4i16_to_v4i32(ptr addrspace(1) %ou
 ; GFX13-NEXT:    v_dual_mov_b32 v4, 0 :: v_dual_mov_b32 v1, s2
 ; GFX13-NEXT:    v_dual_mov_b32 v0, s5 :: v_dual_mov_b32 v3, s4
 ; GFX13-NEXT:    v_mov_b32_e32 v2, s3
-; GFX13-NEXT:    global_store_b128 v4, v[0:3], s[0:1]
+; GFX13-NEXT:    global_store_b128 v4, v[0:3], s[0:1] scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
   %load = load <4 x i16>, ptr addrspace(4) %in
   %ext = zext <4 x i16> %load to <4 x i32>
@@ -2020,7 +2020,7 @@ define amdgpu_kernel void @constant_sextload_v4i16_to_v4i32(ptr addrspace(1) %ou
 ; GFX13-NEXT:    v_dual_mov_b32 v4, 0 :: v_dual_mov_b32 v1, s5
 ; GFX13-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v3, s4
 ; GFX13-NEXT:    v_mov_b32_e32 v2, s3
-; GFX13-NEXT:    global_store_b128 v4, v[0:3], s[0:1]
+; GFX13-NEXT:    global_store_b128 v4, v[0:3], s[0:1] scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
   %load = load <4 x i16>, ptr addrspace(4) %in
   %ext = sext <4 x i16> %load to <4 x i32>
@@ -2204,8 +2204,8 @@ define amdgpu_kernel void @constant_zextload_v8i16_to_v8i32(ptr addrspace(1) %ou
 ; GFX13-NEXT:    v_dual_mov_b32 v4, s4 :: v_dual_mov_b32 v7, s2
 ; GFX13-NEXT:    v_mov_b32_e32 v6, s3
 ; GFX13-NEXT:    s_clause 0x1
-; GFX13-NEXT:    global_store_b128 v8, v[0:3], s[0:1] offset:16
-; GFX13-NEXT:    global_store_b128 v8, v[4:7], s[0:1]
+; GFX13-NEXT:    global_store_b128 v8, v[0:3], s[0:1] offset:16 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v8, v[4:7], s[0:1] scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
   %load = load <8 x i16>, ptr addrspace(4) %in
   %ext = zext <8 x i16> %load to <8 x i32>
@@ -2391,8 +2391,8 @@ define amdgpu_kernel void @constant_sextload_v8i16_to_v8i32(ptr addrspace(1) %ou
 ; GFX13-NEXT:    v_dual_mov_b32 v4, s4 :: v_dual_mov_b32 v7, s2
 ; GFX13-NEXT:    v_mov_b32_e32 v6, s5
 ; GFX13-NEXT:    s_clause 0x1
-; GFX13-NEXT:    global_store_b128 v8, v[0:3], s[0:1] offset:16
-; GFX13-NEXT:    global_store_b128 v8, v[4:7], s[0:1]
+; GFX13-NEXT:    global_store_b128 v8, v[0:3], s[0:1] offset:16 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v8, v[4:7], s[0:1] scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
   %load = load <8 x i16>, ptr addrspace(4) %in
   %ext = sext <8 x i16> %load to <8 x i32>
@@ -2692,10 +2692,10 @@ define amdgpu_kernel void @constant_zextload_v16i16_to_v16i32(ptr addrspace(1) %
 ; GFX13-NEXT:    v_dual_mov_b32 v12, s4 :: v_dual_mov_b32 v15, s2
 ; GFX13-NEXT:    v_mov_b32_e32 v14, s3
 ; GFX13-NEXT:    s_clause 0x3
-; GFX13-NEXT:    global_store_b128 v16, v[0:3], s[0:1] offset:48
-; GFX13-NEXT:    global_store_b128 v16, v[4:7], s[0:1] offset:32
-; GFX13-NEXT:    global_store_b128 v16, v[8:11], s[0:1] offset:16
-; GFX13-NEXT:    global_store_b128 v16, v[12:15], s[0:1]
+; GFX13-NEXT:    global_store_b128 v16, v[0:3], s[0:1] offset:48 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v16, v[4:7], s[0:1] offset:32 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v16, v[8:11], s[0:1] offset:16 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v16, v[12:15], s[0:1] scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
   %load = load <16 x i16>, ptr addrspace(4) %in
   %ext = zext <16 x i16> %load to <16 x i32>
@@ -2999,10 +2999,10 @@ define amdgpu_kernel void @constant_sextload_v16i16_to_v16i32(ptr addrspace(1) %
 ; GFX13-NEXT:    v_dual_mov_b32 v12, s4 :: v_dual_mov_b32 v15, s2
 ; GFX13-NEXT:    v_mov_b32_e32 v14, s5
 ; GFX13-NEXT:    s_clause 0x3
-; GFX13-NEXT:    global_store_b128 v16, v[0:3], s[0:1] offset:48
-; GFX13-NEXT:    global_store_b128 v16, v[4:7], s[0:1] offset:32
-; GFX13-NEXT:    global_store_b128 v16, v[8:11], s[0:1] offset:16
-; GFX13-NEXT:    global_store_b128 v16, v[12:15], s[0:1]
+; GFX13-NEXT:    global_store_b128 v16, v[0:3], s[0:1] offset:48 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v16, v[4:7], s[0:1] offset:32 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v16, v[8:11], s[0:1] offset:16 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v16, v[12:15], s[0:1] scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
   %load = load <16 x i16>, ptr addrspace(4) %in
   %ext = sext <16 x i16> %load to <16 x i32>
@@ -3527,8 +3527,8 @@ define amdgpu_kernel void @constant_zextload_v32i16_to_v32i32(ptr addrspace(1) %
 ; GFX13-NEXT:    s_lshr_b32 s23, s4, 16
 ; GFX13-NEXT:    s_and_b32 s4, s4, 0xffff
 ; GFX13-NEXT:    s_clause 0x1
-; GFX13-NEXT:    global_store_b128 v24, v[0:3], s[16:17] offset:112
-; GFX13-NEXT:    global_store_b128 v24, v[4:7], s[16:17] offset:96
+; GFX13-NEXT:    global_store_b128 v24, v[0:3], s[16:17] offset:112 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v24, v[4:7], s[16:17] offset:96 scope:SCOPE_SE
 ; GFX13-NEXT:    v_dual_mov_b32 v1, s27 :: v_dual_mov_b32 v0, s8
 ; GFX13-NEXT:    v_dual_mov_b32 v3, s26 :: v_dual_mov_b32 v2, s9
 ; GFX13-NEXT:    v_mov_b32_e32 v5, s25
@@ -3549,12 +3549,12 @@ define amdgpu_kernel void @constant_zextload_v32i16_to_v32i32(ptr addrspace(1) %
 ; GFX13-NEXT:    v_dual_mov_b32 v20, s0 :: v_dual_mov_b32 v23, s18
 ; GFX13-NEXT:    v_mov_b32_e32 v22, s1
 ; GFX13-NEXT:    s_clause 0x5
-; GFX13-NEXT:    global_store_b128 v24, v[8:11], s[16:17] offset:80
-; GFX13-NEXT:    global_store_b128 v24, v[0:3], s[16:17] offset:64
-; GFX13-NEXT:    global_store_b128 v24, v[4:7], s[16:17] offset:48
-; GFX13-NEXT:    global_store_b128 v24, v[12:15], s[16:17] offset:32
-; GFX13-NEXT:    global_store_b128 v24, v[16:19], s[16:17] offset:16
-; GFX13-NEXT:    global_store_b128 v24, v[20:23], s[16:17]
+; GFX13-NEXT:    global_store_b128 v24, v[8:11], s[16:17] offset:80 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v24, v[0:3], s[16:17] offset:64 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v24, v[4:7], s[16:17] offset:48 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v24, v[12:15], s[16:17] offset:32 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v24, v[16:19], s[16:17] offset:16 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v24, v[20:23], s[16:17] scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
   %load = load <32 x i16>, ptr addrspace(4) %in
   %ext = zext <32 x i16> %load to <32 x i32>
@@ -4089,8 +4089,8 @@ define amdgpu_kernel void @constant_sextload_v32i16_to_v32i32(ptr addrspace(1) %
 ; GFX13-NEXT:    s_sext_i32_i16 s5, s5
 ; GFX13-NEXT:    s_sext_i32_i16 s4, s4
 ; GFX13-NEXT:    s_clause 0x1
-; GFX13-NEXT:    global_store_b128 v24, v[0:3], s[16:17] offset:112
-; GFX13-NEXT:    global_store_b128 v24, v[4:7], s[16:17] offset:96
+; GFX13-NEXT:    global_store_b128 v24, v[0:3], s[16:17] offset:112 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v24, v[4:7], s[16:17] offset:96 scope:SCOPE_SE
 ; GFX13-NEXT:    v_dual_mov_b32 v1, s27 :: v_dual_mov_b32 v0, s8
 ; GFX13-NEXT:    v_dual_mov_b32 v3, s26 :: v_dual_mov_b32 v2, s9
 ; GFX13-NEXT:    v_mov_b32_e32 v5, s25
@@ -4111,12 +4111,12 @@ define amdgpu_kernel void @constant_sextload_v32i16_to_v32i32(ptr addrspace(1) %
 ; GFX13-NEXT:    v_dual_mov_b32 v20, s0 :: v_dual_mov_b32 v23, s18
 ; GFX13-NEXT:    v_mov_b32_e32 v22, s1
 ; GFX13-NEXT:    s_clause 0x5
-; GFX13-NEXT:    global_store_b128 v24, v[8:11], s[16:17] offset:80
-; GFX13-NEXT:    global_store_b128 v24, v[0:3], s[16:17] offset:64
-; GFX13-NEXT:    global_store_b128 v24, v[4:7], s[16:17] offset:48
-; GFX13-NEXT:    global_store_b128 v24, v[12:15], s[16:17] offset:32
-; GFX13-NEXT:    global_store_b128 v24, v[16:19], s[16:17] offset:16
-; GFX13-NEXT:    global_store_b128 v24, v[20:23], s[16:17]
+; GFX13-NEXT:    global_store_b128 v24, v[8:11], s[16:17] offset:80 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v24, v[0:3], s[16:17] offset:64 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v24, v[4:7], s[16:17] offset:48 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v24, v[12:15], s[16:17] offset:32 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v24, v[16:19], s[16:17] offset:16 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v24, v[20:23], s[16:17] scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
   %load = load <32 x i16>, ptr addrspace(4) %in
   %ext = sext <32 x i16> %load to <32 x i32>
@@ -5085,10 +5085,10 @@ define amdgpu_kernel void @constant_zextload_v64i16_to_v64i32(ptr addrspace(1) %
 ; GFX13-NEXT:    s_and_b32 s3, s3, 0xffff
 ; GFX13-NEXT:    s_and_b32 s2, s2, 0xffff
 ; GFX13-NEXT:    s_clause 0x3
-; GFX13-NEXT:    global_store_b128 v24, v[0:3], s[36:37] offset:240
-; GFX13-NEXT:    global_store_b128 v24, v[4:7], s[36:37] offset:224
-; GFX13-NEXT:    global_store_b128 v24, v[8:11], s[36:37] offset:208
-; GFX13-NEXT:    global_store_b128 v24, v[12:15], s[36:37] offset:192
+; GFX13-NEXT:    global_store_b128 v24, v[0:3], s[36:37] offset:240 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v24, v[4:7], s[36:37] offset:224 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v24, v[8:11], s[36:37] offset:208 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v24, v[12:15], s[36:37] offset:192 scope:SCOPE_SE
 ; GFX13-NEXT:    v_dual_mov_b32 v1, s58 :: v_dual_mov_b32 v0, s6
 ; GFX13-NEXT:    v_dual_mov_b32 v3, s57 :: v_dual_mov_b32 v2, s7
 ; GFX13-NEXT:    v_mov_b32_e32 v5, s56
@@ -5126,12 +5126,12 @@ define amdgpu_kernel void @constant_zextload_v64i16_to_v64i32(ptr addrspace(1) %
 ; GFX13-NEXT:    v_dual_mov_b32 v20, s28 :: v_dual_mov_b32 v23, s47
 ; GFX13-NEXT:    v_mov_b32_e32 v22, s29
 ; GFX13-NEXT:    s_clause 0x5
-; GFX13-NEXT:    global_store_b128 v24, v[0:3], s[36:37] offset:176
-; GFX13-NEXT:    global_store_b128 v24, v[4:7], s[36:37] offset:160
-; GFX13-NEXT:    global_store_b128 v24, v[8:11], s[36:37] offset:144
-; GFX13-NEXT:    global_store_b128 v24, v[12:15], s[36:37] offset:128
-; GFX13-NEXT:    global_store_b128 v24, v[16:19], s[36:37] offset:112
-; GFX13-NEXT:    global_store_b128 v24, v[20:23], s[36:37] offset:96
+; GFX13-NEXT:    global_store_b128 v24, v[0:3], s[36:37] offset:176 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v24, v[4:7], s[36:37] offset:160 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v24, v[8:11], s[36:37] offset:144 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v24, v[12:15], s[36:37] offset:128 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v24, v[16:19], s[36:37] offset:112 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v24, v[20:23], s[36:37] offset:96 scope:SCOPE_SE
 ; GFX13-NEXT:    v_dual_mov_b32 v1, s46 :: v_dual_mov_b32 v0, s26
 ; GFX13-NEXT:    v_dual_mov_b32 v3, s45 :: v_dual_mov_b32 v2, s27
 ; GFX13-NEXT:    v_mov_b32_e32 v5, s44
@@ -5158,12 +5158,12 @@ define amdgpu_kernel void @constant_zextload_v64i16_to_v64i32(ptr addrspace(1) %
 ; GFX13-NEXT:    v_dual_mov_b32 v20, s16 :: v_dual_mov_b32 v23, s33
 ; GFX13-NEXT:    v_mov_b32_e32 v22, s17
 ; GFX13-NEXT:    s_clause 0x5
-; GFX13-NEXT:    global_store_b128 v24, v[0:3], s[36:37] offset:80
-; GFX13-NEXT:    global_store_b128 v24, v[4:7], s[36:37] offset:64
-; GFX13-NEXT:    global_store_b128 v24, v[8:11], s[36:37] offset:48
-; GFX13-NEXT:    global_store_b128 v24, v[12:15], s[36:37] offset:32
-; GFX13-NEXT:    global_store_b128 v24, v[16:19], s[36:37] offset:16
-; GFX13-NEXT:    global_store_b128 v24, v[20:23], s[36:37]
+; GFX13-NEXT:    global_store_b128 v24, v[0:3], s[36:37] offset:80 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v24, v[4:7], s[36:37] offset:64 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v24, v[8:11], s[36:37] offset:48 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v24, v[12:15], s[36:37] offset:32 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v24, v[16:19], s[36:37] offset:16 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v24, v[20:23], s[36:37] scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
   %load = load <64 x i16>, ptr addrspace(4) %in
   %ext = zext <64 x i16> %load to <64 x i32>
@@ -6151,10 +6151,10 @@ define amdgpu_kernel void @constant_sextload_v64i16_to_v64i32(ptr addrspace(1) %
 ; GFX13-NEXT:    s_sext_i32_i16 s3, s3
 ; GFX13-NEXT:    s_sext_i32_i16 s2, s2
 ; GFX13-NEXT:    s_clause 0x3
-; GFX13-NEXT:    global_store_b128 v24, v[0:3], s[36:37] offset:240
-; GFX13-NEXT:    global_store_b128 v24, v[4:7], s[36:37] offset:224
-; GFX13-NEXT:    global_store_b128 v24, v[8:11], s[36:37] offset:208
-; GFX13-NEXT:    global_store_b128 v24, v[12:15], s[36:37] offset:192
+; GFX13-NEXT:    global_store_b128 v24, v[0:3], s[36:37] offset:240 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v24, v[4:7], s[36:37] offset:224 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v24, v[8:11], s[36:37] offset:208 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v24, v[12:15], s[36:37] offset:192 scope:SCOPE_SE
 ; GFX13-NEXT:    v_dual_mov_b32 v1, s58 :: v_dual_mov_b32 v0, s6
 ; GFX13-NEXT:    v_dual_mov_b32 v3, s57 :: v_dual_mov_b32 v2, s7
 ; GFX13-NEXT:    v_mov_b32_e32 v5, s56
@@ -6193,12 +6193,12 @@ define amdgpu_kernel void @constant_sextload_v64i16_to_v64i32(ptr addrspace(1) %
 ; GFX13-NEXT:    v_dual_mov_b32 v20, s28 :: v_dual_mov_b32 v23, s47
 ; GFX13-NEXT:    v_mov_b32_e32 v22, s29
 ; GFX13-NEXT:    s_clause 0x5
-; GFX13-NEXT:    global_store_b128 v24, v[0:3], s[36:37] offset:176
-; GFX13-NEXT:    global_store_b128 v24, v[4:7], s[36:37] offset:160
-; GFX13-NEXT:    global_store_b128 v24, v[8:11], s[36:37] offset:144
-; GFX13-NEXT:    global_store_b128 v24, v[12:15], s[36:37] offset:128
-; GFX13-NEXT:    global_store_b128 v24, v[16:19], s[36:37] offset:112
-; GFX13-NEXT:    global_store_b128 v24, v[20:23], s[36:37] offset:96
+; GFX13-NEXT:    global_store_b128 v24, v[0:3], s[36:37] offset:176 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v24, v[4:7], s[36:37] offset:160 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v24, v[8:11], s[36:37] offset:144 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v24, v[12:15], s[36:37] offset:128 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v24, v[16:19], s[36:37] offset:112 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v24, v[20:23], s[36:37] offset:96 scope:SCOPE_SE
 ; GFX13-NEXT:    v_dual_mov_b32 v1, s46 :: v_dual_mov_b32 v0, s26
 ; GFX13-NEXT:    v_dual_mov_b32 v3, s45 :: v_dual_mov_b32 v2, s27
 ; GFX13-NEXT:    v_mov_b32_e32 v5, s44
@@ -6225,12 +6225,12 @@ define amdgpu_kernel void @constant_sextload_v64i16_to_v64i32(ptr addrspace(1) %
 ; GFX13-NEXT:    v_dual_mov_b32 v20, s16 :: v_dual_mov_b32 v23, s33
 ; GFX13-NEXT:    v_mov_b32_e32 v22, s17
 ; GFX13-NEXT:    s_clause 0x5
-; GFX13-NEXT:    global_store_b128 v24, v[0:3], s[36:37] offset:80
-; GFX13-NEXT:    global_store_b128 v24, v[4:7], s[36:37] offset:64
-; GFX13-NEXT:    global_store_b128 v24, v[8:11], s[36:37] offset:48
-; GFX13-NEXT:    global_store_b128 v24, v[12:15], s[36:37] offset:32
-; GFX13-NEXT:    global_store_b128 v24, v[16:19], s[36:37] offset:16
-; GFX13-NEXT:    global_store_b128 v24, v[20:23], s[36:37]
+; GFX13-NEXT:    global_store_b128 v24, v[0:3], s[36:37] offset:80 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v24, v[4:7], s[36:37] offset:64 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v24, v[8:11], s[36:37] offset:48 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v24, v[12:15], s[36:37] offset:32 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v24, v[16:19], s[36:37] offset:16 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v24, v[20:23], s[36:37] scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
   %load = load <64 x i16>, ptr addrspace(4) %in
   %ext = sext <64 x i16> %load to <64 x i32>
@@ -6336,7 +6336,7 @@ define amdgpu_kernel void @constant_zextload_i16_to_i64(ptr addrspace(1) %out, p
 ; GFX13-TRUE16-NEXT:    global_load_d16_b16 v0, v1, s[2:3]
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-TRUE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX13-TRUE16-NEXT:    global_store_b64 v1, v[0:1], s[0:1]
+; GFX13-TRUE16-NEXT:    global_store_b64 v1, v[0:1], s[0:1] scope:SCOPE_SE
 ; GFX13-TRUE16-NEXT:    s_endpgm
 ;
 ; GFX13-FAKE16-LABEL: constant_zextload_i16_to_i64:
@@ -6347,7 +6347,7 @@ define amdgpu_kernel void @constant_zextload_i16_to_i64(ptr addrspace(1) %out, p
 ; GFX13-FAKE16-NEXT:    global_load_u16 v0, v1, s[2:3]
 ; GFX13-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX13-FAKE16-NEXT:    global_store_b64 v1, v[0:1], s[0:1]
+; GFX13-FAKE16-NEXT:    global_store_b64 v1, v[0:1], s[0:1] scope:SCOPE_SE
 ; GFX13-FAKE16-NEXT:    s_endpgm
   %a = load i16, ptr addrspace(4) %in
   %ext = zext i16 %a to i64
@@ -6466,7 +6466,7 @@ define amdgpu_kernel void @constant_sextload_i16_to_i64(ptr addrspace(1) %out, p
 ; GFX13-TRUE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
 ; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-TRUE16-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
-; GFX13-TRUE16-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; GFX13-TRUE16-NEXT:    global_store_b64 v2, v[0:1], s[0:1] scope:SCOPE_SE
 ; GFX13-TRUE16-NEXT:    s_endpgm
 ;
 ; GFX13-FAKE16-LABEL: constant_sextload_i16_to_i64:
@@ -6479,7 +6479,7 @@ define amdgpu_kernel void @constant_sextload_i16_to_i64(ptr addrspace(1) %out, p
 ; GFX13-FAKE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
 ; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-FAKE16-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
-; GFX13-FAKE16-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; GFX13-FAKE16-NEXT:    global_store_b64 v2, v[0:1], s[0:1] scope:SCOPE_SE
 ; GFX13-FAKE16-NEXT:    s_endpgm
   %a = load i16, ptr addrspace(4) %in
   %ext = sext i16 %a to i64
@@ -6585,7 +6585,7 @@ define amdgpu_kernel void @constant_zextload_v1i16_to_v1i64(ptr addrspace(1) %ou
 ; GFX13-TRUE16-NEXT:    global_load_d16_b16 v0, v1, s[2:3]
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-TRUE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX13-TRUE16-NEXT:    global_store_b64 v1, v[0:1], s[0:1]
+; GFX13-TRUE16-NEXT:    global_store_b64 v1, v[0:1], s[0:1] scope:SCOPE_SE
 ; GFX13-TRUE16-NEXT:    s_endpgm
 ;
 ; GFX13-FAKE16-LABEL: constant_zextload_v1i16_to_v1i64:
@@ -6596,7 +6596,7 @@ define amdgpu_kernel void @constant_zextload_v1i16_to_v1i64(ptr addrspace(1) %ou
 ; GFX13-FAKE16-NEXT:    global_load_u16 v0, v1, s[2:3]
 ; GFX13-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX13-FAKE16-NEXT:    global_store_b64 v1, v[0:1], s[0:1]
+; GFX13-FAKE16-NEXT:    global_store_b64 v1, v[0:1], s[0:1] scope:SCOPE_SE
 ; GFX13-FAKE16-NEXT:    s_endpgm
   %load = load <1 x i16>, ptr addrspace(4) %in
   %ext = zext <1 x i16> %load to <1 x i64>
@@ -6710,7 +6710,7 @@ define amdgpu_kernel void @constant_sextload_v1i16_to_v1i64(ptr addrspace(1) %ou
 ; GFX13-TRUE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
 ; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-TRUE16-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
-; GFX13-TRUE16-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; GFX13-TRUE16-NEXT:    global_store_b64 v2, v[0:1], s[0:1] scope:SCOPE_SE
 ; GFX13-TRUE16-NEXT:    s_endpgm
 ;
 ; GFX13-FAKE16-LABEL: constant_sextload_v1i16_to_v1i64:
@@ -6723,7 +6723,7 @@ define amdgpu_kernel void @constant_sextload_v1i16_to_v1i64(ptr addrspace(1) %ou
 ; GFX13-FAKE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
 ; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-FAKE16-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
-; GFX13-FAKE16-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; GFX13-FAKE16-NEXT:    global_store_b64 v2, v[0:1], s[0:1] scope:SCOPE_SE
 ; GFX13-FAKE16-NEXT:    s_endpgm
   %load = load <1 x i16>, ptr addrspace(4) %in
   %ext = sext <1 x i16> %load to <1 x i64>
@@ -6851,7 +6851,7 @@ define amdgpu_kernel void @constant_zextload_v2i16_to_v2i64(ptr addrspace(1) %ou
 ; GFX13-TRUE16-NEXT:    s_and_b32 s3, 0xffff, s3
 ; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v0, s3 :: v_dual_mov_b32 v3, v1
-; GFX13-TRUE16-NEXT:    global_store_b128 v1, v[0:3], s[0:1]
+; GFX13-TRUE16-NEXT:    global_store_b128 v1, v[0:3], s[0:1] scope:SCOPE_SE
 ; GFX13-TRUE16-NEXT:    s_endpgm
 ;
 ; GFX13-FAKE16-LABEL: constant_zextload_v2i16_to_v2i64:
@@ -6866,7 +6866,7 @@ define amdgpu_kernel void @constant_zextload_v2i16_to_v2i64(ptr addrspace(1) %ou
 ; GFX13-FAKE16-NEXT:    s_pack_hl_b32_b16 s2, s2, 0
 ; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX13-FAKE16-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, v1
-; GFX13-FAKE16-NEXT:    global_store_b128 v1, v[0:3], s[0:1]
+; GFX13-FAKE16-NEXT:    global_store_b128 v1, v[0:3], s[0:1] scope:SCOPE_SE
 ; GFX13-FAKE16-NEXT:    s_endpgm
   %load = load <2 x i16>, ptr addrspace(4) %in
   %ext = zext <2 x i16> %load to <2 x i64>
@@ -6982,7 +6982,7 @@ define amdgpu_kernel void @constant_sextload_v2i16_to_v2i64(ptr addrspace(1) %ou
 ; GFX13-NEXT:    v_dual_mov_b32 v4, 0 :: v_dual_mov_b32 v1, s3
 ; GFX13-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v3, s5
 ; GFX13-NEXT:    v_mov_b32_e32 v2, s4
-; GFX13-NEXT:    global_store_b128 v4, v[0:3], s[0:1]
+; GFX13-NEXT:    global_store_b128 v4, v[0:3], s[0:1] scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
   %load = load <2 x i16>, ptr addrspace(4) %in
   %ext = sext <2 x i16> %load to <2 x i64>
@@ -7154,10 +7154,10 @@ define amdgpu_kernel void @constant_zextload_v4i16_to_v4i64(ptr addrspace(1) %ou
 ; GFX13-TRUE16-NEXT:    s_pack_hl_b32_b16 s2, s3, 0
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v0, s4 :: v_dual_mov_b32 v3, v1
 ; GFX13-TRUE16-NEXT:    s_and_b32 s3, 0xffff, s3
-; GFX13-TRUE16-NEXT:    global_store_b128 v1, v[0:3], s[0:1]
+; GFX13-TRUE16-NEXT:    global_store_b128 v1, v[0:3], s[0:1] scope:SCOPE_SE
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v0, s3
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v2, s2
-; GFX13-TRUE16-NEXT:    global_store_b128 v1, v[0:3], s[0:1] offset:16
+; GFX13-TRUE16-NEXT:    global_store_b128 v1, v[0:3], s[0:1] offset:16 scope:SCOPE_SE
 ; GFX13-TRUE16-NEXT:    s_endpgm
 ;
 ; GFX13-FAKE16-LABEL: constant_zextload_v4i16_to_v4i64:
@@ -7174,10 +7174,10 @@ define amdgpu_kernel void @constant_zextload_v4i16_to_v4i64(ptr addrspace(1) %ou
 ; GFX13-FAKE16-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, v1
 ; GFX13-FAKE16-NEXT:    s_pack_hl_b32_b16 s2, s3, 0
 ; GFX13-FAKE16-NEXT:    s_and_b32 s3, 0xffff, s3
-; GFX13-FAKE16-NEXT:    global_store_b128 v1, v[0:3], s[0:1]
+; GFX13-FAKE16-NEXT:    global_store_b128 v1, v[0:3], s[0:1] scope:SCOPE_SE
 ; GFX13-FAKE16-NEXT:    v_mov_b32_e32 v0, s3
 ; GFX13-FAKE16-NEXT:    v_mov_b32_e32 v2, s2
-; GFX13-FAKE16-NEXT:    global_store_b128 v1, v[0:3], s[0:1] offset:16
+; GFX13-FAKE16-NEXT:    global_store_b128 v1, v[0:3], s[0:1] offset:16 scope:SCOPE_SE
 ; GFX13-FAKE16-NEXT:    s_endpgm
   %load = load <4 x i16>, ptr addrspace(4) %in
   %ext = zext <4 x i16> %load to <4 x i64>
@@ -7350,8 +7350,8 @@ define amdgpu_kernel void @constant_sextload_v4i16_to_v4i64(ptr addrspace(1) %ou
 ; GFX13-NEXT:    v_dual_mov_b32 v6, s8 :: v_dual_mov_b32 v3, s3
 ; GFX13-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX13-NEXT:    s_clause 0x1
-; GFX13-NEXT:    global_store_b128 v8, v[4:7], s[0:1] offset:16
-; GFX13-NEXT:    global_store_b128 v8, v[0:3], s[0:1]
+; GFX13-NEXT:    global_store_b128 v8, v[4:7], s[0:1] offset:16 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v8, v[0:3], s[0:1] scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
   %load = load <4 x i16>, ptr addrspace(4) %in
   %ext = sext <4 x i16> %load to <4 x i64>
@@ -7579,20 +7579,20 @@ define amdgpu_kernel void @constant_zextload_v8i16_to_v8i64(ptr addrspace(1) %ou
 ; GFX13-NEXT:    s_pack_hl_b32_b16 s2, s6, 0
 ; GFX13-NEXT:    v_dual_mov_b32 v2, s3 :: v_dual_mov_b32 v3, v1
 ; GFX13-NEXT:    s_and_b32 s3, 0xffff, s6
-; GFX13-NEXT:    global_store_b128 v1, v[0:3], s[0:1] offset:48
+; GFX13-NEXT:    global_store_b128 v1, v[0:3], s[0:1] offset:48 scope:SCOPE_SE
 ; GFX13-NEXT:    v_mov_b32_e32 v0, s3
 ; GFX13-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX13-NEXT:    s_pack_hl_b32_b16 s2, s5, 0
 ; GFX13-NEXT:    s_and_b32 s3, 0xffff, s5
-; GFX13-NEXT:    global_store_b128 v1, v[0:3], s[0:1] offset:32
+; GFX13-NEXT:    global_store_b128 v1, v[0:3], s[0:1] offset:32 scope:SCOPE_SE
 ; GFX13-NEXT:    v_mov_b32_e32 v0, s3
 ; GFX13-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX13-NEXT:    s_pack_hl_b32_b16 s2, s4, 0
 ; GFX13-NEXT:    s_and_b32 s3, 0xffff, s4
-; GFX13-NEXT:    global_store_b128 v1, v[0:3], s[0:1] offset:16
+; GFX13-NEXT:    global_store_b128 v1, v[0:3], s[0:1] offset:16 scope:SCOPE_SE
 ; GFX13-NEXT:    v_mov_b32_e32 v0, s3
 ; GFX13-NEXT:    v_mov_b32_e32 v2, s2
-; GFX13-NEXT:    global_store_b128 v1, v[0:3], s[0:1]
+; GFX13-NEXT:    global_store_b128 v1, v[0:3], s[0:1] scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
   %load = load <8 x i16>, ptr addrspace(4) %in
   %ext = zext <8 x i16> %load to <8 x i64>
@@ -7874,10 +7874,10 @@ define amdgpu_kernel void @constant_sextload_v8i16_to_v8i64(ptr addrspace(1) %ou
 ; GFX13-NEXT:    v_dual_mov_b32 v14, s10 :: v_dual_mov_b32 v7, s5
 ; GFX13-NEXT:    v_mov_b32_e32 v6, s4
 ; GFX13-NEXT:    s_clause 0x3
-; GFX13-NEXT:    global_store_b128 v16, v[8:11], s[0:1] offset:48
-; GFX13-NEXT:    global_store_b128 v16, v[0:3], s[0:1] offset:32
-; GFX13-NEXT:    global_store_b128 v16, v[12:15], s[0:1] offset:16
-; GFX13-NEXT:    global_store_b128 v16, v[4:7], s[0:1]
+; GFX13-NEXT:    global_store_b128 v16, v[8:11], s[0:1] offset:48 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v16, v[0:3], s[0:1] offset:32 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v16, v[12:15], s[0:1] offset:16 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v16, v[4:7], s[0:1] scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
   %load = load <8 x i16>, ptr addrspace(4) %in
   %ext = sext <8 x i16> %load to <8 x i64>
@@ -8263,40 +8263,40 @@ define amdgpu_kernel void @constant_zextload_v16i16_to_v16i64(ptr addrspace(1) %
 ; GFX13-NEXT:    v_dual_mov_b32 v2, s5 :: v_dual_mov_b32 v3, v1
 ; GFX13-NEXT:    s_lshr_b32 s5, s4, 16
 ; GFX13-NEXT:    s_and_b32 s4, s4, 0xffff
-; GFX13-NEXT:    global_store_b128 v1, v[0:3], s[8:9] offset:80
+; GFX13-NEXT:    global_store_b128 v1, v[0:3], s[8:9] offset:80 scope:SCOPE_SE
 ; GFX13-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX13-NEXT:    v_mov_b32_e32 v2, s5
 ; GFX13-NEXT:    s_lshr_b32 s4, s7, 16
 ; GFX13-NEXT:    s_and_b32 s5, s7, 0xffff
-; GFX13-NEXT:    global_store_b128 v1, v[0:3], s[8:9] offset:64
+; GFX13-NEXT:    global_store_b128 v1, v[0:3], s[8:9] offset:64 scope:SCOPE_SE
 ; GFX13-NEXT:    v_mov_b32_e32 v0, s5
 ; GFX13-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX13-NEXT:    s_lshr_b32 s4, s6, 16
 ; GFX13-NEXT:    s_and_b32 s5, s6, 0xffff
-; GFX13-NEXT:    global_store_b128 v1, v[0:3], s[8:9] offset:112
+; GFX13-NEXT:    global_store_b128 v1, v[0:3], s[8:9] offset:112 scope:SCOPE_SE
 ; GFX13-NEXT:    v_mov_b32_e32 v0, s5
 ; GFX13-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX13-NEXT:    s_lshr_b32 s4, s3, 16
 ; GFX13-NEXT:    s_and_b32 s3, s3, 0xffff
-; GFX13-NEXT:    global_store_b128 v1, v[0:3], s[8:9] offset:96
+; GFX13-NEXT:    global_store_b128 v1, v[0:3], s[8:9] offset:96 scope:SCOPE_SE
 ; GFX13-NEXT:    v_mov_b32_e32 v0, s3
 ; GFX13-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX13-NEXT:    s_lshr_b32 s3, s2, 16
 ; GFX13-NEXT:    s_and_b32 s2, s2, 0xffff
-; GFX13-NEXT:    global_store_b128 v1, v[0:3], s[8:9] offset:48
+; GFX13-NEXT:    global_store_b128 v1, v[0:3], s[8:9] offset:48 scope:SCOPE_SE
 ; GFX13-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX13-NEXT:    v_mov_b32_e32 v2, s3
 ; GFX13-NEXT:    s_lshr_b32 s2, s1, 16
 ; GFX13-NEXT:    s_and_b32 s1, s1, 0xffff
-; GFX13-NEXT:    global_store_b128 v1, v[0:3], s[8:9] offset:32
+; GFX13-NEXT:    global_store_b128 v1, v[0:3], s[8:9] offset:32 scope:SCOPE_SE
 ; GFX13-NEXT:    v_mov_b32_e32 v0, s1
 ; GFX13-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX13-NEXT:    s_lshr_b32 s1, s0, 16
 ; GFX13-NEXT:    s_and_b32 s0, s0, 0xffff
-; GFX13-NEXT:    global_store_b128 v1, v[0:3], s[8:9] offset:16
+; GFX13-NEXT:    global_store_b128 v1, v[0:3], s[8:9] offset:16 scope:SCOPE_SE
 ; GFX13-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX13-NEXT:    v_mov_b32_e32 v2, s1
-; GFX13-NEXT:    global_store_b128 v1, v[0:3], s[8:9]
+; GFX13-NEXT:    global_store_b128 v1, v[0:3], s[8:9] scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
   %load = load <16 x i16>, ptr addrspace(4) %in
   %ext = zext <16 x i16> %load to <16 x i64>
@@ -8793,8 +8793,8 @@ define amdgpu_kernel void @constant_sextload_v16i16_to_v16i64(ptr addrspace(1) %
 ; GFX13-NEXT:    v_mov_b32_e32 v18, s20
 ; GFX13-NEXT:    s_bfe_i64 s[4:5], s[4:5], 0x100000
 ; GFX13-NEXT:    s_clause 0x1
-; GFX13-NEXT:    global_store_b128 v24, v[8:11], s[0:1] offset:80
-; GFX13-NEXT:    global_store_b128 v24, v[0:3], s[0:1] offset:64
+; GFX13-NEXT:    global_store_b128 v24, v[8:11], s[0:1] offset:80 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v24, v[0:3], s[0:1] offset:64 scope:SCOPE_SE
 ; GFX13-NEXT:    v_dual_mov_b32 v1, s17 :: v_dual_mov_b32 v0, s16
 ; GFX13-NEXT:    v_dual_mov_b32 v3, s7 :: v_dual_mov_b32 v2, s6
 ; GFX13-NEXT:    v_dual_mov_b32 v9, s13 :: v_dual_mov_b32 v8, s12
@@ -8802,12 +8802,12 @@ define amdgpu_kernel void @constant_sextload_v16i16_to_v16i64(ptr addrspace(1) %
 ; GFX13-NEXT:    v_dual_mov_b32 v21, s3 :: v_dual_mov_b32 v20, s2
 ; GFX13-NEXT:    v_dual_mov_b32 v23, s5 :: v_dual_mov_b32 v22, s4
 ; GFX13-NEXT:    s_clause 0x5
-; GFX13-NEXT:    global_store_b128 v24, v[12:15], s[0:1] offset:112
-; GFX13-NEXT:    global_store_b128 v24, v[4:7], s[0:1] offset:96
-; GFX13-NEXT:    global_store_b128 v24, v[16:19], s[0:1] offset:48
-; GFX13-NEXT:    global_store_b128 v24, v[0:3], s[0:1] offset:32
-; GFX13-NEXT:    global_store_b128 v24, v[8:11], s[0:1] offset:16
-; GFX13-NEXT:    global_store_b128 v24, v[20:23], s[0:1]
+; GFX13-NEXT:    global_store_b128 v24, v[12:15], s[0:1] offset:112 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v24, v[4:7], s[0:1] offset:96 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v24, v[16:19], s[0:1] offset:48 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v24, v[0:3], s[0:1] offset:32 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v24, v[8:11], s[0:1] offset:16 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v24, v[20:23], s[0:1] scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
   %load = load <16 x i16>, ptr addrspace(4) %in
   %ext = sext <16 x i16> %load to <16 x i64>
@@ -9515,80 +9515,80 @@ define amdgpu_kernel void @constant_zextload_v32i16_to_v32i64(ptr addrspace(1) %
 ; GFX13-NEXT:    v_dual_mov_b32 v2, s15 :: v_dual_mov_b32 v3, v1
 ; GFX13-NEXT:    s_lshr_b32 s15, s14, 16
 ; GFX13-NEXT:    s_and_b32 s14, s14, 0xffff
-; GFX13-NEXT:    global_store_b128 v1, v[0:3], s[16:17] offset:240
+; GFX13-NEXT:    global_store_b128 v1, v[0:3], s[16:17] offset:240 scope:SCOPE_SE
 ; GFX13-NEXT:    v_mov_b32_e32 v0, s14
 ; GFX13-NEXT:    v_mov_b32_e32 v2, s15
 ; GFX13-NEXT:    s_lshr_b32 s14, s13, 16
 ; GFX13-NEXT:    s_and_b32 s13, s13, 0xffff
-; GFX13-NEXT:    global_store_b128 v1, v[0:3], s[16:17] offset:224
+; GFX13-NEXT:    global_store_b128 v1, v[0:3], s[16:17] offset:224 scope:SCOPE_SE
 ; GFX13-NEXT:    v_mov_b32_e32 v0, s13
 ; GFX13-NEXT:    v_mov_b32_e32 v2, s14
 ; GFX13-NEXT:    s_lshr_b32 s13, s12, 16
 ; GFX13-NEXT:    s_and_b32 s12, s12, 0xffff
-; GFX13-NEXT:    global_store_b128 v1, v[0:3], s[16:17] offset:208
+; GFX13-NEXT:    global_store_b128 v1, v[0:3], s[16:17] offset:208 scope:SCOPE_SE
 ; GFX13-NEXT:    v_mov_b32_e32 v0, s12
 ; GFX13-NEXT:    v_mov_b32_e32 v2, s13
 ; GFX13-NEXT:    s_lshr_b32 s12, s11, 16
 ; GFX13-NEXT:    s_and_b32 s11, s11, 0xffff
-; GFX13-NEXT:    global_store_b128 v1, v[0:3], s[16:17] offset:192
+; GFX13-NEXT:    global_store_b128 v1, v[0:3], s[16:17] offset:192 scope:SCOPE_SE
 ; GFX13-NEXT:    v_mov_b32_e32 v0, s11
 ; GFX13-NEXT:    v_mov_b32_e32 v2, s12
 ; GFX13-NEXT:    s_lshr_b32 s11, s10, 16
 ; GFX13-NEXT:    s_and_b32 s10, s10, 0xffff
-; GFX13-NEXT:    global_store_b128 v1, v[0:3], s[16:17] offset:176
+; GFX13-NEXT:    global_store_b128 v1, v[0:3], s[16:17] offset:176 scope:SCOPE_SE
 ; GFX13-NEXT:    v_mov_b32_e32 v0, s10
 ; GFX13-NEXT:    v_mov_b32_e32 v2, s11
 ; GFX13-NEXT:    s_lshr_b32 s10, s9, 16
 ; GFX13-NEXT:    s_and_b32 s9, s9, 0xffff
-; GFX13-NEXT:    global_store_b128 v1, v[0:3], s[16:17] offset:160
+; GFX13-NEXT:    global_store_b128 v1, v[0:3], s[16:17] offset:160 scope:SCOPE_SE
 ; GFX13-NEXT:    v_mov_b32_e32 v0, s9
 ; GFX13-NEXT:    v_mov_b32_e32 v2, s10
 ; GFX13-NEXT:    s_lshr_b32 s9, s8, 16
 ; GFX13-NEXT:    s_and_b32 s8, s8, 0xffff
-; GFX13-NEXT:    global_store_b128 v1, v[0:3], s[16:17] offset:144
+; GFX13-NEXT:    global_store_b128 v1, v[0:3], s[16:17] offset:144 scope:SCOPE_SE
 ; GFX13-NEXT:    v_mov_b32_e32 v0, s8
 ; GFX13-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX13-NEXT:    s_lshr_b32 s8, s7, 16
 ; GFX13-NEXT:    s_and_b32 s7, s7, 0xffff
-; GFX13-NEXT:    global_store_b128 v1, v[0:3], s[16:17] offset:128
+; GFX13-NEXT:    global_store_b128 v1, v[0:3], s[16:17] offset:128 scope:SCOPE_SE
 ; GFX13-NEXT:    v_mov_b32_e32 v0, s7
 ; GFX13-NEXT:    v_mov_b32_e32 v2, s8
 ; GFX13-NEXT:    s_lshr_b32 s7, s6, 16
 ; GFX13-NEXT:    s_and_b32 s6, s6, 0xffff
-; GFX13-NEXT:    global_store_b128 v1, v[0:3], s[16:17] offset:112
+; GFX13-NEXT:    global_store_b128 v1, v[0:3], s[16:17] offset:112 scope:SCOPE_SE
 ; GFX13-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX13-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX13-NEXT:    s_lshr_b32 s6, s5, 16
 ; GFX13-NEXT:    s_and_b32 s5, s5, 0xffff
-; GFX13-NEXT:    global_store_b128 v1, v[0:3], s[16:17] offset:96
+; GFX13-NEXT:    global_store_b128 v1, v[0:3], s[16:17] offset:96 scope:SCOPE_SE
 ; GFX13-NEXT:    v_mov_b32_e32 v0, s5
 ; GFX13-NEXT:    v_mov_b32_e32 v2, s6
 ; GFX13-NEXT:    s_lshr_b32 s5, s4, 16
 ; GFX13-NEXT:    s_and_b32 s4, s4, 0xffff
-; GFX13-NEXT:    global_store_b128 v1, v[0:3], s[16:17] offset:80
+; GFX13-NEXT:    global_store_b128 v1, v[0:3], s[16:17] offset:80 scope:SCOPE_SE
 ; GFX13-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX13-NEXT:    v_mov_b32_e32 v2, s5
 ; GFX13-NEXT:    s_lshr_b32 s4, s3, 16
 ; GFX13-NEXT:    s_and_b32 s3, s3, 0xffff
-; GFX13-NEXT:    global_store_b128 v1, v[0:3], s[16:17] offset:64
+; GFX13-NEXT:    global_store_b128 v1, v[0:3], s[16:17] offset:64 scope:SCOPE_SE
 ; GFX13-NEXT:    v_mov_b32_e32 v0, s3
 ; GFX13-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX13-NEXT:    s_lshr_b32 s3, s2, 16
 ; GFX13-NEXT:    s_and_b32 s2, s2, 0xffff
-; GFX13-NEXT:    global_store_b128 v1, v[0:3], s[16:17] offset:48
+; GFX13-NEXT:    global_store_b128 v1, v[0:3], s[16:17] offset:48 scope:SCOPE_SE
 ; GFX13-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX13-NEXT:    v_mov_b32_e32 v2, s3
 ; GFX13-NEXT:    s_lshr_b32 s2, s1, 16
 ; GFX13-NEXT:    s_and_b32 s1, s1, 0xffff
-; GFX13-NEXT:    global_store_b128 v1, v[0:3], s[16:17] offset:32
+; GFX13-NEXT:    global_store_b128 v1, v[0:3], s[16:17] offset:32 scope:SCOPE_SE
 ; GFX13-NEXT:    v_mov_b32_e32 v0, s1
 ; GFX13-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX13-NEXT:    s_lshr_b32 s1, s0, 16
 ; GFX13-NEXT:    s_and_b32 s0, s0, 0xffff
-; GFX13-NEXT:    global_store_b128 v1, v[0:3], s[16:17] offset:16
+; GFX13-NEXT:    global_store_b128 v1, v[0:3], s[16:17] offset:16 scope:SCOPE_SE
 ; GFX13-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX13-NEXT:    v_mov_b32_e32 v2, s1
-; GFX13-NEXT:    global_store_b128 v1, v[0:3], s[16:17]
+; GFX13-NEXT:    global_store_b128 v1, v[0:3], s[16:17] scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
   %load = load <32 x i16>, ptr addrspace(4) %in
   %ext = zext <32 x i16> %load to <32 x i64>
@@ -10502,62 +10502,62 @@ define amdgpu_kernel void @constant_sextload_v32i16_to_v32i64(ptr addrspace(1) %
 ; GFX13-NEXT:    s_bfe_i64 s[14:15], s[14:15], 0x100000
 ; GFX13-NEXT:    s_bfe_i64 s[66:67], s[66:67], 0x100000
 ; GFX13-NEXT:    s_bfe_i64 s[60:61], s[60:61], 0x100000
-; GFX13-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v3, s15
+; GFX13-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s14
 ; GFX13-NEXT:    s_bfe_i64 s[12:13], s[12:13], 0x100000
 ; GFX13-NEXT:    s_bfe_i64 s[58:59], s[58:59], 0x100000
-; GFX13-NEXT:    v_dual_mov_b32 v2, s14 :: v_dual_mov_b32 v5, s67
-; GFX13-NEXT:    v_dual_mov_b32 v4, s66 :: v_dual_mov_b32 v7, s65
+; GFX13-NEXT:    v_dual_mov_b32 v2, s15 :: v_dual_mov_b32 v3, s66
+; GFX13-NEXT:    v_dual_mov_b32 v4, s67 :: v_dual_mov_b32 v5, s64
 ; GFX13-NEXT:    s_bfe_i64 s[52:53], s[52:53], 0x100000
-; GFX13-NEXT:    v_dual_mov_b32 v6, s64 :: v_dual_mov_b32 v9, s61
-; GFX13-NEXT:    v_dual_mov_b32 v8, s60 :: v_dual_mov_b32 v11, s13
-; GFX13-NEXT:    v_dual_mov_b32 v10, s12 :: v_dual_mov_b32 v13, s59
-; GFX13-NEXT:    v_dual_mov_b32 v12, s58 :: v_dual_mov_b32 v15, s55
-; GFX13-NEXT:    v_dual_mov_b32 v14, s54 :: v_dual_mov_b32 v17, s53
-; GFX13-NEXT:    v_mov_b32_e32 v16, s52
+; GFX13-NEXT:    v_dual_mov_b32 v6, s65 :: v_dual_mov_b32 v7, s60
+; GFX13-NEXT:    v_dual_mov_b32 v8, s61 :: v_dual_mov_b32 v9, s12
+; GFX13-NEXT:    v_dual_mov_b32 v10, s13 :: v_dual_mov_b32 v11, s58
+; GFX13-NEXT:    v_dual_mov_b32 v12, s59 :: v_dual_mov_b32 v13, s54
+; GFX13-NEXT:    v_dual_mov_b32 v14, s55 :: v_dual_mov_b32 v15, s52
+; GFX13-NEXT:    v_mov_b32_e32 v16, s53
 ; GFX13-NEXT:    s_bfe_i64 s[12:13], s[62:63], 0x100000
 ; GFX13-NEXT:    s_clause 0x3
-; GFX13-NEXT:    global_store_b128 v0, v[2:5], s[16:17] offset:240
-; GFX13-NEXT:    global_store_b128 v0, v[6:9], s[16:17] offset:224
-; GFX13-NEXT:    global_store_b128 v0, v[10:13], s[16:17] offset:208
-; GFX13-NEXT:    global_store_b128 v0, v[14:17], s[16:17] offset:192
-; GFX13-NEXT:    v_dual_mov_b32 v3, s51 :: v_dual_mov_b32 v2, s50
-; GFX13-NEXT:    v_dual_mov_b32 v5, s13 :: v_dual_mov_b32 v4, s12
-; GFX13-NEXT:    v_dual_mov_b32 v7, s57 :: v_dual_mov_b32 v6, s56
-; GFX13-NEXT:    v_dual_mov_b32 v9, s49 :: v_dual_mov_b32 v8, s48
-; GFX13-NEXT:    v_dual_mov_b32 v11, s45 :: v_dual_mov_b32 v10, s44
-; GFX13-NEXT:    v_dual_mov_b32 v13, s47 :: v_dual_mov_b32 v12, s46
-; GFX13-NEXT:    v_dual_mov_b32 v15, s35 :: v_dual_mov_b32 v14, s34
-; GFX13-NEXT:    v_dual_mov_b32 v17, s43 :: v_dual_mov_b32 v16, s42
-; GFX13-NEXT:    v_dual_mov_b32 v19, s41 :: v_dual_mov_b32 v18, s40
-; GFX13-NEXT:    v_dual_mov_b32 v21, s39 :: v_dual_mov_b32 v20, s38
-; GFX13-NEXT:    v_dual_mov_b32 v23, s21 :: v_dual_mov_b32 v22, s20
-; GFX13-NEXT:    v_dual_mov_b32 v25, s37 :: v_dual_mov_b32 v24, s36
+; GFX13-NEXT:    global_store_b128 v0, v[1:4], s[16:17] offset:240 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v0, v[5:8], s[16:17] offset:224 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v0, v[9:12], s[16:17] offset:208 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v0, v[13:16], s[16:17] offset:192 scope:SCOPE_SE
+; GFX13-NEXT:    v_dual_mov_b32 v1, s50 :: v_dual_mov_b32 v2, s51
+; GFX13-NEXT:    v_dual_mov_b32 v3, s12 :: v_dual_mov_b32 v4, s13
+; GFX13-NEXT:    v_dual_mov_b32 v5, s56 :: v_dual_mov_b32 v6, s57
+; GFX13-NEXT:    v_dual_mov_b32 v7, s48 :: v_dual_mov_b32 v8, s49
+; GFX13-NEXT:    v_dual_mov_b32 v9, s44 :: v_dual_mov_b32 v10, s45
+; GFX13-NEXT:    v_dual_mov_b32 v11, s46 :: v_dual_mov_b32 v12, s47
+; GFX13-NEXT:    v_dual_mov_b32 v13, s34 :: v_dual_mov_b32 v14, s35
+; GFX13-NEXT:    v_dual_mov_b32 v15, s42 :: v_dual_mov_b32 v16, s43
+; GFX13-NEXT:    v_dual_mov_b32 v17, s40 :: v_dual_mov_b32 v18, s41
+; GFX13-NEXT:    v_dual_mov_b32 v19, s38 :: v_dual_mov_b32 v20, s39
+; GFX13-NEXT:    v_dual_mov_b32 v21, s20 :: v_dual_mov_b32 v22, s21
+; GFX13-NEXT:    v_dual_mov_b32 v23, s36 :: v_dual_mov_b32 v24, s37
 ; GFX13-NEXT:    s_clause 0x5
-; GFX13-NEXT:    global_store_b128 v0, v[2:5], s[16:17] offset:176
-; GFX13-NEXT:    global_store_b128 v0, v[6:9], s[16:17] offset:160
-; GFX13-NEXT:    global_store_b128 v0, v[10:13], s[16:17] offset:144
-; GFX13-NEXT:    global_store_b128 v0, v[14:17], s[16:17] offset:128
-; GFX13-NEXT:    global_store_b128 v0, v[18:21], s[16:17] offset:112
-; GFX13-NEXT:    global_store_b128 v0, v[22:25], s[16:17] offset:96
-; GFX13-NEXT:    v_dual_mov_b32 v3, s31 :: v_dual_mov_b32 v2, s30
-; GFX13-NEXT:    v_dual_mov_b32 v5, s29 :: v_dual_mov_b32 v4, s28
-; GFX13-NEXT:    v_dual_mov_b32 v7, s3 :: v_dual_mov_b32 v6, s2
-; GFX13-NEXT:    v_dual_mov_b32 v9, s27 :: v_dual_mov_b32 v8, s26
-; GFX13-NEXT:    v_dual_mov_b32 v11, s25 :: v_dual_mov_b32 v10, s24
-; GFX13-NEXT:    v_dual_mov_b32 v13, s23 :: v_dual_mov_b32 v12, s22
-; GFX13-NEXT:    v_dual_mov_b32 v15, s1 :: v_dual_mov_b32 v14, s0
-; GFX13-NEXT:    v_dual_mov_b32 v17, s11 :: v_dual_mov_b32 v16, s10
-; GFX13-NEXT:    v_dual_mov_b32 v19, s9 :: v_dual_mov_b32 v18, s8
-; GFX13-NEXT:    v_dual_mov_b32 v21, s7 :: v_dual_mov_b32 v20, s6
-; GFX13-NEXT:    v_dual_mov_b32 v23, s19 :: v_dual_mov_b32 v22, s18
-; GFX13-NEXT:    v_dual_mov_b32 v25, s5 :: v_dual_mov_b32 v24, s4
+; GFX13-NEXT:    global_store_b128 v0, v[1:4], s[16:17] offset:176 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v0, v[5:8], s[16:17] offset:160 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v0, v[9:12], s[16:17] offset:144 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v0, v[13:16], s[16:17] offset:128 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v0, v[17:20], s[16:17] offset:112 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v0, v[21:24], s[16:17] offset:96 scope:SCOPE_SE
+; GFX13-NEXT:    v_dual_mov_b32 v1, s30 :: v_dual_mov_b32 v2, s31
+; GFX13-NEXT:    v_dual_mov_b32 v3, s28 :: v_dual_mov_b32 v4, s29
+; GFX13-NEXT:    v_dual_mov_b32 v5, s2 :: v_dual_mov_b32 v6, s3
+; GFX13-NEXT:    v_dual_mov_b32 v7, s26 :: v_dual_mov_b32 v8, s27
+; GFX13-NEXT:    v_dual_mov_b32 v9, s24 :: v_dual_mov_b32 v10, s25
+; GFX13-NEXT:    v_dual_mov_b32 v11, s22 :: v_dual_mov_b32 v12, s23
+; GFX13-NEXT:    v_dual_mov_b32 v13, s0 :: v_dual_mov_b32 v14, s1
+; GFX13-NEXT:    v_dual_mov_b32 v15, s10 :: v_dual_mov_b32 v16, s11
+; GFX13-NEXT:    v_dual_mov_b32 v17, s8 :: v_dual_mov_b32 v18, s9
+; GFX13-NEXT:    v_dual_mov_b32 v19, s6 :: v_dual_mov_b32 v20, s7
+; GFX13-NEXT:    v_dual_mov_b32 v21, s18 :: v_dual_mov_b32 v22, s19
+; GFX13-NEXT:    v_dual_mov_b32 v23, s4 :: v_dual_mov_b32 v24, s5
 ; GFX13-NEXT:    s_clause 0x5
-; GFX13-NEXT:    global_store_b128 v0, v[2:5], s[16:17] offset:80
-; GFX13-NEXT:    global_store_b128 v0, v[6:9], s[16:17] offset:64
-; GFX13-NEXT:    global_store_b128 v0, v[10:13], s[16:17] offset:48
-; GFX13-NEXT:    global_store_b128 v0, v[14:17], s[16:17] offset:32
-; GFX13-NEXT:    global_store_b128 v0, v[18:21], s[16:17] offset:16
-; GFX13-NEXT:    global_store_b128 v0, v[22:25], s[16:17]
+; GFX13-NEXT:    global_store_b128 v0, v[1:4], s[16:17] offset:80 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v0, v[5:8], s[16:17] offset:64 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v0, v[9:12], s[16:17] offset:48 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v0, v[13:16], s[16:17] offset:32 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v0, v[17:20], s[16:17] offset:16 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v0, v[21:24], s[16:17] scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
   %load = load <32 x i16>, ptr addrspace(4) %in
   %ext = sext <32 x i16> %load to <32 x i64>

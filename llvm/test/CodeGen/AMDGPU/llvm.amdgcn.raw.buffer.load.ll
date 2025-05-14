@@ -1283,19 +1283,12 @@ define amdgpu_ps void @raw_buffer_load_v4f16(<4 x i32> inreg %rsrc, ptr addrspac
 ; GFX11-NEXT:    ds_store_b64 v0, v[1:2]
 ; GFX11-NEXT:    s_endpgm
 ;
-; GFX12-LABEL: raw_buffer_load_v4f16:
-; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    buffer_load_b64 v[1:2], off, s[0:3], null
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    ds_store_b64 v0, v[1:2]
-; GFX12-NEXT:    s_endpgm
-;
-; GFX13-LABEL: raw_buffer_load_v4f16:
-; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    buffer_load_b64 v[2:3], off, s[0:3], null
-; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    ds_store_b64 v0, v[2:3]
-; GFX13-NEXT:    s_endpgm
+; GFX12PLUS-LABEL: raw_buffer_load_v4f16:
+; GFX12PLUS:       ; %bb.0: ; %main_body
+; GFX12PLUS-NEXT:    buffer_load_b64 v[1:2], off, s[0:3], null
+; GFX12PLUS-NEXT:    s_wait_loadcnt 0x0
+; GFX12PLUS-NEXT:    ds_store_b64 v0, v[1:2]
+; GFX12PLUS-NEXT:    s_endpgm
 main_body:
   %val = call <4 x half> @llvm.amdgcn.raw.buffer.load.v4f16(<4 x i32> %rsrc, i32 0, i32 0, i32 0)
   store <4 x half> %val, ptr addrspace(3) %ptr
@@ -1360,19 +1353,12 @@ define amdgpu_ps void @raw_buffer_load_v4i16(<4 x i32> inreg %rsrc, ptr addrspac
 ; GFX11-NEXT:    ds_store_b64 v0, v[1:2]
 ; GFX11-NEXT:    s_endpgm
 ;
-; GFX12-LABEL: raw_buffer_load_v4i16:
-; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    buffer_load_b64 v[1:2], off, s[0:3], null
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    ds_store_b64 v0, v[1:2]
-; GFX12-NEXT:    s_endpgm
-;
-; GFX13-LABEL: raw_buffer_load_v4i16:
-; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    buffer_load_b64 v[2:3], off, s[0:3], null
-; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    ds_store_b64 v0, v[2:3]
-; GFX13-NEXT:    s_endpgm
+; GFX12PLUS-LABEL: raw_buffer_load_v4i16:
+; GFX12PLUS:       ; %bb.0: ; %main_body
+; GFX12PLUS-NEXT:    buffer_load_b64 v[1:2], off, s[0:3], null
+; GFX12PLUS-NEXT:    s_wait_loadcnt 0x0
+; GFX12PLUS-NEXT:    ds_store_b64 v0, v[1:2]
+; GFX12PLUS-NEXT:    s_endpgm
 main_body:
   %val = call <4 x i16> @llvm.amdgcn.raw.buffer.load.v4i16(<4 x i32> %rsrc, i32 0, i32 0, i32 0)
   store <4 x i16> %val, ptr addrspace(3) %ptr

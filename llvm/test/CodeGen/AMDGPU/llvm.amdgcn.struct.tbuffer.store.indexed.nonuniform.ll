@@ -4,18 +4,12 @@
 define amdgpu_ps void @tbuffer_store(i32 %arg, <4 x float> %arg1, <4 x float> %arg2, <4 x float> %arg3) {
 ; GFX13-LABEL: tbuffer_store:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    v_dual_mov_b32 v13, v12 :: v_dual_mov_b32 v12, v11
-; GFX13-NEXT:    v_dual_mov_b32 v11, v10 :: v_dual_mov_b32 v10, v9
-; GFX13-NEXT:    v_dual_mov_b32 v9, v8 :: v_dual_mov_b32 v8, v7
-; GFX13-NEXT:    v_dual_mov_b32 v7, v6 :: v_dual_mov_b32 v6, v5
-; GFX13-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, v3
-; GFX13-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
-; GFX13-NEXT:    v_mov_b32_e32 v1, 0
+; GFX13-NEXT:    v_mov_b32_e32 v13, 0
 ; GFX13-NEXT:    s_clause 0x3
-; GFX13-NEXT:    tbuffer_store_format_xyzw v[2:5], v1, v0, null format:[BUF_FMT_8_8_8_8_USCALED] idxen
-; GFX13-NEXT:    tbuffer_store_format_xyzw v[6:9], v1, v0, null format:[BUF_FMT_32_32_32_32_UINT] idxen th:TH_STORE_NT
-; GFX13-NEXT:    tbuffer_store_format_xyzw v[10:13], v1, v0, null format:78 idxen th:TH_STORE_HT
-; GFX13-NEXT:    tbuffer_store_format_xyzw v[10:13], v1, v0, null format:78 idxen th:TH_STORE_RT_NT
+; GFX13-NEXT:    tbuffer_store_format_xyzw v[1:4], v13, v0, null format:[BUF_FMT_8_8_8_8_USCALED] idxen scope:SCOPE_SE
+; GFX13-NEXT:    tbuffer_store_format_xyzw v[5:8], v13, v0, null format:[BUF_FMT_32_32_32_32_UINT] idxen th:TH_STORE_NT scope:SCOPE_SE
+; GFX13-NEXT:    tbuffer_store_format_xyzw v[9:12], v13, v0, null format:78 idxen th:TH_STORE_HT scope:SCOPE_SE
+; GFX13-NEXT:    tbuffer_store_format_xyzw v[9:12], v13, v0, null format:78 idxen th:TH_STORE_RT_NT scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 main_body:
   %in1 = bitcast <4 x float> %arg1 to <4 x i32>
@@ -31,10 +25,8 @@ main_body:
 define amdgpu_ps void @tbuffer_store_immoffs(i32 %arg, <4 x float> %arg1) {
 ; GFX13-LABEL: tbuffer_store_immoffs:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, v3
-; GFX13-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
-; GFX13-NEXT:    v_mov_b32_e32 v1, 0
-; GFX13-NEXT:    tbuffer_store_format_xyzw v[2:5], v1, v0, null format:117 idxen offset:42
+; GFX13-NEXT:    v_mov_b32_e32 v5, 0
+; GFX13-NEXT:    tbuffer_store_format_xyzw v[1:4], v5, v0, null format:117 idxen offset:42 scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 main_body:
   %in1 = bitcast <4 x float> %arg1 to <4 x i32>
@@ -45,10 +37,8 @@ main_body:
 define amdgpu_ps void @tbuffer_store_scalar_and_imm_offs(i32 %arg, <4 x float> %vdata, i32 inreg %soffset) {
 ; GFX13-LABEL: tbuffer_store_scalar_and_imm_offs:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, v3
-; GFX13-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
-; GFX13-NEXT:    v_mov_b32_e32 v1, 0
-; GFX13-NEXT:    tbuffer_store_format_xyzw v[2:5], v1, v0, s0 format:117 idxen offset:42
+; GFX13-NEXT:    v_mov_b32_e32 v5, 0
+; GFX13-NEXT:    tbuffer_store_format_xyzw v[1:4], v5, v0, s0 format:117 idxen offset:42 scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 main_body:
   %in1 = bitcast <4 x float> %vdata to <4 x i32>
@@ -59,9 +49,7 @@ main_body:
 define amdgpu_ps void @buffer_store_idx(i32 %arg, <4 x float> %vdata, i32 %vindex) {
 ; GFX13-LABEL: buffer_store_idx:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    v_dual_mov_b32 v9, v4 :: v_dual_mov_b32 v8, v3
-; GFX13-NEXT:    v_dual_mov_b32 v7, v2 :: v_dual_mov_b32 v6, v1
-; GFX13-NEXT:    tbuffer_store_format_xyzw v[6:9], v5, v0, null format:[BUF_FMT_8_8_8_8_SINT] idxen
+; GFX13-NEXT:    tbuffer_store_format_xyzw v[1:4], v5, v0, null format:[BUF_FMT_8_8_8_8_SINT] idxen scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 main_body:
   %in1 = bitcast <4 x float> %vdata to <4 x i32>
@@ -72,10 +60,8 @@ main_body:
 define amdgpu_ps void @buffer_store_ofs(i32 %arg, <4 x float> %vdata, i32 %voffset) {
 ; GFX13-LABEL: buffer_store_ofs:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    v_dual_mov_b32 v9, v4 :: v_dual_mov_b32 v8, v3
-; GFX13-NEXT:    v_dual_mov_b32 v7, v2 :: v_dual_mov_b32 v6, v1
-; GFX13-NEXT:    v_mov_b32_e32 v4, 0
-; GFX13-NEXT:    tbuffer_store_format_xyzw v[6:9], v[4:5], v0, null format:115 idxen offen
+; GFX13-NEXT:    v_dual_mov_b32 v6, v5 :: v_dual_mov_b32 v5, 0
+; GFX13-NEXT:    tbuffer_store_format_xyzw v[1:4], v[5:6], v0, null format:115 idxen offen scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 main_body:
   %in1 = bitcast <4 x float> %vdata to <4 x i32>
@@ -86,10 +72,7 @@ main_body:
 define amdgpu_ps void @buffer_store_both(i32 %arg, <4 x float> %vdata, i32 %vindex, i32 %voffset) {
 ; GFX13-LABEL: buffer_store_both:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    v_dual_mov_b32 v7, v6 :: v_dual_mov_b32 v6, v5
-; GFX13-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, v3
-; GFX13-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
-; GFX13-NEXT:    tbuffer_store_format_xyzw v[2:5], v[6:7], v0, null format:70 idxen offen
+; GFX13-NEXT:    tbuffer_store_format_xyzw v[1:4], v[5:6], v0, null format:70 idxen offen scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 main_body:
   %in1 = bitcast <4 x float> %vdata to <4 x i32>
@@ -100,13 +83,11 @@ main_body:
 define amdgpu_ps void @buffer_store_wait(i32 %arg, <4 x float> %vdata, i32 %vindex.1, i32 %vindex.2, i32 %vindex.3) {
 ; GFX13-LABEL: buffer_store_wait:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    v_dual_mov_b32 v11, v4 :: v_dual_mov_b32 v10, v3
-; GFX13-NEXT:    v_dual_mov_b32 v9, v2 :: v_dual_mov_b32 v8, v1
 ; GFX13-NEXT:    s_clause 0x1
-; GFX13-NEXT:    tbuffer_store_format_xyzw v[8:11], v5, v0, null format:[BUF_FMT_32_32_32_32_FLOAT] idxen
-; GFX13-NEXT:    buffer_load_format_xyzw v[2:5], v6, v0, null idxen
+; GFX13-NEXT:    tbuffer_store_format_xyzw v[1:4], v5, v0, null format:[BUF_FMT_32_32_32_32_FLOAT] idxen scope:SCOPE_SE
+; GFX13-NEXT:    buffer_load_format_xyzw v[1:4], v6, v0, null idxen
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    tbuffer_store_format_xyzw v[2:5], v7, v0, null format:[BUF_FMT_8_8_8_8_UINT] idxen
+; GFX13-NEXT:    tbuffer_store_format_xyzw v[1:4], v7, v0, null format:[BUF_FMT_8_8_8_8_UINT] idxen scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 main_body:
   %in1 = bitcast <4 x float> %vdata to <4 x i32>
@@ -120,7 +101,7 @@ main_body:
 define amdgpu_ps void @buffer_store_x1(i32 %rsrc, float %data, i32 %vindex) {
 ; GFX13-LABEL: buffer_store_x1:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    tbuffer_store_format_x v1, v2, v0, null format:125 idxen
+; GFX13-NEXT:    tbuffer_store_format_x v1, v2, v0, null format:125 idxen scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 main_body:
   %data.i = bitcast float %data to i32
@@ -131,8 +112,7 @@ main_body:
 define amdgpu_ps void @buffer_store_x2(i32 %rsrc, <2 x float> %data, i32 %vindex) {
 ; GFX13-LABEL: buffer_store_x2:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    v_dual_mov_b32 v5, v2 :: v_dual_mov_b32 v4, v1
-; GFX13-NEXT:    tbuffer_store_format_xy v[4:5], v3, v0, null format:[BUF_FMT_10_10_10_2_SNORM] idxen
+; GFX13-NEXT:    tbuffer_store_format_xy v[1:2], v3, v0, null format:[BUF_FMT_10_10_10_2_SNORM] idxen scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 main_body:
   %data.i = bitcast <2 x float> %data to <2 x i32>
@@ -143,10 +123,8 @@ main_body:
 define amdgpu_ps void @buffer_store_voffset_large_12bit(i32 %rsrc, <4 x float> %data) {
 ; GFX13-LABEL: buffer_store_voffset_large_12bit:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, v3
-; GFX13-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
-; GFX13-NEXT:    v_mov_b32_e32 v1, 0
-; GFX13-NEXT:    tbuffer_store_format_xyzw v[2:5], v1, v0, null format:[BUF_FMT_32_32_32_32_FLOAT] idxen offset:4092
+; GFX13-NEXT:    v_mov_b32_e32 v5, 0
+; GFX13-NEXT:    tbuffer_store_format_xyzw v[1:4], v5, v0, null format:[BUF_FMT_32_32_32_32_FLOAT] idxen offset:4092 scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.struct.tbuffer.store.v4f32.i32(<4 x float> %data, i32 %rsrc, i32 0, i32 4092, i32 0, i32 63, i32 0)
@@ -156,10 +134,8 @@ main_body:
 define amdgpu_ps void @buffer_store_voffset_large_13bit(i32 %rsrc, <4 x float> %data) {
 ; GFX13-LABEL: buffer_store_voffset_large_13bit:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, v3
-; GFX13-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
-; GFX13-NEXT:    v_mov_b32_e32 v1, 0
-; GFX13-NEXT:    tbuffer_store_format_xyzw v[2:5], v1, v0, null format:[BUF_FMT_32_32_32_32_FLOAT] idxen offset:8188
+; GFX13-NEXT:    v_mov_b32_e32 v5, 0
+; GFX13-NEXT:    tbuffer_store_format_xyzw v[1:4], v5, v0, null format:[BUF_FMT_32_32_32_32_FLOAT] idxen offset:8188 scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.struct.tbuffer.store.v4f32.i32(<4 x float> %data, i32 %rsrc, i32 0, i32 8188, i32 0, i32 63, i32 0)
@@ -169,10 +145,8 @@ main_body:
 define amdgpu_ps void @buffer_store_voffset_large_16bit(i32 %rsrc, <4 x float> %data) {
 ; GFX13-LABEL: buffer_store_voffset_large_16bit:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, v3
-; GFX13-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
-; GFX13-NEXT:    v_mov_b32_e32 v1, 0
-; GFX13-NEXT:    tbuffer_store_format_xyzw v[2:5], v1, v0, null format:[BUF_FMT_32_32_32_32_FLOAT] idxen offset:65532
+; GFX13-NEXT:    v_mov_b32_e32 v5, 0
+; GFX13-NEXT:    tbuffer_store_format_xyzw v[1:4], v5, v0, null format:[BUF_FMT_32_32_32_32_FLOAT] idxen offset:65532 scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.struct.tbuffer.store.v4f32.i32(<4 x float> %data, i32 %rsrc, i32 0, i32 65532, i32 0, i32 63, i32 0)
@@ -182,10 +156,8 @@ main_body:
 define amdgpu_ps void @buffer_store_voffset_large_23bit(i32 %rsrc, <4 x float> %data) {
 ; GFX13-LABEL: buffer_store_voffset_large_23bit:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, v3
-; GFX13-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
-; GFX13-NEXT:    v_mov_b32_e32 v1, 0
-; GFX13-NEXT:    tbuffer_store_format_xyzw v[2:5], v1, v0, null format:[BUF_FMT_32_32_32_32_FLOAT] idxen offset:8388604
+; GFX13-NEXT:    v_mov_b32_e32 v5, 0
+; GFX13-NEXT:    tbuffer_store_format_xyzw v[1:4], v5, v0, null format:[BUF_FMT_32_32_32_32_FLOAT] idxen offset:8388604 scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.struct.tbuffer.store.v4f32.i32(<4 x float> %data, i32 %rsrc, i32 0, i32 8388604, i32 0, i32 63, i32 0)
@@ -195,10 +167,8 @@ main_body:
 define amdgpu_ps void @buffer_store_voffset_large_24bit(i32 %rsrc, <4 x float> %data) {
 ; GFX13-LABEL: buffer_store_voffset_large_24bit:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, v3
-; GFX13-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
-; GFX13-NEXT:    v_dual_mov_b32 v7, 0x800000 :: v_dual_mov_b32 v6, 0
-; GFX13-NEXT:    tbuffer_store_format_xyzw v[2:5], v[6:7], v0, null format:[BUF_FMT_32_32_32_32_FLOAT] idxen offen offset:8388604
+; GFX13-NEXT:    v_dual_mov_b32 v6, 0x800000 :: v_dual_mov_b32 v5, 0
+; GFX13-NEXT:    tbuffer_store_format_xyzw v[1:4], v[5:6], v0, null format:[BUF_FMT_32_32_32_32_FLOAT] idxen offen offset:8388604 scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.struct.tbuffer.store.v4f32.i32(<4 x float> %data, i32 %rsrc, i32 0, i32 16777212, i32 0, i32 63, i32 0)

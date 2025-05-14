@@ -28,8 +28,7 @@ define amdgpu_ps void @store_f16_1d(<8 x i32> inreg %rsrc, <2 x i16> %coords, <2
 ;
 ; GFX13-LABEL: store_f16_1d:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
-; GFX13-NEXT:    image_store v[2:3], v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D scope:SCOPE_SE a16 d16
+; GFX13-NEXT:    image_store v[1:2], v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D scope:SCOPE_SE a16 d16
 ; GFX13-NEXT:    s_endpgm
 main_body:
   %x = extractelement <2 x i16> %coords, i32 0
@@ -61,8 +60,7 @@ define amdgpu_ps void @store_v2f16_1d(<8 x i32> inreg %rsrc, <2 x i16> %coords, 
 ;
 ; GFX13-LABEL: store_v2f16_1d:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
-; GFX13-NEXT:    image_store v[2:3], v0, s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_1D scope:SCOPE_SE a16 d16
+; GFX13-NEXT:    image_store v[1:2], v0, s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_1D scope:SCOPE_SE a16 d16
 ; GFX13-NEXT:    s_endpgm
 main_body:
   %x = extractelement <2 x i16> %coords, i32 0
@@ -94,8 +92,7 @@ define amdgpu_ps void @store_v3f16_1d(<8 x i32> inreg %rsrc, <2 x i16> %coords, 
 ;
 ; GFX13-LABEL: store_v3f16_1d:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
-; GFX13-NEXT:    image_store v[2:3], v0, s[0:7] dmask:0x7 dim:SQ_RSRC_IMG_1D scope:SCOPE_SE a16 d16
+; GFX13-NEXT:    image_store v[1:2], v0, s[0:7] dmask:0x7 dim:SQ_RSRC_IMG_1D scope:SCOPE_SE a16 d16
 ; GFX13-NEXT:    s_endpgm
 main_body:
   %x = extractelement <2 x i16> %coords, i32 0
@@ -127,8 +124,7 @@ define amdgpu_ps void @store_v4f16_1d(<8 x i32> inreg %rsrc, <2 x i16> %coords, 
 ;
 ; GFX13-LABEL: store_v4f16_1d:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
-; GFX13-NEXT:    image_store v[2:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D scope:SCOPE_SE a16 d16
+; GFX13-NEXT:    image_store v[1:2], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D scope:SCOPE_SE a16 d16
 ; GFX13-NEXT:    s_endpgm
 main_body:
   %x = extractelement <2 x i16> %coords, i32 0
@@ -160,8 +156,7 @@ define amdgpu_ps void @store_f16_2d(<8 x i32> inreg %rsrc, <2 x i16> %coords, <2
 ;
 ; GFX13-LABEL: store_f16_2d:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
-; GFX13-NEXT:    image_store v[2:3], v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_2D scope:SCOPE_SE a16 d16
+; GFX13-NEXT:    image_store v[1:2], v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_2D scope:SCOPE_SE a16 d16
 ; GFX13-NEXT:    s_endpgm
 main_body:
   %x = extractelement <2 x i16> %coords, i32 0
@@ -194,8 +189,7 @@ define amdgpu_ps void @store_v2f16_2d(<8 x i32> inreg %rsrc, <2 x i16> %coords, 
 ;
 ; GFX13-LABEL: store_v2f16_2d:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
-; GFX13-NEXT:    image_store v[2:3], v0, s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_2D scope:SCOPE_SE a16 d16
+; GFX13-NEXT:    image_store v[1:2], v0, s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_2D scope:SCOPE_SE a16 d16
 ; GFX13-NEXT:    s_endpgm
 main_body:
   %x = extractelement <2 x i16> %coords, i32 0
@@ -228,8 +222,7 @@ define amdgpu_ps void @store_v3f16_2d(<8 x i32> inreg %rsrc, <2 x i16> %coords, 
 ;
 ; GFX13-LABEL: store_v3f16_2d:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
-; GFX13-NEXT:    image_store v[2:3], v0, s[0:7] dmask:0x7 dim:SQ_RSRC_IMG_2D scope:SCOPE_SE a16 d16
+; GFX13-NEXT:    image_store v[1:2], v0, s[0:7] dmask:0x7 dim:SQ_RSRC_IMG_2D scope:SCOPE_SE a16 d16
 ; GFX13-NEXT:    s_endpgm
 main_body:
   %x = extractelement <2 x i16> %coords, i32 0
@@ -262,8 +255,7 @@ define amdgpu_ps void @store_v4f16_2d(<8 x i32> inreg %rsrc, <2 x i16> %coords, 
 ;
 ; GFX13-LABEL: store_v4f16_2d:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
-; GFX13-NEXT:    image_store v[2:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D scope:SCOPE_SE a16 d16
+; GFX13-NEXT:    image_store v[1:2], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D scope:SCOPE_SE a16 d16
 ; GFX13-NEXT:    s_endpgm
 main_body:
   %x = extractelement <2 x i16> %coords, i32 0

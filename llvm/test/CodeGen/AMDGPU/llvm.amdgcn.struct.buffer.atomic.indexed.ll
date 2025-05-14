@@ -5,53 +5,48 @@
 define amdgpu_ps float @test1(i32 inreg %rsrc, i32 %data, i32 %vindex, i32 %voffset) {
 ; GFX13-SDAG-LABEL: test1:
 ; GFX13-SDAG:       ; %bb.0: ; %main_body
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v4, v1
-; GFX13-SDAG-NEXT:    v_mov_b32_e32 v2, 0
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v3, v1 :: v_dual_mov_b32 v4, v2
+; GFX13-SDAG-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX13-SDAG-NEXT:    s_movk_i32 s1, 0x1ffc
-; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX13-SDAG-NEXT:    v_mov_b32_e32 v5, v3
-; GFX13-SDAG-NEXT:    buffer_atomic_swap_b32 v0, v2, s0, null idxen th:TH_ATOMIC_RETURN
-; GFX13-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-SDAG-NEXT:    buffer_atomic_swap_b32 v0, v1, s0, null idxen th:TH_ATOMIC_RETURN
 ; GFX13-SDAG-NEXT:    s_wait_loadcnt 0x0
-; GFX13-SDAG-NEXT:    buffer_atomic_swap_b32 v0, v[2:3], s0, null idxen offen th:TH_ATOMIC_RETURN
-; GFX13-SDAG-NEXT:    v_add_nc_u32_e32 v3, 42, v3
+; GFX13-SDAG-NEXT:    buffer_atomic_swap_b32 v0, v3, s0, null idxen th:TH_ATOMIC_RETURN
 ; GFX13-SDAG-NEXT:    s_wait_loadcnt 0x0
-; GFX13-SDAG-NEXT:    buffer_atomic_swap_b32 v0, v[4:5], s0, null idxen offen th:TH_ATOMIC_RETURN
+; GFX13-SDAG-NEXT:    buffer_atomic_swap_b32 v0, v[1:2], s0, null idxen offen th:TH_ATOMIC_RETURN
+; GFX13-SDAG-NEXT:    v_add_nc_u32_e32 v2, 42, v2
 ; GFX13-SDAG-NEXT:    s_wait_loadcnt 0x0
-; GFX13-SDAG-NEXT:    buffer_atomic_swap_b32 v0, v[2:3], s0, null idxen offen th:TH_ATOMIC_RETURN
+; GFX13-SDAG-NEXT:    buffer_atomic_swap_b32 v0, v[3:4], s0, null idxen offen th:TH_ATOMIC_RETURN
 ; GFX13-SDAG-NEXT:    s_wait_loadcnt 0x0
-; GFX13-SDAG-NEXT:    buffer_atomic_swap_b32 v0, v2, s0, s1 idxen offset:4 th:TH_ATOMIC_RETURN
+; GFX13-SDAG-NEXT:    buffer_atomic_swap_b32 v0, v[1:2], s0, null idxen offen th:TH_ATOMIC_RETURN
+; GFX13-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX13-SDAG-NEXT:    buffer_atomic_swap_b32 v0, v1, s0, s1 idxen offset:4 th:TH_ATOMIC_RETURN
 ; GFX13-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-SDAG-NEXT:    s_clause 0x1
-; GFX13-SDAG-NEXT:    buffer_atomic_swap_b32 v0, v2, s0, null idxen
-; GFX13-SDAG-NEXT:    buffer_atomic_swap_b32 v0, v2, s0, null idxen th:TH_ATOMIC_RETURN
+; GFX13-SDAG-NEXT:    buffer_atomic_swap_b32 v0, v1, s0, null idxen
+; GFX13-SDAG-NEXT:    buffer_atomic_swap_b32 v0, v1, s0, null idxen th:TH_ATOMIC_RETURN
 ; GFX13-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX13-GISEL-LABEL: test1:
 ; GFX13-GISEL:       ; %bb.0: ; %main_body
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v3, v2
-; GFX13-GISEL-NEXT:    v_mov_b32_e32 v2, 0
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v4, v2 :: v_dual_mov_b32 v3, 0
 ; GFX13-GISEL-NEXT:    s_movk_i32 s1, 0x1ffc
-; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX13-GISEL-NEXT:    v_mov_b32_e32 v5, v3
-; GFX13-GISEL-NEXT:    buffer_atomic_swap_b32 v0, v2, s0, null idxen th:TH_ATOMIC_RETURN
+; GFX13-GISEL-NEXT:    buffer_atomic_swap_b32 v0, v3, s0, null idxen th:TH_ATOMIC_RETURN
 ; GFX13-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-GISEL-NEXT:    buffer_atomic_swap_b32 v0, v1, s0, null idxen th:TH_ATOMIC_RETURN
 ; GFX13-GISEL-NEXT:    s_wait_loadcnt 0x0
-; GFX13-GISEL-NEXT:    buffer_atomic_swap_b32 v0, v[2:3], s0, null idxen offen th:TH_ATOMIC_RETURN
-; GFX13-GISEL-NEXT:    v_add_nc_u32_e32 v3, 42, v3
+; GFX13-GISEL-NEXT:    buffer_atomic_swap_b32 v0, v[3:4], s0, null idxen offen th:TH_ATOMIC_RETURN
+; GFX13-GISEL-NEXT:    v_add_nc_u32_e32 v4, 42, v4
 ; GFX13-GISEL-NEXT:    s_wait_loadcnt 0x0
-; GFX13-GISEL-NEXT:    buffer_atomic_swap_b32 v0, v[4:5], s0, null idxen offen th:TH_ATOMIC_RETURN
+; GFX13-GISEL-NEXT:    buffer_atomic_swap_b32 v0, v[1:2], s0, null idxen offen th:TH_ATOMIC_RETURN
 ; GFX13-GISEL-NEXT:    s_wait_loadcnt 0x0
-; GFX13-GISEL-NEXT:    buffer_atomic_swap_b32 v0, v[2:3], s0, null idxen offen th:TH_ATOMIC_RETURN
+; GFX13-GISEL-NEXT:    buffer_atomic_swap_b32 v0, v[3:4], s0, null idxen offen th:TH_ATOMIC_RETURN
 ; GFX13-GISEL-NEXT:    s_wait_loadcnt 0x0
-; GFX13-GISEL-NEXT:    buffer_atomic_swap_b32 v0, v2, s0, s1 idxen offset:4 th:TH_ATOMIC_RETURN
+; GFX13-GISEL-NEXT:    buffer_atomic_swap_b32 v0, v3, s0, s1 idxen offset:4 th:TH_ATOMIC_RETURN
 ; GFX13-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-GISEL-NEXT:    s_clause 0x1
-; GFX13-GISEL-NEXT:    buffer_atomic_swap_b32 v0, v2, s0, null idxen
-; GFX13-GISEL-NEXT:    buffer_atomic_swap_b32 v0, v2, s0, null idxen th:TH_ATOMIC_RETURN
+; GFX13-GISEL-NEXT:    buffer_atomic_swap_b32 v0, v3, s0, null idxen
+; GFX13-GISEL-NEXT:    buffer_atomic_swap_b32 v0, v3, s0, null idxen th:TH_ATOMIC_RETURN
 ; GFX13-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-GISEL-NEXT:    ; return to shader part epilog
 main_body:

@@ -530,26 +530,24 @@ define amdgpu_ps void @cluster_load_async_to_lds_b64_saddr_no_scale_offset(ptr a
 ;
 ; GFX1300-SDAG-LABEL: cluster_load_async_to_lds_b64_saddr_no_scale_offset:
 ; GFX1300-SDAG:       ; %bb.0: ; %entry
-; GFX1300-SDAG-NEXT:    v_mov_b32_e32 v2, v1
-; GFX1300-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1300-SDAG-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
-; GFX1300-SDAG-NEXT:    v_lshl_add_u64 v[2:3], v[2:3], 2, s[0:1]
+; GFX1300-SDAG-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
+; GFX1300-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1300-SDAG-NEXT:    v_lshl_add_u64 v[1:2], v[1:2], 2, s[0:1]
 ; GFX1300-SDAG-NEXT:    s_mov_b32 m0, s2
-; GFX1300-SDAG-NEXT:    global_load_async_mcast_to_lds_b64 v0, v[2:3], off offset:16 th:TH_LOAD_NT
+; GFX1300-SDAG-NEXT:    global_load_async_mcast_to_lds_b64 v0, v[1:2], off offset:16 th:TH_LOAD_NT
 ; GFX1300-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1300-GISEL-LABEL: cluster_load_async_to_lds_b64_saddr_no_scale_offset:
 ; GFX1300-GISEL:       ; %bb.0: ; %entry
 ; GFX1300-GISEL-NEXT:    s_mov_b32 m0, s2
-; GFX1300-GISEL-NEXT:    v_mov_b32_e32 v2, v1
-; GFX1300-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1300-GISEL-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
-; GFX1300-GISEL-NEXT:    v_lshlrev_b64_e32 v[2:3], 2, v[2:3]
-; GFX1300-GISEL-NEXT:    v_dual_mov_b32 v5, s1 :: v_dual_mov_b32 v4, s0
-; GFX1300-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1300-GISEL-NEXT:    v_add_co_u32 v2, vcc_lo, v4, v2
-; GFX1300-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, v5, v3, vcc_lo
-; GFX1300-GISEL-NEXT:    global_load_async_mcast_to_lds_b64 v0, v[2:3], off offset:16 th:TH_LOAD_NT
+; GFX1300-GISEL-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
+; GFX1300-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX1300-GISEL-NEXT:    v_lshlrev_b64_e32 v[1:2], 2, v[1:2]
+; GFX1300-GISEL-NEXT:    v_dual_mov_b32 v4, s1 :: v_dual_mov_b32 v3, s0
+; GFX1300-GISEL-NEXT:    v_add_co_u32 v1, vcc_lo, v3, v1
+; GFX1300-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1300-GISEL-NEXT:    v_add_co_ci_u32_e64 v2, null, v4, v2, vcc_lo
+; GFX1300-GISEL-NEXT:    global_load_async_mcast_to_lds_b64 v0, v[1:2], off offset:16 th:TH_LOAD_NT
 ; GFX1300-GISEL-NEXT:    s_endpgm
 entry:
   %idxprom = sext i32 %idx to i64
