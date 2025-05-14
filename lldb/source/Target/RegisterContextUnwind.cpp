@@ -1243,24 +1243,34 @@ bool RegisterContextUnwind::IsTrapHandlerSymbol(
   return false;
 }
 
-// Search this stack frame's UnwindPlans for the AbstractRegisterLocation
-// for this register.
-//
-// When an AbstractRegisterLocation is found in an UnwindPlan, that is
-// returned, regardless of the ABI rules for volatile/non-volatile registers
-// in effect.
-//
-// If there is no unwind rule for a volatile (caller-preserved) register
-// the returned AbstractRegisterLocation will be IsUndefined,
-// indicating that we should stop searching.
-//
-// If there is no unwind rule for a non-volatile (callee-preserved)
-// register, the returned AbstractRegisterLocation will be IsSame.
-// In frame 0, IsSame means get the value from the live register context.
-// Else it means to continue descending down the stack to more-live frames
-// looking for a location/value.
-//
-// An empty optional indicates that there was an error in processing.
+/// Search this stack frame's UnwindPlans for the AbstractRegisterLocation
+/// for this register.
+///
+/// \param[out] kind
+///     Set to the RegisterKind of the UnwindPlan which is the basis for
+///     the returned AbstractRegisterLocation; if the location is in terms
+///     of another register number, this Kind is needed to interpret it
+///     correctly.
+///
+/// \return
+///     An empty optional indicaTes that there was an error in processing
+///     the request.
+///
+///     If there is no unwind rule for a volatile (caller-preserved) register,
+///     the returned AbstractRegisterLocation will be IsUndefined,
+///     indicating that we should stop searching.
+///
+///     If there is no unwind rule for a non-volatile (callee-preserved)
+///     register, the returned AbstractRegisterLocation will be IsSame.
+///     In frame 0, IsSame means get the value from the live register context.
+///     Else it means to continue descending down the stack to more-live frames
+///     looking for a location/value.
+///
+///     If an AbstractRegisterLocation is found in an UnwindPlan, that will
+///     be returned, with no consideration of the current ABI rules for
+///     registers.  Functions using an alternate ABI calling convention
+///     will work as long as the UnwindPlans are exhaustive about what
+///     registers are volatile/non-volatile.
 std::optional<UnwindPlan::Row::AbstractRegisterLocation>
 RegisterContextUnwind::GetAbstractRegisterLocation(uint32_t lldb_regnum,
                                                    lldb::RegisterKind &kind) {
@@ -1324,16 +1334,15 @@ RegisterContextUnwind::GetAbstractRegisterLocation(uint32_t lldb_regnum,
     }
 
     if (regnum.GetAsKind(kind) == LLDB_INVALID_REGNUM) {
-      if (kind == eRegisterKindGeneric) {
+      if (kind == eRegisterKindGeneric)
         UnwindLogMsg("could not convert lldb regnum %s (%d) into "
                      "eRegisterKindGeneric reg numbering scheme",
                      regnum.GetName(), regnum.GetAsKind(eRegisterKindLLDB));
-      } else {
+      else
         UnwindLogMsg("could not convert lldb regnum %s (%d) into %d "
                      "RegisterKind reg numbering scheme",
                      regnum.GetName(), regnum.GetAsKind(eRegisterKindLLDB),
                      (int)kind);
-      }
       return {};
     }
 
@@ -1347,42 +1356,37 @@ RegisterContextUnwind::GetAbstractRegisterLocation(uint32_t lldb_regnum,
       return unwindplan_regloc;
     }
 
-    // When asking for the caller's pc, check if we have a
+    // When asking for the caller's pc, and did not find a register
+    // location for PC above in the UnwindPlan.  Check if we have a
     // Return Address register on this target.
     //
     // On a Return Address Register architecture like arm/mips/riscv,
     // the caller's pc is in the RA register, and will be spilled to
-    // stack before any other function can be called.  We may have a
-    // register location saying
-    //     pc=RAReg  {caller's retrun addr is in RA register}
-    //     ra=IsSame {caller's return addr is live in RA register}
-    //     ra=StackAddr {caller's return addr spilled to stack}
-    // or none of the above, which means the caller's pc is live in the
-    // return address reg if this is frame 0, or the frame below is
-    // a trap/sigtramp/interrupt handler function.  Any other mid-stack
-    // function must have an unwind rule for PC/RA giving a location/value.
+    // stack before any other function is called.  If no function
+    // has been called yet, the return address may still be in the
+    // live RA reg.
     //
-    // In the case of an interrupted function -- the function above sigtramp,
-    // or a function interrupted asynchronously, or that has faulted to
-    // a trap handler -- it is valid to ask both the "pc" value -- the
-    // instruction that was executing when the interrupt/fault happend --
-    // and the RA Register value.  If a frameless function (which doesn't
-    // create a stack frame, doesn't save the RA reg to stack) is interrupted,
-    // the trap handler will have a rule to provide the pc (the instruction
-    // that was executing) AND a rule to provide the RA Register, which we
-    // need to use to find the caller function:
-    //     pc=StackAddr1
-    //     ra=StackAddr2
-    // and we don't want to rewrite a request of "pc" to "ra" here, because
-    // they mean different things.
-
+    // There's a lot of variety of what we might see in an UnwindPlan.
+    // We may have
+    //   ra=IsSame {unncessary}
+    //   ra=StackAddr {caller's return addr spilled to stack}
+    // or no unwindrule for pc or ra at all, in a frameless function -
+    // the caller's return address is in live ra reg.
+    //
+    // If a function has been interrupted in a non-call way --
+    // async signal/sigtramp, or a hardware exception / interrupt / fault --
+    // then the "pc" and "ra" are two distinct values, and must be
+    // handled separately.  The "pc" is the pc value at the point
+    // the function was interrupted.  The "ra" is the return address
+    // register value at that point.
+    // The UnwindPlan for the sigtramp/trap handler will normally have
+    // register loations for both pc and lr, and so we'll have already
+    // fetched them above.
     if (pc_regnum.IsValid() && pc_regnum == regnum) {
-      RegisterNumber return_address_reg;
-      uint32_t return_address_regnum =
-          LLDB_INVALID_REGNUM; // in full UnwindPlan's numbering
+      uint32_t return_address_regnum = LLDB_INVALID_REGNUM;
 
       // Get the return address register number from the UnwindPlan
-      // or the arch register set.
+      // or the register set definition.
       if (m_full_unwind_plan_sp->GetReturnAddressRegister() !=
           LLDB_INVALID_REGNUM) {
         return_address_regnum =
@@ -1393,32 +1397,38 @@ RegisterContextUnwind::GetAbstractRegisterLocation(uint32_t lldb_regnum,
         return_address_regnum = arch_default_ra_regnum.GetAsKind(kind);
       }
 
+      // This system is using a return address register.
       if (return_address_regnum != LLDB_INVALID_REGNUM) {
-        // This is a normal function, there's no rule for
-        // finding the caller's pc value, look for the caller's
-        // return address register value.
+        RegisterNumber return_address_reg;
         return_address_reg.init(m_thread,
                                 m_full_unwind_plan_sp->GetRegisterKind(),
                                 return_address_regnum);
-        regnum = return_address_reg;
         UnwindLogMsg("requested caller's saved PC but this UnwindPlan uses a "
                      "RA reg; getting %s (%d) instead",
                      return_address_reg.GetName(),
                      return_address_reg.GetAsKind(eRegisterKindLLDB));
-        if (active_row && active_row->GetRegisterInfo(regnum.GetAsKind(kind),
-                                                      unwindplan_regloc)) {
+
+        // Do we have a location for the ra register?
+        if (active_row &&
+            active_row->GetRegisterInfo(return_address_reg.GetAsKind(kind),
+                                        unwindplan_regloc)) {
           UnwindLogMsg("supplying caller's saved %s (%d)'s location using "
                        "%s UnwindPlan",
-                       regnum.GetName(), regnum.GetAsKind(eRegisterKindLLDB),
+                       return_address_reg.GetName(),
+                       return_address_reg.GetAsKind(eRegisterKindLLDB),
                        m_full_unwind_plan_sp->GetSourceName().GetCString());
+          // If we have "ra=IsSame", rewrite to "ra=InRegister(ra)" because the
+          // calling function thinks it is fetching "pc" and if we return an
+          // IsSame register location, it will try to read pc.
           if (unwindplan_regloc.IsSame())
-            unwindplan_regloc.SetInRegister(regnum.GetAsKind(kind));
+            unwindplan_regloc.SetInRegister(return_address_reg.GetAsKind(kind));
           return unwindplan_regloc;
         } else {
-          // No unwind rule for the return address reg on frame
-          // 0 means that the caller's address is still in RA reg.
+          // No unwind rule for the return address reg on frame 0, or an
+          // interrupted function, means that the caller's address is still in
+          // RA reg.
           if (BehavesLikeZerothFrame()) {
-            unwindplan_regloc.SetInRegister(regnum.GetAsKind(kind));
+            unwindplan_regloc.SetInRegister(return_address_reg.GetAsKind(kind));
             return unwindplan_regloc;
           }
         }
@@ -1441,11 +1451,14 @@ RegisterContextUnwind::GetAbstractRegisterLocation(uint32_t lldb_regnum,
     const RegisterInfo *reg_info =
         GetRegisterInfoAtIndex(regnum.GetAsKind(eRegisterKindLLDB));
     if (reg_info &&
-        abi->GetFallbackRegisterLocation(reg_info, unwindplan_regloc) &&
-        !unwindplan_regloc.IsUndefined()) {
-      UnwindLogMsg(
-          "supplying caller's saved %s (%d)'s location using ABI default",
-          regnum.GetName(), regnum.GetAsKind(eRegisterKindLLDB));
+        abi->GetFallbackRegisterLocation(reg_info, unwindplan_regloc)) {
+      if (!unwindplan_regloc.IsUndefined())
+        UnwindLogMsg(
+            "supplying caller's saved %s (%d)'s location using ABI default",
+            regnum.GetName(), regnum.GetAsKind(eRegisterKindLLDB));
+      // ABI defined volatile registers with no register location
+      // will be returned as IsUndefined, stopping the search down
+      // the stack.
       return unwindplan_regloc;
     }
   }
