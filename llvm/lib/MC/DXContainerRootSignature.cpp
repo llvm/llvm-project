@@ -32,7 +32,7 @@ size_t RootSignatureDesc::getSize() const {
   size_t Size = sizeof(dxbc::RootSignatureHeader) +
                 ParametersContainer.size() * sizeof(dxbc::RootParameterHeader);
 
-  for (const auto &I : ParametersContainer) {
+  for (const RootParameterInfo &I : ParametersContainer) {
     switch (I.Header.ParameterType) {
     case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit):
       Size += sizeof(dxbc::RootConstants);
@@ -48,7 +48,6 @@ size_t RootSignatureDesc::getSize() const {
       break;
     }
   }
-
   return Size;
 }
 

@@ -167,7 +167,7 @@ static bool validate(LLVMContext *Ctx, const mcdxbc::RootSignatureDesc &RSD) {
     return reportValueError(Ctx, "RootFlags", RSD.Flags);
   }
 
-  for (const llvm::mcdxbc::RootParameterInfo &Info : RSD.ParametersContainer) {
+  for (const mcdxbc::RootParameterInfo &Info : RSD.ParametersContainer) {
     if (!dxbc::isValidShaderVisibility(Info.Header.ShaderVisibility))
       return reportValueError(Ctx, "ShaderVisibility",
                               Info.Header.ShaderVisibility);
