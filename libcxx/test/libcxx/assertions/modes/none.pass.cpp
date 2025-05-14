@@ -11,9 +11,9 @@
 
 // REQUIRES: libcpp-hardening-mode=none
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+#include "test_macros.h"
 
-#include <__assert>
+#include TEST_LIBCPP_INTERNAL_POSSIBLY_FROZEN_INCLUDE(__assert)
 #include <cassert>
 
 bool executed_condition = false;

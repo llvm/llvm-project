@@ -18,14 +18,12 @@
 // If n <= 1, return n. If n is a power of 2, return n.
 // Otherwise, return the next power of 2.
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+#include "test_macros.h"
 
-#include <__hash_table>
+#include TEST_LIBCPP_INTERNAL_POSSIBLY_FROZEN_INCLUDE(__hash_table)
 #include <cassert>
 #include <cstdint>
 #include <unordered_map>
-
-#include "test_macros.h"
 
 bool is_power_of_two(unsigned long n) { return __builtin_popcount(n) == 1; }
 

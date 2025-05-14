@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+#include "test_macros.h"
 
-#include <__type_traits/is_trivially_relocatable.h>
+#include TEST_LIBCPP_INTERNAL_POSSIBLY_FROZEN_INCLUDE(__type_traits/is_trivially_relocatable.h)
 #include <array>
 #include <deque>
 #include <exception>
@@ -22,7 +22,6 @@
 
 #include "constexpr_char_traits.h"
 #include "test_allocator.h"
-#include "test_macros.h"
 
 #ifndef TEST_HAS_NO_LOCALIZATION
 #  include <locale>

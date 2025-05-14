@@ -11,14 +11,13 @@
 // __half_positive divides an integer number by 2 as unsigned number for known types.
 // It can be an important optimization for lower bound, for example.
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+#include "test_macros.h"
 
-#include <__algorithm/half_positive.h>
+#include TEST_LIBCPP_INTERNAL_POSSIBLY_FROZEN_INCLUDE(__algorithm/half_positive.h)
 #include <cassert>
 #include <cstddef>
 #include <limits>
 
-#include "test_macros.h"
 #include "user_defined_integral.h"
 
 namespace {

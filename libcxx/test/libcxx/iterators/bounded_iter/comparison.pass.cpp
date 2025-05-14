@@ -11,13 +11,12 @@
 //
 // Comparison operators
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+#include "test_macros.h"
 
 #include <concepts>
-#include <__iterator/bounded_iter.h>
+#include TEST_LIBCPP_INTERNAL_POSSIBLY_FROZEN_INCLUDE(__iterator/bounded_iter.h)
 
 #include "test_iterators.h"
-#include "test_macros.h"
 
 template <class Iter>
 TEST_CONSTEXPR_CXX14 bool tests() {

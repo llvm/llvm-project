@@ -11,9 +11,9 @@
 //
 // Nested types
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+#include "test_macros.h"
 
-#include <__iterator/bounded_iter.h>
+#include TEST_LIBCPP_INTERNAL_POSSIBLY_FROZEN_INCLUDE(__iterator/bounded_iter.h)
 #include <cstddef>
 #include <iterator>
 #include <type_traits>

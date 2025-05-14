@@ -12,9 +12,9 @@
 // failures when back-deploying.
 // XFAIL: availability-verbose_abort-missing
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+#include "test_macros.h"
 
-#include <__verbose_abort>
+#include TEST_LIBCPP_INTERNAL_POSSIBLY_FROZEN_INCLUDE(__verbose_abort)
 #include <cstdlib>
 
 void std::__libcpp_verbose_abort(char const*, ...) _NOEXCEPT { std::exit(EXIT_SUCCESS); }

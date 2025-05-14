@@ -13,12 +13,10 @@
 // void
 // __tree_balance_after_insert(_NodePtr __root, _NodePtr __x)
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
-#include <__tree>
-#include <cassert>
-
 #include "test_macros.h"
+
+#include TEST_LIBCPP_INTERNAL_POSSIBLY_FROZEN_INCLUDE(__tree)
+#include <cassert>
 
 struct Node {
   Node* __left_;
