@@ -187,6 +187,7 @@ def FeatureStdExtZilsd
 def HasStdExtZilsd : Predicate<"Subtarget->hasStdExtZilsd()">,
                        AssemblerPredicate<(all_of FeatureStdExtZilsd),
                                           "'Zilsd' (Load/Store pair instructions)">;
+def NoHasStdExtZilsd : Predicate<"!Subtarget->hasStdExtZilsd()">;
 
 // Multiply Extensions
 
