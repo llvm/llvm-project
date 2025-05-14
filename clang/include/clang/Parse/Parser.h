@@ -2285,7 +2285,6 @@ private:
     }
     return AttrsParsed;
   }
-
   bool MaybeParseMicrosoftDeclSpecs(ParsedAttributes &Attrs) {
     if (getLangOpts().DeclSpecKeyword && Tok.is(tok::kw___declspec)) {
       ParseMicrosoftDeclSpecs(Attrs);
@@ -3602,6 +3601,8 @@ private:
   /// 'replaceable_if_eligible', or Microsoft 'sealed' or 'abstract' contextual
   /// keyword.
   bool isClassCompatibleKeyword(Token Tok) const;
+
+  void ParseMicrosoftRootSignatureAttributeArgs(ParsedAttributes &Attrs);
 
   ///@}
 
@@ -6948,6 +6949,16 @@ public:
   /// present
   /// where, map-type ::= alloc | delete | from | release | to | tofrom
   bool parseMapTypeModifiers(SemaOpenMP::OpenMPVarListDataTy &Data);
+
+  /// Parses 'omp begin declare variant' directive.
+  /// The syntax is:
+  /// \verbatim
+  /// { #pragma omp begin declare variant clause }
+  /// <function-declaration-or-definition-sequence>
+  /// { #pragma omp end declare variant }
+  /// \endverbatim
+  ///
+  bool ParseOpenMPDeclareBeginVariantDirective(SourceLocation Loc);
 
   ///@}
 
