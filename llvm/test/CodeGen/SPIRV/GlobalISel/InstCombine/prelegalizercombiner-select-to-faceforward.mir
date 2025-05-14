@@ -1,6 +1,35 @@
 # RUN: llc -verify-machineinstrs -O0 -mtriple spirv-unknown-unknown -run-pass=spirv-prelegalizer-combiner %s -o - | FileCheck %s
 # REQUIRES: asserts
 ---
+name:            faceforward_instcombine_float
+tracksRegLiveness: true
+legalized: true
+body:             |
+  bb.1.entry:
+    ; CHECK-LABEL: name: faceforward_instcombine_float
+    ; CHECK-NOT: %9:_(s32) = G_FCONSTANT float 0.000000e+00
+    ; CHECK-NOT: %8:_(s32) = G_FMUL %1:fid, %2:fid
+    ; CHECK-NOT: %10:_(s1) = G_FCMP floatpred(olt), %8:_(s32), %9:_
+    ; CHECK-NOT: %11:_(s32) = G_FNEG %0:fid
+    ; CHECK-NOT: %12:id(s32) = G_SELECT %10:_(s1), %0:fid, %11:_
+    ; CHECK: %10:id(s32) = G_INTRINSIC intrinsic(@llvm.spv.faceforward), %2(s32), %3(s32), %4(s32)
+    %3:type(s64) = OpTypeFloat 32
+    %5:type(s64) = OpTypeFunction %3:type(s64), %3:type(s64), %3:type(s64), %3:type(s64)
+    OpName %0:fid(s32), 97
+    OpName %1:fid(s32), 98
+    OpName %2:fid(s32), 99
+    %4:iid(s64) = OpFunction %3:type(s64), 0, %5:type(s64)
+    %0:fid(s32) = OpFunctionParameter %3:type(s64)
+    %1:fid(s32) = OpFunctionParameter %3:type(s64)
+    %2:fid(s32) = OpFunctionParameter %3:type(s64)
+    OpName %4:iid(s64), 1701011814, 2003988326, 1600418401, 1953721961, 1651339107, 1600482921, 1634692198, 116
+    %9:_(s32) = G_FCONSTANT float 0.000000e+00
+    %8:_(s32) = G_FMUL %1:fid, %2:fid
+    %10:_(s1) = G_FCMP floatpred(olt), %8:_(s32), %9:_
+    %11:_(s32) = G_FNEG %0:fid
+    %12:id(s32) = G_SELECT %10:_(s1), %0:fid, %11:_
+    OpReturnValue %12:id(s32)
+---
 name:            faceforward_instcombine_float4
 tracksRegLiveness: true
 legalized: true

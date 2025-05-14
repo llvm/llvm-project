@@ -95,8 +95,9 @@ bool SPIRVCombinerHelper::matchSelectToFaceForward(MachineInstr &MI) const {
 
   Register DotReg = CondInstr->getOperand(2).getReg();
   MachineInstr *DotInstr = MRI.getVRegDef(DotReg);
-  if (DotInstr->getOpcode() != TargetOpcode::G_INTRINSIC ||
-      cast<GIntrinsic>(DotInstr)->getIntrinsicID() != Intrinsic::spv_fdot)
+  if (DotInstr->getOpcode() != TargetOpcode::G_FMUL &&
+      (DotInstr->getOpcode() != TargetOpcode::G_INTRINSIC ||
+       cast<GIntrinsic>(DotInstr)->getIntrinsicID() != Intrinsic::spv_fdot))
     return false;
 
   Register CondZeroReg = CondInstr->getOperand(3).getReg();
@@ -123,8 +124,14 @@ void SPIRVCombinerHelper::applySPIRVFaceForward(MachineInstr &MI) const {
   MachineInstr *CondInstr = MRI.getVRegDef(CondReg);
   Register DotReg = CondInstr->getOperand(2).getReg();
   MachineInstr *DotInstr = MRI.getVRegDef(DotReg);
-  Register DotOperand1 = DotInstr->getOperand(2).getReg();
-  Register DotOperand2 = DotInstr->getOperand(3).getReg();
+  Register DotOperand1, DotOperand2;
+  if (DotInstr->getOpcode() == TargetOpcode::G_FMUL) {
+    DotOperand1 = DotInstr->getOperand(1).getReg();
+    DotOperand2 = DotInstr->getOperand(2).getReg();
+  } else {
+    DotOperand1 = DotInstr->getOperand(2).getReg();
+    DotOperand2 = DotInstr->getOperand(3).getReg();
+  }
   Register TrueReg = MI.getOperand(2).getReg();
 
   // Remove the original `select` instruction.
@@ -134,8 +141,8 @@ void SPIRVCombinerHelper::applySPIRVFaceForward(MachineInstr &MI) const {
   MachineBasicBlock::iterator InsertPt = MI.getIterator();
 
   // Build the `spv_faceforward` intrinsic.
-  MachineInstrBuilder NewInstr =
-      BuildMI(MBB, InsertPt, DL, Builder.getTII().get(TargetOpcode::G_INTRINSIC));
+  MachineInstrBuilder NewInstr = BuildMI(
+      MBB, InsertPt, DL, Builder.getTII().get(TargetOpcode::G_INTRINSIC));
   NewInstr
       .addDef(ResultReg)                          // Result register
       .addIntrinsicID(Intrinsic::spv_faceforward) // Intrinsic ID
