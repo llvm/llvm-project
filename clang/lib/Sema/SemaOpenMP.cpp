@@ -14980,8 +14980,18 @@ StmtResult SemaOpenMP::ActOnOpenMPUnrollDirective(ArrayRef<OMPClause *> Clauses,
   SourceLocation FactorLoc;
   if (Expr *FactorVal = PartialClause->getFactor();
       FactorVal && !FactorVal->containsErrors()) {
+    if (!VerifyPositiveIntegerConstantInClause(FactorVal,OMPC_partial,/*StrictlyPositive=*/true,/*SuppressExprDiags=*/false).isUsable()) {
+    return StmtError();
+    }
+    // Checking if Itertor Variable Type can hold the Factor Width
+    if (FactorVal->EvaluateKnownConstInt(Context).getBitWidth() > Context.getTypeSize(IVTy)) {
+          Diag(FactorVal->getExprLoc(), diag::err_omp_hint_clause_no_name);
+          return StmtError();
+    }
+
     Factor = FactorVal->getIntegerConstantExpr(Context)->getZExtValue();
     FactorLoc = FactorVal->getExprLoc();
+
   } else {
     // TODO: Use a better profitability model.
     Factor = 2;
