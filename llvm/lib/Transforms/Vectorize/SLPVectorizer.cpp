@@ -18682,18 +18682,6 @@ Value *BoUpSLP::vectorizeTree(
   else
     Builder.SetInsertPoint(&F->getEntryBlock(), F->getEntryBlock().begin());
 
-  // Emit gathered loads first to emit better code for the users of those
-  // gathered loads.
-  for (const std::unique_ptr<TreeEntry> &TE : VectorizableTree) {
-    if (GatheredLoadsEntriesFirst.has_value() &&
-        TE->Idx >= *GatheredLoadsEntriesFirst && !TE->VectorizedValue &&
-        (!TE->isGather() || TE->UserTreeIndex)) {
-      assert((TE->UserTreeIndex ||
-              (TE->getOpcode() == Instruction::Load && !TE->isGather())) &&
-             "Expected gathered load node.");
-      (void)vectorizeTree(TE.get());
-    }
-  }
   // Vectorize gather operands of the PHI nodes.
   for (const std::unique_ptr<TreeEntry> &TE : reverse(VectorizableTree)) {
     if (TE->isGather() && TE->UserTreeIndex.UserTE &&
@@ -18713,6 +18701,18 @@ Value *BoUpSLP::vectorizeTree(
         continue;
       Builder.SetInsertPoint(IBB->getTerminator());
       Builder.SetCurrentDebugLocation(PH->getDebugLoc());
+      (void)vectorizeTree(TE.get());
+    }
+  }
+  // Emit gathered loads first to emit better code for the users of those
+  // gathered loads.
+  for (const std::unique_ptr<TreeEntry> &TE : VectorizableTree) {
+    if (GatheredLoadsEntriesFirst.has_value() &&
+        TE->Idx >= *GatheredLoadsEntriesFirst && !TE->VectorizedValue &&
+        (!TE->isGather() || TE->UserTreeIndex)) {
+      assert((TE->UserTreeIndex ||
+              (TE->getOpcode() == Instruction::Load && !TE->isGather())) &&
+             "Expected gathered load node.");
       (void)vectorizeTree(TE.get());
     }
   }
