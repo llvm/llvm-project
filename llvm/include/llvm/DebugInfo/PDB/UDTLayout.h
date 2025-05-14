@@ -15,8 +15,10 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/PDB/PDBSymbol.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolData.h"
+#include "llvm/DebugInfo/PDB/PDBSymbolFunc.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeBaseClass.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeBuiltin.h"
+#include "llvm/DebugInfo/PDB/PDBSymbolTypeFunctionSig.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeUDT.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeVTable.h"
 #include <cstdint>
@@ -115,6 +117,10 @@ public:
                 const std::string &Name, uint32_t OffsetInParent, uint32_t Size,
                 bool IsElided);
 
+  // Explicitly non-copyable.
+  UDTLayoutBase(UDTLayoutBase const&) = delete;
+  UDTLayoutBase& operator=(UDTLayoutBase const&) = delete;
+
   uint32_t tailPadding() const override;
   ArrayRef<LayoutItemBase *> layout_items() const { return LayoutItems; }
   ArrayRef<BaseClassLayout *> bases() const { return AllBases; }
@@ -163,8 +169,6 @@ class LLVM_ABI ClassLayout : public UDTLayoutBase {
 public:
   explicit ClassLayout(const PDBSymbolTypeUDT &UDT);
   explicit ClassLayout(std::unique_ptr<PDBSymbolTypeUDT> UDT);
-
-  ClassLayout(ClassLayout &&Other) = default;
 
   const PDBSymbolTypeUDT &getClass() const { return UDT; }
   uint32_t immediatePadding() const override;
