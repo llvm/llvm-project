@@ -411,7 +411,7 @@ added in the future:
       be saved by the caller, but on Windows, xmm6-xmm15 are preserved.
 
     - On AArch64 the callee preserve all general purpose registers, except
-      X0-X8 and X16-X18. Not allowed with nest.
+      X0-X8 and X16-X18. Not allowed with ``nest``.
 
     The idea behind this convention is to support calls to runtime functions
     that have a hot path and a cold path. The hot path is usually a small piece
@@ -449,7 +449,7 @@ added in the future:
 
     - On AArch64 the callee preserve all general purpose registers, except
       X0-X8 and X16-X18. Furthermore it also preserves lower 128 bits of V8-V31
-      SIMD floating point registers. Not allowed with nest.
+      SIMD floating point registers. Not allowed with ``nest``.
 
     The idea behind this convention is to support calls to runtime functions
     that don't need to call out to any other functions.
