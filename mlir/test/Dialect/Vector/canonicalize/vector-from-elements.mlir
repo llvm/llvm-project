@@ -143,3 +143,14 @@ func.func @negative_different_sources(%arg0: vector<1x2xi8>, %arg1: vector<1x2xi
   %2 = vector.from_elements %0, %1 : vector<2xi8>
   return %2 : vector<2xi8>
 }
+
+// -----
+
+// CHECK-LABEL: func @negative_source_too_large(
+//   CHECK-NOT: shape_cast
+func.func @negative_source_too_large(%arg0: vector<1x3xi8>) -> vector<2xi8> {
+  %0 = vector.extract %arg0[0, 0] : i8 from vector<1x3xi8>
+  %1 = vector.extract %arg0[0, 1] : i8 from vector<1x3xi8>
+  %2 = vector.from_elements %0, %1 : vector<2xi8>
+  return %2 : vector<2xi8>
+}

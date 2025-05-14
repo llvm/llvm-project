@@ -33,6 +33,7 @@
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "mlir/IR/ValueRange.h"
 #include "mlir/Interfaces/SubsetOpInterface.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "mlir/Support/LLVM.h"
@@ -2394,60 +2395,89 @@ static LogicalResult rewriteFromElementsAsSplat(FromElementsOp fromElementsOp,
 ///
 /// becomes
 ///   %2 = vector.shape_cast %source : vector<1x2xi8> to vector<2xi8>
-static LogicalResult
-rewriteFromElementsAsShapeCast(FromElementsOp fromElementsOp,
-                               PatternRewriter &rewriter) {
+///
+/// The requirements for this to be valid are
+/// i) all elements are extracted from the same vector (source),
+/// ii) source and from_elements result have the same number of elements,
+/// iii) the elements are extracted in ascending order.
+///
+/// It might be possible to rewrite vector.from_elements as a single
+/// vector.extract if (ii) is not satisifed, or in some cases as a
+/// a single vector_extract_strided_slice if (ii) and (iii) are not satisfied,
+/// this is left for future consideration.
+class FromElementsToShapCast : public OpRewritePattern<FromElementsOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
 
-  // The common source of vector.extract operations (if one exists), as well
-  // as its shape and rank. These are set in the first iteration of the loop
-  // over the operands (elements) of `fromElementsOp`.
-  Value source;
-  ArrayRef<int64_t> shape;
-  int64_t rank;
+  LogicalResult matchAndRewrite(FromElementsOp fromElements,
+                                PatternRewriter &rewriter) const override {
 
-  for (auto [index, element] : llvm::enumerate(fromElementsOp.getElements())) {
+    mlir::OperandRange elements = fromElements.getElements();
+    assert(!elements.empty() && "must be at least 1 element");
 
-    // Check that the element is defined by an extract operation, and that
-    // the extract is on the same vector as all preceding elements.
-    auto extractOp =
-        dyn_cast_if_present<vector::ExtractOp>(element.getDefiningOp());
-    if (!extractOp)
-      return failure();
-    Value currentSource = extractOp.getVector();
-    if (index == 0) {
-      source = currentSource;
-      shape = extractOp.getSourceVectorType().getShape();
-      rank = shape.size();
-    } else if (currentSource != source) {
-      return failure();
+    Value firstElement = elements.front();
+    ExtractOp extractOp =
+        dyn_cast_if_present<vector::ExtractOp>(firstElement.getDefiningOp());
+    if (!extractOp) {
+      return rewriter.notifyMatchFailure(
+          fromElements, "first element not from vector.extract");
+    }
+    VectorType sourceType = extractOp.getSourceVectorType();
+    Value source = extractOp.getVector();
+
+    // Check condition (ii).
+    if (static_cast<size_t>(sourceType.getNumElements()) != elements.size()) {
+      return rewriter.notifyMatchFailure(fromElements,
+                                         "number of elements differ");
     }
 
-    // Check that the (linearized) index of extraction is the same as the index
-    // in the result of `fromElementsOp`.
-    ArrayRef<int64_t> position = extractOp.getStaticPosition();
-    assert(position.size() == rank &&
-           "scalar extract must have full rank position");
-    int64_t stride{1};
-    int64_t offset{0};
-    for (auto [pos, size] :
-         llvm::zip(llvm::reverse(position), llvm::reverse(shape))) {
-      if (pos == ShapedType::kDynamic)
-        return failure();
-      offset += pos * stride;
-      stride *= size;
+    for (auto [indexMinusOne, element] :
+         llvm::enumerate(elements.drop_front(1))) {
+
+      extractOp =
+          dyn_cast_if_present<vector::ExtractOp>(element.getDefiningOp());
+      if (!extractOp) {
+        return rewriter.notifyMatchFailure(fromElements,
+                                           "element not from vector.extract");
+      }
+      Value currentSource = extractOp.getVector();
+      // Check condition (i).
+      if (currentSource != source) {
+        return rewriter.notifyMatchFailure(fromElements,
+                                           "element from different vector");
+      }
+
+      ArrayRef<int64_t> position = extractOp.getStaticPosition();
+      assert(position.size() == static_cast<size_t>(sourceType.getRank()) &&
+             "scalar extract must have full rank position");
+      int64_t stride{1};
+      int64_t offset{0};
+      for (auto [pos, size] : llvm::zip(llvm::reverse(position),
+                                        llvm::reverse(sourceType.getShape()))) {
+        if (pos == ShapedType::kDynamic) {
+          return rewriter.notifyMatchFailure(
+              fromElements, "elements not in ascending order (dynamic order)");
+        }
+        offset += pos * stride;
+        stride *= size;
+      }
+      // Check condition (iii).
+      if (offset != static_cast<int64_t>(indexMinusOne + 1)) {
+        return rewriter.notifyMatchFailure(
+            fromElements, "elements not in ascending order (static order)");
+      }
     }
-    if (offset != index)
-      return failure();
+
+    rewriter.replaceOpWithNewOp<ShapeCastOp>(fromElements,
+                                             fromElements.getType(), source);
+    return success();
   }
-
-  rewriter.replaceOpWithNewOp<ShapeCastOp>(fromElementsOp,
-                                           fromElementsOp.getType(), source);
-}
+};
 
 void FromElementsOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                  MLIRContext *context) {
   results.add(rewriteFromElementsAsSplat);
-  results.add(rewriteFromElementsAsShapeCast);
+  results.add<FromElementsToShapCast>(context);
 }
 
 //===----------------------------------------------------------------------===//
