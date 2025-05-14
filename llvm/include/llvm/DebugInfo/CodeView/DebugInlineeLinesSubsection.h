@@ -9,6 +9,7 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_DEBUGINLINEELINESSUBSECTION_H
 #define LLVM_DEBUGINFO_CODEVIEW_DEBUGINLINEELINESSUBSECTION_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/DebugSubsection.h"
@@ -49,7 +50,7 @@ struct InlineeSourceLine {
 } // end namespace codeview
 
 template <> struct VarStreamArrayExtractor<codeview::InlineeSourceLine> {
-  Error operator()(BinaryStreamRef Stream, uint32_t &Len,
+  LLVM_ABI Error operator()(BinaryStreamRef Stream, uint32_t &Len,
                    codeview::InlineeSourceLine &Item);
 
   bool HasExtraFiles = false;
@@ -62,19 +63,19 @@ class DebugInlineeLinesSubsectionRef final : public DebugSubsectionRef {
   using Iterator = LinesArray::Iterator;
 
 public:
-  DebugInlineeLinesSubsectionRef();
+  LLVM_ABI DebugInlineeLinesSubsectionRef();
 
   static bool classof(const DebugSubsectionRef *S) {
     return S->kind() == DebugSubsectionKind::InlineeLines;
   }
 
-  Error initialize(BinaryStreamReader Reader);
+  LLVM_ABI Error initialize(BinaryStreamReader Reader);
   Error initialize(BinaryStreamRef Section) {
     return initialize(BinaryStreamReader(Section));
   }
 
   bool valid() const { return Lines.valid(); }
-  bool hasExtraFiles() const;
+  LLVM_ABI bool hasExtraFiles() const;
 
   Iterator begin() const { return Lines.begin(); }
   Iterator end() const { return Lines.end(); }
@@ -84,7 +85,7 @@ private:
   LinesArray Lines;
 };
 
-class DebugInlineeLinesSubsection final : public DebugSubsection {
+class LLVM_ABI DebugInlineeLinesSubsection final : public DebugSubsection {
 public:
   struct Entry {
     std::vector<support::ulittle32_t> ExtraFiles;

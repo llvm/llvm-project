@@ -14,6 +14,7 @@
 #ifndef LLVM_DEBUGINFO_SYMBOLIZE_DIPRINTER_H
 #define LLVM_DEBUGINFO_SYMBOLIZE_DIPRINTER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/JSON.h"
 #include <memory>
@@ -67,7 +68,7 @@ struct PrinterConfig {
 
 using ErrorHandler = std::function<void(const ErrorInfoBase &, StringRef)>;
 
-class PlainPrinterBase : public DIPrinter {
+class LLVM_ABI PlainPrinterBase : public DIPrinter {
 protected:
   raw_ostream &OS;
   ErrorHandler ErrHandler;
@@ -104,7 +105,7 @@ public:
   void listEnd() override {}
 };
 
-class LLVMPrinter : public PlainPrinterBase {
+class LLVM_ABI LLVMPrinter : public PlainPrinterBase {
 private:
   void printSimpleLocation(StringRef Filename, const DILineInfo &Info) override;
   void printStartAddress(const DILineInfo &Info) override;
@@ -115,7 +116,7 @@ public:
       : PlainPrinterBase(OS, EH, Config) {}
 };
 
-class GNUPrinter : public PlainPrinterBase {
+class LLVM_ABI GNUPrinter : public PlainPrinterBase {
 private:
   void printSimpleLocation(StringRef Filename, const DILineInfo &Info) override;
 
@@ -125,7 +126,7 @@ public:
 
 };
 
-class JSONPrinter : public DIPrinter {
+class LLVM_ABI JSONPrinter : public DIPrinter {
 private:
   raw_ostream &OS;
   PrinterConfig Config;

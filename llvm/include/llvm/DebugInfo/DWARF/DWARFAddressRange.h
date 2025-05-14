@@ -9,6 +9,7 @@
 #ifndef LLVM_DEBUGINFO_DWARF_DWARFADDRESSRANGE_H
 #define LLVM_DEBUGINFO_DWARF_DWARFADDRESSRANGE_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/Object/ObjectFile.h"
 #include <algorithm>
@@ -68,7 +69,7 @@ struct DWARFAddressRange {
     return true;
   }
 
-  void dump(raw_ostream &OS, uint32_t AddressSize, DIDumpOptions DumpOpts = {},
+  LLVM_ABI void dump(raw_ostream &OS, uint32_t AddressSize, DIDumpOptions DumpOpts = {},
             const DWARFObject *Obj = nullptr) const;
 };
 
@@ -82,7 +83,7 @@ inline bool operator==(const DWARFAddressRange &LHS,
   return std::tie(LHS.SectionIndex, LHS.LowPC, LHS.HighPC) == std::tie(RHS.SectionIndex, RHS.LowPC, RHS.HighPC);
 }
 
-raw_ostream &operator<<(raw_ostream &OS, const DWARFAddressRange &R);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const DWARFAddressRange &R);
 
 /// DWARFAddressRangesVector - represents a set of absolute address ranges.
 using DWARFAddressRangesVector = std::vector<DWARFAddressRange>;

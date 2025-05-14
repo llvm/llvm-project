@@ -9,6 +9,7 @@
 #ifndef LLVM_DEBUGINFO_PDB_NATIVE_PDBFILE_H
 #define LLVM_DEBUGINFO_PDB_NATIVE_PDBFILE_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/DebugInfo/MSF/IMSFFile.h"
 #include "llvm/DebugInfo/MSF/MSFCommon.h"
 #include "llvm/Support/Allocator.h"
@@ -37,7 +38,7 @@ class PublicsStream;
 class SymbolStream;
 class TpiStream;
 
-class PDBFile : public msf::IMSFFile {
+class LLVM_ABI PDBFile : public msf::IMSFFile {
   friend PDBFileBuilder;
 
 public:

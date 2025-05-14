@@ -14,6 +14,7 @@
 #ifndef LLVM_DEBUGINFO_LOGICALVIEW_CORE_LVELEMENT_H
 #define LLVM_DEBUGINFO_LOGICALVIEW_CORE_LVELEMENT_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVObject.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/MathExtras.h"
@@ -70,7 +71,7 @@ using LVElementRequest = std::vector<LVElementGetFunction>;
 // lldb/source/Plugins/SymbolFile/DWARF/DWARFASTParserClang.cpp.
 constexpr unsigned int DWARF_CHAR_BIT = 8u;
 
-class LVElement : public LVObject {
+class LLVM_ABI LVElement : public LVObject {
   enum class Property {
     IsLine,   // A logical line.
     IsScope,  // A logical scope.

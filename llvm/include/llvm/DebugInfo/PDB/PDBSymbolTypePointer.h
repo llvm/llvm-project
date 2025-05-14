@@ -9,6 +9,7 @@
 #ifndef LLVM_DEBUGINFO_PDB_PDBSYMBOLTYPEPOINTER_H
 #define LLVM_DEBUGINFO_PDB_PDBSYMBOLTYPEPOINTER_H
 
+#include "llvm/Support/Compiler.h"
 #include "PDBSymbol.h"
 #include "PDBTypes.h"
 
@@ -16,7 +17,7 @@ namespace llvm {
 
 namespace pdb {
 
-class PDBSymbolTypePointer : public PDBSymbol {
+class LLVM_ABI PDBSymbolTypePointer : public PDBSymbol {
   DECLARE_PDB_SYMBOL_CONCRETE_TYPE(PDB_SymType::PointerType)
 public:
   void dump(PDBSymDumper &Dumper) const override;

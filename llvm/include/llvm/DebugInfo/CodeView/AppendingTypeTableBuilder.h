@@ -9,6 +9,7 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_APPENDINGTYPETABLEBUILDER_H
 #define LLVM_DEBUGINFO_CODEVIEW_APPENDINGTYPETABLEBUILDER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
@@ -23,7 +24,7 @@ namespace codeview {
 
 class ContinuationRecordBuilder;
 
-class AppendingTypeTableBuilder : public TypeCollection {
+class LLVM_ABI AppendingTypeTableBuilder : public TypeCollection {
 
   BumpPtrAllocator &RecordStorage;
   SimpleTypeSerializer SimpleSerializer;

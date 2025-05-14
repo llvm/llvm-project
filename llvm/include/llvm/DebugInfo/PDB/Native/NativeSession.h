@@ -9,6 +9,7 @@
 #ifndef LLVM_DEBUGINFO_PDB_NATIVE_NATIVESESSION_H
 #define LLVM_DEBUGINFO_PDB_NATIVE_NATIVESESSION_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/IntervalMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/PDB/IPDBSession.h"
@@ -29,7 +30,7 @@ class PDBSymbolCompiland;
 class PDBSymbolExe;
 template <typename ChildType> class IPDBEnumChildren;
 
-class NativeSession : public IPDBSession {
+class LLVM_ABI NativeSession : public IPDBSession {
   struct PdbSearchOptions {
     StringRef ExePath;
     // FIXME: Add other PDB search options (_NT_SYMBOL_PATH, symsrv)

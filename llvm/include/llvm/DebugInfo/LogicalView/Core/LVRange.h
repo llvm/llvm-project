@@ -14,6 +14,7 @@
 #ifndef LLVM_DEBUGINFO_LOGICALVIEW_CORE_LVRANGE_H
 #define LLVM_DEBUGINFO_LOGICALVIEW_CORE_LVRANGE_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/IntervalTree.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVObject.h"
 
@@ -46,7 +47,7 @@ public:
 // scope; the addresses are stored in ascending order and can overlap.
 using LVRangeEntries = std::vector<LVRangeEntry>;
 
-class LVRange final : public LVObject {
+class LLVM_ABI LVRange final : public LVObject {
   /// Map of where a user value is live, and its location.
   using LVRangesTree = IntervalTree<LVAddress, LVScope *>;
   using LVAllocator = LVRangesTree::Allocator;

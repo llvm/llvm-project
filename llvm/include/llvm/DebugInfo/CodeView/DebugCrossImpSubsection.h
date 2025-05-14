@@ -9,6 +9,7 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_DEBUGCROSSIMPSUBSECTION_H
 #define LLVM_DEBUGINFO_CODEVIEW_DEBUGCROSSIMPSUBSECTION_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
@@ -37,7 +38,7 @@ template <> struct VarStreamArrayExtractor<codeview::CrossModuleImportItem> {
 public:
   using ContextType = void;
 
-  Error operator()(BinaryStreamRef Stream, uint32_t &Len,
+  LLVM_ABI Error operator()(BinaryStreamRef Stream, uint32_t &Len,
                    codeview::CrossModuleImportItem &Item);
 };
 
@@ -57,8 +58,8 @@ public:
     return S->kind() == DebugSubsectionKind::CrossScopeImports;
   }
 
-  Error initialize(BinaryStreamReader Reader);
-  Error initialize(BinaryStreamRef Stream);
+  LLVM_ABI Error initialize(BinaryStreamReader Reader);
+  LLVM_ABI Error initialize(BinaryStreamRef Stream);
 
   Iterator begin() const { return References.begin(); }
   Iterator end() const { return References.end(); }
@@ -67,7 +68,7 @@ private:
   ReferenceArray References;
 };
 
-class DebugCrossModuleImportsSubsection final : public DebugSubsection {
+class LLVM_ABI DebugCrossModuleImportsSubsection final : public DebugSubsection {
 public:
   explicit DebugCrossModuleImportsSubsection(
       DebugStringTableSubsection &Strings)

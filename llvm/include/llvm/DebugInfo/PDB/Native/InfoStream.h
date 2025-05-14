@@ -9,6 +9,7 @@
 #ifndef LLVM_DEBUGINFO_PDB_NATIVE_INFOSTREAM_H
 #define LLVM_DEBUGINFO_PDB_NATIVE_INFOSTREAM_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/DebugInfo/CodeView/GUID.h"
 #include "llvm/DebugInfo/PDB/Native/NamedStreamMap.h"
@@ -25,30 +26,30 @@ class InfoStream {
   friend class InfoStreamBuilder;
 
 public:
-  InfoStream(std::unique_ptr<BinaryStream> Stream);
+  LLVM_ABI InfoStream(std::unique_ptr<BinaryStream> Stream);
 
-  Error reload();
+  LLVM_ABI Error reload();
 
-  uint32_t getStreamSize() const;
+  LLVM_ABI uint32_t getStreamSize() const;
 
   const InfoStreamHeader *getHeader() const { return Header; }
 
-  bool containsIdStream() const;
-  PdbRaw_ImplVer getVersion() const;
-  uint32_t getSignature() const;
-  uint32_t getAge() const;
-  codeview::GUID getGuid() const;
-  uint32_t getNamedStreamMapByteSize() const;
+  LLVM_ABI bool containsIdStream() const;
+  LLVM_ABI PdbRaw_ImplVer getVersion() const;
+  LLVM_ABI uint32_t getSignature() const;
+  LLVM_ABI uint32_t getAge() const;
+  LLVM_ABI codeview::GUID getGuid() const;
+  LLVM_ABI uint32_t getNamedStreamMapByteSize() const;
 
-  PdbRaw_Features getFeatures() const;
-  ArrayRef<PdbRaw_FeatureSig> getFeatureSignatures() const;
+  LLVM_ABI PdbRaw_Features getFeatures() const;
+  LLVM_ABI ArrayRef<PdbRaw_FeatureSig> getFeatureSignatures() const;
 
-  const NamedStreamMap &getNamedStreams() const;
+  LLVM_ABI const NamedStreamMap &getNamedStreams() const;
 
-  BinarySubstreamRef getNamedStreamsBuffer() const;
+  LLVM_ABI BinarySubstreamRef getNamedStreamsBuffer() const;
 
-  Expected<uint32_t> getNamedStreamIndex(llvm::StringRef Name) const;
-  StringMap<uint32_t> named_streams() const;
+  LLVM_ABI Expected<uint32_t> getNamedStreamIndex(llvm::StringRef Name) const;
+  LLVM_ABI StringMap<uint32_t> named_streams() const;
 
 private:
   std::unique_ptr<BinaryStream> Stream;

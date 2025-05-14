@@ -9,6 +9,7 @@
 #ifndef LLVM_DEBUGINFO_PDB_NATIVE_HASHTABLE_H
 #define LLVM_DEBUGINFO_PDB_NATIVE_HASHTABLE_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/SparseBitVector.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/DebugInfo/PDB/Native/RawError.h"
@@ -25,8 +26,8 @@ namespace llvm {
 
 namespace pdb {
 
-Error readSparseBitVector(BinaryStreamReader &Stream, SparseBitVector<> &V);
-Error writeSparseBitVector(BinaryStreamWriter &Writer, SparseBitVector<> &Vec);
+LLVM_ABI Error readSparseBitVector(BinaryStreamReader &Stream, SparseBitVector<> &V);
+LLVM_ABI Error writeSparseBitVector(BinaryStreamWriter &Writer, SparseBitVector<> &Vec);
 
 template <typename ValueT> class HashTable;
 

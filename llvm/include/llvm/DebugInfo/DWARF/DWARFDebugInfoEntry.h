@@ -9,6 +9,7 @@
 #ifndef LLVM_DEBUGINFO_DWARF_DWARFDEBUGINFOENTRY_H
 #define LLVM_DEBUGINFO_DWARF_DWARFDEBUGINFOENTRY_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFAbbreviationDeclaration.h"
 #include <cstdint>
@@ -38,7 +39,7 @@ public:
   /// starting at a given offset. If DIE can't be extracted, returns false and
   /// doesn't change OffsetPtr.
   /// High performance extraction should use this call.
-  bool extractFast(const DWARFUnit &U, uint64_t *OffsetPtr,
+  LLVM_ABI bool extractFast(const DWARFUnit &U, uint64_t *OffsetPtr,
                    const DWARFDataExtractor &DebugInfoData, uint64_t UEndOffset,
                    uint32_t ParentIdx);
 

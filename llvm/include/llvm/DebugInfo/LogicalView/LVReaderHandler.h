@@ -13,6 +13,7 @@
 #ifndef LLVM_DEBUGINFO_LOGICALVIEW_READERS_LVREADERHANDLER_H
 #define LLVM_DEBUGINFO_LOGICALVIEW_READERS_LVREADERHANDLER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVReader.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
@@ -52,7 +53,7 @@ class LVReaderHandler {
                       object::Archive &Arch);
   Error handleBuffer(LVReaders &Readers, StringRef Filename,
                      MemoryBufferRef Buffer, StringRef ExePath = {});
-  Error handleFile(LVReaders &Readers, StringRef Filename,
+  LLVM_ABI Error handleFile(LVReaders &Readers, StringRef Filename,
                    StringRef ExePath = {});
   Error handleMach(LVReaders &Readers, StringRef Filename,
                    object::MachOUniversalBinary &Mach);
@@ -77,7 +78,7 @@ public:
   Error createReader(StringRef Filename, LVReaders &Readers) {
     return handleFile(Readers, Filename);
   }
-  Error process();
+  LLVM_ABI Error process();
 
   Expected<std::unique_ptr<LVReader>> createReader(StringRef Pathname) {
     LVReaders Readers;
@@ -86,7 +87,7 @@ public:
     return std::move(Readers[0]);
   }
 
-  void print(raw_ostream &OS) const;
+  LLVM_ABI void print(raw_ostream &OS) const;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void dump() const { print(dbgs()); }

@@ -9,6 +9,7 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_SYMBOLRECORDMAPPING_H
 #define LLVM_DEBUGINFO_CODEVIEW_SYMBOLRECORDMAPPING_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/DebugInfo/CodeView/CodeViewRecordIO.h"
 #include "llvm/DebugInfo/CodeView/SymbolVisitorCallbacks.h"
 
@@ -17,7 +18,7 @@ class BinaryStreamReader;
 class BinaryStreamWriter;
 
 namespace codeview {
-class SymbolRecordMapping : public SymbolVisitorCallbacks {
+class LLVM_ABI SymbolRecordMapping : public SymbolVisitorCallbacks {
 public:
   explicit SymbolRecordMapping(BinaryStreamReader &Reader,
                                CodeViewContainer Container)

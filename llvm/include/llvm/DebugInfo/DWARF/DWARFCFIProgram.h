@@ -9,6 +9,7 @@
 #ifndef LLVM_DEBUGINFO_DWARF_DWARFCFIPROGRAM_H
 #define LLVM_DEBUGINFO_DWARF_DWARFCFIPROGRAM_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/iterator.h"
@@ -45,10 +46,10 @@ public:
     // Associated DWARF expression in case this instruction refers to one
     std::optional<DWARFExpression> Expression;
 
-    Expected<uint64_t> getOperandAsUnsigned(const CFIProgram &CFIP,
+    LLVM_ABI Expected<uint64_t> getOperandAsUnsigned(const CFIProgram &CFIP,
                                             uint32_t OperandIdx) const;
 
-    Expected<int64_t> getOperandAsSigned(const CFIProgram &CFIP,
+    LLVM_ABI Expected<int64_t> getOperandAsSigned(const CFIProgram &CFIP,
                                          uint32_t OperandIdx) const;
   };
 
@@ -76,15 +77,15 @@ public:
   /// starting at *Offset and ending at EndOffset. *Offset is updated
   /// to EndOffset upon successful parsing, or indicates the offset
   /// where a problem occurred in case an error is returned.
-  Error parse(DWARFDataExtractor Data, uint64_t *Offset, uint64_t EndOffset);
+  LLVM_ABI Error parse(DWARFDataExtractor Data, uint64_t *Offset, uint64_t EndOffset);
 
-  void dump(raw_ostream &OS, DIDumpOptions DumpOpts, unsigned IndentLevel,
+  LLVM_ABI void dump(raw_ostream &OS, DIDumpOptions DumpOpts, unsigned IndentLevel,
             std::optional<uint64_t> InitialLocation) const;
 
   void addInstruction(const Instruction &I) { Instructions.push_back(I); }
 
   /// Get a DWARF CFI call frame string for the given DW_CFA opcode.
-  StringRef callFrameString(unsigned Opcode) const;
+  LLVM_ABI StringRef callFrameString(unsigned Opcode) const;
 
 private:
   std::vector<Instruction> Instructions;

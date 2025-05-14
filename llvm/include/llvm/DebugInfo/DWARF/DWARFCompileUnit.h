@@ -9,6 +9,7 @@
 #ifndef LLVM_DEBUGINFO_DWARF_DWARFCOMPILEUNIT_H
 #define LLVM_DEBUGINFO_DWARF_DWARFCOMPILEUNIT_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 
 namespace llvm {
@@ -19,7 +20,7 @@ class raw_ostream;
 struct DIDumpOptions;
 struct DWARFSection;
 
-class DWARFCompileUnit : public DWARFUnit {
+class LLVM_ABI DWARFCompileUnit : public DWARFUnit {
 public:
   DWARFCompileUnit(DWARFContext &Context, const DWARFSection &Section,
                    const DWARFUnitHeader &Header, const DWARFDebugAbbrev *DA,

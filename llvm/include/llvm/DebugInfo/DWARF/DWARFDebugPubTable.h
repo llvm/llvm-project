@@ -9,6 +9,7 @@
 #ifndef LLVM_DEBUGINFO_DWARF_DWARFDEBUGPUBTABLE_H
 #define LLVM_DEBUGINFO_DWARF_DWARFDEBUGPUBTABLE_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -74,10 +75,10 @@ private:
 public:
   DWARFDebugPubTable() = default;
 
-  void extract(DWARFDataExtractor Data, bool GnuStyle,
+  LLVM_ABI void extract(DWARFDataExtractor Data, bool GnuStyle,
                function_ref<void(Error)> RecoverableErrorHandler);
 
-  void dump(raw_ostream &OS) const;
+  LLVM_ABI void dump(raw_ostream &OS) const;
 
   ArrayRef<Set> getData() { return Sets; }
 };

@@ -9,6 +9,7 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_TYPEINDEXDISCOVERY_H
 #define LLVM_DEBUGINFO_CODEVIEW_TYPEINDEXDISCOVERY_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
 
@@ -23,22 +24,22 @@ struct TiReference {
   uint32_t Count;
 };
 
-void discoverTypeIndices(ArrayRef<uint8_t> RecordData,
+LLVM_ABI void discoverTypeIndices(ArrayRef<uint8_t> RecordData,
                          SmallVectorImpl<TiReference> &Refs);
-void discoverTypeIndices(const CVType &Type,
+LLVM_ABI void discoverTypeIndices(const CVType &Type,
                          SmallVectorImpl<TiReference> &Refs);
-void discoverTypeIndices(const CVType &Type,
+LLVM_ABI void discoverTypeIndices(const CVType &Type,
                          SmallVectorImpl<TypeIndex> &Indices);
-void discoverTypeIndices(ArrayRef<uint8_t> RecordData,
+LLVM_ABI void discoverTypeIndices(ArrayRef<uint8_t> RecordData,
                          SmallVectorImpl<TypeIndex> &Indices);
 
 /// Discover type indices in symbol records. Returns false if this is an unknown
 /// record.
-bool discoverTypeIndicesInSymbol(const CVSymbol &Symbol,
+LLVM_ABI bool discoverTypeIndicesInSymbol(const CVSymbol &Symbol,
                                  SmallVectorImpl<TiReference> &Refs);
-bool discoverTypeIndicesInSymbol(ArrayRef<uint8_t> RecordData,
+LLVM_ABI bool discoverTypeIndicesInSymbol(ArrayRef<uint8_t> RecordData,
                                  SmallVectorImpl<TiReference> &Refs);
-bool discoverTypeIndicesInSymbol(ArrayRef<uint8_t> RecordData,
+LLVM_ABI bool discoverTypeIndicesInSymbol(ArrayRef<uint8_t> RecordData,
                                  SmallVectorImpl<TypeIndex> &Indices);
 }
 }
