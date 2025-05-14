@@ -517,7 +517,17 @@ Improvements to Clang's diagnostics
 
 - Improved the ``-Wtautological-overlap-compare`` diagnostics to warn about overlapping and non-overlapping ranges involving character literals and floating-point literals. 
   The warning message for non-overlapping cases has also been improved (#GH13473).
-  
+
+- Fixed a duplicate diagnostic when performing typo correction on function template
+  calls with explicit template arguments. (#GH139226)
+
+- An error is now emitted when OpenMP ``collapse`` and ``ordered`` clauses have an
+  argument larger than what can fit within a 64-bit integer.
+
+- A new off-by-default warning ``-Wms-bitfield-padding`` has been added to alert to cases where bit-field
+  packing may differ under the MS struct ABI (#GH117428).
+
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -578,6 +588,9 @@ Bug Fixes in This Version
   (#GH138832)
 - Fixed a crash when instantiating an invalid dependent friend template specialization.
   (#GH139052)
+- Fixed a crash with an invalid member function parameter list with a default
+  argument which contains a pragma. (#GH113722)
+- Fixed assertion failures when generating name lookup table in modules. (#GH61065, #GH134739)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -919,6 +932,9 @@ OpenMP Support
   ``partial`` was an invalid expression. (#GH139267)
 - Fixed a crashing bug with ``omp tile sizes`` if the argument to ``sizes`` was
   an invalid expression. (#GH139073)
+- Fixed a crashing bug with ``omp simd collapse`` if the argument to
+  ``collapse`` was an invalid expression. (#GH138493)
+- Fixed a crashing bug with a malformed ``cancel`` directive. (#GH139360)
 - Fixed a crashing bug with ``omp distribute dist_schedule`` if the argument to
   ``dist_schedule`` was not strictly positive. (#GH139266)
 

@@ -67,7 +67,7 @@ public:
 
   /// Build plain CFG for TheLoop  and connects it to Plan's entry.
   std::unique_ptr<VPlan>
-  buildPlainCFG(DenseMap<VPBlockBase *, BasicBlock *> &VPB2IRBB);
+  buildPlainCFG(DenseMap<const VPBlockBase *, BasicBlock *> &VPB2IRBB);
 };
 } // anonymous namespace
 
@@ -243,7 +243,7 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
 
 // Main interface to build the plain CFG.
 std::unique_ptr<VPlan> PlainCFGBuilder::buildPlainCFG(
-    DenseMap<VPBlockBase *, BasicBlock *> &VPB2IRBB) {
+    DenseMap<const VPBlockBase *, BasicBlock *> &VPB2IRBB) {
   VPIRBasicBlock *Entry = cast<VPIRBasicBlock>(Plan->getEntry());
   BB2VPBB[Entry->getIRBasicBlock()] = Entry;
   for (VPIRBasicBlock *ExitVPBB : Plan->getExitBlocks())
@@ -343,7 +343,7 @@ std::unique_ptr<VPlan> PlainCFGBuilder::buildPlainCFG(
 
 std::unique_ptr<VPlan> VPlanTransforms::buildPlainCFG(
     Loop *TheLoop, LoopInfo &LI,
-    DenseMap<VPBlockBase *, BasicBlock *> &VPB2IRBB) {
+    DenseMap<const VPBlockBase *, BasicBlock *> &VPB2IRBB) {
   PlainCFGBuilder Builder(TheLoop, &LI);
   return Builder.buildPlainCFG(VPB2IRBB);
 }
@@ -460,11 +460,10 @@ static void addCanonicalIVRecipes(VPlan &Plan, VPBasicBlock *HeaderVPBB,
                        {CanonicalIVIncrement, &Plan.getVectorTripCount()}, DL);
 }
 
-void VPlanTransforms::prepareForVectorization(VPlan &Plan, Type *InductionTy,
-                                              PredicatedScalarEvolution &PSE,
-                                              bool RequiresScalarEpilogueCheck,
-                                              bool TailFolded, Loop *TheLoop,
-                                              DebugLoc IVDL) {
+void VPlanTransforms::prepareForVectorization(
+    VPlan &Plan, Type *InductionTy, PredicatedScalarEvolution &PSE,
+    bool RequiresScalarEpilogueCheck, bool TailFolded, Loop *TheLoop,
+    DebugLoc IVDL, bool HasUncountableEarlyExit, VFRange &Range) {
   VPDominatorTree VPDT;
   VPDT.recalculate(Plan);
 
@@ -491,18 +490,32 @@ void VPlanTransforms::prepareForVectorization(VPlan &Plan, Type *InductionTy,
   addCanonicalIVRecipes(Plan, cast<VPBasicBlock>(HeaderVPB),
                         cast<VPBasicBlock>(LatchVPB), InductionTy, IVDL);
 
-  // Disconnect all edges to exit blocks other than from the middle block.
-  // TODO: VPlans with early exits should be explicitly converted to a form
-  // exiting only via the latch here, including adjusting the exit condition,
-  // instead of simply disconnecting the edges and adjusting the VPlan later.
-  for (VPBlockBase *EB : Plan.getExitBlocks()) {
+  [[maybe_unused]] bool HandledUncountableEarlyExit = false;
+  // Disconnect all early exits from the loop leaving it with a single exit from
+  // the latch. Early exits that are countable are left for a scalar epilog. The
+  // condition of uncountable early exits (currently at most one is supported)
+  // is fused into the latch exit, and used to branch from middle block to the
+  // early exit destination.
+  for (VPIRBasicBlock *EB : Plan.getExitBlocks()) {
     for (VPBlockBase *Pred : to_vector(EB->getPredecessors())) {
       if (Pred == MiddleVPBB)
         continue;
+      if (HasUncountableEarlyExit) {
+        assert(!HandledUncountableEarlyExit &&
+               "can handle exactly one uncountable early exit");
+        handleUncountableEarlyExit(cast<VPBasicBlock>(Pred), EB, Plan,
+                                   cast<VPBasicBlock>(HeaderVPB),
+                                   cast<VPBasicBlock>(LatchVPB), Range);
+        HandledUncountableEarlyExit = true;
+      }
+
       cast<VPBasicBlock>(Pred)->getTerminator()->eraseFromParent();
       VPBlockUtils::disconnectBlocks(Pred, EB);
     }
   }
+
+  assert((!HasUncountableEarlyExit || HandledUncountableEarlyExit) &&
+         "missed an uncountable exit that must be handled");
 
   // Create SCEV and VPValue for the trip count.
   // We use the symbolic max backedge-taken-count, which works also when

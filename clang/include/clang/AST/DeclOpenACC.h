@@ -76,8 +76,7 @@ class OpenACCDeclareDecl final
     std::uninitialized_value_construct(
         getTrailingObjects<const OpenACCClause *>(),
         getTrailingObjects<const OpenACCClause *>() + NumClauses);
-    setClauseList(MutableArrayRef(getTrailingObjects<const OpenACCClause *>(),
-                                  NumClauses));
+    setClauseList(getTrailingObjects<const OpenACCClause *>(NumClauses));
   }
 
   OpenACCDeclareDecl(DeclContext *DC, SourceLocation StartLoc,
@@ -89,8 +88,7 @@ class OpenACCDeclareDecl final
     llvm::uninitialized_copy(Clauses,
                              getTrailingObjects<const OpenACCClause *>());
 
-    setClauseList(MutableArrayRef(getTrailingObjects<const OpenACCClause *>(),
-                                  Clauses.size()));
+    setClauseList(getTrailingObjects<const OpenACCClause *>(Clauses.size()));
   }
 
 public:
@@ -122,8 +120,7 @@ class OpenACCRoutineDecl final
     std::uninitialized_value_construct(
         getTrailingObjects<const OpenACCClause *>(),
         getTrailingObjects<const OpenACCClause *>() + NumClauses);
-    setClauseList(MutableArrayRef(getTrailingObjects<const OpenACCClause *>(),
-                                  NumClauses));
+    setClauseList(getTrailingObjects<const OpenACCClause *>(NumClauses));
   }
 
   OpenACCRoutineDecl(DeclContext *DC, SourceLocation StartLoc,
@@ -139,8 +136,7 @@ class OpenACCRoutineDecl final
     // Initialize the trailing storage.
     llvm::uninitialized_copy(Clauses,
                              getTrailingObjects<const OpenACCClause *>());
-    setClauseList(MutableArrayRef(getTrailingObjects<const OpenACCClause *>(),
-                                  Clauses.size()));
+    setClauseList(getTrailingObjects<const OpenACCClause *>(Clauses.size()));
   }
 
 public:

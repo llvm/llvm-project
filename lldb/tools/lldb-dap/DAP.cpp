@@ -126,6 +126,7 @@ DAP::DAP(Log *log, const ReplMode default_repl_mode,
           [&](const ProgressEvent &event) { SendJSON(event.ToJSON()); }),
       reverse_request_seq(0), repl_mode(default_repl_mode) {
   configuration.preInitCommands = std::move(pre_init_commands);
+  RegisterRequests();
 }
 
 DAP::~DAP() = default;
@@ -1193,8 +1194,7 @@ bool SendEventRequestHandler::DoExecute(lldb::SBDebugger debugger,
                                    "exited",     "initialize",   "loadedSource",
                                    "module",     "process",      "stopped",
                                    "terminated", "thread"};
-  if (std::find(internal_events.begin(), internal_events.end(), name) !=
-      std::end(internal_events)) {
+  if (llvm::is_contained(internal_events, name)) {
     std::string msg =
         llvm::formatv("Invalid use of lldb-dap send-event, event \"{0}\" "
                       "should be handled by lldb-dap internally.",
@@ -1650,6 +1650,48 @@ void DAP::EventThread() {
       }
     }
   }
+}
+
+void DAP::RegisterRequests() {
+  RegisterRequest<AttachRequestHandler>();
+  RegisterRequest<BreakpointLocationsRequestHandler>();
+  RegisterRequest<CancelRequestHandler>();
+  RegisterRequest<CompletionsRequestHandler>();
+  RegisterRequest<ConfigurationDoneRequestHandler>();
+  RegisterRequest<ContinueRequestHandler>();
+  RegisterRequest<DataBreakpointInfoRequestHandler>();
+  RegisterRequest<DisassembleRequestHandler>();
+  RegisterRequest<DisconnectRequestHandler>();
+  RegisterRequest<EvaluateRequestHandler>();
+  RegisterRequest<ExceptionInfoRequestHandler>();
+  RegisterRequest<InitializeRequestHandler>();
+  RegisterRequest<LaunchRequestHandler>();
+  RegisterRequest<LocationsRequestHandler>();
+  RegisterRequest<NextRequestHandler>();
+  RegisterRequest<PauseRequestHandler>();
+  RegisterRequest<ReadMemoryRequestHandler>();
+  RegisterRequest<RestartRequestHandler>();
+  RegisterRequest<ScopesRequestHandler>();
+  RegisterRequest<SetBreakpointsRequestHandler>();
+  RegisterRequest<SetDataBreakpointsRequestHandler>();
+  RegisterRequest<SetExceptionBreakpointsRequestHandler>();
+  RegisterRequest<SetFunctionBreakpointsRequestHandler>();
+  RegisterRequest<SetInstructionBreakpointsRequestHandler>();
+  RegisterRequest<SetVariableRequestHandler>();
+  RegisterRequest<SourceRequestHandler>();
+  RegisterRequest<StackTraceRequestHandler>();
+  RegisterRequest<StepInRequestHandler>();
+  RegisterRequest<StepInTargetsRequestHandler>();
+  RegisterRequest<StepOutRequestHandler>();
+  RegisterRequest<ThreadsRequestHandler>();
+  RegisterRequest<VariablesRequestHandler>();
+
+  // Custom requests
+  RegisterRequest<CompileUnitsRequestHandler>();
+  RegisterRequest<ModulesRequestHandler>();
+
+  // Testing requests
+  RegisterRequest<TestGetTargetBreakpointsRequestHandler>();
 }
 
 } // namespace lldb_dap
