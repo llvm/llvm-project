@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s -canonicalize="test-convergence" -split-input-file -allow-unregistered-dialect | FileCheck %s
 
-// This file contains some tests of folding/canonicalizing vector.from_elements 
+// This file contains some tests of folding/canonicalizing vector.from_elements
 
 ///===----------------------------------------------===//
 ///  Tests of `rewriteFromElementsAsSplat`
@@ -75,9 +75,8 @@ func.func @from_elements_to_splat(%a: f32, %b: f32) -> (vector<2x3xf32>, vector<
 
 // -----
 
-
 ///===----------------------------------------------===//
-///  Tests of `rewriteFromElementsAsShapeCast`
+///  Tests of `FromElementsToShapeCast`
 ///===----------------------------------------------===//
 
 // CHECK-LABEL: func @to_shape_cast_rank2_to_rank1(
@@ -112,7 +111,7 @@ func.func @to_shape_cast_rank1_to_rank3(%arg0: vector<8xi8>) -> vector<2x2x2xi8>
 
 // -----
 
-// The extracted elements are recombined into a single vector, but in a new order. 
+// The extracted elements are recombined into a single vector, but in a new order.
 // CHECK-LABEL: func @negative_nonascending_order(
 //   CHECK-NOT: shape_cast
 func.func @negative_nonascending_order(%arg0: vector<1x2xi8>) -> vector<2xi8> {
@@ -122,7 +121,7 @@ func.func @negative_nonascending_order(%arg0: vector<1x2xi8>) -> vector<2xi8> {
   return %2 : vector<2xi8>
 }
 
-// ----- 
+// -----
 
 // CHECK-LABEL: func @negative_nonstatic_extract(
 //   CHECK-NOT: shape_cast
