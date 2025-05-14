@@ -1170,13 +1170,19 @@ struct AAAMDWavesPerEU : public AAAMDSizeRangeAttribute {
           !AssumedGroupSize->isValidState())
         return false;
 
+      unsigned MinFWGSize =
+          AssumedGroupSize->getAssumed().getLower().getZExtValue();
+      unsigned MaxFWGSize =
+          AssumedGroupSize->getAssumed().getUpper().getZExtValue();
+      if (MinFWGSize == 0 && MaxFWGSize == 0)
+        std::tie(MinFWGSize, MaxFWGSize) =
+            InfoCache.getDefaultFlatWorkGroupSize(*Func);
       unsigned Min, Max;
       std::tie(Min, Max) = InfoCache.getEffectiveWavesPerEU(
           *Caller,
           {CallerInfo->getAssumed().getLower().getZExtValue(),
            CallerInfo->getAssumed().getUpper().getZExtValue() - 1},
-          {AssumedGroupSize->getAssumed().getLower().getZExtValue(),
-           AssumedGroupSize->getAssumed().getUpper().getZExtValue() - 1});
+          {MinFWGSize, MaxFWGSize - 1});
       ConstantRange CallerRange(APInt(32, Min), APInt(32, Max + 1));
       IntegerRangeState CallerRangeState(CallerRange);
       Change |= clampStateAndIndicateChange(this->getState(), CallerRangeState);
