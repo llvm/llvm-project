@@ -2633,7 +2633,8 @@ BugPathGetter::BugPathGetter(const ExplodedGraph *OriginalGraph,
     assert(I->isValid() &&
            "We only allow BugReporterVisitors and BugReporter itself to "
            "invalidate reports!");
-    Nodes.emplace_back(I->getErrorNode());
+    if (const ExplodedNode *ErrNode = I->getErrorNode())
+      Nodes.emplace_back(ErrNode);
   }
 
   // The trimmed graph is created in the body of the constructor to ensure

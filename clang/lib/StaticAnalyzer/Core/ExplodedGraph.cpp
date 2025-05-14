@@ -442,60 +442,21 @@ std::unique_ptr<ExplodedGraph>
 ExplodedGraph::trim(ArrayRef<const NodeTy *> Sinks,
                     InterExplodedGraphMap *ForwardMap,
                     InterExplodedGraphMap *InverseMap) const {
-  // FIXME: The two-pass algorithm of this function (which was introduced in
-  // 2008) is terribly overcomplicated and should be replaced by a single
-  // (backward) pass.
-
-  if (Nodes.empty())
+  if (Sinks.empty())
     return nullptr;
 
-  using Pass1Ty = llvm::DenseSet<const ExplodedNode *>;
-  Pass1Ty Pass1;
+  std::unique_ptr<ExplodedGraph> Trimmed = std::make_unique<ExplodedGraph>();
 
-  using Pass2Ty = InterExplodedGraphMap;
-  InterExplodedGraphMap Pass2Scratch;
-  Pass2Ty &Pass2 = ForwardMap ? *ForwardMap : Pass2Scratch;
+  SmallVector<const ExplodedNode*, 32> Worklist{Sinks};
 
-  SmallVector<const ExplodedNode*, 10> WL1, WL2;
+  InterExplodedGraphMap Scratch;
+  if (!ForwardMap)
+    ForwardMap = &Scratch;
 
-  // ===- Pass 1 (reverse DFS) -===
-  for (const auto Sink : Sinks)
-    if (Sink)
-      WL1.push_back(Sink);
+  while (!Worklist.empty()) {
+    const ExplodedNode *N = Worklist.pop_back_val();
 
-  // Process the first worklist until it is empty.
-  while (!WL1.empty()) {
-    const ExplodedNode *N = WL1.pop_back_val();
-
-    // Have we already visited this node?  If so, continue to the next one.
-    if (!Pass1.insert(N).second)
-      continue;
-
-    // If this is the root enqueue it to the second worklist.
-    if (N->Preds.empty()) {
-      assert(N == getRoot() && "Found non-root node with no predecessors!");
-      WL2.push_back(N);
-      continue;
-    }
-
-    // Visit our predecessors and enqueue them.
-    WL1.append(N->Preds.begin(), N->Preds.end());
-  }
-
-  // We didn't hit the root? Return with a null pointer for the new graph.
-  if (WL2.empty())
-    return nullptr;
-
-  assert(WL2.size() == 1 && "There must be only one root!");
-
-  // Create an empty graph.
-  std::unique_ptr<ExplodedGraph> G = std::make_unique<ExplodedGraph>();
-
-  // ===- Pass 2 (forward DFS to construct the new graph) -===
-  while (!WL2.empty()) {
-    const ExplodedNode *N = WL2.pop_back_val();
-
-    auto [Place, Inserted] = Pass2.try_emplace(N);
+    auto [Place, Inserted] = ForwardMap->try_emplace(N);
 
     // Skip this node if we have already processed it.
     if (!Inserted)
@@ -503,48 +464,43 @@ ExplodedGraph::trim(ArrayRef<const NodeTy *> Sinks,
 
     // Create the corresponding node in the new graph and record the mapping
     // from the old node to the new node.
-    ExplodedNode *NewN = G->createUncachedNode(N->getLocation(), N->State,
+    ExplodedNode *NewN = Trimmed->createUncachedNode(N->getLocation(), N->State,
                                                N->getID(), N->isSink());
     Place->second = NewN;
 
     // Also record the reverse mapping from the new node to the old node.
     if (InverseMap) (*InverseMap)[NewN] = N;
 
-    // If this node is the root, designate it as such in the graph.
-    if (N->Preds.empty()) {
-      assert(N == getRoot());
-      G->designateAsRoot(NewN);
-    }
+    // If this is the root node, designate is as the root in the trimmed graph as well.
+    if (N == getRoot())
+      Trimmed->designateAsRoot(NewN);
 
-    // In the case that some of the intended predecessors of NewN have already
-    // been created, we should hook them up as predecessors.
-
-    // Walk through the predecessors of 'N' and hook up their corresponding
-    // nodes in the new graph (if any) to the freshly created node.
+    // Iterate over the predecessors of the node: if they are already present
+    // in the trimmed graph, then add the corresponding edges with
+    // `addPredecessor()`, otherwise add them to the worklist.
     for (const ExplodedNode *Pred : N->Preds) {
-      Pass2Ty::iterator PI = Pass2.find(Pred);
-      if (PI == Pass2.end())
-        continue;
-
-      NewN->addPredecessor(const_cast<ExplodedNode *>(PI->second), *G);
+      auto Iterator = ForwardMap->find(Pred);
+      if (Iterator != ForwardMap->end()) {
+        NewN->addPredecessor(const_cast<ExplodedNode *>(Iterator->second), *Trimmed);
+      } else {
+        Worklist.push_back(Pred);
+      }
     }
 
-    // In the case that some of the intended successors of NewN have already
-    // been created, we should hook them up as successors.  Otherwise, enqueue
-    // the new nodes from the original graph that should have nodes created
-    // in the new graph.
+    // Iterate over the successors of the node: if they are present in the
+    // trimmed graph, then add the corresponding edges with `addPredecessor()`.
+    // (If they are not present in the trimmed graph, we don't add them to the
+    // worklist. Maybe we'll reach them through a different direction, maybe
+    // they will be omitted from the trimmed graph.)
     for (const ExplodedNode *Succ : N->Succs) {
-      Pass2Ty::iterator PI = Pass2.find(Succ);
-      if (PI != Pass2.end()) {
-        const_cast<ExplodedNode *>(PI->second)->addPredecessor(NewN, *G);
-        continue;
+      auto Iterator = ForwardMap->find(Succ);
+      if (Iterator != ForwardMap->end()) {
+        const_cast<ExplodedNode *>(Iterator->second)->addPredecessor(NewN, *Trimmed);
       }
-
-      // Enqueue nodes to the worklist that were marked during pass 1.
-      if (Pass1.count(Succ))
-        WL2.push_back(Succ);
     }
   }
 
-  return G;
+  assert(Trimmed->getRoot() && "The root must be reachable from any nonempty set of sinks!");
+
+  return Trimmed;
 }
