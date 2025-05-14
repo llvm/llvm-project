@@ -153,9 +153,10 @@ Value *FindAvailableLoadedValue(LoadInst *Load, BasicBlock *ScanBB,
 /// This overload provides a more efficient implementation of
 /// FindAvailableLoadedValue() for the case where we are not interested in
 /// finding the closest clobbering instruction if no available load is found.
-/// This overload cannot be used to scan across multiple blocks.
+/// This overload cannot be used to scan across multiple blocks. If a memcpy is
+/// returned, it indicates that we can load from its source.
 Value *FindAvailableLoadedValue(LoadInst *Load, BatchAAResults &AA,
-                                bool *IsLoadCSE,
+                                bool *IsLoadCSE, int64_t &Offset,
                                 unsigned MaxInstsToScan = DefMaxInstsToScan);
 
 /// Scan backwards to see if we have the value of the given pointer available
