@@ -269,6 +269,17 @@ void MipsAsmPrinter::emitInstruction(const MachineInstr *MI) {
       continue;
     }
 
+    // This instruction is only used to note jump table debug info, we
+    // did not need to emit it.
+    if (I->getOpcode() == TargetOpcode::JUMP_TABLE_DEBUG_INFO) {
+      LLVM_DEBUG(
+          dbgs()
+          << DEBUG_TYPE
+          << ": JUMP_TABLE_DEBUG_INFO is an instruction which was used to "
+             "note jump table debug info, did not emit it."
+          << "\n");
+      continue;
+    }
     // The inMips16Mode() test is not permanent.
     // Some instructions are marked as pseudo right now which
     // would make the test fail for the wrong reason but
