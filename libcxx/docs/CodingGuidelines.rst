@@ -125,7 +125,7 @@ subsume other concepts. This means that overloads based on traits can be written
 They also show intent better.
 
 Write ``enable_if`` as ``enable_if_t<condition, int> = 0``
-=========================================================
+==========================================================
 
 The form ``enable_if_t<condition, int> = 0`` is the only one that works in every language mode and for overload sets
 using the same template arguments otherwise. If the code must work in C++11 or C++03, the libc++-internal alias
