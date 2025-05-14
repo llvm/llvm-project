@@ -215,9 +215,8 @@ void ModuleShaderFlags::gatherGlobalModuleFlags(
   // Set DisableOptimizations flag based on the presence of OptimizeNone
   // attribute of entry functions.
   if (MMDI.EntryPropertyVec.size() > 0) {
-    CSF.DisableOptimizations =
-        MMDI.EntryPropertyVec[0].Entry->hasFnAttribute(
-            llvm::Attribute::OptimizeNone);
+    CSF.DisableOptimizations = MMDI.EntryPropertyVec[0].Entry->hasFnAttribute(
+        llvm::Attribute::OptimizeNone);
     // Ensure all entry functions have the same optimization attribute
     for (const auto &EntryFunProps : MMDI.EntryPropertyVec)
       if (CSF.DisableOptimizations !=
@@ -262,7 +261,7 @@ void ModuleShaderFlags::gatherGlobalModuleFlags(
   // are UAVs present globally.
   if (CanSetResMayNotAlias && MMDI.ValidatorVersion < VersionTuple(1, 8))
     CSF.ResMayNotAlias = !DRM.uavs().empty();
- }
+}
 
 /// Construct ModuleShaderFlags for module Module M
 void ModuleShaderFlags::initialize(Module &M, DXILResourceTypeMap &DRTM,
