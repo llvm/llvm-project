@@ -7769,7 +7769,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
       SDValue Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, StoredVal,
                                DAG.getTargetConstant(1, DL, MVT::i32));
 
-     return DAG.getMemIntrinsicNode(
+      return DAG.getMemIntrinsicNode(
           RISCVISD::SD_RV32, DL, DAG.getVTList(MVT::Other),
           {Store->getChain(), Lo, Hi, Store->getBasePtr()}, MVT::i64,
           Store->getMemOperand());
