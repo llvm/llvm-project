@@ -123,6 +123,12 @@ subroutine acc_serial_loop
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
 
+  !$acc serial loop async(async) device_type(nvidia) async(1)
+  DO i = 1, n
+    a(i) = b(i)
+  END DO
+! CHECK: acc.serial combined(loop) async(%{{.*}} : i32, %c1{{.*}} : i32 [#acc.device_type<nvidia>])
+
   !$acc serial loop wait
   DO i = 1, n
     a(i) = b(i)
