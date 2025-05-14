@@ -770,7 +770,7 @@ Register SPIRVGlobalRegistry::buildGlobalVariable(
   if (IsConst && !ST.isShaderEnv())
     buildOpDecorate(Reg, MIRBuilder, SPIRV::Decoration::Constant, {});
 
-  if (GVar && GVar->getAlign().valueOrOne().value() != 1 && !ST.isVulkanEnv()) {
+  if (GVar && GVar->getAlign().valueOrOne().value() != 1 && !ST.isShaderEnv()) {
     unsigned Alignment = (unsigned)GVar->getAlign().valueOrOne().value();
     buildOpDecorate(Reg, MIRBuilder, SPIRV::Decoration::Alignment, {Alignment});
   }
@@ -982,7 +982,7 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeStruct(
   Register ResVReg = createTypeVReg(MIRBuilder);
   if (Ty->hasName())
     buildOpName(ResVReg, Ty->getName(), MIRBuilder);
-  if (Ty->isPacked() && !ST.isVulkanEnv())
+  if (Ty->isPacked() && !ST.isShaderEnv())
     buildOpDecorate(ResVReg, MIRBuilder, SPIRV::Decoration::CPacked, {});
 
   SPIRVType *SPVType =

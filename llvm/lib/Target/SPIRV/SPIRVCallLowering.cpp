@@ -342,7 +342,7 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
           buildOpDecorate(VRegs[i][0], MIRBuilder,
                           SPIRV::Decoration::MaxByteOffset, {DerefBytes});
       }
-      if (Arg.hasAttribute(Attribute::Alignment) && !ST->isVulkanEnv()) {
+      if (Arg.hasAttribute(Attribute::Alignment) && !ST->isShaderEnv()) {
         auto Alignment = static_cast<unsigned>(
             Arg.getAttribute(Attribute::Alignment).getValueAsInt());
         buildOpDecorate(VRegs[i][0], MIRBuilder, SPIRV::Decoration::Alignment,
