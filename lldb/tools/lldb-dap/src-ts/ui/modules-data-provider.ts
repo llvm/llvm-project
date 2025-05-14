@@ -29,7 +29,7 @@ class ModuleItem extends vscode.TreeItem {
     if (module.addressRange) {
       children.push({
         key: "load address:",
-        value: `0x${Number(module.addressRange).toString(16)}`,
+        value: module.addressRange,
       });
     }
     if (module.path) {
