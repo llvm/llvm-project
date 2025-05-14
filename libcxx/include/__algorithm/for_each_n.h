@@ -15,7 +15,9 @@
 #include <__config>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/segmented_iterator.h>
+#include <__type_traits/disjunction.h>
 #include <__type_traits/enable_if.h>
+#include <__type_traits/negation.h>
 #include <__utility/convert_to_integral.h>
 #include <__utility/move.h>
 
@@ -32,11 +34,8 @@ template <class _InputIterator,
           class _Size,
           class _Func,
           __enable_if_t<!__has_random_access_iterator_category<_InputIterator>::value &&
-                            (!__is_segmented_iterator<_InputIterator>::value
-                             //   || !__has_random_access_iterator_category<
-                             //      typename __segmented_iterator_traits<_InputIterator>::__local_iterator>::value
-                             ), // TODO: __segmented_iterator_traits<_InputIterator> results in template instantiation
-                                // during SFINAE, which is a hard error to be fixed. Once fixed, we should uncomment.
+                            _Or< _Not<__is_segmented_iterator<_InputIterator> >,
+                                 _Not<__has_random_access_local_iterator<_InputIterator> > >::value,
                         int> = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _InputIterator
 __for_each_n(_InputIterator __first, _Size __orig_n, _Func& __f) {

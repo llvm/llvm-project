@@ -18,6 +18,7 @@
 #include <deque>
 #include <functional>
 #include <iterator>
+#include <list>
 #include <ranges>
 #include <vector>
 
@@ -46,15 +47,24 @@ struct deque_test {
 };
 
 /*TEST_CONSTEXPR_CXX26*/
-void test_segmented_deque_iterator() { // TODO: Mark as TEST_CONSTEXPR_CXX26 once std::deque is constexpr
-  // check that segmented deque iterators work properly
-  int sizes[] = {0, 1, 2, 1023, 1024, 1025, 2047, 2048, 2049};
-  for (const int size : sizes) {
-    std::deque<int> d(size);
-    int index = 0;
+void test_deque_and_join_view_iterators() { // TODO: Mark as TEST_CONSTEXPR_CXX26 once std::deque is constexpr
+  {                                         // Verify that segmented deque iterators work properly
+    int sizes[] = {0, 1, 2, 1023, 1024, 1025, 2047, 2048, 2049};
+    for (const int size : sizes) {
+      std::deque<int> d(size);
+      int index = 0;
 
-    std::for_each_n(d.begin(), d.size(), deque_test(d, index));
+      std::for_each_n(d.begin(), d.size(), deque_test(d, index));
+    }
   }
+#if TEST_STD_VER >= 20
+  { // Verify that join_view of lists work properly. Note that join_view of (non-random access) lists does
+    // not produce segmented iterators.
+    std::list<std::list<int>> lst = {{}, {0}, {1, 2}, {}, {3, 4, 5}, {6, 7, 8, 9}, {10}, {11, 12, 13}};
+    auto v                        = lst | std::views::join;
+    std::for_each_n(v.begin(), std::ranges::distance(v), [i = 0](int& a) mutable { assert(a == i++); });
+  }
+#endif
 }
 
 TEST_CONSTEXPR_CXX20 bool test() {
@@ -108,11 +118,11 @@ TEST_CONSTEXPR_CXX20 bool test() {
   }
 
   if (!TEST_IS_CONSTANT_EVALUATED) // TODO: Use TEST_STD_AT_LEAST_26_OR_RUNTIME_EVALUATED when std::deque is made constexpr
-    test_segmented_deque_iterator();
+    test_deque_and_join_view_iterators();
 
 #if TEST_STD_VER >= 20
-  {
-    std::vector<std::vector<int>> vec = {{0}, {1, 2}, {3, 4, 5}, {6, 7, 8, 9}, {10}, {11, 12, 13}};
+  { // join_views of (random-access) vectors yield segmented iterators
+    std::vector<std::vector<int>> vec = {{}, {0}, {1, 2}, {}, {3, 4, 5}, {6, 7, 8, 9}, {10}, {11, 12, 13}};
     auto v                            = vec | std::views::join;
     std::for_each_n(v.begin(), std::ranges::distance(v), [i = 0](int& a) mutable { assert(a == i++); });
   }
