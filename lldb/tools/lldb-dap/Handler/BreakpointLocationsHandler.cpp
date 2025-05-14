@@ -122,9 +122,9 @@ void BreakpointLocationsRequestHandler::AddAssemblyBreakpointLocations(
 
   // start_line is relative to the symbol's start address
   lldb::SBInstructionList insts = symbol.GetInstructions(dap.target);
-  for (uint32_t i = start_line - 1; i < insts.GetSize() && i < (end_line - 1);
+  for (uint32_t i = start_line - 1; i < insts.GetSize() && i <= (end_line - 1);
        ++i) {
-    locations.emplace_back(i, 0);
+    locations.emplace_back(i, 1);
   }
 }
 

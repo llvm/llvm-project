@@ -28,21 +28,20 @@ SetBreakpointsRequestHandler::Run(
   const auto &source = args.source;
   std::vector<protocol::Breakpoint> response_breakpoints;
   if (source.sourceReference)
-    response_breakpoints = SetAssemblyBreakpoints(
-        source.sourceReference.value(), args.breakpoints);
+    response_breakpoints = SetAssemblyBreakpoints(source, args.breakpoints);
   else if (source.path)
-    response_breakpoints =
-        SetSourceBreakpoints(source.path.value(), args.breakpoints);
+    response_breakpoints = SetSourceBreakpoints(source, args.breakpoints);
 
   return protocol::SetBreakpointsResponseBody{std::move(response_breakpoints)};
 }
 
 std::vector<protocol::Breakpoint>
 SetBreakpointsRequestHandler::SetSourceBreakpoints(
-    const std::string &path,
+    const protocol::Source &source,
     const std::optional<std::vector<protocol::SourceBreakpoint>> &breakpoints)
     const {
   std::vector<protocol::Breakpoint> response_breakpoints;
+  std::string path = source.path.value_or("");
 
   // Decode the source breakpoint infos for this "setBreakpoints" request
   SourceBreakpointMap request_bps;
@@ -96,10 +95,11 @@ SetBreakpointsRequestHandler::SetSourceBreakpoints(
 
 std::vector<protocol::Breakpoint>
 SetBreakpointsRequestHandler::SetAssemblyBreakpoints(
-    int64_t sourceReference,
+    const protocol::Source &source,
     const std::optional<std::vector<protocol::SourceBreakpoint>> &breakpoints)
     const {
   std::vector<protocol::Breakpoint> response_breakpoints;
+  int64_t sourceReference = source.sourceReference.value_or(0);
 
   lldb::SBProcess process = dap.target.GetProcess();
   lldb::SBThread thread =
@@ -114,14 +114,14 @@ SetBreakpointsRequestHandler::SetAssemblyBreakpoints(
     return response_breakpoints; // Not yet supporting breakpoints in assembly
                                  // without a valid symbol
 
-  SourceBreakpointMap request_bps;
+  llvm::DenseMap<uint32_t, SourceBreakpoint> request_bps;
   if (breakpoints) {
     for (const auto &bp : *breakpoints) {
       SourceBreakpoint src_bp(dap, bp);
-      std::pair<uint32_t, uint32_t> bp_pos(src_bp.GetLine(), 0);
-      request_bps.try_emplace(bp_pos, src_bp);
+      request_bps.try_emplace(src_bp.GetLine(), src_bp);
       const auto [iv, inserted] =
-          dap.assembly_breakpoints[sourceReference].try_emplace(bp_pos, src_bp);
+          dap.assembly_breakpoints[sourceReference].try_emplace(
+              src_bp.GetLine(), src_bp);
       // We check if this breakpoint already exists to update it
       if (inserted)
         iv->getSecond().SetBreakpoint(symbol);
@@ -129,15 +129,11 @@ SetBreakpointsRequestHandler::SetAssemblyBreakpoints(
         iv->getSecond().UpdateBreakpoint(src_bp);
 
       protocol::Breakpoint response_bp = iv->getSecond().ToProtocolBreakpoint();
-      protocol::Source source;
-      source.sourceReference = sourceReference;
-      source.name = symbol.GetName();
-      response_bp.source = std::move(source);
-
+      response_bp.source = source;
       if (!response_bp.line)
         response_bp.line = src_bp.GetLine();
-      if (!response_bp.column)
-        response_bp.column = src_bp.GetColumn();
+      if (bp.column)
+        response_bp.column = *bp.column;
       response_breakpoints.push_back(response_bp);
     }
   }

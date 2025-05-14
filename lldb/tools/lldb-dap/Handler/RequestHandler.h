@@ -391,11 +391,11 @@ public:
   Run(const protocol::SetBreakpointsArguments &args) const override;
 
   std::vector<protocol::Breakpoint> SetSourceBreakpoints(
-      const std::string &path,
+      const protocol::Source &source,
       const std::optional<std::vector<protocol::SourceBreakpoint>> &breakpoints)
       const;
   std::vector<protocol::Breakpoint> SetAssemblyBreakpoints(
-      int64_t sourceReference,
+      const protocol::Source &source,
       const std::optional<std::vector<protocol::SourceBreakpoint>> &breakpoints)
       const;
 };

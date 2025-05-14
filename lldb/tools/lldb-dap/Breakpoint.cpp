@@ -9,10 +9,12 @@
 #include "Breakpoint.h"
 #include "DAP.h"
 #include "JSONUtils.h"
+#include "LLDBUtils.h"
 #include "lldb/API/SBAddress.h"
 #include "lldb/API/SBBreakpointLocation.h"
 #include "lldb/API/SBLineEntry.h"
 #include "lldb/API/SBMutex.h"
+#include "lldb/lldb-enumerations.h"
 #include "llvm/ADT/StringExtras.h"
 #include <cstddef>
 #include <cstdint>
@@ -63,14 +65,43 @@ protocol::Breakpoint Breakpoint::ToProtocolBreakpoint() {
     std::string formatted_addr =
         "0x" + llvm::utohexstr(bp_addr.GetLoadAddress(m_bp.GetTarget()));
     breakpoint.instructionReference = formatted_addr;
+
+    lldb::StopDisassemblyType stop_disassembly_display =
+        GetStopDisassemblyDisplay(m_dap.debugger);
     auto line_entry = bp_addr.GetLineEntry();
-    const auto line = line_entry.GetLine();
-    if (line != UINT32_MAX)
-      breakpoint.line = line;
-    const auto column = line_entry.GetColumn();
-    if (column != 0)
-      breakpoint.column = column;
-    breakpoint.source = CreateSource(line_entry);
+    if (!ShouldDisplayAssemblySource(line_entry, stop_disassembly_display)) {
+      const auto line = line_entry.GetLine();
+      if (line != UINT32_MAX)
+        breakpoint.line = line;
+      const auto column = line_entry.GetColumn();
+      if (column != 0)
+        breakpoint.column = column;
+      breakpoint.source = CreateSource(line_entry);
+    } else {
+      // Breakpoint made by assembly
+      auto symbol_context = bp_addr.GetSymbolContext(
+          lldb::eSymbolContextSymbol | lldb::eSymbolContextModule);
+      if (symbol_context.IsValid()) {
+        auto symbol = symbol_context.GetSymbol();
+        breakpoint.line =
+            m_bp.GetTarget()
+                .ReadInstructions(symbol.GetStartAddress(), bp_addr, nullptr)
+                .GetSize() +
+            1;
+        protocol::Source source;
+        source.name = symbol.GetName();
+
+        auto module = symbol_context.GetModule();
+        if (module.IsValid()) {
+          std::string path = module.GetFileSpec().GetDirectory();
+          path += "/";
+          path += module.GetFileSpec().GetFilename();
+          source.path = std::move(path);
+        }
+
+        breakpoint.source = std::move(source);
+      }
+    }
   }
 
   return breakpoint;
