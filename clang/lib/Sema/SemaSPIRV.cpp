@@ -29,13 +29,14 @@ namespace clang {
 
 SemaSPIRV::SemaSPIRV(Sema &S) : SemaBase(S) {}
 
-/// Checks if the first `NumArgsToCheck` arguments of a function call are of vector type.
-/// If any of the arguments is not a vector type, it emits a diagnostic error and returns `true`.
-/// Otherwise, it returns `false`.
+/// Checks if the first `NumArgsToCheck` arguments of a function call are of
+/// vector type. If any of the arguments is not a vector type, it emits a
+/// diagnostic error and returns `true`. Otherwise, it returns `false`.
 ///
 /// \param TheCall The function call expression to check.
 /// \param NumArgsToCheck The number of arguments to check for vector type.
-/// \return `true` if any of the arguments is not a vector type, `false` otherwise.
+/// \return `true` if any of the arguments is not a vector type, `false`
+/// otherwise.
 
 bool SemaSPIRV::CheckVectorArgs(CallExpr *TheCall, unsigned NumArgsToCheck) {
   for (unsigned i = 0; i < NumArgsToCheck; ++i) {
@@ -187,7 +188,8 @@ bool SemaSPIRV::CheckSPIRVBuiltinFunctionCall(const TargetInfo &TI,
     if (CheckVectorArgs(TheCall, 2))
       return true;
 
-    QualType RetTy = TheCall->getArg(0)->getType()->getAs<VectorType>()->getElementType();
+    QualType RetTy =
+        TheCall->getArg(0)->getType()->getAs<VectorType>()->getElementType();
     TheCall->setType(RetTy);
     break;
   }
@@ -199,7 +201,8 @@ bool SemaSPIRV::CheckSPIRVBuiltinFunctionCall(const TargetInfo &TI,
     if (CheckVectorArgs(TheCall, 1))
       return true;
 
-    QualType RetTy = TheCall->getArg(0)->getType()->getAs<VectorType>()->getElementType();
+    QualType RetTy =
+        TheCall->getArg(0)->getType()->getAs<VectorType>()->getElementType();
     TheCall->setType(RetTy);
     break;
   }
@@ -215,8 +218,7 @@ bool SemaSPIRV::CheckSPIRVBuiltinFunctionCall(const TargetInfo &TI,
     QualType ArgTyC = C.get()->getType();
     if (!ArgTyC->isFloatingType()) {
       SemaRef.Diag(C.get()->getBeginLoc(), diag::err_builtin_invalid_arg_type)
-          << 3 << /* scalar*/ 5 << /* no int */ 0 << /* fp */ 1
-          << ArgTyC;
+          << 3 << /* scalar*/ 5 << /* no int */ 0 << /* fp */ 1 << ArgTyC;
       return true;
     }
 
