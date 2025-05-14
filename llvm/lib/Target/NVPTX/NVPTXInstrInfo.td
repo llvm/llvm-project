@@ -714,6 +714,23 @@ let hasSideEffects = false in {
                                         # type # " \t$dst, $src;", []>;
   }
   
+  // FP4 conversions.
+  def CVT_e2m1x2_f32_sf : NVPTXInst<(outs Int16Regs:$dst),
+      (ins Float32Regs:$src1, Float32Regs:$src2, CvtMode:$mode),
+      !strconcat("{{ \n\t",
+                 ".reg .b8 \t%e2m1x2_out; \n\t",
+                 "cvt${mode:base}.satfinite${mode:relu}.e2m1x2.f32 \t%e2m1x2_out, $src1, $src2; \n\t",
+                 "cvt.u16.u8 \t$dst, %e2m1x2_out; \n\t",
+                 "}}"), []>;
+
+  def CVT_f16x2_e2m1x2 : NVPTXInst<(outs Int32Regs:$dst),
+      (ins Int16Regs:$src, CvtMode:$mode),
+      !strconcat("{{ \n\t",
+                 ".reg .b8 \t%e2m1x2_in; \n\t",
+                 "cvt.u8.u16 \t%e2m1x2_in, $src; \n\t",
+                 "cvt${mode:base}${mode:relu}.f16x2.e2m1x2 \t$dst, %e2m1x2_in; \n\t",
+                 "}}"), []>;
+
   // UE8M0x2 conversions.
   class CVT_f32_to_ue8m0x2<string sat = ""> :
     NVPTXInst<(outs Int16Regs:$dst),
