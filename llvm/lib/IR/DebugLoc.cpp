@@ -135,6 +135,7 @@ DebugLoc DebugLoc::appendInlinedAt(const DebugLoc &DL, DILocation *InlinedAt,
   // Starting from the top, rebuild the nodes to point to the new inlined-at
   // location (then rebuilding the rest of the chain behind it) and update the
   // map of already-constructed inlined-at nodes.
+  // Key Instructions: InlinedAt fields don't need atom info.
   for (const DILocation *MD : reverse(InlinedAtLocations))
     Cache[MD] = Last = DILocation::getDistinct(
         Ctx, MD->getLine(), MD->getColumn(), MD->getScope(), Last);

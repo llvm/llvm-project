@@ -215,7 +215,7 @@ struct CollapseShapeOpInterface
           MemRefType::get(collapseShapeOp.getSrcType().getShape(),
                           collapseShapeOp.getSrcType().getElementType(),
                           AffineMap(), bufferType.getMemorySpace());
-      buffer = rewriter.create<bufferization::ToMemrefOp>(
+      buffer = rewriter.create<bufferization::ToBufferOp>(
           op->getLoc(), memrefType, *tensorAlloc);
     }
 
@@ -491,7 +491,7 @@ struct FromElementsOpInterface
         bufferization::getBufferType(*tensorAlloc, options);
     if (failed(memrefType))
       return failure();
-    Value buffer = rewriter.create<bufferization::ToMemrefOp>(
+    Value buffer = rewriter.create<bufferization::ToBufferOp>(
         op->getLoc(), *memrefType, *tensorAlloc);
 
     // Case: tensor<0xelem_type>.
@@ -894,7 +894,7 @@ struct ReshapeOpInterface
           srcType.getShape(), srcType.getElementType(), AffineMap(),
           cast<BaseMemRefType>(srcBuffer->getType()).getMemorySpace());
       srcBuffer = rewriter
-                      .create<bufferization::ToMemrefOp>(
+                      .create<bufferization::ToBufferOp>(
                           op->getLoc(), memrefType, *tensorAlloc)
                       .getResult();
     }

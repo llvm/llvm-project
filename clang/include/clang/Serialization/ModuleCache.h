@@ -12,6 +12,8 @@
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 
+#include <ctime>
+
 namespace llvm {
 class AdvisoryLock;
 } // namespace llvm
@@ -31,11 +33,20 @@ public:
   virtual std::unique_ptr<llvm::AdvisoryLock>
   getLock(StringRef ModuleFilename) = 0;
 
+  // TODO: Consider exposing a "validation lock" API to prevent multiple clients
+  // concurrently noticing an out-of-date module file and validating its inputs.
+
+  /// Checks whether the inputs of the module file were marked as validated.
+  virtual bool isMarkedUpToDate(StringRef ModuleFilename) = 0;
+
+  /// Marks the inputs of the module file as validated.
+  virtual void markUpToDate(StringRef ModuleFilename) = 0;
+
   /// Returns this process's view of the module cache.
   virtual InMemoryModuleCache &getInMemoryModuleCache() = 0;
   virtual const InMemoryModuleCache &getInMemoryModuleCache() const = 0;
 
-  // TODO: Virtualize writing/reading PCM files, timestamping, pruning, etc.
+  // TODO: Virtualize writing/reading PCM files, pruning, etc.
 
   virtual ~ModuleCache() = default;
 };
@@ -44,7 +55,8 @@ public:
 /// operated on by multiple processes. This instance must be used across all
 /// \c CompilerInstance instances participating in building modules for single
 /// translation unit in order to share the same \c InMemoryModuleCache.
-IntrusiveRefCntPtr<ModuleCache> createCrossProcessModuleCache();
+IntrusiveRefCntPtr<ModuleCache>
+createCrossProcessModuleCache(std::time_t BuildSessionTimestamp);
 } // namespace clang
 
 #endif

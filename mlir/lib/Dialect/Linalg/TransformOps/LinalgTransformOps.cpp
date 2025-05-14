@@ -1211,7 +1211,7 @@ DiagnosedSilenceableFailure transform::LinalgCopyToMemrefOp::applyToOne(
   // linalg.copy supports different element types on source/dest whereas
   // memref.copy does not, so we must check that the source and dest types can
   // be handled by memref.copy and otherwise reject the transformation.
-  if (!dyn_cast<ShapedType>(input.getType())) {
+  if (!isa<ShapedType>(input.getType())) {
     DiagnosedSilenceableFailure diag =
         emitSilenceableError()
         << "cannot transform a linalg.copy which input has no shape";
@@ -1220,7 +1220,7 @@ DiagnosedSilenceableFailure transform::LinalgCopyToMemrefOp::applyToOne(
   }
 
   // linalg.copy destination must be a shaped type.
-  assert(dyn_cast<ShapedType>(output.getType()));
+  assert(isa<ShapedType>(output.getType()));
 
   if (cast<ShapedType>(input.getType()).getElementType() !=
       cast<ShapedType>(output.getType()).getElementType()) {
@@ -2288,7 +2288,6 @@ transform::ScalarizeOp::applyToOne(transform::TransformRewriter &rewriter,
     }
     return tileSizes;
   });
-  SmallVector<int64_t> emptyTileSizes;
   rewriter.setInsertionPoint(target);
   FailureOr<scf::SCFTilingResult> maybeTilingResult = tileUsingSCF(
       rewriter, cast<TilingInterface>(target.getOperation()), tilingOptions);
@@ -2347,7 +2346,6 @@ transform::RewriteInDestinationPassingStyleOp::applyToOne(
     transform::TransformRewriter &rewriter, Operation *target,
     transform::ApplyToEachResultList &results,
     transform::TransformState &state) {
-  SmallVector<Operation *> res;
   rewriter.setInsertionPoint(target);
   FailureOr<Operation *> maybeResult =
       TypeSwitch<Operation *, FailureOr<Operation *>>(target)

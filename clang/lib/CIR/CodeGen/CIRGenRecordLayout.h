@@ -33,9 +33,23 @@ private:
   /// field no. This info is populated by the record builder.
   llvm::DenseMap<const clang::FieldDecl *, unsigned> fieldIdxMap;
 
+  /// False if any direct or indirect subobject of this class, when considered
+  /// as a complete object, requires a non-zero bitpattern when
+  /// zero-initialized.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned zeroInitializable : 1;
+
+  /// False if any direct or indirect subobject of this class, when considered
+  /// as a base subobject, requires a non-zero bitpattern when zero-initialized.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned zeroInitializableAsBase : 1;
+
 public:
-  CIRGenRecordLayout(cir::RecordType completeObjectType)
-      : completeObjectType(completeObjectType) {}
+  CIRGenRecordLayout(cir::RecordType completeObjectType, bool zeroInitializable,
+                     bool zeroInitializableAsBase)
+      : completeObjectType(completeObjectType),
+        zeroInitializable(zeroInitializable),
+        zeroInitializableAsBase(zeroInitializableAsBase) {}
 
   /// Return the "complete object" LLVM type associated with
   /// this record.
@@ -47,6 +61,14 @@ public:
     assert(fieldIdxMap.count(fd) && "Invalid field for record!");
     return fieldIdxMap.lookup(fd);
   }
+
+  /// Check whether this struct can be C++ zero-initialized
+  /// with a zeroinitializer.
+  bool isZeroInitializable() const { return zeroInitializable; }
+
+  /// Check whether this struct can be C++ zero-initialized
+  /// with a zeroinitializer when considered as a base subobject.
+  bool isZeroInitializableAsBase() const { return zeroInitializableAsBase; }
 };
 
 } // namespace clang::CIRGen

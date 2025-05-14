@@ -486,8 +486,7 @@ public:
 
       // Is there a variable that wants a location for this value? If not, skip.
       ValueLocPair Probe(VNum, LocationAndQuality());
-      auto VIt = std::lower_bound(ValueToLoc.begin(), ValueToLoc.end(), Probe,
-                                  ValueToLocSort);
+      auto VIt = llvm::lower_bound(ValueToLoc, Probe, ValueToLocSort);
       if (VIt == ValueToLoc.end() || VIt->first != VNum)
         continue;
 
@@ -2588,8 +2587,7 @@ void InstrRefBasedLDV::placeMLocPHIs(
   auto CollectPHIsForLoc = [&](LocIdx L) {
     // Collect the set of defs.
     SmallPtrSet<MachineBasicBlock *, 32> DefBlocks;
-    for (unsigned int I = 0; I < OrderToBB.size(); ++I) {
-      MachineBasicBlock *MBB = OrderToBB[I];
+    for (MachineBasicBlock *MBB : OrderToBB) {
       const auto &TransferFunc = MLocTransfer[MBB->getNumber()];
       if (TransferFunc.contains(L))
         DefBlocks.insert(MBB);
@@ -3800,8 +3798,7 @@ bool InstrRefBasedLDV::ExtendRanges(MachineFunction &MF,
   // To mirror old LiveDebugValues, enumerate variables in RPOT order. Otherwise
   // the order is unimportant, it just has to be stable.
   unsigned VarAssignCount = 0;
-  for (unsigned int I = 0; I < OrderToBB.size(); ++I) {
-    auto *MBB = OrderToBB[I];
+  for (MachineBasicBlock *MBB : OrderToBB) {
     auto *VTracker = &vlocs[MBB->getNumber()];
     // Collect each variable with a DBG_VALUE in this block.
     for (auto &idx : VTracker->Vars) {

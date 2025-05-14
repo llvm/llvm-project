@@ -40,8 +40,7 @@ CGBlockInfo::CGBlockInfo(const BlockDecl *block, StringRef name)
 
   // Skip asm prefix, if any.  'name' is usually taken directly from
   // the mangled name of the enclosing function.
-  if (!name.empty() && name[0] == '\01')
-    name = name.substr(1);
+  name.consume_front("\01");
 }
 
 // Anchor the vtable to this translation unit.

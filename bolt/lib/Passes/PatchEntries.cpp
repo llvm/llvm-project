@@ -39,7 +39,8 @@ Error PatchEntries::runOnFunctions(BinaryContext &BC) {
     bool NeedsPatching = llvm::any_of(
         llvm::make_second_range(BC.getBinaryFunctions()),
         [&](BinaryFunction &BF) {
-          return !BC.shouldEmit(BF) && !BF.hasExternalRefRelocations();
+          return (!BC.shouldEmit(BF) && !BF.hasExternalRefRelocations()) ||
+                 BF.needsPatch();
         });
 
     if (!NeedsPatching)
@@ -66,7 +67,7 @@ Error PatchEntries::runOnFunctions(BinaryContext &BC) {
 
     // Check if we can skip patching the function.
     if (!opts::ForcePatch && !Function.hasEHRanges() &&
-        Function.getSize() < PatchThreshold)
+        !Function.needsPatch() && Function.getSize() < PatchThreshold)
       continue;
 
     // List of patches for function entries. We either successfully patch

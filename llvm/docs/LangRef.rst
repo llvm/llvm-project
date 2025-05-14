@@ -700,7 +700,7 @@ Global Variables
 Global variables define regions of memory allocated at compilation time
 instead of run-time.
 
-Global variable definitions must be initialized.
+Global variable definitions must be initialized with a sized value.
 
 Global variables in other translation units can also be declared, in which
 case they don't have an initializer.
@@ -3133,6 +3133,9 @@ as follows:
     program memory space defaults to the default address space of 0,
     which corresponds to a Von Neumann architecture that has code
     and data in the same space.
+
+.. _globals_addrspace:
+
 ``G<address space>``
     Specifies the address space to be used by default when creating global
     variables. If omitted, the globals address space defaults to the default
@@ -5776,6 +5779,7 @@ and GCC likely indicates a bug in LLVM.
 
 Target-independent:
 
+- ``a``: Print a memory reference. Targets might customize the output.
 - ``c``: Print an immediate integer constant unadorned, without
   the target-specific immediate punctuation (e.g. no ``$`` prefix).
 - ``n``: Negate and print immediate integer constant unadorned, without the
@@ -5913,6 +5917,8 @@ target-independent modifiers.
 
 X86:
 
+- ``a``: Print a memory reference. This displays as ``sym(%rip)`` for x86-64.
+  i386 should only use this with the static relocation model.
 - ``c``: Print an unadorned integer or symbol name. (The latter is
   target-specific behavior for this typically target-independent modifier).
 - ``A``: Print a register name with a '``*``' before it.
@@ -6360,6 +6366,8 @@ The following ``tag:`` values are valid:
   DW_TAG_enumeration_type = 4
   DW_TAG_structure_type   = 19
   DW_TAG_union_type       = 23
+  DW_TAG_variant          = 25
+  DW_TAG_variant_part     = 51
 
 For ``DW_TAG_array_type``, the ``elements:`` should be :ref:`subrange
 descriptors <DISubrange>` or :ref:`subrange descriptors
@@ -6394,6 +6402,16 @@ For ``DW_TAG_structure_type``, ``DW_TAG_class_type``, and
 <DIDerivedType>` with ``tag: DW_TAG_member``, ``tag: DW_TAG_inheritance``, or
 ``tag: DW_TAG_friend``; or :ref:`subprograms <DISubprogram>` with
 ``isDefinition: false``.
+
+``DW_TAG_variant_part`` introduces a variant part of a structure type.
+This should have a discriminant, a member that is used to decide which
+elements are active.  The elements of the variant part should each be
+a ``DW_TAG_member``; if a member has a non-null ``ExtraData``, then it
+is a ``ConstantInt`` or ``ConstantDataArray`` indicating the values of
+the discriminant member that cause the activation of this branch.  A
+member itself may be of composite type with tag ``DW_TAG_variant``; in
+this case the members of that composite type are inlined into the
+current one.
 
 .. _DISubrange:
 
@@ -15046,7 +15064,8 @@ Syntax:
 
 ::
 
-      declare ptr @llvm.thread.pointer()
+      declare ptr @llvm.thread.pointer.p0()
+      declare ptr addrspace(5) @llvm.thread.pointer.p5()
 
 Overview:
 """""""""
@@ -15063,7 +15082,8 @@ specific: it may point to the start of TLS area, to the end, or somewhere
 in the middle.  Depending on the target, this intrinsic may read a register,
 call a helper function, read from an alternate memory space, or perform
 other operations necessary to locate the TLS area.  Not all targets support
-this intrinsic.
+this intrinsic.  The address space must be the :ref:`globals address space
+<globals_addrspace>`.
 
 '``llvm.call.preallocated.setup``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

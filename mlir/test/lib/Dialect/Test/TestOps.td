@@ -243,16 +243,6 @@ def FloatElementsAttrOp : TEST_Op<"float_elements_attr"> {
   );
 }
 
-def ContainingIntPolynomialAttrOp : TEST_Op<"containing_int_polynomial_attr"> {
-  let arguments = (ins NestedPolynomialAttr:$attr);
-  let assemblyFormat = "$attr attr-dict";
-}
-
-def ContainingIntPolynomialAttr2Op : TEST_Op<"containing_int_polynomial_attr2"> {
-  let arguments = (ins NestedPolynomialAttr2:$attr);
-  let assemblyFormat = "$attr attr-dict";
-}
-
 // A pattern that updates dense<[3.0, 4.0]> to dense<[5.0, 6.0]>.
 // This tests both matching and generating float elements attributes.
 def UpdateFloatElementsAttr : Pat<
@@ -332,6 +322,10 @@ def DenseArrayAttrOp : TEST_Op<"dense_array_attr"> {
    `i32attr` `=` $i32attr `i64attr` `=` $i64attr  `f32attr` `=` $f32attr
    `f64attr` `=` $f64attr `emptyattr` `=` $emptyattr attr-dict
   }];
+}
+
+def SlashAttrOp : TEST_Op<"slash_attr"> {
+  let arguments = (ins SlashAttr:$attr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1849,6 +1843,20 @@ def : Pat<
                     ConstantAttr<I32Attr, "2">:$attr1),
   (MixedVOperandOp5 $input2a, $input2b, $input1b, $attr1,
                     ConstantStrAttr<StrAttr, "MatchMultiVariadicSubSymbol">)>;
+
+def MixedVOperandOp7 : TEST_Op<"mixed_variadic_optional_in7",
+                               [AttrSizedOperandSegments]> {
+  let arguments = (ins
+    Variadic<I32>:$input1,
+    Optional<I32>:$input2,
+    I32Attr:$attr1
+  );
+}
+
+def : Pat<
+  (MixedVOperandOp7 $input1, $input2, ConstantAttr<I32Attr, "2">:$attr1),
+  (MixedVOperandOp6 $input1, (variadic $input2), $attr1),
+  [(Constraint<CPred<"$0 != Value()">> $input2)]>;
 
 //===----------------------------------------------------------------------===//
 // Test Patterns (either)

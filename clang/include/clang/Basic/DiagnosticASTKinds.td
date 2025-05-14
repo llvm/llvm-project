@@ -478,16 +478,23 @@ def warn_odr_function_type_inconsistent : Warning<
   "external function %0 declared with incompatible types in different "
   "translation units (%1 vs. %2)">,
   InGroup<ODR>;
+def warn_odr_tag_type_with_attributes : Warning<
+  "type %0 has %select{an attribute|a member with an attribute}1 which "
+  "currently causes the types to be treated as though they are incompatible">,
+  InGroup<ODR>, DefaultError;
+def note_odr_attr_here : Note<"attribute %0 here">;
 def err_odr_tag_type_inconsistent
-    : Error<"type %0 has incompatible definitions in different translation "
-            "units">;
+    : Error<"type %0 has incompatible definitions%select{| in different "
+            "translation units}1">;
 def warn_odr_tag_type_inconsistent
-    : Warning<"type %0 has incompatible definitions in different translation "
-              "units">,
+    : Warning<"type %0 has incompatible definitions%select{| in different "
+              "translation units}1">,
       InGroup<ODR>;
 def note_odr_tag_kind_here: Note<
   "%0 is a %select{struct|interface|union|class|enum}1 here">;
 def note_odr_field : Note<"field %0 has type %1 here">;
+def note_odr_field_bit_width : Note<"bit-field %0 has bit-width %1 here">;
+def note_odr_field_not_bit_field : Note<"field %0 is not a bit-field">;
 def note_odr_field_name : Note<"field has name %0 here">;
 def note_odr_missing_field : Note<"no corresponding field here">;
 def note_odr_base : Note<"class has base type %0">;

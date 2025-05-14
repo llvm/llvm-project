@@ -23,6 +23,7 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
 
+#include "CIRGenFunctionInfo.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/MLIRContext.h"
@@ -247,8 +248,22 @@ void CIRGenModule::emitGlobalFunctionDefinition(clang::GlobalDecl gd,
              "function definition with a non-identifier for a name");
     return;
   }
-  cir::FuncType funcType =
-      cast<cir::FuncType>(convertType(funcDecl->getType()));
+
+  cir::FuncType funcType;
+  // TODO: Move this to arrangeFunctionDeclaration when it is
+  // implemented.
+  // When declaring a function without a prototype, always use a
+  // non-variadic type.
+  if (CanQual<FunctionNoProtoType> noProto =
+          funcDecl->getType()
+              ->getCanonicalTypeUnqualified()
+              .getAs<FunctionNoProtoType>()) {
+    const CIRGenFunctionInfo &fi = getTypes().arrangeCIRFunctionInfo(
+        noProto->getReturnType(), {}, RequiredArgs::All);
+    funcType = getTypes().getFunctionType(fi);
+  } else {
+    funcType = cast<cir::FuncType>(convertType(funcDecl->getType()));
+  }
 
   cir::FuncOp funcOp = dyn_cast_if_present<cir::FuncOp>(op);
   if (!funcOp || funcOp.getFunctionType() != funcType) {
@@ -267,6 +282,40 @@ void CIRGenModule::emitGlobalFunctionDefinition(clang::GlobalDecl gd,
 
 mlir::Operation *CIRGenModule::getGlobalValue(StringRef name) {
   return mlir::SymbolTable::lookupSymbolIn(theModule, name);
+}
+
+cir::GlobalOp CIRGenModule::createGlobalOp(CIRGenModule &cgm,
+                                           mlir::Location loc, StringRef name,
+                                           mlir::Type t,
+                                           mlir::Operation *insertPoint) {
+  cir::GlobalOp g;
+  CIRGenBuilderTy &builder = cgm.getBuilder();
+
+  {
+    mlir::OpBuilder::InsertionGuard guard(builder);
+
+    // Some global emissions are triggered while emitting a function, e.g.
+    // void s() { const char *s = "yolo"; ... }
+    //
+    // Be sure to insert global before the current function
+    CIRGenFunction *curCGF = cgm.curCGF;
+    if (curCGF)
+      builder.setInsertionPoint(curCGF->curFn);
+
+    g = builder.create<cir::GlobalOp>(loc, name, t);
+    if (!curCGF) {
+      if (insertPoint)
+        cgm.getModule().insert(insertPoint, g);
+      else
+        cgm.getModule().push_back(g);
+    }
+
+    // Default to private until we can judge based on the initializer,
+    // since MLIR doesn't allow public declarations.
+    mlir::SymbolTable::setSymbolVisibility(
+        g, mlir::SymbolTable::Visibility::Private);
+  }
+  return g;
 }
 
 /// If the specified mangled name is not in the module,
@@ -324,8 +373,15 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
       return entry;
   }
 
-  errorNYI(d->getSourceRange(), "reference of undeclared global");
-  return {};
+  mlir::Location loc = getLoc(d->getSourceRange());
+
+  // mlir::SymbolTable::Visibility::Public is the default, no need to explicitly
+  // mark it as such.
+  cir::GlobalOp gv =
+      CIRGenModule::createGlobalOp(*this, loc, mangledName, ty,
+                                   /*insertPoint=*/entry.getOperation());
+
+  return gv;
 }
 
 cir::GlobalOp
@@ -365,46 +421,125 @@ mlir::Value CIRGenModule::getAddrOfGlobalVar(const VarDecl *d, mlir::Type ty,
 void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
                                            bool isTentative) {
   const QualType astTy = vd->getType();
-  const mlir::Type type = convertType(vd->getType());
-  if (vd->getIdentifier()) {
-    StringRef name = getMangledName(GlobalDecl(vd));
-    auto varOp =
-        builder.create<cir::GlobalOp>(getLoc(vd->getSourceRange()), name, type);
-    // TODO(CIR): This code for processing initial values is a placeholder
-    // until class ConstantEmitter is upstreamed and the code for processing
-    // constant expressions is filled out.  Only the most basic handling of
-    // certain constant expressions is implemented for now.
-    const VarDecl *initDecl;
-    const Expr *initExpr = vd->getAnyInitializer(initDecl);
-    mlir::Attribute initializer;
-    if (initExpr) {
-      if (APValue *value = initDecl->evaluateValue()) {
-        ConstantEmitter emitter(*this);
-        initializer = emitter.tryEmitPrivateForMemory(*value, astTy);
+
+  if (getLangOpts().OpenCL || getLangOpts().OpenMPIsTargetDevice) {
+    errorNYI(vd->getSourceRange(), "emit OpenCL/OpenMP global variable");
+    return;
+  }
+
+  // Whether the definition of the variable is available externally.
+  // If yes, we shouldn't emit the GloablCtor and GlobalDtor for the variable
+  // since this is the job for its original source.
+  bool isDefinitionAvailableExternally =
+      astContext.GetGVALinkageForVariable(vd) == GVA_AvailableExternally;
+  assert(!cir::MissingFeatures::needsGlobalCtorDtor());
+
+  // It is useless to emit the definition for an available_externally variable
+  // which can't be marked as const.
+  if (isDefinitionAvailableExternally &&
+      (!vd->hasConstantInitialization() ||
+       // TODO: Update this when we have interface to check constexpr
+       // destructor.
+       vd->needsDestruction(astContext) ||
+       !vd->getType().isConstantStorage(astContext, true, true)))
+    return;
+
+  mlir::Attribute init;
+  const VarDecl *initDecl;
+  const Expr *initExpr = vd->getAnyInitializer(initDecl);
+
+  std::optional<ConstantEmitter> emitter;
+
+  assert(!cir::MissingFeatures::cudaSupport());
+
+  if (vd->hasAttr<LoaderUninitializedAttr>()) {
+    errorNYI(vd->getSourceRange(), "loader uninitialized attribute");
+    return;
+  } else if (!initExpr) {
+    // This is a tentative definition; tentative definitions are
+    // implicitly initialized with { 0 }.
+    //
+    // Note that tentative definitions are only emitted at the end of
+    // a translation unit, so they should never have incomplete
+    // type. In addition, EmitTentativeDefinition makes sure that we
+    // never attempt to emit a tentative definition if a real one
+    // exists. A use may still exists, however, so we still may need
+    // to do a RAUW.
+    assert(!astTy->isIncompleteType() && "Unexpected incomplete type");
+    init = builder.getZeroInitAttr(convertType(vd->getType()));
+  } else {
+    emitter.emplace(*this);
+    mlir::Attribute initializer = emitter->tryEmitForInitializer(*initDecl);
+    if (!initializer) {
+      QualType qt = initExpr->getType();
+      if (vd->getType()->isReferenceType())
+        qt = vd->getType();
+
+      if (getLangOpts().CPlusPlus) {
+        if (initDecl->hasFlexibleArrayInit(astContext))
+          errorNYI(vd->getSourceRange(), "flexible array initializer");
+        init = builder.getZeroInitAttr(convertType(qt));
+        if (astContext.GetGVALinkageForVariable(vd) != GVA_AvailableExternally)
+          errorNYI(vd->getSourceRange(), "global constructor");
       } else {
-        errorNYI(initExpr->getSourceRange(), "non-constant initializer");
+        errorNYI(vd->getSourceRange(), "static initializer");
       }
     } else {
-      initializer = builder.getZeroInitAttr(convertType(astTy));
+      init = initializer;
+      // We don't need an initializer, so remove the entry for the delayed
+      // initializer position (just in case this entry was delayed) if we
+      // also don't need to register a destructor.
+      if (vd->needsDestruction(astContext) == QualType::DK_cxx_destructor)
+        errorNYI(vd->getSourceRange(), "delayed destructor");
     }
-
-    varOp.setInitialValueAttr(initializer);
-
-    // Set CIR's linkage type as appropriate.
-    cir::GlobalLinkageKind linkage =
-        getCIRLinkageVarDefinition(vd, /*IsConstant=*/false);
-
-    // Set CIR linkage and DLL storage class.
-    varOp.setLinkage(linkage);
-
-    if (linkage == cir::GlobalLinkageKind::CommonLinkage)
-      errorNYI(initExpr->getSourceRange(), "common linkage");
-
-    theModule.push_back(varOp);
-  } else {
-    errorNYI(vd->getSourceRange().getBegin(),
-             "variable definition with a non-identifier for a name");
   }
+
+  mlir::Type initType;
+  if (mlir::isa<mlir::SymbolRefAttr>(init)) {
+    errorNYI(vd->getSourceRange(), "global initializer is a symbol reference");
+    return;
+  } else {
+    assert(mlir::isa<mlir::TypedAttr>(init) && "This should have a type");
+    auto typedInitAttr = mlir::cast<mlir::TypedAttr>(init);
+    initType = typedInitAttr.getType();
+  }
+  assert(!mlir::isa<mlir::NoneType>(initType) && "Should have a type by now");
+
+  cir::GlobalOp gv =
+      getOrCreateCIRGlobal(vd, initType, ForDefinition_t(!isTentative));
+  // TODO(cir): Strip off pointer casts from Entry if we get them?
+
+  if (!gv || gv.getSymType() != initType) {
+    errorNYI(vd->getSourceRange(), "global initializer with type mismatch");
+    return;
+  }
+
+  assert(!cir::MissingFeatures::maybeHandleStaticInExternC());
+
+  if (vd->hasAttr<AnnotateAttr>()) {
+    errorNYI(vd->getSourceRange(), "annotate global variable");
+  }
+
+  assert(!cir::MissingFeatures::opGlobalLinkage());
+
+  if (langOpts.CUDA) {
+    errorNYI(vd->getSourceRange(), "CUDA global variable");
+  }
+
+  // Set initializer and finalize emission
+  CIRGenModule::setInitializer(gv, init);
+  if (emitter)
+    emitter->finalize(gv);
+
+  // Set CIR's linkage type as appropriate.
+  cir::GlobalLinkageKind linkage =
+      getCIRLinkageVarDefinition(vd, /*IsConstant=*/false);
+
+  // Set CIR linkage and DLL storage class.
+  gv.setLinkage(linkage);
+
+  if (linkage == cir::GlobalLinkageKind::CommonLinkage)
+    errorNYI(initExpr->getSourceRange(), "common linkage");
 }
 
 void CIRGenModule::emitGlobalDefinition(clang::GlobalDecl gd,
@@ -667,7 +802,7 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
   case Decl::OpenACCDeclare:
     emitGlobalOpenACCDecl(cast<OpenACCDeclareDecl>(decl));
     break;
-
+  case Decl::Enum:
   case Decl::UsingDirective: // using namespace X; [C++]
   case Decl::Typedef:
   case Decl::TypeAlias: // using foo = bar; [C++11]
@@ -682,6 +817,12 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
     emitDeclContext(Decl::castToDeclContext(decl));
     break;
   }
+}
+
+void CIRGenModule::setInitializer(cir::GlobalOp &op, mlir::Attribute value) {
+  // Recompute visibility when updating initializer.
+  op.setInitialValueAttr(value);
+  assert(!cir::MissingFeatures::opGlobalSetVisitibility());
 }
 
 cir::FuncOp CIRGenModule::getAddrOfFunction(clang::GlobalDecl gd,

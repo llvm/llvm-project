@@ -25,10 +25,6 @@
 
 using namespace llvm;
 
-static cl::opt<unsigned> KernargPreloadCount(
-    "amdgpu-kernarg-preload-count",
-    cl::desc("How many kernel arguments to preload onto SGPRs"), cl::init(0));
-
 static cl::opt<unsigned> IndirectCallSpecializationThreshold(
     "amdgpu-indirect-call-specialization-threshold",
     cl::desc(
@@ -1327,23 +1323,9 @@ struct AAAMDGPUNoAGPR
 
 const char AAAMDGPUNoAGPR::ID = 0;
 
-static void addPreloadKernArgHint(Function &F, TargetMachine &TM) {
-  const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
-  for (unsigned I = 0;
-       I < F.arg_size() &&
-       I < std::min(KernargPreloadCount.getValue(), ST.getMaxNumUserSGPRs());
-       ++I) {
-    Argument &Arg = *F.getArg(I);
-    // Check for incompatible attributes.
-    if (Arg.hasByRefAttr() || Arg.hasNestAttr())
-      break;
-
-    Arg.addAttr(Attribute::InReg);
-  }
-}
-
 static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
-                    AMDGPUAttributorOptions Options) {
+                    AMDGPUAttributorOptions Options,
+                    ThinOrFullLTOPhase LTOPhase) {
   SetVector<Function *> Functions;
   for (Function &F : M) {
     if (!F.isIntrinsic())
@@ -1378,9 +1360,13 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
 
   Attributor A(Functions, InfoCache, AC);
 
-  LLVM_DEBUG(dbgs() << "[AMDGPUAttributor] Module " << M.getName() << " is "
-                    << (AC.IsClosedWorldModule ? "" : "not ")
-                    << "assumed to be a closed world.\n");
+  LLVM_DEBUG({
+    StringRef LTOPhaseStr = to_string(LTOPhase);
+    dbgs() << "[AMDGPUAttributor] Running at phase " << LTOPhaseStr << '\n'
+           << "[AMDGPUAttributor] Module " << M.getName() << " is "
+           << (AC.IsClosedWorldModule ? "" : "not ")
+           << "assumed to be a closed world.\n";
+  });
 
   for (auto *F : Functions) {
     A.getOrCreateAAFor<AAAMDAttributes>(IRPosition::function(*F));
@@ -1391,8 +1377,6 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
     if (!AMDGPU::isEntryFunctionCC(CC)) {
       A.getOrCreateAAFor<AAAMDFlatWorkGroupSize>(IRPosition::function(*F));
       A.getOrCreateAAFor<AAAMDWavesPerEU>(IRPosition::function(*F));
-    } else if (CC == CallingConv::AMDGPU_KERNEL) {
-      addPreloadKernArgHint(*F, TM);
     }
 
     for (auto &I : instructions(F)) {
@@ -1433,7 +1417,8 @@ public:
 
   bool runOnModule(Module &M) override {
     AnalysisGetter AG(this);
-    return runImpl(M, AG, *TM, /*Options=*/{});
+    return runImpl(M, AG, *TM, /*Options=*/{},
+                   /*LTOPhase=*/ThinOrFullLTOPhase::None);
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -1454,8 +1439,8 @@ PreservedAnalyses llvm::AMDGPUAttributorPass::run(Module &M,
   AnalysisGetter AG(FAM);
 
   // TODO: Probably preserves CFG
-  return runImpl(M, AG, TM, Options) ? PreservedAnalyses::none()
-                                     : PreservedAnalyses::all();
+  return runImpl(M, AG, TM, Options, LTOPhase) ? PreservedAnalyses::none()
+                                               : PreservedAnalyses::all();
 }
 
 char AMDGPUAttributorLegacy::ID = 0;

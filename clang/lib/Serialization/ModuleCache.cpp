@@ -9,6 +9,7 @@
 #include "clang/Serialization/ModuleCache.h"
 
 #include "clang/Serialization/InMemoryModuleCache.h"
+#include "clang/Serialization/ModuleFile.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/LockFileManager.h"
 #include "llvm/Support/Path.h"
@@ -19,7 +20,12 @@ namespace {
 class CrossProcessModuleCache : public ModuleCache {
   InMemoryModuleCache InMemory;
 
+  std::time_t BuildSessionTimestamp;
+
 public:
+  explicit CrossProcessModuleCache(std::time_t BuildSessionTimestamp)
+      : BuildSessionTimestamp(BuildSessionTimestamp) {}
+
   void prepareForGetLock(StringRef ModuleFilename) override {
     // FIXME: Do this in LockFileManager and only if the directory doesn't
     // exist.
@@ -32,6 +38,29 @@ public:
     return std::make_unique<llvm::LockFileManager>(ModuleFilename);
   }
 
+  bool isMarkedUpToDate(StringRef ModuleFilename) override {
+    std::string TimestampFilename =
+        serialization::ModuleFile::getTimestampFilename(ModuleFilename);
+    llvm::sys::fs::file_status Status;
+    if (llvm::sys::fs::status(ModuleFilename, Status) != std::error_code{})
+      return false;
+    return llvm::sys::toTimeT(Status.getLastModificationTime()) >
+           BuildSessionTimestamp;
+  }
+
+  void markUpToDate(StringRef ModuleFilename) override {
+    // Overwrite the timestamp file contents so that file's mtime changes.
+    std::error_code EC;
+    llvm::raw_fd_ostream OS(
+        serialization::ModuleFile::getTimestampFilename(ModuleFilename), EC,
+        llvm::sys::fs::OF_TextWithCRLF);
+    if (EC)
+      return;
+    OS << "Timestamp file\n";
+    OS.close();
+    OS.clear_error(); // Avoid triggering a fatal error.
+  }
+
   InMemoryModuleCache &getInMemoryModuleCache() override { return InMemory; }
   const InMemoryModuleCache &getInMemoryModuleCache() const override {
     return InMemory;
@@ -39,6 +68,8 @@ public:
 };
 } // namespace
 
-IntrusiveRefCntPtr<ModuleCache> clang::createCrossProcessModuleCache() {
-  return llvm::makeIntrusiveRefCnt<CrossProcessModuleCache>();
+IntrusiveRefCntPtr<ModuleCache>
+clang::createCrossProcessModuleCache(std::time_t BuildSessionTimestamp) {
+  return llvm::makeIntrusiveRefCnt<CrossProcessModuleCache>(
+      BuildSessionTimestamp);
 }

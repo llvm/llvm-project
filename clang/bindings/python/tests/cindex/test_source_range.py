@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 from clang.cindex import Config, SourceLocation, SourceRange, TranslationUnit
 
@@ -8,6 +9,8 @@ if "CLANG_LIBRARY_PATH" in os.environ:
 import unittest
 
 from .util import get_tu
+
+INPUTS_DIR = Path(__file__).parent / "INPUTS"
 
 
 def create_range(tu, line1, column1, line2, column2):
@@ -83,3 +86,16 @@ aaaaa"""
         r_curly = create_range(tu2, 1, 11, 3, 1)
         l_f2 = SourceLocation.from_position(tu2, tu2.get_file("./numbers.inc"), 4, 1)
         assert l_f2 in r_curly
+
+    def test_equality(self):
+        path = INPUTS_DIR / "testfile.c"
+        tu = TranslationUnit.from_source(path)
+
+        r1 = create_range(tu, 1, 1, 2, 2)
+        r2 = create_range(tu, 1, 2, 2, 2)
+        r1_2 = create_range(tu, 1, 1, 2, 2)
+
+        self.assertEqual(r1, r1)
+        self.assertEqual(r1, r1_2)
+        self.assertNotEqual(r1, r2)
+        self.assertNotEqual(r1, "foo")

@@ -72,7 +72,9 @@ CompilerInstance::CompilerInstance(
     ModuleCache *ModCache)
     : ModuleLoader(/*BuildingModule=*/ModCache),
       Invocation(std::move(Invocation)),
-      ModCache(ModCache ? ModCache : createCrossProcessModuleCache()),
+      ModCache(ModCache ? ModCache
+                        : createCrossProcessModuleCache(
+                              getHeaderSearchOpts().BuildSessionTimestamp)),
       ThePCHContainerOperations(std::move(PCHContainerOps)) {
   assert(this->Invocation && "Invocation must not be null");
 }
@@ -580,13 +582,13 @@ struct ReadModuleNames : ASTReaderListener {
     ModuleMap &MM = PP.getHeaderSearchInfo().getModuleMap();
     for (const std::string &LoadedModule : LoadedModules)
       MM.cacheModuleLoad(*PP.getIdentifierInfo(LoadedModule),
-                         MM.findModule(LoadedModule));
+                         MM.findOrLoadModule(LoadedModule));
     LoadedModules.clear();
   }
 
   void markAllUnavailable() {
     for (const std::string &LoadedModule : LoadedModules) {
-      if (Module *M = PP.getHeaderSearchInfo().getModuleMap().findModule(
+      if (Module *M = PP.getHeaderSearchInfo().getModuleMap().findOrLoadModule(
               LoadedModule)) {
         M->HasIncompatibleModuleFile = true;
 
@@ -638,8 +640,9 @@ IntrusiveRefCntPtr<ASTReader> CompilerInstance::createPCHExternalASTSource(
       PP, ModCache, &Context, PCHContainerRdr, Extensions,
       Sysroot.empty() ? "" : Sysroot.data(), DisableValidation,
       AllowPCHWithCompilerErrors, /*AllowConfigurationMismatch*/ false,
-      HSOpts.ModulesValidateSystemHeaders, HSOpts.ValidateASTInputFilesContent,
-      UseGlobalModuleIndex));
+      HSOpts.ModulesValidateSystemHeaders,
+      HSOpts.ModulesForceValidateUserHeaders,
+      HSOpts.ValidateASTInputFilesContent, UseGlobalModuleIndex));
 
   // We need the external source to be set up before we read the AST, because
   // eagerly-deserialized declarations may use it.
@@ -1752,6 +1755,7 @@ void CompilerInstance::createASTReader() {
       PPOpts.DisablePCHOrModuleValidation,
       /*AllowASTWithCompilerErrors=*/FEOpts.AllowPCMWithCompilerErrors,
       /*AllowConfigurationMismatch=*/false, HSOpts.ModulesValidateSystemHeaders,
+      HSOpts.ModulesForceValidateUserHeaders,
       HSOpts.ValidateASTInputFilesContent,
       getFrontendOpts().UseGlobalModuleIndex, std::move(ReadTimer));
   if (hasASTConsumer()) {

@@ -639,9 +639,7 @@ void Symbol::SynthesizeNameIfNeeded() const {
     // breakpoints on them.
     llvm::SmallString<256> name;
     llvm::raw_svector_ostream os(name);
-    os << GetSyntheticSymbolPrefix() << "_"
-       << llvm::format_hex_no_prefix(
-              m_addr_range.GetBaseAddress().GetFileAddress(), 0);
+    os << GetSyntheticSymbolPrefix() << GetID();
     m_mangled.SetDemangledName(ConstString(os.str()));
   }
 }

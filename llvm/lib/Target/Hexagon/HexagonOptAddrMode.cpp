@@ -533,7 +533,7 @@ bool HexagonOptAddrMode::processAddBases(NodeAddr<StmtNode *> AddSN,
       [](const MachineInstr *MI,
          const DenseSet<MachineInstr *> &ProcessedAddiInsts) -> bool {
     // If we've already processed this Addi, just return
-    if (ProcessedAddiInsts.find(MI) != ProcessedAddiInsts.end()) {
+    if (ProcessedAddiInsts.contains(MI)) {
       LLVM_DEBUG(dbgs() << "\t\t\tAddi already found in ProcessedAddiInsts: "
                         << *MI << "\n\t\t\tSkipping...");
       return true;

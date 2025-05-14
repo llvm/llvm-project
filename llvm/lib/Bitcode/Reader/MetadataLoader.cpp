@@ -558,7 +558,7 @@ class MetadataLoader::MetadataLoaderImpl {
           SetVector<Metadata *> EntitiesToRemove;
           for (Metadata *Op : CU->getImportedEntities()->operands()) {
             auto *IE = cast<DIImportedEntity>(Op);
-            if (dyn_cast_or_null<DILocalScope>(IE->getScope())) {
+            if (isa_and_nonnull<DILocalScope>(IE->getScope())) {
               EntitiesToRemove.insert(IE);
             }
           }

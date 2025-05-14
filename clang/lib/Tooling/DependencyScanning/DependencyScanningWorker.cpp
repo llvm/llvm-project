@@ -411,7 +411,7 @@ public:
     Scanned = true;
 
     // Create a compiler instance to handle the actual work.
-    auto ModCache = makeInProcessModuleCache(Service.getModuleCacheMutexes());
+    auto ModCache = makeInProcessModuleCache(Service.getModuleCacheEntries());
     ScanInstanceStorage.emplace(std::move(Invocation),
                                 std::move(PCHContainerOps), ModCache.get());
     CompilerInstance &ScanInstance = *ScanInstanceStorage;
@@ -526,6 +526,7 @@ public:
     ScanInstance.getHeaderSearchOpts().ModulesSkipHeaderSearchPaths = true;
     ScanInstance.getHeaderSearchOpts().ModulesSkipPragmaDiagnosticMappings =
         true;
+    ScanInstance.getHeaderSearchOpts().ModulesForceValidateUserHeaders = false;
 
     // Avoid some checks and module map parsing when loading PCM files.
     ScanInstance.getPreprocessorOpts().ModulesCheckRelocated = false;

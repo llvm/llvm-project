@@ -18,13 +18,18 @@
 namespace clang {
 namespace tooling {
 namespace dependencies {
-struct ModuleCacheMutexes {
+struct ModuleCacheEntry {
+  std::shared_mutex CompilationMutex;
+  std::atomic<bool> UpToDate = false;
+};
+
+struct ModuleCacheEntries {
   std::mutex Mutex;
-  llvm::StringMap<std::unique_ptr<std::shared_mutex>> Map;
+  llvm::StringMap<std::unique_ptr<ModuleCacheEntry>> Map;
 };
 
 IntrusiveRefCntPtr<ModuleCache>
-makeInProcessModuleCache(ModuleCacheMutexes &Mutexes);
+makeInProcessModuleCache(ModuleCacheEntries &Entries);
 } // namespace dependencies
 } // namespace tooling
 } // namespace clang

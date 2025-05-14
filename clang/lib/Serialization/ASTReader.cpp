@@ -3103,9 +3103,8 @@ ASTReader::ReadControlBlock(ModuleFile &F,
 
         unsigned N = ValidateSystemInputs ? NumInputs : NumUserInputs;
         if (HSOpts.ModulesValidateOncePerBuildSession &&
-            F.InputFilesValidationTimestamp > HSOpts.BuildSessionTimestamp &&
-            F.Kind == MK_ImplicitModule)
-          N = NumUserInputs;
+            F.InputFilesValidated && F.Kind == MK_ImplicitModule)
+          N = ForceValidateUserInputs ? NumUserInputs : 0;
 
         for (unsigned I = 0; I < N; ++I) {
           InputFile IF = getInputFile(F, I+1, Complain);
@@ -4950,9 +4949,8 @@ ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName, ModuleKind Type,
     // timestamp files are up-to-date in this build session.
     for (unsigned I = 0, N = Loaded.size(); I != N; ++I) {
       ImportedModule &M = Loaded[I];
-      if (M.Mod->Kind == MK_ImplicitModule &&
-          M.Mod->InputFilesValidationTimestamp < HSOpts.BuildSessionTimestamp)
-        updateModuleTimestamp(M.Mod->FileName);
+      if (M.Mod->Kind == MK_ImplicitModule && !M.Mod->InputFilesValidated)
+        getModuleManager().getModuleCache().markUpToDate(M.Mod->FileName);
     }
   }
 
@@ -8646,9 +8644,8 @@ ASTReader::getLoadedSpecializationsLookupTables(const Decl *D, bool IsPartial) {
 
 bool ASTReader::haveUnloadedSpecializations(const Decl *D) const {
   assert(D->isCanonicalDecl());
-  return (PartialSpecializationsLookups.find(D) !=
-          PartialSpecializationsLookups.end()) ||
-         (SpecializationsLookups.find(D) != SpecializationsLookups.end());
+  return PartialSpecializationsLookups.contains(D) ||
+         SpecializationsLookups.contains(D);
 }
 
 /// Under non-PCH compilation the consumer receives the objc methods
@@ -10188,8 +10185,6 @@ void ASTReader::ReadComments() {
       }
     }
   NextCursor:
-    llvm::DenseMap<FileID, std::map<unsigned, RawComment *>>
-        FileToOffsetToComment;
     for (RawComment *C : Comments) {
       SourceLocation CommentLoc = C->getBeginLoc();
       if (CommentLoc.isValid()) {
@@ -10359,7 +10354,7 @@ void ASTReader::finishPendingActions() {
           PendingObjCExtensionIvarRedeclarations.back().second;
       StructuralEquivalenceContext::NonEquivalentDeclSet NonEquivalentDecls;
       StructuralEquivalenceContext Ctx(
-          ExtensionsPair.first->getASTContext(),
+          ContextObj->getLangOpts(), ExtensionsPair.first->getASTContext(),
           ExtensionsPair.second->getASTContext(), NonEquivalentDecls,
           StructuralEquivalenceKind::Default, /*StrictTypeSpelling =*/false,
           /*Complain =*/false,
@@ -10976,6 +10971,7 @@ ASTReader::ASTReader(Preprocessor &PP, ModuleCache &ModCache,
                      DisableValidationForModuleKind DisableValidationKind,
                      bool AllowASTWithCompilerErrors,
                      bool AllowConfigurationMismatch, bool ValidateSystemInputs,
+                     bool ForceValidateUserInputs,
                      bool ValidateASTInputFilesContent, bool UseGlobalIndex,
                      std::unique_ptr<llvm::Timer> ReadTimer)
     : Listener(bool(DisableValidationKind & DisableValidationForModuleKind::PCH)
@@ -10991,6 +10987,7 @@ ASTReader::ASTReader(Preprocessor &PP, ModuleCache &ModCache,
       AllowASTWithCompilerErrors(AllowASTWithCompilerErrors),
       AllowConfigurationMismatch(AllowConfigurationMismatch),
       ValidateSystemInputs(ValidateSystemInputs),
+      ForceValidateUserInputs(ForceValidateUserInputs),
       ValidateASTInputFilesContent(ValidateASTInputFilesContent),
       UseGlobalIndex(UseGlobalIndex), CurrSwitchCaseStmts(&SwitchCaseStmts) {
   SourceMgr.setExternalSLocEntrySource(this);

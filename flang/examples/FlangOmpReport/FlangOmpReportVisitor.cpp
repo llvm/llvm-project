@@ -267,8 +267,9 @@ void OpenMPCounterVisitor::Post(const OmpScheduleClause::Kind &c) {
       "type=" + std::string{OmpScheduleClause::EnumToString(c)} + ";";
 }
 void OpenMPCounterVisitor::Post(const OmpDirectiveNameModifier &c) {
-  clauseDetails +=
-      "name_modifier=" + llvm::omp::getOpenMPDirectiveName(c.v).str() + ";";
+  clauseDetails += "name_modifier=" +
+      llvm::omp::getOpenMPDirectiveName(c.v, llvm::omp::FallbackVersion).str() +
+      ";";
 }
 void OpenMPCounterVisitor::Post(const OmpClause &c) {
   PostClauseCommon(normalize_clause_name(c.source.ToString()));
