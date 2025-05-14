@@ -29,8 +29,8 @@
 #ifndef LLVM_ANALYSIS_LOOPANALYSISMANAGER_H
 #define LLVM_ANALYSIS_LOOPANALYSISMANAGER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -67,7 +67,8 @@ struct LoopStandardAnalysisResults {
 /// Extern template declaration for the analysis set for this IR unit.
 extern template class LLVM_TEMPLATE_ABI AllAnalysesOn<Loop>;
 
-extern template class LLVM_TEMPLATE_ABI AnalysisManager<Loop, LoopStandardAnalysisResults &>;
+extern template class LLVM_TEMPLATE_ABI
+    AnalysisManager<Loop, LoopStandardAnalysisResults &>;
 /// The loop analysis manager.
 ///
 /// See the documentation for the AnalysisManager template for detail
@@ -133,7 +134,7 @@ public:
   /// clear all of the cached analysis results that are keyed on the \c
   /// LoopInfo for this function.
   LLVM_ABI bool invalidate(Function &F, const PreservedAnalyses &PA,
-                  FunctionAnalysisManager::Invalidator &Inv);
+                           FunctionAnalysisManager::Invalidator &Inv);
 
 private:
   LoopAnalysisManager *InnerAM;
@@ -151,8 +152,8 @@ LoopAnalysisManagerFunctionProxy::run(Function &F, FunctionAnalysisManager &AM);
 // template.
 extern template class InnerAnalysisManagerProxy<LoopAnalysisManager, Function>;
 
-extern template class LLVM_TEMPLATE_ABI OuterAnalysisManagerProxy<FunctionAnalysisManager, Loop,
-                                                LoopStandardAnalysisResults &>;
+extern template class LLVM_TEMPLATE_ABI OuterAnalysisManagerProxy<
+    FunctionAnalysisManager, Loop, LoopStandardAnalysisResults &>;
 /// A proxy from a \c FunctionAnalysisManager to a \c Loop.
 typedef OuterAnalysisManagerProxy<FunctionAnalysisManager, Loop,
                                   LoopStandardAnalysisResults &>

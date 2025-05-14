@@ -45,11 +45,11 @@
 #ifndef LLVM_ANALYSIS_CALLGRAPH_H
 #define LLVM_ANALYSIS_CALLGRAPH_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <map>
 #include <memory>
@@ -101,7 +101,7 @@ public:
   Module &getModule() const { return M; }
 
   LLVM_ABI bool invalidate(Module &, const PreservedAnalyses &PA,
-                  ModuleAnalysisManager::Invalidator &);
+                           ModuleAnalysisManager::Invalidator &);
 
   inline iterator begin() { return FunctionMap.begin(); }
   inline iterator end() { return FunctionMap.end(); }
@@ -257,7 +257,7 @@ public:
   ///
   /// Note that this method takes linear time, so it should be used sparingly.
   LLVM_ABI void replaceCallEdge(CallBase &Call, CallBase &NewCall,
-                       CallGraphNode *NewNode);
+                                CallGraphNode *NewNode);
 
 private:
   friend class CallGraph;

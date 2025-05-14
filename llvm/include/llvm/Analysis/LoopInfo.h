@@ -13,11 +13,11 @@
 #ifndef LLVM_ANALYSIS_LOOPINFO_H
 #define LLVM_ANALYSIS_LOOPINFO_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/GenericLoopInfo.h"
 #include <optional>
 #include <utility>
@@ -415,7 +415,8 @@ class LoopInfo : public LoopInfoBase<BasicBlock, Loop> {
 
 public:
   LoopInfo() = default;
-  LLVM_ABI explicit LoopInfo(const DominatorTreeBase<BasicBlock, false> &DomTree);
+  LLVM_ABI explicit LoopInfo(
+      const DominatorTreeBase<BasicBlock, false> &DomTree);
 
   LoopInfo(LoopInfo &&Arg) : BaseT(std::move(static_cast<BaseT &>(Arg))) {}
   LoopInfo &operator=(LoopInfo &&RHS) {
@@ -425,7 +426,7 @@ public:
 
   /// Handle invalidation explicitly.
   LLVM_ABI bool invalidate(Function &F, const PreservedAnalyses &PA,
-                  FunctionAnalysisManager::Invalidator &);
+                           FunctionAnalysisManager::Invalidator &);
 
   // Most of the public interface is provided via LoopInfoBase.
 
@@ -533,8 +534,9 @@ public:
   // to be inserted at the beginning of the block.  Note that V is assumed to
   // dominate ExitBB, and ExitBB must be the exit block of some loop.  The
   // IR is assumed to be in LCSSA form before the planned insertion.
-  LLVM_ABI bool wouldBeOutOfLoopUseRequiringLCSSA(const Value *V,
-                                         const BasicBlock *ExitBB) const;
+  LLVM_ABI bool
+  wouldBeOutOfLoopUseRequiringLCSSA(const Value *V,
+                                    const BasicBlock *ExitBB) const;
 };
 
 /// Enable verification of loop info.
@@ -615,7 +617,8 @@ public:
 };
 
 /// Function to print a loop's contents as LLVM's text IR assembly.
-LLVM_ABI void printLoop(Loop &L, raw_ostream &OS, const std::string &Banner = "");
+LLVM_ABI void printLoop(Loop &L, raw_ostream &OS,
+                        const std::string &Banner = "");
 
 /// Find and return the loop attribute node for the attribute @p Name in
 /// @p LoopID. Return nullptr if there is no such attribute.
@@ -629,26 +632,27 @@ LLVM_ABI MDNode *findOptionMDForLoopID(MDNode *LoopID, StringRef Name);
 LLVM_ABI MDNode *findOptionMDForLoop(const Loop *TheLoop, StringRef Name);
 
 LLVM_ABI std::optional<bool> getOptionalBoolLoopAttribute(const Loop *TheLoop,
-                                                 StringRef Name);
+                                                          StringRef Name);
 
 /// Returns true if Name is applied to TheLoop and enabled.
 LLVM_ABI bool getBooleanLoopAttribute(const Loop *TheLoop, StringRef Name);
 
 /// Find named metadata for a loop with an integer value.
 LLVM_ABI std::optional<int> getOptionalIntLoopAttribute(const Loop *TheLoop,
-                                               StringRef Name);
+                                                        StringRef Name);
 
 /// Find named metadata for a loop with an integer value. Return \p Default if
 /// not set.
-LLVM_ABI int getIntLoopAttribute(const Loop *TheLoop, StringRef Name, int Default = 0);
+LLVM_ABI int getIntLoopAttribute(const Loop *TheLoop, StringRef Name,
+                                 int Default = 0);
 
 /// Find string metadata for loop
 ///
 /// If it has a value (e.g. {"llvm.distribute", 1} return the value as an
 /// operand or null otherwise.  If the string metadata is not found return
 /// Optional's not-a-value.
-LLVM_ABI std::optional<const MDOperand *> findStringMetadataForLoop(const Loop *TheLoop,
-                                                           StringRef Name);
+LLVM_ABI std::optional<const MDOperand *>
+findStringMetadataForLoop(const Loop *TheLoop, StringRef Name);
 
 /// Find the convergence heart of the loop.
 LLVM_ABI CallBase *getLoopConvergenceHeart(const Loop *TheLoop);

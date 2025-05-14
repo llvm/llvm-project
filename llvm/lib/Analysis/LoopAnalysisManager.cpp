@@ -22,10 +22,12 @@ namespace llvm {
 // Explicit template instantiations and specialization definitions for core
 // template typedefs.
 template class LLVM_EXPORT_TEMPLATE AllAnalysesOn<Loop>;
-template class LLVM_EXPORT_TEMPLATE AnalysisManager<Loop, LoopStandardAnalysisResults &>;
-template class LLVM_EXPORT_TEMPLATE InnerAnalysisManagerProxy<LoopAnalysisManager, Function>;
-template class LLVM_EXPORT_TEMPLATE OuterAnalysisManagerProxy<FunctionAnalysisManager, Loop,
-                                         LoopStandardAnalysisResults &>;
+template class LLVM_EXPORT_TEMPLATE
+    AnalysisManager<Loop, LoopStandardAnalysisResults &>;
+template class LLVM_EXPORT_TEMPLATE
+    InnerAnalysisManagerProxy<LoopAnalysisManager, Function>;
+template class LLVM_EXPORT_TEMPLATE OuterAnalysisManagerProxy<
+    FunctionAnalysisManager, Loop, LoopStandardAnalysisResults &>;
 
 bool LoopAnalysisManagerFunctionProxy::Result::invalidate(
     Function &F, const PreservedAnalyses &PA,

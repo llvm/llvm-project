@@ -9,13 +9,13 @@
 #ifndef LLVM_ANALYSIS_TARGETLIBRARYINFO_H
 #define LLVM_ANALYSIS_TARGETLIBRARYINFO_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/TargetParser/Triple.h"
 #include <bitset>
 #include <optional>
@@ -114,7 +114,7 @@ class TargetLibraryInfoImpl {
   /// Return true if the function type FTy is valid for the library function
   /// F, regardless of whether the function is available.
   LLVM_ABI bool isValidProtoForLibFunc(const FunctionType &FTy, LibFunc F,
-                              const Module &M) const;
+                                       const Module &M) const;
 
 public:
   /// List of known vector-functions libraries.
@@ -197,8 +197,9 @@ public:
 
   /// Calls addVectorizableFunctions with a known preset of functions for the
   /// given vector library.
-  LLVM_ABI void addVectorizableFunctionsFromVecLib(enum VectorLibrary VecLib,
-                                          const llvm::Triple &TargetTriple);
+  LLVM_ABI void
+  addVectorizableFunctionsFromVecLib(enum VectorLibrary VecLib,
+                                     const llvm::Triple &TargetTriple);
 
   /// Return true if the function F has a vector equivalent with vectorization
   /// factor VF.
@@ -214,13 +215,13 @@ public:
   /// Return the name of the equivalent of F, vectorized with factor VF. If no
   /// such mapping exists, return the empty string.
   LLVM_ABI StringRef getVectorizedFunction(StringRef F, const ElementCount &VF,
-                                  bool Masked) const;
+                                           bool Masked) const;
 
   /// Return a pointer to a VecDesc object holding all info for scalar to vector
   /// mappings in TLI for the equivalent of F, vectorized with factor VF.
   /// If no such mapping exists, return nullpointer.
-  LLVM_ABI const VecDesc *getVectorMappingInfo(StringRef F, const ElementCount &VF,
-                                      bool Masked) const;
+  LLVM_ABI const VecDesc *
+  getVectorMappingInfo(StringRef F, const ElementCount &VF, bool Masked) const;
 
   /// Set to true iff i32 parameters to library functions should have signext
   /// or zeroext attributes if they correspond to C-level int or unsigned int,
@@ -268,7 +269,7 @@ public:
   /// Returns the largest vectorization factor used in the list of
   /// vector functions.
   LLVM_ABI void getWidestVF(StringRef ScalarF, ElementCount &FixedVF,
-                   ElementCount &Scalable) const;
+                            ElementCount &Scalable) const;
 
   /// Returns true if call site / callee has cdecl-compatible calling
   /// conventions.

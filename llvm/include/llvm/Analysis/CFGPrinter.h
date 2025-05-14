@@ -18,7 +18,6 @@
 #ifndef LLVM_ANALYSIS_CFGPRINTER_H
 #define LLVM_ANALYSIS_CFGPRINTER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/HeatUtils.h"
@@ -28,6 +27,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ProfDataUtils.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DOTGraphTraits.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -75,7 +75,7 @@ public:
   LLVM_ABI ~DOTFuncInfo();
 
   LLVM_ABI DOTFuncInfo(const Function *F, const BlockFrequencyInfo *BFI,
-              const BranchProbabilityInfo *BPI, uint64_t MaxFreq);
+                       const BranchProbabilityInfo *BPI, uint64_t MaxFreq);
 
   const BlockFrequencyInfo *getBFI() const { return BFI; }
 
@@ -326,7 +326,8 @@ struct DOTGraphTraits<DOTFuncInfo *> : public DefaultDOTGraphTraits {
                         " fontname=\"Courier\"";
     return Attrs;
   }
-  LLVM_ABI bool isNodeHidden(const BasicBlock *Node, const DOTFuncInfo *CFGInfo);
+  LLVM_ABI bool isNodeHidden(const BasicBlock *Node,
+                             const DOTFuncInfo *CFGInfo);
   LLVM_ABI void computeDeoptOrUnreachablePaths(const Function *F);
 };
 } // namespace llvm

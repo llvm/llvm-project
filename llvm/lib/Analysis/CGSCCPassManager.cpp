@@ -49,13 +49,16 @@ AnalysisKey ShouldNotRunFunctionPassesAnalysis::Key;
 
 // Explicit instantiations for the core proxy templates.
 template class LLVM_EXPORT_TEMPLATE AllAnalysesOn<LazyCallGraph::SCC>;
-template class LLVM_EXPORT_TEMPLATE AnalysisManager<LazyCallGraph::SCC, LazyCallGraph &>;
+template class LLVM_EXPORT_TEMPLATE
+    AnalysisManager<LazyCallGraph::SCC, LazyCallGraph &>;
 template class PassManager<LazyCallGraph::SCC, CGSCCAnalysisManager,
                            LazyCallGraph &, CGSCCUpdateResult &>;
-template class LLVM_EXPORT_TEMPLATE InnerAnalysisManagerProxy<CGSCCAnalysisManager, Module>;
-template class LLVM_EXPORT_TEMPLATE OuterAnalysisManagerProxy<ModuleAnalysisManager,
-                                         LazyCallGraph::SCC, LazyCallGraph &>;
-template class LLVM_EXPORT_TEMPLATE OuterAnalysisManagerProxy<CGSCCAnalysisManager, Function>;
+template class LLVM_EXPORT_TEMPLATE
+    InnerAnalysisManagerProxy<CGSCCAnalysisManager, Module>;
+template class LLVM_EXPORT_TEMPLATE OuterAnalysisManagerProxy<
+    ModuleAnalysisManager, LazyCallGraph::SCC, LazyCallGraph &>;
+template class LLVM_EXPORT_TEMPLATE
+    OuterAnalysisManagerProxy<CGSCCAnalysisManager, Function>;
 
 /// Explicitly specialize the pass manager run method to handle call graph
 /// updates.

@@ -13,11 +13,11 @@
 #ifndef LLVM_ANALYSIS_IVDESCRIPTORS_H
 #define LLVM_ANALYSIS_IVDESCRIPTORS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/ValueHandle.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -129,17 +129,18 @@ public:
   /// advances the instruction pointer 'I' from the compare instruction to the
   /// select instruction and stores this pointer in 'PatternLastInst' member of
   /// the returned struct.
-  LLVM_ABI static InstDesc isRecurrenceInstr(Loop *L, PHINode *Phi, Instruction *I,
-                                    RecurKind Kind, InstDesc &Prev,
-                                    FastMathFlags FuncFMF, ScalarEvolution *SE);
+  LLVM_ABI static InstDesc
+  isRecurrenceInstr(Loop *L, PHINode *Phi, Instruction *I, RecurKind Kind,
+                    InstDesc &Prev, FastMathFlags FuncFMF, ScalarEvolution *SE);
 
   /// Returns true if instruction I has multiple uses in Insts
   LLVM_ABI static bool hasMultipleUsesOf(Instruction *I,
-                                SmallPtrSetImpl<Instruction *> &Insts,
-                                unsigned MaxNumUses);
+                                         SmallPtrSetImpl<Instruction *> &Insts,
+                                         unsigned MaxNumUses);
 
   /// Returns true if all uses of the instruction I is within the Set.
-  LLVM_ABI static bool areAllUsesIn(Instruction *I, SmallPtrSetImpl<Instruction *> &Set);
+  LLVM_ABI static bool areAllUsesIn(Instruction *I,
+                                    SmallPtrSetImpl<Instruction *> &Set);
 
   /// Returns a struct describing if the instruction is a llvm.(s/u)(min/max),
   /// llvm.minnum/maxnum or a Select(ICmp(X, Y), X, Y) pair of instructions
@@ -147,7 +148,7 @@ public:
   /// Kind. \p Prev specifies the description of an already processed select
   /// instruction, so its corresponding cmp can be matched to it.
   LLVM_ABI static InstDesc isMinMaxPattern(Instruction *I, RecurKind Kind,
-                                  const InstDesc &Prev);
+                                           const InstDesc &Prev);
 
   /// Returns a struct describing whether the instruction is either a
   ///   Select(ICmp(A, B), X, Y), or
@@ -155,8 +156,8 @@ public:
   /// where one of (X, Y) is a loop invariant integer and the other is a PHI
   /// value. \p Prev specifies the description of an already processed select
   /// instruction, so its corresponding cmp can be matched to it.
-  LLVM_ABI static InstDesc isAnyOfPattern(Loop *Loop, PHINode *OrigPhi, Instruction *I,
-                                 InstDesc &Prev);
+  LLVM_ABI static InstDesc isAnyOfPattern(Loop *Loop, PHINode *OrigPhi,
+                                          Instruction *I, InstDesc &Prev);
 
   /// Returns a struct describing whether the instruction is either a
   ///   Select(ICmp(A, B), X, Y), or
@@ -166,11 +167,13 @@ public:
   // TODO: Support non-monotonic variable. FindLast does not need be restricted
   // to increasing loop induction variables.
   LLVM_ABI static InstDesc isFindLastIVPattern(Loop *TheLoop, PHINode *OrigPhi,
-                                      Instruction *I, ScalarEvolution &SE);
+                                               Instruction *I,
+                                               ScalarEvolution &SE);
 
   /// Returns a struct describing if the instruction is a
   /// Select(FCmp(X, Y), (Z = X op PHINode), PHINode) instruction pattern.
-  LLVM_ABI static InstDesc isConditionalRdxPattern(RecurKind Kind, Instruction *I);
+  LLVM_ABI static InstDesc isConditionalRdxPattern(RecurKind Kind,
+                                                   Instruction *I);
 
   /// Returns the opcode corresponding to the RecurrenceKind.
   LLVM_ABI static unsigned getOpcode(RecurKind Kind);
@@ -205,7 +208,7 @@ public:
   /// uses of the recurrence can be re-ordered if necessary and users need to
   /// check and perform the re-ordering.
   LLVM_ABI static bool isFixedOrderRecurrence(PHINode *Phi, Loop *TheLoop,
-                                     DominatorTree *DT);
+                                              DominatorTree *DT);
 
   RecurKind getRecurrenceKind() const { return Kind; }
 
@@ -291,7 +294,7 @@ public:
   /// Attempts to find a chain of operations from Phi to LoopExitInst that can
   /// be treated as a set of reductions instructions for in-loop reductions.
   LLVM_ABI SmallVector<Instruction *, 4> getReductionOpChain(PHINode *Phi,
-                                                    Loop *L) const;
+                                                             Loop *L) const;
 
   /// Returns true if the instruction is a call to the llvm.fmuladd intrinsic.
   static bool isFMulAddIntrinsic(Instruction *I) {
@@ -369,8 +372,9 @@ public:
   /// Returns true if \p Phi is a floating point induction in the loop \p L.
   /// If \p Phi is an induction, the induction descriptor \p D will contain
   /// the data describing this induction.
-  LLVM_ABI static bool isFPInductionPHI(PHINode *Phi, const Loop *L, ScalarEvolution *SE,
-                               InductionDescriptor &D);
+  LLVM_ABI static bool isFPInductionPHI(PHINode *Phi, const Loop *L,
+                                        ScalarEvolution *SE,
+                                        InductionDescriptor &D);
 
   /// Returns true if \p Phi is a loop \p L induction, in the context associated
   /// with the run-time predicate of PSE. If \p Assume is true, this can add
@@ -379,8 +383,9 @@ public:
   /// If \p Phi is an induction, \p D will contain the data describing this
   /// induction.
   LLVM_ABI static bool isInductionPHI(PHINode *Phi, const Loop *L,
-                             PredicatedScalarEvolution &PSE,
-                             InductionDescriptor &D, bool Assume = false);
+                                      PredicatedScalarEvolution &PSE,
+                                      InductionDescriptor &D,
+                                      bool Assume = false);
 
   /// Returns floating-point induction operator that does not allow
   /// reassociation (transforming the induction requires an override of normal

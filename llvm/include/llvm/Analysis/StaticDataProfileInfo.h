@@ -1,12 +1,12 @@
 #ifndef LLVM_ANALYSIS_STATICDATAPROFILEINFO_H
 #define LLVM_ANALYSIS_STATICDATAPROFILEINFO_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -23,7 +23,8 @@ public:
   DenseSet<const Constant *> ConstantWithoutCounts;
 
   /// If \p C has a count, return it. Otherwise, return std::nullopt.
-  LLVM_ABI std::optional<uint64_t> getConstantProfileCount(const Constant *C) const;
+  LLVM_ABI std::optional<uint64_t>
+  getConstantProfileCount(const Constant *C) const;
 
 public:
   StaticDataProfileInfo() = default;
@@ -33,7 +34,7 @@ public:
   /// the result exceeds it. Otherwise, mark the constant as having no profile
   /// count.
   LLVM_ABI void addConstantProfileCount(const Constant *C,
-                               std::optional<uint64_t> Count);
+                                        std::optional<uint64_t> Count);
 
   /// Return a section prefix for the constant \p C based on its profile count.
   /// - If a constant doesn't have a counter, return an empty string.
@@ -43,8 +44,8 @@ public:
   ///   - If it has a cold count, return "unlikely".
   ///   - Otherwise (e.g. it's used by lukewarm functions), return an empty
   ///     string.
-  LLVM_ABI StringRef getConstantSectionPrefix(const Constant *C,
-                                     const ProfileSummaryInfo *PSI) const;
+  LLVM_ABI StringRef getConstantSectionPrefix(
+      const Constant *C, const ProfileSummaryInfo *PSI) const;
 };
 
 /// This wraps the StaticDataProfileInfo object as an immutable pass, for a

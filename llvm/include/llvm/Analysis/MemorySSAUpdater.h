@@ -31,7 +31,6 @@
 #ifndef LLVM_ANALYSIS_MEMORYSSAUPDATER_H
 #define LLVM_ANALYSIS_MEMORYSSAUPDATER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -39,6 +38,7 @@
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/IR/ValueMap.h"
 #include "llvm/Support/CFGDiff.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -92,28 +92,29 @@ public:
   /// following a CFG change that replaced multiple edges (switch) with a direct
   /// branch.
   LLVM_ABI void removeDuplicatePhiEdgesBetween(const BasicBlock *From,
-                                      const BasicBlock *To);
+                                               const BasicBlock *To);
   /// Update MemorySSA when inserting a unique backedge block for a loop.
-  LLVM_ABI void updatePhisWhenInsertingUniqueBackedgeBlock(BasicBlock *LoopHeader,
-                                                  BasicBlock *LoopPreheader,
-                                                  BasicBlock *BackedgeBlock);
+  LLVM_ABI void
+  updatePhisWhenInsertingUniqueBackedgeBlock(BasicBlock *LoopHeader,
+                                             BasicBlock *LoopPreheader,
+                                             BasicBlock *BackedgeBlock);
   /// Update MemorySSA after a loop was cloned, given the blocks in RPO order,
   /// the exit blocks and a 1:1 mapping of all blocks and instructions
   /// cloned. This involves duplicating all defs and uses in the cloned blocks
   /// Updating phi nodes in exit block successors is done separately.
   LLVM_ABI void updateForClonedLoop(const LoopBlocksRPO &LoopBlocks,
-                           ArrayRef<BasicBlock *> ExitBlocks,
-                           const ValueToValueMapTy &VM,
-                           bool IgnoreIncomingWithNoClones = false);
+                                    ArrayRef<BasicBlock *> ExitBlocks,
+                                    const ValueToValueMapTy &VM,
+                                    bool IgnoreIncomingWithNoClones = false);
   // Block BB was fully or partially cloned into its predecessor P1. Map
   // contains the 1:1 mapping of instructions cloned and VM[BB]=P1.
   LLVM_ABI void updateForClonedBlockIntoPred(BasicBlock *BB, BasicBlock *P1,
-                                    const ValueToValueMapTy &VM);
+                                             const ValueToValueMapTy &VM);
   /// Update phi nodes in exit block successors following cloning. Exit blocks
   /// that were not cloned don't have additional predecessors added.
   LLVM_ABI void updateExitBlocksForClonedLoop(ArrayRef<BasicBlock *> ExitBlocks,
-                                     const ValueToValueMapTy &VMap,
-                                     DominatorTree &DT);
+                                              const ValueToValueMapTy &VMap,
+                                              DominatorTree &DT);
   LLVM_ABI void updateExitBlocksForClonedLoop(
       ArrayRef<BasicBlock *> ExitBlocks,
       ArrayRef<std::unique_ptr<ValueToValueMapTy>> VMaps, DominatorTree &DT);
@@ -122,14 +123,15 @@ public:
   /// DT is assumed to be already up to date. If UpdateDTFirst is true, first
   /// update the DT with the same updates.
   LLVM_ABI void applyUpdates(ArrayRef<CFGUpdate> Updates, DominatorTree &DT,
-                    bool UpdateDTFirst = false);
+                             bool UpdateDTFirst = false);
   /// Apply CFG insert updates, analogous with the DT edge updates.
-  LLVM_ABI void applyInsertUpdates(ArrayRef<CFGUpdate> Updates, DominatorTree &DT);
+  LLVM_ABI void applyInsertUpdates(ArrayRef<CFGUpdate> Updates,
+                                   DominatorTree &DT);
 
   LLVM_ABI void moveBefore(MemoryUseOrDef *What, MemoryUseOrDef *Where);
   LLVM_ABI void moveAfter(MemoryUseOrDef *What, MemoryUseOrDef *Where);
   LLVM_ABI void moveToPlace(MemoryUseOrDef *What, BasicBlock *BB,
-                   MemorySSA::InsertionPlace Where);
+                            MemorySSA::InsertionPlace Where);
   /// `From` block was spliced into `From` and `To`. There is a CFG edge from
   /// `From` to `To`. Move all accesses from `From` to `To` starting at
   /// instruction `Start`. `To` is newly created BB, so empty of
@@ -144,7 +146,7 @@ public:
   /// |      |        |  To  |
   /// |------|        |------|
   LLVM_ABI void moveAllAfterSpliceBlocks(BasicBlock *From, BasicBlock *To,
-                                Instruction *Start);
+                                         Instruction *Start);
   /// `From` block was merged into `To`. There is a CFG edge from `To` to
   /// `From`.`To` still branches to `From`, but all instructions were moved and
   /// `From` is now an empty block; `From` is about to be deleted. Move all
@@ -160,7 +162,7 @@ public:
   /// | From |        |      |
   /// |------|        |------|
   LLVM_ABI void moveAllAfterMergeBlocks(BasicBlock *From, BasicBlock *To,
-                               Instruction *Start);
+                                        Instruction *Start);
   /// A new empty BasicBlock (New) now branches directly to Old. Some of
   /// Old's predecessors (Preds) are now branching to New instead of Old.
   /// If New is the only predecessor, move Old's Phi, if present, to New.
@@ -189,23 +191,23 @@ public:
   ///
   /// Note: If a MemoryAccess already exists for I, this function will make it
   /// inaccessible and it *must* have removeMemoryAccess called on it.
-  LLVM_ABI MemoryAccess *createMemoryAccessInBB(Instruction *I, MemoryAccess *Definition,
-                                       const BasicBlock *BB,
-                                       MemorySSA::InsertionPlace Point,
-                                       bool CreationMustSucceed = true);
+  LLVM_ABI MemoryAccess *
+  createMemoryAccessInBB(Instruction *I, MemoryAccess *Definition,
+                         const BasicBlock *BB, MemorySSA::InsertionPlace Point,
+                         bool CreationMustSucceed = true);
 
   /// Create a MemoryAccess in MemorySSA before an existing MemoryAccess.
   ///
   /// See createMemoryAccessInBB() for usage details.
   LLVM_ABI MemoryUseOrDef *createMemoryAccessBefore(Instruction *I,
-                                           MemoryAccess *Definition,
-                                           MemoryUseOrDef *InsertPt);
+                                                    MemoryAccess *Definition,
+                                                    MemoryUseOrDef *InsertPt);
   /// Create a MemoryAccess in MemorySSA after an existing MemoryAccess.
   ///
   /// See createMemoryAccessInBB() for usage details.
   LLVM_ABI MemoryUseOrDef *createMemoryAccessAfter(Instruction *I,
-                                          MemoryAccess *Definition,
-                                          MemoryAccess *InsertPt);
+                                                   MemoryAccess *Definition,
+                                                   MemoryAccess *InsertPt);
 
   /// Remove a MemoryAccess from MemorySSA, including updating all
   /// definitions and uses.

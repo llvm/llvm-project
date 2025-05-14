@@ -9,11 +9,11 @@
 #ifndef LLVM_ANALYSIS_INLINEADVISOR_H
 #define LLVM_ANALYSIS_INLINEADVISOR_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 #include <memory>
 
 namespace llvm {
@@ -75,7 +75,8 @@ class InlineAdvisor;
 class InlineAdvice {
 public:
   LLVM_ABI InlineAdvice(InlineAdvisor *Advisor, CallBase &CB,
-               OptimizationRemarkEmitter &ORE, bool IsInliningRecommended);
+                        OptimizationRemarkEmitter &ORE,
+                        bool IsInliningRecommended);
 
   InlineAdvice(InlineAdvice &&) = delete;
   InlineAdvice(const InlineAdvice &) = delete;
@@ -319,8 +320,8 @@ public:
       return !PAC.preservedWhenStateless();
     }
     LLVM_ABI bool tryCreate(InlineParams Params, InliningAdvisorMode Mode,
-                   const ReplayInlinerSettings &ReplaySettings,
-                   InlineContext IC);
+                            const ReplayInlinerSettings &ReplaySettings,
+                            InlineContext IC);
     InlineAdvisor *getAdvisor() const { return Advisor.get(); }
 
   private:
@@ -342,8 +343,9 @@ public:
 
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 
-  LLVM_ABI PreservedAnalyses run(LazyCallGraph::SCC &InitialC, CGSCCAnalysisManager &AM,
-                        LazyCallGraph &CG, CGSCCUpdateResult &UR);
+  LLVM_ABI PreservedAnalyses run(LazyCallGraph::SCC &InitialC,
+                                 CGSCCAnalysisManager &AM, LazyCallGraph &CG,
+                                 CGSCCUpdateResult &UR);
   static bool isRequired() { return true; }
 };
 
@@ -368,18 +370,18 @@ shouldInline(CallBase &CB, TargetTransformInfo &CalleeTTI,
              OptimizationRemarkEmitter &ORE, bool EnableDeferral = true);
 
 /// Emit ORE message.
-LLVM_ABI void emitInlinedInto(OptimizationRemarkEmitter &ORE, DebugLoc DLoc,
-                     const BasicBlock *Block, const Function &Callee,
-                     const Function &Caller, bool IsMandatory,
-                     function_ref<void(OptimizationRemark &)> ExtraContext = {},
-                     const char *PassName = nullptr);
+LLVM_ABI void
+emitInlinedInto(OptimizationRemarkEmitter &ORE, DebugLoc DLoc,
+                const BasicBlock *Block, const Function &Callee,
+                const Function &Caller, bool IsMandatory,
+                function_ref<void(OptimizationRemark &)> ExtraContext = {},
+                const char *PassName = nullptr);
 
 /// Emit ORE message based in cost (default heuristic).
-LLVM_ABI void emitInlinedIntoBasedOnCost(OptimizationRemarkEmitter &ORE, DebugLoc DLoc,
-                                const BasicBlock *Block, const Function &Callee,
-                                const Function &Caller, const InlineCost &IC,
-                                bool ForProfileContext = false,
-                                const char *PassName = nullptr);
+LLVM_ABI void emitInlinedIntoBasedOnCost(
+    OptimizationRemarkEmitter &ORE, DebugLoc DLoc, const BasicBlock *Block,
+    const Function &Callee, const Function &Caller, const InlineCost &IC,
+    bool ForProfileContext = false, const char *PassName = nullptr);
 
 /// Add location info to ORE message.
 LLVM_ABI void addLocationToRemarks(OptimizationRemark &Remark, DebugLoc DLoc);

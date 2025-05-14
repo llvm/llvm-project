@@ -30,9 +30,9 @@
 #ifndef LLVM_ANALYSIS_LASTRUNTRACKINGANALYSIS_H
 #define LLVM_ANALYSIS_LASTRUNTRACKINGANALYSIS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 #include <functional>
 
 namespace llvm {
@@ -82,7 +82,8 @@ public:
 
 private:
   LLVM_ABI bool shouldSkipImpl(PassID ID, OptionPtr Ptr) const;
-  LLVM_ABI void updateImpl(PassID ID, bool Changed, CompatibilityCheckFn CheckFn);
+  LLVM_ABI void updateImpl(PassID ID, bool Changed,
+                           CompatibilityCheckFn CheckFn);
 
   DenseMap<PassID, CompatibilityCheckFn> TrackedPasses;
 };

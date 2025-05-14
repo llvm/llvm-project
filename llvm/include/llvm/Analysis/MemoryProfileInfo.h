@@ -13,9 +13,9 @@
 #ifndef LLVM_ANALYSIS_MEMORYPROFILEINFO_H
 #define LLVM_ANALYSIS_MEMORYPROFILEINFO_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
+#include "llvm/Support/Compiler.h"
 #include <map>
 
 namespace llvm {
@@ -23,16 +23,19 @@ namespace memprof {
 
 /// Return the allocation type for a given set of memory profile values.
 LLVM_ABI AllocationType getAllocType(uint64_t TotalLifetimeAccessDensity,
-                            uint64_t AllocCount, uint64_t TotalLifetime);
+                                     uint64_t AllocCount,
+                                     uint64_t TotalLifetime);
 
 /// Build callstack metadata from the provided list of call stack ids. Returns
 /// the resulting metadata node.
-LLVM_ABI MDNode *buildCallstackMetadata(ArrayRef<uint64_t> CallStack, LLVMContext &Ctx);
+LLVM_ABI MDNode *buildCallstackMetadata(ArrayRef<uint64_t> CallStack,
+                                        LLVMContext &Ctx);
 
 /// Build metadata from the provided list of full stack id and profiled size, to
 /// use when reporting of hinted sizes is enabled.
-LLVM_ABI MDNode *buildContextSizeMetadata(ArrayRef<ContextTotalSize> ContextSizeInfo,
-                                 LLVMContext &Ctx);
+LLVM_ABI MDNode *
+buildContextSizeMetadata(ArrayRef<ContextTotalSize> ContextSizeInfo,
+                         LLVMContext &Ctx);
 
 /// Returns the stack node from an MIB metadata node.
 LLVM_ABI MDNode *getMIBStackNode(const MDNode *MIB);
@@ -118,8 +121,9 @@ public:
   /// matching via a debug location hash), expected to be in order from the
   /// allocation call down to the bottom of the call stack (i.e. callee to
   /// caller order).
-  LLVM_ABI void addCallStack(AllocationType AllocType, ArrayRef<uint64_t> StackIds,
-                    std::vector<ContextTotalSize> ContextSizeInfo = {});
+  LLVM_ABI void
+  addCallStack(AllocationType AllocType, ArrayRef<uint64_t> StackIds,
+               std::vector<ContextTotalSize> ContextSizeInfo = {});
 
   /// Add the call stack context along with its allocation type from the MIB
   /// metadata to the Trie.
@@ -138,7 +142,7 @@ public:
   /// If hinted by reporting is enabled, a message is emitted with the given
   /// descriptor used to identify the category of single allocation type.
   LLVM_ABI void addSingleAllocTypeAttribute(CallBase *CI, AllocationType AT,
-                                   StringRef Descriptor);
+                                            StringRef Descriptor);
 };
 
 /// Helper class to iterate through stack ids in both metadata (memprof MIB and
@@ -216,11 +220,14 @@ CallStack<NodeT, IteratorT>::beginAfterSharedPrefix(const CallStack &Other) {
 
 /// Specializations for iterating through IR metadata stack contexts.
 template <>
-LLVM_ABI CallStack<MDNode, MDNode::op_iterator>::CallStackIterator::CallStackIterator(
+LLVM_ABI
+CallStack<MDNode, MDNode::op_iterator>::CallStackIterator::CallStackIterator(
     const MDNode *N, bool End);
 template <>
-LLVM_ABI uint64_t CallStack<MDNode, MDNode::op_iterator>::CallStackIterator::operator*();
-template <> LLVM_ABI uint64_t CallStack<MDNode, MDNode::op_iterator>::back() const;
+LLVM_ABI uint64_t
+CallStack<MDNode, MDNode::op_iterator>::CallStackIterator::operator*();
+template <>
+LLVM_ABI uint64_t CallStack<MDNode, MDNode::op_iterator>::back() const;
 
 } // end namespace memprof
 } // end namespace llvm

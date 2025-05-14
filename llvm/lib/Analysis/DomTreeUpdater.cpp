@@ -22,8 +22,8 @@
 
 namespace llvm {
 
-template class LLVM_EXPORT_TEMPLATE GenericDomTreeUpdater<DomTreeUpdater, DominatorTree,
-                                     PostDominatorTree>;
+template class LLVM_EXPORT_TEMPLATE
+    GenericDomTreeUpdater<DomTreeUpdater, DominatorTree, PostDominatorTree>;
 
 template LLVM_EXPORT_TEMPLATE void
 GenericDomTreeUpdater<DomTreeUpdater, DominatorTree,

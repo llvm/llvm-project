@@ -14,10 +14,10 @@
 #ifndef LLVM_ANALYSIS_DOMPRINTER_H
 #define LLVM_ANALYSIS_DOMPRINTER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/Analysis/DOTGraphTraitsPass.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

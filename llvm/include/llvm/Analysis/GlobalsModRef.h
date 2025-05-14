@@ -13,11 +13,11 @@
 #ifndef LLVM_ANALYSIS_GLOBALSMODREF_H
 #define LLVM_ANALYSIS_GLOBALSMODREF_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Compiler.h"
 #include <list>
 
 namespace llvm {
@@ -84,7 +84,7 @@ public:
   LLVM_ABI ~GlobalsAAResult();
 
   LLVM_ABI bool invalidate(Module &M, const PreservedAnalyses &PA,
-                  ModuleAnalysisManager::Invalidator &);
+                           ModuleAnalysisManager::Invalidator &);
 
   LLVM_ABI static GlobalsAAResult
   analyzeModule(Module &M,
@@ -94,12 +94,14 @@ public:
   //------------------------------------------------
   // Implement the AliasAnalysis API
   //
-  LLVM_ABI AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB,
-                    AAQueryInfo &AAQI, const Instruction *CtxI);
+  LLVM_ABI AliasResult alias(const MemoryLocation &LocA,
+                             const MemoryLocation &LocB, AAQueryInfo &AAQI,
+                             const Instruction *CtxI);
 
   using AAResultBase::getModRefInfo;
-  LLVM_ABI ModRefInfo getModRefInfo(const CallBase *Call, const MemoryLocation &Loc,
-                           AAQueryInfo &AAQI);
+  LLVM_ABI ModRefInfo getModRefInfo(const CallBase *Call,
+                                    const MemoryLocation &Loc,
+                                    AAQueryInfo &AAQI);
 
   using AAResultBase::getMemoryEffects;
   /// getMemoryEffects - Return the behavior of the specified function if

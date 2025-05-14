@@ -13,7 +13,6 @@
 #ifndef LLVM_ANALYSIS_SCALAREVOLUTIONEXPRESSIONS_H
 #define LLVM_ANALYSIS_SCALAREVOLUTIONEXPRESSIONS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -21,6 +20,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <cstddef>
@@ -106,8 +106,8 @@ protected:
   const SCEV *Op;
   Type *Ty;
 
-  LLVM_ABI SCEVCastExpr(const FoldingSetNodeIDRef ID, SCEVTypes SCEVTy, const SCEV *op,
-               Type *ty);
+  LLVM_ABI SCEVCastExpr(const FoldingSetNodeIDRef ID, SCEVTypes SCEVTy,
+                        const SCEV *op, Type *ty);
 
 public:
   const SCEV *getOperand() const { return Op; }
@@ -142,7 +142,7 @@ public:
 class SCEVIntegralCastExpr : public SCEVCastExpr {
 protected:
   LLVM_ABI SCEVIntegralCastExpr(const FoldingSetNodeIDRef ID, SCEVTypes SCEVTy,
-                       const SCEV *op, Type *ty);
+                                const SCEV *op, Type *ty);
 
 public:
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
@@ -395,12 +395,14 @@ public:
 
   /// Return the value of this chain of recurrences at the specified
   /// iteration number.
-  LLVM_ABI const SCEV *evaluateAtIteration(const SCEV *It, ScalarEvolution &SE) const;
+  LLVM_ABI const SCEV *evaluateAtIteration(const SCEV *It,
+                                           ScalarEvolution &SE) const;
 
   /// Return the value of this chain of recurrences at the specified iteration
   /// number. Takes an explicit list of operands to represent an AddRec.
-  LLVM_ABI static const SCEV *evaluateAtIteration(ArrayRef<const SCEV *> Operands,
-                                         const SCEV *It, ScalarEvolution &SE);
+  LLVM_ABI static const SCEV *
+  evaluateAtIteration(ArrayRef<const SCEV *> Operands, const SCEV *It,
+                      ScalarEvolution &SE);
 
   /// Return the number of iterations of this loop that produce
   /// values in the specified constant range.  Another way of
@@ -409,7 +411,7 @@ public:
   /// exit count.  If the iteration count can't be computed, an
   /// instance of SCEVCouldNotCompute is returned.
   LLVM_ABI const SCEV *getNumIterationsInRange(const ConstantRange &Range,
-                                      ScalarEvolution &SE) const;
+                                               ScalarEvolution &SE) const;
 
   /// Return an expression representing the value of this expression
   /// one iteration of the loop ahead.

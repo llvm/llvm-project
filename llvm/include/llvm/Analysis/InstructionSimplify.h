@@ -31,9 +31,9 @@
 #ifndef LLVM_ANALYSIS_INSTRUCTIONSIMPLIFY_H
 #define LLVM_ANALYSIS_INSTRUCTIONSIMPLIFY_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/Analysis/SimplifyQuery.h"
 #include "llvm/IR/FPEnv.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -60,33 +60,35 @@ class Value;
 
 /// Given operands for an Add, fold the result or return null.
 LLVM_ABI Value *simplifyAddInst(Value *LHS, Value *RHS, bool IsNSW, bool IsNUW,
-                       const SimplifyQuery &Q);
+                                const SimplifyQuery &Q);
 
 /// Given operands for a Sub, fold the result or return null.
 LLVM_ABI Value *simplifySubInst(Value *LHS, Value *RHS, bool IsNSW, bool IsNUW,
-                       const SimplifyQuery &Q);
+                                const SimplifyQuery &Q);
 
 /// Given operands for a Mul, fold the result or return null.
 LLVM_ABI Value *simplifyMulInst(Value *LHS, Value *RHS, bool IsNSW, bool IsNUW,
-                       const SimplifyQuery &Q);
+                                const SimplifyQuery &Q);
 
 /// Given operands for an SDiv, fold the result or return null.
 LLVM_ABI Value *simplifySDivInst(Value *LHS, Value *RHS, bool IsExact,
-                        const SimplifyQuery &Q);
+                                 const SimplifyQuery &Q);
 
 /// Given operands for a UDiv, fold the result or return null.
 LLVM_ABI Value *simplifyUDivInst(Value *LHS, Value *RHS, bool IsExact,
-                        const SimplifyQuery &Q);
+                                 const SimplifyQuery &Q);
 
 /// Given operands for an SRem, fold the result or return null.
-LLVM_ABI Value *simplifySRemInst(Value *LHS, Value *RHS, const SimplifyQuery &Q);
+LLVM_ABI Value *simplifySRemInst(Value *LHS, Value *RHS,
+                                 const SimplifyQuery &Q);
 
 /// Given operands for a URem, fold the result or return null.
-LLVM_ABI Value *simplifyURemInst(Value *LHS, Value *RHS, const SimplifyQuery &Q);
+LLVM_ABI Value *simplifyURemInst(Value *LHS, Value *RHS,
+                                 const SimplifyQuery &Q);
 
 /// Given operand for an FNeg, fold the result or return null.
-LLVM_ABI Value *simplifyFNegInst(Value *Op, FastMathFlags FMF, const SimplifyQuery &Q);
-
+LLVM_ABI Value *simplifyFNegInst(Value *Op, FastMathFlags FMF,
+                                 const SimplifyQuery &Q);
 
 /// Given operands for an FAdd, fold the result or return null.
 LLVM_ABI Value *
@@ -113,10 +115,11 @@ simplifyFMulInst(Value *LHS, Value *RHS, FastMathFlags FMF,
 /// null. In contrast to simplifyFMulInst, this function will not perform
 /// simplifications whose unrounded results differ when rounded to the argument
 /// type.
-LLVM_ABI Value *simplifyFMAFMul(Value *LHS, Value *RHS, FastMathFlags FMF,
-                       const SimplifyQuery &Q,
-                       fp::ExceptionBehavior ExBehavior = fp::ebIgnore,
-                       RoundingMode Rounding = RoundingMode::NearestTiesToEven);
+LLVM_ABI Value *
+simplifyFMAFMul(Value *LHS, Value *RHS, FastMathFlags FMF,
+                const SimplifyQuery &Q,
+                fp::ExceptionBehavior ExBehavior = fp::ebIgnore,
+                RoundingMode Rounding = RoundingMode::NearestTiesToEven);
 
 /// Given operands for an FDiv, fold the result or return null.
 LLVM_ABI Value *
@@ -134,15 +137,15 @@ simplifyFRemInst(Value *LHS, Value *RHS, FastMathFlags FMF,
 
 /// Given operands for a Shl, fold the result or return null.
 LLVM_ABI Value *simplifyShlInst(Value *Op0, Value *Op1, bool IsNSW, bool IsNUW,
-                       const SimplifyQuery &Q);
+                                const SimplifyQuery &Q);
 
 /// Given operands for a LShr, fold the result or return null.
 LLVM_ABI Value *simplifyLShrInst(Value *Op0, Value *Op1, bool IsExact,
-                        const SimplifyQuery &Q);
+                                 const SimplifyQuery &Q);
 
 /// Given operands for a AShr, fold the result or return nulll.
 LLVM_ABI Value *simplifyAShrInst(Value *Op0, Value *Op1, bool IsExact,
-                        const SimplifyQuery &Q);
+                                 const SimplifyQuery &Q);
 
 /// Given operands for an And, fold the result or return null.
 LLVM_ABI Value *simplifyAndInst(Value *LHS, Value *RHS, const SimplifyQuery &Q);
@@ -155,76 +158,81 @@ LLVM_ABI Value *simplifyXorInst(Value *LHS, Value *RHS, const SimplifyQuery &Q);
 
 /// Given operands for an ICmpInst, fold the result or return null.
 LLVM_ABI Value *simplifyICmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
-                        const SimplifyQuery &Q);
+                                 const SimplifyQuery &Q);
 
 /// Given operands for an FCmpInst, fold the result or return null.
 LLVM_ABI Value *simplifyFCmpInst(CmpPredicate Predicate, Value *LHS, Value *RHS,
-                        FastMathFlags FMF, const SimplifyQuery &Q);
+                                 FastMathFlags FMF, const SimplifyQuery &Q);
 
 /// Given operands for a SelectInst, fold the result or return null.
 LLVM_ABI Value *simplifySelectInst(Value *Cond, Value *TrueVal, Value *FalseVal,
-                          const SimplifyQuery &Q);
+                                   const SimplifyQuery &Q);
 
 /// Given operands for a GetElementPtrInst, fold the result or return null.
-LLVM_ABI Value *simplifyGEPInst(Type *SrcTy, Value *Ptr, ArrayRef<Value *> Indices,
-                       GEPNoWrapFlags NW, const SimplifyQuery &Q);
+LLVM_ABI Value *simplifyGEPInst(Type *SrcTy, Value *Ptr,
+                                ArrayRef<Value *> Indices, GEPNoWrapFlags NW,
+                                const SimplifyQuery &Q);
 
 /// Given operands for an InsertValueInst, fold the result or return null.
-LLVM_ABI Value *simplifyInsertValueInst(Value *Agg, Value *Val, ArrayRef<unsigned> Idxs,
-                               const SimplifyQuery &Q);
+LLVM_ABI Value *simplifyInsertValueInst(Value *Agg, Value *Val,
+                                        ArrayRef<unsigned> Idxs,
+                                        const SimplifyQuery &Q);
 
 /// Given operands for an InsertElement, fold the result or return null.
 LLVM_ABI Value *simplifyInsertElementInst(Value *Vec, Value *Elt, Value *Idx,
-                                 const SimplifyQuery &Q);
+                                          const SimplifyQuery &Q);
 
 /// Given operands for an ExtractValueInst, fold the result or return null.
 LLVM_ABI Value *simplifyExtractValueInst(Value *Agg, ArrayRef<unsigned> Idxs,
-                                const SimplifyQuery &Q);
+                                         const SimplifyQuery &Q);
 
 /// Given operands for an ExtractElementInst, fold the result or return null.
 LLVM_ABI Value *simplifyExtractElementInst(Value *Vec, Value *Idx,
-                                  const SimplifyQuery &Q);
+                                           const SimplifyQuery &Q);
 
 /// Given operands for a CastInst, fold the result or return null.
 LLVM_ABI Value *simplifyCastInst(unsigned CastOpc, Value *Op, Type *Ty,
-                        const SimplifyQuery &Q);
+                                 const SimplifyQuery &Q);
 
 /// Given operands for a BinaryIntrinsic, fold the result or return null.
-LLVM_ABI Value *simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType, Value *Op0,
-                               Value *Op1, const SimplifyQuery &Q,
-                               const CallBase *Call);
+LLVM_ABI Value *simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
+                                        Value *Op0, Value *Op1,
+                                        const SimplifyQuery &Q,
+                                        const CallBase *Call);
 
 /// Given operands for a ShuffleVectorInst, fold the result or return null.
 /// See class ShuffleVectorInst for a description of the mask representation.
-LLVM_ABI Value *simplifyShuffleVectorInst(Value *Op0, Value *Op1, ArrayRef<int> Mask,
-                                 Type *RetTy, const SimplifyQuery &Q);
+LLVM_ABI Value *simplifyShuffleVectorInst(Value *Op0, Value *Op1,
+                                          ArrayRef<int> Mask, Type *RetTy,
+                                          const SimplifyQuery &Q);
 
 //=== Helper functions for higher up the class hierarchy.
 
 /// Given operands for a CmpInst, fold the result or return null.
 LLVM_ABI Value *simplifyCmpInst(CmpPredicate Predicate, Value *LHS, Value *RHS,
-                       const SimplifyQuery &Q);
+                                const SimplifyQuery &Q);
 
 /// Given operand for a UnaryOperator, fold the result or return null.
-LLVM_ABI Value *simplifyUnOp(unsigned Opcode, Value *Op, const SimplifyQuery &Q);
+LLVM_ABI Value *simplifyUnOp(unsigned Opcode, Value *Op,
+                             const SimplifyQuery &Q);
 
 /// Given operand for a UnaryOperator, fold the result or return null.
 /// Try to use FastMathFlags when folding the result.
 LLVM_ABI Value *simplifyUnOp(unsigned Opcode, Value *Op, FastMathFlags FMF,
-                    const SimplifyQuery &Q);
+                             const SimplifyQuery &Q);
 
 /// Given operands for a BinaryOperator, fold the result or return null.
 LLVM_ABI Value *simplifyBinOp(unsigned Opcode, Value *LHS, Value *RHS,
-                     const SimplifyQuery &Q);
+                              const SimplifyQuery &Q);
 
 /// Given operands for a BinaryOperator, fold the result or return null.
 /// Try to use FastMathFlags when folding the result.
-LLVM_ABI Value *simplifyBinOp(unsigned Opcode, Value *LHS, Value *RHS, FastMathFlags FMF,
-                     const SimplifyQuery &Q);
+LLVM_ABI Value *simplifyBinOp(unsigned Opcode, Value *LHS, Value *RHS,
+                              FastMathFlags FMF, const SimplifyQuery &Q);
 
 /// Given a callsite, callee, and arguments, fold the result or return null.
-LLVM_ABI Value *simplifyCall(CallBase *Call, Value *Callee, ArrayRef<Value *> Args,
-                    const SimplifyQuery &Q);
+LLVM_ABI Value *simplifyCall(CallBase *Call, Value *Callee,
+                             ArrayRef<Value *> Args, const SimplifyQuery &Q);
 
 /// Given a constrained FP intrinsic call, tries to compute its simplified
 /// version. Returns a simplified result or null.
@@ -233,7 +241,8 @@ LLVM_ABI Value *simplifyCall(CallBase *Call, Value *Callee, ArrayRef<Value *> Ar
 /// simplification succeeds that the intrinsic is side effect free. As a result,
 /// successful simplification can be used to delete the intrinsic not just
 /// replace its result.
-LLVM_ABI Value *simplifyConstrainedFPCall(CallBase *Call, const SimplifyQuery &Q);
+LLVM_ABI Value *simplifyConstrainedFPCall(CallBase *Call,
+                                          const SimplifyQuery &Q);
 
 /// Given an operand for a Freeze, see if we can fold the result.
 /// If not, this returns null.
@@ -241,7 +250,8 @@ LLVM_ABI Value *simplifyFreezeInst(Value *Op, const SimplifyQuery &Q);
 
 /// Given a load instruction and its pointer operand, fold the result or return
 /// null.
-LLVM_ABI Value *simplifyLoadInst(LoadInst *LI, Value *PtrOp, const SimplifyQuery &Q);
+LLVM_ABI Value *simplifyLoadInst(LoadInst *LI, Value *PtrOp,
+                                 const SimplifyQuery &Q);
 
 /// See if we can compute a simplified version of this instruction. If not,
 /// return null.
@@ -249,9 +259,9 @@ LLVM_ABI Value *simplifyInstruction(Instruction *I, const SimplifyQuery &Q);
 
 /// Like \p simplifyInstruction but the operands of \p I are replaced with
 /// \p NewOps. Returns a simplified value, or null if none was found.
-LLVM_ABI Value *
-simplifyInstructionWithOperands(Instruction *I, ArrayRef<Value *> NewOps,
-                                const SimplifyQuery &Q);
+LLVM_ABI Value *simplifyInstructionWithOperands(Instruction *I,
+                                                ArrayRef<Value *> NewOps,
+                                                const SimplifyQuery &Q);
 
 /// See if V simplifies when its operand Op is replaced with RepOp. If not,
 /// return null.
@@ -289,7 +299,7 @@ template <class T, class... TArgs>
 const SimplifyQuery getBestSimplifyQuery(AnalysisManager<T, TArgs...> &,
                                          Function &);
 LLVM_ABI const SimplifyQuery getBestSimplifyQuery(LoopStandardAnalysisResults &,
-                                         const DataLayout &);
+                                                  const DataLayout &);
 } // end namespace llvm
 
 #endif

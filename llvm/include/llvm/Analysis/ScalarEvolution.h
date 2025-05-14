@@ -20,7 +20,6 @@
 #ifndef LLVM_ANALYSIS_SCALAREVOLUTION_H
 #define LLVM_ANALYSIS_SCALAREVOLUTION_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -36,6 +35,7 @@
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/IR/ValueMap.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstdint>
 #include <memory>
@@ -482,8 +482,9 @@ public:
     return TestFlags == maskFlags(Flags, TestFlags);
   };
 
-  LLVM_ABI ScalarEvolution(Function &F, TargetLibraryInfo &TLI, AssumptionCache &AC,
-                  DominatorTree &DT, LoopInfo &LI);
+  LLVM_ABI ScalarEvolution(Function &F, TargetLibraryInfo &TLI,
+                           AssumptionCache &AC, DominatorTree &DT,
+                           LoopInfo &LI);
   LLVM_ABI ScalarEvolution(ScalarEvolution &&Arg);
   LLVM_ABI ~ScalarEvolution();
 
@@ -531,8 +532,8 @@ public:
   /// a signed/unsigned overflow (\p Signed)? If \p CtxI is specified, the
   /// no-overflow fact should be true in the context of this instruction.
   LLVM_ABI bool willNotOverflow(Instruction::BinaryOps BinOp, bool Signed,
-                       const SCEV *LHS, const SCEV *RHS,
-                       const Instruction *CtxI = nullptr);
+                                const SCEV *LHS, const SCEV *RHS,
+                                const Instruction *CtxI = nullptr);
 
   /// Parse NSW/NUW flags from add/sub/mul IR binary operation \p Op into
   /// SCEV no-wrap flags, and deduce flag[s] that aren't known yet.
@@ -562,22 +563,26 @@ public:
   LLVM_ABI const SCEV *getConstant(ConstantInt *V);
   LLVM_ABI const SCEV *getConstant(const APInt &Val);
   LLVM_ABI const SCEV *getConstant(Type *Ty, uint64_t V, bool isSigned = false);
-  LLVM_ABI const SCEV *getLosslessPtrToIntExpr(const SCEV *Op, unsigned Depth = 0);
+  LLVM_ABI const SCEV *getLosslessPtrToIntExpr(const SCEV *Op,
+                                               unsigned Depth = 0);
   LLVM_ABI const SCEV *getPtrToIntExpr(const SCEV *Op, Type *Ty);
-  LLVM_ABI const SCEV *getTruncateExpr(const SCEV *Op, Type *Ty, unsigned Depth = 0);
+  LLVM_ABI const SCEV *getTruncateExpr(const SCEV *Op, Type *Ty,
+                                       unsigned Depth = 0);
   LLVM_ABI const SCEV *getVScale(Type *Ty);
   LLVM_ABI const SCEV *getElementCount(Type *Ty, ElementCount EC);
-  LLVM_ABI const SCEV *getZeroExtendExpr(const SCEV *Op, Type *Ty, unsigned Depth = 0);
+  LLVM_ABI const SCEV *getZeroExtendExpr(const SCEV *Op, Type *Ty,
+                                         unsigned Depth = 0);
   LLVM_ABI const SCEV *getZeroExtendExprImpl(const SCEV *Op, Type *Ty,
-                                    unsigned Depth = 0);
-  LLVM_ABI const SCEV *getSignExtendExpr(const SCEV *Op, Type *Ty, unsigned Depth = 0);
+                                             unsigned Depth = 0);
+  LLVM_ABI const SCEV *getSignExtendExpr(const SCEV *Op, Type *Ty,
+                                         unsigned Depth = 0);
   LLVM_ABI const SCEV *getSignExtendExprImpl(const SCEV *Op, Type *Ty,
-                                    unsigned Depth = 0);
+                                             unsigned Depth = 0);
   LLVM_ABI const SCEV *getCastExpr(SCEVTypes Kind, const SCEV *Op, Type *Ty);
   LLVM_ABI const SCEV *getAnyExtendExpr(const SCEV *Op, Type *Ty);
   LLVM_ABI const SCEV *getAddExpr(SmallVectorImpl<const SCEV *> &Ops,
-                         SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
-                         unsigned Depth = 0);
+                                  SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
+                                  unsigned Depth = 0);
   const SCEV *getAddExpr(const SCEV *LHS, const SCEV *RHS,
                          SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
                          unsigned Depth = 0) {
@@ -591,8 +596,8 @@ public:
     return getAddExpr(Ops, Flags, Depth);
   }
   LLVM_ABI const SCEV *getMulExpr(SmallVectorImpl<const SCEV *> &Ops,
-                         SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
-                         unsigned Depth = 0);
+                                  SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
+                                  unsigned Depth = 0);
   const SCEV *getMulExpr(const SCEV *LHS, const SCEV *RHS,
                          SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
                          unsigned Depth = 0) {
@@ -608,10 +613,10 @@ public:
   LLVM_ABI const SCEV *getUDivExpr(const SCEV *LHS, const SCEV *RHS);
   LLVM_ABI const SCEV *getUDivExactExpr(const SCEV *LHS, const SCEV *RHS);
   LLVM_ABI const SCEV *getURemExpr(const SCEV *LHS, const SCEV *RHS);
-  LLVM_ABI const SCEV *getAddRecExpr(const SCEV *Start, const SCEV *Step, const Loop *L,
-                            SCEV::NoWrapFlags Flags);
+  LLVM_ABI const SCEV *getAddRecExpr(const SCEV *Start, const SCEV *Step,
+                                     const Loop *L, SCEV::NoWrapFlags Flags);
   LLVM_ABI const SCEV *getAddRecExpr(SmallVectorImpl<const SCEV *> &Operands,
-                            const Loop *L, SCEV::NoWrapFlags Flags);
+                                     const Loop *L, SCEV::NoWrapFlags Flags);
   const SCEV *getAddRecExpr(const SmallVectorImpl<const SCEV *> &Operands,
                             const Loop *L, SCEV::NoWrapFlags Flags) {
     SmallVector<const SCEV *, 4> NewOp(Operands.begin(), Operands.end());
@@ -622,7 +627,8 @@ public:
   /// Predicates. If successful return these <AddRecExpr, Predicates>;
   /// The function is intended to be called from PSCEV (the caller will decide
   /// whether to actually add the predicates and carry out the rewrites).
-  LLVM_ABI std::optional<std::pair<const SCEV *, SmallVector<const SCEVPredicate *, 3>>>
+  LLVM_ABI std::optional<
+      std::pair<const SCEV *, SmallVector<const SCEVPredicate *, 3>>>
   createAddRecFromPHIWithCasts(const SCEVUnknown *SymbolicPHI);
 
   /// Returns an expression for a GEP
@@ -630,13 +636,14 @@ public:
   /// \p GEP The GEP. The indices contained in the GEP itself are ignored,
   /// instead we use IndexExprs.
   /// \p IndexExprs The expressions for the indices.
-  LLVM_ABI const SCEV *getGEPExpr(GEPOperator *GEP,
-                         const SmallVectorImpl<const SCEV *> &IndexExprs);
+  LLVM_ABI const SCEV *
+  getGEPExpr(GEPOperator *GEP, const SmallVectorImpl<const SCEV *> &IndexExprs);
   LLVM_ABI const SCEV *getAbsExpr(const SCEV *Op, bool IsNSW);
   LLVM_ABI const SCEV *getMinMaxExpr(SCEVTypes Kind,
-                            SmallVectorImpl<const SCEV *> &Operands);
-  LLVM_ABI const SCEV *getSequentialMinMaxExpr(SCEVTypes Kind,
-                                      SmallVectorImpl<const SCEV *> &Operands);
+                                     SmallVectorImpl<const SCEV *> &Operands);
+  LLVM_ABI const SCEV *
+  getSequentialMinMaxExpr(SCEVTypes Kind,
+                          SmallVectorImpl<const SCEV *> &Operands);
   LLVM_ABI const SCEV *getSMaxExpr(const SCEV *LHS, const SCEV *RHS);
   LLVM_ABI const SCEV *getSMaxExpr(SmallVectorImpl<const SCEV *> &Operands);
   LLVM_ABI const SCEV *getUMaxExpr(const SCEV *LHS, const SCEV *RHS);
@@ -644,9 +651,9 @@ public:
   LLVM_ABI const SCEV *getSMinExpr(const SCEV *LHS, const SCEV *RHS);
   LLVM_ABI const SCEV *getSMinExpr(SmallVectorImpl<const SCEV *> &Operands);
   LLVM_ABI const SCEV *getUMinExpr(const SCEV *LHS, const SCEV *RHS,
-                          bool Sequential = false);
+                                   bool Sequential = false);
   LLVM_ABI const SCEV *getUMinExpr(SmallVectorImpl<const SCEV *> &Operands,
-                          bool Sequential = false);
+                                   bool Sequential = false);
   LLVM_ABI const SCEV *getUnknown(Value *V);
   LLVM_ABI const SCEV *getCouldNotCompute();
 
@@ -677,11 +684,12 @@ public:
   LLVM_ABI const SCEV *getStoreSizeOfExpr(Type *IntTy, Type *StoreTy);
 
   /// Return an expression for offsetof on the given field with type IntTy
-  LLVM_ABI const SCEV *getOffsetOfExpr(Type *IntTy, StructType *STy, unsigned FieldNo);
+  LLVM_ABI const SCEV *getOffsetOfExpr(Type *IntTy, StructType *STy,
+                                       unsigned FieldNo);
 
   /// Return the SCEV object corresponding to -V.
-  LLVM_ABI const SCEV *getNegativeSCEV(const SCEV *V,
-                              SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap);
+  LLVM_ABI const SCEV *
+  getNegativeSCEV(const SCEV *V, SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap);
 
   /// Return the SCEV object corresponding to ~V.
   LLVM_ABI const SCEV *getNotSCEV(const SCEV *V);
@@ -694,8 +702,8 @@ public:
   /// explicitly convert the arguments using getPtrToIntExpr(), for pointer
   /// types that support it.
   LLVM_ABI const SCEV *getMinusSCEV(const SCEV *LHS, const SCEV *RHS,
-                           SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
-                           unsigned Depth = 0);
+                                    SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
+                                    unsigned Depth = 0);
 
   /// Compute ceil(N / D). N and D are treated as unsigned values.
   ///
@@ -710,12 +718,12 @@ public:
   /// Return a SCEV corresponding to a conversion of the input value to the
   /// specified type.  If the type must be extended, it is zero extended.
   LLVM_ABI const SCEV *getTruncateOrZeroExtend(const SCEV *V, Type *Ty,
-                                      unsigned Depth = 0);
+                                               unsigned Depth = 0);
 
   /// Return a SCEV corresponding to a conversion of the input value to the
   /// specified type.  If the type must be extended, it is sign extended.
   LLVM_ABI const SCEV *getTruncateOrSignExtend(const SCEV *V, Type *Ty,
-                                      unsigned Depth = 0);
+                                               unsigned Depth = 0);
 
   /// Return a SCEV corresponding to a conversion of the input value to the
   /// specified type.  If the type must be extended, it is zero extended.  The
@@ -738,17 +746,20 @@ public:
 
   /// Promote the operands to the wider of the types using zero-extension, and
   /// then perform a umax operation with them.
-  LLVM_ABI const SCEV *getUMaxFromMismatchedTypes(const SCEV *LHS, const SCEV *RHS);
+  LLVM_ABI const SCEV *getUMaxFromMismatchedTypes(const SCEV *LHS,
+                                                  const SCEV *RHS);
 
   /// Promote the operands to the wider of the types using zero-extension, and
   /// then perform a umin operation with them.
-  LLVM_ABI const SCEV *getUMinFromMismatchedTypes(const SCEV *LHS, const SCEV *RHS,
-                                         bool Sequential = false);
+  LLVM_ABI const SCEV *getUMinFromMismatchedTypes(const SCEV *LHS,
+                                                  const SCEV *RHS,
+                                                  bool Sequential = false);
 
   /// Promote the operands to the wider of the types using zero-extension, and
   /// then perform a umin operation with them. N-ary function.
-  LLVM_ABI const SCEV *getUMinFromMismatchedTypes(SmallVectorImpl<const SCEV *> &Ops,
-                                         bool Sequential = false);
+  LLVM_ABI const SCEV *
+  getUMinFromMismatchedTypes(SmallVectorImpl<const SCEV *> &Ops,
+                             bool Sequential = false);
 
   /// Transitively follow the chain of pointer-type operands until reaching a
   /// SCEV that does not have a single pointer operand. This returns a
@@ -778,17 +789,19 @@ public:
   /// and RHS.  This is used to help avoid max expressions in loop trip
   /// counts, and to eliminate casts.
   LLVM_ABI bool isLoopEntryGuardedByCond(const Loop *L, CmpPredicate Pred,
-                                const SCEV *LHS, const SCEV *RHS);
+                                         const SCEV *LHS, const SCEV *RHS);
 
   /// Test whether entry to the basic block is protected by a conditional
   /// between LHS and RHS.
-  LLVM_ABI bool isBasicBlockEntryGuardedByCond(const BasicBlock *BB, CmpPredicate Pred,
-                                      const SCEV *LHS, const SCEV *RHS);
+  LLVM_ABI bool isBasicBlockEntryGuardedByCond(const BasicBlock *BB,
+                                               CmpPredicate Pred,
+                                               const SCEV *LHS,
+                                               const SCEV *RHS);
 
   /// Test whether the backedge of the loop is protected by a conditional
   /// between LHS and RHS.  This is used to eliminate casts.
   LLVM_ABI bool isLoopBackedgeGuardedByCond(const Loop *L, CmpPredicate Pred,
-                                   const SCEV *LHS, const SCEV *RHS);
+                                            const SCEV *LHS, const SCEV *RHS);
 
   /// A version of getTripCountFromExitCount below which always picks an
   /// evaluation type which can not result in overflow.
@@ -801,8 +814,8 @@ public:
   /// expression can overflow if ExitCount = UINT_MAX.  If EvalTy is not wide
   /// enough to hold the result without overflow, result unsigned wraps with
   /// 2s-complement semantics.  ex: EC = 255 (i8), TC = 0 (i8)
-  LLVM_ABI const SCEV *getTripCountFromExitCount(const SCEV *ExitCount, Type *EvalTy,
-                                        const Loop *L);
+  LLVM_ABI const SCEV *getTripCountFromExitCount(const SCEV *ExitCount,
+                                                 Type *EvalTy, const Loop *L);
 
   /// Returns the exact trip count of the loop if we can compute it, and
   /// the result is a small constant.  '0' is used to represent an unknown
@@ -820,7 +833,7 @@ public:
   /// the number times that the loop header executes if the loop exits
   /// prematurely via another branch.
   LLVM_ABI unsigned getSmallConstantTripCount(const Loop *L,
-                                     const BasicBlock *ExitingBlock);
+                                              const BasicBlock *ExitingBlock);
 
   /// Returns the upper bound of the loop trip count as a normal unsigned
   /// value.
@@ -837,7 +850,7 @@ public:
   /// return 1 if the trip count is very large (>= 2^32).
   /// Note that the argument is an exit count for loop L, NOT a trip count.
   LLVM_ABI unsigned getSmallConstantTripMultiple(const Loop *L,
-                                        const SCEV *ExitCount);
+                                                 const SCEV *ExitCount);
 
   /// Returns the largest constant divisor of the trip count of the
   /// loop.  Will return 1 if no trip count could be computed, or if a
@@ -850,8 +863,8 @@ public:
   /// count could very well be zero as well!). As explained in the comments
   /// for getSmallConstantTripCount, this assumes that control exits the loop
   /// via ExitingBlock.
-  LLVM_ABI unsigned getSmallConstantTripMultiple(const Loop *L,
-                                        const BasicBlock *ExitingBlock);
+  LLVM_ABI unsigned
+  getSmallConstantTripMultiple(const Loop *L, const BasicBlock *ExitingBlock);
 
   /// The terms "backedge taken count" and "exit count" are used
   /// interchangeably to refer to the number of times the backedge of a loop
@@ -872,8 +885,9 @@ public:
   /// getBackedgeTakenCount.  The loop is guaranteed to exit (via *some* exit)
   /// before the backedge is executed (ExitCount + 1) times.  Note that there
   /// is no guarantee about *which* exit is taken on the exiting iteration.
-  LLVM_ABI const SCEV *getExitCount(const Loop *L, const BasicBlock *ExitingBlock,
-                           ExitCountKind Kind = Exact);
+  LLVM_ABI const SCEV *getExitCount(const Loop *L,
+                                    const BasicBlock *ExitingBlock,
+                                    ExitCountKind Kind = Exact);
 
   /// Same as above except this uses the predicated backedge taken info and
   /// may require predicates.
@@ -892,7 +906,8 @@ public:
   /// Note that it is not valid to call this method on a loop without a
   /// loop-invariant backedge-taken count (see
   /// hasLoopInvariantBackedgeTakenCount).
-  LLVM_ABI const SCEV *getBackedgeTakenCount(const Loop *L, ExitCountKind Kind = Exact);
+  LLVM_ABI const SCEV *getBackedgeTakenCount(const Loop *L,
+                                             ExitCountKind Kind = Exact);
 
   /// Similar to getBackedgeTakenCount, except it will add a set of
   /// SCEV predicates to Predicates that are required to be true in order for
@@ -1043,14 +1058,15 @@ public:
   /// Test if the given expression is known to be a power of 2.  OrNegative
   /// allows matching negative power of 2s, and OrZero allows matching 0.
   LLVM_ABI bool isKnownToBeAPowerOfTwo(const SCEV *S, bool OrZero = false,
-                              bool OrNegative = false);
+                                       bool OrNegative = false);
 
   /// Check that \p S is a multiple of \p M. When \p S is an AddRecExpr, \p S is
   /// a multiple of \p M if \p S starts with a multiple of \p M and at every
   /// iteration step \p S only adds multiples of \p M. \p Assumptions records
   /// the runtime predicates under which \p S is a multiple of \p M.
-  LLVM_ABI bool isKnownMultipleOf(const SCEV *S, uint64_t M,
-                         SmallVectorImpl<const SCEVPredicate *> &Assumptions);
+  LLVM_ABI bool
+  isKnownMultipleOf(const SCEV *S, uint64_t M,
+                    SmallVectorImpl<const SCEVPredicate *> &Assumptions);
 
   /// Splits SCEV expression \p S into two SCEVs. One of them is obtained from
   /// \p S by substitution of all AddRec sub-expression related to loop \p L
@@ -1068,8 +1084,8 @@ public:
   /// 0 (initial value) for the first element and to {1, +, 1}<L1> (post
   /// increment value) for the second one. In both cases AddRec expression
   /// related to L2 remains the same.
-  LLVM_ABI std::pair<const SCEV *, const SCEV *> SplitIntoInitAndPostInc(const Loop *L,
-                                                                const SCEV *S);
+  LLVM_ABI std::pair<const SCEV *, const SCEV *>
+  SplitIntoInitAndPostInc(const Loop *L, const SCEV *S);
 
   /// We'd like to check the predicate on every iteration of the most dominated
   /// loop between loops used in LHS and RHS.
@@ -1089,34 +1105,38 @@ public:
   ///    so we can assert on that.
   /// e. Return true if isLoopEntryGuardedByCond(Pred, E(LHS), E(RHS)) &&
   ///                   isLoopBackedgeGuardedByCond(Pred, B(LHS), B(RHS))
-  LLVM_ABI bool isKnownViaInduction(CmpPredicate Pred, const SCEV *LHS, const SCEV *RHS);
+  LLVM_ABI bool isKnownViaInduction(CmpPredicate Pred, const SCEV *LHS,
+                                    const SCEV *RHS);
 
   /// Test if the given expression is known to satisfy the condition described
   /// by Pred, LHS, and RHS.
-  LLVM_ABI bool isKnownPredicate(CmpPredicate Pred, const SCEV *LHS, const SCEV *RHS);
+  LLVM_ABI bool isKnownPredicate(CmpPredicate Pred, const SCEV *LHS,
+                                 const SCEV *RHS);
 
   /// Check whether the condition described by Pred, LHS, and RHS is true or
   /// false. If we know it, return the evaluation of this condition. If neither
   /// is proved, return std::nullopt.
-  LLVM_ABI std::optional<bool> evaluatePredicate(CmpPredicate Pred, const SCEV *LHS,
-                                        const SCEV *RHS);
+  LLVM_ABI std::optional<bool>
+  evaluatePredicate(CmpPredicate Pred, const SCEV *LHS, const SCEV *RHS);
 
   /// Test if the given expression is known to satisfy the condition described
   /// by Pred, LHS, and RHS in the given Context.
-  LLVM_ABI bool isKnownPredicateAt(CmpPredicate Pred, const SCEV *LHS, const SCEV *RHS,
-                          const Instruction *CtxI);
+  LLVM_ABI bool isKnownPredicateAt(CmpPredicate Pred, const SCEV *LHS,
+                                   const SCEV *RHS, const Instruction *CtxI);
 
   /// Check whether the condition described by Pred, LHS, and RHS is true or
   /// false in the given \p Context. If we know it, return the evaluation of
   /// this condition. If neither is proved, return std::nullopt.
-  LLVM_ABI std::optional<bool> evaluatePredicateAt(CmpPredicate Pred, const SCEV *LHS,
-                                          const SCEV *RHS,
-                                          const Instruction *CtxI);
+  LLVM_ABI std::optional<bool> evaluatePredicateAt(CmpPredicate Pred,
+                                                   const SCEV *LHS,
+                                                   const SCEV *RHS,
+                                                   const Instruction *CtxI);
 
   /// Test if the condition described by Pred, LHS, RHS is known to be true on
   /// every iteration of the loop of the recurrency LHS.
-  LLVM_ABI bool isKnownOnEveryIteration(CmpPredicate Pred, const SCEVAddRecExpr *LHS,
-                               const SCEV *RHS);
+  LLVM_ABI bool isKnownOnEveryIteration(CmpPredicate Pred,
+                                        const SCEVAddRecExpr *LHS,
+                                        const SCEV *RHS);
 
   /// Information about the number of loop iterations for which a loop exit's
   /// branch condition evaluates to the not-taken path.  This is a temporary
@@ -1141,13 +1161,14 @@ public:
     /// as arguments and asserts enforce that internally.
     /*implicit*/ LLVM_ABI ExitLimit(const SCEV *E);
 
-    LLVM_ABI ExitLimit(const SCEV *E, const SCEV *ConstantMaxNotTaken,
+    LLVM_ABI
+    ExitLimit(const SCEV *E, const SCEV *ConstantMaxNotTaken,
               const SCEV *SymbolicMaxNotTaken, bool MaxOrZero,
               ArrayRef<ArrayRef<const SCEVPredicate *>> PredLists = {});
 
     LLVM_ABI ExitLimit(const SCEV *E, const SCEV *ConstantMaxNotTaken,
-              const SCEV *SymbolicMaxNotTaken, bool MaxOrZero,
-              ArrayRef<const SCEVPredicate *> PredList);
+                       const SCEV *SymbolicMaxNotTaken, bool MaxOrZero,
+                       ArrayRef<const SCEVPredicate *> PredList);
 
     /// Test whether this ExitLimit contains any computed information, or
     /// whether it's all SCEVCouldNotCompute values.
@@ -1173,8 +1194,9 @@ public:
   /// If \p AllowPredicates is set, this call will try to use a minimal set of
   /// SCEV predicates in order to return an exact answer.
   LLVM_ABI ExitLimit computeExitLimitFromCond(const Loop *L, Value *ExitCond,
-                                     bool ExitIfTrue, bool ControlsOnlyExit,
-                                     bool AllowPredicates = false);
+                                              bool ExitIfTrue,
+                                              bool ControlsOnlyExit,
+                                              bool AllowPredicates = false);
 
   /// A predicate is said to be monotonically increasing if may go from being
   /// false to being true as the loop iterates, but never the other way
@@ -1232,7 +1254,7 @@ public:
   /// unequal, LHS and RHS are set to the same value and Pred is set to either
   /// ICMP_EQ or ICMP_NE.
   LLVM_ABI bool SimplifyICmpOperands(CmpPredicate &Pred, const SCEV *&LHS,
-                            const SCEV *&RHS, unsigned Depth = 0);
+                                     const SCEV *&RHS, unsigned Depth = 0);
 
   /// Return the "disposition" of the given SCEV with respect to the given
   /// loop.
@@ -1255,7 +1277,8 @@ public:
 
   /// Return the "disposition" of the given SCEV with respect to the given
   /// block.
-  LLVM_ABI BlockDisposition getBlockDisposition(const SCEV *S, const BasicBlock *BB);
+  LLVM_ABI BlockDisposition getBlockDisposition(const SCEV *S,
+                                                const BasicBlock *BB);
 
   /// Return true if elements that makes up the given SCEV dominate the
   /// specified basic block.
@@ -1274,15 +1297,17 @@ public:
   LLVM_ABI void print(raw_ostream &OS) const;
   LLVM_ABI void verify() const;
   LLVM_ABI bool invalidate(Function &F, const PreservedAnalyses &PA,
-                  FunctionAnalysisManager::Invalidator &Inv);
+                           FunctionAnalysisManager::Invalidator &Inv);
 
   /// Return the DataLayout associated with the module this SCEV instance is
   /// operating on.
   const DataLayout &getDataLayout() const { return DL; }
 
-  LLVM_ABI const SCEVPredicate *getEqualPredicate(const SCEV *LHS, const SCEV *RHS);
+  LLVM_ABI const SCEVPredicate *getEqualPredicate(const SCEV *LHS,
+                                                  const SCEV *RHS);
   LLVM_ABI const SCEVPredicate *getComparePredicate(ICmpInst::Predicate Pred,
-                                           const SCEV *LHS, const SCEV *RHS);
+                                                    const SCEV *LHS,
+                                                    const SCEV *RHS);
 
   LLVM_ABI const SCEVPredicate *
   getWrapPredicate(const SCEVAddRecExpr *AR,
@@ -1290,7 +1315,7 @@ public:
 
   /// Re-writes the SCEV according to the Predicates in \p A.
   LLVM_ABI const SCEV *rewriteUsingPredicate(const SCEV *S, const Loop *L,
-                                    const SCEVPredicate &A);
+                                             const SCEVPredicate &A);
   /// Tries to convert the \p S expression to an AddRec expression,
   /// adding additional predicates to \p Preds as required.
   LLVM_ABI const SCEVAddRecExpr *convertSCEVToAddRecWithPredicates(
@@ -1305,7 +1330,7 @@ public:
   /// canonicalizing an expression in the cases where the result isn't going
   /// to be a constant.
   LLVM_ABI std::optional<APInt> computeConstantDifference(const SCEV *LHS,
-                                                 const SCEV *RHS);
+                                                          const SCEV *RHS);
 
   /// Update no-wrap flags of an AddRec. This may drop the cached info about
   /// this AddRec (such as range info) in case if new flags may potentially
@@ -1350,7 +1375,8 @@ public:
 
   /// Try to apply information from loop guards for \p L to \p Expr.
   LLVM_ABI const SCEV *applyLoopGuards(const SCEV *Expr, const Loop *L);
-  LLVM_ABI const SCEV *applyLoopGuards(const SCEV *Expr, const LoopGuards &Guards);
+  LLVM_ABI const SCEV *applyLoopGuards(const SCEV *Expr,
+                                       const LoopGuards &Guards);
 
   /// Return true if the loop has no abnormal exits. That is, if the loop
   /// is not infinite, it must exit through an explicit edge in the CFG.
@@ -1367,8 +1393,9 @@ public:
   /// Return the set of Values that, if poison, will definitively result in S
   /// being poison as well. The returned set may be incomplete, i.e. there can
   /// be additional Values that also result in S being poison.
-  LLVM_ABI void getPoisonGeneratingValues(SmallPtrSetImpl<const Value *> &Result,
-                                 const SCEV *S);
+  LLVM_ABI void
+  getPoisonGeneratingValues(SmallPtrSetImpl<const Value *> &Result,
+                            const SCEV *S);
 
   /// Check whether it is poison-safe to represent the expression S using the
   /// instruction I. If such a replacement is performed, the poison flags of
@@ -1563,8 +1590,9 @@ private:
     using EdgeExitInfo = std::pair<BasicBlock *, ExitLimit>;
 
     /// Initialize BackedgeTakenInfo from a list of exact exit counts.
-    LLVM_ABI BackedgeTakenInfo(ArrayRef<EdgeExitInfo> ExitCounts, bool IsComplete,
-                      const SCEV *ConstantMax, bool MaxOrZero);
+    LLVM_ABI BackedgeTakenInfo(ArrayRef<EdgeExitInfo> ExitCounts,
+                               bool IsComplete, const SCEV *ConstantMax,
+                               bool MaxOrZero);
 
     /// Test whether this BackedgeTakenInfo contains any computed information,
     /// or whether it's all SCEVCouldNotCompute values.
@@ -1742,7 +1770,7 @@ private:
   /// NOTE: This returns a reference to an entry in a cache. It must be
   /// copied if its needed for longer.
   LLVM_ABI const ConstantRange &getRangeRef(const SCEV *S, RangeSignHint Hint,
-                                   unsigned Depth = 0);
+                                            unsigned Depth = 0);
 
   /// Determine the range for a particular SCEV, but evaluates ranges for
   /// operands iteratively first.
@@ -1870,12 +1898,13 @@ private:
         : L(L), ExitIfTrue(ExitIfTrue), AllowPredicates(AllowPredicates) {}
 
     LLVM_ABI std::optional<ExitLimit> find(const Loop *L, Value *ExitCond,
-                                  bool ExitIfTrue, bool ControlsOnlyExit,
-                                  bool AllowPredicates);
+                                           bool ExitIfTrue,
+                                           bool ControlsOnlyExit,
+                                           bool AllowPredicates);
 
     LLVM_ABI void insert(const Loop *L, Value *ExitCond, bool ExitIfTrue,
-                bool ControlsOnlyExit, bool AllowPredicates,
-                const ExitLimit &EL);
+                         bool ControlsOnlyExit, bool AllowPredicates,
+                         const ExitLimit &EL);
   };
 
   using ExitLimitCacheTy = ExitLimitCache;
@@ -1980,27 +2009,30 @@ private:
   /// whenever the given FoundCondValue value evaluates to true in given
   /// Context. If Context is nullptr, then the found predicate is true
   /// everywhere. LHS and FoundLHS may have different type width.
-  LLVM_ABI bool isImpliedCond(CmpPredicate Pred, const SCEV *LHS, const SCEV *RHS,
-                     const Value *FoundCondValue, bool Inverse,
-                     const Instruction *Context = nullptr);
+  LLVM_ABI bool isImpliedCond(CmpPredicate Pred, const SCEV *LHS,
+                              const SCEV *RHS, const Value *FoundCondValue,
+                              bool Inverse,
+                              const Instruction *Context = nullptr);
 
   /// Test whether the condition described by Pred, LHS, and RHS is true
   /// whenever the given FoundCondValue value evaluates to true in given
   /// Context. If Context is nullptr, then the found predicate is true
   /// everywhere. LHS and FoundLHS must have same type width.
   LLVM_ABI bool isImpliedCondBalancedTypes(CmpPredicate Pred, const SCEV *LHS,
-                                  const SCEV *RHS, CmpPredicate FoundPred,
-                                  const SCEV *FoundLHS, const SCEV *FoundRHS,
-                                  const Instruction *CtxI);
+                                           const SCEV *RHS,
+                                           CmpPredicate FoundPred,
+                                           const SCEV *FoundLHS,
+                                           const SCEV *FoundRHS,
+                                           const Instruction *CtxI);
 
   /// Test whether the condition described by Pred, LHS, and RHS is true
   /// whenever the condition described by FoundPred, FoundLHS, FoundRHS is
   /// true in given Context. If Context is nullptr, then the found predicate is
   /// true everywhere.
-  LLVM_ABI bool isImpliedCond(CmpPredicate Pred, const SCEV *LHS, const SCEV *RHS,
-                     CmpPredicate FoundPred, const SCEV *FoundLHS,
-                     const SCEV *FoundRHS,
-                     const Instruction *Context = nullptr);
+  LLVM_ABI bool isImpliedCond(CmpPredicate Pred, const SCEV *LHS,
+                              const SCEV *RHS, CmpPredicate FoundPred,
+                              const SCEV *FoundLHS, const SCEV *FoundRHS,
+                              const Instruction *Context = nullptr);
 
   /// Test whether the condition described by Pred, LHS, and RHS is true
   /// whenever the condition described by Pred, FoundLHS, and FoundRHS is
@@ -2418,11 +2450,13 @@ public:
   LLVM_ABI const SCEVAddRecExpr *getAsAddRec(Value *V);
 
   /// Proves that V doesn't overflow by adding SCEV predicate.
-  LLVM_ABI void setNoOverflow(Value *V, SCEVWrapPredicate::IncrementWrapFlags Flags);
+  LLVM_ABI void setNoOverflow(Value *V,
+                              SCEVWrapPredicate::IncrementWrapFlags Flags);
 
   /// Returns true if we've proved that V doesn't wrap by means of a SCEV
   /// predicate.
-  LLVM_ABI bool hasNoOverflow(Value *V, SCEVWrapPredicate::IncrementWrapFlags Flags);
+  LLVM_ABI bool hasNoOverflow(Value *V,
+                              SCEVWrapPredicate::IncrementWrapFlags Flags);
 
   /// Returns the ScalarEvolution analysis used.
   ScalarEvolution *getSE() const { return &SE; }
@@ -2437,7 +2471,7 @@ public:
   /// Check if \p AR1 and \p AR2 are equal, while taking into account
   /// Equal predicates in Preds.
   LLVM_ABI bool areAddRecsEqualWithPreds(const SCEVAddRecExpr *AR1,
-                                const SCEVAddRecExpr *AR2) const;
+                                         const SCEVAddRecExpr *AR2) const;
 
 private:
   /// Increments the version number of the predicate.  This needs to be called

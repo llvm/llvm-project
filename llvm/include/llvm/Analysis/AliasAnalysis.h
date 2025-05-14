@@ -37,13 +37,13 @@
 #ifndef LLVM_ANALYSIS_ALIASANALYSIS_H
 #define LLVM_ANALYSIS_ALIASANALYSIS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ModRef.h"
 #include <cstdint>
 #include <functional>
@@ -340,7 +340,7 @@ public:
   /// The aggregation is invalidated if any of the underlying analyses is
   /// invalidated.
   LLVM_ABI bool invalidate(Function &F, const PreservedAnalyses &PA,
-                  FunctionAnalysisManager::Invalidator &Inv);
+                           FunctionAnalysisManager::Invalidator &Inv);
 
   //===--------------------------------------------------------------------===//
   /// \name Alias Queries
@@ -350,7 +350,8 @@ public:
   /// Returns an AliasResult indicating whether the two pointers are aliased to
   /// each other. This is the interface that must be implemented by specific
   /// alias analysis implementations.
-  LLVM_ABI AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB);
+  LLVM_ABI AliasResult alias(const MemoryLocation &LocA,
+                             const MemoryLocation &LocB);
 
   /// A convenience wrapper around the primary \c alias interface.
   AliasResult alias(const Value *V1, LocationSize V1Size, const Value *V2,
@@ -419,7 +420,7 @@ public:
   /// If IgnoreLocals is true, then this method returns NoModRef for memory
   /// that points to a local alloca.
   LLVM_ABI ModRefInfo getModRefInfoMask(const MemoryLocation &Loc,
-                               bool IgnoreLocals = false);
+                                        bool IgnoreLocals = false);
 
   /// A convenience wrapper around the primary \c getModRefInfoMask
   /// interface.
@@ -524,7 +525,8 @@ public:
 
   /// Return information about whether two instructions may refer to the same
   /// memory locations.
-  LLVM_ABI ModRefInfo getModRefInfo(const Instruction *I1, const Instruction *I2);
+  LLVM_ABI ModRefInfo getModRefInfo(const Instruction *I1,
+                                    const Instruction *I2);
 
   /// Return information about whether a particular call site modifies
   /// or reads the specified memory location \p MemLoc before instruction \p I
@@ -549,7 +551,8 @@ public:
 
   /// Check if it is possible for execution of the specified basic block to
   /// modify the location Loc.
-  LLVM_ABI bool canBasicBlockModify(const BasicBlock &BB, const MemoryLocation &Loc);
+  LLVM_ABI bool canBasicBlockModify(const BasicBlock &BB,
+                                    const MemoryLocation &Loc);
 
   /// A convenience wrapper synthesizing a memory location.
   bool canBasicBlockModify(const BasicBlock &BB, const Value *P,
@@ -562,9 +565,10 @@ public:
   ///
   /// The instructions to consider are all of the instructions in the range of
   /// [I1,I2] INCLUSIVE. I1 and I2 must be in the same basic block.
-  LLVM_ABI bool canInstructionRangeModRef(const Instruction &I1, const Instruction &I2,
-                                 const MemoryLocation &Loc,
-                                 const ModRefInfo Mode);
+  LLVM_ABI bool canInstructionRangeModRef(const Instruction &I1,
+                                          const Instruction &I2,
+                                          const MemoryLocation &Loc,
+                                          const ModRefInfo Mode);
 
   /// A convenience wrapper synthesizing a memory location.
   bool canInstructionRangeModRef(const Instruction &I1, const Instruction &I2,
@@ -575,42 +579,54 @@ public:
 
   // CtxI can be nullptr, in which case the query is whether or not the aliasing
   // relationship holds through the entire function.
-  LLVM_ABI AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB,
-                    AAQueryInfo &AAQI, const Instruction *CtxI = nullptr);
+  LLVM_ABI AliasResult alias(const MemoryLocation &LocA,
+                             const MemoryLocation &LocB, AAQueryInfo &AAQI,
+                             const Instruction *CtxI = nullptr);
 
-  LLVM_ABI ModRefInfo getModRefInfoMask(const MemoryLocation &Loc, AAQueryInfo &AAQI,
-                               bool IgnoreLocals = false);
+  LLVM_ABI ModRefInfo getModRefInfoMask(const MemoryLocation &Loc,
+                                        AAQueryInfo &AAQI,
+                                        bool IgnoreLocals = false);
   LLVM_ABI ModRefInfo getModRefInfo(const Instruction *I, const CallBase *Call2,
-                           AAQueryInfo &AAQIP);
-  LLVM_ABI ModRefInfo getModRefInfo(const CallBase *Call, const MemoryLocation &Loc,
-                           AAQueryInfo &AAQI);
-  LLVM_ABI ModRefInfo getModRefInfo(const CallBase *Call1, const CallBase *Call2,
-                           AAQueryInfo &AAQI);
-  LLVM_ABI ModRefInfo getModRefInfo(const VAArgInst *V, const MemoryLocation &Loc,
-                           AAQueryInfo &AAQI);
-  LLVM_ABI ModRefInfo getModRefInfo(const LoadInst *L, const MemoryLocation &Loc,
-                           AAQueryInfo &AAQI);
-  LLVM_ABI ModRefInfo getModRefInfo(const StoreInst *S, const MemoryLocation &Loc,
-                           AAQueryInfo &AAQI);
-  LLVM_ABI ModRefInfo getModRefInfo(const FenceInst *S, const MemoryLocation &Loc,
-                           AAQueryInfo &AAQI);
+                                    AAQueryInfo &AAQIP);
+  LLVM_ABI ModRefInfo getModRefInfo(const CallBase *Call,
+                                    const MemoryLocation &Loc,
+                                    AAQueryInfo &AAQI);
+  LLVM_ABI ModRefInfo getModRefInfo(const CallBase *Call1,
+                                    const CallBase *Call2, AAQueryInfo &AAQI);
+  LLVM_ABI ModRefInfo getModRefInfo(const VAArgInst *V,
+                                    const MemoryLocation &Loc,
+                                    AAQueryInfo &AAQI);
+  LLVM_ABI ModRefInfo getModRefInfo(const LoadInst *L,
+                                    const MemoryLocation &Loc,
+                                    AAQueryInfo &AAQI);
+  LLVM_ABI ModRefInfo getModRefInfo(const StoreInst *S,
+                                    const MemoryLocation &Loc,
+                                    AAQueryInfo &AAQI);
+  LLVM_ABI ModRefInfo getModRefInfo(const FenceInst *S,
+                                    const MemoryLocation &Loc,
+                                    AAQueryInfo &AAQI);
   LLVM_ABI ModRefInfo getModRefInfo(const AtomicCmpXchgInst *CX,
-                           const MemoryLocation &Loc, AAQueryInfo &AAQI);
-  LLVM_ABI ModRefInfo getModRefInfo(const AtomicRMWInst *RMW, const MemoryLocation &Loc,
-                           AAQueryInfo &AAQI);
-  LLVM_ABI ModRefInfo getModRefInfo(const CatchPadInst *I, const MemoryLocation &Loc,
-                           AAQueryInfo &AAQI);
-  LLVM_ABI ModRefInfo getModRefInfo(const CatchReturnInst *I, const MemoryLocation &Loc,
-                           AAQueryInfo &AAQI);
+                                    const MemoryLocation &Loc,
+                                    AAQueryInfo &AAQI);
+  LLVM_ABI ModRefInfo getModRefInfo(const AtomicRMWInst *RMW,
+                                    const MemoryLocation &Loc,
+                                    AAQueryInfo &AAQI);
+  LLVM_ABI ModRefInfo getModRefInfo(const CatchPadInst *I,
+                                    const MemoryLocation &Loc,
+                                    AAQueryInfo &AAQI);
+  LLVM_ABI ModRefInfo getModRefInfo(const CatchReturnInst *I,
+                                    const MemoryLocation &Loc,
+                                    AAQueryInfo &AAQI);
   LLVM_ABI ModRefInfo getModRefInfo(const Instruction *I,
-                           const std::optional<MemoryLocation> &OptLoc,
-                           AAQueryInfo &AAQIP);
-  LLVM_ABI ModRefInfo getModRefInfo(const Instruction *I1, const Instruction *I2,
-                           AAQueryInfo &AAQI);
+                                    const std::optional<MemoryLocation> &OptLoc,
+                                    AAQueryInfo &AAQIP);
+  LLVM_ABI ModRefInfo getModRefInfo(const Instruction *I1,
+                                    const Instruction *I2, AAQueryInfo &AAQI);
   LLVM_ABI ModRefInfo callCapturesBefore(const Instruction *I,
-                                const MemoryLocation &MemLoc, DominatorTree *DT,
-                                AAQueryInfo &AAQIP);
-  LLVM_ABI MemoryEffects getMemoryEffects(const CallBase *Call, AAQueryInfo &AAQI);
+                                         const MemoryLocation &MemLoc,
+                                         DominatorTree *DT, AAQueryInfo &AAQIP);
+  LLVM_ABI MemoryEffects getMemoryEffects(const CallBase *Call,
+                                          AAQueryInfo &AAQI);
 
 private:
   class Concept;
@@ -905,7 +921,7 @@ LLVM_ABI bool isEscapeSource(const Value *V);
 /// to true, then the memory is only not visible if the object has not been
 /// captured prior to the unwind. Otherwise it is not visible even if captured.
 LLVM_ABI bool isNotVisibleOnUnwind(const Value *Object,
-                          bool &RequiresNoCaptureBeforeUnwind);
+                                   bool &RequiresNoCaptureBeforeUnwind);
 
 /// Return true if the Object is writable, in the sense that any location based
 /// on this pointer that can be loaded can also be stored to without trapping.
@@ -918,7 +934,8 @@ LLVM_ABI bool isNotVisibleOnUnwind(const Value *Object,
 /// using the dereferenceable(N) attribute. It does not necessarily hold for
 /// parts that are only known to be dereferenceable due to the presence of
 /// loads.
-LLVM_ABI bool isWritableObject(const Value *Object, bool &ExplicitlyDereferenceableOnly);
+LLVM_ABI bool isWritableObject(const Value *Object,
+                               bool &ExplicitlyDereferenceableOnly);
 
 /// A manager for alias analyses.
 ///

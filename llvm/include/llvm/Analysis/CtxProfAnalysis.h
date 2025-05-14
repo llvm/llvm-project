@@ -9,13 +9,13 @@
 #ifndef LLVM_ANALYSIS_CTXPROFANALYSIS_H
 #define LLVM_ANALYSIS_CTXPROFANALYSIS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/ProfileData/PGOCtxProfReader.h"
+#include "llvm/Support/Compiler.h"
 #include <optional>
 
 namespace llvm {
@@ -122,7 +122,8 @@ class CtxProfAnalysis : public AnalysisInfoMixin<CtxProfAnalysis> {
 
 public:
   LLVM_ABI static AnalysisKey Key;
-  LLVM_ABI explicit CtxProfAnalysis(std::optional<StringRef> Profile = std::nullopt);
+  LLVM_ABI explicit CtxProfAnalysis(
+      std::optional<StringRef> Profile = std::nullopt);
 
   using Result = PGOContextualProfile;
 
@@ -136,7 +137,8 @@ public:
   LLVM_ABI static InstrProfIncrementInst *getBBInstrumentation(BasicBlock &BB);
 
   /// Get the step instrumentation associated with a `select`
-  LLVM_ABI static InstrProfIncrementInstStep *getSelectInstrumentation(SelectInst &SI);
+  LLVM_ABI static InstrProfIncrementInstStep *
+  getSelectInstrumentation(SelectInst &SI);
 
   // FIXME: refactor to an advisor model, and separate
   LLVM_ABI static void collectIndirectCallPromotionList(
@@ -174,15 +176,15 @@ public:
   // false if the select doesn't have instrumentation or if the count of the
   // parent BB is 0.
   LLVM_ABI bool getSelectInstrProfile(SelectInst &SI, uint64_t &TrueCount,
-                             uint64_t &FalseCount) const;
+                                      uint64_t &FalseCount) const;
   // Clears Profile and populates it with the edge weights, in the same order as
   // they need to appear in the MD_prof metadata. Also computes the max of those
   // weights an returns it in MaxCount. Returs false if:
   //   - the BB has less than 2 successors
   //   - the counts are 0
   LLVM_ABI bool getOutgoingBranchWeights(BasicBlock &BB,
-                                SmallVectorImpl<uint64_t> &Profile,
-                                uint64_t &MaxCount) const;
+                                         SmallVectorImpl<uint64_t> &Profile,
+                                         uint64_t &MaxCount) const;
   LLVM_ABI ~ProfileAnnotator();
 };
 

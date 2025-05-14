@@ -39,12 +39,12 @@
 #ifndef LLVM_ANALYSIS_DEPENDENCEANALYSIS_H
 #define LLVM_ANALYSIS_DEPENDENCEANALYSIS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
   class AAResults;
@@ -305,7 +305,7 @@ namespace llvm {
 
     /// Handle transitive invalidation when the cached analysis results go away.
     LLVM_ABI bool invalidate(Function &F, const PreservedAnalyses &PA,
-                    FunctionAnalysisManager::Invalidator &Inv);
+                             FunctionAnalysisManager::Invalidator &Inv);
 
     /// depends - Tests for a dependence between the Src and Dst instructions.
     /// Returns NULL if no dependence; otherwise, returns a Dependence (or a
@@ -314,8 +314,9 @@ namespace llvm {
     /// solved at compilation time. By default UnderRuntimeAssumptions is false
     /// for a safe approximation of the dependence relation that does not
     /// require runtime checks.
-    LLVM_ABI std::unique_ptr<Dependence> depends(Instruction *Src, Instruction *Dst,
-                                        bool UnderRuntimeAssumptions = false);
+    LLVM_ABI std::unique_ptr<Dependence>
+    depends(Instruction *Src, Instruction *Dst,
+            bool UnderRuntimeAssumptions = false);
 
     /// getSplitIteration - Give a dependence that's splittable at some
     /// particular level, return the iteration that should be used to split
@@ -357,7 +358,8 @@ namespace llvm {
     ///
     /// breaks the dependence and allows us to vectorize/parallelize
     /// both loops.
-    LLVM_ABI const SCEV *getSplitIteration(const Dependence &Dep, unsigned Level);
+    LLVM_ABI const SCEV *getSplitIteration(const Dependence &Dep,
+                                           unsigned Level);
 
     Function *getFunction() const { return F; }
 
@@ -469,11 +471,12 @@ namespace llvm {
       LLVM_ABI const Loop *getAssociatedLoop() const;
 
       /// setPoint - Change a constraint to Point.
-      LLVM_ABI void setPoint(const SCEV *X, const SCEV *Y, const Loop *CurrentLoop);
+      LLVM_ABI void setPoint(const SCEV *X, const SCEV *Y,
+                             const Loop *CurrentLoop);
 
       /// setLine - Change a constraint to Line.
-      LLVM_ABI void setLine(const SCEV *A, const SCEV *B,
-                   const SCEV *C, const Loop *CurrentLoop);
+      LLVM_ABI void setLine(const SCEV *A, const SCEV *B, const SCEV *C,
+                            const Loop *CurrentLoop);
 
       /// setDistance - Change a constraint to Distance.
       LLVM_ABI void setDistance(const SCEV *D, const Loop *CurrentLoop);

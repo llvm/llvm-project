@@ -23,12 +23,12 @@
 #ifndef LLVM_ANALYSIS_MUSTEXECUTE_H
 #define LLVM_ANALYSIS_MUSTEXECUTE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/Analysis/InstructionPrecedenceTracking.h"
 #include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -82,8 +82,9 @@ public:
 
   /// Return true if we must reach the block \p BB under assumption that the
   /// loop \p CurLoop is entered.
-  LLVM_ABI bool allLoopPathsLeadToBlock(const Loop *CurLoop, const BasicBlock *BB,
-                               const DominatorTree *DT) const;
+  LLVM_ABI bool allLoopPathsLeadToBlock(const Loop *CurLoop,
+                                        const BasicBlock *BB,
+                                        const DominatorTree *DT) const;
 
   /// Computes safety information for a loop checks loop body & header for
   /// the possibility of may throw exception, it takes LoopSafetyInfo and loop
@@ -107,7 +108,7 @@ public:
 /// Simple and conservative implementation of LoopSafetyInfo that can give
 /// false-positive answers to its queries in order to avoid complicated
 /// analysis.
-class LLVM_ABI SimpleLoopSafetyInfo: public LoopSafetyInfo {
+class LLVM_ABI SimpleLoopSafetyInfo : public LoopSafetyInfo {
   bool MayThrow = false;       // The current loop contains an instruction which
                                // may throw.
   bool HeaderMayThrow = false; // Same as previous, but specific to loop header
@@ -129,7 +130,7 @@ public:
 /// that should be invalidated by calling the methods insertInstructionTo and
 /// removeInstruction whenever we modify a basic block's contents by adding or
 /// removing instructions.
-class LLVM_ABI ICFLoopSafetyInfo: public LoopSafetyInfo {
+class LLVM_ABI ICFLoopSafetyInfo : public LoopSafetyInfo {
   bool MayThrow = false;       // The current loop contains an instruction which
                                // may throw.
   // Contains information about implicit control flow in this loop's blocks.
@@ -169,7 +170,8 @@ public:
   void removeInstruction(const Instruction *Inst);
 };
 
-LLVM_ABI bool mayContainIrreducibleControl(const Function &F, const LoopInfo *LI);
+LLVM_ABI bool mayContainIrreducibleControl(const Function &F,
+                                           const LoopInfo *LI);
 
 struct MustBeExecutedContextExplorer;
 

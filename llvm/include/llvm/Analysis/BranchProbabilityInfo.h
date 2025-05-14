@@ -13,7 +13,6 @@
 #ifndef LLVM_ANALYSIS_BRANCHPROBABILITYINFO_H
 #define LLVM_ANALYSIS_BRANCHPROBABILITYINFO_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/DenseSet.h"
@@ -23,6 +22,7 @@
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/BranchProbability.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstdint>
 #include <memory>
@@ -143,7 +143,7 @@ public:
   }
 
   LLVM_ABI bool invalidate(Function &, const PreservedAnalyses &PA,
-                  FunctionAnalysisManager::Invalidator &);
+                           FunctionAnalysisManager::Invalidator &);
 
   LLVM_ABI void releaseMemory();
 
@@ -155,17 +155,17 @@ public:
   /// (0%) and one (100%) of this edge executing, relative to other edges
   /// leaving the 'Src' block. The returned probability is never zero, and can
   /// only be one if the source block has only one successor.
-  LLVM_ABI BranchProbability getEdgeProbability(const BasicBlock *Src,
-                                       unsigned IndexInSuccessors) const;
+  LLVM_ABI BranchProbability
+  getEdgeProbability(const BasicBlock *Src, unsigned IndexInSuccessors) const;
 
   /// Get the probability of going from Src to Dst.
   ///
   /// It returns the sum of all probabilities for edges from Src to Dst.
   LLVM_ABI BranchProbability getEdgeProbability(const BasicBlock *Src,
-                                       const BasicBlock *Dst) const;
+                                                const BasicBlock *Dst) const;
 
   LLVM_ABI BranchProbability getEdgeProbability(const BasicBlock *Src,
-                                       const_succ_iterator Dst) const;
+                                                const_succ_iterator Dst) const;
 
   /// Test if an edge is hot relative to other out-edges of the Src.
   ///
@@ -178,8 +178,9 @@ public:
   /// Retrieves an edge's probability similarly to \see getEdgeProbability, but
   /// then prints that probability to the provided stream. That stream is then
   /// returned.
-  LLVM_ABI raw_ostream &printEdgeProbability(raw_ostream &OS, const BasicBlock *Src,
-                                    const BasicBlock *Dst) const;
+  LLVM_ABI raw_ostream &printEdgeProbability(raw_ostream &OS,
+                                             const BasicBlock *Src,
+                                             const BasicBlock *Dst) const;
 
 public:
   /// Set the raw probabilities for all edges from the given block.
@@ -187,8 +188,9 @@ public:
   /// This allows a pass to explicitly set edge probabilities for a block. It
   /// can be used when updating the CFG to update the branch probability
   /// information.
-  LLVM_ABI void setEdgeProbability(const BasicBlock *Src,
-                          const SmallVectorImpl<BranchProbability> &Probs);
+  LLVM_ABI void
+  setEdgeProbability(const BasicBlock *Src,
+                     const SmallVectorImpl<BranchProbability> &Probs);
 
   /// Copy outgoing edge probabilities from \p Src to \p Dst.
   ///
@@ -205,8 +207,8 @@ public:
   }
 
   LLVM_ABI void calculate(const Function &F, const LoopInfo &LI,
-                 const TargetLibraryInfo *TLI, DominatorTree *DT,
-                 PostDominatorTree *PDT);
+                          const TargetLibraryInfo *TLI, DominatorTree *DT,
+                          PostDominatorTree *PDT);
 
   /// Forget analysis results for the given basic block.
   LLVM_ABI void eraseBlock(const BasicBlock *BB);
@@ -257,13 +259,13 @@ public:
     /// Fills in \p Enters vector with all such blocks that don't belong to
     /// SCC with \p SccNum ID but there is an edge to a block belonging to the
     /// SCC.
-    LLVM_ABI void getSccEnterBlocks(int SccNum,
-                           SmallVectorImpl<BasicBlock *> &Enters) const;
+    LLVM_ABI void
+    getSccEnterBlocks(int SccNum, SmallVectorImpl<BasicBlock *> &Enters) const;
     /// Fills in \p Exits vector with all such blocks that don't belong to
     /// SCC with \p SccNum ID but there is an edge from a block belonging to the
     /// SCC.
     LLVM_ABI void getSccExitBlocks(int SccNum,
-                          SmallVectorImpl<BasicBlock *> &Exits) const;
+                                   SmallVectorImpl<BasicBlock *> &Exits) const;
 
   private:
     /// Returns \p BB's type according to classification given by SccBlockType
@@ -299,7 +301,7 @@ private:
   class LoopBlock {
   public:
     LLVM_ABI explicit LoopBlock(const BasicBlock *BB, const LoopInfo &LI,
-                       const SccInfo &SccI);
+                                const SccInfo &SccI);
 
     const BasicBlock *getBlock() const { return BB; }
     BasicBlock *getBlock() { return const_cast<BasicBlock *>(BB); }

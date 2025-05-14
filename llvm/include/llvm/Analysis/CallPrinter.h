@@ -14,8 +14,8 @@
 #ifndef LLVM_ANALYSIS_CALLPRINTER_H
 #define LLVM_ANALYSIS_CALLPRINTER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

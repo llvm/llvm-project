@@ -14,10 +14,10 @@
 #ifndef LLVM_ANALYSIS_LOOPACCESSANALYSIS_H
 #define LLVM_ANALYSIS_LOOPACCESSANALYSIS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/Support/Compiler.h"
 #include <optional>
 #include <variant>
 
@@ -163,7 +163,8 @@ public:
     Instruction *getDestination(const MemoryDepChecker &DepChecker) const;
 
     /// Dependence types that don't prevent vectorization.
-    LLVM_ABI static VectorizationSafetyStatus isSafeForVectorization(DepType Type);
+    LLVM_ABI static VectorizationSafetyStatus
+    isSafeForVectorization(DepType Type);
 
     /// Lexically forward dependence.
     LLVM_ABI bool isForward() const;
@@ -176,7 +177,7 @@ public:
     /// Print the dependence.  \p Instr is used to map the instruction
     /// indices to instructions.
     LLVM_ABI void print(raw_ostream &OS, unsigned Depth,
-               const SmallVectorImpl<Instruction *> &Instrs) const;
+                        const SmallVectorImpl<Instruction *> &Instrs) const;
   };
 
   MemoryDepChecker(PredicatedScalarEvolution &PSE, const Loop *L,
@@ -197,7 +198,7 @@ public:
   ///
   /// Only checks sets with elements in \p CheckDeps.
   LLVM_ABI bool areDepsSafe(const DepCandidates &AccessSets,
-                   const MemAccessInfoList &CheckDeps);
+                            const MemAccessInfoList &CheckDeps);
 
   /// No memory dependence was encountered that would inhibit
   /// vectorization.
@@ -266,8 +267,8 @@ public:
   }
 
   /// Find the set of instructions that read or write via \p Ptr.
-  LLVM_ABI SmallVector<Instruction *, 4> getInstructionsForAccess(Value *Ptr,
-                                                         bool isWrite) const;
+  LLVM_ABI SmallVector<Instruction *, 4>
+  getInstructionsForAccess(Value *Ptr, bool isWrite) const;
 
   /// Return the program order indices for the access location (Ptr, IsWrite).
   /// Returns an empty ArrayRef if there are no accesses for the location.
@@ -434,16 +435,17 @@ struct RuntimeCheckingPtrGroup {
   /// Create a new pointer checking group containing a single
   /// pointer, with index \p Index in RtCheck.
   LLVM_ABI RuntimeCheckingPtrGroup(unsigned Index,
-                          const RuntimePointerChecking &RtCheck);
+                                   const RuntimePointerChecking &RtCheck);
 
   /// Tries to add the pointer recorded in RtCheck at index
   /// \p Index to this pointer checking group. We can only add a pointer
   /// to a checking group if we will still be able to get
   /// the upper and lower bounds of the check. Returns true in case
   /// of success, false otherwise.
-  LLVM_ABI bool addPointer(unsigned Index, const RuntimePointerChecking &RtCheck);
+  LLVM_ABI bool addPointer(unsigned Index,
+                           const RuntimePointerChecking &RtCheck);
   LLVM_ABI bool addPointer(unsigned Index, const SCEV *Start, const SCEV *End,
-                  unsigned AS, bool NeedsFreeze, ScalarEvolution &SE);
+                           unsigned AS, bool NeedsFreeze, ScalarEvolution &SE);
 
   /// The SCEV expression which represents the upper bound of all the
   /// pointers in this group.
@@ -530,9 +532,10 @@ public:
   /// according to the assumptions that we've made during the analysis.
   /// The method might also version the pointer stride according to \p Strides,
   /// and add new predicates to \p PSE.
-  LLVM_ABI void insert(Loop *Lp, Value *Ptr, const SCEV *PtrExpr, Type *AccessTy,
-              bool WritePtr, unsigned DepSetId, unsigned ASId,
-              PredicatedScalarEvolution &PSE, bool NeedsFreeze);
+  LLVM_ABI void insert(Loop *Lp, Value *Ptr, const SCEV *PtrExpr,
+                       Type *AccessTy, bool WritePtr, unsigned DepSetId,
+                       unsigned ASId, PredicatedScalarEvolution &PSE,
+                       bool NeedsFreeze);
 
   /// No run-time memory checking is necessary.
   bool empty() const { return Pointers.empty(); }
@@ -540,7 +543,7 @@ public:
   /// Generate the checks and store it.  This also performs the grouping
   /// of pointers to reduce the number of memchecks necessary.
   LLVM_ABI void generateChecks(MemoryDepChecker::DepCandidates &DepCands,
-                      bool UseDependencies);
+                               bool UseDependencies);
 
   /// Returns the checks that generateChecks created. They can be used to ensure
   /// no read/write accesses overlap across all loop iterations.
@@ -562,7 +565,7 @@ public:
   /// Decide if we need to add a check between two groups of pointers,
   /// according to needsChecking.
   LLVM_ABI bool needsChecking(const RuntimeCheckingPtrGroup &M,
-                     const RuntimeCheckingPtrGroup &N) const;
+                              const RuntimeCheckingPtrGroup &N) const;
 
   /// Returns the number of run-time checks required according to
   /// needsChecking.
@@ -573,8 +576,8 @@ public:
 
   /// Print \p Checks.
   LLVM_ABI void printChecks(raw_ostream &OS,
-                   const SmallVectorImpl<RuntimePointerCheck> &Checks,
-                   unsigned Depth = 0) const;
+                            const SmallVectorImpl<RuntimePointerCheck> &Checks,
+                            unsigned Depth = 0) const;
 
   /// This flag indicates if we need to add the runtime check.
   bool Need = false;
@@ -661,9 +664,10 @@ private:
 /// PSE must be emitted in order for the results of this analysis to be valid.
 class LoopAccessInfo {
 public:
-  LLVM_ABI LoopAccessInfo(Loop *L, ScalarEvolution *SE, const TargetTransformInfo *TTI,
-                 const TargetLibraryInfo *TLI, AAResults *AA, DominatorTree *DT,
-                 LoopInfo *LI);
+  LLVM_ABI LoopAccessInfo(Loop *L, ScalarEvolution *SE,
+                          const TargetTransformInfo *TTI,
+                          const TargetLibraryInfo *TLI, AAResults *AA,
+                          DominatorTree *DT, LoopInfo *LI);
 
   /// Return true we can analyze the memory accesses in the loop and there are
   /// no memory dependence cycles. Note that for dependences between loads &
@@ -691,7 +695,7 @@ public:
   /// Return true if the block BB needs to be predicated in order for the loop
   /// to be vectorized.
   LLVM_ABI static bool blockNeedsPredication(BasicBlock *BB, Loop *TheLoop,
-                                    DominatorTree *DT);
+                                             DominatorTree *DT);
 
   /// Returns true if value \p V is loop invariant.
   LLVM_ABI bool isInvariant(Value *V) const;
@@ -846,7 +850,8 @@ replaceSymbolicStrideSCEV(PredicatedScalarEvolution &PSE,
 LLVM_ABI std::optional<int64_t>
 getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
              const Loop *Lp,
-             const DenseMap<Value *, const SCEV *> &StridesMap = DenseMap<Value *, const SCEV *>(),
+             const DenseMap<Value *, const SCEV *> &StridesMap =
+                 DenseMap<Value *, const SCEV *>(),
              bool Assume = false, bool ShouldCheckWrap = true);
 
 /// Returns the distance between the pointers \p PtrA and \p PtrB iff they are
@@ -869,14 +874,14 @@ getPointersDiff(Type *ElemTyA, Value *PtrA, Type *ElemTyB, Value *PtrB,
 /// sorted indices in \p SortedIndices as a[i+0], a[i+1], a[i+4], a[i+7] and
 /// saves the mask for actual memory accesses in program order in
 /// \p SortedIndices as <1,2,0,3>
-LLVM_ABI bool sortPtrAccesses(ArrayRef<Value *> VL, Type *ElemTy, const DataLayout &DL,
-                     ScalarEvolution &SE,
-                     SmallVectorImpl<unsigned> &SortedIndices);
+LLVM_ABI bool sortPtrAccesses(ArrayRef<Value *> VL, Type *ElemTy,
+                              const DataLayout &DL, ScalarEvolution &SE,
+                              SmallVectorImpl<unsigned> &SortedIndices);
 
 /// Returns true if the memory operations \p A and \p B are consecutive.
 /// This is a simple API that does not depend on the analysis pass.
 LLVM_ABI bool isConsecutiveAccess(Value *A, Value *B, const DataLayout &DL,
-                         ScalarEvolution &SE, bool CheckType = true);
+                                  ScalarEvolution &SE, bool CheckType = true);
 
 /// Calculate Start and End points of memory access.
 /// Let's assume A is the first access and B is a memory access on N-th loop
@@ -920,7 +925,7 @@ public:
   LLVM_ABI void clear();
 
   LLVM_ABI bool invalidate(Function &F, const PreservedAnalyses &PA,
-                  FunctionAnalysisManager::Invalidator &Inv);
+                           FunctionAnalysisManager::Invalidator &Inv);
 };
 
 /// This analysis provides dependence information for the memory

@@ -13,12 +13,12 @@
 #ifndef LLVM_ANALYSIS_DDG_H
 #define LLVM_ANALYSIS_DDG_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DirectedGraph.h"
 #include "llvm/Analysis/DependenceAnalysis.h"
 #include "llvm/Analysis/DependenceGraphBuilder.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class Function;
@@ -344,7 +344,8 @@ private:
 ///
 /// For information about time complexity of the build algorithm see the
 /// comments near the declaration of AbstractDependenceGraphBuilder.
-class LLVM_ABI DDGBuilder : public AbstractDependenceGraphBuilder<DataDependenceGraph> {
+class LLVM_ABI DDGBuilder
+    : public AbstractDependenceGraphBuilder<DataDependenceGraph> {
 public:
   DDGBuilder(DataDependenceGraph &G, DependenceInfo &D,
              const BasicBlockListType &BBs)
@@ -415,7 +416,8 @@ LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const DataDependenceGraph &G);
 class DDGAnalysis : public AnalysisInfoMixin<DDGAnalysis> {
 public:
   using Result = std::unique_ptr<DataDependenceGraph>;
-  LLVM_ABI Result run(Loop &L, LoopAnalysisManager &AM, LoopStandardAnalysisResults &AR);
+  LLVM_ABI Result run(Loop &L, LoopAnalysisManager &AM,
+                      LoopStandardAnalysisResults &AR);
 
 private:
   friend AnalysisInfoMixin<DDGAnalysis>;
@@ -427,7 +429,8 @@ class DDGAnalysisPrinterPass : public PassInfoMixin<DDGAnalysisPrinterPass> {
 public:
   explicit DDGAnalysisPrinterPass(raw_ostream &OS) : OS(OS) {}
   LLVM_ABI PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
-                        LoopStandardAnalysisResults &AR, LPMUpdater &U);
+                                 LoopStandardAnalysisResults &AR,
+                                 LPMUpdater &U);
   static bool isRequired() { return true; }
 
 private:

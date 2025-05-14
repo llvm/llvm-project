@@ -28,8 +28,8 @@ class Value;
 /// pointer). Return the result as a signed integer of intptr size.
 /// When NoAssumptions is true, no assumptions about index computation not
 /// overflowing is made.
-LLVM_ABI Value *emitGEPOffset(IRBuilderBase *Builder, const DataLayout &DL, User *GEP,
-                     bool NoAssumptions = false);
+LLVM_ABI Value *emitGEPOffset(IRBuilderBase *Builder, const DataLayout &DL,
+                              User *GEP, bool NoAssumptions = false);
 
 } // namespace llvm
 

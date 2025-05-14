@@ -18,7 +18,6 @@
 #ifndef LLVM_ANALYSIS_ALIASSETTRACKER_H
 #define LLVM_ANALYSIS_ALIASSETTRACKER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/ilist.h"
@@ -26,6 +25,7 @@
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueHandle.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <vector>
 
@@ -114,7 +114,8 @@ public:
   bool isForwardingAliasSet() const { return Forward; }
 
   /// Merge the specified alias set into this alias set.
-  LLVM_ABI void mergeSetIn(AliasSet &AS, AliasSetTracker &AST, BatchAAResults &BatchAA);
+  LLVM_ABI void mergeSetIn(AliasSet &AS, AliasSetTracker &AST,
+                           BatchAAResults &BatchAA);
 
   // Alias Set iteration - Allow access to all of the memory locations which are
   // part of this alias set.
@@ -148,10 +149,10 @@ public:
   /// If the specified memory location "may" (or must) alias one of the members
   /// in the set return the appropriate AliasResult. Otherwise return NoAlias.
   LLVM_ABI AliasResult aliasesMemoryLocation(const MemoryLocation &MemLoc,
-                                    BatchAAResults &AA) const;
+                                             BatchAAResults &AA) const;
 
   LLVM_ABI ModRefInfo aliasesUnknownInst(const Instruction *Inst,
-                                BatchAAResults &AA) const;
+                                         BatchAAResults &AA) const;
 };
 
 inline raw_ostream& operator<<(raw_ostream &OS, const AliasSet &AS) {
@@ -190,9 +191,11 @@ public:
   LLVM_ABI void add(VAArgInst *VAAI);
   LLVM_ABI void add(AnyMemSetInst *MSI);
   LLVM_ABI void add(AnyMemTransferInst *MTI);
-  LLVM_ABI void add(Instruction *I);       // Dispatch to one of the other add methods...
-  LLVM_ABI void add(BasicBlock &BB);       // Add all instructions in basic block
-  LLVM_ABI void add(const AliasSetTracker &AST); // Add alias relations from another AST
+  LLVM_ABI void
+  add(Instruction *I); // Dispatch to one of the other add methods...
+  LLVM_ABI void add(BasicBlock &BB); // Add all instructions in basic block
+  LLVM_ABI void
+  add(const AliasSetTracker &AST); // Add alias relations from another AST
   LLVM_ABI void addUnknown(Instruction *I);
 
   LLVM_ABI void clear();

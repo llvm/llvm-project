@@ -34,7 +34,6 @@
 #ifndef LLVM_ANALYSIS_LAZYCALLGRAPH_H
 #define LLVM_ANALYSIS_LAZYCALLGRAPH_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/Any.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -47,6 +46,7 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <iterator>
@@ -715,7 +715,7 @@ public:
     /// Note that if SourceN and TargetN are in separate SCCs, the simpler
     /// routine `switchTrivialInternalEdgeToRef` should be used instead.
     LLVM_ABI iterator_range<iterator> switchInternalEdgeToRef(Node &SourceN,
-                                                     Node &TargetN);
+                                                              Node &TargetN);
 
     /// Make an existing outgoing ref edge into a call edge.
     ///
@@ -749,7 +749,8 @@ public:
     /// There must be an existing path from the \p SourceN to the \p TargetN.
     /// This operation is inexpensive and does not change the set of SCCs and
     /// RefSCCs in the graph.
-    LLVM_ABI void insertOutgoingEdge(Node &SourceN, Node &TargetN, Edge::Kind EK);
+    LLVM_ABI void insertOutgoingEdge(Node &SourceN, Node &TargetN,
+                                     Edge::Kind EK);
 
     /// Insert an edge whose source is in a descendant RefSCC and target is in
     /// this RefSCC.
@@ -777,7 +778,7 @@ public:
     /// caller and callee are very nearby in the graph. See comments in the
     /// implementation for details, but that use case might impact users.
     LLVM_ABI SmallVector<RefSCC *, 1> insertIncomingRefEdge(Node &SourceN,
-                                                   Node &TargetN);
+                                                            Node &TargetN);
 
     /// Remove an edge whose source is in this RefSCC and target is *not*.
     ///
@@ -936,7 +937,7 @@ public:
   /// No function definitions are scanned until their nodes in the graph are
   /// requested during traversal.
   LLVM_ABI LazyCallGraph(Module &M,
-                function_ref<TargetLibraryInfo &(Function &)> GetTLI);
+                         function_ref<TargetLibraryInfo &(Function &)> GetTLI);
 
   LLVM_ABI LazyCallGraph(LazyCallGraph &&G);
   LLVM_ABI LazyCallGraph &operator=(LazyCallGraph &&RHS);
@@ -947,7 +948,7 @@ public:
 #endif
 
   LLVM_ABI bool invalidate(Module &, const PreservedAnalyses &PA,
-                  ModuleAnalysisManager::Invalidator &);
+                           ModuleAnalysisManager::Invalidator &);
 
   EdgeSequence::iterator begin() { return EntryEdges.begin(); }
   EdgeSequence::iterator end() { return EntryEdges.end(); }
@@ -1078,7 +1079,8 @@ public:
   /// The new function may also reference the original function.
   /// It may end up in a parent SCC in the case that the original function's
   /// edge to the new function is a ref edge, and the edge back is a call edge.
-  LLVM_ABI void addSplitFunction(Function &OriginalFunction, Function &NewFunction);
+  LLVM_ABI void addSplitFunction(Function &OriginalFunction,
+                                 Function &NewFunction);
 
   /// Add new ref-recursive functions split/outlined from an existing function.
   ///
@@ -1088,8 +1090,9 @@ public:
   ///
   /// The original function must reference (not call) all new functions.
   /// All new functions must reference (not call) each other.
-  LLVM_ABI void addSplitRefRecursiveFunctions(Function &OriginalFunction,
-                                     ArrayRef<Function *> NewFunctions);
+  LLVM_ABI void
+  addSplitRefRecursiveFunctions(Function &OriginalFunction,
+                                ArrayRef<Function *> NewFunctions);
 
   ///@}
 
@@ -1108,8 +1111,8 @@ public:
   ///
   /// For each defined function, calls \p Callback with that function.
   LLVM_ABI static void visitReferences(SmallVectorImpl<Constant *> &Worklist,
-                              SmallPtrSetImpl<Constant *> &Visited,
-                              function_ref<void(Function &)> Callback);
+                                       SmallPtrSetImpl<Constant *> &Visited,
+                                       function_ref<void(Function &)> Callback);
 
   ///@}
 

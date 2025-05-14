@@ -53,8 +53,8 @@
 #ifndef LLVM_ANALYSIS_UTILS_TRAININGLOGGER_H
 #define LLVM_ANALYSIS_UTILS_TRAININGLOGGER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Support/Compiler.h"
 
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Analysis/TensorSpec.h"
@@ -111,9 +111,9 @@ public:
   /// corresponding indices) with any MLModelRunner implementations
   /// corresponding to the model being trained/logged.
   LLVM_ABI Logger(std::unique_ptr<raw_ostream> OS,
-         const std::vector<TensorSpec> &FeatureSpecs,
-         const TensorSpec &RewardSpec, bool IncludeReward,
-         std::optional<TensorSpec> AdviceSpec = std::nullopt);
+                  const std::vector<TensorSpec> &FeatureSpecs,
+                  const TensorSpec &RewardSpec, bool IncludeReward,
+                  std::optional<TensorSpec> AdviceSpec = std::nullopt);
 
   LLVM_ABI void switchContext(StringRef Name);
   LLVM_ABI void startObservation();

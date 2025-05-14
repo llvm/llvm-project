@@ -20,9 +20,9 @@
 #ifndef LLVM_ANALYSIS_CALLGRAPHSCCPASS_H
 #define LLVM_ANALYSIS_CALLGRAPHSCCPASS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Compiler.h"
 #include <vector>
 
 namespace llvm {

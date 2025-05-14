@@ -20,8 +20,8 @@
 #ifndef LLVM_ANALYSIS_INSTRUCTIONPRECEDENCETRACKING_H
 #define LLVM_ANALYSIS_INSTRUCTIONPRECEDENCETRACKING_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -72,7 +72,8 @@ public:
   /// Notifies this tracking that we are going to insert a new instruction \p
   /// Inst to the basic block \p BB. It makes all necessary updates to internal
   /// caches to keep them consistent.
-  LLVM_ABI void insertInstructionTo(const Instruction *Inst, const BasicBlock *BB);
+  LLVM_ABI void insertInstructionTo(const Instruction *Inst,
+                                    const BasicBlock *BB);
 
   /// Notifies this tracking that we are going to remove the instruction \p Inst
   /// It makes all necessary updates to internal caches to keep them consistent.
@@ -94,7 +95,8 @@ public:
 /// is reached, then we need to make sure that there is no implicit control flow
 /// instruction (ICFI) preceding it. For example, this check is required if we
 /// perform PRE moving non-speculable instruction to other place.
-class LLVM_ABI ImplicitControlFlowTracking : public InstructionPrecedenceTracking {
+class LLVM_ABI ImplicitControlFlowTracking
+    : public InstructionPrecedenceTracking {
 public:
   /// Returns the topmost instruction with implicit control flow from the given
   /// basic block. Returns nullptr if there is no such instructions in the block.
