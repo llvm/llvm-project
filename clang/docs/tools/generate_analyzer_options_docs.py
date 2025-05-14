@@ -165,7 +165,7 @@ def get_calls(tokens, macro_names):
 # #define ANALYZER_OPTION_DEPENDS_ON_USER_MODE(TYPE, NAME, CMDFLAG, DESC,
 #                                              SHALLOW_VAL, DEEP_VAL)
 
-MACRO_NAMES_ARGCOUNTS = {
+MACRO_NAMES_PARAMCOUNTS = {
     "ANALYZER_OPTION": 5,
     "ANALYZER_OPTION_DEPENDS_ON_USER_MODE": 6,
 }
@@ -239,10 +239,14 @@ def defaults_to_rst_paragraph(defaults):
 
 
 def macro_call_to_rst_paragraphs(macro_call):
-    if len(macro_call.args) != MACRO_NAMES_ARGCOUNTS[macro_call.name]:
-        return ""
-
     try:
+        arg_count = len(macro_call.args)
+        param_count = MACRO_NAMES_PARAMCOUNTS[macro_call.name]
+        if arg_count != param_count:
+            raise ValueError(
+                f"expected {param_count} arguments for {macro_call.name}, found {arg_count}"
+            )
+
         _, _, cmdflag, desc, *defaults = macro_call.args
 
         return (
@@ -259,7 +263,7 @@ def get_option_list(input_file):
     with open(input_file, encoding="utf-8") as f:
         contents = f.read()
     tokens = join_strings(tokenize(contents))
-    macro_calls = get_calls(tokens, MACRO_NAMES_ARGCOUNTS)
+    macro_calls = get_calls(tokens, MACRO_NAMES_PARAMCOUNTS)
 
     result = ""
     for mc in macro_calls:
