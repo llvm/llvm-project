@@ -525,9 +525,6 @@ Improvements to Clang's diagnostics
 
 - Fixed a duplicate diagnostic when performing typo correction on function template
   calls with explicit template arguments. (#GH139226)
-
-- An error is now emitted when OpenMP ``collapse`` and ``ordered`` clauses have an
-  argument larger than what can fit within a 64-bit integer.
   
 - Explanatory note is printed when ``assert`` fails during evaluation of a
   constant expression. Prior to this, the error inaccurately implied that assert
@@ -950,6 +947,8 @@ OpenMP Support
   a crash if the next token after ``metadirective`` was a paren, bracket, or
   brace. The other was if the next token after the meta directive was not an
   open parenthesis. (#GH139665)
+- An error is now emitted when OpenMP ``collapse`` and ``ordered`` clauses have
+  an argument larger than what can fit within a 64-bit integer.
 
 Improvements
 ^^^^^^^^^^^^
