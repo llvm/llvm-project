@@ -339,6 +339,7 @@ enum SteppingGranularity : unsigned {
 };
 bool fromJSON(const llvm::json::Value &, SteppingGranularity &,
               llvm::json::Path);
+llvm::json::Value toJSON(const SteppingGranularity &);
 
 /// Provides formatting information for a value.
 struct ValueFormat {
