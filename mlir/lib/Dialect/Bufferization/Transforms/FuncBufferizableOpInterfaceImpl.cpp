@@ -299,7 +299,7 @@ struct CallOpInterface
         memRefType = *maybeMemRefType;
       }
 
-      // Since we don't yet have a clear layout story, to_memref may
+      // Since we don't yet have a clear layout story, to_buffer may
       // conservatively turn tensors into more dynamic memref than necessary.
       // If the memref type of the callee fails, introduce an extra memref.cast
       // that will either canonicalize away or fail compilation until we can do
@@ -480,9 +480,9 @@ struct FuncOpInterface
 
         // Note: If `inferFunctionResultLayout = true`, casts are later folded
         // away.
-        Value toMemrefOp = rewriter.create<bufferization::ToMemrefOp>(
+        Value toBufferOp = rewriter.create<bufferization::ToBufferOp>(
             returnOp.getLoc(), bufferizedType, returnVal);
-        returnValues.push_back(toMemrefOp);
+        returnValues.push_back(toBufferOp);
       }
 
       returnOp.getOperandsMutable().assign(returnValues);
