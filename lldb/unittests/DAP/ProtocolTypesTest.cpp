@@ -132,3 +132,65 @@ TEST(ProtocolTypesTest, Breakpoint) {
   EXPECT_EQ(breakpoint.offset, deserialized_breakpoint->offset);
   EXPECT_EQ(breakpoint.reason, deserialized_breakpoint->reason);
 }
+
+TEST(ProtocolTypesTest, SourceBreakpoint) {
+  SourceBreakpoint source_breakpoint;
+  source_breakpoint.line = 42;
+  source_breakpoint.column = 5;
+  source_breakpoint.condition = "x > 10";
+  source_breakpoint.hitCondition = "5";
+  source_breakpoint.logMessage = "Breakpoint hit at line 42";
+  source_breakpoint.mode = "hardware";
+
+  llvm::Expected<SourceBreakpoint> deserialized_source_breakpoint =
+      roundtrip(source_breakpoint);
+  ASSERT_THAT_EXPECTED(deserialized_source_breakpoint, llvm::Succeeded());
+
+  EXPECT_EQ(source_breakpoint.line, deserialized_source_breakpoint->line);
+  EXPECT_EQ(source_breakpoint.column, deserialized_source_breakpoint->column);
+  EXPECT_EQ(source_breakpoint.condition,
+            deserialized_source_breakpoint->condition);
+  EXPECT_EQ(source_breakpoint.hitCondition,
+            deserialized_source_breakpoint->hitCondition);
+  EXPECT_EQ(source_breakpoint.logMessage,
+            deserialized_source_breakpoint->logMessage);
+  EXPECT_EQ(source_breakpoint.mode, deserialized_source_breakpoint->mode);
+}
+
+TEST(ProtocolTypesTest, FunctionBreakpoint) {
+  FunctionBreakpoint function_breakpoint;
+  function_breakpoint.name = "myFunction";
+  function_breakpoint.condition = "x == 0";
+  function_breakpoint.hitCondition = "3";
+
+  llvm::Expected<FunctionBreakpoint> deserialized_function_breakpoint =
+      roundtrip(function_breakpoint);
+  ASSERT_THAT_EXPECTED(deserialized_function_breakpoint, llvm::Succeeded());
+
+  EXPECT_EQ(function_breakpoint.name, deserialized_function_breakpoint->name);
+  EXPECT_EQ(function_breakpoint.condition,
+            deserialized_function_breakpoint->condition);
+  EXPECT_EQ(function_breakpoint.hitCondition,
+            deserialized_function_breakpoint->hitCondition);
+}
+
+TEST(ProtocolTypesTest, DataBreakpoint) {
+  DataBreakpoint data_breakpoint_info;
+  data_breakpoint_info.dataId = "variable1";
+  data_breakpoint_info.accessType = eDataBreakpointAccessTypeReadWrite;
+  data_breakpoint_info.condition = "x > 100";
+  data_breakpoint_info.hitCondition = "10";
+
+  llvm::Expected<DataBreakpoint> deserialized_data_breakpoint_info =
+      roundtrip(data_breakpoint_info);
+  ASSERT_THAT_EXPECTED(deserialized_data_breakpoint_info, llvm::Succeeded());
+
+  EXPECT_EQ(data_breakpoint_info.dataId,
+            deserialized_data_breakpoint_info->dataId);
+  EXPECT_EQ(data_breakpoint_info.accessType,
+            deserialized_data_breakpoint_info->accessType);
+  EXPECT_EQ(data_breakpoint_info.condition,
+            deserialized_data_breakpoint_info->condition);
+  EXPECT_EQ(data_breakpoint_info.hitCondition,
+            deserialized_data_breakpoint_info->hitCondition);
+}
