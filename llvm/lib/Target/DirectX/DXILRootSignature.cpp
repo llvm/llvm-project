@@ -305,7 +305,7 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
 
       switch (Type) {
       case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit): {
-        auto Constants = RS.ParametersContainer.getConstant(Loc);
+        const dxbc::RootConstants &Constants = RS.ParametersContainer.getConstant(Loc);
         OS << indent(Space + 2) << "Register Space: " << Constants.RegisterSpace
            << "\n";
         OS << indent(Space + 2)
