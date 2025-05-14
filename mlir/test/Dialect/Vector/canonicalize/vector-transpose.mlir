@@ -139,9 +139,9 @@ func.func @negative_broadcast_transpose_021(%arg0 : vector<3x1x3xi8>) -> vector<
 
 // -----
 
-///===----------------------------------------------------------------------===//
-/// ShapeCastOp::fold:  shape_cast(transpose) -> shape_cast
-///===----------------------------------------------------------------------===//
+/// +--------------------------------------------------------------------------
+///  Tests of ShapeCastOp::fold:  shape_cast(transpose) -> shape_cast
+/// +--------------------------------------------------------------------------
 
 // In this test, the permutation maps the non-unit dimensions (1 and 2) as follows:
 // 1 -> 0
@@ -193,9 +193,9 @@ func.func @negative_shape_cast_of_transpose_scalable(%arg : vector<[4]x1xi8>) ->
 
 // -----
 
-///===----------------------------------------------------------------------===//
-/// FoldTransposeShapeCast:  transpose(shape_cast) -> shape_cast
-///===----------------------------------------------------------------------===//
+/// +--------------------------------------------------------------------------
+/// Tests of FoldTransposeShapeCast:  transpose(shape_cast) -> shape_cast
+/// +--------------------------------------------------------------------------
 
 // The conversion transpose(shape_cast) -> shape_cast is not disabled for scalable
 // vectors.
