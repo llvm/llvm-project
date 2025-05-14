@@ -366,7 +366,7 @@ class WMMA_NAME<string ALayout, string BLayout, int Satfinite, string Rnd, strin
   string record = "int_nvvm_wmma_"
                   # A.geom
                   # "_mma"
-                  # b1op
+                  # !subst(".", "_", b1op)
                   # "_" # ALayout
                   # "_" # BLayout
                   # !if(!ne(Rnd, ""), !strconcat("_", Rnd), "")
@@ -378,7 +378,7 @@ class MMA_NAME<string ALayout, string BLayout, int Satfinite, string b1op,
                WMMA_REGS A, WMMA_REGS B, WMMA_REGS C, WMMA_REGS D> {
   string signature = MMA_SIGNATURE<A, B, C, D>.ret;
   string record = "int_nvvm_mma"
-                  # b1op
+                  # !subst(".", "_", b1op)
                   # "_" # A.geom
                   # "_" # ALayout
                   # "_" # BLayout
@@ -597,7 +597,7 @@ class NVVM_WMMA_SUPPORTED<list<WMMA_REGS> frags, string layout_a, string layout_
 
 class NVVM_MMA_B1OPS<list<WMMA_REGS> frags> {
   list<string> ret = !cond(
-    !eq(frags[0].ptx_elt_type, "b1") : ["_xor_popc", "_and_popc"],
+    !eq(frags[0].ptx_elt_type, "b1") : [".xor.popc", ".and.popc"],
     true: [""]
   );
 }
