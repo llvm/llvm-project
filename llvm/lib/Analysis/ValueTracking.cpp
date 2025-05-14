@@ -7788,8 +7788,6 @@ static bool canCreateUndefOrPoison(const Operator *Op, UndefPoisonKind Kind,
   case Instruction::FRem:
     return false;
   case Instruction::GetElementPtr:
-    // inbounds is handled above
-    // TODO: what about inrange on constexpr?
     return false;
   default: {
     const auto *CE = dyn_cast<ConstantExpr>(Op);
