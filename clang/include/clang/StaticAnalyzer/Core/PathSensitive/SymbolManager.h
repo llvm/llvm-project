@@ -103,10 +103,7 @@ public:
   const Stmt *getStmt() const {
     switch (Elem->getKind()) {
     case CFGElement::Initializer:
-      if (const auto *Init = Elem->castAs<CFGInitializer>().getInitializer()) {
-        return Init->getInit();
-      }
-      return nullptr;
+      return Elem->castAs<CFGInitializer>().getInitializer()->getInit();
     case CFGElement::ScopeBegin:
       return Elem->castAs<CFGScopeBegin>().getTriggerStmt();
     case CFGElement::ScopeEnd:
