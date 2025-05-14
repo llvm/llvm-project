@@ -7248,8 +7248,7 @@ Sema::BuildCompoundLiteralExpr(SourceLocation LParenLoc, TypeSourceInfo *TInfo,
     if (auto ILE = dyn_cast<InitListExpr>(LiteralExpr))
       for (unsigned i = 0, j = ILE->getNumInits(); i != j; i++) {
         Expr *Init = ILE->getInit(i);
-        if (!Init->isTypeDependent() && !Init->isValueDependent() &&
-            !Init->getType()->isDependentType())
+        if (!Init->isTypeDependent() && !Init->isValueDependent())
           if (!Init->isConstantInitializer(Context, /*IsForRef=*/false)) {
             Diag(Init->getExprLoc(), diag::err_init_element_not_constant)
                 << Init->getSourceBitField();
