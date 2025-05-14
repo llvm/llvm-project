@@ -2,6 +2,10 @@
 
 // This file contains some tests of folding/canonicalizing vector.from_elements 
 
+///===----------------------------------------------===//
+///  Tests of `rewriteFromElementsAsSplat`
+///===----------------------------------------------===//
+
 // CHECK-LABEL: func @extract_scalar_from_from_elements(
 //  CHECK-SAME:     %[[a:.*]]: f32, %[[b:.*]]: f32)
 func.func @extract_scalar_from_from_elements(%a: f32, %b: f32) -> (f32, f32, f32, f32, f32, f32, f32) {
@@ -70,3 +74,72 @@ func.func @from_elements_to_splat(%a: f32, %b: f32) -> (vector<2x3xf32>, vector<
 }
 
 // -----
+
+
+///===----------------------------------------------===//
+///  Tests of `rewriteFromElementsAsShapeCast`
+///===----------------------------------------------===//
+
+// CHECK-LABEL: func @to_shape_cast_rank2_to_rank1(
+//  CHECK-SAME:       %[[a:.*]]: vector<1x2xi8>)
+//       CHECK:       %[[shape_cast:.*]] = vector.shape_cast %[[a]] : vector<1x2xi8> to vector<2xi8>
+//       CHECK:       return %[[shape_cast]] : vector<2xi8>
+func.func @to_shape_cast_rank2_to_rank1(%arg0: vector<1x2xi8>) -> vector<2xi8> {
+  %0 = vector.extract %arg0[0, 0] : i8 from vector<1x2xi8>
+  %1 = vector.extract %arg0[0, 1] : i8 from vector<1x2xi8>
+  %4 = vector.from_elements %0, %1 : vector<2xi8>
+  return %4 : vector<2xi8>
+}
+
+// -----
+
+// CHECK-LABEL: func @to_shape_cast_rank1_to_rank3(
+//  CHECK-SAME:       %[[a:.*]]: vector<8xi8>)
+//       CHECK:       %[[shape_cast:.*]] = vector.shape_cast %[[a]] : vector<8xi8> to vector<2x2x2xi8>
+//       CHECK:       return %[[shape_cast]] : vector<2x2x2xi8>
+func.func @to_shape_cast_rank1_to_rank3(%arg0: vector<8xi8>) -> vector<2x2x2xi8> {
+  %0 = vector.extract %arg0[0] : i8 from vector<8xi8>
+  %1 = vector.extract %arg0[1] : i8 from vector<8xi8>
+  %2 = vector.extract %arg0[2] : i8 from vector<8xi8>
+  %3 = vector.extract %arg0[3] : i8 from vector<8xi8>
+  %4 = vector.extract %arg0[4] : i8 from vector<8xi8>
+  %5 = vector.extract %arg0[5] : i8 from vector<8xi8>
+  %6 = vector.extract %arg0[6] : i8 from vector<8xi8>
+  %7 = vector.extract %arg0[7] : i8 from vector<8xi8>
+  %8 = vector.from_elements %0, %1, %2, %3, %4, %5, %6, %7 : vector<2x2x2xi8>
+  return %8 : vector<2x2x2xi8>
+}
+
+// -----
+
+// The extracted elements are recombined into a single vector, but in a new order. 
+// CHECK-LABEL: func @negative_nonascending_order(
+//   CHECK-NOT: shape_cast
+func.func @negative_nonascending_order(%arg0: vector<1x2xi8>) -> vector<2xi8> {
+  %0 = vector.extract %arg0[0, 1] : i8 from vector<1x2xi8>
+  %1 = vector.extract %arg0[0, 0] : i8 from vector<1x2xi8>
+  %2 = vector.from_elements %0, %1 : vector<2xi8>
+  return %2 : vector<2xi8>
+}
+
+// ----- 
+
+// CHECK-LABEL: func @negative_nonstatic_extract(
+//   CHECK-NOT: shape_cast
+func.func @negative_nonstatic_extract(%arg0: vector<1x2xi8>, %i0 : index, %i1 : index) -> vector<2xi8> {
+  %0 = vector.extract %arg0[0, %i0] : i8 from vector<1x2xi8>
+  %1 = vector.extract %arg0[0, %i1] : i8 from vector<1x2xi8>
+  %2 = vector.from_elements %0, %1 : vector<2xi8>
+  return %2 : vector<2xi8>
+}
+
+// -----
+
+// CHECK-LABEL: func @negative_different_sources(
+//   CHECK-NOT: shape_cast
+func.func @negative_different_sources(%arg0: vector<1x2xi8>, %arg1: vector<1x2xi8>) -> vector<2xi8> {
+  %0 = vector.extract %arg0[0, 0] : i8 from vector<1x2xi8>
+  %1 = vector.extract %arg1[0, 1] : i8 from vector<1x2xi8>
+  %2 = vector.from_elements %0, %1 : vector<2xi8>
+  return %2 : vector<2xi8>
+}

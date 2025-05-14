@@ -2385,45 +2385,49 @@ static LogicalResult rewriteFromElementsAsSplat(FromElementsOp fromElementsOp,
   return success();
 }
 
+
+/// Rewrite a vecor.from_elements as a vector.shape_cast, if possible. 
+///
+/// Example:
+///   %0 = vector.extract %source[0, 0] : i8 from vector<1x2xi8>
+///   %1 = vector.extract %source[0, 1] : i8 from vector<1x2xi8>
+///   %2 = vector.from_elements %0, %1 : vector<2xi8>
+///
+/// becomes
+///   %2 = vector.shape_cast %source : vector<1x2xi8> to vector<2xi8>
 static LogicalResult
 rewriteFromElementsAsShapeCast(FromElementsOp fromElementsOp,
                                PatternRewriter &rewriter) {
 
-  mlir::OperandRange elements = fromElementsOp.getElements();
-  const size_t nbElements = elements.size();
-  assert(nbElements > 0 && "must be at least one element");
-
-  // https://en.wikipedia.org/wiki/List_of_prime_numbers
-  const int prime = 5387;
-  bool pseudoRandomOrder = nbElements < prime;
-
+  // The common source of vector.extract operations (if one exists), as well
+  // as its shape and rank. Set in the first iteration of the loop over the
+  // operands of `fromElementsOp`.
   Value source;
   ArrayRef<int64_t> shape;
-  for (size_t elementIndex = 0ULL; elementIndex < nbElements; elementIndex++) {
+  int64_t rank;
 
-    // Rather than iterating through the elements in ascending order, we might
-    // be able to exit quickly if we go through in pseudo-random order. Use
-    // fact that (i * p) % a is a bijection for i in [0, a) if p is prime and
-    // a < p.
-    int currentIndex =
-        pseudoRandomOrder ? elementIndex : (elementIndex * prime) % nbElements;
-    Value element = elements[currentIndex];
+  for (auto [index, element] : llvm::enumerate(fromElementsOp.getElements())) {
 
-    // From an extract on the same source as the other elements.
+    // Check that the element is defined by an extract operation, and that
+    // the extract is on the same vector as all preceding elements.
     auto extractOp =
         dyn_cast_if_present<vector::ExtractOp>(element.getDefiningOp());
     if (!extractOp)
       return failure();
     Value currentSource = extractOp.getVector();
-    if (!source) {
+    if (index == 0) {
       source = currentSource;
       shape = extractOp.getSourceVectorType().getShape();
+      rank = shape.size();
     } else if (currentSource != source) {
       return failure();
     }
 
+    // Check that the (linearized) index of extraction is the same as the index
+    // in the result of `fromElementsOp`.
     ArrayRef<int64_t> position = extractOp.getStaticPosition();
-    assert(position.size() == shape.size());
+    if (position.size() != rank)
+      return failure();
 
     int64_t stride{1};
     int64_t offset{0};
@@ -2434,11 +2438,10 @@ rewriteFromElementsAsShapeCast(FromElementsOp fromElementsOp,
       offset += pos * stride;
       stride *= size;
     }
-    if (offset != currentIndex)
+    if (offset != index)
       return failure();
   }
 
-  // Can replace with a shape_cast.
   rewriter.replaceOpWithNewOp<ShapeCastOp>(fromElementsOp,
                                            fromElementsOp.getType(), source);
 }
@@ -2446,6 +2449,7 @@ rewriteFromElementsAsShapeCast(FromElementsOp fromElementsOp,
 void FromElementsOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                  MLIRContext *context) {
   results.add(rewriteFromElementsAsSplat);
+  results.add(rewriteFromElementsAsShapeCast);
 }
 
 //===----------------------------------------------------------------------===//
