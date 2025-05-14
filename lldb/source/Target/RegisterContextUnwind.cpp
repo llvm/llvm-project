@@ -1243,47 +1243,51 @@ bool RegisterContextUnwind::IsTrapHandlerSymbol(
   return false;
 }
 
-/// Search this stack frame's UnwindPlans for the AbstractRegisterLocation
-/// for this register.
-///
-/// \param[out] kind
-///     Set to the RegisterKind of the UnwindPlan which is the basis for
-///     the returned AbstractRegisterLocation; if the location is in terms
-///     of another register number, this Kind is needed to interpret it
-///     correctly.
-///
-/// \return
-///     An empty optional indicaTes that there was an error in processing
-///     the request.
-///
-///     If there is no unwind rule for a volatile (caller-preserved) register,
-///     the returned AbstractRegisterLocation will be IsUndefined,
-///     indicating that we should stop searching.
-///
-///     If there is no unwind rule for a non-volatile (callee-preserved)
-///     register, the returned AbstractRegisterLocation will be IsSame.
-///     In frame 0, IsSame means get the value from the live register context.
-///     Else it means to continue descending down the stack to more-live frames
-///     looking for a location/value.
-///
-///     If an AbstractRegisterLocation is found in an UnwindPlan, that will
-///     be returned, with no consideration of the current ABI rules for
-///     registers.  Functions using an alternate ABI calling convention
-///     will work as long as the UnwindPlans are exhaustive about what
-///     registers are volatile/non-volatile.
+// Search this stack frame's UnwindPlans for the AbstractRegisterLocation
+// for this register.
+//
+// \param[in] lldb_regnum
+//     The register number (in the eRegisterKindLLDB register numbering)
+//     we are searching for.
+//
+// \param[out] kind
+//     Set to the RegisterKind of the UnwindPlan which is the basis for
+//     the returned AbstractRegisterLocation; if the location is in terms
+//     of another register number, this Kind is needed to interpret it
+//     correctly.
+//
+// \return
+//     An empty optional indicaTes that there was an error in processing
+//     the request.
+//
+//     If there is no unwind rule for a volatile (caller-preserved) register,
+//     the returned AbstractRegisterLocation will be IsUndefined,
+//     indicating that we should stop searching.
+//
+//     If there is no unwind rule for a non-volatile (callee-preserved)
+//     register, the returned AbstractRegisterLocation will be IsSame.
+//     In frame 0, IsSame means get the value from the live register context.
+//     Else it means to continue descending down the stack to more-live frames
+//     looking for a location/value.
+//
+//     If an AbstractRegisterLocation is found in an UnwindPlan, that will
+//     be returned, with no consideration of the current ABI rules for
+//     registers.  Functions using an alternate ABI calling convention
+//     will work as long as the UnwindPlans are exhaustive about what
+//     registers are volatile/non-volatile.
 std::optional<UnwindPlan::Row::AbstractRegisterLocation>
 RegisterContextUnwind::GetAbstractRegisterLocation(uint32_t lldb_regnum,
                                                    lldb::RegisterKind &kind) {
   RegisterNumber regnum(m_thread, eRegisterKindLLDB, lldb_regnum);
   Log *log = GetLog(LLDBLog::Unwind);
 
+  kind = eRegisterKindLLDB;
   UnwindPlan::Row::AbstractRegisterLocation unwindplan_regloc;
 
   // First, try to find a register location via the FastUnwindPlan
   if (m_fast_unwind_plan_sp) {
     const UnwindPlan::Row *active_row =
         m_fast_unwind_plan_sp->GetRowForFunctionOffset(m_current_offset);
-    kind = m_fast_unwind_plan_sp->GetRegisterKind();
     if (regnum.GetAsKind(kind) == LLDB_INVALID_REGNUM) {
       UnwindLogMsg("could not convert lldb regnum %s (%d) into %d RegisterKind "
                    "reg numbering scheme",
@@ -1291,14 +1295,16 @@ RegisterContextUnwind::GetAbstractRegisterLocation(uint32_t lldb_regnum,
                    (int)kind);
       return {};
     }
-    // The architecture default unwind plan marks unknown registers as
-    // Undefined so that we don't forward them up the stack when a
-    // jitted stack frame may have overwritten them.  But when the
-    // arch default unwind plan is used as the Fast Unwind Plan, we
-    // need to recognize this & switch over to the Full Unwind Plan
-    // to see what unwind rule that (more knowledgeable, probably)
-    // UnwindPlan has.
-    if (active_row->GetRegisterInfo(regnum.GetAsKind(kind),
+    kind = m_fast_unwind_plan_sp->GetRegisterKind();
+    // The Fast UnwindPlan typically only provides fp & pc as we move up
+    // the stack, without requiring additional parsing or memory reads.
+    // It may mark all other registers as IsUndefined() because, indicating
+    // that it doesn't know if they were spilled to stack or not.
+    // If this caSe, for an IsUndefined register, we should continue on
+    // to the Full UnwindPlan which may have more accurate information
+    // about register locations of all registers.
+    if (active_row &&
+        active_row->GetRegisterInfo(regnum.GetAsKind(kind),
                                     unwindplan_regloc) &&
         !unwindplan_regloc.IsUndefined()) {
       UnwindLogMsg(
