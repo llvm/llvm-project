@@ -16,15 +16,16 @@ define amdgpu_kernel void @_Z6kernelILi4000ELi1EEvPd(ptr addrspace(1) %x.coerce)
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_mov_b64 s[0:1], 0
 ; CHECK-NEXT:    s_load_dword s2, s[0:1], 0x0
+; CHECK-NEXT:    s_mov_b64 s[0:1], 0x100
 ; CHECK-NEXT:    s_load_dwordx2 s[6:7], s[0:1], 0x0
 ; CHECK-NEXT:    s_mov_b32 s4, 0
 ; CHECK-NEXT:    s_mov_b32 s0, 0
-; CHECK-NEXT:    s_mov_b32 s5, 0x40280000
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_mov_b32 s1, s2
 ; CHECK-NEXT:    s_mov_b32 s2, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s6
 ; CHECK-NEXT:    s_mov_b32 s3, 0x40260000
+; CHECK-NEXT:    s_mov_b32 s5, 0x40280000
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s7
 ; CHECK-NEXT:  .LBB0_1: ; %for.cond4.preheader
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -50,7 +51,7 @@ define amdgpu_kernel void @_Z6kernelILi4000ELi1EEvPd(ptr addrspace(1) %x.coerce)
 ; CHECK-NEXT:    v_add_f64 v[0:1], v[0:1], s[4:5]
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB0_1
 ; CHECK-NEXT:  ; %bb.2: ; %for.cond.cleanup.loopexit
-; CHECK-NEXT:    v_mov_b32_e32 v2, 0
+; CHECK-NEXT:    v_mov_b32_e32 v2, 0x100
 ; CHECK-NEXT:    v_mov_b32_e32 v3, 0
 ; CHECK-NEXT:    global_store_dwordx2 v[2:3], v[0:1], off
 ; CHECK-NEXT:    s_endpgm
@@ -61,7 +62,7 @@ entry:
 
 for.cond4.preheader:                              ; preds = %for.cond4.preheader, %entry
   %idx.07 = phi i32 [ %add13, %for.cond4.preheader ], [ 0, %entry ]
-  %arrayidx.promoted = load double, ptr addrspace(1) null, align 8
+  %arrayidx.promoted = load double, ptr addrspace(1) inttoptr (i64 256 to ptr addrspace(1)), align 8
   %add9 = fadd contract double %arrayidx.promoted, 0.000000e+00
   %add9.1 = fadd contract double %add9, 5.000000e+00
   %add9.2 = fadd contract double %add9.1, 6.000000e+00
@@ -70,7 +71,7 @@ for.cond4.preheader:                              ; preds = %for.cond4.preheader
   %add9.5 = fadd contract double %add9.4, 1.000000e+01
   %add9.6 = fadd contract double %add9.5, 1.100000e+01
   %add9.7 = fadd contract double %add9.6, 1.200000e+01
-  store double %add9.7, ptr addrspace(1) null, align 8
+  store double %add9.7, ptr addrspace(1) inttoptr (i64 256 to ptr addrspace(1)), align 8
   %add13 = add i32 %idx.07, %0
   %cmp = icmp slt i32 %add13, 2560
   br i1 %cmp, label %for.cond4.preheader, label %for.cond.cleanup

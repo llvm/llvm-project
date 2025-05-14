@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s llvm-prefer-register-over-unsigned %t
+// RUN: %check_clang_tidy --match-partial-fixes %s llvm-prefer-register-over-unsigned %t
 
 namespace llvm {
 class Register {

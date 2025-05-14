@@ -10,12 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ABIInfo.h"
 #include "CodeGenFunction.h"
-#include "TargetInfo.h"
 #include "clang/Basic/TargetBuiltins.h"
-#include "llvm/IR/InlineAsm.h"
-#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
@@ -392,10 +388,10 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
   case RISCV::BI__builtin_riscv_cv_alu_exthz:
     return Builder.CreateZExt(Builder.CreateTrunc(Ops[0], Int16Ty), Int32Ty,
                               "exthz");
-  case RISCV::BI__builtin_riscv_cv_alu_slet:
+  case RISCV::BI__builtin_riscv_cv_alu_sle:
     return Builder.CreateZExt(Builder.CreateICmpSLE(Ops[0], Ops[1]), Int32Ty,
                               "sle");
-  case RISCV::BI__builtin_riscv_cv_alu_sletu:
+  case RISCV::BI__builtin_riscv_cv_alu_sleu:
     return Builder.CreateZExt(Builder.CreateICmpULE(Ops[0], Ops[1]), Int32Ty,
                               "sleu");
   case RISCV::BI__builtin_riscv_cv_alu_subN:

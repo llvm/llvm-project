@@ -162,8 +162,6 @@ bool CompilerInstance::executeAction(FrontendAction &act) {
   allSources->set_encoding(invoc.getFortranOpts().encoding);
   if (!setUpTargetMachine())
     return false;
-  // Create the semantics context
-  semaContext = invoc.getSemanticsCtx(*allCookedSources, getTargetMachine());
   // Set options controlling lowering to FIR.
   invoc.setLoweringOptions();
 

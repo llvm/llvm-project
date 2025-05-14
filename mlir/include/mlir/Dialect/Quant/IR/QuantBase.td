@@ -279,6 +279,7 @@ def Quant_Dialect : Dialect {
     // Correct. The quantized type now includes 3 scale values, matching the
     // size of dimension 1 of the result tensor.
     %result = quant.qcast %input : tensor<?x3xf32> to tensor<?x3x!quant.uniform<i8:f32:1, {2.0, 3.0, 4.0}>>
+    ```
 
     ## Sub-channel quantization integrity
 

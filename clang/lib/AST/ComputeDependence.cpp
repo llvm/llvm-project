@@ -391,7 +391,7 @@ ExprDependence clang::computeDependence(PackIndexingExpr *E) {
   if (Exprs.empty() || !E->isFullySubstituted())
     D |= PatternDep | ExprDependence::Instantiation;
   else if (!E->getIndexExpr()->isInstantiationDependent()) {
-    std::optional<unsigned> Index = E->getSelectedIndex();
+    UnsignedOrNone Index = E->getSelectedIndex();
     assert(Index && *Index < Exprs.size() && "pack index out of bound");
     D |= Exprs[*Index]->getDependence();
   }

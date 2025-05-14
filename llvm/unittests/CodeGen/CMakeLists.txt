@@ -48,6 +48,7 @@ add_llvm_unittest(CodeGenTests
   TargetOptionsTest.cpp
   TestAsmPrinter.cpp
   MLRegAllocDevelopmentFeatures.cpp
+  X86MCInstLowerTest.cpp
   )
 
 add_subdirectory(GlobalISel)

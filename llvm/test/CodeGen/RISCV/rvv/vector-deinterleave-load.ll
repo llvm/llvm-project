@@ -154,21 +154,21 @@ define {<vscale x 8 x i64>, <vscale x 8 x i64>} @vector_deinterleave_load_nxv8i6
 ; CHECK-NEXT:    vcompress.vm v16, v24, v13
 ; CHECK-NEXT:    vcompress.vm v24, v0, v12
 ; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vs8r.v v24, (a0) # Unknown-size Folded Spill
+; CHECK-NEXT:    vs8r.v v24, (a0) # vscale x 64-byte Folded Spill
 ; CHECK-NEXT:    vcompress.vm v24, v0, v13
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vs8r.v v24, (a0) # Unknown-size Folded Spill
+; CHECK-NEXT:    vs8r.v v24, (a0) # vscale x 64-byte Folded Spill
 ; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vl8r.v v24, (a0) # Unknown-size Folded Reload
+; CHECK-NEXT:    vl8r.v v24, (a0) # vscale x 64-byte Folded Reload
 ; CHECK-NEXT:    vmv4r.v v12, v24
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vl8r.v v24, (a0) # Unknown-size Folded Reload
+; CHECK-NEXT:    vl8r.v v24, (a0) # vscale x 64-byte Folded Reload
 ; CHECK-NEXT:    vmv4r.v v20, v24
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4
