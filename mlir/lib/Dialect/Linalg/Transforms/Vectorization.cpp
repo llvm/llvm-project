@@ -1545,6 +1545,7 @@ createWriteOrMaskedWrite(OpBuilder &builder, Location loc, Value vectorToStore,
   assert(cast<VectorType>(vectorToStore.getType()).getRank() ==
              static_cast<int64_t>(destType.getRank()) &&
          "Rank mismatch!");
+  (void)destType;
 
   int64_t rank = cast<ShapedType>(dest.getType()).getRank();
   auto destShape = cast<ShapedType>(dest.getType()).getShape();
