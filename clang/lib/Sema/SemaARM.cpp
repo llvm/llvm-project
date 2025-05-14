@@ -389,7 +389,7 @@ bool SemaARM::CheckImmediateArg(CallExpr *TheCall, unsigned CheckTy,
     if (SemaRef.BuiltinConstantArg(TheCall, ArgIdx, Imm))
       return true;
 
-    if (std::find(Set.begin(), Set.end(), Imm.getSExtValue()) == Set.end())
+    if (!llvm::is_contained(Set, Imm.getSExtValue()))
       return Diag(TheCall->getBeginLoc(), ErrDiag) << Arg->getSourceRange();
     return false;
   };
