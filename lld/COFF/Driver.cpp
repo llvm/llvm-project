@@ -659,6 +659,10 @@ void LinkerDriver::setMachine(MachineTypes machine) {
   if (!isArm64EC(machine)) {
     ctx.symtab.machine = machine;
   } else {
+    // Set up a hybrid symbol table on ARM64EC/ARM64X. This is primarily useful
+    // on ARM64X, where both the native and EC symbol tables are meaningful.
+    // However, since ARM64EC can include native object files, we also need to
+    // support a hybrid symbol table there.
     ctx.symtab.machine = ARM64EC;
     ctx.hybridSymtab.emplace(ctx, ARM64);
   }
@@ -2551,6 +2555,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
           for (auto *s : lto::LTO::getRuntimeLibcallSymbols(TT))
             symtab.addLibcall(s);
         }
+
         // Windows specific -- if __load_config_used can be resolved, resolve
         // it.
         if (symtab.findUnderscore("_load_config_used"))
