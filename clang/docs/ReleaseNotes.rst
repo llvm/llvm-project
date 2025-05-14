@@ -120,6 +120,9 @@ C++23 Feature Support
 
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
+- Fixed a crash with a defaulted spaceship (``<=>``) operator when the class
+  contains a member declaration of vector type. Vector types cannot yet be
+  compared directly, so this causes the operator to be deleted. (#GH137452)
 
 C++17 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -522,9 +525,6 @@ Improvements to Clang's diagnostics
 
 - Fixed a duplicate diagnostic when performing typo correction on function template
   calls with explicit template arguments. (#GH139226)
-
-- An error is now emitted when OpenMP ``collapse`` and ``ordered`` clauses have an
-  argument larger than what can fit within a 64-bit integer.
   
 - Explanatory note is printed when ``assert`` fails during evaluation of a
   constant expression. Prior to this, the error inaccurately implied that assert
@@ -943,6 +943,12 @@ OpenMP Support
 - Fixed a crashing bug with a malformed ``cancel`` directive. (#GH139360)
 - Fixed a crashing bug with ``omp distribute dist_schedule`` if the argument to
   ``dist_schedule`` was not strictly positive. (#GH139266)
+- Fixed two crashing bugs with a malformed ``metadirective`` directive. One was
+  a crash if the next token after ``metadirective`` was a paren, bracket, or
+  brace. The other was if the next token after the meta directive was not an
+  open parenthesis. (#GH139665)
+- An error is now emitted when OpenMP ``collapse`` and ``ordered`` clauses have
+  an argument larger than what can fit within a 64-bit integer.
 
 Improvements
 ^^^^^^^^^^^^
