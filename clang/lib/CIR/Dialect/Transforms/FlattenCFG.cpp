@@ -360,7 +360,8 @@ public:
         rewriter.eraseOp(caseOp);
     }
 
-    for (auto [index, rangeVal] : llvm::enumerate(rangeValues)) {
+    for (auto [rangeVal, operand, destination] :
+         llvm::zip(rangeValues, rangeOperands, rangeDestinations)) {
       APInt lowerBound = rangeVal.first;
       APInt upperBound = rangeVal.second;
 
@@ -376,16 +377,16 @@ public:
         for (APInt iValue = lowerBound; iValue.sle(upperBound);
              (void)iValue++) {
           caseValues.push_back(iValue);
-          caseOperands.push_back(rangeOperands[index]);
-          caseDestinations.push_back(rangeDestinations[index]);
+          caseOperands.push_back(operand);
+          caseDestinations.push_back(destination);
         }
         continue;
       }
 
       defaultDestination =
-          condBrToRangeDestination(op, rewriter, rangeDestinations[index],
+          condBrToRangeDestination(op, rewriter, destination,
                                    defaultDestination, lowerBound, upperBound);
-      defaultOperands = rangeOperands[index];
+      defaultOperands = operand;
     }
 
     // Set switch op to branch to the newly created blocks.
