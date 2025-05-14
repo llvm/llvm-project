@@ -1483,10 +1483,7 @@ public:
   }
 
   void print(raw_ostream &) const;
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  LLVM_DUMP_METHOD void dump() const;
-#endif
+  void dump() const;
 
   bool getExactInverse(APFloat *inv) const {
     APFLOAT_DISPATCH_ON_SEMANTICS(getExactInverse(inv));
