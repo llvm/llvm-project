@@ -64,7 +64,7 @@ Value *CodeGenFunction::EmitSPIRVBuiltinExpr(unsigned BuiltinID,
     Value *eta = EmitScalarExpr(E->getArg(2));
     assert(E->getArg(0)->getType()->hasFloatingRepresentation() &&
            E->getArg(1)->getType()->hasFloatingRepresentation() &&
-           E->getArg(2)->getType()->hasFloatingRepresentation() &&
+           E->getArg(2)->getType()->isFloatingType() &&
            "refract operands must have a float representation");
     assert(E->getArg(0)->getType()->isVectorType() &&
            E->getArg(1)->getType()->isVectorType() &&

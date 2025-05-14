@@ -20,7 +20,7 @@ namespace clang {
 class SemaSPIRV : public SemaBase {
 public:
   SemaSPIRV(Sema &S);
-
+  bool CheckVectorArgs(CallExpr *TheCall, unsigned NumArgsToCheck);
   bool CheckSPIRVBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
 };
 } // namespace clang
