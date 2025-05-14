@@ -84,7 +84,7 @@ RESOURCE Buffer;
 // CHECK-NEXT: ParmVarDecl {{.*}} spaceNo 'unsigned int'
 // CHECK-NEXT: ParmVarDecl {{.*}} range 'int'
 // CHECK-NEXT: ParmVarDecl {{.*}} index 'unsigned int'
-// CHECK-NEXT: ParmVarDecl {{.*}} order_id 'unsigned int'
+// CHECK-NEXT: ParmVarDecl {{.*}} orderId 'unsigned int'
 // CHECK-NEXT: CompoundStmt {{.*}}
 // CHECK-NEXT: BinaryOperator {{.*}} '='
 // CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
@@ -97,7 +97,7 @@ RESOURCE Buffer;
 // CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'spaceNo' 'unsigned int'
 // CHECK-NEXT: DeclRefExpr {{.*}} 'int' ParmVar {{.*}} 'range' 'int'
 // CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'index' 'unsigned int'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'order_id' 'unsigned int'
+// CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'orderId' 'unsigned int'
 // CHECK-NEXT: AlwaysInlineAttr
 
 // CHECK-NOSUBSCRIPT-NOT: CXXMethodDecl {{.*}} operator[] 'const element_type &(unsigned int) const'

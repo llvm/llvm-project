@@ -11,6 +11,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/DXILResource.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
@@ -132,13 +133,11 @@ static bool assignBindings(Module &M, DXILResourceBindingInfo &DRBI,
 PreservedAnalyses DXILResourceImplicitBinding::run(Module &M,
                                                    ModuleAnalysisManager &AM) {
 
-  PreservedAnalyses PA;
-
   DXILResourceBindingInfo &DRBI = AM.getResult<DXILResourceBindingAnalysis>(M);
   DXILResourceTypeMap &DRTM = AM.getResult<DXILResourceTypeAnalysis>(M);
   if (DRBI.hasImplicitBinding())
     if (assignBindings(M, DRBI, DRTM))
-      return PA;
+      return PreservedAnalyses::none();
   return PreservedAnalyses::all();
 }
 

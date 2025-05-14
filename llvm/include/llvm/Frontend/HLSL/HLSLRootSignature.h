@@ -14,7 +14,9 @@
 #ifndef LLVM_FRONTEND_HLSL_HLSLROOTSIGNATURE_H
 #define LLVM_FRONTEND_HLSL_HLSLROOTSIGNATURE_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/DXILABI.h"
+#include "llvm/Support/raw_ostream.h"
 #include <variant>
 
 namespace llvm {
@@ -22,6 +24,23 @@ namespace hlsl {
 namespace rootsig {
 
 // Definition of the various enumerations and flags
+
+enum class RootFlags : uint32_t {
+  None = 0,
+  AllowInputAssemblerInputLayout = 0x1,
+  DenyVertexShaderRootAccess = 0x2,
+  DenyHullShaderRootAccess = 0x4,
+  DenyDomainShaderRootAccess = 0x8,
+  DenyGeometryShaderRootAccess = 0x10,
+  DenyPixelShaderRootAccess = 0x20,
+  AllowStreamOutput = 0x40,
+  LocalRootSignature = 0x80,
+  DenyAmplificationShaderRootAccess = 0x100,
+  DenyMeshShaderRootAccess = 0x200,
+  CBVSRVUAVHeapDirectlyIndexed = 0x400,
+  SamplerHeapDirectlyIndexed = 0x800,
+  ValidFlags = 0x00000fff
+};
 
 enum class DescriptorRangeFlags : unsigned {
   None = 0,
@@ -58,12 +77,16 @@ struct Register {
 struct RootConstants {
   uint32_t Num32BitConstants;
   Register Reg;
+  uint32_t Space = 0;
+  ShaderVisibility Visibility = ShaderVisibility::All;
 };
 
 // Models the end of a descriptor table and stores its visibility
 struct DescriptorTable {
   ShaderVisibility Visibility = ShaderVisibility::All;
   uint32_t NumClauses = 0; // The number of clauses in the table
+
+  void dump(raw_ostream &OS) const;
 };
 
 static const uint32_t NumDescriptorsUnbounded = 0xffffffff;
@@ -92,11 +115,15 @@ struct DescriptorTableClause {
       break;
     }
   }
+
+  void dump(raw_ostream &OS) const;
 };
 
 // Models RootElement : RootConstants | DescriptorTable | DescriptorTableClause
-using RootElement =
-    std::variant<RootConstants, DescriptorTable, DescriptorTableClause>;
+using RootElement = std::variant<RootFlags, RootConstants, DescriptorTable,
+                                 DescriptorTableClause>;
+
+void dumpRootElements(raw_ostream &OS, ArrayRef<RootElement> Elements);
 
 } // namespace rootsig
 } // namespace hlsl

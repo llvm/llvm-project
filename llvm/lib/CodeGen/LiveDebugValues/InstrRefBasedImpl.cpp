@@ -486,8 +486,7 @@ public:
 
       // Is there a variable that wants a location for this value? If not, skip.
       ValueLocPair Probe(VNum, LocationAndQuality());
-      auto VIt = std::lower_bound(ValueToLoc.begin(), ValueToLoc.end(), Probe,
-                                  ValueToLocSort);
+      auto VIt = llvm::lower_bound(ValueToLoc, Probe, ValueToLocSort);
       if (VIt == ValueToLoc.end() || VIt->first != VNum)
         continue;
 

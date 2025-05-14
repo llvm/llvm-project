@@ -137,7 +137,7 @@ private:
   std::unordered_map<std::string, uint32_t> NameToIndexMap;
 
   /// Returns current state of the DIEBuilder
-  State &getState() { return *BuilderState.get(); }
+  State &getState() { return *BuilderState; }
 
   /// Resolve the reference in DIE, if target is not loaded into IR,
   /// pre-allocate it. \p RefCU will be updated to the Unit specific by \p

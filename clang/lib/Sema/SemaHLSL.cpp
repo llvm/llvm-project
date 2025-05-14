@@ -29,6 +29,7 @@
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/Initialization.h"
+#include "clang/Sema/Lookup.h"
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/Template.h"
@@ -968,6 +969,32 @@ void SemaHLSL::emitLogicalOperatorFixIt(Expr *LHS, Expr *RHS,
   SourceRange FullRange = SourceRange(LHS->getBeginLoc(), RHS->getEndLoc());
   SemaRef.Diag(LHS->getBeginLoc(), diag::note_function_suggestion)
       << NewFnName << FixItHint::CreateReplacement(FullRange, OS.str());
+}
+
+void SemaHLSL::handleRootSignatureAttr(Decl *D, const ParsedAttr &AL) {
+  if (AL.getNumArgs() != 1) {
+    Diag(AL.getLoc(), diag::err_attribute_wrong_number_arguments) << AL << 1;
+    return;
+  }
+
+  IdentifierInfo *Ident = AL.getArgAsIdent(0)->getIdentifierInfo();
+  if (auto *RS = D->getAttr<RootSignatureAttr>()) {
+    if (RS->getSignature() != Ident) {
+      Diag(AL.getLoc(), diag::err_disallowed_duplicate_attribute) << RS;
+      return;
+    }
+
+    Diag(AL.getLoc(), diag::warn_duplicate_attribute_exact) << RS;
+    return;
+  }
+
+  LookupResult R(SemaRef, Ident, SourceLocation(), Sema::LookupOrdinaryName);
+  if (SemaRef.LookupQualifiedName(R, D->getDeclContext()))
+    if (isa<HLSLRootSignatureDecl>(R.getFoundDecl())) {
+      // Perform validation of constructs here
+      D->addAttr(::new (getASTContext())
+                     RootSignatureAttr(getASTContext(), AL, Ident));
+    }
 }
 
 void SemaHLSL::handleNumThreadsAttr(Decl *D, const ParsedAttr &AL) {
@@ -3320,9 +3347,9 @@ bool SemaHLSL::initGlobalResourceDecl(VarDecl *VD) {
   ASTContext &AST = SemaRef.getASTContext();
   uint64_t UIntTySize = AST.getTypeSize(AST.UnsignedIntTy);
   uint64_t IntTySize = AST.getTypeSize(AST.IntTy);
-  IntegerLiteral *One = IntegerLiteral::Create(AST, llvm::APInt(IntTySize, 1),
-                                               AST.IntTy, SourceLocation());
-  IntegerLiteral *Zero = IntegerLiteral::Create(
+  IntegerLiteral *RangeSize = IntegerLiteral::Create(
+      AST, llvm::APInt(IntTySize, 1), AST.IntTy, SourceLocation());
+  IntegerLiteral *Index = IntegerLiteral::Create(
       AST, llvm::APInt(UIntTySize, 0), AST.UnsignedIntTy, SourceLocation());
   IntegerLiteral *Space =
       IntegerLiteral::Create(AST, llvm::APInt(UIntTySize, SpaceNo),
@@ -3333,15 +3360,15 @@ bool SemaHLSL::initGlobalResourceDecl(VarDecl *VD) {
     IntegerLiteral *RegSlot = IntegerLiteral::Create(
         AST, llvm::APInt(UIntTySize, RegisterSlot.value()), AST.UnsignedIntTy,
         SourceLocation());
-    Expr *Args[] = {RegSlot, Space, One, Zero};
+    Expr *Args[] = {RegSlot, Space, RangeSize, Index};
     return initVarDeclWithCtor(SemaRef, VD, Args);
   }
 
-  // resource with explicit binding
+  // resource with implicit binding
   IntegerLiteral *OrderId = IntegerLiteral::Create(
       AST, llvm::APInt(UIntTySize, getNextImplicitBindingOrderID()),
       AST.UnsignedIntTy, SourceLocation());
-  Expr *Args[] = {Space, One, Zero, OrderId};
+  Expr *Args[] = {Space, RangeSize, Index, OrderId};
   return initVarDeclWithCtor(SemaRef, VD, Args);
 }
 
