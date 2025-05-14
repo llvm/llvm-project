@@ -11,15 +11,38 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/CIR/Dialect/OpenACC/CIROpenACCTypeInterfaces.h"
+#include "clang/CIR/Dialect/IR/CIRDialect.h"
 
 namespace cir::acc {
+
+mlir::Type getBaseType(mlir::Value varPtr) {
+  mlir::Operation *op = varPtr.getDefiningOp();
+  assert(op && "Expected a defining operation");
+
+  // This is the variable definition we're looking for.
+  if (auto allocaOp = mlir::dyn_cast<cir::AllocaOp>(*op))
+    return allocaOp.getAllocaType();
+
+  // Look through casts to the source pointer.
+  if (auto castOp = mlir::dyn_cast<cir::CastOp>(*op))
+    return getBaseType(castOp.getSrc());
+
+  // Follow the source of ptr strides.
+  if (auto ptrStrideOp = mlir::dyn_cast<cir::PtrStrideOp>(*op))
+    return getBaseType(ptrStrideOp.getBase());
+
+  if (auto getMemberOp = mlir::dyn_cast<cir::GetMemberOp>(*op))
+    return getBaseType(getMemberOp.getAddr());
+
+  return mlir::cast<cir::PointerType>(varPtr.getType()).getPointee();
+}
 
 template <>
 mlir::acc::VariableTypeCategory
 OpenACCPointerLikeModel<cir::PointerType>::getPointeeTypeCategory(
     mlir::Type pointer, mlir::TypedValue<mlir::acc::PointerLikeType> varPtr,
     mlir::Type varType) const {
-  mlir::Type eleTy = mlir::cast<cir::PointerType>(pointer).getPointee();
+  mlir::Type eleTy = getBaseType(varPtr);
 
   if (auto mappableTy = mlir::dyn_cast<mlir::acc::MappableType>(eleTy))
     return mappableTy.getTypeCategory(varPtr);

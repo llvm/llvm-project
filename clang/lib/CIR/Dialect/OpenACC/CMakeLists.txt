@@ -7,4 +7,6 @@ add_clang_library(CIROpenACCSupport
 
   LINK_LIBS PUBLIC
   MLIRIR
+  MLIRCIR
+  MLIROpenACCDialect
   )

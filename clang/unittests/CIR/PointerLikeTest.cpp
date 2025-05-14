@@ -44,18 +44,31 @@ protected:
   MLIRContext context;
   OpBuilder b;
   Location loc;
+  llvm::StringMap<unsigned> recordNames;
 
-  mlir::IntegerAttr getSizeFromCharUnits(mlir::MLIRContext *ctx,
-                                         clang::CharUnits size) {
+  mlir::IntegerAttr getAlignOne(mlir::MLIRContext *ctx) {
     // Note that mlir::IntegerType is used instead of cir::IntType here
     // because we don't need sign information for this to be useful, so keep
     // it simple.
+    clang::CharUnits align = clang::CharUnits::One();
     return mlir::IntegerAttr::get(mlir::IntegerType::get(ctx, 64),
-                                  size.getQuantity());
+                                  align.getQuantity());
+  }
+
+  mlir::StringAttr getUniqueRecordName(const std::string &baseName) {
+    auto it = recordNames.find(baseName);
+    if (it == recordNames.end()) {
+      recordNames[baseName] = 0;
+      return b.getStringAttr(baseName);
+    }
+
+    return b.getStringAttr(baseName + "." +
+                           std::to_string(recordNames[baseName]++));
   }
 
   // General handler for types without a specific test
-  void testElementType(mlir::Type ty) {
+  void testSingleType(mlir::Type ty,
+                      mlir::acc::VariableTypeCategory expectedTypeCategory) {
     mlir::Type ptrTy = cir::PointerType::get(ty);
 
     // cir::PointerType should be castable to acc::PointerLikeType
@@ -64,97 +77,288 @@ protected:
 
     EXPECT_EQ(pltTy.getElementType(), ty);
 
-    OwningOpRef<cir::AllocaOp> varPtrOp = b.create<cir::AllocaOp>(
-        loc, ptrTy, ty, "",
-        getSizeFromCharUnits(&context, clang::CharUnits::One()));
+    OwningOpRef<cir::AllocaOp> varPtrOp =
+        b.create<cir::AllocaOp>(loc, ptrTy, ty, "", getAlignOne(&context));
 
     mlir::Value val = varPtrOp.get();
     mlir::acc::VariableTypeCategory typeCategory = pltTy.getPointeeTypeCategory(
         cast<TypedValue<mlir::acc::PointerLikeType>>(val),
         mlir::acc::getVarType(varPtrOp.get()));
 
-    if (isAnyIntegerOrFloatingPointType(ty) ||
-        mlir::isa<cir::PointerType>(ty) || mlir::isa<cir::BoolType>(ty)) {
-      EXPECT_EQ(typeCategory, mlir::acc::VariableTypeCategory::scalar);
-    } else if (mlir::isa<cir::ArrayType>(ty)) {
-      EXPECT_EQ(typeCategory, mlir::acc::VariableTypeCategory::array);
-    } else if (mlir::isa<cir::RecordType>(ty)) {
-      EXPECT_EQ(typeCategory, mlir::acc::VariableTypeCategory::composite);
-    } else if (mlir::isa<cir::FuncType, cir::VectorType>(ty)) {
-      EXPECT_EQ(typeCategory, mlir::acc::VariableTypeCategory::nonscalar);
-    } else if (mlir::isa<cir::VoidType>(ty)) {
-      EXPECT_EQ(typeCategory, mlir::acc::VariableTypeCategory::uncategorized);
-    } else {
-      EXPECT_EQ(typeCategory, mlir::acc::VariableTypeCategory::uncategorized);
-      // If we hit this, we need to add support for a new type.
-      ASSERT_TRUE(false);
-    }
+    EXPECT_EQ(typeCategory, expectedTypeCategory);
+  }
+
+  void testScalarType(mlir::Type ty) {
+    testSingleType(ty, mlir::acc::VariableTypeCategory::scalar);
+  }
+
+  void testNonScalarType(mlir::Type ty) {
+    testSingleType(ty, mlir::acc::VariableTypeCategory::nonscalar);
+  }
+
+  void testUncategorizedType(mlir::Type ty) {
+    testSingleType(ty, mlir::acc::VariableTypeCategory::uncategorized);
+  }
+
+  void testArrayType(mlir::Type ty) {
+    // Build the array pointer type.
+    mlir::Type arrTy = cir::ArrayType::get(ty, 10);
+    mlir::Type ptrTy = cir::PointerType::get(arrTy);
+
+    // Verify that the pointer points to the array type..
+    auto pltTy = dyn_cast_if_present<mlir::acc::PointerLikeType>(ptrTy);
+    ASSERT_NE(pltTy, nullptr);
+    EXPECT_EQ(pltTy.getElementType(), arrTy);
+
+    // Create an alloca for the array
+    OwningOpRef<cir::AllocaOp> varPtrOp =
+        b.create<cir::AllocaOp>(loc, ptrTy, arrTy, "", getAlignOne(&context));
+
+    // Verify that the type category is array.
+    mlir::Value val = varPtrOp.get();
+    mlir::acc::VariableTypeCategory typeCategory = pltTy.getPointeeTypeCategory(
+        cast<TypedValue<mlir::acc::PointerLikeType>>(val),
+        mlir::acc::getVarType(varPtrOp.get()));
+    EXPECT_EQ(typeCategory, mlir::acc::VariableTypeCategory::array);
+
+    // Create an array-to-pointer decay cast.
+    mlir::Type ptrToElemTy = cir::PointerType::get(ty);
+    OwningOpRef<cir::CastOp> decayPtr = b.create<cir::CastOp>(
+        loc, ptrToElemTy, cir::CastKind::array_to_ptrdecay, val);
+    mlir::Value decayVal = decayPtr.get();
+
+    // Verify that we still get the expected element type.
+    auto decayPltTy =
+        dyn_cast_if_present<mlir::acc::PointerLikeType>(decayVal.getType());
+    ASSERT_NE(decayPltTy, nullptr);
+    EXPECT_EQ(decayPltTy.getElementType(), ty);
+
+    // Verify that we still identify the type category as an array.
+    mlir::acc::VariableTypeCategory decayTypeCategory =
+        decayPltTy.getPointeeTypeCategory(
+            cast<TypedValue<mlir::acc::PointerLikeType>>(decayVal),
+            mlir::acc::getVarType(decayPtr.get()));
+    EXPECT_EQ(decayTypeCategory, mlir::acc::VariableTypeCategory::array);
+
+    // Create an element access.
+    mlir::Type i32Ty = cir::IntType::get(&context, 32, true);
+    mlir::Value index =
+        b.create<cir::ConstantOp>(loc, cir::IntAttr::get(i32Ty, 2));
+    OwningOpRef<cir::PtrStrideOp> accessPtr =
+        b.create<cir::PtrStrideOp>(loc, ptrToElemTy, decayVal, index);
+    mlir::Value accessVal = accessPtr.get();
+
+    // Verify that we still get the expected element type.
+    auto accessPltTy =
+        dyn_cast_if_present<mlir::acc::PointerLikeType>(accessVal.getType());
+    ASSERT_NE(accessPltTy, nullptr);
+    EXPECT_EQ(accessPltTy.getElementType(), ty);
+
+    // Verify that we still identify the type category as an array.
+    mlir::acc::VariableTypeCategory accessTypeCategory =
+        accessPltTy.getPointeeTypeCategory(
+            cast<TypedValue<mlir::acc::PointerLikeType>>(accessVal),
+            mlir::acc::getVarType(accessPtr.get()));
+    EXPECT_EQ(accessTypeCategory, mlir::acc::VariableTypeCategory::array);
+  }
+
+  // Structures and unions are accessed in the same way, so use a common test.
+  void testRecordType(mlir::Type ty1, mlir::Type ty2,
+                      cir::RecordType::RecordKind kind) {
+    // Build the structure pointer type.
+    cir::RecordType structTy =
+        cir::RecordType::get(&context, getUniqueRecordName("S"), kind);
+    structTy.complete({ty1, ty2}, false, false);
+    mlir::Type ptrTy = cir::PointerType::get(structTy);
+
+    // Verify that the pointer points to the structure type.
+    auto pltTy = dyn_cast_if_present<mlir::acc::PointerLikeType>(ptrTy);
+    ASSERT_NE(pltTy, nullptr);
+    EXPECT_EQ(pltTy.getElementType(), structTy);
+
+    // Create an alloca for the array
+    OwningOpRef<cir::AllocaOp> varPtrOp = b.create<cir::AllocaOp>(
+        loc, ptrTy, structTy, "", getAlignOne(&context));
+
+    // Verify that the type category is composite.
+    mlir::Value val = varPtrOp.get();
+    mlir::acc::VariableTypeCategory typeCategory = pltTy.getPointeeTypeCategory(
+        cast<TypedValue<mlir::acc::PointerLikeType>>(val),
+        mlir::acc::getVarType(varPtrOp.get()));
+    EXPECT_EQ(typeCategory, mlir::acc::VariableTypeCategory::composite);
+
+    // Access the first element of the structure.
+    OwningOpRef<cir::GetMemberOp> access1 = b.create<cir::GetMemberOp>(
+        loc, cir::PointerType::get(ty1), val, b.getStringAttr("f1"), 0);
+    mlir::Value accessVal1 = access1.get();
+
+    // Verify that we get the expected element type.
+    auto access1PltTy =
+        dyn_cast_if_present<mlir::acc::PointerLikeType>(accessVal1.getType());
+    ASSERT_NE(access1PltTy, nullptr);
+    EXPECT_EQ(access1PltTy.getElementType(), ty1);
+
+    // Verify that the type category is still composite.
+    mlir::acc::VariableTypeCategory access1TypeCategory =
+        access1PltTy.getPointeeTypeCategory(
+            cast<TypedValue<mlir::acc::PointerLikeType>>(accessVal1),
+            mlir::acc::getVarType(access1.get()));
+    EXPECT_EQ(access1TypeCategory, mlir::acc::VariableTypeCategory::composite);
+
+    // Access the second element of the structure.
+    OwningOpRef<cir::GetMemberOp> access2 = b.create<cir::GetMemberOp>(
+        loc, cir::PointerType::get(ty2), val, b.getStringAttr("f2"), 1);
+    mlir::Value accessVal2 = access2.get();
+
+    // Verify that we get the expected element type.
+    auto access2PltTy =
+        dyn_cast_if_present<mlir::acc::PointerLikeType>(accessVal2.getType());
+    ASSERT_NE(access2PltTy, nullptr);
+    EXPECT_EQ(access2PltTy.getElementType(), ty2);
+
+    // Verify that the type category is still composite.
+    mlir::acc::VariableTypeCategory access2TypeCategory =
+        access2PltTy.getPointeeTypeCategory(
+            cast<TypedValue<mlir::acc::PointerLikeType>>(accessVal2),
+            mlir::acc::getVarType(access2.get()));
+    EXPECT_EQ(access2TypeCategory, mlir::acc::VariableTypeCategory::composite);
+  }
+
+  void testStructType(mlir::Type ty1, mlir::Type ty2) {
+    testRecordType(ty1, ty2, cir::RecordType::RecordKind::Struct);
+  }
+
+  void testUnionType(mlir::Type ty1, mlir::Type ty2) {
+    testRecordType(ty1, ty2, cir::RecordType::RecordKind::Union);
+  }
+
+  // This is testing a case like this:
+  //
+  // struct S {
+  //   int *f1;
+  //   int *f2;
+  // } *p;
+  // int *pMember = p->f2;
+  //
+  // That is, we are not testing a pointer to a member, we're testing a pointer
+  // that is loaded as a member value.
+  void testPointerToMemberType(
+      mlir::Type ty, mlir::acc::VariableTypeCategory expectedTypeCategory) {
+    // Construct a struct type with two members that are pointers to the input
+    // type.
+    mlir::Type ptrTy = cir::PointerType::get(ty);
+    cir::RecordType structTy =
+        cir::RecordType::get(&context, getUniqueRecordName("S"),
+                             cir::RecordType::RecordKind::Struct);
+    structTy.complete({ptrTy, ptrTy}, false, false);
+    mlir::Type structPptrTy = cir::PointerType::get(structTy);
+
+    // Create an alloca for the struct.
+    OwningOpRef<cir::AllocaOp> varPtrOp = b.create<cir::AllocaOp>(
+        loc, structPptrTy, structTy, "S", getAlignOne(&context));
+    mlir::Value val = varPtrOp.get();
+
+    // Get a pointer to the second member.
+    OwningOpRef<cir::GetMemberOp> access = b.create<cir::GetMemberOp>(
+        loc, cir::PointerType::get(ptrTy), val, b.getStringAttr("f2"), 1);
+    mlir::Value accessVal = access.get();
+
+    // Load the value of the second member. This is the pointer we want to test.
+    OwningOpRef<cir::LoadOp> loadOp = b.create<cir::LoadOp>(loc, accessVal);
+    mlir::Value loadVal = loadOp.get();
+
+    // Verify that the type category is the expected type category.
+    auto pltTy = dyn_cast_if_present<mlir::acc::PointerLikeType>(ptrTy);
+    mlir::acc::VariableTypeCategory typeCategory = pltTy.getPointeeTypeCategory(
+        cast<TypedValue<mlir::acc::PointerLikeType>>(loadVal),
+        mlir::acc::getVarType(loadOp.get()));
+
+    EXPECT_EQ(typeCategory, expectedTypeCategory);
   }
 };
 
 TEST_F(CIROpenACCPointerLikeTest, testPointerToInt) {
   // Test various scalar types.
-  testElementType(cir::IntType::get(&context, 8, true));
-  testElementType(cir::IntType::get(&context, 8, false));
-  testElementType(cir::IntType::get(&context, 16, true));
-  testElementType(cir::IntType::get(&context, 16, false));
-  testElementType(cir::IntType::get(&context, 32, true));
-  testElementType(cir::IntType::get(&context, 32, false));
-  testElementType(cir::IntType::get(&context, 64, true));
-  testElementType(cir::IntType::get(&context, 64, false));
-  testElementType(cir::IntType::get(&context, 128, true));
-  testElementType(cir::IntType::get(&context, 128, false));
+  testScalarType(cir::IntType::get(&context, 8, true));
+  testScalarType(cir::IntType::get(&context, 8, false));
+  testScalarType(cir::IntType::get(&context, 16, true));
+  testScalarType(cir::IntType::get(&context, 16, false));
+  testScalarType(cir::IntType::get(&context, 32, true));
+  testScalarType(cir::IntType::get(&context, 32, false));
+  testScalarType(cir::IntType::get(&context, 64, true));
+  testScalarType(cir::IntType::get(&context, 64, false));
+  testScalarType(cir::IntType::get(&context, 128, true));
+  testScalarType(cir::IntType::get(&context, 128, false));
 }
 
 TEST_F(CIROpenACCPointerLikeTest, testPointerToBool) {
-  testElementType(cir::BoolType::get(&context));
+  testScalarType(cir::BoolType::get(&context));
 }
 
 TEST_F(CIROpenACCPointerLikeTest, testPointerToFloat) {
-  testElementType(cir::SingleType::get(&context));
-  testElementType(cir::DoubleType::get(&context));
+  testScalarType(cir::SingleType::get(&context));
+  testScalarType(cir::DoubleType::get(&context));
 }
 
 TEST_F(CIROpenACCPointerLikeTest, testPointerToPointer) {
   mlir::Type i32Ty = cir::IntType::get(&context, 32, true);
   mlir::Type ptrTy = cir::PointerType::get(i32Ty);
-  testElementType(ptrTy);
+  testScalarType(ptrTy);
 }
 
 TEST_F(CIROpenACCPointerLikeTest, testPointerToArray) {
   // Test an array type.
   mlir::Type i32Ty = cir::IntType::get(&context, 32, true);
-  testElementType(cir::ArrayType::get(i32Ty, 10));
+  testArrayType(i32Ty);
 }
 
 TEST_F(CIROpenACCPointerLikeTest, testPointerToStruct) {
   // Test a struct type.
+  mlir::Type i16Ty = cir::IntType::get(&context, 16, true);
   mlir::Type i32Ty = cir::IntType::get(&context, 32, true);
-  llvm::ArrayRef<mlir::Type> fields = {i32Ty, i32Ty};
-  cir::RecordType structTy = cir::RecordType::get(
-      &context, b.getStringAttr("S"), cir::RecordType::RecordKind::Struct);
-  structTy.complete(fields, false, false);
-  testElementType(structTy);
+  testStructType(i16Ty, i32Ty);
+}
 
+TEST_F(CIROpenACCPointerLikeTest, testPointerToUnion) {
   // Test a union type.
-  cir::RecordType unionTy = cir::RecordType::get(
-      &context, b.getStringAttr("U"), cir::RecordType::RecordKind::Union);
-  unionTy.complete(fields, false, false);
-  testElementType(unionTy);
+  mlir::Type i16Ty = cir::IntType::get(&context, 16, true);
+  mlir::Type i32Ty = cir::IntType::get(&context, 32, true);
+  testUnionType(i16Ty, i32Ty);
 }
 
 TEST_F(CIROpenACCPointerLikeTest, testPointerToFunction) {
   mlir::Type i32Ty = cir::IntType::get(&context, 32, true);
-  cir::FuncType::get(SmallVector<mlir::Type, 2>{i32Ty, i32Ty}, i32Ty);
+  mlir::Type funcTy =
+      cir::FuncType::get(SmallVector<mlir::Type, 2>{i32Ty, i32Ty}, i32Ty);
+  testNonScalarType(funcTy);
 }
 
 TEST_F(CIROpenACCPointerLikeTest, testPointerToVector) {
   mlir::Type i32Ty = cir::IntType::get(&context, 32, true);
   mlir::Type vecTy = cir::VectorType::get(i32Ty, 4);
-  testElementType(vecTy);
+  testNonScalarType(vecTy);
 }
 
 TEST_F(CIROpenACCPointerLikeTest, testPointerToVoid) {
   mlir::Type voidTy = cir::VoidType::get(&context);
-  testElementType(voidTy);
+  testUncategorizedType(voidTy);
+}
+
+TEST_F(CIROpenACCPointerLikeTest, testPointerToIntMember) {
+  mlir::Type i32Ty = cir::IntType::get(&context, 32, true);
+  testPointerToMemberType(i32Ty, mlir::acc::VariableTypeCategory::scalar);
+}
+
+TEST_F(CIROpenACCPointerLikeTest, testPointerToArrayMember) {
+  mlir::Type i32Ty = cir::IntType::get(&context, 32, true);
+  mlir::Type arrTy = cir::ArrayType::get(i32Ty, 10);
+  testPointerToMemberType(arrTy, mlir::acc::VariableTypeCategory::array);
+}
+
+TEST_F(CIROpenACCPointerLikeTest, testPointerToStructMember) {
+  mlir::Type i32Ty = cir::IntType::get(&context, 32, true);
+  cir::RecordType structTy = cir::RecordType::get(
+      &context, getUniqueRecordName("S"), cir::RecordType::RecordKind::Struct);
+  structTy.complete({i32Ty, i32Ty}, false, false);
+  testPointerToMemberType(structTy, mlir::acc::VariableTypeCategory::composite);
 }
