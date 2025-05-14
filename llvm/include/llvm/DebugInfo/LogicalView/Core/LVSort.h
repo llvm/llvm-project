@@ -13,6 +13,8 @@
 #ifndef LLVM_DEBUGINFO_LOGICALVIEW_CORE_LVSORT_H
 #define LLVM_DEBUGINFO_LOGICALVIEW_CORE_LVSORT_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 namespace logicalview {
 

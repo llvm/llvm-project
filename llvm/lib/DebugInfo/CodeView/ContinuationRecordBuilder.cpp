@@ -244,8 +244,8 @@ std::vector<CVType> ContinuationRecordBuilder::end(TypeIndex Index) {
 // implement this in the cpp file.
 #define TYPE_RECORD(EnumName, EnumVal, Name)
 #define TYPE_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
-#define MEMBER_RECORD(EnumName, EnumVal, Name)                                 \
-  template void llvm::codeview::ContinuationRecordBuilder::writeMemberType(    \
+#define MEMBER_RECORD(EnumName, EnumVal, Name)  \
+  template LLVM_ABI void llvm::codeview::ContinuationRecordBuilder::writeMemberType(  \
       Name##Record &Record);
 #define MEMBER_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
 #include "llvm/DebugInfo/CodeView/CodeViewTypes.def"
