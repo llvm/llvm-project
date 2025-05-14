@@ -84,6 +84,25 @@ define amdgpu_kernel void @hsa_debugtrap(ptr addrspace(1) nocapture readonly %ar
   ret void
 }
 
+; MESA-TRAP: .section .AMDGPU.config
+; MESA-TRAP:  .long   47180
+; MESA-TRAP-NEXT: .long   5080
+
+; NOMESA-TRAP: .section .AMDGPU.config
+; NOMESA-TRAP:  .long   47180
+; NOMESA-TRAP-NEXT: .long   5016
+
+; GCN-LABEL: {{^}}ubsantrap:
+; HSA-TRAP: s_trap 2
+; HSA-TRAP: flat_store_dword v[0:1], v3
+; HSA-TRAP: COMPUTE_PGM_RSRC2:TRAP_HANDLER: 0
+
+; for llvm.debugtrap in non-hsa path without ABI, generate a warning and a s_endpgm instruction
+; NO-HSA-TRAP: s_endpgm
+
+; TRAP-BIT: enable_trap_handler = 1
+; NO-TRAP-BIT: enable_trap_handler = 0
+; NO-MESA-TRAP: s_endpgm
 define amdgpu_kernel void @ubsantrap(ptr addrspace(1) nocapture readonly %arg0) {
   store volatile i32 1, ptr addrspace(1) %arg0
   call void @llvm.ubsantrap(i8 0)
