@@ -51,6 +51,8 @@ Value *InstCombinerImpl::EvaluateInDifferentType(Value *V, Type *Ty,
     Value *LHS = EvaluateInDifferentType(I->getOperand(0), Ty, isSigned);
     Value *RHS = EvaluateInDifferentType(I->getOperand(1), Ty, isSigned);
     Res = BinaryOperator::Create((Instruction::BinaryOps)Opc, LHS, RHS);
+    if (Opc == Instruction::LShr || Opc == Instruction::AShr)
+      Res->setIsExact(I->isExact());
     break;
   }
   case Instruction::Trunc:
@@ -319,13 +321,21 @@ static bool canEvaluateTruncated(Value *V, Type *Ty, InstCombinerImpl &IC,
     //       zero - use AmtKnownBits.getMaxValue().
     uint32_t OrigBitWidth = OrigTy->getScalarSizeInBits();
     uint32_t BitWidth = Ty->getScalarSizeInBits();
-    KnownBits AmtKnownBits =
-        llvm::computeKnownBits(I->getOperand(1), IC.getDataLayout());
+    KnownBits AmtKnownBits = IC.computeKnownBits(I->getOperand(1), 0, CxtI);
+    APInt MaxShiftAmt = AmtKnownBits.getMaxValue();
     APInt ShiftedBits = APInt::getBitsSetFrom(OrigBitWidth, BitWidth);
-    if (AmtKnownBits.getMaxValue().ult(BitWidth) &&
-        IC.MaskedValueIsZero(I->getOperand(0), ShiftedBits, 0, CxtI)) {
-      return canEvaluateTruncated(I->getOperand(0), Ty, IC, CxtI) &&
-             canEvaluateTruncated(I->getOperand(1), Ty, IC, CxtI);
+    if (MaxShiftAmt.ult(BitWidth)) {
+      // If the only user is a trunc then we can narrow the shift if any new
+      // MSBs are not going to be used.
+      if (auto *Trunc = dyn_cast<TruncInst>(V->user_back())) {
+        auto DemandedBits = Trunc->getType()->getScalarSizeInBits();
+        if ((MaxShiftAmt + DemandedBits).ule(BitWidth))
+          return canEvaluateTruncated(I->getOperand(0), Ty, IC, CxtI) &&
+                 canEvaluateTruncated(I->getOperand(1), Ty, IC, CxtI);
+      }
+      if (IC.MaskedValueIsZero(I->getOperand(0), ShiftedBits, 0, CxtI))
+        return canEvaluateTruncated(I->getOperand(0), Ty, IC, CxtI) &&
+               canEvaluateTruncated(I->getOperand(1), Ty, IC, CxtI);
     }
     break;
   }

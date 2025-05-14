@@ -693,7 +693,7 @@ llvm::json::Value toJSON(const DataBreakpointInfoResponseBody &);
 struct SetDataBreakpointsArguments {
   /// The contents of this array replaces all existing data breakpoints. An
   /// empty array clears all data breakpoints.
-  std::vector<DataBreakpointInfo> breakpoints;
+  std::vector<DataBreakpoint> breakpoints;
 };
 bool fromJSON(const llvm::json::Value &, SetDataBreakpointsArguments &,
               llvm::json::Path);

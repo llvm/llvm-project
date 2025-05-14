@@ -1401,18 +1401,20 @@ def ShiftOp : CIR_Op<"shift", [Pure]> {
     The `cir.shift` operation performs a bitwise shift, either to the left or to
     the right, based on the first operand. The second operand specifies the
     value to be shifted, and the third operand determines the number of
-    positions by which the shift is applied. Both the second and third operands
-    are required to be integers.
+    positions by which the shift is applied, They must be either all vector of
+    integer type, or all integer type. If they are vectors, each vector element of
+    the shift target is shifted by the corresponding shift amount in
+    the shift amount vector.
 
     ```mlir
-    %7 = cir.shift(left, %1 : !u64i, %4 : !s32i) -> !u64i
+    %res = cir.shift(left, %lhs : !u64i, %amount : !s32i) -> !u64i
+    %new_vec = cir.shift(left, %lhs : !cir.vector<2 x !s32i>, %rhs :
+        !cir.vector<2 x !s32i>) -> !cir.vector<2 x !s32i>
     ```
   }];
 
-  // TODO(cir): Support vectors. CIR_IntType -> CIR_AnyIntOrVecOfInt. Also
-  // update the description above.
-  let results = (outs CIR_IntType:$result);
-  let arguments = (ins CIR_IntType:$value, CIR_IntType:$amount,
+  let results = (outs CIR_AnyIntOrVecOfInt:$result);
+  let arguments = (ins CIR_AnyIntOrVecOfInt:$value, CIR_AnyIntOrVecOfInt:$amount,
                        UnitAttr:$isShiftleft);
 
   let assemblyFormat = [{
@@ -2031,6 +2033,8 @@ def VecExtractOp : CIR_Op<"vec.extract", [Pure,
   let assemblyFormat = [{
     $vec `[` $index `:` type($index) `]` attr-dict `:` qualified(type($vec))
   }];
+
+  let hasFolder = 1;
 }
 
 #endif // CLANG_CIR_DIALECT_IR_CIROPS_TD

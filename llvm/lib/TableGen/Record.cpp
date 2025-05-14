@@ -1796,14 +1796,13 @@ const Init *TernOpInit::Fold(const Record *CurRec) const {
     if (LHSs && MHSs && RHSs) {
       std::string Val = RHSs->getValue().str();
 
-      StringRef::size_type found;
-      StringRef::size_type idx = 0;
+      std::string::size_type Idx = 0;
       while (true) {
-        found = StringRef(Val).find(LHSs->getValue(), idx);
-        if (found == StringRef::npos)
+        std::string::size_type Found = Val.find(LHSs->getValue(), Idx);
+        if (Found == std::string::npos)
           break;
-        Val.replace(found, LHSs->getValue().size(), MHSs->getValue().str());
-        idx = found + MHSs->getValue().size();
+        Val.replace(Found, LHSs->getValue().size(), MHSs->getValue().str());
+        Idx = Found + MHSs->getValue().size();
       }
 
       return StringInit::get(RK, Val);

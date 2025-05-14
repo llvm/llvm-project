@@ -3375,6 +3375,13 @@ public:
   llvm::Value *EmitLoadOfCountedByField(const Expr *Base, const FieldDecl *FD,
                                         const FieldDecl *CountDecl);
 
+  // Emit bounds checking for flexible array and pointer members with the
+  // counted_by attribute.
+  void EmitCountedByBoundsChecking(const Expr *E, llvm::Value *Idx,
+                                   Address Addr, QualType IdxTy,
+                                   QualType ArrayTy, bool Accessed,
+                                   bool FlexibleArray);
+
   llvm::Value *EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
                                        bool isInc, bool isPre);
   ComplexPairTy EmitComplexPrePostIncDec(const UnaryOperator *E, LValue LV,
@@ -5530,9 +5537,20 @@ private:
                                      llvm::IntegerType *ResType,
                                      llvm::Value *EmittedE, bool IsDynamic);
 
-  llvm::Value *emitCountedByMemberSize(const Expr *E, llvm::Value *EmittedE,
+  llvm::Value *emitCountedBySize(const Expr *E, llvm::Value *EmittedE,
+                                 unsigned Type, llvm::IntegerType *ResType);
+
+  llvm::Value *emitCountedByMemberSize(const MemberExpr *E, const Expr *Idx,
+                                       llvm::Value *EmittedE,
+                                       QualType CastedArrayElementTy,
                                        unsigned Type,
                                        llvm::IntegerType *ResType);
+
+  llvm::Value *emitCountedByPointerSize(const ImplicitCastExpr *E,
+                                        const Expr *Idx, llvm::Value *EmittedE,
+                                        QualType CastedArrayElementTy,
+                                        unsigned Type,
+                                        llvm::IntegerType *ResType);
 
   void emitZeroOrPatternForAutoVarInit(QualType type, const VarDecl &D,
                                        Address Loc);
