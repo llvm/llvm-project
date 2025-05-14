@@ -9,6 +9,7 @@
 #ifndef LLVM_DEBUGINFO_PDB_PDBSYMBOLTYPEVTABLE_H
 #define LLVM_DEBUGINFO_PDB_PDBSYMBOLTYPEVTABLE_H
 
+#include "llvm/Support/Compiler.h"
 #include "PDBSymbol.h"
 #include "PDBTypes.h"
 
@@ -16,7 +17,7 @@ namespace llvm {
 
 namespace pdb {
 
-class PDBSymbolTypeVTable : public PDBSymbol {
+class LLVM_ABI PDBSymbolTypeVTable : public PDBSymbol {
   DECLARE_PDB_SYMBOL_CONCRETE_TYPE(PDB_SymType::VTable)
 public:
   void dump(PDBSymDumper &Dumper) const override;

@@ -9,6 +9,7 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_DEBUGSTRINGTABLESUBSECTION_H
 #define LLVM_DEBUGINFO_CODEVIEW_DEBUGSTRINGTABLESUBSECTION_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -30,16 +31,16 @@ namespace codeview {
 /// does not own the underlying storage for the buffer.
 class DebugStringTableSubsectionRef : public DebugSubsectionRef {
 public:
-  DebugStringTableSubsectionRef();
+  LLVM_ABI DebugStringTableSubsectionRef();
 
   static bool classof(const DebugSubsectionRef *S) {
     return S->kind() == DebugSubsectionKind::StringTable;
   }
 
-  Error initialize(BinaryStreamRef Contents);
-  Error initialize(BinaryStreamReader &Reader);
+  LLVM_ABI Error initialize(BinaryStreamRef Contents);
+  LLVM_ABI Error initialize(BinaryStreamReader &Reader);
 
-  Expected<StringRef> getString(uint32_t Offset) const;
+  LLVM_ABI Expected<StringRef> getString(uint32_t Offset) const;
 
   bool valid() const { return Stream.valid(); }
 
@@ -53,7 +54,7 @@ private:
 /// DebugStringTableSubsection owns the underlying storage for the table, and is
 /// capable of serializing the string table into a format understood by
 /// DebugStringTableSubsectionRef.
-class DebugStringTableSubsection : public DebugSubsection {
+class LLVM_ABI DebugStringTableSubsection : public DebugSubsection {
 public:
   DebugStringTableSubsection();
 

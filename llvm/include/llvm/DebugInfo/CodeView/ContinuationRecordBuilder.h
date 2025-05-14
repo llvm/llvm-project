@@ -9,6 +9,7 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_CONTINUATIONRECORDBUILDER_H
 #define LLVM_DEBUGINFO_CODEVIEW_CONTINUATIONRECORDBUILDER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
@@ -38,17 +39,17 @@ class ContinuationRecordBuilder {
                              std::optional<TypeIndex> RefersTo);
 
 public:
-  ContinuationRecordBuilder();
-  ~ContinuationRecordBuilder();
+  LLVM_ABI ContinuationRecordBuilder();
+  LLVM_ABI ~ContinuationRecordBuilder();
 
-  void begin(ContinuationRecordKind RecordKind);
+  LLVM_ABI void begin(ContinuationRecordKind RecordKind);
 
   // This template is explicitly instantiated in the implementation file for all
   // supported types.  The method itself is ugly, so inlining it into the header
   // file clutters an otherwise straightforward interface.
   template <typename RecordType> void writeMemberType(RecordType &Record);
 
-  std::vector<CVType> end(TypeIndex Index);
+  LLVM_ABI std::vector<CVType> end(TypeIndex Index);
 };
 } // namespace codeview
 } // namespace llvm

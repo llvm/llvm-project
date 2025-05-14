@@ -9,6 +9,7 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_SYMBOLSERIALIZER_H
 #define LLVM_DEBUGINFO_CODEVIEW_SYMBOLSERIALIZER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/RecordSerialization.h"
@@ -25,7 +26,7 @@
 namespace llvm {
 namespace codeview {
 
-class SymbolSerializer : public SymbolVisitorCallbacks {
+class LLVM_ABI SymbolSerializer : public SymbolVisitorCallbacks {
   BumpPtrAllocator &Storage;
   // Since this is a fixed size buffer, use a stack allocated buffer.  This
   // yields measurable performance increase over the repeated heap allocations

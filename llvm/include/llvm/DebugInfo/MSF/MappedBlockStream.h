@@ -9,6 +9,7 @@
 #ifndef LLVM_DEBUGINFO_MSF_MAPPEDBLOCKSTREAM_H
 #define LLVM_DEBUGINFO_MSF_MAPPEDBLOCKSTREAM_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/DebugInfo/MSF/MSFCommon.h"
@@ -34,7 +35,7 @@ namespace msf {
 /// the MSF.  MappedBlockStream provides methods for reading from and writing
 /// to one of these streams transparently, as if it were a contiguous sequence
 /// of bytes.
-class MappedBlockStream : public BinaryStream {
+class LLVM_ABI MappedBlockStream : public BinaryStream {
   friend class WritableMappedBlockStream;
 
 public:
@@ -102,7 +103,7 @@ private:
   DenseMap<uint32_t, std::vector<CacheEntry>> CacheMap;
 };
 
-class WritableMappedBlockStream : public WritableBinaryStream {
+class LLVM_ABI WritableMappedBlockStream : public WritableBinaryStream {
 public:
   static std::unique_ptr<WritableMappedBlockStream>
   createStream(uint32_t BlockSize, const MSFStreamLayout &Layout,

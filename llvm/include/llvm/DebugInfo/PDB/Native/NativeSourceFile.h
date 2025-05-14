@@ -9,6 +9,7 @@
 #ifndef LLVM_DEBUGINFO_PDB_NATIVE_NATIVESOURCEFILE_H
 #define LLVM_DEBUGINFO_PDB_NATIVE_NATIVESOURCEFILE_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/DebugInfo/CodeView/DebugChecksumsSubsection.h"
 #include "llvm/DebugInfo/PDB/IPDBSourceFile.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
@@ -19,7 +20,7 @@ class PDBSymbolCompiland;
 template <typename ChildType> class IPDBEnumChildren;
 class NativeSession;
 
-class NativeSourceFile : public IPDBSourceFile {
+class LLVM_ABI NativeSourceFile : public IPDBSourceFile {
 public:
   explicit NativeSourceFile(NativeSession &Session, uint32_t FileId,
                             const codeview::FileChecksumEntry &Checksum);

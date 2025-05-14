@@ -9,6 +9,7 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_DEBUGCHECKSUMSSUBSECTION_H
 #define LLVM_DEBUGINFO_CODEVIEW_DEBUGCHECKSUMSSUBSECTION_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -42,7 +43,7 @@ template <> struct VarStreamArrayExtractor<codeview::FileChecksumEntry> {
 public:
   using ContextType = void;
 
-  Error operator()(BinaryStreamRef Stream, uint32_t &Len,
+  LLVM_ABI Error operator()(BinaryStreamRef Stream, uint32_t &Len,
                    codeview::FileChecksumEntry &Item);
 };
 
@@ -62,8 +63,8 @@ public:
 
   bool valid() const { return Checksums.valid(); }
 
-  Error initialize(BinaryStreamReader Reader);
-  Error initialize(BinaryStreamRef Stream);
+  LLVM_ABI Error initialize(BinaryStreamReader Reader);
+  LLVM_ABI Error initialize(BinaryStreamRef Stream);
 
   Iterator begin() const { return Checksums.begin(); }
   Iterator end() const { return Checksums.end(); }
@@ -74,7 +75,7 @@ private:
   FileChecksumArray Checksums;
 };
 
-class DebugChecksumsSubsection final : public DebugSubsection {
+class LLVM_ABI DebugChecksumsSubsection final : public DebugSubsection {
 public:
   explicit DebugChecksumsSubsection(DebugStringTableSubsection &Strings);
 

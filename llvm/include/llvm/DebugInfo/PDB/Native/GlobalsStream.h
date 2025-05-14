@@ -9,6 +9,7 @@
 #ifndef LLVM_DEBUGINFO_PDB_NATIVE_GLOBALSSTREAM_H
 #define LLVM_DEBUGINFO_PDB_NATIVE_GLOBALSSTREAM_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/PDB/Native/RawTypes.h"
@@ -55,7 +56,7 @@ public:
   FixedStreamArray<support::ulittle32_t> HashBuckets;
   std::array<int32_t, IPHR_HASH + 1> BucketMap;
 
-  Error read(BinaryStreamReader &Reader);
+  LLVM_ABI Error read(BinaryStreamReader &Reader);
 
   uint32_t getVerSignature() const { return HashHdr->VerSignature; }
   uint32_t getVerHeader() const { return HashHdr->VerHdr; }
@@ -69,12 +70,12 @@ public:
 
 class GlobalsStream {
 public:
-  explicit GlobalsStream(std::unique_ptr<msf::MappedBlockStream> Stream);
-  ~GlobalsStream();
+  LLVM_ABI explicit GlobalsStream(std::unique_ptr<msf::MappedBlockStream> Stream);
+  LLVM_ABI ~GlobalsStream();
   const GSIHashTable &getGlobalsTable() const { return GlobalsTable; }
-  Error reload();
+  LLVM_ABI Error reload();
 
-  std::vector<std::pair<uint32_t, codeview::CVSymbol>>
+  LLVM_ABI std::vector<std::pair<uint32_t, codeview::CVSymbol>>
   findRecordsByName(StringRef Name, const SymbolStream &Symbols) const;
 
 private:

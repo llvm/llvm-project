@@ -9,6 +9,7 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_TYPEDUMPVISITOR_H
 #define LLVM_DEBUGINFO_CODEVIEW_TYPEDUMPVISITOR_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
@@ -25,7 +26,7 @@ struct MemberAttributes;
 class TypeCollection;
 
 /// Dumper for CodeView type streams found in COFF object files and PDB files.
-class TypeDumpVisitor : public TypeVisitorCallbacks {
+class LLVM_ABI TypeDumpVisitor : public TypeVisitorCallbacks {
 public:
   TypeDumpVisitor(TypeCollection &TpiTypes, ScopedPrinter *W,
                   bool PrintRecordBytes)

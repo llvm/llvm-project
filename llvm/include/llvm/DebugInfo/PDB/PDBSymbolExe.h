@@ -9,6 +9,7 @@
 #ifndef LLVM_DEBUGINFO_PDB_PDBSYMBOLEXE_H
 #define LLVM_DEBUGINFO_PDB_PDBSYMBOLEXE_H
 
+#include "llvm/Support/Compiler.h"
 #include "PDBSymbol.h"
 #include "PDBTypes.h"
 
@@ -18,7 +19,7 @@ class raw_ostream;
 
 namespace pdb {
 
-class PDBSymbolExe : public PDBSymbol {
+class LLVM_ABI PDBSymbolExe : public PDBSymbol {
   DECLARE_PDB_SYMBOL_CONCRETE_TYPE(PDB_SymType::Exe)
 public:
   void dump(PDBSymDumper &Dumper) const override;

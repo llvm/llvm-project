@@ -9,6 +9,7 @@
 #ifndef LLVM_DEBUGINFO_PDB_PDBSYMDUMPER_H
 #define LLVM_DEBUGINFO_PDB_PDBSYMDUMPER_H
 
+#include "llvm/Support/Compiler.h"
 #include "PDBTypes.h"
 
 namespace llvm {
@@ -16,7 +17,7 @@ namespace llvm {
 class raw_ostream;
 namespace pdb {
 
-class PDBSymDumper {
+class LLVM_ABI PDBSymDumper {
 public:
   PDBSymDumper(bool ShouldRequireImpl);
   virtual ~PDBSymDumper();

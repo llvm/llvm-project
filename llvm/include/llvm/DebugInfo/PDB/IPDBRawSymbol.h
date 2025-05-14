@@ -9,6 +9,7 @@
 #ifndef LLVM_DEBUGINFO_PDB_IPDBRAWSYMBOL_H
 #define LLVM_DEBUGINFO_PDB_IPDBRAWSYMBOL_H
 
+#include "llvm/Support/Compiler.h"
 #include "PDBTypes.h"
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/SmallVector.h"
@@ -32,7 +33,7 @@ enum class PdbSymbolIdField : uint32_t {
   LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ All)
 };
 
-void dumpSymbolIdField(raw_ostream &OS, StringRef Name, SymIndexId Value,
+LLVM_ABI void dumpSymbolIdField(raw_ostream &OS, StringRef Name, SymIndexId Value,
                        int Indent, const IPDBSession &Session,
                        PdbSymbolIdField FieldId, PdbSymbolIdField ShowFlags,
                        PdbSymbolIdField RecurseFlags);
@@ -42,7 +43,7 @@ void dumpSymbolIdField(raw_ostream &OS, StringRef Name, SymIndexId Value,
 /// all properties that are valid for any symbol type.  This interface is then
 /// wrapped by a concrete class which exposes only those set of methods valid
 /// for this particular symbol type.  See PDBSymbol.h for more details.
-class IPDBRawSymbol {
+class LLVM_ABI IPDBRawSymbol {
 public:
   virtual ~IPDBRawSymbol();
 

@@ -9,6 +9,7 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_MERGINGTYPETABLEBUILDER_H
 #define LLVM_DEBUGINFO_CODEVIEW_MERGINGTYPETABLEBUILDER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
@@ -25,7 +26,7 @@ struct LocallyHashedType;
 
 class ContinuationRecordBuilder;
 
-class MergingTypeTableBuilder : public TypeCollection {
+class LLVM_ABI MergingTypeTableBuilder : public TypeCollection {
   /// Storage for records.  These need to outlive the TypeTableBuilder.
   BumpPtrAllocator &RecordStorage;
 

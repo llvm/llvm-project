@@ -13,6 +13,7 @@
 #ifndef LLVM_DEBUGINFO_LOGICALVIEW_CORE_LVSUPPORT_H
 #define LLVM_DEBUGINFO_LOGICALVIEW_CORE_LVSUPPORT_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVStringPool.h"
@@ -28,7 +29,7 @@ namespace llvm {
 namespace logicalview {
 
 // Returns the unique string pool instance.
-LVStringPool &getStringPool();
+LLVM_ABI LVStringPool &getStringPool();
 
 using LVStringRefs = std::vector<StringRef>;
 using LVLexicalComponent = std::tuple<StringRef, StringRef>;
@@ -210,8 +211,8 @@ public:
 };
 
 // Unified and flattened pathnames.
-std::string transformPath(StringRef Path);
-std::string flattenedFilePath(StringRef Path);
+LLVM_ABI std::string transformPath(StringRef Path);
+LLVM_ABI std::string flattenedFilePath(StringRef Path);
 
 inline std::string formattedKind(StringRef Kind) {
   return (Twine("{") + Twine(Kind) + Twine("}")).str();
@@ -229,9 +230,9 @@ inline std::string formattedNames(StringRef Name1, StringRef Name2) {
 // scopes, such as: name, name<..>, scope::name, scope::..::name, etc.
 // The string can have multiple references to template instantiations.
 // It returns the inner most component.
-LVLexicalComponent getInnerComponent(StringRef Name);
-LVStringRefs getAllLexicalComponents(StringRef Name);
-std::string getScopedName(const LVStringRefs &Components,
+LLVM_ABI LVLexicalComponent getInnerComponent(StringRef Name);
+LLVM_ABI LVStringRefs getAllLexicalComponents(StringRef Name);
+LLVM_ABI std::string getScopedName(const LVStringRefs &Components,
                           StringRef BaseName = {});
 
 // These are the values assigned to the debug location record IDs.

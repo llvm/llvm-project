@@ -9,6 +9,7 @@
 #ifndef LLVM_DEBUGINFO_PDB_NATIVE_FORMATUTIL_H
 #define LLVM_DEBUGINFO_PDB_NATIVE_FORMATUTIL_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/StringRef.h"
@@ -38,27 +39,27 @@ template <typename T> std::string formatUnknownEnum(T Value) {
   return formatv("unknown ({0})", llvm::to_underlying(Value)).str();
 }
 
-std::string formatSegmentOffset(uint16_t Segment, uint32_t Offset);
+LLVM_ABI std::string formatSegmentOffset(uint16_t Segment, uint32_t Offset);
 
 enum class CharacteristicStyle {
   HeaderDefinition, // format as windows header definition
   Descriptive,      // format as human readable words
 };
-std::string formatSectionCharacteristics(
+LLVM_ABI std::string formatSectionCharacteristics(
     uint32_t IndentLevel, uint32_t C, uint32_t FlagsPerLine,
     StringRef Separator,
     CharacteristicStyle Style = CharacteristicStyle::HeaderDefinition);
 
-std::string typesetItemList(ArrayRef<std::string> Opts, uint32_t IndentLevel,
+LLVM_ABI std::string typesetItemList(ArrayRef<std::string> Opts, uint32_t IndentLevel,
                             uint32_t GroupSize, StringRef Sep);
 
-std::string typesetStringList(uint32_t IndentLevel,
+LLVM_ABI std::string typesetStringList(uint32_t IndentLevel,
                               ArrayRef<StringRef> Strings);
 
-std::string formatChunkKind(codeview::DebugSubsectionKind Kind,
+LLVM_ABI std::string formatChunkKind(codeview::DebugSubsectionKind Kind,
                             bool Friendly = true);
-std::string formatSymbolKind(codeview::SymbolKind K);
-std::string formatTypeLeafKind(codeview::TypeLeafKind K);
+LLVM_ABI std::string formatSymbolKind(codeview::SymbolKind K);
+LLVM_ABI std::string formatTypeLeafKind(codeview::TypeLeafKind K);
 
 /// Returns the number of digits in the given integer.
 inline int NumDigits(uint64_t N) {

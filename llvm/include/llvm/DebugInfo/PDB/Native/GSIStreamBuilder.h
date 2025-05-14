@@ -9,6 +9,7 @@
 #ifndef LLVM_DEBUGINFO_PDB_NATIVE_GSISTREAMBUILDER_H
 #define LLVM_DEBUGINFO_PDB_NATIVE_GSISTREAMBUILDER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
@@ -46,30 +47,30 @@ struct SymbolDenseMapInfo;
 class GSIStreamBuilder {
 
 public:
-  explicit GSIStreamBuilder(msf::MSFBuilder &Msf);
-  ~GSIStreamBuilder();
+  LLVM_ABI explicit GSIStreamBuilder(msf::MSFBuilder &Msf);
+  LLVM_ABI ~GSIStreamBuilder();
 
   GSIStreamBuilder(const GSIStreamBuilder &) = delete;
   GSIStreamBuilder &operator=(const GSIStreamBuilder &) = delete;
 
-  Error finalizeMsfLayout();
+  LLVM_ABI Error finalizeMsfLayout();
 
-  Error commit(const msf::MSFLayout &Layout, WritableBinaryStreamRef Buffer);
+  LLVM_ABI Error commit(const msf::MSFLayout &Layout, WritableBinaryStreamRef Buffer);
 
   uint32_t getPublicsStreamIndex() const { return PublicsStreamIndex; }
   uint32_t getGlobalsStreamIndex() const { return GlobalsStreamIndex; }
   uint32_t getRecordStreamIndex() const { return RecordStreamIndex; }
 
   // Add public symbols in bulk.
-  void addPublicSymbols(std::vector<BulkPublic> &&PublicsIn);
+  LLVM_ABI void addPublicSymbols(std::vector<BulkPublic> &&PublicsIn);
 
-  void addGlobalSymbol(const codeview::ProcRefSym &Sym);
-  void addGlobalSymbol(const codeview::DataSym &Sym);
-  void addGlobalSymbol(const codeview::ConstantSym &Sym);
+  LLVM_ABI void addGlobalSymbol(const codeview::ProcRefSym &Sym);
+  LLVM_ABI void addGlobalSymbol(const codeview::DataSym &Sym);
+  LLVM_ABI void addGlobalSymbol(const codeview::ConstantSym &Sym);
 
   // Add a pre-serialized global symbol record. The caller must ensure that the
   // symbol data remains alive until the global stream is committed to disk.
-  void addGlobalSymbol(const codeview::CVSymbol &Sym);
+  LLVM_ABI void addGlobalSymbol(const codeview::CVSymbol &Sym);
 
 private:
   void finalizePublicBuckets();

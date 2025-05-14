@@ -9,6 +9,7 @@
 #ifndef LLVM_DEBUGINFO_PDB_PDBSYMBOL_H
 #define LLVM_DEBUGINFO_PDB_PDBSYMBOL_H
 
+#include "llvm/Support/Compiler.h"
 #include "IPDBRawSymbol.h"
 #include "PDBExtras.h"
 #include "PDBTypes.h"
@@ -68,7 +69,7 @@ public:                                                                        \
 /// valid for that particular symbol type, as described in the Microsoft
 /// reference "Lexical and Class Hierarchy of Symbol Types":
 /// https://msdn.microsoft.com/en-us/library/370hs6k4.aspx
-class PDBSymbol {
+class LLVM_ABI PDBSymbol {
   static std::unique_ptr<PDBSymbol> createSymbol(const IPDBSession &PDBSession,
                                                  PDB_SymType Tag);
 

@@ -9,6 +9,7 @@
 #ifndef LLVM_DEBUGINFO_GSYM_DWARFTRANSFORMER_H
 #define LLVM_DEBUGINFO_GSYM_DWARFTRANSFORMER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/GSYM/ExtractRanges.h"
@@ -57,9 +58,9 @@ public:
   ///
   /// \returns An error indicating any fatal issues that happen when parsing
   /// the DWARF, or Error::success() if all goes well.
-  llvm::Error convert(uint32_t NumThreads, OutputAggregator &OS);
+  LLVM_ABI llvm::Error convert(uint32_t NumThreads, OutputAggregator &OS);
 
-  llvm::Error verify(StringRef GsymPath, OutputAggregator &OS);
+  LLVM_ABI llvm::Error verify(StringRef GsymPath, OutputAggregator &OS);
 
 private:
 

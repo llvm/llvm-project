@@ -9,6 +9,7 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_TYPERECORDMAPPING_H
 #define LLVM_DEBUGINFO_CODEVIEW_TYPERECORDMAPPING_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/CodeViewRecordIO.h"
@@ -23,7 +24,7 @@ class BinaryStreamWriter;
 namespace codeview {
 class TypeIndex;
 struct CVMemberRecord;
-class TypeRecordMapping : public TypeVisitorCallbacks {
+class LLVM_ABI TypeRecordMapping : public TypeVisitorCallbacks {
 public:
   explicit TypeRecordMapping(BinaryStreamReader &Reader) : IO(Reader) {}
   explicit TypeRecordMapping(BinaryStreamWriter &Writer) : IO(Writer) {}

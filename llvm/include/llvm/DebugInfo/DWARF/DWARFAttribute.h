@@ -9,6 +9,7 @@
 #ifndef LLVM_DEBUGINFO_DWARF_DWARFATTRIBUTE_H
 #define LLVM_DEBUGINFO_DWARF_DWARFATTRIBUTE_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include <cstdint>
@@ -40,11 +41,11 @@ struct DWARFAttribute {
   }
 
   /// Identify DWARF attributes that may contain a pointer to a location list.
-  static bool mayHaveLocationList(dwarf::Attribute Attr);
+  LLVM_ABI static bool mayHaveLocationList(dwarf::Attribute Attr);
 
   /// Identifies DWARF attributes that may contain a reference to a
   /// DWARF expression.
-  static bool mayHaveLocationExpr(dwarf::Attribute Attr);
+  LLVM_ABI static bool mayHaveLocationExpr(dwarf::Attribute Attr);
 };
 
 } // end namespace llvm

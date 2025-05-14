@@ -9,6 +9,7 @@
 #ifndef LLVM_DEBUGINFO_PDB_PDBSYMBOLTYPEFUNCTIONSIG_H
 #define LLVM_DEBUGINFO_PDB_PDBSYMBOLTYPEFUNCTIONSIG_H
 
+#include "llvm/Support/Compiler.h"
 #include "PDBSymbol.h"
 #include "PDBTypes.h"
 
@@ -17,7 +18,7 @@ namespace llvm {
 class raw_ostream;
 namespace pdb {
 
-class PDBSymbolTypeFunctionSig : public PDBSymbol {
+class LLVM_ABI PDBSymbolTypeFunctionSig : public PDBSymbol {
   DECLARE_PDB_SYMBOL_CONCRETE_TYPE(PDB_SymType::FunctionSig)
 public:
   std::unique_ptr<IPDBEnumSymbols> getArguments() const;

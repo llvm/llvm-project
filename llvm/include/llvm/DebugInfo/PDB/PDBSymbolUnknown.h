@@ -9,13 +9,14 @@
 #ifndef LLVM_DEBUGINFO_PDB_PDBSYMBOLUNKNOWN_H
 #define LLVM_DEBUGINFO_PDB_PDBSYMBOLUNKNOWN_H
 
+#include "llvm/Support/Compiler.h"
 #include "PDBSymbol.h"
 
 namespace llvm {
 
 namespace pdb {
 
-class PDBSymbolUnknown : public PDBSymbol {
+class LLVM_ABI PDBSymbolUnknown : public PDBSymbol {
   DECLARE_PDB_SYMBOL_CUSTOM_TYPE(S->getSymTag() == PDB_SymType::None ||
                                  S->getSymTag() >= PDB_SymType::Max)
 

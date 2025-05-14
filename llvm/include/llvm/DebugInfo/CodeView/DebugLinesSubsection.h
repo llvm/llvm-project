@@ -9,6 +9,7 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_DEBUGLINESSUBSECTION_H
 #define LLVM_DEBUGINFO_CODEVIEW_DEBUGLINESSUBSECTION_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/DebugSubsection.h"
@@ -70,7 +71,7 @@ struct LineColumnEntry {
 
 class LineColumnExtractor {
 public:
-  Error operator()(BinaryStreamRef Stream, uint32_t &Len,
+  LLVM_ABI Error operator()(BinaryStreamRef Stream, uint32_t &Len,
                    LineColumnEntry &Item);
 
   const LineFragmentHeader *Header = nullptr;
@@ -83,27 +84,27 @@ class DebugLinesSubsectionRef final : public DebugSubsectionRef {
   using Iterator = LineInfoArray::Iterator;
 
 public:
-  DebugLinesSubsectionRef();
+  LLVM_ABI DebugLinesSubsectionRef();
 
   static bool classof(const DebugSubsectionRef *S) {
     return S->kind() == DebugSubsectionKind::Lines;
   }
 
-  Error initialize(BinaryStreamReader Reader);
+  LLVM_ABI Error initialize(BinaryStreamReader Reader);
 
   Iterator begin() const { return LinesAndColumns.begin(); }
   Iterator end() const { return LinesAndColumns.end(); }
 
   const LineFragmentHeader *header() const { return Header; }
 
-  bool hasColumnInfo() const;
+  LLVM_ABI bool hasColumnInfo() const;
 
 private:
   const LineFragmentHeader *Header = nullptr;
   LineInfoArray LinesAndColumns;
 };
 
-class DebugLinesSubsection final : public DebugSubsection {
+class LLVM_ABI DebugLinesSubsection final : public DebugSubsection {
   struct Block {
     Block(uint32_t ChecksumBufferOffset)
         : ChecksumBufferOffset(ChecksumBufferOffset) {}

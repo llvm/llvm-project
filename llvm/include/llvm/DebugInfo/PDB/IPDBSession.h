@@ -9,6 +9,7 @@
 #ifndef LLVM_DEBUGINFO_PDB_IPDBSESSION_H
 #define LLVM_DEBUGINFO_PDB_IPDBSESSION_H
 
+#include "llvm/Support/Compiler.h"
 #include "PDBSymbol.h"
 #include "PDBTypes.h"
 #include "llvm/ADT/StringRef.h"
@@ -22,7 +23,7 @@ class PDBSymbolExe;
 
 /// IPDBSession defines an interface used to provide a context for querying
 /// debug information from a debug data source (for example, a PDB).
-class IPDBSession {
+class LLVM_ABI IPDBSession {
 public:
   virtual ~IPDBSession();
 
