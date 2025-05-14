@@ -224,20 +224,33 @@ f_unreachable_instruction:
         ret
         .size f_unreachable_instruction, .-f_unreachable_instruction
 
-// Expected false positive: without CFG, the state is reset to all-unsafe
-// after an unconditional branch.
+// Without CFG, the state is reset at labels, assuming every register that can
+// be clobbered in the function was actually clobbered.
 
-        .globl  state_is_reset_after_indirect_branch_nocfg
-        .type   state_is_reset_after_indirect_branch_nocfg,@function
-state_is_reset_after_indirect_branch_nocfg:
-// CHECK-LABEL: GS-PAUTH: non-protected ret found in function state_is_reset_after_indirect_branch_nocfg, at address
-// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:         ret
-// CHECK-NEXT:  The 0 instructions that write to the affected registers after any authentication are:
+        .globl  lr_untouched_nocfg
+        .type   lr_untouched_nocfg,@function
+lr_untouched_nocfg:
+// CHECK-NOT: lr_untouched_nocfg
         adr     x2, 1f
         br      x2
 1:
         ret
-        .size state_is_reset_after_indirect_branch_nocfg, .-state_is_reset_after_indirect_branch_nocfg
+        .size lr_untouched_nocfg, .-lr_untouched_nocfg
+
+        .globl  lr_clobbered_nocfg
+        .type   lr_clobbered_nocfg,@function
+lr_clobbered_nocfg:
+// CHECK-LABEL: GS-PAUTH: non-protected ret found in function lr_clobbered_nocfg, at address
+// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      ret
+// CHECK-NEXT:  The 0 instructions that write to the affected registers after any authentication are:
+        adr     x2, 1f
+        br      x2
+1:
+        b       2f
+        bl      g   // never executed, but affects the expected worst-case scenario
+2:
+        ret
+        .size lr_clobbered_nocfg, .-lr_clobbered_nocfg
 
 /// Now do a basic sanity check on every different Authentication instruction:
 
