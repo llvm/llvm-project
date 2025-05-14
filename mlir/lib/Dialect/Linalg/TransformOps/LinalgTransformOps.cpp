@@ -1901,9 +1901,10 @@ transform::PadOp::apply(transform::TransformRewriter &rewriter,
     SmallVector<Attribute> paddingValues;
     for (auto const &it :
          llvm::zip(getPaddingValues(), linalgTarget->getOperandTypes())) {
-      auto attr = dyn_cast<TypedAttr>(std::get<0>(it));
-      if (!attr) {
-        emitOpError("expects padding values to be typed attributes");
+      Attribute attr = std::get<0>(it);
+      if (!llvm::isa<TypedAttr, ArrayAttr>(attr)) {
+        emitOpError("expects padding values to be typed attributes or array "
+                    "attributes (for complex numbers)");
         return DiagnosedSilenceableFailure::definiteFailure();
       }
       Type elementType = getElementTypeOrSelf(std::get<1>(it));
@@ -1922,7 +1923,14 @@ transform::PadOp::apply(transform::TransformRewriter &rewriter,
         continue;
       }
       // Otherwise, add the attribute directly.
-      if (attr.getType() != elementType) {
+      if (isa<TypedAttr>(attr) &&
+          cast<TypedAttr>(attr).getType() != elementType) {
+        auto diag = this->emitOpError("expects a padding value of type ")
+                    << elementType << ", got " << attr;
+        diag.attachNote(linalgTarget.getLoc()) << "when applied to this op";
+        return DiagnosedSilenceableFailure::definiteFailure();
+      }
+      if (isa<ArrayAttr>(attr) && !isa<ComplexType>(elementType)) {
         auto diag = this->emitOpError("expects a padding value of type ")
                     << elementType << ", got " << attr;
         diag.attachNote(linalgTarget.getLoc()) << "when applied to this op";

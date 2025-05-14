@@ -419,3 +419,40 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
+
+// -----
+
+!type = tensor<10x10xcomplex<f32>>
+// CHECK-LABEL: @pad_matmul
+func.func @pad_matmul(%arg0: !type,
+                           %arg1: !type,
+                           %arg2: !type
+                           ) -> !type {  
+  // CHECK: complex.constant [{{.*}}] : complex<f32>
+  // CHECK: tensor.pad
+  // CHECK: tensor.yield
+  // CHECK: complex.constant [{{.*}}] : complex<f32>
+  // CHECK: tensor.pad
+  // CHECK: tensor.yield
+  // CHECK: complex.constant [{{.*}}] : complex<f32>
+  // CHECK: tensor.pad
+  // CHECK: tensor.yield
+  // CHECK: linalg.matmul
+  %0 = linalg.matmul ins(%arg0, %arg1 : !type, !type) outs(%arg2 : !type) -> !type
+  func.return %0 : !type
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %padded, %pad, %copy_back = transform.structured.pad %0 pad_to_multiple_of [3, 3, 3] {
+      padding_values=[
+        [0.1 : f32, 0.2 : f32],
+        [0.3 : f32, 0.4 : f32],
+        [0.5 : f32, 0.6 : f32]
+      ],      
+      padding_dimensions = [0, 1, 2]      
+    } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
