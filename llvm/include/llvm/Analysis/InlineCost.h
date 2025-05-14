@@ -13,11 +13,11 @@
 #ifndef LLVM_ANALYSIS_INLINECOST_H
 #define LLVM_ANALYSIS_INLINECOST_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Analysis/InlineModelFeatureMaps.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <climits>
 #include <optional>
@@ -240,7 +240,8 @@ struct InlineParams {
   std::optional<bool> AllowRecursiveCall = false;
 };
 
-LLVM_ABI std::optional<int> getStringFnAttrAsInt(CallBase &CB, StringRef AttrKind);
+LLVM_ABI std::optional<int> getStringFnAttrAsInt(CallBase &CB,
+                                                 StringRef AttrKind);
 
 /// Generate the parameters to tune the inline cost analysis based only on the
 /// commandline options.
@@ -261,8 +262,8 @@ LLVM_ABI InlineParams getInlineParams(unsigned OptLevel, unsigned SizeOptLevel);
 
 /// Return the cost associated with a callsite, including parameter passing
 /// and the call/return instruction.
-LLVM_ABI int getCallsiteCost(const TargetTransformInfo &TTI, const CallBase &Call,
-                    const DataLayout &DL);
+LLVM_ABI int getCallsiteCost(const TargetTransformInfo &TTI,
+                             const CallBase &Call, const DataLayout &DL);
 
 /// Get an InlineCost object representing the cost of inlining this
 /// callsite.

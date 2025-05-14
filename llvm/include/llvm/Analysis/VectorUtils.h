@@ -13,7 +13,6 @@
 #ifndef LLVM_ANALYSIS_VECTORUTILS_H
 #define LLVM_ANALYSIS_VECTORUTILS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
@@ -21,6 +20,7 @@
 #include "llvm/IR/VFABIDemangler.h"
 #include "llvm/IR/VectorTypeUtils.h"
 #include "llvm/Support/CheckedArithmetic.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class TargetLibraryInfo;
@@ -145,20 +145,23 @@ LLVM_ABI bool isTriviallyVectorizable(Intrinsic::ID ID);
 /// intrinsic is redundant, but we want to implement scalarization of the
 /// vector. To prevent the requirement that an intrinsic also implements
 /// vectorization we provide this seperate function.
-LLVM_ABI bool isTriviallyScalarizable(Intrinsic::ID ID, const TargetTransformInfo *TTI);
+LLVM_ABI bool isTriviallyScalarizable(Intrinsic::ID ID,
+                                      const TargetTransformInfo *TTI);
 
 /// Identifies if the vector form of the intrinsic has a scalar operand.
 /// \p TTI is used to consider target specific intrinsics, if no target specific
 /// intrinsics will be considered then it is appropriate to pass in nullptr.
-LLVM_ABI bool isVectorIntrinsicWithScalarOpAtArg(Intrinsic::ID ID, unsigned ScalarOpdIdx,
-                                        const TargetTransformInfo *TTI);
+LLVM_ABI bool
+isVectorIntrinsicWithScalarOpAtArg(Intrinsic::ID ID, unsigned ScalarOpdIdx,
+                                   const TargetTransformInfo *TTI);
 
 /// Identifies if the vector form of the intrinsic is overloaded on the type of
 /// the operand at index \p OpdIdx, or on the return type if \p OpdIdx is -1.
 /// \p TTI is used to consider target specific intrinsics, if no target specific
 /// intrinsics will be considered then it is appropriate to pass in nullptr.
-LLVM_ABI bool isVectorIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID, int OpdIdx,
-                                            const TargetTransformInfo *TTI);
+LLVM_ABI bool
+isVectorIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID, int OpdIdx,
+                                       const TargetTransformInfo *TTI);
 
 /// Identifies if the vector form of the intrinsic that returns a struct is
 /// overloaded at the struct element index \p RetIdx. /// \p TTI is used to
@@ -170,8 +173,8 @@ LLVM_ABI bool isVectorIntrinsicWithStructReturnOverloadAtField(
 /// Returns intrinsic ID for call.
 /// For the input call instruction it finds mapping intrinsic and returns
 /// its intrinsic ID, in case it does not found it return not_intrinsic.
-LLVM_ABI Intrinsic::ID getVectorIntrinsicIDForCall(const CallInst *CI,
-                                          const TargetLibraryInfo *TLI);
+LLVM_ABI Intrinsic::ID
+getVectorIntrinsicIDForCall(const CallInst *CI, const TargetLibraryInfo *TLI);
 
 /// Given a vector and an element number, see if the scalar value is
 /// already around as a register, for example if it were inserted then extracted
@@ -201,8 +204,9 @@ LLVM_ABI bool isSplatValue(const Value *V, int Index = -1, unsigned Depth = 0);
 /// Both \p DemandedLHS and \p DemandedRHS are initialised to [SrcWidth].
 /// \p AllowUndefElts permits "-1" indices to be treated as undef.
 LLVM_ABI bool getShuffleDemandedElts(int SrcWidth, ArrayRef<int> Mask,
-                            const APInt &DemandedElts, APInt &DemandedLHS,
-                            APInt &DemandedRHS, bool AllowUndefElts = false);
+                                     const APInt &DemandedElts,
+                                     APInt &DemandedLHS, APInt &DemandedRHS,
+                                     bool AllowUndefElts = false);
 
 /// Does this shuffle mask represent either one slide shuffle or a pair of
 /// two slide shuffles, combined with a select on some constant vector mask?
@@ -211,7 +215,7 @@ LLVM_ABI bool getShuffleDemandedElts(int SrcWidth, ArrayRef<int> Mask,
 /// will be matched a slide by 0.  The output parameter provides the source
 /// (-1 means no source), and slide direction for each slide.
 LLVM_ABI bool isMaskedSlidePair(ArrayRef<int> Mask, int NumElts,
-                       std::array<std::pair<int, int>, 2> &SrcInfo);
+                                std::array<std::pair<int, int>, 2> &SrcInfo);
 
 /// Replace each shuffle mask index with the scaled sequential indices for an
 /// equivalent mask of narrowed elements. Mask elements that are less than 0
@@ -225,7 +229,7 @@ LLVM_ABI bool isMaskedSlidePair(ArrayRef<int> Mask, int NumElts,
 /// succeeds because the indexes can always be multiplied (scaled up) to map to
 /// narrower vector elements.
 LLVM_ABI void narrowShuffleMaskElts(int Scale, ArrayRef<int> Mask,
-                           SmallVectorImpl<int> &ScaledMask);
+                                    SmallVectorImpl<int> &ScaledMask);
 
 /// Try to transform a shuffle mask by replacing elements with the scaled index
 /// for an equivalent mask of widened elements. If all mask elements that would
@@ -243,13 +247,14 @@ LLVM_ABI void narrowShuffleMaskElts(int Scale, ArrayRef<int> Mask,
 /// succeeds. This transform is not always possible because indexes may not
 /// divide evenly (scale down) to map to wider vector elements.
 LLVM_ABI bool widenShuffleMaskElts(int Scale, ArrayRef<int> Mask,
-                          SmallVectorImpl<int> &ScaledMask);
+                                   SmallVectorImpl<int> &ScaledMask);
 
 /// A variant of the previous method which is specialized for Scale=2, and
 /// treats -1 as undef and allows widening when a wider element is partially
 /// undef in the narrow form of the mask.  This transformation discards
 /// information about which bytes in the original shuffle were undef.
-LLVM_ABI bool widenShuffleMaskElts(ArrayRef<int> M, SmallVectorImpl<int> &NewMask);
+LLVM_ABI bool widenShuffleMaskElts(ArrayRef<int> M,
+                                   SmallVectorImpl<int> &NewMask);
 
 /// Attempt to narrow/widen the \p Mask shuffle mask to the \p NumDstElts target
 /// width. Internally this will call narrowShuffleMaskElts/widenShuffleMaskElts.
@@ -257,12 +262,12 @@ LLVM_ABI bool widenShuffleMaskElts(ArrayRef<int> M, SmallVectorImpl<int> &NewMas
 /// vice-versa). Returns false on failure, and ScaledMask will be in an
 /// undefined state.
 LLVM_ABI bool scaleShuffleMaskElts(unsigned NumDstElts, ArrayRef<int> Mask,
-                          SmallVectorImpl<int> &ScaledMask);
+                                   SmallVectorImpl<int> &ScaledMask);
 
 /// Repetitively apply `widenShuffleMaskElts()` for as long as it succeeds,
 /// to get the shuffle mask with widest possible elements.
 LLVM_ABI void getShuffleMaskWithWidestElts(ArrayRef<int> Mask,
-                                  SmallVectorImpl<int> &ScaledMask);
+                                           SmallVectorImpl<int> &ScaledMask);
 
 /// Splits and processes shuffle mask depending on the number of input and
 /// output registers. The function does 2 main things: 1) splits the
@@ -296,9 +301,9 @@ LLVM_ABI void processShuffleMasks(
 /// \param DemandedLHS    the demanded elements mask for the left operand
 /// \param DemandedRHS    the demanded elements mask for the right operand
 LLVM_ABI void getHorizDemandedEltsForFirstOperand(unsigned VectorBitWidth,
-                                         const APInt &DemandedElts,
-                                         APInt &DemandedLHS,
-                                         APInt &DemandedRHS);
+                                                  const APInt &DemandedElts,
+                                                  APInt &DemandedLHS,
+                                                  APInt &DemandedRHS);
 
 /// Compute a map of integer instructions to their minimum legal type
 /// size.
@@ -334,10 +339,9 @@ LLVM_ABI void getHorizDemandedEltsForFirstOperand(unsigned VectorBitWidth,
 ///
 /// If the optional TargetTransformInfo is provided, this function tries harder
 /// to do less work by only looking at illegal types.
-LLVM_ABI MapVector<Instruction*, uint64_t>
-computeMinimumValueSizes(ArrayRef<BasicBlock*> Blocks,
-                         DemandedBits &DB,
-                         const TargetTransformInfo *TTI=nullptr);
+LLVM_ABI MapVector<Instruction *, uint64_t>
+computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
+                         const TargetTransformInfo *TTI = nullptr);
 
 /// Compute the union of two access-group lists.
 ///
@@ -352,7 +356,7 @@ LLVM_ABI MDNode *uniteAccessGroups(MDNode *AccGroups1, MDNode *AccGroups2);
 /// If the list contains just one access group, it is returned directly. If the
 /// list is empty, returns nullptr.
 LLVM_ABI MDNode *intersectAccessGroups(const Instruction *Inst1,
-                              const Instruction *Inst2);
+                                       const Instruction *Inst2);
 
 /// Add metadata from \p Inst to \p Metadata, if it can be preserved after
 /// vectorization. It can be preserved after vectorization if the kind is one of
@@ -383,8 +387,9 @@ LLVM_ABI Instruction *propagateMetadata(Instruction *I, ArrayRef<Value *> VL);
 /// Note: The result is a mask of 0's and 1's, as opposed to the other
 /// create[*]Mask() utilities which create a shuffle mask (mask that
 /// consists of indices).
-LLVM_ABI Constant *createBitMaskForGaps(IRBuilderBase &Builder, unsigned VF,
-                               const InterleaveGroup<Instruction> &Group);
+LLVM_ABI Constant *
+createBitMaskForGaps(IRBuilderBase &Builder, unsigned VF,
+                     const InterleaveGroup<Instruction> &Group);
 
 /// Create a mask with replicated elements.
 ///
@@ -398,8 +403,8 @@ LLVM_ABI Constant *createBitMaskForGaps(IRBuilderBase &Builder, unsigned VF,
 /// For example, the mask for \p ReplicationFactor=3 and \p VF=4 is:
 ///
 ///   <0,0,0,1,1,1,2,2,2,3,3,3>
-LLVM_ABI llvm::SmallVector<int, 16> createReplicatedMask(unsigned ReplicationFactor,
-                                                unsigned VF);
+LLVM_ABI llvm::SmallVector<int, 16>
+createReplicatedMask(unsigned ReplicationFactor, unsigned VF);
 
 /// Create an interleave shuffle mask.
 ///
@@ -412,7 +417,8 @@ LLVM_ABI llvm::SmallVector<int, 16> createReplicatedMask(unsigned ReplicationFac
 /// For example, the mask for VF = 4 and NumVecs = 2 is:
 ///
 ///   <0, 4, 1, 5, 2, 6, 3, 7>.
-LLVM_ABI llvm::SmallVector<int, 16> createInterleaveMask(unsigned VF, unsigned NumVecs);
+LLVM_ABI llvm::SmallVector<int, 16> createInterleaveMask(unsigned VF,
+                                                         unsigned NumVecs);
 
 /// Create a stride shuffle mask.
 ///
@@ -426,8 +432,8 @@ LLVM_ABI llvm::SmallVector<int, 16> createInterleaveMask(unsigned VF, unsigned N
 /// For example, the mask for Start = 0, Stride = 2, and VF = 4 is:
 ///
 ///   <0, 2, 4, 6>
-LLVM_ABI llvm::SmallVector<int, 16> createStrideMask(unsigned Start, unsigned Stride,
-                                            unsigned VF);
+LLVM_ABI llvm::SmallVector<int, 16>
+createStrideMask(unsigned Start, unsigned Stride, unsigned VF);
 
 /// Create a sequential shuffle mask.
 ///
@@ -447,7 +453,7 @@ createSequentialMask(unsigned Start, unsigned NumInts, unsigned NumUndefs);
 /// mask assuming both operands are identical. This assumes that the unary
 /// shuffle will use elements from operand 0 (operand 1 will be unused).
 LLVM_ABI llvm::SmallVector<int, 16> createUnaryMask(ArrayRef<int> Mask,
-                                           unsigned NumElts);
+                                                    unsigned NumElts);
 
 /// Concatenate a list of vectors.
 ///
@@ -456,7 +462,8 @@ LLVM_ABI llvm::SmallVector<int, 16> createUnaryMask(ArrayRef<int> Mask,
 /// their element types should be the same. The number of elements in the
 /// vectors should also be the same; however, if the last vector has fewer
 /// elements, it will be padded with undefs.
-LLVM_ABI Value *concatenateVectors(IRBuilderBase &Builder, ArrayRef<Value *> Vecs);
+LLVM_ABI Value *concatenateVectors(IRBuilderBase &Builder,
+                                   ArrayRef<Value *> Vecs);
 
 /// Given a mask vector of i1, Return true if all of the elements of this
 /// predicate mask are known to be false or undef.  That is, return true if all

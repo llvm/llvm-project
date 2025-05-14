@@ -9,8 +9,8 @@
 #ifndef LLVM_ANALYSIS_INLINEORDER_H
 #define LLVM_ANALYSIS_INLINEORDER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/Analysis/InlineCost.h"
+#include "llvm/Support/Compiler.h"
 #include <utility>
 
 namespace llvm {

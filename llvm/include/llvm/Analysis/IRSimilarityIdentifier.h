@@ -49,12 +49,12 @@
 #ifndef LLVM_ANALYSIS_IRSIMILARITYIDENTIFIER_H
 #define LLVM_ANALYSIS_IRSIMILARITYIDENTIFIER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include <optional>
 
 namespace llvm {
@@ -169,7 +169,8 @@ struct IRInstructionData
   /// operands. This extra information allows for similarity matching to make
   /// assertions that allow for more flexibility when checking for whether an
   /// Instruction performs the same operation.
-  LLVM_ABI IRInstructionData(Instruction &I, bool Legality, IRInstructionDataList &IDL);
+  LLVM_ABI IRInstructionData(Instruction &I, bool Legality,
+                             IRInstructionDataList &IDL);
   LLVM_ABI IRInstructionData(IRInstructionDataList &IDL);
 
   /// Fills data stuctures for IRInstructionData when it is constructed from a
@@ -188,7 +189,7 @@ struct IRInstructionData
   /// in a greater than form. Otherwise, the predicate is unchanged.
   ///
   /// \param CI - The comparison operation to find a consistent preidcate for.
-  /// \return the consistent comparison predicate. 
+  /// \return the consistent comparison predicate.
   LLVM_ABI static CmpInst::Predicate predicateForConsistency(CmpInst *CI);
 
   /// For an IRInstructionData containing a branch, finds the
@@ -428,8 +429,9 @@ struct IRInstructionMapper {
   /// \param IDL - The InstructionDataList that the IRInstructionData is
   /// inserted into.
   /// \returns An allocated IRInstructionData struct.
-  LLVM_ABI IRInstructionData *allocateIRInstructionData(Instruction &I, bool Legality,
-                                               IRInstructionDataList &IDL);
+  LLVM_ABI IRInstructionData *
+  allocateIRInstructionData(Instruction &I, bool Legality,
+                            IRInstructionDataList &IDL);
 
   /// Get an empty allocated IRInstructionData struct using the
   /// InstDataAllocator.
@@ -437,7 +439,8 @@ struct IRInstructionMapper {
   /// \param IDL - The InstructionDataList that the IRInstructionData is
   /// inserted into.
   /// \returns An allocated IRInstructionData struct.
-  LLVM_ABI IRInstructionData *allocateIRInstructionData(IRInstructionDataList &IDL);
+  LLVM_ABI IRInstructionData *
+  allocateIRInstructionData(IRInstructionDataList &IDL);
 
   /// Get an allocated IRInstructionDataList object using the IDLAllocator.
   ///
@@ -471,9 +474,10 @@ struct IRInstructionMapper {
   /// \param [in] BB - The BasicBlock to be mapped to integers.
   /// \param [in,out] InstrList - Vector of IRInstructionData to append to.
   /// \param [in,out] IntegerMapping - Vector of unsigned integers to append to.
-  LLVM_ABI void convertToUnsignedVec(BasicBlock &BB,
-                            std::vector<IRInstructionData *> &InstrList,
-                            std::vector<unsigned> &IntegerMapping);
+  LLVM_ABI void
+  convertToUnsignedVec(BasicBlock &BB,
+                       std::vector<IRInstructionData *> &InstrList,
+                       std::vector<unsigned> &IntegerMapping);
 
   /// Maps an Instruction to a legal integer.
   ///
@@ -482,9 +486,10 @@ struct IRInstructionMapper {
   /// append to.
   /// \param [in,out] InstrListForBB - Vector of InstructionData to append to.
   /// \returns The integer \p It was mapped to.
-  LLVM_ABI unsigned mapToLegalUnsigned(BasicBlock::iterator &It,
-                              std::vector<unsigned> &IntegerMappingForBB,
-                              std::vector<IRInstructionData *> &InstrListForBB);
+  LLVM_ABI unsigned
+  mapToLegalUnsigned(BasicBlock::iterator &It,
+                     std::vector<unsigned> &IntegerMappingForBB,
+                     std::vector<IRInstructionData *> &InstrListForBB);
 
   /// Maps an Instruction to an illegal integer.
   ///
@@ -684,22 +689,22 @@ public:
   /// \param FirstInstIt - The starting IRInstructionData of the region.
   /// \param LastInstIt - The ending IRInstructionData of the region.
   LLVM_ABI IRSimilarityCandidate(unsigned StartIdx, unsigned Len,
-                        IRInstructionData *FirstInstIt,
-                        IRInstructionData *LastInstIt);
+                                 IRInstructionData *FirstInstIt,
+                                 IRInstructionData *LastInstIt);
 
   /// \param A - The first IRInstructionCandidate to compare.
   /// \param B - The second IRInstructionCandidate to compare.
   /// \returns True when every IRInstructionData in \p A is similar to every
   /// IRInstructionData in \p B.
   LLVM_ABI static bool isSimilar(const IRSimilarityCandidate &A,
-                        const IRSimilarityCandidate &B);
+                                 const IRSimilarityCandidate &B);
 
   /// \param [in] A - The first IRInstructionCandidate to compare.
   /// \param [in] B - The second IRInstructionCandidate to compare.
   /// \returns True when every IRInstructionData in \p A is structurally similar
   /// to \p B.
   LLVM_ABI static bool compareStructure(const IRSimilarityCandidate &A,
-                               const IRSimilarityCandidate &B);
+                                        const IRSimilarityCandidate &B);
 
   /// \param [in] A - The first IRInstructionCandidate to compare.
   /// \param [in] B - The second IRInstructionCandidate to compare.
@@ -752,7 +757,7 @@ public:
   /// operand mappings to compare.
   /// \returns true if the IRSimilarityCandidates operands are compatible.
   LLVM_ABI static bool compareNonCommutativeOperandMapping(OperandMapping A,
-                                                  OperandMapping B);
+                                                           OperandMapping B);
 
   /// Compare the operands in \p A and \p B and check that the current mapping
   /// of global value numbers from \p A to \p B and \p B to \A is consistent
@@ -764,7 +769,7 @@ public:
   /// operand mappings to compare.
   /// \returns true if the IRSimilarityCandidates operands are compatible.
   LLVM_ABI static bool compareCommutativeOperandMapping(OperandMapping A,
-                                               OperandMapping B);
+                                                        OperandMapping B);
 
   /// Compare the GVN of the assignment value in corresponding instructions in
   /// IRSimilarityCandidates \p A and \p B and check that there exists a mapping
@@ -820,7 +825,7 @@ public:
   /// and incoming block.
   /// \returns true if the relative locations match.
   LLVM_ABI static bool checkRelativeLocations(RelativeLocMapping A,
-                                     RelativeLocMapping B);
+                                              RelativeLocMapping B);
 
   /// Create a mapping from the value numbering to a different separate set of
   /// numbers. This will serve as a guide for relating one candidate to another.
@@ -829,7 +834,8 @@ public:
   ///
   /// \param [in, out] CurrCand - The IRSimilarityCandidate to create a
   /// canonical numbering for.
-  LLVM_ABI static void createCanonicalMappingFor(IRSimilarityCandidate &CurrCand);
+  LLVM_ABI static void
+  createCanonicalMappingFor(IRSimilarityCandidate &CurrCand);
 
   /// Create a mapping for the value numbering of the calling
   /// IRSimilarityCandidate, to a different separate set of numbers, based on
@@ -848,7 +854,7 @@ public:
       IRSimilarityCandidate &SourceCand,
       DenseMap<unsigned, DenseSet<unsigned>> &ToSourceMapping,
       DenseMap<unsigned, DenseSet<unsigned>> &FromSourceMapping);
-  
+
   /// Create a mapping for the value numbering of the calling
   /// IRSimilarityCandidate, to a different separate set of numbers, based on
   /// the canonical ordering in \p SourceCand. These are defined based on the
@@ -868,11 +874,10 @@ public:
   /// \param FromSourceMapping - The mapping of value numbers from \p SoureCand
   /// to this candidate.
   LLVM_ABI void createCanonicalRelationFrom(
-      IRSimilarityCandidate &SourceCand,
-      DenseMap<unsigned, unsigned> &OneToOne,
+      IRSimilarityCandidate &SourceCand, DenseMap<unsigned, unsigned> &OneToOne,
       DenseMap<unsigned, DenseSet<unsigned>> &ToSourceMapping,
       DenseMap<unsigned, DenseSet<unsigned>> &FromSourceMapping);
-  
+
   /// Create a mapping for the value numbering of the calling
   /// IRSimilarityCandidate, to a different separate set of numbers, based on
   /// the canonical ordering in \p SourceCand. These are defined based on the
@@ -887,10 +892,10 @@ public:
   /// \p SourceCand.
   /// \param TargetCandLarge -  The IRSimilarityCandidate fully containing
   /// this Candidate.
-  LLVM_ABI void createCanonicalRelationFrom(
-      IRSimilarityCandidate &SourceCand,
-      IRSimilarityCandidate &SourceCandLarge,
-      IRSimilarityCandidate &TargetCandLarge);
+  LLVM_ABI void
+  createCanonicalRelationFrom(IRSimilarityCandidate &SourceCand,
+                              IRSimilarityCandidate &SourceCandLarge,
+                              IRSimilarityCandidate &TargetCandLarge);
 
   /// \param [in,out] BBSet - The set to track the basic blocks.
   void getBasicBlocks(DenseSet<BasicBlock *> &BBSet) const {
@@ -920,7 +925,7 @@ public:
   /// \returns true if the IRSimilarityCandidates do not have overlapping
   /// instructions.
   LLVM_ABI static bool overlap(const IRSimilarityCandidate &A,
-                      const IRSimilarityCandidate &B);
+                               const IRSimilarityCandidate &B);
 
   /// \returns the number of instructions in this Candidate.
   unsigned getLength() const { return Len; }

@@ -13,11 +13,11 @@
 #ifndef LLVM_ANALYSIS_POSTDOMINATORS_H
 #define LLVM_ANALYSIS_POSTDOMINATORS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -34,7 +34,7 @@ public:
   explicit PostDominatorTree(Function &F) { recalculate(F); }
   /// Handle invalidation explicitly.
   LLVM_ABI bool invalidate(Function &F, const PreservedAnalyses &PA,
-                  FunctionAnalysisManager::Invalidator &);
+                           FunctionAnalysisManager::Invalidator &);
 
   // Ensure base-class overloads are visible.
   using Base::dominates;
@@ -96,7 +96,7 @@ struct LLVM_ABI PostDominatorTreeWrapperPass : public FunctionPass {
   void print(raw_ostream &OS, const Module*) const override;
 };
 
-LLVM_ABI FunctionPass* createPostDomTree();
+LLVM_ABI FunctionPass *createPostDomTree();
 
 template <> struct GraphTraits<PostDominatorTree*>
   : public GraphTraits<DomTreeNode*> {

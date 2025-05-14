@@ -26,8 +26,8 @@ namespace llvm {
 class DomTreeUpdater;
 class PostDominatorTree;
 
-extern template class LLVM_TEMPLATE_ABI GenericDomTreeUpdater<DomTreeUpdater, DominatorTree,
-                                            PostDominatorTree>;
+extern template class LLVM_TEMPLATE_ABI
+    GenericDomTreeUpdater<DomTreeUpdater, DominatorTree, PostDominatorTree>;
 
 class DomTreeUpdater
     : public GenericDomTreeUpdater<DomTreeUpdater, DominatorTree,
@@ -81,7 +81,7 @@ public:
   /// modified while awaiting deletion. Multiple callbacks can be queued for one
   /// DelBB under Lazy UpdateStrategy.
   LLVM_ABI void callbackDeleteBB(BasicBlock *DelBB,
-                        std::function<void(BasicBlock *)> Callback);
+                                 std::function<void(BasicBlock *)> Callback);
 
   ///@}
 

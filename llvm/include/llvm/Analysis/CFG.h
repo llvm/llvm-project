@@ -14,9 +14,9 @@
 #ifndef LLVM_ANALYSIS_CFG_H
 #define LLVM_ANALYSIS_CFG_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/Support/Compiler.h"
 #include <utility>
 
 namespace llvm {
@@ -35,22 +35,22 @@ template <typename T> class SmallVectorImpl;
 /// The output is added to Result, as pairs of <from,to> edge info.
 LLVM_ABI void FindFunctionBackedges(
     const Function &F,
-    SmallVectorImpl<std::pair<const BasicBlock *, const BasicBlock *> > &
-        Result);
+    SmallVectorImpl<std::pair<const BasicBlock *, const BasicBlock *>> &Result);
 
 /// Search for the specified successor of basic block BB and return its position
 /// in the terminator instruction's list of successors.  It is an error to call
 /// this with a block that is not a successor.
-LLVM_ABI unsigned GetSuccessorNumber(const BasicBlock *BB, const BasicBlock *Succ);
+LLVM_ABI unsigned GetSuccessorNumber(const BasicBlock *BB,
+                                     const BasicBlock *Succ);
 
 /// Return true if the specified edge is a critical edge. Critical edges are
 /// edges from a block with multiple successors to a block with multiple
 /// predecessors.
 ///
 LLVM_ABI bool isCriticalEdge(const Instruction *TI, unsigned SuccNum,
-                    bool AllowIdenticalEdges = false);
+                             bool AllowIdenticalEdges = false);
 LLVM_ABI bool isCriticalEdge(const Instruction *TI, const BasicBlock *Succ,
-                    bool AllowIdenticalEdges = false);
+                             bool AllowIdenticalEdges = false);
 
 /// Determine whether instruction 'To' is reachable from 'From', without passing
 /// through any blocks in ExclusionSet, returning true if uncertain.
@@ -193,7 +193,7 @@ bool containsIrreducibleCFG(RPOTraversalT &RPOTraversal, const LoopInfoT &LI) {
 //    be ignored)
 //  - must not be split for PGO instrumentation, for example.
 LLVM_ABI bool isPresplitCoroSuspendExitEdge(const BasicBlock &Src,
-                                   const BasicBlock &Dest);
+                                            const BasicBlock &Dest);
 
 /// Return true if there is at least a path through which F can return, false if
 /// there is no such path.

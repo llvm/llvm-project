@@ -12,10 +12,10 @@
 #ifndef LLVM_ANALYSIS_UTILS_IMPORTEDFUNCTIONSINLININGSTATISTICS_H
 #define LLVM_ANALYSIS_UTILS_IMPORTEDFUNCTIONSINLININGSTATISTICS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include <memory>
 #include <vector>
 

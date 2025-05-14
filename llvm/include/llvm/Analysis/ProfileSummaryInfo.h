@@ -14,7 +14,6 @@
 #ifndef LLVM_ANALYSIS_PROFILESUMMARYINFO_H
 #define LLVM_ANALYSIS_PROFILESUMMARYINFO_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
@@ -22,6 +21,7 @@
 #include "llvm/IR/ProfileSummary.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/BlockFrequency.h"
+#include "llvm/Support/Compiler.h"
 #include <memory>
 #include <optional>
 
@@ -101,9 +101,9 @@ public:
   }
 
   /// Returns the profile count for \p CallInst.
-  LLVM_ABI std::optional<uint64_t> getProfileCount(const CallBase &CallInst,
-                                          BlockFrequencyInfo *BFI,
-                                          bool AllowSynthetic = false) const;
+  LLVM_ABI std::optional<uint64_t>
+  getProfileCount(const CallBase &CallInst, BlockFrequencyInfo *BFI,
+                  bool AllowSynthetic = false) const;
   /// Returns true if module \c M has partial-profile sample profile.
   LLVM_ABI bool hasPartialSampleProfile() const;
   /// Returns true if the working set size of the code is considered huge.
@@ -192,7 +192,8 @@ public:
   /// cold percentile cutoff value.
   /// PercentileCutoff is encoded as a 6 digit decimal fixed point number, where
   /// the first two digits are the whole part. E.g. 995000 for 99.5 percentile.
-  LLVM_ABI bool isColdCountNthPercentile(int PercentileCutoff, uint64_t C) const;
+  LLVM_ABI bool isColdCountNthPercentile(int PercentileCutoff,
+                                         uint64_t C) const;
 
   /// Returns true if BasicBlock \p BB is considered hot.
   template <typename BBType, typename BFIT>
@@ -245,9 +246,11 @@ public:
                                                       BlockFreq, BFI);
   }
   /// Returns true if the call site \p CB is considered hot.
-  LLVM_ABI bool isHotCallSite(const CallBase &CB, BlockFrequencyInfo *BFI) const;
+  LLVM_ABI bool isHotCallSite(const CallBase &CB,
+                              BlockFrequencyInfo *BFI) const;
   /// Returns true if call site \p CB is considered cold.
-  LLVM_ABI bool isColdCallSite(const CallBase &CB, BlockFrequencyInfo *BFI) const;
+  LLVM_ABI bool isColdCallSite(const CallBase &CB,
+                               BlockFrequencyInfo *BFI) const;
   /// Returns HotCountThreshold if set. Recompute HotCountThreshold
   /// if not set.
   LLVM_ABI uint64_t getOrCompHotCountThreshold() const;

@@ -15,7 +15,6 @@
 #ifndef LLVM_ANALYSIS_ASSUMPTIONCACHE_H
 #define LLVM_ANALYSIS_ASSUMPTIONCACHE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
@@ -23,6 +22,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Compiler.h"
 #include <memory>
 
 namespace llvm {

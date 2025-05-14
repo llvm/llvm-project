@@ -9,8 +9,8 @@
 #ifndef LLVM_ANALYSIS_TENSORSPEC_H
 #define LLVM_ANALYSIS_TENSORSPEC_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Support/Compiler.h"
 
 #include "llvm/ADT/StringMap.h"
 #include "llvm/IR/LLVMContext.h"
@@ -100,7 +100,7 @@ public:
 
 private:
   LLVM_ABI TensorSpec(const std::string &Name, int Port, TensorType Type,
-             size_t ElementSize, const std::vector<int64_t> &Shape);
+                      size_t ElementSize, const std::vector<int64_t> &Shape);
 
   template <typename T> static TensorType getDataType();
 
@@ -113,7 +113,8 @@ private:
 };
 
 /// For debugging.
-LLVM_ABI std::string tensorValueToString(const char *Buffer, const TensorSpec &Spec);
+LLVM_ABI std::string tensorValueToString(const char *Buffer,
+                                         const TensorSpec &Spec);
 
 /// Construct a TensorSpec from a JSON dictionary of the form:
 /// { "name": <string>,
@@ -122,8 +123,8 @@ LLVM_ABI std::string tensorValueToString(const char *Buffer, const TensorSpec &S
 ///   "shape": <array of ints> }
 /// For the "type" field, see the C++ primitive types used in
 /// TFUTILS_SUPPORTED_TYPES.
-LLVM_ABI std::optional<TensorSpec> getTensorSpecFromJSON(LLVMContext &Ctx,
-                                                const json::Value &Value);
+LLVM_ABI std::optional<TensorSpec>
+getTensorSpecFromJSON(LLVMContext &Ctx, const json::Value &Value);
 
 #define TFUTILS_GETDATATYPE_DEF(T, Name)                                       \
   template <> LLVM_ABI TensorType TensorSpec::getDataType<T>();

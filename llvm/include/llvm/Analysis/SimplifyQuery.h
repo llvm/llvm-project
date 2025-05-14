@@ -9,9 +9,9 @@
 #ifndef LLVM_ANALYSIS_SIMPLIFYQUERY_H
 #define LLVM_ANALYSIS_SIMPLIFYQUERY_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

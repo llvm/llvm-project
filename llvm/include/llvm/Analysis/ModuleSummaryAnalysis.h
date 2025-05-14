@@ -13,10 +13,10 @@
 #ifndef LLVM_ANALYSIS_MODULESUMMARYANALYSIS_H
 #define LLVM_ANALYSIS_MODULESUMMARYANALYSIS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Compiler.h"
 #include <functional>
 #include <optional>
 

@@ -14,12 +14,12 @@
 #ifndef LLVM_ANALYSIS_OPTIMIZATIONREMARKEMITTER_H
 #define LLVM_ANALYSIS_OPTIMIZATIONREMARKEMITTER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Compiler.h"
 #include <optional>
 
 namespace llvm {
@@ -59,7 +59,7 @@ public:
 
   /// Handle invalidation events in the new pass manager.
   LLVM_ABI bool invalidate(Function &F, const PreservedAnalyses &PA,
-                  FunctionAnalysisManager::Invalidator &Inv);
+                           FunctionAnalysisManager::Invalidator &Inv);
 
   /// Return true iff at least *some* remarks are enabled.
   bool enabled() const {

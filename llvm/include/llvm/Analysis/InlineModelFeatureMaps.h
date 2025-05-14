@@ -10,8 +10,8 @@
 #ifndef LLVM_ANALYSIS_INLINEMODELFEATUREMAPS_H
 #define LLVM_ANALYSIS_INLINEMODELFEATUREMAPS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/Analysis/TensorSpec.h"
+#include "llvm/Support/Compiler.h"
 
 #include <array>
 #include <vector>

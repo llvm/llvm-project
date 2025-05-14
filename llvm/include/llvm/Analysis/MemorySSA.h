@@ -85,7 +85,6 @@
 #ifndef LLVM_ANALYSIS_MEMORYSSA_H
 #define LLVM_ANALYSIS_MEMORYSSA_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -99,6 +98,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Compiler.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -771,7 +771,8 @@ public:
 
   /// Given two memory accesses in the same basic block, determine
   /// whether MemoryAccess \p A dominates MemoryAccess \p B.
-  LLVM_ABI bool locallyDominates(const MemoryAccess *A, const MemoryAccess *B) const;
+  LLVM_ABI bool locallyDominates(const MemoryAccess *A,
+                                 const MemoryAccess *B) const;
 
   /// Given two memory accesses in potentially different blocks,
   /// determine whether MemoryAccess \p A dominates MemoryAccess \p B.
@@ -784,7 +785,8 @@ public:
   enum class VerificationLevel { Fast, Full };
   /// Verify that MemorySSA is self consistent (IE definitions dominate
   /// all uses, uses appear in the right places).  This is used by unit tests.
-  LLVM_ABI void verifyMemorySSA(VerificationLevel = VerificationLevel::Fast) const;
+  LLVM_ABI void
+      verifyMemorySSA(VerificationLevel = VerificationLevel::Fast) const;
 
   /// Used in various insertion functions to specify whether we are talking
   /// about the beginning or end of a block.
@@ -825,8 +827,10 @@ protected:
   // machinsations.  They do not always leave the IR in a correct state, and
   // relies on the updater to fixup what it breaks, so it is not public.
 
-  LLVM_ABI void moveTo(MemoryUseOrDef *What, BasicBlock *BB, AccessList::iterator Where);
-  LLVM_ABI void moveTo(MemoryAccess *What, BasicBlock *BB, InsertionPlace Point);
+  LLVM_ABI void moveTo(MemoryUseOrDef *What, BasicBlock *BB,
+                       AccessList::iterator Where);
+  LLVM_ABI void moveTo(MemoryAccess *What, BasicBlock *BB,
+                       InsertionPlace Point);
 
   // Rename the dominator tree branch rooted at BB.
   void renamePass(BasicBlock *BB, MemoryAccess *IncomingVal,
@@ -837,12 +841,13 @@ protected:
   LLVM_ABI void removeFromLookups(MemoryAccess *);
   LLVM_ABI void removeFromLists(MemoryAccess *, bool ShouldDelete = true);
   LLVM_ABI void insertIntoListsForBlock(MemoryAccess *, const BasicBlock *,
-                               InsertionPlace);
+                                        InsertionPlace);
   LLVM_ABI void insertIntoListsBefore(MemoryAccess *, const BasicBlock *,
-                             AccessList::iterator);
-  LLVM_ABI MemoryUseOrDef *createDefinedAccess(Instruction *, MemoryAccess *,
-                                      const MemoryUseOrDef *Template = nullptr,
-                                      bool CreationMustSucceed = true);
+                                      AccessList::iterator);
+  LLVM_ABI MemoryUseOrDef *
+  createDefinedAccess(Instruction *, MemoryAccess *,
+                      const MemoryUseOrDef *Template = nullptr,
+                      bool CreationMustSucceed = true);
 
 private:
   class ClobberWalkerBase;
@@ -869,8 +874,9 @@ private:
   MemoryAccess *renameBlock(BasicBlock *, MemoryAccess *, bool);
   void renameSuccessorPhis(BasicBlock *, MemoryAccess *, bool);
   LLVM_ABI void renamePass(DomTreeNode *, MemoryAccess *IncomingVal,
-                  SmallPtrSetImpl<BasicBlock *> &Visited,
-                  bool SkipVisited = false, bool RenameAllUses = false);
+                           SmallPtrSetImpl<BasicBlock *> &Visited,
+                           bool SkipVisited = false,
+                           bool RenameAllUses = false);
   AccessList *getOrCreateAccessList(const BasicBlock *);
   DefsList *getOrCreateDefsList(const BasicBlock *);
   void renumberBlock(const BasicBlock *) const;
@@ -920,8 +926,9 @@ protected:
   friend class MemorySSAWalker;
 
   // This function should not be used by new passes.
-  LLVM_ABI static bool defClobbersUseOrDef(MemoryDef *MD, const MemoryUseOrDef *MU,
-                                  AliasAnalysis &AA);
+  LLVM_ABI static bool defClobbersUseOrDef(MemoryDef *MD,
+                                           const MemoryUseOrDef *MU,
+                                           AliasAnalysis &AA);
 };
 
 /// An analysis that produces \c MemorySSA for a function.
@@ -943,7 +950,7 @@ public:
     std::unique_ptr<MemorySSA> MSSA;
 
     LLVM_ABI bool invalidate(Function &F, const PreservedAnalyses &PA,
-                    FunctionAnalysisManager::Invalidator &Inv);
+                             FunctionAnalysisManager::Invalidator &Inv);
   };
 
   LLVM_ABI Result run(Function &F, FunctionAnalysisManager &AM);
