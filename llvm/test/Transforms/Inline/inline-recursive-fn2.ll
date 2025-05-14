@@ -2,15 +2,21 @@
 
 ; CHECK:  Inlining calls in: test
 ; CHECK:      Function size: 2
-; CHECK:      Inlining (cost=-35, threshold=337), Call:   %call = tail call float @inline_rec_true_successor(float %x, float %scale)
-; CHECK:      Size after inlining: 10
+; CHECK:      NOT Inlining (cost=never): recursive, Call:   %call = tail call float @inline_rec_true_successor(float %x, float %scale)
 
 ; CHECK:  Inlining calls in: inline_rec_true_successor
 ; CHECK:      Function size: 10
 ; CHECK:      Inlining (cost=-35, threshold=337), Call:   %call = tail call float @inline_rec_true_successor(float %fneg, float %scale)
 ; CHECK:      Size after inlining: 17
 ; CHECK:      NOT Inlining (cost=never): noinline function attribute, Call:   %call_test = tail call float @test(float %fneg, float %common.ret18.op.i)
+; CHECK:      NOT Inlining (cost=never): noinline function attribute, Call:   %call_test.i = tail call float @test(float %x, float %call.i)
+; CHECK:  Skipping inlining due to history: inline_rec_true_successor -> inline_rec_true_successor
+; CHECK:  Updated inlining SCC: (test, inline_rec_true_successor)
 
+; CHECK:  Inlining calls in: test
+; CHECK:      Function size: 2
+; CHECK:      Inlining (cost=25, threshold=225), Call:   %call = tail call float @inline_rec_true_successor(float %x, float %scale)
+; CHECK:      Size after inlining: 10
 
 define float @test(float %x, float %scale) noinline {
 entry:
