@@ -8,6 +8,7 @@ static_library("Vectorize") {
     "//llvm/lib/Transforms/Utils",
   ]
   sources = [
+    "EVLIndVarSimplify.cpp",
     "LoadStoreVectorizer.cpp",
     "LoopIdiomVectorize.cpp",
     "LoopVectorizationLegality.cpp",
