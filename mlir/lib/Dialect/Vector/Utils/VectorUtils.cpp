@@ -291,8 +291,7 @@ vector::createUnrollIterator(VectorType vType, int64_t targetRank) {
   // cannot be unrolled).
   auto shapeToUnroll = vType.getShape().drop_back(targetRank);
   auto scalableDimsToUnroll = vType.getScalableDims().drop_back(targetRank);
-  auto it =
-      std::find(scalableDimsToUnroll.begin(), scalableDimsToUnroll.end(), true);
+  auto it = llvm::find(scalableDimsToUnroll, true);
   auto firstScalableDim = it - scalableDimsToUnroll.begin();
   if (firstScalableDim == 0)
     return {};
@@ -312,7 +311,7 @@ SmallVector<OpFoldResult> vector::getMixedSizesXfer(bool hasTensorSemantics,
 
   Value base = TypeSwitch<Operation *, Value>(xfer)
                    .Case<vector::TransferReadOp>(
-                       [&](auto readOp) { return readOp.getSource(); })
+                       [&](auto readOp) { return readOp.getBase(); })
                    .Case<vector::TransferWriteOp>(
                        [&](auto writeOp) { return writeOp.getOperand(1); });
 

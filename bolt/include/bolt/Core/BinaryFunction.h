@@ -142,8 +142,8 @@ public:
   /// Types of profile the function can use. Could be a combination.
   enum {
     PF_NONE = 0,     /// No profile.
-    PF_LBR = 1,      /// Profile is based on last branch records.
-    PF_SAMPLE = 2,   /// Non-LBR sample-based profile.
+    PF_BRANCH = 1,   /// Profile is based on branches or branch stacks.
+    PF_BASIC = 2,    /// Non-branch IP sample-based profile.
     PF_MEMEVENT = 4, /// Profile has mem events.
   };
 
@@ -360,6 +360,11 @@ private:
   /// True if the function is used for patching code at a fixed address.
   bool IsPatch{false};
 
+  /// True if the original entry point of the function may get called, but the
+  /// original body cannot be executed and needs to be patched with code that
+  /// redirects execution to the new function body.
+  bool NeedsPatch{false};
+
   /// True if the function should not have an associated symbol table entry.
   bool IsAnonymous{false};
 
@@ -387,7 +392,7 @@ private:
   float ProfileMatchRatio{0.0f};
 
   /// Raw branch count for this function in the profile.
-  uint64_t RawBranchCount{0};
+  uint64_t RawSampleCount{0};
 
   /// Dynamically executed function bytes, used for density computation.
   uint64_t SampleCountInBytes{0};
@@ -862,7 +867,7 @@ public:
   /// Returns if BinaryDominatorTree has been constructed for this function.
   bool hasDomTree() const { return BDT != nullptr; }
 
-  BinaryDominatorTree &getDomTree() { return *BDT.get(); }
+  BinaryDominatorTree &getDomTree() { return *BDT; }
 
   /// Constructs DomTree for this function.
   void constructDomTree();
@@ -870,7 +875,7 @@ public:
   /// Returns if loop detection has been run for this function.
   bool hasLoopInfo() const { return BLI != nullptr; }
 
-  const BinaryLoopInfo &getLoopInfo() { return *BLI.get(); }
+  const BinaryLoopInfo &getLoopInfo() { return *BLI; }
 
   bool isLoopFree() {
     if (!hasLoopInfo())
@@ -1372,6 +1377,9 @@ public:
   /// Return true if this function is used for patching existing code.
   bool isPatch() const { return IsPatch; }
 
+  /// Return true if the function requires a patch.
+  bool needsPatch() const { return NeedsPatch; }
+
   /// Return true if the function should not have associated symbol table entry.
   bool isAnonymous() const { return IsAnonymous; }
 
@@ -1757,6 +1765,9 @@ public:
     IsPatch = V;
   }
 
+  /// Mark the function for patching.
+  void setNeedsPatch(bool V) { NeedsPatch = V; }
+
   /// Indicate if the function should have a name in the symbol table.
   void setAnonymous(bool V) {
     assert(isInjected() && "Only injected functions could be anonymous");
@@ -1882,11 +1893,11 @@ public:
 
   /// Return the raw profile information about the number of branch
   /// executions corresponding to this function.
-  uint64_t getRawBranchCount() const { return RawBranchCount; }
+  uint64_t getRawSampleCount() const { return RawSampleCount; }
 
   /// Set the profile data about the number of branch executions corresponding
   /// to this function.
-  void setRawBranchCount(uint64_t Count) { RawBranchCount = Count; }
+  void setRawSampleCount(uint64_t Count) { RawSampleCount = Count; }
 
   /// Return the number of dynamically executed bytes, from raw perf data.
   uint64_t getSampleCountInBytes() const { return SampleCountInBytes; }
