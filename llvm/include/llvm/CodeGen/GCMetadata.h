@@ -182,7 +182,11 @@ public:
 
   bool empty() const { return Strategies.empty(); }
 
-  GCStrategy &operator[](StringRef GCName) { return *Strategies[GCName]; }
+  const GCStrategy &operator[](StringRef GCName) const {
+    auto I = Strategies.find(GCName);
+    assert(I != Strategies.end() && "Required strategy doesn't exist!");
+    return *I->second;
+  }
 
   std::pair<iterator, bool> try_emplace(StringRef GCName) {
     return Strategies.try_emplace(GCName);
