@@ -687,6 +687,16 @@ public:
                                     Value *IfCondition,
                                     omp::Directive CanceledDirective);
 
+  /// Generator for '#omp cancellation point'
+  ///
+  /// \param Loc The location where the directive was encountered.
+  /// \param CanceledDirective The kind of directive that is cancled.
+  ///
+  /// \returns The insertion point after the barrier.
+  InsertPointOrErrorTy
+  createCancellationPoint(const LocationDescription &Loc,
+                          omp::Directive CanceledDirective);
+
   /// Generator for '#omp parallel'
   ///
   /// \param Loc The insert and source location description.

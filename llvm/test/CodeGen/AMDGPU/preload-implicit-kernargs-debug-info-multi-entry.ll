@@ -212,12 +212,12 @@ define amdgpu_kernel void @preload_block_count_x(ptr addrspace(1) inreg noundef 
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_endpgm
-; GFX942-NEXT:  .LBB0_4:
 ; GFX942-NEXT:  .Ltmp4:
+; GFX942-NEXT:  .LBB0_4:
 ; GFX942-NEXT:    ;DEBUG_VALUE: test:var <- [DW_OP_LLVM_poisoned] $sgpr2_sgpr3
 ; GFX942-NEXT:    ; implicit-def: $sgpr8_sgpr9
+; GFX942-NEXT:    .loc 0 0 0 is_stmt 0 ; <stdin>:0:0
 ; GFX942-NEXT:    s_branch .LBB0_2
-; GFX942-NEXT:  .Ltmp5:
 entry:
   %0 = ptrtoint ptr addrspace(1) %dst.coerce to i64
   %1 = inttoptr i64 %0 to ptr

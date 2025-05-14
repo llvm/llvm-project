@@ -2,6 +2,7 @@ set(LLVM_LINK_COMPONENTS
   BinaryFormat
   Core
   FrontendOpenMP
+  FrontendHLSL
   Support
   TargetParser
   )

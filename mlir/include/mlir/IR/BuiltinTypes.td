@@ -807,6 +807,11 @@ def Builtin_MemRef : Builtin_Type<"MemRef", "memref", [
       "ArrayRef<int64_t>":$shape, "Type":$elementType,
       CArg<"AffineMap">:$map,
       CArg<"Attribute", "{}">:$memorySpace)>,
+    /// [deprecated] `Attribute`-based form should be used instead.
+    TypeBuilderWithInferredContext<(ins
+      "ArrayRef<int64_t>":$shape, "Type":$elementType,
+      "AffineMap":$map,
+      "unsigned":$memorySpaceInd)>
   ];
   let extraClassDeclaration = [{
     using BaseMemRefType::clone;
@@ -1175,6 +1180,14 @@ def Builtin_UnrankedMemRef : Builtin_Type<"UnrankedMemRef", "unranked_memref", [
       Attribute nonDefaultMemorySpace = skipDefaultMemorySpace(memorySpace);
       return $_get(elementType.getContext(), elementType, nonDefaultMemorySpace);
     }]>,
+    /// [deprecated] `Attribute`-based form should be used instead.
+    TypeBuilderWithInferredContext<(ins "Type":$elementType,
+                                        "unsigned":$memorySpace), [{
+      // Convert deprecated integer-like memory space to Attribute.
+      Attribute memorySpaceAttr =
+          wrapIntegerMemorySpace(memorySpace, elementType.getContext());
+      return UnrankedMemRefType::get(elementType, memorySpaceAttr);
+    }]>
   ];
   let extraClassDeclaration = [{
     using BaseMemRefType::clone;

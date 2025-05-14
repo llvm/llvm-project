@@ -53,10 +53,17 @@ add_flang_library(FortranSupport
   Version.cpp
   ${version_inc}
 
+  DEPENDS
+  FIRDialect
+
+  LINK_LIBS
+  FIRDialect
+
   LINK_COMPONENTS
   Support
 
   MLIR_LIBS
   MLIRIR
   MLIRSupport
+  MLIROpenMPDialect
 )

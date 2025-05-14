@@ -138,12 +138,10 @@ static void genRuntimeSetBounds(fir::FirOpBuilder &builder, mlir::Location loc,
                                                                     builder)
           : fir::runtime::getRuntimeFunc<mkRTKey(AllocatableSetBounds)>(
                 loc, builder);
-  llvm::SmallVector<mlir::Value> args{box.getAddr(), dimIndex, lowerBound,
-                                      upperBound};
-  llvm::SmallVector<mlir::Value> operands;
-  for (auto [fst, snd] : llvm::zip(args, callee.getFunctionType().getInputs()))
-    operands.emplace_back(builder.createConvert(loc, snd, fst));
-  builder.create<fir::CallOp>(loc, callee, operands);
+  const auto args = fir::runtime::createArguments(
+      builder, loc, callee.getFunctionType(), box.getAddr(), dimIndex,
+      lowerBound, upperBound);
+  builder.create<fir::CallOp>(loc, callee, args);
 }
 
 /// Generate runtime call to set the lengths of a character allocatable or
@@ -162,9 +160,7 @@ static void genRuntimeInitCharacter(fir::FirOpBuilder &builder,
   if (inputTypes.size() != 5)
     fir::emitFatalError(
         loc, "AllocatableInitCharacter runtime interface not as expected");
-  llvm::SmallVector<mlir::Value> args;
-  args.push_back(builder.createConvert(loc, inputTypes[0], box.getAddr()));
-  args.push_back(builder.createConvert(loc, inputTypes[1], len));
+  llvm::SmallVector<mlir::Value> args = {box.getAddr(), len};
   if (kind == 0)
     kind = mlir::cast<fir::CharacterType>(box.getEleTy()).getFKind();
   args.push_back(builder.createIntegerConstant(loc, inputTypes[2], kind));
@@ -173,7 +169,30 @@ static void genRuntimeInitCharacter(fir::FirOpBuilder &builder,
   // TODO: coarrays
   int corank = 0;
   args.push_back(builder.createIntegerConstant(loc, inputTypes[4], corank));
-  builder.create<fir::CallOp>(loc, callee, args);
+  const auto convertedArgs = fir::runtime::createArguments(
+      builder, loc, callee.getFunctionType(), args);
+  builder.create<fir::CallOp>(loc, callee, convertedArgs);
+}
+
+/// Generate a runtime call to set allocator idx of descriptor for target amd.
+static void genAMDRuntimeDescriptorSetAllocIdx(fir::FirOpBuilder &builder,
+                                               mlir::Location loc,
+                                               const fir::MutableBoxValue &box,
+                                               int allocatorId) {
+  auto *context = builder.getContext();
+  mlir::Type descriptorTy = box.getAddr().getType();
+  mlir::IntegerType posTy = builder.getI32Type();
+  mlir::func::FuncOp callee = builder.createFunction(
+      loc, RTNAME_STRING(AMDAllocatableSetAllocIdx),
+      mlir::FunctionType::get(context, {descriptorTy, posTy}, {}));
+  llvm::SmallVector<mlir::Value> args{box.getAddr()};
+  args.push_back(
+      builder.createIntegerConstant(loc, builder.getI32Type(), allocatorId));
+  llvm::SmallVector<mlir::Value> operands;
+  for (auto [fst, snd] : llvm::zip(args, callee.getFunctionType().getInputs()))
+    operands.emplace_back(builder.createConvert(loc, snd, fst));
+  builder.create<fir::CallOp>(loc, callee, operands);
+  return;
 }
 
 /// Generate a sequence of runtime calls to allocate memory.
@@ -194,10 +213,9 @@ static mlir::Value genRuntimeAllocate(fir::FirOpBuilder &builder,
   args.push_back(errorManager.errMsgAddr);
   args.push_back(errorManager.sourceFile);
   args.push_back(errorManager.sourceLine);
-  llvm::SmallVector<mlir::Value> operands;
-  for (auto [fst, snd] : llvm::zip(args, callee.getFunctionType().getInputs()))
-    operands.emplace_back(builder.createConvert(loc, snd, fst));
-  return builder.create<fir::CallOp>(loc, callee, operands).getResult(0);
+  const auto convertedArgs = fir::runtime::createArguments(
+      builder, loc, callee.getFunctionType(), args);
+  return builder.create<fir::CallOp>(loc, callee, convertedArgs).getResult(0);
 }
 
 /// Generate a sequence of runtime calls to allocate memory and assign with the
@@ -213,14 +231,11 @@ static mlir::Value genRuntimeAllocateSource(fir::FirOpBuilder &builder,
                 loc, builder)
           : fir::runtime::getRuntimeFunc<mkRTKey(AllocatableAllocateSource)>(
                 loc, builder);
-  llvm::SmallVector<mlir::Value> args{
-      box.getAddr(),           fir::getBase(source),
-      errorManager.hasStat,    errorManager.errMsgAddr,
-      errorManager.sourceFile, errorManager.sourceLine};
-  llvm::SmallVector<mlir::Value> operands;
-  for (auto [fst, snd] : llvm::zip(args, callee.getFunctionType().getInputs()))
-    operands.emplace_back(builder.createConvert(loc, snd, fst));
-  return builder.create<fir::CallOp>(loc, callee, operands).getResult(0);
+  const auto args = fir::runtime::createArguments(
+      builder, loc, callee.getFunctionType(), box.getAddr(),
+      fir::getBase(source), errorManager.hasStat, errorManager.errMsgAddr,
+      errorManager.sourceFile, errorManager.sourceLine);
+  return builder.create<fir::CallOp>(loc, callee, args).getResult(0);
 }
 
 /// Generate runtime call to apply mold to the descriptor.
@@ -234,14 +249,12 @@ static void genRuntimeAllocateApplyMold(fir::FirOpBuilder &builder,
                                                                     builder)
           : fir::runtime::getRuntimeFunc<mkRTKey(AllocatableApplyMold)>(
                 loc, builder);
-  llvm::SmallVector<mlir::Value> args{
+  const auto args = fir::runtime::createArguments(
+      builder, loc, callee.getFunctionType(),
       fir::factory::getMutableIRBox(builder, loc, box), fir::getBase(mold),
       builder.createIntegerConstant(
-          loc, callee.getFunctionType().getInputs()[2], rank)};
-  llvm::SmallVector<mlir::Value> operands;
-  for (auto [fst, snd] : llvm::zip(args, callee.getFunctionType().getInputs()))
-    operands.emplace_back(builder.createConvert(loc, snd, fst));
-  builder.create<fir::CallOp>(loc, callee, operands);
+          loc, callee.getFunctionType().getInputs()[2], rank));
+  builder.create<fir::CallOp>(loc, callee, args);
 }
 
 /// Generate a runtime call to deallocate memory.
@@ -481,6 +494,9 @@ private:
                             !alloc.hasCoarraySpec() && !useAllocateRuntime &&
                             !box.isPointer();
     unsigned allocatorIdx = Fortran::lower::getAllocatorIdx(alloc.getSymbol());
+    const auto &langFeatures = converter.getFoldingContext().languageFeatures();
+    bool isAMDMemoryAllocatorEnabled = langFeatures.IsEnabled(
+        Fortran::common::LanguageFeature::AmdMemoryAllocator);
 
     if (inlineAllocation &&
         ((isCudaSymbol && isCudaDeviceContext) || !isCudaSymbol)) {
@@ -503,6 +519,8 @@ private:
     genAllocateObjectBounds(alloc, box);
     mlir::Value stat;
     if (!isCudaSymbol) {
+      if (isAMDMemoryAllocatorEnabled)
+        genAMDRuntimeDescriptorSetAllocIdx(builder, loc, box, 1);
       stat = genRuntimeAllocate(builder, loc, box, errorManager);
       setPinnedToFalse();
     } else {
@@ -622,6 +640,9 @@ private:
                                const fir::MutableBoxValue &box, bool isSource) {
     unsigned allocatorIdx = Fortran::lower::getAllocatorIdx(alloc.getSymbol());
     fir::ExtendedValue exv = isSource ? sourceExv : moldExv;
+    const auto &langFeatures = converter.getFoldingContext().languageFeatures();
+    bool isAMDMemoryAllocatorEnabled = langFeatures.IsEnabled(
+        Fortran::common::LanguageFeature::AmdMemoryAllocator);
 
     // Generate a sequence of runtime calls.
     errorManager.genStatCheck(builder, loc);
@@ -645,6 +666,8 @@ private:
       stat =
           genCudaAllocate(builder, loc, box, errorManager, alloc.getSymbol());
     } else {
+      if (isAMDMemoryAllocatorEnabled)
+        genAMDRuntimeDescriptorSetAllocIdx(builder, loc, box, 1);
       if (isSource)
         stat = genRuntimeAllocateSource(builder, loc, box, exv, errorManager);
       else
@@ -669,15 +692,13 @@ private:
 
     llvm::ArrayRef<mlir::Type> inputTypes =
         callee.getFunctionType().getInputs();
-    llvm::SmallVector<mlir::Value> args;
-    args.push_back(builder.createConvert(loc, inputTypes[0], box.getAddr()));
-    args.push_back(builder.createConvert(loc, inputTypes[1], typeDescAddr));
     mlir::Value rankValue =
         builder.createIntegerConstant(loc, inputTypes[2], rank);
     mlir::Value corankValue =
         builder.createIntegerConstant(loc, inputTypes[3], corank);
-    args.push_back(rankValue);
-    args.push_back(corankValue);
+    const auto args = fir::runtime::createArguments(
+        builder, loc, callee.getFunctionType(), box.getAddr(), typeDescAddr,
+        rankValue, corankValue);
     builder.create<fir::CallOp>(loc, callee, args);
   }
 
@@ -696,8 +717,6 @@ private:
 
     llvm::ArrayRef<mlir::Type> inputTypes =
         callee.getFunctionType().getInputs();
-    llvm::SmallVector<mlir::Value> args;
-    args.push_back(builder.createConvert(loc, inputTypes[0], box.getAddr()));
     mlir::Value categoryValue = builder.createIntegerConstant(
         loc, inputTypes[1], static_cast<int32_t>(category));
     mlir::Value kindValue =
@@ -706,10 +725,9 @@ private:
         builder.createIntegerConstant(loc, inputTypes[3], rank);
     mlir::Value corankValue =
         builder.createIntegerConstant(loc, inputTypes[4], corank);
-    args.push_back(categoryValue);
-    args.push_back(kindValue);
-    args.push_back(rankValue);
-    args.push_back(corankValue);
+    const auto args = fir::runtime::createArguments(
+        builder, loc, callee.getFunctionType(), box.getAddr(), categoryValue,
+        kindValue, rankValue, corankValue);
     builder.create<fir::CallOp>(loc, callee, args);
   }
 

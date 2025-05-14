@@ -238,6 +238,8 @@
 ; GCN-O3-NEXT:      Lazy Block Frequency Analysis
 ; GCN-O3-NEXT:      Optimization Remark Emitter
 ; GCN-O3-NEXT:      Global Value Numbering
+; GCN-O3-NEXT:    AMDGPU Preload Kernel Arguments
+; GCN-O3-NEXT:    FunctionPass Manager
 ; GCN-O3-NEXT:      AMDGPU Lower Kernel Arguments
 ; GCN-O3-NEXT:    Lower buffer fat pointer operations to buffer resources
 ; GCN-O3-NEXT:    CallGraph Construction

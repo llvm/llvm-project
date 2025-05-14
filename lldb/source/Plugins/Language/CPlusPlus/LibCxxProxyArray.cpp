@@ -179,12 +179,12 @@ lldb_private::formatters::LibcxxStdProxyArraySyntheticFrontEnd::
   if (!m_base)
     return llvm::createStringError("Type has no child named '%s'",
                                    name.AsCString());
-  size_t idx = ExtractIndexFromString(name.GetCString());
-  if (idx == UINT32_MAX) {
+  auto optional_idx = formatters::ExtractIndexFromString(name.GetCString());
+  if (!optional_idx) {
     return llvm::createStringError("Type has no child named '%s'",
                                    name.AsCString());
   }
-  return idx;
+  return *optional_idx;
 }
 
 lldb_private::SyntheticChildrenFrontEnd *

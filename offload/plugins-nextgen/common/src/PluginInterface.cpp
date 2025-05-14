@@ -514,10 +514,10 @@ Error GenericKernelTy::init(GenericDeviceTy &GenericDevice,
     // Consume the error since it is acceptable to fail.
     [[maybe_unused]] std::string ErrStr = toString(std::move(Err));
     DP("Failed to read execution mode for '%s': %s\n"
-       "Using default SPMD (2) execution mode\n",
+       "Using default Bare (0) execution mode\n",
        Name, ErrStr.data());
 
-    ExecutionMode = OMP_TGT_EXEC_MODE_SPMD;
+    ExecutionMode = OMP_TGT_EXEC_MODE_BARE;
   } else {
     // Check that the retrieved execution mode is valid.
     if (!GenericKernelTy::isValidExecutionMode(ExecModeGlobal.getValue()))
@@ -744,12 +744,7 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
         KernelRecord->getLaunchParamsForKernel(*this, GenericDevice);
     NumBlocks[0] = Teams;
     NumThreads[0] = Threads;
-  } else {
-
-    // TODO fix workaround since IsBareKernel is not properly set for legacy
-    // flang and specialized kernels since they don't use kernel-env. While
-    // we can check for specialized kernels, we can't for legacy flang. So,
-    // on amd-staging, all kernels including bare ones use this codepath.
+  } else if (!isBareMode()) {
     NumThreads[0] = getNumThreads(GenericDevice, NumThreads);
 
     std::pair<bool, uint32_t> AdjustInfo = adjustNumThreadsForLowTripCount(
@@ -823,8 +818,7 @@ KernelLaunchParamsTy GenericKernelTy::prepareArgs(
 
 uint32_t GenericKernelTy::getNumThreads(GenericDeviceTy &GenericDevice,
                                         uint32_t ThreadLimitClause[3]) const {
-  // TODO fix workaround since IsBareKernel is not properly set for all kernels.
-  // assert(!IsBareKernel && "bare kernel should not call this function");
+  assert(!isBareMode() && "bare kernel should not call this function");
 
   assert(ThreadLimitClause[1] == 1 && ThreadLimitClause[2] == 1 &&
          "Multi dimensional launch not supported yet.");
@@ -846,8 +840,7 @@ uint32_t GenericKernelTy::getNumBlocks(GenericDeviceTy &GenericDevice,
                                        uint64_t LoopTripCount,
                                        uint32_t &NumThreads,
                                        bool IsNumThreadsFromUser) const {
-  // TODO fix workaround since IsBareKernel is not properly set for all kernels.
-  // assert(!IsBareKernel && "bare kernel should not call this function");
+  assert(!isBareMode() && "bare kernel should not call this function");
 
   assert(NumTeamsClause[1] == 1 && NumTeamsClause[2] == 1 &&
          "Multi dimensional launch not supported yet.");

@@ -15,6 +15,7 @@ static const __constant uchar kAsanHeapLeftRedzoneMagic = (uchar)0xfa;
 static const __constant uint kAsanHeapLeftRedzoneMagicx4 = 0xfafafafaU;
 static const __constant ulong kAsanHeapLeftRedzoneMagicx8 = 0xfafafafafafafafaUL;
 static const __constant uchar kAsanHeapFreeMagic = (uchar)0xfd;
+static const __constant uchar kAsanArrayCookieMagic = (uchar)0xac;
 
 extern ulong __ockl_devmem_request(ulong addr, ulong size);
 
@@ -321,7 +322,7 @@ __asan_free_impl(ulong aa, ulong pc)
 
     uptr sa = MEM_TO_SHADOW(aa);
     s8 sb = *(__global s8*) sa;
-    if (sb != 0 && ((s8)(aa & (SHADOW_GRANULARITY-1)) >= sb)) {
+    if (sb != 0 && sb != (s8)kAsanArrayCookieMagic && ((s8)(aa & (SHADOW_GRANULARITY-1)) >= sb)) {
         REPORT_IMPL(pc, aa, 1, 1, false);
     }
 

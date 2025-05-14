@@ -120,14 +120,14 @@ public:
 
   /// Creates a reduction declaration and associates it with an OpenMP block
   /// directive.
+  template <class T>
   static void processReductionArguments(
       mlir::Location currentLocation, lower::AbstractConverter &converter,
-      const omp::clause::Reduction &reduction,
-      llvm::SmallVectorImpl<mlir::Value> &reductionVars,
+      const T &reduction, llvm::SmallVectorImpl<mlir::Value> &reductionVars,
       llvm::SmallVectorImpl<bool> &reduceVarByRef,
       llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
       llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSymbols,
-      mlir::omp::ReductionModifierAttr &reductionMod);
+      mlir::omp::ReductionModifierAttr *reductionMod = nullptr);
 };
 
 template <typename FloatOp, typename IntegerOp>

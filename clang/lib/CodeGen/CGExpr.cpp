@@ -100,26 +100,21 @@ CodeGenFunction::CreateTempAllocaWithoutCast(llvm::Type *Ty, CharUnits Align,
   return RawAddress(Alloca, Ty, Align, KnownNonNull);
 }
 
-/// CreateTempAlloca - This creates a alloca and inserts it into the entry
-/// block. The alloca is casted to default address space if necessary.
-RawAddress CodeGenFunction::CreateTempAlloca(llvm::Type *Ty, CharUnits Align,
-                                             const Twine &Name,
+RawAddress CodeGenFunction::CreateTempAlloca(llvm::Type *Ty, LangAS DestLangAS,
+                                             CharUnits Align, const Twine &Name,
                                              llvm::Value *ArraySize,
                                              RawAddress *AllocaAddr) {
-  auto Alloca = CreateTempAllocaWithoutCast(Ty, Align, Name, ArraySize);
+  RawAddress Alloca = CreateTempAllocaWithoutCast(Ty, Align, Name, ArraySize);
   if (AllocaAddr)
     *AllocaAddr = Alloca;
   llvm::Value *V = Alloca.getPointer();
-  assert((!getLangOpts().OpenCL ||
-          CGM.getTarget().getTargetAddressSpace(getASTAllocaAddressSpace()) ==
-              CGM.getTarget().getTargetAddressSpace(LangAS::opencl_private)) &&
-         "For OpenCL allocas must allocate in the private address space!");
   // Alloca always returns a pointer in alloca address space, which may
   // be different from the type defined by the language. For example,
   // in C++ the auto variables are in the default address space. Therefore
   // cast alloca to the default address space when necessary.
-  if (!getLangOpts().OpenCL && getASTAllocaAddressSpace() != LangAS::Default) {
-    auto DestAddrSpace = getContext().getTargetAddressSpace(LangAS::Default);
+
+  unsigned DestAddrSpace = getContext().getTargetAddressSpace(DestLangAS);
+  if (DestAddrSpace != Alloca.getAddressSpace()) {
     llvm::IRBuilderBase::InsertPointGuard IPG(Builder);
     // When ArraySize is nullptr, alloca is inserted at AllocaInsertPt,
     // otherwise alloca is inserted at the current insertion point of the
@@ -127,8 +122,8 @@ RawAddress CodeGenFunction::CreateTempAlloca(llvm::Type *Ty, CharUnits Align,
     if (!ArraySize)
       Builder.SetInsertPoint(getPostAllocaInsertPoint());
     V = getTargetHooks().performAddrSpaceCast(
-        *this, V, getASTAllocaAddressSpace(), LangAS::Default,
-        Builder.getPtrTy(DestAddrSpace), /*non-null*/ true);
+        *this, V, getASTAllocaAddressSpace(), Builder.getPtrTy(DestAddrSpace),
+        /*IsNonNull=*/true);
   }
 
   return RawAddress(V, Ty, Align, KnownNonNull);
@@ -471,7 +466,7 @@ static RawAddress createReferenceTemporary(CodeGenFunction &CGF,
         llvm::Constant *C = GV;
         if (AS != LangAS::Default)
           C = TCG.performAddrSpaceCast(
-              CGF.CGM, GV, AS, LangAS::Default,
+              CGF.CGM, GV, AS,
               llvm::PointerType::get(
                   CGF.getLLVMContext(),
                   CGF.getContext().getTargetAddressSpace(LangAS::Default)));
@@ -1232,7 +1227,11 @@ void CodeGenFunction::EmitBoundsCheckImpl(const Expr *E, llvm::Value *Bound,
   SanitizerScope SanScope(this);
 
   llvm::DILocation *CheckDI = Builder.getCurrentDebugLocation();
-  if (ClArrayBoundsPseudoFn && CheckDI) {
+  auto CheckKind = SanitizerKind::SO_ArrayBounds;
+  // TODO: deprecate ClArrayBoundsPseudoFn
+  if ((ClArrayBoundsPseudoFn ||
+       CGM.getCodeGenOpts().SanitizeAnnotateDebugInfo.has(CheckKind)) &&
+      CheckDI) {
     CheckDI = getDebugInfo()->CreateSyntheticInlineAt(
         Builder.getCurrentDebugLocation(), "__ubsan_check_array_bounds");
   }
@@ -1249,8 +1248,8 @@ void CodeGenFunction::EmitBoundsCheckImpl(const Expr *E, llvm::Value *Bound,
   };
   llvm::Value *Check = Accessed ? Builder.CreateICmpULT(IndexVal, BoundVal)
                                 : Builder.CreateICmpULE(IndexVal, BoundVal);
-  EmitCheck(std::make_pair(Check, SanitizerKind::SO_ArrayBounds),
-            SanitizerHandler::OutOfBounds, StaticData, Index);
+  EmitCheck(std::make_pair(Check, CheckKind), SanitizerHandler::OutOfBounds,
+            StaticData, Index);
 }
 
 CodeGenFunction::ComplexPairTy CodeGenFunction::
@@ -3297,8 +3296,8 @@ LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
     if (AS != T.getAddressSpace()) {
       auto TargetAS = getContext().getTargetAddressSpace(T.getAddressSpace());
       auto PtrTy = llvm::PointerType::get(CGM.getLLVMContext(), TargetAS);
-      auto ASC = getTargetHooks().performAddrSpaceCast(
-          CGM, ATPO.getPointer(), AS, T.getAddressSpace(), PtrTy);
+      auto ASC = getTargetHooks().performAddrSpaceCast(CGM, ATPO.getPointer(),
+                                                       AS, PtrTy);
       ATPO = ConstantAddress(ASC, ATPO.getElementType(), ATPO.getAlignment());
     }
 
@@ -3389,8 +3388,7 @@ LValue CodeGenFunction::EmitPredefinedLValue(const PredefinedExpr *E) {
   auto SL = E->getFunctionName();
   assert(SL != nullptr && "No StringLiteral name in PredefinedExpr");
   StringRef FnName = CurFn->getName();
-  if (FnName.starts_with("\01"))
-    FnName = FnName.substr(1);
+  FnName.consume_front("\01");
   StringRef NameItems[] = {
       PredefinedExpr::getIdentKindName(E->getIdentKind()), FnName};
   std::string GVName = llvm::join(NameItems, NameItems + 2, ".");
@@ -4962,7 +4960,7 @@ static Address emitAddrOfZeroSizeField(CodeGenFunction &CGF, Address Base,
 /// The resulting address doesn't necessarily have the right type.
 static Address emitAddrOfFieldStorage(CodeGenFunction &CGF, Address base,
                                       const FieldDecl *field, bool IsInBounds) {
-  if (isEmptyFieldForLayout(CGF.getContext(), field))
+  if (field->isZeroSize(CGF.getContext()))
     return emitAddrOfZeroSizeField(CGF, base, field, IsInBounds);
 
   const RecordDecl *rec = field->getParent();
@@ -5566,8 +5564,7 @@ LValue CodeGenFunction::EmitCastLValue(const CastExpr *E) {
     QualType DestTy = getContext().getPointerType(E->getType());
     llvm::Value *V = getTargetHooks().performAddrSpaceCast(
         *this, LV.getPointer(*this),
-        E->getSubExpr()->getType().getAddressSpace(),
-        E->getType().getAddressSpace(), ConvertType(DestTy));
+        E->getSubExpr()->getType().getAddressSpace(), ConvertType(DestTy));
     return MakeAddrLValue(Address(V, ConvertTypeForMem(E->getType()),
                                   LV.getAddress().getAlignment()),
                           E->getType(), LV.getBaseInfo(), LV.getTBAAInfo());

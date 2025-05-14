@@ -860,7 +860,8 @@ void clang::getOpenMPCaptureRegions(
     case OMPD_master:
       return false;
     default:
-      llvm::errs() << getOpenMPDirectiveName(LKind) << '\n';
+      llvm::errs() << getOpenMPDirectiveName(LKind, llvm::omp::FallbackVersion)
+                   << '\n';
       llvm_unreachable("Unexpected directive");
     }
     return false;

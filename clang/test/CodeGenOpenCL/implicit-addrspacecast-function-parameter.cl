@@ -45,9 +45,10 @@ __kernel void use_of_local_var()
 // CHECK-SAME: i32 noundef [[X:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[X_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
-// CHECK-NEXT:    store i32 [[X]], ptr addrspace(5) [[X_ADDR]], align 4, !tbaa [[TBAA4]]
-// CHECK-NEXT:    call void @private_ptr(ptr addrspace(5) noundef [[X_ADDR]]) #[[ATTR6]]
 // CHECK-NEXT:    [[X_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[X_ADDR]] to ptr
+// CHECK-NEXT:    store i32 [[X]], ptr [[X_ADDR_ASCAST]], align 4, !tbaa [[TBAA4]]
+// CHECK-NEXT:    [[X_ADDR_ASCAST_ASCAST:%.*]] = addrspacecast ptr [[X_ADDR_ASCAST]] to ptr addrspace(5)
+// CHECK-NEXT:    call void @private_ptr(ptr addrspace(5) noundef [[X_ADDR_ASCAST_ASCAST]]) #[[ATTR6]]
 // CHECK-NEXT:    call void @generic_ptr(ptr noundef [[X_ADDR_ASCAST]]) #[[ATTR6]]
 // CHECK-NEXT:    ret void
 //

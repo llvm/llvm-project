@@ -168,6 +168,7 @@ RT_API_ATTRS int Descriptor::Allocate(std::int64_t asyncId) {
   }
   std::size_t byteSize{Elements() * elementBytes};
   AllocFct alloc{allocatorRegistry.GetAllocator(MapAllocIdx(*this))};
+
   // Zero size allocation is possible in Fortran and the resulting
   // descriptor must be allocated/associated. Since std::malloc(0)
   // result is implementation defined, always allocate at least one byte.
