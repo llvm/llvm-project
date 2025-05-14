@@ -1336,7 +1336,8 @@ void DarwinClang::addClangTargetOptions(
                                 options::OPT_fno_bounds_safety, false)) {
     LangOptions::BoundsSafetyNewChecksMaskIntTy NewChecks =
         ParseBoundsSafetyNewChecksMaskFromArgs(DriverArgs,
-                                               /*DiagnosticsEngine=*/nullptr);
+                                               /*DiagnosticsEngine=*/nullptr,
+                                               /*DiagnoseMissingChecks=*/false);
     if (NewChecks & LangOptions::BS_CHK_LibCAttributes) {
       bool TargetWithoutUserspaceLibc = false;
       if (getTriple().isOSDarwin() && !TargetWithoutUserspaceLibc) {

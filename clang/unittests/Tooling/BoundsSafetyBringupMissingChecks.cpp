@@ -198,15 +198,20 @@ TEST(BoundsSafetyBringUpMissingChecks, ChkPairValidMask) {
 // Default behavior
 // =============================================================================
 
+// Note: Use of ` "-Wno-bounds-safety-legacy-checks-enabled"` in tests is to
+// make the output of running the unit test less noisy.
+
 TEST(BoundsSafetyBringUpMissingChecks, DefaultWithBoundsSafety) {
   bool Result = runOnToolAndCheckLangOptions(
-      {NEED_CC1_ARG "-fbounds-safety"}, [](LangOptions &LO) {
+      {NEED_CC1_ARG "-fbounds-safety",
+       "-Wno-bounds-safety-legacy-checks-enabled"},
+      [](LangOptions &LO) {
         EXPECT_EQ(LO.BoundsSafetyBringUpMissingChecks,
                   LangOptions::getDefaultBoundsSafetyNewChecksMask());
-
         // "batch_0" is the default.
-        EXPECT_EQ(LO.BoundsSafetyBringUpMissingChecks,
-                  LangOptions::getBoundsSafetyNewChecksMaskForGroup("batch_0"));
+        LangOptionsBase::BoundsSafetyNewChecksMaskIntTy DefaultCheckMask =
+            LangOptions::getBoundsSafetyNewChecksMaskForGroup("batch_0");
+        EXPECT_EQ(LO.BoundsSafetyBringUpMissingChecks, DefaultCheckMask);
       });
   ASSERT_TRUE(Result);
 }
@@ -298,6 +303,7 @@ TEST(BoundsSafetyBringUpMissingChecks, only_one_check) {
   for (size_t ChkIdx = 0; ChkIdx < NumChkDescs; ++ChkIdx) {
     ChkDesc Chk = CheckKinds[ChkIdx];
     std::vector<std::string> Args = {NEED_CC1_ARG "-fbounds-safety",
+                                     "-Wno-bounds-safety-legacy-checks-enabled",
                                      NEED_CC1_ARG
                                      "-fbounds-safety-bringup-missing-checks="};
     Args[Args.size() - 1].append(Chk.arg);
@@ -333,6 +339,7 @@ TEST(BoundsSafetyBringUpMissingChecks, all_pairs) {
       auto Second = CheckKinds[secondIdx];
       std::vector<std::string> Args = {
           NEED_CC1_ARG "-fbounds-safety",
+          "-Wno-bounds-safety-legacy-checks-enabled",
           NEED_CC1_ARG "-fbounds-safety-bringup-missing-checks="};
       Args[Args.size() - 1].append(First.arg);
       Args[Args.size() - 1].append(",");
@@ -368,6 +375,7 @@ TEST(BoundsSafetyBringUpMissingChecks, all_with_one_removed) {
     ChkDesc Chk = CheckKinds[ChkIdx];
     std::vector<std::string> Args = {
         NEED_CC1_ARG "-fbounds-safety",
+        "-Wno-bounds-safety-legacy-checks-enabled",
         NEED_CC1_ARG "-fbounds-safety-bringup-missing-checks=all",
         NEED_CC1_ARG "-fno-bounds-safety-bringup-missing-checks="};
     Args[Args.size() - 1].append(Chk.arg);
@@ -400,6 +408,7 @@ TEST(BoundsSafetyBringUpMissingChecks, batch_0_with_one_removed) {
 
     std::vector<std::string> Args = {
         NEED_CC1_ARG "-fbounds-safety",
+        "-Wno-bounds-safety-legacy-checks-enabled",
         NEED_CC1_ARG "-fbounds-safety-bringup-missing-checks=batch_0",
         NEED_CC1_ARG "-fno-bounds-safety-bringup-missing-checks="};
     Args[Args.size() - 1].append(Chk.arg);
@@ -433,6 +442,7 @@ TEST(BoundsSafetyBringUpMissingChecks, batch_0_with_one_removed) {
 TEST(BoundsSafetyBringUpMissingChecks, all_disabled) {
   bool Result = runOnToolAndCheckLangOptions(
       {NEED_CC1_ARG "-fbounds-safety",
+       "-Wno-bounds-safety-legacy-checks-enabled",
        NEED_CC1_ARG "-fno-bounds-safety-bringup-missing-checks"},
       [](LangOptions &LO) {
         EXPECT_EQ(LO.BoundsSafetyBringUpMissingChecks,
@@ -444,6 +454,7 @@ TEST(BoundsSafetyBringUpMissingChecks, all_disabled) {
 TEST(BoundsSafetyBringUpMissingChecks, all_enable_then_disable) {
   bool Result = runOnToolAndCheckLangOptions(
       {NEED_CC1_ARG "-fbounds-safety",
+       "-Wno-bounds-safety-legacy-checks-enabled",
        NEED_CC1_ARG "-fbounds-safety-bringup-missing-checks",
        NEED_CC1_ARG "-fno-bounds-safety-bringup-missing-checks"},
       [](LangOptions &LO) {
@@ -462,6 +473,7 @@ TEST(BoundsSafetyBringUpMissingChecks, all_disabled_then_enable_one) {
     ChkDesc Chk = CheckKinds[ChkIdx];
     std::vector<std::string> Args = {
         NEED_CC1_ARG "-fbounds-safety",
+        "-Wno-bounds-safety-legacy-checks-enabled",
         NEED_CC1_ARG "-fno-bounds-safety-bringup-missing-checks",
         NEED_CC1_ARG "-fbounds-safety-bringup-missing-checks="};
     Args[Args.size() - 1].append(Chk.arg);
@@ -482,4 +494,3 @@ TEST(BoundsSafetyBringUpMissingChecks, all_disabled_then_enable_one) {
     ASSERT_TRUE(Result);
   }
 }
-

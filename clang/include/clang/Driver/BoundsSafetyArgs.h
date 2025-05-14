@@ -16,7 +16,8 @@ namespace driver {
 
 LangOptions::BoundsSafetyNewChecksMaskIntTy
 ParseBoundsSafetyNewChecksMaskFromArgs(const llvm::opt::ArgList &Args,
-                                       DiagnosticsEngine *Diags);
+                                       DiagnosticsEngine *Diags,
+                                       bool DiagnoseMissingChecks);
 } // namespace driver
 } // namespace clang
 
