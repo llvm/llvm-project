@@ -122,10 +122,10 @@ class VPRecipeBuilder {
   tryToOptimizeInductionTruncate(TruncInst *I, ArrayRef<VPValue *> Operands,
                                  VFRange &Range);
 
-  /// Handle non-loop phi nodes. Return a new VPBlendRecipe otherwise. Currently
+  /// Handle non-loop phi nodes, returning a new VPBlendRecipe. Currently
   /// all such phi nodes are turned into a sequence of select instructions as
   /// the vectorizer currently performs full if-conversion.
-  VPBlendRecipe *tryToBlend(PHINode *Phi, ArrayRef<VPValue *> Operands);
+  VPBlendRecipe *tryToBlend(VPWidenPHIRecipe *PhiR);
 
   /// Handle call instructions. If \p CI can be widened for \p Range.Start,
   /// return a new VPWidenCallRecipe or VPWidenIntrinsicRecipe. Range.End may be
@@ -179,11 +179,9 @@ public:
   /// that are valid so recipes can be formed later.
   void collectScaledReductions(VFRange &Range);
 
-  /// Create and return a widened recipe for \p I if one can be created within
+  /// Create and return a widened recipe for \p R if one can be created within
   /// the given VF \p Range.
-  VPRecipeBase *tryToCreateWidenRecipe(Instruction *Instr,
-                                       ArrayRef<VPValue *> Operands,
-                                       VFRange &Range);
+  VPRecipeBase *tryToCreateWidenRecipe(VPSingleDefRecipe *R, VFRange &Range);
 
   /// Create and return a partial reduction recipe for a reduction instruction
   /// along with binary operation and reduction phi operands.
