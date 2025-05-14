@@ -58,6 +58,8 @@ C++ Specific Potentially Breaking Changes
 - The type trait builtin ``__is_referenceable`` has been removed, since it has
   very few users and all the type traits that could benefit from it in the
   standard library already have their own bespoke builtins.
+- A workaround for libstdc++4.7 has been removed. Note that 4.8.3 remains the oldest
+  supported libstdc++ version.
 
 ABI Changes in This Version
 ---------------------------
@@ -521,6 +523,17 @@ Improvements to Clang's diagnostics
 - Fixed a duplicate diagnostic when performing typo correction on function template
   calls with explicit template arguments. (#GH139226)
 
+- An error is now emitted when OpenMP ``collapse`` and ``ordered`` clauses have an
+  argument larger than what can fit within a 64-bit integer.
+  
+- Explanatory note is printed when ``assert`` fails during evaluation of a
+  constant expression. Prior to this, the error inaccurately implied that assert
+  could not be used at all in a constant expression (#GH130458)
+
+- A new off-by-default warning ``-Wms-bitfield-padding`` has been added to alert to cases where bit-field
+  packing may differ under the MS struct ABI (#GH117428).
+
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -579,6 +592,11 @@ Bug Fixes in This Version
   ``#include`` directive. (#GH138094)
 - Fixed a crash during constant evaluation involving invalid lambda captures
   (#GH138832)
+- Fixed a crash when instantiating an invalid dependent friend template specialization.
+  (#GH139052)
+- Fixed a crash with an invalid member function parameter list with a default
+  argument which contains a pragma. (#GH113722)
+- Fixed assertion failures when generating name lookup table in modules. (#GH61065, #GH134739)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -920,6 +938,9 @@ OpenMP Support
   ``partial`` was an invalid expression. (#GH139267)
 - Fixed a crashing bug with ``omp tile sizes`` if the argument to ``sizes`` was
   an invalid expression. (#GH139073)
+- Fixed a crashing bug with ``omp simd collapse`` if the argument to
+  ``collapse`` was an invalid expression. (#GH138493)
+- Fixed a crashing bug with a malformed ``cancel`` directive. (#GH139360)
 - Fixed a crashing bug with ``omp distribute dist_schedule`` if the argument to
   ``dist_schedule`` was not strictly positive. (#GH139266)
 

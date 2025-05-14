@@ -578,7 +578,6 @@ def : PatGprImm<rotr, TH_SRRI, uimmlog2xlen>;
 // it can be implemented with th.srri by negating the immediate.
 def : Pat<(rotl (XLenVT GPR:$rs1), uimmlog2xlen:$shamt),
           (TH_SRRI GPR:$rs1, (ImmSubFromXLen uimmlog2xlen:$shamt))>;
-def : Pat<(sext_inreg (XLenVT GPR:$rs1), i32), (TH_EXT GPR:$rs1, 31, 0)>;
 def : Pat<(sext_inreg (XLenVT GPR:$rs1), i16), (TH_EXT GPR:$rs1, 15, 0)>;
 def : Pat<(sext_inreg (XLenVT GPR:$rs1), i8), (TH_EXT GPR:$rs1, 7, 0)>;
 def : Pat<(sext_inreg (XLenVT GPR:$rs1), i1), (TH_EXT GPR:$rs1, 0, 0)>;

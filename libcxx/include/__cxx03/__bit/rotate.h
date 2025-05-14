@@ -23,7 +23,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // to optimize the code. On x86 this function becomes the ROL instruction and
 // the rotr function becomes the ROR instruction.
 template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp __rotl(_Tp __x, int __s) _NOEXCEPT {
+_LIBCPP_HIDE_FROM_ABI _Tp __rotl(_Tp __x, int __s) _NOEXCEPT {
   static_assert(__libcpp_is_unsigned_integer<_Tp>::value, "__rotl requires an unsigned integer type");
   const int __N = numeric_limits<_Tp>::digits;
   int __r       = __s % __N;
@@ -38,7 +38,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp __rotl(_Tp __x, int __s)
 }
 
 template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp __rotr(_Tp __x, int __s) _NOEXCEPT {
+_LIBCPP_HIDE_FROM_ABI _Tp __rotr(_Tp __x, int __s) _NOEXCEPT {
   static_assert(__libcpp_is_unsigned_integer<_Tp>::value, "__rotr requires an unsigned integer type");
   const int __N = numeric_limits<_Tp>::digits;
   int __r       = __s % __N;
