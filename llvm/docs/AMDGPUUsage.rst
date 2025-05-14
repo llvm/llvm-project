@@ -1573,6 +1573,8 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
   llvm.amdgcn.wave.id.in.wavegroup                 In a wavegroup-enabled dispatch, return the 0-based ID of the wave
                                                    within the wavegroup. Otherwise the return value is undefined.
 
+  llvm.amdgcn.query.shared.rank                    Get workgroup ID within a cluster for a pointer in Distributed address space.
+
   ==============================================   ==========================================================
 
 .. TODO::

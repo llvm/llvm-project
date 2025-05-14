@@ -5316,6 +5316,15 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpdsMapping[2] = AMDGPU::getValueMapping(regBankID, OpSize);
       break;
     }
+    case Intrinsic::amdgcn_query_shared_rank: {
+      Register SrcReg = MI.getOperand(2).getReg();
+      unsigned SrcSize = MRI.getType(SrcReg).getSizeInBits();
+      unsigned DstSize = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
+      unsigned SrcBank = getRegBankID(SrcReg, MRI, AMDGPU::SGPRRegBankID);
+      OpdsMapping[0] = AMDGPU::getValueMapping(SrcBank, DstSize);
+      OpdsMapping[2] = AMDGPU::getValueMapping(SrcBank, SrcSize);
+      break;
+    }
     case Intrinsic::amdgcn_s_bitreplicate:
       Register MaskReg = MI.getOperand(2).getReg();
       unsigned MaskBank = getRegBankID(MaskReg, MRI, AMDGPU::SGPRRegBankID);
