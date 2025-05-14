@@ -409,7 +409,7 @@ public:
 
   /// Returns true if this is an early exit loop containing a store.
   bool isConditionCopyRequired() const {
-    return RequiresEarlyExitConditionCopy;
+    return EarlyExitLoad.has_value();
   }
 
   /// Returns the load instruction, if any, nearest to an uncountable early
@@ -545,6 +545,12 @@ private:
   /// additional cases safely.
   bool isVectorizableEarlyExitLoop();
 
+  /// Clears any current early exit data gathered if a check failed.
+  void clearEarlyExitData() {
+    UncountableEdge = std::nullopt;
+    EarlyExitLoad = std::nullopt;
+  }
+
   /// Return true if all of the instructions in the block can be speculatively
   /// executed, and record the loads/stores that require masking.
   /// \p SafePtrs is a list of addresses that are known to be legal and we know
@@ -664,14 +670,13 @@ private:
   /// of (Exiting, Exit) blocks, if there is exactly one early exit.
   std::optional<std::pair<BasicBlock *, BasicBlock *>> UncountableEdge;
 
-  /// Indicates that we will need to copy the early exit condition into
-  /// the vector preheader, as we will need to mask some operations in
-  /// the loop (e.g. stores).
-  bool RequiresEarlyExitConditionCopy = false;
-
   /// The load used to determine an uncountable early-exit condition. This is
   /// only used to allow further analysis in canVectorizeMemory if we found
   /// what looks like a valid early exit loop with store beforehand.
+  ///
+  /// Also indicates that we will need to copy the early exit condition into
+  /// the vector preheader, as we will need to mask some operations in
+  /// the loop (e.g. stores) or bail out to a scalar loop.
   std::optional<LoadInst *> EarlyExitLoad;
 };
 

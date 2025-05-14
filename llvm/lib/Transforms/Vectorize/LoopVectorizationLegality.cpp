@@ -1698,7 +1698,7 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
         if (Cmp && Cmp->hasOneUse() &&
             TheLoop->isLoopInvariant(Cmp->getOperand(1))) {
           LoadInst *Load = dyn_cast<LoadInst>(Cmp->getOperand(0));
-          if (Load && Load->hasOneUse() && TheLoop->contains(Load))
+          if (Load && Load->hasOneUse() && !TheLoop->isLoopInvariant(Load))
             EELoad = Load;
         }
       }
@@ -1853,10 +1853,8 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
                        "backedge taken count: "
                     << *SymbolicMaxBTC << '\n');
   UncountableEdge = SingleUncountableEdge;
-  if (HasStore) {
-    RequiresEarlyExitConditionCopy = true;
+  if (HasStore)
     EarlyExitLoad = EELoad;
-  }
 
   return true;
 }
@@ -1929,9 +1927,7 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
         return false;
     } else {
       if (!isVectorizableEarlyExitLoop()) {
-        UncountableEdge = std::nullopt;
-        EarlyExitLoad = std::nullopt;
-        RequiresEarlyExitConditionCopy = false;
+        clearEarlyExitData();
         if (DoExtraAnalysis)
           Result = false;
         else
