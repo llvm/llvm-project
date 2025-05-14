@@ -20,9 +20,11 @@
 
 using namespace llvm;
 using namespace lldb;
-using namespace lldb_private;
 using namespace lldb_dap;
 using namespace lldb_dap::protocol;
+using lldb_private::File;
+using lldb_private::NativeFile;
+using lldb_private::Pipe;
 
 class TransportTest : public testing::Test {
 protected:
@@ -31,8 +33,8 @@ protected:
   std::unique_ptr<Transport> transport;
 
   void SetUp() override {
-    ASSERT_THAT_ERROR(input.CreateNew(false).ToError(), llvm::Succeeded());
-    ASSERT_THAT_ERROR(output.CreateNew(false).ToError(), llvm::Succeeded());
+    ASSERT_THAT_ERROR(input.CreateNew(false).ToError(), Succeeded());
+    ASSERT_THAT_ERROR(output.CreateNew(false).ToError(), Succeeded());
     transport = std::make_unique<Transport>(
         "stdio", nullptr,
         std::make_shared<NativeFile>(input.GetReadFileDescriptor(),
@@ -64,9 +66,10 @@ TEST_F(TransportTest, MalformedRequests) {
 
 TEST_F(TransportTest, Read) {
   Write(R"json({"seq": 1, "type": "request", "command": "abc"})json");
-  ASSERT_THAT_EXPECTED(transport->Read(std::chrono::milliseconds(1)),
-                       HasValue(testing::VariantWith<Request>(
-                           testing::FieldsAre(1, "abc", std::nullopt))));
+  ASSERT_THAT_EXPECTED(
+      transport->Read(std::chrono::milliseconds(1)),
+      HasValue(testing::VariantWith<Request>(testing::FieldsAre(
+          /*seq=*/1, /*command=*/"abc", /*arguments=*/std::nullopt))));
 }
 
 TEST_F(TransportTest, ReadWithTimeout) {
@@ -78,4 +81,18 @@ TEST_F(TransportTest, ReadWithEOF) {
   input.CloseWriteFileDescriptor();
   ASSERT_THAT_EXPECTED(transport->Read(std::chrono::milliseconds(1)),
                        Failed<EndOfFileError>());
+}
+
+TEST_F(TransportTest, Write) {
+  ASSERT_THAT_ERROR(transport->Write(Event{"my-event", std::nullopt}),
+                    Succeeded());
+  output.CloseWriteFileDescriptor();
+  char buf[1024];
+  Expected<size_t> bytes_read =
+      output.Read(buf, sizeof(buf), std::chrono::milliseconds(1));
+  ASSERT_THAT_EXPECTED(bytes_read, Succeeded());
+  ASSERT_EQ(
+      StringRef(buf, *bytes_read),
+      StringRef("Content-Length: 43\r\n\r\n"
+                R"json({"event":"my-event","seq":0,"type":"event"})json"));
 }
