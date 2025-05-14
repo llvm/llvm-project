@@ -8693,6 +8693,8 @@ SDValue TargetLowering::expandFMINIMUMNUM_FMAXIMUMNUM(SDNode *Node,
   SDValue MinMax =
       DAG.getSelectCC(DL, LHS, RHS, LHS, RHS, IsMax ? ISD::SETGT : ISD::SETLT);
 
+  // TODO: We need quiet sNaN if strictfp.
+
   // Fixup signed zero behavior.
   if (Options.NoSignedZerosFPMath || Flags.hasNoSignedZeros() ||
       DAG.isKnownNeverZeroFloat(LHS) || DAG.isKnownNeverZeroFloat(RHS)) {
