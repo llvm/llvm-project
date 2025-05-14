@@ -11,7 +11,7 @@ target_include_directories(orc-rt-headers INTERFACE
 set_property(TARGET orc-rt-headers
     PROPERTY PUBLIC_HEADER ${ORC_RT_HEADERS}
 )
-install(DIRECTORY ./
+install(TARGETS orc-rt-headers
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/
-    FILES_MATCHING PATTERN "*.h"
+    COMPONENT OrcRT_Development
 )
