@@ -4,10 +4,6 @@
 // RUN: cir-opt --mlir-print-ir-after=cir-flatten-cfg --cir-flatten-cfg %t.cir -o %t.flattened.after.cir 2> %t.after
 // RUN: FileCheck --input-file=%t.after %s --check-prefix=AFTER
 
-
-
-
-
 void swf(int a) {
   switch (int b = 3; a) {
     case 3:
