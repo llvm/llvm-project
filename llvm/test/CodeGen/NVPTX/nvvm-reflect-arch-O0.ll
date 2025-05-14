@@ -143,16 +143,16 @@ return:
 }
 
 ;      SM_52: .visible .func  (.param .b32 func_retval0) phi()
-;      SM_52: mov.f32         %[[REG:.+]], 0f00000000;
-; SM_52-NEXT: st.param.f32    [func_retval0], %[[REG]];
+;      SM_52: mov.b32         %[[REG:.+]], 0f00000000;
+; SM_52-NEXT: st.param.b32    [func_retval0], %[[REG]];
 ; SM_52-NEXT: ret;
 ;      SM_70: .visible .func  (.param .b32 func_retval0) phi()
-;      SM_70: mov.f32         %[[REG:.+]], 0f00000000;
-; SM_70-NEXT: st.param.f32    [func_retval0], %[[REG]];
+;      SM_70: mov.b32         %[[REG:.+]], 0f00000000;
+; SM_70-NEXT: st.param.b32    [func_retval0], %[[REG]];
 ; SM_70-NEXT: ret;
 ;      SM_90: .visible .func  (.param .b32 func_retval0) phi()
-;      SM_90: mov.f32         %[[REG:.+]], 0f00000000;
-; SM_90-NEXT: st.param.f32    [func_retval0], %[[REG]];
+;      SM_90: mov.b32         %[[REG:.+]], 0f00000000;
+; SM_90-NEXT: st.param.b32    [func_retval0], %[[REG]];
 ; SM_90-NEXT: ret;
 define float @phi() {
 entry:

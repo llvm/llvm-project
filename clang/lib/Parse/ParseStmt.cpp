@@ -216,7 +216,7 @@ Retry:
       // Try to limit which sets of keywords should be included in typo
       // correction based on what the next token is.
       StatementFilterCCC CCC(Next);
-      if (TryAnnotateName(&CCC) == ANK_Error) {
+      if (TryAnnotateName(&CCC) == AnnotatedNameKind::Error) {
         // Handle errors here by skipping up to the next semicolon or '}', and
         // eat the semicolon if that's what stopped us.
         SkipUntil(tok::r_brace, StopAtSemi | StopBeforeMatch);
@@ -235,6 +235,9 @@ Retry:
   }
 
   default: {
+    if (getLangOpts().CPlusPlus && MaybeParseCXX11Attributes(CXX11Attrs, true))
+      goto Retry;
+
     bool HaveAttrs = !CXX11Attrs.empty() || !GNUAttrs.empty();
     auto IsStmtAttr = [](ParsedAttr &Attr) { return Attr.isStmtAttr(); };
     bool AllAttrsAreStmtAttrs = llvm::all_of(CXX11Attrs, IsStmtAttr) &&
@@ -260,11 +263,11 @@ Retry:
                                 GNUAttrs);
       }
       if (CXX11Attrs.Range.getBegin().isValid()) {
-        // The caller must guarantee that the CXX11Attrs appear before the
-        // GNUAttrs, and we rely on that here.
-        assert(GNUAttrs.Range.getBegin().isInvalid() ||
-               GNUAttrs.Range.getBegin() > CXX11Attrs.Range.getBegin());
-        DeclStart = CXX11Attrs.Range.getBegin();
+        // Order of C++11 and GNU attributes is may be arbitrary.
+        DeclStart = GNUAttrs.Range.getBegin().isInvalid()
+                        ? CXX11Attrs.Range.getBegin()
+                        : std::min(CXX11Attrs.Range.getBegin(),
+                                   GNUAttrs.Range.getBegin());
       } else if (GNUAttrs.Range.getBegin().isValid())
         DeclStart = GNUAttrs.Range.getBegin();
       return Actions.ActOnDeclStmt(Decl, DeclStart, DeclEnd);
@@ -526,10 +529,14 @@ Retry:
     return ParsePragmaLoopHint(Stmts, StmtCtx, TrailingElseLoc, CXX11Attrs);
 
   case tok::annot_pragma_dump:
+    ProhibitAttributes(CXX11Attrs);
+    ProhibitAttributes(GNUAttrs);
     HandlePragmaDump();
     return StmtEmpty();
 
   case tok::annot_pragma_attribute:
+    ProhibitAttributes(CXX11Attrs);
+    ProhibitAttributes(GNUAttrs);
     HandlePragmaAttribute();
     return StmtEmpty();
   }
@@ -2142,13 +2149,19 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc) {
     }
     DeclGroupPtrTy DG;
     SourceLocation DeclStart = Tok.getLocation(), DeclEnd;
-    if (Tok.is(tok::kw_using)) {
+    if (!getLangOpts().CPlusPlus &&
+        Tok.isOneOf(tok::kw_static_assert, tok::kw__Static_assert)) {
+      ProhibitAttributes(attrs);
+      Decl *D = ParseStaticAssertDeclaration(DeclEnd);
+      DG = Actions.ConvertDeclToDeclGroup(D);
+      FirstPart = Actions.ActOnDeclStmt(DG, DeclStart, Tok.getLocation());
+    } else if (Tok.is(tok::kw_using)) {
       DG = ParseAliasDeclarationInInitStatement(DeclaratorContext::ForInit,
                                                 attrs);
       FirstPart = Actions.ActOnDeclStmt(DG, DeclStart, Tok.getLocation());
     } else {
       // In C++0x, "for (T NS:a" might not be a typo for ::
-      bool MightBeForRangeStmt = getLangOpts().CPlusPlus;
+      bool MightBeForRangeStmt = getLangOpts().CPlusPlus || getLangOpts().ObjC;
       ColonProtectionRAIIObject ColonProtection(*this, MightBeForRangeStmt);
       ParsedAttributes DeclSpecAttrs(AttrFactory);
       DG = ParseSimpleDeclaration(
@@ -2539,9 +2552,9 @@ StmtResult Parser::ParsePragmaLoopHint(StmtVector &Stmts,
 
     ArgsUnion ArgHints[] = {Hint.PragmaNameLoc, Hint.OptionLoc, Hint.StateLoc,
                             ArgsUnion(Hint.ValueExpr)};
-    TempAttrs.addNew(Hint.PragmaNameLoc->Ident, Hint.Range, nullptr,
-                     Hint.PragmaNameLoc->Loc, ArgHints, 4,
-                     ParsedAttr::Form::Pragma());
+    TempAttrs.addNew(Hint.PragmaNameLoc->getIdentifierInfo(), Hint.Range,
+                     /*scopeName=*/nullptr, Hint.PragmaNameLoc->getLoc(),
+                     ArgHints, /*numArgs=*/4, ParsedAttr::Form::Pragma());
   }
 
   // Get the next statement.
@@ -2819,7 +2832,7 @@ void Parser::ParseMicrosoftIfExistsStatement(StmtVector &Stmts) {
   // This is not the same behavior as Visual C++, which don't treat this as a
   // compound statement, but for Clang's type checking we can't have anything
   // inside these braces escaping to the surrounding code.
-  if (Result.Behavior == IEB_Dependent) {
+  if (Result.Behavior == IfExistsBehavior::Dependent) {
     if (!Tok.is(tok::l_brace)) {
       Diag(Tok, diag::err_expected) << tok::l_brace;
       return;
@@ -2846,14 +2859,14 @@ void Parser::ParseMicrosoftIfExistsStatement(StmtVector &Stmts) {
   }
 
   switch (Result.Behavior) {
-  case IEB_Parse:
+  case IfExistsBehavior::Parse:
     // Parse the statements below.
     break;
 
-  case IEB_Dependent:
+  case IfExistsBehavior::Dependent:
     llvm_unreachable("Dependent case handled above");
 
-  case IEB_Skip:
+  case IfExistsBehavior::Skip:
     Braces.skipToEnd();
     return;
   }

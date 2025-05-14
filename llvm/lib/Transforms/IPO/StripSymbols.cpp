@@ -26,10 +26,12 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/TypeFinder.h"
 #include "llvm/IR/ValueSymbolTable.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/IPO/StripSymbols.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -296,4 +298,22 @@ PreservedAnalyses StripDeadDebugInfoPass::run(Module &M,
   PreservedAnalyses PA;
   PA.preserveSet<CFGAnalyses>();
   return PA;
+}
+
+PreservedAnalyses StripDeadCGProfilePass::run(Module &M,
+                                              ModuleAnalysisManager &AM) {
+  auto *CGProf = dyn_cast_or_null<MDTuple>(M.getModuleFlag("CG Profile"));
+  if (!CGProf)
+    return PreservedAnalyses::all();
+
+  SmallVector<Metadata *, 16> ValidCGEdges;
+  for (Metadata *Edge : CGProf->operands()) {
+    if (auto *EdgeAsNode = dyn_cast_or_null<MDNode>(Edge))
+      if (llvm::all_of(EdgeAsNode->operands(),
+                       [](const Metadata *V) { return V != nullptr; }))
+        ValidCGEdges.push_back(Edge);
+  }
+  M.setModuleFlag(Module::Append, "CG Profile",
+                  MDTuple::getDistinct(M.getContext(), ValidCGEdges));
+  return PreservedAnalyses::none();
 }

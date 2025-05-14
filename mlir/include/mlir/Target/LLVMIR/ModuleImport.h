@@ -229,6 +229,10 @@ public:
   /// attribute.
   LogicalResult convertCommandlineMetadata();
 
+  /// Converts !llvm.dependent-libraries metadata to llvm.dependent_libraries
+  /// LLVM ModuleOp attribute.
+  LogicalResult convertDependentLibrariesMetadata();
+
   /// Converts all LLVM metadata nodes that translate to attributes such as
   /// alias analysis or access group metadata, and builds a map from the
   /// metadata nodes to the converted attributes.
@@ -358,9 +362,11 @@ private:
   /// Converts the callee's function type. For direct calls, it converts the
   /// actual function type, which may differ from the called operand type in
   /// variadic functions. For indirect calls, it converts the function type
-  /// associated with the call instruction. Returns failure when the call and
-  /// the callee are not compatible or when nested type conversions failed.
-  FailureOr<LLVMFunctionType> convertFunctionType(llvm::CallBase *callInst);
+  /// associated with the call instruction. When the call and the callee are not
+  /// compatible (or when nested type conversions failed), emit a warning and
+  /// update `isIncompatibleCall` to indicate it.
+  FailureOr<LLVMFunctionType> convertFunctionType(llvm::CallBase *callInst,
+                                                  bool &isIncompatibleCall);
   /// Returns the callee name, or an empty symbol if the call is not direct.
   FlatSymbolRefAttr convertCalleeName(llvm::CallBase *callInst);
   /// Converts the parameter and result attributes attached to `func` and adds

@@ -6,27 +6,28 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements the PatchEntries class that is used for patching
-// the original function entry points.
+// This file implements the PatchEntries class that is used for patching the
+// original function entry points. This ensures that only the new/optimized code
+// executes and that the old code is never used. This is necessary due to
+// current BOLT limitations of not being able to duplicate all function's
+// associated metadata (e.g., .eh_frame, exception ranges, debug info,
+// jump-tables).
+//
+// NOTE: A successful run of 'scanExternalRefs' can relax this requirement as
+// it also ensures that old code is never executed.
 //
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Passes/PatchEntries.h"
+#include "bolt/Utils/CommandLineOpts.h"
 #include "bolt/Utils/NameResolver.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/CommandLine.h"
 
 namespace opts {
-
 extern llvm::cl::OptionCategory BoltCategory;
-
 extern llvm::cl::opt<unsigned> Verbosity;
-
-llvm::cl::opt<bool>
-    ForcePatch("force-patch",
-               llvm::cl::desc("force patching of original entry points"),
-               llvm::cl::Hidden, llvm::cl::cat(BoltCategory));
-}
+} // namespace opts
 
 namespace llvm {
 namespace bolt {
@@ -38,7 +39,8 @@ Error PatchEntries::runOnFunctions(BinaryContext &BC) {
     bool NeedsPatching = llvm::any_of(
         llvm::make_second_range(BC.getBinaryFunctions()),
         [&](BinaryFunction &BF) {
-          return !BC.shouldEmit(BF) && !BF.hasExternalRefRelocations();
+          return (!BC.shouldEmit(BF) && !BF.hasExternalRefRelocations()) ||
+                 BF.needsPatch();
         });
 
     if (!NeedsPatching)
@@ -65,7 +67,7 @@ Error PatchEntries::runOnFunctions(BinaryContext &BC) {
 
     // Check if we can skip patching the function.
     if (!opts::ForcePatch && !Function.hasEHRanges() &&
-        Function.getSize() < PatchThreshold)
+        !Function.needsPatch() && Function.getSize() < PatchThreshold)
       continue;
 
     // List of patches for function entries. We either successfully patch
@@ -97,21 +99,10 @@ Error PatchEntries::runOnFunctions(BinaryContext &BC) {
     });
 
     if (!Success) {
-      // We can't change output layout for AArch64 due to LongJmp pass
-      if (BC.isAArch64()) {
-        if (opts::ForcePatch) {
-          BC.errs() << "BOLT-ERROR: unable to patch entries in " << Function
-                    << "\n";
-          return createFatalBOLTError("");
-        }
-
-        continue;
-      }
-
       // If the original function entries cannot be patched, then we cannot
       // safely emit new function body.
       BC.errs() << "BOLT-WARNING: failed to patch entries in " << Function
-                << ". The function will not be optimized.\n";
+                << ". The function will not be optimized\n";
       Function.setIgnored();
       continue;
     }

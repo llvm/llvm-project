@@ -13,8 +13,7 @@ define void @blend_uniform_iv_trunc(i1 %c) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[INDEX]] to i16
-; CHECK-NEXT:    [[TMP1:%.*]] = add i16 [[TMP0]], 0
-; CHECK-NEXT:    [[TMP6:%.*]] = select i1 [[C]], i16 [[TMP1]], i16 poison
+; CHECK-NEXT:    [[TMP6:%.*]] = select i1 [[C]], i16 [[TMP0]], i16 poison
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [32 x i16], ptr @dst, i16 0, i16 [[TMP6]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i16, ptr [[TMP7]], i32 0
 ; CHECK-NEXT:    store <4 x i16> zeroinitializer, ptr [[TMP3]], align 2
@@ -74,8 +73,7 @@ define void @blend_uniform_iv(i1 %c) {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP6:%.*]] = select i1 [[C]], i64 [[TMP0]], i64 poison
+; CHECK-NEXT:    [[TMP6:%.*]] = select i1 [[C]], i64 [[INDEX]], i64 poison
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [32 x i16], ptr @dst, i16 0, i64 [[TMP6]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i16, ptr [[TMP7]], i32 0
 ; CHECK-NEXT:    store <4 x i16> zeroinitializer, ptr [[TMP2]], align 2

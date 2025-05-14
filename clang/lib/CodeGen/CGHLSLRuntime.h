@@ -86,6 +86,8 @@ public:
   GENERATE_HLSL_INTRINSIC_FUNCTION(Cross, cross)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Degrees, degrees)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Frac, frac)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(FlattenedThreadIdInGroup,
+                                   flattened_thread_id_in_group)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Lerp, lerp)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Normalize, normalize)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Rsqrt, rsqrt)
@@ -148,7 +150,6 @@ public:
 
   void emitEntryFunction(const FunctionDecl *FD, llvm::Function *Fn);
   void setHLSLFunctionAttributes(const FunctionDecl *FD, llvm::Function *Fn);
-  void handleGlobalVarDefinition(const VarDecl *VD, llvm::GlobalVariable *Var);
 
   llvm::Instruction *getConvergenceToken(llvm::BasicBlock &BB);
 

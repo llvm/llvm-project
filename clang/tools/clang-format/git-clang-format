@@ -32,9 +32,7 @@ import re
 import subprocess
 import sys
 
-usage = (
-    "git clang-format [OPTIONS] [<commit>] [<commit>|--staged] [--] [<file>...]"
-)
+usage = "git clang-format [OPTIONS] [<commit>] [<commit>|--staged] [--] [<file>...]"
 
 desc = """
 If zero or one commits are given, run clang-format on all lines that differ
@@ -106,6 +104,7 @@ def main():
             "c++m",  # C++ Modules
             "cu",
             "cuh",  # CUDA
+            "cl",  # OpenCL
             # Other languages that clang-format supports
             "proto",
             "protodevel",  # Protocol Buffers
@@ -115,7 +114,8 @@ def main():
             "cjs",  # JavaScript
             "ts",  # TypeScript
             "cs",  # C Sharp
-            "json",  # Json
+            "json",
+            "ipynb",  # Json
             "sv",
             "svh",
             "v",
@@ -234,10 +234,7 @@ def main():
         if not opts.diff:
             die("--diff is required when two commits are given")
     elif opts.diff_from_common_commit:
-        die(
-            "--diff_from_common_commit is only allowed when two commits are "
-            "given"
-        )
+        die("--diff_from_common_commit is only allowed when two commits are given")
 
     if os.path.dirname(opts.binary):
         opts.binary = os.path.abspath(opts.binary)
@@ -383,10 +380,7 @@ def disambiguate_revision(value):
         return False
     if object_type in ("commit", "tag"):
         return True
-    die(
-        "`%s` is a %s, but a commit or filename was expected"
-        % (value, object_type)
-    )
+    die("`%s` is a %s, but a commit or filename was expected" % (value, object_type))
 
 
 def get_object_type(value):
@@ -461,9 +455,7 @@ def extract_lines(patch_file):
                 line_count = 1
             if start_line == 0:
                 continue
-            matches.setdefault(filename, []).append(
-                Range(start_line, line_count)
-            )
+            matches.setdefault(filename, []).append(Range(start_line, line_count))
     return matches
 
 
@@ -778,13 +770,10 @@ def apply_changes(old_tree, new_tree, force=False, patch_mode=False):
         .split("\0")
     )
     if not force:
-        unstaged_files = run(
-            "git", "diff-files", "--name-status", *changed_files
-        )
+        unstaged_files = run("git", "diff-files", "--name-status", *changed_files)
         if unstaged_files:
             print(
-                "The following files would be modified but have unstaged "
-                "changes:",
+                "The following files would be modified but have unstaged changes:",
                 file=sys.stderr,
             )
             print(unstaged_files, file=sys.stderr)
@@ -826,17 +815,13 @@ def run(*args, **kwargs):
     if p.returncode == 0:
         if stderr:
             if verbose:
-                print(
-                    "`%s` printed to stderr:" % " ".join(args), file=sys.stderr
-                )
+                print("`%s` printed to stderr:" % " ".join(args), file=sys.stderr)
             print(stderr.rstrip(), file=sys.stderr)
         if strip:
             stdout = stdout.rstrip("\r\n")
         return stdout
     if verbose:
-        print(
-            "`%s` returned %s" % (" ".join(args), p.returncode), file=sys.stderr
-        )
+        print("`%s` returned %s" % (" ".join(args), p.returncode), file=sys.stderr)
     if stderr:
         print(stderr.rstrip(), file=sys.stderr)
     sys.exit(2)

@@ -1943,16 +1943,13 @@ bool IfConverter::IfConvertDiamondCommon(
         } else if (!RedefsByFalse.count(Reg)) {
           // These are defined before ctrl flow reach the 'false' instructions.
           // They cannot be modified by the 'true' instructions.
-          for (MCPhysReg SubReg : TRI->subregs_inclusive(Reg))
-            ExtUses.insert(SubReg);
+          ExtUses.insert_range(TRI->subregs_inclusive(Reg));
         }
       }
 
       for (MCRegister Reg : Defs) {
-        if (!ExtUses.count(Reg)) {
-          for (MCPhysReg SubReg : TRI->subregs_inclusive(Reg))
-            RedefsByFalse.insert(SubReg);
-        }
+        if (!ExtUses.contains(Reg))
+          RedefsByFalse.insert_range(TRI->subregs_inclusive(Reg));
       }
     }
   }

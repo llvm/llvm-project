@@ -46,12 +46,19 @@ rely on the garbage collection when using lldb.SBProgress.
 
 Non-deterministic progresses behave the same, but omit the total in the constructor. ::
 
-    non_deterministic_progress = lldb.SBProgress('Non deterministic progress, 'Detail', lldb.SBDebugger)
+    non_deterministic_progress = lldb.SBProgress('Non deterministic progress', 'Detail', lldb.SBDebugger)
     for i in range(10):
         non_deterministic_progress.Increment(1)
     # Explicitly send a progressEnd, otherwise this will be sent
     # when the python runtime cleans up this object.
     non_deterministic_progress.Finalize()
+
+Additionally for Python, progress is supported in a with statement. ::
+    with lldb.SBProgress('Non deterministic progress', 'Detail', lldb.SBDebugger) as progress:
+        for i in range(10):
+            progress.Increment(1)
+    # The progress object is automatically finalized when the with statement
+
 ") lldb::SBProgress;    
 
 %feature("docstring",

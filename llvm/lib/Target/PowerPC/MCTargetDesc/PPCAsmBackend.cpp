@@ -90,7 +90,7 @@ public:
                                          : llvm::endianness::big),
         TT(TT) {}
 
-  const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override {
+  MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override {
     const static MCFixupKindInfo InfosBE[PPC::NumTargetFixupKinds] = {
       // name                    offset  bits  flags
       { "fixup_ppc_br24",        6,      24,   MCFixupKindInfo::FKF_IsPCRel },
@@ -120,7 +120,7 @@ public:
 
     // Fixup kinds from .reloc directive are like R_PPC_NONE/R_PPC64_NONE. They
     // do not require any extra processing.
-    if (Kind >= FirstLiteralRelocationKind)
+    if (mc::isRelocation(Kind))
       return MCAsmBackend::getFixupKindInfo(FK_NONE);
 
     if (Kind < FirstTargetFixupKind)
@@ -138,7 +138,7 @@ public:
                   uint64_t Value, bool IsResolved,
                   const MCSubtargetInfo *STI) const override {
     MCFixupKind Kind = Fixup.getKind();
-    if (Kind >= FirstLiteralRelocationKind)
+    if (mc::isRelocation(Kind))
       return;
     Value = adjustFixupValue(Kind, Value);
     if (!Value) return;           // Doesn't change encoding.
@@ -159,6 +159,10 @@ public:
   bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
                              const MCValue &Target,
                              const MCSubtargetInfo *STI) override {
+    // If there is a @ specifier, unless it is optimized out (e.g. constant @l),
+    // force a relocation.
+    if (Target.getSpecifier())
+      return true;
     MCFixupKind Kind = Fixup.getKind();
     switch ((unsigned)Kind) {
     default:
@@ -169,18 +173,18 @@ public:
       // If the target symbol has a local entry point we must not attempt
       // to resolve the fixup directly.  Emit a relocation and leave
       // resolution of the final target address to the linker.
-      if (const MCSymbolRefExpr *A = Target.getSymA()) {
-        if (const auto *S = dyn_cast<MCSymbolELF>(&A->getSymbol())) {
+      if (const auto *A = Target.getAddSym()) {
+        if (const auto *S = dyn_cast<MCSymbolELF>(A)) {
           // The "other" values are stored in the last 6 bits of the second
           // byte. The traditional defines for STO values assume the full byte
           // and thus the shift to pack it.
           unsigned Other = S->getOther() << 2;
           if ((Other & ELF::STO_PPC64_LOCAL_MASK) != 0)
             return true;
-        } else if (const auto *S = dyn_cast<MCSymbolXCOFF>(&A->getSymbol())) {
+        } else if (const auto *S = dyn_cast<MCSymbolXCOFF>(A)) {
           return !Target.isAbsolute() && S->isExternal() &&
                  S->getStorageClass() == XCOFF::C_WEAKEXT;
-       }
+        }
       }
       return false;
     }

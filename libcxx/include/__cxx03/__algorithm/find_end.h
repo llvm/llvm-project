@@ -15,11 +15,11 @@
 #include <__cxx03/__algorithm/search.h>
 #include <__cxx03/__config>
 #include <__cxx03/__functional/identity.h>
-#include <__cxx03/__functional/invoke.h>
 #include <__cxx03/__iterator/advance.h>
 #include <__cxx03/__iterator/iterator_traits.h>
 #include <__cxx03/__iterator/next.h>
 #include <__cxx03/__iterator/reverse_iterator.h>
+#include <__cxx03/__type_traits/invoke.h>
 #include <__cxx03/__utility/pair.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

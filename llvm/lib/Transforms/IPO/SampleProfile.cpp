@@ -361,7 +361,7 @@ public:
     for (const auto &F : CurrentModule) {
       StringRef OrigName = F.getName();
       CurrentGUIDToFuncNameMap.insert(
-          {Function::getGUID(OrigName), OrigName});
+          {Function::getGUIDAssumingExternalLinkage(OrigName), OrigName});
 
       // Local to global var promotion used by optimization like thinlto
       // will rename the var and add suffix like ".llvm.xxx" to the
@@ -373,7 +373,7 @@ public:
       StringRef CanonName = FunctionSamples::getCanonicalFnName(F);
       if (CanonName != OrigName)
         CurrentGUIDToFuncNameMap.insert(
-            {Function::getGUID(CanonName), CanonName});
+            {Function::getGUIDAssumingExternalLinkage(CanonName), CanonName});
     }
 
     // Update GUIDToFuncNameMap for each function including inlinees.
@@ -562,12 +562,6 @@ protected:
   /// used to generate the current profile.
   std::shared_ptr<ProfileSymbolList> PSL;
 
-  /// Total number of samples collected in this profile.
-  ///
-  /// This is the sum of all the samples collected in all the functions executed
-  /// at runtime.
-  uint64_t TotalCollectedSamples = 0;
-
   // Information recorded when we declined to inline a call site
   // because we have determined it is too cold is accumulated for
   // each callee function. Initially this is just the entry count.
@@ -629,7 +623,8 @@ inline void SampleProfileInference<Function>::findUnlikelyJumps(
     const Instruction *TI = BB->getTerminator();
     // Check if a block ends with InvokeInst and mark non-taken branch unlikely.
     // In that case block Succ should be a landing pad
-    if (Successors[BB].size() == 2 && Successors[BB].back() == Succ) {
+    const auto &Succs = Successors[BB];
+    if (Succs.size() == 2 && Succs.back() == Succ) {
       if (isa<InvokeInst>(TI)) {
         Jump.IsUnlikely = true;
       }
@@ -825,7 +820,7 @@ static bool doesHistoryAllowICP(const Instruction &Inst, StringRef Candidate) {
     // If the promotion candidate has NOMORE_ICP_MAGICNUM count in the
     // metadata, it means the candidate has been promoted for this
     // indirect call.
-    if (V.Value == Function::getGUID(Candidate))
+    if (V.Value == Function::getGUIDAssumingExternalLinkage(Candidate))
       return false;
     NumPromoted++;
     // If already have MaxNumPromotions promotion, don't do it anymore.
@@ -956,7 +951,8 @@ bool SampleProfileLoader::tryPromoteAndInlineCandidate(
     // For promoted target, set its value with NOMORE_ICP_MAGICNUM count
     // in the value profile metadata so the target won't be promoted again.
     SmallVector<InstrProfValueData, 1> SortedCallTargets = {InstrProfValueData{
-        Function::getGUID(R->second->getName()), NOMORE_ICP_MAGICNUM}};
+        Function::getGUIDAssumingExternalLinkage(R->second->getName()),
+        NOMORE_ICP_MAGICNUM}};
     updateIDTMetaData(CI, SortedCallTargets, 0);
 
     auto *DI = &pgo::promoteIndirectCall(
@@ -1043,8 +1039,8 @@ void SampleProfileLoader::findExternalInlineCandidate(
     // Samples may not exist for replayed function, if so
     // just add the direct GUID and move on
     if (!Samples) {
-      InlinedGUIDs.insert(
-          Function::getGUID(CB->getCalledFunction()->getName()));
+      InlinedGUIDs.insert(Function::getGUIDAssumingExternalLinkage(
+          CB->getCalledFunction()->getName()));
       return;
     }
     // Otherwise, drop the threshold to import everything that we can
@@ -1272,8 +1268,7 @@ bool SampleProfileLoader::tryInlineCandidate(
   // Now populate the list of newly exposed call sites.
   if (InlinedCallSites) {
     InlinedCallSites->clear();
-    for (auto &I : IFI.InlinedCallSites)
-      InlinedCallSites->push_back(I);
+    llvm::append_range(*InlinedCallSites, IFI.InlinedCallSites);
   }
 
   if (FunctionSamples::ProfileIsCS)
@@ -2182,10 +2177,6 @@ bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager *AM,
       rejectHighStalenessProfile(M, PSI, Reader->getProfiles()))
     return false;
 
-  // Compute the total number of samples collected in this profile.
-  for (const auto &I : Reader->getProfiles())
-    TotalCollectedSamples += I.second.getTotalSamples();
-
   auto Remapper = Reader->getRemapper();
   // Populate the symbol map.
   for (const auto &N_F : M.getValueSymbolTable()) {
@@ -2290,7 +2281,8 @@ bool SampleProfileLoader::runOnFunction(Function &F, ModuleAnalysisManager *AM) 
     // cold in sampled binary will actually not be cold after current build.
     StringRef CanonName = FunctionSamples::getCanonicalFnName(F);
     if ((FunctionSamples::UseMD5 &&
-         GUIDsInProfile.count(Function::getGUID(CanonName))) ||
+         GUIDsInProfile.count(
+             Function::getGUIDAssumingExternalLinkage(CanonName))) ||
         (!FunctionSamples::UseMD5 && NamesInProfile.count(CanonName)))
       initialEntryCount = -1;
   }

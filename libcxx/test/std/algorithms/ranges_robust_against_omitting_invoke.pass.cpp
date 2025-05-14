@@ -35,7 +35,7 @@ struct Bar {
   Bar create() const { return Bar(); }
 };
 
-// Invokes both the (iterator, sentinel, ...) and the (range, ...) overloads of the given niebloid.
+// Invokes both the (iterator, sentinel, ...) and the (range, ...) overloads of the given algorithm function object.
 
 // (in, ...)
 template <class Func, std::ranges::range Input, class... Args>
@@ -164,25 +164,16 @@ constexpr bool test_all() {
   // For `shuffle`, whether the given generator is invoked via `std::invoke` is not observable.
   test(std::ranges::unique, in, &Foo::binary_pred, &Bar::val);
   test(std::ranges::partition, in, &Foo::unary_pred, &Bar::val);
-#if TEST_STD_VER < 26
-  if (!std::is_constant_evaluated())
-#endif
-  {
+  if (TEST_STD_AT_LEAST_26_OR_RUNTIME_EVALUATED) {
     test(std::ranges::stable_partition, in, &Foo::unary_pred, &Bar::val);
   }
   test(std::ranges::sort, in, &Foo::binary_pred, &Bar::val);
-#if TEST_STD_VER < 26
-  if (!std::is_constant_evaluated())
-#endif
-  {
+  if (TEST_STD_AT_LEAST_26_OR_RUNTIME_EVALUATED) {
     test(std::ranges::stable_sort, in, &Foo::binary_pred, &Bar::val);
   }
   test_mid(std::ranges::partial_sort, in, mid, &Foo::binary_pred, &Bar::val);
   test_mid(std::ranges::nth_element, in, mid, &Foo::binary_pred, &Bar::val);
-#if TEST_STD_VER < 26
-  if (!std::is_constant_evaluated())
-#endif
-  {
+  if (TEST_STD_AT_LEAST_26_OR_RUNTIME_EVALUATED) {
     test_mid(std::ranges::inplace_merge, in, mid, &Foo::binary_pred, &Bar::val);
   }
   test(std::ranges::make_heap, in, &Foo::binary_pred, &Bar::val);

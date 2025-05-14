@@ -572,8 +572,8 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // AddRunTimeLibs).
   if (D.IsFlangMode() &&
       !Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
-    addFortranRuntimeLibraryPath(ToolChain, Args, CmdArgs);
-    addFortranRuntimeLibs(ToolChain, Args, CmdArgs);
+    ToolChain.addFortranRuntimeLibraryPath(Args, CmdArgs);
+    ToolChain.addFortranRuntimeLibs(Args, CmdArgs);
     CmdArgs.push_back("-lm");
   }
 
@@ -1501,7 +1501,9 @@ bool clang::driver::findMIPSMultilibs(const Driver &D,
                       CPUName == "mips64r5" || CPUName == "octeon" ||
                       CPUName == "octeon+",
                   "-march=mips64r2", Flags);
-  addMultilibFlag(CPUName == "mips64r6", "-march=mips64r6", Flags);
+  addMultilibFlag(CPUName == "mips64r6" || CPUName == "i6400" ||
+                      CPUName == "i6500",
+                  "-march=mips64r6", Flags);
   addMultilibFlag(isMicroMips(Args), "-mmicromips", Flags);
   addMultilibFlag(tools::mips::isUCLibc(Args), "-muclibc", Flags);
   addMultilibFlag(tools::mips::isNaN2008(D, Args, TargetTriple), "-mnan=2008",
@@ -2622,6 +2624,22 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
     case llvm::Triple::x86:
       LibDirs.append(begin(X86LibDirs), end(X86LibDirs));
       TripleAliases.push_back("i686-gnu");
+      break;
+    default:
+      break;
+    }
+
+    return;
+  }
+
+  if (TargetTriple.isWindowsCygwinEnvironment()) {
+    LibDirs.push_back("/lib");
+    switch (TargetTriple.getArch()) {
+    case llvm::Triple::x86_64:
+      TripleAliases.append({"x86_64-pc-cygwin", "x86_64-pc-msys"});
+      break;
+    case llvm::Triple::x86:
+      TripleAliases.append({"i686-pc-cygwin", "i686-pc-msys"});
       break;
     default:
       break;

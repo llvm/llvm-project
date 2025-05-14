@@ -17,6 +17,14 @@ namespace fir::acc {
 
 void registerOpenACCExtensions(mlir::DialectRegistry &registry);
 
+/// Register external models for FIR attributes related to OpenACC.
+void registerAttrsExtensions(mlir::DialectRegistry &registry);
+
+/// Register all dialects whose operations may be created
+/// by the transformational attributes.
+void registerTransformationalAttrsDependentDialects(
+    mlir::DialectRegistry &registry);
+
 } // namespace fir::acc
 
 #endif // FLANG_OPTIMIZER_OPENACC_REGISTEROPENACCEXTENSIONS_H_

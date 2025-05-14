@@ -374,7 +374,7 @@ void OMPOrderedClause::setLoopNumIterations(unsigned NumLoop,
 }
 
 ArrayRef<Expr *> OMPOrderedClause::getLoopNumIterations() const {
-  return llvm::ArrayRef(getTrailingObjects<Expr *>(), NumberOfLoops);
+  return getTrailingObjects<Expr *>(NumberOfLoops);
 }
 
 void OMPOrderedClause::setLoopCounter(unsigned NumLoop, Expr *Counter) {
@@ -799,12 +799,14 @@ OMPReductionClause *OMPReductionClause::Create(
     ArrayRef<Expr *> Privates, ArrayRef<Expr *> LHSExprs,
     ArrayRef<Expr *> RHSExprs, ArrayRef<Expr *> ReductionOps,
     ArrayRef<Expr *> CopyOps, ArrayRef<Expr *> CopyArrayTemps,
-    ArrayRef<Expr *> CopyArrayElems, Stmt *PreInit, Expr *PostUpdate) {
-  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(
-      (Modifier == OMPC_REDUCTION_inscan ? 8 : 5) * VL.size()));
-  auto *Clause = new (Mem)
-      OMPReductionClause(StartLoc, LParenLoc, ModifierLoc, EndLoc, ColonLoc,
-                         Modifier, VL.size(), QualifierLoc, NameInfo);
+    ArrayRef<Expr *> CopyArrayElems, Stmt *PreInit, Expr *PostUpdate,
+    ArrayRef<bool> IsPrivateVarReduction,
+    OpenMPOriginalSharingModifier OrignalSharingModifier) {
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *, bool>(
+      (Modifier == OMPC_REDUCTION_inscan ? 8 : 5) * VL.size(), VL.size()));
+  auto *Clause = new (Mem) OMPReductionClause(
+      StartLoc, LParenLoc, ModifierLoc, EndLoc, ColonLoc, Modifier,
+      OrignalSharingModifier, VL.size(), QualifierLoc, NameInfo);
   Clause->setVarRefs(VL);
   Clause->setPrivates(Privates);
   Clause->setLHSExprs(LHSExprs);
@@ -812,6 +814,7 @@ OMPReductionClause *OMPReductionClause::Create(
   Clause->setReductionOps(ReductionOps);
   Clause->setPreInitStmt(PreInit);
   Clause->setPostUpdateExpr(PostUpdate);
+  Clause->setPrivateVariableReductionFlags(IsPrivateVarReduction);
   if (Modifier == OMPC_REDUCTION_inscan) {
     Clause->setInscanCopyOps(CopyOps);
     Clause->setInscanCopyArrayTemps(CopyArrayTemps);
@@ -830,8 +833,8 @@ OMPReductionClause *OMPReductionClause::Create(
 OMPReductionClause *
 OMPReductionClause::CreateEmpty(const ASTContext &C, unsigned N,
                                 OpenMPReductionClauseModifier Modifier) {
-  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(
-      (Modifier == OMPC_REDUCTION_inscan ? 8 : 5) * N));
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *, bool>(
+      (Modifier == OMPC_REDUCTION_inscan ? 8 : 5) * N, N));
   auto *Clause = new (Mem) OMPReductionClause(N);
   Clause->setModifier(Modifier);
   return Clause;
@@ -1818,7 +1821,7 @@ OMPThreadLimitClause *OMPThreadLimitClause::CreateEmpty(const ASTContext &C,
 void OMPClausePrinter::VisitOMPIfClause(OMPIfClause *Node) {
   OS << "if(";
   if (Node->getNameModifier() != OMPD_unknown)
-    OS << getOpenMPDirectiveName(Node->getNameModifier()) << ": ";
+    OS << getOpenMPDirectiveName(Node->getNameModifier(), Version) << ": ";
   Node->getCondition()->printPretty(OS, nullptr, Policy, 0);
   OS << ")";
 }
@@ -2046,7 +2049,7 @@ void OMPClausePrinter::VisitOMPAbsentClause(OMPAbsentClause *Node) {
   for (auto &D : Node->getDirectiveKinds()) {
     if (!First)
       OS << ", ";
-    OS << getOpenMPDirectiveName(D);
+    OS << getOpenMPDirectiveName(D, Version);
     First = false;
   }
   OS << ")";
@@ -2064,7 +2067,7 @@ void OMPClausePrinter::VisitOMPContainsClause(OMPContainsClause *Node) {
   for (auto &D : Node->getDirectiveKinds()) {
     if (!First)
       OS << ", ";
-    OS << getOpenMPDirectiveName(D);
+    OS << getOpenMPDirectiveName(D, Version);
     First = false;
   }
   OS << ")";

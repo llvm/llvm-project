@@ -1,0 +1,33 @@
+## Test heatmap with pre-aggregated profile
+
+RUN: yaml2obj %p/Inputs/blarge_new.yaml &> %t.exe
+## Non-BOLTed input binary
+RUN: llvm-bolt-heatmap %t.exe -o %t --pa -p %p/Inputs/blarge_new.preagg.txt \
+RUN:   2>&1 | FileCheck --check-prefix CHECK-HEATMAP %s
+RUN: FileCheck %s --check-prefix CHECK-SEC-HOT --input-file %t-section-hotness.csv
+
+## BOLTed input binary
+RUN: llvm-bolt %t.exe -o %t.out --pa -p %p/Inputs/blarge_new.preagg.txt \
+RUN:   --reorder-blocks=ext-tsp --split-functions --split-strategy=cdsplit \
+RUN:   --reorder-functions=cdsort --enable-bat --dyno-stats --skip-funcs=main
+RUN: llvm-bolt-heatmap %t.out -o %t2 --pa -p %p/Inputs/blarge_new_bat.preagg.txt \
+RUN:   2>&1 | FileCheck --check-prefix CHECK-HEATMAP-BAT %s
+RUN: FileCheck %s --check-prefix CHECK-SEC-HOT-BAT --input-file %t2-section-hotness.csv
+
+CHECK-HEATMAP: PERF2BOLT: read 81 aggregated LBR entries
+CHECK-HEATMAP: HEATMAP: invalid traces: 1
+
+CHECK-SEC-HOT:      .init, 0x401000, 0x40101b, 16.8545
+CHECK-SEC-HOT-NEXT: .plt, 0x401020, 0x4010b0, 4.7583
+CHECK-SEC-HOT-NEXT: .text, 0x4010b0, 0x401c25, 78.3872
+CHECK-SEC-HOT-NEXT: .fini, 0x401c28, 0x401c35, 0.0000
+
+CHECK-HEATMAP-BAT: PERF2BOLT: read 79 aggregated LBR entries
+CHECK-HEATMAP-BAT: HEATMAP: invalid traces: 2
+
+CHECK-SEC-HOT-BAT:      .init, 0x401000, 0x40101b, 17.2888
+CHECK-SEC-HOT-BAT-NEXT: .plt, 0x401020, 0x4010b0, 5.6132
+CHECK-SEC-HOT-BAT-NEXT: .bolt.org.text, 0x4010b0, 0x401c25, 38.3385
+CHECK-SEC-HOT-BAT-NEXT: .fini, 0x401c28, 0x401c35, 0.0000
+CHECK-SEC-HOT-BAT-NEXT: .text, 0x800000, 0x8002cc, 38.7595
+CHECK-SEC-HOT-BAT-NEXT: .text.cold, 0x800300, 0x800415, 0.0000

@@ -41,7 +41,7 @@ class VEAsmPrinter : public AsmPrinter {
 
 public:
   explicit VEAsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer)) {}
+      : AsmPrinter(TM, std::move(Streamer), ID) {}
 
   StringRef getPassName() const override { return "VE Assembly Printer"; }
 
@@ -62,17 +62,19 @@ public:
                        const char *ExtraCode, raw_ostream &O) override;
   bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
                              const char *ExtraCode, raw_ostream &O) override;
+
+  static char ID;
 };
 } // end of anonymous namespace
 
-static MCOperand createVEMCOperand(VEMCExpr::VariantKind Kind, MCSymbol *Sym,
+static MCOperand createVEMCOperand(VEMCExpr::Specifier Kind, MCSymbol *Sym,
                                    MCContext &OutContext) {
   const MCSymbolRefExpr *MCSym = MCSymbolRefExpr::create(Sym, OutContext);
   const VEMCExpr *expr = VEMCExpr::create(Kind, MCSym, OutContext);
   return MCOperand::createExpr(expr);
 }
 
-static MCOperand createGOTRelExprOp(VEMCExpr::VariantKind Kind,
+static MCOperand createGOTRelExprOp(VEMCExpr::Specifier Kind,
                                     MCSymbol *GOTLabel, MCContext &OutContext) {
   const MCSymbolRefExpr *GOT = MCSymbolRefExpr::create(GOTLabel, OutContext);
   const VEMCExpr *expr = VEMCExpr::create(Kind, GOT, OutContext);
@@ -164,7 +166,7 @@ static void emitANDrm(MCStreamer &OutStreamer, MCOperand &RS1, MCOperand &Imm,
 }
 
 static void emitHiLo(MCStreamer &OutStreamer, MCSymbol *GOTSym,
-                     VEMCExpr::VariantKind HiKind, VEMCExpr::VariantKind LoKind,
+                     VEMCExpr::Specifier HiKind, VEMCExpr::Specifier LoKind,
                      MCOperand &RD, MCContext &OutContext,
                      const MCSubtargetInfo &STI) {
 
@@ -418,6 +420,11 @@ bool VEAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
   }
   return false;
 }
+
+char VEAsmPrinter::ID = 0;
+
+INITIALIZE_PASS(VEAsmPrinter, "ve-asm-printer", "VE Assembly Printer", false,
+                false)
 
 // Force static initialization.
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeVEAsmPrinter() {

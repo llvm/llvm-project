@@ -221,13 +221,7 @@ namespace {
   public:
     static char ID; // Pass ID, replacement for typeid
 
-    PPCLoopInstrFormPrep() : FunctionPass(ID) {
-      initializePPCLoopInstrFormPrepPass(*PassRegistry::getPassRegistry());
-    }
-
-    PPCLoopInstrFormPrep(PPCTargetMachine &TM) : FunctionPass(ID), TM(&TM) {
-      initializePPCLoopInstrFormPrepPass(*PassRegistry::getPassRegistry());
-    }
+    PPCLoopInstrFormPrep(PPCTargetMachine &TM) : FunctionPass(ID), TM(&TM) {}
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.addPreserved<DominatorTreeWrapperPass>();

@@ -369,6 +369,16 @@ def TestCustomFloatAttr : Test_Attr<"TestCustomFloat"> {
   }];
 }
 
+// Test `struct` with nested `custom` assembly format.
+def TestCustomStructAttr : Test_Attr<"TestCustomStruct"> {
+  let mnemonic = "custom_struct";
+  let parameters = (ins "mlir::StringAttr":$type_str, "int64_t":$value,
+                        OptionalParameter<"mlir::ArrayAttr">:$opt_value);
+  let assemblyFormat = [{
+    `<` struct($type_str, custom<CustomStructAttr>($value), custom<CustomOptStructFieldAttr>($opt_value)) `>`
+  }];
+}
+
 def NestedPolynomialAttr : Test_Attr<"NestedPolynomialAttr"> {
   let mnemonic = "nested_polynomial";
   let parameters = (ins Polynomial_IntPolynomialAttr:$poly);
@@ -412,6 +422,17 @@ def TestOpAsmAttrInterfaceAttr : Test_Attr<"TestOpAsmAttrInterface",
   let assemblyFormat = [{
     `<` struct(params) `>`
   }];
+}
+
+// Test OpAsmAttrInterface from tablegen genMnemonicAlias option.
+def TestOpAsmAttrInterfaceTablegenDefaultAttr : Test_Attr<"TestOpAsmAttrInterfaceTablegenDefault"> {
+  let mnemonic = "op_asm_attr_interface_tablegen_default";
+  let parameters = (ins "mlir::StringAttr":$value);
+  let assemblyFormat = [{
+    `<` struct(params) `>`
+  }];
+
+  let genMnemonicAlias = 1;
 }
 
 #endif // TEST_ATTRDEFS

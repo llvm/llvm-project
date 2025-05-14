@@ -10,7 +10,6 @@
 #ifndef _LIBCPP___CXX03___SYSTEM_ERROR_ERROR_CATEGORY_H
 #define _LIBCPP___CXX03___SYSTEM_ERROR_ERROR_CATEGORY_H
 
-#include <__cxx03/__compare/ordering.h>
 #include <__cxx03/__config>
 #include <__cxx03/string>
 
@@ -45,19 +44,9 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI bool operator==(const error_category& __rhs) const _NOEXCEPT { return this == &__rhs; }
 
-#if _LIBCPP_STD_VER >= 20
-
-  _LIBCPP_HIDE_FROM_ABI strong_ordering operator<=>(const error_category& __rhs) const noexcept {
-    return compare_three_way()(this, std::addressof(__rhs));
-  }
-
-#else // _LIBCPP_STD_VER >= 20
-
   _LIBCPP_HIDE_FROM_ABI bool operator!=(const error_category& __rhs) const _NOEXCEPT { return !(*this == __rhs); }
 
   _LIBCPP_HIDE_FROM_ABI bool operator<(const error_category& __rhs) const _NOEXCEPT { return this < &__rhs; }
-
-#endif // _LIBCPP_STD_VER >= 20
 
   friend class _LIBCPP_HIDDEN __do_message;
 };

@@ -146,6 +146,23 @@ Language Selection and Mode Options
 
    ISO C 2017 with GNU extensions
 
+  | ``c23``
+  | ``iso9899:2024``
+
+   ISO C 2023
+
+  | ``gnu23``
+
+   ISO C 2023 with GNU extensions
+
+  | ``c2y``
+
+   ISO C 202y
+
+  | ``gnu2y``
+
+   ISO C 202y with GNU extensions
+
  The default C language standard is ``gnu17``, except on PS4, where it is
  ``gnu99``.
 
@@ -262,9 +279,10 @@ Language Selection and Mode Options
 .. option:: -ffreestanding
 
  Indicate that the file should be compiled for a freestanding, not a hosted,
- environment. Note that it is assumed that a freestanding environment will
- additionally provide `memcpy`, `memmove`, `memset` and `memcmp`
- implementations, as these are needed for efficient codegen for many programs.
+ environment. Note that a freestanding build still requires linking against a C
+ Standard Library which supports the freestanding interfaces for the specified
+ language mode and target environment. This includes functions like `memcpy`,
+ `memmove`, and `memset`.
 
 .. option:: -fno-builtin
 
