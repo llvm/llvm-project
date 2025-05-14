@@ -62,7 +62,9 @@ bool vputils::isHeaderMask(const VPValue *V, VPlan &Plan) {
 
   if (match(V, m_ActiveLaneMask(m_VPValue(A), m_VPValue(B))))
     return B == Plan.getTripCount() &&
-           (match(A, m_ScalarIVSteps(m_CanonicalIV(), m_SpecificInt(1))) ||
+           (match(A, m_ScalarIVSteps(m_Specific(Plan.getCanonicalIV()),
+                                     m_SpecificInt(1),
+                                     m_Specific(&Plan.getVF()))) ||
             IsWideCanonicalIV(A));
 
   return match(V, m_Binary<Instruction::ICmp>(m_VPValue(A), m_VPValue(B))) &&

@@ -1332,6 +1332,12 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitVectorClause(
       break;
     case OpenACCDirectiveKind::ParallelLoop:
       break;
+    case OpenACCDirectiveKind::Invalid:
+      // This can happen when the directive was not recognized, but we continued
+      // anyway.  Since there is a lot of stuff that can happen (including
+      // 'allow anything' in the parallel loop case), just skip all checking and
+      // continue.
+      break;
     }
   }
 
@@ -1369,6 +1375,14 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitWorkerClause(
     switch (Clause.getDirectiveKind()) {
     default:
       llvm_unreachable("Invalid directive kind for this clause");
+    case OpenACCDirectiveKind::Invalid:
+      // This can happen in cases where the directive was not recognized but we
+      // continued anyway.  Kernels allows kind of any integer argument, so we
+      // can assume it is that (rather than marking the argument invalid like
+      // with parallel/serial/routine), and just continue as if nothing
+      // happened.  We'll skip the 'kernels' checking vs num-workers, since this
+      // MIGHT be something else.
+      break;
     case OpenACCDirectiveKind::Loop:
       switch (SemaRef.getActiveComputeConstructInfo().Kind) {
       case OpenACCDirectiveKind::Invalid:
@@ -2037,6 +2051,12 @@ SemaOpenACC::CheckGangExpr(ArrayRef<const OpenACCClause *> ExistingClauses,
     default:
       llvm_unreachable("Non compute construct in active compute construct?");
     }
+  case OpenACCDirectiveKind::Invalid:
+    // This can happen in cases where the the directive was not recognized but
+    // we continued anyway. Since the validity checking is all-over the place
+    // (it can be a star/integer, or a constant expr depending on the tag), we
+    // just give up and return an ExprError here.
+    return ExprError();
   default:
     llvm_unreachable("Invalid directive kind for a Gang clause");
   }

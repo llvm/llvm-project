@@ -3883,7 +3883,7 @@ bool Compiler<Emitter>::VisitShuffleVectorExpr(const ShuffleVectorExpr *E) {
       return false;
   }
   for (unsigned I = 0; I != NumOutputElems; ++I) {
-    APSInt ShuffleIndex = E->getShuffleMaskIdx(Ctx.getASTContext(), I);
+    APSInt ShuffleIndex = E->getShuffleMaskIdx(I);
     assert(ShuffleIndex >= -1);
     if (ShuffleIndex == -1)
       return this->emitInvalidShuffleVectorIndex(I, E);

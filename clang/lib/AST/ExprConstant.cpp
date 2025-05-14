@@ -11571,7 +11571,7 @@ static bool handleVectorShuffle(EvalInfo &Info, const ShuffleVectorExpr *E,
   unsigned const TotalElementsInInputVector1 = VecVal1.getVectorLength();
   unsigned const TotalElementsInInputVector2 = VecVal2.getVectorLength();
 
-  APSInt IndexVal = E->getShuffleMaskIdx(Info.Ctx, EltNum);
+  APSInt IndexVal = E->getShuffleMaskIdx(EltNum);
   int64_t index = IndexVal.getExtValue();
   // The spec says that -1 should be treated as undef for optimizations,
   // but in constexpr we'd have to produce an APValue::Indeterminate,
