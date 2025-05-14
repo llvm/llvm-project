@@ -853,11 +853,10 @@ getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
 /// is a simple API that does not depend on the analysis pass.
 /// \param StrictCheck Ensure that the calculated distance matches the
 /// type-based one after all the bitcasts removal in the provided pointers.
-std::optional<int> getPointersDiff(Type *ElemTyA, Value *PtrA, Type *ElemTyB,
-                                   Value *PtrB, const DataLayout &DL,
-                                   ScalarEvolution &SE,
-                                   bool StrictCheck = false,
-                                   bool CheckType = true);
+std::optional<int64_t>
+getPointersDiff(Type *ElemTyA, Value *PtrA, Type *ElemTyB, Value *PtrB,
+                const DataLayout &DL, ScalarEvolution &SE,
+                bool StrictCheck = false, bool CheckType = true);
 
 /// Attempt to sort the pointers in \p VL and return the sorted indices
 /// in \p SortedIndices, if reordering is required.
@@ -871,7 +870,7 @@ std::optional<int> getPointersDiff(Type *ElemTyA, Value *PtrA, Type *ElemTyB,
 /// \p SortedIndices as <1,2,0,3>
 bool sortPtrAccesses(ArrayRef<Value *> VL, Type *ElemTy, const DataLayout &DL,
                      ScalarEvolution &SE,
-                     SmallVectorImpl<unsigned> &SortedIndices);
+                     SmallVectorImpl<uint64_t> &SortedIndices);
 
 /// Returns true if the memory operations \p A and \p B are consecutive.
 /// This is a simple API that does not depend on the analysis pass.
