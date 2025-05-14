@@ -8651,6 +8651,18 @@ private:
         assert(Best->BuiltinParamTypes[2].isNull() &&
                "invalid builtin comparison");
 
+        // FIXME: If the type we deduced is a vector type, we mark the
+        // comparison as deleted because we don't yet support this.
+        if (isa<VectorType>(T)) {
+          if (Diagnose == ExplainDeleted) {
+            S.Diag(FD->getLocation(),
+                   diag::note_defaulted_comparison_vector_types)
+                << FD;
+            S.Diag(Subobj.Decl->getLocation(), diag::note_declared_at);
+          }
+          return Result::deleted();
+        }
+
         if (NeedsDeducing) {
           std::optional<ComparisonCategoryType> Cat =
               getComparisonCategoryForBuiltinCmp(T);
@@ -18740,7 +18752,7 @@ NamedDecl *Sema::ActOnFriendFunctionDecl(Scope *S, Declarator &D,
         // a template-id, the function name is not unqualified because these is
         // no name. While the wording requires some reading in-between the
         // lines, GCC, MSVC, and EDG all consider a friend function
-        // specialization definitions // to be de facto explicit specialization
+        // specialization definitions to be de facto explicit specialization
         // and diagnose them as such.
       } else if (isTemplateId) {
         Diag(NameInfo.getBeginLoc(), diag::err_friend_specialization_def);

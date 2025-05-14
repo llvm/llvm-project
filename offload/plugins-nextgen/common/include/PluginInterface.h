@@ -467,9 +467,6 @@ protected:
   /// The prototype kernel launch environment.
   KernelLaunchEnvironmentTy KernelLaunchEnvironment;
 
-  /// If the kernel is a bare kernel.
-  bool IsBareKernel = false;
-
   /// Upper-bound for the launched kernel occupancy.
   /// 0 indicates an invalid result.
   mutable unsigned MaxOccupancy = 0;

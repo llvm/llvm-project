@@ -13084,8 +13084,8 @@ static SDValue lowerShuffleAsBroadcast(const SDLoc &DL, MVT VT, SDValue V1,
     // uops even if the original vector load is not eliminated.
 
     // Reduce the vector load and shuffle to a broadcasted scalar load.
-    LoadSDNode *Ld = cast<LoadSDNode>(V);
-    SDValue BaseAddr = Ld->getOperand(1);
+    auto *Ld = cast<LoadSDNode>(V);
+    SDValue BaseAddr = Ld->getBasePtr();
     MVT SVT = VT.getScalarType();
     unsigned Offset = BroadcastIdx * SVT.getStoreSize();
     assert((int)(Offset * 8) == BitOffset && "Unexpected bit-offset");
@@ -56708,10 +56708,11 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
   SDValue Scale = GorS->getScale();
   EVT IndexVT = Index.getValueType();
   EVT IndexSVT = IndexVT.getVectorElementType();
+  unsigned IndexWidth = Index.getScalarValueSizeInBits();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  EVT PtrVT = TLI.getPointerTy(DAG.getDataLayout());
 
   if (DCI.isBeforeLegalize()) {
-    unsigned IndexWidth = Index.getScalarValueSizeInBits();
     // Attempt to move shifted index into the address scale, allows further
     // index truncation below.
     if (Index.getOpcode() == ISD::SHL && isa<ConstantSDNode>(Scale)) {
@@ -56774,8 +56775,6 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
     }
   }
 
-  EVT PtrVT = TLI.getPointerTy(DAG.getDataLayout());
-
   // Try to move splat adders from the index operand to the base
   // pointer operand. Taking care to multiply by the scale. We can only do
   // this when index element type is the same as the pointer type.
@@ -56823,8 +56822,6 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
   }
 
   if (DCI.isBeforeLegalizeOps()) {
-    unsigned IndexWidth = Index.getScalarValueSizeInBits();
-
     // Make sure the index is either i32 or i64
     if (IndexWidth != 32 && IndexWidth != 64) {
       MVT EltVT = IndexWidth > 32 ? MVT::i64 : MVT::i32;

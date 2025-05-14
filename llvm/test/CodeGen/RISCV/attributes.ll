@@ -101,8 +101,8 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcilo %s -o - | FileCheck --check-prefix=RV32XQCILO %s
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcilsm %s -o - | FileCheck --check-prefix=RV32XQCILSM %s
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcisim %s -o - | FileCheck --check-prefix=RV32XQCISIM %s
-; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcisync %s -o - | FileCheck --check-prefix=RV32XQCISYNC %s
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcisls %s -o - | FileCheck --check-prefix=RV32XQCISLS %s
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcisync %s -o - | FileCheck --check-prefix=RV32XQCISYNC %s
 ; RUN: llc -mtriple=riscv32 -mattr=+xandesperf %s -o - | FileCheck --check-prefix=RV32XANDESPERF %s
 ; RUN: llc -mtriple=riscv32 -mattr=+xandesvpackfph %s -o - | FileCheck --check-prefix=RV32XANDESVPACKFPH %s
 ; RUN: llc -mtriple=riscv32 -mattr=+zaamo %s -o - | FileCheck --check-prefix=RV32ZAAMO %s
@@ -430,24 +430,24 @@
 ; RV32XTHEADSYNC: .attribute 5, "rv32i2p1_xtheadsync1p0"
 ; RV32XWCHC: .attribute 5, "rv32i2p1_zca1p0_xwchc2p2"
 ; RV32XQCCMP: .attribute 5, "rv32i2p1_zca1p0_xqccmp0p1"
-; RV32XQCIA: .attribute 5, "rv32i2p1_xqcia0p4"
+; RV32XQCIA: .attribute 5, "rv32i2p1_xqcia0p7"
 ; RV32XQCIAC: .attribute 5, "rv32i2p1_zca1p0_xqciac0p3"
 ; RV32XQCIBI: .attribute 5, "rv32i2p1_zca1p0_xqcibi0p2"
-; RV32XQCIBM: .attribute 5, "rv32i2p1_zca1p0_xqcibm0p4"
-; RV32XQCICLI: .attribute 5, "rv32i2p1_xqcicli0p2"
+; RV32XQCIBM: .attribute 5, "rv32i2p1_zca1p0_xqcibm0p8"
+; RV32XQCICLI: .attribute 5, "rv32i2p1_xqcicli0p3"
 ; RV32XQCICM: .attribute 5, "rv32i2p1_zca1p0_xqcicm0p2"
 ; RV32XQCICS: .attribute 5, "rv32i2p1_xqcics0p2"
-; RV32XQCICSR: .attribute 5, "rv32i2p1_xqcicsr0p2"
-; RV32XQCIINT: .attribute 5, "rv32i2p1_zca1p0_xqciint0p4"
+; RV32XQCICSR: .attribute 5, "rv32i2p1_xqcicsr0p3"
+; RV32XQCIINT: .attribute 5, "rv32i2p1_zca1p0_xqciint0p7"
 ; RV32XQCIIO: .attribute 5, "rv32i2p1_xqciio0p1"
 ; RV32XQCILB: .attribute 5, "rv32i2p1_zca1p0_xqcilb0p2"
 ; RV32XQCILI: .attribute 5, "rv32i2p1_zca1p0_xqcili0p2"
 ; RV32XQCILIA: .attribute 5, "rv32i2p1_zca1p0_xqcilia0p2"
-; RV32XQCILO: .attribute 5, "rv32i2p1_zca1p0_xqcilo0p2"
-; RV32XQCILSM: .attribute 5, "rv32i2p1_xqcilsm0p2"
+; RV32XQCILO: .attribute 5, "rv32i2p1_zca1p0_xqcilo0p3"
+; RV32XQCILSM: .attribute 5, "rv32i2p1_xqcilsm0p5"
 ; RV32XQCISIM: attribute 5, "rv32i2p1_zca1p0_xqcisim0p2"
-; RV32XQCISYNC: attribute 5, "rv32i2p1_zca1p0_xqcisync0p2"
 ; RV32XQCISLS: .attribute 5, "rv32i2p1_xqcisls0p2"
+; RV32XQCISYNC: attribute 5, "rv32i2p1_zca1p0_xqcisync0p3"
 ; RV32XANDESPERF: .attribute 5, "rv32i2p1_xandesperf5p0"
 ; RV32XANDESVPACKFPH: .attribute 5, "rv32i2p1_f2p2_zicsr2p0_zve32f1p0_zve32x1p0_zvfhmin1p0_zvl32b1p0_xandesvpackfph5p0"
 ; RV32ZAAMO: .attribute 5, "rv32i2p1_zaamo1p0"
