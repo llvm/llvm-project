@@ -841,8 +841,8 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
     auto *ISATy = DBuilder.createPointerType(ClassTy, Size);
 
     ObjTy = DBuilder.createStructType(TheCU, "objc_object", TheCU->getFile(), 0,
-                                      0, 0, llvm::DINode::FlagZero, nullptr,
-                                      llvm::DINodeArray());
+                                      (uint64_t)0, 0, llvm::DINode::FlagZero,
+                                      nullptr, llvm::DINodeArray());
 
     DBuilder.replaceArrays(
         ObjTy, DBuilder.getOrCreateArray(&*DBuilder.createMemberType(
