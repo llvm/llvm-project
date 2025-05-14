@@ -92,8 +92,8 @@ struct ModuleShaderFlags {
 
 private:
   // Booleans set by module flags
-  bool CanSetResMayNotAlias;   // dx.resmayalias
-  bool NativeLowPrecisionMode; // dx.nativelowprec
+  bool CanSetResMayNotAlias;         // dx.resmayalias
+  bool CanSetNativeLowPrecisionMode; // dx.nativelowprec
 
   /// Map of Function-Shader Flag Mask pairs representing properties of each of
   /// the functions in the module. Shader Flags of each function represent both

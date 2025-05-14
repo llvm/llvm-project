@@ -143,7 +143,7 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
   }
 
   if (CSF.LowPrecisionPresent) {
-    if (NativeLowPrecisionMode)
+    if (CanSetNativeLowPrecisionMode)
       CSF.NativeLowPrecision = true;
     else
       CSF.MinimumPrecision = true;
@@ -214,20 +214,19 @@ void ModuleShaderFlags::initialize(Module &M, DXILResourceTypeMap &DRTM,
 
   CanSetResMayNotAlias = MMDI.DXILVersion >= VersionTuple(1, 7);
   // The command line option -res-may-alias will set the dx.resmayalias module
-  // flag to 1 and disable the ability to set the ResMayNotAlias flag
-  if (auto *RMA = mdconst::extract_or_null<ConstantInt>(
+  // flag to 1, thereby disabling the ability to set the ResMayNotAlias flag
+  if (auto *ResMayAlias = mdconst::extract_or_null<ConstantInt>(
           M.getModuleFlag("dx.resmayalias")))
-    if (RMA->getValue() != 0)
-      CanSetResMayNotAlias = false;
+    CanSetResMayNotAlias = !ResMayAlias->getValue().getBoolValue();
 
   // NativeLowPrecisionMode can only be set when the command line option
   // -enable-16bit-types is provided. This is indicated by the dx.nativelowprec
   // module flag being set
-  NativeLowPrecisionMode = false;
+  CanSetNativeLowPrecisionMode = false;
   if (auto *NativeLowPrec = mdconst::extract_or_null<ConstantInt>(
           M.getModuleFlag("dx.nativelowprec")))
     if (MMDI.ShaderModelVersion >= VersionTuple(6, 2))
-      NativeLowPrecisionMode = NativeLowPrec->getValue().getBoolValue();
+      CanSetNativeLowPrecisionMode = NativeLowPrec->getValue().getBoolValue();
 
   CallGraph CG(M);
 
@@ -298,7 +297,7 @@ void ModuleShaderFlags::initialize(Module &M, DXILResourceTypeMap &DRTM,
   // is needed even if the module does not use 16-bit types because a
   // corresponding debug module may include 16-bit types, and tools that use the
   // debug module may expect it to have the same flags as the original
-  CombinedSFMask.NativeLowPrecisionMode = NativeLowPrecisionMode;
+  CombinedSFMask.NativeLowPrecisionMode = CanSetNativeLowPrecisionMode;
 
   // Set the Max64UAVs flag if the number of UAVs is > 8
   uint32_t NumUAVs = 0;
