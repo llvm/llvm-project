@@ -495,15 +495,7 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .legalFor(HasSSE1 && Is64Bit, {s32, s64})
       .legalFor(HasSSE2, {s64, s32})
       .legalFor(HasSSE2 && Is64Bit, {s64, s64})
-      .customFor(UseX87, {{s32, s16},
-                          {s32, s32},
-                          {s32, s64},
-                          {s64, s16},
-                          {s64, s32},
-                          {s64, s64},
-                          {s80, s16},
-                          {s80, s32},
-                          {s80, s64}})
+      .customForCartesianProduct(UseX87, {s32, s64, s80}, {s16, s32, s64})
       .clampScalar(1, (UseX87 && !HasSSE1) ? s16 : s32, sMaxScalar)
       .widenScalarToNextPow2(1)
       .clampScalar(0, s32, HasSSE2 ? s64 : s32)
@@ -514,15 +506,7 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .legalFor(HasSSE1 && Is64Bit, {s64, s32})
       .legalFor(HasSSE2, {s32, s64})
       .legalFor(HasSSE2 && Is64Bit, {s64, s64})
-      .customFor(UseX87, {{s16, s32},
-                          {s16, s64},
-                          {s16, s80},
-                          {s32, s32},
-                          {s32, s64},
-                          {s32, s80},
-                          {s64, s32},
-                          {s64, s64},
-                          {s64, s80}})
+      .customForCartesianProduct(UseX87, {s16, s32, s64}, {s32, s64, s80})
       .clampScalar(0, (UseX87 && !HasSSE1) ? s16 : s32, sMaxScalar)
       .widenScalarToNextPow2(0)
       .clampScalar(1, s32, HasSSE2 ? s64 : s32)
