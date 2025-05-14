@@ -13,8 +13,7 @@ func.func @multidimreduction_contract(
   %arg0: vector<8x32x16xf32>,%arg1: vector<8x32x16xf32>, %acc: vector<8x16xf32>) -> vector<8x16xf32> {
   %0 = arith.mulf %arg0, %arg1 : vector<8x32x16xf32>
   %1 = vector.multi_reduction <add>, %0, %acc [1] : vector<8x32x16xf32> to vector<8x16xf32>
-  return %1 : vector<8x16xf32>
-}
+  return %1 : vector<8x16xf32> }
 
 // -----
 
@@ -62,6 +61,10 @@ func.func @contract_transpose(
 
 // -----
 
+//-----------------------------------------------------------------------------
+// [Pattern: CombineContractBroadcast]
+//-----------------------------------------------------------------------------
+
 #map0 = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
 #map1 = affine_map<(d0, d1, d2) -> (d0, d1)>
 
@@ -87,6 +90,43 @@ func.func @contract_broadcast(
 }
 
 // -----
+
+// Same as above, but with a mask.
+
+#map0 = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
+#map1 = affine_map<(d0, d1, d2) -> (d0, d1)>
+
+// CHECK-DAG: #[[$MAP0:.+]] = affine_map<(d0, d1, d2) -> (d1, d2)>
+// CHECK-DAG: #[[$MAP1:.+]] = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
+// CHECK-DAG: #[[$MAP2:.+]] = affine_map<(d0, d1, d2) -> (d0, d1)>
+
+// CHECK-LABEL: contract_broadcast_masked
+// CHECK-SAME:      %[[ARG0:.*]]: vector<32x16xf32>,
+// CHECK-SAME:      %[[ARG1:.*]]: vector<8x32x16xf32>,
+// CHECK-SAME:      %[[MASK:.*]]: vector<8x32x16xi1>) -> vector<8x32xf32> {
+// CHECK:           %[[C0:.*]] = arith.constant dense<0.000000e+00> : vector<8x32xf32>
+// CHECK:           %[[R:.*]] = vector.mask %[[MASK]] {
+// CHECK-SAME:        vector.contract {indexing_maps = [#[[$MAP0]], #[[$MAP1]], #[[$MAP2]]],
+// CHECK-SAME:        iterator_types = ["parallel", "parallel", "reduction"],
+// CHECK-SAME:        kind = #vector.kind<add>}
+// CHECK-SAME:        %[[ARG0]], %[[ARG1]], %[[C0]] : vector<32x16xf32>, vector<8x32x16xf32> into vector<8x32xf32>
+// CHECK-SAME       } : vector<8x32x16xi1> -> vector<8x32xf32>
+// CHECK:           return %[[R]] : vector<8x32xf32>
+func.func @contract_broadcast_masked(
+  %arg0: vector<32x16xf32>, %arg1: vector<8x32x16xf32>, %mask: vector<8x32x16xi1>) -> vector<8x32xf32> {
+  %cst = arith.constant dense<0.000000e+00> : vector<8x32xf32>
+  %0 = vector.broadcast %arg0 : vector<32x16xf32> to vector<8x32x16xf32>
+  %1 = vector.mask %mask {
+    vector.contract {indexing_maps = [#map0, #map0, #map1],
+    iterator_types = ["parallel", "parallel", "reduction"],
+    kind = #vector.kind<add>
+    } %0, %arg1, %cst : vector<8x32x16xf32>, vector<8x32x16xf32> into vector<8x32xf32>
+  } : vector<8x32x16xi1> -> vector<8x32xf32>
+  return %1 : vector<8x32xf32>
+}
+
+// -----
+
 // Test that CombineContractBroadcast is able to combine a broadcast that
 // creates a unit dim that is consumed by a reduction iterator, dropping that
 // reduction iterator, as long as there is another reduction iterator left.
@@ -113,6 +153,39 @@ func.func @contract_broadcast_unit_dim_reduction(%arg0 : vector<8x4xi32>, %arg1 
         iterator_types = ["reduction", "parallel", "parallel", "reduction"],
         kind = #vector.kind<add>
       } %0, %1, %arg2 : vector<1x8x4xi32>, vector<1x8x4xi32> into vector<8x8xi32>
+    return %result : vector<8x8xi32>
+}
+
+// -----
+
+// Same as above, but with a mask
+
+#map0 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>
+#map1 = affine_map<(d0, d1, d2, d3) -> (d0, d2, d3)>
+#map2 = affine_map<(d0, d1, d2, d3) -> (d1, d2)>
+
+// CHECK-DAG: #[[$map0:.*]] = affine_map<(d0, d1, d2) -> (d0, d2)>
+// CHECK-DAG: #[[$map1:.*]] = affine_map<(d0, d1, d2) -> (d1, d2)>
+// CHECK-DAG: #[[$map2:.*]] = affine_map<(d0, d1, d2) -> (d0, d1)>
+
+// CHECK-LABEL: contract_broadcast_unit_dim_reduction_masked
+//  CHECK-SAME: (%[[ARG0:.+]]: vector<8x4xi32>, %[[ARG1:.+]]: vector<8x4xi32>, %[[ARG2:.+]]: vector<8x8xi32>, %[[MASK:.+]]: vector<1x8x8x4xi1>)
+//  CHECK:      %[[MASK_SC:.*]] = vector.shape_cast %[[MASK]] : vector<1x8x8x4xi1> to vector<8x8x4xi1>
+//  CHECK:      %[[R:.*]] = vector.mask %[[MASK_SC]] {
+//  CHECK-SAME: vector.contract
+//  CHECK-SAME: indexing_maps = [#[[$map0]], #[[$map1]], #[[$map2]]]
+//  CHECK-SAME: iterator_types = ["parallel", "parallel", "reduction"]
+//  CHECK-SAME: %[[ARG0]], %[[ARG1]], %[[ARG2]] : vector<8x4xi32>, vector<8x4xi32> into vector<8x8xi32>
+func.func @contract_broadcast_unit_dim_reduction_masked(%arg0 : vector<8x4xi32>, %arg1 : vector<8x4xi32>, %arg2 : vector<8x8xi32>, %mask: vector<1x8x8x4xi1>) -> vector<8x8xi32> {
+    %0 = vector.broadcast %arg0 : vector<8x4xi32> to vector<1x8x4xi32>
+    %1 = vector.broadcast %arg1 : vector<8x4xi32> to vector<1x8x4xi32>
+    %result = vector.mask %mask {
+      vector.contract {
+        indexing_maps = [#map0, #map1, #map2],
+        iterator_types = ["reduction", "parallel", "parallel", "reduction"],
+        kind = #vector.kind<add>
+      } %0, %1, %arg2 : vector<1x8x4xi32>, vector<1x8x4xi32> into vector<8x8xi32>
+    } : vector<1x8x8x4xi1> -> vector<8x8xi32>
     return %result : vector<8x8xi32>
 }
 
