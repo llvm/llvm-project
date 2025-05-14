@@ -14,5 +14,5 @@ _CLC_OVERLOAD _CLC_DEF float fast_normalize(float p) {
 
 #define __CLC_BODY <fast_normalize.inc>
 #define __FLOAT_ONLY
-#include <clc/geometric/floatn.inc>
+#include <clc/math/gentype.inc>
 #undef __FLOAT_ONLY
