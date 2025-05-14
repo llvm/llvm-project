@@ -87,6 +87,8 @@ public:
   void applyMed3(MachineInstr &MI, Med3MatchInfo &MatchInfo) const;
   void applyClamp(MachineInstr &MI, Register &Reg) const;
 
+  void applyCanonicalizeZextShiftAmt(MachineInstr &MI, MachineInstr &Ext) const;
+
 private:
   SIModeRegisterDefaults getMode() const;
   bool getIEEE() const;
@@ -359,6 +361,34 @@ void AMDGPURegBankCombinerImpl::applyMed3(MachineInstr &MI,
                {getAsVgpr(MatchInfo.Val0), getAsVgpr(MatchInfo.Val1),
                 getAsVgpr(MatchInfo.Val2)},
                MI.getFlags());
+  MI.eraseFromParent();
+}
+
+void AMDGPURegBankCombinerImpl::applyCanonicalizeZextShiftAmt(
+    MachineInstr &MI, MachineInstr &Ext) const {
+  unsigned ShOpc = MI.getOpcode();
+  assert(ShOpc == AMDGPU::G_SHL || ShOpc == AMDGPU::G_LSHR ||
+         ShOpc == AMDGPU::G_ASHR);
+  assert(Ext.getOpcode() == AMDGPU::G_ZEXT);
+
+  Register AmtReg = Ext.getOperand(1).getReg();
+  Register ShDst = MI.getOperand(0).getReg();
+  Register ShSrc = MI.getOperand(1).getReg();
+
+  LLT ExtAmtTy = MRI.getType(Ext.getOperand(0).getReg());
+  LLT AmtTy = MRI.getType(AmtReg);
+
+  auto &RB = *MRI.getRegBank(AmtReg);
+
+  auto NewExt = B.buildAnyExt(ExtAmtTy, AmtReg);
+  auto Mask = B.buildConstant(
+      ExtAmtTy, maskTrailingOnes<uint64_t>(AmtTy.getScalarSizeInBits()));
+  auto And = B.buildAnd(ExtAmtTy, NewExt, Mask);
+  B.buildInstr(ShOpc, {ShDst}, {ShSrc, And});
+
+  MRI.setRegBank(NewExt.getReg(0), RB);
+  MRI.setRegBank(Mask.getReg(0), RB);
+  MRI.setRegBank(And.getReg(0), RB);
   MI.eraseFromParent();
 }
 
