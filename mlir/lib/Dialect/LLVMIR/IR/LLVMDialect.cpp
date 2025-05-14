@@ -3142,6 +3142,72 @@ static bool hasScalableVectorType(Type t) {
   return false;
 }
 
+/// Verified helper for array of struct constants.
+static LogicalResult verifyStructArrayConstant(LLVM::ConstantOp op,
+                                               LLVM::LLVMArrayType arrayType,
+                                               ArrayAttr arrayAttr, int dim) {
+  if (arrayType.getNumElements() != arrayAttr.size())
+    return op.emitOpError()
+           << "array attribute size does not match array type size in "
+              "dimension "
+           << dim << ": " << arrayAttr.size() << " vs. "
+           << arrayType.getNumElements();
+
+  llvm::DenseSet<Attribute> elementsVerified;
+
+  // Recursively verify sub-dimensions for multidimensional arrays.
+  if (auto subArrayType =
+          dyn_cast<LLVM::LLVMArrayType>(arrayType.getElementType())) {
+    for (auto [idx, elementAttr] : llvm::enumerate(arrayAttr))
+      if (elementsVerified.insert(elementAttr).second) {
+        if (isa<LLVM::ZeroAttr, LLVM::UndefAttr>(elementAttr))
+          continue;
+        auto subArrayAttr = dyn_cast<ArrayAttr>(elementAttr);
+        if (!subArrayAttr)
+          return op.emitOpError()
+                 << "nested attribute for sub-array in dimension " << dim
+                 << " at index " << idx
+                 << " must be a zero, or undef, or array attribute";
+        if (failed(verifyStructArrayConstant(op, subArrayType, subArrayAttr,
+                                             dim + 1)))
+          return failure();
+      }
+    return success();
+  }
+
+  // Forbid usages of ArrayAttr for simple array types that should use
+  // DenseElementsAttr instead. Note that there would be a use case for such
+  // array types when one element value is obtained via a ptr-to-int conversion
+  // from a symbol and cannot be represented in a DenseElementsAttr, but no MLIR
+  // user needs this so far, and it seems better to avoid people misusing the
+  // ArrayAttr for simple types.
+  auto structType = dyn_cast<LLVM::LLVMStructType>(arrayType.getElementType());
+  if (!structType)
+    return op.emitOpError() << "for array with an array attribute must have a "
+                               "struct element type";
+
+  // Shallow verification that leaf attributes are appropriate as struct initial
+  // value.
+  size_t numStructElements = structType.getBody().size();
+  for (auto [idx, elementAttr] : llvm::enumerate(arrayAttr))
+    if (elementsVerified.insert(elementAttr).second) {
+      if (isa<LLVM::ZeroAttr, LLVM::UndefAttr>(elementAttr))
+        continue;
+      auto subArrayAttr = dyn_cast<ArrayAttr>(elementAttr);
+      if (!subArrayAttr)
+        return op.emitOpError()
+               << "nested attribute for struct element at index " << idx
+               << " must be a zero, or undef, or array attribute";
+      if (subArrayAttr.size() != numStructElements)
+        return op.emitOpError()
+               << "nested array attribute size for struct element at index "
+               << idx << " must match struct size: " << subArrayAttr.size()
+               << " vs. " << numStructElements;
+    }
+
+  return success();
+}
+
 LogicalResult LLVM::ConstantOp::verify() {
   if (StringAttr sAttr = llvm::dyn_cast<StringAttr>(getValue())) {
     auto arrayType = llvm::dyn_cast<LLVMArrayType>(getType());
@@ -3208,7 +3274,7 @@ LogicalResult LLVM::ConstantOp::verify() {
     if (isa<IntegerType>(getType()) && !getType().isInteger(floatWidth)) {
       return emitOpError() << "expected integer type of width " << floatWidth;
     }
-  } else if (isa<ElementsAttr, ArrayAttr>(getValue())) {
+  } else if (isa<ElementsAttr>(getValue())) {
     if (hasScalableVectorType(getType())) {
       // The exact number of elements of a scalable vector is unknown, so we
       // allow only splat attributes.
@@ -3227,44 +3293,14 @@ LogicalResult LLVM::ConstantOp::verify() {
         return emitOpError()
                << "type and attribute have a different number of elements: "
                << getNumElements(getType()) << " vs. " << attrNumElements;
-    } else {
-      // When the attribute is an ArrayAttr, check that its nesting matches the
-      // corresponding ArrayType or VectorType nesting.
-      Type dimType = getType();
-      Attribute dimVal = getValue();
-      int dim = 0;
-      while (true) {
-        int64_t dimSize =
-            llvm::TypeSwitch<Type, int64_t>(dimType)
-                .Case<VectorType, LLVMArrayType>([&dimType](auto t) -> int64_t {
-                  dimType = t.getElementType();
-                  return t.getNumElements();
-                })
-                .Default([](auto) -> int64_t { return -1; });
-        if (dimSize < 0)
-          break;
-        auto arrayAttr = dyn_cast<ArrayAttr>(dimVal);
-        if (!arrayAttr)
-          return emitOpError()
-                 << "array attribute nesting must match array type nesting";
-        if (dimSize != static_cast<int64_t>(arrayAttr.size()))
-          return emitOpError()
-                 << "array attribute size does not match array type size in "
-                    "dimension "
-                 << dim << ": " << arrayAttr.size() << " vs. " << dimSize;
-        if (arrayAttr.size() == 0)
-          break;
-        dimVal = arrayAttr.getValue()[0];
-        ++dim;
-      }
-      if (auto structType = dyn_cast<LLVMStructType>(dimType)) {
-        auto arrayAttr = dyn_cast<ArrayAttr>(dimVal);
-        if (!arrayAttr || arrayAttr.size() != structType.getBody().size())
-          return emitOpError()
-                 << "nested attribute must be an array attribute with the same "
-                    "number of elements as the struct type";
-      }
     }
+  } else if (auto arrayAttr = dyn_cast<ArrayAttr>(getValue())) {
+    auto arrayType = dyn_cast<LLVM::LLVMArrayType>(getType());
+    if (!arrayType)
+      return emitOpError() << "expected array type";
+    // When the attribute is an ArrayAttr, check that its nesting matches the
+    // corresponding ArrayType or VectorType nesting.
+    return verifyStructArrayConstant(*this, arrayType, arrayAttr, /*dim=*/0);
   } else {
     return emitOpError()
            << "only supports integer, float, string or elements attributes";
