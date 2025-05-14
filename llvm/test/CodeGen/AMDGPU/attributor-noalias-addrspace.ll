@@ -28,21 +28,6 @@ define amdgpu_kernel void @no_alias_addr_space_select(ptr addrspace(3) %sptr, i1
   ret void
 }
 
-define amdgpu_kernel void @no_alias_addr_space_arg(ptr %ptr, i32 %val, i1 %cond) #0 {
-; CHECK-LABEL: define amdgpu_kernel void @no_alias_addr_space_arg(
-; CHECK-SAME: ptr [[PTR:%.*]], i32 [[VAL:%.*]], i1 [[COND:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    store i32 [[VAL]], ptr [[PTR]], align 4, !noalias.addrspace [[META1:![0-9]+]]
-; CHECK-NEXT:    ret void
-;
-  %cast.ptr.a = addrspacecast ptr %ptr to ptr addrspace(5)
-  %cast.ptr.b = addrspacecast ptr %ptr to ptr addrspace(7)
-  %ptr.a = addrspacecast ptr addrspace(5) %cast.ptr.a to ptr
-  %ptr.b = addrspacecast ptr addrspace(7) %cast.ptr.b to ptr
-  %sel.ptr = select i1 %cond, ptr %ptr.a, ptr %ptr.b
-  store i32 %val, ptr %sel.ptr
-  ret void
-}
-
 define amdgpu_kernel void @no_alias_addr_space_branch(ptr addrspace(3) %sptr, i1 %cond1, i1 %cond2, i32 %val, i32 %offset) #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @no_alias_addr_space_branch(
 ; CHECK-SAME: ptr addrspace(3) [[SPTR:%.*]], i1 [[COND1:%.*]], i1 [[COND2:%.*]], i32 [[VAL:%.*]], i32 [[OFFSET:%.*]]) #[[ATTR0]] {
@@ -608,5 +593,4 @@ define amdgpu_kernel void @kernal_call_func(i1 %cond1, i1 %cond2, i32 %val) #0 {
 
 ;.
 ; CHECK: [[META0]] = !{i32 2, i32 3, i32 4, i32 5, i32 6, i32 10}
-; CHECK: [[META1]] = !{i32 1, i32 5, i32 6, i32 7, i32 8, i32 10}
 ;.

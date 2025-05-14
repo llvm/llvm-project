@@ -99,6 +99,7 @@
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/GraphTraits.h"
+#include "llvm/ADT/IntervalMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetOperations.h"
@@ -6341,7 +6342,9 @@ protected:
 struct AANoAliasAddrSpace
     : public StateWrapper<BooleanState, AbstractAttribute> {
   using Base = StateWrapper<BooleanState, AbstractAttribute>;
-  AANoAliasAddrSpace(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
+  using RangeMap = IntervalMap<unsigned, bool>;
+  AANoAliasAddrSpace(const IRPosition &IRP, Attributor &A)
+      : Base(IRP), Map(Allocator) {}
 
   /// See AbstractAttribute::isValidIRPositionForInit
   static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
@@ -6372,7 +6375,8 @@ struct AANoAliasAddrSpace
   static const char ID;
 
 protected:
-  SmallVector<std::pair<unsigned, unsigned>> ASRanges;
+  RangeMap::Allocator Allocator;
+  RangeMap Map;
 };
 
 struct AAAllocationInfo : public StateWrapper<BooleanState, AbstractAttribute> {

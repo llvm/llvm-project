@@ -12813,21 +12813,6 @@ struct AANoAliasAddrSpaceImpl : public AANoAliasAddrSpace {
     auto CheckAddressSpace = [&](Value &Obj) {
       if (isa<PoisonValue>(&Obj))
         return true;
-      // Handle argument in flat address space only has addrspace cast uses
-      if (auto *Arg = dyn_cast<Argument>(&Obj)) {
-        if (Arg->getType()->getPointerAddressSpace() == FlatAS &&
-            getAssociatedFunction()->hasKernelCallingConv()) {
-          for (auto *U : Arg->users()) {
-            auto *ASCI = dyn_cast<AddrSpaceCastInst>(U);
-            if (!ASCI)
-              return false;
-            if (ASCI->getDestAddressSpace() == FlatAS)
-              return false;
-            removeAS(ASCI->getDestAddressSpace());
-          }
-          return true;
-        }
-      }
 
       unsigned AS = Obj.getType()->getPointerAddressSpace();
       if (AS == FlatAS)
@@ -12861,13 +12846,14 @@ struct AANoAliasAddrSpaceImpl : public AANoAliasAddrSpace {
     LLVMContext &Ctx = getAssociatedValue().getContext();
     MDNode *NoAliasASNode = nullptr;
     MDBuilder MDB(Ctx);
-    for (std::pair<unsigned, unsigned> Range : ASRanges) {
+    for (RangeMap::const_iterator I = Map.begin(); I != Map.end(); I++) {
+      unsigned Upper = I.stop();
+      unsigned Lower = I.start();
       if (NoAliasASNode == nullptr) {
-        NoAliasASNode =
-            MDB.createRange(APInt(32, Range.first), APInt(32, Range.second));
+        NoAliasASNode = MDB.createRange(APInt(32, Lower), APInt(32, Upper + 1));
       } else {
         MDNode *ASRange =
-            MDB.createRange(APInt(32, Range.first), APInt(32, Range.second));
+            MDB.createRange(APInt(32, Lower), APInt(32, Upper + 1));
         NoAliasASNode = MDNode::getMostGenericRange(NoAliasASNode, ASRange);
       }
     }
@@ -12905,43 +12891,37 @@ struct AANoAliasAddrSpaceImpl : public AANoAliasAddrSpace {
     std::string Str;
     raw_string_ostream OS(Str);
     OS << "noaliasaddrspace(";
-    for (auto range : ASRanges)
-      OS << ' ' << '[' << range.first << ',' << range.second << ')';
+    for (RangeMap::const_iterator I = Map.begin(); I != Map.end(); I++) {
+      unsigned Upper = I.stop();
+      unsigned Lower = I.start();
+      OS << ' ' << '[' << Upper << ',' << Lower + 1 << ')';
+    }
     OS << " )";
     return OS.str();
   }
 
 private:
   void removeAS(unsigned AS) {
-    for (auto it = ASRanges.begin(); it != ASRanges.end();) {
-      if (it->first == AS) {
-        uint32_t Upper = it->second;
-        ASRanges.erase(it);
-        if (AS + 1 < Upper)
-          ASRanges.push_back(std::pair(AS + 1, Upper));
+    RangeMap::iterator I = Map.find(AS);
+
+    if (I != Map.end()) {
+      unsigned Upper = I.stop();
+      unsigned Lower = I.start();
+      I.erase();
+      if (Upper == Lower)
         return;
-      } else if (it->second - 1 == AS) {
-        uint32_t Lower = it->first;
-        ASRanges.erase(it);
-        if (Lower < AS)
-          ASRanges.push_back(std::pair(Lower, AS));
-        return;
-      } else if (it->first < AS && AS < it->second - 1) {
-        uint32_t Upper = it->second;
-        uint32_t Lower = it->first;
-        ASRanges.erase(it);
-        ASRanges.push_back(std::pair(Lower, AS));
-        ASRanges.push_back(std::pair(AS + 1, Upper));
-        return;
-      } else {
-        it++;
+      if (AS != ~((unsigned)0) && AS + 1 <= Upper) {
+        Map.insert(AS + 1, Upper, true);
+      }
+      if (AS != 0 && Lower <= AS - 1) {
+        Map.insert(Lower, AS - 1, true);
       }
     }
   }
 
   void resetASRanges(Attributor &A) {
-    ASRanges.clear();
-    ASRanges.push_back(std::pair(0, A.getInfoCache().getMaxAddrSpace() + 1));
+    Map.clear();
+    Map.insert(0, A.getInfoCache().getMaxAddrSpace(), true);
   }
 };
 
