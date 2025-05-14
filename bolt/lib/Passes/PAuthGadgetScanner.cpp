@@ -82,6 +82,22 @@ namespace PAuthGadgetScanner {
   dbgs() << "\n";
 }
 
+// Iterates over BinaryFunction's instructions like a range-based for loop:
+//
+// iterateOverInstrs(BF, [&](MCInstReference Inst) {
+//   // loop body
+// });
+template <typename T> static void iterateOverInstrs(BinaryFunction &BF, T Fn) {
+  if (BF.hasCFG()) {
+    for (BinaryBasicBlock &BB : BF)
+      for (int64_t I = 0, E = BB.size(); I < E; ++I)
+        Fn(MCInstInBBReference(&BB, I));
+  } else {
+    for (auto I : BF.instrs())
+      Fn(MCInstInBFReference(&BF, I.first));
+  }
+}
+
 // This class represents mapping from a set of arbitrary physical registers to
 // consecutive array indexes.
 class TrackedRegisters {
@@ -342,10 +358,27 @@ protected:
     return S;
   }
 
-  /// Creates a state with all registers marked unsafe (not to be confused
-  /// with empty state).
-  SrcState createUnsafeState() const {
-    return SrcState(NumRegs, RegsToTrackInstsFor.getNumTrackedRegisters());
+  /// Computes a reasonably pessimistic estimation of the register state when
+  /// the previous instruction is not known for sure. Takes the set of registers
+  /// which are trusted at function entry and removes all registers that can be
+  /// clobbered inside this function.
+  SrcState computePessimisticState(BinaryFunction &BF) {
+    BitVector ClobberedRegs(NumRegs);
+    iterateOverInstrs(BF, [&](MCInstReference Inst) {
+      BC.MIB->getClobberedRegs(Inst, ClobberedRegs);
+
+      // If this is a call instruction, no register is safe anymore, unless
+      // it is a tail call. Ignore tail calls for the purpose of estimating the
+      // worst-case scenario, assuming no instructions are executed in the
+      // caller after this point anyway.
+      if (BC.MIB->isCall(Inst) && !BC.MIB->isTailCall(Inst))
+        ClobberedRegs.set();
+    });
+
+    SrcState S = createEntryState();
+    S.SafeToDerefRegs.reset(ClobberedRegs);
+    S.TrustedRegs.reset(ClobberedRegs);
+    return S;
   }
 
   BitVector getClobberedRegs(const MCInst &Point) const {
@@ -551,6 +584,10 @@ class DataflowSrcSafetyAnalysis
   using SrcSafetyAnalysis::BC;
   using SrcSafetyAnalysis::computeNext;
 
+  // Pessimistic initial state for basic blocks without any predecessors
+  // (not needed for most functions, thus initialized lazily).
+  SrcState PessimisticState;
+
 public:
   DataflowSrcSafetyAnalysis(BinaryFunction &BF,
                             MCPlusBuilder::AllocatorIdTy AllocId,
@@ -593,10 +630,15 @@ protected:
 
     // If a basic block without any predecessors is found in an optimized code,
     // this likely means that some CFG edges were not detected. Pessimistically
-    // assume all registers to be unsafe before this basic block and warn about
-    // this fact in FunctionAnalysis::findUnsafeUses().
-    if (BB.pred_empty())
-      return createUnsafeState();
+    // assume any register that can ever be clobbered in this function to be
+    // unsafe before this basic block.
+    // Warn about this fact in FunctionAnalysis::findUnsafeUses(), as it likely
+    // means imprecise CFG information.
+    if (BB.pred_empty()) {
+      if (PessimisticState.empty())
+        PessimisticState = computePessimisticState(*BB.getParent());
+      return PessimisticState;
+    }
 
     return SrcState();
   }
@@ -701,6 +743,12 @@ class CFGUnawareSrcSafetyAnalysis : public SrcSafetyAnalysis,
                                     public CFGUnawareAnalysis<SrcState> {
   using SrcSafetyAnalysis::BC;
   BinaryFunction &BF;
+
+  /// Creates a state with all registers marked unsafe (not to be confused
+  /// with empty state).
+  SrcState createUnsafeState() const {
+    return SrcState(NumRegs, RegsToTrackInstsFor.getNumTrackedRegisters());
+  }
 
 public:
   CFGUnawareSrcSafetyAnalysis(BinaryFunction &BF,
@@ -1349,17 +1397,6 @@ shouldReportAuthOracle(const BinaryContext &BC, const MCInstReference &Inst,
     return std::nullopt;
 
   return make_gadget_report(AuthOracleKind, Inst, *AuthReg);
-}
-
-template <typename T> static void iterateOverInstrs(BinaryFunction &BF, T Fn) {
-  if (BF.hasCFG()) {
-    for (BinaryBasicBlock &BB : BF)
-      for (int64_t I = 0, E = BB.size(); I < E; ++I)
-        Fn(MCInstInBBReference(&BB, I));
-  } else {
-    for (auto I : BF.instrs())
-      Fn(MCInstInBFReference(&BF, I.first));
-  }
 }
 
 static SmallVector<MCPhysReg>
