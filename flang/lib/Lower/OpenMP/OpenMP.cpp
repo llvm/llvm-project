@@ -2682,14 +2682,14 @@ genTeamsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
       queue, item, clauseOps);
 }
 
-static mlir::omp::CoexecuteOp
-genCoexecuteOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
+static mlir::omp::WorkdistributeOp
+genWorkdistributeOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
             semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
             mlir::Location loc, const ConstructQueue &queue,
             ConstructQueue::const_iterator item) {
-  return genOpWithBody<mlir::omp::CoexecuteOp>(
+  return genOpWithBody<mlir::omp::WorkdistributeOp>(
     OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
-                      llvm::omp::Directive::OMPD_coexecute), queue, item);
+                      llvm::omp::Directive::OMPD_workdistribute), queue, item);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3306,16 +3306,15 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
     newOp = genTeamsOp(converter, symTable, stmtCtx, semaCtx, eval, loc, queue,
                        item);
     break;
-  case llvm::omp::Directive::OMPD_coexecute:
-    newOp = genCoexecuteOp(converter, symTable, semaCtx, eval, loc, queue, item);
-    break;
   case llvm::omp::Directive::OMPD_tile:
   case llvm::omp::Directive::OMPD_unroll: {
     unsigned version = semaCtx.langOptions().OpenMPVersion;
     TODO(loc, "Unhandled loop directive (" +
                   llvm::omp::getOpenMPDirectiveName(dir, version) + ")");
   }
-  // case llvm::omp::Directive::OMPD_workdistribute:
+  case llvm::omp::Directive::OMPD_workdistribute:
+    newOp = genWorkdistributeOp(converter, symTable, semaCtx, eval, loc, queue, item);
+    break;
   case llvm::omp::Directive::OMPD_workshare:
     newOp = genWorkshareOp(converter, symTable, stmtCtx, semaCtx, eval, loc,
                            queue, item);

@@ -1656,9 +1656,9 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPBlockConstruct &x) {
   case llvm::omp::Directive::OMPD_task:
   case llvm::omp::Directive::OMPD_taskgroup:
   case llvm::omp::Directive::OMPD_teams:
-  case llvm::omp::Directive::OMPD_coexecute:
-  case llvm::omp::Directive::OMPD_teams_coexecute:
-  case llvm::omp::Directive::OMPD_target_teams_coexecute:
+  case llvm::omp::Directive::OMPD_workdistribute:
+  case llvm::omp::Directive::OMPD_teams_workdistribute:
+  case llvm::omp::Directive::OMPD_target_teams_workdistribute:
   case llvm::omp::Directive::OMPD_workshare:
   case llvm::omp::Directive::OMPD_parallel_workshare:
   case llvm::omp::Directive::OMPD_target_teams:
@@ -1692,9 +1692,9 @@ void OmpAttributeVisitor::Post(const parser::OpenMPBlockConstruct &x) {
   case llvm::omp::Directive::OMPD_target:
   case llvm::omp::Directive::OMPD_task:
   case llvm::omp::Directive::OMPD_teams:
-  case llvm::omp::Directive::OMPD_coexecute:
-  case llvm::omp::Directive::OMPD_teams_coexecute:
-  case llvm::omp::Directive::OMPD_target_teams_coexecute:
+  case llvm::omp::Directive::OMPD_workdistribute:
+  case llvm::omp::Directive::OMPD_teams_workdistribute:
+  case llvm::omp::Directive::OMPD_target_teams_workdistribute:
   case llvm::omp::Directive::OMPD_parallel_workshare:
   case llvm::omp::Directive::OMPD_target_teams:
   case llvm::omp::Directive::OMPD_target_parallel: {
