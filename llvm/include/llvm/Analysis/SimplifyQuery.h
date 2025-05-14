@@ -9,6 +9,7 @@
 #ifndef LLVM_ANALYSIS_SIMPLIFYQUERY_H
 #define LLVM_ANALYSIS_SIMPLIFYQUERY_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/IR/Operator.h"
 
@@ -117,7 +118,7 @@ struct SimplifyQuery {
 
   /// If CanUseUndef is true, returns whether \p V is undef.
   /// Otherwise always return false.
-  bool isUndefValue(Value *V) const;
+  LLVM_ABI bool isUndefValue(Value *V) const;
 
   SimplifyQuery getWithoutDomCondCache() const {
     SimplifyQuery Copy(*this);

@@ -1,6 +1,7 @@
 #ifndef LLVM_ANALYSIS_STATICDATAPROFILEINFO_H
 #define LLVM_ANALYSIS_STATICDATAPROFILEINFO_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
@@ -22,7 +23,7 @@ public:
   DenseSet<const Constant *> ConstantWithoutCounts;
 
   /// If \p C has a count, return it. Otherwise, return std::nullopt.
-  std::optional<uint64_t> getConstantProfileCount(const Constant *C) const;
+  LLVM_ABI std::optional<uint64_t> getConstantProfileCount(const Constant *C) const;
 
 public:
   StaticDataProfileInfo() = default;
@@ -31,7 +32,7 @@ public:
   /// C in a saturating way, and clamp the count to \p getInstrMaxCountValue if
   /// the result exceeds it. Otherwise, mark the constant as having no profile
   /// count.
-  void addConstantProfileCount(const Constant *C,
+  LLVM_ABI void addConstantProfileCount(const Constant *C,
                                std::optional<uint64_t> Count);
 
   /// Return a section prefix for the constant \p C based on its profile count.
@@ -42,13 +43,13 @@ public:
   ///   - If it has a cold count, return "unlikely".
   ///   - Otherwise (e.g. it's used by lukewarm functions), return an empty
   ///     string.
-  StringRef getConstantSectionPrefix(const Constant *C,
+  LLVM_ABI StringRef getConstantSectionPrefix(const Constant *C,
                                      const ProfileSummaryInfo *PSI) const;
 };
 
 /// This wraps the StaticDataProfileInfo object as an immutable pass, for a
 /// backend pass to operate on.
-class StaticDataProfileInfoWrapperPass : public ImmutablePass {
+class LLVM_ABI StaticDataProfileInfoWrapperPass : public ImmutablePass {
 public:
   static char ID;
   StaticDataProfileInfoWrapperPass();

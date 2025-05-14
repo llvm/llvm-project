@@ -9,6 +9,7 @@
 #ifndef LLVM_ANALYSIS_TARGETLIBRARYINFO_H
 #define LLVM_ANALYSIS_TARGETLIBRARYINFO_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/InstrTypes.h"
@@ -65,7 +66,7 @@ public:
 
   /// Returns a vector function ABI variant string on the form:
   ///    _ZGV<isa><mask><vlen><vparams>_<scalarname>(<vectorname>)
-  std::string getVectorFunctionABIVariantString() const;
+  LLVM_ABI std::string getVectorFunctionABIVariantString() const;
 };
 
   enum LibFunc : unsigned {
@@ -87,7 +88,7 @@ class TargetLibraryInfoImpl {
 
   unsigned char AvailableArray[(NumLibFuncs+3)/4];
   DenseMap<unsigned, std::string> CustomNames;
-  static StringLiteral const StandardNames[NumLibFuncs];
+  LLVM_ABI static StringLiteral const StandardNames[NumLibFuncs];
   bool ShouldExtI32Param, ShouldExtI32Return, ShouldSignExtI32Param, ShouldSignExtI32Return;
   unsigned SizeOfInt;
 
@@ -112,7 +113,7 @@ class TargetLibraryInfoImpl {
 
   /// Return true if the function type FTy is valid for the library function
   /// F, regardless of whether the function is available.
-  bool isValidProtoForLibFunc(const FunctionType &FTy, LibFunc F,
+  LLVM_ABI bool isValidProtoForLibFunc(const FunctionType &FTy, LibFunc F,
                               const Module &M) const;
 
 public:
@@ -135,20 +136,20 @@ public:
     AMDLIBM      // AMD Math Vector library.
   };
 
-  TargetLibraryInfoImpl();
-  explicit TargetLibraryInfoImpl(const Triple &T);
+  LLVM_ABI TargetLibraryInfoImpl();
+  LLVM_ABI explicit TargetLibraryInfoImpl(const Triple &T);
 
   // Provide value semantics.
-  TargetLibraryInfoImpl(const TargetLibraryInfoImpl &TLI);
-  TargetLibraryInfoImpl(TargetLibraryInfoImpl &&TLI);
-  TargetLibraryInfoImpl &operator=(const TargetLibraryInfoImpl &TLI);
-  TargetLibraryInfoImpl &operator=(TargetLibraryInfoImpl &&TLI);
+  LLVM_ABI TargetLibraryInfoImpl(const TargetLibraryInfoImpl &TLI);
+  LLVM_ABI TargetLibraryInfoImpl(TargetLibraryInfoImpl &&TLI);
+  LLVM_ABI TargetLibraryInfoImpl &operator=(const TargetLibraryInfoImpl &TLI);
+  LLVM_ABI TargetLibraryInfoImpl &operator=(TargetLibraryInfoImpl &&TLI);
 
   /// Searches for a particular function name.
   ///
   /// If it is one of the known library functions, return true and set F to the
   /// corresponding value.
-  bool getLibFunc(StringRef funcName, LibFunc &F) const;
+  LLVM_ABI bool getLibFunc(StringRef funcName, LibFunc &F) const;
 
   /// Searches for a particular function name, also checking that its type is
   /// valid for the library function matching that name.
@@ -157,11 +158,11 @@ public:
   /// corresponding value.
   ///
   /// FDecl is assumed to have a parent Module when using this function.
-  bool getLibFunc(const Function &FDecl, LibFunc &F) const;
+  LLVM_ABI bool getLibFunc(const Function &FDecl, LibFunc &F) const;
 
   /// Searches for a function name using an Instruction \p Opcode.
   /// Currently, only the frem instruction is supported.
-  bool getLibFunc(unsigned int Opcode, Type *Ty, LibFunc &F) const;
+  LLVM_ABI bool getLibFunc(unsigned int Opcode, Type *Ty, LibFunc &F) const;
 
   /// Forces a function to be marked as unavailable.
   void setUnavailable(LibFunc F) {
@@ -188,15 +189,15 @@ public:
   /// Disables all builtins.
   ///
   /// This can be used for options like -fno-builtin.
-  void disableAllFunctions();
+  LLVM_ABI void disableAllFunctions();
 
   /// Add a set of scalar -> vector mappings, queryable via
   /// getVectorizedFunction and getScalarizedFunction.
-  void addVectorizableFunctions(ArrayRef<VecDesc> Fns);
+  LLVM_ABI void addVectorizableFunctions(ArrayRef<VecDesc> Fns);
 
   /// Calls addVectorizableFunctions with a known preset of functions for the
   /// given vector library.
-  void addVectorizableFunctionsFromVecLib(enum VectorLibrary VecLib,
+  LLVM_ABI void addVectorizableFunctionsFromVecLib(enum VectorLibrary VecLib,
                                           const llvm::Triple &TargetTriple);
 
   /// Return true if the function F has a vector equivalent with vectorization
@@ -208,17 +209,17 @@ public:
 
   /// Return true if the function F has a vector equivalent with any
   /// vectorization factor.
-  bool isFunctionVectorizable(StringRef F) const;
+  LLVM_ABI bool isFunctionVectorizable(StringRef F) const;
 
   /// Return the name of the equivalent of F, vectorized with factor VF. If no
   /// such mapping exists, return the empty string.
-  StringRef getVectorizedFunction(StringRef F, const ElementCount &VF,
+  LLVM_ABI StringRef getVectorizedFunction(StringRef F, const ElementCount &VF,
                                   bool Masked) const;
 
   /// Return a pointer to a VecDesc object holding all info for scalar to vector
   /// mappings in TLI for the equivalent of F, vectorized with factor VF.
   /// If no such mapping exists, return nullpointer.
-  const VecDesc *getVectorMappingInfo(StringRef F, const ElementCount &VF,
+  LLVM_ABI const VecDesc *getVectorMappingInfo(StringRef F, const ElementCount &VF,
                                       bool Masked) const;
 
   /// Set to true iff i32 parameters to library functions should have signext
@@ -249,10 +250,10 @@ public:
 
   /// Returns the size of the wchar_t type in bytes or 0 if the size is unknown.
   /// This queries the 'wchar_size' metadata.
-  unsigned getWCharSize(const Module &M) const;
+  LLVM_ABI unsigned getWCharSize(const Module &M) const;
 
   /// Returns the size of the size_t type in bits.
-  unsigned getSizeTSize(const Module &M) const;
+  LLVM_ABI unsigned getSizeTSize(const Module &M) const;
 
   /// Get size of a C-level int or unsigned int, in bits.
   unsigned getIntSize() const {
@@ -266,13 +267,13 @@ public:
 
   /// Returns the largest vectorization factor used in the list of
   /// vector functions.
-  void getWidestVF(StringRef ScalarF, ElementCount &FixedVF,
+  LLVM_ABI void getWidestVF(StringRef ScalarF, ElementCount &FixedVF,
                    ElementCount &Scalable) const;
 
   /// Returns true if call site / callee has cdecl-compatible calling
   /// conventions.
-  static bool isCallingConvCCompatible(CallBase *CI);
-  static bool isCallingConvCCompatible(Function *Callee);
+  LLVM_ABI static bool isCallingConvCCompatible(CallBase *CI);
+  LLVM_ABI static bool isCallingConvCCompatible(Function *Callee);
 };
 
 /// Provides information about what library functions are available for
@@ -630,7 +631,7 @@ public:
   TargetLibraryAnalysis(TargetLibraryInfoImpl BaselineInfoImpl)
       : BaselineInfoImpl(std::move(BaselineInfoImpl)) {}
 
-  TargetLibraryInfo run(const Function &F, FunctionAnalysisManager &);
+  LLVM_ABI TargetLibraryInfo run(const Function &F, FunctionAnalysisManager &);
 
 private:
   friend AnalysisInfoMixin<TargetLibraryAnalysis>;
@@ -639,7 +640,7 @@ private:
   std::optional<TargetLibraryInfoImpl> BaselineInfoImpl;
 };
 
-class TargetLibraryInfoWrapperPass : public ImmutablePass {
+class LLVM_ABI TargetLibraryInfoWrapperPass : public ImmutablePass {
   TargetLibraryAnalysis TLA;
   std::optional<TargetLibraryInfo> TLI;
 

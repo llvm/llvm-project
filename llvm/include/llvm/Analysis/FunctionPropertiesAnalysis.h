@@ -14,6 +14,7 @@
 #ifndef LLVM_ANALYSIS_FUNCTIONPROPERTIESANALYSIS_H
 #define LLVM_ANALYSIS_FUNCTIONPROPERTIESANALYSIS_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/PassManager.h"
@@ -32,11 +33,11 @@ class FunctionPropertiesInfo {
   void reIncludeBB(const BasicBlock &BB);
 
 public:
-  static FunctionPropertiesInfo
+  LLVM_ABI static FunctionPropertiesInfo
   getFunctionPropertiesInfo(const Function &F, const DominatorTree &DT,
                             const LoopInfo &LI);
 
-  static FunctionPropertiesInfo
+  LLVM_ABI static FunctionPropertiesInfo
   getFunctionPropertiesInfo(Function &F, FunctionAnalysisManager &FAM);
 
   bool operator==(const FunctionPropertiesInfo &FPI) const {
@@ -47,7 +48,7 @@ public:
     return !(*this == FPI);
   }
 
-  void print(raw_ostream &OS) const;
+  LLVM_ABI void print(raw_ostream &OS) const;
 
   /// Number of basic blocks
   int64_t BasicBlockCount = 0;
@@ -143,11 +144,11 @@ class FunctionPropertiesAnalysis
     : public AnalysisInfoMixin<FunctionPropertiesAnalysis> {
 
 public:
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
   using Result = const FunctionPropertiesInfo;
 
-  FunctionPropertiesInfo run(Function &F, FunctionAnalysisManager &FAM);
+  LLVM_ABI FunctionPropertiesInfo run(Function &F, FunctionAnalysisManager &FAM);
 };
 
 /// Printer pass for the FunctionPropertiesAnalysis results.
@@ -158,7 +159,7 @@ class FunctionPropertiesPrinterPass
 public:
   explicit FunctionPropertiesPrinterPass(raw_ostream &OS) : OS(OS) {}
 
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
   static bool isRequired() { return true; }
 };
@@ -171,9 +172,9 @@ public:
 /// inlining.
 class FunctionPropertiesUpdater {
 public:
-  FunctionPropertiesUpdater(FunctionPropertiesInfo &FPI, CallBase &CB);
+  LLVM_ABI FunctionPropertiesUpdater(FunctionPropertiesInfo &FPI, CallBase &CB);
 
-  void finish(FunctionAnalysisManager &FAM) const;
+  LLVM_ABI void finish(FunctionAnalysisManager &FAM) const;
   bool finishAndTest(FunctionAnalysisManager &FAM) const {
     finish(FAM);
     return isUpdateValid(Caller, FPI, FAM);
@@ -184,7 +185,7 @@ private:
   BasicBlock &CallSiteBB;
   Function &Caller;
 
-  static bool isUpdateValid(Function &F, const FunctionPropertiesInfo &FPI,
+  LLVM_ABI static bool isUpdateValid(Function &F, const FunctionPropertiesInfo &FPI,
                             FunctionAnalysisManager &FAM);
 
   DominatorTree &getUpdatedDominatorTree(FunctionAnalysisManager &FAM) const;

@@ -13,6 +13,7 @@
 #ifndef LLVM_ANALYSIS_PHITRANSADDR_H
 #define LLVM_ANALYSIS_PHITRANSADDR_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Instruction.h"
 
@@ -70,12 +71,12 @@ public:
   /// isPotentiallyPHITranslatable - If this needs PHI translation, return true
   /// if we have some hope of doing it.  This should be used as a filter to
   /// avoid calling PHITranslateValue in hopeless situations.
-  bool isPotentiallyPHITranslatable() const;
+  LLVM_ABI bool isPotentiallyPHITranslatable() const;
 
   /// translateValue - PHI translate the current address up the CFG from
   /// CurBB to Pred, updating our state to reflect any needed changes.  If
   /// 'MustDominate' is true, the translated value must dominate PredBB.
-  Value *translateValue(BasicBlock *CurBB, BasicBlock *PredBB,
+  LLVM_ABI Value *translateValue(BasicBlock *CurBB, BasicBlock *PredBB,
                         const DominatorTree *DT, bool MustDominate);
 
   /// translateWithInsertion - PHI translate this value into the specified
@@ -85,16 +86,16 @@ public:
   /// All newly created instructions are added to the NewInsts list.  This
   /// returns null on failure.
   ///
-  Value *translateWithInsertion(BasicBlock *CurBB, BasicBlock *PredBB,
+  LLVM_ABI Value *translateWithInsertion(BasicBlock *CurBB, BasicBlock *PredBB,
                                 const DominatorTree &DT,
                                 SmallVectorImpl<Instruction *> &NewInsts);
 
-  void dump() const;
+  LLVM_ABI void dump() const;
 
   /// verify - Check internal consistency of this data structure.  If the
   /// structure is valid, it returns true.  If invalid, it prints errors and
   /// returns false.
-  bool verify() const;
+  LLVM_ABI bool verify() const;
 
 private:
   Value *translateSubExpr(Value *V, BasicBlock *CurBB, BasicBlock *PredBB,

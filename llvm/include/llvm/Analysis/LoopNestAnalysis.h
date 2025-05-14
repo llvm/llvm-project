@@ -14,6 +14,7 @@
 #ifndef LLVM_ANALYSIS_LOOPNESTANALYSIS_H
 #define LLVM_ANALYSIS_LOOPNESTANALYSIS_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -195,7 +196,7 @@ private:
                                                     ScalarEvolution &SE);
 };
 
-raw_ostream &operator<<(raw_ostream &, const LoopNest &);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &, const LoopNest &);
 
 /// This analysis provides information for a loop nest. The analysis runs on
 /// demand and can be initiated via AM.getResult<LoopNestAnalysis>.
@@ -205,7 +206,7 @@ class LoopNestAnalysis : public AnalysisInfoMixin<LoopNestAnalysis> {
 
 public:
   using Result = LoopNest;
-  Result run(Loop &L, LoopAnalysisManager &AM, LoopStandardAnalysisResults &AR);
+  LLVM_ABI Result run(Loop &L, LoopAnalysisManager &AM, LoopStandardAnalysisResults &AR);
 };
 
 /// Printer pass for the \c LoopNest results.
@@ -215,7 +216,7 @@ class LoopNestPrinterPass : public PassInfoMixin<LoopNestPrinterPass> {
 public:
   explicit LoopNestPrinterPass(raw_ostream &OS) : OS(OS) {}
 
-  PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
+  LLVM_ABI PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
                         LoopStandardAnalysisResults &AR, LPMUpdater &U);
 
   static bool isRequired() { return true; }

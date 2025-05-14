@@ -14,6 +14,7 @@
 #ifndef LLVM_ANALYSIS_EPHEMERALVALUESCACHE_H
 #define LLVM_ANALYSIS_EPHEMERALVALUESCACHE_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/IR/PassManager.h"
 
@@ -30,7 +31,7 @@ class EphemeralValuesCache {
   AssumptionCache &AC;
   bool Collected = false;
 
-  void collectEphemeralValues();
+  LLVM_ABI void collectEphemeralValues();
 
 public:
   EphemeralValuesCache(Function &F, AssumptionCache &AC) : F(F), AC(AC) {}
@@ -52,7 +53,7 @@ class EphemeralValuesAnalysis
 
 public:
   using Result = EphemeralValuesCache;
-  Result run(Function &F, FunctionAnalysisManager &FAM);
+  LLVM_ABI Result run(Function &F, FunctionAnalysisManager &FAM);
 };
 
 } // namespace llvm
