@@ -1240,9 +1240,9 @@ llvm::DILocation *CodeGenFunction::SanitizerAnnotateDebugInfo(
   if (((ClArrayBoundsPseudoFn &&
         CheckKindOrdinal == SanitizerKind::SO_ArrayBounds) ||
        CGM.getCodeGenOpts().SanitizeAnnotateDebugInfo.has(CheckKindOrdinal)) &&
-      CheckDI) {
+      CheckDI)
     CheckDI = getDebugInfo()->CreateSyntheticInlineAt(CheckDI, Label);
-  }
+
   return CheckDI;
 }
 
