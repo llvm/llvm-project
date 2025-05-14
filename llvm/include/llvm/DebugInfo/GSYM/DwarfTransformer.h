@@ -9,10 +9,10 @@
 #ifndef LLVM_DEBUGINFO_GSYM_DWARFTRANSFORMER_H
 #define LLVM_DEBUGINFO_GSYM_DWARFTRANSFORMER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/GSYM/ExtractRanges.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {

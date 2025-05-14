@@ -9,7 +9,6 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_DEBUGINLINEELINESSUBSECTION_H
 #define LLVM_DEBUGINFO_CODEVIEW_DEBUGINLINEELINESSUBSECTION_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/DebugSubsection.h"
@@ -17,6 +16,7 @@
 #include "llvm/Support/BinaryStreamArray.h"
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/BinaryStreamRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
@@ -51,7 +51,7 @@ struct InlineeSourceLine {
 
 template <> struct VarStreamArrayExtractor<codeview::InlineeSourceLine> {
   LLVM_ABI Error operator()(BinaryStreamRef Stream, uint32_t &Len,
-                   codeview::InlineeSourceLine &Item);
+                            codeview::InlineeSourceLine &Item);
 
   bool HasExtraFiles = false;
 };

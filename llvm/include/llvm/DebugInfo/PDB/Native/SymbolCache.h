@@ -9,7 +9,6 @@
 #ifndef LLVM_DEBUGINFO_PDB_NATIVE_SYMBOLCACHE_H
 #define LLVM_DEBUGINFO_PDB_NATIVE_SYMBOLCACHE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
@@ -19,6 +18,7 @@
 #include "llvm/DebugInfo/PDB/Native/NativeRawSymbol.h"
 #include "llvm/DebugInfo/PDB/Native/NativeSourceFile.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
+#include "llvm/Support/Compiler.h"
 
 #include <memory>
 #include <vector>
@@ -171,8 +171,9 @@ public:
 
   LLVM_ABI SymIndexId getOrCreateGlobalSymbolByOffset(uint32_t Offset);
   LLVM_ABI SymIndexId getOrCreateInlineSymbol(codeview::InlineSiteSym Sym,
-                                     uint64_t ParentAddr, uint16_t Modi,
-                                     uint32_t RecordOffset) const;
+                                              uint64_t ParentAddr,
+                                              uint16_t Modi,
+                                              uint32_t RecordOffset) const;
 
   LLVM_ABI std::unique_ptr<PDBSymbol>
   findSymbolBySectOffset(uint32_t Sect, uint32_t Offset, PDB_SymType Type);
@@ -180,7 +181,8 @@ public:
   LLVM_ABI std::unique_ptr<IPDBEnumLineNumbers>
   findLineNumbersByVA(uint64_t VA, uint32_t Length) const;
 
-  LLVM_ABI std::unique_ptr<PDBSymbolCompiland> getOrCreateCompiland(uint32_t Index);
+  LLVM_ABI std::unique_ptr<PDBSymbolCompiland>
+  getOrCreateCompiland(uint32_t Index);
   LLVM_ABI uint32_t getNumCompilands() const;
 
   LLVM_ABI std::unique_ptr<PDBSymbol> getSymbolById(SymIndexId SymbolId) const;
@@ -192,7 +194,8 @@ public:
     return static_cast<ConcreteT &>(getNativeSymbolById(SymbolId));
   }
 
-  LLVM_ABI std::unique_ptr<IPDBSourceFile> getSourceFileById(SymIndexId FileId) const;
+  LLVM_ABI std::unique_ptr<IPDBSourceFile>
+  getSourceFileById(SymIndexId FileId) const;
   LLVM_ABI SymIndexId
   getOrCreateSourceFile(const codeview::FileChecksumEntry &Checksum) const;
 };

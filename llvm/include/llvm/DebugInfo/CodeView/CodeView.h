@@ -528,7 +528,8 @@ enum class EncodedFramePtrReg : uint8_t {
   BasePtr = 3,
 };
 
-LLVM_ABI RegisterId decodeFramePtrReg(EncodedFramePtrReg EncodedReg, CPUType CPU);
+LLVM_ABI RegisterId decodeFramePtrReg(EncodedFramePtrReg EncodedReg,
+                                      CPUType CPU);
 
 LLVM_ABI EncodedFramePtrReg encodeFramePtrReg(RegisterId Reg, CPUType CPU);
 

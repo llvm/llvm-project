@@ -9,11 +9,11 @@
 #ifndef LLVM_DEBUGINFO_PDB_NATIVE_FORMATUTIL_H
 #define LLVM_DEBUGINFO_PDB_NATIVE_FORMATUTIL_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -50,14 +50,15 @@ LLVM_ABI std::string formatSectionCharacteristics(
     StringRef Separator,
     CharacteristicStyle Style = CharacteristicStyle::HeaderDefinition);
 
-LLVM_ABI std::string typesetItemList(ArrayRef<std::string> Opts, uint32_t IndentLevel,
-                            uint32_t GroupSize, StringRef Sep);
+LLVM_ABI std::string typesetItemList(ArrayRef<std::string> Opts,
+                                     uint32_t IndentLevel, uint32_t GroupSize,
+                                     StringRef Sep);
 
 LLVM_ABI std::string typesetStringList(uint32_t IndentLevel,
-                              ArrayRef<StringRef> Strings);
+                                       ArrayRef<StringRef> Strings);
 
 LLVM_ABI std::string formatChunkKind(codeview::DebugSubsectionKind Kind,
-                            bool Friendly = true);
+                                     bool Friendly = true);
 LLVM_ABI std::string formatSymbolKind(codeview::SymbolKind K);
 LLVM_ABI std::string formatTypeLeafKind(codeview::TypeLeafKind K);
 

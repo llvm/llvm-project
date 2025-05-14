@@ -14,9 +14,9 @@
 #ifndef LLVM_DEBUGINFO_BTF_BTFCONTEXT_H
 #define LLVM_DEBUGINFO_BTF_BTFCONTEXT_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/DebugInfo/BTF/BTFParser.h"
 #include "llvm/DebugInfo/DIContext.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

@@ -9,7 +9,6 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_SYMBOLRECORD_H
 #define LLVM_DEBUGINFO_CODEVIEW_SYMBOLRECORD_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
@@ -20,6 +19,7 @@
 #include "llvm/DebugInfo/CodeView/RecordSerialization.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/Support/BinaryStreamArray.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include <cstdint>
 #include <vector>
@@ -1025,7 +1025,7 @@ public:
 };
 
 LLVM_ABI Expected<CVSymbol> readSymbolFromStream(BinaryStreamRef Stream,
-                                        uint32_t Offset);
+                                                 uint32_t Offset);
 
 } // end namespace codeview
 } // end namespace llvm

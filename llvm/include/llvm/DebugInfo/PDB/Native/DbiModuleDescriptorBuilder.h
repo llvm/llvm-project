@@ -9,13 +9,13 @@
 #ifndef LLVM_DEBUGINFO_PDB_NATIVE_DBIMODULEDESCRIPTORBUILDER_H
 #define LLVM_DEBUGINFO_PDB_NATIVE_DBIMODULEDESCRIPTORBUILDER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/CodeView/DebugSubsectionRecord.h"
 #include "llvm/DebugInfo/PDB/Native/RawTypes.h"
 #include "llvm/Support/BinaryStreamRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
 #include <string>
@@ -66,7 +66,7 @@ class DbiModuleDescriptorBuilder {
 
 public:
   LLVM_ABI DbiModuleDescriptorBuilder(StringRef ModuleName, uint32_t ModIndex,
-                             msf::MSFBuilder &Msf);
+                                      msf::MSFBuilder &Msf);
   LLVM_ABI ~DbiModuleDescriptorBuilder();
 
   DbiModuleDescriptorBuilder(const DbiModuleDescriptorBuilder &) = delete;
@@ -127,7 +127,7 @@ public:
   /// in parallel on different DbiModuleDescriptorBuilder objects. Only modifies
   /// the pre-allocated stream in question.
   LLVM_ABI Error commitSymbolStream(const msf::MSFLayout &MsfLayout,
-                           WritableBinaryStreamRef MsfBuffer);
+                                    WritableBinaryStreamRef MsfBuffer);
 
 private:
   uint32_t calculateC13DebugInfoSize() const;

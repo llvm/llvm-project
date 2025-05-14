@@ -9,9 +9,9 @@
 #ifndef LLVM_DEBUGINFO_DWARF_DWARFDATAEXTRACTOR_H
 #define LLVM_DEBUGINFO_DWARF_DWARFDATAEXTRACTOR_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFSection.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataExtractor.h"
 
 namespace llvm {
@@ -61,8 +61,8 @@ public:
   /// Extracts a value and applies a relocation to the result if
   /// one exists for the given offset.
   LLVM_ABI uint64_t getRelocatedValue(uint32_t Size, uint64_t *Off,
-                             uint64_t *SectionIndex = nullptr,
-                             Error *Err = nullptr) const;
+                                      uint64_t *SectionIndex = nullptr,
+                                      Error *Err = nullptr) const;
   uint64_t getRelocatedValue(Cursor &C, uint32_t Size,
                              uint64_t *SectionIndex = nullptr) const {
     return getRelocatedValue(Size, &getOffset(C), SectionIndex, &getError(C));
@@ -82,8 +82,9 @@ public:
   /// There is a DWARF encoding that uses a PC-relative adjustment.
   /// For these values, \p AbsPosOffset is used to fix them, which should
   /// reflect the absolute address of this pointer.
-  LLVM_ABI std::optional<uint64_t> getEncodedPointer(uint64_t *Offset, uint8_t Encoding,
-                                            uint64_t AbsPosOffset = 0) const;
+  LLVM_ABI std::optional<uint64_t>
+  getEncodedPointer(uint64_t *Offset, uint8_t Encoding,
+                    uint64_t AbsPosOffset = 0) const;
 };
 
 } // end namespace llvm

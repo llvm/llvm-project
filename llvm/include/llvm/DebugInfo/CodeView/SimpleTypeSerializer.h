@@ -9,8 +9,8 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_SIMPLETYPESERIALIZER_H
 #define LLVM_DEBUGINFO_CODEVIEW_SIMPLETYPESERIALIZER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/Compiler.h"
 #include <vector>
 
 namespace llvm {

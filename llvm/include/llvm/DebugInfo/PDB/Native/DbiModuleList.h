@@ -9,13 +9,13 @@
 #ifndef LLVM_DEBUGINFO_PDB_NATIVE_DBIMODULELIST_H
 #define LLVM_DEBUGINFO_PDB_NATIVE_DBIMODULELIST_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/DebugInfo/PDB/Native/DbiModuleDescriptor.h"
 #include "llvm/Support/BinaryStreamArray.h"
 #include "llvm/Support/BinaryStreamRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include <cstddef>
@@ -35,8 +35,8 @@ class DbiModuleSourceFilesIterator
   using BaseType = typename DbiModuleSourceFilesIterator::iterator_facade_base;
 
 public:
-  LLVM_ABI DbiModuleSourceFilesIterator(const DbiModuleList &Modules, uint32_t Modi,
-                               uint16_t Filei);
+  LLVM_ABI DbiModuleSourceFilesIterator(const DbiModuleList &Modules,
+                                        uint32_t Modi, uint16_t Filei);
   DbiModuleSourceFilesIterator() = default;
   DbiModuleSourceFilesIterator(const DbiModuleSourceFilesIterator &R) = default;
   DbiModuleSourceFilesIterator &
@@ -48,7 +48,8 @@ public:
   StringRef &operator*() { return ThisValue; }
 
   LLVM_ABI bool operator<(const DbiModuleSourceFilesIterator &RHS) const;
-  LLVM_ABI std::ptrdiff_t operator-(const DbiModuleSourceFilesIterator &R) const;
+  LLVM_ABI std::ptrdiff_t
+  operator-(const DbiModuleSourceFilesIterator &R) const;
   LLVM_ABI DbiModuleSourceFilesIterator &operator+=(std::ptrdiff_t N);
   LLVM_ABI DbiModuleSourceFilesIterator &operator-=(std::ptrdiff_t N);
 

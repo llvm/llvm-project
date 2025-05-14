@@ -9,10 +9,10 @@
 #ifndef LLVM_DEBUGINFO_PDB_NATIVE_PDBSTRINGTABLE_H
 #define LLVM_DEBUGINFO_PDB_NATIVE_PDBSTRINGTABLE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/CodeView/DebugStringTableSubsection.h"
 #include "llvm/Support/BinaryStreamArray.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
@@ -38,7 +38,8 @@ public:
 
   LLVM_ABI FixedStreamArray<support::ulittle32_t> name_ids() const;
 
-  LLVM_ABI const codeview::DebugStringTableSubsectionRef &getStringTable() const;
+  LLVM_ABI const codeview::DebugStringTableSubsectionRef &
+  getStringTable() const;
 
 private:
   Error readHeader(BinaryStreamReader &Reader);

@@ -9,9 +9,9 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_STRINGSANDCHECKSUMS_H
 #define LLVM_DEBUGINFO_CODEVIEW_STRINGSANDCHECKSUMS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/DebugSubsectionRecord.h"
+#include "llvm/Support/Compiler.h"
 #include <memory>
 
 namespace llvm {
@@ -27,11 +27,12 @@ public:
   LLVM_ABI StringsAndChecksumsRef();
 
   // If only a string table subsection is given, we find a checksums subsection.
-  LLVM_ABI explicit StringsAndChecksumsRef(const DebugStringTableSubsectionRef &Strings);
+  LLVM_ABI explicit StringsAndChecksumsRef(
+      const DebugStringTableSubsectionRef &Strings);
 
   // If both subsections are given, we don't need to find anything.
   LLVM_ABI StringsAndChecksumsRef(const DebugStringTableSubsectionRef &Strings,
-                         const DebugChecksumsSubsectionRef &Checksums);
+                                  const DebugChecksumsSubsectionRef &Checksums);
 
   LLVM_ABI void setStrings(const DebugStringTableSubsectionRef &Strings);
   LLVM_ABI void setChecksums(const DebugChecksumsSubsectionRef &CS);

@@ -9,12 +9,12 @@
 #ifndef LLVM_DEBUGINFO_PDB_NATIVE_TPISTREAM_H
 #define LLVM_DEBUGINFO_PDB_NATIVE_TPISTREAM_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/PDB/Native/HashTable.h"
 #include "llvm/DebugInfo/PDB/Native/RawConstants.h"
 #include "llvm/Support/BinaryStreamArray.h"
 #include "llvm/Support/BinaryStreamRef.h"
+#include "llvm/Support/Compiler.h"
 
 #include "llvm/Support/Error.h"
 
@@ -36,7 +36,8 @@ class TpiStream {
   friend class TpiStreamBuilder;
 
 public:
-  LLVM_ABI TpiStream(PDBFile &File, std::unique_ptr<msf::MappedBlockStream> Stream);
+  LLVM_ABI TpiStream(PDBFile &File,
+                     std::unique_ptr<msf::MappedBlockStream> Stream);
   LLVM_ABI ~TpiStream();
   LLVM_ABI Error reload();
 
@@ -51,7 +52,8 @@ public:
   LLVM_ABI uint32_t getHashKeySize() const;
   LLVM_ABI uint32_t getNumHashBuckets() const;
   LLVM_ABI FixedStreamArray<support::ulittle32_t> getHashValues() const;
-  LLVM_ABI FixedStreamArray<codeview::TypeIndexOffset> getTypeIndexOffsets() const;
+  LLVM_ABI FixedStreamArray<codeview::TypeIndexOffset>
+  getTypeIndexOffsets() const;
   LLVM_ABI HashTable<support::ulittle32_t> &getHashAdjusters();
 
   LLVM_ABI codeview::CVTypeRange types(bool *HadError) const;
@@ -62,7 +64,8 @@ public:
   LLVM_ABI Expected<codeview::TypeIndex>
   findFullDeclForForwardRef(codeview::TypeIndex ForwardRefTI) const;
 
-  LLVM_ABI std::vector<codeview::TypeIndex> findRecordsByName(StringRef Name) const;
+  LLVM_ABI std::vector<codeview::TypeIndex>
+  findRecordsByName(StringRef Name) const;
 
   LLVM_ABI codeview::CVType getType(codeview::TypeIndex Index);
 

@@ -41,7 +41,8 @@ public:
   /// \returns An error indicating any fatal issues that happen when parsing
   /// the DWARF, or Error::success() if all goes well.
   LLVM_ABI static llvm::Error convert(const object::ObjectFile &Obj,
-                             OutputAggregator &Output, GsymCreator &Gsym);
+                                      OutputAggregator &Output,
+                                      GsymCreator &Gsym);
 };
 
 } // namespace gsym

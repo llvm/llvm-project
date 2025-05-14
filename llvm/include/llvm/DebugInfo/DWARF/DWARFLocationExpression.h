@@ -9,8 +9,8 @@
 #ifndef LLVM_DEBUGINFO_DWARF_DWARFLOCATIONEXPRESSION_H
 #define LLVM_DEBUGINFO_DWARF_DWARFLOCATIONEXPRESSION_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/DebugInfo/DWARF/DWARFAddressRange.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -39,7 +39,8 @@ inline bool operator!=(const DWARFLocationExpression &L,
   return !(L == R);
 }
 
-LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const DWARFLocationExpression &Loc);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
+                                 const DWARFLocationExpression &Loc);
 
 /// Represents a set of absolute location expressions.
 using DWARFLocationExpressionsVector = std::vector<DWARFLocationExpression>;

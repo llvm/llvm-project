@@ -9,7 +9,6 @@
 #ifndef LLVM_DEBUGINFO_DWARF_DWARFDIE_H
 #define LLVM_DEBUGINFO_DWARF_DWARFDIE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
@@ -19,6 +18,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFAttribute.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugInfoEntry.h"
 #include "llvm/DebugInfo/DWARF/DWARFLocationExpression.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstdint>
 #include <iterator>
@@ -126,7 +126,7 @@ public:
   /// \param OS the stream to use for output.
   /// \param indent the number of characters to indent each line that is output.
   LLVM_ABI void dump(raw_ostream &OS, unsigned indent = 0,
-            DIDumpOptions DumpOpts = DIDumpOptions()) const;
+                     DIDumpOptions DumpOpts = DIDumpOptions()) const;
 
   /// Convenience zero-argument overload for debugging.
   LLVM_ABI LLVM_DUMP_METHOD void dump() const;
@@ -153,7 +153,8 @@ public:
   /// \returns an optional that has a valid DWARFFormValue for the first
   /// matching attribute in Attrs, or std::nullopt if none of the attributes in
   /// Attrs exist in this DIE.
-  LLVM_ABI std::optional<DWARFFormValue> find(ArrayRef<dwarf::Attribute> Attrs) const;
+  LLVM_ABI std::optional<DWARFFormValue>
+  find(ArrayRef<dwarf::Attribute> Attrs) const;
 
   /// Extract the first value of any attribute in Attrs from this DIE and
   /// recurse into any DW_AT_specification or DW_AT_abstract_origin referenced
@@ -180,8 +181,10 @@ public:
   /// \param Attr the attribute to extract.
   /// \returns a valid DWARFDie instance if the attribute exists, or an invalid
   /// DWARFDie object if it doesn't.
-  LLVM_ABI DWARFDie getAttributeValueAsReferencedDie(dwarf::Attribute Attr) const;
-  LLVM_ABI DWARFDie getAttributeValueAsReferencedDie(const DWARFFormValue &V) const;
+  LLVM_ABI DWARFDie
+  getAttributeValueAsReferencedDie(dwarf::Attribute Attr) const;
+  LLVM_ABI DWARFDie
+  getAttributeValueAsReferencedDie(const DWARFFormValue &V) const;
 
   LLVM_ABI DWARFDie resolveTypeUnitReference() const;
 
@@ -211,7 +214,7 @@ public:
   /// Retrieves DW_AT_low_pc and DW_AT_high_pc from CU.
   /// Returns true if both attributes are present.
   LLVM_ABI bool getLowAndHighPC(uint64_t &LowPC, uint64_t &HighPC,
-                       uint64_t &SectionIndex) const;
+                                uint64_t &SectionIndex) const;
 
   /// Get the address ranges for this DIE.
   ///
@@ -244,7 +247,7 @@ public:
   /// Returns null if no name is found.
   LLVM_ABI const char *getName(DINameKind Kind) const;
   LLVM_ABI void getFullName(raw_string_ostream &,
-                   std::string *OriginalFullName = nullptr) const;
+                            std::string *OriginalFullName = nullptr) const;
 
   /// Return the DIE short name resolving DW_AT_specification or
   /// DW_AT_abstract_origin references if necessary. Returns null if no name
@@ -261,7 +264,8 @@ public:
   /// for this subprogram by resolving DW_AT_sepcification or
   /// DW_AT_abstract_origin references if necessary.
   LLVM_ABI uint64_t getDeclLine() const;
-  LLVM_ABI std::string getDeclFile(DILineInfoSpecifier::FileLineInfoKind Kind) const;
+  LLVM_ABI std::string
+  getDeclFile(DILineInfoSpecifier::FileLineInfoKind Kind) const;
 
   /// Retrieves values of DW_AT_call_file, DW_AT_call_line and DW_AT_call_column
   /// from DIE (or zeroes if they are missing). This function looks for
@@ -276,7 +280,8 @@ public:
   /// \param CallDiscriminator filled in with non-zero if successful, zero if
   /// there is no DW_AT_GNU_discriminator attribute in this DIE.
   LLVM_ABI void getCallerFrame(uint32_t &CallFile, uint32_t &CallLine,
-                      uint32_t &CallColumn, uint32_t &CallDiscriminator) const;
+                               uint32_t &CallColumn,
+                               uint32_t &CallDiscriminator) const;
 
   class attribute_iterator;
 
@@ -484,7 +489,7 @@ inline std::reverse_iterator<DWARFDie::iterator> DWARFDie::rend() const {
 
 LLVM_ABI void dumpTypeQualifiedName(const DWARFDie &DIE, raw_ostream &OS);
 LLVM_ABI void dumpTypeUnqualifiedName(const DWARFDie &DIE, raw_ostream &OS,
-                             std::string *OriginalFullName = nullptr);
+                                      std::string *OriginalFullName = nullptr);
 
 } // end namespace llvm
 

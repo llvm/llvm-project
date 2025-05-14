@@ -9,9 +9,9 @@
 #ifndef LLVM_DEBUGINFO_DWARF_DWARFADDRESSRANGE_H
 #define LLVM_DEBUGINFO_DWARF_DWARFADDRESSRANGE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/Compiler.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -69,8 +69,9 @@ struct DWARFAddressRange {
     return true;
   }
 
-  LLVM_ABI void dump(raw_ostream &OS, uint32_t AddressSize, DIDumpOptions DumpOpts = {},
-            const DWARFObject *Obj = nullptr) const;
+  LLVM_ABI void dump(raw_ostream &OS, uint32_t AddressSize,
+                     DIDumpOptions DumpOpts = {},
+                     const DWARFObject *Obj = nullptr) const;
 };
 
 inline bool operator<(const DWARFAddressRange &LHS,

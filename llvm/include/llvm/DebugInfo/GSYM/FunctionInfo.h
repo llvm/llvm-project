@@ -9,7 +9,6 @@
 #ifndef LLVM_DEBUGINFO_GSYM_FUNCTIONINFO_H
 #define LLVM_DEBUGINFO_GSYM_FUNCTIONINFO_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/DebugInfo/GSYM/CallSiteInfo.h"
 #include "llvm/DebugInfo/GSYM/ExtractRanges.h"
@@ -18,6 +17,7 @@
 #include "llvm/DebugInfo/GSYM/LookupResult.h"
 #include "llvm/DebugInfo/GSYM/MergedFunctionsInfo.h"
 #include "llvm/DebugInfo/GSYM/StringTable.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 
 namespace llvm {
@@ -140,7 +140,7 @@ struct FunctionInfo {
   /// \returns An FunctionInfo or an error describing the issue that was
   /// encountered during decoding.
   LLVM_ABI static llvm::Expected<FunctionInfo> decode(DataExtractor &Data,
-                                             uint64_t BaseAddr);
+                                                      uint64_t BaseAddr);
 
   /// Encode this object into FileWriter stream.
   ///
@@ -156,7 +156,8 @@ struct FunctionInfo {
   ///
   /// \returns An error object that indicates failure or the offset of the
   /// function info that was successfully written into the stream.
-  LLVM_ABI llvm::Expected<uint64_t> encode(FileWriter &O, bool NoPadding = false) const;
+  LLVM_ABI llvm::Expected<uint64_t> encode(FileWriter &O,
+                                           bool NoPadding = false) const;
 
   /// Encode this function info into the internal byte cache and return the size
   /// in bytes.

@@ -9,7 +9,6 @@
 #ifndef LLVM_DEBUGINFO_DWARF_DWARFUNIT_H
 #define LLVM_DEBUGINFO_DWARF_DWARFUNIT_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -22,6 +21,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
 #include "llvm/DebugInfo/DWARF/DWARFLocationExpression.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnitIndex.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataExtractor.h"
 #include <cassert>
 #include <cstddef>
@@ -82,8 +82,9 @@ public:
   /// Note that \p SectionKind is used as a hint to guess the unit type
   /// for DWARF formats prior to DWARFv5. In DWARFv5 the unit type is
   /// explicitly defined in the header and the hint is ignored.
-  LLVM_ABI Error extract(DWARFContext &Context, const DWARFDataExtractor &debug_info,
-                uint64_t *offset_ptr, DWARFSectionKind SectionKind);
+  LLVM_ABI Error extract(DWARFContext &Context,
+                         const DWARFDataExtractor &debug_info,
+                         uint64_t *offset_ptr, DWARFSectionKind SectionKind);
   // For units in DWARF Package File, remember the index entry and update
   // the abbreviation offset read by extract().
   LLVM_ABI Error applyIndexEntry(const DWARFUnitIndex::Entry *Entry);
@@ -120,7 +121,7 @@ public:
 };
 
 LLVM_ABI const DWARFUnitIndex &getDWARFUnitIndex(DWARFContext &Context,
-                                        DWARFSectionKind Kind);
+                                                 DWARFSectionKind Kind);
 
 bool isCompileUnit(const std::unique_ptr<DWARFUnit> &U);
 
@@ -149,14 +150,16 @@ public:
   /// calls after finishedInfoUnits() are for .debug_types sections.  Caller
   /// must not mix calls to addUnitsForSection and addUnitsForDWOSection.
   LLVM_ABI void addUnitsForSection(DWARFContext &C, const DWARFSection &Section,
-                          DWARFSectionKind SectionKind);
+                                   DWARFSectionKind SectionKind);
   /// Read units from a .debug_info.dwo or .debug_types.dwo section.  Calls
   /// made before finishedInfoUnits() are assumed to be for .debug_info.dwo
   /// sections, calls after finishedInfoUnits() are for .debug_types.dwo
   /// sections.  Caller must not mix calls to addUnitsForSection and
   /// addUnitsForDWOSection.
-  LLVM_ABI void addUnitsForDWOSection(DWARFContext &C, const DWARFSection &DWOSection,
-                             DWARFSectionKind SectionKind, bool Lazy = false);
+  LLVM_ABI void addUnitsForDWOSection(DWARFContext &C,
+                                      const DWARFSection &DWOSection,
+                                      DWARFSectionKind SectionKind,
+                                      bool Lazy = false);
 
   /// Add an existing DWARFUnit to this UnitVector. This is used by the DWARF
   /// verifier to process unit separately.

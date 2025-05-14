@@ -9,8 +9,8 @@
 #ifndef LLVM_DEBUGINFO_PDB_NATIVE_SYMBOLSTREAM_H
 #define LLVM_DEBUGINFO_PDB_NATIVE_SYMBOLSTREAM_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
+#include "llvm/Support/Compiler.h"
 
 #include "llvm/Support/Error.h"
 

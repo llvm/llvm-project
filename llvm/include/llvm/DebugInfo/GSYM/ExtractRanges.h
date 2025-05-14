@@ -9,8 +9,8 @@
 #ifndef LLVM_DEBUGINFO_GSYM_EXTRACTRANGES_H
 #define LLVM_DEBUGINFO_GSYM_EXTRACTRANGES_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/AddressRanges.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 #include <stdint.h>
@@ -38,8 +38,9 @@ class FileWriter;
 /// address.
 /// @{
 LLVM_ABI AddressRange decodeRange(DataExtractor &Data, uint64_t BaseAddr,
-                         uint64_t &Offset);
-LLVM_ABI void encodeRange(const AddressRange &Range, FileWriter &O, uint64_t BaseAddr);
+                                  uint64_t &Offset);
+LLVM_ABI void encodeRange(const AddressRange &Range, FileWriter &O,
+                          uint64_t BaseAddr);
 /// @}
 
 /// Skip an address range object in the specified data a the specified
@@ -54,10 +55,10 @@ LLVM_ABI void skipRange(DataExtractor &Data, uint64_t &Offset);
 /// See the AddressRange comment for the encode and decode methods for full
 /// details.
 /// @{
-LLVM_ABI void decodeRanges(AddressRanges &Ranges, DataExtractor &Data, uint64_t BaseAddr,
-                  uint64_t &Offset);
+LLVM_ABI void decodeRanges(AddressRanges &Ranges, DataExtractor &Data,
+                           uint64_t BaseAddr, uint64_t &Offset);
 LLVM_ABI void encodeRanges(const AddressRanges &Ranges, FileWriter &O,
-                  uint64_t BaseAddr);
+                           uint64_t BaseAddr);
 /// @}
 
 /// Skip an address range object in the specified data a the specified

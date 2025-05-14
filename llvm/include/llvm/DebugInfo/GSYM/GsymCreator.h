@@ -309,8 +309,9 @@ public:
   ///                    a single GSYM file that contains all function
   ///                    information will be created.
   /// \returns An error object that indicates success or failure of the save.
-  LLVM_ABI llvm::Error save(StringRef Path, llvm::endianness ByteOrder,
-                   std::optional<uint64_t> SegmentSize = std::nullopt) const;
+  LLVM_ABI llvm::Error
+  save(StringRef Path, llvm::endianness ByteOrder,
+       std::optional<uint64_t> SegmentSize = std::nullopt) const;
 
   /// Encode a GSYM into the file writer stream at the current position.
   ///
@@ -351,8 +352,8 @@ public:
   /// \param   Path The path to the file to insert.
   /// \param   Style The path style for the "Path" parameter.
   /// \returns The unique file index for the inserted file.
-  LLVM_ABI uint32_t insertFile(StringRef Path,
-                      sys::path::Style Style = sys::path::Style::native);
+  LLVM_ABI uint32_t
+  insertFile(StringRef Path, sys::path::Style Style = sys::path::Style::native);
 
   /// Add a function info to this GSYM creator.
   ///
@@ -403,8 +404,8 @@ public:
   ///
   /// \param  Callback A callback function that will get called with each
   ///         FunctionInfo. If the callback returns false, stop iterating.
-  LLVM_ABI void forEachFunctionInfo(
-      std::function<bool(FunctionInfo &)> const &Callback);
+  LLVM_ABI void
+  forEachFunctionInfo(std::function<bool(FunctionInfo &)> const &Callback);
 
   /// Thread safe const iteration over all function infos.
   ///

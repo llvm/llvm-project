@@ -9,8 +9,8 @@
 #ifndef LLVM_DEBUGINFO_PDB_IPDBSOURCEFILE_H
 #define LLVM_DEBUGINFO_PDB_IPDBSOURCEFILE_H
 
-#include "llvm/Support/Compiler.h"
 #include "PDBTypes.h"
+#include "llvm/Support/Compiler.h"
 #include <memory>
 #include <string>
 

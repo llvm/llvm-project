@@ -9,9 +9,9 @@
 #ifndef LLVM_DEBUGINFO_DWARF_DWARFDEBUGARANGESET_H
 #define LLVM_DEBUGINFO_DWARF_DWARFDEBUGARANGESET_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
 #include <vector>
@@ -63,7 +63,7 @@ public:
 
   LLVM_ABI void clear();
   LLVM_ABI Error extract(DWARFDataExtractor data, uint64_t *offset_ptr,
-                function_ref<void(Error)> WarningHandler = nullptr);
+                         function_ref<void(Error)> WarningHandler = nullptr);
   LLVM_ABI void dump(raw_ostream &OS) const;
 
   uint64_t getCompileUnitDIEOffset() const { return HeaderData.CuOffset; }

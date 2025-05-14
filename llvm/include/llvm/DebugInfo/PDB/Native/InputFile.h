@@ -9,7 +9,6 @@
 #ifndef LLVM_DEBUGINFO_PDB_NATIVE_INPUTFILE_H
 #define LLVM_DEBUGINFO_PDB_NATIVE_INPUTFILE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/iterator.h"
@@ -19,6 +18,7 @@
 #include "llvm/DebugInfo/PDB/Native/ModuleDebugStream.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {
@@ -62,7 +62,7 @@ public:
   InputFile(InputFile &&Other) = default;
 
   LLVM_ABI static Expected<InputFile> open(StringRef Path,
-                                  bool AllowUnknownFile = false);
+                                           bool AllowUnknownFile = false);
 
   LLVM_ABI PDBFile &pdb();
   LLVM_ABI const PDBFile &pdb() const;
@@ -98,10 +98,10 @@ public:
   LLVM_ABI Expected<StringRef> getNameFromChecksums(uint32_t Offset) const;
 
   LLVM_ABI void formatFromFileName(LinePrinter &Printer, StringRef File,
-                          bool Append = false) const;
+                                   bool Append = false) const;
 
   LLVM_ABI void formatFromChecksumsOffset(LinePrinter &Printer, uint32_t Offset,
-                                 bool Append = false) const;
+                                          bool Append = false) const;
 
   LLVM_ABI StringRef name() const;
 
@@ -156,10 +156,10 @@ private:
 LLVM_ABI Expected<ModuleDebugStreamRef>
 getModuleDebugStream(PDBFile &File, StringRef &ModuleName, uint32_t Index);
 LLVM_ABI Expected<ModuleDebugStreamRef> getModuleDebugStream(PDBFile &File,
-                                                    uint32_t Index);
+                                                             uint32_t Index);
 
 LLVM_ABI bool shouldDumpSymbolGroup(uint32_t Idx, const SymbolGroup &Group,
-                           const FilterOptions &Filters);
+                                    const FilterOptions &Filters);
 
 // TODO: Change these callbacks to be function_refs (de-templatify them).
 template <typename CallbackT>

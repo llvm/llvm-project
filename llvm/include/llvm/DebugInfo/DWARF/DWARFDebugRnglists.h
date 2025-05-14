@@ -9,11 +9,11 @@
 #ifndef LLVM_DEBUGINFO_DWARF_DWARFDEBUGRNGLISTS_H
 #define LLVM_DEBUGINFO_DWARF_DWARFDEBUGRNGLISTS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFAddressRange.h"
 #include "llvm/DebugInfo/DWARF/DWARFListTable.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 
 namespace llvm {
@@ -55,9 +55,8 @@ public:
           LookupPooledAddress) const;
 
   /// Build a DWARFAddressRangesVector from a rangelist.
-  LLVM_ABI DWARFAddressRangesVector
-  getAbsoluteRanges(std::optional<object::SectionedAddress> BaseAddr,
-                    DWARFUnit &U) const;
+  LLVM_ABI DWARFAddressRangesVector getAbsoluteRanges(
+      std::optional<object::SectionedAddress> BaseAddr, DWARFUnit &U) const;
 };
 
 class DWARFDebugRnglistTable : public DWARFListTableBase<DWARFDebugRnglist> {

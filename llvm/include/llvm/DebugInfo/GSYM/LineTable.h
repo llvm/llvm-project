@@ -9,8 +9,8 @@
 #ifndef LLVM_DEBUGINFO_GSYM_LINETABLE_H
 #define LLVM_DEBUGINFO_GSYM_LINETABLE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/DebugInfo/GSYM/LineEntry.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
 #include <vector>
@@ -137,8 +137,8 @@ public:
   /// initialize the line table row prior to parsing any opcodes.
   ///
   /// \returns An LineEntry object if a match is found, error otherwise.
-  LLVM_ABI static Expected<LineEntry> lookup(DataExtractor &Data, uint64_t BaseAddr,
-                                    uint64_t Addr);
+  LLVM_ABI static Expected<LineEntry> lookup(DataExtractor &Data,
+                                             uint64_t BaseAddr, uint64_t Addr);
 
   /// Decode an LineTable object from a binary data stream.
   ///
@@ -153,7 +153,7 @@ public:
   /// \returns An LineTable or an error describing the issue that was
   /// encountered during decoding.
   LLVM_ABI static llvm::Expected<LineTable> decode(DataExtractor &Data,
-                                          uint64_t BaseAddr);
+                                                   uint64_t BaseAddr);
   /// Encode this LineTable object into FileWriter stream.
   ///
   /// \param O The binary stream to write the data to at the current file

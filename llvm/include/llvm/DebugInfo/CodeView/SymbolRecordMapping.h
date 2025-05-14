@@ -9,9 +9,9 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_SYMBOLRECORDMAPPING_H
 #define LLVM_DEBUGINFO_CODEVIEW_SYMBOLRECORDMAPPING_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/DebugInfo/CodeView/CodeViewRecordIO.h"
 #include "llvm/DebugInfo/CodeView/SymbolVisitorCallbacks.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class BinaryStreamReader;

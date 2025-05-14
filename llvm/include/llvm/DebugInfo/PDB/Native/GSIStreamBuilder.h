@@ -9,13 +9,13 @@
 #ifndef LLVM_DEBUGINFO_PDB_NATIVE_GSISTREAMBUILDER_H
 #define LLVM_DEBUGINFO_PDB_NATIVE_GSISTREAMBUILDER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/PDB/Native/GlobalsStream.h"
 #include "llvm/DebugInfo/PDB/Native/RawConstants.h"
 #include "llvm/Support/BinaryStreamRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {
@@ -55,7 +55,8 @@ public:
 
   LLVM_ABI Error finalizeMsfLayout();
 
-  LLVM_ABI Error commit(const msf::MSFLayout &Layout, WritableBinaryStreamRef Buffer);
+  LLVM_ABI Error commit(const msf::MSFLayout &Layout,
+                        WritableBinaryStreamRef Buffer);
 
   uint32_t getPublicsStreamIndex() const { return PublicsStreamIndex; }
   uint32_t getGlobalsStreamIndex() const { return GlobalsStreamIndex; }

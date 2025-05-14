@@ -14,11 +14,11 @@
 #ifndef LLVM_DEBUGINFO_LOGICALVIEW_CORE_LVOBJECT_H
 #define LLVM_DEBUGINFO_LOGICALVIEW_CORE_LVOBJECT_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVSupport.h"
+#include "llvm/Support/Compiler.h"
 #include <limits>
 #include <list>
 #include <string>

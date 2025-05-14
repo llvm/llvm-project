@@ -9,12 +9,12 @@
 #ifndef LLVM_DEBUGINFO_PDB_NATIVE_LINEPRINTER_H
 #define LLVM_DEBUGINFO_PDB_NATIVE_LINEPRINTER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/DebugInfo/PDB/Native/FormatUtil.h"
 #include "llvm/Support/BinaryStreamRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/raw_ostream.h"
@@ -53,7 +53,7 @@ class LinePrinter {
 
 public:
   LLVM_ABI LinePrinter(int Indent, bool UseColor, raw_ostream &Stream,
-              const FilterOptions &Filters);
+                       const FilterOptions &Filters);
 
   LLVM_ABI void Indent(uint32_t Amount = 0);
   LLVM_ABI void Unindent(uint32_t Amount = 0);
@@ -69,17 +69,18 @@ public:
   }
 
   LLVM_ABI void formatBinary(StringRef Label, ArrayRef<uint8_t> Data,
-                    uint64_t StartOffset);
-  LLVM_ABI void formatBinary(StringRef Label, ArrayRef<uint8_t> Data, uint64_t BaseAddr,
-                    uint64_t StartOffset);
+                             uint64_t StartOffset);
+  LLVM_ABI void formatBinary(StringRef Label, ArrayRef<uint8_t> Data,
+                             uint64_t BaseAddr, uint64_t StartOffset);
 
-  LLVM_ABI void formatMsfStreamData(StringRef Label, PDBFile &File, uint32_t StreamIdx,
-                           StringRef StreamPurpose, uint64_t Offset,
-                           uint64_t Size);
   LLVM_ABI void formatMsfStreamData(StringRef Label, PDBFile &File,
-                           const msf::MSFStreamLayout &Stream,
-                           BinarySubstreamRef Substream);
-  LLVM_ABI void formatMsfStreamBlocks(PDBFile &File, const msf::MSFStreamLayout &Stream);
+                                    uint32_t StreamIdx, StringRef StreamPurpose,
+                                    uint64_t Offset, uint64_t Size);
+  LLVM_ABI void formatMsfStreamData(StringRef Label, PDBFile &File,
+                                    const msf::MSFStreamLayout &Stream,
+                                    BinarySubstreamRef Substream);
+  LLVM_ABI void formatMsfStreamBlocks(PDBFile &File,
+                                      const msf::MSFStreamLayout &Stream);
 
   bool hasColor() const { return UseColor; }
   raw_ostream &getStream() { return OS; }

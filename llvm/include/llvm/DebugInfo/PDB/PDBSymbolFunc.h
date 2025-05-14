@@ -9,8 +9,8 @@
 #ifndef LLVM_DEBUGINFO_PDB_PDBSYMBOLFUNC_H
 #define LLVM_DEBUGINFO_PDB_PDBSYMBOLFUNC_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/DebugInfo/PDB/IPDBRawSymbol.h"
+#include "llvm/Support/Compiler.h"
 
 #include "PDBSymbol.h"
 #include "PDBTypes.h"

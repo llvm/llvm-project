@@ -9,12 +9,12 @@
 #ifndef LLVM_DEBUGINFO_PDB_NATIVE_MODULEDEBUGSTREAM_H
 #define LLVM_DEBUGINFO_PDB_NATIVE_MODULEDEBUGSTREAM_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/CodeView/DebugSubsectionRecord.h"
 #include "llvm/DebugInfo/PDB/Native/DbiModuleDescriptor.h"
 #include "llvm/Support/BinaryStreamRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
 #include <memory>
@@ -34,7 +34,7 @@ class ModuleDebugStreamRef {
 
 public:
   LLVM_ABI ModuleDebugStreamRef(const DbiModuleDescriptor &Module,
-                       std::unique_ptr<msf::MappedBlockStream> Stream);
+                                std::unique_ptr<msf::MappedBlockStream> Stream);
   ModuleDebugStreamRef(ModuleDebugStreamRef &&Other) = default;
   ModuleDebugStreamRef(const ModuleDebugStreamRef &Other) = default;
   LLVM_ABI ~ModuleDebugStreamRef();

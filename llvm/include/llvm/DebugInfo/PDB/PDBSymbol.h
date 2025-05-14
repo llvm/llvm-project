@@ -9,11 +9,11 @@
 #ifndef LLVM_DEBUGINFO_PDB_PDBSYMBOL_H
 #define LLVM_DEBUGINFO_PDB_PDBSYMBOL_H
 
-#include "llvm/Support/Compiler.h"
 #include "IPDBRawSymbol.h"
 #include "PDBExtras.h"
 #include "PDBTypes.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 
 #define FORWARD_SYMBOL_METHOD(MethodName)                                      \
   decltype(auto) MethodName() const { return RawSymbol->MethodName(); }

@@ -9,9 +9,9 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_RECORDNAME_H
 #define LLVM_DEBUGINFO_CODEVIEW_RECORDNAME_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
+#include "llvm/Support/Compiler.h"
 #include <string>
 
 namespace llvm {

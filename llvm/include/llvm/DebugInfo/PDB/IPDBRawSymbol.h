@@ -9,11 +9,11 @@
 #ifndef LLVM_DEBUGINFO_PDB_IPDBRAWSYMBOL_H
 #define LLVM_DEBUGINFO_PDB_IPDBRAWSYMBOL_H
 
-#include "llvm/Support/Compiler.h"
 #include "PDBTypes.h"
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
+#include "llvm/Support/Compiler.h"
 #include <memory>
 
 namespace llvm {
@@ -33,10 +33,10 @@ enum class PdbSymbolIdField : uint32_t {
   LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ All)
 };
 
-LLVM_ABI void dumpSymbolIdField(raw_ostream &OS, StringRef Name, SymIndexId Value,
-                       int Indent, const IPDBSession &Session,
-                       PdbSymbolIdField FieldId, PdbSymbolIdField ShowFlags,
-                       PdbSymbolIdField RecurseFlags);
+LLVM_ABI void
+dumpSymbolIdField(raw_ostream &OS, StringRef Name, SymIndexId Value, int Indent,
+                  const IPDBSession &Session, PdbSymbolIdField FieldId,
+                  PdbSymbolIdField ShowFlags, PdbSymbolIdField RecurseFlags);
 
 /// IPDBRawSymbol defines an interface used to represent an arbitrary symbol.
 /// It exposes a monolithic interface consisting of accessors for the union of

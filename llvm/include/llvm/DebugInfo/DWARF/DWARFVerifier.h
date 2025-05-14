@@ -9,13 +9,13 @@
 #ifndef LLVM_DEBUGINFO_DWARF_DWARFVERIFIER_H
 #define LLVM_DEBUGINFO_DWARF_DWARFVERIFIER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFAcceleratorTable.h"
 #include "llvm/DebugInfo/DWARF/DWARFAddressRange.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnitIndex.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <map>
 #include <mutex>
@@ -50,10 +50,12 @@ public:
       : IncludeDetail(includeDetail) {}
   void ShowDetail(bool showDetail) { IncludeDetail = showDetail; }
   size_t GetNumCategories() const { return Aggregation.size(); }
-  LLVM_ABI void Report(StringRef category, std::function<void()> detailCallback);
+  LLVM_ABI void Report(StringRef category,
+                       std::function<void()> detailCallback);
   LLVM_ABI void Report(StringRef category, StringRef sub_category,
-              std::function<void()> detailCallback);
-  LLVM_ABI void EnumerateResults(std::function<void(StringRef, unsigned)> handleCounts);
+                       std::function<void()> detailCallback);
+  LLVM_ABI void
+  EnumerateResults(std::function<void(StringRef, unsigned)> handleCounts);
   LLVM_ABI void EnumerateDetailedResultsFor(
       StringRef category,
       std::function<void(StringRef, unsigned)> handleCounts);
@@ -92,7 +94,8 @@ public:
     /// This is used for finding overlapping ranges in the DW_AT_ranges
     /// attribute of a DIE. It is also used as a set of address ranges that
     /// children address ranges must all be contained in.
-    LLVM_ABI std::optional<DWARFAddressRange> insert(const DWARFAddressRange &R);
+    LLVM_ABI std::optional<DWARFAddressRange>
+    insert(const DWARFAddressRange &R);
 
     /// Inserts the address range info. If any of its ranges overlaps with a
     /// range in an existing range info, the range info is *not* added and an
@@ -321,7 +324,8 @@ private:
                         const DataExtractor &StrData);
 
 public:
-  LLVM_ABI DWARFVerifier(raw_ostream &S, DWARFContext &D,
+  LLVM_ABI
+  DWARFVerifier(raw_ostream &S, DWARFContext &D,
                 DIDumpOptions DumpOpts = DIDumpOptions::getForSingleDIE());
 
   /// Verify the information in any of the following sections, if available:
@@ -384,9 +388,10 @@ public:
   ///
   /// \returns true if the .debug_line verifies successfully, false otherwise.
   LLVM_ABI bool handleDebugStrOffsets();
-  LLVM_ABI bool verifyDebugStrOffsets(std::optional<dwarf::DwarfFormat> LegacyFormat,
-                             StringRef SectionName, const DWARFSection &Section,
-                             StringRef StrData);
+  LLVM_ABI bool
+  verifyDebugStrOffsets(std::optional<dwarf::DwarfFormat> LegacyFormat,
+                        StringRef SectionName, const DWARFSection &Section,
+                        StringRef StrData);
 
   /// Emits any aggregate information collected, depending on the dump options
   LLVM_ABI void summarize();

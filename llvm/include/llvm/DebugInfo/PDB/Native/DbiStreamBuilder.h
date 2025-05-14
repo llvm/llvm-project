@@ -9,12 +9,12 @@
 #ifndef LLVM_DEBUGINFO_PDB_NATIVE_DBISTREAMBUILDER_H
 #define LLVM_DEBUGINFO_PDB_NATIVE_DBISTREAMBUILDER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 
 #include "llvm/DebugInfo/CodeView/DebugFrameDataSubsection.h"
@@ -69,13 +69,16 @@ public:
   LLVM_ABI void addNewFpoData(const codeview::FrameData &FD);
   LLVM_ABI void addOldFpoData(const object::FpoData &Fpo);
 
-  LLVM_ABI Expected<DbiModuleDescriptorBuilder &> addModuleInfo(StringRef ModuleName);
-  LLVM_ABI Error addModuleSourceFile(DbiModuleDescriptorBuilder &Module, StringRef File);
+  LLVM_ABI Expected<DbiModuleDescriptorBuilder &>
+  addModuleInfo(StringRef ModuleName);
+  LLVM_ABI Error addModuleSourceFile(DbiModuleDescriptorBuilder &Module,
+                                     StringRef File);
   LLVM_ABI Expected<uint32_t> getSourceFileNameIndex(StringRef FileName);
 
   LLVM_ABI Error finalizeMsfLayout();
 
-  LLVM_ABI Error commit(const msf::MSFLayout &Layout, WritableBinaryStreamRef MsfBuffer);
+  LLVM_ABI Error commit(const msf::MSFLayout &Layout,
+                        WritableBinaryStreamRef MsfBuffer);
 
   void addSectionContrib(const SectionContrib &SC) {
     SectionContribs.emplace_back(SC);

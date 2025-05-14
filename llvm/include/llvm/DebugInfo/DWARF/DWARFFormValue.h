@@ -9,10 +9,10 @@
 #ifndef LLVM_DEBUGINFO_DWARF_DWARFFORMVALUE_H
 #define LLVM_DEBUGINFO_DWARF_DWARFFORMVALUE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DIContext.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataExtractor.h"
 #include <cstdint>
 
@@ -71,9 +71,9 @@ public:
   LLVM_ABI static DWARFFormValue createFromUValue(dwarf::Form F, uint64_t V);
   LLVM_ABI static DWARFFormValue createFromPValue(dwarf::Form F, const char *V);
   LLVM_ABI static DWARFFormValue createFromBlockValue(dwarf::Form F,
-                                             ArrayRef<uint8_t> D);
-  LLVM_ABI static DWARFFormValue createFromUnit(dwarf::Form F, const DWARFUnit *Unit,
-                                       uint64_t *OffsetPtr);
+                                                      ArrayRef<uint8_t> D);
+  LLVM_ABI static DWARFFormValue
+  createFromUnit(dwarf::Form F, const DWARFUnit *Unit, uint64_t *OffsetPtr);
   LLVM_ABI static std::optional<object::SectionedAddress>
   getAsSectionedAddress(const ValueType &Val, const dwarf::Form Form,
                         const DWARFUnit *U);
@@ -83,23 +83,26 @@ public:
 
   LLVM_ABI bool isFormClass(FormClass FC) const;
   const DWARFUnit *getUnit() const { return U; }
-  LLVM_ABI void dump(raw_ostream &OS, DIDumpOptions DumpOpts = DIDumpOptions()) const;
+  LLVM_ABI void dump(raw_ostream &OS,
+                     DIDumpOptions DumpOpts = DIDumpOptions()) const;
   LLVM_ABI void dumpSectionedAddress(raw_ostream &OS, DIDumpOptions DumpOpts,
-                            object::SectionedAddress SA) const;
+                                     object::SectionedAddress SA) const;
   LLVM_ABI void dumpAddress(raw_ostream &OS, uint64_t Address) const;
   LLVM_ABI static void dumpAddress(raw_ostream &OS, uint8_t AddressSize,
-                          uint64_t Address);
-  LLVM_ABI static void dumpAddressSection(const DWARFObject &Obj, raw_ostream &OS,
-                                 DIDumpOptions DumpOpts, uint64_t SectionIndex);
+                                   uint64_t Address);
+  LLVM_ABI static void dumpAddressSection(const DWARFObject &Obj,
+                                          raw_ostream &OS,
+                                          DIDumpOptions DumpOpts,
+                                          uint64_t SectionIndex);
 
   /// Extracts a value in \p Data at offset \p *OffsetPtr. The information
   /// in \p FormParams is needed to interpret some forms. The optional
   /// \p Context and \p Unit allows extracting information if the form refers
   /// to other sections (e.g., .debug_str).
-  LLVM_ABI bool extractValue(const DWARFDataExtractor &Data, uint64_t *OffsetPtr,
-                    dwarf::FormParams FormParams,
-                    const DWARFContext *Context = nullptr,
-                    const DWARFUnit *Unit = nullptr);
+  LLVM_ABI bool extractValue(const DWARFDataExtractor &Data,
+                             uint64_t *OffsetPtr, dwarf::FormParams FormParams,
+                             const DWARFContext *Context = nullptr,
+                             const DWARFUnit *Unit = nullptr);
 
   bool extractValue(const DWARFDataExtractor &Data, uint64_t *OffsetPtr,
                     dwarf::FormParams FormParams, const DWARFUnit *U) {
@@ -116,7 +119,8 @@ public:
   LLVM_ABI std::optional<int64_t> getAsSignedConstant() const;
   LLVM_ABI Expected<const char *> getAsCString() const;
   LLVM_ABI std::optional<uint64_t> getAsAddress() const;
-  LLVM_ABI std::optional<object::SectionedAddress> getAsSectionedAddress() const;
+  LLVM_ABI std::optional<object::SectionedAddress>
+  getAsSectionedAddress() const;
   LLVM_ABI std::optional<uint64_t> getAsSectionOffset() const;
   LLVM_ABI std::optional<ArrayRef<uint8_t>> getAsBlock() const;
   LLVM_ABI std::optional<uint64_t> getAsCStringOffset() const;
@@ -160,8 +164,8 @@ public:
   /// \param FormParams DWARF parameters to help interpret forms.
   /// \returns true on success, false if the form was not skipped.
   LLVM_ABI static bool skipValue(dwarf::Form Form, DataExtractor DebugInfoData,
-                        uint64_t *OffsetPtr,
-                        const dwarf::FormParams FormParams);
+                                 uint64_t *OffsetPtr,
+                                 const dwarf::FormParams FormParams);
 
 private:
   void dumpString(raw_ostream &OS) const;
@@ -431,8 +435,9 @@ toBlock(const std::optional<DWARFFormValue> &V) {
 /// \param FC an attribute form class to check.
 /// \param DwarfVersion the version of DWARF debug info keeping the attribute.
 /// \returns true if specified \p Form belongs to the \p FC class.
-LLVM_ABI bool doesFormBelongToClass(dwarf::Form Form, DWARFFormValue::FormClass FC,
-                           uint16_t DwarfVersion);
+LLVM_ABI bool doesFormBelongToClass(dwarf::Form Form,
+                                    DWARFFormValue::FormClass FC,
+                                    uint16_t DwarfVersion);
 
 } // end namespace dwarf
 

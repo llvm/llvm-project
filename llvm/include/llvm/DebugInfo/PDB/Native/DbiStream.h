@@ -9,7 +9,6 @@
 #ifndef LLVM_DEBUGINFO_PDB_NATIVE_DBISTREAM_H
 #define LLVM_DEBUGINFO_PDB_NATIVE_DBISTREAM_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/DebugInfo/CodeView/DebugFrameDataSubsection.h"
 #include "llvm/DebugInfo/PDB/Native/DbiModuleList.h"
 #include "llvm/DebugInfo/PDB/Native/PDBStringTable.h"
@@ -17,6 +16,7 @@
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
 #include "llvm/Support/BinaryStreamArray.h"
 #include "llvm/Support/BinaryStreamRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 
@@ -86,10 +86,12 @@ public:
   LLVM_ABI bool hasOldFpoRecords() const;
   LLVM_ABI FixedStreamArray<object::FpoData> getOldFpoRecords() const;
   LLVM_ABI bool hasNewFpoRecords() const;
-  LLVM_ABI const codeview::DebugFrameDataSubsectionRef &getNewFpoRecords() const;
+  LLVM_ABI const codeview::DebugFrameDataSubsectionRef &
+  getNewFpoRecords() const;
 
   LLVM_ABI FixedStreamArray<SecMapEntry> getSectionMap() const;
-  LLVM_ABI void visitSectionContributions(ISectionContribVisitor &Visitor) const;
+  LLVM_ABI void
+  visitSectionContributions(ISectionContribVisitor &Visitor) const;
 
   LLVM_ABI Expected<StringRef> getECName(uint32_t NI) const;
 

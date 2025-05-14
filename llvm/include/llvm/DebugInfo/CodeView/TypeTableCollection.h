@@ -9,8 +9,8 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_TYPETABLECOLLECTION_H
 #define LLVM_DEBUGINFO_CODEVIEW_TYPETABLECOLLECTION_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/DebugInfo/CodeView/TypeCollection.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/StringSaver.h"
 
 #include <vector>

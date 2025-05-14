@@ -9,9 +9,9 @@
 #ifndef LLVM_DEBUGINFO_PDB_NATIVE_DBIMODULEDESCRIPTOR_H
 #define LLVM_DEBUGINFO_PDB_NATIVE_DBIMODULEDESCRIPTOR_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/BinaryStreamRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
 
@@ -29,7 +29,8 @@ public:
   DbiModuleDescriptor(const DbiModuleDescriptor &Info) = default;
   DbiModuleDescriptor &operator=(const DbiModuleDescriptor &Info) = default;
 
-  LLVM_ABI static Error initialize(BinaryStreamRef Stream, DbiModuleDescriptor &Info);
+  LLVM_ABI static Error initialize(BinaryStreamRef Stream,
+                                   DbiModuleDescriptor &Info);
 
   LLVM_ABI bool hasECInfo() const;
   LLVM_ABI uint16_t getTypeServerIndex() const;

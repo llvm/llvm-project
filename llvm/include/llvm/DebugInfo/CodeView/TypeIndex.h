@@ -9,8 +9,8 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_TYPEINDEX_H
 #define LLVM_DEBUGINFO_CODEVIEW_TYPEINDEX_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include <cassert>
 #include <cinttypes>
@@ -285,8 +285,8 @@ struct TypeIndexOffset {
   support::ulittle32_t Offset;
 };
 
-LLVM_ABI void printTypeIndex(ScopedPrinter &Printer, StringRef FieldName, TypeIndex TI,
-                    TypeCollection &Types);
+LLVM_ABI void printTypeIndex(ScopedPrinter &Printer, StringRef FieldName,
+                             TypeIndex TI, TypeCollection &Types);
 }
 
 template <> struct DenseMapInfo<codeview::TypeIndex> {

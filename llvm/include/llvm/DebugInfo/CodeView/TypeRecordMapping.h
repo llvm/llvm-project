@@ -9,11 +9,11 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_TYPERECORDMAPPING_H
 #define LLVM_DEBUGINFO_CODEVIEW_TYPERECORDMAPPING_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/CodeViewRecordIO.h"
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbacks.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <optional>
 
