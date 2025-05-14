@@ -946,6 +946,10 @@ OpenMP Support
 - Fixed a crashing bug with a malformed ``cancel`` directive. (#GH139360)
 - Fixed a crashing bug with ``omp distribute dist_schedule`` if the argument to
   ``dist_schedule`` was not strictly positive. (#GH139266)
+- Fixed two crashing bugs with a malformed ``metadirective`` directive. One was
+  a crash if the next token after ``metadirective`` was a paren, bracket, or
+  brace. The other was if the next token after the meta directive was not an
+  open parenthesis. (#GH139665)
 
 Improvements
 ^^^^^^^^^^^^
