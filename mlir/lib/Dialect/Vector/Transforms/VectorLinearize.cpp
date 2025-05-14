@@ -645,14 +645,22 @@ static bool isLinearizable(Operation *op) {
       // itself cannot be linearized (will create new shape_casts to linearize
       // ad infinitum).
       .Case<vector::ShapeCastOp>([&](auto) { return false; })
-      // vector.extract_strided_slice, vector.extract, and vector.insert
-      // operations are linearized to a rank-1 vector.shuffle by the current
-      // patterns. vector.shuffle only supports fixed size vectors, so it is
-      // impossible to use this approach to linearize these ops if they operate
-      // on scalable vectors.
+      // The operations
+      // - vector.extract_strided_slice
+      // - vector.extract
+      // - vector.insert_strided_slice
+      // - vector.insert
+      // are linearized to a rank-1 vector.shuffle by the current patterns.
+      // vector.shuffle only supports fixed size vectors, so it is impossible to
+      // use this approach to linearize these ops if they operate on scalable
+      // vectors.
       .Case<vector::ExtractStridedSliceOp>(
           [&](vector::ExtractStridedSliceOp extractOp) {
             return !extractOp.getType().isScalable();
+          })
+      .Case<vector::InsertStridedSliceOp>(
+          [&](vector::InsertStridedSliceOp insertOp) {
+            return !insertOp.getType().isScalable();
           })
       .Case<vector::InsertOp>([&](vector::InsertOp insertOp) {
         return !insertOp.getType().isScalable();
