@@ -355,6 +355,11 @@ func.func @vector_arm_neon_k_unroll_vecmat(%lhs: vector<1x32xi8>, %rhs: vector<2
   return %res : vector<1x2xi32>
 }
 
+// -----
+
+// Test with more than one iteration across all of the M, N and K dimensions.
+// Shows multiple independent accumulators as well as accumulator reuse.
+
 // CHECK-LABEL: @vector_arm_neon_mnk_unroll
 // CHECK-SAME:    %arg0: vector<4x16xi8>
 // CHECK-SAME:    %arg1: vector<4x16xi8>
