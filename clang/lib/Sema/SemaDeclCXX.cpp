@@ -8651,6 +8651,18 @@ private:
         assert(Best->BuiltinParamTypes[2].isNull() &&
                "invalid builtin comparison");
 
+        // FIXME: If the type we deduced is a vector type, we mark the
+        // comparison as deleted because we don't yet support this.
+        if (isa<VectorType>(T)) {
+          if (Diagnose == ExplainDeleted) {
+            S.Diag(FD->getLocation(),
+                   diag::note_defaulted_comparison_vector_types)
+                << FD;
+            S.Diag(Subobj.Decl->getLocation(), diag::note_declared_at);
+          }
+          return Result::deleted();
+        }
+
         if (NeedsDeducing) {
           std::optional<ComparisonCategoryType> Cat =
               getComparisonCategoryForBuiltinCmp(T);
