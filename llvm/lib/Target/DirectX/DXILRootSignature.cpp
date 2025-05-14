@@ -320,8 +320,8 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
 
     Space--;
     // end root signature header
-}
-return PreservedAnalyses::all();
+  }
+  return PreservedAnalyses::all();
 }
 
 //===----------------------------------------------------------------------===//
