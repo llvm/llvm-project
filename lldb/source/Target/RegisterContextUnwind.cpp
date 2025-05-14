@@ -1492,10 +1492,7 @@ RegisterContextUnwind::SavedLocationForRegister(
 
   // Have we already found this register location?
   if (!m_registers.empty()) {
-    std::map<uint32_t,
-             lldb_private::UnwindLLDB::ConcreteRegisterLocation>::const_iterator
-        iterator;
-    iterator = m_registers.find(regnum.GetAsKind(eRegisterKindLLDB));
+    auto iterator = m_registers.find(regnum.GetAsKind(eRegisterKindLLDB));
     if (iterator != m_registers.end()) {
       regloc = iterator->second;
       UnwindLogMsg("supplying caller's saved %s (%d)'s location, cached",
