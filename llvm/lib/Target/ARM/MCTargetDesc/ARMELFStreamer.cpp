@@ -101,6 +101,9 @@ class ARMTargetAsmStreamer : public ARMTargetStreamer {
   void finishAttributeSection() override;
 
   void annotateTLSDescriptorSequence(const MCSymbolRefExpr *SRE) override;
+  void emitSyntaxUnified() override;
+  void emitCode16() override;
+  void emitCode32() override;
   void emitThumbFunc(MCSymbol *Symbol) override;
   void emitThumbSet(MCSymbol *Symbol, const MCExpr *Value) override;
 
@@ -261,6 +264,12 @@ void ARMTargetAsmStreamer::annotateTLSDescriptorSequence(
     const MCSymbolRefExpr *S) {
   OS << "\t.tlsdescseq\t" << S->getSymbol().getName() << "\n";
 }
+
+void ARMTargetAsmStreamer::emitSyntaxUnified() { OS << "\t.syntax\tunified\n"; }
+
+void ARMTargetAsmStreamer::emitCode16() { OS << "\t.code\t16\n"; }
+
+void ARMTargetAsmStreamer::emitCode32() { OS << "\t.code\t32\n"; }
 
 void ARMTargetAsmStreamer::emitThumbFunc(MCSymbol *Symbol) {
   const MCAsmInfo *MAI = Streamer.getContext().getAsmInfo();
@@ -435,6 +444,8 @@ private:
   void emitLabel(MCSymbol *Symbol) override;
 
   void annotateTLSDescriptorSequence(const MCSymbolRefExpr *SRE) override;
+  void emitCode16() override;
+  void emitCode32() override;
   void emitThumbFunc(MCSymbol *Symbol) override;
   void emitThumbSet(MCSymbol *Symbol, const MCExpr *Value) override;
 
@@ -590,25 +601,6 @@ public:
     MCELFStreamer::emitValueImpl(Value, Size, Loc);
   }
 
-  void emitAssemblerFlag(MCAssemblerFlag Flag) override {
-    MCELFStreamer::emitAssemblerFlag(Flag);
-
-    switch (Flag) {
-    case MCAF_SyntaxUnified:
-      return; // no-op here.
-    case MCAF_Code16:
-      IsThumb = true;
-      return; // Change to Thumb mode
-    case MCAF_Code32:
-      IsThumb = false;
-      return; // Change to ARM mode
-    case MCAF_Code64:
-      return;
-    case MCAF_SubsectionsViaSymbols:
-      return;
-    }
-  }
-
   /// If a label is defined before the .type directive sets the label's type
   /// then the label can't be recorded as thumb function when the label is
   /// defined. We override emitSymbolAttribute() which is called as part of the
@@ -630,6 +622,8 @@ public:
 
     return Val;
   };
+
+  void setIsThumb(bool Val) { IsThumb = Val; }
 
 private:
   enum ElfMappingSymbol {
@@ -1106,6 +1100,10 @@ void ARMTargetELFStreamer::annotateTLSDescriptorSequence(
     const MCSymbolRefExpr *S) {
   getStreamer().EmitFixup(S, FK_Data_4);
 }
+
+void ARMTargetELFStreamer::emitCode16() { getStreamer().setIsThumb(true); }
+
+void ARMTargetELFStreamer::emitCode32() { getStreamer().setIsThumb(false); }
 
 void ARMTargetELFStreamer::emitThumbFunc(MCSymbol *Symbol) {
   getStreamer().getAssembler().setIsThumbFunc(Symbol);

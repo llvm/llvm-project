@@ -182,7 +182,7 @@ public:
 
   void emitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
 
-  void emitAssemblerFlag(MCAssemblerFlag Flag) override;
+  void emitSubsectionsViaSymbols() override;
   void emitLinkerOptions(ArrayRef<std::string> Options) override;
   void emitDataRegion(MCDataRegionType Kind) override;
   void emitVersionMin(MCVersionMinType Kind, unsigned Major, unsigned Minor,
@@ -597,15 +597,8 @@ void MCAsmStreamer::emitGNUAttribute(unsigned Tag, unsigned Value) {
   OS << "\t.gnu_attribute " << Tag << ", " << Value << "\n";
 }
 
-void MCAsmStreamer::emitAssemblerFlag(MCAssemblerFlag Flag) {
-  switch (Flag) {
-  case MCAF_SyntaxUnified:         OS << "\t.syntax unified"; break;
-  case MCAF_SubsectionsViaSymbols: OS << ".subsections_via_symbols"; break;
-  case MCAF_Code16:                OS << '\t'<< MAI->getCode16Directive();break;
-  case MCAF_Code32:                OS << '\t'<< MAI->getCode32Directive();break;
-  case MCAF_Code64:                OS << '\t'<< MAI->getCode64Directive();break;
-  }
-  EmitEOL();
+void MCAsmStreamer::emitSubsectionsViaSymbols() {
+  OS << ".subsections_via_symbols\n";
 }
 
 void MCAsmStreamer::emitLinkerOptions(ArrayRef<std::string> Options) {
