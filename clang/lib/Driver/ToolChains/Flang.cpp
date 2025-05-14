@@ -128,7 +128,8 @@ void Flang::addOtherOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
                    options::OPT_std_EQ, options::OPT_W_Joined,
                    options::OPT_fconvert_EQ, options::OPT_fpass_plugin_EQ,
                    options::OPT_funderscoring, options::OPT_fno_underscoring,
-                   options::OPT_funsigned, options::OPT_fno_unsigned});
+                   options::OPT_funsigned, options::OPT_fno_unsigned,
+                   options::OPT_finstrument_functions});
 
   llvm::codegenoptions::DebugInfoKind DebugInfoKind;
   if (Args.hasArg(options::OPT_gN_Group)) {
@@ -151,28 +152,32 @@ void Flang::addCodegenOptions(const ArgList &Args,
       !stackArrays->getOption().matches(options::OPT_fno_stack_arrays))
     CmdArgs.push_back("-fstack-arrays");
 
-  // Enable vectorization per default according to the optimization level
-  // selected. For optimization levels that want vectorization we use the alias
-  // option to simplify the hasFlag logic.
-  bool enableVec = shouldEnableVectorizerAtOLevel(Args, false);
-  OptSpecifier vectorizeAliasOption =
-      enableVec ? options::OPT_O_Group : options::OPT_fvectorize;
-  if (Args.hasFlag(options::OPT_fvectorize, vectorizeAliasOption,
-                   options::OPT_fno_vectorize, enableVec))
-    CmdArgs.push_back("-vectorize-loops");
+  handleVectorizeLoopsArgs(Args, CmdArgs);
+  handleVectorizeSLPArgs(Args, CmdArgs);
 
   if (shouldLoopVersion(Args))
     CmdArgs.push_back("-fversion-loops-for-stride");
 
-  Args.addAllArgs(CmdArgs,
-                  {options::OPT_flang_experimental_hlfir,
-                   options::OPT_flang_deprecated_no_hlfir,
-                   options::OPT_fno_ppc_native_vec_elem_order,
-                   options::OPT_fppc_native_vec_elem_order,
-                   options::OPT_finit_global_zero,
-                   options::OPT_fno_init_global_zero, options::OPT_ftime_report,
-                   options::OPT_ftime_report_EQ, options::OPT_funroll_loops,
-                   options::OPT_fno_unroll_loops});
+  for (const auto &arg :
+       Args.getAllArgValues(options::OPT_frepack_arrays_contiguity_EQ))
+    if (arg != "whole" && arg != "innermost") {
+      getToolChain().getDriver().Diag(diag::err_drv_unsupported_option_argument)
+          << "-frepack-arrays-contiguity=" << arg;
+    }
+
+  Args.addAllArgs(
+      CmdArgs,
+      {options::OPT_fdo_concurrent_to_openmp_EQ,
+       options::OPT_flang_experimental_hlfir,
+       options::OPT_flang_deprecated_no_hlfir,
+       options::OPT_fno_ppc_native_vec_elem_order,
+       options::OPT_fppc_native_vec_elem_order, options::OPT_finit_global_zero,
+       options::OPT_fno_init_global_zero, options::OPT_frepack_arrays,
+       options::OPT_fno_repack_arrays,
+       options::OPT_frepack_arrays_contiguity_EQ,
+       options::OPT_fstack_repack_arrays, options::OPT_fno_stack_repack_arrays,
+       options::OPT_ftime_report, options::OPT_ftime_report_EQ,
+       options::OPT_funroll_loops, options::OPT_fno_unroll_loops});
 }
 
 void Flang::addPicOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
@@ -416,6 +421,9 @@ void Flang::AddAMDGPUTargetArgs(const ArgList &Args,
   if (Arg *A = Args.getLastArg(options::OPT_mcode_object_version_EQ)) {
     StringRef Val = A->getValue();
     CmdArgs.push_back(Args.MakeArgString("-mcode-object-version=" + Val));
+    CmdArgs.push_back(Args.MakeArgString("-mllvm"));
+    CmdArgs.push_back(
+        Args.MakeArgString("--amdhsa-code-object-version=" + Val));
   }
 
   const ToolChain &TC = getToolChain();
@@ -476,7 +484,7 @@ void Flang::addTargetOptions(const ArgList &Args,
           Triple.getArch() != llvm::Triple::x86_64)
         D.Diag(diag::err_drv_unsupported_opt_for_target)
             << Name << Triple.getArchName();
-    } else if (Name == "LIBMVEC-X86") {
+    } else if (Name == "libmvec") {
       if (Triple.getArch() != llvm::Triple::x86 &&
           Triple.getArch() != llvm::Triple::x86_64)
         D.Diag(diag::err_drv_unsupported_opt_for_target)

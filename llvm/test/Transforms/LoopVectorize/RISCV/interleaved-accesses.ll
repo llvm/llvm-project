@@ -1157,9 +1157,8 @@ define void @combine_load_factor2_i32(ptr noalias %p, ptr noalias %q) {
 ; FIXED-NEXT:    br label [[LOOP:%.*]]
 ; FIXED:       vector.body:
 ; FIXED-NEXT:    [[I:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
-; FIXED-NEXT:    [[TMP0:%.*]] = add i64 [[I]], 0
 ; FIXED-NEXT:    [[TMP1:%.*]] = add i64 [[I]], 8
-; FIXED-NEXT:    [[OFFSET0:%.*]] = shl i64 [[TMP0]], 1
+; FIXED-NEXT:    [[OFFSET0:%.*]] = shl i64 [[I]], 1
 ; FIXED-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP1]], 1
 ; FIXED-NEXT:    [[Q0:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 [[OFFSET0]]
 ; FIXED-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[P]], i64 [[TMP3]]
@@ -1171,7 +1170,7 @@ define void @combine_load_factor2_i32(ptr noalias %p, ptr noalias %q) {
 ; FIXED-NEXT:    [[STRIDED_VEC4:%.*]] = shufflevector <16 x i32> [[WIDE_VEC2]], <16 x i32> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
 ; FIXED-NEXT:    [[TMP6:%.*]] = add <8 x i32> [[STRIDED_VEC]], [[STRIDED_VEC1]]
 ; FIXED-NEXT:    [[TMP7:%.*]] = add <8 x i32> [[STRIDED_VEC3]], [[STRIDED_VEC4]]
-; FIXED-NEXT:    [[TMP8:%.*]] = getelementptr i32, ptr [[Q:%.*]], i64 [[TMP0]]
+; FIXED-NEXT:    [[TMP8:%.*]] = getelementptr i32, ptr [[Q:%.*]], i64 [[I]]
 ; FIXED-NEXT:    [[TMP9:%.*]] = getelementptr i32, ptr [[TMP8]], i32 0
 ; FIXED-NEXT:    [[TMP10:%.*]] = getelementptr i32, ptr [[TMP8]], i32 8
 ; FIXED-NEXT:    store <8 x i32> [[TMP6]], ptr [[TMP9]], align 4
@@ -1338,9 +1337,8 @@ define void @combine_load_factor2_i64(ptr noalias %p, ptr noalias %q) {
 ; FIXED-NEXT:    br label [[LOOP:%.*]]
 ; FIXED:       vector.body:
 ; FIXED-NEXT:    [[I:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
-; FIXED-NEXT:    [[TMP0:%.*]] = add i64 [[I]], 0
 ; FIXED-NEXT:    [[TMP1:%.*]] = add i64 [[I]], 4
-; FIXED-NEXT:    [[OFFSET0:%.*]] = shl i64 [[TMP0]], 1
+; FIXED-NEXT:    [[OFFSET0:%.*]] = shl i64 [[I]], 1
 ; FIXED-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP1]], 1
 ; FIXED-NEXT:    [[Q0:%.*]] = getelementptr i64, ptr [[P:%.*]], i64 [[OFFSET0]]
 ; FIXED-NEXT:    [[TMP5:%.*]] = getelementptr i64, ptr [[P]], i64 [[TMP3]]
@@ -1352,7 +1350,7 @@ define void @combine_load_factor2_i64(ptr noalias %p, ptr noalias %q) {
 ; FIXED-NEXT:    [[STRIDED_VEC4:%.*]] = shufflevector <8 x i64> [[WIDE_VEC2]], <8 x i64> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
 ; FIXED-NEXT:    [[TMP6:%.*]] = add <4 x i64> [[STRIDED_VEC]], [[STRIDED_VEC1]]
 ; FIXED-NEXT:    [[TMP7:%.*]] = add <4 x i64> [[STRIDED_VEC3]], [[STRIDED_VEC4]]
-; FIXED-NEXT:    [[TMP8:%.*]] = getelementptr i64, ptr [[Q:%.*]], i64 [[TMP0]]
+; FIXED-NEXT:    [[TMP8:%.*]] = getelementptr i64, ptr [[Q:%.*]], i64 [[I]]
 ; FIXED-NEXT:    [[TMP9:%.*]] = getelementptr i64, ptr [[TMP8]], i32 0
 ; FIXED-NEXT:    [[TMP10:%.*]] = getelementptr i64, ptr [[TMP8]], i32 4
 ; FIXED-NEXT:    store <4 x i64> [[TMP6]], ptr [[TMP9]], align 8

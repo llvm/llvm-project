@@ -157,19 +157,39 @@ define amdgpu_kernel void @scalar_to_vector_v4i16() {
 ; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
-; GFX89-LABEL: scalar_to_vector_v4i16:
-; GFX89:       ; %bb.0: ; %bb
-; GFX89-NEXT:    s_mov_b32 s3, 0xf000
-; GFX89-NEXT:    s_mov_b32 s2, -1
-; GFX89-NEXT:    buffer_load_ubyte v0, off, s[0:3], 0
-; GFX89-NEXT:    s_waitcnt vmcnt(0)
-; GFX89-NEXT:    v_lshlrev_b32_e32 v1, 8, v0
-; GFX89-NEXT:    v_or_b32_e32 v0, v0, v1
-; GFX89-NEXT:    v_lshlrev_b32_e32 v1, 16, v0
-; GFX89-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; GFX89-NEXT:    v_mov_b32_e32 v1, v0
-; GFX89-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
-; GFX89-NEXT:    s_endpgm
+; VI-LABEL: scalar_to_vector_v4i16:
+; VI:       ; %bb.0: ; %bb
+; VI-NEXT:    s_mov_b32 s3, 0xf000
+; VI-NEXT:    s_mov_b32 s2, -1
+; VI-NEXT:    buffer_load_ubyte v0, off, s[0:3], 0
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_readfirstlane_b32 s0, v0
+; VI-NEXT:    s_lshl_b32 s1, s0, 8
+; VI-NEXT:    s_or_b32 s0, s0, s1
+; VI-NEXT:    s_lshl_b32 s1, s0, 16
+; VI-NEXT:    s_and_b32 s0, s0, 0xffff
+; VI-NEXT:    s_or_b32 s0, s0, s1
+; VI-NEXT:    v_mov_b32_e32 v0, s0
+; VI-NEXT:    v_mov_b32_e32 v1, s0
+; VI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
+; VI-NEXT:    s_endpgm
+;
+; GFX9-LABEL: scalar_to_vector_v4i16:
+; GFX9:       ; %bb.0: ; %bb
+; GFX9-NEXT:    s_mov_b32 s3, 0xf000
+; GFX9-NEXT:    s_mov_b32 s2, -1
+; GFX9-NEXT:    buffer_load_ubyte v0, off, s[0:3], 0
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX9-NEXT:    s_lshl_b32 s1, s0, 8
+; GFX9-NEXT:    s_or_b32 s0, s0, s1
+; GFX9-NEXT:    s_and_b32 s1, s0, 0xffff
+; GFX9-NEXT:    s_lshl_b32 s0, s0, 16
+; GFX9-NEXT:    s_or_b32 s0, s1, s0
+; GFX9-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-NEXT:    v_mov_b32_e32 v1, s0
+; GFX9-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
+; GFX9-NEXT:    s_endpgm
 bb:
   %tmp = load <2 x i8>, ptr addrspace(1) poison, align 1
   %tmp1 = shufflevector <2 x i8> %tmp, <2 x i8> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
@@ -195,21 +215,49 @@ define amdgpu_kernel void @scalar_to_vector_v4f16() {
 ; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
-; GFX89-LABEL: scalar_to_vector_v4f16:
-; GFX89:       ; %bb.0: ; %bb
-; GFX89-NEXT:    s_mov_b32 s3, 0xf000
-; GFX89-NEXT:    s_mov_b32 s2, -1
-; GFX89-NEXT:    buffer_load_ubyte v0, off, s[0:3], 0
-; GFX89-NEXT:    s_waitcnt vmcnt(0)
-; GFX89-NEXT:    v_lshlrev_b32_e32 v1, 8, v0
-; GFX89-NEXT:    v_or_b32_e32 v0, v1, v0
-; GFX89-NEXT:    v_and_b32_e32 v1, 0xff00, v0
-; GFX89-NEXT:    v_or_b32_sdwa v1, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1 src1_sel:DWORD
-; GFX89-NEXT:    v_lshlrev_b32_e32 v2, 16, v1
-; GFX89-NEXT:    v_or_b32_sdwa v1, v1, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; GFX89-NEXT:    v_or_b32_sdwa v0, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; GFX89-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
-; GFX89-NEXT:    s_endpgm
+; VI-LABEL: scalar_to_vector_v4f16:
+; VI:       ; %bb.0: ; %bb
+; VI-NEXT:    s_mov_b32 s3, 0xf000
+; VI-NEXT:    s_mov_b32 s2, -1
+; VI-NEXT:    buffer_load_ubyte v0, off, s[0:3], 0
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_readfirstlane_b32 s0, v0
+; VI-NEXT:    s_lshl_b32 s1, s0, 8
+; VI-NEXT:    s_or_b32 s0, s1, s0
+; VI-NEXT:    s_and_b32 s1, s0, 0xff00
+; VI-NEXT:    s_bfe_u32 s4, s0, 0x80008
+; VI-NEXT:    s_or_b32 s1, s4, s1
+; VI-NEXT:    s_and_b32 s0, s0, 0xffff
+; VI-NEXT:    s_lshl_b32 s4, s1, 16
+; VI-NEXT:    s_and_b32 s1, s1, 0xffff
+; VI-NEXT:    s_or_b32 s1, s1, s4
+; VI-NEXT:    s_or_b32 s0, s0, s4
+; VI-NEXT:    v_mov_b32_e32 v0, s0
+; VI-NEXT:    v_mov_b32_e32 v1, s1
+; VI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
+; VI-NEXT:    s_endpgm
+;
+; GFX9-LABEL: scalar_to_vector_v4f16:
+; GFX9:       ; %bb.0: ; %bb
+; GFX9-NEXT:    s_mov_b32 s3, 0xf000
+; GFX9-NEXT:    s_mov_b32 s2, -1
+; GFX9-NEXT:    buffer_load_ubyte v0, off, s[0:3], 0
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX9-NEXT:    s_lshl_b32 s1, s0, 8
+; GFX9-NEXT:    s_or_b32 s0, s1, s0
+; GFX9-NEXT:    s_and_b32 s1, s0, 0xff00
+; GFX9-NEXT:    s_bfe_u32 s4, s0, 0x80008
+; GFX9-NEXT:    s_or_b32 s1, s4, s1
+; GFX9-NEXT:    s_and_b32 s0, s0, 0xffff
+; GFX9-NEXT:    s_and_b32 s4, s1, 0xffff
+; GFX9-NEXT:    s_lshl_b32 s1, s1, 16
+; GFX9-NEXT:    s_or_b32 s4, s4, s1
+; GFX9-NEXT:    s_or_b32 s0, s0, s1
+; GFX9-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-NEXT:    v_mov_b32_e32 v1, s4
+; GFX9-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
+; GFX9-NEXT:    s_endpgm
 bb:
   %load = load half, ptr addrspace(1) poison, align 1
   %tmp = bitcast half %load to <2 x i8>

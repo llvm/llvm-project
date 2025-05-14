@@ -12,8 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "ReduceOperandBundles.h"
-#include "Delta.h"
-#include "TestRunner.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
@@ -32,6 +30,13 @@ class Module;
 using namespace llvm;
 
 namespace {
+
+/// Return true if stripping the bundle from a call will result in invalid IR.
+static bool shouldKeepBundleTag(uint32_t BundleTagID) {
+  // In convergent functions using convergencectrl bundles, all convergent calls
+  // must use the convergence bundles so don't try to remove them.
+  return BundleTagID == LLVMContext::OB_convergencectrl;
+}
 
 /// Given ChunksToKeep, produce a map of calls and indexes of operand bundles
 /// to be preserved for each call.
@@ -54,9 +59,12 @@ public:
     OperandBundlesToKeepIndexes.reserve(Call.getNumOperandBundles());
 
     // Enumerate every operand bundle on this call.
-    for (unsigned BundleIndex : seq(Call.getNumOperandBundles()))
-      if (O.shouldKeep()) // Should we keep this one?
+    for (unsigned BundleIndex : seq(Call.getNumOperandBundles())) {
+      if (shouldKeepBundleTag(
+              Call.getOperandBundleAt(BundleIndex).getTagID()) ||
+          O.shouldKeep()) // Should we keep this one?
         OperandBundlesToKeepIndexes.emplace_back(BundleIndex);
+    }
   }
 };
 
@@ -95,17 +103,11 @@ static void maybeRewriteCallWithDifferentBundles(
 }
 
 /// Removes out-of-chunk operand bundles from calls.
-static void extractOperandBundesFromModule(Oracle &O,
-                                           ReducerWorkItem &WorkItem) {
+void llvm::reduceOperandBundesDeltaPass(Oracle &O, ReducerWorkItem &WorkItem) {
   Module &Program = WorkItem.getModule();
   OperandBundleRemapper R(O);
   R.visit(Program);
 
   for (const auto &I : R.CallsToRefine)
     maybeRewriteCallWithDifferentBundles(I.first, I.second);
-}
-
-void llvm::reduceOperandBundesDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, extractOperandBundesFromModule,
-               "Reducing Operand Bundles");
 }

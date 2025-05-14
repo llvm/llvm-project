@@ -35,6 +35,7 @@ unsigned short PatternBenefit::getBenefit() const {
 
 //===----------------------------------------------------------------------===//
 // OperationName Root Constructors
+//===----------------------------------------------------------------------===//
 
 Pattern::Pattern(StringRef rootName, PatternBenefit benefit,
                  MLIRContext *context, ArrayRef<StringRef> generatedNames)
@@ -43,6 +44,7 @@ Pattern::Pattern(StringRef rootName, PatternBenefit benefit,
 
 //===----------------------------------------------------------------------===//
 // MatchAnyOpTypeTag Root Constructors
+//===----------------------------------------------------------------------===//
 
 Pattern::Pattern(MatchAnyOpTypeTag tag, PatternBenefit benefit,
                  MLIRContext *context, ArrayRef<StringRef> generatedNames)
@@ -50,6 +52,7 @@ Pattern::Pattern(MatchAnyOpTypeTag tag, PatternBenefit benefit,
 
 //===----------------------------------------------------------------------===//
 // MatchInterfaceOpTypeTag Root Constructors
+//===----------------------------------------------------------------------===//
 
 Pattern::Pattern(MatchInterfaceOpTypeTag tag, TypeID interfaceID,
                  PatternBenefit benefit, MLIRContext *context,
@@ -59,6 +62,7 @@ Pattern::Pattern(MatchInterfaceOpTypeTag tag, TypeID interfaceID,
 
 //===----------------------------------------------------------------------===//
 // MatchTraitOpTypeTag Root Constructors
+//===----------------------------------------------------------------------===//
 
 Pattern::Pattern(MatchTraitOpTypeTag tag, TypeID traitID,
                  PatternBenefit benefit, MLIRContext *context,
@@ -68,6 +72,7 @@ Pattern::Pattern(MatchTraitOpTypeTag tag, TypeID traitID,
 
 //===----------------------------------------------------------------------===//
 // General Constructors
+//===----------------------------------------------------------------------===//
 
 Pattern::Pattern(const void *rootValue, RootKind rootKind,
                  ArrayRef<StringRef> generatedNames, PatternBenefit benefit,

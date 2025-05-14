@@ -496,6 +496,47 @@ static const TargetRegisterClass *canFoldCopy(const MachineInstr &MI,
 
 MCInst TargetInstrInfo::getNop() const { llvm_unreachable("Not implemented"); }
 
+/// Try to remove the load by folding it to a register
+/// operand at the use. We fold the load instructions if load defines a virtual
+/// register, the virtual register is used once in the same BB, and the
+/// instructions in-between do not load or store, and have no side effects.
+MachineInstr *TargetInstrInfo::optimizeLoadInstr(MachineInstr &MI,
+                                                 const MachineRegisterInfo *MRI,
+                                                 Register &FoldAsLoadDefReg,
+                                                 MachineInstr *&DefMI) const {
+  // Check whether we can move DefMI here.
+  DefMI = MRI->getVRegDef(FoldAsLoadDefReg);
+  assert(DefMI);
+  bool SawStore = false;
+  if (!DefMI->isSafeToMove(SawStore))
+    return nullptr;
+
+  // Collect information about virtual register operands of MI.
+  SmallVector<unsigned, 1> SrcOperandIds;
+  for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
+    MachineOperand &MO = MI.getOperand(i);
+    if (!MO.isReg())
+      continue;
+    Register Reg = MO.getReg();
+    if (Reg != FoldAsLoadDefReg)
+      continue;
+    // Do not fold if we have a subreg use or a def.
+    if (MO.getSubReg() || MO.isDef())
+      return nullptr;
+    SrcOperandIds.push_back(i);
+  }
+  if (SrcOperandIds.empty())
+    return nullptr;
+
+  // Check whether we can fold the def into SrcOperandId.
+  if (MachineInstr *FoldMI = foldMemoryOperand(MI, SrcOperandIds, *DefMI)) {
+    FoldAsLoadDefReg = 0;
+    return FoldMI;
+  }
+
+  return nullptr;
+}
+
 std::pair<unsigned, unsigned>
 TargetInstrInfo::getPatchpointUnfoldableRange(const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
@@ -1002,7 +1043,7 @@ bool TargetInstrInfo::getAccumulatorReassociationPatterns(
 
   // Check if the MBB this instruction is a part of contains any other chains.
   // If so, don't apply it.
-  SmallSet<Register, 32> ReductionChain(Chain.begin(), Chain.end());
+  SmallSet<Register, 32> ReductionChain(llvm::from_range, Chain);
   for (const auto &I : MBB) {
     if (I.getOpcode() == Opc &&
         !ReductionChain.contains(I.getOperand(0).getReg()))
@@ -1675,7 +1716,7 @@ bool TargetInstrInfo::getMemOperandWithOffset(
     const MachineInstr &MI, const MachineOperand *&BaseOp, int64_t &Offset,
     bool &OffsetIsScalable, const TargetRegisterInfo *TRI) const {
   SmallVector<const MachineOperand *, 4> BaseOps;
-  LocationSize Width = 0;
+  LocationSize Width = LocationSize::precise(0);
   if (!getMemOperandsWithOffsetWidth(MI, BaseOps, Offset, OffsetIsScalable,
                                      Width, TRI) ||
       BaseOps.size() != 1)

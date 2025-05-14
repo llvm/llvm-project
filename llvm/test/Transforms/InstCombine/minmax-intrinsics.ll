@@ -774,8 +774,8 @@ define i8 @clamp_two_vals_smax_smin(i8 %x) {
 
 define <3 x i8> @clamp_two_vals_smin_smax(<3 x i8> %x) {
 ; CHECK-LABEL: @clamp_two_vals_smin_smax(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <3 x i8> [[X:%.*]], splat (i8 41)
-; CHECK-NEXT:    [[R:%.*]] = select <3 x i1> [[TMP1]], <3 x i8> splat (i8 42), <3 x i8> splat (i8 41)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <3 x i8> [[X:%.*]], splat (i8 42)
+; CHECK-NEXT:    [[R:%.*]] = select <3 x i1> [[TMP1]], <3 x i8> splat (i8 41), <3 x i8> splat (i8 42)
 ; CHECK-NEXT:    ret <3 x i8> [[R]]
 ;
   %m = call <3 x i8> @llvm.smin.v3i8(<3 x i8> %x, <3 x i8> <i8 42, i8 42, i8 42>)
@@ -796,8 +796,8 @@ define i8 @clamp_two_vals_umax_umin(i8 %x) {
 
 define i8 @clamp_two_vals_umin_umax(i8 %x) {
 ; CHECK-LABEL: @clamp_two_vals_umin_umax(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i8 [[X:%.*]], 41
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP1]], i8 42, i8 41
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i8 [[X:%.*]], 42
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP1]], i8 41, i8 42
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %m = call i8 @llvm.umin.i8(i8 %x, i8 42)
@@ -2192,9 +2192,9 @@ define i8 @umin_umin_reassoc_constants(i8 %x) {
 
 define i8 @smin_smax_reassoc_constants(i8 %x) {
 ; CHECK-LABEL: @smin_smax_reassoc_constants(
-; CHECK-NEXT:    [[M1:%.*]] = call i8 @llvm.smin.i8(i8 [[X:%.*]], i8 97)
-; CHECK-NEXT:    [[M2:%.*]] = call i8 @llvm.smax.i8(i8 [[M1]], i8 -3)
-; CHECK-NEXT:    ret i8 [[M2]]
+; CHECK-NEXT:    [[M2:%.*]] = call i8 @llvm.smax.i8(i8 [[M1:%.*]], i8 -3)
+; CHECK-NEXT:    [[M3:%.*]] = call i8 @llvm.smin.i8(i8 [[M2]], i8 97)
+; CHECK-NEXT:    ret i8 [[M3]]
 ;
   %m1 = call i8 @llvm.smin.i8(i8 %x, i8 97)
   %m2 = call i8 @llvm.smax.i8(i8 %m1, i8 -3)

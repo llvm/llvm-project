@@ -63,8 +63,9 @@ public:
   ProfileSummaryInfo(const Module &M) : M(&M) { refresh(); }
   ProfileSummaryInfo(ProfileSummaryInfo &&Arg) = default;
 
-  /// If no summary is present, attempt to refresh.
-  void refresh();
+  /// If a summary is provided as argument, use that. Otherwise,
+  /// if the `Summary` member is null, attempt to refresh.
+  void refresh(std::unique_ptr<ProfileSummary> &&Other = nullptr);
 
   /// Returns true if profile summary is available.
   bool hasProfileSummary() const { return Summary != nullptr; }

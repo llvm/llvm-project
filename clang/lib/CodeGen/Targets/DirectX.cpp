@@ -52,7 +52,7 @@ llvm::Type *DirectXTargetCodeGenInfo::getHLSLType(
       return nullptr;
 
     // convert element type
-    llvm::Type *ElemType = CGM.getTypes().ConvertType(ContainedTy);
+    llvm::Type *ElemType = CGM.getTypes().ConvertTypeForMem(ContainedTy);
 
     llvm::StringRef TypeName =
         ResAttrs.RawBuffer ? "dx.RawBuffer" : "dx.TypedBuffer";

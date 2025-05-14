@@ -429,9 +429,13 @@ XCOFFObjectFile::getSectionContents(DataRefImpl Sec) const {
 }
 
 uint64_t XCOFFObjectFile::getSectionAlignment(DataRefImpl Sec) const {
-  uint64_t Result = 0;
-  llvm_unreachable("Not yet implemented!");
-  return Result;
+  // TODO: Copied from MC/XCOFFObjectWriter.cpp
+  // Sections other than DWARF section use DefaultSectionAlign as the default
+  // alignment, while DWARF sections have their own alignments. DWARF section
+  // alignment is bigger than DefaultSectionAlign.
+  if (isDebugSection(Sec))
+    return 8;
+  return 4;
 }
 
 uint64_t XCOFFObjectFile::getSectionFileOffsetToRawData(DataRefImpl Sec) const {

@@ -92,11 +92,11 @@ void StringFind() {
   std::wstring WStr;
   WStr.find(L"n");
   // CHECK-MESSAGES: [[@LINE-1]]:13: warning: 'find' called with a string literal
-  // CHECK-FIXES: Str.find(L'n');
+  // CHECK-FIXES: WStr.find(L'n');
   // Even with unicode that fits in one wide char.
   WStr.find(L"\x3A9");
   // CHECK-MESSAGES: [[@LINE-1]]:13: warning: 'find' called with a string literal
-  // CHECK-FIXES: Str.find(L'\x3A9');
+  // CHECK-FIXES: WStr.find(L'\x3A9');
 
   // std::string_view and std::wstring_view should work.
   std::string_view StrView;

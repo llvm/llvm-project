@@ -123,7 +123,7 @@ template <class Mutex>
 */
 
 #if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
-#  include <__cxx03/shared_mutex>
+#  include <__cxx03/__config>
 #else
 #  include <__config>
 
@@ -240,10 +240,36 @@ public:
       _LIBCPP_THREAD_SAFETY_ANNOTATION(__try_acquire_capability__(true)) {
     return try_lock_until(chrono::steady_clock::now() + __rel_time);
   }
+
   template <class _Clock, class _Duration>
-  _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS bool
-  try_lock_until(const chrono::time_point<_Clock, _Duration>& __abs_time)
-      _LIBCPP_THREAD_SAFETY_ANNOTATION(__try_acquire_capability__(true));
+  _LIBCPP_HIDE_FROM_ABI bool try_lock_until(const chrono::time_point<_Clock, _Duration>& __abs_time)
+      _LIBCPP_THREAD_SAFETY_ANNOTATION(__try_acquire_capability__(true)) {
+    unique_lock<mutex> __lk(__base_.__mut_);
+    if (__base_.__state_ & __base_.__write_entered_) {
+      while (true) {
+        cv_status __status = __base_.__gate1_.wait_until(__lk, __abs_time);
+        if ((__base_.__state_ & __base_.__write_entered_) == 0)
+          break;
+        if (__status == cv_status::timeout)
+          return false;
+      }
+    }
+    __base_.__state_ |= __base_.__write_entered_;
+    if (__base_.__state_ & __base_.__n_readers_) {
+      while (true) {
+        cv_status __status = __base_.__gate2_.wait_until(__lk, __abs_time);
+        if ((__base_.__state_ & __base_.__n_readers_) == 0)
+          break;
+        if (__status == cv_status::timeout) {
+          __base_.__state_ &= ~__base_.__write_entered_;
+          __base_.__gate1_.notify_all();
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
   void unlock() _LIBCPP_THREAD_SAFETY_ANNOTATION(__release_capability__());
 
   // Shared ownership
@@ -254,60 +280,30 @@ public:
       _LIBCPP_THREAD_SAFETY_ANNOTATION(__try_acquire_shared_capability__(true)) {
     return try_lock_shared_until(chrono::steady_clock::now() + __rel_time);
   }
-  template <class _Clock, class _Duration>
-  _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS bool
-  try_lock_shared_until(const chrono::time_point<_Clock, _Duration>& __abs_time)
-      _LIBCPP_THREAD_SAFETY_ANNOTATION(__try_acquire_shared_capability__(true));
-  void unlock_shared() _LIBCPP_THREAD_SAFETY_ANNOTATION(__release_shared_capability__());
-};
 
-template <class _Clock, class _Duration>
-bool shared_timed_mutex::try_lock_until(const chrono::time_point<_Clock, _Duration>& __abs_time) {
-  unique_lock<mutex> __lk(__base_.__mut_);
-  if (__base_.__state_ & __base_.__write_entered_) {
-    while (true) {
-      cv_status __status = __base_.__gate1_.wait_until(__lk, __abs_time);
-      if ((__base_.__state_ & __base_.__write_entered_) == 0)
-        break;
-      if (__status == cv_status::timeout)
-        return false;
-    }
-  }
-  __base_.__state_ |= __base_.__write_entered_;
-  if (__base_.__state_ & __base_.__n_readers_) {
-    while (true) {
-      cv_status __status = __base_.__gate2_.wait_until(__lk, __abs_time);
-      if ((__base_.__state_ & __base_.__n_readers_) == 0)
-        break;
-      if (__status == cv_status::timeout) {
-        __base_.__state_ &= ~__base_.__write_entered_;
-        __base_.__gate1_.notify_all();
-        return false;
+  template <class _Clock, class _Duration>
+  _LIBCPP_HIDE_FROM_ABI bool try_lock_shared_until(const chrono::time_point<_Clock, _Duration>& __abs_time)
+      _LIBCPP_THREAD_SAFETY_ANNOTATION(__try_acquire_shared_capability__(true)) {
+    unique_lock<mutex> __lk(__base_.__mut_);
+    if ((__base_.__state_ & __base_.__write_entered_) ||
+        (__base_.__state_ & __base_.__n_readers_) == __base_.__n_readers_) {
+      while (true) {
+        cv_status __status = __base_.__gate1_.wait_until(__lk, __abs_time);
+        if ((__base_.__state_ & __base_.__write_entered_) == 0 &&
+            (__base_.__state_ & __base_.__n_readers_) < __base_.__n_readers_)
+          break;
+        if (__status == cv_status::timeout)
+          return false;
       }
     }
+    unsigned __num_readers = (__base_.__state_ & __base_.__n_readers_) + 1;
+    __base_.__state_ &= ~__base_.__n_readers_;
+    __base_.__state_ |= __num_readers;
+    return true;
   }
-  return true;
-}
 
-template <class _Clock, class _Duration>
-bool shared_timed_mutex::try_lock_shared_until(const chrono::time_point<_Clock, _Duration>& __abs_time) {
-  unique_lock<mutex> __lk(__base_.__mut_);
-  if ((__base_.__state_ & __base_.__write_entered_) ||
-      (__base_.__state_ & __base_.__n_readers_) == __base_.__n_readers_) {
-    while (true) {
-      cv_status __status = __base_.__gate1_.wait_until(__lk, __abs_time);
-      if ((__base_.__state_ & __base_.__write_entered_) == 0 &&
-          (__base_.__state_ & __base_.__n_readers_) < __base_.__n_readers_)
-        break;
-      if (__status == cv_status::timeout)
-        return false;
-    }
-  }
-  unsigned __num_readers = (__base_.__state_ & __base_.__n_readers_) + 1;
-  __base_.__state_ &= ~__base_.__n_readers_;
-  __base_.__state_ |= __num_readers;
-  return true;
-}
+  void unlock_shared() _LIBCPP_THREAD_SAFETY_ANNOTATION(__release_shared_capability__());
+};
 
 template <class _Mutex>
 class shared_lock {

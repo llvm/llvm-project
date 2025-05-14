@@ -635,3 +635,17 @@ define void @memset_offset_1_size_0(ptr %dst, ptr %src) {
   call void @llvm.memmove.p0.p0.i64(ptr %dst.1, ptr %src, i64 0, i1 false)
   ret void
 }
+
+; We should bail if the range overflows a singed 64-bit int.
+define void @range_overflows_signed_64_bit_int(ptr %arg) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
+; CHECK-LABEL: define void @range_overflows_signed_64_bit_int(
+; CHECK-SAME: ptr writeonly captures(none) [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[GETELEMENTPTR:%.*]] = getelementptr i8, ptr [[ARG]], i64 9223372036854775804
+; CHECK-NEXT:    store i32 0, ptr [[GETELEMENTPTR]], align 4
+; CHECK-NEXT:    ret void
+;
+  %getelementptr = getelementptr i8, ptr %arg, i64 9223372036854775804
+  store i32 0, ptr %getelementptr
+  ret void
+}

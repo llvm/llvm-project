@@ -53,11 +53,10 @@ ModularizeUtilities::ModularizeUtilities(std::vector<std::string> &InputPaths,
       Diagnostics(
           new DiagnosticsEngine(DiagIDs, DiagnosticOpts.get(), &DC, false)),
       TargetOpts(new ModuleMapTargetOptions()),
-      Target(TargetInfo::CreateTargetInfo(*Diagnostics, TargetOpts)),
+      Target(TargetInfo::CreateTargetInfo(*Diagnostics, *TargetOpts)),
       FileMgr(new FileManager(FileSystemOpts)),
-      SourceMgr(new SourceManager(*Diagnostics, *FileMgr, false)),
-      HeaderInfo(new HeaderSearch(std::make_shared<HeaderSearchOptions>(),
-                                  *SourceMgr, *Diagnostics, *LangOpts,
+      SourceMgr(new SourceManager(*Diagnostics, *FileMgr, false)), HSOpts(),
+      HeaderInfo(new HeaderSearch(HSOpts, *SourceMgr, *Diagnostics, *LangOpts,
                                   Target.get())) {}
 
 // Create instance of ModularizeUtilities, to simplify setting up
@@ -291,7 +290,7 @@ std::error_code ModularizeUtilities::loadModuleMap(
     Target.get(), *HeaderInfo));
 
   // Parse module.modulemap file into module map.
-  if (ModMap->parseModuleMapFile(ModuleMapEntry, false, Dir)) {
+  if (ModMap->parseAndLoadModuleMapFile(ModuleMapEntry, false, Dir)) {
     return std::error_code(1, std::generic_category());
   }
 

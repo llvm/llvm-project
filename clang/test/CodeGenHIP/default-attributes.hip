@@ -8,7 +8,6 @@
 //.
 // OPTNONE: @__hip_cuid_ = addrspace(1) global i8 0
 // OPTNONE: @llvm.compiler.used = appending addrspace(1) global [1 x ptr] [ptr addrspacecast (ptr addrspace(1) @__hip_cuid_ to ptr)], section "llvm.metadata"
-// OPTNONE: @__oclc_ABI_version = weak_odr hidden local_unnamed_addr addrspace(4) constant i32 600
 //.
 __device__ void extern_func();
 

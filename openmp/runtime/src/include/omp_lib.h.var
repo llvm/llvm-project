@@ -151,6 +151,18 @@
       parameter(omp_atk_pinned=7)
       integer(kind=omp_alloctrait_key_kind)omp_atk_partition
       parameter(omp_atk_partition=8)
+      integer(kind=omp_alloctrait_key_kind)omp_atk_pin_device
+      parameter(omp_atk_pin_device=9)
+      integer(kind=omp_alloctrait_key_kind)omp_atk_preferred_device
+      parameter(omp_atk_preferred_device=10)
+      integer(kind=omp_alloctrait_key_kind)omp_atk_device_access
+      parameter(omp_atk_device_access=11)
+      integer(kind=omp_alloctrait_key_kind)omp_atk_target_access
+      parameter(omp_atk_target_access=12)
+      integer(kind=omp_alloctrait_key_kind)omp_atk_atomic_scope
+      parameter(omp_atk_atomic_scope=13)
+      integer(kind=omp_alloctrait_key_kind)omp_atk_part_size
+      parameter(omp_atk_part_size=14)
 
       integer(kind=omp_alloctrait_val_kind)omp_atv_default
       parameter(omp_atv_default=-1)
@@ -170,8 +182,8 @@
       parameter(omp_atv_sequential=5)
       integer(kind=omp_alloctrait_val_kind)omp_atv_private
       parameter(omp_atv_private=6)
-      integer(kind=omp_alloctrait_val_kind)omp_atv_all
-      parameter(omp_atv_all=7)
+      integer(kind=omp_alloctrait_val_kind)omp_atv_device
+      parameter(omp_atv_device=7)
       integer(kind=omp_alloctrait_val_kind)omp_atv_thread
       parameter(omp_atv_thread=8)
       integer(kind=omp_alloctrait_val_kind)omp_atv_pteam
@@ -194,6 +206,14 @@
       parameter(omp_atv_blocked=17)
       integer(kind=omp_alloctrait_val_kind)omp_atv_interleaved
       parameter(omp_atv_interleaved=18)
+      integer(kind=omp_alloctrait_val_kind)omp_atv_all
+      parameter(omp_atv_all=19)
+      integer(kind=omp_alloctrait_val_kind)omp_atv_single
+      parameter(omp_atv_single=20)
+      integer(kind=omp_alloctrait_val_kind)omp_atv_multiple
+      parameter(omp_atv_multiple=21)
+      integer(kind=omp_alloctrait_val_kind)omp_atv_memspace
+      parameter(omp_atv_memspace=22)
 
       type omp_alloctrait
         integer (kind=omp_alloctrait_key_kind) key
@@ -225,8 +245,10 @@
       integer(omp_allocator_handle_kind)llvm_omp_target_device_mem_alloc
       parameter(llvm_omp_target_device_mem_alloc=102)
 
+      integer(kind=omp_memspace_handle_kind)omp_null_mem_space
+      parameter(omp_null_mem_space=0)
       integer(kind=omp_memspace_handle_kind)omp_default_mem_space
-      parameter(omp_default_mem_space=0)
+      parameter(omp_default_mem_space=99)
       integer(kind=omp_memspace_handle_kind)omp_large_cap_mem_space
       parameter(omp_large_cap_mem_space=1)
       integer(kind=omp_memspace_handle_kind)omp_const_mem_space
@@ -862,6 +884,98 @@
           import
           logical (kind=omp_logical_kind) omp_in_explicit_task
         end function omp_in_explicit_task
+
+        function omp_get_devices_memspace(ndevs, devs, memspace)
+          import
+          integer(omp_memspace_handle_kind) :: omp_get_devices_memspace
+          integer, intent(in) :: ndevs
+          integer, intent(in) :: devs(*)
+          integer(omp_memspace_handle_kind), intent(in) :: memspace
+        end function omp_get_devices_memspace
+
+        function omp_get_device_memspace(dev, memspace)
+          import
+          integer(omp_memspace_handle_kind) :: omp_get_device_memspace
+          integer, intent(in) :: dev
+          integer(omp_memspace_handle_kind), intent(in) :: memspace
+        end function omp_get_device_memspace
+
+        function omp_get_devices_and_host_memspace(ndevs,devs,memspace)
+          import
+          integer(omp_memspace_handle_kind) ::                                                                                      &
+     &        omp_get_devices_and_host_memspace
+          integer, intent(in) :: ndevs
+          integer, intent(in) :: devs(*)
+          integer(omp_memspace_handle_kind), intent(in) :: memspace
+        end function omp_get_devices_and_host_memspace
+
+        function omp_get_device_and_host_memspace(dev, memspace)
+          import
+          integer(omp_memspace_handle_kind) ::                                                                                      &
+     &        omp_get_device_and_host_memspace
+          integer, intent(in) :: dev
+          integer(omp_memspace_handle_kind), intent(in) :: memspace
+        end function omp_get_device_and_host_memspace
+
+        function omp_get_devices_all_memspace(memspace)
+        import
+        integer(omp_memspace_handle_kind)::omp_get_devices_all_memspace
+        integer(omp_memspace_handle_kind), intent(in) :: memspace
+        end function omp_get_devices_all_memspace
+
+        function omp_get_devices_allocator(ndevs, devs, memspace)
+          import
+          integer(omp_allocator_handle_kind)::omp_get_devices_allocator
+          integer, intent(in) :: ndevs
+          integer, intent(in) :: devs(*)
+          integer(omp_memspace_handle_kind), intent(in) :: memspace
+        end function omp_get_devices_allocator
+
+        function omp_get_device_allocator(dev, memspace)
+          import
+          integer(omp_allocator_handle_kind) :: omp_get_device_allocator
+          integer, intent(in) :: dev
+          integer(omp_memspace_handle_kind), intent(in) :: memspace
+        end function omp_get_device_allocator
+
+        function omp_get_devices_and_host_allocator(ndevs,devs,memspace)
+          import
+          integer(omp_allocator_handle_kind) ::                                                                                     &
+     &        omp_get_devices_and_host_allocator
+          integer, intent(in) :: ndevs
+          integer, intent(in) :: devs(*)
+          integer(omp_memspace_handle_kind), intent(in) :: memspace
+        end function omp_get_devices_and_host_allocator
+
+        function omp_get_device_and_host_allocator(dev, memspace)
+          import
+          integer(omp_allocator_handle_kind) ::                                                                                     &
+     &        omp_get_device_and_host_allocator
+          integer, intent(in) :: dev
+          integer(omp_memspace_handle_kind), intent(in) :: memspace
+        end function omp_get_device_and_host_allocator
+
+        function omp_get_devices_all_allocator(memspace)
+          import
+          integer(omp_allocator_handle_kind) ::                                                                                     &
+     &        omp_get_devices_all_allocator
+          integer(omp_memspace_handle_kind), intent(in) :: memspace
+        end function omp_get_devices_all_allocator
+
+        function omp_get_memspace_num_resources(memspace)
+          import
+          integer omp_get_memspace_num_resources
+          integer(omp_memspace_handle_kind), intent(in) :: memspace
+        end function omp_get_memspace_num_resources
+
+        function omp_get_submemspace(memspace, num_resources, resources)
+          import
+          integer(omp_memspace_handle_kind) omp_get_submemspace
+          integer(omp_memspace_handle_kind), intent(in) :: memspace
+          integer, intent(in) :: num_resources
+          integer, intent(in) :: resources(*)
+        end function omp_get_submemspace
+
 
 !       ***
 !       *** kmp_* entry points

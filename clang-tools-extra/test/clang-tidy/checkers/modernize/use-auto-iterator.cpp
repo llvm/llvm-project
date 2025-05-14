@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++11,c++14 %s modernize-use-auto %t -- -- -I %S/Inputs/use-auto
+// RUN: %check_clang_tidy --match-partial-fixes -std=c++11,c++14 %s modernize-use-auto %t -- -- -I %S/Inputs/use-auto
 // FIXME: Fix the checker to work in C++17 mode.
 
 #include "containers.h"

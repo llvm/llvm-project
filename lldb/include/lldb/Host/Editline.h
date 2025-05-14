@@ -102,6 +102,8 @@ using SuggestionCallbackType =
 
 using CompleteCallbackType = llvm::unique_function<void(CompletionRequest &)>;
 
+using RedrawCallbackType = llvm::unique_function<void()>;
+
 /// Status used to decide when and how to start editing another line in
 /// multi-line sessions.
 enum class EditorStatus {
@@ -166,6 +168,9 @@ public:
   DisplayCompletions(Editline &editline,
                      llvm::ArrayRef<CompletionResult::Completion> results);
 
+  /// Sets if editline should use color.
+  void UseColor(bool use_color);
+
   /// Sets a string to be used as a prompt, or combined with a line number to
   /// form a prompt.
   void SetPrompt(const char *prompt);
@@ -194,6 +199,11 @@ public:
     m_suggestion_callback = std::move(callback);
   }
 
+  /// Register a callback for redrawing the statusline.
+  void SetRedrawCallback(RedrawCallbackType callback) {
+    m_redraw_callback = std::move(callback);
+  }
+
   /// Register a callback for the tab key
   void SetAutoCompleteCallback(CompleteCallbackType callback) {
     m_completion_callback = std::move(callback);
@@ -216,21 +226,29 @@ public:
   void SetPromptAnsiPrefix(std::string prefix) {
     if (m_color)
       m_prompt_ansi_prefix = std::move(prefix);
+    else
+      m_prompt_ansi_prefix.clear();
   }
 
   void SetPromptAnsiSuffix(std::string suffix) {
     if (m_color)
       m_prompt_ansi_suffix = std::move(suffix);
+    else
+      m_prompt_ansi_suffix.clear();
   }
 
   void SetSuggestionAnsiPrefix(std::string prefix) {
     if (m_color)
       m_suggestion_ansi_prefix = std::move(prefix);
+    else
+      m_suggestion_ansi_prefix.clear();
   }
 
   void SetSuggestionAnsiSuffix(std::string suffix) {
     if (m_color)
       m_suggestion_ansi_suffix = std::move(suffix);
+    else
+      m_suggestion_ansi_suffix.clear();
   }
 
   /// Prompts for and reads a single line of user input.
@@ -409,6 +427,7 @@ private:
 
   CompleteCallbackType m_completion_callback;
   SuggestionCallbackType m_suggestion_callback;
+  RedrawCallbackType m_redraw_callback;
 
   bool m_color;
   std::string m_prompt_ansi_prefix;

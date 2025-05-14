@@ -75,6 +75,8 @@ SMEAttrs::SMEAttrs(const AttributeList &Attrs) {
     Bitmask |= SM_Body;
   if (Attrs.hasFnAttr("aarch64_za_state_agnostic"))
     Bitmask |= ZA_State_Agnostic;
+  if (Attrs.hasFnAttr("aarch64_zt0_undef"))
+    Bitmask |= ZT0_Undef;
   if (Attrs.hasFnAttr("aarch64_in_za"))
     Bitmask |= encodeZAState(StateValue::In);
   if (Attrs.hasFnAttr("aarch64_out_za"))

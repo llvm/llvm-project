@@ -82,7 +82,7 @@ void UnarySymExpr::dumpToStream(raw_ostream &os) const {
 
 void SymbolConjured::dumpToStream(raw_ostream &os) const {
   os << getKindStr() << getSymbolID() << '{' << T << ", LC" << LCtx->getID();
-  if (S)
+  if (auto *S = getStmt())
     os << ", S" << S->getID(LCtx->getDecl()->getASTContext());
   else
     os << ", no stmt";
