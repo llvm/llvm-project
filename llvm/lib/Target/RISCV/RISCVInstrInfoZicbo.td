@@ -37,7 +37,7 @@ class CBO_r<bits<12> optype, string opcodestr>
 
 let hasSideEffects = 0, mayLoad = 1, mayStore = 1 in
 class Prefetch_ri<bits<5> optype, string opcodestr>
-    : RVInstS<0b110, OPC_OP_IMM, (outs), (ins GPR:$rs1, simm12_lsb00000:$imm12),
+    : RVInstS<0b110, OPC_OP_IMM, (outs), (ins GPRMem:$rs1, simm12_lsb00000:$imm12),
               opcodestr, "${imm12}(${rs1})"> {
   let Inst{11-7} = 0b00000;
   let rs2 = optype;
