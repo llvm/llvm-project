@@ -752,8 +752,7 @@ private:
   /// name must refer to an entity which has already been declared.
   ///
   /// \param CCC Indicates how to perform typo-correction for this name. If
-  /// NULL,
-  ///        no typo correction will be performed.
+  ///        NULL, no typo correction will be performed.
   /// \param AllowImplicitTypename Whether we are in a context where a dependent
   ///        nested-name-specifier without typename is treated as a type (e.g.
   ///        T::type).
