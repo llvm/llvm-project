@@ -5975,9 +5975,22 @@ static bool CheckConstexprFunction(EvalInfo &Info, SourceLocation CallLoc,
                                         Definition->hasAttr<MSConstexprAttr>())))
     return true;
 
-  if (Info.getLangOpts().CPlusPlus11) {
-    const FunctionDecl *DiagDecl = Definition ? Definition : Declaration;
+  const FunctionDecl *DiagDecl = Definition ? Definition : Declaration;
+  // Special note for the assert() macro, as the normal error message falsely
+  // implies we cannot use an assertion during constant evaluation.
+  if (CallLoc.isMacroID() && DiagDecl->getIdentifier()) {
+    // FIXME: Instead of checking for an implementation-defined function,
+    // check and evaluate the assert() macro.
+    StringRef Name = DiagDecl->getName();
+    bool AssertFailed =
+        Name == "__assert_rtn" || Name == "__assert_fail" || Name == "_wassert";
+    if (AssertFailed) {
+      Info.FFDiag(CallLoc, diag::note_constexpr_assert_failed);
+      return false;
+    }
+  }
 
+  if (Info.getLangOpts().CPlusPlus11) {
     // If this function is not constexpr because it is an inherited
     // non-constexpr constructor, diagnose that directly.
     auto *CD = dyn_cast<CXXConstructorDecl>(DiagDecl);
