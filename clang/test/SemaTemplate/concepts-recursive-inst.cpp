@@ -285,6 +285,56 @@ bool b = i == 1;
 
 }
 
+namespace GCC_99599_3 {
+
+template<typename T>
+struct S { T t; };
+
+template<typename T>
+concept C = sizeof(S<T>) > 0;
+
+struct I;
+
+struct from_range_t {
+    explicit from_range_t() = default;
+};
+inline constexpr from_range_t from_range;
+
+template<typename T>
+concept FromRange = __is_same_as (T, from_range_t);
+
+//#define WORKAROUND
+#ifdef WORKAROUND
+template<FromRange U, C T>
+void f(U, T*);
+#else
+template<C T>
+void f(from_range_t, T*);
+#endif
+
+void f(...);
+
+void g(I* p) {
+  f(0, p);
+}
+
+}
+
+namespace GCC_99599_4 {
+
+struct A {
+  A(...);
+};
+
+template <class T> void f(A, T) { }
+
+int main()
+{
+  f(42, 24);
+}
+
+}
+
 namespace FAILED_GCC_110160 {
 // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=110160
 // Current heuristic FAILED; GCC trunk also failed
