@@ -131,7 +131,7 @@ bool matchSelectToFaceForward(MachineInstr &MI, MachineRegisterInfo &MRI) {
   if (MI.getOpcode() != TargetOpcode::G_SELECT)
     return false;
 
-  // Check if the condition is a comparison between a dot product and zero
+  // Check if select's condition is a comparison between a dot product and 0.
   Register CondReg = MI.getOperand(1).getReg();
   MachineInstr *CondInstr = MRI.getVRegDef(CondReg);
   if (!CondInstr || CondInstr->getOpcode() != TargetOpcode::G_FCMP)
@@ -139,7 +139,6 @@ bool matchSelectToFaceForward(MachineInstr &MI, MachineRegisterInfo &MRI) {
 
   Register DotReg = CondInstr->getOperand(2).getReg();
   MachineInstr *DotInstr = MRI.getVRegDef(DotReg);
-  // fmul?
   if (DotInstr->getOpcode() != TargetOpcode::G_INTRINSIC ||
       cast<GIntrinsic>(DotInstr)->getIntrinsicID() != Intrinsic::spv_fdot)
     return false;
@@ -150,7 +149,7 @@ bool matchSelectToFaceForward(MachineInstr &MI, MachineRegisterInfo &MRI) {
       !CondZeroInstr->getOperand(1).getFPImm()->isZero())
     return false;
 
-  // Check if the false operand is the negation of the true operand
+  // Check if select's false operand is the negation of the true operand.
   Register TrueReg = MI.getOperand(2).getReg();
   Register FalseReg = MI.getOperand(3).getReg();
   MachineInstr *FalseInstr = MRI.getVRegDef(FalseReg);
@@ -169,17 +168,17 @@ void applySPIRVFaceForward(MachineInstr &MI, MachineRegisterInfo &MRI,
   MachineInstr *CondInstr = MRI.getVRegDef(CondReg);
   Register DotReg = CondInstr->getOperand(2).getReg();
   MachineInstr *DotInstr = MRI.getVRegDef(DotReg);
-  Register DotOperand1 = DotInstr->getOperand(2).getReg(); // I
-  Register DotOperand2 = DotInstr->getOperand(3).getReg(); // Ng
-  Register TrueReg = MI.getOperand(2).getReg();            // N
+  Register DotOperand1 = DotInstr->getOperand(2).getReg();
+  Register DotOperand2 = DotInstr->getOperand(3).getReg();
+  Register TrueReg = MI.getOperand(2).getReg();
 
-  // Remove the original `select` instruction
+  // Remove the original `select` instruction.
   Register ResultReg = MI.getOperand(0).getReg();
   DebugLoc DL = MI.getDebugLoc();
   MachineBasicBlock &MBB = *MI.getParent();
   MachineBasicBlock::iterator InsertPt = MI.getIterator();
 
-  // Build the `spv_faceforward` intrinsic
+  // Build the `spv_faceforward` intrinsic.
   MachineInstrBuilder NewInstr =
       BuildMI(MBB, InsertPt, DL, B.getTII().get(TargetOpcode::G_INTRINSIC));
   NewInstr
