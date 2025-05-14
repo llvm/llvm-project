@@ -1,9 +1,11 @@
 add_lldb_unittest(DAPTests
+  DAPTest.cpp
+  Handler/DisconnectRequestHandlerTest.cpp
   JSONUtilsTest.cpp
   LLDBUtilsTest.cpp
-  TransportTest.cpp
   ProtocolTypesTest.cpp
-  DAPTest.cpp
+  TestBase.cpp
+  TransportTest.cpp
 
   LINK_LIBS
     lldbDAP
