@@ -18,6 +18,7 @@
 #include "llvm/Support/SwapByteOrder.h"
 #include "llvm/TargetParser/Triple.h"
 
+#include <cstdint>
 #include <stdint.h>
 
 namespace llvm {
@@ -600,6 +601,25 @@ inline bool isValidShaderVisibility(uint32_t V) {
   return false;
 }
 
+#define STATIC_SAMPLER_FILTER(Val, Enum) Enum = Val,
+enum class StaticSamplerFilter : uint32_t {
+#include "DXContainerConstants.def"
+};
+
+#define TEXTURE_ADDRESS_MODE(Val, Enum) Enum = Val,
+enum class TextureAddressMode : uint32_t {
+#include "DXContainerConstants.def"
+};
+
+#define COMPARISON_FUNCTION(Val, Enum) Enum = Val,
+enum class ComparisonFunction : uint32_t {
+#include "DXContainerConstants.def"
+};
+
+#define STATIC_BORDER_COLOR(Val, Enum) Enum = Val,
+enum class StaticBorderColor : uint32_t {
+#include "DXContainerConstants.def"
+};
 namespace v1 {
 
 struct RootSignatureHeader {
@@ -666,6 +686,37 @@ struct DescriptorRange {
     sys::swapByteOrder(RegisterSpace);
     sys::swapByteOrder(OffsetInDescriptorsFromTableStart);
   }
+};
+
+struct StaticSampler {
+  uint32_t Filter;
+  uint32_t AddressU;
+  uint32_t AddressV;
+  uint32_t AddressW;
+  float MipLODBias;
+  uint32_t MaxAnisotropy;
+  uint32_t ComparisonFunc;
+  uint32_t BorderColor;
+  float MinLOD;
+  float MaxLOD;
+  uint32_t ShaderRegister;
+  uint32_t RegisterSpace;
+  uint32_t ShaderVisibility;
+  void swapBytes() {
+    sys::swapByteOrder(Filter);
+    sys::swapByteOrder(AddressU);
+    sys::swapByteOrder(AddressV);
+    sys::swapByteOrder(AddressW);
+    sys::swapByteOrder(MipLODBias);
+    sys::swapByteOrder(MaxAnisotropy);
+    sys::swapByteOrder(ComparisonFunc);
+    sys::swapByteOrder(BorderColor);
+    sys::swapByteOrder(MinLOD);
+    sys::swapByteOrder(MaxLOD);
+    sys::swapByteOrder(ShaderRegister);
+    sys::swapByteOrder(RegisterSpace);
+    sys::swapByteOrder(ShaderVisibility);
+  };
 };
 } // namespace v1
 

@@ -126,6 +126,22 @@ struct RootParameterYamlDesc {
   RootParameterYamlDesc(uint32_t T) : Type(T) {}
 };
 
+struct StaticSamplerYamlDesc {
+  uint32_t Filter;
+  uint32_t AddressU;
+  uint32_t AddressV;
+  uint32_t AddressW;
+  float MipLODBias;
+  uint32_t MaxAnisotropy;
+  uint32_t ComparisonFunc;
+  uint32_t BorderColor;
+  float MinLOD;
+  float MaxLOD;
+  uint32_t ShaderRegister;
+  uint32_t RegisterSpace;
+  uint32_t ShaderVisibility;
+};
+
 struct RootSignatureYamlDesc {
   RootSignatureYamlDesc() = default;
 
@@ -136,11 +152,16 @@ struct RootSignatureYamlDesc {
   uint32_t StaticSamplersOffset;
 
   SmallVector<RootParameterYamlDesc> Parameters;
+  SmallVector<StaticSamplerYamlDesc> StaticSamplers;
 
   uint32_t getEncodedFlags();
 
   iterator_range<RootParameterYamlDesc *> params() {
     return make_range(Parameters.begin(), Parameters.end());
+  }
+
+  iterator_range<StaticSamplerYamlDesc *> samplers() {
+    return make_range(StaticSamplers.begin(), StaticSamplers.end());
   }
 
   static llvm::Expected<DXContainerYAML::RootSignatureYamlDesc>
@@ -255,6 +276,7 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::PSVInfo::MaskVector)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::SignatureParameter)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::RootParameterYamlDesc)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::DescriptorRangeYaml)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::StaticSamplerYamlDesc)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::SemanticKind)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::ComponentType)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::InterpolationMode)
@@ -345,6 +367,10 @@ template <> struct MappingTraits<llvm::DXContainerYAML::DescriptorTableYaml> {
 
 template <> struct MappingTraits<llvm::DXContainerYAML::DescriptorRangeYaml> {
   static void mapping(IO &IO, llvm::DXContainerYAML::DescriptorRangeYaml &D);
+};
+
+template <> struct MappingTraits<llvm::DXContainerYAML::StaticSamplerYamlDesc> {
+  static void mapping(IO &IO, llvm::DXContainerYAML::StaticSamplerYamlDesc &S);
 };
 
 } // namespace yaml
