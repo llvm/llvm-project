@@ -209,13 +209,11 @@ define void @v2i8(ptr %px, ptr %py, ptr %pz) nounwind {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    ldr b0, [x0]
 ; CHECK-GI-NEXT:    ldr b1, [x1]
+; CHECK-GI-NEXT:    add x8, x0, #1
+; CHECK-GI-NEXT:    add x9, x1, #1
+; CHECK-GI-NEXT:    ld1 { v0.b }[1], [x8]
+; CHECK-GI-NEXT:    ld1 { v1.b }[1], [x9]
 ; CHECK-GI-NEXT:    add x8, x2, #1
-; CHECK-GI-NEXT:    ldr b2, [x0, #1]
-; CHECK-GI-NEXT:    ldr b3, [x1, #1]
-; CHECK-GI-NEXT:    mov v0.b[0], v0.b[0]
-; CHECK-GI-NEXT:    mov v1.b[0], v1.b[0]
-; CHECK-GI-NEXT:    mov v0.b[1], v2.b[0]
-; CHECK-GI-NEXT:    mov v1.b[1], v3.b[0]
 ; CHECK-GI-NEXT:    sqadd v0.8b, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    st1 { v0.b }[0], [x2]
 ; CHECK-GI-NEXT:    st1 { v0.b }[1], [x8]

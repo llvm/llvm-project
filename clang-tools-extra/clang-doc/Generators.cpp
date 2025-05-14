@@ -103,6 +103,7 @@ static int LLVM_ATTRIBUTE_UNUSED MDGeneratorAnchorDest =
     MDGeneratorAnchorSource;
 static int LLVM_ATTRIBUTE_UNUSED HTMLGeneratorAnchorDest =
     HTMLGeneratorAnchorSource;
-
+static int LLVM_ATTRIBUTE_UNUSED MHTMLGeneratorAnchorDest =
+    MHTMLGeneratorAnchorSource;
 } // namespace doc
 } // namespace clang
