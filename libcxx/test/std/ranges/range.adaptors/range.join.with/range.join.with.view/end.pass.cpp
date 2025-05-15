@@ -33,13 +33,13 @@ concept JoinWithViewHasConstEnd = requires(const std::ranges::join_with_view<V, 
 template <size_t Bits>
   requires(Bits < (1 << 7))
 constexpr void test_end() {
-  constexpr bool v_models_forward_range           = Bits & (1 << 0);
-  constexpr bool inner_range_is_reference         = Bits & (1 << 1);
-  constexpr bool inner_range_models_forward_range = Bits & (1 << 2);
-  constexpr bool v_models_common_range            = Bits & (1 << 3);
-  constexpr bool inner_range_models_common_range  = Bits & (1 << 4);
-  constexpr bool v_models_simple_range            = Bits & (1 << 5);
-  constexpr bool pattern_models_simple_range      = Bits & (1 << 6);
+  constexpr bool v_models_forward_range           = static_cast<bool>(Bits & (1 << 0));
+  constexpr bool inner_range_is_reference         = static_cast<bool>(Bits & (1 << 1));
+  constexpr bool inner_range_models_forward_range = static_cast<bool>(Bits & (1 << 2));
+  constexpr bool v_models_common_range            = static_cast<bool>(Bits & (1 << 3));
+  constexpr bool inner_range_models_common_range  = static_cast<bool>(Bits & (1 << 4));
+  constexpr bool v_models_simple_range            = static_cast<bool>(Bits & (1 << 5));
+  constexpr bool pattern_models_simple_range      = static_cast<bool>(Bits & (1 << 6));
 
   constexpr ViewProperties inner_range_props{.common = inner_range_models_common_range};
   using InnerRange =
@@ -108,13 +108,13 @@ constexpr void test_end() {
 template <std::size_t Bits>
   requires(Bits < (1 << 7))
 constexpr void test_const_end() {
-  constexpr bool const_v_models_forward_range           = Bits & (1 << 0);
-  constexpr bool const_pattern_models_forward_range     = Bits & (1 << 1);
-  constexpr bool inner_const_range_is_reference         = Bits & (1 << 2);
-  constexpr bool inner_const_range_models_input_range   = Bits & (1 << 3);
-  constexpr bool inner_const_range_models_forward_range = Bits & (1 << 4);
-  constexpr bool const_v_models_common_range            = Bits & (1 << 5);
-  constexpr bool inner_const_range_models_common_range  = Bits & (1 << 6);
+  constexpr bool const_v_models_forward_range           = static_cast<bool>(Bits & (1 << 0));
+  constexpr bool const_pattern_models_forward_range     = static_cast<bool>(Bits & (1 << 1));
+  constexpr bool inner_const_range_is_reference         = static_cast<bool>(Bits & (1 << 2));
+  constexpr bool inner_const_range_models_input_range   = static_cast<bool>(Bits & (1 << 3));
+  constexpr bool inner_const_range_models_forward_range = static_cast<bool>(Bits & (1 << 4));
+  constexpr bool const_v_models_common_range            = static_cast<bool>(Bits & (1 << 5));
+  constexpr bool inner_const_range_models_common_range  = static_cast<bool>(Bits & (1 << 6));
 
   constexpr ViewProperties inner_range_props{.common = inner_const_range_models_common_range};
   using InnerRange =
