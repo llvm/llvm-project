@@ -2630,11 +2630,11 @@ public:
 BugPathGetter::BugPathGetter(const ExplodedGraph *OriginalGraph,
                              ArrayRef<PathSensitiveBugReport *> &BugReports) {
   TrimGraphWorklist Worklist;
-  for (const auto I : BugReports) {
-    assert(I->isValid() &&
+  for (PathSensitiveBugReport *BR : BugReports) {
+    assert(BR->isValid() &&
            "We only allow BugReporterVisitors and BugReporter itself to "
            "invalidate reports!");
-    Worklist.emplace_back(I->getErrorNode());
+    Worklist.emplace_back(BR->getErrorNode());
   }
 
   // The trimmed graph is created in the body of the constructor to ensure
