@@ -3,8 +3,11 @@
 RUN: yaml2obj %p/Inputs/blarge_new.yaml &> %t.exe
 ## Non-BOLTed input binary
 RUN: llvm-bolt-heatmap %t.exe -o %t --pa -p %p/Inputs/blarge_new.preagg.txt \
-RUN:   2>&1 | FileCheck --check-prefix CHECK-HEATMAP %s
+RUN:   --heatmap-zoom-out 128,1024 2>&1 | FileCheck --check-prefix CHECK-HEATMAP %s
 RUN: FileCheck %s --check-prefix CHECK-SEC-HOT --input-file %t-section-hotness.csv
+RUN: FileCheck %s --check-prefix CHECK-HM-64 --input-file %t
+RUN: FileCheck %s --check-prefix CHECK-HM-128 --input-file %t-128
+RUN: FileCheck %s --check-prefix CHECK-HM-1024 --input-file %t-1024
 
 ## BOLTed input binary
 RUN: llvm-bolt %t.exe -o %t.out --pa -p %p/Inputs/blarge_new.preagg.txt \
@@ -23,6 +26,15 @@ CHECK-SEC-HOT-NEXT: .init, 0x401000, 0x40101b, 16.8545, 100.0000, 0.1685
 CHECK-SEC-HOT-NEXT: .plt, 0x401020, 0x4010b0, 4.7583, 66.6667, 0.0317
 CHECK-SEC-HOT-NEXT: .text, 0x4010b0, 0x401c25, 78.3872, 85.1064, 0.6671
 CHECK-SEC-HOT-NEXT: .fini, 0x401c28, 0x401c35, 0.0000, 0.0000, 0.0000
+
+# Only check start addresses – can't check colors, and FileCheck doesn't strip
+# color codes by default. Reference output:
+# HM-64:   0x00404000: ABBcccccccccccccccCCCCCCCCCccccCCCCCCCCcc....CC
+# HM-128:  0x00408000: ABCCCCCCCCCCCCCCCCCCc.CC
+# HM-1024: 0x00440000: ACC
+CHECK-HM-64:   0x00404000:
+CHECK-HM-128:  0x00408000:
+CHECK-HM-1024: 0x00440000:
 
 CHECK-HEATMAP-BAT: PERF2BOLT: read 79 aggregated LBR entries
 CHECK-HEATMAP-BAT: HEATMAP: invalid traces: 2

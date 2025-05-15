@@ -81,7 +81,7 @@ void Heatmap::print(raw_ostream &OS) const {
   // the Address.
   auto startLine = [&](uint64_t Address, bool Empty = false) {
     changeColor(DefaultColor);
-    const uint64_t LineAddress = Address / BytesPerLine * BytesPerLine;
+    const uint64_t LineAddress = alignTo(Address, BytesPerLine);
 
     if (MaxAddress > 0xffffffff)
       OS << format("0x%016" PRIx64 ": ", LineAddress);
@@ -363,6 +363,19 @@ void Heatmap::printSectionHotness(raw_ostream &OS) const {
   if (UnmappedHotness > 0)
     OS << formatv("[unmapped], 0x0, 0x0, {0:f4}, 0, 0\n",
                   100.0 * UnmappedHotness / NumTotalCounts);
+}
+
+bool Heatmap::resizeBucket(uint64_t TargetSize) {
+  if (TargetSize <= BucketSize)
+    return false;
+  std::map<uint64_t, uint64_t> NewMap;
+  for (const auto [Bucket, Count] : Map) {
+    const uint64_t Address = Bucket * BucketSize;
+    NewMap[Address / TargetSize] += Count;
+  }
+  Map = NewMap;
+  BucketSize = TargetSize;
+  return true;
 }
 } // namespace bolt
 } // namespace llvm
