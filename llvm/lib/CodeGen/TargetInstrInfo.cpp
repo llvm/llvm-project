@@ -1846,8 +1846,7 @@ TargetInstrInfo::describeLoadedValue(const MachineInstr &MI,
 
   // To simplify the sub-register handling, verify that we only need to
   // consider physical registers.
-  assert(MF->getProperties().hasProperty(
-      MachineFunctionProperties::Property::NoVRegs));
+  assert(MF->getProperties().hasNoVRegs());
 
   if (auto DestSrc = isCopyInstr(MI)) {
     Register DestReg = DestSrc->Destination->getReg();
