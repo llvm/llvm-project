@@ -10,9 +10,11 @@
 /// TODO: Port CodeGen passes to new pass manager.
 //===----------------------------------------------------------------------===//
 
+#include "X86AsmPrinter.h"
 #include "X86ISelDAGToDAG.h"
 #include "X86TargetMachine.h"
 
+#include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Passes/CodeGenPassBuilder.h"
 #include "llvm/Passes/PassBuilder.h"
@@ -29,17 +31,11 @@ public:
                                  PassInstrumentationCallbacks *PIC)
       : CodeGenPassBuilder(TM, Opts, PIC) {}
   void addPreISel(AddIRPass &addPass) const;
-  void addAsmPrinter(AddMachinePass &, CreateMCStreamer) const;
   Error addInstSelector(AddMachinePass &) const;
 };
 
 void X86CodeGenPassBuilder::addPreISel(AddIRPass &addPass) const {
   // TODO: Add passes pre instruction selection.
-}
-
-void X86CodeGenPassBuilder::addAsmPrinter(AddMachinePass &addPass,
-                                          CreateMCStreamer) const {
-  // TODO: Add AsmPrinter.
 }
 
 Error X86CodeGenPassBuilder::addInstSelector(AddMachinePass &addPass) const {
@@ -57,8 +53,8 @@ void X86TargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 
 Error X86TargetMachine::buildCodeGenPipeline(
     ModulePassManager &MPM, raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
-    CodeGenFileType FileType, const CGPassBuilderOption &Opt,
+    CodeGenFileType FileType, const CGPassBuilderOption &Opt, MCContext &Ctx,
     PassInstrumentationCallbacks *PIC) {
   auto CGPB = X86CodeGenPassBuilder(*this, Opt, PIC);
-  return CGPB.buildPipeline(MPM, Out, DwoOut, FileType);
+  return CGPB.buildPipeline(MPM, Out, DwoOut, FileType, Ctx);
 }

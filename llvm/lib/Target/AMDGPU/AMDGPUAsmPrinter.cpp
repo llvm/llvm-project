@@ -440,9 +440,13 @@ void AMDGPUAsmPrinter::validateMCResourceInfo(Function &F) {
         RI.getSymbol(FnSym->getName(), RIK::RIK_NumAGPR, OutContext, IsLocal);
     uint64_t NumVgpr, NumAgpr;
 
-    MachineModuleInfo &MMI =
-        getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
-    MachineFunction *MF = MMI.getMachineFunction(F);
+    MachineFunction *MF =
+        !MAM ? MMI->getMachineFunction(F)
+             : &MAM->getResult<FunctionAnalysisManagerModuleProxy>(
+                       *F.getParent())
+                    .getManager()
+                    .getResult<MachineFunctionAnalysis>(F)
+                    .getMF();
     if (MF && NumVgprSymbol->isVariable() && NumAgprSymbol->isVariable() &&
         TryGetMCExprValue(NumVgprSymbol->getVariableValue(), NumVgpr) &&
         TryGetMCExprValue(NumAgprSymbol->getVariableValue(), NumAgpr)) {
@@ -642,7 +646,8 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   if (!IsTargetStreamerInitialized)
     initTargetStreamer(*MF.getFunction().getParent());
 
-  ResourceUsage = &getAnalysis<AMDGPUResourceUsageAnalysis>();
+  if (!inNewPassManager())
+    ResourceUsage = &getAnalysis<AMDGPUResourceUsageAnalysis>();
   CurrentProgramInfo.reset(MF);
 
   const AMDGPUMachineFunction *MFI = MF.getInfo<AMDGPUMachineFunction>();

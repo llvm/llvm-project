@@ -289,7 +289,12 @@ void NVPTXAsmPrinter::printReturnValStr(const MachineFunction &MF,
 // llvm.loop.unroll.disable or llvm.loop.unroll.count=1.
 bool NVPTXAsmPrinter::isLoopHeaderOfNoUnroll(
     const MachineBasicBlock &MBB) const {
-  MachineLoopInfo &LI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+  MachineLoopInfo *LIPtr = nullptr;
+  if (inNewPassManager())
+    LIPtr = &MFAM->getResult<MachineLoopAnalysis>(*MF);
+  else
+    LIPtr = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+  auto &LI = *LIPtr;
   // We insert .pragma "nounroll" only to the loop header.
   if (!LI.isLoopHeader(&MBB))
     return false;
