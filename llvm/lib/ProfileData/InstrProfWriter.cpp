@@ -16,6 +16,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/ProfileSummary.h"
+#include "llvm/ProfileData/DataAccessProf.h"
 #include "llvm/ProfileData/IndexedMemProfData.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/MemProf.h"
@@ -29,6 +30,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
 #include <ctime>
+#include <functional>
 #include <memory>
 #include <string>
 #include <tuple>
@@ -152,9 +154,7 @@ void InstrProfWriter::setValueProfDataEndianness(llvm::endianness Endianness) {
   InfoObj->ValueProfDataEndianness = Endianness;
 }
 
-void InstrProfWriter::setOutputSparse(bool Sparse) {
-  this->Sparse = Sparse;
-}
+void InstrProfWriter::setOutputSparse(bool Sparse) { this->Sparse = Sparse; }
 
 void InstrProfWriter::addRecord(NamedInstrProfRecord &&I, uint64_t Weight,
                                 function_ref<void(Error)> Warn) {
@@ -327,6 +327,12 @@ bool InstrProfWriter::addMemProfData(memprof::IndexedMemProfData Incoming,
 
 void InstrProfWriter::addBinaryIds(ArrayRef<llvm::object::BuildID> BIs) {
   llvm::append_range(BinaryIds, BIs);
+}
+
+void InstrProfWriter::addDataAccessProfData(
+    std::unique_ptr<data_access_prof::DataAccessProfData>
+        DataAccessProfDataIn) {
+  DataAccessProfileData = std::move(DataAccessProfDataIn);
 }
 
 void InstrProfWriter::addTemporalProfileTrace(TemporalProfTraceTy Trace) {
@@ -614,8 +620,14 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   uint64_t MemProfSectionStart = 0;
   if (static_cast<bool>(ProfileKind & InstrProfKind::MemProf)) {
     MemProfSectionStart = OS.tell();
+    std::optional<std::reference_wrapper<data_access_prof::DataAccessProfData>>
+        DAP = std::nullopt;
+    if (DataAccessProfileData.get() != nullptr)
+      DAP = std::ref(*DataAccessProfileData.get());
+
     if (auto E = writeMemProf(OS, MemProfData, MemProfVersionRequested,
-                              MemProfFullSchema))
+                              MemProfFullSchema, DAP))
+
       return E;
   }
 

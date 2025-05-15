@@ -2,6 +2,7 @@
 #define LLVM_PROFILEDATA_MEMPROFYAML_H_
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ProfileData/DataAccessProf.h"
 #include "llvm/ProfileData/MemProf.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/YAMLTraits.h"
@@ -12,6 +13,9 @@ namespace memprof {
 // serialized and deserialized in YAML.
 LLVM_YAML_STRONG_TYPEDEF(uint64_t, GUIDHex64)
 
+LLVM_YAML_STRONG_TYPEDEF(uint64_t, SymbolContentHash)
+LLVM_YAML_STRONG_TYPEDEF(std::string, OwnedSymbolName)
+
 // Helper struct for AllMemProfData.  In YAML, we treat the GUID and the fields
 // within MemProfRecord at the same level as if the GUID were part of
 // MemProfRecord.
@@ -20,9 +24,25 @@ struct GUIDMemProfRecordPair {
   MemProfRecord Record;
 };
 
+// Helper struct to yamlify data_access_prof::DataAccessProfData. The struct
+// members use owned strings. This is for simplicity and assumes that most real
+// world use cases do look-ups and regression test scale is small, so string
+// efficiency is not a priority.
+struct YamlDataAccessProfData {
+  std::vector<data_access_prof::DataAccessProfRecord> Records;
+  std::vector<uint64_t> KnownColdHashes;
+  std::vector<std::string> KnownColdSymbols;
+
+  bool isEmpty() const {
+    return Records.empty() && KnownColdHashes.empty() &&
+           KnownColdSymbols.empty();
+  }
+};
+
 // The top-level data structure, only used with YAML for now.
 struct AllMemProfData {
   std::vector<GUIDMemProfRecordPair> HeapProfileRecords;
+  YamlDataAccessProfData YamlifiedDataAccessProfiles;
 };
 } // namespace memprof
 
@@ -206,9 +226,50 @@ template <> struct MappingTraits<memprof::GUIDMemProfRecordPair> {
   }
 };
 
+template <> struct MappingTraits<data_access_prof::SourceLocation> {
+  static void mapping(IO &Io, data_access_prof::SourceLocation &Loc) {
+    Io.mapOptional("FileName", Loc.FileName);
+    Io.mapOptional("Line", Loc.Line);
+  }
+};
+
+template <> struct MappingTraits<data_access_prof::DataAccessProfRecord> {
+  static void mapping(IO &Io, data_access_prof::DataAccessProfRecord &Rec) {
+    if (Io.outputting()) {
+      if (std::holds_alternative<std::string>(Rec.SymHandle)) {
+        Io.mapOptional("Symbol", std::get<std::string>(Rec.SymHandle));
+      } else {
+        Io.mapOptional("Hash", std::get<uint64_t>(Rec.SymHandle));
+      }
+    } else {
+      std::string SymName;
+      uint64_t Hash = 0;
+      Io.mapOptional("Symbol", SymName);
+      Io.mapOptional("Hash", Hash);
+      if (!SymName.empty()) {
+        Rec.SymHandle = SymName;
+      } else {
+        Rec.SymHandle = Hash;
+      }
+    }
+
+    Io.mapOptional("Locations", Rec.Locations);
+  }
+};
+
+template <> struct MappingTraits<memprof::YamlDataAccessProfData> {
+  static void mapping(IO &Io, memprof::YamlDataAccessProfData &Data) {
+    Io.mapOptional("SampledRecords", Data.Records);
+    Io.mapOptional("KnownColdSymbols", Data.KnownColdSymbols);
+    Io.mapOptional("KnownColdHashes", Data.KnownColdHashes);
+  }
+};
+
 template <> struct MappingTraits<memprof::AllMemProfData> {
   static void mapping(IO &Io, memprof::AllMemProfData &Data) {
     Io.mapRequired("HeapProfileRecords", Data.HeapProfileRecords);
+
+    Io.mapOptional("DataAccessProfiles", Data.YamlifiedDataAccessProfiles);
   }
 };
 
@@ -234,5 +295,9 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(memprof::AllocationInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(memprof::CallSiteInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(memprof::GUIDMemProfRecordPair)
 LLVM_YAML_IS_SEQUENCE_VECTOR(memprof::GUIDHex64) // Used for CalleeGuids
+LLVM_YAML_IS_SEQUENCE_VECTOR(data_access_prof::DataAccessProfRecord)
+LLVM_YAML_IS_SEQUENCE_VECTOR(data_access_prof::SourceLocation)
+LLVM_YAML_IS_SEQUENCE_VECTOR(memprof::SymbolContentHash)
+LLVM_YAML_IS_SEQUENCE_VECTOR(memprof::OwnedSymbolName)
 
 #endif // LLVM_PROFILEDATA_MEMPROFYAML_H_
