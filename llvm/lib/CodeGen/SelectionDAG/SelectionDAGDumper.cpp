@@ -577,6 +577,9 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::VECTOR_FIND_LAST_ACTIVE:
     return "find_last_active";
 
+  case ISD::GET_ACTIVE_LANE_MASK:
+    return "get_active_lane_mask";
+
   case ISD::PARTIAL_REDUCE_UMLA:
     return "partial_reduce_umla";
   case ISD::PARTIAL_REDUCE_SMLA:
