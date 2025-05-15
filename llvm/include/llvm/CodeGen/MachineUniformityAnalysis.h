@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/MachineCycleAnalysis.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/MachineSSAContext.h"
 
 namespace llvm {
@@ -31,7 +32,8 @@ using MachineUniformityInfo = GenericUniformityInfo<MachineSSAContext>;
 /// everything is uniform.
 MachineUniformityInfo computeMachineUniformityInfo(
     MachineFunction &F, const MachineCycleInfo &cycleInfo,
-    const MachineDominatorTree &domTree, bool HasBranchDivergence);
+    const MachineDominatorTree &domTree,
+    const MachinePostDominatorTree &pdomTree, bool HasBranchDivergence);
 
 /// Legacy analysis pass which computes a \ref MachineUniformityInfo.
 class MachineUniformityAnalysisPass : public MachineFunctionPass {

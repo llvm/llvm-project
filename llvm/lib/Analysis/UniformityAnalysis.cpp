@@ -9,6 +9,7 @@
 #include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/ADT/GenericUniformityImpl.h"
 #include "llvm/Analysis/CycleAnalysis.h"
+#include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/InstIterator.h"
@@ -114,9 +115,10 @@ template struct llvm::GenericUniformityAnalysisImplDeleter<
 llvm::UniformityInfo UniformityInfoAnalysis::run(Function &F,
                                                  FunctionAnalysisManager &FAM) {
   auto &DT = FAM.getResult<DominatorTreeAnalysis>(F);
+  auto &PDT = FAM.getResult<PostDominatorTreeAnalysis>(F);
   auto &TTI = FAM.getResult<TargetIRAnalysis>(F);
   auto &CI = FAM.getResult<CycleAnalysis>(F);
-  UniformityInfo UI{DT, CI, &TTI};
+  UniformityInfo UI{DT, PDT, CI, &TTI};
   // Skip computation if we can assume everything is uniform.
   if (TTI.hasBranchDivergence(&F))
     UI.compute();
@@ -148,6 +150,7 @@ UniformityInfoWrapperPass::UniformityInfoWrapperPass() : FunctionPass(ID) {}
 INITIALIZE_PASS_BEGIN(UniformityInfoWrapperPass, "uniformity",
                       "Uniformity Analysis", true, true)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(PostDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(CycleInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_END(UniformityInfoWrapperPass, "uniformity",
@@ -156,6 +159,7 @@ INITIALIZE_PASS_END(UniformityInfoWrapperPass, "uniformity",
 void UniformityInfoWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   AU.addRequired<DominatorTreeWrapperPass>();
+  AU.addRequired<PostDominatorTreeWrapperPass>();
   AU.addRequiredTransitive<CycleInfoWrapperPass>();
   AU.addRequired<TargetTransformInfoWrapperPass>();
 }
@@ -163,11 +167,13 @@ void UniformityInfoWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
 bool UniformityInfoWrapperPass::runOnFunction(Function &F) {
   auto &cycleInfo = getAnalysis<CycleInfoWrapperPass>().getResult();
   auto &domTree = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+  auto &pdomTree = getAnalysis<PostDominatorTreeWrapperPass>().getPostDomTree();
   auto &targetTransformInfo =
       getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
 
   m_function = &F;
-  m_uniformityInfo = UniformityInfo{domTree, cycleInfo, &targetTransformInfo};
+  m_uniformityInfo =
+      UniformityInfo{domTree, pdomTree, cycleInfo, &targetTransformInfo};
 
   // Skip computation if we can assume everything is uniform.
   if (targetTransformInfo.hasBranchDivergence(m_function))

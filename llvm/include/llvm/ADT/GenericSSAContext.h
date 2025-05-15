@@ -77,6 +77,10 @@ public:
   // a given funciton.
   using DominatorTreeT = DominatorTreeBase<BlockT, false>;
 
+  // A post-dominator tree provides the post-dominance relation between
+  // basic blocks in a given funciton.
+  using PostDominatorTreeT = DominatorTreeBase<BlockT, true>;
+
   GenericSSAContext() = default;
   GenericSSAContext(const FunctionT *F) : F(F) {}
 

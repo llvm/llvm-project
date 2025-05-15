@@ -263,6 +263,7 @@ template <typename ContextT> class GenericSyncDependenceAnalysis {
 public:
   using BlockT = typename ContextT::BlockT;
   using DominatorTreeT = typename ContextT::DominatorTreeT;
+  using PostDominatorTreeT = typename ContextT::PostDominatorTreeT;
   using FunctionT = typename ContextT::FunctionT;
   using ValueRefT = typename ContextT::ValueRefT;
   using InstructionT = typename ContextT::InstructionT;
@@ -296,7 +297,9 @@ public:
   using DivergencePropagatorT = DivergencePropagator<ContextT>;
 
   GenericSyncDependenceAnalysis(const ContextT &Context,
-                                const DominatorTreeT &DT, const CycleInfoT &CI);
+                                const DominatorTreeT &DT,
+                                const PostDominatorTreeT &PDT,
+                                const CycleInfoT &CI);
 
   /// \brief Computes divergent join points and cycle exits caused by branch
   /// divergence in \p Term.
@@ -315,6 +318,7 @@ private:
   ModifiedPO CyclePO;
 
   const DominatorTreeT &DT;
+  const PostDominatorTreeT &PDT;
   const CycleInfoT &CI;
 
   DenseMap<const BlockT *, std::unique_ptr<DivergenceDescriptor>>
@@ -336,6 +340,7 @@ public:
   using UseT = typename ContextT::UseT;
   using InstructionT = typename ContextT::InstructionT;
   using DominatorTreeT = typename ContextT::DominatorTreeT;
+  using PostDominatorTreeT = typename ContextT::PostDominatorTreeT;
 
   using CycleInfoT = GenericCycleInfo<ContextT>;
   using CycleT = typename CycleInfoT::CycleT;
@@ -348,10 +353,12 @@ public:
   using TemporalDivergenceTuple =
       std::tuple<ConstValueRefT, InstructionT *, const CycleT *>;
 
-  GenericUniformityAnalysisImpl(const DominatorTreeT &DT, const CycleInfoT &CI,
+  GenericUniformityAnalysisImpl(const DominatorTreeT &DT,
+                                const PostDominatorTreeT &PDT,
+                                const CycleInfoT &CI,
                                 const TargetTransformInfo *TTI)
       : Context(CI.getSSAContext()), F(*Context.getFunction()), CI(CI),
-        TTI(TTI), DT(DT), SDA(Context, DT, CI) {}
+        TTI(TTI), DT(DT), PDT(PDT), SDA(Context, DT, PDT, CI) {}
 
   void initialize();
 
@@ -435,6 +442,7 @@ protected:
 
 private:
   const DominatorTreeT &DT;
+  const PostDominatorTreeT &PDT;
 
   // Recognized cycles with divergent exits.
   SmallPtrSet<const CycleT *, 16> DivergentExitCycles;
@@ -493,6 +501,7 @@ template <typename ContextT> class DivergencePropagator {
 public:
   using BlockT = typename ContextT::BlockT;
   using DominatorTreeT = typename ContextT::DominatorTreeT;
+  using PostDominatorTreeT = typename ContextT::PostDominatorTreeT;
   using FunctionT = typename ContextT::FunctionT;
   using ValueRefT = typename ContextT::ValueRefT;
 
@@ -507,6 +516,7 @@ public:
 
   const ModifiedPO &CyclePOT;
   const DominatorTreeT &DT;
+  const PostDominatorTreeT &PDT;
   const CycleInfoT &CI;
   const BlockT &DivTermBlock;
   const ContextT &Context;
@@ -522,10 +532,11 @@ public:
   BlockLabelMapT &BlockLabels;
 
   DivergencePropagator(const ModifiedPO &CyclePOT, const DominatorTreeT &DT,
-                       const CycleInfoT &CI, const BlockT &DivTermBlock)
-      : CyclePOT(CyclePOT), DT(DT), CI(CI), DivTermBlock(DivTermBlock),
-        Context(CI.getSSAContext()), DivDesc(new DivergenceDescriptorT),
-        BlockLabels(DivDesc->BlockLabels) {}
+                       const PostDominatorTreeT &PDT, const CycleInfoT &CI,
+                       const BlockT &DivTermBlock)
+      : CyclePOT(CyclePOT), DT(DT), PDT(PDT), CI(CI),
+        DivTermBlock(DivTermBlock), Context(CI.getSSAContext()),
+        DivDesc(new DivergenceDescriptorT), BlockLabels(DivDesc->BlockLabels) {}
 
   void printDefs(raw_ostream &Out) {
     Out << "Propagator::BlockLabels {\n";
@@ -540,6 +551,12 @@ public:
       }
     }
     Out << "}\n";
+  }
+
+  const BlockT *getIPDom(const BlockT *B) {
+    const auto *Node = PDT.getNode(B);
+    const auto *IPDomNode = Node->getIDom();
+    return IPDomNode->getBlock();
   }
 
   // Push a definition (\p PushedLabel) to \p SuccBlock and return whether this
@@ -610,10 +627,11 @@ public:
     LLVM_DEBUG(dbgs() << "SDA:computeJoinPoints: "
                       << Context.print(&DivTermBlock) << "\n");
 
-    // Early stopping criterion
-    int FloorIdx = CyclePOT.size() - 1;
-    const BlockT *FloorLabel = nullptr;
-    int DivTermIdx = CyclePOT.getIndex(&DivTermBlock);
+    // Immediate Post-dominator of DivTermBlock is the last join
+    // to visit.
+    const auto *ImmPDom = getIPDom(&DivTermBlock);
+
+    LLVM_DEBUG(dbgs() << "Last join: " << Context.print(ImmPDom) << "\n");
 
     // Bootstrap with branch targets
     auto const *DivTermCycle = CI.getCycle(&DivTermBlock);
@@ -626,33 +644,28 @@ public:
         LLVM_DEBUG(dbgs() << "\tImmediate divergent cycle exit: "
                           << Context.print(SuccBlock) << "\n");
       }
-      auto SuccIdx = CyclePOT.getIndex(SuccBlock);
       visitEdge(*SuccBlock, *SuccBlock);
-      FloorIdx = std::min<int>(FloorIdx, SuccIdx);
     }
 
     while (true) {
       auto BlockIdx = FreshLabels.find_last();
-      if (BlockIdx == -1 || BlockIdx < FloorIdx)
+      if (BlockIdx == -1)
         break;
 
       LLVM_DEBUG(dbgs() << "Current labels:\n"; printDefs(dbgs()));
 
       FreshLabels.reset(BlockIdx);
-      if (BlockIdx == DivTermIdx) {
-        LLVM_DEBUG(dbgs() << "Skipping DivTermBlock\n");
+      const auto *Block = CyclePOT[BlockIdx];
+      if (Block == ImmPDom) {
+        LLVM_DEBUG(dbgs() << "Skipping ImmPDom\n");
         continue;
       }
 
-      const auto *Block = CyclePOT[BlockIdx];
       LLVM_DEBUG(dbgs() << "visiting " << Context.print(Block) << " at index "
                         << BlockIdx << "\n");
 
       const auto *Label = BlockLabels[Block];
       assert(Label);
-
-      bool CausedJoin = false;
-      int LoweredFloorIdx = FloorIdx;
 
       // If the current block is the header of a reducible cycle that
       // contains the divergent branch, then the label should be
@@ -681,28 +694,11 @@ public:
       if (const auto *BlockCycle = getReducibleParent(Block)) {
         SmallVector<BlockT *, 4> BlockCycleExits;
         BlockCycle->getExitBlocks(BlockCycleExits);
-        for (auto *BlockCycleExit : BlockCycleExits) {
-          CausedJoin |= visitCycleExitEdge(*BlockCycleExit, *Label);
-          LoweredFloorIdx =
-              std::min<int>(LoweredFloorIdx, CyclePOT.getIndex(BlockCycleExit));
-        }
+        for (auto *BlockCycleExit : BlockCycleExits)
+          visitCycleExitEdge(*BlockCycleExit, *Label);
       } else {
-        for (const auto *SuccBlock : successors(Block)) {
-          CausedJoin |= visitEdge(*SuccBlock, *Label);
-          LoweredFloorIdx =
-              std::min<int>(LoweredFloorIdx, CyclePOT.getIndex(SuccBlock));
-        }
-      }
-
-      // Floor update
-      if (CausedJoin) {
-        // 1. Different labels pushed to successors
-        FloorIdx = LoweredFloorIdx;
-      } else if (FloorLabel != Label) {
-        // 2. No join caused BUT we pushed a label that is different than the
-        // last pushed label
-        FloorIdx = LoweredFloorIdx;
-        FloorLabel = Label;
+        for (const auto *SuccBlock : successors(Block))
+          visitEdge(*SuccBlock, *Label);
       }
     }
 
@@ -742,8 +738,9 @@ typename llvm::GenericSyncDependenceAnalysis<ContextT>::DivergenceDescriptor
 
 template <typename ContextT>
 llvm::GenericSyncDependenceAnalysis<ContextT>::GenericSyncDependenceAnalysis(
-    const ContextT &Context, const DominatorTreeT &DT, const CycleInfoT &CI)
-    : CyclePO(Context), DT(DT), CI(CI) {
+    const ContextT &Context, const DominatorTreeT &DT,
+    const PostDominatorTreeT &PDT, const CycleInfoT &CI)
+    : CyclePO(Context), DT(DT), PDT(PDT), CI(CI) {
   CyclePO.compute(CI);
 }
 
@@ -761,7 +758,7 @@ auto llvm::GenericSyncDependenceAnalysis<ContextT>::getJoinBlocks(
     return *ItCached->second;
 
   // compute all join points
-  DivergencePropagatorT Propagator(CyclePO, DT, CI, *DivTermBlock);
+  DivergencePropagatorT Propagator(CyclePO, DT, PDT, CI, *DivTermBlock);
   auto DivDesc = Propagator.computeJoinPoints();
 
   auto printBlockSet = [&](ConstBlockSet &Blocks) {
@@ -1155,9 +1152,9 @@ bool GenericUniformityAnalysisImpl<ContextT>::isAlwaysUniform(
 
 template <typename ContextT>
 GenericUniformityInfo<ContextT>::GenericUniformityInfo(
-    const DominatorTreeT &DT, const CycleInfoT &CI,
-    const TargetTransformInfo *TTI) {
-  DA.reset(new ImplT{DT, CI, TTI});
+    const DominatorTreeT &DT, const PostDominatorTreeT &PDT,
+    const CycleInfoT &CI, const TargetTransformInfo *TTI) {
+  DA.reset(new ImplT{DT, PDT, CI, TTI});
 }
 
 template <typename ContextT>
