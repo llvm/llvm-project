@@ -526,7 +526,7 @@ class CheckerBase : public CheckerFrontend, public CheckerBackend {
 public:
   /// Attached to nodes created by this checker class when the ExplodedGraph is
   /// dumped for debugging.
-  StringRef getDebugName() const override;
+  StringRef getDebugName() const final;
 };
 
 /// Simple checker classes that implement one frontend (i.e. checker name)
@@ -545,16 +545,22 @@ public:
 /// Checker families (where a single backend class implements multiple related
 /// frontends) should derive from this template, specify all the implemented
 /// callbacks (i.e. classes like `check::PreStmt` or `eval::Call`) as template
-/// arguments of `FamilyChecker` and implement the pure virtual method
-/// `StringRef getDebugName()` which is inherited from `ProgramPointTag`
-/// and should return a string identifying the class for debugging purposes.
+/// arguments of `FamilyChecker`.
 template <typename... CHECKs>
 class CheckerFamily : public CheckerBackend, public CHECKs... {
 public:
   template <typename CHECKER>
   static void _register(CHECKER *Chk, CheckerManager &Mgr) {
+    Chk->CheckerBackendName = Mgr.getCurrentCheckerName();
     (CHECKs::_register(Chk, Mgr), ...);
   }
+
+  /// Attached to nodes created by this checker class when the ExplodedGraph is
+  /// dumped for debugging.
+  StringRef getDebugName() const final { return CheckerBackendName; }
+
+private:
+  CheckerNameRef CheckerBackendName;
 };
 
 template <typename EVENT>

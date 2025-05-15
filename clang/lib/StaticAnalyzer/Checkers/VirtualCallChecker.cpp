@@ -54,9 +54,6 @@ public:
   void checkEndFunction(const ReturnStmt *RS, CheckerContext &C) const;
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
 
-  /// Identifies this checker family for debugging purposes.
-  StringRef getDebugName() const override { return "VirtualCallChecker"; }
-
 private:
   void registerCtorDtorCallInState(bool IsBeginFunction,
                                    CheckerContext &C) const;
