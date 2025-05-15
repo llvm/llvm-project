@@ -714,7 +714,7 @@ define <8 x float> @v8f32_no_estimate(<8 x float> %x) #0 {
 ;
 ; BTVER2-LABEL: v8f32_no_estimate:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    vmovaps {{.*#+}} ymm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; BTVER2-NEXT:    vbroadcastss {{.*#+}} ymm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; BTVER2-NEXT:    vdivps %ymm0, %ymm1, %ymm0
 ; BTVER2-NEXT:    retq
 ;
@@ -790,7 +790,7 @@ define <8 x float> @v8f32_one_step(<8 x float> %x) #1 {
 ;
 ; BTVER2-LABEL: v8f32_one_step:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    vmovaps {{.*#+}} ymm2 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; BTVER2-NEXT:    vbroadcastss {{.*#+}} ymm2 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; BTVER2-NEXT:    vrcpps %ymm0, %ymm1
 ; BTVER2-NEXT:    vmulps %ymm1, %ymm0, %ymm0
 ; BTVER2-NEXT:    vsubps %ymm0, %ymm2, %ymm0
@@ -912,7 +912,7 @@ define <8 x float> @v8f32_two_step(<8 x float> %x) #2 {
 ;
 ; BTVER2-LABEL: v8f32_two_step:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    vmovaps {{.*#+}} ymm3 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; BTVER2-NEXT:    vbroadcastss {{.*#+}} ymm3 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; BTVER2-NEXT:    vrcpps %ymm0, %ymm1
 ; BTVER2-NEXT:    vmulps %ymm1, %ymm0, %ymm2
 ; BTVER2-NEXT:    vsubps %ymm2, %ymm3, %ymm2
@@ -1017,7 +1017,7 @@ define <16 x float> @v16f32_no_estimate(<16 x float> %x) #0 {
 ;
 ; BTVER2-LABEL: v16f32_no_estimate:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    vmovaps {{.*#+}} ymm2 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; BTVER2-NEXT:    vbroadcastss {{.*#+}} ymm2 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; BTVER2-NEXT:    vdivps %ymm0, %ymm2, %ymm0
 ; BTVER2-NEXT:    vdivps %ymm1, %ymm2, %ymm1
 ; BTVER2-NEXT:    retq
@@ -1124,7 +1124,7 @@ define <16 x float> @v16f32_one_step(<16 x float> %x) #1 {
 ;
 ; BTVER2-LABEL: v16f32_one_step:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    vmovaps {{.*#+}} ymm3 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; BTVER2-NEXT:    vbroadcastss {{.*#+}} ymm3 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; BTVER2-NEXT:    vrcpps %ymm0, %ymm2
 ; BTVER2-NEXT:    vrcpps %ymm1, %ymm4
 ; BTVER2-NEXT:    vmulps %ymm2, %ymm0, %ymm0
@@ -1302,7 +1302,7 @@ define <16 x float> @v16f32_two_step(<16 x float> %x) #2 {
 ;
 ; BTVER2-LABEL: v16f32_two_step:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    vmovaps {{.*#+}} ymm4 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; BTVER2-NEXT:    vbroadcastss {{.*#+}} ymm4 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; BTVER2-NEXT:    vrcpps %ymm0, %ymm2
 ; BTVER2-NEXT:    vmulps %ymm2, %ymm0, %ymm3
 ; BTVER2-NEXT:    vsubps %ymm3, %ymm4, %ymm3

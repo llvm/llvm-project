@@ -358,24 +358,28 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
         RebuildConstant;
   };
 
-  auto NewOpcPreferable = [&](const FixupEntry &Fixup) -> bool {
+  auto NewOpcPreferable = [&](const FixupEntry &Fixup,
+                              unsigned RegBitWidth) -> bool {
     if (SM->hasInstrSchedModel()) {
-      // TODO: how much increase in tput/latency should we permit for the
-      // reduction in constant pool size?
       unsigned NewOpc = Fixup.Op;
       auto *OldDesc = SM->getSchedClassDesc(TII->get(Opc).getSchedClass());
       auto *NewDesc = SM->getSchedClassDesc(TII->get(NewOpc).getSchedClass());
+      unsigned BitsSaved = RegBitWidth - (Fixup.NumCstElts * Fixup.MemBitWidth);
 
-      // Compare tput -> lat
+      // Compare tput/lat - avoid any regressions, but allow extra cycle of
+      // latency in exchange for each 128-bit (or less) constant pool reduction
+      // (this is a very simple cost:benefit estimate - there will probably be
+      // better ways to calculate this).
       double OldTput = MCSchedModel::getReciprocalThroughput(*ST, *OldDesc);
       double NewTput = MCSchedModel::getReciprocalThroughput(*ST, *NewDesc);
       if (OldTput != NewTput)
         return NewTput < OldTput;
 
+      int LatTol = (BitsSaved + 127) / 128;
       int OldLat = MCSchedModel::computeInstrLatency(*ST, *OldDesc);
       int NewLat = MCSchedModel::computeInstrLatency(*ST, *NewDesc);
       if (OldLat != NewLat)
-        return NewLat < OldLat;
+        return NewLat < (OldLat + LatTol);
     }
 
     // We either were unable to get tput/lat or all values were equal.
@@ -399,7 +403,7 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
       unsigned CstBitWidth = C->getType()->getPrimitiveSizeInBits();
       RegBitWidth = RegBitWidth ? RegBitWidth : CstBitWidth;
       for (const FixupEntry &Fixup : Fixups) {
-        if (Fixup.Op && (OptSize || NewOpcPreferable(Fixup))) {
+        if (Fixup.Op && (OptSize || NewOpcPreferable(Fixup, RegBitWidth))) {
           // Construct a suitable constant and adjust the MI to use the new
           // constant pool entry.
           if (Constant *NewCst = Fixup.RebuildConstant(
