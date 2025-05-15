@@ -1872,6 +1872,15 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setPartialReduceMLAAction(MVT::nxv2i64, MVT::nxv16i8, Custom);
   }
 
+  if (EnablePartialReduceNodes && Subtarget->hasNEON() &&
+      Subtarget->hasDotProd()) {
+    setPartialReduceMLAAction(MVT::v2i64, MVT::v8i16, Legal);
+    setPartialReduceMLAAction(MVT::v4i32, MVT::v16i8, Legal);
+    setPartialReduceMLAAction(MVT::v4i32, MVT::v16i8, Legal);
+    setPartialReduceMLAAction(MVT::v2i32, MVT::v8i8, Legal);
+    setPartialReduceMLAAction(MVT::v2i64, MVT::v16i8, Custom);
+  }
+
   // Handle operations that are only available in non-streaming SVE mode.
   if (Subtarget->isSVEAvailable()) {
     for (auto VT : {MVT::nxv16i8,  MVT::nxv8i16, MVT::nxv4i32,  MVT::nxv2i64,
@@ -7743,8 +7752,7 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   case ISD::EXPERIMENTAL_VECTOR_HISTOGRAM:
     return LowerVECTOR_HISTOGRAM(Op, DAG);
   case ISD::PARTIAL_REDUCE_SMLA:
-  case ISD::PARTIAL_REDUCE_UMLA:
-  case ISD::PARTIAL_REDUCE_SMLA: {
+  case ISD::PARTIAL_REDUCE_UMLA: {
     if (SDValue Result = LowerPARTIAL_REDUCE_MLA(Op, DAG))
       return Result;
     return expandPartialReduceMLA(Op.getNode(), DAG);
@@ -27575,8 +27583,7 @@ void AArch64TargetLowering::ReplaceNodeResults(
     return;
   case ISD::PARTIAL_REDUCE_UMLA:
   case ISD::PARTIAL_REDUCE_SMLA: {
-    SDValue Res;
-    if (Res = LowerPARTIAL_REDUCE_MLA(SDValue(N, 0), DAG))
+    if (SDValue Res = LowerPARTIAL_REDUCE_MLA(SDValue(N, 0), DAG))
       Results.push_back(Res);
     else
       Results.push_back(expandPartialReduceMLA(N, DAG));
@@ -29531,9 +29538,9 @@ SDValue AArch64TargetLowering::LowerVECTOR_HISTOGRAM(SDValue Op,
 }
 
 /// If a PARTIAL_REDUCE_MLA node comes in with an accumulator-input type pairing
-/// of nxv2i64/nxv16i8, we cannot directly lower it to a (u|s)dot. We can
+/// of v2i64/v16i8, we cannot directly lower it to a (u|s)dot. We can
 /// however still make use of the dot product instruction by instead
-/// accumulating over two steps: nxv16i8 -> nxv4i32 -> nxv2i64.
+/// accumulating over two steps: v16i8 -> v4i32 -> v2i64.
 SDValue
 AArch64TargetLowering::LowerPARTIAL_REDUCE_MLA(SDValue Op,
                                                SelectionDAG &DAG) const {
@@ -29568,12 +29575,27 @@ AArch64TargetLowering::LowerPARTIAL_REDUCE_MLA(SDValue Op,
     return DAG.getNode(HiOpcode, DL, ResultVT, Lo, DotNode);
   }
 
-  unsigned LoOpcode = IsUnsigned ? AArch64ISD::UUNPKLO : AArch64ISD::SUNPKLO;
-  unsigned HiOpcode = IsUnsigned ? AArch64ISD::UUNPKHI : AArch64ISD::SUNPKHI;
-  auto Lo = DAG.getNode(LoOpcode, DL, ResultVT, DotNode);
-  auto Hi = DAG.getNode(HiOpcode, DL, ResultVT, DotNode);
-  auto Extended = DAG.getNode(ISD::ADD, DL, ResultVT, Lo, Hi);
-  return DAG.getNode(ISD::ADD, DL, ResultVT, Acc, Extended);
+  if (Scalable) {
+    unsigned LoOpcode = IsUnsigned ? AArch64ISD::UUNPKLO : AArch64ISD::SUNPKLO;
+    unsigned HiOpcode = IsUnsigned ? AArch64ISD::UUNPKHI : AArch64ISD::SUNPKHI;
+    auto Lo = DAG.getNode(LoOpcode, DL, ResultVT, DotNode);
+    auto Hi = DAG.getNode(HiOpcode, DL, ResultVT, DotNode);
+    auto Extended = DAG.getNode(ISD::ADD, DL, ResultVT, Lo, Hi);
+    return DAG.getNode(ISD::ADD, DL, ResultVT, Acc, Extended);
+  }
+
+  // Fold v4i32 into v2i64
+  // SDValues
+  auto [DotNodeLo, DotNodeHi] = DAG.SplitVector(DotNode, DL);
+  if (IsUnsigned) {
+    DotNodeLo = DAG.getZExtOrTrunc(DotNodeLo, DL, MVT::v2i64);
+    DotNodeHi = DAG.getZExtOrTrunc(DotNodeHi, DL, MVT::v2i64);
+  } else {
+    DotNodeLo = DAG.getSExtOrTrunc(DotNodeLo, DL, MVT::v2i64);
+    DotNodeHi = DAG.getSExtOrTrunc(DotNodeHi, DL, MVT::v2i64);
+  }
+  auto Lo = DAG.getNode(ISD::ADD, DL, MVT::v2i64, Acc, DotNodeLo);
+  return DAG.getNode(ISD::ADD, DL, MVT::v2i64, Lo, DotNodeHi);
 }
 
 SDValue

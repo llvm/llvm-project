@@ -50,20 +50,17 @@ define <4 x i32> @udot_in_loop(ptr %p1, ptr %p2){
 ; CHECK-NODOT-NEXT:    mov x8, xzr
 ; CHECK-NODOT-NEXT:  .LBB1_1: // %vector.body
 ; CHECK-NODOT-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NODOT-NEXT:    ldr q0, [x0, x8]
-; CHECK-NODOT-NEXT:    ldr q2, [x1, x8]
+; CHECK-NODOT-NEXT:    ldr q2, [x0, x8]
+; CHECK-NODOT-NEXT:    ldr q3, [x1, x8]
+; CHECK-NODOT-NEXT:    mov v0.16b, v1.16b
 ; CHECK-NODOT-NEXT:    add x8, x8, #16
 ; CHECK-NODOT-NEXT:    umull v4.8h, v2.8b, v3.8b
 ; CHECK-NODOT-NEXT:    umull2 v2.8h, v2.16b, v3.16b
 ; CHECK-NODOT-NEXT:    cmp x8, #16
-; CHECK-NODOT-NEXT:    umull v3.8h, v0.8b, v2.8b
-; CHECK-NODOT-NEXT:    umull2 v2.8h, v0.16b, v2.16b
-; CHECK-NODOT-NEXT:    mov v0.16b, v1.16b
-; CHECK-NODOT-NEXT:    ushll v1.4s, v2.4h, #0
-; CHECK-NODOT-NEXT:    uaddw v4.4s, v0.4s, v3.4h
-; CHECK-NODOT-NEXT:    uaddw2 v1.4s, v1.4s, v3.8h
-; CHECK-NODOT-NEXT:    uaddw2 v2.4s, v4.4s, v2.8h
-; CHECK-NODOT-NEXT:    add v1.4s, v1.4s, v2.4s
+; CHECK-NODOT-NEXT:    uaddw v1.4s, v1.4s, v4.4h
+; CHECK-NODOT-NEXT:    uaddw2 v1.4s, v1.4s, v4.8h
+; CHECK-NODOT-NEXT:    uaddw v1.4s, v1.4s, v2.4h
+; CHECK-NODOT-NEXT:    uaddw2 v1.4s, v1.4s, v2.8h
 ; CHECK-NODOT-NEXT:    b.ne .LBB1_1
 ; CHECK-NODOT-NEXT:  // %bb.2: // %end
 ; CHECK-NODOT-NEXT:    ret
@@ -178,10 +175,17 @@ define <4 x i32> @usdot(<4 x i32> %acc, <16 x i8> %u, <16 x i8> %s) {
 ; CHECK-NOI8MM-NEXT:    smlal2 v0.4s, v2.8h, v1.8h
 ; CHECK-NOI8MM-NEXT:    ret
 ;
-; CHECK-I8MM-LABEL: usdot:
-; CHECK-I8MM:       // %bb.0:
-; CHECK-I8MM-NEXT:    usdot v0.4s, v1.16b, v2.16b
-; CHECK-I8MM-NEXT:    ret
+; CHECK-NEWLOWERING-I8MM-LABEL: usdot:
+; CHECK-NEWLOWERING-I8MM:       // %bb.0:
+; CHECK-NEWLOWERING-I8MM-NEXT:    ushll v3.8h, v1.8b, #0
+; CHECK-NEWLOWERING-I8MM-NEXT:    sshll v4.8h, v2.8b, #0
+; CHECK-NEWLOWERING-I8MM-NEXT:    ushll2 v1.8h, v1.16b, #0
+; CHECK-NEWLOWERING-I8MM-NEXT:    sshll2 v2.8h, v2.16b, #0
+; CHECK-NEWLOWERING-I8MM-NEXT:    smlal v0.4s, v4.4h, v3.4h
+; CHECK-NEWLOWERING-I8MM-NEXT:    smlal2 v0.4s, v4.8h, v3.8h
+; CHECK-NEWLOWERING-I8MM-NEXT:    smlal v0.4s, v2.4h, v1.4h
+; CHECK-NEWLOWERING-I8MM-NEXT:    smlal2 v0.4s, v2.8h, v1.8h
+; CHECK-NEWLOWERING-I8MM-NEXT:    ret
   %u.wide = zext <16 x i8> %u to <16 x i32>
   %s.wide = sext <16 x i8> %s to <16 x i32>
   %mult = mul nuw nsw <16 x i32> %s.wide, %u.wide
@@ -213,21 +217,28 @@ define <4 x i32> @usdot_in_loop(ptr %p1, ptr %p2){
 ; CHECK-NOI8MM-NEXT:  // %bb.2: // %end
 ; CHECK-NOI8MM-NEXT:    ret
 ;
-; CHECK-I8MM-LABEL: usdot_in_loop:
-; CHECK-I8MM:       // %bb.0: // %entry
-; CHECK-I8MM-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-I8MM-NEXT:    mov x8, xzr
-; CHECK-I8MM-NEXT:  .LBB6_1: // %vector.body
-; CHECK-I8MM-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-I8MM-NEXT:    ldr q2, [x0, x8]
-; CHECK-I8MM-NEXT:    ldr q3, [x1, x8]
-; CHECK-I8MM-NEXT:    mov v0.16b, v1.16b
-; CHECK-I8MM-NEXT:    add x8, x8, #16
-; CHECK-I8MM-NEXT:    usdot v1.4s, v3.16b, v2.16b
-; CHECK-I8MM-NEXT:    cmp x8, #16
-; CHECK-I8MM-NEXT:    b.ne .LBB6_1
-; CHECK-I8MM-NEXT:  // %bb.2: // %end
-; CHECK-I8MM-NEXT:    ret
+; CHECK-NEWLOWERING-I8MM-LABEL: usdot_in_loop:
+; CHECK-NEWLOWERING-I8MM:       // %bb.0: // %entry
+; CHECK-NEWLOWERING-I8MM-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEWLOWERING-I8MM-NEXT:    mov x8, xzr
+; CHECK-NEWLOWERING-I8MM-NEXT:  .LBB6_1: // %vector.body
+; CHECK-NEWLOWERING-I8MM-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEWLOWERING-I8MM-NEXT:    ldr q2, [x0, x8]
+; CHECK-NEWLOWERING-I8MM-NEXT:    ldr q3, [x1, x8]
+; CHECK-NEWLOWERING-I8MM-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEWLOWERING-I8MM-NEXT:    add x8, x8, #16
+; CHECK-NEWLOWERING-I8MM-NEXT:    sshll v4.8h, v2.8b, #0
+; CHECK-NEWLOWERING-I8MM-NEXT:    ushll v5.8h, v3.8b, #0
+; CHECK-NEWLOWERING-I8MM-NEXT:    sshll2 v2.8h, v2.16b, #0
+; CHECK-NEWLOWERING-I8MM-NEXT:    ushll2 v3.8h, v3.16b, #0
+; CHECK-NEWLOWERING-I8MM-NEXT:    cmp x8, #16
+; CHECK-NEWLOWERING-I8MM-NEXT:    smlal v1.4s, v4.4h, v5.4h
+; CHECK-NEWLOWERING-I8MM-NEXT:    smlal2 v1.4s, v4.8h, v5.8h
+; CHECK-NEWLOWERING-I8MM-NEXT:    smlal v1.4s, v2.4h, v3.4h
+; CHECK-NEWLOWERING-I8MM-NEXT:    smlal2 v1.4s, v2.8h, v3.8h
+; CHECK-NEWLOWERING-I8MM-NEXT:    b.ne .LBB6_1
+; CHECK-NEWLOWERING-I8MM-NEXT:  // %bb.2: // %end
+; CHECK-NEWLOWERING-I8MM-NEXT:    ret
 entry:
   br label %vector.body
 
@@ -268,10 +279,22 @@ define <2 x i32> @usdot_narrow(<2 x i32> %acc, <8 x i8> %u, <8 x i8> %s) #0{
 ; CHECK-NOI8MM-NEXT:    add v0.2s, v1.2s, v0.2s
 ; CHECK-NOI8MM-NEXT:    ret
 ;
-; CHECK-I8MM-LABEL: usdot_narrow:
-; CHECK-I8MM:       // %bb.0:
-; CHECK-I8MM-NEXT:    usdot v0.2s, v1.8b, v2.8b
-; CHECK-I8MM-NEXT:    ret
+; CHECK-NEWLOWERING-I8MM-LABEL: usdot_narrow:
+; CHECK-NEWLOWERING-I8MM:       // %bb.0:
+; CHECK-NEWLOWERING-I8MM-NEXT:    ushll v1.8h, v1.8b, #0
+; CHECK-NEWLOWERING-I8MM-NEXT:    sshll v2.8h, v2.8b, #0
+; CHECK-NEWLOWERING-I8MM-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEWLOWERING-I8MM-NEXT:    smull v3.4s, v2.4h, v1.4h
+; CHECK-NEWLOWERING-I8MM-NEXT:    smlal v0.4s, v2.4h, v1.4h
+; CHECK-NEWLOWERING-I8MM-NEXT:    ext v4.16b, v1.16b, v1.16b, #8
+; CHECK-NEWLOWERING-I8MM-NEXT:    ext v5.16b, v2.16b, v2.16b, #8
+; CHECK-NEWLOWERING-I8MM-NEXT:    smull2 v1.4s, v2.8h, v1.8h
+; CHECK-NEWLOWERING-I8MM-NEXT:    ext v3.16b, v3.16b, v3.16b, #8
+; CHECK-NEWLOWERING-I8MM-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-NEWLOWERING-I8MM-NEXT:    add v0.2s, v3.2s, v0.2s
+; CHECK-NEWLOWERING-I8MM-NEXT:    smlal v0.4s, v5.4h, v4.4h
+; CHECK-NEWLOWERING-I8MM-NEXT:    add v0.2s, v1.2s, v0.2s
+; CHECK-NEWLOWERING-I8MM-NEXT:    ret
   %u.wide = zext <8 x i8> %u to <8 x i32>
   %s.wide = sext <8 x i8> %s to <8 x i32>
   %mult = mul nuw nsw <8 x i32> %s.wide, %u.wide
@@ -292,10 +315,17 @@ define <4 x i32> @sudot(<4 x i32> %acc, <16 x i8> %u, <16 x i8> %s) #0{
 ; CHECK-NOI8MM-NEXT:    smlal2 v0.4s, v2.8h, v1.8h
 ; CHECK-NOI8MM-NEXT:    ret
 ;
-; CHECK-I8MM-LABEL: sudot:
-; CHECK-I8MM:       // %bb.0:
-; CHECK-I8MM-NEXT:    usdot v0.4s, v2.16b, v1.16b
-; CHECK-I8MM-NEXT:    ret
+; CHECK-NEWLOWERING-I8MM-LABEL: sudot:
+; CHECK-NEWLOWERING-I8MM:       // %bb.0:
+; CHECK-NEWLOWERING-I8MM-NEXT:    sshll v3.8h, v1.8b, #0
+; CHECK-NEWLOWERING-I8MM-NEXT:    ushll v4.8h, v2.8b, #0
+; CHECK-NEWLOWERING-I8MM-NEXT:    sshll2 v1.8h, v1.16b, #0
+; CHECK-NEWLOWERING-I8MM-NEXT:    ushll2 v2.8h, v2.16b, #0
+; CHECK-NEWLOWERING-I8MM-NEXT:    smlal v0.4s, v4.4h, v3.4h
+; CHECK-NEWLOWERING-I8MM-NEXT:    smlal2 v0.4s, v4.8h, v3.8h
+; CHECK-NEWLOWERING-I8MM-NEXT:    smlal v0.4s, v2.4h, v1.4h
+; CHECK-NEWLOWERING-I8MM-NEXT:    smlal2 v0.4s, v2.8h, v1.8h
+; CHECK-NEWLOWERING-I8MM-NEXT:    ret
   %s.wide = sext <16 x i8> %u to <16 x i32>
   %u.wide = zext <16 x i8> %s to <16 x i32>
   %mult = mul nuw nsw <16 x i32> %u.wide, %s.wide
@@ -327,21 +357,28 @@ define <4 x i32> @sudot_in_loop(ptr %p1, ptr %p2){
 ; CHECK-NOI8MM-NEXT:  // %bb.2: // %end
 ; CHECK-NOI8MM-NEXT:    ret
 ;
-; CHECK-I8MM-LABEL: sudot_in_loop:
-; CHECK-I8MM:       // %bb.0: // %entry
-; CHECK-I8MM-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-I8MM-NEXT:    mov x8, xzr
-; CHECK-I8MM-NEXT:  .LBB9_1: // %vector.body
-; CHECK-I8MM-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-I8MM-NEXT:    ldr q2, [x0, x8]
-; CHECK-I8MM-NEXT:    ldr q3, [x1, x8]
-; CHECK-I8MM-NEXT:    mov v0.16b, v1.16b
-; CHECK-I8MM-NEXT:    add x8, x8, #16
-; CHECK-I8MM-NEXT:    usdot v1.4s, v2.16b, v3.16b
-; CHECK-I8MM-NEXT:    cmp x8, #16
-; CHECK-I8MM-NEXT:    b.ne .LBB9_1
-; CHECK-I8MM-NEXT:  // %bb.2: // %end
-; CHECK-I8MM-NEXT:    ret
+; CHECK-NEWLOWERING-I8MM-LABEL: sudot_in_loop:
+; CHECK-NEWLOWERING-I8MM:       // %bb.0: // %entry
+; CHECK-NEWLOWERING-I8MM-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEWLOWERING-I8MM-NEXT:    mov x8, xzr
+; CHECK-NEWLOWERING-I8MM-NEXT:  .LBB9_1: // %vector.body
+; CHECK-NEWLOWERING-I8MM-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEWLOWERING-I8MM-NEXT:    ldr q2, [x0, x8]
+; CHECK-NEWLOWERING-I8MM-NEXT:    ldr q3, [x1, x8]
+; CHECK-NEWLOWERING-I8MM-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEWLOWERING-I8MM-NEXT:    add x8, x8, #16
+; CHECK-NEWLOWERING-I8MM-NEXT:    ushll v4.8h, v2.8b, #0
+; CHECK-NEWLOWERING-I8MM-NEXT:    sshll v5.8h, v3.8b, #0
+; CHECK-NEWLOWERING-I8MM-NEXT:    ushll2 v2.8h, v2.16b, #0
+; CHECK-NEWLOWERING-I8MM-NEXT:    sshll2 v3.8h, v3.16b, #0
+; CHECK-NEWLOWERING-I8MM-NEXT:    cmp x8, #16
+; CHECK-NEWLOWERING-I8MM-NEXT:    smlal v1.4s, v4.4h, v5.4h
+; CHECK-NEWLOWERING-I8MM-NEXT:    smlal2 v1.4s, v4.8h, v5.8h
+; CHECK-NEWLOWERING-I8MM-NEXT:    smlal v1.4s, v2.4h, v3.4h
+; CHECK-NEWLOWERING-I8MM-NEXT:    smlal2 v1.4s, v2.8h, v3.8h
+; CHECK-NEWLOWERING-I8MM-NEXT:    b.ne .LBB9_1
+; CHECK-NEWLOWERING-I8MM-NEXT:  // %bb.2: // %end
+; CHECK-NEWLOWERING-I8MM-NEXT:    ret
 entry:
   br label %vector.body
 
@@ -382,10 +419,22 @@ define <2 x i32> @sudot_narrow(<2 x i32> %acc, <8 x i8> %u, <8 x i8> %s) #0{
 ; CHECK-NOI8MM-NEXT:    add v0.2s, v1.2s, v0.2s
 ; CHECK-NOI8MM-NEXT:    ret
 ;
-; CHECK-I8MM-LABEL: sudot_narrow:
-; CHECK-I8MM:       // %bb.0:
-; CHECK-I8MM-NEXT:    usdot v0.2s, v2.8b, v1.8b
-; CHECK-I8MM-NEXT:    ret
+; CHECK-NEWLOWERING-I8MM-LABEL: sudot_narrow:
+; CHECK-NEWLOWERING-I8MM:       // %bb.0:
+; CHECK-NEWLOWERING-I8MM-NEXT:    sshll v1.8h, v1.8b, #0
+; CHECK-NEWLOWERING-I8MM-NEXT:    ushll v2.8h, v2.8b, #0
+; CHECK-NEWLOWERING-I8MM-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEWLOWERING-I8MM-NEXT:    smull v3.4s, v2.4h, v1.4h
+; CHECK-NEWLOWERING-I8MM-NEXT:    smlal v0.4s, v2.4h, v1.4h
+; CHECK-NEWLOWERING-I8MM-NEXT:    ext v4.16b, v1.16b, v1.16b, #8
+; CHECK-NEWLOWERING-I8MM-NEXT:    ext v5.16b, v2.16b, v2.16b, #8
+; CHECK-NEWLOWERING-I8MM-NEXT:    smull2 v1.4s, v2.8h, v1.8h
+; CHECK-NEWLOWERING-I8MM-NEXT:    ext v3.16b, v3.16b, v3.16b, #8
+; CHECK-NEWLOWERING-I8MM-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-NEWLOWERING-I8MM-NEXT:    add v0.2s, v3.2s, v0.2s
+; CHECK-NEWLOWERING-I8MM-NEXT:    smlal v0.4s, v5.4h, v4.4h
+; CHECK-NEWLOWERING-I8MM-NEXT:    add v0.2s, v1.2s, v0.2s
+; CHECK-NEWLOWERING-I8MM-NEXT:    ret
   %u.wide = sext <8 x i8> %u to <8 x i32>
   %s.wide = zext <8 x i8> %s to <8 x i32>
   %mult = mul nuw nsw <8 x i32> %s.wide, %u.wide
@@ -394,14 +443,6 @@ define <2 x i32> @sudot_narrow(<2 x i32> %acc, <8 x i8> %u, <8 x i8> %s) #0{
 }
 
 define <4 x i64> @udot_8to64(<4 x i64> %acc, <16 x i8> %a, <16 x i8> %b) {
-; CHECK-DOT-LABEL: udot_8to64:
-; CHECK-DOT:       // %bb.0: // %entry
-; CHECK-DOT-NEXT:    movi v4.2d, #0000000000000000
-; CHECK-DOT-NEXT:    udot v4.4s, v2.16b, v3.16b
-; CHECK-DOT-NEXT:    saddw2 v1.2d, v1.2d, v4.4s
-; CHECK-DOT-NEXT:    saddw v0.2d, v0.2d, v4.2s
-; CHECK-DOT-NEXT:    ret
-;
 ; CHECK-NODOT-LABEL: udot_8to64:
 ; CHECK-NODOT:       // %bb.0: // %entry
 ; CHECK-NODOT-NEXT:    umull v4.8h, v2.8b, v3.8b
@@ -419,6 +460,22 @@ define <4 x i64> @udot_8to64(<4 x i64> %acc, <16 x i8> %a, <16 x i8> %b) {
 ; CHECK-NODOT-NEXT:    uaddw2 v1.2d, v1.2d, v2.4s
 ; CHECK-NODOT-NEXT:    uaddw2 v0.2d, v0.2d, v4.4s
 ; CHECK-NODOT-NEXT:    ret
+;
+; CHECK-NEWLOWERING-I8MM-LABEL: udot_8to64:
+; CHECK-NEWLOWERING-I8MM:       // %bb.0: // %entry
+; CHECK-NEWLOWERING-I8MM-NEXT:    movi v4.2d, #0000000000000000
+; CHECK-NEWLOWERING-I8MM-NEXT:    udot v4.4s, v2.16b, v3.16b
+; CHECK-NEWLOWERING-I8MM-NEXT:    uaddw v0.2d, v0.2d, v4.2s
+; CHECK-NEWLOWERING-I8MM-NEXT:    uaddw2 v0.2d, v0.2d, v4.4s
+; CHECK-NEWLOWERING-I8MM-NEXT:    ret
+;
+; CHECK-NEWLOWERING-NOI8MM-LABEL: udot_8to64:
+; CHECK-NEWLOWERING-NOI8MM:       // %bb.0: // %entry
+; CHECK-NEWLOWERING-NOI8MM-NEXT:    movi v4.2d, #0000000000000000
+; CHECK-NEWLOWERING-NOI8MM-NEXT:    udot v4.4s, v2.16b, v3.16b
+; CHECK-NEWLOWERING-NOI8MM-NEXT:    uaddw v0.2d, v0.2d, v4.2s
+; CHECK-NEWLOWERING-NOI8MM-NEXT:    uaddw2 v0.2d, v0.2d, v4.4s
+; CHECK-NEWLOWERING-NOI8MM-NEXT:    ret
 entry:
   %a.wide = zext <16 x i8> %a to <16 x i64>
   %b.wide = zext <16 x i8> %b to <16 x i64>
@@ -429,14 +486,6 @@ entry:
 }
 
 define <4 x i64> @sdot_8to64(<4 x i64> %acc, <16 x i8> %a, <16 x i8> %b){
-; CHECK-DOT-LABEL: sdot_8to64:
-; CHECK-DOT:       // %bb.0: // %entry
-; CHECK-DOT-NEXT:    movi v4.2d, #0000000000000000
-; CHECK-DOT-NEXT:    sdot v4.4s, v2.16b, v3.16b
-; CHECK-DOT-NEXT:    saddw2 v1.2d, v1.2d, v4.4s
-; CHECK-DOT-NEXT:    saddw v0.2d, v0.2d, v4.2s
-; CHECK-DOT-NEXT:    ret
-;
 ; CHECK-NODOT-LABEL: sdot_8to64:
 ; CHECK-NODOT:       // %bb.0: // %entry
 ; CHECK-NODOT-NEXT:    smull v4.8h, v2.8b, v3.8b
@@ -454,6 +503,22 @@ define <4 x i64> @sdot_8to64(<4 x i64> %acc, <16 x i8> %a, <16 x i8> %b){
 ; CHECK-NODOT-NEXT:    saddw2 v1.2d, v1.2d, v2.4s
 ; CHECK-NODOT-NEXT:    saddw2 v0.2d, v0.2d, v4.4s
 ; CHECK-NODOT-NEXT:    ret
+;
+; CHECK-NEWLOWERING-I8MM-LABEL: sdot_8to64:
+; CHECK-NEWLOWERING-I8MM:       // %bb.0: // %entry
+; CHECK-NEWLOWERING-I8MM-NEXT:    movi v4.2d, #0000000000000000
+; CHECK-NEWLOWERING-I8MM-NEXT:    sdot v4.4s, v2.16b, v3.16b
+; CHECK-NEWLOWERING-I8MM-NEXT:    saddw v0.2d, v0.2d, v4.2s
+; CHECK-NEWLOWERING-I8MM-NEXT:    saddw2 v0.2d, v0.2d, v4.4s
+; CHECK-NEWLOWERING-I8MM-NEXT:    ret
+;
+; CHECK-NEWLOWERING-NOI8MM-LABEL: sdot_8to64:
+; CHECK-NEWLOWERING-NOI8MM:       // %bb.0: // %entry
+; CHECK-NEWLOWERING-NOI8MM-NEXT:    movi v4.2d, #0000000000000000
+; CHECK-NEWLOWERING-NOI8MM-NEXT:    sdot v4.4s, v2.16b, v3.16b
+; CHECK-NEWLOWERING-NOI8MM-NEXT:    saddw v0.2d, v0.2d, v4.2s
+; CHECK-NEWLOWERING-NOI8MM-NEXT:    saddw2 v0.2d, v0.2d, v4.4s
+; CHECK-NEWLOWERING-NOI8MM-NEXT:    ret
 entry:
   %a.wide = sext <16 x i8> %a to <16 x i64>
   %b.wide = sext <16 x i8> %b to <16 x i64>
@@ -488,13 +553,29 @@ define <4 x i64> @usdot_8to64(<4 x i64> %acc, <16 x i8> %a, <16 x i8> %b){
 ; CHECK-NOI8MM-NEXT:    smlal2 v1.2d, v2.4s, v3.4s
 ; CHECK-NOI8MM-NEXT:    ret
 ;
-; CHECK-I8MM-LABEL: usdot_8to64:
-; CHECK-I8MM:       // %bb.0: // %entry
-; CHECK-I8MM-NEXT:    movi v4.2d, #0000000000000000
-; CHECK-I8MM-NEXT:    usdot v4.4s, v2.16b, v3.16b
-; CHECK-I8MM-NEXT:    saddw2 v1.2d, v1.2d, v4.4s
-; CHECK-I8MM-NEXT:    saddw v0.2d, v0.2d, v4.2s
-; CHECK-I8MM-NEXT:    ret
+; CHECK-NEWLOWERING-I8MM-LABEL: usdot_8to64:
+; CHECK-NEWLOWERING-I8MM:       // %bb.0: // %entry
+; CHECK-NEWLOWERING-I8MM-NEXT:    ushll v4.8h, v2.8b, #0
+; CHECK-NEWLOWERING-I8MM-NEXT:    ushll2 v2.8h, v2.16b, #0
+; CHECK-NEWLOWERING-I8MM-NEXT:    sshll v5.8h, v3.8b, #0
+; CHECK-NEWLOWERING-I8MM-NEXT:    sshll2 v3.8h, v3.16b, #0
+; CHECK-NEWLOWERING-I8MM-NEXT:    ushll v6.4s, v4.4h, #0
+; CHECK-NEWLOWERING-I8MM-NEXT:    ushll v7.4s, v2.4h, #0
+; CHECK-NEWLOWERING-I8MM-NEXT:    sshll v16.4s, v5.4h, #0
+; CHECK-NEWLOWERING-I8MM-NEXT:    sshll v17.4s, v3.4h, #0
+; CHECK-NEWLOWERING-I8MM-NEXT:    ushll2 v4.4s, v4.8h, #0
+; CHECK-NEWLOWERING-I8MM-NEXT:    ushll2 v2.4s, v2.8h, #0
+; CHECK-NEWLOWERING-I8MM-NEXT:    sshll2 v5.4s, v5.8h, #0
+; CHECK-NEWLOWERING-I8MM-NEXT:    sshll2 v3.4s, v3.8h, #0
+; CHECK-NEWLOWERING-I8MM-NEXT:    smlal v0.2d, v6.2s, v16.2s
+; CHECK-NEWLOWERING-I8MM-NEXT:    smlal v1.2d, v7.2s, v17.2s
+; CHECK-NEWLOWERING-I8MM-NEXT:    smlal2 v0.2d, v6.4s, v16.4s
+; CHECK-NEWLOWERING-I8MM-NEXT:    smlal2 v1.2d, v7.4s, v17.4s
+; CHECK-NEWLOWERING-I8MM-NEXT:    smlal v0.2d, v4.2s, v5.2s
+; CHECK-NEWLOWERING-I8MM-NEXT:    smlal v1.2d, v2.2s, v3.2s
+; CHECK-NEWLOWERING-I8MM-NEXT:    smlal2 v0.2d, v4.4s, v5.4s
+; CHECK-NEWLOWERING-I8MM-NEXT:    smlal2 v1.2d, v2.4s, v3.4s
+; CHECK-NEWLOWERING-I8MM-NEXT:    ret
 entry:
   %a.wide = zext <16 x i8> %a to <16 x i64>
   %b.wide = sext <16 x i8> %b to <16 x i64>
@@ -529,13 +610,29 @@ define <4 x i64> @sudot_8to64(<4 x i64> %acc, <16 x i8> %a, <16 x i8> %b) {
 ; CHECK-NOI8MM-NEXT:    smlal2 v1.2d, v2.4s, v3.4s
 ; CHECK-NOI8MM-NEXT:    ret
 ;
-; CHECK-I8MM-LABEL: sudot_8to64:
-; CHECK-I8MM:       // %bb.0: // %entry
-; CHECK-I8MM-NEXT:    movi v4.2d, #0000000000000000
-; CHECK-I8MM-NEXT:    usdot v4.4s, v3.16b, v2.16b
-; CHECK-I8MM-NEXT:    saddw2 v1.2d, v1.2d, v4.4s
-; CHECK-I8MM-NEXT:    saddw v0.2d, v0.2d, v4.2s
-; CHECK-I8MM-NEXT:    ret
+; CHECK-NEWLOWERING-I8MM-LABEL: sudot_8to64:
+; CHECK-NEWLOWERING-I8MM:       // %bb.0: // %entry
+; CHECK-NEWLOWERING-I8MM-NEXT:    sshll v4.8h, v2.8b, #0
+; CHECK-NEWLOWERING-I8MM-NEXT:    sshll2 v2.8h, v2.16b, #0
+; CHECK-NEWLOWERING-I8MM-NEXT:    ushll v5.8h, v3.8b, #0
+; CHECK-NEWLOWERING-I8MM-NEXT:    ushll2 v3.8h, v3.16b, #0
+; CHECK-NEWLOWERING-I8MM-NEXT:    sshll v6.4s, v4.4h, #0
+; CHECK-NEWLOWERING-I8MM-NEXT:    sshll v7.4s, v2.4h, #0
+; CHECK-NEWLOWERING-I8MM-NEXT:    ushll v16.4s, v5.4h, #0
+; CHECK-NEWLOWERING-I8MM-NEXT:    ushll v17.4s, v3.4h, #0
+; CHECK-NEWLOWERING-I8MM-NEXT:    sshll2 v4.4s, v4.8h, #0
+; CHECK-NEWLOWERING-I8MM-NEXT:    sshll2 v2.4s, v2.8h, #0
+; CHECK-NEWLOWERING-I8MM-NEXT:    ushll2 v5.4s, v5.8h, #0
+; CHECK-NEWLOWERING-I8MM-NEXT:    ushll2 v3.4s, v3.8h, #0
+; CHECK-NEWLOWERING-I8MM-NEXT:    smlal v0.2d, v6.2s, v16.2s
+; CHECK-NEWLOWERING-I8MM-NEXT:    smlal v1.2d, v7.2s, v17.2s
+; CHECK-NEWLOWERING-I8MM-NEXT:    smlal2 v0.2d, v6.4s, v16.4s
+; CHECK-NEWLOWERING-I8MM-NEXT:    smlal2 v1.2d, v7.4s, v17.4s
+; CHECK-NEWLOWERING-I8MM-NEXT:    smlal v0.2d, v4.2s, v5.2s
+; CHECK-NEWLOWERING-I8MM-NEXT:    smlal v1.2d, v2.2s, v3.2s
+; CHECK-NEWLOWERING-I8MM-NEXT:    smlal2 v0.2d, v4.4s, v5.4s
+; CHECK-NEWLOWERING-I8MM-NEXT:    smlal2 v1.2d, v2.4s, v3.4s
+; CHECK-NEWLOWERING-I8MM-NEXT:    ret
 entry:
   %a.wide = sext <16 x i8> %a to <16 x i64>
   %b.wide = zext <16 x i8> %b to <16 x i64>
@@ -590,29 +687,29 @@ define <4 x i32> @udot_no_bin_op_in_loop(ptr %p){
 ; CHECK-NEWLOWERING-I8MM-LABEL: udot_no_bin_op_in_loop:
 ; CHECK-NEWLOWERING-I8MM:       // %bb.0: // %entry
 ; CHECK-NEWLOWERING-I8MM-NEXT:    adrp x8, .LCPI16_0
-; CHECK-NEWLOWERING-I8MM-NEXT:    movi v4.2d, #0000000000000000
+; CHECK-NEWLOWERING-I8MM-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-NEWLOWERING-I8MM-NEXT:    adrp x9, .LCPI16_2
 ; CHECK-NEWLOWERING-I8MM-NEXT:    ldr q1, [x8, :lo12:.LCPI16_0]
 ; CHECK-NEWLOWERING-I8MM-NEXT:    adrp x8, .LCPI16_1
 ; CHECK-NEWLOWERING-I8MM-NEXT:    adrp x10, .LCPI16_3
-; CHECK-NEWLOWERING-I8MM-NEXT:    ldr q2, [x8, :lo12:.LCPI16_1]
-; CHECK-NEWLOWERING-I8MM-NEXT:    ldr q3, [x9, :lo12:.LCPI16_2]
+; CHECK-NEWLOWERING-I8MM-NEXT:    ldr q3, [x8, :lo12:.LCPI16_1]
+; CHECK-NEWLOWERING-I8MM-NEXT:    ldr q4, [x9, :lo12:.LCPI16_2]
 ; CHECK-NEWLOWERING-I8MM-NEXT:    ldr q5, [x10, :lo12:.LCPI16_3]
 ; CHECK-NEWLOWERING-I8MM-NEXT:    mov x8, xzr
 ; CHECK-NEWLOWERING-I8MM-NEXT:  .LBB16_1: // %vector.body
 ; CHECK-NEWLOWERING-I8MM-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEWLOWERING-I8MM-NEXT:    ldr q6, [x0, x8]
-; CHECK-NEWLOWERING-I8MM-NEXT:    mov v0.16b, v4.16b
+; CHECK-NEWLOWERING-I8MM-NEXT:    mov v0.16b, v2.16b
 ; CHECK-NEWLOWERING-I8MM-NEXT:    add x8, x8, #16
 ; CHECK-NEWLOWERING-I8MM-NEXT:    cmp x8, #16
-; CHECK-NEWLOWERING-I8MM-NEXT:    tbl v7.16b, { v6.16b }, v2.16b
-; CHECK-NEWLOWERING-I8MM-NEXT:    tbl v4.16b, { v6.16b }, v1.16b
-; CHECK-NEWLOWERING-I8MM-NEXT:    tbl v16.16b, { v6.16b }, v3.16b
-; CHECK-NEWLOWERING-I8MM-NEXT:    tbl v6.16b, { v6.16b }, v5.16b
-; CHECK-NEWLOWERING-I8MM-NEXT:    add v7.4s, v0.4s, v7.4s
-; CHECK-NEWLOWERING-I8MM-NEXT:    add v6.4s, v6.4s, v16.4s
-; CHECK-NEWLOWERING-I8MM-NEXT:    add v4.4s, v4.4s, v7.4s
-; CHECK-NEWLOWERING-I8MM-NEXT:    add v4.4s, v6.4s, v4.4s
+; CHECK-NEWLOWERING-I8MM-NEXT:    tbl v7.16b, { v6.16b }, v3.16b
+; CHECK-NEWLOWERING-I8MM-NEXT:    tbl v16.16b, { v6.16b }, v4.16b
+; CHECK-NEWLOWERING-I8MM-NEXT:    tbl v17.16b, { v6.16b }, v5.16b
+; CHECK-NEWLOWERING-I8MM-NEXT:    tbl v6.16b, { v6.16b }, v1.16b
+; CHECK-NEWLOWERING-I8MM-NEXT:    add v2.4s, v2.4s, v17.4s
+; CHECK-NEWLOWERING-I8MM-NEXT:    add v7.4s, v16.4s, v7.4s
+; CHECK-NEWLOWERING-I8MM-NEXT:    add v2.4s, v2.4s, v7.4s
+; CHECK-NEWLOWERING-I8MM-NEXT:    add v2.4s, v2.4s, v6.4s
 ; CHECK-NEWLOWERING-I8MM-NEXT:    b.ne .LBB16_1
 ; CHECK-NEWLOWERING-I8MM-NEXT:  // %bb.2: // %end
 ; CHECK-NEWLOWERING-I8MM-NEXT:    ret
@@ -620,29 +717,29 @@ define <4 x i32> @udot_no_bin_op_in_loop(ptr %p){
 ; CHECK-NEWLOWERING-NOI8MM-LABEL: udot_no_bin_op_in_loop:
 ; CHECK-NEWLOWERING-NOI8MM:       // %bb.0: // %entry
 ; CHECK-NEWLOWERING-NOI8MM-NEXT:    adrp x8, .LCPI16_0
-; CHECK-NEWLOWERING-NOI8MM-NEXT:    movi v4.2d, #0000000000000000
+; CHECK-NEWLOWERING-NOI8MM-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-NEWLOWERING-NOI8MM-NEXT:    adrp x9, .LCPI16_2
 ; CHECK-NEWLOWERING-NOI8MM-NEXT:    ldr q1, [x8, :lo12:.LCPI16_0]
 ; CHECK-NEWLOWERING-NOI8MM-NEXT:    adrp x8, .LCPI16_1
 ; CHECK-NEWLOWERING-NOI8MM-NEXT:    adrp x10, .LCPI16_3
-; CHECK-NEWLOWERING-NOI8MM-NEXT:    ldr q2, [x8, :lo12:.LCPI16_1]
-; CHECK-NEWLOWERING-NOI8MM-NEXT:    ldr q3, [x9, :lo12:.LCPI16_2]
+; CHECK-NEWLOWERING-NOI8MM-NEXT:    ldr q3, [x8, :lo12:.LCPI16_1]
+; CHECK-NEWLOWERING-NOI8MM-NEXT:    ldr q4, [x9, :lo12:.LCPI16_2]
 ; CHECK-NEWLOWERING-NOI8MM-NEXT:    ldr q5, [x10, :lo12:.LCPI16_3]
 ; CHECK-NEWLOWERING-NOI8MM-NEXT:    mov x8, xzr
 ; CHECK-NEWLOWERING-NOI8MM-NEXT:  .LBB16_1: // %vector.body
 ; CHECK-NEWLOWERING-NOI8MM-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEWLOWERING-NOI8MM-NEXT:    ldr q6, [x0, x8]
-; CHECK-NEWLOWERING-NOI8MM-NEXT:    mov v0.16b, v4.16b
+; CHECK-NEWLOWERING-NOI8MM-NEXT:    mov v0.16b, v2.16b
 ; CHECK-NEWLOWERING-NOI8MM-NEXT:    add x8, x8, #16
 ; CHECK-NEWLOWERING-NOI8MM-NEXT:    cmp x8, #16
-; CHECK-NEWLOWERING-NOI8MM-NEXT:    tbl v7.16b, { v6.16b }, v2.16b
-; CHECK-NEWLOWERING-NOI8MM-NEXT:    tbl v4.16b, { v6.16b }, v1.16b
-; CHECK-NEWLOWERING-NOI8MM-NEXT:    tbl v16.16b, { v6.16b }, v3.16b
-; CHECK-NEWLOWERING-NOI8MM-NEXT:    tbl v6.16b, { v6.16b }, v5.16b
-; CHECK-NEWLOWERING-NOI8MM-NEXT:    add v7.4s, v0.4s, v7.4s
-; CHECK-NEWLOWERING-NOI8MM-NEXT:    add v6.4s, v6.4s, v16.4s
-; CHECK-NEWLOWERING-NOI8MM-NEXT:    add v4.4s, v4.4s, v7.4s
-; CHECK-NEWLOWERING-NOI8MM-NEXT:    add v4.4s, v6.4s, v4.4s
+; CHECK-NEWLOWERING-NOI8MM-NEXT:    tbl v7.16b, { v6.16b }, v3.16b
+; CHECK-NEWLOWERING-NOI8MM-NEXT:    tbl v16.16b, { v6.16b }, v4.16b
+; CHECK-NEWLOWERING-NOI8MM-NEXT:    tbl v17.16b, { v6.16b }, v5.16b
+; CHECK-NEWLOWERING-NOI8MM-NEXT:    tbl v6.16b, { v6.16b }, v1.16b
+; CHECK-NEWLOWERING-NOI8MM-NEXT:    add v2.4s, v2.4s, v17.4s
+; CHECK-NEWLOWERING-NOI8MM-NEXT:    add v7.4s, v16.4s, v7.4s
+; CHECK-NEWLOWERING-NOI8MM-NEXT:    add v2.4s, v2.4s, v7.4s
+; CHECK-NEWLOWERING-NOI8MM-NEXT:    add v2.4s, v2.4s, v6.4s
 ; CHECK-NEWLOWERING-NOI8MM-NEXT:    b.ne .LBB16_1
 ; CHECK-NEWLOWERING-NOI8MM-NEXT:  // %bb.2: // %end
 ; CHECK-NEWLOWERING-NOI8MM-NEXT:    ret
@@ -739,15 +836,6 @@ define <2 x i32> @sdot_no_bin_op_narrow(<2 x i32> %acc, <8 x i8> %a){
 }
 
 define <4 x i64> @udot_no_bin_op_8to64(<4 x i64> %acc, <16 x i8> %a){
-; CHECK-DOT-LABEL: udot_no_bin_op_8to64:
-; CHECK-DOT:       // %bb.0:
-; CHECK-DOT-NEXT:    movi v3.16b, #1
-; CHECK-DOT-NEXT:    movi v4.2d, #0000000000000000
-; CHECK-DOT-NEXT:    udot v4.4s, v2.16b, v3.16b
-; CHECK-DOT-NEXT:    saddw2 v1.2d, v1.2d, v4.4s
-; CHECK-DOT-NEXT:    saddw v0.2d, v0.2d, v4.2s
-; CHECK-DOT-NEXT:    ret
-;
 ; CHECK-NODOT-LABEL: udot_no_bin_op_8to64:
 ; CHECK-NODOT:       // %bb.0:
 ; CHECK-NODOT-NEXT:    ushll v3.8h, v2.8b, #0
@@ -765,21 +853,48 @@ define <4 x i64> @udot_no_bin_op_8to64(<4 x i64> %acc, <16 x i8> %a){
 ; CHECK-NODOT-NEXT:    uaddw2 v1.2d, v1.2d, v2.4s
 ; CHECK-NODOT-NEXT:    uaddw2 v0.2d, v0.2d, v3.4s
 ; CHECK-NODOT-NEXT:    ret
+;
+; CHECK-NEWLOWERING-I8MM-LABEL: udot_no_bin_op_8to64:
+; CHECK-NEWLOWERING-I8MM:       // %bb.0:
+; CHECK-NEWLOWERING-I8MM-NEXT:    ushll v3.8h, v2.8b, #0
+; CHECK-NEWLOWERING-I8MM-NEXT:    ushll2 v2.8h, v2.16b, #0
+; CHECK-NEWLOWERING-I8MM-NEXT:    ushll v4.4s, v3.4h, #0
+; CHECK-NEWLOWERING-I8MM-NEXT:    ushll v5.4s, v2.4h, #0
+; CHECK-NEWLOWERING-I8MM-NEXT:    ushll2 v3.4s, v3.8h, #0
+; CHECK-NEWLOWERING-I8MM-NEXT:    ushll2 v2.4s, v2.8h, #0
+; CHECK-NEWLOWERING-I8MM-NEXT:    uaddw v1.2d, v1.2d, v5.2s
+; CHECK-NEWLOWERING-I8MM-NEXT:    uaddw v0.2d, v0.2d, v4.2s
+; CHECK-NEWLOWERING-I8MM-NEXT:    uaddw2 v1.2d, v1.2d, v5.4s
+; CHECK-NEWLOWERING-I8MM-NEXT:    uaddw2 v0.2d, v0.2d, v4.4s
+; CHECK-NEWLOWERING-I8MM-NEXT:    uaddw v1.2d, v1.2d, v2.2s
+; CHECK-NEWLOWERING-I8MM-NEXT:    uaddw v0.2d, v0.2d, v3.2s
+; CHECK-NEWLOWERING-I8MM-NEXT:    uaddw2 v1.2d, v1.2d, v2.4s
+; CHECK-NEWLOWERING-I8MM-NEXT:    uaddw2 v0.2d, v0.2d, v3.4s
+; CHECK-NEWLOWERING-I8MM-NEXT:    ret
+;
+; CHECK-NEWLOWERING-NOI8MM-LABEL: udot_no_bin_op_8to64:
+; CHECK-NEWLOWERING-NOI8MM:       // %bb.0:
+; CHECK-NEWLOWERING-NOI8MM-NEXT:    ushll v3.8h, v2.8b, #0
+; CHECK-NEWLOWERING-NOI8MM-NEXT:    ushll2 v2.8h, v2.16b, #0
+; CHECK-NEWLOWERING-NOI8MM-NEXT:    ushll v4.4s, v3.4h, #0
+; CHECK-NEWLOWERING-NOI8MM-NEXT:    ushll v5.4s, v2.4h, #0
+; CHECK-NEWLOWERING-NOI8MM-NEXT:    ushll2 v3.4s, v3.8h, #0
+; CHECK-NEWLOWERING-NOI8MM-NEXT:    ushll2 v2.4s, v2.8h, #0
+; CHECK-NEWLOWERING-NOI8MM-NEXT:    uaddw v1.2d, v1.2d, v5.2s
+; CHECK-NEWLOWERING-NOI8MM-NEXT:    uaddw v0.2d, v0.2d, v4.2s
+; CHECK-NEWLOWERING-NOI8MM-NEXT:    uaddw2 v1.2d, v1.2d, v5.4s
+; CHECK-NEWLOWERING-NOI8MM-NEXT:    uaddw2 v0.2d, v0.2d, v4.4s
+; CHECK-NEWLOWERING-NOI8MM-NEXT:    uaddw v1.2d, v1.2d, v2.2s
+; CHECK-NEWLOWERING-NOI8MM-NEXT:    uaddw v0.2d, v0.2d, v3.2s
+; CHECK-NEWLOWERING-NOI8MM-NEXT:    uaddw2 v1.2d, v1.2d, v2.4s
+; CHECK-NEWLOWERING-NOI8MM-NEXT:    uaddw2 v0.2d, v0.2d, v3.4s
+; CHECK-NEWLOWERING-NOI8MM-NEXT:    ret
   %a.wide = zext <16 x i8> %a to <16 x i64>
   %partial.reduce = tail call <4 x i64> @llvm.experimental.vector.partial.reduce.add.v4i64.v16i64(<4 x i64> %acc, <16 x i64> %a.wide)
   ret <4 x i64> %partial.reduce
 }
 
 define <4 x i64> @sdot_no_bin_op_8to64(<4 x i64> %acc, <16 x i8> %a){
-; CHECK-DOT-LABEL: sdot_no_bin_op_8to64:
-; CHECK-DOT:       // %bb.0:
-; CHECK-DOT-NEXT:    movi v3.16b, #1
-; CHECK-DOT-NEXT:    movi v4.2d, #0000000000000000
-; CHECK-DOT-NEXT:    sdot v4.4s, v2.16b, v3.16b
-; CHECK-DOT-NEXT:    saddw2 v1.2d, v1.2d, v4.4s
-; CHECK-DOT-NEXT:    saddw v0.2d, v0.2d, v4.2s
-; CHECK-DOT-NEXT:    ret
-;
 ; CHECK-NODOT-LABEL: sdot_no_bin_op_8to64:
 ; CHECK-NODOT:       // %bb.0:
 ; CHECK-NODOT-NEXT:    sshll v3.8h, v2.8b, #0
@@ -797,6 +912,42 @@ define <4 x i64> @sdot_no_bin_op_8to64(<4 x i64> %acc, <16 x i8> %a){
 ; CHECK-NODOT-NEXT:    saddw2 v1.2d, v1.2d, v2.4s
 ; CHECK-NODOT-NEXT:    saddw2 v0.2d, v0.2d, v3.4s
 ; CHECK-NODOT-NEXT:    ret
+;
+; CHECK-NEWLOWERING-I8MM-LABEL: sdot_no_bin_op_8to64:
+; CHECK-NEWLOWERING-I8MM:       // %bb.0:
+; CHECK-NEWLOWERING-I8MM-NEXT:    sshll v3.8h, v2.8b, #0
+; CHECK-NEWLOWERING-I8MM-NEXT:    sshll2 v2.8h, v2.16b, #0
+; CHECK-NEWLOWERING-I8MM-NEXT:    sshll v4.4s, v3.4h, #0
+; CHECK-NEWLOWERING-I8MM-NEXT:    sshll v5.4s, v2.4h, #0
+; CHECK-NEWLOWERING-I8MM-NEXT:    sshll2 v3.4s, v3.8h, #0
+; CHECK-NEWLOWERING-I8MM-NEXT:    sshll2 v2.4s, v2.8h, #0
+; CHECK-NEWLOWERING-I8MM-NEXT:    saddw v1.2d, v1.2d, v5.2s
+; CHECK-NEWLOWERING-I8MM-NEXT:    saddw v0.2d, v0.2d, v4.2s
+; CHECK-NEWLOWERING-I8MM-NEXT:    saddw2 v1.2d, v1.2d, v5.4s
+; CHECK-NEWLOWERING-I8MM-NEXT:    saddw2 v0.2d, v0.2d, v4.4s
+; CHECK-NEWLOWERING-I8MM-NEXT:    saddw v1.2d, v1.2d, v2.2s
+; CHECK-NEWLOWERING-I8MM-NEXT:    saddw v0.2d, v0.2d, v3.2s
+; CHECK-NEWLOWERING-I8MM-NEXT:    saddw2 v1.2d, v1.2d, v2.4s
+; CHECK-NEWLOWERING-I8MM-NEXT:    saddw2 v0.2d, v0.2d, v3.4s
+; CHECK-NEWLOWERING-I8MM-NEXT:    ret
+;
+; CHECK-NEWLOWERING-NOI8MM-LABEL: sdot_no_bin_op_8to64:
+; CHECK-NEWLOWERING-NOI8MM:       // %bb.0:
+; CHECK-NEWLOWERING-NOI8MM-NEXT:    sshll v3.8h, v2.8b, #0
+; CHECK-NEWLOWERING-NOI8MM-NEXT:    sshll2 v2.8h, v2.16b, #0
+; CHECK-NEWLOWERING-NOI8MM-NEXT:    sshll v4.4s, v3.4h, #0
+; CHECK-NEWLOWERING-NOI8MM-NEXT:    sshll v5.4s, v2.4h, #0
+; CHECK-NEWLOWERING-NOI8MM-NEXT:    sshll2 v3.4s, v3.8h, #0
+; CHECK-NEWLOWERING-NOI8MM-NEXT:    sshll2 v2.4s, v2.8h, #0
+; CHECK-NEWLOWERING-NOI8MM-NEXT:    saddw v1.2d, v1.2d, v5.2s
+; CHECK-NEWLOWERING-NOI8MM-NEXT:    saddw v0.2d, v0.2d, v4.2s
+; CHECK-NEWLOWERING-NOI8MM-NEXT:    saddw2 v1.2d, v1.2d, v5.4s
+; CHECK-NEWLOWERING-NOI8MM-NEXT:    saddw2 v0.2d, v0.2d, v4.4s
+; CHECK-NEWLOWERING-NOI8MM-NEXT:    saddw v1.2d, v1.2d, v2.2s
+; CHECK-NEWLOWERING-NOI8MM-NEXT:    saddw v0.2d, v0.2d, v3.2s
+; CHECK-NEWLOWERING-NOI8MM-NEXT:    saddw2 v1.2d, v1.2d, v2.4s
+; CHECK-NEWLOWERING-NOI8MM-NEXT:    saddw2 v0.2d, v0.2d, v3.4s
+; CHECK-NEWLOWERING-NOI8MM-NEXT:    ret
   %a.wide = sext <16 x i8> %a to <16 x i64>
   %partial.reduce = tail call <4 x i64> @llvm.experimental.vector.partial.reduce.add.v4i64.v16i64(<4 x i64> %acc, <16 x i64> %a.wide)
   ret <4 x i64> %partial.reduce
@@ -950,24 +1101,36 @@ define <4 x i32> @usdot_multiple_zext_users(ptr %p1, ptr %p2, ptr %p3) {
 ; CHECK-NOI8MM-NEXT:    add v0.4s, v1.4s, v0.4s
 ; CHECK-NOI8MM-NEXT:    ret
 ;
-; CHECK-I8MM-LABEL: usdot_multiple_zext_users:
-; CHECK-I8MM:       // %bb.0: // %entry
-; CHECK-I8MM-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-I8MM-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-I8MM-NEXT:    mov x8, xzr
-; CHECK-I8MM-NEXT:  .LBB28_1: // %vector.body
-; CHECK-I8MM-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-I8MM-NEXT:    ldr q2, [x0, x8]
-; CHECK-I8MM-NEXT:    ldr q3, [x1, x8]
-; CHECK-I8MM-NEXT:    ldr q4, [x2, x8]
-; CHECK-I8MM-NEXT:    add x8, x8, #16
-; CHECK-I8MM-NEXT:    usdot v0.4s, v4.16b, v2.16b
-; CHECK-I8MM-NEXT:    usdot v1.4s, v4.16b, v3.16b
-; CHECK-I8MM-NEXT:    cmp x8, #1024
-; CHECK-I8MM-NEXT:    b.ne .LBB28_1
-; CHECK-I8MM-NEXT:  // %bb.2: // %end
-; CHECK-I8MM-NEXT:    add v0.4s, v1.4s, v0.4s
-; CHECK-I8MM-NEXT:    ret
+; CHECK-NEWLOWERING-I8MM-LABEL: usdot_multiple_zext_users:
+; CHECK-NEWLOWERING-I8MM:       // %bb.0: // %entry
+; CHECK-NEWLOWERING-I8MM-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEWLOWERING-I8MM-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEWLOWERING-I8MM-NEXT:    mov x8, xzr
+; CHECK-NEWLOWERING-I8MM-NEXT:  .LBB28_1: // %vector.body
+; CHECK-NEWLOWERING-I8MM-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEWLOWERING-I8MM-NEXT:    ldr q2, [x0, x8]
+; CHECK-NEWLOWERING-I8MM-NEXT:    ldr q3, [x1, x8]
+; CHECK-NEWLOWERING-I8MM-NEXT:    ldr q4, [x2, x8]
+; CHECK-NEWLOWERING-I8MM-NEXT:    add x8, x8, #16
+; CHECK-NEWLOWERING-I8MM-NEXT:    sshll v5.8h, v2.8b, #0
+; CHECK-NEWLOWERING-I8MM-NEXT:    ushll v6.8h, v4.8b, #0
+; CHECK-NEWLOWERING-I8MM-NEXT:    sshll v7.8h, v3.8b, #0
+; CHECK-NEWLOWERING-I8MM-NEXT:    sshll2 v2.8h, v2.16b, #0
+; CHECK-NEWLOWERING-I8MM-NEXT:    ushll2 v4.8h, v4.16b, #0
+; CHECK-NEWLOWERING-I8MM-NEXT:    sshll2 v3.8h, v3.16b, #0
+; CHECK-NEWLOWERING-I8MM-NEXT:    cmp x8, #1024
+; CHECK-NEWLOWERING-I8MM-NEXT:    smlal v0.4s, v5.4h, v6.4h
+; CHECK-NEWLOWERING-I8MM-NEXT:    smlal v1.4s, v7.4h, v6.4h
+; CHECK-NEWLOWERING-I8MM-NEXT:    smlal2 v0.4s, v5.8h, v6.8h
+; CHECK-NEWLOWERING-I8MM-NEXT:    smlal2 v1.4s, v7.8h, v6.8h
+; CHECK-NEWLOWERING-I8MM-NEXT:    smlal v0.4s, v2.4h, v4.4h
+; CHECK-NEWLOWERING-I8MM-NEXT:    smlal v1.4s, v3.4h, v4.4h
+; CHECK-NEWLOWERING-I8MM-NEXT:    smlal2 v0.4s, v2.8h, v4.8h
+; CHECK-NEWLOWERING-I8MM-NEXT:    smlal2 v1.4s, v3.8h, v4.8h
+; CHECK-NEWLOWERING-I8MM-NEXT:    b.ne .LBB28_1
+; CHECK-NEWLOWERING-I8MM-NEXT:  // %bb.2: // %end
+; CHECK-NEWLOWERING-I8MM-NEXT:    add v0.4s, v1.4s, v0.4s
+; CHECK-NEWLOWERING-I8MM-NEXT:    ret
 entry:
   br label %vector.body
 
@@ -996,3 +1159,5 @@ end:
   %2 = add <4 x i32> %psum2, %psum1
   ret <4 x i32> %2
 }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; CHECK-I8MM: {{.*}}
