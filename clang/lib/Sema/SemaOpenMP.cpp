@@ -14986,12 +14986,13 @@ StmtResult SemaOpenMP::ActOnOpenMPUnrollDirective(ArrayRef<OMPClause *> Clauses,
              .isUsable()) {
       return StmtError();
     }
-    // Checking if Itertor Variable Type can hold the Factor Width
-    if (FactorVal->getIntegerConstantExpr(Context)->getBitWidth() >
-        Context.getTypeSize(IVTy)) {
+    // Checking if Iterator Variable Type can hold the Factor Width
+    auto FactorValWidth = FactorVal->getIntegerConstantExpr(Context)->getActiveBits();
+    auto IteratorVWidth = Context.getTypeSize(OrigVar->getType());
+    if ( FactorValWidth > IteratorVWidth ) {
       Diag(FactorVal->getExprLoc(), diag::err_omp_unroll_factor_width_mismatch)
-          << FactorVal->getIntegerConstantExpr(Context)->getBitWidth() << IVTy
-          << Context.getTypeSize(IVTy);
+          << FactorValWidth << OrigVar->getType()
+          << IteratorVWidth;
       return StmtError();
     }
 
