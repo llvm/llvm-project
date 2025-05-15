@@ -191,124 +191,73 @@ of loops and regions can be derived from these representations, which can be
 useful in different scenarios. The representations can be useful for various
 downstream tasks, including ML-guided compiler optimizations.
 
-Currently, to use IR2Vec embeddings, the JSON vocabulary first needs to be read
-and used to obtain the vocabulary mapping. Then, use this mapping to
-derive the representations. In LLVM, this process is implemented using two
-independent passes: ``IR2VecVocabAnalysis`` and ``IR2VecAnalysis``. The former
-reads the JSON vocabulary and populates ``IR2VecVocabResult``, which is then used
-by ``IR2VecAnalysis``. 
+The core components are:
+  - **Vocabulary**: A mapping from IR entities (opcodes, types, etc.) to their
+    vector representations. This is managed by ``IR2VecVocabAnalysis``.
+  - **Embedder**: A class (``ir2vec::Embedder``) that uses the vocabulary to
+    compute embeddings for instructions, basic blocks, and functions.
 
-``IR2VecVocabAnalysis`` is immutable and is intended to
-be run once before ``IR2VecAnalysis`` is run. In the future, we plan
-to improve this requirement by automatically generating default the vocabulary mappings
-during build time, eliminating the need for a separate file read.
+Using IR2Vec
+------------
 
-IR2VecAnalysis Usage
---------------------
+For generating embeddings, first the vocabulary should be obtained. Then, the 
+embeddings can be computed and accessed via an ``ir2vec::Embedder`` instance.
 
-To use IR2Vec in an LLVM-based tool or pass, interaction with the analysis 
-results can be done through the following APIs:
-    
-1. **Accessing the Analysis Results:**
-
-   To access the IR2Vec embeddings, obtain the ``IR2VecAnalysis``
-   result from the Function Analysis Manager (FAM).
+1. **Get the Vocabulary**:
+   In a ModulePass, get the vocabulary analysis result:
 
    .. code-block:: c++
 
-      #include "llvm/Analysis/IR2VecAnalysis.h"
+      auto &VocabRes = MAM.getResult<IR2VecVocabAnalysis>(M);
+      if (!VocabRes.isValid()) {
+        // Handle error: vocabulary is not available or invalid
+        return;
+      }
+      const ir2vec::Vocab &Vocabulary = VocabRes.getVocabulary();
+      unsigned Dimension = VocabRes.getDimension();
 
-      // ... other includes and code ...
+    Note that ``IR2VecVocabAnalysis`` pass is immutable.
 
-      llvm::FunctionAnalysisManager &FAM = ...; // The FAM instance
-      llvm::Function &F = ...; // The function to analyze
-      auto &IR2VecResult = FAM.getResult<llvm::IR2VecAnalysis>(F);
-
-2. **Checking for Valid Results:**
-
-   Ensure that the analysis result is valid before accessing the embeddings:
+2. **Create Embedder instance**:
+   With the vocabulary, create an embedder for a specific function:
 
    .. code-block:: c++
 
-      if (IR2VecResult.isValid()) {
-        // Proceed to access embeddings
+      // Assuming F is an llvm::Function&
+      // For example, using IR2VecKind::Symbolic:
+      ErrorOr<std::unique_ptr<ir2vec::Embedder>> EmbOrErr =
+          ir2vec::Embedder::create(IR2VecKind::Symbolic, F, Vocabulary, Dimension);
+
+      if (auto EC = EmbOrErr.getError()) {
+        // Handle error in embedder creation
+        return;
+      }
+      std::unique_ptr<ir2vec::Embedder> Emb = std::move(*EmbOrErr);
+
+3. **Compute and Access Embeddings**:
+   Call ``computeEmbeddings()`` on the embedder instance to compute the 
+   embeddings. Then the embeddings can be accessed using different getter 
+   methods. Currently, ``Embedder`` can generate embeddings at three levels:
+   Instructions, Basic Blocks, and Functions.
+
+   .. code-block:: c++
+
+      Emb->computeEmbeddings();
+      const ir2vec::Embedding &FuncVector = Emb->getFunctionVector();
+      const ir2vec::InstEmbeddingsMap &InstVecMap = Emb->getInstVecMap();
+      const ir2vec::BBEmbeddingsMap &BBVecMap = Emb->getBBVecMap();
+
+      // Example: Iterate over instruction embeddings
+      for (const auto &Entry : InstVecMap) {
+        const Instruction *Inst = Entry.getFirst();
+        const ir2vec::Embedding &InstEmbedding = Entry.getSecond();
+        // Use Inst and InstEmbedding
       }
 
-3. **Retrieving Embeddings:**
-
-   The ``IR2VecResult`` provides access to embeddings (currently) at three levels:
-
-   - **Instruction Embeddings:**
-
-     .. code-block:: c++
-
-        const auto &instVecMap = IR2VecResult.getInstVecMap();
-        // instVecMap is a SmallMapVector<const Instruction*, ir2vec::Embedding, 128>
-        for (const auto &it : instVecMap) {
-          const Instruction *I = it.first;
-          const ir2vec::Embedding &embedding = it.second;
-          // Use the instruction embedding
-        }
-   - **Basic Block Embeddings:**
-
-     .. code-block:: c++
-
-        const auto &bbVecMap = IR2VecResult.getBBVecMap();
-        // bbVecMap is a SmallMapVector<const BasicBlock*, ir2vec::Embedding, 16>
-        for (const auto &it : bbVecMap) {
-          const BasicBlock *BB = it.first;
-          const ir2vec::Embedding &embedding = it.second;
-          // Use the basic block embedding
-        }
-   - **Function Embedding:**
-
-     .. code-block:: c++
-
-        const ir2vec::Embedding &funcEmbedding = IR2VecResult.getFunctionVector();
-        // Use the function embedding
-
 4. **Working with Embeddings:**
-
    Embeddings are represented as ``std::vector<double>``. These
    vectors as features for machine learning models, compute similarity scores
    between different code snippets, or perform other analyses as needed.
-
-Example Usage
-^^^^^^^^^^^^^
-
-.. code-block:: c++
-
-   #include "llvm/Analysis/IR2VecAnalysis.h"
-   #include "llvm/IR/Function.h"
-   #include "llvm/IR/Instructions.h"
-   #include "llvm/Passes/PassBuilder.h"
-
-   // ... other includes and code ...
-
-   void processFunction(llvm::Function &F, llvm::FunctionAnalysisManager &FAM) {
-     auto &IR2VecResult = FAM.getResult<llvm::IR2VecAnalysis>(F);
-
-     if (IR2VecResult.isValid()) {
-       const auto &instVecMap = IR2VecResult.getInstVecMap();
-       for (const auto &it : instVecMap) {
-         const Instruction *I = it.first;
-         const auto &embedding = it.second;
-         llvm::errs() << "Instruction: " << *I << "\n";
-         llvm::errs() << "Embedding: ";
-         for (double val : embedding) {
-           llvm::errs() << val << " ";
-         }
-         llvm::errs() << "\n";
-       }
-     } else {
-       llvm::errs() << "IR2Vec analysis failed for function " << F.getName() << "\n";
-     }
-   }
-
-   // ... rest of the pass ...
-
-   // In the pass's run method:
-   // processFunction(F, FAM);
 
 Further Details
 ---------------
@@ -316,5 +265,5 @@ Further Details
 For more detailed information about the IR2Vec algorithm, its parameters, and
 advanced usage, please refer to the original paper:
 `IR2Vec: LLVM IR Based Scalable Program Embeddings <https://doi.org/10.1145/3418463>`_.
-The LLVM source code for ``IR2VecAnalysis`` can also be explored to understand the 
+The LLVM source code for ``IR2Vec`` can also be explored to understand the 
 implementation details.
