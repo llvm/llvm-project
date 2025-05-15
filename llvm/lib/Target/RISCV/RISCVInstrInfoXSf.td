@@ -495,32 +495,32 @@ def SDT_SF_VC_V_XVW : SDTypeProfile<1, 5, [SDTCisVec<0>,
                                            SDTCisVec<3>,
                                            SDTCisSameAs<1, 5>]>;
 
-def sf_vc_v_x_se : SDNode<"RISCVISD::SF_VC_V_X_SE", SDT_SF_VC_V_X, [SDNPHasChain]>;
-def sf_vc_v_i_se : SDNode<"RISCVISD::SF_VC_V_I_SE", SDT_SF_VC_V_X, [SDNPHasChain]>;
-def sf_vc_vv_se : SDNode<"RISCVISD::SF_VC_VV_SE", SDT_SF_VC_XV, [SDNPHasChain]>;
-def sf_vc_xv_se : SDNode<"RISCVISD::SF_VC_XV_SE", SDT_SF_VC_XV, [SDNPHasChain]>;
-def sf_vc_iv_se : SDNode<"RISCVISD::SF_VC_IV_SE", SDT_SF_VC_XV, [SDNPHasChain]>;
-def sf_vc_fv_se : SDNode<"RISCVISD::SF_VC_FV_SE", SDT_SF_VC_XV, [SDNPHasChain]>;
-def sf_vc_v_vv_se : SDNode<"RISCVISD::SF_VC_V_VV_SE", SDT_SF_VC_V_XV, [SDNPHasChain]>;
-def sf_vc_v_xv_se : SDNode<"RISCVISD::SF_VC_V_XV_SE", SDT_SF_VC_V_XV, [SDNPHasChain]>;
-def sf_vc_v_iv_se : SDNode<"RISCVISD::SF_VC_V_IV_SE", SDT_SF_VC_V_XV, [SDNPHasChain]>;
-def sf_vc_v_fv_se : SDNode<"RISCVISD::SF_VC_V_FV_SE", SDT_SF_VC_V_XV, [SDNPHasChain]>;
-def sf_vc_vvv_se : SDNode<"RISCVISD::SF_VC_VVV_SE", SDT_SF_VC_XVV, [SDNPHasChain]>;
-def sf_vc_xvv_se : SDNode<"RISCVISD::SF_VC_XVV_SE", SDT_SF_VC_XVV, [SDNPHasChain]>;
-def sf_vc_ivv_se : SDNode<"RISCVISD::SF_VC_IVV_SE", SDT_SF_VC_XVV, [SDNPHasChain]>;
-def sf_vc_fvv_se : SDNode<"RISCVISD::SF_VC_FVV_SE", SDT_SF_VC_XVV, [SDNPHasChain]>;
-def sf_vc_v_vvv_se : SDNode<"RISCVISD::SF_VC_V_VVV_SE", SDT_SF_VC_V_XVV, [SDNPHasChain]>;
-def sf_vc_v_xvv_se : SDNode<"RISCVISD::SF_VC_V_XVV_SE", SDT_SF_VC_V_XVV, [SDNPHasChain]>;
-def sf_vc_v_ivv_se : SDNode<"RISCVISD::SF_VC_V_IVV_SE", SDT_SF_VC_V_XVV, [SDNPHasChain]>;
-def sf_vc_v_fvv_se : SDNode<"RISCVISD::SF_VC_V_FVV_SE", SDT_SF_VC_V_XVV, [SDNPHasChain]>;
-def sf_vc_vvw_se : SDNode<"RISCVISD::SF_VC_VVW_SE", SDT_SF_VC_XVW, [SDNPHasChain]>;
-def sf_vc_xvw_se : SDNode<"RISCVISD::SF_VC_XVW_SE", SDT_SF_VC_XVW, [SDNPHasChain]>;
-def sf_vc_ivw_se : SDNode<"RISCVISD::SF_VC_IVW_SE", SDT_SF_VC_XVW, [SDNPHasChain]>;
-def sf_vc_fvw_se : SDNode<"RISCVISD::SF_VC_FVW_SE", SDT_SF_VC_XVW, [SDNPHasChain]>;
-def sf_vc_v_vvw_se : SDNode<"RISCVISD::SF_VC_V_VVW_SE", SDT_SF_VC_V_XVW, [SDNPHasChain]>;
-def sf_vc_v_xvw_se : SDNode<"RISCVISD::SF_VC_V_XVW_SE", SDT_SF_VC_V_XVW, [SDNPHasChain]>;
-def sf_vc_v_ivw_se : SDNode<"RISCVISD::SF_VC_V_IVW_SE", SDT_SF_VC_V_XVW, [SDNPHasChain]>;
-def sf_vc_v_fvw_se : SDNode<"RISCVISD::SF_VC_V_FVW_SE", SDT_SF_VC_V_XVW, [SDNPHasChain]>;
+def sf_vc_v_x_se : RVSDNode<"SF_VC_V_X_SE", SDT_SF_VC_V_X, [SDNPHasChain]>;
+def sf_vc_v_i_se : RVSDNode<"SF_VC_V_I_SE", SDT_SF_VC_V_X, [SDNPHasChain]>;
+def sf_vc_vv_se : RVSDNode<"SF_VC_VV_SE", SDT_SF_VC_XV, [SDNPHasChain]>;
+def sf_vc_xv_se : RVSDNode<"SF_VC_XV_SE", SDT_SF_VC_XV, [SDNPHasChain]>;
+def sf_vc_iv_se : RVSDNode<"SF_VC_IV_SE", SDT_SF_VC_XV, [SDNPHasChain]>;
+def sf_vc_fv_se : RVSDNode<"SF_VC_FV_SE", SDT_SF_VC_XV, [SDNPHasChain]>;
+def sf_vc_v_vv_se : RVSDNode<"SF_VC_V_VV_SE", SDT_SF_VC_V_XV, [SDNPHasChain]>;
+def sf_vc_v_xv_se : RVSDNode<"SF_VC_V_XV_SE", SDT_SF_VC_V_XV, [SDNPHasChain]>;
+def sf_vc_v_iv_se : RVSDNode<"SF_VC_V_IV_SE", SDT_SF_VC_V_XV, [SDNPHasChain]>;
+def sf_vc_v_fv_se : RVSDNode<"SF_VC_V_FV_SE", SDT_SF_VC_V_XV, [SDNPHasChain]>;
+def sf_vc_vvv_se : RVSDNode<"SF_VC_VVV_SE", SDT_SF_VC_XVV, [SDNPHasChain]>;
+def sf_vc_xvv_se : RVSDNode<"SF_VC_XVV_SE", SDT_SF_VC_XVV, [SDNPHasChain]>;
+def sf_vc_ivv_se : RVSDNode<"SF_VC_IVV_SE", SDT_SF_VC_XVV, [SDNPHasChain]>;
+def sf_vc_fvv_se : RVSDNode<"SF_VC_FVV_SE", SDT_SF_VC_XVV, [SDNPHasChain]>;
+def sf_vc_v_vvv_se : RVSDNode<"SF_VC_V_VVV_SE", SDT_SF_VC_V_XVV, [SDNPHasChain]>;
+def sf_vc_v_xvv_se : RVSDNode<"SF_VC_V_XVV_SE", SDT_SF_VC_V_XVV, [SDNPHasChain]>;
+def sf_vc_v_ivv_se : RVSDNode<"SF_VC_V_IVV_SE", SDT_SF_VC_V_XVV, [SDNPHasChain]>;
+def sf_vc_v_fvv_se : RVSDNode<"SF_VC_V_FVV_SE", SDT_SF_VC_V_XVV, [SDNPHasChain]>;
+def sf_vc_vvw_se : RVSDNode<"SF_VC_VVW_SE", SDT_SF_VC_XVW, [SDNPHasChain]>;
+def sf_vc_xvw_se : RVSDNode<"SF_VC_XVW_SE", SDT_SF_VC_XVW, [SDNPHasChain]>;
+def sf_vc_ivw_se : RVSDNode<"SF_VC_IVW_SE", SDT_SF_VC_XVW, [SDNPHasChain]>;
+def sf_vc_fvw_se : RVSDNode<"SF_VC_FVW_SE", SDT_SF_VC_XVW, [SDNPHasChain]>;
+def sf_vc_v_vvw_se : RVSDNode<"SF_VC_V_VVW_SE", SDT_SF_VC_V_XVW, [SDNPHasChain]>;
+def sf_vc_v_xvw_se : RVSDNode<"SF_VC_V_XVW_SE", SDT_SF_VC_V_XVW, [SDNPHasChain]>;
+def sf_vc_v_ivw_se : RVSDNode<"SF_VC_V_IVW_SE", SDT_SF_VC_V_XVW, [SDNPHasChain]>;
+def sf_vc_v_fvw_se : RVSDNode<"SF_VC_V_FVW_SE", SDT_SF_VC_V_XVW, [SDNPHasChain]>;
 
 class VPatVC_OP4_ISD<SDPatternOperator op,
                      string inst,

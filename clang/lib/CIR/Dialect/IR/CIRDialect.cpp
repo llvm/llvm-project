@@ -1297,9 +1297,8 @@ OpFoldResult cir::SelectOp::fold(FoldAdaptor adaptor) {
 LogicalResult cir::ShiftOp::verify() {
   mlir::Operation *op = getOperation();
   mlir::Type resType = getResult().getType();
-  assert(!cir::MissingFeatures::vectorType());
-  bool isOp0Vec = false;
-  bool isOp1Vec = false;
+  const bool isOp0Vec = mlir::isa<cir::VectorType>(op->getOperand(0).getType());
+  const bool isOp1Vec = mlir::isa<cir::VectorType>(op->getOperand(1).getType());
   if (isOp0Vec != isOp1Vec)
     return emitOpError() << "input types cannot be one vector and one scalar";
   if (isOp1Vec && op->getOperand(1).getType() != resType) {
@@ -1393,6 +1392,29 @@ LogicalResult cir::VecCreateOp::verify() {
   }
 
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// VecExtractOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult cir::VecExtractOp::fold(FoldAdaptor adaptor) {
+  const auto vectorAttr =
+      llvm::dyn_cast_if_present<cir::ConstVectorAttr>(adaptor.getVec());
+  if (!vectorAttr)
+    return {};
+
+  const auto indexAttr =
+      llvm::dyn_cast_if_present<cir::IntAttr>(adaptor.getIndex());
+  if (!indexAttr)
+    return {};
+
+  const mlir::ArrayAttr elements = vectorAttr.getElts();
+  const uint64_t index = indexAttr.getUInt();
+  if (index >= elements.size())
+    return {};
+
+  return elements[index];
 }
 
 //===----------------------------------------------------------------------===//

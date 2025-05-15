@@ -284,6 +284,14 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
           NewParam.Constants.RegisterSpace = Param.Constants.RegisterSpace;
           NewParam.Constants.ShaderRegister = Param.Constants.ShaderRegister;
           break;
+        case llvm::to_underlying(dxbc::RootParameterType::SRV):
+        case llvm::to_underlying(dxbc::RootParameterType::UAV):
+        case llvm::to_underlying(dxbc::RootParameterType::CBV):
+          NewParam.Descriptor.RegisterSpace = Param.Descriptor.RegisterSpace;
+          NewParam.Descriptor.ShaderRegister = Param.Descriptor.ShaderRegister;
+          if (P.RootSignature->Version > 1)
+            NewParam.Descriptor.Flags = Param.Descriptor.getEncodedFlags();
+          break;
         }
 
         RS.Parameters.push_back(NewParam);

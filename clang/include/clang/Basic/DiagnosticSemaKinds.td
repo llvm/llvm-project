@@ -164,6 +164,8 @@ def err_ice_too_large : Error<
   "integer constant expression evaluates to value %0 that cannot be "
   "represented in a %1-bit %select{signed|unsigned}2 integer type">;
 def err_expr_not_string_literal : Error<"expression is not a string literal">;
+def note_constexpr_assert_failed : Note<
+  "assertion failed during evaluation of constant expression">;
 
 // Semantic analysis of constant literals.
 def ext_predef_outside_function : Warning<
@@ -1028,19 +1030,22 @@ def err_ptrauth_indirect_goto_addrlabel_arithmetic : Error<
 
 // __ptrauth qualifier
 def err_ptrauth_qualifier_invalid : Error<
-  "%select{return type|parameter type|property}1 may not be qualified with '__ptrauth'; type is %0">;
+  "%select{return type|parameter type|property}1 may not be qualified with "
+  "'__ptrauth'; type is %0">;
 def err_ptrauth_qualifier_cast : Error<
   "cannot cast to '__ptrauth'-qualified type %0">;
-def err_ptrauth_qualifier_nonpointer : Error<
-  "'__ptrauth' qualifier only applies to pointer types; %0 is invalid">;
-def err_ptrauth_qualifier_redundant : Error<
-  "type %0 is already %1-qualified">;
+def err_ptrauth_qualifier_invalid_target : Error<
+  "'__ptrauth' qualifier only applies to pointer or pointer sized integer "
+  "types; %0 is invalid">;
+def err_ptrauth_qualifier_redundant: Error<
+  "type %0 is already '__ptrauth'-qualified">;
 def err_ptrauth_arg_not_ice : Error<
   "argument to '__ptrauth' must be an integer constant expression">;
 def err_ptrauth_address_discrimination_invalid : Error<
   "invalid address discrimination flag '%0'; '__ptrauth' requires '0' or '1'">;
 def err_ptrauth_extra_discriminator_invalid : Error<
-  "invalid extra discriminator flag '%0'; '__ptrauth' requires a value between '0' and '%1'">;
+  "invalid extra discriminator flag '%0'; '__ptrauth' requires a value between "
+  "'0' and '%1'">;
 
 /// main()
 // static main() is not an error in C, just in C++.
@@ -4364,6 +4369,29 @@ def warn_address_of_reference_bool_conversion : Warning<
   "code; pointer may be assumed to always convert to true">,
   InGroup<UndefinedBoolConversion>;
 
+def warn_impcast_unicode_char_type
+    : Warning<"implicit conversion from %0 to %1 may change the meaning of the "
+              "represented code unit">,
+      InGroup<CharacterConversion>;
+def warn_impcast_unicode_precision
+    : Warning<"implicit conversion from %0 to %1 may lose precision and change "
+              "the meaning of the represented code unit">,
+      InGroup<CharacterConversion>;
+def warn_impcast_unicode_char_type_constant
+    : Warning<"implicit conversion from %0 to %1 changes the meaning of the "
+              "%select{code unit|code point}2 '%3'">,
+      InGroup<CharacterConversion>;
+
+def warn_comparison_unicode_mixed_types
+    : Warning<"comparing values of different Unicode code unit types %0 and %1 "
+              "may compare different code points">,
+      InGroup<CharacterConversion>;
+
+def warn_comparison_unicode_mixed_types_constant
+    : Warning<"comparing values of different Unicode code unit types %0 and %1 "
+              "compares unrelated code units '%2' and '%3'">,
+      InGroup<CharacterConversion>;
+
 def warn_xor_used_as_pow : Warning<
   "result of '%0' is %1; did you mean exponentiation?">,
   InGroup<XorUsedAsPow>;
@@ -6538,6 +6566,13 @@ def note_change_bitfield_sign : Note<
   "consider making the bit-field type %select{unsigned|signed}0">;
 def note_bitfield_preferred_type
     : Note<"preferred type for bit-field %0 specified here">;
+def warn_ms_bitfield_mismatched_storage_packing : Warning<
+  "bit-field %0 of type %1 has a different storage size than the "
+  "preceding bit-field (%2 vs %3 bytes) and will not be packed under "
+  "the Microsoft ABI">,
+  InGroup<MSBitfieldCompatibility>, DefaultIgnore;
+def note_ms_bitfield_mismatched_storage_size_previous : Note<
+  "preceding bit-field %0 declared here with type %1">;
 
 def warn_missing_braces : Warning<
   "suggest braces around initialization of subobject">,
@@ -6822,7 +6857,7 @@ def err_counted_by_on_incomplete_type_on_use : Error <
 
 def note_counted_by_consider_completing_pointee_ty : Note<
   "consider providing a complete definition for %0">;
-  
+
 def note_counted_by_consider_using_sized_by : Note<
   "consider using '__sized_by%select{|_or_null}0' instead of "
   "'__counted_by%select{|_or_null}0'">;
@@ -7720,6 +7755,11 @@ def warn_comparison_of_mixed_enum_types_switch : Warning<
   "comparison of different enumeration types in switch statement"
   "%diff{ ($ and $)|}0,1">,
   InGroup<EnumCompareSwitch>;
+
+def warn_arith_conv_mixed_unicode_types
+    : Warning<"%sub{select_arith_conv_kind}0 "
+              "different Unicode character types %1 and %2">,
+      InGroup<CharacterConversion>;
 
 def err_typecheck_assign_const : Error<
   "%select{"
@@ -10173,6 +10213,9 @@ def note_defaulted_comparison_no_viable_function_synthesized : Note<
 def note_defaulted_comparison_not_rewritten_callee : Note<
   "defaulted %0 is implicitly deleted because this non-rewritten comparison "
   "function would be the best match for the comparison">;
+def note_defaulted_comparison_vector_types : Note<
+  "defaulted %0 is implicitly deleted because defaulted comparison of vector "
+  "types is not supported">;
 def note_defaulted_comparison_not_rewritten_conversion : Note<
   "defaulted %0 is implicitly deleted because a builtin comparison function "
   "using this conversion would be the best match for the comparison">;
@@ -10528,7 +10571,7 @@ def warn_tautological_negation_or_compare: Warning<
   "'||' of a value and its negation always evaluates to true">,
   InGroup<TautologicalNegationCompare>, DefaultIgnore;
 def warn_tautological_overlap_comparison : Warning<
-  "overlapping comparisons always evaluate to %select{false|true}0">,
+  "%select{non-|}0overlapping comparisons always evaluate to %select{false|true}0">,
   InGroup<TautologicalOverlapCompare>, DefaultIgnore;
 def warn_depr_array_comparison : Warning<
   "comparison between two arrays is deprecated; "
@@ -11523,6 +11566,8 @@ def note_omp_collapse_ordered_expr : Note<
   "as specified in %select{'collapse'|'ordered'|'collapse' and 'ordered'}0 clause%select{||s}0">;
 def err_omp_negative_expression_in_clause : Error<
   "argument to '%0' clause must be a %select{non-negative|strictly positive}1 integer value">;
+def err_omp_large_expression_in_clause : Error<
+  "argument to '%0' clause requires a value that can be represented by a 64-bit">;
 def err_omp_not_integral : Error<
   "expression must have integral or unscoped enumeration "
   "type, not %0">;
@@ -13000,6 +13045,8 @@ def err_wasm_reftype_multidimensional_array : Error<
   "multi-dimensional arrays of WebAssembly references are not allowed">;
 def err_wasm_builtin_arg_must_be_table_type : Error <
   "%ordinal0 argument must be a WebAssembly table">;
+def err_wasm_builtin_arg_must_be_externref_type : Error <
+  "%ordinal0 argument must be an externref">;
 def err_wasm_builtin_arg_must_match_table_element_type : Error <
   "%ordinal0 argument must match the element type of the WebAssembly table in the %ordinal1 argument">;
 def err_wasm_builtin_arg_must_be_integer_type : Error <

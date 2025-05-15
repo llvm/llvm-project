@@ -96,6 +96,10 @@ class COFFAsmParser : public MCAsmParserExtension {
         ".seh_startepilogue");
     addDirectiveHandler<&COFFAsmParser::ParseSEHDirectiveEndEpilog>(
         ".seh_endepilogue");
+    addDirectiveHandler<&COFFAsmParser::ParseSEHDirectiveUnwindV2Start>(
+        ".seh_unwindv2start");
+    addDirectiveHandler<&COFFAsmParser::ParseSEHDirectiveUnwindVersion>(
+        ".seh_unwindversion");
   }
 
   bool parseSectionDirectiveText(StringRef, SMLoc) {
@@ -147,6 +151,8 @@ class COFFAsmParser : public MCAsmParserExtension {
   bool parseSEHDirectiveEndProlog(StringRef, SMLoc);
   bool ParseSEHDirectiveBeginEpilog(StringRef, SMLoc);
   bool ParseSEHDirectiveEndEpilog(StringRef, SMLoc);
+  bool ParseSEHDirectiveUnwindV2Start(StringRef, SMLoc);
+  bool ParseSEHDirectiveUnwindVersion(StringRef, SMLoc);
 
   bool parseAtUnwindOrAtExcept(bool &unwind, bool &except);
   bool parseDirectiveSymbolAttribute(StringRef Directive, SMLoc);
@@ -771,6 +777,28 @@ bool COFFAsmParser::ParseSEHDirectiveBeginEpilog(StringRef, SMLoc Loc) {
 bool COFFAsmParser::ParseSEHDirectiveEndEpilog(StringRef, SMLoc Loc) {
   Lex();
   getStreamer().emitWinCFIEndEpilogue(Loc);
+  return false;
+}
+
+bool COFFAsmParser::ParseSEHDirectiveUnwindV2Start(StringRef, SMLoc Loc) {
+  Lex();
+  getStreamer().emitWinCFIUnwindV2Start(Loc);
+  return false;
+}
+
+bool COFFAsmParser::ParseSEHDirectiveUnwindVersion(StringRef, SMLoc Loc) {
+  int64_t Version;
+  if (getParser().parseIntToken(Version, "expected unwind version number"))
+    return true;
+
+  if ((Version < 1) || (Version > UINT8_MAX))
+    return Error(Loc, "invalid unwind version");
+
+  if (getLexer().isNot(AsmToken::EndOfStatement))
+    return TokError("unexpected token in directive");
+
+  Lex();
+  getStreamer().emitWinCFIUnwindVersion(Version, Loc);
   return false;
 }
 

@@ -58,6 +58,8 @@ C++ Specific Potentially Breaking Changes
 - The type trait builtin ``__is_referenceable`` has been removed, since it has
   very few users and all the type traits that could benefit from it in the
   standard library already have their own bespoke builtins.
+- A workaround for libstdc++4.7 has been removed. Note that 4.8.3 remains the oldest
+  supported libstdc++ version.
 
 ABI Changes in This Version
 ---------------------------
@@ -118,6 +120,9 @@ C++23 Feature Support
 
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
+- Fixed a crash with a defaulted spaceship (``<=>``) operator when the class
+  contains a member declaration of vector type. Vector types cannot yet be
+  compared directly, so this causes the operator to be deleted. (#GH137452)
 
 C++17 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -506,9 +511,45 @@ Improvements to Clang's diagnostics
   behavior of the C99 feature as it was introduced into C++20. Fixes #GH47037
 - ``-Wreserved-identifier`` now fires on reserved parameter names in a function
   declaration which is not a definition.
+- Clang now prints the namespace for an attribute, if any,
+  when emitting an unknown attribute diagnostic.
+
+- ``-Wvolatile`` now warns about volatile-qualified class return types
+  as well as volatile-qualified scalar return types. Fixes #GH133380
 
 - Several compatibility diagnostics that were incorrectly being grouped under
   ``-Wpre-c++20-compat`` are now part of ``-Wc++20-compat``. (#GH138775)
+
+- Improved the ``-Wtautological-overlap-compare`` diagnostics to warn about overlapping and non-overlapping ranges involving character literals and floating-point literals.
+  The warning message for non-overlapping cases has also been improved (#GH13473).
+
+- Fixed a duplicate diagnostic when performing typo correction on function template
+  calls with explicit template arguments. (#GH139226)
+
+- Explanatory note is printed when ``assert`` fails during evaluation of a
+  constant expression. Prior to this, the error inaccurately implied that assert
+  could not be used at all in a constant expression (#GH130458)
+
+- A new off-by-default warning ``-Wms-bitfield-padding`` has been added to alert to cases where bit-field
+  packing may differ under the MS struct ABI (#GH117428).
+
+- ``-Watomic-access`` no longer fires on unreachable code. e.g.,
+
+  .. code-block:: c
+
+    _Atomic struct S { int a; } s;
+    void func(void) {
+      if (0)
+        s.a = 12; // Previously diagnosed with -Watomic-access, now silenced
+      s.a = 12; // Still diagnosed with -Watomic-access
+      return;
+      s.a = 12; // Previously diagnosed, now silenced
+    }
+
+
+- A new ``-Wcharacter-conversion`` warns where comparing or implicitly converting
+  between different Unicode character types (``char8_t``, ``char16_t``, ``char32_t``).
+  This warning only triggers in C++ as these types are aliases in C. (#GH138526)
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -564,10 +605,16 @@ Bug Fixes in This Version
 - Fixed a bug where an attribute before a ``pragma clang attribute`` or
   ``pragma clang __debug`` would cause an assertion. Instead, this now diagnoses
   the invalid attribute location appropriately. (#GH137861)
-- Fixed a crash when a malformed ``_Pragma`` directive appears as part of an 
+- Fixed a crash when a malformed ``_Pragma`` directive appears as part of an
   ``#include`` directive. (#GH138094)
 - Fixed a crash during constant evaluation involving invalid lambda captures
   (#GH138832)
+- Fixed a crash when instantiating an invalid dependent friend template specialization.
+  (#GH139052)
+- Fixed a crash with an invalid member function parameter list with a default
+  argument which contains a pragma. (#GH113722)
+- Fixed assertion failures when generating name lookup table in modules. (#GH61065, #GH134739)
+- Fixed an assertion failure in constant compound literal statements. (#GH139160)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -580,6 +627,15 @@ Bug Fixes to Compiler Builtins
 
 - ``__has_unique_object_representations(Incomplete[])`` is no longer accepted, per
   `LWG4113 <https://cplusplus.github.io/LWG/issue4113>`_.
+
+- ``__builtin_is_cpp_trivially_relocatable``, ``__builtin_is_replaceable`` and
+  ``__builtin_trivially_relocate`` have been added to support standard C++26 relocation.
+
+- ``__is_trivially_relocatable`` has been deprecated, and uses should be replaced by
+  ``__builtin_is_cpp_trivially_relocatable``.
+  Note that, it is generally unsafe to ``memcpy`` non-trivially copyable types that
+  are ``__builtin_is_cpp_trivially_relocatable``. It is recommanded to use
+  ``__builtin_trivially_relocate`` instead.
 
 Bug Fixes to Attribute Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -664,11 +720,15 @@ Bug Fixes to C++ Support
 - Fixed an assertion when trying to constant-fold various builtins when the argument
   referred to a reference to an incomplete type. (#GH129397)
 - Fixed a crash when a cast involved a parenthesized aggregate initialization in dependent context. (#GH72880)
-- Fixed a crash when forming an invalid function type in a dependent context. (#GH138657) (#GH115725) (#GH68852)
 - No longer crashes when instantiating invalid variable template specialization
   whose type depends on itself. (#GH51347), (#GH55872)
 - Improved parser recovery of invalid requirement expressions. In turn, this
   fixes crashes from follow-on processing of the invalid requirement. (#GH138820)
+- Fixed the handling of pack indexing types in the constraints of a member function redeclaration. (#GH138255)
+- Clang now correctly parses arbitrary order of ``[[]]``, ``__attribute__`` and ``alignas`` attributes for declarations (#GH133107)
+- Fixed a crash when forming an invalid function type in a dependent context. (#GH138657) (#GH115725) (#GH68852)
+- Clang no longer segfaults when there is a configuration mismatch between modules and their users (http://crbug.com/400353616).
+- Fix an incorrect deduction when calling an explicit object member function template through an overload set address.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -718,6 +778,9 @@ X86 Support
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
+
+- Support has been added for the following processors (command-line identifiers in parentheses):
+  - Arm Cortex-A320 (``cortex-a320``)
 - For ARM targets, cc1as now considers the FPU's features for the selected CPU or Architecture.
 - The ``+nosimd`` attribute is now fully supported for ARM. Previously, this had no effect when being used with
   ARM targets, however this will now disable NEON instructions being generated. The ``simd`` option is
@@ -814,6 +877,11 @@ clang-format
 - Add ``OneLineFormatOffRegex`` option for turning formatting off for one line.
 - Add ``SpaceAfterOperatorKeyword`` option.
 
+clang-refactor
+--------------
+- Reject `0` as column or line number in 1-based command-line source locations.
+  Fixes crash caused by `0` input in `-selection=<file>:<line>:<column>[-<line>:<column>]`. (#GH139457)
+
 libclang
 --------
 - Fixed a bug in ``clang_File_isEqual`` that sometimes led to different
@@ -832,6 +900,8 @@ libclang
 
 Code Completion
 ---------------
+- Reject `0` as column or line number in 1-based command-line source locations.
+  Fixes crash caused by `0` input in `-code-completion-at=<file>:<line>:<column>`. (#GH139457)
 
 Static Analyzer
 ---------------
@@ -891,12 +961,28 @@ OpenMP Support
 - Added support 'no_openmp_constructs' assumption clause.
 - Added support for 'self_maps' in map and requirement clause.
 - Added support for 'omp stripe' directive.
+- Fixed a crashing bug with ``omp unroll partial`` if the argument to
+  ``partial`` was an invalid expression. (#GH139267)
+- Fixed a crashing bug with ``omp tile sizes`` if the argument to ``sizes`` was
+  an invalid expression. (#GH139073)
+- Fixed a crashing bug with ``omp simd collapse`` if the argument to
+  ``collapse`` was an invalid expression. (#GH138493)
+- Fixed a crashing bug with a malformed ``cancel`` directive. (#GH139360)
+- Fixed a crashing bug with ``omp distribute dist_schedule`` if the argument to
+  ``dist_schedule`` was not strictly positive. (#GH139266)
+- Fixed two crashing bugs with a malformed ``metadirective`` directive. One was
+  a crash if the next token after ``metadirective`` was a paren, bracket, or
+  brace. The other was if the next token after the meta directive was not an
+  open parenthesis. (#GH139665)
+- An error is now emitted when OpenMP ``collapse`` and ``ordered`` clauses have
+  an argument larger than what can fit within a 64-bit integer.
 
 Improvements
 ^^^^^^^^^^^^
 
 Additional Information
-======================
+
+===================
 
 A wide variety of additional information is available on the `Clang web
 page <https://clang.llvm.org/>`_. The web page contains versions of the

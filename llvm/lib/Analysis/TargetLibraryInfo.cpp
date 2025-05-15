@@ -205,6 +205,14 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
     return;
   }
 
+  // DXIL does not support libcalls, and disabling them here prevents a number
+  // of passes from introducing libcalls into DXIL which would otherwise
+  // complicate lowering/legalization
+  if (T.isDXIL()) {
+    TLI.disableAllFunctions();
+    return;
+  }
+
   // memset_pattern{4,8,16} is only available on iOS 3.0 and Mac OS X 10.5 and
   // later. All versions of watchOS support it.
   if (T.isMacOSX()) {

@@ -65,6 +65,7 @@ class VPReplicateRecipe;
 class VPlanSlp;
 class Value;
 class LoopVectorizationCostModel;
+class LoopVersioning;
 
 struct VPCostContext;
 
@@ -1115,6 +1116,56 @@ public:
 #endif
 };
 
+/// Helper type to provide functions to access incoming values and blocks for
+/// phi-like recipes.
+class VPPhiAccessors {
+protected:
+  /// Return a VPRecipeBase* to the current object.
+  virtual const VPRecipeBase *getAsRecipe() const = 0;
+
+public:
+  virtual ~VPPhiAccessors() = default;
+
+  /// Returns the incoming VPValue with index \p Idx.
+  VPValue *getIncomingValue(unsigned Idx) const {
+    return getAsRecipe()->getOperand(Idx);
+  }
+
+  /// Returns the incoming block with index \p Idx.
+  const VPBasicBlock *getIncomingBlock(unsigned Idx) const;
+
+  /// Returns the number of incoming values, also number of incoming blocks.
+  virtual unsigned getNumIncoming() const {
+    return getAsRecipe()->getNumOperands();
+  }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void printPhiOperands(raw_ostream &O, VPSlotTracker &SlotTracker) const;
+#endif
+};
+
+struct VPPhi : public VPInstruction, public VPPhiAccessors {
+  VPPhi(ArrayRef<VPValue *> Operands, DebugLoc DL, const Twine &Name = "")
+      : VPInstruction(Instruction::PHI, Operands, DL, Name) {}
+
+  static inline bool classof(const VPRecipeBase *U) {
+    auto *R = dyn_cast<VPInstruction>(U);
+    return R && R->getOpcode() == Instruction::PHI;
+  }
+
+  void execute(VPTransformState &State) override;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
+
+protected:
+  const VPRecipeBase *getAsRecipe() const override { return this; }
+};
+
 /// A recipe to wrap on original IR instruction not to be modified during
 /// execution, except for PHIs. PHIs are modeled via the VPIRPhi subclass.
 /// Expect PHIs, VPIRInstructions cannot have any operands.
@@ -1181,33 +1232,11 @@ public:
   void extractLastLaneOfFirstOperand(VPBuilder &Builder);
 };
 
-/// Helper type to provide functions to access incoming values and blocks for
-/// phi-like recipes.
-class VPPhiAccessors {
-protected:
-  /// Return a VPRecipeBase* to the current object.
-  virtual const VPRecipeBase *getAsRecipe() const = 0;
-
-public:
-  virtual ~VPPhiAccessors() = default;
-
-  /// Returns the incoming VPValue with index \p Idx.
-  VPValue *getIncomingValue(unsigned Idx) const {
-    return getAsRecipe()->getOperand(Idx);
-  }
-
-  /// Returns the incoming block with index \p Idx.
-  const VPBasicBlock *getIncomingBlock(unsigned Idx) const;
-
-  /// Returns the number of incoming values, also number of incoming blocks.
-  unsigned getNumIncoming() const { return getAsRecipe()->getNumOperands(); }
-};
-
 /// An overlay for VPIRInstructions wrapping PHI nodes enabling convenient use
 /// cast/dyn_cast/isa and execute() implementation. A single VPValue operand is
 /// allowed, and it is used to add a new incoming value for the single
 /// predecessor VPBB.
-struct VPIRPhi : public VPIRInstruction {
+struct VPIRPhi : public VPIRInstruction, public VPPhiAccessors {
   VPIRPhi(PHINode &PN) : VPIRInstruction(PN) {}
 
   static inline bool classof(const VPRecipeBase *U) {
@@ -1224,6 +1253,9 @@ struct VPIRPhi : public VPIRInstruction {
   void print(raw_ostream &O, const Twine &Indent,
              VPSlotTracker &SlotTracker) const override;
 #endif
+
+protected:
+  const VPRecipeBase *getAsRecipe() const override { return this; }
 };
 
 /// Helper to manage IR metadata for recipes. It filters out metadata that
@@ -1231,11 +1263,20 @@ struct VPIRPhi : public VPIRInstruction {
 class VPIRMetadata {
   SmallVector<std::pair<unsigned, MDNode *>> Metadata;
 
-protected:
+public:
   VPIRMetadata() {}
+
+  /// Adds metatadata that can be preserved from the original instruction
+  /// \p I.
   VPIRMetadata(Instruction &I) { getMetadataToPropagate(&I, Metadata); }
 
-public:
+  /// Adds metatadata that can be preserved from the original instruction
+  /// \p I and noalias metadata guaranteed by runtime checks using \p LVer.
+  VPIRMetadata(Instruction &I, LoopVersioning *LVer);
+
+  /// Copy constructor for cloning.
+  VPIRMetadata(const VPIRMetadata &Other) : Metadata(Other.Metadata) {}
+
   /// Add all metadata to \p I.
   void applyMetadata(Instruction &I) const;
 };
@@ -1749,12 +1790,14 @@ public:
 ///  * VPWidenPointerInductionRecipe: Generate vector and scalar values for a
 ///    pointer induction. Produces either a vector PHI per-part or scalar values
 ///    per-lane based on the canonical induction.
-class VPHeaderPHIRecipe : public VPSingleDefRecipe {
+class VPHeaderPHIRecipe : public VPSingleDefRecipe, public VPPhiAccessors {
 protected:
   VPHeaderPHIRecipe(unsigned char VPDefID, Instruction *UnderlyingInstr,
                     VPValue *Start, DebugLoc DL = {})
       : VPSingleDefRecipe(VPDefID, ArrayRef<VPValue *>({Start}), UnderlyingInstr, DL) {
   }
+
+  const VPRecipeBase *getAsRecipe() const override { return this; }
 
 public:
   ~VPHeaderPHIRecipe() override = default;
@@ -1943,6 +1986,11 @@ public:
     // increment.
     return isUnrolled() ? getOperand(getNumOperands() - 2) : nullptr;
   }
+
+  /// Returns the number of incoming values, also number of incoming blocks.
+  /// Note that at the moment, VPWidenIntOrFpInductionRecipes only have a single
+  /// incoming value, its start value.
+  unsigned getNumIncoming() const override { return 1; }
 
   /// Returns the first defined value as TruncInst, if it is one or nullptr
   /// otherwise.
@@ -2506,7 +2554,7 @@ public:
 /// copies of the original scalar type, one per lane, instead of producing a
 /// single copy of widened type for all lanes. If the instruction is known to be
 /// uniform only one copy, per lane zero, will be generated.
-class VPReplicateRecipe : public VPRecipeWithIRFlags {
+class VPReplicateRecipe : public VPRecipeWithIRFlags, public VPIRMetadata {
   /// Indicator if only a single replica per lane is needed.
   bool IsUniform;
 
@@ -2515,9 +2563,10 @@ class VPReplicateRecipe : public VPRecipeWithIRFlags {
 
 public:
   VPReplicateRecipe(Instruction *I, ArrayRef<VPValue *> Operands,
-                    bool IsUniform, VPValue *Mask = nullptr)
+                    bool IsUniform, VPValue *Mask = nullptr,
+                    VPIRMetadata Metadata = {})
       : VPRecipeWithIRFlags(VPDef::VPReplicateSC, Operands, *I),
-        IsUniform(IsUniform), IsPredicated(Mask) {
+        VPIRMetadata(Metadata), IsUniform(IsUniform), IsPredicated(Mask) {
     if (Mask)
       addOperand(Mask);
   }
@@ -2527,7 +2576,7 @@ public:
   VPReplicateRecipe *clone() override {
     auto *Copy =
         new VPReplicateRecipe(getUnderlyingInstr(), operands(), IsUniform,
-                              isPredicated() ? getMask() : nullptr);
+                              isPredicated() ? getMask() : nullptr, *this);
     Copy->transferFlags(*this);
     return Copy;
   }
@@ -2687,8 +2736,9 @@ protected:
 
   VPWidenMemoryRecipe(const char unsigned SC, Instruction &I,
                       std::initializer_list<VPValue *> Operands,
-                      bool Consecutive, bool Reverse, DebugLoc DL)
-      : VPRecipeBase(SC, Operands, DL), VPIRMetadata(I), Ingredient(I),
+                      bool Consecutive, bool Reverse,
+                      const VPIRMetadata &Metadata, DebugLoc DL)
+      : VPRecipeBase(SC, Operands, DL), VPIRMetadata(Metadata), Ingredient(I),
         Consecutive(Consecutive), Reverse(Reverse) {
     assert((Consecutive || !Reverse) && "Reverse implies consecutive");
   }
@@ -2746,16 +2796,17 @@ public:
 /// optional mask.
 struct VPWidenLoadRecipe final : public VPWidenMemoryRecipe, public VPValue {
   VPWidenLoadRecipe(LoadInst &Load, VPValue *Addr, VPValue *Mask,
-                    bool Consecutive, bool Reverse, DebugLoc DL)
+                    bool Consecutive, bool Reverse,
+                    const VPIRMetadata &Metadata, DebugLoc DL)
       : VPWidenMemoryRecipe(VPDef::VPWidenLoadSC, Load, {Addr}, Consecutive,
-                            Reverse, DL),
+                            Reverse, Metadata, DL),
         VPValue(this, &Load) {
     setMask(Mask);
   }
 
   VPWidenLoadRecipe *clone() override {
     return new VPWidenLoadRecipe(cast<LoadInst>(Ingredient), getAddr(),
-                                 getMask(), Consecutive, Reverse,
+                                 getMask(), Consecutive, Reverse, *this,
                                  getDebugLoc());
   }
 
@@ -2787,7 +2838,7 @@ struct VPWidenLoadEVLRecipe final : public VPWidenMemoryRecipe, public VPValue {
   VPWidenLoadEVLRecipe(VPWidenLoadRecipe &L, VPValue &EVL, VPValue *Mask)
       : VPWidenMemoryRecipe(VPDef::VPWidenLoadEVLSC, L.getIngredient(),
                             {L.getAddr(), &EVL}, L.isConsecutive(),
-                            L.isReverse(), L.getDebugLoc()),
+                            L.isReverse(), L, L.getDebugLoc()),
         VPValue(this, &getIngredient()) {
     setMask(Mask);
   }
@@ -2824,16 +2875,17 @@ struct VPWidenLoadEVLRecipe final : public VPWidenMemoryRecipe, public VPValue {
 /// to store to and an optional mask.
 struct VPWidenStoreRecipe final : public VPWidenMemoryRecipe {
   VPWidenStoreRecipe(StoreInst &Store, VPValue *Addr, VPValue *StoredVal,
-                     VPValue *Mask, bool Consecutive, bool Reverse, DebugLoc DL)
+                     VPValue *Mask, bool Consecutive, bool Reverse,
+                     const VPIRMetadata &Metadata, DebugLoc DL)
       : VPWidenMemoryRecipe(VPDef::VPWidenStoreSC, Store, {Addr, StoredVal},
-                            Consecutive, Reverse, DL) {
+                            Consecutive, Reverse, Metadata, DL) {
     setMask(Mask);
   }
 
   VPWidenStoreRecipe *clone() override {
     return new VPWidenStoreRecipe(cast<StoreInst>(Ingredient), getAddr(),
                                   getStoredValue(), getMask(), Consecutive,
-                                  Reverse, getDebugLoc());
+                                  Reverse, *this, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenStoreSC);
@@ -2867,7 +2919,8 @@ struct VPWidenStoreEVLRecipe final : public VPWidenMemoryRecipe {
   VPWidenStoreEVLRecipe(VPWidenStoreRecipe &S, VPValue &EVL, VPValue *Mask)
       : VPWidenMemoryRecipe(VPDef::VPWidenStoreEVLSC, S.getIngredient(),
                             {S.getAddr(), S.getStoredValue(), &EVL},
-                            S.isConsecutive(), S.isReverse(), S.getDebugLoc()) {
+                            S.isConsecutive(), S.isReverse(), S,
+                            S.getDebugLoc()) {
     setMask(Mask);
   }
 
@@ -3239,6 +3292,46 @@ public:
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return true;
+  }
+};
+
+/// Casting from VPRecipeBase -> VPPhiAccessors is supported for all recipe
+/// types implementing VPPhiAccessors. Used by isa<> & co.
+template <> struct CastIsPossible<VPPhiAccessors, const VPRecipeBase *> {
+  static inline bool isPossible(const VPRecipeBase *f) {
+    // TODO: include VPPredInstPHIRecipe too, once it implements VPPhiAccessors.
+    return isa<VPIRPhi, VPHeaderPHIRecipe, VPWidenPHIRecipe, VPPhi>(f);
+  }
+};
+/// Support casting from VPRecipeBase -> VPPhiAccessors, by down-casting to the
+/// recipe types implementing VPPhiAccessors. Used by cast<>, dyn_cast<> & co.
+template <>
+struct CastInfo<VPPhiAccessors, const VPRecipeBase *>
+    : public CastIsPossible<VPPhiAccessors, const VPRecipeBase *> {
+
+  using Self = CastInfo<VPPhiAccessors, const VPRecipeBase *>;
+
+  /// doCast is used by cast<>.
+  static inline VPPhiAccessors *doCast(const VPRecipeBase *R) {
+    return const_cast<VPPhiAccessors *>([R]() -> const VPPhiAccessors * {
+      switch (R->getVPDefID()) {
+      case VPDef::VPInstructionSC:
+        return cast<VPPhi>(R);
+      case VPDef::VPIRInstructionSC:
+        return cast<VPIRPhi>(R);
+      case VPDef::VPWidenPHISC:
+        return cast<VPWidenPHIRecipe>(R);
+      default:
+        return cast<VPHeaderPHIRecipe>(R);
+      }
+    }());
+  }
+
+  /// doCastIfPossible is used by dyn_cast<>.
+  static inline VPPhiAccessors *doCastIfPossible(const VPRecipeBase *f) {
+    if (!Self::isPossible(f))
+      return nullptr;
+    return doCast(f);
   }
 };
 

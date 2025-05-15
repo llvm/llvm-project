@@ -1240,6 +1240,8 @@ if(LLVM_PROFDATA_FILE AND EXISTS ${LLVM_PROFDATA_FILE})
   else()
     message(FATAL_ERROR "LLVM_PROFDATA_FILE can only be specified when compiling with clang")
   endif()
+elseif(LLVM_PROFDATA_FILE)
+  message(WARNING "LLVM_PROFDATA_FILE specified, but ${LLVM_PROFDATA_FILE} not found")
 endif()
 
 option(LLVM_BUILD_INSTRUMENTED_COVERAGE "Build LLVM and tools with Code Coverage instrumentation" Off)

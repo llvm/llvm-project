@@ -80,13 +80,13 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
         if (LoadInst *Load = dyn_cast<LoadInst>(Inst)) {
           NewRecipe = new VPWidenLoadRecipe(
               *Load, Ingredient.getOperand(0), nullptr /*Mask*/,
-              false /*Consecutive*/, false /*Reverse*/,
+              false /*Consecutive*/, false /*Reverse*/, VPIRMetadata(*Load),
               Ingredient.getDebugLoc());
         } else if (StoreInst *Store = dyn_cast<StoreInst>(Inst)) {
           NewRecipe = new VPWidenStoreRecipe(
               *Store, Ingredient.getOperand(1), Ingredient.getOperand(0),
               nullptr /*Mask*/, false /*Consecutive*/, false /*Reverse*/,
-              Ingredient.getDebugLoc());
+              VPIRMetadata(*Store), Ingredient.getDebugLoc());
         } else if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Inst)) {
           NewRecipe = new VPWidenGEPRecipe(GEP, Ingredient.operands());
         } else if (CallInst *CI = dyn_cast<CallInst>(Inst)) {
@@ -179,11 +179,13 @@ static bool sinkScalarOperands(VPlan &Plan) {
       if (ScalarVFOnly)
         continue;
       VPSingleDefRecipe *Clone;
-      if (isa<VPReplicateRecipe>(SinkCandidate)) {
+      if (auto *SinkCandidateRepR =
+              dyn_cast<VPReplicateRecipe>(SinkCandidate)) {
         // TODO: Handle converting to uniform recipes as separate transform,
         // then cloning should be sufficient here.
         Instruction *I = SinkCandidate->getUnderlyingInstr();
-        Clone = new VPReplicateRecipe(I, SinkCandidate->operands(), true);
+        Clone = new VPReplicateRecipe(I, SinkCandidate->operands(), true,
+                                      nullptr /*Mask*/, *SinkCandidateRepR);
         // TODO: add ".cloned" suffix to name of Clone's VPValue.
       } else {
         Clone = SinkCandidate->clone();
@@ -345,7 +347,7 @@ static VPRegionBlock *createReplicateRegion(VPReplicateRecipe *PredRecipe,
   auto *RecipeWithoutMask = new VPReplicateRecipe(
       PredRecipe->getUnderlyingInstr(),
       make_range(PredRecipe->op_begin(), std::prev(PredRecipe->op_end())),
-      PredRecipe->isUniform());
+      PredRecipe->isUniform(), nullptr /*Mask*/, *PredRecipe);
   auto *Pred =
       Plan.createVPBasicBlock(Twine(RegionName) + ".if", RecipeWithoutMask);
 
@@ -2494,63 +2496,56 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan,
 }
 
 void VPlanTransforms::handleUncountableEarlyExit(
-    VPlan &Plan, Loop *OrigLoop, BasicBlock *UncountableExitingBlock,
-    VPRecipeBuilder &RecipeBuilder, VFRange &Range) {
-  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
-  auto *LatchVPBB = cast<VPBasicBlock>(LoopRegion->getExiting());
+    VPBasicBlock *EarlyExitingVPBB, VPBasicBlock *EarlyExitVPBB, VPlan &Plan,
+    VPBasicBlock *HeaderVPBB, VPBasicBlock *LatchVPBB, VFRange &Range) {
+  using namespace llvm::VPlanPatternMatch;
+
+  VPBlockBase *MiddleVPBB = LatchVPBB->getSuccessors()[0];
+  if (!EarlyExitVPBB->getSinglePredecessor() &&
+      EarlyExitVPBB->getPredecessors()[1] == MiddleVPBB) {
+    assert(EarlyExitVPBB->getNumPredecessors() == 2 &&
+           EarlyExitVPBB->getPredecessors()[0] == EarlyExitingVPBB &&
+           "unsupported early exit VPBB");
+    // Early exit operand should always be last phi operand. If EarlyExitVPBB
+    // has two predecessors and EarlyExitingVPBB is the first, swap the operands
+    // of the phis.
+    for (VPRecipeBase &R : EarlyExitVPBB->phis())
+      cast<VPIRPhi>(&R)->swapOperands();
+  }
+
   VPBuilder Builder(LatchVPBB->getTerminator());
-  auto *MiddleVPBB = Plan.getMiddleBlock();
-  VPValue *IsEarlyExitTaken = nullptr;
+  VPBlockBase *TrueSucc = EarlyExitingVPBB->getSuccessors()[0];
+  assert(
+      match(EarlyExitingVPBB->getTerminator(), m_BranchOnCond(m_VPValue())) &&
+      "Terminator must be be BranchOnCond");
+  VPValue *CondOfEarlyExitingVPBB =
+      EarlyExitingVPBB->getTerminator()->getOperand(0);
+  auto *CondToEarlyExit = TrueSucc == EarlyExitVPBB
+                              ? CondOfEarlyExitingVPBB
+                              : Builder.createNot(CondOfEarlyExitingVPBB);
 
-  // Process the uncountable exiting block. Update IsEarlyExitTaken, which
-  // tracks if the uncountable early exit has been taken. Also split the middle
-  // block and have it conditionally branch to the early exit block if
-  // EarlyExitTaken.
-  auto *EarlyExitingBranch =
-      cast<BranchInst>(UncountableExitingBlock->getTerminator());
-  BasicBlock *TrueSucc = EarlyExitingBranch->getSuccessor(0);
-  BasicBlock *FalseSucc = EarlyExitingBranch->getSuccessor(1);
-  BasicBlock *EarlyExitIRBB =
-      !OrigLoop->contains(TrueSucc) ? TrueSucc : FalseSucc;
-  VPIRBasicBlock *VPEarlyExitBlock = Plan.getExitBlock(EarlyExitIRBB);
-
-  VPValue *EarlyExitNotTakenCond = RecipeBuilder.getBlockInMask(
-      OrigLoop->contains(TrueSucc) ? TrueSucc : FalseSucc);
-  auto *EarlyExitTakenCond = Builder.createNot(EarlyExitNotTakenCond);
-  IsEarlyExitTaken =
-      Builder.createNaryOp(VPInstruction::AnyOf, {EarlyExitTakenCond});
-
+  // Split the middle block and have it conditionally branch to the early exit
+  // block if CondToEarlyExit.
+  VPValue *IsEarlyExitTaken =
+      Builder.createNaryOp(VPInstruction::AnyOf, {CondToEarlyExit});
   VPBasicBlock *NewMiddle = Plan.createVPBasicBlock("middle.split");
   VPBasicBlock *VectorEarlyExitVPBB =
       Plan.createVPBasicBlock("vector.early.exit");
-  VPBlockUtils::insertOnEdge(LoopRegion, MiddleVPBB, NewMiddle);
+  VPBlockUtils::insertOnEdge(LatchVPBB, MiddleVPBB, NewMiddle);
   VPBlockUtils::connectBlocks(NewMiddle, VectorEarlyExitVPBB);
   NewMiddle->swapSuccessors();
 
-  VPBlockUtils::connectBlocks(VectorEarlyExitVPBB, VPEarlyExitBlock);
+  VPBlockUtils::connectBlocks(VectorEarlyExitVPBB, EarlyExitVPBB);
 
   // Update the exit phis in the early exit block.
   VPBuilder MiddleBuilder(NewMiddle);
   VPBuilder EarlyExitB(VectorEarlyExitVPBB);
-  for (VPRecipeBase &R : VPEarlyExitBlock->phis()) {
+  for (VPRecipeBase &R : EarlyExitVPBB->phis()) {
     auto *ExitIRI = cast<VPIRPhi>(&R);
-    // Early exit operand should always be last, i.e., 0 if VPEarlyExitBlock has
+    // Early exit operand should always be last, i.e., 0 if EarlyExitVPBB has
     // a single predecessor and 1 if it has two.
     unsigned EarlyExitIdx = ExitIRI->getNumOperands() - 1;
-    if (!VPEarlyExitBlock->getSinglePredecessor()) {
-      // If VPEarlyExitBlock has two predecessors, they are already ordered such
-      // that early exit is second (and latch exit is first), by construction.
-      // But its underlying IRBB (EarlyExitIRBB) may have its predecessors
-      // ordered the other way around, and it is the order of the latter which
-      // corresponds to the order of operands of VPEarlyExitBlock's phi recipes.
-      // Therefore, if early exit (UncountableExitingBlock) is the first
-      // predecessor of EarlyExitIRBB, we swap the operands of phi recipes,
-      // thereby bringing them to match VPEarlyExitBlock's predecessor order,
-      // with early exit being last (second). Otherwise they already match.
-      if (*pred_begin(VPEarlyExitBlock->getIRBasicBlock()) ==
-          UncountableExitingBlock)
-        ExitIRI->swapOperands();
-
+    if (ExitIRI->getNumOperands() != 1) {
       // The first of two operands corresponds to the latch exit, via MiddleVPBB
       // predecessor. Extract its last lane.
       ExitIRI->extractLastLaneOfFirstOperand(MiddleBuilder);
@@ -2566,7 +2561,7 @@ void VPlanTransforms::handleUncountableEarlyExit(
         LoopVectorizationPlanner::getDecisionAndClampRange(IsVector, Range)) {
       // Update the incoming value from the early exit.
       VPValue *FirstActiveLane = EarlyExitB.createNaryOp(
-          VPInstruction::FirstActiveLane, {EarlyExitTakenCond}, nullptr,
+          VPInstruction::FirstActiveLane, {CondToEarlyExit}, nullptr,
           "first.active.lane");
       IncomingFromEarlyExit = EarlyExitB.createNaryOp(
           Instruction::ExtractElement, {IncomingFromEarlyExit, FirstActiveLane},
@@ -2819,7 +2814,7 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
       auto *L = new VPWidenLoadRecipe(
           *cast<LoadInst>(LoadGroup->getInterleaveGroup()->getInsertPos()),
           LoadGroup->getAddr(), LoadGroup->getMask(), /*Consecutive=*/true,
-          /*Reverse=*/false, LoadGroup->getDebugLoc());
+          /*Reverse=*/false, {}, LoadGroup->getDebugLoc());
       L->insertBefore(LoadGroup);
       return L;
     }
@@ -2829,7 +2824,8 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
     // Narrow wide load to uniform scalar load, as transformed VPlan will only
     // process one original iteration.
     auto *N = new VPReplicateRecipe(&WideLoad->getIngredient(),
-                                    WideLoad->operands(), /*IsUniform*/ true);
+                                    WideLoad->operands(), /*IsUniform*/ true,
+                                    /*Mask*/ nullptr, *WideLoad);
     N->insertBefore(WideLoad);
     return N;
   };
@@ -2850,7 +2846,7 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
     auto *S = new VPWidenStoreRecipe(
         *cast<StoreInst>(StoreGroup->getInterleaveGroup()->getInsertPos()),
         StoreGroup->getAddr(), Res, nullptr, /*Consecutive=*/true,
-        /*Reverse=*/false, StoreGroup->getDebugLoc());
+        /*Reverse=*/false, {}, StoreGroup->getDebugLoc());
     S->insertBefore(StoreGroup);
     StoreGroup->eraseFromParent();
   }
