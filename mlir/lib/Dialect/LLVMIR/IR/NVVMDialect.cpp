@@ -1712,6 +1712,28 @@ NVVM::IDArgPair DotAccumulate4WayOp::getIntrinsicIDAndArgs(
   return {ids[type], args};
 }
 
+NVVM::IDArgPair DotAccumulate2WayOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto curOp = cast<NVVM::DotAccumulate2WayOp>(op);
+
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(getAsPackedI32(mt.lookupValue(curOp.getA()), builder));
+  args.push_back(getAsPackedI32(mt.lookupValue(curOp.getB()), builder));
+  args.push_back(builder.getInt1(curOp.getBHi()));
+  args.push_back(mt.lookupValue(curOp.getC()));
+
+  bool isASigned = curOp.getAType() == NVVM::DotAccumulateType::SIGNED;
+  bool isBSigned = curOp.getBType() == NVVM::DotAccumulateType::SIGNED;
+  unsigned type = (isASigned << 1) | isBSigned;
+  const llvm::Intrinsic::ID ids[] = {
+      llvm::Intrinsic::nvvm_idp2a_u_u,
+      llvm::Intrinsic::nvvm_idp2a_u_s,
+      llvm::Intrinsic::nvvm_idp2a_s_u,
+      llvm::Intrinsic::nvvm_idp2a_s_s,
+  };
+  return {ids[type], args};
+}
+
 //===----------------------------------------------------------------------===//
 // NVVMDialect initialization, type parsing, and registration.
 //===----------------------------------------------------------------------===//

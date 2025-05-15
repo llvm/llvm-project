@@ -3703,6 +3703,60 @@ def NVVM_DotAccumulate4WayOp : NVVM_Op<"dot.accumulate.4way"> {
   }];
 }
 
+def NVVM_DotAccumulate2WayOp : NVVM_Op<"dot.accumulate.2way"> {
+  let summary = "Two-way 16-bit to 8-bit dot product-accumulate instruction";
+  let description = [{
+    Performs a two-way 16-bit to 8-bit dot-product which is accumulated in a 
+    32-bit result.
+    Operand `a` is a vector of two 16-bit elements and operand `b` a vector 
+    of four 8-bit elements between which the dot product is computed.
+
+    The `a_type` and `b_type` attributes specify the type of the elements in `a`
+    and `b` respectively.
+    If `a_type` or `b_type` is `s`, then the elements in the corresponding 
+    vector are sign-extended to 32-bit before the dot product is computed.
+    If `a_type` or `b_type` is `u`, then the elements in the corresponding 
+    vector are zero-extended to 32-bit instead.
+
+    The `b_hi` boolean attribute specifies which two bytes of `b` are used for 
+    the dot product. If `b_hi` is true, then the dot product is computed 
+    between  `a` and elements at indices 2 and 3 of `b`. If `b_hi` is false, 
+    then the dot product is computed between `a` and elements at indices 0 and 
+    1 of `b`.
+
+    Operand `c` is a 32-bit integer to which the result is accumulated. It is
+    treated as holding a signed integer if any of `a_type` or `b_type` is 
+    signed.
+    
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#integer-arithmetic-instructions-dp2a)
+  }];
+
+  let arguments = (ins
+    VectorOfLengthAndType<[2], [I16]>:$a,
+    DotAccumulateTypeAttr:$a_type,
+    VectorOfLengthAndType<[4], [I8]>:$b,
+    DotAccumulateTypeAttr:$b_type,
+    I32:$c,
+    BoolAttr:$b_hi
+  );
+
+  let results = (outs I32:$res);
+
+  let assemblyFormat = "$a $a_type `,` $b $b_type `,` $c attr-dict `:` type($a) `,` type($b)";
+  
+  let extraClassDeclaration = [{
+    static mlir::NVVM::IDArgPair
+    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                          llvm::IRBuilderBase &builder);
+  }];
+  
+  string llvmBuilder = [{
+    auto [id, args] = NVVM::DotAccumulate2WayOp::getIntrinsicIDAndArgs(
+                        *op, moduleTranslation, builder);
+    $res = createIntrinsicCall(builder, id, args);
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // NVVM target attribute.
 //===----------------------------------------------------------------------===//
