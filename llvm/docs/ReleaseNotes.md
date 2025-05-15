@@ -240,6 +240,7 @@ Changes to the LLVM tools
 * llvm-strip now supports continuing to process files on encountering an error.
 * In llvm-objcopy/llvm-strip's ELF port, `--discard-locals` and `--discard-all` now allow and preserve symbols referenced by relocations.
   ([#47468](https://github.com/llvm/llvm-project/issues/47468))
+* llvm-profdata's `show` subcommand no longer assumes `--all-functions` if a `--function` filter isn't specified.
 
 Changes to LLDB
 ---------------------------------
