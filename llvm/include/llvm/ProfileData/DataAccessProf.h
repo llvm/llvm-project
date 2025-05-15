@@ -41,6 +41,8 @@ namespace data_access_prof {
 struct SourceLocation {
   SourceLocation(StringRef FileNameRef, uint32_t Line)
       : FileName(FileNameRef.str()), Line(Line) {}
+
+  SourceLocation() {}
   /// The filename where the data is located.
   std::string FileName;
   /// The line number in the source code.
@@ -53,6 +55,8 @@ namespace internal {
 // which strings are owned by `DataAccessProfData`. Used by `DataAccessProfData`
 // to represent data locations internally.
 struct SourceLocationRef {
+  SourceLocationRef(StringRef FileNameRef, uint32_t Line)
+      : FileName(FileNameRef), Line(Line) {}
   // The filename where the data is located.
   StringRef FileName;
   // The line number in the source code.
@@ -100,8 +104,9 @@ using SymbolHandle = std::variant<std::string, uint64_t>;
 /// The data access profiles for a symbol.
 struct DataAccessProfRecord {
 public:
-  DataAccessProfRecord(SymbolHandleRef SymHandleRef,
-                       ArrayRef<internal::SourceLocationRef> LocRefs) {
+  DataAccessProfRecord(SymbolHandleRef SymHandleRef, uint64_t AccessCount,
+                       ArrayRef<internal::SourceLocationRef> LocRefs)
+      : AccessCount(AccessCount) {
     if (std::holds_alternative<StringRef>(SymHandleRef)) {
       SymHandle = std::get<StringRef>(SymHandleRef).str();
     } else
@@ -110,8 +115,9 @@ public:
     for (auto Loc : LocRefs)
       Locations.push_back(SourceLocation(Loc.FileName, Loc.Line));
   }
+  DataAccessProfRecord() {}
   SymbolHandle SymHandle;
-
+  uint64_t AccessCount;
   // The locations of data in the source code. Optional.
   SmallVector<SourceLocation> Locations;
 };

@@ -35,4 +35,15 @@ HeapProfileRecords:
         - { Function: 0x7777777777777777, LineOffset: 77, Column: 70, IsInlineFrame: true }
         - { Function: 0x8888888888888888, LineOffset: 88, Column: 80, IsInlineFrame: false }
         CalleeGuids: [ 0x300 ]
+DataAccessProfiles:
+  SampledRecords:
+    - Symbol:          abcde
+    - Hash:            101010
+      Locations:
+        - FileName:        file
+          Line:            233
+  KnownColdSymbols:
+    - foo
+    - bar
+  KnownColdHashes: [ 999, 1001 ]
 ...

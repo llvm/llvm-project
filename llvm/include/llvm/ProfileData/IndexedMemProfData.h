@@ -10,14 +10,20 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ProfileData/DataAccessProf.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/MemProf.h"
+
+#include <functional>
+#include <optional>
 
 namespace llvm {
 
 // Write the MemProf data to OS.
-Error writeMemProf(ProfOStream &OS, memprof::IndexedMemProfData &MemProfData,
-                   memprof::IndexedVersion MemProfVersionRequested,
-                   bool MemProfFullSchema);
+Error writeMemProf(
+    ProfOStream &OS, memprof::IndexedMemProfData &MemProfData,
+    memprof::IndexedVersion MemProfVersionRequested, bool MemProfFullSchema,
+    std::optional<std::reference_wrapper<data_access_prof::DataAccessProfData>>
+        DataAccessProfileData);
 
 } // namespace llvm

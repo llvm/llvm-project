@@ -48,7 +48,8 @@ DataAccessProfData::getProfileRecord(const SymbolHandleRef SymbolID) const {
 
   auto It = Records.find(Key);
   if (It != Records.end()) {
-    return DataAccessProfRecord(Key, It->second.Locations);
+    return DataAccessProfRecord(Key, It->second.AccessCount,
+                                It->second.Locations);
   }
 
   return std::nullopt;
@@ -111,7 +112,8 @@ Error DataAccessProfData::addKnownSymbolWithoutSamples(
   auto CanonicalName = getCanonicalName(std::get<StringRef>(SymbolID));
   if (!CanonicalName)
     return CanonicalName.takeError();
-  KnownColdSymbols.insert(*CanonicalName);
+  KnownColdSymbols.insert(
+      saveStringToMap(StrToIndexMap, Saver, *CanonicalName).first);
   return Error::success();
 }
 
