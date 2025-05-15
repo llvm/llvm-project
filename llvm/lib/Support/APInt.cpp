@@ -336,31 +336,31 @@ void APInt::setBitsSlowCase(unsigned loBit, unsigned hiBit) {
     U.pVal[word] = WORDTYPE_MAX;
 }
 
-void APInt::clearBitsSlowCase(unsigned loBit, unsigned hiBit) {
-  unsigned loWord = whichWord(loBit);
-  unsigned hiWord = whichWord(hiBit);
+void APInt::clearBitsSlowCase(unsigned LoBit, unsigned HiBit) {
+  unsigned LoWord = whichWord(LoBit);
+  unsigned HiWord = whichWord(HiBit);
 
   // Create an initial mask for the low word with ones below loBit.
-  uint64_t loMask = ~(WORDTYPE_MAX << whichBit(loBit));
+  uint64_t LoMask = ~(WORDTYPE_MAX << whichBit(LoBit));
 
   // If hiBit is not aligned, we need a high mask.
-  unsigned hiShiftAmt = whichBit(hiBit);
-  if (hiShiftAmt != 0) {
+  unsigned HiShiftAmt = whichBit(HiBit);
+  if (HiShiftAmt != 0) {
     // Create a high mask with ones above hiBit.
-    uint64_t hiMask = ~(WORDTYPE_MAX >> (APINT_BITS_PER_WORD - hiShiftAmt));
+    uint64_t HiMask = ~(WORDTYPE_MAX >> (APINT_BITS_PER_WORD - HiShiftAmt));
     // If loWord and hiWord are equal, then we combine the masks. Otherwise,
     // set the bits in hiWord.
-    if (hiWord == loWord)
-      loMask &= hiMask;
+    if (HiWord == LoWord)
+      LoMask &= HiMask;
     else
-      U.pVal[hiWord] &= hiMask;
+      U.pVal[HiWord] &= HiMask;
   }
   // Apply the mask to the low word.
-  U.pVal[loWord] &= loMask;
+  U.pVal[LoWord] &= LoMask;
 
   // Fill any words between loWord and hiWord with all zeros.
-  for (unsigned word = loWord + 1; word < hiWord; ++word)
-    U.pVal[word] = 0;
+  for (unsigned Word = LoWord + 1; Word < HiWord; ++Word)
+    U.pVal[Word] = 0;
 }
 
 // Complement a bignum in-place.

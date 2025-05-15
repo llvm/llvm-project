@@ -1415,20 +1415,20 @@ public:
 
   /// Clear the bits from loBit (inclusive) to hiBit (exclusive) to 0.
   /// This function handles case when \p loBit <= \p hiBit.
-  void clearBits(unsigned loBit, unsigned hiBit) {
-    assert(hiBit <= BitWidth && "hiBit out of range");
-    assert(loBit <= hiBit && "loBit greater than hiBit");
-    if (loBit == hiBit)
+  void clearBits(unsigned LoBit, unsigned HiBit) {
+    assert(HiBit <= BitWidth && "hiBit out of range");
+    assert(LoBit <= HiBit && "loBit greater than hiBit");
+    if (LoBit == HiBit)
       return;
-    if (hiBit <= APINT_BITS_PER_WORD) {
-      uint64_t mask = WORDTYPE_MAX >> (APINT_BITS_PER_WORD - (hiBit - loBit));
-      mask = ~(mask << loBit);
+    if (HiBit <= APINT_BITS_PER_WORD) {
+      uint64_t Mask = WORDTYPE_MAX >> (APINT_BITS_PER_WORD - (HiBit - LoBit));
+      Mask = ~(Mask << LoBit);
       if (isSingleWord())
-        U.VAL &= mask;
+        U.VAL &= Mask;
       else
-        U.pVal[0] &= mask;
+        U.pVal[0] &= Mask;
     } else {
-      clearBitsSlowCase(loBit, hiBit);
+      clearBitsSlowCase(LoBit, HiBit);
     }
   }
 
