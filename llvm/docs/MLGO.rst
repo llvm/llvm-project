@@ -27,9 +27,14 @@ of models during training.
 Corpus Tooling
 ==============
 
-Within upstream LLVM, there is the ``mlgo-utils`` python packages that lives at
-``llvm/utils/mlgo-utils``. This package primarily contains tooling for working
-with corpora, or collections of LLVM bitcode. We use these corpora to 
+Within the LLVM monorepo, there is the ``mlgo-utils`` python packages that
+lives at ``llvm/utils/mlgo-utils``. This package primarily contains tooling
+for working with corpora, or collections of LLVM bitcode. We use these corpora
+to train and evaluate ML models. Corpora consist of a description in JSON
+format at ``corpus_description.json`` in the root of the corpus, and then
+a bitcode file and command line flags file for each extracted module. The
+corpus structure is designed to contain sufficient information to fully
+compile the bitcode to bit-identical object files.
 
 .. program:: extract_ir.py
 
@@ -98,9 +103,25 @@ Example: CMake
 --------------
 
 CMake can output a ``compilation_commands.json`` compilation database if the
-``CMAKE_EXPORT_COMPILE_COMMANDS`` switch is turned on at compile time. Assuming
-it was specified and there is a ``compilation_commands.json`` file within the
-``./build`` directory, you can run the following command to create a corpus:
+``CMAKE_EXPORT_COMPILE_COMMANDS`` switch is turned on at compile time. It is
+also necessary to enable bitcode embedding (done by passing 
+``-Xclang -fembed-bitcode=all`` to all C/C++ compilation actions in the
+non-ThinLTO case). For example, to extract a corpus from clang, you would
+run the following commands (assuming that the system C/C++ compiler is clang):
+
+.. code-block:: bash
+
+  cmake -GNinja \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+    -DCMAKE_C_FLAGS="-Xclang -fembed-bitcode=all" \
+    -DCMAKE_CXX_FLAGS="-Xclang -fembed-bitcode-all"
+    ../llvm
+  ninja
+
+After running CMake and building the project, there should be a
+ ``compilation_commands.json`` file within the build directory. You can then
+ run the following command to create a corpus:
 
 .. code-block:: bash
 
@@ -109,9 +130,7 @@ it was specified and there is a ``compilation_commands.json`` file within the
     --input_type=json \
     --output_dir=./corpus
 
-This assumes that the compilation was performed with bitcode embedding
-enabled (done by passing ``-Xclang -fembed-bitcode=all`` to all C/C++
-compilation actions). After running the above command, there should be a full
+After running the above command, there should be a full
 corpus of bitcode within the ``./corpus`` directory.
 
 Example: Bazel Aquery
@@ -122,7 +141,7 @@ depending upon the exact configuration. For ThinLTO, a linker parameters file
 is preferred. For the non-ThinLTO case, the script will accept the output of
 ``bazel aquery`` which it will use to find all the object files that are linked
 into a specific target and then extract bitcode from them. First, you need
-to generate the aquery output
+to generate the aquery output:
 
 .. code-block:: bash
 
