@@ -439,8 +439,7 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
   B.CreateRetVoid();
 
   // Add and identify root signature to function, if applicable
-  const AttrVec &Attrs = FD->getAttrs();
-  for (const Attr *Attr : Attrs) {
+  for (const Attr *Attr : FD->getAttrs()) {
     if (const auto *RSAttr = dyn_cast<RootSignatureAttr>(Attr))
       addRootSignature(RSAttr->getSignatureDecl()->getRootElements(), EntryFn,
                        M);

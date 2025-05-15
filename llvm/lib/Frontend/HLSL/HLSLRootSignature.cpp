@@ -183,12 +183,12 @@ MDNode *MetadataBuilder::BuildRootSignature() {
 }
 
 MDNode *MetadataBuilder::BuildDescriptorTable(const DescriptorTable &Table) {
-  IRBuilder<> B(Ctx);
+  IRBuilder<> Builder(Ctx);
   SmallVector<Metadata *> TableOperands;
   // Set the mandatory arguments
   TableOperands.push_back(MDString::get(Ctx, "DescriptorTable"));
   TableOperands.push_back(ConstantAsMetadata::get(
-      B.getInt32(llvm::to_underlying(Table.Visibility))));
+      Builder.getInt32(llvm::to_underlying(Table.Visibility))));
 
   // Remaining operands are references to the table's clauses. The in-memory
   // representation of the Root Elements created from parsing will ensure that
@@ -206,19 +206,19 @@ MDNode *MetadataBuilder::BuildDescriptorTable(const DescriptorTable &Table) {
 
 MDNode *MetadataBuilder::BuildDescriptorTableClause(
     const DescriptorTableClause &Clause) {
-  IRBuilder<> B(Ctx);
+  IRBuilder<> Builder(Ctx);
   std::string Name;
   llvm::raw_string_ostream OS(Name);
   OS << Clause.Type;
   return MDNode::get(
       Ctx, {
                MDString::get(Ctx, OS.str()),
-               ConstantAsMetadata::get(B.getInt32(Clause.NumDescriptors)),
-               ConstantAsMetadata::get(B.getInt32(Clause.Reg.Number)),
-               ConstantAsMetadata::get(B.getInt32(Clause.Space)),
-               ConstantAsMetadata::get(B.getInt32(Clause.Offset)),
+               ConstantAsMetadata::get(Builder.getInt32(Clause.NumDescriptors)),
+               ConstantAsMetadata::get(Builder.getInt32(Clause.Reg.Number)),
+               ConstantAsMetadata::get(Builder.getInt32(Clause.Space)),
+               ConstantAsMetadata::get(Builder.getInt32(Clause.Offset)),
                ConstantAsMetadata::get(
-                   B.getInt32(llvm::to_underlying(Clause.Flags))),
+                   Builder.getInt32(llvm::to_underlying(Clause.Flags))),
            });
 }
 
