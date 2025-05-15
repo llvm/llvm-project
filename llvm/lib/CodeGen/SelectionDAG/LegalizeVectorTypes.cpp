@@ -61,6 +61,7 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::AssertZext:
   case ISD::AssertSext:
   case ISD::FPOWI:
+  case ISD::AssertNoFPClass:
     R = ScalarizeVecRes_UnaryOpWithExtraInput(N);
     break;
   case ISD::INSERT_VECTOR_ELT: R = ScalarizeVecRes_INSERT_VECTOR_ELT(N); break;
@@ -1276,6 +1277,7 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::UINT_TO_FP:
   case ISD::VP_UINT_TO_FP:
   case ISD::FCANONICALIZE:
+  case ISD::AssertNoFPClass:
     SplitVecRes_UnaryOp(N, Lo, Hi);
     break;
   case ISD::ADDRSPACECAST:
@@ -2614,7 +2616,7 @@ void DAGTypeLegalizer::SplitVecRes_UnaryOp(SDNode *N, SDValue &Lo,
   const SDNodeFlags Flags = N->getFlags();
   unsigned Opcode = N->getOpcode();
   if (N->getNumOperands() <= 2) {
-    if (Opcode == ISD::FP_ROUND) {
+    if (Opcode == ISD::FP_ROUND || Opcode == ISD::AssertNoFPClass) {
       Lo = DAG.getNode(Opcode, dl, LoVT, Lo, N->getOperand(1), Flags);
       Hi = DAG.getNode(Opcode, dl, HiVT, Hi, N->getOperand(1), Flags);
     } else {
@@ -4872,6 +4874,7 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::FREEZE:
   case ISD::ARITH_FENCE:
   case ISD::FCANONICALIZE:
+  case ISD::AssertNoFPClass:
     Res = WidenVecRes_Unary(N);
     break;
   case ISD::FMA: case ISD::VP_FMA:
@@ -5616,6 +5619,9 @@ SDValue DAGTypeLegalizer::WidenVecRes_Unary(SDNode *N) {
   SDValue InOp = GetWidenedVector(N->getOperand(0));
   if (N->getNumOperands() == 1)
     return DAG.getNode(N->getOpcode(), SDLoc(N), WidenVT, InOp, N->getFlags());
+  if (N->getOpcode() == ISD::AssertNoFPClass)
+    return DAG.getNode(N->getOpcode(), SDLoc(N), WidenVT, InOp,
+                       N->getOperand(1), N->getFlags());
 
   assert(N->getNumOperands() == 3 && "Unexpected number of operands!");
   assert(N->isVPOpcode() && "Expected VP opcode");
