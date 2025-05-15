@@ -2193,6 +2193,20 @@ bool Type::isAnyCharacterType() const {
   }
 }
 
+bool Type::isUnicodeCharacterType() const {
+  const auto *BT = dyn_cast<BuiltinType>(CanonicalType);
+  if (!BT)
+    return false;
+  switch (BT->getKind()) {
+  default:
+    return false;
+  case BuiltinType::Char8:
+  case BuiltinType::Char16:
+  case BuiltinType::Char32:
+    return true;
+  }
+}
+
 /// isSignedIntegerType - Return true if this is an integer type that is
 /// signed, according to C99 6.2.5p4 [char, signed char, short, int, long..],
 /// an enum decl which has a signed representation
