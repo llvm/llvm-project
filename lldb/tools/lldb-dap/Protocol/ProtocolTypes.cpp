@@ -16,17 +16,18 @@ using namespace llvm;
 
 namespace lldb_dap::protocol {
 
-bool fromJSON(const json::Value &Params, PresentationHint &PH, json::Path P) {
+bool fromJSON(const json::Value &Params, Source::PresentationHint &PH,
+              json::Path P) {
   auto rawHint = Params.getAsString();
   if (!rawHint) {
     P.report("expected a string");
     return false;
   }
-  std::optional<PresentationHint> hint =
-      StringSwitch<std::optional<PresentationHint>>(*rawHint)
-          .Case("normal", ePresentationHintNormal)
-          .Case("emphasize", ePresentationHintEmphasize)
-          .Case("deemphasize", ePresentationHintDeemphasize)
+  std::optional<Source::PresentationHint> hint =
+      StringSwitch<std::optional<Source::PresentationHint>>(*rawHint)
+          .Case("normal", Source::eSourcePresentationHintNormal)
+          .Case("emphasize", Source::eSourcePresentationHintEmphasize)
+          .Case("deemphasize", Source::eSourcePresentationHintDeemphasize)
           .Default(std::nullopt);
   if (!hint) {
     P.report("unexpected value");
@@ -43,13 +44,13 @@ bool fromJSON(const json::Value &Params, Source &S, json::Path P) {
          O.map("sourceReference", S.sourceReference);
 }
 
-llvm::json::Value toJSON(PresentationHint hint) {
+llvm::json::Value toJSON(Source::PresentationHint hint) {
   switch (hint) {
-  case ePresentationHintNormal:
+  case Source::eSourcePresentationHintNormal:
     return "normal";
-  case ePresentationHintEmphasize:
+  case Source::eSourcePresentationHintEmphasize:
     return "emphasize";
-  case ePresentationHintDeemphasize:
+  case Source::eSourcePresentationHintDeemphasize:
     return "deemphasize";
   }
   llvm_unreachable("unhandled presentation hint.");
@@ -431,6 +432,90 @@ json::Value toJSON(const Capabilities &C) {
   // lldb-dap extensions
   if (C.lldbExtVersion && !C.lldbExtVersion->empty())
     result.insert({"$__lldb_version", *C.lldbExtVersion});
+
+  return result;
+}
+
+bool fromJSON(const json::Value &Params, Scope::PresentationHint &PH,
+              json::Path P) {
+  auto rawHint = Params.getAsString();
+  if (!rawHint) {
+    P.report("expected a string");
+    return false;
+  }
+  const std::optional<Scope::PresentationHint> hint =
+      StringSwitch<std::optional<Scope::PresentationHint>>(*rawHint)
+          .Case("arguments", Scope::eScopePresentationHintArguments)
+          .Case("locals", Scope::eScopePresentationHintLocals)
+          .Case("registers", Scope::eScopePresentationHintRegisters)
+          .Case("returnValue", Scope::eScopePresentationHintReturnValue)
+          .Default(std::nullopt);
+  if (!hint) {
+    P.report("unexpected value");
+    return false;
+  }
+  PH = *hint;
+  return true;
+}
+
+bool fromJSON(const json::Value &Params, Scope &S, json::Path P) {
+  json::ObjectMapper O(Params, P);
+  return O && O.map("name", S.name) &&
+         O.mapOptional("presentationHint", S.presentationHint) &&
+         O.map("variablesReference", S.variablesReference) &&
+         O.mapOptional("namedVariables", S.namedVariables) &&
+         O.map("indexedVariables", S.indexedVariables) &&
+         O.mapOptional("source", S.source) && O.map("expensive", S.expensive) &&
+         O.mapOptional("line", S.line) && O.mapOptional("column", S.column) &&
+         O.mapOptional("endLine", S.endLine) &&
+         O.mapOptional("endColumn", S.endColumn);
+}
+
+llvm::json::Value toJSON(const Scope &SC) {
+  llvm::json::Object result{{"name", SC.name},
+                            {"variablesReference", SC.variablesReference},
+                            {"expensive", SC.expensive}};
+
+  if (SC.presentationHint.has_value()) {
+    llvm::StringRef presentationHint;
+    switch (*SC.presentationHint) {
+    case Scope::eScopePresentationHintArguments:
+      presentationHint = "arguments";
+      break;
+    case Scope::eScopePresentationHintLocals:
+      presentationHint = "locals";
+      break;
+    case Scope::eScopePresentationHintRegisters:
+      presentationHint = "registers";
+      break;
+    case Scope::eScopePresentationHintReturnValue:
+      presentationHint = "returnValue";
+      break;
+    }
+
+    result.insert({"presentationHint", presentationHint});
+  }
+
+  if (SC.namedVariables.has_value())
+    result.insert({"namedVariables", SC.namedVariables});
+
+  if (SC.indexedVariables.has_value())
+    result.insert({"indexedVariables", SC.indexedVariables});
+
+  if (SC.source.has_value())
+    result.insert({"source", SC.source});
+
+  if (SC.line.has_value())
+    result.insert({"line", SC.line});
+
+  if (SC.column.has_value())
+    result.insert({"column", SC.column});
+
+  if (SC.endLine.has_value())
+    result.insert({"endLine", SC.endLine});
+
+  if (SC.endColumn.has_value())
+    result.insert({"endColumn", SC.endColumn});
 
   return result;
 }

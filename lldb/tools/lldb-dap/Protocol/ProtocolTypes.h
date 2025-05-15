@@ -27,6 +27,8 @@
 #include <optional>
 #include <string>
 
+#define LLDB_DAP_INVALID_VARRERF UINT64_MAX
+
 namespace lldb_dap::protocol {
 
 /// An `ExceptionBreakpointsFilter` is shown in the UI as an filter option for
@@ -283,18 +285,16 @@ struct Capabilities {
 bool fromJSON(const llvm::json::Value &, Capabilities &, llvm::json::Path);
 llvm::json::Value toJSON(const Capabilities &);
 
-enum PresentationHint : unsigned {
-  ePresentationHintNormal,
-  ePresentationHintEmphasize,
-  ePresentationHintDeemphasize
-};
-bool fromJSON(const llvm::json::Value &, PresentationHint &, llvm::json::Path);
-llvm::json::Value toJSON(PresentationHint hint);
-
 /// A `Source` is a descriptor for source code. It is returned from the debug
 /// adapter as part of a `StackFrame` and it is used by clients when specifying
 /// breakpoints.
 struct Source {
+  enum PresentationHint : unsigned {
+    eSourcePresentationHintNormal,
+    eSourcePresentationHintEmphasize,
+    eSourcePresentationHintDeemphasize,
+  };
+
   /// The short name of the source. Every source returned from the debug adapter
   /// has a name. When sending a source to the debug adapter this name is
   /// optional.
@@ -318,8 +318,81 @@ struct Source {
 
   // unsupported keys: origin, sources, adapterData, checksums
 };
+bool fromJSON(const llvm::json::Value &, Source::PresentationHint &,
+              llvm::json::Path);
+llvm::json::Value toJSON(Source::PresentationHint);
 bool fromJSON(const llvm::json::Value &, Source &, llvm::json::Path);
 llvm::json::Value toJSON(const Source &);
+
+/// A `Scope` is a named container for variables. Optionally a scope can map to
+/// a source or a range within a source.
+struct Scope {
+  enum PresentationHint : unsigned {
+    eScopePresentationHintArguments,
+    eScopePresentationHintLocals,
+    eScopePresentationHintRegisters,
+    eScopePresentationHintReturnValue
+  };
+  /// Name of the scope such as 'Arguments', 'Locals', or 'Registers'. This
+  /// string is shown in the UI as is and can be translated.
+  ////
+  std::string name;
+
+  /// A hint for how to present this scope in the UI. If this attribute is
+  /// missing, the scope is shown with a generic UI.
+  /// Values:
+  /// 'arguments': Scope contains method arguments.
+  /// 'locals': Scope contains local variables.
+  /// 'registers': Scope contains registers. Only a single `registers` scope
+  /// should be returned from a `scopes` request.
+  /// 'returnValue': Scope contains one or more return values.
+  /// etc.
+  std::optional<PresentationHint> presentationHint;
+
+  /// The variables of this scope can be retrieved by passing the value of
+  /// `variablesReference` to the `variables` request as long as execution
+  /// remains suspended. See 'Lifetime of Object References' in the Overview
+  /// section for details.
+  ////
+  uint64_t variablesReference = LLDB_DAP_INVALID_VARRERF;
+
+  /// The number of named variables in this scope.
+  /// The client can use this information to present the variables in a paged UI
+  /// and fetch them in chunks.
+  std::optional<uint64_t> namedVariables;
+
+  /// The number of indexed variables in this scope.
+  /// The client can use this information to present the variables in a paged UI
+  /// and fetch them in chunks.
+  std::optional<uint64_t> indexedVariables;
+
+  /// The source for this scope.
+  std::optional<Source> source;
+
+  /// If true, the number of variables in this scope is large or expensive to
+  /// retrieve.
+  bool expensive = false;
+
+  /// The start line of the range covered by this scope.
+  std::optional<uint64_t> line;
+
+  /// Start position of the range covered by the scope. It is measured in UTF-16
+  /// code units and the client capability `columnsStartAt1` determines whether
+  /// it is 0- or 1-based.
+  std::optional<uint64_t> column;
+
+  /// The end line of the range covered by this scope.
+  std::optional<uint64_t> endLine;
+
+  /// End position of the range covered by the scope. It is measured in UTF-16
+  /// code units and the client capability `columnsStartAt1` determines whether
+  /// it is 0- or 1-based.
+  std::optional<uint64_t> endColumn;
+};
+bool fromJSON(const llvm::json::Value &Params, Scope::PresentationHint &PH,
+              llvm::json::Path);
+bool fromJSON(const llvm::json::Value &, Scope &, llvm::json::Path);
+llvm::json::Value toJSON(const Scope &);
 
 /// The granularity of one `step` in the stepping requests `next`, `stepIn`,
 /// `stepOut` and `stepBack`.

@@ -238,27 +238,6 @@ llvm::json::Object CreateEventObject(const llvm::StringRef event_name);
 protocol::ExceptionBreakpointsFilter
 CreateExceptionBreakpointFilter(const ExceptionBreakpoint &bp);
 
-/// Create a "Scope" JSON object as described in the debug adapter definition.
-///
-/// \param[in] name
-///     The value to place into the "name" key
-//
-/// \param[in] variablesReference
-///     The value to place into the "variablesReference" key
-//
-/// \param[in] namedVariables
-///     The value to place into the "namedVariables" key
-//
-/// \param[in] expensive
-///     The value to place into the "expensive" key
-///
-/// \return
-///     A "Scope" JSON object with that follows the formal JSON
-///     definition outlined by Microsoft.
-llvm::json::Value CreateScope(const llvm::StringRef name,
-                              int64_t variablesReference,
-                              int64_t namedVariables, bool expensive);
-
 /// Create a "Source" JSON object as described in the debug adapter definition.
 ///
 /// \param[in] file

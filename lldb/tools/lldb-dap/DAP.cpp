@@ -559,17 +559,6 @@ lldb::SBFrame DAP::GetLLDBFrame(const llvm::json::Object &arguments) {
   return GetLLDBFrame(frame_id);
 }
 
-llvm::json::Value DAP::CreateTopLevelScopes() {
-  llvm::json::Array scopes;
-  scopes.emplace_back(
-      CreateScope("Locals", VARREF_LOCALS, variables.locals.GetSize(), false));
-  scopes.emplace_back(CreateScope("Globals", VARREF_GLOBALS,
-                                  variables.globals.GetSize(), false));
-  scopes.emplace_back(CreateScope("Registers", VARREF_REGS,
-                                  variables.registers.GetSize(), false));
-  return llvm::json::Value(std::move(scopes));
-}
-
 ReplMode DAP::DetectReplMode(lldb::SBFrame frame, std::string &expression,
                              bool partial_expression) {
   // Check for the escape hatch prefix.

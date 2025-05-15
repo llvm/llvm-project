@@ -452,11 +452,15 @@ public:
   void operator()(const llvm::json::Object &request) const override;
 };
 
-class ScopesRequestHandler : public LegacyRequestHandler {
+class ScopesRequestHandler final
+    : public RequestHandler<protocol::ScopesArguments,
+                            llvm::Expected<protocol::ScopesResponseBody>> {
 public:
-  using LegacyRequestHandler::LegacyRequestHandler;
+  using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "scopes"; }
-  void operator()(const llvm::json::Object &request) const override;
+
+  llvm::Expected<protocol::ScopesResponseBody>
+  Run(const protocol::ScopesArguments &args) const override;
 };
 
 class SetVariableRequestHandler final
