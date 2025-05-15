@@ -535,7 +535,7 @@ Improvements to Clang's diagnostics
 
 - ``-Watomic-access`` no longer fires on unreachable code. e.g.,
 
-  ..code-block:: c
+  .. code-block:: c
 
     _Atomic struct S { int a; } s;
     void func(void) {
