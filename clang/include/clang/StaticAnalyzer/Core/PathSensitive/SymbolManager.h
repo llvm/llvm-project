@@ -101,11 +101,10 @@ public:
 
   // It might return null.
   const Stmt *getStmt() const {
-    if (const auto *Parent = Elem.getParent()) {
-      // Sometimes the CFG element is invalid, avoid dereferencing it.
-      if (Elem.getIndexInBlock() >= Parent->size())
-        return nullptr;
-    }
+    // Sometimes the CFG element is invalid, avoid dereferencing it.
+    if (Elem.getParent() == nullptr ||
+        Elem.getIndexInBlock() >= Elem.getParent()->size())
+      return nullptr;
     switch (Elem->getKind()) {
     case CFGElement::Initializer:
       if (const auto *Init = Elem->castAs<CFGInitializer>().getInitializer()) {
