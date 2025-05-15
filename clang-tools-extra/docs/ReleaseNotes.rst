@@ -136,6 +136,12 @@ New checks
   Finds potentially erroneous calls to ``reset`` method on smart pointers when
   the pointee type also has a ``reset`` method.
 
+- New :doc:`modernize-use-span
+  <clang-tidy/checks/modernize/use-span>` check.
+
+  Suggests replacing const references to std::vector and std::array with
+  std::span.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 

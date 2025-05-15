@@ -310,6 +310,7 @@ Clang-Tidy Checks
    :doc:`modernize-use-nullptr <modernize/use-nullptr>`, "Yes"
    :doc:`modernize-use-override <modernize/use-override>`, "Yes"
    :doc:`modernize-use-ranges <modernize/use-ranges>`, "Yes"
+   :doc:`modernize-use-span <modernize/use-span>`, "Yes"
    :doc:`modernize-use-starts-ends-with <modernize/use-starts-ends-with>`, "Yes"
    :doc:`modernize-use-std-format <modernize/use-std-format>`, "Yes"
    :doc:`modernize-use-std-numbers <modernize/use-std-numbers>`, "Yes"
