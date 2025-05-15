@@ -4,9 +4,7 @@
 define i24 @forward_load(ptr align 4 %src) {
 ; CHECK-LABEL: define i24 @forward_load(
 ; CHECK-SAME: ptr align 4 [[SRC:%.*]]) {
-; CHECK-NEXT:    [[DEST:%.*]] = alloca [3 x i8], align 1
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(3) [[DEST]], ptr noundef nonnull align 4 dereferenceable(3) [[SRC]], i64 3, i1 false)
-; CHECK-NEXT:    [[VAL1:%.*]] = load i24, ptr [[DEST]], align 4
+; CHECK-NEXT:    [[VAL1:%.*]] = load i24, ptr [[SRC]], align 4
 ; CHECK-NEXT:    ret i24 [[VAL1]]
 ;
   %dest = alloca [3 x i8]
@@ -18,9 +16,7 @@ define i24 @forward_load(ptr align 4 %src) {
 define i8 @forward_load_gep(ptr %src) {
 ; CHECK-LABEL: define i8 @forward_load_gep(
 ; CHECK-SAME: ptr [[SRC:%.*]]) {
-; CHECK-NEXT:    [[DEST:%.*]] = alloca [3 x i8], align 1
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(3) [[DEST]], ptr noundef nonnull align 1 dereferenceable(3) [[SRC]], i64 3, i1 false)
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds nuw i8, ptr [[DEST]], i64 2
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds nuw i8, ptr [[SRC]], i64 2
 ; CHECK-NEXT:    [[VAL:%.*]] = load i8, ptr [[GEP]], align 1
 ; CHECK-NEXT:    ret i8 [[VAL]]
 ;
@@ -34,9 +30,7 @@ define i8 @forward_load_gep(ptr %src) {
 define i17 @forward_load_padding(ptr %src) {
 ; CHECK-LABEL: define i17 @forward_load_padding(
 ; CHECK-SAME: ptr [[SRC:%.*]]) {
-; CHECK-NEXT:    [[DEST:%.*]] = alloca [5 x i8], align 1
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(3) [[DEST]], ptr noundef nonnull align 1 dereferenceable(3) [[SRC]], i64 3, i1 false)
-; CHECK-NEXT:    [[VAL:%.*]] = load i17, ptr [[DEST]], align 4
+; CHECK-NEXT:    [[VAL:%.*]] = load i17, ptr [[SRC]], align 1
 ; CHECK-NEXT:    ret i17 [[VAL]]
 ;
   %dest = alloca [5 x i8]
@@ -143,7 +137,8 @@ define i8 @failed_forward_load_gep_multi_use(ptr %src) {
 ; CHECK-NEXT:    [[DEST:%.*]] = alloca [3 x i8], align 1
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(3) [[DEST]], ptr noundef nonnull align 1 dereferenceable(3) [[SRC]], i64 3, i1 false)
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds nuw i8, ptr [[DEST]], i64 2
-; CHECK-NEXT:    [[VAL1:%.*]] = load i8, ptr [[GEP]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[SRC]], i64 2
+; CHECK-NEXT:    [[VAL1:%.*]] = load i8, ptr [[TMP1]], align 1
 ; CHECK-NEXT:    call void @use_ptr(ptr nonnull [[GEP]])
 ; CHECK-NEXT:    ret i8 [[VAL1]]
 ;

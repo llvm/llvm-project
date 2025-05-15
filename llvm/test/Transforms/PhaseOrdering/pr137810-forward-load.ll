@@ -3,34 +3,14 @@
 
 define i1 @main(ptr %i2) {
 ; CHECK-LABEL: define noundef i1 @main(
-; CHECK-SAME: ptr captures(none) initializes((0, 3)) [[I2:%.*]]) local_unnamed_addr {
-; CHECK-NEXT:    [[I1:%.*]] = alloca [3 x i8], align 1
+; CHECK-SAME: ptr writeonly captures(none) initializes((0, 3)) [[I2:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:  [[COMMON_RET:.*:]]
 ; CHECK-NEXT:    store i8 0, ptr [[I2]], align 1
 ; CHECK-NEXT:    [[I3:%.*]] = getelementptr inbounds nuw i8, ptr [[I2]], i64 1
 ; CHECK-NEXT:    store i8 1, ptr [[I3]], align 1
 ; CHECK-NEXT:    [[I4:%.*]] = getelementptr inbounds nuw i8, ptr [[I2]], i64 2
 ; CHECK-NEXT:    store i8 2, ptr [[I4]], align 1
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 3, ptr nonnull [[I1]])
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(3) [[I1]], ptr noundef nonnull align 1 dereferenceable(3) [[I2]], i64 3, i1 false)
-; CHECK-NEXT:    [[I5:%.*]] = load i8, ptr [[I1]], align 1
-; CHECK-NEXT:    [[I6:%.*]] = icmp eq i8 [[I5]], 0
-; CHECK-NEXT:    [[I7:%.*]] = getelementptr inbounds nuw i8, ptr [[I1]], i64 1
-; CHECK-NEXT:    [[I8:%.*]] = load i8, ptr [[I7]], align 1
-; CHECK-NEXT:    [[I9:%.*]] = icmp eq i8 [[I8]], 1
-; CHECK-NEXT:    [[I10:%.*]] = select i1 [[I6]], i1 [[I9]], i1 false
-; CHECK-NEXT:    [[I11:%.*]] = getelementptr inbounds nuw i8, ptr [[I1]], i64 2
-; CHECK-NEXT:    [[I12:%.*]] = load i8, ptr [[I11]], align 1
-; CHECK-NEXT:    [[I13:%.*]] = icmp eq i8 [[I12]], 2
-; CHECK-NEXT:    [[I14:%.*]] = select i1 [[I10]], i1 [[I13]], i1 false
-; CHECK-NEXT:    br i1 [[I14]], label %[[TRUE:.*]], label %[[FALSE:.*]]
-; CHECK:       [[COMMON_RET:.*]]:
-; CHECK-NEXT:    ret i1 [[I14]]
-; CHECK:       [[TRUE]]:
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 3, ptr nonnull [[I1]])
-; CHECK-NEXT:    br label %[[COMMON_RET]]
-; CHECK:       [[FALSE]]:
-; CHECK-NEXT:    call void @assert_failed(ptr nonnull [[I1]])
-; CHECK-NEXT:    br label %[[COMMON_RET]]
+; CHECK-NEXT:    ret i1 true
 ;
   %i1 = alloca [3 x i8], align 1
   store i8 0, ptr %i2, align 1

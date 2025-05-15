@@ -1032,6 +1032,50 @@ Value *InstCombinerImpl::simplifyNonNullOperand(Value *V,
   return nullptr;
 }
 
+/// Perform simplification of load's. If we have memcpy A which copies X to Y,
+/// and load instruction B which loads from Y, then we can rewrite B to be a
+/// load instruction loads from X. This allows later passes to remove the memcpy
+/// A or identify the source of the load instruction.
+static bool forwardMemCpySrc(LoadInst &LI, Value *&NewSrc, MaybeAlign &NewAlign,
+                             int64_t &Offset) {
+  if (!LI.isSimple())
+    return false;
+  const DataLayout &DL = LI.getDataLayout();
+  u_int64_t Size = DL.getTypeStoreSize(LI.getType()).getKnownMinValue();
+  if (Size == 0)
+    return false;
+  Value *OldSrc = LI.getPointerOperand();
+
+  unsigned MaxInstsToScan = 100;
+  for (Instruction &Inst :
+       make_range(++LI.getReverseIterator(), LI.getParent()->rend())) {
+    if (MaxInstsToScan-- == 0)
+      return false;
+    if (!Inst.mayWriteToMemory())
+      continue;
+    auto *MemCpy = dyn_cast<MemCpyInst>(&Inst);
+    if (!MemCpy || MemCpy->isVolatile())
+      return false;
+    if (OldSrc != MemCpy->getDest()) {
+      std::optional<int64_t> PointerOffset =
+          OldSrc->getPointerOffsetFrom(MemCpy->getDest(), DL);
+      if (!PointerOffset || *PointerOffset < 0)
+        return false;
+      Offset = *PointerOffset;
+    }
+    auto *CopyLen = dyn_cast<ConstantInt>(MemCpy->getLength());
+    if (!CopyLen || CopyLen->getZExtValue() < Size + Offset)
+      return false;
+    NewSrc = MemCpy->getSource();
+    NewAlign = MemCpy->getSourceAlign();
+    if (NewAlign.has_value()) {
+      NewAlign = commonAlignment(*NewAlign, Offset);
+    }
+    return true;
+  }
+  return false;
+}
+
 Instruction *InstCombinerImpl::visitLoadInst(LoadInst &LI) {
   Value *Op = LI.getOperand(0);
   if (Value *Res = simplifyLoadInst(&LI, Op, SQ.getWithInstruction(&LI)))
@@ -1065,6 +1109,25 @@ Instruction *InstCombinerImpl::visitLoadInst(LoadInst &LI) {
   // None of the following transforms are legal for volatile/ordered atomic
   // loads.  Most of them do apply for unordered atomics.
   if (!LI.isUnordered()) return nullptr;
+
+  Value *NewSrc;
+  MaybeAlign NewAlign;
+  int64_t Offset = 0;
+  if (forwardMemCpySrc(LI, NewSrc, NewAlign, Offset)) {
+    if (Offset != 0) {
+      NewSrc = Builder.CreateInBoundsPtrAdd(NewSrc, Builder.getInt64(Offset));
+    }
+
+    // Avoid infinite loops
+    if (!BatchAA.isMustAlias(LI.getPointerOperand(), NewSrc)) {
+
+      Instruction *NewLI = Builder.CreateAlignedLoad(LI.getType(), NewSrc,
+                                                     NewAlign, LI.getName());
+      return replaceInstUsesWith(LI, NewLI);
+    }
+    if (Offset != 0 && NewSrc->use_empty())
+      cast<Instruction>(NewSrc)->eraseFromParent();
+  }
 
   // load(gep null, ...) -> unreachable
   // load null/undef -> unreachable
