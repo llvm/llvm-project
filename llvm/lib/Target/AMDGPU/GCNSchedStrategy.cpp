@@ -1888,6 +1888,7 @@ bool PreRARematStage::canIncreaseOccupancyOrReduceSpill() {
       IncreaseOccupancy = false;
       OptRegions.clear();
     } else if (IncreaseOccupancy) {
+      // There is no spilling in the region, try to increase occupancy.
       Excess = ExcessRP(ST, RP, MaxSGPRsIncOcc, MaxVGPRsIncOcc);
     }
     if (Excess)
