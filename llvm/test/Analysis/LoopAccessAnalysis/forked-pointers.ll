@@ -645,6 +645,7 @@ define dso_local void @forked_ptrs_same_base_different_offset(ptr nocapture read
 ; CHECK-NEXT:        Group [[GRP48]]:
 ; CHECK-NEXT:          (Low: %Preds High: (400 + %Preds))
 ; CHECK-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
+; CHECK-NEXT:      Generated run-time checks are incomplete
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -668,6 +669,7 @@ define dso_local void @forked_ptrs_same_base_different_offset(ptr nocapture read
 ; RECURSE-NEXT:        Group [[GRP50]]:
 ; RECURSE-NEXT:          (Low: %Preds High: (400 + %Preds))
 ; RECURSE-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
+; RECURSE-NEXT:      Generated run-time checks are incomplete
 ; RECURSE-EMPTY:
 ; RECURSE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; RECURSE-NEXT:      SCEV assumptions:
@@ -750,6 +752,7 @@ define dso_local void @forked_ptrs_add_to_offset(ptr nocapture readonly %Base, p
 ; RECURSE-NEXT:        Group [[GRP55]]:
 ; RECURSE-NEXT:          (Low: %Preds High: (400 + %Preds))
 ; RECURSE-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
+; RECURSE-NEXT:      Generated run-time checks are incomplete
 ; RECURSE-EMPTY:
 ; RECURSE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; RECURSE-NEXT:      SCEV assumptions:
@@ -829,6 +832,7 @@ define dso_local void @forked_ptrs_sub_from_offset(ptr nocapture readonly %Base,
 ; RECURSE-NEXT:        Group [[GRP60]]:
 ; RECURSE-NEXT:          (Low: %Preds High: (400 + %Preds))
 ; RECURSE-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
+; RECURSE-NEXT:      Generated run-time checks are incomplete
 ; RECURSE-EMPTY:
 ; RECURSE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; RECURSE-NEXT:      SCEV assumptions:
@@ -908,6 +912,7 @@ define dso_local void @forked_ptrs_add_sub_offset(ptr nocapture readonly %Base, 
 ; RECURSE-NEXT:        Group [[GRP65]]:
 ; RECURSE-NEXT:          (Low: %Preds High: (400 + %Preds))
 ; RECURSE-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
+; RECURSE-NEXT:      Generated run-time checks are incomplete
 ; RECURSE-EMPTY:
 ; RECURSE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; RECURSE-NEXT:      SCEV assumptions:
@@ -957,6 +962,7 @@ define dso_local void @forked_ptrs_mul_by_offset(ptr nocapture readonly %Base, p
 ; CHECK-NEXT:        Group [[GRP67]]:
 ; CHECK-NEXT:          (Low: %Preds High: (400 + %Preds))
 ; CHECK-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
+; CHECK-NEXT:      Generated run-time checks are incomplete
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -980,6 +986,7 @@ define dso_local void @forked_ptrs_mul_by_offset(ptr nocapture readonly %Base, p
 ; RECURSE-NEXT:        Group [[GRP69]]:
 ; RECURSE-NEXT:          (Low: %Preds High: (400 + %Preds))
 ; RECURSE-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
+; RECURSE-NEXT:      Generated run-time checks are incomplete
 ; RECURSE-EMPTY:
 ; RECURSE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; RECURSE-NEXT:      SCEV assumptions:
@@ -1029,6 +1036,7 @@ define dso_local void @forked_ptrs_uniform_and_strided_forks(ptr nocapture reado
 ; CHECK-NEXT:        Group [[GRP71]]:
 ; CHECK-NEXT:          (Low: %Preds High: (400 + %Preds))
 ; CHECK-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
+; CHECK-NEXT:      Generated run-time checks are incomplete
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -1052,6 +1060,7 @@ define dso_local void @forked_ptrs_uniform_and_strided_forks(ptr nocapture reado
 ; RECURSE-NEXT:        Group [[GRP73]]:
 ; RECURSE-NEXT:          (Low: %Preds High: (400 + %Preds))
 ; RECURSE-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
+; RECURSE-NEXT:      Generated run-time checks are incomplete
 ; RECURSE-EMPTY:
 ; RECURSE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; RECURSE-NEXT:      SCEV assumptions:
@@ -1106,6 +1115,7 @@ define dso_local void @forked_ptrs_gather_and_contiguous_forks(ptr nocapture rea
 ; CHECK-NEXT:        Group [[GRP75]]:
 ; CHECK-NEXT:          (Low: %Preds High: (400 + %Preds))
 ; CHECK-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
+; CHECK-NEXT:      Generated run-time checks are incomplete
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -1129,6 +1139,7 @@ define dso_local void @forked_ptrs_gather_and_contiguous_forks(ptr nocapture rea
 ; RECURSE-NEXT:        Group [[GRP77]]:
 ; RECURSE-NEXT:          (Low: %Preds High: (400 + %Preds))
 ; RECURSE-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
+; RECURSE-NEXT:      Generated run-time checks are incomplete
 ; RECURSE-EMPTY:
 ; RECURSE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; RECURSE-NEXT:      SCEV assumptions:
@@ -1179,6 +1190,7 @@ define dso_local void @forked_ptrs_two_forks_gep(ptr nocapture readonly %Base1, 
 ; CHECK-NEXT:        Group [[GRP79]]:
 ; CHECK-NEXT:          (Low: %Preds High: (400 + %Preds))
 ; CHECK-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
+; CHECK-NEXT:      Generated run-time checks are incomplete
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -1202,6 +1214,7 @@ define dso_local void @forked_ptrs_two_forks_gep(ptr nocapture readonly %Base1, 
 ; RECURSE-NEXT:        Group [[GRP81]]:
 ; RECURSE-NEXT:          (Low: %Preds High: (400 + %Preds))
 ; RECURSE-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
+; RECURSE-NEXT:      Generated run-time checks are incomplete
 ; RECURSE-EMPTY:
 ; RECURSE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; RECURSE-NEXT:      SCEV assumptions:
@@ -1243,6 +1256,7 @@ define void @forked_ptrs_two_select(ptr nocapture readonly %Base1, ptr nocapture
 ; CHECK-NEXT:          (Low: %Dest High: (400 + %Dest))
 ; CHECK-NEXT:            Member: {%Dest,+,4}<nuw><%loop>
 ; CHECK-NEXT:            Member: {%Dest,+,4}<nuw><%loop>
+; CHECK-NEXT:      Generated run-time checks are incomplete
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -1259,6 +1273,7 @@ define void @forked_ptrs_two_select(ptr nocapture readonly %Base1, ptr nocapture
 ; RECURSE-NEXT:          (Low: %Dest High: (400 + %Dest))
 ; RECURSE-NEXT:            Member: {%Dest,+,4}<nuw><%loop>
 ; RECURSE-NEXT:            Member: {%Dest,+,4}<nuw><%loop>
+; RECURSE-NEXT:      Generated run-time checks are incomplete
 ; RECURSE-EMPTY:
 ; RECURSE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; RECURSE-NEXT:      SCEV assumptions:
@@ -1309,6 +1324,7 @@ define void @forked_ptrs_too_many_gep_ops(ptr nocapture readonly %Base1, ptr noc
 ; CHECK-NEXT:        Group [[GRP85]]:
 ; CHECK-NEXT:          (Low: %Preds High: (400 + %Preds))
 ; CHECK-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
+; CHECK-NEXT:      Generated run-time checks are incomplete
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -1332,6 +1348,7 @@ define void @forked_ptrs_too_many_gep_ops(ptr nocapture readonly %Base1, ptr noc
 ; RECURSE-NEXT:        Group [[GRP87]]:
 ; RECURSE-NEXT:          (Low: %Preds High: (400 + %Preds))
 ; RECURSE-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
+; RECURSE-NEXT:      Generated run-time checks are incomplete
 ; RECURSE-EMPTY:
 ; RECURSE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; RECURSE-NEXT:      SCEV assumptions:
@@ -1379,6 +1396,7 @@ define void @forked_ptrs_vector_gep(ptr nocapture readonly %Base1, ptr nocapture
 ; CHECK-NEXT:        Group [[GRP89]]:
 ; CHECK-NEXT:          (Low: %Preds High: (388 + %Preds))
 ; CHECK-NEXT:            Member: {%Preds,+,16}<nuw><%for.body>
+; CHECK-NEXT:      Generated run-time checks are incomplete
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -1402,6 +1420,7 @@ define void @forked_ptrs_vector_gep(ptr nocapture readonly %Base1, ptr nocapture
 ; RECURSE-NEXT:        Group [[GRP91]]:
 ; RECURSE-NEXT:          (Low: %Preds High: (388 + %Preds))
 ; RECURSE-NEXT:            Member: {%Preds,+,16}<nuw><%for.body>
+; RECURSE-NEXT:      Generated run-time checks are incomplete
 ; RECURSE-EMPTY:
 ; RECURSE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; RECURSE-NEXT:      SCEV assumptions:
@@ -1650,6 +1669,7 @@ define void @forked_ptrs_with_different_base3(ptr nocapture readonly %Preds, ptr
 ; CHECK-NEXT:        Group [[GRP104:0x[0-9a-f]+]]:
 ; CHECK-NEXT:          (Low: %Preds High: (31996 + %Preds))
 ; CHECK-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
+; CHECK-NEXT:      Generated run-time checks are incomplete
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -1665,6 +1685,7 @@ define void @forked_ptrs_with_different_base3(ptr nocapture readonly %Preds, ptr
 ; RECURSE-NEXT:        Group [[GRP105:0x[0-9a-f]+]]:
 ; RECURSE-NEXT:          (Low: %Preds High: (31996 + %Preds))
 ; RECURSE-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
+; RECURSE-NEXT:      Generated run-time checks are incomplete
 ; RECURSE-EMPTY:
 ; RECURSE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; RECURSE-NEXT:      SCEV assumptions:

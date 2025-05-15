@@ -95,6 +95,7 @@ define void @int_and_multiple_pointer_predicates(ptr %v, ptr %w, i32 %N) {
 ; CHECK-NEXT:        Group [[GRP5]]:
 ; CHECK-NEXT:          (Low: %w High: (6 + (4 * (trunc i32 %N to i16)) + %w))
 ; CHECK-NEXT:            Member: {%w,+,4}<%loop>
+; CHECK-NEXT:      Generated run-time checks are incomplete
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:

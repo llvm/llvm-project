@@ -88,6 +88,7 @@ define void @different_non_constant_strides_known_forward_via_assume(ptr %A, i64
 ; CHECK-NEXT:        Group [[GRP1:0x[0-9a-f]+]]:
 ; CHECK-NEXT:          (Low: %A High: (1024 + %A))
 ; CHECK-NEXT:            Member: {%A,+,4}<nuw><%loop>
+; CHECK-NEXT:      Generated run-time checks are incomplete
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -125,6 +126,7 @@ define void @different_non_constant_strides_known_forward_via_assume_min_distanc
 ; CHECK-NEXT:        Group [[GRP2:0x[0-9a-f]+]]:
 ; CHECK-NEXT:          (Low: %A High: (1024 + %A))
 ; CHECK-NEXT:            Member: {%A,+,4}<nuw><%loop>
+; CHECK-NEXT:      Generated run-time checks are incomplete
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -163,6 +165,7 @@ define void @different_non_constant_strides_not_known_forward(ptr %A, i64 %scale
 ; CHECK-NEXT:        Group [[GRP3:0x[0-9a-f]+]]:
 ; CHECK-NEXT:          (Low: %A High: (1024 + %A))
 ; CHECK-NEXT:            Member: {%A,+,4}<nuw><%loop>
+; CHECK-NEXT:      Generated run-time checks are incomplete
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:

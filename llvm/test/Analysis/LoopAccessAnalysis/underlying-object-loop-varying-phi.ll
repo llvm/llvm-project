@@ -83,6 +83,7 @@ define void @indirect_ptr_recurrences_read_write_may_alias_no_tbaa(ptr %A, ptr %
 ; CHECK-NEXT:        Group [[GRP1:0x[0-9a-f]+]]:
 ; CHECK-NEXT:          (Low: (8 + %B)<nuw> High: (40 + %B))
 ; CHECK-NEXT:            Member: {(8 + %B)<nuw>,+,8}<nuw><%loop>
+; CHECK-NEXT:      Generated run-time checks are incomplete
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -126,6 +127,7 @@ define void @indirect_ptr_recurrences_read_write_may_alias_different_obj(ptr %A,
 ; CHECK-NEXT:        Group [[GRP3]]:
 ; CHECK-NEXT:          (Low: (8 + %B)<nuw> High: (40 + %B))
 ; CHECK-NEXT:            Member: {(8 + %B)<nuw>,+,8}<nuw><%loop>
+; CHECK-NEXT:      Generated run-time checks are incomplete
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
