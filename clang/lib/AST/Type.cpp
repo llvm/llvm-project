@@ -2938,6 +2938,11 @@ static bool isTriviallyCopyableTypeImpl(const QualType &type,
   if (CanonicalType->isScalarType() || CanonicalType->isVectorType())
     return true;
 
+  // Mfloat8 type is a special case as it not scalar, but is still trivially
+  // copyable.
+  if (CanonicalType->isMFloat8Type())
+    return true;
+
   if (const auto *RT = CanonicalType->getAs<RecordType>()) {
     if (const auto *ClassDecl = dyn_cast<CXXRecordDecl>(RT->getDecl())) {
       if (IsCopyConstructible) {
