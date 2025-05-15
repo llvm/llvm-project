@@ -330,8 +330,8 @@ private:
   /// Converts a single debug intrinsic.
   LogicalResult processDebugIntrinsic(llvm::DbgVariableIntrinsic *dbgIntr,
                                       DominanceInfo &domInfo);
-  /// Converts a asm inline call operand attributes into an array of attribute
-  /// suitable for `llvm.inline_asm`.
+  /// Converts LLMV IR asm inline call operand's attributes into an array of
+  /// MLIR attributes to be utilized in `llvm.inline_asm`.
   ArrayAttr convertAsmInlineOperandAttrs(const llvm::CallBase &llvmCall);
   /// Converts an LLVM intrinsic to an MLIR LLVM dialect operation if an MLIR
   /// counterpart exists. Otherwise, returns failure.
