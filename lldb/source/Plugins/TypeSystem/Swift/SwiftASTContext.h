@@ -482,15 +482,12 @@ public:
   void RaiseFatalError(std::string msg) const { m_fatal_errors = Status(msg); }
   static bool HasFatalErrors(swift::ASTContext *ast_context);
   bool HasFatalErrors() const {
-    return m_fatal_errors.Fail() || HasFatalErrors(m_ast_context_ap.get());
+    return m_logged_fatal_error || m_fatal_errors.Fail() ||
+           HasFatalErrors(m_ast_context_ap.get());
   }
 
   /// Return only fatal errors.
   Status GetFatalErrors() const;
-  /// Notify the Process about any Swift or ClangImporter errors.
-  void DiagnoseWarnings(Process &process,
-                        const SymbolContext &sc) const override;
-
   void PrintDiagnostics(DiagnosticManager &diagnostic_manager,
                         uint32_t bufferID = UINT32_MAX, uint32_t first_line = 0,
                         uint32_t last_line = UINT32_MAX) const;
@@ -884,8 +881,6 @@ protected:
   /// Called by the VALID_OR_RETURN macro to log all errors.
   void LogFatalErrors() const;
   Status GetAllDiagnostics() const;
-  /// Stream all diagnostics to the Debugger and clear them.
-  void StreamAllDiagnostics(std::optional<lldb::user_id_t> debugger_id) const;
 
   llvm::TargetOptions *getTargetOptions();
 
@@ -945,7 +940,6 @@ protected:
   std::unique_ptr<swift::irgen::IRGenModule> m_ir_gen_module_ap;
   llvm::once_flag m_ir_gen_module_once;
   mutable std::once_flag m_swift_import_warning;
-  mutable std::once_flag m_swift_diags_streamed;
   mutable std::once_flag m_swift_warning_streamed;
   std::unique_ptr<swift::DiagnosticConsumer> m_diagnostic_consumer_ap;
   std::unique_ptr<swift::DependencyTracker> m_dependency_tracker;

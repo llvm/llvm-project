@@ -116,8 +116,6 @@ public:
   bool SupportsLanguage(lldb::LanguageType language) override;
   Status IsCompatible() override;
 
-  void DiagnoseWarnings(Process &process,
-                        const SymbolContext &sc) const override;
   plugin::dwarf::DWARFASTParser *GetDWARFParser() override;
   // CompilerDecl functions
   ConstString DeclGetName(void *opaque_decl) override {
