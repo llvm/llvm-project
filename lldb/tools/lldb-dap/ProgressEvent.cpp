@@ -83,9 +83,10 @@ ProgressEvent::Create(uint64_t progress_id, std::optional<StringRef> message,
   return event;
 }
 
-bool ProgressEvent::EqualsForIDE(const ProgressEvent &other, uint64_t total) const {
+bool ProgressEvent::EqualsForIDE(const ProgressEvent &other,
+                                 uint64_t total) const {
   return m_progress_id == other.m_progress_id &&
-         m_event_type == other.m_event_type && 
+         m_event_type == other.m_event_type &&
          // If we check the percentage of a non-deterministic event
          // we will basically never send the event, because N+1/Uint64_max
          // will always be an infinitesimally small change.
