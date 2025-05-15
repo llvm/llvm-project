@@ -131,20 +131,20 @@ func.func @memref_reinterpret_cast(%in: memref<?xf32>)
 
 // CHECK-LABEL: func @memref_reinterpret_cast_static_to_dynamic_sizes
 func.func @memref_reinterpret_cast_static_to_dynamic_sizes(%in: memref<?xf32>)
-    -> memref<10x?xf32, strided<[?, 1], offset: ?>> {
+    -> memref<10x10xf32, strided<[?, 1], offset: ?>> {
   %out = memref.reinterpret_cast %in to
            offset: [1], sizes: [10, 10], strides: [1, 1]
-           : memref<?xf32> to memref<10x?xf32, strided<[?, 1], offset: ?>>
-  return %out : memref<10x?xf32, strided<[?, 1], offset: ?>>
+           : memref<?xf32> to memref<10x10xf32, strided<[?, 1], offset: ?>>
+  return %out : memref<10x10xf32, strided<[?, 1], offset: ?>>
 }
 
 // CHECK-LABEL: func @memref_reinterpret_cast_dynamic_offset
 func.func @memref_reinterpret_cast_dynamic_offset(%in: memref<?xf32>, %offset: index)
-    -> memref<10x?xf32, strided<[?, 1], offset: ?>> {
+    -> memref<10x10xf32, strided<[?, 1], offset: ?>> {
   %out = memref.reinterpret_cast %in to
            offset: [%offset], sizes: [10, 10], strides: [1, 1]
-           : memref<?xf32> to memref<10x?xf32, strided<[?, 1], offset: ?>>
-  return %out : memref<10x?xf32, strided<[?, 1], offset: ?>>
+           : memref<?xf32> to memref<10x10xf32, strided<[?, 1], offset: ?>>
+  return %out : memref<10x10xf32, strided<[?, 1], offset: ?>>
 }
 
 // CHECK-LABEL: func @memref_reshape(

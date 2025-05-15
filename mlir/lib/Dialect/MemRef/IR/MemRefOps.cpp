@@ -1052,7 +1052,7 @@ struct DimOfMemRefReshape : public OpRewritePattern<DimOp> {
         }
       } // else dim.getIndex is a block argument to reshape->getBlock and
         // dominates reshape
-    } // Check condition 2
+    }   // Check condition 2
     else if (dim->getBlock() != reshape->getBlock() &&
              !dim.getIndex().getParentRegion()->isProperAncestor(
                  reshape->getParentRegion())) {
@@ -1835,6 +1835,15 @@ LogicalResult ReinterpretCastOp::verify() {
   // Match sizes in result memref type and in static_sizes attribute.
   for (auto [idx, resultSize, expectedSize] :
        llvm::enumerate(resultType.getShape(), getStaticSizes())) {
+    // Check that dynamic sizes are not mixed with static sizes
+    if (ShapedType::isDynamic(resultSize) &&
+        !ShapedType::isDynamic(expectedSize))
+      return emitError(
+          "expectedSize is static but received a dynamic resultSize ");
+    if (!ShapedType::isDynamic(resultSize) &&
+        ShapedType::isDynamic(expectedSize))
+      return emitError(
+          "expectedSize is dynamic but received a static resultSize ");
     if (!ShapedType::isDynamic(resultSize) && resultSize != expectedSize)
       return emitError("expected result type with size = ")
              << (ShapedType::isDynamic(expectedSize)
@@ -2008,7 +2017,7 @@ public:
       // Second, check the sizes.
       if (!llvm::equal(extractStridedMetadata.getConstifiedMixedSizes(),
                        op.getConstifiedMixedSizes()))
-          return false;
+        return false;
 
       // Finally, check the offset.
       assert(op.getMixedOffsets().size() == 1 &&

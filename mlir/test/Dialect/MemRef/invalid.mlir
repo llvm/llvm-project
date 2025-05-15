@@ -245,6 +245,24 @@ func.func @memref_reinterpret_cast_no_map_but_strides(%in: memref<?x?xf32>) {
 
 // -----
 
+func.func @memref_reinterpret_cast_static_dynamic_size_mismatch(%in: memref<1x?x2x1xf32>) {
+  // expected-error@+1 {{expectedSize is static but received a dynamic resultSize}}
+  %out = memref.reinterpret_cast %in to
+         offset: [0], sizes: [1, 4672, 1, 1], strides: [4672, 8, 8, 1]
+       : memref<1x?x2x1xf32> to memref<1x4672x?x1xf32> 
+}
+
+// -----
+
+func.func @memref_reinterpret_cast_dynamic_static_size_mismatch(%in: memref<1x?x2x1xf32>, %size: index) {
+  // expected-error@+1 {{expectedSize is dynamic but received a static resultSize}}
+  %out = memref.reinterpret_cast %in to
+         offset: [0], sizes: [1, %size, 1, 1], strides: [4672, 8, 8, 1]
+       : memref<1x?x2x1xf32> to memref<1x4672x2x1xf32>
+  return
+}
+
+// -----
 func.func @memref_reshape_element_type_mismatch(
        %buf: memref<*xf32>, %shape: memref<1xi32>) {
   // expected-error @+1 {{element types of source and destination memref types should be the same}}
