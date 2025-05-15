@@ -1097,9 +1097,9 @@ bool LoopIdiomRecognize::processLoopStridedStore(
 
   CallInst *NewCall;
   if (Value *SplatValue = isBytewiseValue(StoredVal, *DL)) {
-    NewCall = Builder.CreateMemSet(
-        BasePtr, SplatValue, NumBytes, MaybeAlign(StoreAlignment),
-        /*isVolatile=*/false, AATags.TBAA, AATags.Scope, AATags.NoAlias);
+    NewCall = Builder.CreateMemSet(BasePtr, SplatValue, NumBytes,
+                                   MaybeAlign(StoreAlignment),
+                                   /*isVolatile=*/false, AATags);
   } else if (isLibFuncEmittable(M, TLI, LibFunc_memset_pattern16)) {
     // Everything is emitted in default address space
     Type *Int8PtrTy = DestInt8PtrTy;
@@ -1119,16 +1119,7 @@ bool LoopIdiomRecognize::processLoopStridedStore(
     GV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global); // Ok to merge these.
     GV->setAlignment(Align(16));
     NewCall = Builder.CreateCall(MSP, {BasePtr, GV, NumBytes});
-
-    // Set the TBAA info if present.
-    if (AATags.TBAA)
-      NewCall->setMetadata(LLVMContext::MD_tbaa, AATags.TBAA);
-
-    if (AATags.Scope)
-      NewCall->setMetadata(LLVMContext::MD_alias_scope, AATags.Scope);
-
-    if (AATags.NoAlias)
-      NewCall->setMetadata(LLVMContext::MD_noalias, AATags.NoAlias);
+    NewCall->setAAMetadata(AATags);
   } else {
     // Neither a memset, nor memset_pattern16
     return Changed;
@@ -1422,21 +1413,20 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
   //  by previous checks.
   if (!IsAtomic) {
     if (UseMemMove)
-      NewCall = Builder.CreateMemMove(
-          StoreBasePtr, StoreAlign, LoadBasePtr, LoadAlign, NumBytes,
-          /*isVolatile=*/false, AATags.TBAA, AATags.Scope, AATags.NoAlias);
+      NewCall = Builder.CreateMemMove(StoreBasePtr, StoreAlign, LoadBasePtr,
+                                      LoadAlign, NumBytes,
+                                      /*isVolatile=*/false, AATags);
     else
       NewCall =
           Builder.CreateMemCpy(StoreBasePtr, StoreAlign, LoadBasePtr, LoadAlign,
-                               NumBytes, /*isVolatile=*/false, AATags.TBAA,
-                               AATags.TBAAStruct, AATags.Scope, AATags.NoAlias);
+                               NumBytes, /*isVolatile=*/false, AATags);
   } else {
     // Create the call.
     // Note that unordered atomic loads/stores are *required* by the spec to
     // have an alignment but non-atomic loads/stores may not.
     NewCall = Builder.CreateElementUnorderedAtomicMemCpy(
         StoreBasePtr, *StoreAlign, LoadBasePtr, *LoadAlign, NumBytes, StoreSize,
-        AATags.TBAA, AATags.TBAAStruct, AATags.Scope, AATags.NoAlias);
+        AATags);
   }
   NewCall->setDebugLoc(TheStore->getDebugLoc());
 
