@@ -692,6 +692,70 @@ ExprResult Parser::ParseLambdaExpression() {
   return ParseLambdaExpressionAfterIntroducer(Intro);
 }
 
+bool Parser::IsLambdaAfterTypeCast() {
+  assert(getLangOpts().CPlusPlus && Tok.is(tok::l_square) &&
+         "Not at the start of a possible lambda expression.");
+  RevertingTentativeParsingAction TPA(*this);
+  ConsumeBracket();
+  // skip the introducer
+  if (Tok.is(tok::equal) ||
+      (Tok.is(tok::amp) && NextToken().isOneOf(tok::comma, tok::r_square)))
+    return true;
+
+  SkipUntil(tok::r_square);
+
+  auto IsLambdaKWOrAttribute = [&]() {
+    // These keyworks that either can appear somewhere in a lambda declarator,
+    // or cannot appear in a cast expression and we recover in favor of lambdas
+    if (Tok.isOneOf(tok::kw___declspec, tok::kw___noinline__, tok::kw_noexcept,
+                    tok::kw_throw, tok::kw_mutable, tok::kw___attribute,
+                    tok::kw_constexpr, tok::kw_consteval, tok::kw_static,
+                    tok::kw_inline, tok::kw_extern, tok::kw___private,
+                    tok::kw___global, tok::kw___local, tok::kw___constant,
+                    tok::kw___generic, tok::kw_groupshared, tok::kw_requires,
+                    tok::kw_noexcept))
+      return true;
+    return Tok.isRegularKeywordAttribute() ||
+           isCXX11AttributeSpecifier() !=
+               CXX11AttributeKind::NotAttributeSpecifier;
+  };
+
+  if (Tok.is(tok::l_brace) || IsLambdaKWOrAttribute())
+    return true;
+
+  // This is a generic lambda,
+  if (Tok.is(tok::less)) {
+    ConsumeToken();
+    // Common cases. We consider <> as an invalid lambda.
+    if (Tok.isOneOf(tok::greater, tok::kw_typename, tok::kw_auto,
+                    tok::kw_template))
+      return true;
+    if (isStartOfTemplateTypeParameter() != TPResult::False)
+      return true;
+    return isCXXDeclarationSpecifier(ImplicitTypenameContext::Yes) !=
+           TPResult::False;
+  }
+  // skip the parameter list
+  if (Tok.is(tok::l_paren)) {
+    ConsumeParen();
+    SkipUntil(tok::r_paren);
+  }
+
+  if (IsLambdaKWOrAttribute())
+    return true;
+
+  if (Tok.is(tok::arrow)) {
+    ConsumeToken();
+    // These cases are always id-expressions
+    if (Tok.isOneOf(tok::kw_template, tok::kw_operator, tok::tilde))
+      return false;
+    if (!Tok.is(tok::identifier))
+      return true;
+    return isCXXTypeId(TentativeCXXTypeIdContext::InTrailingReturnType);
+  }
+  return Tok.is(tok::l_brace);
+}
+
 ExprResult Parser::TryParseLambdaExpression() {
   assert(getLangOpts().CPlusPlus && Tok.is(tok::l_square) &&
          "Not at the start of a possible lambda expression.");
