@@ -475,8 +475,8 @@ ExplodedGraph::trim(ArrayRef<const NodeTy *> Sinks,
     // in the trimmed graph, then add the corresponding edges with
     // `addPredecessor()`, otherwise add them to the worklist.
     for (const ExplodedNode *Pred : N->Preds) {
-      if (const ExplodedNode *Mapped = NodeMap->lookup(Pred))
-        NewN->addPredecessor(const_cast<ExplodedNode *>(Mapped), *Trimmed);
+      if (ExplodedNode *Mapped = NodeMap->lookup(Pred))
+        NewN->addPredecessor(Mapped, *Trimmed);
       else
         Worklist.push_back(Pred);
     }
@@ -487,8 +487,8 @@ ExplodedGraph::trim(ArrayRef<const NodeTy *> Sinks,
     // worklist. Maybe we'll reach them through a different direction, maybe
     // they will be omitted from the trimmed graph.)
     for (const ExplodedNode *Succ : N->Succs)
-      if (const ExplodedNode *Mapped = NodeMap->lookup(Succ))
-        const_cast<ExplodedNode *>(Mapped)->addPredecessor(NewN, *Trimmed);
+      if (ExplodedNode *Mapped = NodeMap->lookup(Succ))
+        Mapped->addPredecessor(NewN, *Trimmed);
   }
 
   assert(Trimmed->getRoot() && "The root must be reachable from any nonempty set of sinks!");

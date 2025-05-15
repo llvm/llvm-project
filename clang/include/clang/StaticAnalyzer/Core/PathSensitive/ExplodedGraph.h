@@ -298,7 +298,7 @@ private:
 };
 
 using InterExplodedGraphMap =
-    llvm::DenseMap<const ExplodedNode *, const ExplodedNode *>;
+    llvm::DenseMap<const ExplodedNode *, ExplodedNode *>;
 
 class ExplodedGraph {
 protected:
