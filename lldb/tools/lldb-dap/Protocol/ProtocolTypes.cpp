@@ -105,7 +105,7 @@ bool fromJSON(const json::Value &Params, ColumnType &CT, json::Path P) {
           .Case("string", eColumnTypeString)
           .Case("number", eColumnTypeNumber)
           .Case("boolean", eColumnTypeBoolean)
-          .Case("unixTimestampUTC ", eColumnTypeTimestamp)
+          .Case("unixTimestampUTC", eColumnTypeTimestamp)
           .Default(std::nullopt);
   if (!columnType) {
     P.report("unexpected value, expected 'string', 'number',  'boolean', or "
@@ -163,6 +163,32 @@ json::Value toJSON(const ChecksumAlgorithm &CA) {
     return "timestamp";
   }
   llvm_unreachable("unhandled checksum algorithm.");
+}
+
+bool fromJSON(const llvm::json::Value &Params, ChecksumAlgorithm &CA,
+              llvm::json::Path P) {
+  auto rawAlgorithm = Params.getAsString();
+  if (!rawAlgorithm) {
+    P.report("expected a string");
+    return false;
+  }
+
+  std::optional<ChecksumAlgorithm> algorithm =
+      llvm::StringSwitch<std::optional<ChecksumAlgorithm>>(*rawAlgorithm)
+          .Case("MD5", eChecksumAlgorithmMD5)
+          .Case("SHA1", eChecksumAlgorithmSHA1)
+          .Case("SHA256", eChecksumAlgorithmSHA256)
+          .Case("timestamp", eChecksumAlgorithmTimestamp)
+          .Default(std::nullopt);
+
+  if (!algorithm) {
+    P.report(
+        "unexpected value, expected 'MD5', 'SHA1', 'SHA256', or 'timestamp'");
+    return false;
+  }
+
+  CA = *algorithm;
+  return true;
 }
 
 json::Value toJSON(const BreakpointModeApplicability &BMA) {
@@ -304,6 +330,84 @@ static llvm::StringLiteral ToString(AdapterFeature feature) {
   llvm_unreachable("unhandled adapter feature.");
 }
 
+llvm::json::Value toJSON(const AdapterFeature &feature) {
+  return ToString(feature);
+}
+
+bool fromJSON(const llvm::json::Value &Params, AdapterFeature &feature,
+              llvm::json::Path P) {
+  auto rawFeature = Params.getAsString();
+  if (!rawFeature) {
+    P.report("expected a string");
+    return false;
+  }
+
+  std::optional<AdapterFeature> parsedFeature =
+      llvm::StringSwitch<std::optional<AdapterFeature>>(*rawFeature)
+          .Case("supportsANSIStyling", eAdapterFeatureANSIStyling)
+          .Case("supportsBreakpointLocationsRequest",
+                eAdapterFeatureBreakpointLocationsRequest)
+          .Case("supportsCancelRequest", eAdapterFeatureCancelRequest)
+          .Case("supportsClipboardContext", eAdapterFeatureClipboardContext)
+          .Case("supportsCompletionsRequest", eAdapterFeatureCompletionsRequest)
+          .Case("supportsConditionalBreakpoints",
+                eAdapterFeatureConditionalBreakpoints)
+          .Case("supportsConfigurationDoneRequest",
+                eAdapterFeatureConfigurationDoneRequest)
+          .Case("supportsDataBreakpointBytes",
+                eAdapterFeatureDataBreakpointBytes)
+          .Case("supportsDataBreakpoints", eAdapterFeatureDataBreakpoints)
+          .Case("supportsDelayedStackTraceLoading",
+                eAdapterFeatureDelayedStackTraceLoading)
+          .Case("supportsDisassembleRequest", eAdapterFeatureDisassembleRequest)
+          .Case("supportsEvaluateForHovers", eAdapterFeatureEvaluateForHovers)
+          .Case("supportsExceptionFilterOptions",
+                eAdapterFeatureExceptionFilterOptions)
+          .Case("supportsExceptionInfoRequest",
+                eAdapterFeatureExceptionInfoRequest)
+          .Case("supportsExceptionOptions", eAdapterFeatureExceptionOptions)
+          .Case("supportsFunctionBreakpoints",
+                eAdapterFeatureFunctionBreakpoints)
+          .Case("supportsGotoTargetsRequest", eAdapterFeatureGotoTargetsRequest)
+          .Case("supportsHitConditionalBreakpoints",
+                eAdapterFeatureHitConditionalBreakpoints)
+          .Case("supportsInstructionBreakpoints",
+                eAdapterFeatureInstructionBreakpoints)
+          .Case("supportsLoadedSourcesRequest",
+                eAdapterFeatureLoadedSourcesRequest)
+          .Case("supportsLogPoints", eAdapterFeatureLogPoints)
+          .Case("supportsModulesRequest", eAdapterFeatureModulesRequest)
+          .Case("supportsReadMemoryRequest", eAdapterFeatureReadMemoryRequest)
+          .Case("supportsRestartFrame", eAdapterFeatureRestartFrame)
+          .Case("supportsRestartRequest", eAdapterFeatureRestartRequest)
+          .Case("supportsSetExpression", eAdapterFeatureSetExpression)
+          .Case("supportsSetVariable", eAdapterFeatureSetVariable)
+          .Case("supportsSingleThreadExecutionRequests",
+                eAdapterFeatureSingleThreadExecutionRequests)
+          .Case("supportsStepBack", eAdapterFeatureStepBack)
+          .Case("supportsStepInTargetsRequest",
+                eAdapterFeatureStepInTargetsRequest)
+          .Case("supportsSteppingGranularity",
+                eAdapterFeatureSteppingGranularity)
+          .Case("supportsTerminateRequest", eAdapterFeatureTerminateRequest)
+          .Case("supportsTerminateThreadsRequest",
+                eAdapterFeatureTerminateThreadsRequest)
+          .Case("supportSuspendDebuggee", eAdapterFeatureSuspendDebuggee)
+          .Case("supportsValueFormattingOptions",
+                eAdapterFeatureValueFormattingOptions)
+          .Case("supportsWriteMemoryRequest", eAdapterFeatureWriteMemoryRequest)
+          .Case("supportTerminateDebuggee", eAdapterFeatureTerminateDebuggee)
+          .Default(std::nullopt);
+
+  if (!parsedFeature) {
+    P.report("unexpected value for AdapterFeature");
+    return false;
+  }
+
+  feature = *parsedFeature;
+  return true;
+}
+
 json::Value toJSON(const Capabilities &C) {
   json::Object result;
 
@@ -331,6 +435,32 @@ json::Value toJSON(const Capabilities &C) {
   return result;
 }
 
+bool fromJSON(const llvm::json::Value &Params, Capabilities &C,
+              llvm::json::Path P) {
+  auto *Object = Params.getAsObject();
+  if (!Object) {
+    P.report("expected an object");
+    return false;
+  }
+  // Check for the presence of supported features.
+  for (unsigned i = eAdapterFeatureFirst; i <= eAdapterFeatureLast; ++i) {
+    AdapterFeature feature = static_cast<AdapterFeature>(i);
+    if (Object->getBoolean(ToString(feature)))
+      C.supportedFeatures.insert(feature);
+  }
+  llvm::json::ObjectMapper O(Params, P);
+  return O &&
+         O.mapOptional("exceptionBreakpointFilters",
+                       C.exceptionBreakpointFilters) &&
+         O.mapOptional("completionTriggerCharacters",
+                       C.completionTriggerCharacters) &&
+         O.mapOptional("additionalModuleColumns", C.additionalModuleColumns) &&
+         O.mapOptional("supportedChecksumAlgorithms",
+                       C.supportedChecksumAlgorithms) &&
+         O.mapOptional("breakpointModes", C.breakpointModes) &&
+         O.mapOptional("$__lldb_version", C.lldbExtVersion);
+}
+
 bool fromJSON(const llvm::json::Value &Params, SteppingGranularity &SG,
               llvm::json::Path P) {
   auto raw_granularity = Params.getAsString();
@@ -350,6 +480,18 @@ bool fromJSON(const llvm::json::Value &Params, SteppingGranularity &SG,
   }
   SG = *granularity;
   return true;
+}
+
+llvm::json::Value toJSON(const SteppingGranularity &SG) {
+  switch (SG) {
+  case eSteppingGranularityStatement:
+    return "statement";
+  case eSteppingGranularityLine:
+    return "line";
+  case eSteppingGranularityInstruction:
+    return "instruction";
+  }
+  llvm_unreachable("unhandled stepping granularity.");
 }
 
 bool fromJSON(const llvm::json::Value &Params, ValueFormat &VF,
