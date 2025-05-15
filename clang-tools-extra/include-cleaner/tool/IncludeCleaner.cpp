@@ -115,6 +115,11 @@ cl::opt<bool> DisableRemove{
     cl::init(false),
     cl::cat(IncludeCleaner),
 };
+cl::opt<bool> FailOnChanges{
+    "fail-on-changes",
+    cl::desc("Exit with a non-zero exit code if changes are suggested"),
+    cl::cat(IncludeCleaner),
+};
 
 std::atomic<unsigned> Errors = ATOMIC_VAR_INIT(0);
 
@@ -410,5 +415,6 @@ int main(int argc, const char **argv) {
       }
     }
   }
-  return ErrorCode || Errors != 0;
+  return ErrorCode || Errors != 0 ||
+         (FailOnChanges && Factory.editedFiles().size() != 0);
 }
