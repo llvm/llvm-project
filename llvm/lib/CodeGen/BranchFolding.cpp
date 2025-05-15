@@ -2091,12 +2091,14 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
 
       // Get the next non-meta instruction in FBB.
       FI = skipDebugInstructionsForward(FI, FE, false);
-      assert(FI != FE && "Expected non-debug lockstep");
+      assert(TI->isIdenticalTo(*FI, MachineInstr::CheckKillDead) &&
+             "Expected non-debug lockstep");
 
       // Merge debug locs on hoisted instructions.
       TI->setDebugLoc(
           DILocation::getMergedLocation(TI->getDebugLoc(), FI->getDebugLoc()));
       TI->moveBefore(&*Loc);
+      ++FI;
     }
   }
   FBB->erase(FBB->begin(), FIB);
