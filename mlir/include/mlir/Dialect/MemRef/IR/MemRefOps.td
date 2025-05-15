@@ -143,21 +143,28 @@ class AllocLikeOp<string mnemonic,
 //===----------------------------------------------------------------------===//
 
 def AssumeAlignmentOp : MemRef_Op<"assume_alignment", [
-      NoMemoryEffect, 
+      Pure, 
       ViewLikeOpInterface,
       SameOperandsAndResultType
     ]> {
   let summary =
       "assertion that gives alignment information to the input memref";
   let description = [{
-      The `assume_alignment` operation takes a memref and an integer of alignment
+      The `assume_alignment` operation takes a memref and an integer alignment
       value. It returns a new SSA value of the same memref type, but associated
       with the assertion that the underlying buffer is aligned to the given
-      alignment. If the buffer isn't aligned to the given alignment, the 
-      behavior is undefined.
+      alignment. 
 
-      This operation doesn't affect the semantics of a correct program. It's for
-      optimization only, and the optimization is best-effort.
+      If the buffer isn't actually aligned to the given alignment, this operation
+      itself does not cause undefined behavior. However, subsequent operations
+      that consume the resulting memref and rely on this asserted alignment for
+      correctness (e.g., to avoid hardware traps or to meet ISA requirements for
+      specific instructions) will produce a poison value if the assertion is false.
+
+      This operation doesn't affect the semantics of a program where the
+      alignment assertion holds true. It is intended for optimization purposes,
+      allowing the compiler to generate more efficient code based on the
+      alignment assumption. The optimization is best-effort.
   }];
   let arguments = (ins AnyMemRef:$memref,
                        ConfinedAttr<I32Attr, [IntPositive]>:$alignment);
