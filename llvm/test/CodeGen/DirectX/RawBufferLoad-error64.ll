@@ -12,7 +12,7 @@ declare void @v4f64_user(<4 x double>)
 define void @loadv4f64_byte(i32 %offset) "hlsl.export" {
   %buffer = call target("dx.RawBuffer", i8, 0, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i8_0_0_0(
-          i32 0, i32 0, i32 1, i32 0, i1 false)
+          i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
 
   %load = call {<4 x double>, i1} @llvm.dx.resource.load.rawbuffer.v4i64(
       target("dx.RawBuffer", i8, 0, 0, 0) %buffer, i32 %offset, i32 0)
