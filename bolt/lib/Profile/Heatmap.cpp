@@ -81,7 +81,7 @@ void Heatmap::print(raw_ostream &OS) const {
   // the Address.
   auto startLine = [&](uint64_t Address, bool Empty = false) {
     changeColor(DefaultColor);
-    const uint64_t LineAddress = alignTo(Address, BytesPerLine);
+    const uint64_t LineAddress = Address / BytesPerLine * BytesPerLine;
 
     if (MaxAddress > 0xffffffff)
       OS << format("0x%016" PRIx64 ": ", LineAddress);
