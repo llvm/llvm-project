@@ -232,3 +232,22 @@ struct InitListAreNotPerfectCpy {
 };
 
 InitListAreNotPerfectCpy InitListAreNotPerfectCpy_test({InitListAreNotPerfectCpy{}});
+
+namespace PointerToMemFunc {
+template <typename>
+class A;
+struct N {
+  template <typename T>
+  void f(T);
+};
+template <typename T>
+struct E {
+  template <class = A<int>>
+  void g() = delete;
+  void g(void (T::*)(char));
+};
+void f() {
+  E<N> e;
+  e.g(&N::f);
+}
+}
