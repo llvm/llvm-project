@@ -47,21 +47,21 @@ public:
   ///
   /// If FD is not null, this will consider pass_object_size params in FD.
   static RequiredArgs
-  forPrototypePlus(const clang::FunctionProtoType *prototype,
-                   unsigned additional) {
+  getFromProtoWithExtraSlots(const clang::FunctionProtoType *prototype,
+                             unsigned additional) {
     if (!prototype->isVariadic())
       return All;
 
     if (prototype->hasExtParameterInfos())
       llvm_unreachable("NYI");
 
-    return RequiredArgs(prototype->getNumParams());
+    return RequiredArgs(prototype->getNumParams() + additional);
   }
 
   static RequiredArgs
-  forPrototypePlus(clang::CanQual<clang::FunctionProtoType> prototype,
-                   unsigned additional) {
-    return forPrototypePlus(prototype.getTypePtr(), additional);
+  getFromProtoWithExtraSlots(clang::CanQual<clang::FunctionProtoType> prototype,
+                             unsigned additional) {
+    return getFromProtoWithExtraSlots(prototype.getTypePtr(), additional);
   }
 
   unsigned getNumRequiredArgs() const {

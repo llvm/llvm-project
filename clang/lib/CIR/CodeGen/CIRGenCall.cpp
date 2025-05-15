@@ -81,7 +81,8 @@ static void appendParameterTypes(const CIRGenTypes &cgt,
 static const CIRGenFunctionInfo &
 arrangeCIRFunctionInfo(CIRGenTypes &cgt, SmallVectorImpl<CanQualType> &prefix,
                        CanQual<FunctionProtoType> ftp) {
-  RequiredArgs required = RequiredArgs::forPrototypePlus(ftp, prefix.size());
+  RequiredArgs required =
+      RequiredArgs::getFromProtoWithExtraSlots(ftp, prefix.size());
   assert(!cir::MissingFeatures::opCallExtParameterInfo());
   appendParameterTypes(cgt, prefix, ftp);
   CanQualType resultType = ftp->getReturnType().getUnqualifiedType();
