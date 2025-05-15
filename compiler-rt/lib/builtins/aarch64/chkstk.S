@@ -15,12 +15,18 @@
 //      bl      __chkstk
 //      sub     sp, sp, x15, lsl #4
 
-#ifdef __aarch64__
+#if defined(__aarch64__) || defined(__arm64ec__)
+
+#ifdef __arm64ec__
+#define CHKSTK_FUNC __chkstk_arm64ec
+#else
+#define CHKSTK_FUNC __chkstk
+#endif
 
 #define PAGE_SIZE 4096
 
         .p2align 2
-DEFINE_COMPILERRT_FUNCTION(__chkstk)
+DEFINE_COMPILERRT_FUNCTION(CHKSTK_FUNC)
         lsl    x16, x15, #4
         mov    x17, sp
 1:
@@ -30,6 +36,6 @@ DEFINE_COMPILERRT_FUNCTION(__chkstk)
         b.gt   1b
 
         ret
-END_COMPILERRT_FUNCTION(__chkstk)
+END_COMPILERRT_FUNCTION(CHKSTK_FUNC)
 
-#endif // __aarch64__
+#endif // defined(__aarch64__) || defined(__arm64ec__)
