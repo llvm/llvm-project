@@ -379,17 +379,7 @@ CreateRunThroughTaskSwitchThreadPlan(Thread &thread,
   if (!resume_fn_ptr)
     return {};
 
-  auto arch = reg_ctx->CalculateTarget()->GetArchitecture();
-  std::optional<AsyncUnwindRegisterNumbers> async_regs =
-      GetAsyncUnwindRegisterNumbers(arch.GetMachine());
-  if (!async_regs)
-    return {};
-  unsigned async_reg_number = reg_ctx->ConvertRegisterKindToRegisterNumber(
-      async_regs->GetRegisterKind(), async_regs->async_ctx_regnum);
-  uint64_t async_ctx = reg_ctx->ReadRegisterAsUnsigned(async_reg_number, 0);
-  if (!async_ctx)
-    return {};
-
+  resume_fn_ptr = thread.GetProcess()->FixCodeAddress(resume_fn_ptr);
   return std::make_shared<ThreadPlanRunToAddress>(thread, resume_fn_ptr,
                                                   /*stop_others*/ false);
 }

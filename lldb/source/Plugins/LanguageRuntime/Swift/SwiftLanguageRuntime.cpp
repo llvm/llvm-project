@@ -2668,19 +2668,47 @@ static llvm::Expected<addr_t> ReadAsyncContextRegisterFromUnwind(
   return async_reg;
 }
 
+static llvm::Expected<bool>
+DoesContinuationPointToSameFunction(addr_t async_reg, SymbolContext &sc,
+                                    Process &process) {
+  llvm::Expected<addr_t> continuation_ptr = ReadPtrFromAddr(
+      process, async_reg, /*offset*/ process.GetAddressByteSize());
+  if (!continuation_ptr)
+    return continuation_ptr.takeError();
+
+  Address continuation_addr;
+  continuation_addr.SetLoadAddress(process.FixCodeAddress(*continuation_ptr),
+                                   &process.GetTarget());
+  if (sc.function)
+    return sc.function->GetAddressRange().ContainsLoadAddress(
+        continuation_addr, &process.GetTarget());
+  assert(sc.symbol);
+  return sc.symbol->ContainsFileAddress(continuation_addr.GetFileAddress());
+}
+
 /// Returns true if the async register should be dereferenced once to obtain the
 /// CFA of the currently executing function. This is the case at the start of
 /// "Q" funclets, before the low level code changes the meaning of the async
 /// register to not require the indirection.
-/// The end of the prologue approximates the transition point.
+/// The end of the prologue approximates the transition point well in non-arm64e
+/// targets.
 /// FIXME: In the few instructions between the end of the prologue and the
 /// transition point, this approximation fails. rdar://139676623
 static llvm::Expected<bool> IsIndirectContext(Process &process,
                                               StringRef mangled_name,
-                                              Address pc, SymbolContext &sc) {
+                                              Address pc, SymbolContext &sc,
+                                              addr_t async_reg) {
   if (!SwiftLanguageRuntime::IsSwiftAsyncAwaitResumePartialFunctionSymbol(
           mangled_name))
     return false;
+
+  // For arm64e, pointer authentication generates branches that cause stepping
+  // algorithms to stop & unwind in more places. The "end of the prologue"
+  // approximation fails in those; instead, check whether the continuation
+  // pointer still points to the currently executing function. This works for
+  // all instructions, but fails when direct recursion is involved.
+  if (process.GetTarget().GetArchitecture().GetTriple().isArm64e())
+    return DoesContinuationPointToSameFunction(async_reg, sc, process);
 
   // This is checked prior to calling this function.
   assert(sc.function || sc.symbol);
@@ -2764,7 +2792,7 @@ SwiftLanguageRuntime::GetRuntimeUnwindPlan(ProcessSP process_sp,
     return log_expected(async_reg.takeError());
 
   llvm::Expected<bool> maybe_indirect_context =
-      IsIndirectContext(*process_sp, mangled_name, pc, sc);
+      IsIndirectContext(*process_sp, mangled_name, pc, sc, *async_reg);
   if (!maybe_indirect_context)
     return log_expected(maybe_indirect_context.takeError());
 

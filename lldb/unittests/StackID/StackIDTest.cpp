@@ -76,25 +76,27 @@ struct MockStackID : StackID {
 };
 
 TEST_F(StackIDTest, StackStackCFAComparison) {
-  auto process = MockProcess(m_target_sp, Listener::MakeListener("dummy"));
+  auto process = std::make_shared<MockProcess>(m_target_sp,
+                                               Listener::MakeListener("dummy"));
 
   MockStackID small_cfa_on_stack(/*cfa*/ 10, OnStack::Yes);
   MockStackID big_cfa_on_stack(/*cfa*/ 100, OnStack::Yes);
 
   EXPECT_TRUE(
-      StackID::IsYounger(small_cfa_on_stack, big_cfa_on_stack, process));
+      StackID::IsYounger(small_cfa_on_stack, big_cfa_on_stack, *process));
   EXPECT_FALSE(
-      StackID::IsYounger(big_cfa_on_stack, small_cfa_on_stack, process));
+      StackID::IsYounger(big_cfa_on_stack, small_cfa_on_stack, *process));
 }
 
 TEST_F(StackIDTest, StackHeapCFAComparison) {
-  auto process = MockProcess(m_target_sp, Listener::MakeListener("dummy"));
+  auto process = std::make_shared<MockProcess>(m_target_sp,
+                                               Listener::MakeListener("dummy"));
 
   MockStackID cfa_on_stack(/*cfa*/ 100, OnStack::Yes);
   MockStackID cfa_on_heap(/*cfa*/ 10, OnStack::No);
 
-  EXPECT_TRUE(StackID::IsYounger(cfa_on_stack, cfa_on_heap, process));
-  EXPECT_FALSE(StackID::IsYounger(cfa_on_heap, cfa_on_stack, process));
+  EXPECT_TRUE(StackID::IsYounger(cfa_on_stack, cfa_on_heap, *process));
+  EXPECT_FALSE(StackID::IsYounger(cfa_on_heap, cfa_on_stack, *process));
 }
 
 TEST_F(StackIDTest, HeapHeapCFAComparison) {
@@ -107,21 +109,21 @@ TEST_F(StackIDTest, HeapHeapCFAComparison) {
   memory_map[100] = 108;
   memory_map[108] = 116;
   memory_map[116] = 0;
-  auto process = MockProcess(m_target_sp, Listener::MakeListener("dummy"),
-                             std::move(memory_map));
+  auto process = std::make_shared<MockProcess>(
+      m_target_sp, Listener::MakeListener("dummy"), std::move(memory_map));
 
   MockStackID oldest_cfa(/*cfa*/ 116, OnStack::No);
   MockStackID middle_cfa(/*cfa*/ 108, OnStack::No);
   MockStackID youngest_cfa(/*cfa*/ 100, OnStack::No);
 
-  EXPECT_TRUE(StackID::IsYounger(youngest_cfa, oldest_cfa, process));
-  EXPECT_FALSE(StackID::IsYounger(oldest_cfa, youngest_cfa, process));
+  EXPECT_TRUE(StackID::IsYounger(youngest_cfa, oldest_cfa, *process));
+  EXPECT_FALSE(StackID::IsYounger(oldest_cfa, youngest_cfa, *process));
 
-  EXPECT_TRUE(StackID::IsYounger(youngest_cfa, middle_cfa, process));
-  EXPECT_FALSE(StackID::IsYounger(middle_cfa, youngest_cfa, process));
+  EXPECT_TRUE(StackID::IsYounger(youngest_cfa, middle_cfa, *process));
+  EXPECT_FALSE(StackID::IsYounger(middle_cfa, youngest_cfa, *process));
 
-  EXPECT_TRUE(StackID::IsYounger(middle_cfa, oldest_cfa, process));
-  EXPECT_FALSE(StackID::IsYounger(oldest_cfa, middle_cfa, process));
+  EXPECT_TRUE(StackID::IsYounger(middle_cfa, oldest_cfa, *process));
+  EXPECT_FALSE(StackID::IsYounger(oldest_cfa, middle_cfa, *process));
 }
 
 TEST_F(StackIDTest, HeapHeapCFAComparisonDecreasing) {
@@ -134,19 +136,19 @@ TEST_F(StackIDTest, HeapHeapCFAComparisonDecreasing) {
   memory_map[100] = 90;
   memory_map[90] = 80;
   memory_map[80] = 0;
-  auto process = MockProcess(m_target_sp, Listener::MakeListener("dummy"),
-                             std::move(memory_map));
+  auto process = std::make_shared<MockProcess>(
+      m_target_sp, Listener::MakeListener("dummy"), std::move(memory_map));
 
   MockStackID oldest_cfa(/*cfa*/ 80, OnStack::No);
   MockStackID middle_cfa(/*cfa*/ 90, OnStack::No);
   MockStackID youngest_cfa(/*cfa*/ 100, OnStack::No);
 
-  EXPECT_TRUE(StackID::IsYounger(youngest_cfa, oldest_cfa, process));
-  EXPECT_FALSE(StackID::IsYounger(oldest_cfa, youngest_cfa, process));
+  EXPECT_TRUE(StackID::IsYounger(youngest_cfa, oldest_cfa, *process));
+  EXPECT_FALSE(StackID::IsYounger(oldest_cfa, youngest_cfa, *process));
 
-  EXPECT_TRUE(StackID::IsYounger(youngest_cfa, middle_cfa, process));
-  EXPECT_FALSE(StackID::IsYounger(middle_cfa, youngest_cfa, process));
+  EXPECT_TRUE(StackID::IsYounger(youngest_cfa, middle_cfa, *process));
+  EXPECT_FALSE(StackID::IsYounger(middle_cfa, youngest_cfa, *process));
 
-  EXPECT_TRUE(StackID::IsYounger(middle_cfa, oldest_cfa, process));
-  EXPECT_FALSE(StackID::IsYounger(oldest_cfa, middle_cfa, process));
+  EXPECT_TRUE(StackID::IsYounger(middle_cfa, oldest_cfa, *process));
+  EXPECT_FALSE(StackID::IsYounger(oldest_cfa, middle_cfa, *process));
 }
