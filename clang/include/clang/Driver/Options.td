@@ -5734,6 +5734,9 @@ def nobuiltininc : Flag<["-"], "nobuiltininc">,
 def nogpuinc : Flag<["-"], "nogpuinc">, Group<IncludePath_Group>,
   HelpText<"Do not add include paths for CUDA/HIP and"
   " do not include the default CUDA/HIP wrapper headers">;
+def gpuinc : Flag<["-"], "gpuinc">, Group<IncludePath_Group>,
+  HelpText<"Add include paths for CUDA/HIP and"
+  " include the default CUDA/HIP wrapper headers">;
 def nohipwrapperinc : Flag<["-"], "nohipwrapperinc">, Group<IncludePath_Group>,
   HelpText<"Do not include the default HIP wrapper headers and include paths">;
 def : Flag<["-"], "nocudainc">, Alias<nogpuinc>;
