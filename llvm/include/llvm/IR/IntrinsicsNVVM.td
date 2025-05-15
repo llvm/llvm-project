@@ -2112,6 +2112,19 @@ def int_nvvm_cp_async_bulk_shared_cta_to_global
        WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>,
        NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>]>;
 
+// From Shared CTA to Global memory with bytemask
+def int_nvvm_cp_async_bulk_shared_cta_to_global_bytemask
+  : DefaultAttrsIntrinsic<[],
+      [llvm_global_ptr_ty, // dst_gmem_ptr
+       llvm_shared_ptr_ty, // src_smem_ptr
+       llvm_i32_ty,        // copy_size
+       llvm_i64_ty,        // cache_hint
+       llvm_i1_ty,         // Flag for cache_hint
+       llvm_i16_ty],       // byte_mask
+      [IntrConvergent, IntrArgMemOnly,
+       WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>,
+       ImmArg<ArgIndex<4>>]>;
+
 // Intrinsics for Bulk Copy Prefetch L2
 def int_nvvm_cp_async_bulk_prefetch_L2
   : DefaultAttrsIntrinsicFlags<[],
