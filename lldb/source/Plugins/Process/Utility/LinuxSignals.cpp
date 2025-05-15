@@ -38,6 +38,17 @@
 #define ADD_SIGCODE(signal_name, signal_value, code_name, code_value, ...)     \
   AddSignalCode(signal_value, code_value, __VA_ARGS__)
 #endif /* if defined(__linux__) && !defined(__mips__) */
+// See siginfo.h in the Linux Kernel, these codes can be sent for any signal.
+#define ADD_LINUX_SIGNAL(signo, name, ...) \
+  AddSignal(signo, name, __VA_ARGS__); \
+  ADD_SIGCODE(signo, signo, SI_QUEUE, -1, "sent by sigqueue"); \
+  ADD_SIGCODE(signo, signo, SI_TIMER, -2, "sent by timer expiration"); \
+  ADD_SIGCODE(signo, signo, SI_MESGQ, -3, "sent by real time mesq state change"); \
+  ADD_SIGCODE(signo, signo, SI_ASYNCIO, -4, "sent by AIO completion"); \
+  ADD_SIGCODE(signo, signo, SI_SIGIO, -5, "sent by queued SIGIO"); \
+  ADD_SIGCODE(signo, signo, SI_TKILL, -6, "sent by tkill system call"); \
+  ADD_SIGCODE(signo, signo, SI_DETHREAD, -7, "sent by execve() killing subsidiary threads"); \
+  ADD_SIGCODE(signo, signo, SI_ASYNCNL, -60, "sent by glibc async name lookup completion"); 
 
 using namespace lldb_private;
 
@@ -46,9 +57,9 @@ LinuxSignals::LinuxSignals() : UnixSignals() { Reset(); }
 void LinuxSignals::Reset() {
   m_signals.clear();
   // clang-format off
-  //        SIGNO   NAME            SUPPRESS  STOP    NOTIFY  DESCRIPTION
-  //        ======  ==============  ========  ======  ======  ===================================================
-  AddSignal(1,      "SIGHUP",       false,    true,   true,   "hangup");
+  //               SIGNO   NAME            SUPPRESS  STOP    NOTIFY  DESCRIPTION
+  //               ======  ==============  ========  ======  ======  ===================================================
+  ADD_LINUX_SIGNAL(1,      "SIGHUP",       false,    true,   true,   "hangup");
   AddSignal(2,      "SIGINT",       true,     true,   true,   "interrupt");
   AddSignal(3,      "SIGQUIT",      false,    true,   true,   "quit");
 
