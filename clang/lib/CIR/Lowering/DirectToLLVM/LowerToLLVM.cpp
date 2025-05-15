@@ -57,7 +57,7 @@ namespace {
 mlir::Type elementTypeIfVector(mlir::Type type) {
   return llvm::TypeSwitch<mlir::Type, mlir::Type>(type)
       .Case<cir::VectorType, mlir::VectorType>(
-          [](auto p) { return p->getElementType(); })
+          [](auto p) { return p.getElementType(); })
       .Default([](mlir::Type p) { return p; });
 }
 } // namespace
@@ -1043,11 +1043,11 @@ mlir::LogicalResult CIRToLLVMUnaryOpLowering::matchAndRewrite(
     mlir::ConversionPatternRewriter &rewriter) const {
   assert(op.getType() == op.getInput().getType() &&
          "Unary operation's operand type and result type are different");
-  const mlir::Type type = op.getType();
-  const mlir::Type elementType = elementTypeIfVector(type);
-  const bool isVector = mlir::isa<cir::VectorType>(type);
-  const mlir::Type llvmType = getTypeConverter()->convertType(type);
-  const mlir::Location loc = op.getLoc();
+  mlir::Type type = op.getType();
+  mlir::Type elementType = elementTypeIfVector(type);
+  bool isVector = mlir::isa<cir::VectorType>(type);
+  mlir::Type llvmType = getTypeConverter()->convertType(type);
+  mlir::Location loc = op.getLoc();
 
   // Integer unary operations: + - ~ ++ --
   if (mlir::isa<cir::IntType>(elementType)) {
@@ -1089,23 +1089,12 @@ mlir::LogicalResult CIRToLLVMUnaryOpLowering::matchAndRewrite(
       // bit-wise compliment operator, implemented as an XOR with -1.
       mlir::Value minusOne;
       if (isVector) {
-        // Creating a vector object with all -1 values is easier said than
-        // done. It requires a series of insertelement ops.
-        const mlir::Type llvmElementType =
-            getTypeConverter()->convertType(elementType);
-        const mlir::Value minusOneInt = rewriter.create<mlir::LLVM::ConstantOp>(
-            loc, llvmElementType, mlir::IntegerAttr::get(llvmElementType, -1));
-        minusOne = rewriter.create<mlir::LLVM::UndefOp>(loc, llvmType);
-
         const uint64_t numElements =
             mlir::dyn_cast<cir::VectorType>(type).getSize();
-        for (uint64_t i = 0; i < numElements; ++i) {
-          const mlir::Value indexValue =
-              rewriter.create<mlir::LLVM::ConstantOp>(loc,
-                                                      rewriter.getI64Type(), i);
-          minusOne = rewriter.create<mlir::LLVM::InsertElementOp>(
-              loc, minusOne, minusOneInt, indexValue);
-        }
+        std::vector<int32_t> values(numElements, -1);
+        mlir::DenseIntElementsAttr denseVec = rewriter.getI32VectorAttr(values);
+        minusOne =
+            rewriter.create<mlir::LLVM::ConstantOp>(loc, llvmType, denseVec);
       } else {
         minusOne = rewriter.create<mlir::LLVM::ConstantOp>(
             loc, llvmType, mlir::IntegerAttr::get(llvmType, -1));
