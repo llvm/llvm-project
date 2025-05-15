@@ -6669,8 +6669,8 @@ define amdgpu_kernel void @constant_zextload_v16i1_to_v16i64(ptr addrspace(1) %o
 ; GFX12-NEXT:    v_mov_b32_e32 v2, s3
 ; GFX12-NEXT:    s_bfe_u32 s4, s2, 0x10004
 ; GFX12-NEXT:    s_bfe_u32 s3, s2, 0x10009
-; GFX12-NEXT:    s_bfe_u32 s5, s2, 0x10001
 ; GFX12-NEXT:    v_lshrrev_b32_e32 v10, 15, v4
+; GFX12-NEXT:    s_bfe_u32 s5, s2, 0x10001
 ; GFX12-NEXT:    global_store_b128 v1, v[0:3], s[0:1] offset:48
 ; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    v_mov_b32_e32 v0, s4
