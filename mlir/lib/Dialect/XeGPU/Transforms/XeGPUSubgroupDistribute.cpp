@@ -157,8 +157,9 @@ void LayoutInfo::print(raw_ostream &os) const {
     laneLayout.print(os);
     os << ", lane_data: ";
     laneData.print(os);
-  } else
+  } else {
     os << "Not assigned.";
+  }
 }
 
 LayoutInfo LayoutInfo::meet(const LayoutInfo &lhs, const LayoutInfo &rhs) {
@@ -834,7 +835,7 @@ LogicalResult LayoutAttrAssignment::run() {
 /// TODO: Implement the layout conflict resolution. This must ensure mainly two
 /// things:
 /// 1) Is a given layout supported by the op? (need to query the target
-///    HW info). Otherwise can we achive this layout using a layout conversion?
+///    HW info). Otherwise can we achieve this layout using a layout conversion?
 /// 2) Do all the operands have the required layout? If not, can it
 ///    be resolved using a layout conversion?
 LogicalResult LayoutAttrAssignment::resolveConflicts() { return success(); }

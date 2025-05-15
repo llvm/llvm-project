@@ -756,9 +756,10 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
     if (isa<IntInit>(SrcInit)) {
       InsnMatcher.addPredicate<InstructionOpcodeMatcher>(
           &Target.getInstruction(RK.getDef("G_CONSTANT")));
-    } else
+    } else {
       return failedImport(
           "Unable to deduce gMIR opcode to handle Src (which is a leaf)");
+    }
   } else {
     SrcGIEquivOrNull = findNodeEquiv(Src.getOperator());
     if (!SrcGIEquivOrNull)
@@ -850,9 +851,10 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
       OperandMatcher &OM =
           InsnMatcher.addOperand(OpIdx++, Src.getName(), TempOpIdx);
       OM.addPredicate<LiteralIntOperandMatcher>(SrcIntInit->getValue());
-    } else
+    } else {
       return failedImport(
           "Unable to deduce gMIR opcode to handle Src (which is a leaf)");
+    }
   } else {
     assert(SrcGIOrNull &&
            "Expected to have already found an equivalent Instruction");
@@ -887,7 +889,7 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
                                     : CCDef->getValueAsString("ICmpPredicate");
 
         if (!PredType.empty()) {
-          OM.addPredicate<CmpPredicateOperandMatcher>(std::string(PredType));
+          OM.addPredicate<CmpPredicateOperandMatcher>(PredType.str());
           // Process the other 2 operands normally.
           --NumChildren;
         }
@@ -988,12 +990,12 @@ Error GlobalISelEmitter::importChildMatcher(
     bool OperandIsImmArg, unsigned OpIdx, unsigned &TempOpIdx) {
 
   const Record *PhysReg = nullptr;
-  std::string SrcChildName = std::string(getSrcChildName(SrcChild, PhysReg));
+  std::string SrcChildName = getSrcChildName(SrcChild, PhysReg).str();
   if (!SrcChild.isLeaf() &&
       SrcChild.getOperator()->isSubClassOf("ComplexPattern")) {
     // The "name" of a non-leaf complex pattern (MY_PAT $op1, $op2) is
     // "MY_PAT:op1:op2" and the ones with same "name" represent same operand.
-    std::string PatternName = std::string(SrcChild.getOperator()->getName());
+    std::string PatternName = SrcChild.getOperator()->getName().str();
     for (const TreePatternNode &Child : SrcChild.children()) {
       PatternName += ":";
       PatternName += Child.getName();

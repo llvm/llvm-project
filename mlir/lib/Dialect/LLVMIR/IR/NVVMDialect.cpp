@@ -33,6 +33,7 @@
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Casting.h"
@@ -1203,6 +1204,13 @@ LogicalResult NVVM::VoteSyncOp::verify() {
   return success();
 }
 
+llvm::Value *
+NVVM::DotAccumulate4WayOp::getPackedArg(llvm::Value *arg,
+                                        llvm::IRBuilderBase &builder) {
+  return builder.CreateBitCast(arg,
+                               llvm::Type::getInt32Ty(builder.getContext()));
+}
+
 //===----------------------------------------------------------------------===//
 // getIntrinsicID/getIntrinsicIDAndArgs methods
 //===----------------------------------------------------------------------===//
@@ -1587,6 +1595,26 @@ static void nvvmInferResultRanges(Operation *op, Value result,
   if (auto rangeAttr = op->getAttrOfType<LLVM::ConstantRangeAttr>("range")) {
     setResultRanges(result, {rangeAttr.getLower(), rangeAttr.getUpper(),
                              rangeAttr.getLower(), rangeAttr.getUpper()});
+  }
+}
+
+llvm::Intrinsic::ID
+DotAccumulate4WayOp::getIntrinsicID(NVVM::DotAccumulate4WayType a_type,
+                                    NVVM::DotAccumulate4WayType b_type) {
+  bool is_a_siext = a_type == NVVM::DotAccumulate4WayType::S8;
+  bool is_b_siext = b_type == NVVM::DotAccumulate4WayType::S8;
+  unsigned type = (is_a_siext << 1) | is_b_siext;
+  switch (type) {
+  case 0:
+    return llvm::Intrinsic::nvvm_idp4a_u_u;
+  case 1:
+    return llvm::Intrinsic::nvvm_idp4a_u_s;
+  case 2:
+    return llvm::Intrinsic::nvvm_idp4a_s_u;
+  case 3:
+    return llvm::Intrinsic::nvvm_idp4a_s_s;
+  default:
+    llvm_unreachable("Invalid DP4a type");
   }
 }
 
