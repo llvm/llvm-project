@@ -38,7 +38,6 @@ def Feature32S
     : SubtargetFeature<"32s", "Has32S", "true",
                        "LA32 Standard Basic Instruction Extension">;
 def Has32S : Predicate<"Subtarget->has32S()">;
-def Not32S : Predicate<"!Subtarget->has32S()">;
 
 // Single Precision floating point
 def FeatureBasicF

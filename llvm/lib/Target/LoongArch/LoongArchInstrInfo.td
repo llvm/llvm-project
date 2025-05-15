@@ -855,9 +855,9 @@ def RDTIMEL_W : RDTIME_2R<0x00006000>;
 def RDTIMEH_W : RDTIME_2R<0x00006400>;
 
 // The CPUCFG instruction offers a reliable way to probing CPU features.
-// Although it's undefined on LA32R, adding compiler support enables the
-// Linux kernel to emulate it, making the functionality available to user
-// space applications.
+// Although support is not guaranteed on LA32R, having compiler support
+// nevertheless enables applications to rely on its presence, potentially
+// via kernel emulation if not available natively.
 def CPUCFG : ALU_2R<0x00006c00>;
 
 // Cache Maintenance Instructions
@@ -2372,11 +2372,9 @@ def : InstAlias<"move $dst, $src", (OR GPR:$dst, GPR:$src, R0)>;
 def : InstAlias<"ret", (JIRL R0, R1, 0)>;
 def : InstAlias<"jr $rj", (JIRL R0, GPR:$rj, 0)>;
 
-let Predicates = [Not32S] in {
 def : InstAlias<"rdcntid.w $rj", (RDTIMEL_W R0, GPR:$rj)>;
 def : InstAlias<"rdcntvh.w $rd", (RDTIMEH_W GPR:$rd, R0)>;
 def : InstAlias<"rdcntvl.w $rd", (RDTIMEL_W GPR:$rd, R0)>;
-} // Predicates = [Not32S]
 
 // Branches implemented with aliases.
 // Disassemble branch instructions not having a $zero operand to the
