@@ -362,6 +362,33 @@ class NDSRVInstVD4DOT<bits<6> funct6, string opcodestr>
 }
 
 //===----------------------------------------------------------------------===//
+// Multiclass
+//===----------------------------------------------------------------------===//
+
+let fprclass = !cast<RegisterClass>("FPR32") in
+def SCALAR_F16_FPR32 : FPR_Info<16>;
+
+let hasSideEffects = 0 in
+multiclass VPseudoVFPMAD_VF_RM {
+  foreach m = SCALAR_F16_FPR32.MxList in {
+    defm "" : VPseudoBinaryV_VF_RM<m, SCALAR_F16_FPR32, 0>,
+              SchedBinary<"WriteVFMulAddF", "ReadVFMulAddV", "ReadVFMulAddF",
+                          m.MX,  SCALAR_F16_FPR32.SEW, forcePassthruRead=true>;
+  }
+}
+
+multiclass VPatVFPMADBinaryV_VX_RM<string intrinsic, string instruction,
+                                   list<VTypeInfo> vtilist> {
+  foreach vti = vtilist in {
+    defvar kind = "V"#vti.ScalarSuffix;
+    defm : VPatBinaryRoundingMode<intrinsic, instruction#"_"#kind#"_"#vti.LMul.MX,
+                                  vti.Vector, vti.Vector, f32, vti.Mask,
+                                  vti.Log2SEW, vti.RegClass,
+                                  vti.RegClass, FPR32>;
+  }
+}
+
+//===----------------------------------------------------------------------===//
 // XAndesPerf
 //===----------------------------------------------------------------------===//
 
@@ -433,7 +460,9 @@ def NDS_VD4DOTSU_VV : NDSRVInstVD4DOT<0b000101, "nds.vd4dotsu">;
 }
 } // DecoderNamespace = "XAndes"
 
-// Patterns
+//===----------------------------------------------------------------------===//
+// Pseudo-instructions and codegen patterns
+//===----------------------------------------------------------------------===//
 
 let Predicates = [HasVendorXAndesPerf] in {
 
@@ -461,3 +490,12 @@ def : Sh1AddPat<NDS_LEA_H_ZE>;
 def : Sh2AddPat<NDS_LEA_W_ZE>;
 def : Sh3AddPat<NDS_LEA_D_ZE>;
 } // Predicates = [HasVendorXAndesPerf, IsRV64]
+
+let Predicates = [HasVendorXAndesVPackFPH],
+    mayRaiseFPException = true in {
+defm PseudoNDS_VFPMADT : VPseudoVFPMAD_VF_RM;
+defm PseudoNDS_VFPMADB : VPseudoVFPMAD_VF_RM;
+} // Predicates = [HasVendorXAndesVPackFPH]
+
+defm : VPatVFPMADBinaryV_VX_RM<"int_riscv_nds_vfpmadt", "PseudoNDS_VFPMADT", AllFP16Vectors>;
+defm : VPatVFPMADBinaryV_VX_RM<"int_riscv_nds_vfpmadb", "PseudoNDS_VFPMADB", AllFP16Vectors>;
