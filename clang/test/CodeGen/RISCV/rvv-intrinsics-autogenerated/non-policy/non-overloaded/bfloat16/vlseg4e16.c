@@ -11,7 +11,7 @@
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 4) @test_vlseg4e16_v_bf16mf4x4(
 // CHECK-RV64-SAME: ptr noundef [[RS1:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 4) @llvm.riscv.vlseg4.triscv.vector.tuple_nxv2i8_4t.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 4) poison, ptr [[RS1]], i64 [[VL]], i64 4)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 4) @llvm.riscv.vlseg4.triscv.vector.tuple_nxv2i8_4t.p0.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 4) poison, ptr [[RS1]], i64 [[VL]], i64 4)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 4) [[TMP0]]
 //
 vbfloat16mf4x4_t test_vlseg4e16_v_bf16mf4x4(const __bf16 *rs1, size_t vl) {
@@ -21,7 +21,7 @@ vbfloat16mf4x4_t test_vlseg4e16_v_bf16mf4x4(const __bf16 *rs1, size_t vl) {
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @test_vlseg4e16_v_bf16mf2x4(
 // CHECK-RV64-SAME: ptr noundef [[RS1:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vlseg4.triscv.vector.tuple_nxv4i8_4t.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) poison, ptr [[RS1]], i64 [[VL]], i64 4)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vlseg4.triscv.vector.tuple_nxv4i8_4t.p0.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) poison, ptr [[RS1]], i64 [[VL]], i64 4)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP0]]
 //
 vbfloat16mf2x4_t test_vlseg4e16_v_bf16mf2x4(const __bf16 *rs1, size_t vl) {
@@ -31,7 +31,7 @@ vbfloat16mf2x4_t test_vlseg4e16_v_bf16mf2x4(const __bf16 *rs1, size_t vl) {
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @test_vlseg4e16_v_bf16m1x4(
 // CHECK-RV64-SAME: ptr noundef [[RS1:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vlseg4.triscv.vector.tuple_nxv8i8_4t.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) poison, ptr [[RS1]], i64 [[VL]], i64 4)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vlseg4.triscv.vector.tuple_nxv8i8_4t.p0.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) poison, ptr [[RS1]], i64 [[VL]], i64 4)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP0]]
 //
 vbfloat16m1x4_t test_vlseg4e16_v_bf16m1x4(const __bf16 *rs1, size_t vl) {
@@ -41,7 +41,7 @@ vbfloat16m1x4_t test_vlseg4e16_v_bf16m1x4(const __bf16 *rs1, size_t vl) {
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @test_vlseg4e16_v_bf16m2x4(
 // CHECK-RV64-SAME: ptr noundef [[RS1:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vlseg4.triscv.vector.tuple_nxv16i8_4t.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) poison, ptr [[RS1]], i64 [[VL]], i64 4)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vlseg4.triscv.vector.tuple_nxv16i8_4t.p0.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) poison, ptr [[RS1]], i64 [[VL]], i64 4)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP0]]
 //
 vbfloat16m2x4_t test_vlseg4e16_v_bf16m2x4(const __bf16 *rs1, size_t vl) {
@@ -51,7 +51,7 @@ vbfloat16m2x4_t test_vlseg4e16_v_bf16m2x4(const __bf16 *rs1, size_t vl) {
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 4) @test_vlseg4e16_v_bf16mf4x4_m(
 // CHECK-RV64-SAME: <vscale x 1 x i1> [[VM:%.*]], ptr noundef [[RS1:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 4) @llvm.riscv.vlseg4.mask.triscv.vector.tuple_nxv2i8_4t.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 4) poison, ptr [[RS1]], <vscale x 1 x i1> [[VM]], i64 [[VL]], i64 3, i64 4)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 2 x i8>, 4) @llvm.riscv.vlseg4.mask.triscv.vector.tuple_nxv2i8_4t.p0.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 2 x i8>, 4) poison, ptr [[RS1]], <vscale x 1 x i1> [[VM]], i64 [[VL]], i64 3, i64 4)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 4) [[TMP0]]
 //
 vbfloat16mf4x4_t test_vlseg4e16_v_bf16mf4x4_m(vbool64_t vm, const __bf16 *rs1,
@@ -62,7 +62,7 @@ vbfloat16mf4x4_t test_vlseg4e16_v_bf16mf4x4_m(vbool64_t vm, const __bf16 *rs1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @test_vlseg4e16_v_bf16mf2x4_m(
 // CHECK-RV64-SAME: <vscale x 2 x i1> [[VM:%.*]], ptr noundef [[RS1:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vlseg4.mask.triscv.vector.tuple_nxv4i8_4t.nxv2i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) poison, ptr [[RS1]], <vscale x 2 x i1> [[VM]], i64 [[VL]], i64 3, i64 4)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vlseg4.mask.triscv.vector.tuple_nxv4i8_4t.p0.nxv2i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) poison, ptr [[RS1]], <vscale x 2 x i1> [[VM]], i64 [[VL]], i64 3, i64 4)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP0]]
 //
 vbfloat16mf2x4_t test_vlseg4e16_v_bf16mf2x4_m(vbool32_t vm, const __bf16 *rs1,
@@ -73,7 +73,7 @@ vbfloat16mf2x4_t test_vlseg4e16_v_bf16mf2x4_m(vbool32_t vm, const __bf16 *rs1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @test_vlseg4e16_v_bf16m1x4_m(
 // CHECK-RV64-SAME: <vscale x 4 x i1> [[VM:%.*]], ptr noundef [[RS1:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vlseg4.mask.triscv.vector.tuple_nxv8i8_4t.nxv4i1.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) poison, ptr [[RS1]], <vscale x 4 x i1> [[VM]], i64 [[VL]], i64 3, i64 4)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vlseg4.mask.triscv.vector.tuple_nxv8i8_4t.p0.nxv4i1.i64(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) poison, ptr [[RS1]], <vscale x 4 x i1> [[VM]], i64 [[VL]], i64 3, i64 4)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 4) [[TMP0]]
 //
 vbfloat16m1x4_t test_vlseg4e16_v_bf16m1x4_m(vbool16_t vm, const __bf16 *rs1,
@@ -84,7 +84,7 @@ vbfloat16m1x4_t test_vlseg4e16_v_bf16m1x4_m(vbool16_t vm, const __bf16 *rs1,
 // CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @test_vlseg4e16_v_bf16m2x4_m(
 // CHECK-RV64-SAME: <vscale x 8 x i1> [[VM:%.*]], ptr noundef [[RS1:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vlseg4.mask.triscv.vector.tuple_nxv16i8_4t.nxv8i1.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) poison, ptr [[RS1]], <vscale x 8 x i1> [[VM]], i64 [[VL]], i64 3, i64 4)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vlseg4.mask.triscv.vector.tuple_nxv16i8_4t.p0.nxv8i1.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) poison, ptr [[RS1]], <vscale x 8 x i1> [[VM]], i64 [[VL]], i64 3, i64 4)
 // CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 4) [[TMP0]]
 //
 vbfloat16m2x4_t test_vlseg4e16_v_bf16m2x4_m(vbool8_t vm, const __bf16 *rs1,
