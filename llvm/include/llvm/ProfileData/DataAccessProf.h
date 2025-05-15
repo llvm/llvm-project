@@ -121,6 +121,8 @@ public:
 /// deserialization.
 class DataAccessProfData {
 public:
+  // Use MapVector to keep input order of strings for serialization and
+  // deserialization.
   using StringToIndexMap = llvm::MapVector<StringRef, uint64_t>;
 
   DataAccessProfData() : Saver(Allocator) {}
@@ -201,8 +203,6 @@ private:
   // `Records` stores the records.
   MapVector<SymbolHandleRef, internal::DataAccessProfRecordRef> Records;
 
-  // Use MapVector to keep input order of strings for serialization and
-  // deserialization.
   StringToIndexMap StrToIndexMap;
   llvm::SetVector<uint64_t> KnownColdHashes;
   llvm::SetVector<StringRef> KnownColdSymbols;
