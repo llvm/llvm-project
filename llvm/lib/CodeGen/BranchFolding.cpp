@@ -2071,7 +2071,34 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
   if (!HasDups)
     return false;
 
-  MBB->splice(Loc, TBB, TBB->begin(), TIB);
+  // Hoist the instructions from [T.begin, TIB) and then delete [F.begin, FIB).
+  // Merge the debug locations. FIXME: We should do something with the
+  // debug instructions too (from BOTH branches).
+  {
+    // TIB and FIB point to the end of the regions to hoist/merge in TBB and
+    // FBB.
+    MachineBasicBlock::iterator FE = FIB;
+    MachineBasicBlock::iterator FI = FBB->begin();
+    for (MachineBasicBlock::iterator TI :
+         make_early_inc_range(make_range(TBB->begin(), TIB))) {
+      // Move debug instructions and pseudo probes without modifying them.
+      // FIXME: This is the wrong thing to do for debug locations, which
+      // should at least be killed.
+      if (TI->isDebugOrPseudoInstr()) {
+        TI->moveBefore(&*Loc);
+        continue;
+      }
+
+      // Get the next non-meta instruction in FBB.
+      FI = skipDebugInstructionsForward(FI, FE, false);
+      assert(FI != FE && "Expected non-debug lockstep");
+
+      // Merge debug locs on hoisted instructions.
+      TI->setDebugLoc(
+          DILocation::getMergedLocation(TI->getDebugLoc(), FI->getDebugLoc()));
+      TI->moveBefore(&*Loc);
+    }
+  }
   FBB->erase(FBB->begin(), FIB);
 
   if (UpdateLiveIns)
