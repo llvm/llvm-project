@@ -1623,6 +1623,8 @@ def FunctionMultiVersioning
 
 def NoDeref : DiagGroup<"noderef">;
 
+def CFIUncheckedCallee : DiagGroup<"cfi-unchecked-callee">;
+
 // -fbounds-safety and bounds annotation related warnings
 def BoundsSafetyCountedByEltTyUnknownSize :
   DiagGroup<"bounds-safety-counted-by-elt-type-unknown-size">;

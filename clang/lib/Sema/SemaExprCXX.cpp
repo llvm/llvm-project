@@ -8035,6 +8035,11 @@ QualType Sema::FindCompositePointerType(SourceLocation Loc,
         EPI1.ExtInfo = EPI1.ExtInfo.withNoReturn(Noreturn);
         EPI2.ExtInfo = EPI2.ExtInfo.withNoReturn(Noreturn);
 
+        bool CFIUncheckedCallee = EPI1.ExtInfo.getCFIUncheckedCallee() ||
+                                  EPI2.ExtInfo.getCFIUncheckedCallee();
+        EPI1.ExtInfo = EPI1.ExtInfo.withCFIUncheckedCallee(CFIUncheckedCallee);
+        EPI2.ExtInfo = EPI2.ExtInfo.withCFIUncheckedCallee(CFIUncheckedCallee);
+
         // The result is nothrow if both operands are.
         SmallVector<QualType, 8> ExceptionTypeStorage;
         EPI1.ExceptionSpec = EPI2.ExceptionSpec = Context.mergeExceptionSpecs(

@@ -1988,7 +1988,7 @@ protected:
     /// Extra information which affects how the function is called, like
     /// regparm and the calling convention.
     LLVM_PREFERRED_TYPE(CallingConv)
-    unsigned ExtInfo : 14;
+    unsigned ExtInfo : 15;
 
     /// The number of parameters this function has, not counting '...'.
     /// According to [implimits] 8 bits should be enough here but this is
@@ -2565,6 +2565,8 @@ public:
   bool isSignableIntegerType(const ASTContext &Ctx) const;
   bool isAnyPointerType() const;   // Any C pointer or ObjC object pointer
   bool isCountAttributedType() const;
+  bool isCFIUncheckedCalleeFunctionType() const;
+  bool isPointerToCFIUncheckedCalleeFunctionType() const;
   bool isBlockPointerType() const;
   bool isVoidPointerType() const;
   bool isReferenceType() const;
@@ -4495,8 +4497,8 @@ public:
     // adjust the Bits field below, and if you add bits, you'll need to adjust
     // Type::FunctionTypeBitfields::ExtInfo as well.
 
-    // |  CC  |noreturn|produces|nocallersavedregs|regparm|nocfcheck|cmsenscall|
-    // |0 .. 5|   6    |    7   |       8         |9 .. 11|    12   |    13    |
+    // |  CC  |noreturn|produces|nocallersavedregs|regparm|nocfcheck|cmsenscall|cfiuncheckedcallee|
+    // |0 .. 5|   6    |    7   |       8         |9 .. 11|    12   |    13    |        14        |
     //
     // regparm is either 0 (no regparm attribute) or the regparm value+1.
     enum { CallConvMask = 0x3F };
@@ -4506,6 +4508,7 @@ public:
     enum { RegParmMask = 0xe00, RegParmOffset = 9 };
     enum { NoCfCheckMask = 0x1000 };
     enum { CmseNSCallMask = 0x2000 };
+    enum { CFIUncheckedCalleeMask = 0x4000 };
     uint16_t Bits = CC_C;
 
     ExtInfo(unsigned Bits) : Bits(static_cast<uint16_t>(Bits)) {}
@@ -4515,14 +4518,15 @@ public:
     // have all the elements (when reading an AST file for example).
     ExtInfo(bool noReturn, bool hasRegParm, unsigned regParm, CallingConv cc,
             bool producesResult, bool noCallerSavedRegs, bool NoCfCheck,
-            bool cmseNSCall) {
+            bool cmseNSCall, bool cfiUncheckedCallee) {
       assert((!hasRegParm || regParm < 7) && "Invalid regparm value");
       Bits = ((unsigned)cc) | (noReturn ? NoReturnMask : 0) |
              (producesResult ? ProducesResultMask : 0) |
              (noCallerSavedRegs ? NoCallerSavedRegsMask : 0) |
              (hasRegParm ? ((regParm + 1) << RegParmOffset) : 0) |
              (NoCfCheck ? NoCfCheckMask : 0) |
-             (cmseNSCall ? CmseNSCallMask : 0);
+             (cmseNSCall ? CmseNSCallMask : 0) |
+             (cfiUncheckedCallee ? CFIUncheckedCalleeMask : 0);
     }
 
     // Constructor with all defaults. Use when for example creating a
@@ -4539,6 +4543,7 @@ public:
     bool getNoCallerSavedRegs() const { return Bits & NoCallerSavedRegsMask; }
     bool getNoCfCheck() const { return Bits & NoCfCheckMask; }
     bool getHasRegParm() const { return ((Bits & RegParmMask) >> RegParmOffset) != 0; }
+    bool getCFIUncheckedCallee() const { return Bits & CFIUncheckedCalleeMask; }
 
     unsigned getRegParm() const {
       unsigned RegParm = (Bits & RegParmMask) >> RegParmOffset;
@@ -4558,6 +4563,13 @@ public:
 
     // Note that we don't have setters. That is by design, use
     // the following with methods instead of mutating these objects.
+
+    ExtInfo withCFIUncheckedCallee(bool cfiUncheckedCallee) const {
+      if (cfiUncheckedCallee)
+        return ExtInfo(Bits | CFIUncheckedCalleeMask);
+      else
+        return ExtInfo(Bits & ~CFIUncheckedCalleeMask);
+    }
 
     ExtInfo withNoReturn(bool noReturn) const {
       if (noReturn)
@@ -4710,6 +4722,10 @@ public:
   /// attribute. The C++11 [[noreturn]] attribute does not affect the function
   /// type.
   bool getNoReturnAttr() const { return getExtInfo().getNoReturn(); }
+
+  bool getCFIUncheckedCalleeAttr() const {
+    return getExtInfo().getCFIUncheckedCallee();
+  }
 
   bool getCmseNSCallAttr() const { return getExtInfo().getCmseNSCall(); }
   CallingConv getCallConv() const { return getExtInfo().getCC(); }
@@ -8250,6 +8266,19 @@ inline bool Type::isObjectPointerType() const {
     return !T->getPointeeType()->isFunctionType();
   else
     return false;
+}
+
+inline bool Type::isCFIUncheckedCalleeFunctionType() const {
+  if (const auto *Fn = getAs<FunctionType>())
+    return Fn->getCFIUncheckedCalleeAttr();
+  return false;
+}
+
+inline bool Type::isPointerToCFIUncheckedCalleeFunctionType() const {
+  QualType Pointee = getPointeeType();
+  if (Pointee.isNull())
+    return false;
+  return Pointee->isCFIUncheckedCalleeFunctionType();
 }
 
 inline bool Type::isFunctionPointerType() const {

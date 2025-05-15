@@ -12649,6 +12649,15 @@ def warn_noderef_on_non_pointer_or_array : Warning<
 def warn_noderef_to_dereferenceable_pointer : Warning<
   "casting to dereferenceable pointer removes 'noderef' attribute">, InGroup<NoDeref>;
 
+def warn_cfi_unchecked_callee_on_non_function
+    : Warning<"use of `cfi_unchecked_callee` on %0; can only be used on "
+              "function types">,
+      InGroup<CFIUncheckedCallee>;
+def warn_cast_discards_cfi_unchecked_callee
+    : Warning<"implicit conversion from %0 to %1 discards "
+              "`cfi_unchecked_callee` attribute">,
+      InGroup<CFIUncheckedCallee>;
+
 def err_builtin_launder_invalid_arg : Error<
   "%select{non-pointer|function pointer|void pointer}0 argument to "
   "'__builtin_launder' is not allowed">;
