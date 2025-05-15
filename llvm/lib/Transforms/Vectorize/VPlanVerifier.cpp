@@ -221,22 +221,24 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
         auto *UI = cast<VPRecipeBase>(U);
         if (auto *Phi = dyn_cast<VPPhiAccessors>(UI)) {
           for (unsigned Idx = 0; Idx != Phi->getNumIncoming(); ++Idx) {
-            VPValue *IncVPV = Phi->getIncomingValue(Idx);
-            if (IncVPV != V)
+            VPValue *IncomingVPV = Phi->getIncomingValue(Idx);
+            if (IncomingVPV != V)
               continue;
-            const VPBasicBlock *IncVPBB = Phi->getIncomingBlock(Idx);
-            if (!VPDT.dominates(VPBB, IncVPBB)) {
-              errs() << "Incoming def at index " << Idx
-                     << " does not dominate incoming block!\n";
+
+            const VPBasicBlock *IncomingVPBB = Phi->getIncomingBlock(Idx);
+            if (VPDT.dominates(VPBB, IncomingVPBB))
+              continue;
+
+            errs() << "Incoming def at index " << Idx
+                   << " does not dominate incoming block!\n";
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-              VPSlotTracker Tracker(VPBB->getPlan());
-              IncVPV->getDefiningRecipe()->print(errs(), "  ", Tracker);
-              errs() << "\n  does not dominate " << IncVPBB->getName()
-                     << " for\n";
-              UI->print(errs(), "  ", Tracker);
+            VPSlotTracker Tracker(VPBB->getPlan());
+            IncomingVPV->getDefiningRecipe()->print(errs(), "  ", Tracker);
+            errs() << "\n  does not dominate " << IncomingVPBB->getName()
+                   << " for\n";
+            UI->print(errs(), "  ", Tracker);
 #endif
-              return false;
-            }
+            return false;
           }
           continue;
         }

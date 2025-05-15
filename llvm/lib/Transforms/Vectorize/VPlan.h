@@ -3296,20 +3296,22 @@ public:
 };
 
 /// Casting from VPRecipeBase -> VPPhiAccessors is supported for all recipe
-/// types implementing VPPhiAccessors.
+/// types implementing VPPhiAccessors. Used by isa<> & co.
 template <> struct CastIsPossible<VPPhiAccessors, const VPRecipeBase *> {
   static inline bool isPossible(const VPRecipeBase *f) {
+    // TODO: include VPPredInstPHIRecipe too, once it implements VPPhiAccessors.
     return isa<VPIRPhi, VPHeaderPHIRecipe, VPWidenPHIRecipe, VPPhi>(f);
   }
 };
 /// Support casting from VPRecipeBase -> VPPhiAccessors, by down-casting to the
-/// recipe types implementing VPPhiAccessors.
+/// recipe types implementing VPPhiAccessors. Used by cast<>, dyn_cast<> & co.
 template <>
 struct CastInfo<VPPhiAccessors, const VPRecipeBase *>
     : public CastIsPossible<VPPhiAccessors, const VPRecipeBase *> {
 
   using Self = CastInfo<VPPhiAccessors, const VPRecipeBase *>;
 
+  /// doCast is used by cast<>.
   static inline VPPhiAccessors *doCast(const VPRecipeBase *R) {
     return const_cast<VPPhiAccessors *>([R]() -> const VPPhiAccessors * {
       switch (R->getVPDefID()) {
@@ -3325,6 +3327,7 @@ struct CastInfo<VPPhiAccessors, const VPRecipeBase *>
     }());
   }
 
+  /// doCastIfPossible is used by dyn_cast<>.
   static inline VPPhiAccessors *doCastIfPossible(const VPRecipeBase *f) {
     if (!Self::isPossible(f))
       return nullptr;
