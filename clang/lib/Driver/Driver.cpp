@@ -6210,16 +6210,15 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
     bool IsCLNonPCH =
         IsCLMode() && !C.getArgs().hasArg(options::OPT__SLASH_Yc) &&
         (isa<PreprocessJobAction>(JA) || isa<PrecompileJobAction>(JA));
-    bool HasAnyOutputArg = C.getArgs().hasArg(
-        options::OPT_o, options::OPT__SLASH_Fo, options::OPT__SLASH_Fo_COLON);
+        bool HasAnyOutputArg =
+          C.getArgs().hasArg(options::OPT_o, options::OPT__SLASH_Fo);
 
     Arg *FinalOutput = nullptr;
     if (IsCLNonPCH && HasAnyOutputArg) {
-      FinalOutput = C.getArgs().getLastArg(
-          options::OPT_o, options::OPT__SLASH_Fo, options::OPT__SLASH_Fo_COLON);
+      FinalOutput =
+        C.getArgs().getLastArg(options::OPT_o, options::OPT__SLASH_Fo);
     } else if (IsCLNonPCH) {
-      FinalOutput = C.getArgs().getLastArg(options::OPT__SLASH_Fo,
-                                           options::OPT__SLASH_Fo_COLON);
+      FinalOutput = C.getArgs().getLastArg(options::OPT__SLASH_Fo);
     } else {
       FinalOutput = C.getArgs().getLastArg(options::OPT_o);
     }
