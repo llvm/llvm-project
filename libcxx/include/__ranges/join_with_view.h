@@ -407,9 +407,8 @@ private:
   _LIBCPP_HIDE_FROM_ABI constexpr explicit __sentinel(_Parent& __parent) : __end_(ranges::end(__parent.__base_)) {}
 
   template <bool _OtherConst>
-    requires sentinel_for<sentinel_t<_Base>, iterator_t<__maybe_const<_OtherConst, _View>>>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool __equal_to(const __iterator<_OtherConst>& __x) const {
-    return __x.__get_outer() == __end_;
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto& __get_outer_of(const __iterator<_OtherConst>& __x) {
+    return __x.__get_outer();
   }
 
 public:
@@ -423,7 +422,7 @@ public:
     requires sentinel_for<sentinel_t<_Base>, iterator_t<__maybe_const<_OtherConst, _View>>>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr bool
   operator==(const __iterator<_OtherConst>& __x, const __sentinel& __y) {
-    return __y.__equal_to(__x);
+    return __get_outer_of(__x) == __y.__end_;
   }
 };
 
