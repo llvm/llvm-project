@@ -305,11 +305,12 @@ TEST(ProtocolTypesTest, Scope) {
   scope.endLine = 10;
   scope.endColumn = 20;
 
-  scope.source =
-      Source{.name = "testName",
-             .path = "/path/to/source",
-             .sourceReference = 12345,
-             .presentationHint = Source::eSourcePresentationHintNormal};
+  Source source;
+  source.name = "testName";
+  source.path = "/path/to/source";
+  source.sourceReference = 12345;
+  source.presentationHint = Source::eSourcePresentationHintNormal;
+  scope.source = source;
 
   llvm::Expected<Scope> deserialized_scope = roundtrip(scope);
   ASSERT_THAT_EXPECTED(deserialized_scope, llvm::Succeeded());
@@ -325,7 +326,6 @@ TEST(ProtocolTypesTest, Scope) {
   EXPECT_EQ(scope.endColumn, deserialized_scope->endColumn);
 
   EXPECT_THAT(deserialized_scope->source.has_value(), true);
-  const Source &source = scope.source.value();
   const Source &deserialized_source = deserialized_scope->source.value();
 
   EXPECT_EQ(source.path, deserialized_source.path);
