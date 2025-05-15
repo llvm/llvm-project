@@ -90,15 +90,16 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program, stopOnEntry=True)
 
-        stopped_events = self.dap_server.wait_for_stopped()
-        for stopped_event in stopped_events:
-            if "body" in stopped_event:
-                body = stopped_event["body"]
-                if "reason" in body:
-                    reason = body["reason"]
-                    self.assertNotEqual(
-                        reason, "breakpoint", 'verify stop isn\'t "main" breakpoint'
-                    )
+        self.assertTrue(
+            len(self.dap_server.thread_stop_reasons) > 0,
+            "expected stopped event during launch",
+        )
+        for _, body in self.dap_server.thread_stop_reasons.items():
+            if "reason" in body:
+                reason = body["reason"]
+                self.assertNotEqual(
+                    reason, "breakpoint", 'verify stop isn\'t "main" breakpoint'
+                )
 
     @skipIfWindows
     def test_cwd(self):
@@ -531,7 +532,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
 
         terminateCommands = ["expr 4+2"]
         self.launch(
-            program=program,
+            program,
             stopOnEntry=True,
             terminateCommands=terminateCommands,
             disconnectAutomatically=False,
