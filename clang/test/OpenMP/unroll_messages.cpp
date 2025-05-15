@@ -58,8 +58,17 @@ void func(int n) {
   // expected-error@+1 {{argument to 'partial' clause must be a strictly positive integer value}} 
   #pragma omp unroll partial(0)
   for (int i = 0; i < n; ++i) {}
-    
-  // expected-error@+1 {{directive '#pragma omp unroll' cannot contain more than one 'partial' clause}} 
+
+  // expected-error@+1 {{unroll factor has width 64 but the iteration variable 'int' is only 32 bits wide}}
+  #pragma omp unroll partial(0xFFFFFFFFF)
+  for (int i = 0; i < 10; i++)
+
+  // expected-error@+2 {{integer literal is too large to be represented in any integer type}}
+  // expected-error@+1 {{argument to 'partial' clause must be a strictly positive integer value}}
+  #pragma omp unroll partial(0x10000000000000000)
+  for (int i = 0; i < 10; i++)
+
+  // expected-error@+1 {{directive '#pragma omp unroll' cannot contain more than one 'partial' clause}}
   #pragma omp unroll partial partial
   for (int i = 0; i < n; ++i) {}
 
