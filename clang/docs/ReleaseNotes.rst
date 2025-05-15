@@ -909,6 +909,8 @@ Bug Fixes in This Version
   being deleted has a potentially throwing destructor (#GH118660).
 - Clang now outputs correct values when #embed data contains bytes with negative
   signed char values (#GH102798).
+- Fix crash due to unknown references and pointer implementation and handling of
+  base classes. (GH139452)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
