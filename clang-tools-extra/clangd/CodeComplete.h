@@ -111,6 +111,9 @@ struct CodeCompleteOptions {
   Config::ArgumentListsPolicy ArgumentLists =
       Config::ArgumentListsPolicy::FullPlaceholders;
 
+  /// Whether to suggest code patterns & snippets or not in completion
+  Config::CodePatternsPolicy CodePatterns = Config::CodePatternsPolicy::All;
+
   /// Whether to use the clang parser, or fallback to text-based completion
   /// (using identifiers in the current file and symbol indexes).
   enum CodeCompletionParse {

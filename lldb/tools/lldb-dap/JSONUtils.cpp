@@ -99,19 +99,6 @@ std::optional<bool> GetBoolean(const llvm::json::Object *obj,
   return std::nullopt;
 }
 
-std::optional<int64_t> GetSigned(const llvm::json::Object &obj,
-                                 llvm::StringRef key) {
-  return obj.getInteger(key);
-}
-
-std::optional<int64_t> GetSigned(const llvm::json::Object *obj,
-                                 llvm::StringRef key) {
-  if (obj == nullptr)
-    return std::nullopt;
-
-  return GetSigned(*obj, key);
-}
-
 bool ObjectContainsKey(const llvm::json::Object &obj, llvm::StringRef key) {
   return obj.find(key) != obj.end();
 }
@@ -263,7 +250,7 @@ void FillResponse(const llvm::json::Object &request,
   response.try_emplace("seq", (int64_t)0);
   EmplaceSafeString(response, "command",
                     GetString(request, "command").value_or(""));
-  const int64_t seq = GetSigned(request, "seq").value_or(0);
+  const uint64_t seq = GetInteger<uint64_t>(request, "seq").value_or(0);
   response.try_emplace("request_seq", seq);
   response.try_emplace("success", true);
 }
@@ -395,13 +382,18 @@ static std::string ConvertDebugInfoSizeToString(uint64_t debug_info) {
   return oss.str();
 }
 
-llvm::json::Value CreateModule(lldb::SBTarget &target, lldb::SBModule &module) {
+llvm::json::Value CreateModule(lldb::SBTarget &target, lldb::SBModule &module,
+                               bool id_only) {
   llvm::json::Object object;
   if (!target.IsValid() || !module.IsValid())
     return llvm::json::Value(std::move(object));
 
   const char *uuid = module.GetUUIDString();
   object.try_emplace("id", uuid ? std::string(uuid) : std::string(""));
+
+  if (id_only)
+    return llvm::json::Value(std::move(object));
+
   object.try_emplace("name", std::string(module.GetFileSpec().GetFilename()));
   char module_path_arr[PATH_MAX];
   module.GetFileSpec().GetPath(module_path_arr, sizeof(module_path_arr));
@@ -424,9 +416,11 @@ llvm::json::Value CreateModule(lldb::SBTarget &target, lldb::SBModule &module) {
   } else {
     object.try_emplace("symbolStatus", "Symbols not found.");
   }
-  std::string loaded_addr = std::to_string(
-      module.GetObjectFileHeaderAddress().GetLoadAddress(target));
-  object.try_emplace("addressRange", loaded_addr);
+  std::string load_address =
+      llvm::formatv("{0:x}",
+                    module.GetObjectFileHeaderAddress().GetLoadAddress(target))
+          .str();
+  object.try_emplace("addressRange", load_address);
   std::string version_str;
   uint32_t version_nums[3];
   uint32_t num_versions =

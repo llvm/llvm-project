@@ -714,6 +714,23 @@ let hasSideEffects = false in {
                                         # type # " \t$dst, $src;", []>;
   }
   
+  // FP4 conversions.
+  def CVT_e2m1x2_f32_sf : NVPTXInst<(outs Int16Regs:$dst),
+      (ins Float32Regs:$src1, Float32Regs:$src2, CvtMode:$mode),
+      !strconcat("{{ \n\t",
+                 ".reg .b8 \t%e2m1x2_out; \n\t",
+                 "cvt${mode:base}.satfinite${mode:relu}.e2m1x2.f32 \t%e2m1x2_out, $src1, $src2; \n\t",
+                 "cvt.u16.u8 \t$dst, %e2m1x2_out; \n\t",
+                 "}}"), []>;
+
+  def CVT_f16x2_e2m1x2 : NVPTXInst<(outs Int32Regs:$dst),
+      (ins Int16Regs:$src, CvtMode:$mode),
+      !strconcat("{{ \n\t",
+                 ".reg .b8 \t%e2m1x2_in; \n\t",
+                 "cvt.u8.u16 \t%e2m1x2_in, $src; \n\t",
+                 "cvt${mode:base}${mode:relu}.f16x2.e2m1x2 \t$dst, %e2m1x2_in; \n\t",
+                 "}}"), []>;
+
   // UE8M0x2 conversions.
   class CVT_f32_to_ue8m0x2<string sat = ""> :
     NVPTXInst<(outs Int16Regs:$dst),
@@ -2249,11 +2266,11 @@ def LoadParamMemV2I8   : LoadParamV2MemInst<Int16Regs, ".b8">;
 def LoadParamMemV4I32  : LoadParamV4MemInst<Int32Regs, ".b32">;
 def LoadParamMemV4I16  : LoadParamV4MemInst<Int16Regs, ".b16">;
 def LoadParamMemV4I8   : LoadParamV4MemInst<Int16Regs, ".b8">;
-def LoadParamMemF32    : LoadParamMemInst<Float32Regs, ".f32">;
-def LoadParamMemF64    : LoadParamMemInst<Float64Regs, ".f64">;
-def LoadParamMemV2F32  : LoadParamV2MemInst<Float32Regs, ".f32">;
-def LoadParamMemV2F64  : LoadParamV2MemInst<Float64Regs, ".f64">;
-def LoadParamMemV4F32  : LoadParamV4MemInst<Float32Regs, ".f32">;
+def LoadParamMemF32    : LoadParamMemInst<Float32Regs, ".b32">;
+def LoadParamMemF64    : LoadParamMemInst<Float64Regs, ".b64">;
+def LoadParamMemV2F32  : LoadParamV2MemInst<Float32Regs, ".b32">;
+def LoadParamMemV2F64  : LoadParamV2MemInst<Float64Regs, ".b64">;
+def LoadParamMemV4F32  : LoadParamV4MemInst<Float32Regs, ".b32">;
 
 defm StoreParamI64    : StoreParamInst<Int64Regs, i64imm, ".b64">;
 defm StoreParamI32    : StoreParamInst<Int32Regs, i32imm, ".b32">;
@@ -2272,13 +2289,13 @@ defm StoreParamV4I32  : StoreParamV4Inst<Int32Regs, i32imm, ".b32">;
 defm StoreParamV4I16  : StoreParamV4Inst<Int16Regs, i16imm, ".b16">;
 defm StoreParamV4I8   : StoreParamV4Inst<Int16Regs, i8imm,  ".b8">;
 
-defm StoreParamF32    : StoreParamInst<Float32Regs, f32imm, ".f32">;
-defm StoreParamF64    : StoreParamInst<Float64Regs, f64imm, ".f64">;
+defm StoreParamF32    : StoreParamInst<Float32Regs, f32imm, ".b32">;
+defm StoreParamF64    : StoreParamInst<Float64Regs, f64imm, ".b64">;
 
-defm StoreParamV2F32  : StoreParamV2Inst<Float32Regs, f32imm, ".f32">;
-defm StoreParamV2F64  : StoreParamV2Inst<Float64Regs, f64imm, ".f64">;
+defm StoreParamV2F32  : StoreParamV2Inst<Float32Regs, f32imm, ".b32">;
+defm StoreParamV2F64  : StoreParamV2Inst<Float64Regs, f64imm, ".b64">;
 
-defm StoreParamV4F32  : StoreParamV4Inst<Float32Regs, f32imm, ".f32">;
+defm StoreParamV4F32  : StoreParamV4Inst<Float32Regs, f32imm, ".b32">;
 
 def StoreRetvalI64    : StoreRetvalInst<Int64Regs, ".b64">;
 def StoreRetvalI32    : StoreRetvalInst<Int32Regs, ".b32">;
@@ -2294,11 +2311,11 @@ def StoreRetvalV4I32  : StoreRetvalV4Inst<Int32Regs, ".b32">;
 def StoreRetvalV4I16  : StoreRetvalV4Inst<Int16Regs, ".b16">;
 def StoreRetvalV4I8   : StoreRetvalV4Inst<Int16Regs, ".b8">;
 
-def StoreRetvalF64    : StoreRetvalInst<Float64Regs, ".f64">;
-def StoreRetvalF32    : StoreRetvalInst<Float32Regs, ".f32">;
-def StoreRetvalV2F64  : StoreRetvalV2Inst<Float64Regs, ".f64">;
-def StoreRetvalV2F32  : StoreRetvalV2Inst<Float32Regs, ".f32">;
-def StoreRetvalV4F32  : StoreRetvalV4Inst<Float32Regs, ".f32">;
+def StoreRetvalF64    : StoreRetvalInst<Float64Regs, ".b64">;
+def StoreRetvalF32    : StoreRetvalInst<Float32Regs, ".b32">;
+def StoreRetvalV2F64  : StoreRetvalV2Inst<Float64Regs, ".b64">;
+def StoreRetvalV2F32  : StoreRetvalV2Inst<Float32Regs, ".b32">;
+def StoreRetvalV4F32  : StoreRetvalV4Inst<Float32Regs, ".b32">;
 
 def CallArgBeginInst : NVPTXInst<(outs), (ins), "(", [(CallArgBegin)]>;
 def CallArgEndInst1  : NVPTXInst<(outs), (ins), ");", [(CallArgEnd (i32 1))]>;
@@ -2391,9 +2408,9 @@ foreach vt = [v2f16, v2bf16, v2i16, v4i8] in {
 class LD<NVPTXRegClass regclass>
   : NVPTXInst<
     (outs regclass:$dst),
-    (ins LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp, LdStCode:$Vec, LdStCode:$Sign,
+    (ins LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp, LdStCode:$Sign,
          i32imm:$fromWidth, ADDR:$addr),
-    "ld${sem:sem}${scope:scope}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
+    "ld${sem:sem}${scope:scope}${addsp:addsp}.${Sign:sign}$fromWidth "
     "\t$dst, [$addr];", []>;
 
 let mayLoad=1, hasSideEffects=0 in {
@@ -2409,8 +2426,8 @@ class ST<NVPTXRegClass regclass>
   : NVPTXInst<
     (outs),
     (ins regclass:$src, LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp,
-         LdStCode:$Vec, LdStCode:$Sign, i32imm:$toWidth, ADDR:$addr),
-    "st${sem:sem}${scope:scope}${addsp:addsp}${Vec:vec}.${Sign:sign}$toWidth"
+         LdStCode:$Sign, i32imm:$toWidth, ADDR:$addr),
+    "st${sem:sem}${scope:scope}${addsp:addsp}.${Sign:sign}$toWidth"
     " \t[$addr], $src;", []>;
 
 let mayStore=1, hasSideEffects=0 in {
@@ -2425,52 +2442,71 @@ let mayStore=1, hasSideEffects=0 in {
 // The following is used only in and after vector elementizations.  Vector
 // elementization happens at the machine instruction level, so the following
 // instructions never appear in the DAG.
-multiclass LD_VEC<NVPTXRegClass regclass> {
+multiclass LD_VEC<NVPTXRegClass regclass, bit support_v8 = false> {
   def _v2 : NVPTXInst<
     (outs regclass:$dst1, regclass:$dst2),
-    (ins LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp, LdStCode:$Vec,
+    (ins LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp,
          LdStCode:$Sign, i32imm:$fromWidth, ADDR:$addr),
-    "ld${sem:sem}${scope:scope}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
+    "ld${sem:sem}${scope:scope}${addsp:addsp}.v2.${Sign:sign}$fromWidth "
     "\t{{$dst1, $dst2}}, [$addr];", []>;
   def _v4 : NVPTXInst<
     (outs regclass:$dst1, regclass:$dst2, regclass:$dst3, regclass:$dst4),
-    (ins LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp, LdStCode:$Vec,
+    (ins LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp,
          LdStCode:$Sign, i32imm:$fromWidth, ADDR:$addr),
-    "ld${sem:sem}${scope:scope}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
+    "ld${sem:sem}${scope:scope}${addsp:addsp}.v4.${Sign:sign}$fromWidth "
     "\t{{$dst1, $dst2, $dst3, $dst4}}, [$addr];", []>;
+  if support_v8 then
+    def _v8 : NVPTXInst<
+      (outs regclass:$dst1, regclass:$dst2, regclass:$dst3, regclass:$dst4,
+            regclass:$dst5, regclass:$dst6, regclass:$dst7, regclass:$dst8),
+      (ins LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp, LdStCode:$Sign,
+           i32imm:$fromWidth, ADDR:$addr),
+      "ld${sem:sem}${scope:scope}${addsp:addsp}.v8.${Sign:sign}$fromWidth "
+      "\t{{$dst1, $dst2, $dst3, $dst4, $dst5, $dst6, $dst7, $dst8}}, "
+      "[$addr];", []>;
 }
 let mayLoad=1, hasSideEffects=0 in {
   defm LDV_i8  : LD_VEC<Int16Regs>;
   defm LDV_i16 : LD_VEC<Int16Regs>;
-  defm LDV_i32 : LD_VEC<Int32Regs>;
+  defm LDV_i32 : LD_VEC<Int32Regs, support_v8 = true>;
   defm LDV_i64 : LD_VEC<Int64Regs>;
-  defm LDV_f32 : LD_VEC<Float32Regs>;
+  defm LDV_f32 : LD_VEC<Float32Regs, support_v8 = true>;
   defm LDV_f64 : LD_VEC<Float64Regs>;
 }
 
-multiclass ST_VEC<NVPTXRegClass regclass> {
+multiclass ST_VEC<NVPTXRegClass regclass, bit support_v8 = false> {
   def _v2 : NVPTXInst<
     (outs),
     (ins regclass:$src1, regclass:$src2, LdStCode:$sem, LdStCode:$scope,
-         LdStCode:$addsp, LdStCode:$Vec, LdStCode:$Sign, i32imm:$fromWidth,
+         LdStCode:$addsp, LdStCode:$Sign, i32imm:$fromWidth,
          ADDR:$addr),
-    "st${sem:sem}${scope:scope}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
+    "st${sem:sem}${scope:scope}${addsp:addsp}.v2.${Sign:sign}$fromWidth "
     "\t[$addr], {{$src1, $src2}};", []>;
   def _v4 : NVPTXInst<
     (outs),
     (ins regclass:$src1, regclass:$src2, regclass:$src3, regclass:$src4,
-         LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp, LdStCode:$Vec,
+         LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp,
          LdStCode:$Sign, i32imm:$fromWidth, ADDR:$addr),
-    "st${sem:sem}${scope:scope}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
+    "st${sem:sem}${scope:scope}${addsp:addsp}.v4.${Sign:sign}$fromWidth "
     "\t[$addr], {{$src1, $src2, $src3, $src4}};", []>;
+  if support_v8 then
+    def _v8 : NVPTXInst<
+      (outs),
+      (ins regclass:$src1, regclass:$src2, regclass:$src3, regclass:$src4,
+           regclass:$src5, regclass:$src6, regclass:$src7, regclass:$src8,
+           LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp, LdStCode:$Sign,
+           i32imm:$fromWidth, ADDR:$addr),
+      "st${sem:sem}${scope:scope}${addsp:addsp}.v8.${Sign:sign}$fromWidth "
+      "\t[$addr], "
+      "{{$src1, $src2, $src3, $src4, $src5, $src6, $src7, $src8}};", []>;
 }
 
 let mayStore=1, hasSideEffects=0 in {
   defm STV_i8  : ST_VEC<Int16Regs>;
   defm STV_i16 : ST_VEC<Int16Regs>;
-  defm STV_i32 : ST_VEC<Int32Regs>;
+  defm STV_i32 : ST_VEC<Int32Regs, support_v8 = true>;
   defm STV_i64 : ST_VEC<Int64Regs>;
-  defm STV_f32 : ST_VEC<Float32Regs>;
+  defm STV_f32 : ST_VEC<Float32Regs, support_v8 = true>;
   defm STV_f64 : ST_VEC<Float64Regs>;
 }
 
@@ -3102,28 +3138,20 @@ def CALL_PROTOTYPE :
             "$ident", [(CallPrototype (i32 texternalsym:$ident))]>;
 
 def SDTDynAllocaOp :
-  SDTypeProfile<1, 2, [SDTCisSameAs<0, 1>, SDTCisInt<1>, SDTCisInt<2>]>;
+  SDTypeProfile<1, 2, [SDTCisSameAs<0, 1>, SDTCisInt<1>, SDTCisVT<2, i32>]>;
 
 def dyn_alloca :
   SDNode<"NVPTXISD::DYNAMIC_STACKALLOC", SDTDynAllocaOp,
          [SDNPHasChain, SDNPSideEffect]>;
 
-def DYNAMIC_STACKALLOC32 :
-  NVPTXInst<(outs Int32Regs:$ptr),
-            (ins Int32Regs:$size, i32imm:$align),
-            "alloca.u32 \t$ptr, $size, $align;\n\t"
-            "cvta.local.u32 \t$ptr, $ptr;",
-            [(set i32:$ptr, (dyn_alloca i32:$size, (i32 timm:$align)))]>,
-            Requires<[hasPTX<73>, hasSM<52>]>;
-
-def DYNAMIC_STACKALLOC64 :
-  NVPTXInst<(outs Int64Regs:$ptr),
-            (ins Int64Regs:$size, i32imm:$align),
-            "alloca.u64 \t$ptr, $size, $align;\n\t"
-            "cvta.local.u64 \t$ptr, $ptr;",
-            [(set i64:$ptr, (dyn_alloca i64:$size, (i32 timm:$align)))]>,
-            Requires<[hasPTX<73>, hasSM<52>]>;
-
+foreach t = [I32RT, I64RT] in {
+  def DYNAMIC_STACKALLOC # t.Size :
+    NVPTXInst<(outs t.RC:$ptr),
+              (ins t.RC:$size, i32imm:$align),
+              "alloca.u" # t.Size # " \t$ptr, $size, $align;",
+              [(set t.Ty:$ptr, (dyn_alloca t.Ty:$size, timm:$align))]>,
+              Requires<[hasPTX<73>, hasSM<52>]>;
+}
 
 //
 // BRX

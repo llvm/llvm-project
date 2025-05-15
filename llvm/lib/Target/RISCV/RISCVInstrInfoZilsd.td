@@ -12,6 +12,20 @@
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
+// RISC-V specific DAG Nodes.
+//===----------------------------------------------------------------------===//
+
+def SDT_RISCV_LD_RV32
+    : SDTypeProfile<2, 1, [SDTCisVT<0, i32>, SDTCisVT<1, i32>, SDTCisPtrTy<2>]>;
+def SDT_RISCV_SD_RV32
+    : SDTypeProfile<0, 3, [SDTCisVT<0, i32>, SDTCisVT<1, i32>, SDTCisPtrTy<2>]>;
+
+def riscv_ld_rv32 : RVSDNode<"LD_RV32", SDT_RISCV_LD_RV32,
+                             [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def riscv_st_rv32 : RVSDNode<"SD_RV32", SDT_RISCV_SD_RV32,
+                             [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+
+//===----------------------------------------------------------------------===//
 // Instruction Class Templates
 //===----------------------------------------------------------------------===//
 
