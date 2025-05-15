@@ -44,7 +44,7 @@ public:
 )cpp");
 }
 
-TEST_F(OverridePureVirtualsTests, Availability) {
+TEST_F(OverridePureVirtualsTests, AvailabilityNoOverride) {
   EXPECT_AVAILABLE(R"cpp(
 class Base {
 public:
@@ -58,7 +58,9 @@ public:
 };
 
 )cpp");
+}
 
+TEST_F(OverridePureVirtualsTests, AvailabilityPartiallyOverridden) {
   EXPECT_AVAILABLE(R"cpp(
 class Base {
 public:
@@ -96,11 +98,12 @@ virtual void F2(int P1, const int &P2) = 0;
 class Derived : public Base {
 public:
   void F1() override {
-    // TODO: Implement this pure virtual method
+    // TODO: Implement this pure virtual method.
     static_assert(false, "Method `F1` is not implemented.");
   }
+
   void F2(int P1, const int & P2) override {
-    // TODO: Implement this pure virtual method
+    // TODO: Implement this pure virtual method.
     static_assert(false, "Method `F2` is not implemented.");
   }
 };
@@ -136,7 +139,7 @@ virtual void F2() = 0;
 class Derived : public Base {
 public:
   void F2() override {
-    // TODO: Implement this pure virtual method
+    // TODO: Implement this pure virtual method.
     static_assert(false, "Method `F2` is not implemented.");
   }
 
@@ -172,13 +175,12 @@ protected:
 class Derived : public Base1, public Base2 {
 public:
   void func1() override {
-    // TODO: Implement this pure virtual method
+    // TODO: Implement this pure virtual method.
     static_assert(false, "Method `func1` is not implemented.");
   }
-
 protected:
   bool func2(char c) const override {
-    // TODO: Implement this pure virtual method
+    // TODO: Implement this pure virtual method.
     static_assert(false, "Method `func2` is not implemented.");
   }
 };
@@ -208,7 +210,7 @@ public:
 class Derived : public Base {
 public:
   void func(int, const S &, char *) override {
-    // TODO: Implement this pure virtual method
+    // TODO: Implement this pure virtual method.
     static_assert(false, "Method `func` is not implemented.");
   }
 };
@@ -239,7 +241,7 @@ class Right : virtual public Top {};
 class Bottom : public Left, public Right {
 public:
   void diamond_func() override {
-    // TODO: Implement this pure virtual method
+    // TODO: Implement this pure virtual method.
     static_assert(false, "Method `diamond_func` is not implemented.");
   }
 };
@@ -277,11 +279,12 @@ class Derived : public Base {
   int member; // Existing member
 public:
   void pub_func() override {
-    // TODO: Implement this pure virtual method
+    // TODO: Implement this pure virtual method.
     static_assert(false, "Method `pub_func` is not implemented.");
   }
+
   void pub_func2(char) const override {
-    // TODO: Implement this pure virtual method
+    // TODO: Implement this pure virtual method.
     static_assert(false, "Method `pub_func2` is not implemented.");
   }
 
@@ -289,7 +292,7 @@ public:
 
 protected:
   int prot_func(int x) const override {
-    // TODO: Implement this pure virtual method
+    // TODO: Implement this pure virtual method.
     static_assert(false, "Method `prot_func` is not implemented.");
   }
 };
@@ -329,18 +332,19 @@ class Derived : public Base {
   int member; // Existing member
 protected:
   int prot_func(int x) const override {
-    // TODO: Implement this pure virtual method
+    // TODO: Implement this pure virtual method.
     static_assert(false, "Method `prot_func` is not implemented.");
   }
 
   void foo();
 public:
   void pub_func() override {
-    // TODO: Implement this pure virtual method
+    // TODO: Implement this pure virtual method.
     static_assert(false, "Method `pub_func` is not implemented.");
   }
+
   void pub_func2(char) const override {
-    // TODO: Implement this pure virtual method
+    // TODO: Implement this pure virtual method.
     static_assert(false, "Method `pub_func2` is not implemented.");
   }
 
@@ -374,13 +378,12 @@ protected:
 class Derived : public Base {
 public:
   void foo() override {
-    // TODO: Implement this pure virtual method
+    // TODO: Implement this pure virtual method.
     static_assert(false, "Method `foo` is not implemented.");
   }
-
 protected:
   void bar() override {
-    // TODO: Implement this pure virtual method
+    // TODO: Implement this pure virtual method.
     static_assert(false, "Method `bar` is not implemented.");
   }
 };
@@ -410,10 +413,302 @@ public:
 class Derived : public Base {
 public:
   void func1() override {
-    // TODO: Implement this pure virtual method
+    // TODO: Implement this pure virtual method.
     static_assert(false, "Method `func1` is not implemented.");
   }
 
+};
+)cpp";
+  auto Applied = apply(Before);
+  EXPECT_EQ(Expected, Applied) << "Applied result:\n" << Applied;
+}
+
+TEST_F(OverridePureVirtualsTests, ConstexprSpecifier) {
+  ExtraArgs.push_back("-std=c++20");
+
+  constexpr auto Before = R"cpp(
+class B {
+public:
+  constexpr virtual int getValue() const = 0;
+};
+
+class ^D : public B {};
+)cpp";
+
+  constexpr auto Expected = R"cpp(
+class B {
+public:
+  constexpr virtual int getValue() const = 0;
+};
+
+class D : public B {
+public:
+  constexpr int getValue() const override {
+    // TODO: Implement this pure virtual method.
+    static_assert(false, "Method `getValue` is not implemented.");
+  }
+};
+)cpp";
+  auto Applied = apply(Before);
+  EXPECT_EQ(Expected, Applied) << "Applied result:\n" << Applied;
+}
+
+TEST_F(OverridePureVirtualsTests, ConstevalSpecifier) {
+  ExtraArgs.push_back("-std=c++20");
+
+  constexpr auto Before = R"cpp(
+class B {
+public:
+  virtual consteval float calculate() = 0;
+};
+
+class ^D : public B {};
+)cpp";
+
+  constexpr auto Expected = R"cpp(
+class B {
+public:
+  virtual consteval float calculate() = 0;
+};
+
+class D : public B {
+public:
+  consteval float calculate() override {
+    // TODO: Implement this pure virtual method.
+    static_assert(false, "Method `calculate` is not implemented.");
+  }
+};
+)cpp";
+  auto Applied = apply(Before);
+  EXPECT_EQ(Expected, Applied) << "Applied result:\n" << Applied;
+}
+
+TEST_F(OverridePureVirtualsTests, LValueRefQualifier) {
+  constexpr auto Before = R"cpp(
+class B {
+public:
+  virtual void process() & = 0;
+};
+
+class ^D : public B {};
+)cpp";
+
+  constexpr auto Expected = R"cpp(
+class B {
+public:
+  virtual void process() & = 0;
+};
+
+class D : public B {
+public:
+  void process() & override {
+    // TODO: Implement this pure virtual method.
+    static_assert(false, "Method `process` is not implemented.");
+  }
+};
+)cpp";
+  auto Applied = apply(Before);
+  EXPECT_EQ(Expected, Applied) << "Applied result:\n" << Applied;
+}
+
+TEST_F(OverridePureVirtualsTests, RValueRefQualifier) {
+  constexpr auto Before = R"cpp(
+class B {
+public:
+  virtual bool isValid() && = 0;
+};
+
+class ^D : public B {};
+)cpp";
+
+  constexpr auto Expected = R"cpp(
+class B {
+public:
+  virtual bool isValid() && = 0;
+};
+
+class D : public B {
+public:
+  bool isValid() && override {
+    // TODO: Implement this pure virtual method.
+    static_assert(false, "Method `isValid` is not implemented.");
+  }
+};
+)cpp";
+  auto Applied = apply(Before);
+  EXPECT_EQ(Expected, Applied) << "Applied result:\n" << Applied;
+}
+
+TEST_F(OverridePureVirtualsTests, SimpleTrailingReturnType) {
+  constexpr auto Before = R"cpp(
+class B {
+public:
+  virtual auto getStatus() -> bool = 0;
+};
+
+class ^D : public B {};
+)cpp";
+
+  constexpr auto Expected = R"cpp(
+class B {
+public:
+  virtual auto getStatus() -> bool = 0;
+};
+
+class D : public B {
+public:
+  auto getStatus() -> bool override {
+    // TODO: Implement this pure virtual method.
+    static_assert(false, "Method `getStatus` is not implemented.");
+  }
+};
+)cpp";
+  auto Applied = apply(Before);
+  EXPECT_EQ(Expected, Applied) << "Applied result:\n" << Applied;
+}
+
+TEST_F(OverridePureVirtualsTests, ConstexprLValueRefAndTrailingReturn) {
+  ExtraArgs.push_back("-std=c++20");
+
+  constexpr auto Before = R"cpp(
+class B {
+public:
+  constexpr virtual auto getData() & -> const char * = 0;
+};
+
+class ^D : public B {};
+)cpp";
+
+  constexpr auto Expected = R"cpp(
+class B {
+public:
+  constexpr virtual auto getData() & -> const char * = 0;
+};
+
+class D : public B {
+public:
+  constexpr auto getData() & -> const char * override {
+    // TODO: Implement this pure virtual method.
+    static_assert(false, "Method `getData` is not implemented.");
+  }
+};
+)cpp";
+  auto Applied = apply(Before);
+  EXPECT_EQ(Expected, Applied) << "Applied result:\n" << Applied;
+}
+
+TEST_F(OverridePureVirtualsTests, ConstevalRValueRefAndTrailingReturn) {
+  ExtraArgs.push_back("-std=c++20");
+
+  constexpr auto Before = R"cpp(
+class B {
+public:
+  virtual consteval auto foo() && -> double = 0;
+};
+
+class ^D : public B {};
+)cpp";
+
+  constexpr auto Expected = R"cpp(
+class B {
+public:
+  virtual consteval auto foo() && -> double = 0;
+};
+
+class D : public B {
+public:
+  consteval auto foo() && -> double override {
+    // TODO: Implement this pure virtual method.
+    static_assert(false, "Method `foo` is not implemented.");
+  }
+};
+)cpp";
+  auto Applied = apply(Before);
+  EXPECT_EQ(Expected, Applied) << "Applied result:\n" << Applied;
+}
+
+TEST_F(OverridePureVirtualsTests, CombinedFeaturesWithTrailingReturnTypes) {
+  ExtraArgs.push_back("-std=c++20");
+
+  constexpr auto Before = R"cpp(
+class B {
+public:
+  virtual auto f1() & -> int = 0;
+  constexpr virtual auto f2() && -> int = 0;
+  virtual consteval auto f3() -> int = 0;
+  virtual auto f4() const & -> char = 0;
+  constexpr virtual auto f5() const && -> bool = 0;
+};
+
+class ^D : public B {};
+)cpp";
+
+  constexpr auto Expected = R"cpp(
+class B {
+public:
+  virtual auto f1() & -> int = 0;
+  constexpr virtual auto f2() && -> int = 0;
+  virtual consteval auto f3() -> int = 0;
+  virtual auto f4() const & -> char = 0;
+  constexpr virtual auto f5() const && -> bool = 0;
+};
+
+class D : public B {
+public:
+  auto f1() & -> int override {
+    // TODO: Implement this pure virtual method.
+    static_assert(false, "Method `f1` is not implemented.");
+  }
+
+  constexpr auto f2() && -> int override {
+    // TODO: Implement this pure virtual method.
+    static_assert(false, "Method `f2` is not implemented.");
+  }
+
+  consteval auto f3() -> int override {
+    // TODO: Implement this pure virtual method.
+    static_assert(false, "Method `f3` is not implemented.");
+  }
+
+  auto f4() const & -> char override {
+    // TODO: Implement this pure virtual method.
+    static_assert(false, "Method `f4` is not implemented.");
+  }
+
+  constexpr auto f5() const && -> bool override {
+    // TODO: Implement this pure virtual method.
+    static_assert(false, "Method `f5` is not implemented.");
+  }
+};
+)cpp";
+  auto Applied = apply(Before);
+  EXPECT_EQ(Expected, Applied) << "Applied result:\n" << Applied;
+}
+
+TEST_F(OverridePureVirtualsTests, DefaultParameters) {
+  ExtraArgs.push_back("-std=c++20");
+
+  constexpr auto Before = R"cpp(
+class B {
+public:
+  virtual void foo(int var = 0) = 0;
+};
+
+class ^D : public B {};
+)cpp";
+
+  constexpr auto Expected = R"cpp(
+class B {
+public:
+  virtual void foo(int var = 0) = 0;
+};
+
+class D : public B {
+public:
+  void foo(int var = 0) override {
+    // TODO: Implement this pure virtual method.
+    static_assert(false, "Method `foo` is not implemented.");
+  }
 };
 )cpp";
   auto Applied = apply(Before);

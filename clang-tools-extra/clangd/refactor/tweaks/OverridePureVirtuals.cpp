@@ -8,6 +8,8 @@
 
 #include "refactor/Tweak.h"
 
+#include "support/Token.h"
+
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/Type.h"
@@ -22,6 +24,40 @@
 namespace clang {
 namespace clangd {
 namespace {
+
+// This function removes the "virtual" and the "= 0" at the end;
+// e.g.:
+//   "virtual void foo(int var = 0) = 0"  // input.
+//   "void foo(int var = 0)"              // output.
+std::string removePureVirtualSyntax(const std::string &MethodDecl,
+                                    const LangOptions &LangOpts) {
+  assert(!MethodDecl.empty());
+
+  TokenStream TS = lex(MethodDecl, LangOpts);
+
+  std::string DeclString;
+  for (const clangd::Token &Tk : TS.tokens()) {
+    if (Tk.Kind == clang::tok::raw_identifier && Tk.text() == "virtual")
+      continue;
+
+    // If the ending two tokens are "= 0", we break here and we already have the
+    // method's string without the pure virtual syntax.
+    const auto &Next = Tk.next();
+    if (Next.next().Kind == tok::eof && Tk.Kind == clang::tok::equal &&
+        Next.text() == "0")
+      break;
+
+    DeclString += Tk.text();
+    if (Tk.Kind != tok::l_paren && Next.Kind != tok::comma &&
+        Next.Kind != tok::r_paren && Next.Kind != tok::l_paren)
+      DeclString += ' ';
+  }
+  // Trim the last whitespace.
+  if (DeclString.back() == ' ')
+    DeclString.pop_back();
+
+  return DeclString;
+}
 
 class OverridePureVirtuals : public Tweak {
 public:
@@ -44,7 +80,7 @@ private:
   llvm::MapVector<AccessSpecifier, SourceLocation> AccessSpecifierLocations;
 
   // Helper function to gather information before applying the tweak.
-  void collectMissingPureVirtuals(const Selection &Sel);
+  void collectMissingPureVirtuals();
 };
 
 REGISTER_TWEAK(OverridePureVirtuals)
@@ -102,8 +138,7 @@ getSpecifierLocations(const CXXRecordDecl *D) {
 }
 
 bool hasAbstractBaseAncestor(const clang::CXXRecordDecl *CurrentDecl) {
-  if (!CurrentDecl || !CurrentDecl->getDefinition())
-    return false;
+  assert(CurrentDecl && CurrentDecl->getDefinition());
 
   return llvm::any_of(
       CurrentDecl->getDefinition()->bases(), [](CXXBaseSpecifier BaseSpec) {
@@ -134,7 +169,7 @@ bool OverridePureVirtuals::prepare(const Selection &Sel) {
 
 // Collects all pure virtual methods that are missing an override in
 // CurrentDecl, grouped by their original access specifier.
-void OverridePureVirtuals::collectMissingPureVirtuals(const Selection &Sel) {
+void OverridePureVirtuals::collectMissingPureVirtuals() {
   if (!CurrentDeclDef)
     return;
 
@@ -158,46 +193,39 @@ void OverridePureVirtuals::collectMissingPureVirtuals(const Selection &Sel) {
   }
 }
 
+std::string generateOverrideString(const CXXMethodDecl *Method,
+                                   const LangOptions &LangOpts) {
+  std::string MethodDecl;
+  auto OS = llvm::raw_string_ostream(MethodDecl);
+  Method->print(OS);
+
+  return llvm::formatv(
+             "\n  {0} override {{\n"
+             "    // TODO: Implement this pure virtual method.\n"
+             "    static_assert(false, \"Method `{1}` is not implemented.\");\n"
+             "  }",
+             removePureVirtualSyntax(MethodDecl, LangOpts), Method->getName())
+      .str();
+}
+
 // Free function to generate the string for a group of method overrides.
 std::string generateOverridesStringForGroup(
     llvm::SmallVector<const CXXMethodDecl *> Methods,
     const LangOptions &LangOpts) {
-  const auto GetParamString = [&LangOpts](const ParmVarDecl *P) {
-    std::string TypeStr = P->getType().getAsString(LangOpts);
-    // Unnamed parameter.
-    if (P->getNameAsString().empty())
-      return TypeStr;
-
-    return llvm::formatv("{0} {1}", std::move(TypeStr), P->getNameAsString())
-        .str();
-  };
-
-  std::string MethodsString;
+  llvm::SmallVector<std::string> MethodsString;
+  MethodsString.reserve(Methods.size());
+  std::string SS;
   for (const auto *Method : Methods) {
-    llvm::SmallVector<std::string> ParamsAsString;
-    ParamsAsString.reserve(Method->parameters().size());
-    llvm::transform(Method->parameters(), std::back_inserter(ParamsAsString),
-                    GetParamString);
-    auto Params = llvm::join(ParamsAsString, ", ");
-
-    MethodsString +=
-        llvm::formatv(
-            "  {0} {1}({2}) {3}override {{\n"
-            "    // TODO: Implement this pure virtual method\n"
-            "    static_assert(false, \"Method `{1}` is not implemented.\");\n"
-            "  }\n",
-            Method->getReturnType().getAsString(LangOpts),
-            Method->getNameAsString(), std::move(Params),
-            std::string(Method->isConst() ? "const " : ""))
-            .str();
+    MethodsString.emplace_back(generateOverrideString(Method, LangOpts));
   }
-  return MethodsString;
+
+  return llvm::join(MethodsString, "\n") + '\n';
 }
 
 Expected<Tweak::Effect> OverridePureVirtuals::apply(const Selection &Sel) {
   // The correctness of this tweak heavily relies on the accurate population of
   // these members.
-  collectMissingPureVirtuals(Sel);
+  collectMissingPureVirtuals();
 
   if (MissingMethodsByAccess.empty()) {
     return llvm::make_error<llvm::StringError>(
@@ -214,30 +242,16 @@ Expected<Tweak::Effect> OverridePureVirtuals::apply(const Selection &Sel) {
   //  public:    // ...
   //  protected: // ...
   std::string NewSectionsToAppendText;
-  // Tracks if we are adding the first new access section
-  // to NewSectionsToAppendText, to manage preceding newlines.
-  bool IsFirstNewSection = true;
 
-  // Define the order in which access specifiers should be processed and
-  // potentially added.
-  constexpr auto AccessOrder = std::array{
-      AccessSpecifier::AS_public,
-      AccessSpecifier::AS_protected,
-      AccessSpecifier::AS_private,
-  };
-
-  for (AccessSpecifier AS : AccessOrder) {
-    auto *GroupIter = MissingMethodsByAccess.find(AS);
-    // Check if there are any missing methods for the current access specifier.
-    // No methods to override for this access specifier.
-    if (GroupIter == MissingMethodsByAccess.end() || GroupIter->second.empty())
-      continue;
+  for (const auto &[AS, Methods] : MissingMethodsByAccess) {
+    assert(!Methods.empty());
 
     std::string MethodsGroupString =
-        generateOverridesStringForGroup(GroupIter->second, LangOpts);
+        generateOverridesStringForGroup(Methods, LangOpts);
 
     auto *ExistingSpecLocIter = AccessSpecifierLocations.find(AS);
-    if (ExistingSpecLocIter != AccessSpecifierLocations.end()) {
+    bool ASExists = ExistingSpecLocIter != AccessSpecifierLocations.end();
+    if (ASExists) {
       // Access specifier section already exists in the class.
       // Get location immediately *after* the colon.
       SourceLocation InsertLoc =
@@ -246,7 +260,7 @@ Expected<Tweak::Effect> OverridePureVirtuals::apply(const Selection &Sel) {
       // Create a replacement to insert the method declarations.
       // The replacement is at InsertLoc, has length 0 (insertion), and uses
       // InsertionText.
-      std::string InsertionText = "\n" + MethodsGroupString;
+      std::string InsertionText = MethodsGroupString;
       tooling::Replacement Rep(SM, InsertLoc, 0, InsertionText);
       if (auto Err = EditReplacements.add(Rep))
         return llvm::Expected<Tweak::Effect>(std::move(Err));
@@ -254,12 +268,8 @@ Expected<Tweak::Effect> OverridePureVirtuals::apply(const Selection &Sel) {
       // Access specifier section does not exist in the class.
       // These methods will be grouped into NewSectionsToAppendText and added
       // towards the end of the class definition.
-      if (!IsFirstNewSection)
-        NewSectionsToAppendText += "\n";
-
       NewSectionsToAppendText +=
-          getAccessSpelling(AS).str() + ":\n" + MethodsGroupString;
-      IsFirstNewSection = false;
+          getAccessSpelling(AS).str() + ':' + MethodsGroupString;
     }
   }
 
@@ -269,10 +279,10 @@ Expected<Tweak::Effect> OverridePureVirtuals::apply(const Selection &Sel) {
     // AppendLoc is the SourceLocation of the closing brace '}' of the class.
     // The replacement will insert text *before* this closing brace.
     SourceLocation AppendLoc = CurrentDeclDef->getBraceRange().getEnd();
-    std::string FinalAppendText = NewSectionsToAppendText;
+    std::string FinalAppendText = std::move(NewSectionsToAppendText);
 
     if (!CurrentDeclDef->decls_empty() || !EditReplacements.empty()) {
-      FinalAppendText = "\n" + FinalAppendText;
+      FinalAppendText = '\n' + FinalAppendText;
     }
 
     // Create a replacement to append the new sections.
