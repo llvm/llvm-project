@@ -439,14 +439,12 @@ ExplodedNode *ExplodedGraph::createUncachedNode(const ProgramPoint &L,
 }
 
 std::unique_ptr<ExplodedGraph>
-ExplodedGraph::trim(ArrayRef<const NodeTy *> Sinks,
+ExplodedGraph::trim(TrimGraphWorklist &Worklist,
                     InterExplodedGraphMap *NodeMap) const {
-  if (Sinks.empty())
+  if (Worklist.empty())
     return nullptr;
 
   std::unique_ptr<ExplodedGraph> Trimmed = std::make_unique<ExplodedGraph>();
-
-  SmallVector<const ExplodedNode*, 32> Worklist{Sinks};
 
   InterExplodedGraphMap Scratch;
   if (!NodeMap)

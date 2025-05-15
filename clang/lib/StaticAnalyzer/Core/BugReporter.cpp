@@ -2628,19 +2628,19 @@ public:
 
 BugPathGetter::BugPathGetter(const ExplodedGraph *OriginalGraph,
                              ArrayRef<PathSensitiveBugReport *> &bugReports) {
-  SmallVector<const ExplodedNode *, 32> Nodes;
+  TrimGraphWorklist Worklist;
   for (const auto I : bugReports) {
     assert(I->isValid() &&
            "We only allow BugReporterVisitors and BugReporter itself to "
            "invalidate reports!");
     if (const ExplodedNode *ErrNode = I->getErrorNode())
-      Nodes.emplace_back(ErrNode);
+      Worklist.emplace_back(ErrNode);
   }
 
   // The trimmed graph is created in the body of the constructor to ensure
   // that the DenseMaps have been initialized already.
   InterExplodedGraphMap NodeMap;
-  TrimmedGraph = OriginalGraph->trim(Nodes, &NodeMap);
+  TrimmedGraph = OriginalGraph->trim(Worklist, &NodeMap);
 
   // Find the (first) error node in the trimmed graph.  We just need to consult
   // the node map which maps from nodes in the original graph to nodes
