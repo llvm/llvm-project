@@ -374,8 +374,7 @@ public:
       constexpr int kSmallRangeThreshold = 64;
       if ((upperBound - lowerBound)
               .ult(llvm::APInt(32, kSmallRangeThreshold))) {
-        for (APInt iValue = lowerBound; iValue.sle(upperBound);
-             (void)iValue++) {
+        for (APInt iValue = lowerBound; iValue.sle(upperBound); ++iValue) {
           caseValues.push_back(iValue);
           caseOperands.push_back(operand);
           caseDestinations.push_back(destination);

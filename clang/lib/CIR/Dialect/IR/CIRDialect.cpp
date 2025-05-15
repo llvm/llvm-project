@@ -976,9 +976,8 @@ void cir::SwitchFlatOp::build(OpBuilder &builder, OperationState &result,
                               ArrayRef<ValueRange> caseOperands) {
 
   std::vector<mlir::Attribute> caseValuesAttrs;
-  for (const APInt &val : caseValues) {
+  for (const APInt &val : caseValues)
     caseValuesAttrs.push_back(cir::IntAttr::get(value.getType(), val));
-  }
   mlir::ArrayAttr attrs = ArrayAttr::get(builder.getContext(), caseValuesAttrs);
 
   build(builder, result, value, defaultOperands, caseOperands, attrs,
