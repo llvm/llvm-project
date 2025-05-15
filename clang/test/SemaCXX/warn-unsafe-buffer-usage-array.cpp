@@ -35,7 +35,15 @@ void constant_idx_safe0(unsigned idx) {
   buffer[0] = 0;
 }
 
-int array[10]; // expected-warning {{'array' is an unsafe buffer that does not perform bounds checks}}
+int array[10]; // expected-warning 2{{'array' is an unsafe buffer that does not perform bounds checks}}
+
+void circular_access_safe(unsigned idx) {
+  array[idx % 10];
+}
+
+void circular_access_unsafe(int idx) {
+  array[idx % 10]; // expected-note {{used in buffer access here}}
+}
 
 void masked_idx1(unsigned long long idx, Foo f) {
   // Bitwise and operation
