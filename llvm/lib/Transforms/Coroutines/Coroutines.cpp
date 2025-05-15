@@ -288,6 +288,8 @@ void coro::Shape::analyze(Function &F,
         }
         break;
       case Intrinsic::coro_promise:
+        assert(CoroPromise == nullptr &&
+               "CoroEarly must ensure coro.promise unique");
         CoroPromise = cast<CoroPromiseInst>(II);
         break;
       }

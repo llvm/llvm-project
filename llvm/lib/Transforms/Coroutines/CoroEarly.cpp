@@ -168,6 +168,7 @@ void Lowerer::hidePromiseAlloca(CoroIdInst *CoroId, CoroBeginInst *CoroBegin) {
   SmallVector<Value *, 3> Arg{CoroBegin, Alignment, FromPromise};
   auto *PI = Builder.CreateIntrinsic(
       Builder.getPtrTy(), Intrinsic::coro_promise, Arg, {}, "promise.addr");
+  PI->setCannotDuplicate();
   PA->replaceUsesWithIf(PI, [CoroId](Use &U) {
     bool IsBitcast = U == U.getUser()->stripPointerCasts();
     bool IsCoroId = U.getUser() == CoroId;
