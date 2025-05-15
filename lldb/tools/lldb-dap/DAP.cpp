@@ -26,6 +26,7 @@
 #include "lldb/API/SBListener.h"
 #include "lldb/API/SBProcess.h"
 #include "lldb/API/SBStream.h"
+#include "lldb/API/SBTarget.h"
 #include "lldb/Utility/IOObject.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-defines.h"
@@ -719,23 +720,7 @@ lldb::SBTarget DAP::CreateTarget(lldb::SBError &error) {
   return target;
 }
 
-void DAP::SetTarget(const lldb::SBTarget target) {
-  this->target = target;
-
-  if (target.IsValid()) {
-    // Configure breakpoint event listeners for the target.
-    lldb::SBListener listener = this->debugger.GetListener();
-    listener.StartListeningForEvents(
-        this->target.GetBroadcaster(),
-        lldb::SBTarget::eBroadcastBitBreakpointChanged |
-            lldb::SBTarget::eBroadcastBitModulesLoaded |
-            lldb::SBTarget::eBroadcastBitModulesUnloaded |
-            lldb::SBTarget::eBroadcastBitSymbolsLoaded |
-            lldb::SBTarget::eBroadcastBitSymbolsChanged);
-    listener.StartListeningForEvents(this->broadcaster,
-                                     eBroadcastBitStopEventThread);
-  }
-}
+void DAP::SetTarget(const lldb::SBTarget target) { this->target = target; }
 
 bool DAP::HandleObject(const Message &M) {
   TelemetryDispatcher dispatcher(&debugger);
@@ -1489,17 +1474,31 @@ void DAP::ProgressEventThread() {
 }
 
 // All events from the debugger, target, process, thread and frames are
-// received in this function that runs in its own thread. We are using a
-// "FILE *" to output packets back to VS Code and they have mutexes in them
-// them prevent multiple threads from writing simultaneously so no locking
-// is required.
+// received in this function that runs in its own thread.
 void DAP::EventThread() {
   llvm::set_thread_name(transport.GetClientName() + ".event_handler");
-  lldb::SBEvent event;
+
+  // Configure the debugger listener for all events lldb-dap is interested in.
   lldb::SBListener listener = debugger.GetListener();
-  broadcaster.AddListener(listener, eBroadcastBitStopEventThread);
-  debugger.GetBroadcaster().AddListener(
-      listener, lldb::eBroadcastBitError | lldb::eBroadcastBitWarning);
+  listener.StartListeningForEventClass(
+      debugger, lldb::SBTarget::GetBroadcasterClassName(),
+      lldb::SBTarget::eBroadcastBitBreakpointChanged |
+          lldb::SBTarget::eBroadcastBitModulesLoaded |
+          lldb::SBTarget::eBroadcastBitModulesUnloaded |
+          lldb::SBTarget::eBroadcastBitSymbolsLoaded |
+          lldb::SBTarget::eBroadcastBitSymbolsChanged);
+  listener.StartListeningForEventClass(
+      debugger, lldb::SBProcess::GetBroadcasterClassName(),
+      lldb::SBProcess::eBroadcastBitStateChanged |
+          lldb::SBProcess::eBroadcastBitSTDOUT |
+          lldb::SBProcess::eBroadcastBitSTDERR);
+  listener.StartListeningForEvents(debugger.GetBroadcaster(),
+                                   lldb::SBDebugger::eBroadcastBitError |
+                                       lldb::SBDebugger::eBroadcastBitWarning);
+  // Listen for the lldb-dap stop event.
+  listener.StartListeningForEvents(broadcaster, eBroadcastBitStopEventThread);
+
+  lldb::SBEvent event;
   bool done = false;
   while (!done) {
     if (listener.WaitForEvent(1, event)) {
@@ -1633,8 +1632,8 @@ void DAP::EventThread() {
             SendJSON(llvm::json::Value(std::move(bp_event)));
           }
         }
-      } else if (event_mask & lldb::eBroadcastBitError ||
-                 event_mask & lldb::eBroadcastBitWarning) {
+      } else if (event_mask & lldb::SBDebugger::eBroadcastBitError ||
+                 event_mask & lldb::SBDebugger::eBroadcastBitWarning) {
         lldb::SBStructuredData data =
             lldb::SBDebugger::GetDiagnosticFromEvent(event);
         if (!data.IsValid())

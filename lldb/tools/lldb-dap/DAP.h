@@ -334,8 +334,7 @@ struct DAP {
   ///     An SBTarget object.
   lldb::SBTarget CreateTarget(lldb::SBError &error);
 
-  /// Set given target object as a current target for lldb-dap and start
-  /// listeing for its breakpoint events.
+  /// Set given target object as a current target for lldb-dap.
   void SetTarget(const lldb::SBTarget target);
 
   bool HandleObject(const protocol::Message &M);

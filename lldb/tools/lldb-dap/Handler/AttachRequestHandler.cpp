@@ -96,7 +96,9 @@ Error AttachRequestHandler::Run(const AttachRequestArguments &args) const {
       if (llvm::Error err = dap.RunAttachCommands(args.attachCommands))
         return err;
 
-      dap.target = dap.debugger.GetSelectedTarget();
+      // The custom commands might have created a new target so we should use
+      // the selected target after these commands are run.
+      dap.SetTarget(dap.debugger.GetSelectedTarget());
 
       // Validate the attachCommand results.
       if (!dap.target.GetProcess().IsValid())
