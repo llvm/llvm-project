@@ -187,7 +187,8 @@ void HIPSPVToolChain::AddIAMCUIncludeArgs(const ArgList &Args,
 
 void HIPSPVToolChain::AddHIPIncludeArgs(const ArgList &DriverArgs,
                                         ArgStringList &CC1Args) const {
-  if (DriverArgs.hasArg(options::OPT_nogpuinc))
+  if (!DriverArgs.hasFlag(options::OPT_offload_inc, options::OPT_no_offload_inc,
+                          true))
     return;
 
   StringRef hipPath = DriverArgs.getLastArgValue(options::OPT_hip_path_EQ);
