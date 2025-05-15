@@ -1635,37 +1635,44 @@ PPCRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   }
 
   // Special case for pseudo-ops SPILL_CR and RESTORE_CR, etc.
-  if (OpC == PPC::SPILL_CR) {
+  switch (OpC) {
+  case PPC::SPILL_CR:
     lowerCRSpilling(II, FrameIndex);
     return true;
-  } else if (OpC == PPC::RESTORE_CR) {
+  case PPC::RESTORE_CR:
     lowerCRRestore(II, FrameIndex);
     return true;
-  } else if (OpC == PPC::SPILL_CRBIT) {
+  case PPC::SPILL_CRBIT:
     lowerCRBitSpilling(II, FrameIndex);
     return true;
-  } else if (OpC == PPC::RESTORE_CRBIT) {
+  case PPC::RESTORE_CRBIT:
     lowerCRBitRestore(II, FrameIndex);
     return true;
-  } else if (OpC == PPC::SPILL_ACC || OpC == PPC::SPILL_UACC) {
+  case PPC::SPILL_ACC:
+  case PPC::SPILL_UACC:
     lowerACCSpilling(II, FrameIndex);
     return true;
-  } else if (OpC == PPC::RESTORE_ACC || OpC == PPC::RESTORE_UACC) {
+  case PPC::RESTORE_ACC:
+  case PPC::RESTORE_UACC:
     lowerACCRestore(II, FrameIndex);
     return true;
-  } else if (OpC == PPC::STXVP && DisableAutoPairedVecSt) {
-    lowerOctWordSpilling(II, FrameIndex);
-    return true;
-  } else if (OpC == PPC::SPILL_WACC) {
+  case PPC::STXVP: {
+    if (DisableAutoPairedVecSt) {
+      lowerOctWordSpilling(II, FrameIndex);
+      return true;
+    }
+    break;
+  }
+  case PPC::SPILL_WACC:
     lowerWACCSpilling(II, FrameIndex);
     return true;
-  } else if (OpC == PPC::RESTORE_WACC) {
+  case PPC::RESTORE_WACC:
     lowerWACCRestore(II, FrameIndex);
     return true;
-  } else if (OpC == PPC::SPILL_QUADWORD) {
+  case PPC::SPILL_QUADWORD:
     lowerQuadwordSpilling(II, FrameIndex);
     return true;
-  } else if (OpC == PPC::RESTORE_QUADWORD) {
+  case PPC::RESTORE_QUADWORD:
     lowerQuadwordRestore(II, FrameIndex);
     return true;
   }
