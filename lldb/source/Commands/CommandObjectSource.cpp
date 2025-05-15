@@ -1102,6 +1102,16 @@ protected:
       const char *filename = m_options.file_name.c_str();
 
       bool check_inlines = false;
+      const InlineStrategy inline_strategy = target.GetInlineStrategy();
+      if (inline_strategy == eInlineBreakpointsAlways)
+        check_inlines = true;
+      auto re_compute_check_inlines =
+          [&check_inlines, &inline_strategy](const FileSpec &file_spec) {
+            if (!file_spec.IsSourceImplementationFile() &&
+                inline_strategy == eInlineBreakpointsHeaders)
+              check_inlines = true;
+          };
+
       SymbolContextList sc_list;
       size_t num_matches = 0;
 
@@ -1113,8 +1123,11 @@ protected:
             ModuleSpec module_spec(module_file_spec);
             matching_modules.Clear();
             target.GetImages().FindModules(module_spec, matching_modules);
-            num_matches += matching_modules.ResolveSymbolContextForFilePath(
-                filename, 1, check_inlines,
+            FileSpec file_spec(filename);
+            re_compute_check_inlines(file_spec);
+
+            num_matches += matching_modules.ResolveSymbolContextsForFileSpec(
+                file_spec, 1, check_inlines,
                 SymbolContextItem(eSymbolContextModule |
                                   eSymbolContextCompUnit |
                                   eSymbolContextLineEntry),
@@ -1122,8 +1135,10 @@ protected:
           }
         }
       } else {
-        num_matches = target.GetImages().ResolveSymbolContextForFilePath(
-            filename, 1, check_inlines,
+        FileSpec file_spec(filename);
+        re_compute_check_inlines(file_spec);
+        num_matches = target.GetImages().ResolveSymbolContextsForFileSpec(
+            file_spec, 1, check_inlines,
             eSymbolContextModule | eSymbolContextCompUnit |
                 eSymbolContextLineEntry,
             sc_list);
