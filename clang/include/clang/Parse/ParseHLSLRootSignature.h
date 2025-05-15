@@ -91,6 +91,8 @@ private:
 
   struct ParsedRootParamParams {
     std::optional<llvm::hlsl::rootsig::Register> Reg;
+    std::optional<uint32_t> Space;
+    std::optional<llvm::hlsl::rootsig::ShaderVisibility> Visibility;
   };
   std::optional<ParsedRootParamParams>
   parseRootParamParams(RootSignatureToken::Kind RegType);

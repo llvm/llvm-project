@@ -347,8 +347,8 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootFlagsTest) {
 TEST_F(ParseHLSLRootSignatureTest, ValidParseRootParamsTest) {
   const llvm::StringLiteral Source = R"cc(
     CBV(b0),
-    SRV(t42),
-    UAV(u34893247)
+    SRV(space = 4, t42, visibility = SHADER_VISIBILITY_GEOMETRY),
+    UAV(visibility = SHADER_VISIBILITY_HULL, u34893247)
   )cc";
 
   TrivialModuleLoader ModLoader;
@@ -370,18 +370,24 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootParamsTest) {
   ASSERT_TRUE(std::holds_alternative<RootParam>(Elem));
   ASSERT_EQ(std::get<RootParam>(Elem).Reg.ViewType, RegisterType::BReg);
   ASSERT_EQ(std::get<RootParam>(Elem).Reg.Number, 0u);
+  ASSERT_EQ(std::get<RootParam>(Elem).Space, 0u);
+  ASSERT_EQ(std::get<RootParam>(Elem).Visibility, ShaderVisibility::All);
 
   Elem = Elements[1];
   ASSERT_TRUE(std::holds_alternative<RootParam>(Elem));
   ASSERT_EQ(std::get<RootParam>(Elem).Type, ParamType::SRV);
   ASSERT_EQ(std::get<RootParam>(Elem).Reg.ViewType, RegisterType::TReg);
   ASSERT_EQ(std::get<RootParam>(Elem).Reg.Number, 42u);
+  ASSERT_EQ(std::get<RootParam>(Elem).Space, 4u);
+  ASSERT_EQ(std::get<RootParam>(Elem).Visibility, ShaderVisibility::Geometry);
 
   Elem = Elements[2];
   ASSERT_TRUE(std::holds_alternative<RootParam>(Elem));
   ASSERT_EQ(std::get<RootParam>(Elem).Type, ParamType::UAV);
   ASSERT_EQ(std::get<RootParam>(Elem).Reg.ViewType, RegisterType::UReg);
   ASSERT_EQ(std::get<RootParam>(Elem).Reg.Number, 34893247u);
+  ASSERT_EQ(std::get<RootParam>(Elem).Space, 0u);
+  ASSERT_EQ(std::get<RootParam>(Elem).Visibility, ShaderVisibility::Hull);
 
   ASSERT_TRUE(Consumer->isSatisfied());
 }

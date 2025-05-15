@@ -89,6 +89,8 @@ using ParamType = llvm::dxil::ResourceClass;
 struct RootParam {
   ParamType Type;
   Register Reg;
+  uint32_t Space = 0;
+  ShaderVisibility Visibility = ShaderVisibility::All;
 };
 
 // Models the end of a descriptor table and stores its visibility
