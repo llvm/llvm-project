@@ -14,7 +14,7 @@ define void @print_call_and_memory(i64 %n, ptr noalias %y, ptr noalias %x) nounw
 ; CHECK-NEXT:  compound=true
 ; CHECK-NEXT:  N0 [label =
 ; CHECK-NEXT:    "ir-bb\<for.body.preheader\>:\l" +
-; CHECK-NEXT:    "Successor(s): vector.ph\l"
+; CHECK-NEXT:    "Successor(s): scalar.ph, vector.ph\l"
 ; CHECK-NEXT:  ]
 ; CHECK-NEXT:  N0 -> N1 [ label=""]
 ; CHECK-NEXT:  N1 [label =

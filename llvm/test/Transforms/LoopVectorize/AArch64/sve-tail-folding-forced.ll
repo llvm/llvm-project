@@ -16,7 +16,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; VPLANS-EMPTY:
 ; VPLANS-NEXT: ir-bb<entry>:
 ; VPLANS-NEXT:  EMIT vp<[[TC]]> = EXPAND SCEV (1 umax %n)
-; VPLANS-NEXT: Successor(s): vector.ph
+; VPLANS-NEXT: Successor(s): scalar.ph, vector.ph
 ; VPLANS-EMPTY:
 ; VPLANS-NEXT: vector.ph:
 ; VPLANS-NEXT:   EMIT vp<[[NEWTC:%[0-9]+]]> = TC > VF ? TC - VF : 0 vp<[[TC]]>

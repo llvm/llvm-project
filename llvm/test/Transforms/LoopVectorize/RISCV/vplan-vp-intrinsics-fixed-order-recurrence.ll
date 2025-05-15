@@ -16,7 +16,7 @@ define void @first_order_recurrence(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; IF-EVL-NEXT: Live-in ir<%TC> = original trip-count
 ; IF-EVL-EMPTY:
 ; IF-EVL: ir-bb<entry>:
-; IF-EVL-NEXT: Successor(s): vector.ph
+; IF-EVL-NEXT: Successor(s): scalar.ph, vector.ph
 ; IF-EVL-EMPTY:
 ; IF-EVL: vector.ph:
 ; IF-EVL-NEXT:  EMIT vp<[[VF32:%[0-9]+]]> = trunc vp<[[VF]]> to i32
