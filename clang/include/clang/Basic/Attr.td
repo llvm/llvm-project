@@ -1537,7 +1537,7 @@ def DeviceKernel : DeclOrTypeAttr {
   let Spellings = [Clang<"device_kernel">, Clang<"sycl_kernel">,
                    Clang<"nvptx_kernel">, Clang<"amdgpu_kernel">,
                    CustomKeyword<"__kernel">, CustomKeyword<"kernel">];
-  let Documentation = [SYCLKernelDocs];
+  let Documentation = [DeviceKernelDocs];
   let AdditionalMembers =
   [{
     static inline bool isAMDGPUSpelling(const AttributeCommonInfo& A) {
