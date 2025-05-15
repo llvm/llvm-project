@@ -424,6 +424,13 @@ public:
   trim(TrimGraphWorklist &Worklist,
        InterExplodedGraphMap *NodeMap = nullptr) const;
 
+  std::unique_ptr<ExplodedGraph>
+  trim(ArrayRef<const ExplodedNode *> Nodes,
+       InterExplodedGraphMap *NodeMap = nullptr) const {
+    TrimGraphWorklist Worklist{Nodes};
+    return trim(Worklist, NodeMap);
+  }
+
   /// Enable tracking of recently allocated nodes for potential reclamation
   /// when calling reclaimRecentlyAllocatedNodes().
   void enableNodeReclamation(unsigned Interval) {
