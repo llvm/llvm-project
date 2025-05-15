@@ -2815,6 +2815,7 @@ Status Process::LaunchPrivate(ProcessLaunchInfo &launch_info, StateType &state,
   m_jit_loaders_up.reset();
   m_system_runtime_up.reset();
   m_os_up.reset();
+  GetTarget().ClearAllLoadedSections();
 
   {
     std::lock_guard<std::mutex> guard(m_process_input_reader_mutex);
@@ -2903,7 +2904,6 @@ Status Process::LaunchPrivate(ProcessLaunchInfo &launch_info, StateType &state,
   }
 
   if (state == eStateStopped || state == eStateCrashed) {
-    GetTarget().ClearAllLoadedSections();
     DidLaunch();
 
     // Now that we know the process type, update its signal responses from the
