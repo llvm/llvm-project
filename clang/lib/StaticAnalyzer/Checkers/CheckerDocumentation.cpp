@@ -16,7 +16,6 @@
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
 
 using namespace clang;
 using namespace ento;
@@ -46,6 +45,7 @@ class CheckerDocumentation
           check::EndAnalysis,
           check::EndFunction,
           check::EndOfTranslationUnit,
+          check::BlockEntrance,
           check::Event<ImplicitNullDerefEvent>,
           check::LiveSymbols,
           check::Location,
@@ -165,6 +165,19 @@ public:
   ///
   /// check::Bind
   void checkBind(SVal Loc, SVal Val, const Stmt *S, CheckerContext &) const {}
+
+  /// Called after a CFG edge is taken within a function.
+  ///
+  /// This callback can be used to obtain information about potential branching
+  /// points or any other constructs that involve traversing a CFG edge.
+  /// Note that when inlining a call, there is no CFG edge between the caller
+  /// and the callee. One will only see the edge between the entry block and
+  /// the body of the function once inlined.
+  ///
+  /// \param E The ProgramPoint that describes the transition.
+  ///
+  /// check::BlockEntrance
+  void checkBlockEntrance(const BlockEntrance &E, CheckerContext &) const {}
 
   /// Called whenever a symbol becomes dead.
   ///

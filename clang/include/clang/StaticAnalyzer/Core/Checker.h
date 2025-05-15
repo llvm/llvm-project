@@ -221,6 +221,22 @@ public:
   }
 };
 
+class BlockEntrance {
+  template <typename CHECKER>
+  static void _checkBlockEntrance(void *Checker,
+                                  const clang::BlockEntrance &Entrance,
+                                  CheckerContext &C) {
+    ((const CHECKER *)Checker)->checkBlockEntrance(Entrance, C);
+  }
+
+public:
+  template <typename CHECKER>
+  static void _register(CHECKER *checker, CheckerManager &mgr) {
+    mgr._registerForBlockEntrance(CheckerManager::CheckBlockEntranceFunc(
+        checker, _checkBlockEntrance<CHECKER>));
+  }
+};
+
 class EndAnalysis {
   template <typename CHECKER>
   static void _checkEndAnalysis(void *checker, ExplodedGraph &G,
@@ -548,6 +564,8 @@ public:
 template <typename CHECK1, typename... CHECKs>
 class Checker : public CHECK1, public CHECKs..., public CheckerBase {
 public:
+  using BlockEntrance = clang::BlockEntrance;
+
   template <typename CHECKER>
   static void _register(CHECKER *checker, CheckerManager &mgr) {
     CHECK1::_register(checker, mgr);
@@ -558,6 +576,8 @@ public:
 template <typename CHECK1>
 class Checker<CHECK1> : public CHECK1, public CheckerBase {
 public:
+  using BlockEntrance = clang::BlockEntrance;
+
   template <typename CHECKER>
   static void _register(CHECKER *checker, CheckerManager &mgr) {
     CHECK1::_register(checker, mgr);
