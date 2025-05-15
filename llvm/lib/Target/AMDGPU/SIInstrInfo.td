@@ -1972,81 +1972,25 @@ class getIns64 <RegisterOperand Src0RC, RegisterOperand Src1RC,
                 RegisterOperand Src2RC, int NumSrcArgs,
                 bit HasClamp, bit HasModifiers, bit HasSrc2Mods, bit HasOMod,
                 Operand Src0Mod, Operand Src1Mod, Operand Src2Mod> {
+  dag src0 = !if(!ge(NumSrcArgs, 1),
+                 !if (HasModifiers,
+                      (ins Src0Mod:$src0_modifiers, Src0RC:$src0),
+                      (ins Src0RC:$src0)),
+                 (ins));
+  dag src1 = !if(!ge(NumSrcArgs, 2),
+                 !if (HasModifiers,
+                      (ins Src1Mod:$src1_modifiers, Src1RC:$src1),
+                      (ins Src1RC:$src1)),
+                 (ins));
+  dag src2 = !if(!ge(NumSrcArgs, 3),
+                 !if (HasSrc2Mods,
+                      (ins Src2Mod:$src2_modifiers, Src2RC:$src2),
+                      (ins Src2RC:$src2)),
+                 (ins));
+  dag clamp = !if(HasClamp, (ins Clamp0:$clamp), (ins));
+  dag omod = !if(HasOMod, (ins omod0:$omod), (ins));
 
-  dag ret =
-    !if (!eq(NumSrcArgs, 0),
-      // VOP1 without input operands (V_NOP, V_CLREXCP)
-      (ins),
-      /* else */
-    !if (!eq(NumSrcArgs, 1),
-      !if (HasModifiers,
-        // VOP1 with modifiers
-        !if(HasOMod,
-          (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
-               Clamp0:$clamp, omod0:$omod),
-          !if (HasClamp,
-            (ins Src0Mod:$src0_modifiers, Src0RC:$src0, Clamp0:$clamp),
-            (ins Src0Mod:$src0_modifiers, Src0RC:$src0)))
-      /* else */,
-        // VOP1 without modifiers
-        !if(HasOMod,
-          (ins Src0RC:$src0, Clamp0:$clamp, omod0:$omod),
-          !if (HasClamp,
-            (ins Src0RC:$src0, Clamp0:$clamp),
-            (ins Src0RC:$src0)))
-      /* endif */ ),
-    !if (!eq(NumSrcArgs, 2),
-      !if (HasModifiers,
-        // VOP 2 with modifiers
-        !if(HasOMod,
-          (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
-               Src1Mod:$src1_modifiers, Src1RC:$src1,
-               Clamp0:$clamp, omod0:$omod),
-          !con((ins Src0Mod:$src0_modifiers, Src0RC:$src0,
-                    Src1Mod:$src1_modifiers, Src1RC:$src1),
-                !if(HasClamp, (ins Clamp0:$clamp), (ins))))
-      /* else */,
-        // VOP2 without modifiers
-        !if (HasClamp,
-          (ins Src0RC:$src0, Src1RC:$src1, Clamp0:$clamp),
-          (ins Src0RC:$src0, Src1RC:$src1))
-
-      /* endif */ )
-    /* NumSrcArgs == 3 */,
-      !if (HasModifiers,
-        !if (HasSrc2Mods,
-          // VOP3 with modifiers
-          !if (HasOMod,
-            (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
-                 Src1Mod:$src1_modifiers, Src1RC:$src1,
-                 Src2Mod:$src2_modifiers, Src2RC:$src2,
-                 Clamp0:$clamp, omod0:$omod),
-            !if (HasClamp,
-              (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
-                   Src1Mod:$src1_modifiers, Src1RC:$src1,
-                   Src2Mod:$src2_modifiers, Src2RC:$src2,
-                   Clamp0:$clamp),
-              (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
-                   Src1Mod:$src1_modifiers, Src1RC:$src1,
-                   Src2Mod:$src2_modifiers, Src2RC:$src2))),
-          // VOP3 with modifiers except src2
-          !if (HasOMod,
-            (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
-                 Src1Mod:$src1_modifiers, Src1RC:$src1,
-                 Src2RC:$src2, Clamp0:$clamp, omod0:$omod),
-            !if (HasClamp,
-              (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
-                   Src1Mod:$src1_modifiers, Src1RC:$src1,
-                   Src2RC:$src2, Clamp0:$clamp),
-              (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
-                   Src1Mod:$src1_modifiers, Src1RC:$src1,
-                   Src2RC:$src2))))
-      /* else */,
-        // VOP3 without modifiers
-        !if (HasClamp,
-          (ins Src0RC:$src0, Src1RC:$src1, Src2RC:$src2, Clamp0:$clamp),
-          (ins Src0RC:$src0, Src1RC:$src1, Src2RC:$src2))
-      /* endif */ ))));
+  dag ret = !con(src0, src1, src2, clamp, omod);
 }
 
 class getInsVOP3Base<RegisterOperand Src0RC, RegisterOperand Src1RC,
