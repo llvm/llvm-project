@@ -1,4 +1,4 @@
-//===- xray_interface.h -----------------------------------------*- C++ -*-===//
+//===- xray_interface.h ---------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,20 +14,27 @@
 #ifndef XRAY_XRAY_INTERFACE_H
 #define XRAY_XRAY_INTERFACE_H
 
+#ifdef __cplusplus
 #include <cstddef>
 #include <cstdint>
+#else
+#include <stddef.h>
+#include <stdint.h>
+#endif
 
+#ifdef __cplusplus
 extern "C" {
+#endif
 
 /// Synchronize this with AsmPrinter::SledKind in LLVM.
-enum XRayEntryType {
+typedef enum {
   ENTRY = 0,
   EXIT = 1,
   TAIL = 2,
   LOG_ARGS_ENTRY = 3,
   CUSTOM_EVENT = 4,
   TYPED_EVENT = 5,
-};
+} XRayEntryType;
 
 /// Provide a function to invoke for when instrumentation points are hit. This
 /// is a user-visible control surface that overrides the default implementation.
@@ -68,7 +75,7 @@ extern int __xray_set_handler_arg1(void (*entry)(int32_t, XRayEntryType,
 extern int __xray_remove_handler_arg1();
 
 /// Provide a function to invoke when XRay encounters a custom event.
-extern int __xray_set_customevent_handler(void (*entry)(void *, std::size_t));
+extern int __xray_set_customevent_handler(void (*entry)(void *, size_t));
 
 /// This removes whatever the currently provided custom event handler is.
 /// Returns 1 on success, 0 on error.
@@ -86,12 +93,12 @@ extern int __xray_remove_typedevent_handler();
 
 extern uint16_t __xray_register_event_type(const char *event_type);
 
-enum XRayPatchingStatus {
+typedef enum {
   NOT_INITIALIZED = 0,
   SUCCESS = 1,
   ONGOING = 2,
   FAILED = 3,
-};
+} XRayPatchingStatus;
 
 /// This tells XRay to patch the instrumentation points in all currently loaded
 /// objects. See XRayPatchingStatus for possible result values.
@@ -173,6 +180,8 @@ extern int32_t __xray_pack_id(int32_t FuncId, int32_t ObjId);
 /// Calling __xray_init() more than once is safe across multiple threads.
 extern void __xray_init();
 
+#ifdef __cplusplus
 } // end extern "C"
+#endif
 
 #endif // XRAY_XRAY_INTERFACE_H
