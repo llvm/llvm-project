@@ -1006,11 +1006,11 @@ define amdgpu_ps void @ps_mesa_inreg_v5i32(<5 x i32> inreg %arg0) {
 ;
 ; GFX11-LABEL: ps_mesa_inreg_v5i32:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_add_i32 s3, s3, 4
-; GFX11-NEXT:    s_add_i32 s2, s2, 3
 ; GFX11-NEXT:    s_add_i32 s1, s1, 2
 ; GFX11-NEXT:    s_add_i32 s4, s4, 5
 ; GFX11-NEXT:    s_add_i32 s0, s0, 1
+; GFX11-NEXT:    s_add_i32 s3, s3, 4
+; GFX11-NEXT:    s_add_i32 s2, s2, 3
 ; GFX11-NEXT:    v_dual_mov_b32 v4, s4 :: v_dual_mov_b32 v1, s1
 ; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v3, s3
 ; GFX11-NEXT:    v_mov_b32_e32 v2, s2
@@ -1027,7 +1027,8 @@ define amdgpu_ps void @ps_mesa_inreg_v5i32(<5 x i32> inreg %arg0) {
 ; GFX1250-NEXT:    s_add_co_i32 s1, s1, 2
 ; GFX1250-NEXT:    s_add_co_i32 s4, s4, 5
 ; GFX1250-NEXT:    s_add_co_i32 s0, s0, 1
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1250-NEXT:    s_add_co_i32 s3, s3, 4
+; GFX1250-NEXT:    s_add_co_i32 s2, s2, 3
 ; GFX1250-NEXT:    v_dual_mov_b32 v4, s4 :: v_dual_mov_b32 v0, s0
 ; GFX1250-NEXT:    v_dual_mov_b32 v1, s1 :: v_dual_mov_b32 v2, s2
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, s3
@@ -1056,22 +1057,22 @@ define amdgpu_ps void @ps_mesa_inreg_v5f32(<5 x float> inreg %arg0) {
 ;
 ; VI-LABEL: ps_mesa_inreg_v5f32:
 ; VI:       ; %bb.0:
-; VI-NEXT:    v_add_f32_e64 v3, s3, -1.0
-; VI-NEXT:    v_add_f32_e64 v2, s2, 4.0
 ; VI-NEXT:    v_add_f32_e64 v1, s1, 2.0
 ; VI-NEXT:    v_add_f32_e64 v0, s0, 1.0
 ; VI-NEXT:    v_add_f32_e64 v4, s4, 0.5
+; VI-NEXT:    v_add_f32_e64 v3, s3, -1.0
+; VI-NEXT:    v_add_f32_e64 v2, s2, 4.0
 ; VI-NEXT:    flat_store_dword v[0:1], v4
 ; VI-NEXT:    flat_store_dwordx4 v[0:1], v[0:3]
 ; VI-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: ps_mesa_inreg_v5f32:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_add_f32_e64 v3, s3, -1.0
-; GFX11-NEXT:    v_add_f32_e64 v2, s2, 4.0
 ; GFX11-NEXT:    v_add_f32_e64 v1, s1, 2.0
 ; GFX11-NEXT:    v_add_f32_e64 v4, s4, 0.5
 ; GFX11-NEXT:    v_add_f32_e64 v0, s0, 1.0
+; GFX11-NEXT:    v_add_f32_e64 v3, s3, -1.0
+; GFX11-NEXT:    v_add_f32_e64 v2, s2, 4.0
 ; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    global_store_b32 v[0:1], v4, off
 ; GFX11-NEXT:    global_store_b128 v[0:1], v[0:3], off
@@ -1084,9 +1085,10 @@ define amdgpu_ps void @ps_mesa_inreg_v5f32(<5 x float> inreg %arg0) {
 ; GFX1250-NEXT:    s_add_f32 s4, s4, 0.5
 ; GFX1250-NEXT:    s_add_f32 s0, s0, 1.0
 ; GFX1250-NEXT:    s_add_f32 s1, s1, 2.0
+; GFX1250-NEXT:    s_add_f32 s3, s3, -1.0
 ; GFX1250-NEXT:    s_add_f32 s2, s2, 4.0
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_2)
 ; GFX1250-NEXT:    v_dual_mov_b32 v4, s4 :: v_dual_mov_b32 v0, s0
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_2)
 ; GFX1250-NEXT:    v_dual_mov_b32 v1, s1 :: v_dual_mov_b32 v2, s2
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX1250-NEXT:    s_clause 0x1
@@ -1193,22 +1195,22 @@ define amdgpu_ps void @ps_mesa_v5i32(<5 x i32> %arg0) {
 ;
 ; VI-LABEL: ps_mesa_v5i32:
 ; VI:       ; %bb.0:
-; VI-NEXT:    v_add_u32_e32 v3, vcc, 4, v3
-; VI-NEXT:    v_add_u32_e32 v2, vcc, 3, v2
 ; VI-NEXT:    v_add_u32_e32 v1, vcc, 2, v1
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, 1, v0
 ; VI-NEXT:    v_add_u32_e32 v4, vcc, 5, v4
+; VI-NEXT:    v_add_u32_e32 v3, vcc, 4, v3
+; VI-NEXT:    v_add_u32_e32 v2, vcc, 3, v2
 ; VI-NEXT:    flat_store_dword v[0:1], v4
 ; VI-NEXT:    flat_store_dwordx4 v[0:1], v[0:3]
 ; VI-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: ps_mesa_v5i32:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_add_nc_u32_e32 v3, 4, v3
-; GFX11-NEXT:    v_add_nc_u32_e32 v2, 3, v2
 ; GFX11-NEXT:    v_add_nc_u32_e32 v1, 2, v1
 ; GFX11-NEXT:    v_add_nc_u32_e32 v4, 5, v4
 ; GFX11-NEXT:    v_add_nc_u32_e32 v0, 1, v0
+; GFX11-NEXT:    v_add_nc_u32_e32 v3, 4, v3
+; GFX11-NEXT:    v_add_nc_u32_e32 v2, 3, v2
 ; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    global_store_b32 v[0:1], v4, off
 ; GFX11-NEXT:    global_store_b128 v[0:1], v[0:3], off
@@ -1219,7 +1221,8 @@ define amdgpu_ps void @ps_mesa_v5i32(<5 x i32> %arg0) {
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_dual_add_nc_u32 v3, 4, v3 :: v_dual_add_nc_u32 v2, 3, v2
 ; GFX1250-NEXT:    v_dual_add_nc_u32 v1, 2, v1 :: v_dual_add_nc_u32 v4, 5, v4
-; GFX1250-NEXT:    v_add_nc_u32_e32 v0, 1, v0
+; GFX1250-NEXT:    v_dual_add_nc_u32 v0, 1, v0 :: v_dual_add_nc_u32 v3, 4, v3
+; GFX1250-NEXT:    v_add_nc_u32_e32 v2, 3, v2
 ; GFX1250-NEXT:    s_clause 0x1
 ; GFX1250-NEXT:    global_store_b32 v[0:1], v4, off
 ; GFX1250-NEXT:    global_store_b128 v[0:1], v[0:3], off
@@ -1245,20 +1248,20 @@ define amdgpu_ps void @ps_mesa_v5f32(<5 x float> %arg0) {
 ;
 ; VI-LABEL: ps_mesa_v5f32:
 ; VI:       ; %bb.0:
-; VI-NEXT:    v_add_f32_e32 v3, -1.0, v3
-; VI-NEXT:    v_add_f32_e32 v2, 4.0, v2
 ; VI-NEXT:    v_add_f32_e32 v1, 2.0, v1
 ; VI-NEXT:    v_add_f32_e32 v0, 1.0, v0
 ; VI-NEXT:    v_add_f32_e32 v4, 0.5, v4
+; VI-NEXT:    v_add_f32_e32 v3, -1.0, v3
+; VI-NEXT:    v_add_f32_e32 v2, 4.0, v2
 ; VI-NEXT:    flat_store_dword v[0:1], v4
 ; VI-NEXT:    flat_store_dwordx4 v[0:1], v[0:3]
 ; VI-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: ps_mesa_v5f32:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_dual_add_f32 v3, -1.0, v3 :: v_dual_add_f32 v2, 4.0, v2
 ; GFX11-NEXT:    v_dual_add_f32 v1, 2.0, v1 :: v_dual_add_f32 v4, 0.5, v4
-; GFX11-NEXT:    v_add_f32_e32 v0, 1.0, v0
+; GFX11-NEXT:    v_dual_add_f32 v0, 1.0, v0 :: v_dual_add_f32 v3, -1.0, v3
+; GFX11-NEXT:    v_add_f32_e32 v2, 4.0, v2
 ; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    global_store_b32 v[0:1], v4, off
 ; GFX11-NEXT:    global_store_b128 v[0:1], v[0:3], off
@@ -1269,7 +1272,8 @@ define amdgpu_ps void @ps_mesa_v5f32(<5 x float> %arg0) {
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_dual_add_f32 v3, -1.0, v3 :: v_dual_add_f32 v2, 4.0, v2
 ; GFX1250-NEXT:    v_dual_add_f32 v1, 2.0, v1 :: v_dual_add_f32 v4, 0.5, v4
-; GFX1250-NEXT:    v_add_f32_e32 v0, 1.0, v0
+; GFX1250-NEXT:    v_dual_add_f32 v0, 1.0, v0 :: v_dual_add_f32 v3, -1.0, v3
+; GFX1250-NEXT:    v_add_f32_e32 v2, 4.0, v2
 ; GFX1250-NEXT:    s_clause 0x1
 ; GFX1250-NEXT:    global_store_b32 v[0:1], v4, off
 ; GFX1250-NEXT:    global_store_b128 v[0:1], v[0:3], off

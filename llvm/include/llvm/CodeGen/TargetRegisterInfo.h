@@ -473,6 +473,28 @@ public:
     return false;
   }
 
+  /// Returns true if the two subregisters are equal or overlap.
+  /// The registers may be virtual registers.
+  bool subRegsOverlap(Register RegA, unsigned SubA, Register RegB,
+                      unsigned SubB) const {
+    if (RegA == RegB && SubA == SubB)
+      return true;
+    if (RegA.isVirtual() && RegB.isVirtual()) {
+      if (RegA != RegB)
+        return false;
+      LaneBitmask LA = getSubRegIndexLaneMask(SubA);
+      LaneBitmask LB = getSubRegIndexLaneMask(SubB);
+      return (LA & LB).any();
+    }
+    if (RegA.isPhysical() && RegB.isPhysical()) {
+      RegA = getSubReg(RegA.asMCReg(), SubA);
+      RegB = getSubReg(RegB.asMCReg(), SubB);
+      assert(RegB.isValid() && RegA.isValid() && "invalid subregister");
+      return MCRegisterInfo::regsOverlap(RegA.asMCReg(), RegB.asMCReg());
+    }
+    return false;
+  }
+
   /// Returns true if Reg contains RegUnit.
   bool hasRegUnit(MCRegister Reg, MCRegUnit RegUnit) const {
     return llvm::is_contained(regunits(Reg), RegUnit);
