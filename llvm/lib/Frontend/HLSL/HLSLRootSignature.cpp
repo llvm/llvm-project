@@ -163,25 +163,6 @@ void dumpRootElements(raw_ostream &OS, ArrayRef<RootElement> Elements) {
   OS << "}";
 }
 
-static MDString *ClauseTypeToName(LLVMContext &Ctx, ClauseType Type) {
-  StringRef Name;
-  switch (Type) {
-  case ClauseType::CBuffer:
-    Name = "CBV";
-    break;
-  case ClauseType::SRV:
-    Name = "SRV";
-    break;
-  case ClauseType::UAV:
-    Name = "UAV";
-    break;
-  case ClauseType::Sampler:
-    Name = "Sampler";
-    break;
-  }
-  return MDString::get(Ctx, Name);
-}
-
 MDNode *MetadataBuilder::BuildRootSignature() {
   for (const RootElement &Element : Elements) {
     MDNode *ElementMD = nullptr;
@@ -220,9 +201,12 @@ MDNode *MetadataBuilder::BuildDescriptorTable(const DescriptorTable &Table) {
 MDNode *MetadataBuilder::BuildDescriptorTableClause(
     const DescriptorTableClause &Clause) {
   IRBuilder<> B(Ctx);
+  std::string Name;
+  llvm::raw_string_ostream OS(Name);
+  OS << Clause.Type;
   return MDNode::get(
       Ctx, {
-               ClauseTypeToName(Ctx, Clause.Type),
+               MDString::get(Ctx, OS.str()),
                ConstantAsMetadata::get(B.getInt32(Clause.NumDescriptors)),
                ConstantAsMetadata::get(B.getInt32(Clause.Reg.Number)),
                ConstantAsMetadata::get(B.getInt32(Clause.Space)),
