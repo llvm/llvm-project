@@ -78,7 +78,7 @@ TEST(MemProf, DataAccessProfile) {
     // Test that symbol names and file names are stored in the input order.
     EXPECT_THAT(
         llvm::to_vector(llvm::make_first_range(Data.getStrToIndexMapRef())),
-        ElementsAre("foo", "bar.__uniq.321", "file2", "file1"));
+        ElementsAre("foo", "sym2", "bar.__uniq.321", "file2", "sym1", "file1"));
     EXPECT_THAT(Data.getKnownColdSymbols(), ElementsAre("sym2", "sym1"));
     EXPECT_THAT(Data.getKnownColdHashes(), ElementsAre(789, 678));
 
@@ -134,9 +134,10 @@ TEST(MemProf, DataAccessProfile) {
                 testing::IsEmpty());
     EXPECT_FALSE(deserializedData.deserialize(p));
 
-    EXPECT_THAT(llvm::to_vector(llvm::make_first_range(
-                    deserializedData.getStrToIndexMapRef())),
-                ElementsAre("foo", "bar.__uniq.321", "file2", "file1"));
+    EXPECT_THAT(
+        llvm::to_vector(
+            llvm::make_first_range(deserializedData.getStrToIndexMapRef())),
+        ElementsAre("foo", "sym2", "bar.__uniq.321", "file2", "sym1", "file1"));
     EXPECT_THAT(deserializedData.getKnownColdSymbols(),
                 ElementsAre("sym2", "sym1"));
     EXPECT_THAT(deserializedData.getKnownColdHashes(), ElementsAre(789, 678));
@@ -158,7 +159,7 @@ TEST(MemProf, DataAccessProfile) {
                 Field(&DataAccessProfRecordRef::AccessCount, 100),
                 Field(&DataAccessProfRecordRef::IsStringLiteral, false),
                 Field(&DataAccessProfRecordRef::Locations, testing::IsEmpty())),
-            AllOf(Field(&DataAccessProfRecordRef::SymbolID, 1),
+            AllOf(Field(&DataAccessProfRecordRef::SymbolID, 2),
                   Field(&DataAccessProfRecordRef::AccessCount, 123),
                   Field(&DataAccessProfRecordRef::IsStringLiteral, false),
                   Field(&DataAccessProfRecordRef::Locations,

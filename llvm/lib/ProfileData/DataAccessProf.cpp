@@ -111,7 +111,8 @@ Error DataAccessProfData::addKnownSymbolWithoutSamples(
   auto CanonicalName = getCanonicalName(std::get<StringRef>(SymbolID));
   if (!CanonicalName)
     return CanonicalName.takeError();
-  KnownColdSymbols.insert(*CanonicalName);
+  KnownColdSymbols.insert(
+      saveStringToMap(StrToIndexMap, Saver, *CanonicalName).first);
   return Error::success();
 }
 
