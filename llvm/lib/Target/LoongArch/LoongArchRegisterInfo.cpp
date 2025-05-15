@@ -140,7 +140,36 @@ bool LoongArchRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
   bool FrameRegIsKill = false;
 
-  if (!isInt<12>(Offset.getFixed())) {
+  int fixed_offset = Offset.getFixed();
+  bool OffsetLegal = false;
+
+  // Handle offsets that exceed the immediate range of the instruction
+  switch (MIOpc) {
+  case LoongArch::VSTELM_B:
+  case LoongArch::XVSTELM_B: {
+    OffsetLegal = isInt<8>(fixed_offset);
+    break;
+  }
+  case LoongArch::VSTELM_H:
+  case LoongArch::XVSTELM_H: {
+    OffsetLegal = isShiftedInt<8, 1>(fixed_offset);
+    break;
+  }
+  case LoongArch::VSTELM_W:
+  case LoongArch::XVSTELM_W: {
+    OffsetLegal = isShiftedInt<8, 2>(fixed_offset);
+    break;
+  }
+  case LoongArch::VSTELM_D:
+  case LoongArch::XVSTELM_D: {
+    OffsetLegal = isShiftedInt<8, 3>(fixed_offset);
+    break;
+  }
+  default:
+    OffsetLegal = isInt<12>(fixed_offset);
+  }
+
+  if (!OffsetLegal) {
     unsigned Addi = IsLA64 ? LoongArch::ADDI_D : LoongArch::ADDI_W;
     unsigned Add = IsLA64 ? LoongArch::ADD_D : LoongArch::ADD_W;
 

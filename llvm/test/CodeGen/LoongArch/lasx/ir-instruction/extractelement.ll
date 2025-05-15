@@ -222,3 +222,19 @@ define void @extract_4xdouble_idx(ptr %src, ptr %dst, i32 %idx) nounwind {
   store double %e, ptr %dst
   ret void
 }
+
+define void @eliminate_frame_index(<8 x i32> %a) nounwind {
+; CHECK-LABEL: eliminate_frame_index:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi.d $sp, $sp, -1040
+; CHECK-NEXT:    ori $a0, $zero, 524
+; CHECK-NEXT:    add.d $a0, $sp, $a0
+; CHECK-NEXT:    xvstelm.w $xr0, $a0, 0, 1
+; CHECK-NEXT:    addi.d $sp, $sp, 1040
+; CHECK-NEXT:    ret
+  %1 = alloca [32 x [8 x i32]]
+  %2 = getelementptr i8, ptr %1, i64 508
+  %b = extractelement <8 x i32> %a, i64 1
+  store i32 %b, ptr %2
+  ret void
+}
