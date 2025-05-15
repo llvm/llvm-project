@@ -705,8 +705,8 @@ bool Parser::IsLambdaAfterTypeCast() {
   SkipUntil(tok::r_square);
 
   auto IsLambdaKWOrAttribute = [&]() {
-    // These keyworks that either can appear somewhere in a lambda declarator,
-    // or cannot appear in a cast expression and we recover in favor of lambdas
+    // These are keyworks that can appear somewhere in a lambda declarator,
+    // or cannot appear in a cast-expression and we recover in favor of lambdas
     if (Tok.isOneOf(tok::kw___declspec, tok::kw___noinline__, tok::kw_noexcept,
                     tok::kw_throw, tok::kw_mutable, tok::kw___attribute,
                     tok::kw_constexpr, tok::kw_consteval, tok::kw_static,
