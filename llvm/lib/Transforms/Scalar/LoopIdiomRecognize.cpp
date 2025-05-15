@@ -1097,9 +1097,9 @@ bool LoopIdiomRecognize::processLoopStridedStore(
 
   CallInst *NewCall;
   if (Value *SplatValue = isBytewiseValue(StoredVal, *DL)) {
-    NewCall = Builder.CreateMemSet(
-        BasePtr, SplatValue, NumBytes, MaybeAlign(StoreAlignment),
-        /*isVolatile=*/false, AATags);
+    NewCall = Builder.CreateMemSet(BasePtr, SplatValue, NumBytes,
+                                   MaybeAlign(StoreAlignment),
+                                   /*isVolatile=*/false, AATags);
   } else if (isLibFuncEmittable(M, TLI, LibFunc_memset_pattern16)) {
     // Everything is emitted in default address space
     Type *Int8PtrTy = DestInt8PtrTy;
@@ -1413,9 +1413,9 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
   //  by previous checks.
   if (!IsAtomic) {
     if (UseMemMove)
-      NewCall = Builder.CreateMemMove(
-          StoreBasePtr, StoreAlign, LoadBasePtr, LoadAlign, NumBytes,
-          /*isVolatile=*/false, AATags);
+      NewCall = Builder.CreateMemMove(StoreBasePtr, StoreAlign, LoadBasePtr,
+                                      LoadAlign, NumBytes,
+                                      /*isVolatile=*/false, AATags);
     else
       NewCall =
           Builder.CreateMemCpy(StoreBasePtr, StoreAlign, LoadBasePtr, LoadAlign,

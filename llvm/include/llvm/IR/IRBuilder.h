@@ -608,9 +608,8 @@ public:
   /// Create and insert a memset to the specified pointer and the
   /// specified value.
   ///
-  /// If the pointer isn't an i8*, it will be converted. If a TBAA tag is
-  /// specified, it will be added to the instruction. Likewise with alias.scope
-  /// and noalias tags.
+  /// If the pointer isn't an i8*, it will be converted. If alias metadata is
+  /// specified, it will be added to the instruction.
   CallInst *CreateMemSet(Value *Ptr, Value *Val, uint64_t Size,
                          MaybeAlign Align, bool isVolatile = false,
                          const AAMDNodes &AAInfo = AAMDNodes()) {
@@ -628,9 +627,8 @@ public:
   /// Create and insert an element unordered-atomic memset of the region of
   /// memory starting at the given pointer to the given value.
   ///
-  /// If the pointer isn't an i8*, it will be converted. If a TBAA tag is
-  /// specified, it will be added to the instruction. Likewise with alias.scope
-  /// and noalias tags.
+  /// If the pointer isn't an i8*, it will be converted. If alias metadata is
+  /// specified, it will be added to the instruction.
   CallInst *
   CreateElementUnorderedAtomicMemSet(Value *Ptr, Value *Val, uint64_t Size,
                                      Align Alignment, uint32_t ElementSize,
@@ -661,8 +659,8 @@ public:
 
   /// Create and insert a memcpy between the specified pointers.
   ///
-  /// If the pointers aren't i8*, they will be converted.  If a TBAA tag is
-  /// specified, it will be added to the instruction. Likewise with alias.scope
+  /// If the pointers aren't i8*, they will be converted.  If alias metadata is
+  /// specified, it will be added to the instruction.
   /// and noalias tags.
   CallInst *CreateMemCpy(Value *Dst, MaybeAlign DstAlign, Value *Src,
                          MaybeAlign SrcAlign, uint64_t Size,
@@ -697,11 +695,11 @@ public:
   /// Create and insert an element unordered-atomic memcpy between the
   /// specified pointers.
   ///
-  /// DstAlign/SrcAlign are the alignments of the Dst/Src pointers, respectively.
+  /// DstAlign/SrcAlign are the alignments of the Dst/Src pointers,
+  /// respectively.
   ///
-  /// If the pointers aren't i8*, they will be converted.  If a TBAA tag is
-  /// specified, it will be added to the instruction. Likewise with alias.scope
-  /// and noalias tags.
+  /// If the pointers aren't i8*, they will be converted.  If alias metadata is
+  /// specified, it will be added to the instruction.
   CallInst *CreateElementUnorderedAtomicMemCpy(
       Value *Dst, Align DstAlign, Value *Src, Align SrcAlign, Value *Size,
       uint32_t ElementSize, const AAMDNodes &AAInfo = AAMDNodes());
@@ -728,9 +726,8 @@ public:
   /// DstAlign/SrcAlign are the alignments of the Dst/Src pointers,
   /// respectively.
   ///
-  /// If the pointers aren't i8*, they will be converted.  If a TBAA tag is
-  /// specified, it will be added to the instruction. Likewise with alias.scope
-  /// and noalias tags.
+  /// If the pointers aren't i8*, they will be converted.  If alias metadata is
+  /// specified, it will be added to the instruction.
   CallInst *CreateElementUnorderedAtomicMemMove(
       Value *Dst, Align DstAlign, Value *Src, Align SrcAlign, Value *Size,
       uint32_t ElementSize, const AAMDNodes &AAInfo = AAMDNodes());
