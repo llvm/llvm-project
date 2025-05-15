@@ -40,6 +40,33 @@ class C {
     return 1;
   }
 
+  int type_cast() {
+    int foo, bar;
+
+    (void)[]; // expected-error {{expected expression}}
+    (void)[+] {}; // expected-error {{expected variable name or 'this' in lambda capture list}}
+    (void)[foo+] {}; // expected-error {{expected ',' or ']' in lambda capture list}}
+    (void)[foo,&this] {}; // expected-error {{'this' cannot be captured by reference}}
+    (void)[&this] {}; // expected-error {{'this' cannot be captured by reference}}
+    (void)[&,] {}; // expected-error {{expected variable name or 'this' in lambda capture list}}
+    (void)[=,] {}; // expected-error {{expected variable name or 'this' in lambda capture list}}
+    (void)[] {};
+    (void)[=] (int i) {};
+    (void)[&] (int) mutable -> void {};
+    (void)[foo,bar] () { return 3; };
+    (void)[=,&foo] () {};
+    (void)[&,foo] () {};
+    (void)[this] () {};
+    (void)[] () -> class C { return C(); };
+    (void)[] () -> enum E { return e; };
+
+    (void)[] -> int { return 0; }; // cxx23ext-warning {{lambda without a parameter clause is a C++23 extension}}
+    (void)[] mutable -> int { return 0; }; // cxx23ext-warning {{is a C++23 extension}}
+
+    (void)[](int) -> {}; // PR13652 expected-error {{expected a type}}
+    return 1;
+  }
+
   void designator_or_lambda() {
     typedef int T;
     const int b = 0;
@@ -125,10 +152,46 @@ class C {
     [][[]]{}; // cxx23ext-warning {{an attribute specifier sequence in this position is a C++23 extension}}
   }
 
+  void attributes_type_cast() {
+    (void)[] __attribute__((noreturn)){}; // cxx23ext-warning {{lambda without a parameter clause is a C++23 extension}}
+
+    (void)[]() [[]]
+      mutable {}; // expected-error {{expected body of lambda expression}}
+
+    (void)[]() [[]] {};
+    (void)[]() [[]] -> void {};
+    (void)[]() mutable [[]] -> void {};
+#if __cplusplus >= 201103L
+    (void)[]() mutable noexcept [[]] -> void {};
+#endif
+
+    // Testing GNU-style attributes on lambdas -- the attribute is specified
+    // before the mutable specifier instead of after (unlike C++11).
+    (void)[]() __attribute__((noreturn)) mutable { while(1); };
+    (void)[]() mutable
+      __attribute__((noreturn)) { while(1); }; // expected-error {{expected body of lambda expression}}
+
+    // Testing support for P2173 on adding attributes to the declaration
+    // rather than the type.
+    (void)[][[]](){}; // cxx23ext-warning {{an attribute specifier sequence in this position is a C++23 extension}}
+
+    (void)[]<typename>[[]](){}; // cxx20ext-warning    {{explicit template parameter list for lambdas is a C++20 extension}}
+                          // cxx23ext-warning@-1 {{an attribute specifier sequence in this position is a C++23 extension}}
+
+    (void)[][[]]{}; // cxx23ext-warning {{an attribute specifier sequence in this position is a C++23 extension}}
+  }
+
   void missing_parens() {
     [] mutable {}; // cxx23ext-warning {{is a C++23 extension}}
 #if __cplusplus >= 201103L
     [] noexcept {}; // cxx23ext-warning {{is a C++23 extension}}
+#endif
+  }
+
+  void missing_parens_type_cast() {
+    (void)[] mutable {}; // cxx23ext-warning {{is a C++23 extension}}
+#if __cplusplus >= 201103L
+    (void)[] noexcept {}; // cxx23ext-warning {{is a C++23 extension}}
 #endif
   }
 };
@@ -149,6 +212,25 @@ struct S {
   void mf() { A(([*this]{})); } // cxx17ext-warning {{'*this' by copy is a C++17 extension}}
 };
 }
+
+#if __cplusplus >= 201103L
+namespace GH20723 {
+struct S {
+    S operator[](int);
+    S operator()();
+    S operator<(int);
+    S* operator->();
+    long a;
+};
+int n;
+void f() {
+    static_assert(__is_same_as(decltype((S())[n]()), S), "");
+    static_assert(__is_same_as(decltype((S())[n] < 0), S), "");
+    static_assert(__is_same_as(decltype((S())[n]->a), long), "");
+}
+}
+#endif
+
 
 struct S {
   template <typename T>

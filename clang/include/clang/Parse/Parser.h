@@ -4639,6 +4639,10 @@ private:
   ParseLambdaIntroducer(LambdaIntroducer &Intro,
                         LambdaIntroducerTentativeParse *Tentative = nullptr);
 
+  /// Tries to determine if an expression of the form (S())[...]...
+  /// is a type-cast followed by a lambda, or a subscript expression
+  bool IsLambdaAfterTypeCast();
+
   /// ParseLambdaExpressionAfterIntroducer - Parse the rest of a lambda
   /// expression.
   ExprResult ParseLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro);

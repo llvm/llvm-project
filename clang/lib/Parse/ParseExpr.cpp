@@ -1585,8 +1585,10 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
         }
         break;
       }
-      Res = ParseLambdaExpression();
-      break;
+      if (isTypeCast != TypeCastState::IsTypeCast || IsLambdaAfterTypeCast()) {
+        Res = ParseLambdaExpression();
+        break;
+      }
     }
     if (getLangOpts().ObjC) {
       Res = ParseObjCMessageExpression();
