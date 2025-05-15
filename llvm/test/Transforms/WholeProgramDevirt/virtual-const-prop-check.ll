@@ -37,28 +37,28 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; SKIP-ALL-NOT: devirtualized
 
-; CHECK: [[VT1DATA:@[^ ]*]] = private constant { [8 x i8], [3 x ptr], [0 x i8] } { [8 x i8] c"\00\00\00\01\00\00\00\02", [3 x ptr] [ptr @vf0i1, ptr @vf1i1, ptr @vf1i32], [0 x i8] zeroinitializer }, section "vt1sec", !type [[T8:![0-9]+]]
+; CHECK: [[VT1DATA:@[^ ]*]] = private constant { [8 x i8], [3 x ptr], [4 x i8] } { [8 x i8] c"\00\00\00\00\00\00\00\02", [3 x ptr] [ptr @vf0i1, ptr @vf1i1, ptr @vf1i32], [4 x i8] c"\01\00\00\00" }, section "vt1sec", !type [[T8:![0-9]+]]
 @vt1 = constant [3 x ptr] [
 ptr @vf0i1,
 ptr @vf1i1,
 ptr @vf1i32
 ], section "vt1sec", !type !0
 
-; CHECK: [[VT2DATA:@[^ ]*]] = private constant { [8 x i8], [3 x ptr], [0 x i8] } { [8 x i8] c"\00\00\00\02\00\00\00\01", [3 x ptr] [ptr @vf1i1, ptr @vf0i1, ptr @vf2i32], [0 x i8] zeroinitializer }, !type [[T8]]
+; CHECK: [[VT2DATA:@[^ ]*]] = private constant { [8 x i8], [3 x ptr], [4 x i8] } { [8 x i8] c"\00\00\00\00\00\00\00\01", [3 x ptr] [ptr @vf1i1, ptr @vf0i1, ptr @vf2i32], [4 x i8] c"\02\00\00\00" }, !type [[T8]]
 @vt2 = constant [3 x ptr] [
 ptr @vf1i1,
 ptr @vf0i1,
 ptr @vf2i32
 ], !type !0
 
-; CHECK: [[VT3DATA:@[^ ]*]] = private constant { [8 x i8], [3 x ptr], [0 x i8] } { [8 x i8] c"\00\00\00\03\00\00\00\02", [3 x ptr] [ptr @vf0i1, ptr @vf1i1, ptr @vf3i32], [0 x i8] zeroinitializer }, !type [[T8]]
+; CHECK: [[VT3DATA:@[^ ]*]] = private constant { [8 x i8], [3 x ptr], [4 x i8] } { [8 x i8] c"\00\00\00\00\00\00\00\02", [3 x ptr] [ptr @vf0i1, ptr @vf1i1, ptr @vf3i32], [4 x i8] c"\03\00\00\00" }, !type [[T8]]
 @vt3 = constant [3 x ptr] [
 ptr @vf0i1,
 ptr @vf1i1,
 ptr @vf3i32
 ], !type !0
 
-; CHECK: [[VT4DATA:@[^ ]*]] = private constant { [8 x i8], [3 x ptr], [0 x i8] } { [8 x i8] c"\00\00\00\04\00\00\00\01", [3 x ptr] [ptr @vf1i1, ptr @vf0i1, ptr @vf4i32], [0 x i8] zeroinitializer }, !type [[T8]]
+; CHECK: [[VT4DATA:@[^ ]*]] = private constant { [8 x i8], [3 x ptr], [4 x i8] } { [8 x i8] c"\00\00\00\00\00\00\00\01", [3 x ptr] [ptr @vf1i1, ptr @vf0i1, ptr @vf4i32], [4 x i8] c"\04\00\00\00" }, !type [[T8]]
 @vt4 = constant [3 x ptr] [
 ptr @vf1i1,
 ptr @vf0i1,
@@ -95,10 +95,10 @@ i32 trunc (i64 sub (i64 ptrtoint (ptr dso_local_equivalent @vf0i1 to i64), i64 p
 i32 trunc (i64 sub (i64 ptrtoint (ptr dso_local_equivalent @vf4i32 to i64), i64 ptrtoint (ptr @vt7_rel to i64)) to i32)
 ], !type !1
 
-; CHECK: @vt1 = alias [3 x ptr], getelementptr inbounds ({ [8 x i8], [3 x ptr], [0 x i8] }, ptr [[VT1DATA]], i32 0, i32 1)
-; CHECK: @vt2 = alias [3 x ptr], getelementptr inbounds ({ [8 x i8], [3 x ptr], [0 x i8] }, ptr [[VT2DATA]], i32 0, i32 1)
-; CHECK: @vt3 = alias [3 x ptr], getelementptr inbounds ({ [8 x i8], [3 x ptr], [0 x i8] }, ptr [[VT3DATA]], i32 0, i32 1)
-; CHECK: @vt4 = alias [3 x ptr], getelementptr inbounds ({ [8 x i8], [3 x ptr], [0 x i8] }, ptr [[VT4DATA]], i32 0, i32 1)
+; CHECK: @vt1 = alias [3 x ptr], getelementptr inbounds ({ [8 x i8], [3 x ptr], [4 x i8] }, ptr [[VT1DATA]], i32 0, i32 1)
+; CHECK: @vt2 = alias [3 x ptr], getelementptr inbounds ({ [8 x i8], [3 x ptr], [4 x i8] }, ptr [[VT2DATA]], i32 0, i32 1)
+; CHECK: @vt3 = alias [3 x ptr], getelementptr inbounds ({ [8 x i8], [3 x ptr], [4 x i8] }, ptr [[VT3DATA]], i32 0, i32 1)
+; CHECK: @vt4 = alias [3 x ptr], getelementptr inbounds ({ [8 x i8], [3 x ptr], [4 x i8] }, ptr [[VT4DATA]], i32 0, i32 1)
 ; CHECK: @vt6_rel = alias [3 x i32], getelementptr inbounds ({ [4 x i8], [3 x i32], [0 x i8] }, ptr [[VT6RELDATA]], i32 0, i32 1)
 ; CHECK: @vt7_rel = alias [3 x i32], getelementptr inbounds ({ [4 x i8], [3 x i32], [0 x i8] }, ptr [[VT7RELDATA]], i32 0, i32 1)
 
@@ -165,7 +165,7 @@ define i32 @call3(ptr %obj) {
   %vtable = load ptr, ptr %obj
   %pair = call {ptr, i1} @llvm.type.checked.load(ptr %vtable, i32 16, metadata !"typeid")
   %fptr = extractvalue {ptr, i1} %pair, 0
-  ; CHECK: [[VTGEP3:%[^ ]*]] = getelementptr i8, ptr %vtable, i32 -5
+  ; CHECK: [[VTGEP3:%[^ ]*]] = getelementptr i8, ptr %vtable, i32 24
   ; CHECK: [[VTLOAD3:%[^ ]*]] = load i32, ptr [[VTGEP3]]
   %result = call i32 %fptr(ptr %obj)
   ; CHECK: ret i32 [[VTLOAD3]]
