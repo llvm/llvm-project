@@ -445,21 +445,27 @@ def : ReadAdvance<ReadSFBALU, 0>;
 } // Unsupported = true
 }
 
-multiclass UnsupportedSchedZfa {
+multiclass UnsupportedSchedZfaWithQ {
+let Unsupported = true in {
+def : WriteRes<WriteFRoundF128, []>;
+def : WriteRes<WriteFLI128, []>;
+
+def : ReadAdvance<ReadFRoundF128, 0>;
+}
+}
+
+multiclass UnsupportedSchedZfa : UnsupportedSchedZfaWithQ {
 let Unsupported = true in {
 def : WriteRes<WriteFRoundF16, []>;
 def : WriteRes<WriteFRoundF32, []>;
 def : WriteRes<WriteFRoundF64, []>;
-def : WriteRes<WriteFRoundF128, []>;
 def : WriteRes<WriteFLI16, []>;
 def : WriteRes<WriteFLI32, []>;
 def : WriteRes<WriteFLI64, []>;
-def : WriteRes<WriteFLI128, []>;
 
 def : ReadAdvance<ReadFRoundF32, 0>;
 def : ReadAdvance<ReadFRoundF64, 0>;
 def : ReadAdvance<ReadFRoundF16, 0>;
-def : ReadAdvance<ReadFRoundF128, 0>;
 } // Unsupported = true
 }
 

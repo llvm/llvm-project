@@ -283,14 +283,12 @@ let Latency = 2 in {
   def : WriteRes<WriteFRoundF16, [GenericOOOFPU]>;
   def : WriteRes<WriteFRoundF32, [GenericOOOFPU]>;
   def : WriteRes<WriteFRoundF64, [GenericOOOFPU]>;
-  def : WriteRes<WriteFRoundF128, [GenericOOOFPU]>;
 }
 
 let Latency = 2 in {
   def : WriteRes<WriteFLI16, [GenericOOOFPU]>;
   def : WriteRes<WriteFLI32, [GenericOOOFPU]>;
   def : WriteRes<WriteFLI64, [GenericOOOFPU]>;
-  def : WriteRes<WriteFLI128, [GenericOOOFPU]>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -467,7 +465,6 @@ def : ReadAdvance<ReadXPERM, 0>;
 def : ReadAdvance<ReadFRoundF32, 0>;
 def : ReadAdvance<ReadFRoundF64, 0>;
 def : ReadAdvance<ReadFRoundF16, 0>;
-def : ReadAdvance<ReadFRoundF128, 0>;
 
 // Zfh extension
 def : ReadAdvance<ReadFCvtF16ToF64, 0>;
@@ -497,6 +494,7 @@ def : ReadAdvance<ReadFSqrt16, 0>;
 //===----------------------------------------------------------------------===//
 defm : UnsupportedSchedQ;
 defm : UnsupportedSchedV;
+defm : UnsupportedSchedZfaWithQ;
 defm : UnsupportedSchedZvk;
 defm : UnsupportedSchedSFB;
 defm : UnsupportedSchedXsfvcp;
