@@ -1817,7 +1817,7 @@ public:
   bool classNeedsVectorDestructor(const CXXRecordDecl *RD);
 
   // Helper to get the alignment for a variable.
-  unsigned getGlobalVarAlignment(const VarDecl *D = nullptr) {
+  unsigned getVtableGlobalVarAlignment(const VarDecl *D = nullptr) {
     LangAS AS = GetGlobalVarAddressSpace(D);
     unsigned PAlign = getItaniumVTableContext().isRelativeLayout()
                           ? 32

@@ -2556,7 +2556,7 @@ void CGDebugInfo::emitVTableSymbol(llvm::GlobalVariable *VTable,
       /*Val=*/nullptr, Tag);
 
   // Use the same vtable pointer to global alignment for the symbol.
-  unsigned PAlign = CGM.getGlobalVarAlignment();
+  unsigned PAlign = CGM.getVtableGlobalVarAlignment();
 
   // The global variable is in the CU scope, and links back to the type it's
   // "within" via the declaration field.
