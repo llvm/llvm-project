@@ -1217,35 +1217,6 @@ void CodeGenFunction::EmitBoundsCheck(const Expr *E, const Expr *Base,
   EmitBoundsCheckImpl(E, Bound, Index, IndexType, IndexedType, Accessed);
 }
 
-llvm::DILocation *CodeGenFunction::SanitizerAnnotateDebugInfo(
-    SanitizerKind::SanitizerOrdinal CheckKindOrdinal) {
-  std::string Label;
-  switch (CheckKindOrdinal) {
-#define SANITIZER(NAME, ID)                                                    \
-  case SanitizerKind::SO_##ID:                                                 \
-    Label = "__ubsan_check_" NAME;                                             \
-    break;
-#include "clang/Basic/Sanitizers.def"
-  default:
-    llvm_unreachable("unexpected sanitizer kind");
-  }
-
-  // Sanitize label
-  for (unsigned int i = 0; i < Label.length(); i++)
-    if (!std::isalpha(Label[i]))
-      Label[i] = '_';
-
-  llvm::DILocation *CheckDI = Builder.getCurrentDebugLocation();
-  // TODO: deprecate ClArrayBoundsPseudoFn
-  if (((ClArrayBoundsPseudoFn &&
-        CheckKindOrdinal == SanitizerKind::SO_ArrayBounds) ||
-       CGM.getCodeGenOpts().SanitizeAnnotateDebugInfo.has(CheckKindOrdinal)) &&
-      CheckDI)
-    CheckDI = getDebugInfo()->CreateSyntheticInlineAt(CheckDI, Label);
-
-  return CheckDI;
-}
-
 void CodeGenFunction::EmitBoundsCheckImpl(const Expr *E, llvm::Value *Bound,
                                           llvm::Value *Index,
                                           QualType IndexType,
