@@ -561,8 +561,8 @@ class OpenACC_DataEntryOp<string mnemonic, string clause, string extraDescriptio
     oilist(
         `varPtrPtr` `(` $varPtrPtr `:` type($varPtrPtr) `)`
       | `bounds` `(` $bounds `)`
-      | `async` `(` custom<DeviceTypeOperands>($asyncOperands,
-            type($asyncOperands), $asyncOperandsDeviceType) `)`
+      | `async` `` custom<DeviceTypeOperandsWithKeywordOnly>($asyncOperands,
+            type($asyncOperands), $asyncOperandsDeviceType, $asyncOnly)
     ) `->` type($accVar) attr-dict
   }];
 
@@ -922,8 +922,8 @@ class OpenACC_DataExitOpWithVarPtr<string mnemonic, string clause>
   let assemblyFormat = [{
     custom<AccVar>($accVar, type($accVar))
     (`bounds` `(` $bounds^ `)` )?
-    (`async` `(` custom<DeviceTypeOperands>($asyncOperands,
-            type($asyncOperands), $asyncOperandsDeviceType)^ `)`)?
+    (`async` `` custom<DeviceTypeOperandsWithKeywordOnly>($asyncOperands,
+            type($asyncOperands), $asyncOperandsDeviceType, $asyncOnly)^)?
     `to` custom<Var>($var) `:` custom<VarPtrType>(type($var), $varType)
     attr-dict
   }];
@@ -983,8 +983,8 @@ class OpenACC_DataExitOpNoVarPtr<string mnemonic, string clause> :
   let assemblyFormat = [{
     custom<AccVar>($accVar, type($accVar))
     (`bounds` `(` $bounds^ `)` )?
-    (`async` `(` custom<DeviceTypeOperands>($asyncOperands,
-            type($asyncOperands), $asyncOperandsDeviceType)^ `)`)?
+    (`async` `` custom<DeviceTypeOperandsWithKeywordOnly>($asyncOperands,
+            type($asyncOperands), $asyncOperandsDeviceType, $asyncOnly)^)?
     attr-dict
   }];
 
@@ -1439,8 +1439,8 @@ def OpenACC_ParallelOp : OpenACC_Op<"parallel",
     ( `combined` `(` `loop` `)` $combined^)?
     oilist(
         `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
-      | `async` `(` custom<DeviceTypeOperands>($asyncOperands,
-            type($asyncOperands), $asyncOperandsDeviceType) `)`
+      | `async` `` custom<DeviceTypeOperandsWithKeywordOnly>($asyncOperands,
+            type($asyncOperands), $asyncOperandsDeviceType, $asyncOnly)
       | `firstprivate` `(` custom<SymOperandList>($firstprivateOperands,
             type($firstprivateOperands), $firstprivatizations)
         `)`
@@ -1581,8 +1581,8 @@ def OpenACC_SerialOp : OpenACC_Op<"serial",
     ( `combined` `(` `loop` `)` $combined^)?
     oilist(
         `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
-      | `async` `(` custom<DeviceTypeOperands>($asyncOperands,
-            type($asyncOperands), $asyncOperandsDeviceType) `)`
+      | `async` `` custom<DeviceTypeOperandsWithKeywordOnly>($asyncOperands,
+            type($asyncOperands), $asyncOperandsDeviceType, $asyncOnly)
       | `firstprivate` `(` custom<SymOperandList>($firstprivateOperands,
             type($firstprivateOperands), $firstprivatizations)
         `)`
@@ -1750,8 +1750,8 @@ def OpenACC_KernelsOp : OpenACC_Op<"kernels",
     ( `combined` `(` `loop` `)` $combined^)?
     oilist(
         `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
-      | `async` `(` custom<DeviceTypeOperands>($asyncOperands,
-            type($asyncOperands), $asyncOperandsDeviceType) `)`
+      | `async` `` custom<DeviceTypeOperandsWithKeywordOnly>($asyncOperands,
+            type($asyncOperands), $asyncOperandsDeviceType, $asyncOnly)
       | `num_gangs` `(` custom<NumGangs>($numGangs,
             type($numGangs), $numGangsDeviceType, $numGangsSegments) `)`
       | `num_workers` `(` custom<DeviceTypeOperands>($numWorkers,
@@ -1870,8 +1870,8 @@ def OpenACC_DataOp : OpenACC_Op<"data",
   let assemblyFormat = [{
     oilist(
         `if` `(` $ifCond `)`
-      | `async` `(` custom<DeviceTypeOperands>($asyncOperands,
-            type($asyncOperands), $asyncOperandsDeviceType) `)`
+      | `async` `` custom<DeviceTypeOperandsWithKeywordOnly>($asyncOperands,
+            type($asyncOperands), $asyncOperandsDeviceType, $asyncOnly)
       | `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
       | `wait` `` custom<WaitClause>($waitOperands, type($waitOperands),
           $waitOperandsDeviceType, $waitOperandsSegments, $hasWaitDevnum,
@@ -1934,9 +1934,11 @@ def OpenACC_EnterDataOp : OpenACC_Op<"enter_data",
   let assemblyFormat = [{
     oilist(
         `if` `(` $ifCond `)`
-      | `async` `(` $asyncOperand `:` type($asyncOperand) `)`
+      | `async` `` custom<OperandWithKeywordOnly>($asyncOperand,
+            type($asyncOperand), $async)
       | `wait_devnum` `(` $waitDevnum `:` type($waitDevnum) `)`
-      | `wait` `(` $waitOperands `:` type($waitOperands) `)`
+      | `wait` `` custom<OperandsWithKeywordOnly>($waitOperands,
+            type($waitOperands), $wait)
       | `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
     )
     attr-dict-with-keyword
@@ -1986,9 +1988,11 @@ def OpenACC_ExitDataOp : OpenACC_Op<"exit_data",
   let assemblyFormat = [{
     oilist(
         `if` `(` $ifCond `)`
-      | `async` `(` $asyncOperand `:` type($asyncOperand) `)`
+      | `async` `` custom<OperandWithKeywordOnly>($asyncOperand,
+            type($asyncOperand), $async)
       | `wait_devnum` `(` $waitDevnum `:` type($waitDevnum) `)`
-      | `wait` `(` $waitOperands `:` type($waitOperands) `)`
+      | `wait` `` custom<OperandsWithKeywordOnly>($waitOperands,
+            type($waitOperands), $wait)
       | `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
     )
     attr-dict-with-keyword
@@ -2853,7 +2857,7 @@ def OpenACC_UpdateOp : OpenACC_Op<"update",
   let arguments = (ins Optional<I1>:$ifCond,
       Variadic<IntOrIndex>:$asyncOperands,
       OptionalAttr<DeviceTypeArrayAttr>:$asyncOperandsDeviceType,
-      OptionalAttr<DeviceTypeArrayAttr>:$async,
+      OptionalAttr<DeviceTypeArrayAttr>:$asyncOnly,
       Variadic<IntOrIndex>:$waitOperands,
       OptionalAttr<DenseI32ArrayAttr>:$waitOperandsSegments,
       OptionalAttr<DeviceTypeArrayAttr>:$waitOperandsDeviceType,
@@ -2901,9 +2905,8 @@ def OpenACC_UpdateOp : OpenACC_Op<"update",
   let assemblyFormat = [{
     oilist(
         `if` `(` $ifCond `)`
-      | `async` `` custom<DeviceTypeOperandsWithKeywordOnly>(
-            $asyncOperands, type($asyncOperands),
-            $asyncOperandsDeviceType, $async)
+      | `async` `` custom<DeviceTypeOperandsWithKeywordOnly>($asyncOperands,
+            type($asyncOperands), $asyncOperandsDeviceType, $asyncOnly)
       | `wait` `` custom<WaitClause>($waitOperands, type($waitOperands),
           $waitOperandsDeviceType, $waitOperandsSegments, $hasWaitDevnum,
           $waitOnly)
@@ -2948,9 +2951,11 @@ def OpenACC_WaitOp : OpenACC_Op<"wait", [AttrSizedOperandSegments]> {
 
   let assemblyFormat = [{
     ( `(` $waitOperands^ `:` type($waitOperands) `)` )?
-    oilist(`async` `(` $asyncOperand `:` type($asyncOperand) `)`
-      |`wait_devnum` `(` $waitDevnum `:` type($waitDevnum) `)`
-      |`if` `(` $ifCond `)`
+    oilist(
+        `async` `` custom<OperandWithKeywordOnly>($asyncOperand,
+            type($asyncOperand), $async)
+      |  `wait_devnum` `(` $waitDevnum `:` type($waitDevnum) `)`
+      | `if` `(` $ifCond `)`
     ) attr-dict-with-keyword
   }];
   let hasVerifier = 1;

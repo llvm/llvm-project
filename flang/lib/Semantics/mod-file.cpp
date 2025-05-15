@@ -1548,6 +1548,7 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
   // created under -fhermetic-module-files?  If so, process them first in
   // their own nested scope that will be visible only to USE statements
   // within the module file.
+  Scope *previousHermetic{context_.currentHermeticModuleFileScope()};
   if (parseTree.v.size() > 1) {
     parser::Program hermeticModules{std::move(parseTree.v)};
     parseTree.v.emplace_back(std::move(hermeticModules.v.front()));
@@ -1563,7 +1564,7 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
   GetModuleDependences(context_.moduleDependences(), sourceFile->content());
   ResolveNames(context_, parseTree, topScope);
   context_.foldingContext().set_moduleFileName(wasModuleFileName);
-  context_.set_currentHermeticModuleFileScope(nullptr);
+  context_.set_currentHermeticModuleFileScope(previousHermetic);
   if (!moduleSymbol) {
     // Submodule symbols' storage are owned by their parents' scopes,
     // but their names are not in their parents' dictionaries -- we

@@ -877,6 +877,26 @@ static bool isVectorSubscript(const evaluate::Expr<T> &expr) {
   return false;
 }
 
+bool ClauseProcessor::processDefaultMap(lower::StatementContext &stmtCtx,
+                                        DefaultMapsTy &result) const {
+  auto process = [&](const omp::clause::Defaultmap &clause,
+                     const parser::CharBlock &) {
+    using Defmap = omp::clause::Defaultmap;
+    clause::Defaultmap::VariableCategory variableCategory =
+        Defmap::VariableCategory::All;
+    // Variable Category is optional, if not specified defaults to all.
+    // Multiples of the same category are illegal as are any other
+    // defaultmaps being specified when a user specified all is in place,
+    // however, this should be handled earlier during semantics.
+    if (auto varCat =
+            std::get<std::optional<Defmap::VariableCategory>>(clause.t))
+      variableCategory = varCat.value();
+    auto behaviour = std::get<Defmap::ImplicitBehavior>(clause.t);
+    result[variableCategory] = behaviour;
+  };
+  return findRepeatableClause<omp::clause::Defaultmap>(process);
+}
+
 bool ClauseProcessor::processDepend(lower::SymMap &symMap,
                                     lower::StatementContext &stmtCtx,
                                     mlir::omp::DependClauseOps &result) const {
@@ -1387,8 +1407,7 @@ bool ClauseProcessor::processUseDeviceAddr(
           const parser::CharBlock &source) {
         mlir::Location location = converter.genLocation(source);
         llvm::omp::OpenMPOffloadMappingFlags mapTypeBits =
-            llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO |
-            llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
+            llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_RETURN_PARAM;
         processMapObjects(stmtCtx, location, clause.v, mapTypeBits,
                           parentMemberIndices, result.useDeviceAddrVars,
                           useDeviceSyms);
@@ -1409,8 +1428,7 @@ bool ClauseProcessor::processUseDevicePtr(
           const parser::CharBlock &source) {
         mlir::Location location = converter.genLocation(source);
         llvm::omp::OpenMPOffloadMappingFlags mapTypeBits =
-            llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO |
-            llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
+            llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_RETURN_PARAM;
         processMapObjects(stmtCtx, location, clause.v, mapTypeBits,
                           parentMemberIndices, result.useDevicePtrVars,
                           useDeviceSyms);
