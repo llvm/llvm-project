@@ -240,6 +240,34 @@ def BF16RT   : RegTyInfo<bf16, Int16Regs, bf16imm, fpimm, supports_imm = 0>;
 def F16X2RT  : RegTyInfo<v2f16, Int32Regs, ?, ?, supports_imm = 0>;
 def BF16X2RT : RegTyInfo<v2bf16, Int32Regs, ?, ?, supports_imm = 0>;
 
+// This class provides a basic wrapper around an NVPTXInst that abstracts the
+// specific syntax of most PTX instructions. It automatically handles the
+// construction of the asm string based on the provided dag arguments.
+class BasicFlagsNVPTXInst<dag outs_dag, dag ins_dag, dag flags_dag, string asmstr,
+                          list<dag> pattern = []>
+  : NVPTXInst<
+      outs_dag,
+      !con(ins_dag, flags_dag),
+      !strconcat(
+        asmstr,
+        !if(!and(!empty(ins_dag), !empty(outs_dag)), "",
+          !strconcat(
+            " \t",
+            !interleave(
+              !foreach(i, !range(!size(outs_dag)),
+                "$" # !getdagname(outs_dag, i)),
+              "|"),
+            !if(!or(!empty(ins_dag), !empty(outs_dag)), "", ", "),
+            !interleave(
+              !foreach(i, !range(!size(ins_dag)),
+                "$" # !getdagname(ins_dag, i)),
+              ", "))),
+        ";"),
+      pattern>;
+
+class BasicNVPTXInst<dag outs, dag insv, string asmstr, list<dag> pattern = []>
+  : BasicFlagsNVPTXInst<outs, insv, (ins), asmstr, pattern>;
+
 
 multiclass I3Inst<string op_str, SDPatternOperator op_node, RegTyInfo t,
                   bit commutative, list<Predicate> requires = []> {
