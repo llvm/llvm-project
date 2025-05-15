@@ -520,12 +520,12 @@ Improvements to Clang's diagnostics
 - Several compatibility diagnostics that were incorrectly being grouped under
   ``-Wpre-c++20-compat`` are now part of ``-Wc++20-compat``. (#GH138775)
 
-- Improved the ``-Wtautological-overlap-compare`` diagnostics to warn about overlapping and non-overlapping ranges involving character literals and floating-point literals. 
+- Improved the ``-Wtautological-overlap-compare`` diagnostics to warn about overlapping and non-overlapping ranges involving character literals and floating-point literals.
   The warning message for non-overlapping cases has also been improved (#GH13473).
 
 - Fixed a duplicate diagnostic when performing typo correction on function template
   calls with explicit template arguments. (#GH139226)
-  
+
 - Explanatory note is printed when ``assert`` fails during evaluation of a
   constant expression. Prior to this, the error inaccurately implied that assert
   could not be used at all in a constant expression (#GH130458)
@@ -709,6 +709,7 @@ Bug Fixes to C++ Support
 - Fixed the handling of pack indexing types in the constraints of a member function redeclaration. (#GH138255)
 - Clang now correctly parses arbitrary order of ``[[]]``, ``__attribute__`` and ``alignas`` attributes for declarations (#GH133107)
 - Fixed a crash when forming an invalid function type in a dependent context. (#GH138657) (#GH115725) (#GH68852)
+- Clang no longer segfaults when there is a configuration mismatch between modules and their users (http://crbug.com/400353616).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
