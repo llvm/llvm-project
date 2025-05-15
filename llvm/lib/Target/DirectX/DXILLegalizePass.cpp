@@ -250,6 +250,7 @@ static void emitMemcpyExpansion(IRBuilder<> &Builder, Value *Dst, Value *Src,
                                 ConstantInt *Length) {
 
   uint64_t ByteLength = Length->getZExtValue();
+  // If length to copy is zero, no memcpy is needed.
   if (ByteLength == 0)
     return;
 
