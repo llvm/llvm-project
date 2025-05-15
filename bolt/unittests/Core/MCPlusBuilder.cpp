@@ -9,6 +9,8 @@
 #ifdef AARCH64_AVAILABLE
 #include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
+#include "AArch64.h"
+#include "MCTargetDesc/AArch64AddressingModes.h"
 #endif // AARCH64_AVAILABLE
 
 #ifdef X86_AVAILABLE
@@ -178,12 +180,11 @@ TEST_P(MCPlusBuilderTester, AArch64_LoadZero) {
 
   ASSERT_EQ(BB->size(), 1);
   auto II = BB->begin();
-  // mov x0, xzr <=> orr x0, xzr, xzr, lsl #0
-  ASSERT_EQ(II->getOpcode(), AArch64::ORRXrs);
+  // mov x0, #0
+  ASSERT_EQ(II->getOpcode(), AArch64::MOVZXi);
   ASSERT_EQ(II->getOperand(0).getReg(), AArch64::X0);
-  ASSERT_EQ(II->getOperand(1).getReg(), AArch64::XZR);
-  ASSERT_EQ(II->getOperand(2).getReg(), AArch64::XZR);
-  ASSERT_EQ(II->getOperand(3).getImm(), 0);
+  ASSERT_EQ(II->getOperand(1).getImm(), 0);
+  ASSERT_EQ(II->getOperand(2).getImm(), 0);
 }
 
 TEST_P(MCPlusBuilderTester, AArch64_LoadImm16) {
@@ -256,18 +257,19 @@ TEST_P(MCPlusBuilderTester, AArch64_LoadImm64Partial) {
 
   ASSERT_EQ(BB->size(), 2);
   auto II = BB->begin();
-  // mov x0, #2, lsl #16
-  ASSERT_EQ(II->getOpcode(), AArch64::MOVZXi);
+  // orr x0, xzr, #0x20000
+  ASSERT_EQ(II->getOpcode(), AArch64::ORRXri);
   ASSERT_EQ(II->getOperand(0).getReg(), AArch64::X0);
-  ASSERT_EQ(II->getOperand(1).getImm(), 2);
-  ASSERT_EQ(II->getOperand(2).getImm(), 16);
+  ASSERT_EQ(II->getOperand(1).getReg(), AArch64::XZR);
+  ASSERT_EQ(II->getOperand(2).getImm(),
+            AArch64_AM::encodeLogicalImmediate(2 << 16, 64));
   II++;
-  // movk x0, #4, lsl #48
-  ASSERT_EQ(II->getOpcode(), AArch64::MOVKXi);
+  // orr x0, x0, #0x4000000000000
+  ASSERT_EQ(II->getOpcode(), AArch64::ORRXri);
   ASSERT_EQ(II->getOperand(0).getReg(), AArch64::X0);
   ASSERT_EQ(II->getOperand(1).getReg(), AArch64::X0);
-  ASSERT_EQ(II->getOperand(2).getImm(), 4);
-  ASSERT_EQ(II->getOperand(3).getImm(), 48);
+  ASSERT_EQ(II->getOperand(2).getImm(),
+            AArch64_AM::encodeLogicalImmediate(((uint64_t)4) << 48, 64));
 }
 
 TEST_P(MCPlusBuilderTester, testAccessedRegsImplicitDef) {
