@@ -9,8 +9,7 @@ define double @load_g_0() nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:  .Lpcrel_hi0:
 ; CHECK-NEXT:    auipc a0, %pcrel_hi(g_0)
-; CHECK-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi0)
-; CHECK-NEXT:    ld a0, 0(a0)
+; CHECK-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi0)(a0)
 ; CHECK-NEXT:    ret
 entry:
   %0 = load double, ptr @g_0
@@ -22,9 +21,8 @@ define void @store_g_0() nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:  .Lpcrel_hi1:
 ; CHECK-NEXT:    auipc a0, %pcrel_hi(g_0)
-; CHECK-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi1)
 ; CHECK-NEXT:    fcvt.d.w a2, zero
-; CHECK-NEXT:    sd a2, 0(a0)
+; CHECK-NEXT:    sd a2, %pcrel_lo(.Lpcrel_hi1)(a0)
 ; CHECK-NEXT:    ret
 entry:
   store double 0.0, ptr @g_0
