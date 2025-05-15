@@ -1740,6 +1740,20 @@ public:
   /// recently incremented counter.
   uint64_t getCurrentProfileCount() { return PGO.getCurrentRegionCount(); }
 
+  /// See CGDebugInfo::addInstToCurrentSourceAtom.
+  void addInstToCurrentSourceAtom(llvm::Instruction *KeyInstruction,
+                                  llvm::Value *Backup) {
+    if (CGDebugInfo *DI = getDebugInfo())
+      DI->addInstToCurrentSourceAtom(KeyInstruction, Backup);
+  }
+
+  /// See CGDebugInfo::addRetToOverrideOrNewSourceAtom.
+  void addRetToOverrideOrNewSourceAtom(llvm::ReturnInst *Ret,
+                                       llvm::Value *Backup) {
+    if (CGDebugInfo *DI = getDebugInfo())
+      DI->addRetToOverrideOrNewSourceAtom(Ret, Backup);
+  }
+
 private:
   /// SwitchInsn - This is nearest current switch instruction. It is null if
   /// current context is not in a switch.
