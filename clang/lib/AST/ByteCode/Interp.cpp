@@ -1375,6 +1375,8 @@ bool CheckDestructor(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
     return false;
   if (!CheckTemporary(S, OpPC, Ptr, AK_Destroy))
     return false;
+  if (!CheckRange(S, OpPC, Ptr, AK_Destroy))
+    return false;
 
   // Can't call a dtor on a global variable.
   if (Ptr.block()->isStatic()) {
