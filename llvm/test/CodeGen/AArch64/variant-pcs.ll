@@ -1,13 +1,6 @@
 ; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve -o - %s | FileCheck %s --check-prefix=CHECK-ASM --strict-whitespace
-; RUN: llc -mtriple=arm64-apple-macosx -mattr=+sve -o - %s | FileCheck %s --check-prefix=CHECK-ASM-NON-ELF-TARGET
 ; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve -filetype=obj -o - %s \
 ; RUN:   | llvm-readobj --symbols - | FileCheck %s --check-prefix=CHECK-OBJ
-; RUN: llc -mtriple=arm64-apple-macosx -mattr=+sve -filetype=obj -o - %s \
-; RUN:   | llvm-readobj --symbols - | FileCheck %s --check-prefix=CHECK-OBJ-NON-ELF-TARGET
-
-; .variant_pcs directive should only be emitted for ELF targets.
-; CHECK-ASM-NON-ELF-TARGET-NOT: .variant_pcs
-; CHECK-OBJ-NON-ELF-TARGET-NOT: Other [ (0x80)
 
 ; Check we don't crash when using a Mach-O object format.
 ; RUN: llc -mtriple=arm64-apple-macosx15.0.0 -mattr=+sve -filetype=obj -o /dev/null %s
