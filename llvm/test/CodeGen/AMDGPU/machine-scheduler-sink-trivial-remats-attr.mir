@@ -815,10 +815,9 @@ body:             |
     S_ENDPGM 0
 ...
 # Min/Max waves/EU is 8. For targets with non-unified RF (gfx908) we are able to
-# eliminate both ArchVGPR and AGPR spilling by saving 2 ArchVGPRs (one for
-# spilling AGPR to ArchVGPR). In the unified RF case (gfx90a) the ArchVGPR
-# allocation granule forces us to remat all eligible ArchVGPRs to eliminate
-# spilling.
+# eliminate both ArchVGPR and AGPR spilling by saving 2 VGPRs. In the unified RF
+# case (gfx90a) the ArchVGPR allocation granule forces us to remat more
+# ArchVGPRs to eliminate spilling.
 ---
 name:            reduce_arch_and_acc_vgrp_spill
 tracksRegLiveness: true
