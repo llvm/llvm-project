@@ -491,6 +491,12 @@ void LinkerDriver::parseDirectives(InputFile *file) {
     case OPT_alternatename:
       file->symtab.parseAlternateName(arg->getValue());
       break;
+    case OPT_arm64xsameaddress:
+      if (!file->symtab.isEC())
+        Warn(ctx) << arg->getSpelling()
+                  << " is not allowed in non-ARM64EC files (" << toString(file)
+                  << ")";
+      break;
     case OPT_defaultlib:
       if (std::optional<StringRef> path = findLibIfNew(arg->getValue()))
         enqueuePath(*path, false, false);
