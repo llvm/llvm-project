@@ -311,6 +311,14 @@ ompt_label_##id:
   printf("%" PRIu64 ": current_address=%p or %p or %p\n",                      \
          ompt_get_thread_data()->value, ((char *)addr) - 2,                    \
          ((char *)addr) - 8, ((char *)addr) - 12)
+#elif KMP_ARCH_SPARC
+// FIXME: Need to distinguish between 32 and 64-bit SPARC?
+// On SPARC the NOP instruction is 4 bytes long.
+// FIXME: Explain.  Can use __builtin_frob_return_addr?
+#define print_possible_return_addresses(addr)                                  \
+  printf("%" PRIu64 ": current_address=%p or %p\n",                            \
+         ompt_get_thread_data()->value, ((char *)addr) - 12,                   \
+         (char *)addr - 20)
 #else
 #error Unsupported target architecture, cannot determine address offset!
 #endif
