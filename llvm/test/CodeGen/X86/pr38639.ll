@@ -4,7 +4,7 @@
 define <8 x double> @test(<4 x double> %a, <4 x double> %b) {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovaps {{.*#+}} ymm1 = [u,8.2071743224100002E-1,8.2071743224100002E-1,8.2071743224100002E-1]
+; CHECK-NEXT:    vbroadcastsd {{.*#+}} ymm1 = [8.2071743224100002E-1,8.2071743224100002E-1,8.2071743224100002E-1,8.2071743224100002E-1]
 ; CHECK-NEXT:    vblendps {{.*#+}} ymm2 = ymm0[0,1,2,3],ymm1[4,5,6,7]
 ; CHECK-NEXT:    vblendps {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm0[4,5,6,7]
 ; CHECK-NEXT:    vunpckhpd {{.*#+}} ymm1 = ymm1[1],ymm2[1],ymm1[3],ymm2[3]
