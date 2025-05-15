@@ -3144,24 +3144,6 @@ extern const internal::VariadicFunction<internal::Matcher<NamedDecl>, StringRef,
                                         internal::hasAnyNameFunc>
     hasAnyName;
 
-/// Matches NamedDecl nodes that have any of the names in vector.
-///
-/// This is useful for matching a list of names that are only known at runtime,
-/// e.g. through a command line argument.
-///
-/// \code
-///     hasAnyName({a, b, c})
-/// \endcode
-///  is equivalent to
-/// \code
-///     anyOf(hasName(a), hasName(b), hasName(c))
-/// \endcode
-inline internal::Matcher<NamedDecl>
-hasAnyNameInVector(std::vector<std::string> Names) {
-  return internal::Matcher<NamedDecl>(
-      new internal::HasNameMatcher(std::move(Names)));
-}
-
 /// Matches NamedDecl nodes whose fully qualified names contain
 /// a substring matched by the given RegExp.
 ///
