@@ -479,12 +479,10 @@ ExplodedGraph::trim(ArrayRef<const NodeTy *> Sinks,
     // in the trimmed graph, then add the corresponding edges with
     // `addPredecessor()`, otherwise add them to the worklist.
     for (const ExplodedNode *Pred : N->Preds) {
-      auto Iterator = ForwardMap->find(Pred);
-      if (Iterator != ForwardMap->end()) {
-        NewN->addPredecessor(const_cast<ExplodedNode *>(Iterator->second), *Trimmed);
-      } else {
+      if (const ExplodedNode *Mapped = ForwardMap->lookup(Pred))
+        NewN->addPredecessor(const_cast<ExplodedNode *>(Mapped), *Trimmed);
+      else
         Worklist.push_back(Pred);
-      }
     }
 
     // Iterate over the successors of the node: if they are present in the
@@ -492,12 +490,9 @@ ExplodedGraph::trim(ArrayRef<const NodeTy *> Sinks,
     // (If they are not present in the trimmed graph, we don't add them to the
     // worklist. Maybe we'll reach them through a different direction, maybe
     // they will be omitted from the trimmed graph.)
-    for (const ExplodedNode *Succ : N->Succs) {
-      auto Iterator = ForwardMap->find(Succ);
-      if (Iterator != ForwardMap->end()) {
-        const_cast<ExplodedNode *>(Iterator->second)->addPredecessor(NewN, *Trimmed);
-      }
-    }
+    for (const ExplodedNode *Succ : N->Succs)
+      if (const ExplodedNode *Mapped = ForwardMap->lookup(Succ))
+        const_cast<ExplodedNode *>(Mapped)->addPredecessor(NewN, *Trimmed);
   }
 
   assert(Trimmed->getRoot() && "The root must be reachable from any nonempty set of sinks!");
