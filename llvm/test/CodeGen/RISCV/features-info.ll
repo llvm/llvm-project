@@ -74,6 +74,7 @@
 ; CHECK-NEXT:   predictable-select-expensive     - Prefer likely predicted branches over selects.
 ; CHECK-NEXT:   prefer-vsetvli-over-read-vlenb   - Prefer vsetvli over read vlenb CSR to calculate VLEN.
 ; CHECK-NEXT:   prefer-w-inst                    - Prefer instructions with W suffix.
+; CHECK-NEXT:   q                                - 'Q' (Quad-Precision Floating-Point).
 ; CHECK-NEXT:   relax                            - Enable Linker relaxation..
 ; CHECK-NEXT:   reserve-x1                       - Reserve X1.
 ; CHECK-NEXT:   reserve-x10                      - Reserve X10.

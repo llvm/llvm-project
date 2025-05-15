@@ -292,6 +292,13 @@ def HasStdExtD : Predicate<"Subtarget->hasStdExtD()">,
                  AssemblerPredicate<(all_of FeatureStdExtD),
                                     "'D' (Double-Precision Floating-Point)">;
 
+def FeatureStdExtQ
+    : RISCVExtension<2, 2, "Quad-Precision Floating-Point", [FeatureStdExtD]>,
+      RISCVExtensionBitmask<0, 16>;
+def HasStdExtQ : Predicate<"Subtarget->hasStdExtQ()">,
+                 AssemblerPredicate<(all_of FeatureStdExtQ),
+                                    "'Q' (Quad-Precision Floating-Point)">;
+
 def FeatureStdExtZfhmin
     : RISCVExtension<1, 0, "Half-Precision Floating-Point Minimal",
                      [FeatureStdExtF]>,

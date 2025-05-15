@@ -981,6 +981,7 @@ R"(All available -march extensions for RISC-V
     a                    2.1
     f                    2.2
     d                    2.2
+    q                    2.2
     c                    2.0
     b                    1.0
     v                    1.0
