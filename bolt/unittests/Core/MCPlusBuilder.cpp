@@ -7,10 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #ifdef AARCH64_AVAILABLE
-#include "AArch64Subtarget.h"
-#include "MCTargetDesc/AArch64MCTargetDesc.h"
 #include "AArch64.h"
+#include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
+#include "MCTargetDesc/AArch64MCTargetDesc.h"
 #endif // AARCH64_AVAILABLE
 
 #ifdef X86_AVAILABLE
