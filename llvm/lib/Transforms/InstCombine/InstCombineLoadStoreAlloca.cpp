@@ -1065,24 +1065,33 @@ Instruction *InstCombinerImpl::visitLoadInst(LoadInst &LI) {
     /// the memcpy A or identify the source of the load instruction.
     if (auto *MemCpy = dyn_cast<MemCpyInst>(AvailableVal)) {
       Value *NewSrc = MemCpy->getSource();
+      Value *OldSrc = LI.getPointerOperand();
       MaybeAlign NewAlign = MemCpy->getSourceAlign();
-      if (NewAlign.has_value())
-        NewAlign = commonAlignment(*NewAlign, Offset);
-      if (Offset != 0)
-        NewSrc = Builder.CreateInBoundsPtrAdd(NewSrc, Builder.getInt64(Offset));
-      // Avoid infinite loops
-      if (!BatchAA.isMustAlias(LI.getPointerOperand(), NewSrc)) {
-
-        Instruction *NewLI = Builder.CreateAlignedLoad(LI.getType(), NewSrc,
-                                                       NewAlign, LI.getName());
-        return replaceInstUsesWith(LI, NewLI);
+      if (Offset != 0) {
+        if (NewAlign.has_value())
+          NewAlign = commonAlignment(*NewAlign, Offset);
+        // Avoid increasing instructions
+        if (isa<Instruction>(OldSrc) && OldSrc->hasOneUse())
+          NewSrc =
+              Builder.CreateInBoundsPtrAdd(NewSrc, Builder.getInt64(Offset));
+        else
+          NewSrc = nullptr;
       }
-      if (Offset != 0 && NewSrc->use_empty())
-        cast<Instruction>(NewSrc)->eraseFromParent();
+      // Avoid infinite loops
+      if (NewSrc && !BatchAA.isMustAlias(OldSrc, NewSrc))
+        AvailableVal = Builder.CreateAlignedLoad(LI.getType(), NewSrc, NewAlign,
+                                                 LI.getName());
+      else {
+        AvailableVal = nullptr;
+        if (NewSrc && NewSrc->use_empty())
+          cast<Instruction>(NewSrc)->eraseFromParent();
+      }
     } else
-      return replaceInstUsesWith(
-          LI, Builder.CreateBitOrPointerCast(AvailableVal, LI.getType(),
-                                             LI.getName() + ".cast"));
+      AvailableVal = Builder.CreateBitOrPointerCast(AvailableVal, LI.getType(),
+                                                    LI.getName() + ".cast");
+
+    if (AvailableVal)
+      return replaceInstUsesWith(LI, AvailableVal);
   }
 
   // None of the following transforms are legal for volatile/ordered atomic

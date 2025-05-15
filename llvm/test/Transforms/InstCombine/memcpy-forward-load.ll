@@ -137,8 +137,7 @@ define i8 @failed_forward_load_gep_multi_use(ptr %src) {
 ; CHECK-NEXT:    [[DEST:%.*]] = alloca [3 x i8], align 1
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(3) [[DEST]], ptr noundef nonnull align 1 dereferenceable(3) [[SRC]], i64 3, i1 false)
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds nuw i8, ptr [[DEST]], i64 2
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[SRC]], i64 2
-; CHECK-NEXT:    [[VAL1:%.*]] = load i8, ptr [[TMP1]], align 1
+; CHECK-NEXT:    [[VAL1:%.*]] = load i8, ptr [[GEP]], align 1
 ; CHECK-NEXT:    call void @use_ptr(ptr nonnull [[GEP]])
 ; CHECK-NEXT:    ret i8 [[VAL1]]
 ;
