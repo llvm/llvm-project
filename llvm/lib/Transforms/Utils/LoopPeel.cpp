@@ -596,6 +596,7 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
   // TTI.getPeelingPreferences or by the flag -unroll-peel-count.
   unsigned TargetPeelCount = PP.PeelCount;
   PP.PeelCount = 0;
+  PP.PeelLast = false;
   if (!canPeel(L))
     return;
 
