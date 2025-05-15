@@ -653,7 +653,7 @@ void CodeViewDebug::endModule() {
   emitCompilerInformation();
   endCVSubsection(CompilerInfo);
 
-  emitHotPatchInformation();
+  emitSecureHotPatchInformation();
 
   emitInlineeLinesSubsection();
 
@@ -809,30 +809,26 @@ void CodeViewDebug::emitObjName() {
   endSymbolRecord(CompilerEnd);
 }
 
-void CodeViewDebug::emitHotPatchInformation() {
+void CodeViewDebug::emitSecureHotPatchInformation() {
   MCSymbol *hotPatchInfo = nullptr;
+
   for (const auto &F : MMI->getModule()->functions()) {
     if (!F.isDeclarationForLinker() &&
         F.hasFnAttribute(Attribute::MarkedForWindowsHotPatching)) {
-      if (hotPatchInfo == nullptr) {
+      if (hotPatchInfo == nullptr)
         hotPatchInfo = beginCVSubsection(DebugSubsectionKind::Symbols);
-      }
       MCSymbol *HotPatchEnd = beginSymbolRecord(SymbolKind::S_HOTPATCHFUNC);
       auto *SP = F.getSubprogram();
       OS.AddComment("Function");
       OS.emitInt32(getFuncIdForSubprogram(SP).getIndex());
       OS.AddComment("Name");
-      llvm::StringRef Name = SP->getLinkageName();
-      if (Name.empty()) {
-        Name = F.getName();
-      }
-      emitNullTerminatedSymbolName(OS, Name);
+      emitNullTerminatedSymbolName(OS, F.getName());
       endSymbolRecord(HotPatchEnd);
     }
   }
-  if (hotPatchInfo != nullptr) {
+
+  if (hotPatchInfo != nullptr)
     endCVSubsection(hotPatchInfo);
-  }
 }
 
 namespace {

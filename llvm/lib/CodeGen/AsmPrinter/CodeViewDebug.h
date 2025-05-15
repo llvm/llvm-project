@@ -333,7 +333,7 @@ private:
 
   void emitCompilerInformation();
 
-  void emitHotPatchInformation();
+  void emitSecureHotPatchInformation();
 
   void emitBuildInfo();
 

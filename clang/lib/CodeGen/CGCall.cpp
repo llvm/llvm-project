@@ -2652,11 +2652,9 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
 
     // Windows hotpatching support
     if (!MSHotPatchFunctions.empty()) {
-      bool IsHotPatched = std::binary_search(MSHotPatchFunctions.begin(),
-                                             MSHotPatchFunctions.end(), Name);
-      if (IsHotPatched) {
+      bool IsHotPatched = llvm::binary_search(MSHotPatchFunctions, Name);
+      if (IsHotPatched)
         FuncAttrs.addAttribute(llvm::Attribute::MarkedForWindowsHotPatching);
-      }
     }
   }
 

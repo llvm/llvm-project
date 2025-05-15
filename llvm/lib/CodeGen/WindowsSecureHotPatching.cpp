@@ -132,7 +132,7 @@ char WindowsSecureHotPatching::ID = 0;
 
 INITIALIZE_PASS(WindowsSecureHotPatching, "windows-secure-hot-patch",
                 "Mark functions for Windows hot patch support", false, false)
-ModulePass *llvm::createWindowsSecureHotPatching() {
+ModulePass *llvm::createWindowsSecureHotPatchingPass() {
   return new WindowsSecureHotPatching();
 }
 
