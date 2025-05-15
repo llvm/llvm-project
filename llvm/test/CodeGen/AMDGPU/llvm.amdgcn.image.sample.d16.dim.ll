@@ -198,12 +198,13 @@ define amdgpu_ps half @image_sample_2d_f16_tfe(<8 x i32> inreg %rsrc, <4 x i32> 
 ; GFX13-TRUE16-NEXT:    s_wqm_b32 exec_lo, exec_lo
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v3, v2
-; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v5, v3 :: v_dual_mov_b32 v4, v2
+; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v4, v3
+; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v3, v2
 ; GFX13-TRUE16-NEXT:    s_and_b32 exec_lo, exec_lo, s14
-; GFX13-TRUE16-NEXT:    image_sample v[4:5], [v0, v1], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_2D tfe d16
+; GFX13-TRUE16-NEXT:    image_sample v[3:4], [v0, v1], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_2D tfe d16
 ; GFX13-TRUE16-NEXT:    s_wait_samplecnt 0x0
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v4.l
-; GFX13-TRUE16-NEXT:    global_store_b32 v2, v5, s[12:13] scope:SCOPE_SE
+; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v3.l
+; GFX13-TRUE16-NEXT:    global_store_b32 v2, v4, s[12:13] scope:SCOPE_SE
 ; GFX13-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX13-FAKE16-LABEL: image_sample_2d_f16_tfe:

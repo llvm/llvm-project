@@ -312,15 +312,14 @@ define <4 x i32> @nonsplat_shuffleinsert2(<4 x i16> %b, i16 %b0, i16 %b1, i16 %b
 ; CHECK-GI-LABEL: nonsplat_shuffleinsert2:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    sxth w8, w0
-; CHECK-GI-NEXT:    sshll v0.4s, v0.4h, #0
-; CHECK-GI-NEXT:    mov v1.s[0], w8
-; CHECK-GI-NEXT:    sxth w8, w1
-; CHECK-GI-NEXT:    mov v1.s[1], w8
+; CHECK-GI-NEXT:    sxth w9, w1
+; CHECK-GI-NEXT:    fmov s1, w8
 ; CHECK-GI-NEXT:    sxth w8, w2
-; CHECK-GI-NEXT:    mov v1.s[2], w8
+; CHECK-GI-NEXT:    mov v1.h[1], w9
+; CHECK-GI-NEXT:    mov v1.h[2], w8
 ; CHECK-GI-NEXT:    sxth w8, w3
-; CHECK-GI-NEXT:    mov v1.s[3], w8
-; CHECK-GI-NEXT:    mul v0.4s, v1.4s, v0.4s
+; CHECK-GI-NEXT:    mov v1.h[3], w8
+; CHECK-GI-NEXT:    smull v0.4s, v1.4h, v0.4h
 ; CHECK-GI-NEXT:    ret
 entry:
   %s0 = sext i16 %b0 to i32

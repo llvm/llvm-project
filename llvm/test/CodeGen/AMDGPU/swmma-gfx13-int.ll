@@ -4,11 +4,10 @@
 define amdgpu_ps void @test_swmma_f32_16x16x32_iu8_clamp(<2 x i32> %A, <4 x i32> %B, <8 x float> %C, i32 %Index, ptr addrspace(1) %out) {
 ; GFX13-LABEL: test_swmma_f32_16x16x32_iu8_clamp:
 ; GFX13:       ; %bb.0: ; %bb
-; GFX13-NEXT:    v_dual_mov_b32 v17, v16 :: v_dual_mov_b32 v16, v15
 ; GFX13-NEXT:    v_swmma_f32_16x16_iu8 v[6:13], v[0:1], v[2:5], v[6:13], v14 signed_a signed_b sparse_index_odd clamp
 ; GFX13-NEXT:    s_clause 0x1
-; GFX13-NEXT:    global_store_b128 v[16:17], v[10:13], off offset:16
-; GFX13-NEXT:    global_store_b128 v[16:17], v[6:9], off
+; GFX13-NEXT:    global_store_b128 v[15:16], v[10:13], off offset:16 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v[15:16], v[6:9], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %res = call <8 x float> @llvm.amdgcn.swmma.f32.16x16x32.iu8.clamp(i1 1, <2 x i32> %A, i1 1, <4 x i32> %B, <8 x float> %C, i32 %Index, i1 1, i1 1)
@@ -18,11 +17,10 @@ bb:
 define amdgpu_ps void @test_swmma_f32i32_16x16x32_iu8_clamp(<2 x i32> %A, <4 x i32> %B, <8 x i32> %C, i32 %Index, ptr addrspace(1) %out) {
 ; GFX13-LABEL: test_swmma_f32i32_16x16x32_iu8_clamp:
 ; GFX13:       ; %bb.0: ; %bb
-; GFX13-NEXT:    v_dual_mov_b32 v17, v16 :: v_dual_mov_b32 v16, v15
 ; GFX13-NEXT:    v_swmma_f32i32_16x16_iu8 v[6:13], v[0:1], v[2:5], v[6:13], v14 signed_a signed_b sparse_index_odd clamp
 ; GFX13-NEXT:    s_clause 0x1
-; GFX13-NEXT:    global_store_b128 v[16:17], v[10:13], off offset:16
-; GFX13-NEXT:    global_store_b128 v[16:17], v[6:9], off
+; GFX13-NEXT:    global_store_b128 v[15:16], v[10:13], off offset:16 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v[15:16], v[6:9], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %res = call <8 x float> @llvm.amdgcn.swmma.f32i32.16x16x32.iu8.clamp(i1 1, <2 x i32> %A, i1 1, <4 x i32> %B, <8 x i32> %C, i32 %Index, i1 1, i1 1)
@@ -32,11 +30,10 @@ bb:
 define amdgpu_ps void @test_swmma_i32_16x16x32_iu8_clamp(<2 x i32> %A, <4 x i32> %B, <8 x i32> %C, i32 %Index, ptr addrspace(1) %out) {
 ; GFX13-LABEL: test_swmma_i32_16x16x32_iu8_clamp:
 ; GFX13:       ; %bb.0: ; %bb
-; GFX13-NEXT:    v_dual_mov_b32 v17, v16 :: v_dual_mov_b32 v16, v15
 ; GFX13-NEXT:    v_swmma_i32_16x16_iu8 v[6:13], v[0:1], v[2:5], v[6:13], v14 signed_a signed_b sparse_index_odd clamp
 ; GFX13-NEXT:    s_clause 0x1
-; GFX13-NEXT:    global_store_b128 v[16:17], v[10:13], off offset:16
-; GFX13-NEXT:    global_store_b128 v[16:17], v[6:9], off
+; GFX13-NEXT:    global_store_b128 v[15:16], v[10:13], off offset:16 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v[15:16], v[6:9], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %res = call <8 x i32> @llvm.amdgcn.swmma.i32.16x16x32.iu8.clamp(i1 1, <2 x i32> %A, i1 1, <4 x i32> %B, <8 x i32> %C, i32 %Index, i1 1, i1 1)
@@ -46,15 +43,10 @@ bb:
 define amdgpu_ps void @test_swmma_f32_16x16x32_iu4_clamp(i32 %A, <2 x i32> %B, <8 x float> %C, i32 %Index, ptr addrspace(1) %out) {
 ; GFX13-LABEL: test_swmma_f32_16x16x32_iu4_clamp:
 ; GFX13:       ; %bb.0: ; %bb
-; GFX13-NEXT:    v_dual_mov_b32 v21, v10 :: v_dual_mov_b32 v20, v9
-; GFX13-NEXT:    v_dual_mov_b32 v19, v8 :: v_dual_mov_b32 v18, v7
-; GFX13-NEXT:    v_dual_mov_b32 v17, v6 :: v_dual_mov_b32 v16, v5
-; GFX13-NEXT:    v_dual_mov_b32 v15, v4 :: v_dual_mov_b32 v14, v3
-; GFX13-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
-; GFX13-NEXT:    v_swmma_f32_16x16_iu4 v[14:21], v0, v[2:3], v[14:21], v11 signed_a signed_b sparse_index_odd clamp
+; GFX13-NEXT:    v_swmma_f32_16x16_iu4 v[3:10], v0, v[1:2], v[3:10], v11 signed_a signed_b sparse_index_odd clamp
 ; GFX13-NEXT:    s_clause 0x1
-; GFX13-NEXT:    global_store_b128 v[12:13], v[18:21], off offset:16
-; GFX13-NEXT:    global_store_b128 v[12:13], v[14:17], off
+; GFX13-NEXT:    global_store_b128 v[12:13], v[7:10], off offset:16 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v[12:13], v[3:6], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %res = call <8 x float> @llvm.amdgcn.swmma.f32.16x16x32.iu4.clamp(i1 1, i32 %A, i1 1, <2 x i32> %B, <8 x float> %C, i32 %Index, i1 1, i1 1)
@@ -64,15 +56,10 @@ bb:
 define amdgpu_ps void @test_swmma_f32i32_16x16x32_iu4_clamp(i32 %A, <2 x i32> %B, <8 x i32> %C, i32 %Index, ptr addrspace(1) %out) {
 ; GFX13-LABEL: test_swmma_f32i32_16x16x32_iu4_clamp:
 ; GFX13:       ; %bb.0: ; %bb
-; GFX13-NEXT:    v_dual_mov_b32 v21, v10 :: v_dual_mov_b32 v20, v9
-; GFX13-NEXT:    v_dual_mov_b32 v19, v8 :: v_dual_mov_b32 v18, v7
-; GFX13-NEXT:    v_dual_mov_b32 v17, v6 :: v_dual_mov_b32 v16, v5
-; GFX13-NEXT:    v_dual_mov_b32 v15, v4 :: v_dual_mov_b32 v14, v3
-; GFX13-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
-; GFX13-NEXT:    v_swmma_f32i32_16x16_iu4 v[14:21], v0, v[2:3], v[14:21], v11 signed_a signed_b sparse_index_odd clamp
+; GFX13-NEXT:    v_swmma_f32i32_16x16_iu4 v[3:10], v0, v[1:2], v[3:10], v11 signed_a signed_b sparse_index_odd clamp
 ; GFX13-NEXT:    s_clause 0x1
-; GFX13-NEXT:    global_store_b128 v[12:13], v[18:21], off offset:16
-; GFX13-NEXT:    global_store_b128 v[12:13], v[14:17], off
+; GFX13-NEXT:    global_store_b128 v[12:13], v[7:10], off offset:16 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v[12:13], v[3:6], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %res = call <8 x float> @llvm.amdgcn.swmma.f32i32.16x16x32.iu4.clamp(i1 1, i32 %A, i1 1, <2 x i32> %B, <8 x i32> %C, i32 %Index, i1 1, i1 1)
@@ -82,15 +69,10 @@ bb:
 define amdgpu_ps void @test_swmma_i32_16x16x32_iu4_clamp(i32 %A, <2 x i32> %B, <8 x i32> %C, i32 %Index, ptr addrspace(1) %out) {
 ; GFX13-LABEL: test_swmma_i32_16x16x32_iu4_clamp:
 ; GFX13:       ; %bb.0: ; %bb
-; GFX13-NEXT:    v_dual_mov_b32 v21, v10 :: v_dual_mov_b32 v20, v9
-; GFX13-NEXT:    v_dual_mov_b32 v19, v8 :: v_dual_mov_b32 v18, v7
-; GFX13-NEXT:    v_dual_mov_b32 v17, v6 :: v_dual_mov_b32 v16, v5
-; GFX13-NEXT:    v_dual_mov_b32 v15, v4 :: v_dual_mov_b32 v14, v3
-; GFX13-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
-; GFX13-NEXT:    v_swmma_i32_16x16_iu4 v[14:21], v0, v[2:3], v[14:21], v11 signed_a signed_b sparse_index_odd clamp
+; GFX13-NEXT:    v_swmma_i32_16x16_iu4 v[3:10], v0, v[1:2], v[3:10], v11 signed_a signed_b sparse_index_odd clamp
 ; GFX13-NEXT:    s_clause 0x1
-; GFX13-NEXT:    global_store_b128 v[12:13], v[18:21], off offset:16
-; GFX13-NEXT:    global_store_b128 v[12:13], v[14:17], off
+; GFX13-NEXT:    global_store_b128 v[12:13], v[7:10], off offset:16 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v[12:13], v[3:6], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %res = call <8 x i32> @llvm.amdgcn.swmma.i32.16x16x32.iu4.clamp(i1 1, i32 %A, i1 1, <2 x i32> %B, <8 x i32> %C, i32 %Index, i1 1, i1 1)
@@ -100,11 +82,10 @@ bb:
 define amdgpu_ps void @test_swmma_f32_16x16x64_iu8_clamp(<4 x i32> %A, <8 x i32> %B, <8 x float> %C, i32 %Index, ptr addrspace(1) %out) {
 ; GFX13-LABEL: test_swmma_f32_16x16x64_iu8_clamp:
 ; GFX13:       ; %bb.0: ; %bb
-; GFX13-NEXT:    v_dual_mov_b32 v23, v22 :: v_dual_mov_b32 v22, v21
 ; GFX13-NEXT:    v_swmma_f32_16x16_iu8 v[12:19], v[0:3], v[4:11], v[12:19], v20 signed_a signed_b sparse_index_odd clamp
 ; GFX13-NEXT:    s_clause 0x1
-; GFX13-NEXT:    global_store_b128 v[22:23], v[16:19], off offset:16
-; GFX13-NEXT:    global_store_b128 v[22:23], v[12:15], off
+; GFX13-NEXT:    global_store_b128 v[21:22], v[16:19], off offset:16 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v[21:22], v[12:15], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %res = call <8 x float> @llvm.amdgcn.swmma.f32.16x16x64.iu8.clamp(i1 1, <4 x i32> %A, i1 1, <8 x i32> %B, <8 x float> %C, i32 %Index, i1 1, i1 1)
@@ -114,11 +95,10 @@ bb:
 define amdgpu_ps void @test_swmma_f32i32_16x16x64_iu8_clamp(<4 x i32> %A, <8 x i32> %B, <8 x i32> %C, i32 %Index, ptr addrspace(1) %out) {
 ; GFX13-LABEL: test_swmma_f32i32_16x16x64_iu8_clamp:
 ; GFX13:       ; %bb.0: ; %bb
-; GFX13-NEXT:    v_dual_mov_b32 v23, v22 :: v_dual_mov_b32 v22, v21
 ; GFX13-NEXT:    v_swmma_f32i32_16x16_iu8 v[12:19], v[0:3], v[4:11], v[12:19], v20 signed_a signed_b sparse_index_odd clamp
 ; GFX13-NEXT:    s_clause 0x1
-; GFX13-NEXT:    global_store_b128 v[22:23], v[16:19], off offset:16
-; GFX13-NEXT:    global_store_b128 v[22:23], v[12:15], off
+; GFX13-NEXT:    global_store_b128 v[21:22], v[16:19], off offset:16 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v[21:22], v[12:15], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %res = call <8 x float> @llvm.amdgcn.swmma.f32i32.16x16x64.iu8.clamp(i1 1, <4 x i32> %A, i1 1, <8 x i32> %B, <8 x i32> %C, i32 %Index, i1 1, i1 1)
@@ -128,11 +108,10 @@ bb:
 define amdgpu_ps void @test_swmma_i32_16x16x64_iu8_clamp(<4 x i32> %A, <8 x i32> %B, <8 x i32> %C, i32 %Index, ptr addrspace(1) %out) {
 ; GFX13-LABEL: test_swmma_i32_16x16x64_iu8_clamp:
 ; GFX13:       ; %bb.0: ; %bb
-; GFX13-NEXT:    v_dual_mov_b32 v23, v22 :: v_dual_mov_b32 v22, v21
 ; GFX13-NEXT:    v_swmma_i32_16x16_iu8 v[12:19], v[0:3], v[4:11], v[12:19], v20 signed_a signed_b sparse_index_odd clamp
 ; GFX13-NEXT:    s_clause 0x1
-; GFX13-NEXT:    global_store_b128 v[22:23], v[16:19], off offset:16
-; GFX13-NEXT:    global_store_b128 v[22:23], v[12:15], off
+; GFX13-NEXT:    global_store_b128 v[21:22], v[16:19], off offset:16 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v[21:22], v[12:15], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %res = call <8 x i32> @llvm.amdgcn.swmma.i32.16x16x64.iu8.clamp(i1 1, <4 x i32> %A, i1 1, <8 x i32> %B, <8 x i32> %C, i32 %Index, i1 1, i1 1)
@@ -142,11 +121,10 @@ bb:
 define amdgpu_ps void @test_swmma_f32_16x16x64_iu4_clamp(<2 x i32> %A, <4 x i32> %B, <8 x float> %C, i32 %Index, ptr addrspace(1) %out) {
 ; GFX13-LABEL: test_swmma_f32_16x16x64_iu4_clamp:
 ; GFX13:       ; %bb.0: ; %bb
-; GFX13-NEXT:    v_dual_mov_b32 v17, v16 :: v_dual_mov_b32 v16, v15
 ; GFX13-NEXT:    v_swmma_f32_16x16_iu4 v[6:13], v[0:1], v[2:5], v[6:13], v14 signed_a signed_b sparse_index_odd clamp
 ; GFX13-NEXT:    s_clause 0x1
-; GFX13-NEXT:    global_store_b128 v[16:17], v[10:13], off offset:16
-; GFX13-NEXT:    global_store_b128 v[16:17], v[6:9], off
+; GFX13-NEXT:    global_store_b128 v[15:16], v[10:13], off offset:16 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v[15:16], v[6:9], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %res = call <8 x float> @llvm.amdgcn.swmma.f32.16x16x64.iu4.clamp(i1 1, <2 x i32> %A, i1 1, <4 x i32> %B, <8 x float> %C, i32 %Index, i1 1, i1 1)
@@ -156,11 +134,10 @@ bb:
 define amdgpu_ps void @test_swmma_f32i32_16x16x64_iu4_clamp(<2 x i32> %A, <4 x i32> %B, <8 x i32> %C, i32 %Index, ptr addrspace(1) %out) {
 ; GFX13-LABEL: test_swmma_f32i32_16x16x64_iu4_clamp:
 ; GFX13:       ; %bb.0: ; %bb
-; GFX13-NEXT:    v_dual_mov_b32 v17, v16 :: v_dual_mov_b32 v16, v15
 ; GFX13-NEXT:    v_swmma_f32i32_16x16_iu4 v[6:13], v[0:1], v[2:5], v[6:13], v14 signed_a signed_b sparse_index_odd clamp
 ; GFX13-NEXT:    s_clause 0x1
-; GFX13-NEXT:    global_store_b128 v[16:17], v[10:13], off offset:16
-; GFX13-NEXT:    global_store_b128 v[16:17], v[6:9], off
+; GFX13-NEXT:    global_store_b128 v[15:16], v[10:13], off offset:16 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v[15:16], v[6:9], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %res = call <8 x float> @llvm.amdgcn.swmma.f32i32.16x16x64.iu4.clamp(i1 1, <2 x i32> %A, i1 1, <4 x i32> %B, <8 x i32> %C, i32 %Index, i1 1, i1 1)
@@ -170,11 +147,10 @@ bb:
 define amdgpu_ps void @test_swmma_i32_16x16x64_iu4_clamp(<2 x i32> %A, <4 x i32> %B, <8 x i32> %C, i32 %Index, ptr addrspace(1) %out) {
 ; GFX13-LABEL: test_swmma_i32_16x16x64_iu4_clamp:
 ; GFX13:       ; %bb.0: ; %bb
-; GFX13-NEXT:    v_dual_mov_b32 v17, v16 :: v_dual_mov_b32 v16, v15
 ; GFX13-NEXT:    v_swmma_i32_16x16_iu4 v[6:13], v[0:1], v[2:5], v[6:13], v14 signed_a signed_b sparse_index_odd clamp
 ; GFX13-NEXT:    s_clause 0x1
-; GFX13-NEXT:    global_store_b128 v[16:17], v[10:13], off offset:16
-; GFX13-NEXT:    global_store_b128 v[16:17], v[6:9], off
+; GFX13-NEXT:    global_store_b128 v[15:16], v[10:13], off offset:16 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v[15:16], v[6:9], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %res = call <8 x i32> @llvm.amdgcn.swmma.i32.16x16x64.iu4.clamp(i1 1, <2 x i32> %A, i1 1, <4 x i32> %B, <8 x i32> %C, i32 %Index, i1 1, i1 1)
@@ -186,8 +162,8 @@ define amdgpu_ps void @test_swmma_f32_16x16x128_iu4_clamp(<4 x i32> %A, <8 x i32
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_swmma_f32_16x16_iu4 v[12:19], v[0:3], v[4:11], v[12:19], v[20:21] signed_a signed_b sparse_index_odd clamp
 ; GFX13-NEXT:    s_clause 0x1
-; GFX13-NEXT:    global_store_b128 v[22:23], v[16:19], off offset:16
-; GFX13-NEXT:    global_store_b128 v[22:23], v[12:15], off
+; GFX13-NEXT:    global_store_b128 v[22:23], v[16:19], off offset:16 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v[22:23], v[12:15], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %res = call <8 x float> @llvm.amdgcn.swmma.f32.16x16x128.iu4.clamp(i1 1, <4 x i32> %A, i1 1, <8 x i32> %B, <8 x float> %C, <2 x i32> %Index, i1 1, i1 1)
@@ -199,8 +175,8 @@ define amdgpu_ps void @test_swmma_f32i32_16x16x128_iu4_clamp(<4 x i32> %A, <8 x 
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_swmma_f32i32_16x16_iu4 v[12:19], v[0:3], v[4:11], v[12:19], v[20:21] signed_a signed_b sparse_index_odd clamp
 ; GFX13-NEXT:    s_clause 0x1
-; GFX13-NEXT:    global_store_b128 v[22:23], v[16:19], off offset:16
-; GFX13-NEXT:    global_store_b128 v[22:23], v[12:15], off
+; GFX13-NEXT:    global_store_b128 v[22:23], v[16:19], off offset:16 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v[22:23], v[12:15], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %res = call <8 x float> @llvm.amdgcn.swmma.f32i32.16x16x128.iu4.clamp(i1 1, <4 x i32> %A, i1 1, <8 x i32> %B, <8 x i32> %C, <2 x i32> %Index, i1 1, i1 1)
@@ -212,8 +188,8 @@ define amdgpu_ps void @test_swmma_i32_16x16x128_iu4_clamp(<4 x i32> %A, <8 x i32
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_swmma_i32_16x16_iu4 v[12:19], v[0:3], v[4:11], v[12:19], v[20:21] signed_a signed_b sparse_index_odd clamp
 ; GFX13-NEXT:    s_clause 0x1
-; GFX13-NEXT:    global_store_b128 v[22:23], v[16:19], off offset:16
-; GFX13-NEXT:    global_store_b128 v[22:23], v[12:15], off
+; GFX13-NEXT:    global_store_b128 v[22:23], v[16:19], off offset:16 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v[22:23], v[12:15], off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 bb:
   %res = call <8 x i32> @llvm.amdgcn.swmma.i32.16x16x128.iu4.clamp(i1 1, <4 x i32> %A, i1 1, <8 x i32> %B, <8 x i32> %C, <2 x i32> %Index, i1 1, i1 1)

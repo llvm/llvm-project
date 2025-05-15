@@ -29,7 +29,9 @@ void llvm::initializeAnalysis(PassRegistry &Registry) {
   initializeCycleInfoWrapperPassPass(Registry);
   initializeDXILMetadataAnalysisWrapperPassPass(Registry);
   initializeDXILResourceWrapperPassPass(Registry);
+  initializeDXILResourceBindingWrapperPassPass(Registry);
   initializeDXILResourceTypeWrapperPassPass(Registry);
+  initializeDXILResourceWrapperPassPass(Registry);
   initializeDependenceAnalysisWrapperPassPass(Registry);
   initializeDominanceFrontierWrapperPassPass(Registry);
   initializeDomViewerWrapperPassPass(Registry);

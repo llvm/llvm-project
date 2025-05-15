@@ -6,9 +6,9 @@
 ;; i8
 
 define void @st_global_i8(ptr addrspace(0) %ptr, i8 %a) {
-; PTX32: st.u8 [%r{{[0-9]+}}], %rs{{[0-9]+}}
+; PTX32: st.b8 [%r{{[0-9]+}}], %rs{{[0-9]+}}
 ; PTX32: ret
-; PTX64: st.u8 [%rd{{[0-9]+}}], %rs{{[0-9]+}}
+; PTX64: st.b8 [%rd{{[0-9]+}}], %rs{{[0-9]+}}
 ; PTX64: ret
   store i8 %a, ptr addrspace(0) %ptr
   ret void
@@ -17,9 +17,9 @@ define void @st_global_i8(ptr addrspace(0) %ptr, i8 %a) {
 ;; i16
 
 define void @st_global_i16(ptr addrspace(0) %ptr, i16 %a) {
-; PTX32: st.u16 [%r{{[0-9]+}}], %rs{{[0-9]+}}
+; PTX32: st.b16 [%r{{[0-9]+}}], %rs{{[0-9]+}}
 ; PTX32: ret
-; PTX64: st.u16 [%rd{{[0-9]+}}], %rs{{[0-9]+}}
+; PTX64: st.b16 [%rd{{[0-9]+}}], %rs{{[0-9]+}}
 ; PTX64: ret
   store i16 %a, ptr addrspace(0) %ptr
   ret void
@@ -28,9 +28,9 @@ define void @st_global_i16(ptr addrspace(0) %ptr, i16 %a) {
 ;; i32
 
 define void @st_global_i32(ptr addrspace(0) %ptr, i32 %a) {
-; PTX32: st.u32 [%r{{[0-9]+}}], %r{{[0-9]+}}
+; PTX32: st.b32 [%r{{[0-9]+}}], %r{{[0-9]+}}
 ; PTX32: ret
-; PTX64: st.u32 [%rd{{[0-9]+}}], %r{{[0-9]+}}
+; PTX64: st.b32 [%rd{{[0-9]+}}], %r{{[0-9]+}}
 ; PTX64: ret
   store i32 %a, ptr addrspace(0) %ptr
   ret void
@@ -39,9 +39,9 @@ define void @st_global_i32(ptr addrspace(0) %ptr, i32 %a) {
 ;; i64
 
 define void @st_global_i64(ptr addrspace(0) %ptr, i64 %a) {
-; PTX32: st.u64 [%r{{[0-9]+}}], %rd{{[0-9]+}}
+; PTX32: st.b64 [%r{{[0-9]+}}], %rd{{[0-9]+}}
 ; PTX32: ret
-; PTX64: st.u64 [%rd{{[0-9]+}}], %rd{{[0-9]+}}
+; PTX64: st.b64 [%rd{{[0-9]+}}], %rd{{[0-9]+}}
 ; PTX64: ret
   store i64 %a, ptr addrspace(0) %ptr
   ret void
@@ -50,9 +50,9 @@ define void @st_global_i64(ptr addrspace(0) %ptr, i64 %a) {
 ;; f32
 
 define void @st_global_f32(ptr addrspace(0) %ptr, float %a) {
-; PTX32: st.f32 [%r{{[0-9]+}}], %f{{[0-9]+}}
+; PTX32: st.b32 [%r{{[0-9]+}}], %f{{[0-9]+}}
 ; PTX32: ret
-; PTX64: st.f32 [%rd{{[0-9]+}}], %f{{[0-9]+}}
+; PTX64: st.b32 [%rd{{[0-9]+}}], %f{{[0-9]+}}
 ; PTX64: ret
   store float %a, ptr addrspace(0) %ptr
   ret void
@@ -61,9 +61,9 @@ define void @st_global_f32(ptr addrspace(0) %ptr, float %a) {
 ;; f64
 
 define void @st_global_f64(ptr addrspace(0) %ptr, double %a) {
-; PTX32: st.f64 [%r{{[0-9]+}}], %fd{{[0-9]+}}
+; PTX32: st.b64 [%r{{[0-9]+}}], %fd{{[0-9]+}}
 ; PTX32: ret
-; PTX64: st.f64 [%rd{{[0-9]+}}], %fd{{[0-9]+}}
+; PTX64: st.b64 [%rd{{[0-9]+}}], %fd{{[0-9]+}}
 ; PTX64: ret
   store double %a, ptr addrspace(0) %ptr
   ret void

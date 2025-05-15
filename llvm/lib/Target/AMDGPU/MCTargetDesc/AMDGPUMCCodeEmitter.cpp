@@ -107,9 +107,10 @@ private:
                                const MCSubtargetInfo &STI) const;
 
   /// Encode an fp or int literal.
-  std::optional<uint64_t> getLitEncoding(const MCOperand &MO,
-                                         const MCOperandInfo &OpInfo,
-                                         const MCSubtargetInfo &STI) const;
+  std::optional<uint64_t>
+  getLitEncoding(const MCOperand &MO, const MCOperandInfo &OpInfo,
+                 const MCSubtargetInfo &STI,
+                 bool HasMandatoryLiteral = false) const;
 
   void getBinaryCodeForInstr(const MCInst &MI, SmallVectorImpl<MCFixup> &Fixups,
                              APInt &Inst, APInt &Scratch,
@@ -283,7 +284,8 @@ static uint32_t getLit64Encoding(uint64_t Val, const MCSubtargetInfo &STI,
 std::optional<uint64_t>
 AMDGPUMCCodeEmitter::getLitEncoding(const MCOperand &MO,
                                     const MCOperandInfo &OpInfo,
-                                    const MCSubtargetInfo &STI) const {
+                                    const MCSubtargetInfo &STI,
+                                    bool HasMandatoryLiteral) const {
   int64_t Imm;
   if (MO.isExpr()) {
     const auto *C = dyn_cast<MCConstantExpr>(MO.getExpr());
@@ -307,7 +309,6 @@ AMDGPUMCCodeEmitter::getLitEncoding(const MCOperand &MO,
   switch (OpInfo.OperandType) {
   case AMDGPU::OPERAND_REG_IMM_INT32:
   case AMDGPU::OPERAND_REG_IMM_FP32:
-  case AMDGPU::OPERAND_REG_IMM_FP32_DEFERRED:
   case AMDGPU::OPERAND_REG_INLINE_C_INT32:
   case AMDGPU::OPERAND_REG_INLINE_C_FP32:
   case AMDGPU::OPERAND_REG_INLINE_AC_INT32:
@@ -323,22 +324,24 @@ AMDGPUMCCodeEmitter::getLitEncoding(const MCOperand &MO,
 
   case AMDGPU::OPERAND_REG_INLINE_C_FP64:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
-  case AMDGPU::OPERAND_REG_IMM_FP64:
     return getLit64Encoding(static_cast<uint64_t>(Imm), STI, true);
+
+  case AMDGPU::OPERAND_REG_IMM_FP64: {
+    auto Enc = getLit64Encoding(static_cast<uint64_t>(Imm), STI, true);
+    return (HasMandatoryLiteral && Enc == 255) ? 254 : Enc;
+  }
 
   case AMDGPU::OPERAND_REG_IMM_INT16:
   case AMDGPU::OPERAND_REG_INLINE_C_INT16:
     return getLit16IntEncoding(static_cast<uint32_t>(Imm), STI);
 
   case AMDGPU::OPERAND_REG_IMM_FP16:
-  case AMDGPU::OPERAND_REG_IMM_FP16_DEFERRED:
   case AMDGPU::OPERAND_REG_INLINE_C_FP16:
     // FIXME Is this correct? What do inline immediates do on SI for f16 src
     // which does not have f16 support?
     return getLit16Encoding(static_cast<uint16_t>(Imm), STI);
 
   case AMDGPU::OPERAND_REG_IMM_BF16:
-  case AMDGPU::OPERAND_REG_IMM_BF16_DEFERRED:
   case AMDGPU::OPERAND_REG_INLINE_C_BF16:
     // We don't actually need to check Inv2Pi here because BF16 instructions can
     // only be emitted for targets that already support the feature.
@@ -366,11 +369,6 @@ AMDGPUMCCodeEmitter::getLitEncoding(const MCOperand &MO,
   case AMDGPU::OPERAND_KIMM16:
   case AMDGPU::OPERAND_KIMM64:
     return MO.getImm();
-
-  case AMDGPU::OPERAND_REG_IMM_FP64_DEFERRED: {
-    auto Enc = getLit64Encoding(static_cast<uint64_t>(Imm), STI, true);
-    return Enc == 255 ? 254 : Enc;
-  }
 
   default:
     llvm_unreachable("invalid operand size");
@@ -752,7 +750,10 @@ void AMDGPUMCCodeEmitter::getMachineOpValueCommon(
 
   const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
   if (AMDGPU::isSISrcOperand(Desc, OpNo)) {
-    if (auto Enc = getLitEncoding(MO, Desc.operands()[OpNo], STI)) {
+    bool HasMandatoryLiteral =
+        AMDGPU::hasNamedOperand(MI.getOpcode(), AMDGPU::OpName::imm);
+    if (auto Enc = getLitEncoding(MO, Desc.operands()[OpNo], STI,
+                                  HasMandatoryLiteral)) {
       Op = *Enc;
       return;
     }

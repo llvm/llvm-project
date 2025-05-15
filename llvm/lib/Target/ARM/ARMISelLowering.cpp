@@ -20276,9 +20276,9 @@ bool ARMTargetLowering::ExpandInlineAsm(CallInst *CI) const {
     SplitString(AsmStr, AsmPieces, " \t,");
 
     // rev $0, $1
-    if (AsmPieces.size() == 3 &&
-        AsmPieces[0] == "rev" && AsmPieces[1] == "$0" && AsmPieces[2] == "$1" &&
-        IA->getConstraintString().compare(0, 4, "=l,l") == 0) {
+    if (AsmPieces.size() == 3 && AsmPieces[0] == "rev" &&
+        AsmPieces[1] == "$0" && AsmPieces[2] == "$1" &&
+        IA->getConstraintString().starts_with("=l,l")) {
       IntegerType *Ty = dyn_cast<IntegerType>(CI->getType());
       if (Ty && Ty->getBitWidth() == 32)
         return IntrinsicLowering::LowerToByteSwap(CI);

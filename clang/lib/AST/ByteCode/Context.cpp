@@ -219,10 +219,6 @@ std::optional<PrimType> Context::classify(QualType T) const {
   if (T->isBooleanType())
     return PT_Bool;
 
-  // We map these to primitive arrays.
-  if (T->isAnyComplexType() || T->isVectorType())
-    return std::nullopt;
-
   if (T->isSignedIntegerOrEnumerationType()) {
     switch (Ctx.getIntWidth(T)) {
     case 64:
@@ -259,12 +255,8 @@ std::optional<PrimType> Context::classify(QualType T) const {
   if (T->isNullPtrType())
     return PT_Ptr;
 
-  if (T->isFloatingType())
+  if (T->isRealFloatingType())
     return PT_Float;
-
-  if (T->isSpecificBuiltinType(BuiltinType::BoundMember) ||
-      T->isMemberPointerType())
-    return PT_MemberPtr;
 
   if (T->isFunctionPointerType() || T->isFunctionReferenceType() ||
       T->isFunctionType() || T->isBlockPointerType())
@@ -279,9 +271,14 @@ std::optional<PrimType> Context::classify(QualType T) const {
   if (const auto *DT = dyn_cast<DecltypeType>(T))
     return classify(DT->getUnderlyingType());
 
+  if (T->isSpecificBuiltinType(BuiltinType::BoundMember) ||
+      T->isMemberPointerType())
+    return PT_MemberPtr;
+
   if (T->isFixedPointType())
     return PT_FixedPoint;
 
+  // Vector and complex types get here.
   return std::nullopt;
 }
 

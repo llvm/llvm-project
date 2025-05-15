@@ -46,17 +46,17 @@ define private amdgpu_kernel void @input(ptr addrspace(1) %inbuf, ptr addrspace(
   ; CHECK-NEXT:   [[COPY19:%[0-9]+]]:vgpr_32 = COPY killed [[COPY6]]
   ; CHECK-NEXT:   [[COPY20:%[0-9]+]]:vgpr_32 = COPY killed [[COPY5]]
   ; CHECK-NEXT:   [[COPY21:%[0-9]+]]:vgpr_32 = COPY killed [[S_LOAD_DWORD_IMM]]
-  ; CHECK-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:av_288_align2 = REG_SEQUENCE killed [[COPY13]], %subreg.sub0, killed [[COPY14]], %subreg.sub1, killed [[COPY15]], %subreg.sub2, killed [[COPY16]], %subreg.sub3, killed [[COPY17]], %subreg.sub4, killed [[COPY18]], %subreg.sub5, killed [[COPY19]], %subreg.sub6, killed [[COPY20]], %subreg.sub7, killed [[COPY21]], %subreg.sub8
+  ; CHECK-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:av_288 = REG_SEQUENCE killed [[COPY13]], %subreg.sub0, killed [[COPY14]], %subreg.sub1, killed [[COPY15]], %subreg.sub2, killed [[COPY16]], %subreg.sub3, killed [[COPY17]], %subreg.sub4, killed [[COPY18]], %subreg.sub5, killed [[COPY19]], %subreg.sub6, killed [[COPY20]], %subreg.sub7, killed [[COPY21]], %subreg.sub8
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 64
-  ; CHECK-NEXT:   [[COPY22:%[0-9]+]]:vreg_96_align2 = COPY [[S_LOAD_DWORDX3_IMM]]
+  ; CHECK-NEXT:   [[COPY22:%[0-9]+]]:vreg_96 = COPY [[S_LOAD_DWORDX3_IMM]]
   ; CHECK-NEXT:   [[S_LSHR_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_MOV_B32_]], 2, implicit-def dead $scc
   ; CHECK-NEXT:   V_STORE_IDX [[COPY22]], [[S_LSHR_B32_]], 0, implicit $exec :: (store (s96) into @col_center, align 64, addrspace 10)
   ; CHECK-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 80
-  ; CHECK-NEXT:   [[COPY23:%[0-9]+]]:vreg_96_align2 = COPY [[S_LOAD_DWORDX3_IMM1]]
+  ; CHECK-NEXT:   [[COPY23:%[0-9]+]]:vreg_96 = COPY [[S_LOAD_DWORDX3_IMM1]]
   ; CHECK-NEXT:   [[S_LSHR_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_MOV_B32_1]], 2, implicit-def dead $scc
   ; CHECK-NEXT:   V_STORE_IDX [[COPY23]], [[S_LSHR_B32_1]], 0, implicit $exec :: (store (s96) into @col_left, align 16, addrspace 10)
   ; CHECK-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 96
-  ; CHECK-NEXT:   [[COPY24:%[0-9]+]]:vreg_96_align2 = COPY [[S_LOAD_DWORDX3_IMM2]]
+  ; CHECK-NEXT:   [[COPY24:%[0-9]+]]:vreg_96 = COPY [[S_LOAD_DWORDX3_IMM2]]
   ; CHECK-NEXT:   [[S_LSHR_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_MOV_B32_2]], 2, implicit-def dead $scc
   ; CHECK-NEXT:   V_STORE_IDX [[COPY24]], [[S_LSHR_B32_2]], 0, implicit $exec :: (store (s96) into @col_right, align 32, addrspace 10)
   ; CHECK-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 0
@@ -86,23 +86,23 @@ define private amdgpu_kernel void @compute(ptr addrspace(1) %inbuf, ptr addrspac
   ; CHECK-NEXT:   S_SEMA_WAIT 1
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 64
   ; CHECK-NEXT:   [[S_LSHR_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_MOV_B32_]], 2, implicit-def dead $scc
-  ; CHECK-NEXT:   [[V_LOAD_IDX:%[0-9]+]]:vreg_96_align2 = V_LOAD_IDX [[S_LSHR_B32_]], 0, implicit $exec :: (dereferenceable load (s96) from @col_center, align 64, addrspace 10)
+  ; CHECK-NEXT:   [[V_LOAD_IDX:%[0-9]+]]:vreg_96 = V_LOAD_IDX [[S_LSHR_B32_]], 0, implicit $exec :: (dereferenceable load (s96) from @col_center, align 64, addrspace 10)
   ; CHECK-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 80
   ; CHECK-NEXT:   [[S_LSHR_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_MOV_B32_1]], 2, implicit-def dead $scc
-  ; CHECK-NEXT:   [[V_LOAD_IDX1:%[0-9]+]]:vreg_96_align2 = V_LOAD_IDX [[S_LSHR_B32_1]], 0, implicit $exec :: (dereferenceable load (s96) from @col_left, align 16, addrspace 10)
+  ; CHECK-NEXT:   [[V_LOAD_IDX1:%[0-9]+]]:vreg_96 = V_LOAD_IDX [[S_LSHR_B32_1]], 0, implicit $exec :: (dereferenceable load (s96) from @col_left, align 16, addrspace 10)
   ; CHECK-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 96
   ; CHECK-NEXT:   [[S_LSHR_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_MOV_B32_2]], 2, implicit-def dead $scc
-  ; CHECK-NEXT:   [[V_LOAD_IDX2:%[0-9]+]]:vreg_96_align2 = V_LOAD_IDX [[S_LSHR_B32_2]], 0, implicit $exec :: (dereferenceable load (s96) from @col_right, align 32, addrspace 10)
+  ; CHECK-NEXT:   [[V_LOAD_IDX2:%[0-9]+]]:vreg_96 = V_LOAD_IDX [[S_LSHR_B32_2]], 0, implicit $exec :: (dereferenceable load (s96) from @col_right, align 32, addrspace 10)
   ; CHECK-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 0
   ; CHECK-NEXT:   [[S_LSHR_B32_3:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_MOV_B32_3]], 2, implicit-def dead $scc
-  ; CHECK-NEXT:   [[V_LOAD_IDX3:%[0-9]+]]:vreg_288_align2 = V_LOAD_IDX [[S_LSHR_B32_3]], 0, implicit $exec :: (dereferenceable load (s288) from @weights, align 268435456, addrspace 10)
+  ; CHECK-NEXT:   [[V_LOAD_IDX3:%[0-9]+]]:vreg_288 = V_LOAD_IDX [[S_LSHR_B32_3]], 0, implicit $exec :: (dereferenceable load (s288) from @weights, align 268435456, addrspace 10)
   ; CHECK-NEXT:   [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 0
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_4]]
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_4]]
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_4]]
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_4]]
-  ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
-  ; CHECK-NEXT:   [[V_CONVOLVE_F16_FP8_FP8_3x3_4x4_:%[0-9]+]]:vreg_128_align2 = contract V_CONVOLVE_F16_FP8_FP8_3x3_4x4 killed [[REG_SEQUENCE]], killed [[V_LOAD_IDX3]], killed [[V_LOAD_IDX]], killed [[V_LOAD_IDX1]], killed [[V_LOAD_IDX2]], 42, -1, 0, 0, implicit $exec
+  ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
+  ; CHECK-NEXT:   [[V_CONVOLVE_F16_FP8_FP8_3x3_4x4_:%[0-9]+]]:vreg_128 = contract V_CONVOLVE_F16_FP8_FP8_3x3_4x4 killed [[REG_SEQUENCE]], killed [[V_LOAD_IDX3]], killed [[V_LOAD_IDX]], killed [[V_LOAD_IDX1]], killed [[V_LOAD_IDX2]], 42, -1, 0, 0, implicit $exec
   ; CHECK-NEXT:   [[S_MOV_B32_5:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 112
   ; CHECK-NEXT:   [[S_LSHR_B32_4:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_MOV_B32_5]], 2, implicit-def dead $scc
   ; CHECK-NEXT:   V_STORE_IDX [[V_CONVOLVE_F16_FP8_FP8_3x3_4x4_]], [[S_LSHR_B32_4]], 0, implicit $exec :: (store (s128) into @out, !tbaa !6, addrspace 10)
@@ -131,7 +131,7 @@ define private amdgpu_kernel void @output(ptr addrspace(1) %inbuf, ptr addrspace
   ; CHECK-NEXT:   S_SEMA_WAIT 1
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 112
   ; CHECK-NEXT:   [[S_LSHR_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_MOV_B32_]], 2, implicit-def dead $scc
-  ; CHECK-NEXT:   [[V_LOAD_IDX:%[0-9]+]]:vreg_128_align2 = V_LOAD_IDX [[S_LSHR_B32_]], 0, implicit $exec :: (dereferenceable load (s128) from @out, addrspace 10)
+  ; CHECK-NEXT:   [[V_LOAD_IDX:%[0-9]+]]:vreg_128 = V_LOAD_IDX [[S_LSHR_B32_]], 0, implicit $exec :: (dereferenceable load (s128) from @out, addrspace 10)
   ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR killed [[V_MOV_B32_e32_]], killed [[V_LOAD_IDX]], killed [[S_LOAD_DWORDX2_IMM]], 0, 0, implicit $exec :: (store (s128) into %ir.outbuf.load, addrspace 1)
   ; CHECK-NEXT:   S_ENDPGM 0
 entry:

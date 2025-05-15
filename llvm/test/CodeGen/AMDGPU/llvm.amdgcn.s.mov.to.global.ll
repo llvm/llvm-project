@@ -77,25 +77,14 @@ define amdgpu_cs void @test32_divergent_all(i32 %m0, i32 %x) {
 
 ; TODO: The S_DELAY_ALU here is misguided. The dependency is handled in HW.
 define amdgpu_cs void @test64_divergent_all(i32 %m0, i64 %x) {
-; SDAG-LABEL: test64_divergent_all:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
-; SDAG-NEXT:    v_readfirstlane_b32 s2, v0
-; SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
-; SDAG-NEXT:    v_readfirstlane_b32 s1, v3
-; SDAG-NEXT:    v_readfirstlane_b32 s0, v2
-; SDAG-NEXT:    s_mov_b32 m0, s2
-; SDAG-NEXT:    s_mov_to_global_b64 s[8:9], s[0:1]
-; SDAG-NEXT:    s_endpgm
-;
-; GISEL-LABEL: test64_divergent_all:
-; GISEL:       ; %bb.0:
-; GISEL-NEXT:    v_readfirstlane_b32 s2, v0
-; GISEL-NEXT:    v_readfirstlane_b32 s0, v1
-; GISEL-NEXT:    v_readfirstlane_b32 s1, v2
-; GISEL-NEXT:    s_mov_b32 m0, s2
-; GISEL-NEXT:    s_mov_to_global_b64 s[8:9], s[0:1]
-; GISEL-NEXT:    s_endpgm
+; CHECK-LABEL: test64_divergent_all:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    v_readfirstlane_b32 s2, v0
+; CHECK-NEXT:    v_readfirstlane_b32 s0, v1
+; CHECK-NEXT:    v_readfirstlane_b32 s1, v2
+; CHECK-NEXT:    s_mov_b32 m0, s2
+; CHECK-NEXT:    s_mov_to_global_b64 s[8:9], s[0:1]
+; CHECK-NEXT:    s_endpgm
   call void @llvm.amdgcn.s.mov.to.global.i64(i16 8, i64 %x, i32 %m0)
   ret void
 }

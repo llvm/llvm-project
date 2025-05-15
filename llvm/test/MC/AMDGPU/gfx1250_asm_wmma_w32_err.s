@@ -180,163 +180,163 @@ v_swmmac_bf16f32_16x16x64_bf16 v[24:31], v[0:7], v[8:23], v32 index_key:2
 v_swmmac_bf16f32_16x16x64_bf16 v[24:31], v[0:7], v[8:23], v32 neg_lo:[0,0,1]
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid neg_lo operand
 
-v_swmmac_f32_16x16x128_fp8_fp8 v[24:31], v[0:7], v[8:23], s32
+v_swmmac_f32_16x16x128_fp8_fp8 v[24:31], v[0:7], v[8:23], s[32:33]
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
-v_swmmac_f32_16x16x128_fp8_fp8 v[24:31], v[0:7], 1.0, v32
+v_swmmac_f32_16x16x128_fp8_fp8 v[24:31], v[0:7], 1.0, v[32:33]
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
-v_swmmac_f32_16x16x128_fp8_fp8 v[24:31], v[0:7], v[8:23], v32 index_key:2
+v_swmmac_f32_16x16x128_fp8_fp8 v[24:31], v[0:7], v[8:23], v[32:33] index_key:2
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: out of range index_key
 
-v_swmmac_f32_16x16x128_fp8_fp8 v[24:31], v[0:7], v[8:23], v32 neg_lo:[1,0,0]
+v_swmmac_f32_16x16x128_fp8_fp8 v[24:31], v[0:7], v[8:23], v[32:33] neg_lo:[1,0,0]
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
 
-v_swmmac_f32_16x16x128_fp8_fp8 v[24:31], v[0:7], v[8:23], v32 neg_lo:[0,1,0]
+v_swmmac_f32_16x16x128_fp8_fp8 v[24:31], v[0:7], v[8:23], v[32:33] neg_lo:[0,1,0]
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
 
-v_swmmac_f32_16x16x128_fp8_fp8 v[24:31], v[0:7], v[8:23], v32 neg_lo:[0,0,1]
+v_swmmac_f32_16x16x128_fp8_fp8 v[24:31], v[0:7], v[8:23], v[32:33] neg_lo:[0,0,1]
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
 
-v_swmmac_f32_16x16x128_fp8_bf8 v[24:31], v[0:7], v[8:23], s32
+v_swmmac_f32_16x16x128_fp8_bf8 v[24:31], v[0:7], v[8:23], s[32:33]
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
-v_swmmac_f32_16x16x128_fp8_bf8 v[24:31], v[0:7], 1.0, v32
+v_swmmac_f32_16x16x128_fp8_bf8 v[24:31], v[0:7], 1.0, v[32:33]
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
-v_swmmac_f32_16x16x128_fp8_bf8 v[24:31], v[0:7], v[8:23], v32 index_key:2
+v_swmmac_f32_16x16x128_fp8_bf8 v[24:31], v[0:7], v[8:23], v[32:33] index_key:2
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: out of range index_key
 
-v_swmmac_f32_16x16x128_fp8_bf8 v[24:31], v[0:7], v[8:23], v32 neg_lo:[1,0,0]
+v_swmmac_f32_16x16x128_fp8_bf8 v[24:31], v[0:7], v[8:23], v[32:33] neg_lo:[1,0,0]
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
 
-v_swmmac_f32_16x16x128_fp8_bf8 v[24:31], v[0:7], v[8:23], v32 neg_lo:[0,1,0]
+v_swmmac_f32_16x16x128_fp8_bf8 v[24:31], v[0:7], v[8:23], v[32:33] neg_lo:[0,1,0]
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
 
-v_swmmac_f32_16x16x128_fp8_bf8 v[24:31], v[0:7], v[8:23], v32 neg_lo:[0,0,1]
+v_swmmac_f32_16x16x128_fp8_bf8 v[24:31], v[0:7], v[8:23], v[32:33] neg_lo:[0,0,1]
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
 
-v_swmmac_f32_16x16x128_bf8_fp8 v[24:31], v[0:7], v[8:23], s32
+v_swmmac_f32_16x16x128_bf8_fp8 v[24:31], v[0:7], v[8:23], s[32:33]
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
-v_swmmac_f32_16x16x128_bf8_fp8 v[24:31], v[0:7], 1.0, v32
+v_swmmac_f32_16x16x128_bf8_fp8 v[24:31], v[0:7], 1.0, v[32:33]
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
-v_swmmac_f32_16x16x128_bf8_fp8 v[24:31], v[0:7], v[8:23], v32 index_key:2
+v_swmmac_f32_16x16x128_bf8_fp8 v[24:31], v[0:7], v[8:23], v[32:33] index_key:2
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: out of range index_key
 
-v_swmmac_f32_16x16x128_bf8_fp8 v[24:31], v[0:7], v[8:23], v32 neg_lo:[1,0,0]
+v_swmmac_f32_16x16x128_bf8_fp8 v[24:31], v[0:7], v[8:23], v[32:33] neg_lo:[1,0,0]
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
 
-v_swmmac_f32_16x16x128_bf8_fp8 v[24:31], v[0:7], v[8:23], v32 neg_lo:[0,1,0]
+v_swmmac_f32_16x16x128_bf8_fp8 v[24:31], v[0:7], v[8:23], v[32:33] neg_lo:[0,1,0]
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
 
-v_swmmac_f32_16x16x128_bf8_fp8 v[24:31], v[0:7], v[8:23], v32 neg_lo:[0,0,1]
+v_swmmac_f32_16x16x128_bf8_fp8 v[24:31], v[0:7], v[8:23], v[32:33] neg_lo:[0,0,1]
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
 
-v_swmmac_f32_16x16x128_bf8_bf8 v[24:31], v[0:7], v[8:23], s32
+v_swmmac_f32_16x16x128_bf8_bf8 v[24:31], v[0:7], v[8:23], s[32:33]
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
-v_swmmac_f32_16x16x128_bf8_bf8 v[24:31], v[0:7], 1.0, v32
+v_swmmac_f32_16x16x128_bf8_bf8 v[24:31], v[0:7], 1.0, v[32:33]
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
-v_swmmac_f32_16x16x128_bf8_bf8 v[24:31], v[0:7], v[8:23], v32 index_key:2
+v_swmmac_f32_16x16x128_bf8_bf8 v[24:31], v[0:7], v[8:23], v[32:33] index_key:2
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: out of range index_key
 
-v_swmmac_f32_16x16x128_bf8_bf8 v[24:31], v[0:7], v[8:23], v32 neg_lo:[1,0,0]
+v_swmmac_f32_16x16x128_bf8_bf8 v[24:31], v[0:7], v[8:23], v[32:33] neg_lo:[1,0,0]
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
 
-v_swmmac_f32_16x16x128_bf8_bf8 v[24:31], v[0:7], v[8:23], v32 neg_lo:[0,1,0]
+v_swmmac_f32_16x16x128_bf8_bf8 v[24:31], v[0:7], v[8:23], v[32:33] neg_lo:[0,1,0]
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
 
-v_swmmac_f32_16x16x128_bf8_bf8 v[24:31], v[0:7], v[8:23], v32 neg_lo:[0,0,1]
+v_swmmac_f32_16x16x128_bf8_bf8 v[24:31], v[0:7], v[8:23], v[32:33] neg_lo:[0,0,1]
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
 
-v_swmmac_f16_16x16x128_fp8_fp8 v[24:27], v[0:7], v[8:23], s28
+v_swmmac_f16_16x16x128_fp8_fp8 v[24:27], v[0:7], v[8:23], s[28:29]
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
-v_swmmac_f16_16x16x128_fp8_fp8 v[24:27], v[0:7], 1.0, v28
+v_swmmac_f16_16x16x128_fp8_fp8 v[24:27], v[0:7], 1.0, v[28:29]
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
-v_swmmac_f16_16x16x128_fp8_fp8 v[24:27], v[0:7], v[8:23], v28 index_key:2
+v_swmmac_f16_16x16x128_fp8_fp8 v[24:27], v[0:7], v[8:23], v[28:29] index_key:2
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: out of range index_key
 
-v_swmmac_f16_16x16x128_fp8_fp8 v[24:27], v[0:7], v[8:23], v28 neg_lo:[1,0,0]
+v_swmmac_f16_16x16x128_fp8_fp8 v[24:27], v[0:7], v[8:23], v[28:29] neg_lo:[1,0,0]
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
 
-v_swmmac_f16_16x16x128_fp8_fp8 v[24:27], v[0:7], v[8:23], v28 neg_lo:[0,1,0]
+v_swmmac_f16_16x16x128_fp8_fp8 v[24:27], v[0:7], v[8:23], v[28:29] neg_lo:[0,1,0]
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
 
-v_swmmac_f16_16x16x128_fp8_fp8 v[24:27], v[0:7], v[8:23], v28 neg_lo:[0,0,1]
+v_swmmac_f16_16x16x128_fp8_fp8 v[24:27], v[0:7], v[8:23], v[28:29] neg_lo:[0,0,1]
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
 
-v_swmmac_f16_16x16x128_fp8_bf8 v[24:27], v[0:7], v[8:23], s28
+v_swmmac_f16_16x16x128_fp8_bf8 v[24:27], v[0:7], v[8:23], s[28:29]
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
-v_swmmac_f16_16x16x128_fp8_bf8 v[24:27], v[0:7], 1.0, v28
+v_swmmac_f16_16x16x128_fp8_bf8 v[24:27], v[0:7], 1.0, v[28:29]
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
-v_swmmac_f16_16x16x128_fp8_bf8 v[24:27], v[0:7], v[8:23], v28 index_key:2
+v_swmmac_f16_16x16x128_fp8_bf8 v[24:27], v[0:7], v[8:23], v[28:29] index_key:2
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: out of range index_key
 
-v_swmmac_f16_16x16x128_fp8_bf8 v[24:27], v[0:7], v[8:23], v28 neg_lo:[1,0,0]
+v_swmmac_f16_16x16x128_fp8_bf8 v[24:27], v[0:7], v[8:23], v[28:29] neg_lo:[1,0,0]
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
 
-v_swmmac_f16_16x16x128_fp8_bf8 v[24:27], v[0:7], v[8:23], v28 neg_lo:[0,1,0]
+v_swmmac_f16_16x16x128_fp8_bf8 v[24:27], v[0:7], v[8:23], v[28:29] neg_lo:[0,1,0]
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
 
-v_swmmac_f16_16x16x128_fp8_bf8 v[24:27], v[0:7], v[8:23], v28 neg_lo:[0,0,1]
+v_swmmac_f16_16x16x128_fp8_bf8 v[24:27], v[0:7], v[8:23], v[28:29] neg_lo:[0,0,1]
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
 
-v_swmmac_f16_16x16x128_bf8_fp8 v[24:27], v[0:7], v[8:23], s28
+v_swmmac_f16_16x16x128_bf8_fp8 v[24:27], v[0:7], v[8:23], s[28:29]
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
-v_swmmac_f16_16x16x128_bf8_fp8 v[24:27], v[0:7], 1.0, v28
+v_swmmac_f16_16x16x128_bf8_fp8 v[24:27], v[0:7], 1.0, v[28:29]
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
-v_swmmac_f16_16x16x128_bf8_fp8 v[24:27], v[0:7], v[8:23], v28 index_key:2
+v_swmmac_f16_16x16x128_bf8_fp8 v[24:27], v[0:7], v[8:23], v[28:29] index_key:2
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: out of range index_key
 
-v_swmmac_f16_16x16x128_bf8_fp8 v[24:27], v[0:7], v[8:23], v28 neg_lo:[1,0,0]
+v_swmmac_f16_16x16x128_bf8_fp8 v[24:27], v[0:7], v[8:23], v[28:29] neg_lo:[1,0,0]
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
 
-v_swmmac_f16_16x16x128_bf8_fp8 v[24:27], v[0:7], v[8:23], v28 neg_lo:[0,1,0]
+v_swmmac_f16_16x16x128_bf8_fp8 v[24:27], v[0:7], v[8:23], v[28:29] neg_lo:[0,1,0]
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
 
-v_swmmac_f16_16x16x128_bf8_fp8 v[24:27], v[0:7], v[8:23], v28 neg_lo:[0,0,1]
+v_swmmac_f16_16x16x128_bf8_fp8 v[24:27], v[0:7], v[8:23], v[28:29] neg_lo:[0,0,1]
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
 
-v_swmmac_f16_16x16x128_bf8_bf8 v[24:27], v[0:7], v[8:23], s28
+v_swmmac_f16_16x16x128_bf8_bf8 v[24:27], v[0:7], v[8:23], s[28:29]
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
-v_swmmac_f16_16x16x128_bf8_bf8 v[24:27], v[0:7], 1.0, v28
+v_swmmac_f16_16x16x128_bf8_bf8 v[24:27], v[0:7], 1.0, v[28:29]
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
-v_swmmac_f16_16x16x128_bf8_bf8 v[24:27], v[0:7], v[8:23], v28 index_key:2
+v_swmmac_f16_16x16x128_bf8_bf8 v[24:27], v[0:7], v[8:23], v[28:29] index_key:2
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: out of range index_key
 
-v_swmmac_f16_16x16x128_bf8_bf8 v[24:27], v[0:7], v[8:23], v28 neg_lo:[1,0,0]
+v_swmmac_f16_16x16x128_bf8_bf8 v[24:27], v[0:7], v[8:23], v[28:29] neg_lo:[1,0,0]
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
 
-v_swmmac_f16_16x16x128_bf8_bf8 v[24:27], v[0:7], v[8:23], v28 neg_lo:[0,1,0]
+v_swmmac_f16_16x16x128_bf8_bf8 v[24:27], v[0:7], v[8:23], v[28:29] neg_lo:[0,1,0]
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
 
-v_swmmac_f16_16x16x128_bf8_bf8 v[24:27], v[0:7], v[8:23], v28 neg_lo:[0,0,1]
+v_swmmac_f16_16x16x128_bf8_bf8 v[24:27], v[0:7], v[8:23], v[28:29] neg_lo:[0,0,1]
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
 
-v_swmmac_i32_16x16x128_iu8 v[24:31], v[0:7], v[8:23], s32
+v_swmmac_i32_16x16x128_iu8 v[24:31], v[0:7], v[8:23], s[32:33]
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
-v_swmmac_i32_16x16x128_iu8 v[24:31], v[0:7], 1, v32
+v_swmmac_i32_16x16x128_iu8 v[24:31], v[0:7], 1, v[32:33]
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
-v_swmmac_i32_16x16x128_iu8 v[24:31], v[0:7], v[8:23], v32 clamp
+v_swmmac_i32_16x16x128_iu8 v[24:31], v[0:7], v[8:23], v[32:33] clamp
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
-v_swmmac_i32_16x16x128_iu8 v[24:31], v[0:7], v[8:23], v32 index_key:2
+v_swmmac_i32_16x16x128_iu8 v[24:31], v[0:7], v[8:23], v[32:33] index_key:2
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: out of range index_key
 
-v_swmmac_i32_16x16x128_iu8 v[24:31], v[0:7], v[8:23], v32 neg_lo:[0,0,1]
+v_swmmac_i32_16x16x128_iu8 v[24:31], v[0:7], v[8:23], v[32:33] neg_lo:[0,0,1]
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid neg_lo operand
 
 v_swmmac_f32_16x16x64_f16 v[24:31], v[0:7], v[8:23], s32

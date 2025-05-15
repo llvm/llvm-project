@@ -276,23 +276,22 @@ define amdgpu_ps void @global_store_async_from_lds_b64_saddr_no_scale_offset(ptr
 ;
 ; GFX13-SDAG-LABEL: global_store_async_from_lds_b64_saddr_no_scale_offset:
 ; GFX13-SDAG:       ; %bb.0: ; %entry
-; GFX13-SDAG-NEXT:    v_mov_b32_e32 v2, v1
-; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX13-SDAG-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
-; GFX13-SDAG-NEXT:    v_lshl_add_u64 v[2:3], v[2:3], 2, s[0:1]
-; GFX13-SDAG-NEXT:    global_store_async_from_lds_b64 v[2:3], v0, off offset:16 th:TH_STORE_NT
+; GFX13-SDAG-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
+; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX13-SDAG-NEXT:    v_lshl_add_u64 v[1:2], v[1:2], 2, s[0:1]
+; GFX13-SDAG-NEXT:    global_store_async_from_lds_b64 v[1:2], v0, off offset:16 th:TH_STORE_NT
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: global_store_async_from_lds_b64_saddr_no_scale_offset:
 ; GFX13-GISEL:       ; %bb.0: ; %entry
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v2, v1 :: v_dual_mov_b32 v5, s1
-; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v4, s0 :: v_dual_ashrrev_i32 v3, 31, v2
-; GFX13-GISEL-NEXT:    v_lshlrev_b64_e32 v[2:3], 2, v[2:3]
-; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX13-GISEL-NEXT:    v_add_co_u32 v2, vcc_lo, v4, v2
-; GFX13-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, v5, v3, vcc_lo
-; GFX13-GISEL-NEXT:    global_store_async_from_lds_b64 v[2:3], v0, off offset:16 th:TH_STORE_NT
+; GFX13-GISEL-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v4, s1 :: v_dual_mov_b32 v3, s0
+; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX13-GISEL-NEXT:    v_lshlrev_b64_e32 v[1:2], 2, v[1:2]
+; GFX13-GISEL-NEXT:    v_add_co_u32 v1, vcc_lo, v3, v1
+; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX13-GISEL-NEXT:    v_add_co_ci_u32_e64 v2, null, v4, v2, vcc_lo
+; GFX13-GISEL-NEXT:    global_store_async_from_lds_b64 v[1:2], v0, off offset:16 th:TH_STORE_NT
 ; GFX13-GISEL-NEXT:    s_endpgm
 entry:
   %idxprom = sext i32 %idx to i64

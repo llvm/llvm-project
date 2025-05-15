@@ -1276,6 +1276,7 @@ def op_sel_hi0 : ArrayOperand0<"op_sel_hi", "OpSelHi">;
 def neg_lo0 : ArrayOperand0<"neg_lo", "NegLo">;
 def neg_hi0 : ArrayOperand0<"neg_hi", "NegHi">;
 
+def IndexKey32bit : CustomOperand<i32, 1>;
 def IndexKey16bit : CustomOperand<i32, 1>;
 def IndexKey8bit : CustomOperand<i32, 1>;
 
@@ -1692,6 +1693,7 @@ def WMMAModsF16NegAbs  : ComplexPattern<untyped, 2, "SelectWMMAModsF16NegAbs">;
 def WMMAVISrc  : ComplexPattern<untyped, 1, "SelectWMMAVISrc">;
 def SWMMACIndex8  : ComplexPattern<untyped, 2, "SelectSWMMACIndex8">;
 def SWMMACIndex16  : ComplexPattern<untyped, 2, "SelectSWMMACIndex16">;
+def SWMMACIndex32  : ComplexPattern<untyped, 2, "SelectSWMMACIndex32">;
 
 def VOP3OpSel  : ComplexPattern<untyped, 2, "SelectVOP3OpSel">;
 
@@ -2926,12 +2928,11 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
                                  HasSDWAOMod, Src0ModSDWA, Src1ModSDWA,
                                  DstVT>.ret;
   field dag InsVOPDX = (ins Src0RC32:$src0X, Src1RC32:$vsrc1X);
-  // It is a slight misnomer to use the deferred f32 operand type for non-float
+  // It is a slight misnomer to use the f32 operand type for non-float
   // operands, but this operand type will only be used if the other dual
   // component is FMAAK or FMAMK
-  field dag InsVOPDXDeferred = (ins !if(!eq(Src0VT.Size, 32), VSrc_f32_Deferred, VSrc_f16_Deferred):$src0X, VGPRSrc_32:$vsrc1X);
+  field dag InsVOPDX_immX = (ins !if(!eq(Src0VT.Size, 32), VSrc_f32, VSrc_f16):$src0X, VGPRSrc_32:$vsrc1X);
   field dag InsVOPDY = (ins Src0RC32:$src0Y, Src1RC32:$vsrc1Y);
-  field dag InsVOPDYDeferred = (ins !if(!eq(Src1VT.Size, 32), VSrc_f32_Deferred, VSrc_f16_Deferred):$src0Y, VGPRSrc_32:$vsrc1Y);
   field bit HasVOPD3Src2 = !empty(Ins32); // VOP3 does not have Ins32.
   field dag InsVOPD3X = getInsVOPD3<Src0VOPD3, Src1VOPD3, Src2VOPD3,
                                     Src0ModVOPD3, Src1ModVOPD3, Src2ModVOPD3,
@@ -2939,7 +2940,6 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   field dag InsVOPD3Y = getInsVOPD3<Src0VOPD3, Src1VOPD3, Src2VOPD3,
                                     Src0ModVOPD3, Src1ModVOPD3, Src2ModVOPD3,
                                     HasSrc1, HasVOPD3Src2, HasModifiers, 1>.ret;
-
 
   field string Asm32 = getAsm32<HasDst, NumSrcArgs, DstVT>.ret;
   field string AsmDPP = !if(HasExtDPP,

@@ -239,9 +239,7 @@ defm V_NOP : VOP1Inst <"v_nop", VOP_NOP_PROFILE>;
 
 def VOPProfile_MOV : VOPProfile <[i32, i32, untyped, untyped]> {
   let InsVOPDX = (ins Src0RC32:$src0X);
-  let InsVOPDXDeferred = (ins VSrc_f32_Deferred:$src0X);
   let InsVOPDY = (ins Src0RC32:$src0Y);
-  let InsVOPDYDeferred = (ins VSrc_f32_Deferred:$src0Y);
 }
 
 def VOPProfile_MOV_B64 : VOPProfile <[i64, i64, untyped, untyped]>;

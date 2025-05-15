@@ -525,9 +525,9 @@ main_body:
 define amdgpu_ps void @raw_buffer_load_v4f16(i32 inreg %rsrc, ptr addrspace(3) %ptr) {
 ; GFX13-LABEL: raw_buffer_load_v4f16:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    buffer_load_b64 v[2:3], off, s0, null
+; GFX13-NEXT:    buffer_load_b64 v[1:2], off, s0, null
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    ds_store_b64 v0, v[2:3]
+; GFX13-NEXT:    ds_store_b64 v0, v[1:2]
 ; GFX13-NEXT:    s_endpgm
 main_body:
   %val = call <4 x half> @llvm.amdgcn.raw.buffer.load.v4f16.i32(i32 %rsrc, i32 0, i32 0, i32 0)
@@ -551,9 +551,9 @@ main_body:
 define amdgpu_ps void @raw_buffer_load_v4i16(i32 inreg %rsrc, ptr addrspace(3) %ptr) {
 ; GFX13-LABEL: raw_buffer_load_v4i16:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    buffer_load_b64 v[2:3], off, s0, null
+; GFX13-NEXT:    buffer_load_b64 v[1:2], off, s0, null
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    ds_store_b64 v0, v[2:3]
+; GFX13-NEXT:    ds_store_b64 v0, v[1:2]
 ; GFX13-NEXT:    s_endpgm
 main_body:
   %val = call <4 x i16> @llvm.amdgcn.raw.buffer.load.v4i16.i32(i32 %rsrc, i32 0, i32 0, i32 0)

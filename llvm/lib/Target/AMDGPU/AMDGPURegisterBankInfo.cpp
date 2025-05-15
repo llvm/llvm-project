@@ -5809,11 +5809,23 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       break;
     }
     case Intrinsic::amdgcn_pops_exiting_wave_id:
+      return getDefaultMappingSOP(MI);
     case Intrinsic::amdgcn_tensor_load_to_lds_d2:
     case Intrinsic::amdgcn_tensor_store_from_lds_d2:
     case Intrinsic::amdgcn_tensor_load_to_lds:
-    case Intrinsic::amdgcn_tensor_store_from_lds:
-      return getDefaultMappingSOP(MI);
+    case Intrinsic::amdgcn_tensor_store_from_lds: {
+      // Lie and claim everything is legal, even all operands need to be
+      // SGPRs. applyMapping will have to deal with it with readfirstlane.
+      for (unsigned I = 1; I < MI.getNumOperands(); ++I) {
+        if (MI.getOperand(I).isReg()) {
+          Register Reg = MI.getOperand(I).getReg();
+          auto OpBank = getRegBankID(Reg, MRI);
+          unsigned Size = getSizeInBits(Reg, MRI, *TRI);
+          OpdsMapping[I] = AMDGPU::getValueMapping(OpBank, Size);
+        }
+      }
+      break;
+    }
     case Intrinsic::amdgcn_s_prefetch_data: {
       OpdsMapping[1] = getSGPROpMapping(MI.getOperand(1).getReg(), MRI, *TRI);
       OpdsMapping[2] = getSGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);

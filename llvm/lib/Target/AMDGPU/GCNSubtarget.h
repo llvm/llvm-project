@@ -1370,7 +1370,9 @@ public:
   bool hasMLMathInsts() const { return HasMLMathInsts; }
 
   /// Return if operations acting on VGPR tuples require even alignment.
-  bool needsAlignedVGPRs() const { return GFX90AInsts || GFX1250Insts; }
+  bool needsAlignedVGPRs() const {
+    return GFX90AInsts || (GFX1250Insts && !GFX13Insts);
+  }
 
   /// Return true if the target has the S_PACK_HL_B32_B16 instruction.
   bool hasSPackHL() const { return GFX11Insts; }

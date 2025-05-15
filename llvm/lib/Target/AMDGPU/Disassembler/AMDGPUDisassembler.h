@@ -174,7 +174,7 @@ public:
 
   void convertEXPInst(MCInst &MI) const;
   void convertVINTERPInst(MCInst &MI) const;
-  void convertFMAanyK(MCInst &MI, int ImmLitIdx) const;
+  void convertFMAanyK(MCInst &MI) const;
   void convertSDWAInst(MCInst &MI) const;
   void convertMAIInst(MCInst &MI) const;
   void convertWMMAInst(MCInst &MI) const;
@@ -187,33 +187,10 @@ public:
   void convertMacDPPInst(MCInst &MI) const;
   void convertTrue16OpSel(MCInst &MI) const;
 
-  enum OpWidthTy {
-    OPW32,
-    OPW64,
-    OPW96,
-    OPW128,
-    OPW160,
-    OPW192,
-    OPW224,
-    OPW256,
-    OPW288,
-    OPW320,
-    OPW352,
-    OPW384,
-    OPW512,
-    OPW576,
-    OPW1024,
-    OPW16,
-    OPWV216,
-    OPWV232,
-    OPW_LAST_,
-    OPW_FIRST_ = OPW32
-  };
-
-  unsigned getVgprClassId(const OpWidthTy Width) const;
-  unsigned getAgprClassId(const OpWidthTy Width) const;
-  unsigned getSgprClassId(const OpWidthTy Width) const;
-  unsigned getTtmpClassId(const OpWidthTy Width) const;
+  unsigned getVgprClassId(unsigned Width) const;
+  unsigned getAgprClassId(unsigned Width) const;
+  unsigned getSgprClassId(unsigned Width) const;
+  unsigned getTtmpClassId(unsigned Width) const;
 
   static MCOperand decodeIntImmed(unsigned Imm);
 
@@ -222,13 +199,13 @@ public:
   MCOperand decodeLiteralConstant(bool ExtendFP64) const;
   MCOperand decodeLiteral64Constant() const;
 
-  MCOperand decodeSrcOp(const OpWidthTy Width, unsigned Val) const;
+  MCOperand decodeSrcOp(unsigned Width, unsigned Val) const;
 
-  MCOperand decodeNonVGPRSrcOp(const OpWidthTy Width, unsigned Val) const;
+  MCOperand decodeNonVGPRSrcOp(unsigned Width, unsigned Val) const;
 
-  MCOperand decodeGVGPROp(OpWidthTy OpWidth, unsigned Val) const;
-  MCOperand decodeGSrcVGPROp(OpWidthTy OpWidth, unsigned Val) const;
-  MCOperand decodeGSrcVGPROrZeroOp(OpWidthTy OpWidth, unsigned Val) const;
+  MCOperand decodeGVGPROp(unsigned Width, unsigned Val) const;
+  MCOperand decodeGSrcVGPROp(unsigned Width, unsigned Val) const;
+  MCOperand decodeGSrcVGPROrZeroOp(unsigned Width, unsigned Val) const;
   MCOperand decodeGSrcSimpleOp(unsigned Val) const;
 
   MCOperand decodeVOPDDstYOp(MCInst &Inst, unsigned Val) const;
@@ -236,7 +213,7 @@ public:
   MCOperand decodeSpecialReg64(unsigned Val) const;
   MCOperand decodeSpecialReg96Plus(unsigned Val) const;
 
-  MCOperand decodeSDWASrc(const OpWidthTy Width, unsigned Val) const;
+  MCOperand decodeSDWASrc(unsigned Width, unsigned Val) const;
   MCOperand decodeSDWASrc16(unsigned Val) const;
   MCOperand decodeSDWASrc32(unsigned Val) const;
   MCOperand decodeSDWAVopcDst(unsigned Val) const;

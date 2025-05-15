@@ -6,7 +6,7 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck --check-prefix=GFX10 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+real-true16 -amdgpu-enable-vopd=0 -verify-machineinstrs < %s | FileCheck --check-prefixes=GFX11,GFX11-TRUE16 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=-real-true16 -amdgpu-enable-vopd=0 -verify-machineinstrs < %s | FileCheck --check-prefixes=GFX11,GFX11-FAKE16 %s
-; TODO: Enable this llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -mattr=+real-true16 -amdgpu-enable-vopd=0 -verify-machineinstrs < %s | FileCheck --check-prefixes=GFX1250,GFX1250-TRUE16 %s
+; TODO: FIXME-TRUE16 - Enable this llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -mattr=+real-true16 -amdgpu-enable-vopd=0 -verify-machineinstrs < %s | FileCheck --check-prefixes=GFX1250,GFX1250-TRUE16 %s
 ; Crashing on v_test_imin_slt_i16
 ; LLVM ERROR: Cannot select: 0x5f895f65b050: i16,ch = load<(load (s16) from %ir.b.gep, addrspace 1)>
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -mattr=-real-true16 -amdgpu-enable-vopd=0 -verify-machineinstrs < %s | FileCheck --check-prefixes=GFX1250,GFX1250-FAKE16 %s
@@ -2485,16 +2485,16 @@ define amdgpu_kernel void @v_test_umin_ule_v3i32(ptr addrspace(1) %out, ptr addr
 ; GFX13-NEXT:    s_load_b64 s[4:5], s[4:5], 0x10
 ; GFX13-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX13-NEXT:    v_lshlrev_b32_e32 v3, 4, v0
+; GFX13-NEXT:    v_lshlrev_b32_e32 v6, 4, v0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    s_clause 0x1
-; GFX13-NEXT:    global_load_b96 v[0:2], v3, s[2:3]
-; GFX13-NEXT:    global_load_b96 v[4:6], v3, s[4:5]
+; GFX13-NEXT:    global_load_b96 v[0:2], v6, s[2:3]
+; GFX13-NEXT:    global_load_b96 v[3:5], v6, s[4:5]
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    v_min_u32_e32 v2, v2, v6
-; GFX13-NEXT:    v_min_u32_e32 v1, v1, v5
-; GFX13-NEXT:    v_min_u32_e32 v0, v0, v4
-; GFX13-NEXT:    global_store_b96 v3, v[0:2], s[0:1] scope:SCOPE_SE
+; GFX13-NEXT:    v_min_u32_e32 v2, v2, v5
+; GFX13-NEXT:    v_min_u32_e32 v1, v1, v4
+; GFX13-NEXT:    v_min_u32_e32 v0, v0, v3
+; GFX13-NEXT:    global_store_b96 v6, v[0:2], s[0:1] scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %a.gep = getelementptr inbounds <3 x i32>, ptr addrspace(1) %a.ptr, i32 %tid

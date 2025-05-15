@@ -183,8 +183,8 @@ define amdgpu_ps void @buffer_store_both_reversed(<4 x i32> inreg, <4 x float>, 
 ;
 ; GFX13-LABEL: buffer_store_both_reversed:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    v_dual_mov_b32 v6, v5 :: v_dual_mov_b32 v7, v4
-; GFX13-NEXT:    buffer_store_b128 v[0:3], v[6:7], s[0:3], null idxen offen scope:SCOPE_SE
+; GFX13-NEXT:    v_mov_b32_e32 v6, v4
+; GFX13-NEXT:    buffer_store_b128 v[0:3], v[5:6], s[0:3], null idxen offen scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.struct.buffer.store.v4f32(<4 x float> %1, <4 x i32> %0, i32 %3, i32 %2, i32 0, i32 0)
