@@ -591,10 +591,10 @@ Status ELFLinuxSigInfo::Parse(const DataExtractor &data, const ArchSpec &arch,
   if (data.GetAddressByteSize() == 8)
     offset += 4;
 
- if (si_code < 0) {
-  sifields.kill.pid = data.GetU32(&offset);
-  sifields.kill.uid = data.GetU32(&offset);
- } else if (unix_signals.GetShouldStop(si_signo)) {
+  if (si_code < 0) {
+    sifields.kill.pid = data.GetU32(&offset);
+    sifields.kill.uid = data.GetU32(&offset);
+  } else if (unix_signals.GetShouldStop(si_signo)) {
     // Not every stop signal has a valid address, but that will get resolved in
     // the unix_signals.GetSignalDescription() call below.
     // Instead of memcpy we call all these individually as the extractor will
@@ -620,14 +620,17 @@ std::string ELFLinuxSigInfo::GetDescription(
     const lldb_private::UnixSignals &unix_signals) const {
   if (unix_signals.GetShouldStop(si_signo) && note_type == eNT_SIGINFO) {
     if (si_code < 0)
-      return unix_signals.GetSignalDescription(si_signo, si_code, std::nullopt, std::nullopt, std::nullopt, sifields.kill.pid, sifields.kill.uid);
+      return unix_signals.GetSignalDescription(
+          si_signo, si_code, std::nullopt, std::nullopt, std::nullopt,
+          sifields.kill.pid, sifields.kill.uid);
     else if (sifields.sigfault.bounds._addr_bnd._upper != 0)
       return unix_signals.GetSignalDescription(
-          si_signo, si_code, sifields.sigfault.si_addr, sifields.sigfault.bounds._addr_bnd._lower,
+          si_signo, si_code, sifields.sigfault.si_addr,
+          sifields.sigfault.bounds._addr_bnd._lower,
           sifields.sigfault.bounds._addr_bnd._upper);
     else
       return unix_signals.GetSignalDescription(si_signo, si_code,
-        sifields.sigfault.si_addr);
+                                               sifields.sigfault.si_addr);
   }
 
   // This looks weird, but there is an existing pattern where we don't pass a

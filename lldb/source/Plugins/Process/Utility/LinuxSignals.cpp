@@ -39,16 +39,27 @@
   AddSignalCode(signal_value, code_value, __VA_ARGS__)
 #endif /* if defined(__linux__) && !defined(__mips__) */
 // See siginfo.h in the Linux Kernel, these codes can be sent for any signal.
-#define ADD_LINUX_SIGNAL(signo, name, ...) \
-  AddSignal(signo, name, __VA_ARGS__); \
-  ADD_SIGCODE(signo, signo, SI_QUEUE, -1, "sent by sigqueue", SignalCodePrintOption::Sender); \
-  ADD_SIGCODE(signo, signo, SI_TIMER, -2, "sent by timer expiration", SignalCodePrintOption::Sender); \
-  ADD_SIGCODE(signo, signo, SI_MESGQ, -3, "sent by real time mesq state change", SignalCodePrintOption::Sender); \
-  ADD_SIGCODE(signo, signo, SI_ASYNCIO, -4, "sent by AIO completion", SignalCodePrintOption::Sender); \
-  ADD_SIGCODE(signo, signo, SI_SIGIO, -5, "sent by queued SIGIO", SignalCodePrintOption::Sender); \
-  ADD_SIGCODE(signo, signo, SI_TKILL, -6, "sent by tkill system call", SignalCodePrintOption::Sender); \
-  ADD_SIGCODE(signo, signo, SI_DETHREAD, -7, "sent by execve() killing subsidiary threads", SignalCodePrintOption::Sender); \
-  ADD_SIGCODE(signo, signo, SI_ASYNCNL, -60, "sent by glibc async name lookup completion", SignalCodePrintOption::Sender); 
+#define ADD_LINUX_SIGNAL(signo, name, ...)                                     \
+  AddSignal(signo, name, __VA_ARGS__);                                         \
+  ADD_SIGCODE(signo, signo, SI_QUEUE, -1, "sent by sigqueue",                  \
+              SignalCodePrintOption::Sender);                                  \
+  ADD_SIGCODE(signo, signo, SI_TIMER, -2, "sent by timer expiration",          \
+              SignalCodePrintOption::Sender);                                  \
+  ADD_SIGCODE(signo, signo, SI_MESGQ, -3,                                      \
+              "sent by real time mesq state change",                           \
+              SignalCodePrintOption::Sender);                                  \
+  ADD_SIGCODE(signo, signo, SI_ASYNCIO, -4, "sent by AIO completion",          \
+              SignalCodePrintOption::Sender);                                  \
+  ADD_SIGCODE(signo, signo, SI_SIGIO, -5, "sent by queued SIGIO",              \
+              SignalCodePrintOption::Sender);                                  \
+  ADD_SIGCODE(signo, signo, SI_TKILL, -6, "sent by tkill system call",         \
+              SignalCodePrintOption::Sender);                                  \
+  ADD_SIGCODE(signo, signo, SI_DETHREAD, -7,                                   \
+              "sent by execve() killing subsidiary threads",                   \
+              SignalCodePrintOption::Sender);                                  \
+  ADD_SIGCODE(signo, signo, SI_ASYNCNL, -60,                                   \
+              "sent by glibc async name lookup completion",                    \
+              SignalCodePrintOption::Sender);
 
 using namespace lldb_private;
 

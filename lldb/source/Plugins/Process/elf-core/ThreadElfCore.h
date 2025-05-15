@@ -84,8 +84,8 @@ struct ELFLinuxSigInfo {
   int32_t si_code;
   union alignas(8) {
     struct alignas(8) {
-      uint32_t pid;	/* sender's pid */
-      uint32_t uid;	/* sender's uid */
+      uint32_t pid; /* sender's pid */
+      uint32_t uid; /* sender's uid */
     } kill;
     // Copied from siginfo_t so we don't have to include signal.h on non 'Nix
     // builds. Slight modifications to ensure no 32b vs 64b differences.
