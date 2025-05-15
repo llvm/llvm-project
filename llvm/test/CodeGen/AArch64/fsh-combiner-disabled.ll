@@ -16,6 +16,15 @@ define i32 @fshl_i32_by_zero(i32 %unused, i32 %a, i32 %b) {
   ret i32 %r
 }
 
+define i32 @fshl_i32_by_half_srclen(i32 %unused, i32 %a, i32 %b) {
+; CHECK-LABEL: fshl_i32_by_half_srclen:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    extr w0, w1, w2, #16
+; CHECK-NEXT:    ret
+  %r = call i32 @llvm.fshl.i32(i32 %a, i32 %b, i32 16)
+  ret i32 %r
+}
+
 define i32 @fshl_i32_by_srclen(i32 %unused, i32 %a, i32 %b) {
 ; CHECK-LABEL: fshl_i32_by_srclen:
 ; CHECK:       // %bb.0:
@@ -76,6 +85,15 @@ define i32 @fshr_i32_by_srclen(i32 %unused, i32 %a, i32 %b) {
 ; CHECK-NEXT:    mov w0, w2
 ; CHECK-NEXT:    ret
   %r = call i32 @llvm.fshr.i32(i32 %a, i32 %b, i32 32)
+  ret i32 %r
+}
+
+define i32 @fshr_i32_by_half_srclen(i32 %unused, i32 %a, i32 %b) {
+; CHECK-LABEL: fshr_i32_by_half_srclen:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    extr w0, w1, w2, #16
+; CHECK-NEXT:    ret
+  %r = call i32 @llvm.fshr.i32(i32 %a, i32 %b, i32 16)
   ret i32 %r
 }
 

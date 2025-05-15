@@ -7271,18 +7271,21 @@ static SDValue LowerFunnelShift(SDValue Op, SelectionDAG &DAG) {
         return Op.getOperand(0);
 
       NewShiftNo = VT.getFixedSizeInBits() - NewShiftNo;
+      return DAG.getNode(
+          ISD::FSHR, DL, VT, Op.getOperand(0), Op.getOperand(1),
+          DAG.getConstant(NewShiftNo, DL, Shifts.getValueType()));
     } else if (Op.getOpcode() == ISD::FSHR) {
       if (NewShiftNo == 0)
         return Op.getOperand(1);
 
       if (ShiftNo->getZExtValue() == NewShiftNo)
         return Op;
-    }
 
-    if (ShiftNo->getZExtValue() != NewShiftNo)
+      // Rewrite using the normalised shift amount.
       return DAG.getNode(
           ISD::FSHR, DL, VT, Op.getOperand(0), Op.getOperand(1),
           DAG.getConstant(NewShiftNo, DL, Shifts.getValueType()));
+    }
   }
 
   return SDValue();
