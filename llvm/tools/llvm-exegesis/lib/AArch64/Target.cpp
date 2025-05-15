@@ -219,17 +219,20 @@ private:
       // For some systems with existing PAC keys set, it is better to
       // check the existing state of the key before setting it.
       // For systems without PAC, this is a No-op but with PAC, it is
-      // safer to check the existing key state and then disable/enable them.
+      // better to check the existing key state and then disable/enable them
+      // to avoid runtime crashes owing to unsupported prctl opcodes or if the
+      // CPU implements FEAT_PAuth with FEAT_FPAC (in which case this method
+      // would silently return.).
       // Hence the guard for switching.
       errno = 0;
       unsigned long PacKeys = prctl_wrapper(PR_PAC_GET_ENABLED_KEYS);
-      if ((long)PacKeys < 0 || errno == EINVAL)
+      if (static_cast<long> PacKeys < 0 || errno == EINVAL)
         return nullptr;
 
       // Disable all PAC keys. Note that while we expect the measurements to
       // be the same with PAC keys disabled, they could potentially be lower
       // since authentication checks are bypassed.
-      if ((long)PacKeys != 0) {
+      if (static_cast<long> PacKeys != 0) {
         // Operate on all keys.
         const long KeysToControl =
             PR_PAC_APIAKEY | PR_PAC_APIBKEY | PR_PAC_APDAKEY | PR_PAC_APDBKEY;
