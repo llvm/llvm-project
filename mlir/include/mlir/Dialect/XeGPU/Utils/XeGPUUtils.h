@@ -15,6 +15,8 @@ namespace mlir {
 class VectorType;
 class OpOperand;
 class OpResult;
+class OpBuilder;
+class ValueRange;
 
 namespace xegpu {
 class LayoutAttr;
@@ -53,17 +55,46 @@ FailureOr<VectorType> getDistributedVectorType(xegpu::TensorDescType tdescTy);
 FailureOr<VectorType> getDistributedVectorType(VectorType originalType,
                                                LayoutAttr layout);
 
+/// Return the attribute name for the OpOperand to attach LayoutAttr
+std::string getLayoutName(OpOperand &opr);
+
+/// Return the attribute name for the OpResult to attach LayoutAttr
+std::string getLayoutName(OpResult res);
+
 /// Retrieves the LayoutAttr associated with a given Value. For TensorDescType
 /// values, the LayoutAttr is extracted from the TensorDescType itself. For
 /// other values, it is obtained from the attributes of the defining operation.
 /// Returns nullptr if no LayoutAttr is found.
 LayoutAttr getLayoutAttr(Value value);
 
-/// Retrieves the name for the LayoutAttr associated with a given OpOperand.
-std::string getLayoutName(OpOperand &opr);
+/// Retrieves the LayoutAttr associated with a given OpOperand. It will
+/// first check the operand_layout_{id} of the owner operation. If not found,
+/// it will check the operand itself and its defining op.
+LayoutAttr getLayoutAttr(OpOperand &opr);
 
-/// Retrieves the name for the LayoutAttr associated with a given OpResult.
-std::string getLayoutName(OpResult res);
+/// Sets the LayoutAttr for a given OpOperand by attaching it to the owner
+void setLayoutAttr(OpOperand &opr, LayoutAttr layout);
+
+/// Set the LayoutAttr for the given OpResult by attching it to the defining op
+void setLayoutAttr(OpResult result, LayoutAttr layout);
+
+/// Set the LayoutAttr for each OpOperand and OpResult of the given operation.
+/// If the operation contains regions, it is also applied recursively to the
+/// contained operations
+void setLayoutAttrs(Operation *op,
+                    function_ref<LayoutAttr(Value)> getLayoutImpl);
+
+/// Extract a set of small vectors from a value with a given shape using
+/// vector.extract_stride_slice
+SmallVector<Value> extractVectorsWithShapeFromValue(OpBuilder &builder,
+                                                    Location loc, Value value,
+                                                    ArrayRef<int64_t> shape);
+
+/// Create a vector of shape from a set of values using
+/// vector.insert_stride_slice.
+Value createVectorWithShapeFromValues(OpBuilder &builder, Location loc,
+                                      ValueRange values,
+                                      ArrayRef<int64_t> shape);
 
 /// Do type conversion for SCF structural ops, e.g., scf.for. Since VectorType
 /// cannot carry the layout attribute, they are converted into RankedTensorType

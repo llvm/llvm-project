@@ -14,14 +14,25 @@
 #include "mlir/Dialect/SCF/Transforms/Patterns.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/IR/ValueRange.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <cstdint>
 #include <numeric>
 
 using namespace mlir;
+
+/// convert ArrayRef<ValueRange> into SmallVector<Value>
+static SmallVector<Value> flattenValues(ArrayRef<ValueRange> values) {
+  SmallVector<Value> result;
+  for (const auto &vals : values)
+    llvm::append_range(result, vals);
+  return result;
+}
 
 FailureOr<VectorType>
 mlir::xegpu::getDistributedVectorType(xegpu::TensorDescType tdescTy) {
@@ -90,6 +101,16 @@ mlir::xegpu::getDistributedVectorType(VectorType originalType,
   return xegpu::getDistributedVectorType(helperTdescTy);
 }
 
+std::string xegpu::getLayoutName(OpOperand &opr) {
+  const StringRef prefix("layout_operand_");
+  return llvm::formatv("{0}{1}", prefix, opr.getOperandNumber()).str();
+}
+
+std::string xegpu::getLayoutName(OpResult res) {
+  const StringRef prefix = "layout_result_";
+  return llvm::formatv("{0}{1}", prefix, res.getResultNumber()).str();
+}
+
 xegpu::LayoutAttr xegpu::getLayoutAttr(Value value) {
   if (!value)
     return nullptr;
@@ -121,14 +142,86 @@ xegpu::LayoutAttr xegpu::getLayoutAttr(Value value) {
   return nullptr;
 }
 
-std::string xegpu::getLayoutName(OpOperand &opr) {
-  const StringRef prefix("layout_operand_");
-  return llvm::formatv("{0}{1}", prefix, opr.getOperandNumber()).str();
+xegpu::LayoutAttr xegpu::getLayoutAttr(OpOperand &opr) {
+  Operation *op = opr.getOwner();
+  std::string layoutName = xegpu::getLayoutName(opr);
+  if (op->hasAttr(layoutName))
+    return op->getAttrOfType<xegpu::LayoutAttr>(layoutName);
+  return getLayoutAttr(opr.get());
 }
 
-std::string xegpu::getLayoutName(OpResult res) {
-  const StringRef prefix = "layout_result_";
-  return llvm::formatv("{0}{1}", prefix, res.getResultNumber()).str();
+void xegpu::setLayoutAttr(OpOperand &opr, LayoutAttr layout) {
+  auto owner = opr.getOwner();
+  std::string name = xegpu::getLayoutName(opr);
+  if (layout && !owner->hasAttrOfType<LayoutAttr>(name))
+    owner->setAttr(name, layout);
+}
+
+void xegpu::setLayoutAttr(OpResult result, LayoutAttr layout) {
+  Operation *owner = result.getOwner();
+  std::string name = xegpu::getLayoutName(result);
+  if (layout && !owner->hasAttr(name))
+    owner->setAttr(name, layout);
+}
+
+void xegpu::setLayoutAttrs(Operation *mod,
+                           function_ref<LayoutAttr(Value)> getLayoutImpl) {
+  mod->walk([&](Operation *op) {
+    for (OpResult result : op->getOpResults()) {
+      auto layout = getLayoutImpl(result);
+      setLayoutAttr(result, layout);
+    }
+    for (OpOperand &opr : op->getOpOperands()) {
+      auto layout = getLayoutImpl(opr.get());
+      setLayoutAttr(opr, layout);
+    }
+  });
+}
+
+SmallVector<Value>
+xegpu::extractVectorsWithShapeFromValue(OpBuilder &builder, Location loc,
+                                        Value value, ArrayRef<int64_t> shape) {
+  auto vecTy = dyn_cast<VectorType>(value.getType());
+  if (!vecTy)
+    return {value};
+
+  ArrayRef<int64_t> srcShape = vecTy.getShape();
+  if (!computeShapeRatio(srcShape, shape))
+    return {value};
+
+  SmallVector<Value> result;
+  for (SmallVector<int64_t> offsets : StaticTileOffsetRange(srcShape, shape)) {
+    SmallVector<int64_t> staticStrides(offsets.size(), 1);
+    result.push_back(builder.create<vector::ExtractStridedSliceOp>(
+        loc, value, offsets, shape, staticStrides));
+  }
+
+  return result;
+}
+
+Value xegpu::createVectorWithShapeFromValues(OpBuilder &builder, Location loc,
+                                             ValueRange values,
+                                             ArrayRef<int64_t> shape) {
+  VectorType inputTy = dyn_cast<VectorType>(values[0].getType());
+  assert(llvm::all_of(values.getTypes(),
+                      [&](Type type) { return type == inputTy; }) &&
+         "values must be of the same VectorType");
+
+  Type elemTy = inputTy.getElementType();
+  ArrayRef<int64_t> tileShape = inputTy.getShape();
+
+  VectorType resultTy = VectorType::get(shape, elemTy);
+  auto zeroAttr = builder.getZeroAttr(elemTy);
+  Value result = builder.create<arith::ConstantOp>(
+      loc, resultTy, DenseElementsAttr::get(resultTy, zeroAttr));
+
+  for (auto [src, offsets] :
+       llvm::zip_equal(values, StaticTileOffsetRange(shape, tileShape))) {
+    SmallVector<int64_t> staticStrides(offsets.size(), 1);
+    result = builder.create<vector::InsertStridedSliceOp>(
+        loc, src, result, offsets, staticStrides);
+  }
+  return result;
 }
 
 void xegpu::doSCFStructuralTypeConversionWithTensorType(Operation *op) {
@@ -213,7 +306,6 @@ void xegpu::doSCFStructuralTypeConversionWithTensorType(Operation *op) {
 
   { // perform the conversion from RankedTensorType to VectorType based on the
     // LayoutAttr
-
     auto computeTileShapeAndCount = [&](ArrayRef<int64_t> shape,
                                           DenseI32ArrayAttr sgDataAttr,
                                           DenseI32ArrayAttr sgLayoutAttr) {
@@ -302,9 +394,53 @@ void xegpu::doSCFStructuralTypeConversionWithTensorType(Operation *op) {
     });
 
     mlir::ConversionTarget target(*context);
-    target.addLegalOp<UnrealizedConversionCastOp>();
+    target.addDynamicallyLegalOp<UnrealizedConversionCastOp>(
+        [&](UnrealizedConversionCastOp op) {
+          auto isTensorTy = [&](Type type) {
+            return isa<RankedTensorType>(type);
+          };
+          if (llvm::any_of(op->getOperandTypes(), isTensorTy) ||
+              llvm::any_of(op->getResultTypes(), isTensorTy))
+            return false;
+          return true;
+        });
+
+    class UnrealizedConversionCastOpPattern
+        : public OpConversionPattern<mlir::UnrealizedConversionCastOp> {
+      using OpConversionPattern<
+          mlir::UnrealizedConversionCastOp>::OpConversionPattern;
+
+      mlir::LogicalResult
+      matchAndRewrite(mlir::UnrealizedConversionCastOp op,
+                      OneToNOpAdaptor adaptor,
+                      ConversionPatternRewriter &rewriter) const override {
+        auto inputs = op.getOperands();
+        auto outputs = op.getOutputs();
+
+        if (inputs.size() != 1 || outputs.size() != 1)
+          return failure();
+
+        auto inputTy = inputs[0].getType();
+        auto outputTy = outputs[0].getType();
+
+        if (isa<VectorType>(inputTy) && isa<RankedTensorType>(outputTy)) {
+          rewriter.replaceOpWithMultiple(op, adaptor.getInputs());
+          return success();
+        }
+
+        if (isa<RankedTensorType>(inputTy) && isa<VectorType>(outputTy)) {
+          SmallVector<Value> values = flattenValues(adaptor.getInputs());
+          auto newOp = rewriter.create<UnrealizedConversionCastOp>(
+              op.getLoc(), outputTy, values);
+          rewriter.replaceOp(op, newOp);
+          return success();
+        }
+        return failure();
+      }
+    };
 
     mlir::RewritePatternSet patterns(context);
+    patterns.insert<UnrealizedConversionCastOpPattern>(context);
     scf::populateSCFStructuralTypeConversionsAndLegality(converter, patterns,
                                                          target);
     (void)mlir::applyPartialConversion(op, target, std::move(patterns));
