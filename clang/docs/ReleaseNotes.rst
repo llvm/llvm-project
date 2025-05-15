@@ -601,6 +601,7 @@ Bug Fixes in This Version
 - Fixed a crash with an invalid member function parameter list with a default
   argument which contains a pragma. (#GH113722)
 - Fixed assertion failures when generating name lookup table in modules. (#GH61065, #GH134739)
+- Fixed an assertion failure in constant compound literal statements. (#GH139160)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
