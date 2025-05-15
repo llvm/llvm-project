@@ -10212,7 +10212,7 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
   assert((allConstant(VLRef) || allSameType(VLRef)) && "Invalid types!");
 
   SmallVector<int> ReuseShuffleIndices;
-  SmallVector<Value *> VL(VLRef.begin(), VLRef.end());
+  SmallVector<Value *> VL(VLRef);
 
   // Tries to build split node.
   auto TrySplitNode = [&](const InstructionsState &LocalState) {
@@ -13606,7 +13606,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         unsigned InterleaveFactor;
         SmallVector<int> CompressMask;
         VectorType *LoadVecTy;
-        SmallVector<Value *> Scalars(VL.begin(), VL.end());
+        SmallVector<Value *> Scalars(VL);
         if (!E->ReorderIndices.empty()) {
           SmallVector<int> Mask(E->ReorderIndices.begin(),
                                 E->ReorderIndices.end());
