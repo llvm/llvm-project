@@ -292,19 +292,21 @@ let Predicates = [MMA, PrefixInstrs, IsISAFuture] in {
 let Predicates = [IsISAFuture] in {
   def DMSHA2HASH :
     XForm_AT3_T1_AB3<31, 14, 177, (outs dmr:$AT), (ins dmr:$ATi, dmr:$AB, u1imm:$T),
-                      "dmsha2hash $AT, $AB, $T", []>,
-    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+                     "dmsha2hash $AT, $AB, $T",
+                     [(set v1024i1:$AT, (int_ppc_mma_dmsha2hash v1024i1:$ATi, v1024i1:$AB, timm:$T))]>,
+                     RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
 
   def DMSHA3HASH :
     XForm_ATp2_SR5<31, 15, 177, (outs dmrprc:$ATp), (ins dmrprc:$ATpi , u5imm:$SR),
-                   "dmsha3hash $ATp, $SR", []>,
-    RegConstraint<"$ATpi = $ATp">, NoEncode<"$ATpi">;
+                   "dmsha3hash $ATp, $SR",
+                   [(set v2048i1:$ATp, (int_ppc_mma_dmsha3hash v2048i1:$ATpi, timm:$SR))]>,
+                   RegConstraint<"$ATpi = $ATp">, NoEncode<"$ATpi">;
 
   def DMXXSHAPAD :
     XX2Form_AT3_XB6_ID2_E1_BL2<60, 421, (outs dmr:$AT),
                                (ins dmr:$ATi, vsrc:$XB, u2imm:$ID, u1imm:$E, u2imm:$BL),
-                                "dmxxshapad $AT, $XB, $ID, $E, $BL", []>,
-    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+                               "dmxxshapad $AT, $XB, $ID, $E, $BL", []>,
+                               RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
 }
 
 // MMA+ Intrinsics
@@ -337,14 +339,8 @@ let Predicates = [MMA, PrefixInstrs, IsISAFuture] in {
                            Msk4Imm:$YMSK, Msk4Imm:$PMSK)>;
 }
 
-// cryptography Intrinsics
+// Cryptography Intrinsic
 let Predicates = [IsISAFuture] in {
-  def : Pat<(v1024i1 (int_ppc_mma_dmsha2hash v1024i1:$ATi, v1024i1:$AB, timm:$T)),
-             (DMSHA2HASH $ATi, $AB, $T)>;
-
-  def : Pat<(v2048i1 (int_ppc_mma_dmsha3hash v2048i1:$ATpi, timm:$SR)),
-             (DMSHA3HASH $ATpi, $SR)>;
-
   def : Pat<(v1024i1 (int_ppc_mma_dmxxshapad v1024i1:$ATi, v16i8:$XB, timm:$ID,
                       timm:$E, timm:$BL)), (DMXXSHAPAD $ATi, RCCp.BToVSRC, $ID, $E, $BL)>;
 }
