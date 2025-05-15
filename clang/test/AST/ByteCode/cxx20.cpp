@@ -1007,3 +1007,11 @@ namespace TempDtor {
     a_ref.~A(); // both-note {{destruction of temporary is not allowed in a constant expression outside the expression that created the temporary}}
   }
 }
+
+namespace OnePastEndDtor {
+  struct A {int n; };
+  constexpr void destroy_past_end() { // both-error {{never produces a constant expression}}
+    A a;
+    (&a+1)->~A(); // both-note {{destruction of dereferenced one-past-the-end pointer}}
+  }
+}
