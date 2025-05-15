@@ -511,10 +511,11 @@ def CP_ASYNC_BULK_WAIT_GROUP_READ :
 // TMA Async Bulk Copy Functions
 //------------------------------
 
-class CpAsyncBulkStr<bit mc, bit ch> {
+class CpAsyncBulkStr<bit mc, bit ch, bit mask = 0> {
   // Shared to Global memory
   string S2G = "cp.async.bulk.global.shared::cta.bulk_group"
-               # !if(ch, ".L2::cache_hint", "");
+               # !if(ch, ".L2::cache_hint", "")
+               # !if(mask, ".cp_mask", "");
 
   // Global to Shared cluster memory
   string G2S = "cp.async.bulk.shared::cluster.global.mbarrier::complete_tx::bytes"
@@ -525,18 +526,23 @@ class CpAsyncBulkStr<bit mc, bit ch> {
   string C2C = "cp.async.bulk.shared::cluster.shared::cta.mbarrier::complete_tx::bytes";
 }
 
-multiclass CP_ASYNC_BULK_S2G<NVPTXRegClass rc> {
-  def NAME: NVPTXInst<(outs),
-            (ins Int64Regs:$dst, rc:$src, Int32Regs:$size),
-            !strconcat(CpAsyncBulkStr<0, 0>.S2G, " [$dst], [$src], $size;"), []>,
-            Requires<[hasPTX<80>, hasSM<90>]>;
-  def NAME # _CH: NVPTXInst<(outs),
-                  (ins Int64Regs:$dst, rc:$src, Int32Regs:$size, Int64Regs:$ch),
-                  !strconcat(CpAsyncBulkStr<0, 1>.S2G, " [$dst], [$src], $size, $ch;"), []>,
-                  Requires<[hasPTX<80>, hasSM<90>]>;
+multiclass CP_ASYNC_BULK_S2G_INTR<bit has_ch> {
+  def NAME : NVPTXInst<(outs), (ins ADDR:$dst, ADDR:$src, Int32Regs:$size, Int64Regs:$ch),
+      !if(has_ch,
+          CpAsyncBulkStr<0, 1>.S2G # " [$dst], [$src], $size, $ch;",
+          CpAsyncBulkStr<0, 0>.S2G # " [$dst], [$src], $size;"),
+      [(int_nvvm_cp_async_bulk_shared_cta_to_global addr:$dst, addr:$src, i32:$size, i64:$ch, !if(has_ch, -1, 0))]>,
+      Requires<[hasPTX<80>, hasSM<90>]>;
+
+  def NAME # _BM : NVPTXInst<(outs), (ins ADDR:$dst, ADDR:$src, Int32Regs:$size, Int64Regs:$ch, Int16Regs:$mask),
+      !if(has_ch,
+          CpAsyncBulkStr<0, 1, 1>.S2G # " [$dst], [$src], $size, $ch, $mask;",
+          CpAsyncBulkStr<0, 0, 1>.S2G # " [$dst], [$src], $size, $mask;"),
+      [(int_nvvm_cp_async_bulk_shared_cta_to_global_bytemask addr:$dst, addr:$src, i32:$size, i64:$ch, !if(has_ch, -1, 0), i16:$mask)]>,
+      Requires<[hasPTX<86>, hasSM<100>]>;
 }
-defm CP_ASYNC_BULK_S2G : CP_ASYNC_BULK_S2G<Int64Regs>;
-defm CP_ASYNC_BULK_S2G_SHARED32 : CP_ASYNC_BULK_S2G<Int32Regs>;
+defm CP_ASYNC_BULK_S2G    : CP_ASYNC_BULK_S2G_INTR<0>;
+defm CP_ASYNC_BULK_S2G_CH : CP_ASYNC_BULK_S2G_INTR<1>;
 
 multiclass CP_ASYNC_BULK_G2S<NVPTXRegClass rc> {
   def NAME: NVPTXInst<(outs),

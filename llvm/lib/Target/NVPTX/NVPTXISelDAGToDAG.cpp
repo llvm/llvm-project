@@ -2685,31 +2685,6 @@ void NVPTXDAGToDAGISel::SelectCpAsyncBulkTensorReduceCommon(SDNode *N,
   ReplaceNode(N, CurDAG->getMachineNode(Opcode, DL, N->getVTList(), Ops));
 }
 
-void NVPTXDAGToDAGISel::SelectCpAsyncBulkS2G(SDNode *N) {
-  // We have {Chain, Intrinsic-ID} followed by the actual intrisic args:
-  // dst, src, size, cache_hint, cache_hint_flag
-  // NumOperands = {Chain, IID} + {Actual intrinsic args}
-  //             = {2}          + {5}
-  size_t NumOps = N->getNumOperands();
-  bool IsCacheHint = N->getConstantOperandVal(NumOps - 1) == 1;
-  size_t NumArgs = IsCacheHint ? 4 : 3; // src, dst, size, cache_hint
-
-  SDLoc DL(N);
-  SmallVector<SDValue, 8> Ops(N->ops().slice(2, NumArgs));
-  Ops.push_back(N->getOperand(0)); // Chain operand
-
-  bool IsShared32 =
-      CurDAG->getDataLayout().getPointerSizeInBits(ADDRESS_SPACE_SHARED) == 32;
-  unsigned Opcode;
-  if (IsCacheHint)
-    Opcode = IsShared32 ? NVPTX::CP_ASYNC_BULK_S2G_SHARED32_CH
-                        : NVPTX::CP_ASYNC_BULK_S2G_CH;
-  else
-    Opcode = IsShared32 ? NVPTX::CP_ASYNC_BULK_S2G_SHARED32
-                        : NVPTX::CP_ASYNC_BULK_S2G;
-  ReplaceNode(N, CurDAG->getMachineNode(Opcode, DL, N->getVTList(), Ops));
-}
-
 void NVPTXDAGToDAGISel::SelectCpAsyncBulkG2S(SDNode *N) {
   // We have {Chain, Intrinsic-ID} followed by the actual intrisic args:
   // {dst, mbar, src, size, multicast, cache_hint,
@@ -2891,9 +2866,6 @@ bool NVPTXDAGToDAGISel::tryIntrinsicVoid(SDNode *N) {
     return false;
   case Intrinsic::nvvm_cp_async_bulk_global_to_shared_cluster:
     SelectCpAsyncBulkG2S(N);
-    return true;
-  case Intrinsic::nvvm_cp_async_bulk_shared_cta_to_global:
-    SelectCpAsyncBulkS2G(N);
     return true;
   case Intrinsic::nvvm_cp_async_bulk_prefetch_L2:
     SelectCpAsyncBulkPrefetchL2(N);
