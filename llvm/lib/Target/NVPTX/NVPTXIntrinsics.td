@@ -2003,6 +2003,20 @@ def : Pat<(int_nvvm_e3m2x2_to_f16x2_rn i16:$a),
 def : Pat<(int_nvvm_e3m2x2_to_f16x2_rn_relu i16:$a),
           (CVT_f16x2_e3m2x2 $a, CvtRN_RELU)>,
       Requires<[hasPTX<86>, hasSM<100>, hasArchAccelFeatures]>;
+      
+def : Pat<(int_nvvm_ff_to_e2m1x2_rn_satfinite f32:$a, f32:$b),
+          (CVT_e2m1x2_f32_sf $a, $b, CvtRN)>,
+      Requires<[hasPTX<86>, hasSM<100>, hasArchAccelFeatures]>;
+def : Pat<(int_nvvm_ff_to_e2m1x2_rn_relu_satfinite f32:$a, f32:$b),
+          (CVT_e2m1x2_f32_sf $a, $b, CvtRN_RELU)>,
+      Requires<[hasPTX<86>, hasSM<100>, hasArchAccelFeatures]>;
+      
+def : Pat<(int_nvvm_e2m1x2_to_f16x2_rn Int16Regs:$a),
+          (CVT_f16x2_e2m1x2 $a, CvtRN)>,
+      Requires<[hasPTX<86>, hasSM<100>, hasArchAccelFeatures]>;
+def : Pat<(int_nvvm_e2m1x2_to_f16x2_rn_relu Int16Regs:$a),
+          (CVT_f16x2_e2m1x2 $a, CvtRN_RELU)>,
+      Requires<[hasPTX<86>, hasSM<100>, hasArchAccelFeatures]>;
 
 def : Pat<(int_nvvm_ff_to_ue8m0x2_rz f32:$a, f32:$b),
           (CVT_ue8m0x2_f32 $a, $b, CvtRZ)>,
