@@ -1,0 +1,49 @@
+# RUN: llc -mtriple=amdgcn -mcpu=gfx942 -start-before=machine-scheduler -verify-misched -misched-print-dags -o - %s 2>&1 | FileCheck -check-prefix=GCN %s
+
+--- |
+  define amdgpu_kernel void @smallInterleave() { ret void }
+  ; GCN-LABEL: SU(3):   renamable $vgpr0_vgpr1 = contract nofpexcept V_PK_MUL_F32 8, $vgpr2_vgpr3, 0, $vgpr0_vgpr1, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+  ; GCN-NEXT:   # preds left       : 5
+  ; GCN-NEXT:   # succs left       : 2
+  ; GCN-NEXT:   # rdefs left       : 0
+  ; GCN-NEXT:   Latency            : 1
+  ; GCN-NEXT:   Depth              : 1
+  ; GCN-NEXT:   Height             : 1
+  ; GCN-NEXT:   Predecessors:
+  ; GCN-NEXT:     SU(2): Data Latency=0 Reg=$vgpr2_vgpr3
+  ; GCN-NEXT:     SU(1): Out  Latency=1
+  ; GCN-NEXT:     SU(1): Ord  Latency=0 Artificial
+  ; GCN-NEXT:     SU(0): Out  Latency=1
+  ; GCN-NEXT:     SU(0): Data Latency=1 Reg=$vgpr0_vgpr1
+  ; GCN-NEXT:   Successors:
+  ; GCN-NEXT:     SU(5): Data Latency=1 Reg=$vgpr0_vgpr1
+  ; GCN-NEXT:     SU(4): Anti Latency=0
+
+  ; GCN-LABEL: smallInterleave:
+  ; GCN:       ; %bb.0:
+  ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+  ; GCN-NEXT:    v_mov_b32_e32 v0, 0
+  ; GCN-NEXT:    v_mov_b32_e32 v1, 1
+  ; GCN-NEXT:    ; implicit-def: $vgpr2_vgpr3
+  ; GCN-NEXT:    v_pk_mul_f32 v[0:1], v[2:3], v[0:1] op_sel_hi:[1,0]
+  ; GCN-NEXT:    ; implicit-def: $vgpr2_vgpr3
+  ; GCN-NEXT:    buffer_wbl2 sc0 sc1
+  ; GCN-NEXT:    flat_store_dwordx2 v[2:3], v[0:1] sc0 sc1
+  ; GCN-NEXT:    s_endpgm
+...
+
+---
+name:            smallInterleave
+tracksRegLiveness: true
+machineFunctionInfo:
+  stackPtrOffsetReg: '$sgpr32'
+body:             |
+ bb.0:
+  undef %0.sub0:vreg_64_align2 = V_MOV_B32_e32 0, implicit $exec
+  undef %0.sub1:vreg_64_align2 = V_MOV_B32_e32 1, implicit $exec
+  %2:vreg_64_align2 = IMPLICIT_DEF
+  %3:vreg_64_align2 = contract nofpexcept V_PK_MUL_F32 8, %2:vreg_64_align2, 0, %0:vreg_64_align2, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+  %4:vreg_64_align2 = IMPLICIT_DEF
+  FLAT_STORE_DWORDX2 undef %4:vreg_64_align2, %3:vreg_64_align2, 0, 0, implicit $exec, implicit $flat_scr
+  S_ENDPGM 0
+...
