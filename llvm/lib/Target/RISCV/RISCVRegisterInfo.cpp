@@ -289,15 +289,27 @@ void RISCVRegisterInfo::adjustReg(MachineBasicBlock &MBB,
   }
 
   // Use the QC_E_ADDI instruction from the Xqcilia extension that can take a
-  // signed 26-bit immediate. Avoid anything which can be done with a single lui
-  // (4 bytes) since it will be better than using QC_E_ADDI (6 bytes). It could
-  // also be compressible in certain cases.
-  if (ST.hasVendorXqcilia() && isInt<26>(Val) && (Val & 0xFFF) != 0) {
-    BuildMI(MBB, II, DL, TII->get(RISCV::QC_E_ADDI), DestReg)
-        .addReg(SrcReg, getKillRegState(KillSrcReg))
-        .addImm(Val)
-        .setMIFlag(Flag);
-    return;
+  // signed 26-bit immediate.
+  if (ST.hasVendorXqcilia() && isInt<26>(Val)) {
+    // The one case where using this instruction is sub-optimal is if Val can be
+    // materialized with a single compressible LUI and following add/sub is also
+    // compressible. Avoid doing this if that is the case.
+    int Hi20 = (Val & 0xFFFFF000) >> 12;
+    bool IsCompressLUI =
+        ((Val & 0xFFF) == 0) && (Hi20 != 0) &&
+        (isUInt<5>(Hi20) || (Hi20 >= 0xfffe0 && Hi20 <= 0xfffff));
+    bool IsCompressAddSub =
+        (SrcReg == DestReg) &&
+        ((Val > 0 && RISCV::GPRNoX0RegClass.contains(SrcReg)) ||
+         (Val < 0 && RISCV::GPRCRegClass.contains(SrcReg)));
+
+    if (!(IsCompressLUI && IsCompressAddSub)) {
+      BuildMI(MBB, II, DL, TII->get(RISCV::QC_E_ADDI), DestReg)
+          .addReg(SrcReg, getKillRegState(KillSrcReg))
+          .addImm(Val)
+          .setMIFlag(Flag);
+      return;
+    }
   }
 
   // Try to split the offset across two ADDIs. We need to keep the intermediate
