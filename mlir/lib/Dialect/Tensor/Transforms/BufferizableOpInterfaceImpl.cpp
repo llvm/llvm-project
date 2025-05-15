@@ -1048,6 +1048,103 @@ struct SplatOpInterface
   }
 };
 
+/// Bufferization of tensor.concat. Bufferizes to a new allocation that is
+/// filled with copy ops. Similar to tensor.from_elements, but using memref.copy
+/// on subviews instead of memref.store.
+struct ConcatOpInterface
+    : public BufferizableOpInterface::ExternalModel<ConcatOpInterface,
+                                                    tensor::ConcatOp> {
+
+  bool bufferizesToAllocation(Operation *op, Value value) const { return true; }
+
+  bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
+                               const AnalysisState &state) const {
+    return true;
+  }
+
+  bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
+                              const AnalysisState &state) const {
+    return true;
+  }
+
+  AliasingValueList getAliasingValues(Operation *op, OpOperand &opOperand,
+                                      const AnalysisState &state) const {
+    return {{op->getResult(0), BufferRelation::Equivalent}};
+  }
+
+  LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
+                          const BufferizationOptions &options) const {
+    OpBuilder::InsertionGuard g(rewriter);
+    auto concatOp = cast<tensor::ConcatOp>(op);
+
+    // Allocate memory.
+    Location loc = op->getLoc();
+    FailureOr<Value> tensorAlloc = allocateTensorForShapedValue(
+        rewriter, loc, concatOp.getResult(), options,
+        /*copy=*/false);
+    if (failed(tensorAlloc))
+      return failure();
+    auto tensorType = cast<RankedTensorType>(tensorAlloc->getType());
+
+    // TODO: Implement memory space for this op.
+    if (options.defaultMemorySpaceFn(tensorType) != Attribute())
+      return op->emitError("memory space not implemented yet");
+
+    MemRefLayoutAttrInterface layout;
+    MemRefType memrefType =
+        MemRefType::get(concatOp.getResultType().getShape(),
+                        concatOp.getResultType().getElementType(), layout);
+    Value dstBuffer = rewriter.create<bufferization::ToMemrefOp>(
+        op->getLoc(), memrefType, *tensorAlloc);
+
+    // Extract the dimension for the concat op
+    uint64_t concatDim = concatOp.getDim();
+
+    SmallVector<OpFoldResult> offsets(tensorType.getRank(),
+                                      rewriter.getIndexAttr(0));
+    SmallVector<OpFoldResult> strides(tensorType.getRank(),
+                                      rewriter.getIndexAttr(1));
+    SmallVector<OpFoldResult> sizes;
+    for (auto dimSize : tensorType.getShape()) {
+      sizes.push_back(rewriter.getIndexAttr(dimSize));
+    }
+
+    int concatDimOffset = 0;
+    for (auto operand : concatOp.getInputs()) {
+      // Get the buffer for the operand.
+      FailureOr<Value> srcBuffer = getBuffer(rewriter, operand, options);
+      if (failed(srcBuffer))
+        return failure();
+
+      // Each operand may have a different size along the concat dimension,
+      // so the offset on that axis must accumulate through the loop, and the
+      // size must change to the size of the current operand.
+      auto operandTensorType = cast<RankedTensorType>(operand.getType());
+      int operandConcatDimSize = operandTensorType.getDimSize(concatDim);
+      sizes[concatDim] = rewriter.getIndexAttr(operandConcatDimSize);
+      offsets[concatDim] = rewriter.getIndexAttr(concatDimOffset);
+
+      // Create a subview of the destination buffer.
+      auto dstMemrefType = cast<MemRefType>(memrefType);
+      MemRefType subviewMemRefType =
+          memref::SubViewOp::inferRankReducedResultType(
+              operandTensorType.getShape(), dstMemrefType, offsets, sizes,
+              strides);
+      Value subview = rewriter.create<memref::SubViewOp>(
+          loc, subviewMemRefType, dstBuffer, offsets, sizes, strides);
+
+      // Copy the source buffer into the destination subview.
+      if (failed(options.createMemCpy(rewriter, loc, *srcBuffer, subview)))
+        return failure();
+
+      concatDimOffset += operandConcatDimSize;
+    }
+
+    replaceOpWithBufferizedValues(rewriter, op, dstBuffer);
+    return success();
+  }
+};
+
 } // namespace
 } // namespace tensor
 } // namespace mlir
@@ -1057,6 +1154,7 @@ void mlir::tensor::registerBufferizableOpInterfaceExternalModels(
   registry.addExtension(+[](MLIRContext *ctx, tensor::TensorDialect *dialect) {
     CastOp::attachInterface<CastOpInterface>(*ctx);
     CollapseShapeOp::attachInterface<CollapseShapeOpInterface>(*ctx);
+    ConcatOp::attachInterface<ConcatOpInterface>(*ctx);
     DimOp::attachInterface<DimOpInterface>(*ctx);
     EmptyOp::attachInterface<EmptyOpInterface>(*ctx);
     ExpandShapeOp::attachInterface<ExpandShapeOpInterface>(*ctx);
