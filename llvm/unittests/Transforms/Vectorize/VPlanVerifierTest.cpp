@@ -41,8 +41,16 @@ TEST_F(VPVerifierTest, VPInstructionUseBeforeDefSameBB) {
 #endif
   EXPECT_FALSE(verifyVPlanIsValid(Plan));
 #if GTEST_HAS_STREAM_REDIRECTION
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  EXPECT_STREQ("Use before def!\n"
+               "  EMIT vp<%1> = sub vp<%2>\n"
+               "  before\n"
+               "  EMIT vp<%2> = add ir<0>\n",
+               ::testing::internal::GetCapturedStderr().c_str());
+#else
   EXPECT_STREQ("Use before def!\n",
                ::testing::internal::GetCapturedStderr().c_str());
+#endif
 #endif
 }
 
@@ -72,8 +80,16 @@ TEST_F(VPVerifierTest, VPInstructionUseBeforeDefDifferentBB) {
 #endif
   EXPECT_FALSE(verifyVPlanIsValid(Plan));
 #if GTEST_HAS_STREAM_REDIRECTION
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  EXPECT_STREQ("Use before def!\n"
+               "  EMIT vp<%1> = sub vp<%3>\n"
+               "  before\n"
+               "  EMIT vp<%3> = add ir<0>\n",
+               ::testing::internal::GetCapturedStderr().c_str());
+#else
   EXPECT_STREQ("Use before def!\n",
                ::testing::internal::GetCapturedStderr().c_str());
+#endif
 #endif
 }
 
@@ -112,8 +128,16 @@ TEST_F(VPVerifierTest, VPBlendUseBeforeDefDifferentBB) {
 #endif
   EXPECT_FALSE(verifyVPlanIsValid(Plan));
 #if GTEST_HAS_STREAM_REDIRECTION
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  EXPECT_STREQ("Use before def!\n"
+               "  BLEND ir<<badref>> = vp<%2>\n"
+               "  before\n"
+               "  EMIT vp<%2> = add ir<0>\n",
+               ::testing::internal::GetCapturedStderr().c_str());
+#else
   EXPECT_STREQ("Use before def!\n",
                ::testing::internal::GetCapturedStderr().c_str());
+#endif
 #endif
 
   delete Phi;
