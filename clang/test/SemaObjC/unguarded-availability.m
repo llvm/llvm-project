@@ -343,21 +343,21 @@ AVAILABLE_10_12
 @end
 
 typedef enum {
-  AK_Dodo __attribute__((availability(macos, deprecated=10.3))), // expected-note 3 {{marked deprecated here}}
+  AK_Dodo __attribute__((availability(macos, deprecated=10.3))), // expected-note 1 {{marked deprecated here}}
   AK_Cat __attribute__((availability(macos, introduced=10.4))),
   AK_CyborgCat __attribute__((availability(macos, introduced=10.12))), // expected-note {{'AK_CyborgCat' has been marked as being introduced in macOS 10.12 here, but the deployment target is macOS 10.9}}
 } Animals;
 
 void switchAnimals(Animals a) {
   switch (a) {
-  case AK_Dodo: break; // expected-warning{{'AK_Dodo' is deprecated}}
+  case AK_Dodo: break; // no warn
   case AK_Cat: break;
   case AK_Cat|AK_CyborgCat: break; // expected-warning{{case value not in enum}}
   case AK_CyborgCat: break; // no warn
   }
 
   switch (a) {
-  case AK_Dodo...AK_CyborgCat: // expected-warning {{'AK_Dodo' is depr}}
+  case AK_Dodo...AK_CyborgCat: // no warn
     break;
   }
 

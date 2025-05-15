@@ -6767,6 +6767,9 @@ public:
     };
     std::optional<InitializationContext> DelayedDefaultInitializationContext;
 
+    /// Whether evaluating an expression for a switch case label.
+    bool IsCaseExpr = false;
+
     ExpressionEvaluationContextRecord(ExpressionEvaluationContext Context,
                                       unsigned NumCleanupObjects,
                                       CleanupInfo ParentCleanup,

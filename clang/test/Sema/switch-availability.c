@@ -38,3 +38,11 @@ int testSwitchFour(enum SwitchFour e) {
   case Green: return 2;
   }
 } // expected-warning{{non-void function does not return a value in all control paths}}
+
+int testSwitchFourCovered(enum SwitchFour e) {
+  switch (e) {
+  case Red:   return 1;
+  case Green: return 2;
+  case Blue:  return 3; // no warning
+  }
+}
