@@ -240,7 +240,7 @@ foreach index = !range(0, 32) in {
 // Inline PTX op definition
 //===----------------------------------------------------------------------===//
 
-def NVVM_InlinePtxOP : NVVM_Op<"inline_ptx", 
+def NVVM_InlinePtxOp : NVVM_Op<"inline_ptx", 
   [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>, 
     AttrSizedOperandSegments]>
 {
