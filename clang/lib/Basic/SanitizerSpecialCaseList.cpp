@@ -38,11 +38,10 @@ SanitizerSpecialCaseList::createOrDie(const std::vector<std::string> &Paths,
 
 void SanitizerSpecialCaseList::createSanitizerSections() {
   for (auto &It : Sections) {
-    auto &S = It.second;
     SanitizerMask Mask;
 
 #define SANITIZER(NAME, ID)                                                    \
-  if (S.SectionMatcher->match(NAME))                                           \
+  if (It.SectionMatcher->match(NAME))                                           \
     Mask |= SanitizerKind::ID;
 #define SANITIZER_GROUP(NAME, ID, ALIAS) SANITIZER(NAME, ID)
 
@@ -50,7 +49,7 @@ void SanitizerSpecialCaseList::createSanitizerSections() {
 #undef SANITIZER
 #undef SANITIZER_GROUP
 
-    SanitizerSections.emplace_back(Mask, S.Entries);
+    SanitizerSections.emplace_back(Mask, It.Entries);
   }
 }
 
