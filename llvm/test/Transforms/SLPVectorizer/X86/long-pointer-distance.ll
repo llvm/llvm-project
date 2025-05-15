@@ -5,7 +5,13 @@ define void @test(ptr %this) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: ptr [[THIS:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    store <4 x i64> <i64 1, i64 2, i64 3, i64 4>, ptr [[THIS]], align 8
+; CHECK-NEXT:    store i64 1, ptr [[THIS]], align 8
+; CHECK-NEXT:    [[B:%.*]] = getelementptr i8, ptr [[THIS]], i64 8
+; CHECK-NEXT:    store i64 2, ptr [[B]], align 8
+; CHECK-NEXT:    [[C:%.*]] = getelementptr i8, ptr [[THIS]], i64 4294967312
+; CHECK-NEXT:    store i64 3, ptr [[C]], align 8
+; CHECK-NEXT:    [[D:%.*]] = getelementptr i8, ptr [[THIS]], i64 4294967320
+; CHECK-NEXT:    store i64 4, ptr [[D]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
