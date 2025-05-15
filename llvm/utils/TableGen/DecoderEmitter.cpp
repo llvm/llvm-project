@@ -2149,6 +2149,7 @@ static void insertBits(InsnType &field, InsnType bits, unsigned startBit,
                        unsigned numBits) {
   if constexpr (std::is_integral<InsnType>::value) {
     assert(startBit + numBits <= sizeof field * 8);
+    (void)numBits;
     field |= (InsnType)bits << startBit;
   } else {
     field.insertBits(bits, startBit, numBits);

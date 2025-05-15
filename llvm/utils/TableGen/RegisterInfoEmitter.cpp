@@ -1934,6 +1934,8 @@ void RegisterInfoEmitter::debugDump(raw_ostream &OS) {
       OS << "\tSubReg " << SubIdx->getName() << " = " << SubReg->getName()
          << '\n';
     }
+    for (unsigned U : R.getNativeRegUnits())
+      OS << "\tRegUnit " << U << '\n';
   }
 }
 

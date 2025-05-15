@@ -1272,6 +1272,11 @@ static MCRegister convertFPR64ToFPR32(MCRegister Reg) {
   return Reg - RISCV::F0_D + RISCV::F0_F;
 }
 
+static MCRegister convertFPR64ToFPR128(MCRegister Reg) {
+  assert(Reg >= RISCV::F0_D && Reg <= RISCV::F31_D && "Invalid register");
+  return Reg - RISCV::F0_D + RISCV::F0_Q;
+}
+
 static MCRegister convertVRToVRMx(const MCRegisterInfo &RI, MCRegister Reg,
                                   unsigned Kind) {
   unsigned RegClassID;
@@ -1300,6 +1305,10 @@ unsigned RISCVAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
       RISCVMCRegisterClasses[RISCV::FPR64CRegClassID].contains(Reg);
   bool IsRegVR = RISCVMCRegisterClasses[RISCV::VRRegClassID].contains(Reg);
 
+  if (IsRegFPR64 && Kind == MCK_FPR128) {
+    Op.Reg.RegNum = convertFPR64ToFPR128(Reg);
+    return Match_Success;
+  }
   // As the parser couldn't differentiate an FPR32 from an FPR64, coerce the
   // register from FPR64 to FPR32 or FPR64C to FPR32C if necessary.
   if ((IsRegFPR64 && Kind == MCK_FPR32) ||
@@ -1663,13 +1672,16 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
 // rejected.
 MCRegister RISCVAsmParser::matchRegisterNameHelper(StringRef Name) const {
   MCRegister Reg = MatchRegisterName(Name);
-  // The 16-/32- and 64-bit FPRs have the same asm name. Check that the initial
-  // match always matches the 64-bit variant, and not the 16/32-bit one.
+  // The 16-/32-/128- and 64-bit FPRs have the same asm name. Check
+  // that the initial match always matches the 64-bit variant, and
+  // not the 16/32/128-bit one.
   assert(!(Reg >= RISCV::F0_H && Reg <= RISCV::F31_H));
   assert(!(Reg >= RISCV::F0_F && Reg <= RISCV::F31_F));
+  assert(!(Reg >= RISCV::F0_Q && Reg <= RISCV::F31_Q));
   // The default FPR register class is based on the tablegen enum ordering.
   static_assert(RISCV::F0_D < RISCV::F0_H, "FPR matching must be updated");
   static_assert(RISCV::F0_D < RISCV::F0_F, "FPR matching must be updated");
+  static_assert(RISCV::F0_D < RISCV::F0_Q, "FPR matching must be updated");
   if (!Reg)
     Reg = MatchRegisterAltName(Name);
   if (isRVE() && Reg >= RISCV::X16 && Reg <= RISCV::X31)
@@ -3848,6 +3860,9 @@ bool RISCVAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
   case RISCV::PseudoFLD:
     emitLoadStoreSymbol(Inst, RISCV::FLD, IDLoc, Out, /*HasTmpReg=*/true);
     return false;
+  case RISCV::PseudoFLQ:
+    emitLoadStoreSymbol(Inst, RISCV::FLQ, IDLoc, Out, /*HasTmpReg=*/true);
+    return false;
   case RISCV::PseudoSB:
   case RISCV::PseudoQC_E_SB:
     emitLoadStoreSymbol(Inst, RISCV::SB, IDLoc, Out, /*HasTmpReg=*/true);
@@ -3874,6 +3889,9 @@ bool RISCVAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
     return false;
   case RISCV::PseudoFSD:
     emitLoadStoreSymbol(Inst, RISCV::FSD, IDLoc, Out, /*HasTmpReg=*/true);
+    return false;
+  case RISCV::PseudoFSQ:
+    emitLoadStoreSymbol(Inst, RISCV::FSQ, IDLoc, Out, /*HasTmpReg=*/true);
     return false;
   case RISCV::PseudoAddTPRel:
     if (checkPseudoAddTPRel(Inst, Operands))

@@ -1372,41 +1372,42 @@ mlir::LogicalResult CIRToLLVMCmpOpLowering::matchAndRewrite(
 mlir::LogicalResult CIRToLLVMShiftOpLowering::matchAndRewrite(
     cir::ShiftOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  auto cirAmtTy = mlir::dyn_cast<cir::IntType>(op.getAmount().getType());
-  auto cirValTy = mlir::dyn_cast<cir::IntType>(op.getValue().getType());
+  assert((op.getValue().getType() == op.getType()) &&
+         "inconsistent operands' types NYI");
 
-  // Operands could also be vector type
-  assert(!cir::MissingFeatures::vectorType());
-  mlir::Type llvmTy = getTypeConverter()->convertType(op.getType());
+  const mlir::Type llvmTy = getTypeConverter()->convertType(op.getType());
   mlir::Value amt = adaptor.getAmount();
   mlir::Value val = adaptor.getValue();
 
-  // TODO(cir): Assert for vector types
-  assert((cirValTy && cirAmtTy) &&
-         "shift input type must be integer or vector type, otherwise NYI");
+  auto cirAmtTy = mlir::dyn_cast<cir::IntType>(op.getAmount().getType());
+  bool isUnsigned;
+  if (cirAmtTy) {
+    auto cirValTy = mlir::cast<cir::IntType>(op.getValue().getType());
+    isUnsigned = cirValTy.isUnsigned();
 
-  assert((cirValTy == op.getType()) && "inconsistent operands' types NYI");
-
-  // Ensure shift amount is the same type as the value. Some undefined
-  // behavior might occur in the casts below as per [C99 6.5.7.3].
-  // Vector type shift amount needs no cast as type consistency is expected to
-  // be already be enforced at CIRGen.
-  if (cirAmtTy)
-    amt = getLLVMIntCast(rewriter, amt, mlir::cast<mlir::IntegerType>(llvmTy),
-                         true, cirAmtTy.getWidth(), cirValTy.getWidth());
+    // Ensure shift amount is the same type as the value. Some undefined
+    // behavior might occur in the casts below as per [C99 6.5.7.3].
+    // Vector type shift amount needs no cast as type consistency is expected to
+    // be already be enforced at CIRGen.
+    if (cirAmtTy)
+      amt = getLLVMIntCast(rewriter, amt, llvmTy, true, cirAmtTy.getWidth(),
+                           cirValTy.getWidth());
+  } else {
+    auto cirValVTy = mlir::cast<cir::VectorType>(op.getValue().getType());
+    isUnsigned =
+        mlir::cast<cir::IntType>(cirValVTy.getElementType()).isUnsigned();
+  }
 
   // Lower to the proper LLVM shift operation.
   if (op.getIsShiftleft()) {
     rewriter.replaceOpWithNewOp<mlir::LLVM::ShlOp>(op, llvmTy, val, amt);
-  } else {
-    assert(!cir::MissingFeatures::vectorType());
-    bool isUnsigned = !cirValTy.isSigned();
-    if (isUnsigned)
-      rewriter.replaceOpWithNewOp<mlir::LLVM::LShrOp>(op, llvmTy, val, amt);
-    else
-      rewriter.replaceOpWithNewOp<mlir::LLVM::AShrOp>(op, llvmTy, val, amt);
+    return mlir::success();
   }
 
+  if (isUnsigned)
+    rewriter.replaceOpWithNewOp<mlir::LLVM::LShrOp>(op, llvmTy, val, amt);
+  else
+    rewriter.replaceOpWithNewOp<mlir::LLVM::AShrOp>(op, llvmTy, val, amt);
   return mlir::success();
 }
 
