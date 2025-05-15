@@ -5326,15 +5326,13 @@ static SDValue lowerShuffleViaVRegSplitting(ShuffleVectorSDNode *SVN,
       Mask, NumOfSrcRegs, NumOfDestRegs, NumOfDestRegs,
       [&]() { Operands.emplace_back(); },
       [&](ArrayRef<int> SrcSubMask, unsigned SrcVecIdx, unsigned DstVecIdx) {
-        Operands.emplace_back().emplace_back(
-            SrcVecIdx, UINT_MAX,
-            SmallVector<int>(SrcSubMask.begin(), SrcSubMask.end()));
+        Operands.emplace_back().emplace_back(SrcVecIdx, UINT_MAX,
+                                             SmallVector<int>(SrcSubMask));
       },
       [&](ArrayRef<int> SrcSubMask, unsigned Idx1, unsigned Idx2, bool NewReg) {
         if (NewReg)
           Operands.emplace_back();
-        Operands.back().emplace_back(
-            Idx1, Idx2, SmallVector<int>(SrcSubMask.begin(), SrcSubMask.end()));
+        Operands.back().emplace_back(Idx1, Idx2, SmallVector<int>(SrcSubMask));
       });
   assert(Operands.size() == NumOfDestRegs && "Whole vector must be processed");
   // Note: check that we do not emit too many shuffles here to prevent code
