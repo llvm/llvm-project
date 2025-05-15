@@ -190,18 +190,15 @@ static bool isCandidate(const MachineInstr *MI, Register &DefedReg,
         if (i == 0 && !MO.isImplicit() && !MO.isDead())
           DefedReg = MO.getReg();
         else if (i != 0 && DefedReg != MCRegister::NoRegister) {
-          if (MO.isDead() && MO.isImplicit()) {
+          if (MO.isDead() && MO.isImplicit())
             continue;
-          } else if (MO.isImplicit() &&
-                     MI->getParent()
-                         ->getParent()
-                         ->getSubtarget()
-                         .getRegisterInfo()
-                         ->isSubRegister(MO.getReg(), DefedReg)) {
+          if (MO.isImplicit() && MI->getParent()
+                                     ->getParent()
+                                     ->getSubtarget()
+                                     .getRegisterInfo()
+                                     ->isSubRegister(MO.getReg(), DefedReg))
             continue;
-          } else {
-            return false;
-          }
+          return false;
         } else
           return false;
       } else if (MO.getReg() && MO.getReg() != FrameReg)
