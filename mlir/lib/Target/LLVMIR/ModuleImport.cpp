@@ -2075,20 +2075,18 @@ LogicalResult ModuleImport::convertIntrinsic(llvm::CallInst *inst) {
 
 ArrayAttr
 ModuleImport::convertAsmInlineOperandAttrs(const llvm::CallBase &llvmCall) {
-  const llvm::InlineAsm *ia =
-      cast<llvm::InlineAsm>(llvmCall.getCalledOperand());
+  const auto *ia = cast<llvm::InlineAsm>(llvmCall.getCalledOperand());
   unsigned argIdx = 0;
   SmallVector<mlir::Attribute> opAttrs;
   bool hasIndirect = false;
 
   for (const llvm::InlineAsm::ConstraintInfo &ci : ia->ParseConstraints()) {
-    if (ci.Type == llvm::InlineAsm::isLabel)
-      continue;
-
     // Only deal with constraints that correspond to call arguments.
-    if (!ci.hasArg())
+    if (ci.Type == llvm::InlineAsm::isLabel || !ci.hasArg())
       continue;
 
+    // Only increment `argIdx` in terms of constraints containing arguments,
+    // which are guaranteed to happen in the same order of the call arguments.
     if (ci.isIndirect) {
       if (llvm::Type *paramEltType = llvmCall.getParamElementType(argIdx)) {
         SmallVector<mlir::NamedAttribute> attrs;
