@@ -7,20 +7,16 @@ define void @replace_2x4xint_global_memcpy_test() #0 {
 ; CHECK-LABEL: define void @replace_2x4xint_global_memcpy_test(
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca [2 x <4 x i32>], align 16
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 32, ptr nonnull [[TMP1]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr addrspace(2) @outputStrides, align 16
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr <4 x i32>, ptr [[TMP1]], i32 0
 ; CHECK-NEXT:    store <4 x i32> [[TMP2]], ptr [[GEP]], align 16
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr addrspace(2) getelementptr (<4 x i32>, ptr addrspace(2) @outputStrides, i32 1), align 16
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr <4 x i32>, ptr [[TMP1]], i32 1
 ; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr [[GEP1]], align 16
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 32, ptr nonnull [[TMP1]])
 ; CHECK-NEXT:    ret void
 ;
   %1 = alloca [2 x <4 x i32>], align 16
-  call void @llvm.lifetime.start.p0(i64 32, ptr nonnull %1)
   call void @llvm.memcpy.p0.p2.i32(ptr nonnull align 16 dereferenceable(32) %1, ptr addrspace(2) align 16 dereferenceable(32) @outputStrides, i32 32, i1 false)
-  call void @llvm.lifetime.end.p0(i64 32, ptr nonnull %1)
   ret void
 }
 
@@ -29,23 +25,15 @@ define void @replace_int_memcpy_test() #0 {
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca [1 x i32], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca [1 x i32], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[TMP1]])
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[TMP2]])
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[TMP1]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i32, ptr [[TMP2]], i32 0
 ; CHECK-NEXT:    store i32 [[TMP3]], ptr [[GEP1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull [[TMP2]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull [[TMP1]])
 ; CHECK-NEXT:    ret void
 ;
   %1 = alloca [1 x i32], align 4
   %2 = alloca [1 x i32], align 4
-  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %1)
-  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %2)
   call void @llvm.memcpy.p0.p0.i32(ptr nonnull align 4 dereferenceable(4) %2, ptr align 4 dereferenceable(4) %1, i32 4, i1 false)
-  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %2)
-  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %1)
   ret void
 }
 
@@ -54,8 +42,6 @@ define void @replace_int16_memcpy_test() #0 {
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca [2 x i16], align 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca [2 x i16], align 2
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[TMP1]])
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[TMP2]])
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i16, ptr [[TMP1]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i16, ptr [[GEP]], align 2
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i16, ptr [[TMP2]], i32 0
@@ -64,17 +50,11 @@ define void @replace_int16_memcpy_test() #0 {
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i16, ptr [[GEP2]], align 2
 ; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr i16, ptr [[TMP2]], i32 1
 ; CHECK-NEXT:    store i16 [[TMP4]], ptr [[GEP3]], align 2
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull [[TMP2]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull [[TMP1]])
 ; CHECK-NEXT:    ret void
 ;
   %1 = alloca [2 x i16], align 2
   %2 = alloca [2 x i16], align 2
-  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %1)
-  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %2)
   call void @llvm.memcpy.p0.p0.i32(ptr nonnull align 2 dereferenceable(4) %2, ptr align 2 dereferenceable(4) %1, i32 4, i1 false)
-  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %2)
-  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %1)
   ret void
 }
 
@@ -83,8 +63,6 @@ define void @replace_float_memcpy_test() #0 {
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca [2 x float], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca [2 x float], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr nonnull [[TMP1]])
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr nonnull [[TMP2]])
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr float, ptr [[TMP1]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr float, ptr [[TMP2]], i32 0
@@ -93,17 +71,11 @@ define void @replace_float_memcpy_test() #0 {
 ; CHECK-NEXT:    [[TMP4:%.*]] = load float, ptr [[GEP2]], align 4
 ; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr float, ptr [[TMP2]], i32 1
 ; CHECK-NEXT:    store float [[TMP4]], ptr [[GEP3]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 8, ptr nonnull [[TMP2]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 8, ptr nonnull [[TMP1]])
 ; CHECK-NEXT:    ret void
 ;
   %1 = alloca [2 x float], align 4
   %2 = alloca [2 x float], align 4
-  call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %1)
-  call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %2)
   call void @llvm.memcpy.p0.p0.i32(ptr nonnull align 4 dereferenceable(8) %2, ptr align 4 dereferenceable(8) %1, i32 8, i1 false)
-  call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %2)
-  call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %1)
   ret void
 }
 
@@ -112,8 +84,6 @@ define void @replace_double_memcpy_test() #0 {
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca [2 x double], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca [2 x double], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 16, ptr nonnull [[TMP1]])
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 16, ptr nonnull [[TMP2]])
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr double, ptr [[TMP1]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = load double, ptr [[GEP]], align 8
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr double, ptr [[TMP2]], i32 0
@@ -122,17 +92,11 @@ define void @replace_double_memcpy_test() #0 {
 ; CHECK-NEXT:    [[TMP4:%.*]] = load double, ptr [[GEP2]], align 8
 ; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr double, ptr [[TMP2]], i32 1
 ; CHECK-NEXT:    store double [[TMP4]], ptr [[GEP3]], align 8
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 16, ptr nonnull [[TMP2]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 16, ptr nonnull [[TMP1]])
 ; CHECK-NEXT:    ret void
 ;
   %1 = alloca [2 x double], align 4
   %2 = alloca [2 x double], align 4
-  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %1)
-  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %2)
   call void @llvm.memcpy.p0.p0.i32(ptr nonnull align 4 dereferenceable(8) %2, ptr align 4 dereferenceable(8) %1, i32 16, i1 false)
-  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %2)
-  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %1)
   ret void
 }
 
@@ -141,8 +105,6 @@ define void @replace_half_memcpy_test() #0 {
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca [2 x half], align 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca [2 x half], align 2
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[TMP1]])
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[TMP2]])
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr half, ptr [[TMP1]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = load half, ptr [[GEP]], align 2
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr half, ptr [[TMP2]], i32 0
@@ -151,24 +113,15 @@ define void @replace_half_memcpy_test() #0 {
 ; CHECK-NEXT:    [[TMP4:%.*]] = load half, ptr [[GEP2]], align 2
 ; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr half, ptr [[TMP2]], i32 1
 ; CHECK-NEXT:    store half [[TMP4]], ptr [[GEP3]], align 2
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull [[TMP2]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull [[TMP1]])
 ; CHECK-NEXT:    ret void
 ;
   %1 = alloca [2 x half], align 2
   %2 = alloca [2 x half], align 2
-  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %1)
-  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %2)
   call void @llvm.memcpy.p0.p0.i32(ptr nonnull align 2 dereferenceable(4) %2, ptr align 2 dereferenceable(4) %1, i32 4, i1 false)
-  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %2)
-  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %1)
   ret void
 }
 
 attributes #0 = {"hlsl.export"}
 
-
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr captures(none))
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr captures(none))
 declare void @llvm.memcpy.p0.p2.i32(ptr noalias, ptr addrspace(2) noalias readonly, i32, i1)
 declare void @llvm.memcpy.p0.p0.i32(ptr noalias, ptr noalias readonly, i32, i1)
