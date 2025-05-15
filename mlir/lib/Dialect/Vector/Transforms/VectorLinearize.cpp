@@ -626,45 +626,49 @@ struct LinearizeVectorCreateMask final
 
 } // namespace
 
-/// Return true if the operation `op` does not support scalable vectors and
-/// has at least 1 scalable vector result. These ops should all eventually
-/// support scalable vectors, and this function should be removed.
-static bool isNotLinearizableBecauseScalable(Operation *op) {
-
-  bool unsupported =
-      isa<vector::ExtractStridedSliceOp, vector::InsertStridedSliceOp,
-          vector::ExtractOp, vector::InsertOp>(op);
-  if (!unsupported)
-    return false;
-
-  // Check if any of the results is a scalable vector type.
-  auto types = op->getResultTypes();
-  bool containsScalableResult =
-      std::any_of(types.begin(), types.end(), [](Type type) {
-        auto vecType = dyn_cast<VectorType>(type);
-        return vecType && vecType.isScalable();
-      });
-
-  return containsScalableResult;
-}
-
-static bool isNotLinearizable(Operation *op) {
+/// This method defines the set of operations that are linearizable, and hence
+/// that are considered illegal for the conversion target.
+static bool isLinearizable(Operation *op) {
 
   // Only ops that are in the vector dialect, are ConstantLike, or
   // are Vectorizable might be linearized currently.
   StringLiteral vectorDialect = vector::VectorDialect::getDialectNamespace();
   StringRef opDialect = op->getDialect()->getNamespace();
-  bool unsupported = (opDialect != vectorDialect) &&
-                     !op->hasTrait<OpTrait::ConstantLike>() &&
-                     !op->hasTrait<OpTrait::Vectorizable>();
-  if (unsupported)
-    return true;
+  bool supported = (opDialect == vectorDialect) ||
+                   op->hasTrait<OpTrait::ConstantLike>() ||
+                   op->hasTrait<OpTrait::Vectorizable>();
+  if (!supported)
+    return false;
 
-  // Some ops currently don't support scalable vectors.
-  if (isNotLinearizableBecauseScalable(op))
-    return true;
-
-  return false;
+  return TypeSwitch<Operation *, bool>(op)
+      // As type legalization is done with vector.shape_cast, shape_cast
+      // itself cannot be linearized (will create new shape_casts to linearize
+      // ad infinitum).
+      .Case<vector::ShapeCastOp>([&](auto) { return false; })
+      // The operations
+      // - vector.extract_strided_slice
+      // - vector.extract
+      // - vector.insert_strided_slice
+      // - vector.insert
+      // are linearized to a rank-1 vector.shuffle by the current patterns.
+      // vector.shuffle only supports fixed size vectors, so it is impossible to
+      // use this approach to linearize these ops if they operate on scalable
+      // vectors.
+      .Case<vector::ExtractStridedSliceOp>(
+          [&](vector::ExtractStridedSliceOp extractOp) {
+            return !extractOp.getType().isScalable();
+          })
+      .Case<vector::InsertStridedSliceOp>(
+          [&](vector::InsertStridedSliceOp insertOp) {
+            return !insertOp.getType().isScalable();
+          })
+      .Case<vector::InsertOp>([&](vector::InsertOp insertOp) {
+        return !insertOp.getType().isScalable();
+      })
+      .Case<vector::ExtractOp>([&](vector::ExtractOp extractOp) {
+        return !extractOp.getSourceVectorType().isScalable();
+      })
+      .Default([&](auto) { return true; });
 }
 
 void mlir::vector::populateForVectorLinearize(TypeConverter &typeConverter,
@@ -698,7 +702,7 @@ void mlir::vector::populateForVectorLinearize(TypeConverter &typeConverter,
 
   target.markUnknownOpDynamicallyLegal(
       [=](Operation *op) -> std::optional<bool> {
-        if (isNotLinearizable(op))
+        if (!isLinearizable(op))
           return true;
         // This will return true if, for all operand and result types `t`,
         // convertType(t) = t. This is true if there are no rank>=2 vectors.
