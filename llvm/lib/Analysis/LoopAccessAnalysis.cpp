@@ -2065,15 +2065,17 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
 
   // Attempt to prove strided accesses independent.
   const APInt *APDist = nullptr;
-  std::optional<uint64_t> ConstDistance = match(Dist, m_scev_APInt(APDist))
-                                              ? APDist->abs().tryZExtValue()
-                                              : std::nullopt;
+
+  // The rest of this function relies on ConstantDistance being at most 64-bits,
+  // which is checked earlier. Will assert if the calling code changes.
+  uint64_t ConstDistance =
+      match(Dist, m_scev_APInt(APDist)) ? APDist->abs().getZExtValue() : 0;
 
   if (ConstDistance) {
     // If the distance between accesses and their strides are known constants,
     // check whether the accesses interlace each other.
     if (ConstDistance > 0 && CommonStride && CommonStride > 1 && HasSameSize &&
-        areStridedAccessesIndependent(*ConstDistance, *CommonStride,
+        areStridedAccessesIndependent(ConstDistance, *CommonStride,
                                       TypeByteSize)) {
       LLVM_DEBUG(dbgs() << "LAA: Strided accesses are independent\n");
       return Dependence::NoDep;
@@ -2116,7 +2118,7 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
         return Dependence::Unknown;
       }
       if (!HasSameSize ||
-          couldPreventStoreLoadForward(*ConstDistance, TypeByteSize)) {
+          couldPreventStoreLoadForward(ConstDistance, TypeByteSize)) {
         LLVM_DEBUG(
             dbgs() << "LAA: Forward but may prevent st->ld forwarding\n");
         return Dependence::ForwardButPreventsForwarding;
