@@ -4547,7 +4547,7 @@ same *vendor-name*.
 Code Object V4 Metadata
 +++++++++++++++++++++++
 
-. warning::
+.. warning::
   Code object V4 is not the default code object version emitted by this version
   of LLVM.
 
