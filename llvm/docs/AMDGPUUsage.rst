@@ -394,12 +394,12 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
 
      **GCN GFX10.1 (RDNA 1)** [AMD-GCN-GFX10-RDNA1]_
      -----------------------------------------------------------------------------------------------------------------------
-     ``gfx1010``                 ``amdgcn``   dGPU  - cumode          - Absolute      - *rocm-amdhsa* - Radeon RX 5700
-                                                    - wavefrontsize64   flat          - *pal-amdhsa*  - Radeon RX 5700 XT
-                                                    - xnack             scratch       - *pal-amdpal*  - Radeon Pro 5600 XT
-                                                                                                      - Radeon Pro 5600M
+     ``gfx1010``                 ``amdgcn``   dGPU  - cumode          - Absolute      - *rocm-amdhsa* - Radeon Pro 5600 XT
+                                                    - wavefrontsize64   flat          - *pal-amdhsa*  - Radeon RX 5600M
+                                                    - xnack             scratch       - *pal-amdpal*  - Radeon RX 5700
+                                                                                                      - Radeon RX 5700 XT
      ``gfx1011``                 ``amdgcn``   dGPU  - cumode                          - *rocm-amdhsa* - Radeon Pro V520
-                                                    - wavefrontsize64 - Absolute      - *pal-amdhsa*
+                                                    - wavefrontsize64 - Absolute      - *pal-amdhsa*  - Radeon Pro 5600M
                                                     - xnack             flat          - *pal-amdpal*
                                                                         scratch
      ``gfx1012``                 ``amdgcn``   dGPU  - cumode          - Absolute      - *rocm-amdhsa* - Radeon RX 5500
