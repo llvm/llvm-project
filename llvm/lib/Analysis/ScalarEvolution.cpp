@@ -10785,6 +10785,25 @@ bool ScalarEvolution::SimplifyICmpOperands(CmpPredicate &Pred, const SCEV *&LHS,
   if (Depth >= 3)
     return false;
 
+  const SCEV *NewLHS, *NewRHS;
+  if (match(LHS, m_scev_c_Mul(m_SCEV(NewLHS), m_SCEVVScale())) &&
+      match(RHS, m_scev_c_Mul(m_SCEV(NewRHS), m_SCEVVScale()))) {
+    const SCEVMulExpr *LMul = cast<SCEVMulExpr>(LHS);
+    const SCEVMulExpr *RMul = cast<SCEVMulExpr>(RHS);
+
+    // (X * vscale) uicmp/eq/ne (Y * vscale) ==> X uicmp/eq/ne Y
+    //     when neither multiply wraps.
+    // (X * vscale) sicmp (Y * vscale) ==> X sicmp Y
+    //     when neither multiply changes sign.
+    if ((LMul->hasNoSignedWrap() && RMul->hasNoSignedWrap()) ||
+        (LMul->hasNoUnsignedWrap() && RMul->hasNoUnsignedWrap() &&
+         !ICmpInst::isSigned(Pred))) {
+      LHS = NewLHS;
+      RHS = NewRHS;
+      Changed = true;
+    }
+  }
+
   // Canonicalize a constant to the right side.
   if (const SCEVConstant *LHSC = dyn_cast<SCEVConstant>(LHS)) {
     // Check for both operands constant.
@@ -10959,7 +10978,7 @@ bool ScalarEvolution::SimplifyICmpOperands(CmpPredicate &Pred, const SCEV *&LHS,
   // Recursively simplify until we either hit a recursion limit or nothing
   // changes.
   if (Changed)
-    return SimplifyICmpOperands(Pred, LHS, RHS, Depth + 1);
+    return SimplifyICmpOperands(Pred, LHS, RHS, Depth + 1), true;
 
   return Changed;
 }
