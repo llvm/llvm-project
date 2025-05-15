@@ -13,7 +13,7 @@ target triple = "dxil-pc-shadermodel6.7-library"
 ; CHECK:       64 UAV slots
 
 ; Note: 64 UAV slots does not get set per-function
-; CHECK: Function test : 0x00000000
+; CHECK: Function test : 0x00008000
 define void @test() "hlsl.export" {
   ; RWBuffer<float> Buf : register(u0, space0)
   %buf0 = call target("dx.TypedBuffer", float, 1, 0, 1)
