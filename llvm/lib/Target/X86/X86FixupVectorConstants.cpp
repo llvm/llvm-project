@@ -336,13 +336,6 @@ static Constant *rebuildZExtCst(const Constant *C, unsigned NumBits,
   return rebuildExtCst(C, false, NumBits, NumElts, SrcEltBitWidth);
 }
 
-template <typename T>
-static std::optional<bool> CmpOptionals(T NewVal, T CurVal) {
-  if (NewVal.has_value() && CurVal.has_value() && *NewVal != *CurVal)
-    return *NewVal < *CurVal;
-  return std::nullopt;
-}
-
 bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
                                                      MachineBasicBlock &MBB,
                                                      MachineInstr &MI) {
@@ -365,46 +358,27 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
         RebuildConstant;
   };
 
-  auto GetInstTput = [&](unsigned Opcode) -> std::optional<double> {
-    // We already checked that SchedModel exists in `NewOpcPreferable`.
-    return MCSchedModel::getReciprocalThroughput(
-        *ST, *(SM->getSchedClassDesc(TII->get(Opcode).getSchedClass())));
-  };
-  auto GetInstLat = [&](unsigned Opcode) -> std::optional<double> {
-    // We already checked that SchedModel exists in `NewOpcPreferable`.
-    return MCSchedModel::computeInstrLatency(
-        *ST, *(SM->getSchedClassDesc(TII->get(Opcode).getSchedClass())));
-  };
-  auto GetInstSize = [&](unsigned Opcode) -> std::optional<unsigned> {
-    if (unsigned Size = TII->get(Opcode).getSize())
-      return Size;
-    // Zero size means we where unable to compute it.
-    return std::nullopt;
-  };
-
   auto NewOpcPreferable = [&](const FixupEntry &Fixup) -> bool {
-    unsigned NewOpc = Fixup.Op;
-
-    std::optional<bool> Res;
     if (SM->hasInstrSchedModel()) {
-      // Compare tput -> lat -> code size.
-      // TODO: how much increase in tput/latency/size should we permit for the
+      // TODO: how much increase in tput/latency should we permit for the
       // reduction in constant pool size?
-      Res = CmpOptionals(GetInstTput(NewOpc), GetInstTput(Opc));
-      if (Res.has_value())
-        return *Res;
+      unsigned NewOpc = Fixup.Op;
+      auto *OldDesc = SM->getSchedClassDesc(TII->get(Opc).getSchedClass());
+      auto *NewDesc = SM->getSchedClassDesc(TII->get(NewOpc).getSchedClass());
 
-      Res = CmpOptionals(GetInstLat(NewOpc), GetInstLat(Opc));
-      if (Res.has_value())
-        return *Res;
+      // Compare tput -> lat
+      double OldTput = MCSchedModel::getReciprocalThroughput(*ST, *OldDesc);
+      double NewTput = MCSchedModel::getReciprocalThroughput(*ST, *NewDesc);
+      if (OldTput != NewTput)
+        return NewTput < OldTput;
+
+      int OldLat = MCSchedModel::computeInstrLatency(*ST, *OldDesc);
+      int NewLat = MCSchedModel::computeInstrLatency(*ST, *NewDesc);
+      if (OldLat != NewLat)
+        return NewLat < OldLat;
     }
 
-    // TODO: Include data reduction in size comparison?
-    Res = CmpOptionals(GetInstSize(Opc), GetInstSize(NewOpc));
-    if (Res.has_value())
-      return *Res;
-
-    // We either were unable to get tput/lat/codesize or all values were equal.
+    // We either were unable to get tput/lat or all values were equal.
     // Prefer the new opcode for reduced constant pool size.
     return true;
   };
