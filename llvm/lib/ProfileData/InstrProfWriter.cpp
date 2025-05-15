@@ -152,9 +152,7 @@ void InstrProfWriter::setValueProfDataEndianness(llvm::endianness Endianness) {
   InfoObj->ValueProfDataEndianness = Endianness;
 }
 
-void InstrProfWriter::setOutputSparse(bool Sparse) {
-  this->Sparse = Sparse;
-}
+void InstrProfWriter::setOutputSparse(bool Sparse) { this->Sparse = Sparse; }
 
 void InstrProfWriter::addRecord(NamedInstrProfRecord &&I, uint64_t Weight,
                                 function_ref<void(Error)> Warn) {
