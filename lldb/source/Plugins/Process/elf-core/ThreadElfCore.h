@@ -82,27 +82,29 @@ struct ELFLinuxSigInfo {
   int32_t si_signo; // Order matters for the first 3.
   int32_t si_errno;
   int32_t si_code;
-  // Copied from siginfo_t so we don't have to include signal.h on non 'Nix
-  // builds. Slight modifications to ensure no 32b vs 64b differences.
-  struct alignas(8) {
-    lldb::addr_t si_addr; /* faulting insn/memory ref. */
-    int16_t si_addr_lsb;  /* Valid LSB of the reported address.  */
-    union {
-      /* used when si_code=SEGV_BNDERR */
-      struct {
-        lldb::addr_t _lower;
-        lldb::addr_t _upper;
-      } _addr_bnd;
-      /* used when si_code=SEGV_PKUERR */
-      uint32_t _pkey;
-    } bounds;
+  union alignas(8) {
+    struct alignas(8) {
+      uint32_t pid;	/* sender's pid */
+      uint32_t uid;	/* sender's uid */
+    } kill;
+    // Copied from siginfo_t so we don't have to include signal.h on non 'Nix
+    // builds. Slight modifications to ensure no 32b vs 64b differences.
+    struct alignas(8) {
+      lldb::addr_t si_addr; /* faulting insn/memory ref. */
+      int16_t si_addr_lsb;  /* Valid LSB of the reported address.  */
+      union {
+        /* used when si_code=SEGV_BNDERR */
+        struct {
+          lldb::addr_t _lower;
+          lldb::addr_t _upper;
+        } _addr_bnd;
+        /* used when si_code=SEGV_PKUERR */
+        uint32_t _pkey;
+      } bounds;
 
-    // We need this for all the generic signals.
-    struct {
-      uint32_t _pid;	/* sender's pid */
-      uint32_t _uid;	/* sender's uid */
-    } _kill;
-  } sigfault;
+      // We need this for all the generic signals.
+    } sigfault;
+  } sifields;
 
   enum SigInfoNoteType : uint8_t { eUnspecified, eNT_SIGINFO };
   SigInfoNoteType note_type;

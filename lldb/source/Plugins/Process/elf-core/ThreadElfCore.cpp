@@ -592,24 +592,24 @@ Status ELFLinuxSigInfo::Parse(const DataExtractor &data, const ArchSpec &arch,
     offset += 4;
 
  if (si_code < 0) {
-  sigfault.kill._pid = data.GetU32(&offset);
-  sigfault.kill._uid = data.GetU32(&offset);
+  sifields.kill.pid = data.GetU32(&offset);
+  sifields.kill.uid = data.GetU32(&offset);
  } else if (unix_signals.GetShouldStop(si_signo)) {
     // Not every stop signal has a valid address, but that will get resolved in
     // the unix_signals.GetSignalDescription() call below.
     // Instead of memcpy we call all these individually as the extractor will
     // handle endianness for us.
-    sigfault.si_addr = data.GetAddress(&offset);
-    sigfault.si_addr_lsb = data.GetU16(&offset);
-    if (data.GetByteSize() - offset >= sizeof(sigfault.bounds)) {
-      sigfault.bounds._addr_bnd._lower = data.GetAddress(&offset);
-      sigfault.bounds._addr_bnd._upper = data.GetAddress(&offset);
-      sigfault.bounds._pkey = data.GetU32(&offset);
+    sifields.sigfault.si_addr = data.GetAddress(&offset);
+    sifields.sigfault.si_addr_lsb = data.GetU16(&offset);
+    if (data.GetByteSize() - offset >= sizeof(sifields.sigfault.bounds)) {
+      sifields.sigfault.bounds._addr_bnd._lower = data.GetAddress(&offset);
+      sifields.sigfault.bounds._addr_bnd._upper = data.GetAddress(&offset);
+      sifields.sigfault.bounds._pkey = data.GetU32(&offset);
     } else {
       // Set these to 0 so we don't use bogus data for the description.
-      sigfault.bounds._addr_bnd._lower = 0;
-      sigfault.bounds._addr_bnd._upper = 0;
-      sigfault.bounds._pkey = 0;
+      sifields.sigfault.bounds._addr_bnd._lower = 0;
+      sifields.sigfault.bounds._addr_bnd._upper = 0;
+      sifields.sigfault.bounds._pkey = 0;
     }
   }
 
@@ -619,13 +619,15 @@ Status ELFLinuxSigInfo::Parse(const DataExtractor &data, const ArchSpec &arch,
 std::string ELFLinuxSigInfo::GetDescription(
     const lldb_private::UnixSignals &unix_signals) const {
   if (unix_signals.GetShouldStop(si_signo) && note_type == eNT_SIGINFO) {
-    if (sigfault.bounds._addr_bnd._upper != 0)
+    if (si_code < 0)
+      return unix_signals.GetSignalDescription(si_signo, si_code, std::nullopt, std::nullopt, std::nullopt, sifields.kill.pid, sifields.kill.uid);
+    else if (sifields.sigfault.bounds._addr_bnd._upper != 0)
       return unix_signals.GetSignalDescription(
-          si_signo, si_code, sigfault.si_addr, sigfault.bounds._addr_bnd._lower,
-          sigfault.bounds._addr_bnd._upper);
+          si_signo, si_code, sifields.sigfault.si_addr, sifields.sigfault.bounds._addr_bnd._lower,
+          sifields.sigfault.bounds._addr_bnd._upper);
     else
       return unix_signals.GetSignalDescription(si_signo, si_code,
-                                               sigfault.si_addr);
+        sifields.sigfault.si_addr);
   }
 
   // This looks weird, but there is an existing pattern where we don't pass a
