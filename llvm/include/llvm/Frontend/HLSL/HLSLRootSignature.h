@@ -46,6 +46,14 @@ enum class RootFlags : uint32_t {
   ValidFlags = 0x00000fff
 };
 
+enum class RootDescriptorFlags : unsigned {
+  None = 0,
+  DataVolatile = 0x2,
+  DataStaticWhileSetAtExecute = 0x4,
+  DataStatic = 0x8,
+  ValidFlags = 0xe,
+};
+
 enum class DescriptorRangeFlags : unsigned {
   None = 0,
   DescriptorsVolatile = 0x1,
@@ -92,6 +100,23 @@ struct RootDescriptor {
   Register Reg;
   uint32_t Space = 0;
   ShaderVisibility Visibility = ShaderVisibility::All;
+  RootDescriptorFlags Flags;
+
+  void setDefaultFlags() {
+    assert(Type != ParamType::Sampler &&
+           "Sampler is not a valid type of ParamType");
+    switch (Type) {
+    case ParamType::CBuffer:
+    case ParamType::SRV:
+      Flags = RootDescriptorFlags::DataStaticWhileSetAtExecute;
+      break;
+    case ParamType::UAV:
+      Flags = RootDescriptorFlags::DataVolatile;
+      break;
+    case ParamType::Sampler:
+      break;
+    }
+  }
 };
 
 // Models the end of a descriptor table and stores its visibility
