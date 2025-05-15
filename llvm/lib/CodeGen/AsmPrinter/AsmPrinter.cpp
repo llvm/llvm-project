@@ -459,7 +459,7 @@ void AsmPrinter::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 bool AsmPrinter::doInitialization(Module &M) {
-  if (!MAM) {
+  if (inNewPassManager()) {
     MMI = &MAM->getResult<MachineModuleAnalysis>(M).getMMI();
   } else {
     auto *MMIWP = getAnalysisIfAvailable<MachineModuleInfoWrapperPass>();
@@ -2710,7 +2710,7 @@ bool AsmPrinter::doFinalization(Module &M) {
     }
   }
 
-  if (!MAM) {
+  if (!inNewPassManager()) {
     GCModuleInfo *MI = getAnalysisIfAvailable<GCModuleInfo>();
     assert(MI && "AsmPrinter didn't require GCModuleInfo?");
     for (GCModuleInfo::iterator I = MI->end(), E = MI->begin(); I != E;)
