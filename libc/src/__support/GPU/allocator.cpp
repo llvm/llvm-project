@@ -5,17 +5,37 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// This file implements a parallel allocator intended for use on a GPU device.
+// The core algorithm is slab allocator using a random walk over a bitfield for
+// maximum parallel progress. Slab handling is done by a wait-free reference
+// counted guard. The first use of a slab will create it from system memory for
+// re-use. The last use will invalidate it and free the memory.
+//
+//===----------------------------------------------------------------------===//
 
 #include "allocator.h"
 
+#include "src/__support/CPP/atomic.h"
+#include "src/__support/CPP/bit.h"
+#include "src/__support/CPP/new.h"
 #include "src/__support/GPU/utils.h"
 #include "src/__support/RPC/rpc_client.h"
-#include "src/__support/macros/config.h"
+#include "src/__support/threads/sleep.h"
 
 namespace LIBC_NAMESPACE_DECL {
-namespace {
 
-void *rpc_allocate(uint64_t size) {
+constexpr static uint64_t MAX_SIZE = /* 64 GiB */ 64ull * 1024 * 1024 * 1024;
+constexpr static uint64_t SLAB_SIZE = /* 2 MiB */ 2ull * 1024 * 1024;
+constexpr static uint64_t ARRAY_SIZE = MAX_SIZE / SLAB_SIZE;
+constexpr static uint32_t BITS_IN_WORD = sizeof(uint32_t) * 8;
+
+static_assert(!(ARRAY_SIZE & (ARRAY_SIZE - 1)), "Must be a power of two");
+
+namespace impl {
+// Allocates more memory from the system through the RPC interface. All
+// allocations from the system MUST be aligned on a 2MiB barrier.
+static void *rpc_allocate(uint64_t size) {
   void *ptr = nullptr;
   rpc::Client::Port port = rpc::client.open<LIBC_MALLOC>();
   port.send_and_recv(
@@ -27,7 +47,8 @@ void *rpc_allocate(uint64_t size) {
   return ptr;
 }
 
-void rpc_free(void *ptr) {
+// Deallocates the associated system memory.
+static void rpc_free(void *ptr) {
   rpc::Client::Port port = rpc::client.open<LIBC_FREE>();
   port.send([=](rpc::Buffer *buffer, uint32_t) {
     buffer->data[0] = reinterpret_cast<uintptr_t>(ptr);
@@ -35,13 +56,415 @@ void rpc_free(void *ptr) {
   port.close();
 }
 
-} // namespace
+// Convert a potentially disjoint bitmask into an increasing integer for use
+// with indexing.
+static inline uint32_t lane_count(uint64_t lane_mask) {
+  return cpp::popcount(lane_mask & ((1ull << gpu::get_lane_id()) - 1));
+}
+
+// Obtain an initial value to seed a random number generator.
+static inline uint32_t entropy() {
+  return (static_cast<uint32_t>(gpu::processor_clock()) ^
+          (gpu::get_thread_id_x() * 0x632be59b) ^
+          (gpu::get_block_id_x() * 0x85157af5)) *
+         0x9e3779bb;
+}
+
+// Generate a random number and update the state using the xorshift32 PRNG.
+static inline uint32_t xorshift32(uint32_t &state) {
+  state ^= state << 13;
+  state ^= state >> 17;
+  state ^= state << 5;
+  return state * 0x9e3779bb;
+}
+
+// Final stage of murmurhash used to get a unique index for the global array
+static inline uint32_t hash(uint32_t x) {
+  x ^= x >> 16;
+  x *= 0x85ebca6b;
+  x ^= x >> 13;
+  x *= 0xc2b2ae35;
+  x ^= x >> 16;
+  return x;
+}
+
+// Rounds the input value to the closest permitted chunk size. Here we accept
+// the sum of the closest three powers of two. For a 2MiB slab size this is 48
+// different chunk sizes.
+static inline uint32_t get_chunk_size(uint32_t x) {
+  uint32_t y = x < 16 ? 16 : x;
+  uint32_t pow2 = BITS_IN_WORD - cpp::countl_zero(y - 1);
+
+  uint32_t s0 = 0b0100 << (pow2 - 3);
+  uint32_t s1 = 0b0110 << (pow2 - 3);
+  uint32_t s2 = 0b0111 << (pow2 - 3);
+  uint32_t s3 = 0b1000 << (pow2 - 3);
+
+  if (s0 > y)
+    return (s0 + 15) & ~15;
+  else if (s1 > y)
+    return (s1 + 15) & ~15;
+  else if (s2 > y)
+    return (s2 + 15) & ~15;
+  return (s3 + 15) & ~15;
+}
+
+} // namespace impl
+
+/// A slab allocator used to hand out indentically sized slabs of memory.
+/// Allocation is done through random walks of a bitfield until a free bit is
+/// encountered. This reduces contention and is highly parallel on a GPU.
+struct Slab {
+
+  // Initialize the slab with its chunk size and index in the global table for
+  // use when freeing.
+  Slab(uint32_t chunk_size, uint32_t global_index) {
+    get_chunk_size() = chunk_size;
+    get_global_index() = global_index;
+
+    // This memset is expensive and likely not necessary for the current 'kfd'
+    // driver. Until zeroed pages are exposed by the API we must be careful.
+    __builtin_memset(get_bitfield(), 0, bitfield_bytes(chunk_size));
+  }
+
+  // Get the number of chunks that can theoretically fit inside this array.
+  static uint32_t num_chunks(uint32_t chunk_size) {
+    return SLAB_SIZE / chunk_size;
+  }
+
+  // Get the number of bytes needed to contain the bitfield bits.
+  static uint32_t bitfield_bytes(uint32_t chunk_size) {
+    return ((num_chunks(chunk_size) + BITS_IN_WORD - 1) / BITS_IN_WORD) *
+           sizeof(uint32_t);
+  }
+
+  // The actual amount of memory available excluding the bitfield and metadata.
+  static uint32_t available_bytes(uint32_t chunk_size) {
+    return SLAB_SIZE - 2 * bitfield_bytes(chunk_size) - 4 * sizeof(uint32_t);
+  }
+
+  // The number of chunks that can be stored in this slab.
+  static uint32_t available_chunks(uint32_t chunk_size) {
+    return available_bytes(chunk_size) / chunk_size;
+  }
+
+  // The length in bits of the bitfield.
+  static uint32_t usable_bits(uint32_t chunk_size) {
+    return ((available_bytes(chunk_size) + chunk_size - 1) / chunk_size);
+  }
+
+  // Get the location in the memory where we will store the chunk size.
+  uint32_t &get_chunk_size() { return *reinterpret_cast<uint32_t *>(memory); }
+
+  // Get the location in the memory where we will store the global index.
+  uint32_t &get_global_index() {
+    return *reinterpret_cast<uint32_t *>(memory + sizeof(uint32_t));
+  }
+
+  // Get a pointer to where the bitfield is located in the memory.
+  uint32_t *get_bitfield() {
+    return reinterpret_cast<uint32_t *>(memory + 4 * sizeof(uint32_t));
+  }
+
+  // Get a pointer to where the actual memory to be allocated lives.
+  uint8_t *get_memory(uint32_t chunk_size) {
+    return reinterpret_cast<uint8_t *>(memory) + bitfield_bytes(chunk_size) +
+           4 * sizeof(uint32_t);
+  }
+
+  // Get a pointer to the actual memory given an index into the bitfield.
+  void *ptr_from_index(uint32_t index, uint32_t chunk_size) {
+    return get_memory(chunk_size) + index * chunk_size;
+  }
+
+  // Convert a pointer back into its bitfield index using its offset.
+  uint32_t index_from_ptr(void *ptr, uint32_t chunk_size) {
+    return static_cast<uint32_t>(reinterpret_cast<uint8_t *>(ptr) -
+                                 get_memory(chunk_size)) /
+           chunk_size;
+  }
+
+  // Randomly walks the bitfield until it finds a free bit in the bitfield.
+  // Allocations attempt to put lanes right next to eachother for better
+  // caching and convergence.
+  void *allocate(uint64_t lane_mask, uint64_t uniform) {
+    uint32_t chunk_size = get_chunk_size();
+    uint32_t *bitfield = get_bitfield();
+    uint32_t state = impl::entropy();
+    void *result = nullptr;
+    // The uniform mask represents which lanes contain a uniform target pointer.
+    // We attempt to place these next to eachother in the bitfield.
+    // TODO: We should coalesce these bits and use the result of `fetch_or` to
+    //       search for free bits in parallel.
+    for (uint64_t mask = ~0ull; mask; mask = gpu::ballot(lane_mask, !result)) {
+      uint32_t id = impl::lane_count(uniform & mask);
+      uint32_t index =
+          (gpu::broadcast_value(lane_mask, impl::xorshift32(state)) + id) %
+          usable_bits(chunk_size);
+
+      uint32_t slot = index / BITS_IN_WORD;
+      uint32_t bit = index % BITS_IN_WORD;
+      if (mask & (1ull << gpu::get_lane_id())) {
+        uint32_t before = __scoped_atomic_fetch_or(
+            &bitfield[slot], 1 << bit, __ATOMIC_RELAXED, __MEMORY_SCOPE_DEVICE);
+        if (~before & (1 << bit)) {
+          result = ptr_from_index(index, chunk_size);
+        }
+      }
+    }
+
+    cpp::atomic_thread_fence(cpp::MemoryOrder::ACQUIRE);
+    return result;
+  }
+
+  // Deallocates memory by resetting its corresponding bit in the bitfield.
+  void deallocate(void *ptr) {
+    uint32_t chunk_size = get_chunk_size();
+    uint32_t index = index_from_ptr(ptr, chunk_size);
+    uint32_t slot = index / BITS_IN_WORD;
+    uint32_t bit = index % BITS_IN_WORD;
+    uint32_t bitmask = 1 << bit;
+
+    uint32_t *bitfield = get_bitfield();
+    cpp::atomic_thread_fence(cpp::MemoryOrder::RELEASE);
+    __scoped_atomic_fetch_and(&bitfield[slot], ~bitmask, __ATOMIC_RELAXED,
+                              __MEMORY_SCOPE_DEVICE);
+  }
+
+  // The actual memory the slab will manage. All offsets are calculated at
+  // runtime with the chunk size to keep the interface convergent when a warp or
+  // wavefront is handling multiple sizes at once.
+  uint8_t memory[SLAB_SIZE];
+};
+
+/// A wait-free guard around a pointer resource to be created dynamically if
+/// space is available and freed once there are no more users.
+template <typename T> struct GuardPtr {
+private:
+  struct RefCounter {
+    // Indicates that the object is in its deallocation phase and thus invalid.
+    static constexpr uint64_t invalid = 1ull << 63;
+
+    // If a read preempts an unlock call we indicate this so the following
+    // unlock call can swap out the helped bit and maintain exlusive ownership.
+    static constexpr uint64_t helped = 1ull << 62;
+
+    // Resets the reference counter, cannot be reset to zero safely.
+    void reset(uint32_t n, uint64_t &count) {
+      counter.store(n, cpp::MemoryOrder::RELAXED);
+      count = n;
+    }
+
+    // Acquire a slot in the reference counter if it is not invalid.
+    bool acquire(uint32_t n, uint64_t &count) {
+      count = counter.fetch_add(n, cpp::MemoryOrder::RELAXED) + n;
+      return (count & invalid) == 0;
+    }
+
+    // Release a slot in the reference counter. This function should only be
+    // called following a valid acquire call.
+    bool release(uint32_t n) {
+      // If this thread caused the counter to reach zero we try to invalidate it
+      // and obtain exclusive rights to descontruct it. If the CAS failed either
+      // another thread resurrced the counter and we quit, or a parallel read
+      // helped us invalidating it. For the latter, claim that flag and return.
+      if (counter.fetch_sub(n, cpp::MemoryOrder::RELAXED) == n) {
+        uint64_t expected = 0;
+        if (counter.compare_exchange_strong(expected, invalid,
+                                            cpp::MemoryOrder::RELAXED,
+                                            cpp::MemoryOrder::RELAXED))
+          return true;
+        else if ((expected & helped) &&
+                 (counter.exchange(invalid, cpp::MemoryOrder::RELAXED) &
+                  helped))
+          return true;
+      }
+      return false;
+    }
+
+    // Returns the current reference count, potentially helping a releasing
+    // thread.
+    uint64_t read() {
+      auto val = counter.load(cpp::MemoryOrder::RELAXED);
+      if (val == 0 && counter.compare_exchange_strong(
+                          val, invalid | helped, cpp::MemoryOrder::RELAXED))
+        return 0;
+      return (val & invalid) ? 0 : val;
+    }
+
+    cpp::Atomic<uint64_t> counter{0};
+  };
+
+  cpp::Atomic<T *> ptr{nullptr};
+  RefCounter ref{};
+
+  // A sentinel value used to claim the pointer slot.
+  static constexpr uint64_t sentinel = ~0ULL;
+
+  template <typename... Args>
+  T *try_lock_impl(uint32_t n, uint64_t &count, Args &&...args) {
+    T *expected = ptr.load(cpp::MemoryOrder::RELAXED);
+    if (!expected &&
+        ptr.compare_exchange_strong(expected, reinterpret_cast<T *>(sentinel),
+                                    cpp::MemoryOrder::RELAXED,
+                                    cpp::MemoryOrder::RELAXED)) {
+
+      T *mem = reinterpret_cast<T *>(impl::rpc_allocate(sizeof(T)));
+      if (!mem)
+        return nullptr;
+      new (mem) T(cpp::forward<Args>(args)...);
+
+      cpp::atomic_thread_fence(cpp::MemoryOrder::RELEASE);
+      ptr.store(mem, cpp::MemoryOrder::RELAXED);
+      cpp::atomic_thread_fence(cpp::MemoryOrder::ACQUIRE);
+      if (!ref.acquire(n, count))
+        ref.reset(n, count);
+      return mem;
+    }
+
+    if (!expected || expected == reinterpret_cast<T *>(sentinel))
+      return nullptr;
+
+    if (!ref.acquire(n, count))
+      return nullptr;
+
+    cpp::atomic_thread_fence(cpp::MemoryOrder::ACQUIRE);
+    return ptr.load(cpp::MemoryOrder::RELAXED);
+  }
+
+public:
+  // Attempt to lock access to the pointer, potentially creating it if empty.
+  // The uniform mask represents which lanes share the same pointer. For each
+  // uniform value we elect a leader to handle it on behalf of the other lanes.
+  template <typename... Args>
+  T *try_lock(uint64_t lane_mask, uint64_t unifrom, uint64_t &count,
+              Args &&...args) {
+    count = 0;
+    T *result = nullptr;
+    if (gpu::get_lane_id() == uint32_t(cpp::countr_zero(unifrom)))
+      result = try_lock_impl(cpp::popcount(unifrom), count,
+                             cpp::forward<Args>(args)...);
+    result = gpu::shuffle(lane_mask, cpp::countr_zero(unifrom), result);
+
+    if (!result)
+      return nullptr;
+
+    // Obtain the value of the reference counter for each lane given the
+    // aggregate value.
+    count = gpu::shuffle(lane_mask, cpp::countr_zero(unifrom), count) -
+            cpp::popcount(unifrom) + impl::lane_count(unifrom) + 1;
+    return result;
+  }
+
+  // Release the associated lock on the pointer, potentially destroying it.
+  void unlock(uint64_t lane_mask, uint64_t mask) {
+    cpp::atomic_thread_fence(cpp::MemoryOrder::RELEASE);
+    if (gpu::get_lane_id() == uint32_t(cpp::countr_zero(mask)) &&
+        ref.release(cpp::popcount(mask))) {
+      T *p = ptr.load(cpp::MemoryOrder::RELAXED);
+      p->~T();
+      impl::rpc_free(p);
+      cpp::atomic_thread_fence(cpp::MemoryOrder::RELEASE);
+      ptr.store(nullptr, cpp::MemoryOrder::RELAXED);
+    }
+    gpu::sync_lane(lane_mask);
+  }
+
+  // Get the current value of the reference counter.
+  uint64_t use_count() { return ref.read(); }
+};
+
+// The global array used to search for a valid slab to allocate from.
+static GuardPtr<Slab> slots[ARRAY_SIZE] = {};
+
+// Tries to find a slab in the table that can support the given chunk size.
+static Slab *find_slab(uint32_t chunk_size) {
+  // We start at a hashed value to spread out different chunk sizes.
+  uint32_t start = impl::hash(chunk_size);
+  for (uint32_t offset = 0; offset < ARRAY_SIZE;) {
+    uint32_t index = (offset + start) % ARRAY_SIZE;
+
+    // If this slot is too full we exit early.
+    if (slots[index].use_count() >= Slab::available_chunks(chunk_size)) {
+      offset++;
+      sleep_briefly();
+      continue;
+    }
+
+    uint64_t lane_mask = gpu::get_lane_mask();
+    uint64_t uniform = gpu::match_any(lane_mask, index);
+    uint64_t reserved = 0;
+    Slab *slab =
+        slots[index].try_lock(lane_mask, uniform, reserved, chunk_size, index);
+    gpu::sync_lane(lane_mask);
+
+    // We successfully obtained a slab with enough space for our allocation.
+    // This guarantees that a call to Slab::allocate will always succeed.
+    if (slab && reserved <= Slab::available_chunks(chunk_size) &&
+        slab->get_chunk_size() == chunk_size)
+      return slab;
+
+    // We encountered either a full slab or an slab with an incompatible chunk
+    // size. Move to the next slot.
+    if (slab && reserved > Slab::available_chunks(chunk_size) &&
+        slab->get_chunk_size() == chunk_size) {
+      slots[index].unlock(gpu::get_lane_mask(), gpu::get_lane_mask() & uniform);
+      offset++;
+    }
+
+    // The slab is in the process of being initialized. Start at the beginning
+    // to prevent too many slab allocations from happening at once.
+    if (!slab && reserved == 0)
+      offset = 0;
+    sleep_briefly();
+  }
+  return nullptr;
+}
+
+// Release the lock associated with a given slab.
+static void release_slab(Slab *slab) {
+  uint32_t index = slab->get_global_index();
+  uint64_t lane_mask = gpu::get_lane_mask();
+  uint64_t uniform = gpu::match_any(lane_mask, index);
+  slots[index].unlock(lane_mask, uniform);
+}
 
 namespace gpu {
 
-void *allocate(uint64_t size) { return rpc_allocate(size); }
+void *allocate(uint64_t size) {
+  if (!size)
+    return nullptr;
 
-void deallocate(void *ptr) { rpc_free(ptr); }
+  // Allocations larger than a single slab go directly to memory.
+  if (size >= SLAB_SIZE / 2)
+    return impl::rpc_allocate(size);
+
+  // Try to find a slab for the rounded up chunk size and allocate from it.
+  uint32_t chunk_size = impl::get_chunk_size(static_cast<uint32_t>(size));
+  Slab *slab = find_slab(chunk_size);
+  if (!slab)
+    return nullptr;
+
+  uint64_t lane_mask = gpu::get_lane_mask();
+  uint64_t uniform = gpu::match_any(lane_mask, slab->get_global_index());
+  void *ptr = slab->allocate(lane_mask, uniform);
+  return ptr;
+}
+
+void deallocate(void *ptr) {
+  if (!ptr)
+    return;
+
+  // All non-slab allocations will be alinged on a 2MiB boundary.
+  if ((reinterpret_cast<uintptr_t>(ptr) & 0x1fffff) == 0)
+    return impl::rpc_free(ptr);
+
+  // The original slab pointer is the 2MiB boundary using the given pointer.
+  Slab *slab =
+      reinterpret_cast<Slab *>((reinterpret_cast<uintptr_t>(ptr) & ~0x1fffff));
+  slab->deallocate(ptr);
+  release_slab(slab);
+}
 
 } // namespace gpu
 } // namespace LIBC_NAMESPACE_DECL
