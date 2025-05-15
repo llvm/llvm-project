@@ -106,9 +106,11 @@ body:             |
     ; RV32-LABEL: name: store_common_value_double
     ; RV32: liveins: $x10, $x11, $x12, $x16, $x17
     ; RV32-NEXT: {{  $}}
-    ; RV32-NEXT: SD_RV32 renamable $x16_x17, killed renamable $x10, 0 :: (store (s64) into %ir.a)
-    ; RV32-NEXT: SD_RV32 renamable $x16_x17, killed renamable $x11, 0 :: (store (s64) into %ir.b)
-    ; RV32-NEXT: SD_RV32 killed renamable $x16_x17, killed renamable $x12, 0 :: (store (s64) into %ir.c)
+    ; RV32-NEXT: $x14 = ADDI $x16, 0
+    ; RV32-NEXT: $x15 = ADDI $x17, 0
+    ; RV32-NEXT: SD_RV32 $x14_x15, killed renamable $x10, 0 :: (store (s64) into %ir.a)
+    ; RV32-NEXT: SD_RV32 $x14_x15, killed renamable $x11, 0 :: (store (s64) into %ir.b)
+    ; RV32-NEXT: SD_RV32 killed $x14_x15, killed renamable $x12, 0 :: (store (s64) into %ir.c)
     ; RV32-NEXT: PseudoRET
     SD_RV32 renamable $x16_x17, killed renamable $x10, 0 :: (store (s64) into %ir.a)
     SD_RV32 renamable $x16_x17, killed renamable $x11, 0 :: (store (s64) into %ir.b)
@@ -126,9 +128,10 @@ body:             |
     ; RV32-LABEL: name: store_common_ptr_double
     ; RV32: liveins: $x10, $x11, $x12, $x13, $x14, $x15, $x16
     ; RV32-NEXT: {{  $}}
-    ; RV32-NEXT: SD_RV32 killed renamable $x10_x11, renamable $x16, 0 :: (volatile store (s64) into %ir.p)
-    ; RV32-NEXT: SD_RV32 renamable $x12_x13, renamable $x16, 0 :: (volatile store (s64) into %ir.p)
-    ; RV32-NEXT: SD_RV32 killed renamable $x12_x13, killed renamable $x16, 0 :: (volatile store (s64) into %ir.p)
+    ; RV32-NEXT: $x14 = ADDI $x16, 0
+    ; RV32-NEXT: SD_RV32 killed renamable $x10_x11, $x14, 0 :: (volatile store (s64) into %ir.p)
+    ; RV32-NEXT: SD_RV32 renamable $x12_x13, $x14, 0 :: (volatile store (s64) into %ir.p)
+    ; RV32-NEXT: SD_RV32 killed renamable $x12_x13, killed $x14, 0 :: (volatile store (s64) into %ir.p)
     ; RV32-NEXT: PseudoRET
     SD_RV32 killed renamable $x10_x11, renamable $x16, 0 :: (volatile store (s64) into %ir.p)
     SD_RV32 renamable $x12_x13, renamable $x16, 0 :: (volatile store (s64) into %ir.p)
@@ -146,9 +149,10 @@ body:             |
     ; RV32-LABEL: name: load_common_ptr_double
     ; RV32: liveins: $x16
     ; RV32-NEXT: {{  $}}
-    ; RV32-NEXT: renamable $x10_x11 = LD_RV32 renamable $x16, 0 :: (load (s64) from %ir.g)
-    ; RV32-NEXT: renamable $x12_x13 = LD_RV32 renamable $x16, 8 :: (load (s64) from %ir.arrayidx1)
-    ; RV32-NEXT: renamable $x14 = LW killed renamable $x16, 16 :: (load (s32) from %ir.arrayidx2, align 8)
+    ; RV32-NEXT: $x15 = ADDI $x16, 0
+    ; RV32-NEXT: renamable $x10_x11 = LD_RV32 $x15, 0 :: (load (s64) from %ir.g)
+    ; RV32-NEXT: renamable $x12_x13 = LD_RV32 $x15, 8 :: (load (s64) from %ir.arrayidx1)
+    ; RV32-NEXT: renamable $x14 = LW killed $x15, 16 :: (load (s32) from %ir.arrayidx2, align 8)
     ; RV32-NEXT: PseudoTAIL target-flags(riscv-call) @load_common_ptr_double_1, csr_ilp32_lp64, implicit $x2, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14
     renamable $x10_x11 = LD_RV32 renamable $x16, 0 :: (load (s64) from %ir.g)
     renamable $x12_x13 = LD_RV32 renamable $x16, 8 :: (load (s64) from %ir.arrayidx1)
@@ -166,9 +170,10 @@ body:             |
     ; RV32-LABEL: name: store_large_offset_double
     ; RV32: liveins: $x10, $x12, $x13, $x14, $x15
     ; RV32-NEXT: {{  $}}
-    ; RV32-NEXT: SD_RV32 killed renamable $x12_x13, renamable $x10, 800 :: (volatile store (s64) into %ir.0)
-    ; RV32-NEXT: SD_RV32 renamable $x14_x15, renamable $x10, 808 :: (volatile store (s64) into %ir.1)
-    ; RV32-NEXT: SD_RV32 killed renamable $x14_x15, killed renamable $x10, 816 :: (volatile store (s64) into %ir.2)
+    ; RV32-NEXT: $x11 = ADDI $x10, 768
+    ; RV32-NEXT: SD_RV32 killed renamable $x12_x13, $x11, 32 :: (volatile store (s64) into %ir.0)
+    ; RV32-NEXT: SD_RV32 renamable $x14_x15, $x11, 40 :: (volatile store (s64) into %ir.1)
+    ; RV32-NEXT: SD_RV32 killed renamable $x14_x15, killed $x11, 48 :: (volatile store (s64) into %ir.2)
     ; RV32-NEXT: PseudoRET
     SD_RV32 killed renamable $x12_x13, renamable $x10, 800 :: (volatile store (s64) into %ir.0)
     SD_RV32 renamable $x14_x15, renamable $x10, 808 :: (volatile store (s64) into %ir.1)
@@ -186,9 +191,10 @@ body:             |
     ; RV32-LABEL: name: load_large_offset_double
     ; RV32: liveins: $x14
     ; RV32-NEXT: {{  $}}
-    ; RV32-NEXT: renamable $x10_x11 = LD_RV32 renamable $x14, 800 :: (load (s64) from %ir.arrayidx)
-    ; RV32-NEXT: renamable $x12_x13 = LD_RV32 renamable $x14, 808 :: (load (s64) from %ir.arrayidx1)
-    ; RV32-NEXT: renamable $x14 = LW killed renamable $x14, 816 :: (load (s32) from %ir.arrayidx2, align 8)
+    ; RV32-NEXT: $x15 = ADDI $x14, 768
+    ; RV32-NEXT: renamable $x10_x11 = LD_RV32 $x15, 32 :: (load (s64) from %ir.arrayidx)
+    ; RV32-NEXT: renamable $x12_x13 = LD_RV32 $x15, 40 :: (load (s64) from %ir.arrayidx1)
+    ; RV32-NEXT: renamable $x14 = LW killed $x15, 48 :: (load (s32) from %ir.arrayidx2, align 8)
     ; RV32-NEXT: PseudoTAIL target-flags(riscv-call) @load_large_offset_double_1, csr_ilp32_lp64, implicit $x2, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14
     renamable $x10_x11 = LD_RV32 renamable $x14, 800 :: (load (s64) from %ir.arrayidx)
     renamable $x12_x13 = LD_RV32 renamable $x14, 808 :: (load (s64) from %ir.arrayidx1)
