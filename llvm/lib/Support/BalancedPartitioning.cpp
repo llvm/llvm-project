@@ -21,12 +21,10 @@
 using namespace llvm;
 #define DEBUG_TYPE "balanced-partitioning"
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-LLVM_DUMP_METHOD void BPFunctionNode::dump(raw_ostream &OS) const {
+void BPFunctionNode::dump(raw_ostream &OS) const {
   OS << formatv("{{ID={0} Utilities={{{1:$[,]}} Bucket={2}}", Id,
                 make_range(UtilityNodes.begin(), UtilityNodes.end()), Bucket);
 }
-#endif
 
 template <typename Func>
 void BalancedPartitioning::BPThreadPool::async(Func &&F) {
