@@ -2,10 +2,29 @@
 ; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S -o %t.ll
 ; RUN: FileCheck --input-file=%t.ll %s
 
-define ptr @f(i1 %n) presplitcoroutine {
+; %y and %alias_phi would all go to the frame, but not %x
+; CHECK:       %g.Frame = type { ptr, ptr, i64, ptr, i1 }
+
+; CHECK-LABEL: @g(
+; CHECK:         %x = alloca i64, align 8
+; CHECK-NOT:     %x.reload.addr = getelementptr inbounds %g.Frame, ptr %hdl, i32 0, i32 2
+; CHECK:         %y.reload.addr = getelementptr inbounds %g.Frame, ptr %hdl, i32 0, i32 2
+; CHECK:         %alias_phi = phi ptr [ %y.reload.addr, %merge.from.flag_false ], [ %x, %entry ]
+
+
+; The deprecated !coro.outside.frame metadata is parsed but doesn't do anything.
+define ptr @f() {
 entry:
   %x = alloca i64, !coro.outside.frame !{}
+  ret ptr %x
+}
+
+
+define ptr @g(i1 %n) presplitcoroutine {
+entry:
+  %x = alloca i64
   %y = alloca i64
+  call void @llvm.coro.outside.frame(ptr %x)
   %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
   %size = call i32 @llvm.coro.size.i32()
   %alloc = call ptr @malloc(i32 %size)
@@ -37,13 +56,6 @@ suspend:
   ret ptr %hdl
 }
 
-; %y and %alias_phi would all go to the frame, but not %x
-; CHECK:       %f.Frame = type { ptr, ptr, i64, ptr, i1 }
-; CHECK-LABEL: @f(
-; CHECK:         %x = alloca i64, align 8, !coro.outside.frame !0
-; CHECK-NOT:     %x.reload.addr = getelementptr inbounds %f.Frame, ptr %hdl, i32 0, i32 2
-; CHECK:         %y.reload.addr = getelementptr inbounds %f.Frame, ptr %hdl, i32 0, i32 2
-; CHECK:         %alias_phi = phi ptr [ %y.reload.addr, %merge.from.flag_false ], [ %x, %entry ]
 
 declare ptr @llvm.coro.free(token, ptr)
 declare i32 @llvm.coro.size.i32()
