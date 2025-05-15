@@ -2,24 +2,18 @@
 Test lldb-dap attach request
 """
 
-import dap_server
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 import lldbdap_testcase
-import os
-import shutil
 import subprocess
-import tempfile
 import threading
 import time
 
 
 def spawn_and_wait(program, delay):
-    print("spawn_and_wait started...", time.time())
     if delay:
         time.sleep(delay)
-    print("starting process... ", time.time())
     process = subprocess.Popen(
         [program], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE
     )
@@ -40,7 +34,7 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         # accordingly.
         timeout_offset = 10
         self.continue_to_breakpoints(
-            breakpoint_ids, timeout=timeout_offset + self.timeoutval
+            breakpoint_ids, timeout=timeout_offset + self.DEFAULT_TIMEOUT
         )
         if continueToExit:
             self.continue_to_exit()
@@ -165,7 +159,7 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         # Continue after launch and hit the "pause()" call and stop the target.
         # Get output from the console. This should contain both the
         # "stopCommands" that were run after we stop.
-        self.verify_continue()
+        self.do_continue()
         time.sleep(0.5)
         self.dap_server.request_pause()
         self.dap_server.wait_for_stopped()

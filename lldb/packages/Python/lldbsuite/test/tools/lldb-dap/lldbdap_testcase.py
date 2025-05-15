@@ -1,5 +1,6 @@
 import os
 import time
+from typing import Optional
 import uuid
 
 import dap_server
@@ -11,10 +12,14 @@ import lldbgdbserverutils
 class DAPTestCaseBase(TestBase):
     # set timeout based on whether ASAN was enabled or not. Increase
     # timeout by a factor of 10 if ASAN is enabled.
-    timeoutval = 10 * (10 if ("ASAN_OPTIONS" in os.environ) else 1)
+    DEFAULT_TIMEOUT = 10 * (10 if ("ASAN_OPTIONS" in os.environ) else 1)
     NO_DEBUG_INFO_TESTCASE = True
 
-    def create_debug_adapter(self, lldbDAPEnv=None, connection=None):
+    def create_debug_adapter(
+        self,
+        lldbDAPEnv: Optional[dict[str, str]] = None,
+        connection: Optional[str] = None,
+    ):
         """Create the Visual Studio Code debug adapter"""
         self.assertTrue(
             is_exe(self.lldbDAPExec), "lldb-dap must exist and be executable"
@@ -28,7 +33,11 @@ class DAPTestCaseBase(TestBase):
             env=lldbDAPEnv,
         )
 
-    def build_and_create_debug_adapter(self, lldbDAPEnv=None, dictionary=None):
+    def build_and_create_debug_adapter(
+        self,
+        lldbDAPEnv: Optional[dict[str, str]] = None,
+        dictionary: Optional[dict] = None,
+    ):
         self.build(dictionary=dictionary)
         self.create_debug_adapter(lldbDAPEnv)
 
@@ -78,7 +87,7 @@ class DAPTestCaseBase(TestBase):
             time.sleep(0.5)
         return False
 
-    def verify_breakpoint_hit(self, breakpoint_ids, timeout=timeoutval):
+    def verify_breakpoint_hit(self, breakpoint_ids, timeout=DEFAULT_TIMEOUT):
         """Wait for the process we are debugging to stop, and verify we hit
         any breakpoint location in the "breakpoint_ids" array.
         "breakpoint_ids" should be a list of breakpoint ID strings
@@ -112,7 +121,7 @@ class DAPTestCaseBase(TestBase):
                         return
         self.assertTrue(False, f"breakpoint not hit, stopped_events={stopped_events}")
 
-    def verify_stop_exception_info(self, expected_description, timeout=timeoutval):
+    def verify_stop_exception_info(self, expected_description, timeout=DEFAULT_TIMEOUT):
         """Wait for the process we are debugging to stop, and verify the stop
         reason is 'exception' and that the description matches
         'expected_description'
@@ -267,7 +276,7 @@ class DAPTestCaseBase(TestBase):
         targetId=None,
         waitForStop=True,
         granularity="statement",
-        timeout=timeoutval,
+        timeout=DEFAULT_TIMEOUT,
     ):
         response = self.dap_server.request_stepIn(
             threadId=threadId, targetId=targetId, granularity=granularity
@@ -282,40 +291,40 @@ class DAPTestCaseBase(TestBase):
         threadId=None,
         waitForStop=True,
         granularity="statement",
-        timeout=timeoutval,
+        timeout=DEFAULT_TIMEOUT,
     ):
         self.dap_server.request_next(threadId=threadId, granularity=granularity)
         if waitForStop:
             return self.dap_server.wait_for_stopped(timeout)
         return None
 
-    def stepOut(self, threadId=None, waitForStop=True, timeout=timeoutval):
+    def stepOut(self, threadId=None, waitForStop=True, timeout=DEFAULT_TIMEOUT):
         self.dap_server.request_stepOut(threadId=threadId)
         if waitForStop:
             return self.dap_server.wait_for_stopped(timeout)
         return None
 
-    def verify_continue(self):
+    def do_continue(self):  # `continue` is a keyword.
         resp = self.dap_server.request_continue()
         self.assertTrue(resp["success"], f"continue request failed: {resp}")
 
-    def continue_to_next_stop(self, timeout=timeoutval):
-        self.verify_continue()
+    def continue_to_next_stop(self, timeout=DEFAULT_TIMEOUT):
+        self.do_continue()
         return self.dap_server.wait_for_stopped(timeout)
 
-    def continue_to_breakpoints(self, breakpoint_ids, timeout=timeoutval):
-        self.verify_continue()
+    def continue_to_breakpoints(self, breakpoint_ids, timeout=DEFAULT_TIMEOUT):
+        self.do_continue()
         self.verify_breakpoint_hit(breakpoint_ids, timeout)
 
-    def continue_to_exception_breakpoint(self, filter_label, timeout=timeoutval):
-        self.verify_continue()
+    def continue_to_exception_breakpoint(self, filter_label, timeout=DEFAULT_TIMEOUT):
+        self.do_continue()
         self.assertTrue(
             self.verify_stop_exception_info(filter_label, timeout),
             'verify we got "%s"' % (filter_label),
         )
 
-    def continue_to_exit(self, exitCode=0, timeout=timeoutval):
-        self.verify_continue()
+    def continue_to_exit(self, exitCode=0, timeout=DEFAULT_TIMEOUT):
+        self.do_continue()
         stopped_events = self.dap_server.wait_for_stopped(timeout)
         self.assertEqual(
             len(stopped_events), 1, "stopped_events = {}".format(stopped_events)
@@ -344,14 +353,14 @@ class DAPTestCaseBase(TestBase):
 
     def attach(
         self,
-        /,
+        *,
         stopOnAttach=True,
         disconnectAutomatically=True,
         sourceInitFile=False,
         expectFailure=False,
         sourceBreakpoints=None,
         functionBreakpoints=None,
-        timeout=timeoutval,
+        timeout=DEFAULT_TIMEOUT,
         **kwargs,
     ):
         """Build the default Makefile target, create the DAP debug adapter,
@@ -404,14 +413,14 @@ class DAPTestCaseBase(TestBase):
     def launch(
         self,
         program=None,
-        /,
+        *,
         sourceInitFile=False,
         disconnectAutomatically=True,
         sourceBreakpoints=None,
         functionBreakpoints=None,
         expectFailure=False,
         stopOnEntry=True,
-        timeout=timeoutval,
+        timeout=DEFAULT_TIMEOUT,
         **kwargs,
     ):
         """Sending launch request to dap"""
@@ -472,8 +481,8 @@ class DAPTestCaseBase(TestBase):
     def build_and_launch(
         self,
         program,
-        /,
-        lldbDAPEnv=None,
+        *,
+        lldbDAPEnv: Optional[dict[str, str]] = None,
         **kwargs,
     ):
         """Build the default Makefile target, create the DAP debug adapter,

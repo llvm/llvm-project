@@ -590,33 +590,30 @@ class DebugCommunication(object):
 
     def request_attach(
         self,
-        /,
-        program=None,
-        pid=None,
-        waitFor=None,
-        trace=None,
-        initCommands=None,
-        preRunCommands=None,
-        stopCommands=None,
-        exitCommands=None,
-        attachCommands=None,
-        terminateCommands=None,
-        coreFile=None,
+        *,
+        program: Optional[str] = None,
+        pid: Optional[int] = None,
+        waitFor=False,
+        initCommands: Optional[list[str]] = None,
+        preRunCommands: Optional[list[str]] = None,
+        attachCommands: Optional[list[str]] = None,
+        postRunCommands: Optional[list[str]] = None,
+        stopCommands: Optional[list[str]] = None,
+        exitCommands: Optional[list[str]] = None,
+        terminateCommands: Optional[list[str]] = None,
+        coreFile: Optional[str] = None,
         stopOnAttach=True,
-        postRunCommands=None,
-        sourceMap=None,
-        gdbRemotePort=None,
-        gdbRemoteHostname=None,
+        sourceMap: Optional[Union[list[tuple[str, str]], dict[str, str]]] = None,
+        gdbRemotePort: Optional[int] = None,
+        gdbRemoteHostname: Optional[str] = None,
     ):
         args_dict = {}
         if pid is not None:
             args_dict["pid"] = pid
         if program is not None:
             args_dict["program"] = program
-        if waitFor is not None:
+        if waitFor:
             args_dict["waitFor"] = waitFor
-        if trace:
-            args_dict["trace"] = trace
         args_dict["initCommands"] = self.init_commands
         if initCommands:
             args_dict["initCommands"].extend(initCommands)
@@ -822,33 +819,32 @@ class DebugCommunication(object):
 
     def request_launch(
         self,
-        program: Optional[str],
-        /,
+        program: str,
+        *,
         args: Optional[list[str]] = None,
-        cwd=None,
-        env=None,
+        cwd: Optional[str] = None,
+        env: Optional[dict[str, str]] = None,
         stopOnEntry=True,
         disableASLR=True,
         disableSTDIO=False,
         shellExpandArguments=False,
-        trace=False,
-        initCommands=None,
-        preRunCommands=None,
-        stopCommands=None,
-        exitCommands=None,
-        terminateCommands=None,
-        sourcePath=None,
-        debuggerRoot=None,
-        launchCommands=None,
-        sourceMap=None,
         runInTerminal=False,
-        postRunCommands=None,
         enableAutoVariableSummaries=False,
         displayExtendedBacktrace=False,
         enableSyntheticChildDebugging=False,
-        commandEscapePrefix=None,
-        customFrameFormat=None,
-        customThreadFormat=None,
+        initCommands: Optional[list[str]] = None,
+        preRunCommands: Optional[list[str]] = None,
+        launchCommands: Optional[list[str]] = None,
+        postRunCommands: Optional[list[str]] = None,
+        stopCommands: Optional[list[str]] = None,
+        exitCommands: Optional[list[str]] = None,
+        terminateCommands: Optional[list[str]] = None,
+        sourceMap: Optional[Union[list[tuple[str, str]], dict[str, str]]] = None,
+        sourcePath: Optional[str] = None,
+        debuggerRoot: Optional[str] = None,
+        commandEscapePrefix: Optional[str] = None,
+        customFrameFormat: Optional[str] = None,
+        customThreadFormat: Optional[str] = None,
     ):
         args_dict = {"program": program}
         if args:
@@ -863,8 +859,6 @@ class DebugCommunication(object):
             args_dict["disableSTDIO"] = disableSTDIO
         if shellExpandArguments:
             args_dict["shellExpandArguments"] = shellExpandArguments
-        if trace:
-            args_dict["trace"] = trace
         args_dict["initCommands"] = self.init_commands
         if initCommands:
             args_dict["initCommands"].extend(initCommands)
@@ -1271,7 +1265,7 @@ class DebugAdapterServer(DebugCommunication):
     @classmethod
     def launch(
         cls,
-        /,
+        *,
         executable: str,
         env: Optional[dict[str, str]] = None,
         log_file: Optional[TextIO] = None,
