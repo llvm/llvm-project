@@ -300,8 +300,7 @@ private:
 using InterExplodedGraphMap =
     llvm::DenseMap<const ExplodedNode *, ExplodedNode *>;
 
-using TrimGraphWorklist =
-    SmallVector<const ExplodedNode*, 32>;
+using TrimGraphWorklist = SmallVector<const ExplodedNode *, 32>;
 
 class ExplodedGraph {
 protected:
