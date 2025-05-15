@@ -10,7 +10,7 @@ import os
 class TestUnwindFramelessFaulted(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    @skipIf(oslist=no_match([lldbplatformutil.getDarwinOSTriples()]))
+    @skipIf(oslist=no_match([lldbplatformutil.getDarwinOSTriples(), "linux"]))
     @skipIf(archs=no_match(["aarch64", "arm64", "arm64e"]))
 
     # The static linker in Xcode 15.0-15.2 on macOS 14 will mislink
