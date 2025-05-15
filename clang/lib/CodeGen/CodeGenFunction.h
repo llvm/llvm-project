@@ -2868,6 +2868,11 @@ private:
   void emitStoresForInitAfterBZero(llvm::Constant *Init, Address Loc,
                                    bool isVolatile, bool IsAutoInit);
 
+  /// Returns debug info, with additional annotation if enabled by
+  /// CGM.getCodeGenOpts().SanitizeAnnotateDebugInfo[CheckKindOrdinal].
+  llvm::DILocation *
+  SanitizerAnnotateDebugInfo(SanitizerKind::SanitizerOrdinal CheckKindOrdinal);
+
 public:
   // Captures all the allocas created during the scope of its RAII object.
   struct AllocaTrackerRAII {
