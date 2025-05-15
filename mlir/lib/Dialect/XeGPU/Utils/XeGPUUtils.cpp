@@ -115,7 +115,8 @@ xegpu::LayoutAttr xegpu::getLayoutAttr(Value value) {
   if (!value)
     return nullptr;
 
-  if (auto tdescTy = dyn_cast<xegpu::TensorDescType>(value.getType()))
+  if (auto tdescTy =
+          dyn_cast_if_present<xegpu::TensorDescType>(value.getType()))
     return tdescTy.getLayoutAttr();
 
   if (auto result = dyn_cast<OpResult>(value)) {
@@ -366,7 +367,7 @@ void xegpu::doSCFStructuralTypeConversionWithTensorType(Operation *op) {
           Type newTy = type;
 
           if (xegpu::LayoutAttr layout = type.getLayoutAttr()) {
-            SmallVector<int64_t> subShape, distUnit;
+            SmallVector<int64_t> subShape(shape);
             if (layout.isWgLayout()) {
               // for WgToSg, the subShape is either from sgData or computed as
               // shape/sgLayout
@@ -378,6 +379,7 @@ void xegpu::doSCFStructuralTypeConversionWithTensorType(Operation *op) {
               count = computeProduct(shape) / computeProduct(subShape);
               layout = layout.dropInstData();
             }
+
             newTy = xegpu::TensorDescType::get(ctx, subShape, elemTy, encoding,
                                                layout);
           }

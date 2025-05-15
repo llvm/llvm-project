@@ -32,6 +32,39 @@ using namespace mlir;
 
 namespace {
 
+void resolveUnrealizedConversionCastOp(UnrealizedConversionCastOp castOp) {
+  ValueRange inputs = castOp.getInputs();
+  ValueRange outputs = castOp.getOutputs();
+
+  if (inputs.size() == 1 && outputs.size() == 1) {
+    castOp->replaceAllUsesWith(inputs);
+    castOp->erase();
+  }
+
+  VectorType inputTy = dyn_cast<VectorType>(inputs[0].getType());
+  VectorType outputTy = dyn_cast<VectorType>(outputs[0].getType());
+  if (inputTy && outputTy) {
+    OpBuilder builder(castOp);
+    // unpack
+    if (inputs.size() > 1 && outputs.size() == 1) {
+      ArrayRef<int64_t> shape = outputTy.getShape();
+      Value result = xegpu::createVectorWithShapeFromValues(
+          builder, castOp.getLoc(), inputs, shape);
+      castOp->replaceAllUsesWith(ValueRange(result));
+      castOp->erase();
+    }
+
+    // pack
+    if (castOp.getNumResults() > 1 && castOp.getNumOperands() == 1) {
+      ArrayRef<int64_t> tileShape = outputTy.getShape();
+      SmallVector<Value> results = xegpu::extractVectorsWithShapeFromValue(
+          builder, castOp.getLoc(), inputs[0], tileShape);
+      castOp->replaceAllUsesWith(results);
+      castOp->erase();
+    }
+  }
+}
+
 /// Unroll XeGPU ops to their instruction-level representation.
 class XeGPUInstructionlizePass final
     : public xegpu::impl::XeGPUInstructionlizeBase<XeGPUInstructionlizePass> {
@@ -200,35 +233,22 @@ void XeGPUInstructionlizePass::runOnOperation() {
   populateXeGPUUnrollPatterns(patterns, options);
   (void)applyPatternsGreedily(mod, std::move(patterns));
 
-  mod->walk([&](UnrealizedConversionCastOp castOp) {
-    ValueRange inputs = castOp.getInputs();
-    ValueRange outputs = castOp.getOutputs();
+  mod->walk([&](Operation *op) {
+    if (auto castOp = dyn_cast<UnrealizedConversionCastOp>(op))
+      resolveUnrealizedConversionCastOp(castOp);
 
-    if (inputs.size() == 1 && outputs.size() == 1) {
-      castOp->replaceAllUsesWith(inputs);
-      castOp->erase();
+    for (OpOperand &opr : op->getOpOperands()) {
+      std::string name = xegpu::getLayoutName(opr);
+      if (auto layout = op->getAttrOfType<xegpu::LayoutAttr>(name))
+        op->removeAttr(name);
     }
 
-    VectorType inputTy = dyn_cast<VectorType>(inputs[0].getType());
-    VectorType outputTy = dyn_cast<VectorType>(outputs[0].getType());
-    if (inputTy && outputTy) {
-      OpBuilder builder(castOp);
-      // unpack
-      if (inputs.size() > 1 && outputs.size() == 1) {
-        ArrayRef<int64_t> shape = outputTy.getShape();
-        Value result = xegpu::createVectorWithShapeFromValues(
-            builder, castOp.getLoc(), inputs, shape);
-        castOp->replaceAllUsesWith(ValueRange(result));
-        castOp->erase();
-      }
-
-      // pack
-      if (castOp.getNumResults() > 1 && castOp.getNumOperands() == 1) {
-        ArrayRef<int64_t> tileShape = outputTy.getShape();
-        SmallVector<Value> results = xegpu::extractVectorsWithShapeFromValue(
-            builder, castOp.getLoc(), inputs[0], tileShape);
-        castOp->replaceAllUsesWith(results);
-        castOp->erase();
+    for (OpResult result : op->getOpResults()) {
+      std::string name = xegpu::getLayoutName(result);
+      if (auto layout = op->getAttrOfType<xegpu::LayoutAttr>(name)) {
+        op->removeAttr(name);
+        if (!isa<LoopLikeOpInterface>(op))
+          xegpu::setLayoutAttr(result, layout.dropInstData());
       }
     }
   });
