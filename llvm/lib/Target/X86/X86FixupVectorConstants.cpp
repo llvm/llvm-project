@@ -336,6 +336,13 @@ static Constant *rebuildZExtCst(const Constant *C, unsigned NumBits,
   return rebuildExtCst(C, false, NumBits, NumElts, SrcEltBitWidth);
 }
 
+template <typename T>
+static std::optional<bool> CmpOptionals(T NewVal, T CurVal) {
+  if (NewVal.has_value() && CurVal.has_value() && *NewVal != *CurVal)
+    return *NewVal < *CurVal;
+  return std::nullopt;
+}
+
 bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
                                                      MachineBasicBlock &MBB,
                                                      MachineInstr &MI) {
@@ -348,6 +355,7 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
   bool HasBWI = ST->hasBWI();
   bool HasVLX = ST->hasVLX();
   bool MultiDomain = ST->hasAVX512() || ST->hasNoDomainDelayMov();
+  bool OptSize = MF.getFunction().hasOptSize();
 
   struct FixupEntry {
     int Op;
@@ -356,6 +364,51 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
     std::function<Constant *(const Constant *, unsigned, unsigned, unsigned)>
         RebuildConstant;
   };
+
+  auto GetInstTput = [&](unsigned Opcode) -> std::optional<double> {
+    // We already checked that SchedModel exists in `NewOpcPreferable`.
+    return MCSchedModel::getReciprocalThroughput(
+        *ST, *(SM->getSchedClassDesc(TII->get(Opcode).getSchedClass())));
+  };
+  auto GetInstLat = [&](unsigned Opcode) -> std::optional<double> {
+    // We already checked that SchedModel exists in `NewOpcPreferable`.
+    return MCSchedModel::computeInstrLatency(
+        *ST, *(SM->getSchedClassDesc(TII->get(Opcode).getSchedClass())));
+  };
+  auto GetInstSize = [&](unsigned Opcode) -> std::optional<unsigned> {
+    if (unsigned Size = TII->get(Opcode).getSize())
+      return Size;
+    // Zero size means we where unable to compute it.
+    return std::nullopt;
+  };
+
+  auto NewOpcPreferable = [&](const FixupEntry &Fixup) -> bool {
+    unsigned NewOpc = Fixup.Op;
+
+    std::optional<bool> Res;
+    if (SM->hasInstrSchedModel()) {
+      // Compare tput -> lat -> code size.
+      // TODO: how much increase in tput/latency/size should we permit for the
+      // reduction in constant pool size?
+      Res = CmpOptionals(GetInstTput(NewOpc), GetInstTput(Opc));
+      if (Res.has_value())
+        return *Res;
+
+      Res = CmpOptionals(GetInstLat(NewOpc), GetInstLat(Opc));
+      if (Res.has_value())
+        return *Res;
+    }
+
+    // TODO: Include data reduction in size comparison?
+    Res = CmpOptionals(GetInstSize(Opc), GetInstSize(NewOpc));
+    if (Res.has_value())
+      return *Res;
+
+    // We either were unable to get tput/lat/codesize or all values were equal.
+    // Prefer the new opcode for reduced constant pool size.
+    return true;
+  };
+
   auto FixupConstant = [&](ArrayRef<FixupEntry> Fixups, unsigned RegBitWidth,
                            unsigned OperandNo) {
 #ifdef EXPENSIVE_CHECKS
@@ -372,7 +425,7 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
       unsigned CstBitWidth = C->getType()->getPrimitiveSizeInBits();
       RegBitWidth = RegBitWidth ? RegBitWidth : CstBitWidth;
       for (const FixupEntry &Fixup : Fixups) {
-        if (Fixup.Op) {
+        if (Fixup.Op && (OptSize || NewOpcPreferable(Fixup))) {
           // Construct a suitable constant and adjust the MI to use the new
           // constant pool entry.
           if (Constant *NewCst = Fixup.RebuildConstant(

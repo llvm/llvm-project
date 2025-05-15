@@ -836,7 +836,7 @@ define <4 x i32> @or_and_v4i32(<4 x i32> %a0) {
 ;
 ; AVX512-LABEL: or_and_v4i32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpmovsxbd {{.*#+}} xmm1 = [3,3,15,7]
+; AVX512-NEXT:    vmovdqa {{.*#+}} xmm1 = [3,3,15,7]
 ; AVX512-NEXT:    vpternlogd {{.*#+}} xmm0 = xmm1 & (xmm0 | mem)
 ; AVX512-NEXT:    retq
   %1 = and <4 x i32> %a0, <i32 1, i32 3, i32 5, i32 7>
