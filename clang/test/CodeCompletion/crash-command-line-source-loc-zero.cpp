@@ -8,3 +8,5 @@
 // RUN:     | FileCheck -check-prefix=CHECK-DIAG %s
 
 // CHECK-DIAG: error: invalid value '{{.*}}' in '-code-completion-at={{.*}}'
+// CHECK-DIAG: -code-completion-at=<file>:<line>:<column> requires <line>
+// CHECK-DIAG: and <column> to be integers greater than zero

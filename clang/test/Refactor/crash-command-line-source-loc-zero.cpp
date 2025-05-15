@@ -15,4 +15,5 @@
 // RUN:     | FileCheck -check-prefix=CHECK-DIAG %s
 
 // CHECK-DIAG: error: '-selection' option must be specified using <file>:<line>:<column>
-// CHECK-DIAG: or <file>:<line>:<column>-<line>:<column> format
+// CHECK-DIAG: or <file>:<line>:<column>-<line>:<column> format,
+// CHECK-DIAG: where <line> and <column> are integers greater than zero.
