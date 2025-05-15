@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PrettyStackTraceLocationContext.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
@@ -40,6 +39,11 @@ STAT_COUNTER(NumInlinedCalls, "The # of times we inlined a call");
 
 STAT_COUNTER(NumReachedInlineCountMax,
              "The # of times we reached inline count maximum");
+
+STAT_COUNTER(NumDefaultCallEvals, "The # of times default call eval used.");
+
+STAT_COUNTER(NumDefaultConservativeCallEvals,
+             "The # of times default conservative call eval used.");
 
 void ExprEngine::processCallEnter(NodeBuilderContext& BC, CallEnter CE,
                                   ExplodedNode *Pred) {
@@ -574,7 +578,8 @@ void ExprEngine::inlineCall(WorkList *WList, const CallEvent &Call,
   Bldr.takeNodes(Pred);
 
   NumInlinedCalls++;
-  Engine.FunctionSummaries->bumpNumTimesInlined(D);
+  Engine.FunctionSummaries->bumpNumTimesCalleeInlined(
+      BR.getAnalysisEntryPoint(), D);
 
   // Do not mark as visited in the 2nd run (CTUWList), so the function will
   // be visited as top-level, this way we won't loose reports in non-ctu
@@ -743,7 +748,6 @@ ProgramStateRef ExprEngine::bindReturnValue(const CallEvent &Call,
                                             const LocationContext *LCtx,
                                             ProgramStateRef State) {
   const Expr *E = Call.getOriginExpr();
-  const ConstCFGElementRef &Elem = Call.getCFGElementRef();
   if (!E)
     return State;
 
@@ -786,7 +790,7 @@ ProgramStateRef ExprEngine::bindReturnValue(const CallEvent &Call,
     RegionAndSymbolInvalidationTraits ITraits;
     ITraits.setTrait(TargetR,
         RegionAndSymbolInvalidationTraits::TK_DoNotInvalidateSuperRegion);
-    State = State->invalidateRegions(TargetR, Elem, Count, LCtx,
+    State = State->invalidateRegions(TargetR, E, Count, LCtx,
                                      /* CausesPointerEscape=*/false, nullptr,
                                      &Call, &ITraits);
 
@@ -798,7 +802,7 @@ ProgramStateRef ExprEngine::bindReturnValue(const CallEvent &Call,
     // a regular unknown pointer.
     const auto *CNE = dyn_cast<CXXNewExpr>(E);
     if (CNE && CNE->getOperatorNew()->isReplaceableGlobalAllocationFunction()) {
-      R = svalBuilder.getConjuredHeapSymbolVal(Elem, LCtx, E->getType(), Count);
+      R = svalBuilder.getConjuredHeapSymbolVal(E, LCtx, Count);
       const MemRegion *MR = R.getAsRegion()->StripCasts();
 
       // Store the extent of the allocated object(s).
@@ -820,9 +824,10 @@ ProgramStateRef ExprEngine::bindReturnValue(const CallEvent &Call,
       if (Size.isUndef())
         Size = UnknownVal();
 
-      State = setDynamicExtent(State, MR, Size.castAs<DefinedOrUnknownSVal>());
+      State = setDynamicExtent(State, MR, Size.castAs<DefinedOrUnknownSVal>(),
+                               svalBuilder);
     } else {
-      R = svalBuilder.conjureSymbolVal(Elem, LCtx, ResultTy, Count);
+      R = svalBuilder.conjureSymbolVal(nullptr, E, LCtx, ResultTy, Count);
     }
   }
   return State->BindExpr(E, LCtx, R);
@@ -832,6 +837,7 @@ ProgramStateRef ExprEngine::bindReturnValue(const CallEvent &Call,
 // a conjured return value.
 void ExprEngine::conservativeEvalCall(const CallEvent &Call, NodeBuilder &Bldr,
                                       ExplodedNode *Pred, ProgramStateRef State) {
+  ++NumDefaultConservativeCallEvals;
   State = Call.invalidateRegions(currBldrCtx->blockCount(), State);
   State = bindReturnValue(Call, Pred->getLocationContext(), State);
 
@@ -1015,6 +1021,13 @@ static bool isCXXSharedPtrDtor(const FunctionDecl *FD) {
 /// CFG, to determine whether the analyzer should ever consider inlining it,
 /// in any context.
 bool ExprEngine::mayInlineDecl(AnalysisDeclContext *CalleeADC) const {
+
+  if (CalleeADC->getDecl()->isInvalidDecl() ||
+      llvm::any_of(
+          CalleeADC->getDecl()->specific_attrs<AnnotateAttr>(),
+          [](auto A) { return A->getAnnotation() == "hasParsingErrors"; }))
+    return false;
+
   AnalyzerOptions &Opts = AMgr.getAnalyzerOptions();
   // FIXME: Do not inline variadic calls.
   if (CallEvent::isVariadic(CalleeADC->getDecl()))
@@ -1216,6 +1229,7 @@ static bool isTrivialObjectAssignment(const CallEvent &Call) {
 void ExprEngine::defaultEvalCall(NodeBuilder &Bldr, ExplodedNode *Pred,
                                  const CallEvent &CallTemplate,
                                  const EvalCallOptions &CallOpts) {
+  ++NumDefaultCallEvals;
   // Make sure we have the most recent state attached to the call.
   ProgramStateRef State = Pred->getState();
   CallEventRef<> Call = CallTemplate.cloneWithState(State);
