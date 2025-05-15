@@ -4739,7 +4739,8 @@ def Error : InheritableAttr {
 def RootSignature : Attr {
   /// [RootSignature(Signature)]
   let Spellings = [Microsoft<"RootSignature">];
-  let Args = [IdentifierArgument<"Signature">];
+  let Args = [IdentifierArgument<"SignatureIdent">,
+              DeclArgument<HLSLRootSignature, "SignatureDecl", 0, /*fake=*/1>];
   let Subjects = SubjectList<[Function],
                              ErrorDiag, "'function'">;
   let LangOpts = [HLSL];

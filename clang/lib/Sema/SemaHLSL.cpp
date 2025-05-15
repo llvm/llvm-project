@@ -959,7 +959,7 @@ void SemaHLSL::handleRootSignatureAttr(Decl *D, const ParsedAttr &AL) {
 
   IdentifierInfo *Ident = AL.getArgAsIdent(0)->getIdentifierInfo();
   if (auto *RS = D->getAttr<RootSignatureAttr>()) {
-    if (RS->getSignature() != Ident) {
+    if (RS->getSignatureIdent() != Ident) {
       Diag(AL.getLoc(), diag::err_disallowed_duplicate_attribute) << RS;
       return;
     }
@@ -970,10 +970,11 @@ void SemaHLSL::handleRootSignatureAttr(Decl *D, const ParsedAttr &AL) {
 
   LookupResult R(SemaRef, Ident, SourceLocation(), Sema::LookupOrdinaryName);
   if (SemaRef.LookupQualifiedName(R, D->getDeclContext()))
-    if (isa<HLSLRootSignatureDecl>(R.getFoundDecl())) {
+    if (auto *SignatureDecl =
+            dyn_cast<HLSLRootSignatureDecl>(R.getFoundDecl())) {
       // Perform validation of constructs here
-      D->addAttr(::new (getASTContext())
-                     RootSignatureAttr(getASTContext(), AL, Ident));
+      D->addAttr(::new (getASTContext()) RootSignatureAttr(
+          getASTContext(), AL, Ident, SignatureDecl));
     }
 }
 
