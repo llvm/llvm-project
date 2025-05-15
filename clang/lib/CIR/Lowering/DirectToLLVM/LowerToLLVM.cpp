@@ -55,9 +55,11 @@ namespace {
 /// If the given type is a vector type, return the vector's element type.
 /// Otherwise return the given type unchanged.
 mlir::Type elementTypeIfVector(mlir::Type type) {
+  // cir VectorType
   if (auto vecType = mlir::dyn_cast<cir::VectorType>(type))
     return vecType.getElementType();
 
+  // mlir VectorType
   if (auto vecType = mlir::dyn_cast<mlir::VectorType>(type))
     return vecType.getElementType();
   return type;
