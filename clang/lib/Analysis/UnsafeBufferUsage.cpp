@@ -606,13 +606,13 @@ static bool isSafeArraySubscript(const ArraySubscriptExpr &Node,
     const Expr *LHS = BE->getLHS();
     const Expr *RHS = BE->getRHS();
 
-    if(BE->getOpcode() == BO_Rem) {
+    if (BE->getOpcode() == BO_Rem) {
       // If n is a negative number, then n % const can be greater than const
-      if(!LHS->getType()->isUnsignedIntegerType()) {
+      if (!LHS->getType()->isUnsignedIntegerType()) {
         return false;
       }
 
-      if(!RHS->isValueDependent() && RHS->EvaluateAsInt(EVResult, Ctx)) {
+      if (!RHS->isValueDependent() && RHS->EvaluateAsInt(EVResult, Ctx)) {
         llvm::APSInt result = EVResult.Val.getInt();
         if (result.isNonNegative() && result.getLimitedValue() <= limit)
           return true;

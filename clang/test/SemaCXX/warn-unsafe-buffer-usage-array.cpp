@@ -35,13 +35,19 @@ void constant_idx_safe0(unsigned idx) {
   buffer[0] = 0;
 }
 
-int array[10]; // expected-warning 2{{'array' is an unsafe buffer that does not perform bounds checks}}
+int array[10]; // expected-warning 3{{'array' is an unsafe buffer that does not perform bounds checks}}
 
-void circular_access_safe(unsigned idx) {
+void circular_access_unsigned(unsigned idx) {
   array[idx % 10];
+  array[idx % 11]; // expected-note {{used in buffer access here}}
+  array[(idx + 3) % 10];
+  array[(--idx) % 8];
+  array[idx & 9 % 10];
+  array[9 & idx % 11];
+  array [12 % 10];
 }
 
-void circular_access_unsafe(int idx) {
+void circular_access_signed(int idx) {
   array[idx % 10]; // expected-note {{used in buffer access here}}
 }
 
