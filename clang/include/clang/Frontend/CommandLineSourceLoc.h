@@ -93,10 +93,9 @@ struct ParsedSourceRange {
         // string should be parsed.
         RangeSplit.first = Str;
       } else {
-        // Column and line numbers are 1-based
-        if (EndLine == 0 || EndColumn == 0) {
+        // Column and line numbers are 1-based.
+        if (EndLine == 0 || EndColumn == 0)
           return std::nullopt;
-        }
         HasEndLoc = true;
       }
     }

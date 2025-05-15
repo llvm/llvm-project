@@ -1,4 +1,4 @@
-// Related to #139457
+// Regression test for #139375
 // Clang uses 1-based indexing for source locations given from the command-line.
 // Verify that `clang-refactor` rejects 0 as an invalid value for line or column number.
 
@@ -14,6 +14,4 @@
 // RUN: not clang-refactor local-rename -selection=%s:1:1-1:0 -new-name=test %s 2>&1 \
 // RUN:     | FileCheck -check-prefix=CHECK-DIAG %s
 
-// CHECK-DIAG: error: '-selection' option must be specified using <file>:<line>:<column>
-// CHECK-DIAG: or <file>:<line>:<column>-<line>:<column> format,
-// CHECK-DIAG: where <line> and <column> are integers greater than zero.
+// CHECK-DIAG: error: '-selection' option must be specified using <file>:<line>:<column> or <file>:<line>:<column>-<line>:<column> format, where <line> and <column> are integers greater than zero.

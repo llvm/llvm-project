@@ -1,4 +1,4 @@
-// Related to #139375
+// Regression test for #139375
 // Clang uses 1-based indexing for source locations given from the command-line.
 // Verify that Clang rejects 0 as an invalid value for line or column number.
 
@@ -8,5 +8,4 @@
 // RUN:     | FileCheck -check-prefix=CHECK-DIAG %s
 
 // CHECK-DIAG: error: invalid value '{{.*}}' in '-code-completion-at={{.*}}'
-// CHECK-DIAG: -code-completion-at=<file>:<line>:<column> requires <line>
-// CHECK-DIAG: and <column> to be integers greater than zero
+// CHECK-NEXT: hint: -code-completion-at=<file>:<line>:<column> requires <line> and <column> to be integers greater than zero
