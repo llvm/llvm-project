@@ -105,7 +105,7 @@ define private amdgpu_kernel void @compute(ptr addrspace(1) %inbuf, ptr addrspac
   ; CHECK-NEXT:   [[V_CONVOLVE_F16_FP8_FP8_3x3_4x4_:%[0-9]+]]:vreg_128 = contract V_CONVOLVE_F16_FP8_FP8_3x3_4x4 killed [[REG_SEQUENCE]], killed [[V_LOAD_IDX3]], killed [[V_LOAD_IDX]], killed [[V_LOAD_IDX1]], killed [[V_LOAD_IDX2]], 42, -1, 0, 0, implicit $exec
   ; CHECK-NEXT:   [[S_MOV_B32_5:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 112
   ; CHECK-NEXT:   [[S_LSHR_B32_4:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_MOV_B32_5]], 2, implicit-def dead $scc
-  ; CHECK-NEXT:   V_STORE_IDX [[V_CONVOLVE_F16_FP8_FP8_3x3_4x4_]], [[S_LSHR_B32_4]], 0, implicit $exec :: (store (s128) into @out, !tbaa !6, addrspace 10)
+  ; CHECK-NEXT:   V_STORE_IDX [[V_CONVOLVE_F16_FP8_FP8_3x3_4x4_]], [[S_LSHR_B32_4]], 0, implicit $exec :: (store (s128) into @out, !tbaa !7, addrspace 10)
   ; CHECK-NEXT:   S_SEMA_SIGNAL 33
   ; CHECK-NEXT:   S_ENDPGM 0
 entry:
