@@ -551,7 +551,7 @@ void SymbolTable::initializeLoadConfig() {
       Warn(ctx) << "EC version of '_load_config_used' is missing";
       return;
     }
-    if (ctx.hybridSymtab) {
+    if (ctx.config.machine == ARM64X) {
       Warn(ctx) << "native version of '_load_config_used' is missing for "
                    "ARM64X target";
       return;

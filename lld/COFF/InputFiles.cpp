@@ -137,10 +137,8 @@ void ArchiveFile::parse() {
         ctx.symtab.addLazyArchive(this, sym);
 
       // Read both EC and native symbols on ARM64X.
-      if (!ctx.hybridSymtab)
-        return;
       archiveSymtab = &*ctx.hybridSymtab;
-    } else if (ctx.hybridSymtab) {
+    } else {
       // If the ECSYMBOLS section is missing in the archive, the archive could
       // be either a native-only ARM64 or x86_64 archive. Check the machine type
       // of the object containing a symbol to determine which symbol table to
