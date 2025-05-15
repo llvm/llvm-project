@@ -73,9 +73,7 @@ protected:
 
   /// Weights for different entities (like opcode, arguments, types)
   /// in the IR instructions to generate the vector representation.
-  // FIXME: Defaults to the values used in the original algorithm. Can be
-  // parameterized later.
-  const float OpcWeight = 1.0, TypeWeight = 0.5, ArgWeight = 0.2;
+  const float OpcWeight, TypeWeight, ArgWeight;
 
   /// Dimension of the vector representation; captured from the input vocabulary
   const unsigned Dimension;

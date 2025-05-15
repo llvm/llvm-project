@@ -41,6 +41,18 @@ static cl::opt<std::string>
     VocabFile("ir2vec-vocab-path", cl::Optional,
               cl::desc("Path to the vocabulary file for IR2Vec"), cl::init(""),
               cl::cat(IR2VecCategory));
+static cl::opt<float> OpcWeight("ir2vec-opc-weight", cl::Optional,
+                                cl::init(1.0),
+                                cl::desc("Weight for opcode embeddings"),
+                                cl::cat(IR2VecCategory));
+static cl::opt<float> TypeWeight("ir2vec-type-weight", cl::Optional,
+                                 cl::init(0.5),
+                                 cl::desc("Weight for type embeddings"),
+                                 cl::cat(IR2VecCategory));
+static cl::opt<float> ArgWeight("ir2vec-arg-weight", cl::Optional,
+                                cl::init(0.2),
+                                cl::desc("Weight for argument embeddings"),
+                                cl::cat(IR2VecCategory));
 
 AnalysisKey IR2VecVocabAnalysis::Key;
 
@@ -54,7 +66,8 @@ AnalysisKey IR2VecVocabAnalysis::Key;
 
 Embedder::Embedder(const Function &F, const Vocab &Vocabulary,
                    unsigned Dimension)
-    : F(F), Vocabulary(Vocabulary), Dimension(Dimension) {}
+    : F(F), Vocabulary(Vocabulary), Dimension(Dimension), OpcWeight(OpcWeight),
+      TypeWeight(TypeWeight), ArgWeight(ArgWeight) {}
 
 ErrorOr<std::unique_ptr<Embedder>> Embedder::create(IR2VecKind Mode,
                                                     const Function &F,
