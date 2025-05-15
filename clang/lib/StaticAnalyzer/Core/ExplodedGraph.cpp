@@ -462,10 +462,11 @@ ExplodedGraph::trim(TrimGraphWorklist &Worklist,
     // Create the corresponding node in the new graph and record the mapping
     // from the old node to the new node.
     ExplodedNode *NewN = Trimmed->createUncachedNode(N->getLocation(), N->State,
-                                               N->getID(), N->isSink());
+                                                     N->getID(), N->isSink());
     Place->second = NewN;
 
-    // If this is the root node, designate is as the root in the trimmed graph as well.
+    // If this is the root node, designate is as the root in the trimmed graph
+    // as well.
     if (N == getRoot())
       Trimmed->designateAsRoot(NewN);
 
@@ -489,7 +490,8 @@ ExplodedGraph::trim(TrimGraphWorklist &Worklist,
         Mapped->addPredecessor(NewN, *Trimmed);
   }
 
-  assert(Trimmed->getRoot() && "The root must be reachable from any nonempty set of sinks!");
+  assert(Trimmed->getRoot() &&
+         "The root must be reachable from any nonempty set of sinks!");
 
   return Trimmed;
 }
