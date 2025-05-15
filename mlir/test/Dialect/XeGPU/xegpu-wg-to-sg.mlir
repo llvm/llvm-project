@@ -1,4 +1,4 @@
-// RUN: mlir-opt --xegpu-wg-to-sg -split-input-file %s | FileCheck %s
+// RUN: mlir-opt --xegpu-wg-to-sg-distribute -split-input-file %s | FileCheck %s
 
 gpu.module @test_1_1_assignment {
   // CHECK-LABEL: test_create_nd_tdesc

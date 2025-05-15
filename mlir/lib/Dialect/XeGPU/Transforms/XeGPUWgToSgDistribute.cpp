@@ -1,4 +1,4 @@
-//===- XeGPUWgToSg.cpp - XeGPU Workgroup to Subgroup Pass -----------------===//
+//===- XeGPUWgToSgDistribute.cpp - XeGPU Workgroup to Subgroup Pass -------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,14 +13,12 @@
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "llvm/Support/Debug.h"
 #include <mlir/Dialect/GPU/IR/GPUDialect.h>
 #include <mlir/Dialect/Index/IR/IndexOps.h>
-#include <numeric>
 
 namespace mlir {
 namespace xegpu {
-#define GEN_PASS_DEF_XEGPUWGTOSG
+#define GEN_PASS_DEF_XEGPUWGTOSGDISTRIBUTE
 #include "mlir/Dialect/XeGPU/Transforms/Passes.h.inc"
 } // namespace xegpu
 } // namespace mlir
@@ -98,12 +96,6 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
             rewriter.create<index::RemUOp>(loc, sgID, sgDimY)};
   }
 
-  // Create a constant index value
-  Value createConstantIndex(ConversionPatternRewriter &rewriter, Location loc,
-                            int64_t value) const {
-    return rewriter.create<arith::ConstantIndexOp>(loc, value);
-  }
-
   // Calculate offset for each subgroup
   SmallVector<OpFoldResult>
   calculateGlobalOffsets(ConversionPatternRewriter &rewriter, Location loc,
@@ -112,9 +104,9 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
                          const SmallVector<int64_t> &distUnitBaseAddr) const {
 
     Value constOffsetX =
-        createConstantIndex(rewriter, loc, distUnitBaseAddr[0]);
+        rewriter.create<arith::ConstantIndexOp>(loc, distUnitBaseAddr[0]);
     Value constOffsetY =
-        createConstantIndex(rewriter, loc, distUnitBaseAddr[1]);
+        rewriter.create<arith::ConstantIndexOp>(loc, distUnitBaseAddr[1]);
 
     Value offsetX =
         rewriter.createOrFold<index::AddOp>(loc, localOffset[0], constOffsetX);
@@ -162,8 +154,9 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
     SmallVector<Value> sgDataDim(sgShape.size());
 
     for (size_t i = 0; i < sgLayout.size(); i++) {
-      sgLayoutDim[i] = createConstantIndex(rewriter, loc, sgLayout[i]);
-      sgDataDim[i] = createConstantIndex(rewriter, loc, sgShape[i]);
+      sgLayoutDim[i] =
+          rewriter.create<arith::ConstantIndexOp>(loc, sgLayout[i]);
+      sgDataDim[i] = rewriter.create<arith::ConstantIndexOp>(loc, sgShape[i]);
     }
 
     // Delinearize the 1D subgroup id into 2d
@@ -278,8 +271,8 @@ struct WgToSgDpasOp : public OpConversionPattern<xegpu::DpasOp> {
       return failure();
 
     SmallVector<Value> newDpasOps;
-    size_t i = 0;
     for (auto aVec : adaptor.getLhs()) {
+      size_t i = 0;
       for (auto bVec : adaptor.getRhs()) {
 
         llvm::SmallVector<Value> operands({aVec, bVec});
@@ -325,7 +318,7 @@ struct WgToSgPrefetchNdOp : public OpConversionPattern<xegpu::PrefetchNdOp> {
 
 namespace mlir {
 namespace xegpu {
-void populateXeGPUWgToSgPatterns(RewritePatternSet &patterns) {
+void populateXeGPUWgToSgDistributePatterns(RewritePatternSet &patterns) {
   patterns.add<WgToSgCreateNdOp, WgToSgLoadNdOp, WgToSgStoreNdOp,
                WgToSgUpdateNdOffsetOp, WgToSgDpasOp, WgToSgPrefetchNdOp>(
       patterns.getContext());
@@ -334,12 +327,13 @@ void populateXeGPUWgToSgPatterns(RewritePatternSet &patterns) {
 } // namespace mlir
 
 namespace {
-struct XeGPUWgToSgPass : public xegpu::impl::XeGPUWgToSgBase<XeGPUWgToSgPass> {
+struct XeGPUWgToSgDistributePass
+    : public xegpu::impl::XeGPUWgToSgDistributeBase<XeGPUWgToSgDistributePass> {
   void runOnOperation() override;
 };
 } // namespace
 
-void XeGPUWgToSgPass::runOnOperation() {
+void XeGPUWgToSgDistributePass::runOnOperation() {
   MLIRContext *ctx = &getContext();
   RewritePatternSet patterns(ctx);
   ConversionTarget target(*ctx);
@@ -377,7 +371,7 @@ void XeGPUWgToSgPass::runOnOperation() {
 
   target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });
 
-  xegpu::populateXeGPUWgToSgPatterns(patterns);
+  xegpu::populateXeGPUWgToSgDistributePatterns(patterns);
   if (failed(
           applyPartialConversion(getOperation(), target, std::move(patterns))))
     return signalPassFailure();
