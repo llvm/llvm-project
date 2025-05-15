@@ -2087,7 +2087,10 @@ define i7 @sub_if_uge_C_nsw_i7(i7 %a) {
 ; RV64ZBB-LABEL: sub_if_uge_C_nsw_i7:
 ; RV64ZBB:       # %bb.0:
 ; RV64ZBB-NEXT:    ori a0, a0, 51
+; RV64ZBB-NEXT:    andi a1, a0, 127
 ; RV64ZBB-NEXT:    addi a0, a0, 17
+; RV64ZBB-NEXT:    andi a0, a0, 92
+; RV64ZBB-NEXT:    minu a0, a0, a1
 ; RV64ZBB-NEXT:    ret
   %x = or i7 %a, 51
   %c = icmp ugt i7 %x, -18
@@ -2110,7 +2113,10 @@ define i7 @sub_if_uge_C_swapped_nsw_i7(i7 %a) {
 ; RV64ZBB-LABEL: sub_if_uge_C_swapped_nsw_i7:
 ; RV64ZBB:       # %bb.0:
 ; RV64ZBB-NEXT:    ori a0, a0, 51
+; RV64ZBB-NEXT:    andi a1, a0, 127
 ; RV64ZBB-NEXT:    addi a0, a0, 17
+; RV64ZBB-NEXT:    andi a0, a0, 92
+; RV64ZBB-NEXT:    minu a0, a1, a0
 ; RV64ZBB-NEXT:    ret
   %x = or i7 %a, 51
   %c = icmp ult i7 %x, -17
