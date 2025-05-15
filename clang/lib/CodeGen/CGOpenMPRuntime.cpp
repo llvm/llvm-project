@@ -4926,49 +4926,7 @@ void CGOpenMPRuntime::emitPrivateReduction(
   QualType PrivateType = Privates->getType();
   llvm::Type *LLVMType = CGF.ConvertTypeForMem(PrivateType);
 
-  llvm::Constant *InitVal = nullptr;
   const OMPDeclareReductionDecl *UDR = getReductionInit(ReductionOps);
-  // Determine the initial value for the shared reduction variable
-  if (!UDR) {
-    InitVal = llvm::Constant::getNullValue(LLVMType);
-    if (const auto *DRE = dyn_cast<DeclRefExpr>(Privates)) {
-      if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
-        const Expr *InitExpr = VD->getInit();
-        if (InitExpr) {
-          Expr::EvalResult Result;
-          if (InitExpr->EvaluateAsRValue(Result, CGF.getContext())) {
-            APValue &InitValue = Result.Val;
-            if (InitValue.isInt())
-              InitVal = llvm::ConstantInt::get(LLVMType, InitValue.getInt());
-            else if (InitValue.isFloat())
-              InitVal = llvm::ConstantFP::get(LLVMType, InitValue.getFloat());
-            else if (InitValue.isComplexInt()) {
-              // For complex int: create struct { real, imag }
-              llvm::Constant *Real = llvm::ConstantInt::get(
-                  cast<llvm::StructType>(LLVMType)->getElementType(0),
-                  InitValue.getComplexIntReal());
-              llvm::Constant *Imag = llvm::ConstantInt::get(
-                  cast<llvm::StructType>(LLVMType)->getElementType(1),
-                  InitValue.getComplexIntImag());
-              InitVal = llvm::ConstantStruct::get(
-                  cast<llvm::StructType>(LLVMType), {Real, Imag});
-            } else if (InitValue.isComplexFloat()) {
-              llvm::Constant *Real = llvm::ConstantFP::get(
-                  cast<llvm::StructType>(LLVMType)->getElementType(0),
-                  InitValue.getComplexFloatReal());
-              llvm::Constant *Imag = llvm::ConstantFP::get(
-                  cast<llvm::StructType>(LLVMType)->getElementType(1),
-                  InitValue.getComplexFloatImag());
-              InitVal = llvm::ConstantStruct::get(
-                  cast<llvm::StructType>(LLVMType), {Real, Imag});
-            }
-          }
-        }
-      }
-    }
-  } else {
-    InitVal = llvm::Constant::getNullValue(LLVMType);
-  }
   std::string ReductionVarNameStr;
   if (const auto *DRE = dyn_cast<DeclRefExpr>(Privates->IgnoreParenCasts()))
     ReductionVarNameStr = DRE->getDecl()->getNameAsString();
@@ -4978,16 +4936,14 @@ void CGOpenMPRuntime::emitPrivateReduction(
   // Create an internal shared variable
   std::string SharedName =
       CGM.getOpenMPRuntime().getName({"internal_pivate_", ReductionVarNameStr});
-  llvm::GlobalVariable *SharedVar = new llvm::GlobalVariable(
-      CGM.getModule(), LLVMType, false, llvm::GlobalValue::InternalLinkage,
-      InitVal, ".omp.reduction." + SharedName, nullptr,
-      llvm::GlobalVariable::NotThreadLocal);
+  llvm::GlobalVariable *SharedVar = OMPBuilder.getOrCreateInternalVariable(
+      LLVMType, ".omp.reduction." + SharedName);
 
   SharedVar->setAlignment(
       llvm::MaybeAlign(CGF.getContext().getTypeAlign(PrivateType) / 8));
 
-  Address SharedResult(SharedVar, SharedVar->getValueType(),
-                       CGF.getContext().getTypeAlignInChars(PrivateType));
+  Address SharedResult =
+      CGF.MakeNaturalAlignRawAddrLValue(SharedVar, PrivateType).getAddress();
 
   llvm::Value *ThreadId = getThreadID(CGF, Loc);
   llvm::Value *BarrierLoc = emitUpdateLocation(CGF, Loc, OMP_ATOMIC_REDUCE);
@@ -5027,15 +4983,18 @@ void CGOpenMPRuntime::emitPrivateReduction(
               CGF.EmitIgnoredExpr(CE);
             } else {
               CGF.EmitAnyExprToMem(UDRInitExpr, SharedResult,
-                                   PrivateType.getQualifiers(), true);
+                                   PrivateType.getQualifiers(),
+                                   /*IsInitializer=*/true);
             }
           } else {
             CGF.EmitAnyExprToMem(UDRInitExpr, SharedResult,
-                                 PrivateType.getQualifiers(), true);
+                                 PrivateType.getQualifiers(),
+                                 /*IsInitializer=*/true);
           }
         } else {
           CGF.EmitAnyExprToMem(UDRInitExpr, SharedResult,
-                               PrivateType.getQualifiers(), true);
+                               PrivateType.getQualifiers(),
+                               /*IsInitializer=*/true);
         }
       } else {
         // EmitNullInitialization handles default construction for C++ classes
@@ -5100,6 +5059,7 @@ void CGOpenMPRuntime::emitPrivateReduction(
     EmitCriticalReduction(ReductionGen);
   } else {
     // Handle built-in reduction operations.
+#ifndef NDEBUG
     const Expr *ReductionClauseExpr = ReductionOp->IgnoreParenCasts();
     if (const auto *Cleanup = dyn_cast<ExprWithCleanups>(ReductionClauseExpr))
       ReductionClauseExpr = Cleanup->getSubExpr()->IgnoreParenCasts();
@@ -5114,8 +5074,9 @@ void CGOpenMPRuntime::emitPrivateReduction(
         AssignRHS = OpCall->getArg(1);
     }
 
-    if (!AssignRHS)
-      return;
+    assert(AssignRHS &&
+           "Private Variable Reduction : Invalid ReductionOp expression");
+#endif
 
     auto ReductionGen = [&](CodeGenFunction &CGF, PrePostActionTy &Action) {
       Action.Enter(CGF);
@@ -5123,8 +5084,9 @@ void CGOpenMPRuntime::emitPrivateReduction(
           dyn_cast<DeclRefExpr>(LHSExprs->IgnoreParenImpCasts());
       const auto *OmpInDRE =
           dyn_cast<DeclRefExpr>(RHSExprs->IgnoreParenImpCasts());
-      if (!OmpOutDRE || !OmpInDRE)
-        return;
+      assert(
+          OmpOutDRE && OmpInDRE &&
+          "Private Variable Reduction : LHSExpr/RHSExpr must be DeclRefExprs");
       const VarDecl *OmpOutVD = cast<VarDecl>(OmpOutDRE->getDecl());
       const VarDecl *OmpInVD = cast<VarDecl>(OmpInDRE->getDecl());
       CodeGenFunction::OMPPrivateScope LocalScope(CGF);
@@ -5468,25 +5430,20 @@ void CGOpenMPRuntime::emitReduction(CodeGenFunction &CGF, SourceLocation Loc,
 
   CGF.EmitBranch(DefaultBB);
   CGF.EmitBlock(DefaultBB, /*IsFinished=*/true);
-  if (Options.IsPrivateVarReduction) {
-    if (LHSExprs.empty() || Privates.empty() || ReductionOps.empty())
-      return;
-    if (LHSExprs.size() != Privates.size() ||
-        LHSExprs.size() != ReductionOps.size())
-      return;
-    assert(!LHSExprs.empty() && "PrivateVarReduction: LHSExprs is empty");
-    assert(!Privates.empty() && "PrivateVarReduction: Privates is empty");
-    assert(!ReductionOps.empty() &&
-           "PrivateVarReduction: ReductionOps is empty");
-    assert(LHSExprs.size() == Privates.size() &&
-           "PrivateVarReduction: Privates size mismatch");
-    assert(LHSExprs.size() == ReductionOps.size() &&
-           "PrivateVarReduction: ReductionOps size mismatch");
-    for (unsigned I :
-         llvm::seq<unsigned>(std::min(ReductionOps.size(), LHSExprs.size()))) {
+  assert(!LHSExprs.empty() && "PrivateVarReduction: LHSExprs is empty");
+  assert(!Privates.empty() && "PrivateVarReduction: Privates is empty");
+  assert(!ReductionOps.empty() && "PrivateVarReduction: ReductionOps is empty");
+  assert(LHSExprs.size() == Privates.size() &&
+         "PrivateVarReduction: Privates size mismatch");
+  assert(LHSExprs.size() == ReductionOps.size() &&
+         "PrivateVarReduction: ReductionOps size mismatch");
+  assert(LHSExprs.size() == Options.IsPrivateVarReduction.size() &&
+         "PrivateVarReduction: IsPrivateVarReduction size mismatch");
+  for (unsigned I :
+       llvm::seq<unsigned>(std::min(ReductionOps.size(), LHSExprs.size()))) {
+    if (Options.IsPrivateVarReduction[I])
       emitPrivateReduction(CGF, Loc, Privates[I], LHSExprs[I], RHSExprs[I],
                            ReductionOps[I]);
-    }
   }
 }
 

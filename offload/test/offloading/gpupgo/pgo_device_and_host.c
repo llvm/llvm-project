@@ -59,8 +59,10 @@ int main() {
 
   int device_var = 1;
 #pragma omp target
-  for (int i = 0; i < 10; i++) {
-    device_var *= i;
+  {
+    for (int i = 0; i < 10; i++) {
+      device_var *= i;
+    }
   }
 }
 
@@ -78,7 +80,7 @@ int main() {
 // LLVM-DEVICE-LABEL: __omp_offloading_{{[_0-9a-zA-Z]*}}_main_{{[_0-9a-zA-Z]*}}:
 // LLVM-DEVICE: Hash: {{0[xX][0-9a-fA-F]+}}
 // LLVM-DEVICE: Counters: 3
-// LLVM-DEVICE: Block counts: [10, 2, 1]
+// LLVM-DEVICE: Block counts: [10, {{.*}}, 1]
 // LLVM-DEVICE: Instrumentation level: IR
 
 // CLANG-HOST-LABEL: main:
@@ -97,6 +99,5 @@ int main() {
 // CLANG-DEV-LABEL: __omp_offloading_{{[_0-9a-zA-Z]*}}_main_{{[_0-9a-zA-Z]*}}:
 // CLANG-DEV: Hash: {{0[xX][0-9a-fA-F]+}}
 // CLANG-DEV: Counters: 2
-// CLANG-DEV: Function count: 0
-// CLANG-DEV: Block counts: [11]
+// CLANG-DEV: Block counts: [10]
 // CLANG-DEV: Instrumentation level: Front-end

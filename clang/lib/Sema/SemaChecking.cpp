@@ -5342,29 +5342,29 @@ ExprResult Sema::BuiltinShuffleVector(CallExpr *TheCall) {
   }
 
   for (unsigned i = 2; i < TheCall->getNumArgs(); i++) {
-    if (TheCall->getArg(i)->isTypeDependent() ||
-        TheCall->getArg(i)->isValueDependent())
+    Expr *Arg = TheCall->getArg(i);
+    if (Arg->isTypeDependent() || Arg->isValueDependent())
       continue;
 
     std::optional<llvm::APSInt> Result;
-    if (!(Result = TheCall->getArg(i)->getIntegerConstantExpr(Context)))
+    if (!(Result = Arg->getIntegerConstantExpr(Context)))
       return ExprError(Diag(TheCall->getBeginLoc(),
                             diag::err_shufflevector_nonconstant_argument)
-                       << TheCall->getArg(i)->getSourceRange());
+                       << Arg->getSourceRange());
 
     // Allow -1 which will be translated to undef in the IR.
     if (Result->isSigned() && Result->isAllOnes())
-      continue;
-
-    if (Result->getActiveBits() > 64 ||
-        Result->getZExtValue() >= numElements * 2)
+      ;
+    else if (Result->getActiveBits() > 64 ||
+             Result->getZExtValue() >= numElements * 2)
       return ExprError(Diag(TheCall->getBeginLoc(),
                             diag::err_shufflevector_argument_too_large)
-                       << TheCall->getArg(i)->getSourceRange());
+                       << Arg->getSourceRange());
+
+    TheCall->setArg(i, ConstantExpr::Create(Context, Arg, APValue(*Result)));
   }
 
-  SmallVector<Expr*, 32> exprs;
-
+  SmallVector<Expr *> exprs;
   for (unsigned i = 0, e = TheCall->getNumArgs(); i != e; i++) {
     exprs.push_back(TheCall->getArg(i));
     TheCall->setArg(i, nullptr);

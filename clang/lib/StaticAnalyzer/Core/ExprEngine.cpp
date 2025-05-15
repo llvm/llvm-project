@@ -2529,7 +2529,7 @@ static const LocationContext *getInlinedLocationContext(ExplodedNode *Node,
                                                         ExplodedGraph &G) {
   const LocationContext *CalleeLC = Node->getLocation().getLocationContext();
   const LocationContext *RootLC =
-      (*G.roots_begin())->getLocation().getLocationContext();
+      G.getRoot()->getLocation().getLocationContext();
 
   if (CalleeLC->getStackFrame() == RootLC->getStackFrame())
     return nullptr;

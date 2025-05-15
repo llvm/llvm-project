@@ -1038,6 +1038,12 @@ public:
   }
 
   bool runOnModule(Module &M) {
+    // Check if we've already lowered this module. The pass may run more
+    // than once in the LTO pipeline, and multiple runs aren't supported.
+    if (M.getModuleFlag("amdgpu.lowered_lds"))
+      return false;
+    M.addModuleFlag(Module::ModFlagBehavior::Error, "amdgpu.lowered_lds", 1);
+
     CallGraph CG = CallGraph(M);
     bool Changed = superAlignLDSGlobals(M);
 

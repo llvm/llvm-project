@@ -2422,20 +2422,30 @@ void OmpStructureChecker::Leave(const parser::OpenMPCriticalConstruct &) {
 
 void OmpStructureChecker::Enter(
     const parser::OmpClause::CancellationConstructType &x) {
-  // Do not call CheckAllowed/CheckAllowedClause, because in case of an error
-  // it will print "CANCELLATION_CONSTRUCT_TYPE" as the clause name instead of
-  // the contained construct name.
+  llvm::omp::Directive dir{GetContext().directive};
   auto &dirName{std::get<parser::OmpDirectiveName>(x.v.t)};
-  switch (dirName.v) {
-  case llvm::omp::Directive::OMPD_do:
-  case llvm::omp::Directive::OMPD_parallel:
-  case llvm::omp::Directive::OMPD_sections:
-  case llvm::omp::Directive::OMPD_taskgroup:
-    break;
-  default:
-    context_.Say(dirName.source, "%s is not a cancellable construct"_err_en_US,
-        parser::ToUpperCaseLetters(getDirectiveName(dirName.v).str()));
-    break;
+
+  if (dir != llvm::omp::Directive::OMPD_cancel &&
+      dir != llvm::omp::Directive::OMPD_cancellation_point) {
+    // Do not call CheckAllowed/CheckAllowedClause, because in case of an error
+    // it will print "CANCELLATION_CONSTRUCT_TYPE" as the clause name instead
+    // of the contained construct name.
+    context_.Say(dirName.source, "%s cannot follow %s"_err_en_US,
+        parser::ToUpperCaseLetters(getDirectiveName(dirName.v)),
+        parser::ToUpperCaseLetters(getDirectiveName(dir)));
+  } else {
+    switch (dirName.v) {
+    case llvm::omp::Directive::OMPD_do:
+    case llvm::omp::Directive::OMPD_parallel:
+    case llvm::omp::Directive::OMPD_sections:
+    case llvm::omp::Directive::OMPD_taskgroup:
+      break;
+    default:
+      context_.Say(dirName.source,
+          "%s is not a cancellable construct"_err_en_US,
+          parser::ToUpperCaseLetters(getDirectiveName(dirName.v)));
+      break;
+    }
   }
 }
 

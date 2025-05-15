@@ -1201,7 +1201,7 @@ public:
   struct ReductionOptionsTy {
     bool WithNowait;
     bool SimpleReduction;
-    bool IsPrivateVarReduction;
+    llvm::SmallVector<bool, 8> IsPrivateVarReduction;
     OpenMPDirectiveKind ReductionKind;
   };
 
