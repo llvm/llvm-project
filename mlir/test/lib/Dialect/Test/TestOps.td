@@ -13,7 +13,7 @@ include "TestDialect.td"
 include "TestInterfaces.td"
 include "mlir/Dialect/DLTI/DLTIBase.td"
 include "mlir/Dialect/Linalg/IR/LinalgInterfaces.td"
-include "mlir/Dialect/LLVMIR/NVVMTraits.td"
+include "mlir/Dialect/LLVMIR/NVVMRequiresSMTraits.td"
 include "mlir/IR/EnumAttr.td"
 include "mlir/Interfaces/FunctionInterfaces.td"
 include "mlir/IR/OpBase.td"
@@ -2818,7 +2818,7 @@ def TestNVVMRequiresAtleastSMArchCondOp :
 }
 
 def TestNVVMRequiresExactSMArchCondOp : TEST_Op<"nvvm_requires_sm_90a",
-                                          [NVVMRequiresSM90a]> {
+                                          [NVVMRequiresSMa<90>]> {
   let arguments = (ins );
   let assemblyFormat = "attr-dict";
 }

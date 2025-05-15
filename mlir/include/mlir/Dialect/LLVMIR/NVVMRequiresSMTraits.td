@@ -1,4 +1,4 @@
-//===-- NVVMTraits.td - NVVM Traits ------------------------*- tablegen -*-===//
+//===-- NVVMRequiresSMTraits.td - NVVM Requires SM Traits --*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef NVVM_TRAITS
-#define NVVM_TRAITS
+#ifndef NVVM_REQUIRES_SM_TRAITS
+#define NVVM_REQUIRES_SM_TRAITS
 
 include "mlir/IR/OpBase.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
@@ -33,6 +33,6 @@ class NVVMRequiresSM<int minVersion, string isArchAccelerated = "false",
                     !cast<string>(minVersion) # "," # isArchAccelerated # ","
                       # exactMatch>;
                       
-def NVVMRequiresSM90a : NVVMRequiresSM<90, "true", "true">;
+class NVVMRequiresSMa<int version> : NVVMRequiresSM<version, "true", "true">;
 
-#endif //NVVM_TRAITS
+#endif //NVVM_REQUIRES_SM_TRAITS

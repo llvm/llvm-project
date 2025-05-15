@@ -1,4 +1,4 @@
-//===--- NVVMTraits.h - NVVM Traits -----------------------------*- C++ -*-===//
+//===--- NVVMRequiresSMTraits.h - NVVM Requires SM Traits -----*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef NVVM_DIALECT_NVVM_IR_NVVMTRAITS_H_
-#define NVVM_DIALECT_NVVM_IR_NVVMTRAITS_H_
+#ifndef NVVM_DIALECT_NVVM_IR_NVVMREQUIRESSMTRAITS_H_
+#define NVVM_DIALECT_NVVM_IR_NVVMREQUIRESSMTRAITS_H_
 
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/StorageUniquerSupport.h"
@@ -70,7 +70,7 @@ struct NVVMCheckSMVersion {
 } // namespace NVVM
 } // namespace mlir
 
-#include "mlir/Dialect/LLVMIR/NVVMTraits.h.inc"
+#include "mlir/Dialect/LLVMIR/NVVMRequiresSMTraits.h.inc"
 
 namespace mlir {
 
@@ -93,4 +93,4 @@ public:
 };
 } // namespace OpTrait
 } // namespace mlir
-#endif // NVVM_DIALECT_NVVM_IR_NVVMTRAITS_H_
+#endif // NVVM_DIALECT_NVVM_IR_NVVMREQUIRESSMTRAITS_H_

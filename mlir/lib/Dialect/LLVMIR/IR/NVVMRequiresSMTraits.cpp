@@ -1,4 +1,4 @@
-//===--- NVVMTraits.h - NVVM Traits -----------------------------*- C++ -*-===//
+//===--- NVVMRequiresSMTraits.cpp - NVVM Requires SM Traits -----*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,6 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/LLVMIR/NVVMTraits.h"
+#include "mlir/Dialect/LLVMIR/NVVMRequiresSMTraits.h"
 
-#include "mlir/Dialect/LLVMIR/NVVMTraits.cpp.inc"
+#include "mlir/Dialect/LLVMIR/NVVMRequiresSMTraits.cpp.inc"
