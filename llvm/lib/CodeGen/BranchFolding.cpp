@@ -25,6 +25,7 @@
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/BranchFoldingPass.h"
+#include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MBFIWrapper.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
@@ -2083,17 +2084,51 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
   if (TBB == FBB) {
     MBB->splice(Loc, TBB, TBB->begin(), TIB);
   } else {
+    // Merge the debug locations, and hoist and kill the debug instructions from
+    // both branches. FIXME: We could probably try harder to preserve some debug
+    // instructions (but at least this isn't producing wrong locations).
+    MachineIRBuilder MIRBuilder(*MBB, Loc);
+    auto HoistAndKillDbgInstr =
+        [&MIRBuilder](MachineBasicBlock::iterator DI,
+                      MachineBasicBlock::iterator InsertBefore) {
+          assert(DI->isDebugInstr() && "Expected a debug instruction");
+          if (DI->isDebugRef()) {
+            MIRBuilder.setDebugLoc(DI->getDebugLoc());
+            MIRBuilder.buildDirectDbgValue(0, DI->getDebugVariable(),
+                                           DI->getDebugExpression());
+            return;
+          }
+
+          DI->setDebugValueUndef();
+          DI->moveBefore(&*InsertBefore);
+        };
+
     // TIB and FIB point to the end of the regions to hoist/merge in TBB and
     // FBB.
     MachineBasicBlock::iterator FE = FIB;
     MachineBasicBlock::iterator FI = FBB->begin();
     for (MachineBasicBlock::iterator TI :
          make_early_inc_range(make_range(TBB->begin(), TIB))) {
-      // Move debug instructions and pseudo probes without modifying them.
-      // FIXME: This is the wrong thing to do for debug locations, which
-      // should at least be killed (and hoisted from BOTH blocks).
-      if (TI->isDebugOrPseudoInstr()) {
+
+      // Hoist and kill debug instructions from FBB. Skip over pseudo
+      // instructions. After this loop FI points to the next non-debug
+      // instruction to hoist (checked in assert after the TBB debug
+      // instruction handling code).
+      while (FI->isDebugOrPseudoInstr()) {
+        assert(FI != FE && "Unexpected end of FBB range");
+        MachineBasicBlock::iterator FINext = std::next(FI);
+        HoistAndKillDbgInstr(FI, Loc);
+        FI = FINext;
+      }
+
+      // Move pseudo probes without modifying them.
+      if (TI->isPseudoProbe()) {
         TI->moveBefore(&*Loc);
+        continue;
+      }
+      // Kill debug instructions before moving.
+      if (TI->isDebugInstr()) {
+        HoistAndKillDbgInstr(TI, Loc);
         continue;
       }
 
@@ -2111,6 +2146,7 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
       ++FI;
     }
   }
+  assert(FIB->getParent() == FBB && "Unexpectedly moved FIB?");
   FBB->erase(FBB->begin(), FIB);
 
   if (UpdateLiveIns)
