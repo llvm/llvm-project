@@ -10,6 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+// This predicate is true when the rs2 operand of vlse or vsse is x0, false
+// otherwise.
+def VLDSX0Pred : MCSchedPredicate<CheckRegOperand<3, X0>>;
+
 // Returns true if this is the sext.w pattern, addiw rd, rs1, 0.
 def isSEXT_W
     : TIIPredicate<"isSEXT_W",

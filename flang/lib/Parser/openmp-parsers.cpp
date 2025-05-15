@@ -104,10 +104,12 @@ struct OmpDirectiveNameParser {
   using Token = TokenStringMatch<false, false>;
 
   std::optional<resultType> Parse(ParseState &state) const {
+    auto begin{state.GetLocation()};
     for (const NameWithId &nid : directives()) {
       if (attempt(Token(nid.first.data())).Parse(state)) {
         OmpDirectiveName n;
         n.v = nid.second;
+        n.source = parser::CharBlock(begin, state.GetLocation());
         return n;
       }
     }
@@ -131,7 +133,8 @@ OmpDirectiveNameParser::directives() const {
 void OmpDirectiveNameParser::initTokens(NameWithId *table) const {
   for (size_t i{0}, e{llvm::omp::Directive_enumSize}; i != e; ++i) {
     auto id{static_cast<llvm::omp::Directive>(i)};
-    llvm::StringRef name{llvm::omp::getOpenMPDirectiveName(id)};
+    llvm::StringRef name{
+        llvm::omp::getOpenMPDirectiveName(id, llvm::omp::FallbackVersion)};
     table[i] = std::make_pair(name.str(), id);
   }
   // Sort the table with respect to the directive name length in a descending
@@ -710,7 +713,7 @@ TYPE_PARSER(construct<OmpMapClause>(
 // [OpenMP 5.0]
 // 2.19.7.2 defaultmap(implicit-behavior[:variable-category])
 //  implicit-behavior -> ALLOC | TO | FROM | TOFROM | FIRSRTPRIVATE | NONE |
-//  DEFAULT
+//  DEFAULT | PRESENT
 //  variable-category -> ALL | SCALAR | AGGREGATE | ALLOCATABLE | POINTER
 TYPE_PARSER(construct<OmpDefaultmapClause>(
     construct<OmpDefaultmapClause::ImplicitBehavior>(
@@ -721,7 +724,8 @@ TYPE_PARSER(construct<OmpDefaultmapClause>(
         "FIRSTPRIVATE" >>
             pure(OmpDefaultmapClause::ImplicitBehavior::Firstprivate) ||
         "NONE" >> pure(OmpDefaultmapClause::ImplicitBehavior::None) ||
-        "DEFAULT" >> pure(OmpDefaultmapClause::ImplicitBehavior::Default)),
+        "DEFAULT" >> pure(OmpDefaultmapClause::ImplicitBehavior::Default) ||
+        "PRESENT" >> pure(OmpDefaultmapClause::ImplicitBehavior::Present)),
     maybe(":" >> nonemptyList(Parser<OmpDefaultmapClause::Modifier>{}))))
 
 TYPE_PARSER(construct<OmpScheduleClause::Kind>(
@@ -1112,18 +1116,8 @@ TYPE_PARSER( //
                   parenthesized(Parser<OmpWhenClause>{}))) ||
     "WRITE" >> construct<OmpClause>(construct<OmpClause::Write>()) ||
     // Cancellable constructs
-    "DO"_id >=
-        construct<OmpClause>(construct<OmpClause::CancellationConstructType>(
-            Parser<OmpCancellationConstructTypeClause>{})) ||
-    "PARALLEL"_id >=
-        construct<OmpClause>(construct<OmpClause::CancellationConstructType>(
-            Parser<OmpCancellationConstructTypeClause>{})) ||
-    "SECTIONS"_id >=
-        construct<OmpClause>(construct<OmpClause::CancellationConstructType>(
-            Parser<OmpCancellationConstructTypeClause>{})) ||
-    "TASKGROUP"_id >=
-        construct<OmpClause>(construct<OmpClause::CancellationConstructType>(
-            Parser<OmpCancellationConstructTypeClause>{})))
+    construct<OmpClause>(construct<OmpClause::CancellationConstructType>(
+        Parser<OmpCancellationConstructTypeClause>{})))
 
 // [Clause, [Clause], ...]
 TYPE_PARSER(sourced(construct<OmpClauseList>(

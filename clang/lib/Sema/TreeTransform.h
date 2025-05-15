@@ -5305,12 +5305,14 @@ QualType TreeTransform<Derived>::RebuildQualifiedType(QualType T,
   PointerAuthQualifier LocalPointerAuth = Quals.getPointerAuth();
   if (LocalPointerAuth.isPresent()) {
     if (T.getPointerAuth().isPresent()) {
-      SemaRef.Diag(Loc, diag::err_ptrauth_qualifier_redundant)
-          << TL.getType() << "__ptrauth";
+      SemaRef.Diag(Loc, diag::err_ptrauth_qualifier_redundant) << TL.getType();
       return QualType();
-    } else if (!T->isSignableType() && !T->isDependentType()) {
-      SemaRef.Diag(Loc, diag::err_ptrauth_qualifier_nonpointer) << T;
-      return QualType();
+    }
+    if (!T->isDependentType()) {
+      if (!T->isSignableType(SemaRef.getASTContext())) {
+        SemaRef.Diag(Loc, diag::err_ptrauth_qualifier_invalid_target) << T;
+        return QualType();
+      }
     }
   }
   // C++ [dcl.fct]p7:
@@ -9581,8 +9583,9 @@ template <typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformOMPMetaDirective(OMPMetaDirective *D) {
   // TODO: Fix This
+  unsigned OMPVersion = getDerived().getSema().getLangOpts().OpenMP;
   SemaRef.Diag(D->getBeginLoc(), diag::err_omp_instantiation_not_supported)
-      << getOpenMPDirectiveName(D->getDirectiveKind());
+      << getOpenMPDirectiveName(D->getDirectiveKind(), OMPVersion);
   return StmtError();
 }
 

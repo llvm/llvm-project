@@ -100,8 +100,6 @@ inline bool isPartOfPerModuleInitializer(const Decl *D) {
   return false;
 }
 
-void updateModuleTimestamp(StringRef ModuleFilename);
-
 } // namespace serialization
 
 } // namespace clang

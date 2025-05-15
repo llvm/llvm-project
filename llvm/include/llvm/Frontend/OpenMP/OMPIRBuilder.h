@@ -686,6 +686,16 @@ public:
                                     Value *IfCondition,
                                     omp::Directive CanceledDirective);
 
+  /// Generator for '#omp cancellation point'
+  ///
+  /// \param Loc The location where the directive was encountered.
+  /// \param CanceledDirective The kind of directive that is cancled.
+  ///
+  /// \returns The insertion point after the barrier.
+  InsertPointOrErrorTy
+  createCancellationPoint(const LocationDescription &Loc,
+                          omp::Directive CanceledDirective);
+
   /// Generator for '#omp parallel'
   ///
   /// \param Loc The insert and source location description.
@@ -3072,7 +3082,7 @@ public:
       TargetBodyGenCallbackTy BodyGenCB,
       TargetGenArgAccessorsCallbackTy ArgAccessorFuncCB,
       CustomMapperCallbackTy CustomMapperCB,
-      SmallVector<DependData> Dependencies = {}, bool HasNowait = false);
+      const SmallVector<DependData> &Dependencies, bool HasNowait = false);
 
   /// Returns __kmpc_for_static_init_* runtime function for the specified
   /// size \a IVSize and sign \a IVSigned. Will create a distribute call

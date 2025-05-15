@@ -56,6 +56,10 @@ Makes programs 10x faster by doing Special New Thing.
 Changes to the LLVM IR
 ----------------------
 
+* It is no longer permitted to inspect the uses of ConstantData. Use
+  count APIs will behave as if they have no uses (i.e. use_empty() is
+  always true).
+
 * The `nocapture` attribute has been replaced by `captures(none)`.
 * The constant expression variants of the following instructions have been
   removed:
@@ -181,7 +185,11 @@ Changes to the RISC-V Backend
   interrupt handlers without using inline assembly.
 * Adds assembler support for the Andes `XAndesperf` (Andes Performance extension).
 * `-mcpu=sifive-p870` was added.
-
+* Adds assembler support for the Andes `XAndesvpackfph` (Andes Vector Packed FP16 extension).
+* Adds assembler support for the Andes `XAndesvdot` (Andes Vector Dot Product extension).
+* Adds assembler support for the standard `Q` (Quad-Precision Floating Point) 
+  extension.
+  
 Changes to the WebAssembly Backend
 ----------------------------------
 

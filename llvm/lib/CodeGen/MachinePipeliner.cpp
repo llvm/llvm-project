@@ -884,6 +884,63 @@ bool SUnitWithMemInfo::getUnderlyingObjects() {
   return true;
 }
 
+/// Returns true if there is a loop-carried order dependency from \p Src to \p
+/// Dst.
+static bool hasLoopCarriedMemDep(const SUnitWithMemInfo &Src,
+                                 const SUnitWithMemInfo &Dst,
+                                 BatchAAResults &BAA,
+                                 const TargetInstrInfo *TII,
+                                 const TargetRegisterInfo *TRI) {
+  if (Src.isTriviallyDisjoint(Dst))
+    return false;
+  if (isSuccOrder(Src.SU, Dst.SU))
+    return false;
+
+  MachineInstr &SrcMI = *Src.SU->getInstr();
+  MachineInstr &DstMI = *Dst.SU->getInstr();
+  // First, perform the cheaper check that compares the base register.
+  // If they are the same and the load offset is less than the store
+  // offset, then mark the dependence as loop carried potentially.
+  const MachineOperand *BaseOp1, *BaseOp2;
+  int64_t Offset1, Offset2;
+  bool Offset1IsScalable, Offset2IsScalable;
+  if (TII->getMemOperandWithOffset(SrcMI, BaseOp1, Offset1, Offset1IsScalable,
+                                   TRI) &&
+      TII->getMemOperandWithOffset(DstMI, BaseOp2, Offset2, Offset2IsScalable,
+                                   TRI)) {
+    if (BaseOp1->isIdenticalTo(*BaseOp2) &&
+        Offset1IsScalable == Offset2IsScalable && (int)Offset1 < (int)Offset2) {
+      assert(TII->areMemAccessesTriviallyDisjoint(SrcMI, DstMI) &&
+             "What happened to the chain edge?");
+      return true;
+    }
+  }
+
+  // Second, the more expensive check that uses alias analysis on the
+  // base registers. If they alias, and the load offset is less than
+  // the store offset, the mark the dependence as loop carried.
+  if (Src.isUnknown() || Dst.isUnknown())
+    return true;
+  if (Src.MemOpValue == Dst.MemOpValue && Src.MemOpOffset <= Dst.MemOpOffset)
+    return true;
+
+  if (BAA.isNoAlias(
+          MemoryLocation::getBeforeOrAfter(Src.MemOpValue, Src.AATags),
+          MemoryLocation::getBeforeOrAfter(Dst.MemOpValue, Dst.AATags)))
+    return false;
+
+  // AliasAnalysis sometimes gives up on following the underlying
+  // object. In such a case, separate checks for underlying objects may
+  // prove that there are no aliases between two accesses.
+  for (const Value *SrcObj : Src.UnderlyingObjs)
+    for (const Value *DstObj : Dst.UnderlyingObjs)
+      if (!BAA.isNoAlias(MemoryLocation::getBeforeOrAfter(SrcObj, Src.AATags),
+                         MemoryLocation::getBeforeOrAfter(DstObj, Dst.AATags)))
+        return true;
+
+  return false;
+}
+
 /// Add a chain edge between a load and store if the store can be an
 /// alias of the load on a subsequent iteration, i.e., a loop carried
 /// dependence. This code is very similar to the code in ScheduleDAGInstrs
@@ -898,76 +955,12 @@ void SwingSchedulerDAG::addLoopCarriedDependences() {
       PendingLoads.emplace_back(&SU);
     } else if (MI.mayStore()) {
       SUnitWithMemInfo Store(&SU);
-      for (const SUnitWithMemInfo &Load : PendingLoads) {
-        if (Load.isTriviallyDisjoint(Store))
-          continue;
-        if (isSuccOrder(Load.SU, Store.SU))
-          continue;
-        MachineInstr &LdMI = *Load.SU->getInstr();
-        // First, perform the cheaper check that compares the base register.
-        // If they are the same and the load offset is less than the store
-        // offset, then mark the dependence as loop carried potentially.
-        const MachineOperand *BaseOp1, *BaseOp2;
-        int64_t Offset1, Offset2;
-        bool Offset1IsScalable, Offset2IsScalable;
-        if (TII->getMemOperandWithOffset(LdMI, BaseOp1, Offset1,
-                                         Offset1IsScalable, TRI) &&
-            TII->getMemOperandWithOffset(MI, BaseOp2, Offset2,
-                                         Offset2IsScalable, TRI)) {
-          if (BaseOp1->isIdenticalTo(*BaseOp2) &&
-              Offset1IsScalable == Offset2IsScalable &&
-              (int)Offset1 < (int)Offset2) {
-            assert(TII->areMemAccessesTriviallyDisjoint(LdMI, MI) &&
-                   "What happened to the chain edge?");
-            SDep Dep(Load.SU, SDep::Barrier);
-            Dep.setLatency(1);
-            SU.addPred(Dep);
-            continue;
-          }
-        }
-        // Second, the more expensive check that uses alias analysis on the
-        // base registers. If they alias, and the load offset is less than
-        // the store offset, the mark the dependence as loop carried.
-        if (Load.isUnknown() || Store.isUnknown()) {
-          SDep Dep(Load.SU, SDep::Barrier);
-          Dep.setLatency(1);
-          SU.addPred(Dep);
-          continue;
-        }
-        if (Load.MemOpValue == Store.MemOpValue &&
-            Load.MemOpOffset <= Store.MemOpOffset) {
-          SDep Dep(Load.SU, SDep::Barrier);
-          Dep.setLatency(1);
-          SU.addPred(Dep);
-          continue;
-        }
-
-        bool IsNoAlias = [&] {
-          if (BAA.isNoAlias(MemoryLocation::getBeforeOrAfter(Load.MemOpValue,
-                                                             Load.AATags),
-                            MemoryLocation::getBeforeOrAfter(Store.MemOpValue,
-                                                             Store.AATags)))
-            return true;
-
-          // AliasAnalysis sometimes gives up on following the underlying
-          // object. In such a case, separate checks for underlying objects may
-          // prove that there are no aliases between two accesses.
-          for (const Value *LoadObj : Load.UnderlyingObjs)
-            for (const Value *StoreObj : Store.UnderlyingObjs)
-              if (!BAA.isNoAlias(
-                      MemoryLocation::getBeforeOrAfter(LoadObj, Load.AATags),
-                      MemoryLocation::getBeforeOrAfter(StoreObj, Store.AATags)))
-                return false;
-
-          return true;
-        }();
-
-        if (!IsNoAlias) {
+      for (const SUnitWithMemInfo &Load : PendingLoads)
+        if (hasLoopCarriedMemDep(Load, Store, BAA, TII, TRI)) {
           SDep Dep(Load.SU, SDep::Barrier);
           Dep.setLatency(1);
           SU.addPred(Dep);
         }
-      }
     }
   }
 }

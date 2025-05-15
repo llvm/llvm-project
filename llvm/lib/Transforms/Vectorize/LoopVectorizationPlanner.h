@@ -36,6 +36,7 @@ class LoopVectorizationLegality;
 class LoopVectorizationCostModel;
 class PredicatedScalarEvolution;
 class LoopVectorizeHints;
+class LoopVersioning;
 class OptimizationRemarkEmitter;
 class TargetTransformInfo;
 class TargetLibraryInfo;
@@ -247,6 +248,11 @@ public:
                                 const Twine &Name = "") {
     return tryInsertInstruction(
         new VPInstruction(Ptr, Offset, GEPNoWrapFlags::inBounds(), DL, Name));
+  }
+
+  VPInstruction *createScalarPhi(ArrayRef<VPValue *> IncomingValues,
+                                 DebugLoc DL, const Twine &Name = "") {
+    return tryInsertInstruction(new VPPhi(IncomingValues, DL, Name));
   }
 
   /// Convert the input value \p Current to the corresponding value of an
@@ -518,7 +524,7 @@ private:
   /// returned VPlan is valid for. If no VPlan can be built for the input range,
   /// set the largest included VF to the maximum VF for which no plan could be
   /// built.
-  VPlanPtr tryToBuildVPlanWithVPRecipes(VFRange &Range);
+  VPlanPtr tryToBuildVPlanWithVPRecipes(VFRange &Range, LoopVersioning *LVer);
 
   /// Build VPlans for power-of-2 VF's between \p MinVF and \p MaxVF inclusive,
   /// according to the information gathered by Legal when it checked if it is

@@ -18,15 +18,15 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Arg, class _Result>
-struct _LIBCPP_TEMPLATE_VIS _LIBCPP_DEPRECATED_IN_CXX11 unary_function {
+struct _LIBCPP_TEMPLATE_VIS unary_function {
   typedef _Arg argument_type;
   typedef _Result result_type;
 };
 
 template <class _Arg, class _Result>
 struct __unary_function_keep_layout_base {
-  using argument_type _LIBCPP_DEPRECATED_IN_CXX17 = _Arg;
-  using result_type _LIBCPP_DEPRECATED_IN_CXX17   = _Result;
+  using argument_type = _Arg;
+  using result_type   = _Result;
 };
 
 _LIBCPP_DIAGNOSTIC_PUSH

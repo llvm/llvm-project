@@ -11,6 +11,7 @@
 #include "flang/Common/indirection.h"
 #include "flang/Parser/tools.h"
 #include "flang/Parser/user-state.h"
+#include "llvm/Frontend/OpenMP/OMP.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 
@@ -305,7 +306,9 @@ std::string OmpTraitSelectorName::ToString() const {
             return std::string(EnumToString(v));
           },
           [&](llvm::omp::Directive d) {
-            return llvm::omp::getOpenMPDirectiveName(d).str();
+            return llvm::omp::getOpenMPDirectiveName(
+                d, llvm::omp::FallbackVersion)
+                .str();
           },
           [&](const std::string &s) { //
             return s;
