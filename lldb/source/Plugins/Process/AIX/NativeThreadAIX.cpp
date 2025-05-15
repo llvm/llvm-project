@@ -9,8 +9,6 @@
 #include "NativeThreadAIX.h"
 #include "NativeProcessAIX.h"
 #include "lldb/Utility/State.h"
-#include <procinfo.h>
-#include <sys/procfs.h>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -19,18 +17,7 @@ using namespace lldb_private::process_aix;
 NativeThreadAIX::NativeThreadAIX(NativeProcessAIX &process, lldb::tid_t tid)
     : NativeThreadProtocol(process, tid), m_state(StateType::eStateInvalid) {}
 
-std::string NativeThreadAIX::GetName() {
-  NativeProcessAIX &process = GetProcess();
-  auto BufferOrError = getProcFile(process.GetID(), "psinfo");
-  if (!BufferOrError)
-    return "";
-  auto &Buffer = *BufferOrError;
-  if (Buffer->getBufferSize() < sizeof(psinfo_t))
-    return "";
-  const psinfo_t *psinfo =
-      reinterpret_cast<const psinfo_t *>(Buffer->getBufferStart());
-  return std::string(psinfo->pr_fname);
-}
+std::string NativeThreadAIX::GetName() { return ""; }
 
 lldb::StateType NativeThreadAIX::GetState() { return m_state; }
 
