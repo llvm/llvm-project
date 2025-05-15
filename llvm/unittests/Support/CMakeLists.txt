@@ -39,7 +39,6 @@ add_llvm_unittest(SupportTests
   ErrnoTest.cpp
   ErrorOrTest.cpp
   ErrorTest.cpp
-  EncodingConverterTest.cpp
   ExponentialBackoffTest.cpp
   ExtensibleRTTITest.cpp
   FileCollectorTest.cpp
@@ -89,6 +88,7 @@ add_llvm_unittest(SupportTests
   SuffixTreeTest.cpp
   SwapByteOrderTest.cpp
   TarWriterTest.cpp
+  TextEncodingTest.cpp
   ThreadPool.cpp
   ThreadSafeAllocatorTest.cpp
   Threading.cpp

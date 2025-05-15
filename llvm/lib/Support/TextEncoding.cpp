@@ -1,4 +1,4 @@
-//===-- EncodingConverter.cpp - Encoding conversion class ---------*- C++ -*-=//
+//===-- TextEncoding.cpp - Encoding conversion class --------------*- C++ -*-=//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,7 +12,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/EncodingConverter.h"
+#include "llvm/Support/TextEncoding.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -82,11 +82,12 @@ enum ConversionType {
 // aforementioned encodings. The use of tables for conversion is only
 // possible because EBCDIC 1047 is a single-byte, stateless encoding; other
 // encodings are not supported.
-class EncodingConverterTable : public details::EncodingConverterImplBase {
+class TextEncodingConverterTable
+    : public details::TextEncodingConverterImplBase {
   const ConversionType ConvType;
 
 public:
-  EncodingConverterTable(ConversionType ConvType) : ConvType(ConvType) {}
+  TextEncodingConverterTable(ConversionType ConvType) : ConvType(ConvType) {}
 
   std::error_code convertString(StringRef Source,
                                 SmallVectorImpl<char> &Result) override;
@@ -95,8 +96,8 @@ public:
 };
 
 std::error_code
-EncodingConverterTable::convertString(StringRef Source,
-                                      SmallVectorImpl<char> &Result) {
+TextEncodingConverterTable::convertString(StringRef Source,
+                                          SmallVectorImpl<char> &Result) {
   switch (ConvType) {
   case IBM1047ToUTF8:
     ConverterEBCDIC::convertToUTF8(Source, Result);
@@ -117,13 +118,13 @@ struct UConverterDeleter {
 };
 using UConverterUniquePtr = std::unique_ptr<UConverter, UConverterDeleter>;
 
-class EncodingConverterICU : public details::EncodingConverterImplBase {
+class TextEncodingConverterICU : public details::TextEncodingConverterImplBase {
   UConverterUniquePtr FromConvDesc;
   UConverterUniquePtr ToConvDesc;
 
 public:
-  EncodingConverterICU(UConverterUniquePtr FromConverter,
-                       UConverterUniquePtr ToConverter)
+  TextEncodingConverterICU(UConverterUniquePtr FromConverter,
+                           UConverterUniquePtr ToConverter)
       : FromConvDesc(std::move(FromConverter)),
         ToConvDesc(std::move(ToConverter)) {}
 
@@ -138,8 +139,8 @@ public:
 // insufficient buffer size. In the future, it would better to save the partial
 // result and redo the conversion for the remaining string.
 std::error_code
-EncodingConverterICU::convertString(StringRef Source,
-                                    SmallVectorImpl<char> &Result) {
+TextEncodingConverterICU::convertString(StringRef Source,
+                                        SmallVectorImpl<char> &Result) {
   // Setup the input in case it has no backing data.
   size_t InputLength = Source.size();
   const char *In = InputLength ? const_cast<char *>(Source.data()) : "";
@@ -183,13 +184,14 @@ EncodingConverterICU::convertString(StringRef Source,
   return std::error_code();
 }
 
-void EncodingConverterICU::reset() {
+void TextEncodingConverterICU::reset() {
   ucnv_reset(&*FromConvDesc);
   ucnv_reset(&*ToConvDesc);
 }
 
 #elif HAVE_ICONV
-class EncodingConverterIconv : public details::EncodingConverterImplBase {
+class TextEncodingConverterIconv
+    : public details::TextEncodingConverterImplBase {
   class UniqueIconvT {
     iconv_t ConvDesc;
 
@@ -216,7 +218,7 @@ class EncodingConverterIconv : public details::EncodingConverterImplBase {
   UniqueIconvT ConvDesc;
 
 public:
-  EncodingConverterIconv(UniqueIconvT ConvDesc)
+  TextEncodingConverterIconv(UniqueIconvT ConvDesc)
       : ConvDesc(std::move(ConvDesc)) {}
 
   std::error_code convertString(StringRef Source,
@@ -230,8 +232,8 @@ public:
 // insufficient buffer size. In the future, it would better to save the partial
 // result and redo the conversion for the remaining string.
 std::error_code
-EncodingConverterIconv::convertString(StringRef Source,
-                                      SmallVectorImpl<char> &Result) {
+TextEncodingConverterIconv::convertString(StringRef Source,
+                                          SmallVectorImpl<char> &Result) {
   // Setup the output. We directly write into the SmallVector.
   size_t Capacity = Result.capacity();
   char *Output = static_cast<char *>(Result.data());
@@ -289,15 +291,15 @@ EncodingConverterIconv::convertString(StringRef Source,
   return std::error_code();
 }
 
-void EncodingConverterIconv::reset() {
+void TextEncodingConverterIconv::reset() {
   iconv(ConvDesc, nullptr, nullptr, nullptr, nullptr);
 }
 
 #endif // HAVE_ICONV
 } // namespace
 
-ErrorOr<EncodingConverter> EncodingConverter::create(TextEncoding CPFrom,
-                                                     TextEncoding CPTo) {
+ErrorOr<TextEncodingConverter>
+TextEncodingConverter::create(TextEncoding CPFrom, TextEncoding CPTo) {
 
   // Text encodings should be distinct.
   if (CPFrom == CPTo)
@@ -311,16 +313,17 @@ ErrorOr<EncodingConverter> EncodingConverter::create(TextEncoding CPFrom,
   else
     return std::error_code(errno, std::generic_category());
 
-  return EncodingConverter(
-      std::make_unique<EncodingConverterTable>(Conversion));
+  return TextEncodingConverter(
+      std::make_unique<TextEncodingConverterTable>(Conversion));
 }
 
-ErrorOr<EncodingConverter> EncodingConverter::create(StringRef From,
-                                                     StringRef To) {
+ErrorOr<TextEncodingConverter> TextEncodingConverter::create(StringRef From,
+                                                             StringRef To) {
   std::optional<TextEncoding> FromEncoding = getKnownEncoding(From);
   std::optional<TextEncoding> ToEncoding = getKnownEncoding(To);
   if (FromEncoding && ToEncoding) {
-    ErrorOr<EncodingConverter> Converter = create(*FromEncoding, *ToEncoding);
+    ErrorOr<TextEncodingConverter> Converter =
+        create(*FromEncoding, *ToEncoding);
     if (Converter)
       return Converter;
   }
@@ -334,15 +337,16 @@ ErrorOr<EncodingConverter> EncodingConverter::create(StringRef From,
   if (U_FAILURE(EC)) {
     return std::error_code(errno, std::generic_category());
   }
-  std::unique_ptr<details::EncodingConverterImplBase> Converter =
-      std::make_unique<EncodingConverterICU>(std::move(FromConvDesc),
-                                             std::move(ToConvDesc));
-  return EncodingConverter(std::move(Converter));
+  std::unique_ptr<details::TextEncodingConverterImplBase> Converter =
+      std::make_unique<TextEncodingConverterICU>(std::move(FromConvDesc),
+                                                 std::move(ToConvDesc));
+  return TextEncodingConverter(std::move(Converter));
 #elif HAVE_ICONV
   iconv_t ConvDesc = iconv_open(To.str().c_str(), From.str().c_str());
   if (ConvDesc == (iconv_t)-1)
     return std::error_code(errno, std::generic_category());
-  return EncodingConverter(std::make_unique<EncodingConverterIconv>(ConvDesc));
+  return TextEncodingConverter(
+      std::make_unique<TextEncodingConverterIconv>(ConvDesc));
 #else
   return std::make_error_code(std::errc::invalid_argument);
 #endif

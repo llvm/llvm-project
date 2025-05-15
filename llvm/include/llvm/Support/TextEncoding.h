@@ -1,4 +1,4 @@
-//===-- EncodingConverter.h - Encoding conversion class -----------*- C++ -*-=//
+//===-- TextEncodingConverter.h - Encoding conversion class -------*- C++ -*-=//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -28,7 +28,7 @@ namespace llvm {
 template <typename T> class SmallVectorImpl;
 
 namespace details {
-class EncodingConverterImplBase {
+class TextEncodingConverterImplBase {
 
 private:
   /// Converts a string.
@@ -57,7 +57,7 @@ private:
   virtual void reset() = 0;
 
 public:
-  virtual ~EncodingConverterImplBase() = default;
+  virtual ~TextEncodingConverterImplBase() = default;
 
   /// Converts a string and resets the converter to the initial state.
   std::error_code convert(StringRef Source, SmallVectorImpl<char> &Result) {
@@ -78,43 +78,44 @@ enum class TextEncoding {
 };
 
 /// Utility class to convert between different character encodings.
-class EncodingConverter {
-  std::unique_ptr<details::EncodingConverterImplBase> Converter;
+class TextEncodingConverter {
+  std::unique_ptr<details::TextEncodingConverterImplBase> Converter;
 
-  EncodingConverter(
-      std::unique_ptr<details::EncodingConverterImplBase> Converter)
+  TextEncodingConverter(
+      std::unique_ptr<details::TextEncodingConverterImplBase> Converter)
       : Converter(std::move(Converter)) {}
 
 public:
-  /// Creates a EncodingConverter instance.
+  /// Creates a TextEncodingConverter instance.
   /// Returns std::errc::invalid_argument in case the requested conversion is
   /// not supported.
   /// \param[in] From the source character encoding
   /// \param[in] To the target character encoding
-  /// \return a EncodingConverter instance or an error code
-  static ErrorOr<EncodingConverter> create(TextEncoding From, TextEncoding To);
+  /// \return a TextEncodingConverter instance or an error code
+  static ErrorOr<TextEncodingConverter> create(TextEncoding From,
+                                               TextEncoding To);
 
-  /// Creates a EncodingConverter instance.
+  /// Creates a TextEncodingConverter instance.
   /// Returns std::errc::invalid_argument in case the requested conversion is
   /// not supported.
   /// \param[in] From name of the source character encoding
   /// \param[in] To name of the target character encoding
-  /// \return a EncodingConverter instance or an error code
-  static ErrorOr<EncodingConverter> create(StringRef From, StringRef To);
+  /// \return a TextEncodingConverter instance or an error code
+  static ErrorOr<TextEncodingConverter> create(StringRef From, StringRef To);
 
-  EncodingConverter(const EncodingConverter &) = delete;
-  EncodingConverter &operator=(const EncodingConverter &) = delete;
+  TextEncodingConverter(const TextEncodingConverter &) = delete;
+  TextEncodingConverter &operator=(const TextEncodingConverter &) = delete;
 
-  EncodingConverter(EncodingConverter &&Other)
+  TextEncodingConverter(TextEncodingConverter &&Other)
       : Converter(std::move(Other.Converter)) {}
 
-  EncodingConverter &operator=(EncodingConverter &&Other) {
+  TextEncodingConverter &operator=(TextEncodingConverter &&Other) {
     if (this != &Other)
       Converter = std::move(Other.Converter);
     return *this;
   }
 
-  ~EncodingConverter() = default;
+  ~TextEncodingConverter() = default;
 
   /// Converts a string.
   /// \param[in] Source source string

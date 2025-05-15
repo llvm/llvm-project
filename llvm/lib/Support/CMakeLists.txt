@@ -186,7 +186,6 @@ add_llvm_component_library(LLVMSupport
   ELFAttributes.cpp
   ELFAttrParserCompact.cpp
   ELFAttrParserExtended.cpp
-  EncodingConverter.cpp
   Error.cpp
   ErrorHandling.cpp
   ExponentialBackoff.cpp
@@ -258,6 +257,7 @@ add_llvm_component_library(LLVMSupport
   SuffixTree.cpp
   SystemUtils.cpp
   TarWriter.cpp
+  TextEncoding.cpp
   ThreadPool.cpp
   TimeProfiler.cpp
   Timer.cpp

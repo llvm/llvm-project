@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/EncodingConverter.h"
+#include "llvm/Support/TextEncoding.h"
 #include "llvm/ADT/SmallString.h"
 #include "gtest/gtest.h"
 using namespace llvm;
@@ -58,8 +58,8 @@ TEST(Encoding, FromUTF8) {
   StringRef Src(HelloA);
   SmallString<64> Dst;
 
-  ErrorOr<EncodingConverter> Conv =
-      EncodingConverter::create(TextEncoding::UTF8, TextEncoding::IBM1047);
+  ErrorOr<TextEncodingConverter> Conv =
+      TextEncodingConverter::create(TextEncoding::UTF8, TextEncoding::IBM1047);
 
   // Stop test if conversion is not supported.
   if (!Conv) {
@@ -98,8 +98,8 @@ TEST(Encoding, ToUTF8) {
   StringRef Src(HelloE);
   SmallString<64> Dst;
 
-  ErrorOr<EncodingConverter> Conv =
-      EncodingConverter::create(TextEncoding::IBM1047, TextEncoding::UTF8);
+  ErrorOr<TextEncodingConverter> Conv =
+      TextEncodingConverter::create(TextEncoding::IBM1047, TextEncoding::UTF8);
 
   // Stop test if conversion is not supported.
   if (!Conv) {
@@ -129,24 +129,24 @@ TEST(Encoding, ToUTF8) {
 }
 
 TEST(Encoding, RoundTrip) {
-  ErrorOr<EncodingConverter> ConvToUTF16 =
-      EncodingConverter::create("IBM-1047", "UTF-16");
+  ErrorOr<TextEncodingConverter> ConvToUTF16 =
+      TextEncodingConverter::create("IBM-1047", "UTF-16");
   // Stop test if conversion is not supported (no underlying iconv support).
   if (!ConvToUTF16) {
     ASSERT_EQ(ConvToUTF16.getError(),
               std::make_error_code(std::errc::invalid_argument));
     return;
   }
-  ErrorOr<EncodingConverter> ConvToUTF32 =
-      EncodingConverter::create("UTF-16", "UTF-32");
+  ErrorOr<TextEncodingConverter> ConvToUTF32 =
+      TextEncodingConverter::create("UTF-16", "UTF-32");
   // Stop test if conversion is not supported (no underlying iconv support).
   if (!ConvToUTF32) {
     ASSERT_EQ(ConvToUTF32.getError(),
               std::make_error_code(std::errc::invalid_argument));
     return;
   }
-  ErrorOr<EncodingConverter> ConvToEBCDIC =
-      EncodingConverter::create("UTF-32", "IBM-1047");
+  ErrorOr<TextEncodingConverter> ConvToEBCDIC =
+      TextEncodingConverter::create("UTF-32", "IBM-1047");
   // Stop test if conversion is not supported (no underlying iconv support).
   if (!ConvToEBCDIC) {
     ASSERT_EQ(ConvToEBCDIC.getError(),
@@ -175,8 +175,8 @@ TEST(Encoding, ShiftState2022) {
   StringRef Src(EarthUTF);
   SmallString<8> Dst;
 
-  ErrorOr<EncodingConverter> ConvTo2022 =
-      EncodingConverter::create("UTF-8", "ISO-2022-JP");
+  ErrorOr<TextEncodingConverter> ConvTo2022 =
+      TextEncodingConverter::create("UTF-8", "ISO-2022-JP");
   // Stop test if conversion is not supported (no underlying iconv support).
   if (!ConvTo2022) {
     ASSERT_EQ(ConvTo2022.getError(),
@@ -195,8 +195,8 @@ TEST(Encoding, InvalidInput) {
   StringRef Src(EarthUTFExtraPartial);
   SmallString<8> Dst;
 
-  ErrorOr<EncodingConverter> ConvTo2022 =
-      EncodingConverter::create("UTF-8", "ISO-2022-JP");
+  ErrorOr<TextEncodingConverter> ConvTo2022 =
+      TextEncodingConverter::create("UTF-8", "ISO-2022-JP");
   // Stop test if conversion is not supported (no underlying iconv support).
   if (!ConvTo2022) {
     ASSERT_EQ(ConvTo2022.getError(),
@@ -214,8 +214,8 @@ TEST(Encoding, ShiftStateIBM939) {
   StringRef Src(EarthUTF);
   SmallString<64> Dst;
 
-  ErrorOr<EncodingConverter> ConvToIBM939 =
-      EncodingConverter::create("UTF-8", "IBM-939");
+  ErrorOr<TextEncodingConverter> ConvToIBM939 =
+      TextEncodingConverter::create("UTF-8", "IBM-939");
   // Stop test if conversion is not supported (no underlying iconv support).
   if (!ConvToIBM939) {
     ASSERT_EQ(ConvToIBM939.getError(),
