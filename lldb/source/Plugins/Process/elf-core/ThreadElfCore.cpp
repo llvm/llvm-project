@@ -590,9 +590,13 @@ Status ELFLinuxSigInfo::Parse(const DataExtractor &data, const ArchSpec &arch,
   // 64b ELF have a 4 byte pad.
   if (data.GetAddressByteSize() == 8)
     offset += 4;
-  // Not every stop signal has a valid address, but that will get resolved in
-  // the unix_signals.GetSignalDescription() call below.
-  if (unix_signals.GetShouldStop(si_signo)) {
+
+ if (si_code < 0) {
+  sigfault.kill._pid = data.GetU32(&offset);
+  sigfault.kill._uid = data.GetU32(&offset);
+ } else if (unix_signals.GetShouldStop(si_signo)) {
+    // Not every stop signal has a valid address, but that will get resolved in
+    // the unix_signals.GetSignalDescription() call below.
     // Instead of memcpy we call all these individually as the extractor will
     // handle endianness for us.
     sigfault.si_addr = data.GetAddress(&offset);

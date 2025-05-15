@@ -96,6 +96,12 @@ struct ELFLinuxSigInfo {
       /* used when si_code=SEGV_PKUERR */
       uint32_t _pkey;
     } bounds;
+
+    // We need this for all the generic signals.
+    struct {
+      uint32_t _pid;	/* sender's pid */
+      uint32_t _uid;	/* sender's uid */
+    } _kill;
   } sigfault;
 
   enum SigInfoNoteType : uint8_t { eUnspecified, eNT_SIGINFO };
