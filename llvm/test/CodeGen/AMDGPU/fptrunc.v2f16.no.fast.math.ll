@@ -12,6 +12,20 @@ define <2 x half> @v_test_cvt_v2f32_v2f16(<2 x float> %src) {
   ret <2 x half> %res
 }
 
+define half @fptrunc_v2f32_v2f16_then_extract(<2 x float> %src) {
+; GFX950-LABEL: fptrunc_v2f32_v2f16_then_extract:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-NEXT:    v_cvt_pk_f16_f32 v0, v0, v1
+; GFX950-NEXT:    v_add_f16_sdwa v0, v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX950-NEXT:    s_setpc_b64 s[30:31]
+  %vec_half = fptrunc <2 x float> %src to <2 x half>
+  %first = extractelement <2 x half> %vec_half, i64 1
+  %second = extractelement <2 x half> %vec_half, i64 0
+  %res = fadd half %first, %second
+  ret half %res
+}
+
 define <2 x half> @v_test_cvt_v2f64_v2f16(<2 x double> %src) {
 ; GFX950-SDAG-LABEL: v_test_cvt_v2f64_v2f16:
 ; GFX950-SDAG:       ; %bb.0:
