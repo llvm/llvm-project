@@ -137,13 +137,11 @@ llvm::StringRef UnixSignals::GetSignalAsStringRef(int32_t signo) const {
   return pos->second.m_name;
 }
 
-std::string
-UnixSignals::GetSignalDescription(int32_t signo, std::optional<int32_t> code,
-                                  std::optional<lldb::addr_t> addr,
-                                  std::optional<lldb::addr_t> lower,
-                                  std::optional<lldb::addr_t> upper,
-                                  std::optional<uint32_t> pid,
-                                  std::optional<uint32_t> uid) const {
+std::string UnixSignals::GetSignalDescription(
+    int32_t signo, std::optional<int32_t> code,
+    std::optional<lldb::addr_t> addr, std::optional<lldb::addr_t> lower,
+    std::optional<lldb::addr_t> upper, std::optional<uint32_t> pid,
+    std::optional<uint32_t> uid) const {
   std::string str;
 
   collection::const_iterator pos = m_signals.find(signo);
