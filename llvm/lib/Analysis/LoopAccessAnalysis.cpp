@@ -2066,17 +2066,16 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   // Attempt to prove strided accesses independent.
   const APInt *APDist = nullptr;
 
-  // The rest of this function relies on ConstantDistance being at most 64-bits,
-  // which is checked earlier. Will assert if the calling code changes.
-  uint64_t ConstDistance =
+  // The rest of this function relies on ConstDist being at most 64-bits, which
+  // is checked earlier. Will assert if the calling code changes.
+  uint64_t ConstDist =
       match(Dist, m_scev_APInt(APDist)) ? APDist->abs().getZExtValue() : 0;
 
   if (APDist) {
     // If the distance between accesses and their strides are known constants,
     // check whether the accesses interlace each other.
-    if (ConstDistance > 0 && CommonStride && CommonStride > 1 && HasSameSize &&
-        areStridedAccessesIndependent(ConstDistance, *CommonStride,
-                                      TypeByteSize)) {
+    if (ConstDist > 0 && CommonStride && CommonStride > 1 && HasSameSize &&
+        areStridedAccessesIndependent(ConstDist, *CommonStride, TypeByteSize)) {
       LLVM_DEBUG(dbgs() << "LAA: Strided accesses are independent\n");
       return Dependence::NoDep;
     }
@@ -2109,7 +2108,7 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
     // forward dependency will allow vectorization using any width.
 
     if (IsTrueDataDependence && EnableForwardingConflictDetection) {
-      if (!ConstDistance) {
+      if (!ConstDist) {
         // TODO: FoundNonConstantDistanceDependence is used as a necessary
         // condition to consider retrying with runtime checks. Historically, we
         // did not set it when strides were different but there is no inherent
@@ -2118,7 +2117,7 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
         return Dependence::Unknown;
       }
       if (!HasSameSize ||
-          couldPreventStoreLoadForward(ConstDistance, TypeByteSize)) {
+          couldPreventStoreLoadForward(ConstDist, TypeByteSize)) {
         LLVM_DEBUG(
             dbgs() << "LAA: Forward but may prevent st->ld forwarding\n");
         return Dependence::ForwardButPreventsForwarding;
@@ -2129,15 +2128,14 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
     return Dependence::Forward;
   }
 
-  std::optional<int64_t> MinDistance =
-      SE.getSignedRangeMin(Dist).trySExtValue();
+  int64_t MinDistance = SE.getSignedRangeMin(Dist).getSExtValue();
   // Below we only handle strictly positive distances.
-  if (!MinDistance || MinDistance <= 0) {
+  if (MinDistance <= 0) {
     FoundNonConstantDistanceDependence |= ShouldRetryWithRuntimeCheck;
     return Dependence::Unknown;
   }
 
-  if (!ConstDistance) {
+  if (!ConstDist) {
     // Previously this case would be treated as Unknown, possibly setting
     // FoundNonConstantDistanceDependence to force re-trying with runtime
     // checks. Until the TODO below is addressed, set it here to preserve
@@ -2196,8 +2194,8 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   // minimum for computations below, as this ensures we compute the closest
   // possible dependence distance.
   uint64_t MinDistanceNeeded = MaxStride * (MinNumIter - 1) + TypeByteSize;
-  if (MinDistanceNeeded > static_cast<uint64_t>(*MinDistance)) {
-    if (!ConstDistance) {
+  if (MinDistanceNeeded > static_cast<uint64_t>(MinDistance)) {
+    if (!ConstDist) {
       // For non-constant distances, we checked the lower bound of the
       // dependence distance and the distance may be larger at runtime (and safe
       // for vectorization). Classify it as Unknown, so we re-try with runtime
@@ -2234,12 +2232,11 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   // is 8, which is less than 2 and forbidden vectorization, But actually
   // both A and B could be vectorized by 2 iterations.
   MinDepDistBytes =
-      std::min(static_cast<uint64_t>(*MinDistance), MinDepDistBytes);
+      std::min(static_cast<uint64_t>(MinDistance), MinDepDistBytes);
 
   bool IsTrueDataDependence = (!AIsWrite && BIsWrite);
-  if (IsTrueDataDependence && EnableForwardingConflictDetection &&
-      ConstDistance &&
-      couldPreventStoreLoadForward(*MinDistance, TypeByteSize, *CommonStride))
+  if (IsTrueDataDependence && EnableForwardingConflictDetection && ConstDist &&
+      couldPreventStoreLoadForward(MinDistance, TypeByteSize, *CommonStride))
     return Dependence::BackwardVectorizableButPreventsForwarding;
 
   uint64_t MaxVF = MinDepDistBytes / MaxStride;
@@ -2247,7 +2244,7 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
                     << " with max VF = " << MaxVF << '\n');
 
   uint64_t MaxVFInBits = MaxVF * TypeByteSize * 8;
-  if (!ConstDistance && MaxVFInBits < MaxTargetVectorWidthInBits) {
+  if (!ConstDist && MaxVFInBits < MaxTargetVectorWidthInBits) {
     // For non-constant distances, we checked the lower bound of the dependence
     // distance and the distance may be larger at runtime (and safe for
     // vectorization). Classify it as Unknown, so we re-try with runtime checks.
