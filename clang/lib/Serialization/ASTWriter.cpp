@@ -5391,7 +5391,7 @@ ASTWriter::WriteAST(llvm::PointerUnion<Sema *, Preprocessor *> Subject,
   if (WritingModule && PPRef.getHeaderSearchInfo()
                            .getHeaderSearchOpts()
                            .ModulesValidateOncePerBuildSession)
-    ModCache.markUpToDate(OutputFile);
+    ModCache.updateModuleTimestamp(OutputFile);
 
   if (ShouldCacheASTInMemory) {
     // Construct MemoryBuffer and update buffer manager.
