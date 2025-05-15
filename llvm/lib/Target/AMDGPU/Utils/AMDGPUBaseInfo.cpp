@@ -1362,7 +1362,7 @@ getIntegerPairAttribute(const Function &F, StringRef Name,
                         std::pair<unsigned, unsigned> Default,
                         bool OnlyFirstRequired) {
   if (auto Attr = getIntegerPairAttribute(F, Name, OnlyFirstRequired))
-    return {Attr->first, Attr->second ? *(Attr->second) : Default.second};
+    return {Attr->first, Attr->second.value_or(Default.second)};
   return Default;
 }
 
