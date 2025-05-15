@@ -533,6 +533,19 @@ Improvements to Clang's diagnostics
 - A new off-by-default warning ``-Wms-bitfield-padding`` has been added to alert to cases where bit-field
   packing may differ under the MS struct ABI (#GH117428).
 
+- ``-Watomic-access`` no longer fires on unreachable code. e.g.,
+
+  ..code-block:: c
+
+    _Atomic struct S { int a; } s;
+    void func(void) {
+      if (0)
+        s.a = 12; // Previously diagnosed with -Watomic-access, now silenced
+      s.a = 12; // Still diagnosed with -Watomic-access
+      return;
+      s.a = 12; // Previously diagnosed, now silenced
+    }
+
 
 Improvements to Clang's time-trace
 ----------------------------------
