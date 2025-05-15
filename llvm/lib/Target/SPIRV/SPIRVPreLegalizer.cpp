@@ -39,7 +39,7 @@ public:
 } // namespace
 
 void SPIRVPreLegalizer::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addPreserved<GISelValueTrackingAnalysis>();
+  AU.addPreserved<GISelValueTrackingAnalysisLegacy>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
