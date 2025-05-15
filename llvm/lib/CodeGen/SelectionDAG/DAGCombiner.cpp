@@ -2623,8 +2623,6 @@ SDValue DAGCombiner::foldSubToAvg(SDNode *N, const SDLoc &DL) {
 /// Try to fold a pointer arithmetic node.
 /// This needs to be done separately from normal addition, because pointer
 /// addition is not commutative.
-/// This function was adapted from DAGCombiner::visitPTRADD() from the Morello
-/// project, which is based on CHERI.
 SDValue DAGCombiner::visitPTRADD(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
