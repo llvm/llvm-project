@@ -940,6 +940,7 @@ define i256 @PR25498(i256 %a) nounwind {
 ; LIN-NEXT:    cmoveq %rsi, %rcx
 ; LIN-NEXT:    orq %r10, %r9
 ; LIN-NEXT:    cmoveq %rdx, %rcx
+; LIN-NEXT:    xorl %edi, %edi
 ; LIN-NEXT:    jmp .LBB4_3
 ; LIN-NEXT:  .LBB4_1:
 ; LIN-NEXT:    movl $256, %ecx # imm = 0x100

@@ -3234,20 +3234,20 @@ define amdgpu_gfx void @call_72xi32() #1 {
 ; GFX11-NEXT:    scratch_store_b128 off, v[0:3], s1
 ; GFX11-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v3, 0
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, 0
-; GFX11-NEXT:    v_dual_mov_b32 v5, 0 :: v_dual_mov_b32 v6, 0
-; GFX11-NEXT:    v_dual_mov_b32 v7, 0 :: v_dual_mov_b32 v8, 0
-; GFX11-NEXT:    v_dual_mov_b32 v9, 0 :: v_dual_mov_b32 v10, 0
-; GFX11-NEXT:    v_dual_mov_b32 v11, 0 :: v_dual_mov_b32 v12, 0
-; GFX11-NEXT:    v_dual_mov_b32 v13, 0 :: v_dual_mov_b32 v14, 0
-; GFX11-NEXT:    v_dual_mov_b32 v15, 0 :: v_dual_mov_b32 v16, 0
-; GFX11-NEXT:    v_dual_mov_b32 v17, 0 :: v_dual_mov_b32 v18, 0
-; GFX11-NEXT:    v_dual_mov_b32 v19, 0 :: v_dual_mov_b32 v20, 0
-; GFX11-NEXT:    v_dual_mov_b32 v21, 0 :: v_dual_mov_b32 v22, 0
-; GFX11-NEXT:    v_dual_mov_b32 v23, 0 :: v_dual_mov_b32 v24, 0
-; GFX11-NEXT:    v_dual_mov_b32 v25, 0 :: v_dual_mov_b32 v26, 0
-; GFX11-NEXT:    v_dual_mov_b32 v27, 0 :: v_dual_mov_b32 v28, 0
-; GFX11-NEXT:    v_dual_mov_b32 v29, 0 :: v_dual_mov_b32 v30, 0
-; GFX11-NEXT:    v_mov_b32_e32 v31, 0
+; GFX11-NEXT:    v_dual_mov_b32 v5, 0 :: v_dual_mov_b32 v4, 0
+; GFX11-NEXT:    v_dual_mov_b32 v7, 0 :: v_dual_mov_b32 v6, 0
+; GFX11-NEXT:    v_dual_mov_b32 v9, 0 :: v_dual_mov_b32 v8, 0
+; GFX11-NEXT:    v_dual_mov_b32 v11, 0 :: v_dual_mov_b32 v10, 0
+; GFX11-NEXT:    v_dual_mov_b32 v13, 0 :: v_dual_mov_b32 v12, 0
+; GFX11-NEXT:    v_dual_mov_b32 v15, 0 :: v_dual_mov_b32 v14, 0
+; GFX11-NEXT:    v_dual_mov_b32 v17, 0 :: v_dual_mov_b32 v16, 0
+; GFX11-NEXT:    v_dual_mov_b32 v19, 0 :: v_dual_mov_b32 v18, 0
+; GFX11-NEXT:    v_dual_mov_b32 v21, 0 :: v_dual_mov_b32 v20, 0
+; GFX11-NEXT:    v_dual_mov_b32 v23, 0 :: v_dual_mov_b32 v22, 0
+; GFX11-NEXT:    v_dual_mov_b32 v25, 0 :: v_dual_mov_b32 v24, 0
+; GFX11-NEXT:    v_dual_mov_b32 v27, 0 :: v_dual_mov_b32 v26, 0
+; GFX11-NEXT:    v_dual_mov_b32 v29, 0 :: v_dual_mov_b32 v28, 0
+; GFX11-NEXT:    v_dual_mov_b32 v31, 0 :: v_dual_mov_b32 v30, 0
 ; GFX11-NEXT:    s_mov_b32 s1, return_72xi32@abs32@hi
 ; GFX11-NEXT:    s_mov_b32 s0, return_72xi32@abs32@lo
 ; GFX11-NEXT:    v_writelane_b32 v60, s31, 1

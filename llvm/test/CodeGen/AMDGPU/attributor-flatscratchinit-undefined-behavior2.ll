@@ -246,7 +246,6 @@ define void @call_with_private_to_flat_addrspacecast(ptr addrspace(5) %ptr) #0 {
 ; GFX8-ARCH-FLAT-NEXT:    v_readlane_b32 s30, v3, 0
 ; GFX8-ARCH-FLAT-NEXT:    s_mov_b32 s32, s33
 ; GFX8-ARCH-FLAT-NEXT:    s_xor_saveexec_b64 s[0:1], -1
-; GFX8-ARCH-FLAT-NEXT:    s_add_i32 s3, s33, 8
 ; GFX8-ARCH-FLAT-NEXT:    scratch_load_dword v3, off, s3 ; 4-byte Folded Reload
 ; GFX8-ARCH-FLAT-NEXT:    s_mov_b64 exec, s[0:1]
 ; GFX8-ARCH-FLAT-NEXT:    s_mov_b32 s33, s2

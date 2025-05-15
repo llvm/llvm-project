@@ -267,6 +267,7 @@ define amdgpu_ps void @test_export_across_store_load(i32 %idx, float %v) #0 {
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
 ; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GCN-NEXT:    v_cndmask_b32_e32 v0, 16, v2, vcc_lo
+; GCN-NEXT:    v_mov_b32_e32 v2, 0
 ; GCN-NEXT:    scratch_store_b32 v0, v1, off
 ; GCN-NEXT:    scratch_load_b32 v0, off, off
 ; GCN-NEXT:    v_mov_b32_e32 v1, 1.0

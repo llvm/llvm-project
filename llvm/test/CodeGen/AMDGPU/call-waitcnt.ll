@@ -41,6 +41,7 @@ define amdgpu_kernel void @call_memory_no_dep(ptr addrspace(1) %ptr, i32) #0 {
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    global_store_dword v0, v0, s[6:7]
 ; GCN-NEXT:    s_mov_b64 s[6:7], s[4:5]
+; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    s_mov_b32 s32, 0
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[8:9]
 ; GCN-NEXT:    s_endpgm

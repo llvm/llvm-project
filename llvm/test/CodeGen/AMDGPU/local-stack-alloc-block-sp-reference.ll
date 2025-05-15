@@ -225,10 +225,12 @@ define amdgpu_kernel void @local_stack_offset_uses_sp_flat(ptr addrspace(1) %out
 ; MUBUF-NEXT:  ; %bb.2: ; %split
 ; MUBUF-NEXT:    v_mov_b32_e32 v1, 0x4000
 ; MUBUF-NEXT:    v_or_b32_e32 v0, 0x12d4, v1
+; MUBUF-NEXT:    v_mov_b32_e32 v1, 0x4000
 ; MUBUF-NEXT:    s_movk_i32 s4, 0x4000
 ; MUBUF-NEXT:    buffer_load_dword v5, v0, s[0:3], 0 offen glc
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:    v_or_b32_e32 v0, 0x12d0, v1
+; MUBUF-NEXT:    v_mov_b32_e32 v1, 0x4000
 ; MUBUF-NEXT:    s_or_b32 s4, s4, 0x12c0
 ; MUBUF-NEXT:    buffer_load_dword v4, v0, s[0:3], 0 offen glc
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)

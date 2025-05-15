@@ -323,6 +323,8 @@ define <2 x i128> @v_sdiv_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; SDAG-NEXT:    v_subrev_i32_e32 v36, vcc, 64, v30
 ; SDAG-NEXT:    v_lshr_b64 v[37:38], v[6:7], v30
 ; SDAG-NEXT:    v_add_i32_e32 v34, vcc, -1, v29
+; SDAG-NEXT:    v_mov_b32_e32 v12, 0
+; SDAG-NEXT:    v_mov_b32_e32 v13, 0
 ; SDAG-NEXT:    v_mov_b32_e32 v14, 0
 ; SDAG-NEXT:    v_mov_b32_e32 v15, 0
 ; SDAG-NEXT:    s_mov_b64 s[10:11], 0
@@ -1105,6 +1107,8 @@ define <2 x i128> @v_udiv_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; SDAG-NEXT:    v_subrev_i32_e32 v28, vcc, 64, v22
 ; SDAG-NEXT:    v_lshr_b64 v[29:30], v[6:7], v22
 ; SDAG-NEXT:    v_add_i32_e32 v26, vcc, -1, v12
+; SDAG-NEXT:    v_mov_b32_e32 v20, 0
+; SDAG-NEXT:    v_mov_b32_e32 v21, 0
 ; SDAG-NEXT:    v_mov_b32_e32 v10, 0
 ; SDAG-NEXT:    v_mov_b32_e32 v11, 0
 ; SDAG-NEXT:    s_mov_b64 s[10:11], 0
@@ -1675,6 +1679,8 @@ define <2 x i128> @v_srem_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; SDAG-NEXT:    v_subrev_i32_e32 v37, vcc, 64, v32
 ; SDAG-NEXT:    v_lshr_b64 v[24:25], v[0:1], v32
 ; SDAG-NEXT:    v_add_i32_e32 v36, vcc, -1, v31
+; SDAG-NEXT:    v_mov_b32_e32 v18, 0
+; SDAG-NEXT:    v_mov_b32_e32 v19, 0
 ; SDAG-NEXT:    v_mov_b32_e32 v22, 0
 ; SDAG-NEXT:    v_mov_b32_e32 v23, 0
 ; SDAG-NEXT:    s_mov_b64 s[10:11], 0
@@ -1868,6 +1874,8 @@ define <2 x i128> @v_srem_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; SDAG-NEXT:    v_subrev_i32_e32 v51, vcc, 64, v38
 ; SDAG-NEXT:    v_lshr_b64 v[22:23], v[4:5], v38
 ; SDAG-NEXT:    v_add_i32_e32 v50, vcc, -1, v37
+; SDAG-NEXT:    v_mov_b32_e32 v18, 0
+; SDAG-NEXT:    v_mov_b32_e32 v19, 0
 ; SDAG-NEXT:    v_mov_b32_e32 v20, 0
 ; SDAG-NEXT:    v_mov_b32_e32 v21, 0
 ; SDAG-NEXT:    s_mov_b64 s[10:11], 0
@@ -2554,6 +2562,8 @@ define <2 x i128> @v_urem_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; SDAG-NEXT:    v_subrev_i32_e32 v35, vcc, 64, v30
 ; SDAG-NEXT:    v_lshr_b64 v[26:27], v[2:3], v30
 ; SDAG-NEXT:    v_add_i32_e32 v34, vcc, -1, v8
+; SDAG-NEXT:    v_mov_b32_e32 v20, 0
+; SDAG-NEXT:    v_mov_b32_e32 v21, 0
 ; SDAG-NEXT:    v_mov_b32_e32 v24, 0
 ; SDAG-NEXT:    v_mov_b32_e32 v25, 0
 ; SDAG-NEXT:    s_mov_b64 s[10:11], 0
@@ -2727,6 +2737,8 @@ define <2 x i128> @v_urem_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; SDAG-NEXT:    v_subrev_i32_e32 v39, vcc, 64, v34
 ; SDAG-NEXT:    v_lshr_b64 v[26:27], v[6:7], v34
 ; SDAG-NEXT:    v_add_i32_e32 v38, vcc, -1, v12
+; SDAG-NEXT:    v_mov_b32_e32 v22, 0
+; SDAG-NEXT:    v_mov_b32_e32 v23, 0
 ; SDAG-NEXT:    v_mov_b32_e32 v24, 0
 ; SDAG-NEXT:    v_mov_b32_e32 v25, 0
 ; SDAG-NEXT:    s_mov_b64 s[10:11], 0

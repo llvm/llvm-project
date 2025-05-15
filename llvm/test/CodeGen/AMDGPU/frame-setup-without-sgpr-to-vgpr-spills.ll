@@ -53,6 +53,7 @@ define void @callee_with_stack_and_call() #0 {
 ; NO-SPILL-TO-VGPR-NEXT:    buffer_load_dword v0, off, s[0:3], s33 offset:16
 ; NO-SPILL-TO-VGPR-NEXT:    s_waitcnt vmcnt(0)
 ; NO-SPILL-TO-VGPR-NEXT:    s_mov_b64 exec, s[4:5]
+; NO-SPILL-TO-VGPR-NEXT:    s_mov_b64 s[4:5], exec
 ; NO-SPILL-TO-VGPR-NEXT:    s_mov_b64 exec, 1
 ; NO-SPILL-TO-VGPR-NEXT:    buffer_store_dword v0, off, s[0:3], s33 offset:16
 ; NO-SPILL-TO-VGPR-NEXT:    v_writelane_b32 v0, s31, 0
@@ -76,6 +77,7 @@ define void @callee_with_stack_and_call() #0 {
 ; NO-SPILL-TO-VGPR-NEXT:    buffer_load_dword v0, off, s[0:3], s33 offset:16
 ; NO-SPILL-TO-VGPR-NEXT:    s_waitcnt vmcnt(0)
 ; NO-SPILL-TO-VGPR-NEXT:    s_mov_b64 exec, s[4:5]
+; NO-SPILL-TO-VGPR-NEXT:    s_mov_b64 s[4:5], exec
 ; NO-SPILL-TO-VGPR-NEXT:    s_mov_b64 exec, 1
 ; NO-SPILL-TO-VGPR-NEXT:    buffer_store_dword v0, off, s[0:3], s33 offset:16
 ; NO-SPILL-TO-VGPR-NEXT:    buffer_load_dword v0, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
