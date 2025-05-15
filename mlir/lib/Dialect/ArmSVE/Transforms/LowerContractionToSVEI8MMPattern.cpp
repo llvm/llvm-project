@@ -30,17 +30,30 @@ using namespace mlir;
 using namespace mlir::arm_sve;
 
 namespace {
-// Check if the given value is a result of the operation `T` (which must be
-// sign- or zero- extend) from i8 to i32. Return the value before the extension.
+// Get the LHS or RHS side operand of a vector contract. Handle two cases
+//   * if the operand is a sign- or zero- extend operation of type `T` from i8
+//     to i32, return the value before the extension, otherwise
+//   * if the operand is of i8 type and the operation is sign-extend, return the
+//     operand itself.
+//
+// This way we handle both explicit sign- or zero- extension or implicit
+// sign-extension.
 template <typename T>
-std::optional<Value> extractExtOperand(Value v, Type i8Ty, Type i32Ty) {
+std::optional<Value> getExtOperand(Value v, Type i8Ty, Type i32Ty) {
 
   static_assert(llvm::is_one_of<T, arith::ExtSIOp, arith::ExtUIOp>::value,
                 "Must be instantiated with either sign- or zero- extension op");
 
   auto extOp = dyn_cast_or_null<T>(v.getDefiningOp());
-  if (!extOp)
+  if (!extOp) {
+    if constexpr (std::is_same<T, arith::ExtSIOp>::value) {
+      auto vTy = cast<VectorType>(v.getType());
+      if (vTy.getElementType() != i8Ty)
+        return {};
+      return v;
+    }
     return {};
+  }
 
   auto inOp = extOp.getIn();
   auto inTy = dyn_cast<VectorType>(inOp.getType());
@@ -178,18 +191,18 @@ public:
     // operands are supported, but they are lowered to different operations.
     // Determine which is the appropriate operation to lower to.
     MMLA mmlaOp = MMLA::Signed;
-    auto maybeLhs = extractExtOperand<arith::ExtSIOp>(
+    auto maybeLhs = getExtOperand<arith::ExtSIOp>(
         op.getLhs(), rewriter.getI8Type(), rewriter.getI32Type());
     if (!maybeLhs) {
       mmlaOp = MMLA::Unsigned;
-      maybeLhs = extractExtOperand<arith::ExtUIOp>(
+      maybeLhs = getExtOperand<arith::ExtUIOp>(
           op.getLhs(), rewriter.getI8Type(), rewriter.getI32Type());
     }
     if (!maybeLhs)
       return rewriter.notifyMatchFailure(
           op, "LHS is not a sign- or zero- extended i8");
 
-    auto maybeRhs = extractExtOperand<arith::ExtSIOp>(
+    auto maybeRhs = getExtOperand<arith::ExtSIOp>(
         op.getRhs(), rewriter.getI8Type(), rewriter.getI32Type());
     if (maybeRhs) {
       if (mmlaOp == MMLA::Unsigned)
@@ -197,7 +210,7 @@ public:
     } else {
       if (mmlaOp == MMLA::Signed)
         mmlaOp = MMLA::MixedSwapped;
-      maybeRhs = extractExtOperand<arith::ExtUIOp>(
+      maybeRhs = getExtOperand<arith::ExtUIOp>(
           op.getRhs(), rewriter.getI8Type(), rewriter.getI32Type());
     }
     if (!maybeRhs)

@@ -41,7 +41,7 @@ func.func @main() {
   %acc_m1 = memref.collapse_shape %acc_m [[0, 1]] : memref<4x4xi32> into memref<16xi32>
   %acc_flat = vector.transfer_read %acc_m1[%c0], %c0_i32 {in_bounds = [true]} : memref<16xi32>, vector<[16]xi32>
   %acc = vector.shape_cast %acc_flat : vector<[16]xi32> to vector<4x[4]xi32>
-  
+
   vector.print str "ACC:\n"
   %acc0 = vector.extract %acc[0] : vector<[4]xi32> from vector<4x[4]xi32>
   %acc1 = vector.extract %acc[1] : vector<[4]xi32> from vector<4x[4]xi32>
@@ -91,7 +91,7 @@ func.func @main() {
   vector.print %rhs1 : vector<[16]xi8>
 
   %rhs = vector.shape_cast %rhs_flat : vector<[32]xi8> to vector<[4]x8xi8>
-  
+
   // Matrix multiplication
   %0 = arith.extui %lhs : vector<4x8xi8> to vector<4x8xi32>
   %1 = arith.extui %rhs : vector<[4]x8xi8> to vector<[4]x8xi32>
