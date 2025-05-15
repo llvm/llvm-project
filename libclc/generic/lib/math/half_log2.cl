@@ -7,8 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/clc.h>
+#include <clc/math/clc_half_log2.h>
 
-#define __CLC_FUNC log2
-#define __CLC_BODY <half_unary.inc>
 #define __FLOAT_ONLY
+#define FUNCTION half_log2
+#define __CLC_BODY <clc/shared/unary_def.inc>
+
 #include <clc/math/gentype.inc>

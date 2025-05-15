@@ -233,8 +233,9 @@ std::optional<uint64_t> mlir::affine::getConstantTripCount(AffineForOp forOp) {
             std::min(*tripCount, static_cast<uint64_t>(constExpr.getValue()));
       else
         tripCount = constExpr.getValue();
-    } else
+    } else {
       return std::nullopt;
+    }
   }
   return tripCount;
 }

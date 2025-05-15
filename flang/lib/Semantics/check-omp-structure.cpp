@@ -2422,21 +2422,30 @@ void OmpStructureChecker::Leave(const parser::OpenMPCriticalConstruct &) {
 
 void OmpStructureChecker::Enter(
     const parser::OmpClause::CancellationConstructType &x) {
-  // Do not call CheckAllowed/CheckAllowedClause, because in case of an error
-  // it will print "CANCELLATION_CONSTRUCT_TYPE" as the clause name instead of
-  // the contained construct name.
+  llvm::omp::Directive dir{GetContext().directive};
   auto &dirName{std::get<parser::OmpDirectiveName>(x.v.t)};
-  switch (dirName.v) {
-  case llvm::omp::Directive::OMPD_do:
-  case llvm::omp::Directive::OMPD_parallel:
-  case llvm::omp::Directive::OMPD_sections:
-  case llvm::omp::Directive::OMPD_taskgroup:
-    break;
-  default:
-    context_.Say(dirName.source, "%s is not a cancellable construct"_err_en_US,
-        parser::ToUpperCaseLetters(
-            llvm::omp::getOpenMPDirectiveName(dirName.v).str()));
-    break;
+
+  if (dir != llvm::omp::Directive::OMPD_cancel &&
+      dir != llvm::omp::Directive::OMPD_cancellation_point) {
+    // Do not call CheckAllowed/CheckAllowedClause, because in case of an error
+    // it will print "CANCELLATION_CONSTRUCT_TYPE" as the clause name instead
+    // of the contained construct name.
+    context_.Say(dirName.source, "%s cannot follow %s"_err_en_US,
+        parser::ToUpperCaseLetters(getDirectiveName(dirName.v)),
+        parser::ToUpperCaseLetters(getDirectiveName(dir)));
+  } else {
+    switch (dirName.v) {
+    case llvm::omp::Directive::OMPD_do:
+    case llvm::omp::Directive::OMPD_parallel:
+    case llvm::omp::Directive::OMPD_sections:
+    case llvm::omp::Directive::OMPD_taskgroup:
+      break;
+    default:
+      context_.Say(dirName.source,
+          "%s is not a cancellable construct"_err_en_US,
+          parser::ToUpperCaseLetters(getDirectiveName(dirName.v)));
+      break;
+    }
   }
 }
 
@@ -2468,7 +2477,7 @@ std::optional<llvm::omp::Directive> OmpStructureChecker::GetCancelType(
   // Given clauses from CANCEL or CANCELLATION_POINT, identify the construct
   // to which the cancellation applies.
   std::optional<llvm::omp::Directive> cancelee;
-  llvm::StringRef cancelName{llvm::omp::getOpenMPDirectiveName(cancelDir)};
+  llvm::StringRef cancelName{getDirectiveName(cancelDir)};
 
   for (const parser::OmpClause &clause : maybeClauses->v) {
     using CancellationConstructType =
@@ -2496,7 +2505,7 @@ std::optional<llvm::omp::Directive> OmpStructureChecker::GetCancelType(
 
 void OmpStructureChecker::CheckCancellationNest(
     const parser::CharBlock &source, llvm::omp::Directive type) {
-  llvm::StringRef typeName{llvm::omp::getOpenMPDirectiveName(type)};
+  llvm::StringRef typeName{getDirectiveName(type)};
 
   if (CurrentDirectiveIsNested()) {
     // If construct-type-clause is taskgroup, the cancellation construct must be
@@ -3546,8 +3555,7 @@ void OmpStructureChecker::CheckReductionObjects(
   // names into the lists of their members.
   for (const parser::OmpObject &object : objects.v) {
     auto *symbol{GetObjectSymbol(object)};
-    assert(symbol && "Expecting a symbol for object");
-    if (IsCommonBlock(*symbol)) {
+    if (symbol && IsCommonBlock(*symbol)) {
       auto source{GetObjectSource(object)};
       context_.Say(source ? *source : GetContext().clauseSource,
           "Common block names are not allowed in %s clause"_err_en_US,
@@ -4060,10 +4068,10 @@ void OmpStructureChecker::Enter(const parser::OmpClause::If &x) {
     if (auto *dnm{OmpGetUniqueModifier<parser::OmpDirectiveNameModifier>(
             modifiers)}) {
       llvm::omp::Directive sub{dnm->v};
-      std::string subName{parser::ToUpperCaseLetters(
-          llvm::omp::getOpenMPDirectiveName(sub).str())};
-      std::string dirName{parser::ToUpperCaseLetters(
-          llvm::omp::getOpenMPDirectiveName(dir).str())};
+      std::string subName{
+          parser::ToUpperCaseLetters(getDirectiveName(sub).str())};
+      std::string dirName{
+          parser::ToUpperCaseLetters(getDirectiveName(dir).str())};
 
       parser::CharBlock modifierSource{OmpGetModifierSource(modifiers, dnm)};
       auto desc{OmpGetDescriptor<parser::OmpDirectiveNameModifier>()};
@@ -5433,7 +5441,8 @@ llvm::StringRef OmpStructureChecker::getClauseName(llvm::omp::Clause clause) {
 
 llvm::StringRef OmpStructureChecker::getDirectiveName(
     llvm::omp::Directive directive) {
-  return llvm::omp::getOpenMPDirectiveName(directive);
+  unsigned version{context_.langOptions().OpenMPVersion};
+  return llvm::omp::getOpenMPDirectiveName(directive, version);
 }
 
 const Symbol *OmpStructureChecker::GetObjectSymbol(

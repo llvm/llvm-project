@@ -80,29 +80,62 @@ public:
 /// A symbol representing the result of an expression in the case when we do
 /// not know anything about what the expression is.
 class SymbolConjured : public SymbolData {
-  const Stmt *S;
+  ConstCFGElementRef Elem;
   QualType T;
   unsigned Count;
   const LocationContext *LCtx;
   const void *SymbolTag;
 
   friend class SymExprAllocator;
-  SymbolConjured(SymbolID sym, const Stmt *s, const LocationContext *lctx,
-                 QualType t, unsigned count, const void *symbolTag)
-      : SymbolData(SymbolConjuredKind, sym), S(s), T(t), Count(count),
+  SymbolConjured(SymbolID sym, ConstCFGElementRef elem,
+                 const LocationContext *lctx, QualType t, unsigned count,
+                 const void *symbolTag)
+      : SymbolData(SymbolConjuredKind, sym), Elem(elem), T(t), Count(count),
         LCtx(lctx), SymbolTag(symbolTag) {
-    // FIXME: 's' might be a nullptr if we're conducting invalidation
-    // that was caused by a destructor call on a temporary object,
-    // which has no statement associated with it.
-    // Due to this, we might be creating the same invalidation symbol for
-    // two different invalidation passes (for two different temporaries).
     assert(lctx);
     assert(isValidTypeForSymbol(t));
   }
 
 public:
-  /// It might return null.
-  const Stmt *getStmt() const { return S; }
+  ConstCFGElementRef getCFGElementRef() const { return Elem; }
+
+  // It might return null.
+  const Stmt *getStmt() const {
+    switch (Elem->getKind()) {
+    case CFGElement::Initializer:
+      return Elem->castAs<CFGInitializer>().getInitializer()->getInit();
+    case CFGElement::ScopeBegin:
+      return Elem->castAs<CFGScopeBegin>().getTriggerStmt();
+    case CFGElement::ScopeEnd:
+      return Elem->castAs<CFGScopeEnd>().getTriggerStmt();
+    case CFGElement::NewAllocator:
+      return Elem->castAs<CFGNewAllocator>().getAllocatorExpr();
+    case CFGElement::LifetimeEnds:
+      return Elem->castAs<CFGLifetimeEnds>().getTriggerStmt();
+    case CFGElement::LoopExit:
+      return Elem->castAs<CFGLoopExit>().getLoopStmt();
+    case CFGElement::Statement:
+      return Elem->castAs<CFGStmt>().getStmt();
+    case CFGElement::Constructor:
+      return Elem->castAs<CFGConstructor>().getStmt();
+    case CFGElement::CXXRecordTypedCall:
+      return Elem->castAs<CFGCXXRecordTypedCall>().getStmt();
+    case CFGElement::AutomaticObjectDtor:
+      return Elem->castAs<CFGAutomaticObjDtor>().getTriggerStmt();
+    case CFGElement::DeleteDtor:
+      return Elem->castAs<CFGDeleteDtor>().getDeleteExpr();
+    case CFGElement::BaseDtor:
+      return nullptr;
+    case CFGElement::MemberDtor:
+      return nullptr;
+    case CFGElement::TemporaryDtor:
+      return Elem->castAs<CFGTemporaryDtor>().getBindTemporaryExpr();
+    case CFGElement::CleanupFunction:
+      return nullptr;
+    }
+    return nullptr;
+  }
+
   unsigned getCount() const { return Count; }
   /// It might return null.
   const void *getTag() const { return SymbolTag; }
@@ -113,11 +146,11 @@ public:
 
   void dumpToStream(raw_ostream &os) const override;
 
-  static void Profile(llvm::FoldingSetNodeID &profile, const Stmt *S,
+  static void Profile(llvm::FoldingSetNodeID &profile, ConstCFGElementRef Elem,
                       const LocationContext *LCtx, QualType T, unsigned Count,
                       const void *SymbolTag) {
     profile.AddInteger((unsigned)SymbolConjuredKind);
-    profile.AddPointer(S);
+    profile.Add(Elem);
     profile.AddPointer(LCtx);
     profile.Add(T);
     profile.AddInteger(Count);
@@ -125,7 +158,7 @@ public:
   }
 
   void Profile(llvm::FoldingSetNodeID& profile) override {
-    Profile(profile, S, LCtx, T, Count, SymbolTag);
+    Profile(profile, Elem, LCtx, T, Count, SymbolTag);
   }
 
   // Implement isa<T> support.
@@ -533,18 +566,12 @@ public:
   template <typename SymExprT, typename... Args>
   const SymExprT *acquire(Args &&...args);
 
-  const SymbolConjured *conjureSymbol(const Stmt *E,
+  const SymbolConjured *conjureSymbol(ConstCFGElementRef Elem,
                                       const LocationContext *LCtx, QualType T,
                                       unsigned VisitCount,
                                       const void *SymbolTag = nullptr) {
-    return acquire<SymbolConjured>(E, LCtx, T, VisitCount, SymbolTag);
-  }
 
-  const SymbolConjured* conjureSymbol(const Expr *E,
-                                      const LocationContext *LCtx,
-                                      unsigned VisitCount,
-                                      const void *SymbolTag = nullptr) {
-    return conjureSymbol(E, LCtx, E->getType(), VisitCount, SymbolTag);
+    return acquire<SymbolConjured>(Elem, LCtx, T, VisitCount, SymbolTag);
   }
 
   QualType getType(const SymExpr *SE) const {

@@ -4130,14 +4130,14 @@ void DependentDecltypeType::Profile(llvm::FoldingSetNodeID &ID,
   E->Profile(ID, Context, true);
 }
 
-PackIndexingType::PackIndexingType(const ASTContext &Context,
-                                   QualType Canonical, QualType Pattern,
+PackIndexingType::PackIndexingType(QualType Canonical, QualType Pattern,
                                    Expr *IndexExpr, bool FullySubstituted,
                                    ArrayRef<QualType> Expansions)
     : Type(PackIndexing, Canonical,
            computeDependence(Pattern, IndexExpr, Expansions)),
-      Context(Context), Pattern(Pattern), IndexExpr(IndexExpr),
-      Size(Expansions.size()), FullySubstituted(FullySubstituted) {
+      Pattern(Pattern), IndexExpr(IndexExpr), Size(Expansions.size()),
+      FullySubstituted(FullySubstituted) {
+
   llvm::uninitialized_copy(Expansions, getTrailingObjects<QualType>());
 }
 
@@ -4179,11 +4179,25 @@ PackIndexingType::computeDependence(QualType Pattern, Expr *IndexExpr,
 }
 
 void PackIndexingType::Profile(llvm::FoldingSetNodeID &ID,
+                               const ASTContext &Context) {
+  Profile(ID, Context, getPattern(), getIndexExpr(), isFullySubstituted(),
+          getExpansions());
+}
+
+void PackIndexingType::Profile(llvm::FoldingSetNodeID &ID,
                                const ASTContext &Context, QualType Pattern,
-                               Expr *E, bool FullySubstituted) {
-  Pattern.Profile(ID);
+                               Expr *E, bool FullySubstituted,
+                               ArrayRef<QualType> Expansions) {
+
   E->Profile(ID, Context, true);
   ID.AddBoolean(FullySubstituted);
+  if (!Expansions.empty()) {
+    ID.AddInteger(Expansions.size());
+    for (QualType T : Expansions)
+      T.getCanonicalType().Profile(ID);
+  } else {
+    Pattern.Profile(ID);
+  }
 }
 
 UnaryTransformType::UnaryTransformType(QualType BaseType,
@@ -5064,6 +5078,12 @@ AttributedType::stripOuterNullability(QualType &T) {
   }
 
   return std::nullopt;
+}
+
+bool Type::isSignableIntegerType(const ASTContext &Ctx) const {
+  if (!isIntegralType(Ctx) || isEnumeralType())
+    return false;
+  return Ctx.getTypeSize(this) == Ctx.getTypeSize(Ctx.VoidPtrTy);
 }
 
 bool Type::isBlockCompatibleObjCPointerType(ASTContext &ctx) const {

@@ -70,18 +70,12 @@ public:
     return getHashValue(x.base()) * 89u - subs;
   }
   static unsigned getHashValue(const Fortran::evaluate::CoarrayRef &x) {
-    unsigned subs = 1u;
-    for (const Fortran::evaluate::Subscript &v : x.subscript())
-      subs -= getHashValue(v);
     unsigned cosubs = 3u;
     for (const Fortran::evaluate::Expr<Fortran::evaluate::SubscriptInteger> &v :
          x.cosubscript())
       cosubs -= getHashValue(v);
-    unsigned syms = 7u;
-    for (const Fortran::evaluate::SymbolRef &v : x.base())
-      syms += getHashValue(v);
-    return syms * 97u - subs - cosubs + getHashValue(x.stat()) + 257u +
-           getHashValue(x.team());
+    return getHashValue(x.base()) * 97u - cosubs + getHashValue(x.stat()) +
+           257u + getHashValue(x.team());
   }
   static unsigned getHashValue(const Fortran::evaluate::NamedEntity &x) {
     if (x.IsSymbol())
@@ -339,7 +333,6 @@ public:
   static bool isEqual(const Fortran::evaluate::CoarrayRef &x,
                       const Fortran::evaluate::CoarrayRef &y) {
     return isEqual(x.base(), y.base()) &&
-           isEqual(x.subscript(), y.subscript()) &&
            isEqual(x.cosubscript(), y.cosubscript()) &&
            isEqual(x.stat(), y.stat()) && isEqual(x.team(), y.team());
   }

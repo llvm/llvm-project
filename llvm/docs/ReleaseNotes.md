@@ -185,7 +185,11 @@ Changes to the RISC-V Backend
   interrupt handlers without using inline assembly.
 * Adds assembler support for the Andes `XAndesperf` (Andes Performance extension).
 * `-mcpu=sifive-p870` was added.
-
+* Adds assembler support for the Andes `XAndesvpackfph` (Andes Vector Packed FP16 extension).
+* Adds assembler support for the Andes `XAndesvdot` (Andes Vector Dot Product extension).
+* Adds assembler support for the standard `Q` (Quad-Precision Floating Point) 
+  extension.
+  
 Changes to the WebAssembly Backend
 ----------------------------------
 
