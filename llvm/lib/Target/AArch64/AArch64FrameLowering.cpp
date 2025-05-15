@@ -3611,6 +3611,9 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   unsigned ExtraCSSpill = 0;
   bool HasUnpairedGPR64 = false;
   bool HasPairZReg = false;
+  BitVector UserReservedRegs = RegInfo->getUserReservedRegs(MF);
+  BitVector ReservedRegs = RegInfo->getReservedRegs(MF);
+
   // Figure out which callee-saved registers to save/restore.
   for (unsigned i = 0; CSRegs[i]; ++i) {
     const unsigned Reg = CSRegs[i];
@@ -3621,7 +3624,7 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
 
     // Don't save manually reserved registers set through +reserve-x#i,
     // even for callee-saved registers, as per GCC's behavior.
-    if (RegInfo->isUserReservedReg(MF, Reg)) {
+    if (UserReservedRegs[Reg]) {
       SavedRegs.reset(Reg);
       continue;
     }
@@ -3653,8 +3656,7 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
            AArch64::FPR128RegClass.contains(Reg, PairedReg));
 
     if (!RegUsed) {
-      if (AArch64::GPR64RegClass.contains(Reg) &&
-          !RegInfo->isReservedReg(MF, Reg)) {
+      if (AArch64::GPR64RegClass.contains(Reg) && !ReservedRegs[Reg]) {
         UnspilledCSGPR = Reg;
         UnspilledCSGPRPaired = PairedReg;
       }
@@ -3676,7 +3678,7 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
         !SavedRegs.test(PairedReg)) {
       SavedRegs.set(PairedReg);
       if (AArch64::GPR64RegClass.contains(PairedReg) &&
-          !RegInfo->isReservedReg(MF, PairedReg))
+          !ReservedRegs[PairedReg])
         ExtraCSSpill = PairedReg;
     }
     // Check if there is a pair of ZRegs, so it can select PReg for spill/fill
@@ -3699,7 +3701,7 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
       AFI->setPredicateRegForFillSpill(AArch64::PN8);
     }
 
-    assert(!RegInfo->isReservedReg(MF, AFI->getPredicateRegForFillSpill()) &&
+    assert(!ReservedRegs[AFI->getPredicateRegForFillSpill()] &&
            "Predicate cannot be a reserved register");
   }
 

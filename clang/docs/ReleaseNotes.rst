@@ -533,6 +533,19 @@ Improvements to Clang's diagnostics
 - A new off-by-default warning ``-Wms-bitfield-padding`` has been added to alert to cases where bit-field
   packing may differ under the MS struct ABI (#GH117428).
 
+- ``-Watomic-access`` no longer fires on unreachable code. e.g.,
+
+  .. code-block:: c
+
+    _Atomic struct S { int a; } s;
+    void func(void) {
+      if (0)
+        s.a = 12; // Previously diagnosed with -Watomic-access, now silenced
+      s.a = 12; // Still diagnosed with -Watomic-access
+      return;
+      s.a = 12; // Previously diagnosed, now silenced
+    }
+
 
 - A new ``-Wcharacter-conversion`` warns where comparing or implicitly converting
   between different Unicode character types (``char8_t``, ``char16_t``, ``char32_t``).
@@ -601,6 +614,7 @@ Bug Fixes in This Version
 - Fixed a crash with an invalid member function parameter list with a default
   argument which contains a pragma. (#GH113722)
 - Fixed assertion failures when generating name lookup table in modules. (#GH61065, #GH134739)
+- Fixed an assertion failure in constant compound literal statements. (#GH139160)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
