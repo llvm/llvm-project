@@ -278,7 +278,6 @@ private:
   bool HasNonTrivialDestructor;
   bool HasFlexibleArrayMember;
   bool HasUnalignedFields;
-
 public:
   StructType(ArrayRef<FieldInfo> StructFields, ArrayRef<FieldInfo> Bases,
              ArrayRef<FieldInfo> VBases, TypeSize Size, Align Align,
@@ -325,45 +324,54 @@ public:
   }
 
   const FieldInfo *getElementContainingOffset(unsigned OffsetInBits) const {
-    std::vector<std::pair<unsigned, const FieldInfo *>> AllElements;
+  std::vector<std::pair<unsigned, const FieldInfo *>> AllElements;
 
-    for (const auto &Field : Fields) {
-      if (Field.IsUnnamedBitfield)
-        continue;
-      AllElements.emplace_back(Field.OffsetInBits, &Field);
-    }
+  for (const auto &Base : BaseClasses)
+    AllElements.emplace_back(Base.OffsetInBits, &Base);
 
-    for (const auto &Base : BaseClasses)
-      AllElements.emplace_back(Base.OffsetInBits, &Base);
+  for (const auto &VBase : VirtualBaseClasses)
+    AllElements.emplace_back(VBase.OffsetInBits, &VBase);
 
-    for (const auto &VBase : VirtualBaseClasses)
-      AllElements.emplace_back(VBase.OffsetInBits, &VBase);
+  for (const auto &Field : Fields) {
+    if (Field.IsUnnamedBitfield)
+      continue;
+    AllElements.emplace_back(Field.OffsetInBits, &Field);
+  }
 
-    std::sort(AllElements.begin(), AllElements.end(),
-              [](const auto &a, const auto &b) { return a.first < b.first; });
 
-    auto it =
-        std::upper_bound(AllElements.begin(), AllElements.end(), OffsetInBits,
+    std::stable_sort(AllElements.begin(), AllElements.end(),
+                   [](const auto &a, const auto &b) {
+                     if (a.first != b.first)
+                       return a.first < b.first;
+
+                     unsigned sizeA = a.second->FieldType->getSizeInBits().getFixedValue();
+                     unsigned sizeB = b.second->FieldType->getSizeInBits().getFixedValue();
+
+                     if (sizeA == 0 && sizeB != 0) return false;
+                     if (sizeA != 0 && sizeB == 0) return true;
+
+                     return sizeA > sizeB;
+                   });
+
+  auto it = std::upper_bound(AllElements.begin(), AllElements.end(), OffsetInBits,
                          [](unsigned offset, const auto &element) {
                            return offset < element.first;
                          });
 
-    if (it == AllElements.begin())
-      return nullptr;
-
-    --it;
-
-    const FieldInfo *candidate = it->second;
-    unsigned elementStart = it->first;
-    unsigned elementSize =
-        candidate->FieldType->getSizeInBits().getFixedValue();
-
-    if (OffsetInBits >= elementStart &&
-        OffsetInBits < elementStart + elementSize)
-      return candidate;
-
+  if (it == AllElements.begin())
     return nullptr;
-  }
+
+  --it;
+
+  const FieldInfo *candidate = it->second;
+  unsigned elementStart = it->first;
+  unsigned elementSize = candidate->FieldType->getSizeInBits().getFixedValue();
+
+  if (OffsetInBits >= elementStart && OffsetInBits < elementStart + elementSize)
+    return candidate;
+
+  return nullptr;
+}
   static bool classof(const Type *T) {
     return T->getKind() == TypeKind::Struct;
   }
@@ -371,7 +379,7 @@ public:
 
 // Union metadata to preserve original field information
 struct UnionMetadata {
-  SmallVector<FieldInfo, 16> OriginalFields;
+  ArrayRef<FieldInfo> OriginalFields;
   TypeSize OriginalSize;
   Align OriginalAlignment;
 
@@ -404,6 +412,17 @@ public:
     return new (Allocator.Allocate<IntegerType>()) IntegerType(
         BitWidth, Align, Signed, IsBoolean, IsBitInt, IsPromotable, InMemory);
   }
+const UnionMetadata* createUnionMetadata(ArrayRef<FieldInfo> Fields,
+                                        TypeSize Size, Align Align) {
+  FieldInfo *FieldArray = Allocator.Allocate<FieldInfo>(Fields.size());
+  std::copy(Fields.begin(), Fields.end(), FieldArray);
+
+  ArrayRef<FieldInfo> FieldsRef(FieldArray, Fields.size());
+
+  return new (Allocator.Allocate<UnionMetadata>())
+      UnionMetadata(FieldsRef, Size, Align);
+}
+
 
   const FloatType *getFloatType(const fltSemantics &Semantics, Align Align) {
     return new (Allocator.Allocate<FloatType>()) FloatType(Semantics, Align);

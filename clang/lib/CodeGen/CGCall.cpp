@@ -1054,18 +1054,13 @@ const CGFunctionInfo &CodeGenTypes::arrangeLLVMFunctionInfo(
   // Construct the function info.  We co-allocate the ArgInfos.
   FI = CGFunctionInfo::create(CC, isInstanceMethod, isChainCall, isDelegateCall,
                               info, paramInfos, resultType, argTypes, required);
-std::unique_ptr<llvm::abi::ABIFunctionInfo> tempFI;
+
+  std::unique_ptr<llvm::abi::ABIFunctionInfo> tempFI;
 
   bool inserted = FunctionsBeingProcessed.insert(FI).second;
   (void)inserted;
   assert(inserted && "Recursively being processed?");
 
-  bool isBPF = CGM.getTriple().isBPF();
-  const llvm::Triple &Triple = getTarget().getTriple();
-  bool isSysV =
-      Triple.getArch() == llvm::Triple::x86_64 &&
-      (CC == llvm::CallingConv::X86_64_SysV || CC == llvm::CallingConv::C) &&
-      (Triple.isOSLinux() || Triple.isOSGlibc());
 
   // Compute ABI information.
   if (CC == llvm::CallingConv::SPIR_KERNEL) {
@@ -1075,35 +1070,24 @@ std::unique_ptr<llvm::abi::ABIFunctionInfo> tempFI;
   } else if (info.getCC() == CC_Swift || info.getCC() == CC_SwiftAsync) {
     swiftcall::computeABIInfo(CGM, *FI);
   } else {
-    if (isBPF || isSysV) {
-  SmallVector<const llvm::abi::Type *, 8> MappedArgTypes;
-  for (CanQualType ArgType : argTypes)
-    MappedArgTypes.push_back(Mapper.convertType(ArgType));
-  tempFI.reset(llvm::abi::ABIFunctionInfo::create(
-      CC, Mapper.convertType(resultType), MappedArgTypes));
-  FunctionInfos.InsertNode(FI, insertPos);
+    if (CGM.shouldUseLLVMABI()) {
+      SmallVector<const llvm::abi::Type *, 8> MappedArgTypes;
+      for (CanQualType ArgType : argTypes)
+        MappedArgTypes.push_back(Mapper.convertType(ArgType));
+      tempFI.reset(llvm::abi::ABIFunctionInfo::create(
+          CC, Mapper.convertType(resultType), MappedArgTypes));
+      FunctionInfos.InsertNode(FI, insertPos);
+
       CGM.fetchABIInfo(TB).computeInfo(*tempFI);
-    } else {
+    } else 
       CGM.getABIInfo().computeInfo(*FI);
-    }
   }
 
-  // Non-BPF/SysV path: handle coerce types for direct/extend cases
-  ABIArgInfo &retInfo = FI->getReturnInfo();
-  if (retInfo.canHaveCoerceToType() && retInfo.getCoerceToType() == nullptr) {
-    retInfo.setCoerceToType(ConvertType(FI->getReturnType()));
-  }
-
-  for (auto &I : FI->arguments()) {
-    if (I.info.canHaveCoerceToType() && I.info.getCoerceToType() == nullptr) {
-      I.info.setCoerceToType(ConvertType(I.type));
-    }
-  }
 
   // Loop over all of the computed argument and return value info.  If any of
   // them are direct or extend without a specified coerce type, specify the
   // default now.
-  if ((isBPF || isSysV) && tempFI) {
+  if (CGM.shouldUseLLVMABI() && tempFI) {
 
     const auto &abiRetInfo = tempFI->getReturnInfo();
     ABIArgInfo &cgRetInfo = FI->getReturnInfo();
@@ -1128,14 +1112,12 @@ std::unique_ptr<llvm::abi::ABIFunctionInfo> tempFI;
   } else {
     // Non-BPF/SysV path: handle coerce types for direct/extend cases
     ABIArgInfo &retInfo = FI->getReturnInfo();
-    if (retInfo.canHaveCoerceToType() && retInfo.getCoerceToType() == nullptr) {
+    if (retInfo.canHaveCoerceToType() && retInfo.getCoerceToType() == nullptr)
       retInfo.setCoerceToType(ConvertType(FI->getReturnType()));
-    }
 
     for (auto &I : FI->arguments()) {
-      if (I.info.canHaveCoerceToType() && I.info.getCoerceToType() == nullptr) {
+      if (I.info.canHaveCoerceToType() && I.info.getCoerceToType() == nullptr)
         I.info.setCoerceToType(ConvertType(I.type));
-      }
     }
   }
   bool erased = FunctionsBeingProcessed.erase(FI);

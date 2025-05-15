@@ -348,6 +348,7 @@ public:
   typedef std::vector<Structor> CtorList;
 
 private:
+  bool ShouldUseLLVMABI;
   ASTContext &Context;
   const LangOptions &LangOpts;
   IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS; // Only used for debug info.
@@ -697,7 +698,7 @@ public:
                 CoverageSourceInfo *CoverageInfo = nullptr);
 
   ~CodeGenModule();
-
+  bool shouldUseLLVMABI() const { return ShouldUseLLVMABI; }
   void clear();
 
   /// Finalize LLVM code generation.

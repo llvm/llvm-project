@@ -44,11 +44,10 @@ const llvm::abi::Type *QualTypeMapper::convertType(QualType QT, bool InMemory) {
   // Canonicalize type and strip qualifiers
   // This ensures consistent type representation across different contexts
   QT = QT.getCanonicalType().getUnqualifiedType();
-  ABICacheKey CacheKey(QT, InMemory);
 
   // Results are cached since type conversion may be expensive
-  auto It = TypeCache.find(CacheKey);
-  if (It != TypeCache.end())
+  auto It = TypeCache.find(QT);
+  if (It != TypeCache.end() && !QT->isBooleanType())
     return It->second;
 
   const llvm::abi::Type *Result = nullptr;
@@ -100,8 +99,7 @@ const llvm::abi::Type *QualTypeMapper::convertType(QualType QT, bool InMemory) {
   } else
     QT.dump();
 
-  if (Result)
-    TypeCache[CacheKey] = Result;
+  TypeCache[QT] = Result;
   return Result;
 }
 
@@ -310,7 +308,7 @@ const llvm::abi::Type *QualTypeMapper::convertRecordType(const RecordType *RT) {
   bool canPassInRegs = false;
   bool hasFlexibleArrMember = false;
   if (RD) {
-    canPassInRegs = RT->getOriginalDecl()->canPassInRegisters();
+    canPassInRegs = RD->canPassInRegisters();
     hasFlexibleArrMember = RD->hasFlexibleArrayMember();
   }
   if (!RD) {
@@ -500,8 +498,7 @@ QualTypeMapper::convertUnionType(const clang::RecordDecl *RD,
       llvm::TypeSize::getFixed(Layout.getSize().getQuantity() * 8);
   llvm::Align Alignment = llvm::Align(Layout.getAlignment().getQuantity());
 
-  auto *UnionMeta = new llvm::abi::UnionMetadata(AllFields, Size, Alignment);
-
+auto *UnionMeta = Builder.createUnionMetadata(AllFields, Size, Alignment);
   const llvm::abi::Type *StorageType = nullptr;
   bool SeenNamedMember = false;
 

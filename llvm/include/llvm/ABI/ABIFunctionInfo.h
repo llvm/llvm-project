@@ -359,10 +359,8 @@ private:
 public:
   typedef const ArgInfo *const_arg_iterator;
   typedef ArgInfo *arg_iterator;
-  void operator delete(void *p) {
-    ::operator delete(p);
-  }
 
+  void operator delete(void *p) { ::operator delete(p); }
   const_arg_iterator arg_begin() const { return getTrailingObjects(); }
   const_arg_iterator arg_end() const { return getTrailingObjects() + NumArgs; }
   arg_iterator arg_begin() { return getTrailingObjects(); }

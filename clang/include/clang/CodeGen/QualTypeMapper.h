@@ -28,28 +28,12 @@
 namespace clang {
 namespace CodeGen {
 
-struct ABICacheKey {
-  QualType Type;
-  bool InMemory;
-
-  ABICacheKey() = default;
-
-  ABICacheKey(QualType QT, bool InMem = false)
-      : Type(QT.getCanonicalType().getUnqualifiedType()), InMemory(InMem) {}
-
-  bool operator==(const ABICacheKey &Other) const {
-    return Type == Other.Type && InMemory == Other.InMemory;
-  }
-
-  bool operator!=(const ABICacheKey &Other) const { return !(*this == Other); }
-};
-
 class QualTypeMapper {
 private:
   clang::ASTContext &ASTCtx;
   llvm::abi::TypeBuilder Builder;
 
-  llvm::DenseMap<ABICacheKey, const llvm::abi::Type *> TypeCache;
+  llvm::DenseMap<clang::QualType, const llvm::abi::Type *> TypeCache;
 
   const llvm::abi::Type *convertBuiltinType(const clang::BuiltinType *BT,
                                             bool InMemory = false);
@@ -94,33 +78,5 @@ public:
 
 } // namespace CodeGen
 } // namespace clang
-namespace llvm {
-template <> struct DenseMapInfo<clang::CodeGen::ABICacheKey> {
-  static clang::CodeGen::ABICacheKey getEmptyKey() {
-    clang::CodeGen::ABICacheKey k;
-    k.Type = DenseMapInfo<clang::QualType>::getEmptyKey();
-    k.InMemory = false;
-    return k;
-  }
-
-  static clang::CodeGen::ABICacheKey getTombstoneKey() {
-    clang::CodeGen::ABICacheKey k;
-    k.Type = DenseMapInfo<clang::QualType>::getTombstoneKey();
-    k.InMemory = true;
-    return k;
-  }
-
-  static unsigned getHashValue(const clang::CodeGen::ABICacheKey &Key) {
-    unsigned TypeHash = (unsigned)((uintptr_t)Key.Type.getAsOpaquePtr()) ^
-                        ((unsigned)((uintptr_t)Key.Type.getAsOpaquePtr() >> 9));
-    return hash_combine(TypeHash, hash_value(Key.InMemory));
-  }
-
-  static bool isEqual(const clang::CodeGen::ABICacheKey &LHS,
-                      const clang::CodeGen::ABICacheKey &RHS) {
-    return LHS.Type == RHS.Type && LHS.InMemory == RHS.InMemory;
-  }
-};
-} // namespace llvm
 
 #endif // CLANG_CODEGEN_QUALTYPE_MAPPER_H

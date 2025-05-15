@@ -470,6 +470,12 @@ CodeGenModule::CodeGenModule(ASTContext &C,
       SanitizerMD(new SanitizerMetadata(*this)),
       AtomicOpts(Target.getAtomicOpts()) {
 
+
+  // Flag to use the new LLVM ABI Library :)
+  const llvm::Triple &Triple = Target.getTriple();
+  ShouldUseLLVMABI = Triple.isBPF() || 
+                    (Triple.getArch() == llvm::Triple::x86_64 && 
+                     Triple.isOSLinux());
   // Initialize the type cache.
   Types.reset(new CodeGenTypes(*this));
   llvm::LLVMContext &LLVMContext = M.getContext();
