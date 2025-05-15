@@ -140,7 +140,8 @@ void CIRCanonicalizePass::runOnOperation() {
     assert(!cir::MissingFeatures::callOp());
     // CastOp, UnaryOp and VecExtractOp are here to perform a manual `fold` in
     // applyOpPatternsGreedily.
-    if (isa<BrOp, BrCondOp, CastOp, ScopeOp, SwitchOp, SelectOp, UnaryOp, VecExtractOp>(op))
+    if (isa<BrOp, BrCondOp, CastOp, ScopeOp, SwitchOp, SelectOp, UnaryOp,
+            VecExtractOp>(op))
       ops.push_back(op);
   });
 
