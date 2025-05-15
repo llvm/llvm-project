@@ -170,6 +170,12 @@ MDNode *MetadataBuilder::BuildRootSignature() {
       ElementMD = BuildDescriptorTableClause(*Clause);
     if (const auto &Table = std::get_if<DescriptorTable>(&Element))
       ElementMD = BuildDescriptorTable(*Table);
+
+    // FIXME(#126586): remove once all RootElemnt variants are handled in a
+    // visit or otherwise
+    assert(ElementMD != nullptr &&
+           "Constructed an unhandled root element type.");
+
     GeneratedMetadata.push_back(ElementMD);
   }
 
