@@ -1526,6 +1526,14 @@ def HasVendorXAndesVPackFPH
       AssemblerPredicate<(all_of FeatureVendorXAndesVPackFPH),
                          "'XAndesVPackFPH' (Andes Vector Packed FP16 Extension)">;
 
+def FeatureVendorXAndesVDot
+    : RISCVExtension<5, 0, "Andes Vector Dot Product Extension",
+                     [FeatureStdExtZve32x]>;
+def HasVendorXAndesVDot
+    : Predicate<"Subtarget->hasVendorXAndesVDot()">,
+      AssemblerPredicate<(all_of FeatureVendorXAndesVDot),
+                         "'XAndesVDot' (Andes Vector Dot Product Extension)">;
+
 //===----------------------------------------------------------------------===//
 // LLVM specific features and extensions
 //===----------------------------------------------------------------------===//

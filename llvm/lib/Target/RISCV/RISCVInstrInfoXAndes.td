@@ -338,6 +338,29 @@ class NDSRVInstVFPMAD<bits<6> funct6, string opcodestr>
   let RVVConstraint = VMConstraint;
 }
 
+class NDSRVInstVD4DOT<bits<6> funct6, string opcodestr>
+    : RVInst<(outs VR:$vd), (ins VR:$vs1, VR:$vs2, VMaskOp:$vm),
+             opcodestr # "." # "vv", "$vd, $vs1, $vs2$vm", [], InstFormatR>,
+      SchedBinaryMC<"WriteVIMulAddV", "ReadVIMulAddV", "ReadVIMulAddV"> {
+  bits<5> vs2;
+  bits<5> vs1;
+  bits<5> vd;
+  bit vm;
+
+  let Inst{31-26} = funct6;
+  let Inst{25} = vm;
+  let Inst{24-20} = vs2;
+  let Inst{19-15} = vs1;
+  let Inst{14-12} = 0b100;
+  let Inst{11-7} = vd;
+  let Inst{6-0} = OPC_CUSTOM_2.Value;
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 0;
+
+  let RVVConstraint = VMConstraint;
+}
+
 //===----------------------------------------------------------------------===//
 // XAndesPerf
 //===----------------------------------------------------------------------===//
@@ -397,6 +420,16 @@ let Predicates = [HasVendorXAndesVPackFPH],
     Uses = [FRM, VL, VTYPE], mayRaiseFPException = true in {
 def NDS_VFPMADT_VF : NDSRVInstVFPMAD<0b000010, "nds.vfpmadt">;
 def NDS_VFPMADB_VF : NDSRVInstVFPMAD<0b000011, "nds.vfpmadb">;
+}
+
+//===----------------------------------------------------------------------===//
+// XAndesVDot
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasVendorXAndesVDot], Uses = [VL, VTYPE] in {
+def NDS_VD4DOTS_VV  : NDSRVInstVD4DOT<0b000100, "nds.vd4dots">;
+def NDS_VD4DOTU_VV  : NDSRVInstVD4DOT<0b000111, "nds.vd4dotu">;
+def NDS_VD4DOTSU_VV : NDSRVInstVD4DOT<0b000101, "nds.vd4dotsu">;
 }
 } // DecoderNamespace = "XAndes"
 
