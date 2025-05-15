@@ -360,6 +360,13 @@ class Sema;
     LLVM_PREFERRED_TYPE(bool)
     unsigned ObjCLifetimeConversionBinding : 1;
 
+    /// Whether the source expression was originally a single element
+    /// braced-init-list. Such a conversion is not a perfect match,
+    /// as we prefer a std::initializer_list constructor over an exact match
+    /// constructor.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned FromBracedInitList : 1;
+
     /// FromType - The type that this conversion is converting
     /// from. This is an opaque pointer that can be translated into a
     /// QualType.
@@ -412,13 +419,25 @@ class Sema;
     bool isPerfect(const ASTContext &C) const {
       if (!isIdentityConversion())
         return false;
+
+      // We might prefer a std::initializer_list constructor,
+      // so this sequence cannot be perfect
+      if (FromBracedInitList)
+        return false;
+
       // If we are not performing a reference binding, we can skip comparing
       // the types, which has a noticeable performance impact.
       if (!ReferenceBinding) {
 #ifndef NDEBUG
         auto Decay = [&](QualType T) {
-          return (T->isArrayType() || T->isFunctionType()) ? C.getDecayedType(T)
-                                                           : T;
+          if (T->isArrayType() || T->isFunctionType())
+            T = C.getDecayedType(T);
+
+          // A function pointer type can be resolved to a member function type,
+          // which is still an identity conversion.
+          if (auto *N = T->getAs<MemberPointerType>())
+            T = C.getDecayedType(N->getPointeeType());
+          return T;
         };
         // The types might differ if there is an array-to-pointer conversion
         // an function-to-pointer conversion, or lvalue-to-rvalue conversion.

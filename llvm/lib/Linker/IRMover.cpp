@@ -1640,6 +1640,8 @@ Error IRLinker::run() {
     if (GV.hasAppendingLinkage())
       continue;
     Value *NewValue = Mapper.mapValue(GV);
+    if (FoundError)
+      return std::move(*FoundError);
     if (NewValue) {
       auto *NewGV = dyn_cast<GlobalVariable>(NewValue->stripPointerCasts());
       if (NewGV) {
@@ -1753,7 +1755,5 @@ Error IRMover::move(std::unique_ptr<Module> Src,
   IRLinker TheIRLinker(Composite, SharedMDs, IdentifiedStructTypes,
                        std::move(Src), ValuesToLink, std::move(AddLazyFor),
                        IsPerformingImport);
-  Error E = TheIRLinker.run();
-  Composite.dropTriviallyDeadConstantArrays();
-  return E;
+  return TheIRLinker.run();
 }

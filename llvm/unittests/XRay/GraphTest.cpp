@@ -85,8 +85,6 @@ template <typename T> void graphVertexTester(T &G) {
 }
 
 template <typename T> void graphEdgeTester(T &G) {
-  std::set<unsigned> V({1u, 2u, 3u, 4u, 5u, 6u});
-
   std::set<std::pair<unsigned, unsigned>> E(
       {{1u, 2u}, {2u, 3u}, {6u, 3u}, {4u, 6u}, {2u, 4u}, {2u, 5u}, {4u, 5u}});
   std::vector<unsigned> VA({0u, 3u, 5u, 7u, 11u, 13u, 17u});

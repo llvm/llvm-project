@@ -1087,37 +1087,6 @@ SDValue LanaiTargetLowering::LowerFRAMEADDR(SDValue Op,
   return FrameAddr;
 }
 
-const char *LanaiTargetLowering::getTargetNodeName(unsigned Opcode) const {
-  switch (Opcode) {
-  case LanaiISD::ADJDYNALLOC:
-    return "LanaiISD::ADJDYNALLOC";
-  case LanaiISD::RET_GLUE:
-    return "LanaiISD::RET_GLUE";
-  case LanaiISD::CALL:
-    return "LanaiISD::CALL";
-  case LanaiISD::SELECT_CC:
-    return "LanaiISD::SELECT_CC";
-  case LanaiISD::SETCC:
-    return "LanaiISD::SETCC";
-  case LanaiISD::SUBBF:
-    return "LanaiISD::SUBBF";
-  case LanaiISD::SET_FLAG:
-    return "LanaiISD::SET_FLAG";
-  case LanaiISD::BR_CC:
-    return "LanaiISD::BR_CC";
-  case LanaiISD::Wrapper:
-    return "LanaiISD::Wrapper";
-  case LanaiISD::HI:
-    return "LanaiISD::HI";
-  case LanaiISD::LO:
-    return "LanaiISD::LO";
-  case LanaiISD::SMALL:
-    return "LanaiISD::SMALL";
-  default:
-    return nullptr;
-  }
-}
-
 SDValue LanaiTargetLowering::LowerConstantPool(SDValue Op,
                                                SelectionDAG &DAG) const {
   SDLoc DL(Op);

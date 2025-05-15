@@ -258,6 +258,15 @@ LogicalResult StridedLayoutAttr::verifyLayout(
   return success();
 }
 
+LogicalResult
+StridedLayoutAttr::getStridesAndOffset(ArrayRef<int64_t>,
+                                       SmallVectorImpl<int64_t> &strides,
+                                       int64_t &offset) const {
+  llvm::append_range(strides, getStrides());
+  offset = getOffset();
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // StringAttr
 //===----------------------------------------------------------------------===//

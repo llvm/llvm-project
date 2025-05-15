@@ -12,22 +12,22 @@ define ptx_kernel void @wombat(i32 %arg, i32 %arg1, i32 %arg2) {
 ; CHECK-NEXT:    .reg .b64 %fd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %bb
-; CHECK-NEXT:    ld.param.u32 %r4, [wombat_param_2];
-; CHECK-NEXT:    ld.param.u32 %r3, [wombat_param_1];
-; CHECK-NEXT:    ld.param.u32 %r2, [wombat_param_0];
+; CHECK-NEXT:    ld.param.b32 %r4, [wombat_param_2];
+; CHECK-NEXT:    ld.param.b32 %r3, [wombat_param_1];
+; CHECK-NEXT:    ld.param.b32 %r2, [wombat_param_0];
 ; CHECK-NEXT:    mov.b32 %r10, 0;
 ; CHECK-NEXT:  $L__BB0_1: // %bb3
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    { // callseq 0, 0
 ; CHECK-NEXT:    .param .b64 param0;
-; CHECK-NEXT:    st.param.f64 [param0], 0d0000000000000000;
+; CHECK-NEXT:    st.param.b64 [param0], 0d0000000000000000;
 ; CHECK-NEXT:    .param .b64 retval0;
 ; CHECK-NEXT:    call.uni (retval0),
 ; CHECK-NEXT:    quux,
 ; CHECK-NEXT:    (
 ; CHECK-NEXT:    param0
 ; CHECK-NEXT:    );
-; CHECK-NEXT:    ld.param.f64 %fd1, [retval0];
+; CHECK-NEXT:    ld.param.b64 %fd1, [retval0];
 ; CHECK-NEXT:    } // callseq 0
 ; CHECK-NEXT:    mul.lo.s32 %r7, %r10, %r3;
 ; CHECK-NEXT:    or.b32 %r8, %r4, %r7;
@@ -36,7 +36,7 @@ define ptx_kernel void @wombat(i32 %arg, i32 %arg1, i32 %arg2) {
 ; CHECK-NEXT:    cvt.rn.f64.u32 %fd4, %r10;
 ; CHECK-NEXT:    add.rn.f64 %fd5, %fd4, %fd3;
 ; CHECK-NEXT:    mov.b64 %rd1, 0;
-; CHECK-NEXT:    st.global.f64 [%rd1], %fd5;
+; CHECK-NEXT:    st.global.b64 [%rd1], %fd5;
 ; CHECK-NEXT:    mov.b32 %r10, 1;
 ; CHECK-NEXT:    bra.uni $L__BB0_1;
 bb:

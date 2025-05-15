@@ -267,7 +267,7 @@ namespace {
 class BufferFatPtrTypeLoweringBase : public ValueMapTypeRemapper {
   DenseMap<Type *, Type *> Map;
 
-  Type *remapTypeImpl(Type *Ty, SmallPtrSetImpl<StructType *> &Seen);
+  Type *remapTypeImpl(Type *Ty);
 
 protected:
   virtual Type *remapScalar(PointerType *PT) = 0;
@@ -305,8 +305,7 @@ protected:
 } // namespace
 
 // This code is adapted from the type remapper in lib/Linker/IRMover.cpp
-Type *BufferFatPtrTypeLoweringBase::remapTypeImpl(
-    Type *Ty, SmallPtrSetImpl<StructType *> &Seen) {
+Type *BufferFatPtrTypeLoweringBase::remapTypeImpl(Type *Ty) {
   Type **Entry = &Map[Ty];
   if (*Entry)
     return *Entry;
@@ -331,18 +330,11 @@ Type *BufferFatPtrTypeLoweringBase::remapTypeImpl(
   // require recursion.
   if (Ty->getNumContainedTypes() == 0 && IsUniqued)
     return *Entry = Ty;
-  if (!IsUniqued) {
-    // Create a dummy type for recursion purposes.
-    if (!Seen.insert(TyAsStruct).second) {
-      StructType *Placeholder = StructType::create(Ty->getContext());
-      return *Entry = Placeholder;
-    }
-  }
   bool Changed = false;
   SmallVector<Type *> ElementTypes(Ty->getNumContainedTypes(), nullptr);
   for (unsigned int I = 0, E = Ty->getNumContainedTypes(); I < E; ++I) {
     Type *OldElem = Ty->getContainedType(I);
-    Type *NewElem = remapTypeImpl(OldElem, Seen);
+    Type *NewElem = remapTypeImpl(OldElem);
     ElementTypes[I] = NewElem;
     Changed |= (OldElem != NewElem);
   }
@@ -366,13 +358,6 @@ Type *BufferFatPtrTypeLoweringBase::remapTypeImpl(
       return *Entry = StructType::get(Ty->getContext(), ElementTypes, IsPacked);
     SmallString<16> Name(STy->getName());
     STy->setName("");
-    Type **RecursionEntry = &Map[Ty];
-    if (*RecursionEntry) {
-      auto *Placeholder = cast<StructType>(*RecursionEntry);
-      Placeholder->setBody(ElementTypes, IsPacked);
-      Placeholder->setName(Name);
-      return *Entry = Placeholder;
-    }
     return *Entry = StructType::create(Ty->getContext(), ElementTypes, Name,
                                        IsPacked);
   }
@@ -380,8 +365,7 @@ Type *BufferFatPtrTypeLoweringBase::remapTypeImpl(
 }
 
 Type *BufferFatPtrTypeLoweringBase::remapType(Type *SrcTy) {
-  SmallPtrSet<StructType *, 2> Visited;
-  return remapTypeImpl(SrcTy, Visited);
+  return remapTypeImpl(SrcTy);
 }
 
 Type *BufferFatPtrToStructTypeMap::remapScalar(PointerType *PT) {
@@ -1762,6 +1746,16 @@ Value *SplitPtrStructs::handleMemoryInst(Instruction *I, Value *Arg, Value *Ptr,
       break;
     case AtomicRMWInst::FSub: {
       report_fatal_error("atomic floating point subtraction not supported for "
+                         "buffer resources and should've been expanded away");
+      break;
+    }
+    case AtomicRMWInst::FMaximum: {
+      report_fatal_error("atomic floating point fmaximum not supported for "
+                         "buffer resources and should've been expanded away");
+      break;
+    }
+    case AtomicRMWInst::FMinimum: {
+      report_fatal_error("atomic floating point fminimum not supported for "
                          "buffer resources and should've been expanded away");
       break;
     }

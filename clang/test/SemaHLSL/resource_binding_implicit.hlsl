@@ -14,9 +14,8 @@ RWBuffer<int> c;
 // No warning - explicit binding.
 RWBuffer<float> d : register(u0);
 
-// TODO: Add this test once #135287 lands
-// TODO: ... @+1 {{resource has implicit register binding}}
-// TODO: RWBuffer<float> dd : register(space1);
+// expected-warning@+1 {{resource has implicit register binding}}
+RWBuffer<float> dd : register(space1);
 
 // No warning - explicit binding.
 RWBuffer<float> ddd : register(u3, space4);

@@ -251,22 +251,6 @@ void cleanupAfterFunctionCall(InterpState &S, CodePtr OpPC,
   assert(S.Current);
   assert(Func);
 
-  if (Func->isUnevaluatedBuiltin())
-    return;
-
-  // Some builtin functions require us to only look at the call site, since
-  // the classified parameter types do not match.
-  if (unsigned BID = Func->getBuiltinID();
-      BID && S.getASTContext().BuiltinInfo.hasCustomTypechecking(BID)) {
-    const auto *CE =
-        cast<CallExpr>(S.Current->Caller->getExpr(S.Current->getRetPC()));
-    for (int32_t I = CE->getNumArgs() - 1; I >= 0; --I) {
-      const Expr *A = CE->getArg(I);
-      popArg(S, A);
-    }
-    return;
-  }
-
   if (S.Current->Caller && Func->isVariadic()) {
     // CallExpr we're look for is at the return PC of the current function, i.e.
     // in the caller.
@@ -321,8 +305,11 @@ bool CheckBCPResult(InterpState &S, const Pointer &Ptr) {
   if (Ptr.isTypeidPointer())
     return true;
 
+  if (Ptr.getType()->isAnyComplexType())
+    return true;
+
   if (const Expr *Base = Ptr.getDeclDesc()->asExpr())
-    return isa<StringLiteral>(Base);
+    return isa<StringLiteral>(Base) && Ptr.getIndex() == 0;
   return false;
 }
 
@@ -847,6 +834,12 @@ bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
     return false;
   }
 
+  // Bail out if the function declaration itself is invalid.  We will
+  // have produced a relevant diagnostic while parsing it, so just
+  // note the problematic sub-expression.
+  if (F->getDecl()->isInvalidDecl())
+    return Invalid(S, OpPC);
+
   if (S.checkingPotentialConstantExpression() && S.Current->getDepth() != 0)
     return false;
 
@@ -946,15 +939,6 @@ bool CheckThis(InterpState &S, CodePtr OpPC, const Pointer &This) {
   else
     S.FFDiag(Loc);
 
-  return false;
-}
-
-bool CheckPure(InterpState &S, CodePtr OpPC, const CXXMethodDecl *MD) {
-  if (!MD->isPureVirtual())
-    return true;
-  const SourceInfo &E = S.Current->getSource(OpPC);
-  S.FFDiag(E, diag::note_constexpr_pure_virtual_call, 1) << MD;
-  S.Note(MD->getLocation(), diag::note_declared_at);
   return false;
 }
 
@@ -1267,12 +1251,11 @@ bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm,
 
 void diagnoseEnumValue(InterpState &S, CodePtr OpPC, const EnumDecl *ED,
                        const APSInt &Value) {
-  llvm::APInt Min;
-  llvm::APInt Max;
-
   if (S.EvaluatingDecl && !S.EvaluatingDecl->isConstexpr())
     return;
 
+  llvm::APInt Min;
+  llvm::APInt Max;
   ED->getValueRange(Max, Min);
   --Max;
 
@@ -1349,7 +1332,7 @@ static bool getField(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
     return false;
   }
 
-  if (Off > Ptr.block()->getSize())
+  if ((Ptr.getByteOffset() + Off) >= Ptr.block()->getSize())
     return false;
 
   S.Stk.push<Pointer>(Ptr.atField(Off));
@@ -1388,6 +1371,13 @@ static bool checkConstructor(InterpState &S, CodePtr OpPC, const Function *Func,
 }
 
 bool CheckDestructor(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+  if (!CheckLive(S, OpPC, Ptr, AK_Destroy))
+    return false;
+  if (!CheckTemporary(S, OpPC, Ptr, AK_Destroy))
+    return false;
+  if (!CheckRange(S, OpPC, Ptr, AK_Destroy))
+    return false;
+
   // Can't call a dtor on a global variable.
   if (Ptr.block()->isStatic()) {
     const SourceInfo &E = S.Current->getSource(OpPC);
@@ -1515,7 +1505,7 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
   InterpFrame *FrameBefore = S.Current;
   S.Current = NewFrame.get();
 
-  InterpStateCCOverride CCOverride(S, Func->getDecl()->isImmediateFunction());
+  InterpStateCCOverride CCOverride(S, Func->isImmediate());
   // Note that we cannot assert(CallResult.hasValue()) here since
   // Ret() above only sets the APValue if the curent frame doesn't
   // have a caller set.
@@ -1620,30 +1610,15 @@ bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
   return true;
 }
 
-bool CallBI(InterpState &S, CodePtr OpPC, const Function *Func,
-            const CallExpr *CE, uint32_t BuiltinID) {
+bool CallBI(InterpState &S, CodePtr OpPC, const CallExpr *CE,
+            uint32_t BuiltinID) {
   // A little arbitrary, but the current interpreter allows evaluation
   // of builtin functions in this mode, with some exceptions.
   if (BuiltinID == Builtin::BI__builtin_operator_new &&
       S.checkingPotentialConstantExpression())
     return false;
-  auto NewFrame = std::make_unique<InterpFrame>(S, Func, OpPC);
 
-  InterpFrame *FrameBefore = S.Current;
-  S.Current = NewFrame.get();
-
-  if (InterpretBuiltin(S, OpPC, Func, CE, BuiltinID)) {
-    // Release ownership of NewFrame to prevent it from being deleted.
-    NewFrame.release(); // Frame was deleted already.
-    // Ensure that S.Current is correctly reset to the previous frame.
-    assert(S.Current == FrameBefore);
-    return true;
-  }
-
-  // Interpreting the function failed somehow. Reset to
-  // previous state.
-  S.Current = FrameBefore;
-  return false;
+  return InterpretBuiltin(S, OpPC, CE, BuiltinID);
 }
 
 bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,

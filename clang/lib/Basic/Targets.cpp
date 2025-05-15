@@ -774,9 +774,10 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
 using namespace clang::targets;
 /// CreateTargetInfo - Return the target info object for the specified target
 /// options.
-TargetInfo *
-TargetInfo::CreateTargetInfo(DiagnosticsEngine &Diags,
-                             const std::shared_ptr<TargetOptions> &Opts) {
+TargetInfo *TargetInfo::CreateTargetInfo(DiagnosticsEngine &Diags,
+                                         TargetOptions &OptsRef) {
+  TargetOptions *Opts = &OptsRef;
+
   llvm::Triple Triple(llvm::Triple::normalize(Opts->Triple));
 
   // Construct the target
