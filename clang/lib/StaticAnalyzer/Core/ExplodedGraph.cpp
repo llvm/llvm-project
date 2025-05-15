@@ -440,8 +440,7 @@ ExplodedNode *ExplodedGraph::createUncachedNode(const ProgramPoint &L,
 
 std::unique_ptr<ExplodedGraph>
 ExplodedGraph::trim(ArrayRef<const NodeTy *> Sinks,
-                    InterExplodedGraphMap *ForwardMap,
-                    InterExplodedGraphMap *InverseMap) const {
+                    InterExplodedGraphMap *NodeMap) const {
   if (Sinks.empty())
     return nullptr;
 
@@ -450,13 +449,13 @@ ExplodedGraph::trim(ArrayRef<const NodeTy *> Sinks,
   SmallVector<const ExplodedNode*, 32> Worklist{Sinks};
 
   InterExplodedGraphMap Scratch;
-  if (!ForwardMap)
-    ForwardMap = &Scratch;
+  if (!NodeMap)
+    NodeMap = &Scratch;
 
   while (!Worklist.empty()) {
     const ExplodedNode *N = Worklist.pop_back_val();
 
-    auto [Place, Inserted] = ForwardMap->try_emplace(N);
+    auto [Place, Inserted] = NodeMap->try_emplace(N);
 
     // Skip this node if we have already processed it.
     if (!Inserted)
@@ -468,9 +467,6 @@ ExplodedGraph::trim(ArrayRef<const NodeTy *> Sinks,
                                                N->getID(), N->isSink());
     Place->second = NewN;
 
-    // Also record the reverse mapping from the new node to the old node.
-    if (InverseMap) (*InverseMap)[NewN] = N;
-
     // If this is the root node, designate is as the root in the trimmed graph as well.
     if (N == getRoot())
       Trimmed->designateAsRoot(NewN);
@@ -479,7 +475,7 @@ ExplodedGraph::trim(ArrayRef<const NodeTy *> Sinks,
     // in the trimmed graph, then add the corresponding edges with
     // `addPredecessor()`, otherwise add them to the worklist.
     for (const ExplodedNode *Pred : N->Preds) {
-      if (const ExplodedNode *Mapped = ForwardMap->lookup(Pred))
+      if (const ExplodedNode *Mapped = NodeMap->lookup(Pred))
         NewN->addPredecessor(const_cast<ExplodedNode *>(Mapped), *Trimmed);
       else
         Worklist.push_back(Pred);
@@ -491,7 +487,7 @@ ExplodedGraph::trim(ArrayRef<const NodeTy *> Sinks,
     // worklist. Maybe we'll reach them through a different direction, maybe
     // they will be omitted from the trimmed graph.)
     for (const ExplodedNode *Succ : N->Succs)
-      if (const ExplodedNode *Mapped = ForwardMap->lookup(Succ))
+      if (const ExplodedNode *Mapped = NodeMap->lookup(Succ))
         const_cast<ExplodedNode *>(Mapped)->addPredecessor(NewN, *Trimmed);
   }
 

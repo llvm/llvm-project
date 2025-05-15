@@ -2639,8 +2639,8 @@ BugPathGetter::BugPathGetter(const ExplodedGraph *OriginalGraph,
 
   // The trimmed graph is created in the body of the constructor to ensure
   // that the DenseMaps have been initialized already.
-  InterExplodedGraphMap ForwardMap;
-  TrimmedGraph = OriginalGraph->trim(Nodes, &ForwardMap);
+  InterExplodedGraphMap NodeMap;
+  TrimmedGraph = OriginalGraph->trim(Nodes, &NodeMap);
 
   // Find the (first) error node in the trimmed graph.  We just need to consult
   // the node map which maps from nodes in the original graph to nodes
@@ -2648,7 +2648,7 @@ BugPathGetter::BugPathGetter(const ExplodedGraph *OriginalGraph,
   llvm::SmallPtrSet<const ExplodedNode *, 32> RemainingNodes;
 
   for (PathSensitiveBugReport *Report : bugReports) {
-    const ExplodedNode *NewNode = ForwardMap.lookup(Report->getErrorNode());
+    const ExplodedNode *NewNode = NodeMap.lookup(Report->getErrorNode());
     assert(NewNode &&
            "Failed to construct a trimmed graph that contains this error "
            "node!");

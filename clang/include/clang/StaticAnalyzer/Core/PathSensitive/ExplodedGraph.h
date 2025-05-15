@@ -413,15 +413,12 @@ public:
   ///
   /// \param Nodes The nodes which must appear in the final graph. Presumably
   ///              these are end-of-path nodes (i.e. they have no successors).
-  /// \param[out] ForwardMap An optional map from nodes in this graph to nodes
+  /// \param[out] NodeMap An optional map from nodes in this graph to nodes
   ///                        in the returned graph.
-  /// \param[out] InverseMap An optional map from nodes in the returned graph to
-  ///                        nodes in this graph.
   /// \returns The trimmed graph
   std::unique_ptr<ExplodedGraph>
   trim(ArrayRef<const NodeTy *> Nodes,
-       InterExplodedGraphMap *ForwardMap = nullptr,
-       InterExplodedGraphMap *InverseMap = nullptr) const;
+       InterExplodedGraphMap *NodeMap = nullptr) const;
 
   /// Enable tracking of recently allocated nodes for potential reclamation
   /// when calling reclaimRecentlyAllocatedNodes().
