@@ -1,6 +1,13 @@
 ; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve -o - %s | FileCheck %s --check-prefix=CHECK-ASM --strict-whitespace
+; RUN: llc -mtriple=arm64-apple-macosx -mattr=+sve -o - %s | FileCheck %s --check-prefix=CHECK-ASM-NON-ELF-TARGET
 ; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve -filetype=obj -o - %s \
 ; RUN:   | llvm-readobj --symbols - | FileCheck %s --check-prefix=CHECK-OBJ
+; RUN: llc -mtriple=arm64-apple-macosx -mattr=+sve -filetype=obj -o - %s \
+; RUN:   | llvm-readobj --symbols - | FileCheck %s --check-prefix=CHECK-OBJ-NON-ELF-TARGET
+
+; .variant_pcs directive should only be emitted for ELF targets.
+; CHECK-ASM-NON-ELF-TARGET-NOT: .variant_pcs
+; CHECK-OBJ-NON-ELF-TARGET-NOT: Other [ (0x80)
 
 define i32 @base_pcs() {
 ; CHECK-ASM-LABEL: base_pcs:
