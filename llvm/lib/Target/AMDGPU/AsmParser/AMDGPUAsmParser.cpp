@@ -523,6 +523,10 @@ public:
 #if LLPC_BUILD_NPI
   bool isSCSrc_bf16() const {
     return isRegOrInlineNoMods(AMDGPU::SReg_32RegClassID, MVT::bf16);
+  }
+
+  bool isSCSrc_f16() const {
+    return isRegOrInlineNoMods(AMDGPU::SReg_32RegClassID, MVT::f16);
 #else /* LLPC_BUILD_NPI */
   bool isSCSrcV2B16() const {
     return isSCSrcB16();
@@ -530,10 +534,6 @@ public:
   }
 
 #if LLPC_BUILD_NPI
-  bool isSCSrc_f16() const {
-    return isRegOrInlineNoMods(AMDGPU::SReg_32RegClassID, MVT::f16);
-  }
-
   bool isSCSrcV2B16() const { return isSCSrc_b16(); }
 
 #endif /* LLPC_BUILD_NPI */
@@ -5774,6 +5774,9 @@ bool AMDGPUAsmParser::validateVGPRAlign(const MCInst &Inst) const {
 
 #endif /* LLPC_BUILD_NPI */
   unsigned Opc = Inst.getOpcode();
+#if LLPC_BUILD_NPI
+  const MCRegisterInfo *MRI = getMRI();
+#endif /* LLPC_BUILD_NPI */
   // DS_READ_B96_TR_B6 is the only DS instruction in GFX950, that allows
   // unaligned VGPR. All others only allow even aligned VGPRs.
 #if LLPC_BUILD_NPI
@@ -5783,7 +5786,38 @@ bool AMDGPUAsmParser::validateVGPRAlign(const MCInst &Inst) const {
 #endif /* LLPC_BUILD_NPI */
     return true;
 
+#if LLPC_BUILD_NPI
+  if (FB[AMDGPU::FeatureGFX1250Insts]) {
+    switch (Opc) {
+    default:
+      break;
+    case AMDGPU::DS_LOAD_TR6_B96:
+    case AMDGPU::DS_LOAD_TR6_B96_gfx12:
+      // DS_LOAD_TR6_B96 is the only DS instruction in GFX1250, that
+      // allows unaligned VGPR. All others only allow even aligned VGPRs.
+      return true;
+    case AMDGPU::GLOBAL_LOAD_TR6_B96:
+    case AMDGPU::GLOBAL_LOAD_TR6_B96_SADDR:
+    case AMDGPU::GLOBAL_LOAD_TR6_B96_SADDR_gfx1250:
+    case AMDGPU::GLOBAL_LOAD_TR6_B96_gfx1250: {
+      // GLOBAL_LOAD_TR6_B96 is the only GLOBAL instruction in GFX1250, that
+      // allows unaligned VGPR for vdst, but other operands still only allow
+      // even aligned VGPRs.
+      int VAddrIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vaddr);
+      if (VAddrIdx != -1) {
+        const MCOperand &Op = Inst.getOperand(VAddrIdx);
+        MCRegister Sub = MRI->getSubReg(Op.getReg(), AMDGPU::sub0);
+        if ((Sub - AMDGPU::VGPR0) & 1)
+          return false;
+      }
+      return true;
+    }
+    }
+  }
+
+#else /* LLPC_BUILD_NPI */
   const MCRegisterInfo *MRI = getMRI();
+#endif /* LLPC_BUILD_NPI */
   const MCRegisterClass &VGPR32 = MRI->getRegClass(AMDGPU::VGPR_32RegClassID);
   const MCRegisterClass &AGPR32 = MRI->getRegClass(AMDGPU::AGPR_32RegClassID);
   for (unsigned I = 0, E = Inst.getNumOperands(); I != E; ++I) {
