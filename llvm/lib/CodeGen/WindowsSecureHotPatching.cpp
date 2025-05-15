@@ -124,10 +124,6 @@ private:
   bool
   runOnFunction(Function &F,
                 SmallDenseMap<GlobalVariable *, GlobalVariable *> &RefMapping);
-  void replaceGlobalVariableUses(
-      Function &F, SmallVectorImpl<GlobalVariableUse> &GVUses,
-      SmallDenseMap<GlobalVariable *, GlobalVariable *> &RefMapping,
-      DIBuilder &DebugInfo);
 };
 
 } // end anonymous namespace
@@ -213,7 +209,7 @@ bool WindowsSecureHotPatching::runOnModule(Module &M) {
 // (mutable) global variables through a pointer. This pointer may point into the
 // unpatched ("base") binary or may point into the patched image, depending on
 // whether a hot-patch was loaded as a patch or as a base image.  These
-// indirections go through a new global variable, `named __ref_<Foo>` where
+// indirections go through a new global variable, named `__ref_<Foo>` where
 // `<Foo>` is the original symbol name of the global variable.
 //
 // This function handles rewriting accesses to global variables, but the
@@ -237,28 +233,19 @@ bool WindowsSecureHotPatching::runOnFunction(
     }
   }
 
-  if (!GVUses.empty()) {
-    const llvm::DISubprogram *Subprogram = F.getSubprogram();
-    DIBuilder DebugInfo{*F.getParent(), true,
-                        Subprogram != nullptr ? Subprogram->getUnit()
-                                              : nullptr};
-    replaceGlobalVariableUses(F, GVUses, RefMapping, DebugInfo);
-    if (Subprogram != nullptr)
-      DebugInfo.finalize();
-    return true;
-  } else {
+  if (GVUses.empty())
     return false;
-  }
-}
 
-void WindowsSecureHotPatching::replaceGlobalVariableUses(
-    Function &F, SmallVectorImpl<GlobalVariableUse> &GVUses,
-    SmallDenseMap<GlobalVariable *, GlobalVariable *> &RefMapping,
-    DIBuilder &DebugInfo) {
+  const llvm::DISubprogram *Subprogram = F.getSubprogram();
+  llvm::DICompileUnit *Unit =
+      Subprogram != nullptr ? Subprogram->getUnit() : nullptr;
+  llvm::DIFile *File = Subprogram != nullptr ? Subprogram->getFile() : nullptr;
+  DIBuilder DebugInfo{*F.getParent(), true, Unit};
+
   for (auto &GVUse : GVUses) {
     IRBuilder<> Builder(GVUse.User);
 
-    // Get or create a new global variable that points to the old one and who's
+    // Get or create a new global variable that points to the old one and whose
     // name begins with `__ref_`.
     GlobalVariable *&ReplaceWithRefGV =
         RefMapping.try_emplace(GVUse.GV).first->second;
@@ -272,15 +259,13 @@ void WindowsSecureHotPatching::replaceGlobalVariableUses(
                              nullptr, GlobalVariable::NotThreadLocal);
 
       // Create debug info for the replacement global variable.
-      DISubprogram *SP = F.getSubprogram();
       DataLayout Layout = F.getParent()->getDataLayout();
       DIType *DebugType = DebugInfo.createPointerType(
           nullptr, Layout.getTypeSizeInBits(GVUse.GV->getValueType()));
       DIGlobalVariableExpression *GVE =
           DebugInfo.createGlobalVariableExpression(
-              SP != nullptr ? SP->getUnit() : nullptr,
-              ReplaceWithRefGV->getName(), StringRef{},
-              SP != nullptr ? SP->getFile() : nullptr, /*LineNo*/ 0, DebugType,
+              Unit, ReplaceWithRefGV->getName(), StringRef{}, File,
+              /*LineNo*/ 0, DebugType,
               /*IsLocalToUnit*/ false);
       ReplaceWithRefGV->addDebugInfo(GVE);
     }
@@ -291,4 +276,9 @@ void WindowsSecureHotPatching::replaceGlobalVariableUses(
         Builder.CreateLoad(ReplaceWithRefGV->getValueType(), ReplaceWithRefGV);
     GVUse.User->setOperand(GVUse.Op, LoadedRefGV);
   }
+
+  if (Subprogram != nullptr)
+    DebugInfo.finalize();
+
+  return true;
 }
