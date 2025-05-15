@@ -586,6 +586,12 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     if (!Subtarget.is64Bit())
       setOperationAction(ISD::BITCAST, MVT::i64, Custom);
 
+    if (Subtarget.hasStdExtZdinx() && !Subtarget.hasStdExtZilsd() &&
+        !Subtarget.is64Bit()) {
+      setOperationAction(ISD::LOAD, MVT::f64, Custom);
+      setOperationAction(ISD::STORE, MVT::f64, Custom);
+    }
+
     if (Subtarget.hasStdExtZfa()) {
       setOperationAction(ISD::ConstantFP, MVT::f64, Custom);
       setOperationAction(FPRndMode, MVT::f64, Legal);
@@ -7708,19 +7714,42 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   }
   case ISD::LOAD: {
     auto *Load = cast<LoadSDNode>(Op);
-    EVT VecTy = Load->getMemoryVT();
+    EVT VT = Load->getValueType(0);
+    if (VT == MVT::f64) {
+      assert(Subtarget.hasStdExtZdinx() && !Subtarget.hasStdExtZilsd() &&
+             !Subtarget.is64Bit() && "Unexpected custom legalisation");
+
+      // Replace a double precision load with two i32 loads and a BuildPairF64.
+      SDLoc DL(Op);
+      SDValue BasePtr = Load->getBasePtr();
+      SDValue Chain = Load->getChain();
+
+      SDValue Lo = DAG.getLoad(MVT::i32, DL, Chain, BasePtr,
+                               Load->getPointerInfo(), Load->getOriginalAlign(),
+                               Load->getMemOperand()->getFlags());
+      BasePtr = DAG.getObjectPtrOffset(DL, BasePtr, TypeSize::getFixed(4));
+      SDValue Hi = DAG.getLoad(
+          MVT::i32, DL, Chain, BasePtr, Load->getPointerInfo().getWithOffset(4),
+          Load->getOriginalAlign(), Load->getMemOperand()->getFlags());
+      Chain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other, Lo.getValue(1),
+                          Hi.getValue(1));
+
+      SDValue Pair = DAG.getNode(RISCVISD::BuildPairF64, DL, MVT::f64, Lo, Hi);
+      return DAG.getMergeValues({Pair, Chain}, DL);
+    }
+
     // Handle normal vector tuple load.
-    if (VecTy.isRISCVVectorTuple()) {
+    if (VT.isRISCVVectorTuple()) {
       SDLoc DL(Op);
       MVT XLenVT = Subtarget.getXLenVT();
-      unsigned NF = VecTy.getRISCVVectorTupleNumFields();
-      unsigned Sz = VecTy.getSizeInBits().getKnownMinValue();
+      unsigned NF = VT.getRISCVVectorTupleNumFields();
+      unsigned Sz = VT.getSizeInBits().getKnownMinValue();
       unsigned NumElts = Sz / (NF * 8);
       int Log2LMUL = Log2_64(NumElts) - 3;
 
       auto Flag = SDNodeFlags();
       Flag.setNoUnsignedWrap(true);
-      SDValue Ret = DAG.getUNDEF(VecTy);
+      SDValue Ret = DAG.getUNDEF(VT);
       SDValue BasePtr = Load->getBasePtr();
       SDValue VROffset = DAG.getNode(RISCVISD::READ_VLENB, DL, XLenVT);
       VROffset =
@@ -7734,7 +7763,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
             MVT::getScalableVectorVT(MVT::i8, NumElts), DL, Load->getChain(),
             BasePtr, MachinePointerInfo(Load->getAddressSpace()), Align(8));
         OutChains.push_back(LoadVal.getValue(1));
-        Ret = DAG.getNode(RISCVISD::TUPLE_INSERT, DL, VecTy, Ret, LoadVal,
+        Ret = DAG.getNode(RISCVISD::TUPLE_INSERT, DL, VT, Ret, LoadVal,
                           DAG.getVectorIdxConstant(i, DL));
         BasePtr = DAG.getNode(ISD::ADD, DL, XLenVT, BasePtr, VROffset, Flag);
       }
@@ -7752,6 +7781,27 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     auto *Store = cast<StoreSDNode>(Op);
     SDValue StoredVal = Store->getValue();
     EVT VT = StoredVal.getValueType();
+    if (VT == MVT::f64) {
+      assert(Subtarget.hasStdExtZdinx() && !Subtarget.hasStdExtZilsd() &&
+             !Subtarget.is64Bit() && "Unexpected custom legalisation");
+
+      // Replace a double precision store with a SplitF64 and i32 stores.
+      SDValue DL(Op);
+      SDValue BasePtr = Store->getBasePtr();
+      SDValue Chain = Store->getChain();
+      SDValue Split = DAG.getNode(RISCVISD::SplitF64, DL,
+                                  DAG.getVTList(MVT::i32, MVT::i32), StoredVal);
+
+      SDValue Lo = DAG.getStore(
+          Chain, DL, Split.getValue(0), BasePtr, Store->getPointerInfo(),
+          Store->getOriginalAlign(), Store->getMemOperand()->getFlags());
+      BasePtr = DAG.getObjectPtrOffset(DL, BasePtr, TypeSize::getFixed(4));
+      SDValue Hi = DAG.getStore(Chain, DL, Split.getValue(1), BasePtr,
+                                Store->getPointerInfo().getWithOffset(4),
+                                Store->getOriginalAlign(),
+                                Store->getMemOperand()->getFlags());
+      return DAG.getNode(ISD::TokenFactor, DL, MVT::Other, Lo, Hi);
+    }
     if (VT == MVT::i64) {
       assert(Subtarget.hasStdExtZilsd() && !Subtarget.is64Bit() &&
              "Unexpected custom legalisation");
