@@ -392,6 +392,28 @@ func.func @test_vector_bitcast(%arg0: vector<[4]x2xf32>) -> vector<[4]x4xf16> {
 
 // -----
 
+// CHECK-LABEL: test_linearize_across_for
+func.func @test_linearize_across_for(%arg0 : vector<4xi8>) -> vector<4xi8> {
+  %0 = vector.shape_cast %arg0 : vector<4xi8> to vector<2x2xi8>
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c4 = arith.constant 4 : index
+
+  // CHECK:  scf.for {{.*}} -> (vector<4xi8>)
+  %1 = scf.for %i = %c0 to %c4 step %c1 iter_args(%arg1 = %0) -> (vector<2x2xi8>) {
+
+    // CHECK:  arith.addi {{.*}} : vector<4xi8>
+    %2 = arith.addi %arg1, %0 : vector<2x2xi8>
+
+    // CHECK:  scf.yield {{.*}} : vector<4xi8>
+    scf.yield %2 : vector<2x2xi8>
+  }
+  %3 = vector.shape_cast %1 : vector<2x2xi8> to vector<4xi8>
+  return %3 : vector<4xi8>
+}
+
+// -----
+
 // CHECK-LABEL: linearize_vector_splat
 // CHECK-SAME: (%[[ARG:.*]]: i32) -> vector<4x2xi32>
 func.func @linearize_vector_splat(%arg0: i32) -> vector<4x2xi32> {
@@ -414,6 +436,7 @@ func.func @linearize_scalable_vector_splat(%arg0: i32) -> vector<4x[2]xi32> {
   // CHECK: return %[[CAST]] : vector<4x[2]xi32>
   %0 = vector.splat %arg0 : vector<4x[2]xi32>
   return %0 : vector<4x[2]xi32>
+
 }
 
 // -----
