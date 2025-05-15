@@ -14983,12 +14983,11 @@ StmtResult SemaOpenMP::ActOnOpenMPUnrollDirective(ArrayRef<OMPClause *> Clauses,
     if (!VerifyPositiveIntegerConstantInClause(FactorVal, OMPC_partial,
                                                /*StrictlyPositive=*/true,
                                                /*SuppressExprDiags=*/false)
-             .isUsable()) {
+             .isUsable())
       return StmtError();
-    }
     // Checking if Iterator Variable Type can hold the Factor Width
-    auto FactorValWidth = FactorVal->getIntegerConstantExpr(Context)->getActiveBits();
-    auto IteratorVWidth = Context.getTypeSize(OrigVar->getType());
+    unsigned FactorValWidth = FactorVal->getIntegerConstantExpr(Context)->getActiveBits();
+    unsigned IteratorVWidth = Context.getTypeSize(OrigVar->getType());
     if ( FactorValWidth > IteratorVWidth ) {
       Diag(FactorVal->getExprLoc(), diag::err_omp_unroll_factor_width_mismatch)
           << FactorValWidth << OrigVar->getType()
@@ -14998,7 +14997,6 @@ StmtResult SemaOpenMP::ActOnOpenMPUnrollDirective(ArrayRef<OMPClause *> Clauses,
 
     Factor = FactorVal->getIntegerConstantExpr(Context)->getZExtValue();
     FactorLoc = FactorVal->getExprLoc();
-
   } else {
     // TODO: Use a better profitability model.
     Factor = 2;
