@@ -2782,7 +2782,7 @@ void CodeGenFunction::EmitTypeMetadataCodeForVCall(const CXXRecordDecl *RD,
 /// Converts the CFITypeCheckKind into SanitizerKind::SanitizerOrdinal and
 /// llvm::SanitizerStatKind.
 static std::pair<SanitizerKind::SanitizerOrdinal, llvm::SanitizerStatKind>
-ParseCFITypeCheckKind(CodeGenFunction::CFITypeCheckKind TCK) {
+SanitizerInfoFromCFICheckKind(CodeGenFunction::CFITypeCheckKind TCK) {
   SanitizerKind::SanitizerOrdinal M;
   llvm::SanitizerStatKind SSK;
 
@@ -2875,7 +2875,7 @@ void CodeGenFunction::EmitVTablePtrCheck(const CXXRecordDecl *RD,
       !CGM.HasHiddenLTOVisibility(RD))
     return;
 
-  auto [M, SSK] = ParseCFITypeCheckKind(TCK);
+  auto [M, SSK] = SanitizerInfoFromCFICheckKind(TCK);
 
   std::string TypeName = RD->getQualifiedNameAsString();
   if (getContext().getNoSanitizeList().containsType(
