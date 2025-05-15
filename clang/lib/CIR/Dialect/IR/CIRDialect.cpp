@@ -22,7 +22,6 @@
 #include "clang/CIR/Dialect/IR/CIROpsDialect.cpp.inc"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.cpp.inc"
 #include "clang/CIR/MissingFeatures.h"
-#include "llvm/ADT/APInt.h"
 #include <numeric>
 
 using namespace mlir;
