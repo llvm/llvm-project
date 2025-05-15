@@ -290,6 +290,7 @@ static bool isZeroingInactiveLanes(SDValue Op) {
     return false;
   // We guarantee i1 splat_vectors to zero the other lanes
   case ISD::SPLAT_VECTOR:
+  case ISD::GET_ACTIVE_LANE_MASK:
   case AArch64ISD::PTRUE:
   case AArch64ISD::SETCC_MERGE_ZERO:
     return true;
@@ -1178,6 +1179,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
   setTargetDAGCombine(ISD::CTLZ);
 
+  setTargetDAGCombine(ISD::GET_ACTIVE_LANE_MASK);
+
   setTargetDAGCombine(ISD::VECREDUCE_AND);
   setTargetDAGCombine(ISD::VECREDUCE_OR);
   setTargetDAGCombine(ISD::VECREDUCE_XOR);
@@ -1493,8 +1496,13 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::VECTOR_DEINTERLEAVE, VT, Custom);
       setOperationAction(ISD::VECTOR_INTERLEAVE, VT, Custom);
     }
-    for (auto VT : {MVT::nxv16i1, MVT::nxv8i1, MVT::nxv4i1, MVT::nxv2i1})
+    for (auto VT : {MVT::nxv16i1, MVT::nxv8i1, MVT::nxv4i1, MVT::nxv2i1}) {
       setOperationAction(ISD::VECTOR_FIND_LAST_ACTIVE, VT, Legal);
+      setOperationAction(ISD::GET_ACTIVE_LANE_MASK, VT, Legal);
+    }
+
+    for (auto VT : {MVT::v16i8, MVT::v8i8, MVT::v4i16, MVT::v2i32})
+      setOperationAction(ISD::GET_ACTIVE_LANE_MASK, VT, Custom);
   }
 
   if (Subtarget->isSVEorStreamingSVEAvailable()) {
@@ -5731,21 +5739,24 @@ static inline SDValue getPTrue(SelectionDAG &DAG, SDLoc DL, EVT VT,
                      DAG.getTargetConstant(Pattern, DL, MVT::i32));
 }
 
-static SDValue optimizeIncrementingWhile(SDValue Op, SelectionDAG &DAG,
+static SDValue optimizeIncrementingWhile(SDNode *N, SelectionDAG &DAG,
                                          bool IsSigned, bool IsEqual) {
-  if (!isa<ConstantSDNode>(Op.getOperand(1)) ||
-      !isa<ConstantSDNode>(Op.getOperand(2)))
+  unsigned Op0 = N->getOpcode() == ISD::INTRINSIC_WO_CHAIN ? 1 : 0;
+  unsigned Op1 = N->getOpcode() == ISD::INTRINSIC_WO_CHAIN ? 2 : 1;
+
+  if (!isa<ConstantSDNode>(N->getOperand(Op0)) ||
+      !isa<ConstantSDNode>(N->getOperand(Op1)))
     return SDValue();
 
-  SDLoc dl(Op);
-  APInt X = Op.getConstantOperandAPInt(1);
-  APInt Y = Op.getConstantOperandAPInt(2);
+  SDLoc dl(N);
+  APInt X = N->getConstantOperandAPInt(Op0);
+  APInt Y = N->getConstantOperandAPInt(Op1);
 
   // When the second operand is the maximum value, comparisons that include
   // equality can never fail and thus we can return an all active predicate.
   if (IsEqual)
     if (IsSigned ? Y.isMaxSignedValue() : Y.isMaxValue())
-      return DAG.getConstant(1, dl, Op.getValueType());
+      return DAG.getConstant(1, dl, N->getValueType(0));
 
   bool Overflow;
   APInt NumActiveElems =
@@ -5766,10 +5777,10 @@ static SDValue optimizeIncrementingWhile(SDValue Op, SelectionDAG &DAG,
       getSVEPredPatternFromNumElements(NumActiveElems.getZExtValue());
   unsigned MinSVEVectorSize = std::max(
       DAG.getSubtarget<AArch64Subtarget>().getMinSVEVectorSizeInBits(), 128u);
-  unsigned ElementSize = 128 / Op.getValueType().getVectorMinNumElements();
+  unsigned ElementSize = 128 / N->getValueType(0).getVectorMinNumElements();
   if (PredPattern != std::nullopt &&
       NumActiveElems.getZExtValue() <= (MinSVEVectorSize / ElementSize))
-    return getPTrue(DAG, dl, Op.getValueType(), *PredPattern);
+    return getPTrue(DAG, dl, N->getValueType(0), *PredPattern);
 
   return SDValue();
 }
@@ -6221,17 +6232,14 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
           DAG.getNode(
               AArch64ISD::URSHR_I, dl, Op.getOperand(1).getValueType(), Op.getOperand(1), Op.getOperand(2)));
     return SDValue();
-  case Intrinsic::aarch64_sve_whilelo:
-    return optimizeIncrementingWhile(Op, DAG, /*IsSigned=*/false,
-                                     /*IsEqual=*/false);
   case Intrinsic::aarch64_sve_whilelt:
-    return optimizeIncrementingWhile(Op, DAG, /*IsSigned=*/true,
+    return optimizeIncrementingWhile(Op.getNode(), DAG, /*IsSigned=*/true,
                                      /*IsEqual=*/false);
   case Intrinsic::aarch64_sve_whilels:
-    return optimizeIncrementingWhile(Op, DAG, /*IsSigned=*/false,
+    return optimizeIncrementingWhile(Op.getNode(), DAG, /*IsSigned=*/false,
                                      /*IsEqual=*/true);
   case Intrinsic::aarch64_sve_whilele:
-    return optimizeIncrementingWhile(Op, DAG, /*IsSigned=*/true,
+    return optimizeIncrementingWhile(Op.getNode(), DAG, /*IsSigned=*/true,
                                      /*IsEqual=*/true);
   case Intrinsic::aarch64_sve_sunpkhi:
     return DAG.getNode(AArch64ISD::SUNPKHI, dl, Op.getValueType(),
@@ -6531,28 +6539,6 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::aarch64_sve_usdot: {
     return DAG.getNode(AArch64ISD::USDOT, dl, Op.getValueType(),
                        Op.getOperand(1), Op.getOperand(2), Op.getOperand(3));
-  }
-  case Intrinsic::get_active_lane_mask: {
-    SDValue ID =
-        DAG.getTargetConstant(Intrinsic::aarch64_sve_whilelo, dl, MVT::i64);
-
-    EVT VT = Op.getValueType();
-    if (VT.isScalableVector())
-      return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, dl, VT, ID, Op.getOperand(1),
-                         Op.getOperand(2));
-
-    // We can use the SVE whilelo instruction to lower this intrinsic by
-    // creating the appropriate sequence of scalable vector operations and
-    // then extracting a fixed-width subvector from the scalable vector.
-
-    EVT ContainerVT = getContainerForFixedLengthVector(DAG, VT);
-    EVT WhileVT = ContainerVT.changeElementType(MVT::i1);
-
-    SDValue Mask = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, dl, WhileVT, ID,
-                               Op.getOperand(1), Op.getOperand(2));
-    SDValue MaskAsInt = DAG.getNode(ISD::SIGN_EXTEND, dl, ContainerVT, Mask);
-    return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, VT, MaskAsInt,
-                       DAG.getVectorIdxConstant(0, dl));
   }
   case Intrinsic::aarch64_neon_saddlv:
   case Intrinsic::aarch64_neon_uaddlv: {
@@ -7692,6 +7678,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerVECTOR_DEINTERLEAVE(Op, DAG);
   case ISD::VECTOR_INTERLEAVE:
     return LowerVECTOR_INTERLEAVE(Op, DAG);
+  case ISD::GET_ACTIVE_LANE_MASK:
+    return LowerGET_ACTIVE_LANE_MASK(Op, DAG);
   case ISD::LRINT:
   case ISD::LLRINT:
     if (Op.getValueType().isVector())
@@ -8641,6 +8629,16 @@ static void analyzeCallOperands(const AArch64TargetLowering &TLI,
   }
 }
 
+static SMECallAttrs
+getSMECallAttrs(const Function &Caller,
+                const TargetLowering::CallLoweringInfo &CLI) {
+  if (CLI.CB)
+    return SMECallAttrs(*CLI.CB);
+  if (auto *ES = dyn_cast<ExternalSymbolSDNode>(CLI.Callee))
+    return SMECallAttrs(SMEAttrs(Caller), SMEAttrs(ES->getSymbol()));
+  return SMECallAttrs(SMEAttrs(Caller), SMEAttrs(SMEAttrs::Normal));
+}
+
 bool AArch64TargetLowering::isEligibleForTailCallOptimization(
     const CallLoweringInfo &CLI) const {
   CallingConv::ID CalleeCC = CLI.CallConv;
@@ -8659,12 +8657,10 @@ bool AArch64TargetLowering::isEligibleForTailCallOptimization(
 
   // SME Streaming functions are not eligible for TCO as they may require
   // the streaming mode or ZA to be restored after returning from the call.
-  SMEAttrs CallerAttrs(MF.getFunction());
-  auto CalleeAttrs = CLI.CB ? SMEAttrs(*CLI.CB) : SMEAttrs(SMEAttrs::Normal);
-  if (CallerAttrs.requiresSMChange(CalleeAttrs) ||
-      CallerAttrs.requiresLazySave(CalleeAttrs) ||
-      CallerAttrs.requiresPreservingAllZAState(CalleeAttrs) ||
-      CallerAttrs.hasStreamingBody())
+  SMECallAttrs CallAttrs = getSMECallAttrs(CallerF, CLI);
+  if (CallAttrs.requiresSMChange() || CallAttrs.requiresLazySave() ||
+      CallAttrs.requiresPreservingAllZAState() ||
+      CallAttrs.caller().hasStreamingBody())
     return false;
 
   // Functions using the C or Fast calling convention that have an SVE signature
@@ -8956,14 +8952,14 @@ static SDValue emitSMEStateSaveRestore(const AArch64TargetLowering &TLI,
   return TLI.LowerCallTo(CLI).second;
 }
 
-static unsigned getSMCondition(const SMEAttrs &CallerAttrs,
-                               const SMEAttrs &CalleeAttrs) {
-  if (!CallerAttrs.hasStreamingCompatibleInterface() ||
-      CallerAttrs.hasStreamingBody())
+static AArch64SME::ToggleCondition
+getSMToggleCondition(const SMECallAttrs &CallAttrs) {
+  if (!CallAttrs.caller().hasStreamingCompatibleInterface() ||
+      CallAttrs.caller().hasStreamingBody())
     return AArch64SME::Always;
-  if (CalleeAttrs.hasNonStreamingInterface())
+  if (CallAttrs.callee().hasNonStreamingInterface())
     return AArch64SME::IfCallerIsStreaming;
-  if (CalleeAttrs.hasStreamingInterface())
+  if (CallAttrs.callee().hasStreamingInterface())
     return AArch64SME::IfCallerIsNonStreaming;
 
   llvm_unreachable("Unsupported attributes");
@@ -9096,11 +9092,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   }
 
   // Determine whether we need any streaming mode changes.
-  SMEAttrs CalleeAttrs, CallerAttrs(MF.getFunction());
-  if (CLI.CB)
-    CalleeAttrs = SMEAttrs(*CLI.CB);
-  else if (auto *ES = dyn_cast<ExternalSymbolSDNode>(CLI.Callee))
-    CalleeAttrs = SMEAttrs(ES->getSymbol());
+  SMECallAttrs CallAttrs = getSMECallAttrs(MF.getFunction(), CLI);
 
   auto DescribeCallsite =
       [&](OptimizationRemarkAnalysis &R) -> OptimizationRemarkAnalysis & {
@@ -9115,9 +9107,8 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     return R;
   };
 
-  bool RequiresLazySave = CallerAttrs.requiresLazySave(CalleeAttrs);
-  bool RequiresSaveAllZA =
-      CallerAttrs.requiresPreservingAllZAState(CalleeAttrs);
+  bool RequiresLazySave = CallAttrs.requiresLazySave();
+  bool RequiresSaveAllZA = CallAttrs.requiresPreservingAllZAState();
   if (RequiresLazySave) {
     const TPIDR2Object &TPIDR2 = FuncInfo->getTPIDR2Obj();
     MachinePointerInfo MPI =
@@ -9145,18 +9136,18 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
       return DescribeCallsite(R) << " sets up a lazy save for ZA";
     });
   } else if (RequiresSaveAllZA) {
-    assert(!CalleeAttrs.hasSharedZAInterface() &&
+    assert(!CallAttrs.callee().hasSharedZAInterface() &&
            "Cannot share state that may not exist");
     Chain = emitSMEStateSaveRestore(*this, DAG, FuncInfo, DL, Chain,
                                     /*IsSave=*/true);
   }
 
   SDValue PStateSM;
-  bool RequiresSMChange = CallerAttrs.requiresSMChange(CalleeAttrs);
+  bool RequiresSMChange = CallAttrs.requiresSMChange();
   if (RequiresSMChange) {
-    if (CallerAttrs.hasStreamingInterfaceOrBody())
+    if (CallAttrs.caller().hasStreamingInterfaceOrBody())
       PStateSM = DAG.getConstant(1, DL, MVT::i64);
-    else if (CallerAttrs.hasNonStreamingInterface())
+    else if (CallAttrs.caller().hasNonStreamingInterface())
       PStateSM = DAG.getConstant(0, DL, MVT::i64);
     else
       PStateSM = getRuntimePStateSM(DAG, Chain, DL, MVT::i64);
@@ -9173,7 +9164,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   SDValue ZTFrameIdx;
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  bool ShouldPreserveZT0 = CallerAttrs.requiresPreservingZT0(CalleeAttrs);
+  bool ShouldPreserveZT0 = CallAttrs.requiresPreservingZT0();
 
   // If the caller has ZT0 state which will not be preserved by the callee,
   // spill ZT0 before the call.
@@ -9189,7 +9180,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   // If caller shares ZT0 but the callee is not shared ZA, we need to stop
   // PSTATE.ZA before the call if there is no lazy-save active.
-  bool DisableZA = CallerAttrs.requiresDisablingZABeforeCall(CalleeAttrs);
+  bool DisableZA = CallAttrs.requiresDisablingZABeforeCall();
   assert((!DisableZA || !RequiresLazySave) &&
          "Lazy-save should have PSTATE.SM=1 on entry to the function");
 
@@ -9472,8 +9463,8 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     }
 
     SDValue NewChain = changeStreamingMode(
-        DAG, DL, CalleeAttrs.hasStreamingInterface(), Chain, InGlue,
-        getSMCondition(CallerAttrs, CalleeAttrs), PStateSM);
+        DAG, DL, CallAttrs.callee().hasStreamingInterface(), Chain, InGlue,
+        getSMToggleCondition(CallAttrs), PStateSM);
     Chain = NewChain.getValue(0);
     InGlue = NewChain.getValue(1);
   }
@@ -9659,8 +9650,8 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   if (RequiresSMChange) {
     assert(PStateSM && "Expected a PStateSM to be set");
     Result = changeStreamingMode(
-        DAG, DL, !CalleeAttrs.hasStreamingInterface(), Result, InGlue,
-        getSMCondition(CallerAttrs, CalleeAttrs), PStateSM);
+        DAG, DL, !CallAttrs.callee().hasStreamingInterface(), Result, InGlue,
+        getSMToggleCondition(CallAttrs), PStateSM);
 
     if (!Subtarget->isTargetDarwin() || Subtarget->hasSVE()) {
       InGlue = Result.getValue(1);
@@ -9670,7 +9661,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     }
   }
 
-  if (CallerAttrs.requiresEnablingZAAfterCall(CalleeAttrs))
+  if (CallAttrs.requiresEnablingZAAfterCall())
     // Unconditionally resume ZA.
     Result = DAG.getNode(
         AArch64ISD::SMSTART, DL, MVT::Other, Result,
@@ -18149,6 +18140,70 @@ static SDValue performVecReduceAddCombineWithUADDLP(SDNode *N,
   return DAG.getNode(ISD::VECREDUCE_ADD, DL, MVT::i32, UADDLP);
 }
 
+static SDValue
+performActiveLaneMaskCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
+                             const AArch64Subtarget *ST) {
+  if (DCI.isBeforeLegalize())
+    return SDValue();
+
+  if (SDValue While = optimizeIncrementingWhile(N, DCI.DAG, /*IsSigned=*/false,
+                                                /*IsEqual=*/false))
+    return While;
+
+  if (!ST->hasSVE2p1())
+    return SDValue();
+
+  if (!N->hasNUsesOfValue(2, 0))
+    return SDValue();
+
+  const uint64_t HalfSize = N->getValueType(0).getVectorMinNumElements() / 2;
+  if (HalfSize < 2)
+    return SDValue();
+
+  auto It = N->user_begin();
+  SDNode *Lo = *It++;
+  SDNode *Hi = *It;
+
+  if (Lo->getOpcode() != ISD::EXTRACT_SUBVECTOR ||
+      Hi->getOpcode() != ISD::EXTRACT_SUBVECTOR)
+    return SDValue();
+
+  uint64_t OffLo = Lo->getConstantOperandVal(1);
+  uint64_t OffHi = Hi->getConstantOperandVal(1);
+
+  if (OffLo > OffHi) {
+    std::swap(Lo, Hi);
+    std::swap(OffLo, OffHi);
+  }
+
+  if (OffLo != 0 || OffHi != HalfSize)
+    return SDValue();
+
+  EVT HalfVec = Lo->getValueType(0);
+  if (HalfVec != Hi->getValueType(0) ||
+      HalfVec.getVectorElementCount() != ElementCount::getScalable(HalfSize))
+    return SDValue();
+
+  SelectionDAG &DAG = DCI.DAG;
+  SDLoc DL(N);
+  SDValue ID =
+      DAG.getTargetConstant(Intrinsic::aarch64_sve_whilelo_x2, DL, MVT::i64);
+  SDValue Idx = N->getOperand(0);
+  SDValue TC = N->getOperand(1);
+  if (Idx.getValueType() != MVT::i64) {
+    Idx = DAG.getZExtOrTrunc(Idx, DL, MVT::i64);
+    TC = DAG.getZExtOrTrunc(TC, DL, MVT::i64);
+  }
+  auto R =
+      DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL,
+                  {Lo->getValueType(0), Hi->getValueType(0)}, {ID, Idx, TC});
+
+  DCI.CombineTo(Lo, R.getValue(0));
+  DCI.CombineTo(Hi, R.getValue(1));
+
+  return SDValue(N, 0);
+}
+
 // Turn a v8i8/v16i8 extended vecreduce into a udot/sdot and vecreduce
 //   vecreduce.add(ext(A)) to vecreduce.add(DOT(zero, A, one))
 //   vecreduce.add(mul(ext(A), ext(B))) to vecreduce.add(DOT(zero, A, B))
@@ -19679,6 +19734,8 @@ static SDValue getPTest(SelectionDAG &DAG, EVT VT, SDValue Pg, SDValue Op,
 
 static bool isPredicateCCSettingOp(SDValue N) {
   if ((N.getOpcode() == ISD::SETCC) ||
+      // get_active_lane_mask is lowered to a whilelo instruction.
+      (N.getOpcode() == ISD::GET_ACTIVE_LANE_MASK) ||
       (N.getOpcode() == ISD::INTRINSIC_WO_CHAIN &&
        (N.getConstantOperandVal(0) == Intrinsic::aarch64_sve_whilege ||
         N.getConstantOperandVal(0) == Intrinsic::aarch64_sve_whilegt ||
@@ -19687,9 +19744,7 @@ static bool isPredicateCCSettingOp(SDValue N) {
         N.getConstantOperandVal(0) == Intrinsic::aarch64_sve_whilele ||
         N.getConstantOperandVal(0) == Intrinsic::aarch64_sve_whilelo ||
         N.getConstantOperandVal(0) == Intrinsic::aarch64_sve_whilels ||
-        N.getConstantOperandVal(0) == Intrinsic::aarch64_sve_whilelt ||
-        // get_active_lane_mask is lowered to a whilelo instruction.
-        N.getConstantOperandVal(0) == Intrinsic::get_active_lane_mask)))
+        N.getConstantOperandVal(0) == Intrinsic::aarch64_sve_whilelt)))
     return true;
 
   return false;
@@ -21803,66 +21858,6 @@ static SDValue convertMergedOpToPredOp(SDNode *N, unsigned Opc,
   return SDValue();
 }
 
-static SDValue tryCombineWhileLo(SDNode *N,
-                                 TargetLowering::DAGCombinerInfo &DCI,
-                                 const AArch64Subtarget *Subtarget) {
-  if (DCI.isBeforeLegalize())
-    return SDValue();
-
-  if (!Subtarget->hasSVE2p1())
-    return SDValue();
-
-  if (!N->hasNUsesOfValue(2, 0))
-    return SDValue();
-
-  const uint64_t HalfSize = N->getValueType(0).getVectorMinNumElements() / 2;
-  if (HalfSize < 2)
-    return SDValue();
-
-  auto It = N->user_begin();
-  SDNode *Lo = *It++;
-  SDNode *Hi = *It;
-
-  if (Lo->getOpcode() != ISD::EXTRACT_SUBVECTOR ||
-      Hi->getOpcode() != ISD::EXTRACT_SUBVECTOR)
-    return SDValue();
-
-  uint64_t OffLo = Lo->getConstantOperandVal(1);
-  uint64_t OffHi = Hi->getConstantOperandVal(1);
-
-  if (OffLo > OffHi) {
-    std::swap(Lo, Hi);
-    std::swap(OffLo, OffHi);
-  }
-
-  if (OffLo != 0 || OffHi != HalfSize)
-    return SDValue();
-
-  EVT HalfVec = Lo->getValueType(0);
-  if (HalfVec != Hi->getValueType(0) ||
-      HalfVec.getVectorElementCount() != ElementCount::getScalable(HalfSize))
-    return SDValue();
-
-  SelectionDAG &DAG = DCI.DAG;
-  SDLoc DL(N);
-  SDValue ID =
-      DAG.getTargetConstant(Intrinsic::aarch64_sve_whilelo_x2, DL, MVT::i64);
-  SDValue Idx = N->getOperand(1);
-  SDValue TC = N->getOperand(2);
-  if (Idx.getValueType() != MVT::i64) {
-    Idx = DAG.getZExtOrTrunc(Idx, DL, MVT::i64);
-    TC = DAG.getZExtOrTrunc(TC, DL, MVT::i64);
-  }
-  auto R =
-      DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL,
-                  {Lo->getValueType(0), Hi->getValueType(0)}, {ID, Idx, TC});
-
-  DCI.CombineTo(Lo, R.getValue(0));
-  DCI.CombineTo(Hi, R.getValue(1));
-
-  return SDValue(N, 0);
-}
-
 SDValue tryLowerPartialReductionToDot(SDNode *N,
                                       const AArch64Subtarget *Subtarget,
                                       SelectionDAG &DAG) {
@@ -22342,7 +22337,8 @@ static SDValue performIntrinsicCombine(SDNode *N,
     return getPTest(DAG, N->getValueType(0), N->getOperand(1), N->getOperand(2),
                     AArch64CC::LAST_ACTIVE);
   case Intrinsic::aarch64_sve_whilelo:
-    return tryCombineWhileLo(N, DCI, Subtarget);
+    return DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, SDLoc(N), N->getValueType(0),
+                       N->getOperand(1), N->getOperand(2));
   case Intrinsic::aarch64_sve_bsl:
   case Intrinsic::aarch64_sve_bsl1n:
   case Intrinsic::aarch64_sve_bsl2n:
@@ -26774,6 +26770,8 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performExtractVectorEltCombine(N, DCI, Subtarget);
   case ISD::VECREDUCE_ADD:
     return performVecReduceAddCombine(N, DCI.DAG, Subtarget);
+  case ISD::GET_ACTIVE_LANE_MASK:
+    return performActiveLaneMaskCombine(N, DCI, Subtarget);
   case AArch64ISD::UADDV:
     return performUADDVCombine(N, DAG);
   case AArch64ISD::SMULL:
@@ -27756,8 +27754,7 @@ void AArch64TargetLowering::ReplaceNodeResults(
           DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, RuntimePStateSM));
       return;
     }
-    case Intrinsic::experimental_vector_match:
-    case Intrinsic::get_active_lane_mask: {
+    case Intrinsic::experimental_vector_match: {
       if (!VT.isFixedLengthVector() || VT.getVectorElementType() != MVT::i1)
         return;
 
@@ -28559,12 +28556,10 @@ bool AArch64TargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
 
   // Checks to allow the use of SME instructions
   if (auto *Base = dyn_cast<CallBase>(&Inst)) {
-    auto CallerAttrs = SMEAttrs(*Inst.getFunction());
-    auto CalleeAttrs = SMEAttrs(*Base);
-    if (CallerAttrs.requiresSMChange(CalleeAttrs) ||
-        CallerAttrs.requiresLazySave(CalleeAttrs) ||
-        CallerAttrs.requiresPreservingZT0(CalleeAttrs) ||
-        CallerAttrs.requiresPreservingAllZAState(CalleeAttrs))
+    auto CallAttrs = SMECallAttrs(*Base);
+    if (CallAttrs.requiresSMChange() || CallAttrs.requiresLazySave() ||
+        CallAttrs.requiresPreservingZT0() ||
+        CallAttrs.requiresPreservingAllZAState())
       return true;
   }
   return false;
@@ -29549,6 +29544,29 @@ AArch64TargetLowering::LowerPARTIAL_REDUCE_MLA(SDValue Op,
   auto Hi = DAG.getNode(HiOpcode, DL, ResultVT, DotNode);
   auto Extended = DAG.getNode(ISD::ADD, DL, ResultVT, Lo, Hi);
   return DAG.getNode(ISD::ADD, DL, ResultVT, Acc, Extended);
+}
+
+SDValue
+AArch64TargetLowering::LowerGET_ACTIVE_LANE_MASK(SDValue Op,
+                                                 SelectionDAG &DAG) const {
+  EVT VT = Op.getValueType();
+  assert(VT.isFixedLengthVector() && "Expected fixed length vector type!");
+
+  assert(Subtarget->isSVEorStreamingSVEAvailable() &&
+         "Lowering fixed length get_active_lane_mask requires SVE!");
+
+  // There are no dedicated fixed-length instructions for GET_ACTIVE_LANE_MASK,
+  // but we can use SVE when available.
+
+  SDLoc DL(Op);
+  EVT ContainerVT = getContainerForFixedLengthVector(DAG, VT);
+  EVT WhileVT = ContainerVT.changeElementType(MVT::i1);
+
+  SDValue Mask = DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, DL, WhileVT,
+                             Op.getOperand(0), Op.getOperand(1));
+  SDValue MaskAsInt = DAG.getNode(ISD::SIGN_EXTEND, DL, ContainerVT, Mask);
+  return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, MaskAsInt,
+                     DAG.getVectorIdxConstant(0, DL));
 }
 
 SDValue
