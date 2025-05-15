@@ -336,7 +336,7 @@ bool llvm::canPeelLastIteration(const Loop &L, ScalarEvolution &SE) {
   // iteration executes.
   // TODO: Add checks during codegen.
   if (isa<SCEVCouldNotCompute>(BTC) ||
-      !SE.isKnownPredicate(CmpInst::ICMP_UGT, BTC, SE.getOne(BTC->getType())))
+      !SE.isKnownPredicate(CmpInst::ICMP_UGT, BTC, SE.getZero(BTC->getType())))
     return false;
 
   // Check if the exit condition of the loop can be adjusted by the peeling
@@ -345,7 +345,7 @@ bool llvm::canPeelLastIteration(const Loop &L, ScalarEvolution &SE) {
   // * the exit condition must be a NE/EQ compare of an induction with step
   // of 1.
   BasicBlock *Latch = L.getLoopLatch();
-  return Latch == L.getExitingBlock() &&
+  return Latch && Latch == L.getExitingBlock() &&
          match(Latch->getTerminator(),
                m_Br(m_ICmp(Pred, m_Value(Inc), m_Value()), m_BasicBlock(Succ1),
                     m_BasicBlock(Succ2))) &&
