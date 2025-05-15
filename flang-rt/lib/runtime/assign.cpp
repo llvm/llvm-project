@@ -79,15 +79,18 @@ static RT_API_ATTRS int AllocateAssignmentLHS(
     to.raw().elem_len = from.ElementBytes();
   }
   const typeInfo::DerivedType *derived{nullptr};
+  DescriptorAddendum *toAddendum{to.Addendum()};
   if (const DescriptorAddendum * fromAddendum{from.Addendum()}) {
     derived = fromAddendum->derivedType();
-    if (DescriptorAddendum * toAddendum{to.Addendum()}) {
+    if (toAddendum) {
       toAddendum->set_derivedType(derived);
       std::size_t lenParms{derived ? derived->LenParameters() : 0};
       for (std::size_t j{0}; j < lenParms; ++j) {
         toAddendum->SetLenParameterValue(j, fromAddendum->LenParameterValue(j));
       }
     }
+  } else if (toAddendum) {
+    toAddendum->set_derivedType(nullptr);
   }
   // subtle: leave bounds in place when "from" is scalar (10.2.1.3(3))
   int rank{from.rank()};
