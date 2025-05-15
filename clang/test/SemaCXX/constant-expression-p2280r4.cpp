@@ -178,3 +178,24 @@ namespace extern_reference_used_as_unknown {
   int y;
   constinit int& g = (x,y); // expected-warning {{left operand of comma operator has no effect}}
 }
+
+namespace GH139452 {
+struct Dummy {
+  explicit operator bool() const noexcept { return true; }
+};
+
+struct Base { int error; };
+struct Derived : virtual Base { };
+
+template <class R>
+constexpr R get_value() {
+    const auto& derived_val = Derived{};
+    if (derived_val.error != 0)
+        /* nothing */;
+    return R{};
+}
+
+int f() {
+    return !get_value<Dummy>(); // contextually convert the function call result to bool
+}
+}
