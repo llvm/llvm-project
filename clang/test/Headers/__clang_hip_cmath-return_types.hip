@@ -376,19 +376,19 @@ __device__ void test_isnormal()
 __device__ void test_isgreater()
 {
     static_assert(is_same<decltype(isgreater((float)0, (float)0)), bool>::value, "");
-    static_assert(is_same<decltype(isgreater((float)0, (double)0)), double>::value, "");
-    static_assert(is_same<decltype(isgreater((double)0, (float)0)), double>::value, "");
+    static_assert(is_same<decltype(isgreater((float)0, (double)0)), bool>::value, "");
+    static_assert(is_same<decltype(isgreater((double)0, (float)0)), bool>::value, "");
     static_assert(is_same<decltype(isgreater((double)0, (double)0)), bool>::value, "");
-    static_assert(is_same<decltype(isgreater(0, (double)0)), double>::value, "");
+    static_assert(is_same<decltype(isgreater(0, (double)0)), bool>::value, "");
 }
 
 __device__ void test_isgreaterequal()
 {
     static_assert(is_same<decltype(isgreaterequal((float)0, (float)0)), bool>::value, "");
-    static_assert(is_same<decltype(isgreaterequal((float)0, (double)0)), double>::value, "");
-    static_assert(is_same<decltype(isgreaterequal((double)0, (float)0)), double>::value, "");
+    static_assert(is_same<decltype(isgreaterequal((float)0, (double)0)), bool>::value, "");
+    static_assert(is_same<decltype(isgreaterequal((double)0, (float)0)), bool>::value, "");
     static_assert(is_same<decltype(isgreaterequal((double)0, (double)0)), bool>::value, "");
-    static_assert(is_same<decltype(isgreaterequal(0, (double)0)), double>::value, "");
+    static_assert(is_same<decltype(isgreaterequal(0, (double)0)), bool>::value, "");
 }
 
 __device__ void test_isinf()
@@ -400,28 +400,28 @@ __device__ void test_isinf()
 __device__ void test_isless()
 {
     static_assert(is_same<decltype(isless((float)0, (float)0)), bool>::value, "");
-    static_assert(is_same<decltype(isless((float)0, (double)0)), double>::value, "");
-    static_assert(is_same<decltype(isless((double)0, (float)0)), double>::value, "");
+    static_assert(is_same<decltype(isless((float)0, (double)0)), bool>::value, "");
+    static_assert(is_same<decltype(isless((double)0, (float)0)), bool>::value, "");
     static_assert(is_same<decltype(isless((double)0, (double)0)), bool>::value, "");
-    static_assert(is_same<decltype(isless(0, (double)0)), double>::value, "");
+    static_assert(is_same<decltype(isless(0, (double)0)), bool>::value, "");
 }
 
 __device__ void test_islessequal()
 {
     static_assert(is_same<decltype(islessequal((float)0, (float)0)), bool>::value, "");
-    static_assert(is_same<decltype(islessequal((float)0, (double)0)), double>::value, "");
-    static_assert(is_same<decltype(islessequal((double)0, (float)0)), double>::value, "");
+    static_assert(is_same<decltype(islessequal((float)0, (double)0)), bool>::value, "");
+    static_assert(is_same<decltype(islessequal((double)0, (float)0)), bool>::value, "");
     static_assert(is_same<decltype(islessequal((double)0, (double)0)), bool>::value, "");
-    static_assert(is_same<decltype(islessequal(0, (double)0)), double>::value, "");
+    static_assert(is_same<decltype(islessequal(0, (double)0)), bool>::value, "");
 }
 
 __device__ void test_islessgreater()
 {
     static_assert(is_same<decltype(islessgreater((float)0, (float)0)), bool>::value, "");
-    static_assert(is_same<decltype(islessgreater((float)0, (double)0)), double>::value, "");
-    static_assert(is_same<decltype(islessgreater((double)0, (float)0)), double>::value, "");
+    static_assert(is_same<decltype(islessgreater((float)0, (double)0)), bool>::value, "");
+    static_assert(is_same<decltype(islessgreater((double)0, (float)0)), bool>::value, "");
     static_assert(is_same<decltype(islessgreater((double)0, (double)0)), bool>::value, "");
-    static_assert(is_same<decltype(islessgreater(0, (double)0)), double>::value, "");
+    static_assert(is_same<decltype(islessgreater(0, (double)0)), bool>::value, "");
 }
 
 __device__ void test_isnan()
@@ -433,10 +433,10 @@ __device__ void test_isnan()
 __device__ void test_isunordered()
 {
     static_assert(is_same<decltype(isunordered((float)0, (float)0)), bool>::value, "");
-    static_assert(is_same<decltype(isunordered((float)0, (double)0)), double>::value, "");
-    static_assert(is_same<decltype(isunordered((double)0, (float)0)), double>::value, "");
+    static_assert(is_same<decltype(isunordered((float)0, (double)0)), bool>::value, "");
+    static_assert(is_same<decltype(isunordered((double)0, (float)0)), bool>::value, "");
     static_assert(is_same<decltype(isunordered((double)0, (double)0)), bool>::value, "");
-    static_assert(is_same<decltype(isunordered(0, (double)0)), double>::value, "");
+    static_assert(is_same<decltype(isunordered(0, (double)0)), bool>::value, "");
 }
 
 __device__ void test_acosh()
