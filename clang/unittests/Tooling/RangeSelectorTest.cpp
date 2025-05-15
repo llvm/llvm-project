@@ -50,6 +50,9 @@ template <typename M> TestMatch matchCode(StringRef Code, M Matcher) {
   auto Matches = ast_matchers::match(Matcher, Context);
   // We expect a single, exact match.
   assert(Matches.size() != 0 && "no matches found");
+  if (Matches.size() != 1) {
+    Context.getTranslationUnitDecl()->dumpColor();
+  }
   assert(Matches.size() == 1 && "too many matches");
 
   return TestMatch{std::move(ASTUnit), MatchResult(Matches[0], &Context)};
