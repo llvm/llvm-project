@@ -105,7 +105,7 @@ bool fromJSON(const json::Value &Params, ColumnType &CT, json::Path P) {
           .Case("string", eColumnTypeString)
           .Case("number", eColumnTypeNumber)
           .Case("boolean", eColumnTypeBoolean)
-          .Case("unixTimestampUTC ", eColumnTypeTimestamp)
+          .Case("unixTimestampUTC", eColumnTypeTimestamp)
           .Default(std::nullopt);
   if (!columnType) {
     P.report("unexpected value, expected 'string', 'number',  'boolean', or "
@@ -480,6 +480,18 @@ bool fromJSON(const llvm::json::Value &Params, SteppingGranularity &SG,
   }
   SG = *granularity;
   return true;
+}
+
+llvm::json::Value toJSON(const SteppingGranularity &SG) {
+  switch (SG) {
+  case eSteppingGranularityStatement:
+    return "statement";
+  case eSteppingGranularityLine:
+    return "line";
+  case eSteppingGranularityInstruction:
+    return "instruction";
+  }
+  llvm_unreachable("unhandled stepping granularity.");
 }
 
 bool fromJSON(const llvm::json::Value &Params, ValueFormat &VF,

@@ -520,15 +520,12 @@ Improvements to Clang's diagnostics
 - Several compatibility diagnostics that were incorrectly being grouped under
   ``-Wpre-c++20-compat`` are now part of ``-Wc++20-compat``. (#GH138775)
 
-- Improved the ``-Wtautological-overlap-compare`` diagnostics to warn about overlapping and non-overlapping ranges involving character literals and floating-point literals. 
+- Improved the ``-Wtautological-overlap-compare`` diagnostics to warn about overlapping and non-overlapping ranges involving character literals and floating-point literals.
   The warning message for non-overlapping cases has also been improved (#GH13473).
 
 - Fixed a duplicate diagnostic when performing typo correction on function template
   calls with explicit template arguments. (#GH139226)
 
-- An error is now emitted when OpenMP ``collapse`` and ``ordered`` clauses have an
-  argument larger than what can fit within a 64-bit integer.
-  
 - Explanatory note is printed when ``assert`` fails during evaluation of a
   constant expression. Prior to this, the error inaccurately implied that assert
   could not be used at all in a constant expression (#GH130458)
@@ -712,6 +709,7 @@ Bug Fixes to C++ Support
 - Fixed the handling of pack indexing types in the constraints of a member function redeclaration. (#GH138255)
 - Clang now correctly parses arbitrary order of ``[[]]``, ``__attribute__`` and ``alignas`` attributes for declarations (#GH133107)
 - Fixed a crash when forming an invalid function type in a dependent context. (#GH138657) (#GH115725) (#GH68852)
+- Clang no longer segfaults when there is a configuration mismatch between modules and their users (http://crbug.com/400353616).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -937,6 +935,21 @@ OpenMP Support
 - Added support 'no_openmp_constructs' assumption clause.
 - Added support for 'self_maps' in map and requirement clause.
 - Added support for 'omp stripe' directive.
+- Fixed a crashing bug with ``omp unroll partial`` if the argument to
+  ``partial`` was an invalid expression. (#GH139267)
+- Fixed a crashing bug with ``omp tile sizes`` if the argument to ``sizes`` was
+  an invalid expression. (#GH139073)
+- Fixed a crashing bug with ``omp simd collapse`` if the argument to
+  ``collapse`` was an invalid expression. (#GH138493)
+- Fixed a crashing bug with a malformed ``cancel`` directive. (#GH139360)
+- Fixed a crashing bug with ``omp distribute dist_schedule`` if the argument to
+  ``dist_schedule`` was not strictly positive. (#GH139266)
+- Fixed two crashing bugs with a malformed ``metadirective`` directive. One was
+  a crash if the next token after ``metadirective`` was a paren, bracket, or
+  brace. The other was if the next token after the meta directive was not an
+  open parenthesis. (#GH139665)
+- An error is now emitted when OpenMP ``collapse`` and ``ordered`` clauses have
+  an argument larger than what can fit within a 64-bit integer.
 - Added support for private variable reduction.
 
 Improvements

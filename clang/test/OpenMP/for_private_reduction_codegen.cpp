@@ -81,7 +81,7 @@ int main(void) {
 // CHECK: @[[GLOB4:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 66, i32 0, i32 22, ptr @[[GLOB0]] }, align 8
 // CHECK: @.omp.reduction..internal_pivate_.sum_v = internal global i32 0, align 4
 // CHECK: @.omp.reduction..internal_pivate_.sum_v.1 = internal global i32 0, align 4
-// CHECK: @.omp.reduction..internal_pivate_.prod_v = internal global i32 1, align 4
+// CHECK: @.omp.reduction..internal_pivate_.prod_v = internal global i32 0, align 4
 //.
 // CHECK-LABEL: define dso_local void @_Z8func_redv(
 // CHECK-SAME: ) #[[ATTR0:[0-9]+]] {

@@ -308,8 +308,10 @@ TEST_P(ImportExpr, ImportShuffleVectorExpr) {
   const auto Pattern = functionDecl(hasDescendant(shuffleVectorExpr(
       allOf(has(declRefExpr(to(parmVarDecl(hasName("a"))))),
             has(declRefExpr(to(parmVarDecl(hasName("b"))))),
-            has(integerLiteral(equals(0))), has(integerLiteral(equals(1))),
-            has(integerLiteral(equals(2))), has(integerLiteral(equals(3)))))));
+            has(constantExpr(has(integerLiteral(equals(0))))),
+            has(constantExpr(has(integerLiteral(equals(1))))),
+            has(constantExpr(has(integerLiteral(equals(2))))),
+            has(constantExpr(has(integerLiteral(equals(3)))))))));
   testImport(Code, Lang_C99, "", Lang_C99, Verifier, Pattern);
 }
 

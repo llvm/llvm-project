@@ -61,6 +61,7 @@ call, where the parameters and result are bound by name and are described by
 name, scalar type, and shape tuples.
 
 The main types in LLVM are:
+
 - ``MLModelRunner`` - an abstraction for the decision making mechanism
 - ``TensorSpec`` which describes a tensor.
 

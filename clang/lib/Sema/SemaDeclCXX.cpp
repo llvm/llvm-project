@@ -6274,7 +6274,7 @@ static void ReferenceDllExportedMembers(Sema &S, CXXRecordDecl *Class) {
     }
   } MarkingDllexportedContext(S, Class, ClassAttr->getLocation());
 
-  if (S.Context.getTargetInfo().getTriple().isWindowsGNUEnvironment())
+  if (S.Context.getTargetInfo().getTriple().isOSCygMing())
     S.MarkVTableUsed(Class->getLocation(), Class, true);
 
   for (Decl *Member : Class->decls()) {
@@ -6576,7 +6576,7 @@ void Sema::checkClassLevelDLLAttribute(CXXRecordDecl *Class) {
   // declarations, except in MinGW mode.
   if (ClassExported && !ClassAttr->isInherited() &&
       TSK == TSK_ExplicitInstantiationDeclaration &&
-      !Context.getTargetInfo().getTriple().isWindowsGNUEnvironment()) {
+      !Context.getTargetInfo().getTriple().isOSCygMing()) {
     Class->dropAttr<DLLExportAttr>();
     return;
   }

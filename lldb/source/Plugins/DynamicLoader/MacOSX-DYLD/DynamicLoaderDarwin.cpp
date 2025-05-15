@@ -872,6 +872,7 @@ void DynamicLoaderDarwin::PrivateInitialize(Process *process) {
                StateAsCString(m_process->GetState()));
   Clear(true);
   m_process = process;
+  m_process->GetTarget().ClearAllLoadedSections();
 }
 
 // Member function that gets called when the process state changes.

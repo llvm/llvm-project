@@ -4926,49 +4926,7 @@ void CGOpenMPRuntime::emitPrivateReduction(
   QualType PrivateType = Privates->getType();
   llvm::Type *LLVMType = CGF.ConvertTypeForMem(PrivateType);
 
-  llvm::Constant *InitVal = nullptr;
   const OMPDeclareReductionDecl *UDR = getReductionInit(ReductionOps);
-  // Determine the initial value for the shared reduction variable
-  if (!UDR) {
-    InitVal = llvm::Constant::getNullValue(LLVMType);
-    if (const auto *DRE = dyn_cast<DeclRefExpr>(Privates)) {
-      if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
-        const Expr *InitExpr = VD->getInit();
-        if (InitExpr) {
-          Expr::EvalResult Result;
-          if (InitExpr->EvaluateAsRValue(Result, CGF.getContext())) {
-            APValue &InitValue = Result.Val;
-            if (InitValue.isInt())
-              InitVal = llvm::ConstantInt::get(LLVMType, InitValue.getInt());
-            else if (InitValue.isFloat())
-              InitVal = llvm::ConstantFP::get(LLVMType, InitValue.getFloat());
-            else if (InitValue.isComplexInt()) {
-              // For complex int: create struct { real, imag }
-              llvm::Constant *Real = llvm::ConstantInt::get(
-                  cast<llvm::StructType>(LLVMType)->getElementType(0),
-                  InitValue.getComplexIntReal());
-              llvm::Constant *Imag = llvm::ConstantInt::get(
-                  cast<llvm::StructType>(LLVMType)->getElementType(1),
-                  InitValue.getComplexIntImag());
-              InitVal = llvm::ConstantStruct::get(
-                  cast<llvm::StructType>(LLVMType), {Real, Imag});
-            } else if (InitValue.isComplexFloat()) {
-              llvm::Constant *Real = llvm::ConstantFP::get(
-                  cast<llvm::StructType>(LLVMType)->getElementType(0),
-                  InitValue.getComplexFloatReal());
-              llvm::Constant *Imag = llvm::ConstantFP::get(
-                  cast<llvm::StructType>(LLVMType)->getElementType(1),
-                  InitValue.getComplexFloatImag());
-              InitVal = llvm::ConstantStruct::get(
-                  cast<llvm::StructType>(LLVMType), {Real, Imag});
-            }
-          }
-        }
-      }
-    }
-  } else {
-    InitVal = llvm::Constant::getNullValue(LLVMType);
-  }
   std::string ReductionVarNameStr;
   if (const auto *DRE = dyn_cast<DeclRefExpr>(Privates->IgnoreParenCasts()))
     ReductionVarNameStr = DRE->getDecl()->getNameAsString();
@@ -4980,8 +4938,8 @@ void CGOpenMPRuntime::emitPrivateReduction(
       CGM.getOpenMPRuntime().getName({"internal_pivate_", ReductionVarNameStr});
   llvm::GlobalVariable *SharedVar = new llvm::GlobalVariable(
       CGM.getModule(), LLVMType, false, llvm::GlobalValue::InternalLinkage,
-      InitVal, ".omp.reduction." + SharedName, nullptr,
-      llvm::GlobalVariable::NotThreadLocal);
+      llvm::Constant::getNullValue(LLVMType), ".omp.reduction." + SharedName,
+      nullptr, llvm::GlobalVariable::NotThreadLocal);
 
   SharedVar->setAlignment(
       llvm::MaybeAlign(CGF.getContext().getTypeAlign(PrivateType) / 8));
@@ -5100,6 +5058,7 @@ void CGOpenMPRuntime::emitPrivateReduction(
     EmitCriticalReduction(ReductionGen);
   } else {
     // Handle built-in reduction operations.
+#ifndef NDEBUG
     const Expr *ReductionClauseExpr = ReductionOp->IgnoreParenCasts();
     if (const auto *Cleanup = dyn_cast<ExprWithCleanups>(ReductionClauseExpr))
       ReductionClauseExpr = Cleanup->getSubExpr()->IgnoreParenCasts();
@@ -5114,8 +5073,9 @@ void CGOpenMPRuntime::emitPrivateReduction(
         AssignRHS = OpCall->getArg(1);
     }
 
-    if (!AssignRHS)
-      return;
+    assert(AssignRHS &&
+           "Private Variable Reduction : Invalid ReductionOp expression");
+#endif
 
     auto ReductionGen = [&](CodeGenFunction &CGF, PrePostActionTy &Action) {
       Action.Enter(CGF);

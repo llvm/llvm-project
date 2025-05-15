@@ -91,7 +91,10 @@ struct ModuleShaderFlags {
   const ComputedShaderFlags &getCombinedFlags() const { return CombinedSFMask; }
 
 private:
-  bool CanSetResMayNotAlias;
+  // Booleans set by module flags
+  bool CanSetResMayNotAlias;         // dx.resmayalias
+  bool CanSetNativeLowPrecisionMode; // dx.nativelowprec
+
   /// Map of Function-Shader Flag Mask pairs representing properties of each of
   /// the functions in the module. Shader Flags of each function represent both
   /// module-level and function-level flags
