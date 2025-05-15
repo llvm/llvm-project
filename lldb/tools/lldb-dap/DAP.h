@@ -283,9 +283,9 @@ struct DAP {
   lldb::SBThread GetLLDBThread(const llvm::json::Object &arguments);
 
   lldb::SBFrame GetLLDBFrame(uint64_t frame_id);
+  /// TODO: remove this function when we finish migrating to the
+  /// new protocol types.
   lldb::SBFrame GetLLDBFrame(const llvm::json::Object &arguments);
-
-  llvm::json::Value CreateTopLevelScopes();
 
   void PopulateExceptionBreakpoints();
 
