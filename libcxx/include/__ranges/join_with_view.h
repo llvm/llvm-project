@@ -156,7 +156,7 @@ template <class _Base, class _PatternBase, class _InnerBase = range_reference_t<
 struct __join_with_view_iterator_category {};
 
 template <class _Base, class _PatternBase, class _InnerBase>
-  requires is_reference_v<range_reference_t<_Base>> && forward_range<_Base> && forward_range<_InnerBase>
+  requires is_reference_v<_InnerBase> && forward_range<_Base> && forward_range<_InnerBase>
 struct __join_with_view_iterator_category<_Base, _PatternBase, _InnerBase> {
 private:
   static consteval auto __get_iterator_category() noexcept {
