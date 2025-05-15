@@ -5230,6 +5230,11 @@ bool AMDGPUAsmParser::validateVGPRAlign(const MCInst &Inst) const {
   // unaligned VGPR. All others only allow even aligned VGPRs.
   if (FB[AMDGPU::FeatureGFX90AInsts] && Opc == AMDGPU::DS_READ_B96_TR_B6_vi)
     return true;
+  // Similarly, DS_LOAD_TR6_B96 is the only DS instruction in GFX1250, that
+  // allows unaligned VGPR. All others only allow even aligned VGPRs.
+  if (FB[AMDGPU::FeatureGFX1250Insts] &&
+      (Opc == AMDGPU::DS_LOAD_TR6_B96 || Opc == AMDGPU::DS_LOAD_TR6_B96_gfx12))
+    return true;
 
   const MCRegisterInfo *MRI = getMRI();
   const MCRegisterClass &VGPR32 = MRI->getRegClass(AMDGPU::VGPR_32RegClassID);
