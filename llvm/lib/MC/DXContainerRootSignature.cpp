@@ -102,7 +102,7 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
                              llvm::endianness::little);
       if (Version > 1)
         support::endian::write(BOS, Descriptor.Flags, llvm::endianness::little);
-    } break ;
+    } break;
     }
   }
   assert(Storage.size() == getSize());
