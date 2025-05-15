@@ -9,7 +9,7 @@
 ;__device__ void bar() {}
 ;}
 
-; CHECK: .target sm_{{[0-9]+}}, debug
+; CHECK: .target sm_{{[0-9]+}}
 
 ; CHECK: .visible .func foo()
 ; CHECK: .loc [[FOO:[0-9]+]] 1 31
