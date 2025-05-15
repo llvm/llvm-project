@@ -17,25 +17,23 @@
 // hot-patch generation tools, and the Windows kernel. This file implements that
 // part of the workflow needed in compilers / code generators.
 //
-// SHP is not intended for productivity scenarios, such as Edit-and-Continue or
+// SHP is not intended for productivity scenarios such as Edit-and-Continue or
 // interactive development. SHP is intended to minimize downtime during
 // installation of Windows OS patches.
 //
 // In order to work with SHP, LLVM must do all of the following:
 //
 // * On some architectures (X86, AMD64), the function prolog must begin with
-// hot-patchable
-//   instructions. This is handled by the MSVC `/hotpatch` option and the
-//   equivalent `-fms-hotpatch` function. This is necessary because we generally
-//   cannot anticipate which functions will need to be patched in the future.
-//   This option ensures that a function can be hot-patched in the future, but
-//   does not actually generate any hot-patch for it.
+//   hot-patchable instructions. This is handled by the MSVC `/hotpatch` option
+//   and the equivalent `-fms-hotpatch` function. This is necessary because we
+//   generally cannot anticipate which functions will need to be patched in the
+//   future. This option ensures that a function can be hot-patched in the
+//   future, but does not actually generate any hot-patch for it.
 //
 // * For a selected set of functions that are being hot-patched (which are
-// identified using
-//   command-line options), LLVM must generate the `S_HOTPATCHFUNC` CodeView
-//   record (symbol). This record indicates that a function was compiled with
-//   hot-patching enabled.
+//   identified using command-line options), LLVM must generate the
+//   `S_HOTPATCHFUNC` CodeView record (symbol). This record indicates that a
+//   function was compiled with hot-patching enabled.
 //
 //   This implementation uses the `MarkedForWindowsHotPatching` attribute to
 //   annotate those functions that were marked for hot-patching by command-line
@@ -44,11 +42,10 @@
 //   set by passing LLVM arguments.
 //
 // * For those functions that are hot-patched, LLVM must rewrite references to
-// global variables
-//   so that they are indirected through a `__ref_*` pointer variable.  For each
-//   global variable, that is accessed by a hot-patched function, e.g. `FOO`, a
-//   `__ref_FOO` global pointer variable is created and all references to the
-//   original `FOO` are rewritten as dereferences of the
+//   global variables so that they are indirected through a `__ref_*` pointer
+//   variable.  For each global variable, that is accessed by a hot-patched
+//   function, e.g. `FOO`, a `__ref_FOO` global pointer variable is created and
+//   all references to the original `FOO` are rewritten as dereferences of the
 //   `__ref_FOO` pointer.
 //
 //   Some globals do not need `__ref_*` indirection. The pointer indirection
@@ -58,11 +55,13 @@
 // References
 //
 // * "Hotpatching on Windows":
-// https://techcommunity.microsoft.com/blog/windowsosplatform/hotpatching-on-windows/2959541
+//   https://techcommunity.microsoft.com/blog/windowsosplatform/hotpatching-on-windows/2959541
+//
 // * "Hotpatch for Windows client now available":
-// https://techcommunity.microsoft.com/blog/windows-itpro-blog/hotpatch-for-windows-client-now-available/4399808
+//   https://techcommunity.microsoft.com/blog/windows-itpro-blog/hotpatch-for-windows-client-now-available/4399808
+//
 // * "Get hotpatching for Windows Server":
-// https://www.microsoft.com/en-us/windows-server/blog/2025/04/24/tired-of-all-the-restarts-get-hotpatching-for-windows-server/?msockid=19a6f8f09bd160ac0b18ed449afc614b
+//   https://www.microsoft.com/en-us/windows-server/blog/2025/04/24/tired-of-all-the-restarts-get-hotpatching-for-windows-server/
 //
 //===----------------------------------------------------------------------===//
 
@@ -83,7 +82,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "windows-hot-patch"
+#define DEBUG_TYPE "windows-secure-hot-patch"
 
 // A file containing list of mangled function names to mark for hot patching.
 static cl::opt<std::string> LLVMMSSecureHotPatchFunctionsFile(
