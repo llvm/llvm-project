@@ -38,11 +38,16 @@ export void foo() {
 // CHECK: call void @_ZN4hlsl8RWBufferIfEC2Ejjij(ptr noundef nonnull align 4 dereferenceable(4)
 // CHECK-SAME: %{{.*}}, i32 noundef %{{.*}}, i32 noundef %{{.*}}, i32 noundef %{{.*}}, i32 noundef %{{.*}})
 
-// Buf2 initialization part 1 - FIXME: constructor with implicit binding does not exist yet; 
-// the global init function currently calls the default RWBufer<double> C1 constructor
-// CHECK: define internal void @__cxx_global_var_init.1() #0 {
+// Buf2 initialization part 1 - global init function that calls RWBuffer<float> C1 constructor with implicit binding
+// CHECK: define internal void @__cxx_global_var_init.1()
 // CHECK-NEXT: entry:
-// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIdEC1Ev(ptr noundef nonnull align 4 dereferenceable(4) @_ZL4Buf2)
+// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIdEC1Ejijj(ptr noundef nonnull align 4 dereferenceable(4) @_ZL4Buf2,
+// CHECK-SAME: i32 noundef 0, i32 noundef 1, i32 noundef 0, i32 noundef 0)
+
+// Buf2 initialization part 2 - body of RWBuffer<float> C1 constructor with implicit binding that calls the C2 constructor
+// CHECK: define linkonce_odr void @_ZN4hlsl8RWBufferIdEC1Ejijj(ptr noundef nonnull align 4 dereferenceable(4) %this,
+// CHECK-SAME: i32 noundef %spaceNo, i32 noundef %range, i32 noundef %index, i32 noundef %orderId)
+// CHECK: call void @_ZN4hlsl8RWBufferIdEC2Ejijj(ptr noundef nonnull align 4 dereferenceable(4) %{{.*}}, i32 noundef %{{.*}}, i32 noundef %{{.*}}, i32 noundef %{{.*}}, i32 noundef %{{.*}}) #4
 
 // Buf3 initialization part 1 - local variable declared in function foo() is initialized by RWBuffer<int> C1 default constructor
 // CHECK: define void @_Z3foov()
@@ -62,7 +67,14 @@ export void foo() {
 // CHECK-DXIL-SAME: i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i1 false)
 // CHECK-NEXT: %__handle = getelementptr inbounds nuw %"class.hlsl::RWBuffer", ptr %{{.*}}, i32 0, i32 0
 // CHECK-DXIL-NEXT: store target("dx.TypedBuffer", float, 1, 0, 0) %[[HANDLE]], ptr %__handle, align 4
-// CHECK-NEXT: ret void
+
+// Buf2 initialization part 3 - body of RWBuffer<float> C2 constructor with implicit binding that initializes
+// handle with @llvm.dx.resource.handlefromimplicitbinding
+// CHECK: define linkonce_odr void @_ZN4hlsl8RWBufferIdEC2Ejijj(ptr noundef nonnull align 4 dereferenceable(4) %this,
+// CHECK-SAME: i32 noundef %spaceNo, i32 noundef %range, i32 noundef %index, i32 noundef %orderId) unnamed_addr #1 align 2 {
+// CHECK: %[[HANDLE:.*]] = call target("dx.TypedBuffer", double, 1, 0, 0) @llvm.dx.resource.handlefromimplicitbinding.tdx.TypedBuffer_f64_1_0_0t(i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i1 false)
+// CHECK-NEXT: %__handle = getelementptr inbounds nuw %"class.hlsl::RWBuffer.0", ptr %{{.*}}, i32 0, i32 0
+// CHECK-NEXT: store target("dx.TypedBuffer", double, 1, 0, 0) %[[HANDLE]], ptr %__handle, align 4
 
 // Buf3 initialization part 3 - body of RWBuffer<int> default C2 constructor that initializes handle to poison
 // CHECK: define linkonce_odr void @_ZN4hlsl8RWBufferIiEC2Ev(ptr noundef nonnull align 4 dereferenceable(4) %this)
