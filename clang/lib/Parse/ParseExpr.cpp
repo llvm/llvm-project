@@ -273,7 +273,6 @@ ExprResult Parser::ParseArrayBoundExpression() {
 }
 
 ExprResult Parser::ParseCaseExpression(SourceLocation CaseLoc) {
-
   EnterExpressionEvaluationContext ConstantEvaluated(
       Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated);
   Actions.currentEvaluationContext().IsCaseExpr = true;
