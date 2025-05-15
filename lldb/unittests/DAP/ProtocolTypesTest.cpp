@@ -101,8 +101,8 @@ TEST(ProtocolTypesTest, Breakpoint) {
   breakpoint.id = 42;
   breakpoint.verified = true;
   breakpoint.message = "Breakpoint set successfully";
-  breakpoint.source =
-      Source{"test.cpp", "/path/to/test.cpp", 123, ePresentationHintNormal};
+  breakpoint.source = Source{"test.cpp", "/path/to/test.cpp", 123,
+                             Source::eSourcePresentationHintNormal};
   breakpoint.line = 10;
   breakpoint.column = 5;
   breakpoint.endLine = 15;
