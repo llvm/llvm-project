@@ -100,6 +100,7 @@ function(llvm_create_cross_target project_name target_name toolchain buildtype)
         -DLLVM_TEMPORARILY_ALLOW_OLD_TOOLCHAIN="${LLVM_TEMPORARILY_ALLOW_OLD_TOOLCHAIN}"
         -DLLVM_INCLUDE_BENCHMARKS=OFF
         -DLLVM_INCLUDE_TESTS=OFF
+        -DLLPC_BUILD_NPI="${LLPC_BUILD_NPI}"
         -DLLVM_TABLEGEN_FLAGS="${LLVM_TABLEGEN_FLAGS}"
         ${build_type_flags} ${linker_flag} ${external_clang_dir} ${libc_flags}
         ${ARGN}
