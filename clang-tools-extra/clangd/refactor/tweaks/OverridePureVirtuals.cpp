@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "refactor/Tweak.h"
-
 #include "support/Token.h"
 
 #include "clang/AST/ASTContext.h"
