@@ -1,3 +1,10 @@
+//===----- TargetCodeGenInfo.h ------------------------------------ C++ ---===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
 #include "llvm/ABI/ABIInfo.h"
 #include "llvm/TargetParser/Triple.h"
 #include <memory>
@@ -16,12 +23,12 @@ protected:
   }
 
 public:
-  TargetCodeGenInfo(std::unique_ptr<llvm::abi::ABIInfo> Info);
-  virtual ~TargetCodeGenInfo();
+  TargetCodeGenInfo(std::unique_ptr<llvm::abi::ABIInfo> Info)
+      : Info(std::move(Info)) {}
+
+  virtual ~TargetCodeGenInfo() = default;
 
   const ABIInfo &getABIInfo() const { return *Info; }
-
-  virtual void computeInfo(ABIFunctionInfo &FI) const;
 };
 
 std::unique_ptr<TargetCodeGenInfo>

@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Maps LLVM ABI type representations back to corresponding LLVM IR types.
+/// Maps LLVM ABI type representations to corresponding LLVM IR types.
 /// This reverse mapper translates low-level ABI-specific types back into
 /// LLVM IR types suitable for code generation and optimization passes.
 ///
@@ -16,16 +16,13 @@
 #include "llvm/ABI/ABITypeMapper.h"
 #include "llvm/ABI/Types.h"
 #include "llvm/ADT/APFloat.h"
-#include "llvm/ADT/bit.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Type.h"
-#include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/raw_ostream.h"
 
-using namespace llvm;
+using namespace llvm::abi;
 
-Type *ABITypeMapper::convertType(const abi::Type *ABIType) {
+llvm::Type *ABITypeMapper::convertType(const abi::Type *ABIType) {
   if (!ABIType)
     return nullptr;
 
@@ -33,30 +30,24 @@ Type *ABITypeMapper::convertType(const abi::Type *ABIType) {
   if (It != TypeCache.end())
     return It->second;
 
-  Type *Result = nullptr;
+  llvm::Type *Result = nullptr;
 
   switch (ABIType->getKind()) {
   case abi::TypeKind::Integer: {
     const auto *IT = cast<abi::IntegerType>(ABIType);
     unsigned Bitwidth = IT->getSizeInBits().getFixedValue();
-
-    if (IT->needsMemoryRep()) {
-      if (Bitwidth <= 8) {
-        Bitwidth = 8;
-      } else {
-        Bitwidth = bit_ceil(Bitwidth);
-      }
-    }
-
-    Result = IntegerType::get(Context, Bitwidth);
+    Result = llvm::IntegerType::get(Context, Bitwidth);
     break;
   }
-  case abi::TypeKind::Float:
-    Result = convertFloatType(cast<abi::FloatType>(ABIType));
+  case abi::TypeKind::Float: {
+    const fltSemantics *Semantics =
+        cast<abi::FloatType>(ABIType)->getSemantics();
+    Result = llvm::Type::getFloatingPointTy(Context, *Semantics);
     break;
+  }
   case abi::TypeKind::Pointer:
-    Result = PointerType::get(Context,
-                              cast<abi::PointerType>(ABIType)->getAddrSpace());
+    Result = llvm::PointerType::get(
+        Context, cast<abi::PointerType>(ABIType)->getAddrSpace());
     break;
   case abi::TypeKind::Array:
     Result = convertArrayType(cast<abi::ArrayType>(ABIType));
@@ -64,11 +55,11 @@ Type *ABITypeMapper::convertType(const abi::Type *ABIType) {
   case abi::TypeKind::Vector:
     Result = convertVectorType(cast<abi::VectorType>(ABIType));
     break;
-  case abi::TypeKind::Struct:
-    Result = convertStructType(cast<abi::StructType>(ABIType));
+  case abi::TypeKind::Record:
+    Result = convertRecordType(cast<abi::RecordType>(ABIType));
     break;
   case abi::TypeKind::Void:
-    Result = Type::getVoidTy(Context);
+    Result = llvm::Type::getVoidTy(Context);
     break;
   case abi::TypeKind::Complex:
     Result = convertComplexType(cast<abi::ComplexType>(ABIType));
@@ -84,98 +75,82 @@ Type *ABITypeMapper::convertType(const abi::Type *ABIType) {
   return Result;
 }
 
-Type *ABITypeMapper::convertFloatType(const abi::FloatType *FT) {
-  const fltSemantics *Semantics =
-      const_cast<abi::FloatType *>(FT)->getSemantics();
-  return Type::getFloatingPointTy(Context, *Semantics);
-}
-
-Type *ABITypeMapper::convertArrayType(const abi::ArrayType *AT) {
-  Type *ElementType = convertType(AT->getElementType());
+llvm::Type *ABITypeMapper::convertArrayType(const abi::ArrayType *AT) {
+  llvm::Type *ElementType = convertType(AT->getElementType());
   if (!ElementType)
     return nullptr;
 
   uint64_t NumElements = AT->getNumElements();
   if (AT->isMatrixType())
-    return VectorType::get(ElementType, ElementCount::getFixed(NumElements));
+    return llvm::VectorType::get(ElementType,
+                                 ElementCount::getFixed(NumElements));
 
-  return ArrayType::get(ElementType, NumElements);
+  return llvm::ArrayType::get(ElementType, NumElements);
 }
 
-Type *ABITypeMapper::convertVectorType(const abi::VectorType *VT) {
-  Type *ElementType = convertType(VT->getElementType());
+llvm::Type *ABITypeMapper::convertVectorType(const abi::VectorType *VT) {
+  llvm::Type *ElementType = convertType(VT->getElementType());
   if (!ElementType)
     return nullptr;
 
   ElementCount EC = VT->getNumElements();
-
-  if (EC.isScalable())
-    return ScalableVectorType::get(ElementType, EC.getKnownMinValue());
-  return VectorType::get(ElementType, EC);
+  return llvm::VectorType::get(ElementType, EC);
 }
 
-Type *ABITypeMapper::convertStructType(const abi::StructType *ST) {
-  ArrayRef<abi::FieldInfo> FieldsArray = ST->getFields();
-  return createStructFromFields(FieldsArray, ST->getNumFields(),
-                                ST->getSizeInBits(), ST->getAlignment(),
-                                ST->isUnion(), ST->isCoercedStruct());
+llvm::Type *ABITypeMapper::convertRecordType(const abi::RecordType *RT) {
+  ArrayRef<abi::FieldInfo> FieldsArray = RT->getFields();
+  return createStructFromFields(FieldsArray, RT->getSizeInBits(),
+                                RT->getAlignment(), RT->isUnion(),
+                                RT->isCoercedRecord());
 }
 
-Type *ABITypeMapper::convertComplexType(const abi::ComplexType *CT) {
+llvm::Type *ABITypeMapper::convertComplexType(const abi::ComplexType *CT) {
   // Complex types are represented as structs with two elements: {real, imag}
-  Type *ElementType = convertType(CT->getElementType());
+  llvm::Type *ElementType = convertType(CT->getElementType());
   if (!ElementType)
     return nullptr;
 
-  SmallVector<Type *, 2> Fields = {ElementType, ElementType};
-  return StructType::get(Context, Fields, /*isPacked=*/false);
+  SmallVector<llvm::Type *, 2> Fields = {ElementType, ElementType};
+  return llvm::StructType::get(Context, Fields, /*isPacked=*/false);
 }
 
-Type *
+llvm::Type *
 ABITypeMapper::convertMemberPointerType(const abi::MemberPointerType *MPT) {
-
-  bool Has64BitPointers = DL.getPointerSizeInBits() == 64;
   if (MPT->isFunctionPointer()) {
-
-    if (Has64BitPointers) {
-      // {i64, i64} for function pointer + adjustment
-      Type *I64 = IntegerType::get(Context, 64);
-      SmallVector<Type *, 2> Fields = {I64, I64};
-      return StructType::get(Context, Fields, /*isPacked=*/false);
-    } // {i32, i32} for 32-bit systems
-    Type *I32 = IntegerType::get(Context, 32);
-    SmallVector<Type *, 2> Fields = {I32, I32};
-    return StructType::get(Context, Fields, /*isPacked=*/false);
-
-  } // Data member pointer - single offset value
-  if (Has64BitPointers)
-    return IntegerType::get(Context, 64);
-  return IntegerType::get(Context, 32);
+    llvm::Type *IntPtrTy = DL.getIntPtrType(Context);
+    SmallVector<llvm::Type *, 2> Fields = {IntPtrTy, IntPtrTy};
+    return llvm::StructType::get(Context, Fields, /*isPacked=*/false);
+  }
+  return DL.getIntPtrType(Context);
 }
 
-StructType *ABITypeMapper::createStructFromFields(
-    ArrayRef<abi::FieldInfo> Fields, uint32_t NumFields, TypeSize Size,
-    Align Alignment, bool IsUnion, bool IsCoercedStr) {
-  SmallVector<Type *, 16> FieldTypes;
+llvm::Type *ABITypeMapper::createPaddingType(uint64_t PaddingBits) {
+  if (PaddingBits == 0)
+    return nullptr;
+
+  if (PaddingBits % 8 == 0) {
+    llvm::Type *ByteType = llvm::IntegerType::get(Context, 8);
+    return llvm::ArrayType::get(ByteType, PaddingBits / 8);
+  }
+  return llvm::IntegerType::get(Context, PaddingBits);
+}
+
+llvm::StructType *
+ABITypeMapper::createStructFromFields(ArrayRef<abi::FieldInfo> Fields,
+                                      TypeSize Size, Align Alignment,
+                                      bool IsUnion, bool IsCoercedStr) {
+  SmallVector<llvm::Type *, 16> FieldTypes;
 
   if (IsUnion) {
-    Type *LargestFieldType = nullptr;
+    llvm::Type *LargestFieldType = nullptr;
     uint64_t LargestFieldSize = 0;
 
     for (const auto &Field : Fields) {
-      Type *FieldType = convertType(Field.FieldType);
+      llvm::Type *FieldType = convertType(Field.FieldType);
       if (!FieldType)
         continue;
 
-      uint64_t FieldSize = 0;
-      if (auto *IntTy = dyn_cast<IntegerType>(FieldType)) {
-        FieldSize = IntTy->getBitWidth();
-      } else if (FieldType->isFloatingPointTy()) {
-        FieldSize = FieldType->getPrimitiveSizeInBits();
-      } else if (FieldType->isPointerTy()) {
-        FieldSize = Field.FieldType->getSizeInBits();
-      }
-
+      uint64_t FieldSize = DL.getTypeSizeInBits(FieldType);
       if (FieldSize > LargestFieldSize) {
         LargestFieldSize = FieldSize;
         LargestFieldType = FieldType;
@@ -187,15 +162,10 @@ StructType *ABITypeMapper::createStructFromFields(
 
       uint64_t UnionSizeBits = Size.getFixedValue();
       if (LargestFieldSize < UnionSizeBits) {
-        uint64_t PaddingBits = UnionSizeBits - LargestFieldSize;
-        if (PaddingBits % 8 == 0) {
-          Type *ByteType = IntegerType::get(Context, 8);
-          Type *PaddingType = ArrayType::get(ByteType, PaddingBits / 8);
+        llvm::Type *PaddingType =
+            createPaddingType(UnionSizeBits - LargestFieldSize);
+        if (PaddingType)
           FieldTypes.push_back(PaddingType);
-        } else {
-          Type *PaddingType = IntegerType::get(Context, PaddingBits);
-          FieldTypes.push_back(PaddingType);
-        }
       }
     }
   } else {
@@ -203,51 +173,33 @@ StructType *ABITypeMapper::createStructFromFields(
 
     for (const auto &Field : Fields) {
       if (!IsCoercedStr && Field.OffsetInBits > CurrentOffset) {
-        uint64_t PaddingBits = Field.OffsetInBits - CurrentOffset;
-        if (PaddingBits % 8 == 0 && PaddingBits >= 8) {
-          Type *ByteType = IntegerType::get(Context, 8);
-          Type *PaddingType = ArrayType::get(ByteType, PaddingBits / 8);
+        llvm::Type *PaddingType =
+            createPaddingType(Field.OffsetInBits - CurrentOffset);
+        if (PaddingType)
           FieldTypes.push_back(PaddingType);
-        } else if (PaddingBits > 0) {
-          Type *PaddingType = IntegerType::get(Context, PaddingBits);
-          FieldTypes.push_back(PaddingType);
-        }
         CurrentOffset = Field.OffsetInBits;
       }
 
-      Type *FieldType = convertType(Field.FieldType);
+      llvm::Type *FieldType = convertType(Field.FieldType);
       if (!FieldType)
         continue;
 
       if (Field.IsBitField && Field.BitFieldWidth > 0) {
-        FieldType = IntegerType::get(Context, Field.BitFieldWidth);
+        FieldType = llvm::IntegerType::get(Context, Field.BitFieldWidth);
         CurrentOffset += Field.BitFieldWidth;
       } else {
         FieldTypes.push_back(FieldType);
-        if (auto *IntTy = dyn_cast<IntegerType>(FieldType)) {
-          CurrentOffset += IntTy->getBitWidth();
-        } else if (FieldType->isFloatingPointTy()) {
-          CurrentOffset += FieldType->getPrimitiveSizeInBits();
-        } else if (FieldType->isPointerTy()) {
-          CurrentOffset += Field.FieldType->getSizeInBits();
-        } else {
-          CurrentOffset += 64; // Conservative estimate
-        }
+        CurrentOffset += DL.getTypeSizeInBits(FieldType);
       }
     }
 
     if (!IsCoercedStr) {
       uint64_t TotalSizeBits = Size.getFixedValue();
       if (CurrentOffset < TotalSizeBits) {
-        uint64_t PaddingBits = TotalSizeBits - CurrentOffset;
-        if (PaddingBits % 8 == 0 && PaddingBits >= 8) {
-          Type *ByteType = IntegerType::get(Context, 8);
-          Type *PaddingType = ArrayType::get(ByteType, PaddingBits / 8);
+        llvm::Type *PaddingType =
+            createPaddingType(TotalSizeBits - CurrentOffset);
+        if (PaddingType)
           FieldTypes.push_back(PaddingType);
-        } else if (PaddingBits > 0) {
-          Type *PaddingType = IntegerType::get(Context, PaddingBits);
-          FieldTypes.push_back(PaddingType);
-        }
       }
     }
   }

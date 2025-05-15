@@ -1,12 +1,14 @@
+//===----- ABIInfo.cpp ------------------------------------------- C++ ---===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
 #include "llvm/ABI/ABIInfo.h"
-#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm::abi;
 bool ABIInfo::isAggregateTypeForABI(const Type *Ty) const {
-  // Member pointers are always aggregates
-  if (Ty->isMemberPointer())
-    return true;
-
   // Check for fundamental scalar types
   if (Ty->isInteger() || Ty->isFloat() || Ty->isPointer() || Ty->isVector())
     return false;
@@ -15,9 +17,8 @@ bool ABIInfo::isAggregateTypeForABI(const Type *Ty) const {
   return true;
 }
 
-// Check if an integer type should be promoted
-bool ABIInfo::isPromotableIntegerType(const IntegerType *Ty) const {
-  unsigned BitWidth = Ty->getSizeInBits().getFixedValue();
+bool ABIInfo::isPromotableInteger(const IntegerType *IT) const {
+  unsigned BitWidth = IT->getSizeInBits().getFixedValue();
   return BitWidth < 32;
 }
 
@@ -25,47 +26,47 @@ bool ABIInfo::isPromotableIntegerType(const IntegerType *Ty) const {
 ABIArgInfo ABIInfo::getNaturalAlignIndirect(const Type *Ty, bool ByVal) const {
   return ABIArgInfo::getIndirect(Ty->getAlignment().value(), ByVal);
 }
-RecordArgABI ABIInfo::getRecordArgABI(const StructType *ST) const {
-  if (ST && !ST->canPassInRegisters())
+RecordArgABI ABIInfo::getRecordArgABI(const RecordType *RT) const {
+  if (RT && !RT->canPassInRegisters())
     return RAA_Indirect;
   return RAA_Default;
 }
 
-RecordArgABI ABIInfo::getRecordArgABI(const StructType *ST,
+RecordArgABI ABIInfo::getRecordArgABI(const RecordType *RT,
                                       bool IsCxxRecord) const {
   if (!IsCxxRecord) {
-    if (!ST->canPassInRegisters())
+    if (!RT->canPassInRegisters())
       return RAA_Indirect;
     return RAA_Default;
   }
-  return getRecordArgABI(ST);
+  return getRecordArgABI(RT);
 }
 
 RecordArgABI ABIInfo::getRecordArgABI(const Type *Ty) const {
-  const StructType *ST = dyn_cast<StructType>(Ty);
-  if (!ST)
+  const RecordType *RT = dyn_cast<RecordType>(Ty);
+  if (!RT)
     return RAA_Default;
-  return getRecordArgABI(ST, ST->isCXXRecord());
+  return getRecordArgABI(RT, RT->isCXXRecord());
 }
 
 bool ABIInfo::isZeroSizedType(const Type *Ty) const {
   return Ty->getSizeInBits().getFixedValue() == 0;
 }
 
-bool ABIInfo::isEmptyRecord(const StructType *ST) const {
-  if (ST->hasFlexibleArrayMember() || ST->isPolymorphic() ||
-      ST->getNumVirtualBaseClasses() != 0)
+bool ABIInfo::isEmptyRecord(const RecordType *RT) const {
+  if (RT->hasFlexibleArrayMember() || RT->isPolymorphic() ||
+      RT->getNumVirtualBaseClasses() != 0)
     return false;
 
-  for (unsigned I = 0; I < ST->getNumBaseClasses(); ++I) {
-    const Type *BaseTy = ST->getBaseClasses()[I].FieldType;
-    auto *BaseST = dyn_cast<StructType>(BaseTy);
-    if (!BaseST || !isEmptyRecord(BaseST))
+  for (unsigned I = 0; I < RT->getNumBaseClasses(); ++I) {
+    const Type *BaseTy = RT->getBaseClasses()[I].FieldType;
+    auto *BaseRT = dyn_cast<RecordType>(BaseTy);
+    if (!BaseRT || !isEmptyRecord(BaseRT))
       return false;
   }
 
-  for (unsigned I = 0; I < ST->getNumFields(); ++I) {
-    const FieldInfo &FI = ST->getFields()[I];
+  for (unsigned I = 0; I < RT->getNumFields(); ++I) {
+    const FieldInfo &FI = RT->getFields()[I];
 
     if (FI.IsBitField && FI.BitFieldWidth == 0)
       continue;
@@ -91,8 +92,8 @@ bool ABIInfo::isEmptyField(const FieldInfo &FI) const {
     Ty = AT->getElementType();
   }
 
-  if (auto *ST = dyn_cast<StructType>(Ty))
-    return isEmptyRecord(ST);
+  if (auto *RT = dyn_cast<RecordType>(Ty))
+    return isEmptyRecord(RT);
 
   return isZeroSizedType(Ty);
 }

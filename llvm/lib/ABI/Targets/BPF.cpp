@@ -19,10 +19,6 @@ class BPFABIInfo : public ABIInfo {
 private:
   TypeBuilder &TB;
 
-  bool isAggregateType(const Type *Ty) const {
-    return Ty->isStruct() || Ty->isVector() || Ty->isArray();
-  }
-
 public:
   BPFABIInfo(TypeBuilder &TypeBuilder) : TB(TypeBuilder) {}
 
@@ -30,7 +26,7 @@ public:
     if (RetTy->isVoid())
       return ABIArgInfo::getIgnore();
 
-    if (isAggregateType(RetTy)) {
+    if (isAggregateTypeForABI(RetTy)) {
       auto SizeInBits = RetTy->getSizeInBits().getFixedValue();
       if (SizeInBits == 0)
         return ABIArgInfo::getIgnore();
@@ -46,7 +42,7 @@ public:
   }
 
   ABIArgInfo classifyArgumentType(const Type *ArgTy) const {
-    if (isAggregateType(ArgTy)) {
+    if (isAggregateTypeForABI(ArgTy)) {
       auto SizeInBits = ArgTy->getSizeInBits().getFixedValue();
       if (SizeInBits == 0)
         return ABIArgInfo::getIgnore();
@@ -58,7 +54,7 @@ public:
           CoerceTy = TB.getIntegerType(AlignedBits, Align(8), false);
         } else {
           const Type *RegTy = TB.getIntegerType(64, Align(8), false);
-          CoerceTy = TB.getArrayType(RegTy, 2);
+          CoerceTy = TB.getArrayType(RegTy, 2, 128);
         }
         return ABIArgInfo::getDirect(CoerceTy);
       }
@@ -71,7 +67,7 @@ public:
       if (IntTy->isBitInt() && BitWidth > 128)
         return ABIArgInfo::getIndirect(ArgTy->getAlignment().value());
 
-      if (IntTy->isPromotableIntegerType())
+      if (isPromotableInteger(IntTy))
         return ABIArgInfo::getExtend(ArgTy);
     }
     return ABIArgInfo::getDirect();

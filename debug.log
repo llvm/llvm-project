@@ -1,2 +1,0 @@
-opt: Unknown command line argument '-debug-only=instcombine'.  Try: 'build/bin/opt --help'
-opt: Did you mean '--debug-pass=instcombine'?

@@ -33,10 +33,9 @@ private:
   clang::ASTContext &ASTCtx;
   llvm::abi::TypeBuilder Builder;
 
-  llvm::DenseMap<clang::QualType, const llvm::abi::Type *> TypeCache;
+  llvm::DenseMap<QualType, const llvm::abi::Type *> TypeCache;
 
-  const llvm::abi::Type *convertBuiltinType(const clang::BuiltinType *BT,
-                                            bool InMemory = false);
+  const llvm::abi::Type *convertBuiltinType(const clang::BuiltinType *BT);
   const llvm::abi::Type *convertPointerType(const clang::PointerType *PT);
   const llvm::abi::Type *convertArrayType(const clang::ArrayType *AT);
   const llvm::abi::Type *convertVectorType(const clang::VectorType *VT);
@@ -48,12 +47,12 @@ private:
   convertMemberPointerType(const clang::MemberPointerType *MPT);
   const llvm::abi::Type *convertMatrixType(const ConstantMatrixType *MT);
 
-  const llvm::abi::StructType *convertStructType(const clang::RecordDecl *RD);
-  const llvm::abi::StructType *convertUnionType(const clang::RecordDecl *RD,
-                                                bool isTransparent = false);
+  const llvm::abi::RecordType *convertStructType(const clang::RecordDecl *RD);
+  const llvm::abi::RecordType *convertUnionType(const clang::RecordDecl *RD,
+                                                bool IsTransparent = false);
   const llvm::abi::Type *createPointerTypeForPointee(QualType PointeeType);
-  const llvm::abi::StructType *convertCXXRecordType(const CXXRecordDecl *RD,
-                                                    bool canPassInRegs);
+  const llvm::abi::RecordType *convertCXXRecordType(const CXXRecordDecl *RD,
+                                                    bool CanPassInRegs);
 
   void computeFieldInfo(const clang::RecordDecl *RD,
                         SmallVectorImpl<llvm::abi::FieldInfo> &Fields,
@@ -69,7 +68,7 @@ public:
   explicit QualTypeMapper(clang::ASTContext &Ctx, llvm::BumpPtrAllocator &Alloc)
       : ASTCtx(Ctx), Builder(Alloc) {}
 
-  const llvm::abi::Type *convertType(clang::QualType QT, bool InMemory = false);
+  const llvm::abi::Type *convertType(clang::QualType QT);
 
   void clearCache() { TypeCache.clear(); }
 

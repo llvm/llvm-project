@@ -27,9 +27,9 @@
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ABI/Types.h"
 #include "llvm/Support/Alignment.h"
-#include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TypeSize.h"
-#include "llvm/Support/raw_ostream.h"
+#include <cstdint>
 
 namespace clang {
 namespace CodeGen {
@@ -40,19 +40,19 @@ namespace CodeGen {
 ///
 /// \param QT The Clang QualType to convert
 /// \return Corresponding LLVM ABI Type representation, or nullptr on error
-const llvm::abi::Type *QualTypeMapper::convertType(QualType QT, bool InMemory) {
+const llvm::abi::Type *QualTypeMapper::convertType(QualType QT) {
   // Canonicalize type and strip qualifiers
   // This ensures consistent type representation across different contexts
   QT = QT.getCanonicalType().getUnqualifiedType();
 
   // Results are cached since type conversion may be expensive
   auto It = TypeCache.find(QT);
-  if (It != TypeCache.end() && !QT->isBooleanType())
+  if (It != TypeCache.end())
     return It->second;
 
   const llvm::abi::Type *Result = nullptr;
   if (const auto *BT = dyn_cast<BuiltinType>(QT.getTypePtr()))
-    Result = convertBuiltinType(BT, InMemory);
+    Result = convertBuiltinType(BT);
   else if (const auto *PT = dyn_cast<PointerType>(QT.getTypePtr()))
     Result = convertPointerType(PT);
   else if (const auto *RT = dyn_cast<ReferenceType>(QT.getTypePtr()))
@@ -69,23 +69,22 @@ const llvm::abi::Type *QualTypeMapper::convertType(QualType QT, bool InMemory) {
     Result = convertComplexType(CT);
   else if (const auto *AT = dyn_cast<AtomicType>(QT.getTypePtr()))
     return convertType(AT->getValueType());
-  else if (const auto *BPT = dyn_cast<BlockPointerType>(QT.getTypePtr()))
+  else if (isa<BlockPointerType>(QT.getTypePtr()))
     return createPointerTypeForPointee(ASTCtx.VoidPtrTy);
-  else if (const auto *PipeT = dyn_cast<PipeType>(QT.getTypePtr()))
+  else if (isa<PipeType>(QT.getTypePtr()))
     Result = createPointerTypeForPointee(ASTCtx.VoidPtrTy);
   else if (const auto *MT = dyn_cast<ConstantMatrixType>(QT.getTypePtr())) {
     const llvm::abi::Type *ElementType = convertType(MT->getElementType());
     uint64_t NumElements = MT->getNumRows() * MT->getNumColumns();
-    return Builder.getArrayType(ElementType, NumElements, true);
-  } else if (const auto *MPT = dyn_cast<MemberPointerType>(QT.getTypePtr())) {
+    return Builder.getArrayType(ElementType, NumElements,
+                                ASTCtx.getTypeSize(QT), true);
+  } else if (const auto *MPT = dyn_cast<MemberPointerType>(QT.getTypePtr()))
     Result = convertMemberPointerType(MPT);
-  } else if (const auto *BIT = dyn_cast<BitIntType>(QT.getTypePtr())) {
+  else if (const auto *BIT = dyn_cast<BitIntType>(QT.getTypePtr())) {
     unsigned RawNumBits = BIT->getNumBits();
-    bool IsPromotableInt = BIT->getNumBits() < ASTCtx.getTypeSize(ASTCtx.IntTy);
     bool IsSigned = BIT->isSigned();
     llvm::Align TypeAlign = getTypeAlign(QT);
-    return Builder.getIntegerType(RawNumBits, TypeAlign, IsSigned, false, true,
-                                  IsPromotableInt, InMemory);
+    return Builder.getIntegerType(RawNumBits, TypeAlign, IsSigned, true);
   } else if (isa<ObjCObjectType>(QT.getTypePtr()) ||
              isa<ObjCObjectPointerType>(QT.getTypePtr())) {
     // Objective-C objects are represented as pointers in the ABI
@@ -97,9 +96,10 @@ const llvm::abi::Type *QualTypeMapper::convertType(QualType QT, bool InMemory) {
         PointerSize, llvm::Align(PointerAlign.value() / 8),
         ASTCtx.getTargetInfo().getTargetAddressSpace(QT.getAddressSpace()));
   } else
-    QT.dump();
+    llvm_unreachable("Unsupported type for ABI lowering!");
 
-  TypeCache[QT] = Result;
+  if (Result)
+    TypeCache[QT] = Result;
   return Result;
 }
 
@@ -109,8 +109,8 @@ const llvm::abi::Type *QualTypeMapper::convertType(QualType QT, bool InMemory) {
 ///
 /// \param BT The BuiltinType to convert
 /// \return Corresponding LLVM ABI integer, float, or void type
-const llvm::abi::Type *QualTypeMapper::convertBuiltinType(const BuiltinType *BT,
-                                                          bool InMemory) {
+const llvm::abi::Type *
+QualTypeMapper::convertBuiltinType(const BuiltinType *BT) {
   QualType QT(BT, 0);
 
   switch (BT->getKind()) {
@@ -121,8 +121,7 @@ const llvm::abi::Type *QualTypeMapper::convertBuiltinType(const BuiltinType *BT,
     return createPointerTypeForPointee(QT);
 
   case BuiltinType::Bool:
-    return Builder.getIntegerType(1, getTypeAlign(QT), false, true, false,
-                                  ASTCtx.isPromotableIntegerType(QT), InMemory);
+    return Builder.getIntegerType(1, getTypeAlign(QT), false, false);
   case BuiltinType::Char_S:
   case BuiltinType::Char_U:
   case BuiltinType::SChar:
@@ -143,8 +142,7 @@ const llvm::abi::Type *QualTypeMapper::convertBuiltinType(const BuiltinType *BT,
   case BuiltinType::Int128:
   case BuiltinType::UInt128:
     return Builder.getIntegerType(ASTCtx.getTypeSize(QT), getTypeAlign(QT),
-                                  BT->isSignedInteger(), false, false,
-                                  ASTCtx.isPromotableIntegerType(QT));
+                                  BT->isSignedInteger(), false);
 
   case BuiltinType::Half:
   case BuiltinType::Float16:
@@ -215,17 +213,18 @@ const llvm::abi::Type *QualTypeMapper::convertBuiltinType(const BuiltinType *BT,
 const llvm::abi::Type *
 QualTypeMapper::convertArrayType(const clang::ArrayType *AT) {
   const llvm::abi::Type *ElementType = convertType(AT->getElementType());
+  uint64_t Size = ASTCtx.getTypeSize(AT);
 
   if (const auto *CAT = dyn_cast<ConstantArrayType>(AT)) {
     auto NumElements = CAT->getZExtSize();
-    return Builder.getArrayType(ElementType, NumElements);
+    return Builder.getArrayType(ElementType, NumElements, Size);
   }
-  if (const auto *IAT = dyn_cast<IncompleteArrayType>(AT))
-    return Builder.getArrayType(ElementType, 0);
+  if (isa<IncompleteArrayType>(AT))
+    return Builder.getArrayType(ElementType, 0, 0);
   if (const auto *VAT = dyn_cast<VariableArrayType>(AT))
     return createPointerTypeForPointee(VAT->getPointeeType());
   // Fallback for other array types
-  return Builder.getArrayType(ElementType, 1);
+  return Builder.getArrayType(ElementType, 1, Size);
 }
 
 const llvm::abi::Type *QualTypeMapper::convertVectorType(const VectorType *VT) {
@@ -238,12 +237,10 @@ const llvm::abi::Type *QualTypeMapper::convertVectorType(const VectorType *VT) {
     if (BW != 1 && (BW & 7)) {
       BW = llvm::bit_ceil(BW);
       BW = std::clamp(BW, 8u, 64u);
-      bool Signed = IT->isSigned();
-      ElementType = Builder.getIntegerType(BW, llvm::Align(BW / 8), Signed);
-    } else if (BW < 8 && BW != 1) {
-      bool Signed = IT->isSigned();
-      ElementType = Builder.getIntegerType(8, llvm::Align(1), Signed);
-    }
+      ElementType =
+          Builder.getIntegerType(BW, llvm::Align(BW / 8), IT->isSigned());
+    } else if (BW < 8 && BW != 1)
+      ElementType = Builder.getIntegerType(8, llvm::Align(1), IT->isSigned());
   }
 
   unsigned NElems = VT->getNumElements();
@@ -302,7 +299,7 @@ QualTypeMapper::convertMemberPointerType(const clang::MemberPointerType *MPT) {
 /// and delegates to specialized converters.
 ///
 /// \param RT The RecordType to convert
-/// \return LLVM ABI StructType or UnionType
+/// \return LLVM ABI RecordType
 const llvm::abi::Type *QualTypeMapper::convertRecordType(const RecordType *RT) {
   const RecordDecl *RD = RT->getOriginalDecl()->getDefinition();
   bool canPassInRegs = false;
@@ -313,7 +310,7 @@ const llvm::abi::Type *QualTypeMapper::convertRecordType(const RecordType *RT) {
   }
   if (!RD) {
     SmallVector<llvm::abi::FieldInfo, 0> Fields;
-    return Builder.getStructType(
+    return Builder.getRecordType(
         Fields, llvm::TypeSize::getFixed(0), llvm::Align(1),
         llvm::abi::StructPacking::Default, {}, {}, false, false, false, false,
         hasFlexibleArrMember, false, canPassInRegs);
@@ -328,9 +325,8 @@ const llvm::abi::Type *QualTypeMapper::convertRecordType(const RecordType *RT) {
 
   // Handle C++ classes with base classes
   auto *const CXXRd = dyn_cast<CXXRecordDecl>(RD);
-  if (CXXRd && (CXXRd->getNumBases() > 0 || CXXRd->getNumVBases() > 0)) {
+  if (CXXRd && (CXXRd->getNumBases() > 0 || CXXRd->getNumVBases() > 0))
     return convertCXXRecordType(CXXRd, canPassInRegs);
-  }
   return convertStructType(RD);
 }
 
@@ -341,8 +337,8 @@ const llvm::abi::Type *QualTypeMapper::convertRecordType(const RecordType *RT) {
 /// - Member field layout with proper offsets
 ///
 /// \param RD The C++ record declaration
-/// \return LLVM ABI StructType representing the complete object layout
-const llvm::abi::StructType *
+/// \return LLVM ABI RecordType representing the complete object layout
+const llvm::abi::RecordType *
 QualTypeMapper::convertCXXRecordType(const CXXRecordDecl *RD,
                                      bool canPassInRegs) {
   const ASTRecordLayout &Layout = ASTCtx.getASTRecordLayout(RD);
@@ -411,7 +407,7 @@ QualTypeMapper::convertCXXRecordType(const CXXRecordDecl *RD,
     ++FieldIndex;
   }
 
-  return Builder.getStructType(
+  return Builder.getRecordType(
       Fields, Size, Alignment, llvm::abi::StructPacking::Default, BaseClasses,
       VirtualBaseClasses, true, RD->isPolymorphic(), HasNonTrivialCopy,
       HasNonTrivialDtor, HasFlexibleArrayMember, HasUnalignedFields,
@@ -461,8 +457,8 @@ QualTypeMapper::convertEnumType(const clang::EnumType *ET) {
 /// without considering base classes or virtual functions.
 ///
 /// \param RD The RecordDecl to convert
-/// \return LLVM ABI StructType
-const llvm::abi::StructType *
+/// \return LLVM ABI RecordType
+const llvm::abi::RecordType *
 QualTypeMapper::convertStructType(const clang::RecordDecl *RD) {
   const ASTRecordLayout &Layout = ASTCtx.getASTRecordLayout(RD);
 
@@ -474,7 +470,7 @@ QualTypeMapper::convertStructType(const clang::RecordDecl *RD) {
       llvm::TypeSize::getFixed(Layout.getSize().getQuantity() * 8);
   llvm::Align Alignment = llvm::Align(Layout.getAlignment().getQuantity());
 
-  return Builder.getStructType(
+  return Builder.getRecordType(
       Fields, Size, Alignment, llvm::abi::StructPacking::Default, {}, {},
       IsCXXRecord, false, false, false, RD->hasFlexibleArrayMember(), false,
       RD->canPassInRegisters());
@@ -486,7 +482,7 @@ QualTypeMapper::convertStructType(const clang::RecordDecl *RD) {
 ///
 /// \param RD The RecordDecl representing the union
 /// \return LLVM ABI UnionType
-const llvm::abi::StructType *
+const llvm::abi::RecordType *
 QualTypeMapper::convertUnionType(const clang::RecordDecl *RD,
                                  bool isTransparent) {
   const ASTRecordLayout &Layout = ASTCtx.getASTRecordLayout(RD);
@@ -498,51 +494,9 @@ QualTypeMapper::convertUnionType(const clang::RecordDecl *RD,
       llvm::TypeSize::getFixed(Layout.getSize().getQuantity() * 8);
   llvm::Align Alignment = llvm::Align(Layout.getAlignment().getQuantity());
 
-auto *UnionMeta = Builder.createUnionMetadata(AllFields, Size, Alignment);
-  const llvm::abi::Type *StorageType = nullptr;
-  bool SeenNamedMember = false;
-
-  for (const auto *Field : RD->fields()) {
-    if (Field->isBitField() && Field->isZeroLengthBitField())
-      continue;
-
-    const llvm::abi::Type *FieldType = convertType(Field->getType(), true);
-
-    if (!SeenNamedMember) {
-      SeenNamedMember = Field->getIdentifier() != nullptr;
-      if (!SeenNamedMember) {
-        if (const auto *FieldRD = Field->getType()->getAsRecordDecl())
-          SeenNamedMember = FieldRD->findFirstNamedDataMember() != nullptr;
-      }
-
-      if (SeenNamedMember) {
-        StorageType = FieldType;
-      }
-    }
-
-    if (!StorageType ||
-        FieldType->getAlignment().value() >
-            StorageType->getAlignment().value() ||
-        (FieldType->getAlignment().value() ==
-             StorageType->getAlignment().value() &&
-         FieldType->getSizeInBits().getFixedValue() >
-             StorageType->getSizeInBits().getFixedValue())) {
-      StorageType = FieldType;
-    }
-  }
-
-  SmallVector<llvm::abi::FieldInfo, 1> UnionFields;
-  if (StorageType) {
-    UnionFields.emplace_back(StorageType, 0, false, 0, false);
-  }
-
-  const llvm::abi::StructType *LoweredUnion = Builder.getUnionType(
-      UnionFields, Size, Alignment, llvm::abi::StructPacking::Default,
-      isTransparent, RD->canPassInRegisters(),isa<CXXRecordDecl>(RD));
-
-  LoweredUnion->setMetadata(UnionMeta);
-
-  return LoweredUnion;
+  return Builder.getUnionType(AllFields, Size, Alignment,
+                              llvm::abi::StructPacking::Default, isTransparent,
+                              RD->canPassInRegisters(), isa<CXXRecordDecl>(RD));
 }
 
 llvm::Align QualTypeMapper::getPreferredTypeAlign(QualType QT) const {
@@ -578,20 +532,20 @@ void QualTypeMapper::computeFieldInfo(
   unsigned FieldIndex = 0;
 
   for (const auto *FD : RD->fields()) {
-    const llvm::abi::Type *FieldType = convertType(FD->getType(), true);
+    const llvm::abi::Type *FieldType = convertType(FD->getType());
     uint64_t OffsetInBits = Layout.getFieldOffset(FieldIndex);
 
     bool IsBitField = FD->isBitField();
     uint64_t BitFieldWidth = 0;
-    bool IsUnnamed = false;
+    bool IsUnnamedBitField = false;
 
     if (IsBitField) {
       BitFieldWidth = FD->getBitWidthValue();
-      IsUnnamed = FD->isUnnamedBitField();
+      IsUnnamedBitField = FD->isUnnamedBitField();
     }
 
     Fields.emplace_back(FieldType, OffsetInBits, IsBitField, BitFieldWidth,
-                        IsUnnamed);
+                        IsUnnamedBitField);
     ++FieldIndex;
   }
 }

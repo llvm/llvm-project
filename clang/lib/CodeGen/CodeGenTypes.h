@@ -99,7 +99,7 @@ class CodeGenTypes {
   mutable llvm::BumpPtrAllocator Alloc;
   mutable llvm::abi::TypeBuilder TB;
   mutable QualTypeMapper Mapper;
-  llvm::ABITypeMapper ReverseMapper;
+  llvm::abi::ABITypeMapper ReverseMapper;
 
 public:
   CodeGenTypes(CodeGenModule &cgm);

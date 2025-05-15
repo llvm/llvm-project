@@ -18,7 +18,6 @@
 #include "llvm/ABI/Types.h"
 #include <cassert>
 #include <climits>
-#include <cstdint>
 
 namespace llvm {
 namespace abi {
@@ -70,17 +69,17 @@ public:
 
   virtual ~ABIInfo() = default;
 
-  RecordArgABI getRecordArgABI(const StructType *ST) const;
+  RecordArgABI getRecordArgABI(const RecordType *RT) const;
   RecordArgABI getRecordArgABI(const Type *Ty) const;
-  RecordArgABI getRecordArgABI(const StructType *ST, bool IsCxxRecord) const;
+  RecordArgABI getRecordArgABI(const RecordType *RT, bool IsCxxRecord) const;
+  bool isPromotableInteger(const IntegerType *IT) const;
   virtual void computeInfo(ABIFunctionInfo &FI) const = 0;
   virtual bool isPassByRef(const Type *Ty) const { return false; }
   const ABICompatInfo &getABICompatInfo() const { return CompatInfo; }
   ABIArgInfo getNaturalAlignIndirect(const Type *Ty, bool ByVal = true) const;
   bool isAggregateTypeForABI(const Type *Ty) const;
-  bool isPromotableIntegerType(const IntegerType *Ty) const;
   bool isZeroSizedType(const Type *Ty) const;
-  bool isEmptyRecord(const StructType *ST) const;
+  bool isEmptyRecord(const RecordType *RT) const;
   bool isEmptyField(const FieldInfo &FI) const;
 
   void setABICompatInfo(const ABICompatInfo &Info) { CompatInfo = Info; }

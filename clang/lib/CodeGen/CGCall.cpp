@@ -46,8 +46,6 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Type.h"
-#include "llvm/Support/Allocator.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <optional>
@@ -1055,12 +1053,12 @@ const CGFunctionInfo &CodeGenTypes::arrangeLLVMFunctionInfo(
   FI = CGFunctionInfo::create(CC, isInstanceMethod, isChainCall, isDelegateCall,
                               info, paramInfos, resultType, argTypes, required);
 
+  FunctionInfos.InsertNode(FI, insertPos);
   std::unique_ptr<llvm::abi::ABIFunctionInfo> tempFI;
 
   bool inserted = FunctionsBeingProcessed.insert(FI).second;
   (void)inserted;
   assert(inserted && "Recursively being processed?");
-
 
   // Compute ABI information.
   if (CC == llvm::CallingConv::SPIR_KERNEL) {
@@ -1070,24 +1068,25 @@ const CGFunctionInfo &CodeGenTypes::arrangeLLVMFunctionInfo(
   } else if (info.getCC() == CC_Swift || info.getCC() == CC_SwiftAsync) {
     swiftcall::computeABIInfo(CGM, *FI);
   } else {
-    if (CGM.shouldUseLLVMABI()) {
+    if (CGM.shouldUseLLVMABI() &&
+        (CC == llvm::CallingConv::X86_64_SysV || CC == llvm::CallingConv::C)) {
       SmallVector<const llvm::abi::Type *, 8> MappedArgTypes;
       for (CanQualType ArgType : argTypes)
         MappedArgTypes.push_back(Mapper.convertType(ArgType));
       tempFI.reset(llvm::abi::ABIFunctionInfo::create(
           CC, Mapper.convertType(resultType), MappedArgTypes));
-      FunctionInfos.InsertNode(FI, insertPos);
 
       CGM.fetchABIInfo(TB).computeInfo(*tempFI);
-    } else 
+    } else
       CGM.getABIInfo().computeInfo(*FI);
   }
-
 
   // Loop over all of the computed argument and return value info.  If any of
   // them are direct or extend without a specified coerce type, specify the
   // default now.
-  if (CGM.shouldUseLLVMABI() && tempFI) {
+  if (CGM.shouldUseLLVMABI() &&
+      (CC == llvm::CallingConv::X86_64_SysV || CC == llvm::CallingConv::C) &&
+      tempFI) {
 
     const auto &abiRetInfo = tempFI->getReturnInfo();
     ABIArgInfo &cgRetInfo = FI->getReturnInfo();

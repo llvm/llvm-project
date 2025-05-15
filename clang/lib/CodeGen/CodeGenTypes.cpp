@@ -27,7 +27,6 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Support/Error.h"
 
 using namespace clang;
 using namespace CodeGen;

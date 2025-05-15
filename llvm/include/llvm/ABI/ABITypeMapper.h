@@ -25,14 +25,14 @@
 #include "llvm/IR/Type.h"
 #include "llvm/Support/TypeSize.h"
 
-namespace llvm {
+namespace llvm::abi {
 
 class ABITypeMapper {
 public:
-  explicit ABITypeMapper(LLVMContext &Ctx, const DataLayout &DataLayout)
-      : Context(Ctx), DL(DataLayout) {}
+  explicit ABITypeMapper(LLVMContext &Ctx, const DataLayout &DL)
+      : Context(Ctx), DL(DL) {}
 
-  Type *convertType(const abi::Type *ABIType);
+  llvm::Type *convertType(const abi::Type *ABIType);
 
   void clearCache() { TypeCache.clear(); }
 
@@ -40,37 +40,28 @@ private:
   LLVMContext &Context;
   const DataLayout &DL;
 
-  DenseMap<const abi::Type *, Type *> TypeCache;
+  llvm::DenseMap<const abi::Type *, llvm::Type *> TypeCache;
 
-  Type *convertIntegerType(const abi::IntegerType *IT);
+  llvm::Type *convertArrayType(const abi::ArrayType *AT);
 
-  Type *convertFieldType(const abi::Type *FieldType);
+  llvm::Type *convertMatrixType(const abi::ArrayType *MT);
 
-  Type *convertFloatType(const abi::FloatType *FT);
+  llvm::Type *convertVectorType(const abi::VectorType *VT);
 
-  Type *convertPointerType(const abi::PointerType *PT);
+  llvm::Type *convertRecordType(const abi::RecordType *RT);
 
-  Type *convertArrayType(const abi::ArrayType *AT);
+  llvm::Type *getFloatTypeForSemantics(const fltSemantics &Semantics);
 
-  Type *convertMatrixType(const abi::ArrayType *MT);
+  llvm::StructType *createStructFromFields(ArrayRef<abi::FieldInfo> Fields,
+                                           TypeSize Size, Align Alignment,
+                                           bool IsUnion = false,
+                                           bool IsCoercedStr = false);
+  llvm::Type *createPaddingType(uint64_t PaddingBits);
+  llvm::Type *convertComplexType(const abi::ComplexType *CT);
 
-  Type *convertVectorType(const abi::VectorType *VT);
-
-  Type *convertStructType(const abi::StructType *ST);
-
-  Type *convertVoidType(const abi::VoidType *VT);
-
-  Type *getFloatTypeForSemantics(const fltSemantics &Semantics);
-
-  StructType *createStructFromFields(ArrayRef<abi::FieldInfo> Fields,
-                                     uint32_t NumFields, TypeSize Size,
-                                     Align Alignment, bool IsUnion = false,
-                                     bool IsCoercedStr = false);
-  Type *convertComplexType(const abi::ComplexType *CT);
-
-  Type *convertMemberPointerType(const abi::MemberPointerType *MPT);
+  llvm::Type *convertMemberPointerType(const abi::MemberPointerType *MPT);
 };
 
-} // namespace llvm
+} // namespace llvm::abi
 
 #endif // LLVM_CODEGEN_ABITYPEMAPPER_H
