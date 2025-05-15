@@ -295,9 +295,9 @@ static void emitMemcpyExpansion(IRBuilder<> &Builder, Value *Dst, Value *Src,
          "memcpy length must be divisible by array element type");
   for (uint64_t I = 0; I < NumElemsToCopy; ++I) {
     Value *Offset = ConstantInt::get(Type::getInt32Ty(Ctx), I);
-    Value *SrcPtr = Builder.CreateGEP(ElemTy, Src, Offset, "gep");
+    Value *SrcPtr = Builder.CreateInBoundsGEP(ElemTy, Src, Offset, "gep");
     Value *SrcVal = Builder.CreateLoad(ElemTy, SrcPtr);
-    Value *DstPtr = Builder.CreateGEP(ElemTy, Dst, Offset, "gep");
+    Value *DstPtr = Builder.CreateInBoundsGEP(ElemTy, Dst, Offset, "gep");
     Builder.CreateStore(SrcVal, DstPtr);
   }
 }
