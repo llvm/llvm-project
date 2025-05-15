@@ -2626,6 +2626,7 @@ class VPExtendedReductionRecipe : public VPReductionRecipe {
             ExtRed->isOrdered(), ExtRed->getDebugLoc()),
         ExtOp(ExtRed->getExtOpcode()), ResultTy(ExtRed->getResultType()) {
     transferFlags(*ExtRed);
+    setUnderlyingValue(ExtRed->getUnderlyingValue());
   }
 
 public:
@@ -2671,11 +2672,11 @@ public:
   Instruction::CastOps getExtOpcode() const { return ExtOp; }
 };
 
-/// A recipe to represent inloop MulAccumulateReduction operations, performing a
-/// reduction.add on the result of vector operands (might be extended)
-/// multiplication into a scalar value, and adding the result to a chain. This
-/// recipe is abstract and needs to be lowered to concrete recipes before
-/// codegen. The operands are {ChainOp, VecOp1, VecOp2, [Condition]}.
+/// A recipe to represent inloop MulAccumulateReduction operations,  multiplying
+/// the vector operands (which may be extended), performing a reduction.add on
+/// the result, and adding the scalar result to a chain. This recipe is abstract
+/// and needs to be lowered to concrete recipes before codegen. The operands are
+/// {ChainOp, VecOp1, VecOp2, [Condition]}.
 class VPMulAccumulateReductionRecipe : public VPReductionRecipe {
   /// Opcode of the extend for VecOp1 and VecOp2.
   Instruction::CastOps ExtOp;
@@ -2695,7 +2696,10 @@ class VPMulAccumulateReductionRecipe : public VPReductionRecipe {
             WrapFlagsTy(MulAcc->hasNoUnsignedWrap(), MulAcc->hasNoSignedWrap()),
             MulAcc->getDebugLoc()),
         ExtOp(MulAcc->getExtOpcode()), IsNonNeg(MulAcc->isNonNeg()),
-        ResultTy(MulAcc->getResultType()) {}
+        ResultTy(MulAcc->getResultType()) {
+    transferFlags(*MulAcc);
+    setUnderlyingValue(MulAcc->getUnderlyingValue());
+  }
 
 public:
   VPMulAccumulateReductionRecipe(VPReductionRecipe *R, VPWidenRecipe *Mul,
@@ -2740,9 +2744,7 @@ public:
   ~VPMulAccumulateReductionRecipe() override = default;
 
   VPMulAccumulateReductionRecipe *clone() override {
-    auto *Copy = new VPMulAccumulateReductionRecipe(this);
-    Copy->transferFlags(*this);
-    return Copy;
+    return new VPMulAccumulateReductionRecipe(this);
   }
 
   VP_CLASSOF_IMPL(VPDef::VPMulAccumulateReductionSC);
