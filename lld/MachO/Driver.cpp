@@ -337,15 +337,15 @@ static InputFile *addFile(StringRef path, LoadType loadType,
         for (const object::Archive::Child &c : file->getArchive().children(e)) {
           StringRef reason;
           switch (loadType) {
-            case LoadType::LCLinkerOption:
-              reason = "LC_LINKER_OPTION";
-              break;
-            case LoadType::CommandLineForce:
-              reason = "-force_load";
-              break;
-            case LoadType::CommandLine:
-              reason = "-all_load";
-              break;
+          case LoadType::LCLinkerOption:
+            reason = "LC_LINKER_OPTION";
+            break;
+          case LoadType::CommandLineForce:
+            reason = "-force_load";
+            break;
+          case LoadType::CommandLine:
+            reason = "-all_load";
+            break;
           }
           if (Error e = file->fetch(c, reason)) {
             if (config->warnThinArchiveMissingMembers)
@@ -2178,6 +2178,9 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     StringRef orderFile = args.getLastArgValue(OPT_order_file);
     if (!orderFile.empty())
       priorityBuilder.parseOrderFile(orderFile);
+    config->cStringOrderFilePath = args.getLastArgValue(OPT_order_file_cstring);
+    if (!config->cStringOrderFilePath.empty())
+      priorityBuilder.parseOrderFileCString(config->cStringOrderFilePath);
 
     referenceStubBinder();
 

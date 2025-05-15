@@ -388,3 +388,74 @@ macho::PriorityBuilder::buildInputSectionPriorities() {
 
   return sectionPriorities;
 }
+
+void macho::PriorityBuilder::parseOrderFileCString(StringRef path) {
+  std::optional<MemoryBufferRef> buffer = readFile(path);
+  if (!buffer) {
+    error("Could not read cstring order file at " + path);
+    return;
+  }
+  MemoryBufferRef mbref = *buffer;
+  int priority = std::numeric_limits<int>::min();
+  for (StringRef line : args::getLines(mbref)) {
+    if (line.empty())
+      continue;
+    uint32_t hash = 0;
+    if (!to_integer(line, hash))
+      continue;
+    auto it = cStringPriorities.find(hash);
+    if (it == cStringPriorities.end())
+      cStringPriorities[hash] = ++priority;
+    else
+      assert(it->second <= priority);
+  }
+}
+
+std::vector<StringPiecePair> macho::PriorityBuilder::buildCStringPriorities(
+    ArrayRef<CStringInputSection *> inputs) {
+  std::vector<StringPiecePair> orderedStringPieces;
+  if (config->cStringOrderFilePath.empty()) {
+    for (CStringInputSection *isec : inputs) {
+      for (const auto &[stringPieceIdx, piece] :
+           llvm::enumerate(isec->pieces)) {
+        if (!piece.live)
+          continue;
+        orderedStringPieces.emplace_back(isec, stringPieceIdx);
+      }
+    }
+    return orderedStringPieces;
+  }
+
+  // Split the input strings into hold and cold sets.
+  // Order hot set based on -order_file_cstring for performance improvement;
+  // TODO: Order cold set of cstrings for compression via BP.
+  std::vector<std::pair<int, StringPiecePair>>
+      hotStringPrioritiesAndStringPieces;
+  std::vector<StringPiecePair> coldStringPieces;
+
+  for (CStringInputSection *isec : inputs) {
+    for (const auto &[stringPieceIdx, piece] : llvm::enumerate(isec->pieces)) {
+      if (!piece.live)
+        continue;
+
+      auto it = cStringPriorities.find(piece.hash);
+      if (it != cStringPriorities.end())
+        hotStringPrioritiesAndStringPieces.emplace_back(
+            it->second, std::make_pair(isec, stringPieceIdx));
+      else
+        coldStringPieces.emplace_back(isec, stringPieceIdx);
+    }
+  }
+
+  // Order hot set for perf
+  llvm::stable_sort(hotStringPrioritiesAndStringPieces);
+  for (auto &[priority, stringPiecePair] : hotStringPrioritiesAndStringPieces)
+    orderedStringPieces.push_back(stringPiecePair);
+
+  // TODO: Order cold set for compression
+
+  orderedStringPieces.insert(orderedStringPieces.end(),
+                             coldStringPieces.begin(), coldStringPieces.end());
+
+  return orderedStringPieces;
+}

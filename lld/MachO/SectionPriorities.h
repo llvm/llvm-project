@@ -16,6 +16,7 @@
 namespace lld::macho {
 
 using SectionPair = std::pair<const InputSection *, const InputSection *>;
+using StringPiecePair = std::pair<CStringInputSection *, size_t>;
 
 class PriorityBuilder {
 public:
@@ -55,6 +56,23 @@ public:
   // contains.
   llvm::DenseMap<const InputSection *, int> buildInputSectionPriorities();
 
+  // Reads the cstring order file at `path` into cStringPriorities.
+  // An cstring order file has one entry per line, in the following format:
+  //
+  // <hash of cstring literal content>
+  //
+  // Cstring literals are not symbolized, we can't identify them by name
+  // However, cstrings are deduplicated, hence unique, so we use the hash of
+  // the content of cstring literals to identify them and assign priority to it.
+  // We use the same hash as used in StringPiece, i.e. 31 bit:
+  // xxh3_64bits(string) & 0x7fffffff
+  //
+  // Additionally, given they are deduplicated and unique, we don't need to know
+  // which object file they are from.
+  void parseOrderFileCString(StringRef path);
+  std::vector<StringPiecePair>
+      buildCStringPriorities(ArrayRef<CStringInputSection *>);
+
 private:
   // The symbol with the smallest priority should be ordered first in the output
   // section (modulo input section contiguity constraints).
@@ -68,6 +86,8 @@ private:
 
   std::optional<int> getSymbolPriority(const Defined *sym);
   llvm::DenseMap<llvm::StringRef, SymbolPriorityEntry> priorities;
+  /// A map from cstring literal hashes to priorities
+  llvm::DenseMap<uint32_t, int> cStringPriorities;
   llvm::MapVector<SectionPair, uint64_t> callGraphProfile;
 };
 
