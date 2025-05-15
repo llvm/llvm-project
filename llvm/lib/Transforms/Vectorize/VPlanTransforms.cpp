@@ -1087,37 +1087,37 @@ void VPlanTransforms::simplifyRecipes(VPlan &Plan, Type &CanonicalIVTy) {
 }
 
 static void convertToUniformRecipes(VPlan &Plan) {
-  auto TryToNarrow = [](VPBasicBlock *VPBB) {
+  if (Plan.hasScalarVFOnly())
+    return;
+
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
       // Try to narrow wide and replicating recipes to uniform recipes, based on
       // VPlan analysis.
-      auto *Def = dyn_cast<VPSingleDefRecipe>(&R);
-      if (!Def || !isa<VPReplicateRecipe, VPWidenRecipe>(Def) ||
-          !Def->getUnderlyingValue())
-        continue;
-
       auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
+      if (!RepR && !isa<VPWidenRecipe>(&R))
+        continue;
       if (RepR && RepR->isUniform())
         continue;
 
+      auto *RepOrWiden = cast<VPSingleDefRecipe>(&R);
       // Skip recipes that aren't uniform and don't have only their scalar
       // results used. In the later case, we would introduce extra broadcasts.
-      if (!vputils::isUniformAfterVectorization(Def) ||
-          any_of(Def->users(),
-                 [Def](VPUser *U) { return !U->usesScalars(Def); }))
+      if (!vputils::isUniformAfterVectorization(RepOrWiden) ||
+          any_of(RepOrWiden->users(), [RepOrWiden](VPUser *U) {
+            return !U->usesScalars(RepOrWiden);
+          }))
         continue;
 
-      auto *Clone = new VPReplicateRecipe(Def->getUnderlyingInstr(),
-                                          Def->operands(), /*IsUniform*/ true);
-      Clone->insertBefore(Def);
-      Def->replaceAllUsesWith(Clone);
-      Def->eraseFromParent();
+      auto *Clone =
+          new VPReplicateRecipe(RepOrWiden->getUnderlyingInstr(),
+                                RepOrWiden->operands(), /*IsUniform*/ true);
+      Clone->insertBefore(RepOrWiden);
+      RepOrWiden->replaceAllUsesWith(Clone);
+      RepOrWiden->eraseFromParent();
     }
-  };
-
-  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
-           vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry())))
-    TryToNarrow(VPBB);
+  }
 }
 
 /// Normalize and simplify VPBlendRecipes. Should be run after simplifyRecipes
