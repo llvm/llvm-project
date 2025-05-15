@@ -52,7 +52,7 @@
 ! CHECK-NEXT:          omp.loop_nest (%[[VAL_13:.*]]) : i32 = (%[[VAL_9]]) to (%[[VAL_10]]) inclusive step (%[[VAL_11]]) {
 ! CHECK:                 %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_7]] {uniq_name = "_QFreduction_max_intEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:                 %[[VAL_14:.*]]:2 = hlfir.declare %[[VAL_12]] {uniq_name = "_QFreduction_max_intEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:                 hlfir.assign %[[VAL_13]] to %[[VAL_8]]#1 : i32, !fir.ref<i32>
+! CHECK:                 hlfir.assign %[[VAL_13]] to %[[VAL_8]]#0 : i32, !fir.ref<i32>
 ! CHECK:                 %[[VAL_15:.*]] = fir.load %[[VAL_8]]#0 : !fir.ref<i32>
 ! CHECK:                 %[[VAL_16:.*]] = fir.convert %[[VAL_15]] : (i32) -> i64
 ! CHECK:                 %[[VAL_17:.*]] = hlfir.designate %[[VAL_5]]#0 (%[[VAL_16]])  : (!fir.box<!fir.array<?xi32>>, i64) -> !fir.ref<i32>
@@ -81,7 +81,7 @@
 ! CHECK-NEXT:          omp.loop_nest (%[[VAL_13:.*]]) : i32 = (%[[VAL_9]]) to (%[[VAL_10]]) inclusive step (%[[VAL_11]]) {
 ! CHECK:                 %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_7]] {uniq_name = "_QFreduction_max_realEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:                 %[[VAL_14:.*]]:2 = hlfir.declare %[[VAL_12]] {uniq_name = "_QFreduction_max_realEx"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
-! CHECK:                 hlfir.assign %[[VAL_13]] to %[[VAL_8]]#1 : i32, !fir.ref<i32>
+! CHECK:                 hlfir.assign %[[VAL_13]] to %[[VAL_8]]#0 : i32, !fir.ref<i32>
 ! CHECK:                 %[[VAL_15:.*]] = fir.load %[[VAL_8]]#0 : !fir.ref<i32>
 ! CHECK:                 %[[VAL_16:.*]] = fir.convert %[[VAL_15]] : (i32) -> i64
 ! CHECK:                 %[[VAL_17:.*]] = hlfir.designate %[[VAL_5]]#0 (%[[VAL_16]])  : (!fir.box<!fir.array<?xf32>>, i64) -> !fir.ref<f32>
@@ -100,7 +100,7 @@
 ! CHECK-NEXT:          omp.loop_nest (%[[VAL_36:.*]]) : i32 = (%[[VAL_32]]) to (%[[VAL_33]]) inclusive step (%[[VAL_34]]) {
 ! CHECK:                 %[[VAL_31:.*]]:2 = hlfir.declare %[[VAL_30]] {uniq_name = "_QFreduction_max_realEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:                 %[[VAL_37:.*]]:2 = hlfir.declare %[[VAL_35]] {uniq_name = "_QFreduction_max_realEx"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
-! CHECK:                 hlfir.assign %[[VAL_36]] to %[[VAL_31]]#1 : i32, !fir.ref<i32>
+! CHECK:                 hlfir.assign %[[VAL_36]] to %[[VAL_31]]#0 : i32, !fir.ref<i32>
 ! CHECK:                 %[[VAL_38:.*]] = fir.load %[[VAL_31]]#0 : !fir.ref<i32>
 ! CHECK:                 %[[VAL_39:.*]] = fir.convert %[[VAL_38]] : (i32) -> i64
 ! CHECK:                 %[[VAL_40:.*]] = hlfir.designate %[[VAL_5]]#0 (%[[VAL_39]])  : (!fir.box<!fir.array<?xf32>>, i64) -> !fir.ref<f32>

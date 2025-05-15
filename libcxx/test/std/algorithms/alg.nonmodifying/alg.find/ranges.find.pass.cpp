@@ -34,6 +34,7 @@
 #include <vector>
 
 #include "almost_satisfies_types.h"
+#include "sized_allocator.h"
 #include "test_iterators.h"
 
 struct NotEqualityComparable {};
@@ -202,7 +203,8 @@ constexpr bool test() {
     }
   }
 
-  { // Test vector<bool>::iterator optimization
+  {
+    // Test vector<bool>::iterator optimization
     std::vector<bool> vec(256 + 8);
     for (ptrdiff_t i = 8; i <= 256; i *= 2) {
       for (size_t offset = 0; offset < 8; offset += 2) {
@@ -214,6 +216,39 @@ constexpr bool test() {
         assert(std::ranges::find(std::ranges::begin(vec) + offset, std::ranges::end(vec), false) ==
                std::ranges::begin(vec) + offset + i);
       }
+    }
+
+    // Verify that the std::vector<bool>::iterator optimization works properly for allocators with custom size types
+    // See https://github.com/llvm/llvm-project/issues/122528
+    {
+      using Alloc = sized_allocator<bool, std::uint8_t, std::int8_t>;
+      std::vector<bool, Alloc> in(100, false, Alloc(1));
+      in[in.size() - 2] = true;
+      assert(std::ranges::find(in, true) == in.end() - 2);
+    }
+    {
+      using Alloc = sized_allocator<bool, std::uint16_t, std::int16_t>;
+      std::vector<bool, Alloc> in(199, false, Alloc(1));
+      in[in.size() - 2] = true;
+      assert(std::ranges::find(in, true) == in.end() - 2);
+    }
+    {
+      using Alloc = sized_allocator<bool, unsigned short, short>;
+      std::vector<bool, Alloc> in(200, false, Alloc(1));
+      in[in.size() - 2] = true;
+      assert(std::ranges::find(in, true) == in.end() - 2);
+    }
+    {
+      using Alloc = sized_allocator<bool, std::uint32_t, std::int32_t>;
+      std::vector<bool, Alloc> in(205, false, Alloc(1));
+      in[in.size() - 2] = true;
+      assert(std::ranges::find(in, true) == in.end() - 2);
+    }
+    {
+      using Alloc = sized_allocator<bool, std::uint64_t, std::int64_t>;
+      std::vector<bool, Alloc> in(257, false, Alloc(1));
+      in[in.size() - 2] = true;
+      assert(std::ranges::find(in, true) == in.end() - 2);
     }
   }
 

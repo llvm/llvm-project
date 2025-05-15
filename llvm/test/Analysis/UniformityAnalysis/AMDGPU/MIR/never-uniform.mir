@@ -1,4 +1,5 @@
 # RUN: llc -mtriple=amdgcn-- -mcpu=gfx900 -run-pass=print-machine-uniformity -o - %s 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgcn-- -mcpu=gfx900 -passes='print<machine-uniformity>' -filetype=null %s 2>&1 | FileCheck %s
 # loads from flat non uniform
 ---
 name:            flatloads
@@ -8,7 +9,7 @@ machineFunctionInfo:
 
 body:             |
   bb.0:
-    ; CHECK-LABEL: MachineUniformityInfo for function: flatloads
+    ; CHECK-LABEL: MachineUniformityInfo for function:  @flatloads
     ; CHECK: DIVERGENT: %1
     ; CHECK-NOT: DIVERGENT: %2
     %0:vreg_64 = IMPLICIT_DEF
@@ -27,7 +28,7 @@ machineFunctionInfo:
 
 body:             |
   bb.0:
-    ; CHECK-LABEL: MachineUniformityInfo for function: scratchloads
+    ; CHECK-LABEL: MachineUniformityInfo for function:  @scratchloads
     ; CHECK: DIVERGENT: %1
     %0:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     %1:vgpr_32 = SCRATCH_LOAD_DWORD %0, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32), addrspace 5)
@@ -43,7 +44,7 @@ machineFunctionInfo:
 
 body:             |
   bb.0:
-    ; CHECK-LABEL: MachineUniformityInfo for function: globalloads
+    ; CHECK-LABEL: MachineUniformityInfo for function:  @globalloads
     ; CHECK: DIVERGENT: %2
     ; CHECK-NOT: DIVERGENT: %3
     %0:vreg_64 = IMPLICIT_DEF
@@ -63,7 +64,7 @@ machineFunctionInfo:
 
 body:             |
   bb.0:
-    ; CHECK-LABEL: MachineUniformityInfo for function: dsreads
+    ; CHECK-LABEL: MachineUniformityInfo for function:  @dsreads
     ; CHECK-NEXT: ALL VALUES UNIFORM
     %0:vreg_64 = IMPLICIT_DEF
     $m0 = S_MOV_B32 0
@@ -79,7 +80,7 @@ machineFunctionInfo:
   isEntryFunction: true
 body:             |
   bb.0:
-    ; CHECK-LABEL: MachineUniformityInfo for function: sgprcopy
+    ; CHECK-LABEL: MachineUniformityInfo for function:  @sgprcopy
     ; CHECK: DIVERGENT: %2
     liveins: $sgpr0,$sgpr1,$vgpr0
     %0:sgpr_32 = COPY $sgpr0
@@ -95,7 +96,7 @@ machineFunctionInfo:
   isEntryFunction: true
 body:             |
   bb.0:
-    ; CHECK-LABEL: MachineUniformityInfo for function: writelane
+    ; CHECK-LABEL: MachineUniformityInfo for function:  @writelane
     ; CHECK: DIVERGENT: %4
 
     ; Note how %5 is the result of a vector compare, but it is reported as
@@ -123,7 +124,7 @@ name:            physicalreg
 tracksRegLiveness: true
 body:             |
   bb.0:
-    ; CHECK-LABEL: MachineUniformityInfo for function: physicalreg
+    ; CHECK-LABEL: MachineUniformityInfo for function:  @physicalreg
     ; CHECK: DIVERGENT: %0
     ; CHECK: DIVERGENT: %1
     ; CHECK: DIVERGENT: %2
@@ -147,7 +148,7 @@ machineFunctionInfo:
   isEntryFunction: true
 body:             |
   bb.0:
-    ; CHECK-LABEL: MachineUniformityInfo for function: mbcnt_lo
+    ; CHECK-LABEL: MachineUniformityInfo for function:  @mbcnt_lo
     ; CHECK: DIVERGENT: %0
     %0:vgpr_32 = V_MBCNT_LO_U32_B32_e64 -1, 0, implicit $exec
     S_ENDPGM 0
@@ -158,7 +159,7 @@ machineFunctionInfo:
   isEntryFunction: true
 body:             |
   bb.0:
-    ; CHECK-LABEL: MachineUniformityInfo for function: mbcnt_hi
+    ; CHECK-LABEL: MachineUniformityInfo for function:  @mbcnt_hi
     ; CHECK: DIVERGENT: %0
     %0:vgpr_32 = V_MBCNT_HI_U32_B32_e64 -1, 0, implicit $exec
     S_ENDPGM 0

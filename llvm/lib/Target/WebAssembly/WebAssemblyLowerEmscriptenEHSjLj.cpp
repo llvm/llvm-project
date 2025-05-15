@@ -436,7 +436,7 @@ static std::string getSignature(FunctionType *FTy) {
   erase_if(Sig, isSpace);
   // When s2wasm parses .s file, a comma means the end of an argument. So a
   // mangled function name can contain any character but a comma.
-  std::replace(Sig.begin(), Sig.end(), ',', '.');
+  llvm::replace(Sig, ',', '.');
   return Sig;
 }
 
@@ -1707,7 +1707,6 @@ void WebAssemblyLowerEmscriptenEHSjLj::handleLongjmpableCallsForWasmSjLj(
     // BB. If the call is enclosed in another catchpad/cleanuppad scope, unwind
     // to its parent pad's unwind destination instead to preserve the scope
     // structure. It will eventually unwind to the catch.dispatch.longjmp.
-    SmallVector<OperandBundleDef, 1> Bundles;
     BasicBlock *UnwindDest = nullptr;
     if (auto Bundle = CI->getOperandBundle(LLVMContext::OB_funclet)) {
       Instruction *FromPad = cast<Instruction>(Bundle->Inputs[0]);
@@ -1767,7 +1766,7 @@ void WebAssemblyLowerEmscriptenEHSjLj::handleLongjmpableCallsForWasmSjLj(
     I->eraseFromParent();
 
   // Add entries for new predecessors to phis in unwind destinations. We use
-  // 'undef' as a placeholder value. We should make sure the phis have a valid
+  // 'poison' as a placeholder value. We should make sure the phis have a valid
   // set of predecessors before running SSAUpdater, because SSAUpdater
   // internally can use existing phis to gather predecessor info rather than
   // scanning the actual CFG (See FindPredecessorBlocks in SSAUpdater.cpp for
@@ -1776,7 +1775,7 @@ void WebAssemblyLowerEmscriptenEHSjLj::handleLongjmpableCallsForWasmSjLj(
     for (PHINode &PN : UnwindDest->phis()) {
       for (auto *NewPred : NewPreds) {
         assert(PN.getBasicBlockIndex(NewPred) == -1);
-        PN.addIncoming(UndefValue::get(PN.getType()), NewPred);
+        PN.addIncoming(PoisonValue::get(PN.getType()), NewPred);
       }
     }
   }

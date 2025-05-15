@@ -112,10 +112,8 @@ private:
   /// For example, 'public:' labels in classes are offset by 1 or 2
   /// characters to the left from their level.
   int getIndentOffset(const AnnotatedLine &Line) {
-    if (Style.Language == FormatStyle::LK_Java || Style.isJavaScript() ||
-        Style.isCSharp()) {
+    if (Style.isJava() || Style.isJavaScript() || Style.isCSharp())
       return 0;
-    }
     const auto &RootToken = *Line.First;
     if (Line.Type == LT_AccessModifier ||
         RootToken.isAccessSpecifier(/*ColonRequired=*/false) ||
@@ -316,8 +314,13 @@ private:
           const AnnotatedLine *Line = nullptr;
           for (auto J = I - 1; J >= AnnotatedLines.begin(); --J) {
             assert(*J);
-            if (!(*J)->InPPDirective && !(*J)->isComment() &&
-                (*J)->Level < TheLine->Level) {
+            if ((*J)->InPPDirective || (*J)->isComment() ||
+                (*J)->Level > TheLine->Level) {
+              continue;
+            }
+            if ((*J)->Level < TheLine->Level ||
+                (Style.BreakBeforeBraces == FormatStyle::BS_Whitesmiths &&
+                 (*J)->First->is(tok::l_brace))) {
               Line = *J;
               break;
             }
@@ -421,55 +424,23 @@ private:
                  : 0;
     }
     // Try to merge a control statement block with left brace wrapped.
-    if (NextLine.First->is(tok::l_brace)) {
-      if ((TheLine->First->isOneOf(tok::kw_if, tok::kw_else, tok::kw_while,
-                                   tok::kw_for, tok::kw_switch, tok::kw_try,
-                                   tok::kw_do, TT_ForEachMacro) ||
-           (TheLine->First->is(tok::r_brace) && TheLine->First->Next &&
-            TheLine->First->Next->isOneOf(tok::kw_else, tok::kw_catch))) &&
-          Style.BraceWrapping.AfterControlStatement ==
-              FormatStyle::BWACS_MultiLine) {
-        // If possible, merge the next line's wrapped left brace with the
-        // current line. Otherwise, leave it on the next line, as this is a
-        // multi-line control statement.
-        return (Style.ColumnLimit == 0 || TheLine->Level * Style.IndentWidth +
-                                                  TheLine->Last->TotalLength <=
-                                              Style.ColumnLimit)
-                   ? 1
-                   : 0;
-      }
-      if (TheLine->First->isOneOf(tok::kw_if, tok::kw_else, tok::kw_while,
-                                  tok::kw_for, TT_ForEachMacro)) {
-        return (Style.BraceWrapping.AfterControlStatement ==
-                FormatStyle::BWACS_Always)
-                   ? tryMergeSimpleBlock(I, E, Limit)
-                   : 0;
-      }
-      if (TheLine->First->isOneOf(tok::kw_else, tok::kw_catch) &&
-          Style.BraceWrapping.AfterControlStatement ==
-              FormatStyle::BWACS_MultiLine) {
-        // This case if different from the upper BWACS_MultiLine processing
-        // in that a preceding r_brace is not on the same line as else/catch
-        // most likely because of BeforeElse/BeforeCatch set to true.
-        // If the line length doesn't fit ColumnLimit, leave l_brace on the
-        // next line to respect the BWACS_MultiLine.
-        return (Style.ColumnLimit == 0 ||
-                TheLine->Last->TotalLength <= Style.ColumnLimit)
-                   ? 1
-                   : 0;
-      }
+    if (NextLine.First->is(TT_ControlStatementLBrace)) {
+      // If possible, merge the next line's wrapped left brace with the
+      // current line. Otherwise, leave it on the next line, as this is a
+      // multi-line control statement.
+      return Style.BraceWrapping.AfterControlStatement ==
+                     FormatStyle::BWACS_Always
+                 ? tryMergeSimpleBlock(I, E, Limit)
+                 : 0;
     }
     if (PreviousLine && TheLine->First->is(tok::l_brace)) {
       switch (PreviousLine->First->Tok.getKind()) {
       case tok::at:
         // Don't merge block with left brace wrapped after ObjC special blocks.
-        if (PreviousLine->First->Next) {
-          tok::ObjCKeywordKind kwId =
-              PreviousLine->First->Next->Tok.getObjCKeywordID();
-          if (kwId == tok::objc_autoreleasepool ||
-              kwId == tok::objc_synchronized) {
-            return 0;
-          }
+        if (PreviousLine->First->Next &&
+            PreviousLine->First->Next->isOneOf(tok::objc_autoreleasepool,
+                                               tok::objc_synchronized)) {
+          return 0;
         }
         break;
 
@@ -798,10 +769,8 @@ private:
     // Don't merge ObjC @ keywords and methods.
     // FIXME: If an option to allow short exception handling clauses on a single
     // line is added, change this to not return for @try and friends.
-    if (Style.Language != FormatStyle::LK_Java &&
-        Line.First->isOneOf(tok::at, tok::minus, tok::plus)) {
+    if (!Style.isJava() && Line.First->isOneOf(tok::at, tok::minus, tok::plus))
       return 0;
-    }
 
     // Check that the current line allows merging. This depends on whether we
     // are in a control flow statements as well as several style flags.
@@ -938,7 +907,8 @@ private:
         // { <-- current Line
         //   baz();
         // }
-        if (Line.First == Line.Last && Line.First->isNot(TT_FunctionLBrace) &&
+        if (Line.First == Line.Last &&
+            Line.First->is(TT_ControlStatementLBrace) &&
             Style.BraceWrapping.AfterControlStatement ==
                 FormatStyle::BWACS_MultiLine) {
           return 0;

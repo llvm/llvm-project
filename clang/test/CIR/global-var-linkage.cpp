@@ -4,7 +4,7 @@
 int aaaa;
 // CHECK: cir.global external @aaaa
 static int bbbb;
-// CHECK: cir.global internal @bbbb
+// CHECK: cir.global internal @_ZL4bbbb
 inline int cccc;
 // CHECK: cir.global linkonce_odr @cccc
 [[gnu::selectany]] int dddd;

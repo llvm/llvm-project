@@ -3,9 +3,15 @@
 // RUN: %clang_cc1 -std=c++23 -verify=cxx23,nontemplate -fsyntax-only -Wc++26-extensions %s
 
 void decompose_array() {
-  int arr[4] = {1, 2, 3, 6};
+  constexpr int arr[4] = {1, 2, 3, 6};
   // cxx26-warning@+3 {{structured binding packs are incompatible with C++ standards before C++2c}}
   // cxx23-warning@+2 {{structured binding packs are a C++2c extension}}
   // nontemplate-error@+1 {{pack declaration outside of template}}
   auto [x, ...rest, y] = arr;
+
+  // cxx26-warning@+4 {{structured binding packs are incompatible with C++ standards before C++2c}}
+  // cxx23-warning@+3 {{structured binding packs are a C++2c extension}}
+  // nontemplate-error@+2 {{decomposition declaration cannot be declared 'constexpr'}}
+  // nontemplate-error@+1 {{pack declaration outside of template}}
+  constexpr auto [x_c, ...rest_c, y_c] = arr;
 }

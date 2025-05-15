@@ -379,6 +379,7 @@ private:
   SDValue PromoteIntRes_IS_FPCLASS(SDNode *N);
   SDValue PromoteIntRes_PATCHPOINT(SDNode *N);
   SDValue PromoteIntRes_VECTOR_FIND_LAST_ACTIVE(SDNode *N);
+  SDValue PromoteIntRes_GET_ACTIVE_LANE_MASK(SDNode *N);
   SDValue PromoteIntRes_PARTIAL_REDUCE_MLA(SDNode *N);
 
   // Integer Operand Promotion.
@@ -756,6 +757,7 @@ private:
 
   void PromoteFloatResult(SDNode *N, unsigned ResNo);
   SDValue PromoteFloatRes_BITCAST(SDNode *N);
+  SDValue PromoteFloatRes_FREEZE(SDNode *N);
   SDValue PromoteFloatRes_BinOp(SDNode *N);
   SDValue PromoteFloatRes_UnaryWithTwoFPResults(SDNode *N);
   SDValue PromoteFloatRes_ConstantFP(SDNode *N);
@@ -771,6 +773,7 @@ private:
   SDValue PromoteFloatRes_SELECT(SDNode *N);
   SDValue PromoteFloatRes_SELECT_CC(SDNode *N);
   SDValue PromoteFloatRes_UnaryOp(SDNode *N);
+  SDValue PromoteFloatRes_AssertNoFPClass(SDNode *N);
   SDValue PromoteFloatRes_UNDEF(SDNode *N);
   SDValue BitcastToInt_ATOMIC_SWAP(SDNode *N);
   SDValue PromoteFloatRes_XINT_TO_FP(SDNode *N);
@@ -784,6 +787,7 @@ private:
   SDValue PromoteFloatOp_FP_EXTEND(SDNode *N, unsigned OpNo);
   SDValue PromoteFloatOp_STRICT_FP_EXTEND(SDNode *N, unsigned OpNo);
   SDValue PromoteFloatOp_UnaryOp(SDNode *N, unsigned OpNo);
+  SDValue PromoteFloatOp_AssertNoFPClass(SDNode *N, unsigned OpNo);
   SDValue PromoteFloatOp_FP_TO_XINT_SAT(SDNode *N, unsigned OpNo);
   SDValue PromoteFloatOp_STORE(SDNode *N, unsigned OpNo);
   SDValue PromoteFloatOp_ATOMIC_STORE(SDNode *N, unsigned OpNo);
@@ -819,6 +823,7 @@ private:
   SDValue SoftPromoteHalfRes_SELECT(SDNode *N);
   SDValue SoftPromoteHalfRes_SELECT_CC(SDNode *N);
   SDValue SoftPromoteHalfRes_UnaryOp(SDNode *N);
+  SDValue SoftPromoteHalfRes_AssertNoFPClass(SDNode *N);
   SDValue SoftPromoteHalfRes_XINT_TO_FP(SDNode *N);
   SDValue SoftPromoteHalfRes_UNDEF(SDNode *N);
   SDValue SoftPromoteHalfRes_VECREDUCE(SDNode *N);

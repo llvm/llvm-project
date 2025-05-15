@@ -523,6 +523,9 @@ void ASTDeclReader::ReadFunctionDefinition(FunctionDecl *FD) {
   }
   // Store the offset of the body so we can lazily load it later.
   Reader.PendingBodies[FD] = GetCurrentCursorOffset();
+  // For now remember ThisDeclarationWasADefinition only for friend functions.
+  if (FD->getFriendObjectKind())
+    Reader.ThisDeclarationWasADefinitionSet.insert(FD);
 }
 
 void ASTDeclReader::Visit(Decl *D) {
@@ -901,7 +904,9 @@ void ASTDeclReader::VisitDeclaratorDecl(DeclaratorDecl *DD) {
   if (Record.readInt()) { // hasExtInfo
     auto *Info = new (Reader.getContext()) DeclaratorDecl::ExtInfo();
     Record.readQualifierInfo(*Info);
-    Info->TrailingRequiresClause = Record.readExpr();
+    Info->TrailingRequiresClause = AssociatedConstraint(
+        Record.readExpr(),
+        UnsignedOrNone::fromInternalRepresentation(Record.readUInt32()));
     DD->DeclInfo = Info;
   }
   QualType TSIType = Record.readType();
@@ -1071,6 +1076,8 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
   FD->setFriendConstraintRefersToEnclosingTemplate(
       FunctionDeclBits.getNextBit());
   FD->setUsesSEHTry(FunctionDeclBits.getNextBit());
+  FD->setIsDestroyingOperatorDelete(FunctionDeclBits.getNextBit());
+  FD->setIsTypeAwareOperatorNewOrDelete(FunctionDeclBits.getNextBit());
 
   FD->EndRangeLoc = readSourceLocation();
   if (FD->isExplicitlyDefaulted())
@@ -2706,10 +2713,10 @@ void ASTDeclReader::VisitTemplateTypeParmDecl(TemplateTypeParmDecl *D) {
     if (Record.readBool())
       CR = Record.readConceptReference();
     Expr *ImmediatelyDeclaredConstraint = Record.readExpr();
+    UnsignedOrNone ArgPackSubstIndex = Record.readUnsignedOrNone();
 
-    D->setTypeConstraint(CR, ImmediatelyDeclaredConstraint);
-    if ((D->ExpandedParameterPack = Record.readInt()))
-      D->NumExpanded = Record.readInt();
+    D->setTypeConstraint(CR, ImmediatelyDeclaredConstraint, ArgPackSubstIndex);
+    D->NumExpanded = Record.readUnsignedOrNone();
   }
 
   if (Record.readInt())
@@ -4309,12 +4316,13 @@ Decl *ASTReader::ReadDeclRecord(GlobalDeclID ID) {
 void ASTReader::PassInterestingDeclsToConsumer() {
   assert(Consumer);
 
-  if (PassingDeclsToConsumer)
+  if (!CanPassDeclsToConsumer)
     return;
 
   // Guard variable to avoid recursively redoing the process of passing
   // decls to consumer.
-  SaveAndRestore GuardPassingDeclsToConsumer(PassingDeclsToConsumer, true);
+  SaveAndRestore GuardPassingDeclsToConsumer(CanPassDeclsToConsumer,
+                                             /*NewValue=*/false);
 
   // Ensure that we've loaded all potentially-interesting declarations
   // that need to be eagerly loaded.
@@ -4566,11 +4574,12 @@ namespace {
                             Reader.getOwningModuleFile(Cat)) {
           StructuralEquivalenceContext::NonEquivalentDeclSet NonEquivalentDecls;
           StructuralEquivalenceContext Ctx(
-              Cat->getASTContext(), Existing->getASTContext(),
-              NonEquivalentDecls, StructuralEquivalenceKind::Default,
-              /*StrictTypeSpelling =*/false,
-              /*Complain =*/false,
-              /*ErrorOnTagTypeMismatch =*/true);
+              Reader.getContext().getLangOpts(), Cat->getASTContext(),
+              Existing->getASTContext(), NonEquivalentDecls,
+              StructuralEquivalenceKind::Default,
+              /*StrictTypeSpelling=*/false,
+              /*Complain=*/false,
+              /*ErrorOnTagTypeMismatch=*/true);
           if (!Ctx.IsEquivalent(Cat, Existing)) {
             // Warn only if the categories with the same name are different.
             Reader.Diag(Cat->getLocation(), diag::warn_dup_category_def)
@@ -4681,7 +4690,7 @@ static void forAllLaterRedecls(DeclT *D, Fn F) {
 void ASTDeclReader::UpdateDecl(Decl *D) {
   while (Record.getIdx() < Record.size()) {
     switch ((DeclUpdateKind)Record.readInt()) {
-    case UPD_CXX_ADDED_IMPLICIT_MEMBER: {
+    case DeclUpdateKind::CXXAddedImplicitMember: {
       auto *RD = cast<CXXRecordDecl>(D);
       Decl *MD = Record.readDecl();
       assert(MD && "couldn't read decl from update record");
@@ -4689,7 +4698,7 @@ void ASTDeclReader::UpdateDecl(Decl *D) {
       break;
     }
 
-    case UPD_CXX_ADDED_ANONYMOUS_NAMESPACE: {
+    case DeclUpdateKind::CXXAddedAnonymousNamespace: {
       auto *Anon = readDeclAs<NamespaceDecl>();
 
       // Each module has its own anonymous namespace, which is disjoint from
@@ -4704,7 +4713,7 @@ void ASTDeclReader::UpdateDecl(Decl *D) {
       break;
     }
 
-    case UPD_CXX_ADDED_VAR_DEFINITION: {
+    case DeclUpdateKind::CXXAddedVarDefinition: {
       auto *VD = cast<VarDecl>(D);
       VD->NonParmVarDeclBits.IsInline = Record.readInt();
       VD->NonParmVarDeclBits.IsInlineSpecified = Record.readInt();
@@ -4712,7 +4721,7 @@ void ASTDeclReader::UpdateDecl(Decl *D) {
       break;
     }
 
-    case UPD_CXX_POINT_OF_INSTANTIATION: {
+    case DeclUpdateKind::CXXPointOfInstantiation: {
       SourceLocation POI = Record.readSourceLocation();
       if (auto *VTSD = dyn_cast<VarTemplateSpecializationDecl>(D)) {
         VTSD->setPointOfInstantiation(POI);
@@ -4732,7 +4741,7 @@ void ASTDeclReader::UpdateDecl(Decl *D) {
       break;
     }
 
-    case UPD_CXX_INSTANTIATED_DEFAULT_ARGUMENT: {
+    case DeclUpdateKind::CXXInstantiatedDefaultArgument: {
       auto *Param = cast<ParmVarDecl>(D);
 
       // We have to read the default argument regardless of whether we use it
@@ -4747,7 +4756,7 @@ void ASTDeclReader::UpdateDecl(Decl *D) {
       break;
     }
 
-    case UPD_CXX_INSTANTIATED_DEFAULT_MEMBER_INITIALIZER: {
+    case DeclUpdateKind::CXXInstantiatedDefaultMemberInitializer: {
       auto *FD = cast<FieldDecl>(D);
       auto *DefaultInit = Record.readExpr();
 
@@ -4764,7 +4773,7 @@ void ASTDeclReader::UpdateDecl(Decl *D) {
       break;
     }
 
-    case UPD_CXX_ADDED_FUNCTION_DEFINITION: {
+    case DeclUpdateKind::CXXAddedFunctionDefinition: {
       auto *FD = cast<FunctionDecl>(D);
       if (Reader.PendingBodies[FD]) {
         // FIXME: Maybe check for ODR violations.
@@ -4786,7 +4795,7 @@ void ASTDeclReader::UpdateDecl(Decl *D) {
       break;
     }
 
-    case UPD_CXX_INSTANTIATED_CLASS_DEFINITION: {
+    case DeclUpdateKind::CXXInstantiatedClassDefinition: {
       auto *RD = cast<CXXRecordDecl>(D);
       auto *OldDD = RD->getCanonicalDecl()->DefinitionData;
       bool HadRealDefinition =
@@ -4847,7 +4856,7 @@ void ASTDeclReader::UpdateDecl(Decl *D) {
       break;
     }
 
-    case UPD_CXX_RESOLVED_DTOR_DELETE: {
+    case DeclUpdateKind::CXXResolvedDtorDelete: {
       // Set the 'operator delete' directly to avoid emitting another update
       // record.
       auto *Del = readDeclAs<FunctionDecl>();
@@ -4861,7 +4870,7 @@ void ASTDeclReader::UpdateDecl(Decl *D) {
       break;
     }
 
-    case UPD_CXX_RESOLVED_EXCEPTION_SPEC: {
+    case DeclUpdateKind::CXXResolvedExceptionSpec: {
       SmallVector<QualType, 8> ExceptionStorage;
       auto ESI = Record.readExceptionSpecInfo(ExceptionStorage);
 
@@ -4883,7 +4892,7 @@ void ASTDeclReader::UpdateDecl(Decl *D) {
       break;
     }
 
-    case UPD_CXX_DEDUCED_RETURN_TYPE: {
+    case DeclUpdateKind::CXXDeducedReturnType: {
       auto *FD = cast<FunctionDecl>(D);
       QualType DeducedResultType = Record.readType();
       Reader.PendingDeducedTypeUpdates.insert(
@@ -4891,27 +4900,27 @@ void ASTDeclReader::UpdateDecl(Decl *D) {
       break;
     }
 
-    case UPD_DECL_MARKED_USED:
+    case DeclUpdateKind::DeclMarkedUsed:
       // Maintain AST consistency: any later redeclarations are used too.
       D->markUsed(Reader.getContext());
       break;
 
-    case UPD_MANGLING_NUMBER:
+    case DeclUpdateKind::ManglingNumber:
       Reader.getContext().setManglingNumber(cast<NamedDecl>(D),
                                             Record.readInt());
       break;
 
-    case UPD_STATIC_LOCAL_NUMBER:
+    case DeclUpdateKind::StaticLocalNumber:
       Reader.getContext().setStaticLocalNumber(cast<VarDecl>(D),
                                                Record.readInt());
       break;
 
-    case UPD_DECL_MARKED_OPENMP_THREADPRIVATE:
+    case DeclUpdateKind::DeclMarkedOpenMPThreadPrivate:
       D->addAttr(OMPThreadPrivateDeclAttr::CreateImplicit(Reader.getContext(),
                                                           readSourceRange()));
       break;
 
-    case UPD_DECL_MARKED_OPENMP_ALLOCATE: {
+    case DeclUpdateKind::DeclMarkedOpenMPAllocate: {
       auto AllocatorKind =
           static_cast<OMPAllocateDeclAttr::AllocatorTypeTy>(Record.readInt());
       Expr *Allocator = Record.readExpr();
@@ -4922,7 +4931,7 @@ void ASTDeclReader::UpdateDecl(Decl *D) {
       break;
     }
 
-    case UPD_DECL_EXPORTED: {
+    case DeclUpdateKind::DeclExported: {
       unsigned SubmoduleID = readSubmoduleID();
       auto *Exported = cast<NamedDecl>(D);
       Module *Owner = SubmoduleID ? Reader.getSubmodule(SubmoduleID) : nullptr;
@@ -4931,7 +4940,7 @@ void ASTDeclReader::UpdateDecl(Decl *D) {
       break;
     }
 
-    case UPD_DECL_MARKED_OPENMP_DECLARETARGET: {
+    case DeclUpdateKind::DeclMarkedOpenMPDeclareTarget: {
       auto MapType = Record.readEnum<OMPDeclareTargetDeclAttr::MapTypeTy>();
       auto DevType = Record.readEnum<OMPDeclareTargetDeclAttr::DevTypeTy>();
       Expr *IndirectE = Record.readExpr();
@@ -4943,7 +4952,7 @@ void ASTDeclReader::UpdateDecl(Decl *D) {
       break;
     }
 
-    case UPD_ADDED_ATTR_TO_RECORD:
+    case DeclUpdateKind::AddedAttrToRecord:
       AttrVec Attrs;
       Record.readAttributes(Attrs);
       assert(Attrs.size() == 1);

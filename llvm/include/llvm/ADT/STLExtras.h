@@ -325,6 +325,14 @@ template <typename ContainerTy> bool hasSingleElement(ContainerTy &&C) {
   return B != E && std::next(B) == E;
 }
 
+/// Asserts that the given container has a single element and returns that
+/// element.
+template <typename ContainerTy>
+decltype(auto) getSingleElement(ContainerTy &&C) {
+  assert(hasSingleElement(C) && "expected container with single element");
+  return *adl_begin(C);
+}
+
 /// Return a range covering \p RangeOrContainer with the first N elements
 /// excluded.
 template <typename T> auto drop_begin(T &&RangeOrContainer, size_t N = 1) {
@@ -2028,6 +2036,11 @@ template <typename R, typename Compare> auto max_element(R &&Range, Compare C) {
 template <typename R1, typename R2> auto mismatch(R1 &&Range1, R2 &&Range2) {
   return std::mismatch(adl_begin(Range1), adl_end(Range1), adl_begin(Range2),
                        adl_end(Range2));
+}
+
+template <typename R, typename IterTy>
+auto uninitialized_copy(R &&Src, IterTy Dst) {
+  return std::uninitialized_copy(adl_begin(Src), adl_end(Src), Dst);
 }
 
 template <typename R>

@@ -102,6 +102,12 @@ subroutine acc_kernels_loop
 ! CHECK:        acc.terminator
 ! CHECK-NEXT: }{{$}}
 
+  !$acc kernels loop async(async) device_type(nvidia) async(1)
+  DO i = 1, n
+    a(i) = b(i)
+  END DO
+! CHECK: acc.kernels combined(loop) async(%{{.*}} : i32, %c1{{.*}} : i32 [#acc.device_type<nvidia>])
+
   !$acc kernels loop wait
   DO i = 1, n
     a(i) = b(i)
@@ -291,7 +297,7 @@ subroutine acc_kernels_loop
   END DO
 
 
-! CHECK:      %[[SELF2:.*]] = fir.convert %[[DECLIFCONDITION]]#1 : (!fir.ref<!fir.logical<4>>) -> i1
+! CHECK:      %[[SELF2:.*]] = fir.convert %[[DECLIFCONDITION]]#0 : (!fir.ref<!fir.logical<4>>) -> i1
 ! CHECK:      acc.kernels {{.*}} self(%[[SELF2]]) {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
@@ -495,7 +501,7 @@ subroutine acc_kernels_loop
 
 ! CHECK:      acc.kernels {{.*}} {
 ! CHECK:        [[GANGNUM1:%.*]] = arith.constant 8 : i32
-! CHECK-NEXT:   acc.loop {{.*}} gang({num=[[GANGNUM1]] : i32}) {{.*}} {
+! CHECK:        acc.loop {{.*}} gang({num=[[GANGNUM1]] : i32}) {{.*}} {
 ! CHECK:          acc.yield
 ! CHECK-NEXT:   }{{$}}
 ! CHECK:        acc.terminator
@@ -508,7 +514,7 @@ subroutine acc_kernels_loop
 
 ! CHECK:      acc.kernels {{.*}} {
 ! CHECK:        [[GANGNUM2:%.*]] = fir.load %{{.*}} : !fir.ref<i32>
-! CHECK-NEXT:   acc.loop {{.*}} gang({num=[[GANGNUM2]] : i32}) {{.*}} {
+! CHECK:        acc.loop {{.*}} gang({num=[[GANGNUM2]] : i32}) {{.*}} {
 ! CHECK:          acc.yield
 ! CHECK-NEXT:   }{{$}}
 ! CHECK:        acc.terminator

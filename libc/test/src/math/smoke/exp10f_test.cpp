@@ -20,6 +20,9 @@ using LlvmLibcExp10fTest = LIBC_NAMESPACE::testing::FPTest<float>;
 TEST_F(LlvmLibcExp10fTest, SpecialNumbers) {
   LIBC_NAMESPACE::libc_errno = 0;
 
+  EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::exp10f(sNaN), FE_INVALID);
+  EXPECT_MATH_ERRNO(0);
+
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::exp10f(aNaN));
   EXPECT_MATH_ERRNO(0);
 

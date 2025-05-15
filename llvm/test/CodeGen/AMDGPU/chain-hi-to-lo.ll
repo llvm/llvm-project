@@ -72,7 +72,7 @@ bb:
   %load_lo = load half, ptr addrspace(5) %gep_lo
   %load_hi = load half, ptr addrspace(5) null
 
-  %temp = insertelement <2 x half> undef, half %load_lo, i32 0
+  %temp = insertelement <2 x half> poison, half %load_lo, i32 0
   %result = insertelement <2 x half> %temp, half %load_hi, i32 1
 
   ret <2 x half> %result
@@ -133,7 +133,7 @@ bb:
   %load_lo = load half, ptr addrspace(5) %base_lo
   %load_hi = load half, ptr addrspace(5) %base_hi
 
-  %temp = insertelement <2 x half> undef, half %load_lo, i32 0
+  %temp = insertelement <2 x half> poison, half %load_lo, i32 0
   %result = insertelement <2 x half> %temp, half %load_hi, i32 1
 
   ret <2 x half> %result
@@ -197,7 +197,7 @@ bb:
   %arith_lo = fadd half %in, 1.0
   %load_hi = load half, ptr addrspace(5) %base
 
-  %temp = insertelement <2 x half> undef, half %arith_lo, i32 0
+  %temp = insertelement <2 x half> poison, half %arith_lo, i32 0
   %result = insertelement <2 x half> %temp, half %load_hi, i32 1
 
   ret <2 x half> %result
@@ -224,21 +224,31 @@ define <2 x half> @chain_hi_to_lo_group() {
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: chain_hi_to_lo_group:
-; GFX11:       ; %bb.0: ; %bb
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_mov_b32_e32 v1, 0
-; GFX11-NEXT:    ds_load_u16 v0, v1 offset:2
-; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    ds_load_u16_d16_hi v0, v1
-; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-TRUE16-LABEL: chain_hi_to_lo_group:
+; GFX11-TRUE16:       ; %bb.0: ; %bb
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX11-TRUE16-NEXT:    ds_load_u16_d16 v0, v1 offset:2
+; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    ds_load_u16_d16_hi v0, v1
+; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FAKE16-LABEL: chain_hi_to_lo_group:
+; GFX11-FAKE16:       ; %bb.0: ; %bb
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX11-FAKE16-NEXT:    ds_load_u16 v0, v1 offset:2
+; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    ds_load_u16_d16_hi v0, v1
+; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 bb:
   %gep_lo = getelementptr inbounds half, ptr addrspace(3) null, i64 1
   %load_lo = load half, ptr addrspace(3) %gep_lo
   %load_hi = load half, ptr addrspace(3) null
 
-  %temp = insertelement <2 x half> undef, half %load_lo, i32 0
+  %temp = insertelement <2 x half> poison, half %load_lo, i32 0
   %result = insertelement <2 x half> %temp, half %load_hi, i32 1
 
   ret <2 x half> %result
@@ -263,19 +273,28 @@ define <2 x half> @chain_hi_to_lo_group_different_bases(ptr addrspace(3) %base_l
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: chain_hi_to_lo_group_different_bases:
-; GFX11:       ; %bb.0: ; %bb
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    ds_load_u16 v0, v0
-; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    ds_load_u16_d16_hi v0, v1
-; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-TRUE16-LABEL: chain_hi_to_lo_group_different_bases:
+; GFX11-TRUE16:       ; %bb.0: ; %bb
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    ds_load_u16_d16 v0, v0
+; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    ds_load_u16_d16_hi v0, v1
+; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FAKE16-LABEL: chain_hi_to_lo_group_different_bases:
+; GFX11-FAKE16:       ; %bb.0: ; %bb
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    ds_load_u16 v0, v0
+; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    ds_load_u16_d16_hi v0, v1
+; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 bb:
   %load_lo = load half, ptr addrspace(3) %base_lo
   %load_hi = load half, ptr addrspace(3) %base_hi
 
-  %temp = insertelement <2 x half> undef, half %load_lo, i32 0
+  %temp = insertelement <2 x half> poison, half %load_lo, i32 0
   %result = insertelement <2 x half> %temp, half %load_hi, i32 1
 
   ret <2 x half> %result
@@ -334,7 +353,7 @@ bb:
   %load_lo = load half, ptr addrspace(1) %gep_lo
   %load_hi = load half, ptr addrspace(1) null
 
-  %temp = insertelement <2 x half> undef, half %load_lo, i32 0
+  %temp = insertelement <2 x half> poison, half %load_lo, i32 0
   %result = insertelement <2 x half> %temp, half %load_hi, i32 1
 
   ret <2 x half> %result
@@ -377,45 +396,74 @@ bb:
   %load_lo = load half, ptr addrspace(1) %base_lo
   %load_hi = load half, ptr addrspace(1) %base_hi
 
-  %temp = insertelement <2 x half> undef, half %load_lo, i32 0
+  %temp = insertelement <2 x half> poison, half %load_lo, i32 0
   %result = insertelement <2 x half> %temp, half %load_hi, i32 1
 
   ret <2 x half> %result
 }
 
-define <2 x half> @chain_hi_to_lo_flat() {
-; GCN-LABEL: chain_hi_to_lo_flat:
-; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v0, 2
-; GCN-NEXT:    v_mov_b32_e32 v1, 0
-; GCN-NEXT:    flat_load_ushort v0, v[0:1]
-; GCN-NEXT:    v_mov_b32_e32 v1, 0
-; GCN-NEXT:    v_mov_b32_e32 v2, 0
-; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN-NEXT:    flat_load_short_d16_hi v0, v[1:2]
-; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN-NEXT:    s_setpc_b64 s[30:31]
+define <2 x half> @chain_hi_to_lo_flat(ptr inreg %ptr) {
+; GFX900-LABEL: chain_hi_to_lo_flat:
+; GFX900:       ; %bb.0: ; %bb
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_mov_b32_e32 v0, s16
+; GFX900-NEXT:    v_mov_b32_e32 v1, s17
+; GFX900-NEXT:    flat_load_ushort v0, v[0:1] offset:2
+; GFX900-NEXT:    v_mov_b32_e32 v1, 0
+; GFX900-NEXT:    v_mov_b32_e32 v2, 0
+; GFX900-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    flat_load_short_d16_hi v0, v[1:2]
+; GFX900-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX10-LABEL: chain_hi_to_lo_flat:
-; GFX10:       ; %bb.0: ; %bb
-; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_mov_b32_e32 v0, 2
-; GFX10-NEXT:    v_mov_b32_e32 v1, 0
-; GFX10-NEXT:    flat_load_ushort v0, v[0:1]
-; GFX10-NEXT:    v_mov_b32_e32 v1, 0
-; GFX10-NEXT:    v_mov_b32_e32 v2, 0
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    flat_load_short_d16_hi v0, v[1:2]
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_setpc_b64 s[30:31]
+; FLATSCR-LABEL: chain_hi_to_lo_flat:
+; FLATSCR:       ; %bb.0: ; %bb
+; FLATSCR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; FLATSCR-NEXT:    v_mov_b32_e32 v0, s0
+; FLATSCR-NEXT:    v_mov_b32_e32 v1, s1
+; FLATSCR-NEXT:    flat_load_ushort v0, v[0:1] offset:2
+; FLATSCR-NEXT:    v_mov_b32_e32 v1, 0
+; FLATSCR-NEXT:    v_mov_b32_e32 v2, 0
+; FLATSCR-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; FLATSCR-NEXT:    flat_load_short_d16_hi v0, v[1:2]
+; FLATSCR-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; FLATSCR-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10_DEFAULT-LABEL: chain_hi_to_lo_flat:
+; GFX10_DEFAULT:       ; %bb.0: ; %bb
+; GFX10_DEFAULT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10_DEFAULT-NEXT:    s_add_u32 s4, s16, 2
+; GFX10_DEFAULT-NEXT:    s_addc_u32 s5, s17, 0
+; GFX10_DEFAULT-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10_DEFAULT-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10_DEFAULT-NEXT:    flat_load_ushort v0, v[0:1]
+; GFX10_DEFAULT-NEXT:    v_mov_b32_e32 v1, 0
+; GFX10_DEFAULT-NEXT:    v_mov_b32_e32 v2, 0
+; GFX10_DEFAULT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX10_DEFAULT-NEXT:    flat_load_short_d16_hi v0, v[1:2]
+; GFX10_DEFAULT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX10_DEFAULT-NEXT:    s_setpc_b64 s[30:31]
+;
+; FLATSCR_GFX10-LABEL: chain_hi_to_lo_flat:
+; FLATSCR_GFX10:       ; %bb.0: ; %bb
+; FLATSCR_GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; FLATSCR_GFX10-NEXT:    s_add_u32 s0, s0, 2
+; FLATSCR_GFX10-NEXT:    s_addc_u32 s1, s1, 0
+; FLATSCR_GFX10-NEXT:    v_mov_b32_e32 v0, s0
+; FLATSCR_GFX10-NEXT:    v_mov_b32_e32 v1, s1
+; FLATSCR_GFX10-NEXT:    flat_load_ushort v0, v[0:1]
+; FLATSCR_GFX10-NEXT:    v_mov_b32_e32 v1, 0
+; FLATSCR_GFX10-NEXT:    v_mov_b32_e32 v2, 0
+; FLATSCR_GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; FLATSCR_GFX10-NEXT:    flat_load_short_d16_hi v0, v[1:2]
+; FLATSCR_GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; FLATSCR_GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-TRUE16-LABEL: chain_hi_to_lo_flat:
 ; GFX11-TRUE16:       ; %bb.0: ; %bb
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v0, 2
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
-; GFX11-TRUE16-NEXT:    flat_load_d16_b16 v0, v[0:1]
+; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-TRUE16-NEXT:    flat_load_d16_b16 v0, v[0:1] offset:2
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -426,9 +474,8 @@ define <2 x half> @chain_hi_to_lo_flat() {
 ; GFX11-FAKE16-LABEL: chain_hi_to_lo_flat:
 ; GFX11-FAKE16:       ; %bb.0: ; %bb
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v0, 2
-; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v1, 0
-; GFX11-FAKE16-NEXT:    flat_load_u16 v0, v[0:1]
+; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-FAKE16-NEXT:    flat_load_u16 v0, v[0:1] offset:2
 ; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -436,11 +483,11 @@ define <2 x half> @chain_hi_to_lo_flat() {
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 bb:
-  %gep_lo = getelementptr inbounds half, ptr null, i64 1
+  %gep_lo = getelementptr inbounds half, ptr %ptr, i64 1
   %load_lo = load half, ptr %gep_lo
   %load_hi = load half, ptr null
 
-  %temp = insertelement <2 x half> undef, half %load_lo, i32 0
+  %temp = insertelement <2 x half> poison, half %load_lo, i32 0
   %result = insertelement <2 x half> %temp, half %load_hi, i32 1
 
   ret <2 x half> %result
@@ -486,7 +533,7 @@ bb:
   %load_lo = load half, ptr %base_lo
   %load_hi = load half, ptr %base_hi
 
-  %temp = insertelement <2 x half> undef, half %load_lo, i32 0
+  %temp = insertelement <2 x half> poison, half %load_lo, i32 0
   %result = insertelement <2 x half> %temp, half %load_hi, i32 1
 
   ret <2 x half> %result
@@ -740,7 +787,7 @@ bb:
   %gep_lo = getelementptr inbounds i16, ptr addrspace(3) %ptr, i64 1
   %load_lo = load i16, ptr addrspace(3) %gep_lo
   %load_hi = load i16, ptr addrspace(3) %ptr
-  %to.hi = insertelement <2 x i16> undef, i16 %load_hi, i32 1
+  %to.hi = insertelement <2 x i16> poison, i16 %load_hi, i32 1
   %op.hi = add <2 x i16> %to.hi, <i16 12, i16 12>
   %result = insertelement <2 x i16> %op.hi, i16 %load_lo, i32 0
   ret <2 x i16> %result
@@ -780,21 +827,32 @@ define <2 x i16> @chain_hi_to_lo_group_other_dep_multi_chain(ptr addrspace(3) %p
 ; GFX10-NEXT:    v_bfi_b32 v0, 0xffff, v1, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: chain_hi_to_lo_group_other_dep_multi_chain:
-; GFX11:       ; %bb.0: ; %bb
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    ds_load_u16 v1, v0 offset:2
-; GFX11-NEXT:    ds_load_u16_d16_hi v0, v0
-; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_pk_add_u16 v0, v0, 12 op_sel_hi:[1,0]
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_bfi_b32 v0, 0xffff, v1, v0
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-TRUE16-LABEL: chain_hi_to_lo_group_other_dep_multi_chain:
+; GFX11-TRUE16:       ; %bb.0: ; %bb
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    ds_load_u16_d16 v1, v0 offset:2
+; GFX11-TRUE16-NEXT:    ds_load_u16_d16_hi v0, v0
+; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_pk_add_u16 v0, v0, 12 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_bfi_b32 v0, 0xffff, v1, v0
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FAKE16-LABEL: chain_hi_to_lo_group_other_dep_multi_chain:
+; GFX11-FAKE16:       ; %bb.0: ; %bb
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    ds_load_u16 v1, v0 offset:2
+; GFX11-FAKE16-NEXT:    ds_load_u16_d16_hi v0, v0
+; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_pk_add_u16 v0, v0, 12 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-FAKE16-NEXT:    v_bfi_b32 v0, 0xffff, v1, v0
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 bb:
   %gep_lo = getelementptr inbounds i16, ptr addrspace(3) %ptr, i64 1
   %load_lo = load volatile i16, ptr addrspace(3) %gep_lo
   %load_hi = load volatile i16, ptr addrspace(3) %ptr
-  %to.hi = insertelement <2 x i16> undef, i16 %load_hi, i32 1
+  %to.hi = insertelement <2 x i16> poison, i16 %load_hi, i32 1
   %op.hi = add <2 x i16> %to.hi, <i16 12, i16 12>
   %result = insertelement <2 x i16> %op.hi, i16 %load_lo, i32 0
   ret <2 x i16> %result
@@ -859,7 +917,7 @@ bb:
   %gep_lo = getelementptr inbounds i16, ptr addrspace(5) %ptr, i64 1
   %load_lo = load i16, ptr addrspace(5) %gep_lo
   %load_hi = load i16, ptr addrspace(5) %ptr
-  %to.hi = insertelement <2 x i16> undef, i16 %load_hi, i32 1
+  %to.hi = insertelement <2 x i16> poison, i16 %load_hi, i32 1
   %op.hi = add <2 x i16> %to.hi, <i16 12, i16 12>
   %result = insertelement <2 x i16> %op.hi, i16 %load_lo, i32 0
   ret <2 x i16> %result
@@ -908,10 +966,9 @@ define <2 x i16> @chain_hi_to_lo_global_other_dep(ptr addrspace(1) %ptr) {
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    global_load_d16_hi_b16 v0, v[0:1], off glc dlc
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v2.l
 ; GFX11-TRUE16-NEXT:    v_pk_add_u16 v0, v0, 12 op_sel_hi:[1,0]
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_bfi_b32 v0, 0xffff, v1, v0
+; GFX11-TRUE16-NEXT:    v_bfi_b32 v0, 0xffff, v2, v0
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-FAKE16-LABEL: chain_hi_to_lo_global_other_dep:
@@ -929,7 +986,7 @@ bb:
   %gep_lo = getelementptr inbounds i16, ptr addrspace(1) %ptr, i64 1
   %load_lo = load volatile i16, ptr addrspace(1) %gep_lo
   %load_hi = load volatile i16, ptr addrspace(1) %ptr
-  %to.hi = insertelement <2 x i16> undef, i16 %load_hi, i32 1
+  %to.hi = insertelement <2 x i16> poison, i16 %load_hi, i32 1
   %op.hi = add <2 x i16> %to.hi, <i16 12, i16 12>
   %result = insertelement <2 x i16> %op.hi, i16 %load_lo, i32 0
   ret <2 x i16> %result
@@ -981,12 +1038,11 @@ define <2 x i16> @chain_hi_to_lo_flat_other_dep(ptr addrspace(0) %ptr) {
 ; GFX11-TRUE16-NEXT:    flat_load_d16_b16 v2, v[0:1] offset:2 glc dlc
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    flat_load_d16_hi_b16 v0, v[0:1] glc dlc
-; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(1)
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v2.l
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_pk_add_u16 v0, v0, 12 op_sel_hi:[1,0]
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_bfi_b32 v0, 0xffff, v1, v0
+; GFX11-TRUE16-NEXT:    v_bfi_b32 v0, 0xffff, v2, v0
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-FAKE16-LABEL: chain_hi_to_lo_flat_other_dep:
@@ -1004,7 +1060,7 @@ bb:
   %gep_lo = getelementptr inbounds i16, ptr addrspace(0) %ptr, i64 1
   %load_lo = load volatile i16, ptr addrspace(0) %gep_lo
   %load_hi = load volatile i16, ptr addrspace(0) %ptr
-  %to.hi = insertelement <2 x i16> undef, i16 %load_hi, i32 1
+  %to.hi = insertelement <2 x i16> poison, i16 %load_hi, i32 1
   %op.hi = add <2 x i16> %to.hi, <i16 12, i16 12>
   %result = insertelement <2 x i16> %op.hi, i16 %load_lo, i32 0
   ret <2 x i16> %result
@@ -1049,12 +1105,12 @@ define <2 x i16> @chain_hi_to_lo_group_may_alias_store(ptr addrspace(3) %ptr, pt
 ; GFX11-TRUE16-LABEL: chain_hi_to_lo_group_may_alias_store:
 ; GFX11-TRUE16:       ; %bb.0: ; %bb
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v2, 0x7b
-; GFX11-TRUE16-NEXT:    ds_load_u16 v3, v0
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v2.l, 0x7b
+; GFX11-TRUE16-NEXT:    ds_load_u16_d16_hi v2, v0
 ; GFX11-TRUE16-NEXT:    ds_store_b16 v1, v2
-; GFX11-TRUE16-NEXT:    ds_load_u16 v0, v0 offset:2
+; GFX11-TRUE16-NEXT:    ds_load_u16_d16 v2, v0 offset:2
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v3.l
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-FAKE16-LABEL: chain_hi_to_lo_group_may_alias_store:
@@ -1073,7 +1129,7 @@ bb:
   store i16 123, ptr addrspace(3) %may.alias
   %load_lo = load i16, ptr addrspace(3) %gep_lo
 
-  %to.hi = insertelement <2 x i16> undef, i16 %load_hi, i32 1
+  %to.hi = insertelement <2 x i16> poison, i16 %load_hi, i32 1
   %result = insertelement <2 x i16> %to.hi, i16 %load_lo, i32 0
   ret <2 x i16> %result
 }

@@ -28,13 +28,13 @@ define void @caller(ptr %p) personality ptr @__gxx_personality_v0 {
 ; LA32-NEXT:  # %bb.1: # %bb2
 ; LA32-NEXT:  .Ltmp0:
 ; LA32-NEXT:    move $a0, $fp
-; LA32-NEXT:    bl %plt(bar)
+; LA32-NEXT:    bl bar
 ; LA32-NEXT:  .Ltmp1:
 ; LA32-NEXT:    b .LBB0_3
 ; LA32-NEXT:  .LBB0_2: # %bb1
 ; LA32-NEXT:  .Ltmp2:
 ; LA32-NEXT:    move $a0, $fp
-; LA32-NEXT:    bl %plt(foo)
+; LA32-NEXT:    bl foo
 ; LA32-NEXT:  .Ltmp3:
 ; LA32-NEXT:  .LBB0_3: # %end2
 ; LA32-NEXT:    ld.w $s0, $sp, 4 # 4-byte Folded Reload
@@ -48,7 +48,7 @@ define void @caller(ptr %p) personality ptr @__gxx_personality_v0 {
 ; LA32-NEXT:    move $a0, $fp
 ; LA32-NEXT:    bl callee
 ; LA32-NEXT:    move $a0, $s0
-; LA32-NEXT:    bl %plt(_Unwind_Resume)
+; LA32-NEXT:    bl _Unwind_Resume
 ;
 ; LA64-LABEL: caller:
 ; LA64:       # %bb.0: # %entry
@@ -65,13 +65,15 @@ define void @caller(ptr %p) personality ptr @__gxx_personality_v0 {
 ; LA64-NEXT:  # %bb.1: # %bb2
 ; LA64-NEXT:  .Ltmp0:
 ; LA64-NEXT:    move $a0, $fp
-; LA64-NEXT:    bl %plt(bar)
+; LA64-NEXT:    pcaddu18i $ra, %call36(bar)
+; LA64-NEXT:    jirl $ra, $ra, 0
 ; LA64-NEXT:  .Ltmp1:
 ; LA64-NEXT:    b .LBB0_3
 ; LA64-NEXT:  .LBB0_2: # %bb1
 ; LA64-NEXT:  .Ltmp2:
 ; LA64-NEXT:    move $a0, $fp
-; LA64-NEXT:    bl %plt(foo)
+; LA64-NEXT:    pcaddu18i $ra, %call36(foo)
+; LA64-NEXT:    jirl $ra, $ra, 0
 ; LA64-NEXT:  .Ltmp3:
 ; LA64-NEXT:  .LBB0_3: # %end2
 ; LA64-NEXT:    ld.d $s0, $sp, 8 # 8-byte Folded Reload
@@ -83,9 +85,11 @@ define void @caller(ptr %p) personality ptr @__gxx_personality_v0 {
 ; LA64-NEXT:  .Ltmp4:
 ; LA64-NEXT:    move $s0, $a0
 ; LA64-NEXT:    move $a0, $fp
-; LA64-NEXT:    bl callee
+; LA64-NEXT:    pcaddu18i $ra, %call36(callee)
+; LA64-NEXT:    jirl $ra, $ra, 0
 ; LA64-NEXT:    move $a0, $s0
-; LA64-NEXT:    bl %plt(_Unwind_Resume)
+; LA64-NEXT:    pcaddu18i $ra, %call36(_Unwind_Resume)
+; LA64-NEXT:    jirl $ra, $ra, 0
 entry:
   %0 = icmp eq ptr %p, null
   br i1 %0, label %bb1, label %bb2

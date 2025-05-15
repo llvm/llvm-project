@@ -31,6 +31,7 @@ LLVM and API reference documentation.
    HowToSetUpLLVMStyleRTTI
    HowToUseAttributes
    InAlloca
+   InterfaceExportAnnotations
    LangRef
    LibFuzzer
    MarkedUpDisassembly
@@ -40,6 +41,7 @@ LLVM and API reference documentation.
    PDB/index
    PointerAuth
    ScudoHardenedAllocator
+   MLGO
    MemoryModelRelaxationAnnotations
    MemTagSanitizer
    Security

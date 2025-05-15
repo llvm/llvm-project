@@ -144,8 +144,7 @@ void LanaiInstPrinter::printInst(const MCInst *MI, uint64_t Address,
 }
 
 void LanaiInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
-                                    raw_ostream &OS, const char *Modifier) {
-  assert((Modifier == nullptr || Modifier[0] == 0) && "No modifiers supported");
+                                    raw_ostream &OS) {
   const MCOperand &Op = MI->getOperand(OpNo);
   if (Op.isReg())
     OS << "%" << getRegisterName(Op.getReg());
@@ -232,8 +231,7 @@ static void printMemoryImmediateOffset(const MCAsmInfo &MAI,
 }
 
 void LanaiInstPrinter::printMemRiOperand(const MCInst *MI, int OpNo,
-                                         raw_ostream &OS,
-                                         const char * /*Modifier*/) {
+                                         raw_ostream &OS) {
   const MCOperand &RegOp = MI->getOperand(OpNo);
   const MCOperand &OffsetOp = MI->getOperand(OpNo + 1);
   const MCOperand &AluOp = MI->getOperand(OpNo + 2);
@@ -247,8 +245,7 @@ void LanaiInstPrinter::printMemRiOperand(const MCInst *MI, int OpNo,
 }
 
 void LanaiInstPrinter::printMemRrOperand(const MCInst *MI, int OpNo,
-                                         raw_ostream &OS,
-                                         const char * /*Modifier*/) {
+                                         raw_ostream &OS) {
   const MCOperand &RegOp = MI->getOperand(OpNo);
   const MCOperand &OffsetOp = MI->getOperand(OpNo + 1);
   const MCOperand &AluOp = MI->getOperand(OpNo + 2);
@@ -268,8 +265,7 @@ void LanaiInstPrinter::printMemRrOperand(const MCInst *MI, int OpNo,
 }
 
 void LanaiInstPrinter::printMemSplsOperand(const MCInst *MI, int OpNo,
-                                           raw_ostream &OS,
-                                           const char * /*Modifier*/) {
+                                           raw_ostream &OS) {
   const MCOperand &RegOp = MI->getOperand(OpNo);
   const MCOperand &OffsetOp = MI->getOperand(OpNo + 1);
   const MCOperand &AluOp = MI->getOperand(OpNo + 2);

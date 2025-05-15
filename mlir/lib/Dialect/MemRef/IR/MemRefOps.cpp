@@ -68,7 +68,6 @@ Type mlir::memref::getTensorTypeFromMemRefType(Type type) {
 OpFoldResult memref::getMixedSize(OpBuilder &builder, Location loc, Value value,
                                   int64_t dim) {
   auto memrefType = llvm::cast<MemRefType>(value.getType());
-  SmallVector<OpFoldResult> result;
   if (memrefType.isDynamicDim(dim))
     return builder.createOrFold<memref::DimOp>(loc, value, dim);
 
@@ -88,99 +87,28 @@ SmallVector<OpFoldResult> memref::getMixedSizes(OpBuilder &builder,
 // Utility functions for propagating static information
 //===----------------------------------------------------------------------===//
 
-/// Helper function that infers the constant values from a list of \p values,
-/// a \p memRefTy, and another helper function \p getAttributes.
-/// The inferred constant values replace the related `OpFoldResult` in
-/// \p values.
+/// Helper function that sets values[i] to constValues[i] if the latter is a
+/// static value, as indicated by ShapedType::kDynamic.
 ///
-/// \note This function shouldn't be used directly, instead, use the
-/// `getConstifiedMixedXXX` methods from the related operations.
-///
-/// \p getAttributes retuns a list of potentially constant values, as determined
-/// by \p isDynamic, from the given \p memRefTy. The returned list must have as
-/// many elements as \p values or be empty.
-///
-/// E.g., consider the following example:
-/// ```
-/// memref.reinterpret_cast %base to <...> strides: [2, %dyn_stride] :
-///     memref<f32> to memref<?x?xf32, strided<[?, 1], offset: ?>>
-/// ```
-/// `ReinterpretCastOp::getMixedStrides()` will return `[2, %dyn_stride]`.
-/// Now using this helper function with:
-/// - `values == [2, %dyn_stride]`,
-/// - `memRefTy == memref<?x?xf32, strided<[?, 1], offset: ?>>`
-/// - `getAttributes == getConstantStrides` (i.e., a wrapper around
-/// `getStridesAndOffset`), and
-/// - `isDynamic == ShapedType::isDynamic`
-/// Will yield: `values == [2, 1]`
-static void constifyIndexValues(
-    SmallVectorImpl<OpFoldResult> &values, MemRefType memRefTy,
-    MLIRContext *ctxt,
-    llvm::function_ref<SmallVector<int64_t>(MemRefType)> getAttributes,
-    llvm::function_ref<bool(int64_t)> isDynamic) {
-  SmallVector<int64_t> constValues = getAttributes(memRefTy);
-  Builder builder(ctxt);
-  for (const auto &it : llvm::enumerate(constValues)) {
-    int64_t constValue = it.value();
-    if (!isDynamic(constValue))
-      values[it.index()] = builder.getIndexAttr(constValue);
-  }
-  for (OpFoldResult &ofr : values) {
-    if (auto attr = dyn_cast<Attribute>(ofr)) {
-      // FIXME: We shouldn't need to do that, but right now, the static indices
-      // are created with the wrong type: `i64` instead of `index`.
-      // As a result, if we were to keep the attribute as is, we may fail to see
-      // that two attributes are equal because one would have the i64 type and
-      // the other the index type.
-      // The alternative would be to create constant indices with getI64Attr in
-      // this and the previous loop, but it doesn't logically make sense (we are
-      // dealing with indices here) and would only strenghten the inconsistency
-      // around how static indices are created (some places use getI64Attr,
-      // others use getIndexAttr).
-      // The workaround here is to stick to the IndexAttr type for all the
-      // values, hence we recreate the attribute even when it is already static
-      // to make sure the type is consistent.
-      ofr = builder.getIndexAttr(llvm::cast<IntegerAttr>(attr).getInt());
+/// If constValues[i] is dynamic, tries to extract a constant value from
+/// value[i] to allow for additional folding opportunities. Also convertes all
+/// existing attributes to index attributes. (They may be i64 attributes.)
+static void constifyIndexValues(SmallVectorImpl<OpFoldResult> &values,
+                                ArrayRef<int64_t> constValues) {
+  assert(constValues.size() == values.size() &&
+         "incorrect number of const values");
+  for (auto [i, cstVal] : llvm::enumerate(constValues)) {
+    Builder builder(values[i].getContext());
+    if (!ShapedType::isDynamic(cstVal)) {
+      // Constant value is known, use it directly.
+      values[i] = builder.getIndexAttr(cstVal);
       continue;
     }
-    std::optional<int64_t> maybeConstant =
-        getConstantIntValue(cast<Value>(ofr));
-    if (maybeConstant)
-      ofr = builder.getIndexAttr(*maybeConstant);
+    if (std::optional<int64_t> cst = getConstantIntValue(values[i])) {
+      // Try to extract a constant or convert an existing to index.
+      values[i] = builder.getIndexAttr(*cst);
+    }
   }
-}
-
-/// Wrapper around `getShape` that conforms to the function signature
-/// expected for `getAttributes` in `constifyIndexValues`.
-static SmallVector<int64_t> getConstantSizes(MemRefType memRefTy) {
-  ArrayRef<int64_t> sizes = memRefTy.getShape();
-  return SmallVector<int64_t>(sizes);
-}
-
-/// Wrapper around `getStridesAndOffset` that returns only the offset and
-/// conforms to the function signature expected for `getAttributes` in
-/// `constifyIndexValues`.
-static SmallVector<int64_t> getConstantOffset(MemRefType memrefType) {
-  SmallVector<int64_t> strides;
-  int64_t offset;
-  LogicalResult hasStaticInformation =
-      memrefType.getStridesAndOffset(strides, offset);
-  if (failed(hasStaticInformation))
-    return SmallVector<int64_t>();
-  return SmallVector<int64_t>(1, offset);
-}
-
-/// Wrapper around `getStridesAndOffset` that returns only the strides and
-/// conforms to the function signature expected for `getAttributes` in
-/// `constifyIndexValues`.
-static SmallVector<int64_t> getConstantStrides(MemRefType memrefType) {
-  SmallVector<int64_t> strides;
-  int64_t offset;
-  LogicalResult hasStaticInformation =
-      memrefType.getStridesAndOffset(strides, offset);
-  if (failed(hasStaticInformation))
-    return SmallVector<int64_t>();
-  return strides;
 }
 
 //===----------------------------------------------------------------------===//
@@ -471,7 +399,7 @@ static bool isOpItselfPotentialAutomaticAllocation(Operation *op) {
 /// extending the lifetime of allocations.
 static bool lastNonTerminatorInRegion(Operation *op) {
   return op->getNextNode() == op->getBlock()->getTerminator() &&
-         op->getParentRegion()->getBlocks().size() == 1;
+         llvm::hasSingleElement(op->getParentRegion()->getBlocks());
 }
 
 /// Inline an AllocaScopeOp if either the direct parent is an allocation scope
@@ -1124,7 +1052,7 @@ struct DimOfMemRefReshape : public OpRewritePattern<DimOp> {
         }
       } // else dim.getIndex is a block argument to reshape->getBlock and
         // dominates reshape
-    }   // Check condition 2
+    } // Check condition 2
     else if (dim->getBlock() != reshape->getBlock() &&
              !dim.getIndex().getParentRegion()->isProperAncestor(
                  reshape->getParentRegion())) {
@@ -1445,24 +1373,34 @@ ExtractStridedMetadataOp::fold(FoldAdaptor adaptor,
 
 SmallVector<OpFoldResult> ExtractStridedMetadataOp::getConstifiedMixedSizes() {
   SmallVector<OpFoldResult> values = getAsOpFoldResult(getSizes());
-  constifyIndexValues(values, getSource().getType(), getContext(),
-                      getConstantSizes, ShapedType::isDynamic);
+  constifyIndexValues(values, getSource().getType().getShape());
   return values;
 }
 
 SmallVector<OpFoldResult>
 ExtractStridedMetadataOp::getConstifiedMixedStrides() {
   SmallVector<OpFoldResult> values = getAsOpFoldResult(getStrides());
-  constifyIndexValues(values, getSource().getType(), getContext(),
-                      getConstantStrides, ShapedType::isDynamic);
+  SmallVector<int64_t> staticValues;
+  int64_t unused;
+  LogicalResult status =
+      getSource().getType().getStridesAndOffset(staticValues, unused);
+  (void)status;
+  assert(succeeded(status) && "could not get strides from type");
+  constifyIndexValues(values, staticValues);
   return values;
 }
 
 OpFoldResult ExtractStridedMetadataOp::getConstifiedMixedOffset() {
   OpFoldResult offsetOfr = getAsOpFoldResult(getOffset());
   SmallVector<OpFoldResult> values(1, offsetOfr);
-  constifyIndexValues(values, getSource().getType(), getContext(),
-                      getConstantOffset, ShapedType::isDynamic);
+  SmallVector<int64_t> staticValues, unused;
+  int64_t offset;
+  LogicalResult status =
+      getSource().getType().getStridesAndOffset(unused, offset);
+  (void)status;
+  assert(succeeded(status) && "could not get offset from type");
+  staticValues.push_back(offset);
+  constifyIndexValues(values, staticValues);
   return values[0];
 }
 
@@ -1975,15 +1913,18 @@ OpFoldResult ReinterpretCastOp::fold(FoldAdaptor /*operands*/) {
 
 SmallVector<OpFoldResult> ReinterpretCastOp::getConstifiedMixedSizes() {
   SmallVector<OpFoldResult> values = getMixedSizes();
-  constifyIndexValues(values, getType(), getContext(), getConstantSizes,
-                      ShapedType::isDynamic);
+  constifyIndexValues(values, getType().getShape());
   return values;
 }
 
 SmallVector<OpFoldResult> ReinterpretCastOp::getConstifiedMixedStrides() {
   SmallVector<OpFoldResult> values = getMixedStrides();
-  constifyIndexValues(values, getType(), getContext(), getConstantStrides,
-                      ShapedType::isDynamic);
+  SmallVector<int64_t> staticValues;
+  int64_t unused;
+  LogicalResult status = getType().getStridesAndOffset(staticValues, unused);
+  (void)status;
+  assert(succeeded(status) && "could not get strides from type");
+  constifyIndexValues(values, staticValues);
   return values;
 }
 
@@ -1991,8 +1932,13 @@ OpFoldResult ReinterpretCastOp::getConstifiedMixedOffset() {
   SmallVector<OpFoldResult> values = getMixedOffsets();
   assert(values.size() == 1 &&
          "reinterpret_cast must have one and only one offset");
-  constifyIndexValues(values, getType(), getContext(), getConstantOffset,
-                      ShapedType::isDynamic);
+  SmallVector<int64_t> staticValues, unused;
+  int64_t offset;
+  LogicalResult status = getType().getStridesAndOffset(unused, offset);
+  (void)status;
+  assert(succeeded(status) && "could not get offset from type");
+  staticValues.push_back(offset);
+  constifyIndexValues(values, staticValues);
   return values[0];
 }
 
@@ -2034,6 +1980,11 @@ namespace {
 /// ```
 /// Because we know that `offset`and `c0` will hold 0
 /// and `c4` will hold 4.
+///
+/// If the pattern above does not match, the input of the
+/// extract_strided_metadata is always folded into the input of the
+/// reinterpret_cast operator. This allows for dead code elimination to get rid
+/// of the extract_strided_metadata in some cases.
 struct ReinterpretCastOpExtractStridedMetadataFolder
     : public OpRewritePattern<ReinterpretCastOp> {
 public:
@@ -2045,44 +1996,49 @@ public:
         op.getSource().getDefiningOp<ExtractStridedMetadataOp>();
     if (!extractStridedMetadata)
       return failure();
+
     // Check if the reinterpret cast reconstructs a memref with the exact same
     // properties as the extract strided metadata.
+    auto isReinterpretCastNoop = [&]() -> bool {
+      // First, check that the strides are the same.
+      if (!llvm::equal(extractStridedMetadata.getConstifiedMixedStrides(),
+                       op.getConstifiedMixedStrides()))
+        return false;
 
-    // First, check that the strides are the same.
-    SmallVector<OpFoldResult> extractStridesOfr =
-        extractStridedMetadata.getConstifiedMixedStrides();
-    SmallVector<OpFoldResult> reinterpretStridesOfr =
-        op.getConstifiedMixedStrides();
-    if (extractStridesOfr.size() != reinterpretStridesOfr.size())
-      return failure();
+      // Second, check the sizes.
+      if (!llvm::equal(extractStridedMetadata.getConstifiedMixedSizes(),
+                       op.getConstifiedMixedSizes()))
+          return false;
 
-    unsigned rank = op.getType().getRank();
-    for (unsigned i = 0; i < rank; ++i) {
-      if (extractStridesOfr[i] != reinterpretStridesOfr[i])
-        return failure();
+      // Finally, check the offset.
+      assert(op.getMixedOffsets().size() == 1 &&
+             "reinterpret_cast with more than one offset should have been "
+             "rejected by the verifier");
+      return extractStridedMetadata.getConstifiedMixedOffset() ==
+             op.getConstifiedMixedOffset();
+    };
+
+    if (!isReinterpretCastNoop()) {
+      // If the extract_strided_metadata / reinterpret_cast pair can't be
+      // completely folded, then we could fold the input of the
+      // extract_strided_metadata into the input of the reinterpret_cast
+      // input. For some cases (e.g., static dimensions) the
+      // the extract_strided_metadata is eliminated by dead code elimination.
+      //
+      // reinterpret_cast(extract_strided_metadata(x)) -> reinterpret_cast(x).
+      //
+      // We can always fold the input of a extract_strided_metadata operator
+      // to the input of a reinterpret_cast operator, because they point to
+      // the same memory. Note that the reinterpret_cast does not use the
+      // layout of its input memref, only its base memory pointer which is
+      // the same as the base pointer returned by the extract_strided_metadata
+      // operator and the base pointer of the extract_strided_metadata memref
+      // input.
+      rewriter.modifyOpInPlace(op, [&]() {
+        op.getSourceMutable().assign(extractStridedMetadata.getSource());
+      });
+      return success();
     }
-
-    // Second, check the sizes.
-    assert(extractStridedMetadata.getSizes().size() ==
-               op.getMixedSizes().size() &&
-           "Strides and sizes rank must match");
-    SmallVector<OpFoldResult> extractSizesOfr =
-        extractStridedMetadata.getConstifiedMixedSizes();
-    SmallVector<OpFoldResult> reinterpretSizesOfr =
-        op.getConstifiedMixedSizes();
-    for (unsigned i = 0; i < rank; ++i) {
-      if (extractSizesOfr[i] != reinterpretSizesOfr[i])
-        return failure();
-    }
-    // Finally, check the offset.
-    assert(op.getMixedOffsets().size() == 1 &&
-           "reinterpret_cast with more than one offset should have been "
-           "rejected by the verifier");
-    OpFoldResult extractOffsetOfr =
-        extractStridedMetadata.getConstifiedMixedOffset();
-    OpFoldResult reinterpretOffsetOfr = op.getConstifiedMixedOffset();
-    if (extractOffsetOfr != reinterpretOffsetOfr)
-      return failure();
 
     // At this point, we know that the back and forth between extract strided
     // metadata and reinterpret cast is a noop. However, the final type of the
@@ -2977,6 +2933,9 @@ static LogicalResult produceSubViewErrorMsg(SliceVerificationResult result,
 LogicalResult SubViewOp::verify() {
   MemRefType baseType = getSourceType();
   MemRefType subViewType = getType();
+  ArrayRef<int64_t> staticOffsets = getStaticOffsets();
+  ArrayRef<int64_t> staticSizes = getStaticSizes();
+  ArrayRef<int64_t> staticStrides = getStaticStrides();
 
   // The base memref and the view memref should be in the same memory space.
   if (baseType.getMemorySpace() != subViewType.getMemorySpace())
@@ -2991,7 +2950,7 @@ LogicalResult SubViewOp::verify() {
   // Compute the expected result type, assuming that there are no rank
   // reductions.
   MemRefType expectedType = SubViewOp::inferResultType(
-      baseType, getStaticOffsets(), getStaticSizes(), getStaticStrides());
+      baseType, staticOffsets, staticSizes, staticStrides);
 
   // Verify all properties of a shaped type: rank, element type and dimension
   // sizes. This takes into account potential rank reductions.
@@ -3024,6 +2983,14 @@ LogicalResult SubViewOp::verify() {
   if (!haveCompatibleStrides(expectedType, subViewType, *unusedDims))
     return produceSubViewErrorMsg(SliceVerificationResult::LayoutMismatch,
                                   *this, expectedType);
+
+  // Verify that offsets, sizes, strides do not run out-of-bounds with respect
+  // to the base memref.
+  SliceBoundsVerificationResult boundsResult =
+      verifyInBoundsSlice(baseType.getShape(), staticOffsets, staticSizes,
+                          staticStrides, /*generateErrorMessage=*/true);
+  if (!boundsResult.isValid)
+    return getOperation()->emitError(boundsResult.errorMessage);
 
   return success();
 }

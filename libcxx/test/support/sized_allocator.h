@@ -37,10 +37,12 @@ public:
   TEST_CONSTEXPR_CXX20 T* allocate(size_type n) {
     if (n > max_size())
       TEST_THROW(std::bad_array_new_length());
-    return std::allocator<T>().allocate(n);
+    return std::allocator<T>().allocate(static_cast<std::size_t>(n));
   }
 
-  TEST_CONSTEXPR_CXX20 void deallocate(T* p, size_type n) TEST_NOEXCEPT { std::allocator<T>().deallocate(p, n); }
+  TEST_CONSTEXPR_CXX20 void deallocate(T* p, size_type n) TEST_NOEXCEPT {
+    std::allocator<T>().deallocate(p, static_cast<std::size_t>(n));
+  }
 
   TEST_CONSTEXPR size_type max_size() const TEST_NOEXCEPT {
     return std::numeric_limits<size_type>::max() / sizeof(value_type);

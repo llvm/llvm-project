@@ -159,26 +159,26 @@ define void @zip_v32i16(ptr %a, ptr %b) {
 ; CHECK-NEXT:    mov z4.h, z3.h[7]
 ; CHECK-NEXT:    mov z6.h, z3.h[6]
 ; CHECK-NEXT:    mov z16.h, z3.h[5]
-; CHECK-NEXT:    mov z20.h, z2.h[7]
-; CHECK-NEXT:    mov z21.h, z1.h[7]
 ; CHECK-NEXT:    mov z18.h, z3.h[4]
 ; CHECK-NEXT:    mov z19.h, z0.h[4]
+; CHECK-NEXT:    mov z20.h, z2.h[7]
+; CHECK-NEXT:    mov z21.h, z1.h[7]
 ; CHECK-NEXT:    mov z22.h, z2.h[6]
 ; CHECK-NEXT:    mov z23.h, z1.h[6]
 ; CHECK-NEXT:    zip1 z24.h, z5.h, z4.h
 ; CHECK-NEXT:    zip1 z25.h, z7.h, z6.h
-; CHECK-NEXT:    zip1 z17.h, z17.h, z16.h
+; CHECK-NEXT:    zip1 z16.h, z17.h, z16.h
 ; CHECK-NEXT:    ldp q4, q6, [x0, #32]
-; CHECK-NEXT:    zip1 z16.h, z21.h, z20.h
+; CHECK-NEXT:    zip1 z17.h, z19.h, z18.h
 ; CHECK-NEXT:    ldp q5, q7, [x1, #32]
-; CHECK-NEXT:    zip1 z18.h, z19.h, z18.h
-; CHECK-NEXT:    zip1 z19.s, z25.s, z24.s
+; CHECK-NEXT:    zip1 z18.h, z21.h, z20.h
+; CHECK-NEXT:    zip1 z21.s, z25.s, z24.s
 ; CHECK-NEXT:    zip1 z22.h, z23.h, z22.h
 ; CHECK-NEXT:    mov z23.h, z2.h[5]
-; CHECK-NEXT:    mov z21.h, z6.h[7]
+; CHECK-NEXT:    mov z20.h, z6.h[7]
 ; CHECK-NEXT:    mov z24.h, z1.h[5]
 ; CHECK-NEXT:    mov z25.h, z2.h[4]
-; CHECK-NEXT:    mov z20.h, z7.h[7]
+; CHECK-NEXT:    mov z19.h, z7.h[7]
 ; CHECK-NEXT:    mov z26.h, z1.h[4]
 ; CHECK-NEXT:    mov z27.h, z6.h[6]
 ; CHECK-NEXT:    mov z28.h, z7.h[5]
@@ -187,8 +187,8 @@ define void @zip_v32i16(ptr %a, ptr %b) {
 ; CHECK-NEXT:    mov z31.h, z6.h[4]
 ; CHECK-NEXT:    mov z8.h, z5.h[7]
 ; CHECK-NEXT:    mov z9.h, z4.h[7]
-; CHECK-NEXT:    zip1 z20.h, z21.h, z20.h
-; CHECK-NEXT:    mov z21.h, z7.h[6]
+; CHECK-NEXT:    zip1 z19.h, z20.h, z19.h
+; CHECK-NEXT:    mov z20.h, z7.h[6]
 ; CHECK-NEXT:    mov z10.h, z5.h[6]
 ; CHECK-NEXT:    mov z11.h, z4.h[6]
 ; CHECK-NEXT:    mov z12.h, z5.h[5]
@@ -196,7 +196,7 @@ define void @zip_v32i16(ptr %a, ptr %b) {
 ; CHECK-NEXT:    mov z14.h, z5.h[4]
 ; CHECK-NEXT:    mov z15.h, z4.h[4]
 ; CHECK-NEXT:    zip1 z23.h, z24.h, z23.h
-; CHECK-NEXT:    zip1 z21.h, z27.h, z21.h
+; CHECK-NEXT:    zip1 z20.h, z27.h, z20.h
 ; CHECK-NEXT:    zip1 z27.h, z29.h, z28.h
 ; CHECK-NEXT:    zip1 z28.h, z31.h, z30.h
 ; CHECK-NEXT:    zip1 z24.h, z26.h, z25.h
@@ -207,23 +207,23 @@ define void @zip_v32i16(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    zip1 z30.h, z15.h, z14.h
 ; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    zip1 z17.s, z18.s, z17.s
-; CHECK-NEXT:    zip1 z18.s, z21.s, z20.s
-; CHECK-NEXT:    zip1 z20.s, z28.s, z27.s
-; CHECK-NEXT:    zip1 z16.s, z22.s, z16.s
-; CHECK-NEXT:    zip1 z21.s, z24.s, z23.s
+; CHECK-NEXT:    zip1 z16.s, z17.s, z16.s
+; CHECK-NEXT:    zip1 z17.s, z20.s, z19.s
+; CHECK-NEXT:    zip1 z19.s, z28.s, z27.s
+; CHECK-NEXT:    zip1 z18.s, z22.s, z18.s
+; CHECK-NEXT:    zip1 z20.s, z24.s, z23.s
 ; CHECK-NEXT:    zip1 z0.h, z0.h, z3.h
 ; CHECK-NEXT:    zip1 z3.s, z26.s, z25.s
 ; CHECK-NEXT:    zip1 z22.s, z30.s, z29.s
 ; CHECK-NEXT:    zip1 z6.h, z6.h, z7.h
-; CHECK-NEXT:    zip1 z7.d, z17.d, z19.d
-; CHECK-NEXT:    zip1 z17.d, z20.d, z18.d
+; CHECK-NEXT:    zip1 z7.d, z16.d, z21.d
+; CHECK-NEXT:    zip1 z16.d, z19.d, z17.d
 ; CHECK-NEXT:    zip1 z1.h, z1.h, z2.h
 ; CHECK-NEXT:    zip1 z2.h, z4.h, z5.h
-; CHECK-NEXT:    zip1 z4.d, z21.d, z16.d
+; CHECK-NEXT:    zip1 z4.d, z20.d, z18.d
 ; CHECK-NEXT:    zip1 z3.d, z22.d, z3.d
 ; CHECK-NEXT:    add z0.h, z0.h, z6.h
-; CHECK-NEXT:    add z5.h, z7.h, z17.h
+; CHECK-NEXT:    add z5.h, z7.h, z16.h
 ; CHECK-NEXT:    add z1.h, z1.h, z2.h
 ; CHECK-NEXT:    add z2.h, z4.h, z3.h
 ; CHECK-NEXT:    stp q0, q5, [x0, #32]
@@ -1476,44 +1476,44 @@ define void @uzp_v32i8(ptr %a, ptr %b) #0{
 ; CHECK-NEXT:    zip1 z20.b, z24.b, z23.b
 ; CHECK-NEXT:    zip1 z21.b, z26.b, z25.b
 ; CHECK-NEXT:    zip1 z22.b, z28.b, z27.b
+; CHECK-NEXT:    zip1 z23.b, z17.b, z29.b
 ; CHECK-NEXT:    mov z24.b, z2.b[14]
 ; CHECK-NEXT:    mov z25.b, z2.b[12]
 ; CHECK-NEXT:    mov z26.b, z2.b[10]
 ; CHECK-NEXT:    mov z27.b, z2.b[8]
-; CHECK-NEXT:    zip1 z23.b, z17.b, z29.b
 ; CHECK-NEXT:    zip1 z3.h, z4.h, z3.h
 ; CHECK-NEXT:    zip1 z4.h, z6.h, z5.h
 ; CHECK-NEXT:    zip1 z5.h, z7.h, z18.h
 ; CHECK-NEXT:    zip1 z6.h, z19.h, z16.h
 ; CHECK-NEXT:    zip1 z7.h, z21.h, z20.h
+; CHECK-NEXT:    zip1 z16.h, z23.h, z22.h
 ; CHECK-NEXT:    zip1 z18.b, z25.b, z24.b
 ; CHECK-NEXT:    zip1 z19.b, z27.b, z26.b
 ; CHECK-NEXT:    mov z20.b, z2.b[6]
 ; CHECK-NEXT:    mov z21.b, z2.b[4]
+; CHECK-NEXT:    mov z23.b, z17.b[15]
+; CHECK-NEXT:    mov z24.b, z17.b[13]
 ; CHECK-NEXT:    mov z29.b, z17.b[3]
 ; CHECK-NEXT:    mov z30.b, z17.b[1]
 ; CHECK-NEXT:    mov z31.b, z2.b[15]
 ; CHECK-NEXT:    mov z8.b, z2.b[13]
-; CHECK-NEXT:    zip1 z16.h, z23.h, z22.h
 ; CHECK-NEXT:    mov z22.b, z2.b[2]
-; CHECK-NEXT:    mov z23.b, z17.b[15]
-; CHECK-NEXT:    mov z24.b, z17.b[13]
 ; CHECK-NEXT:    mov z25.b, z17.b[11]
 ; CHECK-NEXT:    mov z26.b, z17.b[9]
 ; CHECK-NEXT:    mov z27.b, z17.b[7]
 ; CHECK-NEXT:    mov z28.b, z17.b[5]
 ; CHECK-NEXT:    zip1 z17.h, z19.h, z18.h
-; CHECK-NEXT:    zip1 z21.b, z21.b, z20.b
-; CHECK-NEXT:    zip1 z19.b, z30.b, z29.b
-; CHECK-NEXT:    zip1 z20.b, z8.b, z31.b
+; CHECK-NEXT:    zip1 z18.b, z21.b, z20.b
+; CHECK-NEXT:    zip1 z20.b, z24.b, z23.b
+; CHECK-NEXT:    zip1 z23.b, z30.b, z29.b
+; CHECK-NEXT:    zip1 z24.b, z8.b, z31.b
 ; CHECK-NEXT:    mov z29.b, z1.b[15]
 ; CHECK-NEXT:    mov z30.b, z1.b[13]
 ; CHECK-NEXT:    mov z31.b, z1.b[11]
 ; CHECK-NEXT:    mov z8.b, z1.b[9]
-; CHECK-NEXT:    zip1 z22.b, z2.b, z22.b
-; CHECK-NEXT:    zip1 z23.b, z24.b, z23.b
-; CHECK-NEXT:    zip1 z24.b, z26.b, z25.b
-; CHECK-NEXT:    zip1 z18.b, z28.b, z27.b
+; CHECK-NEXT:    zip1 z19.b, z2.b, z22.b
+; CHECK-NEXT:    zip1 z21.b, z26.b, z25.b
+; CHECK-NEXT:    zip1 z22.b, z28.b, z27.b
 ; CHECK-NEXT:    mov z25.b, z2.b[11]
 ; CHECK-NEXT:    mov z26.b, z2.b[9]
 ; CHECK-NEXT:    mov z27.b, z2.b[7]
@@ -1538,25 +1538,25 @@ define void @uzp_v32i8(ptr %a, ptr %b) #0{
 ; CHECK-NEXT:    zip1 z25.b, z26.b, z25.b
 ; CHECK-NEXT:    zip1 z26.b, z28.b, z27.b
 ; CHECK-NEXT:    zip1 z2.b, z2.b, z8.b
-; CHECK-NEXT:    zip1 z21.h, z22.h, z21.h
-; CHECK-NEXT:    zip1 z22.h, z24.h, z23.h
-; CHECK-NEXT:    zip1 z23.h, z31.h, z29.h
+; CHECK-NEXT:    zip1 z18.h, z19.h, z18.h
+; CHECK-NEXT:    zip1 z19.h, z21.h, z20.h
+; CHECK-NEXT:    zip1 z20.h, z31.h, z29.h
 ; CHECK-NEXT:    zip1 z1.h, z1.h, z9.h
 ; CHECK-NEXT:    ldp d9, d8, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    zip1 z24.h, z10.h, z11.h
+; CHECK-NEXT:    zip1 z21.h, z10.h, z11.h
 ; CHECK-NEXT:    ldp d11, d10, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    zip1 z0.h, z30.h, z0.h
-; CHECK-NEXT:    zip1 z18.h, z19.h, z18.h
-; CHECK-NEXT:    zip1 z19.h, z25.h, z20.h
+; CHECK-NEXT:    zip1 z22.h, z23.h, z22.h
+; CHECK-NEXT:    zip1 z23.h, z25.h, z24.h
 ; CHECK-NEXT:    zip1 z2.h, z2.h, z26.h
 ; CHECK-NEXT:    zip1 z3.s, z4.s, z3.s
 ; CHECK-NEXT:    zip1 z4.s, z6.s, z5.s
 ; CHECK-NEXT:    zip1 z5.s, z16.s, z7.s
-; CHECK-NEXT:    zip1 z1.s, z1.s, z23.s
-; CHECK-NEXT:    zip1 z6.s, z21.s, z17.s
-; CHECK-NEXT:    zip1 z0.s, z0.s, z24.s
-; CHECK-NEXT:    zip1 z7.s, z18.s, z22.s
-; CHECK-NEXT:    zip1 z2.s, z2.s, z19.s
+; CHECK-NEXT:    zip1 z1.s, z1.s, z20.s
+; CHECK-NEXT:    zip1 z6.s, z18.s, z17.s
+; CHECK-NEXT:    zip1 z0.s, z0.s, z21.s
+; CHECK-NEXT:    zip1 z7.s, z22.s, z19.s
+; CHECK-NEXT:    zip1 z2.s, z2.s, z23.s
 ; CHECK-NEXT:    zip1 z3.d, z4.d, z3.d
 ; CHECK-NEXT:    zip1 z0.d, z0.d, z1.d
 ; CHECK-NEXT:    zip1 z1.d, z6.d, z5.d
@@ -1752,67 +1752,67 @@ define void @uzp_v16i16(ptr %a, ptr %b) #0{
 ; CHECK-NEXT:    str d8, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset b8, -16
-; CHECK-NEXT:    ldp q1, q6, [x0]
-; CHECK-NEXT:    ldp q0, q2, [x1]
-; CHECK-NEXT:    mov z3.h, z6.h[6]
-; CHECK-NEXT:    mov z4.h, z6.h[4]
-; CHECK-NEXT:    mov z5.h, z6.h[2]
+; CHECK-NEXT:    ldp q1, q0, [x0]
+; CHECK-NEXT:    ldp q5, q6, [x1]
+; CHECK-NEXT:    mov z2.h, z0.h[6]
+; CHECK-NEXT:    mov z3.h, z0.h[4]
+; CHECK-NEXT:    mov z4.h, z0.h[2]
 ; CHECK-NEXT:    mov z7.h, z1.h[6]
 ; CHECK-NEXT:    mov z16.h, z1.h[4]
 ; CHECK-NEXT:    mov z17.h, z1.h[2]
-; CHECK-NEXT:    mov z18.h, z2.h[6]
-; CHECK-NEXT:    mov z19.h, z2.h[4]
-; CHECK-NEXT:    mov z20.h, z2.h[2]
-; CHECK-NEXT:    mov z21.h, z0.h[6]
-; CHECK-NEXT:    mov z22.h, z0.h[4]
-; CHECK-NEXT:    zip1 z3.h, z4.h, z3.h
-; CHECK-NEXT:    zip1 z4.h, z6.h, z5.h
-; CHECK-NEXT:    zip1 z5.h, z16.h, z7.h
+; CHECK-NEXT:    mov z18.h, z6.h[6]
+; CHECK-NEXT:    mov z19.h, z6.h[4]
+; CHECK-NEXT:    mov z20.h, z6.h[2]
+; CHECK-NEXT:    mov z21.h, z5.h[6]
+; CHECK-NEXT:    mov z22.h, z5.h[4]
+; CHECK-NEXT:    zip1 z2.h, z3.h, z2.h
+; CHECK-NEXT:    zip1 z3.h, z0.h, z4.h
+; CHECK-NEXT:    zip1 z4.h, z16.h, z7.h
 ; CHECK-NEXT:    zip1 z7.h, z1.h, z17.h
 ; CHECK-NEXT:    zip1 z16.h, z19.h, z18.h
-; CHECK-NEXT:    zip1 z18.h, z2.h, z20.h
-; CHECK-NEXT:    mov z19.h, z0.h[2]
-; CHECK-NEXT:    zip1 z17.h, z22.h, z21.h
-; CHECK-NEXT:    mov z20.h, z6.h[7]
-; CHECK-NEXT:    mov z21.h, z6.h[5]
-; CHECK-NEXT:    mov z22.h, z6.h[3]
-; CHECK-NEXT:    mov z6.h, z6.h[1]
+; CHECK-NEXT:    zip1 z17.h, z6.h, z20.h
+; CHECK-NEXT:    mov z19.h, z5.h[2]
+; CHECK-NEXT:    zip1 z18.h, z22.h, z21.h
+; CHECK-NEXT:    mov z20.h, z0.h[7]
+; CHECK-NEXT:    mov z21.h, z0.h[5]
+; CHECK-NEXT:    mov z22.h, z0.h[3]
+; CHECK-NEXT:    mov z0.h, z0.h[1]
 ; CHECK-NEXT:    mov z23.h, z1.h[7]
 ; CHECK-NEXT:    mov z24.h, z1.h[5]
 ; CHECK-NEXT:    mov z25.h, z1.h[3]
 ; CHECK-NEXT:    mov z1.h, z1.h[1]
-; CHECK-NEXT:    mov z26.h, z2.h[7]
-; CHECK-NEXT:    mov z27.h, z2.h[5]
-; CHECK-NEXT:    mov z28.h, z2.h[3]
-; CHECK-NEXT:    mov z2.h, z2.h[1]
-; CHECK-NEXT:    mov z29.h, z0.h[7]
-; CHECK-NEXT:    mov z30.h, z0.h[5]
-; CHECK-NEXT:    mov z31.h, z0.h[3]
-; CHECK-NEXT:    mov z8.h, z0.h[1]
-; CHECK-NEXT:    zip1 z0.h, z0.h, z19.h
+; CHECK-NEXT:    mov z26.h, z6.h[7]
+; CHECK-NEXT:    mov z27.h, z6.h[5]
+; CHECK-NEXT:    mov z28.h, z6.h[3]
+; CHECK-NEXT:    mov z6.h, z6.h[1]
+; CHECK-NEXT:    mov z29.h, z5.h[7]
+; CHECK-NEXT:    mov z30.h, z5.h[5]
+; CHECK-NEXT:    mov z31.h, z5.h[3]
+; CHECK-NEXT:    mov z8.h, z5.h[1]
+; CHECK-NEXT:    zip1 z5.h, z5.h, z19.h
 ; CHECK-NEXT:    zip1 z19.h, z21.h, z20.h
-; CHECK-NEXT:    zip1 z6.h, z6.h, z22.h
+; CHECK-NEXT:    zip1 z0.h, z0.h, z22.h
 ; CHECK-NEXT:    zip1 z20.h, z24.h, z23.h
 ; CHECK-NEXT:    zip1 z1.h, z1.h, z25.h
 ; CHECK-NEXT:    zip1 z21.h, z27.h, z26.h
-; CHECK-NEXT:    zip1 z2.h, z2.h, z28.h
+; CHECK-NEXT:    zip1 z6.h, z6.h, z28.h
 ; CHECK-NEXT:    zip1 z22.h, z30.h, z29.h
 ; CHECK-NEXT:    zip1 z23.h, z8.h, z31.h
-; CHECK-NEXT:    zip1 z3.s, z4.s, z3.s
-; CHECK-NEXT:    zip1 z4.s, z7.s, z5.s
-; CHECK-NEXT:    zip1 z5.s, z18.s, z16.s
-; CHECK-NEXT:    zip1 z6.s, z6.s, z19.s
+; CHECK-NEXT:    zip1 z2.s, z3.s, z2.s
+; CHECK-NEXT:    zip1 z3.s, z7.s, z4.s
+; CHECK-NEXT:    zip1 z4.s, z17.s, z16.s
+; CHECK-NEXT:    zip1 z0.s, z0.s, z19.s
 ; CHECK-NEXT:    zip1 z1.s, z1.s, z20.s
-; CHECK-NEXT:    zip1 z0.s, z0.s, z17.s
-; CHECK-NEXT:    zip1 z2.s, z2.s, z21.s
+; CHECK-NEXT:    zip1 z5.s, z5.s, z18.s
+; CHECK-NEXT:    zip1 z6.s, z6.s, z21.s
 ; CHECK-NEXT:    zip1 z7.s, z23.s, z22.s
-; CHECK-NEXT:    zip1 z3.d, z4.d, z3.d
-; CHECK-NEXT:    zip1 z1.d, z1.d, z6.d
-; CHECK-NEXT:    zip1 z0.d, z0.d, z5.d
-; CHECK-NEXT:    zip1 z2.d, z7.d, z2.d
-; CHECK-NEXT:    add z1.h, z3.h, z1.h
-; CHECK-NEXT:    add z0.h, z0.h, z2.h
-; CHECK-NEXT:    stp q1, q0, [x0]
+; CHECK-NEXT:    zip1 z2.d, z3.d, z2.d
+; CHECK-NEXT:    zip1 z0.d, z1.d, z0.d
+; CHECK-NEXT:    zip1 z1.d, z5.d, z4.d
+; CHECK-NEXT:    zip1 z3.d, z7.d, z6.d
+; CHECK-NEXT:    add z0.h, z2.h, z0.h
+; CHECK-NEXT:    add z1.h, z1.h, z3.h
+; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ldr d8, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
 ;

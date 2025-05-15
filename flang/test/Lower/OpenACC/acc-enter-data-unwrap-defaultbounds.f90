@@ -26,7 +26,7 @@ subroutine acc_enter_data
 !CHECK: %[[BOUND0:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) extent(%[[C10]] : index) stride(%[[ONE]] : index) startIdx(%[[ONE]] : index)
 !CHECK: %[[LB:.*]] = arith.constant 0 : index
 !CHECK: %[[UB:.*]] = arith.subi %[[EXTENT_C10]], %[[ONE]] : index
-!CHECK: %[[BOUND1:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) extent(%[[EXTENT_C10]] : index) stride(%[[ONE]] : index) startIdx(%[[ONE]] : index)
+!CHECK: %[[BOUND1:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) extent(%[[EXTENT_C10]] : index) stride(%c1{{.*}} : index) startIdx(%[[ONE]] : index)
 !CHECK: %[[CREATE_A:.*]] = acc.create varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) bounds(%[[BOUND0]], %[[BOUND1]]) -> !fir.ref<!fir.array<10x10xf32>> {name = "a", structured = false}
 !CHECK: acc.enter_data dataOperands(%[[CREATE_A]] : !fir.ref<!fir.array<10x10xf32>>){{$}}
 
@@ -37,7 +37,7 @@ subroutine acc_enter_data
 !CHECK: %[[BOUND0:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) extent(%[[C10]] : index) stride(%[[ONE]] : index) startIdx(%[[ONE]] : index)
 !CHECK: %[[LB:.*]] = arith.constant 0 : index
 !CHECK: %[[UB:.*]] = arith.subi %[[EXTENT_C10]], %[[ONE]] : index
-!CHECK: %[[BOUND1:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) extent(%[[EXTENT_C10]] : index) stride(%[[ONE]] : index) startIdx(%[[ONE]] : index)
+!CHECK: %[[BOUND1:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) extent(%[[EXTENT_C10]] : index) stride(%c1{{.*}} : index) startIdx(%[[ONE]] : index)
 !CHECK: %[[CREATE_A:.*]] = acc.create varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) bounds(%[[BOUND0]], %[[BOUND1]]) -> !fir.ref<!fir.array<10x10xf32>> {name = "a", structured = false}
 !CHECK: [[IF1:%.*]] = arith.constant true
 !CHECK: acc.enter_data if([[IF1]]) dataOperands(%[[CREATE_A]] : !fir.ref<!fir.array<10x10xf32>>){{$}}
@@ -49,7 +49,7 @@ subroutine acc_enter_data
 !CHECK: %[[BOUND0:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) extent(%[[C10]] : index) stride(%[[ONE]] : index) startIdx(%[[ONE]] : index)
 !CHECK: %[[LB:.*]] = arith.constant 0 : index
 !CHECK: %[[UB:.*]] = arith.subi %[[EXTENT_C10]], %[[ONE]] : index
-!CHECK: %[[BOUND1:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) extent(%[[EXTENT_C10]] : index) stride(%[[ONE]] : index) startIdx(%[[ONE]] : index)
+!CHECK: %[[BOUND1:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) extent(%[[EXTENT_C10]] : index) stride(%c1{{.*}} : index) startIdx(%[[ONE]] : index)
 !CHECK: %[[CREATE_A:.*]] = acc.create varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) bounds(%[[BOUND0]], %[[BOUND1]]) -> !fir.ref<!fir.array<10x10xf32>> {name = "a", structured = false}
 !CHECK: [[IFCOND:%.*]] = fir.load %{{.*}} : !fir.ref<!fir.logical<4>>
 !CHECK: [[IF2:%.*]] = fir.convert [[IFCOND]] : (!fir.logical<4>) -> i1
@@ -161,7 +161,7 @@ subroutine acc_enter_data
 !CHECK: %[[BOUND1:.*]] = acc.bounds lowerbound(%[[LB1]] : index) upperbound(%[[UB1]] : index) extent(%c10{{.*}} : index) stride(%[[ONE]] : index) startIdx(%c1{{.*}} : index)
 !CHECK: %[[LB2:.*]] = arith.constant 0 : index
 !CHECK: %[[UB2:.*]] = arith.constant 4 : index
-!CHECK: %[[BOUND2:.*]] = acc.bounds lowerbound(%[[LB2]] : index) upperbound(%[[UB2]] : index) extent(%[[EXTENT_C10]] : index) stride(%[[ONE]] : index) startIdx(%c1{{.*}} : index)
+!CHECK: %[[BOUND2:.*]] = acc.bounds lowerbound(%[[LB2]] : index) upperbound(%[[UB2]] : index) extent(%[[EXTENT_C10]] : index) stride(%c1{{.*}} : index) startIdx(%c1{{.*}} : index)
 !CHECK: %[[COPYIN_A:.*]] = acc.copyin varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) bounds(%[[BOUND1]], %[[BOUND2]]) -> !fir.ref<!fir.array<10x10xf32>> {name = "a(1:,1:5)", structured = false}
 !CHECK: acc.enter_data   dataOperands(%[[COPYIN_A]] : !fir.ref<!fir.array<10x10xf32>>)
 
@@ -172,7 +172,7 @@ subroutine acc_enter_data
 !CHECK: %[[BOUND1:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB1]] : index) extent(%[[C10]] : index) stride(%[[ONE]] : index) startIdx(%[[ONE]] : index)
 !CHECK: %[[LB:.*]] = arith.constant 0 : index
 !CHECK: %[[UB2:.*]] = arith.constant 4 : index
-!CHECK: %[[BOUND2:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB2]] : index) extent(%[[EXTENT_C10]] : index) stride(%[[ONE]] : index) startIdx(%[[ONE]] : index)
+!CHECK: %[[BOUND2:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB2]] : index) extent(%[[EXTENT_C10]] : index) stride(%c1{{.*}} : index) startIdx(%[[ONE]] : index)
 !CHECK: %[[COPYIN_A:.*]] = acc.copyin varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) bounds(%[[BOUND1]], %[[BOUND2]]) -> !fir.ref<!fir.array<10x10xf32>> {name = "a(:10,1:5)", structured = false}
 !CHECK: acc.enter_data dataOperands(%[[COPYIN_A]] : !fir.ref<!fir.array<10x10xf32>>)
 
@@ -182,7 +182,7 @@ subroutine acc_enter_data
 !CHECK: %[[UB:.*]] = arith.subi %c10{{.*}}, %[[ONE]] : index
 !CHECK: %[[BOUND1:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) extent(%c10{{.*}} : index) stride(%[[ONE]] : index) startIdx(%[[ONE]] : index)
 !CHECK: %[[UB:.*]] = arith.subi %c10{{.*}}, %[[ONE]] : index
-!CHECK: %[[BOUND2:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) extent(%c10{{.*}} : index) stride(%[[ONE]] : index) startIdx(%[[ONE]] : index)
+!CHECK: %[[BOUND2:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) extent(%c10{{.*}} : index) stride(%c1{{.*}} : index) startIdx(%[[ONE]] : index)
 !CHECK: %[[COPYIN_A:.*]] = acc.copyin varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) bounds(%[[BOUND1]], %[[BOUND2]]) -> !fir.ref<!fir.array<10x10xf32>> {name = "a(:,:)", structured = false}
 end subroutine acc_enter_data
 
@@ -203,10 +203,10 @@ subroutine acc_enter_data_dummy(a, b, n, m)
 !CHECK: %[[LOAD_M:.*]] = fir.load %[[DECLM]]#0 : !fir.ref<i32>
 !CHECK: %[[M_I64:.*]] = fir.convert %[[LOAD_M]] : (i32) -> i64
 !CHECK: %[[M_IDX:.*]] = fir.convert %[[M_I64]] : (i64) -> index
-!CHECK: %[[M_N:.*]] = arith.subi %[[M_IDX]], %[[N_IDX]] : index
 !CHECK: %[[C1:.*]] = arith.constant 1 : index
-!CHECK: %[[M_N_1:.*]] = arith.addi %[[M_N]], %[[C1]] : index
 !CHECK: %[[C0:.*]] = arith.constant 0 : index
+!CHECK: %[[M_N:.*]] = arith.subi %[[M_IDX]], %[[N_IDX]] : index
+!CHECK: %[[M_N_1:.*]] = arith.addi %[[M_N]], %[[C1]] : index
 !CHECK: %[[CMP:.*]] = arith.cmpi sgt, %[[M_N_1]], %[[C0]] : index
 !CHECK: %[[EXT_B:.*]] = arith.select %[[CMP]], %[[M_N_1]], %[[C0]] : index
 !CHECK: %[[DECLB:.*]]:2 = hlfir.declare %[[B]]
@@ -526,7 +526,7 @@ subroutine acc_enter_data_allocatable()
 
 !CHECK: %[[BOX_A_0:.*]] = fir.load %[[DECLA]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 !CHECK: %[[C0_0:.*]] = arith.constant 0 : index
-!CHECK: %[[BOX_A_1:.*]] = fir.load %[[DECLA]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+!CHECK: %[[BOX_A_1:.*]] = fir.load %[[DECLA]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 !CHECK: %[[C0_1:.*]] = arith.constant 0 : index
 !CHECK: %[[DIMS0:.*]]:3 = fir.box_dims %[[BOX_A_1]], %c0{{.*}} : (!fir.box<!fir.heap<!fir.array<?xf32>>>, index) -> (index, index, index)
 !CHECK: %[[DIMS1:.*]]:3 = fir.box_dims %[[BOX_A_0]], %c0{{.*}} : (!fir.box<!fir.heap<!fir.array<?xf32>>>, index) -> (index, index, index)
@@ -542,13 +542,13 @@ subroutine acc_enter_data_allocatable()
 !CHECK: %[[ZERO:.*]] = arith.constant 0 : index
 !CHECK: %[[ONE:.*]] = arith.constant 1 : index
 
-!CHECK: %[[BOX_A_1:.*]] = fir.load %[[DECLA]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+!CHECK: %[[BOX_A_1:.*]] = fir.load %[[DECLA]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 !CHECK: %[[C0:.*]] = arith.constant 0 : index
 !CHECK: %[[DIMS0:.*]]:3 = fir.box_dims %[[BOX_A_1]], %[[C0]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>, index) -> (index, index, index)
 !CHECK: %[[C0:.*]] = arith.constant 0 : index
 !CHECK: %[[DIMS1:.*]]:3 = fir.box_dims %[[BOX_A_0]], %[[C0]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>, index) -> (index, index, index)
 
-!CHECK: %[[BOX_A_2:.*]] = fir.load %[[DECLA]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+!CHECK: %[[BOX_A_2:.*]] = fir.load %[[DECLA]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 !CHECK: %[[C0:.*]] = arith.constant 0 : index
 !CHECK: %[[DIMS2:.*]]:3 = fir.box_dims %[[BOX_A_2]], %[[C0]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>, index) -> (index, index, index)
 !CHECK: %[[UB:.*]] = arith.subi %[[DIMS2]]#1, %[[ONE]] : index
@@ -561,7 +561,7 @@ subroutine acc_enter_data_allocatable()
 
 !CHECK: %[[BOX_A_0:.*]] = fir.load %[[DECLA]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 
-!CHECK: %[[BOX_A_1:.*]] = fir.load %[[DECLA]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+!CHECK: %[[BOX_A_1:.*]] = fir.load %[[DECLA]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 !CHECK: %[[C0:.*]] = arith.constant 0 : index
 !CHECK: %[[DIMS0:.*]]:3 = fir.box_dims %[[BOX_A_1]], %[[C0]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>, index) -> (index, index, index)
 !CHECK: %[[C0:.*]] = arith.constant 0 : index
@@ -570,7 +570,7 @@ subroutine acc_enter_data_allocatable()
 !CHECK: %[[LB:.*]] = arith.subi %[[C2]], %[[DIMS0]]#0 : index
 !CHECK: %[[C5:.*]] = arith.constant 5 : index
 !CHECK: %[[UB:.*]] = arith.subi %[[C5]], %[[DIMS0]]#0 : index
-!CHECK: %[[BOX_A_2:.*]] = fir.load %[[DECLA]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+!CHECK: %[[BOX_A_2:.*]] = fir.load %[[DECLA]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 !CHECK: %[[C0:.*]] = arith.constant 0 : index
 !CHECK: %[[DIMS2:.*]]:3 = fir.box_dims %[[BOX_A_2]], %[[C0]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>, index) -> (index, index, index)
 !CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) extent(%[[DIMS2]]#1 : index) stride(%[[DIMS1]]#2 : index) startIdx(%[[DIMS0]]#0 : index) {strideInBytes = true}
@@ -583,7 +583,7 @@ subroutine acc_enter_data_allocatable()
 !CHECK: %[[BOX_A_0:.*]] = fir.load %[[DECLA]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 !CHECK: %[[ONE:.*]] = arith.constant 1 : index
 
-!CHECK: %[[BOX_A_1:.*]] = fir.load %[[DECLA]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+!CHECK: %[[BOX_A_1:.*]] = fir.load %[[DECLA]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 !CHECK: %[[C0:.*]] = arith.constant 0 : index
 !CHECK: %[[DIMS0:.*]]:3 = fir.box_dims %[[BOX_A_1]], %[[C0]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>, index) -> (index, index, index)
 !CHECK: %[[C0:.*]] = arith.constant 0 : index
@@ -591,7 +591,7 @@ subroutine acc_enter_data_allocatable()
 !CHECK: %[[C3:.*]] = arith.constant 3 : index
 !CHECK: %[[LB:.*]] = arith.subi %[[C3]], %[[DIMS0]]#0 : index
 
-!CHECK: %[[BOX_A_2:.*]] = fir.load %[[DECLA]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+!CHECK: %[[BOX_A_2:.*]] = fir.load %[[DECLA]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 !CHECK: %[[C0:.*]] = arith.constant 0 : index
 !CHECK: %[[DIMS2:.*]]:3 = fir.box_dims %[[BOX_A_2]], %[[C0]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>, index) -> (index, index, index)
 !CHECK: %[[UB:.*]] = arith.subi %[[DIMS2]]#1, %[[ONE]] : index
@@ -605,14 +605,14 @@ subroutine acc_enter_data_allocatable()
 !CHECK: %[[BOX_A_0:.*]] = fir.load %[[DECLA]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 !CHECK: %[[ZERO:.*]] = arith.constant 0 : index
 
-!CHECK: %[[BOX_A_1:.*]] = fir.load %[[DECLA]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+!CHECK: %[[BOX_A_1:.*]] = fir.load %[[DECLA]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 !CHECK: %[[C0:.*]] = arith.constant 0 : index
 !CHECK: %[[DIMS0:.*]]:3 = fir.box_dims %[[BOX_A_1]], %[[C0]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>, index) -> (index, index, index)
 !CHECK: %[[C0:.*]] = arith.constant 0 : index
 !CHECK: %[[DIMS1:.*]]:3 = fir.box_dims %[[BOX_A_0]], %[[C0]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>, index) -> (index, index, index)
 !CHECK: %[[C7:.*]] = arith.constant 7 : index
 !CHECK: %[[UB:.*]] = arith.subi %[[C7]], %[[DIMS0]]#0 : index
-!CHECK: %[[BOX_A_2:.*]] = fir.load %[[DECLA]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+!CHECK: %[[BOX_A_2:.*]] = fir.load %[[DECLA]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 !CHECK: %[[C0:.*]] = arith.constant 0 : index
 !CHECK: %[[DIMS2:.*]]:3 = fir.box_dims %[[BOX_A_2]], %[[C0]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>, index) -> (index, index, index)
 !CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[ZERO]] : index) upperbound(%[[UB]] : index) extent(%[[DIMS2]]#1 : index) stride(%[[DIMS1]]#2 : index) startIdx(%[[DIMS0]]#0 : index) {strideInBytes = true}

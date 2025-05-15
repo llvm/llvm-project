@@ -9,136 +9,22 @@
 #include "DAP.h"
 #include "JSONUtils.h"
 #include "RequestHandler.h"
+#include <vector>
 
 namespace lldb_dap {
 
-// "BreakpointLocationsRequest": {
-//   "allOf": [ { "$ref": "#/definitions/Request" }, {
-//     "type": "object",
-//     "description": "The `breakpointLocations` request returns all possible
-//     locations for source breakpoints in a given range.\nClients should only
-//     call this request if the corresponding capability
-//     `supportsBreakpointLocationsRequest` is true.",
-//     "properties": {
-//       "command": {
-//         "type": "string",
-//         "enum": [ "breakpointLocations" ]
-//       },
-//       "arguments": {
-//         "$ref": "#/definitions/BreakpointLocationsArguments"
-//       }
-//     },
-//     "required": [ "command" ]
-//   }]
-// },
-// "BreakpointLocationsArguments": {
-//   "type": "object",
-//   "description": "Arguments for `breakpointLocations` request.",
-//   "properties": {
-//     "source": {
-//       "$ref": "#/definitions/Source",
-//       "description": "The source location of the breakpoints; either
-//       `source.path` or `source.sourceReference` must be specified."
-//     },
-//     "line": {
-//       "type": "integer",
-//       "description": "Start line of range to search possible breakpoint
-//       locations in. If only the line is specified, the request returns all
-//       possible locations in that line."
-//     },
-//     "column": {
-//       "type": "integer",
-//       "description": "Start position within `line` to search possible
-//       breakpoint locations in. It is measured in UTF-16 code units and the
-//       client capability `columnsStartAt1` determines whether it is 0- or
-//       1-based. If no column is given, the first position in the start line is
-//       assumed."
-//     },
-//     "endLine": {
-//       "type": "integer",
-//       "description": "End line of range to search possible breakpoint
-//       locations in. If no end line is given, then the end line is assumed to
-//       be the start line."
-//     },
-//     "endColumn": {
-//       "type": "integer",
-//       "description": "End position within `endLine` to search possible
-//       breakpoint locations in. It is measured in UTF-16 code units and the
-//       client capability `columnsStartAt1` determines whether it is 0- or
-//       1-based. If no end column is given, the last position in the end line
-//       is assumed."
-//     }
-//   },
-//   "required": [ "source", "line" ]
-// },
-// "BreakpointLocationsResponse": {
-//   "allOf": [ { "$ref": "#/definitions/Response" }, {
-//     "type": "object",
-//     "description": "Response to `breakpointLocations` request.\nContains
-//     possible locations for source breakpoints.",
-//     "properties": {
-//       "body": {
-//         "type": "object",
-//         "properties": {
-//           "breakpoints": {
-//             "type": "array",
-//             "items": {
-//               "$ref": "#/definitions/BreakpointLocation"
-//             },
-//             "description": "Sorted set of possible breakpoint locations."
-//           }
-//         },
-//         "required": [ "breakpoints" ]
-//       }
-//     },
-//     "required": [ "body" ]
-//   }]
-// },
-// "BreakpointLocation": {
-//   "type": "object",
-//   "description": "Properties of a breakpoint location returned from the
-//   `breakpointLocations` request.",
-//   "properties": {
-//     "line": {
-//       "type": "integer",
-//       "description": "Start line of breakpoint location."
-//     },
-//     "column": {
-//       "type": "integer",
-//       "description": "The start position of a breakpoint location. Position
-//       is measured in UTF-16 code units and the client capability
-//       `columnsStartAt1` determines whether it is 0- or 1-based."
-//     },
-//     "endLine": {
-//       "type": "integer",
-//       "description": "The end line of breakpoint location if the location
-//       covers a range."
-//     },
-//     "endColumn": {
-//       "type": "integer",
-//       "description": "The end position of a breakpoint location (if the
-//       location covers a range). Position is measured in UTF-16 code units and
-//       the client capability `columnsStartAt1` determines whether it is 0- or
-//       1-based."
-//     }
-//   },
-//   "required": [ "line" ]
-// },
-void BreakpointLocationsRequestHandler::operator()(
-    const llvm::json::Object &request) const {
-  llvm::json::Object response;
-  FillResponse(request, response);
-  auto *arguments = request.getObject("arguments");
-  auto *source = arguments->getObject("source");
-  std::string path = GetString(source, "path").str();
-  const auto start_line = GetInteger<uint64_t>(arguments, "line")
-                              .value_or(LLDB_INVALID_LINE_NUMBER);
-  const auto start_column = GetInteger<uint64_t>(arguments, "column")
-                                .value_or(LLDB_INVALID_COLUMN_NUMBER);
-  const auto end_line =
-      GetInteger<uint64_t>(arguments, "endLine").value_or(start_line);
-  const auto end_column = GetInteger<uint64_t>(arguments, "endColumn")
-                              .value_or(std::numeric_limits<uint64_t>::max());
+/// The `breakpointLocations` request returns all possible locations for source
+/// breakpoints in a given range. Clients should only call this request if the
+/// corresponding capability `supportsBreakpointLocationsRequest` is true.
+llvm::Expected<protocol::BreakpointLocationsResponseBody>
+BreakpointLocationsRequestHandler::Run(
+    const protocol::BreakpointLocationsArguments &args) const {
+  std::string path = args.source.path.value_or("");
+  uint32_t start_line = args.line;
+  uint32_t start_column = args.column.value_or(LLDB_INVALID_COLUMN_NUMBER);
+  uint32_t end_line = args.endLine.value_or(start_line);
+  uint32_t end_column =
+      args.endColumn.value_or(std::numeric_limits<uint32_t>::max());
 
   lldb::SBFileSpec file_spec(path.c_str(), true);
   lldb::SBSymbolContextList compile_units =
@@ -189,21 +75,18 @@ void BreakpointLocationsRequestHandler::operator()(
   // The line entries are sorted by addresses, but we must return the list
   // ordered by line / column position.
   std::sort(locations.begin(), locations.end());
-  locations.erase(std::unique(locations.begin(), locations.end()),
-                  locations.end());
+  locations.erase(llvm::unique(locations), locations.end());
 
-  llvm::json::Array locations_json;
+  std::vector<protocol::BreakpointLocation> breakpoint_locations;
   for (auto &l : locations) {
-    llvm::json::Object location;
-    location.try_emplace("line", l.first);
-    location.try_emplace("column", l.second);
-    locations_json.emplace_back(std::move(location));
+    protocol::BreakpointLocation lc;
+    lc.line = l.first;
+    lc.column = l.second;
+    breakpoint_locations.push_back(std::move(lc));
   }
 
-  llvm::json::Object body;
-  body.try_emplace("breakpoints", std::move(locations_json));
-  response.try_emplace("body", std::move(body));
-  dap.SendJSON(llvm::json::Value(std::move(response)));
+  return protocol::BreakpointLocationsResponseBody{
+      /*breakpoints=*/std::move(breakpoint_locations)};
 }
 
 } // namespace lldb_dap

@@ -12,10 +12,11 @@ jobs:
   commit-access-greeter:
     permissions:
       issues: write
+      pull-requests: read
     if: >-
       github.repository_owner == 'llvm' &&
       github.event.label.name == 'infra:commit-access-request'
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:

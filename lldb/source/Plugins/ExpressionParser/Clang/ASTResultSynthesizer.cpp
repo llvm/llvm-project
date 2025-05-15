@@ -83,14 +83,14 @@ void ASTResultSynthesizer::TransformTopLevelDecl(Decl *D) {
   } else if (!m_top_level) {
     if (ObjCMethodDecl *method_decl = dyn_cast<ObjCMethodDecl>(D)) {
       if (m_ast_context &&
-          !method_decl->getSelector().getAsString().compare("$__lldb_expr:")) {
+          method_decl->getSelector().getAsString() == "$__lldb_expr:") {
         RecordPersistentTypes(method_decl);
         SynthesizeObjCMethodResult(method_decl);
       }
     } else if (FunctionDecl *function_decl = dyn_cast<FunctionDecl>(D)) {
       // When completing user input the body of the function may be a nullptr.
       if (m_ast_context && function_decl->hasBody() &&
-          !function_decl->getNameInfo().getAsString().compare("$__lldb_expr")) {
+          function_decl->getNameInfo().getAsString() == "$__lldb_expr") {
         RecordPersistentTypes(function_decl);
         SynthesizeFunctionResult(function_decl);
       }

@@ -20,8 +20,8 @@ define <vscale x 2 x i64> @llrint_nxv2i64_nxv2f32(<vscale x 2 x float> %x) {
 ; CHECK-LABEL: llrint_nxv2i64_nxv2f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vfwcvt.x.f.v v10, v8
-; CHECK-NEXT:    vmv2r.v v8, v10
+; CHECK-NEXT:    vmv1r.v v10, v8
+; CHECK-NEXT:    vfwcvt.x.f.v v8, v10
 ; CHECK-NEXT:    ret
   %a = call <vscale x 2 x i64> @llvm.llrint.nxv2i64.nxv2f32(<vscale x 2 x float> %x)
   ret <vscale x 2 x i64> %a
@@ -32,8 +32,8 @@ define <vscale x 4 x i64> @llrint_nxv4i64_nxv4f32(<vscale x 4 x float> %x) {
 ; CHECK-LABEL: llrint_nxv4i64_nxv4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vfwcvt.x.f.v v12, v8
-; CHECK-NEXT:    vmv4r.v v8, v12
+; CHECK-NEXT:    vmv2r.v v12, v8
+; CHECK-NEXT:    vfwcvt.x.f.v v8, v12
 ; CHECK-NEXT:    ret
   %a = call <vscale x 4 x i64> @llvm.llrint.nxv4i64.nxv4f32(<vscale x 4 x float> %x)
   ret <vscale x 4 x i64> %a
@@ -44,8 +44,8 @@ define <vscale x 8 x i64> @llrint_nxv8i64_nxv8f32(<vscale x 8 x float> %x) {
 ; CHECK-LABEL: llrint_nxv8i64_nxv8f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vfwcvt.x.f.v v16, v8
-; CHECK-NEXT:    vmv8r.v v8, v16
+; CHECK-NEXT:    vmv4r.v v16, v8
+; CHECK-NEXT:    vfwcvt.x.f.v v8, v16
 ; CHECK-NEXT:    ret
   %a = call <vscale x 8 x i64> @llvm.llrint.nxv8i64.nxv8f32(<vscale x 8 x float> %x)
   ret <vscale x 8 x i64> %a

@@ -1,9 +1,10 @@
 function genLink(Ref) {
   // we treat the file paths different depending on if we're
   // serving via a http server or viewing from a local
-  var Path = window.location.protocol.startsWith("file") ?
-      `${window.location.protocol}//${window.location.host}/${Ref.Path}` :
-      `${window.location.protocol}//${RootPath}/${Ref.Path}`;
+  var Path = window.location.protocol.startsWith("file")
+                 ? `${window.location.protocol}//${RootPath}/${Ref.Path}`
+                 : `${window.location.protocol}//${window.location.host}/${
+                       Base}/${Ref.Path}`;
   if (Ref.RefType === "namespace") {
     Path = `${Path}/index.html`
   } else if (Ref.Path === "") {

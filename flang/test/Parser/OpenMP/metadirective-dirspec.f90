@@ -26,7 +26,7 @@ end
 !PARSE-TREE: | | | | | | | bool = 'true'
 !PARSE-TREE: | | OmpDirectiveSpecification
 !PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = allocate
-!PARSE-TREE: | | | OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'x'
+!PARSE-TREE: | | | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'x'
 !PARSE-TREE: | | | OmpClauseList ->
 
 subroutine f01(x)
@@ -52,7 +52,7 @@ end
 !PARSE-TREE: | | | | | | | bool = 'true'
 !PARSE-TREE: | | OmpDirectiveSpecification
 !PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = critical
-!PARSE-TREE: | | | OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'x'
+!PARSE-TREE: | | | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'x'
 !PARSE-TREE: | | | OmpClauseList ->
 
 subroutine f02
@@ -77,7 +77,7 @@ end
 !PARSE-TREE: | | | | | | | bool = 'true'
 !PARSE-TREE: | | OmpDirectiveSpecification
 !PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = declare mapper
-!PARSE-TREE: | | | OmpArgument -> OmpMapperSpecifier
+!PARSE-TREE: | | | OmpArgumentList -> OmpArgument -> OmpMapperSpecifier
 !PARSE-TREE: | | | | Name = 'mymapper'
 !PARSE-TREE: | | | | TypeSpec -> IntrinsicTypeSpec -> IntegerTypeSpec ->
 !PARSE-TREE: | | | | Name = 'v'
@@ -92,10 +92,10 @@ subroutine f03
     integer :: x
   endtype
   type :: tt2
-    real :: a
+    real :: x
   endtype
   !$omp metadirective when(user={condition(.true.)}: &
-  !$omp & declare reduction(+ : tt1, tt2 : omp_out = omp_in + omp_out))
+  !$omp & declare reduction(+ : tt1, tt2 : omp_out%x = omp_in%x + omp_out%x))
 end
 
 !UNPARSE: SUBROUTINE f03
@@ -103,9 +103,9 @@ end
 !UNPARSE:   INTEGER :: x
 !UNPARSE:  END TYPE
 !UNPARSE:  TYPE :: tt2
-!UNPARSE:   REAL :: a
+!UNPARSE:   REAL :: x
 !UNPARSE:  END TYPE
-!UNPARSE: !$OMP METADIRECTIVE  WHEN(USER={CONDITION(.true._4)}: DECLARE REDUCTION(+:tt1,tt2: omp_out=omp_in+omp_out
+!UNPARSE: !$OMP METADIRECTIVE  WHEN(USER={CONDITION(.true._4)}: DECLARE REDUCTION(+:tt1,tt2: omp_out%x=omp_in%x+omp_out%x
 !UNPARSE: ))
 !UNPARSE: END SUBROUTINE
 
@@ -121,21 +121,26 @@ end
 !PARSE-TREE: | | | | | | | bool = 'true'
 !PARSE-TREE: | | OmpDirectiveSpecification
 !PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = declare reduction
-!PARSE-TREE: | | | OmpArgument -> OmpReductionSpecifier
+!PARSE-TREE: | | | OmpArgumentList -> OmpArgument -> OmpReductionSpecifier
 !PARSE-TREE: | | | | OmpReductionIdentifier -> DefinedOperator -> IntrinsicOperator = Add
 !PARSE-TREE: | | | | OmpTypeNameList -> OmpTypeSpecifier -> TypeSpec -> DerivedTypeSpec
 !PARSE-TREE: | | | | | Name = 'tt1'
 !PARSE-TREE: | | | | OmpTypeSpecifier -> TypeSpec -> DerivedTypeSpec
 !PARSE-TREE: | | | | | Name = 'tt2'
-!PARSE-TREE: | | | | OmpReductionCombiner -> AssignmentStmt = 'omp_out=omp_in+omp_out'
-!PARSE-TREE: | | | | | Variable = 'omp_out'
-!PARSE-TREE: | | | | | | Designator -> DataRef -> Name = 'omp_out'
-!PARSE-TREE: | | | | | Expr = 'omp_in+omp_out'
+!PARSE-TREE: | | | | OmpReductionCombiner -> AssignmentStmt = 'omp_out%x=omp_in%x+omp_out%x'
+!PARSE-TREE: | | | | | | Designator -> DataRef -> StructureComponent
+!PARSE-TREE: | | | | | | | DataRef -> Name = 'omp_out'
+!PARSE-TREE: | | | | | | | Name = 'x'
+!PARSE-TREE: | | | | | Expr = 'omp_in%x+omp_out%x'
 !PARSE-TREE: | | | | | | Add
-!PARSE-TREE: | | | | | | | Expr = 'omp_in'
-!PARSE-TREE: | | | | | | | | Designator -> DataRef -> Name = 'omp_in'
-!PARSE-TREE: | | | | | | | Expr = 'omp_out'
-!PARSE-TREE: | | | | | | | | Designator -> DataRef -> Name = 'omp_out'
+!PARSE-TREE: | | | | | | | Expr = 'omp_in%x'
+!PARSE-TREE: | | | | | | | | Designator -> DataRef -> StructureComponent
+!PARSE-TREE: | | | | | | | | | DataRef -> Name = 'omp_in'
+!PARSE-TREE: | | | | | | | | | Name = 'x'
+!PARSE-TREE: | | | | | | | Expr = 'omp_out%x'
+!PARSE-TREE: | | | | | | | | Designator -> DataRef -> StructureComponent
+!PARSE-TREE: | | | | | | | | | DataRef -> Name = 'omp_out'
+!PARSE-TREE: | | | | | | | | | Name = 'x'
 !PARSE-TREE: | | | OmpClauseList ->
 
 subroutine f04
@@ -159,7 +164,7 @@ end
 !PARSE-TREE: | | | | | | | bool = 'true'
 !PARSE-TREE: | | OmpDirectiveSpecification
 !PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = declare simd
-!PARSE-TREE: | | | OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'f04'
+!PARSE-TREE: | | | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'f04'
 !PARSE-TREE: | | | OmpClauseList ->
 !PARSE-TREE: ImplicitPart ->
 
@@ -184,7 +189,7 @@ end
 !PARSE-TREE: | | | | | | | bool = 'true'
 !PARSE-TREE: | | OmpDirectiveSpecification
 !PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = declare target
-!PARSE-TREE: | | | OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'f05'
+!PARSE-TREE: | | | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'f05'
 !PARSE-TREE: | | | OmpClauseList ->
 !PARSE-TREE: ImplicitPart ->
 
@@ -211,8 +216,8 @@ end
 !PARSE-TREE: | | | | | | | bool = 'true'
 !PARSE-TREE: | | OmpDirectiveSpecification
 !PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = flush
-!PARSE-TREE: | | | OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'x'
-!PARSE-TREE: | | | OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'y'
+!PARSE-TREE: | | | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'x'
+!PARSE-TREE: | | | | OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'y'
 !PARSE-TREE: | | | OmpClauseList ->
 
 subroutine f07
@@ -238,5 +243,5 @@ end
 !PARSE-TREE: | | | | | | | bool = 'true'
 !PARSE-TREE: | | OmpDirectiveSpecification
 !PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = threadprivate
-!PARSE-TREE: | | | OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 't'
+!PARSE-TREE: | | | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 't'
 !PARSE-TREE: | | | OmpClauseList ->

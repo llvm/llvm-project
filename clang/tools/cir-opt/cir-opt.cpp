@@ -22,6 +22,7 @@
 #include "mlir/Pass/PassRegistry.h"
 #include "mlir/Tools/mlir-opt/MlirOptMain.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CIR/Dialect/Passes.h"
 #include "clang/CIR/Passes.h"
 
 struct CIRToLLVMPipelineOptions
@@ -33,11 +34,26 @@ int main(int argc, char **argv) {
   registry.insert<mlir::BuiltinDialect, cir::CIRDialect,
                   mlir::memref::MemRefDialect, mlir::LLVM::LLVMDialect>();
 
+  ::mlir::registerPass([]() -> std::unique_ptr<::mlir::Pass> {
+    return mlir::createCIRCanonicalizePass();
+  });
+  ::mlir::registerPass([]() -> std::unique_ptr<::mlir::Pass> {
+    return mlir::createCIRSimplifyPass();
+  });
+
   mlir::PassPipelineRegistration<CIRToLLVMPipelineOptions> pipeline(
       "cir-to-llvm", "",
       [](mlir::OpPassManager &pm, const CIRToLLVMPipelineOptions &options) {
         cir::direct::populateCIRToLLVMPasses(pm);
       });
+
+  ::mlir::registerPass([]() -> std::unique_ptr<::mlir::Pass> {
+    return mlir::createCIRFlattenCFGPass();
+  });
+
+  ::mlir::registerPass([]() -> std::unique_ptr<::mlir::Pass> {
+    return mlir::createHoistAllocasPass();
+  });
 
   mlir::registerTransformsPasses();
 

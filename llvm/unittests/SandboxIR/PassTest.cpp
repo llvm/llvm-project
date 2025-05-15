@@ -197,7 +197,7 @@ define void @foo() {
   std::string Buff;
   llvm::raw_string_ostream SS(Buff);
   FPM.print(SS);
-  EXPECT_EQ(Buff, "test-fpm(test-pass1,test-pass2)");
+  EXPECT_EQ(Buff, "test-fpm<test-pass1,test-pass2>");
 #endif // NDEBUG
 }
 
@@ -256,7 +256,7 @@ define i8 @foo(i8 %v0, i8 %v1) {
   std::string Buff;
   llvm::raw_string_ostream SS(Buff);
   RPM.print(SS);
-  EXPECT_EQ(Buff, "test-rpm(test-pass1,test-pass2)");
+  EXPECT_EQ(Buff, "test-rpm<test-pass1,test-pass2>");
 #endif // NDEBUG
 }
 

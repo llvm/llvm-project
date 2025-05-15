@@ -23,7 +23,6 @@ using namespace lldb_private::formatters;
 
 bool lldb_private::formatters::CXXFunctionPointerSummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
-  std::string destination;
   StreamString sstr;
   AddressType func_ptr_address_type = eAddressTypeInvalid;
   addr_t func_ptr_address = valobj.GetPointerValue(&func_ptr_address_type);

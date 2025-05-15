@@ -1233,12 +1233,7 @@ addMissingWasmCodeSymbols(const WasmObjectFile &Obj,
   }
 }
 
-static void addPltEntries(const ObjectFile &Obj,
-                          std::map<SectionRef, SectionSymbolsTy> &AllSymbols,
-                          StringSaver &Saver) {
-  auto *ElfObj = dyn_cast<ELFObjectFileBase>(&Obj);
-  if (!ElfObj)
-    return;
+static DenseMap<StringRef, SectionRef> getSectionNames(const ObjectFile &Obj) {
   DenseMap<StringRef, SectionRef> Sections;
   for (SectionRef Section : Obj.sections()) {
     Expected<StringRef> SecNameOrErr = Section.getName();
@@ -1248,13 +1243,23 @@ static void addPltEntries(const ObjectFile &Obj,
     }
     Sections[*SecNameOrErr] = Section;
   }
-  for (auto Plt : ElfObj->getPltEntries()) {
+  return Sections;
+}
+
+static void addPltEntries(const MCSubtargetInfo &STI, const ObjectFile &Obj,
+                          DenseMap<StringRef, SectionRef> &SectionNames,
+                          std::map<SectionRef, SectionSymbolsTy> &AllSymbols,
+                          StringSaver &Saver) {
+  auto *ElfObj = dyn_cast<ELFObjectFileBase>(&Obj);
+  if (!ElfObj)
+    return;
+  for (auto Plt : ElfObj->getPltEntries(STI)) {
     if (Plt.Symbol) {
       SymbolRef Symbol(*Plt.Symbol, ElfObj);
       uint8_t SymbolType = getElfSymbolType(Obj, Symbol);
       if (Expected<StringRef> NameOrErr = Symbol.getName()) {
         if (!NameOrErr->empty())
-          AllSymbols[Sections[Plt.Section]].emplace_back(
+          AllSymbols[SectionNames[Plt.Section]].emplace_back(
               Plt.Address, Saver.save((*NameOrErr + "@plt").str()), SymbolType);
         continue;
       } else {
@@ -1495,8 +1500,7 @@ collectLocalBranchTargets(ArrayRef<uint8_t> Bytes, MCInstrAnalysis *MIA,
   if (MIA)
     MIA->resetState();
 
-  Labels.clear();
-  unsigned LabelCount = 0;
+  std::set<uint64_t> Targets;
   Start += SectionAddr;
   End += SectionAddr;
   const bool isXCOFF = STI->getTargetTriple().isOSBinFormatXCOFF();
@@ -1516,13 +1520,13 @@ collectLocalBranchTargets(ArrayRef<uint8_t> Bytes, MCInstrAnalysis *MIA,
         uint64_t Target;
         bool TargetKnown = MIA->evaluateBranch(Inst, Index, Size, Target);
         if (TargetKnown && (Target >= Start && Target < End) &&
-            !Labels.count(Target)) {
+            !Targets.count(Target)) {
           // On PowerPC and AIX, a function call is encoded as a branch to 0.
           // On other PowerPC platforms (ELF), a function call is encoded as
           // a branch to self. Do not add a label for these cases.
           if (!(isPPC &&
                 ((Target == 0 && isXCOFF) || (Target == Index && !isXCOFF))))
-            Labels[Target] = ("L" + Twine(LabelCount++)).str();
+            Targets.insert(Target);
         }
         MIA->updateState(Inst, Index);
       } else
@@ -1530,6 +1534,10 @@ collectLocalBranchTargets(ArrayRef<uint8_t> Bytes, MCInstrAnalysis *MIA,
     }
     Index += Size;
   }
+
+  Labels.clear();
+  for (auto [Idx, Target] : enumerate(Targets))
+    Labels[Target] = ("L" + Twine(Idx)).str();
 }
 
 // Create an MCSymbolizer for the target and add it to the MCDisassembler.
@@ -1570,8 +1578,7 @@ static void addSymbolizer(
   ArrayRef<uint64_t> LabelAddrsRef = SymbolizerPtr->getReferencedAddresses();
   // Copy and sort to remove duplicates.
   std::vector<uint64_t> LabelAddrs;
-  LabelAddrs.insert(LabelAddrs.end(), LabelAddrsRef.begin(),
-                    LabelAddrsRef.end());
+  llvm::append_range(LabelAddrs, LabelAddrsRef);
   llvm::sort(LabelAddrs);
   LabelAddrs.resize(llvm::unique(LabelAddrs) - LabelAddrs.begin());
   // Add the labels.
@@ -1770,9 +1777,34 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
   if (Obj.isELF() && Obj.sections().empty())
     createFakeELFSections(Obj);
 
+  DisassemblerTarget *PltTarget = DT;
+  auto SectionNames = getSectionNames(Obj);
+  if (SecondaryTarget && isArmElf(Obj)) {
+    auto PltSectionRef = SectionNames.find(".plt");
+    if (PltSectionRef != SectionNames.end()) {
+      bool PltIsThumb = false;
+      for (auto [Addr, SymbolName] : AllMappingSymbols[PltSectionRef->second]) {
+        if (Addr != 0)
+          continue;
+
+        if (SymbolName == 't') {
+          PltIsThumb = true;
+          break;
+        }
+        if (SymbolName == 'a')
+          break;
+      }
+
+      if (PrimaryTarget.SubtargetInfo->checkFeatures("+thumb-mode"))
+        PltTarget = PltIsThumb ? &PrimaryTarget : &*SecondaryTarget;
+      else
+        PltTarget = PltIsThumb ? &*SecondaryTarget : &PrimaryTarget;
+    }
+  }
   BumpPtrAllocator A;
   StringSaver Saver(A);
-  addPltEntries(Obj, AllSymbols, Saver);
+  addPltEntries(*PltTarget->SubtargetInfo, Obj, SectionNames, AllSymbols,
+                Saver);
 
   // Create a mapping from virtual address to section. An empty section can
   // cause more than one section at the same address. Sort such sections to be
@@ -2043,8 +2075,7 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
       if (Start < SectionAddr || StopAddress <= Start)
         continue;
 
-      for (size_t i = 0; i < SymbolsHere.size(); ++i)
-        FoundDisasmSymbolSet.insert(SymNamesHere[i]);
+      FoundDisasmSymbolSet.insert_range(SymNamesHere);
 
       // The end is the section end, the beginning of the next symbol, or
       // --stop-address.
@@ -2505,16 +2536,8 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
         if (InlineRelocs && Obj.getArch() != Triple::hexagon) {
           while (findRel()) {
             // When --adjust-vma is used, update the address printed.
-            if (RelCur->getSymbol() != Obj.symbol_end()) {
-              Expected<section_iterator> SymSI =
-                  RelCur->getSymbol()->getSection();
-              if (SymSI && *SymSI != Obj.section_end() &&
-                  shouldAdjustVA(**SymSI))
-                RelOffset += AdjustVMA;
-            }
-
             printRelocation(FOS, Obj.getFileName(), *RelCur,
-                            SectionAddr + RelOffset, Is64Bits);
+                            SectionAddr + RelOffset + VMAAdjustment, Is64Bits);
             LVP.printAfterOtherLine(FOS, true);
             ++RelCur;
           }
@@ -3743,7 +3766,7 @@ int llvm_objdump_main(int argc, char **argv, const llvm::ToolContext &) {
     return 2;
   }
 
-  DisasmSymbolSet.insert(DisassembleSymbols.begin(), DisassembleSymbols.end());
+  DisasmSymbolSet.insert_range(DisassembleSymbols);
 
   llvm::for_each(InputFilenames, dumpInput);
 

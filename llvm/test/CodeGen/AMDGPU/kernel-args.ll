@@ -5158,8 +5158,8 @@ define amdgpu_kernel void @array_3xi32(i16 %arg0, [3 x i32] %arg1) {
 ; CM-NEXT:     MOV * T3.X, KC0[3].X,
 ; CM-NEXT:     MOV * T4.X, literal.x,
 ; CM-NEXT:    0(0.000000e+00), 0(0.000000e+00)
-  store volatile i16 %arg0, ptr addrspace(1) undef
-  store volatile [3 x i32] %arg1, ptr addrspace(1) undef
+  store volatile i16 %arg0, ptr addrspace(1) poison
+  store volatile [3 x i32] %arg1, ptr addrspace(1) poison
   ret void
 }
 
@@ -5329,8 +5329,8 @@ define amdgpu_kernel void @array_3xi16(i8 %arg0, [3 x i16] %arg1) {
 ; CM-NEXT:     MOV T2.Y, 0.0,
 ; CM-NEXT:     MOV * T2.Z, 0.0,
 ; CM-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
-  store volatile i8 %arg0, ptr addrspace(1) undef
-  store volatile [3 x i16] %arg1, ptr addrspace(1) undef
+  store volatile i8 %arg0, ptr addrspace(1) poison
+  store volatile [3 x i16] %arg1, ptr addrspace(1) poison
   ret void
 }
 
@@ -5387,7 +5387,7 @@ define amdgpu_kernel void @small_array_round_down_offset(i8, [1 x i8] %arg) {
 ; EGCM-NEXT:     MOV * T1.X, literal.x,
 ; EGCM-NEXT:    0(0.000000e+00), 0(0.000000e+00)
   %val = extractvalue [1 x i8] %arg, 0
-  store volatile i8 %val, ptr addrspace(1) undef
+  store volatile i8 %val, ptr addrspace(1) poison
   ret void
 }
 

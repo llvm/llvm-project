@@ -165,8 +165,10 @@ void DAGTypeLegalizer::SoftenFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::STRICT_UINT_TO_FP:
     case ISD::SINT_TO_FP:
     case ISD::UINT_TO_FP:  R = SoftenFloatRes_XINT_TO_FP(N); break;
+    case ISD::POISON:
     case ISD::UNDEF:       R = SoftenFloatRes_UNDEF(N); break;
     case ISD::VAARG:       R = SoftenFloatRes_VAARG(N); break;
+    case ISD::AssertNoFPClass:       R = GetSoftenedFloat(N->getOperand(0)); break;
     case ISD::VECREDUCE_FADD:
     case ISD::VECREDUCE_FMUL:
     case ISD::VECREDUCE_FMIN:
@@ -772,13 +774,16 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FFREXP(SDNode *N) {
 
   SDLoc DL(N);
 
+  auto PointerTy = PointerType::getUnqual(*DAG.getContext());
   TargetLowering::MakeLibCallOptions CallOptions;
   SDValue Ops[2] = {GetSoftenedFloat(N->getOperand(0)), StackSlot};
   EVT OpsVT[2] = {VT0, StackSlot.getValueType()};
+  Type *CallOpsTypeOverrides[2] = {nullptr, PointerTy};
 
   // TODO: setTypeListBeforeSoften can't properly express multiple return types,
   // but we only really need to handle the 0th one for softening anyway.
-  CallOptions.setTypeListBeforeSoften({OpsVT}, VT0, true);
+  CallOptions.setTypeListBeforeSoften({OpsVT}, VT0, true)
+      .setOpsTypeOverrides(CallOpsTypeOverrides);
 
   auto [ReturnVal, Chain] = TLI.makeLibCall(DAG, LC, NVT0, Ops, CallOptions, DL,
                                             /*Chain=*/SDValue());
@@ -811,6 +816,8 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_UnaryWithTwoFPResults(
   SmallVector<EVT, 3> OpsVT = {VT};
 
   std::array<SDValue, 2> StackSlots;
+  SmallVector<Type *, 3> CallOpsTypeOverrides = {nullptr};
+  auto PointerTy = PointerType::getUnqual(*DAG.getContext());
   for (unsigned ResNum = 0; ResNum < N->getNumValues(); ++ResNum) {
     if (ResNum == CallRetResNo)
       continue;
@@ -818,12 +825,14 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_UnaryWithTwoFPResults(
     Ops.push_back(StackSlot);
     OpsVT.push_back(StackSlot.getValueType());
     StackSlots[ResNum] = StackSlot;
+    CallOpsTypeOverrides.push_back(PointerTy);
   }
 
   TargetLowering::MakeLibCallOptions CallOptions;
   // TODO: setTypeListBeforeSoften can't properly express multiple return types,
   // but since both returns have the same type it should be okay.
-  CallOptions.setTypeListBeforeSoften({OpsVT}, VT, true);
+  CallOptions.setTypeListBeforeSoften({OpsVT}, VT, true)
+      .setOpsTypeOverrides(CallOpsTypeOverrides);
 
   auto [ReturnVal, Chain] = TLI.makeLibCall(DAG, LC, NVT, Ops, CallOptions, DL,
                                             /*Chain=*/SDValue());
@@ -1494,6 +1503,7 @@ void DAGTypeLegalizer::ExpandFloatResult(SDNode *N, unsigned ResNo) {
     report_fatal_error("Do not know how to expand the result of this "
                        "operator!");
     // clang-format off
+  case ISD::POISON:
   case ISD::UNDEF:        SplitRes_UNDEF(N, Lo, Hi); break;
   case ISD::SELECT:       SplitRes_Select(N, Lo, Hi); break;
   case ISD::SELECT_CC:    SplitRes_SELECT_CC(N, Lo, Hi); break;
@@ -2573,6 +2583,7 @@ bool DAGTypeLegalizer::PromoteFloatOperand(SDNode *N, unsigned OpNo) {
     case ISD::LLROUND:
     case ISD::LRINT:
     case ISD::LLRINT:     R = PromoteFloatOp_UnaryOp(N, OpNo); break;
+    case ISD::AssertNoFPClass:     R = PromoteFloatOp_AssertNoFPClass(N, OpNo); break;
     case ISD::FP_TO_SINT_SAT:
     case ISD::FP_TO_UINT_SAT:
                           R = PromoteFloatOp_FP_TO_XINT_SAT(N, OpNo); break;
@@ -2629,6 +2640,12 @@ SDValue DAGTypeLegalizer::PromoteFloatOp_FCOPYSIGN(SDNode *N, unsigned OpNo) {
 SDValue DAGTypeLegalizer::PromoteFloatOp_UnaryOp(SDNode *N, unsigned OpNo) {
   SDValue Op = GetPromotedFloat(N->getOperand(0));
   return DAG.getNode(N->getOpcode(), SDLoc(N), N->getValueType(0), Op);
+}
+
+// Convert the promoted float value to the desired integer type
+SDValue DAGTypeLegalizer::PromoteFloatOp_AssertNoFPClass(SDNode *N,
+                                                         unsigned OpNo) {
+  return GetPromotedFloat(N->getOperand(0));
 }
 
 SDValue DAGTypeLegalizer::PromoteFloatOp_FP_TO_XINT_SAT(SDNode *N,
@@ -2756,7 +2773,12 @@ void DAGTypeLegalizer::PromoteFloatResult(SDNode *N, unsigned ResNo) {
 #endif
       report_fatal_error("Do not know how to promote this operator's result!");
 
-    case ISD::BITCAST:    R = PromoteFloatRes_BITCAST(N); break;
+    case ISD::BITCAST:
+      R = PromoteFloatRes_BITCAST(N);
+      break;
+    case ISD::FREEZE:
+      R = PromoteFloatRes_FREEZE(N);
+      break;
     case ISD::ConstantFP: R = PromoteFloatRes_ConstantFP(N); break;
     case ISD::EXTRACT_VECTOR_ELT:
                           R = PromoteFloatRes_EXTRACT_VECTOR_ELT(N); break;
@@ -2790,6 +2812,9 @@ void DAGTypeLegalizer::PromoteFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::FTAN:
     case ISD::FTANH:
     case ISD::FCANONICALIZE: R = PromoteFloatRes_UnaryOp(N); break;
+    case ISD::AssertNoFPClass:
+      R = PromoteFloatRes_AssertNoFPClass(N);
+      break;
 
     // Binary FP Operations
     case ISD::FADD:
@@ -2833,6 +2858,7 @@ void DAGTypeLegalizer::PromoteFloatResult(SDNode *N, unsigned ResNo) {
 
     case ISD::SINT_TO_FP:
     case ISD::UINT_TO_FP: R = PromoteFloatRes_XINT_TO_FP(N); break;
+    case ISD::POISON:
     case ISD::UNDEF:      R = PromoteFloatRes_UNDEF(N); break;
     case ISD::ATOMIC_SWAP: R = BitcastToInt_ATOMIC_SWAP(N); break;
     case ISD::VECREDUCE_FADD:
@@ -2867,6 +2893,18 @@ SDValue DAGTypeLegalizer::PromoteFloatRes_BITCAST(SDNode *N) {
                               N->getOperand(0).getValueType().getSizeInBits());
   SDValue Cast = DAG.getBitcast(IVT, N->getOperand(0));
   return DAG.getNode(GetPromotionOpcode(VT, NVT), SDLoc(N), NVT, Cast);
+}
+
+SDValue DAGTypeLegalizer::PromoteFloatRes_FREEZE(SDNode *N) {
+  EVT VT = N->getValueType(0);
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
+  // Input type isn't guaranteed to be a scalar int so bitcast if not. The
+  // bitcast will be legalized further if necessary.
+  EVT IVT = EVT::getIntegerVT(*DAG.getContext(),
+                              N->getOperand(0).getValueType().getSizeInBits());
+  SDValue Cast = DAG.getBitcast(IVT, N->getOperand(0));
+  return DAG.getNode(GetPromotionOpcode(VT, NVT), SDLoc(N), NVT,
+                     DAG.getFreeze(Cast));
 }
 
 SDValue DAGTypeLegalizer::PromoteFloatRes_ConstantFP(SDNode *N) {
@@ -2969,8 +3007,14 @@ SDValue DAGTypeLegalizer::PromoteFloatRes_UnaryOp(SDNode *N) {
   EVT VT = N->getValueType(0);
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
   SDValue Op = GetPromotedFloat(N->getOperand(0));
-
   return DAG.getNode(N->getOpcode(), SDLoc(N), NVT, Op);
+}
+
+// Unary operation with a more non-float operand where the result and the
+// operand have PromoteFloat type action.  Construct a new SDNode with the
+// promoted float value of the old operand.
+SDValue DAGTypeLegalizer::PromoteFloatRes_AssertNoFPClass(SDNode *N) {
+  return GetPromotedFloat(N->getOperand(0));
 }
 
 // Binary operations where the result and both operands have PromoteFloat type
@@ -3254,6 +3298,9 @@ void DAGTypeLegalizer::SoftPromoteHalfResult(SDNode *N, unsigned ResNo) {
   case ISD::FTAN:
   case ISD::FTANH:
   case ISD::FCANONICALIZE: R = SoftPromoteHalfRes_UnaryOp(N); break;
+  case ISD::AssertNoFPClass:
+    R = SoftPromoteHalfRes_AssertNoFPClass(N);
+    break;
 
   // Binary FP Operations
   case ISD::FADD:
@@ -3294,6 +3341,7 @@ void DAGTypeLegalizer::SoftPromoteHalfResult(SDNode *N, unsigned ResNo) {
   case ISD::STRICT_UINT_TO_FP:
   case ISD::SINT_TO_FP:
   case ISD::UINT_TO_FP:  R = SoftPromoteHalfRes_XINT_TO_FP(N); break;
+  case ISD::POISON:
   case ISD::UNDEF:       R = SoftPromoteHalfRes_UNDEF(N); break;
   case ISD::ATOMIC_SWAP: R = BitcastToInt_ATOMIC_SWAP(N); break;
   case ISD::VECREDUCE_FADD:
@@ -3577,6 +3625,10 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfRes_UnaryOp(SDNode *N) {
 
   // Convert back to FP16 as an integer.
   return DAG.getNode(GetPromotionOpcode(NVT, OVT), dl, MVT::i16, Res);
+}
+
+SDValue DAGTypeLegalizer::SoftPromoteHalfRes_AssertNoFPClass(SDNode *N) {
+  return GetSoftPromotedHalf(N->getOperand(0));
 }
 
 SDValue DAGTypeLegalizer::SoftPromoteHalfRes_BinOp(SDNode *N) {

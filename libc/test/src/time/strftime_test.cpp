@@ -31,13 +31,13 @@ constexpr int get_adjusted_year(int year) {
 // A helper class to generate simple padded numbers. It places the result in its
 // internal buffer, which is cleared on every call.
 class SimplePaddedNum {
-  static constexpr size_t BUFF_LEN = 16;
+  static constexpr int BUFF_LEN = 16;
   char buff[BUFF_LEN];
   size_t cur_len; // length of string currently in buff
 
   void clear_buff() {
     // TODO: builtin_memset?
-    for (size_t i = 0; i < BUFF_LEN; ++i)
+    for (int i = 0; i < BUFF_LEN; ++i)
       buff[i] = '\0';
   }
 
@@ -56,9 +56,9 @@ public:
     // loop through all the possibilities, and for time those are all positive.
     LIBC_NAMESPACE::IntegerToString<int> raw(num);
     auto str = raw.view();
-    int leading_zeroes = min_width - raw.size();
+    int leading_zeroes = static_cast<int>(min_width - raw.size());
 
-    size_t i = 0;
+    int i = 0;
     for (; static_cast<int>(i) < leading_zeroes; ++i)
       buff[i] = padding_char;
     for (size_t str_cur = 0, e = str.size(); str_cur < e; ++i, ++str_cur)
@@ -290,7 +290,7 @@ TEST(LlvmLibcStrftimeTest, TwoDigitDayOfMonth) {
   SimplePaddedNum spn;
 
   // Tests on all the well defined values
-  for (size_t i = 1; i <= MAX_DAYS_PER_MONTH; ++i) {
+  for (int i = 1; i <= MAX_DAYS_PER_MONTH; ++i) {
     time.tm_mday = i;
     written = LIBC_NAMESPACE::strftime(buffer, sizeof(buffer), "%d", &time);
     char *result = spn.get_padded_num(i, 2);
@@ -330,7 +330,7 @@ TEST(LlvmLibcStrftimeTest, MinDigitDayOfMonth) {
   SimplePaddedNum spn;
 
   // Tests on all the well defined values
-  for (size_t i = 1; i < 32; ++i) {
+  for (int i = 1; i < 32; ++i) {
     time.tm_mday = i;
     written = LIBC_NAMESPACE::strftime(buffer, sizeof(buffer), "%e", &time);
     char *result = spn.get_padded_num(i, 2, ' ');
@@ -380,7 +380,7 @@ TEST(LlvmLibcStrftimeTest, ISOYearOfCentury) {
   time.tm_yday = 100;
 
   // Test the easy cases
-  for (size_t i = 0; i < 102; ++i) {
+  for (int i = 0; i < 102; ++i) {
     time.tm_year = i;
     written = LIBC_NAMESPACE::strftime(buffer, sizeof(buffer), "%g", &time);
     char *result = spn.get_padded_num(i % 100, 2);
@@ -411,8 +411,8 @@ everywhere else should be in the current year.
 */
 
   // check the first days of the year
-  for (size_t yday = 0; yday < 5; ++yday) {
-    for (size_t iso_wday = LIBC_NAMESPACE::time_constants::MONDAY; iso_wday < 8;
+  for (int yday = 0; yday < 5; ++yday) {
+    for (int iso_wday = LIBC_NAMESPACE::time_constants::MONDAY; iso_wday < 8;
          ++iso_wday) {
       // start with monday, to match the ISO week.
       time.tm_wday = iso_wday % LIBC_NAMESPACE::time_constants::DAYS_PER_WEEK;
@@ -427,7 +427,7 @@ everywhere else should be in the current year.
       } else {
         // iso_wday is 5, 6, or 7 and yday is 0, 1, or 2.
         // days_since_thursday is therefor 1, 2, or 3.
-        const size_t days_since_thursday =
+        const int days_since_thursday =
             iso_wday - LIBC_NAMESPACE::time_constants::THURSDAY;
 
         if (days_since_thursday > yday) {
@@ -482,8 +482,8 @@ year end - yday yday
 
   // check the last days of the year. Checking 5 to make sure all the leap year
   // cases are covered as well.
-  for (size_t days_left = 0; days_left < 5; ++days_left) {
-    for (size_t iso_wday = LIBC_NAMESPACE::time_constants::MONDAY; iso_wday < 8;
+  for (int days_left = 0; days_left < 5; ++days_left) {
+    for (int iso_wday = LIBC_NAMESPACE::time_constants::MONDAY; iso_wday < 8;
          ++iso_wday) {
       // start with monday, to match the ISO week.
       time.tm_wday = iso_wday % LIBC_NAMESPACE::time_constants::DAYS_PER_WEEK;
@@ -580,8 +580,8 @@ TEST(LlvmLibcStrftimeTest, ISOYear) {
   time.tm_year = get_adjusted_year(1999);
 
   // check the first days of the year
-  for (size_t yday = 0; yday < 5; ++yday) {
-    for (size_t iso_wday = 1; iso_wday < 8; ++iso_wday) {
+  for (int yday = 0; yday < 5; ++yday) {
+    for (int iso_wday = 1; iso_wday < 8; ++iso_wday) {
       // start with monday, to match the ISO week.
       time.tm_wday = iso_wday % LIBC_NAMESPACE::time_constants::DAYS_PER_WEEK;
       time.tm_yday = yday;
@@ -595,7 +595,7 @@ TEST(LlvmLibcStrftimeTest, ISOYear) {
       } else {
         // iso_wday is 5, 6, or 7 and yday is 0, 1, or 2.
         // days_since_thursday is therefor 1, 2, or 3.
-        const size_t days_since_thursday =
+        const int days_since_thursday =
             iso_wday - LIBC_NAMESPACE::time_constants::THURSDAY;
 
         if (days_since_thursday > yday) {
@@ -616,8 +616,8 @@ TEST(LlvmLibcStrftimeTest, ISOYear) {
 
   // check the last days of the year. Checking 5 to make sure all the leap year
   // cases are covered as well.
-  for (size_t days_left = 0; days_left < 5; ++days_left) {
-    for (size_t iso_wday = 1; iso_wday < 8; ++iso_wday) {
+  for (int days_left = 0; days_left < 5; ++days_left) {
+    for (int iso_wday = 1; iso_wday < 8; ++iso_wday) {
       // start with monday, to match the ISO week.
       time.tm_wday = iso_wday % LIBC_NAMESPACE::time_constants::DAYS_PER_WEEK;
       // subtract 1 from the max yday to handle yday being 0-indexed.
@@ -692,7 +692,7 @@ TEST(LlvmLibcStrftimeTest, TwentyFourHour) {
   SimplePaddedNum spn;
 
   // Tests on all the well defined values
-  for (size_t i = 0; i < 24; ++i) {
+  for (int i = 0; i < 24; ++i) {
     time.tm_hour = i;
     written = LIBC_NAMESPACE::strftime(buffer, sizeof(buffer), "%H", &time);
     char *result = spn.get_padded_num(i, 2);
@@ -737,7 +737,7 @@ TEST(LlvmLibcStrftimeTest, TwelveHour) {
 
   // Tests on all the well defined values, except 0 since it was easier to
   // special case it.
-  for (size_t i = 1; i <= 12; ++i) {
+  for (int i = 1; i <= 12; ++i) {
     char *result = spn.get_padded_num(i, 2);
 
     time.tm_hour = i;
@@ -783,8 +783,7 @@ TEST(LlvmLibcStrftimeTest, DayOfYear) {
   SimplePaddedNum spn;
 
   // Tests on all the well defined values
-  for (size_t i = 0; i < LIBC_NAMESPACE::time_constants::DAYS_PER_LEAP_YEAR;
-       ++i) {
+  for (int i = 0; i < LIBC_NAMESPACE::time_constants::DAYS_PER_LEAP_YEAR; ++i) {
     time.tm_yday = i;
     written = LIBC_NAMESPACE::strftime(buffer, sizeof(buffer), "%j", &time);
     char *result = spn.get_padded_num(i + 1, 3);
@@ -824,7 +823,7 @@ TEST(LlvmLibcStrftimeTest, MonthOfYear) {
   SimplePaddedNum spn;
 
   // Tests on all the well defined values
-  for (size_t i = 0; i < LIBC_NAMESPACE::time_constants::MONTHS_PER_YEAR; ++i) {
+  for (int i = 0; i < LIBC_NAMESPACE::time_constants::MONTHS_PER_YEAR; ++i) {
     time.tm_mon = i;
     written = LIBC_NAMESPACE::strftime(buffer, sizeof(buffer), "%m", &time);
     // %m is 1 indexed, so add 1 to the number we're comparing to.
@@ -865,8 +864,7 @@ TEST(LlvmLibcStrftimeTest, MinuteOfHour) {
   SimplePaddedNum spn;
 
   // Tests on all the well defined values
-  for (size_t i = 0; i < LIBC_NAMESPACE::time_constants::MINUTES_PER_HOUR;
-       ++i) {
+  for (int i = 0; i < LIBC_NAMESPACE::time_constants::MINUTES_PER_HOUR; ++i) {
     time.tm_min = i;
     written = LIBC_NAMESPACE::strftime(buffer, sizeof(buffer), "%M", &time);
     char *result = spn.get_padded_num(i, 2);
@@ -971,7 +969,7 @@ TEST(LlvmLibcStrftimeTest, SecondOfMinute) {
   SimplePaddedNum spn;
 
   // Tests on all the well defined values
-  for (size_t i = 0; i < LIBC_NAMESPACE::time_constants::SECONDS_PER_MIN; ++i) {
+  for (int i = 0; i < LIBC_NAMESPACE::time_constants::SECONDS_PER_MIN; ++i) {
     time.tm_sec = i;
     written = LIBC_NAMESPACE::strftime(buffer, sizeof(buffer), "%S", &time);
     char *result = spn.get_padded_num(i, 2);
@@ -1016,7 +1014,7 @@ TEST(LlvmLibcStrftimeTest, ISODayOfWeek) {
 
   // Tests on all the well defined values except for sunday, which is 0 in
   // normal weekdays but 7 here.
-  for (size_t i = LIBC_NAMESPACE::time_constants::MONDAY;
+  for (int i = LIBC_NAMESPACE::time_constants::MONDAY;
        i <= LIBC_NAMESPACE::time_constants::SATURDAY; ++i) {
     time.tm_wday = i;
     written = LIBC_NAMESPACE::strftime(buffer, sizeof(buffer), "%u", &time);
@@ -1052,14 +1050,14 @@ TEST(LlvmLibcStrftimeTest, WeekOfYearStartingSunday) {
 
   const int WEEK_START = LIBC_NAMESPACE::time_constants::SUNDAY;
 
-  for (size_t first_weekday = LIBC_NAMESPACE::time_constants::SUNDAY;
+  for (int first_weekday = LIBC_NAMESPACE::time_constants::SUNDAY;
        first_weekday <= LIBC_NAMESPACE::time_constants::SATURDAY;
        ++first_weekday) {
     time.tm_wday = first_weekday;
-    size_t cur_week = 0;
+    int cur_week = 0;
 
     // iterate through the year, starting on first_weekday.
-    for (size_t yday = 0;
+    for (int yday = 0;
          yday < LIBC_NAMESPACE::time_constants::DAYS_PER_LEAP_YEAR; ++yday) {
       time.tm_yday = yday;
       // If the week just ended, move to the next week.
@@ -1122,13 +1120,13 @@ TEST(LlvmLibcStrftimeTest, ISOWeekOfYear) {
 
   const int WEEK_START = LIBC_NAMESPACE::time_constants::MONDAY;
 
-  for (size_t first_weekday = LIBC_NAMESPACE::time_constants::SUNDAY;
+  for (int first_weekday = LIBC_NAMESPACE::time_constants::SUNDAY;
        first_weekday <= LIBC_NAMESPACE::time_constants::SATURDAY;
        ++first_weekday) {
     time.tm_year = starting_year;
     time.tm_wday = first_weekday;
     time.tm_yday = 0;
-    size_t cur_week = 1;
+    int cur_week = 1;
     if (first_weekday == LIBC_NAMESPACE::time_constants::SUNDAY ||
         first_weekday == LIBC_NAMESPACE::time_constants::SATURDAY)
       cur_week = 52;
@@ -1206,7 +1204,7 @@ TEST(LlvmLibcStrftimeTest, DayOfWeek) {
   SimplePaddedNum spn;
 
   // Tests on all the well defined values.
-  for (size_t i = LIBC_NAMESPACE::time_constants::SUNDAY;
+  for (int i = LIBC_NAMESPACE::time_constants::SUNDAY;
        i <= LIBC_NAMESPACE::time_constants::SATURDAY; ++i) {
     time.tm_wday = i;
     written = LIBC_NAMESPACE::strftime(buffer, sizeof(buffer), "%w", &time);
@@ -1242,14 +1240,14 @@ TEST(LlvmLibcStrftimeTest, WeekOfYearStartingMonday) {
 
   const int WEEK_START = LIBC_NAMESPACE::time_constants::MONDAY;
 
-  for (size_t first_weekday = LIBC_NAMESPACE::time_constants::SUNDAY;
+  for (int first_weekday = LIBC_NAMESPACE::time_constants::SUNDAY;
        first_weekday <= LIBC_NAMESPACE::time_constants::SATURDAY;
        ++first_weekday) {
     time.tm_wday = first_weekday;
-    size_t cur_week = 0;
+    int cur_week = 0;
 
     // iterate through the year, starting on first_weekday.
-    for (size_t yday = 0;
+    for (int yday = 0;
          yday < LIBC_NAMESPACE::time_constants::DAYS_PER_LEAP_YEAR; ++yday) {
       time.tm_yday = yday;
       // If the week just ended, move to the next week.
@@ -1303,7 +1301,7 @@ TEST(LlvmLibcStrftimeTest, YearOfCentury) {
   time.tm_year = get_adjusted_year(2000);
 
   // iterate through the year, starting on first_weekday.
-  for (size_t year = 1900; year < 2001; ++year) {
+  for (int year = 1900; year < 2001; ++year) {
     time.tm_year = get_adjusted_year(year);
 
     written = LIBC_NAMESPACE::strftime(buffer, sizeof(buffer), "%y", &time);

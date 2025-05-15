@@ -576,8 +576,7 @@ struct AMDGPUKernelTy : public GenericKernelTy {
   /// Get the HSA kernel object representing the kernel function.
   uint64_t getKernelObject() const { return KernelObject; }
 
-  /// Get the size of implicitargs based on the code object version
-  /// @return 56 for cov4 and 256 for cov5
+  /// Get the size of implicitargs based on the code object version.
   uint32_t getImplicitArgsSize() const { return ImplicitArgsSize; }
 
   /// Indicates whether or not we need to set up our own private segment size.
@@ -3364,16 +3363,6 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   if (auto Err = GenericDevice.getDeviceStackSize(StackSize))
     return Err;
 
-  hsa_utils::AMDGPUImplicitArgsTy *ImplArgs = nullptr;
-  if (ArgsSize == LaunchParams.Size + getImplicitArgsSize()) {
-    // Initialize implicit arguments.
-    ImplArgs = reinterpret_cast<hsa_utils::AMDGPUImplicitArgsTy *>(
-        utils::advancePtr(AllArgs, LaunchParams.Size));
-
-    // Initialize the implicit arguments to zero.
-    std::memset(ImplArgs, 0, getImplicitArgsSize());
-  }
-
   // Copy the explicit arguments.
   // TODO: We should expose the args memory manager alloc to the common part as
   // 	   alternative to copying them twice.
@@ -3386,9 +3375,13 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   if (auto Err = AMDGPUDevice.getStream(AsyncInfoWrapper, Stream))
     return Err;
 
-  // Only COV5 implicitargs needs to be set. COV4 implicitargs are not used.
-  if (ImplArgs &&
-      getImplicitArgsSize() == sizeof(hsa_utils::AMDGPUImplicitArgsTy)) {
+  hsa_utils::AMDGPUImplicitArgsTy *ImplArgs = nullptr;
+  if (ArgsSize == LaunchParams.Size + getImplicitArgsSize()) {
+    ImplArgs = reinterpret_cast<hsa_utils::AMDGPUImplicitArgsTy *>(
+        utils::advancePtr(AllArgs, LaunchParams.Size));
+
+    // Set the COV5+ implicit arguments to the appropriate values.
+    std::memset(ImplArgs, 0, getImplicitArgsSize());
     ImplArgs->BlockCountX = NumBlocks[0];
     ImplArgs->BlockCountY = NumBlocks[1];
     ImplArgs->BlockCountZ = NumBlocks[2];

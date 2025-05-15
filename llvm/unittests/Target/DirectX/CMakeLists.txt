@@ -4,12 +4,17 @@ include_directories(
   )
 
 set(LLVM_LINK_COMPONENTS
+  Analysis
   AsmParser
   Core
   DirectXCodeGen
+  DirectXDesc
+  DirectXInfo
   DirectXPointerTypeAnalysis
+  MC
   Passes
   Support
+  TargetParser
   )
 
 add_llvm_target_unittest(DirectXTests
@@ -17,4 +22,5 @@ add_llvm_target_unittest(DirectXTests
   PointerTypeAnalysisTests.cpp
   UniqueResourceFromUseTests.cpp
   RegisterCostTests.cpp
+  ResourceBindingAnalysisTests.cpp
   )

@@ -26,7 +26,7 @@ bb3:                                              ; preds = %bb2, %bb
   br i1 %tmp, label %bb4, label %bb6
 
 bb4:                                              ; preds = %bb3
-  %val = load volatile i32, ptr addrspace(1) undef
+  %val = load volatile i32, ptr addrspace(1) poison
   %tmp5 = mul i32 %val, %arg
   br label %bb6
 

@@ -568,9 +568,8 @@ private:
     std::vector<char> &newStorage = propertiesStorage.back();
     size_t propertiesSize = sizeScratch.size() + rawProperties.size();
     newStorage.reserve(propertiesSize);
-    newStorage.insert(newStorage.end(), sizeScratch.begin(), sizeScratch.end());
-    newStorage.insert(newStorage.end(), rawProperties.begin(),
-                      rawProperties.end());
+    llvm::append_range(newStorage, sizeScratch);
+    llvm::append_range(newStorage, rawProperties);
 
     // Try to de-duplicate the new serialized properties.
     // If the properties is a duplicate, pop it back from the storage.
@@ -772,6 +771,7 @@ LogicalResult BytecodeWriter::write(Operation *rootOp, raw_ostream &os) {
 
 //===----------------------------------------------------------------------===//
 // Dialects
+//===----------------------------------------------------------------------===//
 
 /// Write the given entries in contiguous groups with the same parent dialect.
 /// Each dialect sub-group is encoded with the parent dialect and number of
@@ -855,6 +855,7 @@ void BytecodeWriter::writeDialectSection(EncodingEmitter &emitter) {
 
 //===----------------------------------------------------------------------===//
 // Attributes and Types
+//===----------------------------------------------------------------------===//
 
 void BytecodeWriter::writeAttrTypeSection(EncodingEmitter &emitter) {
   EncodingEmitter attrTypeEmitter;
@@ -936,6 +937,7 @@ void BytecodeWriter::writeAttrTypeSection(EncodingEmitter &emitter) {
 
 //===----------------------------------------------------------------------===//
 // Operations
+//===----------------------------------------------------------------------===//
 
 LogicalResult BytecodeWriter::writeBlock(EncodingEmitter &emitter,
                                          Block *block) {
@@ -1215,6 +1217,7 @@ LogicalResult BytecodeWriter::writeIRSection(EncodingEmitter &emitter,
 
 //===----------------------------------------------------------------------===//
 // Resources
+//===----------------------------------------------------------------------===//
 
 namespace {
 /// This class represents a resource builder implementation for the MLIR
@@ -1327,6 +1330,7 @@ void BytecodeWriter::writeResourceSection(Operation *op,
 
 //===----------------------------------------------------------------------===//
 // Strings
+//===----------------------------------------------------------------------===//
 
 void BytecodeWriter::writeStringSection(EncodingEmitter &emitter) {
   EncodingEmitter stringEmitter;
@@ -1336,6 +1340,7 @@ void BytecodeWriter::writeStringSection(EncodingEmitter &emitter) {
 
 //===----------------------------------------------------------------------===//
 // Properties
+//===----------------------------------------------------------------------===//
 
 void BytecodeWriter::writePropertiesSection(EncodingEmitter &emitter) {
   EncodingEmitter propertiesEmitter;

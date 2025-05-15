@@ -16,6 +16,7 @@
 #include "MCTargetDesc/RISCVMatInt.h"
 #include "RISCVISelLowering.h"
 #include "RISCVInstrInfo.h"
+#include "RISCVSelectionDAGInfo.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/Support/Alignment.h"
@@ -33,6 +34,9 @@ static cl::opt<bool> UsePseudoMovImm(
     cl::desc("Use a rematerializable pseudoinstruction for 2 instruction "
              "constant materialization"),
     cl::init(false));
+
+#define GET_DAGISEL_BODY RISCVDAGToDAGISel
+#include "RISCVGenDAGISel.inc"
 
 void RISCVDAGToDAGISel::PreprocessISelDAG() {
   SelectionDAG::allnodes_iterator Position = CurDAG->allnodes_end();
@@ -653,7 +657,9 @@ bool RISCVDAGToDAGISel::trySignedBitfieldExtract(SDNode *Node) {
       return false;
 
     const unsigned Msb = ExtSize - 1;
-    const unsigned Lsb = RightShAmt;
+    // If the shift-right amount is greater than Msb, it means that extracts
+    // the X[Msb] bit and sign-extend it.
+    const unsigned Lsb = RightShAmt > Msb ? Msb : RightShAmt;
 
     SDNode *TH_EXT = BitfieldExtract(N0, Msb, Lsb, DL, VT);
     ReplaceNode(Node, TH_EXT);
@@ -661,6 +667,20 @@ bool RISCVDAGToDAGISel::trySignedBitfieldExtract(SDNode *Node) {
   }
 
   return false;
+}
+
+bool RISCVDAGToDAGISel::tryUnsignedBitfieldExtract(SDNode *Node, SDLoc DL,
+                                                   MVT VT, SDValue X,
+                                                   unsigned Msb, unsigned Lsb) {
+  // Only supported with XTHeadBb at the moment.
+  if (!Subtarget->hasVendorXTHeadBb())
+    return false;
+
+  SDNode *TH_EXTU = CurDAG->getMachineNode(
+      RISCV::TH_EXTU, DL, VT, X, CurDAG->getTargetConstant(Msb, DL, VT),
+      CurDAG->getTargetConstant(Lsb, DL, VT));
+  ReplaceNode(Node, TH_EXTU);
+  return true;
 }
 
 bool RISCVDAGToDAGISel::tryIndexedLoad(SDNode *Node) {
@@ -1122,16 +1142,12 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       return;
     }
 
-    unsigned LShAmt = Subtarget->getXLen() - TrailingOnes;
-    if (Subtarget->hasVendorXTHeadBb()) {
-      SDNode *THEXTU = CurDAG->getMachineNode(
-          RISCV::TH_EXTU, DL, VT, N0->getOperand(0),
-          CurDAG->getTargetConstant(TrailingOnes - 1, DL, VT),
-          CurDAG->getTargetConstant(ShAmt, DL, VT));
-      ReplaceNode(Node, THEXTU);
+    const unsigned Msb = TrailingOnes - 1;
+    const unsigned Lsb = ShAmt;
+    if (tryUnsignedBitfieldExtract(Node, DL, VT, N0->getOperand(0), Msb, Lsb))
       return;
-    }
 
+    unsigned LShAmt = Subtarget->getXLen() - TrailingOnes;
     SDNode *SLLI =
         CurDAG->getMachineNode(RISCV::SLLI, DL, VT, N0->getOperand(0),
                                CurDAG->getTargetConstant(LShAmt, DL, VT));
@@ -1187,19 +1203,6 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       break;
 
     SDValue N0 = Node->getOperand(0);
-
-    auto tryUnsignedBitfieldExtract = [&](SDNode *Node, SDLoc DL, MVT VT,
-                                          SDValue X, unsigned Msb,
-                                          unsigned Lsb) {
-      if (!Subtarget->hasVendorXTHeadBb())
-        return false;
-
-      SDNode *TH_EXTU = CurDAG->getMachineNode(
-          RISCV::TH_EXTU, DL, VT, X, CurDAG->getTargetConstant(Msb, DL, VT),
-          CurDAG->getTargetConstant(Lsb, DL, VT));
-      ReplaceNode(Node, TH_EXTU);
-      return true;
-    };
 
     bool LeftShift = N0.getOpcode() == ISD::SHL;
     if (LeftShift || N0.getOpcode() == ISD::SRL) {
@@ -1622,6 +1625,51 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       return;
     }
     break;
+  }
+  case RISCVISD::LD_RV32: {
+    assert(Subtarget->hasStdExtZilsd() && "LD_RV32 is only used with Zilsd");
+
+    SDValue Base, Offset;
+    SDValue Chain = Node->getOperand(0);
+    SDValue Addr = Node->getOperand(1);
+    SelectAddrRegImm(Addr, Base, Offset);
+
+    SDValue Ops[] = {Base, Offset, Chain};
+    MachineSDNode *New = CurDAG->getMachineNode(
+        RISCV::LD_RV32, DL, {MVT::Untyped, MVT::Other}, Ops);
+    SDValue Lo = CurDAG->getTargetExtractSubreg(RISCV::sub_gpr_even, DL,
+                                                MVT::i32, SDValue(New, 0));
+    SDValue Hi = CurDAG->getTargetExtractSubreg(RISCV::sub_gpr_odd, DL,
+                                                MVT::i32, SDValue(New, 0));
+    CurDAG->setNodeMemRefs(New, {cast<MemSDNode>(Node)->getMemOperand()});
+    ReplaceUses(SDValue(Node, 0), Lo);
+    ReplaceUses(SDValue(Node, 1), Hi);
+    ReplaceUses(SDValue(Node, 2), SDValue(New, 1));
+    CurDAG->RemoveDeadNode(Node);
+    return;
+  }
+  case RISCVISD::SD_RV32: {
+    SDValue Base, Offset;
+    SDValue Chain = Node->getOperand(0);
+    SDValue Addr = Node->getOperand(3);
+    SelectAddrRegImm(Addr, Base, Offset);
+
+    SDValue Ops[] = {
+        CurDAG->getTargetConstant(RISCV::GPRPairRegClassID, DL, MVT::i32),
+        Node->getOperand(1),
+        CurDAG->getTargetConstant(RISCV::sub_gpr_even, DL, MVT::i32),
+        Node->getOperand(2),
+        CurDAG->getTargetConstant(RISCV::sub_gpr_odd, DL, MVT::i32)};
+
+    SDNode *RegPair = CurDAG->getMachineNode(TargetOpcode::REG_SEQUENCE, DL,
+                                             MVT::Untyped, Ops);
+    MachineSDNode *New =
+        CurDAG->getMachineNode(RISCV::SD_RV32, DL, MVT::Other,
+                               {SDValue(RegPair, 0), Base, Offset, Chain});
+    CurDAG->setNodeMemRefs(New, {cast<MemSDNode>(Node)->getMemOperand()});
+    ReplaceUses(SDValue(Node, 0), SDValue(New, 0));
+    CurDAG->RemoveDeadNode(Node);
+    return;
   }
   case ISD::INTRINSIC_WO_CHAIN: {
     unsigned IntNo = Node->getConstantOperandVal(0);
@@ -2600,6 +2648,8 @@ static bool isWorthFoldingAdd(SDValue Add) {
     if (User->getOpcode() == ISD::ATOMIC_STORE &&
         cast<AtomicSDNode>(User)->getVal() == Add)
       return false;
+    if (isStrongerThanMonotonic(cast<MemSDNode>(User)->getSuccessOrdering()))
+      return false;
   }
 
   return true;
@@ -2809,8 +2859,7 @@ bool RISCVDAGToDAGISel::SelectAddrRegImmLsb00000(SDValue Addr, SDValue &Base,
   // Handle ADD with large immediates.
   if (Addr.getOpcode() == ISD::ADD && isa<ConstantSDNode>(Addr.getOperand(1))) {
     int64_t CVal = cast<ConstantSDNode>(Addr.getOperand(1))->getSExtValue();
-    assert(!(isInt<12>(CVal) && isInt<12>(CVal)) &&
-           "simm12 not already handled?");
+    assert(!isInt<12>(CVal) && "simm12 not already handled?");
 
     // Handle immediates in the range [-4096,-2049] or [2017, 4065]. We can save
     // one instruction by folding adjustment (-2048 or 2016) into the address.
@@ -2853,8 +2902,8 @@ bool RISCVDAGToDAGISel::SelectAddrRegReg(SDValue Addr, SDValue &Base,
   if (isa<ConstantSDNode>(Addr.getOperand(1)))
     return false;
 
-  Base = Addr.getOperand(1);
-  Offset = Addr.getOperand(0);
+  Base = Addr.getOperand(0);
+  Offset = Addr.getOperand(1);
   return true;
 }
 
@@ -2990,6 +3039,18 @@ bool RISCVDAGToDAGISel::selectSETCC(SDValue N, ISD::CondCode ExpectedCCVal,
           CurDAG->getMachineNode(
               RISCV::BINVI, DL, N->getValueType(0), LHS,
               CurDAG->getTargetConstant(Log2_64(CVal), DL, N->getValueType(0))),
+          0);
+      return true;
+    }
+    // Same as the addi case above but for larger immediates (signed 26-bit) use
+    // the QC_E_ADDI instruction from the Xqcilia extension, if available. Avoid
+    // anything which can be done with a single lui as it might be compressible.
+    if (Subtarget->hasVendorXqcilia() && isInt<26>(CVal) &&
+        (CVal & 0xFFF) != 0) {
+      Val = SDValue(
+          CurDAG->getMachineNode(
+              RISCV::QC_E_ADDI, DL, N->getValueType(0), LHS,
+              CurDAG->getSignedTargetConstant(-CVal, DL, N->getValueType(0))),
           0);
       return true;
     }
@@ -3204,6 +3265,40 @@ bool RISCVDAGToDAGISel::selectSHXADD_UWOp(SDValue N, unsigned ShAmt,
   }
 
   return false;
+}
+
+bool RISCVDAGToDAGISel::selectNegImm(SDValue N, SDValue &Val) {
+  if (!isa<ConstantSDNode>(N))
+    return false;
+  int64_t Imm = cast<ConstantSDNode>(N)->getSExtValue();
+  if (isInt<32>(Imm))
+    return false;
+
+  for (const SDNode *U : N->users()) {
+    switch (U->getOpcode()) {
+    case ISD::ADD:
+      break;
+    case RISCVISD::VMV_V_X_VL:
+      if (!all_of(U->users(), [](const SDNode *V) {
+            return V->getOpcode() == ISD::ADD ||
+                   V->getOpcode() == RISCVISD::ADD_VL;
+          }))
+        return false;
+      break;
+    default:
+      return false;
+    }
+  }
+
+  int OrigImmCost = RISCVMatInt::getIntMatCost(APInt(64, Imm), 64, *Subtarget,
+                                               /*CompressionCost=*/true);
+  int NegImmCost = RISCVMatInt::getIntMatCost(APInt(64, -Imm), 64, *Subtarget,
+                                              /*CompressionCost=*/true);
+  if (OrigImmCost <= NegImmCost)
+    return false;
+
+  Val = selectImm(CurDAG, SDLoc(N), N->getSimpleValueType(0), -Imm, *Subtarget);
+  return true;
 }
 
 bool RISCVDAGToDAGISel::selectInvLogicImm(SDValue N, SDValue &Val) {
@@ -3595,6 +3690,11 @@ bool RISCVDAGToDAGISel::selectVSplatUimm(SDValue N, unsigned Bits,
   return selectVSplatImmHelper(
       N, SplatVal, *CurDAG, *Subtarget,
       [Bits](int64_t Imm) { return isUIntN(Bits, Imm); });
+}
+
+bool RISCVDAGToDAGISel::selectVSplatImm64Neg(SDValue N, SDValue &SplatVal) {
+  SDValue Splat = findVSplat(N);
+  return Splat && selectNegImm(Splat.getOperand(1), SplatVal);
 }
 
 bool RISCVDAGToDAGISel::selectLow8BitsVSplat(SDValue N, SDValue &SplatVal) {

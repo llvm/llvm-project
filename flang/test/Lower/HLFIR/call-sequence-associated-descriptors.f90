@@ -30,7 +30,7 @@ contains
 ! CHECK:           %[[VAL_10:.*]] = fir.rebox %[[VAL_6]]#0(%[[VAL_9]]) : (!fir.box<!fir.array<10x20x!fir.char<1,?>>>, !fir.shift<2>) -> !fir.box<!fir.array<10x20x!fir.char<1,?>>>
 ! CHECK:           %[[VAL_11:.*]]:3 = hlfir.associate %[[VAL_7]] {adapt.valuebyref} : (i32) -> (!fir.ref<i32>, !fir.ref<i32>, i1)
 ! CHECK:           %[[VAL_12:.*]] = arith.constant 0 : index
-! CHECK:           %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_11]]#1 {uniq_name = "_QMbindc_seq_assocFtakes_charEn"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_11]]#0 {uniq_name = "_QMbindc_seq_assocFtakes_charEn"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_14:.*]] = fir.load %[[VAL_13]]#0 : !fir.ref<i32>
 ! CHECK:           %[[VAL_15:.*]] = fir.convert %[[VAL_14]] : (i32) -> i64
 ! CHECK:           %[[VAL_16:.*]] = arith.constant 1 : i64
@@ -46,7 +46,7 @@ contains
 ! CHECK:           %[[VAL_26:.*]] = fir.box_addr %[[VAL_10]] : (!fir.box<!fir.array<10x20x!fir.char<1,?>>>) -> !fir.ref<!fir.array<10x20x!fir.char<1,?>>>
 ! CHECK:           %[[VAL_27:.*]] = fir.convert %[[VAL_26]] : (!fir.ref<!fir.array<10x20x!fir.char<1,?>>>) -> !fir.ref<!fir.array<?x!fir.char<1,?>>>
 ! CHECK:           %[[VAL_28:.*]] = fir.embox %[[VAL_27]](%[[VAL_24]]) typeparams %[[VAL_25]] : (!fir.ref<!fir.array<?x!fir.char<1,?>>>, !fir.shapeshift<1>, index) -> !fir.box<!fir.array<?x!fir.char<1,?>>>
-! CHECK:           fir.call @takes_char(%[[VAL_28]], %[[VAL_11]]#1) proc_attrs<bind_c> fastmath<contract> : (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.ref<i32>) -> ()
+! CHECK:           fir.call @takes_char(%[[VAL_28]], %[[VAL_11]]#0) proc_attrs<bind_c> fastmath<contract> : (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.ref<i32>) -> ()
 ! CHECK:           hlfir.end_associate %[[VAL_11]]#1, %[[VAL_11]]#2 : !fir.ref<i32>, i1
 ! CHECK:           return
 ! CHECK:         }
@@ -64,7 +64,7 @@ contains
 ! CHECK:           %[[VAL_6:.*]] = fir.rebox %[[VAL_3]]#0(%[[VAL_5]]) : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, !fir.shift<2>) -> !fir.box<!fir.array<?x?x!fir.char<1,?>>>
 ! CHECK:           %[[VAL_7:.*]]:3 = hlfir.associate %[[VAL_2]] {adapt.valuebyref} : (i32) -> (!fir.ref<i32>, !fir.ref<i32>, i1)
 ! CHECK:           %[[VAL_8:.*]] = arith.constant 0 : index
-! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_7]]#1 {uniq_name = "_QMbindc_seq_assocFtakes_charEn"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_7]]#0 {uniq_name = "_QMbindc_seq_assocFtakes_charEn"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_10:.*]] = fir.load %[[VAL_9]]#0 : !fir.ref<i32>
 ! CHECK:           %[[VAL_11:.*]] = fir.convert %[[VAL_10]] : (i32) -> i64
 ! CHECK:           %[[VAL_12:.*]] = arith.constant 1 : i64
@@ -80,7 +80,7 @@ contains
 ! CHECK:           %[[VAL_22:.*]] = fir.box_addr %[[VAL_6]] : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>) -> !fir.ref<!fir.array<?x?x!fir.char<1,?>>>
 ! CHECK:           %[[VAL_23:.*]] = fir.convert %[[VAL_22]] : (!fir.ref<!fir.array<?x?x!fir.char<1,?>>>) -> !fir.ref<!fir.array<?x!fir.char<1,?>>>
 ! CHECK:           %[[VAL_24:.*]] = fir.embox %[[VAL_23]](%[[VAL_20]]) typeparams %[[VAL_21]] : (!fir.ref<!fir.array<?x!fir.char<1,?>>>, !fir.shapeshift<1>, index) -> !fir.box<!fir.array<?x!fir.char<1,?>>>
-! CHECK:           fir.call @takes_char(%[[VAL_24]], %[[VAL_7]]#1) proc_attrs<bind_c> fastmath<contract> : (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.ref<i32>) -> ()
+! CHECK:           fir.call @takes_char(%[[VAL_24]], %[[VAL_7]]#0) proc_attrs<bind_c> fastmath<contract> : (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.ref<i32>) -> ()
 ! CHECK:           hlfir.copy_out %[[TMP_BOX]], %[[VAL_3]]#1 to %[[VAL_1]]#0 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?x!fir.char<1,?>>>>>, i1, !fir.box<!fir.array<?x?x!fir.char<1,?>>>) -> ()
 ! CHECK:           hlfir.end_associate %[[VAL_7]]#1, %[[VAL_7]]#2 : !fir.ref<i32>, i1
 ! CHECK:           return
@@ -138,7 +138,7 @@ contains
 ! CHECK:           %[[VAL_14:.*]]:3 = hlfir.associate %[[VAL_8]] {adapt.valuebyref} : (i32) -> (!fir.ref<i32>, !fir.ref<i32>, i1)
 ! CHECK:           %[[VAL_15:.*]] = fir.if %[[VAL_7]] -> (!fir.box<!fir.array<?x!fir.char<1,?>>>) {
 ! CHECK:             %[[VAL_16:.*]] = arith.constant 0 : index
-! CHECK:             %[[VAL_17:.*]]:2 = hlfir.declare %[[VAL_14]]#1 {uniq_name = "_QMbindc_seq_assocFtakes_optional_charEn"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:             %[[VAL_17:.*]]:2 = hlfir.declare %[[VAL_14]]#0 {uniq_name = "_QMbindc_seq_assocFtakes_optional_charEn"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:             %[[VAL_18:.*]] = fir.load %[[VAL_17]]#0 : !fir.ref<i32>
 ! CHECK:             %[[VAL_19:.*]] = fir.convert %[[VAL_18]] : (i32) -> i64
 ! CHECK:             %[[VAL_20:.*]] = arith.constant 1 : i64
@@ -159,7 +159,7 @@ contains
 ! CHECK:             %[[VAL_33:.*]] = fir.absent !fir.box<!fir.array<?x!fir.char<1,?>>>
 ! CHECK:             fir.result %[[VAL_33]] : !fir.box<!fir.array<?x!fir.char<1,?>>>
 ! CHECK:           }
-! CHECK:           fir.call @takes_optional_char(%[[VAL_15]], %[[VAL_14]]#1) proc_attrs<bind_c> fastmath<contract> : (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.ref<i32>) -> ()
+! CHECK:           fir.call @takes_optional_char(%[[VAL_15]], %[[VAL_14]]#0) proc_attrs<bind_c> fastmath<contract> : (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.ref<i32>) -> ()
 ! CHECK:           hlfir.end_associate %[[VAL_14]]#1, %[[VAL_14]]#2 : !fir.ref<i32>, i1
 ! CHECK:           return
 ! CHECK:         }
@@ -189,7 +189,7 @@ contains
 ! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0:.*]] dummy_scope %{{[0-9]+}} {uniq_name = "_QMpoly_seq_assocFtest_poly_1Ex"} : (!fir.class<!fir.array<10x20xnone>>, !fir.dscope) -> (!fir.class<!fir.array<10x20xnone>>, !fir.class<!fir.array<10x20xnone>>)
 ! CHECK:           %[[VAL_2:.*]] = arith.constant 100 : i32
 ! CHECK:           %[[VAL_3:.*]]:3 = hlfir.associate %[[VAL_2]] {adapt.valuebyref} : (i32) -> (!fir.ref<i32>, !fir.ref<i32>, i1)
-! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_3]]#1 {uniq_name = "_QMpoly_seq_assocFtakes_polyEn"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_3]]#0 {uniq_name = "_QMpoly_seq_assocFtakes_polyEn"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_5:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<i32>
 ! CHECK:           %[[VAL_6:.*]] = fir.convert %[[VAL_5]] : (i32) -> i64
 ! CHECK:           %[[VAL_7:.*]] = arith.constant 1 : i64
@@ -204,7 +204,7 @@ contains
 ! CHECK:           %[[VAL_16:.*]] = fir.box_addr %[[VAL_1]]#1 : (!fir.class<!fir.array<10x20xnone>>) -> !fir.ref<!fir.array<10x20xnone>>
 ! CHECK:           %[[VAL_17:.*]] = fir.convert %[[VAL_16]] : (!fir.ref<!fir.array<10x20xnone>>) -> !fir.ref<!fir.array<?xnone>>
 ! CHECK:           %[[VAL_18:.*]] = fir.embox %[[VAL_17]](%[[VAL_15]]) source_box %[[VAL_1]]#0 : (!fir.ref<!fir.array<?xnone>>, !fir.shape<1>, !fir.class<!fir.array<10x20xnone>>) -> !fir.class<!fir.array<?xnone>>
-! CHECK:           fir.call @_QPtakes_poly(%[[VAL_18]], %[[VAL_3]]#1) fastmath<contract> : (!fir.class<!fir.array<?xnone>>, !fir.ref<i32>) -> ()
+! CHECK:           fir.call @_QPtakes_poly(%[[VAL_18]], %[[VAL_3]]#0) fastmath<contract> : (!fir.class<!fir.array<?xnone>>, !fir.ref<i32>) -> ()
 ! CHECK:           hlfir.end_associate %[[VAL_3]]#1, %[[VAL_3]]#2 : !fir.ref<i32>, i1
 ! CHECK:           return
 ! CHECK:         }
@@ -218,7 +218,7 @@ contains
 ! CHECK:           %[[VAL_2:.*]] = arith.constant 100 : i32
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.copy_in %[[VAL_1]]#0 to %[[TMP_BOX:.*]] : (!fir.class<!fir.array<?x?xnone>>, !fir.ref<!fir.class<!fir.heap<!fir.array<?x?xnone>>>>) -> (!fir.class<!fir.array<?x?xnone>>, i1)
 ! CHECK:           %[[VAL_4:.*]]:3 = hlfir.associate %[[VAL_2]] {adapt.valuebyref} : (i32) -> (!fir.ref<i32>, !fir.ref<i32>, i1)
-! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]]#1 {uniq_name = "_QMpoly_seq_assocFtakes_polyEn"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]]#0 {uniq_name = "_QMpoly_seq_assocFtakes_polyEn"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_6:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<i32>
 ! CHECK:           %[[VAL_7:.*]] = fir.convert %[[VAL_6]] : (i32) -> i64
 ! CHECK:           %[[VAL_8:.*]] = arith.constant 1 : i64
@@ -233,7 +233,7 @@ contains
 ! CHECK:           %[[VAL_17:.*]] = fir.box_addr %[[VAL_3]]#0 : (!fir.class<!fir.array<?x?xnone>>) -> !fir.ref<!fir.array<?x?xnone>>
 ! CHECK:           %[[VAL_18:.*]] = fir.convert %[[VAL_17]] : (!fir.ref<!fir.array<?x?xnone>>) -> !fir.ref<!fir.array<?xnone>>
 ! CHECK:           %[[VAL_19:.*]] = fir.embox %[[VAL_18]](%[[VAL_16]]) source_box %[[VAL_3]]#0 : (!fir.ref<!fir.array<?xnone>>, !fir.shape<1>, !fir.class<!fir.array<?x?xnone>>) -> !fir.class<!fir.array<?xnone>>
-! CHECK:           fir.call @_QPtakes_poly(%[[VAL_19]], %[[VAL_4]]#1) fastmath<contract> : (!fir.class<!fir.array<?xnone>>, !fir.ref<i32>) -> ()
+! CHECK:           fir.call @_QPtakes_poly(%[[VAL_19]], %[[VAL_4]]#0) fastmath<contract> : (!fir.class<!fir.array<?xnone>>, !fir.ref<i32>) -> ()
 ! CHECK:           hlfir.copy_out %[[TMP_BOX]], %[[VAL_3]]#1 to %[[VAL_1]]#0 : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x?xnone>>>>, i1, !fir.class<!fir.array<?x?xnone>>) -> ()
 ! CHECK:           hlfir.end_associate %[[VAL_4]]#1, %[[VAL_4]]#2 : !fir.ref<i32>, i1
 ! CHECK:           return
@@ -282,7 +282,7 @@ contains
 ! CHECK:           }
 ! CHECK:           %[[VAL_6:.*]]:3 = hlfir.associate %[[VAL_3]] {adapt.valuebyref} : (i32) -> (!fir.ref<i32>, !fir.ref<i32>, i1)
 ! CHECK:           %[[VAL_7:.*]] = fir.if %[[VAL_2]] -> (!fir.class<!fir.array<?xnone>>) {
-! CHECK:             %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_6]]#1 {uniq_name = "_QMpoly_seq_assocFtakes_optional_polyEn"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:             %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_6]]#0 {uniq_name = "_QMpoly_seq_assocFtakes_optional_polyEn"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:             %[[VAL_9:.*]] = fir.load %[[VAL_8]]#0 : !fir.ref<i32>
 ! CHECK:             %[[VAL_10:.*]] = fir.convert %[[VAL_9]] : (i32) -> i64
 ! CHECK:             %[[VAL_11:.*]] = arith.constant 1 : i64
@@ -302,7 +302,7 @@ contains
 ! CHECK:             %[[VAL_23:.*]] = fir.absent !fir.class<!fir.array<?xnone>>
 ! CHECK:             fir.result %[[VAL_23]] : !fir.class<!fir.array<?xnone>>
 ! CHECK:           }
-! CHECK:           fir.call @_QPtakes_optional_poly(%[[VAL_7]], %[[VAL_6]]#1) fastmath<contract> : (!fir.class<!fir.array<?xnone>>, !fir.ref<i32>) -> ()
+! CHECK:           fir.call @_QPtakes_optional_poly(%[[VAL_7]], %[[VAL_6]]#0) fastmath<contract> : (!fir.class<!fir.array<?xnone>>, !fir.ref<i32>) -> ()
 ! CHECK:           hlfir.end_associate %[[VAL_6]]#1, %[[VAL_6]]#2 : !fir.ref<i32>, i1
 ! CHECK:           return
 ! CHECK:         }

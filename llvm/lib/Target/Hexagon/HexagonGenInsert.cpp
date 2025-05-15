@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "BitTracker.h"
+#include "Hexagon.h"
 #include "HexagonBitTracker.h"
 #include "HexagonInstrInfo.h"
 #include "HexagonRegisterInfo.h"
@@ -493,22 +494,13 @@ namespace {
 
 } // end anonymous namespace
 
-namespace llvm {
-
-  void initializeHexagonGenInsertPass(PassRegistry&);
-  FunctionPass *createHexagonGenInsert();
-
-} // end namespace llvm
-
 namespace {
 
   class HexagonGenInsert : public MachineFunctionPass {
   public:
     static char ID;
 
-    HexagonGenInsert() : MachineFunctionPass(ID) {
-      initializeHexagonGenInsertPass(*PassRegistry::getPassRegistry());
-    }
+    HexagonGenInsert() : MachineFunctionPass(ID) {}
 
     StringRef getPassName() const override {
       return "Hexagon generate \"insert\" instructions";

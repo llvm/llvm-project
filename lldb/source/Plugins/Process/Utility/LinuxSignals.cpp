@@ -8,7 +8,11 @@
 
 #include "LinuxSignals.h"
 
-#ifdef __linux__
+// mips-linux debugging is not supported and mips uses different numbers for
+// some signals (e.g. SIGBUS) on linux, so we skip the static checks below. The
+// definitions here can be used for debugging non-mips targets on a mips-hosted
+// lldb.
+#if defined(__linux__) && !defined(__mips__)
 #include <csignal>
 
 #ifndef SEGV_BNDERR
@@ -33,7 +37,7 @@
 #else
 #define ADD_SIGCODE(signal_name, signal_value, code_name, code_value, ...)     \
   AddSignalCode(signal_value, code_value, __VA_ARGS__)
-#endif /* ifdef __linux__ */
+#endif /* if defined(__linux__) && !defined(__mips__) */
 
 using namespace lldb_private;
 

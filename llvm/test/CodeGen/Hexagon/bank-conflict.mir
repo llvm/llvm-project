@@ -9,8 +9,8 @@
 # CHECK: = A2_tfr
 # CHECK: = L2_loadrigp
 
-# CHECK: = L4_loadri_rr
 # CHECK: = S2_tstbit_i
+# CHECK: = L4_loadri_rr
 # CHECK: = L4_loadri_rr
 
 --- |

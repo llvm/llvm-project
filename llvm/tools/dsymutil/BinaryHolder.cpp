@@ -242,9 +242,9 @@ BinaryHolder::getObjectEntry(StringRef Filename, TimestampTy Timestamp) {
     StringRef ArchiveFilename = getArchiveAndObjectName(Filename).first;
     std::lock_guard<std::mutex> Lock(ArchiveCacheMutex);
     ArchiveRefCounter[ArchiveFilename]++;
-    if (ArchiveCache.count(ArchiveFilename)) {
-      return ArchiveCache[ArchiveFilename]->getObjectEntry(Filename, Timestamp,
-                                                           Opts);
+    if (auto It = ArchiveCache.find(ArchiveFilename);
+        It != ArchiveCache.end()) {
+      return It->second->getObjectEntry(Filename, Timestamp, Opts);
     } else {
       auto AE = std::make_unique<ArchiveEntry>();
       auto Err = AE->load(VFS, Filename, Timestamp, Opts);
@@ -252,9 +252,9 @@ BinaryHolder::getObjectEntry(StringRef Filename, TimestampTy Timestamp) {
         // Don't return the error here: maybe the file wasn't an archive.
         llvm::consumeError(std::move(Err));
       } else {
-        ArchiveCache[ArchiveFilename] = std::move(AE);
-        return ArchiveCache[ArchiveFilename]->getObjectEntry(Filename,
-                                                             Timestamp, Opts);
+        auto &Cache = ArchiveCache[ArchiveFilename];
+        Cache = std::move(AE);
+        return Cache->getObjectEntry(Filename, Timestamp, Opts);
       }
     }
   }

@@ -100,7 +100,7 @@ public:
   void addCapabilities(const CapabilityList &ToAdd);
   void addCapability(Capability::Capability ToAdd) { addCapabilities({ToAdd}); }
   void addExtensions(const ExtensionList &ToAdd) {
-    AllExtensions.insert(ToAdd.begin(), ToAdd.end());
+    AllExtensions.insert_range(ToAdd);
   }
   void addExtension(Extension::Extension ToAdd) { AllExtensions.insert(ToAdd); }
   // Add the given requirements to the lists. If constraints conflict, or these

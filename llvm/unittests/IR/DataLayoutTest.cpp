@@ -157,7 +157,7 @@ public:
 
   std::string format(StringRef Str) const {
     std::string Res = Str.str();
-    std::replace(Res.begin(), Res.end(), '!', Specifier);
+    llvm::replace(Res, '!', Specifier);
     return Res;
   }
 };

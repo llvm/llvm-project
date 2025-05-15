@@ -287,8 +287,10 @@ void StackSlotColoring::InitializeSlots() {
 
     auto StackID = MFI->getStackID(FI);
     if (StackID != 0) {
-      AllColors.resize(StackID + 1);
-      UsedColors.resize(StackID + 1);
+      if (StackID >= AllColors.size()) {
+        AllColors.resize(StackID + 1);
+        UsedColors.resize(StackID + 1);
+      }
       AllColors[StackID].resize(LastFI);
       UsedColors[StackID].resize(LastFI);
     }
@@ -484,8 +486,8 @@ bool StackSlotColoring::RemoveDeadStores(MachineBasicBlock* MBB) {
 
     Register LoadReg;
     Register StoreReg;
-    unsigned LoadSize = 0;
-    unsigned StoreSize = 0;
+    TypeSize LoadSize = TypeSize::getZero();
+    TypeSize StoreSize = TypeSize::getZero();
     if (!(LoadReg = TII->isLoadFromStackSlot(*I, FirstSS, LoadSize)))
       continue;
     // Skip the ...pseudo debugging... instructions between a load and store.

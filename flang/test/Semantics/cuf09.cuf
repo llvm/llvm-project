@@ -209,3 +209,22 @@ subroutine host1()
     a(i) = a(i) + a(j) - 34.0
   end do
 end 
+
+subroutine ieee_test
+  use ieee_arithmetic
+
+  real(8), device :: y(100)
+  logical(4), managed :: ll(100)
+
+  !$cuf kernel do(1)<<<*,*>>>
+  do i = 1, 100
+    ll(i) = ieee_is_finite(y(i)) ! allow ieee_arithmetic functions on the device.
+  end do
+end subroutine
+
+attributes(host,device) subroutine do2(a,b,c,i)
+  integer a(*), b(*), c(*)
+  integer, value :: i  
+  c(i) = a(i) - b(i) ! ok. Should not error with Host array 
+                     ! cannot be present in device context
+end

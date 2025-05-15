@@ -171,8 +171,8 @@ private:
   trimMitigatedEdges(std::unique_ptr<MachineGadgetGraph> Graph) const;
   int insertFences(MachineFunction &MF, MachineGadgetGraph &G,
                    EdgeSet &CutEdges /* in, out */) const;
-  bool instrUsesRegToAccessMemory(const MachineInstr &I, unsigned Reg) const;
-  bool instrUsesRegToBranch(const MachineInstr &I, unsigned Reg) const;
+  bool instrUsesRegToAccessMemory(const MachineInstr &I, Register Reg) const;
+  bool instrUsesRegToBranch(const MachineInstr &I, Register Reg) const;
   inline bool isFence(const MachineInstr *MI) const {
     return MI && (MI->getOpcode() == X86::LFENCE ||
                   (STI->useLVIControlFlowIntegrity() && MI->isCall()));
@@ -414,7 +414,6 @@ X86LoadValueInjectionLoadHardeningPass::getGadgetGraph(
 
             // Check whether the use propagates to more defs.
             NodeAddr<InstrNode *> Owner{Use.Addr->getOwner(DFG)};
-            rdf::NodeList AnalyzedChildDefs;
             for (const auto &ChildDef :
                  Owner.Addr->members_if(DataFlowGraph::IsDef, DFG)) {
               if (!DefsVisited.insert(ChildDef.Id).second)
@@ -763,7 +762,7 @@ int X86LoadValueInjectionLoadHardeningPass::insertFences(
 }
 
 bool X86LoadValueInjectionLoadHardeningPass::instrUsesRegToAccessMemory(
-    const MachineInstr &MI, unsigned Reg) const {
+    const MachineInstr &MI, Register Reg) const {
   if (!MI.mayLoadOrStore() || MI.getOpcode() == X86::MFENCE ||
       MI.getOpcode() == X86::SFENCE || MI.getOpcode() == X86::LFENCE)
     return false;
@@ -780,14 +779,14 @@ bool X86LoadValueInjectionLoadHardeningPass::instrUsesRegToAccessMemory(
       MI.getOperand(MemRefBeginIdx + X86::AddrBaseReg);
   const MachineOperand &IndexMO =
       MI.getOperand(MemRefBeginIdx + X86::AddrIndexReg);
-  return (BaseMO.isReg() && BaseMO.getReg() != X86::NoRegister &&
+  return (BaseMO.isReg() && BaseMO.getReg().isValid() &&
           TRI->regsOverlap(BaseMO.getReg(), Reg)) ||
-         (IndexMO.isReg() && IndexMO.getReg() != X86::NoRegister &&
+         (IndexMO.isReg() && IndexMO.getReg().isValid() &&
           TRI->regsOverlap(IndexMO.getReg(), Reg));
 }
 
 bool X86LoadValueInjectionLoadHardeningPass::instrUsesRegToBranch(
-    const MachineInstr &MI, unsigned Reg) const {
+    const MachineInstr &MI, Register Reg) const {
   if (!MI.isConditionalBranch())
     return false;
   for (const MachineOperand &Use : MI.uses())

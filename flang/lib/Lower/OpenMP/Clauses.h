@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Frontend/OpenMP/ClauseT.h"
+#include "llvm/Frontend/OpenMP/OMP.h.inc"
 
 #include <optional>
 #include <type_traits>
@@ -142,6 +143,9 @@ inline ObjectList makeObjects(const parser::OmpObjectList &objects,
                               semantics::SemanticsContext &semaCtx) {
   return makeList(objects.v, makeObjectFn(semaCtx));
 }
+
+ObjectList makeObjects(const parser::OmpArgumentList &objects,
+                       semantics::SemanticsContext &semaCtx);
 
 template <typename FuncTy, //
           typename ArgTy,  //
@@ -303,7 +307,8 @@ using Write = tomp::clause::WriteT<TypeTy, IdTy, ExprTy>;
 using tomp::type::operator==;
 
 struct CancellationConstructType {
-  using EmptyTrait = std::true_type;
+  using WrapperTrait = std::true_type;
+  llvm::omp::CancellationConstructType v;
 };
 struct Depobj {
   using EmptyTrait = std::true_type;

@@ -339,7 +339,7 @@ end subroutine
 ! CHECK:           %[[VAL_13:.*]] = fir.convert %[[VAL_2]]#0 : (!fir.box<!fir.array<*:f32>>) -> !fir.box<f32>
 ! CHECK:           %[[VAL_14:.*]] = fir.box_addr %[[VAL_13]] : (!fir.box<f32>) -> !fir.ref<f32>
 ! CHECK:           %[[VAL_15:.*]]:2 = hlfir.declare %[[VAL_14]] {uniq_name = "_QFtest_simple_caseEx"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
-! CHECK:           fir.call @_QPr0(%[[VAL_15]]#1) fastmath<contract> : (!fir.ref<f32>) -> ()
+! CHECK:           fir.call @_QPr0(%[[VAL_15]]#0) fastmath<contract> : (!fir.ref<f32>) -> ()
 ! CHECK:           cf.br ^bb6
 ! CHECK:         ^bb6:
 ! CHECK:           return
@@ -701,18 +701,18 @@ end subroutine
 ! CHECK:           %[[VAL_16:.*]] = fir.convert %[[VAL_4]]#0 : (!fir.box<!fir.array<*:f32>>) -> !fir.box<f32>
 ! CHECK:           %[[VAL_17:.*]] = fir.box_addr %[[VAL_16]] : (!fir.box<f32>) -> !fir.ref<f32>
 ! CHECK:           %[[VAL_18:.*]]:2 = hlfir.declare %[[VAL_17]] {uniq_name = "_QFtest_nested_select_rankEx2"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
-! CHECK:           fir.call @_QPr0(%[[VAL_11]]#1) fastmath<contract> : (!fir.ref<f32>) -> ()
-! CHECK:           fir.call @_QPr0(%[[VAL_18]]#1) fastmath<contract> : (!fir.ref<f32>) -> ()
+! CHECK:           fir.call @_QPr0(%[[VAL_11]]#0) fastmath<contract> : (!fir.ref<f32>) -> ()
+! CHECK:           fir.call @_QPr0(%[[VAL_18]]#0) fastmath<contract> : (!fir.ref<f32>) -> ()
 ! CHECK:           cf.br ^bb7
 ! CHECK:         ^bb5:
 ! CHECK:           %[[VAL_19:.*]] = fir.convert %[[VAL_4]]#0 : (!fir.box<!fir.array<*:f32>>) -> !fir.box<!fir.array<?xf32>>
 ! CHECK:           %[[VAL_20:.*]]:2 = hlfir.declare %[[VAL_19]] {uniq_name = "_QFtest_nested_select_rankEx2"} : (!fir.box<!fir.array<?xf32>>) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
-! CHECK:           fir.call @_QPr0(%[[VAL_11]]#1) fastmath<contract> : (!fir.ref<f32>) -> ()
+! CHECK:           fir.call @_QPr0(%[[VAL_11]]#0) fastmath<contract> : (!fir.ref<f32>) -> ()
 ! CHECK:           fir.call @_QPr1(%[[VAL_20]]#0) fastmath<contract> : (!fir.box<!fir.array<?xf32>>) -> ()
 ! CHECK:           cf.br ^bb7
 ! CHECK:         ^bb6:
 ! CHECK:           %[[VAL_21:.*]]:2 = hlfir.declare %[[VAL_4]]#0 {uniq_name = "_QFtest_nested_select_rankEx2"} : (!fir.box<!fir.array<*:f32>>) -> (!fir.box<!fir.array<*:f32>>, !fir.box<!fir.array<*:f32>>)
-! CHECK:           fir.call @_QPr0(%[[VAL_11]]#1) fastmath<contract> : (!fir.ref<f32>) -> ()
+! CHECK:           fir.call @_QPr0(%[[VAL_11]]#0) fastmath<contract> : (!fir.ref<f32>) -> ()
 ! CHECK:           fir.call @_QPrdefault(%[[VAL_21]]#0) fastmath<contract> : (!fir.box<!fir.array<*:f32>>) -> ()
 ! CHECK:           cf.br ^bb7
 ! CHECK:         ^bb7:
@@ -732,7 +732,7 @@ end subroutine
 ! CHECK:           %[[VAL_29:.*]] = fir.box_addr %[[VAL_28]] : (!fir.box<f32>) -> !fir.ref<f32>
 ! CHECK:           %[[VAL_30:.*]]:2 = hlfir.declare %[[VAL_29]] {uniq_name = "_QFtest_nested_select_rankEx2"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 ! CHECK:           fir.call @_QPr1(%[[VAL_23]]#0) fastmath<contract> : (!fir.box<!fir.array<?xf32>>) -> ()
-! CHECK:           fir.call @_QPr0(%[[VAL_30]]#1) fastmath<contract> : (!fir.ref<f32>) -> ()
+! CHECK:           fir.call @_QPr0(%[[VAL_30]]#0) fastmath<contract> : (!fir.ref<f32>) -> ()
 ! CHECK:           cf.br ^bb13
 ! CHECK:         ^bb11:
 ! CHECK:           %[[VAL_31:.*]] = fir.convert %[[VAL_4]]#0 : (!fir.box<!fir.array<*:f32>>) -> !fir.box<!fir.array<?xf32>>
@@ -761,7 +761,7 @@ end subroutine
 ! CHECK:           %[[VAL_40:.*]] = fir.box_addr %[[VAL_39]] : (!fir.box<f32>) -> !fir.ref<f32>
 ! CHECK:           %[[VAL_41:.*]]:2 = hlfir.declare %[[VAL_40]] {uniq_name = "_QFtest_nested_select_rankEx2"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 ! CHECK:           fir.call @_QPrdefault(%[[VAL_34]]#0) fastmath<contract> : (!fir.box<!fir.array<*:f32>>) -> ()
-! CHECK:           fir.call @_QPr0(%[[VAL_41]]#1) fastmath<contract> : (!fir.ref<f32>) -> ()
+! CHECK:           fir.call @_QPr0(%[[VAL_41]]#0) fastmath<contract> : (!fir.ref<f32>) -> ()
 ! CHECK:           cf.br ^bb19
 ! CHECK:         ^bb17:
 ! CHECK:           %[[VAL_42:.*]] = fir.convert %[[VAL_4]]#0 : (!fir.box<!fir.array<*:f32>>) -> !fir.box<!fir.array<?xf32>>

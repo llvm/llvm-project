@@ -87,6 +87,11 @@ subroutine acc_serial
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }
 
+  !$acc serial device_type(nvidia) wait
+  !$acc end serial
+
+! CHECK: acc.serial wait([#acc.device_type<nvidia>])
+
   !$acc serial wait(1)
   !$acc end serial
 
@@ -148,7 +153,7 @@ subroutine acc_serial
   !$acc serial self(ifCondition)
   !$acc end serial
 
-! CHECK:      %[[SELF2:.*]] = fir.convert %[[DECLIFCONDITION]]#1 : (!fir.ref<!fir.logical<4>>) -> i1
+! CHECK:      %[[SELF2:.*]] = fir.convert %[[DECLIFCONDITION]]#0 : (!fir.ref<!fir.logical<4>>) -> i1
 ! CHECK:      acc.serial self(%[[SELF2]]) {
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}

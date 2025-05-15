@@ -1066,7 +1066,7 @@ ConvertDWARFCallingConventionToClang(const ParsedDWARFTypeAttributes &attrs) {
 }
 
 bool DWARFASTParserClang::ParseObjCMethod(
-    const ObjCLanguage::MethodName &objc_method, const DWARFDIE &die,
+    const ObjCLanguage::ObjCMethodName &objc_method, const DWARFDIE &die,
     CompilerType clang_type, const ParsedDWARFTypeAttributes &attrs,
     bool is_variadic) {
   SymbolFileDWARF *dwarf = die.GetDWARF();
@@ -1318,9 +1318,9 @@ DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
   if (attrs.name) {
     bool type_handled = false;
     if (tag == DW_TAG_subprogram || tag == DW_TAG_inlined_subroutine) {
-      if (std::optional<const ObjCLanguage::MethodName> objc_method =
-              ObjCLanguage::MethodName::Create(attrs.name.GetStringRef(),
-                                               true)) {
+      if (std::optional<const ObjCLanguage::ObjCMethodName> objc_method =
+              ObjCLanguage::ObjCMethodName::Create(attrs.name.GetStringRef(),
+                                                   true)) {
         type_handled =
             ParseObjCMethod(*objc_method, die, clang_type, attrs, is_variadic);
       } else if (is_cxx_method) {
@@ -1837,7 +1837,8 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
 
   ClangASTMetadata metadata;
   metadata.SetUserID(die.GetID());
-  metadata.SetIsDynamicCXXType(dwarf->ClassOrStructIsVirtual(die));
+  if (!attrs.is_forward_declaration)
+    metadata.SetIsDynamicCXXType(dwarf->ClassOrStructIsVirtual(die));
 
   TypeSystemClang::TemplateParameterInfos template_param_infos;
   if (ParseTemplateParameterInfos(die, template_param_infos)) {
@@ -2753,16 +2754,16 @@ PropertyAttributes::PropertyAttributes(const DWARFDIE &die) {
   // Check if the property getter/setter were provided as full names.
   // We want basenames, so we extract them.
   if (prop_getter_name && prop_getter_name[0] == '-') {
-    std::optional<const ObjCLanguage::MethodName> prop_getter_method =
-        ObjCLanguage::MethodName::Create(prop_getter_name, true);
+    std::optional<const ObjCLanguage::ObjCMethodName> prop_getter_method =
+        ObjCLanguage::ObjCMethodName::Create(prop_getter_name, true);
     if (prop_getter_method)
       prop_getter_name =
           ConstString(prop_getter_method->GetSelector()).GetCString();
   }
 
   if (prop_setter_name && prop_setter_name[0] == '-') {
-    std::optional<const ObjCLanguage::MethodName> prop_setter_method =
-        ObjCLanguage::MethodName::Create(prop_setter_name, true);
+    std::optional<const ObjCLanguage::ObjCMethodName> prop_setter_method =
+        ObjCLanguage::ObjCMethodName::Create(prop_setter_name, true);
     if (prop_setter_method)
       prop_setter_name =
           ConstString(prop_setter_method->GetSelector()).GetCString();

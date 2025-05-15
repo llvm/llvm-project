@@ -14,7 +14,7 @@
 #include "DebugTypeGenerator.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
-#include "flang/Optimizer/CodeGen/CGOps.h"
+#include "flang/Optimizer/Dialect/FIRCG/CGOps.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
@@ -23,6 +23,7 @@
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "flang/Support/Version.h"
+#include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Matchers.h"
@@ -206,8 +207,13 @@ void AddDebugInfoPass::handleDeclareOp(fir::cg::XDeclareOp declOp,
   // a dummy_scope operand).
   unsigned argNo = 0;
   if (declOp.getDummyScope()) {
-    if (auto arg = llvm::dyn_cast<mlir::BlockArgument>(declOp.getMemref()))
-      argNo = arg.getArgNumber() + 1;
+    if (auto arg = llvm::dyn_cast<mlir::BlockArgument>(declOp.getMemref())) {
+      // Check if it is the BlockArgument of the function's entry block.
+      if (auto funcLikeOp =
+              declOp->getParentOfType<mlir::FunctionOpInterface>())
+        if (arg.getOwner() == &funcLikeOp.front())
+          argNo = arg.getArgNumber() + 1;
+    }
   }
 
   auto tyAttr = typeGen.convertType(fir::unwrapRefType(declOp.getType()),
