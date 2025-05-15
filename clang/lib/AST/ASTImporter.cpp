@@ -754,8 +754,6 @@ namespace clang {
         using SubstitutionDiagnostic = std::pair<SourceLocation, StringRef>;
         for (auto &Record : from) {
           if (auto *SubstDiag = Record.dyn_cast<SubstitutionDiagnostic *>()) {
-            Error Err = Error::success();
-    
             auto ToPairFirst = import(SubstDiag->first);
             if(!ToPairFirst)
               return ToPairFirst.takeError();
@@ -1112,6 +1110,9 @@ Expected<concepts::Requirement*> ASTNodeImporter::import(concepts::Requirement* 
     
   auto ImportSubstitutionDiagnos = [this, &ImportStringRef]
   (concepts::Requirement::SubstitutionDiagnostic* FromDiagnos, Error& Err)->concepts::Requirement::SubstitutionDiagnostic* {
+    if (Err) {
+      return nullptr;
+    }
     const auto& ToEntity = ImportStringRef(FromDiagnos->SubstitutedEntity);
     Expected<SourceLocation> ToLoc = import(FromDiagnos->DiagLoc);
     if(!ToLoc) {
@@ -1216,7 +1217,7 @@ Expected<concepts::Requirement*> ASTNodeImporter::import(concepts::Requirement* 
     const auto& FromSatisfaction = From->getConstraintSatisfaction();
     if(From->hasInvalidConstraint()) {
       const auto& ToConstraintEntity = ImportStringRef(From->getInvalidConstraintEntity());
-      auto ToSatisfaction = ASTConstraintSatisfaction::Rebuild(Importer.getToContext(),FromSatisfaction);
+      auto* ToSatisfaction = ASTConstraintSatisfaction::Rebuild(Importer.getToContext(),FromSatisfaction);
       return new (Importer.getToContext()) concepts::NestedRequirement(ToConstraintEntity,ToSatisfaction);
     } else {
       Expected<Expr *> ToExpr = import(From->getConstraintExpr());
@@ -7545,11 +7546,11 @@ ExpectedStmt ASTNodeImporter::VisitRequiresExpr(RequiresExpr* E) {
   auto LParenLoc = importChecked(Err,E->getLParenLoc());
   if(Err)
     return std::move(Err);
-  SmallVector<ParmVarDecl*, 4> LocalParameters;
-  if (Error Err = ImportArrayChecked(E->getLocalParameters(),LocalParameters.begin()))
+  SmallVector<ParmVarDecl*, 4> LocalParameters(E->getLocalParameters().size());
+  if (Error Err = ImportArrayChecked(E->getLocalParameters(), LocalParameters.begin()))
     return std::move(Err);
-  SmallVector<concepts::Requirement*, 4> Requirements;
-  if (Error Err = ImportArrayChecked(E->getRequirements(),Requirements.begin()))
+  SmallVector<concepts::Requirement*, 4> Requirements(E->getRequirements().size());
+  if (Error Err = ImportArrayChecked(E->getRequirements(), Requirements.begin()))
     return std::move(Err);
   return RequiresExpr::Create(Importer.getToContext(),RequiresKWLoc, Body, LParenLoc,
                     LocalParameters, RParenLoc, Requirements, RBraceLoc);
@@ -7557,32 +7558,31 @@ ExpectedStmt ASTNodeImporter::VisitRequiresExpr(RequiresExpr* E) {
 
 ExpectedDecl ASTNodeImporter::VisitRequiresExprBodyDecl(RequiresExprBodyDecl* D) {
   DeclContext *DC, *LexicalDC;
-  Error Err = Error::success();
-  Err = ImportDeclContext(D, DC, LexicalDC);  
-  auto RequiresLoc = importChecked(Err,D->getLocation());
-  return RequiresExprBodyDecl::Create(Importer.getToContext(),DC,RequiresLoc);
+  Error Err = ImportDeclContext(D, DC, LexicalDC);
+  auto RequiresLoc = importChecked(Err, D->getLocation());
+  if (Err) {
+    return std::move(Err);
+  }
+  RequiresExprBodyDecl *To;
+  if (GetImportedOrCreateDecl(To, D, Importer.getToContext(), DC, RequiresLoc))
+    return To;
+  To->setLexicalDeclContext(LexicalDC);
+  LexicalDC->addDeclInternal(To);
+  return To;
 }
 
 ExpectedStmt ASTNodeImporter::VisitConceptSpecializationExpr(ConceptSpecializationExpr* E) {
   Error Err = Error::success();
-  
   auto CL = importChecked(Err,E->getConceptReference());
   auto CSD = importChecked(Err,E->getSpecializationDecl());
-  // auto Satisfaction = importChecked(Err,E->getSatisfaction());  
   if (Err)
     return std::move(Err);
-  // E->getDependence();
   if(E->isValueDependent()) {
     return ConceptSpecializationExpr::Create(
       Importer.getToContext(), CL,
       const_cast<ImplicitConceptSpecializationDecl *>(CSD), nullptr);
   }
   const auto& FromSatisfaction = E->getSatisfaction();
-  auto ImportStringRef = [this](const StringRef& FromString) {
-    char* ToDiagMessage = new (Importer.getToContext()) char[FromString.size()];
-    std::copy(FromString.begin(),FromString.end(),ToDiagMessage);
-    return StringRef(ToDiagMessage,FromString.size());
-  };
   auto expected_satisfaction = FillConstraintSatisfaction(FromSatisfaction);
   if (!expected_satisfaction) {
     return expected_satisfaction.takeError();
@@ -7594,34 +7594,39 @@ ExpectedStmt ASTNodeImporter::VisitConceptSpecializationExpr(ConceptSpecializati
 
 ExpectedDecl ASTNodeImporter::VisitConceptDecl(ConceptDecl* D) {
   // Import the context of this declaration.
-  DeclContext *DC, *LexicalDC;
-  Error Err = Error::success();
-  Err = ImportDeclContext(D, DC, LexicalDC);  
-  auto BeginLocOrErr = importChecked(Err, D->getBeginLoc());
+  DeclContext *DC = nullptr;
+  DeclContext *LexicalDC = nullptr;
+  Error Err = ImportDeclContext(D, DC, LexicalDC);
   auto LocationOrErr = importChecked(Err, D->getLocation());
   auto NameDeclOrErr = importChecked(Err,D->getDeclName());
-  auto ToTemplateParameters = importChecked(Err, D->getTemplateParameters());
-  auto ConstraintExpr = importChecked(Err, D->getConstraintExpr());
-  if(Err)
+  auto* ToTemplateParameters = importChecked(Err, D->getTemplateParameters());
+  auto* ConstraintExpr = importChecked(Err, D->getConstraintExpr());
+  if(Err) {
     return std::move(Err);
-  return ConceptDecl::Create(
-    Importer.getToContext(),DC,
-    LocationOrErr,NameDeclOrErr,
-    ToTemplateParameters,ConstraintExpr);
+  }
+  ConceptDecl *To;
+  if (GetImportedOrCreateDecl(To, D, Importer.getToContext(), DC, LocationOrErr, NameDeclOrErr, ToTemplateParameters, ConstraintExpr))
+    return To;
+  To->setLexicalDeclContext(LexicalDC);
+  LexicalDC->addDeclInternal(To);
+  return To;
 }
 
 ExpectedDecl ASTNodeImporter::VisitImplicitConceptSpecializationDecl(ImplicitConceptSpecializationDecl* D) {
   DeclContext *DC, *LexicalDC;
-  Error Err = Error::success();
-  Err = ImportDeclContext(D, DC, LexicalDC);
-  auto ToSL = importChecked(Err,D->getLocation());
+  Error Err = ImportDeclContext(D, DC, LexicalDC);
+  auto ToSL = importChecked(Err, D->getLocation());
   if(Err)
     return std::move(Err);
-  SmallVector<TemplateArgument,2> ToArgs;
-  if(Error Err = ImportTemplateArguments(D->getTemplateArguments(),ToArgs))
+  SmallVector<TemplateArgument,2> ToArgs(D->getTemplateArguments().size());
+  if(Error Err = ImportTemplateArguments(D->getTemplateArguments(), ToArgs))
     return std::move(Err);
-
-  return ImplicitConceptSpecializationDecl::Create(Importer.getToContext(),DC,ToSL,ToArgs);
+  ImplicitConceptSpecializationDecl *To;
+  if (GetImportedOrCreateDecl(To, D, Importer.getToContext(), DC, ToSL, ToArgs))
+    return To;
+  To->setLexicalDeclContext(LexicalDC);
+  LexicalDC->addDeclInternal(To);
+  return To;
 }
 
 ExpectedStmt ASTNodeImporter::VisitSourceLocExpr(SourceLocExpr *E) {
@@ -7644,8 +7649,8 @@ ExpectedStmt ASTNodeImporter::VisitVAArgExpr(VAArgExpr *E) {
 
   Error Err = Error::success();
   auto ToBuiltinLoc = importChecked(Err, E->getBuiltinLoc());
-  auto ToSubExpr = importChecked(Err, E->getSubExpr());
-  auto ToWrittenTypeInfo = importChecked(Err, E->getWrittenTypeInfo());
+  auto* ToSubExpr = importChecked(Err, E->getSubExpr());
+  auto* ToWrittenTypeInfo = importChecked(Err, E->getWrittenTypeInfo());
   auto ToRParenLoc = importChecked(Err, E->getRParenLoc());
   auto ToType = importChecked(Err, E->getType());
   if (Err)
