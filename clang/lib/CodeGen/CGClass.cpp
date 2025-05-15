@@ -2779,6 +2779,37 @@ void CodeGenFunction::EmitTypeMetadataCodeForVCall(const CXXRecordDecl *RD,
   }
 }
 
+std::pair<SanitizerKind::SanitizerOrdinal, llvm::SanitizerStatKind>
+CodeGenFunction::ParseCFITypeCheckKind(CFITypeCheckKind TCK) {
+  SanitizerKind::SanitizerOrdinal M;
+  llvm::SanitizerStatKind SSK;
+
+  switch (TCK) {
+  case CFITCK_VCall:
+    M = SanitizerKind::SO_CFIVCall;
+    SSK = llvm::SanStat_CFI_VCall;
+    break;
+  case CFITCK_NVCall:
+    M = SanitizerKind::SO_CFINVCall;
+    SSK = llvm::SanStat_CFI_NVCall;
+    break;
+  case CFITCK_DerivedCast:
+    M = SanitizerKind::SO_CFIDerivedCast;
+    SSK = llvm::SanStat_CFI_DerivedCast;
+    break;
+  case CFITCK_UnrelatedCast:
+    M = SanitizerKind::SO_CFIUnrelatedCast;
+    SSK = llvm::SanStat_CFI_UnrelatedCast;
+    break;
+  case CFITCK_ICall:
+  case CFITCK_NVMFCall:
+  case CFITCK_VMFCall:
+    llvm_unreachable("unexpected sanitizer kind");
+  }
+
+  return std::make_pair(M, SSK);
+}
+
 void CodeGenFunction::EmitVTablePtrCheckForCall(const CXXRecordDecl *RD,
                                                 llvm::Value *VTable,
                                                 CFITypeCheckKind TCK,
@@ -2842,30 +2873,7 @@ void CodeGenFunction::EmitVTablePtrCheck(const CXXRecordDecl *RD,
       !CGM.HasHiddenLTOVisibility(RD))
     return;
 
-  SanitizerKind::SanitizerOrdinal M;
-  llvm::SanitizerStatKind SSK;
-  switch (TCK) {
-  case CFITCK_VCall:
-    M = SanitizerKind::SO_CFIVCall;
-    SSK = llvm::SanStat_CFI_VCall;
-    break;
-  case CFITCK_NVCall:
-    M = SanitizerKind::SO_CFINVCall;
-    SSK = llvm::SanStat_CFI_NVCall;
-    break;
-  case CFITCK_DerivedCast:
-    M = SanitizerKind::SO_CFIDerivedCast;
-    SSK = llvm::SanStat_CFI_DerivedCast;
-    break;
-  case CFITCK_UnrelatedCast:
-    M = SanitizerKind::SO_CFIUnrelatedCast;
-    SSK = llvm::SanStat_CFI_UnrelatedCast;
-    break;
-  case CFITCK_ICall:
-  case CFITCK_NVMFCall:
-  case CFITCK_VMFCall:
-    llvm_unreachable("unexpected sanitizer kind");
-  }
+  auto [M, SSK] = ParseCFITypeCheckKind(TCK);
 
   std::string TypeName = RD->getQualifiedNameAsString();
   if (getContext().getNoSanitizeList().containsType(
