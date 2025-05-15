@@ -288,9 +288,9 @@ Your options are as follows:
    in ``llvm/llvm-project``.
 
 .. note::
-   When using the dependency notes approach, GitHub will not display proper
-   diffs for subsequent PRs in a stack. Instead, it will show a combined diff
-   that includes all commits from earlier PRs.
+   When not using user branches, GitHub will not display proper diffs for
+   subsequent PRs in a stack. Instead, it will show a combined diff that
+   includes all commits from earlier PRs.
 
    As described above, it is the PR author’s responsibility to clearly indicate
    which commits are relevant to the current PR.
