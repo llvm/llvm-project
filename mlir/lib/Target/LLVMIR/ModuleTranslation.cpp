@@ -727,7 +727,7 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
       constants.reserve(arrayTy->getNumElements());
       for (Attribute elementAttr : arrayAttr) {
         // Arrays with a single value or with repeating values are quite common.
-        // short-circuit the translation when the element value is the same as
+        // Short-circuit the translation when the element value is the same as
         // the previous one.
         if (!previousElementAttr || previousElementAttr != elementAttr) {
           previousElementAttr = elementAttr;

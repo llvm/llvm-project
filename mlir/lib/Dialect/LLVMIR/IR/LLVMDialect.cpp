@@ -3142,7 +3142,7 @@ static bool hasScalableVectorType(Type t) {
   return false;
 }
 
-/// Verified helper for array of struct constants.
+/// Verifies the constant array represented by `arrayAttr` matches the provided `arrayType`.
 static LogicalResult verifyStructArrayConstant(LLVM::ConstantOp op,
                                                LLVM::LLVMArrayType arrayType,
                                                ArrayAttr arrayAttr, int dim) {
@@ -3189,7 +3189,7 @@ static LogicalResult verifyStructArrayConstant(LLVM::ConstantOp op,
   // Shallow verification that leaf attributes are appropriate as struct initial
   // value.
   size_t numStructElements = structType.getBody().size();
-  for (auto [idx, elementAttr] : llvm::enumerate(arrayAttr))
+  for (auto [idx, elementAttr] : llvm::enumerate(arrayAttr)) {
     if (elementsVerified.insert(elementAttr).second) {
       if (isa<LLVM::ZeroAttr, LLVM::UndefAttr>(elementAttr))
         continue;
@@ -3204,6 +3204,7 @@ static LogicalResult verifyStructArrayConstant(LLVM::ConstantOp op,
                << idx << " must match struct size: " << subArrayAttr.size()
                << " vs. " << numStructElements;
     }
+  }
 
   return success();
 }
