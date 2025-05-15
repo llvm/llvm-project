@@ -331,7 +331,7 @@ template <class ELFT> void Writer<ELFT>::run() {
   for (OutputSection *sec : ctx.outputSections)
     sec->maybeCompress<ELFT>(ctx);
 
-  if (ctx.script->hasSectionsCommand)
+  if (ctx.script->hasSectionsCommand || !ctx.arg.sectionStartMap.empty())
     ctx.script->allocateHeaders(ctx.mainPart->phdrs);
 
   // Remove empty PT_LOAD to avoid causing the dynamic linker to try to mmap a
