@@ -3459,16 +3459,10 @@ let Predicates = [HasSVE_or_SME] in {
   // Alternative case where insertelement is just scalar_to_vector rather than vector_insert.
   def : Pat<(v1f64 (scalar_to_vector
                      (f64 (vector_extract nxv2f64:$vec, VectorIndexD:$index)))),
-            (EXTRACT_SUBREG
-                (INSvi64lane (IMPLICIT_DEF), (i64 0),
-                    (EXTRACT_SUBREG nxv2f64:$vec, zsub), VectorIndexD:$index),
-                dsub)>;
+            (DUPi64 (EXTRACT_SUBREG nxv2f64:$vec, zsub), VectorIndexD:$index)>;
   def : Pat<(v1i64 (scalar_to_vector
                      (i64 (vector_extract nxv2i64:$vec, VectorIndexD:$index)))),
-            (EXTRACT_SUBREG
-                (INSvi64lane (IMPLICIT_DEF), (i64 0),
-                    (EXTRACT_SUBREG nxv2i64:$vec, zsub), VectorIndexD:$index),
-                 dsub)>;
+            (DUPi64 (EXTRACT_SUBREG nxv2i64:$vec, zsub), VectorIndexD:$index)>;
   } // End HasNEON
 
   let Predicates = [HasNEON] in {

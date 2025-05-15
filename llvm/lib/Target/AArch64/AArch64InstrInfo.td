@@ -7358,7 +7358,8 @@ def : Pat<(v2i64 (vector_insert v2i64:$src, (i64 (bitconvert (f64 FPR64:$Sn))), 
 
 // Patterns for i8/i16 -> v2i32/v4i16 lane moves via insert and extract that go via i32.
 multiclass Neon_INS_elt_ext_pattern<ValueType VT128, ValueType VT64, ValueType OutVT,
-                                    Instruction INS, SDNodeXForm VecIndexMult> {
+                                    Instruction INS, Instruction DUP, SubRegIndex DUPSub,
+                                    SDNodeXForm VecIndexMult> {
   // VT64->OutVT
   def : Pat<(OutVT (vector_insert (OutVT V64:$src),
                                   (i32 (vector_extract (VT64 V64:$Rn), (i64 imm:$Immn))),
@@ -7369,8 +7370,10 @@ multiclass Neon_INS_elt_ext_pattern<ValueType VT128, ValueType VT64, ValueType O
               dsub)>;
   def : Pat<(OutVT (scalar_to_vector (i32 (vector_extract (VT64 V64:$Rn), (i64 imm:$Immn))))),
             (EXTRACT_SUBREG
-              (INS (IMPLICIT_DEF), 0,
-                   (INSERT_SUBREG (VT128 (IMPLICIT_DEF)), V64:$Rn, dsub), imm:$Immn),
+              (VT128 (SUBREG_TO_REG
+                (i64 0),
+                (DUP (INSERT_SUBREG (VT128 (IMPLICIT_DEF)), V64:$Rn, dsub), imm:$Immn),
+                DUPSub)),
               dsub)>;
 
   // VT128->OutVT
@@ -7383,24 +7386,37 @@ multiclass Neon_INS_elt_ext_pattern<ValueType VT128, ValueType VT64, ValueType O
               dsub)>;
   def : Pat<(OutVT (scalar_to_vector (i32 (vector_extract (VT128 V128:$Rn), (i64 imm:$Immn))))),
             (EXTRACT_SUBREG
-              (INS (IMPLICIT_DEF), 0, V128:$Rn, imm:$Immn),
+              (VT128 (SUBREG_TO_REG
+                (i64 0),
+                (DUP V128:$Rn, imm:$Immn),
+                DUPSub)),
               dsub)>;
 }
 
-defm : Neon_INS_elt_ext_pattern<v16i8, v8i8, v4i16, INSvi8lane, VecIndex_x2>;
-defm : Neon_INS_elt_ext_pattern<v16i8, v8i8, v2i32, INSvi8lane, VecIndex_x4>;
-defm : Neon_INS_elt_ext_pattern<v8i16, v4i16, v2i32, INSvi16lane, VecIndex_x2>;
+defm : Neon_INS_elt_ext_pattern<v16i8, v8i8, v4i16, INSvi8lane, DUPi8, bsub, VecIndex_x2>;
+defm : Neon_INS_elt_ext_pattern<v16i8, v8i8, v2i32, INSvi8lane, DUPi8, bsub, VecIndex_x4>;
+defm : Neon_INS_elt_ext_pattern<v8i16, v4i16, v2i32, INSvi16lane, DUPi16, hsub, VecIndex_x2>;
 
 // bitcast of an extract
-// f32 bitcast(vector_extract(v4i32 src, lane)) -> EXTRACT_SUBREG(INSvi32lane(-, 0, src, lane))
-def : Pat<(f32 (bitconvert (i32 (vector_extract v4i32:$src, imm:$Immd)))),
-          (EXTRACT_SUBREG (INSvi32lane (IMPLICIT_DEF), 0, V128:$src, imm:$Immd), ssub)>;
+// f32 bitcast(vector_extract(v4i32 src, 0)) -> EXTRACT_SUBREG(src)
+def : Pat<(f32 (bitconvert (i32 (vector_extract v16i8:$src, (i64 0))))),
+          (EXTRACT_SUBREG V128:$src, bsub)>;
+def : Pat<(f32 (bitconvert (i32 (vector_extract v8i16:$src, (i64 0))))),
+          (EXTRACT_SUBREG V128:$src, hsub)>;
 def : Pat<(f32 (bitconvert (i32 (vector_extract v4i32:$src, (i64 0))))),
           (EXTRACT_SUBREG V128:$src, ssub)>;
-def : Pat<(f64 (bitconvert (i64 (vector_extract v2i64:$src, imm:$Immd)))),
-          (EXTRACT_SUBREG (INSvi64lane (IMPLICIT_DEF), 0, V128:$src, imm:$Immd), dsub)>;
 def : Pat<(f64 (bitconvert (i64 (vector_extract v2i64:$src, (i64 0))))),
           (EXTRACT_SUBREG V128:$src, dsub)>;
+
+// f32 bitcast(vector_extract(v4i32 src, lane)) -> DUPi32(src, lane)
+def : Pat<(f32 (bitconvert (i32 (vector_extract v16i8:$src, imm:$Immd)))),
+          (EXTRACT_SUBREG (v16i8 (SUBREG_TO_REG (i64 0), (DUPi8 V128:$src, imm:$Immd), bsub)), ssub)>;
+def : Pat<(f32 (bitconvert (i32 (vector_extract v8i16:$src, imm:$Immd)))),
+          (EXTRACT_SUBREG (v8i16 (SUBREG_TO_REG (i64 0), (DUPi16 V128:$src, imm:$Immd), hsub)), ssub)>;
+def : Pat<(f32 (bitconvert (i32 (vector_extract v4i32:$src, imm:$Immd)))),
+          (DUPi32 V128:$src, imm:$Immd)>;
+def : Pat<(f64 (bitconvert (i64 (vector_extract v2i64:$src, imm:$Immd)))),
+          (DUPi64 V128:$src, imm:$Immd)>;
 
 // Floating point vector extractions are codegen'd as either a sequence of
 // subregister extractions, or a MOV (aka DUP here) if
