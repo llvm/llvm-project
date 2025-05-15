@@ -347,8 +347,11 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootFlagsTest) {
 TEST_F(ParseHLSLRootSignatureTest, ValidParseRootParamsTest) {
   const llvm::StringLiteral Source = R"cc(
     CBV(b0),
-    SRV(space = 4, t42, visibility = SHADER_VISIBILITY_GEOMETRY),
-    UAV(visibility = SHADER_VISIBILITY_HULL, u34893247)
+    SRV(space = 4, t42, visibility = SHADER_VISIBILITY_GEOMETRY,
+      flags = DATA_VOLATILE | DATA_STATIC | DATA_STATIC_WHILE_SET_AT_EXECUTE
+    ),
+    UAV(visibility = SHADER_VISIBILITY_HULL, u34893247),
+    CBV(b0, flags = 0),
   )cc";
 
   TrivialModuleLoader ModLoader;
@@ -364,7 +367,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootParamsTest) {
 
   ASSERT_FALSE(Parser.parse());
 
-  ASSERT_EQ(Elements.size(), 3u);
+  ASSERT_EQ(Elements.size(), 4u);
 
   RootElement Elem = Elements[0];
   ASSERT_TRUE(std::holds_alternative<RootParam>(Elem));
@@ -372,6 +375,8 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootParamsTest) {
   ASSERT_EQ(std::get<RootParam>(Elem).Reg.Number, 0u);
   ASSERT_EQ(std::get<RootParam>(Elem).Space, 0u);
   ASSERT_EQ(std::get<RootParam>(Elem).Visibility, ShaderVisibility::All);
+  ASSERT_EQ(std::get<RootParam>(Elem).Flags,
+            RootDescriptorFlags::DataStaticWhileSetAtExecute);
 
   Elem = Elements[1];
   ASSERT_TRUE(std::holds_alternative<RootParam>(Elem));
@@ -380,6 +385,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootParamsTest) {
   ASSERT_EQ(std::get<RootParam>(Elem).Reg.Number, 42u);
   ASSERT_EQ(std::get<RootParam>(Elem).Space, 4u);
   ASSERT_EQ(std::get<RootParam>(Elem).Visibility, ShaderVisibility::Geometry);
+  ASSERT_EQ(std::get<RootParam>(Elem).Flags, RootDescriptorFlags::ValidFlags);
 
   Elem = Elements[2];
   ASSERT_TRUE(std::holds_alternative<RootParam>(Elem));
@@ -388,6 +394,14 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootParamsTest) {
   ASSERT_EQ(std::get<RootParam>(Elem).Reg.Number, 34893247u);
   ASSERT_EQ(std::get<RootParam>(Elem).Space, 0u);
   ASSERT_EQ(std::get<RootParam>(Elem).Visibility, ShaderVisibility::Hull);
+  ASSERT_EQ(std::get<RootParam>(Elem).Flags, RootDescriptorFlags::DataVolatile);
+
+  Elem = Elements[3];
+  ASSERT_EQ(std::get<RootParam>(Elem).Reg.ViewType, RegisterType::BReg);
+  ASSERT_EQ(std::get<RootParam>(Elem).Reg.Number, 0u);
+  ASSERT_EQ(std::get<RootParam>(Elem).Space, 0u);
+  ASSERT_EQ(std::get<RootParam>(Elem).Visibility, ShaderVisibility::All);
+  ASSERT_EQ(std::get<RootParam>(Elem).Flags, RootDescriptorFlags::None);
 
   ASSERT_TRUE(Consumer->isSatisfied());
 }
