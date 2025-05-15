@@ -6746,9 +6746,9 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
     // maxnum(x, snan) -> qnan
     // minimum(X, nan) -> qnan
     // maximum(X, nan) -> qnan
-    if (PropagateSNaN && match(Op1, m_sNaN())) {
+    if (PropagateSNaN && match(Op1, m_sNaN()))
       return propagateNaN(cast<Constant>(Op1));
-    } else if (match(Op1, m_NaN())) {
+    if (match(Op1, m_NaN())) {
       if (PropagateNaN)
         return propagateNaN(cast<Constant>(Op1));
       // In cases like mixed <sNaN, qNaN> vectors, avoid the optimization to
