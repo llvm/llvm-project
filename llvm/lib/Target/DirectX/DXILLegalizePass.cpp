@@ -8,6 +8,8 @@
 
 #include "DXILLegalizePass.h"
 #include "DirectX.h"
+#include "llvm/ADT/APInt.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
@@ -510,6 +512,49 @@ static void updateFnegToFsub(Instruction &I,
   ToRemove.push_back(&I);
 }
 
+static void
+legalizeGetHighLowi64Bytes(Instruction &I,
+                           SmallVectorImpl<Instruction *> &ToRemove,
+                           DenseMap<Value *, Value *> &ReplacedValues) {
+  if (auto *BitCast = dyn_cast<BitCastInst>(&I)) {
+    if (BitCast->getDestTy() ==
+            FixedVectorType::get(Type::getInt32Ty(I.getContext()), 2) &&
+        BitCast->getSrcTy()->isIntegerTy(64)) {
+      ToRemove.push_back(BitCast);
+      ReplacedValues[BitCast] = BitCast->getOperand(0);
+    }
+  }
+
+  if (auto *Extract = dyn_cast<ExtractElementInst>(&I)) {
+    auto *VecTy = dyn_cast<FixedVectorType>(Extract->getVectorOperandType());
+    if (VecTy && VecTy->getElementType()->isIntegerTy(32) &&
+        VecTy->getNumElements() == 2) {
+      if (auto *Index = dyn_cast<ConstantInt>(Extract->getIndexOperand())) {
+        unsigned Idx = Index->getZExtValue();
+        IRBuilder<> Builder(&I);
+        assert(dyn_cast<BitCastInst>(Extract->getVectorOperand()));
+        auto *Replacement = ReplacedValues[Extract->getVectorOperand()];
+        if (Idx == 0) {
+          Value *LowBytes = Builder.CreateTrunc(
+              Replacement, Type::getInt32Ty(I.getContext()));
+          ReplacedValues[Extract] = LowBytes;
+        } else {
+          assert(Idx == 1);
+          Value *LogicalShiftRight = Builder.CreateLShr(
+              Replacement,
+              ConstantInt::get(
+                  Replacement->getType(),
+                  APInt(Replacement->getType()->getIntegerBitWidth(), 32)));
+          Value *HighBytes = Builder.CreateTrunc(
+              LogicalShiftRight, Type::getInt32Ty(I.getContext()));
+          ReplacedValues[Extract] = HighBytes;
+        }
+        ToRemove.push_back(Extract);
+      }
+    }
+  }
+}
+
 namespace {
 class DXILLegalizationPipeline {
 
@@ -544,6 +589,7 @@ private:
     LegalizationPipeline.push_back(legalizeMemCpy);
     LegalizationPipeline.push_back(removeMemSet);
     LegalizationPipeline.push_back(updateFnegToFsub);
+    LegalizationPipeline.push_back(legalizeGetHighLowi64Bytes);
   }
 };
 
