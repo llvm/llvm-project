@@ -7786,7 +7786,6 @@ static bool canCreateUndefOrPoison(const Operator *Op, UndefPoisonKind Kind,
   case Instruction::FMul:
   case Instruction::FDiv:
   case Instruction::FRem:
-    return false;
   case Instruction::GetElementPtr:
     return false;
   default: {
