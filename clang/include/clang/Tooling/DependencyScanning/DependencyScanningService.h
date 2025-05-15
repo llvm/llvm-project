@@ -15,6 +15,7 @@
 #include "clang/Tooling/DependencyScanning/InProcessModuleCache.h"
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/CAS/ActionCache.h"
+#include "llvm/Support/Chrono.h"
 
 namespace clang {
 namespace tooling {
@@ -105,7 +106,9 @@ public:
       std::shared_ptr<llvm::cas::ActionCache> Cache,
       IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> SharedFS,
       ScanningOptimizations OptimizeArgs = ScanningOptimizations::Default,
-      bool EagerLoadModules = false, bool TraceVFS = false);
+      bool EagerLoadModules = false, bool TraceVFS = false,
+      std::time_t BuildSessionTimestamp =
+          llvm::sys::toTimeT(std::chrono::system_clock::now()));
 
   ScanningMode getMode() const { return Mode; }
 
@@ -134,6 +137,8 @@ public:
 
   ModuleCacheEntries &getModuleCacheEntries() { return ModCacheEntries; }
 
+  std::time_t getBuildSessionTimestamp() const { return BuildSessionTimestamp; }
+
 private:
   const ScanningMode Mode;
   const ScanningOutputFormat Format;
@@ -153,6 +158,8 @@ private:
   std::optional<DependencyScanningFilesystemSharedCache> SharedCache;
   /// The global module cache entries.
   ModuleCacheEntries ModCacheEntries;
+  /// The build session timestamp.
+  std::time_t BuildSessionTimestamp;
 };
 
 } // end namespace dependencies
