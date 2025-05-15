@@ -50,6 +50,7 @@
 #include "llvm/Frontend/Debug/Options.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Option/ArgList.h"
+#include "llvm/Support/CharSet.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Compression.h"
@@ -7597,12 +7598,20 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                                           << value;
   }
 
-  // -fexec_charset=UTF-8 is default. Reject others
+  // Set the default fexec-charset as the system charset.
+  CmdArgs.push_back("-fexec-charset");
+  CmdArgs.push_back(Args.MakeArgString(Triple.getSystemCharset()));
   if (Arg *execCharset = Args.getLastArg(options::OPT_fexec_charset_EQ)) {
     StringRef value = execCharset->getValue();
-    if (!value.equals_insensitive("utf-8"))
-      D.Diag(diag::err_drv_invalid_value) << execCharset->getAsString(Args)
-                                          << value;
+    llvm::ErrorOr<llvm::CharSetConverter> ErrorOrConverter =
+        llvm::CharSetConverter::create("UTF-8", value.data());
+    if (ErrorOrConverter) {
+      CmdArgs.push_back("-fexec-charset");
+      CmdArgs.push_back(Args.MakeArgString(value));
+    } else {
+      D.Diag(diag::err_drv_invalid_value)
+          << execCharset->getAsString(Args) << value;
+    }
   }
 
   RenderDiagnosticsOptions(D, Args, CmdArgs);
