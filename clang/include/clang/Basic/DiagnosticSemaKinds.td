@@ -164,6 +164,8 @@ def err_ice_too_large : Error<
   "integer constant expression evaluates to value %0 that cannot be "
   "represented in a %1-bit %select{signed|unsigned}2 integer type">;
 def err_expr_not_string_literal : Error<"expression is not a string literal">;
+def note_constexpr_assert_failed : Note<
+  "assertion failed during evaluation of constant expression">;
 
 // Semantic analysis of constant literals.
 def ext_predef_outside_function : Warning<
@@ -10183,6 +10185,9 @@ def note_defaulted_comparison_no_viable_function_synthesized : Note<
 def note_defaulted_comparison_not_rewritten_callee : Note<
   "defaulted %0 is implicitly deleted because this non-rewritten comparison "
   "function would be the best match for the comparison">;
+def note_defaulted_comparison_vector_types : Note<
+  "defaulted %0 is implicitly deleted because defaulted comparison of vector "
+  "types is not supported">;
 def note_defaulted_comparison_not_rewritten_conversion : Note<
   "defaulted %0 is implicitly deleted because a builtin comparison function "
   "using this conversion would be the best match for the comparison">;
