@@ -92,8 +92,13 @@ struct ParsedSourceRange {
         // probably belongs to the filename which menas the whole
         // string should be parsed.
         RangeSplit.first = Str;
-      } else
+      } else {
+        // Column and line numbers are 1-based
+        if (EndLine == 0 || EndColumn == 0) {
+          return std::nullopt;
+        }
         HasEndLoc = true;
+      }
     }
     auto Begin = ParsedSourceLocation::FromString(RangeSplit.first);
     if (Begin.FileName.empty())
