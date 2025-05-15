@@ -677,7 +677,7 @@ RootSignatureParser::parseStaticSamplerParams() {
       if (consumeExpectedToken(TokenKind::pu_equal))
         return std::nullopt;
 
-      auto MipLODBias = parseUIntParam();
+      auto MipLODBias = parseFloatParam();
       if (!MipLODBias.has_value())
         return std::nullopt;
       Params.MipLODBias = (float)*MipLODBias;
@@ -728,6 +728,30 @@ std::optional<Register> RootSignatureParser::parseRegister() {
 
   Reg.Number = *Number;
   return Reg;
+}
+
+std::optional<float> RootSignatureParser::parseFloatParam() {
+  assert(CurToken.TokKind == TokenKind::pu_equal &&
+         "Expects to only be invoked starting at given keyword");
+  // Consume sign modifier
+  bool Signed = tryConsumeExpectedToken({TokenKind::pu_plus, TokenKind::pu_minus});
+  bool Negated = Signed && CurToken.TokKind == TokenKind::pu_minus;
+
+  // Handle an uint and interpret it as a float
+  if (!Signed && tryConsumeExpectedToken(TokenKind::int_literal)) {
+    auto UInt = handleUIntLiteral();
+    if (!UInt.has_value())
+      return std::nullopt;
+    return (float)UInt.value();
+  } else if (tryConsumeExpectedToken(TokenKind::int_literal)) {
+    auto Int = handleIntLiteral(Negated);
+    if (!Int.has_value())
+      return std::nullopt;
+
+    return (float)Int.value();
+  }
+
+  return std::nullopt;
 }
 
 std::optional<llvm::hlsl::rootsig::ShaderVisibility>
@@ -854,6 +878,31 @@ std::optional<uint32_t> RootSignatureParser::handleUIntLiteral() {
   }
 
   return Val.getExtValue();
+}
+
+std::optional<int32_t> RootSignatureParser::handleIntLiteral(bool Negated) {
+  // Parse the numeric value and do semantic checks on its specification
+  clang::NumericLiteralParser Literal(CurToken.NumSpelling, CurToken.TokLoc,
+                                      PP.getSourceManager(), PP.getLangOpts(),
+                                      PP.getTargetInfo(), PP.getDiagnostics());
+  if (Literal.hadError)
+    return true; // Error has already been reported so just return
+
+  assert(Literal.isIntegerLiteral() && "IsNumberChar will only support digits");
+
+  llvm::APSInt Val = llvm::APSInt(32, true);
+  if (Literal.GetIntegerValue(Val) || INT32_MAX < Val.getExtValue()) {
+    // Report that the value has overflowed
+    PP.getDiagnostics().Report(CurToken.TokLoc,
+                               diag::err_hlsl_number_literal_overflow)
+        << 0 << CurToken.NumSpelling;
+    return std::nullopt;
+  }
+
+  if (Negated)
+    return static_cast<int32_t>((-Val).getExtValue());
+
+  return static_cast<int32_t>(Val.getExtValue());
 }
 
 bool RootSignatureParser::verifyZeroFlag() {

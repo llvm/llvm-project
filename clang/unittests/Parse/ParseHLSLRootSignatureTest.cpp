@@ -247,7 +247,42 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseStaticSamplerTest) {
   ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
   ASSERT_EQ(std::get<StaticSampler>(Elem).Reg.ViewType, RegisterType::SReg);
   ASSERT_EQ(std::get<StaticSampler>(Elem).Reg.Number, 0u);
-  ASSERT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 0u);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 0.f);
+
+  ASSERT_TRUE(Consumer->isSatisfied());
+}
+
+TEST_F(ParseHLSLRootSignatureTest, ValidParseFloatsTest) {
+  const llvm::StringLiteral Source = R"cc(
+    StaticSampler(s0, mipLODBias = 0),
+    StaticSampler(s0, mipLODBias = +1),
+    StaticSampler(s0, mipLODBias = -1)
+  )cc";
+
+  TrivialModuleLoader ModLoader;
+  auto PP = createPP(Source, ModLoader);
+  auto TokLoc = SourceLocation();
+
+  hlsl::RootSignatureLexer Lexer(Source, TokLoc);
+  SmallVector<RootElement> Elements;
+  hlsl::RootSignatureParser Parser(Elements, Lexer, *PP);
+
+  // Test no diagnostics produced
+  Consumer->setNoDiag();
+
+  ASSERT_FALSE(Parser.parse());
+
+  RootElement Elem = Elements[0];
+  ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
+  ASSERT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 0.f);
+
+  Elem = Elements[1];
+  ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
+  ASSERT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 1.f);
+
+  Elem = Elements[2];
+  ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
+  ASSERT_EQ(std::get<StaticSampler>(Elem).MipLODBias, -1.f);
 
   ASSERT_TRUE(Consumer->isSatisfied());
 }

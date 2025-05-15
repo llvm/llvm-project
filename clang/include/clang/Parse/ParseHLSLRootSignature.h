@@ -118,6 +118,7 @@ private:
   // Common parsing methods
   std::optional<uint32_t> parseUIntParam();
   std::optional<llvm::hlsl::rootsig::Register> parseRegister();
+  std::optional<float> parseFloatParam();
 
   /// Parsing methods of various enums
   std::optional<llvm::hlsl::rootsig::ShaderVisibility> parseShaderVisibility();
@@ -129,6 +130,9 @@ private:
   /// Use NumericLiteralParser to convert CurToken.NumSpelling into a unsigned
   /// 32-bit integer
   std::optional<uint32_t> handleUIntLiteral();
+  /// Use NumericLiteralParser to convert CurToken.NumSpelling into a unsigned
+  /// 32-bit integer
+  std::optional<int32_t> handleIntLiteral(bool Negated);
 
   /// Flags may specify the value of '0' to denote that there should be no
   /// flags set.
