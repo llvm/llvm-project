@@ -190,7 +190,7 @@ def AddShl : PatFrag<(ops node:$Ra, node:$Rb, node:$SH3),
 
 def IntCCtoQCRISCVCC : SDNodeXForm<riscv_selectcc, [{
   ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
-  int64_t Imm = dyn_cast<ConstantSDNode>(N->getOperand(1))->getSExtValue();
+  int64_t Imm = cast<ConstantSDNode>(N->getOperand(1))->getSExtValue();
   RISCVCC::CondCode BrCC;
   switch (CC) {
   default:
