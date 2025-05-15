@@ -70,14 +70,14 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::vector_reduce_add:
   case Intrinsic::vector_reduce_fadd:
     return true;
-  case Intrinsic::dx_resource_load_typedbuffer: // want to transform double and
-                                                // double2
+  case Intrinsic::dx_resource_load_typedbuffer:
+    // We need to handle doubles and vector of doubles.
     return F.getReturnType()
         ->getStructElementType(0)
         ->getScalarType()
         ->isDoubleTy();
-  case Intrinsic::dx_resource_store_typedbuffer: // want to transform double and
-                                                 // double2
+  case Intrinsic::dx_resource_store_typedbuffer:
+    // We need to handle doubles and vector of doubles.
     return F.getFunctionType()->getParamType(2)->getScalarType()->isDoubleTy();
   }
   return false;
