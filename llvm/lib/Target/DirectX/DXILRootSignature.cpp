@@ -76,8 +76,8 @@ static bool parseRootConstants(LLVMContext *Ctx, mcdxbc::RootSignatureDesc &RSD,
     return reportError(Ctx, "Invalid format for RootConstants Element");
 
   dxbc::RootParameterHeader Header;
-  // this will be properly calculated when writing it.
-  Header.ParameterOffset = 0;
+  // The parameter offset doesn't matter here - we recalculate it during
+  // serialization  Header.ParameterOffset = 0;
   Header.ParameterType =
       llvm::to_underlying(dxbc::RootParameterType::Constants32Bit);
 

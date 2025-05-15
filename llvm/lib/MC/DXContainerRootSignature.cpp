@@ -89,7 +89,8 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
                              llvm::endianness::little);
       support::endian::write(BOS, Constants.Num32BitValues,
                              llvm::endianness::little);
-    } break;
+      break;
+    }
     case llvm::to_underlying(dxbc::RootParameterType::CBV):
     case llvm::to_underlying(dxbc::RootParameterType::SRV):
     case llvm::to_underlying(dxbc::RootParameterType::UAV): {
@@ -102,7 +103,8 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
                              llvm::endianness::little);
       if (Version > 1)
         support::endian::write(BOS, Descriptor.Flags, llvm::endianness::little);
-    } break;
+      break;
+    }
     }
   }
   assert(Storage.size() == getSize());

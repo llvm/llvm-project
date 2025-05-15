@@ -21,8 +21,8 @@ struct RootParameterInfo {
 
   RootParameterInfo() = default;
 
-  RootParameterInfo(dxbc::RootParameterHeader H, size_t L)
-      : Header(H), Location(L) {}
+  RootParameterInfo(dxbc::RootParameterHeader Header, size_t Location)
+      : Header(Header), Location(Location) {}
 };
 
 struct RootParametersContainer {
@@ -31,29 +31,34 @@ struct RootParametersContainer {
   SmallVector<dxbc::RootConstants> Constants;
   SmallVector<dxbc::RTS0::v2::RootDescriptor> Descriptors;
 
-  void addInfo(dxbc::RootParameterHeader H, size_t L) {
-    ParametersInfo.push_back(RootParameterInfo(H, L));
+  void addInfo(dxbc::RootParameterHeader Header, size_t Location) {
+    ParametersInfo.push_back(RootParameterInfo(Header, Location));
   }
 
-  void addParameter(dxbc::RootParameterHeader H, dxbc::RootConstants C) {
-    addInfo(H, Constants.size());
-    Constants.push_back(C);
+  void addParameter(dxbc::RootParameterHeader Header,
+                    dxbc::RootConstants Constant) {
+    addInfo(Header, Constants.size());
+    Constants.push_back(Constant);
   }
 
-  void addParameter(dxbc::RootParameterHeader H,
-                    dxbc::RTS0::v2::RootDescriptor D) {
-    addInfo(H, Descriptors.size());
-    Descriptors.push_back(D);
+  void addInvalidParameter(dxbc::RootParameterHeader Header) {
+    addInfo(Header, -1);
+  }
+
+  void addParameter(dxbc::RootParameterHeader Header,
+                    dxbc::RTS0::v2::RootDescriptor Descriptor) {
+    addInfo(Header, Descriptors.size());
+    Descriptors.push_back(Descriptor);
   }
 
   const std::pair<uint32_t, uint32_t>
-  getTypeAndLocForParameter(uint32_t Index) const {
-    const RootParameterInfo &Info = ParametersInfo[Index];
+  getTypeAndLocForParameter(uint32_t Location) const {
+    const RootParameterInfo &Info = ParametersInfo[Location];
     return {Info.Header.ParameterType, Info.Location};
   }
 
-  const dxbc::RootParameterHeader &getHeader(size_t Index) const {
-    const RootParameterInfo &Info = ParametersInfo[Index];
+  const dxbc::RootParameterHeader &getHeader(size_t Location) const {
+    const RootParameterInfo &Info = ParametersInfo[Location];
     return Info.Header;
   }
 

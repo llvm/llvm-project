@@ -274,8 +274,8 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
       RS.StaticSamplersOffset = P.RootSignature->StaticSamplersOffset;
 
       for (const auto &Param : P.RootSignature->Parameters) {
-        auto Header = dxbc::RootParameterHeader{Param.Type, Param.Visibility,
-                                                Param.Offset};
+        dxbc::RootParameterHeader Header{Param.Type, Param.Visibility,
+                                         Param.Offset};
 
         switch (Param.Type) {
         case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit):
@@ -288,24 +288,18 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
         case llvm::to_underlying(dxbc::RootParameterType::SRV):
         case llvm::to_underlying(dxbc::RootParameterType::UAV):
         case llvm::to_underlying(dxbc::RootParameterType::CBV):
-          if (RS.Version == 1) {
-            dxbc::RTS0::v1::RootDescriptor Descriptor;
-            Descriptor.RegisterSpace = Param.Descriptor.RegisterSpace;
-            Descriptor.ShaderRegister = Param.Descriptor.ShaderRegister;
-            RS.ParametersContainer.addParameter(Header, Descriptor);
-          } else {
-            dxbc::RTS0::v2::RootDescriptor Descriptor;
-            Descriptor.RegisterSpace = Param.Descriptor.RegisterSpace;
-            Descriptor.ShaderRegister = Param.Descriptor.ShaderRegister;
+          dxbc::RTS0::v2::RootDescriptor Descriptor;
+          Descriptor.RegisterSpace = Param.Descriptor.RegisterSpace;
+          Descriptor.ShaderRegister = Param.Descriptor.ShaderRegister;
+          if (RS.Version > 1)
             Descriptor.Flags = Param.Descriptor.getEncodedFlags();
-            RS.ParametersContainer.addParameter(Header, Descriptor);
-          }
+          RS.ParametersContainer.addParameter(Header, Descriptor);
           break;
         default:
           // Handling invalid parameter type edge case. We intentionally let
           // obj2yaml/yaml2obj parse and emit invalid dxcontainer data, in order
           // for that to be used as a testing tool more effectively.
-          RS.ParametersContainer.addInfo(Header, -1);
+          RS.ParametersContainer.addInvalidParameter(Header);
         }
       }
 
