@@ -1536,20 +1536,50 @@ bool fir::ConvertOp::canBeConverted(mlir::Type inType, mlir::Type outType) {
          areRecordsCompatible(inType, outType);
 }
 
+// In general, ptrtoint-like conversions are allowed to lose volatility
+// information because they are either:
+//
+// 1. passing an entity to an external function and there's nothing we can do
+//    about volatility after that happens, or
+// 2. for code generation, at which point we represent volatility with
+//    attributes on the LLVM instructions and intrinsics.
+//
+// For all other cases, volatility ought to match exactly.
+static mlir::LogicalResult verifyVolatility(mlir::Type inType,
+                                            mlir::Type outType) {
+  const bool toLLVMPointer = mlir::isa<mlir::LLVM::LLVMPointerType>(outType);
+  const bool toInteger = fir::isa_integer(outType);
+
+  // When converting references to classes or allocatables into boxes for
+  // runtime arguments, we cast away all the volatility information and pass a
+  // box<none>. This is allowed.
+  const bool isBoxNoneLike = [&]() {
+    if (fir::isBoxNone(outType))
+      return true;
+    if (auto referenceType = mlir::dyn_cast<fir::ReferenceType>(outType)) {
+      if (fir::isBoxNone(referenceType.getElementType())) {
+        return true;
+      }
+    }
+    return false;
+  }();
+
+  const bool isPtrToIntLike = toLLVMPointer || toInteger || isBoxNoneLike;
+  if (isPtrToIntLike) {
+    return mlir::success();
+  }
+
+  // In all other cases, we need to check for an exact volatility match.
+  return mlir::success(fir::isa_volatile_type(inType) ==
+                       fir::isa_volatile_type(outType));
+}
+
 llvm::LogicalResult fir::ConvertOp::verify() {
   mlir::Type inType = getValue().getType();
   mlir::Type outType = getType();
-  // If we're converting to an LLVM pointer type or an integer, we don't
-  // need to check for volatility mismatch - volatility will be handled by the
-  // memory operations themselves in llvm code generation and ptr-to-int can't
-  // represent volatility.
-  const bool toLLVMPointer = mlir::isa<mlir::LLVM::LLVMPointerType>(outType);
-  const bool toInteger = fir::isa_integer(outType);
   if (fir::useStrictVolatileVerification()) {
-    if (fir::isa_volatile_type(inType) != fir::isa_volatile_type(outType) &&
-        !toLLVMPointer && !toInteger) {
-      return emitOpError("cannot convert between volatile and non-volatile "
-                         "types, use fir.volatile_cast instead ")
+    if (failed(verifyVolatility(inType, outType))) {
+      return emitOpError("this conversion does not preserve volatility: ")
              << inType << " / " << outType;
     }
   }

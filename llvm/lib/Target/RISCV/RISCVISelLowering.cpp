@@ -318,6 +318,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       !(Subtarget.hasVendorXCValu() && !Subtarget.is64Bit()))
     setOperationAction(ISD::SIGN_EXTEND_INREG, {MVT::i8, MVT::i16}, Expand);
 
+  if (Subtarget.hasStdExtZilsd() && !Subtarget.is64Bit()) {
+    setOperationAction(ISD::LOAD, MVT::i64, Custom);
+    setOperationAction(ISD::STORE, MVT::i64, Custom);
+  }
+
   if (Subtarget.is64Bit()) {
     setOperationAction(ISD::EH_DWARF_CFA, MVT::i64, Custom);
 
@@ -7748,13 +7753,33 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::STORE: {
     auto *Store = cast<StoreSDNode>(Op);
     SDValue StoredVal = Store->getValue();
-    EVT VecTy = StoredVal.getValueType();
+    EVT VT = StoredVal.getValueType();
+    if (VT == MVT::i64) {
+      assert(Subtarget.hasStdExtZilsd() && !Subtarget.is64Bit() &&
+             "Unexpected custom legalisation");
+      if (Store->isTruncatingStore())
+        return SDValue();
+
+      if (!Subtarget.enableUnalignedScalarMem() && Store->getAlign() < 8)
+        return SDValue();
+
+      SDLoc DL(Op);
+      SDValue Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, StoredVal,
+                               DAG.getTargetConstant(0, DL, MVT::i32));
+      SDValue Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, StoredVal,
+                               DAG.getTargetConstant(1, DL, MVT::i32));
+
+      return DAG.getMemIntrinsicNode(
+          RISCVISD::SD_RV32, DL, DAG.getVTList(MVT::Other),
+          {Store->getChain(), Lo, Hi, Store->getBasePtr()}, MVT::i64,
+          Store->getMemOperand());
+    }
     // Handle normal vector tuple store.
-    if (VecTy.isRISCVVectorTuple()) {
+    if (VT.isRISCVVectorTuple()) {
       SDLoc DL(Op);
       MVT XLenVT = Subtarget.getXLenVT();
-      unsigned NF = VecTy.getRISCVVectorTupleNumFields();
-      unsigned Sz = VecTy.getSizeInBits().getKnownMinValue();
+      unsigned NF = VT.getRISCVVectorTupleNumFields();
+      unsigned Sz = VT.getSizeInBits().getKnownMinValue();
       unsigned NumElts = Sz / (NF * 8);
       int Log2LMUL = Log2_64(NumElts) - 3;
 
@@ -13714,6 +13739,28 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     // sext_inreg we emit for ADD/SUB/MUL/SLLI.
     LoadSDNode *Ld = cast<LoadSDNode>(N);
 
+    if (N->getValueType(0) == MVT::i64) {
+      assert(Subtarget.hasStdExtZilsd() && !Subtarget.is64Bit() &&
+             "Unexpected custom legalisation");
+
+      if (!Subtarget.enableUnalignedScalarMem() && Ld->getAlign() < 8)
+        return;
+
+      SDLoc DL(N);
+      SDValue Result = DAG.getMemIntrinsicNode(
+          RISCVISD::LD_RV32, DL,
+          DAG.getVTList({MVT::i32, MVT::i32, MVT::Other}),
+          {Ld->getChain(), Ld->getBasePtr()}, MVT::i64, Ld->getMemOperand());
+      SDValue Lo = Result.getValue(0);
+      SDValue Hi = Result.getValue(1);
+      SDValue Pair = DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64, Lo, Hi);
+      Results.append({Pair, Result.getValue(2)});
+      return;
+    }
+
+    assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
+           "Unexpected custom legalisation");
+
     SDLoc dl(N);
     SDValue Res = DAG.getExtLoad(ISD::SEXTLOAD, dl, MVT::i64, Ld->getChain(),
                                  Ld->getBasePtr(), Ld->getMemoryVT(),
@@ -16619,6 +16666,25 @@ NodeExtensionHelper::getSupportedFoldings(const SDNode *Root) {
 }
 } // End anonymous namespace.
 
+static SDValue simplifyOp_VL(SDNode *N) {
+  // TODO: Extend this to other binops using generic identity logic
+  assert(N->getOpcode() == RISCVISD::ADD_VL);
+  SDValue A = N->getOperand(0);
+  SDValue B = N->getOperand(1);
+  SDValue Passthru = N->getOperand(2);
+  if (!Passthru.isUndef())
+    // TODO:This could be a vmerge instead
+    return SDValue();
+  ;
+  if (ISD::isConstantSplatVectorAllZeros(B.getNode()))
+    return A;
+  // Peek through fixed to scalable
+  if (B.getOpcode() == ISD::INSERT_SUBVECTOR && B.getOperand(0).isUndef() &&
+      ISD::isConstantSplatVectorAllZeros(B.getOperand(1).getNode()))
+    return A;
+  return SDValue();
+}
+
 /// Combine a binary or FMA operation to its equivalent VW or VW_W form.
 /// The supported combines are:
 /// add | add_vl | or disjoint | or_vl disjoint -> vwadd(u) | vwadd(u)_w
@@ -18515,20 +18581,10 @@ static SDValue combineVqdotAccum(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   SDValue AccumOp = DotOp.getOperand(2);
-  bool IsNullAdd = ISD::isConstantSplatVectorAllZeros(AccumOp.getNode());
-  // Peek through fixed to scalable
-  if (!IsNullAdd && AccumOp.getOpcode() == ISD::INSERT_SUBVECTOR &&
-      AccumOp.getOperand(0).isUndef())
-    IsNullAdd =
-        ISD::isConstantSplatVectorAllZeros(AccumOp.getOperand(1).getNode());
-
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
-  // The manual constant folding is required, this case is not constant folded
-  // or combined.
-  if (!IsNullAdd)
-    Addend = DAG.getNode(RISCVISD::ADD_VL, DL, VT, AccumOp, Addend,
-                         DAG.getUNDEF(VT), AddMask, AddVL);
+  Addend = DAG.getNode(RISCVISD::ADD_VL, DL, VT, Addend, AccumOp,
+                       DAG.getUNDEF(VT), AddMask, AddVL);
 
   SDValue Ops[] = {DotOp.getOperand(0), DotOp.getOperand(1), Addend,
                    DotOp.getOperand(3), DotOp->getOperand(4)};
@@ -19657,6 +19713,8 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     break;
   }
   case RISCVISD::ADD_VL:
+    if (SDValue V = simplifyOp_VL(N))
+      return V;
     if (SDValue V = combineOp_VLToVWOp_VL(N, DCI, Subtarget))
       return V;
     if (SDValue V = combineVqdotAccum(N, DAG, Subtarget))
@@ -23373,8 +23431,8 @@ bool RISCVTargetLowering::preferScalarizeSplat(SDNode *N) const {
 
 static Value *useTpOffset(IRBuilderBase &IRB, unsigned Offset) {
   Module *M = IRB.GetInsertBlock()->getModule();
-  Function *ThreadPointerFunc =
-      Intrinsic::getOrInsertDeclaration(M, Intrinsic::thread_pointer);
+  Function *ThreadPointerFunc = Intrinsic::getOrInsertDeclaration(
+      M, Intrinsic::thread_pointer, IRB.getPtrTy());
   return IRB.CreateConstGEP1_32(IRB.getInt8Ty(),
                                 IRB.CreateCall(ThreadPointerFunc), Offset);
 }
@@ -23417,6 +23475,11 @@ bool RISCVTargetLowering::isLegalInterleavedAccessType(
 
   MVT ContainerVT = VT.getSimpleVT();
 
+  // The intrinsics are not (yet) overloaded on pointer type and can only handle
+  // the default address space.
+  if (AddrSpace)
+    return false;
+
   if (auto *FVTy = dyn_cast<FixedVectorType>(VTy)) {
     if (!Subtarget.useRVVForFixedLengthVectors())
       return false;
@@ -23426,11 +23489,6 @@ bool RISCVTargetLowering::isLegalInterleavedAccessType(
       return false;
 
     ContainerVT = getContainerForFixedLengthVector(VT.getSimpleVT());
-  } else {
-    // The intrinsics for scalable vectors are not overloaded on pointer type
-    // and can only handle the default address space.
-    if (AddrSpace)
-      return false;
   }
 
   // Need to make sure that EMUL * NFIELDS ≤ 8
