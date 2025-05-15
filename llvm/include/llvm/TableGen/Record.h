@@ -1438,11 +1438,23 @@ public:
   }
 
   static const DagInit *get(const Init *V, const StringInit *VN,
-                            ArrayRef<const Init *> ArgRange,
-                            ArrayRef<const StringInit *> NameRange);
+                            ArrayRef<const Init *> Args,
+                            ArrayRef<const StringInit *> ArgNames);
+
+  static const DagInit *get(const Init *V, ArrayRef<const Init *> Args,
+                            ArrayRef<const StringInit *> ArgNames) {
+    return DagInit::get(V, nullptr, Args, ArgNames);
+  }
+
   static const DagInit *
   get(const Init *V, const StringInit *VN,
       ArrayRef<std::pair<const Init *, const StringInit *>> ArgAndNames);
+
+  static const DagInit *
+  get(const Init *V,
+      ArrayRef<std::pair<const Init *, const StringInit *>> ArgAndNames) {
+    return DagInit::get(V, nullptr, ArgAndNames);
+  }
 
   void Profile(FoldingSetNodeID &ID) const;
 
