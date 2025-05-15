@@ -124,6 +124,11 @@ New checks
   pointer and store it as class members without handle the copy and move
   constructors and the assignments.
 
+- New :doc:`bugprone-function-visibility-change
+  <clang-tidy/checks/bugprone/function-visibility-change>` check.
+
+  Check function visibility changes in subclasses.
+
 - New :doc:`bugprone-unintended-char-ostream-output
   <clang-tidy/checks/bugprone/unintended-char-ostream-output>` check.
 
