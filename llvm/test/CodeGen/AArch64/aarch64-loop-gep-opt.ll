@@ -8,7 +8,7 @@ target triple = "aarch64--linux-android"
 define i32 @test1(ptr nocapture %s) {
 entry:
 ; CHECK-LABEL: entry:
-; CHECK:    %uglygep = getelementptr i8, ptr %s, i64 1032
+; CHECK:    %invariant.gep = getelementptr i8, ptr %s, i64 1032
 ; CHECK:    br label %do.body.i
 
 
@@ -18,8 +18,8 @@ entry:
 
 do.body.i:
 ; CHECK-LABEL: do.body.i:
-; CHECK:          %uglygep2 = getelementptr i8, ptr %uglygep, i64 %2
-; CHECK-NOT:      %uglygep2 = getelementptr i8, ptr %uglygep, i64 1032
+; CHECK:          %gep = getelementptr i8, ptr %invariant.gep, i64 %2
+; CHECK-NOT:      %gep = getelementptr i8, ptr %invariant.gep, i64 1032
 
 
   %0 = phi i32 [ 256, %entry ], [ %.be, %do.body.i.backedge ]
@@ -45,4 +45,3 @@ fooo.exit:                              ; preds = %do.body.i
   store i32 %nb.1.i, ptr %k0, align 4
   br label %do.body.i.backedge
 }
-

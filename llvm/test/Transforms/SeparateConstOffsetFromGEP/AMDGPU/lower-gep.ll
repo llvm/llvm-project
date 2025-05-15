@@ -120,9 +120,9 @@ define void @test_A_sub_B_add_ConstantInt(ptr %p) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[REM]] to i64
 ; CHECK-NEXT:    [[SUB22:%.*]] = sub i64 [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[SUB22]], 2
-; CHECK-NEXT:    [[UGLYGEP4:%.*]] = getelementptr i8, ptr [[UGLYGEP3:%.*]], i64 2044
-; CHECK-NEXT:    [[UGLYGEP5:%.*]] = getelementptr i8, ptr [[UGLYGEP4]], i64 [[TMP3]]
-; CHECK-NEXT:    store float 1.000000e+00, ptr [[UGLYGEP5]], align 4
+; CHECK-NEXT:    [[UGLYGEP5:%.*]] = getelementptr i8, ptr [[UGLYGEP4:%.*]], i64 [[TMP3]]
+; CHECK-NEXT:    [[UGLYGEP3:%.*]] = getelementptr i8, ptr [[UGLYGEP5]], i64 2044
+; CHECK-NEXT:    store float 1.000000e+00, ptr [[UGLYGEP3]], align 4
 ; CHECK-NEXT:    br label [[COND_END]]
 ; CHECK:       cond.end:
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[K]], 1
@@ -180,8 +180,8 @@ define void @test_A_sub_B_add_ConstantInt_gv_baseptr(ptr %p) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[REM]] to i64
 ; CHECK-NEXT:    [[SUB22:%.*]] = sub i64 [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[SUB22]], 2
-; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr inbounds i8, ptr @extern_array, i64 2044
-; CHECK-NEXT:    [[UGLYGEP3:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr @extern_array, i64 [[TMP3]]
+; CHECK-NEXT:    [[UGLYGEP3:%.*]] = getelementptr i8, ptr [[TMP4]], i64 2044
 ; CHECK-NEXT:    store float 1.000000e+00, ptr [[UGLYGEP3]], align 4
 ; CHECK-NEXT:    br label [[COND_END]]
 ; CHECK:       cond.end:
@@ -238,8 +238,8 @@ define void @test_A_sub_B_add_ConstantInt_null_basptr() {
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[REM]] to i64
 ; CHECK-NEXT:    [[SUB22:%.*]] = sub i64 [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[SUB22]], 2
-; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr inbounds i8, ptr null, i64 2044
-; CHECK-NEXT:    [[UGLYGEP3:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr null, i64 [[TMP3]]
+; CHECK-NEXT:    [[UGLYGEP3:%.*]] = getelementptr i8, ptr [[TMP4]], i64 2044
 ; CHECK-NEXT:    store float 1.000000e+00, ptr [[UGLYGEP3]], align 4
 ; CHECK-NEXT:    br label [[COND_END]]
 ; CHECK:       cond.end:
@@ -425,8 +425,8 @@ define amdgpu_kernel void @multi_use_in_loop_global_base_address(ptr addrspace(1
 ; CHECK-NEXT:    [[TMP25]] = add nuw nsw i32 [[TMP13]], 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[TMP13]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 2
-; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr addrspace(1) @extern_array_1, i64 4
-; CHECK-NEXT:    [[UGLYGEP2:%.*]] = getelementptr i8, ptr addrspace(1) [[UGLYGEP]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr addrspace(1) @extern_array_1, i64 [[TMP1]]
+; CHECK-NEXT:    [[UGLYGEP2:%.*]] = getelementptr i8, ptr addrspace(1) [[TMP2]], i64 4
 ; CHECK-NEXT:    [[TMP28:%.*]] = load i32, ptr addrspace(1) [[UGLYGEP2]], align 4
 ; CHECK-NEXT:    [[TMP29:%.*]] = add i32 [[TMP24]], [[TMP12]]
 ; CHECK-NEXT:    [[TMP30]] = add i32 [[TMP29]], [[TMP28]]

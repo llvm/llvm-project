@@ -7,12 +7,12 @@ define void @illegal_addr_mode(ptr %in.ptr, i64 %in.idx0, i64 %in.idx1) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[BASE:%.*]] = getelementptr i64, ptr [[IN_PTR]], i64 [[IN_IDX0]]
 ; CHECK-NEXT:    [[IDX0:%.*]] = getelementptr i64, ptr [[BASE]], i64 [[IN_IDX1]]
-; CHECK-NEXT:    [[CONST1:%.*]] = getelementptr i64, ptr [[BASE]], i64 256
-; CHECK-NEXT:    [[IDX1:%.*]] = getelementptr i64, ptr [[CONST1]], i64 [[IN_IDX1]]
-; CHECK-NEXT:    [[CONST2:%.*]] = getelementptr i64, ptr [[BASE]], i64 512
-; CHECK-NEXT:    [[IDX2:%.*]] = getelementptr i64, ptr [[CONST2]], i64 [[IN_IDX1]]
-; CHECK-NEXT:    [[CONST3:%.*]] = getelementptr i64, ptr [[BASE]], i64 768
-; CHECK-NEXT:    [[IDX3:%.*]] = getelementptr i64, ptr [[CONST3]], i64 [[IN_IDX1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i64, ptr [[BASE]], i64 [[IN_IDX1]]
+; CHECK-NEXT:    [[IDX1:%.*]] = getelementptr i64, ptr [[TMP0]], i64 256
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i64, ptr [[BASE]], i64 [[IN_IDX1]]
+; CHECK-NEXT:    [[IDX2:%.*]] = getelementptr i64, ptr [[TMP1]], i64 512
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i64, ptr [[BASE]], i64 [[IN_IDX1]]
+; CHECK-NEXT:    [[IDX3:%.*]] = getelementptr i64, ptr [[TMP2]], i64 768
 ; CHECK-NEXT:    [[CMP0:%.*]] = icmp eq i64 [[IN_IDX0]], 0
 ; CHECK-NEXT:    br i1 [[CMP0]], label [[BB_1:%.*]], label [[END:%.*]]
 ; CHECK:       bb.1:
@@ -131,12 +131,12 @@ define void @different_type_reorder(ptr %in.ptr, i64 %in.idx0, i64 %in.idx1) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[BASE:%.*]] = getelementptr i64, ptr [[IN_PTR]], i64 [[IN_IDX0]]
 ; CHECK-NEXT:    [[IDX0:%.*]] = getelementptr i64, ptr [[BASE]], i64 [[IN_IDX1]]
-; CHECK-NEXT:    [[CONST1:%.*]] = getelementptr i8, ptr [[BASE]], i64 256
-; CHECK-NEXT:    [[IDX1:%.*]] = getelementptr i64, ptr [[CONST1]], i64 [[IN_IDX1]]
-; CHECK-NEXT:    [[CONST2:%.*]] = getelementptr i8, ptr [[BASE]], i64 512
-; CHECK-NEXT:    [[IDX2:%.*]] = getelementptr i64, ptr [[CONST2]], i64 [[IN_IDX1]]
-; CHECK-NEXT:    [[CONST3:%.*]] = getelementptr i8, ptr [[BASE]], i64 768
-; CHECK-NEXT:    [[IDX3:%.*]] = getelementptr i64, ptr [[CONST3]], i64 [[IN_IDX1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i64, ptr [[BASE]], i64 [[IN_IDX1]]
+; CHECK-NEXT:    [[IDX1:%.*]] = getelementptr i8, ptr [[TMP0]], i64 256
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i64, ptr [[BASE]], i64 [[IN_IDX1]]
+; CHECK-NEXT:    [[IDX2:%.*]] = getelementptr i8, ptr [[TMP1]], i64 512
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i64, ptr [[BASE]], i64 [[IN_IDX1]]
+; CHECK-NEXT:    [[IDX3:%.*]] = getelementptr i8, ptr [[TMP2]], i64 768
 ; CHECK-NEXT:    [[CMP0:%.*]] = icmp eq i64 [[IN_IDX0]], 0
 ; CHECK-NEXT:    br i1 [[CMP0]], label [[BB_1:%.*]], label [[END:%.*]]
 ; CHECK:       bb.1:
@@ -194,12 +194,12 @@ define void @different_type_reorder2(ptr %in.ptr, i64 %in.idx0, i64 %in.idx1) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[BASE:%.*]] = getelementptr i8, ptr [[IN_PTR]], i64 [[IN_IDX0]]
 ; CHECK-NEXT:    [[IDX0:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[IN_IDX1]]
-; CHECK-NEXT:    [[CONST1:%.*]] = getelementptr i64, ptr [[BASE]], i64 256
-; CHECK-NEXT:    [[IDX1:%.*]] = getelementptr i8, ptr [[CONST1]], i64 [[IN_IDX1]]
-; CHECK-NEXT:    [[CONST2:%.*]] = getelementptr i64, ptr [[BASE]], i64 512
-; CHECK-NEXT:    [[IDX2:%.*]] = getelementptr i8, ptr [[CONST2]], i64 [[IN_IDX1]]
-; CHECK-NEXT:    [[CONST3:%.*]] = getelementptr i64, ptr [[BASE]], i64 768
-; CHECK-NEXT:    [[IDX3:%.*]] = getelementptr i8, ptr [[CONST3]], i64 [[IN_IDX1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[IN_IDX1]]
+; CHECK-NEXT:    [[IDX1:%.*]] = getelementptr i64, ptr [[TMP0]], i64 256
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[IN_IDX1]]
+; CHECK-NEXT:    [[IDX2:%.*]] = getelementptr i64, ptr [[TMP1]], i64 512
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[IN_IDX1]]
+; CHECK-NEXT:    [[IDX3:%.*]] = getelementptr i64, ptr [[TMP2]], i64 768
 ; CHECK-NEXT:    [[CMP0:%.*]] = icmp eq i64 [[IN_IDX0]], 0
 ; CHECK-NEXT:    br i1 [[CMP0]], label [[BB_1:%.*]], label [[END:%.*]]
 ; CHECK:       bb.1:
