@@ -1545,6 +1545,16 @@ class ExceptionSpecificationKind(BaseEnumeration):
 ### Cursors ###
 
 
+# This guard is used to ensure that no operations are possible on null cursors
+def cursor_null_guard(func):
+    def inner(self, *args, **kwargs):
+        if self.is_null():
+            raise Exception("Tried calling method on a null-cursor.")
+        return func(self, *args, **kwargs)
+
+    return inner
+
+
 class Cursor(Structure):
     """
     The Cursor class represents a reference to an element within the AST. It
@@ -1554,18 +1564,6 @@ class Cursor(Structure):
     _fields_ = [("_kind_id", c_int), ("xdata", c_int), ("data", c_void_p * 3)]
 
     _tu: TranslationUnit
-
-    # This ensures that no operations are possible on null cursors
-    # by guarding all method calls with a not-null assert
-    def __getattribute__(self, key: str) -> object:
-        value = super().__getattribute__(key)
-        is_property = isinstance(getattr(Cursor, key, None), property)
-        # Don't guard the is_null method, since it is part of the guard
-        # and leads to infinite recursion otherwise
-        if is_property or callable(value):
-            if key != "is_null" and self.is_null():
-                raise Exception("Tried calling method on a null-cursor.")
-        return value
 
     @staticmethod
     def from_location(tu: TranslationUnit, location: SourceLocation) -> Cursor:
@@ -1584,12 +1582,14 @@ class Cursor(Structure):
     def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
+    @cursor_null_guard
     def __hash__(self) -> int:
         return self.hash
 
     def is_null(self) -> bool:
         return self == conf.null_cursor
 
+    @cursor_null_guard
     def is_definition(self) -> bool:
         """
         Returns true if the declaration pointed at by the cursor is also a
@@ -1597,40 +1597,48 @@ class Cursor(Structure):
         """
         return conf.lib.clang_isCursorDefinition(self)  # type: ignore [no-any-return]
 
+    @cursor_null_guard
     def is_const_method(self) -> bool:
         """Returns True if the cursor refers to a C++ member function or member
         function template that is declared 'const'.
         """
         return conf.lib.clang_CXXMethod_isConst(self)  # type: ignore [no-any-return]
 
+    @cursor_null_guard
     def is_converting_constructor(self) -> bool:
         """Returns True if the cursor refers to a C++ converting constructor."""
         return conf.lib.clang_CXXConstructor_isConvertingConstructor(self)  # type: ignore [no-any-return]
 
+    @cursor_null_guard
     def is_copy_constructor(self) -> bool:
         """Returns True if the cursor refers to a C++ copy constructor."""
         return conf.lib.clang_CXXConstructor_isCopyConstructor(self)  # type: ignore [no-any-return]
 
+    @cursor_null_guard
     def is_default_constructor(self) -> bool:
         """Returns True if the cursor refers to a C++ default constructor."""
         return conf.lib.clang_CXXConstructor_isDefaultConstructor(self)  # type: ignore [no-any-return]
 
+    @cursor_null_guard
     def is_move_constructor(self) -> bool:
         """Returns True if the cursor refers to a C++ move constructor."""
         return conf.lib.clang_CXXConstructor_isMoveConstructor(self)  # type: ignore [no-any-return]
 
+    @cursor_null_guard
     def is_default_method(self) -> bool:
         """Returns True if the cursor refers to a C++ member function or member
         function template that is declared '= default'.
         """
         return conf.lib.clang_CXXMethod_isDefaulted(self)  # type: ignore [no-any-return]
 
+    @cursor_null_guard
     def is_deleted_method(self) -> bool:
         """Returns True if the cursor refers to a C++ member function or member
         function template that is declared '= delete'.
         """
         return conf.lib.clang_CXXMethod_isDeleted(self)  # type: ignore [no-any-return]
 
+    @cursor_null_guard
     def is_copy_assignment_operator_method(self) -> bool:
         """Returnrs True if the cursor refers to a copy-assignment operator.
 
@@ -1656,6 +1664,7 @@ class Cursor(Structure):
         """
         return conf.lib.clang_CXXMethod_isCopyAssignmentOperator(self)  # type: ignore [no-any-return]
 
+    @cursor_null_guard
     def is_move_assignment_operator_method(self) -> bool:
         """Returnrs True if the cursor refers to a move-assignment operator.
 
@@ -1681,6 +1690,7 @@ class Cursor(Structure):
         """
         return conf.lib.clang_CXXMethod_isMoveAssignmentOperator(self)  # type: ignore [no-any-return]
 
+    @cursor_null_guard
     def is_explicit_method(self) -> bool:
         """Determines if a C++ constructor or conversion function is
         explicit, returning 1 if such is the case and 0 otherwise.
@@ -1726,40 +1736,47 @@ class Cursor(Structure):
         """
         return conf.lib.clang_CXXMethod_isExplicit(self)  # type: ignore [no-any-return]
 
+    @cursor_null_guard
     def is_mutable_field(self) -> bool:
         """Returns True if the cursor refers to a C++ field that is declared
         'mutable'.
         """
         return conf.lib.clang_CXXField_isMutable(self)  # type: ignore [no-any-return]
 
+    @cursor_null_guard
     def is_pure_virtual_method(self) -> bool:
         """Returns True if the cursor refers to a C++ member function or member
         function template that is declared pure virtual.
         """
         return conf.lib.clang_CXXMethod_isPureVirtual(self)  # type: ignore [no-any-return]
 
+    @cursor_null_guard
     def is_static_method(self) -> bool:
         """Returns True if the cursor refers to a C++ member function or member
         function template that is declared 'static'.
         """
         return conf.lib.clang_CXXMethod_isStatic(self)  # type: ignore [no-any-return]
 
+    @cursor_null_guard
     def is_virtual_method(self) -> bool:
         """Returns True if the cursor refers to a C++ member function or member
         function template that is declared 'virtual'.
         """
         return conf.lib.clang_CXXMethod_isVirtual(self)  # type: ignore [no-any-return]
 
+    @cursor_null_guard
     def is_abstract_record(self) -> bool:
         """Returns True if the cursor refers to a C++ record declaration
         that has pure virtual member functions.
         """
         return conf.lib.clang_CXXRecord_isAbstract(self)  # type: ignore [no-any-return]
 
+    @cursor_null_guard
     def is_scoped_enum(self) -> bool:
         """Returns True if the cursor refers to a scoped enum declaration."""
         return conf.lib.clang_EnumDecl_isScoped(self)  # type: ignore [no-any-return]
 
+    @cursor_null_guard
     def get_definition(self) -> Cursor | None:
         """
         If the cursor is a reference to a declaration or a declaration of
@@ -1770,6 +1787,7 @@ class Cursor(Structure):
         # declaration prior to issuing the lookup.
         return Cursor.from_result(conf.lib.clang_getCursorDefinition(self), self)
 
+    @cursor_null_guard
     def get_usr(self) -> str:
         """Return the Unified Symbol Resolution (USR) for the entity referenced
         by the given cursor.
@@ -1781,6 +1799,7 @@ class Cursor(Structure):
         another translation unit."""
         return _CXString.from_result(conf.lib.clang_getCursorUSR(self))
 
+    @cursor_null_guard
     def get_included_file(self) -> File:
         """Returns the File that is included by the current inclusion cursor."""
         assert self.kind == CursorKind.INCLUSION_DIRECTIVE
@@ -1788,11 +1807,13 @@ class Cursor(Structure):
         return File.from_result(conf.lib.clang_getIncludedFile(self), self)
 
     @property
+    @cursor_null_guard
     def kind(self) -> CursorKind:
         """Return the kind of this cursor."""
         return CursorKind.from_id(self._kind_id)
 
     @property
+    @cursor_null_guard
     def spelling(self) -> str:
         """Return the spelling of the entity pointed at by the cursor."""
         if not hasattr(self, "_spelling"):
@@ -1802,6 +1823,7 @@ class Cursor(Structure):
 
         return self._spelling
 
+    @cursor_null_guard
     def pretty_printed(self, policy: PrintingPolicy) -> str:
         """
         Pretty print declarations.
@@ -1813,6 +1835,7 @@ class Cursor(Structure):
         )
 
     @property
+    @cursor_null_guard
     def displayname(self) -> str:
         """
         Return the display name for the entity referenced by this cursor.
@@ -1829,6 +1852,7 @@ class Cursor(Structure):
         return self._displayname
 
     @property
+    @cursor_null_guard
     def mangled_name(self) -> str:
         """Return the mangled name for the entity referenced by this cursor."""
         if not hasattr(self, "_mangled_name"):
@@ -1839,6 +1863,7 @@ class Cursor(Structure):
         return self._mangled_name
 
     @property
+    @cursor_null_guard
     def location(self) -> SourceLocation:
         """
         Return the source location (the starting character) of the entity
@@ -1850,6 +1875,7 @@ class Cursor(Structure):
         return self._loc
 
     @property
+    @cursor_null_guard
     def linkage(self) -> LinkageKind:
         """Return the linkage of this cursor."""
         if not hasattr(self, "_linkage"):
@@ -1858,6 +1884,7 @@ class Cursor(Structure):
         return LinkageKind.from_id(self._linkage)
 
     @property
+    @cursor_null_guard
     def tls_kind(self) -> TLSKind:
         """Return the thread-local storage (TLS) kind of this cursor."""
         if not hasattr(self, "_tls_kind"):
@@ -1866,6 +1893,7 @@ class Cursor(Structure):
         return TLSKind.from_id(self._tls_kind)
 
     @property
+    @cursor_null_guard
     def extent(self) -> SourceRange:
         """
         Return the source range (the range of text) occupied by the entity
@@ -1877,6 +1905,7 @@ class Cursor(Structure):
         return self._extent
 
     @property
+    @cursor_null_guard
     def storage_class(self) -> StorageClass:
         """
         Retrieves the storage class (if any) of the entity pointed at by the
@@ -1888,6 +1917,7 @@ class Cursor(Structure):
         return StorageClass.from_id(self._storage_class)
 
     @property
+    @cursor_null_guard
     def availability(self) -> AvailabilityKind:
         """
         Retrieves the availability of the entity pointed at by the cursor.
@@ -1898,6 +1928,7 @@ class Cursor(Structure):
         return AvailabilityKind.from_id(self._availability)
 
     @property
+    @cursor_null_guard
     def binary_operator(self) -> BinaryOperator:
         """
         Retrieves the opcode if this cursor points to a binary operator
@@ -1910,6 +1941,7 @@ class Cursor(Structure):
         return BinaryOperator.from_id(self._binopcode)
 
     @property
+    @cursor_null_guard
     def access_specifier(self) -> AccessSpecifier:
         """
         Retrieves the access specifier (if any) of the entity pointed at by the
@@ -1921,6 +1953,7 @@ class Cursor(Structure):
         return AccessSpecifier.from_id(self._access_specifier)
 
     @property
+    @cursor_null_guard
     def type(self) -> Type:
         """
         Retrieve the Type (if any) of the entity pointed at by the cursor.
@@ -1931,6 +1964,7 @@ class Cursor(Structure):
         return self._type
 
     @property
+    @cursor_null_guard
     def canonical(self) -> Cursor:
         """Return the canonical Cursor corresponding to this Cursor.
 
@@ -1947,6 +1981,7 @@ class Cursor(Structure):
         return self._canonical
 
     @property
+    @cursor_null_guard
     def result_type(self) -> Type:
         """Retrieve the Type of the result for this Cursor."""
         if not hasattr(self, "_result_type"):
@@ -1957,6 +1992,7 @@ class Cursor(Structure):
         return self._result_type
 
     @property
+    @cursor_null_guard
     def exception_specification_kind(self) -> ExceptionSpecificationKind:
         """
         Retrieve the exception specification kind, which is one of the values
@@ -1971,6 +2007,7 @@ class Cursor(Structure):
         return self._exception_specification_kind
 
     @property
+    @cursor_null_guard
     def underlying_typedef_type(self) -> Type:
         """Return the underlying type of a typedef declaration.
 
@@ -1986,6 +2023,7 @@ class Cursor(Structure):
         return self._underlying_type
 
     @property
+    @cursor_null_guard
     def enum_type(self) -> Type:
         """Return the integer type of an enum declaration.
 
@@ -2001,6 +2039,7 @@ class Cursor(Structure):
         return self._enum_type
 
     @property
+    @cursor_null_guard
     def enum_value(self) -> int:
         """Return the value of an enum constant."""
         if not hasattr(self, "_enum_value"):
@@ -2028,6 +2067,7 @@ class Cursor(Structure):
         return self._enum_value
 
     @property
+    @cursor_null_guard
     def objc_type_encoding(self) -> str:
         """Return the Objective-C type encoding as a str."""
         if not hasattr(self, "_objc_type_encoding"):
@@ -2038,6 +2078,7 @@ class Cursor(Structure):
         return self._objc_type_encoding
 
     @property
+    @cursor_null_guard
     def hash(self) -> int:
         """Returns a hash of the cursor as an int."""
         if not hasattr(self, "_hash"):
@@ -2046,6 +2087,7 @@ class Cursor(Structure):
         return self._hash
 
     @property
+    @cursor_null_guard
     def semantic_parent(self) -> Cursor | None:
         """Return the semantic parent for this cursor."""
         if not hasattr(self, "_semantic_parent"):
@@ -2056,6 +2098,7 @@ class Cursor(Structure):
         return self._semantic_parent
 
     @property
+    @cursor_null_guard
     def lexical_parent(self) -> Cursor | None:
         """Return the lexical parent for this cursor."""
         if not hasattr(self, "_lexical_parent"):
@@ -2066,6 +2109,7 @@ class Cursor(Structure):
         return self._lexical_parent
 
     @property
+    @cursor_null_guard
     def specialized_template(self) -> Cursor | None:
         """Return the primary template that this cursor is a specialization of, if any."""
         return Cursor.from_cursor_result(
@@ -2073,6 +2117,7 @@ class Cursor(Structure):
         )
 
     @property
+    @cursor_null_guard
     def translation_unit(self) -> TranslationUnit:
         """Returns the TranslationUnit to which this Cursor belongs."""
         # If this triggers an AttributeError, the instance was not properly
@@ -2080,6 +2125,7 @@ class Cursor(Structure):
         return self._tu
 
     @property
+    @cursor_null_guard
     def referenced(self) -> Cursor | None:
         """
         For a cursor that is a reference, returns a cursor
@@ -2093,25 +2139,30 @@ class Cursor(Structure):
         return self._referenced
 
     @property
+    @cursor_null_guard
     def brief_comment(self) -> str:
         """Returns the brief comment text associated with that Cursor"""
         return _CXString.from_result(conf.lib.clang_Cursor_getBriefCommentText(self))
 
     @property
+    @cursor_null_guard
     def raw_comment(self) -> str:
         """Returns the raw comment text associated with that Cursor"""
         return _CXString.from_result(conf.lib.clang_Cursor_getRawCommentText(self))
 
+    @cursor_null_guard
     def get_arguments(self) -> Iterator[Cursor | None]:
         """Return an iterator for accessing the arguments of this cursor."""
         num_args = conf.lib.clang_Cursor_getNumArguments(self)
         for i in range(0, num_args):
             yield Cursor.from_result(conf.lib.clang_Cursor_getArgument(self, i), self)
 
+    @cursor_null_guard
     def get_num_template_arguments(self) -> int:
         """Returns the number of template args associated with this cursor."""
         return conf.lib.clang_Cursor_getNumTemplateArguments(self)  # type: ignore [no-any-return]
 
+    @cursor_null_guard
     def get_template_argument_kind(self, num: int) -> TemplateArgumentKind:
         """Returns the TemplateArgumentKind for the indicated template
         argument."""
@@ -2119,20 +2170,24 @@ class Cursor(Structure):
             conf.lib.clang_Cursor_getTemplateArgumentKind(self, num)
         )
 
+    @cursor_null_guard
     def get_template_argument_type(self, num: int) -> Type:
         """Returns the CXType for the indicated template argument."""
         return Type.from_result(
             conf.lib.clang_Cursor_getTemplateArgumentType(self, num), (self, num)
         )
 
+    @cursor_null_guard
     def get_template_argument_value(self, num: int) -> int:
         """Returns the value of the indicated arg as a signed 64b integer."""
         return conf.lib.clang_Cursor_getTemplateArgumentValue(self, num)  # type: ignore [no-any-return]
 
+    @cursor_null_guard
     def get_template_argument_unsigned_value(self, num: int) -> int:
         """Returns the value of the indicated arg as an unsigned 64b integer."""
         return conf.lib.clang_Cursor_getTemplateArgumentUnsignedValue(self, num)  # type: ignore [no-any-return]
 
+    @cursor_null_guard
     def get_children(self) -> Iterator[Cursor]:
         """Return an iterator for accessing the children of this cursor."""
 
@@ -2150,6 +2205,7 @@ class Cursor(Structure):
         conf.lib.clang_visitChildren(self, cursor_visit_callback(visitor), children)
         return iter(children)
 
+    @cursor_null_guard
     def walk_preorder(self) -> Iterator[Cursor]:
         """Depth-first preorder walk over the cursor and its descendants.
 
@@ -2160,6 +2216,7 @@ class Cursor(Structure):
             for descendant in child.walk_preorder():
                 yield descendant
 
+    @cursor_null_guard
     def get_tokens(self) -> Iterator[Token]:
         """Obtain Token instances formulating that compose this Cursor.
 
@@ -2168,18 +2225,22 @@ class Cursor(Structure):
         """
         return TokenGroup.get_tokens(self._tu, self.extent)
 
+    @cursor_null_guard
     def get_field_offsetof(self) -> int:
         """Returns the offsetof the FIELD_DECL pointed by this Cursor."""
         return conf.lib.clang_Cursor_getOffsetOfField(self)  # type: ignore [no-any-return]
 
+    @cursor_null_guard
     def get_base_offsetof(self, parent: Cursor) -> int:
         """Returns the offsetof the CXX_BASE_SPECIFIER pointed by this Cursor."""
         return conf.lib.clang_getOffsetOfBase(parent, self)  # type: ignore [no-any-return]
 
+    @cursor_null_guard
     def is_virtual_base(self) -> bool:
         """Returns whether the CXX_BASE_SPECIFIER pointed by this Cursor is virtual."""
         return conf.lib.clang_isVirtualBase(self)  # type: ignore [no-any-return]
 
+    @cursor_null_guard
     def is_anonymous(self) -> bool:
         """
         Check whether this is a record type without a name, or a field where
@@ -2192,6 +2253,7 @@ class Cursor(Structure):
             return self.type.get_declaration().is_anonymous()
         return conf.lib.clang_Cursor_isAnonymous(self)  # type: ignore [no-any-return]
 
+    @cursor_null_guard
     def is_anonymous_record_decl(self) -> bool:
         """
         Check if the record is an anonymous union as defined in the C/C++ standard
@@ -2202,18 +2264,21 @@ class Cursor(Structure):
             return self.type.get_declaration().is_anonymous_record_decl()
         return conf.lib.clang_Cursor_isAnonymousRecordDecl(self)  # type: ignore [no-any-return]
 
+    @cursor_null_guard
     def is_bitfield(self) -> bool:
         """
         Check if the field is a bitfield.
         """
         return conf.lib.clang_Cursor_isBitField(self)  # type: ignore [no-any-return]
 
+    @cursor_null_guard
     def get_bitfield_width(self) -> int:
         """
         Retrieve the width of a bitfield.
         """
         return conf.lib.clang_getFieldDeclBitWidth(self)  # type: ignore [no-any-return]
 
+    @cursor_null_guard
     def has_attrs(self) -> bool:
         """
         Determine whether the given cursor has any attributes.
