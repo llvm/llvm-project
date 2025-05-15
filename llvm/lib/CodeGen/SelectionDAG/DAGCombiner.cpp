@@ -10972,6 +10972,22 @@ SDValue DAGCombiner::visitSRL(SDNode *N) {
       return DAG.getNode(ISD::SRL, DL, VT, N0, NewOp1);
   }
 
+  // fold (srl (logic_op x, (shl (zext y), c1)), c1)
+  //   -> (logic_op (srl x, c1), (zext y))
+  // c1 <= leadingzeros(zext(y))
+  SDValue X, ZExtY;
+  if (N1C && sd_match(N0, m_OneUse(m_BitwiseLogic(
+                              m_Value(X),
+                              m_OneUse(m_Shl(m_AllOf(m_Value(ZExtY),
+                                                     m_Opc(ISD::ZERO_EXTEND)),
+                                             m_Specific(N1))))))) {
+    unsigned NumLeadingZeros = ZExtY.getScalarValueSizeInBits() -
+                               ZExtY.getOperand(0).getScalarValueSizeInBits();
+    if (N1C->getZExtValue() <= NumLeadingZeros)
+      return DAG.getNode(N0.getOpcode(), SDLoc(N0), VT,
+                         DAG.getNode(ISD::SRL, SDLoc(N0), VT, X, N1), ZExtY);
+  }
+
   // fold operands of srl based on knowledge that the low bits are not
   // demanded.
   if (SimplifyDemandedBits(SDValue(N, 0)))
@@ -23018,18 +23034,33 @@ SDValue DAGCombiner::visitINSERT_VECTOR_ELT(SDNode *N) {
             return NewShuffle;
       }
 
-      // If all insertions are zero value, try to convert to AND mask.
-      // TODO: Do this for -1 with OR mask?
-      if (!LegalOperations && llvm::isNullConstant(InVal) &&
-          all_of(Ops, [InVal](SDValue Op) { return !Op || Op == InVal; }) &&
-          count_if(Ops, [InVal](SDValue Op) { return Op == InVal; }) >= 2) {
-        SDValue Zero = DAG.getConstant(0, DL, MaxEltVT);
-        SDValue AllOnes = DAG.getAllOnesConstant(DL, MaxEltVT);
-        SmallVector<SDValue, 8> Mask(NumElts);
-        for (unsigned I = 0; I != NumElts; ++I)
-          Mask[I] = Ops[I] ? Zero : AllOnes;
-        return DAG.getNode(ISD::AND, DL, VT, CurVec,
-                           DAG.getBuildVector(VT, DL, Mask));
+      if (!LegalOperations) {
+        bool IsNull = llvm::isNullConstant(InVal);
+        // We can convert to AND/OR mask if all insertions are zero or -1
+        // respectively.
+        if ((IsNull || llvm::isAllOnesConstant(InVal)) &&
+            all_of(Ops, [InVal](SDValue Op) { return !Op || Op == InVal; }) &&
+            count_if(Ops, [InVal](SDValue Op) { return Op == InVal; }) >= 2) {
+          SDValue Zero = DAG.getConstant(0, DL, MaxEltVT);
+          SDValue AllOnes = DAG.getAllOnesConstant(DL, MaxEltVT);
+          SmallVector<SDValue, 8> Mask(NumElts);
+
+          // Build the mask and return the corresponding DAG node.
+          auto BuildMaskAndNode = [&](SDValue TrueVal, SDValue FalseVal,
+                                      unsigned MaskOpcode) {
+            for (unsigned I = 0; I != NumElts; ++I)
+              Mask[I] = Ops[I] ? TrueVal : FalseVal;
+            return DAG.getNode(MaskOpcode, DL, VT, CurVec,
+                               DAG.getBuildVector(VT, DL, Mask));
+          };
+
+          // If all elements are zero, we can use AND with all ones.
+          if (IsNull)
+            return BuildMaskAndNode(Zero, AllOnes, ISD::AND);
+
+          // If all elements are -1, we can use OR with zero.
+          return BuildMaskAndNode(AllOnes, Zero, ISD::OR);
+        }
       }
 
       // Failed to find a match in the chain - bail.

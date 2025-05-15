@@ -1536,6 +1536,7 @@ cc_library(
         ":Core",
         ":Support",
         ":Target",
+        ":TargetParser",
         ":TransformUtils",
         ":config",
     ],

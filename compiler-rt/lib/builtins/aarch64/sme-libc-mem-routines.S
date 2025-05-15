@@ -235,7 +235,7 @@ END_COMPILERRT_FUNCTION(__arm_sc_memcpy)
 DEFINE_COMPILERRT_FUNCTION_ALIAS(__arm_sc_memmove, __arm_sc_memcpy)
 
 // This version uses FP registers. Use this only on targets with them
-#if defined(__aarch64__) && __ARM_FP != 0
+#if (defined(__aarch64__) && __ARM_FP != 0) || defined(__arm64ec__)
 //
 //  __arm_sc_memset
 //
