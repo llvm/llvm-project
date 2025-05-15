@@ -474,10 +474,6 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
       return false;
     return this->emitDecayPtr(*FromT, *ToT, CE);
   }
-
-  case CK_LValueToRValueBitCast:
-    return this->emitBuiltinBitCast(CE);
-
   case CK_IntegralToBoolean:
   case CK_FixedPointToBoolean: {
     // HLSL uses this to cast to one-element vectors.
@@ -733,6 +729,11 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     return this->emitInvalid(CE);
   }
   llvm_unreachable("Unhandled clang::CastKind enum");
+}
+
+template <class Emitter>
+bool Compiler<Emitter>::VisitBuiltinBitCastExpr(const BuiltinBitCastExpr *E) {
+  return this->emitBuiltinBitCast(E);
 }
 
 template <class Emitter>
