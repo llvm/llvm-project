@@ -412,7 +412,7 @@ public:
             // an alias to the new verbose filename option because this
             // closely mimics the behavior under the old option.
             ShouldWriteStableReportFilename || ShouldWriteVerboseReportFilename,
-            AnalyzerWerror,
+            static_cast<bool>(AnalyzerWerror),
             ShouldApplyFixIts,
             ShouldDisplayCheckerNameForText};
   }
