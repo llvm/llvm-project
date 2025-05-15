@@ -1251,12 +1251,11 @@ bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm,
 
 void diagnoseEnumValue(InterpState &S, CodePtr OpPC, const EnumDecl *ED,
                        const APSInt &Value) {
-  llvm::APInt Min;
-  llvm::APInt Max;
-
   if (S.EvaluatingDecl && !S.EvaluatingDecl->isConstexpr())
     return;
 
+  llvm::APInt Min;
+  llvm::APInt Max;
   ED->getValueRange(Max, Min);
   --Max;
 
@@ -1373,6 +1372,10 @@ static bool checkConstructor(InterpState &S, CodePtr OpPC, const Function *Func,
 
 bool CheckDestructor(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (!CheckLive(S, OpPC, Ptr, AK_Destroy))
+    return false;
+  if (!CheckTemporary(S, OpPC, Ptr, AK_Destroy))
+    return false;
+  if (!CheckRange(S, OpPC, Ptr, AK_Destroy))
     return false;
 
   // Can't call a dtor on a global variable.
@@ -1502,7 +1505,7 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
   InterpFrame *FrameBefore = S.Current;
   S.Current = NewFrame.get();
 
-  InterpStateCCOverride CCOverride(S, Func->getDecl()->isImmediateFunction());
+  InterpStateCCOverride CCOverride(S, Func->isImmediate());
   // Note that we cannot assert(CallResult.hasValue()) here since
   // Ret() above only sets the APValue if the curent frame doesn't
   // have a caller set.

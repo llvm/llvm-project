@@ -51,6 +51,10 @@ def HasVIS3 : Predicate<"Subtarget->isVIS3()">,
 def HasUA2005 : Predicate<"Subtarget->isUA2005()">,
                 AssemblerPredicate<(all_of FeatureUA2005)>;
 
+// HasUA2007 - This is true when the target processor has UA 2007 extensions.
+def HasUA2007 : Predicate<"Subtarget->isUA2007()">,
+                AssemblerPredicate<(all_of FeatureUA2007)>;
+
 // HasHardQuad - This is true when the target processor supports quad floating
 // point instructions.
 def HasHardQuad : Predicate<"Subtarget->hasHardQuad()">;
@@ -1027,10 +1031,10 @@ class CPBranchSPA<dag ins, string asmstr, list<dag> pattern>
 
 } // let isBranch = 1, isTerminator = 1, hasDelaySlot = 1
 
-def CBCOND  : CPBranchSP<(ins brtarget:$imm22, CCOp:$cond),
+def CPBCOND  : CPBranchSP<(ins brtarget:$imm22, CCOp:$cond),
                           "cb$cond $imm22",
                           [(SPbrfcc bb:$imm22, imm:$cond)]>;
-def CBCONDA : CPBranchSPA<(ins brtarget:$imm22, CCOp:$cond),
+def CPBCONDA : CPBranchSPA<(ins brtarget:$imm22, CCOp:$cond),
                            "cb$cond,a $imm22", []>;
 
 // Section B.24 - Call and Link Instruction, p. 125

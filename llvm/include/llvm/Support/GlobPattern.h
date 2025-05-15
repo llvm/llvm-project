@@ -16,6 +16,7 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <optional>
 
@@ -54,10 +55,10 @@ public:
   /// \param MaxSubPatterns if provided limit the number of allowed subpatterns
   ///                       created from expanding braces otherwise disable
   ///                       brace expansion
-  static Expected<GlobPattern>
+  LLVM_ABI static Expected<GlobPattern>
   create(StringRef Pat, std::optional<size_t> MaxSubPatterns = {});
   /// \returns \p true if \p S matches this glob pattern
-  bool match(StringRef S) const;
+  LLVM_ABI bool match(StringRef S) const;
 
   // Returns true for glob pattern "*". Can be used to avoid expensive
   // preparation/acquisition of the input for match().
@@ -74,9 +75,9 @@ private:
 
   struct SubGlobPattern {
     /// \param Pat the pattern to match against
-    static Expected<SubGlobPattern> create(StringRef Pat);
+    LLVM_ABI static Expected<SubGlobPattern> create(StringRef Pat);
     /// \returns \p true if \p S matches this glob pattern
-    bool match(StringRef S) const;
+    LLVM_ABI bool match(StringRef S) const;
     StringRef getPat() const { return StringRef(Pat.data(), Pat.size()); }
 
     // Brackets with their end position and matched bytes.

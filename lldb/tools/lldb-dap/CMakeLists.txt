@@ -85,17 +85,4 @@ if(LLDB_DAP_WELCOME_MESSAGE)
     -DLLDB_DAP_WELCOME_MESSAGE=\"${LLDB_DAP_WELCOME_MESSAGE}\")
 endif()
 
-if(LLDB_BUILD_FRAMEWORK)
-  # In the build-tree, we know the exact path to the framework directory.
-  # The installed framework can be in different locations.
-  lldb_setup_rpaths(lldb-dap
-    BUILD_RPATH
-      "${LLDB_FRAMEWORK_ABSOLUTE_BUILD_DIR}"
-    INSTALL_RPATH
-      "@loader_path/../../../SharedFrameworks"
-      "@loader_path/../../System/Library/PrivateFrameworks"
-      "@loader_path/../../Library/PrivateFrameworks"
-  )
-endif()
-
 add_subdirectory(tool)
