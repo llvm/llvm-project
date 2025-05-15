@@ -300,8 +300,8 @@ def NVVM_InlinePtxOp : NVVM_Op<"inline_ptx",
   
   let extraClassDefinition = [{
     std::string $cppClass::getPtx() {
-      StringRef eventName = getPtxCode();
-      return std::string(eventName.data());
+      StringRef ptxInstStr = getPtxCode();
+      return std::string(ptxInstStr.data());
     }
   }];
 }
