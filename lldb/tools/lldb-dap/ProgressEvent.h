@@ -54,7 +54,7 @@ public:
   /// \return
   ///       \b true if two event messages would result in the same event for the
   ///       IDE, e.g. same rounded percentage.
-  bool EqualsForIDE(const ProgressEvent &other, uint64_t total) const;
+  bool EqualsForIDE(const ProgressEvent &other) const;
 
   llvm::StringRef GetEventName() const;
 
