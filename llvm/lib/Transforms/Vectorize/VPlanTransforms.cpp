@@ -1101,21 +1101,21 @@ static void convertToUniformRecipes(VPlan &Plan) {
       if (RepR && RepR->isUniform())
         continue;
 
-      auto *RepOrWiden = cast<VPSingleDefRecipe>(&R);
+      auto *RepOrWidenR = cast<VPSingleDefRecipe>(&R);
       // Skip recipes that aren't uniform and don't have only their scalar
-      // results used. In the later case, we would introduce extra broadcasts.
-      if (!vputils::isUniformAfterVectorization(RepOrWiden) ||
-          any_of(RepOrWiden->users(), [RepOrWiden](VPUser *U) {
-            return !U->usesScalars(RepOrWiden);
+      // results used. In the latter case, we would introduce extra broadcasts.
+      if (!vputils::isUniformAfterVectorization(RepOrWidenR) ||
+          any_of(RepOrWidenR->users(), [RepOrWidenR](VPUser *U) {
+            return !U->usesScalars(RepOrWidenR);
           }))
         continue;
 
       auto *Clone =
-          new VPReplicateRecipe(RepOrWiden->getUnderlyingInstr(),
-                                RepOrWiden->operands(), /*IsUniform*/ true);
-      Clone->insertBefore(RepOrWiden);
-      RepOrWiden->replaceAllUsesWith(Clone);
-      RepOrWiden->eraseFromParent();
+          new VPReplicateRecipe(RepOrWidenR->getUnderlyingInstr(),
+                                RepOrWidenR->operands(), /*IsUniform*/ true);
+      Clone->insertBefore(RepOrWidenR);
+      RepOrWidenR->replaceAllUsesWith(Clone);
+      RepOrWidenR->eraseFromParent();
     }
   }
 }
