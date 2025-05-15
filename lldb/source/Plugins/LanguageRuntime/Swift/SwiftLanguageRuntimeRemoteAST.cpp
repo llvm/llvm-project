@@ -270,8 +270,6 @@ SwiftLanguageRuntime::GetDynamicTypeAndAddress_ExistentialRemoteAST(
 llvm::Expected<CompilerType>
 SwiftLanguageRuntime::BindGenericTypeParametersRemoteAST(
     StackFrame &stack_frame, CompilerType base_type) {
-  LLDB_SCOPED_TIMER();
-
   // If this is a TypeRef type, bind that.
   auto sc = stack_frame.GetSymbolContext(lldb::eSymbolContextEverything);
   if (auto ts =

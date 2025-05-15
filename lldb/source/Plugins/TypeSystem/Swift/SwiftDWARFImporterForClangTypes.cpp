@@ -60,7 +60,6 @@ SwiftDWARFImporterForClangTypes::SwiftDWARFImporterForClangTypes(
 void SwiftDWARFImporterForClangTypes::lookupValue(
     StringRef name, std::optional<swift::ClangTypeKind> kind,
     StringRef inModule, llvm::SmallVectorImpl<CompilerType> &results) {
-  LLDB_SCOPED_TIMER();
   LLDB_LOG(GetLog(LLDBLog::Types), "{0}::lookupValue(\"{1}\")", m_description,
            name.str());
 
