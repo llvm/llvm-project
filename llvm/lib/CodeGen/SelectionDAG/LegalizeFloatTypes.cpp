@@ -2645,9 +2645,7 @@ SDValue DAGTypeLegalizer::PromoteFloatOp_UnaryOp(SDNode *N, unsigned OpNo) {
 // Convert the promoted float value to the desired integer type
 SDValue DAGTypeLegalizer::PromoteFloatOp_AssertNoFPClass(SDNode *N,
                                                          unsigned OpNo) {
-  SDValue Op = GetPromotedFloat(N->getOperand(0));
-  return DAG.getNode(N->getOpcode(), SDLoc(N), N->getValueType(0), Op,
-                     N->getOperand(1));
+  return GetPromotedFloat(N->getOperand(0));
 }
 
 SDValue DAGTypeLegalizer::PromoteFloatOp_FP_TO_XINT_SAT(SDNode *N,
@@ -3016,11 +3014,9 @@ SDValue DAGTypeLegalizer::PromoteFloatRes_UnaryOp(SDNode *N) {
 // operand have PromoteFloat type action.  Construct a new SDNode with the
 // promoted float value of the old operand.
 SDValue DAGTypeLegalizer::PromoteFloatRes_AssertNoFPClass(SDNode *N) {
-  EVT VT = N->getValueType(0);
-  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
-  SDValue Op = GetPromotedFloat(N->getOperand(0));
-  return DAG.getNode(N->getOpcode(), SDLoc(N), NVT, Op, N->getOperand(1));
+  return GetPromotedFloat(N->getOperand(0));
 }
+
 // Binary operations where the result and both operands have PromoteFloat type
 // action.  Construct a new SDNode with the promoted float values of the old
 // operands.
