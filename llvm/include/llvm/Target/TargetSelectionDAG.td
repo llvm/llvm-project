@@ -860,6 +860,12 @@ def find_last_active
     : SDNode<"ISD::VECTOR_FIND_LAST_ACTIVE",
              SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisVec<1>]>, []>;
 
+def get_active_lane_mask
+    : SDNode<
+          "ISD::GET_ACTIVE_LANE_MASK",
+          SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisInt<1>, SDTCisSameAs<1, 2>]>,
+          []>;
+
 // Nodes for intrinsics, you should use the intrinsic itself and let tblgen use
 // these internally.  Don't reference these directly.
 def intrinsic_void : SDNode<"ISD::INTRINSIC_VOID",
@@ -875,6 +881,7 @@ def SDT_assert : SDTypeProfile<1, 1,
   [SDTCisInt<0>, SDTCisInt<1>, SDTCisSameAs<1, 0>]>;
 def assertsext : SDNode<"ISD::AssertSext", SDT_assert>;
 def assertzext : SDNode<"ISD::AssertZext", SDT_assert>;
+def assertnofpclass : SDNode<"ISD::AssertNoFPClass", SDTFPUnaryOp>;
 def assertalign : SDNode<"ISD::AssertAlign", SDT_assert>;
 
 def convergencectrl_anchor : SDNode<"ISD::CONVERGENCECTRL_ANCHOR",
