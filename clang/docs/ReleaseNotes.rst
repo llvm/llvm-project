@@ -525,6 +525,10 @@ Improvements to Clang's diagnostics
 
 - An error is now emitted when OpenMP ``collapse`` and ``ordered`` clauses have an
   argument larger than what can fit within a 64-bit integer.
+  
+- Explanatory note is printed when ``assert`` fails during evaluation of a
+  constant expression. Prior to this, the error inaccurately implied that assert
+  could not be used at all in a constant expression (#GH130458)
 
 - A new off-by-default warning ``-Wms-bitfield-padding`` has been added to alert to cases where bit-field
   packing may differ under the MS struct ABI (#GH117428).
