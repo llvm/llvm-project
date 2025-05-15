@@ -213,8 +213,8 @@ struct S {
 };
 }
 
-#if __cplusplus >= 201103L
 namespace GH20723 {
+#if __cplusplus >= 201103L
 struct S {
     S operator[](int);
     S operator()();
@@ -228,9 +228,25 @@ void f() {
     static_assert(__is_same_as(decltype((S())[n] < 0), S), "");
     static_assert(__is_same_as(decltype((S())[n]->a), long), "");
 }
+#endif
+#if __cplusplus >= 202302
+struct S2 {
+    S2 operator[]();
+    S2* operator->();
+    template <typename U>
+    constexpr static int trailing = 0;
+};
+
+template <typename T>
+struct trailing{};
+
+void f2() {
+  static_assert(__is_same_as(decltype((S2())[]->trailing<int>), const int));
+  (void)[]->trailing<int>{return {};}();
 }
 #endif
 
+}
 
 struct S {
   template <typename T>

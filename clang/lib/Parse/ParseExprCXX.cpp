@@ -751,7 +751,23 @@ bool Parser::IsLambdaAfterTypeCast() {
       return false;
     if (!Tok.is(tok::identifier))
       return true;
-    return isCXXTypeId(TentativeCXXTypeIdContext::InTrailingReturnType);
+    if(NextToken().is(tok::l_brace))
+      return true;
+
+    // Use a nested unannotated so that we can revert
+    // annotations when we fail to find a brace.
+    TentativeParsingAction TPA(*this, /*Unannotated=*/true);
+    if(TryAnnotateTypeOrScopeToken()
+        || !Tok.isSimpleTypeSpecifier(getLangOpts())) {
+      TPA.Revert();
+      return false;
+    }
+    ConsumeAnyToken();
+    if(Tok.is(tok::l_brace)) {
+      TPA.Commit();
+      return true;
+    }
+    TPA.Revert();
   }
   return Tok.is(tok::l_brace);
 }
