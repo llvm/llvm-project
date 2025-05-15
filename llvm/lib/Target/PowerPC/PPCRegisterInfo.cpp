@@ -1610,33 +1610,33 @@ PPCRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   // Get the instruction opcode.
   unsigned OpC = MI.getOpcode();
 
-  if ((OpC == PPC::DYNAREAOFFSET || OpC == PPC::DYNAREAOFFSET8)) {
+  switch (OpC) {
+  case PPC::DYNAREAOFFSET:
+  case PPC::DYNAREAOFFSET8:
     lowerDynamicAreaOffset(II);
     // lowerDynamicAreaOffset erases II
     return true;
+  case PPC::DYNALLOC:
+  case PPC::DYNALLOC8: {
+    // Special case for dynamic alloca.
+    if (FPSI && FrameIndex == FPSI) {
+      lowerDynamicAlloc(II); // lowerDynamicAlloc erases II
+      return true;
+    }
+    break;
   }
-
-  // Special case for dynamic alloca.
-  if (FPSI && FrameIndex == FPSI &&
-      (OpC == PPC::DYNALLOC || OpC == PPC::DYNALLOC8)) {
-    lowerDynamicAlloc(II);
-    // lowerDynamicAlloc erases II
-    return true;
+  case PPC::PREPARE_PROBED_ALLOCA_64:
+  case PPC::PREPARE_PROBED_ALLOCA_32:
+  case PPC::PREPARE_PROBED_ALLOCA_NEGSIZE_SAME_REG_64:
+  case PPC::PREPARE_PROBED_ALLOCA_NEGSIZE_SAME_REG_32: {
+    if (FPSI && FrameIndex == FPSI) {
+      lowerPrepareProbedAlloca(II); // lowerPrepareProbedAlloca erases II
+      return true;
+    }
+    break;
   }
-
-  if (FPSI && FrameIndex == FPSI &&
-      (OpC == PPC::PREPARE_PROBED_ALLOCA_64 ||
-       OpC == PPC::PREPARE_PROBED_ALLOCA_32 ||
-       OpC == PPC::PREPARE_PROBED_ALLOCA_NEGSIZE_SAME_REG_64 ||
-       OpC == PPC::PREPARE_PROBED_ALLOCA_NEGSIZE_SAME_REG_32)) {
-    lowerPrepareProbedAlloca(II);
-    // lowerPrepareProbedAlloca erases II
-    return true;
-  }
-
-  // Special case for pseudo-ops SPILL_CR and RESTORE_CR, etc.
-  switch (OpC) {
   case PPC::SPILL_CR:
+    // Special case for pseudo-ops SPILL_CR and RESTORE_CR, etc.
     lowerCRSpilling(II, FrameIndex);
     return true;
   case PPC::RESTORE_CR:
