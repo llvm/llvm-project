@@ -2749,7 +2749,6 @@ genAtomicRead(lower::AbstractConverter &converter, mlir::Location loc,
               fir::FirOpBuilder::InsertPoint atomicAt,
               fir::FirOpBuilder::InsertPoint postAt) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-  fir::FirOpBuilder::InsertPoint saved = builder.saveInsertionPoint();
   builder.restoreInsertionPoint(preAt);
 
   mlir::Value storeAddr =
@@ -2782,7 +2781,6 @@ genAtomicRead(lower::AbstractConverter &converter, mlir::Location loc,
 
     builder.create<fir::StoreOp>(loc, value, storeAddr);
   }
-  builder.restoreInsertionPoint(saved);
   return op;
 }
 
@@ -2796,7 +2794,6 @@ genAtomicWrite(lower::AbstractConverter &converter, mlir::Location loc,
                fir::FirOpBuilder::InsertPoint atomicAt,
                fir::FirOpBuilder::InsertPoint postAt) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-  fir::FirOpBuilder::InsertPoint saved = builder.saveInsertionPoint();
   builder.restoreInsertionPoint(preAt);
 
   mlir::Value value =
@@ -2807,7 +2804,6 @@ genAtomicWrite(lower::AbstractConverter &converter, mlir::Location loc,
   builder.restoreInsertionPoint(atomicAt);
   mlir::Operation *op = builder.create<mlir::omp::AtomicWriteOp>(
       loc, atomAddr, converted, hint, memOrder);
-  builder.restoreInsertionPoint(saved);
   return op;
 }
 
@@ -2823,7 +2819,6 @@ genAtomicUpdate(lower::AbstractConverter &converter, mlir::Location loc,
   lower::ExprToValueMap overrides;
   lower::StatementContext naCtx;
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-  fir::FirOpBuilder::InsertPoint saved = builder.saveInsertionPoint();
   builder.restoreInsertionPoint(preAt);
 
   mlir::Type atomType = fir::unwrapRefType(atomAddr.getType());
@@ -2853,7 +2848,7 @@ genAtomicUpdate(lower::AbstractConverter &converter, mlir::Location loc,
   builder.create<mlir::omp::YieldOp>(loc, converted);
   converter.resetExprOverrides();
 
-  builder.restoreInsertionPoint(saved);
+  builder.restoreInsertionPoint(postAt);  // For naCtx cleanups
   return updateOp;
 }
 
@@ -2866,6 +2861,8 @@ genAtomicOperation(lower::AbstractConverter &converter, mlir::Location loc,
                    fir::FirOpBuilder::InsertPoint preAt,
                    fir::FirOpBuilder::InsertPoint atomicAt,
                    fir::FirOpBuilder::InsertPoint postAt) {
+  // This function and the functions called here do not preserve the
+  // builder's insertion point, or set it to anything specific.
   switch (action) {
   case parser::OpenMPAtomicConstruct::Analysis::Read:
     return genAtomicRead(converter, loc, stmtCtx, atomAddr, atom, assign, hint,
@@ -3919,6 +3916,8 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
       postAt = atomicAt = preAt;
     }
 
+    // The builder's insertion point needs to be specifically set before
+    // each call to `genAtomicOperation`.
     mlir::Operation *firstOp = genAtomicOperation(
         converter, loc, stmtCtx, analysis.op0.what, atomAddr, atom,
         *get(analysis.op0.assign), hint, memOrder, preAt, atomicAt, postAt);
@@ -3932,10 +3931,16 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                                     hint, memOrder, preAt, atomicAt, postAt);
     }
 
-    if (secondOp) {
-      builder.setInsertionPointAfter(secondOp);
+    if (construct.IsCapture()) {
+      // If this is a capture operation, the first/second ops will be inside
+      // of it. Set the insertion point to past the capture op itself.
+      builder.restoreInsertionPoint(postAt);
     } else {
-      builder.setInsertionPointAfter(firstOp);
+      if (secondOp) {
+        builder.setInsertionPointAfter(secondOp);
+      } else {
+        builder.setInsertionPointAfter(firstOp);
+      }
     }
   }
 }
