@@ -426,7 +426,7 @@ public:
   /// It runs node predicate number PredNo and returns true if it succeeds or
   /// false if it fails.  The number is a private implementation
   /// detail to the code tblgen produces.
-  virtual bool CheckNodePredicate(SDNode *N, unsigned PredNo) const {
+  virtual bool CheckNodePredicate(SDValue Op, unsigned PredNo) const {
     llvm_unreachable("Tblgen should generate the implementation of this!");
   }
 
@@ -436,7 +436,7 @@ public:
   /// false if it fails.  The number is a private implementation detail to the
   /// code tblgen produces.
   virtual bool CheckNodePredicateWithOperands(
-      SDNode *N, unsigned PredNo,
+      SDValue Op, unsigned PredNo,
       const SmallVectorImpl<SDValue> &Operands) const {
     llvm_unreachable("Tblgen should generate the implementation of this!");
   }

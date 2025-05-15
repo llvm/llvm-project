@@ -125,7 +125,7 @@ CreateCI(const llvm::opt::ArgStringList &Argv) {
   Clang->getPreprocessorOpts().addRemappedFile("<<< inputs >>>", MB);
 
   Clang->setTarget(TargetInfo::CreateTargetInfo(
-      Clang->getDiagnostics(), Clang->getInvocation().TargetOpts));
+      Clang->getDiagnostics(), Clang->getInvocation().getTargetOpts()));
   if (!Clang->hasTarget())
     return llvm::createStringError(llvm::errc::not_supported,
                                    "Initialization failed. "
@@ -416,6 +416,10 @@ Interpreter::Interpreter(std::unique_ptr<CompilerInstance> Instance,
 Interpreter::~Interpreter() {
   IncrParser.reset();
   Act->FinalizeAction();
+  if (DeviceParser)
+    DeviceParser.reset();
+  if (DeviceAct)
+    DeviceAct->FinalizeAction();
   if (IncrExecutor) {
     if (llvm::Error Err = IncrExecutor->cleanUp())
       llvm::report_fatal_error(
@@ -501,8 +505,11 @@ Interpreter::createWithCUDA(std::unique_ptr<CompilerInstance> CI,
 
   DCI->ExecuteAction(*Interp->DeviceAct);
 
+  Interp->DeviceCI = std::move(DCI);
+
   auto DeviceParser = std::make_unique<IncrementalCUDADeviceParser>(
-      std::move(DCI), *Interp->getCompilerInstance(), IMVFS, Err, Interp->PTUs);
+      *Interp->DeviceCI, *Interp->getCompilerInstance(), IMVFS, Err,
+      Interp->PTUs);
 
   if (Err)
     return std::move(Err);

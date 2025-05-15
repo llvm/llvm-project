@@ -71,9 +71,6 @@ class Clause<string c> {
   // Name of the clause.
   string name = c;
 
-  // Define an alternative name return in get<LanguageName>ClauseName function.
-  string alternativeName = "";
-
   // Define aliases used in the parser.
   list<string> aliases = [];
 
@@ -179,10 +176,6 @@ def CA_Utility: Category<"Utility"> {}
 class Directive<string d> {
   // Name of the directive. Can be composite directive sepearted by whitespace.
   string name = d;
-
-  // Define an alternative name return in get<LanguageName>DirectiveName
-  // function.
-  string alternativeName = "";
 
   // Clauses cannot appear twice in the three allowed lists below. Also, since
   // required implies allowed, the same clause cannot appear in both the

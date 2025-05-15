@@ -54,18 +54,18 @@ void uses() {
 #pragma acc set if (true)
 
   // expected-error@+2{{'default_async' clause cannot appear more than once on a 'set' directive}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'default_async' clause is here}}
 #pragma acc set default_async(getI()) default_async(getI())
 
   // expected-error@+2{{'device_num' clause cannot appear more than once on a 'set' directive}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'device_num' clause is here}}
 #pragma acc set device_num(getI()) device_num(getI())
 
   // expected-error@+2{{'device_type' clause cannot appear more than once on a 'set' directive}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'device_type' clause is here}}
 #pragma acc set device_type(nvidia) device_type(default)
   // expected-error@+2{{'if' clause cannot appear more than once on a 'set' directive}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'if' clause is here}}
 #pragma acc set device_type(acc_device_nvidia) if(true) if (true)
 
   // expected-error@+2{{OpenACC 'device_type' clause on a 'set' construct only permits one architecture}}

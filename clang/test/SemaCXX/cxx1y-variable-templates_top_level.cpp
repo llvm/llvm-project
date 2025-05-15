@@ -492,4 +492,21 @@ static_assert(C<int, 0,1,2,3,4>::VALUEARRAY[3] == 3, "");
 static_assert(C<int, 0,1,2,3,4>::VALUEARRAY[0] == 0, "");
 
 }
+
+namespace appear_in_its_own_init {
+template <class T>
+auto GH51347 = GH51347<T>; // expected-error {{variable template 'GH51347' declared with deduced type 'auto' cannot appear in its own initializer}}
+
+template <class T, class... Ts>
+auto a = [] {
+  using U = T;
+  a<U, Ts...>; // expected-error {{variable template 'a' declared with deduced type 'auto' cannot appear in its own initializer}}
+};
+
+template <int...> int b;
+template <int I>
+auto b<I, I * 2, 5> = b<I, I * 2, 5l>; // expected-error {{variable template partial specialization 'b<I, I * 2, 5>' declared with deduced type 'auto' cannot appear in its own initializer}}
+template <> auto b<0, 0, 0> = b<0, 0, 0>; // expected-error {{variable template explicit specialization 'b<0, 0, 0>' declared with deduced type 'auto' cannot appear in its own initializer}}
+}
+
 #endif
