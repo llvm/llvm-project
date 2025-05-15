@@ -913,7 +913,7 @@ Error LVDWARFReader::createScopes() {
           LT->getFileNameByIndex(
               1, None, DILineInfoSpecifier::FileLineInfoKind::RawValue,
               FileOne);
-          return FileZero.compare(FileOne);
+          return FileZero != FileOne;
         }
       }
 
