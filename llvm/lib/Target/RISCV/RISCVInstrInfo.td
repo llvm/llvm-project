@@ -2220,6 +2220,7 @@ include "RISCVInstrInfoZilsd.td"
 // Scalar FP
 include "RISCVInstrInfoF.td"
 include "RISCVInstrInfoD.td"
+include "RISCVInstrInfoQ.td"
 include "RISCVInstrInfoZfh.td"
 include "RISCVInstrInfoZfbfmin.td"
 include "RISCVInstrInfoZfa.td"
