@@ -10748,6 +10748,22 @@ bool ScalarEvolution::SimplifyICmpOperands(CmpPredicate &Pred, const SCEV *&LHS,
   if (Depth >= 3)
     return false;
 
+  // (X * Z) icmp (Y * Z) ==> X icmp Y
+  //     when neither multiply wraps and Z is positive.
+  if (isa<SCEVMulExpr>(LHS) && isa<SCEVMulExpr>(RHS)) {
+    const SCEVMulExpr *LMul = cast<SCEVMulExpr>(LHS);
+    const SCEVMulExpr *RMul = cast<SCEVMulExpr>(RHS);
+
+    if (LMul->getNumOperands() == 2 && RMul->getNumOperands() == 2 &&
+        LMul->getOperand(1) == RMul->getOperand(1) &&
+        isKnownPositive(LMul->getOperand(1)) && ICmpInst::isUnsigned(Pred) &&
+        LMul->hasNoUnsignedWrap() && RMul->hasNoUnsignedWrap()) {
+      LHS = LMul->getOperand(0);
+      RHS = RMul->getOperand(0);
+      Changed = true;
+    }
+  }
+
   // Canonicalize a constant to the right side.
   if (const SCEVConstant *LHSC = dyn_cast<SCEVConstant>(LHS)) {
     // Check for both operands constant.
