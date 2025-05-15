@@ -88,6 +88,7 @@ struct RootConstants {
 using ParamType = llvm::dxil::ResourceClass;
 struct RootParam {
   ParamType Type;
+  Register Reg;
 };
 
 // Models the end of a descriptor table and stores its visibility

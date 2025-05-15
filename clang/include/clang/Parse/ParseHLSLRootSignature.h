@@ -89,6 +89,12 @@ private:
   };
   std::optional<ParsedConstantParams> parseRootConstantParams();
 
+  struct ParsedRootParamParams {
+    std::optional<llvm::hlsl::rootsig::Register> Reg;
+  };
+  std::optional<ParsedRootParamParams>
+  parseRootParamParams(RootSignatureToken::Kind RegType);
+
   struct ParsedClauseParams {
     std::optional<llvm::hlsl::rootsig::Register> Reg;
     std::optional<uint32_t> NumDescriptors;

@@ -346,9 +346,9 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootFlagsTest) {
 
 TEST_F(ParseHLSLRootSignatureTest, ValidParseRootParamsTest) {
   const llvm::StringLiteral Source = R"cc(
-    CBV(),
-    SRV(),
-    UAV()
+    CBV(b0),
+    SRV(t42),
+    UAV(u34893247)
   )cc";
 
   TrivialModuleLoader ModLoader;
@@ -368,15 +368,20 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootParamsTest) {
 
   RootElement Elem = Elements[0];
   ASSERT_TRUE(std::holds_alternative<RootParam>(Elem));
-  ASSERT_EQ(std::get<RootParam>(Elem).Type, ParamType::CBuffer);
+  ASSERT_EQ(std::get<RootParam>(Elem).Reg.ViewType, RegisterType::BReg);
+  ASSERT_EQ(std::get<RootParam>(Elem).Reg.Number, 0u);
 
   Elem = Elements[1];
   ASSERT_TRUE(std::holds_alternative<RootParam>(Elem));
   ASSERT_EQ(std::get<RootParam>(Elem).Type, ParamType::SRV);
+  ASSERT_EQ(std::get<RootParam>(Elem).Reg.ViewType, RegisterType::TReg);
+  ASSERT_EQ(std::get<RootParam>(Elem).Reg.Number, 42u);
 
   Elem = Elements[2];
   ASSERT_TRUE(std::holds_alternative<RootParam>(Elem));
   ASSERT_EQ(std::get<RootParam>(Elem).Type, ParamType::UAV);
+  ASSERT_EQ(std::get<RootParam>(Elem).Reg.ViewType, RegisterType::UReg);
+  ASSERT_EQ(std::get<RootParam>(Elem).Reg.Number, 34893247u);
 
   ASSERT_TRUE(Consumer->isSatisfied());
 }

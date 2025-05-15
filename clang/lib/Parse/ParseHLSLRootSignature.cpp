@@ -176,19 +176,36 @@ std::optional<RootParam> RootSignatureParser::parseRootParam() {
     return std::nullopt;
 
   RootParam Param;
+  TokenKind ExpectedReg;
   switch (ParamKind) {
   default:
     llvm_unreachable("Switch for consumed token was not provided");
   case TokenKind::kw_CBV:
     Param.Type = ParamType::CBuffer;
+    ExpectedReg = TokenKind::bReg;
     break;
   case TokenKind::kw_SRV:
     Param.Type = ParamType::SRV;
+    ExpectedReg = TokenKind::tReg;
     break;
   case TokenKind::kw_UAV:
     Param.Type = ParamType::UAV;
+    ExpectedReg = TokenKind::uReg;
     break;
   }
+
+  auto Params = parseRootParamParams(ExpectedReg);
+  if (!Params.has_value())
+    return std::nullopt;
+
+  // Check mandatory parameters were provided
+  if (!Params->Reg.has_value()) {
+    getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_missing_param)
+        << ExpectedReg;
+    return std::nullopt;
+  }
+
+  Param.Reg = Params->Reg.value();
 
   if (consumeExpectedToken(TokenKind::pu_r_paren,
                            diag::err_hlsl_unexpected_end_of_params,
@@ -393,6 +410,31 @@ RootSignatureParser::parseRootConstantParams() {
         return std::nullopt;
       Params.Visibility = Visibility;
     }
+  } while (tryConsumeExpectedToken(TokenKind::pu_comma));
+
+  return Params;
+}
+
+std::optional<RootSignatureParser::ParsedRootParamParams>
+RootSignatureParser::parseRootParamParams(TokenKind RegType) {
+  assert(CurToken.TokKind == TokenKind::pu_l_paren &&
+         "Expects to only be invoked starting at given token");
+
+  ParsedRootParamParams Params;
+  do {
+    // ( `b` | `t` | `u`) POS_INT
+    if (tryConsumeExpectedToken(RegType)) {
+      if (Params.Reg.has_value()) {
+        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+            << CurToken.TokKind;
+        return std::nullopt;
+      }
+      auto Reg = parseRegister();
+      if (!Reg.has_value())
+        return std::nullopt;
+      Params.Reg = Reg;
+    }
+
   } while (tryConsumeExpectedToken(TokenKind::pu_comma));
 
   return Params;
