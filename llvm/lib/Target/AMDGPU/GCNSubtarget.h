@@ -272,6 +272,17 @@ private:
   SITargetLowering TLInfo;
   SIFrameLowering FrameLowering;
 
+  /// From the (MI300) ISA:
+  /// "Packed 32-bit instructions operate on 2 dwords at a time and those
+  /// operands must be two-dword aligned (i.e. an even VGPR address). Output
+  /// modifiers are not supported for these instructions. OPSEL and OPSEL_HI
+  /// work to select the first or second DWORD for each source."
+  /// -> We can save dependencies on VGPRs by analyzing the operand selection.
+  /// See also
+  /// https://llvm.org/docs/AMDGPUModifierSyntax.html#amdgpu-synid-op-sel
+  bool isRealSchedDependency(MachineInstr *DefI, int DefOpIdx,
+                             MachineInstr *UseI, int UseOpIdx) const;
+
 public:
   GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
                const GCNTargetMachine &TM);
