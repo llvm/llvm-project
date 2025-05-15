@@ -7846,10 +7846,10 @@ static void AddMethodTemplateCandidateImmediately(
           MethodTmpl, ExplicitTemplateArgs, Args, Specialization, Info,
           PartialOverloading, /*AggregateDeductionCandidate=*/false,
           /*PartialOrdering=*/false, ObjectType, ObjectClassification,
-          [&](ArrayRef<QualType> ParamTypes) {
+          [&](ArrayRef<QualType> ParamTypes, bool NonInstOnly) {
             return S.CheckNonDependentConversions(
                 MethodTmpl, ParamTypes, Args, CandidateSet, Conversions,
-                SuppressUserConversions, ActingContext, ObjectType,
+                SuppressUserConversions, NonInstOnly, ActingContext, ObjectType,
                 ObjectClassification, PO);
           });
       Result != TemplateDeductionResult::Success) {
@@ -7960,10 +7960,11 @@ static void AddTemplateOverloadCandidateImmediately(
           /*PartialOrdering=*/false,
           /*ObjectType=*/QualType(),
           /*ObjectClassification=*/Expr::Classification(),
-          [&](ArrayRef<QualType> ParamTypes) {
+          [&](ArrayRef<QualType> ParamTypes, bool NonInstOnly) {
             return S.CheckNonDependentConversions(
                 FunctionTemplate, ParamTypes, Args, CandidateSet, Conversions,
-                SuppressUserConversions, nullptr, QualType(), {}, PO);
+                SuppressUserConversions, NonInstOnly, nullptr, QualType(), {},
+                PO);
           });
       Result != TemplateDeductionResult::Success) {
     OverloadCandidate &Candidate =
@@ -8038,8 +8039,9 @@ bool Sema::CheckNonDependentConversions(
     FunctionTemplateDecl *FunctionTemplate, ArrayRef<QualType> ParamTypes,
     ArrayRef<Expr *> Args, OverloadCandidateSet &CandidateSet,
     ConversionSequenceList &Conversions, bool SuppressUserConversions,
-    CXXRecordDecl *ActingContext, QualType ObjectType,
-    Expr::Classification ObjectClassification, OverloadCandidateParamOrder PO) {
+    bool SkipUserDefinedConversions, CXXRecordDecl *ActingContext,
+    QualType ObjectType, Expr::Classification ObjectClassification,
+    OverloadCandidateParamOrder PO) {
   // FIXME: The cases in which we allow explicit conversions for constructor
   // arguments never consider calling a constructor template. It's not clear
   // that is correct.
@@ -8050,8 +8052,9 @@ bool Sema::CheckNonDependentConversions(
   bool HasThisConversion = Method && !isa<CXXConstructorDecl>(Method);
   unsigned ThisConversions = HasThisConversion ? 1 : 0;
 
-  Conversions =
-      CandidateSet.allocateConversionSequences(ThisConversions + Args.size());
+  Conversions = Conversions.empty() ? CandidateSet.allocateConversionSequences(
+                                          ThisConversions + Args.size())
+                                    : Conversions;
 
   // Overload resolution is always an unevaluated context.
   EnterExpressionEvaluationContext Unevaluated(
@@ -8075,6 +8078,46 @@ bool Sema::CheckNonDependentConversions(
     }
   }
 
+  // A speculative workaround for self-dependent constraint bugs that manifest
+  // after CWG2369.
+  // FIXME: Add references to the standard once P3606 is adopted.
+  auto MaybeInvolveUserDefinedConversion = [&](QualType ParamType,
+                                               QualType ArgType) {
+    ParamType = ParamType.getNonReferenceType();
+    ArgType = ArgType.getNonReferenceType();
+    bool PointerConv = ParamType->isPointerType() && ArgType->isPointerType();
+    if (PointerConv) {
+      ParamType = ParamType->getPointeeType();
+      ArgType = ArgType->getPointeeType();
+    }
+
+    if (auto *RT = ParamType->getAs<RecordType>())
+      if (auto *RD = dyn_cast<CXXRecordDecl>(RT->getDecl());
+          RD && RD->hasDefinition()) {
+        if (llvm::any_of(LookupConstructors(RD), [](NamedDecl *ND) {
+              auto Info = getConstructorInfo(ND);
+              if (!Info)
+                return false;
+              CXXConstructorDecl *Ctor = Info.Constructor;
+              /// isConvertingConstructor takes copy/move constructors into
+              /// account!
+              return !Ctor->isCopyOrMoveConstructor() &&
+                     Ctor->isConvertingConstructor(
+                         /*AllowExplicit=*/true);
+            }))
+          return true;
+      }
+
+    if (auto *RT = ArgType->getAs<RecordType>())
+      if (auto *RD = dyn_cast<CXXRecordDecl>(RT->getDecl());
+          RD && RD->hasDefinition() &&
+          !RD->getVisibleConversionFunctions().empty()) {
+        return true;
+      }
+
+    return false;
+  };
+
   unsigned Offset =
       Method && Method->hasCXXExplicitFunctionObjectParameter() ? 1 : 0;
 
@@ -8095,6 +8138,11 @@ bool Sema::CheckNonDependentConversions(
         // For members, 'this' got ConvIdx = 0 previously.
         ConvIdx = ThisConversions + I;
       }
+      if (Conversions[ConvIdx].isInitialized())
+        continue;
+      if (SkipUserDefinedConversions &&
+          MaybeInvolveUserDefinedConversion(ParamType, Args[I]->getType()))
+        continue;
       Conversions[ConvIdx]
         = TryCopyInitialization(*this, Args[I], ParamType,
                                 SuppressUserConversions,
