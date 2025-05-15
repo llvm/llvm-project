@@ -19,9 +19,10 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/FMF.h"
-#include "llvm/IR/Instructions.h"
 #include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/PassManager.h"
 #include <cassert>
 #include <cstdint>
 
@@ -1000,6 +1001,19 @@ std::optional<bool> isImpliedByDomCondition(CmpPredicate Pred, const Value *LHS,
 /// DomConditionCache.
 void findValuesAffectedByCondition(Value *Cond, bool IsAssume,
                                    function_ref<void(Value *)> InsertAffected);
+
+/// Printer pass for \p computeConstantRange results.
+class ConstantRangePrinterPass
+    : public PassInfoMixin<ConstantRangePrinterPass> {
+  raw_ostream &OS;
+
+public:
+  explicit ConstantRangePrinterPass(raw_ostream &OS) : OS(OS) {}
+
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+
+  static bool isRequired() { return true; }
+};
 
 } // end namespace llvm
 

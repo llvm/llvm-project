@@ -38,6 +38,7 @@ SUPPORTED_ANALYSES = {
     "Dependence Analysis",
     "Loop Access Analysis",
     "Scalar Evolution Analysis",
+    "ConstantRange",
 }
 
 

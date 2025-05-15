@@ -49,6 +49,7 @@
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -10450,4 +10451,20 @@ void llvm::findValuesAffectedByCondition(
       Worklist.push_back(X);
     }
   }
+}
+
+PreservedAnalyses ConstantRangePrinterPass::run(Function &F,
+                                                FunctionAnalysisManager &AM) {
+  // For compatibility with opt's -analyze feature under legacy pass manager
+  // which was not ported to NPM. This keeps tests using
+  // update_analyze_test_checks.py working.
+  OS << "Printing analysis 'ConstantRange' for function '" << F.getName()
+     << "':\n";
+  for (const Instruction &I : instructions(F)) {
+    if (!I.getType()->isIntOrIntVectorTy())
+      continue;
+    auto CR = computeConstantRange(&I, false);
+    OS << I << ": " << CR << "\n";
+  }
+  return PreservedAnalyses::all();
 }
