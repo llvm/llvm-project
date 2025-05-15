@@ -2662,22 +2662,7 @@ SDValue DAGCombiner::visitPTRADD(SDNode *N) {
     if (isNullConstant(X) || (YIsConstant && ZOneUse) ||
         (YIsConstant && N0OneUse) || (N0OneUse && ZOneUse && !ZIsConstant)) {
       SDValue Add = DAG.getNode(ISD::ADD, DL, IntVT, {Y, Z});
-
-      // Calling visit() can replace the Add node with ISD::DELETED_NODE if
-      // there aren't any users, so keep a handle around whilst we visit it.
-      HandleSDNode ADDHandle(Add);
-
-      SDValue VisitedAdd = visit(Add.getNode());
-      if (VisitedAdd) {
-        // If visit() returns the same node, it means the SDNode was RAUW'd, and
-        // therefore we have to load the new value to perform the checks whether
-        // the reassociation fold is profitable.
-        if (VisitedAdd.getNode() == Add.getNode())
-          Add = ADDHandle.getValue();
-        else
-          Add = VisitedAdd;
-      }
-
+      AddToWorklist(Add.getNode());
       return DAG.getMemBasePlusOffset(X, Add, DL, SDNodeFlags());
     }
 
