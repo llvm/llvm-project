@@ -225,7 +225,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseDTClausesTest) {
 
 TEST_F(ParseHLSLRootSignatureTest, ValidParseStaticSamplerTest) {
   const llvm::StringLiteral Source = R"cc(
-    StaticSampler(s0)
+    StaticSampler(s0, mipLODBias = 0)
   )cc";
 
   TrivialModuleLoader ModLoader;
@@ -247,6 +247,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseStaticSamplerTest) {
   ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
   ASSERT_EQ(std::get<StaticSampler>(Elem).Reg.ViewType, RegisterType::SReg);
   ASSERT_EQ(std::get<StaticSampler>(Elem).Reg.Number, 0u);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 0u);
 
   ASSERT_TRUE(Consumer->isSatisfied());
 }

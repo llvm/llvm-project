@@ -111,6 +111,7 @@ private:
 
   struct ParsedStaticSamplerParams {
     std::optional<llvm::hlsl::rootsig::Register> Reg;
+    std::optional<float> MipLODBias;
   };
   std::optional<ParsedStaticSamplerParams> parseStaticSamplerParams();
 
