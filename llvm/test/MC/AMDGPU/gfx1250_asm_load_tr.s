@@ -102,6 +102,10 @@ global_load_tr6_b96 v[2:4], v0, s[0:1]
 // GFX1250: global_load_tr6_b96 v[2:4], v0, s[0:1]  ; encoding: [0x00,0x00,0x1d,0xee,0x02,0x00,0x00,0x00,0x00,0x00,0x00,0x00]
 // WAVESIZE-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
 
+global_load_tr6_b96 v[3:5], v0, s[0:1]
+// GFX1250: global_load_tr6_b96 v[3:5], v0, s[0:1]  ; encoding: [0x00,0x00,0x1d,0xee,0x03,0x00,0x00,0x00,0x00,0x00,0x00,0x00]
+// WAVESIZE-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
 global_load_tr6_b96 v[2:4], v0, s[0:1] offset:64
 // GFX1250: global_load_tr6_b96 v[2:4], v0, s[0:1] offset:64 ; encoding: [0x00,0x00,0x1d,0xee,0x02,0x00,0x00,0x00,0x00,0x40,0x00,0x00]
 // WAVESIZE-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
