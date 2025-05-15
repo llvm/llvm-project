@@ -136,9 +136,8 @@ std::optional<StringMap<bool>> getPPCDefaultTargetFeatures(const Triple &T,
   if (CPU == "8548")
     Features["spe"] = true;
 
-  // The target feature `quadword-atomics` is enabled by llvm back-end for
-  // power8 or power8 up, we disable the target feature if the triple is
-  // 32-bit.
+  // The target feature `quadword-atomics` is only supported for 64-bit
+  // POWER8 and above.
   if (Features.find("quadword-atomics") != Features.end() && !T.isArch64Bit())
     Features["quadword-atomics"] = false;
   return Features;
