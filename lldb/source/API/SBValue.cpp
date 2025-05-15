@@ -680,19 +680,18 @@ SBValue SBValue::GetChildAtIndex(uint32_t idx) {
 
 SBValue SBValue::GetChildAtIndex(uint32_t idx,
                                  lldb::DynamicValueType use_dynamic,
-                                 bool can_create_synthetic) {
-  LLDB_INSTRUMENT_VA(this, idx, use_dynamic, can_create_synthetic);
-
-  lldb::ValueObjectSP child_sp;
-
+                                 bool use_synthetic) {
+  LLDB_INSTRUMENT_VA(this, idx, use_dynamic, use_synthetic);
   ValueLocker locker;
   lldb::ValueObjectSP value_sp(GetSP(locker));
+
+  lldb::ValueObjectSP child_sp;
   if (value_sp) {
     const bool can_create = true;
-    child_sp = value_sp->GetChildAtIndex(idx);
-    if (can_create_synthetic && !child_sp) {
+    if (use_synthetic && (value_sp->IsPointerType() || value_sp->IsArrayType()))
       child_sp = value_sp->GetSyntheticArrayMember(idx, can_create);
-    }
+    else
+      child_sp = value_sp->GetChildAtIndex(idx);
   }
 
   SBValue sb_value;
