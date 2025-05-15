@@ -352,9 +352,12 @@ static void emitMemsetExpansion(IRBuilder<> &Builder, Value *Dst, Value *Val,
   }
 }
 
-static void removeMemCpy(Instruction &I,
-                         SmallVectorImpl<Instruction *> &ToRemove,
-                         DenseMap<Value *, Value *> &ReplacedValues) {
+// Expands the instruction `I` into corresponding loads and stores if it is a
+// memcpy call. In that case, the call instruction is added to the `ToRemove`
+// vector. `ReplacedValues` is unused.
+static void legalizeMemCpy(Instruction &I,
+                           SmallVectorImpl<Instruction *> &ToRemove,
+                           DenseMap<Value *, Value *> &ReplacedValues) {
 
   CallInst *CI = dyn_cast<CallInst>(&I);
   if (!CI)
@@ -428,7 +431,7 @@ private:
     LegalizationPipeline.push_back(fixI8UseChain);
     LegalizationPipeline.push_back(downcastI64toI32InsertExtractElements);
     LegalizationPipeline.push_back(legalizeFreeze);
-    LegalizationPipeline.push_back(removeMemCpy);
+    LegalizationPipeline.push_back(legalizeMemCpy);
     LegalizationPipeline.push_back(removeMemSet);
   }
 };
