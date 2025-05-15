@@ -3678,7 +3678,7 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
         !SavedRegs.test(PairedReg)) {
       SavedRegs.set(PairedReg);
       if (AArch64::GPR64RegClass.contains(PairedReg) &&
-          !RegInfo->isReservedReg(MF, PairedReg))
+          !ReservedRegs[PairedReg])
         ExtraCSSpill = PairedReg;
     }
     // Check if there is a pair of ZRegs, so it can select PReg for spill/fill
@@ -3701,7 +3701,7 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
       AFI->setPredicateRegForFillSpill(AArch64::PN8);
     }
 
-    assert(!RegInfo->isReservedReg(MF, AFI->getPredicateRegForFillSpill()) &&
+    assert(!ReservedRegs[AFI->getPredicateRegForFillSpill()] &&
            "Predicate cannot be a reserved register");
   }
 
