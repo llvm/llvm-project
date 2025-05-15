@@ -77,6 +77,48 @@ static void generateEnumClass(ArrayRef<const Record *> Records, raw_ostream &OS,
   }
 }
 
+// Generate enum class with values corresponding to different bit positions.
+// Entries are emitted in the order in which they appear in the `Records`
+// vector.
+static void generateEnumBitmask(ArrayRef<const Record *> Records,
+                                raw_ostream &OS, StringRef Enum,
+                                StringRef Prefix,
+                                const DirectiveLanguage &DirLang,
+                                bool ExportEnums) {
+  assert(Records.size() <= 64 && "Too many values for a bitmask");
+  llvm::StringRef Type = Records.size() <= 32 ? "uint32_t" : "uint64_t";
+  llvm::StringRef TypeSuffix = Records.size() <= 32 ? "U" : "ULL";
+
+  OS << "\n";
+  OS << "enum class " << Enum << " : " << Type << " {\n";
+  std::string LastName;
+  for (auto [I, R] : llvm::enumerate(Records)) {
+    BaseRecord Rec(R);
+    LastName = Prefix.str() + Rec.getFormattedName();
+    OS << "  " << LastName << " = " << (1ull << I) << TypeSuffix << ",\n";
+  }
+  OS << "  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/" << LastName << ")\n";
+  OS << "};\n";
+  OS << "\n";
+  OS << "static constexpr std::size_t " << Enum
+     << "_enumSize = " << Records.size() << ";\n";
+
+  // Make the enum values available in the defined namespace. This allows us to
+  // write something like Enum_X if we have a `using namespace <CppNamespace>`.
+  // At the same time we do not loose the strong type guarantees of the enum
+  // class, that is we cannot pass an unsigned as Directive without an explicit
+  // cast.
+  if (ExportEnums) {
+    OS << "\n";
+    for (const auto &R : Records) {
+      BaseRecord Rec(R);
+      OS << "constexpr auto " << Prefix << Rec.getFormattedName() << " = "
+         << "llvm::" << DirLang.getCppNamespace() << "::" << Enum
+         << "::" << Prefix << Rec.getFormattedName() << ";\n";
+    }
+  }
+}
+
 // Generate enums for values that clauses can take.
 // Also generate function declarations for get<Enum>Name(StringRef Str).
 static void generateEnumClauseVal(ArrayRef<const Record *> Records,
@@ -224,6 +266,9 @@ static void emitDirectivesDecl(const RecordKeeper &Records, raw_ostream &OS) {
   generateEnumClass(DirLang.getCategories(), OS, "Category", /*Prefix=*/"",
                     DirLang, /*ExportEnums=*/false);
 
+  generateEnumBitmask(DirLang.getSourceLanguages(), OS, "SourceLanguage",
+                      /*Prefix=*/"", DirLang, /*ExportEnums=*/false);
+
   // Emit Directive enumeration
   generateEnumClass(DirLang.getDirectives(), OS, "Directive",
                     DirLang.getDirectivePrefix(), DirLang,
@@ -267,6 +312,7 @@ static void emitDirectivesDecl(const RecordKeeper &Records, raw_ostream &OS) {
      << getMaxLeafCount(DirLang) << "; }\n";
   OS << "LLVM_ABI Association getDirectiveAssociation(Directive D);\n";
   OS << "LLVM_ABI Category getDirectiveCategory(Directive D);\n";
+  OS << "LLVM_ABI SourceLanguage getDirectiveLanguages(Directive D);\n";
   if (EnumHelperFuncs.length() > 0) {
     OS << EnumHelperFuncs;
     OS << "\n";
@@ -760,6 +806,34 @@ static void generateGetDirectiveCategory(const DirectiveLanguage &DirLang,
        << D.getCategory()->getValueAsString("name") << ";\n";
   }
   OS << "  } // switch (Dir)\n";
+  OS << "  llvm_unreachable(\"Unexpected directive\");\n";
+  OS << "}\n";
+}
+
+static void generateGetDirectiveLanguages(const DirectiveLanguage &DirLang,
+                                          raw_ostream &OS) {
+  std::string LangNamespace = "llvm::" + DirLang.getCppNamespace().str();
+  std::string LanguageTypeName = LangNamespace + "::SourceLanguage";
+  std::string LanguageNamespace = LanguageTypeName + "::";
+
+  OS << '\n';
+  OS << LanguageTypeName << ' ' << LangNamespace << "::getDirectiveLanguages("
+     << getDirectiveType(DirLang) << " D) {\n";
+  OS << "  switch (D) {\n";
+
+  for (const Record *R : DirLang.getDirectives()) {
+    Directive D(R);
+    OS << "  case " << getDirectiveName(DirLang, R) << ":\n";
+    OS << "    return ";
+    llvm::interleave(
+        D.getSourceLanguages(), OS,
+        [&](const Record *L) {
+          OS << LanguageNamespace << BaseRecord::getFormattedName(L);
+        },
+        " | ");
+    OS << ";\n";
+  }
+  OS << "  } // switch(D)\n";
   OS << "  llvm_unreachable(\"Unexpected directive\");\n";
   OS << "}\n";
 }
@@ -1263,6 +1337,9 @@ void emitDirectivesBasicImpl(const DirectiveLanguage &DirLang,
 
   // getDirectiveCategory(Directive D)
   generateGetDirectiveCategory(DirLang, OS);
+
+  // getDirectiveLanguages(Directive D)
+  generateGetDirectiveLanguages(DirLang, OS);
 
   // Leaf table for getLeafConstructs, etc.
   emitLeafTable(DirLang, OS, "LeafConstructTable");
