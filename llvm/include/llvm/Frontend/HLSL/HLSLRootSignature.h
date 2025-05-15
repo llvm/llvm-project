@@ -88,7 +88,9 @@ struct RootConstants {
 // Models the end of a descriptor table and stores its visibility
 struct DescriptorTable {
   ShaderVisibility Visibility = ShaderVisibility::All;
-  uint32_t NumClauses = 0; // The number of clauses in the table
+  // Denotes that the previous NumClauses in the RootElement array
+  // are the clauses in the table.
+  uint32_t NumClauses = 0;
 
   void dump(raw_ostream &OS) const;
 };
@@ -123,7 +125,21 @@ struct DescriptorTableClause {
   void dump(raw_ostream &OS) const;
 };
 
-// Models RootElement : RootConstants | DescriptorTable | DescriptorTableClause
+/// Models RootElement : RootFlags | RootConstants | DescriptorTable
+///  | DescriptorTableClause
+///
+/// A Root Signature is modeled in-memory by an array of RootElements. These
+/// aim to map closely to their DSL grammar reprsentation defined in the spec.
+///
+/// Each optional parameter has its default value defined in the struct, and,
+/// each mandatory parameter does not have a default initialization.
+///
+/// For the variants RootFlags, RootConstants and DescriptorTableClause: each
+/// data member maps directly to a parameter in the grammar.
+///
+/// The DescriptorTable is modelled by having its Clauses as the previous
+/// RootElements in the array, and it holds a data member for the Visibility
+/// parameter.
 using RootElement = std::variant<RootFlags, RootConstants, DescriptorTable,
                                  DescriptorTableClause>;
 
