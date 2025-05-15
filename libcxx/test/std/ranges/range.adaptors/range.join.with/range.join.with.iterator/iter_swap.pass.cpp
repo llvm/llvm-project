@@ -32,12 +32,13 @@ enum class IterKind { inner_view, pattern };
 
 template <std::forward_iterator Iter, IterKind Kind>
 class IterSwapTrackingIterator {
-  template <std::forward_iterator T, IterKind K>
-  friend class IterSwapTrackingIterator;
-
 public:
   using value_type      = std::iter_value_t<Iter>;
   using difference_type = std::iter_difference_t<Iter>;
+
+  constexpr Iter get_iter() const { return iter_; }
+
+  constexpr SwapKind* get_flag() const { return flag_; }
 
   IterSwapTrackingIterator() = default;
   constexpr explicit IterSwapTrackingIterator(Iter iter, SwapKind* flag = nullptr)
@@ -67,9 +68,9 @@ public:
   template <std::indirectly_swappable<Iter> OtherIter, IterKind OtherKind>
   friend constexpr decltype(auto)
   iter_swap(const IterSwapTrackingIterator& lhs, const IterSwapTrackingIterator<OtherIter, OtherKind>& rhs) {
-    assert(lhs.flag_ != nullptr && rhs.flag_ != nullptr);
-    *lhs.flag_ = *rhs.flag_ = SwapKind::with_different_type;
-    return std::ranges::iter_swap(lhs.iter_, rhs.iter_);
+    assert(lhs.flag_ != nullptr && rhs.get_flag() != nullptr);
+    *lhs.flag_ = *rhs.get_flag() = SwapKind::with_different_type;
+    return std::ranges::iter_swap(lhs.iter_, rhs.get_iter());
   }
 
 private:
