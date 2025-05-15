@@ -318,6 +318,8 @@ struct Source {
 
   // unsupported keys: origin, sources, adapterData, checksums
 };
+bool fromJSON(const llvm::json::Value &, Source::PresentationHint &,
+              llvm::json::Path);
 llvm::json::Value toJSON(Source::PresentationHint);
 bool fromJSON(const llvm::json::Value &, Source &, llvm::json::Path);
 llvm::json::Value toJSON(const Source &);

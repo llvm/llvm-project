@@ -335,10 +335,10 @@ TEST(ProtocolTypesTest, Scope) {
 
 TEST(ProtocolTypesTest, PresentationHint) {
   // Test all PresentationHint values.
-  std::vector<std::pair<PresentationHint, llvm::StringRef>> test_cases = {
-      {ePresentationHintNormal, "normal"},
-      {ePresentationHintEmphasize, "emphasize"},
-      {ePresentationHintDeemphasize, "deemphasize"}};
+  std::vector<std::pair<Source::PresentationHint, llvm::StringRef>> test_cases =
+      {{Source::eSourcePresentationHintNormal, "normal"},
+       {Source::eSourcePresentationHintEmphasize, "emphasize"},
+       {Source::eSourcePresentationHintDeemphasize, "deemphasize"}};
 
   for (const auto &test_case : test_cases) {
     // Serialize the PresentationHint to JSON.
@@ -347,7 +347,7 @@ TEST(ProtocolTypesTest, PresentationHint) {
     EXPECT_EQ(serialized.getAsString(), test_case.second);
 
     // Deserialize the JSON back to PresentationHint.
-    PresentationHint deserialized;
+    Source::PresentationHint deserialized;
     llvm::json::Path::Root root;
     ASSERT_TRUE(fromJSON(serialized, deserialized, root))
         << llvm::toString(root.getError());
@@ -356,7 +356,7 @@ TEST(ProtocolTypesTest, PresentationHint) {
 
   // Test invalid value.
   llvm::json::Value invalid_value = "invalid_hint";
-  PresentationHint deserialized_invalid;
+  Source::PresentationHint deserialized_invalid;
   llvm::json::Path::Root root;
   EXPECT_FALSE(fromJSON(invalid_value, deserialized_invalid, root));
 }
