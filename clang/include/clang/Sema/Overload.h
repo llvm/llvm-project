@@ -430,8 +430,8 @@ class Sema;
       if (!ReferenceBinding) {
 #ifndef NDEBUG
         auto Decay = [&](QualType T) {
-          T = (T->isArrayType() || T->isFunctionType()) ? C.getDecayedType(T)
-                                                        : T;
+          if (T->isArrayType() || T->isFunctionType())
+            T = C.getDecayedType(T);
 
           // A function pointer type can be resolved to a member function type,
           // which is still an identity conversion.
