@@ -2171,6 +2171,7 @@ PathSensitiveBugReport::PathSensitiveBugReport(
     : BugReport(Kind::PathSensitive, bt, shortDesc, desc), ErrorNode(errorNode),
       ErrorNodeRange(getStmt() ? getStmt()->getSourceRange() : SourceRange()),
       UniqueingLocation(LocationToUnique), UniqueingDecl(DeclToUnique) {
+  assert(ErrorNode && "The error node must not be null!");
   assert(!isDependency(ErrorNode->getState()
                            ->getAnalysisManager()
                            .getCheckerManager()
@@ -2633,8 +2634,7 @@ BugPathGetter::BugPathGetter(const ExplodedGraph *OriginalGraph,
     assert(I->isValid() &&
            "We only allow BugReporterVisitors and BugReporter itself to "
            "invalidate reports!");
-    if (const ExplodedNode *ErrNode = I->getErrorNode())
-      Worklist.emplace_back(ErrNode);
+    Worklist.emplace_back(I->getErrorNode());
   }
 
   // The trimmed graph is created in the body of the constructor to ensure
