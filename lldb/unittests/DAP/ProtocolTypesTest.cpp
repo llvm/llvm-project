@@ -305,11 +305,11 @@ TEST(ProtocolTypesTest, Scope) {
   scope.endLine = 10;
   scope.endColumn = 20;
 
-  scope.source =
-      Source{.name = "testName",
-             .path = "/path/to/source",
-             .sourceReference = 12345,
-             .presentationHint = Source::eSourcePresentationHintNormal};
+  // scope.source =
+  scope.source->name = "testName";
+  scope.source->path = "/path/to/source";
+  scope.source->sourceReference = 12345;
+  scope.source->presentationHint = Source::eSourcePresentationHintNormal;
 
   llvm::Expected<Scope> deserialized_scope = roundtrip(scope);
   ASSERT_THAT_EXPECTED(deserialized_scope, llvm::Succeeded());
