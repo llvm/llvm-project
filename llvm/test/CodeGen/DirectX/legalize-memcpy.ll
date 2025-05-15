@@ -37,6 +37,31 @@ define void @replace_int_memcpy_test() #0 {
   ret void
 }
 
+define void @replace_3int_memcpy_test() #0 {
+; CHECK-LABEL: define void @replace_3int_memcpy_test(
+; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = alloca [3 x i32], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = alloca [3 x i32], align 4
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[GEP]], align 4
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i32, ptr [[TMP2]], i32 0
+; CHECK-NEXT:    store i32 [[TMP3]], ptr [[GEP1]], align 4
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i32, ptr [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[GEP2]], align 4
+; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr i32, ptr [[TMP2]], i32 1
+; CHECK-NEXT:    store i32 [[TMP4]], ptr [[GEP3]], align 4
+; CHECK-NEXT:    [[GEP4:%.*]] = getelementptr i32, ptr [[TMP1]], i32 2
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[GEP4]], align 4
+; CHECK-NEXT:    [[GEP5:%.*]] = getelementptr i32, ptr [[TMP2]], i32 2
+; CHECK-NEXT:    store i32 [[TMP5]], ptr [[GEP5]], align 4
+; CHECK-NEXT:    ret void
+;
+  %1 = alloca [3 x i32], align 4
+  %2 = alloca [3 x i32], align 4
+  call void @llvm.memcpy.p0.p0.i32(ptr nonnull align 4 dereferenceable(12) %2, ptr align 4 dereferenceable(12) %1, i32 12, i1 false)
+  ret void
+}
+
 define void @replace_int16_memcpy_test() #0 {
 ; CHECK-LABEL: define void @replace_int16_memcpy_test(
 ; CHECK-SAME: ) #[[ATTR0]] {
