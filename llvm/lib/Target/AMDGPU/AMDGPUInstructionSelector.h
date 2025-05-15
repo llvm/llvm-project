@@ -232,6 +232,10 @@ private:
   selectSWMMACIndex8(MachineOperand &Root) const;
   InstructionSelector::ComplexRendererFns
   selectSWMMACIndex16(MachineOperand &Root) const;
+#if LLPC_BUILD_NPI
+  InstructionSelector::ComplexRendererFns
+  selectSWMMACIndex32(MachineOperand &Root) const;
+#endif /* LLPC_BUILD_NPI */
 
   InstructionSelector::ComplexRendererFns
   selectVOP3OpSelMods(MachineOperand &Root) const;
@@ -471,6 +475,8 @@ private:
   /// Match either sign or zero extend depending on the \p IsSigned from a
   /// 32-bit value to 64-bits, or \p Reg itself if it is 32-bit.
   Register matchExtendFromS32OrS32(Register Reg, bool IsSigned) const;
+  /// Match an any extend from a 32-bit value to 64-bit.
+  Register matchAnyExtendFromS32(Register Reg) const;
 #endif /* LLPC_BUILD_NPI */
 
   const SIInstrInfo &TII;

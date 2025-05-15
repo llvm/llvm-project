@@ -20,17 +20,17 @@ define amdgpu_ps <4 x float> @sample_1d_tfe(<8 x i32> inreg %rsrc, i32 %samp, pt
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    s_mov_b32 s10, exec_lo
 ; GFX13-NEXT:    s_wqm_b32 exec_lo, exec_lo
-; GFX13-NEXT:    v_dual_mov_b32 v8, 0 :: v_dual_mov_b32 v5, v1
-; GFX13-NEXT:    v_dual_mov_b32 v6, v0 :: v_dual_mov_b32 v9, v8
-; GFX13-NEXT:    v_dual_mov_b32 v10, v8 :: v_dual_mov_b32 v11, v8
-; GFX13-NEXT:    v_mov_b32_e32 v12, v8
-; GFX13-NEXT:    v_dual_mov_b32 v0, v8 :: v_dual_mov_b32 v1, v9
-; GFX13-NEXT:    v_dual_mov_b32 v2, v10 :: v_dual_mov_b32 v3, v11
-; GFX13-NEXT:    v_mov_b32_e32 v4, v12
+; GFX13-NEXT:    v_mov_b32_e32 v7, 0
+; GFX13-NEXT:    v_dual_mov_b32 v5, v1 :: v_dual_mov_b32 v6, v0
+; GFX13-NEXT:    v_dual_mov_b32 v8, v7 :: v_dual_mov_b32 v9, v7
+; GFX13-NEXT:    v_dual_mov_b32 v10, v7 :: v_dual_mov_b32 v11, v7
+; GFX13-NEXT:    v_dual_mov_b32 v0, v7 :: v_dual_mov_b32 v1, v8
+; GFX13-NEXT:    v_dual_mov_b32 v2, v9 :: v_dual_mov_b32 v3, v10
+; GFX13-NEXT:    v_mov_b32_e32 v4, v11
 ; GFX13-NEXT:    s_and_b32 exec_lo, exec_lo, s10
 ; GFX13-NEXT:    image_sample v[0:4], v5, s[0:7], v6 dmask:0xf dim:SQ_RSRC_IMG_1D tfe
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    global_store_b32 v8, v4, s[8:9]
+; GFX13-NEXT:    global_store_b32 v7, v4, s[8:9] scope:SCOPE_SE
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call {<4 x float>,i32} @llvm.amdgcn.image.sample.1d.v4f32i32.f32(i32 15, float %s, <8 x i32> %rsrc, i32 %samp, i1 0, i32 1, i32 0)
@@ -215,17 +215,17 @@ define amdgpu_ps <4 x float> @sample_1d_lwe(<8 x i32> inreg %rsrc, i32 %samp, pt
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    s_mov_b32 s10, exec_lo
 ; GFX13-NEXT:    s_wqm_b32 exec_lo, exec_lo
-; GFX13-NEXT:    v_dual_mov_b32 v8, 0 :: v_dual_mov_b32 v5, v1
-; GFX13-NEXT:    v_dual_mov_b32 v6, v0 :: v_dual_mov_b32 v9, v8
-; GFX13-NEXT:    v_dual_mov_b32 v10, v8 :: v_dual_mov_b32 v11, v8
-; GFX13-NEXT:    v_mov_b32_e32 v12, v8
-; GFX13-NEXT:    v_dual_mov_b32 v0, v8 :: v_dual_mov_b32 v1, v9
-; GFX13-NEXT:    v_dual_mov_b32 v2, v10 :: v_dual_mov_b32 v3, v11
-; GFX13-NEXT:    v_mov_b32_e32 v4, v12
+; GFX13-NEXT:    v_mov_b32_e32 v7, 0
+; GFX13-NEXT:    v_dual_mov_b32 v5, v1 :: v_dual_mov_b32 v6, v0
+; GFX13-NEXT:    v_dual_mov_b32 v8, v7 :: v_dual_mov_b32 v9, v7
+; GFX13-NEXT:    v_dual_mov_b32 v10, v7 :: v_dual_mov_b32 v11, v7
+; GFX13-NEXT:    v_dual_mov_b32 v0, v7 :: v_dual_mov_b32 v1, v8
+; GFX13-NEXT:    v_dual_mov_b32 v2, v9 :: v_dual_mov_b32 v3, v10
+; GFX13-NEXT:    v_mov_b32_e32 v4, v11
 ; GFX13-NEXT:    s_and_b32 exec_lo, exec_lo, s10
 ; GFX13-NEXT:    image_sample v[0:4], v5, s[0:7], v6 dmask:0xf dim:SQ_RSRC_IMG_1D lwe
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    global_store_b32 v8, v4, s[8:9]
+; GFX13-NEXT:    global_store_b32 v7, v4, s[8:9] scope:SCOPE_SE
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call {<4 x float>,i32} @llvm.amdgcn.image.sample.1d.v4f32i32.f32(i32 15, float %s, <8 x i32> %rsrc, i32 %samp, i1 0, i32 2, i32 0)
@@ -697,7 +697,7 @@ define amdgpu_ps float @sample_c_d_o_2darray_V1_tfe(<8 x i32> inreg %rsrc, i32 %
 ; GFX13-NEXT:    v_dual_mov_b32 v0, v12 :: v_dual_mov_b32 v1, v13
 ; GFX13-NEXT:    image_sample_c_d_o v[0:1], [v10, v2, v3, v[4:9]], s[0:7], v11 dmask:0x4 dim:SQ_RSRC_IMG_2D_ARRAY tfe
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    global_store_b32 v12, v1, s[8:9]
+; GFX13-NEXT:    global_store_b32 v12, v1, s[8:9] scope:SCOPE_SE
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call {float,i32} @llvm.amdgcn.image.sample.c.d.o.2darray.f32i32.f32.f32(i32 4, i32 %offset, float %zcompare, float %dsdh, float %dtdh, float %dsdv, float %dtdv, float %s, float %t, float %slice, <8 x i32> %rsrc, i32 %samp, i1 0, i32 1, i32 0)

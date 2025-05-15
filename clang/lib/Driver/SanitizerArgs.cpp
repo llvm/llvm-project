@@ -180,7 +180,7 @@ static void validateSpecialCaseListFormat(const Driver &D,
   std::string BLError;
   std::unique_ptr<llvm::SpecialCaseList> SCL(
       llvm::SpecialCaseList::create(SCLFiles, D.getVFS(), BLError));
-  if (!SCL.get() && DiagnoseErrors)
+  if (!SCL && DiagnoseErrors)
     D.Diag(MalformedSCLErrorDiagID) << BLError;
 }
 

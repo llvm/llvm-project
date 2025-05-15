@@ -1461,7 +1461,9 @@ public:
 
   /// Return if operations acting on VGPR tuples require even alignment.
 #if LLPC_BUILD_NPI
-  bool needsAlignedVGPRs() const { return GFX90AInsts || GFX1250Insts; }
+  bool needsAlignedVGPRs() const {
+    return GFX90AInsts || (GFX1250Insts && !GFX13Insts);
+  }
 #else /* LLPC_BUILD_NPI */
   bool needsAlignedVGPRs() const { return GFX90AInsts; }
 #endif /* LLPC_BUILD_NPI */

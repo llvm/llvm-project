@@ -25,7 +25,7 @@ define amdgpu_ps <4 x float> @load_1d_tfe(i32 inreg %rsrc, ptr addrspace(1) inre
 ; GFX13-NEXT:    v_mov_b32_e32 v4, v10
 ; GFX13-NEXT:    image_load v[0:4], v5, s0 dmask:0xf dim:SQ_RSRC_IMG_1D tfe
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    global_store_b32 v6, v4, s[2:3]
+; GFX13-NEXT:    global_store_b32 v6, v4, s[2:3] scope:SCOPE_SE
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call {<4 x float>,i32} @llvm.amdgcn.image.load.1d.v4f32i32.i32(i32 15, i32 %s, i32 %rsrc, i32 1, i32 0)
@@ -43,7 +43,7 @@ define amdgpu_ps <4 x float> @load_1d_lwe(i32 inreg %rsrc, ptr addrspace(1) inre
 ; GFX13-NEXT:    s_mov_b32 s3, s2
 ; GFX13-NEXT:    s_mov_b32 s2, s1
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    global_store_b32 v5, v4, s[2:3]
+; GFX13-NEXT:    global_store_b32 v5, v4, s[2:3] scope:SCOPE_SE
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call {<4 x float>, i32} @llvm.amdgcn.image.load.1d.v4f32i32.i32(i32 15, i32 %s, i32 %rsrc, i32 2, i32 0)
@@ -67,18 +67,18 @@ main_body:
 define amdgpu_ps <4 x float> @load_2d_tfe(i32 inreg %rsrc, ptr addrspace(1) inreg %out, i32 %s, i32 %t) {
 ; GFX13-LABEL: load_2d_tfe:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    v_dual_mov_b32 v8, 0 :: v_dual_mov_b32 v5, v1
-; GFX13-NEXT:    v_mov_b32_e32 v6, v0
+; GFX13-NEXT:    v_mov_b32_e32 v7, 0
+; GFX13-NEXT:    v_dual_mov_b32 v5, v1 :: v_dual_mov_b32 v6, v0
 ; GFX13-NEXT:    s_mov_b32 s3, s2
 ; GFX13-NEXT:    s_mov_b32 s2, s1
-; GFX13-NEXT:    v_dual_mov_b32 v9, v8 :: v_dual_mov_b32 v10, v8
-; GFX13-NEXT:    v_dual_mov_b32 v11, v8 :: v_dual_mov_b32 v12, v8
-; GFX13-NEXT:    v_dual_mov_b32 v0, v8 :: v_dual_mov_b32 v1, v9
-; GFX13-NEXT:    v_dual_mov_b32 v2, v10 :: v_dual_mov_b32 v3, v11
-; GFX13-NEXT:    v_mov_b32_e32 v4, v12
+; GFX13-NEXT:    v_dual_mov_b32 v8, v7 :: v_dual_mov_b32 v9, v7
+; GFX13-NEXT:    v_dual_mov_b32 v10, v7 :: v_dual_mov_b32 v11, v7
+; GFX13-NEXT:    v_dual_mov_b32 v0, v7 :: v_dual_mov_b32 v1, v8
+; GFX13-NEXT:    v_dual_mov_b32 v2, v9 :: v_dual_mov_b32 v3, v10
+; GFX13-NEXT:    v_mov_b32_e32 v4, v11
 ; GFX13-NEXT:    image_load v[0:4], [v6, v5], s0 dmask:0xf dim:SQ_RSRC_IMG_2D tfe
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    global_store_b32 v8, v4, s[2:3]
+; GFX13-NEXT:    global_store_b32 v7, v4, s[2:3] scope:SCOPE_SE
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call {<4 x float>,i32} @llvm.amdgcn.image.load.2d.v4f32i32.i32(i32 15, i32 %s, i32 %t, i32 %rsrc, i32 1, i32 0)
@@ -113,7 +113,7 @@ define amdgpu_ps <4 x float> @load_3d_tfe_lwe(i32 inreg %rsrc, ptr addrspace(1) 
 ; GFX13-NEXT:    v_mov_b32_e32 v4, v12
 ; GFX13-NEXT:    image_load v[0:4], [v7, v6, v5], s0 dmask:0xf dim:SQ_RSRC_IMG_3D tfe
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    global_store_b32 v8, v4, s[2:3]
+; GFX13-NEXT:    global_store_b32 v8, v4, s[2:3] scope:SCOPE_SE
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call {<4 x float>,i32} @llvm.amdgcn.image.load.3d.v4f32i32.i32(i32 15, i32 %s, i32 %t, i32 %r, i32 %rsrc, i32 3, i32 0)
@@ -142,7 +142,7 @@ define amdgpu_ps <4 x float> @load_cube_lwe(i32 inreg %rsrc, ptr addrspace(1) in
 ; GFX13-NEXT:    s_mov_b32 s3, s2
 ; GFX13-NEXT:    s_mov_b32 s2, s1
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    global_store_b32 v5, v4, s[2:3]
+; GFX13-NEXT:    global_store_b32 v5, v4, s[2:3] scope:SCOPE_SE
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call {<4 x float>,i32} @llvm.amdgcn.image.load.cube.v4f32i32.i32(i32 15, i32 %s, i32 %t, i32 %slice, i32 %rsrc, i32 2, i32 0)
@@ -166,18 +166,18 @@ main_body:
 define amdgpu_ps <4 x float> @load_1darray_tfe(i32 inreg %rsrc, ptr addrspace(1) inreg %out, i32 %s, i32 %slice) {
 ; GFX13-LABEL: load_1darray_tfe:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    v_dual_mov_b32 v8, 0 :: v_dual_mov_b32 v5, v1
-; GFX13-NEXT:    v_mov_b32_e32 v6, v0
+; GFX13-NEXT:    v_mov_b32_e32 v7, 0
+; GFX13-NEXT:    v_dual_mov_b32 v5, v1 :: v_dual_mov_b32 v6, v0
 ; GFX13-NEXT:    s_mov_b32 s3, s2
 ; GFX13-NEXT:    s_mov_b32 s2, s1
-; GFX13-NEXT:    v_dual_mov_b32 v9, v8 :: v_dual_mov_b32 v10, v8
-; GFX13-NEXT:    v_dual_mov_b32 v11, v8 :: v_dual_mov_b32 v12, v8
-; GFX13-NEXT:    v_dual_mov_b32 v0, v8 :: v_dual_mov_b32 v1, v9
-; GFX13-NEXT:    v_dual_mov_b32 v2, v10 :: v_dual_mov_b32 v3, v11
-; GFX13-NEXT:    v_mov_b32_e32 v4, v12
+; GFX13-NEXT:    v_dual_mov_b32 v8, v7 :: v_dual_mov_b32 v9, v7
+; GFX13-NEXT:    v_dual_mov_b32 v10, v7 :: v_dual_mov_b32 v11, v7
+; GFX13-NEXT:    v_dual_mov_b32 v0, v7 :: v_dual_mov_b32 v1, v8
+; GFX13-NEXT:    v_dual_mov_b32 v2, v9 :: v_dual_mov_b32 v3, v10
+; GFX13-NEXT:    v_mov_b32_e32 v4, v11
 ; GFX13-NEXT:    image_load v[0:4], [v6, v5], s0 dmask:0xf dim:SQ_RSRC_IMG_1D_ARRAY tfe
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    global_store_b32 v8, v4, s[2:3]
+; GFX13-NEXT:    global_store_b32 v7, v4, s[2:3] scope:SCOPE_SE
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call {<4 x float>,i32} @llvm.amdgcn.image.load.1darray.v4f32i32.i32(i32 15, i32 %s, i32 %slice, i32 %rsrc, i32 1, i32 0)
@@ -206,7 +206,7 @@ define amdgpu_ps <4 x float> @load_2darray_lwe(i32 inreg %rsrc, ptr addrspace(1)
 ; GFX13-NEXT:    s_mov_b32 s3, s2
 ; GFX13-NEXT:    s_mov_b32 s2, s1
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    global_store_b32 v5, v4, s[2:3]
+; GFX13-NEXT:    global_store_b32 v5, v4, s[2:3] scope:SCOPE_SE
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call {<4 x float>,i32} @llvm.amdgcn.image.load.2darray.v4f32i32.i32(i32 15, i32 %s, i32 %t, i32 %slice, i32 %rsrc, i32 2, i32 0)
@@ -241,7 +241,7 @@ define amdgpu_ps <4 x float> @load_2dmsaa_both(i32 inreg %rsrc, ptr addrspace(1)
 ; GFX13-NEXT:    v_mov_b32_e32 v4, v12
 ; GFX13-NEXT:    image_load v[0:4], [v7, v6, v5], s0 dmask:0xf dim:SQ_RSRC_IMG_2D_MSAA tfe
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    global_store_b32 v8, v4, s[2:3]
+; GFX13-NEXT:    global_store_b32 v8, v4, s[2:3] scope:SCOPE_SE
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call {<4 x float>,i32} @llvm.amdgcn.image.load.2dmsaa.v4f32i32.i32(i32 15, i32 %s, i32 %t, i32 %fragid, i32 %rsrc, i32 3, i32 0)
@@ -265,19 +265,19 @@ main_body:
 define amdgpu_ps <4 x float> @load_2darraymsaa_tfe(i32 inreg %rsrc, ptr addrspace(1) inreg %out, i32 %s, i32 %t, i32 %slice, i32 %fragid) {
 ; GFX13-LABEL: load_2darraymsaa_tfe:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    v_dual_mov_b32 v10, 0 :: v_dual_mov_b32 v5, v3
-; GFX13-NEXT:    v_dual_mov_b32 v6, v2 :: v_dual_mov_b32 v7, v1
-; GFX13-NEXT:    v_dual_mov_b32 v8, v0 :: v_dual_mov_b32 v11, v10
-; GFX13-NEXT:    v_dual_mov_b32 v12, v10 :: v_dual_mov_b32 v13, v10
-; GFX13-NEXT:    v_mov_b32_e32 v14, v10
-; GFX13-NEXT:    v_dual_mov_b32 v0, v10 :: v_dual_mov_b32 v1, v11
-; GFX13-NEXT:    v_dual_mov_b32 v2, v12 :: v_dual_mov_b32 v3, v13
-; GFX13-NEXT:    v_mov_b32_e32 v4, v14
+; GFX13-NEXT:    v_mov_b32_e32 v9, 0
+; GFX13-NEXT:    v_dual_mov_b32 v5, v3 :: v_dual_mov_b32 v6, v2
+; GFX13-NEXT:    v_dual_mov_b32 v7, v1 :: v_dual_mov_b32 v8, v0
+; GFX13-NEXT:    v_dual_mov_b32 v10, v9 :: v_dual_mov_b32 v11, v9
+; GFX13-NEXT:    v_dual_mov_b32 v12, v9 :: v_dual_mov_b32 v13, v9
+; GFX13-NEXT:    v_dual_mov_b32 v0, v9 :: v_dual_mov_b32 v1, v10
+; GFX13-NEXT:    v_dual_mov_b32 v2, v11 :: v_dual_mov_b32 v3, v12
+; GFX13-NEXT:    v_mov_b32_e32 v4, v13
 ; GFX13-NEXT:    image_load v[0:4], [v8, v7, v6, v5], s0 dmask:0xf dim:SQ_RSRC_IMG_2D_MSAA_ARRAY tfe
 ; GFX13-NEXT:    s_mov_b32 s3, s2
 ; GFX13-NEXT:    s_mov_b32 s2, s1
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    global_store_b32 v10, v4, s[2:3]
+; GFX13-NEXT:    global_store_b32 v9, v4, s[2:3] scope:SCOPE_SE
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call {<4 x float>,i32} @llvm.amdgcn.image.load.2darraymsaa.v4f32i32.i32(i32 15, i32 %s, i32 %t, i32 %slice, i32 %fragid, i32 %rsrc, i32 1, i32 0)
@@ -306,7 +306,7 @@ define amdgpu_ps <4 x float> @load_mip_1d_lwe(i32 inreg %rsrc, ptr addrspace(1) 
 ; GFX13-NEXT:    s_mov_b32 s3, s2
 ; GFX13-NEXT:    s_mov_b32 s2, s1
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    global_store_b32 v5, v4, s[2:3]
+; GFX13-NEXT:    global_store_b32 v5, v4, s[2:3] scope:SCOPE_SE
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call {<4 x float>,i32} @llvm.amdgcn.image.load.mip.1d.v4f32i32.i32(i32 15, i32 %s, i32 %mip, i32 %rsrc, i32 2, i32 0)
@@ -341,7 +341,7 @@ define amdgpu_ps <4 x float> @load_mip_2d_tfe(i32 inreg %rsrc, ptr addrspace(1) 
 ; GFX13-NEXT:    v_mov_b32_e32 v4, v12
 ; GFX13-NEXT:    image_load_mip v[0:4], [v7, v6, v5], s0 dmask:0xf dim:SQ_RSRC_IMG_2D tfe
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    global_store_b32 v8, v4, s[2:3]
+; GFX13-NEXT:    global_store_b32 v8, v4, s[2:3] scope:SCOPE_SE
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call {<4 x float>,i32} @llvm.amdgcn.image.load.mip.2d.v4f32i32.i32(i32 15, i32 %s, i32 %t, i32 %mip, i32 %rsrc, i32 1, i32 0)
@@ -354,11 +354,11 @@ main_body:
 define amdgpu_ps float @load_1d_V2_tfe_dmask0(i32 inreg %rsrc, i32 %s) {
 ; GFX13-LABEL: load_1d_V2_tfe_dmask0:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    v_mov_b32_e32 v2, 0
-; GFX13-NEXT:    v_mov_b32_e32 v3, v2
-; GFX13-NEXT:    image_load v[2:3], v0, s0 dmask:0x1 dim:SQ_RSRC_IMG_1D tfe
+; GFX13-NEXT:    v_mov_b32_e32 v1, 0
+; GFX13-NEXT:    v_mov_b32_e32 v2, v1
+; GFX13-NEXT:    image_load v[1:2], v0, s0 dmask:0x1 dim:SQ_RSRC_IMG_1D tfe
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    v_mov_b32_e32 v0, v3
+; GFX13-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call {<2 x float>,i32} @llvm.amdgcn.image.load.1d.v2f32i32.i32(i32 0, i32 %s, i32 %rsrc, i32 1, i32 0)
@@ -370,11 +370,11 @@ main_body:
 define amdgpu_ps float @load_1d_V1_tfe_dmask0(i32 inreg %rsrc, i32 %s) {
 ; GFX13-LABEL: load_1d_V1_tfe_dmask0:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    v_mov_b32_e32 v2, 0
-; GFX13-NEXT:    v_mov_b32_e32 v3, v2
-; GFX13-NEXT:    image_load v[2:3], v0, s0 dmask:0x1 dim:SQ_RSRC_IMG_1D tfe
+; GFX13-NEXT:    v_mov_b32_e32 v1, 0
+; GFX13-NEXT:    v_mov_b32_e32 v2, v1
+; GFX13-NEXT:    image_load v[1:2], v0, s0 dmask:0x1 dim:SQ_RSRC_IMG_1D tfe
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    v_mov_b32_e32 v0, v3
+; GFX13-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call {float,i32} @llvm.amdgcn.image.load.1d.f32i32.i32(i32 0, i32 %s, i32 %rsrc, i32 1, i32 0)
@@ -386,11 +386,11 @@ main_body:
 define amdgpu_ps float @load_mip_2d_tfe_dmask0(i32 inreg %rsrc, i32 %s, i32 %t, i32 %mip) {
 ; GFX13-LABEL: load_mip_2d_tfe_dmask0:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    v_mov_b32_e32 v4, 0
-; GFX13-NEXT:    v_mov_b32_e32 v5, v4
-; GFX13-NEXT:    image_load_mip v[4:5], [v0, v1, v2], s0 dmask:0x1 dim:SQ_RSRC_IMG_2D tfe
+; GFX13-NEXT:    v_mov_b32_e32 v3, 0
+; GFX13-NEXT:    v_mov_b32_e32 v4, v3
+; GFX13-NEXT:    image_load_mip v[3:4], [v0, v1, v2], s0 dmask:0x1 dim:SQ_RSRC_IMG_2D tfe
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    v_mov_b32_e32 v0, v5
+; GFX13-NEXT:    v_mov_b32_e32 v0, v4
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call {<4 x float>,i32} @llvm.amdgcn.image.load.mip.2d.v4f32i32.i32(i32 0, i32 %s, i32 %t, i32 %mip, i32 %rsrc, i32 1, i32 0)
@@ -402,11 +402,11 @@ main_body:
 define amdgpu_ps float @load_mip_2d_tfe_nouse(i32 inreg %rsrc, i32 %s, i32 %t, i32 %mip) {
 ; GFX13-LABEL: load_mip_2d_tfe_nouse:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    v_mov_b32_e32 v4, 0
-; GFX13-NEXT:    v_mov_b32_e32 v5, v4
-; GFX13-NEXT:    image_load_mip v[4:5], [v0, v1, v2], s0 dmask:0x1 dim:SQ_RSRC_IMG_2D tfe
+; GFX13-NEXT:    v_mov_b32_e32 v3, 0
+; GFX13-NEXT:    v_mov_b32_e32 v4, v3
+; GFX13-NEXT:    image_load_mip v[3:4], [v0, v1, v2], s0 dmask:0x1 dim:SQ_RSRC_IMG_2D tfe
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    v_mov_b32_e32 v0, v5
+; GFX13-NEXT:    v_mov_b32_e32 v0, v4
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call {<4 x float>,i32} @llvm.amdgcn.image.load.mip.2d.v4f32i32.i32(i32 15, i32 %s, i32 %t, i32 %mip, i32 %rsrc, i32 1, i32 0)
@@ -418,11 +418,11 @@ main_body:
 define amdgpu_ps float @load_mip_2d_tfe_nouse_V2(i32 inreg %rsrc, i32 %s, i32 %t, i32 %mip) {
 ; GFX13-LABEL: load_mip_2d_tfe_nouse_V2:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    v_mov_b32_e32 v4, 0
-; GFX13-NEXT:    v_mov_b32_e32 v5, v4
-; GFX13-NEXT:    image_load_mip v[4:5], [v0, v1, v2], s0 dmask:0x1 dim:SQ_RSRC_IMG_2D tfe
+; GFX13-NEXT:    v_mov_b32_e32 v3, 0
+; GFX13-NEXT:    v_mov_b32_e32 v4, v3
+; GFX13-NEXT:    image_load_mip v[3:4], [v0, v1, v2], s0 dmask:0x1 dim:SQ_RSRC_IMG_2D tfe
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    v_mov_b32_e32 v0, v5
+; GFX13-NEXT:    v_mov_b32_e32 v0, v4
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call {<2 x float>,i32} @llvm.amdgcn.image.load.mip.2d.v2f32i32.i32(i32 6, i32 %s, i32 %t, i32 %mip, i32 %rsrc, i32 1, i32 0)
@@ -434,11 +434,11 @@ main_body:
 define amdgpu_ps float @load_mip_2d_tfe_nouse_V1(i32 inreg %rsrc, i32 %s, i32 %t, i32 %mip) {
 ; GFX13-LABEL: load_mip_2d_tfe_nouse_V1:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    v_mov_b32_e32 v4, 0
-; GFX13-NEXT:    v_mov_b32_e32 v5, v4
-; GFX13-NEXT:    image_load_mip v[4:5], [v0, v1, v2], s0 dmask:0x2 dim:SQ_RSRC_IMG_2D tfe
+; GFX13-NEXT:    v_mov_b32_e32 v3, 0
+; GFX13-NEXT:    v_mov_b32_e32 v4, v3
+; GFX13-NEXT:    image_load_mip v[3:4], [v0, v1, v2], s0 dmask:0x2 dim:SQ_RSRC_IMG_2D tfe
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    v_mov_b32_e32 v0, v5
+; GFX13-NEXT:    v_mov_b32_e32 v0, v4
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call {float, i32} @llvm.amdgcn.image.load.mip.2d.f32i32.i32(i32 2, i32 %s, i32 %t, i32 %mip, i32 %rsrc, i32 1, i32 0)
@@ -450,17 +450,16 @@ main_body:
 define amdgpu_ps <4 x float> @load_1d_tfe_V4_dmask3(i32 inreg %rsrc, ptr addrspace(1) inreg %out, i32 %s) {
 ; GFX13-LABEL: load_1d_tfe_V4_dmask3:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    v_mov_b32_e32 v6, 0
-; GFX13-NEXT:    v_mov_b32_e32 v4, v0
+; GFX13-NEXT:    v_dual_mov_b32 v4, v0 :: v_dual_mov_b32 v5, 0
 ; GFX13-NEXT:    s_mov_b32 s3, s2
 ; GFX13-NEXT:    s_mov_b32 s2, s1
-; GFX13-NEXT:    v_dual_mov_b32 v7, v6 :: v_dual_mov_b32 v8, v6
-; GFX13-NEXT:    v_mov_b32_e32 v9, v6
-; GFX13-NEXT:    v_dual_mov_b32 v0, v6 :: v_dual_mov_b32 v1, v7
-; GFX13-NEXT:    v_dual_mov_b32 v2, v8 :: v_dual_mov_b32 v3, v9
+; GFX13-NEXT:    v_dual_mov_b32 v6, v5 :: v_dual_mov_b32 v7, v5
+; GFX13-NEXT:    v_mov_b32_e32 v8, v5
+; GFX13-NEXT:    v_dual_mov_b32 v0, v5 :: v_dual_mov_b32 v1, v6
+; GFX13-NEXT:    v_dual_mov_b32 v2, v7 :: v_dual_mov_b32 v3, v8
 ; GFX13-NEXT:    image_load v[0:3], v4, s0 dmask:0x7 dim:SQ_RSRC_IMG_1D tfe
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    global_store_b32 v6, v3, s[2:3]
+; GFX13-NEXT:    global_store_b32 v5, v3, s[2:3] scope:SCOPE_SE
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call {<4 x float>,i32} @llvm.amdgcn.image.load.1d.v4f32i32.i32(i32 7, i32 %s, i32 %rsrc, i32 1, i32 0)
@@ -481,7 +480,7 @@ define amdgpu_ps <4 x float> @load_1d_tfe_V4_dmask2(i32 inreg %rsrc, ptr addrspa
 ; GFX13-NEXT:    v_mov_b32_e32 v2, v6
 ; GFX13-NEXT:    image_load v[0:2], v3, s0 dmask:0x6 dim:SQ_RSRC_IMG_1D tfe
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    global_store_b32 v4, v2, s[2:3]
+; GFX13-NEXT:    global_store_b32 v4, v2, s[2:3] scope:SCOPE_SE
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call {<4 x float>,i32} @llvm.amdgcn.image.load.1d.v4f32i32.i32(i32 6, i32 %s, i32 %rsrc, i32 1, i32 0)
@@ -494,15 +493,14 @@ main_body:
 define amdgpu_ps <4 x float> @load_1d_tfe_V4_dmask1(i32 inreg %rsrc, ptr addrspace(1) inreg %out, i32 %s) {
 ; GFX13-LABEL: load_1d_tfe_V4_dmask1:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    v_mov_b32_e32 v4, 0
-; GFX13-NEXT:    v_mov_b32_e32 v2, v0
+; GFX13-NEXT:    v_dual_mov_b32 v2, v0 :: v_dual_mov_b32 v3, 0
 ; GFX13-NEXT:    s_mov_b32 s3, s2
 ; GFX13-NEXT:    s_mov_b32 s2, s1
-; GFX13-NEXT:    v_mov_b32_e32 v5, v4
-; GFX13-NEXT:    v_dual_mov_b32 v0, v4 :: v_dual_mov_b32 v1, v5
+; GFX13-NEXT:    v_mov_b32_e32 v4, v3
+; GFX13-NEXT:    v_dual_mov_b32 v0, v3 :: v_dual_mov_b32 v1, v4
 ; GFX13-NEXT:    image_load v[0:1], v2, s0 dmask:0x8 dim:SQ_RSRC_IMG_1D tfe
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    global_store_b32 v4, v1, s[2:3]
+; GFX13-NEXT:    global_store_b32 v3, v1, s[2:3] scope:SCOPE_SE
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call {<4 x float>,i32} @llvm.amdgcn.image.load.1d.v4f32i32.i32(i32 8, i32 %s, i32 %rsrc, i32 1, i32 0)
@@ -515,15 +513,14 @@ main_body:
 define amdgpu_ps <2 x float> @load_1d_tfe_V2_dmask1(i32 inreg %rsrc, ptr addrspace(1) inreg %out, i32 %s) {
 ; GFX13-LABEL: load_1d_tfe_V2_dmask1:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    v_mov_b32_e32 v4, 0
-; GFX13-NEXT:    v_mov_b32_e32 v2, v0
+; GFX13-NEXT:    v_dual_mov_b32 v2, v0 :: v_dual_mov_b32 v3, 0
 ; GFX13-NEXT:    s_mov_b32 s3, s2
 ; GFX13-NEXT:    s_mov_b32 s2, s1
-; GFX13-NEXT:    v_mov_b32_e32 v5, v4
-; GFX13-NEXT:    v_dual_mov_b32 v0, v4 :: v_dual_mov_b32 v1, v5
+; GFX13-NEXT:    v_mov_b32_e32 v4, v3
+; GFX13-NEXT:    v_dual_mov_b32 v0, v3 :: v_dual_mov_b32 v1, v4
 ; GFX13-NEXT:    image_load v[0:1], v2, s0 dmask:0x8 dim:SQ_RSRC_IMG_1D tfe
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    global_store_b32 v4, v1, s[2:3]
+; GFX13-NEXT:    global_store_b32 v3, v1, s[2:3] scope:SCOPE_SE
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call {<2 x float>,i32} @llvm.amdgcn.image.load.1d.v2f32i32.i32(i32 8, i32 %s, i32 %rsrc, i32 1, i32 0)
@@ -581,7 +578,7 @@ main_body:
 define amdgpu_ps void @store_1d(i32 inreg %rsrc, <4 x float> %vdata, i32 %s) {
 ; GFX13-LABEL: store_1d:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    image_store v[0:3], v4, s0 dmask:0xf dim:SQ_RSRC_IMG_1D
+; GFX13-NEXT:    image_store v[0:3], v4, s0 dmask:0xf dim:SQ_RSRC_IMG_1D scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.image.store.1d.v4f32.i32(<4 x float> %vdata, i32 15, i32 %s, i32 %rsrc, i32 0, i32 0)
@@ -591,7 +588,7 @@ main_body:
 define amdgpu_ps void @store_2d(i32 inreg %rsrc, <4 x float> %vdata, i32 %s, i32 %t) {
 ; GFX13-LABEL: store_2d:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    image_store v[0:3], [v4, v5], s0 dmask:0xf dim:SQ_RSRC_IMG_2D
+; GFX13-NEXT:    image_store v[0:3], [v4, v5], s0 dmask:0xf dim:SQ_RSRC_IMG_2D scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.image.store.2d.v4f32.i32(<4 x float> %vdata, i32 15, i32 %s, i32 %t, i32 %rsrc, i32 0, i32 0)
@@ -601,7 +598,7 @@ main_body:
 define amdgpu_ps void @store_3d(i32 inreg %rsrc, <4 x float> %vdata, i32 %s, i32 %t, i32 %r) {
 ; GFX13-LABEL: store_3d:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    image_store v[0:3], [v4, v5, v6], s0 dmask:0xf dim:SQ_RSRC_IMG_3D
+; GFX13-NEXT:    image_store v[0:3], [v4, v5, v6], s0 dmask:0xf dim:SQ_RSRC_IMG_3D scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.image.store.3d.v4f32.i32(<4 x float> %vdata, i32 15, i32 %s, i32 %t, i32 %r, i32 %rsrc, i32 0, i32 0)
@@ -611,7 +608,7 @@ main_body:
 define amdgpu_ps void @store_cube(i32 inreg %rsrc, <4 x float> %vdata, i32 %s, i32 %t, i32 %slice) {
 ; GFX13-LABEL: store_cube:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    image_store v[0:3], [v4, v5, v6], s0 dmask:0xf dim:SQ_RSRC_IMG_CUBE
+; GFX13-NEXT:    image_store v[0:3], [v4, v5, v6], s0 dmask:0xf dim:SQ_RSRC_IMG_CUBE scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.image.store.cube.v4f32.i32(<4 x float> %vdata, i32 15, i32 %s, i32 %t, i32 %slice, i32 %rsrc, i32 0, i32 0)
@@ -621,7 +618,7 @@ main_body:
 define amdgpu_ps void @store_1darray(i32 inreg %rsrc, <4 x float> %vdata, i32 %s, i32 %slice) {
 ; GFX13-LABEL: store_1darray:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    image_store v[0:3], [v4, v5], s0 dmask:0xf dim:SQ_RSRC_IMG_1D_ARRAY
+; GFX13-NEXT:    image_store v[0:3], [v4, v5], s0 dmask:0xf dim:SQ_RSRC_IMG_1D_ARRAY scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.image.store.1darray.v4f32.i32(<4 x float> %vdata, i32 15, i32 %s, i32 %slice, i32 %rsrc, i32 0, i32 0)
@@ -631,7 +628,7 @@ main_body:
 define amdgpu_ps void @store_2darray(i32 inreg %rsrc, <4 x float> %vdata, i32 %s, i32 %t, i32 %slice) {
 ; GFX13-LABEL: store_2darray:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    image_store v[0:3], [v4, v5, v6], s0 dmask:0xf dim:SQ_RSRC_IMG_2D_ARRAY
+; GFX13-NEXT:    image_store v[0:3], [v4, v5, v6], s0 dmask:0xf dim:SQ_RSRC_IMG_2D_ARRAY scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.image.store.2darray.v4f32.i32(<4 x float> %vdata, i32 15, i32 %s, i32 %t, i32 %slice, i32 %rsrc, i32 0, i32 0)
@@ -641,7 +638,7 @@ main_body:
 define amdgpu_ps void @store_2dmsaa(i32 inreg %rsrc, <4 x float> %vdata, i32 %s, i32 %t, i32 %fragid) {
 ; GFX13-LABEL: store_2dmsaa:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    image_store v[0:3], [v4, v5, v6], s0 dmask:0xf dim:SQ_RSRC_IMG_2D_MSAA
+; GFX13-NEXT:    image_store v[0:3], [v4, v5, v6], s0 dmask:0xf dim:SQ_RSRC_IMG_2D_MSAA scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.image.store.2dmsaa.v4f32.i32(<4 x float> %vdata, i32 15, i32 %s, i32 %t, i32 %fragid, i32 %rsrc, i32 0, i32 0)
@@ -651,7 +648,7 @@ main_body:
 define amdgpu_ps void @store_2darraymsaa(i32 inreg %rsrc, <4 x float> %vdata, i32 %s, i32 %t, i32 %slice, i32 %fragid) {
 ; GFX13-LABEL: store_2darraymsaa:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    image_store v[0:3], [v4, v5, v6, v7], s0 dmask:0xf dim:SQ_RSRC_IMG_2D_MSAA_ARRAY
+; GFX13-NEXT:    image_store v[0:3], [v4, v5, v6, v7], s0 dmask:0xf dim:SQ_RSRC_IMG_2D_MSAA_ARRAY scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.image.store.2darraymsaa.v4f32.i32(<4 x float> %vdata, i32 15, i32 %s, i32 %t, i32 %slice, i32 %fragid, i32 %rsrc, i32 0, i32 0)
@@ -661,7 +658,7 @@ main_body:
 define amdgpu_ps void @store_mip_1d(i32 inreg %rsrc, <4 x float> %vdata, i32 %s, i32 %mip) {
 ; GFX13-LABEL: store_mip_1d:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    image_store_mip v[0:3], [v4, v5], s0 dmask:0xf dim:SQ_RSRC_IMG_1D
+; GFX13-NEXT:    image_store_mip v[0:3], [v4, v5], s0 dmask:0xf dim:SQ_RSRC_IMG_1D scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.image.store.mip.1d.v4f32.i32(<4 x float> %vdata, i32 15, i32 %s, i32 %mip, i32 %rsrc, i32 0, i32 0)
@@ -671,7 +668,7 @@ main_body:
 define amdgpu_ps void @store_mip_2d(i32 inreg %rsrc, <4 x float> %vdata, i32 %s, i32 %t, i32 %mip) {
 ; GFX13-LABEL: store_mip_2d:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    image_store_mip v[0:3], [v4, v5, v6], s0 dmask:0xf dim:SQ_RSRC_IMG_2D
+; GFX13-NEXT:    image_store_mip v[0:3], [v4, v5, v6], s0 dmask:0xf dim:SQ_RSRC_IMG_2D scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.image.store.mip.2d.v4f32.i32(<4 x float> %vdata, i32 15, i32 %s, i32 %t, i32 %mip, i32 %rsrc, i32 0, i32 0)
@@ -681,7 +678,7 @@ main_body:
 define amdgpu_ps void @store_mip_3d(i32 inreg %rsrc, <4 x float> %vdata, i32 %s, i32 %t, i32 %r, i32 %mip) {
 ; GFX13-LABEL: store_mip_3d:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    image_store_mip v[0:3], [v4, v5, v6, v7], s0 dmask:0xf dim:SQ_RSRC_IMG_3D
+; GFX13-NEXT:    image_store_mip v[0:3], [v4, v5, v6, v7], s0 dmask:0xf dim:SQ_RSRC_IMG_3D scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.image.store.mip.3d.v4f32.i32(<4 x float> %vdata, i32 15, i32 %s, i32 %t, i32 %r, i32 %mip, i32 %rsrc, i32 0, i32 0)
@@ -691,7 +688,7 @@ main_body:
 define amdgpu_ps void @store_mip_cube(i32 inreg %rsrc, <4 x float> %vdata, i32 %s, i32 %t, i32 %slice, i32 %mip) {
 ; GFX13-LABEL: store_mip_cube:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    image_store_mip v[0:3], [v4, v5, v6, v7], s0 dmask:0xf dim:SQ_RSRC_IMG_CUBE
+; GFX13-NEXT:    image_store_mip v[0:3], [v4, v5, v6, v7], s0 dmask:0xf dim:SQ_RSRC_IMG_CUBE scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.image.store.mip.cube.v4f32.i32(<4 x float> %vdata, i32 15, i32 %s, i32 %t, i32 %slice, i32 %mip, i32 %rsrc, i32 0, i32 0)
@@ -701,7 +698,7 @@ main_body:
 define amdgpu_ps void @store_mip_1darray(i32 inreg %rsrc, <4 x float> %vdata, i32 %s, i32 %slice, i32 %mip) {
 ; GFX13-LABEL: store_mip_1darray:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    image_store_mip v[0:3], [v4, v5, v6], s0 dmask:0xf dim:SQ_RSRC_IMG_1D_ARRAY
+; GFX13-NEXT:    image_store_mip v[0:3], [v4, v5, v6], s0 dmask:0xf dim:SQ_RSRC_IMG_1D_ARRAY scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.image.store.mip.1darray.v4f32.i32(<4 x float> %vdata, i32 15, i32 %s, i32 %slice, i32 %mip, i32 %rsrc, i32 0, i32 0)
@@ -711,7 +708,7 @@ main_body:
 define amdgpu_ps void @store_mip_2darray(i32 inreg %rsrc, <4 x float> %vdata, i32 %s, i32 %t, i32 %slice, i32 %mip) {
 ; GFX13-LABEL: store_mip_2darray:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    image_store_mip v[0:3], [v4, v5, v6, v7], s0 dmask:0xf dim:SQ_RSRC_IMG_2D_ARRAY
+; GFX13-NEXT:    image_store_mip v[0:3], [v4, v5, v6, v7], s0 dmask:0xf dim:SQ_RSRC_IMG_2D_ARRAY scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.image.store.mip.2darray.v4f32.i32(<4 x float> %vdata, i32 15, i32 %s, i32 %t, i32 %slice, i32 %mip, i32 %rsrc, i32 0, i32 0)
@@ -831,7 +828,7 @@ main_body:
 define amdgpu_ps void @store_1d_V1(i32 inreg %rsrc, float %vdata, i32 %s) {
 ; GFX13-LABEL: store_1d_V1:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    image_store v0, v1, s0 dmask:0x2 dim:SQ_RSRC_IMG_1D
+; GFX13-NEXT:    image_store v0, v1, s0 dmask:0x2 dim:SQ_RSRC_IMG_1D scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.image.store.1d.f32.i32(float %vdata, i32 2, i32 %s, i32 %rsrc, i32 0, i32 0)
@@ -841,7 +838,7 @@ main_body:
 define amdgpu_ps void @store_1d_V2(i32 inreg %rsrc, <2 x float> %vdata, i32 %s) {
 ; GFX13-LABEL: store_1d_V2:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    image_store v[0:1], v2, s0 dmask:0xc dim:SQ_RSRC_IMG_1D
+; GFX13-NEXT:    image_store v[0:1], v2, s0 dmask:0xc dim:SQ_RSRC_IMG_1D scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.image.store.1d.v2f32.i32(<2 x float> %vdata, i32 12, i32 %s, i32 %rsrc, i32 0, i32 0)
@@ -884,7 +881,7 @@ main_body:
 define amdgpu_ps void @store_1d_glc(i32 inreg %rsrc, <4 x float> %vdata, i32 %s) {
 ; GFX13-LABEL: store_1d_glc:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    image_store v[0:3], v4, s0 dmask:0xf dim:SQ_RSRC_IMG_1D th:TH_STORE_NT
+; GFX13-NEXT:    image_store v[0:3], v4, s0 dmask:0xf dim:SQ_RSRC_IMG_1D th:TH_STORE_NT scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.image.store.1d.v4f32.i32(<4 x float> %vdata, i32 15, i32 %s, i32 %rsrc, i32 0, i32 1)
@@ -894,7 +891,7 @@ main_body:
 define amdgpu_ps void @store_1d_slc(i32 inreg %rsrc, <4 x float> %vdata, i32 %s) {
 ; GFX13-LABEL: store_1d_slc:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    image_store v[0:3], v4, s0 dmask:0xf dim:SQ_RSRC_IMG_1D th:TH_STORE_HT
+; GFX13-NEXT:    image_store v[0:3], v4, s0 dmask:0xf dim:SQ_RSRC_IMG_1D th:TH_STORE_HT scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.image.store.1d.v4f32.i32(<4 x float> %vdata, i32 15, i32 %s, i32 %rsrc, i32 0, i32 2)
@@ -904,7 +901,7 @@ main_body:
 define amdgpu_ps void @store_1d_glc_slc(i32 inreg %rsrc, <4 x float> %vdata, i32 %s) {
 ; GFX13-LABEL: store_1d_glc_slc:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    image_store v[0:3], v4, s0 dmask:0xf dim:SQ_RSRC_IMG_1D th:TH_STORE_WB
+; GFX13-NEXT:    image_store v[0:3], v4, s0 dmask:0xf dim:SQ_RSRC_IMG_1D th:TH_STORE_WB scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.image.store.1d.v4f32.i32(<4 x float> %vdata, i32 15, i32 %s, i32 %rsrc, i32 0, i32 3)
@@ -956,10 +953,10 @@ main_body:
 define amdgpu_ps void @image_store_wait(i32 inreg %arg, i32 inreg %arg1, i32 inreg %arg2, <4 x float> %arg3, i32 %arg4) #0 {
 ; GFX13-LABEL: image_store_wait:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    image_store v[0:3], v4, s0 dmask:0xf dim:SQ_RSRC_IMG_1D
+; GFX13-NEXT:    image_store v[0:3], v4, s0 dmask:0xf dim:SQ_RSRC_IMG_1D scope:SCOPE_SE
 ; GFX13-NEXT:    image_load v[0:3], v4, s1 dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    image_store v[0:3], v4, s2 dmask:0xf dim:SQ_RSRC_IMG_1D
+; GFX13-NEXT:    image_store v[0:3], v4, s2 dmask:0xf dim:SQ_RSRC_IMG_1D scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.image.store.1d.v4f32.i32(<4 x float> %arg3, i32 15, i32 %arg4, i32 %arg, i32 0, i32 0)

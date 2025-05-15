@@ -100,6 +100,12 @@ def gi_swmmacindex16 :
     GIComplexOperandMatcher<s32, "selectSWMMACIndex16">,
     GIComplexPatternEquiv<SWMMACIndex16>;
 
+#ifdef LLPC_BUILD_NPI
+def gi_swmmacindex32 :
+    GIComplexOperandMatcher<s64, "selectSWMMACIndex32">,
+    GIComplexPatternEquiv<SWMMACIndex32>;
+
+#endif /* LLPC_BUILD_NPI */
 def gi_vop3opselmods :
     GIComplexOperandMatcher<s32, "selectVOP3OpSelMods">,
     GIComplexPatternEquiv<VOP3OpSelMods>;

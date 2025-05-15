@@ -875,9 +875,10 @@ public:
     if (!VT.isVector())
       return hasAndNotCompare(Y);
 
-    TypeSize TS = VT.getSizeInBits();
-    // TODO: We should be able to use bic/bif too for SVE.
-    return !TS.isScalable() && TS.getFixedValue() >= 64; // vector 'bic'
+    if (VT.isScalableVector())
+      return true;
+
+    return VT.getFixedSizeInBits() >= 64; // vector 'bic'
   }
 
   bool shouldProduceAndByConstByHoistingConstFromShiftsLHSOfAnd(

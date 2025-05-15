@@ -34,8 +34,8 @@ define amdgpu_kernel void @test_cvt_scalef32_pk32_bf6_f32_v(ptr addrspace(1) %ou
 ; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-SDAG-NEXT:    v_cvt_scalef32_pk32_bf6_f32 v[0:5], v[0:31], s2
 ; GFX13-SDAG-NEXT:    s_clause 0x1
-; GFX13-SDAG-NEXT:    global_store_b64 v32, v[4:5], s[0:1] offset:16
-; GFX13-SDAG-NEXT:    global_store_b128 v32, v[0:3], s[0:1]
+; GFX13-SDAG-NEXT:    global_store_b64 v32, v[4:5], s[0:1] offset:16 scope:SCOPE_SE
+; GFX13-SDAG-NEXT:    global_store_b128 v32, v[0:3], s[0:1] scope:SCOPE_SE
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: test_cvt_scalef32_pk32_bf6_f32_v:
@@ -66,8 +66,8 @@ define amdgpu_kernel void @test_cvt_scalef32_pk32_bf6_f32_v(ptr addrspace(1) %ou
 ; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-GISEL-NEXT:    v_cvt_scalef32_pk32_bf6_f32 v[0:5], v[0:31], s2
 ; GFX13-GISEL-NEXT:    s_clause 0x1
-; GFX13-GISEL-NEXT:    global_store_b128 v32, v[0:3], s[0:1]
-; GFX13-GISEL-NEXT:    global_store_b64 v32, v[4:5], s[0:1] offset:16
+; GFX13-GISEL-NEXT:    global_store_b128 v32, v[0:3], s[0:1] scope:SCOPE_SE
+; GFX13-GISEL-NEXT:    global_store_b64 v32, v[4:5], s[0:1] offset:16 scope:SCOPE_SE
 ; GFX13-GISEL-NEXT:    s_endpgm
   %cvt = tail call <6 x i32> @llvm.amdgcn.cvt.scalef32.pk32.bf6.f32(<32 x float> %src, float %scale)
   store <6 x i32> %cvt, ptr addrspace(1) %out, align 8
@@ -102,8 +102,8 @@ define amdgpu_kernel void @test_cvt_scalef32_pk32_bf6_f32_s(ptr addrspace(1) %ou
 ; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-SDAG-NEXT:    v_cvt_scalef32_pk32_bf6_f32 v[0:5], v[0:31], 0x42c80000
 ; GFX13-SDAG-NEXT:    s_clause 0x1
-; GFX13-SDAG-NEXT:    global_store_b64 v32, v[4:5], s[0:1] offset:16
-; GFX13-SDAG-NEXT:    global_store_b128 v32, v[0:3], s[0:1]
+; GFX13-SDAG-NEXT:    global_store_b64 v32, v[4:5], s[0:1] offset:16 scope:SCOPE_SE
+; GFX13-SDAG-NEXT:    global_store_b128 v32, v[0:3], s[0:1] scope:SCOPE_SE
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: test_cvt_scalef32_pk32_bf6_f32_s:
@@ -133,8 +133,8 @@ define amdgpu_kernel void @test_cvt_scalef32_pk32_bf6_f32_s(ptr addrspace(1) %ou
 ; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-GISEL-NEXT:    v_cvt_scalef32_pk32_bf6_f32 v[0:5], v[0:31], 0x42c80000
 ; GFX13-GISEL-NEXT:    s_clause 0x1
-; GFX13-GISEL-NEXT:    global_store_b128 v32, v[0:3], s[0:1]
-; GFX13-GISEL-NEXT:    global_store_b64 v32, v[4:5], s[0:1] offset:16
+; GFX13-GISEL-NEXT:    global_store_b128 v32, v[0:3], s[0:1] scope:SCOPE_SE
+; GFX13-GISEL-NEXT:    global_store_b64 v32, v[4:5], s[0:1] offset:16 scope:SCOPE_SE
 ; GFX13-GISEL-NEXT:    s_endpgm
   %cvt = tail call <6 x i32> @llvm.amdgcn.cvt.scalef32.pk32.bf6.f32(<32 x float> %src, float 100.0)
   store <6 x i32> %cvt, ptr addrspace(1) %out, align 8
@@ -147,8 +147,8 @@ define amdgpu_kernel void @test_cvt_scalef32_pk32_bf6_f32_v_inreg_src(ptr addrsp
 ; GFX13-SDAG-NEXT:    s_clause 0x3
 ; GFX13-SDAG-NEXT:    s_load_b512 s[36:51], s[4:5], 0xa4
 ; GFX13-SDAG-NEXT:    s_load_b512 s[8:23], s[4:5], 0xe4
-; GFX13-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX13-SDAG-NEXT:    s_load_b32 s2, s[4:5], 0x124
+; GFX13-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX13-SDAG-NEXT:    v_mov_b32_e32 v32, 0
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    v_dual_mov_b32 v0, s36 :: v_dual_mov_b32 v1, s37
@@ -170,8 +170,8 @@ define amdgpu_kernel void @test_cvt_scalef32_pk32_bf6_f32_v_inreg_src(ptr addrsp
 ; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-SDAG-NEXT:    v_cvt_scalef32_pk32_bf6_f32 v[0:5], v[0:31], s2
 ; GFX13-SDAG-NEXT:    s_clause 0x1
-; GFX13-SDAG-NEXT:    global_store_b64 v32, v[4:5], s[0:1] offset:16
-; GFX13-SDAG-NEXT:    global_store_b128 v32, v[0:3], s[0:1]
+; GFX13-SDAG-NEXT:    global_store_b64 v32, v[4:5], s[0:1] offset:16 scope:SCOPE_SE
+; GFX13-SDAG-NEXT:    global_store_b128 v32, v[0:3], s[0:1] scope:SCOPE_SE
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: test_cvt_scalef32_pk32_bf6_f32_v_inreg_src:
@@ -202,8 +202,8 @@ define amdgpu_kernel void @test_cvt_scalef32_pk32_bf6_f32_v_inreg_src(ptr addrsp
 ; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-GISEL-NEXT:    v_cvt_scalef32_pk32_bf6_f32 v[0:5], v[0:31], s2
 ; GFX13-GISEL-NEXT:    s_clause 0x1
-; GFX13-GISEL-NEXT:    global_store_b128 v32, v[0:3], s[0:1]
-; GFX13-GISEL-NEXT:    global_store_b64 v32, v[4:5], s[0:1] offset:16
+; GFX13-GISEL-NEXT:    global_store_b128 v32, v[0:3], s[0:1] scope:SCOPE_SE
+; GFX13-GISEL-NEXT:    global_store_b64 v32, v[4:5], s[0:1] offset:16 scope:SCOPE_SE
 ; GFX13-GISEL-NEXT:    s_endpgm
   %cvt = tail call <6 x i32> @llvm.amdgcn.cvt.scalef32.pk32.bf6.f32(<32 x float> %src, float %scale)
   store <6 x i32> %cvt, ptr addrspace(1) %out, align 8
@@ -238,8 +238,8 @@ define amdgpu_kernel void @test_cvt_scalef32_pk32_bf6_f32_s_inreg_src(ptr addrsp
 ; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-SDAG-NEXT:    v_cvt_scalef32_pk32_bf6_f32 v[0:5], v[0:31], 0x42c80000
 ; GFX13-SDAG-NEXT:    s_clause 0x1
-; GFX13-SDAG-NEXT:    global_store_b64 v32, v[4:5], s[0:1] offset:16
-; GFX13-SDAG-NEXT:    global_store_b128 v32, v[0:3], s[0:1]
+; GFX13-SDAG-NEXT:    global_store_b64 v32, v[4:5], s[0:1] offset:16 scope:SCOPE_SE
+; GFX13-SDAG-NEXT:    global_store_b128 v32, v[0:3], s[0:1] scope:SCOPE_SE
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: test_cvt_scalef32_pk32_bf6_f32_s_inreg_src:
@@ -269,8 +269,8 @@ define amdgpu_kernel void @test_cvt_scalef32_pk32_bf6_f32_s_inreg_src(ptr addrsp
 ; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-GISEL-NEXT:    v_cvt_scalef32_pk32_bf6_f32 v[0:5], v[0:31], 0x42c80000
 ; GFX13-GISEL-NEXT:    s_clause 0x1
-; GFX13-GISEL-NEXT:    global_store_b128 v32, v[0:3], s[0:1]
-; GFX13-GISEL-NEXT:    global_store_b64 v32, v[4:5], s[0:1] offset:16
+; GFX13-GISEL-NEXT:    global_store_b128 v32, v[0:3], s[0:1] scope:SCOPE_SE
+; GFX13-GISEL-NEXT:    global_store_b64 v32, v[4:5], s[0:1] offset:16 scope:SCOPE_SE
 ; GFX13-GISEL-NEXT:    s_endpgm
   %cvt = tail call <6 x i32> @llvm.amdgcn.cvt.scalef32.pk32.bf6.f32(<32 x float> %src, float 100.0)
   store <6 x i32> %cvt, ptr addrspace(1) %out, align 8
@@ -306,8 +306,8 @@ define amdgpu_kernel void @test_cvt_scalef32_pk32_fp6_f32_v(ptr addrspace(1) %ou
 ; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-SDAG-NEXT:    v_cvt_scalef32_pk32_fp6_f32 v[0:5], v[0:31], s2
 ; GFX13-SDAG-NEXT:    s_clause 0x1
-; GFX13-SDAG-NEXT:    global_store_b64 v32, v[4:5], s[0:1] offset:16
-; GFX13-SDAG-NEXT:    global_store_b128 v32, v[0:3], s[0:1]
+; GFX13-SDAG-NEXT:    global_store_b64 v32, v[4:5], s[0:1] offset:16 scope:SCOPE_SE
+; GFX13-SDAG-NEXT:    global_store_b128 v32, v[0:3], s[0:1] scope:SCOPE_SE
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: test_cvt_scalef32_pk32_fp6_f32_v:
@@ -338,8 +338,8 @@ define amdgpu_kernel void @test_cvt_scalef32_pk32_fp6_f32_v(ptr addrspace(1) %ou
 ; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-GISEL-NEXT:    v_cvt_scalef32_pk32_fp6_f32 v[0:5], v[0:31], s2
 ; GFX13-GISEL-NEXT:    s_clause 0x1
-; GFX13-GISEL-NEXT:    global_store_b128 v32, v[0:3], s[0:1]
-; GFX13-GISEL-NEXT:    global_store_b64 v32, v[4:5], s[0:1] offset:16
+; GFX13-GISEL-NEXT:    global_store_b128 v32, v[0:3], s[0:1] scope:SCOPE_SE
+; GFX13-GISEL-NEXT:    global_store_b64 v32, v[4:5], s[0:1] offset:16 scope:SCOPE_SE
 ; GFX13-GISEL-NEXT:    s_endpgm
   %cvt = tail call <6 x i32> @llvm.amdgcn.cvt.scalef32.pk32.fp6.f32(<32 x float> %src, float %scale)
   store <6 x i32> %cvt, ptr addrspace(1) %out, align 8
@@ -374,8 +374,8 @@ define amdgpu_kernel void @test_cvt_scalef32_pk32_fp6_f32_s(ptr addrspace(1) %ou
 ; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-SDAG-NEXT:    v_cvt_scalef32_pk32_fp6_f32 v[0:5], v[0:31], 0x42c80000
 ; GFX13-SDAG-NEXT:    s_clause 0x1
-; GFX13-SDAG-NEXT:    global_store_b64 v32, v[4:5], s[0:1] offset:16
-; GFX13-SDAG-NEXT:    global_store_b128 v32, v[0:3], s[0:1]
+; GFX13-SDAG-NEXT:    global_store_b64 v32, v[4:5], s[0:1] offset:16 scope:SCOPE_SE
+; GFX13-SDAG-NEXT:    global_store_b128 v32, v[0:3], s[0:1] scope:SCOPE_SE
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: test_cvt_scalef32_pk32_fp6_f32_s:
@@ -405,8 +405,8 @@ define amdgpu_kernel void @test_cvt_scalef32_pk32_fp6_f32_s(ptr addrspace(1) %ou
 ; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-GISEL-NEXT:    v_cvt_scalef32_pk32_fp6_f32 v[0:5], v[0:31], 0x42c80000
 ; GFX13-GISEL-NEXT:    s_clause 0x1
-; GFX13-GISEL-NEXT:    global_store_b128 v32, v[0:3], s[0:1]
-; GFX13-GISEL-NEXT:    global_store_b64 v32, v[4:5], s[0:1] offset:16
+; GFX13-GISEL-NEXT:    global_store_b128 v32, v[0:3], s[0:1] scope:SCOPE_SE
+; GFX13-GISEL-NEXT:    global_store_b64 v32, v[4:5], s[0:1] offset:16 scope:SCOPE_SE
 ; GFX13-GISEL-NEXT:    s_endpgm
   %cvt = tail call <6 x i32> @llvm.amdgcn.cvt.scalef32.pk32.fp6.f32(<32 x float> %src, float 100.0)
   store <6 x i32> %cvt, ptr addrspace(1) %out, align 8
@@ -419,8 +419,8 @@ define amdgpu_kernel void @test_cvt_scalef32_pk32_fp6_f32_v_inreg_src(ptr addrsp
 ; GFX13-SDAG-NEXT:    s_clause 0x3
 ; GFX13-SDAG-NEXT:    s_load_b512 s[36:51], s[4:5], 0xa4
 ; GFX13-SDAG-NEXT:    s_load_b512 s[8:23], s[4:5], 0xe4
-; GFX13-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX13-SDAG-NEXT:    s_load_b32 s2, s[4:5], 0x124
+; GFX13-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX13-SDAG-NEXT:    v_mov_b32_e32 v32, 0
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    v_dual_mov_b32 v0, s36 :: v_dual_mov_b32 v1, s37
@@ -442,8 +442,8 @@ define amdgpu_kernel void @test_cvt_scalef32_pk32_fp6_f32_v_inreg_src(ptr addrsp
 ; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-SDAG-NEXT:    v_cvt_scalef32_pk32_fp6_f32 v[0:5], v[0:31], s2
 ; GFX13-SDAG-NEXT:    s_clause 0x1
-; GFX13-SDAG-NEXT:    global_store_b64 v32, v[4:5], s[0:1] offset:16
-; GFX13-SDAG-NEXT:    global_store_b128 v32, v[0:3], s[0:1]
+; GFX13-SDAG-NEXT:    global_store_b64 v32, v[4:5], s[0:1] offset:16 scope:SCOPE_SE
+; GFX13-SDAG-NEXT:    global_store_b128 v32, v[0:3], s[0:1] scope:SCOPE_SE
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: test_cvt_scalef32_pk32_fp6_f32_v_inreg_src:
@@ -474,8 +474,8 @@ define amdgpu_kernel void @test_cvt_scalef32_pk32_fp6_f32_v_inreg_src(ptr addrsp
 ; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-GISEL-NEXT:    v_cvt_scalef32_pk32_fp6_f32 v[0:5], v[0:31], s2
 ; GFX13-GISEL-NEXT:    s_clause 0x1
-; GFX13-GISEL-NEXT:    global_store_b128 v32, v[0:3], s[0:1]
-; GFX13-GISEL-NEXT:    global_store_b64 v32, v[4:5], s[0:1] offset:16
+; GFX13-GISEL-NEXT:    global_store_b128 v32, v[0:3], s[0:1] scope:SCOPE_SE
+; GFX13-GISEL-NEXT:    global_store_b64 v32, v[4:5], s[0:1] offset:16 scope:SCOPE_SE
 ; GFX13-GISEL-NEXT:    s_endpgm
   %cvt = tail call <6 x i32> @llvm.amdgcn.cvt.scalef32.pk32.fp6.f32(<32 x float> %src, float %scale)
   store <6 x i32> %cvt, ptr addrspace(1) %out, align 8
@@ -510,8 +510,8 @@ define amdgpu_kernel void @test_cvt_scalef32_pk32_fp6_f32_s_inreg_src(ptr addrsp
 ; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-SDAG-NEXT:    v_cvt_scalef32_pk32_fp6_f32 v[0:5], v[0:31], 0x42c80000
 ; GFX13-SDAG-NEXT:    s_clause 0x1
-; GFX13-SDAG-NEXT:    global_store_b64 v32, v[4:5], s[0:1] offset:16
-; GFX13-SDAG-NEXT:    global_store_b128 v32, v[0:3], s[0:1]
+; GFX13-SDAG-NEXT:    global_store_b64 v32, v[4:5], s[0:1] offset:16 scope:SCOPE_SE
+; GFX13-SDAG-NEXT:    global_store_b128 v32, v[0:3], s[0:1] scope:SCOPE_SE
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: test_cvt_scalef32_pk32_fp6_f32_s_inreg_src:
@@ -541,8 +541,8 @@ define amdgpu_kernel void @test_cvt_scalef32_pk32_fp6_f32_s_inreg_src(ptr addrsp
 ; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-GISEL-NEXT:    v_cvt_scalef32_pk32_fp6_f32 v[0:5], v[0:31], 0x42c80000
 ; GFX13-GISEL-NEXT:    s_clause 0x1
-; GFX13-GISEL-NEXT:    global_store_b128 v32, v[0:3], s[0:1]
-; GFX13-GISEL-NEXT:    global_store_b64 v32, v[4:5], s[0:1] offset:16
+; GFX13-GISEL-NEXT:    global_store_b128 v32, v[0:3], s[0:1] scope:SCOPE_SE
+; GFX13-GISEL-NEXT:    global_store_b64 v32, v[4:5], s[0:1] offset:16 scope:SCOPE_SE
 ; GFX13-GISEL-NEXT:    s_endpgm
   %cvt = tail call <6 x i32> @llvm.amdgcn.cvt.scalef32.pk32.fp6.f32(<32 x float> %src, float 100.0)
   store <6 x i32> %cvt, ptr addrspace(1) %out, align 8

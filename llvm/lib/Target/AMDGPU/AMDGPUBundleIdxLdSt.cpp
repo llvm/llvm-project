@@ -105,11 +105,10 @@ private:
   const TargetRegisterInfo *TRI = nullptr;
   const TargetInstrInfo *TII = nullptr;
   const SIInstrInfo *STI = nullptr;
+  const GCNSubtarget *ST = nullptr;
   MachineRegisterInfo *MRI = nullptr;
   AliasAnalysis *AA = nullptr;
   MachineCycleInfo *CI = nullptr;
-
-  bool NeedsAlignedVGPRs;
 };
 
 bool sideEffectConflict(MachineInstr &MIa, MachineInstr &MIb) {
@@ -602,6 +601,9 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
   // TODO-GFX13 Handle phis.
   if (MI->isPHI())
     return false;
+  // There is no way to safely expand it post RA if bundled.
+  if (MI->getOpcode() == AMDGPU::V_MOV_B64_PSEUDO && !ST->hasMovB64())
+    return false;
 
   MachineFunction *MF = MI->getParent()->getParent();
   MachineBasicBlock *MBB = MI->getParent();
@@ -632,7 +634,7 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
         DefReg)
       continue;
 
-    if (NeedsAlignedVGPRs && MI->getOpcode() != AMDGPU::V_LOAD_IDX &&
+    if (ST->needsAlignedVGPRs() && MI->getOpcode() != AMDGPU::V_LOAD_IDX &&
         AMDGPU::getRegOperandSize(TRI, MI->getDesc(), Def.getOperandNo()) > 4) {
       // Do not bundle instructions with odd offsets to ensure proper register
       // alignment.
@@ -705,7 +707,7 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
     if (LoadMI->getParent() != MBB)
       continue;
 
-    if (NeedsAlignedVGPRs &&
+    if (ST->needsAlignedVGPRs() &&
         AMDGPU::getRegOperandSize(TRI, MI->getDesc(), Use.getOperandNo()) > 4) {
       // Do not bundle instructions with odd offsets to ensure proper register
       // alignment.
@@ -808,19 +810,18 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
 
 bool AMDGPUBundleIdxLdSt::runOnMachineFunction(MachineFunction &MF) {
 
-  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  ST = &MF.getSubtarget<GCNSubtarget>();
 
-  if (!ST.hasVGPRIndexingRegisters())
+  if (!ST->hasVGPRIndexingRegisters())
     return false;
 
-  TRI = ST.getRegisterInfo();
-  STI = ST.getInstrInfo();
+  TRI = ST->getRegisterInfo();
+  STI = ST->getInstrInfo();
   TII = MF.getSubtarget().getInstrInfo();
   MRI = &MF.getRegInfo();
   if (auto *AAR = getAnalysisIfAvailable<AAResultsWrapperPass>())
     AA = &AAR->getAAResults();
   CI = &getAnalysis<MachineCycleInfoWrapperPass>().getCycleInfo();
-  NeedsAlignedVGPRs = ST.needsAlignedVGPRs();
 
   LLVM_DEBUG(dbgs() << "===== AMDGPUBundleIdxLdSt :: Sinking Phase =====\n");
   bool Changed = sinkLoadsAndCoreMIs(MF);

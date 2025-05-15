@@ -215,7 +215,7 @@ define amdgpu_gs void @main(<4 x i32> %arg, i32 %arg1) {
 ; GFX13-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX13-TRUE16-NEXT:    s_and_saveexec_b32 s0, s0
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX13-TRUE16-NEXT:    buffer_load_d16_format_xyz v[6:7], v4, s[4:7], null idxen
+; GFX13-TRUE16-NEXT:    buffer_load_d16_format_xyz v[5:6], v4, s[4:7], null idxen
 ; GFX13-TRUE16-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
 ; GFX13-TRUE16-NEXT:    ; implicit-def: $vgpr4
 ; GFX13-TRUE16-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
@@ -224,8 +224,8 @@ define amdgpu_gs void @main(<4 x i32> %arg, i32 %arg1) {
 ; GFX13-TRUE16-NEXT:    s_mov_b32 exec_lo, s1
 ; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v0.h, 0
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v6.h
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v1, 0xffff, v7
+; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v5.h
+; GFX13-TRUE16-NEXT:    v_and_b32_e32 v1, 0xffff, v6
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX13-TRUE16-NEXT:    ds_store_2addr_b32 v2, v0, v1 offset0:7 offset1:8
 ;
@@ -244,7 +244,7 @@ define amdgpu_gs void @main(<4 x i32> %arg, i32 %arg1) {
 ; GFX13-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX13-FAKE16-NEXT:    s_and_saveexec_b32 s0, s0
 ; GFX13-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; GFX13-FAKE16-NEXT:    buffer_load_d16_format_xyz v[6:7], v4, s[4:7], null idxen
+; GFX13-FAKE16-NEXT:    buffer_load_d16_format_xyz v[5:6], v4, s[4:7], null idxen
 ; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
 ; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr4
 ; GFX13-FAKE16-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
@@ -252,8 +252,8 @@ define amdgpu_gs void @main(<4 x i32> %arg, i32 %arg1) {
 ; GFX13-FAKE16-NEXT:  ; %bb.2:
 ; GFX13-FAKE16-NEXT:    s_mov_b32 exec_lo, s1
 ; GFX13-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; GFX13-FAKE16-NEXT:    v_lshrrev_b32_e32 v0, 16, v6
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v1, 0xffff, v7
+; GFX13-FAKE16-NEXT:    v_lshrrev_b32_e32 v0, 16, v5
+; GFX13-FAKE16-NEXT:    v_and_b32_e32 v1, 0xffff, v6
 ; GFX13-FAKE16-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX13-FAKE16-NEXT:    ds_store_2addr_b32 v2, v0, v1 offset0:7 offset1:8
 bb:

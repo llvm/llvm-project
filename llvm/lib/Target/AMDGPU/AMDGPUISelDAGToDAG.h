@@ -294,6 +294,9 @@ private:
 
   bool SelectSWMMACIndex8(SDValue In, SDValue &Src, SDValue &IndexKey) const;
   bool SelectSWMMACIndex16(SDValue In, SDValue &Src, SDValue &IndexKey) const;
+#if LLPC_BUILD_NPI
+  bool SelectSWMMACIndex32(SDValue In, SDValue &Src, SDValue &IndexKey) const;
+#endif /* LLPC_BUILD_NPI */
 
   bool SelectVOP3OpSel(SDValue In, SDValue &Src, SDValue &SrcMods) const;
 

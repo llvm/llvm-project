@@ -280,7 +280,7 @@ ProgramStateRef CallEvent::invalidateRegions(unsigned BlockCount,
   // Invalidate designated regions using the batch invalidation API.
   // NOTE: Even if RegionsToInvalidate is empty, we may still invalidate
   //  global variables.
-  return Result->invalidateRegions(ValuesToInvalidate, getOriginExpr(),
+  return Result->invalidateRegions(ValuesToInvalidate, getCFGElementRef(),
                                    BlockCount, getLocationContext(),
                                    /*CausedByPointerEscape*/ true,
                                    /*Symbols=*/nullptr, this, &ETraits);

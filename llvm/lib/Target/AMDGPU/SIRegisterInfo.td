@@ -410,12 +410,25 @@ class RegisterTypes<list<ValueType> reg_types> {
 }
 
 def Reg16Types : RegisterTypes<[i16, f16, bf16]>;
-def Reg32Types : RegisterTypes<[i32, f32, v2i16, v2f16, v2bf16, p2, p3, p5, p6, p10, p11]>;
-def Reg64Types : RegisterTypes<[i64, f64, v2i32, v2f32, p0, p1, p4, v4i16, v4f16, v4bf16]>;
-def Reg96Types : RegisterTypes<[v3i32, v3f32]>;
+def Reg32DataTypes: RegisterTypes<[i32, f32, v2i16, v2f16, v2bf16]>;
+def Reg32PtrTypes: RegisterTypes<[p2, p3, p5, p6, p10, p11]>;
+def Reg32Types : RegisterTypes<!listconcat(Reg32DataTypes.types, Reg32PtrTypes.types)>;
+def Reg64DataTypes: RegisterTypes<[i64, f64, v2i32, v2f32, v4i16, v4f16, v4bf16]>;
+def Reg64PtrTypes: RegisterTypes<[p0, p1, p4]>;
+def Reg64Types : RegisterTypes<!listconcat(Reg64DataTypes.types, Reg64PtrTypes.types)>;
+def Reg96Types : RegisterTypes<[v3i32, v3f32, v6i16, v6f16, v6bf16]>;
 def Reg128Types : RegisterTypes<[v4i32, v4f32, v2i64, v2f64, v8i16, v8f16, v8bf16]>;
+def Reg160Types : RegisterTypes<[v5i32, v5f32, v10i16, v10f16, v10bf16]>;
+def Reg192Types : RegisterTypes<[v6i32, v6f32, v3i64, v3f64]>;
+def Reg224Types : RegisterTypes<[v7i32, v7f32]>;
 def Reg256Types : RegisterTypes<[v8i32, v8f32, v4i64, v4f64, v16i16, v16f16, v16bf16]>;
-
+def Reg288Types : RegisterTypes<[v9i32, v9f32, v18i16, v18f16, v18bf16]>;
+def Reg320Types : RegisterTypes<[v10i32, v10f32]>;
+def Reg352Types : RegisterTypes<[v11i32, v11f32]>;
+def Reg384Types : RegisterTypes<[v12i32, v12f32]>;
+def Reg512Types : RegisterTypes<[v16i32, v16f32, v8i64, v8f64, v32i16, v32f16, v32bf16]>;
+def Reg576Types : RegisterTypes<[v18i32, v18f32, v36i16, v36f16, v36bf16]>;
+def Reg1024Types : RegisterTypes<[v32i32, v32f32, v16i64, v16f64]>;
 
 #endif /* LLPC_BUILD_NPI */
 def SCC_CLASS : SIRegisterClass<"AMDGPU", [i1], 1, (add SCC)> {
@@ -672,10 +685,24 @@ class RegisterTypes<list<ValueType> reg_types> {
 }
 
 def Reg16Types : RegisterTypes<[i16, f16, bf16]>;
-def Reg32Types : RegisterTypes<[i32, f32, v2i16, v2f16, v2bf16, p2, p3, p5, p6]>;
-def Reg64Types : RegisterTypes<[i64, f64, v2i32, v2f32, p0, p1, p4, v4i16, v4f16, v4bf16]>;
+def Reg32DataTypes: RegisterTypes<[i32, f32, v2i16, v2f16, v2bf16]>;
+def Reg32PtrTypes: RegisterTypes<[p2, p3, p5, p6]>;
+def Reg32Types : RegisterTypes<!listconcat(Reg32DataTypes.types, Reg32PtrTypes.types)>;
+def Reg64DataTypes: RegisterTypes<[i64, f64, v2i32, v2f32, v4i16, v4f16, v4bf16]>;
+def Reg64PtrTypes: RegisterTypes<[p0, p1, p4]>;
+def Reg64Types : RegisterTypes<!listconcat(Reg64DataTypes.types, Reg64PtrTypes.types)>;
 def Reg96Types : RegisterTypes<[v3i32, v3f32]>;
 def Reg128Types : RegisterTypes<[v4i32, v4f32, v2i64, v2f64, v8i16, v8f16, v8bf16]>;
+def Reg160Types : RegisterTypes<[v5i32, v5f32]>;
+def Reg192Types : RegisterTypes<[v6i32, v6f32, v3i64, v3f64]>;
+def Reg224Types : RegisterTypes<[v7i32, v7f32]>;
+def Reg256Types : RegisterTypes<[v8i32, v8f32, v4i64, v4f64, v16i16, v16f16, v16bf16]>;
+def Reg288Types : RegisterTypes<[v9i32, v9f32]>;
+def Reg320Types : RegisterTypes<[v10i32, v10f32]>;
+def Reg352Types : RegisterTypes<[v11i32, v11f32]>;
+def Reg384Types : RegisterTypes<[v12i32, v12f32]>;
+def Reg512Types : RegisterTypes<[v16i32, v16f32, v8i64, v8f64, v32i16, v32f16, v32bf16]>;
+def Reg1024Types : RegisterTypes<[v32i32, v32f32, v16i64, v16f64]>;
 
 #endif /* LLPC_BUILD_NPI */
 let HasVGPR = 1 in {
@@ -1037,6 +1064,7 @@ def SReg_32 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v2f16,
   let AllocationPriority = 0;
   let HasSGPR = 1;
   let BaseClassOrder = 32;
+  let Size = 32;
 }
 
 def SGPR_NULL128 : SIReg<"null">;
@@ -1047,6 +1075,7 @@ def SRegOrLds_32 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v
   (add SReg_32, LDS_DIRECT_CLASS)> {
   let isAllocatable = 0;
   let HasSGPR = 1;
+  let Size = 32;
 }
 
 def SGPR_64 : SIRegisterClass<"AMDGPU", Reg64Types.types, 32,
@@ -1103,6 +1132,7 @@ def SReg_64 : SIRegisterClass<"AMDGPU", [v2i32, i64, v2f32, f64, i1, v4i16, v4f1
   let AllocationPriority = 1;
   let HasSGPR = 1;
   let BaseClassOrder = 64;
+  let Size = 64;
 }
 
 def SReg_1_XEXEC : SIRegisterClass<"AMDGPU", [i1], 32,
@@ -1161,35 +1191,23 @@ multiclass SRegClass<int numRegs,
   }
 }
 
-#ifdef LLPC_BUILD_NPI
-defm "" : SRegClass<3, [v3i32, v3f32, v6i16, v6f16, v6bf16], SGPR_96Regs, TTMP_96Regs>;
-#else /* LLPC_BUILD_NPI */
 defm "" : SRegClass<3, Reg96Types.types, SGPR_96Regs, TTMP_96Regs>;
-#endif /* LLPC_BUILD_NPI */
 defm "" : SRegClass<4, Reg128Types.types, SGPR_128Regs, TTMP_128Regs, /*hasNull*/ true>;
+defm "" : SRegClass<5, Reg160Types.types, SGPR_160Regs, TTMP_160Regs>;
+defm "" : SRegClass<6, Reg192Types.types, SGPR_192Regs, TTMP_192Regs>;
+defm "" : SRegClass<7, Reg224Types.types, SGPR_224Regs, TTMP_224Regs>;
+defm "" : SRegClass<8, Reg256Types.types, SGPR_256Regs, TTMP_256Regs, /*hasNull*/ true>;
+defm "" : SRegClass<9, Reg288Types.types, SGPR_288Regs, TTMP_288Regs>;
+defm "" : SRegClass<10, Reg320Types.types, SGPR_320Regs, TTMP_320Regs>;
+defm "" : SRegClass<11, Reg352Types.types, SGPR_352Regs, TTMP_352Regs>;
+defm "" : SRegClass<12, Reg384Types.types, SGPR_384Regs, TTMP_384Regs>;
 #ifdef LLPC_BUILD_NPI
-defm "" : SRegClass<5, [v5i32, v5f32, v10i16, v10f16, v10bf16], SGPR_160Regs, TTMP_160Regs>;
-#else /* LLPC_BUILD_NPI */
-defm "" : SRegClass<5, [v5i32, v5f32], SGPR_160Regs, TTMP_160Regs>;
-#endif /* LLPC_BUILD_NPI */
-defm "" : SRegClass<6, [v6i32, v6f32, v3i64, v3f64], SGPR_192Regs, TTMP_192Regs>;
-defm "" : SRegClass<7, [v7i32, v7f32], SGPR_224Regs, TTMP_224Regs>;
-defm "" : SRegClass<8, [v8i32, v8f32, v4i64, v4f64, v16i16, v16f16, v16bf16], SGPR_256Regs, TTMP_256Regs, /*hasNull*/ true>;
-#ifdef LLPC_BUILD_NPI
-defm "" : SRegClass<9, [v9i32, v9f32, v18i16, v18f16, v18bf16], SGPR_288Regs, TTMP_288Regs>;
-#else /* LLPC_BUILD_NPI */
-defm "" : SRegClass<9, [v9i32, v9f32], SGPR_288Regs, TTMP_288Regs>;
-#endif /* LLPC_BUILD_NPI */
-defm "" : SRegClass<10, [v10i32, v10f32], SGPR_320Regs, TTMP_320Regs>;
-defm "" : SRegClass<11, [v11i32, v11f32], SGPR_352Regs, TTMP_352Regs>;
-defm "" : SRegClass<12, [v12i32, v12f32], SGPR_384Regs, TTMP_384Regs>;
-#ifdef LLPC_BUILD_NPI
-defm "" : SRegClass<18, [v18i32, v18f32, v36i16, v36f16, v36bf16], SGPR_576Regs>;
+defm "" : SRegClass<18, Reg576Types.types, SGPR_576Regs>;
 #endif /* LLPC_BUILD_NPI */
 
 let GlobalPriority = true in {
-defm "" : SRegClass<16, [v16i32, v16f32, v8i64, v8f64, v32i16, v32f16, v32bf16], SGPR_512Regs, TTMP_512Regs>;
-defm "" : SRegClass<32, [v32i32, v32f32, v16i64, v16f64], SGPR_1024Regs>;
+defm "" : SRegClass<16, Reg512Types.types, SGPR_512Regs, TTMP_512Regs>;
+defm "" : SRegClass<32, Reg1024Types.types, SGPR_1024Regs>;
 }
 
 def VRegOrLds_32 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v2f16, v2bf16], 32,
@@ -1200,6 +1218,7 @@ def VRegOrLds_32 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v
 #endif /* LLPC_BUILD_NPI */
   let isAllocatable = 0;
   let HasVGPR = 1;
+  let Size = 32;
 }
 
 // Register class for all vector registers (VGPRs + Interpolation Registers)
@@ -1257,46 +1276,42 @@ multiclass VRegClass_STAGING<int numRegs, list<ValueType> regTypes, dag regList>
     defm _STAGING : VRegClass<numRegs, regTypes, regList, (add STAGING_REG)>;
 }
 
-defm VReg_64 : VRegClass_STAGING<2, [i64, f64, v2i32, v2f32, v4f16, v4bf16, v4i16, p0, p1, p4],
-#else /* LLPC_BUILD_NPI */
-defm VReg_64 : VRegClass<2, [i64, f64, v2i32, v2f32, v4f16, v4bf16, v4i16, p0, p1, p4],
-#endif /* LLPC_BUILD_NPI */
-                                (add VGPR_64)>;
-#ifdef LLPC_BUILD_NPI
-defm VReg_96 : VRegClass_STAGING<3, [v3i32, v3f32, v6i16, v6f16, v6bf16], (add VGPR_96)>;
+defm VReg_64 : VRegClass_STAGING<2, Reg64Types.types, (add VGPR_64)>;
+defm VReg_96 : VRegClass_STAGING<3, Reg96Types.types, (add VGPR_96)>;
 defm VReg_128 : VRegClass_STAGING<4, Reg128Types.types, (add VGPR_128)>;
-defm VReg_160 : VRegClass_STAGING<5, [v5i32, v5f32, v10i16, v10f16, v10bf16], (add VGPR_160)>;
+defm VReg_160 : VRegClass_STAGING<5, Reg160Types.types, (add VGPR_160)>;
 
-defm VReg_192 : VRegClass_STAGING<6, [v6i32, v6f32, v3i64, v3f64], (add VGPR_192)>;
-defm VReg_224 : VRegClass_STAGING<7, [v7i32, v7f32], (add VGPR_224)>;
-defm VReg_256 : VRegClass_STAGING<8, [v8i32, v8f32, v4i64, v4f64, v16i16, v16f16, v16bf16], (add VGPR_256)>;
-defm VReg_288 : VRegClass_STAGING<9, [v9i32, v9f32, v18i16, v18f16, v18bf16], (add VGPR_288)>;
+defm VReg_192 : VRegClass_STAGING<6, Reg192Types.types, (add VGPR_192)>;
+defm VReg_224 : VRegClass_STAGING<7, Reg224Types.types, (add VGPR_224)>;
+defm VReg_256 : VRegClass_STAGING<8, Reg256Types.types, (add VGPR_256)>;
+defm VReg_288 : VRegClass_STAGING<9, Reg288Types.types, (add VGPR_288)>;
 #else /* LLPC_BUILD_NPI */
+defm VReg_64 : VRegClass<2, Reg64Types.types, (add VGPR_64)>;
 defm VReg_96 : VRegClass<3, Reg96Types.types, (add VGPR_96)>;
 defm VReg_128 : VRegClass<4, Reg128Types.types, (add VGPR_128)>;
-defm VReg_160 : VRegClass<5, [v5i32, v5f32], (add VGPR_160)>;
+defm VReg_160 : VRegClass<5, Reg160Types.types, (add VGPR_160)>;
 
-defm VReg_192 : VRegClass<6, [v6i32, v6f32, v3i64, v3f64], (add VGPR_192)>;
-defm VReg_224 : VRegClass<7, [v7i32, v7f32], (add VGPR_224)>;
-defm VReg_256 : VRegClass<8, [v8i32, v8f32, v4i64, v4f64, v16i16, v16f16, v16bf16], (add VGPR_256)>;
-defm VReg_288 : VRegClass<9, [v9i32, v9f32], (add VGPR_288)>;
+defm VReg_192 : VRegClass<6, Reg192Types.types, (add VGPR_192)>;
+defm VReg_224 : VRegClass<7, Reg224Types.types, (add VGPR_224)>;
+defm VReg_256 : VRegClass<8, Reg256Types.types, (add VGPR_256)>;
+defm VReg_288 : VRegClass<9, Reg288Types.types, (add VGPR_288)>;
 #endif /* LLPC_BUILD_NPI */
-defm VReg_320 : VRegClass<10, [v10i32, v10f32], (add VGPR_320)>;
-defm VReg_352 : VRegClass<11, [v11i32, v11f32], (add VGPR_352)>;
+defm VReg_320 : VRegClass<10, Reg320Types.types, (add VGPR_320)>;
+defm VReg_352 : VRegClass<11, Reg352Types.types, (add VGPR_352)>;
 #ifdef LLPC_BUILD_NPI
-defm VReg_384 : VRegClass_STAGING<12, [v12i32, v12f32], (add VGPR_384)>;
-defm VReg_576 : VRegClass_STAGING<18, [v18i32, v18f32, v36i16, v36f16, v36bf16], (add VGPR_576)>;
+defm VReg_384 : VRegClass_STAGING<12, Reg384Types.types, (add VGPR_384)>;
+defm VReg_576 : VRegClass_STAGING<18, Reg576Types.types, (add VGPR_576)>;
 #else /* LLPC_BUILD_NPI */
-defm VReg_384 : VRegClass<12, [v12i32, v12f32], (add VGPR_384)>;
+defm VReg_384 : VRegClass<12, Reg384Types.types, (add VGPR_384)>;
 #endif /* LLPC_BUILD_NPI */
 
 let GlobalPriority = true in {
 #ifdef LLPC_BUILD_NPI
-defm VReg_512 : VRegClass_STAGING<16, [v16i32, v16f32, v8i64, v8f64, v32i16, v32f16, v32bf16], (add VGPR_512)>;
-defm VReg_1024 : VRegClass_STAGING<32, [v32i32, v32f32, v16i64, v16f64], (add VGPR_1024)>;
+defm VReg_512 : VRegClass_STAGING<16, Reg512Types.types, (add VGPR_512)>;
+defm VReg_1024 : VRegClass_STAGING<32, Reg1024Types.types, (add VGPR_1024)>;
 #else /* LLPC_BUILD_NPI */
-defm VReg_512 : VRegClass<16, [v16i32, v16f32, v8i64, v8f64, v32i16, v32f16, v32bf16], (add VGPR_512)>;
-defm VReg_1024 : VRegClass<32, [v32i32, v32f32, v16i64, v16f64], (add VGPR_1024)>;
+defm VReg_512 : VRegClass<16, Reg512Types.types, (add VGPR_512)>;
+defm VReg_1024 : VRegClass<32, Reg1024Types.types, (add VGPR_1024)>;
 #endif /* LLPC_BUILD_NPI */
 }
 
@@ -1369,6 +1384,7 @@ def VS_16 : SIRegisterClass<"AMDGPU", Reg16Types.types, 16,
 #endif /* LLPC_BUILD_NPI */
   let isAllocatable = 0;
   let HasVGPR = 1;
+  let Size = 16;
 }
 
 def VS_16_Lo128 : SIRegisterClass<"AMDGPU", Reg16Types.types, 16,
@@ -1379,6 +1395,7 @@ def VS_16_Lo128 : SIRegisterClass<"AMDGPU", Reg16Types.types, 16,
 #endif /* LLPC_BUILD_NPI */
   let isAllocatable = 0;
   let HasVGPR = 1;
+  let Size = 16;
 }
 
 def VS_32 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v2f16, v2bf16], 32,
@@ -1390,6 +1407,7 @@ def VS_32 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v2f16, v
   let isAllocatable = 0;
   let HasVGPR = 1;
   let HasSGPR = 1;
+  let Size = 32;
 }
 
 def VS_32_Lo128 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v2f16, v2bf16], 32,
@@ -1398,6 +1416,7 @@ def VS_32_Lo128 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v2
   let isAllocatable = 0;
   let HasVGPR = 1;
   let HasSGPR = 1;
+  let Size = 32;
 }
 
 def VS_32_Lo256 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v2f16, v2bf16], 32,
@@ -1408,6 +1427,7 @@ def VS_32_Lo256 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v2
   let isAllocatable = 0;
   let HasVGPR = 1;
   let HasSGPR = 1;
+  let Size = 32;
 }
 
 #ifdef LLPC_BUILD_NPI
@@ -1418,23 +1438,27 @@ def VS_64 : SIRegisterClass<"AMDGPU", VReg_64.RegTypes, 32, (add VReg_64, SReg_6
   let isAllocatable = 0;
   let HasVGPR = 1;
   let HasSGPR = 1;
+  let Size = 64;
 }
 
 def AV_32 : SIRegisterClass<"AMDGPU", VGPR_32.RegTypes, 32, (add VGPR_32, AGPR_32)> {
   let HasVGPR = 1;
   let HasAGPR = 1;
+  let Size = 32;
 }
 #ifdef LLPC_BUILD_NPI
 def AV_32_STAGING : SIRegisterClass<"AMDGPU", VGPR_32.RegTypes, 32, (add VGPR_32_STAGING, AGPR_32)> {
   let isAllocatable = 0;
   let HasVGPR = 1;
   let HasAGPR = 1;
+  let Size = 32;
 }
 
 def VS_64_Lo256 : SIRegisterClass<"AMDGPU", VReg_64.RegTypes, 32, (add VReg_64_STAGING_Lo256_Align2, SReg_64)> {
   let isAllocatable = 0;
   let HasVGPR = 1;
   let HasSGPR = 1;
+  let Size = 64;
 }
 #endif /* LLPC_BUILD_NPI */
 } // End GeneratePressureSet = 0
@@ -1558,7 +1582,7 @@ class RegOrImmOperand <RegisterClass RegClass, string OperandTypeName>
   : RegisterOperand<RegClass> {
     let OperandNamespace = "AMDGPU";
     let OperandType = OperandTypeName;
-    let ParserMatchClass = RegImmMatcher<!subst("_Deferred", "", NAME)>;
+    let ParserMatchClass = RegImmMatcher<NAME>;
 }
 
 #ifdef LLPC_BUILD_NPI
@@ -1582,42 +1606,42 @@ def VGPR_IDX_IDX_OP : RegisterOperand<VGPR_IDX_IDX_OP_RC> {
 //  GVGPR Operands
 //===----------------------------------------------------------------------===//
 
-class GVGPROp<RegisterClass regClass, string width> : RegisterOperand<regClass> {
+class GVGPROp<RegisterClass regClass> : RegisterOperand<regClass> {
   let EncoderMethod = "encodeGVGPR";
-  let DecoderMethod = "decodeGVGPR<AMDGPUDisassembler::" # width # ">";
+  let DecoderMethod = "decodeGVGPR<" # regClass.Size # ">";
   let PrintMethod = "printGVGPR";
 }
 
-def GVGPR_32 : GVGPROp<VGPR_32_STAGING, "OPW32">;
-def GVGPR_64 : GVGPROp<VReg_64_STAGING, "OPW64">;
-def GVGPR_96 : GVGPROp<VReg_96_STAGING, "OPW96">;
-def GVGPR_128 : GVGPROp<VReg_128_STAGING, "OPW128">;
-def GVGPR_256 : GVGPROp<VReg_256_STAGING, "OPW256">;
+def GVGPR_32 : GVGPROp<VGPR_32_STAGING>;
+def GVGPR_64 : GVGPROp<VReg_64_STAGING>;
+def GVGPR_96 : GVGPROp<VReg_96_STAGING>;
+def GVGPR_128 : GVGPROp<VReg_128_STAGING>;
+def GVGPR_256 : GVGPROp<VReg_256_STAGING>;
 
-class GSrcVGPROp<RegisterClass regClass, string width> : RegisterOperand<regClass> {
+class GSrcVGPROp<RegisterClass regClass> : RegisterOperand<regClass> {
   let EncoderMethod = "encodeGSrcVGPR";
-  let DecoderMethod = "decodeGSrcVGPR<AMDGPUDisassembler::" # width # ">";
+  let DecoderMethod = "decodeGSrcVGPR<" # regClass.Size # ">";
   let PrintMethod = "printGVGPR";
 }
 
-def GSrcVGPR_32 : GSrcVGPROp<VGPR_32_STAGING, "OPW32">;
-def GSrcVGPR_64 : GSrcVGPROp<VReg_64_STAGING, "OPW64">;
-def GSrcVGPR_96 : GSrcVGPROp<VReg_96_STAGING, "OPW96">;
-def GSrcVGPR_128 : GSrcVGPROp<VReg_128_STAGING, "OPW128">;
-def GSrcVGPR_160 : GSrcVGPROp<VReg_160_STAGING, "OPW160">;
-def GSrcVGPR_192 : GSrcVGPROp<VReg_192_STAGING, "OPW192">;
-def GSrcVGPR_256 : GSrcVGPROp<VReg_256_STAGING, "OPW256">;
-def GSrcVGPR_288 : GSrcVGPROp<VReg_288_STAGING, "OPW288">;
-def GSrcVGPR_576 : GSrcVGPROp<VReg_576_STAGING, "OPW576">;
+def GSrcVGPR_32 : GSrcVGPROp<VGPR_32_STAGING>;
+def GSrcVGPR_64 : GSrcVGPROp<VReg_64_STAGING>;
+def GSrcVGPR_96 : GSrcVGPROp<VReg_96_STAGING>;
+def GSrcVGPR_128 : GSrcVGPROp<VReg_128_STAGING>;
+def GSrcVGPR_160 : GSrcVGPROp<VReg_160_STAGING>;
+def GSrcVGPR_192 : GSrcVGPROp<VReg_192_STAGING>;
+def GSrcVGPR_256 : GSrcVGPROp<VReg_256_STAGING>;
+def GSrcVGPR_288 : GSrcVGPROp<VReg_288_STAGING>;
+def GSrcVGPR_576 : GSrcVGPROp<VReg_576_STAGING>;
 
-class GSrcVGPROrZeroOp<RegisterClass regClass, string width> : RegOrImmOperand<regClass, "OPERAND_REG_INLINE_C_INT32"> {
+class GSrcVGPROrZeroOp<RegisterClass regClass> : RegOrImmOperand<regClass, "OPERAND_REG_INLINE_C_INT32"> {
   let EncoderMethod = "encodeGSrcVGPROrZero";
-  let DecoderMethod = "decodeGSrcVGPROrZero<AMDGPUDisassembler::" # width # ">";
+  let DecoderMethod = "decodeGSrcVGPROrZero<" # regClass.Size # ">";
   let PrintMethod = "printGSrcSimple";
 }
 
-def GSrcVGPROrZero_128 : GSrcVGPROrZeroOp<VReg_128_STAGING, "OPW128">;
-def GSrcVGPROrZero_256 : GSrcVGPROrZeroOp<VReg_256_STAGING, "OPW256">;
+def GSrcVGPROrZero_128 : GSrcVGPROrZeroOp<VReg_128_STAGING>;
+def GSrcVGPROrZero_256 : GSrcVGPROrZeroOp<VReg_256_STAGING>;
 
 def GSrcSimple : RegOrImmOperand<VS_32, "OPERAND_REG_INLINE_C_INT32"> {
   let EncoderMethod = "encodeGSrcSimple";
@@ -1633,65 +1657,50 @@ def GSrcSimple : RegOrImmOperand<VS_32, "OPERAND_REG_INLINE_C_INT32"> {
 #endif /* LLPC_BUILD_NPI */
 //===----------------------------------------------------------------------===//
 
-class SrcRegOrImm9<RegisterClass regClass, string opWidth, string operandType>
+class SrcRegOrImm9<RegisterClass regClass, string operandType>
     : RegOrImmOperand<regClass, operandType> {
   string DecoderMethodName = "decodeSrcRegOrImm9";
-  let DecoderMethod = DecoderMethodName # "<AMDGPUDisassembler::" # opWidth # ">";
+  let DecoderMethod = DecoderMethodName # "<" # regClass.Size # ">";
 }
 
 class SrcRegOrImm9_t16<string operandType, RegisterClass regClass = VS_16>
-    : SrcRegOrImm9<regClass, "OPW16", operandType> {
+    : SrcRegOrImm9<regClass, operandType> {
   let DecoderMethodName = "decodeOperand_VSrcT16";
   let EncoderMethod = "getMachineOpValueT16";
 }
 
-def SSrc_b16 : SrcRegOrImm9 <SReg_32, "OPW32", "OPERAND_REG_IMM_INT16">;
-def SSrc_bf16: SrcRegOrImm9 <SReg_32, "OPW32", "OPERAND_REG_IMM_BF16">;
-def SSrc_f16 : SrcRegOrImm9 <SReg_32, "OPW32", "OPERAND_REG_IMM_FP16">;
-def SSrc_b32 : SrcRegOrImm9 <SReg_32, "OPW32", "OPERAND_REG_IMM_INT32">;
-def SSrc_f32 : SrcRegOrImm9 <SReg_32, "OPW32", "OPERAND_REG_IMM_FP32">;
-def SSrc_b64 : SrcRegOrImm9 <SReg_64, "OPW64", "OPERAND_REG_IMM_INT64">;
+def SSrc_b16 : SrcRegOrImm9 <SReg_32, "OPERAND_REG_IMM_INT16">;
+def SSrc_bf16: SrcRegOrImm9 <SReg_32, "OPERAND_REG_IMM_BF16">;
+def SSrc_f16 : SrcRegOrImm9 <SReg_32, "OPERAND_REG_IMM_FP16">;
+def SSrc_b32 : SrcRegOrImm9 <SReg_32, "OPERAND_REG_IMM_INT32">;
+def SSrc_f32 : SrcRegOrImm9 <SReg_32, "OPERAND_REG_IMM_FP32">;
+def SSrc_b64 : SrcRegOrImm9 <SReg_64, "OPERAND_REG_IMM_INT64">;
 
-def SSrcOrLds_b32 : SrcRegOrImm9 <SRegOrLds_32, "OPW32", "OPERAND_REG_IMM_INT32">;
-
-//===----------------------------------------------------------------------===//
-//  SSrc_32_Deferred Operands with an SGPR or a 32-bit immediate for use with
-//  FMAMK/FMAAK
-//===----------------------------------------------------------------------===//
-
-class SrcRegOrImmDeferred9<RegisterClass regClass, string opWidth,
-                           string operandType>
-    : RegOrImmOperand<regClass, operandType> {
-  string DecoderMethodName = "decodeSrcRegOrImmDeferred9";
-  let DecoderMethod = DecoderMethodName # "<AMDGPUDisassembler::" #
-                      opWidth # ">";
-}
-
-def SSrc_f32_Deferred : SrcRegOrImmDeferred9<SReg_32, "OPW32", "OPERAND_REG_IMM_FP32_DEFERRED">;
+def SSrcOrLds_b32 : SrcRegOrImm9 <SRegOrLds_32, "OPERAND_REG_IMM_INT32">;
 
 //===----------------------------------------------------------------------===//
 //  SCSrc_* Operands with an SGPR or a inline constant
 //===----------------------------------------------------------------------===//
 
 #ifdef LLPC_BUILD_NPI
-def SCSrc_bf16: SrcRegOrImm9 <SReg_32, "OPW32", "OPERAND_REG_INLINE_C_BF16">;
-def SCSrc_f16 : SrcRegOrImm9 <SReg_32, "OPW32", "OPERAND_REG_INLINE_C_FP16">;
-def SCSrc_b16 : SrcRegOrImm9 <SReg_32, "OPW32", "OPERAND_REG_INLINE_C_INT16">;
+def SCSrc_bf16: SrcRegOrImm9 <SReg_32, "OPERAND_REG_INLINE_C_BF16">;
+def SCSrc_f16 : SrcRegOrImm9 <SReg_32, "OPERAND_REG_INLINE_C_FP16">;
+def SCSrc_b16 : SrcRegOrImm9 <SReg_32, "OPERAND_REG_INLINE_C_INT16">;
 #endif /* LLPC_BUILD_NPI */
-def SCSrc_b32 : SrcRegOrImm9 <SReg_32, "OPW32", "OPERAND_REG_INLINE_C_INT32">;
+def SCSrc_b32 : SrcRegOrImm9 <SReg_32, "OPERAND_REG_INLINE_C_INT32">;
 #ifdef LLPC_BUILD_NPI
-def SCSrc_f32 : SrcRegOrImm9 <SReg_32, "OPW32", "OPERAND_REG_INLINE_C_FP32">;
+def SCSrc_f32 : SrcRegOrImm9 <SReg_32, "OPERAND_REG_INLINE_C_FP32">;
 #endif /* LLPC_BUILD_NPI */
-def SCSrc_b64 : SrcRegOrImm9 <SReg_64, "OPW64", "OPERAND_REG_INLINE_C_INT64">;
+def SCSrc_b64 : SrcRegOrImm9 <SReg_64, "OPERAND_REG_INLINE_C_INT64">;
 
 //===----------------------------------------------------------------------===//
 //  VSrc_* Operands with an SGPR, VGPR or a 32-bit immediate
 //===----------------------------------------------------------------------===//
 
 // The current and temporary future default used case for VOP3.
-def VSrc_b16 : SrcRegOrImm9 <VS_32, "OPW32", "OPERAND_REG_IMM_INT16">;
-def VSrc_bf16 : SrcRegOrImm9 <VS_32, "OPW32", "OPERAND_REG_IMM_BF16">;
-def VSrc_f16 : SrcRegOrImm9 <VS_32, "OPW32", "OPERAND_REG_IMM_FP16">;
+def VSrc_b16 : SrcRegOrImm9 <VS_32, "OPERAND_REG_IMM_INT16">;
+def VSrc_bf16 : SrcRegOrImm9 <VS_32, "OPERAND_REG_IMM_BF16">;
+def VSrc_f16 : SrcRegOrImm9 <VS_32, "OPERAND_REG_IMM_FP16">;
 
 // True16 VOP3 operands.
 def VSrcT_b16 : SrcRegOrImm9_t16 <"OPERAND_REG_IMM_INT16">;
@@ -1707,84 +1716,60 @@ let DecoderMethodName = "decodeOperand_VSrcT16_Lo128", EncoderMethod = "getMachi
 
 // The current and temporary future default used case for fake VOP1/2/C.
 // For VOP1,2,C True16 instructions. _Lo128 use first 128 32-bit VGPRs only.
-def VSrcFake16_b16_Lo128 : SrcRegOrImm9 <VS_32_Lo128, "OPW16", "OPERAND_REG_IMM_INT16">;
-def VSrcFake16_bf16_Lo128 : SrcRegOrImm9 <VS_32_Lo128, "OPW16", "OPERAND_REG_IMM_BF16">;
-def VSrcFake16_f16_Lo128 : SrcRegOrImm9 <VS_32_Lo128, "OPW16", "OPERAND_REG_IMM_FP16">;
+def VSrcFake16_b16_Lo128 : SrcRegOrImm9 <VS_32_Lo128, "OPERAND_REG_IMM_INT16">;
+def VSrcFake16_bf16_Lo128 : SrcRegOrImm9 <VS_32_Lo128, "OPERAND_REG_IMM_BF16">;
+def VSrcFake16_f16_Lo128 : SrcRegOrImm9 <VS_32_Lo128, "OPERAND_REG_IMM_FP16">;
 
-def VSrc_b32 : SrcRegOrImm9 <VS_32, "OPW32", "OPERAND_REG_IMM_INT32">;
-def VSrc_f32 : SrcRegOrImm9 <VS_32, "OPW32", "OPERAND_REG_IMM_FP32">;
-def VSrc_v2b16 : SrcRegOrImm9 <VS_32, "OPW32", "OPERAND_REG_IMM_V2INT16">;
-def VSrc_v2bf16 : SrcRegOrImm9 <VS_32, "OPW32", "OPERAND_REG_IMM_V2BF16">;
-def VSrc_v2f16 : SrcRegOrImm9 <VS_32, "OPW32", "OPERAND_REG_IMM_V2FP16">;
-def VSrc_b64 : SrcRegOrImm9 <VS_64, "OPW64", "OPERAND_REG_IMM_INT64">;
-def VSrc_f64 : SrcRegOrImm9 <VS_64, "OPW64", "OPERAND_REG_IMM_FP64"> {
+def VSrc_b32 : SrcRegOrImm9 <VS_32, "OPERAND_REG_IMM_INT32">;
+def VSrc_f32 : SrcRegOrImm9 <VS_32, "OPERAND_REG_IMM_FP32">;
+def VSrc_v2b16 : SrcRegOrImm9 <VS_32, "OPERAND_REG_IMM_V2INT16">;
+def VSrc_v2bf16 : SrcRegOrImm9 <VS_32, "OPERAND_REG_IMM_V2BF16">;
+def VSrc_v2f16 : SrcRegOrImm9 <VS_32, "OPERAND_REG_IMM_V2FP16">;
+def VSrc_b64 : SrcRegOrImm9 <VS_64, "OPERAND_REG_IMM_INT64">;
+def VSrc_f64 : SrcRegOrImm9 <VS_64, "OPERAND_REG_IMM_FP64"> {
   let DecoderMethod = "decodeOperand_VSrc_f64";
 }
-def VSrc_v2b32 : SrcRegOrImm9 <VS_64, "OPW64", "OPERAND_REG_IMM_V2INT32">;
-def VSrc_v2f32 : SrcRegOrImm9 <VS_64, "OPW64", "OPERAND_REG_IMM_V2FP32">;
+def VSrc_v2b32 : SrcRegOrImm9 <VS_64, "OPERAND_REG_IMM_V2INT32">;
+def VSrc_v2f32 : SrcRegOrImm9 <VS_64, "OPERAND_REG_IMM_V2FP32">;
 
 #ifdef LLPC_BUILD_NPI
-def VSrc_NoInline_v2f16  : SrcRegOrImm9 <VS_32, "OPW32", "OPERAND_REG_IMM_NOINLINE_V2FP16">;
+def VSrc_NoInline_v2f16  : SrcRegOrImm9 <VS_32, "OPERAND_REG_IMM_NOINLINE_V2FP16">;
 
 #endif /* LLPC_BUILD_NPI */
-//===----------------------------------------------------------------------===//
-//  VSrc_*_Deferred Operands with an SGPR, VGPR or a 32-bit immediate for use
-//  with FMAMK/FMAAK
-//===----------------------------------------------------------------------===//
-
-def VSrc_bf16_Deferred : SrcRegOrImmDeferred9<VS_32, "OPW16", "OPERAND_REG_IMM_BF16_DEFERRED">;
-def VSrc_f16_Deferred : SrcRegOrImmDeferred9<VS_32, "OPW16", "OPERAND_REG_IMM_FP16_DEFERRED">;
-def VSrc_f32_Deferred : SrcRegOrImmDeferred9<VS_32, "OPW32", "OPERAND_REG_IMM_FP32_DEFERRED">;
-#ifdef LLPC_BUILD_NPI
-def VSrc_f64_Deferred : SrcRegOrImmDeferred9<VS_64, "OPW64", "OPERAND_REG_IMM_FP64_DEFERRED">;
-#endif /* LLPC_BUILD_NPI */
-
-// True 16 Operands
-def VSrcT_f16_Lo128_Deferred : SrcRegOrImmDeferred9<VS_16_Lo128, "OPW16",
-                                                   "OPERAND_REG_IMM_FP16_DEFERRED"> {
-  let DecoderMethodName = "decodeOperand_VSrcT16_Lo128_Deferred";
-  let EncoderMethod = "getMachineOpValueT16Lo128";
-}
-
-def VSrcFake16_bf16_Lo128_Deferred
-  : SrcRegOrImmDeferred9<VS_32_Lo128, "OPW16", "OPERAND_REG_IMM_BF16_DEFERRED">;
-def VSrcFake16_f16_Lo128_Deferred
-  : SrcRegOrImmDeferred9<VS_32_Lo128, "OPW16", "OPERAND_REG_IMM_FP16_DEFERRED">;
-
 //===----------------------------------------------------------------------===//
 //  VRegSrc_* Operands with a VGPR
 //===----------------------------------------------------------------------===//
 
 // This is for operands with the enum(9), VSrc encoding restriction,
 // but only allows VGPRs.
-class SrcReg9<RegisterClass regClass, string width> : RegisterOperand<regClass> {
-  let DecoderMethod = "decodeSrcReg9<AMDGPUDisassembler::" # width # ">";
+class SrcReg9<RegisterClass regClass> : RegisterOperand<regClass> {
+  let DecoderMethod = "decodeSrcReg9<" # regClass.Size # ">";
 }
 
 #ifdef LLPC_BUILD_NPI
-def VRegSrc_32   : SrcReg9<VGPR_32_STAGING, "OPW32">;
-def VRegSrc_64   : SrcReg9<VReg_64_STAGING, "OPW64">;
-def VRegSrc_96   : SrcReg9<VReg_96_STAGING, "OPW96">;
-def VRegSrc_128  : SrcReg9<VReg_128_STAGING, "OPW128">;
-def VRegSrc_160  : SrcReg9<VReg_160_STAGING, "OPW160">;
-def VRegSrc_192  : SrcReg9<VReg_192_STAGING, "OPW192">;
-def VRegSrc_256  : SrcReg9<VReg_256_STAGING, "OPW256">;
-def VRegSrc_288  : SrcReg9<VReg_288_STAGING, "OPW288">;
-def VRegSrc_384  : SrcReg9<VReg_384_STAGING, "OPW384">;
-def VRegSrc_512  : SrcReg9<VReg_512_STAGING, "OPW512">;
-def VRegSrc_576  : SrcReg9<VReg_576_STAGING, "OPW576">;
-def VRegSrc_1024 : SrcReg9<VReg_1024_STAGING, "OPW1024">;
+def VRegSrc_32   : SrcReg9<VGPR_32_STAGING>;
+def VRegSrc_64   : SrcReg9<VReg_64_STAGING>;
+def VRegSrc_96   : SrcReg9<VReg_96_STAGING>;
+def VRegSrc_128  : SrcReg9<VReg_128_STAGING>;
+def VRegSrc_160  : SrcReg9<VReg_160_STAGING>;
+def VRegSrc_192  : SrcReg9<VReg_192_STAGING>;
+def VRegSrc_256  : SrcReg9<VReg_256_STAGING>;
+def VRegSrc_288  : SrcReg9<VReg_288_STAGING>;
+def VRegSrc_384  : SrcReg9<VReg_384_STAGING>;
+def VRegSrc_512  : SrcReg9<VReg_512_STAGING>;
+def VRegSrc_576  : SrcReg9<VReg_576_STAGING>;
+def VRegSrc_1024 : SrcReg9<VReg_1024_STAGING>;
 #else /* LLPC_BUILD_NPI */
-def VRegSrc_32 : SrcReg9<VGPR_32, "OPW32">;
-def VRegSrc_64 : SrcReg9<VReg_64, "OPW64">;
-def VRegSrc_96 : SrcReg9<VReg_96, "OPW96">;
-def VRegSrc_128: SrcReg9<VReg_128, "OPW128">;
-def VRegSrc_192: SrcReg9<VReg_192, "OPW192">;
-def VRegSrc_256: SrcReg9<VReg_256, "OPW256">;
-def VRegSrc_512: SrcReg9<VReg_512, "OPW512">;
-def VRegSrc_1024: SrcReg9<VReg_1024, "OPW1024">;
+def VRegSrc_32 : SrcReg9<VGPR_32>;
+def VRegSrc_64 : SrcReg9<VReg_64>;
+def VRegSrc_96 : SrcReg9<VReg_96>;
+def VRegSrc_128: SrcReg9<VReg_128>;
+def VRegSrc_192: SrcReg9<VReg_192>;
+def VRegSrc_256: SrcReg9<VReg_256>;
+def VRegSrc_512: SrcReg9<VReg_512>;
+def VRegSrc_1024: SrcReg9<VReg_1024>;
 #endif /* LLPC_BUILD_NPI */
-def VRegOrLdsSrc_32 : SrcReg9<VRegOrLds_32, "OPW32">;
+def VRegOrLdsSrc_32 : SrcReg9<VRegOrLds_32>;
 
 // True 16 Operands
 #ifdef LLPC_BUILD_NPI
@@ -1796,9 +1781,9 @@ def VRegSrc_16 : RegisterOperand<VGPR_16> {
   let EncoderMethod = "getMachineOpValueT16";
 }
 #ifdef LLPC_BUILD_NPI
-def VRegSrc_fake16: SrcReg9<VGPR_32_STAGING, "OPW16"> {
+def VRegSrc_fake16: SrcReg9<VGPR_32_STAGING> {
 #else /* LLPC_BUILD_NPI */
-def VRegSrc_fake16: SrcReg9<VGPR_32, "OPW16"> {
+def VRegSrc_fake16: SrcReg9<VGPR_32> {
 #endif /* LLPC_BUILD_NPI */
   let EncoderMethod = "getMachineOpValueT16";
 }
@@ -1865,34 +1850,34 @@ def VGPR_IDX_DATA_OP : RegisterOperand<VGPR_IDX_DATA_OP_RC>;
 //  ASrc_* Operands with an AccVGPR
 //===----------------------------------------------------------------------===//
 
-class AVOperand<RegisterClass regClass, string decoder, string width>
+class AVOperand<RegisterClass regClass, string decoder>
     : RegisterOperand<regClass> {
-  let DecoderMethod = decoder # "<AMDGPUDisassembler::" # width # ">";
+  let DecoderMethod = decoder # "<" # regClass.Size # ">";
   let EncoderMethod = "getAVOperandEncoding";
 }
 
-def ARegSrc_32 : AVOperand<AGPR_32, "decodeSrcA9", "OPW32">;
+def ARegSrc_32 : AVOperand<AGPR_32, "decodeSrcA9">;
 
 //===----------------------------------------------------------------------===//
 //  VCSrc_* Operands with an SGPR, VGPR or an inline constant
 //===----------------------------------------------------------------------===//
 
-def VCSrc_b16 : SrcRegOrImm9 <VS_32, "OPW32", "OPERAND_REG_INLINE_C_INT16">;
-def VCSrc_bf16 : SrcRegOrImm9 <VS_32, "OPW32", "OPERAND_REG_INLINE_C_BF16">;
-def VCSrc_f16 : SrcRegOrImm9 <VS_32, "OPW32", "OPERAND_REG_INLINE_C_FP16">;
-def VCSrc_b32 : SrcRegOrImm9 <VS_32, "OPW32", "OPERAND_REG_INLINE_C_INT32">;
-def VCSrc_f32 : SrcRegOrImm9 <VS_32, "OPW32", "OPERAND_REG_INLINE_C_FP32">;
+def VCSrc_b16 : SrcRegOrImm9 <VS_32, "OPERAND_REG_INLINE_C_INT16">;
+def VCSrc_bf16 : SrcRegOrImm9 <VS_32, "OPERAND_REG_INLINE_C_BF16">;
+def VCSrc_f16 : SrcRegOrImm9 <VS_32, "OPERAND_REG_INLINE_C_FP16">;
+def VCSrc_b32 : SrcRegOrImm9 <VS_32, "OPERAND_REG_INLINE_C_INT32">;
+def VCSrc_f32 : SrcRegOrImm9 <VS_32, "OPERAND_REG_INLINE_C_FP32">;
 #ifdef LLPC_BUILD_NPI
-def VCSrc_b64 : SrcRegOrImm9 <VS_64, "OPW64", "OPERAND_REG_INLINE_C_INT64">;
-def VCSrc_f64 : SrcRegOrImm9 <VS_64, "OPW64", "OPERAND_REG_INLINE_C_FP64">;
+def VCSrc_b64 : SrcRegOrImm9 <VS_64, "OPERAND_REG_INLINE_C_INT64">;
+def VCSrc_f64 : SrcRegOrImm9 <VS_64, "OPERAND_REG_INLINE_C_FP64">;
 #endif /* LLPC_BUILD_NPI */
-def VCSrc_v2b16 : SrcRegOrImm9 <VS_32, "OPW32", "OPERAND_REG_INLINE_C_V2INT16">;
-def VCSrc_v2bf16: SrcRegOrImm9 <VS_32, "OPW32", "OPERAND_REG_INLINE_C_V2BF16">;
-def VCSrc_v2f16 : SrcRegOrImm9 <VS_32, "OPW32", "OPERAND_REG_INLINE_C_V2FP16">;
+def VCSrc_v2b16 : SrcRegOrImm9 <VS_32, "OPERAND_REG_INLINE_C_V2INT16">;
+def VCSrc_v2bf16: SrcRegOrImm9 <VS_32, "OPERAND_REG_INLINE_C_V2BF16">;
+def VCSrc_v2f16 : SrcRegOrImm9 <VS_32, "OPERAND_REG_INLINE_C_V2FP16">;
 #ifdef LLPC_BUILD_NPI
-def VCSrc_b32_Lo256 : SrcRegOrImm9 <VS_32_Lo256, "OPW32", "OPERAND_REG_INLINE_C_INT32">;
-def VCSrc_v2b32 : SrcRegOrImm9 <VS_64, "OPW64", "OPERAND_REG_INLINE_C_V2INT32">;
-def VCSrc_b64_Lo256 : SrcRegOrImm9 <VS_64_Lo256, "OPW64", "OPERAND_REG_INLINE_C_INT64">;
+def VCSrc_b32_Lo256 : SrcRegOrImm9 <VS_32_Lo256, "OPERAND_REG_INLINE_C_INT32">;
+def VCSrc_v2b32 : SrcRegOrImm9 <VS_64, "OPERAND_REG_INLINE_C_V2INT32">;
+def VCSrc_b64_Lo256 : SrcRegOrImm9 <VS_64_Lo256, "OPERAND_REG_INLINE_C_INT64">;
 #endif /* LLPC_BUILD_NPI */
 
 // True 16 Operands
@@ -1904,113 +1889,113 @@ def VCSrcT_f16 : SrcRegOrImm9_t16 <"OPERAND_REG_INLINE_C_FP16">;
 //===----------------------------------------------------------------------===//
 
 #ifdef LLPC_BUILD_NPI
-def VISrc_64_bf16 : SrcRegOrImm9 <VReg_64_STAGING, "OPW64", "OPERAND_REG_INLINE_C_BF16">;
-def VISrc_64_f16 : SrcRegOrImm9 <VReg_64_STAGING, "OPW64", "OPERAND_REG_INLINE_C_FP16">;
-def VISrc_64_b32 : SrcRegOrImm9 <VReg_64_STAGING, "OPW64", "OPERAND_REG_INLINE_C_INT32">;
-def VISrc_64_f64 : SrcRegOrImm9 <VReg_64_STAGING, "OPW64", "OPERAND_REG_INLINE_C_FP64">;
-def VISrc_128_bf16 : SrcRegOrImm9 <VReg_128_STAGING, "OPW128", "OPERAND_REG_INLINE_C_BF16">;
-def VISrc_128_f16 : SrcRegOrImm9 <VReg_128_STAGING, "OPW128", "OPERAND_REG_INLINE_C_FP16">;
-def VISrc_128_b32 : SrcRegOrImm9 <VReg_128_STAGING, "OPW128", "OPERAND_REG_INLINE_C_INT32">;
-def VISrc_128_f32 : SrcRegOrImm9 <VReg_128_STAGING, "OPW128", "OPERAND_REG_INLINE_C_FP32">;
-def VISrc_256_b32 : SrcRegOrImm9 <VReg_256_STAGING, "OPW256", "OPERAND_REG_INLINE_C_INT32">;
-def VISrc_256_f32 : SrcRegOrImm9 <VReg_256_STAGING, "OPW256", "OPERAND_REG_INLINE_C_FP32">;
-def VISrc_256_f64 : SrcRegOrImm9 <VReg_256_STAGING, "OPW256", "OPERAND_REG_INLINE_C_FP64">;
-def VISrc_512_b32 : SrcRegOrImm9 <VReg_512_STAGING, "OPW512", "OPERAND_REG_INLINE_C_INT32">;
-def VISrc_512_f32 : SrcRegOrImm9 <VReg_512_STAGING, "OPW512", "OPERAND_REG_INLINE_C_FP32">;
-def VISrc_512_f64 : SrcRegOrImm9 <VReg_512_STAGING, "OPW512", "OPERAND_REG_INLINE_C_FP64">;
-def VISrc_1024_b32 : SrcRegOrImm9 <VReg_1024_STAGING, "OPW1024", "OPERAND_REG_INLINE_C_INT32">;
-def VISrc_1024_f32 : SrcRegOrImm9 <VReg_1024_STAGING, "OPW1024", "OPERAND_REG_INLINE_C_FP32">;
+def VISrc_64_bf16 : SrcRegOrImm9 <VReg_64_STAGING, "OPERAND_REG_INLINE_C_BF16">;
+def VISrc_64_f16 : SrcRegOrImm9 <VReg_64_STAGING, "OPERAND_REG_INLINE_C_FP16">;
+def VISrc_64_b32 : SrcRegOrImm9 <VReg_64_STAGING, "OPERAND_REG_INLINE_C_INT32">;
+def VISrc_64_f64 : SrcRegOrImm9 <VReg_64_STAGING, "OPERAND_REG_INLINE_C_FP64">;
+def VISrc_128_bf16 : SrcRegOrImm9 <VReg_128_STAGING, "OPERAND_REG_INLINE_C_BF16">;
+def VISrc_128_f16 : SrcRegOrImm9 <VReg_128_STAGING, "OPERAND_REG_INLINE_C_FP16">;
+def VISrc_128_b32 : SrcRegOrImm9 <VReg_128_STAGING, "OPERAND_REG_INLINE_C_INT32">;
+def VISrc_128_f32 : SrcRegOrImm9 <VReg_128_STAGING, "OPERAND_REG_INLINE_C_FP32">;
+def VISrc_256_b32 : SrcRegOrImm9 <VReg_256_STAGING, "OPERAND_REG_INLINE_C_INT32">;
+def VISrc_256_f32 : SrcRegOrImm9 <VReg_256_STAGING, "OPERAND_REG_INLINE_C_FP32">;
+def VISrc_256_f64 : SrcRegOrImm9 <VReg_256_STAGING, "OPERAND_REG_INLINE_C_FP64">;
+def VISrc_512_b32 : SrcRegOrImm9 <VReg_512_STAGING, "OPERAND_REG_INLINE_C_INT32">;
+def VISrc_512_f32 : SrcRegOrImm9 <VReg_512_STAGING, "OPERAND_REG_INLINE_C_FP32">;
+def VISrc_512_f64 : SrcRegOrImm9 <VReg_512_STAGING, "OPERAND_REG_INLINE_C_FP64">;
+def VISrc_1024_b32 : SrcRegOrImm9 <VReg_1024_STAGING, "OPERAND_REG_INLINE_C_INT32">;
+def VISrc_1024_f32 : SrcRegOrImm9 <VReg_1024_STAGING, "OPERAND_REG_INLINE_C_FP32">;
 #else /* LLPC_BUILD_NPI */
-def VISrc_64_bf16 : SrcRegOrImm9 <VReg_64, "OPW64", "OPERAND_REG_INLINE_C_BF16">;
-def VISrc_64_f16 : SrcRegOrImm9 <VReg_64, "OPW64", "OPERAND_REG_INLINE_C_FP16">;
-def VISrc_64_b32 : SrcRegOrImm9 <VReg_64, "OPW64", "OPERAND_REG_INLINE_C_INT32">;
-def VISrc_64_f64 : SrcRegOrImm9 <VReg_64, "OPW64", "OPERAND_REG_INLINE_C_FP64">;
-def VISrc_128_bf16 : SrcRegOrImm9 <VReg_128, "OPW128", "OPERAND_REG_INLINE_C_BF16">;
-def VISrc_128_f16 : SrcRegOrImm9 <VReg_128, "OPW128", "OPERAND_REG_INLINE_C_FP16">;
-def VISrc_128_b32 : SrcRegOrImm9 <VReg_128, "OPW128", "OPERAND_REG_INLINE_C_INT32">;
-def VISrc_128_f32 : SrcRegOrImm9 <VReg_128, "OPW128", "OPERAND_REG_INLINE_C_FP32">;
-def VISrc_256_b32 : SrcRegOrImm9 <VReg_256, "OPW256", "OPERAND_REG_INLINE_C_INT32">;
-def VISrc_256_f32 : SrcRegOrImm9 <VReg_256, "OPW256", "OPERAND_REG_INLINE_C_FP32">;
-def VISrc_256_f64 : SrcRegOrImm9 <VReg_256, "OPW256", "OPERAND_REG_INLINE_C_FP64">;
-def VISrc_512_b32 : SrcRegOrImm9 <VReg_512, "OPW512", "OPERAND_REG_INLINE_C_INT32">;
-def VISrc_512_f32 : SrcRegOrImm9 <VReg_512, "OPW512", "OPERAND_REG_INLINE_C_FP32">;
-def VISrc_1024_b32 : SrcRegOrImm9 <VReg_1024, "OPW1024", "OPERAND_REG_INLINE_C_INT32">;
-def VISrc_1024_f32 : SrcRegOrImm9 <VReg_1024, "OPW1024", "OPERAND_REG_INLINE_C_FP32">;
+def VISrc_64_bf16 : SrcRegOrImm9 <VReg_64, "OPERAND_REG_INLINE_C_BF16">;
+def VISrc_64_f16 : SrcRegOrImm9 <VReg_64, "OPERAND_REG_INLINE_C_FP16">;
+def VISrc_64_b32 : SrcRegOrImm9 <VReg_64, "OPERAND_REG_INLINE_C_INT32">;
+def VISrc_64_f64 : SrcRegOrImm9 <VReg_64, "OPERAND_REG_INLINE_C_FP64">;
+def VISrc_128_bf16 : SrcRegOrImm9 <VReg_128, "OPERAND_REG_INLINE_C_BF16">;
+def VISrc_128_f16 : SrcRegOrImm9 <VReg_128, "OPERAND_REG_INLINE_C_FP16">;
+def VISrc_128_b32 : SrcRegOrImm9 <VReg_128, "OPERAND_REG_INLINE_C_INT32">;
+def VISrc_128_f32 : SrcRegOrImm9 <VReg_128, "OPERAND_REG_INLINE_C_FP32">;
+def VISrc_256_b32 : SrcRegOrImm9 <VReg_256, "OPERAND_REG_INLINE_C_INT32">;
+def VISrc_256_f32 : SrcRegOrImm9 <VReg_256, "OPERAND_REG_INLINE_C_FP32">;
+def VISrc_256_f64 : SrcRegOrImm9 <VReg_256, "OPERAND_REG_INLINE_C_FP64">;
+def VISrc_512_b32 : SrcRegOrImm9 <VReg_512, "OPERAND_REG_INLINE_C_INT32">;
+def VISrc_512_f32 : SrcRegOrImm9 <VReg_512, "OPERAND_REG_INLINE_C_FP32">;
+def VISrc_1024_b32 : SrcRegOrImm9 <VReg_1024, "OPERAND_REG_INLINE_C_INT32">;
+def VISrc_1024_f32 : SrcRegOrImm9 <VReg_1024, "OPERAND_REG_INLINE_C_FP32">;
 #endif /* LLPC_BUILD_NPI */
 
 //===----------------------------------------------------------------------===//
 //  AVSrc_*, AVDst_*, AVLdSt_* Operands with an AGPR or VGPR
 //===----------------------------------------------------------------------===//
 
-class AVSrcOperand<RegisterClass regClass, string width>
-  : AVOperand<regClass, "decodeSrcAV10", width>;
+class AVSrcOperand<RegisterClass regClass>
+  : AVOperand<regClass, "decodeSrcAV10">;
 
 #ifdef LLPC_BUILD_NPI
-def AVSrc_32 : AVSrcOperand<AV_32_STAGING, "OPW32">;
-def AVSrc_64 : AVSrcOperand<AV_64_STAGING, "OPW64">;
-def AVSrc_128 : AVSrcOperand<AV_128_STAGING, "OPW128">;
-def AVSrc_192 : AVSrcOperand<AV_192_STAGING, "OPW192">;
-def AVSrc_256 : AVSrcOperand<AV_256_STAGING, "OPW256">;
+def AVSrc_32 : AVSrcOperand<AV_32_STAGING>;
+def AVSrc_64 : AVSrcOperand<AV_64_STAGING>;
+def AVSrc_128 : AVSrcOperand<AV_128_STAGING>;
+def AVSrc_192 : AVSrcOperand<AV_192_STAGING>;
+def AVSrc_256 : AVSrcOperand<AV_256_STAGING>;
 #else /* LLPC_BUILD_NPI */
-def AVSrc_32 : AVSrcOperand<AV_32, "OPW32">;
-def AVSrc_64 : AVSrcOperand<AV_64, "OPW64">;
-def AVSrc_128 : AVSrcOperand<AV_128, "OPW128">;
-def AVSrc_192 : AVSrcOperand<AV_192, "OPW192">;
-def AVSrc_256 : AVSrcOperand<AV_256, "OPW256">;
+def AVSrc_32 : AVSrcOperand<AV_32>;
+def AVSrc_64 : AVSrcOperand<AV_64>;
+def AVSrc_128 : AVSrcOperand<AV_128>;
+def AVSrc_192 : AVSrcOperand<AV_192>;
+def AVSrc_256 : AVSrcOperand<AV_256>;
 #endif /* LLPC_BUILD_NPI */
 
-class AVDstOperand<RegisterClass regClass, string width>
-  : AVOperand<regClass, "decodeAV10", width>;
+class AVDstOperand<RegisterClass regClass>
+  : AVOperand<regClass, "decodeAV10">;
 
 #ifdef LLPC_BUILD_NPI
-def AVDst_128 : AVDstOperand<AV_128_STAGING, "OPW128">;
-def AVDst_256 : AVDstOperand<AV_256_STAGING, "OPW256">;
-def AVDst_512 : AVDstOperand<AV_512_STAGING, "OPW512">;
+def AVDst_128 : AVDstOperand<AV_128_STAGING>;
+def AVDst_256 : AVDstOperand<AV_256_STAGING>;
+def AVDst_512 : AVDstOperand<AV_512_STAGING>;
 #else /* LLPC_BUILD_NPI */
-def AVDst_128 : AVDstOperand<AV_128, "OPW128">;
-def AVDst_256 : AVDstOperand<AV_256, "OPW256">;
-def AVDst_512 : AVDstOperand<AV_512, "OPW512">;
+def AVDst_128 : AVDstOperand<AV_128>;
+def AVDst_256 : AVDstOperand<AV_256>;
+def AVDst_512 : AVDstOperand<AV_512>;
 
 #endif /* LLPC_BUILD_NPI */
-class AVLdStOperand<RegisterClass regClass, string width>
-  : AVOperand<regClass, "decodeAVLdSt", width>;
+class AVLdStOperand<RegisterClass regClass>
+  : AVOperand<regClass, "decodeAVLdSt">;
 
 #ifdef LLPC_BUILD_NPI
-def AVLdSt_32 : AVLdStOperand<AV_32_STAGING, "OPW32">;
-def AVLdSt_64 : AVLdStOperand<AV_64_STAGING, "OPW64">;
-def AVLdSt_96 : AVLdStOperand<AV_96_STAGING, "OPW96">;
-def AVLdSt_128 : AVLdStOperand<AV_128_STAGING, "OPW128">;
-def AVLdSt_160 : AVLdStOperand<AV_160_STAGING, "OPW160">;
-def AVLdSt_192 : AVLdStOperand<AV_192_STAGING, "OPW192">;
-def AVLdSt_224 : AVLdStOperand<AV_224_STAGING, "OPW224">;
-def AVLdSt_256 : AVLdStOperand<AV_256_STAGING, "OPW256">;
-def AVLdSt_288 : AVLdStOperand<AV_288_STAGING, "OPW288">;
-def AVLdSt_512 : AVLdStOperand<AV_512_STAGING, "OPW512">;
-def AVLdSt_576 : AVLdStOperand<AV_576_STAGING, "OPW576">;
-def AVLdSt_1024 : AVLdStOperand<AV_1024_STAGING, "OPW1024">;
+def AVLdSt_32 : AVLdStOperand<AV_32_STAGING>;
+def AVLdSt_64 : AVLdStOperand<AV_64_STAGING>;
+def AVLdSt_96 : AVLdStOperand<AV_96_STAGING>;
+def AVLdSt_128 : AVLdStOperand<AV_128_STAGING>;
+def AVLdSt_160 : AVLdStOperand<AV_160_STAGING>;
+def AVLdSt_192 : AVLdStOperand<AV_192_STAGING>;
+def AVLdSt_224 : AVLdStOperand<AV_224_STAGING>;
+def AVLdSt_256 : AVLdStOperand<AV_256_STAGING>;
+def AVLdSt_288 : AVLdStOperand<AV_288_STAGING>;
+def AVLdSt_512 : AVLdStOperand<AV_512_STAGING>;
+def AVLdSt_576 : AVLdStOperand<AV_576_STAGING>;
+def AVLdSt_1024 : AVLdStOperand<AV_1024_STAGING>;
 #else /* LLPC_BUILD_NPI */
-def AVLdSt_32 : AVLdStOperand<AV_32, "OPW32">;
-def AVLdSt_64 : AVLdStOperand<AV_64, "OPW64">;
-def AVLdSt_96 : AVLdStOperand<AV_96, "OPW96">;
-def AVLdSt_128 : AVLdStOperand<AV_128, "OPW128">;
-def AVLdSt_160 : AVLdStOperand<AV_160, "OPW160">;
-def AVLdSt_1024 : AVLdStOperand<AV_1024, "OPW1024">;
+def AVLdSt_32 : AVLdStOperand<AV_32>;
+def AVLdSt_64 : AVLdStOperand<AV_64>;
+def AVLdSt_96 : AVLdStOperand<AV_96>;
+def AVLdSt_128 : AVLdStOperand<AV_128>;
+def AVLdSt_160 : AVLdStOperand<AV_160>;
+def AVLdSt_1024 : AVLdStOperand<AV_1024>;
 #endif /* LLPC_BUILD_NPI */
 
 //===----------------------------------------------------------------------===//
 //  ACSrc_* Operands with an AGPR or an inline constant
 //===----------------------------------------------------------------------===//
 
-class SrcRegOrImmA9<RegisterClass regClass, string opWidth, string operandType>
+class SrcRegOrImmA9<RegisterClass regClass, string operandType>
     : RegOrImmOperand<regClass, operandType> {
-  let DecoderMethod = "decodeSrcRegOrImmA9<AMDGPUDisassembler::" # opWidth # ">";
+  let DecoderMethod = "decodeSrcRegOrImmA9<" # regClass.Size # ">";
 }
 
-def AISrc_64_f64 : SrcRegOrImmA9 <AReg_64, "OPW64", "OPERAND_REG_INLINE_AC_FP64">;
-def AISrc_128_f32 : SrcRegOrImmA9 <AReg_128, "OPW128", "OPERAND_REG_INLINE_AC_FP32">;
-def AISrc_128_b32 : SrcRegOrImmA9 <AReg_128, "OPW128", "OPERAND_REG_INLINE_AC_INT32">;
-def AISrc_256_f64 : SrcRegOrImmA9 <AReg_256, "OPW256", "OPERAND_REG_INLINE_AC_FP64">;
-def AISrc_512_f32 : SrcRegOrImmA9 <AReg_512, "OPW512", "OPERAND_REG_INLINE_AC_FP32">;
-def AISrc_512_b32 : SrcRegOrImmA9 <AReg_512, "OPW512", "OPERAND_REG_INLINE_AC_INT32">;
-def AISrc_1024_f32 : SrcRegOrImmA9 <AReg_1024, "OPW1024", "OPERAND_REG_INLINE_AC_FP32">;
-def AISrc_1024_b32 : SrcRegOrImmA9 <AReg_1024, "OPW1024", "OPERAND_REG_INLINE_AC_INT32">;
+def AISrc_64_f64 : SrcRegOrImmA9 <AReg_64, "OPERAND_REG_INLINE_AC_FP64">;
+def AISrc_128_f32 : SrcRegOrImmA9 <AReg_128, "OPERAND_REG_INLINE_AC_FP32">;
+def AISrc_128_b32 : SrcRegOrImmA9 <AReg_128, "OPERAND_REG_INLINE_AC_INT32">;
+def AISrc_256_f64 : SrcRegOrImmA9 <AReg_256, "OPERAND_REG_INLINE_AC_FP64">;
+def AISrc_512_f32 : SrcRegOrImmA9 <AReg_512, "OPERAND_REG_INLINE_AC_FP32">;
+def AISrc_512_b32 : SrcRegOrImmA9 <AReg_512, "OPERAND_REG_INLINE_AC_INT32">;
+def AISrc_1024_f32 : SrcRegOrImmA9 <AReg_1024, "OPERAND_REG_INLINE_AC_FP32">;
+def AISrc_1024_b32 : SrcRegOrImmA9 <AReg_1024, "OPERAND_REG_INLINE_AC_INT32">;

@@ -1344,18 +1344,13 @@ define amdgpu_kernel void @test_convolve.f32_iu4_1x1_4x2_iter_1() "amdgpu-wavegr
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    s_mul_i32 s1, s0, 4
+; GFX13-NEXT:    s_mul_i32 s1, s0, 1
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 11
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f32_iu4 v[0:3], g1[0:3], g1[4:5], g1[6] aux_data:3 clamp idxs:0x1110
-; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 g1[7], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[8], v1
-; GFX13-NEXT:    v_mov_b32_e32 g1[9], v2
-; GFX13-NEXT:    v_mov_b32_e32 g1[10], v3
+; GFX13-NEXT:    v_convolve_f32_iu4 g1[7:10], g1[0:3], g1[4:5], g1[6] aux_data:3 clamp idxs:0x1111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x float>, ptr addrspace(10) @acc_in_var_f32_iu4_1x1_4x2_iter_1
@@ -1383,16 +1378,13 @@ define amdgpu_kernel void @test_convolve.f16_iu4_1x1_4x2_iter_1() "amdgpu-wavegr
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    s_mul_i32 s1, s0, 2
+; GFX13-NEXT:    s_mul_i32 s1, s0, 1
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 7
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_iu4 v[0:1], g1[0:1], g1[2:3], g1[4] aux_data:3 clamp idxs:0x1110
-; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 g1[5], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[6], v1
+; GFX13-NEXT:    v_convolve_f16_iu4 g1[5:6], g1[0:1], g1[2:3], g1[4] aux_data:3 clamp idxs:0x1111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x half>, ptr addrspace(10) @acc_in_var_f16_iu4_1x1_4x2_iter_1
@@ -1454,22 +1446,13 @@ define amdgpu_kernel void @test_convolve.f16_iu4_1x1_8x4_iter_1() "amdgpu-wavegr
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    s_mul_i32 s1, s0, 4
+; GFX13-NEXT:    s_mul_i32 s1, s0, 2
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 11
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v0, g1[5]
-; GFX13-NEXT:    v_mov_b32_e32 v1, g1[6]
-; GFX13-NEXT:    v_convolve_f16_iu4 v[0:3], g1[0:3], g1[4], v[0:1] clamp idxs:0x110
-; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX13-NEXT:    v_mov_b32_e32 g1[7], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[8], v1
-; GFX13-NEXT:    v_mov_b32_e32 g1[9], v2
-; GFX13-NEXT:    v_mov_b32_e32 g1[10], v3
+; GFX13-NEXT:    v_convolve_f16_iu4 g1[7:10], g1[0:3], g1[4], g1[5:6] clamp idxs:0x1111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_iu4_1x1_8x4_iter_1
@@ -1497,18 +1480,13 @@ define amdgpu_kernel void @test_convolve.i32_iu4_1x1_4x2_iter_1() "amdgpu-wavegr
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    s_mul_i32 s1, s0, 4
+; GFX13-NEXT:    s_mul_i32 s1, s0, 1
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 11
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_i32_iu4 v[0:3], g1[0:3], g1[4:5], g1[6] aux_data:3 clamp idxs:0x1110
-; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 g1[7], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[8], v1
-; GFX13-NEXT:    v_mov_b32_e32 g1[9], v2
-; GFX13-NEXT:    v_mov_b32_e32 g1[10], v3
+; GFX13-NEXT:    v_convolve_i32_iu4 g1[7:10], g1[0:3], g1[4:5], g1[6] aux_data:3 clamp idxs:0x1111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x i32>, ptr addrspace(10) @acc_in_var_i32_iu4_1x1_4x2_iter_1
@@ -1536,18 +1514,13 @@ define amdgpu_kernel void @test_convolve.f32i32_iu4_1x1_4x2_iter_1() "amdgpu-wav
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    s_mul_i32 s1, s0, 4
+; GFX13-NEXT:    s_mul_i32 s1, s0, 1
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 11
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f32i32_iu4 v[0:3], g1[0:3], g1[4:5], g1[6] aux_data:3 clamp idxs:0x1110
-; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 g1[7], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[8], v1
-; GFX13-NEXT:    v_mov_b32_e32 g1[9], v2
-; GFX13-NEXT:    v_mov_b32_e32 g1[10], v3
+; GFX13-NEXT:    v_convolve_f32i32_iu4 g1[7:10], g1[0:3], g1[4:5], g1[6] aux_data:3 clamp idxs:0x1111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x i32>, ptr addrspace(10) @acc_in_var_f32i32_iu4_1x1_4x2_iter_1
@@ -1684,23 +1657,13 @@ define amdgpu_kernel void @test_convolve.f16_iu4_1x1_8x4_iter_2() "amdgpu-wavegr
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    s_mul_i32 s1, s0, 4
+; GFX13-NEXT:    s_mul_i32 s1, s0, 2
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 13
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v0, g1[5]
-; GFX13-NEXT:    v_mov_b32_e32 v1, g1[6]
-; GFX13-NEXT:    v_mov_b32_e32 v2, g1[7]
-; GFX13-NEXT:    v_mov_b32_e32 v3, g1[8]
-; GFX13-NEXT:    v_convolve_f16_iu4 v[0:3], g1[0:3], g1[4], v[0:1], v[2:3] aux_data:4096 clamp idxs:0x110
-; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 g1[9], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[10], v1
-; GFX13-NEXT:    v_mov_b32_e32 g1[11], v2
-; GFX13-NEXT:    v_mov_b32_e32 g1[12], v3
+; GFX13-NEXT:    v_convolve_f16_iu4 g1[9:12], g1[0:3], g1[4], g1[5:6], g1[7:8] aux_data:4096 clamp idxs:0x11111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_iu4_1x1_8x4_iter_2
@@ -1803,18 +1766,13 @@ define amdgpu_kernel void @test_convolve.f32_iu4_1x1_4x2_iter_3() "amdgpu-wavegr
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    s_mul_i32 s1, s0, 4
+; GFX13-NEXT:    s_mul_i32 s1, s0, 1
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 19
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f32_iu4 v[0:3], g1[0:3], g1[4:9], g1[12], g1[13], g1[14] aux_data:8195 clamp idxs:0x111110
-; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 g1[15], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[16], v1
-; GFX13-NEXT:    v_mov_b32_e32 g1[17], v2
-; GFX13-NEXT:    v_mov_b32_e32 g1[18], v3
+; GFX13-NEXT:    v_convolve_f32_iu4 g1[15:18], g1[0:3], g1[4:9], g1[12], g1[13], g1[14] aux_data:8195 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x float>, ptr addrspace(10) @acc_in_var_f32_iu4_1x1_4x2_iter_3
@@ -1846,16 +1804,13 @@ define amdgpu_kernel void @test_convolve.f16_iu4_1x1_4x2_iter_3() "amdgpu-wavegr
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    s_mul_i32 s1, s0, 2
+; GFX13-NEXT:    s_mul_i32 s1, s0, 1
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 15
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_iu4 v[0:1], g1[0:1], g1[2:7], g1[10], g1[11], g1[12] aux_data:8195 clamp idxs:0x111110
-; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 g1[13], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[14], v1
+; GFX13-NEXT:    v_convolve_f16_iu4 g1[13:14], g1[0:1], g1[2:7], g1[10], g1[11], g1[12] aux_data:8195 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x half>, ptr addrspace(10) @acc_in_var_f16_iu4_1x1_4x2_iter_3
@@ -1887,18 +1842,13 @@ define amdgpu_kernel void @test_convolve.f16_iu4_1x1_4x4_iter_3() "amdgpu-wavegr
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    s_mul_i32 s1, s0, 4
+; GFX13-NEXT:    s_mul_i32 s1, s0, 1
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 15
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_iu4 v[0:3], g1[0:3], g1[4:6], g1[8], g1[9], g1[10] aux_data:8194 clamp idxs:0x111110
-; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 g1[11], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[12], v1
-; GFX13-NEXT:    v_mov_b32_e32 g1[13], v2
-; GFX13-NEXT:    v_mov_b32_e32 g1[14], v3
+; GFX13-NEXT:    v_convolve_f16_iu4 g1[11:14], g1[0:3], g1[4:6], g1[8], g1[9], g1[10] aux_data:8194 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_iu4_1x1_4x4_iter_3
@@ -1968,18 +1918,13 @@ define amdgpu_kernel void @test_convolve.i32_iu4_1x1_4x2_iter_3() "amdgpu-wavegr
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    s_mul_i32 s1, s0, 4
+; GFX13-NEXT:    s_mul_i32 s1, s0, 1
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 19
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_i32_iu4 v[0:3], g1[0:3], g1[4:9], g1[12], g1[13], g1[14] aux_data:8195 clamp idxs:0x111110
-; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 g1[15], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[16], v1
-; GFX13-NEXT:    v_mov_b32_e32 g1[17], v2
-; GFX13-NEXT:    v_mov_b32_e32 g1[18], v3
+; GFX13-NEXT:    v_convolve_i32_iu4 g1[15:18], g1[0:3], g1[4:9], g1[12], g1[13], g1[14] aux_data:8195 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x i32>, ptr addrspace(10) @acc_in_var_i32_iu4_1x1_4x2_iter_3
@@ -2011,18 +1956,13 @@ define amdgpu_kernel void @test_convolve.f32i32_iu4_1x1_4x2_iter_3() "amdgpu-wav
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    s_mul_i32 s1, s0, 4
+; GFX13-NEXT:    s_mul_i32 s1, s0, 1
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 19
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f32i32_iu4 v[0:3], g1[0:3], g1[4:9], g1[12], g1[13], g1[14] aux_data:8195 clamp idxs:0x111110
-; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 g1[15], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[16], v1
-; GFX13-NEXT:    v_mov_b32_e32 g1[17], v2
-; GFX13-NEXT:    v_mov_b32_e32 g1[18], v3
+; GFX13-NEXT:    v_convolve_f32i32_iu4 g1[15:18], g1[0:3], g1[4:9], g1[12], g1[13], g1[14] aux_data:8195 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x i32>, ptr addrspace(10) @acc_in_var_f32i32_iu4_1x1_4x2_iter_3
@@ -2286,18 +2226,13 @@ define amdgpu_kernel void @test_convolve.f32_iu8_1x1_4x2_iter_1() "amdgpu-wavegr
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    s_mul_i32 s1, s0, 4
+; GFX13-NEXT:    s_mul_i32 s1, s0, 1
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 11
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f32_iu8 v[0:3], g1[0:3], g1[4:5], g1[6] aux_data:3 clamp idxs:0x1110
-; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 g1[7], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[8], v1
-; GFX13-NEXT:    v_mov_b32_e32 g1[9], v2
-; GFX13-NEXT:    v_mov_b32_e32 g1[10], v3
+; GFX13-NEXT:    v_convolve_f32_iu8 g1[7:10], g1[0:3], g1[4:5], g1[6] aux_data:3 clamp idxs:0x1111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x float>, ptr addrspace(10) @acc_in_var_f32_iu8_1x1_4x2_iter_1
@@ -2325,16 +2260,13 @@ define amdgpu_kernel void @test_convolve.f16_iu8_1x1_4x2_iter_1() "amdgpu-wavegr
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    s_mul_i32 s1, s0, 2
+; GFX13-NEXT:    s_mul_i32 s1, s0, 1
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 7
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_iu8 v[0:1], g1[0:1], g1[2:3], g1[4] aux_data:3 clamp idxs:0x1110
-; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 g1[5], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[6], v1
+; GFX13-NEXT:    v_convolve_f16_iu8 g1[5:6], g1[0:1], g1[2:3], g1[4] aux_data:3 clamp idxs:0x1111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x half>, ptr addrspace(10) @acc_in_var_f16_iu8_1x1_4x2_iter_1
@@ -2396,22 +2328,13 @@ define amdgpu_kernel void @test_convolve.f16_iu8_1x1_8x4_iter_1() "amdgpu-wavegr
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    s_mul_i32 s1, s0, 4
+; GFX13-NEXT:    s_mul_i32 s1, s0, 2
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 11
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v0, g1[5]
-; GFX13-NEXT:    v_mov_b32_e32 v1, g1[6]
-; GFX13-NEXT:    v_convolve_f16_iu8 v[0:3], g1[0:3], g1[4], v[0:1] clamp idxs:0x110
-; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX13-NEXT:    v_mov_b32_e32 g1[7], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[8], v1
-; GFX13-NEXT:    v_mov_b32_e32 g1[9], v2
-; GFX13-NEXT:    v_mov_b32_e32 g1[10], v3
+; GFX13-NEXT:    v_convolve_f16_iu8 g1[7:10], g1[0:3], g1[4], g1[5:6] clamp idxs:0x1111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_iu8_1x1_8x4_iter_1
@@ -2439,18 +2362,13 @@ define amdgpu_kernel void @test_convolve.i32_iu8_1x1_4x2_iter_1() "amdgpu-wavegr
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    s_mul_i32 s1, s0, 4
+; GFX13-NEXT:    s_mul_i32 s1, s0, 1
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 11
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_i32_iu8 v[0:3], g1[0:3], g1[4:5], g1[6] aux_data:3 clamp idxs:0x1110
-; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 g1[7], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[8], v1
-; GFX13-NEXT:    v_mov_b32_e32 g1[9], v2
-; GFX13-NEXT:    v_mov_b32_e32 g1[10], v3
+; GFX13-NEXT:    v_convolve_i32_iu8 g1[7:10], g1[0:3], g1[4:5], g1[6] aux_data:3 clamp idxs:0x1111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x i32>, ptr addrspace(10) @acc_in_var_i32_iu8_1x1_4x2_iter_1
@@ -2478,18 +2396,13 @@ define amdgpu_kernel void @test_convolve.f32i32_iu8_1x1_4x2_iter_1() "amdgpu-wav
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    s_mul_i32 s1, s0, 4
+; GFX13-NEXT:    s_mul_i32 s1, s0, 1
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 11
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f32i32_iu8 v[0:3], g1[0:3], g1[4:5], g1[6] aux_data:3 clamp idxs:0x1110
-; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 g1[7], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[8], v1
-; GFX13-NEXT:    v_mov_b32_e32 g1[9], v2
-; GFX13-NEXT:    v_mov_b32_e32 g1[10], v3
+; GFX13-NEXT:    v_convolve_f32i32_iu8 g1[7:10], g1[0:3], g1[4:5], g1[6] aux_data:3 clamp idxs:0x1111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x i32>, ptr addrspace(10) @acc_in_var_f32i32_iu8_1x1_4x2_iter_1
@@ -2626,23 +2539,13 @@ define amdgpu_kernel void @test_convolve.f16_iu8_1x1_8x4_iter_2() "amdgpu-wavegr
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    s_mul_i32 s1, s0, 4
+; GFX13-NEXT:    s_mul_i32 s1, s0, 2
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 13
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v0, g1[5]
-; GFX13-NEXT:    v_mov_b32_e32 v1, g1[6]
-; GFX13-NEXT:    v_mov_b32_e32 v2, g1[7]
-; GFX13-NEXT:    v_mov_b32_e32 v3, g1[8]
-; GFX13-NEXT:    v_convolve_f16_iu8 v[0:3], g1[0:3], g1[4], v[0:1], v[2:3] aux_data:4096 clamp idxs:0x110
-; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 g1[9], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[10], v1
-; GFX13-NEXT:    v_mov_b32_e32 g1[11], v2
-; GFX13-NEXT:    v_mov_b32_e32 g1[12], v3
+; GFX13-NEXT:    v_convolve_f16_iu8 g1[9:12], g1[0:3], g1[4], g1[5:6], g1[7:8] aux_data:4096 clamp idxs:0x11111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_iu8_1x1_8x4_iter_2
@@ -2745,18 +2648,13 @@ define amdgpu_kernel void @test_convolve.f32_iu8_1x1_4x2_iter_3() "amdgpu-wavegr
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    s_mul_i32 s1, s0, 4
+; GFX13-NEXT:    s_mul_i32 s1, s0, 1
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 19
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f32_iu8 v[0:3], g1[0:3], g1[4:9], g1[12], g1[13], g1[14] aux_data:8195 clamp idxs:0x111110
-; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 g1[15], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[16], v1
-; GFX13-NEXT:    v_mov_b32_e32 g1[17], v2
-; GFX13-NEXT:    v_mov_b32_e32 g1[18], v3
+; GFX13-NEXT:    v_convolve_f32_iu8 g1[15:18], g1[0:3], g1[4:9], g1[12], g1[13], g1[14] aux_data:8195 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x float>, ptr addrspace(10) @acc_in_var_f32_iu8_1x1_4x2_iter_3
@@ -2788,16 +2686,13 @@ define amdgpu_kernel void @test_convolve.f16_iu8_1x1_4x2_iter_3() "amdgpu-wavegr
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    s_mul_i32 s1, s0, 2
+; GFX13-NEXT:    s_mul_i32 s1, s0, 1
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 15
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_iu8 v[0:1], g1[0:1], g1[2:7], g1[10], g1[11], g1[12] aux_data:8195 clamp idxs:0x111110
-; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 g1[13], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[14], v1
+; GFX13-NEXT:    v_convolve_f16_iu8 g1[13:14], g1[0:1], g1[2:7], g1[10], g1[11], g1[12] aux_data:8195 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x half>, ptr addrspace(10) @acc_in_var_f16_iu8_1x1_4x2_iter_3
@@ -2829,18 +2724,13 @@ define amdgpu_kernel void @test_convolve.f16_iu8_1x1_4x4_iter_3() "amdgpu-wavegr
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    s_mul_i32 s1, s0, 4
+; GFX13-NEXT:    s_mul_i32 s1, s0, 1
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 15
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_iu8 v[0:3], g1[0:3], g1[4:6], g1[8], g1[9], g1[10] aux_data:8194 clamp idxs:0x111110
-; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 g1[11], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[12], v1
-; GFX13-NEXT:    v_mov_b32_e32 g1[13], v2
-; GFX13-NEXT:    v_mov_b32_e32 g1[14], v3
+; GFX13-NEXT:    v_convolve_f16_iu8 g1[11:14], g1[0:3], g1[4:6], g1[8], g1[9], g1[10] aux_data:8194 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_iu8_1x1_4x4_iter_3
@@ -2910,18 +2800,13 @@ define amdgpu_kernel void @test_convolve.i32_iu8_1x1_4x2_iter_3() "amdgpu-wavegr
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    s_mul_i32 s1, s0, 4
+; GFX13-NEXT:    s_mul_i32 s1, s0, 1
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 19
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_i32_iu8 v[0:3], g1[0:3], g1[4:9], g1[12], g1[13], g1[14] aux_data:8195 clamp idxs:0x111110
-; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 g1[15], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[16], v1
-; GFX13-NEXT:    v_mov_b32_e32 g1[17], v2
-; GFX13-NEXT:    v_mov_b32_e32 g1[18], v3
+; GFX13-NEXT:    v_convolve_i32_iu8 g1[15:18], g1[0:3], g1[4:9], g1[12], g1[13], g1[14] aux_data:8195 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x i32>, ptr addrspace(10) @acc_in_var_i32_iu8_1x1_4x2_iter_3
@@ -2953,18 +2838,13 @@ define amdgpu_kernel void @test_convolve.f32i32_iu8_1x1_4x2_iter_3() "amdgpu-wav
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    s_mul_i32 s1, s0, 4
+; GFX13-NEXT:    s_mul_i32 s1, s0, 1
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 19
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f32i32_iu8 v[0:3], g1[0:3], g1[4:9], g1[12], g1[13], g1[14] aux_data:8195 clamp idxs:0x111110
-; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 g1[15], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[16], v1
-; GFX13-NEXT:    v_mov_b32_e32 g1[17], v2
-; GFX13-NEXT:    v_mov_b32_e32 g1[18], v3
+; GFX13-NEXT:    v_convolve_f32i32_iu8 g1[15:18], g1[0:3], g1[4:9], g1[12], g1[13], g1[14] aux_data:8195 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x i32>, ptr addrspace(10) @acc_in_var_f32i32_iu8_1x1_4x2_iter_3
@@ -3230,18 +3110,13 @@ define amdgpu_kernel void @test_convolve.f32_fp8_1x1_4x2_iter_1() "amdgpu-wavegr
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    s_mul_i32 s1, s0, 4
+; GFX13-NEXT:    s_mul_i32 s1, s0, 1
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 11
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f32_fp8_fp8 v[0:3], g1[0:3], g1[4:5], g1[6] aux_data:3 clamp idxs:0x1110
-; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 g1[7], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[8], v1
-; GFX13-NEXT:    v_mov_b32_e32 g1[9], v2
-; GFX13-NEXT:    v_mov_b32_e32 g1[10], v3
+; GFX13-NEXT:    v_convolve_f32_fp8_fp8 g1[7:10], g1[0:3], g1[4:5], g1[6] aux_data:3 clamp idxs:0x1111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x float>, ptr addrspace(10) @acc_in_var_f32_fp8_fp8_1x1_4x2_iter_1
@@ -3269,16 +3144,13 @@ define amdgpu_kernel void @test_convolve.f16_fp8_1x1_4x2_iter_1() "amdgpu-wavegr
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    s_mul_i32 s1, s0, 2
+; GFX13-NEXT:    s_mul_i32 s1, s0, 1
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 7
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_fp8_fp8 v[0:1], g1[0:1], g1[2:3], g1[4] aux_data:3 clamp idxs:0x1110
-; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 g1[5], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[6], v1
+; GFX13-NEXT:    v_convolve_f16_fp8_fp8 g1[5:6], g1[0:1], g1[2:3], g1[4] aux_data:3 clamp idxs:0x1111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x half>, ptr addrspace(10) @acc_in_var_f16_fp8_fp8_1x1_4x2_iter_1
@@ -3340,22 +3212,13 @@ define amdgpu_kernel void @test_convolve.f16_fp8_1x1_8x4_iter_1() "amdgpu-wavegr
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    s_mul_i32 s1, s0, 4
+; GFX13-NEXT:    s_mul_i32 s1, s0, 2
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 11
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v0, g1[5]
-; GFX13-NEXT:    v_mov_b32_e32 v1, g1[6]
-; GFX13-NEXT:    v_convolve_f16_fp8_fp8 v[0:3], g1[0:3], g1[4], v[0:1] clamp idxs:0x110
-; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX13-NEXT:    v_mov_b32_e32 g1[7], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[8], v1
-; GFX13-NEXT:    v_mov_b32_e32 g1[9], v2
-; GFX13-NEXT:    v_mov_b32_e32 g1[10], v3
+; GFX13-NEXT:    v_convolve_f16_fp8_fp8 g1[7:10], g1[0:3], g1[4], g1[5:6] clamp idxs:0x1111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_fp8_fp8_1x1_8x4_iter_1
@@ -3492,23 +3355,13 @@ define amdgpu_kernel void @test_convolve.f16_fp8_1x1_8x4_iter_2() "amdgpu-wavegr
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    s_mul_i32 s1, s0, 4
+; GFX13-NEXT:    s_mul_i32 s1, s0, 2
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 13
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v0, g1[5]
-; GFX13-NEXT:    v_mov_b32_e32 v1, g1[6]
-; GFX13-NEXT:    v_mov_b32_e32 v2, g1[7]
-; GFX13-NEXT:    v_mov_b32_e32 v3, g1[8]
-; GFX13-NEXT:    v_convolve_f16_fp8_fp8 v[0:3], g1[0:3], g1[4], v[0:1], v[2:3] aux_data:4096 clamp idxs:0x110
-; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 g1[9], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[10], v1
-; GFX13-NEXT:    v_mov_b32_e32 g1[11], v2
-; GFX13-NEXT:    v_mov_b32_e32 g1[12], v3
+; GFX13-NEXT:    v_convolve_f16_fp8_fp8 g1[9:12], g1[0:3], g1[4], g1[5:6], g1[7:8] aux_data:4096 clamp idxs:0x11111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_fp8_fp8_1x1_8x4_iter_2
@@ -3539,18 +3392,13 @@ define amdgpu_kernel void @test_convolve.f32_fp8_1x1_4x2_iter_3() "amdgpu-wavegr
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    s_mul_i32 s1, s0, 4
+; GFX13-NEXT:    s_mul_i32 s1, s0, 1
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 19
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f32_fp8_fp8 v[0:3], g1[0:3], g1[4:9], g1[12], g1[13], g1[14] aux_data:8195 clamp idxs:0x111110
-; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 g1[15], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[16], v1
-; GFX13-NEXT:    v_mov_b32_e32 g1[17], v2
-; GFX13-NEXT:    v_mov_b32_e32 g1[18], v3
+; GFX13-NEXT:    v_convolve_f32_fp8_fp8 g1[15:18], g1[0:3], g1[4:9], g1[12], g1[13], g1[14] aux_data:8195 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x float>, ptr addrspace(10) @acc_in_var_f32_fp8_fp8_1x1_4x2_iter_3
@@ -3582,16 +3430,13 @@ define amdgpu_kernel void @test_convolve.f16_fp8_1x1_4x2_iter_3() "amdgpu-wavegr
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    s_mul_i32 s1, s0, 2
+; GFX13-NEXT:    s_mul_i32 s1, s0, 1
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 15
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_fp8_fp8 v[0:1], g1[0:1], g1[2:7], g1[10], g1[11], g1[12] aux_data:8195 clamp idxs:0x111110
-; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 g1[13], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[14], v1
+; GFX13-NEXT:    v_convolve_f16_fp8_fp8 g1[13:14], g1[0:1], g1[2:7], g1[10], g1[11], g1[12] aux_data:8195 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x half>, ptr addrspace(10) @acc_in_var_f16_fp8_fp8_1x1_4x2_iter_3
@@ -3623,18 +3468,13 @@ define amdgpu_kernel void @test_convolve.f16_fp8_fp8_1x1_4x4_iter_3() "amdgpu-wa
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    s_mul_i32 s1, s0, 4
+; GFX13-NEXT:    s_mul_i32 s1, s0, 1
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 15
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_fp8_fp8 v[0:3], g1[0:3], g1[4:6], g1[8], g1[9], g1[10] aux_data:8194 clamp idxs:0x111110
-; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 g1[11], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[12], v1
-; GFX13-NEXT:    v_mov_b32_e32 g1[13], v2
-; GFX13-NEXT:    v_mov_b32_e32 g1[14], v3
+; GFX13-NEXT:    v_convolve_f16_fp8_fp8 g1[11:14], g1[0:3], g1[4:6], g1[8], g1[9], g1[10] aux_data:8194 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_fp8_fp8_1x1_4x4_iter_3
@@ -3858,18 +3698,13 @@ define amdgpu_kernel void @test_convolve.f32_bf8_1x1_4x2_iter_1() "amdgpu-wavegr
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    s_mul_i32 s1, s0, 4
+; GFX13-NEXT:    s_mul_i32 s1, s0, 1
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 11
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f32_fp8_bf8 v[0:3], g1[0:3], g1[4:5], g1[6] aux_data:3 clamp idxs:0x1110
-; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 g1[7], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[8], v1
-; GFX13-NEXT:    v_mov_b32_e32 g1[9], v2
-; GFX13-NEXT:    v_mov_b32_e32 g1[10], v3
+; GFX13-NEXT:    v_convolve_f32_fp8_bf8 g1[7:10], g1[0:3], g1[4:5], g1[6] aux_data:3 clamp idxs:0x1111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x float>, ptr addrspace(10) @acc_in_var_f32_fp8_bf8_1x1_4x2_iter_1
@@ -3897,16 +3732,13 @@ define amdgpu_kernel void @test_convolve.f16_fp8_bf8_1x1_4x2_iter_1() "amdgpu-wa
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    s_mul_i32 s1, s0, 2
+; GFX13-NEXT:    s_mul_i32 s1, s0, 1
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 7
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_fp8_bf8 v[0:1], g1[0:1], g1[2:3], g1[4] aux_data:3 clamp idxs:0x1110
-; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 g1[5], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[6], v1
+; GFX13-NEXT:    v_convolve_f16_fp8_bf8 g1[5:6], g1[0:1], g1[2:3], g1[4] aux_data:3 clamp idxs:0x1111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x half>, ptr addrspace(10) @acc_in_var_f16_fp8_bf8_1x1_4x2_iter_1
@@ -3968,22 +3800,13 @@ define amdgpu_kernel void @test_convolve.f16_fp8_bf8_1x1_8x4_iter_1() "amdgpu-wa
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    s_mul_i32 s1, s0, 4
+; GFX13-NEXT:    s_mul_i32 s1, s0, 2
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 11
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v0, g1[5]
-; GFX13-NEXT:    v_mov_b32_e32 v1, g1[6]
-; GFX13-NEXT:    v_convolve_f16_fp8_bf8 v[0:3], g1[0:3], g1[4], v[0:1] clamp idxs:0x110
-; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX13-NEXT:    v_mov_b32_e32 g1[7], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[8], v1
-; GFX13-NEXT:    v_mov_b32_e32 g1[9], v2
-; GFX13-NEXT:    v_mov_b32_e32 g1[10], v3
+; GFX13-NEXT:    v_convolve_f16_fp8_bf8 g1[7:10], g1[0:3], g1[4], g1[5:6] clamp idxs:0x1111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_fp8_bf8_1x1_8x4_iter_1
@@ -4120,23 +3943,13 @@ define amdgpu_kernel void @test_convolve.f16_fp8_bf8_1x1_8x4_iter_2() "amdgpu-wa
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    s_mul_i32 s1, s0, 4
+; GFX13-NEXT:    s_mul_i32 s1, s0, 2
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 13
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v0, g1[5]
-; GFX13-NEXT:    v_mov_b32_e32 v1, g1[6]
-; GFX13-NEXT:    v_mov_b32_e32 v2, g1[7]
-; GFX13-NEXT:    v_mov_b32_e32 v3, g1[8]
-; GFX13-NEXT:    v_convolve_f16_fp8_bf8 v[0:3], g1[0:3], g1[4], v[0:1], v[2:3] aux_data:4096 clamp idxs:0x110
-; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 g1[9], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[10], v1
-; GFX13-NEXT:    v_mov_b32_e32 g1[11], v2
-; GFX13-NEXT:    v_mov_b32_e32 g1[12], v3
+; GFX13-NEXT:    v_convolve_f16_fp8_bf8 g1[9:12], g1[0:3], g1[4], g1[5:6], g1[7:8] aux_data:4096 clamp idxs:0x11111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_fp8_bf8_1x1_8x4_iter_2
@@ -4167,18 +3980,13 @@ define amdgpu_kernel void @test_convolve.f32_fp8_bf8_1x1_4x2_iter_3() "amdgpu-wa
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    s_mul_i32 s1, s0, 4
+; GFX13-NEXT:    s_mul_i32 s1, s0, 1
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 19
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f32_fp8_bf8 v[0:3], g1[0:3], g1[4:9], g1[12], g1[13], g1[14] aux_data:8195 clamp idxs:0x111110
-; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 g1[15], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[16], v1
-; GFX13-NEXT:    v_mov_b32_e32 g1[17], v2
-; GFX13-NEXT:    v_mov_b32_e32 g1[18], v3
+; GFX13-NEXT:    v_convolve_f32_fp8_bf8 g1[15:18], g1[0:3], g1[4:9], g1[12], g1[13], g1[14] aux_data:8195 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x float>, ptr addrspace(10) @acc_in_var_f32_fp8_bf8_1x1_4x2_iter_3
@@ -4210,16 +4018,13 @@ define amdgpu_kernel void @test_convolve.f16_fp8_bf8_1x1_4x2_iter_3() "amdgpu-wa
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    s_mul_i32 s1, s0, 2
+; GFX13-NEXT:    s_mul_i32 s1, s0, 1
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 15
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_fp8_bf8 v[0:1], g1[0:1], g1[2:7], g1[10], g1[11], g1[12] aux_data:8195 clamp idxs:0x111110
-; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 g1[13], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[14], v1
+; GFX13-NEXT:    v_convolve_f16_fp8_bf8 g1[13:14], g1[0:1], g1[2:7], g1[10], g1[11], g1[12] aux_data:8195 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x half>, ptr addrspace(10) @acc_in_var_f16_fp8_bf8_1x1_4x2_iter_3
@@ -4251,18 +4056,13 @@ define amdgpu_kernel void @test_convolve.f16_fp8_bf8_1x1_4x4_iter_3() "amdgpu-wa
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    s_mul_i32 s1, s0, 4
+; GFX13-NEXT:    s_mul_i32 s1, s0, 1
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 15
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_fp8_bf8 v[0:3], g1[0:3], g1[4:6], g1[8], g1[9], g1[10] aux_data:8194 clamp idxs:0x111110
-; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 g1[11], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[12], v1
-; GFX13-NEXT:    v_mov_b32_e32 g1[13], v2
-; GFX13-NEXT:    v_mov_b32_e32 g1[14], v3
+; GFX13-NEXT:    v_convolve_f16_fp8_bf8 g1[11:14], g1[0:3], g1[4:6], g1[8], g1[9], g1[10] aux_data:8194 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_fp8_bf8_1x1_4x4_iter_3
@@ -4486,18 +4286,13 @@ define amdgpu_kernel void @test_convolve.f32_bf8_fp8_1x1_4x2_iter_1() "amdgpu-wa
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    s_mul_i32 s1, s0, 4
+; GFX13-NEXT:    s_mul_i32 s1, s0, 1
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 11
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f32_bf8_fp8 v[0:3], g1[0:3], g1[4:5], g1[6] aux_data:3 clamp idxs:0x1110
-; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 g1[7], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[8], v1
-; GFX13-NEXT:    v_mov_b32_e32 g1[9], v2
-; GFX13-NEXT:    v_mov_b32_e32 g1[10], v3
+; GFX13-NEXT:    v_convolve_f32_bf8_fp8 g1[7:10], g1[0:3], g1[4:5], g1[6] aux_data:3 clamp idxs:0x1111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x float>, ptr addrspace(10) @acc_in_var_f32_bf8_fp8_1x1_4x2_iter_1
@@ -4525,16 +4320,13 @@ define amdgpu_kernel void @test_convolve.f16_bf8_fp8_1x1_4x2_iter_1() "amdgpu-wa
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    s_mul_i32 s1, s0, 2
+; GFX13-NEXT:    s_mul_i32 s1, s0, 1
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 7
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_bf8_fp8 v[0:1], g1[0:1], g1[2:3], g1[4] aux_data:3 clamp idxs:0x1110
-; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 g1[5], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[6], v1
+; GFX13-NEXT:    v_convolve_f16_bf8_fp8 g1[5:6], g1[0:1], g1[2:3], g1[4] aux_data:3 clamp idxs:0x1111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x half>, ptr addrspace(10) @acc_in_var_f16_bf8_fp8_1x1_4x2_iter_1
@@ -4596,22 +4388,13 @@ define amdgpu_kernel void @test_convolve.f16_bf8_fp8_1x1_8x4_iter_1() "amdgpu-wa
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    s_mul_i32 s1, s0, 4
+; GFX13-NEXT:    s_mul_i32 s1, s0, 2
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 11
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v0, g1[5]
-; GFX13-NEXT:    v_mov_b32_e32 v1, g1[6]
-; GFX13-NEXT:    v_convolve_f16_bf8_fp8 v[0:3], g1[0:3], g1[4], v[0:1] clamp idxs:0x110
-; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX13-NEXT:    v_mov_b32_e32 g1[7], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[8], v1
-; GFX13-NEXT:    v_mov_b32_e32 g1[9], v2
-; GFX13-NEXT:    v_mov_b32_e32 g1[10], v3
+; GFX13-NEXT:    v_convolve_f16_bf8_fp8 g1[7:10], g1[0:3], g1[4], g1[5:6] clamp idxs:0x1111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_bf8_fp8_1x1_8x4_iter_1
@@ -4748,23 +4531,13 @@ define amdgpu_kernel void @test_convolve.f16_bf8_fp8_1x1_8x4_iter_2() "amdgpu-wa
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    s_mul_i32 s1, s0, 4
+; GFX13-NEXT:    s_mul_i32 s1, s0, 2
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 13
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v0, g1[5]
-; GFX13-NEXT:    v_mov_b32_e32 v1, g1[6]
-; GFX13-NEXT:    v_mov_b32_e32 v2, g1[7]
-; GFX13-NEXT:    v_mov_b32_e32 v3, g1[8]
-; GFX13-NEXT:    v_convolve_f16_bf8_fp8 v[0:3], g1[0:3], g1[4], v[0:1], v[2:3] aux_data:4096 clamp idxs:0x110
-; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 g1[9], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[10], v1
-; GFX13-NEXT:    v_mov_b32_e32 g1[11], v2
-; GFX13-NEXT:    v_mov_b32_e32 g1[12], v3
+; GFX13-NEXT:    v_convolve_f16_bf8_fp8 g1[9:12], g1[0:3], g1[4], g1[5:6], g1[7:8] aux_data:4096 clamp idxs:0x11111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_bf8_fp8_1x1_8x4_iter_2
@@ -4795,18 +4568,13 @@ define amdgpu_kernel void @test_convolve.f32_bf8_fp8_1x1_4x2_iter_3() "amdgpu-wa
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    s_mul_i32 s1, s0, 4
+; GFX13-NEXT:    s_mul_i32 s1, s0, 1
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 19
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f32_bf8_fp8 v[0:3], g1[0:3], g1[4:9], g1[12], g1[13], g1[14] aux_data:8195 clamp idxs:0x111110
-; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 g1[15], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[16], v1
-; GFX13-NEXT:    v_mov_b32_e32 g1[17], v2
-; GFX13-NEXT:    v_mov_b32_e32 g1[18], v3
+; GFX13-NEXT:    v_convolve_f32_bf8_fp8 g1[15:18], g1[0:3], g1[4:9], g1[12], g1[13], g1[14] aux_data:8195 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x float>, ptr addrspace(10) @acc_in_var_f32_bf8_fp8_1x1_4x2_iter_3
@@ -4838,16 +4606,13 @@ define amdgpu_kernel void @test_convolve.f16_bf8_fp8_1x1_4x2_iter_3() "amdgpu-wa
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    s_mul_i32 s1, s0, 2
+; GFX13-NEXT:    s_mul_i32 s1, s0, 1
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 15
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_bf8_fp8 v[0:1], g1[0:1], g1[2:7], g1[10], g1[11], g1[12] aux_data:8195 clamp idxs:0x111110
-; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 g1[13], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[14], v1
+; GFX13-NEXT:    v_convolve_f16_bf8_fp8 g1[13:14], g1[0:1], g1[2:7], g1[10], g1[11], g1[12] aux_data:8195 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x half>, ptr addrspace(10) @acc_in_var_f16_bf8_fp8_1x1_4x2_iter_3
@@ -4879,18 +4644,13 @@ define amdgpu_kernel void @test_convolve.f16_bf8_fp8_1x1_4x4_iter_3() "amdgpu-wa
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    s_mul_i32 s1, s0, 4
+; GFX13-NEXT:    s_mul_i32 s1, s0, 1
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 15
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_bf8_fp8 v[0:3], g1[0:3], g1[4:6], g1[8], g1[9], g1[10] aux_data:8194 clamp idxs:0x111110
-; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 g1[11], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[12], v1
-; GFX13-NEXT:    v_mov_b32_e32 g1[13], v2
-; GFX13-NEXT:    v_mov_b32_e32 g1[14], v3
+; GFX13-NEXT:    v_convolve_f16_bf8_fp8 g1[11:14], g1[0:3], g1[4:6], g1[8], g1[9], g1[10] aux_data:8194 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_bf8_fp8_1x1_4x4_iter_3
@@ -5114,18 +4874,13 @@ define amdgpu_kernel void @test_convolve.f32_bf8_bf8_1x1_4x2_iter_1() "amdgpu-wa
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    s_mul_i32 s1, s0, 4
+; GFX13-NEXT:    s_mul_i32 s1, s0, 1
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 11
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f32_bf8_bf8 v[0:3], g1[0:3], g1[4:5], g1[6] aux_data:3 clamp idxs:0x1110
-; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 g1[7], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[8], v1
-; GFX13-NEXT:    v_mov_b32_e32 g1[9], v2
-; GFX13-NEXT:    v_mov_b32_e32 g1[10], v3
+; GFX13-NEXT:    v_convolve_f32_bf8_bf8 g1[7:10], g1[0:3], g1[4:5], g1[6] aux_data:3 clamp idxs:0x1111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x float>, ptr addrspace(10) @acc_in_var_f32_bf8_bf8_1x1_4x2_iter_1
@@ -5153,16 +4908,13 @@ define amdgpu_kernel void @test_convolve.f16_bf8_bf8_1x1_4x2_iter_1() "amdgpu-wa
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    s_mul_i32 s1, s0, 2
+; GFX13-NEXT:    s_mul_i32 s1, s0, 1
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 7
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_bf8_bf8 v[0:1], g1[0:1], g1[2:3], g1[4] aux_data:3 clamp idxs:0x1110
-; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 g1[5], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[6], v1
+; GFX13-NEXT:    v_convolve_f16_bf8_bf8 g1[5:6], g1[0:1], g1[2:3], g1[4] aux_data:3 clamp idxs:0x1111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x half>, ptr addrspace(10) @acc_in_var_f16_bf8_bf8_1x1_4x2_iter_1
@@ -5224,22 +4976,13 @@ define amdgpu_kernel void @test_convolve.f16_bf8_bf8_1x1_8x4_iter_1() "amdgpu-wa
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    s_mul_i32 s1, s0, 4
+; GFX13-NEXT:    s_mul_i32 s1, s0, 2
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 11
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v0, g1[5]
-; GFX13-NEXT:    v_mov_b32_e32 v1, g1[6]
-; GFX13-NEXT:    v_convolve_f16_bf8_bf8 v[0:3], g1[0:3], g1[4], v[0:1] clamp idxs:0x110
-; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX13-NEXT:    v_mov_b32_e32 g1[7], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[8], v1
-; GFX13-NEXT:    v_mov_b32_e32 g1[9], v2
-; GFX13-NEXT:    v_mov_b32_e32 g1[10], v3
+; GFX13-NEXT:    v_convolve_f16_bf8_bf8 g1[7:10], g1[0:3], g1[4], g1[5:6] clamp idxs:0x1111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_bf8_bf8_1x1_8x4_iter_1
@@ -5376,23 +5119,13 @@ define amdgpu_kernel void @test_convolve.f16_bf8_bf8_1x1_8x4_iter_2() "amdgpu-wa
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    s_mul_i32 s1, s0, 4
+; GFX13-NEXT:    s_mul_i32 s1, s0, 2
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 13
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v0, g1[5]
-; GFX13-NEXT:    v_mov_b32_e32 v1, g1[6]
-; GFX13-NEXT:    v_mov_b32_e32 v2, g1[7]
-; GFX13-NEXT:    v_mov_b32_e32 v3, g1[8]
-; GFX13-NEXT:    v_convolve_f16_bf8_bf8 v[0:3], g1[0:3], g1[4], v[0:1], v[2:3] aux_data:4096 clamp idxs:0x110
-; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 g1[9], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[10], v1
-; GFX13-NEXT:    v_mov_b32_e32 g1[11], v2
-; GFX13-NEXT:    v_mov_b32_e32 g1[12], v3
+; GFX13-NEXT:    v_convolve_f16_bf8_bf8 g1[9:12], g1[0:3], g1[4], g1[5:6], g1[7:8] aux_data:4096 clamp idxs:0x11111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_bf8_bf8_1x1_8x4_iter_2
@@ -5423,18 +5156,13 @@ define amdgpu_kernel void @test_convolve.f32_bf8_bf8_1x1_4x2_iter_3() "amdgpu-wa
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    s_mul_i32 s1, s0, 4
+; GFX13-NEXT:    s_mul_i32 s1, s0, 1
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 19
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f32_bf8_bf8 v[0:3], g1[0:3], g1[4:9], g1[12], g1[13], g1[14] aux_data:8195 clamp idxs:0x111110
-; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 g1[15], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[16], v1
-; GFX13-NEXT:    v_mov_b32_e32 g1[17], v2
-; GFX13-NEXT:    v_mov_b32_e32 g1[18], v3
+; GFX13-NEXT:    v_convolve_f32_bf8_bf8 g1[15:18], g1[0:3], g1[4:9], g1[12], g1[13], g1[14] aux_data:8195 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x float>, ptr addrspace(10) @acc_in_var_f32_bf8_bf8_1x1_4x2_iter_3
@@ -5466,16 +5194,13 @@ define amdgpu_kernel void @test_convolve.f16_bf8_bf8_1x1_4x2_iter_3() "amdgpu-wa
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    s_mul_i32 s1, s0, 2
+; GFX13-NEXT:    s_mul_i32 s1, s0, 1
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 15
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_bf8_bf8 v[0:1], g1[0:1], g1[2:7], g1[10], g1[11], g1[12] aux_data:8195 clamp idxs:0x111110
-; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 g1[13], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[14], v1
+; GFX13-NEXT:    v_convolve_f16_bf8_bf8 g1[13:14], g1[0:1], g1[2:7], g1[10], g1[11], g1[12] aux_data:8195 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x half>, ptr addrspace(10) @acc_in_var_f16_bf8_bf8_1x1_4x2_iter_3
@@ -5507,18 +5232,13 @@ define amdgpu_kernel void @test_convolve.f16_bf8_bf8_1x1_4x4_iter_3() "amdgpu-wa
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    s_mul_i32 s1, s0, 4
+; GFX13-NEXT:    s_mul_i32 s1, s0, 1
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 15
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_bf8_bf8 v[0:3], g1[0:3], g1[4:6], g1[8], g1[9], g1[10] aux_data:8194 clamp idxs:0x111110
-; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 g1[11], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[12], v1
-; GFX13-NEXT:    v_mov_b32_e32 g1[13], v2
-; GFX13-NEXT:    v_mov_b32_e32 g1[14], v3
+; GFX13-NEXT:    v_convolve_f16_bf8_bf8 g1[11:14], g1[0:3], g1[4:6], g1[8], g1[9], g1[10] aux_data:8194 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_bf8_bf8_1x1_4x4_iter_3
@@ -5742,18 +5462,13 @@ define amdgpu_kernel void @test_convolve.f32_f16_1x1_4x2_iter_1() "amdgpu-wavegr
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    s_mul_i32 s1, s0, 4
+; GFX13-NEXT:    s_mul_i32 s1, s0, 1
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 11
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f32_f16 v[0:3], g1[0:3], g1[4:5], g1[6] aux_data:3 clamp idxs:0x1110
-; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 g1[7], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[8], v1
-; GFX13-NEXT:    v_mov_b32_e32 g1[9], v2
-; GFX13-NEXT:    v_mov_b32_e32 g1[10], v3
+; GFX13-NEXT:    v_convolve_f32_f16 g1[7:10], g1[0:3], g1[4:5], g1[6] aux_data:3 clamp idxs:0x1111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x float>, ptr addrspace(10) @acc_in_var_f32_f16_1x1_4x2_iter_1
@@ -5781,16 +5496,13 @@ define amdgpu_kernel void @test_convolve.f16_f16_1x1_4x2_iter_1() "amdgpu-wavegr
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    s_mul_i32 s1, s0, 2
+; GFX13-NEXT:    s_mul_i32 s1, s0, 1
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 7
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_f16 v[0:1], g1[0:1], g1[2:3], g1[4] aux_data:3 clamp idxs:0x1110
-; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 g1[5], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[6], v1
+; GFX13-NEXT:    v_convolve_f16_f16 g1[5:6], g1[0:1], g1[2:3], g1[4] aux_data:3 clamp idxs:0x1111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x half>, ptr addrspace(10) @acc_in_var_f16_f16_1x1_4x2_iter_1
@@ -5852,22 +5564,13 @@ define amdgpu_kernel void @test_convolve.f16_f16_1x1_8x4_iter_1() "amdgpu-wavegr
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    s_mul_i32 s1, s0, 4
+; GFX13-NEXT:    s_mul_i32 s1, s0, 2
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 11
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v0, g1[5]
-; GFX13-NEXT:    v_mov_b32_e32 v1, g1[6]
-; GFX13-NEXT:    v_convolve_f16_f16 v[0:3], g1[0:3], g1[4], v[0:1] clamp idxs:0x110
-; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX13-NEXT:    v_mov_b32_e32 g1[7], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[8], v1
-; GFX13-NEXT:    v_mov_b32_e32 g1[9], v2
-; GFX13-NEXT:    v_mov_b32_e32 g1[10], v3
+; GFX13-NEXT:    v_convolve_f16_f16 g1[7:10], g1[0:3], g1[4], g1[5:6] clamp idxs:0x1111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_f16_1x1_8x4_iter_1
@@ -6004,23 +5707,13 @@ define amdgpu_kernel void @test_convolve.f16_f16_1x1_8x4_iter_2() "amdgpu-wavegr
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    s_mul_i32 s1, s0, 4
+; GFX13-NEXT:    s_mul_i32 s1, s0, 2
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 13
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v0, g1[5]
-; GFX13-NEXT:    v_mov_b32_e32 v1, g1[6]
-; GFX13-NEXT:    v_mov_b32_e32 v2, g1[7]
-; GFX13-NEXT:    v_mov_b32_e32 v3, g1[8]
-; GFX13-NEXT:    v_convolve_f16_f16 v[0:3], g1[0:3], g1[4], v[0:1], v[2:3] aux_data:4096 clamp idxs:0x110
-; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 g1[9], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[10], v1
-; GFX13-NEXT:    v_mov_b32_e32 g1[11], v2
-; GFX13-NEXT:    v_mov_b32_e32 g1[12], v3
+; GFX13-NEXT:    v_convolve_f16_f16 g1[9:12], g1[0:3], g1[4], g1[5:6], g1[7:8] aux_data:4096 clamp idxs:0x11111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_f16_1x1_8x4_iter_2
@@ -6051,18 +5744,13 @@ define amdgpu_kernel void @test_convolve.f32_f16_1x1_4x2_iter_3() "amdgpu-wavegr
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    s_mul_i32 s1, s0, 4
+; GFX13-NEXT:    s_mul_i32 s1, s0, 1
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 19
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f32_f16 v[0:3], g1[0:3], g1[4:11], g1[12], g1[13], g1[14] aux_data:8195 clamp idxs:0x111110
-; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 g1[15], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[16], v1
-; GFX13-NEXT:    v_mov_b32_e32 g1[17], v2
-; GFX13-NEXT:    v_mov_b32_e32 g1[18], v3
+; GFX13-NEXT:    v_convolve_f32_f16 g1[15:18], g1[0:3], g1[4:11], g1[12], g1[13], g1[14] aux_data:8195 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x float>, ptr addrspace(10) @acc_in_var_f32_f16_1x1_4x2_iter_3
@@ -6094,16 +5782,13 @@ define amdgpu_kernel void @test_convolve.f16_f16_1x1_4x2_iter_3() "amdgpu-wavegr
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    s_mul_i32 s1, s0, 2
+; GFX13-NEXT:    s_mul_i32 s1, s0, 1
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 15
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_f16 v[0:1], g1[0:1], g1[2:9], g1[10], g1[11], g1[12] aux_data:8195 clamp idxs:0x111110
-; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 g1[13], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[14], v1
+; GFX13-NEXT:    v_convolve_f16_f16 g1[13:14], g1[0:1], g1[2:9], g1[10], g1[11], g1[12] aux_data:8195 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x half>, ptr addrspace(10) @acc_in_var_f16_f16_1x1_4x2_iter_3
@@ -6135,18 +5820,13 @@ define amdgpu_kernel void @test_convolve.f16_f16_1x1_4x4_iter_3() "amdgpu-wavegr
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    s_mul_i32 s1, s0, 4
+; GFX13-NEXT:    s_mul_i32 s1, s0, 1
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 15
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_f16 v[0:3], g1[0:3], g1[4:6], g1[8], g1[9], g1[10] aux_data:8194 clamp idxs:0x111110
-; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 g1[11], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[12], v1
-; GFX13-NEXT:    v_mov_b32_e32 g1[13], v2
-; GFX13-NEXT:    v_mov_b32_e32 g1[14], v3
+; GFX13-NEXT:    v_convolve_f16_f16 g1[11:14], g1[0:3], g1[4:6], g1[8], g1[9], g1[10] aux_data:8194 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_f16_1x1_4x4_iter_3
@@ -6370,18 +6050,13 @@ define amdgpu_kernel void @test_convolve.f32_bf16_1x1_4x2_iter_1() "amdgpu-waveg
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    s_mul_i32 s1, s0, 4
+; GFX13-NEXT:    s_mul_i32 s1, s0, 1
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 11
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f32_bf16 v[0:3], g1[0:3], g1[4:5], g1[6] aux_data:3 clamp idxs:0x1110
-; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 g1[7], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[8], v1
-; GFX13-NEXT:    v_mov_b32_e32 g1[9], v2
-; GFX13-NEXT:    v_mov_b32_e32 g1[10], v3
+; GFX13-NEXT:    v_convolve_f32_bf16 g1[7:10], g1[0:3], g1[4:5], g1[6] aux_data:3 clamp idxs:0x1111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x float>, ptr addrspace(10) @acc_in_var_f32_bf16_1x1_4x2_iter_1
@@ -6409,16 +6084,13 @@ define amdgpu_kernel void @test_convolve.bf16_bf16_1x1_4x2_iter_1() "amdgpu-wave
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    s_mul_i32 s1, s0, 2
+; GFX13-NEXT:    s_mul_i32 s1, s0, 1
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 7
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_bf16_bf16 v[0:1], g1[0:1], g1[2:3], g1[4] aux_data:3 clamp idxs:0x1110
-; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 g1[5], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[6], v1
+; GFX13-NEXT:    v_convolve_bf16_bf16 g1[5:6], g1[0:1], g1[2:3], g1[4] aux_data:3 clamp idxs:0x1111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x bfloat>, ptr addrspace(10) @acc_in_var_bf16_bf16_1x1_4x2_iter_1
@@ -6480,22 +6152,13 @@ define amdgpu_kernel void @test_convolve.bf16_bf16_1x1_8x4_iter_1() "amdgpu-wave
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    s_mul_i32 s1, s0, 4
+; GFX13-NEXT:    s_mul_i32 s1, s0, 2
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 11
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v0, g1[5]
-; GFX13-NEXT:    v_mov_b32_e32 v1, g1[6]
-; GFX13-NEXT:    v_convolve_bf16_bf16 v[0:3], g1[0:3], g1[4], v[0:1] clamp idxs:0x110
-; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX13-NEXT:    v_mov_b32_e32 g1[7], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[8], v1
-; GFX13-NEXT:    v_mov_b32_e32 g1[9], v2
-; GFX13-NEXT:    v_mov_b32_e32 g1[10], v3
+; GFX13-NEXT:    v_convolve_bf16_bf16 g1[7:10], g1[0:3], g1[4], g1[5:6] clamp idxs:0x1111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x bfloat>, ptr addrspace(10) @acc_in_var_bf16_bf16_1x1_8x4_iter_1
@@ -6632,23 +6295,13 @@ define amdgpu_kernel void @test_convolve.bf16_bf16_1x1_8x4_iter_2() "amdgpu-wave
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    s_mul_i32 s1, s0, 4
+; GFX13-NEXT:    s_mul_i32 s1, s0, 2
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 13
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v0, g1[5]
-; GFX13-NEXT:    v_mov_b32_e32 v1, g1[6]
-; GFX13-NEXT:    v_mov_b32_e32 v2, g1[7]
-; GFX13-NEXT:    v_mov_b32_e32 v3, g1[8]
-; GFX13-NEXT:    v_convolve_bf16_bf16 v[0:3], g1[0:3], g1[4], v[0:1], v[2:3] aux_data:4096 clamp idxs:0x110
-; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 g1[9], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[10], v1
-; GFX13-NEXT:    v_mov_b32_e32 g1[11], v2
-; GFX13-NEXT:    v_mov_b32_e32 g1[12], v3
+; GFX13-NEXT:    v_convolve_bf16_bf16 g1[9:12], g1[0:3], g1[4], g1[5:6], g1[7:8] aux_data:4096 clamp idxs:0x11111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x bfloat>, ptr addrspace(10) @acc_in_var_bf16_bf16_1x1_8x4_iter_2
@@ -6679,18 +6332,13 @@ define amdgpu_kernel void @test_convolve.f32_bf16_1x1_4x2_iter_3() "amdgpu-waveg
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    s_mul_i32 s1, s0, 4
+; GFX13-NEXT:    s_mul_i32 s1, s0, 1
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 19
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f32_bf16 v[0:3], g1[0:3], g1[4:11], g1[12], g1[13], g1[14] aux_data:8195 clamp idxs:0x111110
-; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 g1[15], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[16], v1
-; GFX13-NEXT:    v_mov_b32_e32 g1[17], v2
-; GFX13-NEXT:    v_mov_b32_e32 g1[18], v3
+; GFX13-NEXT:    v_convolve_f32_bf16 g1[15:18], g1[0:3], g1[4:11], g1[12], g1[13], g1[14] aux_data:8195 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x float>, ptr addrspace(10) @acc_in_var_f32_bf16_1x1_4x2_iter_3
@@ -6722,16 +6370,13 @@ define amdgpu_kernel void @test_convolve.bf16_bf16_1x1_4x2_iter_3() "amdgpu-wave
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    s_mul_i32 s1, s0, 2
+; GFX13-NEXT:    s_mul_i32 s1, s0, 1
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 15
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_bf16_bf16 v[0:1], g1[0:1], g1[2:9], g1[10], g1[11], g1[12] aux_data:8195 clamp idxs:0x111110
-; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 g1[13], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[14], v1
+; GFX13-NEXT:    v_convolve_bf16_bf16 g1[13:14], g1[0:1], g1[2:9], g1[10], g1[11], g1[12] aux_data:8195 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x bfloat>, ptr addrspace(10) @acc_in_var_bf16_bf16_1x1_4x2_iter_3
@@ -6763,18 +6408,13 @@ define amdgpu_kernel void @test_convolve.bf16_bf16_1x1_4x4_iter_3() "amdgpu-wave
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    s_mul_i32 s1, s0, 4
+; GFX13-NEXT:    s_mul_i32 s1, s0, 1
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 15
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_bf16_bf16 v[0:3], g1[0:3], g1[4:6], g1[8], g1[9], g1[10] aux_data:8194 clamp idxs:0x111110
-; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 g1[11], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[12], v1
-; GFX13-NEXT:    v_mov_b32_e32 g1[13], v2
-; GFX13-NEXT:    v_mov_b32_e32 g1[14], v3
+; GFX13-NEXT:    v_convolve_bf16_bf16 g1[11:14], g1[0:3], g1[4:6], g1[8], g1[9], g1[10] aux_data:8194 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x bfloat>, ptr addrspace(10) @acc_in_var_bf16_bf16_1x1_4x4_iter_3

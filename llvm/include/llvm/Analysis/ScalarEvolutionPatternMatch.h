@@ -23,6 +23,8 @@ template <typename Pattern> bool match(const SCEV *S, const Pattern &P) {
 }
 
 template <typename Predicate> struct cst_pred_ty : public Predicate {
+  cst_pred_ty() = default;
+  cst_pred_ty(uint64_t V) : Predicate(V) {}
   bool match(const SCEV *S) const {
     assert((isa<SCEVCouldNotCompute>(S) || !S->getType()->isVectorTy()) &&
            "no vector types expected from SCEVs");
@@ -58,6 +60,8 @@ template <typename Class> struct class_match {
   template <typename ITy> bool match(ITy *V) const { return isa<Class>(V); }
 };
 
+inline class_match<const SCEV> m_SCEV() { return class_match<const SCEV>(); }
+
 template <typename Class> struct bind_ty {
   Class *&VR;
 
@@ -92,6 +96,34 @@ struct specificscev_ty {
 
 /// Match if we have a specific specified SCEV.
 inline specificscev_ty m_Specific(const SCEV *S) { return S; }
+
+struct is_specific_cst {
+  uint64_t CV;
+  is_specific_cst(uint64_t C) : CV(C) {}
+  bool isValue(const APInt &C) const { return C == CV; }
+};
+
+/// Match an SCEV constant with a plain unsigned integer.
+inline cst_pred_ty<is_specific_cst> m_scev_SpecificInt(uint64_t V) { return V; }
+
+struct bind_cst_ty {
+  const APInt *&CR;
+
+  bind_cst_ty(const APInt *&Op0) : CR(Op0) {}
+
+  bool match(const SCEV *S) const {
+    assert((isa<SCEVCouldNotCompute>(S) || !S->getType()->isVectorTy()) &&
+           "no vector types expected from SCEVs");
+    auto *C = dyn_cast<SCEVConstant>(S);
+    if (!C)
+      return false;
+    CR = &C->getAPInt();
+    return true;
+  }
+};
+
+/// Match an SCEV constant and bind it to an APInt.
+inline bind_cst_ty m_scev_APInt(const APInt *&C) { return C; }
 
 /// Match a unary SCEV.
 template <typename SCEVTy, typename Op0_t> struct SCEVUnaryExpr_match {
@@ -149,6 +181,17 @@ m_scev_Add(const Op0_t &Op0, const Op1_t &Op1) {
   return m_scev_Binary<SCEVAddExpr>(Op0, Op1);
 }
 
+template <typename Op0_t, typename Op1_t>
+inline SCEVBinaryExpr_match<SCEVMulExpr, Op0_t, Op1_t>
+m_scev_Mul(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_scev_Binary<SCEVMulExpr>(Op0, Op1);
+}
+
+template <typename Op0_t, typename Op1_t>
+inline SCEVBinaryExpr_match<SCEVUDivExpr, Op0_t, Op1_t>
+m_scev_UDiv(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_scev_Binary<SCEVUDivExpr>(Op0, Op1);
+}
 } // namespace SCEVPatternMatch
 } // namespace llvm
 
