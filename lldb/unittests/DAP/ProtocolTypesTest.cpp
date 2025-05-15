@@ -305,7 +305,6 @@ TEST(ProtocolTypesTest, Scope) {
   scope.endLine = 10;
   scope.endColumn = 20;
 
-  // scope.source =
   scope.source->name = "testName";
   scope.source->path = "/path/to/source";
   scope.source->sourceReference = 12345;
