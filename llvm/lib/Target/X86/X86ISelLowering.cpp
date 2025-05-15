@@ -58403,9 +58403,7 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
           ((VT.is256BitVector() &&
             (EltSizeInBits >= 32 || Subtarget.hasInt256())) ||
            (VT.is512BitVector() && Subtarget.useAVX512Regs() &&
-            (EltSizeInBits >= 32 || Subtarget.hasVBMI2())))) {
-        // TODO: Relax VBMI requirement for repeated shuffle ops - currently
-        // limited to targets that should always have good cross lane shuffles.
+            (EltSizeInBits >= 32 || Subtarget.useBWIRegs())))) {
         SDValue Concat0 = CombineSubOperand(VT, Ops, 0);
         SDValue Concat1 = CombineSubOperand(VT, Ops, 1);
         if (Concat0 || Concat1 ||
