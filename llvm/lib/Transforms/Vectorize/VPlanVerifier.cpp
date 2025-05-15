@@ -192,8 +192,7 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
   if (!verifyPhiRecipes(VPBB))
     return false;
 
-  // Verify that defs in VPBB dominate all their uses. The current
-  // implementation is still incomplete.
+  // Verify that defs in VPBB dominate all their uses.
   DenseMap<const VPRecipeBase *, unsigned> RecipeNumbering;
   unsigned Cnt = 0;
   for (const VPRecipeBase &R : *VPBB)
@@ -220,12 +219,31 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
 
       for (const VPUser *U : V->users()) {
         auto *UI = cast<VPRecipeBase>(U);
-        // TODO: check dominance of incoming values for phis properly.
-        if (!UI ||
-            isa<VPHeaderPHIRecipe, VPWidenPHIRecipe, VPPredInstPHIRecipe,
-                VPIRPhi>(UI) ||
-            (isa<VPInstruction>(UI) &&
-             cast<VPInstruction>(UI)->getOpcode() == Instruction::PHI))
+        if (auto *Phi = dyn_cast<VPPhiAccessors>(UI)) {
+          for (unsigned Idx = 0; Idx != Phi->getNumIncoming(); ++Idx) {
+            VPValue *IncomingVPV = Phi->getIncomingValue(Idx);
+            if (IncomingVPV != V)
+              continue;
+
+            const VPBasicBlock *IncomingVPBB = Phi->getIncomingBlock(Idx);
+            if (VPDT.dominates(VPBB, IncomingVPBB))
+              continue;
+
+            errs() << "Incoming def at index " << Idx
+                   << " does not dominate incoming block!\n";
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+            VPSlotTracker Tracker(VPBB->getPlan());
+            IncomingVPV->getDefiningRecipe()->print(errs(), "  ", Tracker);
+            errs() << "\n  does not dominate " << IncomingVPBB->getName()
+                   << " for\n";
+            UI->print(errs(), "  ", Tracker);
+#endif
+            return false;
+          }
+          continue;
+        }
+        // TODO: Also verify VPPredInstPHIRecipe.
+        if (isa<VPPredInstPHIRecipe>(UI))
           continue;
 
         // If the user is in the same block, check it comes after R in the
