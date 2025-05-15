@@ -3183,36 +3183,46 @@ struct ConvertCollector
   using Base::operator();
 
   template <typename T> //
-  Result operator()(const evaluate::Designator<T> &x) const {
+  Result asSomeExpr(const T &x) const {
     auto copy{x};
     return {AsGenericExpr(std::move(copy)), {}};
+  }
+
+  template <typename T> //
+  Result operator()(const evaluate::Designator<T> &x) const {
+    return asSomeExpr(x);
   }
 
   template <typename T> //
   Result operator()(const evaluate::FunctionRef<T> &x) const {
-    auto copy{x};
-    return {AsGenericExpr(std::move(copy)), {}};
+    return asSomeExpr(x);
   }
 
   template <typename T> //
   Result operator()(const evaluate::Constant<T> &x) const {
-    auto copy{x};
-    return {AsGenericExpr(std::move(copy)), {}};
+    return asSomeExpr(x);
   }
 
   template <typename D, typename R, typename... Os>
   Result operator()(const evaluate::Operation<D, R, Os...> &x) const {
     if constexpr (std::is_same_v<D, evaluate::Parentheses<R>>) {
-      // Ignore top-level parentheses.
+      // Ignore parentheses.
       return (*this)(x.template operand<0>());
     } else if constexpr (is_convert_v<D>) {
       // Convert should always have a typed result, so it should be safe to
       // dereference x.GetType().
       return Combine(
           {std::nullopt, {*x.GetType()}}, (*this)(x.template operand<0>()));
+    } else if constexpr (is_complex_constructor_v<D>) {
+      // This is a conversion iff the imaginary operand is 0.
+      if (IsZero(x.template operand<1>())) {
+        return Combine(
+            {std::nullopt, {*x.GetType()}}, (*this)(x.template operand<0>()));
+      } else {
+        return asSomeExpr(x.derived());
+      }
     } else {
-      auto copy{x.derived()};
-      return {evaluate::AsGenericExpr(std::move(copy)), {}};
+      return asSomeExpr(x.derived());
     }
   }
 
@@ -3232,6 +3242,23 @@ struct ConvertCollector
 
 private:
   template <typename T> //
+  static bool IsZero(const T &x) {
+    return false;
+  }
+  template <typename T> //
+  static bool IsZero(const evaluate::Expr<T> &x) {
+    return common::visit([](auto &&s) { return IsZero(s); }, x.u);
+  }
+  template <typename T> //
+  static bool IsZero(const evaluate::Constant<T> &x) {
+    if (auto &&maybeScalar{x.GetScalarValue()}) {
+      return maybeScalar->IsZero();
+    } else {
+      return false;
+    }
+  }
+
+  template <typename T> //
   struct is_convert {
     static constexpr bool value{false};
   };
@@ -3246,6 +3273,18 @@ private:
   };
   template <typename T> //
   static constexpr bool is_convert_v = is_convert<T>::value;
+
+  template <typename T> //
+  struct is_complex_constructor {
+    static constexpr bool value{false};
+  };
+  template <int K> //
+  struct is_complex_constructor<evaluate::ComplexConstructor<K>> {
+    static constexpr bool value{true};
+  };
+  template <typename T> //
+  static constexpr bool is_complex_constructor_v =
+      is_complex_constructor<T>::value;
 };
 
 struct VariableFinder : public evaluate::AnyTraverse<VariableFinder> {
