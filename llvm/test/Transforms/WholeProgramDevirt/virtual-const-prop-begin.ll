@@ -9,28 +9,28 @@ target datalayout = "e-p:64:64"
 ;; preserve alignment. Making them i16s allows them to stay at the beginning of
 ;; the vtable. There are other tests where there's a mix of constants before and
 ;; after the vtable but for this file we just want everything before the vtable.
-; CHECK: [[VT1DATA:@[^ ]*]] = private constant { [8 x i8], [3 x ptr], [0 x i8] } { [8 x i8] c"\00\00\00\00\00\03\00\02", [3 x ptr] [ptr @vf0i1, ptr @vf1i1, ptr @vf1i16], [0 x i8] zeroinitializer }, section "vt1sec", !type [[T8:![0-9]+]]
+; CHECK: [[VT1DATA:@[^ ]*]] = private constant { [8 x i8], [3 x ptr], [0 x i8] } { [8 x i8] c"\00\00\00\00\03\00\00\02", [3 x ptr] [ptr @vf0i1, ptr @vf1i1, ptr @vf1i16], [0 x i8] zeroinitializer }, section "vt1sec", !type [[T8:![0-9]+]]
 @vt1 = constant [3 x ptr] [
 ptr @vf0i1,
 ptr @vf1i1,
 ptr @vf1i16
 ], section "vt1sec", !type !0
 
-; CHECK: [[VT2DATA:@[^ ]*]] = private constant { [8 x i8], [3 x ptr], [0 x i8] } { [8 x i8] c"\00\00\00\00\00\04\00\01", [3 x ptr] [ptr @vf1i1, ptr @vf0i1, ptr @vf2i16], [0 x i8] zeroinitializer }, !type [[T8]]
+; CHECK: [[VT2DATA:@[^ ]*]] = private constant { [8 x i8], [3 x ptr], [0 x i8] } { [8 x i8] c"\00\00\00\00\04\00\00\01", [3 x ptr] [ptr @vf1i1, ptr @vf0i1, ptr @vf2i16], [0 x i8] zeroinitializer }, !type [[T8]]
 @vt2 = constant [3 x ptr] [
 ptr @vf1i1,
 ptr @vf0i1,
 ptr @vf2i16
 ], !type !0
 
-; CHECK: [[VT3DATA:@[^ ]*]] = private constant { [4 x i8], [3 x ptr], [0 x i8] } { [4 x i8] c"\00\05\00\02", [3 x ptr] [ptr @vf0i1, ptr @vf1i1, ptr @vf3i16], [0 x i8] zeroinitializer }, align 2, !type [[T5:![0-9]+]]
+; CHECK: [[VT3DATA:@[^ ]*]] = private constant { [4 x i8], [3 x ptr], [0 x i8] } { [4 x i8] c"\05\00\00\02", [3 x ptr] [ptr @vf0i1, ptr @vf1i1, ptr @vf3i16], [0 x i8] zeroinitializer }, align 2, !type [[T5:![0-9]+]]
 @vt3 = constant [3 x ptr] [
 ptr @vf0i1,
 ptr @vf1i1,
 ptr @vf3i16
 ], align 2, !type !0
 
-; CHECK: [[VT4DATA:@[^ ]*]] = private constant { [16 x i8], [3 x ptr], [0 x i8] } { [16 x i8] c"\00\00\00\00\00\00\00\00\00\00\00\00\00\06\00\01", [3 x ptr] [ptr @vf1i1, ptr @vf0i1, ptr @vf4i16], [0 x i8] zeroinitializer },  align 16, !type [[T16:![0-9]+]]
+; CHECK: [[VT4DATA:@[^ ]*]] = private constant { [16 x i8], [3 x ptr], [0 x i8] } { [16 x i8] c"\00\00\00\00\00\00\00\00\00\00\00\00\06\00\00\01", [3 x ptr] [ptr @vf1i1, ptr @vf0i1, ptr @vf4i16], [0 x i8] zeroinitializer },  align 16, !type [[T16:![0-9]+]]
 @vt4 = constant [3 x ptr] [
 ptr @vf1i1,
 ptr @vf0i1,
@@ -136,7 +136,7 @@ define i16 @call3(ptr %obj) {
   call void @llvm.assume(i1 %p)
   %fptrptr = getelementptr [3 x ptr], ptr %vtable, i16 0, i16 2
   %fptr = load ptr, ptr %fptrptr
-  ; CHECK: [[VTGEP3:%[^ ]*]] = getelementptr i8, ptr %vtable, i32 -3
+  ; CHECK: [[VTGEP3:%[^ ]*]] = getelementptr i8, ptr %vtable, i32 -4
   ; CHECK: [[VTLOAD3:%[^ ]*]] = load i16, ptr [[VTGEP3]]
   %result = call i16 %fptr(ptr %obj)
   ; CHECK: ret i16 [[VTLOAD3]]
