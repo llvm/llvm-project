@@ -2627,9 +2627,9 @@ public:
 } // namespace
 
 BugPathGetter::BugPathGetter(const ExplodedGraph *OriginalGraph,
-                             ArrayRef<PathSensitiveBugReport *> &bugReports) {
+                             ArrayRef<PathSensitiveBugReport *> &BugReports) {
   TrimGraphWorklist Worklist;
-  for (const auto I : bugReports) {
+  for (const auto I : BugReports) {
     assert(I->isValid() &&
            "We only allow BugReporterVisitors and BugReporter itself to "
            "invalidate reports!");
@@ -2647,7 +2647,7 @@ BugPathGetter::BugPathGetter(const ExplodedGraph *OriginalGraph,
   // in the new graph.
   llvm::SmallPtrSet<const ExplodedNode *, 32> RemainingNodes;
 
-  for (PathSensitiveBugReport *Report : bugReports) {
+  for (PathSensitiveBugReport *Report : BugReports) {
     const ExplodedNode *NewNode = NodeMap.lookup(Report->getErrorNode());
     assert(NewNode &&
            "Failed to construct a trimmed graph that contains this error "
