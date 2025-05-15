@@ -2783,33 +2783,23 @@ void CodeGenFunction::EmitTypeMetadataCodeForVCall(const CXXRecordDecl *RD,
 /// llvm::SanitizerStatKind.
 static std::pair<SanitizerKind::SanitizerOrdinal, llvm::SanitizerStatKind>
 SanitizerInfoFromCFICheckKind(CodeGenFunction::CFITypeCheckKind TCK) {
-  SanitizerKind::SanitizerOrdinal M;
-  llvm::SanitizerStatKind SSK;
-
   switch (TCK) {
   case CodeGenFunction::CFITCK_VCall:
-    M = SanitizerKind::SO_CFIVCall;
-    SSK = llvm::SanStat_CFI_VCall;
-    break;
+    return std::make_pair(SanitizerKind::SO_CFIVCall, llvm::SanStat_CFI_VCall);
   case CodeGenFunction::CFITCK_NVCall:
-    M = SanitizerKind::SO_CFINVCall;
-    SSK = llvm::SanStat_CFI_NVCall;
-    break;
+    return std::make_pair(SanitizerKind::SO_CFINVCall,
+                          llvm::SanStat_CFI_NVCall);
   case CodeGenFunction::CFITCK_DerivedCast:
-    M = SanitizerKind::SO_CFIDerivedCast;
-    SSK = llvm::SanStat_CFI_DerivedCast;
-    break;
+    return std::make_pair(SanitizerKind::SO_CFIDerivedCast,
+                          llvm::SanStat_CFI_DerivedCast);
   case CodeGenFunction::CFITCK_UnrelatedCast:
-    M = SanitizerKind::SO_CFIUnrelatedCast;
-    SSK = llvm::SanStat_CFI_UnrelatedCast;
-    break;
+    return std::make_pair(SanitizerKind::SO_CFIUnrelatedCast,
+                          llvm::SanStat_CFI_UnrelatedCast);
   case CodeGenFunction::CFITCK_ICall:
   case CodeGenFunction::CFITCK_NVMFCall:
   case CodeGenFunction::CFITCK_VMFCall:
     llvm_unreachable("unexpected sanitizer kind");
   }
-
-  return std::make_pair(M, SSK);
 }
 
 void CodeGenFunction::EmitVTablePtrCheckForCall(const CXXRecordDecl *RD,
