@@ -136,7 +136,7 @@ static cl::opt<bool> ForceLocalAssignment(
     "force-local-assignment",
     cl::desc("Force allocation order of local live ranges, such that "
              "shorter local live ranges will tend to be allocated first"),
-    cl::Hidden);
+    cl::init(false), cl::Hidden);
 
 static cl::opt<unsigned> SplitThresholdForRegWithHint(
     "split-threshold-for-reg-with-hint",
