@@ -53,6 +53,7 @@ enum class ThunkAction {
   Unknown = 0,
   GetThunkTarget,
   StepIntoConformance,
+  StepIntoAllocatingInit,
   StepThrough,
 };
 
@@ -336,7 +337,7 @@ static const char *GetThunkKindName(ThunkKind kind) {
   case ThunkKind::Unknown:
     return "Unknown";
   case ThunkKind::AllocatingInit:
-    return "StepThrough";
+    return "StepIntoAllocatingInit";
   case ThunkKind::PartialApply:
     return "GetThunkTarget";
   case ThunkKind::ObjCAttribute:
@@ -353,7 +354,7 @@ static ThunkAction GetThunkAction(ThunkKind kind) {
   case ThunkKind::Unknown:
     return ThunkAction::Unknown;
   case ThunkKind::AllocatingInit:
-    return ThunkAction::StepThrough;
+    return ThunkAction::StepIntoAllocatingInit;
   case ThunkKind::PartialApply:
     return ThunkAction::GetThunkTarget;
   case ThunkKind::ObjCAttribute:
@@ -589,18 +590,50 @@ static lldb::ThreadPlanSP GetStepThroughTrampolinePlan(Thread &thread,
         thread, sym_addr_range, sc, function_name.c_str(), eOnlyDuringStepping,
         eLazyBoolNo, eLazyBoolNo);
   }
+  case ThunkAction::StepIntoAllocatingInit: {
+    LLDB_LOGF(log, "Stepping into allocating init: \"%s\"", symbol_name);
+    swift::Demangle::Context ctx;
+    NodePointer demangled_node =
+        SwiftLanguageRuntime::DemangleSymbolAsNode(symbol_name, ctx);
+
+    using Kind = Node::Kind;
+    NodePointer class_node = childAtPath(
+        demangled_node, {Kind::Allocator, Kind::Class, Kind::Identifier});
+    if (!class_node || !class_node->hasText()) {
+      std::string node_str = getNodeTreeAsString(demangled_node);
+      LLDB_LOGF(log,
+                "Failed to extract constructor name from demangle node: %s",
+                node_str.c_str());
+      return nullptr;
+    }
+
+    ModuleFunctionSearchOptions options{/*include_symbols*/ true,
+                                        /*include_inlines*/ true};
+    std::string ctor_name = llvm::formatv("{0}.init", class_node->getText());
+    SymbolContextList sc_list;
+    sc.module_sp->FindFunctions(RegularExpression(ctor_name), options, sc_list);
+    std::vector<addr_t> load_addresses;
+    Target &target = thread.GetProcess()->GetTarget();
+    for (const SymbolContext &ctor_sc : sc_list) {
+      const Symbol *ctor_symbol = ctor_sc.symbol;
+      if (ctor_symbol)
+        load_addresses.push_back(ctor_symbol->GetLoadAddress(&target));
+    }
+    if (load_addresses.empty())
+      return nullptr;
+    return std::make_shared<ThreadPlanRunToAddress>(thread, load_addresses,
+                                                    stop_others);
+  }
   case ThunkAction::StepThrough: {
     if (log)
       log->Printf("Stepping through thunk: %s kind: %s", symbol_name,
                   GetThunkKindName(thunk_kind));
     AddressRange sym_addr_range(sc.symbol->GetAddress(),
                                 sc.symbol->GetByteSize());
-    ThreadPlanSP new_plan_sp = std::make_shared<ThreadPlanStepInRange>(thread, sym_addr_range, sc,
-                                                   nullptr, eOnlyDuringStepping,
-                                                   eLazyBoolNo, eLazyBoolNo);
-    static_cast<ThreadPlanStepInRange *>(new_plan_sp.get())
-        ->GetFlags().Clear(ThreadPlanShouldStopHere::eStepOutPastThunks);
-    return new_plan_sp;     
+    ThreadPlanSP new_plan_sp = std::make_shared<ThreadPlanStepInRange>(
+        thread, sym_addr_range, sc, nullptr, eOnlyDuringStepping, eLazyBoolNo,
+        eLazyBoolNo);
+    return new_plan_sp;
   }
   }
 
@@ -613,7 +646,15 @@ bool SwiftLanguageRuntime::IsSymbolARuntimeThunk(const Symbol &symbol) {
   if (symbol_name.empty())
     return false;
   swift::Demangle::Context demangle_ctx;
-  return demangle_ctx.isThunkSymbol(symbol_name);
+  if (demangle_ctx.isThunkSymbol(symbol_name))
+    return true;
+
+  // These are not Thunks in the sense that they don't jump to *user* code.
+  // But they are language symbols that should be identified as something to act
+  // on; here, the default action of stepping out is appropriate.
+  Node *node = demangle_ctx.demangleSymbolAsNode(symbol_name);
+  return node && node->getKind() == Node::Kind::Global &&
+         hasChild(node, Node::Kind::TypeMetadataAccessFunction);
 }
 
 bool SwiftLanguageRuntime::IsSwiftMangledName(llvm::StringRef name) {
