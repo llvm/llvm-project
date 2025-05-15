@@ -779,3 +779,18 @@ template <typename T>
 consteval void S::mfn() requires (bool(&fn)) {}
 
 }
+
+namespace GH139476 {
+
+namespace moo {
+  template <typename T>
+  constexpr bool baa = true;
+
+  template <typename T> requires baa<T>
+  void caw();
+}
+
+template <typename T> requires moo::baa<T>
+void moo::caw() {}
+
+}
