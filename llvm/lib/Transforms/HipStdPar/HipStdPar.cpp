@@ -390,8 +390,8 @@ PreservedAnalyses HipStdParMathFixupPass::run(Module &M,
 
     switch (ID) {
     case Intrinsic::not_intrinsic: {
-      auto It = find_if(MathLibToHipStdPar,
-                        [&](auto &&M) { return M.first == N; });
+      auto It =
+          find_if(MathLibToHipStdPar, [&](auto &&M) { return M.first == N; });
       if (It == std::cend(MathLibToHipStdPar))
         continue;
       ToReplace.emplace_back(&F, It->second);
@@ -433,8 +433,9 @@ PreservedAnalyses HipStdParMathFixupPass::run(Module &M,
     ToReplace.emplace_back(&F, std::move(N));
   }
   for (auto &&F : ToReplace)
-    F.first->replaceAllUsesWith(M.getOrInsertFunction(
-        F.second, F.first->getFunctionType()).getCallee());
+    F.first->replaceAllUsesWith(
+        M.getOrInsertFunction(F.second, F.first->getFunctionType())
+            .getCallee());
 
   return PreservedAnalyses::none();
 }
