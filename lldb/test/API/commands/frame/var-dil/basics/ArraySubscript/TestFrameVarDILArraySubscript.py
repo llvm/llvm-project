@@ -58,14 +58,19 @@ class TestFrameVarDILGlobalVariableLookup(TestBase):
         # Test address-of of the subscripted value.
         self.expect_var_path("*(&int_arr[1])", value="2")
 
-        # Test synthetic value subscription
-        self.expect_var_path("vector[1]", value="2")
-
         # Test for negative index.
         self.expect(
             "frame var 'int_arr[-1]'",
             error=True,
             substrs=["unrecognized token"],
+        )
+
+        # Test synthetic value subscription
+        self.expect_var_path("vector[1]", value="2")
+        self.expect(
+            "frame var 'vector[100]'",
+            error=True,
+            substrs=["array index 100 is not valid"],
         )
 
         # Test for floating point index
@@ -77,6 +82,16 @@ class TestFrameVarDILGlobalVariableLookup(TestBase):
 
         # Base should be a "pointer to T" and index should be of an integral type.
         self.expect(
+            "frame var 'idx_1[0]'",
+            error=True,
+            substrs=["subscripted value is not an array or pointer"],
+        )
+        self.expect(
+            "frame var 'idx_1_ref[0]'",
+            error=True,
+            substrs=["subscripted value is not an array or pointer"],
+        )
+        self.expect(
             "frame var 'int_arr[int_ptr]'",
             error=True,
             substrs=["failed to parse integer constant"],
@@ -85,4 +100,11 @@ class TestFrameVarDILGlobalVariableLookup(TestBase):
             "frame var '1[2]'",
             error=True,
             substrs=["Unexpected token"],
+        )
+
+        # Base should not be a pointer to void
+        self.expect(
+            "frame var 'p_void[0]'",
+            error=True,
+            substrs=["subscript of pointer to incomplete type 'void'"],
         )

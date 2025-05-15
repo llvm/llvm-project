@@ -101,10 +101,8 @@ llvm::Expected<Token> DILLexer::Lex(llvm::StringRef expr,
 
   uint32_t position = cur_pos - expr.begin();
   std::optional<llvm::StringRef> maybe_number = IsNumber(expr, remainder);
-  if (maybe_number) {
-    std::string number = (*maybe_number).str();
-    return Token(Token::numeric_constant, number, position);
-  }
+  if (maybe_number)
+    return Token(Token::numeric_constant, maybe_number->str(), position);
   std::optional<llvm::StringRef> maybe_word = IsWord(expr, remainder);
   if (maybe_word)
     return Token(Token::identifier, maybe_word->str(), position);

@@ -112,14 +112,14 @@ private:
 
 class ArraySubscriptNode : public ASTNode {
 public:
-  ArraySubscriptNode(uint32_t location, ASTNodeUP base, llvm::APInt index)
+  ArraySubscriptNode(uint32_t location, ASTNodeUP base, int64_t index)
       : ASTNode(location, NodeKind::eArraySubscriptNode),
-        m_base(std::move(base)), m_index(std::move(index)) {}
+        m_base(std::move(base)), m_index(index) {}
 
   llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
 
   ASTNode *GetBase() const { return m_base.get(); }
-  const llvm::APInt *GetIndex() const { return &m_index; }
+  int64_t GetIndex() const { return m_index; }
 
   static bool classof(const ASTNode *node) {
     return node->GetKind() == NodeKind::eArraySubscriptNode;
@@ -127,7 +127,7 @@ public:
 
 private:
   ASTNodeUP m_base;
-  llvm::APInt m_index;
+  int64_t m_index;
 };
 
 /// This class contains one Visit method for each specialized type of

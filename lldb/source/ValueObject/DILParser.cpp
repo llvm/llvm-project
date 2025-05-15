@@ -128,7 +128,7 @@ ASTNodeUP DILParser::ParsePostfixExpression() {
     switch (token.GetKind()) {
     case Token::l_square: {
       m_dil_lexer.Advance();
-      auto rhs = ParseIntegerConstant();
+      std::optional<int64_t> rhs = ParseIntegerConstant();
       if (!rhs) {
         BailOut(
             llvm::formatv("failed to parse integer constant: {0}", CurToken()),
@@ -320,11 +320,11 @@ void DILParser::BailOut(const std::string &error, uint32_t loc,
 //  integer_literal:
 //    ? Integer constant ?
 //
-std::optional<llvm::APInt> DILParser::ParseIntegerConstant() {
+std::optional<int64_t> DILParser::ParseIntegerConstant() {
   auto spelling = CurToken().GetSpelling();
   llvm::StringRef spelling_ref = spelling;
-  llvm::APInt raw_value;
-  if (!spelling_ref.getAsInteger(0, raw_value)) {
+  int64_t raw_value;
+  if (!spelling_ref.getAsInteger<int64_t>(0, raw_value)) {
     m_dil_lexer.Advance();
     return raw_value;
   }

@@ -4,6 +4,7 @@ int main(int argc, char **argv) {
   int int_arr[] = {1, 2, 3};
   int *int_ptr = int_arr;
   int(&int_arr_ref)[3] = int_arr;
+  void *p_void = (void *)int_arr;
 
   int idx_1 = 1;
   const int &idx_1_ref = idx_1;
