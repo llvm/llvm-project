@@ -93,7 +93,6 @@ struct MissingFeatures {
   static bool opCallChainCall() { return false; }
   static bool opCallNoPrototypeFunc() { return false; }
   static bool opCallMustTail() { return false; }
-  static bool opCallIndirect() { return false; }
   static bool opCallVirtual() { return false; }
   static bool opCallInAlloca() { return false; }
   static bool opCallAttrs() { return false; }

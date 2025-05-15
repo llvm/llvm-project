@@ -25,11 +25,20 @@ class CIRGenFunction;
 
 /// Abstract information about a function or function prototype.
 class CIRGenCalleeInfo {
+  const clang::FunctionProtoType *calleeProtoTy;
   clang::GlobalDecl calleeDecl;
 
 public:
-  explicit CIRGenCalleeInfo() : calleeDecl() {}
+  explicit CIRGenCalleeInfo() : calleeProtoTy(nullptr), calleeDecl() {}
+  CIRGenCalleeInfo(const clang::FunctionProtoType *calleeProtoTy,
+                   clang::GlobalDecl calleeDecl)
+      : calleeProtoTy(calleeProtoTy), calleeDecl(calleeDecl) {}
   CIRGenCalleeInfo(clang::GlobalDecl calleeDecl) : calleeDecl(calleeDecl) {}
+
+  const clang::FunctionProtoType *getCalleeFunctionProtoType() const {
+    return calleeProtoTy;
+  }
+  clang::GlobalDecl getCalleeDecl() const { return calleeDecl; }
 };
 
 class CIRGenCallee {
