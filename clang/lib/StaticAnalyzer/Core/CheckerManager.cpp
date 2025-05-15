@@ -138,7 +138,7 @@ namespace {
 std::string checkerScopeName(StringRef Name, const CheckerBackend *Checker) {
   if (!llvm::timeTraceProfilerEnabled())
     return "";
-  StringRef CheckerTag = Checker ? Checker->getTagDescription() : "<unknown>";
+  StringRef CheckerTag = Checker ? Checker->getDebugName() : "<unknown>";
   return (Name + ":" + CheckerTag).str();
 }
 
@@ -721,12 +721,12 @@ void CheckerManager::runCheckersForEvalCall(ExplodedNodeSet &Dst,
             "while the {2} checker also tried to evaluate the same call. At "
             "most one checker supposed to evaluate a call.",
             toString(Call), evaluatorChecker,
-            EvalCallChecker.Checker->getTagDescription());
+            EvalCallChecker.Checker->getDebugName());
         llvm_unreachable(AssertionMessage.c_str());
       }
 #endif
       if (evaluated) {
-        evaluatorChecker = EvalCallChecker.Checker->getTagDescription();
+        evaluatorChecker = EvalCallChecker.Checker->getDebugName();
         Dst.insert(checkDst);
 #ifdef NDEBUG
         break; // on release don't check that no other checker also evals.
@@ -798,7 +798,7 @@ void CheckerManager::runCheckersForPrintStateJson(raw_ostream &Out,
       continue;
 
     Indent(Out, Space, IsDot)
-        << "{ \"checker\": \"" << CT.second->getTagDescription()
+        << "{ \"checker\": \"" << CT.second->getDebugName()
         << "\", \"messages\": [" << NL;
     Indent(Out, InnerSpace, IsDot)
         << '\"' << TempBuf.str().trim() << '\"' << NL;
