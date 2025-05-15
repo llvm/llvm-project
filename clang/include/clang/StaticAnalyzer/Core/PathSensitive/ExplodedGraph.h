@@ -409,8 +409,6 @@ public:
   llvm::BumpPtrAllocator & getAllocator() { return BVC.getAllocator(); }
   BumpVectorContext &getNodeAllocator() { return BVC; }
 
-  using NodeMap = llvm::DenseMap<const ExplodedNode *, ExplodedNode *>;
-
   /// Creates a trimmed version of the graph that only contains paths leading
   /// to the given nodes.
   ///
