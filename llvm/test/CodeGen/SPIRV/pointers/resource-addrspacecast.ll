@@ -1,9 +1,6 @@
 ; RUN: llc -verify-machineinstrs -O3 -mtriple=spirv-unknown-vulkan1.3-compute %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O3 -mtriple=spirv-unknown-vulkan1.3-compute %s -o - -filetype=obj | spirv-val %}
 
-; FIXME(134119): enable-this once Offset decoration are added.
-; XFAIL: spirv-tools
-
 %struct.S = type { i32 }
 
 ; CHECK-DAG:                     %[[#uint:]] = OpTypeInt 32 0
