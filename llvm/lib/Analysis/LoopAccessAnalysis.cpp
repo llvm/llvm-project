@@ -2071,7 +2071,7 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   uint64_t ConstDistance =
       match(Dist, m_scev_APInt(APDist)) ? APDist->abs().getZExtValue() : 0;
 
-  if (ConstDistance) {
+  if (APDist) {
     // If the distance between accesses and their strides are known constants,
     // check whether the accesses interlace each other.
     if (ConstDistance > 0 && CommonStride && CommonStride > 1 && HasSameSize &&
