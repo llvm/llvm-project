@@ -83,6 +83,12 @@ static cl::opt<bool> DisableRemat(
     cl::init(false));
 
 
+static cl::opt<bool> DisableRemat(
+    "amdgpu-disable-remat", cl::Hidden,
+    cl::desc("Disable rematerialization during AMDGPU scheduling)"),
+    cl::init(false));
+
+
 const unsigned ScheduleMetrics::ScaleFactor = 100;
 
 GCNSchedStrategy::GCNSchedStrategy(const MachineSchedContext *C)
