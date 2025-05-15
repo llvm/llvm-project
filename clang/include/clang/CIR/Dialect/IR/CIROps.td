@@ -269,7 +269,7 @@ def PtrStrideOp : CIR_Op<"ptr_stride",
   let extraClassDeclaration = [{
     // Get type pointed by the base pointer.
     mlir::Type getElementTy() {
-      return getBase().getType().getPointee();
+      return mlir::cast<cir::PointerType>(getBase().getType()).getPointee();
     }
   }];
 }
@@ -1710,7 +1710,7 @@ def GetMemberOp : CIR_Op<"get_member"> {
 
     /// Return the result type.
     cir::PointerType getResultTy() {
-      return getResult().getType();
+      return mlir::cast<cir::PointerType>(getResult().getType());
     }
   }];
 

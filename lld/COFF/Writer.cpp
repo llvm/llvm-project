@@ -1374,7 +1374,7 @@ void Writer::createExportTable() {
       }
     }
   }
-  ctx.forEachActiveSymtab([&](SymbolTable &symtab) {
+  ctx.forEachSymtab([&](SymbolTable &symtab) {
     if (symtab.edataStart) {
       if (symtab.hadExplicitExports)
         Warn(ctx) << "literal .edata sections override exports";
@@ -1776,8 +1776,7 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
   assert(coffHeaderOffset == buf - buffer->getBufferStart());
   auto *coff = reinterpret_cast<coff_file_header *>(buf);
   buf += sizeof(*coff);
-  SymbolTable &symtab =
-      ctx.config.machine == ARM64X ? *ctx.hybridSymtab : ctx.symtab;
+  SymbolTable &symtab = ctx.hybridSymtab ? *ctx.hybridSymtab : ctx.symtab;
   coff->Machine = symtab.isEC() ? AMD64 : symtab.machine;
   coff->NumberOfSections = ctx.outputSections.size();
   coff->Characteristics = IMAGE_FILE_EXECUTABLE_IMAGE;
@@ -2434,7 +2433,7 @@ void Writer::setECSymbols() {
     return a.first->getRVA() < b.first->getRVA();
   });
 
-  ChunkRange &chpePdata = ctx.config.machine == ARM64X ? hybridPdata : pdata;
+  ChunkRange &chpePdata = ctx.hybridSymtab ? hybridPdata : pdata;
   Symbol *rfeTableSym = ctx.symtab.findUnderscore("__arm64x_extra_rfe_table");
   replaceSymbol<DefinedSynthetic>(rfeTableSym, "__arm64x_extra_rfe_table",
                                   chpePdata.first);
@@ -2479,7 +2478,7 @@ void Writer::setECSymbols() {
       delayIdata.getAuxIatCopy().empty() ? nullptr
                                          : delayIdata.getAuxIatCopy().front());
 
-  if (ctx.config.machine == ARM64X) {
+  if (ctx.hybridSymtab) {
     // For the hybrid image, set the alternate entry point to the EC entry
     // point. In the hybrid view, it is swapped to the native entry point
     // using ARM64X relocations.
@@ -2869,7 +2868,7 @@ void Writer::fixTlsAlignment() {
 }
 
 void Writer::prepareLoadConfig() {
-  ctx.forEachActiveSymtab([&](SymbolTable &symtab) {
+  ctx.forEachSymtab([&](SymbolTable &symtab) {
     if (!symtab.loadConfigSym)
       return;
 
@@ -2929,7 +2928,7 @@ void Writer::prepareLoadConfig(SymbolTable &symtab, T *loadConfig) {
   IF_CONTAINS(CHPEMetadataPointer) {
     // On ARM64X, only the EC version of the load config contains
     // CHPEMetadataPointer. Copy its value to the native load config.
-    if (ctx.config.machine == ARM64X && !symtab.isEC() &&
+    if (ctx.hybridSymtab && !symtab.isEC() &&
         ctx.symtab.loadConfigSize >=
             offsetof(T, CHPEMetadataPointer) + sizeof(T::CHPEMetadataPointer)) {
       OutputSection *sec =

@@ -249,10 +249,7 @@ public:
   }
 
   void print(raw_ostream &) const;
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  LLVM_DUMP_METHOD void dump() const;
-#endif
+  void dump() const;
 
   // If LHS > RHS, return 1. If LHS == RHS, return 0. If LHS < RHS, return -1.
   int compare(const APFixedPoint &Other) const;

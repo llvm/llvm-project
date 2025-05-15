@@ -1123,10 +1123,14 @@ static bool replaceIfSimplePointerUse(const TargetTransformInfo &TTI,
 static bool handleMemIntrinsicPtrUse(MemIntrinsic *MI, Value *OldV,
                                      Value *NewV) {
   IRBuilder<> B(MI);
+  MDNode *TBAA = MI->getMetadata(LLVMContext::MD_tbaa);
+  MDNode *ScopeMD = MI->getMetadata(LLVMContext::MD_alias_scope);
+  MDNode *NoAliasMD = MI->getMetadata(LLVMContext::MD_noalias);
+
   if (auto *MSI = dyn_cast<MemSetInst>(MI)) {
     B.CreateMemSet(NewV, MSI->getValue(), MSI->getLength(), MSI->getDestAlign(),
                    false, // isVolatile
-                   MI->getAAMetadata());
+                   TBAA, ScopeMD, NoAliasMD);
   } else if (auto *MTI = dyn_cast<MemTransferInst>(MI)) {
     Value *Src = MTI->getRawSource();
     Value *Dest = MTI->getRawDest();
@@ -1139,22 +1143,23 @@ static bool handleMemIntrinsicPtrUse(MemIntrinsic *MI, Value *OldV,
       Dest = NewV;
 
     if (auto *MCI = dyn_cast<MemCpyInst>(MTI)) {
+      MDNode *TBAAStruct = MTI->getMetadata(LLVMContext::MD_tbaa_struct);
       if (MCI->isForceInlined())
         B.CreateMemCpyInline(Dest, MTI->getDestAlign(), Src,
                              MTI->getSourceAlign(), MTI->getLength(),
                              false, // isVolatile
-                             MI->getAAMetadata());
+                             TBAA, TBAAStruct, ScopeMD, NoAliasMD);
       else
         B.CreateMemCpy(Dest, MTI->getDestAlign(), Src, MTI->getSourceAlign(),
                        MTI->getLength(),
                        false, // isVolatile
-                       MI->getAAMetadata());
+                       TBAA, TBAAStruct, ScopeMD, NoAliasMD);
     } else {
       assert(isa<MemMoveInst>(MTI));
       B.CreateMemMove(Dest, MTI->getDestAlign(), Src, MTI->getSourceAlign(),
                       MTI->getLength(),
                       false, // isVolatile
-                      MI->getAAMetadata());
+                      TBAA, ScopeMD, NoAliasMD);
     }
   } else
     llvm_unreachable("unhandled MemIntrinsic");

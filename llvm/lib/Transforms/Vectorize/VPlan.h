@@ -1135,9 +1135,7 @@ public:
   const VPBasicBlock *getIncomingBlock(unsigned Idx) const;
 
   /// Returns the number of incoming values, also number of incoming blocks.
-  virtual unsigned getNumIncoming() const {
-    return getAsRecipe()->getNumOperands();
-  }
+  unsigned getNumIncoming() const { return getAsRecipe()->getNumOperands(); }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -1236,7 +1234,7 @@ public:
 /// cast/dyn_cast/isa and execute() implementation. A single VPValue operand is
 /// allowed, and it is used to add a new incoming value for the single
 /// predecessor VPBB.
-struct VPIRPhi : public VPIRInstruction, public VPPhiAccessors {
+struct VPIRPhi : public VPIRInstruction {
   VPIRPhi(PHINode &PN) : VPIRInstruction(PN) {}
 
   static inline bool classof(const VPRecipeBase *U) {
@@ -1253,9 +1251,6 @@ struct VPIRPhi : public VPIRInstruction, public VPPhiAccessors {
   void print(raw_ostream &O, const Twine &Indent,
              VPSlotTracker &SlotTracker) const override;
 #endif
-
-protected:
-  const VPRecipeBase *getAsRecipe() const override { return this; }
 };
 
 /// Helper to manage IR metadata for recipes. It filters out metadata that
@@ -1790,14 +1785,12 @@ public:
 ///  * VPWidenPointerInductionRecipe: Generate vector and scalar values for a
 ///    pointer induction. Produces either a vector PHI per-part or scalar values
 ///    per-lane based on the canonical induction.
-class VPHeaderPHIRecipe : public VPSingleDefRecipe, public VPPhiAccessors {
+class VPHeaderPHIRecipe : public VPSingleDefRecipe {
 protected:
   VPHeaderPHIRecipe(unsigned char VPDefID, Instruction *UnderlyingInstr,
                     VPValue *Start, DebugLoc DL = {})
       : VPSingleDefRecipe(VPDefID, ArrayRef<VPValue *>({Start}), UnderlyingInstr, DL) {
   }
-
-  const VPRecipeBase *getAsRecipe() const override { return this; }
 
 public:
   ~VPHeaderPHIRecipe() override = default;
@@ -1986,11 +1979,6 @@ public:
     // increment.
     return isUnrolled() ? getOperand(getNumOperands() - 2) : nullptr;
   }
-
-  /// Returns the number of incoming values, also number of incoming blocks.
-  /// Note that at the moment, VPWidenIntOrFpInductionRecipes only have a single
-  /// incoming value, its start value.
-  unsigned getNumIncoming() const override { return 1; }
 
   /// Returns the first defined value as TruncInst, if it is one or nullptr
   /// otherwise.
@@ -3292,46 +3280,6 @@ public:
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return true;
-  }
-};
-
-/// Casting from VPRecipeBase -> VPPhiAccessors is supported for all recipe
-/// types implementing VPPhiAccessors. Used by isa<> & co.
-template <> struct CastIsPossible<VPPhiAccessors, const VPRecipeBase *> {
-  static inline bool isPossible(const VPRecipeBase *f) {
-    // TODO: include VPPredInstPHIRecipe too, once it implements VPPhiAccessors.
-    return isa<VPIRPhi, VPHeaderPHIRecipe, VPWidenPHIRecipe, VPPhi>(f);
-  }
-};
-/// Support casting from VPRecipeBase -> VPPhiAccessors, by down-casting to the
-/// recipe types implementing VPPhiAccessors. Used by cast<>, dyn_cast<> & co.
-template <>
-struct CastInfo<VPPhiAccessors, const VPRecipeBase *>
-    : public CastIsPossible<VPPhiAccessors, const VPRecipeBase *> {
-
-  using Self = CastInfo<VPPhiAccessors, const VPRecipeBase *>;
-
-  /// doCast is used by cast<>.
-  static inline VPPhiAccessors *doCast(const VPRecipeBase *R) {
-    return const_cast<VPPhiAccessors *>([R]() -> const VPPhiAccessors * {
-      switch (R->getVPDefID()) {
-      case VPDef::VPInstructionSC:
-        return cast<VPPhi>(R);
-      case VPDef::VPIRInstructionSC:
-        return cast<VPIRPhi>(R);
-      case VPDef::VPWidenPHISC:
-        return cast<VPWidenPHIRecipe>(R);
-      default:
-        return cast<VPHeaderPHIRecipe>(R);
-      }
-    }());
-  }
-
-  /// doCastIfPossible is used by dyn_cast<>.
-  static inline VPPhiAccessors *doCastIfPossible(const VPRecipeBase *f) {
-    if (!Self::isPossible(f))
-      return nullptr;
-    return doCast(f);
   }
 };
 

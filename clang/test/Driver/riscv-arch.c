@@ -10,8 +10,6 @@
 // RUN: -fsyntax-only 2>&1 | FileCheck %s
 // RUN: %clang --target=riscv32-unknown-elf -march=rv32imafd -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck %s
-// RUN: %clang --target=riscv32-unknown-elf -march=rv32imafdq -### %s \
-// RUN: -fsyntax-only 2>&1 | FileCheck %s
 
 // RUN: %clang --target=riscv32-unknown-elf -march=rv32ic -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck %s
@@ -23,8 +21,6 @@
 // RUN: -fsyntax-only 2>&1 | FileCheck %s
 // RUN: %clang --target=riscv32-unknown-elf -march=rv32imafdc -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck %s
-// RUN: %clang --target=riscv32-unknown-elf -march=rv32imafdqc -### %s \
-// RUN: -fsyntax-only 2>&1 | FileCheck %s
 
 // RUN: %clang --target=riscv32-unknown-elf -march=rv32ia -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck %s
@@ -32,16 +28,12 @@
 // RUN: -fsyntax-only 2>&1 | FileCheck %s
 // RUN: %clang --target=riscv32-unknown-elf -march=rv32iafd -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck %s
-// RUN: %clang --target=riscv32-unknown-elf -march=rv32iafdq -### %s \
-// RUN: -fsyntax-only 2>&1 | FileCheck %s
 
 // RUN: %clang --target=riscv32-unknown-elf -march=rv32iac -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck %s
 // RUN: %clang --target=riscv32-unknown-elf -march=rv32iafc -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck %s
 // RUN: %clang --target=riscv32-unknown-elf -march=rv32iafdc -### %s \
-// RUN: -fsyntax-only 2>&1 | FileCheck %s
-// RUN: %clang --target=riscv32-unknown-elf -march=rv32iafdqc -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck %s
 
 // RUN: %clang --target=riscv32-unknown-elf -march=rv32g -### %s \
@@ -88,8 +80,6 @@
 // RUN: -fsyntax-only 2>&1 | FileCheck %s
 // RUN: %clang --target=riscv64-unknown-elf -march=rv64imafd -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck %s
-// RUN: %clang --target=riscv64-unknown-elf -march=rv64imafdq -### %s \
-// RUN: -fsyntax-only 2>&1 | FileCheck %s
 
 // RUN: %clang --target=riscv64-unknown-elf -march=rv64ic -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck %s
@@ -101,8 +91,6 @@
 // RUN: -fsyntax-only 2>&1 | FileCheck %s
 // RUN: %clang --target=riscv64-unknown-elf -march=rv64imafdc -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck %s
-// RUN: %clang --target=riscv64-unknown-elf -march=rv64imafdqc -### %s \
-// RUN: -fsyntax-only 2>&1 | FileCheck %s
 
 // RUN: %clang --target=riscv64-unknown-elf -march=rv64ia -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck %s
@@ -110,16 +98,12 @@
 // RUN: -fsyntax-only 2>&1 | FileCheck %s
 // RUN: %clang --target=riscv64-unknown-elf -march=rv64iafd -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck %s
-// RUN: %clang --target=riscv64-unknown-elf -march=rv64iafdq -### %s \
-// RUN: -fsyntax-only 2>&1 | FileCheck %s
 
 // RUN: %clang --target=riscv64-unknown-elf -march=rv64iac -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck %s
 // RUN: %clang --target=riscv64-unknown-elf -march=rv64iafc -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck %s
 // RUN: %clang --target=riscv64-unknown-elf -march=rv64iafdc -### %s \
-// RUN: -fsyntax-only 2>&1 | FileCheck %s
-// RUN: %clang --target=riscv64-unknown-elf -march=rv64iafdqc -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck %s
 
 // RUN: %clang --target=riscv64-unknown-elf -march=rv64g -### %s \
@@ -227,6 +211,11 @@
 // RV32-LETTER: error: invalid arch name 'rv32q',
 // RV32-LETTER: first letter after 'rv32' should be 'e', 'i' or 'g'
 
+// RUN: not %clang --target=riscv32-unknown-elf -march=rv32imcq -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-ORDER %s
+// RV32-ORDER: error: invalid arch name 'rv32imcq',
+// RV32-ORDER: unsupported standard user-level extension 'q'
+
 // RUN: not %clang --target=riscv32-unknown-elf -march=rv32izvl64b -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-ZVL64B-ER %s
 // RV32-ZVL64B-ER: error: invalid arch name 'rv32izvl64b',
@@ -236,6 +225,11 @@
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-STD-INVAL %s
 // RV32-STD-INVAL: error: invalid arch name 'rv32imw',
 // RV32-STD-INVAL: invalid standard user-level extension 'w'
+
+// RUN: not %clang --target=riscv32-unknown-elf -march=rv32imqc -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-STD %s
+// RV32-STD: error: invalid arch name 'rv32imqc',
+// RV32-STD: unsupported standard user-level extension 'q'
 
 // RUN: not %clang --target=riscv32-unknown-elf -march=rv32xabc -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32X %s

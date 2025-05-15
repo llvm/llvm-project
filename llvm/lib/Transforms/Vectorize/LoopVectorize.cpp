@@ -603,13 +603,13 @@ protected:
   // --- Vectorization state ---
 
   /// The vector-loop preheader.
-  BasicBlock *LoopVectorPreHeader = nullptr;
+  BasicBlock *LoopVectorPreHeader;
 
   /// The scalar-loop preheader.
-  BasicBlock *LoopScalarPreHeader = nullptr;
+  BasicBlock *LoopScalarPreHeader;
 
   /// Middle Block between the vector and the scalar.
-  BasicBlock *LoopMiddleBlock = nullptr;
+  BasicBlock *LoopMiddleBlock;
 
   /// A list of all bypass blocks. The first block is the entry of the loop.
   SmallVector<BasicBlock *, 4> LoopBypassBlocks;

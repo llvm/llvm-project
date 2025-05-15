@@ -91,12 +91,8 @@ PreservedAnalyses ForceFunctionAttrsPass::run(Module &M,
   bool Changed = false;
   if (!CSVFilePath.empty()) {
     auto BufferOrError = MemoryBuffer::getFileOrSTDIN(CSVFilePath);
-    if (!BufferOrError) {
-      std::error_code EC = BufferOrError.getError();
-      M.getContext().emitError("cannot open CSV file: " + EC.message());
-      return PreservedAnalyses::all();
-    }
-
+    if (!BufferOrError)
+      report_fatal_error("Cannot open CSV file.");
     StringRef Buffer = BufferOrError.get()->getBuffer();
     auto MemoryBuffer = MemoryBuffer::getMemBuffer(Buffer);
     line_iterator It(*MemoryBuffer);

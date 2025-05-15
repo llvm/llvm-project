@@ -187,7 +187,6 @@ def FeatureStdExtZilsd
 def HasStdExtZilsd : Predicate<"Subtarget->hasStdExtZilsd()">,
                        AssemblerPredicate<(all_of FeatureStdExtZilsd),
                                           "'Zilsd' (Load/Store pair instructions)">;
-def NoHasStdExtZilsd : Predicate<"!Subtarget->hasStdExtZilsd()">;
 
 // Multiply Extensions
 
@@ -291,13 +290,6 @@ def FeatureStdExtD
 def HasStdExtD : Predicate<"Subtarget->hasStdExtD()">,
                  AssemblerPredicate<(all_of FeatureStdExtD),
                                     "'D' (Double-Precision Floating-Point)">;
-
-def FeatureStdExtQ
-    : RISCVExtension<2, 2, "Quad-Precision Floating-Point", [FeatureStdExtD]>,
-      RISCVExtensionBitmask<0, 16>;
-def HasStdExtQ : Predicate<"Subtarget->hasStdExtQ()">,
-                 AssemblerPredicate<(all_of FeatureStdExtQ),
-                                    "'Q' (Quad-Precision Floating-Point)">;
 
 def FeatureStdExtZfhmin
     : RISCVExtension<1, 0, "Half-Precision Floating-Point Minimal",
@@ -1532,14 +1524,6 @@ def HasVendorXAndesVPackFPH
     : Predicate<"Subtarget->hasVendorXAndesVPackFPH()">,
       AssemblerPredicate<(all_of FeatureVendorXAndesVPackFPH),
                          "'XAndesVPackFPH' (Andes Vector Packed FP16 Extension)">;
-
-def FeatureVendorXAndesVDot
-    : RISCVExtension<5, 0, "Andes Vector Dot Product Extension",
-                     [FeatureStdExtZve32x]>;
-def HasVendorXAndesVDot
-    : Predicate<"Subtarget->hasVendorXAndesVDot()">,
-      AssemblerPredicate<(all_of FeatureVendorXAndesVDot),
-                         "'XAndesVDot' (Andes Vector Dot Product Extension)">;
 
 //===----------------------------------------------------------------------===//
 // LLVM specific features and extensions

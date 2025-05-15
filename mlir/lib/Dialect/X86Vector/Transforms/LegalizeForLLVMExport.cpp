@@ -84,23 +84,20 @@ LogicalResult intrinsicRewrite(Operation *op, StringAttr intrinsic,
 /// Generic one-to-one conversion of simply mappable operations into calls
 /// to their respective LLVM intrinsics.
 struct OneToOneIntrinsicOpConversion
-    : public OpInterfaceConversionPattern<x86vector::OneToOneIntrinsicOp> {
-  using OpInterfaceConversionPattern<
-      x86vector::OneToOneIntrinsicOp>::OpInterfaceConversionPattern;
+    : public OpInterfaceRewritePattern<x86vector::OneToOneIntrinsicOp> {
+  using OpInterfaceRewritePattern<
+      x86vector::OneToOneIntrinsicOp>::OpInterfaceRewritePattern;
 
   OneToOneIntrinsicOpConversion(const LLVMTypeConverter &typeConverter,
                                 PatternBenefit benefit = 1)
-      : OpInterfaceConversionPattern(typeConverter, &typeConverter.getContext(),
-                                     benefit),
+      : OpInterfaceRewritePattern(&typeConverter.getContext(), benefit),
         typeConverter(typeConverter) {}
 
-  LogicalResult
-  matchAndRewrite(x86vector::OneToOneIntrinsicOp op, ArrayRef<Value> operands,
-                  ConversionPatternRewriter &rewriter) const override {
-    return intrinsicRewrite(
-        op, rewriter.getStringAttr(op.getIntrinsicName()),
-        op.getIntrinsicOperands(operands, typeConverter, rewriter),
-        typeConverter, rewriter);
+  LogicalResult matchAndRewrite(x86vector::OneToOneIntrinsicOp op,
+                                PatternRewriter &rewriter) const override {
+    return intrinsicRewrite(op, rewriter.getStringAttr(op.getIntrinsicName()),
+                            op.getIntrinsicOperands(rewriter, typeConverter),
+                            typeConverter, rewriter);
   }
 
 private:

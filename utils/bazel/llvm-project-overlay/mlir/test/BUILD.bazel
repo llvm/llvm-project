@@ -1085,7 +1085,6 @@ cc_library(
         "//mlir:NVGPUDialect",
         "//mlir:Pass",
         "//mlir:SCFDialect",
-        "//mlir:SCFTransforms",
         "//mlir:Support",
         "//mlir:TensorDialect",
         "//mlir:TransformUtils",

@@ -114,7 +114,7 @@ OpenACCSelfClause::OpenACCSelfClause(SourceLocation BeginLoc,
     : OpenACCClauseWithParams(OpenACCClauseKind::Self, BeginLoc, LParenLoc,
                               EndLoc),
       HasConditionExpr(std::nullopt), NumExprs(VarList.size()) {
-  llvm::uninitialized_copy(VarList, getTrailingObjects());
+  llvm::uninitialized_copy(VarList, getTrailingObjects<Expr *>());
 }
 
 OpenACCSelfClause::OpenACCSelfClause(SourceLocation BeginLoc,
@@ -126,7 +126,8 @@ OpenACCSelfClause::OpenACCSelfClause(SourceLocation BeginLoc,
   assert((!ConditionExpr || ConditionExpr->isInstantiationDependent() ||
           ConditionExpr->getType()->isScalarType()) &&
          "Condition expression type not scalar/dependent");
-  llvm::uninitialized_copy(ArrayRef(ConditionExpr), getTrailingObjects());
+  llvm::uninitialized_copy(ArrayRef(ConditionExpr),
+                           getTrailingObjects<Expr *>());
 }
 
 OpenACCClause::child_range OpenACCClause::children() {

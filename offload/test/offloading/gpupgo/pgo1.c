@@ -23,12 +23,10 @@ int test2(int a) { return a * 2; }
 int main() {
   int m = 2;
 #pragma omp target
-  {
-    for (int i = 0; i < 10; i++) {
-      m = test1(m);
-      for (int j = 0; j < 2; j++) {
-        m = test2(m);
-      }
+  for (int i = 0; i < 10; i++) {
+    m = test1(m);
+    for (int j = 0; j < 2; j++) {
+      m = test2(m);
     }
   }
 }
@@ -36,7 +34,7 @@ int main() {
 // LLVM-PGO-LABEL: __omp_offloading_{{[_0-9a-zA-Z]*}}_main_{{[_0-9a-zA-Z]*}}:
 // LLVM-PGO: Hash: {{0[xX][0-9a-fA-F]+}}
 // LLVM-PGO: Counters: 4
-// LLVM-PGO: Block counts: [20, 10, {{.*}}, 1]
+// LLVM-PGO: Block counts: [20, 10, 2, 1]
 
 // LLVM-PGO-LABEL: test1:
 // LLVM-PGO: Hash: {{0[xX][0-9a-fA-F]+}}
@@ -55,10 +53,14 @@ int main() {
 // LLVM-PGO-SAME: 3
 // LLVM-PGO-LABEL: Maximum function count:
 // LLVM-PGO-SAME: 20
+// LLVM-PGO-LABEL: Maximum internal block count:
+// LLVM-PGO-SAME: 10
 
 // CLANG-PGO-LABEL: __omp_offloading_{{[_0-9a-zA-Z]*}}_main_{{[_0-9a-zA-Z]*}}:
 // CLANG-PGO: Hash: {{0[xX][0-9a-fA-F]+}}
-// CLANG-PGO: Block counts: [10, 20]
+// CLANG-PGO: Counters: 3
+// CLANG-PGO: Function count: 0
+// CLANG-PGO: Block counts: [11, 20]
 
 // CLANG-PGO-LABEL: test1:
 // CLANG-PGO: Hash: {{0[xX][0-9a-fA-F]+}}
@@ -76,5 +78,7 @@ int main() {
 // CLANG-PGO-SAME: Front-end
 // CLANG-PGO-LABEL: Functions shown:
 // CLANG-PGO-SAME: 3
+// CLANG-PGO-LABEL: Maximum function count:
+// CLANG-PGO-SAME: 20
 // CLANG-PGO-LABEL: Maximum internal block count:
 // CLANG-PGO-SAME: 20

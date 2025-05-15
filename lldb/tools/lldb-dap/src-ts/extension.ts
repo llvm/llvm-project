@@ -6,10 +6,7 @@ import { LaunchUriHandler } from "./uri-launch-handler";
 import { LLDBDapConfigurationProvider } from "./debug-configuration-provider";
 import { LLDBDapServer } from "./lldb-dap-server";
 import { DebugSessionTracker } from "./debug-session-tracker";
-import {
-  ModulesDataProvider,
-  ModuleProperty,
-} from "./ui/modules-data-provider";
+import { ModulesDataProvider } from "./ui/modules-data-provider";
 
 /**
  * This class represents the extension and manages its life cycle. Other extensions
@@ -42,11 +39,6 @@ export class LLDBDapExtension extends DisposableContext {
         new ModulesDataProvider(sessionTracker),
       ),
       vscode.window.registerUriHandler(new LaunchUriHandler()),
-    );
-
-    vscode.commands.registerCommand(
-      "lldb-dap.modules.copyProperty",
-      (node: ModuleProperty) => vscode.env.clipboard.writeText(node.value),
     );
   }
 }

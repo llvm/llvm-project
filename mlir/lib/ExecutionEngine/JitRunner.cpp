@@ -222,13 +222,8 @@ static Error compileAndExecuteVoidFunction(
     CompileAndExecuteConfig config, std::unique_ptr<llvm::TargetMachine> tm) {
   auto mainFunction = dyn_cast_or_null<LLVM::LLVMFuncOp>(
       SymbolTable::lookupSymbolIn(module, entryPoint));
-  if (!mainFunction || mainFunction.isExternal())
+  if (!mainFunction || mainFunction.empty())
     return makeStringError("entry point not found");
-
-  if (cast<LLVM::LLVMFunctionType>(mainFunction.getFunctionType())
-          .getNumParams() != 0)
-    return makeStringError(
-        "JIT can't invoke a main function expecting arguments");
 
   auto resultType = dyn_cast<LLVM::LLVMVoidType>(
       mainFunction.getFunctionType().getReturnType());
@@ -279,8 +274,7 @@ Error compileAndExecuteSingleReturnFunction(
 
   if (cast<LLVM::LLVMFunctionType>(mainFunction.getFunctionType())
           .getNumParams() != 0)
-    return makeStringError(
-        "JIT can't invoke a main function expecting arguments");
+    return makeStringError("function inputs not supported");
 
   if (Error error = checkCompatibleReturnType<Type>(mainFunction))
     return error;

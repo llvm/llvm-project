@@ -1247,9 +1247,8 @@ TEST_F(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
   {
     // Test for a call to a function without side-effects.
     Module M("", C);
-    PointerType *PtrTy = PointerType::get(C, 0);
     Function *TheFn =
-        Intrinsic::getOrInsertDeclaration(&M, Intrinsic::thread_pointer, PtrTy);
+        Intrinsic::getOrInsertDeclaration(&M, Intrinsic::thread_pointer);
 
     auto *Call = CallInst::Create(TheFn->getFunctionType(), TheFn);
     VPValue *Op1 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));

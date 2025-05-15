@@ -492,7 +492,6 @@ def : ReadAdvance<ReadFSqrt16, 0>;
 //===----------------------------------------------------------------------===//
 // Unsupported extensions
 //===----------------------------------------------------------------------===//
-defm : UnsupportedSchedQ;
 defm : UnsupportedSchedV;
 defm : UnsupportedSchedZvk;
 defm : UnsupportedSchedSFB;

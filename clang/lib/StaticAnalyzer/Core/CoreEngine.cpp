@@ -87,9 +87,8 @@ void CoreEngine::setBlockCounter(BlockCounter C) {
 /// ExecuteWorkList - Run the worklist algorithm for a maximum number of steps.
 bool CoreEngine::ExecuteWorkList(const LocationContext *L, unsigned MaxSteps,
                                  ProgramStateRef InitState) {
-  if (G.empty()) {
-    assert(!G.getRoot() && "empty graph must not have a root node");
-    // Initialize the analysis by constructing the root if there are no nodes.
+  if (G.num_roots() == 0) { // Initialize the analysis by constructing
+    // the root if none exists.
 
     const CFGBlock *Entry = &(L->getCFG()->getEntry());
 
@@ -118,7 +117,7 @@ bool CoreEngine::ExecuteWorkList(const LocationContext *L, unsigned MaxSteps,
     bool IsNew;
     ExplodedNode *Node = G.getNode(StartLoc, InitState, false, &IsNew);
     assert(IsNew);
-    G.designateAsRoot(Node);
+    G.addRoot(Node);
 
     NodeBuilderContext BuilderCtx(*this, StartLoc.getDst(), Node);
     ExplodedNodeSet DstBegin;
@@ -549,11 +548,15 @@ void CoreEngine::HandleVirtualBaseBranch(const CFGBlock *B,
 void CoreEngine::generateNode(const ProgramPoint &Loc,
                               ProgramStateRef State,
                               ExplodedNode *Pred) {
-  assert(Pred);
   bool IsNew;
   ExplodedNode *Node = G.getNode(Loc, State, false, &IsNew);
 
-  Node->addPredecessor(Pred, G); // Link 'Node' with its predecessor.
+  if (Pred)
+    Node->addPredecessor(Pred, G); // Link 'Node' with its predecessor.
+  else {
+    assert(IsNew);
+    G.addRoot(Node); // 'Node' has no predecessor.  Make it a root.
+  }
 
   // Only add 'Node' to the worklist if it was freshly generated.
   if (IsNew) WList->enqueue(Node);

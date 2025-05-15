@@ -1226,8 +1226,16 @@ void CodeGenFunction::EmitBoundsCheckImpl(const Expr *E, llvm::Value *Bound,
 
   SanitizerScope SanScope(this);
 
+  llvm::DILocation *CheckDI = Builder.getCurrentDebugLocation();
   auto CheckKind = SanitizerKind::SO_ArrayBounds;
-  ApplyDebugLocation ApplyTrapDI(*this, SanitizerAnnotateDebugInfo(CheckKind));
+  // TODO: deprecate ClArrayBoundsPseudoFn
+  if ((ClArrayBoundsPseudoFn ||
+       CGM.getCodeGenOpts().SanitizeAnnotateDebugInfo.has(CheckKind)) &&
+      CheckDI) {
+    CheckDI = getDebugInfo()->CreateSyntheticInlineAt(
+        Builder.getCurrentDebugLocation(), "__ubsan_check_array_bounds");
+  }
+  ApplyDebugLocation ApplyTrapDI(*this, CheckDI);
 
   bool IndexSigned = IndexType->isSignedIntegerOrEnumerationType();
   llvm::Value *IndexVal = Builder.CreateIntCast(Index, SizeTy, IndexSigned);
@@ -1242,35 +1250,6 @@ void CodeGenFunction::EmitBoundsCheckImpl(const Expr *E, llvm::Value *Bound,
                                 : Builder.CreateICmpULE(IndexVal, BoundVal);
   EmitCheck(std::make_pair(Check, CheckKind), SanitizerHandler::OutOfBounds,
             StaticData, Index);
-}
-
-llvm::DILocation *CodeGenFunction::SanitizerAnnotateDebugInfo(
-    SanitizerKind::SanitizerOrdinal CheckKindOrdinal) {
-  std::string Label;
-  switch (CheckKindOrdinal) {
-#define SANITIZER(NAME, ID)                                                    \
-  case SanitizerKind::SO_##ID:                                                 \
-    Label = "__ubsan_check_" NAME;                                             \
-    break;
-#include "clang/Basic/Sanitizers.def"
-  default:
-    llvm_unreachable("unexpected sanitizer kind");
-  }
-
-  // Sanitize label
-  for (unsigned int i = 0; i < Label.length(); i++)
-    if (!std::isalpha(Label[i]))
-      Label[i] = '_';
-
-  llvm::DILocation *CheckDI = Builder.getCurrentDebugLocation();
-  // TODO: deprecate ClArrayBoundsPseudoFn
-  if (((ClArrayBoundsPseudoFn &&
-        CheckKindOrdinal == SanitizerKind::SO_ArrayBounds) ||
-       CGM.getCodeGenOpts().SanitizeAnnotateDebugInfo.has(CheckKindOrdinal)) &&
-      CheckDI)
-    CheckDI = getDebugInfo()->CreateSyntheticInlineAt(CheckDI, Label);
-
-  return CheckDI;
 }
 
 CodeGenFunction::ComplexPairTy CodeGenFunction::

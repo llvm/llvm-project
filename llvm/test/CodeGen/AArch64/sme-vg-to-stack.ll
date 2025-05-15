@@ -1098,11 +1098,11 @@ define void @test_rdsvl_right_after_prologue(i64 %x0) nounwind {
 ; NO-SVE-CHECK-NEXT: ret
   %some_alloc = alloca i64, align 8
   %rdsvl = tail call i64 @llvm.aarch64.sme.cntsd()
-  call void @bar(i64 %rdsvl, i64 %x0)
+  call void @bar(i64 %rdsvl, i64 %x0) "aarch64_pstate_sm_enabled"
   ret void
 }
 
-declare void @bar(i64, i64) "aarch64_pstate_sm_enabled"
+declare void @bar(i64, i64)
 
 ; Ensure we still emit async unwind information with -fno-asynchronous-unwind-tables
 ; if the function contains a streaming-mode change.

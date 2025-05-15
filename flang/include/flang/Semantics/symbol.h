@@ -600,7 +600,6 @@ class TypeParamDetails {
 public:
   TypeParamDetails() = default;
   TypeParamDetails(const TypeParamDetails &) = default;
-  TypeParamDetails &operator=(const TypeParamDetails &) = default;
   std::optional<common::TypeParamAttr> attr() const { return attr_; }
   TypeParamDetails &set_attr(common::TypeParamAttr);
   MaybeIntExpr &init() { return init_; }

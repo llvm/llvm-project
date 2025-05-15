@@ -791,7 +791,7 @@ LogicalResult SparseTensorEncodingAttr::verify(
     return emitError() << "unexpected coordinate bitwidth: " << crdWidth;
 
   // Verify every COO segment.
-  auto *it = llvm::find_if(lvlTypes, isSingletonLT);
+  auto *it = std::find_if(lvlTypes.begin(), lvlTypes.end(), isSingletonLT);
   while (it != lvlTypes.end()) {
     if (it == lvlTypes.begin() ||
         !(it - 1)->isa<LevelFormat::Compressed, LevelFormat::LooseCompressed>())
@@ -829,7 +829,7 @@ LogicalResult SparseTensorEncodingAttr::verify(
   }
 
   // TODO: audit formats that actually are supported by backend.
-  if (auto it = llvm::find_if(lvlTypes, isNOutOfMLT);
+  if (auto it = std::find_if(lvlTypes.begin(), lvlTypes.end(), isNOutOfMLT);
       it != std::end(lvlTypes)) {
     if (it != lvlTypes.end() - 1)
       return emitError() << "expected n_out_of_m to be the last level type";

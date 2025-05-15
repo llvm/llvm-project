@@ -2454,20 +2454,6 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     TheCall->setType(ResourceTy);
     break;
   }
-  case Builtin::BI__builtin_hlsl_resource_handlefromimplicitbinding: {
-    ASTContext &AST = SemaRef.getASTContext();
-    if (SemaRef.checkArgCount(TheCall, 5) ||
-        CheckResourceHandle(&SemaRef, TheCall, 0) ||
-        CheckArgTypeMatches(&SemaRef, TheCall->getArg(1), AST.UnsignedIntTy) ||
-        CheckArgTypeMatches(&SemaRef, TheCall->getArg(2), AST.IntTy) ||
-        CheckArgTypeMatches(&SemaRef, TheCall->getArg(3), AST.UnsignedIntTy) ||
-        CheckArgTypeMatches(&SemaRef, TheCall->getArg(4), AST.UnsignedIntTy))
-      return true;
-    // use the type of the handle (arg0) as a return type
-    QualType ResourceTy = TheCall->getArg(0)->getType();
-    TheCall->setType(ResourceTy);
-    break;
-  }
   case Builtin::BI__builtin_hlsl_and:
   case Builtin::BI__builtin_hlsl_or: {
     if (SemaRef.checkArgCount(TheCall, 2))
@@ -3299,10 +3285,8 @@ static bool initVarDeclWithCtor(Sema &S, VarDecl *VD,
       VD->getLocation(), SourceLocation(), SourceLocation());
 
   InitializationSequence InitSeq(S, Entity, Kind, Args);
-  if (InitSeq.Failed())
-    return false;
-
   ExprResult Init = InitSeq.Perform(S, Entity, Kind, Args);
+
   if (!Init.get())
     return false;
 
@@ -3312,42 +3296,27 @@ static bool initVarDeclWithCtor(Sema &S, VarDecl *VD,
   return true;
 }
 
-bool SemaHLSL::initGlobalResourceDecl(VarDecl *VD) {
-  std::optional<uint32_t> RegisterSlot;
-  uint32_t SpaceNo = 0;
+static bool initGlobalResourceDecl(Sema &S, VarDecl *VD) {
   HLSLResourceBindingAttr *RBA = VD->getAttr<HLSLResourceBindingAttr>();
-  if (RBA) {
-    if (RBA->hasRegisterSlot())
-      RegisterSlot = RBA->getSlotNumber();
-    SpaceNo = RBA->getSpaceNumber();
-  }
+  if (!RBA || !RBA->hasRegisterSlot())
+    // FIXME: add support for implicit binding (llvm/llvm-project#110722)
+    return false;
 
-  ASTContext &AST = SemaRef.getASTContext();
+  ASTContext &AST = S.getASTContext();
   uint64_t UIntTySize = AST.getTypeSize(AST.UnsignedIntTy);
   uint64_t IntTySize = AST.getTypeSize(AST.IntTy);
-  IntegerLiteral *RangeSize = IntegerLiteral::Create(
-      AST, llvm::APInt(IntTySize, 1), AST.IntTy, SourceLocation());
-  IntegerLiteral *Index = IntegerLiteral::Create(
-      AST, llvm::APInt(UIntTySize, 0), AST.UnsignedIntTy, SourceLocation());
-  IntegerLiteral *Space =
-      IntegerLiteral::Create(AST, llvm::APInt(UIntTySize, SpaceNo),
-                             AST.UnsignedIntTy, SourceLocation());
+  Expr *Args[] = {
+      IntegerLiteral::Create(AST, llvm::APInt(UIntTySize, RBA->getSlotNumber()),
+                             AST.UnsignedIntTy, SourceLocation()),
+      IntegerLiteral::Create(AST,
+                             llvm::APInt(UIntTySize, RBA->getSpaceNumber()),
+                             AST.UnsignedIntTy, SourceLocation()),
+      IntegerLiteral::Create(AST, llvm::APInt(IntTySize, 1), AST.IntTy,
+                             SourceLocation()),
+      IntegerLiteral::Create(AST, llvm::APInt(UIntTySize, 0), AST.UnsignedIntTy,
+                             SourceLocation())};
 
-  // resource with explicit binding
-  if (RegisterSlot.has_value()) {
-    IntegerLiteral *RegSlot = IntegerLiteral::Create(
-        AST, llvm::APInt(UIntTySize, RegisterSlot.value()), AST.UnsignedIntTy,
-        SourceLocation());
-    Expr *Args[] = {RegSlot, Space, RangeSize, Index};
-    return initVarDeclWithCtor(SemaRef, VD, Args);
-  }
-
-  // resource with implicit binding
-  IntegerLiteral *OrderId = IntegerLiteral::Create(
-      AST, llvm::APInt(UIntTySize, getNextImplicitBindingOrderID()),
-      AST.UnsignedIntTy, SourceLocation());
-  Expr *Args[] = {Space, RangeSize, Index, OrderId};
-  return initVarDeclWithCtor(SemaRef, VD, Args);
+  return initVarDeclWithCtor(S, VD, Args);
 }
 
 // Returns true if the initialization has been handled.
@@ -3365,9 +3334,8 @@ bool SemaHLSL::ActOnUninitializedVarDecl(VarDecl *VD) {
   // FIXME: We currectly support only simple resources - no arrays of resources
   // or resources in user defined structs.
   // (llvm/llvm-project#133835, llvm/llvm-project#133837)
-  // Initialize resources at the global scope
-  if (VD->hasGlobalStorage() && VD->getType()->isHLSLResourceRecord())
-    return initGlobalResourceDecl(VD);
+  if (VD->getType()->isHLSLResourceRecord())
+    return initGlobalResourceDecl(SemaRef, VD);
 
   return false;
 }

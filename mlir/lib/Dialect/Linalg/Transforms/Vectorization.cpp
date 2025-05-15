@@ -1506,69 +1506,72 @@ static SmallVector<int64_t> getTiledPackShape(linalg::PackOp packOp,
   return applyPermutation(destShape, linalg::getPackInverseDestPerm(packOp));
 }
 
-/// Creates an optionally masked TransferWriteOp
+/// Creates a TransferWriteOp to write `input` into a newly initialized
+/// output tensor.
 ///
-/// Generates the following operation:
-///   %res = vector.transfer_write %vectorToStore into %dest
+/// Given:
+/// - an input vector to write,
+/// - the mixed destination sizes for the output tensor,
+/// - and the vector sizes used for vectorization (i.e., the leading N dims,
+///   for some value of N),
+///
+/// this function generates the following sequence of ops:
+///
+///   %dest = tensor.empty(%destSizes)
+///   %res = vector.transfer_write %input into %dest
 ///
 /// If the leading N dimensions of the destination tensor do not match
-/// `inputVecSizesForLeadingDims` (N = rank(inputVecSizesForLeadingDims)),
-/// masking is applied to ensure correctness:
+/// `inputVecSizesForLeadingDims` (where N =
+/// rank(`inputVecSizesForLeadingDims`)), masking is applied to ensure
+/// correctness:
 ///
-///   %mask = vector.create_mask(%destShape)
-///   %res = vector.mask %mask {
-///     vector.transfer_write %vectorToStore into %dest
-///   }
+///   %dest = tensor.empty(%destSizes)
+///   %write = vector.transfer_write %input into %dest
+///   %mask = vector.create_mask(%destSizes)
+///   %res = vector.mask %mask { %write }
 ///
 /// If `useInBoundsInsteadOfMasking` is set to `true`, the `in_bounds` attribute
 /// is used instead of masking:
 ///
-///   %write = vector.transfer_write %vectorToStore into %dest
+///   %dest = tensor.empty(%destSizes)
 ///   in_bounds_flags = (...)
 ///   %res = vector.transfer_write %input into %dest
 ///       {in_bounds = in_bounds_flags}
 ///
-/// NOTE: All write offsets are set to 0.
-/// TODO: Allow specyfying write offsets.
+/// NOTE: all write offsets are set to 0.
 /// NOTE: When N < rank(input), the missing vector sizes are effectively
 /// extracted from the trailing sizes of `destSizes`. This means those sizes
-/// must be static.
-/// TODO: Support cases where an arbitrary dim is dynamic - this will require
-/// specifying all the vector sizes.
+/// must be static. Supporting dynamic sizes will require the user to specify
+/// the remaining vector sizes. This is left as a TODO.
 static Operation *
-createWriteOrMaskedWrite(OpBuilder &builder, Location loc, Value vectorToStore,
-                         Value dest,
+createWriteOrMaskedWrite(OpBuilder &builder, Location loc, Value input,
+                         SmallVector<OpFoldResult> destSizes,
                          ArrayRef<int64_t> inputVecSizesForLeadingDims,
                          bool useInBoundsInsteadOfMasking = false) {
 
-  ShapedType destType = cast<ShapedType>(dest.getType());
-  assert(cast<VectorType>(vectorToStore.getType()).getRank() ==
-             static_cast<int64_t>(destType.getRank()) &&
+  auto inputType = cast<VectorType>(input.getType());
+  assert(inputType.getRank() == static_cast<int64_t>(destSizes.size()) &&
          "Rank mismatch!");
-  (void)destType;
 
+  Value dest = builder.create<tensor::EmptyOp>(loc, destSizes,
+                                               inputType.getElementType());
   int64_t rank = cast<ShapedType>(dest.getType()).getRank();
+  auto zero = builder.create<arith::ConstantIndexOp>(loc, 0);
   auto destShape = cast<ShapedType>(dest.getType()).getShape();
-
-  // Compute the in_bounds attribute
   SmallVector<bool> inBoundsVal(rank, true);
   if (useInBoundsInsteadOfMasking) {
     // In this case, assume that all the required vector sizes have been
     // provided.
-    assert(inputVecSizesForLeadingDims.size() ==
-               static_cast<size_t>(destType.getRank()) &&
+    assert(inputVecSizesForLeadingDims.size() == destSizes.size() &&
            "Insufficient number of input vector sizes!");
     // Update the inBounds attribute.
     for (unsigned i = 0; i < rank; i++)
       inBoundsVal[i] = (destShape[i] == inputVecSizesForLeadingDims[i]) &&
                        !ShapedType::isDynamic(destShape[i]);
   }
-
-  // Generate the xfer_write Op
-  auto zero = builder.create<arith::ConstantIndexOp>(loc, 0);
   Operation *write = builder.create<vector::TransferWriteOp>(
       loc,
-      /*vector=*/vectorToStore,
+      /*vector=*/input,
       /*source=*/dest,
       /*indices=*/SmallVector<Value>(rank, zero),
       /*inBounds=*/inBoundsVal);
@@ -1576,17 +1579,11 @@ createWriteOrMaskedWrite(OpBuilder &builder, Location loc, Value vectorToStore,
              destShape.drop_front(inputVecSizesForLeadingDims.size()),
              [](int64_t size) { return size == ShapedType::kDynamic; }) &&
          "Only dims aligned with inputVecSizesForLeadingDims may be dynamic");
-
-  // If masking is disabled, exit.
   if (useInBoundsInsteadOfMasking)
     return write;
-
-  // Check if masking is needed.
   bool needMaskForWrite =
       !llvm::equal(inputVecSizesForLeadingDims,
                    destShape.take_front(inputVecSizesForLeadingDims.size()));
-
-  // If masking is needed, generate the mask and mask the operation.
   if (needMaskForWrite) {
     SmallVector<int64_t> writeMaskShape;
     writeMaskShape.append(inputVecSizesForLeadingDims.begin(),
@@ -1595,11 +1592,10 @@ createWriteOrMaskedWrite(OpBuilder &builder, Location loc, Value vectorToStore,
                               inputVecSizesForLeadingDims.size(),
                           destShape.end());
     auto writeMaskType = VectorType::get(writeMaskShape, builder.getI1Type());
-    Value maskForWrite = builder.create<vector::CreateMaskOp>(
-        loc, writeMaskType, tensor::getMixedSizes(builder, loc, dest));
+    Value maskForWrite =
+        builder.create<vector::CreateMaskOp>(loc, writeMaskType, destSizes);
     write = mlir::vector::maskOperation(builder, write, maskForWrite);
   }
-
   return write;
 }
 
@@ -1697,11 +1693,9 @@ vectorizeAsTensorPackOp(RewriterBase &rewriter, linalg::PackOp packOp,
       loc, shapeCastOp.getResult(), destPermutation);
 
   // Create TransferWriteOp.
-  Value dest = rewriter.create<tensor::EmptyOp>(
-      loc, reifiedReturnShapes[0],
-      transposeOp.getResult().getType().getElementType());
   Operation *write =
-      createWriteOrMaskedWrite(rewriter, loc, transposeOp.getResult(), dest,
+      createWriteOrMaskedWrite(rewriter, loc, transposeOp.getResult(),
+                               /*destSizes=*/reifiedReturnShapes[0],
                                /*inputVecSizesForLeadingDims=*/inputVectorSizes,
                                /*useInBoundsInsteadOfMasking=*/false);
   newResults.push_back(write->getResult(0));
@@ -1836,13 +1830,10 @@ vectorizeAsTensorUnpackOp(RewriterBase &rewriter, linalg::UnPackOp unpackOp,
       unpackOp.getDestType().hasStaticShape()
           ? vectorSizes
           : shapeCastOp.getResultVectorType().getShape());
-  Value dest = rewriter.create<tensor::EmptyOp>(
-      loc, reifiedRetShapes[0],
-      shapeCastOp.getResult().getType().getElementType());
-  Operation *write =
-      createWriteOrMaskedWrite(rewriter, loc, shapeCastOp.getResult(), dest,
-                               /*inputVecSizesForLeadingDims=*/writeVectorSizes,
-                               useInBoundsInsteadOfMasking);
+  Operation *write = createWriteOrMaskedWrite(
+      rewriter, loc, shapeCastOp.getResult(), /*destSizes=*/reifiedRetShapes[0],
+      /*inputVecSizesForLeadingDims=*/writeVectorSizes,
+      useInBoundsInsteadOfMasking);
   newResults.push_back(write->getResult(0));
   return success();
 }
@@ -1870,14 +1861,10 @@ vectorizeAsTensorPadOp(RewriterBase &rewriter, tensor::PadOp padOp,
   auto maskedRead = vector::createReadOrMaskedRead(
       rewriter, loc, padOp.getSource(), inputVectorSizes, padValue,
       /*useInBoundsInsteadOfMasking=*/false);
-
-  // Create Xfer write Op
-  Value dest = rewriter.create<tensor::EmptyOp>(
-      loc, reifiedReturnShapes[0], padOp.getResultType().getElementType());
-  Operation *write =
-      createWriteOrMaskedWrite(rewriter, loc, maskedRead, dest,
-                               /*inputVecSizesForLeadingDims=*/inputVectorSizes,
-                               /*useInBoundsInsteadOfMasking=*/false);
+  Operation *write = createWriteOrMaskedWrite(
+      rewriter, loc, maskedRead, reifiedReturnShapes[0],
+      /*inputVecSizesForLeadingDims=*/inputVectorSizes,
+      /*useInBoundsInsteadOfMasking=*/false);
   newResults.push_back(write->getResult(0));
   return success();
 }

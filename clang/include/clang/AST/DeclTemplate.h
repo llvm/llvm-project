@@ -712,7 +712,7 @@ public:
 
   /// Returns the candidates for the primary function template.
   ArrayRef<FunctionTemplateDecl *> getCandidates() const {
-    return getTrailingObjects(NumCandidates);
+    return {getTrailingObjects<FunctionTemplateDecl *>(), NumCandidates};
   }
 };
 
@@ -1325,7 +1325,8 @@ public:
   /// Returns the type constraint associated with this template parameter (if
   /// any).
   const TypeConstraint *getTypeConstraint() const {
-    return TypeConstraintInitialized ? getTrailingObjects() : nullptr;
+    return TypeConstraintInitialized ? getTrailingObjects<TypeConstraint>() :
+         nullptr;
   }
 
   void setTypeConstraint(ConceptReference *CR,
@@ -1710,7 +1711,7 @@ public:
   /// pack.
   TemplateParameterList *getExpansionTemplateParameters(unsigned I) const {
     assert(I < NumExpandedParams && "Out-of-range expansion type index");
-    return getTrailingObjects()[I];
+    return getTrailingObjects<TemplateParameterList *>()[I];
   }
 
   const DefArgStorage &getDefaultArgStorage() const { return DefaultArgument; }
@@ -3253,7 +3254,8 @@ public:
                      unsigned NumTemplateArgs);
 
   ArrayRef<TemplateArgument> getTemplateArguments() const {
-    return getTrailingObjects(NumTemplateArgs);
+    return ArrayRef<TemplateArgument>(getTrailingObjects<TemplateArgument>(),
+                                      NumTemplateArgs);
   }
   void setTemplateArguments(ArrayRef<TemplateArgument> Converted);
 

@@ -9021,7 +9021,8 @@ Sema::CheckSpecializationInstantiationRedecl(SourceLocation NewLoc,
         // The declaration itself has not actually been instantiated, so it is
         // still okay to specialize it.
         StripImplicitInstantiation(
-            PrevDecl, Context.getTargetInfo().getTriple().isOSCygMing());
+            PrevDecl,
+            Context.getTargetInfo().getTriple().isWindowsGNUEnvironment());
         return false;
       }
       // Fall through
@@ -9891,7 +9892,7 @@ DeclResult Sema::ActOnExplicitInstantiation(
                                        : TSK_ExplicitInstantiationDeclaration;
 
   if (TSK == TSK_ExplicitInstantiationDeclaration &&
-      !Context.getTargetInfo().getTriple().isOSCygMing()) {
+      !Context.getTargetInfo().getTriple().isWindowsGNUEnvironment()) {
     // Check for dllexport class template instantiation declarations,
     // except for MinGW mode.
     for (const ParsedAttr &AL : Attr) {
@@ -9956,7 +9957,7 @@ DeclResult Sema::ActOnExplicitInstantiation(
     = PrevDecl ? PrevDecl->getTemplateSpecializationKind() : TSK_Undeclared;
 
   if (TSK == TSK_ExplicitInstantiationDefinition && PrevDecl != nullptr &&
-      Context.getTargetInfo().getTriple().isOSCygMing()) {
+      Context.getTargetInfo().getTriple().isWindowsGNUEnvironment()) {
     // Check for dllexport class template instantiation definitions in MinGW
     // mode, if a previous declaration of the instantiation was seen.
     for (const ParsedAttr &AL : Attr) {
@@ -10124,7 +10125,7 @@ DeclResult Sema::ActOnExplicitInstantiation(
     // In MinGW mode, export the template instantiation if the declaration
     // was marked dllexport.
     if (PrevDecl_TSK == TSK_ExplicitInstantiationDeclaration &&
-        Context.getTargetInfo().getTriple().isOSCygMing() &&
+        Context.getTargetInfo().getTriple().isWindowsGNUEnvironment() &&
         PrevDecl->hasAttr<DLLExportAttr>()) {
       dllExportImportClassTemplateSpecialization(*this, Def);
     }

@@ -1,9 +1,5 @@
 llvm/test/tools/llvm-exegesis/AArch64/skip_unsupported_instructions.s
 
-# TODO: This is failing on some systems that have hardware support for
-# pointer authentication. This needs to be fixed before reenabling.
-# REQUIRES: disabled
-
 # REQUIRES: aarch64-registered-target
 
 # Check for skipping of illegal instruction errors (AUT and LDGM)
@@ -11,4 +7,4 @@ llvm/test/tools/llvm-exegesis/AArch64/skip_unsupported_instructions.s
 # CHECK-AUTIA-NOT: snippet crashed while running: Illegal instruction
 
 # RUN: llvm-exegesis -mcpu=neoverse-v2 -mode=latency --opcode-name=LDGM --benchmark-phase=assemble-measured-code 2>&1 | FileCheck %s --check-prefix=CHECK-LDGM
-# CHECK-LDGM: LDGM: Unsupported opcode: load tag multiple
+# CHECK-LDGM: LDGM: Unsupported opcode: load tag multiple 

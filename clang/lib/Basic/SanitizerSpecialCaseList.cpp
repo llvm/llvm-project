@@ -41,7 +41,7 @@ void SanitizerSpecialCaseList::createSanitizerSections() {
     SanitizerMask Mask;
 
 #define SANITIZER(NAME, ID)                                                    \
-  if (It.SectionMatcher->match(NAME))                                           \
+  if (It.SectionMatcher->match(NAME))                                          \
     Mask |= SanitizerKind::ID;
 #define SANITIZER_GROUP(NAME, ID, ALIAS) SANITIZER(NAME, ID)
 

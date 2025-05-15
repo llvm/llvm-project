@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "AttrOrTypeFormatGen.h"
-#include "CppGenUtilities.h"
 #include "mlir/TableGen/AttrOrTypeDef.h"
 #include "mlir/TableGen/Class.h"
 #include "mlir/TableGen/CodeGenHelpers.h"
@@ -814,14 +813,8 @@ bool DefGenerator::emitDecls(StringRef selectedDialect) {
     NamespaceEmitter nsEmitter(os, defs.front().getDialect());
 
     // Declare all the def classes first (in case they reference each other).
-    for (const AttrOrTypeDef &def : defs) {
-      std::string comments = tblgen::emitSummaryAndDescComments(
-          def.getSummary(), def.getDescription());
-      if (!comments.empty()) {
-        os << comments << "\n";
-      }
+    for (const AttrOrTypeDef &def : defs)
       os << "class " << def.getCppClassName() << ";\n";
-    }
 
     // Emit the declarations.
     for (const AttrOrTypeDef &def : defs)

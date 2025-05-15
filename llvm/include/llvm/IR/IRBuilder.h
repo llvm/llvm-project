@@ -608,33 +608,43 @@ public:
   /// Create and insert a memset to the specified pointer and the
   /// specified value.
   ///
-  /// If the pointer isn't an i8*, it will be converted. If alias metadata is
-  /// specified, it will be added to the instruction.
+  /// If the pointer isn't an i8*, it will be converted. If a TBAA tag is
+  /// specified, it will be added to the instruction. Likewise with alias.scope
+  /// and noalias tags.
   CallInst *CreateMemSet(Value *Ptr, Value *Val, uint64_t Size,
                          MaybeAlign Align, bool isVolatile = false,
-                         const AAMDNodes &AAInfo = AAMDNodes()) {
-    return CreateMemSet(Ptr, Val, getInt64(Size), Align, isVolatile, AAInfo);
+                         MDNode *TBAATag = nullptr, MDNode *ScopeTag = nullptr,
+                         MDNode *NoAliasTag = nullptr) {
+    return CreateMemSet(Ptr, Val, getInt64(Size), Align, isVolatile,
+                        TBAATag, ScopeTag, NoAliasTag);
   }
 
   CallInst *CreateMemSet(Value *Ptr, Value *Val, Value *Size, MaybeAlign Align,
-                         bool isVolatile = false,
-                         const AAMDNodes &AAInfo = AAMDNodes());
+                         bool isVolatile = false, MDNode *TBAATag = nullptr,
+                         MDNode *ScopeTag = nullptr,
+                         MDNode *NoAliasTag = nullptr);
 
   CallInst *CreateMemSetInline(Value *Dst, MaybeAlign DstAlign, Value *Val,
                                Value *Size, bool IsVolatile = false,
-                               const AAMDNodes &AAInfo = AAMDNodes());
+                               MDNode *TBAATag = nullptr,
+                               MDNode *ScopeTag = nullptr,
+                               MDNode *NoAliasTag = nullptr);
 
   /// Create and insert an element unordered-atomic memset of the region of
   /// memory starting at the given pointer to the given value.
   ///
-  /// If the pointer isn't an i8*, it will be converted. If alias metadata is
-  /// specified, it will be added to the instruction.
-  CallInst *
-  CreateElementUnorderedAtomicMemSet(Value *Ptr, Value *Val, uint64_t Size,
-                                     Align Alignment, uint32_t ElementSize,
-                                     const AAMDNodes &AAInfo = AAMDNodes()) {
-    return CreateElementUnorderedAtomicMemSet(
-        Ptr, Val, getInt64(Size), Align(Alignment), ElementSize, AAInfo);
+  /// If the pointer isn't an i8*, it will be converted. If a TBAA tag is
+  /// specified, it will be added to the instruction. Likewise with alias.scope
+  /// and noalias tags.
+  CallInst *CreateElementUnorderedAtomicMemSet(Value *Ptr, Value *Val,
+                                               uint64_t Size, Align Alignment,
+                                               uint32_t ElementSize,
+                                               MDNode *TBAATag = nullptr,
+                                               MDNode *ScopeTag = nullptr,
+                                               MDNode *NoAliasTag = nullptr) {
+    return CreateElementUnorderedAtomicMemSet(Ptr, Val, getInt64(Size),
+                                              Align(Alignment), ElementSize,
+                                              TBAATag, ScopeTag, NoAliasTag);
   }
 
   CallInst *CreateMalloc(Type *IntPtrTy, Type *AllocTy, Value *AllocSize,
@@ -652,72 +662,88 @@ public:
   /// Generate the IR for a call to the builtin free function.
   CallInst *CreateFree(Value *Source, ArrayRef<OperandBundleDef> Bundles = {});
 
-  CallInst *
-  CreateElementUnorderedAtomicMemSet(Value *Ptr, Value *Val, Value *Size,
-                                     Align Alignment, uint32_t ElementSize,
-                                     const AAMDNodes &AAInfo = AAMDNodes());
+  CallInst *CreateElementUnorderedAtomicMemSet(Value *Ptr, Value *Val,
+                                               Value *Size, Align Alignment,
+                                               uint32_t ElementSize,
+                                               MDNode *TBAATag = nullptr,
+                                               MDNode *ScopeTag = nullptr,
+                                               MDNode *NoAliasTag = nullptr);
 
   /// Create and insert a memcpy between the specified pointers.
   ///
-  /// If the pointers aren't i8*, they will be converted.  If alias metadata is
-  /// specified, it will be added to the instruction.
+  /// If the pointers aren't i8*, they will be converted.  If a TBAA tag is
+  /// specified, it will be added to the instruction. Likewise with alias.scope
   /// and noalias tags.
   CallInst *CreateMemCpy(Value *Dst, MaybeAlign DstAlign, Value *Src,
                          MaybeAlign SrcAlign, uint64_t Size,
-                         bool isVolatile = false,
-                         const AAMDNodes &AAInfo = AAMDNodes()) {
+                         bool isVolatile = false, MDNode *TBAATag = nullptr,
+                         MDNode *TBAAStructTag = nullptr,
+                         MDNode *ScopeTag = nullptr,
+                         MDNode *NoAliasTag = nullptr) {
     return CreateMemCpy(Dst, DstAlign, Src, SrcAlign, getInt64(Size),
-                        isVolatile, AAInfo);
+                        isVolatile, TBAATag, TBAAStructTag, ScopeTag,
+                        NoAliasTag);
   }
 
-  CallInst *CreateMemTransferInst(Intrinsic::ID IntrID, Value *Dst,
-                                  MaybeAlign DstAlign, Value *Src,
-                                  MaybeAlign SrcAlign, Value *Size,
-                                  bool isVolatile = false,
-                                  const AAMDNodes &AAInfo = AAMDNodes());
+  CallInst *CreateMemTransferInst(
+      Intrinsic::ID IntrID, Value *Dst, MaybeAlign DstAlign, Value *Src,
+      MaybeAlign SrcAlign, Value *Size, bool isVolatile = false,
+      MDNode *TBAATag = nullptr, MDNode *TBAAStructTag = nullptr,
+      MDNode *ScopeTag = nullptr, MDNode *NoAliasTag = nullptr);
 
   CallInst *CreateMemCpy(Value *Dst, MaybeAlign DstAlign, Value *Src,
                          MaybeAlign SrcAlign, Value *Size,
-                         bool isVolatile = false,
-                         const AAMDNodes &AAInfo = AAMDNodes()) {
+                         bool isVolatile = false, MDNode *TBAATag = nullptr,
+                         MDNode *TBAAStructTag = nullptr,
+                         MDNode *ScopeTag = nullptr,
+                         MDNode *NoAliasTag = nullptr) {
     return CreateMemTransferInst(Intrinsic::memcpy, Dst, DstAlign, Src,
-                                 SrcAlign, Size, isVolatile, AAInfo);
+                                 SrcAlign, Size, isVolatile, TBAATag,
+                                 TBAAStructTag, ScopeTag, NoAliasTag);
   }
 
-  CallInst *CreateMemCpyInline(Value *Dst, MaybeAlign DstAlign, Value *Src,
-                               MaybeAlign SrcAlign, Value *Size,
-                               bool isVolatile = false,
-                               const AAMDNodes &AAInfo = AAMDNodes()) {
+  CallInst *
+  CreateMemCpyInline(Value *Dst, MaybeAlign DstAlign, Value *Src,
+                     MaybeAlign SrcAlign, Value *Size, bool isVolatile = false,
+                     MDNode *TBAATag = nullptr, MDNode *TBAAStructTag = nullptr,
+                     MDNode *ScopeTag = nullptr, MDNode *NoAliasTag = nullptr) {
     return CreateMemTransferInst(Intrinsic::memcpy_inline, Dst, DstAlign, Src,
-                                 SrcAlign, Size, isVolatile, AAInfo);
+                                 SrcAlign, Size, isVolatile, TBAATag,
+                                 TBAAStructTag, ScopeTag, NoAliasTag);
   }
 
   /// Create and insert an element unordered-atomic memcpy between the
   /// specified pointers.
   ///
-  /// DstAlign/SrcAlign are the alignments of the Dst/Src pointers,
-  /// respectively.
+  /// DstAlign/SrcAlign are the alignments of the Dst/Src pointers, respectively.
   ///
-  /// If the pointers aren't i8*, they will be converted.  If alias metadata is
-  /// specified, it will be added to the instruction.
+  /// If the pointers aren't i8*, they will be converted.  If a TBAA tag is
+  /// specified, it will be added to the instruction. Likewise with alias.scope
+  /// and noalias tags.
   CallInst *CreateElementUnorderedAtomicMemCpy(
       Value *Dst, Align DstAlign, Value *Src, Align SrcAlign, Value *Size,
-      uint32_t ElementSize, const AAMDNodes &AAInfo = AAMDNodes());
+      uint32_t ElementSize, MDNode *TBAATag = nullptr,
+      MDNode *TBAAStructTag = nullptr, MDNode *ScopeTag = nullptr,
+      MDNode *NoAliasTag = nullptr);
 
   CallInst *CreateMemMove(Value *Dst, MaybeAlign DstAlign, Value *Src,
                           MaybeAlign SrcAlign, uint64_t Size,
-                          bool isVolatile = false,
-                          const AAMDNodes &AAInfo = AAMDNodes()) {
+                          bool isVolatile = false, MDNode *TBAATag = nullptr,
+                          MDNode *ScopeTag = nullptr,
+                          MDNode *NoAliasTag = nullptr) {
     return CreateMemMove(Dst, DstAlign, Src, SrcAlign, getInt64(Size),
-                         isVolatile, AAInfo);
+                         isVolatile, TBAATag, ScopeTag, NoAliasTag);
   }
 
   CallInst *CreateMemMove(Value *Dst, MaybeAlign DstAlign, Value *Src,
                           MaybeAlign SrcAlign, Value *Size,
-                          bool isVolatile = false,
-                          const AAMDNodes &AAInfo = AAMDNodes()) {
+                          bool isVolatile = false, MDNode *TBAATag = nullptr,
+                          MDNode *ScopeTag = nullptr,
+                          MDNode *NoAliasTag = nullptr) {
     return CreateMemTransferInst(Intrinsic::memmove, Dst, DstAlign, Src,
-                                 SrcAlign, Size, isVolatile, AAInfo);
+                                 SrcAlign, Size, isVolatile, TBAATag,
+                                 /*TBAAStructTag=*/nullptr, ScopeTag,
+                                 NoAliasTag);
   }
 
   /// \brief Create and insert an element unordered-atomic memmove between the
@@ -726,11 +752,14 @@ public:
   /// DstAlign/SrcAlign are the alignments of the Dst/Src pointers,
   /// respectively.
   ///
-  /// If the pointers aren't i8*, they will be converted.  If alias metadata is
-  /// specified, it will be added to the instruction.
+  /// If the pointers aren't i8*, they will be converted.  If a TBAA tag is
+  /// specified, it will be added to the instruction. Likewise with alias.scope
+  /// and noalias tags.
   CallInst *CreateElementUnorderedAtomicMemMove(
       Value *Dst, Align DstAlign, Value *Src, Align SrcAlign, Value *Size,
-      uint32_t ElementSize, const AAMDNodes &AAInfo = AAMDNodes());
+      uint32_t ElementSize, MDNode *TBAATag = nullptr,
+      MDNode *TBAAStructTag = nullptr, MDNode *ScopeTag = nullptr,
+      MDNode *NoAliasTag = nullptr);
 
 private:
   CallInst *getReductionIntrinsic(Intrinsic::ID ID, Value *Src);

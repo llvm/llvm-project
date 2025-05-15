@@ -656,12 +656,6 @@ public:
   /// Parse a '+' token if present.
   virtual ParseResult parseOptionalPlus() = 0;
 
-  /// Parse a '/' token.
-  virtual ParseResult parseSlash() = 0;
-
-  /// Parse a '/' token if present.
-  virtual ParseResult parseOptionalSlash() = 0;
-
   /// Parse a '-' token.
   virtual ParseResult parseMinus() = 0;
 

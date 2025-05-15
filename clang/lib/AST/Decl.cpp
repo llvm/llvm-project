@@ -4325,7 +4325,8 @@ DependentFunctionTemplateSpecializationInfo::
         const ASTTemplateArgumentListInfo *TemplateArgsWritten)
     : NumCandidates(Candidates.size()),
       TemplateArgumentsAsWritten(TemplateArgsWritten) {
-  std::transform(Candidates.begin(), Candidates.end(), getTrailingObjects(),
+  std::transform(Candidates.begin(), Candidates.end(),
+                 getTrailingObjects<FunctionTemplateDecl *>(),
                  [](NamedDecl *ND) {
                    return cast<FunctionTemplateDecl>(ND->getUnderlyingDecl());
                  });
@@ -5379,7 +5380,7 @@ PragmaCommentDecl *PragmaCommentDecl::Create(const ASTContext &C,
   PragmaCommentDecl *PCD =
       new (C, DC, additionalSizeToAlloc<char>(Arg.size() + 1))
           PragmaCommentDecl(DC, CommentLoc, CommentKind);
-  memcpy(PCD->getTrailingObjects(), Arg.data(), Arg.size());
+  memcpy(PCD->getTrailingObjects<char>(), Arg.data(), Arg.size());
   PCD->getTrailingObjects<char>()[Arg.size()] = '\0';
   return PCD;
 }
@@ -5401,10 +5402,11 @@ PragmaDetectMismatchDecl::Create(const ASTContext &C, TranslationUnitDecl *DC,
   PragmaDetectMismatchDecl *PDMD =
       new (C, DC, additionalSizeToAlloc<char>(ValueStart + Value.size() + 1))
           PragmaDetectMismatchDecl(DC, Loc, ValueStart);
-  memcpy(PDMD->getTrailingObjects(), Name.data(), Name.size());
-  PDMD->getTrailingObjects()[Name.size()] = '\0';
-  memcpy(PDMD->getTrailingObjects() + ValueStart, Value.data(), Value.size());
-  PDMD->getTrailingObjects()[ValueStart + Value.size()] = '\0';
+  memcpy(PDMD->getTrailingObjects<char>(), Name.data(), Name.size());
+  PDMD->getTrailingObjects<char>()[Name.size()] = '\0';
+  memcpy(PDMD->getTrailingObjects<char>() + ValueStart, Value.data(),
+         Value.size());
+  PDMD->getTrailingObjects<char>()[ValueStart + Value.size()] = '\0';
   return PDMD;
 }
 
@@ -5898,7 +5900,7 @@ ImportDecl::ImportDecl(DeclContext *DC, SourceLocation StartLoc,
     : Decl(Import, DC, StartLoc), ImportedModule(Imported),
       NextLocalImportAndComplete(nullptr, true) {
   assert(getNumModuleIdentifiers(Imported) == IdentifierLocs.size());
-  auto *StoredLocs = getTrailingObjects();
+  auto *StoredLocs = getTrailingObjects<SourceLocation>();
   llvm::uninitialized_copy(IdentifierLocs, StoredLocs);
 }
 
@@ -5906,7 +5908,7 @@ ImportDecl::ImportDecl(DeclContext *DC, SourceLocation StartLoc,
                        Module *Imported, SourceLocation EndLoc)
     : Decl(Import, DC, StartLoc), ImportedModule(Imported),
       NextLocalImportAndComplete(nullptr, false) {
-  *getTrailingObjects() = EndLoc;
+  *getTrailingObjects<SourceLocation>() = EndLoc;
 }
 
 ImportDecl *ImportDecl::Create(ASTContext &C, DeclContext *DC,
@@ -5937,12 +5939,14 @@ ArrayRef<SourceLocation> ImportDecl::getIdentifierLocs() const {
   if (!isImportComplete())
     return {};
 
-  return getTrailingObjects(getNumModuleIdentifiers(getImportedModule()));
+  const auto *StoredLocs = getTrailingObjects<SourceLocation>();
+  return llvm::ArrayRef(StoredLocs,
+                        getNumModuleIdentifiers(getImportedModule()));
 }
 
 SourceRange ImportDecl::getSourceRange() const {
   if (!isImportComplete())
-    return SourceRange(getLocation(), *getTrailingObjects());
+    return SourceRange(getLocation(), *getTrailingObjects<SourceLocation>());
 
   return SourceRange(getLocation(), getIdentifierLocs().back());
 }

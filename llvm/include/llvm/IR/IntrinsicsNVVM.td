@@ -357,33 +357,38 @@ class MMA_SIGNATURE<WMMA_REGS A, WMMA_REGS B, WMMA_REGS C, WMMA_REGS D> {
      !ne(A.ptx_elt_type, B.ptx_elt_type): [A, B],
      true: [A]
      );
-   string ret = !foldl("", id_frags, a, b, !strconcat(a, "_", b.ptx_elt_type));
+   string ret = !foldl("", id_frags, a, b, !strconcat(a, ".", b.ptx_elt_type));
 }
 
 class WMMA_NAME<string ALayout, string BLayout, int Satfinite, string Rnd, string b1op,
                 WMMA_REGS A, WMMA_REGS B, WMMA_REGS C, WMMA_REGS D> {
   string signature = MMA_SIGNATURE<A, B, C, D>.ret;
-  string record = "int_nvvm_wmma_"
-                  # A.geom
-                  # "_mma"
-                  # !subst(".", "_", b1op)
-                  # "_" # ALayout
-                  # "_" # BLayout
-                  # !if(!ne(Rnd, ""), !strconcat("_", Rnd), "")
-                  # signature
-                  # !if(Satfinite, "_satfinite", "");
+  string llvm = "llvm.nvvm.wmma."
+                # A.geom
+                # ".mma"
+                # b1op
+                # "." # ALayout
+                # "." # BLayout
+                # !if(!ne(Rnd, ""), !strconcat(".", Rnd), "")
+                # signature
+                # !if(Satfinite, ".satfinite", "");
+
+  string record = !subst(".", "_",
+                  !subst("llvm.", "int_", llvm));
 }
 
 class MMA_NAME<string ALayout, string BLayout, int Satfinite, string b1op,
                WMMA_REGS A, WMMA_REGS B, WMMA_REGS C, WMMA_REGS D> {
   string signature = MMA_SIGNATURE<A, B, C, D>.ret;
-  string record = "int_nvvm_mma"
-                  # !subst(".", "_", b1op)
-                  # "_" # A.geom
-                  # "_" # ALayout
-                  # "_" # BLayout
-                  # !if(Satfinite, "_satfinite", "")
-                  # signature;
+  string llvm = "llvm.nvvm.mma"
+                # b1op
+                # "." # A.geom
+                # "." # ALayout
+                # "." # BLayout
+                # !if(Satfinite, ".satfinite", "")
+                # signature;
+  string record = !subst(".", "_",
+                  !subst("llvm.", "int_", llvm));
 }
 
 class LDMATRIX_NAME<WMMA_REGS Frag, int Trans> {
@@ -691,6 +696,101 @@ class SHFL_INFO<bit sync, string mode, string type, bit return_pred> {
     [OpType, llvm_i32_ty, llvm_i32_ty]);
 }
 
+class CP_ASYNC_BULK_TENSOR_G2S_INTR<int dim, string mode> {
+  string Name = "int_nvvm_cp_async_bulk_tensor_g2s_" # mode # "_" # dim # "d";
+
+  bit IsIm2Col = !if(!eq(mode, "im2col"), 1, 0);
+  int NumIm2ColOffsets = !if(IsIm2Col, !add(dim, -2), 0);
+  list<LLVMType> Im2ColOffsetsTy = !listsplat(llvm_i16_ty, NumIm2ColOffsets);
+  list<LLVMType> TensorDimsTy = !listsplat(llvm_i32_ty, dim);
+  list<LLVMType> ArgsTy = !listconcat(
+                          [llvm_shared_cluster_ptr_ty,  // dst_shared_cluster_ptr
+                           llvm_shared_ptr_ty,          // mbarrier_smem_ptr
+                           llvm_ptr_ty],                // tensormap_ptr
+                           TensorDimsTy,                // actual tensor dims
+                           Im2ColOffsetsTy,             // im2col offsets
+                          [llvm_i16_ty,                 // cta_mask
+                           llvm_i64_ty,                 // cache_hint
+                           llvm_i1_ty,                  // Flag for cta_mask
+                           llvm_i1_ty]                  // Flag for cache_hint
+                          );
+
+  int TempFlagsStartIdx = !add(dim, 5);
+  int FlagsStartIdx = !add(TempFlagsStartIdx, NumIm2ColOffsets);
+  list<IntrinsicProperty> IntrProp = [IntrConvergent,
+        WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>,
+        NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>, NoCapture<ArgIndex<2>>,
+        ImmArg<ArgIndex<FlagsStartIdx>>,
+        ImmArg<ArgIndex<!add(FlagsStartIdx, 1)>>];
+}
+
+class CP_ASYNC_BULK_TENSOR_S2G_INTR<int dim, string mode> {
+  string Name = "int_nvvm_cp_async_bulk_tensor_s2g_" # mode # "_" # dim # "d";
+
+  list<LLVMType> TensorDimsTy = !listsplat(llvm_i32_ty, dim);
+  list<LLVMType> ArgsTy = !listconcat(
+                          [llvm_shared_ptr_ty,  // src_smem_ptr
+                           llvm_ptr_ty],        // tensormap_ptr
+                           TensorDimsTy,        // actual tensor dims
+                          [llvm_i64_ty,         // cache_hint
+                           llvm_i1_ty]          // Flag for cache_hint
+                          );
+  int FlagsStartIdx = !add(dim, 3);
+  list<IntrinsicProperty> IntrProp = [IntrConvergent,
+        ReadOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>,
+        NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>,
+        ImmArg<ArgIndex<FlagsStartIdx>>];
+}
+
+class CP_ASYNC_BULK_TENSOR_PREFETCH_INTR<int dim, string mode> {
+  string Name = "int_nvvm_cp_async_bulk_tensor_prefetch_" # mode # "_" # dim # "d";
+
+  bit IsIm2Col = !if(!eq(mode, "im2col"), 1, 0);
+  int NumIm2ColOffsets = !if(IsIm2Col, !add(dim, -2), 0);
+  list<LLVMType> Im2ColOffsetsTy = !listsplat(llvm_i16_ty, NumIm2ColOffsets);
+  list<LLVMType> TensorDimsTy = !listsplat(llvm_i32_ty, dim);
+  list<LLVMType> ArgsTy = !listconcat(
+                          [llvm_ptr_ty],     // tensormap_ptr
+                           TensorDimsTy,     // actual tensor dims
+                           Im2ColOffsetsTy,  // im2col offsets
+                          [llvm_i64_ty,      // cache_hint
+                           llvm_i1_ty]       // Flag for cache_hint
+                          );
+
+  int TempFlagsStartIdx = !add(dim, 2);
+  int FlagsStartIdx = !add(TempFlagsStartIdx, NumIm2ColOffsets);
+  list<IntrinsicProperty> IntrProp = [IntrConvergent,
+        ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>,
+        ImmArg<ArgIndex<FlagsStartIdx>>];
+}
+
+class CP_ASYNC_BULK_TENSOR_REDUCE_INTR<int dim, string mode, string op> {
+  string Suffix = op # "_" # mode # "_" # dim # "d";
+  string Name = "int_nvvm_cp_async_bulk_tensor_reduce_" # Suffix;
+
+  list<LLVMType> TensorDimsTy = !listsplat(llvm_i32_ty, dim);
+  list<LLVMType> ArgsTy = !listconcat(
+                          [llvm_shared_ptr_ty,  // src_smem_ptr
+                           llvm_ptr_ty],        // tensormap_ptr
+                           TensorDimsTy,        // actual tensor dims
+                          [llvm_i64_ty,         // cache_hint
+                           llvm_i1_ty]          // Flag for cache_hint
+                          );
+  int FlagsStartIdx = !add(dim, 3);
+  list<IntrinsicProperty> IntrProp = [IntrConvergent,
+        ReadOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>,
+        NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>,
+        ImmArg<ArgIndex<FlagsStartIdx>>];
+}
+
+class NVVM_TCGEN05_LDST_NAME<string Op, string Shape, int Num> {
+  string intr =   "llvm.nvvm.tcgen05." # Op
+                  # "." # Shape
+                  # "." # "x" # !shl(1, Num);
+
+  string record = !subst(".", "_",
+                  !subst("llvm.", "int_", intr));
+}
 class NVVM_TCGEN05_LDST_ACCESS_SIZE<string Shape, int Num> {
   int shift = !cond(!eq(Shape, "16x128b"): 1,
                     !eq(Shape, "16x256b"): 2,
@@ -710,28 +810,6 @@ class NVVM_TCGEN05_LDST_ACCESS_SIZE<string Shape, int Num> {
                         true : llvm_void_ty);
 }
 
-class TexVector<string name, list<LLVMType> types> {
-  string Name = name;
-  list<LLVMType> Types = types;
-}
-
-def TV_I8 : TexVector<"i8", [llvm_i16_ty]>;
-def TV_I16 : TexVector<"i16", [llvm_i16_ty]>;
-def TV_I32 : TexVector<"i32", [llvm_i32_ty]>;
-def TV_I64 : TexVector<"i64", [llvm_i64_ty]>;
-def TV_V2I8 : TexVector<"v2i8", !listsplat(llvm_i16_ty, 2)>;
-def TV_V2I16 : TexVector<"v2i16", !listsplat(llvm_i16_ty, 2)>;
-def TV_V2I32 : TexVector<"v2i32", !listsplat(llvm_i32_ty, 2)>;
-def TV_V2I64 : TexVector<"v2i64", !listsplat(llvm_i64_ty, 2)>;
-def TV_V4I8 : TexVector<"v4i8", !listsplat(llvm_i16_ty, 4)>;
-def TV_V4I16 : TexVector<"v4i16", !listsplat(llvm_i16_ty, 4)>;
-def TV_V4I32 : TexVector<"v4i32", !listsplat(llvm_i32_ty, 4)>;
-
-
-def V4F32 : TexVector<"v4f32", !listsplat(llvm_float_ty, 4)>;
-def V4S32 : TexVector<"v4s32", !listsplat(llvm_i32_ty, 4)>;
-def V4U32 : TexVector<"v4u32", !listsplat(llvm_i32_ty, 4)>;
-
 class NVVMBuiltin :
   ClangBuiltin<!strconcat("__", !substr(NAME, !size("int_")))> {
     assert !eq(!substr(NAME, 0, !size("int_nvvm_")), "int_nvvm_"),
@@ -750,116 +828,131 @@ let TargetPrefix = "nvvm" in {
 //
 // Min Max
 //
-  let IntrProperties = [IntrNoMem, IntrSpeculatable, Commutative] in {
-    foreach operation = ["min", "max"] in {
-      def int_nvvm_f # operation # _d : NVVMBuiltin,
-        DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty, llvm_double_ty]>;
 
-      foreach variant = ["", "_xorsign_abs"] in {
-        foreach nan = ["", "_nan"] in {
-          foreach ftz = ["", "_ftz"] in {
-            def int_nvvm_f # operation # ftz # nan # variant # _f : NVVMBuiltin,
-              DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty]>;
+  foreach operation = ["min", "max"] in {
+    def int_nvvm_f # operation # _d : NVVMBuiltin,
+      DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty, llvm_double_ty],
+        [IntrNoMem, IntrSpeculatable, Commutative]>;
 
-            def int_nvvm_f # operation # ftz # nan # variant # _f16 :
-              DefaultAttrsIntrinsic<[llvm_half_ty], [llvm_half_ty, llvm_half_ty]>;
+    foreach variant = ["", "_xorsign_abs"] in {
+      foreach nan = ["", "_nan"] in {
+        foreach ftz = ["", "_ftz"] in {
+          def int_nvvm_f # operation # ftz # nan # variant # _f : NVVMBuiltin,
+            DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty],
+              [IntrNoMem, IntrSpeculatable, Commutative]>;
 
-            def int_nvvm_f # operation # ftz # nan # variant # _f16x2 :
-              DefaultAttrsIntrinsic<[llvm_v2f16_ty], [llvm_v2f16_ty, llvm_v2f16_ty]>;
+          def int_nvvm_f # operation # ftz # nan # variant # _f16 :
+            DefaultAttrsIntrinsic<[llvm_half_ty], [llvm_half_ty, llvm_half_ty],
+              [IntrNoMem, IntrSpeculatable, Commutative]>;
 
-            def int_nvvm_f # operation # ftz # nan # variant # _bf16 : NVVMBuiltin,
-              DefaultAttrsIntrinsic<[llvm_bfloat_ty], [llvm_bfloat_ty, llvm_bfloat_ty]>;
+          def int_nvvm_f # operation # ftz # nan # variant # _f16x2 :
+            DefaultAttrsIntrinsic<[llvm_v2f16_ty], [llvm_v2f16_ty, llvm_v2f16_ty],
+              [IntrNoMem, IntrSpeculatable, Commutative]>;
 
-            def int_nvvm_f # operation # ftz # nan # variant # _bf16x2 : NVVMBuiltin,
-              DefaultAttrsIntrinsic<[llvm_v2bf16_ty], [llvm_v2bf16_ty, llvm_v2bf16_ty]>;
-          } // ftz
-        } // nan
-      } // variant
-    } // operation
-  }
+          def int_nvvm_f # operation # ftz # nan # variant # _bf16 : NVVMBuiltin,
+            DefaultAttrsIntrinsic<[llvm_bfloat_ty], [llvm_bfloat_ty, llvm_bfloat_ty],
+              [IntrNoMem, IntrSpeculatable, Commutative]>;
+
+          def int_nvvm_f # operation # ftz # nan # variant # _bf16x2 : NVVMBuiltin,
+            DefaultAttrsIntrinsic<[llvm_v2bf16_ty], [llvm_v2bf16_ty, llvm_v2bf16_ty],
+              [IntrNoMem, IntrSpeculatable, Commutative]>;
+        } // ftz
+      } // nan
+    } // variant
+  } // operation
 
 //
 // Multiplication
 //
-  let IntrProperties = [IntrNoMem, IntrSpeculatable, Commutative] in {
-    foreach sign = ["", "u"] in {
-      def int_nvvm_mulhi_ # sign # s : NVVMBuiltin,
-          DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_i16_ty, llvm_i16_ty]>;
 
-      def int_nvvm_mulhi_ # sign # i : NVVMBuiltin,
-          DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty]>;
+  foreach sign = ["", "u"] in {
+    def int_nvvm_mulhi_ # sign # s : NVVMBuiltin,
+        DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_i16_ty, llvm_i16_ty],
+          [IntrNoMem, IntrSpeculatable, Commutative]>;
 
-      def int_nvvm_mulhi_ # sign # ll : NVVMBuiltin,
-          DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_i64_ty, llvm_i64_ty]>;
+    def int_nvvm_mulhi_ # sign # i : NVVMBuiltin,
+        DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
+          [IntrNoMem, IntrSpeculatable, Commutative]>;
 
-      def int_nvvm_mul24_ # sign # i : NVVMBuiltin,
-        DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty]>;
-    }
+    def int_nvvm_mulhi_ # sign # ll : NVVMBuiltin,
+        DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_i64_ty, llvm_i64_ty],
+          [IntrNoMem, IntrSpeculatable, Commutative]>;
 
-    foreach rnd = ["rn", "rz", "rm", "rp"] in {
-      foreach ftz = ["", "_ftz"] in
-        def int_nvvm_mul_ # rnd # ftz # _f : NVVMBuiltin,
-            DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty]>;
+    def int_nvvm_mul24_ # sign # i : NVVMBuiltin,
+      DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
+        [IntrNoMem, IntrSpeculatable, Commutative]>;
+  }
 
-      def int_nvvm_mul_ # rnd # _d : NVVMBuiltin,
-          DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty, llvm_double_ty]>;
-    }
+  foreach rnd = ["rn", "rz", "rm", "rp"] in {
+    foreach ftz = ["", "_ftz"] in
+      def int_nvvm_mul_ # rnd # ftz # _f : NVVMBuiltin,
+          DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty],
+            [IntrNoMem, IntrSpeculatable, Commutative]>;
+
+    def int_nvvm_mul_ # rnd # _d : NVVMBuiltin,
+        DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty, llvm_double_ty],
+          [IntrNoMem, IntrSpeculatable, Commutative]>;
   }
 
 //
 // Div
 //
-  let IntrProperties = [IntrNoMem] in {
-    foreach ftz = ["", "_ftz"] in {
-      def int_nvvm_div_approx # ftz # _f : NVVMBuiltin,
-          DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty]>;
 
-      def int_nvvm_div_full # ftz : NVVMBuiltin,
-          DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty]>;
-    }
+  foreach ftz = ["", "_ftz"] in {
+    def int_nvvm_div_approx # ftz # _f : NVVMBuiltin,
+        DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty],
+          [IntrNoMem]>;
 
-    foreach rnd = ["rn", "rz", "rm", "rp"] in {
-      foreach ftz = ["", "_ftz"] in
-        def int_nvvm_div_ # rnd # ftz # _f : NVVMBuiltin,
-            DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty]>;
+    def int_nvvm_div_full # ftz : NVVMBuiltin,
+        DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty],
+          [IntrNoMem]>;
+  }
 
-      def int_nvvm_div_ # rnd # _d : NVVMBuiltin,
-          DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty, llvm_double_ty]>;
-    }
+  foreach rnd = ["rn", "rz", "rm", "rp"] in {
+    foreach ftz = ["", "_ftz"] in
+      def int_nvvm_div_ # rnd # ftz # _f : NVVMBuiltin,
+          DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty],
+            [IntrNoMem]>;
+
+    def int_nvvm_div_ # rnd # _d : NVVMBuiltin,
+        DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty, llvm_double_ty],
+          [IntrNoMem]>;
   }
 
 //
 // Sad
 //
-  let IntrProperties = [IntrNoMem, Commutative, IntrSpeculatable] in {
-    foreach sign = ["", "u"] in {
-      def int_nvvm_sad_ # sign # s : NVVMBuiltin,
-          DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty]>;
 
-      def int_nvvm_sad_ # sign # i : NVVMBuiltin,
-          DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty]>;
+  foreach sign = ["", "u"] in {
+    def int_nvvm_sad_ # sign # s : NVVMBuiltin,
+        DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty],
+          [IntrNoMem, Commutative, IntrSpeculatable]>;
 
-      def int_nvvm_sad_ # sign # ll : NVVMBuiltin,
-          DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_i64_ty, llvm_i64_ty, llvm_i64_ty]>;
-    }
+    def int_nvvm_sad_ # sign # i : NVVMBuiltin,
+        DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+          [IntrNoMem, Commutative, IntrSpeculatable]>;
+
+    def int_nvvm_sad_ # sign # ll : NVVMBuiltin,
+        DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_i64_ty, llvm_i64_ty, llvm_i64_ty],
+          [IntrNoMem, Commutative, IntrSpeculatable]>;
   }
 
 //
 // Floor  Ceil
 //
-  let IntrProperties = [IntrNoMem, IntrSpeculatable] in {
-    foreach op = ["floor", "ceil"] in {
-      foreach ftz = ["", "_ftz"] in
-        def int_nvvm_ # op # ftz # _f : NVVMBuiltin,
-            DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty]>;
-      def int_nvvm_ # op # _d : NVVMBuiltin,
-          DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty]>;
-    }
+
+  foreach op = ["floor", "ceil"] in {
+    foreach ftz = ["", "_ftz"] in
+      def int_nvvm_ # op # ftz # _f : NVVMBuiltin,
+          DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
+    def int_nvvm_ # op # _d : NVVMBuiltin,
+        DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
   }
 
 //
 // Abs
 //
+
   foreach ftz = ["", "_ftz"] in
     def int_nvvm_fabs # ftz :
       DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>],
@@ -868,6 +961,7 @@ let TargetPrefix = "nvvm" in {
 //
 // Abs, Neg bf16, bf16x2
 //
+
   def int_nvvm_neg_bf16 : NVVMBuiltin,
     DefaultAttrsIntrinsic<[llvm_bfloat_ty], [llvm_bfloat_ty], [IntrNoMem]>;
   def int_nvvm_neg_bf16x2 : NVVMBuiltin,
@@ -876,65 +970,62 @@ let TargetPrefix = "nvvm" in {
 //
 // Round
 //
-  let IntrProperties = [IntrNoMem, IntrSpeculatable] in {
-    foreach ftz = ["", "_ftz"] in
-      def int_nvvm_round # ftz # _f : NVVMBuiltin,
-          DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty]>;
 
-    def int_nvvm_round_d : NVVMBuiltin,
-        DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty]>;
-  }
+  foreach ftz = ["", "_ftz"] in
+    def int_nvvm_round # ftz # _f : NVVMBuiltin,
+      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
+
+  def int_nvvm_round_d : NVVMBuiltin,
+      DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
 
 //
 // Trunc
 //
-  let IntrProperties = [IntrNoMem, IntrSpeculatable] in {
-    foreach ftz = ["", "_ftz"] in
-      def int_nvvm_trunc # ftz # _f : NVVMBuiltin,
-          DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty]>;
 
-    def int_nvvm_trunc_d : NVVMBuiltin,
-        DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty]>;
-  }
+  foreach ftz = ["", "_ftz"] in
+    def int_nvvm_trunc # ftz # _f : NVVMBuiltin,
+        DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
+
+  def int_nvvm_trunc_d : NVVMBuiltin,
+      DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
 
 //
 // Saturate
 //
-  let IntrProperties = [IntrNoMem, IntrSpeculatable] in {
-    foreach ftz = ["", "_ftz"] in
-      def int_nvvm_saturate # ftz # _f : NVVMBuiltin,
-          DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty]>;
 
-    def int_nvvm_saturate_d : NVVMBuiltin,
-        DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty]>;
-  }
+  foreach ftz = ["", "_ftz"] in
+    def int_nvvm_saturate # ftz # _f : NVVMBuiltin,
+        DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
+
+  def int_nvvm_saturate_d : NVVMBuiltin,
+      DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
 
 //
 // Exp2  Log2
 //
-  let IntrProperties = [IntrNoMem] in {
-    foreach ftz = ["", "_ftz"] in
-      def int_nvvm_ex2_approx # ftz # _f : NVVMBuiltin,
-          DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty]>;
 
-    def int_nvvm_ex2_approx_d : NVVMBuiltin,
-        DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty]>;
-    def int_nvvm_ex2_approx_f16 :
-        DefaultAttrsIntrinsic<[llvm_half_ty], [llvm_half_ty]>;
-    def int_nvvm_ex2_approx_f16x2 :
-        DefaultAttrsIntrinsic<[llvm_v2f16_ty], [llvm_v2f16_ty]>;
+  foreach ftz = ["", "_ftz"] in
+    def int_nvvm_ex2_approx # ftz # _f : NVVMBuiltin,
+        DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
 
-    foreach ftz = ["", "_ftz"] in
-      def int_nvvm_lg2_approx # ftz # _f : NVVMBuiltin,
-          DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty]>;
+  def int_nvvm_ex2_approx_d : NVVMBuiltin,
+      DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem]>;
+  def int_nvvm_ex2_approx_f16 :
+      DefaultAttrsIntrinsic<[llvm_half_ty], [llvm_half_ty], [IntrNoMem]>;
+  def int_nvvm_ex2_approx_f16x2 :
+      DefaultAttrsIntrinsic<[llvm_v2f16_ty], [llvm_v2f16_ty], [IntrNoMem]>;
 
-    def int_nvvm_lg2_approx_d : NVVMBuiltin,
-        DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty]>;
-  }
+  foreach ftz = ["", "_ftz"] in
+    def int_nvvm_lg2_approx # ftz # _f : NVVMBuiltin,
+        DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
+
+  def int_nvvm_lg2_approx_d : NVVMBuiltin,
+      DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem]>;
 
 //
 // Sin  Cos
 //
+
   foreach op = ["sin", "cos"] in
     foreach ftz = ["", "_ftz"] in
       def int_nvvm_ # op # _approx # ftz # _f : NVVMBuiltin,
@@ -943,103 +1034,105 @@ let TargetPrefix = "nvvm" in {
 //
 // Fma
 //
-  let IntrProperties = [IntrNoMem, IntrSpeculatable] in {
-    foreach variant = ["", "_sat", "_relu"] in {
-      foreach ftz = ["", "_ftz"] in {
-        def int_nvvm_fma_rn # ftz # variant # _f16 :
-          DefaultAttrsIntrinsic<[llvm_half_ty],
-            [llvm_half_ty, llvm_half_ty, llvm_half_ty]>;
 
-        def int_nvvm_fma_rn # ftz # variant # _f16x2 :
-          DefaultAttrsIntrinsic<[llvm_v2f16_ty],
-            [llvm_v2f16_ty, llvm_v2f16_ty, llvm_v2f16_ty]>;
+  foreach variant = ["", "_sat", "_relu"] in {
+    foreach ftz = ["", "_ftz"] in {
+      def int_nvvm_fma_rn # ftz # variant # _f16 :
+        DefaultAttrsIntrinsic<[llvm_half_ty],
+          [llvm_half_ty, llvm_half_ty, llvm_half_ty],
+          [IntrNoMem, IntrSpeculatable]>;
 
-        def int_nvvm_fma_rn # ftz # variant # _bf16 : NVVMBuiltin,
-          DefaultAttrsIntrinsic<[llvm_bfloat_ty],
-            [llvm_bfloat_ty, llvm_bfloat_ty, llvm_bfloat_ty]>;
+      def int_nvvm_fma_rn # ftz # variant # _f16x2 :
+        DefaultAttrsIntrinsic<[llvm_v2f16_ty],
+          [llvm_v2f16_ty, llvm_v2f16_ty, llvm_v2f16_ty],
+          [IntrNoMem, IntrSpeculatable]>;
 
-        def int_nvvm_fma_rn # ftz # variant # _bf16x2 : NVVMBuiltin,
-          DefaultAttrsIntrinsic<[llvm_v2bf16_ty],
-            [llvm_v2bf16_ty, llvm_v2bf16_ty, llvm_v2bf16_ty]>;
-      } // ftz
-    } // variant
+      def int_nvvm_fma_rn # ftz # variant # _bf16 : NVVMBuiltin,
+        DefaultAttrsIntrinsic<[llvm_bfloat_ty],
+          [llvm_bfloat_ty, llvm_bfloat_ty, llvm_bfloat_ty],
+          [IntrNoMem, IntrSpeculatable]>;
 
-    foreach rnd = ["rn", "rz", "rm", "rp"] in {
-      foreach ftz = ["", "_ftz"] in
-        def int_nvvm_fma_ # rnd # ftz # _f : NVVMBuiltin,
-          DefaultAttrsIntrinsic<[llvm_float_ty],
-            [llvm_float_ty, llvm_float_ty, llvm_float_ty]>;
+      def int_nvvm_fma_rn # ftz # variant # _bf16x2 : NVVMBuiltin,
+        DefaultAttrsIntrinsic<[llvm_v2bf16_ty],
+          [llvm_v2bf16_ty, llvm_v2bf16_ty, llvm_v2bf16_ty],
+          [IntrNoMem, IntrSpeculatable]>;
+    } // ftz
+  } // variant
 
-      def int_nvvm_fma_ # rnd # _d : NVVMBuiltin,
-        DefaultAttrsIntrinsic<[llvm_double_ty],
-          [llvm_double_ty, llvm_double_ty, llvm_double_ty]>;
-    }
+  foreach rnd = ["rn", "rz", "rm", "rp"] in {
+    foreach ftz = ["", "_ftz"] in
+      def int_nvvm_fma_ # rnd # ftz # _f : NVVMBuiltin,
+        DefaultAttrsIntrinsic<[llvm_float_ty],
+          [llvm_float_ty, llvm_float_ty, llvm_float_ty],
+          [IntrNoMem, IntrSpeculatable]>;
+
+    def int_nvvm_fma_ # rnd # _d : NVVMBuiltin,
+      DefaultAttrsIntrinsic<[llvm_double_ty],
+        [llvm_double_ty, llvm_double_ty, llvm_double_ty],
+        [IntrNoMem, IntrSpeculatable]>;
   }
 
 //
 // Rcp
 //
-  let IntrProperties = [IntrNoMem] in {
-    foreach rnd = ["rn", "rz", "rm", "rp"] in {
-      foreach ftz = ["", "_ftz"] in
-        def int_nvvm_rcp_ # rnd # ftz # _f : NVVMBuiltin,
-            DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty]>;
 
-      def int_nvvm_rcp_ # rnd # _d : NVVMBuiltin,
-          DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty]>;
-    }
+  foreach rnd = ["rn", "rz", "rm", "rp"] in {
+    foreach ftz = ["", "_ftz"] in
+      def int_nvvm_rcp_ # rnd # ftz # _f : NVVMBuiltin,
+          DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
 
-    def int_nvvm_rcp_approx_ftz_f : NVVMBuiltin,
-        DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty]>;
-    def int_nvvm_rcp_approx_ftz_d : NVVMBuiltin,
-        DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty]>;
+    def int_nvvm_rcp_ # rnd # _d : NVVMBuiltin,
+        DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem]>;
   }
+
+  def int_nvvm_rcp_approx_ftz_f : NVVMBuiltin,
+      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
+  def int_nvvm_rcp_approx_ftz_d : NVVMBuiltin,
+      DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem]>;
 
 //
 // Sqrt
 //
-  let IntrProperties = [IntrNoMem] in {
-    foreach rnd = ["rn", "rz", "rm", "rp"] in {
-      foreach ftz = ["", "_ftz"] in
-        def int_nvvm_sqrt_ # rnd # ftz # _f : NVVMBuiltin,
-          DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty]>;
-
-      def int_nvvm_sqrt_ # rnd # _d : NVVMBuiltin,
-          DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty]>;
-    }
-
-    def int_nvvm_sqrt_f : NVVMBuiltin,
-        DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty]>;
-
+  foreach rnd = ["rn", "rz", "rm", "rp"] in {
     foreach ftz = ["", "_ftz"] in
-      def int_nvvm_sqrt_approx # ftz # _f : NVVMBuiltin,
-          DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty]>;
+      def int_nvvm_sqrt_ # rnd # ftz # _f : NVVMBuiltin,
+        DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
+
+    def int_nvvm_sqrt_ # rnd # _d : NVVMBuiltin,
+        DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem]>;
   }
+
+  def int_nvvm_sqrt_f : NVVMBuiltin,
+      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
+
+  foreach ftz = ["", "_ftz"] in
+    def int_nvvm_sqrt_approx # ftz # _f : NVVMBuiltin,
+        DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
 
 //
 // Rsqrt
 //
-  let IntrProperties = [IntrNoMem] in {
-    foreach ftz = ["", "_ftz"] in {
-      def int_nvvm_rsqrt_approx # ftz # _f : NVVMBuiltin,
-          DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty]>;
-      def int_nvvm_rsqrt_approx # ftz # _d : NVVMBuiltin,
-          DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty]>;
-    }
+
+  foreach ftz = ["", "_ftz"] in {
+    def int_nvvm_rsqrt_approx # ftz # _f : NVVMBuiltin,
+        DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
+    def int_nvvm_rsqrt_approx # ftz # _d : NVVMBuiltin,
+        DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem]>;
   }
 
 //
 // Add
 //
-  let IntrProperties = [IntrNoMem, IntrSpeculatable, Commutative] in {
-    foreach rnd = ["rn", "rz", "rm", "rp"] in {
-      foreach ftz = ["", "_ftz"] in
-        def int_nvvm_add_ # rnd # ftz # _f : NVVMBuiltin,
-          DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty]>;
+
+  foreach rnd = ["rn", "rz", "rm", "rp"] in {
+    foreach ftz = ["", "_ftz"] in
+      def int_nvvm_add_ # rnd # ftz # _f : NVVMBuiltin,
+          DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty],
+            [IntrNoMem, IntrSpeculatable, Commutative]>;
 
     def int_nvvm_add_ # rnd # _d : NVVMBuiltin,
-        DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty, llvm_double_ty]>;
-    }
+        DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty, llvm_double_ty],
+          [IntrNoMem, IntrSpeculatable, Commutative]>;
   }
 
 //
@@ -1098,134 +1191,135 @@ let TargetPrefix = "nvvm" in {
 //
 // Convert
 //
-  let IntrProperties = [IntrNoMem, IntrSpeculatable] in {
-    def int_nvvm_lohi_i2d : NVVMBuiltin,
-        DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_i32_ty, llvm_i32_ty]>;
 
-    def int_nvvm_d2i_lo : NVVMBuiltin,
-        DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_double_ty]>;
-    def int_nvvm_d2i_hi : NVVMBuiltin,
-        DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_double_ty]>;
+  def int_nvvm_lohi_i2d : NVVMBuiltin,
+      DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_i32_ty, llvm_i32_ty],
+        [IntrNoMem, IntrSpeculatable, Commutative]>;
 
-    foreach rnd = ["rn", "rz", "rm", "rp"] in {
+  def int_nvvm_d2i_lo : NVVMBuiltin,
+      DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
+  def int_nvvm_d2i_hi : NVVMBuiltin,
+      DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
+
+
+  foreach rnd = ["rn", "rz", "rm", "rp"] in {
+    foreach ftz = ["", "_ftz"] in
+      def int_nvvm_d2f_ # rnd # ftz : NVVMBuiltin,
+          DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
+
+    foreach sign = ["", "u"] in {
+
+      def int_nvvm_d2 # sign # i_ # rnd : NVVMBuiltin,
+          DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
+
+      def int_nvvm_ # sign # i2d_ # rnd : NVVMBuiltin,
+        DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_i32_ty], [IntrNoMem, IntrSpeculatable]>;
+
       foreach ftz = ["", "_ftz"] in
-        def int_nvvm_d2f_ # rnd # ftz : NVVMBuiltin,
-            DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_double_ty]>;
+        def int_nvvm_f2 # sign # i_ # rnd # ftz : NVVMBuiltin,
+            DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
 
-      foreach sign = ["", "u"] in {
+      def int_nvvm_ # sign # i2f_ # rnd : NVVMBuiltin,
+          DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_i32_ty], [IntrNoMem, IntrSpeculatable]>;
 
-        def int_nvvm_d2 # sign # i_ # rnd : NVVMBuiltin,
-            DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_double_ty]>;
+      foreach ftz = ["", "_ftz"] in
+        def int_nvvm_f2 # sign # ll_ # rnd # ftz : NVVMBuiltin,
+            DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
 
-        def int_nvvm_ # sign # i2d_ # rnd : NVVMBuiltin,
-          DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_i32_ty]>;
+      def int_nvvm_d2 # sign # ll_ # rnd : NVVMBuiltin,
+        DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
 
-        foreach ftz = ["", "_ftz"] in
-          def int_nvvm_f2 # sign # i_ # rnd # ftz : NVVMBuiltin,
-              DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_float_ty]>;
+      def int_nvvm_ # sign # ll2f_ # rnd : NVVMBuiltin,
+          DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_i64_ty], [IntrNoMem, IntrSpeculatable]>;
 
-        def int_nvvm_ # sign # i2f_ # rnd : NVVMBuiltin,
-            DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_i32_ty]>;
+      def int_nvvm_ # sign # ll2d_ # rnd : NVVMBuiltin,
+          DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_i64_ty], [IntrNoMem, IntrSpeculatable]>;
+    } // sign
+  } // rnd
 
-        foreach ftz = ["", "_ftz"] in
-          def int_nvvm_f2 # sign # ll_ # rnd # ftz : NVVMBuiltin,
-              DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_float_ty]>;
+  foreach ftz = ["", "_ftz"] in {
+    def int_nvvm_f2h_rn # ftz : NVVMBuiltin,
+        DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
 
-        def int_nvvm_d2 # sign # ll_ # rnd : NVVMBuiltin,
-          DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_double_ty]>;
-
-        def int_nvvm_ # sign # ll2f_ # rnd : NVVMBuiltin,
-            DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_i64_ty]>;
-
-        def int_nvvm_ # sign # ll2d_ # rnd : NVVMBuiltin,
-            DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_i64_ty]>;
-
-      } // sign
-    } // rnd
-
-    foreach ftz = ["", "_ftz"] in {
-      def int_nvvm_f2h_rn # ftz : NVVMBuiltin,
-          DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_float_ty]>;
-
-      def int_nvvm_bf2h_rn # ftz : NVVMBuiltin,
-          DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_bfloat_ty]>;
-    }
+    def int_nvvm_bf2h_rn # ftz : NVVMBuiltin,
+        DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_bfloat_ty], [IntrNoMem, IntrSpeculatable]>;
   }
-  let IntrProperties = [IntrNoMem, IntrNoCallback] in {
-    foreach rnd = ["rn", "rz"] in {
-      foreach relu = ["", "_relu"] in {
-        def int_nvvm_ff2bf16x2_ # rnd # relu : NVVMBuiltin,
-            Intrinsic<[llvm_v2bf16_ty], [llvm_float_ty, llvm_float_ty]>;
 
-        def int_nvvm_ff2f16x2_ # rnd # relu : NVVMBuiltin,
-            Intrinsic<[llvm_v2f16_ty], [llvm_float_ty, llvm_float_ty]>;
-
-        def int_nvvm_f2bf16_ # rnd # relu : NVVMBuiltin,
-            Intrinsic<[llvm_bfloat_ty], [llvm_float_ty]>;
-      }
-    }
-
-    foreach satfinite = ["", "_satfinite"] in {
-      def int_nvvm_f2tf32_rna # satfinite : NVVMBuiltin,
-          Intrinsic<[llvm_i32_ty], [llvm_float_ty]>;
-
-      foreach rnd = ["rn", "rz"] in
-        foreach relu = ["", "_relu"] in
-          def int_nvvm_f2tf32_ # rnd # relu # satfinite : NVVMBuiltin,
-              Intrinsic<[llvm_i32_ty], [llvm_float_ty]>;
-    }
-
-    foreach type = ["e4m3x2", "e5m2x2"] in {
-      foreach relu = ["", "_relu"] in {
-        def int_nvvm_ff_to_ # type # _rn # relu : NVVMBuiltin,
-            Intrinsic<[llvm_i16_ty], [llvm_float_ty, llvm_float_ty]>;
-
-        def int_nvvm_f16x2_to_ # type # _rn # relu : NVVMBuiltin,
-            Intrinsic<[llvm_i16_ty], [llvm_v2f16_ty]>;
-
-        def int_nvvm_ # type # _to_f16x2_rn # relu : NVVMBuiltin,
-            Intrinsic<[llvm_v2f16_ty], [llvm_i16_ty]>;
-      }
-    }
-
-    // FP4 conversions.
+  foreach rnd = ["rn", "rz"] in {
     foreach relu = ["", "_relu"] in {
-      def int_nvvm_ff_to_e2m1x2_rn # relu # _satfinite : NVVMBuiltin,
-          DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_float_ty, llvm_float_ty]>;
+      def int_nvvm_ff2bf16x2_ # rnd # relu : NVVMBuiltin,
+          Intrinsic<[llvm_v2bf16_ty], [llvm_float_ty, llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
 
-      def int_nvvm_e2m1x2_to_f16x2_rn # relu : NVVMBuiltin,
-          DefaultAttrsIntrinsic<[llvm_v2f16_ty], [llvm_i16_ty]>;
+      def int_nvvm_ff2f16x2_ # rnd # relu : NVVMBuiltin,
+          Intrinsic<[llvm_v2f16_ty], [llvm_float_ty, llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
+
+      def int_nvvm_f2bf16_ # rnd # relu : NVVMBuiltin,
+          Intrinsic<[llvm_bfloat_ty], [llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
     }
-
-    // FP6 conversions.
-    foreach type = ["e2m3x2", "e3m2x2"] in {
-      foreach relu = ["", "_relu"] in {
-        def int_nvvm_ff_to_ # type # _rn # relu # _satfinite : NVVMBuiltin,
-            DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_float_ty, llvm_float_ty]>;
-
-        def int_nvvm_ # type # _to_f16x2_rn # relu : NVVMBuiltin,
-            DefaultAttrsIntrinsic<[llvm_v2f16_ty], [llvm_i16_ty]>;
-      }
-    }
-
-    // UE8M0x2 conversions.
-    foreach rmode = ["_rz", "_rp"] in {
-      foreach satmode = ["", "_satfinite"] in {
-        defvar suffix = rmode # satmode;
-        def int_nvvm_ff_to_ue8m0x2 # suffix : NVVMBuiltin,
-            DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_float_ty, llvm_float_ty]>;
-
-        def int_nvvm_bf16x2_to_ue8m0x2 # suffix : NVVMBuiltin,
-            DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_v2bf16_ty]>;
-
-      }
-    }
-
-    def int_nvvm_ue8m0x2_to_bf16x2 : NVVMBuiltin,
-        Intrinsic<[llvm_v2bf16_ty], [llvm_i16_ty]>;
   }
+
+
+  foreach satfinite = ["", "_satfinite"] in {
+    def int_nvvm_f2tf32_rna # satfinite : NVVMBuiltin,
+        Intrinsic<[llvm_i32_ty], [llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
+
+    foreach rnd = ["rn", "rz"] in
+      foreach relu = ["", "_relu"] in
+        def int_nvvm_f2tf32_ # rnd # relu # satfinite : NVVMBuiltin,
+            Intrinsic<[llvm_i32_ty], [llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
+  }
+
+  foreach type = ["e4m3x2", "e5m2x2"] in {
+    foreach relu = ["", "_relu"] in {
+      def int_nvvm_ff_to_ # type # _rn # relu : NVVMBuiltin,
+          Intrinsic<[llvm_i16_ty], [llvm_float_ty, llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
+
+      def int_nvvm_f16x2_to_ # type # _rn # relu : NVVMBuiltin,
+          Intrinsic<[llvm_i16_ty], [llvm_v2f16_ty], [IntrNoMem, IntrNoCallback]>;
+
+      def int_nvvm_ # type # _to_f16x2_rn # relu : NVVMBuiltin,
+          Intrinsic<[llvm_v2f16_ty], [llvm_i16_ty], [IntrNoMem, IntrNoCallback]>;
+    }
+  }
+
+  // FP6 conversions.
+  foreach type = ["e2m3x2", "e3m2x2"] in {
+    foreach relu = ["", "_relu"] in {
+      def int_nvvm_ff_to_ # type # _rn # relu # _satfinite : NVVMBuiltin,
+          DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_float_ty, llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
+
+      def int_nvvm_ # type # _to_f16x2_rn # relu : NVVMBuiltin,
+          DefaultAttrsIntrinsic<[llvm_v2f16_ty], [llvm_i16_ty], [IntrNoMem, IntrNoCallback]>;
+    }
+  }
+
+  // FP4 conversions.
+  foreach relu = ["", "_relu"] in {
+    def int_nvvm_ff_to_e2m1x2_rn # relu # _satfinite : NVVMBuiltin,
+        DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_float_ty, llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
+
+    def int_nvvm_e2m1x2_to_f16x2_rn # relu : NVVMBuiltin,
+        DefaultAttrsIntrinsic<[llvm_v2f16_ty], [llvm_i16_ty], [IntrNoMem, IntrNoCallback]>;
+  }
+  
+  // UE8M0x2 conversions.
+  foreach rmode = ["_rz", "_rp"] in {
+    foreach satmode = ["", "_satfinite"] in {
+      defvar suffix = rmode # satmode;
+      def int_nvvm_ff_to_ue8m0x2 # suffix : NVVMBuiltin,
+          DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_float_ty, llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
+
+      def int_nvvm_bf16x2_to_ue8m0x2 # suffix : NVVMBuiltin,
+          DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_v2bf16_ty], [IntrNoMem, IntrNoCallback]>;
+
+    }
+  }
+
+  def int_nvvm_ue8m0x2_to_bf16x2 : NVVMBuiltin,
+      Intrinsic<[llvm_v2bf16_ty], [llvm_i16_ty], [IntrNoMem, IntrNoCallback]>;
 
 // FNS
+
   def int_nvvm_fns : NVVMBuiltin,
       DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
                 [IntrNoMem]>;
@@ -1329,16 +1423,14 @@ foreach scope = ["cta", "cluster", "gpu", "sys"] in {
 }
 
 // Async Copy
-let IntrProperties = [IntrConvergent, IntrNoCallback] in {
-  def int_nvvm_cp_async_mbarrier_arrive : NVVMBuiltin,
-      Intrinsic<[],[llvm_ptr_ty]>;
-  def int_nvvm_cp_async_mbarrier_arrive_shared : NVVMBuiltin,
-      Intrinsic<[],[llvm_shared_ptr_ty]>;
-  def int_nvvm_cp_async_mbarrier_arrive_noinc : NVVMBuiltin,
-      Intrinsic<[],[llvm_ptr_ty]>;
-  def int_nvvm_cp_async_mbarrier_arrive_noinc_shared : NVVMBuiltin,
-      Intrinsic<[],[llvm_shared_ptr_ty]>;
-}
+def int_nvvm_cp_async_mbarrier_arrive : NVVMBuiltin,
+    Intrinsic<[], [llvm_ptr_ty], [IntrConvergent, IntrNoCallback]>;
+def int_nvvm_cp_async_mbarrier_arrive_shared : NVVMBuiltin,
+    Intrinsic<[], [llvm_shared_ptr_ty], [IntrConvergent, IntrNoCallback]>;
+def int_nvvm_cp_async_mbarrier_arrive_noinc : NVVMBuiltin,
+    Intrinsic<[], [llvm_ptr_ty], [IntrConvergent, IntrNoCallback]>;
+def int_nvvm_cp_async_mbarrier_arrive_noinc_shared : NVVMBuiltin,
+    Intrinsic<[], [llvm_shared_ptr_ty], [IntrConvergent, IntrNoCallback]>;
 
 multiclass CP_ASYNC_SHARED_GLOBAL {
   def NAME : Intrinsic<[], [llvm_shared_ptr_ty, llvm_global_ptr_ty],
@@ -1416,11 +1508,15 @@ def int_nvvm_mbarrier_pending_count : NVVMBuiltin,
 
 // Generated within nvvm. Use for ldu on sm_20 or later.  Second arg is the
 // pointer's alignment.
-let IntrProperties = [IntrReadMem, IntrArgMemOnly, IntrNoCallback, IntrWillReturn, NoCapture<ArgIndex<0>>] in {
-  def int_nvvm_ldu_global_i : Intrinsic<[llvm_anyint_ty], [llvm_anyptr_ty, llvm_i32_ty]>;
-  def int_nvvm_ldu_global_f : Intrinsic<[llvm_anyfloat_ty], [llvm_anyptr_ty, llvm_i32_ty]>;
-  def int_nvvm_ldu_global_p : Intrinsic<[llvm_anyptr_ty], [llvm_anyptr_ty, llvm_i32_ty]>;
-}
+def int_nvvm_ldu_global_i : Intrinsic<[llvm_anyint_ty],
+  [llvm_anyptr_ty, llvm_i32_ty],
+  [IntrReadMem, IntrArgMemOnly, IntrNoCallback, IntrWillReturn, NoCapture<ArgIndex<0>>]>;
+def int_nvvm_ldu_global_f : Intrinsic<[llvm_anyfloat_ty],
+  [llvm_anyptr_ty, llvm_i32_ty],
+  [IntrReadMem, IntrArgMemOnly, IntrNoCallback, IntrWillReturn, NoCapture<ArgIndex<0>>]>;
+def int_nvvm_ldu_global_p : Intrinsic<[llvm_anyptr_ty],
+  [llvm_anyptr_ty, llvm_i32_ty],
+  [IntrReadMem, IntrArgMemOnly, IntrNoCallback, IntrWillReturn, NoCapture<ArgIndex<0>>]>;
 
 // Represents an explicit hole in the LLVM IR type system. It may be inserted by
 // the compiler in cases where a pointer is of the wrong type. In the backend
@@ -1454,8 +1550,8 @@ def int_nvvm_texsurf_handle_internal
   : Intrinsic<[llvm_i64_ty], [llvm_anyptr_ty], [IntrNoMem]>;
 
 /// Error / Warn
-def int_nvvm_compiler_error : Intrinsic<[], [llvm_anyptr_ty]>;
-def int_nvvm_compiler_warn : Intrinsic<[], [llvm_anyptr_ty]>;
+def int_nvvm_compiler_error : Intrinsic<[], [llvm_anyptr_ty], []>;
+def int_nvvm_compiler_warn : Intrinsic<[], [llvm_anyptr_ty], []>;
 
 def int_nvvm_reflect : NVVMBuiltin,
   Intrinsic<[llvm_i32_ty], [llvm_ptr_ty], [IntrNoMem]>;
@@ -1472,158 +1568,1792 @@ foreach i = 0...31 in
     DefaultAttrsIntrinsic<[llvm_i32_ty], [],
               [IntrNoMem, IntrSpeculatable, NoUndef<RetIndex>]>;
 
+// Texture Fetch
+// texmode_independent
+def int_nvvm_tex_1d_v4f32_s32
+  : Intrinsic<[llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_i32_ty], []>;
+def int_nvvm_tex_1d_v4f32_f32
+  : Intrinsic<[llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_float_ty], []>;
+def int_nvvm_tex_1d_level_v4f32_f32
+  : Intrinsic<[llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tex_1d_grad_v4f32_f32
+  : Intrinsic<[llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty], []>;
+def int_nvvm_tex_1d_v4s32_s32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_i32_ty], []>;
+def int_nvvm_tex_1d_v4s32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_float_ty], []>;
+def int_nvvm_tex_1d_level_v4s32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tex_1d_grad_v4s32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty], []>;
+def int_nvvm_tex_1d_v4u32_s32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_i32_ty], []>;
+def int_nvvm_tex_1d_v4u32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_float_ty], []>;
+def int_nvvm_tex_1d_level_v4u32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tex_1d_grad_v4u32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty], []>;
 
-foreach is_unified = [true, false] in {
-  defvar mode = !if(is_unified, "_unified", "");
-  defvar addr_args = !if(is_unified, [llvm_i64_ty], [llvm_i64_ty, llvm_i64_ty]);
+def int_nvvm_tex_1d_array_v4f32_s32
+  : Intrinsic<[llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_tex_1d_array_v4f32_f32
+  : Intrinsic<[llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_i32_ty, llvm_float_ty], []>;
+def int_nvvm_tex_1d_array_level_v4f32_f32
+  : Intrinsic<[llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_i32_ty, llvm_float_ty,
+               llvm_float_ty], []>;
+def int_nvvm_tex_1d_array_grad_v4f32_f32
+  : Intrinsic<[llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_i32_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tex_1d_array_v4s32_s32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_tex_1d_array_v4s32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_i32_ty, llvm_float_ty], []>;
+def int_nvvm_tex_1d_array_level_v4s32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_i32_ty, llvm_float_ty,
+               llvm_float_ty], []>;
+def int_nvvm_tex_1d_array_grad_v4s32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_i32_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tex_1d_array_v4u32_s32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_tex_1d_array_v4u32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_i32_ty, llvm_float_ty], []>;
+def int_nvvm_tex_1d_array_level_v4u32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_i32_ty, llvm_float_ty,
+               llvm_float_ty], []>;
+def int_nvvm_tex_1d_array_grad_v4u32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_i32_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty], []>;
 
-  // Texture Fetch
-  foreach vec = [V4F32, V4S32, V4U32] in {
-    foreach is_array = [true, false] in {
-      defvar array = !if(is_array, "_array", "");
-      defvar array_args = !if(is_array, [llvm_i32_ty], []<LLVMType>);
+def int_nvvm_tex_2d_v4f32_s32
+  : Intrinsic<[llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_tex_2d_v4f32_f32
+  : Intrinsic<[llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tex_2d_level_v4f32_f32
+  : Intrinsic<[llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty], []>;
+def int_nvvm_tex_2d_grad_v4f32_f32
+  : Intrinsic<[llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tex_2d_v4s32_s32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_tex_2d_v4s32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tex_2d_level_v4s32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty], []>;
+def int_nvvm_tex_2d_grad_v4s32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tex_2d_v4u32_s32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_tex_2d_v4u32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tex_2d_level_v4u32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty], []>;
+def int_nvvm_tex_2d_grad_v4u32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty], []>;
 
-      def int_nvvm_tex # mode # _1d # array # _ # vec.Name # _s32
-        : Intrinsic<vec.Types,
-                    !listconcat(addr_args, array_args, !listsplat(llvm_i32_ty, 1))>;
-      def int_nvvm_tex # mode # _1d # array # _ # vec.Name # _f32
-        : Intrinsic<vec.Types,
-                    !listconcat(addr_args, array_args, !listsplat(llvm_float_ty, 1))>;
-      def int_nvvm_tex # mode # _1d # array # _level_ # vec.Name # _f32
-        : Intrinsic<vec.Types,
-                    !listconcat(addr_args, array_args, !listsplat(llvm_float_ty, 2))>;
-      def int_nvvm_tex # mode # _1d # array # _grad_ # vec.Name # _f32
-        : Intrinsic<vec.Types,
-                    !listconcat(addr_args, array_args, !listsplat(llvm_float_ty, 3))>;
+def int_nvvm_tex_2d_array_v4f32_s32
+  : Intrinsic<[llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+               llvm_i32_ty], []>;
+def int_nvvm_tex_2d_array_v4f32_f32
+  : Intrinsic<[llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_i32_ty, llvm_float_ty,
+               llvm_float_ty], []>;
+def int_nvvm_tex_2d_array_level_v4f32_f32
+  : Intrinsic<[llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_i32_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tex_2d_array_grad_v4f32_f32
+  : Intrinsic<[llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_i32_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty], []>;
+def int_nvvm_tex_2d_array_v4s32_s32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+               llvm_i32_ty], []>;
+def int_nvvm_tex_2d_array_v4s32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_i32_ty, llvm_float_ty,
+               llvm_float_ty], []>;
+def int_nvvm_tex_2d_array_level_v4s32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_i32_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tex_2d_array_grad_v4s32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_i32_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty], []>;
+def int_nvvm_tex_2d_array_v4u32_s32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+               llvm_i32_ty], []>;
+def int_nvvm_tex_2d_array_v4u32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_i32_ty, llvm_float_ty,
+               llvm_float_ty], []>;
+def int_nvvm_tex_2d_array_level_v4u32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_i32_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tex_2d_array_grad_v4u32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_i32_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty], []>;
 
-      def int_nvvm_tex # mode # _2d # array # _ # vec.Name # _s32
-        : Intrinsic<vec.Types,
-                    !listconcat(addr_args, array_args, !listsplat(llvm_i32_ty, 2))>;
-      def int_nvvm_tex # mode # _2d # array # _ # vec.Name # _f32
-        : Intrinsic<vec.Types,
-                    !listconcat(addr_args, array_args, !listsplat(llvm_float_ty, 2))>;
-      def int_nvvm_tex # mode # _2d # array # _level_ # vec.Name # _f32
-        : Intrinsic<vec.Types,
-                    !listconcat(addr_args, array_args, !listsplat(llvm_float_ty, 3))>;
-      def int_nvvm_tex # mode # _2d # array # _grad_ # vec.Name # _f32
-        : Intrinsic<vec.Types,
-                    !listconcat(addr_args, array_args, !listsplat(llvm_float_ty, 6))>;
+def int_nvvm_tex_3d_v4f32_s32
+  : Intrinsic<[llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              []>;
+def int_nvvm_tex_3d_v4f32_f32
+  : Intrinsic<[llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty], []>;
+def int_nvvm_tex_3d_level_v4f32_f32
+  : Intrinsic<[llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tex_3d_grad_v4f32_f32
+  : Intrinsic<[llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tex_3d_v4s32_s32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              []>;
+def int_nvvm_tex_3d_v4s32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty], []>;
+def int_nvvm_tex_3d_level_v4s32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tex_3d_grad_v4s32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tex_3d_v4u32_s32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              []>;
+def int_nvvm_tex_3d_v4u32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty], []>;
+def int_nvvm_tex_3d_level_v4u32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tex_3d_grad_v4u32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty], []>;
 
-      if !not(is_array) then {
-        def int_nvvm_tex # mode # _3d_ # vec.Name # _s32
-          : Intrinsic<vec.Types,
-                      !listconcat(addr_args, !listsplat(llvm_i32_ty, 3))>;
-        def int_nvvm_tex # mode # _3d_ # vec.Name # _f32
-          : Intrinsic<vec.Types,
-                      !listconcat(addr_args, !listsplat(llvm_float_ty, 3))>;
-        def int_nvvm_tex # mode # _3d_level_ # vec.Name # _f32
-          : Intrinsic<vec.Types,
-                      !listconcat(addr_args, !listsplat(llvm_float_ty, 4))>;
-        def int_nvvm_tex # mode # _3d_grad_ # vec.Name # _f32
-          : Intrinsic<vec.Types,
-                      !listconcat(addr_args, !listsplat(llvm_float_ty, 9))>;
-      }
+def int_nvvm_tex_cube_v4f32_f32
+  : Intrinsic<[llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty],
+              [llvm_i64_ty, llvm_i64_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tex_cube_level_v4f32_f32
+  : Intrinsic<[llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty],
+              [llvm_i64_ty, llvm_i64_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tex_cube_v4s32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i64_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tex_cube_level_v4s32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i64_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tex_cube_v4u32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i64_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tex_cube_level_v4u32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i64_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty], []>;
 
-      def int_nvvm_tex # mode # _cube # array # _ # vec.Name # _f32
-        : Intrinsic<vec.Types,
-                    !listconcat(addr_args, array_args, !listsplat(llvm_float_ty, 3))>;
-      def int_nvvm_tex # mode # _cube # array # _level_ # vec.Name # _f32
-        : Intrinsic<vec.Types,
-                    !listconcat(addr_args, array_args, !listsplat(llvm_float_ty, 4))>;
+def int_nvvm_tex_cube_array_v4f32_f32
+  : Intrinsic<[llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_i32_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tex_cube_array_level_v4f32_f32
+  : Intrinsic<[llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_i32_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tex_cube_array_v4s32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_i32_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tex_cube_array_level_v4s32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_i32_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tex_cube_array_v4u32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_i32_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tex_cube_array_level_v4u32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_i32_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty], []>;
 
-      if is_unified then
-        def int_nvvm_tex # mode # _cube # array # _grad_ # vec.Name # _f32
-          : Intrinsic<vec.Types,
-                      !listconcat(addr_args, array_args, !listsplat(llvm_float_ty, 9))>;
-    } // is_array
+def int_nvvm_tld4_r_2d_v4f32_f32
+  : Intrinsic<[llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tld4_g_2d_v4f32_f32
+  : Intrinsic<[llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tld4_b_2d_v4f32_f32
+  : Intrinsic<[llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tld4_a_2d_v4f32_f32
+  : Intrinsic<[llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tld4_r_2d_v4s32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tld4_g_2d_v4s32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tld4_b_2d_v4s32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tld4_a_2d_v4s32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tld4_r_2d_v4u32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tld4_g_2d_v4u32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tld4_b_2d_v4u32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tld4_a_2d_v4u32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i64_ty, llvm_float_ty, llvm_float_ty], []>;
+// texmode_unified
+def int_nvvm_tex_unified_1d_v4f32_s32
+  : Intrinsic<[llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty],
+              [llvm_i64_ty, llvm_i32_ty], []>;
+def int_nvvm_tex_unified_1d_v4f32_f32
+  : Intrinsic<[llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty],
+              [llvm_i64_ty, llvm_float_ty], []>;
+def int_nvvm_tex_unified_1d_level_v4f32_f32
+  : Intrinsic<[llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty],
+              [llvm_i64_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tex_unified_1d_grad_v4f32_f32
+  : Intrinsic<[llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty],
+              [llvm_i64_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty], []>;
+def int_nvvm_tex_unified_1d_v4s32_s32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty], []>;
+def int_nvvm_tex_unified_1d_v4s32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_float_ty], []>;
+def int_nvvm_tex_unified_1d_level_v4s32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tex_unified_1d_grad_v4s32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty], []>;
+def int_nvvm_tex_unified_1d_v4u32_s32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty], []>;
+def int_nvvm_tex_unified_1d_v4u32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_float_ty], []>;
+def int_nvvm_tex_unified_1d_level_v4u32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tex_unified_1d_grad_v4u32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty], []>;
 
-    foreach comp = ["r", "g", "b", "a"] in {
-      def int_nvvm_tld4 # mode # _ # comp # _2d_ # vec.Name # _f32
-        : Intrinsic<vec.Types,
-                    !listconcat(addr_args, !listsplat(llvm_float_ty, 2))>;
-    } // comp
-  } // vec
-} // is_unified
+def int_nvvm_tex_unified_1d_array_v4f32_s32
+  : Intrinsic<[llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_tex_unified_1d_array_v4f32_f32
+  : Intrinsic<[llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_float_ty], []>;
+def int_nvvm_tex_unified_1d_array_level_v4f32_f32
+  : Intrinsic<[llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_float_ty,
+               llvm_float_ty], []>;
+def int_nvvm_tex_unified_1d_array_grad_v4f32_f32
+  : Intrinsic<[llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tex_unified_1d_array_v4s32_s32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_tex_unified_1d_array_v4s32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_float_ty], []>;
+def int_nvvm_tex_unified_1d_array_level_v4s32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_float_ty,
+               llvm_float_ty], []>;
+def int_nvvm_tex_unified_1d_array_grad_v4s32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tex_unified_1d_array_v4u32_s32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_tex_unified_1d_array_v4u32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_float_ty], []>;
+def int_nvvm_tex_unified_1d_array_level_v4u32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_float_ty,
+               llvm_float_ty], []>;
+def int_nvvm_tex_unified_1d_array_grad_v4u32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty], []>;
 
+def int_nvvm_tex_unified_2d_v4f32_s32
+  : Intrinsic<[llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_tex_unified_2d_v4f32_f32
+  : Intrinsic<[llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty],
+              [llvm_i64_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tex_unified_2d_level_v4f32_f32
+  : Intrinsic<[llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty],
+              [llvm_i64_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty], []>;
+def int_nvvm_tex_unified_2d_grad_v4f32_f32
+  : Intrinsic<[llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty],
+              [llvm_i64_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tex_unified_2d_v4s32_s32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_tex_unified_2d_v4s32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tex_unified_2d_level_v4s32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty], []>;
+def int_nvvm_tex_unified_2d_grad_v4s32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tex_unified_2d_v4u32_s32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_tex_unified_2d_v4u32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tex_unified_2d_level_v4u32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty], []>;
+def int_nvvm_tex_unified_2d_grad_v4u32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty], []>;
+
+def int_nvvm_tex_unified_2d_array_v4f32_s32
+  : Intrinsic<[llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+               llvm_i32_ty], []>;
+def int_nvvm_tex_unified_2d_array_v4f32_f32
+  : Intrinsic<[llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_float_ty,
+               llvm_float_ty], []>;
+def int_nvvm_tex_unified_2d_array_level_v4f32_f32
+  : Intrinsic<[llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tex_unified_2d_array_grad_v4f32_f32
+  : Intrinsic<[llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty], []>;
+def int_nvvm_tex_unified_2d_array_v4s32_s32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+               llvm_i32_ty], []>;
+def int_nvvm_tex_unified_2d_array_v4s32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_float_ty,
+               llvm_float_ty], []>;
+def int_nvvm_tex_unified_2d_array_level_v4s32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tex_unified_2d_array_grad_v4s32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty], []>;
+def int_nvvm_tex_unified_2d_array_v4u32_s32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+               llvm_i32_ty], []>;
+def int_nvvm_tex_unified_2d_array_v4u32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_float_ty,
+               llvm_float_ty], []>;
+def int_nvvm_tex_unified_2d_array_level_v4u32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tex_unified_2d_array_grad_v4u32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty], []>;
+
+def int_nvvm_tex_unified_3d_v4f32_s32
+  : Intrinsic<[llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              []>;
+def int_nvvm_tex_unified_3d_v4f32_f32
+  : Intrinsic<[llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty],
+              [llvm_i64_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty], []>;
+def int_nvvm_tex_unified_3d_level_v4f32_f32
+  : Intrinsic<[llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty],
+              [llvm_i64_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tex_unified_3d_grad_v4f32_f32
+  : Intrinsic<[llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty],
+              [llvm_i64_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tex_unified_3d_v4s32_s32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              []>;
+def int_nvvm_tex_unified_3d_v4s32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty], []>;
+def int_nvvm_tex_unified_3d_level_v4s32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tex_unified_3d_grad_v4s32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tex_unified_3d_v4u32_s32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              []>;
+def int_nvvm_tex_unified_3d_v4u32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty], []>;
+def int_nvvm_tex_unified_3d_level_v4u32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tex_unified_3d_grad_v4u32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty], []>;
+
+def int_nvvm_tex_unified_cube_v4f32_f32
+  : Intrinsic<[llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty],
+              [llvm_i64_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tex_unified_cube_level_v4f32_f32
+  : Intrinsic<[llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty],
+              [llvm_i64_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tex_unified_cube_v4s32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tex_unified_cube_level_v4s32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tex_unified_cube_v4u32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tex_unified_cube_level_v4u32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty], []>;
+
+def int_nvvm_tex_unified_cube_array_v4f32_f32
+  : Intrinsic<[llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty],
+              [llvm_i64_ty, llvm_i32_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tex_unified_cube_array_level_v4f32_f32
+  : Intrinsic<[llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty],
+              [llvm_i64_ty, llvm_i32_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tex_unified_cube_array_v4s32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tex_unified_cube_array_level_v4s32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tex_unified_cube_array_v4u32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tex_unified_cube_array_level_v4u32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty], []>;
+
+def int_nvvm_tex_unified_cube_grad_v4f32_f32
+  : Intrinsic<[llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty],
+              [llvm_i64_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tex_unified_cube_grad_v4s32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tex_unified_cube_grad_v4u32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty], []>;
+
+def int_nvvm_tex_unified_cube_array_grad_v4f32_f32
+  : Intrinsic<[llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty],
+              [llvm_i64_ty, llvm_i32_ty,
+              llvm_float_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tex_unified_cube_array_grad_v4s32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty,
+              llvm_float_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tex_unified_cube_array_grad_v4u32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty,
+              llvm_float_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty], []>;
+
+def int_nvvm_tld4_unified_r_2d_v4f32_f32
+  : Intrinsic<[llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty],
+              [llvm_i64_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tld4_unified_g_2d_v4f32_f32
+  : Intrinsic<[llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty],
+              [llvm_i64_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tld4_unified_b_2d_v4f32_f32
+  : Intrinsic<[llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty],
+              [llvm_i64_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tld4_unified_a_2d_v4f32_f32
+  : Intrinsic<[llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty],
+              [llvm_i64_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tld4_unified_r_2d_v4s32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tld4_unified_g_2d_v4s32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tld4_unified_b_2d_v4s32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tld4_unified_a_2d_v4s32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tld4_unified_r_2d_v4u32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tld4_unified_g_2d_v4u32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tld4_unified_b_2d_v4u32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_float_ty, llvm_float_ty], []>;
+def int_nvvm_tld4_unified_a_2d_v4u32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_float_ty, llvm_float_ty], []>;
 //=== Surface Load
-foreach clamp = ["clamp", "trap", "zero"] in {
-  foreach vec = [TV_I8, TV_I16, TV_I32, TV_I64,
-                 TV_V2I8, TV_V2I16, TV_V2I32, TV_V2I64,
-                 TV_V4I8, TV_V4I16, TV_V4I32] in {
+// .clamp variants
+def int_nvvm_suld_1d_i8_clamp
+  : Intrinsic<[llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_1d_i16_clamp
+  : Intrinsic<[llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_1d_i32_clamp
+  : Intrinsic<[llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_1d_i64_clamp
+  : Intrinsic<[llvm_i64_ty],
+              [llvm_i64_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_1d_v2i8_clamp
+  : Intrinsic<[llvm_i16_ty, llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_1d_v2i16_clamp
+  : Intrinsic<[llvm_i16_ty, llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_1d_v2i32_clamp
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_1d_v2i64_clamp
+  : Intrinsic<[llvm_i64_ty, llvm_i64_ty],
+              [llvm_i64_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_1d_v4i8_clamp
+  : Intrinsic<[llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_1d_v4i16_clamp
+  : Intrinsic<[llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_1d_v4i32_clamp
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty], []>;
 
-    def int_nvvm_suld_1d_ # vec.Name # _ # clamp
-      : Intrinsic<vec.Types,
-                  [llvm_i64_ty, llvm_i32_ty]>;
+def int_nvvm_suld_1d_array_i8_clamp
+  : Intrinsic<[llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_1d_array_i16_clamp
+  : Intrinsic<[llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_1d_array_i32_clamp
+  : Intrinsic<[llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_1d_array_i64_clamp
+  : Intrinsic<[llvm_i64_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_1d_array_v2i8_clamp
+  : Intrinsic<[llvm_i16_ty, llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_1d_array_v2i16_clamp
+  : Intrinsic<[llvm_i16_ty, llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_1d_array_v2i32_clamp
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_1d_array_v2i64_clamp
+  : Intrinsic<[llvm_i64_ty, llvm_i64_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_1d_array_v4i8_clamp
+  : Intrinsic<[llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_1d_array_v4i16_clamp
+  : Intrinsic<[llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_1d_array_v4i32_clamp
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
 
-    def int_nvvm_suld_1d_array_ # vec.Name # _ # clamp
-      : Intrinsic<vec.Types,
-                  [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty]>;
+def int_nvvm_suld_2d_i8_clamp
+  : Intrinsic<[llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_2d_i16_clamp
+  : Intrinsic<[llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_2d_i32_clamp
+  : Intrinsic<[llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_2d_i64_clamp
+  : Intrinsic<[llvm_i64_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_2d_v2i8_clamp
+  : Intrinsic<[llvm_i16_ty, llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_2d_v2i16_clamp
+  : Intrinsic<[llvm_i16_ty, llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_2d_v2i32_clamp
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_2d_v2i64_clamp
+  : Intrinsic<[llvm_i64_ty, llvm_i64_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_2d_v4i8_clamp
+  : Intrinsic<[llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_2d_v4i16_clamp
+  : Intrinsic<[llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_2d_v4i32_clamp
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
 
-    def int_nvvm_suld_2d_ # vec.Name # _ # clamp
-      : Intrinsic<vec.Types,
-                  [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty]>;
+def int_nvvm_suld_2d_array_i8_clamp
+  : Intrinsic<[llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_2d_array_i16_clamp
+  : Intrinsic<[llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_2d_array_i32_clamp
+  : Intrinsic<[llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_2d_array_i64_clamp
+  : Intrinsic<[llvm_i64_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_2d_array_v2i8_clamp
+  : Intrinsic<[llvm_i16_ty, llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_2d_array_v2i16_clamp
+  : Intrinsic<[llvm_i16_ty, llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_2d_array_v2i32_clamp
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_2d_array_v2i64_clamp
+  : Intrinsic<[llvm_i64_ty, llvm_i64_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_2d_array_v4i8_clamp
+  : Intrinsic<[llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_2d_array_v4i16_clamp
+  : Intrinsic<[llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_2d_array_v4i32_clamp
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
 
-    def int_nvvm_suld_2d_array_ # vec.Name # _ # clamp
-      : Intrinsic<vec.Types,
-                  [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty]>;
+def int_nvvm_suld_3d_i8_clamp
+  : Intrinsic<[llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_3d_i16_clamp
+  : Intrinsic<[llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_3d_i32_clamp
+  : Intrinsic<[llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_3d_i64_clamp
+  : Intrinsic<[llvm_i64_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_3d_v2i8_clamp
+  : Intrinsic<[llvm_i16_ty, llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_3d_v2i16_clamp
+  : Intrinsic<[llvm_i16_ty, llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_3d_v2i32_clamp
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_3d_v2i64_clamp
+  : Intrinsic<[llvm_i64_ty, llvm_i64_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_3d_v4i8_clamp
+  : Intrinsic<[llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_3d_v4i16_clamp
+  : Intrinsic<[llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_3d_v4i32_clamp
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
 
-    def int_nvvm_suld_3d_ # vec.Name # _ # clamp
-      : Intrinsic<vec.Types,
-                  [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty]>;
-  } // vec
-} // clamp
+// .trap variants
+def int_nvvm_suld_1d_i8_trap
+  : Intrinsic<[llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_1d_i16_trap
+  : Intrinsic<[llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_1d_i32_trap
+  : Intrinsic<[llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_1d_i64_trap
+  : Intrinsic<[llvm_i64_ty],
+              [llvm_i64_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_1d_v2i8_trap
+  : Intrinsic<[llvm_i16_ty, llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_1d_v2i16_trap
+  : Intrinsic<[llvm_i16_ty, llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_1d_v2i32_trap
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_1d_v2i64_trap
+  : Intrinsic<[llvm_i64_ty, llvm_i64_ty],
+              [llvm_i64_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_1d_v4i8_trap
+  : Intrinsic<[llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_1d_v4i16_trap
+  : Intrinsic<[llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_1d_v4i32_trap
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty], []>;
+
+def int_nvvm_suld_1d_array_i8_trap
+  : Intrinsic<[llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_1d_array_i16_trap
+  : Intrinsic<[llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_1d_array_i32_trap
+  : Intrinsic<[llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_1d_array_i64_trap
+  : Intrinsic<[llvm_i64_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_1d_array_v2i8_trap
+  : Intrinsic<[llvm_i16_ty, llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_1d_array_v2i16_trap
+  : Intrinsic<[llvm_i16_ty, llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_1d_array_v2i32_trap
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_1d_array_v2i64_trap
+  : Intrinsic<[llvm_i64_ty, llvm_i64_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_1d_array_v4i8_trap
+  : Intrinsic<[llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_1d_array_v4i16_trap
+  : Intrinsic<[llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_1d_array_v4i32_trap
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+
+def int_nvvm_suld_2d_i8_trap
+  : Intrinsic<[llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_2d_i16_trap
+  : Intrinsic<[llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_2d_i32_trap
+  : Intrinsic<[llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_2d_i64_trap
+  : Intrinsic<[llvm_i64_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_2d_v2i8_trap
+  : Intrinsic<[llvm_i16_ty, llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_2d_v2i16_trap
+  : Intrinsic<[llvm_i16_ty, llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_2d_v2i32_trap
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_2d_v2i64_trap
+  : Intrinsic<[llvm_i64_ty, llvm_i64_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_2d_v4i8_trap
+  : Intrinsic<[llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_2d_v4i16_trap
+  : Intrinsic<[llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_2d_v4i32_trap
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+
+def int_nvvm_suld_2d_array_i8_trap
+  : Intrinsic<[llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_2d_array_i16_trap
+  : Intrinsic<[llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_2d_array_i32_trap
+  : Intrinsic<[llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_2d_array_i64_trap
+  : Intrinsic<[llvm_i64_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_2d_array_v2i8_trap
+  : Intrinsic<[llvm_i16_ty, llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_2d_array_v2i16_trap
+  : Intrinsic<[llvm_i16_ty, llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_2d_array_v2i32_trap
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_2d_array_v2i64_trap
+  : Intrinsic<[llvm_i64_ty, llvm_i64_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_2d_array_v4i8_trap
+  : Intrinsic<[llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_2d_array_v4i16_trap
+  : Intrinsic<[llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_2d_array_v4i32_trap
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+
+def int_nvvm_suld_3d_i8_trap
+  : Intrinsic<[llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_3d_i16_trap
+  : Intrinsic<[llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_3d_i32_trap
+  : Intrinsic<[llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_3d_i64_trap
+  : Intrinsic<[llvm_i64_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_3d_v2i8_trap
+  : Intrinsic<[llvm_i16_ty, llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_3d_v2i16_trap
+  : Intrinsic<[llvm_i16_ty, llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_3d_v2i32_trap
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_3d_v2i64_trap
+  : Intrinsic<[llvm_i64_ty, llvm_i64_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_3d_v4i8_trap
+  : Intrinsic<[llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_3d_v4i16_trap
+  : Intrinsic<[llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_3d_v4i32_trap
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+
+// .zero variants
+def int_nvvm_suld_1d_i8_zero
+  : Intrinsic<[llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_1d_i16_zero
+  : Intrinsic<[llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_1d_i32_zero
+  : Intrinsic<[llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_1d_i64_zero
+  : Intrinsic<[llvm_i64_ty],
+              [llvm_i64_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_1d_v2i8_zero
+  : Intrinsic<[llvm_i16_ty, llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_1d_v2i16_zero
+  : Intrinsic<[llvm_i16_ty, llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_1d_v2i32_zero
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_1d_v2i64_zero
+  : Intrinsic<[llvm_i64_ty, llvm_i64_ty],
+              [llvm_i64_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_1d_v4i8_zero
+  : Intrinsic<[llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_1d_v4i16_zero
+  : Intrinsic<[llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_1d_v4i32_zero
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty], []>;
+
+def int_nvvm_suld_1d_array_i8_zero
+  : Intrinsic<[llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_1d_array_i16_zero
+  : Intrinsic<[llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_1d_array_i32_zero
+  : Intrinsic<[llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_1d_array_i64_zero
+  : Intrinsic<[llvm_i64_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_1d_array_v2i8_zero
+  : Intrinsic<[llvm_i16_ty, llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_1d_array_v2i16_zero
+  : Intrinsic<[llvm_i16_ty, llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_1d_array_v2i32_zero
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_1d_array_v2i64_zero
+  : Intrinsic<[llvm_i64_ty, llvm_i64_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_1d_array_v4i8_zero
+  : Intrinsic<[llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_1d_array_v4i16_zero
+  : Intrinsic<[llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_1d_array_v4i32_zero
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+
+def int_nvvm_suld_2d_i8_zero
+  : Intrinsic<[llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_2d_i16_zero
+  : Intrinsic<[llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_2d_i32_zero
+  : Intrinsic<[llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_2d_i64_zero
+  : Intrinsic<[llvm_i64_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_2d_v2i8_zero
+  : Intrinsic<[llvm_i16_ty, llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_2d_v2i16_zero
+  : Intrinsic<[llvm_i16_ty, llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_2d_v2i32_zero
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_2d_v2i64_zero
+  : Intrinsic<[llvm_i64_ty, llvm_i64_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_2d_v4i8_zero
+  : Intrinsic<[llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_2d_v4i16_zero
+  : Intrinsic<[llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_2d_v4i32_zero
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+
+def int_nvvm_suld_2d_array_i8_zero
+  : Intrinsic<[llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_2d_array_i16_zero
+  : Intrinsic<[llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_2d_array_i32_zero
+  : Intrinsic<[llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_2d_array_i64_zero
+  : Intrinsic<[llvm_i64_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_2d_array_v2i8_zero
+  : Intrinsic<[llvm_i16_ty, llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_2d_array_v2i16_zero
+  : Intrinsic<[llvm_i16_ty, llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_2d_array_v2i32_zero
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_2d_array_v2i64_zero
+  : Intrinsic<[llvm_i64_ty, llvm_i64_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_2d_array_v4i8_zero
+  : Intrinsic<[llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_2d_array_v4i16_zero
+  : Intrinsic<[llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_2d_array_v4i32_zero
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+
+def int_nvvm_suld_3d_i8_zero
+  : Intrinsic<[llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_3d_i16_zero
+  : Intrinsic<[llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_3d_i32_zero
+  : Intrinsic<[llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_3d_i64_zero
+  : Intrinsic<[llvm_i64_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_3d_v2i8_zero
+  : Intrinsic<[llvm_i16_ty, llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_3d_v2i16_zero
+  : Intrinsic<[llvm_i16_ty, llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_3d_v2i32_zero
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_3d_v2i64_zero
+  : Intrinsic<[llvm_i64_ty, llvm_i64_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_3d_v4i8_zero
+  : Intrinsic<[llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_3d_v4i16_zero
+  : Intrinsic<[llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i16_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_suld_3d_v4i32_zero
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
 
 //===- Texture Query ------------------------------------------------------===//
 
 foreach query = ["channel_order", "channel_data_type", "width", "height",
-                 "depth", "array_size", "num_samples", "num_mipmap_levels"] in
+                 "depth", "array_size", "num_samples", "num_mipmap_levels"] in {
   def int_nvvm_txq_ # query : NVVMBuiltin,
     Intrinsic<[llvm_i32_ty], [llvm_i64_ty], [IntrNoMem]>;
+}
 
 //===- Surface Query ------------------------------------------------------===//
 
-foreach query = ["channel_order", "channel_data_type", "width", "height",
-                 "depth", "array_size"] in
+foreach query = ["channel_order", "channel_data_type", "width", "height", 
+                 "depth", "array_size"] in {
   def int_nvvm_suq_ # query : NVVMBuiltin,
     Intrinsic<[llvm_i32_ty], [llvm_i64_ty], [IntrNoMem]>;
+}
 
 //===- Handle Query -------------------------------------------------------===//
 
-foreach type = ["sampler", "surface", "texture"] in
+foreach type = ["sampler", "surface", "texture"] in {
   def int_nvvm_istypep_ # type : NVVMBuiltin,
     Intrinsic<[llvm_i1_ty], [llvm_i64_ty], [IntrNoMem]>;
+}
 
 //===- Surface Stores -----------------------------------------------------===//
 
-multiclass SurfaceStoreIntrinsics<string clamp, TexVector vec> {
-  def _1d_ # vec.Name # _ # clamp : NVVMBuiltin,
-      Intrinsic<[], !listconcat([llvm_i64_ty, llvm_i32_ty], vec.Types)>;
-
-  def _1d_array_ # vec.Name # _ # clamp : NVVMBuiltin,
-      Intrinsic<[], !listconcat([llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], vec.Types)>;
-
-  def _2d_ # vec.Name # _ # clamp : NVVMBuiltin,
-      Intrinsic<[], !listconcat([llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], vec.Types)>;
-
-  def _2d_array_ # vec.Name # _ # clamp : NVVMBuiltin,
-      Intrinsic<[], !listconcat([llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], vec.Types)>;
-
-  def _3d_ # vec.Name # _ # clamp : NVVMBuiltin,
-      Intrinsic<[], !listconcat([llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], vec.Types)>;
-}
-
 // Unformatted
-foreach clamp = ["clamp", "trap", "zero"] in
-  foreach vec = [TV_I8, TV_I16, TV_I32, TV_I64,
-                 TV_V2I8, TV_V2I16, TV_V2I32, TV_V2I64,
-                 TV_V4I8, TV_V4I16, TV_V4I32] in
-    defm int_nvvm_sust_b : SurfaceStoreIntrinsics<clamp, vec>;
+// .clamp variant
+def int_nvvm_sust_b_1d_i8_clamp : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_1d_i16_clamp : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_1d_i32_clamp : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_sust_b_1d_i64_clamp : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i64_ty], []>;
+def int_nvvm_sust_b_1d_v2i8_clamp : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_1d_v2i16_clamp : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_1d_v2i32_clamp : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_sust_b_1d_v2i64_clamp : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i64_ty, llvm_i64_ty], []>;
+def int_nvvm_sust_b_1d_v4i8_clamp : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i16_ty, llvm_i16_ty,
+                   llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_1d_v4i16_clamp : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i16_ty,
+                   llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_1d_v4i32_clamp : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_sust_b_1d_array_i8_clamp : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_1d_array_i16_clamp : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_1d_array_i32_clamp : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_sust_b_1d_array_i64_clamp : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i64_ty], []>;
+def int_nvvm_sust_b_1d_array_v2i8_clamp : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_1d_array_v2i16_clamp : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_1d_array_v2i32_clamp : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_sust_b_1d_array_v2i64_clamp : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i64_ty, llvm_i64_ty], []>;
+def int_nvvm_sust_b_1d_array_v4i8_clamp : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i16_ty,
+                   llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_1d_array_v4i16_clamp : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i16_ty,
+                   llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_1d_array_v4i32_clamp : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_sust_b_2d_i8_clamp : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_2d_i16_clamp : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_2d_i32_clamp : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_sust_b_2d_i64_clamp : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i64_ty], []>;
+def int_nvvm_sust_b_2d_v2i8_clamp : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_2d_v2i16_clamp : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_2d_v2i32_clamp : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_sust_b_2d_v2i64_clamp : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i64_ty, llvm_i64_ty], []>;
+def int_nvvm_sust_b_2d_v4i8_clamp : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i16_ty,
+                   llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_2d_v4i16_clamp : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i16_ty,
+                   llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_2d_v4i32_clamp : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_sust_b_2d_array_i8_clamp : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_2d_array_i16_clamp : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_2d_array_i32_clamp : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_sust_b_2d_array_i64_clamp : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i64_ty], []>;
+def int_nvvm_sust_b_2d_array_v2i8_clamp : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_2d_array_v2i16_clamp : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_2d_array_v2i32_clamp : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_sust_b_2d_array_v2i64_clamp : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i64_ty, llvm_i64_ty], []>;
+def int_nvvm_sust_b_2d_array_v4i8_clamp : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_2d_array_v4i16_clamp : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_2d_array_v4i32_clamp : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_sust_b_3d_i8_clamp : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_3d_i16_clamp : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_3d_i32_clamp : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_sust_b_3d_i64_clamp : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i64_ty], []>;
+def int_nvvm_sust_b_3d_v2i8_clamp : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_3d_v2i16_clamp : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_3d_v2i32_clamp : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_sust_b_3d_v2i64_clamp : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i64_ty, llvm_i64_ty], []>;
+def int_nvvm_sust_b_3d_v4i8_clamp : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_3d_v4i16_clamp : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_3d_v4i32_clamp : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+// .trap variant
+def int_nvvm_sust_b_1d_i8_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_1d_i16_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_1d_i32_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_sust_b_1d_i64_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i64_ty], []>;
+def int_nvvm_sust_b_1d_v2i8_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_1d_v2i16_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_1d_v2i32_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_sust_b_1d_v2i64_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i64_ty, llvm_i64_ty], []>;
+def int_nvvm_sust_b_1d_v4i8_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i16_ty,
+                   llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_1d_v4i16_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i16_ty,
+                   llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_1d_v4i32_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_sust_b_1d_array_i8_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_1d_array_i16_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_1d_array_i32_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_sust_b_1d_array_i64_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i64_ty], []>;
+def int_nvvm_sust_b_1d_array_v2i8_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_1d_array_v2i16_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_1d_array_v2i32_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_sust_b_1d_array_v2i64_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i64_ty, llvm_i64_ty], []>;
+def int_nvvm_sust_b_1d_array_v4i8_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i16_ty,
+                   llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_1d_array_v4i16_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i16_ty,
+                   llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_1d_array_v4i32_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_sust_b_2d_i8_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_2d_i16_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_2d_i32_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_sust_b_2d_i64_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i64_ty], []>;
+def int_nvvm_sust_b_2d_v2i8_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_2d_v2i16_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_2d_v2i32_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_sust_b_2d_v2i64_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i64_ty, llvm_i64_ty], []>;
+def int_nvvm_sust_b_2d_v4i8_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i16_ty,
+                   llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_2d_v4i16_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i16_ty,
+                   llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_2d_v4i32_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_sust_b_2d_array_i8_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_2d_array_i16_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_2d_array_i32_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_sust_b_2d_array_i64_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i64_ty], []>;
+def int_nvvm_sust_b_2d_array_v2i8_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_2d_array_v2i16_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_2d_array_v2i32_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_sust_b_2d_array_v2i64_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i64_ty, llvm_i64_ty], []>;
+def int_nvvm_sust_b_2d_array_v4i8_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_2d_array_v4i16_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_2d_array_v4i32_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_sust_b_3d_i8_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_3d_i16_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_3d_i32_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_sust_b_3d_i64_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i64_ty], []>;
+def int_nvvm_sust_b_3d_v2i8_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_3d_v2i16_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_3d_v2i32_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_sust_b_3d_v2i64_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i64_ty, llvm_i64_ty], []>;
+def int_nvvm_sust_b_3d_v4i8_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_3d_v4i16_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_3d_v4i32_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+// .zero variant
+def int_nvvm_sust_b_1d_i8_zero : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_1d_i16_zero : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_1d_i32_zero : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_sust_b_1d_i64_zero : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i64_ty], []>;
+def int_nvvm_sust_b_1d_v2i8_zero : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_1d_v2i16_zero : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_1d_v2i32_zero : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_sust_b_1d_v2i64_zero : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i64_ty, llvm_i64_ty], []>;
+def int_nvvm_sust_b_1d_v4i8_zero : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i16_ty,
+                   llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_1d_v4i16_zero : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i16_ty,
+                   llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_1d_v4i32_zero : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_sust_b_1d_array_i8_zero : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_1d_array_i16_zero : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_1d_array_i32_zero : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_sust_b_1d_array_i64_zero : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i64_ty], []>;
+def int_nvvm_sust_b_1d_array_v2i8_zero : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_1d_array_v2i16_zero : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_1d_array_v2i32_zero : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_sust_b_1d_array_v2i64_zero : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i64_ty, llvm_i64_ty], []>;
+def int_nvvm_sust_b_1d_array_v4i8_zero : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i16_ty,
+                   llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_1d_array_v4i16_zero : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i16_ty,
+                   llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_1d_array_v4i32_zero : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_sust_b_2d_i8_zero : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_2d_i16_zero : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_2d_i32_zero : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_sust_b_2d_i64_zero : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i64_ty], []>;
+def int_nvvm_sust_b_2d_v2i8_zero : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_2d_v2i16_zero : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_2d_v2i32_zero : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_sust_b_2d_v2i64_zero : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i64_ty, llvm_i64_ty], []>;
+def int_nvvm_sust_b_2d_v4i8_zero : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i16_ty,
+                   llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_2d_v4i16_zero : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i16_ty,
+                   llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_2d_v4i32_zero : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_sust_b_2d_array_i8_zero : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_2d_array_i16_zero : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_2d_array_i32_zero : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_sust_b_2d_array_i64_zero : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i64_ty], []>;
+def int_nvvm_sust_b_2d_array_v2i8_zero : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_2d_array_v2i16_zero : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_2d_array_v2i32_zero : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_sust_b_2d_array_v2i64_zero : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i64_ty, llvm_i64_ty], []>;
+def int_nvvm_sust_b_2d_array_v4i8_zero : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_2d_array_v4i16_zero : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_2d_array_v4i32_zero : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_sust_b_3d_i8_zero : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_3d_i16_zero : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_3d_i32_zero : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_sust_b_3d_i64_zero : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i64_ty], []>;
+def int_nvvm_sust_b_3d_v2i8_zero : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_3d_v2i16_zero : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_3d_v2i32_zero : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_sust_b_3d_v2i64_zero : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i64_ty, llvm_i64_ty], []>;
+def int_nvvm_sust_b_3d_v4i8_zero : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_3d_v4i16_zero : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_b_3d_v4i32_zero : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
 
 // Formatted
-foreach vec = [TV_I8, TV_I16, TV_I32,
-               TV_V2I8, TV_V2I16, TV_V2I32,
-               TV_V4I8, TV_V4I16, TV_V4I32] in
-  defm int_nvvm_sust_p : SurfaceStoreIntrinsics<"trap", vec>;
+
+def int_nvvm_sust_p_1d_i8_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_p_1d_i16_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_p_1d_i32_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_sust_p_1d_v2i8_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_p_1d_v2i16_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_p_1d_v2i32_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_sust_p_1d_v4i8_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i16_ty,
+                   llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_p_1d_v4i16_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i16_ty,
+                   llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_p_1d_v4i32_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_sust_p_1d_array_i8_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_p_1d_array_i16_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_p_1d_array_i32_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_sust_p_1d_array_v2i8_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_p_1d_array_v2i16_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_p_1d_array_v2i32_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_sust_p_1d_array_v4i8_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i16_ty,
+                   llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_p_1d_array_v4i16_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i16_ty,
+                   llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_p_1d_array_v4i32_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_sust_p_2d_i8_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_p_2d_i16_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_p_2d_i32_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_sust_p_2d_v2i8_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_p_2d_v2i16_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_p_2d_v2i32_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_sust_p_2d_v4i8_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i16_ty,
+                   llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_p_2d_v4i16_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i16_ty,
+                   llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_p_2d_v4i32_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_sust_p_2d_array_i8_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_p_2d_array_i16_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_p_2d_array_i32_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_sust_p_2d_array_v2i8_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_p_2d_array_v2i16_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_p_2d_array_v2i32_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_sust_p_2d_array_v4i8_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_p_2d_array_v4i16_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_p_2d_array_v4i32_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_sust_p_3d_i8_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_p_3d_i16_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_p_3d_i32_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_sust_p_3d_v2i8_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_p_3d_v2i16_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_p_3d_v2i32_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i32_ty], []>;
+def int_nvvm_sust_p_3d_v4i8_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_p_3d_v4i16_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], []>;
+def int_nvvm_sust_p_3d_v4i32_trap : NVVMBuiltin,
+    Intrinsic<[], [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
 
 // Accessing special registers.
 
@@ -1745,16 +3475,19 @@ def int_nvvm_read_ptx_sreg_cluster_nctarank : PTXReadSRegIntrinsicNB_r32;
 // SHUFFLE
 //
 // Generate intrinsics for all variants of shfl instruction.
-let IntrProperties = [IntrInaccessibleMemOnly, IntrConvergent, IntrNoCallback] in {
-  foreach sync = [false, true] in {
-    foreach mode = ["up", "down", "bfly", "idx"] in {
-      foreach type = ["i32", "f32"] in {
-        foreach return_pred = [false, true] in {
-          defvar i = SHFL_INFO<sync, mode, type, return_pred>;
-          if i.withGccBuiltin then
-            def i.Name : NVVMBuiltin, Intrinsic<i.RetTy, i.ArgsTy>;
-          else
-            def i.Name : Intrinsic<i.RetTy, i.ArgsTy>;
+foreach sync = [false, true] in {
+  foreach mode = ["up", "down", "bfly", "idx"] in {
+    foreach type = ["i32", "f32"] in {
+      foreach return_pred = [false, true] in {
+        defvar i = SHFL_INFO<sync, mode, type, return_pred>;
+        if i.withGccBuiltin then {
+          def i.Name : NVVMBuiltin,
+            Intrinsic<i.RetTy, i.ArgsTy,
+                      [IntrInaccessibleMemOnly, IntrConvergent, IntrNoCallback]>;
+        } else {
+          def i.Name :
+            Intrinsic<i.RetTy, i.ArgsTy,
+                      [IntrInaccessibleMemOnly, IntrConvergent, IntrNoCallback]>;
         }
       }
     }
@@ -1765,21 +3498,43 @@ let IntrProperties = [IntrInaccessibleMemOnly, IntrConvergent, IntrNoCallback] i
 // VOTE
 //
 
-let IntrProperties = [IntrInaccessibleMemOnly, IntrConvergent, IntrNoCallback] in {
-  def int_nvvm_vote_all : NVVMBuiltin, Intrinsic<[llvm_i1_ty], [llvm_i1_ty]>;
-  def int_nvvm_vote_any : NVVMBuiltin, Intrinsic<[llvm_i1_ty], [llvm_i1_ty]>;
-  def int_nvvm_vote_uni : NVVMBuiltin, Intrinsic<[llvm_i1_ty], [llvm_i1_ty]>;
-  def int_nvvm_vote_ballot : NVVMBuiltin, Intrinsic<[llvm_i32_ty], [llvm_i1_ty]>;
-}
+// vote.all pred
+def int_nvvm_vote_all : NVVMBuiltin,
+  Intrinsic<[llvm_i1_ty], [llvm_i1_ty],
+            [IntrInaccessibleMemOnly, IntrConvergent, IntrNoCallback]>;
+// vote.any pred
+def int_nvvm_vote_any : NVVMBuiltin,
+  Intrinsic<[llvm_i1_ty], [llvm_i1_ty],
+            [IntrInaccessibleMemOnly, IntrConvergent, IntrNoCallback]>;
+// vote.uni pred
+def int_nvvm_vote_uni : NVVMBuiltin,
+  Intrinsic<[llvm_i1_ty], [llvm_i1_ty],
+            [IntrInaccessibleMemOnly, IntrConvergent, IntrNoCallback]>;
+// vote.ballot pred
+def int_nvvm_vote_ballot : NVVMBuiltin,
+  Intrinsic<[llvm_i32_ty], [llvm_i1_ty],
+            [IntrInaccessibleMemOnly, IntrConvergent, IntrNoCallback]>;
+
 //
 // VOTE.SYNC
 //
-let IntrProperties = [IntrInaccessibleMemOnly, IntrConvergent, IntrNoCallback] in {
-  def int_nvvm_vote_all_sync : NVVMBuiltin, Intrinsic<[llvm_i1_ty], [llvm_i32_ty, llvm_i1_ty]>;
-  def int_nvvm_vote_any_sync : NVVMBuiltin, Intrinsic<[llvm_i1_ty], [llvm_i32_ty, llvm_i1_ty]>;
-  def int_nvvm_vote_uni_sync : NVVMBuiltin, Intrinsic<[llvm_i1_ty], [llvm_i32_ty, llvm_i1_ty]>;
-  def int_nvvm_vote_ballot_sync : NVVMBuiltin, Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i1_ty]>;
-}
+
+// vote.sync.all mask, pred
+def int_nvvm_vote_all_sync : NVVMBuiltin,
+  Intrinsic<[llvm_i1_ty], [llvm_i32_ty, llvm_i1_ty],
+            [IntrInaccessibleMemOnly, IntrConvergent, IntrNoCallback]>;
+// vote.sync.any mask, pred
+def int_nvvm_vote_any_sync : NVVMBuiltin,
+  Intrinsic<[llvm_i1_ty], [llvm_i32_ty, llvm_i1_ty],
+            [IntrInaccessibleMemOnly, IntrConvergent, IntrNoCallback]>;
+// vote.sync.uni mask, pred
+def int_nvvm_vote_uni_sync : NVVMBuiltin,
+  Intrinsic<[llvm_i1_ty], [llvm_i32_ty, llvm_i1_ty],
+            [IntrInaccessibleMemOnly, IntrConvergent, IntrNoCallback]>;
+// vote.sync.ballot mask, pred
+def int_nvvm_vote_ballot_sync : NVVMBuiltin,
+  Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i1_ty],
+            [IntrInaccessibleMemOnly, IntrConvergent, IntrNoCallback]>;
 
 //
 // ACTIVEMASK
@@ -1791,25 +3546,28 @@ def int_nvvm_activemask : NVVMBuiltin,
 //
 // MATCH.SYNC
 //
-let IntrProperties = [IntrInaccessibleMemOnly, IntrConvergent, IntrNoCallback] in {
-  // match.any.sync.b32 mask, value
-  def int_nvvm_match_any_sync_i32 : NVVMBuiltin,
-    Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty]>;
-  // match.any.sync.b64 mask, value
-  def int_nvvm_match_any_sync_i64 : NVVMBuiltin,
-    Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i64_ty]>;
+// match.any.sync.b32 mask, value
+def int_nvvm_match_any_sync_i32 : NVVMBuiltin,
+  Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
+            [IntrInaccessibleMemOnly, IntrConvergent, IntrNoCallback]>;
+// match.any.sync.b64 mask, value
+def int_nvvm_match_any_sync_i64 : NVVMBuiltin,
+  Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i64_ty],
+            [IntrInaccessibleMemOnly, IntrConvergent, IntrNoCallback]>;
 
-  // match.all instruction have two variants -- one returns a single value, another
-  // returns a pair {value, predicate}. We currently only implement the latter as
-  // that's the variant exposed by CUDA API.
+// match.all instruction have two variants -- one returns a single value, another
+// returns a pair {value, predicate}. We currently only implement the latter as
+// that's the variant exposed by CUDA API.
 
-  // match.all.sync.b32p mask, value
-  def int_nvvm_match_all_sync_i32p :
-    Intrinsic<[llvm_i32_ty, llvm_i1_ty], [llvm_i32_ty, llvm_i32_ty]>;
-  // match.all.sync.b64p mask, value
-  def int_nvvm_match_all_sync_i64p :
-    Intrinsic<[llvm_i32_ty, llvm_i1_ty], [llvm_i32_ty, llvm_i64_ty]>;
-}
+// match.all.sync.b32p mask, value
+def int_nvvm_match_all_sync_i32p :
+  Intrinsic<[llvm_i32_ty, llvm_i1_ty], [llvm_i32_ty, llvm_i32_ty],
+            [IntrInaccessibleMemOnly, IntrConvergent, IntrNoCallback]>;
+// match.all.sync.b64p mask, value
+def int_nvvm_match_all_sync_i64p :
+  Intrinsic<[llvm_i32_ty, llvm_i1_ty], [llvm_i32_ty, llvm_i64_ty],
+            [IntrInaccessibleMemOnly, IntrConvergent, IntrNoCallback]>;
+
 //
 // ELECT.SYNC
 //
@@ -1823,17 +3581,21 @@ def int_nvvm_elect_sync :
 //
 // redux.sync.op.u32 dst, src, membermask;
 
-let IntrProperties = [IntrConvergent, IntrInaccessibleMemOnly, IntrNoCallback] in {
-  foreach op = ["umin", "umax", "add", "min", "max", "and", "xor", "or"] in
-    def int_nvvm_redux_sync_ # op : NVVMBuiltin,
-      Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty]>;
+foreach op = ["umin", "umax", "add", "min", "max", "and", "xor", "or"] in {
+  def int_nvvm_redux_sync_ # op : NVVMBuiltin,
+    Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
+              [IntrConvergent, IntrInaccessibleMemOnly, IntrNoCallback]>;
+}
 
-  // redux.sync.op.{abs}.{NaN}.f32 dst, src, membermask;
-  foreach binOp = ["min", "max"] in
-    foreach abs = ["", "_abs"] in
-      foreach NaN = ["", "_NaN"] in
-        def int_nvvm_redux_sync_f # binOp # abs # NaN : NVVMBuiltin,
-          Intrinsic<[llvm_float_ty], [llvm_float_ty, llvm_i32_ty]>;
+// redux.sync.op.{abs}.{NaN}.f32 dst, src, membermask;
+foreach binOp = ["min", "max"] in {
+  foreach abs = ["", "_abs"] in {
+    foreach NaN = ["", "_NaN"] in {
+      def int_nvvm_redux_sync_f # binOp # abs # NaN : NVVMBuiltin,
+        Intrinsic<[llvm_float_ty], [llvm_float_ty, llvm_i32_ty],
+                  [IntrConvergent, IntrInaccessibleMemOnly, IntrNoCallback]>;
+    }
+  }
 }
 
 //
@@ -1885,10 +3647,13 @@ foreach layout = ["row", "col"] in {
 }
 
 // WMMA.MMA
-class NVVM_MMA<WMMA_REGS A, WMMA_REGS B, WMMA_REGS C, WMMA_REGS D>
+class NVVM_WMMA_MMA<string ALayout, string BLayout, int Satfinite, string rnd, string b1op,
+                    WMMA_REGS A, WMMA_REGS B,
+                    WMMA_REGS C, WMMA_REGS D>
   : Intrinsic<D.regs,
               !listconcat(A.regs, B.regs, C.regs),
-              [IntrNoMem, IntrNoCallback]>;
+              [IntrNoMem, IntrNoCallback],
+              WMMA_NAME<ALayout, BLayout, Satfinite, rnd, b1op, A, B, C, D>.llvm>;
 
 foreach layout_a = ["row", "col"] in {
   foreach layout_b = ["row", "col"] in {
@@ -1899,7 +3664,8 @@ foreach layout_a = ["row", "col"] in {
             if NVVM_WMMA_SUPPORTED<op, layout_a, layout_b, satf, rnd>.ret then {
               def WMMA_NAME<layout_a, layout_b, satf, rnd, b1op,
                                 op[0], op[1], op[2], op[3]>.record
-                : NVVM_MMA<op[0], op[1], op[2], op[3]>;
+                : NVVM_WMMA_MMA<layout_a, layout_b, satf, rnd, b1op,
+                                op[0], op[1], op[2], op[3]>;
             }
           } // b1op
         } // op
@@ -1908,6 +3674,14 @@ foreach layout_a = ["row", "col"] in {
   } // layout_b
 } // layout_a
 
+// MMA
+class NVVM_MMA<string ALayout, string BLayout, int Satfinite, string b1op,
+               WMMA_REGS A, WMMA_REGS B, WMMA_REGS C, WMMA_REGS D>
+  : Intrinsic<D.regs,
+              !listconcat(A.regs, B.regs, C.regs),
+              [IntrNoMem, IntrNoCallback],
+              MMA_NAME<ALayout, BLayout, Satfinite, b1op, A, B, C, D>.llvm>;
+
 foreach layout_a = ["row", "col"] in {
   foreach layout_b = ["row", "col"] in {
     foreach satf = [0, 1] in {
@@ -1915,7 +3689,7 @@ foreach layout_a = ["row", "col"] in {
         foreach b1op = NVVM_MMA_B1OPS<op>.ret in {
           if NVVM_MMA_SUPPORTED<op, layout_a, layout_b, satf>.ret then {
             def MMA_NAME<layout_a, layout_b, satf, b1op, op[0], op[1], op[2], op[3]>.record
-              : NVVM_MMA<op[0], op[1], op[2], op[3]>;
+              : NVVM_MMA<layout_a, layout_b, satf, b1op, op[0], op[1], op[2], op[3]>;
           }
         } // b1op
       } // op
@@ -1939,22 +3713,18 @@ foreach transposed = [0, 1] in {
   }
 }
 
-// MAPA
-let IntrProperties = [IntrNoMem, IntrSpeculatable, NoCapture<ArgIndex<0>>] in {
-  def int_nvvm_mapa
-    : DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_ptr_ty, llvm_i32_ty]>;
-  def int_nvvm_mapa_shared_cluster
-    : DefaultAttrsIntrinsic<[llvm_shared_cluster_ptr_ty], [llvm_shared_ptr_ty, llvm_i32_ty]>;
-}
-
-// GETCTARANK
-let IntrProperties = [IntrNoMem, IntrSpeculatable, NoCapture<ArgIndex<0>>] in {
-  def int_nvvm_getctarank
-    : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_ptr_ty]>;
-  def int_nvvm_getctarank_shared_cluster
-    : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_shared_ptr_ty]>;
-}
-
+def int_nvvm_mapa
+  : DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_ptr_ty, llvm_i32_ty],
+              [IntrNoMem, IntrSpeculatable, NoCapture<ArgIndex<0>>]>;
+def int_nvvm_mapa_shared_cluster
+  : DefaultAttrsIntrinsic<[llvm_shared_cluster_ptr_ty], [llvm_shared_ptr_ty, llvm_i32_ty],
+              [IntrNoMem, IntrSpeculatable, NoCapture<ArgIndex<0>>]>;
+def int_nvvm_getctarank
+  : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_ptr_ty],
+              [IntrNoMem, IntrSpeculatable, NoCapture<ArgIndex<0>>]>;
+def int_nvvm_getctarank_shared_cluster
+  : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_shared_ptr_ty],
+              [IntrNoMem, IntrSpeculatable, NoCapture<ArgIndex<0>>]>;
 def int_nvvm_is_explicit_cluster
   : DefaultAttrsIntrinsic<[llvm_i1_ty], [],
               [IntrNoMem, IntrSpeculatable, NoUndef<RetIndex>],
@@ -1970,123 +3740,87 @@ foreach op = ["dec", "inc"] in
 def int_nvvm_exit : NVVMBuiltin,
     Intrinsic<[], [], [IntrConvergent, IntrInaccessibleMemOnly, IntrNoReturn]>;
 
-class DefaultAttrsIntrinsicFlags<list<LLVMType> ret_types,
-                list<LLVMType> param_types,
-                list<LLVMType> flags,
-                list<IntrinsicProperty> intr_properties>
-  : DefaultAttrsIntrinsic<
-        ret_types,
-        !listconcat(param_types, flags),
-        !listconcat(intr_properties,
-                    !foreach(i, !range(flags),
-                        ImmArg<ArgIndex<!add(i, !size(param_types))>>))>;
-
 // Intrinsics for Tensor Copy using TMA
 // G2S -> From Global to Shared memory variants
 // S2G -> From Shared to Global memory variants
-foreach dim = 1...5 in {
-  defvar tensor_dim_args = !listsplat(llvm_i32_ty, dim);
-
+foreach dim = [1, 2, 3, 4, 5] in {
   foreach mode = !if(!ge(dim, 3), ["tile", "im2col"], ["tile"]) in {
-    defvar is_im2col = !eq(mode, "im2col");
-    defvar num_im2col_offsets = !if(is_im2col, !add(dim, -2), 0);
-    defvar im2col_offsets_args = !listsplat(llvm_i16_ty, num_im2col_offsets);
+    foreach g2s = [CP_ASYNC_BULK_TENSOR_G2S_INTR<dim, mode>] in
+      def g2s.Name : DefaultAttrsIntrinsic<[], g2s.ArgsTy, g2s.IntrProp>;
+    foreach s2g = [CP_ASYNC_BULK_TENSOR_S2G_INTR<dim, mode>] in
+      def s2g.Name : DefaultAttrsIntrinsic<[], s2g.ArgsTy, s2g.IntrProp>;
+    foreach prefetch = [CP_ASYNC_BULK_TENSOR_PREFETCH_INTR<dim, mode>] in
+      def prefetch.Name : DefaultAttrsIntrinsic<[], prefetch.ArgsTy, prefetch.IntrProp>;
+  }
+}
 
-    def int_nvvm_cp_async_bulk_tensor_g2s_ # mode # _ # dim # d :
-      DefaultAttrsIntrinsicFlags<[],
-          !listconcat([llvm_shared_cluster_ptr_ty,  // dst_shared_cluster_ptr
-                       llvm_shared_ptr_ty,          // mbarrier_smem_ptr
-                       llvm_ptr_ty],                // tensormap_ptr
-                      tensor_dim_args,              // actual tensor dims
-                      im2col_offsets_args,          // im2col offsets
-                      [llvm_i16_ty,                 // cta_mask
-                       llvm_i64_ty]),               // cache_hint
-          [llvm_i1_ty,                              // Flag for cta_mask
-           llvm_i1_ty],                             // Flag for cache_hint
-          [IntrConvergent,
-           WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>,
-           NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>, NoCapture<ArgIndex<2>>]>;
-
-    def int_nvvm_cp_async_bulk_tensor_s2g_ # mode # _ # dim # d :
-      DefaultAttrsIntrinsicFlags<[],
-          !listconcat([llvm_shared_ptr_ty,  // src_smem_ptr
-                       llvm_ptr_ty],        // tensormap_ptr
-                      tensor_dim_args,      // actual tensor dims
-                      [llvm_i64_ty]),       // cache_hint
-          [llvm_i1_ty],                     // Flag for cache_hint
-          [IntrConvergent,
-           ReadOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>,
-           NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>]>;
-
-    def int_nvvm_cp_async_bulk_tensor_prefetch_ # mode # _ # dim # d :
-      DefaultAttrsIntrinsicFlags<[],
-          !listconcat([llvm_ptr_ty],        // tensormap_ptr
-                       tensor_dim_args,     // actual tensor dims
-                       im2col_offsets_args, // im2col offsets
-                      [llvm_i64_ty]),       // cache_hint
-          [llvm_i1_ty],                     // Flag for cache_hint
-          [IntrConvergent,
-           ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
-
-    // Intrinsics for TMA Copy with reduction
-    foreach red_op = ["add", "min", "max", "inc", "dec", "and", "or", "xor"] in
-      def int_nvvm_cp_async_bulk_tensor_reduce_ # red_op # _ # mode # _ # dim # d :
-        DefaultAttrsIntrinsicFlags<[],
-            !listconcat([llvm_shared_ptr_ty,  // src_smem_ptr
-                         llvm_ptr_ty],        // tensormap_ptr
-                         tensor_dim_args,     // actual tensor dims
-                        [llvm_i64_ty]),       // cache_hint
-          [llvm_i1_ty],                       // Flag for cache_hint
-          [IntrConvergent, ReadOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>,
-           NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>]>;
+// Intrinsics for TMA Copy with reduction
+foreach dim = [1, 2, 3, 4, 5] in {
+  foreach mode = !if(!ge(dim, 3), ["tile", "im2col"], ["tile"]) in {
+    foreach red_op = ["add", "min", "max", "inc", "dec", "and", "or", "xor"] in {
+      foreach reduce = [CP_ASYNC_BULK_TENSOR_REDUCE_INTR<dim, mode, red_op>] in
+        def reduce.Name : DefaultAttrsIntrinsic<[], reduce.ArgsTy, reduce.IntrProp>;
+    }
   }
 }
 
 // Intrinsics for Prefetch and Prefetchu
-let IntrProperties = [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>] in {
-  foreach level = ["L1", "L2"] in {
-    def int_nvvm_prefetch_ # level : Intrinsic<[], [llvm_ptr_ty]>;
-    def int_nvvm_prefetch_global_ # level : Intrinsic<[], [llvm_global_ptr_ty]>;
-    def int_nvvm_prefetch_local_ # level : Intrinsic<[], [llvm_local_ptr_ty]>;
-  }
+def int_nvvm_prefetch_L1 : Intrinsic<[], [llvm_ptr_ty],
+  [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
+def int_nvvm_prefetch_L2 : Intrinsic<[], [llvm_ptr_ty],
+  [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
+def int_nvvm_prefetch_global_L1 : Intrinsic<[], [llvm_global_ptr_ty],
+  [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
+def int_nvvm_prefetch_global_L2 : Intrinsic<[], [llvm_global_ptr_ty],
+  [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
+def int_nvvm_prefetch_local_L1 : Intrinsic<[], [llvm_local_ptr_ty],
+  [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
+def int_nvvm_prefetch_local_L2 : Intrinsic<[], [llvm_local_ptr_ty],
+  [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
 
-  foreach eviction_priority = ["evict_normal", "evict_last"] in
-    def int_nvvm_prefetch_global_L2_ # eviction_priority : Intrinsic<[], [llvm_global_ptr_ty]>;
+def int_nvvm_prefetch_global_L2_evict_normal : Intrinsic<[], [llvm_global_ptr_ty],
+  [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
+def int_nvvm_prefetch_global_L2_evict_last : Intrinsic<[], [llvm_global_ptr_ty],
+  [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
+def int_nvvm_prefetchu_L1 : Intrinsic<[], [llvm_ptr_ty],
+  [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
 
-  def int_nvvm_prefetchu_L1 : Intrinsic<[], [llvm_ptr_ty]>;
-}
+def int_nvvm_applypriority_global_L2_evict_normal
+  : DefaultAttrsIntrinsic<[], [llvm_global_ptr_ty, llvm_i64_ty],
+    [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>,
+    ImmArg<ArgIndex<1>>]>;
 
-// applypriority
-let IntrProperties = [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>,
-                      ImmArg<ArgIndex<1>>] in {
-  def int_nvvm_applypriority_global_L2_evict_normal
-    : DefaultAttrsIntrinsic<[], [llvm_global_ptr_ty, llvm_i64_ty]>;
+def int_nvvm_applypriority_L2_evict_normal
+  : DefaultAttrsIntrinsic<[], [llvm_ptr_ty, llvm_i64_ty],
+    [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>,
+    ImmArg<ArgIndex<1>>]>;
 
-  def int_nvvm_applypriority_L2_evict_normal
-    : DefaultAttrsIntrinsic<[], [llvm_ptr_ty, llvm_i64_ty]>;
-}
+// Intrinsics for discard
+def int_nvvm_discard_global_L2 : DefaultAttrsIntrinsic<[], 
+    [llvm_global_ptr_ty, llvm_i64_ty], [NoCapture<ArgIndex<0>>,
+    ImmArg<ArgIndex<1>>, IntrHasSideEffects]>;
 
-// discard
-let IntrProperties = [NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<1>>, IntrHasSideEffects] in {
-  def int_nvvm_discard_global_L2 : DefaultAttrsIntrinsic<[], [llvm_global_ptr_ty, llvm_i64_ty]>;
-  def int_nvvm_discard_L2 : DefaultAttrsIntrinsic<[], [llvm_ptr_ty, llvm_i64_ty]>;
-}
+def int_nvvm_discard_L2 : DefaultAttrsIntrinsic<[], 
+    [llvm_ptr_ty, llvm_i64_ty], [NoCapture<ArgIndex<0>>,
+    ImmArg<ArgIndex<1>>, IntrHasSideEffects]>;
 
 // Intrinsics for Bulk Copy using TMA (non-tensor)
 // From Global to Shared Cluster
 def int_nvvm_cp_async_bulk_global_to_shared_cluster
-  : DefaultAttrsIntrinsicFlags<[],
+  : DefaultAttrsIntrinsic<[],
       [llvm_shared_cluster_ptr_ty, // dst_shared_cluster_ptr
        llvm_shared_ptr_ty,         // mbarrier_ptr
        llvm_global_ptr_ty,         // src_gmem_ptr
        llvm_i32_ty,                // copy_size
        llvm_i16_ty,                // cta_mask
-       llvm_i64_ty],               // cache_hint
-      [llvm_i1_ty,                 // Flag for cta_mask
+       llvm_i64_ty,                // cache_hint
+       llvm_i1_ty,                 // Flag for cta_mask
        llvm_i1_ty],                // Flag for cache_hint
       [IntrConvergent, IntrArgMemOnly,
        WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>,
-       NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>, NoCapture<ArgIndex<2>>]>;
+       NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>,
+       NoCapture<ArgIndex<2>>, ImmArg<ArgIndex<6>>,
+       ImmArg<ArgIndex<7>>]>;
 
 // From Shared CTA to Shared Cluster
 def int_nvvm_cp_async_bulk_shared_cta_to_cluster
@@ -2102,38 +3836,27 @@ def int_nvvm_cp_async_bulk_shared_cta_to_cluster
 
 // From Shared CTA to Global memory
 def int_nvvm_cp_async_bulk_shared_cta_to_global
-  : DefaultAttrsIntrinsicFlags<[],
-      [llvm_global_ptr_ty, // dst_gmem_ptr
-       llvm_shared_ptr_ty, // src_smem_ptr
-       llvm_i32_ty,        // copy_size
-       llvm_i64_ty],       // cache_hint
-      [llvm_i1_ty],        // Flag for cache_hint
-      [IntrConvergent, IntrArgMemOnly,
-       WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>,
-       NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>]>;
-
-// From Shared CTA to Global memory with bytemask
-def int_nvvm_cp_async_bulk_shared_cta_to_global_bytemask
   : DefaultAttrsIntrinsic<[],
       [llvm_global_ptr_ty, // dst_gmem_ptr
        llvm_shared_ptr_ty, // src_smem_ptr
        llvm_i32_ty,        // copy_size
        llvm_i64_ty,        // cache_hint
-       llvm_i1_ty,         // Flag for cache_hint
-       llvm_i16_ty],       // byte_mask
+       llvm_i1_ty],        // Flag for cache_hint
       [IntrConvergent, IntrArgMemOnly,
        WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>,
+       NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>,
        ImmArg<ArgIndex<4>>]>;
 
 // Intrinsics for Bulk Copy Prefetch L2
 def int_nvvm_cp_async_bulk_prefetch_L2
-  : DefaultAttrsIntrinsicFlags<[],
+  : DefaultAttrsIntrinsic<[],
       [llvm_global_ptr_ty, // src_gmem_ptr
        llvm_i32_ty,        // copy_size
-       llvm_i64_ty],       // cache_hint
-      [llvm_i1_ty],        // Flag for cache_hint
+       llvm_i64_ty,        // cache_hint
+       llvm_i1_ty],        // Flag for cache_hint
       [IntrConvergent, IntrArgMemOnly,
-       NoCapture<ArgIndex<0>>, ReadOnly<ArgIndex<0>>]>;
+       NoCapture<ArgIndex<0>>, ReadOnly<ArgIndex<0>>,
+       ImmArg<ArgIndex<3>>]>;
 
 def int_nvvm_griddepcontrol_launch_dependents : Intrinsic<[], [], [IntrNoMem, IntrHasSideEffects]>;
 def int_nvvm_griddepcontrol_wait : Intrinsic<[], [], [IntrNoMem, IntrHasSideEffects]>;
@@ -2232,7 +3955,8 @@ class NVVM_TCGEN05_LD<string Shape, int Num> :
                   !listconcat([IntrConvergent, IntrArgMemOnly, NoCapture<ArgIndex<0>>],
                               !if(!eq(Shape, "16x32bx2"),
                                 [ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>],
-                                [ImmArg<ArgIndex<1>>]))>;
+                                [ImmArg<ArgIndex<1>>])),
+                  NVVM_TCGEN05_LDST_NAME<"ld", Shape, Num>.intr>;
 
 // Tcgen05 st intrinsics
 class NVVM_TCGEN05_ST<string Shape, int Num> :
@@ -2244,28 +3968,32 @@ class NVVM_TCGEN05_ST<string Shape, int Num> :
                   !listconcat([IntrConvergent, IntrArgMemOnly, NoCapture<ArgIndex<0>>],
                               !if(!eq(Shape, "16x32bx2"),
                                 [ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<3>>],
-                                [ImmArg<ArgIndex<2>>]))>;
+                                [ImmArg<ArgIndex<2>>])),
+                  NVVM_TCGEN05_LDST_NAME<"st", Shape, Num>.intr>;
 
 foreach shape = ["16x64b", "16x128b", "16x256b", "32x32b", "16x32bx2"] in {
-  foreach num = 0...8 in {
+  foreach num = !range(0, 8) in {
     if NVVM_TCGEN05_LDST_ACCESS_SIZE<shape, num>.valid then {
-      def int_nvvm_tcgen05_ld_ # shape # _x # !shl(1, num) :
+      def NVVM_TCGEN05_LDST_NAME<"ld", shape, num>.record :
             NVVM_TCGEN05_LD<shape, num>;
-      def int_nvvm_tcgen05_st_ # shape # _x # !shl(1, num) :
+      def NVVM_TCGEN05_LDST_NAME<"st", shape, num>.record :
             NVVM_TCGEN05_ST<shape, num>;
-    }
+      }
   }
 }
 
 //
 // Bulk store intrinsics
 //
-let IntrProperties = [IntrArgMemOnly, IntrWriteMem, WriteOnly<ArgIndex<0>>,
-                      NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<2>>] in {
-  def int_nvvm_st_bulk :
-      DefaultAttrsIntrinsic<[], [llvm_ptr_ty, llvm_i64_ty, llvm_i64_ty]>;
 
-  def int_nvvm_st_bulk_shared_cta :
-      DefaultAttrsIntrinsic<[], [llvm_shared_ptr_ty, llvm_i64_ty, llvm_i64_ty]>;
-}
+def int_nvvm_st_bulk : DefaultAttrsIntrinsic<[],
+  [llvm_ptr_ty, llvm_i64_ty, llvm_i64_ty],
+  [IntrArgMemOnly, IntrWriteMem,
+    WriteOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<2>>]>;
+
+def int_nvvm_st_bulk_shared_cta : DefaultAttrsIntrinsic<[],
+  [llvm_shared_ptr_ty, llvm_i64_ty, llvm_i64_ty],
+  [IntrArgMemOnly, IntrWriteMem,
+    WriteOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<2>>]>;
+
 } // let TargetPrefix = "nvvm"

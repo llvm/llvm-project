@@ -755,7 +755,7 @@ void TemplateTypeParmDecl::setTypeConstraint(
          "call setTypeConstraint");
   assert(!TypeConstraintInitialized &&
          "TypeConstraint was already initialized!");
-  new (getTrailingObjects())
+  new (getTrailingObjects<TypeConstraint>())
       TypeConstraint(Loc, ImmediatelyDeclaredConstraint, ArgPackSubstIndex);
   TypeConstraintInitialized = true;
 }
@@ -880,7 +880,8 @@ TemplateTemplateParmDecl::TemplateTemplateParmDecl(
     : TemplateDecl(TemplateTemplateParm, DC, L, Id, Params),
       TemplateParmPosition(D, P), Typename(Typename), ParameterPack(true),
       ExpandedParameterPack(true), NumExpandedParams(Expansions.size()) {
-  llvm::uninitialized_copy(Expansions, getTrailingObjects());
+  llvm::uninitialized_copy(Expansions,
+                           getTrailingObjects<TemplateParameterList *>());
 }
 
 TemplateTemplateParmDecl *
@@ -938,7 +939,7 @@ void TemplateTemplateParmDecl::setDefaultArgument(
 //===----------------------------------------------------------------------===//
 TemplateArgumentList::TemplateArgumentList(ArrayRef<TemplateArgument> Args)
     : NumArguments(Args.size()) {
-  llvm::uninitialized_copy(Args, getTrailingObjects());
+  llvm::uninitialized_copy(Args, getTrailingObjects<TemplateArgument>());
 }
 
 TemplateArgumentList *
@@ -1165,7 +1166,7 @@ ImplicitConceptSpecializationDecl::CreateDeserialized(
 void ImplicitConceptSpecializationDecl::setTemplateArguments(
     ArrayRef<TemplateArgument> Converted) {
   assert(Converted.size() == NumTemplateArgs);
-  llvm::uninitialized_copy(Converted, getTrailingObjects());
+  llvm::uninitialized_copy(Converted, getTrailingObjects<TemplateArgument>());
 }
 
 //===----------------------------------------------------------------------===//

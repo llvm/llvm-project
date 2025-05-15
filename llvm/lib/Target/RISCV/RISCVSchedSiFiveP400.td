@@ -1231,7 +1231,6 @@ defm "" : LMULReadAdvance<"ReadVSM3MEV", 0>;
 
 //===----------------------------------------------------------------------===//
 // Unsupported extensions
-defm : UnsupportedSchedQ;
 defm : UnsupportedSchedZabha;
 defm : UnsupportedSchedZbc;
 defm : UnsupportedSchedZbkb;

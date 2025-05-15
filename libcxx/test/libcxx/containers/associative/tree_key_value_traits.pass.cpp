@@ -21,6 +21,7 @@ void testKeyValueTrait() {
     typedef int Tp;
     typedef std::__tree_key_value_types<Tp> Traits;
     static_assert((std::is_same<Traits::key_type, int>::value), "");
+    static_assert((std::is_same<Traits::__node_value_type, Tp>::value), "");
     static_assert((std::is_same<Traits::__container_value_type, Tp>::value), "");
     static_assert(Traits::__is_map == false, "");
   }
@@ -28,6 +29,7 @@ void testKeyValueTrait() {
     typedef std::pair<int, int> Tp;
     typedef std::__tree_key_value_types<Tp> Traits;
     static_assert((std::is_same<Traits::key_type, Tp>::value), "");
+    static_assert((std::is_same<Traits::__node_value_type, Tp>::value), "");
     static_assert((std::is_same<Traits::__container_value_type, Tp>::value), "");
     static_assert(Traits::__is_map == false, "");
   }
@@ -35,6 +37,7 @@ void testKeyValueTrait() {
     typedef std::pair<const int, int> Tp;
     typedef std::__tree_key_value_types<Tp> Traits;
     static_assert((std::is_same<Traits::key_type, Tp>::value), "");
+    static_assert((std::is_same<Traits::__node_value_type, Tp>::value), "");
     static_assert((std::is_same<Traits::__container_value_type, Tp>::value), "");
     static_assert(Traits::__is_map == false, "");
   }
@@ -43,6 +46,7 @@ void testKeyValueTrait() {
     typedef std::__tree_key_value_types<Tp> Traits;
     static_assert((std::is_same<Traits::key_type, int>::value), "");
     static_assert((std::is_same<Traits::mapped_type, int>::value), "");
+    static_assert((std::is_same<Traits::__node_value_type, Tp>::value), "");
     static_assert((std::is_same<Traits::__container_value_type, std::pair<const int, int> >::value), "");
     static_assert((std::is_same<Traits::__map_value_type, std::pair<const int, int> >::value), "");
     static_assert(Traits::__is_map == true, "");

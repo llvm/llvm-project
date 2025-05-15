@@ -3112,11 +3112,9 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
   if (const Arg *A = Args.getLastArg(OPT_code_completion_at)) {
     Opts.CodeCompletionAt =
       ParsedSourceLocation::FromString(A->getValue());
-    if (Opts.CodeCompletionAt.FileName.empty()) {
+    if (Opts.CodeCompletionAt.FileName.empty())
       Diags.Report(diag::err_drv_invalid_value)
-          << A->getAsString(Args) << A->getValue();
-      Diags.Report(diag::note_command_line_code_loc_requirement);
-    }
+        << A->getAsString(Args) << A->getValue();
   }
 
   Opts.Plugins = Args.getAllArgValues(OPT_load);

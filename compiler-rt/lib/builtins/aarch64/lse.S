@@ -20,7 +20,7 @@
 // Routines may modify temporary registers tmp0, tmp1, tmp2,
 // return value x0 and the flags only.
 
-#if defined(__aarch64__) || defined(__arm64ec__)
+#ifdef __aarch64__
 
 #ifdef HAS_ASM_LSE
 .arch armv8-a+lse
@@ -267,4 +267,4 @@ NO_EXEC_STACK_DIRECTIVE
 // GNU property note for BTI and PAC
 GNU_PROPERTY_BTI_PAC
 
-#endif // defined(__aarch64__) || defined(__arm64ec__)
+#endif // __aarch64__

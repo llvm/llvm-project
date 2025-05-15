@@ -2660,7 +2660,8 @@ BugPathGetter::BugPathGetter(const ExplodedGraph *OriginalGraph,
   // Perform a forward BFS to find all the shortest paths.
   std::queue<const ExplodedNode *> WS;
 
-  WS.push(TrimmedGraph->getRoot());
+  assert(TrimmedGraph->num_roots() == 1);
+  WS.push(*TrimmedGraph->roots_begin());
   unsigned Priority = 0;
 
   while (!WS.empty()) {
@@ -2721,9 +2722,7 @@ BugPathInfo *BugPathGetter::getNextBugPath() {
 
     // Are we at the final node?
     if (OrigN->pred_empty()) {
-      assert(OrigN == TrimmedGraph->getRoot() &&
-             "There should be only one root!");
-      GNew->designateAsRoot(NewN);
+      GNew->addRoot(NewN);
       break;
     }
 

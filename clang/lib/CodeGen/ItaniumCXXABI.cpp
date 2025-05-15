@@ -3754,7 +3754,7 @@ static bool ShouldUseExternalRTTIDescriptor(CodeGenModule &CGM,
     bool IsDLLImport = RD->hasAttr<DLLImportAttr>();
 
     // Don't import the RTTI but emit it locally.
-    if (CGM.getTriple().isOSCygMing())
+    if (CGM.getTriple().isWindowsGNUEnvironment())
       return false;
 
     if (CGM.getVTables().isVTableExternal(RD)) {
@@ -4041,7 +4041,10 @@ static llvm::GlobalVariable::LinkageTypes getTypeInfoLinkage(CodeGenModule &CGM,
           return llvm::GlobalValue::ExternalLinkage;
       // MinGW always uses LinkOnceODRLinkage for type info.
       if (RD->isDynamicClass() &&
-          !CGM.getContext().getTargetInfo().getTriple().isOSCygMing())
+          !CGM.getContext()
+               .getTargetInfo()
+               .getTriple()
+               .isWindowsGNUEnvironment())
         return CGM.getVTableLinkage(RD);
     }
 

@@ -690,13 +690,19 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
   // Emit blockaddress. We first need to find the LLVM block referenced by this
   // operation and then create a LLVM block address for it.
   if (auto blockAddressOp = dyn_cast<LLVM::BlockAddressOp>(opInst)) {
+    // getBlockTagOp() walks a function to search for block labels. Check
+    // whether it's in cache first.
     BlockAddressAttr blockAddressAttr = blockAddressOp.getBlockAddr();
-    llvm::BasicBlock *llvmBlock =
-        moduleTranslation.lookupBlockAddress(blockAddressAttr);
+    BlockTagOp blockTagOp = moduleTranslation.lookupBlockTag(blockAddressAttr);
+    if (!blockTagOp) {
+      blockTagOp = blockAddressOp.getBlockTagOp();
+      moduleTranslation.mapBlockTag(blockAddressAttr, blockTagOp);
+    }
 
     llvm::Value *llvmValue = nullptr;
     StringRef fnName = blockAddressAttr.getFunction().getValue();
-    if (llvmBlock) {
+    if (llvm::BasicBlock *llvmBlock =
+            moduleTranslation.lookupBlock(blockTagOp->getBlock())) {
       llvm::Function *llvmFn = moduleTranslation.lookupFunction(fnName);
       llvmValue = llvm::BlockAddress::get(llvmFn, llvmBlock);
     } else {
@@ -730,8 +736,7 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
         FlatSymbolRefAttr::get(&moduleTranslation.getContext(),
                                funcOp.getName()),
         blockTagOp.getTag());
-    moduleTranslation.mapBlockAddress(blockAddressAttr,
-                                      builder.GetInsertBlock());
+    moduleTranslation.mapBlockTag(blockAddressAttr, blockTagOp);
     return success();
   }
 

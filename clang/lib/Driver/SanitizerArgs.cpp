@@ -160,10 +160,6 @@ static std::string describeSanitizeArg(const llvm::opt::Arg *A,
 /// Sanitizers set.
 static std::string toString(const clang::SanitizerSet &Sanitizers);
 
-/// Produce a string containing comma-separated names of sanitizers and
-/// sanitizer groups in \p Sanitizers set.
-static std::string toStringWithGroups(const clang::SanitizerSet &Sanitizers);
-
 /// Return true if an execute-only target disallows data access to code
 /// sections.
 static bool isExecuteOnlyTarget(const llvm::Triple &Triple,
@@ -293,7 +289,7 @@ parseSanitizeArgs(const Driver &D, const llvm::opt::ArgList &Args,
           SanitizerSet SetToDiagnose;
           SetToDiagnose.Mask |= KindsToDiagnose;
           D.Diag(diag::err_drv_unsupported_option_argument)
-              << Arg->getSpelling() << toStringWithGroups(SetToDiagnose);
+              << Arg->getSpelling() << toString(SetToDiagnose);
           DiagnosedAlwaysOutViolations |= KindsToDiagnose;
         }
       }
@@ -309,7 +305,7 @@ parseSanitizeArgs(const Driver &D, const llvm::opt::ArgList &Args,
           SanitizerSet SetToDiagnose;
           SetToDiagnose.Mask |= KindsToDiagnose;
           D.Diag(diag::err_drv_unsupported_option_argument)
-              << Arg->getSpelling() << toStringWithGroups(SetToDiagnose);
+              << Arg->getSpelling() << toString(SetToDiagnose);
           DiagnosedAlwaysInViolations |= KindsToDiagnose;
         }
       }
@@ -1202,19 +1198,6 @@ static std::string toString(const clang::SanitizerMaskCutoffs &Cutoffs) {
   llvm::SmallVector<std::string, 4> Res;
   serializeSanitizerMaskCutoffs(Cutoffs, Res);
   return llvm::join(Res, ",");
-}
-
-static std::string toStringWithGroups(const clang::SanitizerSet &Sanitizers) {
-  std::string Res;
-#define SANITIZER(NAME, ID)                                                    \
-  if (Sanitizers.has(SanitizerKind::ID)) {                                     \
-    if (!Res.empty())                                                          \
-      Res += ",";                                                              \
-    Res += NAME;                                                               \
-  }
-#define SANITIZER_GROUP(NAME, ID, ALIAS) SANITIZER(NAME, ID##Group)
-#include "clang/Basic/Sanitizers.def"
-  return Res;
 }
 
 static void addSpecialCaseListOpt(const llvm::opt::ArgList &Args,

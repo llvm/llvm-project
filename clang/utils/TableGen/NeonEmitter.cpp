@@ -2053,20 +2053,8 @@ void NeonEmitter::createIntrinsic(const Record *R,
   auto &Entry = IntrinsicMap[Name];
 
   for (auto &I : NewTypeSpecs) {
-
-    // MFloat8 type is only available on AArch64. If encountered set ArchGuard
-    // correctly.
-    std::string NewArchGuard = ArchGuard;
-    if (Type(I.first, ".").isMFloat8()) {
-      if (NewArchGuard.empty()) {
-        NewArchGuard = "defined(__aarch64__)";
-      } else if (NewArchGuard.find("defined(__aarch64__)") ==
-                 std::string::npos) {
-        NewArchGuard = "defined(__aarch64__) && (" + NewArchGuard + ")";
-      }
-    }
     Entry.emplace_back(R, Name, Proto, I.first, I.second, CK, Body, *this,
-                       NewArchGuard, TargetGuard, IsUnavailable, BigEndianSafe);
+                       ArchGuard, TargetGuard, IsUnavailable, BigEndianSafe);
     Out.push_back(&Entry.back());
   }
 

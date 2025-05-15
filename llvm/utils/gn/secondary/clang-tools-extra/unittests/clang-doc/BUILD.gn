@@ -16,7 +16,6 @@ unittest("ClangDocTests") {
     "//llvm/lib/Bitcode/Reader",
     "//llvm/lib/Bitcode/Writer",
     "//llvm/lib/Support",
-    "//llvm/lib/Testing/Support",
   ]
   include_dirs = [ "//clang-tools-extra/clang-doc" ]
   sources = [
@@ -24,7 +23,6 @@ unittest("ClangDocTests") {
     "ClangDocTest.cpp",
     "GeneratorTest.cpp",
     "HTMLGeneratorTest.cpp",
-    "HTMLMustacheGeneratorTest.cpp",
     "MDGeneratorTest.cpp",
     "MergeTest.cpp",
     "SerializeTest.cpp",

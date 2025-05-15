@@ -1375,7 +1375,7 @@ static uint64_t dumpARMELFData(uint64_t SectionAddr, uint64_t Index,
 }
 
 static void dumpELFData(uint64_t SectionAddr, uint64_t Index, uint64_t End,
-                        ArrayRef<uint8_t> Bytes, raw_ostream &OS) {
+                        ArrayRef<uint8_t> Bytes) {
   // print out data up to 8 bytes at a time in hex and ascii
   uint8_t AsciiData[9] = {'\0'};
   uint8_t Byte;
@@ -1383,9 +1383,9 @@ static void dumpELFData(uint64_t SectionAddr, uint64_t Index, uint64_t End,
 
   for (; Index < End; ++Index) {
     if (NumBytes == 0)
-      OS << format("%8" PRIx64 ":", SectionAddr + Index);
+      outs() << format("%8" PRIx64 ":", SectionAddr + Index);
     Byte = Bytes.slice(Index)[0];
-    OS << format(" %02x", Byte);
+    outs() << format(" %02x", Byte);
     AsciiData[NumBytes] = isPrint(Byte) ? Byte : '.';
 
     uint8_t IndentOffset = 0;
@@ -1400,9 +1400,9 @@ static void dumpELFData(uint64_t SectionAddr, uint64_t Index, uint64_t End,
     }
     if (NumBytes == 8) {
       AsciiData[8] = '\0';
-      OS << std::string(IndentOffset, ' ') << "         ";
-      OS << reinterpret_cast<char *>(AsciiData);
-      OS << '\n';
+      outs() << std::string(IndentOffset, ' ') << "         ";
+      outs() << reinterpret_cast<char *>(AsciiData);
+      outs() << '\n';
       NumBytes = 0;
     }
   }
@@ -1666,7 +1666,7 @@ static void
 disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
                   DisassemblerTarget &PrimaryTarget,
                   std::optional<DisassemblerTarget> &SecondaryTarget,
-                  SourcePrinter &SP, bool InlineRelocs, raw_ostream &OS) {
+                  SourcePrinter &SP, bool InlineRelocs) {
   DisassemblerTarget *DT = &PrimaryTarget;
   bool PrimaryIsThumb = false;
   SmallVector<std::pair<uint64_t, uint64_t>, 0> CHPECodeMap;
@@ -2089,10 +2089,10 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
 
       if (!PrintedSection) {
         PrintedSection = true;
-        OS << "\nDisassembly of section ";
+        outs() << "\nDisassembly of section ";
         if (!SegmentName.empty())
-          OS << SegmentName << ",";
-        OS << SectionName << ":\n";
+          outs() << SegmentName << ",";
+        outs() << SectionName << ":\n";
       }
 
       bool PrintedLabel = false;
@@ -2104,22 +2104,22 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
         const StringRef SymbolName = SymNamesHere[i];
 
         if (!PrintedLabel) {
-          OS << '\n';
+          outs() << '\n';
           PrintedLabel = true;
         }
         if (LeadingAddr)
-          OS << format(Is64Bits ? "%016" PRIx64 " " : "%08" PRIx64 " ",
-                       SectionAddr + Start + VMAAdjustment);
+          outs() << format(Is64Bits ? "%016" PRIx64 " " : "%08" PRIx64 " ",
+                           SectionAddr + Start + VMAAdjustment);
         if (Obj.isXCOFF() && SymbolDescription) {
-          OS << getXCOFFSymbolDescription(Symbol, SymbolName) << ":\n";
+          outs() << getXCOFFSymbolDescription(Symbol, SymbolName) << ":\n";
         } else
-          OS << '<' << SymbolName << ">:\n";
+          outs() << '<' << SymbolName << ">:\n";
       }
 
       // Don't print raw contents of a virtual section. A virtual section
       // doesn't have any contents in the file.
       if (Section.isVirtual()) {
-        OS << "...\n";
+        outs() << "...\n";
         continue;
       }
 
@@ -2156,17 +2156,17 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
           do {
             StringRef Line;
             std::tie(Line, ErrMsg) = ErrMsg.split('\n');
-            OS << DT->Context->getAsmInfo()->getCommentString()
-               << " error decoding " << SymNamesHere[SHI] << ": " << Line
-               << '\n';
+            outs() << DT->Context->getAsmInfo()->getCommentString()
+                   << " error decoding " << SymNamesHere[SHI] << ": " << Line
+                   << '\n';
           } while (!ErrMsg.empty());
 
           if (Size) {
-            OS << DT->Context->getAsmInfo()->getCommentString()
-               << " decoding failed region as bytes\n";
+            outs() << DT->Context->getAsmInfo()->getCommentString()
+                   << " decoding failed region as bytes\n";
             for (uint64_t I = 0; I < Size; ++I)
-              OS << "\t.byte\t " << format_hex(Bytes[I], 1, /*Upper=*/true)
-                 << '\n';
+              outs() << "\t.byte\t " << format_hex(Bytes[I], 1, /*Upper=*/true)
+                     << '\n';
           }
         }
 
@@ -2179,13 +2179,13 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
         Start += Size;
         break;
       }
-      formatted_raw_ostream FOS(OS);
+
       Index = Start;
       if (SectionAddr < StartAddress)
         Index = std::max<uint64_t>(Index, StartAddress - SectionAddr);
 
       if (DisassembleAsELFData) {
-        dumpELFData(SectionAddr, Index, End, Bytes, FOS);
+        dumpELFData(SectionAddr, Index, End, Bytes);
         Index = End;
         continue;
       }
@@ -2202,6 +2202,8 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
           Obj.isXCOFF() && Section.isText() && TracebackTable &&
           Symbols[SI - 1].XCOFFSymInfo.StorageMappingClass &&
           (*Symbols[SI - 1].XCOFFSymInfo.StorageMappingClass == XCOFF::XMC_PR);
+
+      formatted_raw_ostream FOS(outs());
 
       std::unordered_map<uint64_t, std::string> AllLabels;
       std::unordered_map<uint64_t, std::vector<BBAddrMapLabel>> BBAddrMapLabels;
@@ -2551,8 +2553,7 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
     reportWarning("failed to disassemble missing symbol " + Sym, FileName);
 }
 
-static void disassembleObject(ObjectFile *Obj, bool InlineRelocs,
-                              raw_ostream &OS) {
+static void disassembleObject(ObjectFile *Obj, bool InlineRelocs) {
   // If information useful for showing the disassembly is missing, try to find a
   // more complete binary and disassemble that instead.
   OwningBinary<Binary> FetchedBinary;
@@ -2678,7 +2679,7 @@ static void disassembleObject(ObjectFile *Obj, bool InlineRelocs,
                   "Unrecognized disassembler option: " + Opt);
 
   disassembleObject(*Obj, *DbgObj, PrimaryTarget, SecondaryTarget, SP,
-                    InlineRelocs, OS);
+                    InlineRelocs);
 }
 
 void Dumper::printRelocations() {
@@ -3339,7 +3340,7 @@ static void dumpObject(ObjectFile *O, const Archive *A = nullptr,
   if (SectionContents)
     printSectionContents(O);
   if (Disassemble)
-    disassembleObject(O, Relocations, outs());
+    disassembleObject(O, Relocations);
   if (UnwindInfo)
     printUnwindInfo(O);
 

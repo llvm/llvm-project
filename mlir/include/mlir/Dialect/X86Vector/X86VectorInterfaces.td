@@ -58,11 +58,9 @@ def OneToOneIntrinsicOpInterface : OpInterface<"OneToOneIntrinsicOp"> {
       }],
       /*retType=*/"SmallVector<Value>",
       /*methodName=*/"getIntrinsicOperands",
-      /*args=*/(ins "::mlir::ArrayRef<Value>":$operands,
-                    "const ::mlir::LLVMTypeConverter &":$typeConverter,
-                    "::mlir::RewriterBase &":$rewriter),
+      /*args=*/(ins "::mlir::RewriterBase &":$rewriter, "const LLVMTypeConverter &":$typeConverter),
       /*methodBody=*/"",
-      /*defaultImplementation=*/"return SmallVector<Value>(operands);"
+      /*defaultImplementation=*/"return SmallVector<Value>($_op->getOperands());"
     >,
   ];
 }

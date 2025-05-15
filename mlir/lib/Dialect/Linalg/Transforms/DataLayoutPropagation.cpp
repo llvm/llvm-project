@@ -312,17 +312,10 @@ static GenericOp packGenericOp(RewriterBase &rewriter, GenericOp genericOp,
   SmallVector<Value> inputOperands;
   SmallVector<Value> inputOperandsFromUnpackedSource;
   SmallVector<AffineMap> indexingMaps;
-  auto hasEquivalentTiles = [](PackOp packOp, UnPackOp unPackOp) {
-    return packOp.getOuterDimsPerm() == unPackOp.getOuterDimsPerm() &&
-           packOp.getInnerDimsPos() == unPackOp.getInnerDimsPos() &&
-           llvm::equal(packOp.getMixedTiles(), unPackOp.getMixedTiles());
-  };
   for (OpOperand *inputOperand : genericOp.getDpsInputOperands()) {
     auto [packedOperand, packedIndexingMap] = getOrCreatePackedViewOfOperand(
         rewriter, loc, packInfo, genericOp, inputOperand);
-    auto unpackOp = inputOperand->get().getDefiningOp<linalg::UnPackOp>();
-    auto packOp = packedOperand.getDefiningOp<linalg::PackOp>();
-    if (packOp && unpackOp && hasEquivalentTiles(packOp, unpackOp)) {
+    if (auto unpackOp = inputOperand->get().getDefiningOp<linalg::UnPackOp>()) {
       inputOperandsFromUnpackedSource.push_back(unpackOp.getSource());
     } else {
       inputOperandsFromUnpackedSource.push_back(packedOperand);
@@ -331,16 +324,14 @@ static GenericOp packGenericOp(RewriterBase &rewriter, GenericOp genericOp,
     indexingMaps.push_back(packedIndexingMap);
   }
 
-  // If the unpack->pack sequences can be folded, replace use the sources of
-  // the unpack ops in any unpack->pack chains on the generic op operands.
+  // If the pack and unpack op can be folded:
+  // 1) use unpack op source op for operand to fold unpack -> pack sequence.
+  // 2) init tensor of the generic op can be replaced by the destination of the
+  // pack op.
   if (isFoldableUnpackPack) {
     inputOperands = inputOperandsFromUnpackedSource;
-    if (auto destPack = dest.getDefiningOp<linalg::PackOp>()) {
-      auto destUnPack = destPack.getSource().getDefiningOp<linalg::UnPackOp>();
-      if (destUnPack && hasEquivalentTiles(destPack, destUnPack)) {
-        dest = destUnPack.getSource();
-      }
-    }
+    if (auto destPack = dest.getDefiningOp<linalg::PackOp>())
+      dest = destPack.getDest();
   }
 
   int64_t numInnerLoops = packInfo.getNumTiledLoops();

@@ -1011,24 +1011,19 @@ struct ExternalAAWrapperPass : ImmutablePass {
 
   ExternalAAWrapperPass();
 
-  explicit ExternalAAWrapperPass(CallbackT CB, bool RunEarly = false);
+  explicit ExternalAAWrapperPass(CallbackT CB);
 
-  /// Flag indicating whether this external AA should run before Basic AA.
+  /// Returns whether this external AA should run before Basic AA.
   ///
-  /// This flag is for LegacyPassManager only. To run an external AA early
-  /// with the NewPassManager, override the registerEarlyDefaultAliasAnalyses
-  /// method on the target machine.
-  ///
-  /// By default, external AA passes are run after Basic AA. If this flag is
-  /// set to true, the external AA will be run before Basic AA during alias
-  /// analysis.
+  /// By default, external AA passes are run after Basic AA. If this returns
+  /// true, the external AA will be run before Basic AA during alias analysis.
   ///
   /// For some targets, we prefer to run the external AA early to improve
   /// compile time as it has more target-specific information. This is
   /// particularly useful when the external AA can provide more precise results
   /// than Basic AA so that Basic AA does not need to spend time recomputing
   /// them.
-  bool RunEarly = false;
+  virtual bool runEarly() { return false; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();

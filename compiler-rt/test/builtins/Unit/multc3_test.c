@@ -4,7 +4,7 @@
 
 #include <stdio.h>
 
-#if _ARCH_PPC || __aarch64__ || __arm64ec__
+#if _ARCH_PPC || __aarch64__
 
 #include "int_lib.h"
 #include <math.h>
@@ -348,7 +348,7 @@ long double x[][2] =
 
 int main()
 {
-#if _ARCH_PPC || __aarch64__ || __arm64ec__
+#if _ARCH_PPC || __aarch64__
     const unsigned N = sizeof(x) / sizeof(x[0]);
     unsigned i, j;
     for (i = 0; i < N; ++i)

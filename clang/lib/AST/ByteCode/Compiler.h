@@ -126,7 +126,6 @@ public:
 
   // Expressions.
   bool VisitCastExpr(const CastExpr *E);
-  bool VisitBuiltinBitCastExpr(const BuiltinBitCastExpr *E);
   bool VisitIntegerLiteral(const IntegerLiteral *E);
   bool VisitFloatingLiteral(const FloatingLiteral *E);
   bool VisitImaginaryLiteral(const ImaginaryLiteral *E);
