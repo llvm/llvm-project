@@ -114,9 +114,6 @@ bool CheckCallDepth(InterpState &S, CodePtr OpPC);
 /// Checks the 'this' pointer.
 bool CheckThis(InterpState &S, CodePtr OpPC, const Pointer &This);
 
-/// Checks if a method is pure virtual.
-bool CheckPure(InterpState &S, CodePtr OpPC, const CXXMethodDecl *MD);
-
 /// Checks if all the arguments annotated as 'nonnull' are in fact not null.
 bool CheckNonNullArgs(InterpState &S, CodePtr OpPC, const Function *F,
                       const CallExpr *CE, unsigned ArgSize);
@@ -1329,6 +1326,14 @@ static inline bool Kill(InterpState &S, CodePtr OpPC) {
   return true;
 }
 
+static inline bool StartLifetime(InterpState &S, CodePtr OpPC) {
+  const auto &Ptr = S.Stk.peek<Pointer>();
+  if (!CheckDummy(S, OpPC, Ptr, AK_Destroy))
+    return false;
+  Ptr.startLifetime();
+  return true;
+}
+
 /// 1) Pops the value from the stack.
 /// 2) Writes the value to the local variable with the
 ///    given offset.
@@ -1858,10 +1863,8 @@ template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool Init(InterpState &S, CodePtr OpPC) {
   const T &Value = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.peek<Pointer>();
-  if (!CheckInit(S, OpPC, Ptr)) {
-    assert(false);
+  if (!CheckInit(S, OpPC, Ptr))
     return false;
-  }
   Ptr.activate();
   Ptr.initialize();
   new (&Ptr.deref<T>()) T(Value);
@@ -3029,10 +3032,11 @@ template <PrimType Name, class T = typename PrimConv<Name>::T>
 inline bool CheckEnumValue(InterpState &S, CodePtr OpPC, const EnumDecl *ED) {
   assert(ED);
   assert(!ED->isFixed());
-  const APSInt Val = S.Stk.peek<T>().toAPSInt();
 
-  if (S.inConstantContext())
+  if (S.inConstantContext()) {
+    const APSInt Val = S.Stk.peek<T>().toAPSInt();
     diagnoseEnumValue(S, OpPC, ED, Val);
+  }
   return true;
 }
 

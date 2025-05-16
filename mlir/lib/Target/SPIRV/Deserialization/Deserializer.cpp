@@ -448,6 +448,21 @@ LogicalResult spirv::Deserializer::setFunctionArgAttrs(
       foundDecorationAttr = spirv::DecorationAttr::get(context, decoration);
       break;
     }
+
+    if (decAttr.getName() == getSymbolDecoration(stringifyDecoration(
+                                 spirv::Decoration::RelaxedPrecision))) {
+      // TODO: Current implementation supports only one decoration per function
+      // parameter so RelaxedPrecision cannot be applied at the same time as,
+      // for example, Aliased/Restrict/etc. This should be relaxed to allow any
+      // combination of decoration allowed by the spec to be supported.
+      if (foundDecorationAttr)
+        return emitError(unknownLoc, "already found a decoration for function "
+                                     "argument with result <id> ")
+               << argID;
+
+      foundDecorationAttr = spirv::DecorationAttr::get(
+          context, spirv::Decoration::RelaxedPrecision);
+    }
   }
 
   if (!foundDecorationAttr)

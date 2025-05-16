@@ -18,12 +18,12 @@ define ptx_kernel void @foo(i64 %img, ptr %red, i32 %idx) {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [foo_param_0];
-; CHECK-NEXT:    ld.param.u64 %rd2, [foo_param_1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [foo_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd2, [foo_param_1];
 ; CHECK-NEXT:    cvta.to.global.u64 %rd3, %rd2;
-; CHECK-NEXT:    ld.param.u32 %r1, [foo_param_2];
+; CHECK-NEXT:    ld.param.b32 %r1, [foo_param_2];
 ; CHECK-NEXT:    tex.1d.v4.f32.s32 {%f1, %f2, %f3, %f4}, [%rd1, {%r1}];
-; CHECK-NEXT:    st.global.f32 [%rd3], %f1;
+; CHECK-NEXT:    st.global.b32 [%rd3], %f1;
 ; CHECK-NEXT:    ret;
   %val = tail call { float, float, float, float } @llvm.nvvm.tex.unified.1d.v4f32.s32(i64 %img, i32 %idx)
   %ret = extractvalue { float, float, float, float } %val, 0
@@ -42,11 +42,11 @@ define ptx_kernel void @bar(ptr %red, i32 %idx) {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [bar_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [bar_param_0];
 ; CHECK-NEXT:    cvta.to.global.u64 %rd2, %rd1;
-; CHECK-NEXT:    ld.param.u32 %r1, [bar_param_1];
+; CHECK-NEXT:    ld.param.b32 %r1, [bar_param_1];
 ; CHECK-NEXT:    tex.1d.v4.f32.s32 {%f1, %f2, %f3, %f4}, [tex0, {%r1}];
-; CHECK-NEXT:    st.global.f32 [%rd2], %f1;
+; CHECK-NEXT:    st.global.b32 [%rd2], %f1;
 ; CHECK-NEXT:    ret;
   %texHandle = tail call i64 @llvm.nvvm.texsurf.handle.internal.p1(ptr addrspace(1) @tex0)
   %val = tail call { float, float, float, float } @llvm.nvvm.tex.unified.1d.v4f32.s32(i64 %texHandle, i32 %idx)
@@ -65,9 +65,9 @@ define ptx_kernel void @baz(ptr %red, i32 %idx) {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [baz_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [baz_param_0];
 ; CHECK-NEXT:    cvta.to.global.u64 %rd2, %rd1;
-; CHECK-NEXT:    ld.param.u32 %r1, [baz_param_1];
+; CHECK-NEXT:    ld.param.b32 %r1, [baz_param_1];
 ; CHECK-NEXT:    mov.u64 %rd3, tex0;
 ; CHECK-NEXT:    tex.1d.v4.f32.s32 {%f1, %f2, %f3, %f4}, [tex0, {%r1}];
 ; CHECK-NEXT:    { // callseq 0, 0
@@ -79,10 +79,10 @@ define ptx_kernel void @baz(ptr %red, i32 %idx) {
 ; CHECK-NEXT:    (
 ; CHECK-NEXT:    param0
 ; CHECK-NEXT:    );
-; CHECK-NEXT:    ld.param.f32 %f5, [retval0];
+; CHECK-NEXT:    ld.param.b32 %f5, [retval0];
 ; CHECK-NEXT:    } // callseq 0
 ; CHECK-NEXT:    add.rn.f32 %f7, %f1, %f5;
-; CHECK-NEXT:    st.global.f32 [%rd2], %f7;
+; CHECK-NEXT:    st.global.b32 [%rd2], %f7;
 ; CHECK-NEXT:    ret;
   %texHandle = tail call i64 @llvm.nvvm.texsurf.handle.internal.p1(ptr addrspace(1) @tex0)
   %val = tail call { float, float, float, float } @llvm.nvvm.tex.unified.1d.v4f32.s32(i64 %texHandle, i32 %idx)

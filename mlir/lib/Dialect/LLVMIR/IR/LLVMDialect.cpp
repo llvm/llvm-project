@@ -3727,36 +3727,6 @@ void CallIntrinsicOp::print(OpAsmPrinter &p) {
 }
 
 //===----------------------------------------------------------------------===//
-// OpAsmDialectInterface
-//===----------------------------------------------------------------------===//
-
-namespace {
-struct LLVMOpAsmDialectInterface : public OpAsmDialectInterface {
-  using OpAsmDialectInterface::OpAsmDialectInterface;
-
-  AliasResult getAlias(Attribute attr, raw_ostream &os) const override {
-    return TypeSwitch<Attribute, AliasResult>(attr)
-        .Case<AccessGroupAttr, AliasScopeAttr, AliasScopeDomainAttr,
-              DIBasicTypeAttr, DICommonBlockAttr, DICompileUnitAttr,
-              DICompositeTypeAttr, DIDerivedTypeAttr, DIFileAttr,
-              DIGlobalVariableAttr, DIGlobalVariableExpressionAttr,
-              DIImportedEntityAttr, DILabelAttr, DILexicalBlockAttr,
-              DILexicalBlockFileAttr, DILocalVariableAttr, DIModuleAttr,
-              DINamespaceAttr, DINullTypeAttr, DIStringTypeAttr,
-              DISubprogramAttr, DISubroutineTypeAttr, LoopAnnotationAttr,
-              LoopVectorizeAttr, LoopInterleaveAttr, LoopUnrollAttr,
-              LoopUnrollAndJamAttr, LoopLICMAttr, LoopDistributeAttr,
-              LoopPipelineAttr, LoopPeeledAttr, LoopUnswitchAttr, TBAARootAttr,
-              TBAATagAttr, TBAATypeDescriptorAttr>([&](auto attr) {
-          os << decltype(attr)::getMnemonic();
-          return AliasResult::OverridableAlias;
-        })
-        .Default([](Attribute) { return AliasResult::NoAlias; });
-  }
-};
-} // namespace
-
-//===----------------------------------------------------------------------===//
 // LinkerOptionsOp
 //===----------------------------------------------------------------------===//
 
@@ -4024,9 +3994,6 @@ void LLVMDialect::initialize() {
 
   // Support unknown operations because not all LLVM operations are registered.
   allowUnknownOperations();
-  // clang-format off
-  addInterfaces<LLVMOpAsmDialectInterface>();
-  // clang-format on
   declarePromisedInterface<DialectInlinerInterface, LLVMDialect>();
 }
 

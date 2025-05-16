@@ -116,6 +116,7 @@ private:
   bool IsIfPredicateTrue(const TokenSequence &expr, std::size_t first,
       std::size_t exprTokens, Prescanner &);
   void LineDirective(const TokenSequence &, std::size_t, Prescanner &);
+  TokenSequence TokenizeMacroBody(const std::string &);
 
   AllSources &allSources_;
   std::list<std::string> names_;

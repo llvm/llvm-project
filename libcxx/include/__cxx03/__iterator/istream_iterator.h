@@ -45,7 +45,7 @@ private:
   _Tp __value_;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR istream_iterator() : __in_stream_(nullptr), __value_() {}
+  _LIBCPP_HIDE_FROM_ABI istream_iterator() : __in_stream_(nullptr), __value_() {}
   _LIBCPP_HIDE_FROM_ABI istream_iterator(istream_type& __s) : __in_stream_(std::addressof(__s)) {
     if (!(*__in_stream_ >> __value_))
       __in_stream_ = nullptr;

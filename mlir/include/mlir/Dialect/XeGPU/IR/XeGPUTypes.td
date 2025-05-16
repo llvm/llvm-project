@@ -189,6 +189,15 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
         return scatter_attr.getChunkSize().getInt();
       return 1;
     }
+
+    /// Helper to drop all layout information from the TensorDesc type.
+    TensorDescType dropLayouts() {
+      if (!getLayoutAttr())
+        return *this;
+
+      return get(getContext(), getShape(), getElementType(), getEncoding(),
+        xegpu::LayoutAttr());
+    }
   }];
 
   let hasCustomAssemblyFormat = true;

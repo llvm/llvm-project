@@ -18,7 +18,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if __has_builtin(__add_lvalue_reference)
+#if __has_builtin(__add_lvalue_reference) && !defined(_LIBCPP_COMPILER_GCC)
 
 template <class _Tp>
 using __add_lvalue_reference_t _LIBCPP_NODEBUG = __add_lvalue_reference(_Tp);
