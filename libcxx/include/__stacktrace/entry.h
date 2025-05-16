@@ -10,28 +10,15 @@
 #ifndef _LIBCPP_STACKTRACE_ENTRY
 #define _LIBCPP_STACKTRACE_ENTRY
 
-#include <__cstddef/byte.h>
-#include <__cstddef/ptrdiff_t.h>
-#include <__cstddef/size_t.h>
-#include <__format/formatter.h>
-#include <__functional/function.h>
-#include <__functional/hash.h>
+#include <__config>
 #include <__fwd/format.h>
 #include <__fwd/ostream.h>
-#include <__fwd/sstream.h>
-#include <__fwd/vector.h>
-#include <__iterator/iterator.h>
-#include <__iterator/iterator_traits.h>
-#include <__iterator/reverse_access.h>
-#include <__iterator/reverse_iterator.h>
-#include <__memory/allocator.h>
-#include <__memory/allocator_traits.h>
-#include <__utility/move.h>
-#include <__vector/pmr.h>
-#include <__vector/swap.h>
-#include <__vector/vector.h>
+#include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <string>
+
+#include <__stacktrace/base.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -42,11 +29,10 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-namespace __stacktrace {
-struct entry;
-} // namespace __stacktrace
+class _LIBCPP_EXPORTED_FROM_ABI stacktrace_entry : private __stacktrace::entry_base {
+  friend struct __stacktrace::entry_base;
+  stacktrace_entry(entry_base const& __base) : entry_base(__base) {}
 
-class _LIBCPP_EXPORTED_FROM_ABI stacktrace_entry {
 public:
   // (19.6.3.1) Overview [stacktrace.entry.overview]
   using native_handle_type = uintptr_t;
@@ -59,15 +45,25 @@ public:
 
   // (19.6.3.3) [stacktrace.entry.obs], observers
   [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI constexpr native_handle_type native_handle() const noexcept {
-    return __addr_;
+    return __addr_actual_;
   }
   [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI constexpr explicit operator bool() const noexcept {
     return native_handle() != 0;
   }
 
   // (19.6.3.4) [stacktrace.entry.query], query
-  [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI string description() const { return __desc_; }
-  [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI string source_file() const { return __file_; }
+  [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI string description() const {
+    if (__desc_->empty()) {
+      return "";
+    }
+    return {__desc_->data(), __desc_->size()};
+  }
+  [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI string source_file() const {
+    if (__desc_->empty()) {
+      return "";
+    }
+    return {__file_->data(), __file_->size()};
+  }
   [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI uint_least32_t source_line() const { return __line_; }
 
   // (19.6.3.5) [stacktrace.entry.cmp], comparison
@@ -80,20 +76,12 @@ public:
   operator<=>(const stacktrace_entry& __x, const stacktrace_entry& __y) noexcept {
     return __x.native_handle() <=> __y.native_handle();
   }
-
-private:
-  friend struct __stacktrace::entry;
-
-  uintptr_t __addr_{};
-  std::string __desc_{};
-  std::string __file_{};
-  uint_least32_t __line_{};
 };
 
 // (19.6.4.6)
 // Non-member functions [stacktrace.basic.nonmem]
 
-_LIBCPP_EXPORTED_FROM_ABI string to_string(const stacktrace_entry& __entry);
+[[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI string to_string(const stacktrace_entry& __entry);
 _LIBCPP_EXPORTED_FROM_ABI ostream& operator<<(ostream& __os, const stacktrace_entry& __entry);
 
 // (19.6.5)
@@ -113,6 +101,10 @@ struct _LIBCPP_EXPORTED_FROM_ABI hash<stacktrace_entry> {
     return hash<uintptr_t>()(__addr);
   }
 };
+
+namespace __stacktrace {
+inline stacktrace_entry entry_base::to_stacktrace_entry() const { return {*this}; }
+} // namespace __stacktrace
 
 _LIBCPP_END_NAMESPACE_STD
 

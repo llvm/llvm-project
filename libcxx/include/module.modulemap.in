@@ -1987,13 +1987,13 @@ module std [system] {
   }
 
   module stacktrace {
-    module fwd {
-      header "__stacktrace/basic_stacktrace.h"
-      header "__stacktrace/stacktrace_entry.h"
-    }
-    module impl {
-      header "__stacktrace/impl.h"
-    }
+    module base         { header "__stacktrace/base.h" }
+    module basic        { header "__stacktrace/basic.h" }
+    module entry        { header "__stacktrace/entry.h" }
+    module format       { header "__stacktrace/format.h" }
+    module hash         { header "__stacktrace/hash.h" }
+    module nonmem       { header "__stacktrace/nonmem.h" }
+    module to_string    { header "__stacktrace/to_string.h" }
 
     header "stacktrace"
     export *

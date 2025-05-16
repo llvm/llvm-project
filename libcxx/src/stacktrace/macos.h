@@ -14,13 +14,13 @@
 #include <cstddef>
 #include <cstdlib>
 
+#include <__stacktrace/base.h>
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __stacktrace {
 
-struct context;
-
 struct macos {
-  context& cx_;
+  builder& builder_;
   void ident_modules();
   void symbolize();
 };

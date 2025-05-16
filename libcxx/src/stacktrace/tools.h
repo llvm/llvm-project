@@ -16,58 +16,59 @@
 #include <csignal>
 #include <cstddef>
 #include <cstdlib>
-#include <list>
 #include <spawn.h>
 #include <string>
 #include <sys/fcntl.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
-#include <vector>
 
-#include "stacktrace/context.h"
+#include <__stacktrace/base.h>
+#include <__stacktrace/basic.h>
+#include <__stacktrace/entry.h>
+
 #include "stacktrace/utils.h"
-#include <__stacktrace/basic_stacktrace.h>
-#include <__stacktrace/stacktrace_entry.h>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __stacktrace {
 
 struct tool {
+  alloc& alloc_;
   char const* progName_;
-  explicit tool(char const* progName) : progName_(progName) {}
-  constexpr virtual ~tool() = default;
+
+  tool(alloc& alloc, char const* progName) : alloc_(alloc), progName_(progName) {}
+  virtual ~tool() = default;
 
   /** Construct complete `argv` for the spawned process.
   Includes the program name at argv[0], followed by flags */
-  virtual std::pmr::list<std::pmr::string> buildArgs(context& trace) const = 0;
+  virtual alloc::list<alloc::str> buildArgs(builder& trace) const = 0;
 
   /** Parse line(s) output by the tool, and modify `entry`. */
-  virtual void parseOutput(context& trace, entry& e, std::istream& output) const = 0;
+  virtual void parseOutput(builder& trace, entry_base& entry, std::istream& output) const = 0;
 };
 
 struct llvm_symbolizer : tool {
-  constexpr virtual ~llvm_symbolizer() = default;
-  llvm_symbolizer() : llvm_symbolizer("llvm-symbolizer") {}
-  explicit llvm_symbolizer(char const* progName) : tool{progName} {}
-  std::pmr::list<std::pmr::string> buildArgs(context& trace) const override;
-  void parseOutput(context& trace, entry& entry, std::istream& output) const override;
+  virtual ~llvm_symbolizer() = default;
+  explicit llvm_symbolizer(alloc& alloc) : llvm_symbolizer(alloc, "llvm_symbolizer") {}
+  llvm_symbolizer(alloc& alloc, char const* progName) : tool{alloc, progName} {}
+  alloc::list<alloc::str> buildArgs(builder& trace) const override;
+  void parseOutput(builder& trace, entry_base& entry, std::istream& output) const override;
 };
 
 struct addr2line : tool {
-  constexpr virtual ~addr2line() = default;
-  addr2line() : addr2line("addr2line") {}
-  explicit addr2line(char const* progName) : tool{progName} {}
-  std::pmr::list<std::pmr::string> buildArgs(context& trace) const override;
-  void parseOutput(context& trace, entry& e, std::istream& stream) const override;
+  virtual ~addr2line() = default;
+  explicit addr2line(alloc& alloc) : addr2line(alloc, "addr2line") {}
+  addr2line(alloc& alloc, char const* progName) : tool{alloc, progName} {}
+  alloc::list<alloc::str> buildArgs(builder& trace) const override;
+  void parseOutput(builder& trace, entry_base& entry, std::istream& stream) const override;
 };
 
 struct atos : tool {
-  constexpr virtual ~atos() = default;
-  atos() : atos("atos") {}
-  explicit atos(char const* progName) : tool{progName} {}
-  std::pmr::list<std::pmr::string> buildArgs(context& trace) const override;
-  void parseOutput(context& trace, entry& entry, std::istream& output) const override;
+  virtual ~atos() = default;
+  explicit atos(alloc& alloc) : atos(alloc, "atos") {}
+  atos(alloc& alloc, char const* progName) : tool{alloc, progName} {}
+  alloc::list<alloc::str> buildArgs(builder& trace) const override;
+  void parseOutput(builder& trace, entry_base& entry, std::istream& output) const override;
 };
 
 struct file_actions {
@@ -121,8 +122,8 @@ struct pspawn {
     }
   }
 
-  void spawn(std::pmr::list<std::pmr::string> const& argStrings) {
-    std::pmr::vector<char const*> argv{argStrings.get_allocator()};
+  void spawn(alloc::list<alloc::str> const& argStrings) {
+    alloc::vec<char const*> argv = tool_.alloc_.make_vec<char const*>();
     argv.reserve(argStrings.size() + 1);
     for (auto const& str : argStrings) {
       argv.push_back(str.data());
@@ -142,13 +143,13 @@ struct pspawn {
 };
 
 struct pspawn_tool : pspawn {
-  context& cx_;
+  builder& builder_;
   fd fd_;
   fd_streambuf buf_;
   fd_istream stream_;
 
-  pspawn_tool(tool const& a2l, context& cx, char* buf, size_t size)
-      : pspawn{a2l}, cx_(cx), fd_(fa_.redirectOutFD()), buf_(fd_, buf, size), stream_(buf_) {
+  pspawn_tool(tool const& a2l, builder& trace, char* buf, size_t size)
+      : pspawn{a2l}, builder_(trace), fd_(fa_.redirectOutFD()), buf_(fd_, buf, size), stream_(buf_) {
     if (!debug::enabled()) {
       fa_.redirectErrNull();
     }
@@ -159,11 +160,11 @@ struct pspawn_tool : pspawn {
     // Cannot run "addr2line" or similar without addresses, since we
     // provide them in argv, and if there are none passed in argv, the
     // tool will try to read from stdin and hang.
-    if (cx_.__entries_.empty()) {
+    if (builder_.__entries_.empty()) {
       return;
     }
 
-    auto argStrings = tool_.buildArgs(cx_);
+    auto argStrings = tool_.buildArgs(builder_);
     if (debug::enabled()) {
       debug() << "Trying to get stacktrace using:";
       for (auto& str : argStrings) {
@@ -174,14 +175,17 @@ struct pspawn_tool : pspawn {
 
     spawn(argStrings);
 
-    for (auto& entry : cx_.__entries_) {
-      tool_.parseOutput(cx_, entry, stream_);
+    auto end = builder_.__entries_.end();
+    auto it  = builder_.__entries_.begin();
+    while (it != end) {
+      auto& entry = (entry_base&)(*it++);
+      tool_.parseOutput(builder_, entry, stream_);
     }
   }
 };
 
 struct spawner {
-  context& cx_;
+  builder& builder_;
   void resolve_lines();
 };
 

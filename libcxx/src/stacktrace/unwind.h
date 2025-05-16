@@ -14,17 +14,15 @@
 #include <cstddef>
 #include <cstdlib>
 
-#include "stacktrace/context.h"
-#include <__stacktrace/basic_stacktrace.h>
-#include <__stacktrace/stacktrace_entry.h>
+#include <__stacktrace/base.h>
+#include <__stacktrace/basic.h>
+#include <__stacktrace/entry.h>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __stacktrace {
 
-struct context;
-
 struct unwind {
-  context& cx_;
+  builder& builder_;
   void collect(size_t skip, size_t max_depth);
 };
 

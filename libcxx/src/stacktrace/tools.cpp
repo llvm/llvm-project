@@ -23,180 +23,121 @@
 #  include <sys/wait.h>
 #  include <unistd.h>
 
-#  include "stacktrace/context.h"
+#  include <__stacktrace/base.h>
+#  include <__stacktrace/basic.h>
+#  include <__stacktrace/entry.h>
+
 #  include "stacktrace/tools.h"
 #  include "stacktrace/utils.h"
-#  include <__stacktrace/basic_stacktrace.h>
-#  include <__stacktrace/stacktrace_entry.h>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __stacktrace {
 
 namespace {
 
-/**
-Returns a list of `tool` objects that can be tried during the first stacktrace operation.
-The result is an array of `tool*` pointers with a final `nullptr` terminator.
+_LIBCPP_HIDE_FROM_ABI alloc::str hex_string(alloc& alloc, uintptr_t __addr) {
+  char __ret[19]; // "0x" + 16 digits + NUL
+  auto __size = snprintf(__ret, sizeof(__ret), "0x%016llx", (unsigned long long)__addr);
+  return alloc.make_str(__ret, size_t(__size));
+}
 
-The returned tool array pointer is saved during `resolve_lines`'s static init,
-with the first working tool being used from that point forward.
-
-This will first add any tools specified by these defines (in order):
-- LIBCXX_STACKTRACE_FORCE_LLVM_SYMBOLIZER_PATH
-- LIBCXX_STACKTRACE_FORCE_GNU_ADDR2LINE_PATH
-- LIBCXX_STACKTRACE_FORCE_APPLE_ATOS_PATH
-
-Then any tools specified by the environment variables of the same names (and added in the same order).
-
-Finally, this adds the tools `llvm-symbolizer`, `addr2line`, and `atos`, in that order.
-These tools won't have absolute paths, so $PATH will be searched for these.
-
-Called by `findWorkingTool` during its static initialization, therefore this is used in a threadsafe way.
-*/
-tool const** toolList() {
-  constexpr static size_t kMax = 20;
-  static tool const* array_[kMax];
-  size_t count = 0;
-
-  auto add = [&](tool* t) {
-    assert(count < kMax - 1);
-    array_[count++] = t;
-  };
+_LIBCPP_HIDE_FROM_ABI alloc::str u64_string(alloc& alloc, uintptr_t __val) {
+  char __ret[21]; // 20 digits max + NUL
+  auto __size = snprintf(__ret, sizeof(__ret), "%zu", __val);
+  return alloc.make_str(__ret, size_t(__size));
+}
 
 #  define STRINGIFY0(x) #x
 #  define STRINGIFY(x) STRINGIFY0(x)
 
-#  if defined(LIBCXX_STACKTRACE_FORCE_LLVM_SYMBOLIZER_PATH)
-  {
-    static llvm_symbolizer t{STRINGIFY(LIBCXX_STACKTRACE_FORCE_LLVM_SYMBOLIZER_PATH)};
-    add(&t);
-  }
-#  endif
-#  if defined(LIBCXX_STACKTRACE_FORCE_GNU_ADDR2LINE_PATH)
-  {
-    static addr2line t{STRINGIFY(LIBCXX_STACKTRACE_FORCE_GNU_ADDR2LINE_PATH)};
-    add(&t);
-  }
-#  endif
-#  if defined(LIBCXX_STACKTRACE_FORCE_APPLE_ATOS_PATH)
-  {
-    static atos t{STRINGIFY(LIBCXX_STACKTRACE_FORCE_APPLE_ATOS_PATH)};
-    add(&t);
-  }
-#  endif
+void try_tools(alloc& alloc, function<bool(tool const&)> cb) {
+  char const* prog_name;
 
-  if (getenv("LIBCXX_STACKTRACE_FORCE_LLVM_SYMBOLIZER_PATH")) {
-    static llvm_symbolizer t{getenv("LIBCXX_STACKTRACE_FORCE_LLVM_SYMBOLIZER_PATH")};
-    add(&t);
-  }
-  if (getenv("LIBCXX_STACKTRACE_FORCE_GNU_ADDR2LINE_PATH")) {
-    static addr2line t{getenv("LIBCXX_STACKTRACE_FORCE_GNU_ADDR2LINE_PATH")};
-    add(&t);
-  }
-  if (getenv("LIBCXX_STACKTRACE_FORCE_APPLE_ATOS_PATH")) {
-    static atos t{getenv("LIBCXX_STACKTRACE_FORCE_APPLE_ATOS_PATH")};
-    add(&t);
-  }
-
-  {
-    static llvm_symbolizer t;
-    add(&t);
-  }
-  {
-    static addr2line t;
-    add(&t);
-  }
-  {
-    static atos t;
-    add(&t);
-  }
-
-  array_[count] = nullptr; // terminator
-  return array_;
-}
-
-// Try a handful of different addr2line-esque tools, returning the first discovered, or else nullptr
-tool const* findWorkingTool(auto& trace) {
-  // Try each of these programs and stop at the first one that works.
-  // There's no synchronization so this is subject to races on setting `prog`,
-  // but as long as one thread ends up setting it to something that works, we're good.
-  // Programs to try ($PATH is searched):
-  auto* it = toolList();
-  tool const* prog;
-  while ((prog = *it++)) {
-    pspawn test{*prog}; // Just try to run with "--help"
-    try {
-      std::pmr::list<std::pmr::string> testArgs{&trace.__alloc_};
-      testArgs.push_back(prog->progName_);
-      testArgs.push_back("--help");
-      test.fa_.redirectInNull();
-      test.fa_.redirectOutNull();
-      test.fa_.redirectErrNull();
-      test.spawn(testArgs);
-      if (test.wait() == 0) {
-        // Success
-        return prog;
-      }
-    } catch (failed const&) {
-      /* ignore during probe attempt */
+  if ((prog_name = getenv("LIBCXX_STACKTRACE_FORCE_LLVM_SYMBOLIZER_PATH"))) {
+    if (cb(llvm_symbolizer{alloc, prog_name})) {
+      return;
     }
+  } else {
+#  if defined(LIBCXX_STACKTRACE_FORCE_LLVM_SYMBOLIZER_PATH)
+    if (cb(llvm_symbolizer{alloc, STRINGIFY(LIBCXX_STACKTRACE_FORCE_LLVM_SYMBOLIZER_PATH)})) {
+      return;
+    }
+#  else
+    if (cb(llvm_symbolizer{alloc})) {
+      return;
+    }
+#  endif
   }
-  return nullptr;
+
+  if ((prog_name = getenv("LIBCXX_STACKTRACE_FORCE_GNU_ADDR2LINE_PATH"))) {
+    if (cb(addr2line{alloc, prog_name})) {
+      return;
+    }
+  } else {
+#  if defined(LIBCXX_STACKTRACE_FORCE_GNU_ADDR2LINE_PATH)
+    if (cb(addr2line{alloc, STRINGIFY(LIBCXX_STACKTRACE_FORCE_GNU_ADDR2LINE_PATH)})) {
+      return;
+    }
+#  else
+    if (cb(addr2line{alloc})) {
+      return;
+    }
+#  endif
+  }
+
+  if ((prog_name = getenv("LIBCXX_STACKTRACE_FORCE_APPLE_ATOS_PATH"))) {
+    if (cb(atos{alloc, prog_name})) {
+      return;
+    }
+  } else {
+#  if defined(LIBCXX_STACKTRACE_FORCE_APPLE_ATOS_PATH)
+    if (cb(atos{alloc, STRINGIFY(LIBCXX_STACKTRACE_FORCE_APPLE_ATOS_PATH)})) {
+      return;
+    }
+#  else
+    if (cb(atos{alloc})) {
+      return;
+    }
+#  endif
+  }
 }
 
 } // namespace
 
 void spawner::resolve_lines() {
-  // The address-to-line tool that worked (after lazy-setting, below)
-  static tool const* prog{nullptr};
-  // Whether we should not attempt because tool detection previously failed.
-  static bool fail{false};
-
-  // If this previously failed, don't try again.
-  if (fail) {
-    return;
-  }
-
-  if (!prog) {
-    prog = findWorkingTool(cx_);
-    if (!prog) {
-      fail = true;
-      return;
+  try_tools(builder_.__alloc_, [&](tool const& prog) {
+    char buf[512];
+    pspawn_tool proc(prog, builder_, buf, sizeof(buf));
+    try {
+      proc.run();
+      return true;
+    } catch (failed const& failed) {
+      debug() << failed.what();
+      if (failed.errno_) {
+        debug() << " (" << failed.errno_ << " " << strerror(failed.errno_) << ')';
+      }
+      debug() << '\n';
     }
-  }
-  assert(prog);
-
-  char buf[256];
-  pspawn_tool proc(*prog, cx_, buf, sizeof(buf));
-  try {
-    proc.run();
-  } catch (failed const& failed) {
-    debug() << failed.what();
-    if (failed.errno_) {
-      debug() << " (" << failed.errno_ << " " << strerror(failed.errno_) << ')';
-    }
-    debug() << '\n';
-  }
+    return false;
+  });
 }
 
-// TODO(stacktrace23): possible to link against `libLLVMSymbolize.a`, or some shared obj at runtime (does that exist?)
-
-std::pmr::list<std::pmr::string> llvm_symbolizer::buildArgs(context& cx) const {
-  auto& alloc = cx.__alloc_;
-  auto ret    = alloc.new_string_list();
-  ret.push_back(progName_);
-  ret.push_back("--demangle");
-  ret.push_back("--no-inlines");
-  ret.push_back("--verbose");
-  ret.push_back("--relativenames");
-  ret.push_back("--functions=short");
-  for (auto& entry : cx.__entries_) {
-    auto addr_string = alloc.hex_string(entry.__addr_unslid_);
-    debug() << "@@@ " << addr_string << " " << entry.__file_ << " " << entry.__file_.empty() << '\n';
-    if (!entry.__file_.empty()) {
-      auto arg = alloc.new_string(entry.__file_.size() + 40);
+alloc::list<alloc::str> llvm_symbolizer::buildArgs(builder& builder) const {
+  auto ret = alloc_.make_list<alloc::str>();
+  ret.push_back(alloc_.make_str(progName_));
+  ret.push_back(alloc_.make_str("--demangle"));
+  ret.push_back(alloc_.make_str("--no-inlines"));
+  ret.push_back(alloc_.make_str("--verbose"));
+  ret.push_back(alloc_.make_str("--relativenames"));
+  ret.push_back(alloc_.make_str("--functions=short"));
+  for (auto& st_entry : builder.__entries_) {
+    auto& entry      = (entry_base&)st_entry;
+    auto addr_string = hex_string(alloc_, entry.__addr_unslid_);
+    if (entry.__file_) {
+      auto arg = alloc_.make_str();
+      arg.reserve(entry.__file_->size() + 40);
       arg += "FILE:";
-      arg += entry.__file_;
+      arg += *entry.__file_;
       arg += " ";
       arg += addr_string;
       ret.push_back(arg);
@@ -207,14 +148,14 @@ std::pmr::list<std::pmr::string> llvm_symbolizer::buildArgs(context& cx) const {
   return ret;
 }
 
-void llvm_symbolizer::parseOutput(context& cx, entry& entry, std::istream& output) const {
+void llvm_symbolizer::parseOutput(builder& builder, __stacktrace::entry_base& entry, std::istream& output) const {
   // clang-format off
 /*
 With "--verbose", parsing is a little easier, or at least, more reliable;
 probably the best solution (until we have a JSON parser).
 Example output, verbatim, between the '---' lines:
 ---
-test1<test_alloc<std::__1::stacktrace_entry> >
+test1<test_alloc<std::__1::stackbuilder_entry> >
   Filename: /data/code/llvm-project/libcxx/test/std/diagnostics/stacktrace/basic.cons.pass.cpp
   Function start filename: /data/code/llvm-project/libcxx/test/std/diagnostics/stacktrace/basic.cons.pass.cpp
   Function start line: 114
@@ -227,12 +168,13 @@ Note that this includes an extra empty line as a terminator.
 */
   // clang-format on
 
-  auto& alloc = cx.__alloc_;
-  auto line   = alloc.new_string(256);
+  auto& alloc = builder.__alloc_;
+  auto line   = alloc.make_str();
+  line.reserve(512);
   std::string_view tmp;
   while (true) {
     std::getline(output, line);
-    while (isspace(line.back())) {
+    while (!line.empty() && isspace(line.back())) {
       line.pop_back();
     }
     if (line.empty()) {
@@ -249,7 +191,7 @@ Note that this includes an extra empty line as a terminator.
       tmp = line;
       tmp = tmp.substr(tmp.find_first_of(":") + 2); // skip ": "
       if (tmp != "??") {
-        entry.__file_ = tmp;
+        entry.__file_ = alloc.make_str(tmp);
       }
     } else if (line.starts_with("  Line:")) {
       tmp = line;
@@ -266,29 +208,29 @@ Note that this includes an extra empty line as a terminator.
   }
 }
 
-std::pmr::list<std::pmr::string> addr2line::buildArgs(context& cx) const {
-  auto& alloc = cx.__alloc_;
-  auto ret    = alloc.new_string_list();
-  if (cx.__main_prog_path_.empty()) {
+alloc::list<alloc::str> addr2line::buildArgs(builder& builder) const {
+  auto& alloc = builder.__alloc_;
+  auto ret    = alloc.make_list<alloc::str>();
+  if (builder.__main_prog_path_.empty()) {
     // Should not have reached here but be graceful anyway
-    ret.push_back("/bin/false");
+    ret.push_back(alloc.make_str("/bin/false"));
     return ret;
   }
 
-  ret.push_back(progName_);
-  ret.push_back("--functions");
-  ret.push_back("--demangle");
-  ret.push_back("--basenames");
-  ret.push_back("--pretty-print"); // This "human-readable form" is easier to parse
-  ret.push_back("-e");
-  ret.push_back(cx.__main_prog_path_);
-  for (auto& entry : cx.__entries_) {
-    ret.push_back(alloc.hex_string(entry.__addr_unslid_));
+  ret.push_back(alloc.make_str(progName_));
+  ret.push_back(alloc.make_str("--functions"));
+  ret.push_back(alloc.make_str("--demangle"));
+  ret.push_back(alloc.make_str("--basenames"));
+  ret.push_back(alloc.make_str("--pretty-print")); // This "human-readable form" is easier to parse
+  ret.push_back(alloc.make_str("-e"));
+  ret.push_back(builder.__main_prog_path_);
+  for (auto& entry : builder.__entries_) {
+    ret.push_back(hex_string(alloc, ((entry_base&)entry).__addr_unslid_));
   }
   return ret;
 }
 
-void addr2line::parseOutput(context& trace, entry& entry, std::istream& output) const {
+void addr2line::parseOutput(builder& builder, entry_base& entry, std::istream& output) const {
   // clang-format off
 /*
 Example:
@@ -304,9 +246,11 @@ test::Foo::Foo(int) at foo.cc:11
 */
   // clang-format on
 
-  std::pmr::string line{&trace.__alloc_};
+  auto& alloc = builder.__alloc_;
+  auto line   = alloc.make_str();
+  line.reserve(512);
   std::getline(output, line);
-  while (isspace(line.back())) {
+  while (!line.empty() && isspace(line.back())) {
     line.pop_back();
   }
   if (line.empty()) {
@@ -319,16 +263,16 @@ test::Foo::Foo(int) at foo.cc:11
     return;
   }
   if (sepIndex > 0) {
-    entry.__desc_ = line.substr(0, sepIndex);
+    entry.__desc_ = alloc.make_str(string_view(line).substr(0, sepIndex));
   }
   auto fileBegin = sepIndex + 4;
   if (fileBegin >= line.size()) {
     return;
   }
-  auto fileline = line.substr(fileBegin);
+  auto fileline = alloc.make_str(string_view(line).substr(fileBegin));
   auto colon    = fileline.find_last_of(":");
   if (colon > 0 && !fileline.starts_with("?")) {
-    entry.__file_ = fileline.substr(0, colon);
+    entry.__file_ = alloc.make_str(string_view(fileline).substr(0, colon));
   }
 
   if (colon == std::string::npos) {
@@ -342,21 +286,21 @@ test::Foo::Foo(int) at foo.cc:11
   entry.__line_ = lineno;
 }
 
-std::pmr::list<std::pmr::string> atos::buildArgs(context& cx) const {
-  auto& alloc = cx.__alloc_;
-  auto ret    = alloc.new_string_list();
-  ret.push_back(progName_);
-  ret.push_back("-p");
-  ret.push_back(alloc.u64_string(getpid()));
+alloc::list<alloc::str> atos::buildArgs(builder& builder) const {
+  auto& alloc = builder.__alloc_;
+  auto ret    = alloc.make_list<alloc::str>();
+  ret.push_back(alloc.make_str(progName_));
+  ret.push_back(alloc.make_str("-p"));
+  ret.push_back(u64_string(alloc, getpid()));
   // TODO(stackcx23): Allow options in env, e.g. LIBCPP_STACKTRACE_OPTIONS=FullPath
   // ret.push_back("--fullPath");
-  for (auto& entry : cx.__entries_) {
-    ret.push_back(alloc.hex_string(entry.__addr_));
+  for (auto& entry : builder.__entries_) {
+    ret.push_back(hex_string(alloc, ((entry_base&)entry).__addr_actual_));
   }
   return ret;
 }
 
-void atos::parseOutput(context& cx, entry& entry, std::istream& output) const {
+void atos::parseOutput(builder& builder, entry_base& entry, std::istream& output) const {
   // Simple example:
   //
   //   main (in testprog) (/Users/steve/code/notes/testprog.cc:208)
@@ -380,9 +324,11 @@ void atos::parseOutput(context& cx, entry& entry, std::istream& output) const {
   // If this more or less fits our expected format we'll take these data,
   // even if the line number is 0.
 
-  auto line = cx.__alloc_.new_string(256);
+  auto& alloc = builder.__alloc_;
+  auto line   = alloc.make_str();
+  line.reserve(512);
   std::getline(output, line);
-  while (isspace(line.back())) {
+  while (!line.empty() && isspace(line.back())) {
     line.pop_back();
   }
   if (line.empty()) {
@@ -415,13 +361,13 @@ void atos::parseOutput(context& cx, entry& entry, std::istream& output) const {
   // In case a previous step could not obtain the symbol name,
   // we have the name provided by atos; only use that if we have no symbol
   // (no need to copy more strings otherwise).
-  if (entry.__desc_.empty() && !sym.empty()) {
-    entry.__desc_ = sym;
+  if (entry.__desc_->empty() && !sym.empty()) {
+    entry.__desc_ = alloc.make_str(sym);
   }
 
   std::string_view file{fileBegin, size_t(lastColon - fileBegin)};
   if (file != "?" && file != "??" && !file.empty()) {
-    entry.__file_ = file;
+    entry.__file_ = alloc.make_str(file);
   }
 
   unsigned lineno = 0;
