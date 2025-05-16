@@ -14,6 +14,8 @@
 #include "clang/Basic/DiagnosticParse.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Sema/ParsedTemplate.h"
+#include "clang/Tooling/Inclusions/StandardLibrary.h"
+
 using namespace clang;
 
 /// isCXXDeclarationStatement - C++-specialized function that disambiguates
@@ -1442,6 +1444,34 @@ Parser::isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
       // If annotation failed, assume it's a non-type.
       // FIXME: If this happens due to an undeclared identifier, treat it as
       // ambiguous.
+
+      if (Tok.is(tok::annot_cxxscope)) {
+        CXXScopeSpec SS;
+        Actions.RestoreNestedNameSpecifierAnnotation(
+            Tok.getAnnotationValue(), Tok.getAnnotationRange(), SS);
+        auto Next = NextToken();
+        if (SS.isInvalid() && Next.is(tok::identifier)) {
+          auto SymbolName = Next.getIdentifierInfo()->getName();
+          SourceRange SR = Tok.getAnnotationRange();
+          CharSourceRange CSR = CharSourceRange::getCharRange(
+              SR.getBegin(), SR.getEnd().getLocWithOffset(2));
+          StringRef ScopeText = Lexer::getSourceText(CSR, PP.getSourceManager(),
+                                                     PP.getLangOpts());
+
+          auto header = [](llvm::StringRef symbolName, llvm::StringRef scope) {
+            for (const auto &symbol : clang::tooling::stdlib::Symbol::all()) {
+              if (symbol.name() == symbolName && symbol.scope() == scope)
+                return symbol.header()->name();
+            }
+            return llvm::StringRef();
+          }(SymbolName, ScopeText);
+
+          if (header.size() > 0) {
+            Diag(Next.getLocation(), diag::note_include_for_declaration)
+                << header;
+          }
+        }
+      }
       if (Tok.is(tok::identifier))
         return TPResult::False;
     }

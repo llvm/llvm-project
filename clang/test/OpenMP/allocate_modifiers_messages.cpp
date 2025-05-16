@@ -108,6 +108,7 @@ int main() {
   #pragma omp scope private(b) allocate(align
   // expected-error@+1 {{duplicate modifier 'align' in 'allocate' clause}}
   #pragma omp scope private(a) allocate(align(8), align(4) : a)
+  // expected-note@+6 {{perhaps `#include <memory>` is needed?}}
   // expected-error@+5 {{use of undeclared identifier 'align'}}
   // expected-error@+4 {{expected ',' or ')' in 'allocate' clause}}
   // expected-error@+3 {{expected ')'}}

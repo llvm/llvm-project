@@ -5984,6 +5984,7 @@ def err_unexpected_typedef : Error<
 def err_unexpected_namespace : Error<
   "unexpected namespace name %0: expected expression">;
 def err_undeclared_var_use : Error<"use of undeclared identifier %0">;
+def note_include_for_declaration : Note<"perhaps `#include %0` is needed?">;
 def ext_undeclared_unqual_id_with_dependent_base : ExtWarn<
   "use of undeclared identifier %0; "
   "unqualified lookup into dependent bases of class template %1 is a Microsoft extension">,

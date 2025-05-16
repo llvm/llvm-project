@@ -21,13 +21,13 @@
 #include "f1.h"
 void f() { return assert(true); } // expected-error {{undeclared identifier 'd'}}
 #include "e2.h" // undefines d1's macro
-void g() { return assert(true); } // expected-error {{undeclared identifier 'assert'}}
+void g() { return assert(true); } // expected-error {{undeclared identifier 'assert'}} expected-note {{perhaps `#include <cassert>` is needed?}}
 #elif defined(D1)
 #include "e1.h" // undefines c1's macro but not d1's macro
 #include "d1.h"
 void f() { return assert(true); } // expected-error {{undeclared identifier 'd'}}
 #include "e2.h" // undefines d1's macro
-void g() { return assert(true); } // expected-error {{undeclared identifier 'assert'}}
+void g() { return assert(true); } // expected-error {{undeclared identifier 'assert'}} expected-note {{perhaps `#include <cassert>` is needed?}}
 #elif defined(D2)
 #include "d2.h"
 void f() { return assert(true); } // expected-error {{undeclared identifier 'b'}}
@@ -35,5 +35,5 @@ void f() { return assert(true); } // expected-error {{undeclared identifier 'b'}
 // e2 undefines d1's macro, which overrides c1's macro.
 #include "e2.h"
 #include "c1.h"
-void f() { return assert(true); } // expected-error {{undeclared identifier 'assert'}}
+void f() { return assert(true); } // expected-error {{undeclared identifier 'assert'}} expected-note {{perhaps `#include <cassert>` is needed?}}
 #endif

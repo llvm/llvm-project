@@ -26,14 +26,18 @@ void no_get_1() {
     auto [a0, a1] = A(); // expected-error {{decomposes into 3 elements}}
     auto [b0, b1] = B(); // expected-error {{decomposes into 3 elements}}
   }
-  auto [a0, a1, a2] = A(); // expected-error {{undeclared identifier 'get'}} expected-note {{in implicit initialization of binding declaration 'a0'}}
+  auto [a0, a1, a2] = A(); // expected-error {{undeclared identifier 'get'}} \
+                           // expected-note {{perhaps `#include <ranges>` is needed?}} \
+                           // expected-note {{in implicit initialization of binding declaration 'a0'}}
 }
 
 int get(A);
 
 void no_get_2() {
   // FIXME: This diagnostic is not great.
-  auto [a0, a1, a2] = A(); // expected-error {{undeclared identifier 'get'}} expected-note {{in implicit initialization of binding declaration 'a0'}}
+  auto [a0, a1, a2] = A(); // expected-error {{undeclared identifier 'get'}} \
+                           // expected-note {{perhaps `#include <ranges>` is needed?}} \
+                           // expected-note {{in implicit initialization of binding declaration 'a0'}}
 }
 
 template<int> float &get(A); // expected-note 2 {{no known conversion}}
@@ -172,7 +176,9 @@ template<int> int get(ADL::X);
 template<> struct std::tuple_size<ADL::X> { static const int value = 1; };
 template<> struct std::tuple_element<0, ADL::X> { typedef int type; };
 void adl_only_bad() {
-  auto [x] = ADL::X(); // expected-error {{undeclared identifier 'get'}} expected-note {{in implicit init}}
+  auto [x] = ADL::X(); // expected-error {{undeclared identifier 'get'}} \
+                       // expected-note {{perhaps `#include <ranges>` is needed?}} \
+                       // expected-note {{in implicit init}}
 }
 
 template<typename ElemType, typename GetTypeLV, typename GetTypeRV>

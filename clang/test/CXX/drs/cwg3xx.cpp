@@ -1474,6 +1474,7 @@ namespace cwg387 { // cwg387: 2.8
       a = gcd(a, b);
       b = gcd(3, 4);
       // expected-error@-1 {{use of undeclared identifier 'gcd'}}
+      // expected-note@-2 {{perhaps `#include <numeric>` is needed?}}
     }
   }
 
@@ -1489,6 +1490,7 @@ namespace cwg387 { // cwg387: 2.8
       a = gcd(a, b);
       b = gcd(3, 4);
       // expected-error@-1 {{use of undeclared identifier 'gcd'}}
+      // expected-note@-2 {{perhaps `#include <numeric>` is needed?}}
     }
   }
 } // namespace cwg387

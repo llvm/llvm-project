@@ -58,6 +58,7 @@
 #include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/SemaPseudoObject.h"
 #include "clang/Sema/Template.h"
+#include "clang/Tooling/Inclusions/StandardLibrary.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/StringExtras.h"
@@ -2647,6 +2648,22 @@ bool Sema::DiagnoseEmptyLookup(Scope *S, CXXScopeSpec &SS, LookupResult &R,
 
   // Give up, we can't recover.
   Diag(R.getNameLoc(), diagnostic) << Name << NameRange;
+
+  llvm::errs() << "cheese ##1) name's kind : " << Name.getAsString() << "\n";
+  auto header = [](const std::string &symbolName) {
+    for (const auto &symbol : clang::tooling::stdlib::Symbol::all()) {
+      if (symbol.header() && symbol.name() == symbolName)
+        return symbol.header()->name();
+    }
+    return llvm::StringRef();
+  }(Name.getAsString());
+
+  llvm::errs() << "cheese ##2) header : " << header << "\n";
+  bool IsFunctionContext = !Args.empty() || ExplicitTemplateArgs != nullptr;
+  if (diagnostic == diag::err_undeclared_var_use && header.size() > 0 &&
+      IsFunctionContext) {
+    Diag(R.getNameLoc(), diag::note_include_for_declaration) << header;
+  }
   return true;
 }
 

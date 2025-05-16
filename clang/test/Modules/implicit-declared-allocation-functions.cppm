@@ -17,14 +17,14 @@ export void alloc_wrapper() {
   //   std::align_­val_­t is ill-formed unless a standard library declaration
   //   ([cstddef.syn], [new.syn], [std.modules]) of that name precedes
   //   ([basic.lookup.general]) the use of that name.
-  void *b = ::operator new((std::size_t)32); // expected-error {{use of undeclared identifier 'std'}}
-  void *c = ::operator new((std::size_t)32, // expected-error {{use of undeclared identifier 'std'}}
-                           (std::align_val_t)64); // expected-error {{use of undeclared identifier 'std'}}
+  void *b = ::operator new((std::size_t)32); // expected-error {{use of undeclared identifier 'std'}} expected-note {{perhaps `#include <cstddef>` is needed?}}
+  void *c = ::operator new((std::size_t)32, // expected-error {{use of undeclared identifier 'std'}} expected-note {{perhaps `#include <cstddef>` is needed?}}
+                           (std::align_val_t)64); // expected-error {{use of undeclared identifier 'std'}} expected-note {{perhaps `#include <new>` is needed?}}
 
   ::operator delete(a);
-  ::operator delete(b, (std::size_t)32); // expected-error {{use of undeclared identifier 'std'}}
-  ::operator delete(c, (std::size_t)32,  // expected-error {{use of undeclared identifier 'std'}}
-                       (std::align_val_t)64); // expected-error {{use of undeclared identifier 'std'}}
+  ::operator delete(b, (std::size_t)32); // expected-error {{use of undeclared identifier 'std'}} expected-note {{perhaps `#include <cstddef>` is needed?}}
+  ::operator delete(c, (std::size_t)32,  // expected-error {{use of undeclared identifier 'std'}} expected-note {{perhaps `#include <cstddef>` is needed?}}
+                       (std::align_val_t)64); // expected-error {{use of undeclared identifier 'std'}} expected-note {{perhaps `#include <new>` is needed?}}
 }
 
 //--- new
