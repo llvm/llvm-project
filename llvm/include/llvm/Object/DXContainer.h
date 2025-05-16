@@ -211,6 +211,7 @@ struct DescriptorTableView : RootParameterView {
     if(Version > 1)
       RangeSize = sizeof(dxbc::RTS0::v2::DescriptorRange);
 
+    Table.Ranges.Stride = RangeSize;
     Table.Ranges.Data =
         ParamData.substr(2 * sizeof(uint32_t), Table.NumRanges * RangeSize);
     return Table;

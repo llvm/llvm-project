@@ -117,8 +117,8 @@ DXContainerYAML::RootSignatureYamlDesc::create(
   NewR.Val =                                                                   \
       (R.Flags & llvm::to_underlying(dxbc::DescriptorRangeFlag::Val)) > 0;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
-        NewP.Table.Ranges.push_back(NewR);
-      }
+}
+NewP.Table.Ranges.push_back(NewR);
     }
     } 
 
