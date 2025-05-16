@@ -29,14 +29,14 @@
 // This is a low-level utility which does not work on all platforms, since it needs
 // to make assumptions about the object file format in use. Furthermore, it requires
 // the "base definition" of the function (the one we want to check whether it has been
-// overridden) to be annotated with the _LIBCPP_MAKE_OVERRIDABLE_FUNCTION_DETECTABLE macro.
+// overridden) to be defined using the _LIBCPP_OVERRIDABLE_FUNCTION macro.
 //
 // This currently works with Mach-O files (used on Darwin) and with ELF files (used on Linux
 // and others). On platforms where we know how to implement this detection, the macro
 // _LIBCPP_CAN_DETECT_OVERRIDDEN_FUNCTION is defined to 1, and it is defined to 0 on
-// other platforms. The _LIBCPP_MAKE_OVERRIDABLE_FUNCTION_DETECTABLE macro is defined to
-// nothing on unsupported platforms so that it can be used to decorate functions regardless
-// of whether detection is actually supported.
+// other platforms. The _LIBCPP_OVERRIDABLE_FUNCTION macro is defined to perform a normal
+// function definition on unsupported platforms so that it can be used to define functions
+// regardless of whether detection is actually supported.
 //
 // How does this work?
 // -------------------
@@ -44,7 +44,7 @@
 // Let's say we want to check whether a weak function `f` has been overridden by the user.
 // The general mechanism works by placing `f`'s definition (in the libc++ built library)
 // inside a special section, which we do using the `__section__` attribute via the
-// _LIBCPP_MAKE_OVERRIDABLE_FUNCTION_DETECTABLE macro.
+// _LIBCPP_OVERRIDABLE_FUNCTION macro.
 //
 // Then, when comes the time to check whether the function has been overridden, we take
 // the address of the function and we check whether it falls inside the special function

@@ -20,6 +20,7 @@
 #include "RISCVSelectionDAGInfo.h"
 #include "RISCVSubtarget.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -309,12 +310,13 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::VASTART, MVT::Other, Custom);
   setOperationAction({ISD::VAARG, ISD::VACOPY, ISD::VAEND}, MVT::Other, Expand);
 
-  if (!Subtarget.hasVendorXTHeadBb())
+  if (!Subtarget.hasVendorXTHeadBb() && !Subtarget.hasVendorXqcibm())
     setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1, Expand);
 
   setOperationAction(ISD::EH_DWARF_CFA, MVT::i32, Custom);
 
   if (!Subtarget.hasStdExtZbb() && !Subtarget.hasVendorXTHeadBb() &&
+      !Subtarget.hasVendorXqcibm() &&
       !(Subtarget.hasVendorXCValu() && !Subtarget.is64Bit()))
     setOperationAction(ISD::SIGN_EXTEND_INREG, {MVT::i8, MVT::i16}, Expand);
 
@@ -2400,12 +2402,21 @@ static void translateSetCCForBranch(const SDLoc &DL, SDValue &LHS, SDValue &RHS,
 
   if (auto *RHSC = dyn_cast<ConstantSDNode>(RHS)) {
     int64_t C = RHSC->getSExtValue();
+    const RISCVSubtarget &Subtarget =
+        DAG.getMachineFunction().getSubtarget<RISCVSubtarget>();
     switch (CC) {
     default: break;
     case ISD::SETGT:
       // Convert X > -1 to X >= 0.
       if (C == -1) {
         RHS = DAG.getConstant(0, DL, RHS.getValueType());
+        CC = ISD::SETGE;
+        return;
+      }
+      if (Subtarget.hasVendorXqcibi() && C != INT64_MAX && isInt<16>(C + 1)) {
+        // We have a branch immediate instruction for SETGE but not SETGT.
+        // Convert X > C to X >= C + 1, if (C + 1) is a 16-bit signed immediate.
+        RHS = DAG.getSignedConstant(C + 1, DL, RHS.getValueType());
         CC = ISD::SETGE;
         return;
       }
@@ -2416,6 +2427,16 @@ static void translateSetCCForBranch(const SDLoc &DL, SDValue &LHS, SDValue &RHS,
         RHS = LHS;
         LHS = DAG.getConstant(0, DL, RHS.getValueType());
         CC = ISD::SETGE;
+        return;
+      }
+      break;
+    case ISD::SETUGT:
+      if (Subtarget.hasVendorXqcibi() && C != INT64_MAX && isInt<16>(C + 1) &&
+          C != -1) {
+        // We have a branch immediate instruction for SETUGE but not SETUGT.
+        // Convert X > C to X >= C + 1, if (C + 1) is a 16-bit signed immediate.
+        RHS = DAG.getSignedConstant(C + 1, DL, RHS.getValueType());
+        CC = ISD::SETUGE;
         return;
       }
       break;
@@ -15502,6 +15523,32 @@ static SDValue performXORCombine(SDNode *N, SelectionDAG &DAG,
   return combineSelectAndUseCommutative(N, DAG, /*AllOnes*/ false, Subtarget);
 }
 
+// Try to expand a multiply to a sequence of shifts and add/subs,
+// for a machine without native mul instruction.
+static SDValue expandMulToNAFSequence(SDNode *N, SelectionDAG &DAG,
+                                      uint64_t MulAmt) {
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  const uint64_t BitWidth = VT.getFixedSizeInBits();
+
+  SDValue Result = DAG.getConstant(0, DL, N->getValueType(0));
+  SDValue N0 = N->getOperand(0);
+
+  // Find the Non-adjacent form of the multiplier.
+  for (uint64_t E = MulAmt, I = 0; E && I < BitWidth; ++I, E >>= 1) {
+    if (E & 1) {
+      bool IsAdd = (E & 3) == 1;
+      E -= IsAdd ? 1 : -1;
+      SDValue ShiftVal = DAG.getNode(ISD::SHL, DL, VT, N0,
+                                     DAG.getShiftAmountConstant(I, VT, DL));
+      ISD::NodeType AddSubOp = IsAdd ? ISD::ADD : ISD::SUB;
+      Result = DAG.getNode(AddSubOp, DL, VT, Result, ShiftVal);
+    }
+  }
+
+  return Result;
+}
+
 // X * (2^N +/- 2^M) -> (add/sub (shl X, C1), (shl X, C2))
 static SDValue expandMulToAddOrSubOfShl(SDNode *N, SelectionDAG &DAG,
                                         uint64_t MulAmt) {
@@ -15537,20 +15584,23 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
   if (DAG.getMachineFunction().getFunction().hasMinSize())
     return SDValue();
 
-  if (DCI.isBeforeLegalize() || DCI.isCalledByLegalizer())
-    return SDValue();
-
   if (VT != Subtarget.getXLenVT())
     return SDValue();
 
-  const bool HasShlAdd = Subtarget.hasStdExtZba() ||
-                         Subtarget.hasVendorXTHeadBa() ||
-                         Subtarget.hasVendorXAndesPerf();
+  bool ShouldExpandMul =
+      (!DCI.isBeforeLegalize() && !DCI.isCalledByLegalizer()) ||
+      !Subtarget.hasStdExtZmmul();
+  if (!ShouldExpandMul)
+    return SDValue();
 
   ConstantSDNode *CNode = dyn_cast<ConstantSDNode>(N->getOperand(1));
   if (!CNode)
     return SDValue();
   uint64_t MulAmt = CNode->getZExtValue();
+
+  const bool HasShlAdd = Subtarget.hasStdExtZba() ||
+                         Subtarget.hasVendorXTHeadBa() ||
+                         Subtarget.hasVendorXAndesPerf();
 
   // WARNING: The code below is knowingly incorrect with regards to undef semantics.
   // We're adding additional uses of X here, and in principle, we should be freezing
@@ -15688,6 +15738,9 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
 
   if (SDValue V = expandMulToAddOrSubOfShl(N, DAG, MulAmt))
     return V;
+
+  if (!Subtarget.hasStdExtZmmul())
+    return expandMulToNAFSequence(N, DAG, MulAmt);
 
   return SDValue();
 }
@@ -21298,6 +21351,10 @@ RISCVTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     return emitReadCounterWidePseudo(MI, BB);
   case RISCV::Select_GPR_Using_CC_GPR:
   case RISCV::Select_GPR_Using_CC_Imm:
+  case RISCV::Select_GPR_Using_CC_Simm5NonZero:
+  case RISCV::Select_GPR_Using_CC_Uimm5NonZero:
+  case RISCV::Select_GPR_Using_CC_Simm16NonZero:
+  case RISCV::Select_GPR_Using_CC_Uimm16NonZero:
   case RISCV::Select_FPR16_Using_CC_GPR:
   case RISCV::Select_FPR16INX_Using_CC_GPR:
   case RISCV::Select_FPR32_Using_CC_GPR:

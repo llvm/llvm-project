@@ -69,12 +69,12 @@ subroutine acc_kernels_loop
   END DO
   !$acc end kernels loop
 
-! CHECK:      acc.kernels {{.*}} {
+! CHECK:      acc.kernels {{.*}} async {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
 ! CHECK-NEXT:   }{{$}}
 ! CHECK:        acc.terminator
-! CHECK-NEXT: } attributes {asyncOnly = [#acc.device_type<none>]} 
+! CHECK-NEXT: }
 
   !$acc kernels loop async(1)
   DO i = 1, n
