@@ -17,6 +17,7 @@ class OpOperand;
 class OpResult;
 class OpBuilder;
 class ValueRange;
+class TypeConverter;
 
 namespace xegpu {
 class LayoutAttr;
@@ -96,10 +97,12 @@ Value createVectorWithShapeFromValues(OpBuilder &builder, Location loc,
                                       ValueRange values,
                                       ArrayRef<int64_t> shape);
 
-/// Do type conversion for SCF structural ops, e.g., scf.for. Since VectorType
-/// cannot carry the layout attribute, they are converted into RankedTensorType
-/// first, which will convert back to VectorType in the second round.
-void doSCFStructuralTypeConversionWithTensorType(Operation *op);
+/// Do type conversion for SCF structural ops, e.g., scf.for using SCF structure type
+/// convertion patterns. Since VectorType cannot carry the layout attribute, which is
+/// needed to guide the type conversion for XeGPU, they are first converted into
+/// RankedTensorType, where the layout attribute can be attached. And then upstream
+/// SCF structural type conversion patterns are applied with the provided converter.
+void doSCFStructuralTypeConversionWithTensorType(Operation *op, TypeConverter converter);
 
 } // namespace xegpu
 

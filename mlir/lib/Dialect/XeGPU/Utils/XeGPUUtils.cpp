@@ -225,7 +225,7 @@ Value xegpu::createVectorWithShapeFromValues(OpBuilder &builder, Location loc,
   return result;
 }
 
-void xegpu::doSCFStructuralTypeConversionWithTensorType(Operation *op) {
+void xegpu::doSCFStructuralTypeConversionWithTensorType(Operation *op, TypeConverter converter) {
   MLIRContext *context = op->getContext();
 
   auto materializeCast = [&](OpBuilder &builder, Type type, ValueRange inputs,
@@ -307,109 +307,11 @@ void xegpu::doSCFStructuralTypeConversionWithTensorType(Operation *op) {
 
   { // perform the conversion from RankedTensorType to VectorType based on the
     // LayoutAttr
-    auto computeTileShapeAndCount = [&](ArrayRef<int64_t> shape,
-                                        DenseI32ArrayAttr sgDataAttr,
-                                        DenseI32ArrayAttr sgLayoutAttr) {
-      SmallVector<int64_t> tileShape;
-      auto sgLayout = llvm::to_vector_of<int64_t>(sgLayoutAttr.asArrayRef());
-      if (sgDataAttr)
-        tileShape = llvm::to_vector_of<int64_t>(sgDataAttr.asArrayRef());
-      else
-        tileShape = computeShapeRatio(shape, sgLayout).value_or(tileShape);
-      assert(tileShape.size() && "failed to compute tileShape");
-      SmallVector<int64_t> distUnit =
-          computeElementwiseMul(sgLayout, tileShape);
-      int count = computeProduct(shape) / computeProduct(distUnit);
-      return std::make_pair(tileShape, count);
-    };
 
-    TypeConverter converter;
-    converter.addConversion([&](Type type) -> Type { return type; });
-    converter.addConversion(
-        [&](RankedTensorType type,
-            SmallVectorImpl<Type> &result) -> std::optional<LogicalResult> {
-          ArrayRef<int64_t> shape = type.getShape();
-          auto encoding = type.getEncoding();
-          Type elemTy = type.getElementType();
-
-          // init count and subShape to the default value. If the LayoutAttr
-          // is not present, it will return a VectorType with original shape.
-          int count = 1;
-          SmallVector<int64_t> subShape(shape);
-
-          if (auto layout =
-                  llvm::dyn_cast_if_present<xegpu::LayoutAttr>(encoding)) {
-            if (layout.isWgLayout()) {
-              // for WgToSg, the subShape is either from sgData or computed as
-              // shape/sgLayout
-              std::tie(subShape, count) = computeTileShapeAndCount(
-                  shape, layout.getSgData(), layout.getSgLayout());
-            } else if (DenseI32ArrayAttr instData = layout.getInstData()) {
-              // for unrolling, the subShape is determined by inst_data
-              subShape = llvm::to_vector_of<int64_t>(instData.asArrayRef());
-              count = computeProduct(shape) / computeProduct(subShape);
-            }
-          }
-          auto newTy = VectorType::get(subShape, elemTy);
-          result.append(count, newTy);
-          return success();
-        });
-
-    converter.addConversion(
-        [&](xegpu::TensorDescType type,
-            SmallVectorImpl<Type> &result) -> std::optional<LogicalResult> {
-          MLIRContext *ctx = type.getContext();
-          Type elemTy = type.getElementType();
-          Attribute encoding = type.getEncoding();
-          ArrayRef<int64_t> shape = type.getShape();
-
-          // init count and newTy to the default value. If the layout attribute
-          // is not present, it will return the original type.
-          int count = 1;
-          Type newTy = type;
-
-          if (xegpu::LayoutAttr layout = type.getLayoutAttr()) {
-            SmallVector<int64_t> subShape(shape);
-            if (layout.isWgLayout()) {
-              // for WgToSg, the subShape is either from sgData or computed as
-              // shape/sgLayout
-              std::tie(subShape, count) = computeTileShapeAndCount(
-                  shape, layout.getSgData(), layout.getSgLayout());
-              layout = layout.dropSgLayoutAndData();
-            } else if (DenseI32ArrayAttr instData = layout.getInstData()) {
-              // for unrolling, the subShape is determined by inst_data
-              subShape = llvm::to_vector_of<int64_t>(instData.asArrayRef());
-              count = computeProduct(shape) / computeProduct(subShape);
-              layout = layout.dropInstData();
-            }
-
-            newTy = xegpu::TensorDescType::get(ctx, subShape, elemTy, encoding,
-                                               layout);
-          }
-
-          result.append(count, newTy);
-          return success();
-        });
-
-    converter.addSourceMaterialization(materializeCast);
-    converter.addTargetMaterialization([&](OpBuilder &builder, TypeRange type,
-                                           ValueRange inputs, Location loc) {
-      return builder.create<UnrealizedConversionCastOp>(loc, type, inputs)
-          .getResults();
-    });
-
-    mlir::ConversionTarget target(*context);
-    target.addDynamicallyLegalOp<UnrealizedConversionCastOp>(
-        [&](UnrealizedConversionCastOp op) {
-          auto isTensorTy = [&](Type type) {
-            return isa<RankedTensorType>(type);
-          };
-          if (llvm::any_of(op->getOperandTypes(), isTensorTy) ||
-              llvm::any_of(op->getResultTypes(), isTensorTy))
-            return false;
-          return true;
-        });
-
+    // Handle the UnrealizedConversionCastOp introduced by the first step.
+    // For vector->RankedTensorType, it will simply forward the inputs.
+    // For RankedTensorType->vector, it will update the inputs with the
+    // one from the adaptor.
     class UnrealizedConversionCastOpPattern
         : public OpConversionPattern<mlir::UnrealizedConversionCastOp> {
       using OpConversionPattern<
@@ -444,6 +346,24 @@ void xegpu::doSCFStructuralTypeConversionWithTensorType(Operation *op) {
       }
     };
 
+    converter.addSourceMaterialization(materializeCast);
+    converter.addTargetMaterialization([&](OpBuilder &builder, TypeRange type,
+                                           ValueRange inputs, Location loc) {
+      return builder.create<UnrealizedConversionCastOp>(loc, type, inputs)
+          .getResults();
+    });
+
+    mlir::ConversionTarget target(*context);
+    target.addDynamicallyLegalOp<UnrealizedConversionCastOp>(
+        [&](UnrealizedConversionCastOp op) {
+          auto isTensorTy = [&](Type type) {
+            return isa<RankedTensorType>(type);
+          };
+          if (llvm::any_of(op->getOperandTypes(), isTensorTy) ||
+              llvm::any_of(op->getResultTypes(), isTensorTy))
+            return false;
+          return true;
+        });
     mlir::RewritePatternSet patterns(context);
     patterns.insert<UnrealizedConversionCastOpPattern>(context);
     scf::populateSCFStructuralTypeConversionsAndLegality(converter, patterns,
