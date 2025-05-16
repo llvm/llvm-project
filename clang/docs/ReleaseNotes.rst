@@ -556,6 +556,8 @@ Improvements to Clang's diagnostics
   between different Unicode character types (``char8_t``, ``char16_t``, ``char32_t``).
   This warning only triggers in C++ as these types are aliases in C. (#GH138526)
 
+- Clang now suggests a fix-it to correct ``template`` in a template-template parameter with a missing ``<`` to ``typename``
+
 Improvements to Clang's time-trace
 ----------------------------------
 
