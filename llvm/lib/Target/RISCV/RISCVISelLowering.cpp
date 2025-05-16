@@ -7744,13 +7744,13 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
       SDValue BasePtr = Load->getBasePtr();
       SDValue Chain = Load->getChain();
 
-      SDValue Lo = DAG.getLoad(MVT::i32, DL, Chain, BasePtr,
-                               Load->getPointerInfo(), Load->getOriginalAlign(),
-                               Load->getMemOperand()->getFlags());
+      SDValue Lo =
+          DAG.getLoad(MVT::i32, DL, Chain, BasePtr, Load->getPointerInfo(),
+                      Load->getBaseAlign(), Load->getMemOperand()->getFlags());
       BasePtr = DAG.getObjectPtrOffset(DL, BasePtr, TypeSize::getFixed(4));
       SDValue Hi = DAG.getLoad(
           MVT::i32, DL, Chain, BasePtr, Load->getPointerInfo().getWithOffset(4),
-          Load->getOriginalAlign(), Load->getMemOperand()->getFlags());
+          Load->getBaseAlign(), Load->getMemOperand()->getFlags());
       Chain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other, Lo.getValue(1),
                           Hi.getValue(1));
 
@@ -7812,13 +7812,13 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
       SDValue Split = DAG.getNode(RISCVISD::SplitF64, DL,
                                   DAG.getVTList(MVT::i32, MVT::i32), StoredVal);
 
-      SDValue Lo = DAG.getStore(
-          Chain, DL, Split.getValue(0), BasePtr, Store->getPointerInfo(),
-          Store->getOriginalAlign(), Store->getMemOperand()->getFlags());
+      SDValue Lo = DAG.getStore(Chain, DL, Split.getValue(0), BasePtr,
+                                Store->getPointerInfo(), Store->getBaseAlign(),
+                                Store->getMemOperand()->getFlags());
       BasePtr = DAG.getObjectPtrOffset(DL, BasePtr, TypeSize::getFixed(4));
       SDValue Hi = DAG.getStore(Chain, DL, Split.getValue(1), BasePtr,
                                 Store->getPointerInfo().getWithOffset(4),
-                                Store->getOriginalAlign(),
+                                Store->getBaseAlign(),
                                 Store->getMemOperand()->getFlags());
       return DAG.getNode(ISD::TokenFactor, DL, MVT::Other, Lo, Hi);
     }
@@ -19031,6 +19031,10 @@ static SDValue combineToVCPOP(SDNode *N, SelectionDAG &DAG,
   if (!SrcMVT.isVector() || SrcMVT.getVectorElementType() != MVT::i1)
     return SDValue();
 
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  if (!TLI.isTypeLegal(SrcMVT))
+    return SDValue();
+
   // Check that destination type is large enough to hold result without
   // overflow.
   if (Opc == ISD::VECREDUCE_ADD) {
@@ -19047,9 +19051,6 @@ static SDValue combineToVCPOP(SDNode *N, SelectionDAG &DAG,
 
   MVT ContainerVT = SrcMVT;
   if (SrcMVT.isFixedLengthVector()) {
-    if (!useRVVForFixedLengthVectorVT(SrcMVT, Subtarget))
-      return SDValue();
-
     ContainerVT = getContainerForFixedLengthVector(DAG, SrcMVT, Subtarget);
     Src = convertToScalableVector(ContainerVT, Src, DAG, Subtarget);
   }
