@@ -49,7 +49,7 @@ constexpr void test() {
 
   std::same_as<EnumerateSentinel> decltype(auto) s = view.end();
   std::same_as<Sentinel> decltype(auto) sResult    = s.base();
-  assert(base(base(sResult)) == array.end());
+  assert(base(base(sResult)) == std::to_address(base(array.end())));
 
   // Test assignment
   EnumerateConstSentinel cs                      = s;
