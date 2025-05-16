@@ -2397,13 +2397,13 @@ static LogicalResult rewriteFromElementsAsSplat(FromElementsOp fromElementsOp,
 ///   %2 = vector.shape_cast %source : vector<1x2xi8> to vector<2xi8>
 ///
 /// The requirements for this to be valid are
-/// i) all elements are extracted from the same vector (source),
-/// ii) source and from_elements result have the same number of elements,
+/// i) source and from_elements result have the same number of elements,
+/// ii) all elements are extracted from the same vector (%source),
 /// iii) the elements are extracted in ascending order.
 ///
 /// It might be possible to rewrite vector.from_elements as a single
-/// vector.extract if (ii) is not satisifed, or in some cases as a
-/// a single vector_extract_strided_slice if (ii) and (iii) are not satisfied,
+/// vector.extract if (i) is not satisifed, or in some cases as a
+/// a single vector_extract_strided_slice if (i) and (iii) are not satisfied,
 /// this is left for future consideration.
 class FromElementsToShapCast : public OpRewritePattern<FromElementsOp> {
 public:
@@ -2412,64 +2412,71 @@ public:
   LogicalResult matchAndRewrite(FromElementsOp fromElements,
                                 PatternRewriter &rewriter) const override {
 
-    mlir::OperandRange elements = fromElements.getElements();
-    assert(!elements.empty() && "must be at least 1 element");
-    Value firstElement = elements.front();
+    // The source of the first element. This is initialized in the first
+    // iteration of the loop over elements.
+    TypedValue<VectorType> firstElementSource;
 
-    ExtractOp extractOp =
-        dyn_cast_if_present<vector::ExtractOp>(firstElement.getDefiningOp());
-    if (!extractOp) {
-      return rewriter.notifyMatchFailure(
-          fromElements, "first element not from vector.extract");
-    }
-    VectorType sourceType = extractOp.getSourceVectorType();
-    Value source = extractOp.getVector();
+    for (auto [insertIndex, element] :
+         llvm::enumerate(fromElements.getElements())) {
 
-    // Check condition (ii).
-    if (static_cast<size_t>(sourceType.getNumElements()) != elements.size()) {
-      return rewriter.notifyMatchFailure(fromElements,
-                                         "number of elements differ");
-    }
-
-    for (auto [indexMinusOne, element] :
-         llvm::enumerate(elements.drop_front(1))) {
-
-      extractOp =
+      // Check that the element is from a vector.extract operation.
+      auto extractOp =
           dyn_cast_if_present<vector::ExtractOp>(element.getDefiningOp());
       if (!extractOp) {
         return rewriter.notifyMatchFailure(fromElements,
                                            "element not from vector.extract");
       }
+
+      // Check condition (i) on the first element. As we will check that all
+      // elements have the same source, we don't need to check condition (i) for
+      // any other elements.
+      if (insertIndex == 0) {
+        firstElementSource = extractOp.getVector();
+        if (static_cast<size_t>(
+                firstElementSource.getType().getNumElements()) !=
+            fromElements.getType().getNumElements()) {
+          return rewriter.notifyMatchFailure(fromElements,
+                                             "number of elements differ");
+        }
+      }
+
+      // Check condition (ii), by checking that all elements have same source as
+      // the first element.
       Value currentSource = extractOp.getVector();
-      // Check condition (i).
-      if (currentSource != source) {
+      if (currentSource != firstElementSource) {
         return rewriter.notifyMatchFailure(fromElements,
                                            "element from different vector");
       }
 
-      ArrayRef<int64_t> position = extractOp.getStaticPosition();
-      assert(position.size() == static_cast<size_t>(sourceType.getRank()) &&
-             "scalar extract must have full rank position");
+      // Check condition (iii).
+      // First, get the index that the element is extracted from.
+      int64_t extractIndex{0};
       int64_t stride{1};
-      int64_t offset{0};
-      for (auto [pos, size] : llvm::zip(llvm::reverse(position),
-                                        llvm::reverse(sourceType.getShape()))) {
+      ArrayRef<int64_t> position = extractOp.getStaticPosition();
+      assert(position.size() ==
+                 static_cast<size_t>(firstElementSource.getType().getRank()) &&
+             "scalar extract must have full rank position");
+      for (auto [pos, size] :
+           llvm::zip(llvm::reverse(position),
+                     llvm::reverse(firstElementSource.getType().getShape()))) {
         if (pos == ShapedType::kDynamic) {
           return rewriter.notifyMatchFailure(
               fromElements, "elements not in ascending order (dynamic order)");
         }
-        offset += pos * stride;
+        extractIndex += pos * stride;
         stride *= size;
       }
-      // Check condition (iii).
-      if (offset != static_cast<int64_t>(indexMinusOne + 1)) {
+
+      // Second, check that the index of extraction from source and insertion in
+      // from_elements are the same.
+      if (extractIndex != static_cast<int64_t>(insertIndex)) {
         return rewriter.notifyMatchFailure(
             fromElements, "elements not in ascending order (static order)");
       }
     }
 
-    rewriter.replaceOpWithNewOp<ShapeCastOp>(fromElements,
-                                             fromElements.getType(), source);
+    rewriter.replaceOpWithNewOp<ShapeCastOp>(
+        fromElements, fromElements.getType(), firstElementSource);
     return success();
   }
 };

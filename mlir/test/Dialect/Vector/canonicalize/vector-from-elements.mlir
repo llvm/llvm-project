@@ -7,7 +7,7 @@
 ///===----------------------------------------------===//
 
 // CHECK-LABEL: func @extract_scalar_from_from_elements(
-//  CHECK-SAME:     %[[a:.*]]: f32, %[[b:.*]]: f32)
+//  CHECK-SAME:     %[[A:.*]]: f32, %[[B:.*]]: f32)
 func.func @extract_scalar_from_from_elements(%a: f32, %b: f32) -> (f32, f32, f32, f32, f32, f32, f32) {
   // Extract from 0D.
   %0 = vector.from_elements %a : vector<f32>
@@ -26,50 +26,50 @@ func.func @extract_scalar_from_from_elements(%a: f32, %b: f32) -> (f32, f32, f32
   %9 = vector.extract %6[1, 1] : f32 from vector<2x3xf32>
   %10 = vector.extract %6[1, 2] : f32 from vector<2x3xf32>
 
-  // CHECK: return %[[a]], %[[a]], %[[b]], %[[a]], %[[a]], %[[b]], %[[b]]
+  // CHECK: return %[[A]], %[[A]], %[[B]], %[[A]], %[[A]], %[[B]], %[[B]]
   return %1, %3, %5, %7, %8, %9, %10 : f32, f32, f32, f32, f32, f32, f32
 }
 
 // -----
 
 // CHECK-LABEL: func @extract_1d_from_from_elements(
-//  CHECK-SAME:     %[[a:.*]]: f32, %[[b:.*]]: f32)
+//  CHECK-SAME:     %[[A:.*]]: f32, %[[B:.*]]: f32)
 func.func @extract_1d_from_from_elements(%a: f32, %b: f32) -> (vector<3xf32>, vector<3xf32>) {
   %0 = vector.from_elements %a, %a, %a, %b, %b, %b : vector<2x3xf32>
-  // CHECK: %[[splat1:.*]] = vector.splat %[[a]] : vector<3xf32>
+  // CHECK: %[[SPLAT1:.*]] = vector.splat %[[A]] : vector<3xf32>
   %1 = vector.extract %0[0] : vector<3xf32> from vector<2x3xf32>
-  // CHECK: %[[splat2:.*]] = vector.splat %[[b]] : vector<3xf32>
+  // CHECK: %[[SPLAT2:.*]] = vector.splat %[[B]] : vector<3xf32>
   %2 = vector.extract %0[1] : vector<3xf32> from vector<2x3xf32>
-  // CHECK: return %[[splat1]], %[[splat2]]
+  // CHECK: return %[[SPLAT1]], %[[SPLAT2]]
   return %1, %2 : vector<3xf32>, vector<3xf32>
 }
 
 // -----
 
 // CHECK-LABEL: func @extract_2d_from_from_elements(
-//  CHECK-SAME:     %[[a:.*]]: f32, %[[b:.*]]: f32)
+//  CHECK-SAME:     %[[A:.*]]: f32, %[[B:.*]]: f32)
 func.func @extract_2d_from_from_elements(%a: f32, %b: f32) -> (vector<2x2xf32>, vector<2x2xf32>) {
   %0 = vector.from_elements %a, %a, %a, %b, %b, %b, %b, %a, %b, %a, %a, %b : vector<3x2x2xf32>
-  // CHECK: %[[splat1:.*]] = vector.from_elements %[[a]], %[[a]], %[[a]], %[[b]] : vector<2x2xf32>
+  // CHECK: %[[SPLAT1:.*]] = vector.from_elements %[[A]], %[[A]], %[[A]], %[[B]] : vector<2x2xf32>
   %1 = vector.extract %0[0] : vector<2x2xf32> from vector<3x2x2xf32>
-  // CHECK: %[[splat2:.*]] = vector.from_elements %[[b]], %[[b]], %[[b]], %[[a]] : vector<2x2xf32>
+  // CHECK: %[[SPLAT2:.*]] = vector.from_elements %[[B]], %[[B]], %[[B]], %[[A]] : vector<2x2xf32>
   %2 = vector.extract %0[1] : vector<2x2xf32> from vector<3x2x2xf32>
-  // CHECK: return %[[splat1]], %[[splat2]]
+  // CHECK: return %[[SPLAT1]], %[[SPLAT2]]
   return %1, %2 : vector<2x2xf32>, vector<2x2xf32>
 }
 
 // -----
 
 // CHECK-LABEL: func @from_elements_to_splat(
-//  CHECK-SAME:     %[[a:.*]]: f32, %[[b:.*]]: f32)
+//  CHECK-SAME:     %[[A:.*]]: f32, %[[B:.*]]: f32)
 func.func @from_elements_to_splat(%a: f32, %b: f32) -> (vector<2x3xf32>, vector<2x3xf32>, vector<f32>) {
-  // CHECK: %[[splat:.*]] = vector.splat %[[a]] : vector<2x3xf32>
+  // CHECK: %[[SPLAT:.*]] = vector.splat %[[A]] : vector<2x3xf32>
   %0 = vector.from_elements %a, %a, %a, %a, %a, %a : vector<2x3xf32>
-  // CHECK: %[[from_el:.*]] = vector.from_elements {{.*}} : vector<2x3xf32>
+  // CHECK: %[[FROM_EL:.*]] = vector.from_elements {{.*}} : vector<2x3xf32>
   %1 = vector.from_elements %a, %a, %a, %a, %b, %a : vector<2x3xf32>
-  // CHECK: %[[splat2:.*]] = vector.splat %[[a]] : vector<f32>
+  // CHECK: %[[SPLAT2:.*]] = vector.splat %[[A]] : vector<f32>
   %2 = vector.from_elements %a : vector<f32>
-  // CHECK: return %[[splat]], %[[from_el]], %[[splat2]]
+  // CHECK: return %[[SPLAT]], %[[FROM_EL]], %[[SPLAT2]]
   return %0, %1, %2 : vector<2x3xf32>, vector<2x3xf32>, vector<f32>
 }
 
@@ -80,9 +80,9 @@ func.func @from_elements_to_splat(%a: f32, %b: f32) -> (vector<2x3xf32>, vector<
 ///===----------------------------------------------===//
 
 // CHECK-LABEL: func @to_shape_cast_rank2_to_rank1(
-//  CHECK-SAME:       %[[a:.*]]: vector<1x2xi8>)
-//       CHECK:       %[[shape_cast:.*]] = vector.shape_cast %[[a]] : vector<1x2xi8> to vector<2xi8>
-//       CHECK:       return %[[shape_cast]] : vector<2xi8>
+//  CHECK-SAME:       %[[A:.*]]: vector<1x2xi8>)
+//       CHECK:       %[[SHAPE_CAST:.*]] = vector.shape_cast %[[A]] : vector<1x2xi8> to vector<2xi8>
+//       CHECK:       return %[[SHAPE_CAST]] : vector<2xi8>
 func.func @to_shape_cast_rank2_to_rank1(%arg0: vector<1x2xi8>) -> vector<2xi8> {
   %0 = vector.extract %arg0[0, 0] : i8 from vector<1x2xi8>
   %1 = vector.extract %arg0[0, 1] : i8 from vector<1x2xi8>
@@ -93,9 +93,9 @@ func.func @to_shape_cast_rank2_to_rank1(%arg0: vector<1x2xi8>) -> vector<2xi8> {
 // -----
 
 // CHECK-LABEL: func @to_shape_cast_rank1_to_rank3(
-//  CHECK-SAME:       %[[a:.*]]: vector<8xi8>)
-//       CHECK:       %[[shape_cast:.*]] = vector.shape_cast %[[a]] : vector<8xi8> to vector<2x2x2xi8>
-//       CHECK:       return %[[shape_cast]] : vector<2x2x2xi8>
+//  CHECK-SAME:       %[[A:.*]]: vector<8xi8>)
+//       CHECK:       %[[SHAPE_CAST:.*]] = vector.shape_cast %[[A]] : vector<8xi8> to vector<2x2x2xi8>
+//       CHECK:       return %[[SHAPE_CAST]] : vector<2x2x2xi8>
 func.func @to_shape_cast_rank1_to_rank3(%arg0: vector<8xi8>) -> vector<2x2x2xi8> {
   %0 = vector.extract %arg0[0] : i8 from vector<8xi8>
   %1 = vector.extract %arg0[1] : i8 from vector<8xi8>
@@ -153,3 +153,17 @@ func.func @negative_source_too_large(%arg0: vector<1x3xi8>) -> vector<2xi8> {
   %2 = vector.from_elements %0, %1 : vector<2xi8>
   return %2 : vector<2xi8>
 }
+
+// -----
+
+// The inserted elements are are a subset of the extracted elements.
+// [0, 1, 2] -> [1, 1, 2]
+// CHECK-LABEL: func @negative_nobijection_order(
+//   CHECK-NOT: shape_cast
+func.func @negative_nobijection_order(%arg0: vector<1x3xi8>) -> vector<3xi8> {
+  %0 = vector.extract %arg0[0, 1] : i8 from vector<1x3xi8>
+  %1 = vector.extract %arg0[0, 2] : i8 from vector<1x3xi8>
+  %2 = vector.from_elements %0, %0, %1 : vector<3xi8>
+  return %2 : vector<3xi8>
+}
+
