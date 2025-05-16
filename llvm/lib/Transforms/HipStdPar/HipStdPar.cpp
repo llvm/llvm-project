@@ -385,8 +385,8 @@ PreservedAnalyses HipStdParMathFixupPass::run(Module &M,
     if (!F.hasName())
       continue;
 
-    auto N = F.getName().str();
-    auto ID = F.getIntrinsicID();
+    StringRef N = F.getName();
+    Intrinsic::ID ID = F.getIntrinsicID();
 
     switch (ID) {
     case Intrinsic::not_intrinsic: {
@@ -428,9 +428,9 @@ PreservedAnalyses HipStdParMathFixupPass::run(Module &M,
     }
     }
 
-    llvm::replace(N, '.', '_');
-    N.replace(0, sizeof("llvm"), "__hipstdpar_");
     ToReplace.emplace_back(&F, std::move(N));
+    llvm::replace(ToReplace.back().second, '.', '_');
+    ToReplace.back().second.replace(0, sizeof("llvm"), "__hipstdpar_");
   }
   for (auto &&F : ToReplace)
     F.first->replaceAllUsesWith(
