@@ -310,12 +310,13 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::VASTART, MVT::Other, Custom);
   setOperationAction({ISD::VAARG, ISD::VACOPY, ISD::VAEND}, MVT::Other, Expand);
 
-  if (!Subtarget.hasVendorXTHeadBb())
+  if (!Subtarget.hasVendorXTHeadBb() && !Subtarget.hasVendorXqcibm())
     setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1, Expand);
 
   setOperationAction(ISD::EH_DWARF_CFA, MVT::i32, Custom);
 
   if (!Subtarget.hasStdExtZbb() && !Subtarget.hasVendorXTHeadBb() &&
+      !Subtarget.hasVendorXqcibm() &&
       !(Subtarget.hasVendorXCValu() && !Subtarget.is64Bit()))
     setOperationAction(ISD::SIGN_EXTEND_INREG, {MVT::i8, MVT::i16}, Expand);
 
