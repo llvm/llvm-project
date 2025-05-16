@@ -185,7 +185,6 @@ findSwiftSelf(StackFrame &frame, lldb::VariableSP self_var_sp) {
 void SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
   Log *log = GetLog(LLDBLog::Expressions);
   LLDB_LOG(log, "SwiftUserExpression::ScanContext()");
-  LLDB_SCOPED_TIMER();
 
   m_target = exe_ctx.GetTargetPtr();
   if (!m_target) {
@@ -304,8 +303,6 @@ static llvm::Error AddVariableInfo(
     llvm::SmallVectorImpl<SwiftASTManipulator::VariableInfo> &local_variables,
     lldb::DynamicValueType use_dynamic,
     lldb::BindGenericTypes bind_generic_types) {
-  LLDB_SCOPED_TIMER();
-
   StringRef name = variable_sp->GetUnqualifiedName().GetStringRef();
   const char *name_cstr = name.data();
   assert(StringRef(name_cstr) == name && "missing null terminator");
@@ -495,7 +492,6 @@ static llvm::Error RegisterAllVariables(
     llvm::SmallVectorImpl<SwiftASTManipulator::VariableInfo> &local_variables,
     lldb::DynamicValueType use_dynamic,
     lldb::BindGenericTypes bind_generic_types) {
-  LLDB_SCOPED_TIMER();
   SwiftLanguageRuntime *language_runtime = nullptr;
 
   if (stack_frame_sp)
@@ -703,8 +699,6 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
                                 bool keep_result_in_memory,
                                 bool generate_debug_info) {
   Log *log = GetLog(LLDBLog::Expressions);
-  LLDB_SCOPED_TIMER();
-
   Status err;
 
   auto error = [&](const char *error_msg, const char *detail = nullptr) {
@@ -981,7 +975,6 @@ bool SwiftUserExpression::AddArguments(ExecutionContext &exe_ctx,
 
 lldb::ExpressionVariableSP SwiftUserExpression::GetResultAfterDematerialization(
     ExecutionContextScope *exe_scope) {
-  LLDB_SCOPED_TIMER();
   lldb::ExpressionVariableSP in_result_sp = m_result_delegate.GetVariable();
   lldb::ExpressionVariableSP in_error_sp = m_error_delegate.GetVariable();
 
