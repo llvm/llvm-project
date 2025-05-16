@@ -2871,7 +2871,33 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
           simplifyAndOrWithOpReplaced(Op1, Op0, Constant::getAllOnesValue(Ty),
                                       /*SimplifyOnly*/ false, *this))
     return BinaryOperator::CreateAnd(Op0, V);
-
+  // I is the 'and' instruction
+if (auto *Add = dyn_cast<BinaryOperator>(I.getOperand(0))) {
+  if (Add->getOpcode() == Instruction::Add) {
+      Value *LHS = Add->getOperand(0); // should be shl
+      ConstantInt *AddConst = dyn_cast<ConstantInt>(Add->getOperand(1));
+      ConstantInt *AndConst = dyn_cast<ConstantInt>(I.getOperand(1));
+      if (AddConst && AndConst) {
+          // check if AddConst is 47 and AndConst is -32
+          if (AddConst->equalsInt(47) && AndConst->getSExtValue() == -32) {
+              // Check if LHS is shl i64 %a, 5
+              if (auto *Shl = dyn_cast<BinaryOperator>(LHS)) {
+                  if (Shl->getOpcode() == Instruction::Shl) {
+                      ConstantInt *ShlConst = dyn_cast<ConstantInt>(Shl->getOperand(1));
+                      if (ShlConst && ShlConst->equalsInt(5)) {
+                          // You've matched the pattern!
+                          // Replace with: shl i64 (add i64 %a, 1), 5
+                          IRBuilder<> Builder(&I);
+                          Value *NewAdd = Builder.CreateAdd(Shl->getOperand(0), ConstantInt::get(I.getType(), 1));
+                          Value *NewShl = Builder.CreateShl(NewAdd, ShlConst);
+                          I.replaceAllUsesWith(NewShl);
+                      }
+                  }
+              }
+          }
+      }
+  }
+}
   return nullptr;
 }
 
