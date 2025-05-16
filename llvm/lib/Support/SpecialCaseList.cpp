@@ -215,9 +215,9 @@ bool SpecialCaseList::inSection(StringRef Section, StringRef Prefix,
 unsigned SpecialCaseList::inSectionBlame(StringRef Section, StringRef Prefix,
                                          StringRef Query,
                                          StringRef Category) const {
-  for (const auto &It : Sections) {
-    if (It.SectionMatcher->match(Section)) {
-      unsigned Blame = inSectionBlame(It.Entries, Prefix, Query, Category);
+  for (const auto &S : Sections) {
+    if (S.SectionMatcher->match(Section)) {
+      unsigned Blame = inSectionBlame(S.Entries, Prefix, Query, Category);
       if (Blame)
         return Blame;
     }
