@@ -759,6 +759,8 @@ void Preprocessor::HandlePoisonedIdentifier(Token & Identifier) {
 
 void Preprocessor::updateOutOfDateIdentifier(const IdentifierInfo &II) const {
   assert(II.isOutOfDate() && "not out of date");
+  assert(getExternalSource() &&
+         "getExternalSource() should not return nullptr");
   getExternalSource()->updateOutOfDateIdentifier(II);
 }
 
