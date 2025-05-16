@@ -199,8 +199,8 @@ nocfg:
 // CHECK-NEXT:   SrcSafetyAnalysis::ComputeNext(  br      x0, src-state<SafeToDerefRegs: LR W0 W30 X0 W0_HI W30_HI , TrustedRegs: LR W0 W30 X0 W0_HI W30_HI , Insts: >)
 // CHECK-NEXT:     .. result: (src-state<SafeToDerefRegs: LR W0 W30 X0 W0_HI W30_HI , TrustedRegs: LR W0 W30 X0 W0_HI W30_HI , Insts: >)
 // CHECK-NEXT:   Due to label, resetting the state before:     00000000:       ret # Offset: 8
-// CHECK-NEXT:   SrcSafetyAnalysis::ComputeNext(  ret     x30, src-state<SafeToDerefRegs: , TrustedRegs: , Insts: >)
-// CHECK-NEXT:     .. result: (src-state<SafeToDerefRegs: , TrustedRegs: , Insts: >)
+// CHECK-NEXT:   SrcSafetyAnalysis::ComputeNext(  ret     x30, src-state<SafeToDerefRegs: LR W30 W30_HI , TrustedRegs: LR W30 W30_HI , Insts: >)
+// CHECK-NEXT:     .. result: (src-state<SafeToDerefRegs: LR W30 W30_HI , TrustedRegs: LR W30 W30_HI , Insts: >)
 // CHECK-NEXT: After src register safety analysis:
 // CHECK-NEXT: Binary Function "nocfg"  {
 // CHECK-NEXT:   Number      : 3
@@ -224,32 +224,6 @@ nocfg:
 // CHECK-NEXT:   Found RET inst:     00000000:         ret # Offset: 8 # CFGUnawareSrcSafetyAnalysis: src-state<SafeToDerefRegs: BitVector, TrustedRegs: BitVector, Insts: >
 // CHECK-NEXT:     RetReg: LR
 // CHECK-NEXT:     SafeToDerefRegs:
-// CHECK-EMPTY:
-// CHECK-NEXT: Running detailed src register safety analysis...
-// CHECK-NEXT:   SrcSafetyAnalysis::ComputeNext(   adr     x0, __ENTRY_nocfg@0x[[ENTRY_ADDR]], src-state<SafeToDerefRegs: LR W30 W30_HI , TrustedRegs: LR W30 W30_HI , Insts: [0]()>)
-// CHECK-NEXT:     .. result: (src-state<SafeToDerefRegs: LR W0 W30 X0 W0_HI W30_HI , TrustedRegs: LR W0 W30 X0 W0_HI W30_HI , Insts: [0]()>)
-// CHECK-NEXT:   SrcSafetyAnalysis::ComputeNext(  br      x0, src-state<SafeToDerefRegs: LR W0 W30 X0 W0_HI W30_HI , TrustedRegs: LR W0 W30 X0 W0_HI W30_HI , Insts: [0]()>)
-// CHECK-NEXT:     .. result: (src-state<SafeToDerefRegs: LR W0 W30 X0 W0_HI W30_HI , TrustedRegs: LR W0 W30 X0 W0_HI W30_HI , Insts: [0]()>)
-// CHECK-NEXT:   Due to label, resetting the state before:     00000000:       ret # Offset: 8
-// CHECK-NEXT:   SrcSafetyAnalysis::ComputeNext(  ret     x30, src-state<SafeToDerefRegs: , TrustedRegs: , Insts: [0]()>)
-// CHECK-NEXT:     .. result: (src-state<SafeToDerefRegs: , TrustedRegs: , Insts: [0]()>)
-// CHECK-NEXT: After detailed src register safety analysis:
-// CHECK-NEXT: Binary Function "nocfg"  {
-// CHECK-NEXT:   Number      : 3
-// ...
-// CHECK:        Secondary Entry Points : __ENTRY_nocfg@0x[[ENTRY_ADDR]]
-// CHECK-NEXT: }
-// CHECK-NEXT: .{{[A-Za-z0-9]+}}:
-// CHECK-NEXT:     00000000:   adr     x0, __ENTRY_nocfg@0x[[ENTRY_ADDR]] # CFGUnawareSrcSafetyAnalysis: src-state<SafeToDerefRegs: BitVector, TrustedRegs: BitVector, Insts: [0]()>
-// CHECK-NEXT:     00000004:   br      x0 # UNKNOWN CONTROL FLOW # Offset: 4 # CFGUnawareSrcSafetyAnalysis: src-state<SafeToDerefRegs: BitVector, TrustedRegs: BitVector, Insts: [0]()>
-// CHECK-NEXT: __ENTRY_nocfg@0x[[ENTRY_ADDR]] (Entry Point):
-// CHECK-NEXT: .{{[A-Za-z0-9]+}}:
-// CHECK-NEXT:     00000008:   ret # Offset: 8 # CFGUnawareSrcSafetyAnalysis: src-state<SafeToDerefRegs: BitVector, TrustedRegs: BitVector, Insts: [0]()>
-// CHECK-NEXT: DWARF CFI Instructions:
-// CHECK-NEXT:     <empty>
-// CHECK-NEXT: End of Function "nocfg"
-// CHECK-EMPTY:
-// CHECK-NEXT:   Attaching clobbering info to:     00000000:   ret # Offset: 8 # CFGUnawareSrcSafetyAnalysis: src-state<SafeToDerefRegs: BitVector, TrustedRegs: BitVector, Insts: [0]()>
 
         .globl  auth_oracle
         .type   auth_oracle,@function
