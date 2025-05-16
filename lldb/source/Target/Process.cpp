@@ -2675,6 +2675,7 @@ Status Process::LaunchPrivate(ProcessLaunchInfo &launch_info, StateType &state,
   m_jit_loaders_up.reset();
   m_system_runtime_up.reset();
   m_os_up.reset();
+  GetTarget().ClearAllLoadedSections();
 
   {
     std::lock_guard<std::mutex> guard(m_process_input_reader_mutex);
@@ -2763,7 +2764,6 @@ Status Process::LaunchPrivate(ProcessLaunchInfo &launch_info, StateType &state,
   }
 
   if (state == eStateStopped || state == eStateCrashed) {
-    GetTarget().ClearAllLoadedSections();
     DidLaunch();
 
     // Now that we know the process type, update its signal responses from the
@@ -2986,6 +2986,7 @@ Status Process::Attach(ProcessAttachInfo &attach_info) {
   m_jit_loaders_up.reset();
   m_system_runtime_up.reset();
   m_os_up.reset();
+  GetTarget().ClearAllLoadedSections();
 
   lldb::pid_t attach_pid = attach_info.GetProcessID();
   Status error;
@@ -3095,8 +3096,6 @@ Status Process::Attach(ProcessAttachInfo &attach_info) {
 void Process::CompleteAttach() {
   Log *log(GetLog(LLDBLog::Process | LLDBLog::Target));
   LLDB_LOGF(log, "Process::%s()", __FUNCTION__);
-
-  GetTarget().ClearAllLoadedSections();
 
   // Let the process subclass figure out at much as it can about the process
   // before we go looking for a dynamic loader plug-in.
