@@ -1085,36 +1085,36 @@ void VPlanTransforms::simplifyRecipes(VPlan &Plan, Type &CanonicalIVTy) {
   }
 }
 
-static void convertToUniformRecipes(VPlan &Plan) {
+static void narrowToSingleScalarRecipes(VPlan &Plan) {
   if (Plan.hasScalarVFOnly())
     return;
 
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
-      // Try to narrow wide and replicating recipes to uniform recipes, based on
-      // VPlan analysis.
+      // Try to narrow wide and replicating recipes to single scalar recipes,
+      // based on VPlan analysis.
       auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
       if (!RepR && !isa<VPWidenRecipe>(&R))
         continue;
-      if (RepR && RepR->isUniform())
+      if (RepR && RepR->isSingleScalar())
         continue;
 
       auto *RepOrWidenR = cast<VPSingleDefRecipe>(&R);
-      // Skip recipes that aren't uniform and don't have only their scalar
-      // results used. In the latter case, we would introduce extra broadcasts.
-      if (!vputils::isUniformAfterVectorization(RepOrWidenR) ||
+      // Skip recipes that aren't single scalars and don't have only their
+      // scalar results used. In the latter case, we would introduce extra
+      // broadcasts.
+      if (!vputils::isSingleScalar(RepOrWidenR) ||
           any_of(RepOrWidenR->users(), [RepOrWidenR](VPUser *U) {
             return !U->usesScalars(RepOrWidenR);
           }))
         continue;
 
-      auto *Clone =
-          new VPReplicateRecipe(RepOrWidenR->getUnderlyingInstr(),
-                                RepOrWidenR->operands(), /*IsUniform*/ true);
+      auto *Clone = new VPReplicateRecipe(RepOrWidenR->getUnderlyingInstr(),
+                                          RepOrWidenR->operands(),
+                                          true /*IsSingleScalar*/);
       Clone->insertBefore(RepOrWidenR);
       RepOrWidenR->replaceAllUsesWith(Clone);
-      RepOrWidenR->eraseFromParent();
     }
   }
 }
@@ -1813,7 +1813,7 @@ void VPlanTransforms::optimize(VPlan &Plan) {
   runPass(simplifyRecipes, Plan, *Plan.getCanonicalIV()->getScalarType());
   runPass(simplifyBlends, Plan);
   runPass(removeDeadRecipes, Plan);
-  runPass(convertToUniformRecipes, Plan);
+  runPass(narrowToSingleScalarRecipes, Plan);
   runPass(legalizeAndOptimizeInductions, Plan);
   runPass(removeRedundantExpandSCEVRecipes, Plan);
   runPass(simplifyRecipes, Plan, *Plan.getCanonicalIV()->getScalarType());
