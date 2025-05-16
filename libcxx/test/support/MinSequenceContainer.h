@@ -54,7 +54,8 @@ struct MinSequenceContainer {
     return from_vector_iterator(data_.insert(to_vector_iterator(p), std::move(value)));
   }
 
-  iterator insert_range(const_iterator p, auto rg) { return data_.insert_range((to_vector_iterator(p), rg); }
+  iterator insert_range(const_iterator p, auto rg) { return data_.insert_range((to_vector_iterator(p), rg);
+  }
 
   iterator erase(const_iterator first, const_iterator last) {
     return from_vector_iterator(data_.erase(to_vector_iterator(first), to_vector_iterator(last)));
