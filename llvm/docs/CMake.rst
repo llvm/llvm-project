@@ -589,7 +589,7 @@ enabled sub-projects. Nearly all of these variable names begin with
 
   .. note::
     Some projects listed here can also go in ``LLVM_ENABLE_RUNTIMES``. They
-    should only appear in one of the two lists. If a project is a valid possiblity
+    should only appear in one of the two lists. If a project is a valid possibility
     for both, prefer putting it in ``LLVM_ENABLE_RUNTIMES``.
 
 **LLVM_ENABLE_RTTI**:BOOL
