@@ -922,8 +922,10 @@ static void addOpDecorateReqs(const MachineInstr &MI, unsigned DecIndex,
     Reqs.addExtension(SPIRV::Extension::SPV_INTEL_fp_max_error);
   } else if (Dec == SPIRV::Decoration::StallEnableINTEL) {
     Reqs.addRequirements(SPIRV::Capability::FPGAClusterAttributesINTEL);
+    Reqs.addExtension(SPIRV::Extension::SPV_INTEL_fpga_cluster_attributes);
   } else if (Dec == SPIRV::Decoration::StallFreeINTEL) {
     Reqs.addRequirements(SPIRV::Capability::FPGAClusterAttributesV2INTEL);
+    Reqs.addExtension(SPIRV::Extension::SPV_INTEL_fpga_cluster_attributes);
   }
 }
 
