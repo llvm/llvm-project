@@ -142,6 +142,7 @@ private:
   bool foldInterleaveIntrinsics(Instruction &I);
   bool shrinkType(Instruction &I);
   bool shrinkLoadForShuffles(Instruction &I);
+  bool shrinkPhiOfShuffles(Instruction &I);
 
   void replaceValue(Value &Old, Value &New) {
     LLVM_DEBUG(dbgs() << "VC: Replacing: " << Old << '\n');
@@ -3994,6 +3995,109 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
   return false;
 }
 
+// Attempt to narrow a phi of shufflevector instructions where the two incoming
+// values have the same operands but different masks. If the two shuffle masks
+// are offsets of one another we can use one branch to rotate the incoming
+// vector and perform one larger shuffle after the phi.
+bool VectorCombine::shrinkPhiOfShuffles(Instruction &I) {
+  auto *Phi = dyn_cast<PHINode>(&I);
+  if (!Phi || Phi->getNumIncomingValues() != 2u)
+    return false;
+
+  auto *Shuf0 = dyn_cast<ShuffleVectorInst>(Phi->getOperand(0u));
+  auto *Shuf1 = dyn_cast<ShuffleVectorInst>(Phi->getOperand(1u));
+  if (!Shuf0 || !Shuf1)
+    return false;
+
+  if (!Shuf0->hasOneUse() && !Shuf1->hasOneUse())
+    return false;
+
+  auto *Shuf0Op0 = Shuf0->getOperand(0u);
+  auto *Shuf0Op1 = Shuf0->getOperand(1u);
+  auto *Shuf1Op0 = Shuf1->getOperand(0u);
+  auto *Shuf1Op1 = Shuf1->getOperand(1u);
+
+  auto IsPoison = [](Value *Val) -> bool {
+    return isa<PoisonValue>(Val) || isa<UndefValue>(Val);
+  };
+
+  if (Shuf0Op0 != Shuf1Op0 || !IsPoison(Shuf0Op1) || !IsPoison(Shuf1Op1))
+    return false;
+
+  // Ensure result vectors are wider than the argument vector.
+  auto *InputVT = cast<FixedVectorType>(Shuf0Op0->getType());
+  auto *ResultVT = cast<FixedVectorType>(Shuf0->getType());
+  auto const InputNumElements = InputVT->getNumElements();
+
+  if (InputNumElements >= ResultVT->getNumElements())
+    return false;
+
+  // Take the difference of the two shuffle masks at each index. Ignore poison
+  // values at the same index in both masks.
+  auto Mask0 = Shuf0->getShuffleMask();
+  auto Mask1 = Shuf1->getShuffleMask();
+  auto NewMask0 = std::vector<int>();
+  NewMask0.reserve(Mask0.size());
+
+  for (auto I = 0u; I < Mask0.size(); ++I) {
+    if (Mask0[I] >= 0 && Mask1[I] >= 0)
+      NewMask0.push_back(Mask0[I] - Mask1[I]);
+    else if (Mask0[I] == -1 && Mask1[I] == -1)
+      continue;
+    else
+      return false;
+  }
+
+  if (NewMask0.empty() ||
+      !std::equal(NewMask0.begin() + 1u, NewMask0.end(), NewMask0.begin()))
+    return false;
+
+  // Create new mask using difference of the two incoming masks.
+  auto MaskOffset = NewMask0[0u];
+  if (!Shuf0->hasOneUse()) {
+    std::swap(Shuf0, Shuf1);
+    std::swap(Mask0, Mask1);
+    MaskOffset *= -1;
+  }
+
+  auto Index = (InputNumElements - MaskOffset) % InputNumElements;
+  NewMask0.clear();
+
+  for (auto I = 0u; I < InputNumElements; ++I) {
+    NewMask0.push_back(Index);
+    Index = (Index + 1u) % InputNumElements;
+  }
+
+  // Calculate costs for worst cases and compare.
+  auto const Kind = TTI::SK_PermuteSingleSrc;
+  auto OldCost = std::max(TTI.getShuffleCost(Kind, InputVT, ResultVT, Mask0, CostKind),
+                          TTI.getShuffleCost(Kind, InputVT, ResultVT, Mask1, CostKind));
+  auto NewCost = TTI.getShuffleCost(Kind, InputVT, InputVT, NewMask0, CostKind) +
+                 TTI.getShuffleCost(Kind, InputVT, ResultVT, Mask1, CostKind);
+
+  if (NewCost > OldCost)
+    return false;
+
+  // Create new shuffles and narrowed phi.
+  auto Builder = IRBuilder(&I);
+  Builder.SetInsertPoint(Shuf0);
+  Builder.SetCurrentDebugLocation(Shuf0->getDebugLoc());
+  auto *NewShuf0 = Builder.CreateShuffleVector(Shuf0Op0, Shuf0Op1, NewMask0);
+
+  Builder.SetInsertPoint(Phi);
+  Builder.SetCurrentDebugLocation(Phi->getDebugLoc());
+  auto *NewPhi = Builder.CreatePHI(NewShuf0->getType(), 2u);
+  NewPhi->addIncoming(NewShuf0, Phi->getIncomingBlock(0u));
+  NewPhi->addIncoming(Shuf1Op0, Phi->getIncomingBlock(1u));
+
+  Builder.SetInsertPoint(*NewPhi->getInsertionPointAfterDef());
+  auto *NewPoison = PoisonValue::get(NewPhi->getType());
+  auto *NewShuf2 = Builder.CreateShuffleVector(NewPhi, NewPoison, Mask1);
+
+  replaceValue(*Phi, *NewShuf2);
+  return true;
+}
+
 /// This is the entry point for all transforms. Pass manager differences are
 /// handled in the callers of this function.
 bool VectorCombine::run() {
@@ -4080,6 +4184,9 @@ bool VectorCombine::run() {
       case Instruction::Or:
       case Instruction::Xor:
         MadeChange |= foldBitOpOfCastops(I);
+        break;
+      case Instruction::PHI:
+        MadeChange |= shrinkPhiOfShuffles(I);
         break;
       default:
         MadeChange |= shrinkType(I);
