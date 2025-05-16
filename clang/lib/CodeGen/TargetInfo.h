@@ -455,6 +455,10 @@ public:
   initBranchProtectionFnAttributes(const TargetInfo::BranchProtectionInfo &BPI,
                                    llvm::AttrBuilder &FuncAttrs);
 
+  // Add the ptrauth-* Attributes to the FuncAttrs.
+  static void initPointerAuthFnAttributes(const PointerAuthOptions &Opts,
+                                          llvm::AttrBuilder &FuncAttrs);
+
 protected:
   static std::string qualifyWindowsLibrary(StringRef Lib);
 

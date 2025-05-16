@@ -2100,6 +2100,8 @@ static void getTrivialDefaultFunctionAttributes(
 
   TargetInfo::BranchProtectionInfo BPI(LangOpts);
   TargetCodeGenInfo::initBranchProtectionFnAttributes(BPI, FuncAttrs);
+  TargetCodeGenInfo::initPointerAuthFnAttributes(CodeGenOpts.PointerAuth,
+                                                 FuncAttrs);
 }
 
 /// Merges `target-features` from \TargetOpts and \F, and sets the result in

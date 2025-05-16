@@ -258,6 +258,20 @@ void TargetCodeGenInfo::initBranchProtectionFnAttributes(
     FuncAttrs.addAttribute("guarded-control-stack");
 }
 
+void TargetCodeGenInfo::initPointerAuthFnAttributes(
+    const PointerAuthOptions &Opts, llvm::AttrBuilder &FuncAttrs) {
+  if (Opts.ReturnAddresses)
+    FuncAttrs.addAttribute("ptrauth-returns");
+  if (Opts.FunctionPointers)
+    FuncAttrs.addAttribute("ptrauth-calls");
+  if (Opts.AuthTraps)
+    FuncAttrs.addAttribute("ptrauth-auth-traps");
+  if (Opts.IndirectGotos)
+    FuncAttrs.addAttribute("ptrauth-indirect-gotos");
+  if (Opts.AArch64JumpTableHardening)
+    FuncAttrs.addAttribute("aarch64-jump-table-hardening");
+}
+
 namespace {
 class DefaultTargetCodeGenInfo : public TargetCodeGenInfo {
 public:
