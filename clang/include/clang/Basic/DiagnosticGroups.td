@@ -111,7 +111,6 @@ def EnumConversion : DiagGroup<"enum-conversion",
                                 ImplicitEnumEnumCast,
                                 EnumFloatConversion,
                                 EnumCompareConditional]>;
-def CharacterConversion : DiagGroup<"character-conversion">;
 def DeprecatedOFast : DiagGroup<"deprecated-ofast">;
 def ObjCSignedCharBoolImplicitIntConversion :
   DiagGroup<"objc-signed-char-bool-implicit-int-conversion">;
@@ -1120,7 +1119,6 @@ def Parentheses : DiagGroup<"parentheses",
 //   - __null-to-integer conversion warnings are on by default
 def Conversion : DiagGroup<"conversion",
                            [BoolConversion,
-                            CharacterConversion,
                             ConstantConversion,
                             EnumConversion,
                             BitFieldEnumConversion,
