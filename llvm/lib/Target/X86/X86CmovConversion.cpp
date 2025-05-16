@@ -190,9 +190,7 @@ bool X86CmovConverterPass::runOnMachineFunction(MachineFunction &MF) {
   // execution behind a branch is better suited to handle on modern x86 chips.
   if (ForceMemOperand || ForceAll) {
     CmovGroups AllCmovGroups;
-    SmallVector<MachineBasicBlock *, 4> Blocks;
-    for (auto &MBB : MF)
-      Blocks.push_back(&MBB);
+    SmallVector<MachineBasicBlock *, 4> Blocks(llvm::make_pointer_range(MF));
     if (collectCmovCandidates(Blocks, AllCmovGroups, /*IncludeLoads*/ true)) {
       for (auto &Group : AllCmovGroups) {
         // Skip any group that doesn't do at least one memory operand cmov.
@@ -240,8 +238,7 @@ bool X86CmovConverterPass::runOnMachineFunction(MachineFunction &MF) {
   // Note that we need to check size on each iteration as we accumulate child
   // loops.
   for (int i = 0; i < (int)Loops.size(); ++i)
-    for (MachineLoop *Child : Loops[i]->getSubLoops())
-      Loops.push_back(Child);
+    llvm::append_range(Loops, Loops[i]->getSubLoops());
 
   for (MachineLoop *CurrLoop : Loops) {
     // Optimize only innermost loops.
@@ -555,7 +552,7 @@ bool X86CmovConverterPass::checkForProfitableCmovCandidates(
       // This is another conservative check to avoid converting CMOV instruction
       // used with tree-search like algorithm, where the branch is unpredicted.
       auto UIs = MRI->use_instructions(MI->defs().begin()->getReg());
-      if (!UIs.empty() && ++UIs.begin() == UIs.end()) {
+      if (hasSingleElement(UIs)) {
         unsigned Op = UIs.begin()->getOpcode();
         if (Op == X86::MOV64rm || Op == X86::MOV32rm) {
           WorthOpGroup = false;

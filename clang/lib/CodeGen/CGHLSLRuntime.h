@@ -86,6 +86,8 @@ public:
   GENERATE_HLSL_INTRINSIC_FUNCTION(Cross, cross)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Degrees, degrees)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Frac, frac)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(FlattenedThreadIdInGroup,
+                                   flattened_thread_id_in_group)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Lerp, lerp)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Normalize, normalize)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Rsqrt, rsqrt)
@@ -117,6 +119,8 @@ public:
                                    resource_getpointer)
   GENERATE_HLSL_INTRINSIC_FUNCTION(CreateHandleFromBinding,
                                    resource_handlefrombinding)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(CreateHandleFromImplicitBinding,
+                                   resource_handlefromimplicitbinding)
   GENERATE_HLSL_INTRINSIC_FUNCTION(BufferUpdateCounter, resource_updatecounter)
   GENERATE_HLSL_INTRINSIC_FUNCTION(GroupMemoryBarrierWithGroupSync,
                                    group_memory_barrier_with_group_sync)
@@ -148,7 +152,6 @@ public:
 
   void emitEntryFunction(const FunctionDecl *FD, llvm::Function *Fn);
   void setHLSLFunctionAttributes(const FunctionDecl *FD, llvm::Function *Fn);
-  void handleGlobalVarDefinition(const VarDecl *VD, llvm::GlobalVariable *Var);
 
   llvm::Instruction *getConvergenceToken(llvm::BasicBlock &BB);
 

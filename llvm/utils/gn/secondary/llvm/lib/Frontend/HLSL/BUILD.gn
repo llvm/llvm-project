@@ -4,5 +4,9 @@ static_library("HLSL") {
     "//llvm/lib/IR",
     "//llvm/lib/Support",
   ]
-  sources = [ "HLSLResource.cpp" ]
+  sources = [
+    "CBuffer.cpp",
+    "HLSLResource.cpp",
+    "HLSLRootSignature.cpp",
+  ]
 }

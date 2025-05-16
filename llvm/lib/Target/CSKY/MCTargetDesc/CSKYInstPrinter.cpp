@@ -98,9 +98,7 @@ void CSKYInstPrinter::printFPRRegName(raw_ostream &O, unsigned RegNo) const {
 }
 
 void CSKYInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
-                                   const MCSubtargetInfo &STI, raw_ostream &O,
-                                   const char *Modifier) {
-  assert((Modifier == 0 || Modifier[0] == 0) && "No modifiers supported");
+                                   const MCSubtargetInfo &STI, raw_ostream &O) {
   const MCOperand &MO = MI->getOperand(OpNo);
 
   if (MO.isReg()) {

@@ -16,10 +16,13 @@
 #include "CIRGenBuilder.h"
 #include "CIRGenTypeCache.h"
 #include "CIRGenTypes.h"
+#include "CIRGenValue.h"
 
 #include "clang/AST/CharUnits.h"
+#include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 
+#include "TargetInfo.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
@@ -41,6 +44,9 @@ class VarDecl;
 
 namespace CIRGen {
 
+class CIRGenFunction;
+class CIRGenCXXABI;
+
 enum ForDefinition_t : bool { NotForDefinition = false, ForDefinition = true };
 
 /// This class organizes the cross-function state that is used while generating
@@ -54,9 +60,11 @@ public:
                const clang::CodeGenOptions &cgo,
                clang::DiagnosticsEngine &diags);
 
-  ~CIRGenModule() = default;
+  ~CIRGenModule();
 
 private:
+  mutable std::unique_ptr<TargetCIRGenInfo> theTargetCIRGenInfo;
+
   CIRGenBuilderTy builder;
 
   /// Hold Clang AST information.
@@ -73,21 +81,72 @@ private:
 
   const clang::TargetInfo &target;
 
+  std::unique_ptr<CIRGenCXXABI> abi;
+
   CIRGenTypes genTypes;
+
+  /// Per-function codegen information. Updated everytime emitCIR is called
+  /// for FunctionDecls's.
+  CIRGenFunction *curCGF = nullptr;
 
 public:
   mlir::ModuleOp getModule() const { return theModule; }
   CIRGenBuilderTy &getBuilder() { return builder; }
   clang::ASTContext &getASTContext() const { return astContext; }
+  const clang::TargetInfo &getTarget() const { return target; }
   const clang::CodeGenOptions &getCodeGenOpts() const { return codeGenOpts; }
   CIRGenTypes &getTypes() { return genTypes; }
   const clang::LangOptions &getLangOpts() const { return langOpts; }
+
+  CIRGenCXXABI &getCXXABI() const { return *abi; }
   mlir::MLIRContext &getMLIRContext() { return *builder.getContext(); }
+
+  const cir::CIRDataLayout getDataLayout() const {
+    // FIXME(cir): instead of creating a CIRDataLayout every time, set it as an
+    // attribute for the CIRModule class.
+    return cir::CIRDataLayout(theModule);
+  }
+
+  /// -------
+  /// Handling globals
+  /// -------
+
+  mlir::Operation *getGlobalValue(llvm::StringRef ref);
+
+  /// If the specified mangled name is not in the module, create and return an
+  /// mlir::GlobalOp value
+  cir::GlobalOp getOrCreateCIRGlobal(llvm::StringRef mangledName, mlir::Type ty,
+                                     LangAS langAS, const VarDecl *d,
+                                     ForDefinition_t isForDefinition);
+
+  cir::GlobalOp getOrCreateCIRGlobal(const VarDecl *d, mlir::Type ty,
+                                     ForDefinition_t isForDefinition);
+
+  static cir::GlobalOp createGlobalOp(CIRGenModule &cgm, mlir::Location loc,
+                                      llvm::StringRef name, mlir::Type t,
+                                      mlir::Operation *insertPoint = nullptr);
+
+  /// Return the mlir::Value for the address of the given global variable.
+  /// If Ty is non-null and if the global doesn't exist, then it will be created
+  /// with the specified type instead of whatever the normal requested type
+  /// would be. If IsForDefinition is true, it is guaranteed that an actual
+  /// global with type Ty will be returned, not conversion of a variable with
+  /// the same mangled name but some other type.
+  mlir::Value
+  getAddrOfGlobalVar(const VarDecl *d, mlir::Type ty = {},
+                     ForDefinition_t isForDefinition = NotForDefinition);
+
+  const TargetCIRGenInfo &getTargetCIRGenInfo();
 
   /// Helpers to convert the presumed location of Clang's SourceLocation to an
   /// MLIR Location.
   mlir::Location getLoc(clang::SourceLocation cLoc);
   mlir::Location getLoc(clang::SourceRange cRange);
+
+  /// FIXME: this could likely be a common helper and not necessarily related
+  /// with codegen.
+  clang::CharUnits getNaturalTypeAlignment(clang::QualType t,
+                                           LValueBaseInfo *baseInfo);
 
   void emitTopLevelDecl(clang::Decl *decl);
 
@@ -112,6 +171,19 @@ public:
   void emitGlobalFunctionDefinition(clang::GlobalDecl gd, mlir::Operation *op);
   void emitGlobalVarDefinition(const clang::VarDecl *vd,
                                bool isTentative = false);
+
+  void emitGlobalOpenACCDecl(const clang::OpenACCConstructDecl *cd);
+
+  // C++ related functions.
+  void emitDeclContext(const DeclContext *dc);
+
+  /// Return the result of value-initializing the given type, i.e. a null
+  /// expression of the given type.
+  mlir::Value emitNullConstant(QualType t, mlir::Location loc);
+
+  llvm::StringRef getMangledName(clang::GlobalDecl gd);
+
+  static void setInitializer(cir::GlobalOp &op, mlir::Attribute value);
 
   cir::FuncOp
   getOrCreateCIRFunction(llvm::StringRef mangledName, mlir::Type funcType,
@@ -170,6 +242,11 @@ public:
                              const T &name) {
     return errorNYI(loc.getBegin(), feature, name) << loc;
   }
+
+private:
+  // An ordered map of canonical GlobalDecls to their mangled names.
+  llvm::MapVector<clang::GlobalDecl, llvm::StringRef> mangledDeclNames;
+  llvm::StringMap<clang::GlobalDecl, llvm::BumpPtrAllocator> manglings;
 };
 } // namespace CIRGen
 

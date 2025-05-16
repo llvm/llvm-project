@@ -54,7 +54,7 @@ public:
 
   void emitConstantPools() override;
 
-  virtual void emitMachine(StringRef CPU) {};
+  virtual void emitMachine(StringRef CPUOrCommand) {};
 
   virtual void emitExtern(StringRef Str) {};
 
@@ -80,6 +80,23 @@ public:
   void emitExtern(StringRef Sym) override;
   const MCExpr *createWordDiffExpr(MCContext &Ctx, const MCSymbol *Hi,
                                    const MCSymbol *Lo) override;
+};
+
+class SystemZTargetELFStreamer : public SystemZTargetStreamer {
+public:
+  SystemZTargetELFStreamer(MCStreamer &S) : SystemZTargetStreamer(S) {}
+  void emitMachine(StringRef CPUOrCommand) override {}
+};
+
+class SystemZTargetGNUStreamer : public SystemZTargetStreamer {
+  formatted_raw_ostream &OS;
+
+public:
+  SystemZTargetGNUStreamer(MCStreamer &S, formatted_raw_ostream &OS)
+      : SystemZTargetStreamer(S), OS(OS) {}
+  void emitMachine(StringRef CPUOrCommand) override {
+    OS << "\t.machine " << CPUOrCommand << "\n";
+  }
 };
 
 } // end namespace llvm

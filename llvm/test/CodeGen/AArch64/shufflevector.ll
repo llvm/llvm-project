@@ -208,14 +208,13 @@ define <2 x i1> @shufflevector_v2i1(<2 x i1> %a, <2 x i1> %b){
 ;
 ; CHECK-GI-LABEL: shufflevector_v2i1:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-GI-NEXT:    mov w8, v1.s[1]
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    mov w9, v0.s[1]
-; CHECK-GI-NEXT:    mov v1.b[1], w8
-; CHECK-GI-NEXT:    mov v0.b[1], w9
-; CHECK-GI-NEXT:    mov b1, v1.b[1]
-; CHECK-GI-NEXT:    mov v0.b[1], v1.b[0]
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-GI-NEXT:    mov w8, v0.s[1]
+; CHECK-GI-NEXT:    mov w9, v1.s[1]
+; CHECK-GI-NEXT:    mov v0.b[1], w8
+; CHECK-GI-NEXT:    mov v1.b[1], w9
+; CHECK-GI-NEXT:    mov v0.b[1], v1.b[1]
 ; CHECK-GI-NEXT:    umov w8, v0.b[0]
 ; CHECK-GI-NEXT:    umov w9, v0.b[1]
 ; CHECK-GI-NEXT:    mov v0.s[0], w8

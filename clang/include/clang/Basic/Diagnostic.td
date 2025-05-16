@@ -155,6 +155,19 @@ class DefaultWarnNoWerror {
 }
 class DefaultRemark { Severity DefaultSeverity = SEV_Remark; }
 
+class CompatWarningId<string name, int std, string diag, string diag_pre> {
+  string Component = ?;
+  string Name = name;
+  string Diag = diag;
+  string DiagPre = diag_pre;
+  int Std = std;
+
+  // This is unused, but Tablegen will complain if it's missing because we define
+  // the compatibility ids in the same place as the other diagnostics (which means
+  // that we'll be inside a 'let CategoryName = "" in { ... }' block).
+  string CategoryName = ?;
+}
+
 // C++ compatibility warnings.
 multiclass CXXCompat<
     string message,
@@ -178,6 +191,11 @@ multiclass CXXCompat<
                                      "CXX98Compat",
                                      "CXXPre"#std_ver#"Compat"))>,
         DefaultIgnore;
+
+    def : CompatWarningId<
+        NAME, std_ver,
+        "compat_cxx"#std_ver#"_"#NAME,
+        "compat_pre_cxx"#std_ver#"_"#NAME>;
 }
 
 // These generate pairs of C++ compatibility warnings of the form:

@@ -11,10 +11,10 @@
 
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-types.h"
+#include "llvm/ADT/SmallVector.h"
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
-
 #include <string>
 #include <vector>
 
@@ -88,6 +88,14 @@ struct Entry {
     FunctionNameWithArgs,
     FunctionNameNoArgs,
     FunctionMangledName,
+    FunctionScope,
+    FunctionBasename,
+    FunctionTemplateArguments,
+    FunctionFormattedArguments,
+    FunctionReturnLeft,
+    FunctionReturnRight,
+    FunctionQualifiers,
+    FunctionSuffix,
     FunctionAddrOffset,
     FunctionAddrOffsetConcrete,
     FunctionLineOffset,
@@ -100,7 +108,10 @@ struct Entry {
     LineEntryColumn,
     LineEntryStartAddress,
     LineEntryEndAddress,
-    CurrentPCArrow
+    CurrentPCArrow,
+    ProgressCount,
+    ProgressMessage,
+    Separator,
   };
 
   struct Definition {
@@ -147,9 +158,7 @@ struct Entry {
   }
 
   Entry(Type t = Type::Invalid, const char *s = nullptr,
-        const char *f = nullptr)
-      : string(s ? s : ""), printf_format(f ? f : ""), type(t) {}
-
+        const char *f = nullptr);
   Entry(llvm::StringRef s);
   Entry(char ch);
 
@@ -159,15 +168,19 @@ struct Entry {
 
   void AppendText(const char *cstr);
 
-  void AppendEntry(const Entry &&entry) { children.push_back(entry); }
+  void AppendEntry(const Entry &&entry);
+
+  void StartAlternative();
 
   void Clear() {
     string.clear();
     printf_format.clear();
-    children.clear();
+    children_stack.clear();
+    children_stack.emplace_back();
     type = Type::Invalid;
     fmt = lldb::eFormatDefault;
     number = 0;
+    level = 0;
     deref = false;
   }
 
@@ -180,13 +193,7 @@ struct Entry {
       return false;
     if (printf_format != rhs.printf_format)
       return false;
-    const size_t n = children.size();
-    const size_t m = rhs.children.size();
-    for (size_t i = 0; i < std::min<size_t>(n, m); ++i) {
-      if (!(children[i] == rhs.children[i]))
-        return false;
-    }
-    if (children != rhs.children)
+    if (children_stack != rhs.children_stack)
       return false;
     if (type != rhs.type)
       return false;
@@ -197,9 +204,18 @@ struct Entry {
     return true;
   }
 
+  std::vector<Entry> &GetChildren();
+
   std::string string;
   std::string printf_format;
-  std::vector<Entry> children;
+
+  /// A stack of children entries, used by Scope entries to provide alterantive
+  /// children. All other entries have a stack of size 1.
+  /// @{
+  llvm::SmallVector<std::vector<Entry>, 1> children_stack;
+  size_t level = 0;
+  /// @}
+
   Type type;
   lldb::Format fmt = lldb::eFormatDefault;
   lldb::addr_t number = 0;
@@ -214,11 +230,6 @@ bool FormatStringRef(const llvm::StringRef &format, Stream &s,
                      const SymbolContext *sc, const ExecutionContext *exe_ctx,
                      const Address *addr, ValueObject *valobj,
                      bool function_changed, bool initial_function);
-
-bool FormatCString(const char *format, Stream &s, const SymbolContext *sc,
-                   const ExecutionContext *exe_ctx, const Address *addr,
-                   ValueObject *valobj, bool function_changed,
-                   bool initial_function);
 
 Status Parse(const llvm::StringRef &format, Entry &entry);
 

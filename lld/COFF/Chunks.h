@@ -253,8 +253,7 @@ public:
   size_t getSize() const { return header->SizeOfRawData; }
   ArrayRef<uint8_t> getContents() const;
   void writeTo(uint8_t *buf) const;
-
-  MachineTypes getMachine() const { return file->getMachineType(); }
+  MachineTypes getMachine() const;
 
   // Defend against unsorted relocations. This may be overly conservative.
   void sortRelocations();

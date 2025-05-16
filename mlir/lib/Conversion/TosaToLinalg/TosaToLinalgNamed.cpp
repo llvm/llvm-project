@@ -119,10 +119,11 @@ static AffineMap getBroadcastingMap(PatternRewriter &rewriter, Value source,
 }
 
 // Broadcast the source value to all the outer dimensions of the result value.
-// If required, the element type is expanded using an arith.extsi operation.
-static mlir::Value linalgBroadcastAndMaybeExtSI(PatternRewriter &rewriter,
-                                                Location loc, Value source,
-                                                Value result) {
+// If required, the element type is expanded using an arith.extsi or arith.extf
+// operation as appropriate.
+static mlir::Value linalgBroadcastAndMaybeExt(PatternRewriter &rewriter,
+                                              Location loc, Value source,
+                                              Value result) {
   ShapedType resultTy = cast<ShapedType>(result.getType());
   const int64_t resultRank = resultTy.getRank();
   // Creating maps for the input and output of the broacast-like generic op.
@@ -135,11 +136,16 @@ static mlir::Value linalgBroadcastAndMaybeExtSI(PatternRewriter &rewriter,
       .create<linalg::GenericOp>(
           loc, resultTy, ValueRange({source}), result, indexingMaps,
           getNParallelLoopsAttrs(resultTy.getRank()),
-          [](OpBuilder &builder, Location loc, ValueRange args) {
+          [&resultTy](OpBuilder &builder, Location loc, ValueRange args) {
             Value biasVal = args[0];
             Type resType = args[1].getType();
             if (resType != biasVal.getType()) {
-              biasVal = builder.create<arith::ExtSIOp>(loc, resType, biasVal);
+              biasVal =
+                  resultTy.getElementType().isFloat()
+                      ? builder.create<arith::ExtFOp>(loc, resType, biasVal)
+                            .getResult()
+                      : builder.create<arith::ExtSIOp>(loc, resType, biasVal)
+                            .getResult();
             }
             builder.create<linalg::YieldOp>(loc, biasVal);
           })
@@ -253,11 +259,13 @@ public:
     ShapedType resultTy = cast<ShapedType>(op->getResult(0).getType());
 
     Type inputETy = inputTy.getElementType();
-    Type resultETy = resultTy.getElementType();
 
     DenseI64ArrayAttr padAttr = op.getPadAttr();
     DenseI64ArrayAttr strideTosaAttr = op.getStrideAttr();
     DenseI64ArrayAttr dilationTosaAttr = op.getDilationAttr();
+
+    Type accETy = op.getAccType();
+    Type accTy = RankedTensorType::get(resultTy.getShape(), accETy);
 
     // Get and verify zero points.
     FailureOr<int64_t> maybeIZp = op.getInputZeroPoint();
@@ -385,10 +393,10 @@ public:
     auto dilationAttr = rewriter.getI64TensorAttr(dilation);
 
     Value biasEmptyTensor = rewriter.create<tensor::EmptyOp>(
-        loc, resultTy.getShape(), resultETy, filteredDims);
+        loc, resultTy.getShape(), accETy, filteredDims);
 
     Value broadcastBias =
-        linalgBroadcastAndMaybeExtSI(rewriter, loc, bias, biasEmptyTensor);
+        linalgBroadcastAndMaybeExt(rewriter, loc, bias, biasEmptyTensor);
 
     if (hasZp) {
       auto iZp = rewriter.getI32IntegerAttr(inputZpVal);
@@ -410,9 +418,14 @@ public:
 
     Value conv = rewriter
                      .create<LinalgConvOp>(
-                         loc, resultTy, ValueRange{input, weight},
+                         loc, accTy, ValueRange{input, weight},
                          ValueRange{broadcastBias}, strideAttr, dilationAttr)
                      ->getResult(0);
+
+    // We may need to truncate back to the result type if the accumulator was
+    // wider than the result.
+    if (resultTy != accTy)
+      conv = rewriter.create<tosa::CastOp>(loc, resultTy, conv);
 
     rewriter.replaceOp(op, conv);
     return success();
@@ -443,6 +456,8 @@ public:
     auto padAttr = cast<DenseI64ArrayAttr>(op->getAttr("pad"));
     auto strideTosaAttr = cast<DenseI64ArrayAttr>(op->getAttr("stride"));
     auto dilationTosaAttr = cast<DenseI64ArrayAttr>(op->getAttr("dilation"));
+
+    Type accETy = op.getAccType();
 
     if (!weightTy.hasStaticShape() || !biasTy.hasStaticShape())
       return rewriter.notifyMatchFailure(
@@ -516,11 +531,11 @@ public:
     ShapedType linalgConvTy =
         RankedTensorType::get({resultShape[0], resultShape[1], resultShape[2],
                                weightShape[2], weightShape[3]},
-                              resultETy);
+                              accETy);
 
-    auto resultZeroAttr = rewriter.getZeroAttr(resultETy);
+    auto resultZeroAttr = rewriter.getZeroAttr(accETy);
     Value emptyTensor = rewriter.create<tensor::EmptyOp>(
-        loc, linalgConvTy.getShape(), resultETy, filteredDims);
+        loc, linalgConvTy.getShape(), accETy, filteredDims);
     Value zero = rewriter.create<arith::ConstantOp>(loc, resultZeroAttr);
     Value zeroTensor = rewriter
                            .create<linalg::FillOp>(loc, ValueRange{zero},
@@ -542,6 +557,15 @@ public:
                            loc, linalgConvTy, ValueRange{input, weight},
                            ValueRange{zeroTensor}, strideAttr, dilationAttr)
                        .getResult(0);
+
+      // We may need to truncate back to the result type if the accumulator was
+      // wider than the result.
+      if (accETy != resultETy)
+        conv = rewriter.create<tosa::CastOp>(
+            loc,
+            RankedTensorType::get(cast<ShapedType>(conv.getType()).getShape(),
+                                  resultETy),
+            conv);
 
       SmallVector<ReassociationExprs, 4> reassociationMap;
       createDepthwiseConvCollapseMap(resultRank, reassociationMap, rewriter);

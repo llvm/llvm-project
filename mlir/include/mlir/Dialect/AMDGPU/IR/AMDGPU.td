@@ -35,6 +35,11 @@ def AMDGPU_Dialect : Dialect {
   let useDefaultAttributePrinterParser = 1;
 }
 
+def AnyIntegerOrFloat : AnyTypeOf<[AnySignlessInteger, AnyFloat], "Integer or Float">;
+
+def AnyIntegerOrFloatOr1DVector :
+  AnyTypeOf<[AnyIntegerOrFloat, FixedVectorOfRankAndType<[1], [AnyIntegerOrFloat]>]>;
+
 //===----------------------------------------------------------------------===//
 // AMDGPU general attribute definitions
 //===----------------------------------------------------------------------===//
@@ -533,14 +538,15 @@ def AMDGPU_DPPPerm : I32EnumAttr<"DPPPerm",
 def AMDGPU_DPPPermAttr : EnumAttr<AMDGPU_Dialect, AMDGPU_DPPPerm,
   "dpp_perm">;
 
-def AMDGPU_DPPOp : AMDGPU_Op<"dpp", [SameTypeOperands, AllTypesMatch<["result", "old", "src"]>]>,
+def AMDGPU_DPPOp : AMDGPU_Op<"dpp",
+    [Pure, SameTypeOperands, AllTypesMatch<["result", "old", "src"]>]>,
   Arguments<(ins AnyType:$old,
-                  AnyType:$src,
-                  AMDGPU_DPPPermAttr:$kind,
-                  OptionalAttr<AnyAttrOf<[I32Attr, ArrayAttr, UnitAttr]>>:$permArgument,
-                  DefaultValuedAttr<I32Attr, "0xf">:$row_mask,
-                  DefaultValuedAttr<I32Attr, "0xf">:$bank_mask,
-                  DefaultValuedAttr<BoolAttr, "false">:$bound_ctrl)> {
+                 AnyType:$src,
+                 AMDGPU_DPPPermAttr:$kind,
+                 OptionalAttr<AnyAttrOf<[I32Attr, ArrayAttr, UnitAttr]>>:$permArgument,
+                 DefaultValuedAttr<I32Attr, "0xf">:$row_mask,
+                 DefaultValuedAttr<I32Attr, "0xf">:$bank_mask,
+                 DefaultValuedAttr<BoolAttr, "false">:$bound_ctrl)> {
   let summary = "AMDGPU DPP operation";
   let description = [{
     This operation represents DPP functionality in a GPU program.
@@ -563,6 +569,27 @@ def AMDGPU_DPPOp : AMDGPU_Op<"dpp", [SameTypeOperands, AllTypesMatch<["result", 
     $old $src $kind (`(` $permArgument^ `)`)? attr-dict `:` type($result)
   }];
   let hasVerifier = 1;
+}
+
+def AMDGPU_SwizzleBitModeOp : AMDGPU_Op<"swizzle_bitmode",
+    [Pure, AllTypesMatch<["result", "src"]>]>,
+  Arguments<(ins AnyIntegerOrFloatOr1DVector:$src,
+                 I32Attr:$and_mask,
+                 I32Attr:$or_mask,
+                 I32Attr:$xor_mask
+             )> {
+  let summary = "AMDGPU ds_swizzle op, bitmode variant";
+  let description = [{
+    High-level wrapper on bitmode `rocdl.ds_swizzle` op, masks are represented
+    as separate fields so user won't need to do manual bitpacking.
+
+    Supports arbitrary int/float/vector types, which will be repacked to i32 and
+    one or more `rocdl.ds_swizzle` ops during lowering.
+  }];
+  let results = (outs AnyIntegerOrFloatOr1DVector:$result);
+  let assemblyFormat = [{
+    $src $and_mask $or_mask $xor_mask attr-dict `:` type($result)
+  }];
 }
 
 def AMDGPU_LDSBarrierOp : AMDGPU_Op<"lds_barrier"> {
@@ -650,14 +677,20 @@ def AMDGPU_MFMAPermBAttr : EnumAttr<AMDGPU_Dialect, AMDGPU_MFMAPermB,
 // mfma
 def MFMAInTypes : AnyTypeOf<[F32, F64, I32, I64,
                              VectorOfLengthAndType<[2], [F32]>,
-                             VectorOfLengthAndType<[4], [F16]>,
-                             VectorOfLengthAndType<[2, 4], [BF16]>,
-                             VectorOfLengthAndType<[4, 8], [I8]>,
-                             VectorOfLengthAndType<[8], [F8E5M2FNUZ, F8E4M3FNUZ, F8E5M2, F8E4M3FN]>]>;
+                             VectorOfLengthAndType<[4, 8], [F16]>,
+                             VectorOfLengthAndType<[2, 4, 8], [BF16]>,
+                             VectorOfLengthAndType<[4, 8, 16], [I8]>,
+                             VectorOfLengthAndType<[8], [F8E5M2FNUZ, F8E4M3FNUZ]>,
+                             VectorOfLengthAndType<[8, 32], [F8E5M2, F8E4M3FN]>,
+                             VectorOfLengthAndType<[32], [F6E2M3FN, F6E3M2FN, F4E2M1FN]>]>;
 def MFMAOutTypes : AnyTypeOf<[F64,
                               VectorOfLengthAndType<[4, 16, 32], [F32]>,
                               VectorOfLengthAndType<[4, 16, 32], [I32]>,
                               VectorOfLengthAndType<[4], [F64]>]>;
+// scaled_mfma
+def ScaledMFMAInTypes : AnyTypeOf<[VectorOfLengthAndType<[32], [F8E5M2, F8E4M3FN]>,
+                                   VectorOfLengthAndType<[32], [F6E2M3FN, F6E3M2FN, F4E2M1FN]>]>;
+def ScaledMFMAOutTypes : AnyTypeOf<[VectorOfLengthAndType<[4, 16], [F32]>]>;
 // wmma
 def WMMAInTypes : AnyTypeOf<[VectorOfLengthAndType<
                              [4, 8, 16],
@@ -765,4 +798,88 @@ def AMDGPU_WMMAOp :
   let hasVerifier = 1;
 }
 
+def AMDGPU_GatherToLDSOp :
+    AMDGPU_Op<"gather_to_lds", [SameVariadicOperandSize]>,
+    Arguments<(ins
+                   Arg<AnyMemRef, "buffer to gather from", [MemRead]>:$src,
+                   Variadic<Index>:$srcIndices,
+                   Arg<AnyMemRef, "buffer to write to", [MemWrite]>:$dst,
+                   Variadic<Index>:$dstIndices,
+                   TypeAttr:$transferType
+                   )>,
+    Results<(outs)> {
+  let summary = "MLIR wrapper for CDNA Gather to LDS instructions";
+  let description = [{
+    The `amdgpu.global_load` op is a wrapper around the `global_load_lds` instructions.
+
+    Operands:
+    * `$src`: global memory memref to read from.
+    * `$srcIndices`: indices into `$src` to read from for this thread.
+    * `$dst`: LDS memory memref to write to.
+    * `$dstIndices`: base indices into `$dst` to write to for the subgroup of this thread.
+      The elements gathered by the subgroup will be written in order of lane ID will be written
+      into contiguously starting at `$dst[$dstIndices]`.
+    * `$transferType`: type of the data to be transferred by each thread. This is used to determine
+      the size of the data to be transferred and the number of threads in the subgroup.
+      The transfer type must be a scalar type or a vector type with a single element type.
+
+    The `$dst`, along with its indices, points to the memory location the subgroup of this thread
+    will write to.
+
+    Note: only enabled for gfx942 and later.
+  }];
+  let assemblyFormat = [{
+    $src `[` $srcIndices `]` `,` $dst `[` $dstIndices `]` attr-dict `:` $transferType `,` type($src) `,` type($dst)
+  }];
+  let hasVerifier = 1;
+}
+
+def AMDGPU_ScaledMFMAOp :
+    AMDGPU_Op<"scaled_mfma", [AllTypesMatch<["destC", "destD"]>,
+                        Pure]>,
+    Arguments<(ins
+                   I32Attr:$m,
+                   I32Attr:$n,
+                   I32Attr:$k,
+                   ScaledMFMAInTypes:$sourceA,
+                   ScaledMFMAInTypes:$sourceB,
+                   ScaledMFMAOutTypes:$destC,
+                   AnyTypeOf<[F8E8M0FNU, FixedVectorOfLengthAndType<[4], [F8E8M0FNU]>]>:$scalesA,
+                   AnyTypeOf<[F8E8M0FNU, FixedVectorOfLengthAndType<[4], [F8E8M0FNU]>]>:$scalesB,
+                   ConfinedAttr<I32Attr, [IntNonNegative, IntMaxValue<3>]>:$scalesIdxA,
+                   ConfinedAttr<I32Attr, [IntNonNegative, IntMaxValue<3>]>:$scalesIdxB
+                   )>,
+    Results<(outs ScaledMFMAOutTypes: $destD)> {
+  let summary = "MLIR wrapper for CDNA scaled mfma instructions";
+  let description = [{
+    The `amdgpu.scaled_mfma` op is an MLIR wrapper around intrinsics
+    for various scaled versions of `mfma` instructions in the CDNA architecture, which perform
+    multiple outer products in order to allow fast matrix multiplication.
+
+    The wrapper will select an appropriate `mfma` instruction, if one is available,
+    based on the provided `m`, `k`, `n`, and `nBlks` attributes, along with the
+    types of the source and destination arguments.
+
+    Note, this wrapper allows specifying `vector<4Kxi8>` arguments to MFMA
+    intrinsics that take an integer type of width `4K`. For example,
+    one can provide a `vector<4xi8>` as an argument to an MFMA instruction that
+    logically takes 4 i8s but whose intrinsics are specified to take an i32.
+    In these cases, the bytes in the vector will be concatenated in little-endian
+    order (that is, v[0] will go to arg[7:0], v[1] to arg[15:8] and so on).
+
+    This wrapper takes inspiration from `amdgpu.mfma`, but has some key differences:
+    - `amdgpu.scaled_mfma` operates on fp4 (f4E2M1FN), fp6 (f6E2M3FN and f6E3M2FN) and 
+    fp8 (f8E4M3FN and f8E5M2) types using either M=N=16, K=128 or M=N=32, K=64 as their tile 
+    size. 
+    - `amdgpu.scaled_mfma` does not support broadcasting. So, `cbsz`, `abid`, and `blgp` 
+    are omitted from this wrapper.
+    - The `negateA`, `negateB`, and `negateC` flags in `amdgpu.mfma` are only supported for 
+    double-precision operations on gfx94x and so are not included here. 
+  }];
+  let assemblyFormat = [{
+    `(` $scalesA `[` $scalesIdxA `]` `*` $sourceA `)` `*` `(` $scalesB `[` $scalesIdxB `]` `*` $sourceB `)` `+` $destC
+    attr-dict
+    `:` type($scalesA) `,` type($sourceA) `,` type($scalesB) `,` type($sourceB) `,` type($destC)
+  }];
+}
 #endif // AMDGPU

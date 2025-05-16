@@ -81,6 +81,7 @@ add_lldb_library(liblldb SHARED ${option_framework}
   SBMemoryRegionInfoList.cpp
   SBModule.cpp
   SBModuleSpec.cpp
+  SBMutex.cpp
   SBPlatform.cpp
   SBProcess.cpp
   SBProcessInfo.cpp

@@ -806,15 +806,11 @@ void SIScheduleBlockCreator::colorComputeReservedDependencies() {
       CurrentTopDownReservedDependencyColoring[SU->NodeNum] =
         *SUColors.begin();
     else {
-      std::map<std::set<unsigned>, unsigned>::iterator Pos =
-        ColorCombinations.find(SUColors);
-      if (Pos != ColorCombinations.end()) {
-          CurrentTopDownReservedDependencyColoring[SU->NodeNum] = Pos->second;
-      } else {
-        CurrentTopDownReservedDependencyColoring[SU->NodeNum] =
-          NextNonReservedID;
-        ColorCombinations[SUColors] = NextNonReservedID++;
-      }
+      auto [Pos, Inserted] =
+          ColorCombinations.try_emplace(SUColors, NextNonReservedID);
+      if (Inserted)
+        ++NextNonReservedID;
+      CurrentTopDownReservedDependencyColoring[SU->NodeNum] = Pos->second;
     }
   }
 
@@ -1176,14 +1172,15 @@ void SIScheduleBlockCreator::createBlocksForVariant(SISchedulerBlockCreatorVaria
   for (unsigned i = 0, e = DAGSize; i != e; ++i) {
     SUnit *SU = &DAG->SUnits[i];
     unsigned Color = CurrentColoring[SU->NodeNum];
-    if (RealID.find(Color) == RealID.end()) {
+    auto [It, Inserted] = RealID.try_emplace(Color);
+    if (Inserted) {
       int ID = CurrentBlocks.size();
       BlockPtrs.push_back(std::make_unique<SIScheduleBlock>(DAG, this, ID));
       CurrentBlocks.push_back(BlockPtrs.rbegin()->get());
-      RealID[Color] = ID;
+      It->second = ID;
     }
-    CurrentBlocks[RealID[Color]]->addUnit(SU);
-    Node2CurrentBlock[SU->NodeNum] = RealID[Color];
+    CurrentBlocks[It->second]->addUnit(SU);
+    Node2CurrentBlock[SU->NodeNum] = It->second;
   }
 
   // Build dependencies between blocks.

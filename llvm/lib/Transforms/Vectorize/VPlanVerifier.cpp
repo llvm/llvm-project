@@ -16,6 +16,7 @@
 #include "VPlan.h"
 #include "VPlanCFG.h"
 #include "VPlanDominatorTree.h"
+#include "VPlanHelpers.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/TypeSwitch.h"
 
@@ -97,6 +98,18 @@ bool VPlanVerifier::verifyPhiRecipes(const VPBasicBlock *VPBB) {
       return false;
     }
 
+    // Check if the recipe operands match the number of predecessors.
+    // TODO Extend to other phi-like recipes.
+    if (auto *PhiIRI = dyn_cast<VPIRPhi>(&*RecipeI)) {
+      if (PhiIRI->getNumOperands() != VPBB->getNumPredecessors()) {
+        errs() << "Phi-like recipe with different number of operands and "
+                  "predecessors.\n";
+        // TODO: Print broken recipe. At the moment printing an ill-formed
+        // phi-like recipe may crash.
+        return false;
+      }
+    }
+
     RecipeI++;
   }
 
@@ -147,8 +160,8 @@ bool VPlanVerifier::verifyEVLRecipe(const VPInstruction &EVL) const {
             [&](const VPRecipeBase *S) { return VerifyEVLUse(*S, 2); })
         .Case<VPWidenLoadEVLRecipe, VPVectorEndPointerRecipe>(
             [&](const VPRecipeBase *R) { return VerifyEVLUse(*R, 1); })
-        .Case<VPScalarCastRecipe>(
-            [&](const VPScalarCastRecipe *S) { return VerifyEVLUse(*S, 0); })
+        .Case<VPInstructionWithType>(
+            [&](const VPInstructionWithType *S) { return VerifyEVLUse(*S, 0); })
         .Case<VPInstruction>([&](const VPInstruction *I) {
           if (I->getOpcode() == Instruction::PHI)
             return VerifyEVLUse(*I, 1);
@@ -179,8 +192,7 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
   if (!verifyPhiRecipes(VPBB))
     return false;
 
-  // Verify that defs in VPBB dominate all their uses. The current
-  // implementation is still incomplete.
+  // Verify that defs in VPBB dominate all their uses.
   DenseMap<const VPRecipeBase *, unsigned> RecipeNumbering;
   unsigned Cnt = 0;
   for (const VPRecipeBase &R : *VPBB)
@@ -207,29 +219,52 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
 
       for (const VPUser *U : V->users()) {
         auto *UI = cast<VPRecipeBase>(U);
-        // TODO: check dominance of incoming values for phis properly.
-        if (!UI ||
-            isa<VPHeaderPHIRecipe, VPWidenPHIRecipe, VPPredInstPHIRecipe>(UI) ||
-            (isa<VPIRInstruction>(UI) &&
-             isa<PHINode>(cast<VPIRInstruction>(UI)->getInstruction())) ||
-            (isa<VPInstruction>(UI) &&
-             cast<VPInstruction>(UI)->getOpcode() == Instruction::PHI))
+        if (auto *Phi = dyn_cast<VPPhiAccessors>(UI)) {
+          for (unsigned Idx = 0; Idx != Phi->getNumIncoming(); ++Idx) {
+            VPValue *IncomingVPV = Phi->getIncomingValue(Idx);
+            if (IncomingVPV != V)
+              continue;
+
+            const VPBasicBlock *IncomingVPBB = Phi->getIncomingBlock(Idx);
+            if (VPDT.dominates(VPBB, IncomingVPBB))
+              continue;
+
+            errs() << "Incoming def at index " << Idx
+                   << " does not dominate incoming block!\n";
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+            VPSlotTracker Tracker(VPBB->getPlan());
+            IncomingVPV->getDefiningRecipe()->print(errs(), "  ", Tracker);
+            errs() << "\n  does not dominate " << IncomingVPBB->getName()
+                   << " for\n";
+            UI->print(errs(), "  ", Tracker);
+#endif
+            return false;
+          }
+          continue;
+        }
+        // TODO: Also verify VPPredInstPHIRecipe.
+        if (isa<VPPredInstPHIRecipe>(UI))
           continue;
 
         // If the user is in the same block, check it comes after R in the
         // block.
         if (UI->getParent() == VPBB) {
-          if (RecipeNumbering[UI] < RecipeNumbering[&R]) {
-            errs() << "Use before def!\n";
-            return false;
-          }
-          continue;
+          if (RecipeNumbering[UI] >= RecipeNumbering[&R])
+            continue;
+        } else {
+          if (VPDT.dominates(VPBB, UI->getParent()))
+            continue;
         }
 
-        if (!VPDT.dominates(VPBB, UI->getParent())) {
-          errs() << "Use before def!\n";
-          return false;
-        }
+        errs() << "Use before def!\n";
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+        VPSlotTracker Tracker(VPBB->getPlan());
+        UI->print(errs(), "  ", Tracker);
+        errs() << "\n  before\n";
+        R.print(errs(), "  ", Tracker);
+        errs() << "\n";
+#endif
+        return false;
       }
     }
     if (const auto *EVL = dyn_cast<VPInstruction>(&R)) {
@@ -420,8 +455,7 @@ bool VPlanVerifier::verify(const VPlan &Plan) {
 bool llvm::verifyVPlanIsValid(const VPlan &Plan) {
   VPDominatorTree VPDT;
   VPDT.recalculate(const_cast<VPlan &>(Plan));
-  VPTypeAnalysis TypeInfo(
-      const_cast<VPlan &>(Plan).getCanonicalIV()->getScalarType());
+  VPTypeAnalysis TypeInfo(Plan);
   VPlanVerifier Verifier(VPDT, TypeInfo);
   return Verifier.verify(Plan);
 }

@@ -564,6 +564,17 @@ func.func @shape_cast(%arg0 : vector<5x1x3x2xf32>,
   return %0, %1, %2, %3 : vector<15x2xf32>, vector<8xf32>, vector<16xf32>, vector<16x1xf32>
 }
 
+// A vector.shape_cast can cast between any 2 shapes as long as the
+// number of elements is preserved. For those familiar with the tensor
+// dialect: this behaviour is like the tensor.reshape operation, i.e.
+// less restrictive than tensor.collapse_shape and tensor.expand_shape
+// CHECK-LABEL: @shape_cast_general_reshape
+func.func @shape_cast_general_reshape(%arg0 : vector<2x3xf32>) -> (vector<3x1x2xf32>) {
+  // CHECK: vector.shape_cast %{{.*}} : vector<2x3xf32> to vector<3x1x2xf32>
+  %0 = vector.shape_cast %arg0 : vector<2x3xf32> to vector<3x1x2xf32>
+  return %0 : vector<3x1x2xf32>
+}
+
 // CHECK-LABEL: @shape_cast_0d
 func.func @shape_cast_0d(%arg0 : vector<1x1x1x1xf32>) -> (vector<1x1x1x1xf32>) {
 
@@ -882,20 +893,22 @@ func.func @gather_and_scatter2d(%base: memref<?x?xf32>, %v: vector<16xi32>, %mas
   return
 }
 
+// CHECK-LABEL: @gather_and_scatter_multi_dims
+func.func @gather_and_scatter_multi_dims(%base: memref<?xf32>, %v: vector<2x16xi32>, %mask: vector<2x16xi1>, %pass_thru: vector<2x16xf32>) -> vector<2x16xf32> {
+  %c0 = arith.constant 0 : index
+  // CHECK: %[[X:.*]] = vector.gather %{{.*}}[%{{.*}}] [%{{.*}}], %{{.*}}, %{{.*}} : memref<?xf32>, vector<2x16xi32>, vector<2x16xi1>, vector<2x16xf32> into vector<2x16xf32>
+  %0 = vector.gather %base[%c0][%v], %mask, %pass_thru : memref<?xf32>, vector<2x16xi32>, vector<2x16xi1>, vector<2x16xf32> into vector<2x16xf32>
+  // CHECK: vector.scatter %{{.*}}[%{{.*}}] [%{{.*}}], %{{.*}}, %[[X]] : memref<?xf32>, vector<2x16xi32>, vector<2x16xi1>, vector<2x16xf32>
+  vector.scatter %base[%c0][%v], %mask, %0 : memref<?xf32>, vector<2x16xi32>, vector<2x16xi1>, vector<2x16xf32>
+  return %0 : vector<2x16xf32>
+}
+
 // CHECK-LABEL: @gather_on_tensor
 func.func @gather_on_tensor(%base: tensor<?xf32>, %v: vector<16xi32>, %mask: vector<16xi1>, %pass_thru: vector<16xf32>) -> vector<16xf32> {
   %c0 = arith.constant 0 : index
   // CHECK: vector.gather %{{.*}}[%{{.*}}] [%{{.*}}], %{{.*}}, %{{.*}} : tensor<?xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
   %0 = vector.gather %base[%c0][%v], %mask, %pass_thru : tensor<?xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
   return %0 : vector<16xf32>
-}
-
-// CHECK-LABEL: @gather_multi_dims
-func.func @gather_multi_dims(%base: tensor<?xf32>, %v: vector<2x16xi32>, %mask: vector<2x16xi1>, %pass_thru: vector<2x16xf32>) -> vector<2x16xf32> {
-  %c0 = arith.constant 0 : index
-  // CHECK: vector.gather %{{.*}}[%{{.*}}] [%{{.*}}], %{{.*}}, %{{.*}} : tensor<?xf32>, vector<2x16xi32>, vector<2x16xi1>, vector<2x16xf32> into vector<2x16xf32>
-  %0 = vector.gather %base[%c0][%v], %mask, %pass_thru : tensor<?xf32>, vector<2x16xi32>, vector<2x16xi1>, vector<2x16xf32> into vector<2x16xf32>
-  return %0 : vector<2x16xf32>
 }
 
 // CHECK-LABEL: @expand_and_compress

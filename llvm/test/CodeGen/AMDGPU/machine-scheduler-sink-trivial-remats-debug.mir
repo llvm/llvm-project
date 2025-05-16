@@ -17,7 +17,7 @@ machineFunctionInfo:
   isEntryFunction: true
 body:             |
   ; DEBUG: Machine code for function sink_and_inc_idx_when_skipping_small_region_1: IsSSA, NoPHIs, TracksLiveness
-  ; DEBUG: Retrying function scheduling with improved occupancy of 10 from rematerializing
+  ; DEBUG: [PreRARemat] Retrying function scheduling with new min. occupancy of 10 from rematerializing (original was 9, target was 10)
   ; DEBUG-NEXT: ********** MI Scheduling **********
   ; DEBUG-NEXT: sink_and_inc_idx_when_skipping_small_region_1:%bb.2
   ; DEBUG-NEXT:   From: %24:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 24, implicit $exec, implicit $mode, implicit-def $m0
@@ -89,7 +89,7 @@ machineFunctionInfo:
   isEntryFunction: true
 body:             |
   ; DEBUG: Machine code for function sink_and_inc_idx_when_skipping_small_regions_2: IsSSA, NoPHIs, TracksLiveness
-  ; DEBUG: Retrying function scheduling with improved occupancy of 10 from rematerializing
+  ; DEBUG: [PreRARemat] Retrying function scheduling with new min. occupancy of 10 from rematerializing (original was 9, target was 10)
   ; DEBUG-NEXT: ********** MI Scheduling **********
   ; DEBUG-NEXT: sink_and_inc_idx_when_skipping_small_regions_2:%bb.2
   ; DEBUG-NEXT:   From: %24:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 24, implicit $exec, implicit $mode, implicit-def $m0

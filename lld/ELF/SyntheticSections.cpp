@@ -590,7 +590,7 @@ SmallVector<EhFrameSection::FdeData, 0> EhFrameSection::getFdeData() const {
   auto eq = [](const FdeData &a, const FdeData &b) {
     return a.pcRel == b.pcRel;
   };
-  ret.erase(std::unique(ret.begin(), ret.end(), eq), ret.end());
+  ret.erase(llvm::unique(ret, eq), ret.end());
 
   return ret;
 }
@@ -2594,6 +2594,11 @@ PltSection::PltSection(Ctx &ctx)
     : SyntheticSection(ctx, ".plt", SHT_PROGBITS, SHF_ALLOC | SHF_EXECINSTR,
                        16),
       headerSize(ctx.target->pltHeaderSize) {
+  // On AArch64, PLT entries only do loads from the .got.plt section, so the
+  // .plt section can be marked with the SHF_AARCH64_PURECODE section flag.
+  if (ctx.arg.emachine == EM_AARCH64)
+    this->flags |= SHF_AARCH64_PURECODE;
+
   // On PowerPC, this section contains lazy symbol resolvers.
   if (ctx.arg.emachine == EM_PPC64) {
     name = ".glink";
@@ -2654,6 +2659,11 @@ void PltSection::addSymbols() {
 IpltSection::IpltSection(Ctx &ctx)
     : SyntheticSection(ctx, ".iplt", SHT_PROGBITS, SHF_ALLOC | SHF_EXECINSTR,
                        16) {
+  // On AArch64, PLT entries only do loads from the .got.plt section, so the
+  // .iplt section can be marked with the SHF_AARCH64_PURECODE section flag.
+  if (ctx.arg.emachine == EM_AARCH64)
+    this->flags |= SHF_AARCH64_PURECODE;
+
   if (ctx.arg.emachine == EM_PPC || ctx.arg.emachine == EM_PPC64) {
     name = ".glink";
     addralign = 4;
@@ -4317,14 +4327,20 @@ InputSection *ThunkSection::getTargetInputSection() const {
 
 bool ThunkSection::assignOffsets() {
   uint64_t off = 0;
+  bool changed = false;
   for (Thunk *t : thunks) {
+    if (t->alignment > addralign) {
+      addralign = t->alignment;
+      changed = true;
+    }
     off = alignToPowerOf2(off, t->alignment);
     t->setOffset(off);
     uint32_t size = t->size();
     t->getThunkTargetSym()->size = size;
     off += size;
   }
-  bool changed = off != size;
+  if (off != size)
+    changed = true;
   size = off;
   return changed;
 }

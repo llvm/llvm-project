@@ -1,6 +1,7 @@
 {
   "DisplayName": "watchOS 7.0",
   "Version": "7.0",
+  "CanonicalName": "watchos7.0",
   "MaximumDeploymentTarget": "7.0.99",
   "PropertyConditionFallbackNames": [],
   "VersionMap": {

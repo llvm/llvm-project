@@ -24,14 +24,6 @@ class Triple;
 
 namespace RISCV {
 
-namespace RISCVExtensionBitmaskTable {
-struct RISCVExtensionBitmask {
-  const char *Name;
-  unsigned GroupID;
-  unsigned BitPosition;
-};
-} // namespace RISCVExtensionBitmaskTable
-
 struct CPUModel {
   uint32_t MVendorID;
   uint64_t MArchID;
@@ -49,6 +41,7 @@ struct CPUInfo {
 
 // We use 64 bits as the known part in the scalable vector types.
 static constexpr unsigned RVVBitsPerBlock = 64;
+static constexpr unsigned RVVBytesPerBlock = RVVBitsPerBlock / 8;
 
 void getFeaturesForCPU(StringRef CPU,
                        SmallVectorImpl<std::string> &EnabledFeatures,

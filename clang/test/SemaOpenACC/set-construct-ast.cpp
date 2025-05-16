@@ -13,7 +13,7 @@ void NormalFunc() {
   // CHECK-LABEL: NormalFunc
   // CHECK-NEXT: CompoundStmt
 
-#pragma acc set default_async(some_int()) device_num(some_long()) device_type(DT) if (some_int() < some_long())
+#pragma acc set default_async(some_int()) device_num(some_long()) device_type(acc_device_nvidia) if (some_int() < some_long())
   // CHECK-NEXT: OpenACCSetConstruct{{.*}}set
   // CHECK-NEXT: default_async clause
   // CHECK-NEXT: CallExpr{{.*}}'int'
@@ -23,7 +23,7 @@ void NormalFunc() {
   // CHECK-NEXT: CallExpr{{.*}} 'long'
   // CHECK-NEXT: ImplicitCastExpr
   // CHECK-NEXT: DeclRefExpr{{.*}}'some_long' 'long ()'
-  // CHECK-NEXT: device_type(DT)
+  // CHECK-NEXT: device_type(acc_device_nvidia)
   // CHECK-NEXT: if clause
   // CHECK-NEXT: BinaryOperator{{.*}}'bool' '<'
   // CHECK-NEXT: ImplicitCastExpr{{.*}}'long'
@@ -43,14 +43,14 @@ void TemplFunc(T t) {
   // CHECK-NEXT: ParmVarDecl{{.*}} t 'T'
   // CHECK-NEXT: CompoundStmt
 
-#pragma acc set default_async(T::value) device_num(t) device_type(DT) if (T::value < t)
+#pragma acc set default_async(T::value) device_num(t) device_type(multicore) if (T::value < t)
   // CHECK-NEXT: OpenACCSetConstruct{{.*}}set
   // CHECK-NEXT: default_async clause
   // CHECK-NEXT: DependentScopeDeclRefExpr{{.*}} '<dependent type>'
   // CHECK-NEXT: NestedNameSpecifier TypeSpec 'T'
   // CHECK-NEXT: device_num clause
   // CHECK-NEXT: DeclRefExpr{{.*}}'t' 'T'
-  // CHECK-NEXT: device_type(DT)
+  // CHECK-NEXT: device_type(multicore)
   // CHECK-NEXT: if clause
   // CHECK-NEXT: BinaryOperator{{.*}}'<dependent type>' '<'
   // CHECK-NEXT: DependentScopeDeclRefExpr{{.*}} '<dependent type>'
@@ -75,7 +75,7 @@ void TemplFunc(T t) {
   // CHECK-NEXT: CXXMemberCallExpr{{.*}}'unsigned int'
   // CHECK-NEXT: MemberExpr{{.*}}.operator unsigned int
   // CHECK-NEXT: DeclRefExpr{{.*}}'t' 'SomeStruct'
-  // CHECK-NEXT: device_type(DT)
+  // CHECK-NEXT: device_type(multicore)
   // CHECK-NEXT: if clause
   // CHECK-NEXT: BinaryOperator{{.*}}'bool' '<'
   // CHECK-NEXT: ImplicitCastExpr {{.*}}'unsigned int'

@@ -224,7 +224,7 @@
 #include "SIDefines.h"
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Analysis/ConstantFolding.h"
+#include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/Analysis/Utils/Local.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/AttributeMask.h"
@@ -267,7 +267,7 @@ namespace {
 class BufferFatPtrTypeLoweringBase : public ValueMapTypeRemapper {
   DenseMap<Type *, Type *> Map;
 
-  Type *remapTypeImpl(Type *Ty, SmallPtrSetImpl<StructType *> &Seen);
+  Type *remapTypeImpl(Type *Ty);
 
 protected:
   virtual Type *remapScalar(PointerType *PT) = 0;
@@ -305,8 +305,7 @@ protected:
 } // namespace
 
 // This code is adapted from the type remapper in lib/Linker/IRMover.cpp
-Type *BufferFatPtrTypeLoweringBase::remapTypeImpl(
-    Type *Ty, SmallPtrSetImpl<StructType *> &Seen) {
+Type *BufferFatPtrTypeLoweringBase::remapTypeImpl(Type *Ty) {
   Type **Entry = &Map[Ty];
   if (*Entry)
     return *Entry;
@@ -331,18 +330,11 @@ Type *BufferFatPtrTypeLoweringBase::remapTypeImpl(
   // require recursion.
   if (Ty->getNumContainedTypes() == 0 && IsUniqued)
     return *Entry = Ty;
-  if (!IsUniqued) {
-    // Create a dummy type for recursion purposes.
-    if (!Seen.insert(TyAsStruct).second) {
-      StructType *Placeholder = StructType::create(Ty->getContext());
-      return *Entry = Placeholder;
-    }
-  }
   bool Changed = false;
   SmallVector<Type *> ElementTypes(Ty->getNumContainedTypes(), nullptr);
   for (unsigned int I = 0, E = Ty->getNumContainedTypes(); I < E; ++I) {
     Type *OldElem = Ty->getContainedType(I);
-    Type *NewElem = remapTypeImpl(OldElem, Seen);
+    Type *NewElem = remapTypeImpl(OldElem);
     ElementTypes[I] = NewElem;
     Changed |= (OldElem != NewElem);
   }
@@ -366,13 +358,6 @@ Type *BufferFatPtrTypeLoweringBase::remapTypeImpl(
       return *Entry = StructType::get(Ty->getContext(), ElementTypes, IsPacked);
     SmallString<16> Name(STy->getName());
     STy->setName("");
-    Type **RecursionEntry = &Map[Ty];
-    if (*RecursionEntry) {
-      auto *Placeholder = cast<StructType>(*RecursionEntry);
-      Placeholder->setBody(ElementTypes, IsPacked);
-      Placeholder->setName(Name);
-      return *Entry = Placeholder;
-    }
     return *Entry = StructType::create(Ty->getContext(), ElementTypes, Name,
                                        IsPacked);
   }
@@ -380,8 +365,7 @@ Type *BufferFatPtrTypeLoweringBase::remapTypeImpl(
 }
 
 Type *BufferFatPtrTypeLoweringBase::remapType(Type *SrcTy) {
-  SmallPtrSet<StructType *, 2> Visited;
-  return remapTypeImpl(SrcTy, Visited);
+  return remapTypeImpl(SrcTy);
 }
 
 Type *BufferFatPtrToStructTypeMap::remapScalar(PointerType *PT) {
@@ -445,7 +429,7 @@ class StoreFatPtrsAsIntsAndExpandMemcpyVisitor
 
   ValueToValueMapTy ConvertedForStore;
 
-  IRBuilder<> IRB;
+  IRBuilder<InstSimplifyFolder> IRB;
 
   const TargetMachine *TM;
 
@@ -459,9 +443,10 @@ class StoreFatPtrsAsIntsAndExpandMemcpyVisitor
 
 public:
   StoreFatPtrsAsIntsAndExpandMemcpyVisitor(BufferFatPtrToIntTypeMap *TypeMap,
+                                           const DataLayout &DL,
                                            LLVMContext &Ctx,
                                            const TargetMachine *TM)
-      : TypeMap(TypeMap), IRB(Ctx), TM(TM) {}
+      : TypeMap(TypeMap), IRB(Ctx, InstSimplifyFolder(DL)), TM(TM) {}
   bool processFunction(Function &F);
 
   bool visitInstruction(Instruction &I) { return false; }
@@ -683,7 +668,7 @@ class LegalizeBufferContentTypesVisitor
     : public InstVisitor<LegalizeBufferContentTypesVisitor, bool> {
   friend class InstVisitor<LegalizeBufferContentTypesVisitor, bool>;
 
-  IRBuilder<> IRB;
+  IRBuilder<InstSimplifyFolder> IRB;
 
   const DataLayout &DL;
 
@@ -743,7 +728,7 @@ class LegalizeBufferContentTypesVisitor
 
 public:
   LegalizeBufferContentTypesVisitor(const DataLayout &DL, LLVMContext &Ctx)
-      : IRB(Ctx), DL(DL) {}
+      : IRB(Ctx, InstSimplifyFolder(DL)), DL(DL) {}
   bool processFunction(Function &F);
 };
 } // namespace
@@ -1326,7 +1311,7 @@ class SplitPtrStructs : public InstVisitor<SplitPtrStructs, PtrParts> {
   const TargetMachine *TM;
   const GCNSubtarget *ST = nullptr;
 
-  IRBuilder<> IRB;
+  IRBuilder<InstSimplifyFolder> IRB;
 
   // Copy metadata between instructions if applicable.
   void copyMetadata(Value *Dest, Value *Src);
@@ -1363,8 +1348,9 @@ class SplitPtrStructs : public InstVisitor<SplitPtrStructs, PtrParts> {
                           bool IsVolatile, SyncScope::ID SSID);
 
 public:
-  SplitPtrStructs(LLVMContext &Ctx, const TargetMachine *TM)
-      : TM(TM), IRB(Ctx) {}
+  SplitPtrStructs(const DataLayout &DL, LLVMContext &Ctx,
+                  const TargetMachine *TM)
+      : TM(TM), IRB(Ctx, InstSimplifyFolder(DL)) {}
 
   void processFunction(Function &F);
 
@@ -1415,7 +1401,7 @@ PtrParts SplitPtrStructs::getPtrParts(Value *V) {
     return {*RsrcEntry = Rsrc, *OffEntry = Off};
   }
 
-  IRBuilder<>::InsertPointGuard Guard(IRB);
+  IRBuilder<InstSimplifyFolder>::InsertPointGuard Guard(IRB);
   if (auto *I = dyn_cast<Instruction>(V)) {
     LLVM_DEBUG(dbgs() << "Recursing to split parts of " << *I << "\n");
     auto [Rsrc, Off] = visit(*I);
@@ -1479,7 +1465,7 @@ void SplitPtrStructs::getPossibleRsrcRoots(Instruction *I,
 }
 
 void SplitPtrStructs::processConditionals() {
-  SmallDenseMap<Instruction *, Value *> FoundRsrcs;
+  SmallDenseMap<Value *, Value *> FoundRsrcs;
   SmallPtrSet<Value *, 4> Roots;
   SmallPtrSet<Value *, 4> Seen;
   for (Instruction *I : Conditionals) {
@@ -1493,7 +1479,7 @@ void SplitPtrStructs::processConditionals() {
     if (MaybeFoundRsrc != FoundRsrcs.end()) {
       MaybeRsrc = MaybeFoundRsrc->second;
     } else {
-      IRBuilder<>::InsertPointGuard Guard(IRB);
+      IRBuilder<InstSimplifyFolder>::InsertPointGuard Guard(IRB);
       Roots.clear();
       Seen.clear();
       getPossibleRsrcRoots(I, Roots, Seen);
@@ -1558,21 +1544,29 @@ void SplitPtrStructs::processConditionals() {
       // to put the corrections maps in an inconstent state. That'll be handed
       // during the rest of the killing. Also, `ValueToValueMapTy` guarantees
       // that references in that map will be updated as well.
-      ConditionalTemps.push_back(cast<Instruction>(Rsrc));
-      ConditionalTemps.push_back(cast<Instruction>(Off));
-      Rsrc->replaceAllUsesWith(NewRsrc);
-      Off->replaceAllUsesWith(NewOff);
+      // Note that if the temporary instruction got `InstSimplify`'d away, it
+      // might be something like a block argument.
+      if (auto *RsrcInst = dyn_cast<Instruction>(Rsrc)) {
+        ConditionalTemps.push_back(RsrcInst);
+        RsrcInst->replaceAllUsesWith(NewRsrc);
+      }
+      if (auto *OffInst = dyn_cast<Instruction>(Off)) {
+        ConditionalTemps.push_back(OffInst);
+        OffInst->replaceAllUsesWith(NewOff);
+      }
 
       // Save on recomputing the cycle traversals in known-root cases.
       if (MaybeRsrc)
         for (Value *V : Seen)
-          FoundRsrcs[cast<Instruction>(V)] = NewRsrc;
+          FoundRsrcs[V] = NewRsrc;
     } else if (isa<SelectInst>(I)) {
       if (MaybeRsrc) {
-        ConditionalTemps.push_back(cast<Instruction>(Rsrc));
-        Rsrc->replaceAllUsesWith(*MaybeRsrc);
+        if (auto *RsrcInst = dyn_cast<Instruction>(Rsrc)) {
+          ConditionalTemps.push_back(RsrcInst);
+          RsrcInst->replaceAllUsesWith(*MaybeRsrc);
+        }
         for (Value *V : Seen)
-          FoundRsrcs[cast<Instruction>(V)] = *MaybeRsrc;
+          FoundRsrcs[V] = *MaybeRsrc;
       }
     } else {
       llvm_unreachable("Only PHIs and selects go in the conditionals list");
@@ -1752,6 +1746,16 @@ Value *SplitPtrStructs::handleMemoryInst(Instruction *I, Value *Arg, Value *Ptr,
       break;
     case AtomicRMWInst::FSub: {
       report_fatal_error("atomic floating point subtraction not supported for "
+                         "buffer resources and should've been expanded away");
+      break;
+    }
+    case AtomicRMWInst::FMaximum: {
+      report_fatal_error("atomic floating point fmaximum not supported for "
+                         "buffer resources and should've been expanded away");
+      break;
+    }
+    case AtomicRMWInst::FMinimum: {
+      report_fatal_error("atomic floating point fminimum not supported for "
                          "buffer resources and should've been expanded away");
       break;
     }
@@ -2251,11 +2255,10 @@ PtrParts SplitPtrStructs::visitIntrinsicInst(IntrinsicInst &I) {
 
 void SplitPtrStructs::processFunction(Function &F) {
   ST = &TM->getSubtarget<GCNSubtarget>(F);
-  SmallVector<Instruction *, 0> Originals;
+  SmallVector<Instruction *, 0> Originals(
+      llvm::make_pointer_range(instructions(F)));
   LLVM_DEBUG(dbgs() << "Splitting pointer structs in function: " << F.getName()
                     << "\n");
-  for (Instruction &I : instructions(F))
-    Originals.push_back(&I);
   for (Instruction *I : Originals) {
     auto [Rsrc, Off] = visit(I);
     assert(((Rsrc && Off) || (!Rsrc && !Off)) &&
@@ -2281,10 +2284,7 @@ class AMDGPULowerBufferFatPointers : public ModulePass {
 public:
   static char ID;
 
-  AMDGPULowerBufferFatPointers() : ModulePass(ID) {
-    initializeAMDGPULowerBufferFatPointersPass(
-        *PassRegistry::getPassRegistry());
-  }
+  AMDGPULowerBufferFatPointers() : ModulePass(ID) {}
 
   bool run(Module &M, const TargetMachine &TM);
   bool runOnModule(Module &M) override;
@@ -2402,7 +2402,7 @@ bool AMDGPULowerBufferFatPointers::run(Module &M, const TargetMachine &TM) {
     for (Function &F : M.functions())
       for (Instruction &I : instructions(F))
         for (Value *Op : I.operands())
-          if (isa<ConstantExpr>(Op) || isa<ConstantAggregate>(Op))
+          if (isa<ConstantExpr, ConstantAggregate>(Op))
             Worklist.push_back(cast<Constant>(Op));
 
     // Recursively look for any referenced buffer pointer constants.
@@ -2415,7 +2415,7 @@ bool AMDGPULowerBufferFatPointers::run(Module &M, const TargetMachine &TM) {
       if (isBufferFatPtrOrVector(C->getType()))
         BufferFatPtrConsts.insert(C);
       for (Value *Op : C->operands())
-        if (isa<ConstantExpr>(Op) || isa<ConstantAggregate>(Op))
+        if (isa<ConstantExpr, ConstantAggregate>(Op))
           Worklist.push_back(cast<Constant>(Op));
     }
 
@@ -2426,8 +2426,8 @@ bool AMDGPULowerBufferFatPointers::run(Module &M, const TargetMachine &TM) {
         /*RemoveDeadConstants=*/false, /*IncludeSelf=*/true);
   }
 
-  StoreFatPtrsAsIntsAndExpandMemcpyVisitor MemOpsRewrite(&IntTM, M.getContext(),
-                                                         &TM);
+  StoreFatPtrsAsIntsAndExpandMemcpyVisitor MemOpsRewrite(&IntTM, DL,
+                                                         M.getContext(), &TM);
   LegalizeBufferContentTypesVisitor BufferContentsTypeRewrite(DL,
                                                               M.getContext());
   for (Function &F : M.functions()) {
@@ -2472,7 +2472,7 @@ bool AMDGPULowerBufferFatPointers::run(Module &M, const TargetMachine &TM) {
   IntTM.clear();
   CloneMap.clear();
 
-  SplitPtrStructs Splitter(M.getContext(), &TM);
+  SplitPtrStructs Splitter(DL, M.getContext(), &TM);
   for (Function *F : NeedsPostProcess)
     Splitter.processFunction(*F);
   for (Function *F : Intrinsics) {

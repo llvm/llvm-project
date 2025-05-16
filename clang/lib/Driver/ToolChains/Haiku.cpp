@@ -123,8 +123,8 @@ void haiku::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // AddRunTimeLibs).
     if (D.IsFlangMode() &&
         !Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
-      addFortranRuntimeLibraryPath(ToolChain, Args, CmdArgs);
-      addFortranRuntimeLibs(ToolChain, Args, CmdArgs);
+      ToolChain.addFortranRuntimeLibraryPath(Args, CmdArgs);
+      ToolChain.addFortranRuntimeLibs(Args, CmdArgs);
     }
 
     if (NeedsSanitizerDeps)
@@ -273,6 +273,8 @@ void Haiku::AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                    "/boot/system/develop/headers/gnu"));
   addSystemInclude(DriverArgs, CC1Args, concat(D.SysRoot,
                    "/boot/system/develop/headers/posix"));
+  addSystemInclude(DriverArgs, CC1Args, concat(D.SysRoot,
+                   "/boot/system/develop/headers/gcc/include"));
   addSystemInclude(DriverArgs, CC1Args, concat(D.SysRoot,
                    "/boot/system/develop/headers"));
 }

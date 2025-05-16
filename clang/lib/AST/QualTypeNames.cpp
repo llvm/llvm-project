@@ -10,6 +10,7 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/Mangle.h"
+#include "clang/AST/Type.h"
 
 namespace clang {
 
@@ -139,7 +140,7 @@ static const Type *getFullyQualifiedTemplateType(const ASTContext &Ctx,
     if (MightHaveChanged) {
       QualType QT = Ctx.getTemplateSpecializationType(
           TST->getTemplateName(), FQArgs,
-          TST->getCanonicalTypeInternal());
+          /*CanonicalArgs=*/std::nullopt, TST->desugar());
       // getTemplateSpecializationType returns a fully qualified
       // version of the specialization itself, so no need to qualify
       // it.
@@ -171,6 +172,7 @@ static const Type *getFullyQualifiedTemplateType(const ASTContext &Ctx,
         TemplateName TN(TSTDecl->getSpecializedTemplate());
         QualType QT = Ctx.getTemplateSpecializationType(
             TN, FQArgs,
+            /*CanonicalArgs=*/std::nullopt,
             TSTRecord->getCanonicalTypeInternal());
         // getTemplateSpecializationType returns a fully qualified
         // version of the specialization itself, so no need to qualify
@@ -212,6 +214,7 @@ static NestedNameSpecifier *getFullyQualifiedNestedNameSpecifier(
     bool WithGlobalNsPrefix) {
   switch (Scope->getKind()) {
     case NestedNameSpecifier::Global:
+    case NestedNameSpecifier::Super:
       // Already fully qualified
       return Scope;
     case NestedNameSpecifier::Namespace:
@@ -232,9 +235,7 @@ static NestedNameSpecifier *getFullyQualifiedNestedNameSpecifier(
       // but use the name of it's prefix.
       return getFullyQualifiedNestedNameSpecifier(
           Ctx, Scope->getPrefix(), WithGlobalNsPrefix);
-    case NestedNameSpecifier::Super:
-    case NestedNameSpecifier::TypeSpec:
-    case NestedNameSpecifier::TypeSpecWithTemplate: {
+    case NestedNameSpecifier::TypeSpec: {
       const Type *Type = Scope->getAsType();
       // Find decl context.
       const TagDecl *TD = nullptr;
@@ -366,8 +367,7 @@ NestedNameSpecifier *createNestedNameSpecifier(const ASTContext &Ctx,
   }
 
   return NestedNameSpecifier::Create(
-      Ctx, createOuterNNS(Ctx, TD, FullyQualify, WithGlobalNsPrefix),
-      false /*No TemplateKeyword*/, TypePtr);
+      Ctx, createOuterNNS(Ctx, TD, FullyQualify, WithGlobalNsPrefix), TypePtr);
 }
 
 /// Return the fully qualified type, including fully-qualified
@@ -416,6 +416,18 @@ QualType getFullyQualifiedType(QualType QT, const ASTContext &Ctx,
     // Add back the qualifiers.
     QT = Ctx.getQualifiedType(QT, Quals);
     return QT;
+  }
+
+  // Handle types with attributes such as `unique_ptr<int> _Nonnull`.
+  if (auto *AT = dyn_cast<AttributedType>(QT.getTypePtr())) {
+    QualType NewModified =
+        getFullyQualifiedType(AT->getModifiedType(), Ctx, WithGlobalNsPrefix);
+    QualType NewEquivalent =
+        getFullyQualifiedType(AT->getEquivalentType(), Ctx, WithGlobalNsPrefix);
+    Qualifiers Qualifiers = QT.getLocalQualifiers();
+    return Ctx.getQualifiedType(
+        Ctx.getAttributedType(AT->getAttrKind(), NewModified, NewEquivalent),
+        Qualifiers);
   }
 
   // Remove the part of the type related to the type being a template

@@ -13,8 +13,24 @@
 //===----------------------------------------------------------------------===//
 
 #include "SystemZTargetStreamer.h"
+#include "llvm/MC/MCObjectFileInfo.h"
 
 using namespace llvm;
+
+void SystemZTargetStreamer::emitConstantPools() {
+  // Emit EXRL target instructions.
+  if (EXRLTargets2Sym.empty())
+    return;
+  // Switch to the .text section.
+  const MCObjectFileInfo &OFI = *Streamer.getContext().getObjectFileInfo();
+  Streamer.switchSection(OFI.getTextSection());
+  for (auto &I : EXRLTargets2Sym) {
+    Streamer.emitLabel(I.second);
+    const MCInstSTIPair &MCI_STI = I.first;
+    Streamer.emitInstruction(MCI_STI.first, *MCI_STI.second);
+  }
+  EXRLTargets2Sym.clear();
+}
 
 void SystemZTargetHLASMStreamer::emitExtern(StringRef Sym) {
   getStreamer().emitRawText(Twine(" EXTRN ") + Twine(Sym));

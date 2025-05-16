@@ -18,6 +18,9 @@ using LIBC_NAMESPACE::fputil::testing::RoundingMode;
 TEST_F(LlvmLibcExp2m1fTest, SpecialNumbers) {
   LIBC_NAMESPACE::libc_errno = 0;
 
+  EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::exp2m1f(sNaN), FE_INVALID);
+  EXPECT_MATH_ERRNO(0);
+
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::exp2m1f(aNaN));
   EXPECT_FP_EQ_ALL_ROUNDING(inf, LIBC_NAMESPACE::exp2m1f(inf));
   EXPECT_FP_EQ_ALL_ROUNDING(-1.0f, LIBC_NAMESPACE::exp2m1f(neg_inf));

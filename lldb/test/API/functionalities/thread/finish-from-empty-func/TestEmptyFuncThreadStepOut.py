@@ -11,6 +11,7 @@ from lldbsuite.test import lldbutil
 class FinishFromEmptyFunctionTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
+    @skipIf(compiler="clang", compiler_version=['<', '17.0'])
     def test_finish_from_empty_function(self):
         """Test that when stopped at a breakpoint in an empty function, finish leaves it correctly."""
         self.build()

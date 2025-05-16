@@ -60,7 +60,7 @@ define <2 x i32> @main(ptr %0) {
 ; CHECK-NEXT:    vslide1down.vx v8, v8, zero
 ; CHECK-NEXT:    vslide1down.vx v10, v10, zero
 ; CHECK-NEXT:    vmin.vv v8, v10, v8
-; CHECK-NEXT:    vmv.v.x v10, a0
+; CHECK-NEXT:    vmv.s.x v10, a0
 ; CHECK-NEXT:    vslide1down.vx v11, v11, zero
 ; CHECK-NEXT:    vmin.vx v10, v10, a2
 ; CHECK-NEXT:    vmin.vx v10, v10, a1

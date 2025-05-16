@@ -90,12 +90,12 @@ subroutine acc_serial_loop
   END DO
   !$acc end serial loop
 
-! CHECK:      acc.serial {{.*}} {
+! CHECK:      acc.serial {{.*}} async {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
 ! CHECK-NEXT:   }{{$}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {asyncOnly = [#acc.device_type<none>]}
+! CHECK-NEXT: }
 
   !$acc serial loop async(1)
   DO i = 1, n
@@ -122,6 +122,12 @@ subroutine acc_serial_loop
 ! CHECK-NEXT:   }{{$}}
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
+
+  !$acc serial loop async(async) device_type(nvidia) async(1)
+  DO i = 1, n
+    a(i) = b(i)
+  END DO
+! CHECK: acc.serial combined(loop) async(%{{.*}} : i32, %c1{{.*}} : i32 [#acc.device_type<nvidia>])
 
   !$acc serial loop wait
   DO i = 1, n
@@ -389,7 +395,7 @@ subroutine acc_serial_loop
 ! CHECK:      %[[ACC_FPRIVATE_B:.*]] = acc.firstprivate varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {name = "b"}
 ! CHECK:      acc.serial {{.*}} firstprivate(@firstprivatization_ref_10xf32 -> %[[ACC_FPRIVATE_B]] : !fir.ref<!fir.array<10xf32>>) {
 ! CHECK:      %[[ACC_PRIVATE_A:.*]] = acc.private varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {name = "a"}
-! CHECK:        acc.loop {{.*}} private({{.*}}@privatization_ref_10xf32 -> %[[ACC_PRIVATE_A]] : !fir.ref<!fir.array<10xf32>>)
+! CHECK:        acc.loop {{.*}} private({{.*}}@privatization_ref_10xf32 -> %[[ACC_PRIVATE_A]] : !fir.ref<!fir.array<10xf32>>{{.*}})
 ! CHECK-NOT:          fir.do_loop
 ! CHECK:          acc.yield
 ! CHECK-NEXT:   }{{$}}
@@ -451,7 +457,7 @@ subroutine acc_serial_loop
 
 ! CHECK:      acc.serial {{.*}} {
 ! CHECK:        [[GANGNUM1:%.*]] = arith.constant 8 : i32
-! CHECK-NEXT:   acc.loop {{.*}} gang({num=[[GANGNUM1]] : i32}) {{.*}} {
+! CHECK:        acc.loop {{.*}} gang({num=[[GANGNUM1]] : i32}) {{.*}} {
 ! CHECK:          acc.yield
 ! CHECK-NEXT:   }{{$}}
 ! CHECK:        acc.yield
@@ -464,7 +470,7 @@ subroutine acc_serial_loop
 
 ! CHECK:      acc.serial {{.*}} {
 ! CHECK:        [[GANGNUM2:%.*]] = fir.load %{{.*}} : !fir.ref<i32>
-! CHECK-NEXT:   acc.loop {{.*}} gang({num=[[GANGNUM2]] : i32}) {{.*}} {
+! CHECK:        acc.loop {{.*}} gang({num=[[GANGNUM2]] : i32}) {{.*}} {
 ! CHECK:          acc.yield
 ! CHECK-NEXT:   }{{$}}
 ! CHECK:        acc.yield

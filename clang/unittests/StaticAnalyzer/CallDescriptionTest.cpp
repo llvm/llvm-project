@@ -361,15 +361,8 @@ TEST(CallDescription, AliasNames) {
       std::cont v;
       v.data();
     })code";
-  constexpr StringRef UseStructNameInSpelling = R"code(
-    void foo() {
-      std::container v;
-      v.data();
-    })code";
   const std::string UseAliasInSpellingCode =
       (Twine{AliasNamesCode} + UseAliasInSpelling).str();
-  const std::string UseStructNameInSpellingCode =
-      (Twine{AliasNamesCode} + UseStructNameInSpelling).str();
 
   // Test if the code spells the alias, wile we match against the struct name,
   // and again matching against the alias.

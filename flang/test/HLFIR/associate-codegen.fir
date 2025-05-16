@@ -80,10 +80,9 @@ func.func @associate_char(%arg0: !fir.boxchar<1> ) {
 // CHECK:           %[[VAL_9:.*]] = arith.constant 1 : i64
 // CHECK:           %[[VAL_10:.*]] = fir.convert %[[VAL_2]]#1 : (index) -> i64
 // CHECK:           %[[VAL_11:.*]] = arith.muli %[[VAL_9]], %[[VAL_10]] : i64
-// CHECK:           %[[VAL_12:.*]] = arith.constant false
-// CHECK:           %[[VAL_13:.*]] = fir.convert %[[VAL_8]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
-// CHECK:           %[[VAL_14:.*]] = fir.convert %[[VAL_3]]#1 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
-// CHECK:           fir.call @llvm.memmove.p0.p0.i64(%[[VAL_13]], %[[VAL_14]], %[[VAL_11]], %[[VAL_12]]) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+// CHECK:           %[[VAL_13:.*]] = fir.convert %[[VAL_8]] : (!fir.ref<!fir.char<1,?>>) -> !llvm.ptr
+// CHECK:           %[[VAL_14:.*]] = fir.convert %[[VAL_3]]#1 : (!fir.ref<!fir.char<1,?>>) -> !llvm.ptr
+// CHECK:           "llvm.intr.memmove"(%[[VAL_13]], %[[VAL_14]], %[[VAL_11]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i64) -> ()
 // CHECK:           %[[VAL_15:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_16:.*]] = arith.subi %[[VAL_7]], %[[VAL_15]] : index
 // CHECK:           fir.do_loop %[[VAL_17:.*]] = %[[VAL_2]]#1 to %[[VAL_16]] step %[[VAL_15]] {

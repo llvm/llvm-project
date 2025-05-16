@@ -9,7 +9,9 @@ static_library("ProfileData") {
     "//llvm/lib/TargetParser",
   ]
   sources = [
+    "DataAccessProf.cpp",
     "GCOV.cpp",
+    "IndexedMemProfData.cpp",
     "InstrProf.cpp",
     "InstrProfCorrelator.cpp",
     "InstrProfReader.cpp",
