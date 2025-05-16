@@ -853,3 +853,18 @@ template <int... Ts>
 requires C<Ts...[0]>
 auto TplClass<int>::buggy() -> void {}
 }
+
+namespace GH139476 {
+
+namespace moo {
+  template <typename T>
+  constexpr bool baa = true;
+
+  template <typename T> requires baa<T>
+  void caw();
+}
+
+template <typename T> requires moo::baa<T>
+void moo::caw() {}
+
+}
