@@ -12421,6 +12421,10 @@ def warn_zero_as_null_pointer_constant : Warning<
   "zero as null pointer constant">,
   InGroup<DiagGroup<"zero-as-null-pointer-constant">>, DefaultIgnore;
 
+def warn_not_eliding_copy_on_return : Warning<
+  "not eliding copy on return">, 
+  InGroup<DiagGroup<"nrvo">>, DefaultIgnore;
+
 def err_nullability_cs_multilevel : Error<
   "nullability keyword %0 cannot be applied to multi-level pointer type %1">;
 def note_nullability_type_specifier : Note<
