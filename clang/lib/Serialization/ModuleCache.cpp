@@ -20,12 +20,7 @@ namespace {
 class CrossProcessModuleCache : public ModuleCache {
   InMemoryModuleCache InMemory;
 
-  std::time_t BuildSessionTimestamp;
-
 public:
-  explicit CrossProcessModuleCache(std::time_t BuildSessionTimestamp)
-      : BuildSessionTimestamp(BuildSessionTimestamp) {}
-
   void prepareForGetLock(StringRef ModuleFilename) override {
     // FIXME: Do this in LockFileManager and only if the directory doesn't
     // exist.
@@ -38,17 +33,16 @@ public:
     return std::make_unique<llvm::LockFileManager>(ModuleFilename);
   }
 
-  bool isMarkedUpToDate(StringRef ModuleFilename) override {
+  std::time_t getModuleTimestamp(StringRef ModuleFilename) override {
     std::string TimestampFilename =
         serialization::ModuleFile::getTimestampFilename(ModuleFilename);
     llvm::sys::fs::file_status Status;
     if (llvm::sys::fs::status(ModuleFilename, Status) != std::error_code{})
-      return false;
-    return llvm::sys::toTimeT(Status.getLastModificationTime()) >
-           BuildSessionTimestamp;
+      return 0;
+    return llvm::sys::toTimeT(Status.getLastModificationTime());
   }
 
-  void markUpToDate(StringRef ModuleFilename) override {
+  void updateModuleTimestamp(StringRef ModuleFilename) override {
     // Overwrite the timestamp file contents so that file's mtime changes.
     std::error_code EC;
     llvm::raw_fd_ostream OS(
@@ -68,8 +62,6 @@ public:
 };
 } // namespace
 
-IntrusiveRefCntPtr<ModuleCache>
-clang::createCrossProcessModuleCache(std::time_t BuildSessionTimestamp) {
-  return llvm::makeIntrusiveRefCnt<CrossProcessModuleCache>(
-      BuildSessionTimestamp);
+IntrusiveRefCntPtr<ModuleCache> clang::createCrossProcessModuleCache() {
+  return llvm::makeIntrusiveRefCnt<CrossProcessModuleCache>();
 }
