@@ -178,7 +178,8 @@ def build_function_info_dictionary(
             )
             if func in func_dict[prefix]:
                 if (
-                    func_dict[prefix][func].scrub != info.scrub
+                    not func_dict[prefix][func]
+                    or func_dict[prefix][func].scrub != info.scrub
                     or func_dict[prefix][func].extrascrub != info.extrascrub
                 ):
                     func_dict[prefix][func] = None

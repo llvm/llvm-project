@@ -77,7 +77,7 @@ def update_test(ti: common.TestInfo):
         if ti.path.endswith(".mir"):
             llc_args += " -x mir"
         raw_tool_output = common.invoke_tool(
-            ti.args.llc_binary, llc_args, ti.path, verbose=ti.args.verbose
+            ti.args.llc_binary or "llc", llc_args, ti.path, verbose=ti.args.verbose
         )
 
         builder.process_run_line(
