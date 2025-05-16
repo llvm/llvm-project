@@ -5039,17 +5039,17 @@ PseudoObjectExpr::PseudoObjectExpr(QualType type, ExprValueKind VK,
   PseudoObjectExprBits.ResultIndex = resultIndex + 1;
   MutableArrayRef<Expr *> Trail = getTrailingObjects(semantics.size() + 1);
   Trail[0] = syntax;
+
+  assert(llvm::all_of(semantics,
+                      [](const Expr *E) {
+                        return !isa<OpaqueValueExpr>(E) ||
+                               cast<OpaqueValueExpr>(E)->getSourceExpr() !=
+                                   nullptr;
+                      }) &&
+         "opaque-value semantic expressions for pseudo-object "
+         "operations must have sources");
+
   llvm::copy(semantics, Trail.drop_front().begin());
-
-#ifndef NDEBUG
-  llvm::for_each(semantics, [](const Expr *E) {
-    if (auto *OE = dyn_cast<OpaqueValueExpr>(E))
-      assert(OE->getSourceExpr() != nullptr &&
-             "opaque-value semantic expressions for pseudo-object "
-             "operations must have sources");
-  });
-#endif
-
   setDependence(computeDependence(this));
 }
 
