@@ -5573,13 +5573,11 @@ LogicalResult ShapeCastOp::verify() {
   return success();
 }
 
-namespace {
-
 /// Return true if `transpose` does not permute a pair of non-unit dims.
 /// By `order preserving` we mean that the flattened versions of the input and
 /// output vectors are (numerically) identical. In other words `transpose` is
 /// effectively a shape cast.
-bool isOrderPreserving(TransposeOp transpose) {
+static bool isOrderPreserving(TransposeOp transpose) {
   ArrayRef<int64_t> permutation = transpose.getPermutation();
   VectorType sourceType = transpose.getSourceVectorType();
   ArrayRef<int64_t> inShape = sourceType.getShape();
@@ -5598,8 +5596,6 @@ bool isOrderPreserving(TransposeOp transpose) {
   }
   return true;
 }
-
-} // namespace
 
 OpFoldResult ShapeCastOp::fold(FoldAdaptor adaptor) {
 
@@ -5997,18 +5993,22 @@ OpFoldResult vector::TransposeOp::fold(FoldAdaptor adaptor) {
   if (llvm::dyn_cast_if_present<ub::PoisonAttr>(adaptor.getVector()))
     return ub::PoisonAttr::get(getContext());
 
-  // Eliminate identity transpose ops. This happens when the dimensions of the
-  // input vector remain in their original order after the transpose operation.
-  ArrayRef<int64_t> perm = getPermutation();
+  // Eliminate identity transposes, and more generally any transposes that
+  // preserves the shape without permuting elements.
+  //
+  // Examples of what to fold:
+  // %0 = vector.transpose %arg, [0, 1] : vector<1x1xi8> to vector<1x1xi8>
+  // %0 = vector.transpose %arg, [0, 1] : vector<2x2xi8> to vector<2x2xi8>
+  // %0 = vector.transpose %arg, [1, 0] : vector<1x1xi8> to vector<1x1xi8>
+  //
+  // Example of what NOT to fold:
+  // %0 = vector.transpose %arg, [1, 0] : vector<2x2xi8> to vector<2x2xi8>
+  //
+  if (getSourceVectorType() == getResultVectorType() &&
+      isOrderPreserving(*this))
+    return getVector();
 
-  // Check if the permutation of the dimensions contains sequential values:
-  // {0, 1, 2, ...}.
-  for (int64_t i = 0, e = perm.size(); i < e; i++) {
-    if (perm[i] != i)
-      return {};
-  }
-
-  return getVector();
+  return {};
 }
 
 LogicalResult vector::TransposeOp::verify() {

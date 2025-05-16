@@ -8,6 +8,7 @@
 
 #include "bolt/Profile/Heatmap.h"
 #include "bolt/Utils/CommandLineOpts.h"
+#include "llvm/ADT/AddressRanges.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Debug.h"
@@ -313,6 +314,9 @@ void Heatmap::printSectionHotness(raw_ostream &OS) const {
     UnmappedHotness += Frequency;
   };
 
+  AddressRange HotTextRange(HotStart, HotEnd);
+  StringRef HotTextName = "[hot text]";
+
   for (const std::pair<const uint64_t, uint64_t> &KV : Map) {
     NumTotalCounts += KV.second;
     // We map an address bucket to the first section (lowest address)
@@ -328,7 +332,16 @@ void Heatmap::printSectionHotness(raw_ostream &OS) const {
     }
     SectionHotness[TextSections[TextSectionIndex].Name] += KV.second;
     ++BucketUtilization[TextSections[TextSectionIndex].Name];
+    if (HotTextRange.contains(Address)) {
+      SectionHotness[HotTextName] += KV.second;
+      ++BucketUtilization[HotTextName];
+    }
   }
+
+  std::vector<SectionNameAndRange> Sections(TextSections);
+  // Append synthetic hot text section to TextSections
+  if (!HotTextRange.empty())
+    Sections.emplace_back(SectionNameAndRange{HotTextName, HotStart, HotEnd});
 
   assert(NumTotalCounts > 0 &&
          "total number of heatmap buckets should be greater than 0");
@@ -336,7 +349,7 @@ void Heatmap::printSectionHotness(raw_ostream &OS) const {
   OS << "Section Name, Begin Address, End Address, Percentage Hotness, "
      << "Utilization Pct, Partition Score\n";
   const uint64_t MappedCounts = NumTotalCounts - UnmappedHotness;
-  for (const auto [Name, Begin, End] : TextSections) {
+  for (const auto [Name, Begin, End] : Sections) {
     const float Hotness = 1. * SectionHotness[Name] / NumTotalCounts;
     const float MappedHotness =
         MappedCounts ? 1. * SectionHotness[Name] / MappedCounts : 0;
