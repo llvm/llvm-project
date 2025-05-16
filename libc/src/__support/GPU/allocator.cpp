@@ -311,6 +311,7 @@ private:
   // A sentinel value used to claim the pointer slot.
   static constexpr uint64_t sentinel = ~0ULL;
 
+  // Should be called be a single lane for each different pointer.
   template <typename... Args>
   T *try_lock_impl(uint32_t n, uint64_t &count, Args &&...args) {
     T *expected = ptr.load(cpp::MemoryOrder::RELAXED);
@@ -318,7 +319,7 @@ private:
         ptr.compare_exchange_strong(expected, reinterpret_cast<T *>(sentinel),
                                     cpp::MemoryOrder::RELAXED,
                                     cpp::MemoryOrder::RELAXED)) {
-
+      count = ~0ull;
       T *mem = reinterpret_cast<T *>(impl::rpc_allocate(sizeof(T)));
       if (!mem)
         return nullptr;
@@ -421,6 +422,10 @@ static Slab *find_slab(uint32_t chunk_size) {
       slots[index].unlock(gpu::get_lane_mask(), gpu::get_lane_mask() & uniform);
       offset++;
     }
+
+    // Malloc returned a null pointer and we are out-of-memory.
+    if (!slab && reserved == ~0ull)
+      return nullptr;
 
     // The slab is in the process of being initialized. Start at the beginning
     // to prevent too many slab allocations from happening at once.
