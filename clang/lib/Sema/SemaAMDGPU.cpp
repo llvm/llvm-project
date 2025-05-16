@@ -368,19 +368,19 @@ void SemaAMDGPU::handleAMDGPUMaxNumWorkGroupsAttr(Decl *D,
 }
 
 Expr *SemaAMDGPU::ExpandAMDGPUPredicateBI(CallExpr *CE) {
-  auto &Ctx = getASTContext();
-  auto BoolTy = Ctx.getLogicalOperationType();
-  auto False = llvm::APInt::getZero(Ctx.getIntWidth(BoolTy));
-  auto True = llvm::APInt::getAllOnes(Ctx.getIntWidth(BoolTy));
-  auto Loc = CE->getExprLoc();
+  ASTContext &Ctx = getASTContext();
+  QualType BoolTy = Ctx.getLogicalOperationType();
+  llvm::APInt False = llvm::APInt::getZero(Ctx.getIntWidth(BoolTy));
+  llvm::APInt True = llvm::APInt::getAllOnes(Ctx.getIntWidth(BoolTy));
+  SourceLocation Loc = CE->getExprLoc();
 
   if (!CE->getBuiltinCallee())
     return *ExpandedPredicates
                 .insert(IntegerLiteral::Create(Ctx, False, BoolTy, Loc))
                 .first;
 
-  auto P = false;
-  auto BI = CE->getBuiltinCallee();
+  bool P = false;
+  unsigned BI = CE->getBuiltinCallee();
   if (Ctx.BuiltinInfo.isAuxBuiltinID(BI))
     BI = Ctx.BuiltinInfo.getAuxBuiltinID(BI);
 
@@ -391,7 +391,7 @@ Expr *SemaAMDGPU::ExpandAMDGPUPredicateBI(CallExpr *CE) {
       return nullptr;
     }
 
-    auto N = GFX->getString();
+    StringRef N = GFX->getString();
     if (!Ctx.getTargetInfo().isValidCPUName(N) &&
         (!Ctx.getAuxTargetInfo() ||
          !Ctx.getAuxTargetInfo()->isValidCPUName(N))) {
@@ -406,7 +406,7 @@ Expr *SemaAMDGPU::ExpandAMDGPUPredicateBI(CallExpr *CE) {
     if (auto TID = Ctx.getTargetInfo().getTargetID())
       P = TID->find(N) == 0;
   } else {
-    auto *Arg = CE->getArg(0);
+    Expr *Arg = CE->getArg(0);
     if (!Arg || Arg->getType() != Ctx.BuiltinFnTy) {
       Diag(Loc, diag::err_amdgcn_is_invocable_arg_invalid_value) << Arg;
       return nullptr;
