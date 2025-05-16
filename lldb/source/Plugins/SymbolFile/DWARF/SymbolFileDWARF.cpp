@@ -1538,8 +1538,7 @@ bool SymbolFileDWARF::HasForwardDeclForCompilerType(
           compiler_type_no_qualifiers.GetOpaqueQualType())) {
     return true;
   }
-  auto type_system = compiler_type.GetTypeSystem();
-  auto clang_type_system = type_system.dyn_cast_or_null<TypeSystemClang>();
+  auto clang_type_system = compiler_type.GetTypeSystem<TypeSystemClang>();
   if (!clang_type_system)
     return false;
   DWARFASTParserClang *ast_parser =
@@ -1549,8 +1548,7 @@ bool SymbolFileDWARF::HasForwardDeclForCompilerType(
 
 bool SymbolFileDWARF::CompleteType(CompilerType &compiler_type) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
-  auto clang_type_system =
-      compiler_type.GetTypeSystem().dyn_cast_or_null<TypeSystemClang>();
+  auto clang_type_system = compiler_type.GetTypeSystem<TypeSystemClang>();
   if (clang_type_system) {
     DWARFASTParserClang *ast_parser =
         static_cast<DWARFASTParserClang *>(clang_type_system->GetDWARFParser());
