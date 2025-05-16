@@ -1110,7 +1110,7 @@ struct ConcatOpInterface
     for (const auto &[dimIdx, dimSize] :
          llvm::enumerate(tensorType.getShape())) {
       if (dimSize == ShapedType::kDynamic) {
-        auto dimOp = rewriter.create<memref::DimOp>(loc, dstBuffer, dimSize);
+        auto dimOp = rewriter.create<memref::DimOp>(loc, dstBuffer, dimIdx);
         sizes.push_back(dimOp.getResult());
         if (dimIdx == concatDim)
           dynamicConcatDim = true;
