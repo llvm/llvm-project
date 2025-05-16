@@ -10,7 +10,6 @@ define amdgpu_kernel void @select_and1(ptr addrspace(1) %p, i32 %x, i32 %y) {
 ; GCN-NEXT:    s_cmp_gt_i32 s2, 10
 ; GCN-NEXT:    s_cselect_b32 s2, s3, 0
 ; GCN-NEXT:    v_mov_b32_e32 v1, s2
-; GCN-NOT:     v_and_b32
 ; GCN-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GCN-NEXT:    s_endpgm
   %c = icmp slt i32 %x, 11
@@ -29,7 +28,6 @@ define amdgpu_kernel void @select_and2(ptr addrspace(1) %p, i32 %x, i32 %y) {
 ; GCN-NEXT:    s_cmp_gt_i32 s2, 10
 ; GCN-NEXT:    s_cselect_b32 s2, s3, 0
 ; GCN-NEXT:    v_mov_b32_e32 v1, s2
-; GCN-NOT:     v_and_b32
 ; GCN-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GCN-NEXT:    s_endpgm
   %c = icmp slt i32 %x, 11
@@ -48,7 +46,6 @@ define amdgpu_kernel void @select_and3(ptr addrspace(1) %p, i32 %x, i32 %y) {
 ; GCN-NEXT:    s_cmp_lt_i32 s2, 11
 ; GCN-NEXT:    s_cselect_b32 s2, s3, 0
 ; GCN-NEXT:    v_mov_b32_e32 v1, s2
-; GCN-NOT:     v_and_b32
 ; GCN-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GCN-NEXT:    s_endpgm
   %c = icmp slt i32 %x, 11
@@ -75,7 +72,6 @@ define amdgpu_kernel void @select_and_v4(ptr addrspace(1) %p, i32 %x, <4 x i32> 
 ; GCN-NEXT:    v_mov_b32_e32 v1, s1
 ; GCN-NEXT:    v_mov_b32_e32 v2, s2
 ; GCN-NEXT:    v_mov_b32_e32 v3, s3
-; GCN-NOT:     v_and_b32
 ; GCN-NEXT:    global_store_dwordx4 v4, v[0:3], s[6:7]
 ; GCN-NEXT:    s_endpgm
   %c = icmp slt i32 %x, 11
@@ -94,7 +90,6 @@ define amdgpu_kernel void @select_or1(ptr addrspace(1) %p, i32 %x, i32 %y) {
 ; GCN-NEXT:    s_cmp_lt_i32 s2, 11
 ; GCN-NEXT:    s_cselect_b32 s2, s3, -1
 ; GCN-NEXT:    v_mov_b32_e32 v1, s2
-; GCN-NOT:     v_or_b32
 ; GCN-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GCN-NEXT:    s_endpgm
   %c = icmp slt i32 %x, 11
@@ -113,7 +108,6 @@ define amdgpu_kernel void @select_or2(ptr addrspace(1) %p, i32 %x, i32 %y) {
 ; GCN-NEXT:    s_cmp_lt_i32 s2, 11
 ; GCN-NEXT:    s_cselect_b32 s2, s3, -1
 ; GCN-NEXT:    v_mov_b32_e32 v1, s2
-; GCN-NOT:     v_or_b32
 ; GCN-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GCN-NEXT:    s_endpgm
   %c = icmp slt i32 %x, 11
@@ -132,7 +126,6 @@ define amdgpu_kernel void @select_or3(ptr addrspace(1) %p, i32 %x, i32 %y) {
 ; GCN-NEXT:    s_cmp_gt_i32 s2, 10
 ; GCN-NEXT:    s_cselect_b32 s2, s3, -1
 ; GCN-NEXT:    v_mov_b32_e32 v1, s2
-; GCN-NOT:     v_or_b32
 ; GCN-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GCN-NEXT:    s_endpgm
   %c = icmp slt i32 %x, 11
@@ -155,7 +148,6 @@ define amdgpu_kernel void @select_or_v4(ptr addrspace(1) %p, i32 %x, <4 x i32> %
 ; GCN-NEXT:    s_cselect_b32 s2, s2, -1
 ; GCN-NEXT:    s_cselect_b32 s1, s1, -1
 ; GCN-NEXT:    s_cselect_b32 s0, s0, -1
-; GCN-NOT:     v_or_b32
 ; GCN-NEXT:    v_mov_b32_e32 v0, s0
 ; GCN-NEXT:    v_mov_b32_e32 v1, s1
 ; GCN-NEXT:    v_mov_b32_e32 v2, s2
