@@ -358,7 +358,7 @@ defm SPV_EXT_opacity_micromap : ExtensionOperand<98, [EnvVulkan]>;
 defm SPV_NV_shader_invocation_reorder : ExtensionOperand<99, [EnvVulkan]>;
 defm SPV_INTEL_usm_storage_classes : ExtensionOperand<100, [EnvOpenCL]>;
 defm SPV_INTEL_fpga_latency_control : ExtensionOperand<101, [EnvOpenCL]>;
-defm SPV_INTEL_fpga_argument_interfaces : ExtensionOperand<102, [EnvOpenCL]>;
+defm SPV_ALTERA_fpga_argument_interfaces : ExtensionOperand<102, [EnvOpenCL]>;
 defm SPV_INTEL_optnone : ExtensionOperand<103, [EnvOpenCL]>;
 defm SPV_INTEL_function_pointers : ExtensionOperand<104, [EnvOpenCL]>;
 defm SPV_INTEL_variable_length_array : ExtensionOperand<105, [EnvOpenCL]>;
@@ -621,6 +621,7 @@ defm BFloat16DotProductKHR : CapabilityOperand<5117, 0, 0, [SPV_KHR_bfloat16], [
 defm BFloat16CooperativeMatrixKHR : CapabilityOperand<5118, 0, 0, [SPV_KHR_bfloat16], [BFloat16TypeKHR, CooperativeMatrixKHR]>;
 defm BlockingPipesALTERA : CapabilityOperand<5945, 0, 0, [SPV_ALTERA_blocking_pipes], []>;
 defm ArbitraryPrecisionFixedPointALTERA : CapabilityOperand<5922, 0, 0, [SPV_ALTERA_arbitrary_precision_fixed_point], []>;
+defm FPGAArgumentInterfacesALTERA : CapabilityOperand<6174, 0, 0, [SPV_ALTERA_fpga_argument_interfaces], []>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define SourceLanguage enum values and at the same time
@@ -1409,6 +1410,15 @@ defm FunctionFloatingPointModeINTEL : DecorationOperand<6080, 0, 0, [], [Functio
 defm AliasScopeINTEL : DecorationOperand<5914, 0, 0, [], [MemoryAccessAliasingINTEL]>;
 defm NoAliasINTEL : DecorationOperand<5915, 0, 0, [], [MemoryAccessAliasingINTEL]>;
 defm FPMaxErrorDecorationINTEL : DecorationOperand<6170, 0, 0, [], [FPMaxErrorINTEL]>;
+defm ConduitKernelArgumentALTERA: DecorationOperand<6175, 0, 0, [], [FPGAArgumentInterfacesALTERA]>;
+defm RegisterMapKernelArgumentALTERA: DecorationOperand<6176, 0, 0, [], [FPGAArgumentInterfacesALTERA]>;
+defm MMHostInterfaceAddressWidthALTERA: DecorationOperand<6177, 0, 0, [], [FPGAArgumentInterfacesALTERA]>;
+defm MMHostInterfaceDataWidthALTERA: DecorationOperand<6178, 0, 0, [], [FPGAArgumentInterfacesALTERA]>;
+defm MMHostInterfaceLatencyALTERA: DecorationOperand<6179, 0, 0, [], [FPGAArgumentInterfacesALTERA]>;
+defm MMHostInterfaceReadWriteModeALTERA: DecorationOperand<6180, 0, 0, [], [FPGAArgumentInterfacesALTERA]>;
+defm MMHostInterfaceMaxBurstALTERA: DecorationOperand<6181, 0, 0, [], [FPGAArgumentInterfacesALTERA]>;
+defm MMHostInterfaceWaitRequestALTERA: DecorationOperand<6182, 0, 0, [], [FPGAArgumentInterfacesALTERA]>;
+defm StableKernelArgumentALTERA: DecorationOperand<6183, 0, 0, [], [FPGAArgumentInterfacesALTERA]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define BuiltIn enum values and at the same time

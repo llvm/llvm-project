@@ -1006,6 +1006,17 @@ static void addOpDecorateReqs(const MachineInstr &MI, unsigned DecIndex,
       Reqs.addRequirements(SPIRV::Capability::FloatControls2);
       Reqs.addExtension(SPIRV::Extension::SPV_KHR_float_controls2);
     }
+  } else if (Dec == SPIRV::Decoration::ConduitKernelArgumentALTERA ||
+             Dec == SPIRV::Decoration::RegisterMapKernelArgumentALTERA ||
+             Dec == SPIRV::Decoration::MMHostInterfaceAddressWidthALTERA ||
+             Dec == SPIRV::Decoration::MMHostInterfaceDataWidthALTERA ||
+             Dec == SPIRV::Decoration::MMHostInterfaceLatencyALTERA ||
+             Dec == SPIRV::Decoration::MMHostInterfaceReadWriteModeALTERA ||
+             Dec == SPIRV::Decoration::MMHostInterfaceMaxBurstALTERA ||
+             Dec == SPIRV::Decoration::MMHostInterfaceWaitRequestALTERA ||
+             Dec == SPIRV::Decoration::StableKernelArgumentALTERA) {
+    Reqs.addRequirements(SPIRV::Capability::FPGAArgumentInterfacesALTERA);
+    Reqs.addExtension(SPIRV::Extension::SPV_ALTERA_fpga_argument_interfaces);
   }
 }
 
