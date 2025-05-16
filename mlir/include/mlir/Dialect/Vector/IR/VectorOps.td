@@ -2485,9 +2485,9 @@ def Vector_MaskOp : Vector_Op<"mask", [
     terminator yields all results from the maskable operation to the result of
     this operation. No other values are allowed to be yielded.
 
-    An empty `vector.mask` operation is legal to facilitate optimizations across
-    the `vector.mask` operation. However, it is considered a no-op regardless of
-    its returned values and will be removed by the canonicalizer.
+    An empty `vector.mask` operation is currently legal to enable optimizations
+    across the `vector.mask` region. However, this might change in the future
+    once vector transformations gain better support for `vector.mask`.
 
     The vector mask argument holds a bit for each vector lane and determines
     which vector lanes should execute the maskable operation and which ones
