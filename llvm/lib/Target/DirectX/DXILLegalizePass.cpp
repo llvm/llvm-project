@@ -522,6 +522,7 @@ legalizeGetHighLowi64Bytes(Instruction &I,
         BitCast->getSrcTy()->isIntegerTy(64)) {
       ToRemove.push_back(BitCast);
       ReplacedValues[BitCast] = BitCast->getOperand(0);
+      return;
     }
   }
 
@@ -534,6 +535,8 @@ legalizeGetHighLowi64Bytes(Instruction &I,
         IRBuilder<> Builder(&I);
         assert(dyn_cast<BitCastInst>(Extract->getVectorOperand()));
         auto *Replacement = ReplacedValues[Extract->getVectorOperand()];
+        assert(Replacement && "The BitCast replacement should have been set "
+                              "before working on ExtractElementInst.");
         if (Idx == 0) {
           Value *LowBytes = Builder.CreateTrunc(
               Replacement, Type::getInt32Ty(I.getContext()));
