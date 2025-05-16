@@ -16,4 +16,18 @@ if(NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
       --threads 256
       --blocks 1024
   )
+
+  add_integration_test(
+    malloc_stress
+    SUITE
+      stdlib-gpu-integration-tests
+    SRCS
+      malloc_stress.cpp
+    DEPENDS
+      libc.src.stdlib.malloc
+      libc.src.stdlib.free
+    LOADER_ARGS
+      --threads 256
+      --blocks 2048
+  )
 endif()
