@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "RISCVAsmBackend.h"
+#include "RISCVFixupKinds.h"
 #include "RISCVMCExpr.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -37,7 +38,7 @@ static cl::opt<bool> ULEB128Reloc(
 RISCVAsmBackend::RISCVAsmBackend(const MCSubtargetInfo &STI, uint8_t OSABI,
                                  bool Is64Bit, const MCTargetOptions &Options)
     : MCAsmBackend(llvm::endianness::little, ELF::R_RISCV_RELAX), STI(STI),
-      OSABI(OSABI), Is64Bit(Is64Bit), TargetOptions(Options) {
+      OSABI(OSABI), Is64Bit(Is64Bit), TargetOptions(Options), VendorSymbols() {
   RISCVFeatures::validate(STI.getTargetTriple(), STI.getFeatureBits());
 }
 
@@ -84,10 +85,12 @@ MCFixupKindInfo RISCVAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       {"fixup_riscv_call", 0, 64, MCFixupKindInfo::FKF_IsPCRel},
       {"fixup_riscv_call_plt", 0, 64, MCFixupKindInfo::FKF_IsPCRel},
 
-      {"fixup_riscv_qc_e_branch", 0, 48, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_riscv_qc_e_32", 16, 32, 0},
-      {"fixup_riscv_qc_abs20_u", 12, 20, 0},
-      {"fixup_riscv_qc_e_jump_plt", 0, 48, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_riscv_qc_e_branch", 0, 48,
+       MCFixupKindInfo::FKF_IsPCRel | MCFixupKindInfo::FKF_IsTarget},
+      {"fixup_riscv_qc_e_32", 16, 32, MCFixupKindInfo::FKF_IsTarget},
+      {"fixup_riscv_qc_abs20_u", 12, 20, MCFixupKindInfo::FKF_IsTarget},
+      {"fixup_riscv_qc_e_jump_plt", 0, 48,
+       MCFixupKindInfo::FKF_IsPCRel | MCFixupKindInfo::FKF_IsTarget},
   };
   static_assert((std::size(Infos)) == RISCV::NumTargetFixupKinds,
                 "Not all fixup kinds added to Infos array");
@@ -571,37 +574,10 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   }
 }
 
-bool RISCVAsmBackend::evaluateTargetFixup(
-    const MCAssembler &Asm, const MCFixup &Fixup, const MCFragment *DF,
-    const MCValue &Target, const MCSubtargetInfo *STI, uint64_t &Value) {
-  const MCFixup *AUIPCFixup;
-  const MCFragment *AUIPCDF;
-  MCValue AUIPCTarget;
-  switch (Fixup.getTargetKind()) {
-  default:
-    llvm_unreachable("Unexpected fixup kind!");
-  case RISCV::fixup_riscv_pcrel_hi20:
-    AUIPCFixup = &Fixup;
-    AUIPCDF = DF;
-    AUIPCTarget = Target;
-    break;
-  case RISCV::fixup_riscv_pcrel_lo12_i:
-  case RISCV::fixup_riscv_pcrel_lo12_s: {
-    AUIPCFixup = cast<RISCVMCExpr>(Fixup.getValue())->getPCRelHiFixup(&AUIPCDF);
-    if (!AUIPCFixup) {
-      Asm.getContext().reportError(Fixup.getLoc(),
-                                   "could not find corresponding %pcrel_hi");
-      return true;
-    }
-
-    // MCAssembler::evaluateFixup will emit an error for this case when it sees
-    // the %pcrel_hi, so don't duplicate it when also seeing the %pcrel_lo.
-    const MCExpr *AUIPCExpr = AUIPCFixup->getValue();
-    if (!AUIPCExpr->evaluateAsRelocatable(AUIPCTarget, &Asm))
-      return true;
-    break;
-  }
-  }
+static bool evaluateAUIPCFixup(const MCAssembler &Asm,
+                               const MCFixup *AUIPCFixup,
+                               const MCFragment *AUIPCDF, MCValue AUIPCTarget,
+                               uint64_t &Value) {
 
   if (!AUIPCTarget.getAddSym())
     return false;
@@ -620,6 +596,129 @@ bool RISCVAsmBackend::evaluateTargetFixup(
   Value -= Asm.getFragmentOffset(*AUIPCDF) + AUIPCFixup->getOffset();
 
   return AUIPCFixup->getTargetKind() == RISCV::fixup_riscv_pcrel_hi20;
+}
+
+StringRef
+RISCVAsmBackend::getVendorSymbolNameForRelocation(unsigned FixupKind) const {
+  switch (FixupKind) {
+  case RISCV::fixup_riscv_qc_e_branch:
+  case RISCV::fixup_riscv_qc_abs20_u:
+  case RISCV::fixup_riscv_qc_e_32:
+  case RISCV::fixup_riscv_qc_e_jump_plt:
+    return "QUALCOMM";
+  }
+
+  return "";
+}
+
+bool RISCVAsmBackend::evaluateVendorFixup(const MCAssembler &Asm,
+                                          const MCFixup &Fixup,
+                                          const MCFragment *DF,
+                                          const MCValue &Target,
+                                          const MCSubtargetInfo *STI,
+                                          uint64_t &Value, bool RecordReloc) {
+  // This is a copy of the target-independent branch of
+  // MCAssembler::evaluateFixup
+  bool IsResolved = false;
+  const MCSymbol *Add = Target.getAddSym();
+  const MCSymbol *Sub = Target.getSubSym();
+  Value = Target.getConstant();
+  if (Add && Add->isDefined())
+    Value += Asm.getSymbolOffset(*Add);
+  if (Sub && Sub->isDefined())
+    Value -= Asm.getSymbolOffset(*Sub);
+
+  unsigned FixupFlags = getFixupKindInfo(Fixup.getKind()).Flags;
+  if (FixupFlags & MCFixupKindInfo::FKF_IsPCRel) {
+    Value -= Asm.getFragmentOffset(*DF) + Fixup.getOffset();
+
+    if (Add && !Sub && !Add->isUndefined() && !Add->isAbsolute()) {
+      IsResolved = Asm.getWriter().isSymbolRefDifferenceFullyResolvedImpl(
+          Asm, *Add, *DF, false, true);
+    }
+  } else {
+    IsResolved = Target.isAbsolute();
+  }
+  // End copy of MCAssembler::evaluateFixup
+
+  // If we failed to resolve, or we need to force relocations (relaxations), then
+  // record a vendor relocation too.
+  if ((!IsResolved || shouldForceRelocation(Asm, Fixup, Target, STI)) &&
+      RecordReloc) {
+    // Here are the additions to emit a vendor relocation for fixups that need
+    // them.
+    MCContext &Ctx = Asm.getContext();
+
+    StringRef VendorIdentifier =
+        getVendorSymbolNameForRelocation(Fixup.getTargetKind());
+
+    auto It = VendorSymbols.find(VendorIdentifier);
+    if (It == VendorSymbols.end()) {
+      auto *VendorSymbol =
+          cast<MCSymbolELF>(Ctx.createLocalSymbol(VendorIdentifier));
+
+      // Vendor Symbols are Absolute, Local, NOTYPE.
+      VendorSymbol->setType(ELF::STT_NOTYPE);
+      VendorSymbol->setBinding(ELF::STB_LOCAL);
+      VendorSymbol->setVariableValue(MCConstantExpr::create(0, Ctx));
+      const_cast<MCAssembler &>(Asm).registerSymbol(*VendorSymbol);
+
+      It = VendorSymbols.try_emplace(VendorIdentifier, VendorSymbol).first;
+    }
+
+    MCSymbolELF *VendorSymbol = It->getValue();
+    const MCExpr *VendorExpr = MCSymbolRefExpr::create(VendorSymbol, Ctx);
+    MCFixup VendorFixup =
+        MCFixup::create(Fixup.getOffset(), VendorExpr,
+                        FirstLiteralRelocationKind + ELF::R_RISCV_VENDOR);
+    // Explicitly create MCValue so that the absolute symbol is not evaluated to
+    // a constant.
+    MCValue VendorTarget = MCValue::get(VendorSymbol);
+    uint64_t VendorValue;
+    Asm.getWriter().recordRelocation(const_cast<MCAssembler &>(Asm), DF,
+                                     VendorFixup, VendorTarget, VendorValue);
+  }
+
+  return IsResolved;
+}
+
+bool RISCVAsmBackend::evaluateTargetFixup(const MCAssembler &Asm,
+                                          const MCFixup &Fixup,
+                                          const MCFragment *DF,
+                                          const MCValue &Target,
+                                          const MCSubtargetInfo *STI,
+                                          uint64_t &Value, bool RecordReloc) {
+  switch (Fixup.getTargetKind()) {
+  case RISCV::fixup_riscv_pcrel_hi20:
+    return evaluateAUIPCFixup(Asm, &Fixup, DF, Target, Value);
+  case RISCV::fixup_riscv_pcrel_lo12_i:
+  case RISCV::fixup_riscv_pcrel_lo12_s: {
+    const MCFragment *AUIPCDF;
+    const MCFixup *AUIPCFixup =
+        cast<RISCVMCExpr>(Fixup.getValue())->getPCRelHiFixup(&AUIPCDF);
+    if (!AUIPCFixup) {
+      Asm.getContext().reportError(Fixup.getLoc(),
+                                   "could not find corresponding %pcrel_hi");
+      return true;
+    }
+
+    // MCAssembler::evaluateFixup will emit an error for this case when it sees
+    // the %pcrel_hi, so don't duplicate it when also seeing the %pcrel_lo.
+    const MCExpr *AUIPCExpr = AUIPCFixup->getValue();
+    MCValue AUIPCTarget;
+    if (!AUIPCExpr->evaluateAsRelocatable(AUIPCTarget, &Asm))
+      return true;
+
+    return evaluateAUIPCFixup(Asm, AUIPCFixup, AUIPCDF, AUIPCTarget, Value);
+  }
+  case RISCV::fixup_riscv_qc_e_branch:
+  case RISCV::fixup_riscv_qc_abs20_u:
+  case RISCV::fixup_riscv_qc_e_32:
+  case RISCV::fixup_riscv_qc_e_jump_plt:
+    return evaluateVendorFixup(Asm, Fixup, DF, Target, STI, Value, RecordReloc);
+  }
+
+  llvm_unreachable("Unexpected target fixup kind!");
 }
 
 bool RISCVAsmBackend::handleAddSubRelocations(const MCAssembler &Asm,

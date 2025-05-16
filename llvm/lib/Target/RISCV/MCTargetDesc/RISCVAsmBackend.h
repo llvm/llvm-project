@@ -12,6 +12,7 @@
 #include "MCTargetDesc/RISCVBaseInfo.h"
 #include "MCTargetDesc/RISCVFixupKinds.h"
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -20,6 +21,7 @@ namespace llvm {
 class MCAssembler;
 class MCObjectTargetWriter;
 class raw_ostream;
+class MCSymbolELF;
 
 class RISCVAsmBackend : public MCAsmBackend {
   const MCSubtargetInfo &STI;
@@ -27,6 +29,8 @@ class RISCVAsmBackend : public MCAsmBackend {
   bool Is64Bit;
   bool ForceRelocs = false;
   const MCTargetOptions &TargetOptions;
+
+  StringMap<MCSymbolELF *> VendorSymbols;
 
 public:
   RISCVAsmBackend(const MCSubtargetInfo &STI, uint8_t OSABI, bool Is64Bit,
@@ -45,8 +49,15 @@ public:
 
   bool evaluateTargetFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                            const MCFragment *DF, const MCValue &Target,
-                           const MCSubtargetInfo *STI,
-                           uint64_t &Value) override;
+                           const MCSubtargetInfo *STI, uint64_t &Value,
+                           bool RecordReloc) override;
+
+  bool evaluateVendorFixup(const MCAssembler &Asm, const MCFixup &Fixup,
+                           const MCFragment *DF, const MCValue &Target,
+                           const MCSubtargetInfo *STI, uint64_t &Value,
+                           bool RecordReloc);
+
+  StringRef getVendorSymbolNameForRelocation(unsigned TargetFixupKind) const;
 
   bool handleAddSubRelocations(const MCAssembler &Asm, const MCFragment &F,
                                const MCFixup &Fixup, const MCValue &Target,

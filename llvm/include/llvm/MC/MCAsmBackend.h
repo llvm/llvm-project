@@ -111,8 +111,8 @@ public:
 
   virtual bool evaluateTargetFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                                    const MCFragment *DF, const MCValue &Target,
-                                   const MCSubtargetInfo *STI,
-                                   uint64_t &Value) {
+                                   const MCSubtargetInfo *STI, uint64_t &Value,
+                                   bool RecordReloc) {
     llvm_unreachable("Need to implement hook if target has custom fixups");
   }
 

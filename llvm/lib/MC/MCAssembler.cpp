@@ -158,8 +158,8 @@ bool MCAssembler::evaluateFixup(const MCFixup &Fixup, const MCFragment *DF,
   bool IsResolved = false;
   unsigned FixupFlags = getBackend().getFixupKindInfo(Fixup.getKind()).Flags;
   if (FixupFlags & MCFixupKindInfo::FKF_IsTarget) {
-    IsResolved =
-        getBackend().evaluateTargetFixup(*this, Fixup, DF, Target, STI, Value);
+    IsResolved = getBackend().evaluateTargetFixup(*this, Fixup, DF, Target, STI,
+                                                  Value, RecordReloc);
   } else {
     const MCSymbol *Add = Target.getAddSym();
     const MCSymbol *Sub = Target.getSubSym();
