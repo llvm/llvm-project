@@ -60,14 +60,11 @@ AnalysisKey IR2VecVocabAnalysis::Key;
 // Embedder and its subclasses
 //===----------------------------------------------------------------------===//
 
-#define RETURN_LOOKUP_IF(CONDITION, KEY_STR)                                   \
-  if (CONDITION)                                                               \
-    return lookupVocab(KEY_STR);
-
 Embedder::Embedder(const Function &F, const Vocab &Vocabulary,
                    unsigned Dimension)
-    : F(F), Vocabulary(Vocabulary), Dimension(Dimension), OpcWeight(OpcWeight),
-      TypeWeight(TypeWeight), ArgWeight(ArgWeight) {}
+    : F(F), Vocabulary(Vocabulary), Dimension(Dimension),
+      OpcWeight(::OpcWeight), TypeWeight(::TypeWeight), ArgWeight(::ArgWeight) {
+}
 
 ErrorOr<std::unique_ptr<Embedder>> Embedder::create(IR2VecKind Mode,
                                                     const Function &F,
@@ -77,7 +74,8 @@ ErrorOr<std::unique_ptr<Embedder>> Embedder::create(IR2VecKind Mode,
   case IR2VecKind::Symbolic:
     return std::make_unique<SymbolicEmbedder>(F, Vocabulary, Dimension);
   default:
-    return errc::invalid_argument;
+    return errorToErrorCode(
+        make_error<StringError>("Unknown IR2VecKind", errc::invalid_argument));
   }
 }
 
@@ -96,7 +94,7 @@ void Embedder::addScaledVector(Embedding &Dst, const Embedding &Src,
 
 // FIXME: Currently lookups are string based. Use numeric Keys
 // for efficiency
-Embedding Embedder::lookupVocab(const std::string &Key) {
+Embedding Embedder::lookupVocab(const std::string &Key) const {
   Embedding Vec(Dimension, 0);
   // FIXME: Use zero vectors in vocab and assert failure for
   // unknown entities rather than silently returning zeroes here.
@@ -108,7 +106,11 @@ Embedding Embedder::lookupVocab(const std::string &Key) {
   return Vec;
 }
 
-Embedding SymbolicEmbedder::getTypeEmbedding(const Type *Ty) {
+#define RETURN_LOOKUP_IF(CONDITION, KEY_STR)                                   \
+  if (CONDITION)                                                               \
+    return lookupVocab(KEY_STR);
+
+Embedding SymbolicEmbedder::getTypeEmbedding(const Type *Ty) const {
   RETURN_LOOKUP_IF(Ty->isVoidTy(), "voidTy");
   RETURN_LOOKUP_IF(Ty->isFloatingPointTy(), "floatTy");
   RETURN_LOOKUP_IF(Ty->isIntegerTy(), "integerTy");
@@ -124,12 +126,14 @@ Embedding SymbolicEmbedder::getTypeEmbedding(const Type *Ty) {
   return lookupVocab("unknownTy");
 }
 
-Embedding SymbolicEmbedder::getOperandEmbedding(const Value *Op) {
+Embedding SymbolicEmbedder::getOperandEmbedding(const Value *Op) const {
   RETURN_LOOKUP_IF(isa<Function>(Op), "function");
   RETURN_LOOKUP_IF(isa<PointerType>(Op->getType()), "pointer");
   RETURN_LOOKUP_IF(isa<Constant>(Op), "constant");
   return lookupVocab("variable");
 }
+
+#undef RETURN_LOOKUP_IF
 
 void SymbolicEmbedder::computeEmbeddings() {
   if (F.isDeclaration())
@@ -147,17 +151,17 @@ Embedding SymbolicEmbedder::computeBB2Vec(const BasicBlock &BB) {
   for (const auto &I : BB) {
     Embedding InstVector(Dimension, 0);
 
-    auto OpcVec = lookupVocab(I.getOpcodeName());
+    const auto OpcVec = lookupVocab(I.getOpcodeName());
     addScaledVector(InstVector, OpcVec, OpcWeight);
 
     // FIXME: Currently lookups are string based. Use numeric Keys
     // for efficiency.
-    auto Type = I.getType();
-    auto TypeVec = getTypeEmbedding(Type);
+    const auto Type = I.getType();
+    const auto TypeVec = getTypeEmbedding(Type);
     addScaledVector(InstVector, TypeVec, TypeWeight);
 
     for (const auto &Op : I.operands()) {
-      auto OperandVec = getOperandEmbedding(Op.get());
+      const auto OperandVec = getOperandEmbedding(Op.get());
       addScaledVector(InstVector, OperandVec, ArgWeight);
     }
     InstVecMap[&I] = InstVector;
@@ -184,8 +188,9 @@ unsigned IR2VecVocabResult::getDimension() const {
 }
 
 // For now, assume vocabulary is stable unless explicitly invalidated.
-bool IR2VecVocabResult::invalidate(Module &M, const PreservedAnalyses &PA,
-                                   ModuleAnalysisManager::Invalidator &Inv) {
+bool IR2VecVocabResult::invalidate(
+    Module &M, const PreservedAnalyses &PA,
+    ModuleAnalysisManager::Invalidator &Inv) const {
   auto PAC = PA.getChecker<IR2VecVocabAnalysis>();
   return !(PAC.preservedWhenStateless());
 }

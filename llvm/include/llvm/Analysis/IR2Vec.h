@@ -71,12 +71,12 @@ protected:
   const Function &F;
   const Vocab &Vocabulary;
 
+  /// Dimension of the vector representation; captured from the input vocabulary
+  const unsigned Dimension;
+
   /// Weights for different entities (like opcode, arguments, types)
   /// in the IR instructions to generate the vector representation.
   const float OpcWeight, TypeWeight, ArgWeight;
-
-  /// Dimension of the vector representation; captured from the input vocabulary
-  const unsigned Dimension;
 
   // Utility maps - these are used to store the vector representations of
   // instructions, basic blocks and functions.
@@ -88,21 +88,21 @@ protected:
 
   /// Lookup vocabulary for a given Key. If the key is not found, it returns a
   /// zero vector.
-  Embedding lookupVocab(const std::string &Key);
+  Embedding lookupVocab(const std::string &Key) const;
 
   /// Adds two vectors: Dst += Src
-  void addVectors(Embedding &Dst, const Embedding &Src);
+  static void addVectors(Embedding &Dst, const Embedding &Src);
 
   /// Adds Src vector scaled by Factor to Dst vector: Dst += Src * Factor
-  void addScaledVector(Embedding &Dst, const Embedding &Src, float Factor);
+  static void addScaledVector(Embedding &Dst, const Embedding &Src,
+                              float Factor);
 
 public:
   virtual ~Embedder() = default;
 
-  /// Top level function to compute embeddings. Given a function, it
-  /// generates embeddings for all the instructions and basic blocks in that
-  /// function. Logic of computing the embeddings is specific to the kind of
-  /// embeddings being computed.
+  /// Top level function to compute embeddings. It generates embeddings for all
+  /// the instructions and basic blocks in the function F. Logic of computing
+  /// the embeddings is specific to the kind of embeddings being computed.
   virtual void computeEmbeddings() = 0;
 
   /// Factory method to create an Embedder object.
@@ -126,23 +126,19 @@ public:
   const Embedding &getFunctionVector() const { return FuncVector; }
 };
 
-/// Class for computing the Symbolic embeddings of IR2Vec
+/// Class for computing the Symbolic embeddings of IR2Vec.
 class SymbolicEmbedder : public Embedder {
 private:
   /// Utility function to compute the vector representation for a given basic
   /// block.
   Embedding computeBB2Vec(const BasicBlock &BB);
 
-  /// Utility function to compute the vector representation for a given
-  /// function.
-  Embedding computeFunc2Vec();
-
   /// Utility function to compute the vector representation for a given type.
-  Embedding getTypeEmbedding(const Type *Ty);
+  Embedding getTypeEmbedding(const Type *Ty) const;
 
   /// Utility function to compute the vector representation for a given
   /// operand.
-  Embedding getOperandEmbedding(const Value *Op);
+  Embedding getOperandEmbedding(const Value *Op) const;
 
 public:
   SymbolicEmbedder(const Function &F, const Vocab &Vocabulary,
@@ -168,7 +164,7 @@ public:
   const ir2vec::Vocab &getVocabulary() const;
   unsigned getDimension() const;
   bool invalidate(Module &M, const PreservedAnalyses &PA,
-                  ModuleAnalysisManager::Invalidator &Inv);
+                  ModuleAnalysisManager::Invalidator &Inv) const;
 };
 
 /// This analysis provides the vocabulary for IR2Vec. The vocabulary provides a
