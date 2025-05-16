@@ -35,6 +35,7 @@ namespace llvm {
 class AAManager;
 using ModulePassManager = PassManager<Module>;
 
+struct EVT;
 class Function;
 class GlobalValue;
 class MachineModuleInfoWrapperPass;
@@ -469,9 +470,13 @@ public:
   }
 
   /// True if target has some particular form of dealing with pointer arithmetic
-  /// semantics. False if pointer arithmetic should not be preserved for passes
-  /// such as instruction selection, and can fallback to regular arithmetic.
-  virtual bool shouldPreservePtrArith(const Function &F) const { return false; }
+  /// semantics for pointers with the given value type. False if pointer
+  /// arithmetic should not be preserved for passes such as instruction
+  /// selection, and can fallback to regular arithmetic.
+  virtual bool shouldPreservePtrArith(const Function &F,
+                                      const EVT &PtrVT) const {
+    return false;
+  }
 
   /// Create a pass configuration object to be used by addPassToEmitX methods
   /// for generating a pipeline of CodeGen passes.

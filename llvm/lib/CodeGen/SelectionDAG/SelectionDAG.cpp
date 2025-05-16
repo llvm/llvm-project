@@ -8146,7 +8146,7 @@ SDValue SelectionDAG::getMemBasePlusOffset(SDValue Ptr, SDValue Offset,
   assert(Offset.getValueType().isInteger());
   EVT BasePtrVT = Ptr.getValueType();
   if (!this->getTarget().shouldPreservePtrArith(
-          this->getMachineFunction().getFunction()))
+          this->getMachineFunction().getFunction(), BasePtrVT))
     return getNode(ISD::ADD, DL, BasePtrVT, Ptr, Offset, Flags);
   return getNode(ISD::PTRADD, DL, BasePtrVT, Ptr, Offset, Flags);
 }
