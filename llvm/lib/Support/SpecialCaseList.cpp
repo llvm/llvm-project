@@ -132,8 +132,9 @@ bool SpecialCaseList::createInternal(const MemoryBuffer *MB,
 Expected<SpecialCaseList::Section *>
 SpecialCaseList::addSection(StringRef SectionStr, unsigned LineNo,
                             bool UseGlobs) {
-  Sections.emplace_back(SectionStr);
+  Sections.emplace_back();
   auto &Section = Sections.back();
+  Section.SectionStr = SectionStr;
 
   if (auto Err = Section.SectionMatcher->insert(SectionStr, LineNo, UseGlobs)) {
     return createStringError(errc::invalid_argument,
