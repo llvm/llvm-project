@@ -236,7 +236,6 @@ void XeGPUInstructionlizePass::runOnOperation() {
   RewritePatternSet patterns(ctx);
 
   vector::UnrollVectorOptions vectorOptions;
-  // vectorOptions.setNativeShapeFn([&](Operation *op) { return getTileShape(op); });
   vectorOptions.setNativeShapeFn(options.nativeShape);
 
   populateXeGPUUnrollPatterns(patterns, options);
