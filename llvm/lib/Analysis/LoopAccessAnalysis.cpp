@@ -832,11 +832,7 @@ getStrideFromAddRec(const SCEVAddRecExpr *AR, const Loop *Lp, Type *AccessTy,
     return std::nullopt;
 
   // Strided access.
-  int64_t Stride = *StepVal / Size;
-  if (*StepVal % Size)
-    return std::nullopt;
-
-  return Stride;
+  return *StepVal % Size ? std::nullopt : std::make_optional(*StepVal / Size);
 }
 
 static bool isNoWrapGEP(Value *Ptr, PredicatedScalarEvolution &PSE,
