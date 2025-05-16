@@ -57,12 +57,13 @@ static void rpc_free(void *ptr) {
 }
 
 // Convert a potentially disjoint bitmask into an increasing integer for use
-// with indexing.
+// with indexing between gpu lanes.
 static inline uint32_t lane_count(uint64_t lane_mask) {
   return cpp::popcount(lane_mask & ((1ull << gpu::get_lane_id()) - 1));
 }
 
-// Obtain an initial value to seed a random number generator.
+// Obtain an initial value to seed a random number generator. We use the rounded
+// multiples of the golden ratio from xorshift* as additional spreading.
 static inline uint32_t entropy() {
   return (static_cast<uint32_t>(gpu::processor_clock()) ^
           (gpu::get_thread_id_x() * 0x632be59b) ^
@@ -70,7 +71,7 @@ static inline uint32_t entropy() {
          0x9e3779bb;
 }
 
-// Generate a random number and update the state using the xorshift32 PRNG.
+// Generate a random number and update the state using the xorshift*32 PRNG.
 static inline uint32_t xorshift32(uint32_t &state) {
   state ^= state << 13;
   state ^= state >> 17;
@@ -114,13 +115,23 @@ static inline uint32_t get_chunk_size(uint32_t x) {
 /// A slab allocator used to hand out indentically sized slabs of memory.
 /// Allocation is done through random walks of a bitfield until a free bit is
 /// encountered. This reduces contention and is highly parallel on a GPU.
+///
+/// 0       4           8       16                 ...                     2 MiB
+/// ┌────────┬──────────┬────────┬──────────────────┬──────────────────────────┐
+/// │ chunk  │  index   │  pad   │    bitfield[]    │         memory[]         │
+/// └────────┴──────────┴────────┴──────────────────┴──────────────────────────┘
+///
+/// The size of the bitfield is the slab size divided by the chunk size divided
+/// by the number of bits per word. We pad the interface to ensure 16 byte
+/// alignment and to indicate that if the pointer is not aligned by 2MiB it
+/// belongs to a slab rather than the global allocator.
 struct Slab {
 
   // Initialize the slab with its chunk size and index in the global table for
   // use when freeing.
   Slab(uint32_t chunk_size, uint32_t global_index) {
-    get_chunk_size() = chunk_size;
-    get_global_index() = global_index;
+    *reinterpret_cast<uint32_t *>(&memory[0]) = chunk_size;
+    *reinterpret_cast<uint32_t *>(&memory[sizeof(uint32_t)]) = global_index;
 
     // This memset is expensive and likely not necessary for the current 'kfd'
     // driver. Until zeroed pages are exposed by the API we must be careful.
@@ -154,11 +165,13 @@ struct Slab {
   }
 
   // Get the location in the memory where we will store the chunk size.
-  uint32_t &get_chunk_size() { return *reinterpret_cast<uint32_t *>(memory); }
+  uint32_t get_chunk_size() const {
+    return *reinterpret_cast<const uint32_t *>(memory);
+  }
 
   // Get the location in the memory where we will store the global index.
-  uint32_t &get_global_index() {
-    return *reinterpret_cast<uint32_t *>(memory + sizeof(uint32_t));
+  uint32_t get_global_index() const {
+    return *reinterpret_cast<const uint32_t *>(memory + sizeof(uint32_t));
   }
 
   // Get a pointer to where the bitfield is located in the memory.
@@ -189,7 +202,6 @@ struct Slab {
   // caching and convergence.
   void *allocate(uint64_t lane_mask, uint64_t uniform) {
     uint32_t chunk_size = get_chunk_size();
-    uint32_t *bitfield = get_bitfield();
     uint32_t state = impl::entropy();
     void *result = nullptr;
     // The uniform mask represents which lanes contain a uniform target pointer.
@@ -205,8 +217,8 @@ struct Slab {
       uint32_t slot = index / BITS_IN_WORD;
       uint32_t bit = index % BITS_IN_WORD;
       if (mask & (1ull << gpu::get_lane_id())) {
-        uint32_t before = __scoped_atomic_fetch_or(
-            &bitfield[slot], 1 << bit, __ATOMIC_RELAXED, __MEMORY_SCOPE_DEVICE);
+        uint32_t before = cpp::AtomicRef<uint32_t>(get_bitfield()[slot])
+                              .fetch_or(1u << bit, cpp::MemoryOrder::RELAXED);
         if (~before & (1 << bit)) {
           result = ptr_from_index(index, chunk_size);
         }
@@ -223,12 +235,10 @@ struct Slab {
     uint32_t index = index_from_ptr(ptr, chunk_size);
     uint32_t slot = index / BITS_IN_WORD;
     uint32_t bit = index % BITS_IN_WORD;
-    uint32_t bitmask = 1 << bit;
 
-    uint32_t *bitfield = get_bitfield();
     cpp::atomic_thread_fence(cpp::MemoryOrder::RELEASE);
-    __scoped_atomic_fetch_and(&bitfield[slot], ~bitmask, __ATOMIC_RELAXED,
-                              __MEMORY_SCOPE_DEVICE);
+    cpp::AtomicRef<uint32_t>(get_bitfield()[slot])
+        .fetch_and(~(1u << bit), cpp::MemoryOrder::RELAXED);
   }
 
   // The actual memory the slab will manage. All offsets are calculated at
