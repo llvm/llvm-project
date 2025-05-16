@@ -234,12 +234,12 @@ define void @test7() {
 define void @test8() {
 ; CHECK-LABEL: @test8(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP4:%.*]] = call <4 x float> @llvm.vector.insert.v4f32.v2f32(<4 x float> poison, <2 x float> zeroinitializer, i64 0)
+; CHECK-NEXT:    [[TMP5:%.*]] = call <4 x float> @llvm.vector.insert.v4f32.v2f32(<4 x float> [[TMP4]], <2 x float> zeroinitializer, i64 2)
 ; CHECK-NEXT:    [[TMP0:%.*]] = call <8 x float> @llvm.vector.insert.v8f32.v2f32(<8 x float> poison, <2 x float> zeroinitializer, i64 0)
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x float> @llvm.vector.insert.v8f32.v2f32(<8 x float> [[TMP0]], <2 x float> zeroinitializer, i64 2)
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <8 x float> @llvm.vector.insert.v8f32.v2f32(<8 x float> [[TMP1]], <2 x float> zeroinitializer, i64 4)
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <8 x float> @llvm.vector.insert.v8f32.v2f32(<8 x float> [[TMP2]], <2 x float> zeroinitializer, i64 6)
-; CHECK-NEXT:    [[TMP4:%.*]] = call <4 x float> @llvm.vector.insert.v4f32.v2f32(<4 x float> poison, <2 x float> zeroinitializer, i64 0)
-; CHECK-NEXT:    [[TMP5:%.*]] = call <4 x float> @llvm.vector.insert.v4f32.v2f32(<4 x float> [[TMP4]], <2 x float> zeroinitializer, i64 2)
 ; CHECK-NEXT:    br i1 false, label [[FOR0:%.*]], label [[FOR_BODY:%.*]]
 ; CHECK:       for0:
 ; CHECK-NEXT:    [[TMP6:%.*]] = phi <8 x float> [ [[TMP3]], [[ENTRY:%.*]] ], [ [[TMP8:%.*]], [[FOR_BODY]] ]

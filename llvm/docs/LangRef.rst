@@ -410,8 +410,8 @@ added in the future:
       calling convention: on most platforms, they are not preserved and need to
       be saved by the caller, but on Windows, xmm6-xmm15 are preserved.
 
-    - On AArch64 the callee preserve all general purpose registers, except X0-X8
-      and X16-X18.
+    - On AArch64 the callee preserve all general purpose registers, except
+      X0-X8 and X16-X18. Not allowed with ``nest``.
 
     The idea behind this convention is to support calls to runtime functions
     that have a hot path and a cold path. The hot path is usually a small piece
@@ -447,9 +447,9 @@ added in the future:
       R11. R11 can be used as a scratch register. Furthermore it also preserves
       all floating-point registers (XMMs/YMMs).
 
-    - On AArch64 the callee preserve all general purpose registers, except X0-X8
-      and X16-X18. Furthermore it also preserves lower 128 bits of V8-V31 SIMD -
-      floating point registers.
+    - On AArch64 the callee preserve all general purpose registers, except
+      X0-X8 and X16-X18. Furthermore it also preserves lower 128 bits of V8-V31
+      SIMD floating point registers. Not allowed with ``nest``.
 
     The idea behind this convention is to support calls to runtime functions
     that don't need to call out to any other functions.
@@ -3133,6 +3133,9 @@ as follows:
     program memory space defaults to the default address space of 0,
     which corresponds to a Von Neumann architecture that has code
     and data in the same space.
+
+.. _globals_addrspace:
+
 ``G<address space>``
     Specifies the address space to be used by default when creating global
     variables. If omitted, the globals address space defaults to the default
@@ -12425,15 +12428,12 @@ Semantics:
 """"""""""
 
 The '``ptrtoint``' instruction converts ``value`` to integer type
-``ty2`` by interpreting the all pointer representation bits as an integer
-(equivalent to a ``bitcast``) and either truncating or zero extending that value
-to the size of the integer type.
+``ty2`` by interpreting the pointer value as an integer and either
+truncating or zero extending that value to the size of the integer type.
 If ``value`` is smaller than ``ty2`` then a zero extension is done. If
 ``value`` is larger than ``ty2`` then a truncation is done. If they are
 the same size, then nothing is done (*no-op cast*) other than a type
 change.
-The ``ptrtoint`` always :ref:`captures address and provenance <pointercapture>`
-of the pointer argument.
 
 Example:
 """"""""
@@ -12488,9 +12488,6 @@ of the integer ``value``. If ``value`` is larger than the size of a
 pointer then a truncation is done. If ``value`` is smaller than the size
 of a pointer then a zero extension is done. If they are the same size,
 nothing is done (*no-op cast*).
-The behavior is equivalent to a ``bitcast``, however, the resulting value is not
-guaranteed to be dereferenceable (e.g. if the result type is a
-:ref:`non-integral pointers <nointptrtype>`).
 
 Example:
 """"""""
@@ -15084,7 +15081,8 @@ Syntax:
 
 ::
 
-      declare ptr @llvm.thread.pointer()
+      declare ptr @llvm.thread.pointer.p0()
+      declare ptr addrspace(5) @llvm.thread.pointer.p5()
 
 Overview:
 """""""""
@@ -15101,7 +15099,8 @@ specific: it may point to the start of TLS area, to the end, or somewhere
 in the middle.  Depending on the target, this intrinsic may read a register,
 call a helper function, read from an alternate memory space, or perform
 other operations necessary to locate the TLS area.  Not all targets support
-this intrinsic.
+this intrinsic.  The address space must be the :ref:`globals address space
+<globals_addrspace>`.
 
 '``llvm.call.preallocated.setup``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -17218,12 +17217,14 @@ type.
 
 Semantics:
 """"""""""
-If both operands are NaNs (including sNaN), returns qNaN. If one operand
-is NaN (including sNaN) and another operand is a number, return the number.
-Otherwise returns the lesser of the two arguments. -0.0 is considered to
-be less than +0.0 for this intrinsic.
 
-Note that these are the semantics of minimumNumber specified in IEEE 754-2019.
+If both operands are NaNs (including sNaN), returns a :ref:`NaN <floatnan>`. If
+one operand is NaN (including sNaN) and another operand is a number,
+return the number.  Otherwise returns the lesser of the two
+arguments. -0.0 is considered to be less than +0.0 for this intrinsic.
+
+Note that these are the semantics of minimumNumber specified in
+IEEE-754-2019 with the usual :ref:`signaling NaN <floatnan>` exception.
 
 It has some differences with '``llvm.minnum.*``':
 1)'``llvm.minnum.*``' will return qNaN if either operand is sNaN.
@@ -17264,12 +17265,15 @@ type.
 
 Semantics:
 """"""""""
-If both operands are NaNs (including sNaN), returns qNaN. If one operand
-is NaN (including sNaN) and another operand is a number, return the number.
-Otherwise returns the greater of the two arguments. -0.0 is considered to
-be less than +0.0 for this intrinsic.
 
-Note that these are the semantics of maximumNumber specified in IEEE 754-2019.
+If both operands are NaNs (including sNaN), returns a
+:ref:`NaN <floatnan>`. If one operand is NaN (including sNaN) and
+another operand is a number, return the number.  Otherwise returns the
+greater of the two arguments. -0.0 is considered to be less than +0.0
+for this intrinsic.
+
+Note that these are the semantics of maximumNumber specified in
+IEEE-754-2019  with the usual :ref:`signaling NaN <floatnan>` exception.
 
 It has some differences with '``llvm.maxnum.*``':
 1)'``llvm.maxnum.*``' will return qNaN if either operand is sNaN.
@@ -21143,7 +21147,12 @@ sufficiently aligned block of memory; this memory is written to by the
 intrinsic. Note that the size and the alignment are target-specific -
 LLVM currently provides no portable way of determining them, so a
 front-end that generates this intrinsic needs to have some
-target-specific knowledge. The ``func`` argument must hold a function.
+target-specific knowledge.
+
+The ``func`` argument must be a constant (potentially bitcasted) pointer to a
+function declaration or definition, since the calling convention may affect the
+content of the trampoline that is created.
+
 
 Semantics:
 """"""""""
