@@ -10471,8 +10471,8 @@ its two operands.
 
 .. note::
 
-	The instruction is implemented as a call to libm's '``fmod``'
-	for some targets, and using the instruction may thus require linking libm.
+    The instruction is implemented as a call to libm's '``fmod``'
+    for some targets, and using the instruction may thus require linking libm.
 
 
 Arguments:
@@ -18054,49 +18054,6 @@ Example:
       %r = call i8 @llvm.fshr.i8(i8 255, i8 0, i8 15)  ; %r = i8: 254 (0b11111110)
       %r = call i8 @llvm.fshr.i8(i8 15, i8 15, i8 11)  ; %r = i8: 225 (0b11100001)
       %r = call i8 @llvm.fshr.i8(i8 0, i8 255, i8 8)   ; %r = i8: 255 (0b11111111)
-Syntax:
-"""""""
-
-This is an overloaded intrinsic. You can use ``llvm.fshr`` on any
-integer bit width or any vector of integer elements. Not all targets
-support all bit widths or vector types, however.
-
-::
-
-      declare i8  @llvm.fshr.i8 (i8 %a, i8 %b, i8 %c)
-      declare i64 @llvm.fshr.i64(i64 %a, i64 %b, i64 %c)
-      declare <2 x i32> @llvm.fshr.v2i32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c)
-
-Overview:
-"""""""""
-
-The '``llvm.fshr``' family of intrinsic functions performs a funnel shift right:
-the first two values are concatenated as { %a : %b } (%a is the most significant
-bits of the wide value), the combined value is shifted right, and the least
-significant bits are extracted to produce a result that is the same size as the
-original arguments. If the first 2 arguments are identical, this is equivalent
-to a rotate right operation. For vector types, the operation occurs for each
-element of the vector. The shift argument is treated as an unsigned amount
-modulo the element size of the arguments.
-
-Arguments:
-""""""""""
-
-The first two arguments are the values to be concatenated. The third
-argument is the shift amount. The arguments may be any integer type or a
-vector with integer element type. All arguments and the return value must
-have the same type.
-
-Example:
-""""""""
-
-.. code-block:: text
-
-      %r = call i8 @llvm.fshr.i8(i8 %x, i8 %y, i8 %z)  ; %r = i8: lsb_extract((concat(x, y) >> (z % 8)), 8)
-      %r = call i8 @llvm.fshr.i8(i8 255, i8 0, i8 15)  ; %r = i8: 254 (0b11111110)
-      %r = call i8 @llvm.fshr.i8(i8 15, i8 15, i8 11)  ; %r = i8: 225 (0b11100001)
-      %r = call i8 @llvm.fshr.i8(i8 0, i8 255, i8 8)   ; %r = i8: 255 (0b11111111)
-
 
 .. clmul:
 
@@ -24335,14 +24292,14 @@ Examples:
 
 .. code-block:: text
 
-	 %r = call <8 x i64> @llvm.experimental.vp.strided.load.v8i64.i64(i64* %ptr, i64 %stride, <8 x i64> %mask, i32 %evl)
-	 ;; The operation can also be expressed like this:
+     %r = call <8 x i64> @llvm.experimental.vp.strided.load.v8i64.i64(i64* %ptr, i64 %stride, <8 x i64> %mask, i32 %evl)
+     ;; The operation can also be expressed like this:
 
-	 %addr = bitcast i64* %ptr to i8*
-	 ;; Create a vector of pointers %addrs in the form:
-	 ;; %addrs = <%addr, %addr + %stride, %addr + 2 * %stride, ...>
-	 %ptrs = bitcast <8 x i8* > %addrs to <8 x i64* >
-	 %also.r = call <8 x i64> @llvm.vp.gather.v8i64.v8p0i64(<8 x i64* > %ptrs, <8 x i64> %mask, i32 %evl)
+     %addr = bitcast i64* %ptr to i8*
+     ;; Create a vector of pointers %addrs in the form:
+     ;; %addrs = <%addr, %addr + %stride, %addr + 2 * %stride, ...>
+     %ptrs = bitcast <8 x i8* > %addrs to <8 x i64* >
+     %also.r = call <8 x i64> @llvm.vp.gather.v8i64.v8p0i64(<8 x i64* > %ptrs, <8 x i64> %mask, i32 %evl)
 
 
 .. _int_experimental_vp_strided_store:
@@ -24386,7 +24343,7 @@ The '``llvm.experimental.vp.strided.store``' intrinsic stores the elements of
 '``val``' in the same way as the :ref:`llvm.vp.scatter <int_vp_scatter>` intrinsic,
 where the vector of pointers is in the form:
 
-	``%ptrs = <%ptr, %ptr + %stride, %ptr + 2 * %stride, ... >``,
+    ``%ptrs = <%ptr, %ptr + %stride, %ptr + 2 * %stride, ... >``,
 
 with '``ptr``' previously casted to a pointer '``i8``', '``stride``' always interpreted as a signed
 integer and all arithmetic occurring in the pointer type.
@@ -24396,14 +24353,14 @@ Examples:
 
 .. code-block:: text
 
-	 call void @llvm.experimental.vp.strided.store.v8i64.i64(<8 x i64> %val, i64* %ptr, i64 %stride, <8 x i1> %mask, i32 %evl)
-	 ;; The operation can also be expressed like this:
+     call void @llvm.experimental.vp.strided.store.v8i64.i64(<8 x i64> %val, i64* %ptr, i64 %stride, <8 x i1> %mask, i32 %evl)
+     ;; The operation can also be expressed like this:
 
-	 %addr = bitcast i64* %ptr to i8*
-	 ;; Create a vector of pointers %addrs in the form:
-	 ;; %addrs = <%addr, %addr + %stride, %addr + 2 * %stride, ...>
-	 %ptrs = bitcast <8 x i8* > %addrs to <8 x i64* >
-	 call void @llvm.vp.scatter.v8i64.v8p0i64(<8 x i64> %val, <8 x i64*> %ptrs, <8 x i1> %mask, i32 %evl)
+     %addr = bitcast i64* %ptr to i8*
+     ;; Create a vector of pointers %addrs in the form:
+     ;; %addrs = <%addr, %addr + %stride, %addr + 2 * %stride, ...>
+     %ptrs = bitcast <8 x i8* > %addrs to <8 x i64* >
+     call void @llvm.vp.scatter.v8i64.v8p0i64(<8 x i64> %val, <8 x i64*> %ptrs, <8 x i1> %mask, i32 %evl)
 
 
 .. _int_vp_gather:
