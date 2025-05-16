@@ -877,9 +877,8 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   StringRef Linker = Args.getLastArgValue(options::OPT_fuse_ld_EQ);
   const char *LinkerPath = Args.MakeArgString(ToolChain.GetLinkerPath());
   const Driver &D = ToolChain.getDriver();
-  bool ClosedNeeded =
-    checkForAMDProprietaryOptOptions(ToolChain, D, Args, CmdArgs,
-                                     false /*isLLD*/, true /*checkOnly*/);
+  checkForAMDProprietaryOptOptions(ToolChain, D, Args, CmdArgs, /*isLLD=*/false,
+                                   /*checkOnly=*/true);
 
   const bool IsFatLTO = Args.hasFlag(options::OPT_ffat_lto_objects,
                                      options::OPT_fno_fat_lto_objects, false);
