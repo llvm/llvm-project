@@ -249,12 +249,14 @@ ThreadElfCore::CreateRegisterContextForFrame(StackFrame *frame) {
   return reg_ctx_sp;
 }
 
-llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>> ThreadElfCore::GetSiginfo(size_t max_size) const {
+llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
+ThreadElfCore::GetSiginfo(size_t max_size) const {
   if (m_siginfo_bytes.empty())
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
-              "no siginfo note");
+                                   "no siginfo note");
 
-  return llvm::MemoryBuffer::getMemBufferCopy(m_siginfo_bytes, "siginfo note bytes");
+  return llvm::MemoryBuffer::getMemBufferCopy(m_siginfo_bytes,
+                                              "siginfo note bytes");
 }
 
 bool ThreadElfCore::CalculateStopInfo() {
@@ -269,13 +271,17 @@ bool ThreadElfCore::CalculateStopInfo() {
   lldb::ValueObjectSP siginfo = GetSiginfoValue();
   if (!siginfo || !siginfo->GetValueIsValid()) {
     std::string description = unix_signals_sp->GetSignalDescription(m_signo, 0);
-    SetStopInfo(StopInfo::CreateStopReasonWithSignal(*this, m_signo, description.c_str(), 0));
+    SetStopInfo(StopInfo::CreateStopReasonWithSignal(*this, m_signo,
+                                                     description.c_str(), 0));
   } else {
-    std::string description = unix_signals_sp->GetSignalDescriptionFromSiginfo(siginfo);
-    uint32_t signo = siginfo->GetChildMemberWithName("si_signo")->GetValueAsUnsigned(-1);
-    uint32_t code = siginfo->GetChildMemberWithName("si_code")->GetValueAsUnsigned(0);
+    std::string description =
+        unix_signals_sp->GetSignalDescriptionFromSiginfo(siginfo);
+    uint32_t signo =
+        siginfo->GetChildMemberWithName("si_signo")->GetValueAsUnsigned(-1);
+    uint32_t code =
+        siginfo->GetChildMemberWithName("si_code")->GetValueAsUnsigned(0);
     SetStopInfo(StopInfo::CreateStopReasonWithSignal(
-      *this, signo, description.c_str(), code));
+        *this, signo, description.c_str(), code));
   }
 
   SetStopInfo(m_stop_info_sp);
@@ -560,7 +566,9 @@ ELFLinuxPrPsInfo::Populate(const lldb_private::ProcessInstanceInfo &info,
   return prpsinfo;
 }
 
-Status ELFLinuxSigInfo::Parse(const DataExtractor &data, const ArchSpec &arch, const lldb::PlatformSP platform_sp, ThreadData &thread_data) {
+Status ELFLinuxSigInfo::Parse(const DataExtractor &data, const ArchSpec &arch,
+                              const lldb::PlatformSP platform_sp,
+                              ThreadData &thread_data) {
   if (!platform_sp)
     return Status::FromErrorString("No platform for arch.");
   CompilerType type = platform_sp->GetSiginfoType(arch.GetTriple());
@@ -572,10 +580,12 @@ Status ELFLinuxSigInfo::Parse(const DataExtractor &data, const ArchSpec &arch, c
     return Status::FromError(type_size_or_err.takeError());
 
   if (data.GetByteSize() < *type_size_or_err)
-    return Status::FromErrorString("siginfo note byte size smaller than siginfo_t for platform.");
+    return Status::FromErrorString(
+        "siginfo note byte size smaller than siginfo_t for platform.");
 
   lldb::offset_t offset = 0;
-  const char *bytes = static_cast<const char*>(data.GetData(&offset, *type_size_or_err));
+  const char *bytes =
+      static_cast<const char *>(data.GetData(&offset, *type_size_or_err));
   thread_data.siginfo_bytes = llvm::StringRef(bytes, *type_size_or_err);
   return Status();
 }

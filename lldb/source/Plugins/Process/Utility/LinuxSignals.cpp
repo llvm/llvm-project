@@ -172,45 +172,61 @@ void LinuxSignals::Reset() {
   // clang-format on
 }
 
-std::string LinuxSignals::GetSignalDescriptionFromSiginfo(lldb::ValueObjectSP siginfo_sp) const {
+std::string LinuxSignals::GetSignalDescriptionFromSiginfo(
+    lldb::ValueObjectSP siginfo_sp) const {
   if (!siginfo_sp)
     return "";
 
   int code = siginfo_sp->GetChildMemberWithName("si_code")->GetValueAsSigned(0);
-  int signo = siginfo_sp->GetChildMemberWithName("si_signo")->GetValueAsSigned(-1);
-  // si_code = 0 is SI_NOINFO, we just want the description with nothing important
+  int signo =
+      siginfo_sp->GetChildMemberWithName("si_signo")->GetValueAsSigned(-1);
+  // si_code = 0 is SI_NOINFO, we just want the description with nothing
+  // important
   if (code == 0)
     return GetSignalDescription(signo, code);
 
-  lldb::ValueObjectSP sifields = siginfo_sp->GetChildMemberWithName("_sifields");
-  // The negative si_codes are special and mean this signal was sent from user space
-  // not the kernel. These take precedence because they break some of the invariants
-  // around kernel sent signals. Such as SIGSEGV won't have an address.
+  lldb::ValueObjectSP sifields =
+      siginfo_sp->GetChildMemberWithName("_sifields");
+  // The negative si_codes are special and mean this signal was sent from user
+  // space not the kernel. These take precedence because they break some of the
+  // invariants around kernel sent signals. Such as SIGSEGV won't have an
+  // address.
   if (code < 0) {
     lldb::ValueObjectSP sikill = sifields->GetChildMemberWithName("_kill");
-    uint32_t pid = sikill->GetChildMemberWithName("si_pid")->GetValueAsUnsigned(-1);
-    uint32_t uid = sikill->GetChildMemberWithName("si_uid")->GetValueAsUnsigned(-1);
-    return GetSignalDescription(signo, code, std::nullopt, std::nullopt, std::nullopt, pid, uid);
+    uint32_t pid =
+        sikill->GetChildMemberWithName("si_pid")->GetValueAsUnsigned(-1);
+    uint32_t uid =
+        sikill->GetChildMemberWithName("si_uid")->GetValueAsUnsigned(-1);
+    return GetSignalDescription(signo, code, std::nullopt, std::nullopt,
+                                std::nullopt, pid, uid);
   }
 
   switch (signo) {
-      case SIGILL:
-      case SIGFPE:
-      case SIGBUS: {
-        lldb::ValueObjectSP sigfault = sifields->GetChildMemberWithName("_sigfault");
-        lldb::addr_t addr = sigfault->GetChildMemberWithName("si_addr")->GetValueAsUnsigned(-1);
-        return GetSignalDescription(signo, code, addr);
-      }
-      case SIGSEGV: {
-        lldb::ValueObjectSP sigfault = sifields->GetChildMemberWithName("_sigfault");
-        lldb::addr_t addr = sigfault->GetChildMemberWithName("si_addr")->GetValueAsUnsigned(-1);
+  case SIGILL:
+  case SIGFPE:
+  case SIGBUS: {
+    lldb::ValueObjectSP sigfault =
+        sifields->GetChildMemberWithName("_sigfault");
+    lldb::addr_t addr =
+        sigfault->GetChildMemberWithName("si_addr")->GetValueAsUnsigned(-1);
+    return GetSignalDescription(signo, code, addr);
+  }
+  case SIGSEGV: {
+    lldb::ValueObjectSP sigfault =
+        sifields->GetChildMemberWithName("_sigfault");
+    lldb::addr_t addr =
+        sigfault->GetChildMemberWithName("si_addr")->GetValueAsUnsigned(-1);
 
-        lldb::ValueObjectSP bounds = sigfault->GetChildMemberWithName("_bounds")->GetChildMemberWithName("_addr_bnd");
-        lldb::addr_t lower = bounds->GetChildMemberWithName("_lower")->GetValueAsUnsigned(-1);
-        lldb::addr_t upper = bounds->GetChildMemberWithName("_upper")->GetValueAsUnsigned(-1);
-        return GetSignalDescription(signo, code, addr, lower, upper);
-      }
-      default:
-        return GetSignalDescription(signo, code);
+    lldb::ValueObjectSP bounds =
+        sigfault->GetChildMemberWithName("_bounds")->GetChildMemberWithName(
+            "_addr_bnd");
+    lldb::addr_t lower =
+        bounds->GetChildMemberWithName("_lower")->GetValueAsUnsigned(-1);
+    lldb::addr_t upper =
+        bounds->GetChildMemberWithName("_upper")->GetValueAsUnsigned(-1);
+    return GetSignalDescription(signo, code, addr, lower, upper);
+  }
+  default:
+    return GetSignalDescription(signo, code);
   }
 }

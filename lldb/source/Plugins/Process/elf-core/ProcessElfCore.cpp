@@ -938,7 +938,8 @@ llvm::Error ProcessElfCore::parseLinuxNotes(llvm::ArrayRef<CoreNote> notes) {
       break;
     }
     case ELF::NT_SIGINFO: {
-      Status status = ELFLinuxSigInfo::Parse(note.data, arch, GetTarget().GetPlatform(), thread_data);
+      Status status = ELFLinuxSigInfo::Parse(
+          note.data, arch, GetTarget().GetPlatform(), thread_data);
       if (status.Fail())
         return status.ToError();
       break;
