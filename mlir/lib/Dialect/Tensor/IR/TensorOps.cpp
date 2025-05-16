@@ -33,6 +33,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/MathExtras.h"
 #include <algorithm>
 #include <optional>
@@ -809,7 +810,7 @@ struct InferConcatOperandTypes : public OpRewritePattern<ConcatOp> {
         ConcatOp::inferResultType(dim, concatOp->getOperandTypes()).getShape();
 
     // Find operands for which a more static shape can be inferred.
-    SmallVector<std::tuple<size_t, RankedTensorType>> refinedTypes;
+    LogicalResult matched = failure();
     for (auto [operandIdx, operandType] : llvm::enumerate(operandTensorTypes)) {
       // Compute inferred type for operand.
       SmallVector<int64_t> inferredOperandShape(inferredResultShape);
@@ -819,24 +820,20 @@ struct InferConcatOperandTypes : public OpRewritePattern<ConcatOp> {
 
       // Check if inferred type is more static.
       if (!preservesStaticInformation(inferredOperandType, operandType)) {
-        refinedTypes.push_back({operandIdx, inferredOperandType});
+        matched = success();
+
+        // Use refined operand type and create cast from original operand.
+        auto castOp =
+            rewriter.create<CastOp>(concatOp->getLoc(), inferredOperandType,
+                                    concatOp.getOperand(operandIdx));
+        rewriter.modifyOpInPlace(
+            concatOp, [=, operandIdx = (size_t)operandIdx] {
+              concatOp->setOperand(operandIdx, castOp->getResult(0));
+            });
       }
     }
 
-    if (refinedTypes.empty()) {
-      return failure();
-    }
-
-    // Use refined types for operands, insert casts for original type.
-    SmallVector<Value> newOperands = concatOp.getOperands();
-    for (auto [operandIdx, refinedType] : refinedTypes) {
-      newOperands[operandIdx] = rewriter.create<CastOp>(
-          concatOp->getLoc(), refinedType, concatOp.getOperand(operandIdx));
-    }
-    rewriter.replaceOpWithNewOp<ConcatOp>(concatOp, concatOp.getResultType(),
-                                          dim, newOperands);
-
-    return success();
+    return matched;
   }
 };
 
