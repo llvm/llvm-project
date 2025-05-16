@@ -161,7 +161,7 @@ public:
   /// current class will then follow the base classes.
   ///
   /// For array and pointers the behavior of the function depends on the value
-  /// of the \a use_synthetic argument. If \b false, the function returns
+  /// of the \a treat_as_array argument. If \b false, the function returns
   /// members of the array as given by the array bounds. If the value is a
   /// pointer to a simple type, the child at index zero is the only child
   /// value available. If the pointer points to an aggregate type (an array,
@@ -171,7 +171,7 @@ public:
   /// SBValue that contains a pointer to a 'Point' type, then the child at
   /// index zero will be the 'x' member, and the child at index 1 will be the
   /// 'y' member (the child at index zero won't be a 'Point' instance). If \a
-  /// use_synthetic is \b true, pointer values will be used as a (C) array and
+  /// treat_as_array is \b true, pointer values will be used as a (C) array and
   /// and the function will create 'synthetic' child values using positive or
   /// negative indexes. In case of arrays, the function will return values
   /// which are outside of the array bounds.
@@ -188,7 +188,7 @@ public:
   ///     and also if the target can be run to figure out the dynamic
   ///     type of the child value.
   ///
-  /// \param[in] use_synthetic
+  /// \param[in] treat_as_array
   ///     If \b true, then allow child values to be created by index
   ///     for pointers and arrays for indexes that normally wouldn't
   ///     be allowed.
@@ -197,7 +197,7 @@ public:
   ///     A new SBValue object that represents the child member value.
   lldb::SBValue GetChildAtIndex(uint32_t idx,
                                 lldb::DynamicValueType use_dynamic,
-                                bool use_synthetic);
+                                bool treat_as_array);
 
   // Matches children of this object only and will match base classes and
   // member names if this is a clang typed object.
