@@ -56715,7 +56715,8 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
   if (DCI.isBeforeLegalize()) {
     // Attempt to move shifted index into the address scale, allows further
     // index truncation below.
-    if (Index.getOpcode() == ISD::SHL && isa<ConstantSDNode>(Scale)) {
+    if (Index.getOpcode() == ISD::SHL && IndexSVT == PtrVT &&
+        isa<ConstantSDNode>(Scale)) {
       unsigned ScaleAmt = Scale->getAsZExtVal();
       assert(isPowerOf2_32(ScaleAmt) && "Scale must be a power of 2");
       unsigned Log2ScaleAmt = Log2_32(ScaleAmt);
