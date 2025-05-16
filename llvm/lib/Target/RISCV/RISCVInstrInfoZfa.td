@@ -175,6 +175,28 @@ def FLEQ_H : FPCmp_rr<0b1010010, 0b100, "fleq.h", FPR16>;
 }
 } // Predicates = [HasStdExtZfa, HasStdExtZfh]
 
+let Predicates = [HasStdExtZfa, HasStdExtQ] in {
+let isReMaterializable = 1, isAsCheapAsAMove = 1 in
+def FLI_Q : FPFLI_r<0b1111011, 0b00001, 0b000, FPR128, "fli.q">;
+
+def FMINM_Q: FPALU_rr<0b0010111, 0b010, "fminm.q", FPR128, Commutable=1>;
+def FMAXM_Q: FPALU_rr<0b0010111, 0b011, "fmaxm.q", FPR128, Commutable=1>;
+
+def FROUND_Q : FPUnaryOp_r_frm<0b0100011, 0b00100, FPR128, FPR128, "fround.q">;
+def FROUNDNX_Q : FPUnaryOp_r_frm<0b0100011, 0b00101, FPR128, FPR128, 
+                                 "froundnx.q">;
+
+def FLTQ_Q : FPCmp_rr<0b1010011, 0b101, "fltq.q", FPR128>;
+def FLEQ_Q : FPCmp_rr<0b1010011, 0b100, "fleq.q", FPR128>;
+} // Predicates = [HasStdExtZfa, HasStdExtQ]
+
+let Predicates = [HasStdExtZfa, HasStdExtQ, IsRV64] in {
+  let mayRaiseFPException = 0 in {
+    def FMVH_X_Q : FPUnaryOp_r<0b1110011, 0b00001, 0b000, GPR, FPR128, "fmvh.x.q">;
+    def FMVP_Q_X : FPBinaryOp_rr<0b1011011, 0b000, FPR128, GPR, "fmvp.q.x">;
+  }
+} // Predicates = [HasStdExtZfa, HasStdExtQ, IsRV64]
+
 //===----------------------------------------------------------------------===//
 // Pseudo-instructions and codegen patterns
 //===----------------------------------------------------------------------===//
@@ -198,6 +220,13 @@ def : InstAlias<"fgtq.h $rd, $rs, $rt",
                 (FLTQ_H GPR:$rd, FPR16:$rt, FPR16:$rs), 0>;
 def : InstAlias<"fgeq.h $rd, $rs, $rt",
                 (FLEQ_H GPR:$rd, FPR16:$rt, FPR16:$rs), 0>;
+}
+
+let Predicates = [HasStdExtZfa, HasStdExtQ] in {
+def : InstAlias<"fgtq.q $rd, $rs, $rt",
+                (FLTQ_Q GPR:$rd, FPR128:$rt, FPR128:$rs), 0>;
+def : InstAlias<"fgeq.q $rd, $rs, $rt",
+                (FLEQ_Q GPR:$rd, FPR128:$rt, FPR128:$rs), 0>;
 }
 
 //===----------------------------------------------------------------------===//

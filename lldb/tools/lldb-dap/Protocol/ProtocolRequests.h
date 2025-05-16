@@ -439,6 +439,19 @@ struct SetVariableResponseBody {
 };
 llvm::json::Value toJSON(const SetVariableResponseBody &);
 
+struct ScopesArguments {
+  /// Retrieve the scopes for the stack frame identified by `frameId`. The
+  /// `frameId` must have been obtained in the current suspended state. See
+  /// 'Lifetime of Object References' in the Overview section for details.
+  uint64_t frameId = LLDB_INVALID_FRAME_ID;
+};
+bool fromJSON(const llvm::json::Value &, ScopesArguments &, llvm::json::Path);
+
+struct ScopesResponseBody {
+  std::vector<Scope> scopes;
+};
+llvm::json::Value toJSON(const ScopesResponseBody &);
+
 /// Arguments for `source` request.
 struct SourceArguments {
   /// Specifies the source content to load. Either `source.path` or

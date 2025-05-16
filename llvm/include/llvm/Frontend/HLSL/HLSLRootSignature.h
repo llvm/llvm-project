@@ -20,6 +20,10 @@
 #include <variant>
 
 namespace llvm {
+class LLVMContext;
+class MDNode;
+class Metadata;
+
 namespace hlsl {
 namespace rootsig {
 
@@ -84,7 +88,9 @@ struct RootConstants {
 // Models the end of a descriptor table and stores its visibility
 struct DescriptorTable {
   ShaderVisibility Visibility = ShaderVisibility::All;
-  uint32_t NumClauses = 0; // The number of clauses in the table
+  // Denotes that the previous NumClauses in the RootElement array
+  // are the clauses in the table.
+  uint32_t NumClauses = 0;
 
   void dump(raw_ostream &OS) const;
 };
@@ -119,11 +125,46 @@ struct DescriptorTableClause {
   void dump(raw_ostream &OS) const;
 };
 
-// Models RootElement : RootConstants | DescriptorTable | DescriptorTableClause
+/// Models RootElement : RootFlags | RootConstants | DescriptorTable
+///  | DescriptorTableClause
+///
+/// A Root Signature is modeled in-memory by an array of RootElements. These
+/// aim to map closely to their DSL grammar reprsentation defined in the spec.
+///
+/// Each optional parameter has its default value defined in the struct, and,
+/// each mandatory parameter does not have a default initialization.
+///
+/// For the variants RootFlags, RootConstants and DescriptorTableClause: each
+/// data member maps directly to a parameter in the grammar.
+///
+/// The DescriptorTable is modelled by having its Clauses as the previous
+/// RootElements in the array, and it holds a data member for the Visibility
+/// parameter.
 using RootElement = std::variant<RootFlags, RootConstants, DescriptorTable,
                                  DescriptorTableClause>;
 
 void dumpRootElements(raw_ostream &OS, ArrayRef<RootElement> Elements);
+
+class MetadataBuilder {
+public:
+  MetadataBuilder(llvm::LLVMContext &Ctx, ArrayRef<RootElement> Elements)
+      : Ctx(Ctx), Elements(Elements) {}
+
+  /// Iterates through the elements and dispatches onto the correct Build method
+  ///
+  /// Accumulates the root signature and returns the Metadata node that is just
+  /// a list of all the elements
+  MDNode *BuildRootSignature();
+
+private:
+  /// Define the various builders for the different metadata types
+  MDNode *BuildDescriptorTable(const DescriptorTable &Table);
+  MDNode *BuildDescriptorTableClause(const DescriptorTableClause &Clause);
+
+  llvm::LLVMContext &Ctx;
+  ArrayRef<RootElement> Elements;
+  SmallVector<Metadata *> GeneratedMetadata;
+};
 
 } // namespace rootsig
 } // namespace hlsl

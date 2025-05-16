@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/Register.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/KnownBits.h"
 
@@ -104,18 +105,41 @@ protected:
 /// Eventually add other features such as caching/ser/deserializing
 /// to MIR etc. Those implementations can derive from GISelValueTracking
 /// and override computeKnownBitsImpl.
-class GISelValueTrackingAnalysis : public MachineFunctionPass {
+class GISelValueTrackingAnalysisLegacy : public MachineFunctionPass {
   std::unique_ptr<GISelValueTracking> Info;
 
 public:
   static char ID;
-  GISelValueTrackingAnalysis() : MachineFunctionPass(ID) {
-    initializeGISelValueTrackingAnalysisPass(*PassRegistry::getPassRegistry());
+  GISelValueTrackingAnalysisLegacy() : MachineFunctionPass(ID) {
+    initializeGISelValueTrackingAnalysisLegacyPass(
+        *PassRegistry::getPassRegistry());
   }
   GISelValueTracking &get(MachineFunction &MF);
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnMachineFunction(MachineFunction &MF) override;
   void releaseMemory() override { Info.reset(); }
+};
+
+class GISelValueTrackingAnalysis
+    : public AnalysisInfoMixin<GISelValueTrackingAnalysis> {
+  friend AnalysisInfoMixin<GISelValueTrackingAnalysis>;
+  static AnalysisKey Key;
+
+public:
+  using Result = GISelValueTracking;
+
+  Result run(MachineFunction &MF, MachineFunctionAnalysisManager &MFAM);
+};
+
+class GISelValueTrackingPrinterPass
+    : public PassInfoMixin<GISelValueTrackingPrinterPass> {
+  raw_ostream &OS;
+
+public:
+  GISelValueTrackingPrinterPass(raw_ostream &OS) : OS(OS) {}
+
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
 };
 } // namespace llvm
 

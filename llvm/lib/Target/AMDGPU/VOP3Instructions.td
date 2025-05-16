@@ -605,7 +605,6 @@ def VOP3_CVT_SR_F8_F32_Profile : VOP3_Profile<VOPProfile<[i32, f32, i32, f32]>,
 
 class VOP3_CVT_SR_F8_ByteSel_Profile<ValueType SrcVT> :
   VOP3_Profile<VOPProfile<[i32, SrcVT, i32, untyped]>> {
-  let IsFP8DstByteSel = 1;
   let HasFP8DstByteSel = 1;
   let HasClamp = 0;
   defvar bytesel = (ins VGPR_32:$vdst_in, ByteSel:$byte_sel);

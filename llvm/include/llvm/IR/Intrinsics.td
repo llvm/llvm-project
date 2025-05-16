@@ -903,7 +903,7 @@ def int_stackrestore  : DefaultAttrsIntrinsic<[], [llvm_anyptr_ty]>,
 
 def int_get_dynamic_area_offset : DefaultAttrsIntrinsic<[llvm_anyint_ty]>;
 
-def int_thread_pointer : DefaultAttrsIntrinsic<[llvm_ptr_ty], [], [IntrNoMem]>,
+def int_thread_pointer : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [], [IntrNoMem]>,
                          ClangBuiltin<"__builtin_thread_pointer">;
 
 // IntrInaccessibleMemOrArgMemOnly is a little more pessimistic than strictly

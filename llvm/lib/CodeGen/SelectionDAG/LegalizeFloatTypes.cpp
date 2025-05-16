@@ -168,6 +168,7 @@ void DAGTypeLegalizer::SoftenFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::POISON:
     case ISD::UNDEF:       R = SoftenFloatRes_UNDEF(N); break;
     case ISD::VAARG:       R = SoftenFloatRes_VAARG(N); break;
+    case ISD::AssertNoFPClass:       R = GetSoftenedFloat(N->getOperand(0)); break;
     case ISD::VECREDUCE_FADD:
     case ISD::VECREDUCE_FMUL:
     case ISD::VECREDUCE_FMIN:
@@ -2582,6 +2583,7 @@ bool DAGTypeLegalizer::PromoteFloatOperand(SDNode *N, unsigned OpNo) {
     case ISD::LLROUND:
     case ISD::LRINT:
     case ISD::LLRINT:     R = PromoteFloatOp_UnaryOp(N, OpNo); break;
+    case ISD::AssertNoFPClass:     R = PromoteFloatOp_AssertNoFPClass(N, OpNo); break;
     case ISD::FP_TO_SINT_SAT:
     case ISD::FP_TO_UINT_SAT:
                           R = PromoteFloatOp_FP_TO_XINT_SAT(N, OpNo); break;
@@ -2638,6 +2640,12 @@ SDValue DAGTypeLegalizer::PromoteFloatOp_FCOPYSIGN(SDNode *N, unsigned OpNo) {
 SDValue DAGTypeLegalizer::PromoteFloatOp_UnaryOp(SDNode *N, unsigned OpNo) {
   SDValue Op = GetPromotedFloat(N->getOperand(0));
   return DAG.getNode(N->getOpcode(), SDLoc(N), N->getValueType(0), Op);
+}
+
+// Convert the promoted float value to the desired integer type
+SDValue DAGTypeLegalizer::PromoteFloatOp_AssertNoFPClass(SDNode *N,
+                                                         unsigned OpNo) {
+  return GetPromotedFloat(N->getOperand(0));
 }
 
 SDValue DAGTypeLegalizer::PromoteFloatOp_FP_TO_XINT_SAT(SDNode *N,
@@ -2804,6 +2812,9 @@ void DAGTypeLegalizer::PromoteFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::FTAN:
     case ISD::FTANH:
     case ISD::FCANONICALIZE: R = PromoteFloatRes_UnaryOp(N); break;
+    case ISD::AssertNoFPClass:
+      R = PromoteFloatRes_AssertNoFPClass(N);
+      break;
 
     // Binary FP Operations
     case ISD::FADD:
@@ -2996,8 +3007,14 @@ SDValue DAGTypeLegalizer::PromoteFloatRes_UnaryOp(SDNode *N) {
   EVT VT = N->getValueType(0);
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
   SDValue Op = GetPromotedFloat(N->getOperand(0));
-
   return DAG.getNode(N->getOpcode(), SDLoc(N), NVT, Op);
+}
+
+// Unary operation with a more non-float operand where the result and the
+// operand have PromoteFloat type action.  Construct a new SDNode with the
+// promoted float value of the old operand.
+SDValue DAGTypeLegalizer::PromoteFloatRes_AssertNoFPClass(SDNode *N) {
+  return GetPromotedFloat(N->getOperand(0));
 }
 
 // Binary operations where the result and both operands have PromoteFloat type
@@ -3281,6 +3298,9 @@ void DAGTypeLegalizer::SoftPromoteHalfResult(SDNode *N, unsigned ResNo) {
   case ISD::FTAN:
   case ISD::FTANH:
   case ISD::FCANONICALIZE: R = SoftPromoteHalfRes_UnaryOp(N); break;
+  case ISD::AssertNoFPClass:
+    R = SoftPromoteHalfRes_AssertNoFPClass(N);
+    break;
 
   // Binary FP Operations
   case ISD::FADD:
@@ -3605,6 +3625,10 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfRes_UnaryOp(SDNode *N) {
 
   // Convert back to FP16 as an integer.
   return DAG.getNode(GetPromotionOpcode(NVT, OVT), dl, MVT::i16, Res);
+}
+
+SDValue DAGTypeLegalizer::SoftPromoteHalfRes_AssertNoFPClass(SDNode *N) {
+  return GetSoftPromotedHalf(N->getOperand(0));
 }
 
 SDValue DAGTypeLegalizer::SoftPromoteHalfRes_BinOp(SDNode *N) {

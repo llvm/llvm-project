@@ -4432,6 +4432,7 @@ TemplateDeductionResult Sema::DeduceTemplateArguments(
     bool PartialOverloading, bool AggregateDeductionCandidate,
     bool PartialOrdering, QualType ObjectType,
     Expr::Classification ObjectClassification,
+    bool ForOverloadSetAddressResolution,
     llvm::function_ref<bool(ArrayRef<QualType>)> CheckNonDependent) {
   if (FunctionTemplate->isInvalidDecl())
     return TemplateDeductionResult::Invalid;
@@ -4440,7 +4441,15 @@ TemplateDeductionResult Sema::DeduceTemplateArguments(
   unsigned NumParams = Function->getNumParams();
   bool HasExplicitObject = false;
   int ExplicitObjectOffset = 0;
-  if (Function->hasCXXExplicitFunctionObjectParameter()) {
+
+  // [C++26] [over.call.func]p3
+  // If the primary-expression is the address of an overload set,
+  // the argument list is the same as the expression-list in the call.
+  // Otherwise, the argument list is the expression-list in the call augmented
+  // by the addition of an implied object argument as in a qualified function
+  // call.
+  if (!ForOverloadSetAddressResolution &&
+      Function->hasCXXExplicitFunctionObjectParameter()) {
     HasExplicitObject = true;
     ExplicitObjectOffset = 1;
   }
