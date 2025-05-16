@@ -17,6 +17,7 @@
 #include "flang/Parser/parse-tree.h"
 #include "flang/Parser/tools.h"
 #include "flang/Support/Fortran.h"
+#include "flang/Support/LangOptions.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cinttypes>
@@ -27,12 +28,14 @@ namespace Fortran::parser {
 
 class UnparseVisitor {
 public:
-  UnparseVisitor(llvm::raw_ostream &out, int indentationAmount,
-      Encoding encoding, bool capitalize, bool backslashEscapes,
-      preStatementType *preStatement, AnalyzedObjectsAsFortran *asFortran)
-      : out_{out}, indentationAmount_{indentationAmount}, encoding_{encoding},
-        capitalizeKeywords_{capitalize}, backslashEscapes_{backslashEscapes},
-        preStatement_{preStatement}, asFortran_{asFortran} {}
+  UnparseVisitor(llvm::raw_ostream &out, const common::LangOptions &langOpts,
+      int indentationAmount, Encoding encoding, bool capitalize,
+      bool backslashEscapes, preStatementType *preStatement,
+      AnalyzedObjectsAsFortran *asFortran)
+      : out_{out}, langOpts_{langOpts}, indentationAmount_{indentationAmount},
+        encoding_{encoding}, capitalizeKeywords_{capitalize},
+        backslashEscapes_{backslashEscapes}, preStatement_{preStatement},
+        asFortran_{asFortran} {}
 
   // In nearly all cases, this code avoids defining Boolean-valued Pre()
   // callbacks for the parse tree walking framework in favor of two void
@@ -2102,7 +2105,8 @@ public:
     Walk(":", std::get<std::optional<OmpReductionCombiner>>(x.t));
   }
   void Unparse(const llvm::omp::Directive &x) {
-    Word(llvm::omp::getOpenMPDirectiveName(x).str());
+    unsigned ompVersion{langOpts_.OpenMPVersion};
+    Word(llvm::omp::getOpenMPDirectiveName(x, ompVersion).str());
   }
   void Unparse(const OmpDirectiveSpecification &x) {
     auto unparseArgs{[&]() {
@@ -2167,7 +2171,8 @@ public:
         x.u);
   }
   void Unparse(const OmpDirectiveNameModifier &x) {
-    Word(llvm::omp::getOpenMPDirectiveName(x.v));
+    unsigned ompVersion{langOpts_.OpenMPVersion};
+    Word(llvm::omp::getOpenMPDirectiveName(x.v, ompVersion));
   }
   void Unparse(const OmpIteratorSpecifier &x) {
     Walk(std::get<TypeDeclarationStmt>(x.t));
@@ -3249,6 +3254,7 @@ private:
   }
 
   llvm::raw_ostream &out_;
+  const common::LangOptions &langOpts_;
   int indent_{0};
   const int indentationAmount_{1};
   int column_{1};
@@ -3341,17 +3347,20 @@ void UnparseVisitor::Word(const std::string_view &str) {
 }
 
 template <typename A>
-void Unparse(llvm::raw_ostream &out, const A &root, Encoding encoding,
+void Unparse(llvm::raw_ostream &out, const A &root,
+    const common::LangOptions &langOpts, Encoding encoding,
     bool capitalizeKeywords, bool backslashEscapes,
     preStatementType *preStatement, AnalyzedObjectsAsFortran *asFortran) {
-  UnparseVisitor visitor{out, 1, encoding, capitalizeKeywords, backslashEscapes,
-      preStatement, asFortran};
+  UnparseVisitor visitor{out, langOpts, 1, encoding, capitalizeKeywords,
+      backslashEscapes, preStatement, asFortran};
   Walk(root, visitor);
   visitor.Done();
 }
 
-template void Unparse<Program>(llvm::raw_ostream &, const Program &, Encoding,
-    bool, bool, preStatementType *, AnalyzedObjectsAsFortran *);
-template void Unparse<Expr>(llvm::raw_ostream &, const Expr &, Encoding, bool,
-    bool, preStatementType *, AnalyzedObjectsAsFortran *);
+template void Unparse<Program>(llvm::raw_ostream &, const Program &,
+    const common::LangOptions &, Encoding, bool, bool, preStatementType *,
+    AnalyzedObjectsAsFortran *);
+template void Unparse<Expr>(llvm::raw_ostream &, const Expr &,
+    const common::LangOptions &, Encoding, bool, bool, preStatementType *,
+    AnalyzedObjectsAsFortran *);
 } // namespace Fortran::parser
