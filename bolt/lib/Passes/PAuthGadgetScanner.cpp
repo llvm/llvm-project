@@ -431,6 +431,9 @@ protected:
   }
 
   SrcState computeNext(const MCInst &Point, const SrcState &Cur) {
+    if (BC.MIB->isCFI(Point))
+      return Cur;
+
     SrcStatePrinter P(BC);
     LLVM_DEBUG({
       dbgs() << "  SrcSafetyAnalysis::ComputeNext(";
@@ -674,6 +677,8 @@ public:
     SrcState S = createEntryState();
     for (auto &I : BF.instrs()) {
       MCInst &Inst = I.second;
+      if (BC.MIB->isCFI(Inst))
+        continue;
 
       // If there is a label before this instruction, it is possible that it
       // can be jumped-to, thus conservatively resetting S. As an exception,
@@ -959,6 +964,9 @@ protected:
   }
 
   DstState computeNext(const MCInst &Point, const DstState &Cur) {
+    if (BC.MIB->isCFI(Point))
+      return Cur;
+
     DstStatePrinter P(BC);
     LLVM_DEBUG({
       dbgs() << "  DstSafetyAnalysis::ComputeNext(";
@@ -1135,6 +1143,8 @@ public:
     DstState S = createUnsafeState();
     for (auto &I : llvm::reverse(BF.instrs())) {
       MCInst &Inst = I.second;
+      if (BC.MIB->isCFI(Inst))
+        continue;
 
       // If Inst can change the control flow, we cannot be sure that the next
       // instruction (to be executed in analyzed program) is the one processed
@@ -1333,6 +1343,9 @@ void FunctionAnalysisContext::findUnsafeUses(
   });
 
   iterateOverInstrs(BF, [&](MCInstReference Inst) {
+    if (BC.MIB->isCFI(Inst))
+      return;
+
     const SrcState &S = Analysis->getStateBefore(Inst);
 
     // If non-empty state was never propagated from the entry basic block
@@ -1396,6 +1409,9 @@ void FunctionAnalysisContext::findUnsafeDefs(
   });
 
   iterateOverInstrs(BF, [&](MCInstReference Inst) {
+    if (BC.MIB->isCFI(Inst))
+      return;
+
     const DstState &S = Analysis->getStateAfter(Inst);
 
     if (auto Report = shouldReportAuthOracle(BC, Inst, S))

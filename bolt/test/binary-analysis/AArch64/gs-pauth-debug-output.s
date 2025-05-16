@@ -329,6 +329,38 @@ auth_oracle:
 // PAUTH-EMPTY:
 // PAUTH-NEXT:   Attaching leakage info to:     00000000:      autia   x0, x1 # DataflowDstSafetyAnalysis: dst-state<CannotEscapeUnchecked: BitVector, Insts: [0](0x{{[0-9a-f]+}} )>
 
+// Gadget scanner should not crash on CFI instructions, including when debug-printing them.
+// Note that the particular debug output is not checked, but BOLT should be
+// compiled with assertions enabled to support -debug-only argument.
+
+        .globl  cfi_inst_df
+        .type   cfi_inst_df,@function
+cfi_inst_df:
+        .cfi_startproc
+        sub     sp, sp, #16
+        .cfi_def_cfa_offset 16
+        add     sp, sp, #16
+        .cfi_def_cfa_offset 0
+        ret
+        .size   cfi_inst_df, .-cfi_inst_df
+        .cfi_endproc
+
+        .globl  cfi_inst_nocfg
+        .type   cfi_inst_nocfg,@function
+cfi_inst_nocfg:
+        .cfi_startproc
+        sub     sp, sp, #16
+        .cfi_def_cfa_offset 16
+
+        adr     x0, 1f
+        br      x0
+1:
+        add     sp, sp, #16
+        .cfi_def_cfa_offset 0
+        ret
+        .size   cfi_inst_nocfg, .-cfi_inst_nocfg
+        .cfi_endproc
+
 // CHECK-LABEL:Analyzing function main, AllocatorId = 1
         .globl  main
         .type   main,@function
