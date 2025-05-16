@@ -79,6 +79,11 @@ Clang Frontend Potentially Breaking Changes
 
 Clang Python Bindings Potentially Breaking Changes
 --------------------------------------------------
+- ``Cursor.from_location`` now returns ``None`` instead of a null cursor.
+  This eliminates the last known source of null cursors.
+- Almost all ``Cursor`` methods now assert that they are called on non-null cursors.
+  Most of the time null cursors were mapped to ``None``,
+  so no widespread breakages are expected.
 
 What's New in Clang |release|?
 ==============================
@@ -520,15 +525,12 @@ Improvements to Clang's diagnostics
 - Several compatibility diagnostics that were incorrectly being grouped under
   ``-Wpre-c++20-compat`` are now part of ``-Wc++20-compat``. (#GH138775)
 
-- Improved the ``-Wtautological-overlap-compare`` diagnostics to warn about overlapping and non-overlapping ranges involving character literals and floating-point literals. 
+- Improved the ``-Wtautological-overlap-compare`` diagnostics to warn about overlapping and non-overlapping ranges involving character literals and floating-point literals.
   The warning message for non-overlapping cases has also been improved (#GH13473).
 
 - Fixed a duplicate diagnostic when performing typo correction on function template
   calls with explicit template arguments. (#GH139226)
 
-- An error is now emitted when OpenMP ``collapse`` and ``ordered`` clauses have an
-  argument larger than what can fit within a 64-bit integer.
-  
 - Explanatory note is printed when ``assert`` fails during evaluation of a
   constant expression. Prior to this, the error inaccurately implied that assert
   could not be used at all in a constant expression (#GH130458)
@@ -536,6 +538,23 @@ Improvements to Clang's diagnostics
 - A new off-by-default warning ``-Wms-bitfield-padding`` has been added to alert to cases where bit-field
   packing may differ under the MS struct ABI (#GH117428).
 
+- ``-Watomic-access`` no longer fires on unreachable code. e.g.,
+
+  .. code-block:: c
+
+    _Atomic struct S { int a; } s;
+    void func(void) {
+      if (0)
+        s.a = 12; // Previously diagnosed with -Watomic-access, now silenced
+      s.a = 12; // Still diagnosed with -Watomic-access
+      return;
+      s.a = 12; // Previously diagnosed, now silenced
+    }
+
+
+- A new ``-Wcharacter-conversion`` warns where comparing or implicitly converting
+  between different Unicode character types (``char8_t``, ``char16_t``, ``char32_t``).
+  This warning only triggers in C++ as these types are aliases in C. (#GH138526)
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -600,6 +619,9 @@ Bug Fixes in This Version
 - Fixed a crash with an invalid member function parameter list with a default
   argument which contains a pragma. (#GH113722)
 - Fixed assertion failures when generating name lookup table in modules. (#GH61065, #GH134739)
+- Fixed an assertion failure in constant compound literal statements. (#GH139160)
+- Fix crash due to unknown references and pointer implementation and handling of
+  base classes. (GH139452)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -712,6 +734,9 @@ Bug Fixes to C++ Support
 - Fixed the handling of pack indexing types in the constraints of a member function redeclaration. (#GH138255)
 - Clang now correctly parses arbitrary order of ``[[]]``, ``__attribute__`` and ``alignas`` attributes for declarations (#GH133107)
 - Fixed a crash when forming an invalid function type in a dependent context. (#GH138657) (#GH115725) (#GH68852)
+- Fixed a function declaration mismatch that caused inconsistencies between concepts and variable template declarations. (#GH139476)
+- Clang no longer segfaults when there is a configuration mismatch between modules and their users (http://crbug.com/400353616).
+- Fix an incorrect deduction when calling an explicit object member function template through an overload set address.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -811,6 +836,8 @@ RISC-V Support
 
 - `Zicsr` / `Zifencei` are allowed to be duplicated in the presence of `g` in `-march`.
 
+- Add support for the `__builtin_riscv_pause()` intrinsic from the `Zihintpause` extension.
+
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -860,6 +887,11 @@ clang-format
 - Add ``OneLineFormatOffRegex`` option for turning formatting off for one line.
 - Add ``SpaceAfterOperatorKeyword`` option.
 
+clang-refactor
+--------------
+- Reject `0` as column or line number in 1-based command-line source locations.
+  Fixes crash caused by `0` input in `-selection=<file>:<line>:<column>[-<line>:<column>]`. (#GH139457)
+
 libclang
 --------
 - Fixed a bug in ``clang_File_isEqual`` that sometimes led to different
@@ -878,6 +910,8 @@ libclang
 
 Code Completion
 ---------------
+- Reject `0` as column or line number in 1-based command-line source locations.
+  Fixes crash caused by `0` input in `-code-completion-at=<file>:<line>:<column>`. (#GH139457)
 
 Static Analyzer
 ---------------
@@ -946,6 +980,12 @@ OpenMP Support
 - Fixed a crashing bug with a malformed ``cancel`` directive. (#GH139360)
 - Fixed a crashing bug with ``omp distribute dist_schedule`` if the argument to
   ``dist_schedule`` was not strictly positive. (#GH139266)
+- Fixed two crashing bugs with a malformed ``metadirective`` directive. One was
+  a crash if the next token after ``metadirective`` was a paren, bracket, or
+  brace. The other was if the next token after the meta directive was not an
+  open parenthesis. (#GH139665)
+- An error is now emitted when OpenMP ``collapse`` and ``ordered`` clauses have
+  an argument larger than what can fit within a 64-bit integer.
 
 Improvements
 ^^^^^^^^^^^^
