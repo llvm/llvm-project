@@ -40,9 +40,6 @@ template <typename T, typename U, typename = enableif_int<T, U>>
 using common_sint =
     std::common_type_t<std::make_signed_t<T>, std::make_signed_t<U>>;
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wc++17-extensions"
-
 /// Mathematical constants.
 namespace numbers {
 // TODO: Track C++20 std::numbers.
@@ -79,8 +76,6 @@ constexpr float ef          = 0x1.5bf0a8P+1F, // (2.71828183) https://oeis.org/A
                 phif        = 0x1.9e377aP+0F; // (1.61803399) https://oeis.org/A001622
 // clang-format on
 } // namespace numbers
-
-#pragma GCC diagnostic pop
 
 /// Create a bitmask with the N right-most bits set to 1, and all other
 /// bits set to 0.  Only unsigned types are allowed.

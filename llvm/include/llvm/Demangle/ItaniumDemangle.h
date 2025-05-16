@@ -2996,7 +2996,7 @@ template <typename Derived, typename Alloc> struct AbstractManglingParser {
     };
     char Enc[2];      // Encoding
     OIKind Kind;      // Kind of operator
-    bool Flag : 1;   // Entry-specific flag
+    bool Flag : 1;    // Entry-specific flag
     Node::Prec Prec : 7; // Precedence
     const char *Name; // Spelling
 
