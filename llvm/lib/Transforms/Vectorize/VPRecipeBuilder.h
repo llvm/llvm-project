@@ -209,10 +209,12 @@ public:
     return Plan.getOrAddLiveIn(V);
   }
 
-  void updateBlockMaskCache(VPValue *Old, VPValue *New) {
+  void updateBlockMaskCache(const DenseMap<VPValue *, VPValue *> &Old2New) {
     for (auto &[_, V] : BlockMaskCache) {
-      if (V == Old)
+      if (auto *New = Old2New.lookup(V)) {
+        V->replaceAllUsesWith(New);
         V = New;
+      }
     }
   }
 };

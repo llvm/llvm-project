@@ -223,12 +223,12 @@ struct VPlanTransforms {
   static void narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
                                      unsigned VectorRegWidth);
 
-  /// Predicate and linearize the control-flow in the top-level loop region of
+  /// Predicate and linearize the control-flow in the only loop region of
   /// \p Plan. If \p FoldTail is true, also create a mask guarding the loop
   /// header, otherwise use all-true for the header mask. Masks for blocks are
-  /// added to \p BlockMaskCache, which in turn is temporarily used for wide
-  /// recipe construction. This argument is temporary and will be removed in the
-  /// future.
+  /// added to \p BlockMaskCache, which in turn will temporarily be used later
+  /// for wide recipe construction. This argument is temporary and will be
+  /// removed in the future.
   static void
   predicateAndLinearize(VPlan &Plan, bool FoldTail,
                         DenseMap<VPBasicBlock *, VPValue *> &BlockMaskCache);
