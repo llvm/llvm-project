@@ -8217,6 +8217,10 @@ unsigned ScalarEvolution::getSmallConstantTripCount(const Loop *L) {
   return getConstantTripCount(ExitCount);
 }
 
+ElementCount ScalarEvolution::getSmallConstantRuntimeTripCount(const Loop *L) {
+  return ElementCount::getFixed(getSmallConstantTripCount(L));
+}
+
 unsigned
 ScalarEvolution::getSmallConstantTripCount(const Loop *L,
                                            const BasicBlock *ExitingBlock) {

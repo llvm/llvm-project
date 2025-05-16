@@ -427,24 +427,24 @@ static bool hasIrregularType(Type *Ty, const DataLayout &DL) {
 ///   2) Returns expected trip count according to profile data if any.
 ///   3) Returns upper bound estimate if known, and if \p CanUseConstantMax.
 ///   4) Returns std::nullopt if all of the above failed.
-static std::optional<unsigned>
+static std::optional<ElementCount>
 getSmallBestKnownTC(PredicatedScalarEvolution &PSE, Loop *L,
                     bool CanUseConstantMax = true) {
   // Check if exact trip count is known.
-  if (unsigned ExpectedTC = PSE.getSE()->getSmallConstantTripCount(L))
+  if (auto ExpectedTC = PSE.getSE()->getSmallConstantRuntimeTripCount(L))
     return ExpectedTC;
 
   // Check if there is an expected trip count available from profile data.
   if (LoopVectorizeWithBlockFrequency)
     if (auto EstimatedTC = getLoopEstimatedTripCount(L))
-      return *EstimatedTC;
+      return ElementCount::getFixed(*EstimatedTC);
 
   if (!CanUseConstantMax)
     return std::nullopt;
 
   // Check if upper bound estimate is known.
   if (unsigned ExpectedTC = PSE.getSmallConstantMaxTripCount())
-    return ExpectedTC;
+    return ElementCount::getFixed(ExpectedTC);
 
   return std::nullopt;
 }
@@ -1977,7 +1977,8 @@ public:
           // Get the best known TC estimate.
           if (auto EstimatedTC = getSmallBestKnownTC(
                   PSE, OuterLoop, /* CanUseConstantMax = */ false))
-            BestTripCount = *EstimatedTC;
+            if (EstimatedTC->isFixed())
+              BestTripCount = EstimatedTC->getFixedValue();
 
           InstructionCost NewMemCheckCost = MemCheckCost / BestTripCount;
 
@@ -3751,12 +3752,12 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
   }
 
   ScalarEvolution *SE = PSE.getSE();
-  unsigned TC = SE->getSmallConstantTripCount(TheLoop);
+  ElementCount TC = SE->getSmallConstantRuntimeTripCount(TheLoop);
   unsigned MaxTC = PSE.getSmallConstantMaxTripCount();
   LLVM_DEBUG(dbgs() << "LV: Found trip count: " << TC << '\n');
-  if (TC != MaxTC)
+  if (TC != ElementCount::getFixed(MaxTC))
     LLVM_DEBUG(dbgs() << "LV: Found maximum trip count: " << MaxTC << '\n');
-  if (TC == 1) {
+  if (TC.isScalar()) {
     reportVectorizationFailure("Single iteration (non) loop",
         "loop trip count is one, irrelevant for vectorization",
         "SingleIterationLoop", ORE, TheLoop);
@@ -3870,7 +3871,9 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
   }
 
   auto ExpectedTC = getSmallBestKnownTC(PSE, TheLoop);
-  if (ExpectedTC && ExpectedTC <= TTI.getMinTripCountTailFoldingThreshold()) {
+  if (ExpectedTC && ExpectedTC->isFixed() &&
+      ExpectedTC->getFixedValue() <=
+          TTI.getMinTripCountTailFoldingThreshold()) {
     if (MaxPowerOf2RuntimeVF > 0u) {
       // If we have a low-trip-count, and the fixed-width VF is known to divide
       // the trip count but the scalable factor does not, use the fixed-width
@@ -3928,7 +3931,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     return FixedScalableVFPair::getNone();
   }
 
-  if (TC == 0) {
+  if (TC.isZero()) {
     reportVectorizationFailure(
         "unable to calculate the loop count due to complex control flow",
         "UnknownLoopCountComplexCFG", ORE, TheLoop);
@@ -5071,13 +5074,13 @@ LoopVectorizationCostModel::selectInterleaveCount(VPlan &Plan, ElementCount VF,
     // At least one iteration must be scalar when this constraint holds. So the
     // maximum available iterations for interleaving is one less.
     unsigned AvailableTC = requiresScalarEpilogue(VF.isVector())
-                               ? (*BestKnownTC) - 1
-                               : *BestKnownTC;
+                               ? BestKnownTC->getFixedValue() - 1
+                               : BestKnownTC->getFixedValue();
 
     unsigned InterleaveCountLB = bit_floor(std::max(
         1u, std::min(AvailableTC / (EstimatedVF * 2), MaxInterleaveCount)));
 
-    if (PSE.getSE()->getSmallConstantTripCount(TheLoop) > 0) {
+    if (PSE.getSE()->getSmallConstantRuntimeTripCount(TheLoop).isNonZero()) {
       // If the best known trip count is exact, we select between two
       // prospective ICs, where
       //
@@ -5437,8 +5440,8 @@ InstructionCost LoopVectorizationCostModel::expectedCost(ElementCount VF) {
   // costs of comparison and induction instructions, as they'll get simplified
   // away.
   SmallPtrSet<Instruction *, 2> ValuesToIgnoreForVF;
-  auto TC = PSE.getSE()->getSmallConstantTripCount(TheLoop);
-  if (VF.isFixed() && TC == VF.getFixedValue() && !foldTailByMasking())
+  auto TC = PSE.getSE()->getSmallConstantRuntimeTripCount(TheLoop);
+  if (TC == VF && !foldTailByMasking())
     addFullyUnrolledInstructionsToIgnore(TheLoop, Legal->getInductionVars(),
                                          ValuesToIgnoreForVF);
 
@@ -7134,8 +7137,8 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
     // simplified away.
     // TODO: Remove this code after stepping away from the legacy cost model and
     // adding code to simplify VPlans before calculating their costs.
-    auto TC = PSE.getSE()->getSmallConstantTripCount(OrigLoop);
-    if (VF.isFixed() && TC == VF.getFixedValue() && !CM.foldTailByMasking())
+    auto TC = PSE.getSE()->getSmallConstantRuntimeTripCount(OrigLoop);
+    if (TC == VF && !CM.foldTailByMasking())
       addFullyUnrolledInstructionsToIgnore(OrigLoop, Legal->getInductionVars(),
                                            CostCtx.SkipCostComputation);
 
@@ -9942,8 +9945,7 @@ static bool isOutsideLoopWorkProfitable(GeneratedRTChecks &Checks,
   // Skip vectorization if the expected trip count is less than the minimum
   // required trip count.
   if (auto ExpectedTC = getSmallBestKnownTC(PSE, L)) {
-    if (ElementCount::isKnownLT(ElementCount::getFixed(*ExpectedTC),
-                                VF.MinProfitableTripCount)) {
+    if (ElementCount::isKnownLT(*ExpectedTC, VF.MinProfitableTripCount)) {
       LLVM_DEBUG(dbgs() << "LV: Vectorization is not beneficial: expected "
                            "trip count < minimum profitable VF ("
                         << *ExpectedTC << " < " << VF.MinProfitableTripCount
@@ -10300,7 +10302,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   // Check the loop for a trip count threshold: vectorize loops with a tiny trip
   // count by optimizing for size, to minimize overheads.
   auto ExpectedTC = getSmallBestKnownTC(PSE, L);
-  if (ExpectedTC && *ExpectedTC < TinyTripCountVectorThreshold) {
+  if (ExpectedTC && ExpectedTC->isFixed() &&
+      ExpectedTC->getFixedValue() < TinyTripCountVectorThreshold) {
     LLVM_DEBUG(dbgs() << "LV: Found a loop with a very small trip count. "
                       << "This loop is worth vectorizing only if no scalar "
                       << "iteration overheads are incurred.");

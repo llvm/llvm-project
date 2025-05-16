@@ -823,6 +823,10 @@ public:
   /// than the backedge taken count for the loop.
   LLVM_ABI unsigned getSmallConstantTripCount(const Loop *L);
 
+  /// A version of getSmallConstantTripCount that returns as an ElementCount to
+  /// include loops whose trip count is a function of llvm.vscale().
+  ElementCount getSmallConstantRuntimeTripCount(const Loop *L);
+
   /// Return the exact trip count for this loop if we exit through ExitingBlock.
   /// '0' is used to represent an unknown or non-constant trip count.  Note
   /// that a trip count is simply one more than the backedge taken count for
