@@ -727,11 +727,11 @@ loop:
 define void @or_all_disjoint(i64 %c1, i64 %c2) {
 ; CHECK-LABEL: @or_all_disjoint(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = or i64 [[C1:%.*]], [[C2:%.*]]
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = or disjoint i64 [[C1:%.*]], [[C2:%.*]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT_REASS:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[INDEX_NEXT_REASS]] = or i64 [[INDEX]], [[INVARIANT_OP]]
+; CHECK-NEXT:    [[INDEX_NEXT_REASS]] = or disjoint i64 [[INDEX]], [[INVARIANT_OP]]
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
 entry:
