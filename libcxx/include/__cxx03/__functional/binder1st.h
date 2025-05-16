@@ -20,7 +20,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Operation>
-class _LIBCPP_TEMPLATE_VIS _LIBCPP_DEPRECATED_IN_CXX11 binder1st
+class _LIBCPP_TEMPLATE_VIS binder1st
     : public __unary_function<typename _Operation::second_argument_type, typename _Operation::result_type> {
 protected:
   _Operation op;
@@ -40,8 +40,7 @@ public:
 };
 
 template <class _Operation, class _Tp>
-_LIBCPP_DEPRECATED_IN_CXX11 inline _LIBCPP_HIDE_FROM_ABI binder1st<_Operation>
-bind1st(const _Operation& __op, const _Tp& __x) {
+inline _LIBCPP_HIDE_FROM_ABI binder1st<_Operation> bind1st(const _Operation& __op, const _Tp& __x) {
   return binder1st<_Operation>(__op, __x);
 }
 

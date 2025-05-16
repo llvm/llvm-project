@@ -1774,6 +1774,29 @@ struct InputFileEntry {
   uint32_t ContentHash[2];
 
   InputFileEntry(FileEntryRef File) : File(File) {}
+
+  void trySetContentHash(
+      Preprocessor &PP,
+      llvm::function_ref<std::optional<llvm::MemoryBufferRef>()> GetMemBuff) {
+    ContentHash[0] = 0;
+    ContentHash[1] = 0;
+
+    if (!PP.getHeaderSearchInfo()
+             .getHeaderSearchOpts()
+             .ValidateASTInputFilesContent)
+      return;
+
+    auto MemBuff = GetMemBuff();
+    if (!MemBuff) {
+      PP.Diag(SourceLocation(), diag::err_module_unable_to_hash_content)
+          << File.getName();
+      return;
+    }
+
+    uint64_t Hash = xxh3_64bits(MemBuff->getBuffer());
+    ContentHash[0] = uint32_t(Hash);
+    ContentHash[1] = uint32_t(Hash >> 32);
+  }
 };
 
 } // namespace
@@ -1848,23 +1871,39 @@ void ASTWriter::WriteInputFiles(SourceManager &SourceMgr) {
                        !IsSLocFileEntryAffecting[IncludeFileID.ID];
     Entry.IsModuleMap = isModuleMap(File.getFileCharacteristic());
 
-    uint64_t ContentHash = 0;
-    if (PP->getHeaderSearchInfo()
-            .getHeaderSearchOpts()
-            .ValidateASTInputFilesContent) {
-      auto MemBuff = Cache->getBufferIfLoaded();
-      if (MemBuff)
-        ContentHash = xxh3_64bits(MemBuff->getBuffer());
-      else
-        PP->Diag(SourceLocation(), diag::err_module_unable_to_hash_content)
-            << Entry.File.getName();
-    }
-    Entry.ContentHash[0] = uint32_t(ContentHash);
-    Entry.ContentHash[1] = uint32_t(ContentHash >> 32);
+    Entry.trySetContentHash(*PP, [&] { return Cache->getBufferIfLoaded(); });
+
     if (Entry.IsSystemFile)
       SystemFiles.push_back(Entry);
     else
       UserFiles.push_back(Entry);
+  }
+
+  // FIXME: Make providing input files not in the SourceManager more flexible.
+  // The SDKSettings.json file is necessary for correct evaluation of
+  // availability annotations.
+  StringRef Sysroot = PP->getHeaderSearchInfo().getHeaderSearchOpts().Sysroot;
+  if (!Sysroot.empty()) {
+    SmallString<128> SDKSettingsJSON = Sysroot;
+    llvm::sys::path::append(SDKSettingsJSON, "SDKSettings.json");
+    FileManager &FM = PP->getFileManager();
+    if (auto FE = FM.getOptionalFileRef(SDKSettingsJSON)) {
+      InputFileEntry Entry(*FE);
+      Entry.IsSystemFile = true;
+      Entry.IsTransient = false;
+      Entry.BufferOverridden = false;
+      Entry.IsTopLevel = true;
+      Entry.IsModuleMap = false;
+      std::unique_ptr<MemoryBuffer> MB;
+      Entry.trySetContentHash(*PP, [&]() -> std::optional<MemoryBufferRef> {
+        if (auto MBOrErr = FM.getBufferForFile(Entry.File)) {
+          MB = std::move(*MBOrErr);
+          return MB->getMemBufferRef();
+        }
+        return std::nullopt;
+      });
+      SystemFiles.push_back(Entry);
+    }
   }
 
   // User files go at the front, system files at the back.

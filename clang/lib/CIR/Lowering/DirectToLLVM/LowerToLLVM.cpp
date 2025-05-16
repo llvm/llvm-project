@@ -54,11 +54,11 @@ namespace direct {
 namespace {
 /// If the given type is a vector type, return the vector's element type.
 /// Otherwise return the given type unchanged.
-// TODO(cir): Return the vector element type once we have support for vectors
-// instead of the identity type.
 mlir::Type elementTypeIfVector(mlir::Type type) {
-  assert(!cir::MissingFeatures::vectorType());
-  return type;
+  return llvm::TypeSwitch<mlir::Type, mlir::Type>(type)
+      .Case<cir::VectorType, mlir::VectorType>(
+          [](auto p) { return p.getElementType(); })
+      .Default([](mlir::Type p) { return p; });
 }
 } // namespace
 

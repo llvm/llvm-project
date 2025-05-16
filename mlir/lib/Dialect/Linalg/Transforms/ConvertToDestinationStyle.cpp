@@ -75,19 +75,19 @@ static void createMemcpy(OpBuilder &b, Location loc, Value tensorSource,
     // TODO: Support custom memory space on source.
     // We do not know the layout map of the source yet, so use a fully dynamic
     // layout for best compatibility.
-    Value toMemref = b.create<bufferization::ToMemrefOp>(
+    Value toBuffer = b.create<bufferization::ToBufferOp>(
         loc, bufferization::getMemRefTypeWithFullyDynamicLayout(tensorType),
         tensorSource, /*readOnly=*/true);
-    b.create<memref::CopyOp>(loc, toMemref, memrefDest);
+    b.create<memref::CopyOp>(loc, toBuffer, memrefDest);
   } break;
   case linalg::BufferizeToAllocationOptions::MemcpyOp::LinalgCopy: {
     // TODO: Support custom memory space on source.
     // We do not know the layout map of the source yet, so use a fully dynamic
     // layout for best compatibility.
-    Value toMemref = b.create<bufferization::ToMemrefOp>(
+    Value toBuffer = b.create<bufferization::ToBufferOp>(
         loc, bufferization::getMemRefTypeWithFullyDynamicLayout(tensorType),
         tensorSource, /*readOnly=*/true);
-    b.create<linalg::CopyOp>(loc, toMemref, memrefDest);
+    b.create<linalg::CopyOp>(loc, toBuffer, memrefDest);
   } break;
   };
 }
