@@ -20,7 +20,7 @@ define void @simple_alloca(i32 %n) nounwind {
 ; LA32-NEXT:    bstrins.w $a0, $zero, 3, 0
 ; LA32-NEXT:    sub.w $a0, $sp, $a0
 ; LA32-NEXT:    move $sp, $a0
-; LA32-NEXT:    bl %plt(notdead)
+; LA32-NEXT:    bl notdead
 ; LA32-NEXT:    addi.w $sp, $fp, -16
 ; LA32-NEXT:    ld.w $fp, $sp, 8 # 4-byte Folded Reload
 ; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
@@ -67,7 +67,7 @@ define void @scoped_alloca(i32 %n) nounwind {
 ; LA32-NEXT:    bstrins.w $a0, $zero, 3, 0
 ; LA32-NEXT:    sub.w $a0, $sp, $a0
 ; LA32-NEXT:    move $sp, $a0
-; LA32-NEXT:    bl %plt(notdead)
+; LA32-NEXT:    bl notdead
 ; LA32-NEXT:    move $sp, $s0
 ; LA32-NEXT:    addi.w $sp, $fp, -16
 ; LA32-NEXT:    ld.w $s0, $sp, 4 # 4-byte Folded Reload
@@ -137,7 +137,7 @@ define void @alloca_callframe(i32 %n) nounwind {
 ; LA32-NEXT:    ori $a6, $zero, 7
 ; LA32-NEXT:    ori $a7, $zero, 8
 ; LA32-NEXT:    st.w $t0, $sp, 0
-; LA32-NEXT:    bl %plt(func)
+; LA32-NEXT:    bl func
 ; LA32-NEXT:    addi.w $sp, $sp, 16
 ; LA32-NEXT:    addi.w $sp, $fp, -16
 ; LA32-NEXT:    ld.w $fp, $sp, 8 # 4-byte Folded Reload

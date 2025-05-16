@@ -242,6 +242,8 @@ public:
                                        unsigned OpIdx1,
                                        unsigned OpIdx2) const override;
 
+  bool simplifyInstruction(MachineInstr &MI) const override;
+
   MachineInstr *convertToThreeAddress(MachineInstr &MI, LiveVariables *LV,
                                       LiveIntervals *LIS) const override;
 
@@ -308,6 +310,8 @@ public:
 
   static bool isLdStSafeToPair(const MachineInstr &LdSt,
                                const TargetRegisterInfo *TRI);
+#define GET_INSTRINFO_HELPER_DECLS
+#include "RISCVGenInstrInfo.inc"
 
   /// Return the result of the evaluation of C0 CC C1, where CC is a
   /// RISCVCC::CondCode.
@@ -333,11 +337,6 @@ private:
 };
 
 namespace RISCV {
-
-// Returns true if this is the sext.w pattern, addiw rd, rs1, 0.
-bool isSEXT_W(const MachineInstr &MI);
-bool isZEXT_W(const MachineInstr &MI);
-bool isZEXT_B(const MachineInstr &MI);
 
 // Returns true if the given MI is an RVV instruction opcode for which we may
 // expect to see a FrameIndex operand.

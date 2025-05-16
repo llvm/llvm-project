@@ -1036,7 +1036,7 @@ public:
       for (Instruction &I : *BB) {
         if (match(&I, m_Intrinsic<Intrinsic::lifetime_end>()))
           LifetimeEnds.push_back(cast<IntrinsicInst>(&I));
-        if (ShapeMap.find(&I) == ShapeMap.end())
+        if (!ShapeMap.contains(&I))
           continue;
         if (match(&I, m_Intrinsic<Intrinsic::matrix_multiply>()))
           MaybeFusableInsts.push_back(cast<CallInst>(&I));
@@ -1354,7 +1354,7 @@ public:
     ToRemove.push_back(Inst);
     Value *Flattened = nullptr;
     for (Use &U : llvm::make_early_inc_range(Inst->uses())) {
-      if (ShapeMap.find(U.getUser()) == ShapeMap.end()) {
+      if (!ShapeMap.contains(U.getUser())) {
         if (!Flattened)
           Flattened = Matrix.embedInVector(Builder);
         U.set(Flattened);
@@ -1401,7 +1401,7 @@ public:
     // the returned cost is < 0, the argument is cheaper to use in the
     // dot-product lowering.
     auto GetCostForArg = [this, &CanBeFlattened](Value *Op, unsigned N) {
-      if (ShapeMap.find(Op) == ShapeMap.end())
+      if (!ShapeMap.contains(Op))
         return InstructionCost::getInvalid();
 
       if (!isa<Instruction>(Op))
@@ -1420,7 +1420,7 @@ public:
         return EmbedCost;
       }
 
-      if (match(Op, m_BinOp()) && ShapeMap.find(Op) != ShapeMap.end()) {
+      if (match(Op, m_BinOp()) && ShapeMap.contains(Op)) {
         InstructionCost OriginalCost =
             TTI.getArithmeticInstrCost(cast<Instruction>(Op)->getOpcode(),
                                        EltTy) *
@@ -1885,11 +1885,11 @@ public:
     FusedInsts.insert(MatMul);
     eraseFromParentAndRemoveFromShapeMap(Store);
     eraseFromParentAndRemoveFromShapeMap(MatMul);
-    if (LoadOp0->hasNUses(0)) {
+    if (LoadOp0->use_empty()) {
       FusedInsts.insert(LoadOp0);
       eraseFromParentAndRemoveFromShapeMap(LoadOp0);
     }
-    if (LoadOp1 != LoadOp0 && LoadOp1->hasNUses(0)) {
+    if (LoadOp1 != LoadOp0 && LoadOp1->use_empty()) {
       FusedInsts.insert(LoadOp1);
       eraseFromParentAndRemoveFromShapeMap(LoadOp1);
     }

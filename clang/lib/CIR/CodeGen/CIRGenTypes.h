@@ -108,6 +108,8 @@ public:
   std::string getRecordTypeName(const clang::RecordDecl *,
                                 llvm::StringRef suffix);
 
+  const CIRGenRecordLayout &getCIRGenRecordLayout(const clang::RecordDecl *rd);
+
   /// Convert type T into an mlir::Type. This differs from convertType in that
   /// it is used to convert to the memory representation for a type. For
   /// example, the scalar representation for bool is i1, but the memory
@@ -118,10 +120,22 @@ public:
   /// Return whether a type can be zero-initialized (in the C++ sense) with an
   /// LLVM zeroinitializer.
   bool isZeroInitializable(clang::QualType ty);
+  bool isZeroInitializable(const RecordDecl *rd);
 
-  const CIRGenFunctionInfo &arrangeFreeFunctionCall(const FunctionType *fnType);
+  const CIRGenFunctionInfo &arrangeFreeFunctionCall(const CallArgList &args,
+                                                    const FunctionType *fnType);
 
-  const CIRGenFunctionInfo &arrangeCIRFunctionInfo(CanQualType returnType);
+  const CIRGenFunctionInfo &
+  arrangeCIRFunctionInfo(CanQualType returnType,
+                         llvm::ArrayRef<CanQualType> argTypes,
+                         RequiredArgs required);
+
+  const CIRGenFunctionInfo &
+  arrangeFreeFunctionType(CanQual<FunctionProtoType> fpt);
+  const CIRGenFunctionInfo &
+  arrangeFreeFunctionType(CanQual<FunctionNoProtoType> fnpt);
+
+  cir::FuncType getFunctionType(const CIRGenFunctionInfo &fi);
 };
 
 } // namespace clang::CIRGen

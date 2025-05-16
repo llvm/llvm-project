@@ -126,6 +126,7 @@ public:
 
   // Expressions.
   bool VisitCastExpr(const CastExpr *E);
+  bool VisitBuiltinBitCastExpr(const BuiltinBitCastExpr *E);
   bool VisitIntegerLiteral(const IntegerLiteral *E);
   bool VisitFloatingLiteral(const FloatingLiteral *E);
   bool VisitImaginaryLiteral(const ImaginaryLiteral *E);
@@ -180,6 +181,7 @@ public:
   bool VisitPredefinedExpr(const PredefinedExpr *E);
   bool VisitCXXThrowExpr(const CXXThrowExpr *E);
   bool VisitCXXReinterpretCastExpr(const CXXReinterpretCastExpr *E);
+  bool VisitCXXDynamicCastExpr(const CXXDynamicCastExpr *E);
   bool VisitCXXNoexceptExpr(const CXXNoexceptExpr *E);
   bool VisitCXXConstructExpr(const CXXConstructExpr *E);
   bool VisitSourceLocExpr(const SourceLocExpr *E);
@@ -301,7 +303,8 @@ protected:
 
   bool visitInitList(ArrayRef<const Expr *> Inits, const Expr *ArrayFiller,
                      const Expr *E);
-  bool visitArrayElemInit(unsigned ElemIndex, const Expr *Init);
+  bool visitArrayElemInit(unsigned ElemIndex, const Expr *Init,
+                          std::optional<PrimType> InitT);
 
   /// Creates a local primitive value.
   unsigned allocateLocalPrimitive(DeclTy &&Decl, PrimType Ty, bool IsConst,

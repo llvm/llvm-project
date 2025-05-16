@@ -147,6 +147,12 @@ public:
   /// @name Semantic analysis
   /// {
 
+  Fortran::semantics::SemanticsContext &createNewSemanticsContext() {
+    semaContext =
+        getInvocation().getSemanticsCtx(*allCookedSources, getTargetMachine());
+    return *semaContext;
+  }
+
   Fortran::semantics::SemanticsContext &getSemanticsContext() {
     return *semaContext;
   }

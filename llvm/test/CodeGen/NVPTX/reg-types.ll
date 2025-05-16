@@ -25,35 +25,35 @@ entry:
   %u64 = alloca i64, align 8
 ; CHECK-DAG: .reg .b64 %rd<
   %f32 = alloca float, align 4
-; CHECK-DAG: .reg .f32 %f<
+; CHECK-DAG: .reg .b32 %f<
   %f64 = alloca double, align 8
-; CHECK-DAG: .reg .f64 %fd<
+; CHECK-DAG: .reg .b64 %fd<
 
 ; Verify that we use correct register types.
   store i8 1, ptr %s8, align 1
 ; CHECK: mov.b16 [[R1:%rs[0-9]]], 1;
-; CHECK-NEXT: st.u8 {{.*}}, [[R1]]
+; CHECK-NEXT: st.b8 {{.*}}, [[R1]]
   store i8 2, ptr %u8, align 1
 ; CHECK: mov.b16 [[R2:%rs[0-9]]], 2;
-; CHECK-NEXT: st.u8 {{.*}}, [[R2]]
+; CHECK-NEXT: st.b8 {{.*}}, [[R2]]
   store i16 3, ptr %s16, align 2
 ; CHECK: mov.b16 [[R3:%rs[0-9]]], 3;
-; CHECK-NEXT: st.u16 {{.*}}, [[R3]]
+; CHECK-NEXT: st.b16 {{.*}}, [[R3]]
   store i16 4, ptr %u16, align 2
 ; CHECK: mov.b16 [[R4:%rs[0-9]]], 4;
-; CHECK-NEXT: st.u16 {{.*}}, [[R4]]
+; CHECK-NEXT: st.b16 {{.*}}, [[R4]]
   store i32 5, ptr %s32, align 4
 ; CHECK: mov.b32 [[R5:%r[0-9]]], 5;
-; CHECK-NEXT: st.u32 {{.*}}, [[R5]]
+; CHECK-NEXT: st.b32 {{.*}}, [[R5]]
   store i32 6, ptr %u32, align 4
 ; CHECK: mov.b32 [[R6:%r[0-9]]], 6;
-; CHECK-NEXT: st.u32 {{.*}}, [[R6]]
+; CHECK-NEXT: st.b32 {{.*}}, [[R6]]
   store i64 7, ptr %s64, align 8
 ; CHECK: mov.b64 [[R7:%rd[0-9]]], 7;
-; CHECK-NEXT: st.u64 {{.*}}, [[R7]]
+; CHECK-NEXT: st.b64 {{.*}}, [[R7]]
   store i64 8, ptr %u64, align 8
 ; CHECK: mov.b64 [[R8:%rd[0-9]]], 8;
-; CHECK-NEXT: st.u64 {{.*}}, [[R8]]
+; CHECK-NEXT: st.b64 {{.*}}, [[R8]]
 
 ; FP constants are stored via integer registers, but that's an
 ; implementation detail that's irrelevant here.
@@ -61,9 +61,9 @@ entry:
   store double 1.000000e+01, ptr %f64, align 8
 ; Instead, we force a load into a register and then verify register type.
   %f32v = load volatile float, ptr %f32, align 4
-; CHECK: ld.volatile.f32         %f{{[0-9]+}}
+; CHECK: ld.volatile.b32         %f{{[0-9]+}}
   %f64v = load volatile double, ptr %f64, align 8
-; CHECK: ld.volatile.f64         %fd{{[0-9]+}}
+; CHECK: ld.volatile.b64         %fd{{[0-9]+}}
   ret void
 ; CHECK: ret;
 ; NO8BIT: ret;

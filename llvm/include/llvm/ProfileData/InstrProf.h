@@ -28,6 +28,7 @@
 #include "llvm/Support/BalancedPartitioning.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/EndianStream.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MD5.h"
@@ -56,6 +57,37 @@ class InstrProfSymtab;
 class Instruction;
 class MDNode;
 class Module;
+
+// A struct to define how the data stream should be patched. For Indexed
+// profiling, only uint64_t data type is needed.
+struct PatchItem {
+  uint64_t Pos;         // Where to patch.
+  ArrayRef<uint64_t> D; // An array of source data.
+};
+
+// A wrapper class to abstract writer stream with support of bytes
+// back patching.
+class ProfOStream {
+public:
+  ProfOStream(raw_fd_ostream &FD);
+  ProfOStream(raw_string_ostream &STR);
+
+  [[nodiscard]] uint64_t tell() const;
+  void write(uint64_t V);
+  void write32(uint32_t V);
+  void writeByte(uint8_t V);
+
+  // \c patch can only be called when all data is written and flushed.
+  // For raw_string_ostream, the patch is done on the target string
+  // directly and it won't be reflected in the stream's internal buffer.
+  void patch(ArrayRef<PatchItem> P);
+
+  // If \c OS is an instance of \c raw_fd_ostream, this field will be
+  // true. Otherwise, \c OS will be an raw_string_ostream.
+  bool IsFDOStream;
+  raw_ostream &OS;
+  support::endian::Writer LE;
+};
 
 enum InstrProfSectKind {
 #define INSTR_PROF_SECT_ENTRY(Kind, SectNameCommon, SectNameCoff, Prefix) Kind,

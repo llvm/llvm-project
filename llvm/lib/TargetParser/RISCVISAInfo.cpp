@@ -45,9 +45,8 @@ struct RISCVProfile {
 
 } // end anonymous namespace
 
-static const char *RISCVGImplications[] = {
-  "i", "m", "a", "f", "d", "zicsr", "zifencei"
-};
+static const char *RISCVGImplications[] = {"i", "m", "a", "f", "d"};
+static const char *RISCVGImplicationsZi[] = {"zicsr", "zifencei"};
 
 #define GET_SUPPORTED_EXTENSIONS
 #include "llvm/TargetParser/RISCVTargetParserDef.inc"
@@ -643,7 +642,6 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
     for (const char *Ext : RISCVGImplications) {
       auto Version = findDefaultVersion(Ext);
       assert(Version && "Default extension version not found?");
-      // Postpone AddExtension until end of this function
       ISAInfo->Exts[std::string(Ext)] = {Version->Major, Version->Minor};
     }
     break;
@@ -716,6 +714,19 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
         return getError("duplicated " + Desc + " '" + Name + "'");
 
     } while (!Ext.empty());
+  }
+
+  // We add Zicsr/Zifenci as final to allow duplicated "zicsr"/"zifencei" like
+  // "rv64g_zicsr_zifencei".
+  if (Baseline == 'g') {
+    for (const char *Ext : RISCVGImplicationsZi) {
+      if (ISAInfo->Exts.count(Ext))
+        continue;
+
+      auto Version = findDefaultVersion(Ext);
+      assert(Version && "Default extension version not found?");
+      ISAInfo->Exts[std::string(Ext)] = {Version->Major, Version->Minor};
+    }
   }
 
   return RISCVISAInfo::postProcessAndChecking(std::move(ISAInfo));
@@ -914,8 +925,9 @@ void RISCVISAInfo::updateImpliedLengths() {
   assert(FLen == 0 && MaxELenFp == 0 && MaxELen == 0 && MinVLen == 0 &&
          "Expected lengths to be initialied to zero");
 
-  // TODO: Handle q extension.
-  if (Exts.count("d"))
+  if (Exts.count("q"))
+    FLen = 128;
+  else if (Exts.count("d"))
     FLen = 64;
   else if (Exts.count("f"))
     FLen = 32;

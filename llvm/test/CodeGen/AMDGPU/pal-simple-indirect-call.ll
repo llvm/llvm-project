@@ -7,9 +7,6 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1010 < %s | FileCheck -check-prefixes=GFX10 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1010 -global-isel < %s | FileCheck -check-prefixes=GFX10 %s
 
-target datalayout = "A5"
-
-
 define amdgpu_cs void @test_simple_indirect_call() {
 ; ATTRIBUTOR_GCN-LABEL: define {{[^@]+}}@test_simple_indirect_call
 ; ATTRIBUTOR_GCN-SAME: () #[[ATTR0:[0-9]+]] {

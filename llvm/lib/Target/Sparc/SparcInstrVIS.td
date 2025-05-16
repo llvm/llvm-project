@@ -295,6 +295,16 @@ def : Pat<(f32 fpnegimm0), (FNEGS (FZEROS))>;
 let Predicates = [HasVIS3] in {
 def : Pat<(i64 (adde i64:$lhs, i64:$rhs)), (ADDXCCC $lhs, $rhs)>;
 
+def : Pat<(i64 (mulhu i64:$lhs, i64:$rhs)), (UMULXHI $lhs, $rhs)>;
+// Signed "MULXHI".
+// Based on the formula presented in OSA2011 §7.140, but with bitops to select
+// the values to be added.
+// TODO: This expansion should probably be moved to DAG legalization phase.
+def : Pat<(i64 (mulhs i64:$lhs, i64:$rhs)),
+      (SUBrr (UMULXHI $lhs, $rhs),
+             (ADDrr (ANDrr (SRAXri $lhs, 63), $rhs),
+                    (ANDrr (SRAXri $rhs, 63), $lhs)))>;
+
 def : Pat<(i64 (ctlz i64:$src)), (LZCNT $src)>;
 def : Pat<(i64 (ctlz_zero_undef i64:$src)), (LZCNT $src)>;
 // 32-bit LZCNT.
@@ -311,4 +321,12 @@ def : Pat<(i64 (sext (i32 (bitconvert f32:$src)))), (MOVSTOSW $src)>;
 def : Pat<(f32 (bitconvert i32:$src)), (MOVWTOS $src)>;
 def : Pat<(i64 (bitconvert f64:$src)), (MOVDTOX $src)>;
 def : Pat<(f64 (bitconvert i64:$src)), (MOVXTOD $src)>;
+
+// OP-then-neg FP operations.
+// TODO handle equivalent patterns like `rs1*-rs2`.
+def : Pat<(f32 (fneg (fadd f32:$rs1, f32:$rs2))), (FNADDS $rs1, $rs2)>;
+def : Pat<(f64 (fneg (fadd f64:$rs1, f64:$rs2))), (FNADDD $rs1, $rs2)>;
+def : Pat<(f32 (fneg (fmul f32:$rs1, f32:$rs2))), (FNMULS $rs1, $rs2)>;
+def : Pat<(f64 (fneg (fmul f64:$rs1, f64:$rs2))), (FNMULD $rs1, $rs2)>;
+def : Pat<(f64 (fneg (fmul (fpextend f32:$rs1), (fpextend f32:$rs2)))), (FNSMULD $rs1, $rs2)>;
 } // Predicates = [HasVIS3]

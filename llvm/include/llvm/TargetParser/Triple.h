@@ -209,6 +209,7 @@ public:
     Linux,
     Lv2, // PS3
     MacOSX,
+    Managarm,
     NetBSD,
     OpenBSD,
     Solaris,
@@ -300,6 +301,7 @@ public:
     Amplification,
     OpenCL,
     OpenHOS,
+    Mlibc,
 
     PAuthTest,
 
@@ -660,9 +662,6 @@ public:
     return getOS() == Triple::Win32;
   }
 
-  /// Tests whether the OS is Windows or UEFI.
-  bool isOSWindowsOrUEFI() const { return isOSWindows() || isUEFI(); }
-
   /// Checks if the environment is MSVC.
   bool isKnownWindowsMSVCEnvironment() const {
     return isOSWindows() && getEnvironment() == Triple::MSVC;
@@ -849,6 +848,8 @@ public:
   }
 
   bool isVulkanOS() const { return getOS() == Triple::Vulkan; }
+
+  bool isOSManagarm() const { return getOS() == Triple::Managarm; }
 
   bool isShaderStageEnvironment() const {
     EnvironmentType Env = getEnvironment();

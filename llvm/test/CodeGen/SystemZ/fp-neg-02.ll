@@ -5,10 +5,9 @@
 ; Test f16.
 define half @f0(half %f) {
 ; CHECK-LABEL: f0:
-; CHECK: brasl %r14, __extendhfsf2@PLT
-; CHECK: lcdfr %f0, %f0
-; CHECK: brasl %r14, __truncsfhf2@PLT
-; CHECK: br %r14
+; CHECK:      # %bb.0:
+; CHECK-NEXT: lcdfr %f0, %f0
+; CHECK-NEXT: br %r14
   %res = fneg half %f
   ret half %res
 }

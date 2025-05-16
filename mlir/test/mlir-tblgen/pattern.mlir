@@ -584,6 +584,16 @@ func.func @testMatchMultiVariadicSubSymbol(%arg0: i32, %arg1: i32, %arg2: i32, %
   return
 }
 
+// CHECK-LABEL: @testMatchMixedVaradicOptional
+func.func @testMatchMixedVaradicOptional(%arg0: i32, %arg1: i32, %arg2: i32, %arg3: i32) -> () {
+  // CHECK: "test.mixed_variadic_in6"(%arg0, %arg1, %arg2) <{attr1 = 2 : i32}> : (i32, i32, i32) -> () 
+  "test.mixed_variadic_optional_in7"(%arg0, %arg1, %arg2) {attr1 = 2 : i32, operandSegmentSizes = array<i32: 2, 1>} : (i32, i32, i32) -> ()
+  // CHECK: test.mixed_variadic_optional_in7
+  "test.mixed_variadic_optional_in7"(%arg0, %arg1) {attr1 = 2 : i32, operandSegmentSizes = array<i32: 2, 0>} : (i32, i32) -> ()
+
+  return
+}
+
 //===----------------------------------------------------------------------===//
 // Test that natives calls are only called once during rewrites.
 //===----------------------------------------------------------------------===//

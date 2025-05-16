@@ -389,7 +389,7 @@ bool SemaARM::CheckImmediateArg(CallExpr *TheCall, unsigned CheckTy,
     if (SemaRef.BuiltinConstantArg(TheCall, ArgIdx, Imm))
       return true;
 
-    if (std::find(Set.begin(), Set.end(), Imm.getSExtValue()) == Set.end())
+    if (!llvm::is_contained(Set, Imm.getSExtValue()))
       return Diag(TheCall->getBeginLoc(), ErrDiag) << Arg->getSourceRange();
     return false;
   };
@@ -766,7 +766,7 @@ bool SemaARM::CheckNeonBuiltinFunctionCall(const TargetInfo &TI,
     if (HasConstPtr)
       EltTy = EltTy.withConst();
     QualType LHSTy = getASTContext().getPointerType(EltTy);
-    Sema::AssignConvertType ConvTy;
+    AssignConvertType ConvTy;
     ConvTy = SemaRef.CheckSingleAssignmentConstraints(LHSTy, RHS);
     if (RHS.isInvalid())
       return true;
@@ -1010,11 +1010,8 @@ bool SemaARM::CheckARMBuiltinFunctionCall(const TargetInfo &TI,
   case ARM::BI__builtin_arm_vcvtr_d:
     return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 1);
   case ARM::BI__builtin_arm_dmb:
-  case ARM::BI__dmb:
   case ARM::BI__builtin_arm_dsb:
-  case ARM::BI__dsb:
   case ARM::BI__builtin_arm_isb:
-  case ARM::BI__isb:
   case ARM::BI__builtin_arm_dbg:
     return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, 15);
   case ARM::BI__builtin_arm_cdp:
@@ -1111,11 +1108,8 @@ bool SemaARM::CheckAArch64BuiltinFunctionCall(const TargetInfo &TI,
   switch (BuiltinID) {
   default: return false;
   case AArch64::BI__builtin_arm_dmb:
-  case AArch64::BI__dmb:
   case AArch64::BI__builtin_arm_dsb:
-  case AArch64::BI__dsb:
   case AArch64::BI__builtin_arm_isb:
-  case AArch64::BI__isb:
     l = 0;
     u = 15;
     break;
@@ -1316,12 +1310,36 @@ void SemaARM::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
     return;
   }
 
-  const TargetInfo &TI = getASTContext().getTargetInfo();
-  if (TI.hasFeature("vfp"))
-    Diag(D->getLocation(), diag::warn_arm_interrupt_vfp_clobber);
+  if (!D->hasAttr<ARMSaveFPAttr>()) {
+    const TargetInfo &TI = getASTContext().getTargetInfo();
+    if (TI.hasFeature("vfp"))
+      Diag(D->getLocation(), diag::warn_arm_interrupt_vfp_clobber);
+  }
 
   D->addAttr(::new (getASTContext())
                  ARMInterruptAttr(getASTContext(), AL, Kind));
+}
+
+void SemaARM::handleInterruptSaveFPAttr(Decl *D, const ParsedAttr &AL) {
+  // Go ahead and add ARMSaveFPAttr because handleInterruptAttr() checks for
+  // it when deciding to issue a diagnostic about clobbering floating point
+  // registers, which ARMSaveFPAttr prevents.
+  D->addAttr(::new (SemaRef.Context) ARMSaveFPAttr(SemaRef.Context, AL));
+  SemaRef.ARM().handleInterruptAttr(D, AL);
+
+  // If ARM().handleInterruptAttr() failed, remove ARMSaveFPAttr.
+  if (!D->hasAttr<ARMInterruptAttr>()) {
+    D->dropAttr<ARMSaveFPAttr>();
+    return;
+  }
+
+  // If VFP not enabled, remove ARMSaveFPAttr but leave ARMInterruptAttr.
+  bool VFP = SemaRef.Context.getTargetInfo().hasFeature("vfp");
+
+  if (!VFP) {
+    SemaRef.Diag(D->getLocation(), diag::warn_arm_interrupt_save_fp_without_vfp_unit);
+    D->dropAttr<ARMSaveFPAttr>();
+  }
 }
 
 // Check if the function definition uses any AArch64 SME features without

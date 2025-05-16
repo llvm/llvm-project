@@ -32,6 +32,7 @@ static_library("Sema") {
     "//clang/lib/Edit",
     "//clang/lib/Lex",
     "//clang/lib/Support",
+    "//llvm/lib/Frontend/OpenACC",
     "//llvm/lib/Frontend/OpenMP",
     "//llvm/lib/MC",
     "//llvm/lib/Support",

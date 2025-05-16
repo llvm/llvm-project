@@ -2102,8 +2102,7 @@ bool AMDGPUCodeGenPrepareImpl::visitPHINode(PHINode &I) {
   for (VectorSlice &S : Slices) {
     const auto ValName = "largephi.insertslice" + std::to_string(NameSuffix++);
     if (S.NumElts > 1)
-      Vec =
-          B.CreateInsertVector(FVT, Vec, S.NewPHI, B.getInt64(S.Idx), ValName);
+      Vec = B.CreateInsertVector(FVT, Vec, S.NewPHI, S.Idx, ValName);
     else
       Vec = B.CreateInsertElement(Vec, S.NewPHI, S.Idx, ValName);
   }
@@ -2123,11 +2122,16 @@ static bool isPtrKnownNeverNull(const Value *V, const DataLayout &DL,
   // Pointer cannot be null if it's a block address, GV or alloca.
   // NOTE: We don't support extern_weak, but if we did, we'd need to check for
   // it as the symbol could be null in such cases.
-  if (isa<BlockAddress>(V) || isa<GlobalValue>(V) || isa<AllocaInst>(V))
+  if (isa<BlockAddress, GlobalValue, AllocaInst>(V))
     return true;
 
   // Check nonnull arguments.
   if (const auto *Arg = dyn_cast<Argument>(V); Arg && Arg->hasNonNullAttr())
+    return true;
+
+  // Check nonnull loads.
+  if (const auto *Load = dyn_cast<LoadInst>(V);
+      Load && Load->hasMetadata(LLVMContext::MD_nonnull))
     return true;
 
   // getUnderlyingObject may have looked through another addrspacecast, although

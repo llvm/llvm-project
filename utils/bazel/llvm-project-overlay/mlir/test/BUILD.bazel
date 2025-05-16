@@ -124,7 +124,6 @@ td_library(
         "//mlir:LinalgStructuredOpsTdFiles",
         "//mlir:MemorySlotInterfacesTdFiles",
         "//mlir:OpBaseTdFiles",
-        "//mlir:PolynomialTdFiles",
         "//mlir:PtrTdFiles",
         "//mlir:SideEffectInterfacesTdFiles",
     ],
@@ -370,7 +369,6 @@ cc_library(
         "//mlir:LoopLikeInterface",
         "//mlir:MemorySlotInterfaces",
         "//mlir:Pass",
-        "//mlir:PolynomialDialect",
         "//mlir:PtrDialect",
         "//mlir:Reducer",
         "//mlir:SideEffectInterfaces",
@@ -698,6 +696,8 @@ cc_library(
     deps = [
         "//llvm:NVPTXCodeGen",
         "//llvm:Support",
+        "//mlir:AMDGPUDialect",
+        "//mlir:AMDGPUUtils",
         "//mlir:AffineDialect",
         "//mlir:AffineToStandard",
         "//mlir:ArithDialect",
@@ -721,6 +721,7 @@ cc_library(
         "//mlir:NVVMToLLVM",
         "//mlir:NVVMToLLVMIRTranslation",
         "//mlir:Pass",
+        "//mlir:ROCDLDialect",
         "//mlir:ROCDLToLLVMIRTranslation",
         "//mlir:ReconcileUnrealizedCasts",
         "//mlir:SCFDialect",
@@ -1084,6 +1085,7 @@ cc_library(
         "//mlir:NVGPUDialect",
         "//mlir:Pass",
         "//mlir:SCFDialect",
+        "//mlir:SCFTransforms",
         "//mlir:Support",
         "//mlir:TensorDialect",
         "//mlir:TransformUtils",
@@ -1154,5 +1156,21 @@ cc_library(
         "//mlir:Support",
         "//mlir:TransformUtils",
         "//mlir:Transforms",
+    ],
+)
+
+cc_library(
+    name = "TestXeGPU",
+    srcs = glob(["lib/Dialect/XeGPU/*.cpp"]),
+    includes = ["lib/Dialect/Test"],
+    deps = [
+        "//mlir:GPUDialect",
+        "//mlir:IR",
+        "//mlir:MemRefDialect",
+        "//mlir:Pass",
+        "//mlir:TransformUtils",
+        "//mlir:VectorTransforms",
+        "//mlir:XeGPUDialect",
+        "//mlir:XeGPUTransforms",
     ],
 )

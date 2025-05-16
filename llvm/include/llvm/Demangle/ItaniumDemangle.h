@@ -614,8 +614,6 @@ class ObjCProtoName : public Node {
   const Node *Ty;
   std::string_view Protocol;
 
-  friend class PointerType;
-
 public:
   ObjCProtoName(const Node *Ty_, std::string_view Protocol_)
       : Node(KObjCProtoName), Ty(Ty_), Protocol(Protocol_) {}
@@ -626,6 +624,8 @@ public:
     return Ty->getKind() == KNameType &&
            static_cast<const NameType *>(Ty)->getName() == "objc_object";
   }
+
+  std::string_view getProtocol() const { return Protocol; }
 
   void printLeft(OutputBuffer &OB) const override {
     Ty->print(OB);
@@ -664,7 +664,7 @@ public:
     } else {
       const auto *objcProto = static_cast<const ObjCProtoName *>(Pointee);
       OB += "id<";
-      OB += objcProto->Protocol;
+      OB += objcProto->getProtocol();
       OB += ">";
     }
   }
@@ -3421,7 +3421,7 @@ const typename AbstractManglingParser<
     {"or", OperatorInfo::Binary, false, Node::Prec::Ior, "operator|"},
     {"pL", OperatorInfo::Binary, false, Node::Prec::Assign, "operator+="},
     {"pl", OperatorInfo::Binary, false, Node::Prec::Additive, "operator+"},
-    {"pm", OperatorInfo::Member, /*Named*/ false, Node::Prec::PtrMem,
+    {"pm", OperatorInfo::Member, /*Named*/ true, Node::Prec::PtrMem,
      "operator->*"},
     {"pp", OperatorInfo::Postfix, false, Node::Prec::Postfix, "operator++"},
     {"ps", OperatorInfo::Prefix, false, Node::Prec::Unary, "operator+"},

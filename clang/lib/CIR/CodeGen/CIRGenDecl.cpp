@@ -90,8 +90,13 @@ void CIRGenFunction::emitAutoVarInit(
   // If this local has an initializer, emit it now.
   const Expr *init = d.getInit();
 
-  if (!type.isPODType(getContext())) {
-    cgm.errorNYI(d.getSourceRange(), "emitAutoVarInit: non-POD type");
+  // Initialize the variable here if it doesn't have a initializer and it is a
+  // C struct that is non-trivial to initialize or an array containing such a
+  // struct.
+  if (!init && type.isNonTrivialToPrimitiveDefaultInitialize() ==
+                   QualType::PDIK_Struct) {
+    cgm.errorNYI(d.getSourceRange(),
+                 "emitAutoVarInit: non-trivial to default initialize");
     return;
   }
 
@@ -240,7 +245,10 @@ void CIRGenFunction::emitExprAsInit(const Expr *init, const ValueDecl *d,
   QualType type = d->getType();
 
   if (type->isReferenceType()) {
-    cgm.errorNYI(init->getSourceRange(), "emitExprAsInit: reference type");
+    RValue rvalue = emitReferenceBindingToExpr(init);
+    if (capturedByInit)
+      cgm.errorNYI(init->getSourceRange(), "emitExprAsInit: captured by init");
+    emitStoreThroughLValue(rvalue, lvalue);
     return;
   }
   switch (CIRGenFunction::getEvaluationKind(type)) {
@@ -260,7 +268,88 @@ void CIRGenFunction::emitExprAsInit(const Expr *init, const ValueDecl *d,
 
 void CIRGenFunction::emitDecl(const Decl &d) {
   switch (d.getKind()) {
+  case Decl::BuiltinTemplate:
+  case Decl::TranslationUnit:
+  case Decl::ExternCContext:
+  case Decl::Namespace:
+  case Decl::UnresolvedUsingTypename:
+  case Decl::ClassTemplateSpecialization:
+  case Decl::ClassTemplatePartialSpecialization:
+  case Decl::VarTemplateSpecialization:
+  case Decl::VarTemplatePartialSpecialization:
+  case Decl::TemplateTypeParm:
+  case Decl::UnresolvedUsingValue:
+  case Decl::NonTypeTemplateParm:
+  case Decl::CXXDeductionGuide:
+  case Decl::CXXMethod:
+  case Decl::CXXConstructor:
+  case Decl::CXXDestructor:
+  case Decl::CXXConversion:
+  case Decl::Field:
+  case Decl::MSProperty:
+  case Decl::IndirectField:
+  case Decl::ObjCIvar:
+  case Decl::ObjCAtDefsField:
+  case Decl::ParmVar:
+  case Decl::ImplicitParam:
+  case Decl::ClassTemplate:
+  case Decl::VarTemplate:
+  case Decl::FunctionTemplate:
+  case Decl::TypeAliasTemplate:
+  case Decl::TemplateTemplateParm:
+  case Decl::ObjCMethod:
+  case Decl::ObjCCategory:
+  case Decl::ObjCProtocol:
+  case Decl::ObjCInterface:
+  case Decl::ObjCCategoryImpl:
+  case Decl::ObjCImplementation:
+  case Decl::ObjCProperty:
+  case Decl::ObjCCompatibleAlias:
+  case Decl::PragmaComment:
+  case Decl::PragmaDetectMismatch:
+  case Decl::AccessSpec:
+  case Decl::LinkageSpec:
+  case Decl::Export:
+  case Decl::ObjCPropertyImpl:
+  case Decl::FileScopeAsm:
+  case Decl::Friend:
+  case Decl::FriendTemplate:
+  case Decl::Block:
+  case Decl::OutlinedFunction:
+  case Decl::Captured:
+  case Decl::UsingShadow:
+  case Decl::ConstructorUsingShadow:
+  case Decl::ObjCTypeParam:
+  case Decl::Binding:
+  case Decl::UnresolvedUsingIfExists:
+    llvm_unreachable("Declaration should not be in declstmts!");
+
+  case Decl::Function:     // void X();
+  case Decl::EnumConstant: // enum ? { X = ? }
+  case Decl::StaticAssert: // static_assert(X, ""); [C++0x]
+  case Decl::Label:        // __label__ x;
+  case Decl::Import:
+  case Decl::MSGuid: // __declspec(uuid("..."))
+  case Decl::TemplateParamObject:
+  case Decl::OMPThreadPrivate:
+  case Decl::OMPAllocate:
+  case Decl::OMPCapturedExpr:
+  case Decl::OMPRequires:
+  case Decl::Empty:
+  case Decl::Concept:
+  case Decl::LifetimeExtendedTemporary:
+  case Decl::RequiresExprBody:
+  case Decl::UnnamedGlobalConstant:
+    // None of these decls require codegen support.
+    return;
+
+  case Decl::Enum:   // enum X;
   case Decl::Record: // struct/union/class X;
+  case Decl::CXXRecord: // struct/union/class X; [C++]
+  case Decl::NamespaceAlias:
+  case Decl::Using:          // using X; [C++]
+  case Decl::UsingEnum:      // using enum X; [C++]
+  case Decl::UsingDirective: // using namespace X; [C++]
     assert(!cir::MissingFeatures::generateDebugInfo());
     return;
   case Decl::Var: {
@@ -284,7 +373,13 @@ void CIRGenFunction::emitDecl(const Decl &d) {
       cgm.errorNYI(d.getSourceRange(), "emitDecl: variably modified type");
     return;
   }
-  default:
+  case Decl::ImplicitConceptSpecialization:
+  case Decl::HLSLBuffer:
+  case Decl::TopLevelStmt:
+  case Decl::UsingPack:
+  case Decl::Decomposition: // This could be moved to join Decl::Var
+  case Decl::OMPDeclareReduction:
+  case Decl::OMPDeclareMapper:
     cgm.errorNYI(d.getSourceRange(),
                  std::string("emitDecl: unhandled decl type: ") +
                      d.getDeclKindName());

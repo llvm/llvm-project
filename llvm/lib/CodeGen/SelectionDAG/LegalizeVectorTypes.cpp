@@ -61,6 +61,7 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::AssertZext:
   case ISD::AssertSext:
   case ISD::FPOWI:
+  case ISD::AssertNoFPClass:
     R = ScalarizeVecRes_UnaryOpWithExtraInput(N);
     break;
   case ISD::INSERT_VECTOR_ELT: R = ScalarizeVecRes_INSERT_VECTOR_ELT(N); break;
@@ -1276,6 +1277,7 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::UINT_TO_FP:
   case ISD::VP_UINT_TO_FP:
   case ISD::FCANONICALIZE:
+  case ISD::AssertNoFPClass:
     SplitVecRes_UnaryOp(N, Lo, Hi);
     break;
   case ISD::ADDRSPACECAST:
@@ -2614,7 +2616,7 @@ void DAGTypeLegalizer::SplitVecRes_UnaryOp(SDNode *N, SDValue &Lo,
   const SDNodeFlags Flags = N->getFlags();
   unsigned Opcode = N->getOpcode();
   if (N->getNumOperands() <= 2) {
-    if (Opcode == ISD::FP_ROUND) {
+    if (Opcode == ISD::FP_ROUND || Opcode == ISD::AssertNoFPClass) {
       Lo = DAG.getNode(Opcode, dl, LoVT, Lo, N->getOperand(1), Flags);
       Hi = DAG.getNode(Opcode, dl, HiVT, Hi, N->getOperand(1), Flags);
     } else {
@@ -3220,8 +3222,30 @@ void DAGTypeLegalizer::SplitVecRes_VP_REVERSE(SDNode *N, SDValue &Lo,
 void DAGTypeLegalizer::SplitVecRes_PARTIAL_REDUCE_MLA(SDNode *N, SDValue &Lo,
                                                       SDValue &Hi) {
   SDLoc DL(N);
-  SDValue Expanded = TLI.expandPartialReduceMLA(N, DAG);
-  std::tie(Lo, Hi) = DAG.SplitVector(Expanded, DL);
+  SDValue Acc = N->getOperand(0);
+  SDValue Input1 = N->getOperand(1);
+  SDValue Input2 = N->getOperand(2);
+
+  SDValue AccLo, AccHi;
+  std::tie(AccLo, AccHi) = DAG.SplitVector(Acc, DL);
+  unsigned Opcode = N->getOpcode();
+
+  // If the input types don't need splitting, just accumulate into the
+  // low part of the accumulator.
+  if (getTypeAction(Input1.getValueType()) != TargetLowering::TypeSplitVector) {
+    Lo = DAG.getNode(Opcode, DL, AccLo.getValueType(), AccLo, Input1, Input2);
+    Hi = AccHi;
+    return;
+  }
+
+  SDValue Input1Lo, Input1Hi;
+  SDValue Input2Lo, Input2Hi;
+  std::tie(Input1Lo, Input1Hi) = DAG.SplitVector(Input1, DL);
+  std::tie(Input2Lo, Input2Hi) = DAG.SplitVector(Input2, DL);
+  EVT ResultVT = AccLo.getValueType();
+
+  Lo = DAG.getNode(Opcode, DL, ResultVT, AccLo, Input1Lo, Input2Lo);
+  Hi = DAG.getNode(Opcode, DL, ResultVT, AccHi, Input1Hi, Input2Hi);
 }
 
 void DAGTypeLegalizer::SplitVecRes_VECTOR_DEINTERLEAVE(SDNode *N) {
@@ -4319,11 +4343,8 @@ SDValue DAGTypeLegalizer::SplitVecOp_VSETCC(SDNode *N) {
   GetSplitVector(N->getOperand(isStrict ? 1 : 0), Lo0, Hi0);
   GetSplitVector(N->getOperand(isStrict ? 2 : 1), Lo1, Hi1);
 
-  auto PartEltCnt = Lo0.getValueType().getVectorElementCount();
-
-  LLVMContext &Context = *DAG.getContext();
-  EVT PartResVT = EVT::getVectorVT(Context, MVT::i1, PartEltCnt);
-  EVT WideResVT = EVT::getVectorVT(Context, MVT::i1, PartEltCnt*2);
+  EVT VT = N->getValueType(0);
+  EVT PartResVT = Lo0.getValueType().changeElementType(VT.getScalarType());
 
   if (Opc == ISD::SETCC) {
     LoRes = DAG.getNode(ISD::SETCC, DL, PartResVT, Lo0, Lo1, N->getOperand(2));
@@ -4347,12 +4368,8 @@ SDValue DAGTypeLegalizer::SplitVecOp_VSETCC(SDNode *N) {
     HiRes = DAG.getNode(ISD::VP_SETCC, DL, PartResVT, Hi0, Hi1,
                         N->getOperand(2), MaskHi, EVLHi);
   }
-  SDValue Con = DAG.getNode(ISD::CONCAT_VECTORS, DL, WideResVT, LoRes, HiRes);
 
-  EVT OpVT = N->getOperand(0).getValueType();
-  ISD::NodeType ExtendCode =
-      TargetLowering::getExtendForContent(TLI.getBooleanContents(OpVT));
-  return DAG.getNode(ExtendCode, DL, N->getValueType(0), Con);
+  return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, LoRes, HiRes);
 }
 
 
@@ -4501,7 +4518,20 @@ SDValue DAGTypeLegalizer::SplitVecOp_VECTOR_HISTOGRAM(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::SplitVecOp_PARTIAL_REDUCE_MLA(SDNode *N) {
-  return TLI.expandPartialReduceMLA(N, DAG);
+  SDValue Acc = N->getOperand(0);
+  assert(getTypeAction(Acc.getValueType()) != TargetLowering::TypeSplitVector &&
+         "Accumulator should already be a legal type, and shouldn't need "
+         "further splitting");
+
+  SDLoc DL(N);
+  SDValue Input1Lo, Input1Hi, Input2Lo, Input2Hi;
+  std::tie(Input1Lo, Input1Hi) = DAG.SplitVector(N->getOperand(1), DL);
+  std::tie(Input2Lo, Input2Hi) = DAG.SplitVector(N->getOperand(2), DL);
+  unsigned Opcode = N->getOpcode();
+  EVT ResultVT = Acc.getValueType();
+
+  SDValue Lo = DAG.getNode(Opcode, DL, ResultVT, Acc, Input1Lo, Input2Lo);
+  return DAG.getNode(Opcode, DL, ResultVT, Lo, Input1Hi, Input2Hi);
 }
 
 //===----------------------------------------------------------------------===//
@@ -4844,6 +4874,7 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::FREEZE:
   case ISD::ARITH_FENCE:
   case ISD::FCANONICALIZE:
+  case ISD::AssertNoFPClass:
     Res = WidenVecRes_Unary(N);
     break;
   case ISD::FMA: case ISD::VP_FMA:
@@ -5588,6 +5619,9 @@ SDValue DAGTypeLegalizer::WidenVecRes_Unary(SDNode *N) {
   SDValue InOp = GetWidenedVector(N->getOperand(0));
   if (N->getNumOperands() == 1)
     return DAG.getNode(N->getOpcode(), SDLoc(N), WidenVT, InOp, N->getFlags());
+  if (N->getOpcode() == ISD::AssertNoFPClass)
+    return DAG.getNode(N->getOpcode(), SDLoc(N), WidenVT, InOp,
+                       N->getOperand(1), N->getFlags());
 
   assert(N->getNumOperands() == 3 && "Unexpected number of operands!");
   assert(N->isVPOpcode() && "Expected VP opcode");

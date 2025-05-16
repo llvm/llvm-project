@@ -108,6 +108,7 @@ The NVPTX back-end uses the following address space mapping:
    3             Shared
    4             Constant
    5             Local
+   7             Shared Cluster
    ============= ======================
 
 Every global variable and pointer type is assigned to one of these address
@@ -298,6 +299,32 @@ Overview:
 
 The '``llvm.nvvm.isspacep.*``' intrinsics determine whether the provided generic
 pointer references memory which falls within a particular address space.
+
+Semantics:
+""""""""""
+
+If the given pointer in the generic address space refers to memory which falls
+within the state space of the intrinsic (and therefore could be safely address
+space casted to this space), 1 is returned, otherwise 0 is returned.
+
+'``llvm.nvvm.mapa.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare ptr @llvm.nvvm.mapa(ptr %p, i32 %rank)
+    declare ptr addrspace(7) @llvm.nvvm.mapa.shared.cluster(ptr addrspace(3) %p, i32 %rank)
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.mapa.*``' intrinsics map a shared memory pointer ``p`` of another CTA with ``%rank`` to the current CTA.
+The ``llvm.nvvm.mapa`` form expects a generic pointer to shared memory and returns a generic pointer to shared cluster memory.
+The ``llvm.nvvm.mapa.shared.cluster`` form expects a pointer to shared memory and returns a pointer to shared cluster memory.
+They corresponds directly to the ``mapa`` and ``mapa.shared.cluster`` PTX instructions.
 
 Semantics:
 """"""""""
@@ -541,6 +568,62 @@ to left-shift the found bit into the most-significant bit position, otherwise
 the result is the shift amount needed to right-shift the found bit into the
 least-significant bit position. 0xffffffff is returned if no 1 bit is found.
 
+'``llvm.nvvm.{zext,sext}.{wrap,clamp}``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare i32 @llvm.nvvm.zext.wrap(i32 %a, i32 %b)
+    declare i32 @llvm.nvvm.zext.clamp(i32 %a, i32 %b)
+    declare i32 @llvm.nvvm.sext.wrap(i32 %a, i32 %b)
+    declare i32 @llvm.nvvm.sext.clamp(i32 %a, i32 %b)
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.{zext,sext}.{wrap,clamp}``' family of intrinsics extracts the
+low bits of the input value, and zero- or sign-extends them back to the original
+width.
+
+Semantics:
+""""""""""
+
+The '``llvm.nvvm.{zext,sext}.{wrap,clamp}``' family of intrinsics returns
+extension of N lowest bits of operand %a. For the '``wrap``' variants, N is the
+value of operand %b modulo 32. For the '``clamp``' variants, N is the value of
+operand %b clamped to the range [0, 32]. The N lowest bits are then
+zero-extended the case of the '``zext``' variants, or sign-extended the case of
+the '``sext``' variants. If N is 0, the result is 0.
+
+'``llvm.nvvm.bmsk.{wrap,clamp}``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare i32 @llvm.nvvm.bmsk.wrap(i32 %a, i32 %b)
+    declare i32 @llvm.nvvm.bmsk.clamp(i32 %a, i32 %b)
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.bmsk.{wrap,clamp}``' family of intrinsics creates a bit mask
+given a starting bit position and a bit width.
+
+Semantics:
+""""""""""
+
+The '``llvm.nvvm.bmsk.{wrap,clamp}``' family of intrinsics returns a value with
+all bits set to 0 except for %b bits starting at bit position %a. For the
+'``wrap``' variants, the values of %a and %b modulo 32 are used. For the
+'``clamp``' variants, the values of %a and %b are clamped to the range [0, 32],
+which in practice is equivalent to using them as is.
+
 TMA family of Intrinsics
 ------------------------
 
@@ -552,7 +635,7 @@ Syntax:
 
 .. code-block:: llvm
 
-  declare void @llvm.nvvm.cp.async.bulk.global.to.shared.cluster(ptr addrspace(3) %dst, ptr addrspace(3) %mbar, ptr addrspace(1) %src, i32 %size, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch)
+  declare void @llvm.nvvm.cp.async.bulk.global.to.shared.cluster(ptr addrspace(7) %dst, ptr addrspace(3) %mbar, ptr addrspace(1) %src, i32 %size, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch)
 
 Overview:
 """""""""
@@ -589,6 +672,7 @@ Syntax:
 .. code-block:: llvm
 
   declare void @llvm.nvvm.cp.async.bulk.shared.cta.to.global(ptr addrspace(1) %dst, ptr addrspace(3) %src, i32 %size, i64 %ch, i1 %flag_ch)
+  declare void @llvm.nvvm.cp.async.bulk.shared.cta.to.global.bytemask(..., i32 %size, i64 %ch, i1 %flag_ch, i16 %mask)
 
 Overview:
 """""""""
@@ -597,10 +681,13 @@ The '``@llvm.nvvm.cp.async.bulk.shared.cta.to.global``' intrinsic
 corresponds to the ``cp.async.bulk.global.shared::cta.*`` set of PTX
 instructions. These instructions initiate an asynchronous copy from
 shared::cta to global memory. The 32-bit operand ``%size`` specifies
-the amount of memory to be copied and it must be a multiple of 16.
+the amount of memory to be copied (in bytes) and it must be a multiple
+of 16. For the ``.bytemask`` variant, the 16-bit wide mask operand
+specifies whether the i-th byte of each 16-byte wide chunk of source
+data is copied to the destination.
 
-* The last argument to these intrinsics is a boolean flag
-  indicating support for cache_hint. This flag argument must
+* The ``i1 %flag_ch`` argument to these intrinsics is a boolean
+  flag indicating support for cache_hint. This flag argument must
   be a compile-time constant. When set, it indicates a valid
   cache_hint (``i64 %ch``) and generates the ``.L2::cache_hint``
   variant of the PTX instruction.
@@ -616,7 +703,7 @@ Syntax:
 
 .. code-block:: llvm
 
-  declare void @llvm.nvvm.cp.async.bulk.shared.cta.to.cluster(ptr addrspace(3) %dst, ptr addrspace(3) %mbar, ptr addrspace(3) %src, i32 %size)
+  declare void @llvm.nvvm.cp.async.bulk.shared.cta.to.cluster(ptr addrspace(7) %dst, ptr addrspace(3) %mbar, ptr addrspace(3) %src, i32 %size)
 
 Overview:
 """""""""
@@ -771,7 +858,7 @@ Syntax:
 
 .. code-block:: llvm
 
-  declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.1d(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %d0, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.1d(ptr addrspace(7) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %d0, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch)
   declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.2d(..., i32 %d0, i32 %d1, ...)
   declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.3d(..., i32 %d0, i32 %d1, i32 %d2, ...)
   declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)

@@ -1460,8 +1460,8 @@ func.func @mod_of_mod(%lb: index, %ub: index, %step: index) -> (index, index) {
 func.func @prefetch_canonicalize(%arg0: memref<512xf32>) -> () {
   // CHECK: affine.for [[I_0_:%.+]] = 0 to 8 {
   affine.for %arg3 = 0 to 8  {
-    %1 = affine.apply affine_map<()[s0] -> (s0 * 64)>()[%arg3]
-    // CHECK: affine.prefetch [[PARAM_0_]][symbol([[I_0_]]) * 64], read, locality<3>, data : memref<512xf32>
+    %1 = affine.apply affine_map<(d0) -> (d0 * 64)>(%arg3)
+    // CHECK: affine.prefetch [[PARAM_0_]][[[I_0_]] * 64], read, locality<3>, data : memref<512xf32>
     affine.prefetch %arg0[%1], read, locality<3>, data : memref<512xf32>
   }
   return

@@ -88,6 +88,7 @@ def Linalg_IndexOp : Linalg_Op<"index", [Pure]>,
 
   let assemblyFormat = [{ $dim attr-dict `:` type($result) }];
   let hasVerifier = 1;
+  let hasFolder = 1;
 }
 
 def Linalg_SoftmaxOp : Linalg_Op<"softmax",

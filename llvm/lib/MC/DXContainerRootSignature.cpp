@@ -37,6 +37,15 @@ size_t RootSignatureDesc::getSize() const {
     case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit):
       Size += sizeof(dxbc::RootConstants);
       break;
+    case llvm::to_underlying(dxbc::RootParameterType::CBV):
+    case llvm::to_underlying(dxbc::RootParameterType::SRV):
+    case llvm::to_underlying(dxbc::RootParameterType::UAV):
+      if (Version == 1)
+        Size += sizeof(dxbc::RTS0::v1::RootDescriptor);
+      else
+        Size += sizeof(dxbc::RTS0::v2::RootDescriptor);
+
+      break;
     }
   }
   return Size;
@@ -80,6 +89,16 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
       support::endian::write(BOS, P.Constants.Num32BitValues,
                              llvm::endianness::little);
       break;
+    case llvm::to_underlying(dxbc::RootParameterType::CBV):
+    case llvm::to_underlying(dxbc::RootParameterType::SRV):
+    case llvm::to_underlying(dxbc::RootParameterType::UAV):
+      support::endian::write(BOS, P.Descriptor.ShaderRegister,
+                             llvm::endianness::little);
+      support::endian::write(BOS, P.Descriptor.RegisterSpace,
+                             llvm::endianness::little);
+      if (Version > 1)
+        support::endian::write(BOS, P.Descriptor.Flags,
+                               llvm::endianness::little);
     }
   }
   assert(Storage.size() == getSize());
