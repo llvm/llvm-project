@@ -3,6 +3,8 @@
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx942 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX9X,GFX942 %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx950 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX9X,GFX950 %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx950 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX9X,GFX950 %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1170 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX1170 %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1170 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX1170 %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX12 %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX12 %s
 
@@ -28,6 +30,12 @@ define float @test_cvt_f32_bf8_byte0(i32 %a) {
 ; GFX950-NEXT:    v_cvt_f32_bf8_e32 v0, v0
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;
+; GFX1170-LABEL: test_cvt_f32_bf8_byte0:
+; GFX1170:       ; %bb.0:
+; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1170-NEXT:    v_cvt_f32_bf8_e32 v0, v0
+; GFX1170-NEXT:    s_setpc_b64 s[30:31]
+;
 ; GFX12-LABEL: test_cvt_f32_bf8_byte0:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -47,6 +55,12 @@ define float @test_cvt_f32_bf8_byte1(i32 %a) {
 ; GFX9X-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9X-NEXT:    v_cvt_f32_bf8_sdwa v0, v0 src0_sel:BYTE_1
 ; GFX9X-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1170-LABEL: test_cvt_f32_bf8_byte1:
+; GFX1170:       ; %bb.0:
+; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1170-NEXT:    v_cvt_f32_bf8_e64 v0, v0 byte_sel:1
+; GFX1170-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: test_cvt_f32_bf8_byte1:
 ; GFX12:       ; %bb.0:
@@ -68,6 +82,12 @@ define float @test_cvt_f32_bf8_byte2(i32 %a) {
 ; GFX9X-NEXT:    v_cvt_f32_bf8_sdwa v0, v0 src0_sel:BYTE_2
 ; GFX9X-NEXT:    s_setpc_b64 s[30:31]
 ;
+; GFX1170-LABEL: test_cvt_f32_bf8_byte2:
+; GFX1170:       ; %bb.0:
+; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1170-NEXT:    v_cvt_f32_bf8_e64 v0, v0 byte_sel:2
+; GFX1170-NEXT:    s_setpc_b64 s[30:31]
+;
 ; GFX12-LABEL: test_cvt_f32_bf8_byte2:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -87,6 +107,12 @@ define float @test_cvt_f32_bf8_byte3(i32 %a) {
 ; GFX9X-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9X-NEXT:    v_cvt_f32_bf8_sdwa v0, v0 src0_sel:BYTE_3
 ; GFX9X-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1170-LABEL: test_cvt_f32_bf8_byte3:
+; GFX1170:       ; %bb.0:
+; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1170-NEXT:    v_cvt_f32_bf8_e64 v0, v0 byte_sel:3
+; GFX1170-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: test_cvt_f32_bf8_byte3:
 ; GFX12:       ; %bb.0:
@@ -114,6 +140,12 @@ define float @test_cvt_f32_fp8_byte0(i32 %a) {
 ; GFX950-NEXT:    v_cvt_f32_fp8_e32 v0, v0
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;
+; GFX1170-LABEL: test_cvt_f32_fp8_byte0:
+; GFX1170:       ; %bb.0:
+; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1170-NEXT:    v_cvt_f32_fp8_e32 v0, v0
+; GFX1170-NEXT:    s_setpc_b64 s[30:31]
+;
 ; GFX12-LABEL: test_cvt_f32_fp8_byte0:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -133,6 +165,12 @@ define float @test_cvt_f32_fp8_byte1(i32 %a) {
 ; GFX9X-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9X-NEXT:    v_cvt_f32_fp8_sdwa v0, v0 src0_sel:BYTE_1
 ; GFX9X-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1170-LABEL: test_cvt_f32_fp8_byte1:
+; GFX1170:       ; %bb.0:
+; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1170-NEXT:    v_cvt_f32_fp8_e64 v0, v0 byte_sel:1
+; GFX1170-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: test_cvt_f32_fp8_byte1:
 ; GFX12:       ; %bb.0:
@@ -154,6 +192,12 @@ define float @test_cvt_f32_fp8_byte2(i32 %a) {
 ; GFX9X-NEXT:    v_cvt_f32_fp8_sdwa v0, v0 src0_sel:BYTE_2
 ; GFX9X-NEXT:    s_setpc_b64 s[30:31]
 ;
+; GFX1170-LABEL: test_cvt_f32_fp8_byte2:
+; GFX1170:       ; %bb.0:
+; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1170-NEXT:    v_cvt_f32_fp8_e64 v0, v0 byte_sel:2
+; GFX1170-NEXT:    s_setpc_b64 s[30:31]
+;
 ; GFX12-LABEL: test_cvt_f32_fp8_byte2:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -173,6 +217,12 @@ define float @test_cvt_f32_fp8_byte3(i32 %a) {
 ; GFX9X-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9X-NEXT:    v_cvt_f32_fp8_sdwa v0, v0 src0_sel:BYTE_3
 ; GFX9X-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1170-LABEL: test_cvt_f32_fp8_byte3:
+; GFX1170:       ; %bb.0:
+; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1170-NEXT:    v_cvt_f32_fp8_e64 v0, v0 byte_sel:3
+; GFX1170-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: test_cvt_f32_fp8_byte3:
 ; GFX12:       ; %bb.0:
@@ -194,6 +244,12 @@ define <2 x float> @test_cvt_pk_f32_bf8_word0(i32 %a) {
 ; GFX9X-NEXT:    v_cvt_pk_f32_bf8_e32 v[0:1], v0
 ; GFX9X-NEXT:    s_setpc_b64 s[30:31]
 ;
+; GFX1170-LABEL: test_cvt_pk_f32_bf8_word0:
+; GFX1170:       ; %bb.0:
+; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1170-NEXT:    v_cvt_pk_f32_bf8_e32 v[0:1], v0
+; GFX1170-NEXT:    s_setpc_b64 s[30:31]
+;
 ; GFX12-LABEL: test_cvt_pk_f32_bf8_word0:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -213,6 +269,12 @@ define <2 x float> @test_cvt_pk_f32_bf8_word1(i32 %a) {
 ; GFX9X-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9X-NEXT:    v_cvt_pk_f32_bf8_sdwa v[0:1], v0 src0_sel:WORD_1
 ; GFX9X-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1170-LABEL: test_cvt_pk_f32_bf8_word1:
+; GFX1170:       ; %bb.0:
+; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1170-NEXT:    v_cvt_pk_f32_bf8_e64 v[0:1], v0 op_sel:[1,0]
+; GFX1170-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: test_cvt_pk_f32_bf8_word1:
 ; GFX12:       ; %bb.0:
@@ -234,6 +296,12 @@ define <2 x float> @test_cvt_pk_f32_fp8_word0(i32 %a) {
 ; GFX9X-NEXT:    v_cvt_pk_f32_fp8_e32 v[0:1], v0
 ; GFX9X-NEXT:    s_setpc_b64 s[30:31]
 ;
+; GFX1170-LABEL: test_cvt_pk_f32_fp8_word0:
+; GFX1170:       ; %bb.0:
+; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1170-NEXT:    v_cvt_pk_f32_fp8_e32 v[0:1], v0
+; GFX1170-NEXT:    s_setpc_b64 s[30:31]
+;
 ; GFX12-LABEL: test_cvt_pk_f32_fp8_word0:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -253,6 +321,12 @@ define <2 x float> @test_cvt_pk_f32_fp8_word1(i32 %a) {
 ; GFX9X-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9X-NEXT:    v_cvt_pk_f32_fp8_sdwa v[0:1], v0 src0_sel:WORD_1
 ; GFX9X-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1170-LABEL: test_cvt_pk_f32_fp8_word1:
+; GFX1170:       ; %bb.0:
+; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1170-NEXT:    v_cvt_pk_f32_fp8_e64 v[0:1], v0 op_sel:[1,0]
+; GFX1170-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: test_cvt_pk_f32_fp8_word1:
 ; GFX12:       ; %bb.0:
@@ -274,6 +348,14 @@ define i32 @test_cvt_pk_bf8_f32_word0(float %x, float %y, i32 %old) {
 ; GFX9X-NEXT:    v_cvt_pk_bf8_f32 v2, v0, v1
 ; GFX9X-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX9X-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1170-LABEL: test_cvt_pk_bf8_f32_word0:
+; GFX1170:       ; %bb.0:
+; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1170-NEXT:    v_cvt_pk_bf8_f32 v2, v0, v1
+; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1170-NEXT:    v_mov_b32_e32 v0, v2
+; GFX1170-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: test_cvt_pk_bf8_f32_word0:
 ; GFX12:       ; %bb.0:
@@ -299,6 +381,14 @@ define i32 @test_cvt_pk_bf8_f32_word1(float %x, float %y, i32 %old) {
 ; GFX9X-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX9X-NEXT:    s_setpc_b64 s[30:31]
 ;
+; GFX1170-LABEL: test_cvt_pk_bf8_f32_word1:
+; GFX1170:       ; %bb.0:
+; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1170-NEXT:    v_cvt_pk_bf8_f32 v2, v0, v1 op_sel:[0,0,1]
+; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1170-NEXT:    v_mov_b32_e32 v0, v2
+; GFX1170-NEXT:    s_setpc_b64 s[30:31]
+;
 ; GFX12-LABEL: test_cvt_pk_bf8_f32_word1:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -321,6 +411,14 @@ define i32 @test_cvt_pk_fp8_f32_word0(float %x, float %y, i32 %old) {
 ; GFX9X-NEXT:    v_cvt_pk_fp8_f32 v2, v0, v1
 ; GFX9X-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX9X-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1170-LABEL: test_cvt_pk_fp8_f32_word0:
+; GFX1170:       ; %bb.0:
+; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1170-NEXT:    v_cvt_pk_fp8_f32 v2, v0, v1
+; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1170-NEXT:    v_mov_b32_e32 v0, v2
+; GFX1170-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: test_cvt_pk_fp8_f32_word0:
 ; GFX12:       ; %bb.0:
@@ -346,6 +444,14 @@ define i32 @test_cvt_pk_fp8_f32_word1(float %x, float %y, i32 %old) {
 ; GFX9X-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX9X-NEXT:    s_setpc_b64 s[30:31]
 ;
+; GFX1170-LABEL: test_cvt_pk_fp8_f32_word1:
+; GFX1170:       ; %bb.0:
+; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1170-NEXT:    v_cvt_pk_fp8_f32 v2, v0, v1 op_sel:[0,0,1]
+; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1170-NEXT:    v_mov_b32_e32 v0, v2
+; GFX1170-NEXT:    s_setpc_b64 s[30:31]
+;
 ; GFX12-LABEL: test_cvt_pk_fp8_f32_word1:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -368,6 +474,14 @@ define i32 @test_cvt_sr_bf8_f32_byte0(float %x, i32 %r, i32 %old) {
 ; GFX9X-NEXT:    v_cvt_sr_bf8_f32 v2, v0, v1
 ; GFX9X-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX9X-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1170-LABEL: test_cvt_sr_bf8_f32_byte0:
+; GFX1170:       ; %bb.0:
+; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1170-NEXT:    v_cvt_sr_bf8_f32 v2, v0, v1
+; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1170-NEXT:    v_mov_b32_e32 v0, v2
+; GFX1170-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: test_cvt_sr_bf8_f32_byte0:
 ; GFX12:       ; %bb.0:
@@ -393,6 +507,14 @@ define i32 @test_cvt_sr_bf8_f32_byte1(float %x, i32 %r, i32 %old) {
 ; GFX9X-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX9X-NEXT:    s_setpc_b64 s[30:31]
 ;
+; GFX1170-LABEL: test_cvt_sr_bf8_f32_byte1:
+; GFX1170:       ; %bb.0:
+; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1170-NEXT:    v_cvt_sr_bf8_f32 v2, v0, v1 byte_sel:1
+; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1170-NEXT:    v_mov_b32_e32 v0, v2
+; GFX1170-NEXT:    s_setpc_b64 s[30:31]
+;
 ; GFX12-LABEL: test_cvt_sr_bf8_f32_byte1:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -416,6 +538,14 @@ define i32 @test_cvt_sr_bf8_f32_byte2(float %x, i32 %r, i32 %old) {
 ; GFX9X-NEXT:    s_nop 0
 ; GFX9X-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX9X-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1170-LABEL: test_cvt_sr_bf8_f32_byte2:
+; GFX1170:       ; %bb.0:
+; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1170-NEXT:    v_cvt_sr_bf8_f32 v2, v0, v1 byte_sel:2
+; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1170-NEXT:    v_mov_b32_e32 v0, v2
+; GFX1170-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: test_cvt_sr_bf8_f32_byte2:
 ; GFX12:       ; %bb.0:
@@ -441,6 +571,14 @@ define i32 @test_cvt_sr_bf8_f32_byte3(float %x, i32 %r, i32 %old) {
 ; GFX9X-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX9X-NEXT:    s_setpc_b64 s[30:31]
 ;
+; GFX1170-LABEL: test_cvt_sr_bf8_f32_byte3:
+; GFX1170:       ; %bb.0:
+; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1170-NEXT:    v_cvt_sr_bf8_f32 v2, v0, v1 byte_sel:3
+; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1170-NEXT:    v_mov_b32_e32 v0, v2
+; GFX1170-NEXT:    s_setpc_b64 s[30:31]
+;
 ; GFX12-LABEL: test_cvt_sr_bf8_f32_byte3:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -463,6 +601,14 @@ define i32 @test_cvt_sr_fp8_f32_byte0(float %x, i32 %r, i32 %old) {
 ; GFX9X-NEXT:    v_cvt_sr_fp8_f32 v2, v0, v1
 ; GFX9X-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX9X-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1170-LABEL: test_cvt_sr_fp8_f32_byte0:
+; GFX1170:       ; %bb.0:
+; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1170-NEXT:    v_cvt_sr_fp8_f32 v2, v0, v1
+; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1170-NEXT:    v_mov_b32_e32 v0, v2
+; GFX1170-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: test_cvt_sr_fp8_f32_byte0:
 ; GFX12:       ; %bb.0:
@@ -488,6 +634,14 @@ define i32 @test_cvt_sr_fp8_f32_byte1(float %x, i32 %r, i32 %old) {
 ; GFX9X-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX9X-NEXT:    s_setpc_b64 s[30:31]
 ;
+; GFX1170-LABEL: test_cvt_sr_fp8_f32_byte1:
+; GFX1170:       ; %bb.0:
+; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1170-NEXT:    v_cvt_sr_fp8_f32 v2, v0, v1 byte_sel:1
+; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1170-NEXT:    v_mov_b32_e32 v0, v2
+; GFX1170-NEXT:    s_setpc_b64 s[30:31]
+;
 ; GFX12-LABEL: test_cvt_sr_fp8_f32_byte1:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -511,6 +665,14 @@ define i32 @test_cvt_sr_fp8_f32_byte2(float %x, i32 %r, i32 %old) {
 ; GFX9X-NEXT:    s_nop 0
 ; GFX9X-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX9X-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1170-LABEL: test_cvt_sr_fp8_f32_byte2:
+; GFX1170:       ; %bb.0:
+; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1170-NEXT:    v_cvt_sr_fp8_f32 v2, v0, v1 byte_sel:2
+; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1170-NEXT:    v_mov_b32_e32 v0, v2
+; GFX1170-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: test_cvt_sr_fp8_f32_byte2:
 ; GFX12:       ; %bb.0:
@@ -536,6 +698,14 @@ define i32 @test_cvt_sr_fp8_f32_byte3(float %x, i32 %r, i32 %old) {
 ; GFX9X-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX9X-NEXT:    s_setpc_b64 s[30:31]
 ;
+; GFX1170-LABEL: test_cvt_sr_fp8_f32_byte3:
+; GFX1170:       ; %bb.0:
+; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1170-NEXT:    v_cvt_sr_fp8_f32 v2, v0, v1 byte_sel:3
+; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1170-NEXT:    v_mov_b32_e32 v0, v2
+; GFX1170-NEXT:    s_setpc_b64 s[30:31]
+;
 ; GFX12-LABEL: test_cvt_sr_fp8_f32_byte3:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -558,6 +728,14 @@ define float @test_sext_cvt_f32_fp8(i16 %a) {
 ; GFX9X-NEXT:    v_bfe_i32 v0, v0, 0, 16
 ; GFX9X-NEXT:    v_cvt_f32_fp8_sdwa v0, v0 src0_sel:BYTE_1
 ; GFX9X-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1170-LABEL: test_sext_cvt_f32_fp8:
+; GFX1170:       ; %bb.0:
+; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1170-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1170-NEXT:    v_cvt_f32_fp8_e64 v0, v0 byte_sel:1
+; GFX1170-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: test_sext_cvt_f32_fp8:
 ; GFX12:       ; %bb.0:
@@ -583,6 +761,14 @@ define float @test_sext_cvt_f32_bf8(i16 %a) {
 ; GFX9X-NEXT:    v_cvt_f32_bf8_sdwa v0, v0 src0_sel:BYTE_1
 ; GFX9X-NEXT:    s_setpc_b64 s[30:31]
 ;
+; GFX1170-LABEL: test_sext_cvt_f32_bf8:
+; GFX1170:       ; %bb.0:
+; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1170-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1170-NEXT:    v_cvt_f32_bf8_e64 v0, v0 byte_sel:1
+; GFX1170-NEXT:    s_setpc_b64 s[30:31]
+;
 ; GFX12-LABEL: test_sext_cvt_f32_bf8:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -607,6 +793,14 @@ define <2 x float> @test_sext_cvt_pk_f32_bf8_word1(i16 %a) {
 ; GFX9X-NEXT:    v_cvt_pk_f32_bf8_sdwa v[0:1], v0 src0_sel:WORD_1
 ; GFX9X-NEXT:    s_setpc_b64 s[30:31]
 ;
+; GFX1170-LABEL: test_sext_cvt_pk_f32_bf8_word1:
+; GFX1170:       ; %bb.0:
+; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1170-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1170-NEXT:    v_cvt_pk_f32_bf8_e64 v[0:1], v0 op_sel:[1,0]
+; GFX1170-NEXT:    s_setpc_b64 s[30:31]
+;
 ; GFX12-LABEL: test_sext_cvt_pk_f32_bf8_word1:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -630,6 +824,14 @@ define <2 x float> @test_sext_cvt_pk_f32_fp8_word0(i16 %a) {
 ; GFX9X-NEXT:    v_bfe_i32 v0, v0, 0, 16
 ; GFX9X-NEXT:    v_cvt_pk_f32_fp8_e32 v[0:1], v0
 ; GFX9X-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1170-LABEL: test_sext_cvt_pk_f32_fp8_word0:
+; GFX1170:       ; %bb.0:
+; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1170-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1170-NEXT:    v_cvt_pk_f32_fp8_e32 v[0:1], v0
+; GFX1170-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: test_sext_cvt_pk_f32_fp8_word0:
 ; GFX12:       ; %bb.0:
