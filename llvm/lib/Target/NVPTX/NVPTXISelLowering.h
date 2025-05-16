@@ -84,10 +84,12 @@ enum NodeType : unsigned {
   FIRST_MEMORY_OPCODE,
   LoadV2 = FIRST_MEMORY_OPCODE,
   LoadV4,
+  LoadV8,
   LDUV2, // LDU.v2
   LDUV4, // LDU.v4
   StoreV2,
   StoreV4,
+  StoreV8,
   LoadParam,
   LoadParamV2,
   LoadParamV4,

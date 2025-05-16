@@ -50,7 +50,7 @@ LogicalResult bufferizeOp(Operation *op, const BufferizationOptions &options,
 /// Bufferize the signature of `block` and its callers (i.e., ops that have the
 /// given block as a successor). All block argument types are changed to memref
 /// types. All corresponding operands of all callers  are wrapped in
-/// bufferization.to_memref ops. All uses of bufferized tensor block arguments
+/// bufferization.to_buffer ops. All uses of bufferized tensor block arguments
 /// are wrapped in bufferization.to_tensor ops.
 ///
 /// It is expected that all callers implement the `BranchOpInterface`.

@@ -39,6 +39,7 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/Threading.h"
@@ -167,8 +168,6 @@ struct DAP {
   lldb::SBTarget target;
   Variables variables;
   lldb::SBBroadcaster broadcaster;
-  std::thread event_thread;
-  std::thread progress_event_thread;
   llvm::StringMap<SourceBreakpointMap> source_breakpoints;
   FunctionBreakpointMap function_breakpoints;
   InstructionBreakpointMap instruction_breakpoints;
@@ -188,8 +187,7 @@ struct DAP {
   // shutting down the entire adapter. When we're restarting, we keep the id of
   // the old process here so we can detect this case and keep running.
   lldb::pid_t restarting_process_id;
-  bool configuration_done_sent;
-  llvm::StringMap<std::unique_ptr<BaseRequestHandler>> request_handlers;
+  bool configuration_done;
   bool waiting_for_run_in_terminal;
   ProgressEventReporter progress_event_reporter;
   // Keep track of the last stop thread index IDs as threads won't go away
@@ -214,6 +212,13 @@ struct DAP {
   /// The initial thread list upon attaching.
   std::optional<llvm::json::Array> initial_thread_list;
 
+  /// Keep track of all the modules our client knows about: either through the
+  /// modules request or the module events.
+  /// @{
+  std::mutex modules_mutex;
+  llvm::StringSet<> modules;
+  /// @}
+
   /// Creates a new DAP sessions.
   ///
   /// \param[in] log
@@ -221,7 +226,8 @@ struct DAP {
   /// \param[in] default_repl_mode
   ///     Default repl mode behavior, as configured by the binary.
   /// \param[in] pre_init_commands
-  ///     LLDB commands to execute as soon as the debugger instance is allocaed.
+  ///     LLDB commands to execute as soon as the debugger instance is
+  ///     allocated.
   /// \param[in] transport
   ///     Transport for this debug session.
   DAP(Log *log, const ReplMode default_repl_mode,
@@ -251,6 +257,8 @@ struct DAP {
   /// Configures the debug adapter for launching/attaching.
   void SetConfiguration(const protocol::Configuration &confing, bool is_attach);
 
+  void SetConfigurationDone();
+
   /// Configure source maps based on the current `DAPConfiguration`.
   void ConfigureSourceMaps();
 
@@ -275,9 +283,10 @@ struct DAP {
   lldb::SBThread GetLLDBThread(lldb::tid_t id);
   lldb::SBThread GetLLDBThread(const llvm::json::Object &arguments);
 
+  lldb::SBFrame GetLLDBFrame(uint64_t frame_id);
+  /// TODO: remove this function when we finish migrating to the
+  /// new protocol types.
   lldb::SBFrame GetLLDBFrame(const llvm::json::Object &arguments);
-
-  llvm::json::Value CreateTopLevelScopes();
 
   void PopulateExceptionBreakpoints();
 
@@ -368,11 +377,6 @@ struct DAP {
     });
   }
 
-  /// Registers a request handler.
-  template <typename Handler> void RegisterRequest() {
-    request_handlers[Handler::GetCommand()] = std::make_unique<Handler>(*this);
-  }
-
   /// The set of capablities supported by this adapter.
   protocol::Capabilities GetCapabilities();
 
@@ -416,9 +420,32 @@ struct DAP {
 
   lldb::SBMutex GetAPIMutex() const { return target.GetAPIMutex(); }
 
+  void StartEventThread();
+  void StartProgressEventThread();
+
 private:
-  std::mutex m_queue_mutex;
+  /// Registration of request handler.
+  /// @{
+  void RegisterRequests();
+  template <typename Handler> void RegisterRequest() {
+    request_handlers[Handler::GetCommand()] = std::make_unique<Handler>(*this);
+  }
+  llvm::StringMap<std::unique_ptr<BaseRequestHandler>> request_handlers;
+  /// @}
+
+  /// Event threads.
+  /// @{
+  void EventThread();
+  void ProgressEventThread();
+
+  std::thread event_thread;
+  std::thread progress_event_thread;
+  /// @}
+
+  /// Queue for all incoming messages.
   std::deque<protocol::Message> m_queue;
+  std::deque<protocol::Message> m_pending_queue;
+  std::mutex m_queue_mutex;
   std::condition_variable m_queue_cv;
 
   std::mutex m_cancelled_requests_mutex;

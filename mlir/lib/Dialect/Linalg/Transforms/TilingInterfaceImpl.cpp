@@ -511,7 +511,7 @@ struct LinalgOpPartialReductionInterface
       for (auto [resultNum, dimExpr] :
            llvm::enumerate(partialMap.getResults())) {
         unsigned dim = cast<AffineDimExpr>(dimExpr).getPosition();
-        if (llvm::find(reductionDims, dim) != reductionDims.end()) {
+        if (llvm::is_contained(reductionDims, dim)) {
           partialReductionDims.push_back(resultNum);
         }
       }
@@ -553,7 +553,7 @@ struct LinalgOpPartialReductionInterface
       unsigned dim = cast<AffineDimExpr>(dimExpr).getPosition();
       resultSizes.push_back(sizes[dim]);
 
-      if (llvm::find(reductionDims, dim) != reductionDims.end()) {
+      if (llvm::is_contained(reductionDims, dim)) {
         // Reduction dims are reduced, and are always outputed in the same
         // place. So use offset 0 for them.
         resultOffsets.push_back(b.getIndexAttr(0));

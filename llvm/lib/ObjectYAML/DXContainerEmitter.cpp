@@ -274,19 +274,33 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
       RS.StaticSamplersOffset = P.RootSignature->StaticSamplersOffset;
 
       for (const auto &Param : P.RootSignature->Parameters) {
-        mcdxbc::RootParameter NewParam;
-        NewParam.Header = dxbc::RootParameterHeader{
-            Param.Type, Param.Visibility, Param.Offset};
+        dxbc::RootParameterHeader Header{Param.Type, Param.Visibility,
+                                         Param.Offset};
 
         switch (Param.Type) {
         case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit):
-          NewParam.Constants.Num32BitValues = Param.Constants.Num32BitValues;
-          NewParam.Constants.RegisterSpace = Param.Constants.RegisterSpace;
-          NewParam.Constants.ShaderRegister = Param.Constants.ShaderRegister;
+          dxbc::RootConstants Constants;
+          Constants.Num32BitValues = Param.Constants.Num32BitValues;
+          Constants.RegisterSpace = Param.Constants.RegisterSpace;
+          Constants.ShaderRegister = Param.Constants.ShaderRegister;
+          RS.ParametersContainer.addParameter(Header, Constants);
           break;
+        case llvm::to_underlying(dxbc::RootParameterType::SRV):
+        case llvm::to_underlying(dxbc::RootParameterType::UAV):
+        case llvm::to_underlying(dxbc::RootParameterType::CBV):
+          dxbc::RTS0::v2::RootDescriptor Descriptor;
+          Descriptor.RegisterSpace = Param.Descriptor.RegisterSpace;
+          Descriptor.ShaderRegister = Param.Descriptor.ShaderRegister;
+          if (RS.Version > 1)
+            Descriptor.Flags = Param.Descriptor.getEncodedFlags();
+          RS.ParametersContainer.addParameter(Header, Descriptor);
+          break;
+        default:
+          // Handling invalid parameter type edge case. We intentionally let
+          // obj2yaml/yaml2obj parse and emit invalid dxcontainer data, in order
+          // for that to be used as a testing tool more effectively.
+          RS.ParametersContainer.addInvalidParameter(Header);
         }
-
-        RS.Parameters.push_back(NewParam);
       }
 
       RS.write(OS);

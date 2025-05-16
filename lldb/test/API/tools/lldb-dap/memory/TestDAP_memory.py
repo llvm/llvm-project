@@ -10,9 +10,9 @@ from lldbsuite.test import lldbutil
 import lldbdap_testcase
 import os
 
-# DAP tests are flakey, see https://github.com/llvm/llvm-project/issues/137660.
-@skip
+
 class TestDAP_memory(lldbdap_testcase.DAPTestCaseBase):
+    @skipIfWindows
     def test_memory_refs_variables(self):
         """
         Tests memory references for evaluate
@@ -34,6 +34,7 @@ class TestDAP_memory(lldbdap_testcase.DAPTestCaseBase):
         # Non-pointers should also have memory-references
         self.assertIn("memoryReference", locals["not_a_ptr"].keys())
 
+    @skipIfWindows
     def test_memory_refs_evaluate(self):
         """
         Tests memory references for evaluate
@@ -53,6 +54,7 @@ class TestDAP_memory(lldbdap_testcase.DAPTestCaseBase):
             self.dap_server.request_evaluate("rawptr")["body"].keys(),
         )
 
+    @skipIfWindows
     def test_memory_refs_set_variable(self):
         """
         Tests memory references for `setVariable`
@@ -75,6 +77,7 @@ class TestDAP_memory(lldbdap_testcase.DAPTestCaseBase):
             ].keys(),
         )
 
+    @skipIfWindows
     def test_readMemory(self):
         """
         Tests the 'readMemory' request

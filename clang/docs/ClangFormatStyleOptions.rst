@@ -6127,6 +6127,16 @@ the configuration (without a prefix: ``Auto``).
      true:                                  false:
      ! someExpression();            vs.     !someExpression();
 
+.. _SpaceAfterOperatorKeyword:
+
+**SpaceAfterOperatorKeyword** (``Boolean``) :versionbadge:`clang-format 21` :ref:`¶ <SpaceAfterOperatorKeyword>`
+  If ``true``, a space will be inserted after the ``operator`` keyword.
+
+  .. code-block:: c++
+
+     true:                                false:
+     bool operator ==(int a);     vs.     bool operator==(int a);
+
 .. _SpaceAfterTemplateKeyword:
 
 **SpaceAfterTemplateKeyword** (``Boolean``) :versionbadge:`clang-format 4` :ref:`¶ <SpaceAfterTemplateKeyword>`

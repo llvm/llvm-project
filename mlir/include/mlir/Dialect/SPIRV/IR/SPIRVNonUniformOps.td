@@ -1404,8 +1404,8 @@ def SPIRV_GroupNonUniformRotateKHROp : SPIRV_Op<"GroupNonUniformRotateKHR", [
 
     ```mlir
     %four = spirv.Constant 4 : i32
-    %0 = spirv.GroupNonUniformRotateKHR <Subgroup>, %value, %delta : f32, i32 -> f32
-    %1 = spirv.GroupNonUniformRotateKHR <Workgroup>, %value, %delta,
+    %0 = spirv.GroupNonUniformRotateKHR <Subgroup> %value, %delta : f32, i32 -> f32
+    %1 = spirv.GroupNonUniformRotateKHR <Workgroup> %value, %delta,
          clustersize(%four) : f32, i32, i32 -> f32
     ```
   }];
@@ -1429,7 +1429,7 @@ def SPIRV_GroupNonUniformRotateKHROp : SPIRV_Op<"GroupNonUniformRotateKHR", [
   );
 
   let assemblyFormat = [{
-    $execution_scope `,` $value `,` $delta (`,` `cluster_size` `(` $cluster_size^ `)`)? attr-dict `:` type($value) `,` type($delta) (`,` type($cluster_size)^)? `->` type(results)
+    $execution_scope $value `,` $delta (`,` `cluster_size` `(` $cluster_size^ `)`)? attr-dict `:` type($value) `,` type($delta) (`,` type($cluster_size)^)? `->` type(results)
   }];
 }
 

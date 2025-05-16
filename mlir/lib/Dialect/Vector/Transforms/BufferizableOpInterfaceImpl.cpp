@@ -52,7 +52,7 @@ struct TransferReadOpInterface
     auto readOp = cast<vector::TransferReadOp>(op);
     assert(isa<TensorType>(readOp.getShapedType()) &&
            "only tensor types expected");
-    FailureOr<Value> buffer = getBuffer(rewriter, readOp.getSource(), options);
+    FailureOr<Value> buffer = getBuffer(rewriter, readOp.getBase(), options);
     if (failed(buffer))
       return failure();
     replaceOpWithNewBufferizedOp<vector::TransferReadOp>(
@@ -110,7 +110,7 @@ struct TransferWriteOpInterface
 
     // Create a new transfer_write on buffer that doesn't have a return value.
     FailureOr<Value> resultBuffer =
-        getBuffer(rewriter, writeOp.getSource(), options);
+        getBuffer(rewriter, writeOp.getBase(), options);
     if (failed(resultBuffer))
       return failure();
     rewriter.create<vector::TransferWriteOp>(

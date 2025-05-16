@@ -43,113 +43,17 @@
 #include <optional>
 using namespace clang;
 
-/// Simple precedence-based parser for binary/ternary operators.
-///
-/// Note: we diverge from the C99 grammar when parsing the assignment-expression
-/// production.  C99 specifies that the LHS of an assignment operator should be
-/// parsed as a unary-expression, but consistency dictates that it be a
-/// conditional-expession.  In practice, the important thing here is that the
-/// LHS of an assignment has to be an l-value, which productions between
-/// unary-expression and conditional-expression don't produce.  Because we want
-/// consistency, we parse the LHS as a conditional-expression, then check for
-/// l-value-ness in semantic analysis stages.
-///
-/// \verbatim
-///       pm-expression: [C++ 5.5]
-///         cast-expression
-///         pm-expression '.*' cast-expression
-///         pm-expression '->*' cast-expression
-///
-///       multiplicative-expression: [C99 6.5.5]
-///     Note: in C++, apply pm-expression instead of cast-expression
-///         cast-expression
-///         multiplicative-expression '*' cast-expression
-///         multiplicative-expression '/' cast-expression
-///         multiplicative-expression '%' cast-expression
-///
-///       additive-expression: [C99 6.5.6]
-///         multiplicative-expression
-///         additive-expression '+' multiplicative-expression
-///         additive-expression '-' multiplicative-expression
-///
-///       shift-expression: [C99 6.5.7]
-///         additive-expression
-///         shift-expression '<<' additive-expression
-///         shift-expression '>>' additive-expression
-///
-///       compare-expression: [C++20 expr.spaceship]
-///         shift-expression
-///         compare-expression '<=>' shift-expression
-///
-///       relational-expression: [C99 6.5.8]
-///         compare-expression
-///         relational-expression '<' compare-expression
-///         relational-expression '>' compare-expression
-///         relational-expression '<=' compare-expression
-///         relational-expression '>=' compare-expression
-///
-///       equality-expression: [C99 6.5.9]
-///         relational-expression
-///         equality-expression '==' relational-expression
-///         equality-expression '!=' relational-expression
-///
-///       AND-expression: [C99 6.5.10]
-///         equality-expression
-///         AND-expression '&' equality-expression
-///
-///       exclusive-OR-expression: [C99 6.5.11]
-///         AND-expression
-///         exclusive-OR-expression '^' AND-expression
-///
-///       inclusive-OR-expression: [C99 6.5.12]
-///         exclusive-OR-expression
-///         inclusive-OR-expression '|' exclusive-OR-expression
-///
-///       logical-AND-expression: [C99 6.5.13]
-///         inclusive-OR-expression
-///         logical-AND-expression '&&' inclusive-OR-expression
-///
-///       logical-OR-expression: [C99 6.5.14]
-///         logical-AND-expression
-///         logical-OR-expression '||' logical-AND-expression
-///
-///       conditional-expression: [C99 6.5.15]
-///         logical-OR-expression
-///         logical-OR-expression '?' expression ':' conditional-expression
-/// [GNU]   logical-OR-expression '?' ':' conditional-expression
-/// [C++] the third operand is an assignment-expression
-///
-///       assignment-expression: [C99 6.5.16]
-///         conditional-expression
-///         unary-expression assignment-operator assignment-expression
-/// [C++]   throw-expression [C++ 15]
-///
-///       assignment-operator: one of
-///         = *= /= %= += -= <<= >>= &= ^= |=
-///
-///       expression: [C99 6.5.17]
-///         assignment-expression ...[opt]
-///         expression ',' assignment-expression ...[opt]
-/// \endverbatim
 ExprResult Parser::ParseExpression(TypeCastState isTypeCast) {
   ExprResult LHS(ParseAssignmentExpression(isTypeCast));
   return ParseRHSOfBinaryExpression(LHS, prec::Comma);
 }
 
-/// This routine is called when the '@' is seen and consumed.
-/// Current token is an Identifier and is not a 'try'. This
-/// routine is necessary to disambiguate \@try-statement from,
-/// for example, \@encode-expression.
-///
 ExprResult
 Parser::ParseExpressionWithLeadingAt(SourceLocation AtLoc) {
   ExprResult LHS(ParseObjCAtExpression(AtLoc));
   return ParseRHSOfBinaryExpression(LHS, prec::Comma);
 }
 
-/// This routine is called when a leading '__extension__' is seen and
-/// consumed.  This is necessary because the token gets consumed in the
-/// process of disambiguating between an expression and a declaration.
 ExprResult
 Parser::ParseExpressionWithLeadingExtension(SourceLocation ExtLoc) {
   ExprResult LHS(true);
@@ -167,7 +71,6 @@ Parser::ParseExpressionWithLeadingExtension(SourceLocation ExtLoc) {
   return ParseRHSOfBinaryExpression(LHS, prec::Comma);
 }
 
-/// Parse an expr that doesn't include (top-level) commas.
 ExprResult Parser::ParseAssignmentExpression(TypeCastState isTypeCast) {
   if (Tok.is(tok::code_completion)) {
     cutOffParsing();
@@ -201,15 +104,6 @@ ExprResult Parser::ParseConditionalExpression() {
   return ParseRHSOfBinaryExpression(LHS, prec::Conditional);
 }
 
-/// Parse an assignment expression where part of an Objective-C message
-/// send has already been parsed.
-///
-/// In this case \p LBracLoc indicates the location of the '[' of the message
-/// send, and either \p ReceiverName or \p ReceiverExpr is non-null indicating
-/// the receiver of the message.
-///
-/// Since this handles full assignment-expression's, it handles postfix
-/// expressions and other binary operators for these expressions as well.
 ExprResult
 Parser::ParseAssignmentExprWithObjCMessageExprStart(SourceLocation LBracLoc,
                                                     SourceLocation SuperLoc,
@@ -281,12 +175,6 @@ ExprResult Parser::ParseCaseExpression(SourceLocation CaseLoc) {
   return Actions.ActOnCaseExpr(CaseLoc, Res);
 }
 
-/// Parse a constraint-expression.
-///
-/// \verbatim
-///       constraint-expression: C++2a[temp.constr.decl]p1
-///         logical-or-expression
-/// \endverbatim
 ExprResult Parser::ParseConstraintExpression() {
   EnterExpressionEvaluationContext ConstantEvaluated(
       Actions, Sema::ExpressionEvaluationContext::Unevaluated);
@@ -299,15 +187,6 @@ ExprResult Parser::ParseConstraintExpression() {
   return Res;
 }
 
-/// \brief Parse a constraint-logical-and-expression.
-///
-/// \verbatim
-///       C++2a[temp.constr.decl]p1
-///       constraint-logical-and-expression:
-///         primary-expression
-///         constraint-logical-and-expression '&&' primary-expression
-///
-/// \endverbatim
 ExprResult
 Parser::ParseConstraintLogicalAndExpression(bool IsTrailingRequiresClause) {
   EnterExpressionEvaluationContext ConstantEvaluated(
@@ -390,16 +269,6 @@ Parser::ParseConstraintLogicalAndExpression(bool IsTrailingRequiresClause) {
   return LHS;
 }
 
-/// \brief Parse a constraint-logical-or-expression.
-///
-/// \verbatim
-///       C++2a[temp.constr.decl]p1
-///       constraint-logical-or-expression:
-///         constraint-logical-and-expression
-///         constraint-logical-or-expression '||'
-///             constraint-logical-and-expression
-///
-/// \endverbatim
 ExprResult
 Parser::ParseConstraintLogicalOrExpression(bool IsTrailingRequiresClause) {
   ExprResult LHS(ParseConstraintLogicalAndExpression(IsTrailingRequiresClause));
@@ -445,8 +314,6 @@ bool Parser::isFoldOperator(tok::TokenKind Kind) const {
   return isFoldOperator(getBinOpPrecedence(Kind, GreaterThanIsOperator, true));
 }
 
-/// Parse a binary expression that starts with \p LHS and has a
-/// precedence of at least \p MinPrec.
 ExprResult
 Parser::ParseRHSOfBinaryExpression(ExprResult LHS, prec::Level MinPrec) {
   prec::Level NextTokPrec = getBinOpPrecedence(Tok.getKind(),
@@ -717,12 +584,6 @@ Parser::ParseRHSOfBinaryExpression(ExprResult LHS, prec::Level MinPrec) {
   }
 }
 
-/// Parse a cast-expression, unary-expression or primary-expression, based
-/// on \p ExprType.
-///
-/// \p isAddressOfOperand exists because an id-expression that is the
-/// operand of address-of gets special treatment due to member pointers.
-///
 ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
                                        bool isAddressOfOperand,
                                        TypeCastState isTypeCast,
@@ -881,191 +742,6 @@ ExprResult Parser::ParseBuiltinPtrauthTypeDiscriminator() {
       /*isType=*/true, Ty.get().getAsOpaquePtr(), SourceRange(Loc, EndLoc));
 }
 
-/// Parse a cast-expression, or, if \pisUnaryExpression is true, parse
-/// a unary-expression.
-///
-/// \p isAddressOfOperand exists because an id-expression that is the operand
-/// of address-of gets special treatment due to member pointers. NotCastExpr
-/// is set to true if the token is not the start of a cast-expression, and no
-/// diagnostic is emitted in this case and no tokens are consumed.
-///
-/// \verbatim
-///       cast-expression: [C99 6.5.4]
-///         unary-expression
-///         '(' type-name ')' cast-expression
-///
-///       unary-expression:  [C99 6.5.3]
-///         postfix-expression
-///         '++' unary-expression
-///         '--' unary-expression
-/// [Coro]  'co_await' cast-expression
-///         unary-operator cast-expression
-///         'sizeof' unary-expression
-///         'sizeof' '(' type-name ')'
-/// [C++11] 'sizeof' '...' '(' identifier ')'
-/// [GNU]   '__alignof' unary-expression
-/// [GNU]   '__alignof' '(' type-name ')'
-/// [C11]   '_Alignof' '(' type-name ')'
-/// [C++11] 'alignof' '(' type-id ')'
-/// [C2y]   '_Countof' unary-expression
-/// [C2y]   '_Countof' '(' type-name ')'
-/// [GNU]   '&&' identifier
-/// [C++11] 'noexcept' '(' expression ')' [C++11 5.3.7]
-/// [C++]   new-expression
-/// [C++]   delete-expression
-///
-///       unary-operator: one of
-///         '&'  '*'  '+'  '-'  '~'  '!'
-/// [GNU]   '__extension__'  '__real'  '__imag'
-///
-///       primary-expression: [C99 6.5.1]
-/// [C99]   identifier
-/// [C++]   id-expression
-///         constant
-///         string-literal
-/// [C++]   boolean-literal  [C++ 2.13.5]
-/// [C++11] 'nullptr'        [C++11 2.14.7]
-/// [C++11] user-defined-literal
-///         '(' expression ')'
-/// [C11]   generic-selection
-/// [C++2a] requires-expression
-///         '__func__'        [C99 6.4.2.2]
-/// [GNU]   '__FUNCTION__'
-/// [MS]    '__FUNCDNAME__'
-/// [MS]    'L__FUNCTION__'
-/// [MS]    '__FUNCSIG__'
-/// [MS]    'L__FUNCSIG__'
-/// [GNU]   '__PRETTY_FUNCTION__'
-/// [GNU]   '(' compound-statement ')'
-/// [GNU]   '__builtin_va_arg' '(' assignment-expression ',' type-name ')'
-/// [GNU]   '__builtin_offsetof' '(' type-name ',' offsetof-member-designator')'
-/// [GNU]   '__builtin_choose_expr' '(' assign-expr ',' assign-expr ','
-///                                     assign-expr ')'
-/// [GNU]   '__builtin_FILE' '(' ')'
-/// [CLANG] '__builtin_FILE_NAME' '(' ')'
-/// [GNU]   '__builtin_FUNCTION' '(' ')'
-/// [MS]    '__builtin_FUNCSIG' '(' ')'
-/// [GNU]   '__builtin_LINE' '(' ')'
-/// [CLANG] '__builtin_COLUMN' '(' ')'
-/// [GNU]   '__builtin_source_location' '(' ')'
-/// [GNU]   '__builtin_types_compatible_p' '(' type-name ',' type-name ')'
-/// [GNU]   '__null'
-/// [OBJC]  '[' objc-message-expr ']'
-/// [OBJC]  '\@selector' '(' objc-selector-arg ')'
-/// [OBJC]  '\@protocol' '(' identifier ')'
-/// [OBJC]  '\@encode' '(' type-name ')'
-/// [OBJC]  objc-string-literal
-/// [C++]   simple-type-specifier '(' expression-list[opt] ')'      [C++ 5.2.3]
-/// [C++11] simple-type-specifier braced-init-list                  [C++11 5.2.3]
-/// [C++]   typename-specifier '(' expression-list[opt] ')'         [C++ 5.2.3]
-/// [C++11] typename-specifier braced-init-list                     [C++11 5.2.3]
-/// [C++]   'const_cast' '<' type-name '>' '(' expression ')'       [C++ 5.2p1]
-/// [C++]   'dynamic_cast' '<' type-name '>' '(' expression ')'     [C++ 5.2p1]
-/// [C++]   'reinterpret_cast' '<' type-name '>' '(' expression ')' [C++ 5.2p1]
-/// [C++]   'static_cast' '<' type-name '>' '(' expression ')'      [C++ 5.2p1]
-/// [C++]   'typeid' '(' expression ')'                             [C++ 5.2p1]
-/// [C++]   'typeid' '(' type-id ')'                                [C++ 5.2p1]
-/// [C++]   'this'          [C++ 9.3.2]
-/// [G++]   unary-type-trait '(' type-id ')'
-/// [G++]   binary-type-trait '(' type-id ',' type-id ')'           [TODO]
-/// [EMBT]  array-type-trait '(' type-id ',' integer ')'
-/// [clang] '^' block-literal
-///
-///       constant: [C99 6.4.4]
-///         integer-constant
-///         floating-constant
-///         enumeration-constant -> identifier
-///         character-constant
-///
-///       id-expression: [C++ 5.1]
-///                   unqualified-id
-///                   qualified-id
-///
-///       unqualified-id: [C++ 5.1]
-///                   identifier
-///                   operator-function-id
-///                   conversion-function-id
-///                   '~' class-name
-///                   template-id
-///
-///       new-expression: [C++ 5.3.4]
-///                   '::'[opt] 'new' new-placement[opt] new-type-id
-///                                     new-initializer[opt]
-///                   '::'[opt] 'new' new-placement[opt] '(' type-id ')'
-///                                     new-initializer[opt]
-///
-///       delete-expression: [C++ 5.3.5]
-///                   '::'[opt] 'delete' cast-expression
-///                   '::'[opt] 'delete' '[' ']' cast-expression
-///
-/// [GNU/Embarcadero] unary-type-trait:
-///                   '__is_arithmetic'
-///                   '__is_floating_point'
-///                   '__is_integral'
-///                   '__is_lvalue_expr'
-///                   '__is_rvalue_expr'
-///                   '__is_complete_type'
-///                   '__is_void'
-///                   '__is_array'
-///                   '__is_function'
-///                   '__is_reference'
-///                   '__is_lvalue_reference'
-///                   '__is_rvalue_reference'
-///                   '__is_fundamental'
-///                   '__is_object'
-///                   '__is_scalar'
-///                   '__is_compound'
-///                   '__is_pointer'
-///                   '__is_member_object_pointer'
-///                   '__is_member_function_pointer'
-///                   '__is_member_pointer'
-///                   '__is_const'
-///                   '__is_volatile'
-///                   '__is_trivial'
-///                   '__is_standard_layout'
-///                   '__is_signed'
-///                   '__is_unsigned'
-///
-/// [GNU] unary-type-trait:
-///                   '__has_nothrow_assign'
-///                   '__has_nothrow_copy'
-///                   '__has_nothrow_constructor'
-///                   '__has_trivial_assign'                  [TODO]
-///                   '__has_trivial_copy'                    [TODO]
-///                   '__has_trivial_constructor'
-///                   '__has_trivial_destructor'
-///                   '__has_virtual_destructor'
-///                   '__is_abstract'                         [TODO]
-///                   '__is_class'
-///                   '__is_empty'                            [TODO]
-///                   '__is_enum'
-///                   '__is_final'
-///                   '__is_pod'
-///                   '__is_polymorphic'
-///                   '__is_sealed'                           [MS]
-///                   '__is_trivial'
-///                   '__is_union'
-///                   '__has_unique_object_representations'
-///
-/// [Clang] unary-type-trait:
-///                   '__is_aggregate'
-///                   '__trivially_copyable'
-///
-///       binary-type-trait:
-/// [GNU]             '__is_base_of'
-/// [MS]              '__is_convertible_to'
-///                   '__is_convertible'
-///                   '__is_same'
-///
-/// [Embarcadero] array-type-trait:
-///                   '__array_rank'
-///                   '__array_extent'
-///
-/// [Embarcadero] expression-trait:
-///                   '__is_lvalue_expr'
-///                   '__is_rvalue_expr'
-/// \endverbatim
-///
 ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
                                        bool isAddressOfOperand,
                                        bool &NotCastExpr,
@@ -1985,27 +1661,6 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
   return Res;
 }
 
-/// Once the leading part of a postfix-expression is parsed, this
-/// method parses any suffixes that apply.
-///
-/// \verbatim
-///       postfix-expression: [C99 6.5.2]
-///         primary-expression
-///         postfix-expression '[' expression ']'
-///         postfix-expression '[' braced-init-list ']'
-///         postfix-expression '[' expression-list [opt] ']'  [C++23 12.4.5]
-///         postfix-expression '(' argument-expression-list[opt] ')'
-///         postfix-expression '.' identifier
-///         postfix-expression '->' identifier
-///         postfix-expression '++'
-///         postfix-expression '--'
-///         '(' type-name ')' '{' initializer-list '}'
-///         '(' type-name ')' '{' initializer-list ',' '}'
-///
-///       argument-expression-list: [C99 6.5.2]
-///         argument-expression ...[opt]
-///         argument-expression-list ',' assignment-expression ...[opt]
-/// \endverbatim
 ExprResult
 Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
   // Now that the primary-expression piece of the postfix-expression has been
@@ -2428,38 +2083,6 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
   }
 }
 
-/// ParseExprAfterUnaryExprOrTypeTrait - We parsed a typeof/sizeof/alignof/
-/// vec_step and we are at the start of an expression or a parenthesized
-/// type-id. OpTok is the operand token (typeof/sizeof/alignof). Returns the
-/// expression (isCastExpr == false) or the type (isCastExpr == true).
-///
-/// \verbatim
-///       unary-expression:  [C99 6.5.3]
-///         'sizeof' unary-expression
-///         'sizeof' '(' type-name ')'
-/// [Clang] '__datasizeof' unary-expression
-/// [Clang] '__datasizeof' '(' type-name ')'
-/// [GNU]   '__alignof' unary-expression
-/// [GNU]   '__alignof' '(' type-name ')'
-/// [C11]   '_Alignof' '(' type-name ')'
-/// [C++0x] 'alignof' '(' type-id ')'
-///
-/// [GNU]   typeof-specifier:
-///           typeof ( expressions )
-///           typeof ( type-name )
-/// [GNU/C++] typeof unary-expression
-/// [C23]   typeof-specifier:
-///           typeof '(' typeof-specifier-argument ')'
-///           typeof_unqual '(' typeof-specifier-argument ')'
-///
-///         typeof-specifier-argument:
-///           expression
-///           type-name
-///
-/// [OpenCL 1.1 6.11.12] vec_step built-in function:
-///           vec_step ( expressions )
-///           vec_step ( type-name )
-/// \endverbatim
 ExprResult
 Parser::ParseExprAfterUnaryExprOrTypeTrait(const Token &OpTok,
                                            bool &isCastExpr,
@@ -2560,8 +2183,6 @@ Parser::ParseExprAfterUnaryExprOrTypeTrait(const Token &OpTok,
   return Operand;
 }
 
-/// Parse a __builtin_sycl_unique_stable_name expression.  Accepts a type-id as
-/// a parameter.
 ExprResult Parser::ParseSYCLUniqueStableNameExpression() {
   assert(Tok.is(tok::kw___builtin_sycl_unique_stable_name) &&
          "Not __builtin_sycl_unique_stable_name");
@@ -2588,22 +2209,6 @@ ExprResult Parser::ParseSYCLUniqueStableNameExpression() {
       OpLoc, T.getOpenLocation(), T.getCloseLocation(), Ty.get());
 }
 
-/// Parse a sizeof or alignof expression.
-///
-/// \verbatim
-///       unary-expression:  [C99 6.5.3]
-///         'sizeof' unary-expression
-///         'sizeof' '(' type-name ')'
-/// [C++11] 'sizeof' '...' '(' identifier ')'
-/// [Clang] '__datasizeof' unary-expression
-/// [Clang] '__datasizeof' '(' type-name ')'
-/// [GNU]   '__alignof' unary-expression
-/// [GNU]   '__alignof' '(' type-name ')'
-/// [C11]   '_Alignof' '(' type-name ')'
-/// [C++11] 'alignof' '(' type-id ')'
-/// [C2y]   '_Countof' unary-expression
-/// [C2y]   '_Countof' '(' type-name ')'
-/// \endverbatim
 ExprResult Parser::ParseUnaryExprOrTypeTraitExpression() {
   assert(Tok.isOneOf(tok::kw_sizeof, tok::kw___datasizeof, tok::kw___alignof,
                      tok::kw_alignof, tok::kw__Alignof, tok::kw_vec_step,
@@ -2731,29 +2336,6 @@ ExprResult Parser::ParseUnaryExprOrTypeTraitExpression() {
   return Operand;
 }
 
-/// ParseBuiltinPrimaryExpression
-///
-/// \verbatim
-///       primary-expression: [C99 6.5.1]
-/// [GNU]   '__builtin_va_arg' '(' assignment-expression ',' type-name ')'
-/// [GNU]   '__builtin_offsetof' '(' type-name ',' offsetof-member-designator')'
-/// [GNU]   '__builtin_choose_expr' '(' assign-expr ',' assign-expr ','
-///                                     assign-expr ')'
-/// [GNU]   '__builtin_types_compatible_p' '(' type-name ',' type-name ')'
-/// [GNU]   '__builtin_FILE' '(' ')'
-/// [CLANG] '__builtin_FILE_NAME' '(' ')'
-/// [GNU]   '__builtin_FUNCTION' '(' ')'
-/// [MS]    '__builtin_FUNCSIG' '(' ')'
-/// [GNU]   '__builtin_LINE' '(' ')'
-/// [CLANG] '__builtin_COLUMN' '(' ')'
-/// [GNU]   '__builtin_source_location' '(' ')'
-/// [OCL]   '__builtin_astype' '(' assignment-expression ',' type-name ')'
-///
-/// [GNU] offsetof-member-designator:
-/// [GNU]   identifier
-/// [GNU]   offsetof-member-designator '.' identifier
-/// [GNU]   offsetof-member-designator '[' expression ']'
-/// \endverbatim
 ExprResult Parser::ParseBuiltinPrimaryExpression() {
   ExprResult Res;
   const IdentifierInfo *BuiltinII = Tok.getIdentifierInfo();
@@ -3049,33 +2631,6 @@ bool Parser::tryParseOpenMPArrayShapingCastPart() {
   return !ErrorFound;
 }
 
-/// ParseParenExpression - This parses the unit that starts with a '(' token,
-/// based on what is allowed by ExprType.  The actual thing parsed is returned
-/// in ExprType. If stopIfCastExpr is true, it will only return the parsed type,
-/// not the parsed cast-expression.
-///
-/// \verbatim
-///       primary-expression: [C99 6.5.1]
-///         '(' expression ')'
-/// [GNU]   '(' compound-statement ')'      (if !ParenExprOnly)
-///       postfix-expression: [C99 6.5.2]
-///         '(' type-name ')' '{' initializer-list '}'
-///         '(' type-name ')' '{' initializer-list ',' '}'
-///       cast-expression: [C99 6.5.4]
-///         '(' type-name ')' cast-expression
-/// [ARC]   bridged-cast-expression
-/// [ARC] bridged-cast-expression:
-///         (__bridge type-name) cast-expression
-///         (__bridge_transfer type-name) cast-expression
-///         (__bridge_retained type-name) cast-expression
-///       fold-expression: [C++1z]
-///         '(' cast-expression fold-operator '...' ')'
-///         '(' '...' fold-operator cast-expression ')'
-///         '(' cast-expression fold-operator '...'
-///                 fold-operator cast-expression ')'
-/// [OPENMP] Array shaping operation
-///       '(' '[' expression ']' { '[' expression ']' } cast-expression
-/// \endverbatim
 ExprResult
 Parser::ParseParenExpression(ParenParseOption &ExprType, bool stopIfCastExpr,
                              bool isTypeCast, ParsedType &CastTy,
@@ -3421,14 +2976,6 @@ Parser::ParseParenExpression(ParenParseOption &ExprType, bool stopIfCastExpr,
   return Result;
 }
 
-/// ParseCompoundLiteralExpression - We have parsed the parenthesized type-name
-/// and we are at the left brace.
-///
-/// \verbatim
-///       postfix-expression: [C99 6.5.2]
-///         '(' type-name ')' '{' initializer-list '}'
-///         '(' type-name ')' '{' initializer-list ',' '}'
-/// \endverbatim
 ExprResult
 Parser::ParseCompoundLiteralExpression(ParsedType Ty,
                                        SourceLocation LParenLoc,
@@ -3443,14 +2990,6 @@ Parser::ParseCompoundLiteralExpression(ParsedType Ty,
   return Result;
 }
 
-/// ParseStringLiteralExpression - This handles the various token types that
-/// form string literals, and also handles string concatenation [C99 5.1.1.2,
-/// translation phase #6].
-///
-/// \verbatim
-///       primary-expression: [C99 6.5.1]
-///         string-literal
-/// \verbatim
 ExprResult Parser::ParseStringLiteralExpression(bool AllowUserDefinedLiteral) {
   return ParseStringLiteralExpression(AllowUserDefinedLiteral,
                                       /*Unevaluated=*/false);
@@ -3487,25 +3026,6 @@ ExprResult Parser::ParseStringLiteralExpression(bool AllowUserDefinedLiteral,
                                                             : nullptr);
 }
 
-/// ParseGenericSelectionExpression - Parse a C11 generic-selection
-/// [C11 6.5.1.1].
-///
-/// \verbatim
-///    generic-selection:
-///           _Generic ( assignment-expression , generic-assoc-list )
-///    generic-assoc-list:
-///           generic-association
-///           generic-assoc-list , generic-association
-///    generic-association:
-///           type-name : assignment-expression
-///           default : assignment-expression
-/// \endverbatim
-///
-/// As an extension, Clang also accepts:
-/// \verbatim
-///   generic-selection:
-///          _Generic ( type-name, generic-assoc-list )
-/// \endverbatim
 ExprResult Parser::ParseGenericSelectionExpression() {
   assert(Tok.is(tok::kw__Generic) && "_Generic keyword expected");
 
@@ -3604,14 +3124,6 @@ ExprResult Parser::ParseGenericSelectionExpression() {
       ExprOrTy, Types, Exprs);
 }
 
-/// Parse A C++1z fold-expression after the opening paren and optional
-/// left-hand-side expression.
-///
-/// \verbatim
-///   fold-expression:
-///       ( cast-expression fold-operator ... )
-///       ( ... fold-operator cast-expression )
-///       ( cast-expression fold-operator ... fold-operator cast-expression )
 ExprResult Parser::ParseFoldExpression(ExprResult LHS,
                                        BalancedDelimiterTracker &T) {
   if (LHS.isInvalid()) {
@@ -3683,28 +3195,6 @@ void Parser::injectEmbedTokens() {
   ConsumeAnyToken(/*ConsumeCodeCompletionTok=*/true);
 }
 
-/// ParseExpressionList - Used for C/C++ (argument-)expression-list.
-///
-/// \verbatim
-///       argument-expression-list:
-///         assignment-expression
-///         argument-expression-list , assignment-expression
-///
-/// [C++] expression-list:
-/// [C++]   assignment-expression
-/// [C++]   expression-list , assignment-expression
-///
-/// [C++0x] expression-list:
-/// [C++0x]   initializer-list
-///
-/// [C++0x] initializer-list
-/// [C++0x]   initializer-clause ...[opt]
-/// [C++0x]   initializer-list , initializer-clause ...[opt]
-///
-/// [C++0x] initializer-clause:
-/// [C++0x]   assignment-expression
-/// [C++0x]   braced-init-list
-/// \endverbatim
 bool Parser::ParseExpressionList(SmallVectorImpl<Expr *> &Exprs,
                                  llvm::function_ref<void()> ExpressionStarts,
                                  bool FailImmediatelyOnInvalidExpr,
@@ -3763,14 +3253,6 @@ bool Parser::ParseExpressionList(SmallVectorImpl<Expr *> &Exprs,
   return SawError;
 }
 
-/// ParseSimpleExpressionList - A simple comma-separated list of expressions,
-/// used for misc language extensions.
-///
-/// \verbatim
-///       simple-expression-list:
-///         assignment-expression
-///         simple-expression-list , assignment-expression
-/// \endverbatim
 bool Parser::ParseSimpleExpressionList(SmallVectorImpl<Expr *> &Exprs) {
   while (true) {
     ExprResult Expr = ParseAssignmentExpression();
@@ -3791,12 +3273,6 @@ bool Parser::ParseSimpleExpressionList(SmallVectorImpl<Expr *> &Exprs) {
   }
 }
 
-/// ParseBlockId - Parse a block-id, which roughly looks like int (int x).
-///
-/// \verbatim
-/// [clang] block-id:
-/// [clang]   specifier-qualifier-list block-declarator
-/// \endverbatim
 void Parser::ParseBlockId(SourceLocation CaretLoc) {
   if (Tok.is(tok::code_completion)) {
     cutOffParsing();
@@ -3821,16 +3297,6 @@ void Parser::ParseBlockId(SourceLocation CaretLoc) {
   Actions.ActOnBlockArguments(CaretLoc, DeclaratorInfo, getCurScope());
 }
 
-/// ParseBlockLiteralExpression - Parse a block literal, which roughly looks
-/// like ^(int x){ return x+1; }
-///
-/// \verbatim
-///         block-literal:
-/// [clang]   '^' block-args[opt] compound-statement
-/// [clang]   '^' block-id compound-statement
-/// [clang] block-args:
-/// [clang]   '(' parameter-list ')'
-/// \endverbatim
 ExprResult Parser::ParseBlockLiteralExpression() {
   assert(Tok.is(tok::caret) && "block literal starts with ^");
   SourceLocation CaretLoc = ConsumeToken();
@@ -3929,10 +3395,6 @@ ExprResult Parser::ParseBlockLiteralExpression() {
   return Result;
 }
 
-/// ParseObjCBoolLiteral - This handles the objective-c Boolean literals.
-///
-///         '__objc_yes'
-///         '__objc_no'
 ExprResult Parser::ParseObjCBoolLiteral() {
   tok::TokenKind Kind = Tok.getKind();
   return Actions.ObjC().ActOnObjCBoolLiteral(ConsumeToken(), Kind);
@@ -3978,11 +3440,6 @@ static bool CheckAvailabilitySpecList(Parser &P,
   return !Valid;
 }
 
-/// Parse availability query specification.
-///
-///  availability-spec:
-///     '*'
-///     identifier version-tuple
 std::optional<AvailabilitySpec> Parser::ParseAvailabilitySpec() {
   if (Tok.is(tok::star)) {
     return AvailabilitySpec(ConsumeToken());

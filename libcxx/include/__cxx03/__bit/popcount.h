@@ -25,15 +25,11 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR int __libcpp_popcount(unsigned __x) _NOEXCEPT {
-  return __builtin_popcount(__x);
-}
+inline _LIBCPP_HIDE_FROM_ABI int __libcpp_popcount(unsigned __x) _NOEXCEPT { return __builtin_popcount(__x); }
 
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR int __libcpp_popcount(unsigned long __x) _NOEXCEPT {
-  return __builtin_popcountl(__x);
-}
+inline _LIBCPP_HIDE_FROM_ABI int __libcpp_popcount(unsigned long __x) _NOEXCEPT { return __builtin_popcountl(__x); }
 
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR int __libcpp_popcount(unsigned long long __x) _NOEXCEPT {
+inline _LIBCPP_HIDE_FROM_ABI int __libcpp_popcount(unsigned long long __x) _NOEXCEPT {
   return __builtin_popcountll(__x);
 }
 

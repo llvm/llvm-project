@@ -114,6 +114,23 @@ void func_16(void) {
   (void)sizeof(xp->val);
   (void)sizeof(y.ival);
   (void)sizeof(yp->ival);
+
+  // Also, do not diagnose in unreachable code paths.
+  {
+    if (0) {
+      x.val = 12;
+      xp->val = 12;
+      (void)y.ival;
+      (void)yp->ival;
+    }
+
+    return;
+
+    x.val = 12;
+    xp->val = 12;
+    (void)y.ival;
+    (void)yp->ival;
+  }
 }
 
 // Ensure that we correctly implement assignment constraints from C2x 6.5.16.1.

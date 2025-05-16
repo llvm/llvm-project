@@ -126,11 +126,10 @@ void AffineDataCopyGeneration::runOnBlock(Block *block,
   // moment; we do a check later and report an error with location info.
 
   // Get to the first load, store, or for op (that is not a copy nest itself).
-  auto curBegin =
-      std::find_if(block->begin(), block->end(), [&](Operation &op) {
-        return isa<AffineLoadOp, AffineStoreOp, AffineForOp>(op) &&
-               copyNests.count(&op) == 0;
-      });
+  auto curBegin = llvm::find_if(*block, [&](Operation &op) {
+    return isa<AffineLoadOp, AffineStoreOp, AffineForOp>(op) &&
+           copyNests.count(&op) == 0;
+  });
 
   // Create [begin, end) ranges.
   auto it = curBegin;

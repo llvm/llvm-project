@@ -546,16 +546,11 @@ class __bucket_list_deallocator {
 public:
   typedef typename __alloc_traits::pointer pointer;
 
-  _LIBCPP_HIDE_FROM_ABI __bucket_list_deallocator() _NOEXCEPT_(is_nothrow_default_constructible<allocator_type>::value)
-      : __data_(0, __default_init_tag()) {}
+  _LIBCPP_HIDE_FROM_ABI __bucket_list_deallocator() : __data_(0, __default_init_tag()) {}
 
-  _LIBCPP_HIDE_FROM_ABI __bucket_list_deallocator(const allocator_type& __a, size_type __size)
-      _NOEXCEPT_(is_nothrow_copy_constructible<allocator_type>::value)
-      : __data_(__size, __a) {}
+  _LIBCPP_HIDE_FROM_ABI __bucket_list_deallocator(const allocator_type& __a, size_type __size) : __data_(__size, __a) {}
 
-  _LIBCPP_HIDE_FROM_ABI __bucket_list_deallocator(__bucket_list_deallocator&& __x)
-      _NOEXCEPT_(is_nothrow_move_constructible<allocator_type>::value)
-      : __data_(std::move(__x.__data_)) {
+  _LIBCPP_HIDE_FROM_ABI __bucket_list_deallocator(__bucket_list_deallocator&& __x) : __data_(std::move(__x.__data_)) {
     __x.size() = 0;
   }
 
@@ -710,27 +705,18 @@ public:
   typedef __hash_local_iterator<__node_pointer> local_iterator;
   typedef __hash_const_local_iterator<__node_pointer> const_local_iterator;
 
-  _LIBCPP_HIDE_FROM_ABI __hash_table() _NOEXCEPT_(
-      is_nothrow_default_constructible<__bucket_list>::value&& is_nothrow_default_constructible<__first_node>::value&&
-          is_nothrow_default_constructible<__node_allocator>::value&& is_nothrow_default_constructible<hasher>::value&&
-              is_nothrow_default_constructible<key_equal>::value);
+  _LIBCPP_HIDE_FROM_ABI __hash_table();
   _LIBCPP_HIDE_FROM_ABI __hash_table(const hasher& __hf, const key_equal& __eql);
   _LIBCPP_HIDE_FROM_ABI __hash_table(const hasher& __hf, const key_equal& __eql, const allocator_type& __a);
   _LIBCPP_HIDE_FROM_ABI explicit __hash_table(const allocator_type& __a);
   _LIBCPP_HIDE_FROM_ABI __hash_table(const __hash_table& __u);
   _LIBCPP_HIDE_FROM_ABI __hash_table(const __hash_table& __u, const allocator_type& __a);
-  _LIBCPP_HIDE_FROM_ABI __hash_table(__hash_table&& __u) _NOEXCEPT_(
-      is_nothrow_move_constructible<__bucket_list>::value&& is_nothrow_move_constructible<__first_node>::value&&
-          is_nothrow_move_constructible<__node_allocator>::value&& is_nothrow_move_constructible<hasher>::value&&
-              is_nothrow_move_constructible<key_equal>::value);
+  _LIBCPP_HIDE_FROM_ABI __hash_table(__hash_table&& __u);
   _LIBCPP_HIDE_FROM_ABI __hash_table(__hash_table&& __u, const allocator_type& __a);
   _LIBCPP_HIDE_FROM_ABI ~__hash_table();
 
   _LIBCPP_HIDE_FROM_ABI __hash_table& operator=(const __hash_table& __u);
-  _LIBCPP_HIDE_FROM_ABI __hash_table& operator=(__hash_table&& __u)
-      _NOEXCEPT_(__node_traits::propagate_on_container_move_assignment::value&&
-                     is_nothrow_move_assignable<__node_allocator>::value&& is_nothrow_move_assignable<hasher>::value&&
-                         is_nothrow_move_assignable<key_equal>::value);
+  _LIBCPP_HIDE_FROM_ABI __hash_table& operator=(__hash_table&& __u);
   template <class _InputIterator>
   _LIBCPP_HIDE_FROM_ABI void __assign_unique(_InputIterator __first, _InputIterator __last);
   template <class _InputIterator>
@@ -871,11 +857,7 @@ public:
   template <class _Key>
   _LIBCPP_HIDE_FROM_ABI pair<const_iterator, const_iterator> __equal_range_multi(const _Key& __k) const;
 
-  _LIBCPP_HIDE_FROM_ABI void swap(__hash_table& __u)
-      _NOEXCEPT_(__is_nothrow_swappable_v<hasher>&& __is_nothrow_swappable_v<key_equal> &&
-                 (!allocator_traits<__pointer_allocator>::propagate_on_container_swap::value ||
-                  __is_nothrow_swappable_v<__pointer_allocator>) &&
-                 (!__node_traits::propagate_on_container_swap::value || __is_nothrow_swappable_v<__node_allocator>));
+  _LIBCPP_HIDE_FROM_ABI void swap(__hash_table& __u);
 
   _LIBCPP_HIDE_FROM_ABI size_type max_bucket_count() const _NOEXCEPT { return max_size(); }
   _LIBCPP_HIDE_FROM_ABI size_type bucket_size(size_type __n) const;
@@ -934,16 +916,11 @@ private:
   _LIBCPP_HIDE_FROM_ABI void __copy_assign_alloc(const __hash_table&, false_type) {}
 
   _LIBCPP_HIDE_FROM_ABI void __move_assign(__hash_table& __u, false_type);
-  _LIBCPP_HIDE_FROM_ABI void __move_assign(__hash_table& __u, true_type)
-      _NOEXCEPT_(is_nothrow_move_assignable<__node_allocator>::value&& is_nothrow_move_assignable<hasher>::value&&
-                     is_nothrow_move_assignable<key_equal>::value);
-  _LIBCPP_HIDE_FROM_ABI void __move_assign_alloc(__hash_table& __u) _NOEXCEPT_(
-      !__node_traits::propagate_on_container_move_assignment::value ||
-      (is_nothrow_move_assignable<__pointer_allocator>::value && is_nothrow_move_assignable<__node_allocator>::value)) {
+  _LIBCPP_HIDE_FROM_ABI void __move_assign(__hash_table& __u, true_type);
+  _LIBCPP_HIDE_FROM_ABI void __move_assign_alloc(__hash_table& __u) {
     __move_assign_alloc(__u, integral_constant<bool, __node_traits::propagate_on_container_move_assignment::value>());
   }
-  _LIBCPP_HIDE_FROM_ABI void __move_assign_alloc(__hash_table& __u, true_type) _NOEXCEPT_(
-      is_nothrow_move_assignable<__pointer_allocator>::value&& is_nothrow_move_assignable<__node_allocator>::value) {
+  _LIBCPP_HIDE_FROM_ABI void __move_assign_alloc(__hash_table& __u, true_type) {
     __bucket_list_.get_deleter().__alloc() = std::move(__u.__bucket_list_.get_deleter().__alloc());
     __node_alloc()                         = std::move(__u.__node_alloc());
   }
@@ -959,10 +936,7 @@ private:
 };
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
-inline __hash_table<_Tp, _Hash, _Equal, _Alloc>::__hash_table() _NOEXCEPT_(
-    is_nothrow_default_constructible<__bucket_list>::value&& is_nothrow_default_constructible<__first_node>::value&&
-        is_nothrow_default_constructible<__node_allocator>::value&& is_nothrow_default_constructible<hasher>::value&&
-            is_nothrow_default_constructible<key_equal>::value)
+inline __hash_table<_Tp, _Hash, _Equal, _Alloc>::__hash_table()
     : __p2_(0, __default_init_tag()), __p3_(1.0f, __default_init_tag()) {}
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
@@ -1003,10 +977,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__hash_table(const __hash_table& __u, 
       __p3_(__u.__p3_) {}
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
-__hash_table<_Tp, _Hash, _Equal, _Alloc>::__hash_table(__hash_table&& __u) _NOEXCEPT_(
-    is_nothrow_move_constructible<__bucket_list>::value&& is_nothrow_move_constructible<__first_node>::value&&
-        is_nothrow_move_constructible<__node_allocator>::value&& is_nothrow_move_constructible<hasher>::value&&
-            is_nothrow_move_constructible<key_equal>::value)
+__hash_table<_Tp, _Hash, _Equal, _Alloc>::__hash_table(__hash_table&& __u)
     : __bucket_list_(std::move(__u.__bucket_list_)),
       __p1_(std::move(__u.__p1_)),
       __p2_(std::move(__u.__p2_)),
@@ -1095,9 +1066,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__detach() _NOEXCEPT {
 }
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
-void __hash_table<_Tp, _Hash, _Equal, _Alloc>::__move_assign(__hash_table& __u, true_type)
-    _NOEXCEPT_(is_nothrow_move_assignable<__node_allocator>::value&& is_nothrow_move_assignable<hasher>::value&&
-                   is_nothrow_move_assignable<key_equal>::value) {
+void __hash_table<_Tp, _Hash, _Equal, _Alloc>::__move_assign(__hash_table& __u, true_type) {
   clear();
   __bucket_list_.reset(__u.__bucket_list_.release());
   __bucket_list_.get_deleter().size()     = __u.__bucket_list_.get_deleter().size();
@@ -1154,9 +1123,7 @@ void __hash_table<_Tp, _Hash, _Equal, _Alloc>::__move_assign(__hash_table& __u, 
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
 inline __hash_table<_Tp, _Hash, _Equal, _Alloc>&
-__hash_table<_Tp, _Hash, _Equal, _Alloc>::operator=(__hash_table&& __u) _NOEXCEPT_(
-    __node_traits::propagate_on_container_move_assignment::value&& is_nothrow_move_assignable<__node_allocator>::value&&
-        is_nothrow_move_assignable<hasher>::value&& is_nothrow_move_assignable<key_equal>::value) {
+__hash_table<_Tp, _Hash, _Equal, _Alloc>::operator=(__hash_table&& __u) {
   __move_assign(__u, integral_constant<bool, __node_traits::propagate_on_container_move_assignment::value>());
   return *this;
 }
@@ -1566,7 +1533,7 @@ void __hash_table<_Tp, _Hash, _Equal, _Alloc>::__do_rehash(size_type __nbc) {
             __phash                 = __chash;
           } else {
             __next_pointer __np = __cp;
-            if _LIBCPP_CONSTEXPR_SINCE_CXX17 (!_UniqueKeys) {
+            if (!_UniqueKeys) {
               for (; __np->__next_ != nullptr &&
                      key_eq()(__cp->__upcast()->__get_value(), __np->__next_->__upcast()->__get_value());
                    __np = __np->__next_)
@@ -1823,11 +1790,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__equal_range_multi(const _Key& __k) c
 }
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
-void __hash_table<_Tp, _Hash, _Equal, _Alloc>::swap(__hash_table& __u)
-    _NOEXCEPT_(__is_nothrow_swappable_v<hasher>&& __is_nothrow_swappable_v<key_equal> &&
-               (!allocator_traits<__pointer_allocator>::propagate_on_container_swap::value ||
-                __is_nothrow_swappable_v<__pointer_allocator>) &&
-               (!__node_traits::propagate_on_container_swap::value || __is_nothrow_swappable_v<__node_allocator>)) {
+void __hash_table<_Tp, _Hash, _Equal, _Alloc>::swap(__hash_table& __u) {
   _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(
       __node_traits::propagate_on_container_swap::value || this->__node_alloc() == __u.__node_alloc(),
       "unordered container::swap: Either propagate_on_container_swap "
@@ -1868,8 +1831,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::bucket_size(size_type __n) const {
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
 inline _LIBCPP_HIDE_FROM_ABI void
-swap(__hash_table<_Tp, _Hash, _Equal, _Alloc>& __x, __hash_table<_Tp, _Hash, _Equal, _Alloc>& __y)
-    _NOEXCEPT_(_NOEXCEPT_(__x.swap(__y))) {
+swap(__hash_table<_Tp, _Hash, _Equal, _Alloc>& __x, __hash_table<_Tp, _Hash, _Equal, _Alloc>& __y) {
   __x.swap(__y);
 }
 

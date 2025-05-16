@@ -23,10 +23,10 @@ add_llvm_component_library(LLVMJITLink
   ELFLinkGraphBuilder.cpp
   ELF_aarch32.cpp
   ELF_aarch64.cpp
-  ELF_i386.cpp
   ELF_loongarch.cpp
   ELF_ppc64.cpp
   ELF_riscv.cpp
+  ELF_x86.cpp
   ELF_x86_64.cpp
 
   # COFF
@@ -43,10 +43,10 @@ add_llvm_component_library(LLVMJITLink
   # Architectures:
   aarch32.cpp
   aarch64.cpp
-  i386.cpp
   loongarch.cpp
   ppc64.cpp
   riscv.cpp
+  x86.cpp
   x86_64.cpp
 
   ADDITIONAL_HEADER_DIRS

@@ -17,6 +17,8 @@
 #ifndef FORTRAN_OPTIMIZER_BUILDER_DIRECTIVESCOMMON_H_
 #define FORTRAN_OPTIMIZER_BUILDER_DIRECTIVESCOMMON_H_
 
+#include "BoxValue.h"
+#include "FIRBuilder.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
@@ -131,6 +133,31 @@ gatherBoundsOrBoundValues(fir::FirOpBuilder &builder, mlir::Location loc,
   }
   return values;
 }
+template <typename BoundsOp, typename BoundsType>
+mlir::Value
+genBoundsOpFromBoxChar(fir::FirOpBuilder &builder, mlir::Location loc,
+                       fir::ExtendedValue dataExv, AddrAndBoundsInfo &info) {
+  // TODO: Handle info.isPresent.
+  if (auto boxCharType =
+          mlir::dyn_cast<fir::BoxCharType>(info.addr.getType())) {
+    mlir::Type idxTy = builder.getIndexType();
+    mlir::Type lenType = builder.getCharacterLengthType();
+    mlir::Type refType = builder.getRefType(boxCharType.getEleTy());
+    auto unboxed =
+        builder.create<fir::UnboxCharOp>(loc, refType, lenType, info.addr);
+    mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
+    mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
+    mlir::Value extent = unboxed.getResult(1);
+    mlir::Value stride = one;
+    mlir::Value ub = builder.create<mlir::arith::SubIOp>(loc, extent, one);
+    mlir::Type boundTy = builder.getType<mlir::omp::MapBoundsType>();
+    return builder.create<mlir::omp::MapBoundsOp>(
+        loc, boundTy, /*lower_bound=*/zero,
+        /*upper_bound=*/ub, /*extent=*/extent, /*stride=*/stride,
+        /*stride_in_bytes=*/true, /*start_idx=*/zero);
+  }
+  return mlir::Value{};
+}
 
 /// Generate the bounds operation from the descriptor information.
 template <typename BoundsOp, typename BoundsType>
@@ -243,6 +270,17 @@ genBaseBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
   return bounds;
 }
 
+/// Checks if an argument is optional based on the fortran attributes
+/// that are tied to it.
+inline bool isOptionalArgument(mlir::Operation *op) {
+  if (auto declareOp = mlir::dyn_cast_or_null<hlfir::DeclareOp>(op))
+    if (declareOp.getFortranAttrs() &&
+        bitEnumContainsAny(*declareOp.getFortranAttrs(),
+                           fir::FortranVariableFlagsEnum::optional))
+      return true;
+  return false;
+}
+
 template <typename BoundsOp, typename BoundsType>
 llvm::SmallVector<mlir::Value>
 genImplicitBoundsOps(fir::FirOpBuilder &builder, AddrAndBoundsInfo &info,
@@ -257,6 +295,10 @@ genImplicitBoundsOps(fir::FirOpBuilder &builder, AddrAndBoundsInfo &info,
   if (mlir::isa<fir::SequenceType>(fir::unwrapRefType(baseOp.getType()))) {
     bounds = genBaseBoundsOps<BoundsOp, BoundsType>(builder, loc, dataExv,
                                                     dataExvIsAssumedSize);
+  }
+  if (characterWithDynamicLen(fir::unwrapRefType(baseOp.getType()))) {
+    bounds = {genBoundsOpFromBoxChar<BoundsOp, BoundsType>(builder, loc,
+                                                           dataExv, info)};
   }
 
   return bounds;

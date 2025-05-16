@@ -39,7 +39,7 @@ in a few ways. The 2 main ones are:
 * `Use of asserts <https://llvm.org/docs/CodingStandards.html#assert-liberally>`_:
   See the :ref:`section below<Error Handling>`.
 
-For any other contradications, consider the
+For any other contradictions, consider the
 `golden rule <https://llvm.org/docs/CodingStandards.html#introduction>`_
 before choosing to update the style of existing code.
 

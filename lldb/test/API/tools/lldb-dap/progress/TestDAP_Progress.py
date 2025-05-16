@@ -50,7 +50,7 @@ class TestDAP_progress(lldbdap_testcase.DAPTestCaseBase):
     @skipIfWindows
     def test(self):
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program)
+        self.build_and_launch(program, stopOnEntry=True)
         progress_emitter = os.path.join(os.getcwd(), "Progress_emitter.py")
         self.dap_server.request_evaluate(
             f"`command script import {progress_emitter}", context="repl"

@@ -110,6 +110,7 @@ class HexagonAsmParser : public MCTargetAsmParser {
 
   bool equalIsAsmAssignment() override { return false; }
   bool isLabel(AsmToken &Token) override;
+  bool tokenIsStartOfStatement(AsmToken::TokenKind Token) override;
 
   void Warning(SMLoc L, const Twine &Msg) { Parser.Warning(L, Msg); }
   bool Error(SMLoc L, const Twine &Msg) { return Parser.Error(L, Msg); }
@@ -1005,6 +1006,10 @@ bool HexagonAsmParser::isLabel(AsmToken &Token) {
   if (!matchRegister(DotSplit.first.lower()))
     return true;
   return false;
+}
+
+bool HexagonAsmParser::tokenIsStartOfStatement(AsmToken::TokenKind Token) {
+  return Token == AsmToken::LCurly || Token == AsmToken::RCurly;
 }
 
 bool HexagonAsmParser::handleNoncontigiousRegister(bool Contigious,

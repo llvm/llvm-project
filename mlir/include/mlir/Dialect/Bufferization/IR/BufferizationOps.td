@@ -394,7 +394,7 @@ def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor", [
     An operation that creates a tensor from a `memref`. The result value is a
     tensor whose shape and element type match the memref operand.
 
-    The opposite of this op is `to_memref`. Together, these two ops are
+    The opposite of this op is `to_buffer`. Together, these two ops are
     useful for source/target materializations when doing type conversions
     involving tensors and memrefs.
 
@@ -459,7 +459,7 @@ def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor", [
 
     LogicalResult bufferize(RewriterBase &rewriter,
                             const BufferizationOptions &options) const {
-      // to_tensor/to_memref pairs fold away after bufferization.
+      // to_tensor/to_buffer pairs fold away after bufferization.
       return success();
     }
 
@@ -490,10 +490,10 @@ def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor", [
 
 
 //===----------------------------------------------------------------------===//
-// ToMemrefOp
+// ToBufferOp
 //===----------------------------------------------------------------------===//
 
-def Bufferization_ToMemrefOp : Bufferization_Op<"to_memref", [
+def Bufferization_ToBufferOp : Bufferization_Op<"to_buffer", [
     BufferizableOpInterface,
     SameOperandsAndResultShape,
     SameOperandsAndResultElementType,
@@ -507,7 +507,7 @@ def Bufferization_ToMemrefOp : Bufferization_Op<"to_memref", [
 
     ```mlir
     // Result type is memref<4x?xf32, #layout, 0>
-    %m = bufferization.to_memref %t : tensor<4x?xf32> to memref<4x?xf32, #layout, 0>
+    %m = bufferization.to_buffer %t : tensor<4x?xf32> to memref<4x?xf32, #layout, 0>
     ```
 
     This operation is a specialized variant of the built-in
@@ -527,7 +527,7 @@ def Bufferization_ToMemrefOp : Bufferization_Op<"to_memref", [
     // BufferizableOpInterface implementation
     //===------------------------------------------------------------------===//
 
-    // Note: ToMemrefOp / ToTensorOp are temporary ops that are inserted at the
+    // Note: ToBufferOp / ToTensorOp are temporary ops that are inserted at the
     // bufferization boundary. When One-Shot bufferization is complete, there
     // should be no such ops left over. If `allowUnknownOps` (or after running a
     // partial bufferization pass), such ops may be part of the resulting IR,

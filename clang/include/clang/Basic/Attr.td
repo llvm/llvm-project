@@ -4735,6 +4735,18 @@ def Error : InheritableAttr {
   let Documentation = [ErrorAttrDocs];
 }
 
+/// HLSL Root Signature Attribute
+def RootSignature : Attr {
+  /// [RootSignature(Signature)]
+  let Spellings = [Microsoft<"RootSignature">];
+  let Args = [IdentifierArgument<"SignatureIdent">,
+              DeclArgument<HLSLRootSignature, "SignatureDecl", 0, /*fake=*/1>];
+  let Subjects = SubjectList<[Function],
+                             ErrorDiag, "'function'">;
+  let LangOpts = [HLSL];
+  let Documentation = [RootSignatureDocs];
+}
+
 def HLSLNumThreads: InheritableAttr {
   let Spellings = [Microsoft<"numthreads">];
   let Args = [IntArgument<"X">, IntArgument<"Y">, IntArgument<"Z">];
@@ -4785,15 +4797,15 @@ def HLSLResourceBinding: InheritableAttr {
         SlotNumber = SlotNum;
         SpaceNumber = SpaceNum;
       }
-      bool isImplicit() const {
-        return !SlotNumber.has_value();
+      bool hasRegisterSlot() const {
+        return SlotNumber.has_value();
       }
       RegisterType getRegisterType() const {
-        assert(!isImplicit() && "binding does not have register slot");
+        assert(hasRegisterSlot() && "binding does not have register slot");
         return RegType;
       }
       unsigned getSlotNumber() const {
-        assert(!isImplicit() && "binding does not have register slot");
+        assert(hasRegisterSlot() && "binding does not have register slot");
         return SlotNumber.value();
       }
       unsigned getSpaceNumber() const {

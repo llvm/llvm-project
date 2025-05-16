@@ -32,22 +32,12 @@
 #include <list>
 #include <optional>
 
-using llvm::ArrayRef;
 using llvm::formatv;
 using llvm::raw_ostream;
-using llvm::raw_string_ostream;
 using llvm::Record;
 using llvm::RecordKeeper;
-using llvm::SmallVector;
-using llvm::SMLoc;
 using llvm::StringMap;
 using llvm::StringRef;
-using mlir::tblgen::Attribute;
-using mlir::tblgen::EnumCase;
-using mlir::tblgen::EnumInfo;
-using mlir::tblgen::NamedAttribute;
-using mlir::tblgen::NamedTypeConstraint;
-using mlir::tblgen::NamespaceEmitter;
 using mlir::tblgen::Operator;
 
 //===----------------------------------------------------------------------===//

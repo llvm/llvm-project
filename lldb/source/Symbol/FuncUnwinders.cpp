@@ -149,13 +149,9 @@ FuncUnwinders::GetEHFrameUnwindPlan(Target &target) {
     return m_unwind_plan_eh_frame_sp;
 
   m_tried_unwind_plan_eh_frame = true;
-  if (m_range.GetBaseAddress().IsValid()) {
-    DWARFCallFrameInfo *eh_frame = m_unwind_table.GetEHFrameInfo();
-    if (eh_frame) {
-      auto plan_sp = std::make_shared<UnwindPlan>(lldb::eRegisterKindGeneric);
-      if (eh_frame->GetUnwindPlan(m_range, *plan_sp))
-        m_unwind_plan_eh_frame_sp = std::move(plan_sp);
-    }
+  if (m_addr.IsValid()) {
+    if (DWARFCallFrameInfo *eh_frame = m_unwind_table.GetEHFrameInfo())
+      m_unwind_plan_eh_frame_sp = eh_frame->GetUnwindPlan(m_ranges, m_addr);
   }
   return m_unwind_plan_eh_frame_sp;
 }
@@ -167,13 +163,10 @@ FuncUnwinders::GetDebugFrameUnwindPlan(Target &target) {
     return m_unwind_plan_debug_frame_sp;
 
   m_tried_unwind_plan_debug_frame = true;
-  if (m_range.GetBaseAddress().IsValid()) {
-    DWARFCallFrameInfo *debug_frame = m_unwind_table.GetDebugFrameInfo();
-    if (debug_frame) {
-      auto plan_sp = std::make_shared<UnwindPlan>(lldb::eRegisterKindGeneric);
-      if (debug_frame->GetUnwindPlan(m_range, *plan_sp))
-        m_unwind_plan_debug_frame_sp = std::move(plan_sp);
-    }
+  if (!m_ranges.empty()) {
+    if (DWARFCallFrameInfo *debug_frame = m_unwind_table.GetDebugFrameInfo())
+      m_unwind_plan_debug_frame_sp =
+          debug_frame->GetUnwindPlan(m_ranges, m_addr);
   }
   return m_unwind_plan_debug_frame_sp;
 }
@@ -372,33 +365,30 @@ FuncUnwinders::GetAssemblyUnwindPlan(Target &target, Thread &thread) {
 LazyBool FuncUnwinders::CompareUnwindPlansForIdenticalInitialPCLocation(
     Thread &thread, const std::shared_ptr<const UnwindPlan> &a,
     const std::shared_ptr<const UnwindPlan> &b) {
-  LazyBool plans_are_identical = eLazyBoolCalculate;
+  if (!a || !b)
+    return eLazyBoolCalculate;
+
+  const UnwindPlan::Row *a_first_row = a->GetRowAtIndex(0);
+  const UnwindPlan::Row *b_first_row = b->GetRowAtIndex(0);
+  if (!a_first_row || !b_first_row)
+    return eLazyBoolCalculate;
 
   RegisterNumber pc_reg(thread, eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC);
-  uint32_t pc_reg_lldb_regnum = pc_reg.GetAsKind(eRegisterKindLLDB);
+  uint32_t a_pc_regnum = pc_reg.GetAsKind(a->GetRegisterKind());
+  uint32_t b_pc_regnum = pc_reg.GetAsKind(b->GetRegisterKind());
 
-  if (a && b) {
-    const UnwindPlan::Row *a_first_row = a->GetRowAtIndex(0);
-    const UnwindPlan::Row *b_first_row = b->GetRowAtIndex(0);
+  UnwindPlan::Row::AbstractRegisterLocation a_pc_regloc;
+  UnwindPlan::Row::AbstractRegisterLocation b_pc_regloc;
 
-    if (a_first_row && b_first_row) {
-      UnwindPlan::Row::AbstractRegisterLocation a_pc_regloc;
-      UnwindPlan::Row::AbstractRegisterLocation b_pc_regloc;
+  a_first_row->GetRegisterInfo(a_pc_regnum, a_pc_regloc);
+  b_first_row->GetRegisterInfo(b_pc_regnum, b_pc_regloc);
 
-      a_first_row->GetRegisterInfo(pc_reg_lldb_regnum, a_pc_regloc);
-      b_first_row->GetRegisterInfo(pc_reg_lldb_regnum, b_pc_regloc);
+  if (a_first_row->GetCFAValue() != b_first_row->GetCFAValue())
+    return eLazyBoolNo;
+  if (a_pc_regloc != b_pc_regloc)
+    return eLazyBoolNo;
 
-      plans_are_identical = eLazyBoolYes;
-
-      if (a_first_row->GetCFAValue() != b_first_row->GetCFAValue()) {
-        plans_are_identical = eLazyBoolNo;
-      }
-      if (a_pc_regloc != b_pc_regloc) {
-        plans_are_identical = eLazyBoolNo;
-      }
-    }
-  }
-  return plans_are_identical;
+  return eLazyBoolYes;
 }
 
 std::shared_ptr<const UnwindPlan>

@@ -205,10 +205,7 @@ std::string escapeRST(StringRef Str) {
 }
 
 StringRef getSphinxOptionID(StringRef OptionName) {
-  for (auto I = OptionName.begin(), E = OptionName.end(); I != E; ++I)
-    if (!isalnum(*I) && *I != '-')
-      return OptionName.substr(0, I - OptionName.begin());
-  return OptionName;
+  return OptionName.take_while([](char C) { return isalnum(C) || C == '-'; });
 }
 
 bool canSphinxCopeWithOption(const Record *Option) {

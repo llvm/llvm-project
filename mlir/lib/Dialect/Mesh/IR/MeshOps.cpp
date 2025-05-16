@@ -1505,7 +1505,7 @@ LogicalResult ShiftOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 
   auto meshAxes = getMeshAxes();
   auto shiftAxis = getShiftAxis().getZExtValue();
-  if (llvm::find(meshAxes, shiftAxis) == meshAxes.end()) {
+  if (!llvm::is_contained(meshAxes, shiftAxis)) {
     return emitError() << "Invalid shift axis " << shiftAxis
                        << ". It must be one of the grouping mesh axes.";
   }

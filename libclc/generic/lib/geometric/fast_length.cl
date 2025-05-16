@@ -7,19 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/clc.h>
+#include <clc/geometric/clc_fast_length.h>
 
-_CLC_OVERLOAD _CLC_DEF float fast_length(float p) {
-  return fabs(p);
-}
-
-_CLC_OVERLOAD _CLC_DEF float fast_length(float2 p) {
-  return half_sqrt(dot(p, p));
-}
-
-_CLC_OVERLOAD _CLC_DEF float fast_length(float3 p) {
-  return half_sqrt(dot(p, p));
-}
-
-_CLC_OVERLOAD _CLC_DEF float fast_length(float4 p) {
-  return half_sqrt(dot(p, p));
-}
+#define __FLOAT_ONLY
+#define FUNCTION fast_length
+#define __CLC_BODY <clc/geometric/unary_def.inc>
+#include <clc/math/gentype.inc>

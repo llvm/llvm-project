@@ -28,6 +28,7 @@ unittest("CodeGenTests") {
     "DIETest.cpp",
     "DroppedVariableStatsMIRTest.cpp",
     "DwarfStringPoolEntryRefTest.cpp",
+    "GCMetadata.cpp",
     "InstrRefLDVTest.cpp",
     "LexicalScopesTest.cpp",
     "LowLevelTypeTest.cpp",

@@ -17,14 +17,16 @@ namespace lldb_dap {
 
 class Breakpoint : public BreakpointBase {
 public:
-  Breakpoint(DAP &d, const llvm::json::Object &obj) : BreakpointBase(d, obj) {}
+  Breakpoint(DAP &d, const std::optional<std::string> &condition,
+             const std::optional<std::string> &hit_condition)
+      : BreakpointBase(d, condition, hit_condition) {}
   Breakpoint(DAP &d, lldb::SBBreakpoint bp) : BreakpointBase(d), m_bp(bp) {}
 
   lldb::break_id_t GetID() const { return m_bp.GetID(); }
 
   void SetCondition() override;
   void SetHitCondition() override;
-  void CreateJsonObject(llvm::json::Object &object) override;
+  protocol::Breakpoint ToProtocolBreakpoint() override;
 
   bool MatchesName(const char *name);
   void SetBreakpoint();

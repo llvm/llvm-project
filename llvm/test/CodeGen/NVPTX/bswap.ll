@@ -14,7 +14,7 @@ define i16 @bswap16(i16 %a) {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u16 %rs1, [bswap16_param_0];
+; CHECK-NEXT:    ld.param.b16 %rs1, [bswap16_param_0];
 ; CHECK-NEXT:    shr.u16 %rs2, %rs1, 8;
 ; CHECK-NEXT:    shl.b16 %rs3, %rs1, 8;
 ; CHECK-NEXT:    or.b16 %rs4, %rs3, %rs2;
@@ -32,7 +32,7 @@ define i32 @bswap32(i32 %a) {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [bswap32_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [bswap32_param_0];
 ; CHECK-NEXT:    prmt.b32 %r2, %r1, 0, 291;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
@@ -47,7 +47,7 @@ define <2 x i16> @bswapv2i16(<2 x i16> %a) #0 {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [bswapv2i16_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [bswapv2i16_param_0];
 ; CHECK-NEXT:    prmt.b32 %r2, %r1, 0, 8961;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
@@ -62,7 +62,7 @@ define i64 @bswap64(i64 %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [bswap64_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [bswap64_param_0];
 ; PTX70-NEXT:    { .reg .b32 tmp; mov.b64 {%r1, tmp}, %rd1; }
 ; PTX70-NEXT:    prmt.b32 %r2, %r1, 0, 291;
 ; PTX70-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r3}, %rd1; }

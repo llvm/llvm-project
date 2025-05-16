@@ -24,6 +24,7 @@
 #include "flang/Runtime/allocatable.h"
 #include "flang/Support/Fortran.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
+#include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Pass/Pass.h"

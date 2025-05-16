@@ -7,12 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/clc.h>
+#include <clc/math/clc_half_recip.h>
 
-#define recip(x) (1.0f/x)
-
-#define __CLC_FUNC recip
-#define __CLC_BODY <half_unary.inc>
 #define __FLOAT_ONLY
-#include <clc/math/gentype.inc>
+#define FUNCTION half_recip
+#define __CLC_BODY <clc/shared/unary_def.inc>
 
-#undef recip
+#include <clc/math/gentype.inc>

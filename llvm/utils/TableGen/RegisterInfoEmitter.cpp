@@ -937,7 +937,7 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS) {
   unsigned i = 0;
   for (auto I = Regs.begin(), E = Regs.end(); I != E; ++I, ++i) {
     const auto &Reg = *I;
-    RegStrings.add(std::string(Reg.getName()));
+    RegStrings.add(Reg.getName().str());
 
     // Compute the ordered sub-register list.
     SetVector<const CodeGenRegister *> SR;
@@ -974,7 +974,7 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS) {
 
   OS << "namespace llvm {\n\n";
 
-  const std::string &TargetName = std::string(Target.getName());
+  const std::string &TargetName = Target.getName().str();
 
   // Emit the shared table of differential lists.
   OS << "extern const int16_t " << TargetName << "RegDiffLists[] = {\n";
@@ -1009,7 +1009,7 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS) {
     constexpr unsigned RegUnitBits = 12;
     assert(isUInt<RegUnitBits>(FirstRU) && "Too many regunits");
     assert(isUInt<32 - RegUnitBits>(Offset) && "Offset is too big");
-    OS << "  { " << RegStrings.get(std::string(Reg.getName())) << ", "
+    OS << "  { " << RegStrings.get(Reg.getName().str()) << ", "
        << DiffSeqs.get(SubRegLists[i]) << ", " << DiffSeqs.get(SuperRegLists[i])
        << ", " << SubRegIdxSeqs.get(SubRegIdxLists[i]) << ", "
        << (Offset << RegUnitBits | FirstRU) << ", "
@@ -1144,7 +1144,7 @@ void RegisterInfoEmitter::runTargetHeader(raw_ostream &OS) {
   OS << "\n#ifdef GET_REGINFO_HEADER\n";
   OS << "#undef GET_REGINFO_HEADER\n\n";
 
-  const std::string &TargetName = std::string(Target.getName());
+  const std::string &TargetName = Target.getName().str();
   std::string ClassName = TargetName + "GenRegisterInfo";
 
   OS << "#include \"llvm/CodeGen/TargetRegisterInfo.h\"\n\n";
@@ -1472,7 +1472,7 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS) {
   OS << "} // end anonymous namespace\n";
 
   // Emit extra information about registers.
-  const std::string &TargetName = std::string(Target.getName());
+  const std::string &TargetName = Target.getName().str();
   const auto &Regs = RegBank.getRegisters();
   unsigned NumRegCosts = 1;
   for (const auto &Reg : Regs)
@@ -1934,6 +1934,8 @@ void RegisterInfoEmitter::debugDump(raw_ostream &OS) {
       OS << "\tSubReg " << SubIdx->getName() << " = " << SubReg->getName()
          << '\n';
     }
+    for (unsigned U : R.getNativeRegUnits())
+      OS << "\tRegUnit " << U << '\n';
   }
 }
 

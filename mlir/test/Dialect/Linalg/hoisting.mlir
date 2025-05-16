@@ -519,7 +519,7 @@ module attributes {transform.with_named_sequence} {
 // memory (i.e. `%collapsed_1` and `%collapsed_2` alias):
 //    %acc = vector.transfer_read %collapsed_2[%c0]
 
-// CHECK-LABEL:  func.func @no_hoisting_write_to_memref
+// CHECK-LABEL:  func.func @no_hoisting_write_to_buffer
 //       CHECK:    scf.for {{.*}} {
 //       CHECK:      vector.transfer_read {{.*}} :  memref<2xi32>, vector<1xi32>
 //       CHECK-NEXT:      vector.transfer_read {{.*}} :  memref<2xi32>, vector<1xi32>
@@ -527,7 +527,7 @@ module attributes {transform.with_named_sequence} {
 //       CHECK-NEXT:      vector.transfer_write {{.*}} : vector<1xi32>, memref<2xi32>
 //       CHECK-NEXT:    }
 
-func.func @no_hoisting_write_to_memref(%rhs: i32, %arg1: vector<1xi32>) {
+func.func @no_hoisting_write_to_buffer(%rhs: i32, %arg1: vector<1xi32>) {
   %c0_i32 = arith.constant 0 : i32
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index

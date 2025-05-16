@@ -610,10 +610,8 @@ template <class _Key,
           bool = is_empty<_Compare>::value && !__libcpp_is_final<_Compare>::value>
 class __map_value_compare : private _Compare {
 public:
-  _LIBCPP_HIDE_FROM_ABI __map_value_compare() _NOEXCEPT_(is_nothrow_default_constructible<_Compare>::value)
-      : _Compare() {}
-  _LIBCPP_HIDE_FROM_ABI __map_value_compare(_Compare __c) _NOEXCEPT_(is_nothrow_copy_constructible<_Compare>::value)
-      : _Compare(__c) {}
+  _LIBCPP_HIDE_FROM_ABI __map_value_compare() : _Compare() {}
+  _LIBCPP_HIDE_FROM_ABI __map_value_compare(_Compare __c) : _Compare(__c) {}
   _LIBCPP_HIDE_FROM_ABI const _Compare& key_comp() const _NOEXCEPT { return *this; }
   _LIBCPP_HIDE_FROM_ABI bool operator()(const _CP& __x, const _CP& __y) const {
     return static_cast<const _Compare&>(*this)(__x.__get_value().first, __y.__get_value().first);
@@ -624,7 +622,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI bool operator()(const _Key& __x, const _CP& __y) const {
     return static_cast<const _Compare&>(*this)(__x, __y.__get_value().first);
   }
-  _LIBCPP_HIDE_FROM_ABI void swap(__map_value_compare& __y) _NOEXCEPT_(__is_nothrow_swappable_v<_Compare>) {
+  _LIBCPP_HIDE_FROM_ABI void swap(__map_value_compare& __y) {
     using std::swap;
     swap(static_cast<_Compare&>(*this), static_cast<_Compare&>(__y));
   }
@@ -635,10 +633,8 @@ class __map_value_compare<_Key, _CP, _Compare, false> {
   _Compare __comp_;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI __map_value_compare() _NOEXCEPT_(is_nothrow_default_constructible<_Compare>::value)
-      : __comp_() {}
-  _LIBCPP_HIDE_FROM_ABI __map_value_compare(_Compare __c) _NOEXCEPT_(is_nothrow_copy_constructible<_Compare>::value)
-      : __comp_(__c) {}
+  _LIBCPP_HIDE_FROM_ABI __map_value_compare() : __comp_() {}
+  _LIBCPP_HIDE_FROM_ABI __map_value_compare(_Compare __c) : __comp_(__c) {}
   _LIBCPP_HIDE_FROM_ABI const _Compare& key_comp() const _NOEXCEPT { return __comp_; }
 
   _LIBCPP_HIDE_FROM_ABI bool operator()(const _CP& __x, const _CP& __y) const {
@@ -650,7 +646,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI bool operator()(const _Key& __x, const _CP& __y) const {
     return __comp_(__x, __y.__get_value().first);
   }
-  void swap(__map_value_compare& __y) _NOEXCEPT_(__is_nothrow_swappable_v<_Compare>) {
+  void swap(__map_value_compare& __y) {
     using std::swap;
     swap(__comp_, __y.__comp_);
   }
@@ -658,8 +654,7 @@ public:
 
 template <class _Key, class _CP, class _Compare, bool __b>
 inline _LIBCPP_HIDE_FROM_ABI void
-swap(__map_value_compare<_Key, _CP, _Compare, __b>& __x, __map_value_compare<_Key, _CP, _Compare, __b>& __y)
-    _NOEXCEPT_(_NOEXCEPT_(__x.swap(__y))) {
+swap(__map_value_compare<_Key, _CP, _Compare, __b>& __x, __map_value_compare<_Key, _CP, _Compare, __b>& __y) {
   __x.swap(__y);
 }
 
@@ -900,14 +895,9 @@ public:
   template <class _Key2, class _Value2, class _Comp2, class _Alloc2>
   friend class _LIBCPP_TEMPLATE_VIS multimap;
 
-  _LIBCPP_HIDE_FROM_ABI map() _NOEXCEPT_(
-      is_nothrow_default_constructible<allocator_type>::value&& is_nothrow_default_constructible<key_compare>::value&&
-          is_nothrow_copy_constructible<key_compare>::value)
-      : __tree_(__vc(key_compare())) {}
+  _LIBCPP_HIDE_FROM_ABI map() : __tree_(__vc(key_compare())) {}
 
-  _LIBCPP_HIDE_FROM_ABI explicit map(const key_compare& __comp) _NOEXCEPT_(
-      is_nothrow_default_constructible<allocator_type>::value&& is_nothrow_copy_constructible<key_compare>::value)
-      : __tree_(__vc(__comp)) {}
+  _LIBCPP_HIDE_FROM_ABI explicit map(const key_compare& __comp) : __tree_(__vc(__comp)) {}
 
   _LIBCPP_HIDE_FROM_ABI explicit map(const key_compare& __comp, const allocator_type& __a)
       : __tree_(__vc(__comp), typename __base::allocator_type(__a)) {}
@@ -994,7 +984,7 @@ public:
   }
   _LIBCPP_HIDE_FROM_ABI void clear() _NOEXCEPT { __tree_.clear(); }
 
-  _LIBCPP_HIDE_FROM_ABI void swap(map& __m) _NOEXCEPT_(__is_nothrow_swappable_v<__base>) { __tree_.swap(__m.__tree_); }
+  _LIBCPP_HIDE_FROM_ABI void swap(map& __m) { __tree_.swap(__m.__tree_); }
 
   _LIBCPP_HIDE_FROM_ABI iterator find(const key_type& __k) { return __tree_.find(__k); }
   _LIBCPP_HIDE_FROM_ABI const_iterator find(const key_type& __k) const { return __tree_.find(__k); }
@@ -1108,8 +1098,7 @@ operator<=(const map<_Key, _Tp, _Compare, _Allocator>& __x, const map<_Key, _Tp,
 
 template <class _Key, class _Tp, class _Compare, class _Allocator>
 inline _LIBCPP_HIDE_FROM_ABI void
-swap(map<_Key, _Tp, _Compare, _Allocator>& __x, map<_Key, _Tp, _Compare, _Allocator>& __y)
-    _NOEXCEPT_(_NOEXCEPT_(__x.swap(__y))) {
+swap(map<_Key, _Tp, _Compare, _Allocator>& __x, map<_Key, _Tp, _Compare, _Allocator>& __y) {
   __x.swap(__y);
 }
 
@@ -1168,14 +1157,9 @@ public:
   template <class _Key2, class _Value2, class _Comp2, class _Alloc2>
   friend class _LIBCPP_TEMPLATE_VIS multimap;
 
-  _LIBCPP_HIDE_FROM_ABI multimap() _NOEXCEPT_(
-      is_nothrow_default_constructible<allocator_type>::value&& is_nothrow_default_constructible<key_compare>::value&&
-          is_nothrow_copy_constructible<key_compare>::value)
-      : __tree_(__vc(key_compare())) {}
+  _LIBCPP_HIDE_FROM_ABI multimap() : __tree_(__vc(key_compare())) {}
 
-  _LIBCPP_HIDE_FROM_ABI explicit multimap(const key_compare& __comp) _NOEXCEPT_(
-      is_nothrow_default_constructible<allocator_type>::value&& is_nothrow_copy_constructible<key_compare>::value)
-      : __tree_(__vc(__comp)) {}
+  _LIBCPP_HIDE_FROM_ABI explicit multimap(const key_compare& __comp) : __tree_(__vc(__comp)) {}
 
   _LIBCPP_HIDE_FROM_ABI explicit multimap(const key_compare& __comp, const allocator_type& __a)
       : __tree_(__vc(__comp), typename __base::allocator_type(__a)) {}
@@ -1262,9 +1246,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI void clear() _NOEXCEPT { __tree_.clear(); }
 
-  _LIBCPP_HIDE_FROM_ABI void swap(multimap& __m) _NOEXCEPT_(__is_nothrow_swappable_v<__base>) {
-    __tree_.swap(__m.__tree_);
-  }
+  _LIBCPP_HIDE_FROM_ABI void swap(multimap& __m) { __tree_.swap(__m.__tree_); }
 
   _LIBCPP_HIDE_FROM_ABI iterator find(const key_type& __k) { return __tree_.find(__k); }
   _LIBCPP_HIDE_FROM_ABI const_iterator find(const key_type& __k) const { return __tree_.find(__k); }
@@ -1331,8 +1313,7 @@ operator<=(const multimap<_Key, _Tp, _Compare, _Allocator>& __x, const multimap<
 
 template <class _Key, class _Tp, class _Compare, class _Allocator>
 inline _LIBCPP_HIDE_FROM_ABI void
-swap(multimap<_Key, _Tp, _Compare, _Allocator>& __x, multimap<_Key, _Tp, _Compare, _Allocator>& __y)
-    _NOEXCEPT_(_NOEXCEPT_(__x.swap(__y))) {
+swap(multimap<_Key, _Tp, _Compare, _Allocator>& __x, multimap<_Key, _Tp, _Compare, _Allocator>& __y) {
   __x.swap(__y);
 }
 

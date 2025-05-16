@@ -76,6 +76,7 @@ static const SanitizerMask MergeDefault =
     SanitizerKind::Undefined | SanitizerKind::Vptr;
 static const SanitizerMask TrappingDefault =
     SanitizerKind::CFI | SanitizerKind::LocalBounds;
+static const SanitizerMask AnnotateDebugInfoDefault;
 static const SanitizerMask CFIClasses =
     SanitizerKind::CFIVCall | SanitizerKind::CFINVCall |
     SanitizerKind::CFIMFCall | SanitizerKind::CFIDerivedCast |
@@ -159,6 +160,10 @@ static std::string describeSanitizeArg(const llvm::opt::Arg *A,
 /// Sanitizers set.
 static std::string toString(const clang::SanitizerSet &Sanitizers);
 
+/// Produce a string containing comma-separated names of sanitizers and
+/// sanitizer groups in \p Sanitizers set.
+static std::string toStringWithGroups(const clang::SanitizerSet &Sanitizers);
+
 /// Return true if an execute-only target disallows data access to code
 /// sections.
 static bool isExecuteOnlyTarget(const llvm::Triple &Triple,
@@ -179,7 +184,7 @@ static void validateSpecialCaseListFormat(const Driver &D,
   std::string BLError;
   std::unique_ptr<llvm::SpecialCaseList> SCL(
       llvm::SpecialCaseList::create(SCLFiles, D.getVFS(), BLError));
-  if (!SCL.get() && DiagnoseErrors)
+  if (!SCL && DiagnoseErrors)
     D.Diag(MalformedSCLErrorDiagID) << BLError;
 }
 
@@ -288,7 +293,7 @@ parseSanitizeArgs(const Driver &D, const llvm::opt::ArgList &Args,
           SanitizerSet SetToDiagnose;
           SetToDiagnose.Mask |= KindsToDiagnose;
           D.Diag(diag::err_drv_unsupported_option_argument)
-              << Arg->getSpelling() << toString(SetToDiagnose);
+              << Arg->getSpelling() << toStringWithGroups(SetToDiagnose);
           DiagnosedAlwaysOutViolations |= KindsToDiagnose;
         }
       }
@@ -304,7 +309,7 @@ parseSanitizeArgs(const Driver &D, const llvm::opt::ArgList &Args,
           SanitizerSet SetToDiagnose;
           SetToDiagnose.Mask |= KindsToDiagnose;
           D.Diag(diag::err_drv_unsupported_option_argument)
-              << Arg->getSpelling() << toString(SetToDiagnose);
+              << Arg->getSpelling() << toStringWithGroups(SetToDiagnose);
           DiagnosedAlwaysInViolations |= KindsToDiagnose;
         }
       }
@@ -738,6 +743,13 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   // Parse -fno-sanitize-top-hot flags
   SkipHotCutoffs = parseSanitizeSkipHotCutoffArgs(D, Args, DiagnoseErrors);
 
+  // Parse -f(no-)?sanitize-annotate-debug-info flags
+  SanitizerMask AnnotateDebugInfoKinds =
+      parseSanitizeArgs(D, Args, DiagnoseErrors, AnnotateDebugInfoDefault, {},
+                        {}, options::OPT_fsanitize_annotate_debug_info_EQ,
+                        options::OPT_fno_sanitize_annotate_debug_info_EQ);
+  AnnotateDebugInfoKinds &= Kinds;
+
   // Setup ignorelist files.
   // Add default ignorelist from resource directory for activated sanitizers,
   // and validate special case lists format.
@@ -750,6 +762,17 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       D, Args, UserIgnorelistFiles, options::OPT_fsanitize_ignorelist_EQ,
       options::OPT_fno_sanitize_ignorelist,
       clang::diag::err_drv_malformed_sanitizer_ignorelist, DiagnoseErrors);
+
+  // Verify that -fsanitize-coverage-stack-depth-callback-min is >= 0.
+  if (Arg *A = Args.getLastArg(
+          options::OPT_fsanitize_coverage_stack_depth_callback_min_EQ)) {
+    StringRef S = A->getValue();
+    if (S.getAsInteger(0, CoverageStackDepthCallbackMin) ||
+        CoverageStackDepthCallbackMin < 0) {
+      if (DiagnoseErrors)
+        D.Diag(clang::diag::err_drv_invalid_value) << A->getAsString(Args) << S;
+    }
+  }
 
   // Parse -f[no-]sanitize-memory-track-origins[=level] options.
   if (AllAddedKinds & SanitizerKind::Memory) {
@@ -1157,6 +1180,8 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
 
   MergeHandlers.Mask |= MergeKinds;
 
+  AnnotateDebugInfo.Mask |= AnnotateDebugInfoKinds;
+
   // Zero out SkipHotCutoffs for unused sanitizers
   SkipHotCutoffs.clear(~Sanitizers.Mask);
 }
@@ -1177,6 +1202,19 @@ static std::string toString(const clang::SanitizerMaskCutoffs &Cutoffs) {
   llvm::SmallVector<std::string, 4> Res;
   serializeSanitizerMaskCutoffs(Cutoffs, Res);
   return llvm::join(Res, ",");
+}
+
+static std::string toStringWithGroups(const clang::SanitizerSet &Sanitizers) {
+  std::string Res;
+#define SANITIZER(NAME, ID)                                                    \
+  if (Sanitizers.has(SanitizerKind::ID)) {                                     \
+    if (!Res.empty())                                                          \
+      Res += ",";                                                              \
+    Res += NAME;                                                               \
+  }
+#define SANITIZER_GROUP(NAME, ID, ALIAS) SANITIZER(NAME, ID##Group)
+#include "clang/Basic/Sanitizers.def"
+  return Res;
 }
 
 static void addSpecialCaseListOpt(const llvm::opt::ArgList &Args,
@@ -1269,6 +1307,11 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
   addSpecialCaseListOpt(Args, CmdArgs, "-fsanitize-coverage-ignorelist=",
                         CoverageIgnorelistFiles);
 
+  if (CoverageStackDepthCallbackMin)
+    CmdArgs.push_back(
+        Args.MakeArgString("-fsanitize-coverage-stack-depth-callback-min=" +
+                           Twine(CoverageStackDepthCallbackMin)));
+
   if (!GPUSanitize) {
     // Translate available BinaryMetadataFeatures to corresponding clang-cc1
     // flags. Does not depend on any other sanitizers. Unsupported on GPUs.
@@ -1334,6 +1377,10 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
   if (!SkipHotCutoffsStr.empty())
     CmdArgs.push_back(
         Args.MakeArgString("-fsanitize-skip-hot-cutoff=" + SkipHotCutoffsStr));
+
+  if (!AnnotateDebugInfo.empty())
+    CmdArgs.push_back(Args.MakeArgString("-fsanitize-annotate-debug-info=" +
+                                         toString(AnnotateDebugInfo)));
 
   addSpecialCaseListOpt(Args, CmdArgs,
                         "-fsanitize-ignorelist=", UserIgnorelistFiles);
@@ -1518,7 +1565,10 @@ SanitizerMask parseArgValues(const Driver &D, const llvm::opt::Arg *A,
        A->getOption().matches(options::OPT_fsanitize_trap_EQ) ||
        A->getOption().matches(options::OPT_fno_sanitize_trap_EQ) ||
        A->getOption().matches(options::OPT_fsanitize_merge_handlers_EQ) ||
-       A->getOption().matches(options::OPT_fno_sanitize_merge_handlers_EQ)) &&
+       A->getOption().matches(options::OPT_fno_sanitize_merge_handlers_EQ) ||
+       A->getOption().matches(options::OPT_fsanitize_annotate_debug_info_EQ) ||
+       A->getOption().matches(
+           options::OPT_fno_sanitize_annotate_debug_info_EQ)) &&
       "Invalid argument in parseArgValues!");
   SanitizerMask Kinds;
   for (int i = 0, n = A->getNumValues(); i != n; ++i) {

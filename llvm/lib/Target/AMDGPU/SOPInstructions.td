@@ -872,7 +872,7 @@ let SubtargetPredicate = HasSALUFloatInsts, mayRaiseFPException = 1,
       let FixedSize = 1 in
       def S_FMAAK_F32 : SOP2_Pseudo<
         "s_fmaak_f32", (outs SReg_32:$sdst),
-        (ins SSrc_f32_Deferred:$src0, SSrc_f32_Deferred:$src1, KImmFP32:$imm),
+        (ins SSrc_f32:$src0, SSrc_f32:$src1, KImmFP32:$imm),
         "$sdst, $src0, $src1, $imm"
       >;
 
@@ -895,7 +895,7 @@ let SubtargetPredicate = HasSALUFloatInsts, mayRaiseFPException = 1,
     let FixedSize = 1 in
     def S_FMAMK_F32 : SOP2_Pseudo<
       "s_fmamk_f32", (outs SReg_32:$sdst),
-      (ins SSrc_f32_Deferred:$src0, KImmFP32:$imm, SSrc_f32_Deferred:$src1),
+      (ins SSrc_f32:$src0, KImmFP32:$imm, SSrc_f32:$src1),
       "$sdst, $src0, $imm, $src1"
     >;
   } // End isReMaterializable = 1

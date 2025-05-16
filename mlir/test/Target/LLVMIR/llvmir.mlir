@@ -2056,7 +2056,7 @@ module attributes {} {}
 // -----
 
 // CHECK-LABEL: @useInlineAsm
-llvm.func @useInlineAsm(%arg0: i32) {
+llvm.func @useInlineAsm(%arg0: i32, %arg1 : !llvm.ptr) {
   // Constraints string is checked at LLVM InlineAsm instruction construction time.
   // So we can't just use "bar" everywhere, number of in/out arguments has to match.
 
@@ -2081,6 +2081,28 @@ llvm.func @useInlineAsm(%arg0: i32) {
   // CHECK-NEXT:  call { i8, i8 } asm "foo", "=r,=r,r"(i32 {{.*}})
   %5 = llvm.inline_asm "foo", "=r,=r,r" %arg0 : (i32) -> !llvm.struct<(i8, i8)>
 
+  // CHECK-NEXT:  call void asm sideeffect "", "*m,~{memory}"(ptr elementtype(ptr) %1)
+  %6 = llvm.inline_asm has_side_effects operand_attrs = [{elementtype = !llvm.ptr}] "", "*m,~{memory}" %arg1 : (!llvm.ptr) -> !llvm.void
+
+  llvm.return
+}
+
+// -----
+
+// CHECK: @useInlineAsm2(ptr %[[A0:.*]], i64 %[[A1:.*]], ptr %[[A2:.*]], i64 %[[A3:.*]]) {
+llvm.func @useInlineAsm2(%arg0: !llvm.ptr, %arg1: i64, %arg2: !llvm.ptr, %arg3: i64) {
+  // CHECK:  call { i64, ptr, ptr } asm sideeffect
+  // CHECK-SAME: "ldr x4, [$2], #8   \0A\09ldr x5, [$1]       \0A\09mul x6, x4, $4     \0A\09",
+  // CHECK-SAME: "=r,=r,=r,=*m,r,*m,0,1,2,*m,~{x4},~{x5},~{x6},~{x7},~{cc}"
+  // CHECK-SAME:(ptr elementtype([16 x i64]) %[[A0]], i64 %[[A1]], ptr elementtype([16 x i64]) %[[A2]],
+  // CHECK-SAME: i64 %[[A3]], ptr %[[A0]], ptr %[[A2]], ptr elementtype([16 x i64]) %[[A0]])
+  %0 = llvm.inline_asm has_side_effects operand_attrs = [
+    {elementtype = !llvm.array<16 x i64>}, {}, {elementtype = !llvm.array<16 x i64>},
+    {}, {}, {}, {elementtype = !llvm.array<16 x i64>}]
+    "ldr x4, [$2], #8   \0A\09ldr x5, [$1]       \0A\09mul x6, x4, $4     \0A\09",
+    "=r,=r,=r,=*m,r,*m,0,1,2,*m,~{x4},~{x5},~{x6},~{x7},~{cc}"
+    %arg0, %arg1, %arg2, %arg3, %arg0, %arg2, %arg0 :
+      (!llvm.ptr, i64, !llvm.ptr, i64, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.struct<(i64, ptr, ptr)>
   llvm.return
 }
 

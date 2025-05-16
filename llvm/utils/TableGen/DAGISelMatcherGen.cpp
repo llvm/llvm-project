@@ -306,7 +306,7 @@ void MatcherGen::EmitOperatorMatchCode(const TreePatternNode &N,
     // The "name" of a non-leaf complex pattern (MY_PAT $op1, $op2) is
     // "MY_PAT:op1:op2". We should already have validated that the uses are
     // consistent.
-    std::string PatternName = std::string(N.getOperator()->getName());
+    std::string PatternName = N.getOperator()->getName().str();
     for (const TreePatternNode &Child : N.children()) {
       PatternName += ":";
       PatternName += Child.getName();

@@ -11,7 +11,7 @@ define void @bnez_i32(i32 signext %0) nounwind {
 ; LA32-NEXT:  # %bb.1: # %f
 ; LA32-NEXT:    ret
 ; LA32-NEXT:  .LBB0_2: # %t
-; LA32-NEXT:    b %plt(bar)
+; LA32-NEXT:    b bar
 ;
 ; LA64-LABEL: bnez_i32:
 ; LA64:       # %bb.0: # %start
@@ -38,7 +38,7 @@ define void @beqz_i32(i32 signext %0) nounwind {
 ; LA32:       # %bb.0: # %start
 ; LA32-NEXT:    beqz $a0, .LBB1_2
 ; LA32-NEXT:  # %bb.1: # %t
-; LA32-NEXT:    b %plt(bar)
+; LA32-NEXT:    b bar
 ; LA32-NEXT:  .LBB1_2: # %f
 ; LA32-NEXT:    ret
 ;
@@ -70,7 +70,7 @@ define void @bnez_i64(i64 %0) nounwind {
 ; LA32-NEXT:  # %bb.1: # %f
 ; LA32-NEXT:    ret
 ; LA32-NEXT:  .LBB2_2: # %t
-; LA32-NEXT:    b %plt(bar)
+; LA32-NEXT:    b bar
 ;
 ; LA64-LABEL: bnez_i64:
 ; LA64:       # %bb.0: # %start
@@ -98,7 +98,7 @@ define void @beqz_i64(i64 %0) nounwind {
 ; LA32-NEXT:    or $a0, $a0, $a1
 ; LA32-NEXT:    beqz $a0, .LBB3_2
 ; LA32-NEXT:  # %bb.1: # %t
-; LA32-NEXT:    b %plt(bar)
+; LA32-NEXT:    b bar
 ; LA32-NEXT:  .LBB3_2: # %f
 ; LA32-NEXT:    ret
 ;

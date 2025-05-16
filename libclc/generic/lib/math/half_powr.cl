@@ -7,8 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/clc.h>
+#include <clc/math/clc_half_powr.h>
 
-#define __CLC_FUNC powr
-#define __CLC_BODY <half_binary.inc>
 #define __FLOAT_ONLY
+#define FUNCTION half_powr
+#define __CLC_BODY <clc/shared/binary_def.inc>
+
 #include <clc/math/gentype.inc>

@@ -10,7 +10,7 @@ define fp128 @identity(fp128 %x) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.u64 {%rd1, %rd2}, [identity_param_0];
+; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [identity_param_0];
 ; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd1, %rd2};
 ; CHECK-NEXT:    ret;
   ret fp128 %x
@@ -22,10 +22,10 @@ define void @load_store(ptr %in, ptr %out) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [load_store_param_0];
-; CHECK-NEXT:    ld.v2.u64 {%rd2, %rd3}, [%rd1];
-; CHECK-NEXT:    ld.param.u64 %rd4, [load_store_param_1];
-; CHECK-NEXT:    st.v2.u64 [%rd4], {%rd2, %rd3};
+; CHECK-NEXT:    ld.param.b64 %rd1, [load_store_param_0];
+; CHECK-NEXT:    ld.v2.b64 {%rd2, %rd3}, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd4, [load_store_param_1];
+; CHECK-NEXT:    st.v2.b64 [%rd4], {%rd2, %rd3};
 ; CHECK-NEXT:    ret;
   %val = load fp128, ptr %in
   store fp128 %val, ptr %out
@@ -38,7 +38,7 @@ define void @call(fp128 %x) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.u64 {%rd1, %rd2}, [call_param_0];
+; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [call_param_0];
 ; CHECK-NEXT:    { // callseq 0, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
 ; CHECK-NEXT:    st.param.v2.b64 [param0], {%rd1, %rd2};
