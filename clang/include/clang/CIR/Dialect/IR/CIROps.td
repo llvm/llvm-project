@@ -269,7 +269,7 @@ def PtrStrideOp : CIR_Op<"ptr_stride",
   let extraClassDeclaration = [{
     // Get type pointed by the base pointer.
     mlir::Type getElementTy() {
-      return mlir::cast<cir::PointerType>(getBase().getType()).getPointee();
+      return getBase().getType().getPointee();
     }
   }];
 }
@@ -969,6 +969,52 @@ def SwitchOp : CIR_Op<"switch",
     // This is an expensive and need to be used with caution.
     bool isSimpleForm(llvm::SmallVectorImpl<CaseOp> &cases);
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// SwitchFlatOp
+//===----------------------------------------------------------------------===//
+
+def SwitchFlatOp : CIR_Op<"switch.flat", [AttrSizedOperandSegments,
+                                          Terminator]> {
+
+  let description = [{
+    The `cir.switch.flat` operation is a region-less and simplified
+    version of the `cir.switch`.
+    Its representation is closer to LLVM IR dialect
+    than the C/C++ language feature.
+  }];
+
+  let arguments = (ins
+    CIR_IntType:$condition,
+    Variadic<AnyType>:$defaultOperands,
+    VariadicOfVariadic<AnyType, "case_operand_segments">:$caseOperands,
+    ArrayAttr:$caseValues,
+    DenseI32ArrayAttr:$case_operand_segments
+  );
+
+  let successors = (successor
+    AnySuccessor:$defaultDestination,
+    VariadicSuccessor<AnySuccessor>:$caseDestinations
+  );
+
+  let assemblyFormat = [{
+    $condition `:` type($condition) `,`
+    $defaultDestination (`(` $defaultOperands^ `:` type($defaultOperands) `)`)?
+    custom<SwitchFlatOpCases>(ref(type($condition)), $caseValues,
+                              $caseDestinations, $caseOperands,
+                              type($caseOperands))
+    attr-dict
+  }];
+
+  let builders = [
+    OpBuilder<(ins "mlir::Value":$condition,
+      "mlir::Block *":$defaultDestination,
+      "mlir::ValueRange":$defaultOperands,
+      CArg<"llvm::ArrayRef<llvm::APInt>", "{}">:$caseValues,
+      CArg<"mlir::BlockRange", "{}">:$caseDestinations,
+      CArg<"llvm::ArrayRef<mlir::ValueRange>", "{}">:$caseOperands)>
+  ];
 }
 
 //===----------------------------------------------------------------------===//
@@ -1710,7 +1756,7 @@ def GetMemberOp : CIR_Op<"get_member"> {
 
     /// Return the result type.
     cir::PointerType getResultTy() {
-      return mlir::cast<cir::PointerType>(getResult().getType());
+      return getResult().getType();
     }
   }];
 

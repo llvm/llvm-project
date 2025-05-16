@@ -1316,6 +1316,14 @@ std::error_code DataAggregator::printLBRHeatMap() {
   }
   Heatmap HM(opts::HeatmapBlock, opts::HeatmapMinAddress,
              opts::HeatmapMaxAddress, getTextSections(BC));
+  auto getSymbolValue = [&](const MCSymbol *Symbol) -> uint64_t {
+    if (Symbol)
+      if (ErrorOr<uint64_t> SymValue = BC->getSymbolValue(*Symbol))
+        return SymValue.get();
+    return 0;
+  };
+  HM.HotStart = getSymbolValue(BC->getHotTextStartSymbol());
+  HM.HotEnd = getSymbolValue(BC->getHotTextEndSymbol());
 
   if (!NumTotalSamples) {
     if (opts::BasicAggregation) {

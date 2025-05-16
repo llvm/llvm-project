@@ -515,6 +515,8 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
         if (!attr)
           continue;
         DictionaryAttr dAttr = cast<DictionaryAttr>(attr);
+        if (dAttr.empty())
+          continue;
         TypeAttr tAttr =
             cast<TypeAttr>(dAttr.get(InlineAsmOp::getElementTypeAttrName()));
         llvm::AttrBuilder b(moduleTranslation.getLLVMContext());
@@ -690,19 +692,13 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
   // Emit blockaddress. We first need to find the LLVM block referenced by this
   // operation and then create a LLVM block address for it.
   if (auto blockAddressOp = dyn_cast<LLVM::BlockAddressOp>(opInst)) {
-    // getBlockTagOp() walks a function to search for block labels. Check
-    // whether it's in cache first.
     BlockAddressAttr blockAddressAttr = blockAddressOp.getBlockAddr();
-    BlockTagOp blockTagOp = moduleTranslation.lookupBlockTag(blockAddressAttr);
-    if (!blockTagOp) {
-      blockTagOp = blockAddressOp.getBlockTagOp();
-      moduleTranslation.mapBlockTag(blockAddressAttr, blockTagOp);
-    }
+    llvm::BasicBlock *llvmBlock =
+        moduleTranslation.lookupBlockAddress(blockAddressAttr);
 
     llvm::Value *llvmValue = nullptr;
     StringRef fnName = blockAddressAttr.getFunction().getValue();
-    if (llvm::BasicBlock *llvmBlock =
-            moduleTranslation.lookupBlock(blockTagOp->getBlock())) {
+    if (llvmBlock) {
       llvm::Function *llvmFn = moduleTranslation.lookupFunction(fnName);
       llvmValue = llvm::BlockAddress::get(llvmFn, llvmBlock);
     } else {
@@ -736,7 +732,8 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
         FlatSymbolRefAttr::get(&moduleTranslation.getContext(),
                                funcOp.getName()),
         blockTagOp.getTag());
-    moduleTranslation.mapBlockTag(blockAddressAttr, blockTagOp);
+    moduleTranslation.mapBlockAddress(blockAddressAttr,
+                                      builder.GetInsertBlock());
     return success();
   }
 
