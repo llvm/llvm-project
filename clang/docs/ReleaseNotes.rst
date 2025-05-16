@@ -830,6 +830,8 @@ RISC-V Support
 
 - `Zicsr` / `Zifencei` are allowed to be duplicated in the presence of `g` in `-march`.
 
+- Add support for the `__builtin_riscv_pause()` intrinsic from the `Zihintpause` extension.
+
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
