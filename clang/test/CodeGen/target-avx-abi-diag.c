@@ -98,4 +98,6 @@ __attribute__((target("avx512f"))) void call_avx512_ok2(void) {
 // avx512-256-warning@*:* {{invalid feature combination: +avx512f +avx10.1-256; will be promoted to avx10.1-512}}
 // avx512-256-warning@*:* {{invalid feature combination: +avx512f +avx10.1-256; will be promoted to avx10.1-512}}
 // avx512-256-warning@*:* {{invalid feature combination: +avx512f +avx10.1-256; will be promoted to avx10.1-512}}
+// avx512-256-warning@*:* {{invalid feature combination: +avx512f +avx10.1-256; will be promoted to avx10.1-512}}
+// avx512-256-warning@*:* {{invalid feature combination: +avx512f +avx10.1-256; will be promoted to avx10.1-512}}
 #endif
