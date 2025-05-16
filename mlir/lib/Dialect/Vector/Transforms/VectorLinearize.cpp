@@ -566,47 +566,109 @@ struct LinearizeVectorSplat final
   }
 };
 
+/// This pattern converts the CreateMaskOp to work on a linearized vector.
+/// It currently supports only 2D masks with a unit outer dimension.
+/// Following,
+///   vector.create_mask %arg0, %arg1 : vector<1x4xi1>
+/// is converted to:
+///   %zero = arith.constant 0 : index
+///   %cmpi = arith.cmpi sgt, %arg0, %zero : index
+///   %index = arith.index_cast %cmpi : i1 to index
+///   %mul = arith.andi %index, %arg1 : index
+///   %mask = vector.create_mask %mul : vector<4xi1>
+///   %shape_cast = vector.shape_cast %mask : vector<4xi1> to vector<1x4xi1>
+struct LinearizeVectorCreateMask final
+    : OpConversionPattern<vector::CreateMaskOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LinearizeVectorCreateMask(const TypeConverter &typeConverter,
+                            MLIRContext *context, PatternBenefit benefit = 1)
+      : OpConversionPattern(typeConverter, context, benefit) {}
+
+  LogicalResult
+  matchAndRewrite(vector::CreateMaskOp createMaskOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = createMaskOp.getLoc();
+    VectorType srcTy = createMaskOp.getType();
+    auto srcShape = srcTy.getShape();
+    if (srcShape.size() != 2)
+      return rewriter.notifyMatchFailure(createMaskOp,
+                                         "only 2D mask is supported.");
+
+    if (srcShape[0] != 1)
+      return rewriter.notifyMatchFailure(
+          createMaskOp, "only unit outer dimension is supported.");
+
+    auto dstTy = getTypeConverter()->convertType(srcTy);
+    if (!dstTy)
+      return rewriter.notifyMatchFailure(createMaskOp, "cannot convert type.");
+
+    // Compare the first operand with 0. If it is greater than 0, the
+    // corresponding mask element is set to true, otherwise false.
+    // The result of the comparison is then multiplied with
+    // the second operand of create_mask to get the 1D mask.
+    auto firstOperand = adaptor.getOperands().front();
+    auto zero = rewriter.create<mlir::arith::ConstantIndexOp>(loc, 0);
+    auto isNonZero = rewriter.createOrFold<mlir::arith::CmpIOp>(
+        loc, mlir::arith::CmpIPredicate::sgt, firstOperand, zero);
+    auto isNonZeroIndex = rewriter.createOrFold<mlir::arith::IndexCastOp>(
+        loc, rewriter.getIndexType(), isNonZero);
+    auto secondOperand = adaptor.getOperands().back();
+    auto maskSize = rewriter.createOrFold<mlir::arith::AndIOp>(
+        loc, rewriter.getIndexType(), isNonZeroIndex, secondOperand);
+
+    auto newMask =
+        rewriter.create<mlir::vector::CreateMaskOp>(loc, dstTy, maskSize);
+    rewriter.replaceOp(createMaskOp, newMask);
+    return success();
+  }
+};
+
 } // namespace
 
-/// Return true if the operation `op` does not support scalable vectors and
-/// has at least 1 scalable vector result. These ops should all eventually
-/// support scalable vectors, and this function should be removed.
-static bool isNotLinearizableBecauseScalable(Operation *op) {
-
-  bool unsupported =
-      isa<vector::ExtractStridedSliceOp, vector::InsertStridedSliceOp,
-          vector::ExtractOp, vector::InsertOp>(op);
-  if (!unsupported)
-    return false;
-
-  // Check if any of the results is a scalable vector type.
-  auto types = op->getResultTypes();
-  bool containsScalableResult =
-      std::any_of(types.begin(), types.end(), [](Type type) {
-        auto vecType = dyn_cast<VectorType>(type);
-        return vecType && vecType.isScalable();
-      });
-
-  return containsScalableResult;
-}
-
-static bool isNotLinearizable(Operation *op) {
+/// This method defines the set of operations that are linearizable, and hence
+/// that are considered illegal for the conversion target.
+static bool isLinearizable(Operation *op) {
 
   // Only ops that are in the vector dialect, are ConstantLike, or
   // are Vectorizable might be linearized currently.
   StringLiteral vectorDialect = vector::VectorDialect::getDialectNamespace();
   StringRef opDialect = op->getDialect()->getNamespace();
-  bool unsupported = (opDialect != vectorDialect) &&
-                     !op->hasTrait<OpTrait::ConstantLike>() &&
-                     !op->hasTrait<OpTrait::Vectorizable>();
-  if (unsupported)
-    return true;
+  bool supported = (opDialect == vectorDialect) ||
+                   op->hasTrait<OpTrait::ConstantLike>() ||
+                   op->hasTrait<OpTrait::Vectorizable>();
+  if (!supported)
+    return false;
 
-  // Some ops currently don't support scalable vectors.
-  if (isNotLinearizableBecauseScalable(op))
-    return true;
-
-  return false;
+  return TypeSwitch<Operation *, bool>(op)
+      // As type legalization is done with vector.shape_cast, shape_cast
+      // itself cannot be linearized (will create new shape_casts to linearize
+      // ad infinitum).
+      .Case<vector::ShapeCastOp>([&](auto) { return false; })
+      // The operations
+      // - vector.extract_strided_slice
+      // - vector.extract
+      // - vector.insert_strided_slice
+      // - vector.insert
+      // are linearized to a rank-1 vector.shuffle by the current patterns.
+      // vector.shuffle only supports fixed size vectors, so it is impossible to
+      // use this approach to linearize these ops if they operate on scalable
+      // vectors.
+      .Case<vector::ExtractStridedSliceOp>(
+          [&](vector::ExtractStridedSliceOp extractOp) {
+            return !extractOp.getType().isScalable();
+          })
+      .Case<vector::InsertStridedSliceOp>(
+          [&](vector::InsertStridedSliceOp insertOp) {
+            return !insertOp.getType().isScalable();
+          })
+      .Case<vector::InsertOp>([&](vector::InsertOp insertOp) {
+        return !insertOp.getType().isScalable();
+      })
+      .Case<vector::ExtractOp>([&](vector::ExtractOp extractOp) {
+        return !extractOp.getSourceVectorType().isScalable();
+      })
+      .Default([&](auto) { return true; });
 }
 
 void mlir::vector::populateForVectorLinearize(TypeConverter &typeConverter,
@@ -640,7 +702,7 @@ void mlir::vector::populateForVectorLinearize(TypeConverter &typeConverter,
 
   target.markUnknownOpDynamicallyLegal(
       [=](Operation *op) -> std::optional<bool> {
-        if (isNotLinearizable(op))
+        if (!isLinearizable(op))
           return true;
         // This will return true if, for all operand and result types `t`,
         // convertType(t) = t. This is true if there are no rank>=2 vectors.
@@ -651,9 +713,10 @@ void mlir::vector::populateForVectorLinearize(TypeConverter &typeConverter,
 void mlir::vector::populateVectorLinearizeBasePatterns(
     const TypeConverter &typeConverter, const ConversionTarget &target,
     RewritePatternSet &patterns) {
-  patterns.add<LinearizeConstantLike, LinearizeVectorizable,
-               LinearizeVectorBitCast, LinearizeVectorSplat>(
-      typeConverter, patterns.getContext());
+  patterns
+      .add<LinearizeConstantLike, LinearizeVectorizable, LinearizeVectorBitCast,
+           LinearizeVectorSplat, LinearizeVectorCreateMask>(
+          typeConverter, patterns.getContext());
 }
 
 void mlir::vector::populateVectorLinearizeShuffleLikeOpsPatterns(

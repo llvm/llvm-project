@@ -392,6 +392,28 @@ func.func @test_vector_bitcast(%arg0: vector<[4]x2xf32>) -> vector<[4]x4xf16> {
 
 // -----
 
+// CHECK-LABEL: test_linearize_across_for
+func.func @test_linearize_across_for(%arg0 : vector<4xi8>) -> vector<4xi8> {
+  %0 = vector.shape_cast %arg0 : vector<4xi8> to vector<2x2xi8>
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c4 = arith.constant 4 : index
+
+  // CHECK:  scf.for {{.*}} -> (vector<4xi8>)
+  %1 = scf.for %i = %c0 to %c4 step %c1 iter_args(%arg1 = %0) -> (vector<2x2xi8>) {
+
+    // CHECK:  arith.addi {{.*}} : vector<4xi8>
+    %2 = arith.addi %arg1, %0 : vector<2x2xi8>
+
+    // CHECK:  scf.yield {{.*}} : vector<4xi8>
+    scf.yield %2 : vector<2x2xi8>
+  }
+  %3 = vector.shape_cast %1 : vector<2x2xi8> to vector<4xi8>
+  return %3 : vector<4xi8>
+}
+
+// -----
+
 // CHECK-LABEL: linearize_vector_splat
 // CHECK-SAME: (%[[ARG:.*]]: i32) -> vector<4x2xi32>
 func.func @linearize_vector_splat(%arg0: i32) -> vector<4x2xi32> {
@@ -414,5 +436,31 @@ func.func @linearize_scalable_vector_splat(%arg0: i32) -> vector<4x[2]xi32> {
   // CHECK: return %[[CAST]] : vector<4x[2]xi32>
   %0 = vector.splat %arg0 : vector<4x[2]xi32>
   return %0 : vector<4x[2]xi32>
+
 }
 
+// -----
+
+// CHECK-LABEL: linearize_create_mask
+// CHECK-SAME: (%[[ARG0:.*]]: index, %[[ARG1:.*]]: index) -> vector<1x16xi1>
+func.func @linearize_create_mask(%arg0 : index, %arg1 : index) -> vector<1x16xi1> {
+  
+  // CHECK: %[[C0:.*]] = arith.constant 0 : index
+  // CHECK: %[[CMP:.*]] = arith.cmpi sgt, %[[ARG0]], %[[C0]] : index
+  // CHECK: %[[INDEXCAST:.*]] = arith.index_cast %[[CMP]] : i1 to index
+  // CHECK: %[[MULI:.*]] = arith.andi %[[INDEXCAST]], %[[ARG1]] : index
+  // CHECK: %[[MASK_1D:.*]] = vector.create_mask %[[MULI]] : vector<16xi1>
+  // CHECK: %[[CAST:.*]] = vector.shape_cast %[[MASK_1D]] : vector<16xi1> to vector<1x16xi1>
+  // CHECK: return %[[CAST]] : vector<1x16xi1>
+  %0 = vector.create_mask %arg0, %arg1 : vector<1x16xi1>
+  return %0 : vector<1x16xi1>
+}
+
+// -----
+// CHECK-LABEL: linearize_scalable_create_mask
+func.func @linearize_scalable_create_mask(%arg0 : index, %arg1 : index) -> vector<1x[16]xi1> {
+
+  // CHECK: %[[MASK_1D:.*]] = vector.create_mask {{%.*}} : vector<[16]xi1>
+  %0 = vector.create_mask %arg0, %arg1 : vector<1x[16]xi1>
+  return %0 : vector<1x[16]xi1>
+}
