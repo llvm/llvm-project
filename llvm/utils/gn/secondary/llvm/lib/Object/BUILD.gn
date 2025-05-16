@@ -39,6 +39,7 @@ static_library("Object") {
     "Object.cpp",
     "ObjectFile.cpp",
     "OffloadBinary.cpp",
+    "OffloadBundle.cpp",
     "RecordStreamer.cpp",
     "RelocationResolver.cpp",
     "SymbolSize.cpp",
