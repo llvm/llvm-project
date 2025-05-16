@@ -339,7 +339,7 @@ struct DAP {
   /// listeing for its breakpoint events.
   void SetTarget(const lldb::SBTarget target);
 
-  bool HandleObject(const protocol::Message &M);
+  bool HandleObject(const protocol::Message &M, bool &defer);
 
   /// Disconnect the DAP session.
   llvm::Error Disconnect();

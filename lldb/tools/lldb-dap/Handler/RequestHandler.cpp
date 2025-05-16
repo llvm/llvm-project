@@ -126,7 +126,7 @@ RunInTerminal(DAP &dap, const protocol::LaunchRequestArguments &arguments) {
                                  error.GetCString());
 }
 
-void BaseRequestHandler::Run(const Request &request) {
+bool BaseRequestHandler::Run(const Request &request) {
   // If this request was cancelled, send a cancelled response.
   if (dap.IsCancelled(request)) {
     Response cancelled{/*request_seq=*/request.seq,
@@ -135,12 +135,15 @@ void BaseRequestHandler::Run(const Request &request) {
                        /*message=*/eResponseMessageCancelled,
                        /*body=*/std::nullopt};
     dap.Send(cancelled);
-    return;
+    return false;
   }
 
   lldb::SBMutex lock = dap.GetAPIMutex();
   std::lock_guard<lldb::SBMutex> guard(lock);
 
+  if (DeferRequest()) {
+    return true;
+  }
   // FIXME: After all the requests have migrated from LegacyRequestHandler >
   // RequestHandler<> we should be able to move this into
   // RequestHandler<>::operator().
@@ -149,6 +152,7 @@ void BaseRequestHandler::Run(const Request &request) {
   // FIXME: After all the requests have migrated from LegacyRequestHandler >
   // RequestHandler<> we should be able to check `debugger.InterruptRequest` and
   // mark the response as cancelled.
+  return false;
 }
 
 llvm::Error BaseRequestHandler::LaunchProcess(
