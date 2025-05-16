@@ -2539,11 +2539,10 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   field bit IsWMMA = 0;
   field bit IsSWMMAC = 0;
 
-  field bit IsFP8SrcByteSel = 0;
-  field bit IsFP8DstByteSel = 0;
+  field bit HasFP8SrcByteSel = 0;
   field bit HasFP8DstByteSel = 0;
   field bit HasFP4DstByteSel = 0;
-  field bit IsFP8ByteSel = !or(IsFP8SrcByteSel, IsFP8DstByteSel);
+  field bit HasFP8ByteSel = !or(HasFP8SrcByteSel, HasFP8DstByteSel);
 
   field bit HasDst = !ne(DstVT.Value, untyped.Value);
   field bit HasDst32 = HasDst;
@@ -2660,7 +2659,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   field string AsmDPP8 = getAsmDPP8<HasDst, NumSrcArgs, 0 /*HasModifiers*/, DstVT>.ret;
   field string AsmVOP3Base = getAsmVOP3Base<NumSrcArgs, HasDst, HasClamp,
    HasOpSel, HasOMod, IsVOP3P, HasNeg, HasModifiers, HasModifiers,
-   HasModifiers, DstVT, IsFP8ByteSel>.ret;
+   HasModifiers, DstVT, HasFP8ByteSel>.ret;
   field string Asm64 = AsmVOP3Base;
   field string AsmVOP3P = getAsmVOP3P<HasDst, NumSrcArgs, HasNeg, HasClamp, HasOpSel>.ret;
   field string AsmVOP3OpSel = getAsmVOP3OpSel<NumSrcArgs,
