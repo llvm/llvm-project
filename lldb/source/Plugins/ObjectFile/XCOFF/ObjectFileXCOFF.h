@@ -97,6 +97,17 @@ public:
                   lldb::DataBufferSP header_data_sp,
                   const lldb::ProcessSP &process_sp, lldb::addr_t header_addr);
 
+protected:
+  static lldb::WritableDataBufferSP
+  MapFileDataWritable(const lldb_private::FileSpec &file, uint64_t Size,
+                      uint64_t Offset);
+
+private:
+  bool CreateBinary();
+  template <typename T>
+  void
+  CreateSectionsWithBitness(lldb_private::SectionList &unified_section_list);
+
   struct XCOFF32 {
     using SectionHeader = llvm::object::XCOFFSectionHeader32;
     static constexpr bool Is64Bit = false;
@@ -106,17 +117,6 @@ public:
     static constexpr bool Is64Bit = true;
   };
 
-  template <typename T>
-  void
-  CreateSectionsWithBitness(lldb_private::SectionList &unified_section_list);
-
-protected:
-  static lldb::WritableDataBufferSP
-  MapFileDataWritable(const lldb_private::FileSpec &file, uint64_t Size,
-                      uint64_t Offset);
-
-private:
-  bool CreateBinary();
   std::unique_ptr<llvm::object::XCOFFObjectFile> m_binary;
 };
 

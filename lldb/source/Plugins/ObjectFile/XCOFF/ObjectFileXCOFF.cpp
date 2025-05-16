@@ -204,7 +204,8 @@ void ObjectFileXCOFF::CreateSections(SectionList &unified_section_list) {
     CreateSectionsWithBitness<XCOFF32>(unified_section_list);
 }
 
-template <typename T> auto GetSections(llvm::object::XCOFFObjectFile *binary) {
+template <typename T>
+static auto GetSections(llvm::object::XCOFFObjectFile *binary) {
   if constexpr (T::Is64Bit)
     return binary->sections64();
   else
