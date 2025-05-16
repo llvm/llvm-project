@@ -122,6 +122,26 @@ void checkElementProperties(LVReader *Reader) {
   const LVLines *Lines = Function->getLines();
   ASSERT_NE(Lines, nullptr);
   ASSERT_EQ(Lines->size(), 0x12u);
+
+  // Check size of types in CompileUnit.
+  const LVTypes *Types = CompileUnit->getTypes();
+  ASSERT_NE(Types, nullptr);
+  EXPECT_EQ(Types->size(), 7u);
+
+  const auto BoolType =
+      std::find_if(Types->begin(), Types->end(), [](const LVElement *elt) {
+        return elt->getName() == "bool";
+      });
+  ASSERT_NE(BoolType, Types->end());
+  const auto IntType =
+      std::find_if(Types->begin(), Types->end(), [](const LVElement *elt) {
+        return elt->getName() == "int";
+      });
+  ASSERT_NE(IntType, Types->end());
+  EXPECT_EQ(static_cast<LVType *>(*BoolType)->getBitSize(), 8u);
+  EXPECT_EQ(static_cast<LVType *>(*BoolType)->getStorageSizeInBytes(), 1u);
+  EXPECT_EQ(static_cast<LVType *>(*IntType)->getBitSize(), 32u);
+  EXPECT_EQ(static_cast<LVType *>(*IntType)->getStorageSizeInBytes(), 4u);
 }
 
 // Check the logical elements selection.
@@ -253,6 +273,7 @@ void elementProperties(SmallString<128> &InputsDir) {
   ReaderOptions.setAttributePublics();
   ReaderOptions.setAttributeRange();
   ReaderOptions.setAttributeLocation();
+  ReaderOptions.setAttributeSize();
   ReaderOptions.setPrintAll();
   ReaderOptions.resolveDependencies();
 
