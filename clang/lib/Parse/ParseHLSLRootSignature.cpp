@@ -881,7 +881,7 @@ std::optional<uint32_t> RootSignatureParser::handleUIntLiteral() {
     // Report that the value has overflowed
     PP.getDiagnostics().Report(CurToken.TokLoc,
                                diag::err_hlsl_number_literal_overflow)
-        << 0 << CurToken.NumSpelling;
+        << /*integer type*/ 0 << /*is signed*/ 0;
     return std::nullopt;
   }
 
@@ -904,7 +904,7 @@ std::optional<int32_t> RootSignatureParser::handleIntLiteral(bool Negated) {
     // Report that the value has overflowed
     PP.getDiagnostics().Report(CurToken.TokLoc,
                                diag::err_hlsl_number_literal_overflow)
-        << 0 << CurToken.NumSpelling;
+        << /*integer type*/ 0 << /*is signed*/ 1;
     return std::nullopt;
   }
 
@@ -923,8 +923,8 @@ std::optional<float> RootSignatureParser::handleFloatLiteral(bool Negated) {
     return std::nullopt; // Error has already been reported so just return
 
   assert(Literal.isFloatingLiteral() &&
-         "NumSpelling is consistent with isNumberChar in "
-         "LexHLSLRootSignature.cpp");
+         "NumSpelling consists only of [0-9.ef+-]. Any malformed NumSpelling "
+         "will be caught and reported by NumericLiteralParser.");
 
   // DXC used `strtod` to convert the token string to a float which corresponds
   // to:
@@ -935,16 +935,40 @@ std::optional<float> RootSignatureParser::handleFloatLiteral(bool Negated) {
       llvm::APFloat(llvm::APFloat::EnumToSemantics(DXCSemantics));
   llvm::APFloat::opStatus Status = Literal.GetFloatValue(Val, DXCRoundingMode);
 
-  // The float is valid with opInexect as this just denotes if rounding occured
-  if (Status != llvm::APFloat::opStatus::opOK &&
-      Status != llvm::APFloat::opStatus::opInexact)
+  // Note: we do not error when opStatus::opInexact by itself as this just
+  // denotes that rounding occured but not that it is invalid
+  assert(!(Status & llvm::APFloat::opStatus::opInvalidOp) &&
+         "NumSpelling consists only of [0-9.ef+-]. Any malformed NumSpelling "
+         "will be caught and reported by NumericLiteralParser.");
+
+  assert(!(Status & llvm::APFloat::opStatus::opDivByZero) &&
+         "It is not possible for a division to be performed when "
+         "constructing an APFloat from a string");
+
+  if (Status & llvm::APFloat::opStatus::opUnderflow) {
+    // Report that the value has underflowed
+    PP.getDiagnostics().Report(CurToken.TokLoc,
+                               diag::err_hlsl_number_literal_underflow);
     return std::nullopt;
+  }
+
+  if (Status & llvm::APFloat::opStatus::opOverflow) {
+    // Report that the value has overflowed
+    PP.getDiagnostics().Report(CurToken.TokLoc,
+                               diag::err_hlsl_number_literal_overflow)
+        << /*float type*/ 1;
+    return std::nullopt;
+  }
 
   if (Negated)
     Val = -Val;
 
   double DoubleVal = Val.convertToDouble();
   if (FLT_MAX < DoubleVal || DoubleVal < -FLT_MAX) {
+    // Report that the value has overflowed
+    PP.getDiagnostics().Report(CurToken.TokLoc,
+                               diag::err_hlsl_number_literal_overflow)
+        << /*float type*/ 1;
     return std::nullopt;
   }
 
