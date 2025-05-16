@@ -1554,6 +1554,7 @@ def cursor_null_guard(func):
     If necessary, you can check whether a cursor is the null-cursor by
     calling its `is_null` method.
     """
+
     def inner(self, *args, **kwargs):
         if self.is_null():
             raise Exception("Tried calling method on a null-cursor.")
