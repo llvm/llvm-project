@@ -167,8 +167,7 @@ define void @eliminate_frame_index(<4 x i32> %a) nounwind {
 ; CHECK-LABEL: eliminate_frame_index:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi.d $sp, $sp, -1040
-; CHECK-NEXT:    ori $a0, $zero, 524
-; CHECK-NEXT:    add.d $a0, $sp, $a0
+; CHECK-NEXT:    addi.d $a0, $sp, 524
 ; CHECK-NEXT:    vstelm.w $vr0, $a0, 0, 1
 ; CHECK-NEXT:    addi.d $sp, $sp, 1040
 ; CHECK-NEXT:    ret
