@@ -400,6 +400,120 @@ body:             |
 ...
 
 ---
+name:            test_cvt_scalef32_pk_fp8_bf16_hazard_write_low_half
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2
+    ; GCN-LABEL: name: test_cvt_scalef32_pk_fp8_bf16_hazard_write_low_half
+    ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_WAITCNT 0
+    ; GCN-NEXT: renamable $vgpr0 = V_CVT_SCALEF32_PK_FP8_BF16_e64 0, killed $vgpr1, 0, killed $vgpr2, killed $vgpr0, 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: S_NOP 0
+    ; GCN-NEXT: renamable $vgpr0 = V_PK_ADD_U16 8, killed $vgpr0, 8, $vgpr0, 0, 0, 0, 0, 0, implicit $exec
+    ; GCN-NEXT: S_SETPC_B64_return undef $sgpr30_sgpr31, implicit killed $vgpr0
+    S_WAITCNT 0
+    renamable $vgpr0 = V_CVT_SCALEF32_PK_FP8_BF16_e64 0, killed $vgpr1, 0, killed $vgpr2, killed $vgpr0, 0, implicit $mode, implicit $exec
+    renamable $vgpr0 = V_PK_ADD_U16 8, killed $vgpr0, 8, $vgpr0, 0, 0, 0, 0, 0, implicit $exec
+    S_SETPC_B64_return undef $sgpr30_sgpr31, implicit killed $vgpr0
+...
+
+---
+name:            test_cvt_scalef32_pk_fp8_bf16_hazard_write_hi_half
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2
+    ; GCN-LABEL: name: test_cvt_scalef32_pk_fp8_bf16_hazard_write_hi_half
+    ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_WAITCNT 0
+    ; GCN-NEXT: renamable $vgpr0 = V_CVT_SCALEF32_PK_FP8_BF16_e64 8, killed $vgpr1, 0, killed $vgpr2, killed $vgpr0, 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: S_NOP 0
+    ; GCN-NEXT: renamable $vgpr0 = V_PK_ADD_U16 8, killed $vgpr0, 8, $vgpr0, 0, 0, 0, 0, 0, implicit $exec
+    ; GCN-NEXT: S_SETPC_B64_return undef $sgpr30_sgpr31, implicit killed $vgpr0
+    S_WAITCNT 0
+    renamable $vgpr0 = V_CVT_SCALEF32_PK_FP8_BF16_e64 8, killed $vgpr1, 0, killed $vgpr2, killed $vgpr0, 0, implicit $mode, implicit $exec
+    renamable $vgpr0 = V_PK_ADD_U16 8, killed $vgpr0, 8, $vgpr0, 0, 0, 0, 0, 0, implicit $exec
+    S_SETPC_B64_return undef $sgpr30_sgpr31, implicit killed $vgpr0
+...
+
+---
+name:            test_cvt_scalef32_pk_bf8_bf16_hazard_write_low_half
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2
+    ; GCN-LABEL: name: test_cvt_scalef32_pk_bf8_bf16_hazard_write_low_half
+    ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_WAITCNT 0
+    ; GCN-NEXT: renamable $vgpr0 = V_CVT_SCALEF32_PK_BF8_BF16_e64 0, killed $vgpr1, 0, killed $vgpr2, killed $vgpr0, 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: S_NOP 0
+    ; GCN-NEXT: renamable $vgpr0 = V_PK_ADD_U16 8, killed $vgpr0, 8, $vgpr0, 0, 0, 0, 0, 0, implicit $exec
+    ; GCN-NEXT: S_SETPC_B64_return undef $sgpr30_sgpr31, implicit killed $vgpr0
+    S_WAITCNT 0
+    renamable $vgpr0 = V_CVT_SCALEF32_PK_BF8_BF16_e64 0, killed $vgpr1, 0, killed $vgpr2, killed $vgpr0, 0, implicit $mode, implicit $exec
+    renamable $vgpr0 = V_PK_ADD_U16 8, killed $vgpr0, 8, $vgpr0, 0, 0, 0, 0, 0, implicit $exec
+    S_SETPC_B64_return undef $sgpr30_sgpr31, implicit killed $vgpr0
+...
+
+---
+name:            test_cvt_scalef32_pk_bf8_bf16_hazard_write_hi_half
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2
+    ; GCN-LABEL: name: test_cvt_scalef32_pk_bf8_bf16_hazard_write_hi_half
+    ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_WAITCNT 0
+    ; GCN-NEXT: renamable $vgpr0 = V_CVT_SCALEF32_PK_BF8_BF16_e64 8, killed $vgpr1, 0, killed $vgpr2, killed $vgpr0, 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: S_NOP 0
+    ; GCN-NEXT: renamable $vgpr0 = V_PK_ADD_U16 8, killed $vgpr0, 8, $vgpr0, 0, 0, 0, 0, 0, implicit $exec
+    ; GCN-NEXT: S_SETPC_B64_return undef $sgpr30_sgpr31, implicit killed $vgpr0
+    S_WAITCNT 0
+    renamable $vgpr0 = V_CVT_SCALEF32_PK_BF8_BF16_e64 8, killed $vgpr1, 0, killed $vgpr2, killed $vgpr0, 0, implicit $mode, implicit $exec
+    renamable $vgpr0 = V_PK_ADD_U16 8, killed $vgpr0, 8, $vgpr0, 0, 0, 0, 0, 0, implicit $exec
+    S_SETPC_B64_return undef $sgpr30_sgpr31, implicit killed $vgpr0
+...
+
+---
+name:            test_cvt_scalef32_pk_bf8_f16_hazard_write_low_half
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2
+    ; GCN-LABEL: name: test_cvt_scalef32_pk_bf8_f16_hazard_write_low_half
+    ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_WAITCNT 0
+    ; GCN-NEXT: renamable $vgpr0 = V_CVT_SCALEF32_PK_BF8_F16_e64 0, killed $vgpr1, 0, killed $vgpr2, killed $vgpr0, 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: S_NOP 0
+    ; GCN-NEXT: renamable $vgpr0 = V_PK_ADD_U16 8, killed $vgpr0, 8, $vgpr0, 0, 0, 0, 0, 0, implicit $exec
+    ; GCN-NEXT: S_SETPC_B64_return undef $sgpr30_sgpr31, implicit killed $vgpr0
+    S_WAITCNT 0
+    renamable $vgpr0 = V_CVT_SCALEF32_PK_BF8_F16_e64 0, killed $vgpr1, 0, killed $vgpr2, killed $vgpr0, 0, implicit $mode, implicit $exec
+    renamable $vgpr0 = V_PK_ADD_U16 8, killed $vgpr0, 8, $vgpr0, 0, 0, 0, 0, 0, implicit $exec
+    S_SETPC_B64_return undef $sgpr30_sgpr31, implicit killed $vgpr0
+...
+
+---
+name:            test_cvt_scalef32_pk_bf8_f16_hazard_write_hi_half
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2
+    ; GCN-LABEL: name: test_cvt_scalef32_pk_bf8_f16_hazard_write_hi_half
+    ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_WAITCNT 0
+    ; GCN-NEXT: renamable $vgpr0 = V_CVT_SCALEF32_PK_BF8_F16_e64 8, killed $vgpr1, 0, killed $vgpr2, killed $vgpr0, 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: S_NOP 0
+    ; GCN-NEXT: renamable $vgpr0 = V_PK_ADD_U16 8, killed $vgpr0, 8, $vgpr0, 0, 0, 0, 0, 0, implicit $exec
+    ; GCN-NEXT: S_SETPC_B64_return undef $sgpr30_sgpr31, implicit killed $vgpr0
+    S_WAITCNT 0
+    renamable $vgpr0 = V_CVT_SCALEF32_PK_BF8_F16_e64 8, killed $vgpr1, 0, killed $vgpr2, killed $vgpr0, 0, implicit $mode, implicit $exec
+    renamable $vgpr0 = V_PK_ADD_U16 8, killed $vgpr0, 8, $vgpr0, 0, 0, 0, 0, 0, implicit $exec
+    S_SETPC_B64_return undef $sgpr30_sgpr31, implicit killed $vgpr0
+...
+
+---
 name:            test_cvt_scalef32_pk_fp8_f16_hazard_write_hi_half
 body:             |
   bb.0:
