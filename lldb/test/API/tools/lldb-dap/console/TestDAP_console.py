@@ -177,7 +177,7 @@ class TestDAP_console(lldbdap_testcase.DAPTestCaseBase):
         )
 
         diagnostics = self.collect_important(
-            timeout_secs=self.timeoutval, pattern="minidump file"
+            timeout_secs=self.DEFAULT_TIMEOUT, pattern="minidump file"
         )
 
         self.assertIn(
