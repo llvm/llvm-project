@@ -187,7 +187,6 @@ struct DAP {
   // shutting down the entire adapter. When we're restarting, we keep the id of
   // the old process here so we can detect this case and keep running.
   lldb::pid_t restarting_process_id;
-  bool configuration_done;
   bool waiting_for_run_in_terminal;
   ProgressEventReporter progress_event_reporter;
   // Keep track of the last stop thread index IDs as threads won't go away
@@ -257,7 +256,18 @@ struct DAP {
   /// Configures the debug adapter for launching/attaching.
   void SetConfiguration(const protocol::Configuration &confing, bool is_attach);
 
+  /// Returns true if the debug session has received the `configurationDone`
+  /// request.
+  bool GetConfigurationDone();
+
+  /// Marks that the debug session has received the `configurationDone` request.
   void SetConfigurationDone();
+
+  /// Registers a callback that is fired after `configurationDone` is received.
+  ///
+  /// NOTE: If `configurationDone` has already been received, the callback will
+  /// be invoked immediately.
+  void OnConfigurationDone(llvm::unique_function<void()> &&callback);
 
   /// Configure source maps based on the current `DAPConfiguration`.
   void ConfigureSourceMaps();
@@ -265,6 +275,7 @@ struct DAP {
   /// Serialize the JSON value into a string and send the JSON packet to the
   /// "out" stream.
   void SendJSON(const llvm::json::Value &json);
+
   /// Send the given message to the client
   void Send(const protocol::Message &message);
 
@@ -336,7 +347,7 @@ struct DAP {
   lldb::SBTarget CreateTarget(lldb::SBError &error);
 
   /// Set given target object as a current target for lldb-dap and start
-  /// listeing for its breakpoint events.
+  /// listening for its breakpoint events.
   void SetTarget(const lldb::SBTarget target);
 
   bool HandleObject(const protocol::Message &M);
@@ -377,7 +388,7 @@ struct DAP {
     });
   }
 
-  /// The set of capablities supported by this adapter.
+  /// The set of capabilities supported by this adapter.
   protocol::Capabilities GetCapabilities();
 
   /// Debuggee will continue from stopped state.
@@ -444,12 +455,15 @@ private:
 
   /// Queue for all incoming messages.
   std::deque<protocol::Message> m_queue;
-  std::deque<protocol::Message> m_pending_queue;
   std::mutex m_queue_mutex;
   std::condition_variable m_queue_cv;
 
   std::mutex m_cancelled_requests_mutex;
   llvm::SmallSet<int64_t, 4> m_cancelled_requests;
+
+  std::mutex m_configuration_done_mutex;
+  bool m_configuration_done;
+  std::vector<llvm::unique_function<void()>> m_configuration_done_callbacks;
 
   std::mutex m_active_request_mutex;
   const protocol::Request *m_active_request;

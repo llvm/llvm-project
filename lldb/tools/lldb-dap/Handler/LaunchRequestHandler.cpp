@@ -21,11 +21,12 @@ using namespace lldb_dap::protocol;
 namespace lldb_dap {
 
 /// Launch request; value of command field is 'launch'.
-Error LaunchRequestHandler::Run(const LaunchRequestArguments &arguments) const {
+void LaunchRequestHandler::Run(const LaunchRequestArguments &arguments,
+                               Reply<LaunchResponse> reply) const {
   // Validate that we have a well formed launch request.
   if (!arguments.launchCommands.empty() && arguments.runInTerminal)
-    return make_error<DAPError>(
-        "'launchCommands' and 'runInTerminal' are mutually exclusive");
+    return reply(make_error<DAPError>(
+        "'launchCommands' and 'runInTerminal' are mutually exclusive"));
 
   dap.SetConfiguration(arguments.configuration, /*is_attach=*/false);
   dap.last_launch_request = arguments;
@@ -43,49 +44,49 @@ Error LaunchRequestHandler::Run(const LaunchRequestArguments &arguments) const {
   // This is run before target is created, so commands can't do anything with
   // the targets - preRunCommands are run with the target.
   if (Error err = dap.RunInitCommands())
-    return err;
+    return reply(std::move(err));
 
   dap.ConfigureSourceMaps();
 
   lldb::SBError error;
   lldb::SBTarget target = dap.CreateTarget(error);
   if (error.Fail())
-    return ToError(error);
+    return reply(ToError(error));
 
   dap.SetTarget(target);
 
   // Run any pre run LLDB commands the user specified in the launch.json
   if (Error err = dap.RunPreRunCommands())
-    return err;
+    return reply(std::move(err));
 
   if (Error err = LaunchProcess(arguments))
-    return err;
+    return reply(std::move(err));
 
   dap.RunPostRunCommands();
 
-  return Error::success();
-}
+  dap.OnConfigurationDone([&, reply = std::move(reply)]() {
+    reply(Error::success());
 
-void LaunchRequestHandler::PostRun() const {
-  if (!dap.target.GetProcess().IsValid())
-    return;
+    if (!dap.target.GetProcess().IsValid())
+      return;
 
-  // Clients can request a baseline of currently existing threads after
-  // we acknowledge the configurationDone request.
-  // Client requests the baseline of currently existing threads after
-  // a successful or attach by sending a 'threads' request
-  // right after receiving the configurationDone response.
-  // Obtain the list of threads before we resume the process
-  dap.initial_thread_list =
-      GetThreads(dap.target.GetProcess(), dap.thread_format);
+    // Clients can request a baseline of currently existing threads after
+    // we acknowledge the configurationDone request.
+    // Client requests the baseline of currently existing threads after
+    // a successful or attach by sending a 'threads' request
+    // right after receiving the configurationDone response.
+    // Obtain the list of threads before we resume the process
+    dap.initial_thread_list =
+        GetThreads(dap.target.GetProcess(), dap.thread_format);
 
-  // Attach happens when launching with runInTerminal.
-  SendProcessEvent(dap, dap.is_attach ? Attach : Launch);
+    // Attach happens when launching with runInTerminal.
+    SendProcessEvent(dap, dap.is_attach ? Attach : Launch);
 
-  if (dap.stop_at_entry)
-    SendThreadStoppedEvent(dap);
-  else
-    dap.target.GetProcess().Continue();
+    if (dap.stop_at_entry)
+      SendThreadStoppedEvent(dap);
+    else
+      dap.target.GetProcess().Continue();
+  });
 }
 
 } // namespace lldb_dap

@@ -32,6 +32,35 @@ inline constexpr bool is_optional_v = is_optional<T>::value;
 namespace lldb_dap {
 struct DAP;
 
+void HandleErrorResponse(llvm::Error err, protocol::Response &response);
+template <typename Args>
+llvm::Expected<Args> parseArgs(const protocol::Request &request) {
+  protocol::Response response;
+  response.request_seq = request.seq;
+  response.command = request.command;
+
+  if (!is_optional_v<Args> && !request.arguments) {
+    return llvm::make_error<DAPError>(
+        llvm::formatv("arguments required for command '{0}' "
+                      "but none received",
+                      request.command)
+            .str());
+  }
+
+  Args arguments;
+  llvm::json::Path::Root root("arguments");
+  if (request.arguments && !fromJSON(*request.arguments, arguments, root)) {
+    std::string parse_failure;
+    llvm::raw_string_ostream OS(parse_failure);
+    OS << "invalid arguments for request '" << request.command
+       << "': " << llvm::toString(root.getError()) << "\n";
+    root.printErrorContext(*request.arguments, OS);
+    return llvm::make_error<DAPError>(parse_failure);
+  }
+
+  return arguments;
+}
+
 /// Base class for request handlers. Do not extend this directly: Extend
 /// the RequestHandler template subclass instead.
 class BaseRequestHandler {
@@ -102,42 +131,21 @@ class RequestHandler : public BaseRequestHandler {
     response.request_seq = request.seq;
     response.command = request.command;
 
-    if (!is_optional_v<Args> && !request.arguments) {
-      DAP_LOG(dap.log,
-              "({0}) malformed request {1}, expected arguments but got none",
-              dap.transport.GetClientName(), request.command);
-      HandleErrorResponse(
-          llvm::make_error<DAPError>(
-              llvm::formatv("arguments required for command '{0}' "
-                            "but none received",
-                            request.command)
-                  .str()),
-          response);
-      dap.Send(response);
-      return;
-    }
-
-    Args arguments;
-    llvm::json::Path::Root root("arguments");
-    if (request.arguments && !fromJSON(*request.arguments, arguments, root)) {
-      std::string parse_failure;
-      llvm::raw_string_ostream OS(parse_failure);
-      OS << "invalid arguments for request '" << request.command
-         << "': " << llvm::toString(root.getError()) << "\n";
-      root.printErrorContext(*request.arguments, OS);
-      HandleErrorResponse(llvm::make_error<DAPError>(parse_failure), response);
+    llvm::Expected<Args> arguments = parseArgs<Args>(request);
+    if (llvm::Error err = arguments.takeError()) {
+      HandleErrorResponse(std::move(err), response);
       dap.Send(response);
       return;
     }
 
     if constexpr (std::is_same_v<Resp, llvm::Error>) {
-      if (llvm::Error err = Run(arguments)) {
+      if (llvm::Error err = Run(*arguments)) {
         HandleErrorResponse(std::move(err), response);
       } else {
         response.success = true;
       }
     } else {
-      Resp body = Run(arguments);
+      Resp body = Run(*arguments);
       if (llvm::Error err = body.takeError()) {
         HandleErrorResponse(std::move(err), response);
       } else {
@@ -168,48 +176,73 @@ class RequestHandler : public BaseRequestHandler {
   /// *NOTE*: PostRun will be invoked even if the `Run` operation returned an
   /// error.
   virtual void PostRun() const {};
+};
 
-  void HandleErrorResponse(llvm::Error err,
-                           protocol::Response &response) const {
-    response.success = false;
-    llvm::handleAllErrors(
-        std::move(err),
-        [&](const NotStoppedError &err) {
-          response.message = lldb_dap::protocol::eResponseMessageNotStopped;
-        },
-        [&](const DAPError &err) {
-          protocol::ErrorMessage error_message;
-          error_message.sendTelemetry = false;
-          error_message.format = err.getMessage();
-          error_message.showUser = err.getShowUser();
-          error_message.id = err.convertToErrorCode().value();
-          error_message.url = err.getURL();
-          error_message.urlLabel = err.getURLLabel();
-          protocol::ErrorResponseBody body;
-          body.error = error_message;
-          response.body = body;
-        },
-        [&](const llvm::ErrorInfoBase &err) {
-          protocol::ErrorMessage error_message;
-          error_message.showUser = true;
-          error_message.sendTelemetry = false;
-          error_message.format = err.message();
-          error_message.id = err.convertToErrorCode().value();
-          protocol::ErrorResponseBody body;
-          body.error = error_message;
-          response.body = body;
-        });
-  }
+/// A Reply<T> is a void function that accepts a reply to an async request.
+template <typename T> using Reply = llvm::unique_function<void(T) const>;
+
+/// Base class for handling DAP requests. Handlers should declare their
+/// arguments and response body types like:
+///
+/// class MyRequestHandler : public RequestHandler<Arguments, Response> {
+///   ....
+/// };
+template <typename Args, typename Resp>
+class AsyncRequestHandler : public BaseRequestHandler {
+  using BaseRequestHandler::BaseRequestHandler;
+
+  void operator()(const protocol::Request &request) const override {
+    llvm::Expected<Args> arguments = parseArgs<Args>(request);
+    if (llvm::Error err = arguments.takeError()) {
+      protocol::Response response;
+      response.request_seq = request.seq;
+      response.command = request.command;
+      HandleErrorResponse(std::move(err), response);
+      dap.Send(response);
+      return;
+    }
+
+    Run(*arguments, [&, request = std::move(request)](Resp body) {
+      protocol::Response response;
+      response.request_seq = request.seq;
+      response.command = request.command;
+      if constexpr (std::is_same_v<Resp, llvm::Error>) {
+        if (body) {
+          HandleErrorResponse(std::move(body), response);
+        } else {
+          response.success = true;
+        }
+      } else {
+        if (llvm::Error err = body.takeError()) {
+          HandleErrorResponse(std::move(err), response);
+        } else {
+          response.success = true;
+          response.body = std::move(*body);
+        }
+      }
+
+      // Mark the request as 'cancelled' if the debugger was interrupted while
+      // evaluating this handler.
+      if (dap.debugger.InterruptRequested()) {
+        response.success = false;
+        response.message = protocol::eResponseMessageCancelled;
+        response.body = std::nullopt;
+      }
+      dap.Send(response);
+    });
+  };
+
+  virtual void Run(const Args &, Reply<Resp>) const = 0;
 };
 
 class AttachRequestHandler
-    : public RequestHandler<protocol::AttachRequestArguments,
-                            protocol::AttachResponse> {
+    : public AsyncRequestHandler<protocol::AttachRequestArguments,
+                                 protocol::AttachResponse> {
 public:
-  using RequestHandler::RequestHandler;
+  using AsyncRequestHandler::AsyncRequestHandler;
   static llvm::StringLiteral GetCommand() { return "attach"; }
-  llvm::Error Run(const protocol::AttachRequestArguments &args) const override;
-  void PostRun() const override;
+  void Run(const protocol::AttachRequestArguments &args,
+           Reply<protocol::AttachResponse> reply) const override;
 };
 
 class BreakpointLocationsRequestHandler
@@ -301,14 +334,13 @@ public:
 };
 
 class LaunchRequestHandler
-    : public RequestHandler<protocol::LaunchRequestArguments,
-                            protocol::LaunchResponse> {
+    : public AsyncRequestHandler<protocol::LaunchRequestArguments,
+                                 protocol::LaunchResponse> {
 public:
-  using RequestHandler::RequestHandler;
+  using AsyncRequestHandler::AsyncRequestHandler;
   static llvm::StringLiteral GetCommand() { return "launch"; }
-  llvm::Error
-  Run(const protocol::LaunchRequestArguments &arguments) const override;
-  void PostRun() const override;
+  void Run(const protocol::LaunchRequestArguments &arguments,
+           Reply<protocol::LaunchResponse>) const override;
 };
 
 class RestartRequestHandler : public LegacyRequestHandler {

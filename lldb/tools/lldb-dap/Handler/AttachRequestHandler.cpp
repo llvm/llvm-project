@@ -28,21 +28,22 @@ namespace lldb_dap {
 ///
 /// Since attaching is debugger/runtime specific, the arguments for this request
 /// are not part of this specification.
-Error AttachRequestHandler::Run(const AttachRequestArguments &args) const {
+void AttachRequestHandler::Run(const AttachRequestArguments &args,
+                               Reply<AttachResponse> reply) const {
   // Validate that we have a well formed attach request.
   if (args.attachCommands.empty() && args.coreFile.empty() &&
       args.configuration.program.empty() &&
       args.pid == LLDB_INVALID_PROCESS_ID &&
       args.gdbRemotePort == LLDB_DAP_INVALID_PORT)
-    return make_error<DAPError>(
+    return reply(make_error<DAPError>(
         "expected one of 'pid', 'program', 'attachCommands', "
-        "'coreFile' or 'gdb-remote-port' to be specified");
+        "'coreFile' or 'gdb-remote-port' to be specified"));
 
   // Check if we have mutually exclusive arguments.
   if ((args.pid != LLDB_INVALID_PROCESS_ID) &&
       (args.gdbRemotePort != LLDB_DAP_INVALID_PORT))
-    return make_error<DAPError>(
-        "'pid' and 'gdb-remote-port' are mutually exclusive");
+    return reply(make_error<DAPError>(
+        "'pid' and 'gdb-remote-port' are mutually exclusive"));
 
   dap.SetConfiguration(args.configuration, /*is_attach=*/true);
   if (!args.coreFile.empty())
@@ -59,20 +60,20 @@ Error AttachRequestHandler::Run(const AttachRequestArguments &args) const {
 
   // Run any initialize LLDB commands the user specified in the launch.json
   if (llvm::Error err = dap.RunInitCommands())
-    return err;
+    return reply(std::move(err));
 
   dap.ConfigureSourceMaps();
 
   lldb::SBError error;
   lldb::SBTarget target = dap.CreateTarget(error);
   if (error.Fail())
-    return ToError(error);
+    return reply(ToError(error));
 
   dap.SetTarget(target);
 
   // Run any pre run LLDB commands the user specified in the launch.json
   if (Error err = dap.RunPreRunCommands())
-    return err;
+    return reply(std::move(err));
 
   if ((args.pid == LLDB_INVALID_PROCESS_ID ||
        args.gdbRemotePort == LLDB_DAP_INVALID_PORT) &&
@@ -94,14 +95,14 @@ Error AttachRequestHandler::Run(const AttachRequestArguments &args) const {
       // user that their command failed or the debugger is in an unexpected
       // state.
       if (llvm::Error err = dap.RunAttachCommands(args.attachCommands))
-        return err;
+        return reply(std::move(err));
 
       dap.target = dap.debugger.GetSelectedTarget();
 
       // Validate the attachCommand results.
       if (!dap.target.GetProcess().IsValid())
-        return make_error<DAPError>(
-            "attachCommands failed to attach to a process");
+        return reply(make_error<DAPError>(
+            "attachCommands failed to attach to a process"));
     } else if (!args.coreFile.empty()) {
       dap.target.LoadCore(args.coreFile.data(), error);
     } else if (args.gdbRemotePort != LLDB_DAP_INVALID_PORT) {
@@ -129,35 +130,35 @@ Error AttachRequestHandler::Run(const AttachRequestArguments &args) const {
   // Make sure the process is attached and stopped.
   error = dap.WaitForProcessToStop(args.configuration.timeout);
   if (error.Fail())
-    return ToError(error);
+    return reply(ToError(error));
 
   if (args.coreFile.empty() && !dap.target.GetProcess().IsValid())
-    return make_error<DAPError>("failed to attach to process");
+    return reply(make_error<DAPError>("failed to attach to process"));
 
   dap.RunPostRunCommands();
 
-  return Error::success();
-}
+  dap.OnConfigurationDone([&, reply = std::move(reply)]() {
+    reply(Error::success());
 
-void AttachRequestHandler::PostRun() const {
-  if (!dap.target.GetProcess().IsValid())
-    return;
+    if (!dap.target.GetProcess().IsValid())
+      return;
 
-  // Clients can request a baseline of currently existing threads after
-  // we acknowledge the configurationDone request.
-  // Client requests the baseline of currently existing threads after
-  // a successful or attach by sending a 'threads' request
-  // right after receiving the configurationDone response.
-  // Obtain the list of threads before we resume the process
-  dap.initial_thread_list =
-      GetThreads(dap.target.GetProcess(), dap.thread_format);
+    // Clients can request a baseline of currently existing threads after
+    // we acknowledge the configurationDone request.
+    // Client requests the baseline of currently existing threads after
+    // a successful or attach by sending a 'threads' request
+    // right after receiving the configurationDone response.
+    // Obtain the list of threads before we resume the process
+    dap.initial_thread_list =
+        GetThreads(dap.target.GetProcess(), dap.thread_format);
 
-  SendProcessEvent(dap, Attach);
+    SendProcessEvent(dap, Attach);
 
-  if (dap.stop_at_entry)
-    SendThreadStoppedEvent(dap);
-  else
-    dap.target.GetProcess().Continue();
+    if (dap.stop_at_entry)
+      SendThreadStoppedEvent(dap);
+    else
+      dap.target.GetProcess().Continue();
+  });
 }
 
 } // namespace lldb_dap

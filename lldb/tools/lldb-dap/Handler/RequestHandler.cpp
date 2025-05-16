@@ -126,6 +126,37 @@ RunInTerminal(DAP &dap, const protocol::LaunchRequestArguments &arguments) {
                                  error.GetCString());
 }
 
+void HandleErrorResponse(llvm::Error err, protocol::Response &response) {
+  response.success = false;
+  llvm::handleAllErrors(
+      std::move(err),
+      [&](const NotStoppedError &err) {
+        response.message = lldb_dap::protocol::eResponseMessageNotStopped;
+      },
+      [&](const DAPError &err) {
+        protocol::ErrorMessage error_message;
+        error_message.sendTelemetry = false;
+        error_message.format = err.getMessage();
+        error_message.showUser = err.getShowUser();
+        error_message.id = err.convertToErrorCode().value();
+        error_message.url = err.getURL();
+        error_message.urlLabel = err.getURLLabel();
+        protocol::ErrorResponseBody body;
+        body.error = error_message;
+        response.body = body;
+      },
+      [&](const llvm::ErrorInfoBase &err) {
+        protocol::ErrorMessage error_message;
+        error_message.showUser = true;
+        error_message.sendTelemetry = false;
+        error_message.format = err.message();
+        error_message.id = err.convertToErrorCode().value();
+        protocol::ErrorResponseBody body;
+        body.error = error_message;
+        response.body = body;
+      });
+}
+
 void BaseRequestHandler::Run(const Request &request) {
   // If this request was cancelled, send a cancelled response.
   if (dap.IsCancelled(request)) {
