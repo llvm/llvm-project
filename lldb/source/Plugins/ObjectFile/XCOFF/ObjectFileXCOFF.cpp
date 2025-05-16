@@ -335,15 +335,28 @@ bool ObjectFileXCOFF::SetLoadAddress(Target &target, lldb::addr_t value,
         SectionSP section_sp(section_list->GetSectionAtIndex(sect_idx));
         if (section_sp && !section_sp->IsThreadSpecific()) {
           bool use_offset = false;
-          if (strcmp(section_sp->GetName().AsCString(), ".text") == 0 ||
-              strcmp(section_sp->GetName().AsCString(), ".data") == 0 ||
-              strcmp(section_sp->GetName().AsCString(), ".bss") == 0)
+          if (strcmp(section_sp->GetName().AsCString(), ".text") == 0)
+	  {
             use_offset = true;
-
-          if (target.GetSectionLoadListPublic().SetSectionLoadAddress(
-                  section_sp, (use_offset ?
-                  (section_sp->GetFileOffset() + value) : (section_sp->GetFileAddress() + value))))
-            ++num_loaded_sections;
+	    if (target.GetSectionLoadListPublic().SetSectionLoadAddress(
+	      section_sp, (use_offset ?
+	      (section_sp->GetFileOffset() + value) : (section_sp->GetFileAddress() + value))))
+              ++num_loaded_sections;
+	  }
+	  else if (strcmp(section_sp->GetName().AsCString(), ".data") == 0 ||
+	    strcmp(section_sp->GetName().AsCString(), ".bss") == 0)
+	  {
+	    if (target.GetSectionLoadListPublic().SetSectionLoadAddress(
+		section_sp, section_sp->GetFileAddress()))
+	      ++num_loaded_sections;
+	  }
+	  else
+	  {
+	    if (target.GetSectionLoadListPublic().SetSectionLoadAddress(
+	      section_sp, (use_offset ?
+	      (section_sp->GetFileOffset() + value) : (section_sp->GetFileAddress() + value))))
+	      ++num_loaded_sections;
+	  }
         }
       }
       changed = num_loaded_sections > 0;
