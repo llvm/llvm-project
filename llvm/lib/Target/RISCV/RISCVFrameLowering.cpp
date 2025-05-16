@@ -1813,9 +1813,22 @@ MachineBasicBlock::iterator RISCVFrameLowering::eliminateCallFramePseudoInstr(
       if (MI->getOpcode() == RISCV::ADJCALLSTACKDOWN)
         Amount = -Amount;
 
-      const RISCVRegisterInfo &RI = *STI.getRegisterInfo();
-      RI.adjustReg(MBB, MI, DL, SPReg, SPReg, StackOffset::getFixed(Amount),
-                   MachineInstr::NoFlags, getStackAlign());
+      const RISCVTargetLowering *TLI =
+          MF.getSubtarget<RISCVSubtarget>().getTargetLowering();
+      int64_t ProbeSize = TLI->getStackProbeSize(MF, getStackAlign());
+      if (TLI->hasInlineStackProbe(MF) && -Amount >= ProbeSize) {
+        // When stack probing is enabled, the decrement of SP may need to be
+        // probed. We can handle both the decrement and the probing in
+        // allocateStack.
+        bool DynAllocation =
+            MF.getInfo<RISCVMachineFunctionInfo>()->hasDynamicAllocation();
+        allocateStack(MBB, MI, MF, -Amount, -Amount, !hasFP(MF),
+                      /*NeedProbe=*/true, ProbeSize, DynAllocation);
+      } else {
+        const RISCVRegisterInfo &RI = *STI.getRegisterInfo();
+        RI.adjustReg(MBB, MI, DL, SPReg, SPReg, StackOffset::getFixed(Amount),
+                     MachineInstr::NoFlags, getStackAlign());
+      }
     }
   }
 
