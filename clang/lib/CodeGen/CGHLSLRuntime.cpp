@@ -42,10 +42,6 @@ using namespace llvm;
 
 using llvm::hlsl::CBufferRowSizeInBytes;
 
-static void initializeBufferFromBinding(CodeGenModule &CGM,
-                                        llvm::GlobalVariable *GV,
-                                        HLSLResourceBindingAttr *RBA);
-
 namespace {
 
 void addDxilValVersion(StringRef ValVersionStr, llvm::Module &M) {
@@ -275,7 +271,7 @@ void CGHLSLRuntime::addBuffer(const HLSLBufferDecl *BufDecl) {
   HLSLResourceBindingAttr *RBA = BufDecl->getAttr<HLSLResourceBindingAttr>();
   assert(RBA &&
          "cbuffer/tbuffer should always have resource binding attribute");
-  initializeBufferFromBinding(CGM, BufGV, RBA);
+  initializeBufferFromBinding(BufDecl, BufGV, RBA);
 }
 
 llvm::TargetExtType *
@@ -557,29 +553,47 @@ static void initializeBuffer(CodeGenModule &CGM, llvm::GlobalVariable *GV,
   CGM.AddCXXGlobalInit(InitResFunc);
 }
 
-static void initializeBufferFromBinding(CodeGenModule &CGM,
-                                        llvm::GlobalVariable *GV,
-                                        HLSLResourceBindingAttr *RBA) {
+void CGHLSLRuntime::initializeBufferFromBinding(const HLSLBufferDecl *BufDecl,
+                                                llvm::GlobalVariable *GV,
+                                                HLSLResourceBindingAttr *RBA) {
   llvm::Type *Int1Ty = llvm::Type::getInt1Ty(CGM.getLLVMContext());
   auto *NonUniform = llvm::ConstantInt::get(Int1Ty, false);
   auto *Index = llvm::ConstantInt::get(CGM.IntTy, 0);
   auto *RangeSize = llvm::ConstantInt::get(CGM.IntTy, 1);
   auto *Space =
       llvm::ConstantInt::get(CGM.IntTy, RBA ? RBA->getSpaceNumber() : 0);
+  Value *Name = nullptr;
 
+  // DXIL intrinsic includes resource name
+  if (getArch() == Triple::dxil) {
+    std::string Str = std::string(BufDecl->getName());
+    std::string GlobalName = Str + ".str";
+    Name = CGM.GetAddrOfConstantCString(Str, GlobalName.c_str()).getPointer();
+  }
+
+  // buffer with explicit binding
   if (RBA->hasRegisterSlot()) {
     auto *RegSlot = llvm::ConstantInt::get(CGM.IntTy, RBA->getSlotNumber());
     Intrinsic::ID Intr =
         CGM.getHLSLRuntime().getCreateHandleFromBindingIntrinsic();
-    initializeBuffer(CGM, GV, Intr,
-                     {Space, RegSlot, RangeSize, Index, NonUniform});
+    if (Name)
+      initializeBuffer(CGM, GV, Intr,
+                       {Space, RegSlot, RangeSize, Index, NonUniform, Name});
+    else
+      initializeBuffer(CGM, GV, Intr,
+                       {Space, RegSlot, RangeSize, Index, NonUniform});
   } else {
+    // buffer with implicit binding
     auto *OrderID =
         llvm::ConstantInt::get(CGM.IntTy, RBA->getImplicitBindingOrderID());
     Intrinsic::ID Intr =
         CGM.getHLSLRuntime().getCreateHandleFromImplicitBindingIntrinsic();
-    initializeBuffer(CGM, GV, Intr,
-                     {OrderID, Space, RangeSize, Index, NonUniform});
+    if (Name)
+      initializeBuffer(CGM, GV, Intr,
+                       {OrderID, Space, RangeSize, Index, NonUniform, Name});
+    else
+      initializeBuffer(CGM, GV, Intr,
+                       {OrderID, Space, RangeSize, Index, NonUniform});
   }
 }
 
