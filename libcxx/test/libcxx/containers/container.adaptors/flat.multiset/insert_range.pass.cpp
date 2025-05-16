@@ -11,6 +11,9 @@
 
 // <flat_set>
 
+// As an extension, libc++ flat containers support inserting a non forward range into
+// a pre-C++23 container that doesn't provide insert_range(...), since many containers
+// out there are in that situation.
 // https://github.com/llvm/llvm-project/issues/136656
 
 #include <flat_set>
