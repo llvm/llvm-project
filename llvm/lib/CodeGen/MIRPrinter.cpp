@@ -575,9 +575,8 @@ void MIRPrinter::convertCallSiteObjects(yaml::MachineFunction &YMF,
   // Sort call info by position of call instructions.
   llvm::sort(YMF.CallSitesInfo.begin(), YMF.CallSitesInfo.end(),
              [](yaml::CallSiteInfo A, yaml::CallSiteInfo B) {
-               if (A.CallLocation.BlockNum == B.CallLocation.BlockNum)
-                 return A.CallLocation.Offset < B.CallLocation.Offset;
-               return A.CallLocation.BlockNum < B.CallLocation.BlockNum;
+               return std::tie(A.CallLocation.BlockNum, A.CallLocation.Offset) <
+                      std::tie(B.CallLocation.BlockNum, B.CallLocation.Offset);
              });
 }
 
