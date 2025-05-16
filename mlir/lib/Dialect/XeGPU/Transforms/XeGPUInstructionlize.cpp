@@ -164,6 +164,10 @@ XeGPUInstructionlizePass::getTileShape(Operation *op) const {
 
     return SmallVector<int64_t>({(*aTile)[0], (*aTile)[1], (*bTile)[1]});
   }
+
+  if (OpTrait::hasElementwiseMappableTraits(op) && op->getNumResults() == 1)
+    return getTileShape(op->getOpResult(0));
+
   return std::nullopt;
 }
 
@@ -230,7 +234,14 @@ void XeGPUInstructionlizePass::runOnOperation() {
   });
 
   RewritePatternSet patterns(ctx);
+
+  vector::UnrollVectorOptions vectorOptions;
+  // vectorOptions.setNativeShapeFn([&](Operation *op) { return getTileShape(op); });
+  vectorOptions.setNativeShapeFn(options.nativeShape);
+
   populateXeGPUUnrollPatterns(patterns, options);
+  vector::populateVectorUnrollPatterns(patterns, vectorOptions);
+
   (void)applyPatternsGreedily(mod, std::move(patterns));
 
   mod->walk([&](Operation *op) {
