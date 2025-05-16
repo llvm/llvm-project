@@ -665,8 +665,16 @@ basic_ostream<char, _Traits>& operator<<(basic_ostream<char, _Traits>&, const ch
 
 #  endif // _LIBCPP_STD_VER >= 20
 
+#  if defined(__MINGW32__) || defined(__CYGWIN__)
+extern template _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_ostream<char>::sentry::sentry(basic_ostream<char>& __os);
+extern template _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_ostream<char>::sentry::~sentry();
+#  endif
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_ostream<char>;
 #  if _LIBCPP_HAS_WIDE_CHARACTERS
+#    if defined(__MINGW32__) || defined(__CYGWIN__)
+extern template _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_ostream<wchar_t>::sentry::sentry(basic_ostream<wchar_t>& __os);
+extern template _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_ostream<wchar_t>::sentry::~sentry();
+#    endif
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_ostream<wchar_t>;
 #  endif
 
