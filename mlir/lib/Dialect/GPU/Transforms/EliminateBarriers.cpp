@@ -44,8 +44,6 @@ using namespace mlir::gpu;
 // The functions below provide interface-like verification, but are too specific
 // to barrier elimination to become interfaces.
 
-
-
 /// Returns `true` if the op is defines the parallel region that is subject to
 /// barrier synchronization.
 static bool isParallelRegionBoundary(Operation *op) {
@@ -95,7 +93,6 @@ collectEffects(Operation *op,
   // this barrier again).
   if (ignoreBarriers && isa<BarrierOp>(op))
     return true;
-
 
   // Collect effect instances the operation. Note that the implementation of
   // getEffects erases all effect instances that have the type other than the

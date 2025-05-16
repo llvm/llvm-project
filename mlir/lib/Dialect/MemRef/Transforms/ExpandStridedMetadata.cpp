@@ -937,12 +937,13 @@ public:
 
   LogicalResult matchAndRewrite(memref::ExtractStridedMetadataOp op,
                                 PatternRewriter &rewriter) const override {
-    auto assumeAlignmentOp = 
+    auto assumeAlignmentOp =
         op.getSource().getDefiningOp<memref::AssumeAlignmentOp>();
     if (!assumeAlignmentOp)
       return failure();
 
-    rewriter.replaceOpWithNewOp<memref::ExtractStridedMetadataOp>(op, assumeAlignmentOp.getViewSource());
+    rewriter.replaceOpWithNewOp<memref::ExtractStridedMetadataOp>(
+        op, assumeAlignmentOp.getViewSource());
     return success();
   }
 };
