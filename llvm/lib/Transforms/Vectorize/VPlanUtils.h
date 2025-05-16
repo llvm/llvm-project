@@ -37,8 +37,9 @@ VPValue *getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr,
 /// SCEV expression could be constructed.
 const SCEV *getSCEVExprForVPValue(VPValue *V, ScalarEvolution &SE);
 
-/// Returns true if \p VPV is uniform after vectorization.
-inline bool isUniformAfterVectorization(const VPValue *VPV) {
+/// Returns true if \p VPV is a single scalar, either because it produces the
+/// same value for all lanes or only has its first lane used.
+inline bool isSingleScalar(const VPValue *VPV) {
   auto PreservesUniformity = [](unsigned Opcode) -> bool {
     if (Instruction::isBinaryOp(Opcode) || Instruction::isCast(Opcode))
       return true;
@@ -65,21 +66,19 @@ inline bool isUniformAfterVectorization(const VPValue *VPV) {
     // lanes.
     if (RegionOfR && RegionOfR->isReplicator())
       return false;
-    return Rep->isUniform() ||
-           (PreservesUniformity(Rep->getOpcode()) &&
-            all_of(Rep->operands(), isUniformAfterVectorization));
+    return Rep->isSingleScalar() || (PreservesUniformity(Rep->getOpcode()) &&
+                                     all_of(Rep->operands(), isSingleScalar));
   }
   if (isa<VPWidenGEPRecipe, VPDerivedIVRecipe, VPBlendRecipe>(VPV))
-    return all_of(VPV->getDefiningRecipe()->operands(),
-                  isUniformAfterVectorization);
+    return all_of(VPV->getDefiningRecipe()->operands(), isSingleScalar);
   if (auto *WidenR = dyn_cast<VPWidenRecipe>(VPV)) {
     return PreservesUniformity(WidenR->getOpcode()) &&
-           all_of(WidenR->operands(), isUniformAfterVectorization);
+           all_of(WidenR->operands(), isSingleScalar);
   }
   if (auto *VPI = dyn_cast<VPInstruction>(VPV))
     return VPI->isSingleScalar() || VPI->isVectorToScalar() ||
            (PreservesUniformity(VPI->getOpcode()) &&
-            all_of(VPI->operands(), isUniformAfterVectorization));
+            all_of(VPI->operands(), isSingleScalar));
 
   // VPExpandSCEVRecipes must be placed in the entry and are alway uniform.
   return isa<VPExpandSCEVRecipe>(VPV);
