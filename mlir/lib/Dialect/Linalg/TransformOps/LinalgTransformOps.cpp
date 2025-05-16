@@ -3401,7 +3401,7 @@ static scf::ForallOp normalizeForallLoopOp(RewriterBase &rewriter,
   SmallVector<OpFoldResult> ubs = loop.getMixedUpperBound();
   SmallVector<OpFoldResult> steps = loop.getMixedStep();
 
-  if (llvm::all_of(lbs, isZeroIndex) && llvm::all_of(steps, isOneIndex)) {
+  if (llvm::all_of(lbs, isZeroInteger) && llvm::all_of(steps, isOneInteger)) {
     return loop;
   }
 

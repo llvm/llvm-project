@@ -1889,7 +1889,7 @@ OpFoldResult ReinterpretCastOp::fold(FoldAdaptor /*operands*/) {
     // reinterpret_cast(subview(x)) -> reinterpret_cast(x) if subview offsets
     // are 0.
     if (auto prev = src.getDefiningOp<SubViewOp>())
-      if (llvm::all_of(prev.getMixedOffsets(), isZeroIndex))
+      if (llvm::all_of(prev.getMixedOffsets(), isZeroInteger))
         return prev.getSource();
 
     return nullptr;
@@ -3283,9 +3283,9 @@ OpFoldResult SubViewOp::fold(FoldAdaptor adaptor) {
     auto srcSizes = srcSubview.getMixedSizes();
     auto sizes = getMixedSizes();
     auto offsets = getMixedOffsets();
-    bool allOffsetsZero = llvm::all_of(offsets, isZeroIndex);
+    bool allOffsetsZero = llvm::all_of(offsets, isZeroInteger);
     auto strides = getMixedStrides();
-    bool allStridesOne = llvm::all_of(strides, isOneIndex);
+    bool allStridesOne = llvm::all_of(strides, isOneInteger);
     bool allSizesSame = llvm::equal(sizes, srcSizes);
     if (allOffsetsZero && allStridesOne && allSizesSame &&
         resultMemrefType == sourceMemrefType)

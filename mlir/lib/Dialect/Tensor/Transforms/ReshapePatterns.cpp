@@ -452,7 +452,7 @@ struct BubbleUpExpandShapeThroughExtractSlice
     std::function<bool(OpFoldResult, OpFoldResult, OpFoldResult)>
         isZeroOffsetAndFullSize =
             [](OpFoldResult offset, OpFoldResult sliceSize, OpFoldResult size) {
-              if (!isZeroIndex(offset))
+              if (!isZeroInteger(offset))
                 return false;
               FailureOr<bool> maybeEqual =
                   ValueBoundsConstraintSet::areEqual(sliceSize, size);
@@ -476,7 +476,7 @@ struct BubbleUpExpandShapeThroughExtractSlice
       // Find the first expanded dim after the first dim with non-unit extracted
       // size.
       for (; i < e; ++i) {
-        if (!isOneIndex(sizes[indices[i]])) {
+        if (!isOneInteger(sizes[indices[i]])) {
           // +1 to skip the first non-unit size dim.
           i++;
           break;

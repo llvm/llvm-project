@@ -768,7 +768,7 @@ static void denormalizeInductionVariableForIndexType(RewriterBase &rewriter,
   // If an `affine.apply` operation is generated for denormalization, the use
   // of `origLb` in those ops must not be replaced. These arent not generated
   // when `origLb == 0` and `origStep == 1`.
-  if (!isZeroIndex(origLb) || !isOneIndex(origStep)) {
+  if (!isZeroInteger(origLb) || !isOneInteger(origStep)) {
     if (Operation *preservedUse = denormalizedIvVal.getDefiningOp()) {
       preservedUses.insert(preservedUse);
     }
@@ -785,8 +785,8 @@ void mlir::denormalizeInductionVariable(RewriterBase &rewriter, Location loc,
   }
   Value denormalizedIv;
   SmallPtrSet<Operation *, 2> preserve;
-  bool isStepOne = isOneIndex(origStep);
-  bool isZeroBased = isZeroIndex(origLb);
+  bool isStepOne = isOneInteger(origStep);
+  bool isZeroBased = isZeroInteger(origLb);
 
   Value scaled = normalizedIv;
   if (!isStepOne) {

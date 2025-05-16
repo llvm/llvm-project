@@ -897,7 +897,7 @@ LogicalResult ReinterpretCastPattern::matchAndRewrite(
   OpFoldResult offset =
       getMixedValues(adaptor.getStaticOffsets(), adaptor.getOffsets(), rewriter)
           .front();
-  if (isZeroIndex(offset)) {
+  if (isZeroInteger(offset)) {
     rewriter.replaceOp(op, src);
     return success();
   }

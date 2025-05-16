@@ -2840,7 +2840,7 @@ OpFoldResult InsertSliceOp::fold(FoldAdaptor) {
     return getResult();
   if (auto result = foldInsertAfterExtractSlice(*this))
     return result;
-  if (llvm::any_of(getMixedSizes(), isZeroIndex))
+  if (llvm::any_of(getMixedSizes(), isZeroInteger))
     return getDest();
   return OpFoldResult();
 }

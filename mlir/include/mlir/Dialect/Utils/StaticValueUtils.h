@@ -25,10 +25,10 @@
 namespace mlir {
 
 /// Return true if `v` is an IntegerAttr with value `0`.
-bool isZeroIndex(OpFoldResult v);
+bool isZeroInteger(OpFoldResult v);
 
 /// Return true if `v` is an IntegerAttr with value `1`.
-bool isOneIndex(OpFoldResult v);
+bool isOneInteger(OpFoldResult v);
 
 /// Represents a range (offset, size, and stride) where each element of the
 /// triple may be dynamic or static.

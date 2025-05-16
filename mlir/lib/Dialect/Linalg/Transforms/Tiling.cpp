@@ -377,13 +377,13 @@ static void calculateTileOffsetsAndSizes(
 
   SmallVector<Value> threadIds = forallOp.getInductionVars();
   SmallVector<OpFoldResult> nonZeroNumThreads = llvm::filter_to_vector(
-      numThreads, [](OpFoldResult ofr) { return !isZeroIndex(ofr); });
+      numThreads, [](OpFoldResult ofr) { return !isZeroInteger(ofr); });
   int64_t nLoops = loopRanges.size();
   tiledOffsets.reserve(nLoops);
   tiledSizes.reserve(nLoops);
   for (unsigned loopIdx = 0, threadIdIdx = 0; loopIdx < nLoops; ++loopIdx) {
     bool overflow = loopIdx >= numThreads.size();
-    bool isZero = !overflow && isZeroIndex(numThreads[loopIdx]);
+    bool isZero = !overflow && isZeroInteger(numThreads[loopIdx]);
     // Degenerate case: take the whole domain.
     if (overflow || isZero) {
       tiledOffsets.push_back(loopRanges[loopIdx].offset);
@@ -414,7 +414,7 @@ static void calculateTileOffsetsAndSizes(
     OpFoldResult residualTileSize = makeComposedFoldedAffineApply(
         b, loc, i + j * m - n,
         {offset, nonZeroNumThreads[threadIdIdx], tileSizePerThread, size});
-    if (!isZeroIndex(residualTileSize)) {
+    if (!isZeroInteger(residualTileSize)) {
       OpFoldResult sizeMinusOffsetPerThread = makeComposedFoldedAffineApply(
           b, loc, -i + m, {offsetPerThread, size});
       tileSizePerThread =
@@ -656,7 +656,7 @@ FailureOr<linalg::ForallReductionTilingResult> linalg::tileReductionUsingForall(
   Operation *tiledOp = nullptr;
 
   SmallVector<OpFoldResult> nonZeroNumThreads = llvm::filter_to_vector(
-      numThreads, [](OpFoldResult ofr) { return !isZeroIndex(ofr); });
+      numThreads, [](OpFoldResult ofr) { return !isZeroInteger(ofr); });
   SmallVector<Value> materializedNonZeroNumThreads =
       getValueOrCreateConstantIndexOp(b, loc, nonZeroNumThreads);
 

@@ -116,7 +116,7 @@ static bool stridesAllOne(TOp op) {
           std::is_same_v<TOp, vector::InsertStridedSliceOp>,
       "expected vector.extract_strided_slice or vector.insert_strided_slice");
   ArrayAttr strides = op.getStrides();
-  return llvm::all_of(strides, isOneIndex);
+  return llvm::all_of(strides, isOneInteger);
 }
 
 /// Convert an array of attributes into a vector of integers, if possible.

@@ -4488,7 +4488,7 @@ static LogicalResult commonVerifierPackAndUnPackOp(OpTy packOrUnPack) {
 
   // Return true if we have a zero-value tile.
   auto hasZeros = [&](ArrayRef<OpFoldResult> tiles) {
-    return llvm::any_of(tiles, isZeroIndex);
+    return llvm::any_of(tiles, isZeroInteger);
   };
 
   // Verify tiles. Do not allow zero tiles.

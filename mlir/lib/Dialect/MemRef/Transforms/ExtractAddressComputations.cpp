@@ -251,7 +251,7 @@ struct LoadStoreLikeOpRewriter : public OpRewritePattern<LoadStoreLikeOp> {
     // to do.
     SmallVector<OpFoldResult> indices =
         getAsOpFoldResult(loadStoreLikeOp.getIndices());
-    if (std::all_of(indices.begin(), indices.end(), isZeroIndex)) {
+    if (std::all_of(indices.begin(), indices.end(), isZeroInteger)) {
       return rewriter.notifyMatchFailure(
           loadStoreLikeOp, "no computation to extract: offsets are 0s");
     }
