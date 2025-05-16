@@ -1363,8 +1363,16 @@ operator>>(basic_istream<_CharT, _Traits>& __is, bitset<_Size>& __x) {
   return __is;
 }
 
+#    if defined(__MINGW32__) || defined(__CYGWIN__)
+extern template _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS
+basic_istream<char>::sentry::sentry(basic_istream<char>& __is, bool __noskipws);
+#    endif
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_istream<char>;
 #    if _LIBCPP_HAS_WIDE_CHARACTERS
+#      if defined(__MINGW32__) || defined(__CYGWIN__)
+extern template _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS
+basic_istream<wchar_t>::sentry::sentry(basic_istream<wchar_t>& __is, bool __noskipws);
+#      endif
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_istream<wchar_t>;
 #    endif
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_iostream<char>;
