@@ -83,7 +83,13 @@ void SPIRVCombinerHelper::applySPIRVDistance(MachineInstr &MI) const {
 ///   (vXf32 (g_intrinsic faceforward
 ///             (vXf32 N) (vXf32 I) (vXf32 Ng)))
 ///
+/// This only works for Vulkan targets.
+///
 bool SPIRVCombinerHelper::matchSelectToFaceForward(MachineInstr &MI) const {
+  const SPIRVSubtarget &ST = MI.getMF()->getSubtarget<SPIRVSubtarget>();
+  if (!ST.isVulkanEnv())
+    return false;
+
   if (MI.getOpcode() != TargetOpcode::G_SELECT)
     return false;
 
@@ -95,10 +101,16 @@ bool SPIRVCombinerHelper::matchSelectToFaceForward(MachineInstr &MI) const {
 
   Register DotReg = CondInstr->getOperand(2).getReg();
   MachineInstr *DotInstr = MRI.getVRegDef(DotReg);
-  if (DotInstr->getOpcode() != TargetOpcode::G_FMUL &&
-      (DotInstr->getOpcode() != TargetOpcode::G_INTRINSIC ||
-       cast<GIntrinsic>(DotInstr)->getIntrinsicID() != Intrinsic::spv_fdot))
-    return false;
+  if ((DotInstr->getOpcode() != TargetOpcode::G_INTRINSIC ||
+       cast<GIntrinsic>(DotInstr)->getIntrinsicID() != Intrinsic::spv_fdot)) {
+    if (DotInstr->getOpcode() != TargetOpcode::G_FMUL)
+      return false;
+    Register DotOperand1 = DotInstr->getOperand(1).getReg();
+    Register DotOperand2 = DotInstr->getOperand(2).getReg();
+    if (MRI.getType(DotOperand1).isVector() ||
+        MRI.getType(DotOperand2).isVector())
+      return false;
+  }
 
   Register CondZeroReg = CondInstr->getOperand(3).getReg();
   MachineInstr *CondZeroInstr = MRI.getVRegDef(CondZeroReg);
