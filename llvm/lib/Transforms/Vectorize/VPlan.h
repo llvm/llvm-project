@@ -1923,6 +1923,11 @@ public:
   /// Update the step value of the recipe.
   void setStepValue(VPValue *V) { setOperand(1, V); }
 
+  /// Returns the number of incoming values, also number of incoming blocks.
+  /// Note that at the moment, VPWidenPointerInductionRecipe only has a single
+  /// incoming value, its start value.
+  unsigned getNumIncoming() const override { return 1; }
+
   PHINode *getPHINode() const { return cast<PHINode>(getUnderlyingValue()); }
 
   /// Returns the induction descriptor for the recipe.
