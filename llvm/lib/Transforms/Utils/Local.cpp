@@ -3318,7 +3318,7 @@ static void combineMetadata(Instruction *K, const Instruction *J,
     switch (Kind) {
       default:
         if (K->isAtomic() && (find(AMDGPUMD, Kind) != std::cend(AMDGPUMD)))
-         break; // Preserve AMDGPU atomic metadata.
+          break; // Preserve AMDGPU atomic metadata.
         else
           K->setMetadata(Kind, nullptr); // Remove unknown metadata
         break;
