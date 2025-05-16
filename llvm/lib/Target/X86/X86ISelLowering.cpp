@@ -44013,6 +44013,8 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     case X86ISD::VZEXT_MOVL:
       // Variable blend.
     case X86ISD::BLENDV:
+      // Target unary shuffles:
+    case X86ISD::MOVDDUP:
       // Target unary shuffles by immediate:
     case X86ISD::PSHUFD:
     case X86ISD::PSHUFLW:
