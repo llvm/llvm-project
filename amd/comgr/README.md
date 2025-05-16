@@ -100,26 +100,26 @@ leverages the same CMake variables as
 Example of insturmenting with covereage, generating profiles, and creating an
 HTML for investigation:
 
-    > cmake -DCMAKE_STRIP="" -DLLVM_PROFILE_DATA_DIR=`pwd`/profiles \
+    $ cmake -DCMAKE_STRIP="" -DLLVM_PROFILE_DATA_DIR=`pwd`/profiles \
         -DLLVM_BUILD_INSTRUMENTED_COVERAGE=On \
         -DCMAKE_CXX_COMPILER="$LLVM_PROJECT/bin/clang++" \
         -DCMAKE_C_COMPILER="$LLVM_PROJECT/bin/clang" \
         -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_PREFIX_PATH="$LLVM_PROJECT;$DEVICE_LIBS" ..
-    > make -j
-    > make test test-lit
-    > cd profile
-    > $LLVM_PROJECT/bin/llvm-profdata merge -sparse \*.profraw -o ^
+    $ make -j
+    $ make test test-lit
+    $ cd profile
+    $ $LLVM_PROJECT/bin/llvm-profdata merge -sparse \*.profraw -o \
         comgr_test.profdata # merge and index data
-    > $LLVM_PROJECT/bin/llvm-cov report ../libamd_comgr.so ^
+    $ $LLVM_PROJECT/bin/llvm-cov report ../libamd_comgr.so \
         -instr-profile=comgr_test.profdata # show test report
-    > $LLVM_PROJECT/bin/llvm-cov report ../libamd_comgr.so ^
-        -instr-profile=comgr_test.profdata -ignore-filename-regex="build-.*/" ^
-        -ignore-filename-regex="llvm-project-internal/[cl].*/include/*" ^
+    $ $LLVM_PROJECT/bin/llvm-cov report ../libamd_comgr.so \
+        -instr-profile=comgr_test.profdata -ignore-filename-regex="build-.*/" \
+        -ignore-filename-regex="llvm-project-internal/[cl].*/include/*" \
         # show test report without includes
-    > $LLVM_PROJECT/../llvm/utils/prepare-code-coverage-artifact.py ^
-        --preserve-profiles $LLVM_PROJECT/bin/llvm-profdata ^
-        $LLVM_PROJECT/bin/llvm-cov . html ../libamd_comgr.so ^
+    $ $LLVM_PROJECT/../llvm/utils/prepare-code-coverage-artifact.py \
+        --preserve-profiles $LLVM_PROJECT/bin/llvm-profdata \
+        $LLVM_PROJECT/bin/llvm-cov . html ../libamd_comgr.so \
         # create html report
 
 Depending on the Code Object Manager
