@@ -57,7 +57,7 @@ namespace {
 mlir::Type elementTypeIfVector(mlir::Type type) {
   return llvm::TypeSwitch<mlir::Type, mlir::Type>(type)
       .Case<cir::VectorType, mlir::VectorType>(
-          [](auto p) { return p->getElementType(); })
+          [](auto p) { return p.getElementType(); })
       .Default([](mlir::Type p) { return p; });
 }
 } // namespace
