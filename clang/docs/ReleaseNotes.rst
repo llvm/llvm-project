@@ -623,6 +623,10 @@ Bug Fixes in This Version
 - Fix crash due to unknown references and pointer implementation and handling of
   base classes. (GH139452)
 
+- When passing a qualified rvalue as the controlling expression of a
+  ``_Generic`` selection expression, Clang now properly strips the qualifiers.
+  Fixes #GH96713
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
