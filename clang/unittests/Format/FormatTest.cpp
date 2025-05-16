@@ -5522,6 +5522,7 @@ TEST_F(FormatTest, IndentsPPDirectiveWithPPIndentWidth) {
                "        x; \\\n"
                "    }",
                style);
+
   style.PPIndentWidth = 2;
   verifyFormat("#ifdef foo\n"
                "#define bar() \\\n"
