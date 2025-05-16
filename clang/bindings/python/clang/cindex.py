@@ -1545,8 +1545,15 @@ class ExceptionSpecificationKind(BaseEnumeration):
 ### Cursors ###
 
 
-# This guard is used to ensure that no operations are possible on null cursors
 def cursor_null_guard(func):
+    """
+    This decorator is used to ensure that no methods are called on null-cursors.
+    The bindings map null cursors to `None`, so users are not expected
+    to encounter them.
+
+    If necessary, you can check whether a cursor is the null-cursor by
+    calling its `is_null` method.
+    """
     def inner(self, *args, **kwargs):
         if self.is_null():
             raise Exception("Tried calling method on a null-cursor.")
@@ -1566,19 +1573,16 @@ class Cursor(Structure):
     _tu: TranslationUnit
 
     @staticmethod
-    def from_location(tu: TranslationUnit, location: SourceLocation) -> Cursor:
-        # We store a reference to the TU in the instance so the TU won't get
-        # collected before the cursor.
-        cursor: Cursor = conf.lib.clang_getCursor(tu, location)
-        cursor._tu = tu
+    def from_location(tu: TranslationUnit, location: SourceLocation) -> Cursor | None:
+        return Cursor.from_result(conf.lib.clang_getCursor(tu, location), tu)
 
-        return cursor
-
+    # This function is not null-guarded because it is used in cursor_null_guard itself
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Cursor):
             return False
         return conf.lib.clang_equalCursors(self, other)  # type: ignore [no-any-return]
 
+    # Not null-guarded for consistency with __eq__
     def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
@@ -1586,6 +1590,7 @@ class Cursor(Structure):
     def __hash__(self) -> int:
         return self.hash
 
+    # This function is not null-guarded because it is used in cursor_null_guard itself
     def is_null(self) -> bool:
         return self == conf.null_cursor
 
