@@ -615,6 +615,7 @@ Bug Fixes in This Version
   argument which contains a pragma. (#GH113722)
 - Fixed assertion failures when generating name lookup table in modules. (#GH61065, #GH134739)
 - Fixed an assertion failure in constant compound literal statements. (#GH139160)
+- Fixed an assertion failure in serialization of constexpr structs containing unions. (#GH140130)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
