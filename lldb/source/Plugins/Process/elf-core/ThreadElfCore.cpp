@@ -53,7 +53,7 @@ using namespace lldb_private;
 ThreadElfCore::ThreadElfCore(Process &process, const ThreadData &td)
     : Thread(process, td.tid), m_thread_name(td.name), m_thread_reg_ctx_sp(),
       m_gpregset_data(td.gpregset), m_notes(td.notes),
-      m_siginfo(std::move(td.siginfo)) {}
+      m_siginfo_bytes(std::move(td.siginfo_bytes)), m_signo(td.signo) {}
 
 ThreadElfCore::~ThreadElfCore() { DestroyThread(); }
 
@@ -249,6 +249,14 @@ ThreadElfCore::CreateRegisterContextForFrame(StackFrame *frame) {
   return reg_ctx_sp;
 }
 
+llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>> ThreadElfCore::GetSiginfo(size_t max_size) const {
+  if (m_siginfo_bytes.empty())
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+              "no siginfo note");
+
+  return llvm::MemoryBuffer::getMemBufferCopy(m_siginfo_bytes, "siginfo note bytes");
+}
+
 bool ThreadElfCore::CalculateStopInfo() {
   ProcessSP process_sp(GetProcess());
   if (!process_sp)
@@ -258,15 +266,17 @@ bool ThreadElfCore::CalculateStopInfo() {
   if (!unix_signals_sp)
     return false;
 
-  const char *sig_description;
-  std::string description = m_siginfo.GetDescription(*unix_signals_sp);
-  if (description.empty())
-    sig_description = nullptr;
-  else
-    sig_description = description.c_str();
-
-  SetStopInfo(StopInfo::CreateStopReasonWithSignal(
-      *this, m_siginfo.si_signo, sig_description, m_siginfo.si_code));
+  lldb::ValueObjectSP siginfo = GetSiginfoValue();
+  if (!siginfo || !siginfo->GetValueIsValid()) {
+    std::string description = unix_signals_sp->GetSignalDescription(m_signo, 0);
+    SetStopInfo(StopInfo::CreateStopReasonWithSignal(*this, m_signo, description.c_str(), 0));
+  } else {
+    std::string description = unix_signals_sp->GetSignalDescriptionFromSiginfo(siginfo);
+    uint32_t signo = siginfo->GetChildMemberWithName("si_signo")->GetValueAsUnsigned(-1);
+    uint32_t code = siginfo->GetChildMemberWithName("si_code")->GetValueAsUnsigned(0);
+    SetStopInfo(StopInfo::CreateStopReasonWithSignal(
+      *this, signo, description.c_str(), code));
+  }
 
   SetStopInfo(m_stop_info_sp);
   return true;
@@ -550,91 +560,22 @@ ELFLinuxPrPsInfo::Populate(const lldb_private::ProcessInstanceInfo &info,
   return prpsinfo;
 }
 
-// Parse SIGINFO from NOTE entry
-ELFLinuxSigInfo::ELFLinuxSigInfo() { memset(this, 0, sizeof(ELFLinuxSigInfo)); }
+Status ELFLinuxSigInfo::Parse(const DataExtractor &data, const ArchSpec &arch, const lldb::PlatformSP platform_sp, ThreadData &thread_data) {
+  if (!platform_sp)
+    return Status::FromErrorString("No platform for arch.");
+  CompilerType type = platform_sp->GetSiginfoType(arch.GetTriple());
+  if (!type.IsValid())
+    return Status::FromErrorString("no siginfo_t for platform.");
 
-size_t ELFLinuxSigInfo::GetSize(const lldb_private::ArchSpec &arch) {
-  if (arch.IsMIPS())
-    return sizeof(ELFLinuxSigInfo);
-  switch (arch.GetCore()) {
-  case lldb_private::ArchSpec::eCore_x86_64_x86_64:
-    return sizeof(ELFLinuxSigInfo);
-  case lldb_private::ArchSpec::eCore_s390x_generic:
-  case lldb_private::ArchSpec::eCore_x86_32_i386:
-  case lldb_private::ArchSpec::eCore_x86_32_i486:
-    return 12;
-  default:
-    return 0;
-  }
-}
+  auto type_size_or_err = type.GetByteSize(nullptr);
+  if (!type_size_or_err)
+    return Status::FromError(type_size_or_err.takeError());
 
-Status ELFLinuxSigInfo::Parse(const DataExtractor &data, const ArchSpec &arch,
-                              const lldb_private::UnixSignals &unix_signals) {
-  Status error;
-  uint64_t size = GetSize(arch);
-  if (size > data.GetByteSize()) {
-    error = Status::FromErrorStringWithFormat(
-        "NT_SIGINFO size should be %zu, but the remaining bytes are: %" PRIu64,
-        GetSize(arch), data.GetByteSize());
-    return error;
-  }
+  if (data.GetByteSize() < *type_size_or_err)
+    return Status::FromErrorString("siginfo note byte size smaller than siginfo_t for platform.");
 
-  // Set that we've parsed the siginfo from a SIGINFO note.
-  note_type = eNT_SIGINFO;
-  // Parsing from a 32 bit ELF core file, and populating/reusing the structure
-  // properly, because the struct is for the 64 bit version
-  offset_t offset = 0;
-  si_signo = data.GetU32(&offset);
-  si_errno = data.GetU32(&offset);
-  si_code = data.GetU32(&offset);
-  // 64b ELF have a 4 byte pad.
-  if (data.GetAddressByteSize() == 8)
-    offset += 4;
-
-  if (si_code < 0) {
-    sifields.kill.pid = data.GetU32(&offset);
-    sifields.kill.uid = data.GetU32(&offset);
-  } else if (unix_signals.GetShouldStop(si_signo)) {
-    // Not every stop signal has a valid address, but that will get resolved in
-    // the unix_signals.GetSignalDescription() call below.
-    // Instead of memcpy we call all these individually as the extractor will
-    // handle endianness for us.
-    sifields.sigfault.si_addr = data.GetAddress(&offset);
-    sifields.sigfault.si_addr_lsb = data.GetU16(&offset);
-    if (data.GetByteSize() - offset >= sizeof(sifields.sigfault.bounds)) {
-      sifields.sigfault.bounds._addr_bnd._lower = data.GetAddress(&offset);
-      sifields.sigfault.bounds._addr_bnd._upper = data.GetAddress(&offset);
-      sifields.sigfault.bounds._pkey = data.GetU32(&offset);
-    } else {
-      // Set these to 0 so we don't use bogus data for the description.
-      sifields.sigfault.bounds._addr_bnd._lower = 0;
-      sifields.sigfault.bounds._addr_bnd._upper = 0;
-      sifields.sigfault.bounds._pkey = 0;
-    }
-  }
-
-  return error;
-}
-
-std::string ELFLinuxSigInfo::GetDescription(
-    const lldb_private::UnixSignals &unix_signals) const {
-  if (unix_signals.GetShouldStop(si_signo) && note_type == eNT_SIGINFO) {
-    if (si_code < 0)
-      return unix_signals.GetSignalDescription(
-          si_signo, si_code, std::nullopt, std::nullopt, std::nullopt,
-          sifields.kill.pid, sifields.kill.uid);
-    else if (sifields.sigfault.bounds._addr_bnd._upper != 0)
-      return unix_signals.GetSignalDescription(
-          si_signo, si_code, sifields.sigfault.si_addr,
-          sifields.sigfault.bounds._addr_bnd._lower,
-          sifields.sigfault.bounds._addr_bnd._upper);
-    else
-      return unix_signals.GetSignalDescription(si_signo, si_code,
-                                               sifields.sigfault.si_addr);
-  }
-
-  // This looks weird, but there is an existing pattern where we don't pass a
-  // description to keep up with that, we return empty here, and then the above
-  // function will set the description whether or not this is empty.
-  return std::string();
+  lldb::offset_t offset = 0;
+  const char *bytes = static_cast<const char*>(data.GetData(&offset, *type_size_or_err));
+  thread_data.siginfo_bytes = llvm::StringRef(bytes, *type_size_or_err);
+  return Status();
 }
