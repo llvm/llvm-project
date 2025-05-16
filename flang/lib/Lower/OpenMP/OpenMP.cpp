@@ -2850,7 +2850,7 @@ genAtomicUpdate(lower::AbstractConverter &converter, mlir::Location loc,
   builder.create<mlir::omp::YieldOp>(loc, converted);
   converter.resetExprOverrides();
 
-  builder.restoreInsertionPoint(postAt);  // For naCtx cleanups
+  builder.restoreInsertionPoint(postAt); // For naCtx cleanups
   return updateOp;
 }
 
