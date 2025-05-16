@@ -25,8 +25,10 @@ class Lowerer : public coro::LowererBase {
   IRBuilder<> Builder;
   PointerType *const AnyResumeFnPtrTy;
   Constant *NoopCoro = nullptr;
+  SmallVector<CoroFrameInst *, 8> CoroFrames;
 
   void lowerResumeOrDestroy(CallBase &CB, CoroSubFnInst::ResumeKind);
+  void lowerCoroFrames(Function &F, Value *CoroBegin);
   void lowerCoroPromise(CoroPromiseInst *Intrin);
   void lowerCoroDone(IntrinsicInst *II);
   void lowerCoroNoop(IntrinsicInst *II);
@@ -49,6 +51,18 @@ void Lowerer::lowerResumeOrDestroy(CallBase &CB,
   Value *ResumeAddr = makeSubFnCall(CB.getArgOperand(0), Index, &CB);
   CB.setCalledOperand(ResumeAddr);
   CB.setCallingConv(CallingConv::Fast);
+}
+
+void Lowerer::lowerCoroFrames(Function &F, Value *CoroBegin) {
+  // Lower with poison if we cannot find coro.begin
+  if (CoroBegin == nullptr)
+    CoroBegin = PoisonValue::get(PointerType::get(F.getContext(), 0));
+
+  for (CoroFrameInst *CF : CoroFrames) {
+    CF->replaceAllUsesWith(CoroBegin);
+    CF->eraseFromParent();
+  }
+  CoroFrames.clear();
 }
 
 // Coroutine promise field is always at the fixed offset from the beginning of
@@ -257,6 +271,8 @@ void Lowerer::lowerEarlyIntrinsics(Function &F) {
         break;
     }
   }
+  // The coro.frame intrinsic is always lowered to the result of coro.begin.
+  lowerCoroFrames(F, CoroBegin);
 
   if (CoroId) {
     // Make sure that all CoroFree reference the coro.id intrinsic.
@@ -282,8 +298,8 @@ static bool declaresCoroEarlyIntrinsics(const Module &M) {
       M, {"llvm.coro.id", "llvm.coro.id.retcon", "llvm.coro.id.retcon.once",
           "llvm.coro.id.async", "llvm.coro.destroy", "llvm.coro.done",
           "llvm.coro.end", "llvm.coro.end.async", "llvm.coro.noop",
-          "llvm.coro.free", "llvm.coro.promise", "llvm.coro.resume",
-          "llvm.coro.suspend"});
+          "llvm.coro.frame", "llvm.coro.free", "llvm.coro.promise",
+          "llvm.coro.resume", "llvm.coro.suspend"});
 }
 
 PreservedAnalyses CoroEarlyPass::run(Module &M, ModuleAnalysisManager &) {
