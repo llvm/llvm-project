@@ -143,6 +143,7 @@ def SharedVar : SubsetSubject<Var,
 def GlobalVar : SubsetSubject<Var,
                              [{S->hasGlobalStorage()}], "global variables">;
 
+
 def ExternalGlobalVar : SubsetSubject<Var,
                              [{S->hasGlobalStorage() &&
                                S->getStorageClass()!=StorageClass::SC_Static &&
@@ -408,9 +409,13 @@ class SubjectList<list<AttrSubject> subjects, SubjectDiag diag = WarnDiag,
   string CustomDiag = customDiag;
 }
 
-class LangOpt<string name, code customCode = [{}]> {
+class LangOpt<string name, code customCode = [{}], bit silentlyIgnore = 0> {
   // The language option to test; ignored when custom code is supplied.
   string Name = name;
+
+  // If set to 1, the attribute is accepted but is silently ignored. This is
+  // useful in multi-compilation situations like SYCL.
+  bit SilentlyIgnore = silentlyIgnore;
 
   // A custom predicate, written as an expression evaluated in a context with
   // "LangOpts" bound.
@@ -422,6 +427,7 @@ def CUDA : LangOpt<"CUDA">;
 def HIP : LangOpt<"HIP">;
 def SYCLHost : LangOpt<"SYCLIsHost">;
 def SYCLDevice : LangOpt<"SYCLIsDevice">;
+def SilentlyIgnoreSYCLHost : LangOpt<"SYCLIsHost", "", 1>;
 def COnly : LangOpt<"", "!LangOpts.CPlusPlus">;
 def CPlusPlus : LangOpt<"CPlusPlus">;
 def OpenCL : LangOpt<"OpenCL">;
@@ -1543,6 +1549,18 @@ def SYCLKernel : InheritableAttr {
   let Subjects = SubjectList<[FunctionTmpl]>;
   let LangOpts = [SYCLDevice];
   let Documentation = [SYCLKernelDocs];
+}
+
+def GlobalStorageNonLocalVar : SubsetSubject<Var,
+                                             [{S->hasGlobalStorage() &&
+                                               !S->isLocalVarDeclOrParm()}],
+                                             "global variables">;
+
+def SYCLExternal : InheritableAttr {
+  let Spellings = [GNU<"sycl_external">];
+  let Subjects = SubjectList<[Function, GlobalStorageNonLocalVar]>;
+  let LangOpts = [SYCLDevice, SilentlyIgnoreSYCLHost];
+  let Documentation = [SYCLExternalDocs];
 }
 
 def SYCLKernelEntryPoint : InheritableAttr {
