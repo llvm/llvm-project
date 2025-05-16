@@ -474,10 +474,6 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
       return false;
     return this->emitDecayPtr(*FromT, *ToT, CE);
   }
-
-  case CK_LValueToRValueBitCast:
-    return this->emitBuiltinBitCast(CE);
-
   case CK_IntegralToBoolean:
   case CK_FixedPointToBoolean: {
     // HLSL uses this to cast to one-element vectors.
@@ -733,6 +729,11 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     return this->emitInvalid(CE);
   }
   llvm_unreachable("Unhandled clang::CastKind enum");
+}
+
+template <class Emitter>
+bool Compiler<Emitter>::VisitBuiltinBitCastExpr(const BuiltinBitCastExpr *E) {
+  return this->emitBuiltinBitCast(E);
 }
 
 template <class Emitter>
@@ -2435,7 +2436,7 @@ bool Compiler<Emitter>::VisitStringLiteral(const StringLiteral *E) {
   // emitted. Read only the array length from the string literal.
   unsigned ArraySize = CAT->getZExtSize();
   unsigned N = std::min(ArraySize, E->getLength());
-  size_t CharWidth = E->getCharByteWidth();
+  unsigned CharWidth = E->getCharByteWidth();
 
   for (unsigned I = 0; I != N; ++I) {
     uint32_t CodeUnit = E->getCodeUnit(I);
@@ -3883,7 +3884,7 @@ bool Compiler<Emitter>::VisitShuffleVectorExpr(const ShuffleVectorExpr *E) {
       return false;
   }
   for (unsigned I = 0; I != NumOutputElems; ++I) {
-    APSInt ShuffleIndex = E->getShuffleMaskIdx(Ctx.getASTContext(), I);
+    APSInt ShuffleIndex = E->getShuffleMaskIdx(I);
     assert(ShuffleIndex >= -1);
     if (ShuffleIndex == -1)
       return this->emitInvalidShuffleVectorIndex(I, E);
@@ -4107,11 +4108,8 @@ template <class Emitter> bool Compiler<Emitter>::visitBool(const Expr *E) {
     return true;
 
   // Convert pointers to bool.
-  if (T == PT_Ptr) {
-    if (!this->emitNull(*T, 0, nullptr, E))
-      return false;
-    return this->emitNE(*T, E);
-  }
+  if (T == PT_Ptr)
+    return this->emitIsNonNullPtr(E);
 
   // Or Floats.
   if (T == PT_Float)
