@@ -35,10 +35,8 @@ static MCOperand lowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym,
     Kind = LoongArchMCExpr::VK_None;
     break;
   case LoongArchII::MO_CALL:
-    Kind = LoongArchMCExpr::VK_CALL;
-    break;
   case LoongArchII::MO_CALL_PLT:
-    Kind = LoongArchMCExpr::VK_CALL_PLT;
+    Kind = ELF::R_LARCH_B26;
     break;
   case LoongArchII::MO_PCREL_HI:
     Kind = ELF::R_LARCH_PCALA_HI20;

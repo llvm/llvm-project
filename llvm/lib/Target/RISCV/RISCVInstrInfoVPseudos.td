@@ -70,11 +70,15 @@
 ///
 //===----------------------------------------------------------------------===//
 
-def riscv_vmv_x_s : SDNode<"RISCVISD::VMV_X_S",
-                           SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisVec<1>,
-                                                SDTCisInt<1>]>>;
-def riscv_read_vlenb : SDNode<"RISCVISD::READ_VLENB",
-                              SDTypeProfile<1, 0, [SDTCisVT<0, XLenVT>]>>;
+// VMV_X_S matches the semantics of vmv.x.s. The result is always XLenVT sign
+// extended from the vector element size.
+def riscv_vmv_x_s : RVSDNode<"VMV_X_S",
+                             SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisVec<1>,
+                                                  SDTCisInt<1>]>>;
+
+// Read VLENB CSR
+def riscv_read_vlenb : RVSDNode<"READ_VLENB",
+                                SDTypeProfile<1, 0, [SDTCisVT<0, XLenVT>]>>;
 
 // Operand that is allowed to be a register other than X0, a 5 bit unsigned
 // immediate, or -1. -1 means VLMAX. This allows us to pick between VSETIVLI and
@@ -6225,6 +6229,36 @@ foreach vti = AllIntegerVectors in {
                                                         GPR:$vl,
                                                         vti.Log2SEW,
                                                         (XLenVT timm:$policy))>;
+  }
+}
+
+// (add v, C) -> (sub v, -C) if -C cheaper to materialize
+defvar I64IntegerVectors = !filter(vti, AllIntegerVectors, !eq(vti.SEW, 64));
+foreach vti = I64IntegerVectors in {
+  let Predicates = [HasVInstructionsI64] in {
+    def : Pat<(vti.Vector (int_riscv_vadd (vti.Vector vti.RegClass:$passthru),
+                                          (vti.Vector vti.RegClass:$rs1),
+                                          (i64 negImm:$rs2),
+                                          VLOpFrag)),
+              (!cast<Instruction>("PseudoVSUB_VX_"#vti.LMul.MX)
+                                             vti.RegClass:$passthru,
+                                             vti.RegClass:$rs1,
+                                             negImm:$rs2,
+                                             GPR:$vl, vti.Log2SEW, TU_MU)>;
+    def : Pat<(vti.Vector (int_riscv_vadd_mask (vti.Vector vti.RegClass:$passthru),
+                                               (vti.Vector vti.RegClass:$rs1),
+                                               (i64 negImm:$rs2),
+                                               (vti.Mask VMV0:$vm),
+                                               VLOpFrag,
+                                               (i64 timm:$policy))),
+              (!cast<Instruction>("PseudoVSUB_VX_"#vti.LMul.MX#"_MASK")
+                                             vti.RegClass:$passthru,
+                                             vti.RegClass:$rs1,
+                                             negImm:$rs2,
+                                             (vti.Mask VMV0:$vm),
+                                             GPR:$vl,
+                                             vti.Log2SEW,
+                                             (i64 timm:$policy))>;
   }
 }
 

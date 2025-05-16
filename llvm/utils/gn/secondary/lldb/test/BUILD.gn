@@ -181,7 +181,7 @@ group("test") {
     "//clang/tools/driver:symlinks",
     "//lld/tools/lld:symlinks",
     "//lldb/tools/driver:lldb",
-    "//lldb/tools/lldb-dap",
+    "//lldb/tools/lldb-dap/tool:lldb-dap",
 
     # XXX lldb-instr, darwin-debug, etc
     "//lldb/tools/lldb-server",

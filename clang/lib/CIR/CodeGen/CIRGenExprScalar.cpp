@@ -161,8 +161,11 @@ public:
   mlir::Value VisitArraySubscriptExpr(ArraySubscriptExpr *e) {
     if (e->getBase()->getType()->isVectorType()) {
       assert(!cir::MissingFeatures::scalableVectors());
-      cgf.getCIRGenModule().errorNYI("VisitArraySubscriptExpr: VectorType");
-      return {};
+
+      const mlir::Location loc = cgf.getLoc(e->getSourceRange());
+      const mlir::Value vecValue = Visit(e->getBase());
+      const mlir::Value indexValue = Visit(e->getIdx());
+      return cgf.builder.create<cir::VecExtractOp>(loc, vecValue, indexValue);
     }
     // Just load the lvalue formed by the subscript expression.
     return emitLoadOfLValue(e);

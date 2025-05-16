@@ -4,6 +4,10 @@
 
 ! CHECK: func.func @_QPatomic_implicit_cast_read() {
 subroutine atomic_implicit_cast_read
+! CHECK: %[[ALLOCA7:.*]] = fir.alloca complex<f64>
+! CHECK: %[[ALLOCA6:.*]] = fir.alloca i32
+! CHECK: %[[ALLOCA5:.*]] = fir.alloca i32
+! CHECK: %[[ALLOCA4:.*]] = fir.alloca i32
 ! CHECK: %[[ALLOCA3:.*]] = fir.alloca complex<f32>
 ! CHECK: %[[ALLOCA2:.*]] = fir.alloca complex<f32>
 ! CHECK: %[[ALLOCA1:.*]] = fir.alloca i32
@@ -53,4 +57,78 @@ subroutine atomic_implicit_cast_read
 ! CHECK: fir.store %[[CVT]] to %[[M_DECL]]#0 : !fir.ref<complex<f64>>
     !$omp atomic read
         m = w
+
+! CHECK: %[[CONST:.*]] = arith.constant 1 : i32
+! CHECK: omp.atomic.capture {
+! CHECK: omp.atomic.read %[[ALLOCA4]] = %[[X_DECL]]#0 : !fir.ref<i32>, !fir.ref<i32>, i32
+! CHECK: omp.atomic.update %[[X_DECL]]#0 : !fir.ref<i32> {
+! CHECK: ^bb0(%[[ARG:.*]]: i32):
+! CHECK: %[[RESULT:.*]] = arith.addi %[[ARG]], %[[CONST]] : i32
+! CHECK: omp.yield(%[[RESULT]] : i32)
+! CHECK: }
+! CHECK: }
+! CHECK: %[[LOAD:.*]] = fir.load %[[ALLOCA4]] : !fir.ref<i32>
+! CHECK: %[[CVT:.*]] = fir.convert %[[LOAD]] : (i32) -> f32
+! CHECK: fir.store %[[CVT]] to %[[Y_DECL]]#0 : !fir.ref<f32>
+     !$omp atomic capture
+        y = x
+        x = x + 1
+     !$omp end atomic
+
+! CHECK: %[[CONST:.*]] = arith.constant 10 : i32
+! CHECK: omp.atomic.capture {
+! CHECK: omp.atomic.read %[[ALLOCA5:.*]] = %[[X_DECL]]#0 : !fir.ref<i32>, !fir.ref<i32>, i32
+! CHECK: omp.atomic.write %[[X_DECL]]#0 = %[[CONST]] : !fir.ref<i32>, i32
+! CHECK: }
+! CHECK: %[[LOAD:.*]] = fir.load %[[ALLOCA5]] : !fir.ref<i32>
+! CHECK: %[[CVT:.*]] = fir.convert %[[LOAD]] : (i32) -> f64
+! CHECK: fir.store %[[CVT]] to %[[Z_DECL]]#0 : !fir.ref<f64>
+     !$omp atomic capture
+        z = x
+        x = 10
+     !$omp end atomic
+
+! CHECK: %[[CONST:.*]] = arith.constant 1 : i32
+! CHECK: omp.atomic.capture {
+! CHECK: omp.atomic.update %[[X_DECL]]#0 : !fir.ref<i32> {
+! CHECK: ^bb0(%[[ARG:.*]]: i32):
+! CHECK: %[[RESULT:.*]] = arith.addi %[[ARG]], %[[CONST]] : i32
+! CHECK: omp.yield(%[[RESULT]] : i32)
+! CHECK: }
+! CHECK: omp.atomic.read %[[ALLOCA6]] = %[[X_DECL]]#0 : !fir.ref<i32>, !fir.ref<i32>, i32
+! CHECK: %[[LOAD:.*]] = fir.load %[[ALLOCA6]] : !fir.ref<i32>
+! CHECK: %[[UNDEF:.*]] = fir.undefined complex<f32>
+! CHECK: %[[CVT:.*]] = fir.convert %[[LOAD]] : (i32) -> f32
+! CHECK: %[[CST:.*]] = arith.constant 0.000000e+00 : f32
+! CHECK: %[[IDX1:.*]] = fir.insert_value %[[UNDEF]], %[[CVT]], [0 : index] : (complex<f32>, f32) -> complex<f32>
+! CHECK: %[[IDX2:.*]] = fir.insert_value %[[IDX1]], %[[CST]], [1 : index] : (complex<f32>, f32) -> complex<f32>
+! CHECK: fir.store %[[IDX2]] to %[[W_DECL]]#0 : !fir.ref<complex<f32>>
+     !$omp atomic capture
+        x = x + 1
+        w = x
+     !$omp end atomic
+
+
+! CHECK: omp.atomic.capture {
+! CHECK: omp.atomic.update %[[M_DECL]]#0 : !fir.ref<complex<f64>> {
+! CHECK: ^bb0(%[[ARG:.*]]: complex<f64>):
+! CHECK: %[[CST1:.*]] = arith.constant 1.000000e+00 : f64
+! CHECK: %[[CST2:.*]] = arith.constant 0.000000e+00 : f64
+! CHECK: %[[UNDEF:.*]] = fir.undefined complex<f64>
+! CHECK: %[[IDX1:.*]] = fir.insert_value %[[UNDEF]], %[[CST1]], [0 : index] : (complex<f64>, f64) -> complex<f64>
+! CHECK: %[[IDX2:.*]] = fir.insert_value %[[IDX1]], %[[CST2]], [1 : index] : (complex<f64>, f64) -> complex<f64>
+! CHECK: %[[RESULT:.*]] = fir.addc %[[ARG]], %[[IDX2]] {fastmath = #arith.fastmath<contract>} : complex<f64>
+! CHECK: omp.yield(%[[RESULT]] : complex<f64>)
+! CHECK: }
+! CHECK: omp.atomic.read %[[ALLOCA7]] = %[[M_DECL]]#0 : !fir.ref<complex<f64>>, !fir.ref<complex<f64>>, complex<f64>
+! CHECK: }
+! CHECK: %[[LOAD:.*]] = fir.load %[[ALLOCA7]] : !fir.ref<complex<f64>>
+! CHECK: %[[CVT:.*]] = fir.convert %[[LOAD]] : (complex<f64>) -> complex<f32>
+! CHECK: fir.store %[[CVT]] to %[[W_DECL]]#0 : !fir.ref<complex<f32>>
+     !$omp atomic capture
+        m = m + 1
+        w = m
+     !$omp end atomic
+
+
 end subroutine

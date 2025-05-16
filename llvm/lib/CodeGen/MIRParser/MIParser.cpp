@@ -1476,6 +1476,7 @@ bool MIParser::parseInstruction(unsigned &OpCode, unsigned &Flags) {
          Token.is(MIToken::kw_unpredictable) ||
          Token.is(MIToken::kw_nneg) ||
          Token.is(MIToken::kw_disjoint) ||
+         Token.is(MIToken::kw_nusw) ||
          Token.is(MIToken::kw_samesign)) {
     // clang-format on
     // Mine frame and fast math flags
@@ -1513,6 +1514,8 @@ bool MIParser::parseInstruction(unsigned &OpCode, unsigned &Flags) {
       Flags |= MachineInstr::NonNeg;
     if (Token.is(MIToken::kw_disjoint))
       Flags |= MachineInstr::Disjoint;
+    if (Token.is(MIToken::kw_nusw))
+      Flags |= MachineInstr::NoUSWrap;
     if (Token.is(MIToken::kw_samesign))
       Flags |= MachineInstr::SameSign;
 
@@ -2329,6 +2332,8 @@ bool MIParser::parseDILocation(MDNode *&Loc) {
   MDNode *Scope = nullptr;
   MDNode *InlinedAt = nullptr;
   bool ImplicitCode = false;
+  uint64_t AtomGroup = 0;
+  uint64_t AtomRank = 0;
 
   if (expectAndConsume(MIToken::lparen))
     return true;
@@ -2403,6 +2408,28 @@ bool MIParser::parseDILocation(MDNode *&Loc) {
           lex();
           continue;
         }
+        if (Token.stringValue() == "atomGroup") {
+          lex();
+          if (expectAndConsume(MIToken::colon))
+            return true;
+          if (Token.isNot(MIToken::IntegerLiteral) ||
+              Token.integerValue().isSigned())
+            return error("expected unsigned integer");
+          AtomGroup = Token.integerValue().getZExtValue();
+          lex();
+          continue;
+        }
+        if (Token.stringValue() == "atomRank") {
+          lex();
+          if (expectAndConsume(MIToken::colon))
+            return true;
+          if (Token.isNot(MIToken::IntegerLiteral) ||
+              Token.integerValue().isSigned())
+            return error("expected unsigned integer");
+          AtomRank = Token.integerValue().getZExtValue();
+          lex();
+          continue;
+        }
       }
       return error(Twine("invalid DILocation argument '") +
                    Token.stringValue() + "'");
@@ -2418,7 +2445,7 @@ bool MIParser::parseDILocation(MDNode *&Loc) {
     return error("DILocation requires a scope");
 
   Loc = DILocation::get(MF.getFunction().getContext(), Line, Column, Scope,
-                        InlinedAt, ImplicitCode);
+                        InlinedAt, ImplicitCode, AtomGroup, AtomRank);
   return false;
 }
 

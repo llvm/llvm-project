@@ -15,7 +15,7 @@ void acc_wait(int cond) {
   // CHECK-NEXT: acc.wait if(%[[CONV_CAST]])
 
 #pragma acc wait async
-  // CHECK-NEXT: acc.wait attributes {async}
+  // CHECK-NEXT: acc.wait async loc
 
 #pragma acc wait async(cond)
   // CHECK-NEXT: %[[COND_LOAD:.*]] = cir.load %[[COND]] : !cir.ptr<!s32i>, !s32i
@@ -32,7 +32,7 @@ void acc_wait(int cond) {
   // CHECK-NEXT: %[[ONE_CAST:.*]] = builtin.unrealized_conversion_cast %[[ONE_LITERAL]] : !s32i to si32
   // CHECK-NEXT: %[[TWO_LITERAL:.*]] = cir.const #cir.int<2> : !s32i
   // CHECK-NEXT: %[[TWO_CAST:.*]] = builtin.unrealized_conversion_cast %[[TWO_LITERAL]] : !s32i to si32
-  // CHECK-NEXT: acc.wait(%[[ONE_CAST]], %[[TWO_CAST]] : si32, si32) attributes {async}
+  // CHECK-NEXT: acc.wait(%[[ONE_CAST]], %[[TWO_CAST]] : si32, si32) async loc
 
 
 #pragma acc wait(queues:1) if (cond)
@@ -71,7 +71,7 @@ void acc_wait(int cond) {
   // CHECK-NEXT: %[[TWO_CAST:.*]] = builtin.unrealized_conversion_cast %[[TWO_LITERAL]] : !s32i to si32
   // CHECK-NEXT: %[[THREE_LITERAL:.*]] = cir.const #cir.int<3> : !s32i
   // CHECK-NEXT: %[[THREE_CAST:.*]] = builtin.unrealized_conversion_cast %[[THREE_LITERAL]] : !s32i to si32
-  // CHECK-NEXT: acc.wait(%[[TWO_CAST]], %[[THREE_CAST]] : si32, si32) wait_devnum(%[[ONE_CAST]] : si32) attributes {async}
+  // CHECK-NEXT: acc.wait(%[[TWO_CAST]], %[[THREE_CAST]] : si32, si32) async wait_devnum(%[[ONE_CAST]] : si32) loc
 
   // CHECK-NEXT: cir.return
 }

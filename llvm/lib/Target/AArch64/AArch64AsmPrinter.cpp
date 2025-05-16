@@ -96,9 +96,11 @@ class AArch64AsmPrinter : public AsmPrinter {
       SectionToImportedFunctionCalls;
 
 public:
+  static char ID;
+
   AArch64AsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer)), MCInstLowering(OutContext, *this),
-        FM(*this) {}
+      : AsmPrinter(TM, std::move(Streamer), ID),
+        MCInstLowering(OutContext, *this), FM(*this) {}
 
   StringRef getPassName() const override { return "AArch64 Assembly Printer"; }
 
@@ -327,32 +329,8 @@ void AArch64AsmPrinter::emitStartOfAsmFile(Module &M) {
   const Triple &TT = TM.getTargetTriple();
 
   if (TT.isOSBinFormatCOFF()) {
-    // Emit an absolute @feat.00 symbol
-    MCSymbol *S = MMI->getContext().getOrCreateSymbol(StringRef("@feat.00"));
-    OutStreamer->beginCOFFSymbolDef(S);
-    OutStreamer->emitCOFFSymbolStorageClass(COFF::IMAGE_SYM_CLASS_STATIC);
-    OutStreamer->emitCOFFSymbolType(COFF::IMAGE_SYM_DTYPE_NULL);
-    OutStreamer->endCOFFSymbolDef();
-    int64_t Feat00Value = 0;
-
-    if (M.getModuleFlag("cfguard")) {
-      // Object is CFG-aware.
-      Feat00Value |= COFF::Feat00Flags::GuardCF;
-    }
-
-    if (M.getModuleFlag("ehcontguard")) {
-      // Object also has EHCont.
-      Feat00Value |= COFF::Feat00Flags::GuardEHCont;
-    }
-
-    if (M.getModuleFlag("ms-kernel")) {
-      // Object is compiled with /kernel.
-      Feat00Value |= COFF::Feat00Flags::Kernel;
-    }
-
-    OutStreamer->emitSymbolAttribute(S, MCSA_Global);
-    OutStreamer->emitAssignment(
-        S, MCConstantExpr::create(Feat00Value, MMI->getContext()));
+    emitCOFFFeatureSymbol(M);
+    emitCOFFReplaceableFunctionData(M);
 
     if (M.getModuleFlag("import-call-optimization"))
       EnableImportCallOptimization = true;
@@ -3522,6 +3500,11 @@ const MCExpr *AArch64AsmPrinter::lowerConstant(const Constant *CV,
 
   return AsmPrinter::lowerConstant(CV, BaseCV, Offset);
 }
+
+char AArch64AsmPrinter::ID = 0;
+
+INITIALIZE_PASS(AArch64AsmPrinter, "aarch64-asm-printer",
+                "AArch64 Assmebly Printer", false, false)
 
 // Force static initialization.
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAArch64AsmPrinter() {

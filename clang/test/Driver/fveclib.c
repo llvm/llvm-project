@@ -38,7 +38,7 @@
 /* Verify that the correct vector library is passed to LTO flags. */
 
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -fveclib=libmvec -flto %s 2>&1 | FileCheck --check-prefix=CHECK-LTO-LIBMVEC %s
-// CHECK-LTO-LIBMVEC: "-plugin-opt=-vector-library=LIBMVEC-X86"
+// CHECK-LTO-LIBMVEC: "-plugin-opt=-vector-library=LIBMVEC"
 
 // RUN: %clang -### --target=powerpc64-unknown-linux-gnu -fveclib=MASSV -flto %s 2>&1 | FileCheck --check-prefix=CHECK-LTO-MASSV %s
 // CHECK-LTO-MASSV: "-plugin-opt=-vector-library=MASSV"
