@@ -452,6 +452,7 @@ const MCSection *AsmPrinter::getCurrentSection() const {
 
 void AsmPrinter::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
+  MachineFunctionPass::getAnalysisUsage(AU);
   AU.addRequired<MachineOptimizationRemarkEmitterPass>();
   AU.addRequired<GCModuleInfo>();
   AU.addRequired<LazyMachineBlockFrequencyInfoPass>();
