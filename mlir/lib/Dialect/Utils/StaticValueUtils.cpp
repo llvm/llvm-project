@@ -15,17 +15,9 @@
 
 namespace mlir {
 
-bool isZeroIndex(OpFoldResult v) {
-  if (!v)
-    return false;
-  return isConstantIntValue(v, 0);
-}
+bool isZeroIndex(OpFoldResult v) { return isConstantIntValue(v, 0); }
 
-bool isOneIndex(OpFoldResult v) {
-  if (!v)
-    return false;
-  return isConstantIntValue(v, 1);
-}
+bool isOneIndex(OpFoldResult v) { return isConstantIntValue(v, 1); }
 
 std::tuple<SmallVector<OpFoldResult>, SmallVector<OpFoldResult>,
            SmallVector<OpFoldResult>>
