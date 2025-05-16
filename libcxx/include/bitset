@@ -304,7 +304,7 @@ inline _LIBCPP_CONSTEXPR __bitset<_N_words, _Size>::__bitset(unsigned long long 
 #  endif
 {
 #  ifdef _LIBCPP_CXX03_LANG
-  __init(__v, integral_constant<bool, sizeof(unsigned long long) == sizeof(__storage_type)>());
+  __init(__v, integral_constant<bool, sizeof(unsigned long long) <= sizeof(__storage_type)>());
 #  endif
 }
 
