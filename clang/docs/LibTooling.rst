@@ -75,7 +75,7 @@ and automatic location of the compilation database using source files paths.
     auto ExpectedParser = CommonOptionsParser::create(argc, argv, MyToolCategory);
     if (!ExpectedParser) {
       // Fail gracefully for unsupported options.
-      llvm::errs() << ExpectedParser.takeError();
+      llvm::errs() << toString(ExpectedParser.takeError());
       return 1;
     }
     CommonOptionsParser& OptionsParser = ExpectedParser.get();
@@ -142,7 +142,7 @@ version of this example tool is also checked into the clang tree at
   int main(int argc, const char **argv) {
     auto ExpectedParser = CommonOptionsParser::create(argc, argv, MyToolCategory);
     if (!ExpectedParser) {
-      llvm::errs() << ExpectedParser.takeError();
+      llvm::errs() << toString(ExpectedParser.takeError());
       return 1;
     }
     CommonOptionsParser& OptionsParser = ExpectedParser.get();
