@@ -77,19 +77,8 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
                          const SmallVector<OpFoldResult> &originalOffsets,
                          const SmallVector<Value> &localOffset,
                          const SmallVector<int64_t> &distUnitBaseAddr) const {
-
-    Value constOffsetX =
-        rewriter.create<arith::ConstantIndexOp>(loc, distUnitBaseAddr[0]);
-    Value constOffsetY =
-        rewriter.create<arith::ConstantIndexOp>(loc, distUnitBaseAddr[1]);
-
-    Value offsetX =
-        rewriter.createOrFold<index::AddOp>(loc, localOffset[0], constOffsetX);
-    Value offsetY =
-        rewriter.createOrFold<index::AddOp>(loc, localOffset[1], constOffsetY);
-
-    size_t lastDimIndex = originalOffsets.size() - 1;
-    size_t secondLastDimIndex = lastDimIndex - 1;
+    assert(localOffset.size() == distUnitBaseAddr.size() &&
+           "localOffset and distUnitBaseAddr must have the same rank");
 
     // Convert originalOffsets to Value
     auto getValueFromOpFoldResult = [&](OpFoldResult ofr) -> Value {
@@ -102,18 +91,20 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
       llvm_unreachable("Unsupported OpFoldResult kind");
     };
 
-    Value origOffsetX =
-        getValueFromOpFoldResult(originalOffsets[secondLastDimIndex]);
-    Value origOffsetY = getValueFromOpFoldResult(originalOffsets[lastDimIndex]);
-    Value globalOffsetX =
-        rewriter.createOrFold<index::AddOp>(loc, origOffsetX, offsetX);
-    Value globalOffsetY =
-        rewriter.createOrFold<index::AddOp>(loc, origOffsetY, offsetY);
-
     SmallVector<OpFoldResult> globalOffsets(originalOffsets.begin(),
                                             originalOffsets.end());
-    globalOffsets[secondLastDimIndex] = globalOffsetX;
-    globalOffsets[lastDimIndex] = globalOffsetY;
+    size_t rank = localOffset.size();
+    for (size_t i = 0; i < rank; ++i) {
+      size_t dimIdx = originalOffsets.size() - rank + i;
+      Value constOffset =
+          rewriter.create<arith::ConstantIndexOp>(loc, distUnitBaseAddr[i]);
+      Value offset =
+          rewriter.createOrFold<index::AddOp>(loc, localOffset[i], constOffset);
+      Value origOffset = getValueFromOpFoldResult(originalOffsets[dimIdx]);
+      Value globalOffset =
+          rewriter.createOrFold<index::AddOp>(loc, origOffset, offset);
+      globalOffsets[dimIdx] = globalOffset;
+    }
 
     return globalOffsets;
   }
@@ -283,7 +274,7 @@ struct WgToSgDpasOp : public OpConversionPattern<xegpu::DpasOp> {
         tmpC = rewriter.create<xegpu::DpasOp>(
             loc, resTy, operands,
             llvm::ArrayRef<NamedAttribute>(
-                {"layout", originalLayout.dropSgLayoutAndData()}));
+                {"layout_result_0", originalLayout.dropSgLayoutAndData()}));
         newDpasOps.push_back(tmpC);
       }
     }
