@@ -3142,7 +3142,8 @@ static bool hasScalableVectorType(Type t) {
   return false;
 }
 
-/// Verifies the constant array represented by `arrayAttr` matches the provided `arrayType`.
+/// Verifies the constant array represented by `arrayAttr` matches the provided
+/// `arrayType`.
 static LogicalResult verifyStructArrayConstant(LLVM::ConstantOp op,
                                                LLVM::LLVMArrayType arrayType,
                                                ArrayAttr arrayAttr, int dim) {
