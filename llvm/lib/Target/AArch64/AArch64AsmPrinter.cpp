@@ -1344,10 +1344,12 @@ AArch64AsmPrinter::getCodeViewJumpTableInfo(int JTI,
 }
 
 void AArch64AsmPrinter::emitFunctionEntryLabel() {
-  if (MF->getFunction().getCallingConv() == CallingConv::AArch64_VectorCall ||
-      MF->getFunction().getCallingConv() ==
-          CallingConv::AArch64_SVE_VectorCall ||
-      MF->getInfo<AArch64FunctionInfo>()->isSVECC()) {
+  const Triple &TT = TM.getTargetTriple();
+  if (TT.isOSBinFormatELF() &&
+      (MF->getFunction().getCallingConv() == CallingConv::AArch64_VectorCall ||
+       MF->getFunction().getCallingConv() ==
+           CallingConv::AArch64_SVE_VectorCall ||
+       MF->getInfo<AArch64FunctionInfo>()->isSVECC())) {
     auto *TS =
         static_cast<AArch64TargetStreamer *>(OutStreamer->getTargetStreamer());
     TS->emitDirectiveVariantPCS(CurrentFnSym);
@@ -1355,8 +1357,7 @@ void AArch64AsmPrinter::emitFunctionEntryLabel() {
 
   AsmPrinter::emitFunctionEntryLabel();
 
-  if (TM.getTargetTriple().isWindowsArm64EC() &&
-      !MF->getFunction().hasLocalLinkage()) {
+  if (TT.isWindowsArm64EC() && !MF->getFunction().hasLocalLinkage()) {
     // For ARM64EC targets, a function definition's name is mangled differently
     // from the normal symbol, emit required aliases here.
     auto emitFunctionAlias = [&](MCSymbol *Src, MCSymbol *Dst) {
