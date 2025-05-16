@@ -29,6 +29,7 @@ constexpr static uint64_t MAX_SIZE = /* 64 GiB */ 64ull * 1024 * 1024 * 1024;
 constexpr static uint64_t SLAB_SIZE = /* 2 MiB */ 2ull * 1024 * 1024;
 constexpr static uint64_t ARRAY_SIZE = MAX_SIZE / SLAB_SIZE;
 constexpr static uint32_t BITS_IN_WORD = sizeof(uint32_t) * 8;
+constexpr static uint32_t MIN_SIZE = 16;
 
 static_assert(!(ARRAY_SIZE & (ARRAY_SIZE - 1)), "Must be a power of two");
 
@@ -91,9 +92,9 @@ static inline uint32_t hash(uint32_t x) {
 
 // Rounds the input value to the closest permitted chunk size. Here we accept
 // the sum of the closest three powers of two. For a 2MiB slab size this is 48
-// different chunk sizes.
+// different chunk sizes. This gives us average internal fragmentation of 87.5%.
 static inline uint32_t get_chunk_size(uint32_t x) {
-  uint32_t y = x < 16 ? 16 : x;
+  uint32_t y = x < MIN_SIZE ? MIN_SIZE : x;
   uint32_t pow2 = BITS_IN_WORD - cpp::countl_zero(y - 1);
 
   uint32_t s0 = 0b0100 << (pow2 - 3);
@@ -108,6 +109,13 @@ static inline uint32_t get_chunk_size(uint32_t x) {
   if (s2 > y)
     return (s2 + 15) & ~15;
   return (s3 + 15) & ~15;
+}
+
+// Rounds to the nearest power of two.
+template <uint32_t N, typename T>
+static inline constexpr T round_up(const T x) {
+  static_assert(((N - 1) & N) == 0, "N must be a power of two");
+  return (x + N) & ~(N - 1);
 }
 
 } // namespace impl
@@ -126,7 +134,6 @@ static inline uint32_t get_chunk_size(uint32_t x) {
 /// alignment and to indicate that if the pointer is not aligned by 2MiB it
 /// belongs to a slab rather than the global allocator.
 struct Slab {
-
   // Initialize the slab with its chunk size and index in the global table for
   // use when freeing.
   Slab(uint32_t chunk_size, uint32_t global_index) {
@@ -151,7 +158,7 @@ struct Slab {
 
   // The actual amount of memory available excluding the bitfield and metadata.
   static uint32_t available_bytes(uint32_t chunk_size) {
-    return SLAB_SIZE - 2 * bitfield_bytes(chunk_size) - 4 * sizeof(uint32_t);
+    return SLAB_SIZE - 2 * bitfield_bytes(chunk_size) - MIN_SIZE;
   }
 
   // The number of chunks that can be stored in this slab.
@@ -176,13 +183,13 @@ struct Slab {
 
   // Get a pointer to where the bitfield is located in the memory.
   uint32_t *get_bitfield() {
-    return reinterpret_cast<uint32_t *>(memory + 4 * sizeof(uint32_t));
+    return reinterpret_cast<uint32_t *>(memory + MIN_SIZE);
   }
 
   // Get a pointer to where the actual memory to be allocated lives.
   uint8_t *get_memory(uint32_t chunk_size) {
     return reinterpret_cast<uint8_t *>(memory) + bitfield_bytes(chunk_size) +
-           4 * sizeof(uint32_t);
+           MIN_SIZE;
   }
 
   // Get a pointer to the actual memory given an index into the bitfield.
@@ -217,7 +224,7 @@ struct Slab {
       uint32_t slot = index / BITS_IN_WORD;
       uint32_t bit = index % BITS_IN_WORD;
       if (mask & (1ull << gpu::get_lane_id())) {
-        uint32_t before = cpp::AtomicRef<uint32_t>(get_bitfield()[slot])
+        uint32_t before = cpp::AtomicRef(get_bitfield()[slot])
                               .fetch_or(1u << bit, cpp::MemoryOrder::RELAXED);
         if (~before & (1 << bit)) {
           result = ptr_from_index(index, chunk_size);
@@ -237,7 +244,7 @@ struct Slab {
     uint32_t bit = index % BITS_IN_WORD;
 
     cpp::atomic_thread_fence(cpp::MemoryOrder::RELEASE);
-    cpp::AtomicRef<uint32_t>(get_bitfield()[slot])
+    cpp::AtomicRef(get_bitfield()[slot])
         .fetch_and(~(1u << bit), cpp::MemoryOrder::RELAXED);
   }
 
@@ -452,7 +459,7 @@ void *allocate(uint64_t size) {
 
   // Allocations larger than a single slab go directly to memory.
   if (size >= SLAB_SIZE / 2)
-    return impl::rpc_allocate(size);
+    return impl::rpc_allocate(impl::round_up<SLAB_SIZE>(size));
 
   // Try to find a slab for the rounded up chunk size and allocate from it.
   uint32_t chunk_size = impl::get_chunk_size(static_cast<uint32_t>(size));
