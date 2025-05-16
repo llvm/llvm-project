@@ -1154,6 +1154,8 @@ unsigned RecurrenceDescriptor::getOpcode(RecurKind Kind) {
     return Instruction::Add;
   case RecurKind::Mul:
     return Instruction::Mul;
+  case RecurKind::IAnyOf:
+  case RecurKind::FAnyOf:
   case RecurKind::Or:
     return Instruction::Or;
   case RecurKind::And:
@@ -1169,7 +1171,6 @@ unsigned RecurrenceDescriptor::getOpcode(RecurKind Kind) {
   case RecurKind::SMin:
   case RecurKind::UMax:
   case RecurKind::UMin:
-  case RecurKind::IAnyOf:
   case RecurKind::IFindLastIV:
     return Instruction::ICmp;
   case RecurKind::FMax:
@@ -1178,7 +1179,6 @@ unsigned RecurrenceDescriptor::getOpcode(RecurKind Kind) {
   case RecurKind::FMinimum:
   case RecurKind::FMaximumNum:
   case RecurKind::FMinimumNum:
-  case RecurKind::FAnyOf:
   case RecurKind::FFindLastIV:
     return Instruction::FCmp;
   default:
