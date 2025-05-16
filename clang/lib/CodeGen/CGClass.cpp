@@ -2877,6 +2877,7 @@ void CodeGenFunction::EmitVTablePtrCheck(const CXXRecordDecl *RD,
     return;
 
   auto [M, SSK] = SanitizerInfoFromCFICheckKind(TCK);
+
   std::string TypeName = RD->getQualifiedNameAsString();
   if (getContext().getNoSanitizeList().containsType(
           SanitizerMask::bitPosToMask(M), TypeName))
