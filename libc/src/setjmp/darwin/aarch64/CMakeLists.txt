@@ -5,7 +5,7 @@ endif()
 add_entrypoint_object(
   setjmp
   SRCS
-    setjmp.cpp
+    ../../aarch64/setjmp.cpp
   HDRS
     ../../setjmp_impl.h
   DEPENDS
@@ -16,7 +16,7 @@ add_entrypoint_object(
 add_entrypoint_object(
   longjmp
   SRCS
-    longjmp.cpp
+    ../../aarch64/longjmp.cpp
   HDRS
     ../../longjmp.h
   DEPENDS
