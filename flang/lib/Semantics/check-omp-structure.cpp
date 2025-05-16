@@ -3425,12 +3425,12 @@ static bool IsMaybeAtomicWrite(const evaluate::Assignment &assign) {
   return HasStorageOverlap(assign.lhs, assign.rhs) == nullptr;
 }
 
-static MaybeExpr GetConvertInput(const SomeExpr &x) {
+MaybeExpr GetConvertInput(const SomeExpr &x) {
   // This returns SomeExpr(x) when x is a designator/functionref/constant.
   return atomic::ConvertCollector{}(x).first;
 }
 
-static bool IsSameOrConvertOf(const SomeExpr &expr, const SomeExpr &x) {
+bool IsSameOrConvertOf(const SomeExpr &expr, const SomeExpr &x) {
   // Check if expr is same as x, or a sequence of Convert operations on x.
   if (expr == x) {
     return true;
@@ -3438,23 +3438,6 @@ static bool IsSameOrConvertOf(const SomeExpr &expr, const SomeExpr &x) {
     return *maybe == x;
   } else {
     return false;
-  }
-}
-
-bool IsSameOrResizeOf(const SomeExpr &expr, const SomeExpr &x) {
-  // Both expr and x have the form of SomeType(SomeKind(...)[1]).
-  // Check if expr is
-  //   SomeType(SomeKind(Type(
-  //     Convert
-  //       SomeKind(...)[2])))
-  // where SomeKind(...) [1] and [2] are equal, and the Convert preserves
-  // TypeCategory.
-
-  if (expr != x) {
-    auto top{atomic::ArgumentExtractor<false>{}(expr)};
-    return top.first == atomic::Operator::Resize && x == top.second.front();
-  } else {
-    return true;
   }
 }
 
@@ -3801,7 +3784,11 @@ void OmpStructureChecker::CheckAtomicUpdateAssignment(
 
   CheckAtomicVariable(atom, lsrc);
 
-  auto top{GetTopLevelOperation(update.rhs)};
+  std::pair<atomic::Operator, std::vector<SomeExpr>> top{
+      atomic::Operator::Unk, {}};
+  if (auto &&maybeInput{GetConvertInput(update.rhs)}) {
+    top = GetTopLevelOperation(*maybeInput);
+  }
   switch (top.first) {
   case atomic::Operator::Add:
   case atomic::Operator::Sub:
@@ -3842,7 +3829,7 @@ void OmpStructureChecker::CheckAtomicUpdateAssignment(
   auto unique{[&]() { // -> iterator
     auto found{top.second.end()};
     for (auto i{top.second.begin()}, e{top.second.end()}; i != e; ++i) {
-      if (IsSameOrResizeOf(*i, atom)) {
+      if (IsSameOrConvertOf(*i, atom)) {
         if (found != top.second.end()) {
           return top.second.end();
         }
@@ -3902,9 +3889,9 @@ void OmpStructureChecker::CheckAtomicConditionalUpdateAssignment(
   case atomic::Operator::Gt: {
     const SomeExpr &arg0{top.second[0]};
     const SomeExpr &arg1{top.second[1]};
-    if (IsSameOrResizeOf(arg0, atom)) {
+    if (IsSameOrConvertOf(arg0, atom)) {
       CheckStorageOverlap(atom, {arg1}, condSource);
-    } else if (IsSameOrResizeOf(arg1, atom)) {
+    } else if (IsSameOrConvertOf(arg1, atom)) {
       CheckStorageOverlap(atom, {arg0}, condSource);
     } else {
       context_.Say(assignSource,

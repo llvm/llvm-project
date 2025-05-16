@@ -41,10 +41,10 @@ program OmpAtomic
    z = MIN(y, 8, a, d)
 
 !$omp atomic
-   !ERROR: An implicit or explicit type conversion is not a valid ATOMIC UPDATE operation
+   !ERROR: This intrinsic function is not a valid ATOMIC UPDATE operation
    y = FRACTION(x)
 !$omp atomic
-   !ERROR: An implicit or explicit type conversion is not a valid ATOMIC UPDATE operation
+   !ERROR: The atomic variable y should appear as an argument in the update operation
    y = REAL(x)
 !$omp atomic update
    y = IAND(y, 4)
@@ -126,7 +126,7 @@ subroutine more_invalid_atomic_update_stmts()
 
     !$omp atomic update
     !ERROR: Atomic variable k should be a scalar
-    !ERROR: An implicit or explicit type conversion is not a valid ATOMIC UPDATE operation
+    !ERROR: The atomic variable k should occur exactly once among the arguments of the top-level MAX operator
         k = max(x, y)
 
     !$omp atomic

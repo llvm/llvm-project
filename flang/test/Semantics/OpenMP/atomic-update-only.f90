@@ -47,8 +47,8 @@ subroutine f05
   integer :: x
   real :: y
 
+  ! An explicit conversion is accepted as an extension.
   !$omp atomic update
-  !ERROR: An implicit or explicit type conversion is not a valid ATOMIC UPDATE operation
   x = int(x + y)
 end
 

@@ -2823,10 +2823,12 @@ genAtomicUpdate(lower::AbstractConverter &converter, mlir::Location loc,
 
   mlir::Type atomType = fir::unwrapRefType(atomAddr.getType());
 
-  std::vector<SomeExpr> args{semantics::GetOpenMPTopLevelArguments(assign.rhs)};
+  // This must exist by now.
+  SomeExpr input = *semantics::GetConvertInput(assign.rhs);
+  std::vector<SomeExpr> args{semantics::GetOpenMPTopLevelArguments(input)};
   assert(!args.empty() && "Update operation without arguments");
   for (auto &arg : args) {
-    if (!semantics::IsSameOrResizeOf(arg, atom)) {
+    if (!semantics::IsSameOrConvertOf(arg, atom)) {
       mlir::Value val = fir::getBase(converter.genExprValue(arg, naCtx, &loc));
       overrides.try_emplace(&arg, val);
     }

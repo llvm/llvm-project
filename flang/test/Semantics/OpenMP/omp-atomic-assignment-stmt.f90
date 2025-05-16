@@ -87,7 +87,7 @@ program sample
 
     !$omp atomic release capture
         v = x
-    !ERROR: An implicit or explicit type conversion is not a valid ATOMIC UPDATE operation
+    ! This ends up being "x = b + x".
         x = b + (x*1)
     !$omp end atomic
 

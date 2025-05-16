@@ -1,5 +1,3 @@
-! REQUIRES: openmp_runtime
-
 ! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags
 
 ! OpenMP Atomic construct
@@ -7,7 +5,6 @@
 ! Update assignment must be 'var = var op expr' or 'var = expr op var'
 
 program OmpAtomic
-   use omp_lib
    real x
    integer y
    logical m, n, l
@@ -20,10 +17,10 @@ program OmpAtomic
 !$omp atomic
    x = 1 + x
 !$omp atomic
-   !ERROR: An implicit or explicit type conversion is not a valid ATOMIC UPDATE operation
+   !ERROR: The atomic variable x should occur exactly once among the arguments of the top-level + operator
    x = y + 1
 !$omp atomic
-   !ERROR: An implicit or explicit type conversion is not a valid ATOMIC UPDATE operation
+   !ERROR: The atomic variable x should occur exactly once among the arguments of the top-level + operator
    x = 1 + y
 
 !$omp atomic
@@ -31,10 +28,10 @@ program OmpAtomic
 !$omp atomic
    x = 1 - x
 !$omp atomic
-   !ERROR: An implicit or explicit type conversion is not a valid ATOMIC UPDATE operation
+   !ERROR: The atomic variable x should occur exactly once among the arguments of the top-level - operator
    x = y - 1
 !$omp atomic
-   !ERROR: An implicit or explicit type conversion is not a valid ATOMIC UPDATE operation
+   !ERROR: The atomic variable x should occur exactly once among the arguments of the top-level - operator
    x = 1 - y
 
 !$omp atomic
@@ -42,10 +39,10 @@ program OmpAtomic
 !$omp atomic
    x = 1*x
 !$omp atomic
-   !ERROR: An implicit or explicit type conversion is not a valid ATOMIC UPDATE operation
+   !ERROR: The atomic variable x should appear as an argument in the update operation
    x = y*1
 !$omp atomic
-   !ERROR: An implicit or explicit type conversion is not a valid ATOMIC UPDATE operation
+   !ERROR: The atomic variable x should appear as an argument in the update operation
    x = 1*y
 
 !$omp atomic
@@ -53,10 +50,10 @@ program OmpAtomic
 !$omp atomic
    x = 1/x
 !$omp atomic
-   !ERROR: An implicit or explicit type conversion is not a valid ATOMIC UPDATE operation
+   !ERROR: The atomic variable x should occur exactly once among the arguments of the top-level / operator
    x = y/1
 !$omp atomic
-   !ERROR: An implicit or explicit type conversion is not a valid ATOMIC UPDATE operation
+   !ERROR: The atomic variable x should occur exactly once among the arguments of the top-level / operator
    x = 1/y
 
 !$omp atomic
@@ -96,10 +93,10 @@ program OmpAtomic
 !$omp atomic update
    x = 1 + x
 !$omp atomic update
-   !ERROR: An implicit or explicit type conversion is not a valid ATOMIC UPDATE operation
+   !ERROR: The atomic variable x should occur exactly once among the arguments of the top-level + operator
    x = y + 1
 !$omp atomic update
-   !ERROR: An implicit or explicit type conversion is not a valid ATOMIC UPDATE operation
+   !ERROR: The atomic variable x should occur exactly once among the arguments of the top-level + operator
    x = 1 + y
 
 !$omp atomic update
@@ -107,10 +104,10 @@ program OmpAtomic
 !$omp atomic update
    x = 1 - x
 !$omp atomic update
-   !ERROR: An implicit or explicit type conversion is not a valid ATOMIC UPDATE operation
+   !ERROR: The atomic variable x should occur exactly once among the arguments of the top-level - operator
    x = y - 1
 !$omp atomic update
-   !ERROR: An implicit or explicit type conversion is not a valid ATOMIC UPDATE operation
+   !ERROR: The atomic variable x should occur exactly once among the arguments of the top-level - operator
    x = 1 - y
 
 !$omp atomic update
@@ -118,10 +115,10 @@ program OmpAtomic
 !$omp atomic update
    x = 1*x
 !$omp atomic update
-   !ERROR: An implicit or explicit type conversion is not a valid ATOMIC UPDATE operation
+   !ERROR: The atomic variable x should appear as an argument in the update operation
    x = y*1
 !$omp atomic update
-   !ERROR: An implicit or explicit type conversion is not a valid ATOMIC UPDATE operation
+   !ERROR: The atomic variable x should appear as an argument in the update operation
    x = 1*y
 
 !$omp atomic update
@@ -129,10 +126,10 @@ program OmpAtomic
 !$omp atomic update
    x = 1/x
 !$omp atomic update
-   !ERROR: An implicit or explicit type conversion is not a valid ATOMIC UPDATE operation
+   !ERROR: The atomic variable x should occur exactly once among the arguments of the top-level / operator
    x = y/1
 !$omp atomic update
-   !ERROR: An implicit or explicit type conversion is not a valid ATOMIC UPDATE operation
+   !ERROR: The atomic variable x should occur exactly once among the arguments of the top-level / operator
    x = 1/y
 
 !$omp atomic update

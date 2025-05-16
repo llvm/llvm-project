@@ -789,14 +789,15 @@ inline bool checkForSymbolMatch(
 /// return the "expr" but with top-level parentheses stripped.
 std::vector<SomeExpr> GetOpenMPTopLevelArguments(const SomeExpr &expr);
 
-/// Both "expr" and "x" have the form of SomeType(SomeKind(...)[1]).
-/// Check if "expr" is
-///   SomeType(SomeKind(Type(
-///     Convert
-///       SomeKind(...)[2])))
-/// where SomeKind(...) [1] and [2] are equal, and the Convert preserves
-/// TypeCategory.
-bool IsSameOrResizeOf(const SomeExpr &expr, const SomeExpr &x);
+/// Check if expr is same as x, or a sequence of Convert operations on x.
+bool IsSameOrConvertOf(const SomeExpr &expr, const SomeExpr &x);
+
+/// Strip away any top-level Convert operations (if any exist) and return
+/// the input value. A ComplexConstructor(x, 0) is also considered as a
+/// convert operation.
+/// If the input is not Operation, Designator, FunctionRef or Constant,
+/// is returns std::nullopt.
+MaybeExpr GetConvertInput(const SomeExpr &x);
 
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_TOOLS_H_
