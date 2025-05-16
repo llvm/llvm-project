@@ -35,7 +35,9 @@ static_assert(!(ARRAY_SIZE & (ARRAY_SIZE - 1)), "Must be a power of two");
 
 namespace impl {
 // Allocates more memory from the system through the RPC interface. All
-// allocations from the system MUST be aligned on a 2MiB barrier.
+// allocations from the system MUST be aligned on a 2MiB barrier. The default
+// HSA allocator has this behavior for any allocation >= 2MiB and the CUDA
+// driver provides an alignment field for virtual memory allocations.
 static void *rpc_allocate(uint64_t size) {
   void *ptr = nullptr;
   rpc::Client::Port port = rpc::client.open<LIBC_MALLOC>();
