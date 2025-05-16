@@ -15511,25 +15511,21 @@ static SDValue expandMulToNAFSequence(SDNode *N, SelectionDAG &DAG,
   EVT VT = N->getValueType(0);
   const uint64_t BitWidth = VT.getFixedSizeInBits();
 
-  // Find the Non-adjacent form of the multiplier.
-  llvm::SmallVector<std::pair<bool, uint64_t>> Sequence; // {isAdd, shamt}
-  for (uint64_t E = MulAmt, I = 0; E && I < BitWidth; ++I, E >>= 1) {
-    if (E & 1) {
-      bool IsAdd = (E & 3) == 1;
-      Sequence.push_back({IsAdd, I});
-      E -= IsAdd ? 1 : -1;
-    }
-  }
-
   SDValue Result = DAG.getConstant(0, DL, N->getValueType(0));
   SDValue N0 = N->getOperand(0);
 
-  for (const auto &Op : Sequence) {
-    SDValue ShiftVal = DAG.getNode(
-        ISD::SHL, DL, VT, N0, DAG.getShiftAmountConstant(Op.second, VT, DL));
-    ISD::NodeType AddSubOp = Op.first ? ISD::ADD : ISD::SUB;
-    Result = DAG.getNode(AddSubOp, DL, VT, Result, ShiftVal);
+  // Find the Non-adjacent form of the multiplier.
+  for (uint64_t E = MulAmt, I = 0; E && I < BitWidth; ++I, E >>= 1) {
+    if (E & 1) {
+      bool IsAdd = (E & 3) == 1;
+      E -= IsAdd ? 1 : -1;
+      SDValue ShiftVal = DAG.getNode(ISD::SHL, DL, VT, N0,
+                                     DAG.getShiftAmountConstant(I, VT, DL));
+      ISD::NodeType AddSubOp = IsAdd ? ISD::ADD : ISD::SUB;
+      Result = DAG.getNode(AddSubOp, DL, VT, Result, ShiftVal);
+    }
   }
+
   return Result;
 }
 
