@@ -268,36 +268,41 @@ static void emitMemcpyExpansion(IRBuilder<> &Builder, Value *Dst, Value *Src,
     return nullptr;
   };
 
-  ArrayType *ArrTy = GetArrTyFromVal(Dst);
-  assert(ArrTy && "Expected Dst of memcpy to be a Pointer to an Array Type");
+  ArrayType *DstArrTy = GetArrTyFromVal(Dst);
+  assert(DstArrTy && "Expected Dst of memcpy to be a Pointer to an Array Type");
   if (auto *DstGlobalVar = dyn_cast<GlobalVariable>(Dst))
     assert(!DstGlobalVar->isConstant() &&
            "The Dst of memcpy must not be a constant Global Variable");
-
   [[maybe_unused]] ArrayType *SrcArrTy = GetArrTyFromVal(Src);
   assert(SrcArrTy && "Expected Src of memcpy to be a Pointer to an Array Type");
 
+  Type *DstElemTy = DstArrTy->getElementType();
+  uint64_t DstElemByteSize = DL.getTypeStoreSize(DstElemTy);
+  assert(DstElemByteSize > 0 && "Dst element type store size must be set");
+  Type *SrcElemTy = SrcArrTy->getElementType();
+  [[maybe_unused]] uint64_t SrcElemByteSize = DL.getTypeStoreSize(SrcElemTy);
+  assert(SrcElemByteSize > 0 && "Src element type store size must be set");
+
   // This assumption simplifies implementation and covers currently-known
   // use-cases for DXIL. It may be relaxed in the future if required.
-  assert(ArrTy == SrcArrTy &&
-         "Array Types of Src and Dst in memcpy must match");
+  assert(DstElemTy == SrcElemTy &&
+         "The element types of Src and Dst arrays must match");
 
-  Type *ElemTy = ArrTy->getElementType();
-  uint64_t ElemSize = DL.getTypeStoreSize(ElemTy);
-  assert(ElemSize > 0 && "Size must be set");
+  [[maybe_unused]] uint64_t DstArrNumElems = DstArrTy->getArrayNumElements();
+  assert(DstElemByteSize * DstArrNumElems >= ByteLength &&
+         "Dst array size must be at least as large as the memcpy length");
+  [[maybe_unused]] uint64_t SrcArrNumElems = SrcArrTy->getArrayNumElements();
+  assert(SrcElemByteSize * SrcArrNumElems >= ByteLength &&
+         "Src array size must be at least as large as the memcpy length");
 
-  [[maybe_unused]] uint64_t Size = ArrTy->getArrayNumElements();
-  assert(ElemSize * Size >= ByteLength &&
-         "Array size must be at least as large as the memcpy length");
-
-  uint64_t NumElemsToCopy = ByteLength / ElemSize;
-  assert(ByteLength % ElemSize == 0 &&
+  uint64_t NumElemsToCopy = ByteLength / DstElemByteSize;
+  assert(ByteLength % DstElemByteSize == 0 &&
          "memcpy length must be divisible by array element type");
   for (uint64_t I = 0; I < NumElemsToCopy; ++I) {
     Value *Offset = ConstantInt::get(Type::getInt32Ty(Ctx), I);
-    Value *SrcPtr = Builder.CreateInBoundsGEP(ElemTy, Src, Offset, "gep");
-    Value *SrcVal = Builder.CreateLoad(ElemTy, SrcPtr);
-    Value *DstPtr = Builder.CreateInBoundsGEP(ElemTy, Dst, Offset, "gep");
+    Value *SrcPtr = Builder.CreateInBoundsGEP(SrcElemTy, Src, Offset, "gep");
+    Value *SrcVal = Builder.CreateLoad(SrcElemTy, SrcPtr);
+    Value *DstPtr = Builder.CreateInBoundsGEP(DstElemTy, Dst, Offset, "gep");
     Builder.CreateStore(SrcVal, DstPtr);
   }
 }
