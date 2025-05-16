@@ -352,6 +352,9 @@ Improvements to Clang's diagnostics
 - Now correctly diagnose a tentative definition of an array with static
   storage duration in pedantic mode in C. (#GH50661)
 
+- Split diagnosis of implicit integer comparison on negation to a new diagnostic group ``-Wimplicit-int-comparison-on-negation``, 
+  so user can turn it off independently.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
