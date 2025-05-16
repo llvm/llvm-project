@@ -757,7 +757,7 @@ let HasClamp = 0, HasOMod = 0, HasExtDPP = 0, HasExtVOP3DPP = 0,
 }
 
 #ifdef LLPC_BUILD_NPI
-let IsFP8SrcByteSel = 1, HasOpSel = 0, HasExtDPP = 1, HasExtVOP3DPP = 1,
+let HasFP8SrcByteSel = 1, HasOpSel = 0, HasExtDPP = 1, HasExtVOP3DPP = 1,
     HasExtSDWA = 0, HasClamp = 0, HasOMod = 0, HasModifiers = 0 in {
   class VOPProfile_Base_CVT_F_F8_ByteSel<ValueType DstVT, bit _HasClamp = 0> :
         VOPProfile<[DstVT, i32, untyped, untyped]> {
@@ -797,7 +797,7 @@ let IsFP8SrcByteSel = 1, HasOpSel = 0, HasExtDPP = 1, HasExtVOP3DPP = 1,
                                           Src2ModVOP3DPP, HasOpSel>.ret,
                            (ins ByteSel:$byte_sel));
   }
-} // End let IsFP8SrcByteSel = 1, ...
+} // End let HasFP8SrcByteSel = 1, ...
 
 def V_CVT_F16_F8_Profile : VOPProfile_Base_CVT_F_F8_ByteSel<f16>;
 def V_CVT_F16_F8_True16_Profile :
@@ -806,7 +806,7 @@ def V_CVT_F16_F8_Fake16_Profile :
   VOPProfile_Base_CVT_F_F8_ByteSel_fake16<V_CVT_F16_F8_Profile>;
 #else /* LLPC_BUILD_NPI */
 class VOPProfile_Base_CVT_F_F8_ByteSel<ValueType DstVT> : VOPProfile<[DstVT, i32, untyped, untyped]> {
-  let IsFP8SrcByteSel = 1;
+  let HasFP8SrcByteSel = 1;
   let HasOpSel = 0;
   let HasExtDPP = 1;
   let HasExtVOP3DPP = 1;

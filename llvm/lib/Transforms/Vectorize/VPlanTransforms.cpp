@@ -2392,6 +2392,81 @@ void VPlanTransforms::createInterleaveGroups(
   }
 }
 
+// Expand VPExtendedReductionRecipe to VPWidenCastRecipe + VPReductionRecipe.
+static void expandVPExtendedReduction(VPExtendedReductionRecipe *ExtRed) {
+  VPWidenCastRecipe *Ext;
+  // Only ZExt contains non-neg flags.
+  if (ExtRed->isZExt())
+    Ext = new VPWidenCastRecipe(ExtRed->getExtOpcode(), ExtRed->getVecOp(),
+                                ExtRed->getResultType(), ExtRed->isNonNeg(),
+                                ExtRed->getDebugLoc());
+  else
+    Ext = new VPWidenCastRecipe(ExtRed->getExtOpcode(), ExtRed->getVecOp(),
+                                ExtRed->getResultType(), ExtRed->getDebugLoc());
+
+  auto *Red = new VPReductionRecipe(
+      ExtRed->getRecurrenceKind(), FastMathFlags(), ExtRed->getChainOp(), Ext,
+      ExtRed->getCondOp(), ExtRed->isOrdered(), ExtRed->getDebugLoc());
+  Ext->insertBefore(ExtRed);
+  Red->insertBefore(ExtRed);
+  ExtRed->replaceAllUsesWith(Red);
+  ExtRed->eraseFromParent();
+}
+
+// Expand VPMulAccumulateReductionRecipe to VPWidenRecipe (mul) +
+// VPReductionRecipe (reduce.add)
+// + VPWidenCastRecipe (optional).
+static void
+expandVPMulAccumulateReduction(VPMulAccumulateReductionRecipe *MulAcc) {
+  // Generate inner VPWidenCastRecipes if necessary.
+  // Note that we will drop the extend after mul which transforms
+  // reduce.add(ext(mul(ext, ext))) to reduce.add(mul(ext, ext)).
+  VPValue *Op0, *Op1;
+  if (MulAcc->isExtended()) {
+    Type *RedTy = MulAcc->getResultType();
+    if (MulAcc->isZExt())
+      Op0 = new VPWidenCastRecipe(MulAcc->getExtOpcode(), MulAcc->getVecOp0(),
+                                  RedTy, MulAcc->isNonNeg(),
+                                  MulAcc->getDebugLoc());
+    else
+      Op0 = new VPWidenCastRecipe(MulAcc->getExtOpcode(), MulAcc->getVecOp0(),
+                                  RedTy, MulAcc->getDebugLoc());
+    Op0->getDefiningRecipe()->insertBefore(MulAcc);
+    // Prevent reduce.add(mul(ext(A), ext(A))) generate duplicate
+    // VPWidenCastRecipe.
+    if (MulAcc->getVecOp0() == MulAcc->getVecOp1()) {
+      Op1 = Op0;
+    } else {
+      if (MulAcc->isZExt())
+        Op1 = new VPWidenCastRecipe(MulAcc->getExtOpcode(), MulAcc->getVecOp1(),
+                                    RedTy, MulAcc->isNonNeg(),
+                                    MulAcc->getDebugLoc());
+      else
+        Op1 = new VPWidenCastRecipe(MulAcc->getExtOpcode(), MulAcc->getVecOp1(),
+                                    RedTy, MulAcc->getDebugLoc());
+      Op1->getDefiningRecipe()->insertBefore(MulAcc);
+    }
+  } else {
+    // No extends in this MulAccRecipe.
+    Op0 = MulAcc->getVecOp0();
+    Op1 = MulAcc->getVecOp1();
+  }
+
+  std::array<VPValue *, 2> MulOps = {Op0, Op1};
+  auto *Mul = new VPWidenRecipe(
+      Instruction::Mul, ArrayRef(MulOps), MulAcc->hasNoUnsignedWrap(),
+      MulAcc->hasNoSignedWrap(), MulAcc->getDebugLoc());
+  Mul->insertBefore(MulAcc);
+
+  auto *Red = new VPReductionRecipe(
+      MulAcc->getRecurrenceKind(), FastMathFlags(), MulAcc->getChainOp(), Mul,
+      MulAcc->getCondOp(), MulAcc->isOrdered(), MulAcc->getDebugLoc());
+  Red->insertBefore(MulAcc);
+
+  MulAcc->replaceAllUsesWith(Red);
+  MulAcc->eraseFromParent();
+}
+
 void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan,
                                                Type &CanonicalIVTy) {
   using namespace llvm::VPlanPatternMatch;
@@ -2453,6 +2528,14 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan,
       VectorStep = Mul;
       VPI->replaceAllUsesWith(VectorStep);
       ToRemove.push_back(VPI);
+    }
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      if (auto *ExtRed = dyn_cast<VPExtendedReductionRecipe>(&R)) {
+        expandVPExtendedReduction(ExtRed);
+        continue;
+      }
+      if (auto *MulAcc = dyn_cast<VPMulAccumulateReductionRecipe>(&R))
+        expandVPMulAccumulateReduction(MulAcc);
     }
   }
 
@@ -2549,6 +2632,171 @@ void VPlanTransforms::handleUncountableEarlyExit(
       Instruction::Or, {IsEarlyExitTaken, IsLatchExitTaken});
   Builder.createNaryOp(VPInstruction::BranchOnCond, AnyExitTaken);
   LatchExitingBranch->eraseFromParent();
+}
+
+/// This function tries convert extended in-loop reductions to
+/// VPExtendedReductionRecipe and clamp the \p Range if it is beneficial and
+/// valid. The created recipe must be lowered to concrete
+/// recipes before execution.
+static VPExtendedReductionRecipe *
+tryToMatchAndCreateExtendedReduction(VPReductionRecipe *Red, VPCostContext &Ctx,
+                                     VFRange &Range) {
+  using namespace VPlanPatternMatch;
+
+  Type *RedTy = Ctx.Types.inferScalarType(Red);
+  VPValue *VecOp = Red->getVecOp();
+
+  // Clamp the range if using extended-reduction is profitable.
+  auto IsExtendedRedValidAndClampRange = [&](unsigned Opcode, bool isZExt,
+                                             Type *SrcTy) -> bool {
+    return LoopVectorizationPlanner::getDecisionAndClampRange(
+        [&](ElementCount VF) {
+          auto *SrcVecTy = cast<VectorType>(toVectorTy(SrcTy, VF));
+          TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+          InstructionCost ExtRedCost = Ctx.TTI.getExtendedReductionCost(
+              Opcode, isZExt, RedTy, SrcVecTy, Red->getFastMathFlags(),
+              CostKind);
+          InstructionCost ExtCost =
+              cast<VPWidenCastRecipe>(VecOp)->computeCost(VF, Ctx);
+          InstructionCost RedCost = Red->computeCost(VF, Ctx);
+          return ExtRedCost.isValid() && ExtRedCost < ExtCost + RedCost;
+        },
+        Range);
+  };
+
+  VPValue *A;
+  // Match reduce(ext)).
+  if (match(VecOp, m_ZExtOrSExt(m_VPValue(A))) &&
+      IsExtendedRedValidAndClampRange(
+          RecurrenceDescriptor::getOpcode(Red->getRecurrenceKind()),
+          cast<VPWidenCastRecipe>(VecOp)->getOpcode() ==
+              Instruction::CastOps::ZExt,
+          Ctx.Types.inferScalarType(A)))
+    return new VPExtendedReductionRecipe(Red, cast<VPWidenCastRecipe>(VecOp));
+
+  return nullptr;
+}
+
+/// This function tries convert extended in-loop reductions to
+/// VPMulAccumulateReductionRecipe and clamp the \p Range if it is beneficial
+/// and valid. The created VPExtendedReductionRecipe must be lower to concrete
+/// recipes before execution. Patterns of MulAccumulateReduction:
+///   reduce.add(mul(...)),
+///   reduce.add(mul(ext(A), ext(B))),
+///   reduce.add(ext(mul(ext(A), ext(B)))).
+static VPMulAccumulateReductionRecipe *
+tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
+                                          VPCostContext &Ctx, VFRange &Range) {
+  using namespace VPlanPatternMatch;
+
+  unsigned Opcode = RecurrenceDescriptor::getOpcode(Red->getRecurrenceKind());
+  if (Opcode != Instruction::Add)
+    return nullptr;
+
+  Type *RedTy = Ctx.Types.inferScalarType(Red);
+
+  // Clamp the range if using multiply-accumulate-reduction is profitable.
+  auto IsMulAccValidAndClampRange =
+      [&](bool isZExt, VPWidenRecipe *Mul, VPWidenCastRecipe *Ext0,
+          VPWidenCastRecipe *Ext1, VPWidenCastRecipe *OuterExt) -> bool {
+    return LoopVectorizationPlanner::getDecisionAndClampRange(
+        [&](ElementCount VF) {
+          TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+          Type *SrcTy =
+              Ext0 ? Ctx.Types.inferScalarType(Ext0->getOperand(0)) : RedTy;
+          auto *SrcVecTy = cast<VectorType>(toVectorTy(SrcTy, VF));
+          InstructionCost MulAccCost =
+              Ctx.TTI.getMulAccReductionCost(isZExt, RedTy, SrcVecTy, CostKind);
+          InstructionCost MulCost = Mul->computeCost(VF, Ctx);
+          InstructionCost RedCost = Red->computeCost(VF, Ctx);
+          InstructionCost ExtCost = 0;
+          if (Ext0)
+            ExtCost += Ext0->computeCost(VF, Ctx);
+          if (Ext1)
+            ExtCost += Ext1->computeCost(VF, Ctx);
+          if (OuterExt)
+            ExtCost += OuterExt->computeCost(VF, Ctx);
+
+          return MulAccCost.isValid() &&
+                 MulAccCost < ExtCost + MulCost + RedCost;
+        },
+        Range);
+  };
+
+  VPValue *VecOp = Red->getVecOp();
+  VPValue *A, *B;
+  // Try to match reduce.add(mul(...)).
+  if (match(VecOp, m_Mul(m_VPValue(A), m_VPValue(B)))) {
+    auto *RecipeA =
+        dyn_cast_if_present<VPWidenCastRecipe>(A->getDefiningRecipe());
+    auto *RecipeB =
+        dyn_cast_if_present<VPWidenCastRecipe>(B->getDefiningRecipe());
+    auto *Mul = cast<VPWidenRecipe>(VecOp->getDefiningRecipe());
+
+    // Match reduce.add(mul(ext, ext)).
+    if (RecipeA && RecipeB &&
+        (RecipeA->getOpcode() == RecipeB->getOpcode() || A == B) &&
+        match(RecipeA, m_ZExtOrSExt(m_VPValue())) &&
+        match(RecipeB, m_ZExtOrSExt(m_VPValue())) &&
+        IsMulAccValidAndClampRange(RecipeA->getOpcode() ==
+                                       Instruction::CastOps::ZExt,
+                                   Mul, RecipeA, RecipeB, nullptr))
+      return new VPMulAccumulateReductionRecipe(Red, Mul, RecipeA, RecipeB,
+                                                RecipeA->getResultType());
+    // Match reduce.add(mul).
+    if (IsMulAccValidAndClampRange(true, Mul, nullptr, nullptr, nullptr))
+      return new VPMulAccumulateReductionRecipe(Red, Mul, RedTy);
+  }
+  // Match reduce.add(ext(mul(ext(A), ext(B)))).
+  // All extend recipes must have same opcode or A == B
+  // which can be transform to reduce.add(zext(mul(sext(A), sext(B)))).
+  if (match(VecOp, m_ZExtOrSExt(m_Mul(m_ZExtOrSExt(m_VPValue()),
+                                      m_ZExtOrSExt(m_VPValue()))))) {
+    auto *Ext = cast<VPWidenCastRecipe>(VecOp->getDefiningRecipe());
+    auto *Mul = cast<VPWidenRecipe>(Ext->getOperand(0)->getDefiningRecipe());
+    auto *Ext0 =
+        cast<VPWidenCastRecipe>(Mul->getOperand(0)->getDefiningRecipe());
+    auto *Ext1 =
+        cast<VPWidenCastRecipe>(Mul->getOperand(1)->getDefiningRecipe());
+    if ((Ext->getOpcode() == Ext0->getOpcode() || Ext0 == Ext1) &&
+        Ext0->getOpcode() == Ext1->getOpcode() &&
+        IsMulAccValidAndClampRange(Ext0->getOpcode() ==
+                                       Instruction::CastOps::ZExt,
+                                   Mul, Ext0, Ext1, Ext))
+      return new VPMulAccumulateReductionRecipe(Red, Mul, Ext0, Ext1,
+                                                Ext->getResultType());
+  }
+  return nullptr;
+}
+
+/// This function tries to create abstract recipes from the reduction recipe for
+/// following optimizations and cost estimation.
+static void tryToCreateAbstractReductionRecipe(VPReductionRecipe *Red,
+                                               VPCostContext &Ctx,
+                                               VFRange &Range) {
+  VPReductionRecipe *AbstractR = nullptr;
+
+  if (auto *MulAcc = tryToMatchAndCreateMulAccumulateReduction(Red, Ctx, Range))
+    AbstractR = MulAcc;
+  else if (auto *ExtRed = tryToMatchAndCreateExtendedReduction(Red, Ctx, Range))
+    AbstractR = ExtRed;
+  // Cannot create abstract inloop reduction recipes.
+  if (!AbstractR)
+    return;
+
+  AbstractR->insertBefore(Red);
+  Red->replaceAllUsesWith(AbstractR);
+}
+
+void VPlanTransforms::convertToAbstractRecipes(VPlan &Plan, VPCostContext &Ctx,
+                                               VFRange &Range) {
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_deep(Plan.getVectorLoopRegion()))) {
+    for (VPRecipeBase &R : *VPBB) {
+      if (auto *Red = dyn_cast<VPReductionRecipe>(&R))
+        tryToCreateAbstractReductionRecipe(Red, Ctx, Range);
+    }
+  }
 }
 
 void VPlanTransforms::materializeStepVectors(VPlan &Plan) {

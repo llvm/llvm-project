@@ -774,7 +774,6 @@ class VOP3_CVT_SR_F8_ByteSel_Profile<ValueType SrcVT, bit _HasClamp = 0> :
 class VOP3_CVT_SR_F8_ByteSel_Profile<ValueType SrcVT> :
 #endif /* LLPC_BUILD_NPI */
   VOP3_Profile<VOPProfile<[i32, SrcVT, i32, untyped]>> {
-  let IsFP8DstByteSel = 1;
   let HasFP8DstByteSel = 1;
 #ifdef LLPC_BUILD_NPI
   let HasClamp = _HasClamp;
