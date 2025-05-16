@@ -15,6 +15,7 @@
 #include <cstdio>
 #include <iostream>
 #include <stdexcept>
+#include <string_view>
 #include <sys/fcntl.h>
 #include <sys/mman.h>
 #include <unistd.h>

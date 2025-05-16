@@ -20,21 +20,19 @@
 #  include <cstdlib>
 #  include <functional>
 #  include <link.h>
-#  include <stacktrace>
 #  include <string_view>
 #  include <unistd.h>
 
+#  include <__stacktrace/base.h>
+
 #  include "stacktrace/config.h"
-#  include "stacktrace/context.h"
 #  include "stacktrace/utils.h"
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __stacktrace {
 
-struct context;
-
 struct linux {
-  context& cx_;
+  builder& builder_;
   void ident_modules();
   void symbolize();
 
