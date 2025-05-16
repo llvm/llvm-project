@@ -1326,6 +1326,14 @@ static inline bool Kill(InterpState &S, CodePtr OpPC) {
   return true;
 }
 
+static inline bool StartLifetime(InterpState &S, CodePtr OpPC) {
+  const auto &Ptr = S.Stk.peek<Pointer>();
+  if (!CheckDummy(S, OpPC, Ptr, AK_Destroy))
+    return false;
+  Ptr.startLifetime();
+  return true;
+}
+
 /// 1) Pops the value from the stack.
 /// 2) Writes the value to the local variable with the
 ///    given offset.
@@ -1855,10 +1863,8 @@ template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool Init(InterpState &S, CodePtr OpPC) {
   const T &Value = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.peek<Pointer>();
-  if (!CheckInit(S, OpPC, Ptr)) {
-    assert(false);
+  if (!CheckInit(S, OpPC, Ptr))
     return false;
-  }
   Ptr.activate();
   Ptr.initialize();
   new (&Ptr.deref<T>()) T(Value);
