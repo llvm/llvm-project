@@ -118,7 +118,7 @@ define amdgpu_kernel void @no_s_mulk_i32_k0(ptr addrspace(1) %out, i32 %b) {
   ret void
 }
 
-@lds = addrspace(3) global [512 x i32] undef, align 4
+@lds = addrspace(3) global [512 x i32] poison, align 4
 
 define amdgpu_kernel void @commute_s_mulk_i32(ptr addrspace(1) %out, i32 %b) #0 {
 ; GFX6-LABEL: commute_s_mulk_i32:

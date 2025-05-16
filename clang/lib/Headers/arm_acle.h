@@ -42,31 +42,36 @@ extern "C" {
 /* 7.4 Hints */
 
 #if !__has_builtin(__wfi)
-static __inline__ void __attribute__((__always_inline__, __nodebug__)) __wfi(void) {
+static __inline__ void __attribute__((__always_inline__, __nodebug__))
+__wfi(void) {
   __builtin_arm_wfi();
 }
 #endif
 
 #if !__has_builtin(__wfe)
-static __inline__ void __attribute__((__always_inline__, __nodebug__)) __wfe(void) {
+static __inline__ void __attribute__((__always_inline__, __nodebug__))
+__wfe(void) {
   __builtin_arm_wfe();
 }
 #endif
 
 #if !__has_builtin(__sev)
-static __inline__ void __attribute__((__always_inline__, __nodebug__)) __sev(void) {
+static __inline__ void __attribute__((__always_inline__, __nodebug__))
+__sev(void) {
   __builtin_arm_sev();
 }
 #endif
 
 #if !__has_builtin(__sevl)
-static __inline__ void __attribute__((__always_inline__, __nodebug__)) __sevl(void) {
+static __inline__ void __attribute__((__always_inline__, __nodebug__))
+__sevl(void) {
   __builtin_arm_sevl();
 }
 #endif
 
 #if !__has_builtin(__yield)
-static __inline__ void __attribute__((__always_inline__, __nodebug__)) __yield(void) {
+static __inline__ void __attribute__((__always_inline__, __nodebug__))
+__yield(void) {
   __builtin_arm_yield();
 }
 #endif
@@ -872,8 +877,9 @@ __gcspopm() {
   return __builtin_arm_gcspopm(0);
 }
 
-static __inline__ const void * __attribute__((__always_inline__, __nodebug__, target("gcs")))
-__gcsss(const void *__stack) {
+static __inline__ void *__attribute__((__always_inline__, __nodebug__,
+                                       target("gcs")))
+__gcsss(void *__stack) {
   return __builtin_arm_gcsss(__stack);
 }
 #endif

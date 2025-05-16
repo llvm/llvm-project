@@ -215,7 +215,7 @@ struct CollapseShapeOpInterface
           MemRefType::get(collapseShapeOp.getSrcType().getShape(),
                           collapseShapeOp.getSrcType().getElementType(),
                           AffineMap(), bufferType.getMemorySpace());
-      buffer = rewriter.create<bufferization::ToMemrefOp>(
+      buffer = rewriter.create<bufferization::ToBufferOp>(
           op->getLoc(), memrefType, *tensorAlloc);
     }
 
@@ -491,7 +491,7 @@ struct FromElementsOpInterface
         bufferization::getBufferType(*tensorAlloc, options);
     if (failed(memrefType))
       return failure();
-    Value buffer = rewriter.create<bufferization::ToMemrefOp>(
+    Value buffer = rewriter.create<bufferization::ToBufferOp>(
         op->getLoc(), *memrefType, *tensorAlloc);
 
     // Case: tensor<0xelem_type>.
@@ -860,6 +860,10 @@ struct ReshapeOpInterface
 
   AliasingValueList getAliasingValues(Operation *op, OpOperand &opOperand,
                                       const AnalysisState &state) const {
+    // Only the 'source' operand aliases the result.
+    auto reshapeOp = cast<tensor::ReshapeOp>(op);
+    if (reshapeOp.getSourceMutable() != opOperand)
+      return {};
     return {{op->getOpResult(0), BufferRelation::Equivalent}};
   }
 
@@ -890,7 +894,7 @@ struct ReshapeOpInterface
           srcType.getShape(), srcType.getElementType(), AffineMap(),
           cast<BaseMemRefType>(srcBuffer->getType()).getMemorySpace());
       srcBuffer = rewriter
-                      .create<bufferization::ToMemrefOp>(
+                      .create<bufferization::ToBufferOp>(
                           op->getLoc(), memrefType, *tensorAlloc)
                       .getResult();
     }
@@ -926,8 +930,7 @@ struct ParallelInsertSliceOpInterface
 
   bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
                               const AnalysisState &state) const {
-    return insertSliceOpRequiresRead(cast<tensor::ParallelInsertSliceOp>(op),
-                                     opOperand);
+    return opOperand == cast<ParallelInsertSliceOp>(op).getSourceMutable();
   }
 
   bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,

@@ -208,7 +208,7 @@ entry:
   br label %while.cond.outer
 
 while.cond.outer:
-  %tmp = load float, ptr addrspace(1) undef
+  %tmp = load float, ptr addrspace(1) poison
   br label %while.cond
 
 while.cond:
@@ -225,7 +225,7 @@ if.end:
   br i1 %cmp2, label %if.else, label %while.cond.outer
 
 if.else:
-  store volatile i32 3, ptr addrspace(1) undef, align 4
+  store volatile i32 3, ptr addrspace(1) poison, align 4
   br label %while.cond
 
 for.cond:

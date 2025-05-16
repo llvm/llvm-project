@@ -25,16 +25,11 @@ using namespace llvm;
 
 #define DEBUG_TYPE "nvvm-intr-range"
 
-namespace llvm { void initializeNVVMIntrRangePass(PassRegistry &); }
-
 namespace {
 class NVVMIntrRange : public FunctionPass {
 public:
   static char ID;
-  NVVMIntrRange() : FunctionPass(ID) {
-
-    initializeNVVMIntrRangePass(*PassRegistry::getPassRegistry());
-  }
+  NVVMIntrRange() : FunctionPass(ID) {}
 
   bool runOnFunction(Function &) override;
 };
@@ -63,87 +58,89 @@ static bool addRangeAttr(uint64_t Low, uint64_t High, IntrinsicInst *II) {
 }
 
 static bool runNVVMIntrRange(Function &F) {
-  struct {
-    unsigned x, y, z;
-  } MaxBlockSize, MaxGridSize;
+  struct Vector3 {
+    unsigned X, Y, Z;
+  };
 
-  const unsigned MetadataNTID = getOverallReqNTID(F).value_or(
-      getOverallMaxNTID(F).value_or(std::numeric_limits<unsigned>::max()));
+  // All these annotations are only valid for kernel functions.
+  if (!isKernelFunction(F))
+    return false;
 
-  MaxBlockSize.x = std::min(1024u, MetadataNTID);
-  MaxBlockSize.y = std::min(1024u, MetadataNTID);
-  MaxBlockSize.z = std::min(64u, MetadataNTID);
+  const auto OverallReqNTID = getOverallReqNTID(F);
+  const auto OverallMaxNTID = getOverallMaxNTID(F);
+  const auto OverallClusterRank = getOverallClusterRank(F);
 
-  MaxGridSize.x = 0x7fffffff;
-  MaxGridSize.y = 0xffff;
-  MaxGridSize.z = 0xffff;
+  // If this function lacks any range information, do nothing.
+  if (!(OverallReqNTID || OverallMaxNTID || OverallClusterRank))
+    return false;
 
-  // Go through the calls in this function.
-  bool Changed = false;
-  for (Instruction &I : instructions(F)) {
-    IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I);
-    if (!II)
-      continue;
+  const unsigned FunctionNTID = OverallReqNTID.value_or(
+      OverallMaxNTID.value_or(std::numeric_limits<unsigned>::max()));
 
+  const unsigned FunctionClusterRank =
+      OverallClusterRank.value_or(std::numeric_limits<unsigned>::max());
+
+  const Vector3 MaxBlockSize{std::min(1024u, FunctionNTID),
+                             std::min(1024u, FunctionNTID),
+                             std::min(64u, FunctionNTID)};
+
+  // We conservatively use the maximum grid size as an upper bound for the
+  // cluster rank.
+  const Vector3 MaxClusterRank{std::min(0x7fffffffu, FunctionClusterRank),
+                               std::min(0xffffu, FunctionClusterRank),
+                               std::min(0xffffu, FunctionClusterRank)};
+
+  const auto ProccessIntrinsic = [&](IntrinsicInst *II) -> bool {
     switch (II->getIntrinsicID()) {
     // Index within block
     case Intrinsic::nvvm_read_ptx_sreg_tid_x:
-      Changed |= addRangeAttr(0, MaxBlockSize.x, II);
-      break;
+      return addRangeAttr(0, MaxBlockSize.X, II);
     case Intrinsic::nvvm_read_ptx_sreg_tid_y:
-      Changed |= addRangeAttr(0, MaxBlockSize.y, II);
-      break;
+      return addRangeAttr(0, MaxBlockSize.Y, II);
     case Intrinsic::nvvm_read_ptx_sreg_tid_z:
-      Changed |= addRangeAttr(0, MaxBlockSize.z, II);
-      break;
+      return addRangeAttr(0, MaxBlockSize.Z, II);
 
     // Block size
     case Intrinsic::nvvm_read_ptx_sreg_ntid_x:
-      Changed |= addRangeAttr(1, MaxBlockSize.x + 1, II);
-      break;
+      return addRangeAttr(1, MaxBlockSize.X + 1, II);
     case Intrinsic::nvvm_read_ptx_sreg_ntid_y:
-      Changed |= addRangeAttr(1, MaxBlockSize.y + 1, II);
-      break;
+      return addRangeAttr(1, MaxBlockSize.Y + 1, II);
     case Intrinsic::nvvm_read_ptx_sreg_ntid_z:
-      Changed |= addRangeAttr(1, MaxBlockSize.z + 1, II);
-      break;
+      return addRangeAttr(1, MaxBlockSize.Z + 1, II);
 
-    // Index within grid
-    case Intrinsic::nvvm_read_ptx_sreg_ctaid_x:
-      Changed |= addRangeAttr(0, MaxGridSize.x, II);
-      break;
-    case Intrinsic::nvvm_read_ptx_sreg_ctaid_y:
-      Changed |= addRangeAttr(0, MaxGridSize.y, II);
-      break;
-    case Intrinsic::nvvm_read_ptx_sreg_ctaid_z:
-      Changed |= addRangeAttr(0, MaxGridSize.z, II);
-      break;
+    // Cluster size
+    case Intrinsic::nvvm_read_ptx_sreg_cluster_ctaid_x:
+      return addRangeAttr(0, MaxClusterRank.X, II);
+    case Intrinsic::nvvm_read_ptx_sreg_cluster_ctaid_y:
+      return addRangeAttr(0, MaxClusterRank.Y, II);
+    case Intrinsic::nvvm_read_ptx_sreg_cluster_ctaid_z:
+      return addRangeAttr(0, MaxClusterRank.Z, II);
+    case Intrinsic::nvvm_read_ptx_sreg_cluster_nctaid_x:
+      return addRangeAttr(1, MaxClusterRank.X + 1, II);
+    case Intrinsic::nvvm_read_ptx_sreg_cluster_nctaid_y:
+      return addRangeAttr(1, MaxClusterRank.Y + 1, II);
+    case Intrinsic::nvvm_read_ptx_sreg_cluster_nctaid_z:
+      return addRangeAttr(1, MaxClusterRank.Z + 1, II);
 
-    // Grid size
-    case Intrinsic::nvvm_read_ptx_sreg_nctaid_x:
-      Changed |= addRangeAttr(1, MaxGridSize.x + 1, II);
+    case Intrinsic::nvvm_read_ptx_sreg_cluster_ctarank:
+      if (OverallClusterRank)
+        return addRangeAttr(0, FunctionClusterRank, II);
       break;
-    case Intrinsic::nvvm_read_ptx_sreg_nctaid_y:
-      Changed |= addRangeAttr(1, MaxGridSize.y + 1, II);
+    case Intrinsic::nvvm_read_ptx_sreg_cluster_nctarank:
+      if (OverallClusterRank)
+        return addRangeAttr(1, FunctionClusterRank + 1, II);
       break;
-    case Intrinsic::nvvm_read_ptx_sreg_nctaid_z:
-      Changed |= addRangeAttr(1, MaxGridSize.z + 1, II);
-      break;
-
-    // warp size is constant 32.
-    case Intrinsic::nvvm_read_ptx_sreg_warpsize:
-      Changed |= addRangeAttr(32, 32 + 1, II);
-      break;
-
-    // Lane ID is [0..warpsize)
-    case Intrinsic::nvvm_read_ptx_sreg_laneid:
-      Changed |= addRangeAttr(0, 32, II);
-      break;
-
     default:
-      break;
+      return false;
     }
-  }
+    return false;
+  };
+
+  // Go through the calls in this function.
+  bool Changed = false;
+  for (Instruction &I : instructions(F))
+    if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I))
+      Changed |= ProccessIntrinsic(II);
 
   return Changed;
 }

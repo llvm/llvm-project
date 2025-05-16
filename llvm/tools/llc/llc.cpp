@@ -69,6 +69,9 @@ static codegen::RegisterCodeGenFlags CGF;
 static cl::opt<std::string>
 InputFilename(cl::Positional, cl::desc("<input bitcode>"), cl::init("-"));
 
+static cl::list<std::string>
+    InstPrinterOptions("M", cl::desc("InstPrinter options"));
+
 static cl::opt<std::string>
 InputLanguage("x", cl::desc("Input language ('ir' or 'mir')"));
 
@@ -205,13 +208,6 @@ static cl::opt<std::string> PassPipeline(
         "available before a certain pass, add 'require<foo-analysis>'."));
 static cl::alias PassPipeline2("p", cl::aliasopt(PassPipeline),
                                cl::desc("Alias for -passes"));
-
-static cl::opt<bool> TryUseNewDbgInfoFormat(
-    "try-experimental-debuginfo-iterators",
-    cl::desc("Enable debuginfo iterator positions, if they're built in"),
-    cl::init(false), cl::Hidden);
-
-extern cl::opt<bool> UseNewDbgInfoFormat;
 
 namespace {
 
@@ -367,13 +363,6 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  // RemoveDIs debug-info transition: tests may request that we /try/ to use the
-  // new debug-info format.
-  if (TryUseNewDbgInfoFormat) {
-    // Turn the new debug-info format on.
-    UseNewDbgInfoFormat = true;
-  }
-
   if (TimeTrace)
     timeTraceProfilerInitialize(TimeTraceGranularity, argv[0]);
   auto TimeTraceScopeExit = make_scope_exit([]() {
@@ -512,6 +501,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
     Options.MCOptions.AsmVerbose = AsmVerbose;
     Options.MCOptions.PreserveAsmComments = PreserveComments;
     Options.MCOptions.IASSearchPaths = IncludeDirs;
+    Options.MCOptions.InstPrinterOptions = InstPrinterOptions;
     Options.MCOptions.SplitDwarfFile = SplitDwarfFile;
     if (DwarfDirectory.getPosition()) {
       Options.MCOptions.MCUseDwarfDirectory =
@@ -555,7 +545,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
 
       InitializeOptions(TheTriple);
       Target = std::unique_ptr<TargetMachine>(TheTarget->createTargetMachine(
-          TheTriple.getTriple(), CPUStr, FeaturesStr, Options, RM, CM, OLvl));
+          TheTriple, CPUStr, FeaturesStr, Options, RM, CM, OLvl));
       assert(Target && "Could not allocate target machine!");
 
       return Target->createDataLayout().getStringRepresentation();
@@ -598,7 +588,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
 
     InitializeOptions(TheTriple);
     Target = std::unique_ptr<TargetMachine>(TheTarget->createTargetMachine(
-        TheTriple.getTriple(), CPUStr, FeaturesStr, Options, RM, CM, OLvl));
+        TheTriple, CPUStr, FeaturesStr, Options, RM, CM, OLvl));
     assert(Target && "Could not allocate target machine!");
 
     // If we don't have a module then just exit now. We do this down
@@ -688,11 +678,22 @@ static int compileModule(char **argv, LLVMContext &Context) {
     MachineModuleInfoWrapperPass *MMIWP =
         new MachineModuleInfoWrapperPass(Target.get());
 
+    // Set a temporary diagnostic handler. This is used before
+    // MachineModuleInfoWrapperPass::doInitialization for features like -M.
+    bool HasMCErrors = false;
+    MCContext &MCCtx = MMIWP->getMMI().getContext();
+    MCCtx.setDiagnosticHandler([&](const SMDiagnostic &SMD, bool IsInlineAsm,
+                                   const SourceMgr &SrcMgr,
+                                   std::vector<const MDNode *> &LocInfos) {
+      WithColor::error(errs(), argv0) << SMD.getMessage() << '\n';
+      HasMCErrors = true;
+    });
+
     // Construct a custom pass pipeline that starts after instruction
     // selection.
     if (!getRunPassNames().empty()) {
       if (!MIR) {
-        WithColor::warning(errs(), argv[0])
+        WithColor::error(errs(), argv[0])
             << "run-pass is for .mir file only.\n";
         delete MMIWP;
         return 1;
@@ -700,7 +701,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
       TargetPassConfig *PTPC = Target->createPassConfig(PM);
       TargetPassConfig &TPC = *PTPC;
       if (TPC.hasLimitedCodeGenPipeline()) {
-        WithColor::warning(errs(), argv[0])
+        WithColor::error(errs(), argv[0])
             << "run-pass cannot be used with "
             << TPC.getLimitedCodeGenPipelineReason() << ".\n";
         delete PTPC;
@@ -722,7 +723,8 @@ static int compileModule(char **argv, LLVMContext &Context) {
     } else if (Target->addPassesToEmitFile(
                    PM, *OS, DwoOut ? &DwoOut->os() : nullptr,
                    codegen::getFileType(), NoVerify, MMIWP)) {
-      reportError("target does not support generation of this file type");
+      if (!HasMCErrors)
+        reportError("target does not support generation of this file type");
     }
 
     const_cast<TargetLoweringObjectFile *>(Target->getObjFileLowering())
@@ -750,7 +752,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
 
     PM.run(*M);
 
-    if (Context.getDiagHandlerPtr()->HasErrors)
+    if (Context.getDiagHandlerPtr()->HasErrors || HasMCErrors)
       return 1;
 
     // Compare the two outputs and make sure they're the same

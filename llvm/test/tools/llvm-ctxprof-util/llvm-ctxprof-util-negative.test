@@ -10,6 +10,7 @@
 ; RUN: not llvm-ctxprof-util fromYAML --input %S/Inputs/invalid-no-counters.yaml 2>&1 | FileCheck %s --check-prefix=NO_COUNTERS
 ; RUN: not llvm-ctxprof-util fromYAML --input %S/Inputs/invalid-bad-subctx.yaml 2>&1 | FileCheck %s --check-prefix=BAD_SUBCTX
 ; RUN: not llvm-ctxprof-util fromYAML --input %S/Inputs/invalid-flat.yaml 2>&1 | FileCheck %s --check-prefix=BAD_FLAT
+; RUN: not llvm-ctxprof-util fromYAML --input %S/Inputs/invalid-no-entrycount.yaml 2>&1 | FileCheck %s --check-prefix=BAD_NOENTRYCOUNT
 ; RUN: rm -rf %t
 ; RUN: not llvm-ctxprof-util fromYAML --input %S/Inputs/valid.yaml --output %t/output.bitstream 2>&1 | FileCheck %s --check-prefix=NO_DIR
 
@@ -23,4 +24,5 @@
 ; NO_COUNTERS: YAML:2:5: error: missing required key 'Counters'
 ; BAD_SUBCTX: YAML:4:18: error: not a sequence
 ; BAD_FLAT: YAML:2:5: error: missing required key 'Counters'
+; BAD_NOENTRYCOUNT: YAML:2:5: error: missing required key 'TotalRootEntryCount'
 ; NO_DIR: failed to open output

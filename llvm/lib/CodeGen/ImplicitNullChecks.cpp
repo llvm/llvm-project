@@ -706,14 +706,11 @@ bool ImplicitNullChecks::analyzeBlockForNullChecks(
 /// faults.  The FAULTING instruction is inserted at the end of MBB.
 MachineInstr *ImplicitNullChecks::insertFaultingInstr(
     MachineInstr *MI, MachineBasicBlock *MBB, MachineBasicBlock *HandlerMBB) {
-  const unsigned NoRegister = 0; // Guaranteed to be the NoRegister value for
-                                 // all targets.
-
   DebugLoc DL;
   unsigned NumDefs = MI->getDesc().getNumDefs();
   assert(NumDefs <= 1 && "other cases unhandled!");
 
-  unsigned DefReg = NoRegister;
+  Register DefReg;
   if (NumDefs != 0) {
     DefReg = MI->getOperand(0).getReg();
     assert(NumDefs == 1 && "expected exactly one def!");

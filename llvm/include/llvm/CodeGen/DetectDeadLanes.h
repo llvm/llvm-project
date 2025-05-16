@@ -29,6 +29,7 @@
 #define LLVM_CODEGEN_DETECTDEADLANES_H
 
 #include "llvm/ADT/BitVector.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/MC/LaneBitmask.h"
 #include <deque>
 
@@ -113,6 +114,13 @@ private:
   /// This bitvector is set for each vreg index where the vreg is defined
   /// by an instruction where lowersToCopies()==true.
   BitVector DefinedByCopy;
+};
+
+class DetectDeadLanesPass : public PassInfoMixin<DetectDeadLanesPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+  static bool isRequired() { return true; }
 };
 
 } // end namespace llvm

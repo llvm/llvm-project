@@ -18,9 +18,8 @@ define void @example12() {
 ; IC2-LABEL: vector.body:
 ; IC2-NEXT:   [[INDEX:%.+]] = phi i64 [ 0, %vector.ph ]
 ; IC2:        [[TRUNC:%.+]] = trunc i64 [[INDEX]] to i32
-; IC2-NEXT:   [[TRUNC0:%.+]] = add i32 [[TRUNC]], 0
 ; IC2-NEXT:   [[TRUNC1:%.+]] = add i32 [[TRUNC]], 1
-; IC2:        store i32 [[TRUNC0]],
+; IC2:        store i32 [[TRUNC]],
 ; IC2-NEXT:   store i32 [[TRUNC1]],
 ;
 entry:
@@ -51,9 +50,8 @@ define void @redundant_iv_cast(ptr %dst) {
 ; IC2:      vector.body:
 ; IC2-NEXT:  [[CAN_IV:%.+]] = phi i32 [ 0, %vector.ph ], [ [[CAN_IV_NEXT:%.+]], %vector.body ]
 ; IC2-NEXT:  [[OFFSET_IDX:%.+]] = trunc i32 [[CAN_IV]] to i16
-; IC2-NEXT:  [[P0:%.+]] = add i16 [[OFFSET_IDX]], 0
 ; IC2-NEXT:  [[P1:%.+]] = add i16 [[OFFSET_IDX]], 1
-; IC2:       store i16 [[P0]]
+; IC2:       store i16 [[OFFSET_IDX]]
 ; IC2-NEXT:  store i16 [[P1]]
 ;
 entry:
@@ -91,11 +89,9 @@ define void @cast_variable_step(i64 %step) {
 ; IC2:        [[MUL:%.+]] = mul i64 %index, %step
 ; IC2-NEXT:   [[OFFSET_IDX:%.+]] = add i64 10, [[MUL]]
 ; IC2-NEXT:   [[TRUNC_OFF:%.+]] = trunc i64 [[OFFSET_IDX]] to i32
-; IC2-NEXT:   [[STEP0:%.+]] = mul i32 0, [[TRUNC_STEP]]
-; IC2-NEXT:   [[T0:%.+]] = add i32 [[TRUNC_OFF]], [[STEP0]]
 ; IC2-NEXT:   [[STEP1:%.+]] = mul i32 1, [[TRUNC_STEP]]
 ; IC2-NEXT:   [[T1:%.+]] = add i32 [[TRUNC_OFF]], [[STEP1]]
-; IC2:        store i32 [[T0]],
+; IC2:        store i32 [[TRUNC_OFF]],
 ; IC2-NEXT:   store i32 [[T1]],
 ;
 entry:

@@ -2,7 +2,7 @@
 ; RUN: llc -global-isel -amdgpu-codegenprepare-widen-16-bit-ops=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti < %s | FileCheck -check-prefixes=GCN,GFX6 %s
 ; RUN: llc -global-isel -amdgpu-codegenprepare-widen-16-bit-ops=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,GFX9 %s
 ; RUN: llc -global-isel -amdgpu-codegenprepare-widen-16-bit-ops=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 < %s | FileCheck -check-prefixes=GFX10PLUS,GFX10 %s
-; RUN: llc -global-isel -amdgpu-codegenprepare-widen-16-bit-ops=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 < %s | FileCheck -check-prefixes=GFX10PLUS,GFX11 %s
+; RUN: llc -global-isel -amdgpu-codegenprepare-widen-16-bit-ops=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -mattr=-real-true16 -amdgpu-enable-delay-alu=0 < %s | FileCheck -check-prefixes=GFX10PLUS,GFX11 %s
 
 define amdgpu_ps i32 @s_andn2_i32(i32 inreg %src0, i32 inreg %src1) {
 ; GCN-LABEL: s_andn2_i32:
@@ -64,7 +64,7 @@ define amdgpu_ps { i32, i32 } @s_andn2_i32_multi_use(i32 inreg %src0, i32 inreg 
 ; GFX11-NEXT:    ; return to shader part epilog
   %not.src1 = xor i32 %src1, -1
   %and = and i32 %src0, %not.src1
-  %insert.0 = insertvalue { i32, i32 } undef, i32 %and, 0
+  %insert.0 = insertvalue { i32, i32 } poison, i32 %and, 0
   %insert.1 = insertvalue { i32, i32 } %insert.0, i32 %not.src1, 1
   ret { i32, i32 } %insert.1
 }
@@ -90,7 +90,7 @@ define amdgpu_ps { i32, i32 } @s_andn2_i32_multi_foldable_use(i32 inreg %src0, i
   %not.src2 = xor i32 %src2, -1
   %and0 = and i32 %src0, %not.src2
   %and1 = and i32 %src1, %not.src2
-  %insert.0 = insertvalue { i32, i32 } undef, i32 %and0, 0
+  %insert.0 = insertvalue { i32, i32 } poison, i32 %and0, 0
   %insert.1 = insertvalue { i32, i32 } %insert.0, i32 %and1, 1
   ret { i32, i32 } %insert.1
 }
@@ -211,7 +211,7 @@ define amdgpu_ps { i64, i64 } @s_andn2_i64_multi_foldable_use(i64 inreg %src0, i
   %not.src2 = xor i64 %src2, -1
   %and0 = and i64 %src0, %not.src2
   %and1 = and i64 %src1, %not.src2
-  %insert.0 = insertvalue { i64, i64 } undef, i64 %and0, 0
+  %insert.0 = insertvalue { i64, i64 } poison, i64 %and0, 0
   %insert.1 = insertvalue { i64, i64 } %insert.0, i64 %and1, 1
   ret { i64, i64 } %insert.1
 }
@@ -238,7 +238,7 @@ define amdgpu_ps { i64, i64 } @s_andn2_i64_multi_use(i64 inreg %src0, i64 inreg 
 ; GFX11-NEXT:    ; return to shader part epilog
   %not.src1 = xor i64 %src1, -1
   %and = and i64 %src0, %not.src1
-  %insert.0 = insertvalue { i64, i64 } undef, i64 %and, 0
+  %insert.0 = insertvalue { i64, i64 } poison, i64 %and, 0
   %insert.1 = insertvalue { i64, i64 } %insert.0, i64 %not.src1, 1
   ret { i64, i64 } %insert.1
 }
@@ -391,24 +391,24 @@ define amdgpu_ps i16 @s_andn2_i16_commute(i16 inreg %src0, i16 inreg %src1) {
 define amdgpu_ps { i16, i16 } @s_andn2_i16_multi_use(i16 inreg %src0, i16 inreg %src1) {
 ; GCN-LABEL: s_andn2_i16_multi_use:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_xor_b32 s1, s3, -1
+; GCN-NEXT:    s_not_b32 s1, s3
 ; GCN-NEXT:    s_andn2_b32 s0, s2, s3
 ; GCN-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: s_andn2_i16_multi_use:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_andn2_b32 s0, s2, s3
-; GFX10-NEXT:    s_xor_b32 s1, s3, -1
+; GFX10-NEXT:    s_not_b32 s1, s3
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: s_andn2_i16_multi_use:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_and_not1_b32 s0, s2, s3
-; GFX11-NEXT:    s_xor_b32 s1, s3, -1
+; GFX11-NEXT:    s_not_b32 s1, s3
 ; GFX11-NEXT:    ; return to shader part epilog
   %not.src1 = xor i16 %src1, -1
   %and = and i16 %src0, %not.src1
-  %insert.0 = insertvalue { i16, i16 } undef, i16 %and, 0
+  %insert.0 = insertvalue { i16, i16 } poison, i16 %and, 0
   %insert.1 = insertvalue { i16, i16 } %insert.0, i16 %not.src1, 1
   ret { i16, i16 } %insert.1
 }
@@ -434,7 +434,7 @@ define amdgpu_ps { i16, i16 } @s_andn2_i16_multi_foldable_use(i16 inreg %src0, i
   %not.src2 = xor i16 %src2, -1
   %and0 = and i16 %src0, %not.src2
   %and1 = and i16 %src1, %not.src2
-  %insert.0 = insertvalue { i16, i16 } undef, i16 %and0, 0
+  %insert.0 = insertvalue { i16, i16 } poison, i16 %and0, 0
   %insert.1 = insertvalue { i16, i16 } %insert.0, i16 %and1, 1
   ret { i16, i16 } %insert.1
 }
@@ -482,14 +482,14 @@ define amdgpu_ps float @v_andn2_i16_sv(i16 inreg %src0, i16 %src1) {
 define amdgpu_ps float @v_andn2_i16_vs(i16 %src0, i16 inreg %src1) {
 ; GCN-LABEL: v_andn2_i16_vs:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_xor_b32 s0, s2, -1
+; GCN-NEXT:    s_not_b32 s0, s2
 ; GCN-NEXT:    v_and_b32_e32 v0, s0, v0
 ; GCN-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GCN-NEXT:    ; return to shader part epilog
 ;
 ; GFX10PLUS-LABEL: v_andn2_i16_vs:
 ; GFX10PLUS:       ; %bb.0:
-; GFX10PLUS-NEXT:    s_xor_b32 s0, s2, -1
+; GFX10PLUS-NEXT:    s_not_b32 s0, s2
 ; GFX10PLUS-NEXT:    v_and_b32_e32 v0, s0, v0
 ; GFX10PLUS-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX10PLUS-NEXT:    ; return to shader part epilog
@@ -601,7 +601,7 @@ define amdgpu_ps { i32, i32 } @s_andn2_v2i16_multi_use(<2 x i16> inreg %src0, <2
 
   %cast.0 = bitcast <2 x i16> %and to i32
   %cast.1 = bitcast <2 x i16> %not.src1 to i32
-  %insert.0 = insertvalue { i32, i32 } undef, i32 %cast.0, 0
+  %insert.0 = insertvalue { i32, i32 } poison, i32 %cast.0, 0
   %insert.1 = insertvalue { i32, i32 } %insert.0, i32 %cast.1, 1
   ret { i32, i32 } %insert.1
 }
@@ -646,7 +646,7 @@ define amdgpu_ps { i32, i32 } @s_andn2_v2i16_multi_foldable_use(<2 x i16> inreg 
 
   %cast.0 = bitcast <2 x i16> %and0 to i32
   %cast.1 = bitcast <2 x i16> %and1 to i32
-  %insert.0 = insertvalue { i32, i32 } undef, i32 %cast.0, 0
+  %insert.0 = insertvalue { i32, i32 } poison, i32 %cast.0, 0
   %insert.1 = insertvalue { i32, i32 } %insert.0, i32 %cast.1, 1
   ret { i32, i32 } %insert.1
 }
@@ -857,7 +857,7 @@ define amdgpu_ps { i48, i48 } @s_andn2_v3i16_multi_use(<3 x i16> inreg %src0, <3
   %and = and <3 x i16> %src0, %not.src1
   %cast.0 = bitcast <3 x i16> %and to i48
   %cast.1 = bitcast <3 x i16> %not.src1 to i48
-  %insert.0 = insertvalue { i48, i48 } undef, i48 %cast.0, 0
+  %insert.0 = insertvalue { i48, i48 } poison, i48 %cast.0, 0
   %insert.1 = insertvalue { i48, i48 } %insert.0, i48 %cast.1, 1
   ret { i48, i48 } %insert.1
 }
@@ -1028,7 +1028,7 @@ define amdgpu_ps { i64, i64 } @s_andn2_v4i16_multi_use(<4 x i16> inreg %src0, <4
 
   %cast.0 = bitcast <4 x i16> %and to i64
   %cast.1 = bitcast <4 x i16> %not.src1 to i64
-  %insert.0 = insertvalue { i64, i64 } undef, i64 %cast.0, 0
+  %insert.0 = insertvalue { i64, i64 } poison, i64 %cast.0, 0
   %insert.1 = insertvalue { i64, i64 } %insert.0, i64 %cast.1, 1
   ret { i64, i64 } %insert.1
 }
@@ -1082,7 +1082,7 @@ define amdgpu_ps { i64, i64 } @s_andn2_v4i16_multi_foldable_use(<4 x i16> inreg 
 
   %cast.0 = bitcast <4 x i16> %and0 to i64
   %cast.1 = bitcast <4 x i16> %and1 to i64
-  %insert.0 = insertvalue { i64, i64 } undef, i64 %cast.0, 0
+  %insert.0 = insertvalue { i64, i64 } poison, i64 %cast.0, 0
   %insert.1 = insertvalue { i64, i64 } %insert.0, i64 %cast.1, 1
   ret { i64, i64 } %insert.1
 }

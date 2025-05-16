@@ -81,6 +81,7 @@ public:
   void Define(const std::string &macro, const std::string &value);
   void Undefine(std::string macro);
   bool IsNameDefined(const CharBlock &);
+  bool IsNameDefinedEmpty(const CharBlock &);
   bool IsFunctionLikeDefinition(const CharBlock &);
   bool AnyDefinitions() const { return !definitions_.empty(); }
   bool InConditional() const { return !ifStack_.empty(); }
@@ -115,6 +116,7 @@ private:
   bool IsIfPredicateTrue(const TokenSequence &expr, std::size_t first,
       std::size_t exprTokens, Prescanner &);
   void LineDirective(const TokenSequence &, std::size_t, Prescanner &);
+  TokenSequence TokenizeMacroBody(const std::string &);
 
   AllSources &allSources_;
   std::list<std::string> names_;

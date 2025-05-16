@@ -1,6 +1,12 @@
 header: stdfix.h
 header_template: stdfix.h.def
-macros: []
+macros:
+  - macro_name: absfx
+    macro_header: stdfix-macros.h
+  - macro_name: countlsfx
+    macro_header: stdfix-macros.h
+  - macro_name: roundfx
+    macro_header: stdfix-macros.h
 types:
   - type_name: stdfix-types
 enums: []
@@ -230,6 +236,70 @@ functions:
       - stdc_ext
     return_type: uint_ulk_t
     arguments:
+      - type: unsigned long accum
+    guard: LIBC_COMPILER_HAS_FIXED_POINT
+  - name: idivr
+    standards:
+      - stdc_ext
+    return_type: int
+    arguments:
+      - type: fract
+      - type: fract
+    guard: LIBC_COMPILER_HAS_FIXED_POINT
+  - name: idivlr
+    standards:
+      - stdc_ext
+    return_type: long int
+    arguments:
+      - type: long fract
+      - type: long fract
+    guard: LIBC_COMPILER_HAS_FIXED_POINT
+  - name: idivk
+    standards:
+      - stdc_ext
+    return_type: int
+    arguments:
+      - type: accum
+      - type: accum
+    guard: LIBC_COMPILER_HAS_FIXED_POINT
+  - name: idivlk
+    standards:
+      - stdc_ext
+    return_type: long int
+    arguments:
+      - type: long accum
+      - type: long accum
+    guard: LIBC_COMPILER_HAS_FIXED_POINT
+  - name: idivur
+    standards:
+      - stdc_ext
+    return_type: unsigned int
+    arguments:
+      - type: unsigned fract
+      - type: unsigned fract
+    guard: LIBC_COMPILER_HAS_FIXED_POINT
+  - name: idivulr
+    standards:
+      - stdc_ext
+    return_type: unsigned long int
+    arguments:
+      - type: unsigned long fract
+      - type: unsigned long fract
+    guard: LIBC_COMPILER_HAS_FIXED_POINT
+  - name: idivuk
+    standards:
+      - stdc_ext
+    return_type: unsigned int
+    arguments:
+      - type: unsigned accum
+      - type: unsigned accum
+    guard: LIBC_COMPILER_HAS_FIXED_POINT
+  - name: idivulk
+    standards:
+      - stdc_ext
+    return_type: unsigned long int
+    arguments:
+      - type: unsigned long accum
       - type: unsigned long accum
     guard: LIBC_COMPILER_HAS_FIXED_POINT
   - name: roundhk

@@ -156,15 +156,18 @@ public:
     // FIXME: We could have obtained these two constants from RISCVSubtarget
     // but in order to get that from TargetMachine, we need a Function.
     const MCSubtargetInfo &STI = State.getSubtargetInfo();
-    ELEN = STI.checkFeatures("+zve64x") ? 64 : 32;
+    ELEN = STI.hasFeature(RISCV::FeatureStdExtZve64x) ? 64 : 32;
 
-    std::string ZvlQuery;
-    for (unsigned Size = 32; Size <= 65536; Size *= 2) {
-      ZvlQuery = "+zvl";
-      raw_string_ostream SS(ZvlQuery);
-      SS << Size << "b";
-      if (STI.checkFeatures(SS.str()) && ZvlVLen < Size)
-        ZvlVLen = Size;
+    const unsigned ZvlFeatures[] = {
+        RISCV::FeatureStdExtZvl32b,    RISCV::FeatureStdExtZvl64b,
+        RISCV::FeatureStdExtZvl128b,   RISCV::FeatureStdExtZvl256b,
+        RISCV::FeatureStdExtZvl512b,   RISCV::FeatureStdExtZvl1024b,
+        RISCV::FeatureStdExtZvl2048b,  RISCV::FeatureStdExtZvl4096b,
+        RISCV::FeatureStdExtZvl8192b,  RISCV::FeatureStdExtZvl16384b,
+        RISCV::FeatureStdExtZvl32768b, RISCV::FeatureStdExtZvl65536b};
+    for (auto [Idx, Feature] : enumerate(ZvlFeatures)) {
+      if (STI.hasFeature(Feature))
+        ZvlVLen = std::max(ZvlVLen, 1u << (Idx + 5));
     }
   }
 

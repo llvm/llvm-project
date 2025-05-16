@@ -10,6 +10,7 @@ tablegen(LLVM MSP430GenDisassemblerTables.inc -gen-disassembler)
 tablegen(LLVM MSP430GenInstrInfo.inc -gen-instr-info)
 tablegen(LLVM MSP430GenMCCodeEmitter.inc -gen-emitter)
 tablegen(LLVM MSP430GenRegisterInfo.inc -gen-register-info)
+tablegen(LLVM MSP430GenSDNodeInfo.inc -gen-sd-node-info)
 tablegen(LLVM MSP430GenSubtargetInfo.inc -gen-subtarget)
 
 add_public_tablegen_target(MSP430CommonTableGen)
@@ -22,6 +23,7 @@ add_llvm_target(MSP430CodeGen
   MSP430FrameLowering.cpp
   MSP430MachineFunctionInfo.cpp
   MSP430RegisterInfo.cpp
+  MSP430SelectionDAGInfo.cpp
   MSP430Subtarget.cpp
   MSP430TargetMachine.cpp
   MSP430AsmPrinter.cpp

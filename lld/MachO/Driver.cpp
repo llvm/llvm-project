@@ -314,8 +314,6 @@ static InputFile *addFile(StringRef path, LoadType loadType,
       std::unique_ptr<object::Archive> archive = CHECK(
           object::Archive::create(mbref), path + ": failed to parse archive");
 
-      if (!archive->isEmpty() && !archive->hasSymbolTable())
-        error(path + ": archive has no index; run ranlib to add one");
       file = make<ArchiveFile>(std::move(archive), isForceHidden);
 
       if (tar && file->getArchive().isThin())
@@ -362,9 +360,11 @@ static InputFile *addFile(StringRef path, LoadType loadType,
                 ": Archive::children failed: " + toString(std::move(e)));
       }
     } else if (isCommandLineLoad && config->forceLoadObjC) {
-      for (const object::Archive::Symbol &sym : file->getArchive().symbols())
-        if (sym.getName().starts_with(objc::symbol_names::klass))
-          file->fetch(sym);
+      if (file->getArchive().hasSymbolTable()) {
+        for (const object::Archive::Symbol &sym : file->getArchive().symbols())
+          if (sym.getName().starts_with(objc::symbol_names::klass))
+            file->fetch(sym);
+      }
 
       // TODO: no need to look for ObjC sections for a given archive member if
       // we already found that it contains an ObjC symbol.
@@ -394,7 +394,6 @@ static InputFile *addFile(StringRef path, LoadType loadType,
                 ": Archive::children failed: " + toString(std::move(e)));
       }
     }
-
     file->addLazySymbols();
     loadedArchives[path] = ArchiveFileInfo{file, isCommandLineLoad};
     newFile = file;
@@ -616,8 +615,7 @@ static bool compileBitcodeFiles() {
         lto->add(*bitcodeFile);
 
   std::vector<ObjFile *> compiled = lto->compile();
-  for (ObjFile *file : compiled)
-    inputFiles.insert(file);
+  inputFiles.insert_range(compiled);
 
   return !compiled.empty();
 }
@@ -1676,6 +1674,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
   // Must be set before any InputSections and Symbols are created.
   config->deadStrip = args.hasArg(OPT_dead_strip);
+  config->interposable = args.hasArg(OPT_interposable);
 
   config->systemLibraryRoots = getSystemLibraryRoots(args);
   if (const char *path = getReproduceOption(args)) {
@@ -1832,6 +1831,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       args.hasFlag(OPT_warn_thin_archive_missing_members,
                    OPT_no_warn_thin_archive_missing_members, true);
   config->generateUuid = !args.hasArg(OPT_no_uuid);
+  config->disableVerify = args.hasArg(OPT_disable_verify);
 
   auto IncompatWithCGSort = [&](StringRef firstArgStr) {
     // Throw an error only if --call-graph-profile-sort is explicitly specified

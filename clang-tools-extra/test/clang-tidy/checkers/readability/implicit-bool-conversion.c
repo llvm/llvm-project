@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s readability-implicit-bool-conversion %t -- -- -std=c23
+// RUN: %check_clang_tidy --match-partial-fixes %s readability-implicit-bool-conversion %t -- -- -std=c23
 // RUN: %check_clang_tidy -check-suffix=UPPER-CASE %s readability-implicit-bool-conversion %t -- \
 // RUN:     -config='{CheckOptions: { \
 // RUN:         readability-implicit-bool-conversion.UseUpperCaseLiteralSuffix: true \

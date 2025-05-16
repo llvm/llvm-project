@@ -70,10 +70,10 @@ declare <512 x i1> @llvm.ppc.mma.pmxvi16ger2(<16 x i8>, <16 x i8>, i32, i32, i32
 define dso_local void @test3(ptr nocapture readonly %vqp, ptr nocapture readnone %vpp, <16 x i8> %vc, ptr nocapture %resp) {
 ; CHECK-LABEL: test3:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxv vs1, 32(r3)
-; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    lxv vs1, 32(r3)
+; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
 ; CHECK-NEXT:    xvi8ger4spp acc0, v2, v2
 ; CHECK-NEXT:    xxmfacc acc0
@@ -85,10 +85,10 @@ define dso_local void @test3(ptr nocapture readonly %vqp, ptr nocapture readnone
 ;
 ; CHECK-BE-LABEL: test3:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    lxv vs1, 16(r3)
-; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    lxv vs1, 16(r3)
+; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
 ; CHECK-BE-NEXT:    xvi8ger4spp acc0, v2, v2
 ; CHECK-BE-NEXT:    xxmfacc acc0
@@ -111,10 +111,10 @@ declare <512 x i1> @llvm.ppc.mma.xvi8ger4spp(<512 x i1>, <16 x i8>, <16 x i8>)
 define dso_local void @test4(ptr nocapture readonly %vqp, ptr nocapture readnone %vpp, <16 x i8> %vc, ptr nocapture %resp) {
 ; CHECK-LABEL: test4:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxv vs1, 32(r3)
-; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    lxv vs1, 32(r3)
+; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
 ; CHECK-NEXT:    xvi16ger2pp acc0, v2, v2
 ; CHECK-NEXT:    xxmfacc acc0
@@ -126,10 +126,10 @@ define dso_local void @test4(ptr nocapture readonly %vqp, ptr nocapture readnone
 ;
 ; CHECK-BE-LABEL: test4:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    lxv vs1, 16(r3)
-; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    lxv vs1, 16(r3)
+; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
 ; CHECK-BE-NEXT:    xvi16ger2pp acc0, v2, v2
 ; CHECK-BE-NEXT:    xxmfacc acc0
@@ -152,10 +152,10 @@ declare <512 x i1> @llvm.ppc.mma.xvi16ger2pp(<512 x i1>, <16 x i8>, <16 x i8>)
 define dso_local void @test5(ptr nocapture readonly %vqp, ptr nocapture readnone %vpp, <16 x i8> %vc, ptr nocapture %resp) {
 ; CHECK-LABEL: test5:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxv vs1, 32(r3)
-; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    lxv vs1, 32(r3)
+; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
 ; CHECK-NEXT:    pmxvi8ger4spp acc0, v2, v2, 0, 0, 0
 ; CHECK-NEXT:    xxmfacc acc0
@@ -167,10 +167,10 @@ define dso_local void @test5(ptr nocapture readonly %vqp, ptr nocapture readnone
 ;
 ; CHECK-BE-LABEL: test5:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    lxv vs1, 16(r3)
-; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    lxv vs1, 16(r3)
+; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
 ; CHECK-BE-NEXT:    pmxvi8ger4spp acc0, v2, v2, 0, 0, 0
 ; CHECK-BE-NEXT:    xxmfacc acc0
@@ -193,10 +193,10 @@ declare <512 x i1> @llvm.ppc.mma.pmxvi8ger4spp(<512 x i1>, <16 x i8>, <16 x i8>,
 define dso_local void @test6(ptr nocapture readonly %vqp, ptr nocapture readnone %vpp, <16 x i8> %vc, ptr nocapture %resp) {
 ; CHECK-LABEL: test6:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxv vs1, 32(r3)
-; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    lxv vs1, 32(r3)
+; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
 ; CHECK-NEXT:    pmxvi16ger2pp acc0, v2, v2, 0, 0, 0
 ; CHECK-NEXT:    xxmfacc acc0
@@ -208,10 +208,10 @@ define dso_local void @test6(ptr nocapture readonly %vqp, ptr nocapture readnone
 ;
 ; CHECK-BE-LABEL: test6:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    lxv vs1, 16(r3)
-; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    lxv vs1, 16(r3)
+; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
 ; CHECK-BE-NEXT:    pmxvi16ger2pp acc0, v2, v2, 0, 0, 0
 ; CHECK-BE-NEXT:    xxmfacc acc0

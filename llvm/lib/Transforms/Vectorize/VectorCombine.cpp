@@ -33,6 +33,7 @@
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include <numeric>
 #include <queue>
+#include <set>
 
 #define DEBUG_TYPE "vector-combine"
 #include "llvm/Transforms/Utils/InstructionWorklist.h"
@@ -995,8 +996,8 @@ bool VectorCombine::scalarizeVPIntrinsic(Instruction &I) {
   // scalarizing it.
   bool SafeToSpeculate;
   if (ScalarIntrID)
-    SafeToSpeculate = Intrinsic::getAttributes(I.getContext(), *ScalarIntrID)
-                          .hasFnAttr(Attribute::AttrKind::Speculatable);
+    SafeToSpeculate = Intrinsic::getFnAttributes(I.getContext(), *ScalarIntrID)
+                          .hasAttribute(Attribute::AttrKind::Speculatable);
   else
     SafeToSpeculate = isSafeToSpeculativelyExecuteWithOpcode(
         *FunctionalOpcode, &VPI, nullptr, &AC, &DT);
@@ -1294,7 +1295,6 @@ static void analyzeCostOfVecReduction(const IntrinsicInst &II,
   }
   CostAfterReduction = TTI.getArithmeticReductionCost(ReductionOpc, VecRedTy,
                                                       std::nullopt, CostKind);
-  return;
 }
 
 bool VectorCombine::foldBinopOfReductions(Instruction &I) {
@@ -1437,6 +1437,7 @@ static ScalarizationResult canScalarizeAccess(VectorType *VecTy, Value *Idx,
   // This is the number of elements of fixed vector types,
   // or the minimum number of elements of scalable vector types.
   uint64_t NumElements = VecTy->getElementCount().getKnownMinValue();
+  unsigned IntWidth = Idx->getType()->getScalarSizeInBits();
 
   if (auto *C = dyn_cast<ConstantInt>(Idx)) {
     if (C->getValue().ult(NumElements))
@@ -1444,7 +1445,10 @@ static ScalarizationResult canScalarizeAccess(VectorType *VecTy, Value *Idx,
     return ScalarizationResult::unsafe();
   }
 
-  unsigned IntWidth = Idx->getType()->getScalarSizeInBits();
+  // Always unsafe if the index type can't handle all inbound values.
+  if (!llvm::isUIntN(IntWidth, NumElements))
+    return ScalarizationResult::unsafe();
+
   APInt Zero(IntWidth, 0);
   APInt MaxElts(IntWidth, NumElements);
   ConstantRange ValidIndices(Zero, MaxElts);
@@ -2037,7 +2041,6 @@ bool VectorCombine::foldShuffleOfSelects(Instruction &I) {
                      m_Mask(Mask))))
     return false;
 
-  auto *DstVecTy = dyn_cast<FixedVectorType>(I.getType());
   auto *C1VecTy = dyn_cast<FixedVectorType>(C1->getType());
   auto *C2VecTy = dyn_cast<FixedVectorType>(C2->getType());
   if (!C1VecTy || !C2VecTy || C1VecTy != C2VecTy)
@@ -2051,24 +2054,26 @@ bool VectorCombine::foldShuffleOfSelects(Instruction &I) {
        (SI0FOp->getFastMathFlags() != SI1FOp->getFastMathFlags())))
     return false;
 
+  auto *SrcVecTy = cast<FixedVectorType>(T1->getType());
+  auto *DstVecTy = cast<FixedVectorType>(I.getType());
   auto SK = TargetTransformInfo::SK_PermuteTwoSrc;
   auto SelOp = Instruction::Select;
   InstructionCost OldCost = TTI.getCmpSelInstrCost(
-      SelOp, T1->getType(), C1VecTy, CmpInst::BAD_ICMP_PREDICATE, CostKind);
-  OldCost += TTI.getCmpSelInstrCost(SelOp, T2->getType(), C2VecTy,
+      SelOp, SrcVecTy, C1VecTy, CmpInst::BAD_ICMP_PREDICATE, CostKind);
+  OldCost += TTI.getCmpSelInstrCost(SelOp, SrcVecTy, C2VecTy,
                                     CmpInst::BAD_ICMP_PREDICATE, CostKind);
-  OldCost += TTI.getShuffleCost(SK, DstVecTy, Mask, CostKind, 0, nullptr,
+  OldCost += TTI.getShuffleCost(SK, SrcVecTy, Mask, CostKind, 0, nullptr,
                                 {I.getOperand(0), I.getOperand(1)}, &I);
 
-  auto *C1C2VecTy = cast<FixedVectorType>(
-      toVectorTy(Type::getInt1Ty(I.getContext()), DstVecTy->getNumElements()));
   InstructionCost NewCost =
-      TTI.getShuffleCost(SK, C1C2VecTy, Mask, CostKind, 0, nullptr, {C1, C2});
+      TTI.getShuffleCost(SK, C1VecTy, Mask, CostKind, 0, nullptr, {C1, C2});
   NewCost +=
-      TTI.getShuffleCost(SK, DstVecTy, Mask, CostKind, 0, nullptr, {T1, T2});
+      TTI.getShuffleCost(SK, SrcVecTy, Mask, CostKind, 0, nullptr, {T1, T2});
   NewCost +=
-      TTI.getShuffleCost(SK, DstVecTy, Mask, CostKind, 0, nullptr, {F1, F2});
-  NewCost += TTI.getCmpSelInstrCost(SelOp, DstVecTy, DstVecTy,
+      TTI.getShuffleCost(SK, SrcVecTy, Mask, CostKind, 0, nullptr, {F1, F2});
+  auto *C1C2ShuffledVecTy = cast<FixedVectorType>(
+      toVectorTy(Type::getInt1Ty(I.getContext()), DstVecTy->getNumElements()));
+  NewCost += TTI.getCmpSelInstrCost(SelOp, DstVecTy, C1C2ShuffledVecTy,
                                     CmpInst::BAD_ICMP_PREDICATE, CostKind);
 
   LLVM_DEBUG(dbgs() << "Found a shuffle feeding two selects: " << I
@@ -2371,7 +2376,7 @@ bool VectorCombine::foldShuffleOfIntrinsics(Instruction &I) {
     } else {
       auto *VecTy = cast<FixedVectorType>(II0->getArgOperand(I)->getType());
       NewArgsTy.push_back(FixedVectorType::get(VecTy->getElementType(),
-                                               VecTy->getNumElements() * 2));
+                                               ShuffleDstTy->getNumElements()));
       NewCost += TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc,
                                     VecTy, OldMask, CostKind);
     }

@@ -263,6 +263,20 @@ GenerateModuleFromModuleMapAction::CreateOutputFile(CompilerInstance &CI,
                                     /*ForceUseTemporary=*/true);
 }
 
+bool GenerateModuleInterfaceAction::PrepareToExecuteAction(
+    CompilerInstance &CI) {
+  for (const auto &FIF : CI.getFrontendOpts().Inputs) {
+    if (const auto InputFormat = FIF.getKind().getFormat();
+        InputFormat != InputKind::Format::Source) {
+      CI.getDiagnostics().Report(
+          diag::err_frontend_action_unsupported_input_format)
+          << "module interface compilation" << FIF.getFile() << InputFormat;
+      return false;
+    }
+  }
+  return GenerateModuleAction::PrepareToExecuteAction(CI);
+}
+
 bool GenerateModuleInterfaceAction::BeginSourceFileAction(
     CompilerInstance &CI) {
   CI.getLangOpts().setCompilingModule(LangOptions::CMK_ModuleInterface);
@@ -350,7 +364,7 @@ void VerifyPCHAction::ExecuteAction() {
       DisableValidationForModuleKind::None,
       /*AllowASTWithCompilerErrors*/ false,
       /*AllowConfigurationMismatch*/ true,
-      /*ValidateSystemInputs*/ true));
+      /*ValidateSystemInputs*/ true, /*ForceValidateUserInputs*/ true));
 
   Reader->ReadAST(getCurrentFile(),
                   Preamble ? serialization::MK_Preamble
@@ -403,8 +417,7 @@ public:
   }
 
 private:
-  static std::optional<std::string>
-  toString(CodeSynthesisContext::SynthesisKind Kind) {
+  static std::string toString(CodeSynthesisContext::SynthesisKind Kind) {
     switch (Kind) {
     case CodeSynthesisContext::TemplateInstantiation:
       return "TemplateInstantiation";
@@ -462,10 +475,8 @@ private:
       return "TypeAliasTemplateInstantiation";
     case CodeSynthesisContext::PartialOrderingTTP:
       return "PartialOrderingTTP";
-    case CodeSynthesisContext::CheckTemplateParameter:
-      return std::nullopt;
     }
-    return std::nullopt;
+    return "";
   }
 
   template <bool BeginInstantiation>
@@ -473,14 +484,12 @@ private:
                                     const CodeSynthesisContext &Inst) {
     std::string YAML;
     {
-      std::optional<TemplightEntry> Entry =
-          getTemplightEntry<BeginInstantiation>(TheSema, Inst);
-      if (!Entry)
-        return;
       llvm::raw_string_ostream OS(YAML);
       llvm::yaml::Output YO(OS);
+      TemplightEntry Entry =
+          getTemplightEntry<BeginInstantiation>(TheSema, Inst);
       llvm::yaml::EmptyContext Context;
-      llvm::yaml::yamlize(YO, *Entry, true, Context);
+      llvm::yaml::yamlize(YO, Entry, true, Context);
     }
     Out << "---" << YAML << "\n";
   }
@@ -560,13 +569,10 @@ private:
   }
 
   template <bool BeginInstantiation>
-  static std::optional<TemplightEntry>
-  getTemplightEntry(const Sema &TheSema, const CodeSynthesisContext &Inst) {
+  static TemplightEntry getTemplightEntry(const Sema &TheSema,
+                                          const CodeSynthesisContext &Inst) {
     TemplightEntry Entry;
-    std::optional<std::string> Kind = toString(Inst.Kind);
-    if (!Kind)
-      return std::nullopt;
-    Entry.Kind = *Kind;
+    Entry.Kind = toString(Inst.Kind);
     Entry.Event = BeginInstantiation ? "Begin" : "End";
     llvm::raw_string_ostream OS(Entry.Name);
     printEntryName(TheSema, Inst.Entity, OS);
@@ -785,10 +791,11 @@ namespace {
     /// Indicates that the AST file contains particular input file.
     ///
     /// \returns true to continue receiving the next input file, false to stop.
-    bool visitInputFile(StringRef Filename, bool isSystem,
-                        bool isOverridden, bool isExplicitModule) override {
+    bool visitInputFile(StringRef FilenameAsRequested, StringRef Filename,
+                        bool isSystem, bool isOverridden,
+                        bool isExplicitModule) override {
 
-      Out.indent(2) << "Input file: " << Filename;
+      Out.indent(2) << "Input file: " << FilenameAsRequested;
 
       if (isSystem || isOverridden || isExplicitModule) {
         Out << " [";
@@ -886,7 +893,8 @@ void DumpModuleInfoAction::ExecuteAction() {
 
   Preprocessor &PP = CI.getPreprocessor();
   DumpModuleInfoListener Listener(Out);
-  HeaderSearchOptions &HSOpts = PP.getHeaderSearchInfo().getHeaderSearchOpts();
+  const HeaderSearchOptions &HSOpts =
+      PP.getHeaderSearchInfo().getHeaderSearchOpts();
 
   // The FrontendAction::BeginSourceFile () method loads the AST so that much
   // of the information is already available and modules should have been
@@ -1222,9 +1230,9 @@ void GetDependenciesByModuleNameAction::ExecuteAction() {
   SourceManager &SM = PP.getSourceManager();
   FileID MainFileID = SM.getMainFileID();
   SourceLocation FileStart = SM.getLocForStartOfFile(MainFileID);
-  SmallVector<std::pair<IdentifierInfo *, SourceLocation>, 2> Path;
+  SmallVector<IdentifierLoc, 2> Path;
   IdentifierInfo *ModuleID = PP.getIdentifierInfo(ModuleName);
-  Path.push_back(std::make_pair(ModuleID, FileStart));
+  Path.emplace_back(FileStart, ModuleID);
   auto ModResult = CI.loadModule(FileStart, Path, Module::Hidden, false);
   PPCallbacks *CB = PP.getPPCallbacks();
   CB->moduleImport(SourceLocation(), Path, ModResult);

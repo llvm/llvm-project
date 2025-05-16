@@ -88,13 +88,12 @@
 # STRIP-NEXT:  0 __text           {{[0-9a-f]*}} [[#%x, TEXTSTART:]] TEXT
 # STRIP-NEXT:  1 __cstring        00000000      [[#%x, CSTRINGSTART:]] DATA
 # STRIP-NEXT:  2 __data           00000000
-# STRIP-NEXT:  3 __llvm_orderfile 00000000
-# STRIP-NEXT:  4 __mybss          00000000
-# STRIP-NEXT:  5 __bar            00000000
-# STRIP-NEXT:  6 __ever           00000000
-# STRIP-NEXT:  7 __lookup         00000000
-# STRIP-NEXT:  8 symbol           00000000
-# STRIP-NEXT:  9 __quux           00000000
+# STRIP-NEXT:  3 __mybss          00000000
+# STRIP-NEXT:  4 __bar            00000000
+# STRIP-NEXT:  5 __ever           00000000
+# STRIP-NEXT:  6 __lookup         00000000
+# STRIP-NEXT:  7 symbol           00000000
+# STRIP-NEXT:  8 __quux           00000000
 
 # STRIP-LABEL: SYMBOL TABLE:
 # STRIP-NOT:   section$start$__FOO$__bar
@@ -110,14 +109,13 @@
 # STRIP2-NEXT:  0 __text           {{[0-9a-f]*}} [[#%x, TEXTSTART:]] TEXT
 # STRIP2-NEXT:  1 __cstring        00000000      [[#%x, CSTRINGSTART:]] DATA
 # STRIP2-NEXT:  2 __data           00000000
-# STRIP2-NEXT:  3 __llvm_orderfile 00000000
-# STRIP2-NEXT:  4 __mybss          00000000
-# STRIP2-NEXT:  5 __bar            00000000
-# STRIP2-NEXT:  6 __notexist       00000000
-# STRIP2-NEXT:  7 __ever           00000000
-# STRIP2-NEXT:  8 __lookup         00000000
-# STRIP2-NEXT:  9 symbol           00000000
-# STRIP2-NEXT:  10 __quux          00000000
+# STRIP2-NEXT:  3 __mybss          00000000
+# STRIP2-NEXT:  4 __bar            00000000
+# STRIP2-NEXT:  5 __notexist       00000000
+# STRIP2-NEXT:  6 __ever           00000000
+# STRIP2-NEXT:  7 __lookup         00000000
+# STRIP2-NEXT:  8 symbol           00000000
+# STRIP2-NEXT:  9 __quux           00000000
 
 # CHECK-LABEL: Sections:
 # CHECK-NEXT:  Idx Name           Size     VMA              Type
@@ -126,12 +124,11 @@
 # CHECK:       2 __cstring        {{[0-9a-f]*}} [[#%x, CSTRINGSTART:]] DATA
 # CHECK:       3 __aftercstring   {{[0-9a-f]*}} [[#%x, CSTRINGEND:]]
 # CHECK:       4 __data           00000008      [[#%x, DATASTART:]] DATA
-# CHECK:       5 __llvm_orderfile 00000000      [[#%x, LLVMORDERFILESTART:]] DATA
-# CHECK:       6 __mybss          00008000      [[#%x, MYBSSSTART:]] BSS
-# CHECK:       7 __quux           0000002a      [[#%x, QUUXSTART:]]
-# CHECK:       8 __bar            00000059      [[#%x, BARSTART:]]
-# CHECK:       9 __uflag_sect     00000000
-# CHECK:       10 __lookup        00000000
+# CHECK:       5 __mybss          00008000      [[#%x, MYBSSSTART:]] BSS
+# CHECK:       6 __quux           0000002a      [[#%x, QUUXSTART:]]
+# CHECK:       7 __bar            00000059      [[#%x, BARSTART:]]
+# CHECK:       8 __uflag_sect     00000000
+# CHECK:       9 __lookup         00000000
 # CHECK-NOT:   symbol
 # CHECK-NOT:   __unref
 
@@ -142,8 +139,6 @@
 # CHECK-NOT: section$end$__TEXT$__cstring
 # CHECK-NOT: section$start$__DATA$__data
 # CHECK-NOT: section$end$__DATA$__data
-# CHECK-NOT: section$start$__DATA$__llvm_orderfile
-# CHECK-NOT: section$end$__DATA$__llvm_orderfile
 # CHECK-NOT: section$start$__DYNAMIC$__lookup
 # CHECK-NOT: section$start$__DYNAMIC$__unref
 # CHECK: section$end$ACTUAL$symbol
@@ -179,13 +174,6 @@
 # CHECK-SAME: leaq [[#%d, MYBSSSTART - PC7 - 7]](%rip), %rax
 # CHECK-NEXT: [[#%x, PC8:]]:
 # CHECK-SAME: leaq [[#%d, MYBSSSTART + 0x8000 - PC8 - 7]](%rip), %rbx
-
-## section$start$__DATA$__llvm_orderfile / section$end$__DATA$__llvm_orderfile
-## This section has size 0.
-# CHECK:      [[#%x, PC9:]]:
-# CHECK-SAME: leaq [[#%d, LLVMORDERFILESTART - PC9 - 7]](%rip), %rax
-# CHECK-NEXT: [[#%x, PC10:]]:
-# CHECK-SAME: leaq [[#%d, LLVMORDERFILESTART - PC10 - 7]](%rip), %rbx
 
 ## Section-rename tests.
 ## Input section __FOO/__bar is renamed to output section
@@ -349,12 +337,6 @@ _main:
   # Vanilla zerofill.
   movq section$start$__MYBSS$__mybss@GOTPCREL(%rip), %rax
   movq section$end$__MYBSS$__mybss@GOTPCREL(%rip), %rbx
-
-  # Referring to a non-existent section wills it into existence.
-  # This is needed for e.g. __DATA/__llvm_orderfile in libclang_rt.profile.
-  # This means `-u` can be used as a janky `-sectcreate`.
-  movq section$start$__DATA$__llvm_orderfile@GOTPCREL(%rip), %rax
-  movq section$end$__DATA$__llvm_orderfile@GOTPCREL(%rip), %rbx
 
   # Section-rename tests.
   movq section$start$__FOO$__bar@GOTPCREL(%rip), %rax

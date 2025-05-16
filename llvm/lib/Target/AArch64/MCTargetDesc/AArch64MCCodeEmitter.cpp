@@ -309,7 +309,7 @@ AArch64MCCodeEmitter::getAddSubImmOpValue(const MCInst &MI, unsigned OpIdx,
   // Set the shift bit of the add instruction for relocation types
   // R_AARCH64_TLSLE_ADD_TPREL_HI12 and R_AARCH64_TLSLD_ADD_DTPREL_HI12.
   if (const AArch64MCExpr *A64E = dyn_cast<AArch64MCExpr>(Expr)) {
-    AArch64MCExpr::VariantKind RefKind = A64E->getKind();
+    AArch64MCExpr::Specifier RefKind = A64E->getSpecifier();
     if (RefKind == AArch64MCExpr::VK_TPREL_HI12 ||
         RefKind == AArch64MCExpr::VK_DTPREL_HI12 ||
         RefKind == AArch64MCExpr::VK_SECREL_HI12)
@@ -719,7 +719,7 @@ unsigned AArch64MCCodeEmitter::fixMOVZ(const MCInst &MI, unsigned EncodedValue,
 
   const MCExpr *E = UImm16MO.getExpr();
   if (const AArch64MCExpr *A64E = dyn_cast<AArch64MCExpr>(E)) {
-    switch (A64E->getKind()) {
+    switch (A64E->getSpecifier()) {
     case AArch64MCExpr::VK_DTPREL_G2:
     case AArch64MCExpr::VK_DTPREL_G1:
     case AArch64MCExpr::VK_DTPREL_G0:
@@ -749,9 +749,7 @@ void AArch64MCCodeEmitter::encodeInstruction(const MCInst &MI,
     auto Reloc = STI.getTargetTriple().getEnvironment() == Triple::GNUILP32
                      ? ELF::R_AARCH64_P32_TLSDESC_CALL
                      : ELF::R_AARCH64_TLSDESC_CALL;
-    Fixups.push_back(
-        MCFixup::create(0, MI.getOperand(0).getExpr(),
-                        MCFixupKind(FirstLiteralRelocationKind + Reloc)));
+    Fixups.push_back(MCFixup::create(0, MI.getOperand(0).getExpr(), Reloc));
     return;
   }
 

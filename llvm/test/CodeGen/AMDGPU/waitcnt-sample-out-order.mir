@@ -1,0 +1,80 @@
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs -run-pass si-insert-waitcnts -o - %s | FileCheck -check-prefixes=GCN,GFX11 %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1150 -verify-machineinstrs -run-pass si-insert-waitcnts -o - %s | FileCheck -check-prefixes=GCN,GFX1150 %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs -run-pass si-insert-waitcnts -o - %s | FileCheck -check-prefixes=GCN,GFX12 %s
+
+---
+name: waitcnt-gather-sample
+machineFunctionInfo:
+  isEntryFunction: true
+body: |
+  bb.0:
+    ; GCN-LABEL: name: waitcnt-gather-sample
+    ; GCN: $vgpr10_vgpr11_vgpr12_vgpr13 = IMAGE_GATHER4_LZ_O_V4_V3 $vgpr0_vgpr1_vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, 1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (load (s128))
+    ; GFX1150-NEXT: S_WAITCNT 1015
+    ; GFX12-NEXT: S_WAIT_SAMPLECNT 0
+    ; GCN-NEXT: $vgpr13_vgpr14_vgpr15_vgpr16 = IMAGE_SAMPLE_V4_V2 $vgpr20_vgpr21, $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11, $sgpr0_sgpr1_sgpr2_sgpr3, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
+    $vgpr10_vgpr11_vgpr12_vgpr13 = IMAGE_GATHER4_LZ_O_V4_V3 $vgpr0_vgpr1_vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, 1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (load (s128))
+    $vgpr13_vgpr14_vgpr15_vgpr16 = IMAGE_SAMPLE_V4_V2 $vgpr20_vgpr21, $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11, $sgpr0_sgpr1_sgpr2_sgpr3, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
+    S_ENDPGM 0
+...
+---
+name: waitcnt-gather-sample-o
+machineFunctionInfo:
+  isEntryFunction: true
+body: |
+  bb.0:
+    ; GCN-LABEL: name: waitcnt-gather-sample-o
+    ; GCN: $vgpr10_vgpr11_vgpr12_vgpr13 = IMAGE_GATHER4_LZ_O_V4_V3 $vgpr0_vgpr1_vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, 1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (load (s128))
+    ; GFX12-NEXT: S_WAIT_SAMPLECNT 0
+    ; GCN-NEXT:     $vgpr13_vgpr14_vgpr15_vgpr16 = IMAGE_SAMPLE_O_V4_V2 $vgpr20_vgpr21, $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11, $sgpr0_sgpr1_sgpr2_sgpr3, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
+    $vgpr10_vgpr11_vgpr12_vgpr13 = IMAGE_GATHER4_LZ_O_V4_V3 $vgpr0_vgpr1_vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, 1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (load (s128))
+    $vgpr13_vgpr14_vgpr15_vgpr16 = IMAGE_SAMPLE_O_V4_V2 $vgpr20_vgpr21, $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11, $sgpr0_sgpr1_sgpr2_sgpr3, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
+    S_ENDPGM 0
+...
+---
+name: waitcnt-sample-gather
+machineFunctionInfo:
+  isEntryFunction: true
+body: |
+  bb.0:
+    ; GCN-LABEL: name: waitcnt-sample-gather
+    ; GCN: $vgpr13_vgpr14_vgpr15_vgpr16 = IMAGE_SAMPLE_V4_V2 $vgpr20_vgpr21, $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11, $sgpr0_sgpr1_sgpr2_sgpr3, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
+    ; GFX1150-NEXT: S_WAITCNT 1015
+    ; GFX12-NEXT: S_WAIT_SAMPLECNT 0
+    ; GCN-NEXT: $vgpr10_vgpr11_vgpr12_vgpr13 = IMAGE_GATHER4_LZ_O_V4_V3 $vgpr0_vgpr1_vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, 1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (load (s128))
+    $vgpr13_vgpr14_vgpr15_vgpr16 = IMAGE_SAMPLE_V4_V2 $vgpr20_vgpr21, $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11, $sgpr0_sgpr1_sgpr2_sgpr3, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
+    $vgpr10_vgpr11_vgpr12_vgpr13 = IMAGE_GATHER4_LZ_O_V4_V3 $vgpr0_vgpr1_vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, 1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (load (s128))
+    S_ENDPGM 0
+...
+---
+name: waitcnt-sample-load
+machineFunctionInfo:
+  isEntryFunction: true
+body: |
+  bb.0:
+    ; GCN-LABEL: name: waitcnt-sample-load
+    ; GCN: $vgpr13_vgpr14_vgpr15_vgpr16 = IMAGE_SAMPLE_V4_V2 $vgpr20_vgpr21, $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11, $sgpr0_sgpr1_sgpr2_sgpr3, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
+    ; GFX11: S_WAITCNT 1015
+    ; GFX1150-NEXT: S_WAITCNT 1015
+    ; GFX12-NEXT: S_WAIT_SAMPLECNT 0
+    ; GCN-NEXT: renamable $vgpr10_vgpr11_vgpr12_vgpr13 = IMAGE_MSAA_LOAD_V4_V2_gfx11 killed renamable $vgpr4_vgpr5, killed renamable $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 4, 7, -1, 0, 0, -1, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
+    $vgpr13_vgpr14_vgpr15_vgpr16 = IMAGE_SAMPLE_V4_V2 $vgpr20_vgpr21, $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11, $sgpr0_sgpr1_sgpr2_sgpr3, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
+    renamable $vgpr10_vgpr11_vgpr12_vgpr13 = IMAGE_MSAA_LOAD_V4_V2_gfx11 killed renamable $vgpr4_vgpr5, killed renamable $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 4, 7, -1, 0, 0, -1, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
+    S_ENDPGM 0
+...
+---
+name: waitcnt-load-sample
+machineFunctionInfo:
+  isEntryFunction: true
+body: |
+  bb.0:
+    ; GCN-LABEL: name: waitcnt-load-sample
+    ; GCN: renamable $vgpr10_vgpr11_vgpr12_vgpr13 = IMAGE_MSAA_LOAD_V4_V2_gfx11 killed renamable $vgpr4_vgpr5, killed renamable $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 4, 7, -1, 0, 0, -1, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
+    ; GFX11: S_WAITCNT 1015
+    ; GFX1150-NEXT: S_WAITCNT 1015
+    ; GFX12-NEXT: S_WAIT_LOADCNT 0
+    ; GCN-NEXT: $vgpr13_vgpr14_vgpr15_vgpr16 = IMAGE_SAMPLE_V4_V2 $vgpr20_vgpr21, $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11, $sgpr0_sgpr1_sgpr2_sgpr3, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
+    renamable $vgpr10_vgpr11_vgpr12_vgpr13 = IMAGE_MSAA_LOAD_V4_V2_gfx11 killed renamable $vgpr4_vgpr5, killed renamable $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 4, 7, -1, 0, 0, -1, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
+    $vgpr13_vgpr14_vgpr15_vgpr16 = IMAGE_SAMPLE_V4_V2 $vgpr20_vgpr21, $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11, $sgpr0_sgpr1_sgpr2_sgpr3, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
+    S_ENDPGM 0
+...

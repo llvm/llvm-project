@@ -40,13 +40,13 @@ if(MLIR_INCLUDE_TESTS)
     MLIRTestDialect
     MLIRTestDynDialect
     MLIRTestIR
-    MLIRTestOneToNTypeConversionPass
     MLIRTestPass
     MLIRTestReducer
     MLIRTestTransforms
     MLIRTilingInterfaceTestPasses
     MLIRTosaTestPasses
     MLIRVectorTestPasses
+    MLIRXeGPUTestPasses
     MLIRTestVectorToSPIRV
     MLIRLLVMTestPasses
     )

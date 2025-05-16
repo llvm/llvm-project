@@ -197,11 +197,6 @@ PowIStrengthReduction<PowIOpTy, DivOpTy, MulOpTy>::matchAndRewrite(
   if (exponentValue > exponentThreshold)
     return failure();
 
-  // Inverse the base for negative exponent, i.e. for
-  // `[fi]powi(x, negative_exponent)` set `x` to `1 / x`.
-  if (exponentIsNegative)
-    base = rewriter.create<DivOpTy>(loc, bcast(one), base);
-
   Value result = base;
   // Transform to naive sequence of multiplications:
   //   * For positive exponent case replace:
@@ -214,6 +209,11 @@ PowIStrengthReduction<PowIOpTy, DivOpTy, MulOpTy>::matchAndRewrite(
   //       (1 / x) * (1 / x) * (1 / x) * ...
   for (unsigned i = 1; i < exponentValue; ++i)
     result = rewriter.create<MulOpTy>(loc, result, base);
+
+  // Inverse the base for negative exponent, i.e. for
+  // `[fi]powi(x, negative_exponent)` set `x` to `1 / x`.
+  if (exponentIsNegative)
+    result = rewriter.create<DivOpTy>(loc, bcast(one), result);
 
   rewriter.replaceOp(op, result);
   return success();

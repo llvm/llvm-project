@@ -45,6 +45,7 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/Mangler.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
@@ -95,9 +96,11 @@ class AArch64AsmPrinter : public AsmPrinter {
       SectionToImportedFunctionCalls;
 
 public:
+  static char ID;
+
   AArch64AsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer)), MCInstLowering(OutContext, *this),
-        FM(*this) {}
+      : AsmPrinter(TM, std::move(Streamer), ID),
+        MCInstLowering(OutContext, *this), FM(*this) {}
 
   StringRef getPassName() const override { return "AArch64 Assembly Printer"; }
 
@@ -112,7 +115,8 @@ public:
   const MCExpr *lowerBlockAddressConstant(const BlockAddress &BA) override;
 
   void emitStartOfAsmFile(Module &M) override;
-  void emitJumpTableInfo() override;
+  void emitJumpTableImpl(const MachineJumpTableInfo &MJTI,
+                         ArrayRef<unsigned> JumpTableIndices) override;
   std::tuple<const MCSymbol *, uint64_t, const MCSymbol *,
              codeview::JumpTableEntrySize>
   getCodeViewJumpTableInfo(int JTI, const MachineInstr *BranchInstr,
@@ -226,6 +230,12 @@ public:
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override {
+    if (auto *PSIW = getAnalysisIfAvailable<ProfileSummaryInfoWrapperPass>())
+      PSI = &PSIW->getPSI();
+    if (auto *SDPIW =
+            getAnalysisIfAvailable<StaticDataProfileInfoWrapperPass>())
+      SDPI = &SDPIW->getStaticDataProfileInfo();
+
     AArch64FI = MF.getInfo<AArch64FunctionInfo>();
     STI = &MF.getSubtarget<AArch64Subtarget>();
 
@@ -254,7 +264,9 @@ public:
     return false;
   }
 
-  const MCExpr *lowerConstant(const Constant *CV) override;
+  const MCExpr *lowerConstant(const Constant *CV,
+                              const Constant *BaseCV = nullptr,
+                              uint64_t Offset = 0) override;
 
 private:
   void printOperand(const MachineInstr *MI, unsigned OpNum, raw_ostream &O);
@@ -317,32 +329,8 @@ void AArch64AsmPrinter::emitStartOfAsmFile(Module &M) {
   const Triple &TT = TM.getTargetTriple();
 
   if (TT.isOSBinFormatCOFF()) {
-    // Emit an absolute @feat.00 symbol
-    MCSymbol *S = MMI->getContext().getOrCreateSymbol(StringRef("@feat.00"));
-    OutStreamer->beginCOFFSymbolDef(S);
-    OutStreamer->emitCOFFSymbolStorageClass(COFF::IMAGE_SYM_CLASS_STATIC);
-    OutStreamer->emitCOFFSymbolType(COFF::IMAGE_SYM_DTYPE_NULL);
-    OutStreamer->endCOFFSymbolDef();
-    int64_t Feat00Value = 0;
-
-    if (M.getModuleFlag("cfguard")) {
-      // Object is CFG-aware.
-      Feat00Value |= COFF::Feat00Flags::GuardCF;
-    }
-
-    if (M.getModuleFlag("ehcontguard")) {
-      // Object also has EHCont.
-      Feat00Value |= COFF::Feat00Flags::GuardEHCont;
-    }
-
-    if (M.getModuleFlag("ms-kernel")) {
-      // Object is compiled with /kernel.
-      Feat00Value |= COFF::Feat00Flags::Kernel;
-    }
-
-    OutStreamer->emitSymbolAttribute(S, MCSA_Global);
-    OutStreamer->emitAssignment(
-        S, MCConstantExpr::create(Feat00Value, MMI->getContext()));
+    emitCOFFFeatureSymbol(M);
+    emitCOFFReplaceableFunctionData(M);
 
     if (M.getModuleFlag("import-call-optimization"))
       EnableImportCallOptimization = true;
@@ -361,7 +349,7 @@ void AArch64AsmPrinter::emitStartOfAsmFile(Module &M) {
   if (const auto *BTE = mdconst::extract_or_null<ConstantInt>(
           M.getModuleFlag("branch-target-enforcement"))) {
     if (!BTE->isZero()) {
-      BAFlags |= AArch64BuildAttrs::FeatureAndBitsFlag::Feature_BTI_Flag;
+      BAFlags |= AArch64BuildAttributes::FeatureAndBitsFlag::Feature_BTI_Flag;
       GNUFlags |= ELF::GNU_PROPERTY_AARCH64_FEATURE_1_BTI;
     }
   }
@@ -369,7 +357,7 @@ void AArch64AsmPrinter::emitStartOfAsmFile(Module &M) {
   if (const auto *GCS = mdconst::extract_or_null<ConstantInt>(
           M.getModuleFlag("guarded-control-stack"))) {
     if (!GCS->isZero()) {
-      BAFlags |= AArch64BuildAttrs::FeatureAndBitsFlag::Feature_GCS_Flag;
+      BAFlags |= AArch64BuildAttributes::FeatureAndBitsFlag::Feature_GCS_Flag;
       GNUFlags |= ELF::GNU_PROPERTY_AARCH64_FEATURE_1_GCS;
     }
   }
@@ -377,7 +365,7 @@ void AArch64AsmPrinter::emitStartOfAsmFile(Module &M) {
   if (const auto *Sign = mdconst::extract_or_null<ConstantInt>(
           M.getModuleFlag("sign-return-address"))) {
     if (!Sign->isZero()) {
-      BAFlags |= AArch64BuildAttrs::FeatureAndBitsFlag::Feature_PAC_Flag;
+      BAFlags |= AArch64BuildAttributes::FeatureAndBitsFlag::Feature_PAC_Flag;
       GNUFlags |= ELF::GNU_PROPERTY_AARCH64_FEATURE_1_PAC;
     }
   }
@@ -480,35 +468,42 @@ void AArch64AsmPrinter::emitAttributes(unsigned Flags,
 
   if (PAuthABIPlatform || PAuthABIVersion) {
     TS->emitAtributesSubsection(
-        AArch64BuildAttrs::getVendorName(AArch64BuildAttrs::AEABI_PAUTHABI),
-        AArch64BuildAttrs::SubsectionOptional::REQUIRED,
-        AArch64BuildAttrs::SubsectionType::ULEB128);
-    TS->emitAttribute(
-        AArch64BuildAttrs::getVendorName(AArch64BuildAttrs::AEABI_PAUTHABI),
-        AArch64BuildAttrs::TAG_PAUTH_PLATFORM, PAuthABIPlatform, "");
-    TS->emitAttribute(
-        AArch64BuildAttrs::getVendorName(AArch64BuildAttrs::AEABI_PAUTHABI),
-        AArch64BuildAttrs::TAG_PAUTH_SCHEMA, PAuthABIVersion, "");
+        AArch64BuildAttributes::getVendorName(
+            AArch64BuildAttributes::AEABI_PAUTHABI),
+        AArch64BuildAttributes::SubsectionOptional::REQUIRED,
+        AArch64BuildAttributes::SubsectionType::ULEB128);
+    TS->emitAttribute(AArch64BuildAttributes::getVendorName(
+                          AArch64BuildAttributes::AEABI_PAUTHABI),
+                      AArch64BuildAttributes::TAG_PAUTH_PLATFORM,
+                      PAuthABIPlatform, "");
+    TS->emitAttribute(AArch64BuildAttributes::getVendorName(
+                          AArch64BuildAttributes::AEABI_PAUTHABI),
+                      AArch64BuildAttributes::TAG_PAUTH_SCHEMA, PAuthABIVersion,
+                      "");
   }
 
-  unsigned BTIValue = (Flags & AArch64BuildAttrs::Feature_BTI_Flag) ? 1 : 0;
-  unsigned PACValue = (Flags & AArch64BuildAttrs::Feature_PAC_Flag) ? 1 : 0;
-  unsigned GCSValue = (Flags & AArch64BuildAttrs::Feature_GCS_Flag) ? 1 : 0;
+  unsigned BTIValue =
+      (Flags & AArch64BuildAttributes::Feature_BTI_Flag) ? 1 : 0;
+  unsigned PACValue =
+      (Flags & AArch64BuildAttributes::Feature_PAC_Flag) ? 1 : 0;
+  unsigned GCSValue =
+      (Flags & AArch64BuildAttributes::Feature_GCS_Flag) ? 1 : 0;
 
   if (BTIValue || PACValue || GCSValue) {
-    TS->emitAtributesSubsection(AArch64BuildAttrs::getVendorName(
-                                    AArch64BuildAttrs::AEABI_FEATURE_AND_BITS),
-                                AArch64BuildAttrs::SubsectionOptional::OPTIONAL,
-                                AArch64BuildAttrs::SubsectionType::ULEB128);
-    TS->emitAttribute(AArch64BuildAttrs::getVendorName(
-                          AArch64BuildAttrs::AEABI_FEATURE_AND_BITS),
-                      AArch64BuildAttrs::TAG_FEATURE_BTI, BTIValue, "");
-    TS->emitAttribute(AArch64BuildAttrs::getVendorName(
-                          AArch64BuildAttrs::AEABI_FEATURE_AND_BITS),
-                      AArch64BuildAttrs::TAG_FEATURE_PAC, PACValue, "");
-    TS->emitAttribute(AArch64BuildAttrs::getVendorName(
-                          AArch64BuildAttrs::AEABI_FEATURE_AND_BITS),
-                      AArch64BuildAttrs::TAG_FEATURE_GCS, GCSValue, "");
+    TS->emitAtributesSubsection(
+        AArch64BuildAttributes::getVendorName(
+            AArch64BuildAttributes::AEABI_FEATURE_AND_BITS),
+        AArch64BuildAttributes::SubsectionOptional::OPTIONAL,
+        AArch64BuildAttributes::SubsectionType::ULEB128);
+    TS->emitAttribute(AArch64BuildAttributes::getVendorName(
+                          AArch64BuildAttributes::AEABI_FEATURE_AND_BITS),
+                      AArch64BuildAttributes::TAG_FEATURE_BTI, BTIValue, "");
+    TS->emitAttribute(AArch64BuildAttributes::getVendorName(
+                          AArch64BuildAttributes::AEABI_FEATURE_AND_BITS),
+                      AArch64BuildAttributes::TAG_FEATURE_PAC, PACValue, "");
+    TS->emitAttribute(AArch64BuildAttributes::getVendorName(
+                          AArch64BuildAttributes::AEABI_FEATURE_AND_BITS),
+                      AArch64BuildAttributes::TAG_FEATURE_GCS, GCSValue, "");
   }
 }
 
@@ -912,19 +907,17 @@ void AArch64AsmPrinter::emitHwasanMemaccessSymbols(Module &M) {
       // Intentionally load the GOT entry and branch to it, rather than possibly
       // late binding the function, which may clobber the registers before we
       // have a chance to save them.
-      EmitToStreamer(
-          MCInstBuilder(AArch64::ADRP)
-              .addReg(AArch64::X16)
-              .addExpr(AArch64MCExpr::create(
-                  HwasanTagMismatchRef, AArch64MCExpr::VariantKind::VK_GOT_PAGE,
-                  OutContext)));
-      EmitToStreamer(
-          MCInstBuilder(AArch64::LDRXui)
-              .addReg(AArch64::X16)
-              .addReg(AArch64::X16)
-              .addExpr(AArch64MCExpr::create(
-                  HwasanTagMismatchRef, AArch64MCExpr::VariantKind::VK_GOT_LO12,
-                  OutContext)));
+      EmitToStreamer(MCInstBuilder(AArch64::ADRP)
+                         .addReg(AArch64::X16)
+                         .addExpr(AArch64MCExpr::create(
+                             HwasanTagMismatchRef, AArch64MCExpr::VK_GOT_PAGE,
+                             OutContext)));
+      EmitToStreamer(MCInstBuilder(AArch64::LDRXui)
+                         .addReg(AArch64::X16)
+                         .addReg(AArch64::X16)
+                         .addExpr(AArch64MCExpr::create(
+                             HwasanTagMismatchRef, AArch64MCExpr::VK_GOT_LO12,
+                             OutContext)));
       EmitToStreamer(MCInstBuilder(AArch64::BR).addReg(AArch64::X16));
     }
   }
@@ -1134,7 +1127,7 @@ bool AArch64AsmPrinter::printAsmRegInClass(const MachineOperand &MO,
   assert(MO.isReg() && "Should only get here with a register!");
   const TargetRegisterInfo *RI = STI->getRegisterInfo();
   Register Reg = MO.getReg();
-  unsigned RegToPrint = RC->getRegister(RI->getEncodingValue(Reg));
+  MCRegister RegToPrint = RC->getRegister(RI->getEncodingValue(Reg));
   if (!RI->regsOverlap(RegToPrint, Reg))
     return true;
   O << AArch64InstPrinter::getRegisterName(RegToPrint, AltName);
@@ -1276,19 +1269,26 @@ void AArch64AsmPrinter::PrintDebugValueComment(const MachineInstr *MI,
   printOperand(MI, NOps - 2, OS);
 }
 
-void AArch64AsmPrinter::emitJumpTableInfo() {
-  const MachineJumpTableInfo *MJTI = MF->getJumpTableInfo();
-  if (!MJTI) return;
-
-  const std::vector<MachineJumpTableEntry> &JT = MJTI->getJumpTables();
-  if (JT.empty()) return;
-
+void AArch64AsmPrinter::emitJumpTableImpl(const MachineJumpTableInfo &MJTI,
+                                          ArrayRef<unsigned> JumpTableIndices) {
+  // Fast return if there is nothing to emit to avoid creating empty sections.
+  if (JumpTableIndices.empty())
+    return;
   const TargetLoweringObjectFile &TLOF = getObjFileLowering();
-  MCSection *ReadOnlySec = TLOF.getSectionForJumpTable(MF->getFunction(), TM);
+  const auto &F = MF->getFunction();
+  ArrayRef<MachineJumpTableEntry> JT = MJTI.getJumpTables();
+
+  MCSection *ReadOnlySec = nullptr;
+  if (TM.Options.EnableStaticDataPartitioning) {
+    ReadOnlySec =
+        TLOF.getSectionForJumpTable(F, TM, &JT[JumpTableIndices.front()]);
+  } else {
+    ReadOnlySec = TLOF.getSectionForJumpTable(F, TM);
+  }
   OutStreamer->switchSection(ReadOnlySec);
 
   auto AFI = MF->getInfo<AArch64FunctionInfo>();
-  for (unsigned JTI = 0, e = JT.size(); JTI != e; ++JTI) {
+  for (unsigned JTI : JumpTableIndices) {
     const std::vector<MachineBasicBlock*> &JTBBs = JT[JTI].MBBs;
 
     // If this jump table was deleted, ignore it.
@@ -1374,22 +1374,21 @@ void AArch64AsmPrinter::emitFunctionEntryLabel() {
       return Sym;
     };
 
-    if (MCSymbol *UnmangledSym =
-            getSymbolFromMetadata("arm64ec_unmangled_name")) {
-      MCSymbol *ECMangledSym = getSymbolFromMetadata("arm64ec_ecmangled_name");
-
-      if (ECMangledSym) {
-        // An external function, emit the alias from the unmangled symbol to
-        // mangled symbol name and the alias from the mangled symbol to guest
-        // exit thunk.
+    SmallVector<MDNode *> UnmangledNames;
+    MF->getFunction().getMetadata("arm64ec_unmangled_name", UnmangledNames);
+    for (MDNode *Node : UnmangledNames) {
+      StringRef NameStr = cast<MDString>(Node->getOperand(0))->getString();
+      MCSymbol *UnmangledSym = MMI->getContext().getOrCreateSymbol(NameStr);
+      if (std::optional<std::string> MangledName =
+              getArm64ECMangledFunctionName(UnmangledSym->getName())) {
+        MCSymbol *ECMangledSym =
+            MMI->getContext().getOrCreateSymbol(*MangledName);
         emitFunctionAlias(UnmangledSym, ECMangledSym);
-        emitFunctionAlias(ECMangledSym, CurrentFnSym);
-      } else {
-        // A function implementation, emit the alias from the unmangled symbol
-        // to mangled symbol name.
-        emitFunctionAlias(UnmangledSym, CurrentFnSym);
       }
     }
+    if (MCSymbol *ECMangledSym =
+            getSymbolFromMetadata("arm64ec_ecmangled_name"))
+      emitFunctionAlias(ECMangledSym, CurrentFnSym);
   }
 }
 
@@ -3491,14 +3490,21 @@ void AArch64AsmPrinter::emitMachOIFuncStubHelperBody(Module &M,
                      .addReg(AArch64::X16));
 }
 
-const MCExpr *AArch64AsmPrinter::lowerConstant(const Constant *CV) {
+const MCExpr *AArch64AsmPrinter::lowerConstant(const Constant *CV,
+                                               const Constant *BaseCV,
+                                               uint64_t Offset) {
   if (const GlobalValue *GV = dyn_cast<GlobalValue>(CV)) {
     return MCSymbolRefExpr::create(MCInstLowering.GetGlobalValueSymbol(GV, 0),
                                    OutContext);
   }
 
-  return AsmPrinter::lowerConstant(CV);
+  return AsmPrinter::lowerConstant(CV, BaseCV, Offset);
 }
+
+char AArch64AsmPrinter::ID = 0;
+
+INITIALIZE_PASS(AArch64AsmPrinter, "aarch64-asm-printer",
+                "AArch64 Assmebly Printer", false, false)
 
 // Force static initialization.
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAArch64AsmPrinter() {

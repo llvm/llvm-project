@@ -26,3 +26,12 @@ struct S {
   // CHECK-NEXT:   `-DeclRefExpr 0x{{[^ ]*}} <col:5> 'S<T>' lvalue ParmVar 0x{{[^ ]*}} 's' 'S<T>'
 };
 }
+
+namespace GH130272 {
+struct A {};
+struct B {
+  operator A(this B);
+};
+A a = A(B{});
+// CHECK: CallExpr 0x{{[^ ]*}} <col:9, col:11> 'A':'GH130272::A'
+}

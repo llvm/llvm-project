@@ -144,7 +144,7 @@ llvm.func @sections_(%arg0: !llvm.ptr {fir.bindc_name = "x"}) attributes {fir.in
 // CHECK:       omp_section_loop.inc:                             ; preds = %[[VAL_59]]
 // CHECK:         %[[VAL_35]] = add nuw i32 %[[VAL_34]], 1
 // CHECK:         br label %[[VAL_32]]
-// CHECK:       omp.par.outlined.exit.exitStub:                   ; preds = %[[VAL_54]]
+// CHECK:       omp.par.exit.exitStub:                            ; preds = %[[VAL_54]]
 // CHECK:         ret void
 // CHECK:         %[[VAL_70:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_71:.*]], i64 0, i64 0
 // CHECK:         %[[VAL_72:.*]] = load ptr, ptr %[[VAL_70]], align 8

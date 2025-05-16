@@ -15,7 +15,7 @@
 #include "flang/Optimizer/Builder/DirectivesCommon.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
-#include "flang/Optimizer/CodeGen/CGOps.h"
+#include "flang/Optimizer/Dialect/FIRCG/CGOps.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
@@ -188,6 +188,77 @@ OpenACCMappableModel<fir::SequenceType>::generateAccBounds(
                                                mlir::acc::DataBoundsType>(
           firBuilder, loc, exv, info);
     }
+
+    if (mlir::isa<hlfir::DeclareOp, fir::DeclareOp>(varPtr.getDefiningOp())) {
+      mlir::Value zero =
+          firBuilder.createIntegerConstant(loc, builder.getIndexType(), 0);
+      mlir::Value one =
+          firBuilder.createIntegerConstant(loc, builder.getIndexType(), 1);
+
+      mlir::Value shape;
+      if (auto declareOp =
+              mlir::dyn_cast_if_present<fir::DeclareOp>(varPtr.getDefiningOp()))
+        shape = declareOp.getShape();
+      else if (auto declareOp = mlir::dyn_cast_if_present<hlfir::DeclareOp>(
+                   varPtr.getDefiningOp()))
+        shape = declareOp.getShape();
+
+      const bool strideIncludeLowerExtent = true;
+
+      llvm::SmallVector<mlir::Value> accBounds;
+      if (auto shapeOp =
+              mlir::dyn_cast_if_present<fir::ShapeOp>(shape.getDefiningOp())) {
+        mlir::Value cummulativeExtent = one;
+        for (auto extent : shapeOp.getExtents()) {
+          mlir::Value upperbound =
+              builder.create<mlir::arith::SubIOp>(loc, extent, one);
+          mlir::Value stride = one;
+          if (strideIncludeLowerExtent) {
+            stride = cummulativeExtent;
+            cummulativeExtent = builder.create<mlir::arith::MulIOp>(
+                loc, cummulativeExtent, extent);
+          }
+          auto accBound = builder.create<mlir::acc::DataBoundsOp>(
+              loc, mlir::acc::DataBoundsType::get(builder.getContext()),
+              /*lowerbound=*/zero, /*upperbound=*/upperbound,
+              /*extent=*/extent, /*stride=*/stride, /*strideInBytes=*/false,
+              /*startIdx=*/one);
+          accBounds.push_back(accBound);
+        }
+      } else if (auto shapeShiftOp =
+                     mlir::dyn_cast_if_present<fir::ShapeShiftOp>(
+                         shape.getDefiningOp())) {
+        mlir::Value lowerbound;
+        mlir::Value cummulativeExtent = one;
+        for (auto [idx, val] : llvm::enumerate(shapeShiftOp.getPairs())) {
+          if (idx % 2 == 0) {
+            lowerbound = val;
+          } else {
+            mlir::Value extent = val;
+            mlir::Value upperbound =
+                builder.create<mlir::arith::SubIOp>(loc, extent, one);
+            upperbound = builder.create<mlir::arith::AddIOp>(loc, lowerbound,
+                                                             upperbound);
+            mlir::Value stride = one;
+            if (strideIncludeLowerExtent) {
+              stride = cummulativeExtent;
+              cummulativeExtent = builder.create<mlir::arith::MulIOp>(
+                  loc, cummulativeExtent, extent);
+            }
+            auto accBound = builder.create<mlir::acc::DataBoundsOp>(
+                loc, mlir::acc::DataBoundsType::get(builder.getContext()),
+                /*lowerbound=*/zero, /*upperbound=*/upperbound,
+                /*extent=*/extent, /*stride=*/stride, /*strideInBytes=*/false,
+                /*startIdx=*/lowerbound);
+            accBounds.push_back(accBound);
+          }
+        }
+      }
+
+      if (!accBounds.empty())
+        return accBounds;
+    }
+
     assert(false && "array with unknown dimension expected to have descriptor");
     return {};
   }

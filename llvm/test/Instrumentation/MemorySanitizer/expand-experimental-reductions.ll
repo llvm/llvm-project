@@ -2,14 +2,6 @@
 ; RUN: opt < %s -passes=msan -S | FileCheck %s
 ;
 ; Forked from llvm/test/CodeGen/Generic/expand-experimental-reductions.ll
-;
-; Handled suboptimally by visitInstruction:
-; - llvm.vector.reduce.smax
-; - llvm.vector.reduce.smin
-; - llvm.vector.reduce.umax
-; - llvm.vector.reduce.umin
-; - llvm.vector.reduce.fmax
-; - llvm.vector.reduce.fmin
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -268,15 +260,9 @@ define i64 @smax_i64(<2 x i64> %vec) #0 {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[TMP0]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB2:.*]], label %[[BB3:.*]], !prof [[PROF1:![0-9]+]]
-; CHECK:       [[BB2]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5:[0-9]+]]
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB3]]:
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vector.reduce.or.v2i64(<2 x i64> [[TMP0]])
 ; CHECK-NEXT:    [[R:%.*]] = call i64 @llvm.vector.reduce.smax.v2i64(<2 x i64> [[VEC]])
-; CHECK-NEXT:    store i64 0, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store i64 [[TMP1]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i64 [[R]]
 ;
 entry:
@@ -290,15 +276,9 @@ define i64 @smin_i64(<2 x i64> %vec) #0 {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[TMP0]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB2:.*]], label %[[BB3:.*]], !prof [[PROF1]]
-; CHECK:       [[BB2]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB3]]:
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vector.reduce.or.v2i64(<2 x i64> [[TMP0]])
 ; CHECK-NEXT:    [[R:%.*]] = call i64 @llvm.vector.reduce.smin.v2i64(<2 x i64> [[VEC]])
-; CHECK-NEXT:    store i64 0, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store i64 [[TMP1]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i64 [[R]]
 ;
 entry:
@@ -312,15 +292,9 @@ define i64 @umax_i64(<2 x i64> %vec) #0 {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[TMP0]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB2:.*]], label %[[BB3:.*]], !prof [[PROF1]]
-; CHECK:       [[BB2]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB3]]:
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vector.reduce.or.v2i64(<2 x i64> [[TMP0]])
 ; CHECK-NEXT:    [[R:%.*]] = call i64 @llvm.vector.reduce.umax.v2i64(<2 x i64> [[VEC]])
-; CHECK-NEXT:    store i64 0, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store i64 [[TMP1]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i64 [[R]]
 ;
 entry:
@@ -334,15 +308,9 @@ define i64 @umin_i64(<2 x i64> %vec) #0 {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[TMP0]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB2:.*]], label %[[BB3:.*]], !prof [[PROF1]]
-; CHECK:       [[BB2]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB3]]:
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vector.reduce.or.v2i64(<2 x i64> [[TMP0]])
 ; CHECK-NEXT:    [[R:%.*]] = call i64 @llvm.vector.reduce.umin.v2i64(<2 x i64> [[VEC]])
-; CHECK-NEXT:    store i64 0, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store i64 [[TMP1]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i64 [[R]]
 ;
 entry:
@@ -357,15 +325,9 @@ define double @fmax_f64(<2 x double> %vec) #0 {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[TMP0]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB2:.*]], label %[[BB3:.*]], !prof [[PROF1]]
-; CHECK:       [[BB2]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB3]]:
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vector.reduce.or.v2i64(<2 x i64> [[TMP0]])
 ; CHECK-NEXT:    [[R:%.*]] = call double @llvm.vector.reduce.fmax.v2f64(<2 x double> [[VEC]])
-; CHECK-NEXT:    store i64 0, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store i64 [[TMP1]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret double [[R]]
 ;
 entry:
@@ -380,15 +342,9 @@ define double @fmin_f64(<2 x double> %vec) #0 {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[TMP0]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB2:.*]], label %[[BB3:.*]], !prof [[PROF1]]
-; CHECK:       [[BB2]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB3]]:
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vector.reduce.or.v2i64(<2 x i64> [[TMP0]])
 ; CHECK-NEXT:    [[R:%.*]] = call double @llvm.vector.reduce.fmin.v2f64(<2 x double> [[VEC]])
-; CHECK-NEXT:    store i64 0, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store i64 [[TMP1]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret double [[R]]
 ;
 entry:
@@ -417,6 +373,3 @@ entry:
 }
 
 attributes #0 = { sanitize_memory }
-;.
-; CHECK: [[PROF1]] = !{!"branch_weights", i32 1, i32 1048575}
-;.

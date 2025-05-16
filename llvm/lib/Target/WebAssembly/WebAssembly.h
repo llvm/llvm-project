@@ -64,6 +64,7 @@ void initializeOptimizeReturnedPass(PassRegistry &);
 void initializeWebAssemblyRefTypeMem2LocalPass(PassRegistry &);
 void initializeWebAssemblyAddMissingPrototypesPass(PassRegistry &);
 void initializeWebAssemblyArgumentMovePass(PassRegistry &);
+void initializeWebAssemblyAsmPrinterPass(PassRegistry &);
 void initializeWebAssemblyCleanCodeAfterTrapPass(PassRegistry &);
 void initializeWebAssemblyCFGSortPass(PassRegistry &);
 void initializeWebAssemblyCFGStackifyPass(PassRegistry &);

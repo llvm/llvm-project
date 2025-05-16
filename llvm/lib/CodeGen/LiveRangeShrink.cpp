@@ -95,14 +95,25 @@ static MachineInstr *FindDominatedInstruction(MachineInstr &New,
   return Old;
 }
 
+/// Returns whether this instruction is considered a code motion barrier by this
+/// pass. We can be less conservative than hasUnmodeledSideEffects() when
+/// deciding whether an instruction is a barrier because it is known that pseudo
+/// probes are safe to move in this pass specifically (see commit 1cb47a063e2b).
+static bool isCodeMotionBarrier(MachineInstr &MI) {
+  return MI.hasUnmodeledSideEffects() && !MI.isPseudoProbe();
+}
+
 /// Builds Instruction to its dominating order number map \p M by traversing
 /// from instruction \p Start.
 static void BuildInstOrderMap(MachineBasicBlock::iterator Start,
                               InstOrderMap &M) {
   M.clear();
   unsigned i = 0;
-  for (MachineInstr &I : make_range(Start, Start->getParent()->end()))
+  for (MachineInstr &I : make_range(Start, Start->getParent()->end())) {
+    if (isCodeMotionBarrier(I))
+      break;
     M[&I] = i++;
+  }
 }
 
 bool LiveRangeShrink::runOnMachineFunction(MachineFunction &MF) {
@@ -142,8 +153,6 @@ bool LiveRangeShrink::runOnMachineFunction(MachineFunction &MF) {
     while (Next != MBB.end()) {
       MachineInstr &MI = *Next;
       Next = MBB.SkipPHIsLabelsAndDebug(++Next);
-      if (MI.mayStore())
-        SawStore = true;
 
       unsigned CurrentOrder = IOM[&MI];
       unsigned Barrier = 0;
@@ -153,21 +162,20 @@ bool LiveRangeShrink::runOnMachineFunction(MachineFunction &MF) {
           continue;
         if (MO.isUse())
           UseMap[MO.getReg()] = std::make_pair(CurrentOrder, &MI);
-        else if (MO.isDead() && UseMap.count(MO.getReg()))
+        else if (MO.isDead()) {
           // Barrier is the last instruction where MO get used. MI should not
           // be moved above Barrier.
-          if (Barrier < UseMap[MO.getReg()].first) {
-            Barrier = UseMap[MO.getReg()].first;
-            BarrierMI = UseMap[MO.getReg()].second;
-          }
+          auto It = UseMap.find(MO.getReg());
+          if (It != UseMap.end() && Barrier < It->second.first)
+            std::tie(Barrier, BarrierMI) = It->second;
+        }
       }
 
       if (!MI.isSafeToMove(SawStore)) {
         // If MI has side effects, it should become a barrier for code motion.
         // IOM is rebuild from the next instruction to prevent later
         // instructions from being moved before this MI.
-        if (MI.hasUnmodeledSideEffects() && !MI.isPseudoProbe() &&
-            Next != MBB.end()) {
+        if (isCodeMotionBarrier(MI) && Next != MBB.end()) {
           BuildInstOrderMap(Next, IOM);
           SawStore = false;
         }

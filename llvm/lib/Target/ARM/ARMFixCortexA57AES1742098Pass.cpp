@@ -70,9 +70,7 @@ namespace {
 class ARMFixCortexA57AES1742098 : public MachineFunctionPass {
 public:
   static char ID;
-  explicit ARMFixCortexA57AES1742098() : MachineFunctionPass(ID) {
-    initializeARMFixCortexA57AES1742098Pass(*PassRegistry::getPassRegistry());
-  }
+  explicit ARMFixCortexA57AES1742098() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &F) override;
 

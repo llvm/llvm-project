@@ -54,8 +54,10 @@ static std::optional<TemplateSpecializationTypeLoc>
 matchEnableIfSpecializationImplTypename(TypeLoc TheType) {
   if (const auto Dep = TheType.getAs<DependentNameTypeLoc>()) {
     const IdentifierInfo *Identifier = Dep.getTypePtr()->getIdentifier();
+    ElaboratedTypeKeyword Keyword = Dep.getTypePtr()->getKeyword();
     if (!Identifier || Identifier->getName() != "type" ||
-        Dep.getTypePtr()->getKeyword() != ElaboratedTypeKeyword::Typename) {
+        (Keyword != ElaboratedTypeKeyword::Typename &&
+         Keyword != ElaboratedTypeKeyword::None)) {
       return std::nullopt;
     }
     TheType = Dep.getQualifierLoc().getTypeLoc();
@@ -108,8 +110,10 @@ matchEnableIfSpecializationImplTrait(TypeLoc TheType) {
 
     if (const auto *AliasedType =
             dyn_cast<DependentNameType>(Specialization->getAliasedType())) {
+      ElaboratedTypeKeyword Keyword = AliasedType->getKeyword();
       if (AliasedType->getIdentifier()->getName() != "type" ||
-          AliasedType->getKeyword() != ElaboratedTypeKeyword::Typename) {
+          (Keyword != ElaboratedTypeKeyword::Typename &&
+           Keyword != ElaboratedTypeKeyword::None)) {
         return std::nullopt;
       }
     } else {
@@ -356,7 +360,7 @@ static std::vector<FixItHint> handleReturnType(const FunctionDecl *Function,
   if (!TypeText)
     return {};
 
-  SmallVector<const Expr *, 3> ExistingConstraints;
+  SmallVector<AssociatedConstraint, 3> ExistingConstraints;
   Function->getAssociatedConstraints(ExistingConstraints);
   if (!ExistingConstraints.empty()) {
     // FIXME - Support adding new constraints to existing ones. Do we need to
@@ -404,7 +408,7 @@ handleTrailingTemplateType(const FunctionTemplateDecl *FunctionTemplate,
   if (!ConditionText)
     return {};
 
-  SmallVector<const Expr *, 3> ExistingConstraints;
+  SmallVector<AssociatedConstraint, 3> ExistingConstraints;
   Function->getAssociatedConstraints(ExistingConstraints);
   if (!ExistingConstraints.empty()) {
     // FIXME - Support adding new constraints to existing ones. Do we need to

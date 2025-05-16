@@ -311,7 +311,7 @@ def int_arm_isb : ClangBuiltin<"__builtin_arm_isb">, MSBuiltin<"__isb">,
 // VFP
 
 def int_arm_get_fpscr : ClangBuiltin<"__builtin_arm_get_fpscr">,
-                       DefaultAttrsIntrinsic<[llvm_i32_ty], [], []>;
+                       DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrReadMem]>;
 def int_arm_set_fpscr : ClangBuiltin<"__builtin_arm_set_fpscr">,
                        DefaultAttrsIntrinsic<[], [llvm_i32_ty], []>;
 def int_arm_vcvtr : DefaultAttrsIntrinsic<[llvm_float_ty],

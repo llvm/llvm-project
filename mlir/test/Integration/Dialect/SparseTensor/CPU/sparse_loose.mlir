@@ -41,7 +41,7 @@ module {
 
     //
     // Note: position for loose_compressed level can vary in the end,
-    // therefore we loosly check it with {{.*}}.
+    // therefore we loosely check it with {{.*}}.
     //
     // CHECK:   ---- Sparse Tensor ----
     // CHECK-NEXT: nse = 17

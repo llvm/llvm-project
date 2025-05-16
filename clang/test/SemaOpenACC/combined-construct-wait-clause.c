@@ -10,9 +10,6 @@ void uses() {
 #pragma acc parallel loop wait
   for (unsigned i = 0; i < 5; ++i);
 
-#pragma acc serial loop wait()
-  for (unsigned i = 0; i < 5; ++i);
-
 #pragma acc kernels loop wait(getS(), getI())
   for (unsigned i = 0; i < 5; ++i);
 

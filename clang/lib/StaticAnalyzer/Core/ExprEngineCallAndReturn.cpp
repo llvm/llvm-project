@@ -19,9 +19,9 @@
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicExtent.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/EntryPointStats.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "llvm/ADT/SmallSet.h"
-#include "llvm/ADT/Statistic.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/SaveAndRestore.h"
@@ -32,14 +32,14 @@ using namespace ento;
 
 #define DEBUG_TYPE "ExprEngine"
 
-STATISTIC(NumOfDynamicDispatchPathSplits,
-  "The # of times we split the path due to imprecise dynamic dispatch info");
+STAT_COUNTER(
+    NumOfDynamicDispatchPathSplits,
+    "The # of times we split the path due to imprecise dynamic dispatch info");
 
-STATISTIC(NumInlinedCalls,
-  "The # of times we inlined a call");
+STAT_COUNTER(NumInlinedCalls, "The # of times we inlined a call");
 
-STATISTIC(NumReachedInlineCountMax,
-  "The # of times we reached inline count maximum");
+STAT_COUNTER(NumReachedInlineCountMax,
+             "The # of times we reached inline count maximum");
 
 void ExprEngine::processCallEnter(NodeBuilderContext& BC, CallEnter CE,
                                   ExplodedNode *Pred) {
@@ -746,6 +746,7 @@ ProgramStateRef ExprEngine::bindReturnValue(const CallEvent &Call,
                                             const LocationContext *LCtx,
                                             ProgramStateRef State) {
   const Expr *E = Call.getOriginExpr();
+  const ConstCFGElementRef &Elem = Call.getCFGElementRef();
   if (!E)
     return State;
 
@@ -788,7 +789,7 @@ ProgramStateRef ExprEngine::bindReturnValue(const CallEvent &Call,
     RegionAndSymbolInvalidationTraits ITraits;
     ITraits.setTrait(TargetR,
         RegionAndSymbolInvalidationTraits::TK_DoNotInvalidateSuperRegion);
-    State = State->invalidateRegions(TargetR, E, Count, LCtx,
+    State = State->invalidateRegions(TargetR, Elem, Count, LCtx,
                                      /* CausesPointerEscape=*/false, nullptr,
                                      &Call, &ITraits);
 
@@ -800,7 +801,7 @@ ProgramStateRef ExprEngine::bindReturnValue(const CallEvent &Call,
     // a regular unknown pointer.
     const auto *CNE = dyn_cast<CXXNewExpr>(E);
     if (CNE && CNE->getOperatorNew()->isReplaceableGlobalAllocationFunction()) {
-      R = svalBuilder.getConjuredHeapSymbolVal(E, LCtx, Count);
+      R = svalBuilder.getConjuredHeapSymbolVal(Elem, LCtx, E->getType(), Count);
       const MemRegion *MR = R.getAsRegion()->StripCasts();
 
       // Store the extent of the allocated object(s).
@@ -824,7 +825,7 @@ ProgramStateRef ExprEngine::bindReturnValue(const CallEvent &Call,
 
       State = setDynamicExtent(State, MR, Size.castAs<DefinedOrUnknownSVal>());
     } else {
-      R = svalBuilder.conjureSymbolVal(nullptr, E, LCtx, ResultTy, Count);
+      R = svalBuilder.conjureSymbolVal(Elem, LCtx, ResultTy, Count);
     }
   }
   return State->BindExpr(E, LCtx, R);

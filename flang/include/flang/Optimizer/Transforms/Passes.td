@@ -210,7 +210,8 @@ def AddDebugInfo : Pass<"add-debug-info", "mlir::ModuleOp"> {
   }];
   let constructor = "::fir::createAddDebugInfoPass()";
   let dependentDialects = [
-    "fir::FIROpsDialect", "mlir::func::FuncDialect", "mlir::LLVM::LLVMDialect"
+    "fir::FIROpsDialect", "mlir::func::FuncDialect", "mlir::LLVM::LLVMDialect",
+    "mlir::DLTIDialect"
   ];
   let options = [
     Option<"debugLevel", "debug-level",
@@ -355,7 +356,7 @@ def LoopVersioning : Pass<"loop-versioning", "mlir::func::FuncOp"> {
     an array has element sized stride. The element sizes stride allows some
     loops to be vectorized as well as other loop optimizations.
   }];
-  let dependentDialects = [ "fir::FIROpsDialect" ];
+  let dependentDialects = [ "fir::FIROpsDialect", "mlir::DLTIDialect" ];
 }
 
 def VScaleAttr : Pass<"vscale-attr", "mlir::func::FuncOp"> {
@@ -393,6 +394,14 @@ def FunctionAttr : Pass<"function-attr", "mlir::func::FuncOp"> {
             clEnumValN(mlir::LLVM::framePointerKind::FramePointerKind::All, "All", ""),
             clEnumValN(mlir::LLVM::framePointerKind::FramePointerKind::Reserved, "Reserved", "")
           )}]>,
+       Option<"instrumentFunctionEntry", "instrument-function-entry",
+              "std::string", /*default=*/"",
+              "Sets the name of the profiling function called during function "
+              "entry">,
+       Option<"instrumentFunctionExit", "instrument-function-exit",
+              "std::string", /*default=*/"",
+              "Sets the name of the profiling function called during function "
+              "exit">,
        Option<"noInfsFPMath", "no-infs-fp-math", "bool", /*default=*/"false",
               "Set the no-infs-fp-math attribute on functions in the module.">,
        Option<"noNaNsFPMath", "no-nans-fp-math", "bool", /*default=*/"false",
@@ -427,7 +436,7 @@ def AssumedRankOpConversion : Pass<"fir-assumed-rank-op", "mlir::ModuleOp"> {
 def CUFOpConversion : Pass<"cuf-convert", "mlir::ModuleOp"> {
   let summary = "Convert some CUF operations to runtime calls";
   let dependentDialects = [
-    "fir::FIROpsDialect", "mlir::gpu::GPUDialect"
+    "fir::FIROpsDialect", "mlir::gpu::GPUDialect", "mlir::DLTIDialect"
   ];
 }
 
@@ -442,14 +451,30 @@ def CUFDeviceGlobal :
 def CUFAddConstructor : Pass<"cuf-add-constructor", "mlir::ModuleOp"> {
   let summary = "Add constructor to register CUDA Fortran allocators";
   let dependentDialects = [
-    "cuf::CUFDialect", "mlir::func::FuncDialect"
+    "cuf::CUFDialect", "mlir::func::FuncDialect", "mlir::DLTIDialect"
   ];
 }
 
 def CUFGPUToLLVMConversion : Pass<"cuf-gpu-convert-to-llvm", "mlir::ModuleOp"> {
   let summary = "Convert some GPU operations lowered from CUF to runtime calls";
   let dependentDialects = [
-    "mlir::LLVM::LLVMDialect"
+    "mlir::LLVM::LLVMDialect", "mlir::DLTIDialect"
+  ];
+}
+
+def CUFComputeSharedMemoryOffsetsAndSize
+    : Pass<"cuf-compute-shared-memory", "mlir::ModuleOp"> {
+  let summary = "Create the shared memory global variable and set offsets";
+
+  let description = [{
+    Compute the size and alignment of the shared memory global and materialize
+    it. Compute the offset of each cuf.shared_memory operation according to
+    the global and set it.
+  }];
+
+  let dependentDialects = [
+    "cuf::CUFDialect", "fir::FIROpsDialect", "mlir::gpu::GPUDialect",
+    "mlir::DLTIDialect"
   ];
 }
 
@@ -484,6 +509,20 @@ def GenRuntimeCallsForTest
               "are generated.">,
   ];
   let dependentDialects = ["fir::FIROpsDialect", "mlir::func::FuncDialect"];
+}
+
+def SimplifyFIROperations : Pass<"simplify-fir-operations", "mlir::ModuleOp"> {
+  let summary = "Simplifies complex FIR operations";
+  let description = [{
+    Expands complex FIR operations into their equivalent using
+    FIR, SCF and other usual dialects. It may also generate calls
+    to Fortran runtime.
+  }];
+
+  let options = [Option<
+      "preferInlineImplementation", "prefer-inline-implementation", "bool",
+      /*default=*/"false",
+      "Prefer expanding without using Fortran runtime calls.">];
 }
 
 #endif // FLANG_OPTIMIZER_TRANSFORMS_PASSES

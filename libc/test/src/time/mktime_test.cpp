@@ -18,6 +18,10 @@ using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 using LIBC_NAMESPACE::time_constants::Month;
 
+#ifndef EOVERFLOW
+#define EOVERFLOW 0
+#endif
+
 static inline constexpr int tm_year(int year) {
   return year - LIBC_NAMESPACE::time_constants::TIME_YEAR_BASE;
 }

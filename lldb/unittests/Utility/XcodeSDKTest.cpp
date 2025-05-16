@@ -66,13 +66,14 @@ TEST(XcodeSDKTest, MergeTest) {
   empty.Merge(XcodeSDK("MacOSX10.14.Internal.sdk"));
   EXPECT_EQ(empty.GetString(), llvm::StringRef("MacOSX10.14.Internal.sdk"));
   EXPECT_FALSE(empty.GetSysroot());
-  empty.Merge(XcodeSDK("MacOSX9.5.Internal.sdk", FileSpec{"/Path/To/9.5.sdk"}));
+  empty.Merge(XcodeSDK("MacOSX9.5.Internal.sdk",
+                       FileSpec{"/Path/To/MacOSX9.5.Internal.sdk"}));
   EXPECT_FALSE(empty.GetSysroot());
-  empty.Merge(XcodeSDK("MacOSX12.5.sdk", FileSpec{"/Path/To/12.5.sdk"}));
-  EXPECT_EQ(empty.GetSysroot(), FileSpec{"/Path/To/12.5.sdk"});
+  empty.Merge(XcodeSDK("MacOSX12.5.sdk", FileSpec{"/Path/To/MacOSX12.5.sdk"}));
+  EXPECT_EQ(empty.GetSysroot(), FileSpec{"/Path/To/MacOSX12.5.sdk"});
   empty.Merge(XcodeSDK("MacOSX11.5.Internal.sdk",
-                       FileSpec{"/Path/To/12.5.Internal.sdk"}));
-  EXPECT_EQ(empty.GetSysroot(), FileSpec{"/Path/To/12.5.Internal.sdk"});
+                       FileSpec{"/Path/To/MacOSX11.5.Internal.sdk"}));
+  EXPECT_EQ(empty.GetSysroot(), FileSpec{"/Path/To/MacOSX12.5.Internal.sdk"});
 }
 
 #ifndef _WIN32
