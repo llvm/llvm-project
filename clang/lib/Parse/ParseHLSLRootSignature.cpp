@@ -393,10 +393,10 @@ std::optional<StaticSampler> RootSignatureParser::parseStaticSampler() {
     Sampler.MaxAnisotropy = Params->MaxAnisotropy.value();
 
   if (Params->ComparisonFunc.has_value())
-    Sampler.ComparisonFunc= Params->ComparisonFunc.value();
+    Sampler.ComparisonFunc = Params->ComparisonFunc.value();
 
   if (Params->BorderColor.has_value())
-    Sampler.BorderColor= Params->BorderColor.value();
+    Sampler.BorderColor = Params->BorderColor.value();
 
   if (Params->MinLOD.has_value())
     Sampler.MinLOD = Params->MinLOD.value();
@@ -775,7 +775,6 @@ RootSignatureParser::parseStaticSamplerParams() {
       Params.MaxAnisotropy = MaxAnisotropy;
     }
 
-
     // `comparisonFunc` `=` COMPARISON_FUNC
     if (tryConsumeExpectedToken(TokenKind::kw_comparisonFunc)) {
       if (Params.ComparisonFunc.has_value()) {
@@ -792,7 +791,6 @@ RootSignatureParser::parseStaticSamplerParams() {
         return std::nullopt;
       Params.ComparisonFunc = ComparisonFunc;
     }
-
 
     // `borderColor` `=` STATIC_BORDER_COLOR
     if (tryConsumeExpectedToken(TokenKind::kw_borderColor)) {
@@ -991,9 +989,9 @@ RootSignatureParser::parseComparisonFunc() {
     return std::nullopt;
 
   switch (CurToken.TokKind) {
-#define COMPARISON_FUNC_ENUM(NAME, LIT)                                      \
+#define COMPARISON_FUNC_ENUM(NAME, LIT)                                        \
   case TokenKind::en_##NAME:                                                   \
-    return ComparisonFunc::NAME;                                             \
+    return ComparisonFunc::NAME;                                               \
     break;
 #include "clang/Lex/HLSLRootSignatureTokenKinds.def"
   default:
@@ -1017,9 +1015,9 @@ RootSignatureParser::parseStaticBorderColor() {
     return std::nullopt;
 
   switch (CurToken.TokKind) {
-#define STATIC_BORDER_COLOR_ENUM(NAME, LIT)                                      \
+#define STATIC_BORDER_COLOR_ENUM(NAME, LIT)                                    \
   case TokenKind::en_##NAME:                                                   \
-    return StaticBorderColor::NAME;                                             \
+    return StaticBorderColor::NAME;                                            \
     break;
 #include "clang/Lex/HLSLRootSignatureTokenKinds.def"
   default:
