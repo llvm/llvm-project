@@ -231,7 +231,8 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseStaticSamplerTest) {
       addressW = TEXTURE_ADDRESS_CLAMP,
       addressV = TEXTURE_ADDRESS_BORDER,
       maxLOD = 9000, addressU = TEXTURE_ADDRESS_MIRROR,
-      comparisonFunc = COMPARISON_NOT_EQUAL
+      comparisonFunc = COMPARISON_NOT_EQUAL,
+      borderColor = STATIC_BORDER_COLOR_OPAQUE_BLACK_UINT
     )
   )cc";
 
@@ -261,6 +262,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseStaticSamplerTest) {
   ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 0.f);
   ASSERT_EQ(std::get<StaticSampler>(Elem).MaxAnisotropy, 16u);
   ASSERT_EQ(std::get<StaticSampler>(Elem).ComparisonFunc, ComparisonFunc::LessEqual);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).BorderColor, StaticBorderColor::OpaqueWhite);
   ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MinLOD, 0.f);
   ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MaxLOD, 3.402823466e+38f);
 
@@ -276,6 +278,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseStaticSamplerTest) {
   ASSERT_EQ(std::get<StaticSampler>(Elem).MaxAnisotropy, 3u);
   ASSERT_EQ(std::get<StaticSampler>(Elem).ComparisonFunc,
             ComparisonFunc::NotEqual);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).BorderColor, StaticBorderColor::OpaqueBlackUint);
   ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MinLOD, 4.2f);
   ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MaxLOD, 9000.f);
 

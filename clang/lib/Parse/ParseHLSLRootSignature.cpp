@@ -395,6 +395,9 @@ std::optional<StaticSampler> RootSignatureParser::parseStaticSampler() {
   if (Params->ComparisonFunc.has_value())
     Sampler.ComparisonFunc= Params->ComparisonFunc.value();
 
+  if (Params->BorderColor.has_value())
+    Sampler.BorderColor= Params->BorderColor.value();
+
   if (Params->MinLOD.has_value())
     Sampler.MinLOD = Params->MinLOD.value();
 
@@ -790,6 +793,24 @@ RootSignatureParser::parseStaticSamplerParams() {
       Params.ComparisonFunc = ComparisonFunc;
     }
 
+
+    // `borderColor` `=` STATIC_BORDER_COLOR
+    if (tryConsumeExpectedToken(TokenKind::kw_borderColor)) {
+      if (Params.BorderColor.has_value()) {
+        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+            << CurToken.TokKind;
+        return std::nullopt;
+      }
+
+      if (consumeExpectedToken(TokenKind::pu_equal))
+        return std::nullopt;
+
+      auto BorderColor = parseStaticBorderColor();
+      if (!BorderColor.has_value())
+        return std::nullopt;
+      Params.BorderColor = BorderColor;
+    }
+
     // `minLOD` `=` NUMBER
     if (tryConsumeExpectedToken(TokenKind::kw_minLOD)) {
       if (Params.MinLOD.has_value()) {
@@ -973,6 +994,32 @@ RootSignatureParser::parseComparisonFunc() {
 #define COMPARISON_FUNC_ENUM(NAME, LIT)                                      \
   case TokenKind::en_##NAME:                                                   \
     return ComparisonFunc::NAME;                                             \
+    break;
+#include "clang/Lex/HLSLRootSignatureTokenKinds.def"
+  default:
+    llvm_unreachable("Switch for consumed enum token was not provided");
+  }
+
+  return std::nullopt;
+}
+
+std::optional<llvm::hlsl::rootsig::StaticBorderColor>
+RootSignatureParser::parseStaticBorderColor() {
+  assert(CurToken.TokKind == TokenKind::pu_equal &&
+         "Expects to only be invoked starting at given keyword");
+
+  TokenKind Expected[] = {
+#define STATIC_BORDER_COLOR_ENUM(NAME, LIT) TokenKind::en_##NAME,
+#include "clang/Lex/HLSLRootSignatureTokenKinds.def"
+  };
+
+  if (!tryConsumeExpectedToken(Expected))
+    return std::nullopt;
+
+  switch (CurToken.TokKind) {
+#define STATIC_BORDER_COLOR_ENUM(NAME, LIT)                                      \
+  case TokenKind::en_##NAME:                                                   \
+    return StaticBorderColor::NAME;                                             \
     break;
 #include "clang/Lex/HLSLRootSignatureTokenKinds.def"
   default:
