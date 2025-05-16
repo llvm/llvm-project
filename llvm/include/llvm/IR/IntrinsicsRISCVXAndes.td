@@ -14,4 +14,9 @@ let TargetPrefix = "riscv" in {
   // Andes Vector Packed FP16 Extension
   defm nds_vfpmadt : RISCVBinaryAAXRoundingMode;
   defm nds_vfpmadb : RISCVBinaryAAXRoundingMode;
+
+  // Andes Vector Dot Product Extension
+  defm nds_vd4dots  : RISCVTernaryWide;
+  defm nds_vd4dotu  : RISCVTernaryWide;
+  defm nds_vd4dotsu : RISCVTernaryWide;
 }
