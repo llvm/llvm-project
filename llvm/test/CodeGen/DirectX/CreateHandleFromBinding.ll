@@ -13,13 +13,20 @@
 
 target triple = "dxil-pc-shadermodel6.6-compute"
 
+@BufA.str = private unnamed_addr constant [5 x i8] c"BufA\00", align 1
+@BufB.str = private unnamed_addr constant [5 x i8] c"BufB\00", align 1
+
+; make sure the string constants are removed from the module
+; CHECK-NOT: private unnamed_addr constant [5 x i8] c"BufA\00", align 1
+; CHECK-NOT: private unnamed_addr constant [5 x i8] c"BufB\00", align 1
+
 declare i32 @some_val();
 
 define void @test_bindings() {
   ; RWBuffer<float4> Buf : register(u5, space3)
   %typed0 = call target("dx.TypedBuffer", <4 x float>, 1, 0, 0)
               @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_v4f32_1_0_0(
-                  i32 3, i32 5, i32 1, i32 0, i1 false, ptr null)
+                  i32 3, i32 5, i32 1, i32 0, i1 false, ptr @BufA.str)
   ; CHECK: [[BUF0:%.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217, %dx.types.ResBind { i32 5, i32 5, i32 3, i8 1 }, i32 5, i1 false) #[[#ATTR:]]
   ; CHECK: call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[BUF0]], %dx.types.ResourceProperties { i32 4106, i32 1033 }) #[[#ATTR]]
 
@@ -35,7 +42,7 @@ define void @test_bindings() {
   ; Note that the index below is 3 + 4 = 7
   %typed2 = call target("dx.TypedBuffer", <4 x i32>, 0, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_i32_0_0_0t(
-          i32 5, i32 3, i32 24, i32 4, i1 false, ptr null)
+          i32 5, i32 3, i32 24, i32 4, i1 false, ptr @BufB.str)
   ; CHECK: [[BUF2:%.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217, %dx.types.ResBind { i32 3, i32 26, i32 5, i8 0 }, i32 7, i1 false) #[[#ATTR]]
   ; CHECK: call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[BUF2]], %dx.types.ResourceProperties { i32 10, i32 1029 }) #[[#ATTR]]
 

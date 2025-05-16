@@ -12,13 +12,20 @@
 
 target triple = "dxil-pc-shadermodel6.0-compute"
 
+@BufA.str = private unnamed_addr constant [5 x i8] c"BufA\00", align 1
+@BufB.str = private unnamed_addr constant [5 x i8] c"BufB\00", align 1
+
+; make sure the string constants are removed from the module
+; CHECK-NOT: private unnamed_addr constant [5 x i8] c"BufA\00", align 1
+; CHECK-NOT: private unnamed_addr constant [5 x i8] c"BufB\00", align 1
+
 declare i32 @some_val();
 
 define void @test_buffers() {
   ; RWBuffer<float4> Buf : register(u5, space3)
   %typed0 = call target("dx.TypedBuffer", <4 x float>, 1, 0, 0)
               @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_v4f32_1_0_0(
-                  i32 3, i32 5, i32 1, i32 0, i1 false, ptr null)
+                  i32 3, i32 5, i32 1, i32 0, i1 false, ptr @BufA.str)
   ; CHECK: call %dx.types.Handle @dx.op.createHandle(i32 57, i8 1, i32 1, i32 5, i1 false) #[[#ATTR:]]
   ; CHECK-NOT: @llvm.dx.cast.handle
 
@@ -33,7 +40,7 @@ define void @test_buffers() {
   ; Note that the index below is 3 + 4 = 7
   %typed2 = call target("dx.TypedBuffer", <4 x i32>, 0, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_i32_0_0_0t(
-          i32 5, i32 3, i32 24, i32 4, i1 false, ptr null)
+          i32 5, i32 3, i32 24, i32 4, i1 false, ptr @BufB.str)
   ; CHECK: call %dx.types.Handle @dx.op.createHandle(i32 57, i8 0, i32 3, i32 7, i1 false) #[[#ATTR]]
 
   ; struct S { float4 a; uint4 b; };
