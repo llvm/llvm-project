@@ -200,22 +200,12 @@ void Lowerer::lowerEarlyIntrinsics(Function &F) {
       default:
         continue;
       case Intrinsic::coro_begin:
-      case Intrinsic::coro_begin_custom_abi: {
-        auto CBI = cast<CoroBeginInst>(&I);
-
-        // Ignore coro id's that aren't pre-split.
-        auto Id = dyn_cast<CoroIdInst>(CBI->getId());
-        if (Id && !Id->getInfo().isPreSplit())
-          break;
-
+      case Intrinsic::coro_begin_custom_abi:
         if (CoroBegin)
           report_fatal_error(
               "coroutine should have exactly one defining @llvm.coro.begin");
-        CBI->addRetAttr(Attribute::NonNull);
-        CBI->addRetAttr(Attribute::NoAlias);
-        CoroBegin = CBI;
+        CoroBegin = cast<CoroBeginInst>(&I);
         break;
-      }
       case Intrinsic::coro_free:
         CoroFrees.push_back(cast<CoroFreeInst>(&I));
         break;
