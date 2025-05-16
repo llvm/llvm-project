@@ -861,8 +861,7 @@ define <4 x double> @shuffle_v4f64_2345_0567_select(<4 x double> %vec1, <4 x dou
 define <4 x double> @shuffle_v4f64_1436_split_load(ptr %px, ptr %py) {
 ; AVX1-LABEL: shuffle_v4f64_1436_split_load:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovapd (%rsi), %xmm0
-; AVX1-NEXT:    vmovddup {{.*#+}} ymm0 = ymm0[0,0,2,2]
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; AVX1-NEXT:    vmovupd (%rdi), %ymm1
 ; AVX1-NEXT:    vinsertf128 $1, 16(%rsi), %ymm0, %ymm0
 ; AVX1-NEXT:    vshufpd {{.*#+}} ymm0 = ymm1[1],ymm0[1],ymm1[3],ymm0[2]
