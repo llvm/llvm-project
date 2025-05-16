@@ -91,7 +91,6 @@ struct StaticDiagInfoRec {
 
   LLVM_PREFERRED_TYPE(diag::Group)
   uint16_t OptionGroupIndex : 15;
-
   LLVM_PREFERRED_TYPE(bool)
   uint16_t Deferrable : 1;
 
