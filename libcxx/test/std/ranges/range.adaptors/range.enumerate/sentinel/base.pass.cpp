@@ -21,6 +21,7 @@
 #include <array>
 #include <cassert>
 #include <concepts>
+#include <memory>
 #include <utility>
 
 #include "test_iterators.h"
@@ -35,7 +36,7 @@ constexpr void test() {
 
   std::array<int, 5> array{0, 1, 2, 3, 84};
 
-  View mv{Iterator{array.begin()}, Sentinel{Iterator{array.end()}}};
+  View mv{Iterator(std::to_address(base(array.begin()))), Sentinel(Iterator(std::to_address(base(array.end()))))};
   EnumerateView ev{std::move(mv)};
 
   EnumerateSentinel const s                    = ev.end();

@@ -37,8 +37,8 @@ constexpr void test() {
 
   std::array array{0, 1, 2, 3, 4};
 
-  View view{Iterator(array.begin()), Sentinel(Iterator(array.end()))};
-  EnumerateView ev{std::move(view)};
+  View mv{Iterator(std::to_address(base(array.begin()))), Sentinel(Iterator(std::to_address(base(array.end()))))};
+  EnumerateView ev{std::move(mv)};
   EnumerateIterator const it = ev.begin();
 
   auto&& result = iter_move(it);

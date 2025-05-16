@@ -35,8 +35,8 @@ constexpr void test() {
 
   std::array array{0, 1, 2, 3, 84};
 
-  View v(Iterator(array.begin()), Sentinel(Iterator(array.end())));
-  std::ranges::enumerate_view view(std::move(v));
+  View mv{Iterator(std::to_address(base(array.begin()))), Sentinel(Iterator(std::to_address(base(array.end()))))};
+  std::ranges::enumerate_view view(std::move(mv));
 
   auto const it = view.begin();
   auto const s  = view.end();

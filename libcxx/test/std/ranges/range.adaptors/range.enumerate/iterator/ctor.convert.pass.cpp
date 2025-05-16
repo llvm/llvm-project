@@ -20,6 +20,7 @@
 #include <array>
 #include <cassert>
 #include <concepts>
+#include <memory>
 #include <ranges>
 #include <utility>
 
@@ -35,7 +36,7 @@ constexpr void test() {
   using EnumerateConstIterator = std::ranges::iterator_t<const EnumerateView>;
 
   auto make_enumerate_view = [](auto begin, auto end) {
-    View view{Iterator(begin), Sentinel(Iterator(end))};
+    View view{Iterator(std::to_address(base(begin))), Sentinel(Iterator(std::to_address(base(end))))};
 
     return EnumerateView(std::move(view));
   };
