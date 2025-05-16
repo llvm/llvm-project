@@ -13,6 +13,7 @@ body:             |
     ; CHECK-NOT: %11:_(s32) = G_FNEG %0:fid
     ; CHECK-NOT: %12:id(s32) = G_SELECT %10:_(s1), %0:fid, %11:_
     ; CHECK: %10:id(s32) = G_INTRINSIC intrinsic(@llvm.spv.faceforward), %2(s32), %3(s32), %4(s32)
+    ; CHECK: OpReturnValue %10(s32)
     %3:type(s64) = OpTypeFloat 32
     %5:type(s64) = OpTypeFunction %3:type(s64), %3:type(s64), %3:type(s64), %3:type(s64)
     OpName %0:fid(s32), 97
@@ -42,6 +43,7 @@ body:             |
     ; CHECK-NOT: %12:_(<4 x s32>) = G_FNEG %0:vfid
     ; CHECK-NOT: %13:id(<4 x s32>) = G_SELECT %11:_(s1), %0:vfid, %12:_
     ; CHECK: %11:id(<4 x s32>) = G_INTRINSIC intrinsic(@llvm.spv.faceforward), %3(<4 x s32>), %4(<4 x s32>), %5(<4 x s32>)
+    ; CHECK: OpReturnValue %11(<4 x s32>)
     %4:type(s64) = OpTypeVector %3:type(s64), 4
     %6:type(s64) = OpTypeFunction %4:type(s64), %4:type(s64), %4:type(s64), %4:type(s64)
     %3:type(s64) = OpTypeFloat 32
@@ -60,4 +62,4 @@ body:             |
     %12:_(<4 x s32>) = G_FNEG %0:vfid
     %13:id(<4 x s32>) = G_SELECT %11:_(s1), %0:vfid, %12:_
     OpReturnValue %13:id(<4 x s32>)
-      
+
