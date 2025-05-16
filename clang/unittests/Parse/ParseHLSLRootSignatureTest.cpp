@@ -223,6 +223,34 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseDTClausesTest) {
   ASSERT_TRUE(Consumer->isSatisfied());
 }
 
+TEST_F(ParseHLSLRootSignatureTest, ValidParseStaticSamplerTest) {
+  const llvm::StringLiteral Source = R"cc(
+    StaticSampler(s0)
+  )cc";
+
+  TrivialModuleLoader ModLoader;
+  auto PP = createPP(Source, ModLoader);
+  auto TokLoc = SourceLocation();
+
+  hlsl::RootSignatureLexer Lexer(Source, TokLoc);
+  SmallVector<RootElement> Elements;
+  hlsl::RootSignatureParser Parser(Elements, Lexer, *PP);
+
+  // Test no diagnostics produced
+  Consumer->setNoDiag();
+
+  ASSERT_FALSE(Parser.parse());
+
+  ASSERT_EQ(Elements.size(), 1u);
+
+  RootElement Elem = Elements[0];
+  ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
+  ASSERT_EQ(std::get<StaticSampler>(Elem).Reg.ViewType, RegisterType::SReg);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).Reg.Number, 0u);
+
+  ASSERT_TRUE(Consumer->isSatisfied());
+}
+
 TEST_F(ParseHLSLRootSignatureTest, ValidSamplerFlagsTest) {
   // This test will checks we can set the valid enum for Sampler descriptor
   // range flags

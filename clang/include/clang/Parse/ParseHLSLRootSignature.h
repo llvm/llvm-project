@@ -77,6 +77,7 @@ private:
   std::optional<llvm::hlsl::rootsig::DescriptorTable> parseDescriptorTable();
   std::optional<llvm::hlsl::rootsig::DescriptorTableClause>
   parseDescriptorTableClause();
+  std::optional<llvm::hlsl::rootsig::StaticSampler> parseStaticSampler();
 
   /// Parameter arguments (eg. `bReg`, `space`, ...) can be specified in any
   /// order and only exactly once. The following methods define a
@@ -107,6 +108,11 @@ private:
   };
   std::optional<ParsedClauseParams>
   parseDescriptorTableClauseParams(RootSignatureToken::Kind RegType);
+
+  struct ParsedStaticSamplerParams {
+    std::optional<llvm::hlsl::rootsig::Register> Reg;
+  };
+  std::optional<ParsedStaticSamplerParams> parseStaticSamplerParams();
 
   // Common parsing methods
   std::optional<uint32_t> parseUIntParam();
