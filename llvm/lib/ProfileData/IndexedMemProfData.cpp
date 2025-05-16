@@ -228,7 +228,7 @@ static Error writeMemProfRadixTreeBased(
   OS.write(0ULL); // Reserve space for the memprof call stack payload offset.
   OS.write(0ULL); // Reserve space for the memprof record payload offset.
   OS.write(0ULL); // Reserve space for the memprof record table offset.
-  if (Version == memprof::Version4)
+  if (Version >= memprof::Version4)
     OS.write(0ULL); // Reserve space for the data access profile offset.
 
   auto Schema = memprof::getHotColdSchema();
@@ -258,6 +258,8 @@ static Error writeMemProfRadixTreeBased(
 
   uint64_t DataAccessProfOffset = 0;
   if (DataAccessProfileData.has_value()) {
+    assert(Version >= memprof::Version4 &&
+           "Data access profiles are added starting from v4");
     DataAccessProfOffset = OS.tell();
     if (Error E = (*DataAccessProfileData).get().serialize(OS))
       return E;
@@ -274,7 +276,7 @@ static Error writeMemProfRadixTreeBased(
       RecordPayloadOffset,
       RecordTableOffset,
   };
-  if (Version == memprof::Version4)
+  if (Version >= memprof::Version4)
     Header.push_back(DataAccessProfOffset);
   OS.patch({{HeaderUpdatePos, Header}});
 
