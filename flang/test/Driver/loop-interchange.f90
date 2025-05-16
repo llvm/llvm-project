@@ -8,6 +8,10 @@
 ! RUN: %flang -### -S -Oz %s 2>&1 | FileCheck -check-prefix=CHECK-NO-LOOP-INTERCHANGE %s
 ! CHECK-LOOP-INTERCHANGE: "-floop-interchange"
 ! CHECK-NO-LOOP-INTERCHANGE-NOT: "-floop-interchange"
+! RUN: %flang_fc1 -emit-llvm -O2 -floop-interchange -mllvm -print-pipeline-passes -o /dev/null %s 2>&1 | FileCheck -check-prefix=CHECK-LOOP-INTERCHANGE-PASS %s
+! RUN: %flang_fc1 -emit-llvm -O2 -fno-loop-interchange -mllvm -print-pipeline-passes -o /dev/null %s 2>&1 | FileCheck -check-prefix=CHECK-NO-LOOP-INTERCHANGE-PASS %s
+! CHECK-LOOP-INTERCHANGE-PASS: loop-interchange
+! CHECK-NO-LOOP-INTERCHANGE-PASS-NOT: loop-interchange
 
 program test
 end program
