@@ -322,7 +322,7 @@ public:
   }
 
   bool VisitCleanupAttr(CleanupAttr *attr) {
-    report(attr->getLocation(), attr->getFunctionDecl());
+    report(attr->getExpr()->getExprLoc(), attr->getFunctionDecl());
     return true;
   }
 

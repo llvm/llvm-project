@@ -3620,7 +3620,7 @@ static void handleCleanupAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     return;
   }
 
-  D->addAttr(::new (S.Context) CleanupAttr(S.Context, AL, FD));
+  D->addAttr(::new (S.Context) CleanupAttr(S.Context, AL, FD, E));
 }
 
 static void handleEnumExtensibilityAttr(Sema &S, Decl *D,
