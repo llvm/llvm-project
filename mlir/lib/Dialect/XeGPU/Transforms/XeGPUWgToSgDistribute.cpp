@@ -11,6 +11,7 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
+#include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
 #include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include <mlir/Dialect/GPU/IR/GPUDialect.h>
@@ -163,8 +164,11 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
     // Calculate distribution unit shape and local offsets for subgroup
     SmallVector<int64_t> distUnitShape(sgLayout.size());
     SmallVector<Value> localOffset(sgLayout.size());
+    ArrayRef<int64_t> shape = tdescTy.getShape();
     for (size_t i = 0; i < sgLayout.size(); i++) {
       distUnitShape[i] = sgLayout[i] * sgShape[i];
+      if (distUnitShape[i] > shape[i])
+        distUnitShape[i] = shape[i];
       localOffset[i] =
           rewriter.createOrFold<index::MulOp>(loc, sgIds[i], sgDataDim[i]);
     }
@@ -263,7 +267,7 @@ struct WgToSgDpasOp : public OpConversionPattern<xegpu::DpasOp> {
       return failure();
 
     auto originalLayout =
-        llvm::dyn_cast_or_null<xegpu::LayoutAttr>(op->getAttr("layout"));
+        llvm::dyn_cast_or_null<xegpu::LayoutAttr>(op->getAttr("layout_result_0"));
     if (!originalLayout)
       return failure();
 
@@ -311,14 +315,38 @@ struct WgToSgPrefetchNdOp : public OpConversionPattern<xegpu::PrefetchNdOp> {
   }
 };
 
+static SmallVector<Value> flattenValues(ArrayRef<ValueRange> values) {
+  SmallVector<Value> result;
+  for (const auto &vals : values)
+    llvm::append_range(result, vals);
+  return result;
+}
+
+struct UnrealizedConversionCastOpPattern
+    : public OpConversionPattern<mlir::UnrealizedConversionCastOp> {
+  using OpConversionPattern<
+      mlir::UnrealizedConversionCastOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::UnrealizedConversionCastOp op,
+                  OneToNOpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (op.getNumOperands() == 1 && op.getNumResults() == 1) {
+      rewriter.replaceOpWithMultiple(op, flattenValues(adaptor.getInputs()));
+      return mlir::success();
+    }
+    return mlir::failure();
+  }
+};
+
 } // namespace
 
 namespace mlir {
 namespace xegpu {
 void populateXeGPUWgToSgDistributePatterns(RewritePatternSet &patterns) {
   patterns.add<WgToSgCreateNdOp, WgToSgLoadNdOp, WgToSgStoreNdOp,
-               WgToSgUpdateNdOffsetOp, WgToSgDpasOp, WgToSgPrefetchNdOp>(
-      patterns.getContext());
+               WgToSgUpdateNdOffsetOp, WgToSgDpasOp, WgToSgPrefetchNdOp,
+               UnrealizedConversionCastOpPattern>(patterns.getContext());
 }
 } // namespace xegpu
 } // namespace mlir
@@ -350,7 +378,7 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
   };
 
   auto isLegal = [&](xegpu::LayoutAttr layout) -> bool {
-    return !layout || layout.getSgLayout() == nullptr;
+    return !layout || !layout.isWgLayout();
   };
 
   target.addDynamicallyLegalOp<xegpu::CreateNdDescOp, xegpu::LoadNdOp,
@@ -362,11 +390,14 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
   });
 
   target.addDynamicallyLegalOp<xegpu::DpasOp>([=](xegpu::DpasOp op) -> bool {
-    auto layout = dyn_cast_or_null<xegpu::LayoutAttr>(op->getAttr("layout"));
+    auto layout = dyn_cast_or_null<xegpu::LayoutAttr>(op->getAttr("layout_result_0"));
     return isLegal(layout);
   });
 
+  target.addIllegalOp<UnrealizedConversionCastOp>();
   target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });
+
+  xegpu::doSCFStructuralTypeConversionWithTensorType(getOperation());
 
   xegpu::populateXeGPUWgToSgDistributePatterns(patterns);
   if (failed(

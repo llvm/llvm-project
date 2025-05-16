@@ -307,6 +307,9 @@ void xegpu::doSCFStructuralTypeConversionWithTensorType(Operation *op) {
 
   { // perform the conversion from RankedTensorType to VectorType based on the
     // LayoutAttr
+    llvm::dbgs() << "\n\nDumpBefore: \n";
+    op->dump();
+    llvm::dbgs() << "\n";
     auto computeTileShapeAndCount = [&](ArrayRef<int64_t> shape,
                                         DenseI32ArrayAttr sgDataAttr,
                                         DenseI32ArrayAttr sgLayoutAttr) {
@@ -319,6 +322,10 @@ void xegpu::doSCFStructuralTypeConversionWithTensorType(Operation *op) {
       assert(tileShape.size() && "failed to compute tileShape");
       SmallVector<int64_t> distUnit =
           computeElementwiseMul(sgLayout, tileShape);
+      for(size_t i = 0; i < distUnit.size(); i++) {
+        if (distUnit[i] > shape[i])
+          distUnit[i] = shape[i];
+      }
       int count = computeProduct(shape) / computeProduct(distUnit);
       return std::make_pair(tileShape, count);
     };
@@ -328,6 +335,7 @@ void xegpu::doSCFStructuralTypeConversionWithTensorType(Operation *op) {
     converter.addConversion(
         [&](RankedTensorType type,
             SmallVectorImpl<Type> &result) -> std::optional<LogicalResult> {
+          llvm::dbgs() << "\n\nConverting Type: " << type;
           ArrayRef<int64_t> shape = type.getShape();
           auto encoding = type.getEncoding();
           Type elemTy = type.getElementType();
@@ -344,13 +352,10 @@ void xegpu::doSCFStructuralTypeConversionWithTensorType(Operation *op) {
               // shape/sgLayout
               std::tie(subShape, count) = computeTileShapeAndCount(
                   shape, layout.getSgData(), layout.getSgLayout());
-            } else if (DenseI32ArrayAttr instData = layout.getInstData()) {
-              // for unrolling, the subShape is determined by inst_data
-              subShape = llvm::to_vector_of<int64_t>(instData.asArrayRef());
-              count = computeProduct(shape) / computeProduct(subShape);
             }
           }
           auto newTy = VectorType::get(subShape, elemTy);
+          llvm::dbgs() << "\n   result: " << count << ", " << newTy << "\n";
           result.append(count, newTy);
           return success();
         });
@@ -358,6 +363,7 @@ void xegpu::doSCFStructuralTypeConversionWithTensorType(Operation *op) {
     converter.addConversion(
         [&](xegpu::TensorDescType type,
             SmallVectorImpl<Type> &result) -> std::optional<LogicalResult> {
+          llvm::dbgs() << "\n\nConverting Type: " << type;
           MLIRContext *ctx = type.getContext();
           Type elemTy = type.getElementType();
           Attribute encoding = type.getEncoding();
@@ -376,17 +382,12 @@ void xegpu::doSCFStructuralTypeConversionWithTensorType(Operation *op) {
               std::tie(subShape, count) = computeTileShapeAndCount(
                   shape, layout.getSgData(), layout.getSgLayout());
               layout = layout.dropSgLayoutAndData();
-            } else if (DenseI32ArrayAttr instData = layout.getInstData()) {
-              // for unrolling, the subShape is determined by inst_data
-              subShape = llvm::to_vector_of<int64_t>(instData.asArrayRef());
-              count = computeProduct(shape) / computeProduct(subShape);
-              layout = layout.dropInstData();
-            }
-
-            newTy = xegpu::TensorDescType::get(ctx, subShape, elemTy, encoding,
+              newTy = xegpu::TensorDescType::get(ctx, subShape, elemTy, encoding,
                                                layout);
+            }
           }
 
+          llvm::dbgs() << "\n   result: " << count << ", " << newTy << "\n";
           result.append(count, newTy);
           return success();
         });
@@ -449,5 +450,8 @@ void xegpu::doSCFStructuralTypeConversionWithTensorType(Operation *op) {
     scf::populateSCFStructuralTypeConversionsAndLegality(converter, patterns,
                                                          target);
     (void)mlir::applyPartialConversion(op, target, std::move(patterns));
+  llvm::dbgs() << "\n\nDumpAfter: \n";
+  op->dump();
+  llvm::dbgs() << "\n";
   }
 }
