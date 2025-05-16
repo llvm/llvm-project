@@ -255,33 +255,6 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
     }
   }
 
-  // mul (shr exact X, N), (2^N + 1) -> add (X, shr exact (X, N))
-  {
-    Value *NewOp;
-    const APInt *ShiftC;
-    const APInt *MulAP;
-    if (BitWidth > 2 &&
-        match(&I, m_Mul(m_Exact(m_Shr(m_Value(NewOp), m_APInt(ShiftC))),
-                        m_APInt(MulAP))) &&
-        (*MulAP - 1).isPowerOf2() && *ShiftC == MulAP->logBase2()) {
-      Value *BinOp = Op0;
-      BinaryOperator *OpBO = cast<BinaryOperator>(Op0);
-
-      // mul nuw (ashr exact X, N) -> add nuw (X, lshr exact (X, N))
-      if (HasNUW && OpBO->getOpcode() == Instruction::AShr && OpBO->hasOneUse())
-        BinOp = Builder.CreateLShr(NewOp, ConstantInt::get(Ty, *ShiftC), "",
-                                   /*isExact=*/true);
-
-      auto *NewAdd = BinaryOperator::CreateAdd(NewOp, BinOp);
-      if (HasNSW && (HasNUW || OpBO->getOpcode() == Instruction::LShr ||
-                     ShiftC->getZExtValue() < BitWidth - 1))
-        NewAdd->setHasNoSignedWrap(true);
-
-      NewAdd->setHasNoUnsignedWrap(HasNUW);
-      return NewAdd;
-    }
-  }
-
   if (Op0->hasOneUse() && match(Op1, m_NegatedPower2())) {
     // Interpret  X * (-1<<C)  as  (-X) * (1<<C)  and try to sink the negation.
     // The "* (1<<C)" thus becomes a potential shifting opportunity.
@@ -1257,8 +1230,10 @@ static Value *foldIDivShl(BinaryOperator &I, InstCombiner::BuilderTy &Builder) {
 
 /// Common integer divide/remainder transforms
 Instruction *InstCombinerImpl::commonIDivRemTransforms(BinaryOperator &I) {
+  const APInt *C1, *C2;
   assert(I.isIntDivRem() && "Unexpected instruction");
-  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
+  Value *X;
+  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1), *Op2 = I.getOperand(2);
 
   // If any element of a constant divisor fixed width vector is zero or undef
   // the behavior is undefined and we can fold the whole op to poison.
@@ -1295,6 +1270,15 @@ Instruction *InstCombinerImpl::commonIDivRemTransforms(BinaryOperator &I) {
                                           /*FoldWithMultiUse*/ true))
       return R;
   }
+
+  if (match(Op0, m_OneUse(m_Intrinsic<Intrinsic::smul_fix>(m_APInt(C1), m_APInt(C2)))) &&
+    match(Op1, m_OneUse(m_URem(m_Value(X), Op0))) &&
+    match(Op2, m_OneUse(m_UDiv(Op1, m_APInt(C2))))) {
+    
+    Value *XDivC2 = Builder.CreateUDiv(X, ConstantInt::get(X->getType(), *C2));
+    Value *Result = Builder.CreateURem(XDivC2, ConstantInt::get(X->getType(), *C1));
+    return replaceInstUsesWith(I, Result);
+}
 
   return nullptr;
 }
@@ -2071,7 +2055,7 @@ convertFSqrtDivIntoFMul(CallInst *CI, Instruction *X,
   // instructions in R2 and get the most common fpmath metadata and fast-math
   // flags on it.
   auto *FSqrt = cast<CallInst>(CI->clone());
-  FSqrt->insertBefore(CI->getIterator());
+  FSqrt->insertBefore(CI);
   auto *R2FPMathMDNode = (*R2.begin())->getMetadata(LLVMContext::MD_fpmath);
   FastMathFlags R2FMF = (*R2.begin())->getFastMathFlags(); // Common FMF
   for (Instruction *I : R2) {
