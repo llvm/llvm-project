@@ -14,7 +14,7 @@ class TestDAP_module(lldbdap_testcase.DAPTestCaseBase):
     def run_test(self, symbol_basename, expect_debug_info_size):
         program_basename = "a.out.stripped"
         program = self.getBuildArtifact(program_basename)
-        self.build_and_launch(program)
+        self.build_and_launch(program, stopOnEntry=True)
         functions = ["foo"]
         breakpoint_ids = self.set_function_breakpoints(functions)
         self.assertEqual(len(breakpoint_ids), len(functions), "expect one breakpoint")
@@ -108,7 +108,7 @@ class TestDAP_module(lldbdap_testcase.DAPTestCaseBase):
     @skipIfWindows
     def test_compile_units(self):
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program)
+        self.build_and_launch(program, stopOnEntry=True)
         source = "main.cpp"
         main_source_path = self.getSourcePath(source)
         breakpoint1_line = line_number(source, "// breakpoint 1")
