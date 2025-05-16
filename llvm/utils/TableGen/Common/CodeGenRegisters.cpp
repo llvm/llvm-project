@@ -771,7 +771,7 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank,
 
   // Alternative allocation orders may be subsets.
   SetTheory::RecSet Order;
-  for (auto [Idx, AltOrderElem] : enumerate(AltOrders->getValues())) {
+  for (auto [Idx, AltOrderElem] : enumerate(AltOrders->getElements())) {
     RegBank.getSets().evaluate(AltOrderElem, Order, R->getLoc());
     Orders[1 + Idx].append(Order.begin(), Order.end());
     // Verify that all altorder members are regclass members.
