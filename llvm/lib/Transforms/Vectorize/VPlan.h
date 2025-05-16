@@ -1320,12 +1320,6 @@ protected:
       : VPRecipeWithIRFlags(VPDefOpcode, Operands, WrapFlagsTy(NUW, NSW), DL),
         Opcode(Opcode) {}
 
-  template <typename IterT>
-  VPWidenRecipe(unsigned VPDefOpcode, unsigned Opcode,
-                iterator_range<IterT> Operands, bool NUW, bool NSW, DebugLoc DL)
-      : VPRecipeWithIRFlags(VPDefOpcode, Operands, WrapFlagsTy(NUW, NSW), DL),
-        Opcode(Opcode) {}
-
 public:
   VPWidenRecipe(Instruction &I, ArrayRef<VPValue *> Operands)
       : VPWidenRecipe(VPDef::VPWidenSC, I, Operands) {}
@@ -2585,7 +2579,7 @@ public:
 /// A recipe to represent inloop reduction operations with vector-predication
 /// intrinsics, performing a reduction on a vector operand with the explicit
 /// vector length (EVL) into a scalar value, and adding the result to a chain.
-/// The operands are {ChainOp, VecOp, EVL, [Condition]}.
+/// The Operands are {ChainOp, VecOp, EVL, [Condition]}.
 class VPReductionEVLRecipe : public VPReductionRecipe {
 public:
   VPReductionEVLRecipe(VPReductionRecipe &R, VPValue &EVL, VPValue *CondOp,
