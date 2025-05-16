@@ -20,68 +20,67 @@ branch. LLVM should be built with at least
 
 An example `bash` session to build Comgr on Linux using GNUMakefiles is:
 
-    $ LLVM_PROJECT=~/llvm-project
-    $ DEVICE_LIBS=~/llvm-project/amd/device-libs
-    $ COMGR=~/llvm-project/amd/comgr
-    $ mkdir -p "$LLVM_PROJECT/build"
-    $ cd "$LLVM_PROJECT/build"
+    $ LLVM_PROJECT=~/llvm-project/build
+    $ DEVICE_LIBS=~/llvm-project/amd/device-libs/build
+    $ mkdir -p "$LLVM_PROJECT"
+    $ cd "$LLVM_PROJECT"
     $ cmake \
         -DCMAKE_BUILD_TYPE=Release \
         -DLLVM_ENABLE_PROJECTS="llvm;clang;lld" \
         -DLLVM_TARGETS_TO_BUILD="AMDGPU;X86" \
         ../llvm
     $ make
-    $ mkdir -p "$DEVICE_LIBS/build"
-    $ cd "$DEVICE_LIBS/build"
+    $ mkdir -p "$DEVICE_LIBS"
+    $ cd "$DEVICE_LIBS"
     $ cmake \
         -DCMAKE_BUILD_TYPE=Release \
-        -DCMAKE_PREFIX_PATH="$LLVM_PROJECT/build" \
+        -DCMAKE_PREFIX_PATH="$LLVM_PROJECT" \
         ..
     $ make
-    $ mkdir -p "$COMGR/build"
-    $ cd "$COMGR/build"
+    $ cd ~/llvm-project/amd/comgr
+    $ mkdir -p build; cd build;
     $ cmake \
         -DCMAKE_BUILD_TYPE=Release \
-        -DCMAKE_PREFIX_PATH="$LLVM_PROJECT/build;$DEVICE_LIBS/build" \
+        -DCMAKE_PREFIX_PATH="$LLVM_PROJECT;$DEVICE_LIBS" \
         ..
     $ make
     $ make test
 
 The equivalent on Windows in `cmd.exe` using Visual Studio project files is:
 
-    > set LLVM_PROJECT="%HOMEPATH%\llvm-project"
-    > set DEVICE_LIBS="%HOMEPATH%\llvm-project\amd\device-libs"
-    > set COMGR="%HOMEPATH%\llvm-project\amd\comgr"
-    > mkdir "%LLVM_PROJECT%\build"
-    > cd "%LLVM_PROJECT%\build"
+    > set LLVM_PROJECT="%HOMEPATH%\llvm-project\build"
+    > set DEVICE_LIBS="%HOMEPATH%\llvm-project\amd\device-libs\build"
+    > mkdir "%LLVM_PROJECT%"
+    > cd "%LLVM_PROJECT%"
     > cmake ^
         -DLLVM_ENABLE_PROJECTS="llvm;clang;lld" ^
         -DLLVM_TARGETS_TO_BUILD="AMDGPU;X86" ^
         ..\llvm
     > msbuild /p:Configuration=Release ALL_BUILD.vcxproj
-    > mkdir "%DEVICE_LIBS%\build"
-    > cd "%DEVICE_LIBS%\build"
+    > mkdir "%DEVICE_LIBS%"
+    > cd "%DEVICE_LIBS%"
     > cmake ^
-        -DCMAKE_PREFIX_PATH="%LLVM_PROJECT%\build" ^
+        -DCMAKE_PREFIX_PATH="%LLVM_PROJECT%" ^
         ..
     > msbuild /p:Configuration=Release ALL_BUILD.vcxproj
-    > mkdir "%COMGR%\build"
-    > cd "%COMGR%\build"
+    > cd "%HOMEPATH%\llvm-project\amd\comgr"
+    > mkdir build
+    > cd build
     > cmake ^
-        -DCMAKE_PREFIX_PATH="%LLVM_PROJECT%\build;%DEVICE_LIBS%\build" ^
+        -DCMAKE_PREFIX_PATH="%LLVM_PROJECT%;%DEVICE_LIBS%" ^
         ..
     > msbuild /p:Configuration=Release ALL_BUILD.vcxproj
     > msbuild /p:Configuration=Release RUN_TESTS.vcxproj
 
-Optionally,
+**ASAN support:** Optionally,
 [AddressSanitizer](https://github.com/google/sanitizers/wiki/AddressSanitizer)
 may be enabled during development via `-DADDRESS_SANITIZER=On` during the Comgr
 `cmake` step.
 
-Comgr can be built as a static library by passing
+**Static Comgr:** Comgr can be built as a static library by passing
 `-DCOMGR_BUILD_SHARED_LIBS=OFF` during the Comgr `cmake` step.
 
-To enable SPIRV support, checkout
+**SPIRV Support:** To enable SPIRV support, checkout
 [SPIRV-LLVM-Translator](https://github.com/ROCm/SPIRV-LLVM-Translator) in
 `llvm/projects` or `llvm/tools` and build using the above instructions, with the
 exception that the `-DCMAKE_PREFIX_PATH` for llvm-project must be an install
@@ -91,6 +90,37 @@ with `make install`) rather than the build path.
 Comgr SPIRV-related APIs can be disabled by passing
 `-DCOMGR_DISABLE_SPIRV=1` during the Comgr `cmake` step. This removes any
 dependency on LLVM SPIRV libraries or the llvm-spirv tool.
+
+**Code Coverage Instrumentation:** Comgr supports source-based [code coverage
+via clang](https://clang.llvm.org/docs/SourceBasedCodeCoverage.html), and
+leverages the same CMake variables as
+[LLVM](https://www.llvm.org/docs/CMake.html#llvm-related-variables)
+(LLVM_BUILD_INSTRUMENTED_COVERAGE, etc.).
+
+Example of insturmenting with covereage, generating profiles, and creating an
+HTML for investigation:
+
+    > cmake -DCMAKE_STRIP="" -DLLVM_PROFILE_DATA_DIR=`pwd`/profiles \
+        -DLLVM_BUILD_INSTRUMENTED_COVERAGE=On \
+        -DCMAKE_CXX_COMPILER="$LLVM_PROJECT/bin/clang++" \
+        -DCMAKE_C_COMPILER="$LLVM_PROJECT/bin/clang" \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_PREFIX_PATH="$LLVM_PROJECT;$DEVICE_LIBS" ..
+    > make -j
+    > make test test-lit
+    > cd profile
+    > $LLVM_PROJECT/bin/llvm-profdata merge -sparse \*.profraw -o ^
+        comgr_test.profdata # merge and index data
+    > $LLVM_PROJECT/bin/llvm-cov report ../libamd_comgr.so ^
+        -instr-profile=comgr_test.profdata # show test report
+    > $LLVM_PROJECT/bin/llvm-cov report ../libamd_comgr.so ^
+        -instr-profile=comgr_test.profdata -ignore-filename-regex="build-.*/" ^
+        -ignore-filename-regex="llvm-project-internal/[cl].*/include/*" ^
+        # show test report without includes
+    > $LLVM_PROJECT/../llvm/utils/prepare-code-coverage-artifact.py ^
+        --preserve-profiles $LLVM_PROJECT/bin/llvm-profdata ^
+        $LLVM_PROJECT/bin/llvm-cov . html ../libamd_comgr.so ^
+        # create html report
 
 Depending on the Code Object Manager
 ------------------------------------
