@@ -50,7 +50,10 @@ public:
   [[nodiscard]]
   bool Run(const protocol::Request &);
 
-  virtual bool DeferRequest() const { return false; };
+  [[nodiscard]]
+  virtual bool DeferRequest() const {
+    return false;
+  }
 
   virtual void operator()(const protocol::Request &request) const = 0;
 
