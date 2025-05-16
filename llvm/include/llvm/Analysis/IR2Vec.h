@@ -127,6 +127,8 @@ public:
 };
 
 /// Class for computing the Symbolic embeddings of IR2Vec.
+/// Symbolic embeddings are constructed based on the entity-level
+/// representations obtained from the Vocabulary.
 class SymbolicEmbedder : public Embedder {
 private:
   /// Utility function to compute the vector representation for a given basic
