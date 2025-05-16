@@ -296,6 +296,8 @@ const char *llvm::to_string(ThinOrFullLTOPhase Phase) {
     return "FullLTOPreLink";
   case ThinOrFullLTOPhase::FullLTOPostLink:
     return "FullLTOPostLink";
+  case llvm::ThinOrFullLTOPhase::CustomLTOPostLink:
+    return "CustomLTOPostLink";
   }
   llvm_unreachable("invalid phase");
 }
