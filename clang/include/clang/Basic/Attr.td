@@ -143,7 +143,6 @@ def SharedVar : SubsetSubject<Var,
 def GlobalVar : SubsetSubject<Var,
                              [{S->hasGlobalStorage()}], "global variables">;
 
-
 def ExternalGlobalVar : SubsetSubject<Var,
                              [{S->hasGlobalStorage() &&
                                S->getStorageClass()!=StorageClass::SC_Static &&
