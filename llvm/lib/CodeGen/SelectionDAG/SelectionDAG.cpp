@@ -8145,10 +8145,10 @@ SDValue SelectionDAG::getMemBasePlusOffset(SDValue Ptr, SDValue Offset,
                                            const SDNodeFlags Flags) {
   assert(Offset.getValueType().isInteger());
   EVT BasePtrVT = Ptr.getValueType();
-  if (!this->getTarget().shouldPreservePtrArith(
-          this->getMachineFunction().getFunction(), BasePtrVT))
-    return getNode(ISD::ADD, DL, BasePtrVT, Ptr, Offset, Flags);
-  return getNode(ISD::PTRADD, DL, BasePtrVT, Ptr, Offset, Flags);
+  if (TLI->shouldPreservePtrArith(this->getMachineFunction().getFunction(),
+                                  BasePtrVT))
+    return getNode(ISD::PTRADD, DL, BasePtrVT, Ptr, Offset, Flags);
+  return getNode(ISD::ADD, DL, BasePtrVT, Ptr, Offset, Flags);
 }
 
 /// Returns true if memcpy source is constant data.

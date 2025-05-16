@@ -35,7 +35,6 @@ namespace llvm {
 class AAManager;
 using ModulePassManager = PassManager<Module>;
 
-struct EVT;
 class Function;
 class GlobalValue;
 class MachineModuleInfoWrapperPass;
@@ -466,15 +465,6 @@ public:
   virtual bool splitModule(
       Module &M, unsigned NumParts,
       function_ref<void(std::unique_ptr<Module> MPart)> ModuleCallback) {
-    return false;
-  }
-
-  /// True if target has some particular form of dealing with pointer arithmetic
-  /// semantics for pointers with the given value type. False if pointer
-  /// arithmetic should not be preserved for passes such as instruction
-  /// selection, and can fallback to regular arithmetic.
-  virtual bool shouldPreservePtrArith(const Function &F,
-                                      const EVT &PtrVT) const {
     return false;
   }
 
