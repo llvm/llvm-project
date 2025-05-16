@@ -1434,6 +1434,12 @@ def : SelectQCbi<SETULT, uimm16nonzero, Select_GPR_Using_CC_Uimm16NonZero>;
 def : SelectQCbi<SETUGE, uimm16nonzero, Select_GPR_Using_CC_Uimm16NonZero>;
 } // let Predicates = [HasVendorXqcibi, IsRV32], AddedComplexity = 2
 
+let Predicates = [HasVendorXqcibm, IsRV32] in {
+def : Pat<(sext_inreg (i32 GPR:$rs1), i16), (QC_EXT GPR:$rs1, 16, 0)>;
+def : Pat<(sext_inreg (i32 GPR:$rs1), i8), (QC_EXT GPR:$rs1, 8, 0)>;
+def : Pat<(sext_inreg (i32 GPR:$rs1), i1), (QC_EXT GPR:$rs1, 1, 0)>;
+} // Predicates = [HasVendorXqcibm, IsRV32]
+
 let Predicates = [HasVendorXqciint, IsRV32] in
 def : Pat<(riscv_mileaveret_glue), (QC_C_MILEAVERET)>;
 

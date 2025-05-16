@@ -986,7 +986,8 @@ class Sema;
     /// Have we matched any packs on the parameter side, versus any non-packs on
     /// the argument side, in a context where the opposite matching is also
     /// allowed?
-    bool StrictPackMatch : 1;
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned StrictPackMatch : 1;
 
     /// True if the candidate was found using ADL.
     LLVM_PREFERRED_TYPE(CallExpr::ADLCallKind)
@@ -1002,7 +1003,8 @@ class Sema;
 
     /// FailureKind - The reason why this candidate is not viable.
     /// Actually an OverloadFailureKind.
-    unsigned char FailureKind;
+    LLVM_PREFERRED_TYPE(OverloadFailureKind)
+    unsigned FailureKind : 8;
 
     /// The number of call arguments that were explicitly provided,
     /// to be used while performing partial ordering of function templates.
