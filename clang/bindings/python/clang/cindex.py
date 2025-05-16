@@ -62,7 +62,24 @@ from __future__ import annotations
 #
 # o implement additional SourceLocation, SourceRange, and File methods.
 
-from ctypes import *
+from ctypes import (
+    Array,
+    CDLL,
+    CFUNCTYPE,
+    POINTER,
+    Structure,
+    byref,
+    c_char_p,
+    c_int,
+    c_longlong,
+    c_uint,
+    c_ulong,
+    c_ulonglong,
+    c_void_p,
+    cast,
+    cdll,
+    py_object,
+)
 
 import os
 import sys
