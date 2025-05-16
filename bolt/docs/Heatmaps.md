@@ -90,9 +90,12 @@ Some useful options are:
 
 ```
 -block-size=<uint>  - heatmap bucket size in bytes (default 64)
--line-size=<uint>   - number of entries per line (default 256)
+-line-size=<uint>   - number of entries per line (default 256).
+                      Use 128 if the heatmap doesn't fit screen horizontally.
 -max-address=<uint> - maximum address considered valid for heatmap (default 4GB)
 -print-mappings     - print mappings in the legend, between characters/blocks and text sections (default false)
 -heatmap-zoom-out=<uint>,... - print zoomed out heatmaps with given block sizes,
-                      must be multiples of block-size in ascending order
+                      must be multiples of block-size in ascending order.
+                      Suggested values: 4096 (default page size), 16384 (16k page),
+                      1048576 (1MB for XL workloads).
 ```
