@@ -62,7 +62,7 @@ static bool fillLineInfoFromLocation(const SourceLocation &Location,
 
 std::optional<DILineInfo>
 GsymContext::getLineInfoForAddress(object::SectionedAddress Address,
-                                     DILineInfoSpecifier Specifier) {
+                                   DILineInfoSpecifier Specifier) {
   if (Address.SectionIndex != object::SectionedAddress::UndefSection)
     return {};
 
@@ -101,8 +101,8 @@ GsymContext::getLineInfoForDataAddress(object::SectionedAddress Address) {
 
 DILineInfoTable
 GsymContext::getLineInfoForAddressRange(object::SectionedAddress Address,
-                                          uint64_t Size,
-                                          DILineInfoSpecifier Specifier) {
+                                        uint64_t Size,
+                                        DILineInfoSpecifier Specifier) {
   if (Size == 0)
     return DILineInfoTable();
 
@@ -132,7 +132,7 @@ GsymContext::getLineInfoForAddressRange(object::SectionedAddress Address,
 
 DIInliningInfo
 GsymContext::getInliningInfoForAddress(object::SectionedAddress Address,
-                                         DILineInfoSpecifier Specifier) {
+                                       DILineInfoSpecifier Specifier) {
   auto ResultOrErr = Reader->lookup(Address.Address);
 
   if (!ResultOrErr)
