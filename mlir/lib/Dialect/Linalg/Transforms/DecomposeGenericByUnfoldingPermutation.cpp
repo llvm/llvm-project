@@ -103,7 +103,7 @@ computeTransposeBroadcast(AffineMap &map) {
 
   // If dims are not monotonically increasing then transpose is present.
   SmallVector<int64_t> sortedResMap(minorResult);
-  std::sort(sortedResMap.begin(), sortedResMap.end());
+  llvm::sort(sortedResMap);
   bool hasTranspose = !std::equal(minorResult.begin(), minorResult.end(),
                                   sortedResMap.begin(), sortedResMap.end());
 

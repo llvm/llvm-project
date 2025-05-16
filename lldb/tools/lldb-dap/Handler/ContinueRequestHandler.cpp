@@ -31,6 +31,9 @@ ContinueRequestHandler::Run(const ContinueArguments &args) const {
   SBProcess process = dap.target.GetProcess();
   SBError error;
 
+  if (!SBDebugger::StateIsStoppedState(process.GetState()))
+    return make_error<NotStoppedError>();
+
   if (args.singleThread)
     dap.GetLLDBThread(args.threadId).Resume(error);
   else
@@ -40,7 +43,7 @@ ContinueRequestHandler::Run(const ContinueArguments &args) const {
     return ToError(error);
 
   ContinueResponseBody body;
-  body.allThreadsContinued = args.singleThread;
+  body.allThreadsContinued = !args.singleThread;
   return body;
 }
 
