@@ -55,8 +55,9 @@ struct MinSequenceContainer {
   }
 
 #if defined(__cpp_lib_containers_ranges) && __cpp_lib_containers_ranges >= 202202L
-  iterator insert_range(const_iterator p, auto rg) {
-    return from_vector_iterator(data_.insert_range(to_vector_iterator(p), rg));
+  template <class Rng>
+  iterator insert_range(const_iterator p, Rng&& rg) {
+    return from_vector_iterator(data_.insert_range(to_vector_iterator(p), std::forward<Rng>(rg)));
   }
 #endif // defined(__cpp_lib_containers_ranges) && __cpp_lib_containers_ranges >= 202202L
 
