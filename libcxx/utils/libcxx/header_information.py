@@ -169,6 +169,7 @@ headers_not_available = list(map(Header, [
     "inplace_vector",
     "linalg",
     "rcu",
+    "spanstream",
     "stacktrace",
     "stdfloat",
     "text_encoding",
