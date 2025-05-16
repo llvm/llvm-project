@@ -108,15 +108,15 @@ HTML for investigation:
         -DCMAKE_PREFIX_PATH="$LLVM_PROJECT;$DEVICE_LIBS" ..
     $ make -j
     $ make test test-lit
-    $ cd profile
-    $ $LLVM_PROJECT/bin/llvm-profdata merge -sparse \*.profraw -o \
+    $ cd profiles
+    $ $LLVM_PROJECT/bin/llvm-profdata merge -sparse *.profraw -o \
         comgr_test.profdata # merge and index data
     $ $LLVM_PROJECT/bin/llvm-cov report ../libamd_comgr.so \
         -instr-profile=comgr_test.profdata # show test report
     $ $LLVM_PROJECT/bin/llvm-cov report ../libamd_comgr.so \
-        -instr-profile=comgr_test.profdata -ignore-filename-regex="build-.*/" \
-        -ignore-filename-regex="llvm-project-internal/[cl].*/include/*" \
-        # show test report without includes
+        -instr-profile=comgr_test.profdata \
+        -ignore-filename-regex="[cl].*/include/*" # show test report without \
+        includes
     $ $LLVM_PROJECT/../llvm/utils/prepare-code-coverage-artifact.py \
         --preserve-profiles $LLVM_PROJECT/bin/llvm-profdata \
         $LLVM_PROJECT/bin/llvm-cov . html ../libamd_comgr.so \
