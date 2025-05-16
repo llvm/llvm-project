@@ -11,7 +11,7 @@
 // CHECK-DAG: @a = external addrspace(2) global i32, align 4
 // CHECK-DAG: @c = external addrspace(2) global [4 x double], align 8
 // CHECK-DAG: @e = external addrspace(2) global <4 x float>, align 16
-// CHECK-DAG: @s = external addrspace(2) global target("dx.Layout", %S, 8, 0), align 8
+// CHECK-DAG: @s = external addrspace(2) global target("dx.Layout", %S, 8, 0), align 1
 
 struct S {
   float2 v;

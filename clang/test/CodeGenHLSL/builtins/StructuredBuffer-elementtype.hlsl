@@ -13,6 +13,8 @@
 // CHECK: %"class.hlsl::StructuredBuffer.9" = type { target("dx.RawBuffer", <3 x i32>, 0, 0) }
 // CHECK: %"class.hlsl::StructuredBuffer.10" = type { target("dx.RawBuffer", <2 x half>, 0, 0) }
 // CHECK: %"class.hlsl::StructuredBuffer.11" = type { target("dx.RawBuffer", <3 x float>, 0, 0) }
+// CHECK: %"class.hlsl::StructuredBuffer.12" = type { target("dx.RawBuffer", i32, 0, 0) }
+// CHECK: %"class.hlsl::StructuredBuffer.13" = type { target("dx.RawBuffer", <4 x i32>, 0, 0) }
 
 StructuredBuffer<int16_t> BufI16;
 StructuredBuffer<uint16_t> BufU16;
@@ -27,6 +29,8 @@ StructuredBuffer< vector<int16_t, 4> > BufI16x4;
 StructuredBuffer< vector<uint, 3> > BufU32x3;
 StructuredBuffer<half2> BufF16x2;
 StructuredBuffer<float3> BufF32x3;
+StructuredBuffer<bool> BufBool;
+StructuredBuffer<bool4> BufBoolVec;
 // TODO: StructuredBuffer<snorm half> BufSNormF16;
 // TODO: StructuredBuffer<unorm half> BufUNormF16;
 // TODO: StructuredBuffer<snorm float> BufSNormF32;
@@ -49,4 +53,6 @@ void main(int GI : SV_GroupIndex) {
   vector<int, 3> v11 = BufU32x3[GI];
   half2 v12 = BufF16x2[GI];
   float3 v13 = BufF32x3[GI];
+  bool v14 = BufBool[GI];
+  bool4 v15 = BufBoolVec[GI];
 }

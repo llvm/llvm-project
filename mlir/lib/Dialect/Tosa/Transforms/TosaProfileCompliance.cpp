@@ -227,6 +227,12 @@ LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::VariableOp op) {
 }
 
 template <>
+LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::VariableWriteOp op) {
+  addValue(op.getInput1());
+  return success();
+}
+
+template <>
 LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::IfOp op) {
   addValue(op.getCondition());
   return success();
@@ -280,6 +286,7 @@ LogicalResult ProfileInfoDepot::populatationDispatch(Operation *op) {
   POPULATE_PROFILE_INFO_CUSTOM(Rescale)
   POPULATE_PROFILE_INFO_CUSTOM(MatMul)
   POPULATE_PROFILE_INFO_CUSTOM(Variable)
+  POPULATE_PROFILE_INFO_CUSTOM(VariableWrite)
   POPULATE_PROFILE_INFO_CUSTOM(If)
   POPULATE_PROFILE_INFO_CUSTOM(While)
 
@@ -334,7 +341,6 @@ LogicalResult ProfileInfoDepot::populatationDispatch(Operation *op) {
   POPULATE_PROFILE_INFO_COMMON(Reverse)
   POPULATE_PROFILE_INFO_COMMON(Identity)
   POPULATE_PROFILE_INFO_COMMON(VariableRead)
-  POPULATE_PROFILE_INFO_COMMON(VariableWrite)
 
   // Type Invariant Extension, a capability extension that is independent
   // of the data type, meaning any compatible type can be used. No type
@@ -438,9 +444,8 @@ LogicalResult TosaProfileCompliance::checkProfileOrExtension(
   // Ensure the profile inference match the profile knowledge of the
   // specification.
   for (const auto &cands : specRequiredModeSet) {
-    for (size_t i = 0; i < opRequiredMode.size(); i++) {
-      if (std::find(cands.begin(), cands.end(), opRequiredMode[i]) ==
-          cands.end()) {
+    for (const auto &mode : opRequiredMode) {
+      if (!llvm::is_contained(cands, mode)) {
         op->emitOpError() << "illegal: requires ["
                           << llvm::join(stringifyProfile<T>(opRequiredMode),
                                         ", ")

@@ -286,5 +286,3 @@ declare hidden { <4 x i32>, <4 x half> } @func_struct() #0
 
 attributes #0 = { nounwind}
 
-!llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

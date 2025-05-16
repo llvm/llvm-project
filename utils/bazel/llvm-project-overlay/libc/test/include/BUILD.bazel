@@ -1,0 +1,22 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+# Tests for LLVM libc public headers.
+
+load("//libc/test:libc_test_rules.bzl", "libc_test")
+
+package(default_visibility = ["//visibility:public"])
+
+licenses(["notice"])
+
+libc_test(
+    name = "stdbit_test",
+    srcs = [
+        "stdbit_stub.h",
+        "stdbit_test.cpp",
+    ],
+    deps = [
+        "//libc:public_headers_deps",
+    ],
+)

@@ -20,6 +20,8 @@
 #include "lldb/Core/IOHandler.h"
 #include "lldb/Core/SourceManager.h"
 #include "lldb/Core/Statusline.h"
+#include "lldb/Core/StructuredDataImpl.h"
+#include "lldb/Core/Telemetry.h"
 #include "lldb/Core/UserSettingsController.h"
 #include "lldb/Host/HostThread.h"
 #include "lldb/Host/StreamFile.h"
@@ -32,6 +34,7 @@
 #include "lldb/Utility/Diagnostics.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/UserID.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
@@ -123,6 +126,8 @@ public:
                              llvm::StringRef prompt);
 
   void Clear();
+
+  void DispatchClientTelemetry(const lldb_private::StructuredDataImpl &entry);
 
   bool GetAsyncExecution();
 
@@ -232,14 +237,6 @@ public:
 
   void SetLoggingCallback(lldb::LogOutputCallback log_callback, void *baton);
 
-  // Properties Functions
-  enum StopDisassemblyType {
-    eStopDisassemblyTypeNever = 0,
-    eStopDisassemblyTypeNoDebugInfo,
-    eStopDisassemblyTypeNoSource,
-    eStopDisassemblyTypeAlways
-  };
-
   Status SetPropertyValue(const ExecutionContext *exe_ctx,
                           VarSetOperationType op, llvm::StringRef property_path,
                           llvm::StringRef value) override;
@@ -303,6 +300,9 @@ public:
   const FormatEntity::Entry *GetStatuslineFormat() const;
   bool SetStatuslineFormat(const FormatEntity::Entry &format);
 
+  llvm::StringRef GetSeparator() const;
+  bool SetSeparator(llvm::StringRef s);
+
   llvm::StringRef GetShowProgressAnsiPrefix() const;
 
   llvm::StringRef GetShowProgressAnsiSuffix() const;
@@ -333,7 +333,7 @@ public:
 
   uint64_t GetStopSourceLineCount(bool before) const;
 
-  StopDisassemblyType GetStopDisassemblyDisplay() const;
+  lldb::StopDisassemblyType GetStopDisassemblyDisplay() const;
 
   uint64_t GetDisassemblyLineCount() const;
 

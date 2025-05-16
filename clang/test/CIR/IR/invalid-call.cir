@@ -41,3 +41,30 @@ cir.func @f7() {
   %0 = cir.call @f6() : () -> !s32i
   cir.return
 }
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!u32i = !cir.int<u, 32>
+
+cir.func @f8(!s32i, !s32i)
+cir.func @f9() {
+  %0 = cir.const #cir.int<1> : !s32i
+  // expected-error @below {{incorrect number of operands for callee}}
+  cir.call @f8(%0) : (!s32i) -> ()
+  cir.return
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!u32i = !cir.int<u, 32>
+
+cir.func @f10(!s32i, !s32i)
+cir.func @f11() {
+  %0 = cir.const #cir.int<1> : !s32i
+  %1 = cir.const #cir.int<2> : !u32i
+  // expected-error @below {{operand type mismatch: expected operand type '!cir.int<s, 32>', but provided '!cir.int<u, 32>' for operand number 1}}
+  cir.call @f10(%0, %1) : (!s32i, !u32i) -> ()
+  cir.return
+}

@@ -33,7 +33,7 @@ public:
       : MCAsmBackend(llvm::endianness::little), OSABI(osABI),
         IsLittleEndian(isLE) {}
 
-  const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
+  MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,
                   uint64_t Value, bool IsResolved,
@@ -51,8 +51,7 @@ public:
 };
 } // namespace llvm
 
-const MCFixupKindInfo &
-XtensaMCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
+MCFixupKindInfo XtensaMCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   const static MCFixupKindInfo Infos[Xtensa::NumTargetFixupKinds] = {
       // name                     offset bits  flags
       {"fixup_xtensa_branch_6", 0, 16, MCFixupKindInfo::FKF_IsPCRel},

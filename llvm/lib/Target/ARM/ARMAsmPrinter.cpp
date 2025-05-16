@@ -50,7 +50,7 @@ using namespace llvm;
 
 ARMAsmPrinter::ARMAsmPrinter(TargetMachine &TM,
                              std::unique_ptr<MCStreamer> Streamer)
-    : AsmPrinter(TM, std::move(Streamer)), Subtarget(nullptr), AFI(nullptr),
+    : AsmPrinter(TM, std::move(Streamer), ID), Subtarget(nullptr), AFI(nullptr),
       MCP(nullptr), InConstantPool(false), OptimizationGoals(-1) {}
 
 void ARMAsmPrinter::emitFunctionBodyEnd() {
@@ -1202,6 +1202,14 @@ void ARMAsmPrinter::EmitUnwindingInstruction(const MachineInstr *MI) {
     SrcReg = ~0U;
     DstReg = MI->getOperand(0).getReg();
     break;
+  case ARM::VMRS:
+    SrcReg = ARM::FPSCR;
+    DstReg = MI->getOperand(0).getReg();
+    break;
+  case ARM::VMRS_FPEXC:
+    SrcReg = ARM::FPEXC;
+    DstReg = MI->getOperand(0).getReg();
+    break;
   default:
     SrcReg = MI->getOperand(1).getReg();
     DstReg = MI->getOperand(0).getReg();
@@ -1368,6 +1376,14 @@ void ARMAsmPrinter::EmitUnwindingInstruction(const MachineInstr *MI) {
         // correct ".save" later.
         AFI->EHPrologueRemappedRegs[DstReg] = SrcReg;
         break;
+      case ARM::VMRS:
+      case ARM::VMRS_FPEXC:
+        // If a function spills FPSCR or FPEXC, we copy the values to low
+        // registers before pushing them.  However, we can't issue annotations
+        // for FP status registers because ".save" requires GPR registers, and
+        // ".vsave" requires DPR registers, so don't record the copy and simply
+        // emit annotations for the source registers used for the store.
+        break;
       case ARM::tLDRpci: {
         // Grab the constpool index and check, whether it corresponds to
         // original or cloned constpool entry.
@@ -1426,9 +1442,8 @@ void ARMAsmPrinter::EmitUnwindingInstruction(const MachineInstr *MI) {
 #include "ARMGenMCPseudoLowering.inc"
 
 void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
-  // TODOD FIXME: Enable feature predicate checks once all the test pass.
-  // ARM_MC::verifyInstructionPredicates(MI->getOpcode(),
-  //                                   getSubtargetInfo().getFeatureBits());
+  ARM_MC::verifyInstructionPredicates(MI->getOpcode(),
+                                      getSubtargetInfo().getFeatureBits());
 
   const DataLayout &DL = getDataLayout();
   MCTargetStreamer &TS = *OutStreamer->getTargetStreamer();
@@ -2417,6 +2432,11 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
   EmitToStreamer(*OutStreamer, TmpInst);
 }
+
+char ARMAsmPrinter::ID = 0;
+
+INITIALIZE_PASS(ARMAsmPrinter, "arm-asm-printer", "ARM Assembly Printer", false,
+                false)
 
 //===----------------------------------------------------------------------===//
 // Target Registry Stuff

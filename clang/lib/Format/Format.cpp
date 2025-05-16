@@ -1100,6 +1100,7 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("ObjCSpaceAfterProperty", Style.ObjCSpaceAfterProperty);
     IO.mapOptional("ObjCSpaceBeforeProtocolList",
                    Style.ObjCSpaceBeforeProtocolList);
+    IO.mapOptional("OneLineFormatOffRegex", Style.OneLineFormatOffRegex);
     IO.mapOptional("PackConstructorInitializers",
                    Style.PackConstructorInitializers);
     IO.mapOptional("PenaltyBreakAssignment", Style.PenaltyBreakAssignment);
@@ -1151,6 +1152,8 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("SortUsingDeclarations", Style.SortUsingDeclarations);
     IO.mapOptional("SpaceAfterCStyleCast", Style.SpaceAfterCStyleCast);
     IO.mapOptional("SpaceAfterLogicalNot", Style.SpaceAfterLogicalNot);
+    IO.mapOptional("SpaceAfterOperatorKeyword",
+                   Style.SpaceAfterOperatorKeyword);
     IO.mapOptional("SpaceAfterTemplateKeyword",
                    Style.SpaceAfterTemplateKeyword);
     IO.mapOptional("SpaceAroundPointerQualifiers",
@@ -1638,6 +1641,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.SortUsingDeclarations = FormatStyle::SUD_LexicographicNumeric;
   LLVMStyle.SpaceAfterCStyleCast = false;
   LLVMStyle.SpaceAfterLogicalNot = false;
+  LLVMStyle.SpaceAfterOperatorKeyword = false;
   LLVMStyle.SpaceAfterTemplateKeyword = true;
   LLVMStyle.SpaceAroundPointerQualifiers = FormatStyle::SAPQ_Default;
   LLVMStyle.SpaceBeforeAssignmentOperators = true;
@@ -2427,19 +2431,23 @@ public:
 private:
   void editEnumTrailingComma(SmallVectorImpl<AnnotatedLine *> &Lines,
                              tooling::Replacements &Result) {
+    bool InEnumBraces = false;
+    const FormatToken *BeforeRBrace = nullptr;
     const auto &SourceMgr = Env.getSourceManager();
     for (auto *Line : Lines) {
       if (!Line->Children.empty())
         editEnumTrailingComma(Line->Children, Result);
-      if (!Line->Affected)
-        continue;
       for (const auto *Token = Line->First; Token && !Token->Finalized;
            Token = Token->Next) {
-        if (Token->isNot(TT_EnumRBrace))
+        if (Token->isNot(TT_EnumRBrace)) {
+          if (Token->is(TT_EnumLBrace))
+            InEnumBraces = true;
+          else if (InEnumBraces && Token->isNot(tok::comment))
+            BeforeRBrace = Line->Affected ? Token : nullptr;
           continue;
-        const auto *BeforeRBrace = Token->getPreviousNonComment();
-        assert(BeforeRBrace);
-        if (BeforeRBrace->is(TT_EnumLBrace)) // Empty braces.
+        }
+        InEnumBraces = false;
+        if (!BeforeRBrace) // Empty braces or Line not affected.
           continue;
         if (BeforeRBrace->is(tok::comma)) {
           if (Style.EnumTrailingComma == FormatStyle::ETC_Remove)
@@ -2448,6 +2456,7 @@ private:
           cantFail(Result.add(tooling::Replacement(
               SourceMgr, BeforeRBrace->Tok.getEndLoc(), 0, ",")));
         }
+        BeforeRBrace = nullptr;
       }
     }
   }
@@ -3239,11 +3248,11 @@ static void sortCppIncludes(const FormatStyle &Style,
   }
 
   // Deduplicate #includes.
-  Indices.erase(std::unique(Indices.begin(), Indices.end(),
-                            [&](unsigned LHSI, unsigned RHSI) {
-                              return Includes[LHSI].Text.trim() ==
-                                     Includes[RHSI].Text.trim();
-                            }),
+  Indices.erase(llvm::unique(Indices,
+                             [&](unsigned LHSI, unsigned RHSI) {
+                               return Includes[LHSI].Text.trim() ==
+                                      Includes[RHSI].Text.trim();
+                             }),
                 Indices.end());
 
   int CurrentCategory = Includes.front().Category;
@@ -3471,10 +3480,10 @@ static void sortJavaImports(const FormatStyle &Style,
   });
 
   // Deduplicate imports.
-  Indices.erase(std::unique(Indices.begin(), Indices.end(),
-                            [&](unsigned LHSI, unsigned RHSI) {
-                              return Imports[LHSI].Text == Imports[RHSI].Text;
-                            }),
+  Indices.erase(llvm::unique(Indices,
+                             [&](unsigned LHSI, unsigned RHSI) {
+                               return Imports[LHSI].Text == Imports[RHSI].Text;
+                             }),
                 Indices.end());
 
   bool CurrentIsStatic = Imports[Indices.front()].IsStatic;

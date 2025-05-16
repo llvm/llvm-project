@@ -175,7 +175,7 @@ void dumpFunction(const BinaryFunction &BF) {
       // Dump pseudo instructions (CFI)
       if (BC.MIB->isPseudo(Instr)) {
         if (BC.MIB->isCFI(Instr))
-          dumpCFI(BF, Instr, *MAP.get());
+          dumpCFI(BF, Instr, *MAP);
         continue;
       }
 
@@ -227,7 +227,7 @@ void dumpFunction(const BinaryFunction &BF) {
   OS << "# Jump tables\n";
   // Print all jump tables.
   for (auto &JTI : BF.jumpTables())
-    dumpJumpTableSymbols(OS, JTI.second, *MAP.get(), LastSection);
+    dumpJumpTableSymbols(OS, JTI.second, *MAP, LastSection);
 
   OS << "# BinaryData\n";
   // Print data references.

@@ -258,6 +258,15 @@ LogicalResult StridedLayoutAttr::verifyLayout(
   return success();
 }
 
+LogicalResult
+StridedLayoutAttr::getStridesAndOffset(ArrayRef<int64_t>,
+                                       SmallVectorImpl<int64_t> &strides,
+                                       int64_t &offset) const {
+  llvm::append_range(strides, getStrides());
+  offset = getOffset();
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // StringAttr
 //===----------------------------------------------------------------------===//
@@ -988,7 +997,7 @@ DenseElementsAttr DenseElementsAttr::get(ShapedType type,
   assert(hasSameNumElementsOrSplat(type, values));
   assert(type.getElementType().isInteger(1));
 
-  std::vector<char> buff(llvm::divideCeil(values.size(), CHAR_BIT));
+  SmallVector<char> buff(llvm::divideCeil(values.size(), CHAR_BIT));
 
   if (!values.empty()) {
     bool isSplat = true;
@@ -1306,7 +1315,8 @@ int64_t DenseElementsAttr::getNumElements() const {
 
 /// Utility method to write a range of APInt values to a buffer.
 template <typename APRangeT>
-static void writeAPIntsToBuffer(size_t storageWidth, std::vector<char> &data,
+static void writeAPIntsToBuffer(size_t storageWidth,
+                                SmallVectorImpl<char> &data,
                                 APRangeT &&values) {
   size_t numValues = llvm::size(values);
   data.resize(llvm::divideCeil(storageWidth * numValues, CHAR_BIT));
@@ -1328,7 +1338,7 @@ static void writeAPIntsToBuffer(size_t storageWidth, std::vector<char> &data,
 DenseElementsAttr DenseIntOrFPElementsAttr::getRaw(ShapedType type,
                                                    size_t storageWidth,
                                                    ArrayRef<APFloat> values) {
-  std::vector<char> data;
+  SmallVector<char> data;
   auto unwrapFloat = [](const APFloat &val) { return val.bitcastToAPInt(); };
   writeAPIntsToBuffer(storageWidth, data, llvm::map_range(values, unwrapFloat));
   return DenseIntOrFPElementsAttr::getRaw(type, data);
@@ -1340,7 +1350,7 @@ DenseElementsAttr DenseIntOrFPElementsAttr::getRaw(ShapedType type,
 DenseElementsAttr DenseIntOrFPElementsAttr::getRaw(ShapedType type,
                                                    size_t storageWidth,
                                                    ArrayRef<APInt> values) {
-  std::vector<char> data;
+  SmallVector<char> data;
   writeAPIntsToBuffer(storageWidth, data, values);
   return DenseIntOrFPElementsAttr::getRaw(type, data);
 }
@@ -1705,8 +1715,8 @@ Attribute SparseElementsAttr::getZeroAttr() const {
 
 /// Flatten, and return, all of the sparse indices in this attribute in
 /// row-major order.
-std::vector<ptrdiff_t> SparseElementsAttr::getFlattenedSparseIndices() const {
-  std::vector<ptrdiff_t> flatSparseIndices;
+SmallVector<ptrdiff_t> SparseElementsAttr::getFlattenedSparseIndices() const {
+  SmallVector<ptrdiff_t> flatSparseIndices;
 
   // The sparse indices are 64-bit integers, so we can reinterpret the raw data
   // as a 1-D index array.

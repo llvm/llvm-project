@@ -23,6 +23,17 @@ if (DEFINED LLVM_HAVE_TF_AOT OR LLVM_HAVE_TFLITE)
   endif()
 endif()
 
+# The implementation of ConstantFolding.cpp relies on the use of math functions
+# from the host. In particular, it relies on the detection of floating point
+# exceptions originating from such math functions to prevent invalid cases
+# from being constant folded. Therefore, we must ensure that fp exceptions are
+# handled correctly.
+if (MSVC)
+  set_source_files_properties(ConstantFolding.cpp PROPERTIES COMPILE_OPTIONS "/fp:except")
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  set_source_files_properties(ConstantFolding.cpp PROPERTIES COMPILE_OPTIONS "-ftrapping-math")
+endif()
+
 add_llvm_component_library(LLVMAnalysis
   AliasAnalysis.cpp
   AliasAnalysisEvaluator.cpp

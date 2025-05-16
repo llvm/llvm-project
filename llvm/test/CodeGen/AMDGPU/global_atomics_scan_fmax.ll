@@ -9465,7 +9465,5 @@ define amdgpu_kernel void @global_atomic_fmax_uni_address_uni_value_system_scope
 
 attributes #0 = { "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
 
-!llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}
 !1 = !{}
 

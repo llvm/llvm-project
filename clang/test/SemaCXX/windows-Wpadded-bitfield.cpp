@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-windows-msvc -fsyntax-only -verify -Wpadded %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -verify -Wpadded %s
 
 struct __attribute__((ms_struct)) BitfieldStruct { // expected-warning {{padding size of 'BitfieldStruct' with 3 bytes to alignment boundary}}
   char c : 1;
@@ -24,9 +25,23 @@ struct __attribute__((ms_struct)) DifferentUnitSizeBitfield { // expected-warnin
   char i; // expected-warning {{padding struct 'DifferentUnitSizeBitfield' with 31 bits to align 'i'}}
 };
 
+struct __attribute__((ms_struct)) BitfieldBigPadding { // expected-warning {{padding size of 'BitfieldBigPadding' with 63 bits to alignment boundary}}
+  long long x;
+  char a : 1;
+  long long b : 1; // expected-warning {{padding struct 'BitfieldBigPadding' with 63 bits to align 'b'}}
+};
+
+struct __attribute__((ms_struct)) SameUnitSizeMultiple { // expected-warning {{padding size of 'SameUnitSizeMultiple' with 2 bits to alignment boundary}}
+  char c : 1;
+  char cc : 2;
+  char ccc : 3;
+};
+
 int main() {
   BitfieldStruct b;
   SevenBitfieldStruct s;
   SameUnitSizeBitfield su;
   DifferentUnitSizeBitfield du;
+  BitfieldBigPadding bbp;
+  SameUnitSizeMultiple susm;
 }

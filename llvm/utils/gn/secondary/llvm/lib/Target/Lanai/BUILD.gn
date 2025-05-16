@@ -12,10 +12,17 @@ tablegen("LanaiGenDAGISel") {
   td_file = "Lanai.td"
 }
 
+tablegen("LanaiGenSDNodeInfo") {
+  visibility = [ ":LLVMLanaiCodeGen" ]
+  args = [ "-gen-sd-node-info" ]
+  td_file = "Lanai.td"
+}
+
 static_library("LLVMLanaiCodeGen") {
   deps = [
     ":LanaiGenCallingConv",
     ":LanaiGenDAGISel",
+    ":LanaiGenSDNodeInfo",
     "MCTargetDesc",
     "TargetInfo",
     "//llvm/include/llvm/Config:llvm-config",
