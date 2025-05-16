@@ -77,8 +77,11 @@ Clang Frontend Potentially Breaking Changes
 
 Clang Python Bindings Potentially Breaking Changes
 --------------------------------------------------
-- Calling methods on null-cursors now leads to an exception.
-- ``Cursor.from_location`` now returns ``None`` instead of a null-cursor.
+- ``Cursor.from_location`` now returns ``None`` instead of a null cursor.
+  This eliminates the last known source of null cursors.
+- Almost all `Cursor` methods now assert that they are called on non-null cursors.
+  Most of the time null cursors were mapped to `None`,
+  so no widespread breakages are expected.
 
 What's New in Clang |release|?
 ==============================
