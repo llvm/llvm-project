@@ -7,14 +7,15 @@
 //===----------------------------------------------------------------------===//
 #include "mlir/Dialect/XeGPU/Transforms/Passes.h"
 
+#include "mlir/Dialect/Affine/Utils.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/Index/IR/IndexDialect.h"
+#include "mlir/Dialect/Index/IR/IndexOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include <mlir/Dialect/GPU/IR/GPUDialect.h>
-#include <mlir/Dialect/Index/IR/IndexOps.h>
 
 namespace mlir {
 namespace xegpu {
@@ -69,15 +70,6 @@ namespace {
 /// 9 distribution units (3x3) in total. Hence the 9 subgroup level operations.
 struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
   using OpConversionPattern<xegpu::CreateNdDescOp>::OpConversionPattern;
-
-  // Convert linear subgroup ID to 2D coordinates
-  // TODO: Delinearize for nD
-  SmallVector<Value> delinearizeSubgroupId(ConversionPatternRewriter &rewriter,
-                                           Location loc, Value sgID,
-                                           Value sgDimX, Value sgDimY) const {
-    return {rewriter.create<index::DivUOp>(loc, sgID, sgDimY),
-            rewriter.create<index::RemUOp>(loc, sgID, sgDimY)};
-  }
 
   // Calculate offset for each subgroup
   SmallVector<OpFoldResult>
@@ -144,7 +136,8 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
 
     // TODO : Handle order attribute
     // Get the subgroup ID
-    auto linearSgId = rewriter.create<gpu::SubgroupIdOp>(loc, nullptr);
+    auto linearSgId =
+        rewriter.create<gpu::SubgroupIdOp>(loc, /*upper_bound=*/nullptr);
 
     // Create constants for layout dimensions
     SmallVector<Value> sgLayoutDim(sgLayout.size());
@@ -156,9 +149,11 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
       sgDataDim[i] = rewriter.create<arith::ConstantIndexOp>(loc, sgShape[i]);
     }
 
-    // Delinearize the 1D subgroup id into 2d
-    SmallVector<Value> sgIds = delinearizeSubgroupId(
-        rewriter, loc, linearSgId, sgLayoutDim[0], sgLayoutDim[1]);
+    auto deLinearizeSgId =
+        affine::delinearizeIndex(rewriter, loc, linearSgId, sgLayoutDim);
+    if (failed(deLinearizeSgId))
+      return failure();
+    SmallVector<Value> sgIds = *deLinearizeSgId;
 
     // Calculate distribution unit shape and local offsets for subgroup
     SmallVector<int64_t> distUnitShape(sgLayout.size());
@@ -267,9 +262,9 @@ struct WgToSgDpasOp : public OpConversionPattern<xegpu::DpasOp> {
     if (!originalLayout)
       return failure();
 
+    size_t i = 0;
     SmallVector<Value> newDpasOps;
     for (auto aVec : adaptor.getLhs()) {
-      size_t i = 0;
       for (auto bVec : adaptor.getRhs()) {
 
         llvm::SmallVector<Value> operands({aVec, bVec});

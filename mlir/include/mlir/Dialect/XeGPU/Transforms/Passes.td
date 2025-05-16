@@ -33,7 +33,7 @@ def XeGPUSubgroupDistribute : Pass<"xegpu-subgroup-distribute"> {
       "Print the result of the subgroup map propagation analysis and exit.">];
 }
 
-def XeGPUWgToSgDistribute : Pass<"xegpu-wg-to-sg-distribute", "::mlir::gpu::GPUModuleOp"> {
+def XeGPUWgToSgDistribute : Pass<"xegpu-wg-to-sg-distribute"> {
   let summary = "Transform WorkGroup level XeGPU code to SubGroup level";
   let description = [{
     This transform pass distributes the workgroup level computation to
