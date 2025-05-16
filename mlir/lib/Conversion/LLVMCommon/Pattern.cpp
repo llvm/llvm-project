@@ -413,9 +413,8 @@ LogicalResult LLVM::detail::intrinsicRewrite(
   SmallVector<Value, 4> results;
   results.reserve(numResults);
   Value intrRes = callIntrOp.getResults();
-  for (unsigned i = 0; i < numResults; ++i) {
+  for (unsigned i = 0; i < numResults; ++i)
     results.push_back(rewriter.create<LLVM::ExtractValueOp>(loc, intrRes, i));
-  }
   rewriter.replaceOp(op, results);
 
   return success();

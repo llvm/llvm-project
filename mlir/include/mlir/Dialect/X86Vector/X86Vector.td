@@ -40,7 +40,7 @@ class AVX512_Op<string mnemonic, list<Trait> traits = []> :
 //----------------------------------------------------------------------------//
 
 def MaskCompressOp : AVX512_Op<"mask.compress", [Pure,
-    IntrinsicOpInterface,
+    X86IntrinsicOpInterface,
     // TODO: Support optional arguments in `AllTypesMatch`. "type($src)" could
     // then be removed from assemblyFormat.
     AllTypesMatch<["a", "dst"]>,
@@ -95,7 +95,7 @@ def MaskCompressOp : AVX512_Op<"mask.compress", [Pure,
 //----------------------------------------------------------------------------//
 
 def MaskRndScaleOp : AVX512_Op<"mask.rndscale", [Pure,
-    IntrinsicOpInterface,
+    X86IntrinsicOpInterface,
     AllTypesMatch<["src", "a", "dst"]>,
     TypesMatchWith<"imm has the same number of bits as elements in dst",
                    "dst", "imm",
@@ -147,7 +147,7 @@ def MaskRndScaleOp : AVX512_Op<"mask.rndscale", [Pure,
 //----------------------------------------------------------------------------//
 
 def MaskScaleFOp : AVX512_Op<"mask.scalef", [Pure,
-    IntrinsicOpInterface,
+    X86IntrinsicOpInterface,
     AllTypesMatch<["src", "a", "b", "dst"]>,
     TypesMatchWith<"k has the same number of bits as elements in dst",
                    "dst", "k",
@@ -200,7 +200,7 @@ def MaskScaleFOp : AVX512_Op<"mask.scalef", [Pure,
 //----------------------------------------------------------------------------//
 
 def Vp2IntersectOp : AVX512_Op<"vp2intersect", [Pure,
-    IntrinsicOpInterface,
+    X86IntrinsicOpInterface,
     AllTypesMatch<["a", "b"]>,
     TypesMatchWith<"k1 has the same number of bits as elements in a",
                    "a", "k1",
@@ -257,7 +257,7 @@ def Vp2IntersectOp : AVX512_Op<"vp2intersect", [Pure,
 //----------------------------------------------------------------------------//
 
 def DotBF16Op : AVX512_Op<"dot", [Pure,
-    IntrinsicOpInterface,
+    X86IntrinsicOpInterface,
     AllTypesMatch<["a", "b"]>,
     AllTypesMatch<["src", "dst"]>,
     TypesMatchWith<"`a` has twice an many elements as `src`",
@@ -307,7 +307,7 @@ def DotBF16Op : AVX512_Op<"dot", [Pure,
 //----------------------------------------------------------------------------//
 
 def CvtPackedF32ToBF16Op : AVX512_Op<"cvt.packed.f32_to_bf16", [Pure,
-    IntrinsicOpInterface,
+    X86IntrinsicOpInterface,
     AllElementCountsMatch<["a", "dst"]>
   ]> {
   let summary = "Convert packed F32 to packed BF16 Data.";
@@ -362,7 +362,7 @@ class AVX_LowOp<string mnemonic, list<Trait> traits = []> :
 //----------------------------------------------------------------------------//
 
 def RsqrtOp : AVX_Op<"rsqrt", [Pure,
-    IntrinsicOpInterface,
+    X86IntrinsicOpInterface,
     SameOperandsAndResultType
   ]> {
   let summary = "Rsqrt";
@@ -382,7 +382,7 @@ def RsqrtOp : AVX_Op<"rsqrt", [Pure,
 //----------------------------------------------------------------------------//
 
 def DotOp : AVX_LowOp<"dot", [Pure,
-    IntrinsicOpInterface,
+    X86IntrinsicOpInterface,
     SameOperandsAndResultType
   ]> {
   let summary = "Dot";
@@ -427,7 +427,7 @@ def DotOp : AVX_LowOp<"dot", [Pure,
 def BcstToPackedF32Op
   : AVX_Op<"bcst_to_f32.packed", [
     MemoryEffects<[MemRead]>,
-    IntrinsicOpInterface
+    X86IntrinsicOpInterface
   ]> {
   let summary = "AVX: Broadcasts BF16/F16 into packed F32 Data.";
   let description = [{
@@ -480,7 +480,7 @@ def BcstToPackedF32Op
 def CvtPackedEvenIndexedToF32Op
   : AVX_Op<"cvt.packed.even.indexed_to_f32", [
     MemoryEffects<[MemRead]>,
-    IntrinsicOpInterface
+    X86IntrinsicOpInterface
   ]> {
   let summary = "AVX: Convert packed BF16/F16 even-indexed elements into packed F32 Data.";
   let description = [{
@@ -527,7 +527,7 @@ def CvtPackedEvenIndexedToF32Op
 def CvtPackedOddIndexedToF32Op
   : AVX_Op<"cvt.packed.odd.indexed_to_f32", [
     MemoryEffects<[MemRead]>,
-    IntrinsicOpInterface
+    X86IntrinsicOpInterface
   ]> {
   let summary = "AVX: Convert packed BF16/F16 odd-indexed elements into packed F32 Data.";
   let description = [{

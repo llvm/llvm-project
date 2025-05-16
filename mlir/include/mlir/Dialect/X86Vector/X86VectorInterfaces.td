@@ -20,8 +20,8 @@ include "mlir/Dialect/LLVMIR/LLVMInterfaces.td"
 // Intrinsic Interface
 //===----------------------------------------------------------------------===//
 
-def IntrinsicOpInterface
-    : OpInterface<"IntrinsicOp", [OneToOneIntrinsicOpInterface]> {
+def X86IntrinsicOpInterface
+    : OpInterface<"X86IntrinsicOp", [OneToOneIntrinsicOpInterface]> {
   let description = [{
     A wrapper interface for operations representing x86 LLVM intrinsics.
   }];

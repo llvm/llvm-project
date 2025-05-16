@@ -22,19 +22,19 @@ namespace {
 
 /// Generic one-to-one conversion of simply mappable operations into calls
 /// to their respective LLVM intrinsics.
-struct IntrinsicOpConversion
-    : public OpInterfaceConversionPattern<x86vector::IntrinsicOp> {
+struct X86IntrinsicOpConversion
+    : public OpInterfaceConversionPattern<x86vector::X86IntrinsicOp> {
   using OpInterfaceConversionPattern<
-      x86vector::IntrinsicOp>::OpInterfaceConversionPattern;
+      x86vector::X86IntrinsicOp>::OpInterfaceConversionPattern;
 
-  IntrinsicOpConversion(const LLVMTypeConverter &typeConverter,
-                        PatternBenefit benefit = 1)
+  X86IntrinsicOpConversion(const LLVMTypeConverter &typeConverter,
+                           PatternBenefit benefit = 1)
       : OpInterfaceConversionPattern(typeConverter, &typeConverter.getContext(),
                                      benefit),
         typeConverter(typeConverter) {}
 
   LogicalResult
-  matchAndRewrite(x86vector::IntrinsicOp op, ArrayRef<Value> operands,
+  matchAndRewrite(x86vector::X86IntrinsicOp op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     return LLVM::detail::intrinsicRewrite(
         op, rewriter.getStringAttr(op.getIntrinsicName()),
@@ -51,7 +51,7 @@ private:
 /// Populate the given list with patterns that convert from X86Vector to LLVM.
 void mlir::populateX86VectorLegalizeForLLVMExportPatterns(
     const LLVMTypeConverter &converter, RewritePatternSet &patterns) {
-  patterns.add<IntrinsicOpConversion>(converter);
+  patterns.add<X86IntrinsicOpConversion>(converter);
 }
 
 void mlir::configureX86VectorLegalizeForExportTarget(
