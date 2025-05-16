@@ -2059,14 +2059,13 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
           DL, SE, *(PSE.getSymbolicMaxBackedgeTakenCount()), *Dist, MaxStride))
     return Dependence::NoDep;
 
-  // Attempt to prove strided accesses independent.
-  const APInt *APDist = nullptr;
-
   // The rest of this function relies on ConstDist being at most 64-bits, which
   // is checked earlier. Will assert if the calling code changes.
+  const APInt *APDist = nullptr;
   uint64_t ConstDist =
       match(Dist, m_scev_APInt(APDist)) ? APDist->abs().getZExtValue() : 0;
 
+  // Attempt to prove strided accesses independent.
   if (APDist) {
     // If the distance between accesses and their strides are known constants,
     // check whether the accesses interlace each other.
