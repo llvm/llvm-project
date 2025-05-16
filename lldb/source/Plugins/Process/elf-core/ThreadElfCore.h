@@ -10,10 +10,10 @@
 #define LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_THREADELFCORE_H
 
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
+#include "lldb/Target/Platform.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/ValueObject/ValueObject.h"
-#include "lldb/Target/Platform.h"
 #include "llvm/ADT/DenseMap.h"
 #include <optional>
 #include <string>
@@ -97,7 +97,6 @@ public:
                                     ThreadData &thread_data);
 };
 
-
 // PRPSINFO structure's size differs based on architecture.
 // This is the layout in the x86-64 arch case.
 // In the i386 case we parse it manually and fill it again
@@ -140,7 +139,6 @@ struct ELFLinuxPrPsInfo {
 static_assert(sizeof(ELFLinuxPrPsInfo) == 136,
               "sizeof ELFLinuxPrPsInfo is not correct!");
 
-
 class ThreadElfCore : public lldb_private::Thread {
 public:
   ThreadElfCore(lldb_private::Process &process, const ThreadData &td);
@@ -169,7 +167,8 @@ public:
       m_thread_name.clear();
   }
 
-  llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>> GetSiginfo(size_t max_size) const override;
+  llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
+  GetSiginfo(size_t max_size) const override;
 
 protected:
   // Member variables.
