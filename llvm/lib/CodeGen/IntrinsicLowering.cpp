@@ -199,6 +199,25 @@ static Value *LowerCTLZ(LLVMContext &Context, Value *V, Instruction *IP) {
   return LowerCTPOP(Context, V, IP);
 }
 
+/// Emit the code to lower clmul of V1, V2 before the specified instruction IP.
+static Value *LowerCLMUL(LLVMContext &Context, Value *V1, Value *V2, Instruction *IP) {
+
+  IRBuilder<> Builder(IP);
+
+  unsigned BitSize = V1->getType()->getPrimitiveSizeInBits();
+  Value *Res = ConstantInt::get(V1->getType(), 0);
+  Value *Zero = ConstantInt::get(V1->getType(), 0);
+  Value *One = ConstantInt::get(V1->getType(), 1);
+  for (unsigned I = 1; I < BitSize; I ++) {
+    Value *LowBit = Builder.CreateAnd(V1, One, "clmul.isodd");
+    Value *Pred = Builder.CreateSelect(LowBit, V2, Zero, "clmul.V2_or_zero");
+    Res = Builder.CreateXor(Res, Pred, "clmul.Res");
+    V1 = Builder.CreateLShr(V1, One, "clmul.V1");
+    V2 = Builder.CreateShl(V2, One, "clmul.V2");
+  }
+  return LowerCTPOP(Context, Res, IP);
+}
+
 static void ReplaceFPIntrinsicWithCall(CallInst *CI, const char *Fname,
                                        const char *Dname,
                                        const char *LDname) {
@@ -260,6 +279,10 @@ void IntrinsicLowering::LowerIntrinsicCall(CallInst *CI) {
 
   case Intrinsic::ctlz:
     CI->replaceAllUsesWith(LowerCTLZ(Context, CI->getArgOperand(0), CI));
+    break;
+
+  case Intrinsic::clmul:
+    CI->replaceAllUsesWith(LowerCLMUL(Context, CI->getArgOperand(0), CI->getArgOperand(1), CI));
     break;
 
   case Intrinsic::cttz: {

@@ -760,6 +760,9 @@ enum NodeType {
   ROTR,
   FSHL,
   FSHR,
+  
+  /// Carryless multiplication operator
+  CLMUL,
 
   /// Byte Swap and Counting operators.
   BSWAP,
