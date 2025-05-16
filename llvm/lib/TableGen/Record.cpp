@@ -334,11 +334,10 @@ static const RecordRecTy *resolveRecordTypes(const RecordRecTy *T1,
   while (!Stack.empty()) {
     const Record *R = Stack.pop_back_val();
 
-    if (T2->isSubClassOf(R)) {
+    if (T2->isSubClassOf(R))
       CommonSuperClasses.push_back(R);
-    } else {
-      append_range(Stack, make_first_range(R->getDirectSuperClasses()));
-    }
+    else
+      llvm::append_range(Stack, make_first_range(R->getDirectSuperClasses()));
   }
 
   return RecordRecTy::get(T1->getRecordKeeper(), CommonSuperClasses);
@@ -2733,11 +2732,8 @@ const DagInit *DagInit::get(const Init *V, const StringInit *VN,
 const DagInit *DagInit::get(
     const Init *V, const StringInit *VN,
     ArrayRef<std::pair<const Init *, const StringInit *>> ArgAndNames) {
-  SmallVector<const Init *, 8> Args;
-  SmallVector<const StringInit *, 8> Names;
-
-  llvm::append_range(Args, make_first_range(ArgAndNames));
-  llvm::append_range(Names, make_second_range(ArgAndNames));
+  SmallVector<const Init *, 8> Args(make_first_range(ArgAndNames));
+  SmallVector<const StringInit *, 8> Names(make_second_range(ArgAndNames));
   return DagInit::get(V, VN, Args, Names);
 }
 
@@ -2901,8 +2897,8 @@ void Record::checkName() {
 }
 
 const RecordRecTy *Record::getType() const {
-  SmallVector<const Record *, 4> DirectSCs;
-  append_range(DirectSCs, make_first_range(getDirectSuperClasses()));
+  SmallVector<const Record *> DirectSCs(
+      make_first_range(getDirectSuperClasses()));
   return RecordRecTy::get(TrackedRecords, DirectSCs);
 }
 
