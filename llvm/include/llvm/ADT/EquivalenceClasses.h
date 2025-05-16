@@ -60,6 +60,7 @@ namespace llvm {
 ///   5 1 2
 ///
 template <class ElemTy> class EquivalenceClasses {
+public:
   /// ECValue - The EquivalenceClasses data structure is just a set of these.
   /// Each of these represents a relation for a value.  First it stores the
   /// value itself. Next, it provides a "next pointer", which is used to
@@ -122,6 +123,7 @@ template <class ElemTy> class EquivalenceClasses {
     }
   };
 
+private:
   /// TheMapping - This implicitly provides a mapping from ElemTy values to the
   /// ECValues, it just keeps the key as part of the value.
   DenseMap<ElemTy, ECValue *> TheMapping;
