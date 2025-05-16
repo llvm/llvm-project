@@ -225,7 +225,8 @@ Value xegpu::createVectorWithShapeFromValues(OpBuilder &builder, Location loc,
   return result;
 }
 
-void xegpu::doSCFStructuralTypeConversionWithTensorType(Operation *op, TypeConverter converter) {
+void xegpu::doSCFStructuralTypeConversionWithTensorType(
+    Operation *op, TypeConverter converter) {
   MLIRContext *context = op->getContext();
 
   auto materializeCast = [&](OpBuilder &builder, Type type, ValueRange inputs,

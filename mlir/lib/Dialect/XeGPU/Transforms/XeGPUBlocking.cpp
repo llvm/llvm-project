@@ -220,7 +220,8 @@ void XeGPUBlockingPass::runOnOperation() {
         // is not present, it will return a VectorType with original shape.
         int count = 1;
         SmallVector<int64_t> subShape(shape);
-        if (auto layout = llvm::dyn_cast_if_present<xegpu::LayoutAttr>(type.getEncoding())) {
+        if (auto layout = llvm::dyn_cast_if_present<xegpu::LayoutAttr>(
+                type.getEncoding())) {
           if (layout.isWgLayout())
             return failure();
           if (DenseI32ArrayAttr instData = layout.getInstData()) {
@@ -260,7 +261,8 @@ void XeGPUBlockingPass::runOnOperation() {
             layout = layout.dropInstData();
           }
         }
-        auto newTy = xegpu::TensorDescType::get(ctx, subShape, elemTy, encoding, layout);
+        auto newTy =
+            xegpu::TensorDescType::get(ctx, subShape, elemTy, encoding, layout);
         result.append(count, newTy);
         return success();
       });
