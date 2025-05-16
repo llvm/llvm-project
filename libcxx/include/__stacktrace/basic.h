@@ -10,30 +10,19 @@
 #ifndef _LIBCPP_BASIC_STACKTRACE
 #define _LIBCPP_BASIC_STACKTRACE
 
-#include <__stacktrace/impl.h>
-#include <__stacktrace/stacktrace_entry.h>
-
 #include <__config>
-#include <__format/formatter.h>
-#include <__functional/function.h>
 #include <__functional/hash.h>
 #include <__fwd/format.h>
-#include <__fwd/sstream.h>
 #include <__iterator/iterator.h>
-#include <__iterator/iterator_traits.h>
-#include <__iterator/reverse_access.h>
 #include <__iterator/reverse_iterator.h>
-#include <__memory/allocator.h>
 #include <__memory/allocator_traits.h>
-#include <__memory_resource/memory_resource.h>
 #include <__memory_resource/polymorphic_allocator.h>
-#include <__ostream/basic_ostream.h>
-#include <__utility/move.h>
-#include <__vector/pmr.h>
-#include <__vector/swap.h>
+#include <__stacktrace/base.h>
+#include <__stacktrace/entry.h>
+#include <__stacktrace/to_string.h>
+#include <__type_traits/is_nothrow_constructible.h>
 #include <__vector/vector.h>
-#include <cstddef>
-#include <memory>
+#include <utility>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -63,12 +52,10 @@ class _LIBCPP_EXPORTED_FROM_ABI basic_stacktrace {
   constexpr static bool __kNoThrowAlloc =
       noexcept(noexcept(_Allocator().allocate(1)) && noexcept(_Allocator().allocate_at_least(1)));
 
-  using __entry_vec _LIBCPP_NODEBUG = vector<stacktrace_entry, _Allocator>;
-
   [[no_unique_address]] _Allocator __alloc_;
-  __entry_vec __entries_;
 
-  // _LIBCPP_HIDE_FROM_ABI basic_stacktrace(const _Allocator& __alloc, std::pmr::list<stacktrace_entry>&& __vec);
+  using __entry_vec = vector<stacktrace_entry, _Allocator>;
+  __entry_vec __entries_;
 
 public:
   // (19.6.4.1)
@@ -80,7 +67,7 @@ public:
   using difference_type = ptrdiff_t;
   using size_type       = size_t;
   using allocator_type  = _Allocator;
-  using const_iterator  = decltype(__entries_)::const_iterator;
+  using const_iterator  = __entry_vec::const_iterator;
   using iterator        = const_iterator;
 
   using reverse_iterator       = std::reverse_iterator<basic_stacktrace::iterator>;
@@ -103,13 +90,13 @@ public:
   current(size_type __skip,
           size_type __max_depth,
           const allocator_type& __caller_alloc = allocator_type()) noexcept(__kNoThrowAlloc) {
+    __stacktrace::builder __builder(__caller_alloc);
+    __builder.build_stacktrace(__skip + 1, __max_depth);
     basic_stacktrace<_Allocator> __ret{__caller_alloc};
-    __stacktrace::alloc __alloc(__caller_alloc);
-    auto __resize = [&__ret](size_t __sz) { __ret.__entries_.resize(__sz); };
-    auto __assign = [&__ret](size_t __index, stacktrace_entry&& __entry) {
-      __ret.__entries_.at(__index) = std::move(__entry);
-    };
-    __stacktrace::__impl(__skip + 1, __max_depth, __alloc, __resize, __assign);
+    __ret.__entries_.reserve(__builder.__entries_.size());
+    for (auto& __base : __builder.__entries_) {
+      __ret.__entries_.emplace_back(__base.to_stacktrace_entry());
+    }
     return __ret;
   }
 
@@ -251,48 +238,6 @@ using stacktrace = basic_stacktrace<allocator<stacktrace_entry>>;
 namespace pmr {
 using stacktrace = basic_stacktrace<polymorphic_allocator<stacktrace_entry>>;
 } // namespace pmr
-
-// (19.6.4.6)
-// Non-member functions [stacktrace.basic.nonmem]
-
-template <class _Allocator>
-_LIBCPP_EXPORTED_FROM_ABI inline void
-swap(basic_stacktrace<_Allocator>& __a, basic_stacktrace<_Allocator>& __b) noexcept(noexcept(__a.swap(__b))) {
-  __a.swap(__b);
-}
-
-template <class _Allocator>
-_LIBCPP_EXPORTED_FROM_ABI inline string to_string(const basic_stacktrace<_Allocator>& __stacktrace) {
-  return __stacktrace::__to_string()(__stacktrace);
-}
-
-template <class _Allocator>
-_LIBCPP_EXPORTED_FROM_ABI inline ostream& operator<<(ostream& __os, const basic_stacktrace<_Allocator>& __stacktrace) {
-  auto __str = __stacktrace::__to_string()(__stacktrace);
-  return __os << __str;
-}
-
-// (19.6.5)
-// Formatting support [stacktrace.format]
-
-// TODO: stacktrace formatter: https://github.com/llvm/llvm-project/issues/105257
-template <class _Allocator>
-struct _LIBCPP_EXPORTED_FROM_ABI formatter<basic_stacktrace<_Allocator>>;
-
-// (19.6.6)
-// Hash support [stacktrace.basic.hash]
-
-template <class _Allocator>
-struct _LIBCPP_EXPORTED_FROM_ABI hash<basic_stacktrace<_Allocator>> {
-  [[nodiscard]] size_t operator()(basic_stacktrace<_Allocator> const& __context) const noexcept {
-    size_t __ret = 1;
-    for (auto const& __entry : __context.__entries_) {
-      __ret += hash<uintptr_t>()(__entry.native_handle());
-      __ret *= 3001;
-    }
-    return __ret;
-  }
-};
 
 _LIBCPP_END_NAMESPACE_STD
 

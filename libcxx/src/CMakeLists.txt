@@ -40,9 +40,10 @@ set(LIBCXX_SOURCES
   ryu/d2fixed.cpp
   ryu/d2s.cpp
   ryu/f2s.cpp
+  stacktrace/base.cpp
   stacktrace/linux.cpp
   stacktrace/macos.cpp
-  stacktrace/stacktrace.cpp
+  stacktrace/to_string.cpp
   stacktrace/tools.cpp
   stacktrace/unwind.cpp
   stacktrace/windows.cpp

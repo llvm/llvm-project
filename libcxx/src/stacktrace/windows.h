@@ -26,15 +26,15 @@
 #include <cstdlib>
 #include <mutex>
 
+#include <__stacktrace/base.h>
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __stacktrace {
 
-struct context;
-
 struct win_impl {
-  context& cx_;
+  builder& builder_;
   std::lock_guard<std::mutex> guard_;
-  win_impl(context& trace);
+  win_impl(builder& trace);
   ~win_impl();
 
   void collect(size_t skip, size_t max_depth);

@@ -16,8 +16,9 @@
 #  include <stacktrace>
 #  include <unistd.h>
 
+#  include <__stacktrace/base.h>
+
 #  include "stacktrace/config.h"
-#  include "stacktrace/context.h"
 #  include "stacktrace/linux.h"
 #  include "stacktrace/utils.h"
 
@@ -35,19 +36,19 @@ void linux::ident_modules() {
 
   auto mainProg = images.mainProg();
   if (mainProg) {
-    cx_.__main_prog_path_ = mainProg->name_;
+    builder_.__main_prog_path_ = mainProg->name_;
   }
 
   unsigned index = 1; // Starts at one, and is moved around in this loop
-  for (auto& entry : cx_.__entries_) {
-    while (images[index].loaded_at_ > entry.__addr_) {
+  for (auto& entry : builder_.__entries_) {
+    while (images[index].loaded_at_ > entry.__addr_actual_) {
       --index;
     }
-    while (images[index + 1].loaded_at_ <= entry.__addr_) {
+    while (images[index + 1].loaded_at_ <= entry.__addr_actual_) {
       ++index;
     }
-    entry.__addr_unslid_ = entry.__addr_ - images[index].slide_;
-    entry.__file_        = images[index].name_;
+    entry.__addr_unslid_ = entry.__addr_actual_ - images[index].slide_;
+    entry.__file_        = builder_.__alloc_.make_str(images[index].name_);
   }
 }
 
@@ -65,27 +66,28 @@ void linux::resolve_main_elf_syms(std::string_view main_elf_name) {
   if (_mm) {
     static elf::ELF _this_elf(_mm.addr_);
     if (_this_elf) {
-      for (auto& entry : cx_.__entries_) {
-        if (entry.__desc_.empty() && entry.__file_ == main_elf_name) {
-          entry.__desc_ = _this_elf.getSym(entry.__addr_unslid_).name();
+      for (auto& entry : builder_.__entries_) {
+        if (entry.__desc_->empty() && entry.__file_ == main_elf_name) {
+          auto name     = _this_elf.getSym(entry.__addr_unslid_).name();
+          entry.__desc_ = builder_.__alloc_.make_str(name);
         }
       }
     }
   }
 }
 
-bool symbolize_entry(entry& entry) {
+bool symbolize_entry(alloc& alloc, entry_base& entry) {
   bool ret = false;
   Dl_info info;
-  if (dladdr((void*)entry.__addr_, &info)) {
+  if (dladdr((void*)entry.__addr_actual_, &info)) {
     ret = true; // at least partially successful
-    if (info.dli_fname && entry.__file_.empty()) {
+    if (info.dli_fname && entry.__file_->empty()) {
       // provide at least the binary filename in case we cannot lookup source location
-      entry.__file_ = info.dli_fname;
+      entry.__file_ = alloc.make_str(info.dli_fname);
     }
-    if (info.dli_sname && entry.__desc_.empty()) {
+    if (info.dli_sname && entry.__desc_->empty()) {
       // provide at least the mangled name; try to unmangle in a later step
-      entry.__desc_ = info.dli_sname;
+      entry.__desc_ = alloc.make_str(info.dli_sname);
     }
   }
   return ret;
@@ -95,8 +97,8 @@ bool symbolize_entry(entry& entry) {
 // except for symbols in the main program.  If addr2line-style tools are enabled, that step
 // might also be able to get symbols directly from the binary's debug info.
 void linux::symbolize() {
-  for (auto& entry : cx_.__entries_) {
-    symbolize_entry(entry);
+  for (auto& entry : builder_.__entries_) {
+    symbolize_entry(builder_.__alloc_, entry);
   }
   // Symbols might be missing, because both (1) Linux's `dladdr` won't try to resolve non-exported symbols,
   // which can be the case for the main program executable; and (2) debug info was not preserved.

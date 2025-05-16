@@ -168,7 +168,7 @@ namespace std {
 
 #if _LIBCPP_STD_VER >= 23
 
-#  include <compare> // [stacktrace.syn]
+#  include <compare> // according to [stacktrace.syn]
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    pragma GCC system_header
@@ -177,10 +177,13 @@ namespace std {
 _LIBCPP_PUSH_MACROS
 #  include <__undef_macros>
 
-#  include <__stacktrace/basic_stacktrace.h>
-#  include <__stacktrace/stacktrace_entry.h>
-
-#  include <__stacktrace/impl.h>
+#  include <__stacktrace/base.h>
+#  include <__stacktrace/basic.h>
+#  include <__stacktrace/entry.h>
+#  include <__stacktrace/format.h>
+#  include <__stacktrace/hash.h>
+#  include <__stacktrace/nonmem.h>
+#  include <__stacktrace/to_string.h>
 
 _LIBCPP_POP_MACROS
 

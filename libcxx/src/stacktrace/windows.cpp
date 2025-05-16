@@ -10,9 +10,10 @@
 
 #if defined(_LIBCPP_STACKTRACE_WINDOWS)
 
+#  include <__stacktrace/base.h>
+
 #  include "stacktrace/alloc.h"
 #  include "stacktrace/config.h"
-#  include "stacktrace/context.h"
 #  include "stacktrace/utils.h"
 #  include "stacktrace/windows.h"
 
@@ -47,7 +48,7 @@ size_t moduleCount; // 0 IFF module enumeration failed
 
 } // namespace
 
-win_impl::WinDebugAPIs(context& trace) : trace_(trace), guard_(gWindowsAPILock) {
+win_impl::WinDebugAPIs(builder& trace) : builder_(trace), guard_(gWindowsAPILock) {
   if (!globalInitialized) {
     // Cannot proceed without these DLLs:
     if (!dbg) {
@@ -106,15 +107,15 @@ void win_impl::symbolize() {
     return;
   }
 
-  for (auto& entry : cx_.__entries_) {
+  for (auto& entry : builder_.__entries_) {
     char space[sizeof(IMAGEHLP_SYMBOL64) + kMaxSymName];
     auto* sym          = (IMAGEHLP_SYMBOL64*)space;
     sym->SizeOfStruct  = sizeof(IMAGEHLP_SYMBOL64);
     sym->MaxNameLength = kMaxSymName;
     uint64_t disp{0};
-    if ((*dbg.SymGetSymFromAddr64)(proc, entry.__addr_, &disp, sym)) {
+    if ((*dbg.SymGetSymFromAddr64)(proc, entry.__addr_actual_, &disp, sym)) {
       // Copy chars into the destination string which uses the caller-provided allocator.
-      entry.__desc_ = {sym->Name};
+      ((entry_base&)entry).__desc_ = {sym->Name};
     } else {
       Debug() << "SymGetSymFromAddr64 failed: " << GetLastError() << '\n';
     }
@@ -126,11 +127,11 @@ void win_impl::resolve_lines() {
     return;
   }
 
-  for (auto& entry : cx_.__entries_) {
+  for (auto& entry : builder_.__entries_) {
     DWORD disp{0};
     IMAGEHLP_LINE64 line;
     line.SizeOfStruct = sizeof(IMAGEHLP_LINE64);
-    if ((*dbg.SymGetLineFromAddr64)(proc, entry.__addr_, &disp, &line)) {
+    if ((*dbg.SymGetLineFromAddr64)(proc, entry.__addr_actual_, &disp, &line)) {
       // Copy chars into the destination string which uses the caller-provided allocator.
       entry.__file_ = line.FileName;
       entry.__line_ = line.LineNumber;
@@ -163,9 +164,9 @@ _LIBCPP_NO_TAIL_CALLS _LIBCPP_NOINLINE void win_impl::collect(size_t skip, size_
   frame.AddrPC.Mode      = AddrModeFlat;
   frame.AddrStack.Mode   = AddrModeFlat;
   frame.AddrFrame.Mode   = AddrModeFlat;
-  frame.AddrPC.Offset    = ccx.Rip;
-  frame.AddrStack.Offset = ccx.Rsp;
-  frame.AddrFrame.Offset = ccx.Rbp;
+  frame.AddrPC.Offset    = ctrace.Rip;
+  frame.AddrStack.Offset = ctrace.Rsp;
+  frame.AddrFrame.Offset = ctrace.Rbp;
 
   while (max_depth &&
          (*dbg.StackWalk64)(
@@ -183,11 +184,11 @@ _LIBCPP_NO_TAIL_CALLS _LIBCPP_NOINLINE void win_impl::collect(size_t skip, size_
       continue;
     }
     --max_depth;
-    auto& entry = cx_.__entries_.emplace_back();
+    auto& entry = builder_.__entries_.emplace_back();
     // We don't need to compute the un-slid addr; windbg only needs the actual addresses.
     // Assume address is of the instruction after a call instruction, since we can't
     // differentiate between a signal, SEH exception handler, or a normal function call.
-    entry.__addr_ = frame.AddrPC.Offset - 1; // Back up 1 byte to get into prev insn range
+    entry.__addr_actual_ = frame.AddrPC.Offset - 1; // Back up 1 byte to get into prev insn range
   }
 }
 
