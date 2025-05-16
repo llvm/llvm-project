@@ -2073,6 +2073,40 @@ LogicalResult ModuleImport::convertIntrinsic(llvm::CallInst *inst) {
   return emitError(loc) << "unhandled intrinsic: " << diag(*inst);
 }
 
+ArrayAttr
+ModuleImport::convertAsmInlineOperandAttrs(const llvm::CallBase &llvmCall) {
+  const auto *ia = cast<llvm::InlineAsm>(llvmCall.getCalledOperand());
+  unsigned argIdx = 0;
+  SmallVector<mlir::Attribute> opAttrs;
+  bool hasIndirect = false;
+
+  for (const llvm::InlineAsm::ConstraintInfo &ci : ia->ParseConstraints()) {
+    // Only deal with constraints that correspond to call arguments.
+    if (ci.Type == llvm::InlineAsm::isLabel || !ci.hasArg())
+      continue;
+
+    // Only increment `argIdx` in terms of constraints containing arguments,
+    // which are guaranteed to happen in the same order of the call arguments.
+    if (ci.isIndirect) {
+      if (llvm::Type *paramEltType = llvmCall.getParamElementType(argIdx)) {
+        SmallVector<mlir::NamedAttribute> attrs;
+        attrs.push_back(builder.getNamedAttr(
+            mlir::LLVM::InlineAsmOp::getElementTypeAttrName(),
+            mlir::TypeAttr::get(convertType(paramEltType))));
+        opAttrs.push_back(builder.getDictionaryAttr(attrs));
+        hasIndirect = true;
+      }
+    } else {
+      opAttrs.push_back(builder.getDictionaryAttr({}));
+    }
+    argIdx++;
+  }
+
+  // Avoid emitting an array where all entries are empty dictionaries.
+  return hasIndirect ? ArrayAttr::get(mlirModule->getContext(), opAttrs)
+                     : nullptr;
+}
+
 LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
   // Convert all instructions that do not provide an MLIR builder.
   Location loc = translateLoc(inst->getDebugLoc());
@@ -2159,14 +2193,17 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
         Type resultTy = convertType(callInst->getType());
         if (!resultTy)
           return failure();
+        ArrayAttr operandAttrs = convertAsmInlineOperandAttrs(*callInst);
         return builder
             .create<InlineAsmOp>(
                 loc, resultTy, *operands,
                 builder.getStringAttr(asmI->getAsmString()),
                 builder.getStringAttr(asmI->getConstraintString()),
-                /*has_side_effects=*/true,
-                /*is_align_stack=*/false, /*asm_dialect=*/nullptr,
-                /*operand_attrs=*/nullptr)
+                asmI->hasSideEffects(), asmI->isAlignStack(),
+                AsmDialectAttr::get(
+                    mlirModule.getContext(),
+                    convertAsmDialectFromLLVM(asmI->getDialect())),
+                operandAttrs)
             .getOperation();
       }
       bool isIncompatibleCall;
