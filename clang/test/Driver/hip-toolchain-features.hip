@@ -67,9 +67,15 @@
 // DUP-NOT: "-target-feature" "{{.*}}wavefrontsize64"
 // DUP: {{.*}}lld{{.*}} "-plugin-opt=-mattr=+cumode"
 
-// RUN: %clang -### --target=x86_64-linux-gnu -fgpu-rdc -nogpulib \
+// RUN: not %clang -### --target=x86_64-linux-gnu -fgpu-rdc -nogpulib \
 // RUN:   -nogpuinc --offload-arch=gfx1010 --no-offload-new-driver %s \
 // RUN:   -mno-wavefrontsize64 -mwavefrontsize64 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=WAVE64-ERR
+// WAVE64-ERR: error: '-mwavefrontsize64' is not fully supported for HIP on AMD GPU architecture gfx10 and above. Use '-mforce-unsafe-wavefrontsize64' to override
+
+// RUN: %clang -### --target=x86_64-linux-gnu -fgpu-rdc -nogpulib \
+// RUN:   -nogpuinc --offload-arch=gfx1010 --no-offload-new-driver %s \
+// RUN:   -mno-wavefrontsize64 -mforce-unsafe-wavefrontsize64 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=WAVE64
 // WAVE64: {{.*}}clang{{.*}} "-target-feature" "+wavefrontsize64"
 // WAVE64-NOT: "-target-feature" "{{.*}}wavefrontsize16"
