@@ -5684,12 +5684,11 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
         if (SVT.isFloatingPoint())
           V = DAG.getLoad(SVT, DL, Ld->getChain(), NewAddr,
                           Ld->getPointerInfo().getWithOffset(Offset),
-                          Ld->getOriginalAlign(),
-                          Ld->getMemOperand()->getFlags());
+                          Ld->getBaseAlign(), Ld->getMemOperand()->getFlags());
         else
           V = DAG.getExtLoad(ISD::EXTLOAD, DL, XLenVT, Ld->getChain(), NewAddr,
                              Ld->getPointerInfo().getWithOffset(Offset), SVT,
-                             Ld->getOriginalAlign(),
+                             Ld->getBaseAlign(),
                              Ld->getMemOperand()->getFlags());
         DAG.makeEquivalentMemoryOrdering(Ld, V);
 
@@ -6398,7 +6397,7 @@ SDValue RISCVTargetLowering::expandUnalignedRVVLoad(SDValue Op,
   assert(NewVT.isValid() &&
          "Expecting equally-sized RVV vector types to be legal");
   SDValue L = DAG.getLoad(NewVT, DL, Load->getChain(), Load->getBasePtr(),
-                          Load->getPointerInfo(), Load->getOriginalAlign(),
+                          Load->getPointerInfo(), Load->getBaseAlign(),
                           Load->getMemOperand()->getFlags());
   return DAG.getMergeValues({DAG.getBitcast(VT, L), L.getValue(1)}, DL);
 }
@@ -6430,7 +6429,7 @@ SDValue RISCVTargetLowering::expandUnalignedRVVStore(SDValue Op,
          "Expecting equally-sized RVV vector types to be legal");
   StoredVal = DAG.getBitcast(NewVT, StoredVal);
   return DAG.getStore(Store->getChain(), DL, StoredVal, Store->getBasePtr(),
-                      Store->getPointerInfo(), Store->getOriginalAlign(),
+                      Store->getPointerInfo(), Store->getBaseAlign(),
                       Store->getMemOperand()->getFlags());
 }
 
@@ -7869,7 +7868,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
                                    StoredVal, DAG.getVectorIdxConstant(i, DL));
         Ret = DAG.getStore(Chain, DL, Extract, BasePtr,
                            MachinePointerInfo(Store->getAddressSpace()),
-                           Store->getOriginalAlign(),
+                           Store->getBaseAlign(),
                            Store->getMemOperand()->getFlags());
         Chain = Ret.getValue(0);
         BasePtr = DAG.getNode(ISD::ADD, DL, XLenVT, BasePtr, VROffset, Flag);
@@ -19895,7 +19894,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
                                          NewVT, *Store->getMemOperand())) {
         SDValue NewV = DAG.getConstant(NewC, DL, NewVT);
         return DAG.getStore(Chain, DL, NewV, Store->getBasePtr(),
-                            Store->getPointerInfo(), Store->getOriginalAlign(),
+                            Store->getPointerInfo(), Store->getBaseAlign(),
                             Store->getMemOperand()->getFlags());
       }
     }
@@ -19915,10 +19914,10 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
           allowsMemoryAccessForAlignment(*DAG.getContext(), DAG.getDataLayout(),
                                          NewVT, *L->getMemOperand())) {
         SDValue NewL = DAG.getLoad(NewVT, DL, L->getChain(), L->getBasePtr(),
-                                   L->getPointerInfo(), L->getOriginalAlign(),
+                                   L->getPointerInfo(), L->getBaseAlign(),
                                    L->getMemOperand()->getFlags());
         return DAG.getStore(Chain, DL, NewL, Store->getBasePtr(),
-                            Store->getPointerInfo(), Store->getOriginalAlign(),
+                            Store->getPointerInfo(), Store->getBaseAlign(),
                             Store->getMemOperand()->getFlags());
       }
     }
