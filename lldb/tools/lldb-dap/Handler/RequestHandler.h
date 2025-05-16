@@ -181,10 +181,10 @@ class RequestHandler : public BaseRequestHandler {
 /// A Reply<T> is a void function that accepts a reply to an async request.
 template <typename T> using Reply = llvm::unique_function<void(T) const>;
 
-/// Base class for handling DAP requests. Handlers should declare their
-/// arguments and response body types like:
+/// Base class for handling DAP requests asynchronously. Handlers should declare
+/// their arguments and response body types like:
 ///
-/// class MyRequestHandler : public RequestHandler<Arguments, Response> {
+/// class MyRequestHandler : public AsyncRequestHandler<Arguments, Response> {
 ///   ....
 /// };
 template <typename Args, typename Resp>
@@ -232,6 +232,9 @@ class AsyncRequestHandler : public BaseRequestHandler {
     });
   };
 
+  /// Run the request handler. The reply callback is expected to be invoked only
+  /// once and may be moved to be handled at a later time. Returning from the
+  /// `Run` call will unblock handling the next request.
   virtual void Run(const Args &, Reply<Resp>) const = 0;
 };
 
