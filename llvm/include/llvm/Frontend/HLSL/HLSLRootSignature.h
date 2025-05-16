@@ -160,6 +160,7 @@ struct DescriptorTableClause {
 
 struct StaticSampler {
   Register Reg;
+  float MipLODBias = 0.f;
 };
 
 /// Models RootElement : RootFlags | RootConstants | RootParam

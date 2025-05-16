@@ -100,6 +100,9 @@ KEYWORD(flags)
 KEYWORD(numDescriptors)
 KEYWORD(offset)
 
+// StaticSampler Keywords:
+KEYWORD(mipLODBias)
+
 // Unbounded Enum:
 UNBOUNDED_ENUM(unbounded, "unbounded")
 
