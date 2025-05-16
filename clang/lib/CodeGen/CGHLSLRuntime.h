@@ -151,7 +151,6 @@ public:
   void setHLSLEntryAttributes(const FunctionDecl *FD, llvm::Function *Fn);
 
   void emitEntryFunction(const FunctionDecl *FD, llvm::Function *Fn);
-  void setHLSLFunctionAttributes(const FunctionDecl *FD, llvm::Function *Fn);
 
   llvm::Instruction *getConvergenceToken(llvm::BasicBlock &BB);
 

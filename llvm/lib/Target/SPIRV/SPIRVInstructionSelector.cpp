@@ -3895,7 +3895,8 @@ bool SPIRVInstructionSelector::selectGlobalValue(
   if (hasInitializer(GlobalVar) && !Init)
     return true;
 
-  bool HasLnkTy = !GV->hasInternalLinkage() && !GV->hasPrivateLinkage();
+  bool HasLnkTy = !GV->hasInternalLinkage() && !GV->hasPrivateLinkage() &&
+                  !GV->hasHiddenVisibility();
   SPIRV::LinkageType::LinkageType LnkType =
       GV->isDeclarationForLinker()
           ? SPIRV::LinkageType::Import
