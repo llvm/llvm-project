@@ -5744,12 +5744,10 @@ static SDValue optimizeIncrementingWhile(SDNode *N, SelectionDAG &DAG,
   unsigned Op0 = N->getOpcode() == ISD::INTRINSIC_WO_CHAIN ? 1 : 0;
   unsigned Op1 = N->getOpcode() == ISD::INTRINSIC_WO_CHAIN ? 2 : 1;
 
-  if (!isa<ConstantSDNode>(N->getOperand(Op0)) ||
-      !isa<ConstantSDNode>(N->getOperand(Op1)))
+  if (!isa<ConstantSDNode>(N->getOperand(Op1)))
     return SDValue();
 
   SDLoc dl(N);
-  APInt X = N->getConstantOperandAPInt(Op0);
   APInt Y = N->getConstantOperandAPInt(Op1);
 
   // When the second operand is the maximum value, comparisons that include
@@ -5757,6 +5755,11 @@ static SDValue optimizeIncrementingWhile(SDNode *N, SelectionDAG &DAG,
   if (IsEqual)
     if (IsSigned ? Y.isMaxSignedValue() : Y.isMaxValue())
       return DAG.getConstant(1, dl, N->getValueType(0));
+
+  if (!isa<ConstantSDNode>(N->getOperand(Op0)))
+    return SDValue();
+
+  APInt X = N->getConstantOperandAPInt(Op0);
 
   bool Overflow;
   APInt NumActiveElems =
