@@ -256,6 +256,7 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
     case llvm::Instruction::FPToUI:
     case llvm::Instruction::FPToSI:
     case llvm::Instruction::FPExt:
+    case llvm::Instruction::PtrToAddr:
     case llvm::Instruction::PtrToInt:
     case llvm::Instruction::IntToPtr:
     case llvm::Instruction::SIToFP:
