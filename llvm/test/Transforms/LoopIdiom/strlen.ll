@@ -617,20 +617,23 @@ define i64 @valid_basic_strlen_with_dbg(ptr %str) {
 ; CHECK-LABEL: define i64 @valid_basic_strlen_with_dbg(
 ; CHECK-SAME: ptr [[STR:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[STRLEN:%.*]] = call i64 @strlen(ptr [[STR]]), !dbg !4
+; CHECK-NEXT:    [[STRLEN:%.*]] = call i64 @strlen(ptr [[STR]]), !dbg [[DBGLOC1:![0-9]+]]
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[STR]], i64 [[STRLEN]]
 ; CHECK-NEXT:    br label %[[WHILE_COND:.*]]
 ; CHECK:       [[WHILE_COND]]:
 ; CHECK-NEXT:    [[STR_ADDR_0:%.*]] = phi ptr [ [[STR]], %[[ENTRY]] ], [ [[INCDEC_PTR:%.*]], %[[WHILE_COND]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[STR_ADDR_0]], align 1, !dbg !8
-; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i8 [[TMP0]], 0, !dbg !8
-; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr i8, ptr [[STR_ADDR_0]], i64 1, !dbg !8
-; CHECK-NEXT:    br i1 true, label %[[WHILE_END:.*]], label %[[WHILE_COND]], !dbg !4
+; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[STR_ADDR_0]], align 1, !dbg [[DBGLOC2:![0-9]+]]
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i8 [[TMP0]], 0, !dbg [[DBGLOC2]]
+; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr i8, ptr [[STR_ADDR_0]], i64 1, !dbg [[DBGLOC2]]
+; CHECK-NEXT:    br i1 true, label %[[WHILE_END:.*]], label %[[WHILE_COND]], !dbg [[DBGLOC1]]
 ; CHECK:       [[WHILE_END]]:
-; CHECK-NEXT:    [[SUB_PTR_LHS_CAST:%.*]] = ptrtoint ptr [[SCEVGEP]] to i64, !dbg !8
-; CHECK-NEXT:    [[SUB_PTR_RHS_CAST:%.*]] = ptrtoint ptr [[STR]] to i64, !dbg !8
-; CHECK-NEXT:    [[SUB_PTR_SUB:%.*]] = sub i64 [[SUB_PTR_LHS_CAST]], [[SUB_PTR_RHS_CAST]], !dbg !8
-; CHECK-NEXT:    ret i64 [[SUB_PTR_SUB]], !dbg !8
+; CHECK-NEXT:    [[SUB_PTR_LHS_CAST:%.*]] = ptrtoint ptr [[SCEVGEP]] to i64, !dbg [[DBGLOC2]]
+; CHECK-NEXT:    [[SUB_PTR_RHS_CAST:%.*]] = ptrtoint ptr [[STR]] to i64, !dbg [[DBGLOC2]]
+; CHECK-NEXT:    [[SUB_PTR_SUB:%.*]] = sub i64 [[SUB_PTR_LHS_CAST]], [[SUB_PTR_RHS_CAST]], !dbg [[DBGLOC2]]
+; CHECK-NEXT:    ret i64 [[SUB_PTR_SUB]], !dbg [[DBGLOC2]]
+;
+; CHECK: [[DBGLOC1]] = !DILocation(line: 3, column: 3
+; CHECK: [[DBGLOC2]] = !DILocation(line: 5, column: 3
 ;
 entry:
   br label %while.cond
