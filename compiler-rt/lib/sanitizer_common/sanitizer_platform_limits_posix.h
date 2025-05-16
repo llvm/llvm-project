@@ -481,29 +481,20 @@ struct __sanitizer_msghdr {
   void *msg_name;
   unsigned msg_namelen;
   struct __sanitizer_iovec *msg_iov;
-#    if __LONG_MAX > 0x7fffffff && __BYTE_ORDER == __BIG_ENDIAN
-  int __pad1;
-#    endif
   int msg_iovlen;
-#    if __LONG_MAX > 0x7fffffff && __BYTE_ORDER == __LITTLE_ENDIAN
+#    if SANITIZER_WORDSIZE == 64
   int __pad1;
 #    endif
   void *msg_control;
-#    if __LONG_MAX > 0x7fffffff && __BYTE_ORDER == __BIG_ENDIAN
-  int __pad2;
-#    endif
   unsigned msg_controllen;
-#    if __LONG_MAX > 0x7fffffff && __BYTE_ORDER == __LITTLE_ENDIAN
+#    if SANITIZER_WORDSIZE == 64
   int __pad2;
 #    endif
   int msg_flags;
 };
 struct __sanitizer_cmsghdr {
-#    if __LONG_MAX > 0x7fffffff && __BYTE_ORDER == __BIG_ENDIAN
-  int __pad1;
-#    endif
   unsigned cmsg_len;
-#    if __LONG_MAX > 0x7fffffff && __BYTE_ORDER == __LITTLE_ENDIAN
+#    if SANITIZER_WORDSIZE == 64
   int __pad1;
 #    endif
   int cmsg_level;
