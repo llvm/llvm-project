@@ -24,7 +24,8 @@
 #include "llvm/ADT/SmallString.h"
 
 #include "Plugins/Process/POSIX/CrashReason.h"
-
+#include <procinfo.h>
+#include <sys/procfs.h>
 #include <sys/types.h>
 #include <sys/ptrace.h>
 #include <signal.h>
@@ -102,11 +103,15 @@ NativeThreadAIX::NativeThreadAIX(NativeProcessAIX &process,
 
 std::string NativeThreadAIX::GetName() {
   NativeProcessAIX &process = GetProcess();
-
-  auto BufferOrError = getProcFile(process.GetID(), GetID(), "comm");
+  auto BufferOrError = getProcFile(process.GetID(), "psinfo");
   if (!BufferOrError)
     return "";
-  return std::string(BufferOrError.get()->getBuffer().rtrim('\n'));
+  auto &Buffer = *BufferOrError;
+  if (Buffer->getBufferSize() < sizeof(psinfo_t))
+    return "";
+  const psinfo_t *psinfo =
+      reinterpret_cast<const psinfo_t *>(Buffer->getBufferStart());
+  return std::string(psinfo->pr_fname);
 }
 
 lldb::StateType NativeThreadAIX::GetState() { return m_state; }
