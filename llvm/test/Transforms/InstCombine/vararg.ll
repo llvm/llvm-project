@@ -33,7 +33,9 @@ define void @func_destroy_copy_src(ptr nocapture readnone %fmt, ...) {
 ; CHECK-NEXT:    [[VA1:%.*]] = alloca [[STRUCT___VA_LIST]], align 8
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 32, ptr nonnull [[VA0]])
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 32, ptr nonnull [[VA1]])
+; CHECK-NEXT:    call void @llvm.va_start.p0(ptr nonnull [[VA0]])
 ; CHECK-NEXT:    call void @llvm.va_copy.p0(ptr nonnull [[VA1]], ptr nonnull [[VA0]])
+; CHECK-NEXT:    call void @llvm.va_end.p0(ptr [[VA0]])
 ; CHECK-NEXT:    call void @callee(ptr nonnull [[VA1]])
 ; CHECK-NEXT:    call void @llvm.va_end.p0(ptr [[VA1]])
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 32, ptr nonnull [[VA1]])
