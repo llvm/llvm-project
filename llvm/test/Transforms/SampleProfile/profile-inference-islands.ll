@@ -1,5 +1,5 @@
 ; RUN: opt < %s -passes=pseudo-probe,sample-profile -sample-profile-use-profi -sample-profile-file=%S/Inputs/profile-inference-islands.prof -S -o %t
-; RUN: FileCheck %s < %t -check-prefix=CHECK-ENTRY-COUNT
+; RUN: FileCheck %s < %t -check-prefix=CHECK-ENTRY-NUM
 ; RUN: opt < %t -passes='print<block-freq>' -disable-output 2>&1 | FileCheck %s
 
 
@@ -209,4 +209,4 @@ attributes #2 = { nounwind }
 !8 = !{i64 -7683376842751444845, i64 69495280403, !"islands_2"}
 !9 = !{i64 -9095645063288297061, i64 156608410269, !"islands_3"}
 
-; CHECK-ENTRY-COUNT: = !{!"function_entry_count", i64 2}
+; CHECK-ENTRY-NUM: = !{!"function_entry_count", i64 2}
