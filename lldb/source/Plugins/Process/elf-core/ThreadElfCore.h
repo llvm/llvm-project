@@ -79,6 +79,16 @@ struct ELFLinuxPrStatus {
 static_assert(sizeof(ELFLinuxPrStatus) == 112,
               "sizeof ELFLinuxPrStatus is not correct!");
 
+struct ThreadData {
+  lldb_private::DataExtractor gpregset;
+  std::vector<lldb_private::CoreNote> notes;
+  lldb::tid_t tid;
+  std::string name;
+  llvm::StringRef siginfo_bytes;
+  int prstatus_sig;
+  int signo;
+};
+
 class ELFLinuxSigInfo {
 public:
   static lldb_private::Status Parse(const lldb_private::DataExtractor &data,
@@ -130,15 +140,6 @@ struct ELFLinuxPrPsInfo {
 static_assert(sizeof(ELFLinuxPrPsInfo) == 136,
               "sizeof ELFLinuxPrPsInfo is not correct!");
 
-struct ThreadData {
-  lldb_private::DataExtractor gpregset;
-  std::vector<lldb_private::CoreNote> notes;
-  lldb::tid_t tid;
-  std::string name;
-  llvm::StringRef siginfo_bytes;
-  int prstatus_sig;
-  int signo;
-};
 
 class ThreadElfCore : public lldb_private::Thread {
 public:

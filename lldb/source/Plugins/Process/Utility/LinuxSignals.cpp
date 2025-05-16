@@ -188,8 +188,8 @@ std::string LinuxSignals::GetSignalDescriptionFromSiginfo(lldb::ValueObjectSP si
   // around kernel sent signals. Such as SIGSEGV won't have an address.
   if (code < 0) {
     lldb::ValueObjectSP sikill = sifields->GetChildMemberWithName("_kill");
-    uint32_t pid = sikill->GetChildMemberWithName("_pid")->GetValueAsUnsigned(-1);
-    uint32_t uid = sikill->GetChildMemberWithName("_uid")->GetValueAsUnsigned(-1);
+    uint32_t pid = sikill->GetChildMemberWithName("si_pid")->GetValueAsUnsigned(-1);
+    uint32_t uid = sikill->GetChildMemberWithName("si_uid")->GetValueAsUnsigned(-1);
     return GetSignalDescription(signo, code, std::nullopt, std::nullopt, std::nullopt, pid, uid);
   }
 
@@ -198,13 +198,14 @@ std::string LinuxSignals::GetSignalDescriptionFromSiginfo(lldb::ValueObjectSP si
       case SIGFPE:
       case SIGBUS: {
         lldb::ValueObjectSP sigfault = sifields->GetChildMemberWithName("_sigfault");
-        lldb::addr_t addr = sigfault->GetChildMemberWithName("_addr")->GetValueAsUnsigned(-1);
+        lldb::addr_t addr = sigfault->GetChildMemberWithName("si_addr")->GetValueAsUnsigned(-1);
         return GetSignalDescription(signo, code, addr);
       }
       case SIGSEGV: {
         lldb::ValueObjectSP sigfault = sifields->GetChildMemberWithName("_sigfault");
-        lldb::addr_t addr = sigfault->GetChildMemberWithName("_addr")->GetValueAsUnsigned(-1);
-        lldb::ValueObjectSP bounds = sigfault->GetChildMemberWithName("_addr_bnd");
+        lldb::addr_t addr = sigfault->GetChildMemberWithName("si_addr")->GetValueAsUnsigned(-1);
+
+        lldb::ValueObjectSP bounds = sigfault->GetChildMemberWithName("_bounds")->GetChildMemberWithName("_addr_bnd");
         lldb::addr_t lower = bounds->GetChildMemberWithName("_lower")->GetValueAsUnsigned(-1);
         lldb::addr_t upper = bounds->GetChildMemberWithName("_upper")->GetValueAsUnsigned(-1);
         return GetSignalDescription(signo, code, addr, lower, upper);
