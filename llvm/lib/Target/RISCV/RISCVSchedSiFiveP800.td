@@ -198,8 +198,6 @@ def : WriteRes<WriteFST64, [SiFiveP800LDST]>;
 let Latency = 4 in {
 def : WriteRes<WriteLDB, [SiFiveP800Load]>;
 def : WriteRes<WriteLDH, [SiFiveP800Load]>;
-}
-let Latency = 4 in {
 def : WriteRes<WriteLDW, [SiFiveP800Load]>;
 def : WriteRes<WriteLDD, [SiFiveP800Load]>;
 }
@@ -211,11 +209,15 @@ def : WriteRes<WriteFLD64, [SiFiveP800Load]>;
 }
 
 // Atomic memory
-let Latency = 3 in {
 def : WriteRes<WriteAtomicSTW, [SiFiveP800LDST]>;
 def : WriteRes<WriteAtomicSTD, [SiFiveP800LDST]>;
+
+let Latency = 7 in {
 def : WriteRes<WriteAtomicW, [SiFiveP800LDST]>;
 def : WriteRes<WriteAtomicD, [SiFiveP800LDST]>;
+}
+
+let Latency = 10 in {
 def : WriteRes<WriteAtomicLDW, [SiFiveP800Load]>;
 def : WriteRes<WriteAtomicLDD, [SiFiveP800Load]>;
 }
@@ -253,8 +255,8 @@ def : WriteRes<WriteFDiv16, [SiFiveP800FEXQ1, SiFiveP800FloatDiv]> {
   let ReleaseAtCycles = [1, 4];
 }
 def : WriteRes<WriteFSqrt16, [SiFiveP800FEXQ1, SiFiveP800FloatDiv]> {
-  let Latency = 18;
-  let ReleaseAtCycles = [1, 17];
+  let Latency = 8;
+  let ReleaseAtCycles = [1, 7];
 }
 
 // Single precision.
@@ -263,8 +265,8 @@ def : WriteRes<WriteFDiv32, [SiFiveP800FEXQ1, SiFiveP800FloatDiv]> {
   let ReleaseAtCycles = [1, 6];
 }
 def : WriteRes<WriteFSqrt32, [SiFiveP800FEXQ1, SiFiveP800FloatDiv]> {
-  let Latency = 18;
-  let ReleaseAtCycles = [1, 17];
+  let Latency = 14;
+  let ReleaseAtCycles = [1, 13];
 }
 
 // Double precision
@@ -273,8 +275,8 @@ def : WriteRes<WriteFDiv64, [SiFiveP800FEXQ1, SiFiveP800FloatDiv]> {
   let ReleaseAtCycles = [1, 11];
 }
 def : WriteRes<WriteFSqrt64, [SiFiveP800FEXQ1, SiFiveP800FloatDiv]> {
-  let Latency = 33;
-  let ReleaseAtCycles = [1, 32];
+  let Latency = 29;
+  let ReleaseAtCycles = [1, 28];
 }
 
 // Conversions
