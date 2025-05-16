@@ -3344,8 +3344,6 @@ void ARMFrameLowering::adjustForSegmentedStacks(
   }
 
   for (MachineBasicBlock *MBB : BeforePrologueRegion) {
-    // Make sure the LiveIns are still sorted and unique.
-    MBB->sortUniqueLiveIns();
     // Replace the edges to PrologueMBB by edges to the sequences
     // we are about to add, but only update for immediate predecessors.
     if (MBB->isSuccessor(&PrologueMBB))

@@ -2503,8 +2503,8 @@ MachineBasicBlock *ARMConstantIslands::adjustJTTargetBlockForward(
   MF->insert(MBBI, NewBB);
 
   // Copy live-in information to new block.
-  for (const MachineBasicBlock::RegisterMaskPair &RegMaskPair : BB->liveins())
-    NewBB->addLiveIn(RegMaskPair);
+  for (const MCRegister Reg : BB->liveins())
+    NewBB->addLiveIn(Reg);
 
   // Add an unconditional branch from NewBB to BB.
   // There doesn't seem to be meaningful DebugInfo available; this doesn't

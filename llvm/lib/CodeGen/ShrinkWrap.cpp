@@ -507,8 +507,8 @@ tryToSplitRestore(MachineBasicBlock *MBB,
   // interfere with control flow optimizer decisions.
   MF->insert(MF->end(), NMBB);
 
-  for (const MachineBasicBlock::RegisterMaskPair &LI : MBB->liveins())
-    NMBB->addLiveIn(LI.PhysReg);
+  for (const MCRegister LI : MBB->liveins())
+    NMBB->addLiveIn(LI);
 
   TII->insertUnconditionalBranch(*NMBB, MBB, DebugLoc());
 

@@ -1250,8 +1250,8 @@ void PEIImpl::insertZeroCallUsedRegs(MachineFunction &MF) {
 
   // Get a list of registers that are used.
   BitVector LiveIns(TRI.getNumRegs());
-  for (const MachineBasicBlock::RegisterMaskPair &LI : MF.front().liveins())
-    LiveIns.set(LI.PhysReg);
+  for (const MCRegister &LI : MF.front().liveins())
+    LiveIns.set(LI);
 
   BitVector RegsToZero(TRI.getNumRegs());
   for (MCRegister Reg : AllocatableSet.set_bits()) {

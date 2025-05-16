@@ -4192,9 +4192,8 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
                     EntryBB->end());
 
   // Update the live-in information for the new entry block.
-  for (const MachineBasicBlock::RegisterMaskPair &LiveIn : EntryBB->liveins())
+  for (const MCRegister LiveIn : EntryBB->liveins())
     NewEntryBB.addLiveIn(LiveIn);
-  NewEntryBB.sortUniqueLiveIns();
 
   // Get rid of the now empty basic block.
   EntryBB->removeSuccessor(&NewEntryBB);
