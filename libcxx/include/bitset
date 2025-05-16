@@ -147,8 +147,10 @@ template <size_t N> struct hash<std::bitset<N>>;
 #  include <__functional/hash.h>
 #  include <__functional/identity.h>
 #  include <__functional/unary_function.h>
+#  include <__type_traits/enable_if.h>
 #  include <__type_traits/integral_constant.h>
 #  include <__type_traits/is_char_like_type.h>
+#  include <__utility/integer_sequence.h>
 #  include <climits>
 #  include <stdexcept>
 #  include <string_view>
@@ -223,10 +225,10 @@ protected:
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 void flip() _NOEXCEPT;
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unsigned long to_ulong() const {
-    return __to_ulong(_BoolConstant<_Size < sizeof(unsigned long) * CHAR_BIT>());
+    return __to_ulong(_BoolConstant<_Size <= sizeof(unsigned long) * CHAR_BIT>());
   }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unsigned long long to_ullong() const {
-    return __to_ullong(_BoolConstant<_Size < sizeof(unsigned long long) * CHAR_BIT>());
+    return __to_ullong(_BoolConstant<_Size <= sizeof(unsigned long long) * CHAR_BIT>());
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 bool all() const _NOEXCEPT { return !__scan_bits(__bit_not()); }
@@ -287,6 +289,11 @@ private:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unsigned long long __to_ullong(true_type) const;
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unsigned long long __to_ullong(true_type, false_type) const;
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unsigned long long __to_ullong(true_type, true_type) const;
+#  if _LIBCPP_STD_VER >= 14
+  template <size_t... _Indices>
+  _LIBCPP_HIDE_FROM_ABI constexpr __bitset(unsigned long long __v, std::index_sequence<_Indices...>) _NOEXCEPT
+      : __first_{static_cast<__storage_type>(__v >> (_Indices * __bits_per_word))...} {}
+#  endif
 };
 
 template <size_t _N_words, size_t _Size>
@@ -318,35 +325,47 @@ inline _LIBCPP_HIDE_FROM_ABI void __bitset<_N_words, _Size>::__init(unsigned lon
 
 #  endif // _LIBCPP_CXX03_LANG
 
+#  ifdef _LIBCPP_CXX03_LANG
+template <size_t _N_words, size_t _Size>
+inline _LIBCPP_CONSTEXPR __bitset<_N_words, _Size>::__bitset(unsigned long long __v) _NOEXCEPT {
+  __init(__v, _BoolConstant<sizeof(unsigned long long) == sizeof(__storage_type)>());
+}
+#  elif _LIBCPP_STD_VER >= 14
 template <size_t _N_words, size_t _Size>
 inline _LIBCPP_CONSTEXPR __bitset<_N_words, _Size>::__bitset(unsigned long long __v) _NOEXCEPT
-#  ifndef _LIBCPP_CXX03_LANG
+    : __bitset{__v,
+               std::make_index_sequence<
+                   std::min<size_t>(_N_words, (sizeof(unsigned long long) - 1) / sizeof(__storage_type) + 1)>{}} {}
+#  else
 #    if __SIZEOF_LONG_LONG__ <= __SIZEOF_SIZE_T__
-    : __first_{static_cast<__storage_type>(__v)}
-#    elif __SIZEOF_LONG_LONG__ <= 2 * __SIZEOF_SIZE_T__
-    : __first_{static_cast<__storage_type>(__v), static_cast<__storage_type>(__v >> __bits_per_word)}
-#    elif __SIZEOF_LONG_LONG__ <= 4 * __SIZEOF_SIZE_T__
-#      if _N_words == 2
-    : __first_{static_cast<__storage_type>(__v), static_cast<__storage_type>(__v >> __bits_per_word)}
-#      elif _N_words == 3
+template <size_t _N_words, size_t _Size>
+inline _LIBCPP_CONSTEXPR __bitset<_N_words, _Size>::__bitset(unsigned long long __v) _NOEXCEPT
+    : __first_{static_cast<__storage_type>(__v)} {}
+#    elif __SIZEOF_LONG_LONG__ == 2 * __SIZEOF_SIZE_T__
+template <size_t _N_words, size_t _Size>
+inline _LIBCPP_CONSTEXPR __bitset<_N_words, _Size>::__bitset(unsigned long long __v) _NOEXCEPT
+    : __first_{static_cast<__storage_type>(__v), static_cast<__storage_type>(__v >> __bits_per_word)} {}
+#    elif __SIZEOF_LONG_LONG__ == 4 * __SIZEOF_SIZE_T__
+template <size_t _N_words, size_t _Size, __enable_if_t<_N_words == 2, int> = 0>
+inline _LIBCPP_CONSTEXPR __bitset<_N_words, _Size>::__bitset(unsigned long long __v) _NOEXCEPT
+    : __first_{static_cast<__storage_type>(__v), static_cast<__storage_type>(__v >> __bits_per_word)} {}
+
+template <size_t _N_words, size_t _Size, __enable_if_t<_N_words == 3, int> = 0>
+inline _LIBCPP_CONSTEXPR __bitset<_N_words, _Size>::__bitset(unsigned long long __v) _NOEXCEPT
     : __first_{static_cast<__storage_type>(__v),
                static_cast<__storage_type>(__v >> __bits_per_word),
-               static_cast<__storage_type>(__v >> (__bits_per_word * 2))}
-#      else
+               static_cast<__storage_type>(__v >> (__bits_per_word * 2))} {}
+
+template <size_t _N_words, size_t _Size, __enable_if_t<_N_words >= 4, int> = 0>
+inline _LIBCPP_CONSTEXPR __bitset<_N_words, _Size>::__bitset(unsigned long long __v) _NOEXCEPT
     : __first_{static_cast<__storage_type>(__v),
                static_cast<__storage_type>(__v >> __bits_per_word),
                static_cast<__storage_type>(__v >> (__bits_per_word * 2)),
-               static_cast<__storage_type>(__v >> (__bits_per_word * 3))}
-#      endif
+               static_cast<__storage_type>(__v >> (__bits_per_word * 3))} {}
 #    else
 #      error This constructor has not been ported to this platform
 #    endif
-#  endif
-{
-#  ifdef _LIBCPP_CXX03_LANG
-  __init(__v, _BoolConstant<sizeof(unsigned long long) <= sizeof(__storage_type)>());
-#  endif
-}
+#  endif // _LIBCPP_CXX03_LANG
 
 template <size_t _N_words, size_t _Size>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 void
@@ -407,12 +426,11 @@ __bitset<_N_words, _Size>::__to_ulong(true_type, false_type) const {
 template <size_t _N_words, size_t _Size>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unsigned long
 __bitset<_N_words, _Size>::__to_ulong(true_type, true_type) const {
-  unsigned long __r = static_cast<unsigned long>(__first_[0]);
-  _LIBCPP_DIAGNOSTIC_PUSH
-  _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wshift-count-overflow")
-  for (size_t __i = 1; __i < _N_words; ++__i)
+  const size_t __ul_wrods = (sizeof(unsigned long) - 1) / sizeof(__storage_type) + 1;
+  const size_t __n_words  = _N_words < __ul_wrods ? _N_words : __ul_wrods;
+  unsigned long __r       = static_cast<unsigned long>(__first_[0]);
+  for (size_t __i = 1; __i < __n_words; ++__i)
     __r |= static_cast<unsigned long>(__first_[__i]) << (__bits_per_word * __i);
-  _LIBCPP_DIAGNOSTIC_POP
   return __r;
 }
 
@@ -440,14 +458,11 @@ __bitset<_N_words, _Size>::__to_ullong(true_type, false_type) const {
 template <size_t _N_words, size_t _Size>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unsigned long long
 __bitset<_N_words, _Size>::__to_ullong(true_type, true_type) const {
-  unsigned long long __r = static_cast<unsigned long long>(__first_[0]);
-  _LIBCPP_DIAGNOSTIC_PUSH
-  _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wshift-count-overflow")
   const size_t __ull_wrods = (sizeof(unsigned long long) - 1) / sizeof(__storage_type) + 1;
   const size_t __n_words   = _N_words < __ull_wrods ? _N_words : __ull_wrods;
+  unsigned long long __r   = static_cast<unsigned long long>(__first_[0]);
   for (size_t __i = 1; __i < __n_words; ++__i)
     __r |= static_cast<unsigned long long>(__first_[__i]) << (__bits_per_word * __i);
-  _LIBCPP_DIAGNOSTIC_POP
   return __r;
 }
 
@@ -534,6 +549,8 @@ protected:
 private:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unsigned long __to_ulong(false_type) const;
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unsigned long __to_ulong(true_type) const;
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unsigned long long __to_ullong(false_type) const;
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unsigned long long __to_ullong(true_type) const;
 };
 
 template <size_t _Size>
@@ -568,7 +585,7 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 void __bitset<1, _Siz
 
 template <size_t _Size>
 inline _LIBCPP_CONSTEXPR_SINCE_CXX23 unsigned long __bitset<1, _Size>::to_ulong() const {
-  return __to_ulong(_BoolConstant < _Size< sizeof(unsigned long) * CHAR_BIT>());
+  return __to_ulong(_BoolConstant<_Size <= sizeof(unsigned long) * CHAR_BIT>());
 }
 
 template <size_t _Size>
@@ -586,6 +603,21 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unsigned long __bitset<1, _S
 
 template <size_t _Size>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unsigned long long __bitset<1, _Size>::to_ullong() const {
+  return __to_ullong(_BoolConstant<_Size <= sizeof(unsigned long long) * CHAR_BIT>());
+}
+
+template <size_t _Size>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unsigned long long
+__bitset<1, _Size>::__to_ullong(false_type) const {
+  if (auto __e = __make_iter(_Size); std::find(__make_iter(sizeof(unsigned long long) * CHAR_BIT), __e, true) != __e)
+    __throw_overflow_error("__bitset<1, _Size>::__to_ullong overflow error");
+
+  return static_cast<unsigned long long>(__first_);
+}
+
+template <size_t _Size>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unsigned long long
+__bitset<1, _Size>::__to_ullong(true_type) const {
   return static_cast<unsigned long long>(__first_);
 }
 
