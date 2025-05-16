@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <float.h>
+
 #include "clang/Parse/ParseHLSLRootSignature.h"
 
 #include "clang/Lex/LiteralSupport.h"
@@ -734,7 +736,8 @@ std::optional<float> RootSignatureParser::parseFloatParam() {
   assert(CurToken.TokKind == TokenKind::pu_equal &&
          "Expects to only be invoked starting at given keyword");
   // Consume sign modifier
-  bool Signed = tryConsumeExpectedToken({TokenKind::pu_plus, TokenKind::pu_minus});
+  bool Signed =
+      tryConsumeExpectedToken({TokenKind::pu_plus, TokenKind::pu_minus});
   bool Negated = Signed && CurToken.TokKind == TokenKind::pu_minus;
 
   // Handle an uint and interpret it as a float
@@ -747,8 +750,12 @@ std::optional<float> RootSignatureParser::parseFloatParam() {
     auto Int = handleIntLiteral(Negated);
     if (!Int.has_value())
       return std::nullopt;
-
     return (float)Int.value();
+  } else if (tryConsumeExpectedToken(TokenKind::float_literal)) {
+    auto Float = handleFloatLiteral(Negated);
+    if (!Float.has_value())
+      return std::nullopt;
+    return Float.value();
   }
 
   return std::nullopt;
@@ -864,9 +871,10 @@ std::optional<uint32_t> RootSignatureParser::handleUIntLiteral() {
                                       PP.getSourceManager(), PP.getLangOpts(),
                                       PP.getTargetInfo(), PP.getDiagnostics());
   if (Literal.hadError)
-    return true; // Error has already been reported so just return
+    return std::nullopt; // Error has already been reported so just return
 
-  assert(Literal.isIntegerLiteral() && "IsNumberChar will only support digits");
+  assert(Literal.isIntegerLiteral() &&
+         "NumSpelling can only consist of digits");
 
   llvm::APSInt Val = llvm::APSInt(32, false);
   if (Literal.GetIntegerValue(Val)) {
@@ -886,9 +894,10 @@ std::optional<int32_t> RootSignatureParser::handleIntLiteral(bool Negated) {
                                       PP.getSourceManager(), PP.getLangOpts(),
                                       PP.getTargetInfo(), PP.getDiagnostics());
   if (Literal.hadError)
-    return true; // Error has already been reported so just return
+    return std::nullopt; // Error has already been reported so just return
 
-  assert(Literal.isIntegerLiteral() && "IsNumberChar will only support digits");
+  assert(Literal.isIntegerLiteral() &&
+         "NumSpelling can only consist of digits");
 
   llvm::APSInt Val = llvm::APSInt(32, true);
   if (Literal.GetIntegerValue(Val) || INT32_MAX < Val.getExtValue()) {
@@ -900,9 +909,46 @@ std::optional<int32_t> RootSignatureParser::handleIntLiteral(bool Negated) {
   }
 
   if (Negated)
-    return static_cast<int32_t>((-Val).getExtValue());
+    Val = -Val;
 
   return static_cast<int32_t>(Val.getExtValue());
+}
+
+std::optional<float> RootSignatureParser::handleFloatLiteral(bool Negated) {
+  // Parse the numeric value and do semantic checks on its specification
+  clang::NumericLiteralParser Literal(CurToken.NumSpelling, CurToken.TokLoc,
+                                      PP.getSourceManager(), PP.getLangOpts(),
+                                      PP.getTargetInfo(), PP.getDiagnostics());
+  if (Literal.hadError)
+    return std::nullopt; // Error has already been reported so just return
+
+  assert(Literal.isFloatingLiteral() &&
+         "NumSpelling is consistent with isNumberChar in "
+         "LexHLSLRootSignature.cpp");
+
+  // DXC used `strtod` to convert the token string to a float which corresponds
+  // to:
+  auto DXCSemantics = llvm::APFloat::Semantics::S_IEEEdouble;
+  auto DXCRoundingMode = llvm::RoundingMode::NearestTiesToEven;
+
+  llvm::APFloat Val =
+      llvm::APFloat(llvm::APFloat::EnumToSemantics(DXCSemantics));
+  llvm::APFloat::opStatus Status = Literal.GetFloatValue(Val, DXCRoundingMode);
+
+  // The float is valid with opInexect as this just denotes if rounding occured
+  if (Status != llvm::APFloat::opStatus::opOK &&
+      Status != llvm::APFloat::opStatus::opInexact)
+    return std::nullopt;
+
+  if (Negated)
+    Val = -Val;
+
+  double DoubleVal = Val.convertToDouble();
+  if (FLT_MAX < DoubleVal || DoubleVal < -FLT_MAX) {
+    return std::nullopt;
+  }
+
+  return static_cast<float>(DoubleVal);
 }
 
 bool RootSignatureParser::verifyZeroFlag() {

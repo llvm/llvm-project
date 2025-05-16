@@ -130,9 +130,11 @@ private:
   /// Use NumericLiteralParser to convert CurToken.NumSpelling into a unsigned
   /// 32-bit integer
   std::optional<uint32_t> handleUIntLiteral();
-  /// Use NumericLiteralParser to convert CurToken.NumSpelling into a unsigned
+  /// Use NumericLiteralParser to convert CurToken.NumSpelling into a signed
   /// 32-bit integer
   std::optional<int32_t> handleIntLiteral(bool Negated);
+  /// Use NumericLiteralParser to convert CurToken.NumSpelling into a float
+  std::optional<float> handleFloatLiteral(bool Negated);
 
   /// Flags may specify the value of '0' to denote that there should be no
   /// flags set.

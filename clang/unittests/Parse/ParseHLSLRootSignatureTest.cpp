@@ -256,7 +256,15 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseFloatsTest) {
   const llvm::StringLiteral Source = R"cc(
     StaticSampler(s0, mipLODBias = 0),
     StaticSampler(s0, mipLODBias = +1),
-    StaticSampler(s0, mipLODBias = -1)
+    StaticSampler(s0, mipLODBias = -1),
+    StaticSampler(s0, mipLODBias = 42.),
+    StaticSampler(s0, mipLODBias = +4.2),
+    StaticSampler(s0, mipLODBias = -.42),
+    StaticSampler(s0, mipLODBias = .42e+3),
+    StaticSampler(s0, mipLODBias = 42E-12),
+    StaticSampler(s0, mipLODBias = 42.f),
+    StaticSampler(s0, mipLODBias = 4.2F),
+    StaticSampler(s0, mipLODBias = 42.e+10f),
   )cc";
 
   TrivialModuleLoader ModLoader;
@@ -283,6 +291,38 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseFloatsTest) {
   Elem = Elements[2];
   ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
   ASSERT_EQ(std::get<StaticSampler>(Elem).MipLODBias, -1.f);
+
+  Elem = Elements[3];
+  ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
+  ASSERT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 42.f);
+
+  Elem = Elements[4];
+  ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
+  ASSERT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 4.2f);
+
+  Elem = Elements[5];
+  ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
+  ASSERT_EQ(std::get<StaticSampler>(Elem).MipLODBias, -.42f);
+
+  Elem = Elements[6];
+  ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
+  ASSERT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 420.f);
+
+  Elem = Elements[7];
+  ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
+  ASSERT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 0.000000000042f);
+
+  Elem = Elements[8];
+  ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
+  ASSERT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 42.f);
+
+  Elem = Elements[9];
+  ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
+  ASSERT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 4.2f);
+
+  Elem = Elements[10];
+  ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
+  ASSERT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 420000000000.f);
 
   ASSERT_TRUE(Consumer->isSatisfied());
 }
