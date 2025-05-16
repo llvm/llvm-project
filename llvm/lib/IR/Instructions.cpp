@@ -3459,19 +3459,17 @@ FPToSIInst::FPToSIInst(Value *S, Type *Ty, const Twine &Name,
   assert(castIsValid(getOpcode(), S, Ty) && "Illegal FPToSI");
 }
 
-PtrToIntInst::PtrToIntInst(unsigned Op, Value *S, Type *Ty, const Twine &Name,
+PtrToIntInst::PtrToIntInst(Value *S, Type *Ty, const Twine &Name,
                            InsertPosition InsertBefore)
-    : CastInst(Ty, Op, S, Name, InsertBefore) {
+    : CastInst(Ty, PtrToInt, S, Name, InsertBefore) {
   assert(castIsValid(getOpcode(), S, Ty) && "Illegal PtrToInt");
 }
 
-PtrToIntInst::PtrToIntInst(Value *S, Type *Ty, const Twine &Name,
-                           InsertPosition InsertBefore)
-    : PtrToIntInst(PtrToInt, S, Ty, Name, InsertBefore) {}
-
 PtrToAddrInst::PtrToAddrInst(Value *S, Type *Ty, const Twine &Name,
                              InsertPosition InsertBefore)
-    : PtrToIntInst(PtrToAddr, S, Ty, Name, InsertBefore) {}
+: CastInst(Ty, PtrToAddr, S, Name, InsertBefore) {
+  assert(castIsValid(getOpcode(), S, Ty) && "Illegal PtrToAddr");
+}
 
 IntToPtrInst::IntToPtrInst(Value *S, Type *Ty, const Twine &Name,
                            InsertPosition InsertBefore)

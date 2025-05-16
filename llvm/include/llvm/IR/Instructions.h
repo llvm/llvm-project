@@ -4881,9 +4881,6 @@ protected:
   /// Clone an identical PtrToIntInst.
   PtrToIntInst *cloneImpl() const;
 
-  PtrToIntInst(unsigned Op, Value *S, Type *Ty, const Twine &NameStr,
-               InsertPosition InsertBefore);
-
 public:
   /// Constructor with insert-before-instruction semantics
   PtrToIntInst(Value *S,                  ///< The value to be converted
@@ -4907,7 +4904,7 @@ public:
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Instruction *I) {
-    return I->getOpcode() == PtrToInt || I->getOpcode() == PtrToAddr;
+    return I->getOpcode() == PtrToInt;
   }
   static bool classof(const Value *V) {
     return isa<Instruction>(V) && classof(cast<Instruction>(V));
@@ -4915,9 +4912,8 @@ public:
 };
 
 /// This class represents a cast from a pointer to an address (non-capturing
-/// ptrtoint). Inherits from PtrToIntInst since it is a less restrictive version
-/// of ptrtoint, so treating it as ptrtoint is conservatively correct.
-class PtrToAddrInst : public PtrToIntInst {
+/// ptrtoint).
+class PtrToAddrInst : public CastInst {
 protected:
   // Note: Instruction needs to be a friend here to call cloneImpl.
   friend class Instruction;
@@ -4933,6 +4929,18 @@ public:
                 InsertPosition InsertBefore =
                     nullptr ///< Where to insert the new instruction
   );
+
+  /// Gets the pointer operand.
+  Value *getPointerOperand() { return getOperand(0); }
+  /// Gets the pointer operand.
+  const Value *getPointerOperand() const { return getOperand(0); }
+  /// Gets the operand index of the pointer operand.
+  static unsigned getPointerOperandIndex() { return 0U; }
+
+  /// Returns the address space of the pointer operand.
+  unsigned getPointerAddressSpace() const {
+    return getPointerOperand()->getType()->getPointerAddressSpace();
+  }
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Instruction *I) {

@@ -100,41 +100,7 @@ public:
   ConstCFGElementRef getCFGElementRef() const { return Elem; }
 
   // It might return null.
-  const Stmt *getStmt() const {
-    switch (Elem->getKind()) {
-    case CFGElement::Initializer:
-      return Elem->castAs<CFGInitializer>().getInitializer()->getInit();
-    case CFGElement::ScopeBegin:
-      return Elem->castAs<CFGScopeBegin>().getTriggerStmt();
-    case CFGElement::ScopeEnd:
-      return Elem->castAs<CFGScopeEnd>().getTriggerStmt();
-    case CFGElement::NewAllocator:
-      return Elem->castAs<CFGNewAllocator>().getAllocatorExpr();
-    case CFGElement::LifetimeEnds:
-      return Elem->castAs<CFGLifetimeEnds>().getTriggerStmt();
-    case CFGElement::LoopExit:
-      return Elem->castAs<CFGLoopExit>().getLoopStmt();
-    case CFGElement::Statement:
-      return Elem->castAs<CFGStmt>().getStmt();
-    case CFGElement::Constructor:
-      return Elem->castAs<CFGConstructor>().getStmt();
-    case CFGElement::CXXRecordTypedCall:
-      return Elem->castAs<CFGCXXRecordTypedCall>().getStmt();
-    case CFGElement::AutomaticObjectDtor:
-      return Elem->castAs<CFGAutomaticObjDtor>().getTriggerStmt();
-    case CFGElement::DeleteDtor:
-      return Elem->castAs<CFGDeleteDtor>().getDeleteExpr();
-    case CFGElement::BaseDtor:
-      return nullptr;
-    case CFGElement::MemberDtor:
-      return nullptr;
-    case CFGElement::TemporaryDtor:
-      return Elem->castAs<CFGTemporaryDtor>().getBindTemporaryExpr();
-    case CFGElement::CleanupFunction:
-      return nullptr;
-    }
-    return nullptr;
-  }
+  const Stmt *getStmt() const;
 
   unsigned getCount() const { return Count; }
   /// It might return null.
