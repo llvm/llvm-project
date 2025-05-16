@@ -740,8 +740,8 @@ std::optional<float> RootSignatureParser::parseFloatParam() {
       tryConsumeExpectedToken({TokenKind::pu_plus, TokenKind::pu_minus});
   bool Negated = Signed && CurToken.TokKind == TokenKind::pu_minus;
 
-  // Handle an uint and interpret it as a float
-  if (!Signed && tryConsumeExpectedToken(TokenKind::int_literal)) {
+  // DXC will treat a postive signed integer as unsigned
+  if (!Negated && tryConsumeExpectedToken(TokenKind::int_literal)) {
     auto UInt = handleUIntLiteral();
     if (!UInt.has_value())
       return std::nullopt;
