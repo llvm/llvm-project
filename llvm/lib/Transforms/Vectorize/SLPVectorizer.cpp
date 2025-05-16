@@ -1641,7 +1641,7 @@ static void addMask(SmallVectorImpl<int> &Mask, ArrayRef<int> SubMask,
 /// before:  6 9 5 4 9 2 1 0
 /// after:   6 3 5 4 7 2 1 0
 static void fixupOrderingIndices(MutableArrayRef<unsigned> Order) {
-  const unsigned Sz = Order.size();
+  const size_t Sz = Order.size();
   SmallBitVector UnusedIndices(Sz, /*t=*/true);
   SmallBitVector MaskedIndices(Sz);
   for (unsigned I = 0; I < Sz; ++I) {
@@ -2273,7 +2273,7 @@ public:
             !LI2->isSimple())
           return CheckSameEntryOrFail();
 
-        std::optional<int> Dist = getPointersDiff(
+        std::optional<int64_t> Dist = getPointersDiff(
             LI1->getType(), LI1->getPointerOperand(), LI2->getType(),
             LI2->getPointerOperand(), DL, SE, /*StrictCheck=*/true);
         if (!Dist || *Dist == 0) {
@@ -3680,9 +3680,10 @@ private:
   /// vector loads/masked gathers instead of regular gathers. Later these loads
   /// are reshufled to build final gathered nodes.
   void tryToVectorizeGatheredLoads(
-      const SmallMapVector<std::tuple<BasicBlock *, Value *, Type *>,
-                           SmallVector<SmallVector<std::pair<LoadInst *, int>>>,
-                           8> &GatheredLoads);
+      const SmallMapVector<
+          std::tuple<BasicBlock *, Value *, Type *>,
+          SmallVector<SmallVector<std::pair<LoadInst *, int64_t>>>, 8>
+          &GatheredLoads);
 
   /// Helper for `findExternalStoreUsersReorderIndices()`. It iterates over the
   /// users of \p TE and collects the stores. It returns the map from the store
@@ -5445,7 +5446,7 @@ BoUpSLP::findReusedOrderedScalars(const BoUpSLP::TreeEntry &TE,
   // patterns.
   SmallVector<Value *> GatheredScalars(TE.Scalars.begin(), TE.Scalars.end());
   Type *ScalarTy = GatheredScalars.front()->getType();
-  int NumScalars = GatheredScalars.size();
+  size_t NumScalars = GatheredScalars.size();
   if (!isValidElementType(ScalarTy))
     return std::nullopt;
   auto *VecTy = getWidenedType(ScalarTy, NumScalars);
@@ -5519,7 +5520,7 @@ BoUpSLP::findReusedOrderedScalars(const BoUpSLP::TreeEntry &TE,
       unsigned Limit = getNumElems(CurrentOrder.size(), PartSz, I);
       MutableArrayRef<unsigned> Slice = CurrentOrder.slice(I * PartSz, Limit);
       // Shuffle of at least 2 vectors - ignore.
-      if (any_of(Slice, [&](int I) { return I != NumScalars; })) {
+      if (any_of(Slice, [&](unsigned I) { return I != NumScalars; })) {
         std::fill(Slice.begin(), Slice.end(), NumScalars);
         ShuffledSubMasks.set(I);
         continue;
@@ -5617,8 +5618,8 @@ BoUpSLP::findReusedOrderedScalars(const BoUpSLP::TreeEntry &TE,
       return std::max(Entries[I].front()->getVectorFactor(),
                       Entries[I].back()->getVectorFactor());
     });
-  int NumUndefs =
-      count_if(CurrentOrder, [&](int Idx) { return Idx == NumScalars; });
+  unsigned NumUndefs =
+      count_if(CurrentOrder, [&](unsigned Idx) { return Idx == NumScalars; });
   if (ShuffledSubMasks.all() || (NumScalars > 2 && NumUndefs >= NumScalars / 2))
     return std::nullopt;
   return std::move(CurrentOrder);
@@ -5945,7 +5946,11 @@ static bool buildCompressMask(ArrayRef<Value *> PointerOps,
   Value *Ptr0 = Order.empty() ? PointerOps.front() : PointerOps[Order.front()];
   for (unsigned I : seq<unsigned>(1, Sz)) {
     Value *Ptr = Order.empty() ? PointerOps[I] : PointerOps[Order[I]];
-    unsigned Pos = *getPointersDiff(ScalarTy, Ptr0, ScalarTy, Ptr, DL, SE);
+    std::optional<int64_t> OptPos =
+        getPointersDiff(ScalarTy, Ptr0, ScalarTy, Ptr, DL, SE);
+    if (!OptPos || OptPos > std::numeric_limits<unsigned>::max())
+      return false;
+    unsigned Pos = static_cast<unsigned>(*OptPos);
     CompressMask[I] = Pos;
     if (!Stride)
       continue;
@@ -5971,7 +5976,7 @@ static bool isMaskedLoadCompress(
     VectorType *&LoadVecTy) {
   InterleaveFactor = 0;
   Type *ScalarTy = VL.front()->getType();
-  const unsigned Sz = VL.size();
+  const size_t Sz = VL.size();
   auto *VecTy = getWidenedType(ScalarTy, Sz);
   constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   SmallVector<int> Mask;
@@ -5998,11 +6003,11 @@ static bool isMaskedLoadCompress(
     Ptr0 = PointerOps[Order.front()];
     PtrN = PointerOps[Order.back()];
   }
-  std::optional<int> Diff =
+  std::optional<int64_t> Diff =
       getPointersDiff(ScalarTy, Ptr0, ScalarTy, PtrN, DL, SE);
   if (!Diff)
     return false;
-  const unsigned MaxRegSize =
+  const size_t MaxRegSize =
       TTI.getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector)
           .getFixedValue();
   // Check for very large distances between elements.
@@ -6128,9 +6133,10 @@ static bool isStridedLoad(ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
                           ArrayRef<unsigned> Order,
                           const TargetTransformInfo &TTI, const DataLayout &DL,
                           ScalarEvolution &SE,
-                          const bool IsAnyPointerUsedOutGraph, const int Diff) {
-  const unsigned Sz = VL.size();
-  const unsigned AbsoluteDiff = std::abs(Diff);
+                          const bool IsAnyPointerUsedOutGraph,
+                          const int64_t Diff) {
+  const size_t Sz = VL.size();
+  const uint64_t AbsoluteDiff = std::abs(Diff);
   Type *ScalarTy = VL.front()->getType();
   auto *VecTy = getWidenedType(ScalarTy, Sz);
   if (IsAnyPointerUsedOutGraph ||
@@ -6138,9 +6144,9 @@ static bool isStridedLoad(ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
        (Sz > MinProfitableStridedLoads ||
         (AbsoluteDiff <= MaxProfitableLoadStride * Sz &&
          AbsoluteDiff % Sz == 0 && has_single_bit(AbsoluteDiff / Sz)))) ||
-      Diff == -(static_cast<int>(Sz) - 1)) {
-    int Stride = Diff / static_cast<int>(Sz - 1);
-    if (Diff != Stride * static_cast<int>(Sz - 1))
+      Diff == -(static_cast<int64_t>(Sz) - 1)) {
+    int64_t Stride = Diff / static_cast<int64_t>(Sz - 1);
+    if (Diff != Stride * static_cast<int64_t>(Sz - 1))
       return false;
     Align Alignment =
         cast<LoadInst>(Order.empty() ? VL.front() : VL[Order.front()])
@@ -6158,9 +6164,9 @@ static bool isStridedLoad(ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
     }
     // Iterate through all pointers and check if all distances are
     // unique multiple of Dist.
-    SmallSet<int, 4> Dists;
+    SmallSet<int64_t, 4> Dists;
     for (Value *Ptr : PointerOps) {
-      int Dist = 0;
+      int64_t Dist = 0;
       if (Ptr == PtrN)
         Dist = Diff;
       else if (Ptr != Ptr0)
@@ -6199,7 +6205,7 @@ BoUpSLP::canVectorizeLoads(ArrayRef<Value *> VL, const Value *VL0,
   // Make sure all loads in the bundle are simple - we can't vectorize
   // atomic or volatile loads.
   PointerOps.clear();
-  const unsigned Sz = VL.size();
+  const size_t Sz = VL.size();
   PointerOps.resize(Sz);
   auto *POIter = PointerOps.begin();
   for (Value *V : VL) {
@@ -6242,10 +6248,10 @@ BoUpSLP::canVectorizeLoads(ArrayRef<Value *> VL, const Value *VL0,
       Ptr0 = PointerOps[Order.front()];
       PtrN = PointerOps[Order.back()];
     }
-    std::optional<int> Diff =
+    std::optional<int64_t> Diff =
         getPointersDiff(ScalarTy, Ptr0, ScalarTy, PtrN, *DL, *SE);
     // Check that the sorted loads are consecutive.
-    if (static_cast<unsigned>(*Diff) == Sz - 1)
+    if (static_cast<uint64_t>(*Diff) == Sz - 1)
       return LoadsState::Vectorize;
     if (isMaskedLoadCompress(VL, PointerOps, Order, *TTI, *DL, *SE, *AC, *DT,
                              *TLI, [&](Value *V) {
@@ -6504,8 +6510,9 @@ static bool clusterSortPtrAccesses(ArrayRef<Value *> VL,
   // Map from bases to a vector of (Ptr, Offset, OrigIdx), which we insert each
   // Ptr into, sort and return the sorted indices with values next to one
   // another.
-  SmallMapVector<std::pair<BasicBlock *, Value *>,
-                 SmallVector<SmallVector<std::tuple<Value *, int, unsigned>>>, 8>
+  SmallMapVector<
+      std::pair<BasicBlock *, Value *>,
+      SmallVector<SmallVector<std::tuple<Value *, int64_t, unsigned>>>, 8>
       Bases;
   Bases
       .try_emplace(std::make_pair(
@@ -6518,10 +6525,10 @@ static bool clusterSortPtrAccesses(ArrayRef<Value *> VL,
                               getUnderlyingObject(Ptr, RecursionMaxDepth));
     bool Found = any_of(Bases.try_emplace(Key).first->second,
                         [&, &Cnt = Cnt, &Ptr = Ptr](auto &Base) {
-                          std::optional<int> Diff = getPointersDiff(
-                              ElemTy, std::get<0>(Base.front()), ElemTy,
-                              Ptr, DL, SE,
-                              /*StrictCheck=*/true);
+                          std::optional<int64_t> Diff =
+                              getPointersDiff(ElemTy, std::get<0>(Base.front()),
+                                              ElemTy, Ptr, DL, SE,
+                                              /*StrictCheck=*/true);
                           if (!Diff)
                             return false;
 
@@ -6571,10 +6578,11 @@ static bool clusterSortPtrAccesses(ArrayRef<Value *> VL,
     for (auto &Vec : Base.second) {
       if (Vec.size() > 1) {
         stable_sort(Vec, llvm::less_second());
-        int InitialOffset = std::get<1>(Vec[0]);
+        int64_t InitialOffset = std::get<1>(Vec[0]);
         bool AnyConsecutive =
             all_of(enumerate(Vec), [InitialOffset](const auto &P) {
-              return std::get<1>(P.value()) == int(P.index()) + InitialOffset;
+              return std::get<1>(P.value()) ==
+                     int64_t(P.index()) + InitialOffset;
             });
         // Fill SortedIndices array only if it looks worth-while to sort the
         // ptrs.
@@ -7084,7 +7092,7 @@ static void combineOrders(MutableArrayRef<unsigned> Order,
                           ArrayRef<unsigned> SecondaryOrder) {
   assert((SecondaryOrder.empty() || Order.size() == SecondaryOrder.size()) &&
          "Expected same size of orders");
-  unsigned Sz = Order.size();
+  size_t Sz = Order.size();
   SmallBitVector UsedIndices(Sz);
   for (unsigned Idx : seq<unsigned>(0, Sz)) {
     if (Order[Idx] != Sz)
@@ -8076,7 +8084,7 @@ BoUpSLP::collectUserStores(const BoUpSLP::TreeEntry *TE) const {
       if (StoresVec.size() > Lane)
         continue;
       if (!StoresVec.empty()) {
-        std::optional<int> Diff = getPointersDiff(
+        std::optional<int64_t> Diff = getPointersDiff(
             SI->getValueOperand()->getType(), SI->getPointerOperand(),
             SI->getValueOperand()->getType(),
             StoresVec.front()->getPointerOperand(), *DL, *SE,
@@ -8104,14 +8112,14 @@ bool BoUpSLP::canFormVector(ArrayRef<StoreInst *> StoresVec,
 
   // To avoid calling getPointersDiff() while sorting we create a vector of
   // pairs {store, offset from first} and sort this instead.
-  SmallVector<std::pair<int, unsigned>> StoreOffsetVec;
+  SmallVector<std::pair<int64_t, unsigned>> StoreOffsetVec;
   StoreInst *S0 = StoresVec[0];
   StoreOffsetVec.emplace_back(0, 0);
   Type *S0Ty = S0->getValueOperand()->getType();
   Value *S0Ptr = S0->getPointerOperand();
   for (unsigned Idx : seq<unsigned>(1, StoresVec.size())) {
     StoreInst *SI = StoresVec[Idx];
-    std::optional<int> Diff =
+    std::optional<int64_t> Diff =
         getPointersDiff(S0Ty, S0Ptr, SI->getValueOperand()->getType(),
                         SI->getPointerOperand(), *DL, *SE,
                         /*StrictCheck=*/true);
@@ -8123,7 +8131,7 @@ bool BoUpSLP::canFormVector(ArrayRef<StoreInst *> StoresVec,
     return false;
   sort(StoreOffsetVec, llvm::less_first());
   unsigned Idx = 0;
-  int PrevDist = 0;
+  int64_t PrevDist = 0;
   for (const auto &P : StoreOffsetVec) {
     if (Idx > 0 && P.first != PrevDist + 1)
       return false;
@@ -8207,15 +8215,15 @@ void BoUpSLP::buildTree(ArrayRef<Value *> Roots) {
 static void gatherPossiblyVectorizableLoads(
     const BoUpSLP &R, ArrayRef<Value *> VL, const DataLayout &DL,
     ScalarEvolution &SE, const TargetTransformInfo &TTI,
-    SmallVectorImpl<SmallVector<std::pair<LoadInst *, int>>> &GatheredLoads,
+    SmallVectorImpl<SmallVector<std::pair<LoadInst *, int64_t>>> &GatheredLoads,
     bool AddNew = true) {
   if (VL.empty())
     return;
   Type *ScalarTy = getValueType(VL.front());
   if (!isValidElementType(ScalarTy))
     return;
-  SmallVector<SmallVector<std::pair<LoadInst *, int>>> ClusteredLoads;
-  SmallVector<DenseMap<int, LoadInst *>> ClusteredDistToLoad;
+  SmallVector<SmallVector<std::pair<LoadInst *, int64_t>>> ClusteredLoads;
+  SmallVector<DenseMap<int64_t, LoadInst *>> ClusteredDistToLoad;
   for (Value *V : VL) {
     auto *LI = dyn_cast<LoadInst>(V);
     if (!LI)
@@ -8231,7 +8239,7 @@ static void gatherPossiblyVectorizableLoads(
                                      RecursionMaxDepth) &&
              "Expected loads with the same type, same parent and same "
              "underlying pointer.");
-      std::optional<int> Dist = getPointersDiff(
+      std::optional<int64_t> Dist = getPointersDiff(
           LI->getType(), LI->getPointerOperand(), Data.front().first->getType(),
           Data.front().first->getPointerOperand(), DL, SE,
           /*StrictCheck=*/true);
@@ -8253,11 +8261,11 @@ static void gatherPossiblyVectorizableLoads(
     }
   }
   auto FindMatchingLoads =
-      [&](ArrayRef<std::pair<LoadInst *, int>> Loads,
-          SmallVectorImpl<SmallVector<std::pair<LoadInst *, int>>>
+      [&](ArrayRef<std::pair<LoadInst *, int64_t>> Loads,
+          SmallVectorImpl<SmallVector<std::pair<LoadInst *, int64_t>>>
               &GatheredLoads,
           SetVector<unsigned> &ToAdd, SetVector<unsigned> &Repeated,
-          int &Offset, unsigned &Start) {
+          int64_t &Offset, unsigned &Start) {
         if (Loads.empty())
           return GatheredLoads.end();
         LoadInst *LI = Loads.front().first;
@@ -8268,16 +8276,16 @@ static void gatherPossiblyVectorizableLoads(
           if (LI->getParent() != Data.front().first->getParent() ||
               LI->getType() != Data.front().first->getType())
             continue;
-          std::optional<int> Dist =
+          std::optional<int64_t> Dist =
               getPointersDiff(LI->getType(), LI->getPointerOperand(),
                               Data.front().first->getType(),
                               Data.front().first->getPointerOperand(), DL, SE,
                               /*StrictCheck=*/true);
           if (!Dist)
             continue;
-          SmallSet<int, 4> DataDists;
+          SmallSet<int64_t, 4> DataDists;
           SmallPtrSet<LoadInst *, 4> DataLoads;
-          for (std::pair<LoadInst *, int> P : Data) {
+          for (std::pair<LoadInst *, int64_t> P : Data) {
             DataDists.insert(P.second);
             DataLoads.insert(P.first);
           }
@@ -8308,10 +8316,10 @@ static void gatherPossiblyVectorizableLoads(
         ToAdd.clear();
         return GatheredLoads.end();
       };
-  for (ArrayRef<std::pair<LoadInst *, int>> Data : ClusteredLoads) {
+  for (ArrayRef<std::pair<LoadInst *, int64_t>> Data : ClusteredLoads) {
     unsigned Start = 0;
     SetVector<unsigned> ToAdd, LocalToAdd, Repeated;
-    int Offset = 0;
+    int64_t Offset = 0;
     auto *It = FindMatchingLoads(Data, GatheredLoads, LocalToAdd, Repeated,
                                  Offset, Start);
     while (It != GatheredLoads.end()) {
@@ -8326,7 +8334,7 @@ static void gatherPossiblyVectorizableLoads(
           return !ToAdd.contains(Idx) && !Repeated.contains(Idx);
         })) {
       auto AddNewLoads =
-          [&](SmallVectorImpl<std::pair<LoadInst *, int>> &Loads) {
+          [&](SmallVectorImpl<std::pair<LoadInst *, int64_t>> &Loads) {
             for (unsigned Idx : seq<unsigned>(Data.size())) {
               if (ToAdd.contains(Idx) || Repeated.contains(Idx))
                 continue;
@@ -8336,7 +8344,7 @@ static void gatherPossiblyVectorizableLoads(
       if (!AddNew) {
         LoadInst *LI = Data.front().first;
         It = find_if(
-            GatheredLoads, [&](ArrayRef<std::pair<LoadInst *, int>> PD) {
+            GatheredLoads, [&](ArrayRef<std::pair<LoadInst *, int64_t>> PD) {
               return PD.front().first->getParent() == LI->getParent() &&
                      PD.front().first->getType() == LI->getType();
             });
@@ -8344,7 +8352,7 @@ static void gatherPossiblyVectorizableLoads(
           AddNewLoads(*It);
           It = std::find_if(
               std::next(It), GatheredLoads.end(),
-              [&](ArrayRef<std::pair<LoadInst *, int>> PD) {
+              [&](ArrayRef<std::pair<LoadInst *, int64_t>> PD) {
                 return PD.front().first->getParent() == LI->getParent() &&
                        PD.front().first->getType() == LI->getType();
               });
@@ -8357,9 +8365,10 @@ static void gatherPossiblyVectorizableLoads(
 }
 
 void BoUpSLP::tryToVectorizeGatheredLoads(
-    const SmallMapVector<std::tuple<BasicBlock *, Value *, Type *>,
-                         SmallVector<SmallVector<std::pair<LoadInst *, int>>>,
-                         8> &GatheredLoads) {
+    const SmallMapVector<
+        std::tuple<BasicBlock *, Value *, Type *>,
+        SmallVector<SmallVector<std::pair<LoadInst *, int64_t>>>, 8>
+        &GatheredLoads) {
   GatheredLoadsEntriesFirst = VectorizableTree.size();
 
   SmallVector<SmallPtrSet<const Value *, 4>> LoadSetsToVectorize(
@@ -8368,8 +8377,8 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
     Set.insert_range(VectorizableTree[Idx]->Scalars);
 
   // Sort loads by distance.
-  auto LoadSorter = [](const std::pair<LoadInst *, int> &L1,
-                       const std::pair<LoadInst *, int> &L2) {
+  auto LoadSorter = [](const std::pair<LoadInst *, int64_t> &L1,
+                       const std::pair<LoadInst *, int64_t> &L2) {
     return L1.second > L2.second;
   };
 
@@ -8531,28 +8540,30 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
   };
   auto ProcessGatheredLoads =
       [&, &TTI = *TTI](
-          ArrayRef<SmallVector<std::pair<LoadInst *, int>>> GatheredLoads,
+          ArrayRef<SmallVector<std::pair<LoadInst *, int64_t>>> GatheredLoads,
           bool Final = false) {
         SmallVector<LoadInst *> NonVectorized;
-        for (ArrayRef<std::pair<LoadInst *, int>> LoadsDists : GatheredLoads) {
+        for (ArrayRef<std::pair<LoadInst *, int64_t>> LoadsDists :
+             GatheredLoads) {
           if (LoadsDists.size() <= 1) {
             NonVectorized.push_back(LoadsDists.back().first);
             continue;
           }
-          SmallVector<std::pair<LoadInst *, int>> LocalLoadsDists(LoadsDists);
+          SmallVector<std::pair<LoadInst *, int64_t>> LocalLoadsDists(
+              LoadsDists);
           SmallVector<LoadInst *> OriginalLoads(make_first_range(LoadsDists));
           stable_sort(LocalLoadsDists, LoadSorter);
           SmallVector<LoadInst *> Loads;
           unsigned MaxConsecutiveDistance = 0;
           unsigned CurrentConsecutiveDist = 1;
-          int LastDist = LocalLoadsDists.front().second;
+          int64_t LastDist = LocalLoadsDists.front().second;
           bool AllowMaskedGather = IsMaskedGatherSupported(OriginalLoads);
-          for (const std::pair<LoadInst *, int> &L : LocalLoadsDists) {
+          for (const std::pair<LoadInst *, int64_t> &L : LocalLoadsDists) {
             if (isVectorized(L.first))
               continue;
             assert(LastDist >= L.second &&
                    "Expected first distance always not less than second");
-            if (static_cast<unsigned>(LastDist - L.second) ==
+            if (static_cast<uint64_t>(LastDist - L.second) ==
                 CurrentConsecutiveDist) {
               ++CurrentConsecutiveDist;
               MaxConsecutiveDistance =
@@ -8775,12 +8786,12 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
     if (!Ref.empty() && !NonVectorized.empty() &&
         std::accumulate(
             Ref.begin(), Ref.end(), 0u,
-            [](unsigned S,
-               ArrayRef<std::pair<LoadInst *, int>> LoadsDists) -> unsigned {
-              return S + LoadsDists.size();
-            }) != NonVectorized.size() &&
+            [](unsigned S, ArrayRef<std::pair<LoadInst *, int64_t>> LoadsDists)
+                -> unsigned { return S + LoadsDists.size(); }) !=
+            NonVectorized.size() &&
         IsMaskedGatherSupported(NonVectorized)) {
-      SmallVector<SmallVector<std::pair<LoadInst *, int>>> FinalGatheredLoads;
+      SmallVector<SmallVector<std::pair<LoadInst *, int64_t>>>
+          FinalGatheredLoads;
       for (LoadInst *LI : NonVectorized) {
         // Reinsert non-vectorized loads to other list of loads with the same
         // base pointers.
@@ -9376,10 +9387,10 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
         Ptr0 = PointerOps[CurrentOrder.front()];
         PtrN = PointerOps[CurrentOrder.back()];
       }
-      std::optional<int> Dist =
+      std::optional<int64_t> Dist =
           getPointersDiff(ScalarTy, Ptr0, ScalarTy, PtrN, *DL, *SE);
       // Check that the sorted pointer operands are consecutive.
-      if (static_cast<unsigned>(*Dist) == VL.size() - 1)
+      if (static_cast<uint64_t>(*Dist) == VL.size() - 1)
         return TreeEntry::Vectorize;
     }
 
@@ -10489,7 +10500,7 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
   assert((allConstant(VLRef) || allSameType(VLRef)) && "Invalid types!");
 
   SmallVector<int> ReuseShuffleIndices;
-  SmallVector<Value *> VL(VLRef.begin(), VLRef.end());
+  SmallVector<Value *> VL(VLRef);
 
   // Tries to build split node.
   auto TrySplitNode = [&](const InstructionsState &LocalState) {
@@ -11035,7 +11046,7 @@ unsigned BoUpSLP::canMapToVector(Type *T) const {
 
   if (!isValidElementType(EltTy))
     return 0;
-  uint64_t VTSize = DL->getTypeStoreSizeInBits(getWidenedType(EltTy, N));
+  size_t VTSize = DL->getTypeStoreSizeInBits(getWidenedType(EltTy, N));
   if (VTSize < MinVecRegSize || VTSize > MaxVecRegSize ||
       VTSize != DL->getTypeStoreSizeInBits(T))
     return 0;
@@ -12234,7 +12245,7 @@ void BoUpSLP::transformNodes() {
   // A list of loads to be gathered during the vectorization process. We can
   // try to vectorize them at the end, if profitable.
   SmallMapVector<std::tuple<BasicBlock *, Value *, Type *>,
-                 SmallVector<SmallVector<std::pair<LoadInst *, int>>>, 8>
+                 SmallVector<SmallVector<std::pair<LoadInst *, int64_t>>>, 8>
       GatheredLoads;
 
   for (std::unique_ptr<TreeEntry> &TE : VectorizableTree) {
@@ -13894,7 +13905,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         unsigned InterleaveFactor;
         SmallVector<int> CompressMask;
         VectorType *LoadVecTy;
-        SmallVector<Value *> Scalars(VL.begin(), VL.end());
+        SmallVector<Value *> Scalars(VL);
         if (!E->ReorderIndices.empty()) {
           SmallVector<int> Mask(E->ReorderIndices.begin(),
                                 E->ReorderIndices.end());
@@ -16421,16 +16432,10 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
                 [](Value *V) {
                   return !isa<GetElementPtrInst>(V) && isa<Instruction>(V);
                 })) ||
-        all_of(E->Scalars,
-               [](Value *V) {
-                 return isa<PoisonValue>(V) ||
-                        (!isVectorLikeInstWithConstOps(V) &&
-                         isUsedOutsideBlock(V));
-               }) ||
-        (E->isGather() && E->Idx == 0 && all_of(E->Scalars, [](Value *V) {
-           return isa<ExtractElementInst, UndefValue>(V) ||
-                  areAllOperandsNonInsts(V);
-         })))
+        all_of(E->Scalars, [](Value *V) {
+          return isa<PoisonValue>(V) ||
+                 (!isVectorLikeInstWithConstOps(V) && isUsedOutsideBlock(V));
+        }))
       Res = FindLastInst();
     else
       Res = FindFirstInst();
@@ -16489,7 +16494,7 @@ void BoUpSLP::setInsertPointAfterBundle(const TreeEntry *E) {
   }
   if (IsPHI ||
       (!E->isGather() && E->State != TreeEntry::SplitVectorize &&
-       doesNotNeedToSchedule(E->Scalars)) ||
+       all_of(E->Scalars, areAllOperandsNonInsts)) ||
       (GatheredLoadsEntriesFirst.has_value() &&
        E->Idx >= *GatheredLoadsEntriesFirst && !E->isGather() &&
        E->getOpcode() == Instruction::Load)) {
@@ -18086,17 +18091,27 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
           Value *VecOp = NewPhi->getIncomingValueForBlock(IBB);
           NewPhi->addIncoming(VecOp, IBB);
           TreeEntry *OpTE = getOperandEntry(E, I);
+          assert(!OpTE->VectorizedValue && "Expected no vectorized value.");
           OpTE->VectorizedValue = VecOp;
           continue;
         }
 
         Builder.SetInsertPoint(IBB->getTerminator());
         Builder.SetCurrentDebugLocation(PH->getDebugLoc());
-        Value *Vec = vectorizeOperand(E, I);
+        const TreeEntry *OpE = getOperandEntry(E, I);
+        Value *Vec;
+        if (OpE->isGather()) {
+          assert(OpE->VectorizedValue && "Expected vectorized value.");
+          Vec = OpE->VectorizedValue;
+          if (auto *IVec = dyn_cast<Instruction>(Vec))
+            Builder.SetInsertPoint(IVec->getNextNonDebugInstruction());
+        } else {
+          Vec = vectorizeOperand(E, I);
+        }
         if (VecTy != Vec->getType()) {
-          assert((It != MinBWs.end() || getOperandEntry(E, I)->isGather() ||
-                  MinBWs.contains(getOperandEntry(E, I))) &&
-                 "Expected item in MinBWs.");
+          assert(
+              (It != MinBWs.end() || OpE->isGather() || MinBWs.contains(OpE)) &&
+              "Expected item in MinBWs.");
           Vec = Builder.CreateIntCast(Vec, VecTy, GetOperandSignedness(I));
         }
         NewPhi->addIncoming(Vec, IBB);
@@ -18568,12 +18583,13 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         Value *Ptr0 = cast<LoadInst>(E->Scalars.front())->getPointerOperand();
         Value *PtrN = cast<LoadInst>(E->Scalars.back())->getPointerOperand();
         PO = IsReverseOrder ? PtrN : Ptr0;
-        std::optional<int> Diff = getPointersDiff(
+        std::optional<int64_t> Diff = getPointersDiff(
             VL0->getType(), Ptr0, VL0->getType(), PtrN, *DL, *SE);
         Type *StrideTy = DL->getIndexType(PO->getType());
         Value *StrideVal;
         if (Diff) {
-          int Stride = *Diff / (static_cast<int>(E->Scalars.size()) - 1);
+          int64_t Stride =
+              *Diff / (static_cast<int64_t>(E->Scalars.size()) - 1);
           StrideVal =
               ConstantInt::get(StrideTy, (IsReverseOrder ? -1 : 1) * Stride *
                                              DL->getTypeAllocSize(ScalarTy));
@@ -18982,6 +18998,28 @@ Value *BoUpSLP::vectorizeTree(
   else
     Builder.SetInsertPoint(&F->getEntryBlock(), F->getEntryBlock().begin());
 
+  // Vectorize gather operands of the PHI nodes.
+  for (const std::unique_ptr<TreeEntry> &TE : reverse(VectorizableTree)) {
+    if (TE->isGather() && TE->UserTreeIndex.UserTE &&
+        TE->UserTreeIndex.UserTE->hasState() &&
+        !TE->UserTreeIndex.UserTE->isAltShuffle() &&
+        TE->UserTreeIndex.UserTE->State == TreeEntry::Vectorize &&
+        TE->UserTreeIndex.UserTE->getOpcode() == Instruction::PHI &&
+        !TE->VectorizedValue) {
+      auto *PH = cast<PHINode>(TE->UserTreeIndex.UserTE->getMainOp());
+      BasicBlock *IBB = PH->getIncomingBlock(TE->UserTreeIndex.EdgeIdx);
+      // If there is the same incoming block earlier - skip, it will be handled
+      // in PHI node.
+      if (TE->UserTreeIndex.EdgeIdx > 0 &&
+          any_of(seq<unsigned>(TE->UserTreeIndex.EdgeIdx), [&](unsigned Idx) {
+            return PH->getIncomingBlock(Idx) == IBB;
+          }))
+        continue;
+      Builder.SetInsertPoint(IBB->getTerminator());
+      Builder.SetCurrentDebugLocation(PH->getDebugLoc());
+      (void)vectorizeTree(TE.get());
+    }
+  }
   // Emit gathered loads first to emit better code for the users of those
   // gathered loads.
   for (const std::unique_ptr<TreeEntry> &TE : VectorizableTree) {
@@ -21441,18 +21479,18 @@ public:
   /// \p PtrDist.
   /// Does nothing if there is already a store with that \p PtrDist.
   /// \returns The previously associated Instruction index, or std::nullopt
-  std::optional<unsigned> insertOrLookup(unsigned InstrIdx, int PtrDist) {
+  std::optional<unsigned> insertOrLookup(unsigned InstrIdx, int64_t PtrDist) {
     auto [It, Inserted] = Instrs.emplace(PtrDist, InstrIdx);
-    return Inserted ? std::nullopt : std::optional<unsigned>(It->second);
+    return Inserted ? std::nullopt : std::make_optional(It->second);
   }
 
-  using DistToInstMap = std::map<int, unsigned>;
+  using DistToInstMap = std::map<int64_t, unsigned>;
   const DistToInstMap &getStores() const { return Instrs; }
 
   /// If \p SI is related to this group of stores, return the distance of its
   /// pointer operand to the one the group's BaseInstr.
-  std::optional<int> getPointerDiff(StoreInst &SI, const DataLayout &DL,
-                                    ScalarEvolution &SE) const {
+  std::optional<int64_t> getPointerDiff(StoreInst &SI, const DataLayout &DL,
+                                        ScalarEvolution &SE) const {
     StoreInst &BaseStore = *AllStores[BaseInstrIdx];
     return getPointersDiff(
         BaseStore.getValueOperand()->getType(), BaseStore.getPointerOperand(),
@@ -21463,7 +21501,7 @@ public:
   /// Recompute the pointer distances to be based on \p NewBaseInstIdx.
   /// Stores whose index is less than \p MinSafeIdx will be dropped.
   void rebase(unsigned MinSafeIdx, unsigned NewBaseInstIdx,
-              int DistFromCurBase) {
+              int64_t DistFromCurBase) {
     DistToInstMap PrevSet = std::move(Instrs);
     reset(NewBaseInstIdx);
 
@@ -21479,7 +21517,7 @@ public:
   /// Remove all stores that have been vectorized from this group.
   void clearVectorizedStores(const BoUpSLP::ValueSet &VectorizedStores) {
     DistToInstMap::reverse_iterator LastVectorizedStore = find_if(
-        reverse(Instrs), [&](const std::pair<int, unsigned> &DistAndIdx) {
+        reverse(Instrs), [&](const std::pair<int64_t, unsigned> &DistAndIdx) {
           return VectorizedStores.contains(AllStores[DistAndIdx.second]);
         });
 
@@ -21512,7 +21550,7 @@ bool SLPVectorizerPass::vectorizeStores(
   bool Changed = false;
 
   auto TryToVectorize = [&](const RelatedStoreInsts::DistToInstMap &StoreSeq) {
-    int PrevDist = -1;
+    int64_t PrevDist = -1;
     BoUpSLP::ValueList Operands;
     // Collect the chain into a list.
     for (auto [Idx, Data] : enumerate(StoreSeq)) {
@@ -21813,7 +21851,7 @@ bool SLPVectorizerPass::vectorizeStores(
   // dependencies and no need to waste compile time to try to vectorize them.
   // - Try to vectorize the sequence {1, {1, 0}, {3, 2}}.
   auto FillStoresSet = [&](unsigned Idx, StoreInst *SI) {
-    std::optional<int> PtrDist;
+    std::optional<int64_t> PtrDist;
     auto *RelatedStores = find_if(
         SortedStores, [&PtrDist, SI, this](const RelatedStoreInsts &StoreSeq) {
           PtrDist = StoreSeq.getPointerDiff(*SI, *DL, *SE);
