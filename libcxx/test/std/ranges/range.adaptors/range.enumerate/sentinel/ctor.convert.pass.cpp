@@ -54,7 +54,7 @@ constexpr void test() {
   // Test assignment
   EnumerateConstSentinel cs                      = s;
   std::same_as<Sentinel> decltype(auto) csResult = cs.base();
-  assert(base(base(csResult)) == array.end());
+  assert(base(base(csResult)) == std::to_address(base(array.end())));
 }
 
 constexpr bool tests() {

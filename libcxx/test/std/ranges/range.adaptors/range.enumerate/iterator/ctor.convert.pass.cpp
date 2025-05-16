@@ -48,7 +48,7 @@ constexpr void test() {
   {
     std::same_as<EnumerateIterator> decltype(auto) it     = view.begin();
     std::same_as<const Iterator&> decltype(auto) itResult = it.base();
-    assert(base(base(itResult)) == array.begin());
+    assert(base(base(itResult)) == std::to_address(base(array.begin())));
 
     auto [index, value] = *(++it);
     assert(index == 1);
@@ -57,7 +57,7 @@ constexpr void test() {
   {
     std::same_as<EnumerateConstIterator> decltype(auto) it = view.begin();
     std::same_as<const Iterator&> decltype(auto) itResult  = it.base();
-    assert(base(base(itResult)) == array.begin());
+    assert(base(base(itResult)) == std::to_address(base(array.begin())));
 
     auto [index, value] = *(++it);
     assert(index == 1);

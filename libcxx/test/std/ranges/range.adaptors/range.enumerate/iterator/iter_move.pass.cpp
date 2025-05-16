@@ -48,20 +48,20 @@ constexpr void test() {
   static_assert(std::is_same_v<decltype(result), std::tuple<typename decltype(it)::difference_type, int&&>&&>);
 
   assert(get<0>(result) == 0);
-  assert(&get<1>(result) == array.begin());
+  assert(&get<1>(result) == std::to_address(base(array.begin())));
 
   static_assert(noexcept(iter_move(it)) == HasNoexceptIterMove);
 }
 
 constexpr bool tests() {
   // clang-format off
-  test<cpp17_input_iterator<int*>,           /* noexcept */ false>();
-  test<cpp20_input_iterator<int*>,           /* noexcept */ false>();
-  test<forward_iterator<int*>,               /* noexcept */ false>();
-  test<bidirectional_iterator<int*>,         /* noexcept */ false>();
-  test<random_access_iterator<int*>,         /* noexcept */ false>();
-  test<contiguous_iterator<int*>,            /* noexcept */ false>();
-  test<int*,                                 /* noexcept */ true>();
+  test<cpp17_input_iterator<int*>,                /* noexcept */ false>();
+  test<cpp20_input_iterator<int*>,                /* noexcept */ false>();
+  test<forward_iterator<int*>,                    /* noexcept */ false>();
+  test<bidirectional_iterator<int*>,              /* noexcept */ false>();
+  test<random_access_iterator<int*>,              /* noexcept */ false>();
+  test<contiguous_iterator<int*>,                 /* noexcept */ false>();
+  test<int*,                                      /* noexcept */ true>();
   test<MaybeNoexceptIterMoveInputIterator<true>,  /* noexcept */ true>();
   test<MaybeNoexceptIterMoveInputIterator<false>, /* noexcept */ false>();
   // clang-format on

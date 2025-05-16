@@ -49,14 +49,14 @@ constexpr void testBase() {
     EnumerateIterator const it                          = view.begin();
     std::same_as<const Iterator&> decltype(auto) result = it.base();
     ASSERT_NOEXCEPT(it.base());
-    assert(base(result) == array.begin());
+    assert(base(result) == std::to_address(base(array.begin())));
   }
 
   // Test the && version
   {
     EnumerateIterator it                         = view.begin();
     std::same_as<Iterator> decltype(auto) result = std::move(it).base();
-    assert(base(result) == array.begin());
+    assert(base(result) == std::to_address(base(array.begin())));
   }
 }
 
