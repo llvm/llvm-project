@@ -37,18 +37,18 @@ define i32 @test(i32 %s.0) {
 ; CHECK:       [[IF_THEN18:.*]]:
 ; CHECK-NEXT:    br label %[[T]]
 ; CHECK:       [[T]]:
-; CHECK-NEXT:    [[TMP30:%.*]] = phi <8 x i32> [ [[TMP27:%.*]], %[[O]] ], [ poison, %[[IF_THEN18]] ]
+; CHECK-NEXT:    [[TMP19:%.*]] = phi <8 x i32> [ [[TMP27:%.*]], %[[O]] ], [ poison, %[[IF_THEN18]] ]
 ; CHECK-NEXT:    [[TMP17]] = extractelement <4 x i32> [[TMP23:%.*]], i32 0
 ; CHECK-NEXT:    br i1 false, label %[[IF_END24]], label %[[K]]
 ; CHECK:       [[IF_END24]]:
-; CHECK-NEXT:    [[TMP18:%.*]] = phi <8 x i32> [ [[TMP29]], %[[IF_THEN11]] ], [ [[TMP11]], %[[IF_END6]] ], [ [[TMP30]], %[[T]] ]
-; CHECK-NEXT:    [[TMP19:%.*]] = shufflevector <8 x i32> [[TMP18]], <8 x i32> poison, <2 x i32> <i32 7, i32 1>
+; CHECK-NEXT:    [[TMP18:%.*]] = phi <8 x i32> [ [[TMP29]], %[[IF_THEN11]] ], [ [[TMP11]], %[[IF_END6]] ], [ [[TMP19]], %[[T]] ]
 ; CHECK-NEXT:    [[TMP20:%.*]] = shufflevector <8 x i32> [[TMP18]], <8 x i32> poison, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP30:%.*]] = shufflevector <8 x i32> [[TMP18]], <8 x i32> poison, <2 x i32> <i32 7, i32 1>
 ; CHECK-NEXT:    [[TMP21:%.*]] = shufflevector <8 x i32> [[TMP18]], <8 x i32> poison, <4 x i32> <i32 2, i32 3, i32 4, i32 6>
 ; CHECK-NEXT:    br label %[[O]]
 ; CHECK:       [[O]]:
-; CHECK-NEXT:    [[TMP22]] = phi <2 x i32> [ zeroinitializer, %[[K]] ], [ [[TMP19]], %[[IF_END24]] ]
 ; CHECK-NEXT:    [[TMP23]] = phi <4 x i32> [ [[TMP1]], %[[K]] ], [ [[TMP20]], %[[IF_END24]] ]
+; CHECK-NEXT:    [[TMP22]] = phi <2 x i32> [ zeroinitializer, %[[K]] ], [ [[TMP30]], %[[IF_END24]] ]
 ; CHECK-NEXT:    [[TMP24:%.*]] = phi <4 x i32> [ zeroinitializer, %[[K]] ], [ [[TMP21]], %[[IF_END24]] ]
 ; CHECK-NEXT:    [[TMP25:%.*]] = shufflevector <4 x i32> [[TMP23]], <4 x i32> poison, <8 x i32> <i32 0, i32 poison, i32 0, i32 0, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP26:%.*]] = shufflevector <8 x i32> [[TMP25]], <8 x i32> <i32 poison, i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>, <8 x i32> <i32 0, i32 9, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
