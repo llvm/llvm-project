@@ -39,7 +39,6 @@ using namespace lldb;
 using namespace lldb_private;
 
 LLDB_PLUGIN_DEFINE(ObjectFileXCOFF)
-
 // FIXME: target 64bit at this moment.
 
 // Static methods.
@@ -95,10 +94,11 @@ bool ObjectFileXCOFF::CreateBinary() {
 
   Log *log = GetLog(LLDBLog::Object);
 
-  auto binary = llvm::object::ObjectFile::createObjectFile(
-      llvm::MemoryBufferRef(toStringRef(m_data.GetData()),
-                            m_file.GetFilename().GetStringRef()),
-      file_magic::xcoff_object_64);
+  auto memory_ref = llvm::MemoryBufferRef(toStringRef(m_data.GetData()),
+                                          m_file.GetFilename().GetStringRef());
+  llvm::file_magic magic = llvm::identify_magic(memory_ref.getBuffer());
+
+  auto binary = llvm::object::ObjectFile::createObjectFile(memory_ref, magic);
   if (!binary) {
     LLDB_LOG_ERROR(log, binary.takeError(),
                    "Failed to create binary for file ({1}): {0}", m_file);
@@ -143,9 +143,9 @@ size_t ObjectFileXCOFF::GetModuleSpecifications(
 
 static uint32_t XCOFFHeaderSizeFromMagic(uint32_t magic) {
   switch (magic) {
-    // TODO: 32bit not supported.
-    // case XCOFF::XCOFF32:
-    //  return sizeof(struct llvm::object::XCOFFFileHeader32);
+  case XCOFF::XCOFF32:
+    return sizeof(struct llvm::object::XCOFFFileHeader32);
+    break;
   case XCOFF::XCOFF64:
     return sizeof(struct llvm::object::XCOFFFileHeader64);
     break;
@@ -169,8 +169,9 @@ bool ObjectFileXCOFF::MagicBytesMatch(DataBufferSP &data_sp,
 }
 
 bool ObjectFileXCOFF::ParseHeader() {
-  // Only 64-bit is supported for now
-  return m_binary->fileHeader64()->Magic == XCOFF::XCOFF64;
+  if (m_binary->is64Bit())
+    return m_binary->fileHeader64()->Magic == XCOFF::XCOFF64;
+  return m_binary->fileHeader32()->Magic == XCOFF::XCOFF32;
 }
 
 ByteOrder ObjectFileXCOFF::GetByteOrder() const { return eByteOrderBig; }
@@ -178,8 +179,9 @@ ByteOrder ObjectFileXCOFF::GetByteOrder() const { return eByteOrderBig; }
 bool ObjectFileXCOFF::IsExecutable() const { return true; }
 
 uint32_t ObjectFileXCOFF::GetAddressByteSize() const {
-  // 32-bit not supported. return 8 for 64-bit XCOFF::XCOFF64
-  return 8;
+  if (m_binary->is64Bit())
+    return 8;
+  return 4;
 }
 
 AddressClass ObjectFileXCOFF::GetAddressClass(addr_t file_addr) {
@@ -191,20 +193,37 @@ void ObjectFileXCOFF::ParseSymtab(Symtab &lldb_symtab) {}
 bool ObjectFileXCOFF::IsStripped() { return false; }
 
 void ObjectFileXCOFF::CreateSections(SectionList &unified_section_list) {
+
   if (m_sections_up)
     return;
 
   m_sections_up = std::make_unique<SectionList>();
-  ModuleSP module_sp(GetModule());
+  if (m_binary->is64Bit())
+    CreateSectionsWithBitness<XCOFF64>(unified_section_list);
+  else
+    CreateSectionsWithBitness<XCOFF32>(unified_section_list);
+}
 
+template <typename T>
+static auto GetSections(llvm::object::XCOFFObjectFile *binary) {
+  if constexpr (T::Is64Bit)
+    return binary->sections64();
+  else
+    return binary->sections32();
+}
+
+template <typename T>
+void ObjectFileXCOFF::CreateSectionsWithBitness(
+    SectionList &unified_section_list) {
+  ModuleSP module_sp(GetModule());
   if (!module_sp)
     return;
 
   std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
 
   int idx = 0;
-  for (const llvm::object::XCOFFSectionHeader64 &section :
-       m_binary->sections64()) {
+  for (const typename T::SectionHeader &section :
+       GetSections<T>(m_binary.get())) {
 
     ConstString const_sect_name(section.Name);
 
@@ -253,9 +272,13 @@ UUID ObjectFileXCOFF::GetUUID() { return UUID(); }
 uint32_t ObjectFileXCOFF::GetDependentModules(FileSpecList &files) { return 0; }
 
 ObjectFile::Type ObjectFileXCOFF::CalculateType() {
-  if (m_binary->fileHeader64()->Flags & XCOFF::F_EXEC)
+
+  const auto flags = m_binary->is64Bit() ? m_binary->fileHeader64()->Flags
+                                         : m_binary->fileHeader32()->Flags;
+
+  if (flags & XCOFF::F_EXEC)
     return eTypeExecutable;
-  else if (m_binary->fileHeader64()->Flags & XCOFF::F_SHROBJ)
+  else if (flags & XCOFF::F_SHROBJ)
     return eTypeSharedLibrary;
   return eTypeUnknown;
 }
