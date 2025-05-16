@@ -1297,7 +1297,6 @@ feature_test_macros = [
             "name": "__cpp_lib_spanstream",
             "values": {"c++23": 202106},
             "headers": ["spanstream"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_ssize",
