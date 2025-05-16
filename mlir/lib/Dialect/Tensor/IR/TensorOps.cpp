@@ -826,10 +826,9 @@ struct InferConcatOperandTypes : public OpRewritePattern<ConcatOp> {
         auto castOp =
             rewriter.create<CastOp>(concatOp->getLoc(), inferredOperandType,
                                     concatOp.getOperand(operandIdx));
-        rewriter.modifyOpInPlace(
-            concatOp, [=, operandIdx = (size_t)operandIdx] {
-              concatOp->setOperand(operandIdx, castOp->getResult(0));
-            });
+        rewriter.modifyOpInPlace(concatOp, [=, operandIdx = operandIdx] {
+          concatOp->setOperand(operandIdx, castOp->getResult(0));
+        });
       }
     }
 
