@@ -14,28 +14,28 @@ int ints(long a, unsigned long b) {
   enum EnumC {C = 0x10000};
   return
          // (a,b)
-         (a == (unsigned long) b) +  // expected-warning {{comparison of integers of different signs}}
+         (a == (unsigned long) b) +  // expected-warning {{comparison of integers of different signs}} expected-note{{}}
          (a == (unsigned int) b) +
          (a == (unsigned short) b) +
          (a == (unsigned char) b) +
-         ((long) a == b) +  // expected-warning {{comparison of integers of different signs}}
-         ((int) a == b) +  // expected-warning {{comparison of integers of different signs}}
-         ((short) a == b) +  // expected-warning {{comparison of integers of different signs}}
-         ((signed char) a == b) +  // expected-warning {{comparison of integers of different signs}}
-         ((long) a == (unsigned long) b) +  // expected-warning {{comparison of integers of different signs}}
-         ((int) a == (unsigned int) b) +  // expected-warning {{comparison of integers of different signs}}
+         ((long) a == b) +  // expected-warning {{comparison of integers of different signs}} expected-note{{}}
+         ((int) a == b) +  // expected-warning {{comparison of integers of different signs}} expected-note{{}}
+         ((short) a == b) +  // expected-warning {{comparison of integers of different signs}} expected-note{{}}
+         ((signed char) a == b) +  // expected-warning {{comparison of integers of different signs}} expected-note{{}}
+         ((long) a == (unsigned long) b) +  // expected-warning {{comparison of integers of different signs}} expected-note{{}}
+         ((int) a == (unsigned int) b) +  // expected-warning {{comparison of integers of different signs}} expected-note{{}}
          ((short) a == (unsigned short) b) +
          ((signed char) a == (unsigned char) b) +
-         (a < (unsigned long) b) +  // expected-warning {{comparison of integers of different signs}}
+         (a < (unsigned long) b) +  // expected-warning {{comparison of integers of different signs}} expected-note{{}}
          (a < (unsigned int) b) +
          (a < (unsigned short) b) +
          (a < (unsigned char) b) +
-         ((long) a < b) +  // expected-warning {{comparison of integers of different signs}}
-         ((int) a < b) +  // expected-warning {{comparison of integers of different signs}}
-         ((short) a < b) +  // expected-warning {{comparison of integers of different signs}}
-         ((signed char) a < b) +  // expected-warning {{comparison of integers of different signs}}
-         ((long) a < (unsigned long) b) +  // expected-warning {{comparison of integers of different signs}}
-         ((int) a < (unsigned int) b) +  // expected-warning {{comparison of integers of different signs}}
+         ((long) a < b) +  // expected-warning {{comparison of integers of different signs}} expected-note{{}}
+         ((int) a < b) +  // expected-warning {{comparison of integers of different signs}} expected-note{{}}
+         ((short) a < b) +  // expected-warning {{comparison of integers of different signs}} expected-note{{}}
+         ((signed char) a < b) +  // expected-warning {{comparison of integers of different signs}} expected-note{{}}
+         ((long) a < (unsigned long) b) +  // expected-warning {{comparison of integers of different signs}} expected-note{{}}
+         ((int) a < (unsigned int) b) +  // expected-warning {{comparison of integers of different signs}} expected-note{{}}
          ((short) a < (unsigned short) b) +
          ((signed char) a < (unsigned char) b) +
 
@@ -130,7 +130,7 @@ int ints(long a, unsigned long b) {
          ((int) a == (unsigned int) C) +
          ((short) a == (unsigned short) C) +
          ((signed char) a == (unsigned char) C) +
-         (a < (unsigned long) C) +  // expected-warning {{comparison of integers of different signs}}
+         (a < (unsigned long) C) +  // expected-warning {{comparison of integers of different signs}} expected-note{{}}
          (a < (unsigned int) C) +
          (a < (unsigned short) C) +
          (a < (unsigned char) C) +
@@ -138,8 +138,8 @@ int ints(long a, unsigned long b) {
          ((int) a < C) +
          ((short) a < C) + // expected-warning {{comparison of constant 'C' (65536) with expression of type 'short' is always true}}
          ((signed char) a < C) + // expected-warning {{comparison of constant 'C' (65536) with expression of type 'signed char' is always true}}
-         ((long) a < (unsigned long) C) +  // expected-warning {{comparison of integers of different signs}}
-         ((int) a < (unsigned int) C) +  // expected-warning {{comparison of integers of different signs}}
+         ((long) a < (unsigned long) C) +  // expected-warning {{comparison of integers of different signs}} expected-note{{}}
+         ((int) a < (unsigned int) C) +  // expected-warning {{comparison of integers of different signs}} expected-note{{}}
          ((short) a < (unsigned short) C) +
          ((signed char) a < (unsigned char) C) +
 
@@ -182,7 +182,7 @@ int ints(long a, unsigned long b) {
          ((int) a == (unsigned int) 0x80000) +
          ((short) a == (unsigned short) 0x80000) +
          ((signed char) a == (unsigned char) 0x80000) +
-         (a < (unsigned long) 0x80000) +  // expected-warning {{comparison of integers of different signs}}
+         (a < (unsigned long) 0x80000) +  // expected-warning {{comparison of integers of different signs}} expected-note{{}}
          (a < (unsigned int) 0x80000) +
          (a < (unsigned short) 0x80000) +
          (a < (unsigned char) 0x80000) +
@@ -190,8 +190,8 @@ int ints(long a, unsigned long b) {
          ((int) a < 0x80000) +
          ((short) a < 0x80000) + // expected-warning {{comparison of constant 524288 with expression of type 'short' is always true}}
          ((signed char) a < 0x80000) + // expected-warning {{comparison of constant 524288 with expression of type 'signed char' is always true}}
-         ((long) a < (unsigned long) 0x80000) +  // expected-warning {{comparison of integers of different signs}}
-         ((int) a < (unsigned int) 0x80000) +  // expected-warning {{comparison of integers of different signs}}
+         ((long) a < (unsigned long) 0x80000) +  // expected-warning {{comparison of integers of different signs}} expected-note{{}}
+         ((int) a < (unsigned int) 0x80000) +  // expected-warning {{comparison of integers of different signs}} expected-note{{}}
          ((short) a < (unsigned short) 0x80000) +
          ((signed char) a < (unsigned char) 0x80000) +
 
@@ -250,11 +250,11 @@ int test2(int i32) {
     return 0;
   } else if (x->u31 == i32) { // comparison in int32, exact
     return 1;
-  } else if (x->u32 == i32) { // expected-warning {{comparison of integers of different signs}}
+  } else if (x->u32 == i32) { // expected-warning {{comparison of integers of different signs}} expected-note{{}}
     return 2;
   } else if (x->u63 == i32) { // comparison in uint64, exact because ==
     return 3;
-  } else if (x->u64 == i32) { // expected-warning {{comparison of integers of different signs}}
+  } else if (x->u64 == i32) { // expected-warning {{comparison of integers of different signs}} expected-note{{}}
     return 4;
   } else {
     return 5;
@@ -273,7 +273,7 @@ void test3(void) {
 extern char *ptr4;
 void test4(void) {
   long value;
-  if (value < (unsigned long) &ptr4) // expected-warning {{comparison of integers of different signs}}
+  if (value < (unsigned long) &ptr4) // expected-warning {{comparison of integers of different signs}} expected-note{{}}
     return;
 }
 
@@ -381,7 +381,7 @@ int rdar8511238(void) {
 
 // PR10336
 int test9(int sv, unsigned uv, long slv) {
-  return sv == (uv ^= slv); // expected-warning {{comparison of integers of different signs: 'int' and 'unsigned int'}}
+  return sv == (uv ^= slv); // expected-warning {{comparison of integers of different signs}} expected-note{{}}
 }
 
 void test10(void) {
@@ -390,7 +390,7 @@ void test10(void) {
   long sl;
 
   _Bool b;
-  b = (si == (ui = sl)); // expected-warning {{comparison of integers of different signs: 'int' and 'unsigned int'}}
+  b = (si == (ui = sl)); // expected-warning {{comparison of integers of different signs}} expected-note{{}}
   b = (si == (ui = sl&15));
 }
 

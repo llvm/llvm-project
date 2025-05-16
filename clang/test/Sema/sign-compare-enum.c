@@ -22,25 +22,28 @@ int test_pos(enum PosEnum a) {
   if (a < 2)
     return 0;
 
-  // No warning, except in Windows C mode, where PosEnum is 'int' and it can
-  // take on any value according to the C standard.
+    // No warning, except in Windows C mode, where PosEnum is 'int' and it can
+    // take on any value according to the C standard.
 #if !defined(SILENCE) && defined(_WIN32) && !defined(__cplusplus)
-  // expected-warning@+2 {{comparison of integers of different signs}}
+    // expected-warning@+3 {{comparison of integers of different signs}}
+    // expected-note@+2{{}}
 #endif
   if (a < 2U)
     return 0;
 
   unsigned uv = 2;
 #if !defined(SILENCE) && defined(_WIN32) && !defined(__cplusplus)
-  // expected-warning@+2 {{comparison of integers of different signs}}
+  // expected-warning@+3 {{comparison of integers of different signs}}
+  // expected-note@+2{{}}
 #endif
   if (a < uv)
     return 1;
 
 #if !defined(SILENCE) && defined(_WIN32) && !defined(__cplusplus)
-  // expected-warning@+2 {{comparison of integers of different signs}}
+    // expected-warning@+3 {{comparison of integers of different signs}}
+    // expected-note@+2{{}}
 #endif
-  if (a < sizeof(message)/sizeof(message[0]))
+  if (a < sizeof(message) / sizeof(message[0]))
     return 0;
   return 4;
 }
@@ -56,22 +59,25 @@ int test_neg(enum NegEnum a) {
     return 0;
 
 #ifndef SILENCE
-  // expected-warning@+2 {{comparison of integers of different signs}}
+    // expected-warning@+3 {{comparison of integers of different signs}}
+    // expected-note@+2{{}}
 #endif
   if (a < 2U)
     return 0;
 
   unsigned uv = 2;
 #ifndef SILENCE
-  // expected-warning@+2 {{comparison of integers of different signs}}
+  // expected-warning@+3 {{comparison of integers of different signs}}
+  // expected-note@+2{{}}
 #endif
   if (a < uv)
     return 1;
 
 #ifndef SILENCE
-  // expected-warning@+2 {{comparison of integers of different signs}}
+    // expected-warning@+3 {{comparison of integers of different signs}}
+    // expected-note@+2{{}}
 #endif
-  if (a < sizeof(message)/sizeof(message[0]))
+  if (a < sizeof(message) / sizeof(message[0]))
     return 0;
   return 4;
 }

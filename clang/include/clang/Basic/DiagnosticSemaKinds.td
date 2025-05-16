@@ -7808,8 +7808,12 @@ def warn_tautological_compare_value_range : Warning<
   InGroup<TautologicalValueRangeCompare>, DefaultIgnore;
 
 def warn_mixed_sign_comparison : Warning<
-  "comparison of integers of different signs: %0 and %1">,
-  InGroup<SignCompare>, DefaultIgnore;
+  "comparison of integers of different signs implicitly casts "
+  "%select{left|right}0-side operand from %1 to %2">, InGroup<SignCompare>,
+  DefaultIgnore;
+def note_treat_negative_as_smaller : Note<
+  "consider verifying that the signed value is non-negative before the "
+  "comparison; silence this warning by casting to an unsigned type">;
 def warn_out_of_range_compare : Warning<
   "result of comparison of %select{constant %0|true|false}1 with "
   "%select{expression of type %2|boolean expression}3 is always %4">,
