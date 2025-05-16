@@ -1736,42 +1736,6 @@ multiclass VPatFPMulAddVL_VV_VF_RM<SDPatternOperator vop, string instruction_nam
   }
 }
 
-multiclass VPatFPMulAccVL_VV_VF<PatFrag vop, string instruction_name> {
-  foreach vti = AllFloatVectors in {
-  defvar suffix = vti.LMul.MX;
-  let Predicates = GetVTypePredicates<vti>.Predicates in {
-    def : Pat<(riscv_vmerge_vl (vti.Mask VMV0:$vm),
-                           (vti.Vector (vop vti.RegClass:$rs1, vti.RegClass:$rs2,
-                            vti.RegClass:$rd, (vti.Mask true_mask), VLOpFrag)),
-                            vti.RegClass:$rd, vti.RegClass:$rd, VLOpFrag),
-              (!cast<Instruction>(instruction_name#"_VV_"# suffix #"_MASK")
-                   vti.RegClass:$rd, vti.RegClass:$rs1, vti.RegClass:$rs2,
-                   (vti.Mask VMV0:$vm), GPR:$vl, vti.Log2SEW, TU_MU)>;
-    def : Pat<(riscv_vmerge_vl (vti.Mask VMV0:$vm),
-                           (vti.Vector (vop (SplatFPOp vti.ScalarRegClass:$rs1), vti.RegClass:$rs2,
-                            vti.RegClass:$rd, (vti.Mask true_mask), VLOpFrag)),
-                            vti.RegClass:$rd, vti.RegClass:$rd, VLOpFrag),
-              (!cast<Instruction>(instruction_name#"_V" # vti.ScalarSuffix # "_" # suffix # "_MASK")
-                   vti.RegClass:$rd, vti.ScalarRegClass:$rs1, vti.RegClass:$rs2,
-                   (vti.Mask VMV0:$vm), GPR:$vl, vti.Log2SEW, TU_MU)>;
-    def : Pat<(riscv_vmerge_vl (vti.Mask VMV0:$vm),
-                           (vti.Vector (vop vti.RegClass:$rs1, vti.RegClass:$rs2,
-                            vti.RegClass:$rd, (vti.Mask true_mask), VLOpFrag)),
-                            vti.RegClass:$rd, undef, VLOpFrag),
-              (!cast<Instruction>(instruction_name#"_VV_"# suffix #"_MASK")
-                   vti.RegClass:$rd, vti.RegClass:$rs1, vti.RegClass:$rs2,
-                   (vti.Mask VMV0:$vm), GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
-    def : Pat<(riscv_vmerge_vl (vti.Mask VMV0:$vm),
-                           (vti.Vector (vop (SplatFPOp vti.ScalarRegClass:$rs1), vti.RegClass:$rs2,
-                            vti.RegClass:$rd, (vti.Mask true_mask), VLOpFrag)),
-                            vti.RegClass:$rd, undef, VLOpFrag),
-              (!cast<Instruction>(instruction_name#"_V" # vti.ScalarSuffix # "_" # suffix # "_MASK")
-                   vti.RegClass:$rd, vti.ScalarRegClass:$rs1, vti.RegClass:$rs2,
-                   (vti.Mask VMV0:$vm), GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
-    }
-  }
-}
-
 multiclass VPatFPMulAccVL_VV_VF_RM<PatFrag vop, string instruction_name> {
   foreach vti = AllFloatVectors in {
   defvar suffix = vti.LMul.MX # "_E" # vti.SEW;

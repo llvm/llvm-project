@@ -373,9 +373,12 @@ public:
       bool &child_is_base_class, bool &child_is_deref_of_parent,
       ValueObject *valobj, uint64_t &language_flags) = 0;
 
-  virtual uint32_t GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
-                                           llvm::StringRef name,
-                                           bool omit_empty_base_classes) = 0;
+  // Lookup a child given a name. This function will match base class names and
+  // member member names in "clang_type" only, not descendants.
+  virtual llvm::Expected<uint32_t>
+  GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
+                          llvm::StringRef name,
+                          bool omit_empty_base_classes) = 0;
 
   virtual size_t GetIndexOfChildMemberWithName(
       lldb::opaque_compiler_type_t type, llvm::StringRef name,

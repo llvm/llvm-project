@@ -895,50 +895,8 @@ bool ClauseProcessor::processDepend(lower::SymMap &symMap,
           // the standard to be the lowest index) to identify the dependency. We
           // don't need an accurate length for the array section because the
           // OpenMP standard forbids overlapping array sections.
-
-          // Get a hlfir.elemental_addr op describing the address of the value
-          // indexed from the original array.
-          // Note: the hlfir.elemental_addr op verifier requires it to be inside
-          // of a hlfir.region_assign op. This is because the only place in base
-          // Fortran where you need the address of a vector subscript would be
-          // in an assignment operation. We are not doing an assignment here
-          // but we do want the address (without having to duplicate all of
-          // Fortran designation lowering!). This operation is never seen by the
-          // verifier because it is immediately inlined.
-          hlfir::ElementalAddrOp addrOp =
-              convertVectorSubscriptedExprToElementalAddr(
-                  converter.getCurrentLocation(), converter, expr, symMap,
-                  stmtCtx);
-          if (!addrOp.getCleanup().empty())
-            TODO(converter.getCurrentLocation(),
-                 "Vector subscript in DEPEND clause requring a cleanup region");
-
-          // hlfir.elemental_addr doesn't have a normal lowering because it
-          // can't return a value. Instead we need to inline it here using
-          // values for the first element. Similar to hlfir::inlineElementalOp.
-
-          mlir::Value one = builder.createIntegerConstant(
-              converter.getCurrentLocation(), builder.getIndexType(), 1);
-          mlir::SmallVector<mlir::Value> oneBasedIndices;
-          oneBasedIndices.resize(addrOp.getIndices().size(), one);
-
-          mlir::IRMapping mapper;
-          mapper.map(addrOp.getIndices(), oneBasedIndices);
-          assert(addrOp.getElementalRegion().hasOneBlock());
-          mlir::Operation *newOp;
-          for (mlir::Operation &op :
-               addrOp.getElementalRegion().back().getOperations())
-            newOp = builder.clone(op, mapper);
-          auto yield = mlir::cast<hlfir::YieldOp>(newOp);
-
-          addrOp->erase();
-
-          if (!yield.getCleanup().empty())
-            TODO(converter.getCurrentLocation(),
-                 "Vector subscript in DEPEND clause requring element cleanup");
-
-          dependVar = yield.getEntity();
-          yield->erase();
+          dependVar = genVectorSubscriptedDesignatorFirstElementAddress(
+              converter.getCurrentLocation(), converter, expr, symMap, stmtCtx);
         } else {
           // Ordinary array section e.g. A(1:512:2)
           hlfir::EntityWithAttributes entity = convertExprToHLFIR(
@@ -1024,6 +982,29 @@ bool ClauseProcessor::processIf(
     }
   });
   return found;
+}
+bool ClauseProcessor::processInReduction(
+    mlir::Location currentLocation, mlir::omp::InReductionClauseOps &result,
+    llvm::SmallVectorImpl<const semantics::Symbol *> &outReductionSyms) const {
+  return findRepeatableClause<omp::clause::InReduction>(
+      [&](const omp::clause::InReduction &clause, const parser::CharBlock &) {
+        llvm::SmallVector<mlir::Value> inReductionVars;
+        llvm::SmallVector<bool> inReduceVarByRef;
+        llvm::SmallVector<mlir::Attribute> inReductionDeclSymbols;
+        llvm::SmallVector<const semantics::Symbol *> inReductionSyms;
+        ReductionProcessor rp;
+        rp.processReductionArguments<omp::clause::InReduction>(
+            currentLocation, converter, clause, inReductionVars,
+            inReduceVarByRef, inReductionDeclSymbols, inReductionSyms);
+
+        // Copy local lists into the output.
+        llvm::copy(inReductionVars, std::back_inserter(result.inReductionVars));
+        llvm::copy(inReduceVarByRef,
+                   std::back_inserter(result.inReductionByref));
+        llvm::copy(inReductionDeclSymbols,
+                   std::back_inserter(result.inReductionSyms));
+        llvm::copy(inReductionSyms, std::back_inserter(outReductionSyms));
+      });
 }
 
 bool ClauseProcessor::processIsDevicePtr(
@@ -1299,15 +1280,39 @@ bool ClauseProcessor::processReduction(
         llvm::SmallVector<mlir::Attribute> reductionDeclSymbols;
         llvm::SmallVector<const semantics::Symbol *> reductionSyms;
         ReductionProcessor rp;
-        rp.processReductionArguments(
+        rp.processReductionArguments<omp::clause::Reduction>(
             currentLocation, converter, clause, reductionVars, reduceVarByRef,
-            reductionDeclSymbols, reductionSyms, result.reductionMod);
+            reductionDeclSymbols, reductionSyms, &result.reductionMod);
         // Copy local lists into the output.
         llvm::copy(reductionVars, std::back_inserter(result.reductionVars));
         llvm::copy(reduceVarByRef, std::back_inserter(result.reductionByref));
         llvm::copy(reductionDeclSymbols,
                    std::back_inserter(result.reductionSyms));
         llvm::copy(reductionSyms, std::back_inserter(outReductionSyms));
+      });
+}
+
+bool ClauseProcessor::processTaskReduction(
+    mlir::Location currentLocation, mlir::omp::TaskReductionClauseOps &result,
+    llvm::SmallVectorImpl<const semantics::Symbol *> &outReductionSyms) const {
+  return findRepeatableClause<omp::clause::TaskReduction>(
+      [&](const omp::clause::TaskReduction &clause, const parser::CharBlock &) {
+        llvm::SmallVector<mlir::Value> taskReductionVars;
+        llvm::SmallVector<bool> TaskReduceVarByRef;
+        llvm::SmallVector<mlir::Attribute> TaskReductionDeclSymbols;
+        llvm::SmallVector<const semantics::Symbol *> TaskReductionSyms;
+        ReductionProcessor rp;
+        rp.processReductionArguments<omp::clause::TaskReduction>(
+            currentLocation, converter, clause, taskReductionVars,
+            TaskReduceVarByRef, TaskReductionDeclSymbols, TaskReductionSyms);
+        // Copy local lists into the output.
+        llvm::copy(taskReductionVars,
+                   std::back_inserter(result.taskReductionVars));
+        llvm::copy(TaskReduceVarByRef,
+                   std::back_inserter(result.taskReductionByref));
+        llvm::copy(TaskReductionDeclSymbols,
+                   std::back_inserter(result.taskReductionSyms));
+        llvm::copy(TaskReductionSyms, std::back_inserter(outReductionSyms));
       });
 }
 

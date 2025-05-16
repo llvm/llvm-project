@@ -1034,6 +1034,9 @@ ComplexDeinterleavingGraph::identifyPartialReduction(Value *R, Value *I) {
   if (!isa<VectorType>(R->getType()) || !isa<VectorType>(I->getType()))
     return nullptr;
 
+  if (!R->hasUseList() || !I->hasUseList())
+    return nullptr;
+
   auto CommonUser =
       findCommonBetweenCollections<Value *>(R->users(), I->users());
   if (!CommonUser)
@@ -1637,7 +1640,6 @@ bool ComplexDeinterleavingGraph::collectPotentialReductions(BasicBlock *B) {
   if (Br->getSuccessor(0) != B && Br->getSuccessor(1) != B)
     return false;
 
-  SmallVector<PHINode *> PHIs;
   for (auto &PHI : B->phis()) {
     if (PHI.getNumIncomingValues() != 2)
       continue;
@@ -1806,7 +1808,6 @@ bool ComplexDeinterleavingGraph::checkNodes() {
   }
 
   // Find instructions that have users outside of chain
-  SmallVector<Instruction *, 2> OuterInstructions;
   for (auto *I : AllInstructions) {
     // Skip root nodes
     if (RootToNode.count(I))

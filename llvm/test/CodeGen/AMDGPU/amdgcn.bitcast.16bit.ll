@@ -121,11 +121,11 @@ define i16 @bitcast_f16_to_i16(half %a, i32 %b) {
 ; GCN-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GCN-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN-NEXT:    s_cbranch_execz .LBB1_2
-; GCN-NEXT:  ; %bb.1:
+; GCN-NEXT:  ; %bb.1: ; %cmp.true
 ; GCN-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GCN-NEXT:    v_add_f32_e32 v0, 0x38000000, v0
 ; GCN-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GCN-NEXT:  .LBB1_2:
+; GCN-NEXT:  .LBB1_2: ; %end
 ; GCN-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;

@@ -15,7 +15,6 @@
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/BinaryFormat/DXContainer.h"
-#include "llvm/Object/DXContainer.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include <cstdint>
@@ -82,7 +81,7 @@ DXContainerYAML::RootSignatureYamlDesc::create(
       NewP.Constants.RegisterSpace = Constants.RegisterSpace;
     } else if (auto *RDV =
                    dyn_cast<object::DirectX::RootDescriptorView>(&ParamView)) {
-      llvm::Expected<dxbc::RST0::v1::RootDescriptor> DescriptorOrErr =
+      llvm::Expected<dxbc::RTS0::v2::RootDescriptor> DescriptorOrErr =
           RDV->read(Version);
       if (Error E = DescriptorOrErr.takeError())
         return std::move(E);
@@ -96,11 +95,8 @@ DXContainerYAML::RootSignatureYamlDesc::create(
        llvm::to_underlying(dxbc::RootDescriptorFlag::Val)) > 0;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
       }
-    } else if (auto *TDV = dyn_cast<object::DirectX::DescriptorTableView<
-                   dxbc::RST0::v1::DescriptorRange>>(&ParamView)) {
-      llvm::Expected<
-          object::DirectX::DescriptorTable<dxbc::RST0::v1::DescriptorRange>>
-          TableOrErr = TDV->read();
+    } else if (auto *TDV = dyn_cast<object::DirectX::DescriptorTableView>(&ParamView)) {
+      llvm::Expected<object::DirectX::DescriptorTable>TableOrErr = TDV->read(Version);
       if (Error E = TableOrErr.takeError())
         return std::move(E);
       auto Table = *TableOrErr;
@@ -116,36 +112,15 @@ DXContainerYAML::RootSignatureYamlDesc::create(
         NewR.BaseShaderRegister = R.BaseShaderRegister;
         NewR.RegisterSpace = R.RegisterSpace;
         NewR.RangeType = R.RangeType;
+        if (Version > 1) {
 #define DESCRIPTOR_RANGE_FLAG(Num, Val)                                        \
   NewR.Val =                                                                   \
       (R.Flags & llvm::to_underlying(dxbc::DescriptorRangeFlag::Val)) > 0;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
         NewP.Table.Ranges.push_back(NewR);
       }
-    } else if (auto *TDV = dyn_cast<object::DirectX::DescriptorTableView<
-                   dxbc::RST0::v0::DescriptorRange>>(&ParamView)) {
-      llvm::Expected<
-          object::DirectX::DescriptorTable<dxbc::RST0::v0::DescriptorRange>>
-          TableOrErr = TDV->read();
-      if (Error E = TableOrErr.takeError())
-        return std::move(E);
-      auto Table = *TableOrErr;
-      NewP.Table.NumRanges = Table.NumRanges;
-      NewP.Table.RangesOffset = Table.RangesOffset;
-
-      for (const auto &R : Table) {
-        DescriptorRangeYaml NewR;
-
-        NewR.OffsetInDescriptorsFromTableStart =
-            R.OffsetInDescriptorsFromTableStart;
-        NewR.NumDescriptors = R.NumDescriptors;
-        NewR.BaseShaderRegister = R.BaseShaderRegister;
-        NewR.RegisterSpace = R.RegisterSpace;
-        NewR.RangeType = R.RangeType;
-
-        NewP.Table.Ranges.push_back(NewR);
-      }
     }
+    } 
 
     RootSigDesc.Parameters.push_back(NewP);
   }

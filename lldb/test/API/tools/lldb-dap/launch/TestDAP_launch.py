@@ -11,8 +11,13 @@ import time
 import os
 import re
 
+# Many tests are skipped on Windows because get_stdout() returns None there.
+# Despite the test program printing correctly. See
+# https://github.com/llvm/llvm-project/issues/137599.
+
 
 class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
+    @skipIfWindows
     def test_default(self):
         """
         Tests the default launch of a simple program. No arguments,
@@ -26,6 +31,34 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         self.assertTrue(output and len(output) > 0, "expect program output")
         lines = output.splitlines()
         self.assertIn(program, lines[0], "make sure program path is in first argument")
+
+    def test_failing_launch_program(self):
+        """
+        Tests launching with an invalid program.
+        """
+        program = self.getBuildArtifact("a.out")
+        self.create_debug_adapter()
+        response = self.launch(program, expectFailure=True)
+        self.assertFalse(response["success"])
+        self.assertEqual(
+            "'{0}' does not exist".format(program), response["body"]["error"]["format"]
+        )
+
+    def test_failing_launch_commands_and_run_in_terminal(self):
+        """
+        Tests launching with an invalid program.
+        """
+        program = self.getBuildArtifact("a.out")
+        self.create_debug_adapter()
+        response = self.launch(
+            program, launchCommands=["a b c"], runInTerminal=True, expectFailure=True
+        )
+        self.assertFalse(response["success"])
+        self.assertTrue(self.get_dict_value(response, ["body", "error", "showUser"]))
+        self.assertEqual(
+            "'launchCommands' and 'runInTerminal' are mutually exclusive",
+            self.get_dict_value(response, ["body", "error", "format"]),
+        )
 
     @skipIfWindows
     def test_termination(self):
@@ -42,7 +75,9 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         self.dap_server.request_disconnect()
 
         # Wait until the underlying lldb-dap process dies.
-        self.dap_server.process.wait(timeout=lldbdap_testcase.DAPTestCaseBase.timeoutval)
+        self.dap_server.process.wait(
+            timeout=lldbdap_testcase.DAPTestCaseBase.timeoutval
+        )
 
         # Check the return code
         self.assertEqual(self.dap_server.process.poll(), 0)
@@ -54,8 +89,8 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         """
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program, stopOnEntry=True)
-        self.set_function_breakpoints(["main"])
-        stopped_events = self.continue_to_next_stop()
+
+        stopped_events = self.dap_server.wait_for_stopped()
         for stopped_event in stopped_events:
             if "body" in stopped_event:
                 body = stopped_event["body"]
@@ -65,6 +100,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
                         reason, "breakpoint", 'verify stop isn\'t "main" breakpoint'
                     )
 
+    @skipIfWindows
     def test_cwd(self):
         """
         Tests the default launch of a simple program with a current working
@@ -145,6 +181,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         self.assertTrue(found, 'found "sourcePath" in console output')
         self.continue_to_exit()
 
+    @skipIfWindows
     def test_disableSTDIO(self):
         """
         Tests the default launch of a simple program with STDIO disabled.
@@ -180,6 +217,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
                     quote_path, line, 'verify "%s" expanded to "%s"' % (glob, program)
                 )
 
+    @skipIfWindows
     def test_shellExpandArguments_disabled(self):
         """
         Tests the default launch of a simple program with shell expansion
@@ -201,6 +239,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
                     quote_path, line, 'verify "%s" stayed to "%s"' % (glob, glob)
                 )
 
+    @skipIfWindows
     def test_args(self):
         """
         Tests launch of a simple program with arguments
@@ -225,6 +264,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
                 'arg[%i] "%s" not in "%s"' % (i + 1, quoted_arg, lines[i]),
             )
 
+    @skipIfWindows
     def test_environment_with_object(self):
         """
         Tests launch of a simple program with environment variables
@@ -259,6 +299,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
                 found, '"%s" must exist in program environment (%s)' % (var, lines)
             )
 
+    @skipIfWindows
     def test_environment_with_array(self):
         """
         Tests launch of a simple program with environment variables
@@ -317,6 +358,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         terminateCommands = ["expr 4+2"]
         self.build_and_launch(
             program,
+            stopOnEntry=True,
             initCommands=initCommands,
             preRunCommands=preRunCommands,
             postRunCommands=postRunCommands,
@@ -460,7 +502,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
 
         self.assertFalse(response["success"])
         self.assertRegex(
-            response["message"],
+            response["body"]["error"]["format"],
             r"Failed to run launch commands\. See the Debug Console for more details",
         )
 
@@ -490,6 +532,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         terminateCommands = ["expr 4+2"]
         self.launch(
             program=program,
+            stopOnEntry=True,
             terminateCommands=terminateCommands,
             disconnectAutomatically=False,
         )
@@ -503,6 +546,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         )
         self.verify_commands("terminateCommands", output, terminateCommands)
 
+    @skipIfWindows
     def test_version(self):
         """
         Tests that "initialize" response contains the "version" string the same
@@ -523,11 +567,9 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         )
         version_eval_output = version_eval_response["body"]["result"]
 
-        # The first line is the prompt line like "(lldb) version", so we skip it.
-        version_eval_output_without_prompt_line = version_eval_output.splitlines()[1:]
         version_string = self.dap_server.get_initialize_value("$__lldb_version")
         self.assertEqual(
-            version_eval_output_without_prompt_line,
+            version_eval_output.splitlines(),
             version_string.splitlines(),
             "version string does not match",
         )

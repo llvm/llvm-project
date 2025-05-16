@@ -1400,9 +1400,13 @@ Uniform make(const parser::OmpClause::Uniform &inp,
 Update make(const parser::OmpClause::Update &inp,
             semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpUpdateClause
-  auto depType =
-      common::visit([](auto &&s) { return makeDepType(s); }, inp.v.u);
-  return Update{/*DependenceType=*/depType};
+  if (inp.v) {
+    return common::visit(
+        [](auto &&s) { return Update{/*DependenceType=*/makeDepType(s)}; },
+        inp.v->u);
+  } else {
+    return Update{/*DependenceType=*/std::nullopt};
+  }
 }
 
 Use make(const parser::OmpClause::Use &inp,

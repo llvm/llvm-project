@@ -9,12 +9,6 @@ void HelloWorld(int *A, int *B, int *C, int N) {
   for (unsigned I = 0; I < N; ++I)
     A[I] = B[I] + C[I];
 
-// expected-error@+2{{ClangIR code gen Not Yet Implemented: OpenACC Loop Construct}}
-// expected-error@+1{{ClangIR code gen Not Yet Implemented: statement}}
-#pragma acc loop
-  for (unsigned I = 0; I < N; ++I)
-    A[I] = B[I] + C[I];
-
 // expected-error@+1{{ClangIR code gen Not Yet Implemented: OpenACC Declare Construct}}
 #pragma acc declare create(A)
 }

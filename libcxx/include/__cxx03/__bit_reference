@@ -75,16 +75,6 @@ public:
     return *this;
   }
 
-#if _LIBCPP_STD_VER >= 23
-  _LIBCPP_HIDE_FROM_ABI constexpr const __bit_reference& operator=(bool __x) const noexcept {
-    if (__x)
-      *__seg_ |= __mask_;
-    else
-      *__seg_ &= ~__mask_;
-    return *this;
-  }
-#endif
-
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __bit_reference& operator=(const __bit_reference& __x) _NOEXCEPT {
     return operator=(static_cast<bool>(__x));
   }
@@ -801,13 +791,7 @@ private:
   unsigned __ctz_;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __bit_iterator() _NOEXCEPT
-#if _LIBCPP_STD_VER >= 14
-      : __seg_(nullptr),
-        __ctz_(0)
-#endif
-  {
-  }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __bit_iterator() _NOEXCEPT {}
 
   // When _IsConst=false, this is the copy constructor.
   // It is non-trivial. Making it trivial would break ABI.
@@ -913,7 +897,6 @@ public:
     return __x.__seg_ == __y.__seg_ && __x.__ctz_ == __y.__ctz_;
   }
 
-#if _LIBCPP_STD_VER <= 17
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 friend bool
   operator!=(const __bit_iterator& __x, const __bit_iterator& __y) {
     return !(__x == __y);
@@ -938,18 +921,6 @@ public:
   operator>=(const __bit_iterator& __x, const __bit_iterator& __y) {
     return !(__x < __y);
   }
-#else  // _LIBCPP_STD_VER <= 17
-  _LIBCPP_HIDE_FROM_ABI constexpr friend strong_ordering
-  operator<=>(const __bit_iterator& __x, const __bit_iterator& __y) {
-    if (__x.__seg_ < __y.__seg_)
-      return strong_ordering::less;
-
-    if (__x.__seg_ == __y.__seg_)
-      return __x.__ctz_ <=> __y.__ctz_;
-
-    return strong_ordering::greater;
-  }
-#endif // _LIBCPP_STD_VER <= 17
 
 private:
   _LIBCPP_HIDE_FROM_ABI

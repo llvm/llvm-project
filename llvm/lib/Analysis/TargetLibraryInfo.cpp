@@ -29,7 +29,7 @@ static cl::opt<TargetLibraryInfoImpl::VectorLibrary> ClVectorLibrary(
                           "Accelerate framework"),
                clEnumValN(TargetLibraryInfoImpl::DarwinLibSystemM,
                           "Darwin_libsystem_m", "Darwin libsystem_m"),
-               clEnumValN(TargetLibraryInfoImpl::LIBMVEC_X86, "LIBMVEC-X86",
+               clEnumValN(TargetLibraryInfoImpl::LIBMVEC, "LIBMVEC",
                           "GLIBC Vector Math library"),
                clEnumValN(TargetLibraryInfoImpl::MASSV, "MASSV",
                           "IBM MASS vector library"),
@@ -1360,8 +1360,15 @@ void TargetLibraryInfoImpl::addVectorizableFunctionsFromVecLib(
     addVectorizableFunctions(VecFuncs_DarwinLibSystemM);
     break;
   }
-  case LIBMVEC_X86: {
-    addVectorizableFunctions(VecFuncs_LIBMVEC_X86);
+  case LIBMVEC: {
+    switch (TargetTriple.getArch()) {
+    default:
+      break;
+    case llvm::Triple::x86:
+    case llvm::Triple::x86_64:
+      addVectorizableFunctions(VecFuncs_LIBMVEC_X86);
+      break;
+    }
     break;
   }
   case MASSV: {

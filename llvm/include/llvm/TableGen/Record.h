@@ -230,14 +230,14 @@ public:
 /// are not the superclass of some other listed class.
 class RecordRecTy final : public RecTy,
                           public FoldingSetNode,
-                          public TrailingObjects<RecordRecTy, const Record *> {
+                          private TrailingObjects<RecordRecTy, const Record *> {
+  friend TrailingObjects;
   friend class Record;
   friend detail::RecordKeeperImpl;
 
   unsigned NumClasses;
 
-  explicit RecordRecTy(RecordKeeper &RK, unsigned Num)
-      : RecTy(RecordRecTyKind, RK), NumClasses(Num) {}
+  explicit RecordRecTy(RecordKeeper &RK, ArrayRef<const Record *> Classes);
 
 public:
   RecordRecTy(const RecordRecTy &) = delete;
@@ -587,11 +587,11 @@ public:
 /// It contains a vector of bits, whose size is determined by the type.
 class BitsInit final : public TypedInit,
                        public FoldingSetNode,
-                       public TrailingObjects<BitsInit, const Init *> {
+                       private TrailingObjects<BitsInit, const Init *> {
+  friend TrailingObjects;
   unsigned NumBits;
 
-  BitsInit(RecordKeeper &RK, unsigned N)
-      : TypedInit(IK_BitsInit, BitsRecTy::get(RK, N)), NumBits(N) {}
+  BitsInit(RecordKeeper &RK, ArrayRef<const Init *> Bits);
 
 public:
   BitsInit(const BitsInit &) = delete;
@@ -632,10 +632,11 @@ public:
 
   const Init *resolveReferences(Resolver &R) const override;
 
-  const Init *getBit(unsigned Bit) const override {
-    assert(Bit < NumBits && "Bit index out of range!");
-    return getTrailingObjects<const Init *>()[Bit];
+  ArrayRef<const Init *> getBits() const {
+    return ArrayRef(getTrailingObjects<const Init *>(), NumBits);
   }
+
+  const Init *getBit(unsigned Bit) const override { return getBits()[Bit]; }
 };
 
 /// '7' - Represent an initialization by a literal integer value.
@@ -757,15 +758,15 @@ public:
 ///
 class ListInit final : public TypedInit,
                        public FoldingSetNode,
-                       public TrailingObjects<ListInit, const Init *> {
+                       private TrailingObjects<ListInit, const Init *> {
+  friend TrailingObjects;
   unsigned NumValues;
 
 public:
   using const_iterator = const Init *const *;
 
 private:
-  explicit ListInit(unsigned N, const RecTy *EltTy)
-      : TypedInit(IK_ListInit, ListRecTy::get(EltTy)), NumValues(N) {}
+  explicit ListInit(ArrayRef<const Init *> Elements, const RecTy *EltTy);
 
 public:
   ListInit(const ListInit &) = delete;
@@ -781,10 +782,12 @@ public:
 
   void Profile(FoldingSetNodeID &ID) const;
 
-  const Init *getElement(unsigned i) const {
-    assert(i < NumValues && "List element index out of range!");
-    return getTrailingObjects<const Init *>()[i];
+  ArrayRef<const Init *> getValues() const {
+    return ArrayRef(getTrailingObjects<const Init *>(), NumValues);
   }
+
+  const Init *getElement(unsigned Index) const { return getValues()[Index]; }
+
   const RecTy *getElementType() const {
     return cast<ListRecTy>(getType())->getElementType();
   }
@@ -804,12 +807,8 @@ public:
   bool isConcrete() const override;
   std::string getAsString() const override;
 
-  ArrayRef<const Init *> getValues() const {
-    return ArrayRef(getTrailingObjects<const Init *>(), NumValues);
-  }
-
-  const_iterator begin() const { return getTrailingObjects<const Init *>(); }
-  const_iterator end  () const { return begin() + NumValues; }
+  const_iterator begin() const { return getValues().begin(); }
+  const_iterator end() const { return getValues().end(); }
 
   size_t         size () const { return NumValues;  }
   bool           empty() const { return NumValues == 0; }
@@ -1019,12 +1018,13 @@ public:
 /// Otherwise reports an error.
 class CondOpInit final : public TypedInit,
                          public FoldingSetNode,
-                         public TrailingObjects<CondOpInit, const Init *> {
+                         private TrailingObjects<CondOpInit, const Init *> {
+  friend TrailingObjects;
   unsigned NumConds;
   const RecTy *ValType;
 
-  CondOpInit(unsigned NC, const RecTy *Type)
-      : TypedInit(IK_CondOpInit, Type), NumConds(NC), ValType(Type) {}
+  CondOpInit(ArrayRef<const Init *> Conds, ArrayRef<const Init *> Values,
+             const RecTy *Type);
 
   size_t numTrailingObjects(OverloadToken<Init *>) const {
     return 2*NumConds;
@@ -1038,8 +1038,9 @@ public:
     return I->getKind() == IK_CondOpInit;
   }
 
-  static const CondOpInit *get(ArrayRef<const Init *> C,
-                               ArrayRef<const Init *> V, const RecTy *Type);
+  static const CondOpInit *get(ArrayRef<const Init *> Conds,
+                               ArrayRef<const Init *> Values,
+                               const RecTy *Type);
 
   void Profile(FoldingSetNodeID &ID) const;
 
@@ -1047,15 +1048,9 @@ public:
 
   unsigned getNumConds() const { return NumConds; }
 
-  const Init *getCond(unsigned Num) const {
-    assert(Num < NumConds && "Condition number out of range!");
-    return getTrailingObjects<const Init *>()[Num];
-  }
+  const Init *getCond(unsigned Num) const { return getConds()[Num]; }
 
-  const Init *getVal(unsigned Num) const {
-    assert(Num < NumConds && "Val number out of range!");
-    return getTrailingObjects<const Init *>()[Num + NumConds];
-  }
+  const Init *getVal(unsigned Num) const { return getVals()[Num]; }
 
   ArrayRef<const Init *> getConds() const {
     return ArrayRef(getTrailingObjects<const Init *>(), NumConds);
@@ -1337,13 +1332,15 @@ public:
 class VarDefInit final
     : public TypedInit,
       public FoldingSetNode,
-      public TrailingObjects<VarDefInit, const ArgumentInit *> {
+      private TrailingObjects<VarDefInit, const ArgumentInit *> {
+  friend TrailingObjects;
   SMLoc Loc;
   const Record *Class;
   const DefInit *Def = nullptr; // after instantiation
   unsigned NumArgs;
 
-  explicit VarDefInit(SMLoc Loc, const Record *Class, unsigned N);
+  explicit VarDefInit(SMLoc Loc, const Record *Class,
+                      ArrayRef<const ArgumentInit *> Args);
 
   const DefInit *instantiate();
 
@@ -1367,23 +1364,18 @@ public:
 
   std::string getAsString() const override;
 
-  const ArgumentInit *getArg(unsigned i) const {
-    assert(i < NumArgs && "Argument index out of range!");
-    return getTrailingObjects<const ArgumentInit *>()[i];
-  }
+  const ArgumentInit *getArg(unsigned i) const { return args()[i]; }
 
   using const_iterator = const ArgumentInit *const *;
 
-  const_iterator args_begin() const {
-    return getTrailingObjects<const ArgumentInit *>();
-  }
-  const_iterator args_end  () const { return args_begin() + NumArgs; }
+  const_iterator args_begin() const { return args().begin(); }
+  const_iterator args_end() const { return args().end(); }
 
   size_t         args_size () const { return NumArgs; }
   bool           args_empty() const { return NumArgs == 0; }
 
   ArrayRef<const ArgumentInit *> args() const {
-    return ArrayRef(args_begin(), NumArgs);
+    return ArrayRef(getTrailingObjects<const ArgumentInit *>(), NumArgs);
   }
 
   const Init *getBit(unsigned Bit) const override {
@@ -1438,18 +1430,15 @@ public:
 class DagInit final
     : public TypedInit,
       public FoldingSetNode,
-      public TrailingObjects<DagInit, const Init *, const StringInit *> {
+      private TrailingObjects<DagInit, const Init *, const StringInit *> {
   friend TrailingObjects;
 
   const Init *Val;
   const StringInit *ValName;
   unsigned NumArgs;
-  unsigned NumArgNames;
 
-  DagInit(const Init *V, const StringInit *VN, unsigned NumArgs,
-          unsigned NumArgNames)
-      : TypedInit(IK_DagInit, DagRecTy::get(V->getRecordKeeper())), Val(V),
-        ValName(VN), NumArgs(NumArgs), NumArgNames(NumArgNames) {}
+  DagInit(const Init *V, const StringInit *VN, ArrayRef<const Init *> Args,
+          ArrayRef<const StringInit *> ArgNames);
 
   size_t numTrailingObjects(OverloadToken<const Init *>) const {
     return NumArgs;
@@ -1483,18 +1472,14 @@ public:
 
   unsigned getNumArgs() const { return NumArgs; }
 
-  const Init *getArg(unsigned Num) const {
-    assert(Num < NumArgs && "Arg number out of range!");
-    return getTrailingObjects<const Init *>()[Num];
-  }
+  const Init *getArg(unsigned Num) const { return getArgs()[Num]; }
 
   /// This method looks up the specified argument name and returns its argument
   /// number or std::nullopt if that argument name does not exist.
   std::optional<unsigned> getArgNo(StringRef Name) const;
 
   const StringInit *getArgName(unsigned Num) const {
-    assert(Num < NumArgNames && "Arg number out of range!");
-    return getTrailingObjects<const StringInit *>()[Num];
+    return getArgNames()[Num];
   }
 
   StringRef getArgNameStr(unsigned Num) const {
@@ -1507,7 +1492,7 @@ public:
   }
 
   ArrayRef<const StringInit *> getArgNames() const {
-    return ArrayRef(getTrailingObjects<const StringInit *>(), NumArgNames);
+    return ArrayRef(getTrailingObjects<const StringInit *>(), NumArgs);
   }
 
   const Init *resolveReferences(Resolver &R) const override;
@@ -1527,9 +1512,6 @@ public:
 
   inline const_name_iterator name_begin() const { return getArgNames().begin();}
   inline const_name_iterator name_end  () const { return getArgNames().end(); }
-
-  inline size_t              name_size () const { return NumArgNames; }
-  inline bool                name_empty() const { return NumArgNames == 0; }
 
   const Init *getBit(unsigned Bit) const override {
     llvm_unreachable("Illegal bit reference off dag");

@@ -275,8 +275,8 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
       RS.StaticSamplersOffset = P.RootSignature->StaticSamplersOffset;
 
       for (const auto &Param : P.RootSignature->Parameters) {
-        auto Header = dxbc::RootParameterHeader{Param.Type, Param.Visibility,
-                                                Param.Offset};
+        dxbc::RootParameterHeader Header{Param.Type, Param.Visibility,
+                                         Param.Offset};
 
         switch (Param.Type) {
         case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit):
@@ -289,53 +289,39 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
         case llvm::to_underlying(dxbc::RootParameterType::SRV):
         case llvm::to_underlying(dxbc::RootParameterType::UAV):
         case llvm::to_underlying(dxbc::RootParameterType::CBV):
-          if (RS.Version == 1) {
-            dxbc::RST0::v0::RootDescriptor Descriptor;
-            Descriptor.RegisterSpace = Param.Descriptor.RegisterSpace;
-            Descriptor.ShaderRegister = Param.Descriptor.ShaderRegister;
-            RS.ParametersContainer.addParameter(Header, Descriptor);
-          } else {
-            dxbc::RST0::v1::RootDescriptor Descriptor;
-            Descriptor.RegisterSpace = Param.Descriptor.RegisterSpace;
-            Descriptor.ShaderRegister = Param.Descriptor.ShaderRegister;
+          dxbc::RTS0::v2::RootDescriptor Descriptor;
+          Descriptor.RegisterSpace = Param.Descriptor.RegisterSpace;
+          Descriptor.ShaderRegister = Param.Descriptor.ShaderRegister;
+          if (RS.Version > 1)
             Descriptor.Flags = Param.Descriptor.getEncodedFlags();
           RS.ParametersContainer.addParameter(Header, Descriptor);
-          }
           break;
         case llvm::to_underlying(dxbc::RootParameterType::DescriptorTable): {
           mcdxbc::DescriptorTable Table;
           for (const auto &R : Param.Table.Ranges) {
-            if (RS.Version == 1) {
-              dxbc::RST0::v0::DescriptorRange Range;
+
+              dxbc::RTS0::v2::DescriptorRange Range;
               Range.RangeType = R.RangeType;
               Range.NumDescriptors = R.NumDescriptors;
               Range.BaseShaderRegister = R.BaseShaderRegister;
               Range.RegisterSpace = R.RegisterSpace;
               Range.OffsetInDescriptorsFromTableStart =
                   R.OffsetInDescriptorsFromTableStart;
+              if (RS.Version > 1)
+                Range.Flags = R.getEncodedFlags();
               Table.Ranges.push_back(Range);
-            } else {
-              dxbc::RST0::v1::DescriptorRange Range;
-              Range.RangeType = R.RangeType;
-              Range.NumDescriptors = R.NumDescriptors;
-              Range.BaseShaderRegister = R.BaseShaderRegister;
-              Range.RegisterSpace = R.RegisterSpace;
-              Range.OffsetInDescriptorsFromTableStart =
-                  R.OffsetInDescriptorsFromTableStart;
-              Range.Flags = R.getEncodedFlags();
-              Table.Ranges.push_back(Range);
-            }
           }
           RS.ParametersContainer.addParameter(Header, Table);
         } break;
         default:
-          // Handling invalid parameter type edge case
-          RS.ParametersContainer.addInfo(Header, -1);
+          // Handling invalid parameter type edge case. We intentionally let
+          // obj2yaml/yaml2obj parse and emit invalid dxcontainer data, in order
+          // for that to be used as a testing tool more effectively.
+          RS.ParametersContainer.addInvalidParameter(Header);
         }
       }
 
       RS.write(OS);
-      break;
     }
     uint64_t BytesWritten = OS.tell() - DataStart;
     RollingOffset += BytesWritten;

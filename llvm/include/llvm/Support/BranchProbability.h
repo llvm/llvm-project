@@ -13,6 +13,7 @@
 #ifndef LLVM_SUPPORT_BRANCHPROBABILITY_H
 #define LLVM_SUPPORT_BRANCHPROBABILITY_H
 
+#include "llvm/ADT/ADL.h"
 #include "llvm/Support/DataTypes.h"
 #include <algorithm>
 #include <cassert>
@@ -61,6 +62,11 @@ public:
   template <class ProbabilityIter>
   static void normalizeProbabilities(ProbabilityIter Begin,
                                      ProbabilityIter End);
+
+  template <class ProbabilityContainer>
+  static void normalizeProbabilities(ProbabilityContainer &&R) {
+    normalizeProbabilities(adl_begin(R), adl_end(R));
+  }
 
   uint32_t getNumerator() const { return N; }
   static uint32_t getDenominator() { return D; }

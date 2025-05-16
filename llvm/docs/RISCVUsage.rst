@@ -197,6 +197,7 @@ on support follow.
      ``Zicbop``        Supported
      ``Zicboz``        Assembly Support
      ``Ziccamoa``      Supported (`See note <#riscv-profiles-extensions-note>`__)
+     ``Ziccamoc``      Supported (`See note <#riscv-profiles-extensions-note>`__)
      ``Ziccif``        Supported (`See note <#riscv-profiles-extensions-note>`__)
      ``Zicclsm``       Supported (`See note <#riscv-profiles-extensions-note>`__)
      ``Ziccrse``       Supported (`See note <#riscv-profiles-extensions-note>`__)
@@ -298,7 +299,7 @@ Supported
 
 .. _riscv-profiles-extensions-note:
 
-``Za128rs``, ``Za64rs``, ``Zama16b``, ``Zic64b``, ``Ziccamoa``, ``Ziccif``, ``Zicclsm``, ``Ziccrse``, ``Shcounterenvw``, ``Shgatpa``, ``Shtvala``, ``Shvsatpa``, ``Shvstvala``, ``Shvstvecd``, ``Ssccptr``, ``Sscounterenw``, ``Ssstateen``, ``Ssstrict``, ``Sstvala``, ``Sstvecd``, ``Ssu64xl``, ``Svade``, ``Svbare``
+``Za128rs``, ``Za64rs``, ``Zama16b``, ``Zic64b``, ``Ziccamoa``, ``Ziccamoc``, ``Ziccif``, ``Zicclsm``, ``Ziccrse``, ``Shcounterenvw``, ``Shgatpa``, ``Shtvala``, ``Shvsatpa``, ``Shvstvala``, ``Shvstvecd``, ``Ssccptr``, ``Sscounterenw``, ``Ssstateen``, ``Ssstrict``, ``Sstvala``, ``Sstvecd``, ``Ssu64xl``, ``Svade``, ``Svbare``
   These extensions are defined as part of the `RISC-V Profiles specification <https://github.com/riscv/riscv-profiles/releases/tag/v1.0>`__.  They do not introduce any new features themselves, but instead describe existing hardware features.
 
 .. _riscv-zacas-note:
@@ -503,6 +504,9 @@ The current vendor extensions supported are:
 
 ``experimental-XRivosVizip``
   LLVM implements `version 0.1 of the Rivos Vector Register Zips extension specification <https://github.com/rivosinc/rivos-custom-extensions>`__.
+
+``XAndesPerf``
+  LLVM implements `version 5.0.0 of the Andes Performance Extension specification <https://github.com/andestech/andes-v5-isa/releases/download/ast-v5_4_0-release/AndeStar_V5_ISA_Spec_UM165-v1.5.08-20250317.pdf>`__ by Andes Technology. All instructions are prefixed with `nds.` as described in the specification.
 
 Experimental C Intrinsics
 =========================

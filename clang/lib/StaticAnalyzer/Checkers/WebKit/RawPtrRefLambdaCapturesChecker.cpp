@@ -263,8 +263,6 @@ public:
           return;
         DeclRefExprsToIgnore.insert(ArgRef);
         LambdasToIgnore.insert(L);
-        Checker->visitLambdaExpr(L, shouldCheckThis() && !hasProtectedThis(L),
-                                 ClsType, /* ignoreParamVarDecl */ true);
       }
 
       bool hasProtectedThis(LambdaExpr *L) {
@@ -383,6 +381,9 @@ public:
         }
         QualType CapturedVarQualType = CapturedVar->getType();
         auto IsUncountedPtr = isUnsafePtr(CapturedVar->getType());
+        if (C.getCaptureKind() == LCK_ByCopy &&
+            CapturedVarQualType->isReferenceType())
+          continue;
         if (IsUncountedPtr && *IsUncountedPtr)
           reportBug(C, CapturedVar, CapturedVarQualType, L);
       } else if (C.capturesThis() && shouldCheckThis) {

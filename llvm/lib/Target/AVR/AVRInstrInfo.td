@@ -987,8 +987,8 @@ class AtomicLoadOp<PatFrag Op, RegisterClass DRC, RegisterClass PTRRC>
 // 16-bit operations use 16-bit load/store postincrement instructions,
 // which require PTRDISPREGS.
 
-def AtomicLoad8 : AtomicLoad<atomic_load_8, GPR8, PTRREGS>;
-def AtomicLoad16 : AtomicLoad<atomic_load_16, DREGS, PTRDISPREGS>;
+def AtomicLoad8 : AtomicLoad<atomic_load_nonext_8, GPR8, PTRREGS>;
+def AtomicLoad16 : AtomicLoad<atomic_load_nonext_16, DREGS, PTRDISPREGS>;
 
 def AtomicStore8 : AtomicStore<atomic_store_8, GPR8, PTRREGS>;
 def AtomicStore16 : AtomicStore<atomic_store_16, DREGS, PTRDISPREGS>;

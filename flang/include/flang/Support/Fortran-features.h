@@ -76,7 +76,7 @@ ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,
     MismatchingDummyProcedure, SubscriptedEmptyArray, UnsignedLiteralTruncation,
     CompatibleDeclarationsFromDistinctModules,
     NullActualForDefaultIntentAllocatable, UseAssociationIntoSameNameSubprogram,
-    HostAssociatedIntentOutInSpecExpr)
+    HostAssociatedIntentOutInSpecExpr, NonVolatilePointerToVolatile)
 
 using LanguageFeatures = EnumSet<LanguageFeature, LanguageFeature_enumSize>;
 using UsageWarnings = EnumSet<UsageWarning, UsageWarning_enumSize>;

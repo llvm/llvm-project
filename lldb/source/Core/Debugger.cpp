@@ -112,24 +112,24 @@ static llvm::DefaultThreadPool *g_thread_pool = nullptr;
 
 static constexpr OptionEnumValueElement g_show_disassembly_enum_values[] = {
     {
-        Debugger::eStopDisassemblyTypeNever,
+        lldb::eStopDisassemblyTypeNever,
         "never",
         "Never show disassembly when displaying a stop context.",
     },
     {
-        Debugger::eStopDisassemblyTypeNoDebugInfo,
+        lldb::eStopDisassemblyTypeNoDebugInfo,
         "no-debuginfo",
         "Show disassembly when there is no debug information.",
     },
     {
-        Debugger::eStopDisassemblyTypeNoSource,
+        lldb::eStopDisassemblyTypeNoSource,
         "no-source",
         "Show disassembly when there is no source information, or the source "
         "file "
         "is missing when displaying a stop context.",
     },
     {
-        Debugger::eStopDisassemblyTypeAlways,
+        lldb::eStopDisassemblyTypeAlways,
         "always",
         "Always show disassembly when displaying a stop context.",
     },
@@ -611,10 +611,10 @@ uint64_t Debugger::GetStopSourceLineCount(bool before) const {
       idx, g_debugger_properties[idx].default_uint_value);
 }
 
-Debugger::StopDisassemblyType Debugger::GetStopDisassemblyDisplay() const {
+lldb::StopDisassemblyType Debugger::GetStopDisassemblyDisplay() const {
   const uint32_t idx = ePropertyStopDisassemblyDisplay;
-  return GetPropertyAtIndexAs<Debugger::StopDisassemblyType>(
-      idx, static_cast<Debugger::StopDisassemblyType>(
+  return GetPropertyAtIndexAs<lldb::StopDisassemblyType>(
+      idx, static_cast<lldb::StopDisassemblyType>(
                g_debugger_properties[idx].default_uint_value));
 }
 
@@ -839,6 +839,12 @@ DebuggerSP Debugger::CreateInstance(lldb::LogOutputCallback log_callback,
   }
   debugger_sp->InstanceInitialize();
   return debugger_sp;
+}
+
+void Debugger::DispatchClientTelemetry(
+    const lldb_private::StructuredDataImpl &entry) {
+  lldb_private::telemetry::TelemetryManager::GetInstance()
+      ->DispatchClientTelemetry(entry, this);
 }
 
 void Debugger::HandleDestroyCallback() {
@@ -2025,6 +2031,9 @@ void Debugger::CancelForwardEvents(const ListenerSP &listener_sp) {
 }
 
 bool Debugger::StatuslineSupported() {
+// We have trouble with the contol codes on Windows, see
+// https://github.com/llvm/llvm-project/issues/134846.
+#ifndef _WIN32
   if (GetShowStatusline()) {
     if (lldb::LockableStreamFileSP stream_sp = GetOutputStreamSP()) {
       File &file = stream_sp->GetUnlockedFile();
@@ -2032,6 +2041,7 @@ bool Debugger::StatuslineSupported() {
              file.GetIsTerminalWithColors();
     }
   }
+#endif
   return false;
 }
 

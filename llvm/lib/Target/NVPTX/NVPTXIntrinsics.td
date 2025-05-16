@@ -2413,18 +2413,6 @@ foreach space = ["local", "shared", "global", "const", "param"] in {
 defm cvta_shared_cluster : NG_TO_G<"shared::cluster", false, [hasClusters]>;
 defm cvta_to_shared_cluster : G_TO_NG<"shared::cluster", false, [hasClusters]>;
 
-def : Pat<(int_nvvm_ptr_param_to_gen i32:$src),
-          (cvta_param $src)>;
-
-def : Pat<(int_nvvm_ptr_param_to_gen i64:$src),
-          (cvta_param_64 $src)>;
-
-// nvvm.ptr.gen.to.param
-def : Pat<(int_nvvm_ptr_gen_to_param i32:$src),
-          (i32 Int32Regs:$src)>;
-
-def : Pat<(int_nvvm_ptr_gen_to_param i64:$src),
-          (i64 Int64Regs:$src)>;
 
 // nvvm.move intrinsicc
 def nvvm_move_i16 : NVPTXInst<(outs Int16Regs:$r), (ins Int16Regs:$s),

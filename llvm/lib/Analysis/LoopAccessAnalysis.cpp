@@ -513,7 +513,7 @@ void RuntimePointerChecking::groupChecks(
   for (unsigned I = 0; I < Pointers.size(); ++I) {
     // We've seen this pointer before, and therefore already processed
     // its equivalence class.
-    if (Seen.count(I))
+    if (Seen.contains(I))
       continue;
 
     MemoryDepChecker::MemAccessInfo Access(Pointers[I].PointerValue,
@@ -1212,7 +1212,7 @@ bool AccessAnalysis::canCheckPtrAtRT(
     SmallVector<MemAccessInfo, 4> AccessInfos;
     for (const Value *ConstPtr : ASPointers) {
       Value *Ptr = const_cast<Value *>(ConstPtr);
-      bool IsWrite = Accesses.count(MemAccessInfo(Ptr, true));
+      bool IsWrite = Accesses.contains(MemAccessInfo(Ptr, true));
       if (IsWrite)
         ++NumWritePtrChecks;
       else
@@ -1341,9 +1341,10 @@ void AccessAnalysis::processMemAccesses() {
   LLVM_DEBUG({
     for (const auto &[A, _] : Accesses)
       dbgs() << "\t" << *A.getPointer() << " ("
-             << (A.getInt() ? "write"
-                            : (ReadOnlyPtr.count(A.getPointer()) ? "read-only"
-                                                                 : "read"))
+             << (A.getInt()
+                     ? "write"
+                     : (ReadOnlyPtr.contains(A.getPointer()) ? "read-only"
+                                                             : "read"))
              << ")\n";
   });
 
@@ -1387,13 +1388,13 @@ void AccessAnalysis::processMemAccesses() {
 
           // If we're using the deferred access set, then it contains only
           // reads.
-          bool IsReadOnlyPtr = ReadOnlyPtr.count(Ptr) && !IsWrite;
+          bool IsReadOnlyPtr = ReadOnlyPtr.contains(Ptr) && !IsWrite;
           if (UseDeferred && !IsReadOnlyPtr)
             continue;
           // Otherwise, the pointer must be in the PtrAccessSet, either as a
           // read or a write.
           assert(((IsReadOnlyPtr && UseDeferred) || IsWrite ||
-                  S.count(MemAccessInfo(Ptr, false))) &&
+                  S.contains(MemAccessInfo(Ptr, false))) &&
                  "Alias-set pointer not in the access set?");
 
           MemAccessInfo Access(Ptr, IsWrite);
@@ -1425,9 +1426,6 @@ void AccessAnalysis::processMemAccesses() {
 
           // Create sets of pointers connected by a shared alias set and
           // underlying object.
-          typedef SmallVector<const Value *, 16> ValueVector;
-          ValueVector TempObjects;
-
           SmallVector<const Value *, 16> &UOs = UnderlyingObjects[Ptr];
           UOs = {};
           ::getUnderlyingObjects(Ptr, UOs, LI);
@@ -2150,10 +2148,6 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
                          "different type sizes\n");
     return Dependence::Unknown;
   }
-
-  if (!CommonStride)
-    return Dependence::Unknown;
-
   // Bail out early if passed-in parameters make vectorization not feasible.
   unsigned ForcedFactor = (VectorizerParams::VectorizationFactor ?
                            VectorizerParams::VectorizationFactor : 1);
@@ -2164,7 +2158,7 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
 
   // It's not vectorizable if the distance is smaller than the minimum distance
   // needed for a vectroized/unrolled version. Vectorizing one iteration in
-  // front needs CommonStride. Vectorizing the last iteration needs TypeByteSize
+  // front needs MaxStride. Vectorizing the last iteration needs TypeByteSize.
   // (No need to plus the last gap distance).
   //
   // E.g. Assume one char is 1 byte in memory and one int is 4 bytes.
@@ -2188,11 +2182,14 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   // If MinNumIter is 4 (Say if a user forces the vectorization factor to be 4),
   // the minimum distance needed is 28, which is greater than distance. It is
   // not safe to do vectorization.
+  //
+  // We use MaxStride (maximum of src and sink strides) to get a conservative
+  // lower bound on the MinDistanceNeeded in case of different strides.
 
   // We know that Dist is positive, but it may not be constant. Use the signed
   // minimum for computations below, as this ensures we compute the closest
   // possible dependence distance.
-  uint64_t MinDistanceNeeded = *CommonStride * (MinNumIter - 1) + TypeByteSize;
+  uint64_t MinDistanceNeeded = MaxStride * (MinNumIter - 1) + TypeByteSize;
   if (MinDistanceNeeded > static_cast<uint64_t>(MinDistance)) {
     if (!ConstDist) {
       // For non-constant distances, we checked the lower bound of the
@@ -2238,7 +2235,7 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
       couldPreventStoreLoadForward(MinDistance, TypeByteSize, *CommonStride))
     return Dependence::BackwardVectorizableButPreventsForwarding;
 
-  uint64_t MaxVF = MinDepDistBytes / *CommonStride;
+  uint64_t MaxVF = MinDepDistBytes / MaxStride;
   LLVM_DEBUG(dbgs() << "LAA: Positive min distance " << MinDistance
                     << " with max VF = " << MaxVF << '\n');
 
@@ -2260,7 +2257,7 @@ bool MemoryDepChecker::areDepsSafe(const DepCandidates &AccessSets,
   MinDepDistBytes = -1;
   SmallPtrSet<MemAccessInfo, 8> Visited;
   for (MemAccessInfo CurAccess : CheckDeps) {
-    if (Visited.count(CurAccess))
+    if (Visited.contains(CurAccess))
       continue;
 
     // Check accesses within this set.
@@ -2605,7 +2602,7 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
 
     // See if there is an unsafe dependency between a load to a uniform address and
     // store to the same uniform address.
-    if (UniformStores.count(Ptr)) {
+    if (UniformStores.contains(Ptr)) {
       LLVM_DEBUG(dbgs() << "LAA: Found an unsafe dependency between a uniform "
                            "load and uniform store to the same address!\n");
       HasLoadStoreDependenceInvolvingLoopInvariantAddress = true;

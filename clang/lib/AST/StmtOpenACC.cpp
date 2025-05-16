@@ -61,8 +61,8 @@ OpenACCLoopConstruct::OpenACCLoopConstruct(
   assert((Loop == nullptr || isa<ForStmt, CXXForRangeStmt>(Loop)) &&
          "Associated Loop not a for loop?");
   // Initialize the trailing storage.
-  std::uninitialized_copy(Clauses.begin(), Clauses.end(),
-                          getTrailingObjects<const OpenACCClause *>());
+  llvm::uninitialized_copy(Clauses,
+                           getTrailingObjects<const OpenACCClause *>());
 
   setClauseList(MutableArrayRef(getTrailingObjects<const OpenACCClause *>(),
                                 Clauses.size()));

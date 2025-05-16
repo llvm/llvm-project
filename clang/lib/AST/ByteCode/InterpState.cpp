@@ -113,7 +113,9 @@ bool InterpState::maybeDiagnoseDanglingAllocations() {
           << (It.second.size() - 1) << Source->getSourceRange();
     }
   }
-  return NoAllocationsLeft;
+  // Keep evaluating before C++20, since the CXXNewExpr wasn't valid there
+  // in the first place.
+  return NoAllocationsLeft || !getLangOpts().CPlusPlus20;
 }
 
 StdAllocatorCaller InterpState::getStdAllocatorCaller(StringRef Name) const {

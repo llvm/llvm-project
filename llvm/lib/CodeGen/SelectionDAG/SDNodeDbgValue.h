@@ -165,8 +165,8 @@ public:
         IsVariadic(IsVariadic) {
     assert(IsVariadic || L.size() == 1);
     assert(!(IsVariadic && IsIndirect));
-    std::copy(L.begin(), L.end(), LocationOps);
-    std::copy(Dependencies.begin(), Dependencies.end(), AdditionalDependencies);
+    llvm::copy(L, LocationOps);
+    llvm::copy(Dependencies, AdditionalDependencies);
   }
 
   // We allocate arrays with the BumpPtrAllocator and never free or copy them,

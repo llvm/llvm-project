@@ -764,7 +764,7 @@ void LiveVariables::recomputeForSingleDefVirtReg(Register Reg) {
 void LiveVariables::replaceKillInstruction(Register Reg, MachineInstr &OldMI,
                                            MachineInstr &NewMI) {
   VarInfo &VI = getVarInfo(Reg);
-  std::replace(VI.Kills.begin(), VI.Kills.end(), &OldMI, &NewMI);
+  llvm::replace(VI.Kills, &OldMI, &NewMI);
 }
 
 /// removeVirtualRegistersKilled - Remove all killed info for the specified

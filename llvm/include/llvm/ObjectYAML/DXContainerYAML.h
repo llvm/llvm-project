@@ -23,7 +23,6 @@
 #include "llvm/ObjectYAML/YAML.h"
 #include "llvm/Support/YAMLTraits.h"
 #include <array>
-#include <cstdint>
 #include <optional>
 #include <string>
 #include <vector>
@@ -116,7 +115,7 @@ struct RootParameterYamlDesc {
   uint32_t Type;
   uint32_t Visibility;
   uint32_t Offset;
-  RootParameterYamlDesc(){};
+  RootParameterYamlDesc() {};
   RootParameterYamlDesc(uint32_t T) : Type(T) {
     switch (T) {
 

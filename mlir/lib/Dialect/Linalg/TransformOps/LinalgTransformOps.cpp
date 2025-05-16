@@ -985,8 +985,7 @@ transform::FuseIntoContainingOp::apply(transform::TransformRewriter &rewriter,
 
   // Helper function to find the next producer that should be fused. Take any
   // producer that has a use inside the containing op.
-  SetVector<Operation *> remainingProducers(producerOps.begin(),
-                                            producerOps.end());
+  SetVector<Operation *> remainingProducers(llvm::from_range, producerOps);
   auto getNextProducer = [&]() -> FailureOr<Operation *> {
     for (const auto &it : enumerate(remainingProducers)) {
       Operation *producerOp = it.value();
@@ -2289,7 +2288,6 @@ transform::ScalarizeOp::applyToOne(transform::TransformRewriter &rewriter,
     }
     return tileSizes;
   });
-  SmallVector<int64_t> emptyTileSizes;
   rewriter.setInsertionPoint(target);
   FailureOr<scf::SCFTilingResult> maybeTilingResult = tileUsingSCF(
       rewriter, cast<TilingInterface>(target.getOperation()), tilingOptions);
@@ -2348,7 +2346,6 @@ transform::RewriteInDestinationPassingStyleOp::applyToOne(
     transform::TransformRewriter &rewriter, Operation *target,
     transform::ApplyToEachResultList &results,
     transform::TransformState &state) {
-  SmallVector<Operation *> res;
   rewriter.setInsertionPoint(target);
   FailureOr<Operation *> maybeResult =
       TypeSwitch<Operation *, FailureOr<Operation *>>(target)

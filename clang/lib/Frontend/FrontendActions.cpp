@@ -263,6 +263,20 @@ GenerateModuleFromModuleMapAction::CreateOutputFile(CompilerInstance &CI,
                                     /*ForceUseTemporary=*/true);
 }
 
+bool GenerateModuleInterfaceAction::PrepareToExecuteAction(
+    CompilerInstance &CI) {
+  for (const auto &FIF : CI.getFrontendOpts().Inputs) {
+    if (const auto InputFormat = FIF.getKind().getFormat();
+        InputFormat != InputKind::Format::Source) {
+      CI.getDiagnostics().Report(
+          diag::err_frontend_action_unsupported_input_format)
+          << "module interface compilation" << FIF.getFile() << InputFormat;
+      return false;
+    }
+  }
+  return GenerateModuleAction::PrepareToExecuteAction(CI);
+}
+
 bool GenerateModuleInterfaceAction::BeginSourceFileAction(
     CompilerInstance &CI) {
   CI.getLangOpts().setCompilingModule(LangOptions::CMK_ModuleInterface);

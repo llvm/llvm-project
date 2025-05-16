@@ -97,6 +97,9 @@ public:
     return RunSafelyOnThread([&]() { Fn(UserData); }, RequestedStackSize);
   }
 
+  bool RunSafelyOnNewStack(function_ref<void()>,
+                           unsigned RequestedStackSize = 0);
+
   /// Explicitly trigger a crash recovery in the current process, and
   /// return failure from RunSafely(). This function does not return.
   [[noreturn]] void HandleExit(int RetCode);

@@ -1133,9 +1133,6 @@ public:
   /// Return true if this is a trivially copyable type
   bool isTriviallyCopyConstructibleType(const ASTContext &Context) const;
 
-  /// Return true if this is a trivially relocatable type.
-  bool isTriviallyRelocatableType(const ASTContext &Context) const;
-
   /// Returns true if it is a class and it might be dynamic.
   bool mayBeDynamicClass() const;
 
@@ -1506,6 +1503,9 @@ public:
     /// The type is an Objective-C retainable pointer type that is qualified
     /// with the ARC __weak qualifier.
     PCK_ARCWeak,
+
+    /// The type is an address-discriminated signed pointer type.
+    PCK_PtrAuth,
 
     /// The type is a struct containing a field whose type is neither
     /// PCK_Trivial nor PCK_VolatileTrivial.
@@ -3599,6 +3599,9 @@ public:
   }
 
   NestedNameSpecifier *getQualifier() const { return Qualifier; }
+  /// Note: this can trigger extra deserialization when external AST sources are
+  /// used. Prefer `getCXXRecordDecl()` unless you really need the most recent
+  /// decl.
   CXXRecordDecl *getMostRecentCXXRecordDecl() const;
 
   bool isSugared() const;
@@ -3607,7 +3610,10 @@ public:
   }
 
   void Profile(llvm::FoldingSetNodeID &ID) {
-    Profile(ID, getPointeeType(), getQualifier(), getMostRecentCXXRecordDecl());
+    // FIXME: `getMostRecentCXXRecordDecl()` should be possible to use here,
+    // however when external AST sources are used it causes nondeterminism
+    // issues (see https://github.com/llvm/llvm-project/pull/137910).
+    Profile(ID, getPointeeType(), getQualifier(), getCXXRecordDecl());
   }
 
   static void Profile(llvm::FoldingSetNodeID &ID, QualType Pointee,
@@ -3617,6 +3623,9 @@ public:
   static bool classof(const Type *T) {
     return T->getTypeClass() == MemberPointer;
   }
+
+private:
+  CXXRecordDecl *getCXXRecordDecl() const;
 };
 
 /// Capture whether this is a normal array (e.g. int X[4])

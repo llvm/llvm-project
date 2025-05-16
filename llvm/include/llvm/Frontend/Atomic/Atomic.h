@@ -97,6 +97,8 @@ public:
                             bool IsVolatile, bool IsWeak);
 
   std::pair<LoadInst *, AllocaInst *> EmitAtomicLoadLibcall(AtomicOrdering AO);
+
+  void EmitAtomicStoreLibcall(AtomicOrdering AO, Value *Source);
 };
 } // end namespace llvm
 

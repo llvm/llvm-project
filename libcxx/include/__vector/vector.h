@@ -55,6 +55,7 @@
 #include <__type_traits/is_nothrow_assignable.h>
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/is_pointer.h>
+#include <__type_traits/is_replaceable.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_trivially_relocatable.h>
 #include <__type_traits/type_identity.h>
@@ -89,28 +90,28 @@ public:
   //
   // Types
   //
-  typedef vector __self;
-  typedef _Tp value_type;
-  typedef _Allocator allocator_type;
-  typedef allocator_traits<allocator_type> __alloc_traits;
-  typedef value_type& reference;
-  typedef const value_type& const_reference;
-  typedef typename __alloc_traits::size_type size_type;
-  typedef typename __alloc_traits::difference_type difference_type;
-  typedef typename __alloc_traits::pointer pointer;
-  typedef typename __alloc_traits::const_pointer const_pointer;
+  using __self _LIBCPP_NODEBUG         = vector;
+  using value_type                     = _Tp;
+  using allocator_type                 = _Allocator;
+  using __alloc_traits _LIBCPP_NODEBUG = allocator_traits<allocator_type>;
+  using reference                      = value_type&;
+  using const_reference                = const value_type&;
+  using size_type                      = typename __alloc_traits::size_type;
+  using difference_type                = typename __alloc_traits::difference_type;
+  using pointer                        = typename __alloc_traits::pointer;
+  using const_pointer                  = typename __alloc_traits::const_pointer;
 #ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_VECTOR
   // Users might provide custom allocators, and prior to C++20 we have no existing way to detect whether the allocator's
   // pointer type is contiguous (though it has to be by the Standard). Using the wrapper type ensures the iterator is
   // considered contiguous.
-  typedef __bounded_iter<__wrap_iter<pointer> > iterator;
-  typedef __bounded_iter<__wrap_iter<const_pointer> > const_iterator;
+  using iterator       = __bounded_iter<__wrap_iter<pointer> >;
+  using const_iterator = __bounded_iter<__wrap_iter<const_pointer> >;
 #else
-  typedef __wrap_iter<pointer> iterator;
-  typedef __wrap_iter<const_pointer> const_iterator;
+  using iterator       = __wrap_iter<pointer>;
+  using const_iterator = __wrap_iter<const_pointer>;
 #endif
-  typedef std::reverse_iterator<iterator> reverse_iterator;
-  typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
+  using reverse_iterator       = std::reverse_iterator<iterator>;
+  using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
   // A vector containers the following members which may be trivially relocatable:
   // - pointer: may be trivially relocatable, so it's checked
@@ -120,6 +121,10 @@ public:
       __libcpp_is_trivially_relocatable<pointer>::value && __libcpp_is_trivially_relocatable<allocator_type>::value,
       vector,
       void>;
+  using __replaceable _LIBCPP_NODEBUG =
+      __conditional_t<__is_replaceable_v<pointer> && __container_allocator_is_replaceable<__alloc_traits>::value,
+                      vector,
+                      void>;
 
   static_assert(__check_valid_allocator<allocator_type>::value, "");
   static_assert(is_same<typename allocator_type::value_type, value_type>::value,
@@ -716,47 +721,32 @@ private:
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __annotate_new(size_type __current_size) const _NOEXCEPT {
-    (void)__current_size;
-#if _LIBCPP_HAS_ASAN
     __annotate_contiguous_container(data() + capacity(), data() + __current_size);
-#endif
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __annotate_delete() const _NOEXCEPT {
-#if _LIBCPP_HAS_ASAN
     __annotate_contiguous_container(data() + size(), data() + capacity());
-#endif
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __annotate_increase(size_type __n) const _NOEXCEPT {
-    (void)__n;
-#if _LIBCPP_HAS_ASAN
     __annotate_contiguous_container(data() + size(), data() + size() + __n);
-#endif
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __annotate_shrink(size_type __old_size) const _NOEXCEPT {
-    (void)__old_size;
-#if _LIBCPP_HAS_ASAN
     __annotate_contiguous_container(data() + __old_size, data() + size());
-#endif
   }
 
   struct _ConstructTransaction {
     _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI explicit _ConstructTransaction(vector& __v, size_type __n)
         : __v_(__v), __pos_(__v.__end_), __new_end_(__v.__end_ + __n) {
-#if _LIBCPP_HAS_ASAN
       __v_.__annotate_increase(__n);
-#endif
     }
 
     _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI ~_ConstructTransaction() {
       __v_.__end_ = __pos_;
-#if _LIBCPP_HAS_ASAN
       if (__pos_ != __new_end_) {
         __v_.__annotate_shrink(__new_end_ - __v_.__begin_);
       }
-#endif
     }
 
     vector& __v_;

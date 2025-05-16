@@ -18,13 +18,12 @@
 namespace llvm {
 namespace SCEVPatternMatch {
 
-template <typename Val, typename Pattern>
-bool match(const SCEV *S, const Pattern &P) {
+template <typename Pattern> bool match(const SCEV *S, const Pattern &P) {
   return P.match(S);
 }
 
 template <typename Predicate> struct cst_pred_ty : public Predicate {
-  bool match(const SCEV *S) {
+  bool match(const SCEV *S) const {
     assert((isa<SCEVCouldNotCompute>(S) || !S->getType()->isVectorTy()) &&
            "no vector types expected from SCEVs");
     auto *C = dyn_cast<SCEVConstant>(S);
@@ -33,20 +32,23 @@ template <typename Predicate> struct cst_pred_ty : public Predicate {
 };
 
 struct is_zero {
-  bool isValue(const APInt &C) { return C.isZero(); }
+  bool isValue(const APInt &C) const { return C.isZero(); }
 };
+
 /// Match an integer 0.
 inline cst_pred_ty<is_zero> m_scev_Zero() { return cst_pred_ty<is_zero>(); }
 
 struct is_one {
-  bool isValue(const APInt &C) { return C.isOne(); }
+  bool isValue(const APInt &C) const { return C.isOne(); }
 };
+
 /// Match an integer 1.
 inline cst_pred_ty<is_one> m_scev_One() { return cst_pred_ty<is_one>(); }
 
 struct is_all_ones {
-  bool isValue(const APInt &C) { return C.isAllOnes(); }
+  bool isValue(const APInt &C) const { return C.isAllOnes(); }
 };
+
 /// Match an integer with all bits set.
 inline cst_pred_ty<is_all_ones> m_scev_AllOnes() {
   return cst_pred_ty<is_all_ones>();
@@ -85,7 +87,7 @@ struct specificscev_ty {
 
   specificscev_ty(const SCEV *Expr) : Expr(Expr) {}
 
-  template <typename ITy> bool match(ITy *S) { return S == Expr; }
+  template <typename ITy> bool match(ITy *S) const { return S == Expr; }
 };
 
 /// Match if we have a specific specified SCEV.
@@ -97,7 +99,7 @@ template <typename SCEVTy, typename Op0_t> struct SCEVUnaryExpr_match {
 
   SCEVUnaryExpr_match(Op0_t Op0) : Op0(Op0) {}
 
-  bool match(const SCEV *S) {
+  bool match(const SCEV *S) const {
     auto *E = dyn_cast<SCEVTy>(S);
     return E && E->getNumOperands() == 1 && Op0.match(E->getOperand(0));
   }
@@ -128,7 +130,7 @@ struct SCEVBinaryExpr_match {
 
   SCEVBinaryExpr_match(Op0_t Op0, Op1_t Op1) : Op0(Op0), Op1(Op1) {}
 
-  bool match(const SCEV *S) {
+  bool match(const SCEV *S) const {
     auto *E = dyn_cast<SCEVTy>(S);
     return E && E->getNumOperands() == 2 && Op0.match(E->getOperand(0)) &&
            Op1.match(E->getOperand(1));

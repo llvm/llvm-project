@@ -2011,6 +2011,14 @@ void JumpThreadingPass::updateSSA(BasicBlock *BB, BasicBlock *NewBB,
   }
 }
 
+static void remapSourceAtoms(ValueToValueMapTy &VM, BasicBlock::iterator Begin,
+                             BasicBlock::iterator End) {
+  if (VM.AtomMap.empty())
+    return;
+  for (auto It = Begin; It != End; ++It)
+    RemapSourceAtom(&*It, VM);
+}
+
 /// Clone instructions in range [BI, BE) to NewBB.  For PHI nodes, we only clone
 /// arguments that come from PredBB.  Return the map from the variables in the
 /// source basic block to the variables in the newly created basic block.
@@ -2075,6 +2083,8 @@ void JumpThreadingPass::cloneInstructions(ValueToValueMapTy &ValueMapping,
     PHINode *NewPN = PHINode::Create(PN->getType(), 1, PN->getName(), NewBB);
     NewPN->addIncoming(PN->getIncomingValueForBlock(PredBB), PredBB);
     ValueMapping[PN] = NewPN;
+    if (const DebugLoc &DL = PN->getDebugLoc())
+      mapAtomInstance(DL, ValueMapping);
   }
 
   // Clone noalias scope declarations in the threaded block. When threading a
@@ -2103,6 +2113,8 @@ void JumpThreadingPass::cloneInstructions(ValueToValueMapTy &ValueMapping,
     adaptNoAliasScopes(New, ClonedScopes, Context);
 
     CloneAndRemapDbgInfo(New, &*BI);
+    if (const DebugLoc &DL = New->getDebugLoc())
+      mapAtomInstance(DL, ValueMapping);
 
     if (RetargetDbgValueIfPossible(New))
       continue;
@@ -2329,6 +2341,9 @@ void JumpThreadingPass::threadThroughTwoBasicBlocks(BasicBlock *PredPredBB,
        {DominatorTree::Insert, NewBB, CondBr->getSuccessor(1)},
        {DominatorTree::Insert, PredPredBB, NewBB},
        {DominatorTree::Delete, PredPredBB, PredBB}});
+
+  // Remap source location atoms beacuse we're duplicating control flow.
+  remapSourceAtoms(ValueMapping, NewBB->begin(), NewBB->end());
 
   updateSSA(PredBB, NewBB, ValueMapping);
 
@@ -2684,6 +2699,9 @@ bool JumpThreadingPass::duplicateCondBranchOnPHIIntoPred(
   // PredBB block.  Evaluate PHI nodes in BB.
   ValueToValueMapTy ValueMapping;
 
+  // Remember the position before the inserted instructions.
+  auto RItBeforeInsertPt = std::next(OldPredBranch->getReverseIterator());
+
   BasicBlock::iterator BI = BB->begin();
   for (; PHINode *PN = dyn_cast<PHINode>(BI); ++BI)
     ValueMapping[PN] = PN->getIncomingValueForBlock(PredBB);
@@ -2703,6 +2721,8 @@ bool JumpThreadingPass::duplicateCondBranchOnPHIIntoPred(
 
     // Remap debug variable operands.
     remapDebugVariable(ValueMapping, New);
+    if (const DebugLoc &DL = New->getDebugLoc())
+      mapAtomInstance(DL, ValueMapping);
 
     // If this instruction can be simplified after the operands are updated,
     // just use the simplified value instead.  This frequently happens due to
@@ -2740,6 +2760,10 @@ bool JumpThreadingPass::duplicateCondBranchOnPHIIntoPred(
                                   ValueMapping);
   addPHINodeEntriesForMappedBlock(BBBranch->getSuccessor(1), BB, PredBB,
                                   ValueMapping);
+
+  // KeyInstructions: Remap the cloned instructions' atoms only.
+  remapSourceAtoms(ValueMapping, std::prev(RItBeforeInsertPt)->getIterator(),
+                   OldPredBranch->getIterator());
 
   updateSSA(BB, PredBB, ValueMapping);
 

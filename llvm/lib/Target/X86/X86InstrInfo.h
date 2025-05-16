@@ -174,6 +174,19 @@ inline static bool isMem(const MachineInstr &MI, unsigned Op) {
          MI.getOperand(Op + X86::AddrSegmentReg).isReg() && isLeaMem(MI, Op);
 }
 
+inline static bool isAddMemInstrWithRelocation(const MachineInstr &MI) {
+  unsigned Op = MI.getOpcode();
+  if (Op == X86::ADD64rm || Op == X86::ADD64mr_ND || Op == X86::ADD64rm_ND) {
+    int MemOpNo = X86II::getMemoryOperandNo(MI.getDesc().TSFlags) +
+                  X86II::getOperandBias(MI.getDesc());
+    const MachineOperand &MO = MI.getOperand(X86::AddrDisp + MemOpNo);
+    if (MO.getTargetFlags() == X86II::MO_GOTTPOFF)
+      return true;
+  }
+
+  return false;
+}
+
 class X86InstrInfo final : public X86GenInstrInfo {
   X86Subtarget &Subtarget;
   const X86RegisterInfo RI;

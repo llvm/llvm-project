@@ -254,4 +254,10 @@ bool fromJSON(const llvm::json::Value &Params, SteppingGranularity &SG,
   return true;
 }
 
+bool fromJSON(const llvm::json::Value &Params, ValueFormat &VF,
+              llvm::json::Path P) {
+  json::ObjectMapper O(Params, P);
+  return O && O.mapOptional("hex", VF.hex);
+}
+
 } // namespace lldb_dap::protocol

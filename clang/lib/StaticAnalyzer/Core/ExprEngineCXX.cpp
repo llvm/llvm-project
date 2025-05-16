@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/AST/ASTContext.h"
 #include "clang/AST/AttrIterator.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/ParentMap.h"
@@ -23,6 +24,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/Support/Casting.h"
 #include <optional>
 
 using namespace clang;
@@ -715,7 +717,11 @@ void ExprEngine::handleConstructor(const Expr *E,
         // actually make things worse. Placement new makes this tricky as well,
         // since it's then possible to be initializing one part of a multi-
         // dimensional array.
-        State = State->bindDefaultZero(Target, LCtx);
+        const CXXRecordDecl *TargetHeldRecord =
+            dyn_cast_or_null<CXXRecordDecl>(CE->getType()->getAsRecordDecl());
+
+        if (!TargetHeldRecord || !TargetHeldRecord->isEmpty())
+          State = State->bindDefaultZero(Target, LCtx);
       }
 
       Bldr.generateNode(CE, N, State, /*tag=*/nullptr,

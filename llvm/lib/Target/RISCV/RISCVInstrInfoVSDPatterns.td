@@ -1360,6 +1360,8 @@ foreach vti = AllFloatVectors in {
 // 13.11. Vector Floating-Point MIN/MAX Instructions
 defm : VPatBinaryFPSDNode_VV_VF<fminnum, "PseudoVFMIN", isSEWAware=1>;
 defm : VPatBinaryFPSDNode_VV_VF<fmaxnum, "PseudoVFMAX", isSEWAware=1>;
+defm : VPatBinaryFPSDNode_VV_VF<fminimumnum, "PseudoVFMIN", isSEWAware=1>;
+defm : VPatBinaryFPSDNode_VV_VF<fmaximumnum, "PseudoVFMAX", isSEWAware=1>;
 
 // 13.13. Vector Floating-Point Compare Instructions
 defm : VPatFPSetCCSDNode_VV_VF_FV<SETEQ,  "PseudoVMFEQ", "PseudoVMFEQ">;

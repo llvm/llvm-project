@@ -14,7 +14,7 @@
 #ifndef LLVM_IR_DEBUGLOC_H
 #define LLVM_IR_DEBUGLOC_H
 
-#include "llvm/Config/config.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/IR/TrackingMDRef.h"
 #include "llvm/Support/DataTypes.h"
 
@@ -25,7 +25,7 @@ namespace llvm {
   class DILocation;
   class Function;
 
-#if ENABLE_DEBUGLOC_COVERAGE_TRACKING
+#if LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING
   // Used to represent different "kinds" of DebugLoc, expressing that the
   // instruction it is part of is either normal and should contain a valid
   // DILocation, or otherwise describing the reason why the instruction does
@@ -89,7 +89,7 @@ namespace llvm {
   using DebugLocTrackingRef = DILocAndCoverageTracking;
 #else
   using DebugLocTrackingRef = TrackingMDNodeRef;
-#endif // ENABLE_DEBUGLOC_COVERAGE_TRACKING
+#endif // LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING
 
   /// A debug info location.
   ///
@@ -116,12 +116,12 @@ namespace llvm {
     /// IR.
     explicit DebugLoc(const MDNode *N);
 
-#if ENABLE_DEBUGLOC_COVERAGE_TRACKING
+#if LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING
     DebugLoc(DebugLocKind Kind) : Loc(Kind) {}
     DebugLocKind getKind() const { return Loc.Kind; }
 #endif
 
-#if ENABLE_DEBUGLOC_COVERAGE_TRACKING
+#if LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING
     static inline DebugLoc getTemporary() {
       return DebugLoc(DebugLocKind::Temporary);
     }
@@ -139,7 +139,7 @@ namespace llvm {
     static inline DebugLoc getUnknown() { return DebugLoc(); }
     static inline DebugLoc getCompilerGenerated() { return DebugLoc(); }
     static inline DebugLoc getDropped() { return DebugLoc(); }
-#endif // ENABLE_DEBUGLOC_COVERAGE_TRACKING
+#endif // LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING
 
     /// Get the underlying \a DILocation.
     ///
@@ -169,6 +169,16 @@ namespace llvm {
     static DebugLoc appendInlinedAt(const DebugLoc &DL, DILocation *InlinedAt,
                                     LLVMContext &Ctx,
                                     DenseMap<const MDNode *, MDNode *> &Cache);
+
+    /// Return true if the source locations match, ignoring isImplicitCode and
+    /// source atom info.
+    bool isSameSourceLocation(const DebugLoc &Other) const {
+      if (get() == Other.get())
+        return true;
+      return ((bool)*this == (bool)Other) && getLine() == Other.getLine() &&
+             getCol() == Other.getCol() && getScope() == Other.getScope() &&
+             getInlinedAt() == Other.getInlinedAt();
+    }
 
     unsigned getLine() const;
     unsigned getCol() const;

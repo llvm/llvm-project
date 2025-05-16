@@ -19,7 +19,6 @@ NameOrPattern::create(StringRef Pattern, MatchStyle MS,
   case MatchStyle::Literal:
     return NameOrPattern(Pattern);
   case MatchStyle::Wildcard: {
-    SmallVector<char, 32> Data;
     bool IsPositiveMatch = !Pattern.consume_front("!");
     Expected<GlobPattern> GlobOrErr = GlobPattern::create(Pattern);
 

@@ -869,9 +869,6 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
   DenseMap<const Record *, unsigned> MCOpPredicateMap;
 
   for (auto &Aliases : AliasMap) {
-    // Collection of instruction alias rules. May contain ambiguous rules.
-    std::vector<IAPrinter> IAPs;
-
     for (auto &Alias : Aliases.second) {
       const CodeGenInstAlias &CGA = Alias.first;
       unsigned LastOpNo = CGA.ResultInstOperandIndex.size();

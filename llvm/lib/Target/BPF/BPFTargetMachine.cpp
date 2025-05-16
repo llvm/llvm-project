@@ -45,6 +45,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeBPFTarget() {
 
   PassRegistry &PR = *PassRegistry::getPassRegistry();
   initializeGlobalISel(PR);
+  initializeBPFAsmPrinterPass(PR);
   initializeBPFCheckAndAdjustIRPass(PR);
   initializeBPFMIPeepholePass(PR);
   initializeBPFMIPreEmitPeepholePass(PR);
@@ -154,7 +155,7 @@ void BPFPassConfig::addIRPasses() {
 
 TargetTransformInfo
 BPFTargetMachine::getTargetTransformInfo(const Function &F) const {
-  return TargetTransformInfo(BPFTTIImpl(this, F));
+  return TargetTransformInfo(std::make_unique<BPFTTIImpl>(this, F));
 }
 
 // Install an instruction selector pass using

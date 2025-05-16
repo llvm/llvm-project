@@ -321,6 +321,9 @@ bool InitHeaderSearch::ShouldAddDefaultIncludePaths(
     break;
   }
 
+  if (triple.isOSDarwin())
+    return false;
+
   return true; // Everything else uses AddDefaultIncludePaths().
 }
 
@@ -334,22 +337,6 @@ void InitHeaderSearch::AddDefaultIncludePaths(
   // delete the entire pile of code.
   if (!ShouldAddDefaultIncludePaths(triple))
     return;
-
-  // NOTE: some additional header search logic is handled in the driver for
-  // Darwin.
-  if (triple.isOSDarwin()) {
-    if (HSOpts.UseStandardSystemIncludes) {
-      // Add the default framework include paths on Darwin.
-      if (triple.isDriverKit()) {
-        AddPath("/System/DriverKit/System/Library/Frameworks", System, true);
-      } else {
-        AddPath("/System/Library/Frameworks", System, true);
-        AddPath("/System/Library/SubFrameworks", System, true);
-        AddPath("/Library/Frameworks", System, true);
-      }
-    }
-    return;
-  }
 
   if (Lang.CPlusPlus && !Lang.AsmPreprocessor &&
       HSOpts.UseStandardCXXIncludes && HSOpts.UseStandardSystemIncludes) {
