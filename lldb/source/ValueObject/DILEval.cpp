@@ -282,9 +282,13 @@ Interpreter::Visit(const ArraySubscriptNode *node) {
   // Check to see if 'base' has a synthetic value; if so, try using that.
   uint64_t child_idx = node->GetIndex();
   if (lldb::ValueObjectSP synthetic = base->GetSyntheticValue()) {
-    uint32_t num_children = synthetic->GetNumChildrenIgnoringErrors();
+    llvm::Expected<uint32_t> num_children =
+        synthetic->GetNumChildren(child_idx + 1);
+    if (!num_children)
+      return llvm::make_error<DILDiagnosticError>(
+          m_expr, toString(num_children.takeError()), node->GetLocation());
     // Verify that the 'index' is not out-of-range for the declared type.
-    if (child_idx >= num_children) {
+    if (child_idx >= *num_children) {
       std::string message = llvm::formatv(
           "array index {0} is not valid for \"({1}) {2}\"", child_idx,
           base->GetTypeName().AsCString("<invalid type>"),
