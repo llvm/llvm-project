@@ -141,5 +141,4 @@ public:
   using std::basic_spanbuf<CharT, TraitsT>::pptr;
 };
 
-
 #endif // TEST_STD_INPUTOUTPUT_SPANSTREAMS_TYPES_H
