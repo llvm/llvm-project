@@ -15,6 +15,7 @@
 #include <vector>
 
 #include "lldb/lldb-private.h"
+#include "lldb/ValueObject/ValueObject.h"
 #include "llvm/Support/JSON.h"
 
 namespace lldb_private {
@@ -30,6 +31,8 @@ public:
   virtual ~UnixSignals();
 
   llvm::StringRef GetSignalAsStringRef(int32_t signo) const;
+
+  virtual std::string GetSignalDescriptionFromSiginfo(lldb::ValueObjectSP siginfo_sp) const { return ""; };
 
   std::string
   GetSignalDescription(int32_t signo,
