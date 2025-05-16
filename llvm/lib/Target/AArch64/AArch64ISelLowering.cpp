@@ -8231,26 +8231,26 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
   }
 
   // varargs
-  // Note that IsWin64 part is required to prevent odd miscompilations on arm64
-  // windows platforms. For more info refer to GH#126780 PR comments.
-  if (isVarArg &&
-      (DAG.getMachineFunction().getFrameInfo().hasVAStart() || IsWin64)) {
-    if (!Subtarget->isTargetDarwin() || IsWin64) {
-      // The AAPCS variadic function ABI is identical to the non-variadic
-      // one. As a result there may be more arguments in registers and we should
-      // save them for future reference.
-      // Win64 variadic functions also pass arguments in registers, but all float
-      // arguments are passed in integer registers.
-      saveVarArgRegisters(CCInfo, DAG, DL, Chain);
-    }
+  if (isVarArg) {
+    if (DAG.getMachineFunction().getFrameInfo().hasVAStart()) {
+      if (!Subtarget->isTargetDarwin() || IsWin64) {
+        // The AAPCS variadic function ABI is identical to the non-variadic
+        // one. As a result there may be more arguments in registers and we
+        // should save them for future reference.
+        // Win64 variadic functions also pass arguments in registers, but all
+        // float arguments are passed in integer registers.
+        saveVarArgRegisters(CCInfo, DAG, DL, Chain);
+      }
 
-    // This will point to the next argument passed via stack.
-    unsigned VarArgsOffset = CCInfo.getStackSize();
-    // We currently pass all varargs at 8-byte alignment, or 4 for ILP32
-    VarArgsOffset = alignTo(VarArgsOffset, Subtarget->isTargetILP32() ? 4 : 8);
-    FuncInfo->setVarArgsStackOffset(VarArgsOffset);
-    FuncInfo->setVarArgsStackIndex(
-        MFI.CreateFixedObject(4, VarArgsOffset, true));
+      // This will point to the next argument passed via stack.
+      unsigned VarArgsOffset = CCInfo.getStackSize();
+      // We currently pass all varargs at 8-byte alignment, or 4 for ILP32
+      VarArgsOffset =
+          alignTo(VarArgsOffset, Subtarget->isTargetILP32() ? 4 : 8);
+      FuncInfo->setVarArgsStackOffset(VarArgsOffset);
+      FuncInfo->setVarArgsStackIndex(
+          MFI.CreateFixedObject(4, VarArgsOffset, true));
+    }
 
     if (MFI.hasMustTailInVarArgFunc()) {
       SmallVector<MVT, 2> RegParmTypes;
@@ -9436,7 +9436,8 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     }
   }
 
-  if (IsVarArg && Subtarget->isWindowsArm64EC()) {
+  if (IsVarArg && Subtarget->isWindowsArm64EC() &&
+      !(CLI.CB && CLI.CB->isMustTailCall())) {
     SDValue ParamPtr = StackPtr;
     if (IsTailCall) {
       // Create a dummy object at the top of the stack that can be used to get
