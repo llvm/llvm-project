@@ -1352,7 +1352,7 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
 
   llvm.amdgcn.sched.group.barrier                  Creates schedule groups with specific properties to create custom scheduling
                                                    pipelines. The ordering between groups is enforced by the instruction scheduler.
-                                                   The intrinsic applies to the code that preceeds the intrinsic. The intrinsic
+                                                   The intrinsic applies to the code that precedes the intrinsic. The intrinsic
                                                    takes three values that control the behavior of the schedule groups.
 
                                                    - Mask : Classify instruction groups using the llvm.amdgcn.sched_barrier mask values.
@@ -1669,7 +1669,7 @@ The AMDGPU backend supports the following LLVM IR attributes.
 
      "amdgpu-git-ptr-high"                            The hard-wired high half of the address of the global information table
                                                       for AMDPAL OS type. 0xffffffff represents no hard-wired high half, since
-                                                      current hardware only allows a 16 bit value.
+                                                      current hardware only allows a 16-bit value.
 
      "amdgpu-32bit-address-high-bits"                 Assumed high 32-bits for 32-bit address spaces which are really truncated
                                                       64-bit addresses (i.e., addrspace(6))
@@ -4884,7 +4884,7 @@ apertures address can be used. For GFX7-GFX8 these are available in the
 :ref:`amdgpu-amdhsa-hsa-aql-queue` the address of which can be obtained with
 Queue Ptr SGPR (see :ref:`amdgpu-amdhsa-initial-kernel-execution-state`). For
 GFX9-GFX11 the aperture base addresses are directly available as inline constant
-registers ``SRC_SHARED_BASE/LIMIT`` and ``SRC_PRIVATE_BASE/LIMIT``. In 64 bit
+registers ``SRC_SHARED_BASE/LIMIT`` and ``SRC_PRIVATE_BASE/LIMIT``. In 64-bit
 address mode the aperture sizes are 2^32 bytes and the base is aligned to 2^32
 which makes it easier to convert from flat to segment or segment to flat.
 
