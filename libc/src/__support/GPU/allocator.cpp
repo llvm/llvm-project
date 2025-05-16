@@ -28,6 +28,7 @@ namespace LIBC_NAMESPACE_DECL {
 constexpr static uint64_t MAX_SIZE = /* 64 GiB */ 64ull * 1024 * 1024 * 1024;
 constexpr static uint64_t SLAB_SIZE = /* 2 MiB */ 2ull * 1024 * 1024;
 constexpr static uint64_t ARRAY_SIZE = MAX_SIZE / SLAB_SIZE;
+constexpr static uint64_t SLAB_ALIGNMENT = SLAB_SIZE - 1;
 constexpr static uint32_t BITS_IN_WORD = sizeof(uint32_t) * 8;
 constexpr static uint32_t MIN_SIZE = 16;
 
@@ -62,7 +63,7 @@ static void rpc_free(void *ptr) {
 // Convert a potentially disjoint bitmask into an increasing integer for use
 // with indexing between gpu lanes.
 static inline uint32_t lane_count(uint64_t lane_mask) {
-  return cpp::popcount(lane_mask & ((1ull << gpu::get_lane_id()) - 1));
+  return cpp::popcount(lane_mask & ((uint64_t(1) << gpu::get_lane_id()) - 1));
 }
 
 // Obtain an initial value to seed a random number generator. We use the rounded
@@ -225,7 +226,7 @@ struct Slab {
 
       uint32_t slot = index / BITS_IN_WORD;
       uint32_t bit = index % BITS_IN_WORD;
-      if (mask & (1ull << gpu::get_lane_id())) {
+      if (mask & (uint64_t(1) << gpu::get_lane_id())) {
         uint32_t before = cpp::AtomicRef(get_bitfield()[slot])
                               .fetch_or(1u << bit, cpp::MemoryOrder::RELAXED);
         if (~before & (1 << bit)) {
@@ -262,11 +263,11 @@ template <typename T> struct GuardPtr {
 private:
   struct RefCounter {
     // Indicates that the object is in its deallocation phase and thus invalid.
-    static constexpr uint64_t invalid = 1ull << 63;
+    static constexpr uint64_t INVALID = uint64_t(1) << 63;
 
     // If a read preempts an unlock call we indicate this so the following
     // unlock call can swap out the helped bit and maintain exlusive ownership.
-    static constexpr uint64_t helped = 1ull << 62;
+    static constexpr uint64_t HELPED = uint64_t(1) << 62;
 
     // Resets the reference counter, cannot be reset to zero safely.
     void reset(uint32_t n, uint64_t &count) {
@@ -277,7 +278,7 @@ private:
     // Acquire a slot in the reference counter if it is not invalid.
     bool acquire(uint32_t n, uint64_t &count) {
       count = counter.fetch_add(n, cpp::MemoryOrder::RELAXED) + n;
-      return (count & invalid) == 0;
+      return (count & INVALID) == 0;
     }
 
     // Release a slot in the reference counter. This function should only be
@@ -289,13 +290,13 @@ private:
       // helped us invalidating it. For the latter, claim that flag and return.
       if (counter.fetch_sub(n, cpp::MemoryOrder::RELAXED) == n) {
         uint64_t expected = 0;
-        if (counter.compare_exchange_strong(expected, invalid,
+        if (counter.compare_exchange_strong(expected, INVALID,
                                             cpp::MemoryOrder::RELAXED,
                                             cpp::MemoryOrder::RELAXED))
           return true;
-        else if ((expected & helped) &&
-                 (counter.exchange(invalid, cpp::MemoryOrder::RELAXED) &
-                  helped))
+        else if ((expected & HELPED) &&
+                 (counter.exchange(INVALID, cpp::MemoryOrder::RELAXED) &
+                  HELPED))
           return true;
       }
       return false;
@@ -306,9 +307,9 @@ private:
     uint64_t read() {
       auto val = counter.load(cpp::MemoryOrder::RELAXED);
       if (val == 0 && counter.compare_exchange_strong(
-                          val, invalid | helped, cpp::MemoryOrder::RELAXED))
+                          val, INVALID | HELPED, cpp::MemoryOrder::RELAXED))
         return 0;
-      return (val & invalid) ? 0 : val;
+      return (val & INVALID) ? 0 : val;
     }
 
     cpp::Atomic<uint64_t> counter{0};
@@ -318,7 +319,7 @@ private:
   RefCounter ref{};
 
   // A sentinel value used to claim the pointer slot.
-  static constexpr uint64_t sentinel = ~0ULL;
+  static constexpr uint64_t sentinel = cpp::numeric_limits<uint64_t>::max();
 
   // Should be called be a single lane for each different pointer.
   template <typename... Args>
@@ -328,7 +329,7 @@ private:
         ptr.compare_exchange_strong(expected, reinterpret_cast<T *>(sentinel),
                                     cpp::MemoryOrder::RELAXED,
                                     cpp::MemoryOrder::RELAXED)) {
-      count = ~0ull;
+      count = cpp::numeric_limits<uint64_t>::max();
       T *mem = reinterpret_cast<T *>(impl::rpc_allocate(sizeof(T)));
       if (!mem)
         return nullptr;
@@ -357,22 +358,22 @@ public:
   // The uniform mask represents which lanes share the same pointer. For each
   // uniform value we elect a leader to handle it on behalf of the other lanes.
   template <typename... Args>
-  T *try_lock(uint64_t lane_mask, uint64_t unifrom, uint64_t &count,
+  T *try_lock(uint64_t lane_mask, uint64_t uniform, uint64_t &count,
               Args &&...args) {
     count = 0;
     T *result = nullptr;
-    if (gpu::get_lane_id() == uint32_t(cpp::countr_zero(unifrom)))
-      result = try_lock_impl(cpp::popcount(unifrom), count,
+    if (gpu::get_lane_id() == uint32_t(cpp::countr_zero(uniform)))
+      result = try_lock_impl(cpp::popcount(uniform), count,
                              cpp::forward<Args>(args)...);
-    result = gpu::shuffle(lane_mask, cpp::countr_zero(unifrom), result);
+    result = gpu::shuffle(lane_mask, cpp::countr_zero(uniform), result);
 
     if (!result)
       return nullptr;
 
     // Obtain the value of the reference counter for each lane given the
     // aggregate value.
-    count = gpu::shuffle(lane_mask, cpp::countr_zero(unifrom), count) -
-            cpp::popcount(unifrom) + impl::lane_count(unifrom) + 1;
+    count = gpu::shuffle(lane_mask, cpp::countr_zero(uniform), count) -
+            cpp::popcount(uniform) + impl::lane_count(uniform) + 1;
     return result;
   }
 
@@ -433,7 +434,7 @@ static Slab *find_slab(uint32_t chunk_size) {
     }
 
     // Malloc returned a null pointer and we are out-of-memory.
-    if (!slab && reserved == ~0ull)
+    if (!slab && reserved == cpp::numeric_limits<uint64_t>::max())
       return nullptr;
 
     // The slab is in the process of being initialized. Start at the beginning
@@ -480,12 +481,12 @@ void deallocate(void *ptr) {
     return;
 
   // All non-slab allocations will be alinged on a 2MiB boundary.
-  if ((reinterpret_cast<uintptr_t>(ptr) & 0x1fffff) == 0)
+  if ((reinterpret_cast<uintptr_t>(ptr) & SLAB_ALIGNMENT) == 0)
     return impl::rpc_free(ptr);
 
   // The original slab pointer is the 2MiB boundary using the given pointer.
-  Slab *slab =
-      reinterpret_cast<Slab *>((reinterpret_cast<uintptr_t>(ptr) & ~0x1fffff));
+  Slab *slab = reinterpret_cast<Slab *>(
+      (reinterpret_cast<uintptr_t>(ptr) & ~SLAB_ALIGNMENT));
   slab->deallocate(ptr);
   release_slab(slab);
 }
