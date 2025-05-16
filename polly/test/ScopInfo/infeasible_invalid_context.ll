@@ -1,4 +1,5 @@
-; RUN: opt %loadNPMPolly '-passes=print<polly-detect>' -disable-output < %s 2>&1 \
+; RUN: opt %loadNPMPolly '-passes=print<polly-detect>' -disable-output \
+; RUN: -polly-region-expansion-profitability-check=0 < %s 2>&1 \
 ; RUN:  | FileCheck %s -check-prefix=DETECT
 
 ; RUN: opt %loadNPMPolly '-passes=print<polly-detect>,print<polly-function-scops>' -disable-output < %s 2>&1 \
