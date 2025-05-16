@@ -1099,17 +1099,35 @@ struct ConcatOpInterface
 
     // Extract the dimension for the concat op
     uint64_t concatDim = concatOp.getDim();
+    bool dynamicConcatDim = false;
 
     SmallVector<OpFoldResult> offsets(tensorType.getRank(),
                                       rewriter.getIndexAttr(0));
     SmallVector<OpFoldResult> strides(tensorType.getRank(),
                                       rewriter.getIndexAttr(1));
     SmallVector<OpFoldResult> sizes;
-    for (auto dimSize : tensorType.getShape()) {
-      sizes.push_back(rewriter.getIndexAttr(dimSize));
+
+    for (const auto &[dimIdx, dimSize] :
+         llvm::enumerate(tensorType.getShape())) {
+      if (dimSize == ShapedType::kDynamic) {
+        auto dimOp = rewriter.create<memref::DimOp>(loc, dstBuffer, dimSize);
+        sizes.push_back(dimOp.getResult());
+        if (dimIdx == concatDim)
+          dynamicConcatDim = true;
+      } else {
+        sizes.push_back(rewriter.getIndexAttr(dimSize));
+      }
     }
 
     int64_t concatDimOffset = 0;
+    std::optional<Value> dynamicOffset;
+    std::optional<Value> dynamicSize;
+    if (dynamicConcatDim) {
+      // One or more operands have dynamic size, so we must accumulate the
+      // offset with arith ops.
+      dynamicOffset = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+    }
+
     for (auto operand : concatOp.getInputs()) {
       // Get the buffer for the operand.
       FailureOr<Value> srcBuffer = getBuffer(rewriter, operand, options);
@@ -1120,9 +1138,17 @@ struct ConcatOpInterface
       // so the offset on that axis must accumulate through the loop, and the
       // size must change to the size of the current operand.
       auto operandTensorType = cast<RankedTensorType>(operand.getType());
-      int operandConcatDimSize = operandTensorType.getDimSize(concatDim);
-      sizes[concatDim] = rewriter.getIndexAttr(operandConcatDimSize);
-      offsets[concatDim] = rewriter.getIndexAttr(concatDimOffset);
+      int64_t operandConcatDimSize = operandTensorType.getDimSize(concatDim);
+
+      if (dynamicConcatDim) {
+        offsets[concatDim] = dynamicOffset.value();
+        dynamicSize = rewriter.create<memref::DimOp>(loc, *srcBuffer, concatDim)
+                          .getResult();
+        sizes[concatDim] = dynamicSize.value();
+      } else {
+        sizes[concatDim] = rewriter.getIndexAttr(operandConcatDimSize);
+        offsets[concatDim] = rewriter.getIndexAttr(concatDimOffset);
+      }
 
       // Create a subview of the destination buffer.
       auto dstMemrefType = cast<MemRefType>(memrefType);
@@ -1137,7 +1163,12 @@ struct ConcatOpInterface
       if (failed(options.createMemCpy(rewriter, loc, *srcBuffer, subview)))
         return failure();
 
-      concatDimOffset += operandConcatDimSize;
+      if (dynamicConcatDim) {
+        dynamicOffset = rewriter.create<arith::AddIOp>(
+            loc, dynamicOffset.value(), dynamicSize.value());
+      } else {
+        concatDimOffset += operandConcatDimSize;
+      }
     }
 
     replaceOpWithBufferizedValues(rewriter, op, dstBuffer);
