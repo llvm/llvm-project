@@ -10143,8 +10143,8 @@ public:
         SmallVector<std::pair<Value *, Value *>, 4> Candidates1, Candidates2;
         Candidates1.emplace_back(Operands[0][0], Operands[0][1]);
         Candidates2.emplace_back(Operands[1][0], Operands[1][1]);
-        bool Res = R.findBestRootPair(Candidates1) &&
-                   R.findBestRootPair(Candidates2);
+        bool Res =
+            R.findBestRootPair(Candidates1) && R.findBestRootPair(Candidates2);
         if (!Res && isCommutative(MainOp)) {
           Candidates1.clear();
           Candidates2.clear();
@@ -16576,9 +16576,10 @@ Value *BoUpSLP::gather(
           UserOp = InsElt;
         }
         if (UserOp) {
-          if (const auto *It = find_if_not(
-                  Entries,
-                  [&](const TreeEntry *TE) { return TE->isCopyableElement(V); });
+          if (const auto *It = find_if_not(Entries,
+                                           [&](const TreeEntry *TE) {
+                                             return TE->isCopyableElement(V);
+                                           });
               It != Entries.end()) {
             unsigned FoundLane = Entries.front()->findLaneForValue(V);
             ExternalUses.emplace_back(V, UserOp, *Entries.front(), FoundLane);
