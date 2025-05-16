@@ -15,6 +15,7 @@ entry:
 ; CHECK-NEXT: # %bb.0:
 ; CHECK-NEXT:    call bar
 ; CHECK-NEXT:    call bpf_unreachable
+; CHECK-NEXT:    exit
 ; CHECK-NEXT: .Lfunc_end0:
 
 define void @buz() #0 {
