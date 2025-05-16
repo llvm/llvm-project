@@ -70,23 +70,6 @@ namespace {
 struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
   using OpConversionPattern<xegpu::CreateNdDescOp>::OpConversionPattern;
 
-  // Helper to extract mixed offsets into a Value array
-  SmallVector<Value> extractOffsets(ConversionPatternRewriter &rewriter,
-                                    xegpu::CreateNdDescOp op) const {
-    llvm::SmallVector<Value> offsets;
-    auto staticOffsets = op.getStaticOffsets();
-    auto dynamicOffsets = op.getOffsets();
-
-    for (size_t i = 0, j = 0; i != staticOffsets.size(); i++) {
-      if (ShapedType::isDynamic(staticOffsets[i]))
-        offsets.push_back(dynamicOffsets[j++]);
-      else
-        offsets.push_back(rewriter.create<arith::ConstantIndexOp>(
-            op.getLoc(), staticOffsets[i]));
-    }
-    return offsets;
-  }
-
   // Convert linear subgroup ID to 2D coordinates
   // TODO: Delinearize for nD
   SmallVector<Value> delinearizeSubgroupId(ConversionPatternRewriter &rewriter,
@@ -99,7 +82,7 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
   // Calculate offset for each subgroup
   SmallVector<OpFoldResult>
   calculateGlobalOffsets(ConversionPatternRewriter &rewriter, Location loc,
-                         const SmallVector<Value> &originalOffsets,
+                         const SmallVector<OpFoldResult> &originalOffsets,
                          const SmallVector<Value> &localOffset,
                          const SmallVector<int64_t> &distUnitBaseAddr) const {
 
@@ -116,10 +99,24 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
     size_t lastDimIndex = originalOffsets.size() - 1;
     size_t secondLastDimIndex = lastDimIndex - 1;
 
-    Value globalOffsetX = rewriter.createOrFold<index::AddOp>(
-        loc, originalOffsets[secondLastDimIndex], offsetX);
-    Value globalOffsetY = rewriter.createOrFold<index::AddOp>(
-        loc, originalOffsets[lastDimIndex], offsetY);
+    // Convert originalOffsets to Value
+    auto getValueFromOpFoldResult = [&](OpFoldResult ofr) -> Value {
+      if (auto val = ofr.dyn_cast<Value>())
+        return val;
+      if (auto attr = ofr.dyn_cast<Attribute>()) {
+        int64_t staticOffset = cast<IntegerAttr>(attr).getInt();
+        return rewriter.create<arith::ConstantIndexOp>(loc, staticOffset);
+      }
+      llvm_unreachable("Unsupported OpFoldResult kind");
+    };
+
+    Value origOffsetX =
+        getValueFromOpFoldResult(originalOffsets[secondLastDimIndex]);
+    Value origOffsetY = getValueFromOpFoldResult(originalOffsets[lastDimIndex]);
+    Value globalOffsetX =
+        rewriter.createOrFold<index::AddOp>(loc, origOffsetX, offsetX);
+    Value globalOffsetY =
+        rewriter.createOrFold<index::AddOp>(loc, origOffsetY, offsetY);
 
     SmallVector<OpFoldResult> globalOffsets(originalOffsets.begin(),
                                             originalOffsets.end());
@@ -172,7 +169,7 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
           rewriter.createOrFold<index::MulOp>(loc, sgIds[i], sgDataDim[i]);
     }
 
-    SmallVector<Value> originalOffsets = extractOffsets(rewriter, op);
+    SmallVector<OpFoldResult> originalOffsets = op.getMixedOffsets();
 
     xegpu::TensorDescType newTdescTy =
         xegpu::TensorDescType::get(ctx, sgShape, elemTy, tdescTy.getEncoding(),
