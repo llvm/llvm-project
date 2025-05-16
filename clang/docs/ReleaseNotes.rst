@@ -487,7 +487,7 @@ Improvements to Clang's diagnostics
 
 - An error is now emitted when a ``musttail`` call is made to a function marked with the ``not_tail_called`` attribute. (#GH133509).
 
-- ``-Whigher-precisision-for-complex-divison`` warns when:
+- ``-Whigher-precision-for-complex-divison`` warns when:
 
   -	The divisor is complex.
   -	When the complex division happens in a higher precision type due to arithmetic promotion.
@@ -622,11 +622,12 @@ Bug Fixes in This Version
 - Fixed an assertion failure in constant compound literal statements. (#GH139160)
 - Fix crash due to unknown references and pointer implementation and handling of
   base classes. (GH139452)
+- Fixed an assertion failure in serialization of constexpr structs containing unions. (#GH140130)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- The behvaiour of ``__add_pointer`` and ``__remove_pointer`` for Objective-C++'s ``id`` and interfaces has been fixed.
+- The behaviour of ``__add_pointer`` and ``__remove_pointer`` for Objective-C++'s ``id`` and interfaces has been fixed.
 
 - The signature for ``__builtin___clear_cache`` was changed from
   ``void(char *, char *)`` to ``void(void *, void *)`` to match GCC's signature
@@ -701,7 +702,7 @@ Bug Fixes to C++ Support
   not in the last position.
 - Disallow overloading on struct vs class on dependent types, which is IFNDR, as
   this makes the problem diagnosable.
-- Improved preservation of the presence or abscence of typename specifier when
+- Improved preservation of the presence or absence of typename specifier when
   printing types in diagnostics.
 - Clang now correctly parses ``if constexpr`` expressions in immediate function context. (#GH123524)
 - Fixed an assertion failure affecting code that uses C++23 "deducing this". (#GH130272)
