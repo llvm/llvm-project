@@ -70,6 +70,12 @@
 // RUN: %clang -### --target=x86_64-linux-gnu -fgpu-rdc -nogpulib \
 // RUN:   -nogpuinc --offload-arch=gfx1010 --no-offload-new-driver %s \
 // RUN:   -mno-wavefrontsize64 -mwavefrontsize64 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=WAVE64-WARN
+// WAVE64-WARN: warning: wavefront size 64 is not supported by HIP runtime on AMD GPU architecture gfx10 and above
+
+// RUN: %clang -### --target=x86_64-linux-gnu -fgpu-rdc -nogpulib \
+// RUN:   -nogpuinc --offload-arch=gfx1010 --no-offload-new-driver %s \
+// RUN:   -mno-wavefrontsize64 -mwavefrontsize64 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=WAVE64
 // WAVE64: {{.*}}clang{{.*}} "-target-feature" "+wavefrontsize64"
 // WAVE64-NOT: "-target-feature" "{{.*}}wavefrontsize16"

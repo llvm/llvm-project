@@ -148,6 +148,7 @@ def UnsupportedFPOpt : DiagGroup<"unsupported-floating-point-opt">;
 def UnsupportedCB : DiagGroup<"unsupported-cb">;
 def UnsupportedGPOpt : DiagGroup<"unsupported-gpopt">;
 def UnsupportedTargetOpt : DiagGroup<"unsupported-target-opt">;
+def UnsupportedWave64 : DiagGroup<"unsupported-wave64">;
 def NonLiteralNullConversion : DiagGroup<"non-literal-null-conversion">;
 def NullConversion : DiagGroup<"null-conversion">;
 def ImplicitConversionFloatingPointToBool :
