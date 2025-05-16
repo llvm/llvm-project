@@ -529,4 +529,4 @@ void foo11() {
 // OGCG: %[[TMP_A:.*]] = load <4 x i32>, ptr %[[VEC_A]], align 16
 // OGCG: %[[TMP_B:.*]] = load <4 x i32>, ptr %[[VEC_B]], align 16
 // OGCG: %[[XOR:.*]] = xor <4 x i32> %[[TMP_A]], %[[TMP_B]]
-// OGCG: store <4 x i32> %[[XOR]], ptr {{.*}}, align 16/ OGCG: store <4 x i32> %[[XOR]], ptr {{.*}}, align 16
+// OGCG: store <4 x i32> %[[XOR]], ptr {{.*}}, align 16
