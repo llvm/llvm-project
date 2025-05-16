@@ -389,7 +389,8 @@ class VPSlotTracker {
   /// Number to assign to the next VPValue without underlying value.
   unsigned NextSlot = 0;
 
-  /// Cache slot indexes to avoid recomputing them on each printAsOperand call.
+  /// Lazily created ModuleSlotTracker, used only when unnamed IR instructions
+  /// require slot tracking.
   std::unique_ptr<ModuleSlotTracker> MST;
 
   void assignName(const VPValue *V);
@@ -398,16 +399,8 @@ class VPSlotTracker {
 
 public:
   VPSlotTracker(const VPlan *Plan = nullptr) {
-    if (Plan) {
-      // This check is required to support unit tests with incomplete IR.
-      if (Function *F =
-              Plan->getScalarHeader()->getIRBasicBlock()->getParent()) {
-        Module *M = F->getParent();
-        MST = std::make_unique<ModuleSlotTracker>(M);
-        MST->incorporateFunction(*F);
-      }
+    if (Plan)
       assignNames(*Plan);
-    }
   }
 
   /// Returns the name assigned to \p V, if there is one, otherwise try to
