@@ -226,7 +226,8 @@ struct DAP {
   /// \param[in] default_repl_mode
   ///     Default repl mode behavior, as configured by the binary.
   /// \param[in] pre_init_commands
-  ///     LLDB commands to execute as soon as the debugger instance is allocaed.
+  ///     LLDB commands to execute as soon as the debugger instance is
+  ///     allocated.
   /// \param[in] transport
   ///     Transport for this debug session.
   DAP(Log *log, const ReplMode default_repl_mode,

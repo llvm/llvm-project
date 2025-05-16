@@ -549,6 +549,19 @@ Improvements to Clang's diagnostics
 - A new off-by-default warning ``-Wms-bitfield-padding`` has been added to alert to cases where bit-field
   packing may differ under the MS struct ABI (#GH117428).
 
+- ``-Watomic-access`` no longer fires on unreachable code. e.g.,
+
+  .. code-block:: c
+
+    _Atomic struct S { int a; } s;
+    void func(void) {
+      if (0)
+        s.a = 12; // Previously diagnosed with -Watomic-access, now silenced
+      s.a = 12; // Still diagnosed with -Watomic-access
+      return;
+      s.a = 12; // Previously diagnosed, now silenced
+    }
+
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -613,6 +626,7 @@ Bug Fixes in This Version
 - Fixed a crash with an invalid member function parameter list with a default
   argument which contains a pragma. (#GH113722)
 - Fixed assertion failures when generating name lookup table in modules. (#GH61065, #GH134739)
+- Fixed an assertion failure in constant compound literal statements. (#GH139160)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -726,6 +740,7 @@ Bug Fixes to C++ Support
 - Clang now correctly parses arbitrary order of ``[[]]``, ``__attribute__`` and ``alignas`` attributes for declarations (#GH133107)
 - Fixed a crash when forming an invalid function type in a dependent context. (#GH138657) (#GH115725) (#GH68852)
 - Clang no longer segfaults when there is a configuration mismatch between modules and their users (http://crbug.com/400353616).
+- Fix an incorrect deduction when calling an explicit object member function template through an overload set address.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -878,6 +893,11 @@ clang-format
 - Add ``OneLineFormatOffRegex`` option for turning formatting off for one line.
 - Add ``SpaceAfterOperatorKeyword`` option.
 
+clang-refactor
+--------------
+- Reject `0` as column or line number in 1-based command-line source locations.
+  Fixes crash caused by `0` input in `-selection=<file>:<line>:<column>[-<line>:<column>]`. (#GH139457)
+
 libclang
 --------
 - Fixed a bug in ``clang_File_isEqual`` that sometimes led to different
@@ -896,6 +916,8 @@ libclang
 
 Code Completion
 ---------------
+- Reject `0` as column or line number in 1-based command-line source locations.
+  Fixes crash caused by `0` input in `-code-completion-at=<file>:<line>:<column>`. (#GH139457)
 
 Static Analyzer
 ---------------
