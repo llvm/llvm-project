@@ -16,7 +16,7 @@
 // CPP20WARNING-NOT: clang-cl: warning: argument unused during compilation: '/std:c++20' [-Wunused-command-line-argument]
 
 // test whether the following outputs %Hello.bmi
-// RUN: %clang_cl /std:c++20 --precompile -x c++-module -Fo:"%t/Hello.bmi" -c %t/Hello.cppm -### 2>&1 | FileCheck %s
+// RUN: %clang_cl /std:c++20 --precompile -x c++-module -Fo:"%t/Hello.bmi" -c -- %t/Hello.cppm -### 2>&1 | FileCheck %s
 // CHECK: "-emit-module-interface"
 // CHECK: "-o" "{{.*}}Hello.bmi"
 
