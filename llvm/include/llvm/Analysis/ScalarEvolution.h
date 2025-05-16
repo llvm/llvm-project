@@ -455,6 +455,9 @@ public:
     LoopComputable ///< The SCEV varies predictably with the loop.
   };
 
+  bool AssumeLoopFinite = false;
+  void setAssumeLoopExits();
+
   /// An enum describing the relationship between a SCEV and a basic block.
   enum BlockDisposition {
     DoesNotDominateBlock,  ///< The SCEV does not dominate the block.
