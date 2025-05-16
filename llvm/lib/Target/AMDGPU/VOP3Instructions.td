@@ -1082,6 +1082,7 @@ class VOP3_CVT_SCALE_PK_FP8BF8_F16BF16_TiedInput_Profile<VOPProfile P> : VOP3_Pr
   let HasExtVOP3DPP = 0;
   let HasOpSel = 1;
   let HasOMod = 0;
+  let HasFP8DstByteSel = 1;
 }
 
 class VOP3_CVT_SCALEF32_PK_F864_Profile<VOPProfile P> : VOP3_Profile<P> {
