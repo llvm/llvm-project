@@ -2847,7 +2847,7 @@ StackOffset AArch64FrameLowering::resolveFrameOffsetReference(
 
   if (isSVE) {
     assert(-ObjectOffset > (int64_t)AFI->getSVECalleeSavedStackSize() &&
-          "Math isn't correct for CSRs with FPAfterSVECalleeSaves");
+           "Math isn't correct for CSRs with FPAfterSVECalleeSaves");
     StackOffset FPOffset =
         StackOffset::get(-AFI->getCalleeSaveBaseToFrameRecordOffset(), ObjectOffset);
     StackOffset SPOffset =
