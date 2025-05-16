@@ -16142,16 +16142,10 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
                 [](Value *V) {
                   return !isa<GetElementPtrInst>(V) && isa<Instruction>(V);
                 })) ||
-        all_of(E->Scalars,
-               [](Value *V) {
-                 return isa<PoisonValue>(V) ||
-                        (!isVectorLikeInstWithConstOps(V) &&
-                         isUsedOutsideBlock(V));
-               }) ||
-        (E->isGather() && E->Idx == 0 && all_of(E->Scalars, [](Value *V) {
-           return isa<ExtractElementInst, UndefValue>(V) ||
-                  areAllOperandsNonInsts(V);
-         })))
+        all_of(E->Scalars, [](Value *V) {
+          return isa<PoisonValue>(V) ||
+                 (!isVectorLikeInstWithConstOps(V) && isUsedOutsideBlock(V));
+        }))
       Res = FindLastInst();
     else
       Res = FindFirstInst();
@@ -16210,7 +16204,7 @@ void BoUpSLP::setInsertPointAfterBundle(const TreeEntry *E) {
   }
   if (IsPHI ||
       (!E->isGather() && E->State != TreeEntry::SplitVectorize &&
-       doesNotNeedToSchedule(E->Scalars)) ||
+       all_of(E->Scalars, areAllOperandsNonInsts)) ||
       (GatheredLoadsEntriesFirst.has_value() &&
        E->Idx >= *GatheredLoadsEntriesFirst && !E->isGather() &&
        E->getOpcode() == Instruction::Load)) {
@@ -17799,17 +17793,27 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
           Value *VecOp = NewPhi->getIncomingValueForBlock(IBB);
           NewPhi->addIncoming(VecOp, IBB);
           TreeEntry *OpTE = getOperandEntry(E, I);
+          assert(!OpTE->VectorizedValue && "Expected no vectorized value.");
           OpTE->VectorizedValue = VecOp;
           continue;
         }
 
         Builder.SetInsertPoint(IBB->getTerminator());
         Builder.SetCurrentDebugLocation(PH->getDebugLoc());
-        Value *Vec = vectorizeOperand(E, I);
+        const TreeEntry *OpE = getOperandEntry(E, I);
+        Value *Vec;
+        if (OpE->isGather()) {
+          assert(OpE->VectorizedValue && "Expected vectorized value.");
+          Vec = OpE->VectorizedValue;
+          if (auto *IVec = dyn_cast<Instruction>(Vec))
+            Builder.SetInsertPoint(IVec->getNextNonDebugInstruction());
+        } else {
+          Vec = vectorizeOperand(E, I);
+        }
         if (VecTy != Vec->getType()) {
-          assert((It != MinBWs.end() || getOperandEntry(E, I)->isGather() ||
-                  MinBWs.contains(getOperandEntry(E, I))) &&
-                 "Expected item in MinBWs.");
+          assert(
+              (It != MinBWs.end() || OpE->isGather() || MinBWs.contains(OpE)) &&
+              "Expected item in MinBWs.");
           Vec = Builder.CreateIntCast(Vec, VecTy, GetOperandSignedness(I));
         }
         NewPhi->addIncoming(Vec, IBB);
@@ -18696,6 +18700,28 @@ Value *BoUpSLP::vectorizeTree(
   else
     Builder.SetInsertPoint(&F->getEntryBlock(), F->getEntryBlock().begin());
 
+  // Vectorize gather operands of the PHI nodes.
+  for (const std::unique_ptr<TreeEntry> &TE : reverse(VectorizableTree)) {
+    if (TE->isGather() && TE->UserTreeIndex.UserTE &&
+        TE->UserTreeIndex.UserTE->hasState() &&
+        !TE->UserTreeIndex.UserTE->isAltShuffle() &&
+        TE->UserTreeIndex.UserTE->State == TreeEntry::Vectorize &&
+        TE->UserTreeIndex.UserTE->getOpcode() == Instruction::PHI &&
+        !TE->VectorizedValue) {
+      auto *PH = cast<PHINode>(TE->UserTreeIndex.UserTE->getMainOp());
+      BasicBlock *IBB = PH->getIncomingBlock(TE->UserTreeIndex.EdgeIdx);
+      // If there is the same incoming block earlier - skip, it will be handled
+      // in PHI node.
+      if (TE->UserTreeIndex.EdgeIdx > 0 &&
+          any_of(seq<unsigned>(TE->UserTreeIndex.EdgeIdx), [&](unsigned Idx) {
+            return PH->getIncomingBlock(Idx) == IBB;
+          }))
+        continue;
+      Builder.SetInsertPoint(IBB->getTerminator());
+      Builder.SetCurrentDebugLocation(PH->getDebugLoc());
+      (void)vectorizeTree(TE.get());
+    }
+  }
   // Emit gathered loads first to emit better code for the users of those
   // gathered loads.
   for (const std::unique_ptr<TreeEntry> &TE : VectorizableTree) {
