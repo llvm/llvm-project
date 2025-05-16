@@ -85,6 +85,9 @@ public:
   void printSectionHotness(raw_ostream &OS) const;
 
   size_t size() const { return Map.size(); }
+
+  /// Increase bucket size to \p TargetSize, recomputing the heatmap.
+  bool resizeBucket(uint64_t TargetSize);
 };
 
 } // namespace bolt

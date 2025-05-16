@@ -68,6 +68,12 @@ FilterPID("pid",
   cl::Optional,
   cl::cat(AggregatorCategory));
 
+static cl::list<uint64_t>
+    HeatmapZoomOut("heatmap-zoom-out", cl::CommaSeparated,
+                   cl::desc("print secondary heatmaps with given bucket sizes"),
+                   cl::value_desc("bucket_size"), cl::Optional,
+                   cl::cat(HeatmapCategory));
+
 static cl::opt<bool>
 IgnoreBuildID("ignore-build-id",
   cl::desc("continue even if build-ids in input binary and perf.data mismatch"),
@@ -1364,6 +1370,15 @@ std::error_code DataAggregator::printLBRHeatMap() {
   } else {
     HM.printCDF(opts::HeatmapOutput + ".csv");
     HM.printSectionHotness(opts::HeatmapOutput + "-section-hotness.csv");
+  }
+  // Provide coarse-grained heatmap if requested via --heatmap-zoom-out
+  for (const uint64_t NewBucketSize : opts::HeatmapZoomOut) {
+    if (!HM.resizeBucket(NewBucketSize))
+      break;
+    if (opts::HeatmapOutput == "-")
+      HM.print(opts::HeatmapOutput);
+    else
+      HM.print(formatv("{0}-{1}", opts::HeatmapOutput, NewBucketSize).str());
   }
 
   return std::error_code();
