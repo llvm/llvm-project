@@ -3152,3 +3152,16 @@ void tools::handleVectorizeSLPArgs(const ArgList &Args,
                    options::OPT_fno_slp_vectorize, EnableSLPVec))
     CmdArgs.push_back("-vectorize-slp");
 }
+
+void tools::handleInterchangeLoopsArgs(const ArgList &Args,
+                                       ArgStringList &CmdArgs) {
+  // FIXME: instead of relying on shouldEnableVectorizerAtOLevel, we may want to
+  // implement a separate function to infer loop interchange from opt level.
+  // For now, enable loop-interchange at the same opt levels as loop-vectorize.
+  bool EnableInterch = shouldEnableVectorizerAtOLevel(Args, false);
+  OptSpecifier interchangeAliasOption =
+      EnableInterch ? options::OPT_O_Group : options::OPT_floop_interchange;
+  if (Args.hasFlag(options::OPT_floop_interchange, interchangeAliasOption,
+                   options::OPT_fno_loop_interchange, EnableInterch))
+    CmdArgs.push_back("-floop-interchange");
+}
