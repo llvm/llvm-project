@@ -1225,6 +1225,7 @@ void CodeGenFunction::EmitBoundsCheckImpl(const Expr *E, llvm::Value *Bound,
     return;
 
   SanitizerScope SanScope(this);
+
   auto CheckKind = SanitizerKind::SO_ArrayBounds;
   ApplyDebugLocation ApplyTrapDI(*this, SanitizerAnnotateDebugInfo(CheckKind));
 
