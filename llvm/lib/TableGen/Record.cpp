@@ -1309,7 +1309,7 @@ const Init *BinOpInit::Fold(const Record *CurRec) const {
       SmallVector<std::pair<const Init *, const StringInit *>, 8> Args;
       llvm::append_range(Args, LHSs->getArgAndNames());
       llvm::append_range(Args, RHSs->getArgAndNames());
-      return DagInit::get(Op, nullptr, Args);
+      return DagInit::get(Op, Args);
     }
     break;
   }
@@ -1504,7 +1504,7 @@ const Init *BinOpInit::Fold(const Record *CurRec) const {
     const auto *Dag = dyn_cast<DagInit>(LHS);
     const auto *Op = dyn_cast<DefInit>(RHS);
     if (Dag && Op)
-      return DagInit::get(Op, nullptr, Dag->getArgs(), Dag->getArgNames());
+      return DagInit::get(Op, Dag->getArgs(), Dag->getArgNames());
     break;
   }
   case ADD:
@@ -1687,7 +1687,7 @@ static const Init *ForeachDagApply(const Init *LHS, const DagInit *MHSd,
   }
 
   if (Change)
-    return DagInit::get(Val, nullptr, NewArgs);
+    return DagInit::get(Val, NewArgs);
   return MHSd;
 }
 
@@ -1825,7 +1825,7 @@ const Init *TernOpInit::Fold(const Record *CurRec) const {
           return this;
         Children.emplace_back(Node, dyn_cast<StringInit>(Name));
       }
-      return DagInit::get(LHS, nullptr, Children);
+      return DagInit::get(LHS, Children);
     }
     break;
   }
