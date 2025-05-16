@@ -1205,7 +1205,7 @@ public:
     auto [__r, __inserted] = __tree_.__emplace_hint_unique_key_args(__h.__i_, __k, __k, std::forward<_Vp>(__v));
 
     if (!__inserted)
-      __r->__get_value().second = std::forward<_Vp>(__v);
+      __r->second = std::forward<_Vp>(__v);
 
     return __r;
   }
