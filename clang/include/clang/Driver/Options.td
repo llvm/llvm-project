@@ -3637,7 +3637,7 @@ defm disable_block_signature_string : BoolFOption<"disable-block-signature-strin
   BothFlags<[], [CC1Option], " block signature string)">>;
 
 def ffast_amd_memory_allocator : Flag<["-"], "ffast-amd-memory-allocator">, Group<f_Group>,
-  Visibility<[FlangOption,FC1Option]>,
+  Flags<[HelpHidden]>, Visibility<[FlangOption,FC1Option]>,
   HelpText<"Enable optimized memory allocator for AMD Instinct(tm) APUs (experimental)">;
 def fomit_frame_pointer : Flag<["-"], "fomit-frame-pointer">, Group<f_Group>,
   Visibility<[ClangOption, FlangOption]>,
