@@ -806,7 +806,7 @@ struct InferConcatOperandTypes : public OpRewritePattern<ConcatOp> {
 
     int64_t dim = concatOp.getDim();
     ArrayRef<int64_t> inferredResultShape =
-        concatOp.inferResultType(dim, concatOp->getOperandTypes()).getShape();
+        ConcatOp::inferResultType(dim, concatOp->getOperandTypes()).getShape();
 
     // Find operands for which a more static shape can be inferred.
     SmallVector<std::tuple<size_t, RankedTensorType>> refinedTypes;
@@ -861,7 +861,7 @@ struct InferConcatResultType : public OpRewritePattern<ConcatOp> {
                                 PatternRewriter &rewriter) const override {
     int64_t dim = concatOp.getDim();
     RankedTensorType inferredResultType =
-        concatOp.inferResultType(dim, concatOp->getOperandTypes());
+        ConcatOp::inferResultType(dim, concatOp->getOperandTypes());
 
     // The result type should be at least as static as inferred result type.
     if (preservesStaticInformation(inferredResultType,
@@ -874,7 +874,7 @@ struct InferConcatResultType : public OpRewritePattern<ConcatOp> {
     rewriter.replaceOpWithNewOp<CastOp>(concatOp, concatOp.getResultType(),
                                         newConcatOp);
 
-    return llvm::success();
+    return success();
   }
 };
 } // namespace
