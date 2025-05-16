@@ -2,5 +2,11 @@
 //CCIfType<[i32]当返回值为i32时，执行后序
 //CCAssignToReg将返回值分配到 ​X10​（RISC-V 的 a0 寄存器）和 ​X11​（a1 寄存器）
 def RetCC_PE : CallingConv<[
-    CCIfType<[i32],CCAssignToReg<[X10,X11]>>,
+    CCIfType<[i32],CCAssignToReg<[A0,A1]>>,
 ]>;
+
+//寄存器保护，不能随意修改，修改前应该save
+def CC_CSR : CalleeSavedRegs<(add
+    RA,
+    S0,S1
+)>;

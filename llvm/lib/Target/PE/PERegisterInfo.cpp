@@ -14,7 +14,7 @@ using namespace llvm;
 #define GET_REGINFO_TARGET_DESC
 #include "PEGenRegisterInfo.inc"
 
-PERegisterInfo::PERegisterInfo() : PEGenRegisterInfo(PE::X1){
+PERegisterInfo::PERegisterInfo() : PEGenRegisterInfo(PE::RA){
 }
 
 PERegisterInfo::~PERegisterInfo() {
@@ -22,7 +22,7 @@ PERegisterInfo::~PERegisterInfo() {
 }
 
 const MCPhysReg *PERegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const{
-    static const MCPhysReg CalleeSavedRegs[] = {PE::X2,0};
+    static const MCPhysReg CalleeSavedRegs[] = {PE::SP,0};
     return CalleeSavedRegs;
 
 }
@@ -30,7 +30,9 @@ const MCPhysReg *PERegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) c
 //BitVector代表一个位向量0&1
 BitVector PERegisterInfo::getReservedRegs(const MachineFunction &MF) const {
     BitVector Reserved(getNumRegs());
-    Reserved.set(PE::X0);//不允许X0参与寄存器分配
+    Reserved.set(PE::ZERO);
+    Reserved.set(PE::RA);
+    Reserved.set(PE::SP);
     return Reserved;
 
 }
@@ -43,6 +45,6 @@ bool PERegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI, int SPA
 }
     
 Register PERegisterInfo::getFrameRegister(const MachineFunction &MF) const {
-    return PE::X2;
+    return PE::SP;
 
 }

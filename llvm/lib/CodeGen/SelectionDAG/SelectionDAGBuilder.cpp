@@ -2286,7 +2286,7 @@ void SelectionDAGBuilder::visitRet(const ReturnInst &I) {
 /// created for it, emit nodes to copy the value into the virtual
 /// registers.
 void SelectionDAGBuilder::CopyToExportRegsIfNeeded(const Value *V) {
-  // Skip empty types
+  // Skip empty types                       
   if (V->getType()->isEmptyTy())
     return;
 

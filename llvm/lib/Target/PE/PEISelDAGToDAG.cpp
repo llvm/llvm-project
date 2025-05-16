@@ -26,7 +26,7 @@ public:
 
     bool runOnMachineFunction(MachineFunction &MF) override;
 
-    bool SelectAddrFI(SDNode *Parent,SDValue AddrFI, SDValue &Base, SDValue &Offset);
+    bool SelectAddrFI(SDValue AddrFI, SDValue &Base, SDValue &Offset);
 
 private:
 #include "PEGenDAGISel.inc"
@@ -47,7 +47,7 @@ bool PEDAGToDAGISel::runOnMachineFunction(MachineFunction &MF) {
     return SelectionDAGISel::runOnMachineFunction(MF);
 }
 
-bool PEDAGToDAGISel::SelectAddrFI(SDNode *Parent, SDValue AddrFI, SDValue &Base,
+bool PEDAGToDAGISel::SelectAddrFI(SDValue AddrFI, SDValue &Base,
                                   SDValue &Offset) {
     if(FrameIndexSDNode *FIN = dyn_cast<FrameIndexSDNode>(AddrFI)){
         Base = CurDAG->getTargetFrameIndex(FIN->getIndex(),

@@ -17,7 +17,7 @@ using namespace llvm;
 #include "PEGenAsmWriter.inc"
 
 void PEInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) {
-  OS << StringRef(getRegisterName(Reg,PE::ABIRegAltName)).lower();
+  OS << getRegisterName(Reg);
 }
 
 void PEInstPrinter::printInst(const MCInst *MI, uint64_t Address,
@@ -53,7 +53,7 @@ void PEInstPrinter::printOperand(const MCInst *MI, unsigned OpNum,
     return;
   }
 }
-const char *PEInstPrinter::getRegisterName(MCRegister Reg){
-    return getRegisterName(Reg,PE::NoRegAltName);
+// const char *PEInstPrinter::getRegisterName(MCRegister Reg){
+//     return getRegisterName(Reg);
 
-}
+// }

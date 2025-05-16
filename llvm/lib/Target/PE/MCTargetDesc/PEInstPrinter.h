@@ -17,11 +17,15 @@ public:
   PEInstPrinter(const MCAsmInfo &MAI, const MCInstrInfo &MII,
                 const MCRegisterInfo &MRI)
       : MCInstPrinter(MAI, MII, MRI) {}
+  
+  void printCustomAliasOperand(
+        const MCInst *MI, uint64_t Address, unsigned OpIdx,
+        unsigned PrintMethodIdx,
+        raw_ostream &OS);
 
-    std::pair<const char *, uint64_t> getMnemonic(const MCInst &MI) const;
+  std::pair<const char *, uint64_t> getMnemonic(const MCInst &MI) const;
   void printInstruction(const MCInst *MI, uint64_t Address, raw_ostream &O);
   static const char *getRegisterName(MCRegister Reg);
-  static const char *getRegisterName(MCRegister Reg, unsigned AltIdx);
 
   void printRegName(raw_ostream &OS, MCRegister Reg) override;
   void printInst(const MCInst *MI, uint64_t Address, StringRef Annot,

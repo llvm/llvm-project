@@ -33,7 +33,7 @@ static MCAsmInfo *createPEMCAsmInfo(const MCRegisterInfo &MRI,
     }
 static MCRegisterInfo *createPEMCRegisterInfo(const Triple &TT) {
     MCRegisterInfo* X = new MCRegisterInfo();
-    InitPEMCRegisterInfo(X,PE::X1);
+    InitPEMCRegisterInfo(X,PE::RA);
     return X;
 }
 
