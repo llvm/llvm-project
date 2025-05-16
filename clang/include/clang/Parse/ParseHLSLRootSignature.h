@@ -113,6 +113,8 @@ private:
     std::optional<llvm::hlsl::rootsig::Register> Reg;
     std::optional<float> MipLODBias;
     std::optional<llvm::hlsl::rootsig::TextureAddressMode> AddressU;
+    std::optional<llvm::hlsl::rootsig::TextureAddressMode> AddressV;
+    std::optional<llvm::hlsl::rootsig::TextureAddressMode> AddressW;
     std::optional<uint32_t> MaxAnisotropy;
     std::optional<float> MinLOD;
     std::optional<float> MaxLOD;

@@ -380,6 +380,12 @@ std::optional<StaticSampler> RootSignatureParser::parseStaticSampler() {
   if (Params->AddressU.has_value())
     Sampler.AddressU = Params->AddressU.value();
 
+  if (Params->AddressV.has_value())
+    Sampler.AddressV = Params->AddressV.value();
+
+  if (Params->AddressW.has_value())
+    Sampler.AddressW = Params->AddressW.value();
+
   if (Params->MipLODBias.has_value())
     Sampler.MipLODBias = Params->MipLODBias.value();
 
@@ -693,6 +699,40 @@ RootSignatureParser::parseStaticSamplerParams() {
       if (!AddressU.has_value())
         return std::nullopt;
       Params.AddressU = AddressU;
+    }
+
+    // `addressV` `=` TEXTURE_ADDRESS
+    if (tryConsumeExpectedToken(TokenKind::kw_addressV)) {
+      if (Params.AddressV.has_value()) {
+        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+            << CurToken.TokKind;
+        return std::nullopt;
+      }
+
+      if (consumeExpectedToken(TokenKind::pu_equal))
+        return std::nullopt;
+
+      auto AddressV = parseTextureAddressMode();
+      if (!AddressV.has_value())
+        return std::nullopt;
+      Params.AddressV = AddressV;
+    }
+
+    // `addressW` `=` TEXTURE_ADDRESS
+    if (tryConsumeExpectedToken(TokenKind::kw_addressW)) {
+      if (Params.AddressW.has_value()) {
+        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+            << CurToken.TokKind;
+        return std::nullopt;
+      }
+
+      if (consumeExpectedToken(TokenKind::pu_equal))
+        return std::nullopt;
+
+      auto AddressW = parseTextureAddressMode();
+      if (!AddressW.has_value())
+        return std::nullopt;
+      Params.AddressW = AddressW;
     }
 
     // `mipLODBias` `=` NUMBER
