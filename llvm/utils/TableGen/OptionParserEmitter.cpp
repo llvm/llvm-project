@@ -501,7 +501,7 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
     for (const Record *VisibilityHelp :
          R.getValueAsListOfDefs("HelpTextsForVariants")) {
       ArrayRef<const Init *> Visibilities =
-          VisibilityHelp->getValueAsListInit("Visibilities")->getValues();
+          VisibilityHelp->getValueAsListInit("Visibilities")->getElements();
 
       std::vector<std::string> VisibilityNames;
       for (const Init *Visibility : Visibilities)
@@ -523,11 +523,10 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
     OS << ", ";
     if (!isa<UnsetInit>(R.getValueInit("Values")))
       writeCstring(OS, R.getValueAsString("Values"));
-    else if (!isa<UnsetInit>(R.getValueInit("ValuesCode"))) {
+    else if (!isa<UnsetInit>(R.getValueInit("ValuesCode")))
       OS << getOptionName(R) << "_Values";
-    } else {
+    else
       OS << "nullptr";
-    }
   };
 
   auto IsMarshallingOption = [](const Record &R) {
