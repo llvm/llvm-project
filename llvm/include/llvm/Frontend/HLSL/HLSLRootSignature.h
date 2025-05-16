@@ -236,6 +236,8 @@ struct StaticSampler {
   StaticBorderColor BorderColor = StaticBorderColor::OpaqueWhite;
   float MinLOD = 0.f;
   float MaxLOD = 3.402823466e+38f; // FLT_MAX
+  uint32_t Space = 0;
+  ShaderVisibility Visibility = ShaderVisibility::All;
 };
 
 /// Models RootElement : RootFlags | RootConstants | RootParam
