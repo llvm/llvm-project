@@ -535,10 +535,7 @@ void WarningsSpecialCaseList::processSections(DiagnosticsEngine &Diags) {
   // FIXME: We should make this configurable in the parser instead.
   // FIXME: C++20 can use std::erase_if(Sections, [](Section &sec) { return
   // sec.SectionStr == "*"; });
-  Sections.erase(
-      std::remove_if(Sections.begin(), Sections.end(),
-                     [](Section &sec) { return sec.SectionStr == "*"; }),
-      Sections.end());
+  llvm::erase_if(Sections, [](Section &sec) { return sec.SectionStr == "*"; });
   // Make sure we iterate sections by their line numbers.
   std::vector<std::pair<unsigned, const Section *>> LineAndSectionEntry;
   LineAndSectionEntry.reserve(Sections.size());
