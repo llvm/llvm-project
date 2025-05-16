@@ -521,6 +521,9 @@ Improvements to Clang's diagnostics
 - Fixed a duplicate diagnostic when performing typo correction on function template
   calls with explicit template arguments. (#GH139226)
 
+- An error is now emitted when OpenMP ``collapse`` and ``ordered`` clauses have an
+  argument larger than what can fit within a 64-bit integer.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -922,6 +925,7 @@ OpenMP Support
   an invalid expression. (#GH139073)
 - Fixed a crashing bug with ``omp simd collapse`` if the argument to
   ``collapse`` was an invalid expression. (#GH138493)
+- Fixed a crashing bug with a malformed ``cancel`` directive. (#GH139360)
 - Fixed a crashing bug with ``omp distribute dist_schedule`` if the argument to
   ``dist_schedule`` was not strictly positive. (#GH139266)
 

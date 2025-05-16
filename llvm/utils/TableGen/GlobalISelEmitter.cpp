@@ -756,9 +756,10 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
     if (isa<IntInit>(SrcInit)) {
       InsnMatcher.addPredicate<InstructionOpcodeMatcher>(
           &Target.getInstruction(RK.getDef("G_CONSTANT")));
-    } else
+    } else {
       return failedImport(
           "Unable to deduce gMIR opcode to handle Src (which is a leaf)");
+    }
   } else {
     SrcGIEquivOrNull = findNodeEquiv(Src.getOperator());
     if (!SrcGIEquivOrNull)
@@ -850,9 +851,10 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
       OperandMatcher &OM =
           InsnMatcher.addOperand(OpIdx++, Src.getName(), TempOpIdx);
       OM.addPredicate<LiteralIntOperandMatcher>(SrcIntInit->getValue());
-    } else
+    } else {
       return failedImport(
           "Unable to deduce gMIR opcode to handle Src (which is a leaf)");
+    }
   } else {
     assert(SrcGIOrNull &&
            "Expected to have already found an equivalent Instruction");

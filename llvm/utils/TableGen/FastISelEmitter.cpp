@@ -280,9 +280,9 @@ struct OperandsSignature {
         RC = &Target.getRegisterClass(OpLeafRec);
       else if (OpLeafRec->isSubClassOf("Register"))
         RC = Target.getRegBank().getRegClassForRegister(OpLeafRec);
-      else if (OpLeafRec->isSubClassOf("ValueType")) {
+      else if (OpLeafRec->isSubClassOf("ValueType"))
         RC = OrigDstRC;
-      } else
+      else
         return false;
 
       // For now, this needs to be a register class of some sort.
@@ -294,8 +294,9 @@ struct OperandsSignature {
       if (DstRC) {
         if (DstRC != RC && !DstRC->hasSubClass(RC))
           return false;
-      } else
+      } else {
         DstRC = RC;
+      }
       Operands.push_back(OpKind::getReg());
     }
     return true;

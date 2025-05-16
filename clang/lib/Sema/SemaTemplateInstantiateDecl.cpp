@@ -999,6 +999,11 @@ Decl *TemplateDeclInstantiator::VisitHLSLBufferDecl(HLSLBufferDecl *Decl) {
   llvm_unreachable("HLSL buffer declarations cannot be instantiated");
 }
 
+Decl *TemplateDeclInstantiator::VisitHLSLRootSignatureDecl(
+    HLSLRootSignatureDecl *Decl) {
+  llvm_unreachable("HLSL root signature declarations cannot be instantiated");
+}
+
 Decl *
 TemplateDeclInstantiator::VisitPragmaCommentDecl(PragmaCommentDecl *D) {
   llvm_unreachable("pragma comment cannot be instantiated");

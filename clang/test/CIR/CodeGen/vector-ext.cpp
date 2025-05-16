@@ -213,3 +213,126 @@ void foo4() {
 // OGCG: %[[TMP2:.*]] = load i32, ptr %[[IDX]], align 4
 // OGCG: %[[ELE:.*]] = extractelement <4 x i32> %[[TMP1]], i32 %[[TMP2]]
 // OGCG: store i32 %[[ELE]], ptr %[[INIT]], align 4
+
+void foo5() {
+  vi4 a = { 1, 2, 3, 4 };
+
+  a[2] = 5;
+}
+
+// CIR: %[[VEC:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["a", init]
+// CIR: %[[CONST_1:.*]] = cir.const #cir.int<1> : !s32i
+// CIR: %[[CONST_2:.*]] = cir.const #cir.int<2> : !s32i
+// CIR: %[[CONST_3:.*]] = cir.const #cir.int<3> : !s32i
+// CIR: %[[CONST_4:.*]] = cir.const #cir.int<4> : !s32i
+// CIR: %[[VEC_VAL:.*]] = cir.vec.create(%[[CONST_1]], %[[CONST_2]], %[[CONST_3]], %[[CONST_4]] :
+// CIR-SAME: !s32i, !s32i, !s32i, !s32i) : !cir.vector<4 x !s32i>
+// CIR: cir.store %[[VEC_VAL]], %[[VEC]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[CONST_VAL:.*]] = cir.const #cir.int<5> : !s32i
+// CIR: %[[CONST_IDX:.*]] = cir.const #cir.int<2> : !s32i
+// CIR: %[[TMP:.*]] = cir.load %[[VEC]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+// CIR: %[[NEW_VEC:.*]] = cir.vec.insert %[[CONST_VAL]], %[[TMP]][%[[CONST_IDX]] : !s32i] : !cir.vector<4 x !s32i>
+// CIR: cir.store %[[NEW_VEC]], %[[VEC]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
+
+// LLVM: %[[VEC:.*]] = alloca <4 x i32>, i64 1, align 16
+// LLVM: store <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr %[[VEC]], align 16
+// LLVM: %[[TMP:.*]] = load <4 x i32>, ptr %[[VEC]], align 16
+// LLVM: %[[NEW_VEC:.*]] = insertelement <4 x i32> %[[TMP]], i32 5, i32 2
+// LLVM: store <4 x i32> %[[NEW_VEC]], ptr %[[VEC]], align 16
+
+// OGCG: %[[VEC:.*]] = alloca <4 x i32>, align 16
+// OGCG: store <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr %[[VEC]], align 16
+// OGCG: %[[TMP:.*]] = load <4 x i32>, ptr %[[VEC]], align 16
+// OGCG: %[[NEW_VEC:.*]] = insertelement <4 x i32> %[[TMP]], i32 5, i32 2
+// OGCG: store <4 x i32> %[[NEW_VEC]], ptr %[[VEC]], align 16
+
+void foo6() {
+  vi4 a = { 1, 2, 3, 4 };
+  int idx = 2;
+  int value = 5;
+  a[idx] = value;
+}
+
+// CIR: %[[VEC:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["a", init]
+// CIR: %[[IDX:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["idx", init]
+// CIR: %[[VAL:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["value", init]
+// CIR: %[[CONST_1:.*]] = cir.const #cir.int<1> : !s32i
+// CIR: %[[CONST_2:.*]] = cir.const #cir.int<2> : !s32i
+// CIR: %[[CONST_3:.*]] = cir.const #cir.int<3> : !s32i
+// CIR: %[[CONST_4:.*]] = cir.const #cir.int<4> : !s32i
+// CIR: %[[VEC_VAL:.*]] = cir.vec.create(%[[CONST_1]], %[[CONST_2]], %[[CONST_3]], %[[CONST_4]] :
+// CIR-SAME: !s32i, !s32i, !s32i, !s32i) : !cir.vector<4 x !s32i>
+// CIR: cir.store %[[VEC_VAL]], %[[VEC]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[CONST_IDX:.*]] = cir.const #cir.int<2> : !s32i
+// CIR: cir.store %[[CONST_IDX]], %[[IDX]] : !s32i, !cir.ptr<!s32i>
+// CIR: %[[CONST_VAL:.*]] = cir.const #cir.int<5> : !s32i
+// CIR: cir.store %[[CONST_VAL]], %[[VAL]] : !s32i, !cir.ptr<!s32i>
+// CIR: %[[TMP1:.*]] = cir.load %[[VAL]] : !cir.ptr<!s32i>, !s32i
+// CIR: %[[TMP2:.*]] = cir.load %[[IDX]] : !cir.ptr<!s32i>, !s32i
+// CIR: %[[TMP3:.*]] = cir.load %0 : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+// CIR: %[[NEW_VEC:.*]] = cir.vec.insert %[[TMP1]], %[[TMP3]][%[[TMP2]] : !s32i] : !cir.vector<4 x !s32i>
+// CIR: cir.store %[[NEW_VEC]], %[[VEC]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
+
+// LLVM: %[[VEC:.*]] = alloca <4 x i32>, i64 1, align 16
+// LLVM: %[[IDX:.*]] = alloca i32, i64 1, align 4
+// LLVM: %[[VAL:.*]] = alloca i32, i64 1, align 4
+// LLVM: store <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr %1, align 16
+// LLVM: store i32 2, ptr %[[IDX]], align 4
+// LLVM: store i32 5, ptr %[[VAL]], align 4
+// LLVM: %[[TMP1:.*]] = load i32, ptr %[[VAL]], align 4
+// LLVM: %[[TMP2:.*]] = load i32, ptr %[[IDX]], align 4
+// LLVM: %[[TMP3:.*]] = load <4 x i32>, ptr %[[VEC]], align 16
+// LLVM: %[[NEW_VEC:.*]] = insertelement <4 x i32> %[[TMP3]], i32 %[[TMP1]], i32 %[[TMP2]]
+// LLVM: store <4 x i32> %[[NEW_VEC]], ptr %[[VEC]], align 16
+
+// OGCG: %[[VEC:.*]] = alloca <4 x i32>, align 16
+// OGCG: %[[IDX:.*]] = alloca i32, align 4
+// OGCG: %[[VAL:.*]] = alloca i32, align 4
+// OGCG: store <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr %[[VEC]], align 16
+// OGCG: store i32 2, ptr %[[IDX]], align 4
+// OGCG: store i32 5, ptr %[[VAL]], align 4
+// OGCG: %[[TMP1:.*]] = load i32, ptr %[[VAL]], align 4
+// OGCG: %[[TMP2:.*]] = load i32, ptr %[[IDX]], align 4
+// OGCG: %[[TMP3:.*]] = load <4 x i32>, ptr %[[VEC]], align 16
+// OGCG: %[[NEW_VEC:.*]] = insertelement <4 x i32> %[[TMP3]], i32 %[[TMP1]], i32 %[[TMP2]]
+// OGCG: store <4 x i32> %[[NEW_VEC]], ptr %[[VEC]], align 16
+
+void foo7() {
+  vi4 a = {1, 2, 3, 4};
+  a[2] += 5;
+}
+
+// CIR: %[[VEC:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["a", init]
+// CIR: %[[CONST_1:.*]] = cir.const #cir.int<1> : !s32i
+// CIR: %[[CONST_2:.*]] = cir.const #cir.int<2> : !s32i
+// CIR: %[[CONST_3:.*]] = cir.const #cir.int<3> : !s32i
+// CIR: %[[CONST_4:.*]] = cir.const #cir.int<4> : !s32i
+// CIR: %[[VEC_VAL:.*]] = cir.vec.create(%[[CONST_1]], %[[CONST_2]], %[[CONST_3]], %[[CONST_4]] :
+// CIR-SAME: !s32i, !s32i, !s32i, !s32i) : !cir.vector<4 x !s32i>
+// CIR: cir.store %[[VEC_VAL]], %[[VEC]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[CONST_VAL:.*]] = cir.const #cir.int<5> : !s32i
+// CIR: %[[CONST_IDX:.*]] = cir.const #cir.int<2> : !s32i
+// CIR: %[[TMP:.*]] = cir.load %[[VEC]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+// CIR: %[[ELE:.*]] = cir.vec.extract %[[TMP]][%[[CONST_IDX]] : !s32i] : !cir.vector<4 x !s32i>
+// CIR: %[[RES:.*]] = cir.binop(add, %[[ELE]], %[[CONST_VAL]]) nsw : !s32i
+// CIR: %[[TMP2:.*]] = cir.load %[[VEC]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+// CIR: %[[NEW_VEC:.*]] = cir.vec.insert %[[RES]], %[[TMP2]][%[[CONST_IDX]] : !s32i] : !cir.vector<4 x !s32i>
+// CIR: cir.store %[[NEW_VEC]], %[[VEC]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
+
+// LLVM: %[[VEC:.*]] = alloca <4 x i32>, i64 1, align 16
+// LLVM: store <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr %[[VEC]], align 16
+// LLVM: %[[TMP:.*]] = load <4 x i32>, ptr %[[VEC]], align 16
+// LLVM: %[[ELE:.*]] = extractelement <4 x i32> %[[TMP]], i32 2
+// LLVM: %[[RES:.*]] = add nsw i32 %[[ELE]], 5
+// LLVM: %[[TMP2:.*]] = load <4 x i32>, ptr %[[VEC]], align 16
+// LLVM: %[[NEW_VEC:.*]] = insertelement <4 x i32> %[[TMP2]], i32 %[[RES]], i32 2
+// LLVM: store <4 x i32> %[[NEW_VEC]], ptr %[[VEC]], align 16
+
+// OGCG: %[[VEC:.*]] = alloca <4 x i32>, align 16
+// OGCG: store <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr %[[VEC]], align 16
+// OGCG: %[[TMP:.*]] = load <4 x i32>, ptr %[[VEC]], align 16
+// OGCG: %[[ELE:.*]] = extractelement <4 x i32> %[[TMP]], i32 2
+// OGCG: %[[RES:.*]] = add nsw i32 %[[ELE]], 5
+// OGCG: %[[TMP2:.*]] = load <4 x i32>, ptr %[[VEC]], align 16
+// OGCG: %[[NEW_VEC:.*]] = insertelement <4 x i32> %[[TMP2]], i32 %[[RES]], i32 2
+// OGCG: store <4 x i32> %[[NEW_VEC]], ptr %[[VEC]], align 16

@@ -155,8 +155,9 @@ void LayoutInfo::print(raw_ostream &os) const {
     laneLayout.print(os);
     os << ", lane_data: ";
     laneData.print(os);
-  } else
+  } else {
     os << "Not assigned.";
+  }
 }
 
 LayoutInfo LayoutInfo::meet(const LayoutInfo &lhs, const LayoutInfo &rhs) {
