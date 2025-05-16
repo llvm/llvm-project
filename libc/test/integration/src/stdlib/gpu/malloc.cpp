@@ -27,5 +27,14 @@ TEST_MAIN(int, char **, char **) {
   *divergent = 1;
   EXPECT_EQ(*divergent, 1);
   LIBC_NAMESPACE::free(divergent);
+
+  if (gpu::get_lane_id() % 2) {
+    int *masked = reinterpret_cast<int *>(
+        LIBC_NAMESPACE::malloc((gpu::get_thread_id() + 1) * 16));
+    EXPECT_NE(masked, nullptr);
+    *masked = 1;
+    EXPECT_EQ(*masked, 1);
+    LIBC_NAMESPACE::free(masked);
+  }
   return 0;
 }
