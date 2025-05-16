@@ -3166,7 +3166,7 @@ define dso_local void @dotp_high_register_pressure(ptr %a, ptr %b, ptr %sum, i32
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[INDEX]]
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP8]], i32 0
 ; CHECK-INTERLEAVE1-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP9]], align 1
-; CHECK-INTERLEAVE1-NEXT:    [[TMP10:%.*]] = zext <16 x i8> [[WIDE_LOAD]] to <16 x i32>
+; CHECK-INTERLEAVE1-NEXT:    [[TMP10:%.*]] = sext <16 x i8> [[WIDE_LOAD]] to <16 x i32>
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP11:%.*]] = shl nsw i64 [[INDEX]], 3
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[TMP11]]
 ; CHECK-INTERLEAVE1-NEXT:    [[WIDE_VEC:%.*]] = load <128 x i8>, ptr [[TMP12]], align 1
@@ -3267,7 +3267,7 @@ define dso_local void @dotp_high_register_pressure(ptr %a, ptr %b, ptr %sum, i32
 ; CHECK-INTERLEAVED-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[INDEX]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP8]], i32 0
 ; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP9]], align 1
-; CHECK-INTERLEAVED-NEXT:    [[TMP10:%.*]] = zext <16 x i8> [[WIDE_LOAD]] to <16 x i32>
+; CHECK-INTERLEAVED-NEXT:    [[TMP10:%.*]] = sext <16 x i8> [[WIDE_LOAD]] to <16 x i32>
 ; CHECK-INTERLEAVED-NEXT:    [[TMP11:%.*]] = shl nsw i64 [[INDEX]], 3
 ; CHECK-INTERLEAVED-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[TMP11]]
 ; CHECK-INTERLEAVED-NEXT:    [[WIDE_VEC:%.*]] = load <128 x i8>, ptr [[TMP12]], align 1
@@ -3368,7 +3368,7 @@ define dso_local void @dotp_high_register_pressure(ptr %a, ptr %b, ptr %sum, i32
 ; CHECK-MAXBW-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[INDEX]]
 ; CHECK-MAXBW-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP8]], i32 0
 ; CHECK-MAXBW-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP9]], align 1
-; CHECK-MAXBW-NEXT:    [[TMP10:%.*]] = zext <16 x i8> [[WIDE_LOAD]] to <16 x i32>
+; CHECK-MAXBW-NEXT:    [[TMP10:%.*]] = sext <16 x i8> [[WIDE_LOAD]] to <16 x i32>
 ; CHECK-MAXBW-NEXT:    [[TMP11:%.*]] = shl nsw i64 [[INDEX]], 3
 ; CHECK-MAXBW-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[TMP11]]
 ; CHECK-MAXBW-NEXT:    [[WIDE_VEC:%.*]] = load <128 x i8>, ptr [[TMP12]], align 1
@@ -3477,7 +3477,7 @@ for.body:                                         ; preds = %for.body.lr.ph, %fo
   %7 = phi i32 [ %sum.promoted, %for.body.lr.ph ], [ %add.1, %for.body ]
   %arrayidx = getelementptr inbounds nuw i8, ptr %a, i64 %indvars.iv
   %load.a = load i8, ptr %arrayidx, align 1
-  %ext.a = zext i8 %load.a to i32
+  %ext.a = sext i8 %load.a to i32
   %9 = shl nsw i64 %indvars.iv, 3
   %gep.b.1 = getelementptr inbounds nuw i8, ptr %b, i64 %9
   %load.b.1 = load i8, ptr %gep.b.1, align 1
