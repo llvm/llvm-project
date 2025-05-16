@@ -190,6 +190,13 @@ struct VPlanTransforms {
   /// CanonicalIVTy as type for all un-typed live-ins in VPTypeAnalysis.
   static void convertToConcreteRecipes(VPlan &Plan, Type &CanonicalIVTy);
 
+  /// This function converts initial recipes to the abstract recipes and clamps
+  /// \p Range based on cost model for following optimizations and cost
+  /// estimations. The converted abstract recipes will lower to concrete
+  /// recipes before codegen.
+  static void convertToAbstractRecipes(VPlan &Plan, VPCostContext &Ctx,
+                                       VFRange &Range);
+
   /// Perform instcombine-like simplifications on recipes in \p Plan. Use \p
   /// CanonicalIVTy as type for all un-typed live-ins in VPTypeAnalysis.
   static void simplifyRecipes(VPlan &Plan, Type &CanonicalIVTy);

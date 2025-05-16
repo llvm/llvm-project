@@ -9568,10 +9568,6 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range,
          "entry block must be set to a VPRegionBlock having a non-empty entry "
          "VPBasicBlock");
 
-  for (ElementCount VF : Range)
-    Plan->addVF(VF);
-  Plan->setName("Initial VPlan");
-
   // Update wide induction increments to use the same step as the corresponding
   // wide induction. This enables detecting induction increments directly in
   // VPlan and removes redundant splats.
@@ -9600,6 +9596,21 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range,
 
   // Adjust the recipes for any inloop reductions.
   adjustRecipesForReductions(Plan, RecipeBuilder, Range.Start);
+
+  // Transform recipes to abstract recipes if it is legal and beneficial and
+  // clamp the range for better cost estimation.
+  // TODO: Enable following transform when the EVL-version of extended-reduction
+  // and mulacc-reduction are implemented.
+  if (!CM.foldTailWithEVL()) {
+    VPCostContext CostCtx(CM.TTI, *CM.TLI, Legal->getWidestInductionType(), CM,
+                          CM.CostKind);
+    VPlanTransforms::runPass(VPlanTransforms::convertToAbstractRecipes, *Plan,
+                             CostCtx, Range);
+  }
+
+  for (ElementCount VF : Range)
+    Plan->addVF(VF);
+  Plan->setName("Initial VPlan");
 
   // Interleave memory: for each Interleave Group we marked earlier as relevant
   // for this VPlan, replace the Recipes widening its memory instructions with a
