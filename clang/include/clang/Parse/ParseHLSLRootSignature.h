@@ -113,6 +113,7 @@ private:
     std::optional<llvm::hlsl::rootsig::Register> Reg;
     std::optional<float> MipLODBias;
     std::optional<uint32_t> MaxAnisotropy;
+    std::optional<float> MinLOD;
   };
   std::optional<ParsedStaticSamplerParams> parseStaticSamplerParams();
 

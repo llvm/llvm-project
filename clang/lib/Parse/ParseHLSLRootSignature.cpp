@@ -383,6 +383,9 @@ std::optional<StaticSampler> RootSignatureParser::parseStaticSampler() {
   if (Params->MaxAnisotropy.has_value())
     Sampler.MaxAnisotropy= Params->MaxAnisotropy.value();
 
+  if (Params->MinLOD.has_value())
+    Sampler.MinLOD= Params->MinLOD.value();
+
   if (consumeExpectedToken(TokenKind::pu_r_paren,
                            diag::err_hlsl_unexpected_end_of_params,
                            /*param of=*/TokenKind::kw_StaticSampler))
@@ -701,6 +704,23 @@ RootSignatureParser::parseStaticSamplerParams() {
       if (!MaxAnisotropy.has_value())
         return std::nullopt;
       Params.MaxAnisotropy = MaxAnisotropy;
+    }
+
+    // `minLOD` `=` NUMBER
+    if (tryConsumeExpectedToken(TokenKind::kw_minLOD)) {
+      if (Params.MinLOD.has_value()) {
+        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+            << CurToken.TokKind;
+        return std::nullopt;
+      }
+
+      if (consumeExpectedToken(TokenKind::pu_equal))
+        return std::nullopt;
+
+      auto MinLOD= parseFloatParam();
+      if (!MinLOD.has_value())
+        return std::nullopt;
+      Params.MinLOD = MinLOD;
     }
   } while (tryConsumeExpectedToken(TokenKind::pu_comma));
 

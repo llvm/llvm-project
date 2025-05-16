@@ -163,6 +163,7 @@ struct StaticSampler {
   Register Reg;
   float MipLODBias = 0.f;
   uint32_t MaxAnisotropy = 16;
+  float MinLOD = 0.f;
 };
 
 /// Models RootElement : RootFlags | RootConstants | RootParam
