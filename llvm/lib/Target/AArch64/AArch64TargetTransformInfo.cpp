@@ -5485,7 +5485,7 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
       SmallVector<int> NMask;
       // Split the existing mask into chunks of size LTNumElts. Track the source
       // sub-vectors to ensure the result has at most 2 inputs.
-      unsigned Source1, Source2;
+      unsigned Source1 = 0, Source2 = 0;
       unsigned NumSources = 0;
       for (unsigned E = 0; E < LTNumElts; E++) {
         int MaskElt = (N * LTNumElts + E < TpNumElts) ? Mask[N * LTNumElts + E]
