@@ -84,6 +84,17 @@ enum class TextureAddressMode {
   MirrorOnce = 5
 };
 
+enum class ComparisonFunc : unsigned {
+  Never = 1,
+  Less = 2,
+  Equal = 3,
+  LessEqual = 4,
+  Greater = 5,
+  NotEqual = 6,
+  GreaterEqual = 7,
+  Always = 8
+};
+
 // Definitions of the in-memory data layout structures
 
 // Models the different registers: bReg | tReg | uReg | sReg
@@ -170,6 +181,7 @@ struct StaticSampler {
   TextureAddressMode AddressW = TextureAddressMode::Wrap;
   float MipLODBias = 0.f;
   uint32_t MaxAnisotropy = 16;
+  ComparisonFunc ComparisonFunc = ComparisonFunc::LessEqual;
   float MinLOD = 0.f;
   float MaxLOD = std::numeric_limits<float>::max();
 };

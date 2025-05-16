@@ -392,6 +392,9 @@ std::optional<StaticSampler> RootSignatureParser::parseStaticSampler() {
   if (Params->MaxAnisotropy.has_value())
     Sampler.MaxAnisotropy = Params->MaxAnisotropy.value();
 
+  if (Params->ComparisonFunc.has_value())
+    Sampler.ComparisonFunc= Params->ComparisonFunc.value();
+
   if (Params->MinLOD.has_value())
     Sampler.MinLOD = Params->MinLOD.value();
 
@@ -769,6 +772,24 @@ RootSignatureParser::parseStaticSamplerParams() {
       Params.MaxAnisotropy = MaxAnisotropy;
     }
 
+
+    // `comparisonFunc` `=` COMPARISON_FUNC
+    if (tryConsumeExpectedToken(TokenKind::kw_comparisonFunc)) {
+      if (Params.ComparisonFunc.has_value()) {
+        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+            << CurToken.TokKind;
+        return std::nullopt;
+      }
+
+      if (consumeExpectedToken(TokenKind::pu_equal))
+        return std::nullopt;
+
+      auto ComparisonFunc = parseComparisonFunc();
+      if (!ComparisonFunc.has_value())
+        return std::nullopt;
+      Params.ComparisonFunc = ComparisonFunc;
+    }
+
     // `minLOD` `=` NUMBER
     if (tryConsumeExpectedToken(TokenKind::kw_minLOD)) {
       if (Params.MinLOD.has_value()) {
@@ -926,6 +947,32 @@ RootSignatureParser::parseTextureAddressMode() {
 #define TEXTURE_ADDRESS_MODE_ENUM(NAME, LIT)                                   \
   case TokenKind::en_##NAME:                                                   \
     return TextureAddressMode::NAME;                                           \
+    break;
+#include "clang/Lex/HLSLRootSignatureTokenKinds.def"
+  default:
+    llvm_unreachable("Switch for consumed enum token was not provided");
+  }
+
+  return std::nullopt;
+}
+
+std::optional<llvm::hlsl::rootsig::ComparisonFunc>
+RootSignatureParser::parseComparisonFunc() {
+  assert(CurToken.TokKind == TokenKind::pu_equal &&
+         "Expects to only be invoked starting at given keyword");
+
+  TokenKind Expected[] = {
+#define COMPARISON_FUNC_ENUM(NAME, LIT) TokenKind::en_##NAME,
+#include "clang/Lex/HLSLRootSignatureTokenKinds.def"
+  };
+
+  if (!tryConsumeExpectedToken(Expected))
+    return std::nullopt;
+
+  switch (CurToken.TokKind) {
+#define COMPARISON_FUNC_ENUM(NAME, LIT)                                      \
+  case TokenKind::en_##NAME:                                                   \
+    return ComparisonFunc::NAME;                                             \
     break;
 #include "clang/Lex/HLSLRootSignatureTokenKinds.def"
   default:
