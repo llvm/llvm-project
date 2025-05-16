@@ -132,14 +132,16 @@ protected:
   using SectionEntries = StringMap<StringMap<Matcher>>;
 
   struct Section {
-    Section(std::unique_ptr<Matcher> M) : SectionMatcher(std::move(M)){};
-    Section() : Section(std::make_unique<Matcher>()) {}
+    Section(std::unique_ptr<Matcher> M, StringRef str)
+        : SectionMatcher(std::move(M)), SectionStr(SectionStr) {};
+    Section(StringRef str) : Section(std::make_unique<Matcher>(), str) {};
 
     std::unique_ptr<Matcher> SectionMatcher;
     SectionEntries Entries;
+    std::string SectionStr;
   };
 
-  StringMap<Section> Sections;
+  std::vector<Section> Sections;
 
   LLVM_ABI Expected<Section *> addSection(StringRef SectionStr, unsigned LineNo,
                                           bool UseGlobs = true);
@@ -154,6 +156,6 @@ protected:
                                    StringRef Category) const;
 };
 
-}  // namespace llvm
+} // namespace llvm
 
 #endif // LLVM_SUPPORT_SPECIALCASELIST_H
