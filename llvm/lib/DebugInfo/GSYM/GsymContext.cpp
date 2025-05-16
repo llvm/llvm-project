@@ -1,4 +1,4 @@
-//===-- GsymDIContext.cpp ------------------------------------------------===//
+//===-- GsymContext.cpp ------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===/
 
-#include "llvm/DebugInfo/GSYM/GsymDIContext.h"
+#include "llvm/DebugInfo/GSYM/GsymContext.h"
 
 #include "llvm/DebugInfo/GSYM/GsymReader.h"
 #include "llvm/Support/Path.h"
@@ -14,10 +14,10 @@
 using namespace llvm;
 using namespace llvm::gsym;
 
-GsymDIContext::GsymDIContext(std::unique_ptr<GsymReader> Reader)
+GsymContext::GsymContext(std::unique_ptr<GsymReader> Reader)
     : DIContext(CK_GSYM), Reader(std::move(Reader)) {}
 
-void GsymDIContext::dump(raw_ostream &OS, DIDumpOptions DumpOpts) {}
+void GsymContext::dump(raw_ostream &OS, DIDumpOptions DumpOpts) {}
 
 static bool fillLineInfoFromLocation(const SourceLocation &Location,
                                      DILineInfoSpecifier Specifier,
@@ -61,8 +61,8 @@ static bool fillLineInfoFromLocation(const SourceLocation &Location,
 }
 
 std::optional<DILineInfo>
-GsymDIContext::getLineInfoForAddress(object::SectionedAddress Address,
-                                     DILineInfoSpecifier Specifier) {
+GsymContext::getLineInfoForAddress(object::SectionedAddress Address,
+                                   DILineInfoSpecifier Specifier) {
   if (Address.SectionIndex != object::SectionedAddress::UndefSection)
     return {};
 
@@ -93,16 +93,16 @@ GsymDIContext::getLineInfoForAddress(object::SectionedAddress Address,
 }
 
 std::optional<DILineInfo>
-GsymDIContext::getLineInfoForDataAddress(object::SectionedAddress Address) {
+GsymContext::getLineInfoForDataAddress(object::SectionedAddress Address) {
   // We can't implement this, there's no such information in the GSYM file.
 
   return {};
 }
 
 DILineInfoTable
-GsymDIContext::getLineInfoForAddressRange(object::SectionedAddress Address,
-                                          uint64_t Size,
-                                          DILineInfoSpecifier Specifier) {
+GsymContext::getLineInfoForAddressRange(object::SectionedAddress Address,
+                                        uint64_t Size,
+                                        DILineInfoSpecifier Specifier) {
   if (Size == 0)
     return DILineInfoTable();
 
@@ -131,8 +131,8 @@ GsymDIContext::getLineInfoForAddressRange(object::SectionedAddress Address,
 }
 
 DIInliningInfo
-GsymDIContext::getInliningInfoForAddress(object::SectionedAddress Address,
-                                         DILineInfoSpecifier Specifier) {
+GsymContext::getInliningInfoForAddress(object::SectionedAddress Address,
+                                       DILineInfoSpecifier Specifier) {
   auto ResultOrErr = Reader->lookup(Address.Address);
 
   if (!ResultOrErr)
@@ -159,7 +159,7 @@ GsymDIContext::getInliningInfoForAddress(object::SectionedAddress Address,
 }
 
 std::vector<DILocal>
-GsymDIContext::getLocalsForAddress(object::SectionedAddress Address) {
+GsymContext::getLocalsForAddress(object::SectionedAddress Address) {
   // We can't implement this, there's no such information in the GSYM file.
 
   return {};
