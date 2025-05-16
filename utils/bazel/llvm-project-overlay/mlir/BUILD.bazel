@@ -12874,6 +12874,7 @@ cc_library(
     ),
     includes = ["include"],
     deps = [
+        ":Analysis",
         ":FuncDialect",
         ":IR",
         ":Reducer",
