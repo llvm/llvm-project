@@ -723,6 +723,69 @@ loop:
   br label %loop
 }
 
+; Trivially hoist or disjoint.
+define void @or_all_disjoint(i64 %c1, i64 %c2) {
+; CHECK-LABEL: @or_all_disjoint(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = or i64 [[C1:%.*]], [[C2:%.*]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT_REASS:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[INDEX_NEXT_REASS]] = or i64 [[INDEX]], [[INVARIANT_OP]]
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %index = phi i64 [ 0, %entry ], [ %index.next, %loop ]
+  %step.add = or disjoint i64 %index, %c1
+  %index.next = or disjoint i64 %c2, %step.add
+  br label %loop
+}
+
+; Trivially hoist or, disjoint on first or only .
+define void @or_disjoint_on_first_or_only(i64 %c1, i64 %c2) {
+; CHECK-LABEL: @or_disjoint_on_first_or_only(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = or i64 [[C1:%.*]], [[C2:%.*]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT_REASS:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[INDEX_NEXT_REASS]] = or i64 [[INDEX]], [[INVARIANT_OP]]
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %index = phi i64 [ 0, %entry ], [ %index.next, %loop ]
+  %step.add = or i64 %index, %c1
+  %index.next = or disjoint i64 %c2, %step.add
+  br label %loop
+}
+
+; Trivially hoist or, disjoint on second or only .
+define void @or_disjoint_on_second_or_only(i64 %c1, i64 %c2) {
+; CHECK-LABEL: @or_disjoint_on_second_or_only(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = or i64 [[C1:%.*]], [[C2:%.*]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT_REASS:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[INDEX_NEXT_REASS]] = or i64 [[INDEX]], [[INVARIANT_OP]]
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %index = phi i64 [ 0, %entry ], [ %index.next, %loop ]
+  %step.add = or disjoint i64 %index, %c1
+  %index.next = or i64 %c2, %step.add
+  br label %loop
+}
+
 ; Trivially hoist xor.
 define void @xor(i64 %c1, i64 %c2) {
 ; CHECK-LABEL: @xor(
