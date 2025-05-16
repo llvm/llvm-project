@@ -1300,7 +1300,7 @@ RegisterContextUnwind::GetAbstractRegisterLocation(uint32_t lldb_regnum,
     // the stack, without requiring additional parsing or memory reads.
     // It may mark all other registers as IsUndefined() because, indicating
     // that it doesn't know if they were spilled to stack or not.
-    // If this caSe, for an IsUndefined register, we should continue on
+    // If this case, for an IsUndefined register, we should continue on
     // to the Full UnwindPlan which may have more accurate information
     // about register locations of all registers.
     if (active_row &&
