@@ -870,6 +870,7 @@ public:
     case TargetOpcode::G_FPTOUI_SAT:
     case TargetOpcode::G_FPTRUNC:
     case TargetOpcode::G_INTTOPTR:
+    case TargetOpcode::G_PTRTOADDR:
     case TargetOpcode::G_PTRTOINT:
     case TargetOpcode::G_SEXT:
     case TargetOpcode::G_SITOFP:

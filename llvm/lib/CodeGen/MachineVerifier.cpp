@@ -1352,6 +1352,7 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     break;
   }
   case TargetOpcode::G_INTTOPTR:
+  case TargetOpcode::G_PTRTOADDR:
   case TargetOpcode::G_PTRTOINT:
   case TargetOpcode::G_ADDRSPACE_CAST: {
     LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
@@ -1374,6 +1375,11 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
         report("ptrtoint source type must be a pointer", MI);
       if (DstTy.isPointer())
         report("ptrtoint result type must not be a pointer", MI);
+    } else if (MI->getOpcode() == TargetOpcode::G_PTRTOADDR) {
+      if (!SrcTy.isPointer())
+        report("ptrtoaddr source type must be a pointer", MI);
+      if (DstTy.isPointer())
+        report("ptrtoaddr result type must not be a pointer", MI);
     } else {
       assert(MI->getOpcode() == TargetOpcode::G_ADDRSPACE_CAST);
       if (!SrcTy.isPointer() || !DstTy.isPointer())

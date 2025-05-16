@@ -468,6 +468,7 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
   }
   case TargetOpcode::G_INTTOPTR:
   case TargetOpcode::G_PTRTOINT:
+  case TargetOpcode::G_PTRTOADDR:
     if (DstTy.isVector())
       break;
     // Fall through and handle them the same as zext/trunc.
@@ -482,6 +483,8 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     // G_ASSERT_ZEXT stores the original bitwidth in the immediate operand.
     if (Opcode == TargetOpcode::G_ASSERT_ZEXT)
       SrcBitWidth = MI.getOperand(2).getImm();
+    else if (Opcode == TargetOpcode::G_PTRTOADDR)
+      SrcBitWidth = DL.getAddressSizeInBits(SrcTy.getAddressSpace());
     else {
       // For G_PTRTOINT all representation bits are returned even though only
       // the address bits can be reasoned about generically.

@@ -1670,6 +1670,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     narrowScalarSrc(MI, NarrowTy, 1);
     Observer.changedInstr(MI);
     return Legalized;
+  case TargetOpcode::G_PTRTOADDR:
   case TargetOpcode::G_PTRTOINT:
     if (TypeIdx != 0)
       return UnableToLegalize;
@@ -3303,6 +3304,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_ZEXT);
     Observer.changedInstr(MI);
     return Legalized;
+  case TargetOpcode::G_PTRTOADDR:
   case TargetOpcode::G_PTRTOINT:
     if (TypeIdx != 0)
       return UnableToLegalize;
@@ -4687,6 +4689,8 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     return lowerEXT(MI);
   case G_TRUNC:
     return lowerTRUNC(MI);
+  case G_PTRTOADDR:
+    return lowerPTRTOADDR(MI);
   GISEL_VECREDUCE_CASES_NONSEQ
     return lowerVectorReduction(MI);
   case G_VAARG:
@@ -5414,6 +5418,7 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case G_FPTOUI_SAT:
   case G_INTTOPTR:
   case G_PTRTOINT:
+  case G_PTRTOADDR:
   case G_ADDRSPACE_CAST:
   case G_UADDO:
   case G_USUBO:
@@ -7397,6 +7402,34 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerTRUNC(MachineInstr &MI) {
     return Legalized;
   }
   return UnableToLegalize;
+}
+
+LegalizerHelper::LegalizeResult
+LegalizerHelper::lowerPTRTOADDR(MachineInstr &MI) {
+  // Lower G_PTRTOADDR as a truncate to address width of G_PTROINT and then
+  // zero extend to the target width if there is no native support for it.
+  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
+  const DataLayout &DL = MIRBuilder.getDataLayout();
+  assert(MI.getOpcode() == TargetOpcode::G_PTRTOADDR);
+  auto DstReg = MI.getOperand(0).getReg();
+  auto SrcReg = MI.getOperand(1).getReg();
+  LLT SrcTy = MRI.getType(SrcReg);
+
+  LLT AddrTy = getLLTForType(
+      *DL.getAddressType(MIRBuilder.getContext(), SrcTy.getAddressSpace()), DL);
+  LLT IntPtrTy = getLLTForType(
+      *DL.getIntPtrType(MIRBuilder.getContext(), SrcTy.getAddressSpace()), DL);
+  if (SrcTy.isVector()) {
+    AddrTy = LLT::vector(SrcTy.getElementCount(), AddrTy);
+    IntPtrTy = LLT::vector(SrcTy.getElementCount(), IntPtrTy);
+  }
+  auto PtrToInt = MIRBuilder.buildPtrToInt(IntPtrTy, SrcReg);
+  auto Addr = PtrToInt;
+  if (AddrTy != IntPtrTy)
+    Addr = MIRBuilder.buildTrunc(AddrTy, PtrToInt.getReg(0));
+  MIRBuilder.buildZExtOrTrunc(DstReg, Addr.getReg(0));
+  MI.eraseFromParent();
+  return Legalized;
 }
 
 LegalizerHelper::LegalizeResult

@@ -714,6 +714,11 @@ public:
     return buildInstr(TargetOpcode::G_PTRTOINT, {Dst}, {Src});
   }
 
+  /// Build and insert a G_PTRTOADDR instruction.
+  MachineInstrBuilder buildPtrToAddr(const DstOp &Dst, const SrcOp &Src) {
+    return buildInstr(TargetOpcode::G_PTRTOADDR, {Dst}, {Src});
+  }
+
   /// Build and insert a G_INTTOPTR instruction.
   MachineInstrBuilder buildIntToPtr(const DstOp &Dst, const SrcOp &Src) {
     return buildInstr(TargetOpcode::G_INTTOPTR, {Dst}, {Src});
