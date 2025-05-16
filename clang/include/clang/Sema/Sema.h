@@ -1825,6 +1825,11 @@ public:
   /// Set of no-builtin functions listed by \#pragma function.
   llvm::SmallSetVector<StringRef, 4> MSFunctionNoBuiltins;
 
+  /// Map of BuiltinIDs to source locations that have #pragma intrinsic calls
+  /// that refer to them.
+  llvm::DenseMap<unsigned, llvm::SmallSetVector<SourceLocation, 4>>
+      PragmaIntrinsicBuiltinIDMap;
+
   /// AddAlignmentAttributesForRecord - Adds any needed alignment attributes to
   /// a the record decl, to handle '\#pragma pack' and '\#pragma options align'.
   void AddAlignmentAttributesForRecord(RecordDecl *RD);
@@ -4344,6 +4349,11 @@ public:
   /// enumeration's scope is a transparent context and structures cannot
   /// contain non-field names.
   Scope *getNonFieldDeclScope(Scope *S);
+
+  // Determine if the given builtin usage at the given source location
+  // was previously specified in a #pragma intrinsic.
+  bool isBuiltinSpecifiedInPragmaIntrinsic(unsigned BuiltinID,
+                                           SourceLocation UsageLoc) const;
 
   FunctionDecl *CreateBuiltin(IdentifierInfo *II, QualType Type, unsigned ID,
                               SourceLocation Loc);

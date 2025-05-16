@@ -301,9 +301,13 @@ struct PragmaMSRuntimeChecksHandler : public EmptyPragmaHandler {
 };
 
 struct PragmaMSIntrinsicHandler : public PragmaHandler {
-  PragmaMSIntrinsicHandler() : PragmaHandler("intrinsic") {}
+  PragmaMSIntrinsicHandler(Sema &Actions)
+      : PragmaHandler("intrinsic"), Actions(Actions) {}
   void HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
                     Token &FirstToken) override;
+
+private:
+  Sema &Actions;
 };
 
 // "\#pragma fenv_access (on)".
@@ -517,7 +521,7 @@ void Parser::initializePragmaHandlers() {
     PP.AddPragmaHandler(MSOptimize.get());
     MSRuntimeChecks = std::make_unique<PragmaMSRuntimeChecksHandler>();
     PP.AddPragmaHandler(MSRuntimeChecks.get());
-    MSIntrinsic = std::make_unique<PragmaMSIntrinsicHandler>();
+    MSIntrinsic = std::make_unique<PragmaMSIntrinsicHandler>(Actions);
     PP.AddPragmaHandler(MSIntrinsic.get());
     MSFenvAccess = std::make_unique<PragmaMSFenvAccessHandler>();
     PP.AddPragmaHandler(MSFenvAccess.get());
@@ -3803,7 +3807,10 @@ void PragmaMSIntrinsicHandler::HandlePragma(Preprocessor &PP,
     if (!II->getBuiltinID())
       PP.Diag(Tok.getLocation(), diag::warn_pragma_intrinsic_builtin)
           << II << SuggestIntrinH;
-
+    /// Store the location at which the builtin was used in a #pragma intrinsic
+    /// so we don't emit a missing header warning later.
+    Actions.PragmaIntrinsicBuiltinIDMap[II->getBuiltinID()].insert(
+        Tok.getLocation());
     PP.Lex(Tok);
     if (Tok.isNot(tok::comma))
       break;

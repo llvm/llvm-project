@@ -2299,6 +2299,21 @@ static StringRef getHeaderName(Builtin::Context &BuiltinInfo, unsigned ID,
   llvm_unreachable("unhandled error kind");
 }
 
+bool Sema::isBuiltinSpecifiedInPragmaIntrinsic(unsigned BuiltinID,
+                                               SourceLocation UsageLoc) const {
+  assert(Context.BuiltinInfo(BuiltinID) && "Invalid builtin id");
+  assert(UsageLoc.isValid() && "Invalid source location");
+  auto It = PragmaIntrinsicBuiltinIDMap.find(BuiltinID);
+  if (It == PragmaIntrinsicBuiltinIDMap.end())
+    return false;
+  for (const SourceLocation &PragmaIntrinLoc : It->second) {
+    if (Context.getSourceManager().isBeforeInTranslationUnit(PragmaIntrinLoc,
+                                                             UsageLoc))
+      return true;
+  }
+  return false;
+}
+
 FunctionDecl *Sema::CreateBuiltin(IdentifierInfo *II, QualType Type,
                                   unsigned ID, SourceLocation Loc) {
   DeclContext *Parent = Context.getTranslationUnitDecl();
@@ -2370,20 +2385,17 @@ NamedDecl *Sema::LazilyCreateBuiltin(IdentifierInfo *II, unsigned ID,
 
     // Generally, we emit a warning that the declaration requires the
     // appropriate header.
-    Diag(Loc, diag::warn_implicit_decl_requires_sysheader)
-        << getHeaderName(Context.BuiltinInfo, ID, Error)
-        << Context.BuiltinInfo.getName(ID);
+    if (!isBuiltinSpecifiedInPragmaIntrinsic(ID, Loc))
+      Diag(Loc, diag::warn_implicit_decl_requires_sysheader)
+          << getHeaderName(Context.BuiltinInfo, ID, Error)
+          << Context.BuiltinInfo.getName(ID);
     return nullptr;
   }
 
-  // Warn for implicit uses of header dependent libraries,
-  // except in system headers.
   if (!ForRedeclaration &&
       (Context.BuiltinInfo.isPredefinedLibFunction(ID) ||
        Context.BuiltinInfo.isHeaderDependentFunction(ID)) &&
-      (!getDiagnostics().getSuppressSystemWarnings() ||
-       !Context.getSourceManager().isInSystemHeader(
-           Context.getSourceManager().getSpellingLoc(Loc)))) {
+      !isBuiltinSpecifiedInPragmaIntrinsic(ID, Loc)) {
     Diag(Loc, LangOpts.C99 ? diag::ext_implicit_lib_function_decl_c99
                            : diag::ext_implicit_lib_function_decl)
         << Context.BuiltinInfo.getName(ID) << R;
