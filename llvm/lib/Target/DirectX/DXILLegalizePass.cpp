@@ -553,6 +553,7 @@ legalizeGetHighLowi64Bytes(Instruction &I,
           ReplacedValues[Extract] = HighBytes;
         }
         ToRemove.push_back(Extract);
+        Extract->replaceAllUsesWith(ReplacedValues[Extract]);
       }
     }
   }
@@ -565,34 +566,42 @@ public:
   DXILLegalizationPipeline() { initializeLegalizationPipeline(); }
 
   bool runLegalizationPipeline(Function &F) {
-    SmallVector<Instruction *> ToRemove;
-    DenseMap<Value *, Value *> ReplacedValues;
-    for (auto &I : instructions(F)) {
-      for (auto &LegalizationFn : LegalizationPipeline)
-        LegalizationFn(I, ToRemove, ReplacedValues);
+    bool MadeChange = false;
+    for (int Stage = 0; Stage < NumStages; ++Stage) {
+      SmallVector<Instruction *> ToRemove;
+      DenseMap<Value *, Value *> ReplacedValues;
+      for (auto &I : instructions(F)) {
+        for (auto &LegalizationFn : LegalizationPipeline[Stage])
+          LegalizationFn(I, ToRemove, ReplacedValues);
+      }
+
+      for (auto *Inst : reverse(ToRemove))
+        Inst->eraseFromParent();
+
+      MadeChange |= !ToRemove.empty();
     }
-
-    for (auto *Inst : reverse(ToRemove))
-      Inst->eraseFromParent();
-
-    return !ToRemove.empty();
+    return MadeChange;
   }
 
 private:
-  SmallVector<
+  enum LegalizationStage { Stage1 = 0, Stage2 = 1, NumStages };
+
+  using LegalizationFnTy =
       std::function<void(Instruction &, SmallVectorImpl<Instruction *> &,
-                         DenseMap<Value *, Value *> &)>>
-      LegalizationPipeline;
+                         DenseMap<Value *, Value *> &)>;
+
+  SmallVector<LegalizationFnTy> LegalizationPipeline[NumStages];
 
   void initializeLegalizationPipeline() {
-    LegalizationPipeline.push_back(upcastI8AllocasAndUses);
-    LegalizationPipeline.push_back(fixI8UseChain);
-    LegalizationPipeline.push_back(downcastI64toI32InsertExtractElements);
-    LegalizationPipeline.push_back(legalizeFreeze);
-    LegalizationPipeline.push_back(legalizeMemCpy);
-    LegalizationPipeline.push_back(removeMemSet);
-    LegalizationPipeline.push_back(updateFnegToFsub);
-    LegalizationPipeline.push_back(legalizeGetHighLowi64Bytes);
+    LegalizationPipeline[Stage1].push_back(upcastI8AllocasAndUses);
+    LegalizationPipeline[Stage1].push_back(fixI8UseChain);
+    LegalizationPipeline[Stage1].push_back(legalizeGetHighLowi64Bytes);
+    LegalizationPipeline[Stage1].push_back(legalizeFreeze);
+    LegalizationPipeline[Stage1].push_back(legalizeMemCpy);
+    LegalizationPipeline[Stage1].push_back(removeMemSet);
+    LegalizationPipeline[Stage1].push_back(updateFnegToFsub);
+    LegalizationPipeline[Stage2].push_back(
+        downcastI64toI32InsertExtractElements);
   }
 };
 
