@@ -12,7 +12,8 @@ import ast
 class TestLib(unittest.TestCase):
     def test_functions_registered(self):
         def get_function_spelling(node):
-            # The call expressions we are interested in have their spelling in .attr, not .id
+            # The call expressions we are interested in have
+            # their spelling in .attr, not .id
             if hasattr(node, "attr"):
                 return node.attr
             return ""
