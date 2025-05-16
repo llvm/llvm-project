@@ -22,7 +22,6 @@ add_llvm_component_library(LLVMObject
   Object.cpp
   ObjectFile.cpp
   OffloadBinary.cpp
-  OffloadBundle.cpp
   RecordStreamer.cpp
   RelocationResolver.cpp
   SymbolicFile.cpp
