@@ -46,10 +46,7 @@ define void @cse_bitcast(i16 %val, half %fval, ptr %p, i64 %n) {
 ; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <4 x half> [[TMP13]], <4 x half> [[BROADCAST_SPLAT5]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <8 x half> [[TMP14]], <8 x half> poison, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
 ; CHECK-NEXT:    store <8 x half> [[INTERLEAVED_VEC]], ptr [[NEXT_GEP]], align 2
-; CHECK-NEXT:    [[TMP15:%.*]] = bitcast <4 x i16> [[BROADCAST_SPLAT]] to <4 x half>
-; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <4 x half> [[TMP15]], <4 x half> [[BROADCAST_SPLAT5]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[INTERLEAVED_VEC7:%.*]] = shufflevector <8 x half> [[TMP16]], <8 x half> poison, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
-; CHECK-NEXT:    store <8 x half> [[INTERLEAVED_VEC7]], ptr [[NEXT_GEP6]], align 2
+; CHECK-NEXT:    store <8 x half> [[INTERLEAVED_VEC]], ptr [[NEXT_GEP6]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
