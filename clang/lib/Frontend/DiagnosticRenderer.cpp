@@ -272,8 +272,7 @@ retrieveMacroLocation(SourceLocation Loc, FileID MacroFileID,
   if (SM->isMacroArgExpansion(Loc)) {
     // Only look at the immediate spelling location of this macro argument if
     // the other location in the source range is also present in that expansion.
-    if (std::binary_search(CommonArgExpansions.begin(),
-                           CommonArgExpansions.end(), MacroFileID))
+    if (llvm::binary_search(CommonArgExpansions, MacroFileID))
       MacroRange =
           CharSourceRange(SM->getImmediateSpellingLoc(Loc), IsTokenRange);
     MacroArgRange = SM->getImmediateExpansionRange(Loc);
