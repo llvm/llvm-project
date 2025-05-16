@@ -103,9 +103,9 @@ static inline uint32_t get_chunk_size(uint32_t x) {
 
   if (s0 > y)
     return (s0 + 15) & ~15;
-  else if (s1 > y)
+  if (s1 > y)
     return (s1 + 15) & ~15;
-  else if (s2 > y)
+  if (s2 > y)
     return (s2 + 15) & ~15;
   return (s3 + 15) & ~15;
 }

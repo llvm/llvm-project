@@ -28,7 +28,7 @@ TEST_MAIN(int, char **, char **) {
   EXPECT_EQ(*divergent, 1);
   LIBC_NAMESPACE::free(divergent);
 
-  if (gpu::get_lane_id() % 2) {
+  if (gpu::get_lane_id() & 1) {
     int *masked = reinterpret_cast<int *>(
         LIBC_NAMESPACE::malloc((gpu::get_thread_id() + 1) * 16));
     EXPECT_NE(masked, nullptr);
