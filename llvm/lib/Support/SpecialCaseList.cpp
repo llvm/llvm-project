@@ -132,14 +132,17 @@ bool SpecialCaseList::createInternal(const MemoryBuffer *MB,
 Expected<SpecialCaseList::Section *>
 SpecialCaseList::addSection(StringRef SectionStr, unsigned LineNo,
                             bool UseGlobs) {
-  auto [It, DidEmplace] = Sections.try_emplace(SectionStr);
-  auto &Section = It->getValue();
-  if (DidEmplace)
-    if (auto Err = Section.SectionMatcher->insert(SectionStr, LineNo, UseGlobs))
-      return createStringError(errc::invalid_argument,
-                               "malformed section at line " + Twine(LineNo) +
-                                   ": '" + SectionStr +
-                                   "': " + toString(std::move(Err)));
+  Sections.emplace_back();
+  auto &Section = Sections.back();
+  Section.SectionStr = SectionStr;
+
+  if (auto Err = Section.SectionMatcher->insert(SectionStr, LineNo, UseGlobs)) {
+    return createStringError(errc::invalid_argument,
+                             "malformed section at line " + Twine(LineNo) +
+                                 ": '" + SectionStr +
+                                 "': " + toString(std::move(Err)));
+  }
+
   return &Section;
 }
 
@@ -212,8 +215,7 @@ bool SpecialCaseList::inSection(StringRef Section, StringRef Prefix,
 unsigned SpecialCaseList::inSectionBlame(StringRef Section, StringRef Prefix,
                                          StringRef Query,
                                          StringRef Category) const {
-  for (const auto &It : Sections) {
-    const auto &S = It.getValue();
+  for (const auto &S : Sections) {
     if (S.SectionMatcher->match(Section)) {
       unsigned Blame = inSectionBlame(S.Entries, Prefix, Query, Category);
       if (Blame)

@@ -533,16 +533,20 @@ void WarningsSpecialCaseList::processSections(DiagnosticsEngine &Diags) {
   // Drop the default section introduced by special case list, we only support
   // exact diagnostic group names.
   // FIXME: We should make this configurable in the parser instead.
-  Sections.erase("*");
+  // FIXME: C++20 can use std::erase_if(Sections, [](Section &sec) { return
+  // sec.SectionStr == "*"; });
+  Sections.erase(
+      std::remove_if(Sections.begin(), Sections.end(),
+                     [](Section &sec) { return sec.SectionStr == "*"; }),
+      Sections.end());
   // Make sure we iterate sections by their line numbers.
-  std::vector<std::pair<unsigned, const llvm::StringMapEntry<Section> *>>
-      LineAndSectionEntry;
+  std::vector<std::pair<unsigned, const Section *>> LineAndSectionEntry;
   LineAndSectionEntry.reserve(Sections.size());
   for (const auto &Entry : Sections) {
-    StringRef DiagName = Entry.getKey();
+    StringRef DiagName = Entry.SectionStr;
     // Each section has a matcher with that section's name, attached to that
     // line.
-    const auto &DiagSectionMatcher = Entry.getValue().SectionMatcher;
+    const auto &DiagSectionMatcher = Entry.SectionMatcher;
     unsigned DiagLine = DiagSectionMatcher->Globs.at(DiagName).second;
     LineAndSectionEntry.emplace_back(DiagLine, &Entry);
   }
@@ -550,7 +554,7 @@ void WarningsSpecialCaseList::processSections(DiagnosticsEngine &Diags) {
   static constexpr auto WarningFlavor = clang::diag::Flavor::WarningOrError;
   for (const auto &[_, SectionEntry] : LineAndSectionEntry) {
     SmallVector<diag::kind> GroupDiags;
-    StringRef DiagGroup = SectionEntry->getKey();
+    StringRef DiagGroup = SectionEntry->SectionStr;
     if (Diags.getDiagnosticIDs()->getDiagnosticsInGroup(
             WarningFlavor, DiagGroup, GroupDiags)) {
       StringRef Suggestion =
@@ -563,7 +567,7 @@ void WarningsSpecialCaseList::processSections(DiagnosticsEngine &Diags) {
     for (diag::kind Diag : GroupDiags)
       // We're intentionally overwriting any previous mappings here to make sure
       // latest one takes precedence.
-      DiagToSection[Diag] = &SectionEntry->getValue();
+      DiagToSection[Diag] = SectionEntry;
   }
 }
 
