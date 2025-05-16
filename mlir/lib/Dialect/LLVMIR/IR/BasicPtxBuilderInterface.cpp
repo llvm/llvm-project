@@ -140,6 +140,7 @@ LLVM::InlineAsmOp PtxBuilder::build() {
       /*constraints=*/registerConstraints.data(),
       /*has_side_effects=*/interfaceOp.hasSideEffect(),
       /*is_align_stack=*/false,
+      /*tail_call_kind=*/nullptr,
       /*asm_dialect=*/asmDialectAttr,
       /*operand_attrs=*/ArrayAttr());
 }

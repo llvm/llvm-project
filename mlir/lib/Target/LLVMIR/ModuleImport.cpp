@@ -2201,6 +2201,10 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
                 builder.getStringAttr(asmI->getAsmString()),
                 builder.getStringAttr(asmI->getConstraintString()),
                 asmI->hasSideEffects(), asmI->isAlignStack(),
+                callInst->isTailCall()
+                    ? TailCallKindAttr::get(mlirModule.getContext(),
+                                            TailCallKind::Tail)
+                    : nullptr,
                 AsmDialectAttr::get(
                     mlirModule.getContext(),
                     convertAsmDialectFromLLVM(asmI->getDialect())),
