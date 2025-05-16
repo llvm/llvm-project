@@ -1,17 +1,31 @@
 import os
 
-from clang.cindex import Config, conf, FUNCTION_LIST
+import clang.cindex
 
 if "CLANG_LIBRARY_PATH" in os.environ:
-    Config.set_library_path(os.environ["CLANG_LIBRARY_PATH"])
+    clang.cindex.Config.set_library_path(os.environ["CLANG_LIBRARY_PATH"])
 
 import unittest
+import ast
 
 
-class TestIndex(unittest.TestCase):
+class TestLib(unittest.TestCase):
     def test_functions_registered(self):
-        IGNORED = set(["_FuncPtr", "_name", "_handle"])
-        lib_functions = set(vars(conf.lib).keys())
-        registered_functions = set([item[0] for item in FUNCTION_LIST])
-        unregistered_functions = lib_functions - registered_functions - IGNORED
-        self.assertEqual(unregistered_functions, set())
+
+        def get_function_spelling(node):
+            # The call expressions we are interested in have their spelling in .attr, not .id
+            if hasattr(node, "attr"):
+                return node.attr
+            return ""
+
+        filename = clang.cindex.__file__
+        with open(filename) as file:
+            root = ast.parse(file.read())
+        functions = [
+            get_function_spelling(node.func)
+            for node in ast.walk(root)
+            if isinstance(node, ast.Call)
+        ]
+        used_functions = set([func for func in functions if func.startswith("clang_")])
+        registered_functions = set([item[0] for item in clang.cindex.FUNCTION_LIST])
+        self.assertEqual(used_functions - registered_functions, set())
