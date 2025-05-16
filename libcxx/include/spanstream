@@ -90,7 +90,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // Class template basic_spanbuf [spanbuf]
 
 template <class _CharT, class _Traits>
-class _LIBCPP_TEMPLATE_VIS basic_spanbuf : public basic_streambuf<_CharT, _Traits> {
+class basic_spanbuf : public basic_streambuf<_CharT, _Traits> {
 public:
   using char_type   = _CharT;
   using int_type    = typename _Traits::int_type;
@@ -254,7 +254,7 @@ using std::wspanbuf;
 // Class template basic_ispanstream [ispanstream]
 
 template <class _CharT, class _Traits>
-class _LIBCPP_TEMPLATE_VIS basic_ispanstream : public basic_istream<_CharT, _Traits> {
+class basic_ispanstream : public basic_istream<_CharT, _Traits> {
 public:
   using char_type   = _CharT;
   using int_type    = typename _Traits::int_type;
@@ -332,7 +332,7 @@ using std::wispanstream;
 // Class template basic_ospanstream [ospanstream]
 
 template <class _CharT, class _Traits>
-class _LIBCPP_TEMPLATE_VIS basic_ospanstream : public basic_ostream<_CharT, _Traits> {
+class basic_ospanstream : public basic_ostream<_CharT, _Traits> {
 public:
   using char_type   = _CharT;
   using int_type    = typename _Traits::int_type;
@@ -393,7 +393,7 @@ using std::wospanstream;
 #      endif
 
 template <class _CharT, class _Traits>
-class _LIBCPP_TEMPLATE_VIS basic_spanstream : public basic_iostream<_CharT, _Traits> {
+class basic_spanstream : public basic_iostream<_CharT, _Traits> {
 public:
   using char_type   = _CharT;
   using int_type    = typename _Traits::int_type;
