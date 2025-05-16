@@ -1,4 +1,4 @@
-//===---- XeGPUInstructionlize.cpp -- XeGPU Instructionlize Pass ----------===//
+//===---- XeGPUBlocking.cpp ---- XeGPU Instructionlize Pass ---------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,12 +20,12 @@
 
 namespace mlir {
 namespace xegpu {
-#define GEN_PASS_DEF_XEGPUINSTRUCTIONLIZE
+#define GEN_PASS_DEF_XEGPUBLOCKING
 #include "mlir/Dialect/XeGPU/Transforms/Passes.h.inc"
 } // namespace xegpu
 } // namespace mlir
 
-#define DEBUG_TYPE "xegpu-instructionlize"
+#define DEBUG_TYPE "xegpu-blocking"
 #define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
 
 using namespace mlir;
@@ -66,8 +66,8 @@ void resolveUnrealizedConversionCastOp(UnrealizedConversionCastOp castOp) {
 }
 
 /// Unroll XeGPU ops to their instruction-level representation.
-class XeGPUInstructionlizePass final
-    : public xegpu::impl::XeGPUInstructionlizeBase<XeGPUInstructionlizePass> {
+class XeGPUBlockingPass final
+    : public xegpu::impl::XeGPUBlockingBase<XeGPUBlockingPass> {
 public:
   void runOnOperation() override;
 
@@ -94,7 +94,7 @@ private:
 } // namespace
 
 std::optional<SmallVector<int64_t>>
-XeGPUInstructionlizePass::getTileShape(TypedValue<ShapedType> value) const {
+XeGPUBlockingPass::getTileShape(TypedValue<ShapedType> value) const {
   assert(value && "value must be non-null");
   xegpu::LayoutAttr layout = xegpu::getLayoutAttr(value);
   if (layout && layout.isSgLayout()) {
@@ -106,7 +106,7 @@ XeGPUInstructionlizePass::getTileShape(TypedValue<ShapedType> value) const {
 }
 
 std::optional<SmallVector<int64_t>>
-XeGPUInstructionlizePass::getTileShape(OpOperand &operand) const {
+XeGPUBlockingPass::getTileShape(OpOperand &operand) const {
   xegpu::LayoutAttr layout = xegpu::getLayoutAttr(operand);
   if (layout && layout.isSgLayout()) {
     if (auto inst_data = layout.getInstData())
@@ -119,7 +119,7 @@ XeGPUInstructionlizePass::getTileShape(OpOperand &operand) const {
 }
 
 std::optional<SmallVector<int64_t>>
-XeGPUInstructionlizePass::getTileShape(OpResult result) const {
+XeGPUBlockingPass::getTileShape(OpResult result) const {
   xegpu::LayoutAttr layout = xegpu::getLayoutAttr(result);
   if (layout && layout.isSgLayout()) {
     if (auto inst_data = layout.getInstData())
@@ -132,7 +132,7 @@ XeGPUInstructionlizePass::getTileShape(OpResult result) const {
 }
 
 std::optional<SmallVector<int64_t>>
-XeGPUInstructionlizePass::getTileShape(Operation *op) const {
+XeGPUBlockingPass::getTileShape(Operation *op) const {
   if (isa<xegpu::CreateNdDescOp, xegpu::UpdateNdOffsetOp>(op))
     return getTileShape(op->getOpResult(0));
   if (isa<xegpu::PrefetchNdOp, xegpu::LoadNdOp>(op))
@@ -171,7 +171,7 @@ XeGPUInstructionlizePass::getTileShape(Operation *op) const {
   return std::nullopt;
 }
 
-bool XeGPUInstructionlizePass::needsUnroll(Operation *op) const {
+bool XeGPUBlockingPass::needsUnroll(Operation *op) const {
   if (isa<LoopLikeOpInterface>(op))
     return false;
 
@@ -197,7 +197,7 @@ bool XeGPUInstructionlizePass::needsUnroll(Operation *op) const {
   return false;
 }
 
-void XeGPUInstructionlizePass::runOnOperation() {
+void XeGPUBlockingPass::runOnOperation() {
   MLIRContext *ctx = &getContext();
   Operation *mod = getOperation();
 

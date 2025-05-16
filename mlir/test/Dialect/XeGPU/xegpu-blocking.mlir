@@ -1,4 +1,4 @@
-// RUN: mlir-opt --xegpu-instructionlize -split-input-file %s | FileCheck %s
+// RUN: mlir-opt --xegpu-blocking -split-input-file %s | FileCheck %s
 
 
 #a = #xegpu.layout<inst_data = [8, 16], lane_layout = [1, 16], lane_data = [8, 1]>

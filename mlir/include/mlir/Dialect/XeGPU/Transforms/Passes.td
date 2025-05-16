@@ -38,7 +38,7 @@ def XeGPUSubgroupDistribute : Pass<"xegpu-subgroup-distribute"> {
   ];
 }
 
-def XeGPUInstructionlize: Pass<"xegpu-instructionlize"> {
+def XeGPUBlocking: Pass<"xegpu-blocking"> {
   let summary = "Instructionlize XeGPU ops";
   let description = [{
     The pass unrolls XeGPU ops working on large shapes into ops working on small shapes
