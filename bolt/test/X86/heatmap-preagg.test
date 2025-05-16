@@ -3,8 +3,12 @@
 RUN: yaml2obj %p/Inputs/blarge_new.yaml &> %t.exe
 ## Non-BOLTed input binary
 RUN: llvm-bolt-heatmap %t.exe -o %t --pa -p %p/Inputs/blarge_new.preagg.txt \
+RUN:   --heatmap-zoom-out 128,1024 --line-size 64 \
 RUN:   2>&1 | FileCheck --check-prefix CHECK-HEATMAP %s
 RUN: FileCheck %s --check-prefix CHECK-SEC-HOT --input-file %t-section-hotness.csv
+RUN: FileCheck %s --check-prefix CHECK-HM-64 --input-file %t
+RUN: FileCheck %s --check-prefix CHECK-HM-128 --input-file %t-128
+RUN: FileCheck %s --check-prefix CHECK-HM-1024 --input-file %t-1024
 
 ## BOLTed input binary
 RUN: llvm-bolt %t.exe -o %t.out --pa -p %p/Inputs/blarge_new.preagg.txt \
@@ -23,6 +27,29 @@ CHECK-SEC-HOT-NEXT: .init, 0x401000, 0x40101b, 16.8545, 100.0000, 0.1685
 CHECK-SEC-HOT-NEXT: .plt, 0x401020, 0x4010b0, 4.7583, 66.6667, 0.0317
 CHECK-SEC-HOT-NEXT: .text, 0x4010b0, 0x401c25, 78.3872, 85.1064, 0.6671
 CHECK-SEC-HOT-NEXT: .fini, 0x401c28, 0x401c35, 0.0000, 0.0000, 0.0000
+
+# Only check x scales – can't check colors, and FileCheck doesn't strip color
+# codes by default.
+CHECK-HM-64: (299, 937]
+CHECK-HM-64-NEXT:   0
+CHECK-HM-64-NEXT:   0
+CHECK-HM-64-NEXT:   0   1   2   3   4   5   6   7   8   9   a   b   c   d   e   f
+CHECK-HM-64-NEXT:   048c048c048c048c048c048c048c048c048c048c048c048c048c048c048c048c
+CHECK-HM-64-NEXT:   0
+
+CHECK-HM-128: (299, 937]
+CHECK-HM-128-NEXT:  0
+CHECK-HM-128-NEXT:  0                               1
+CHECK-HM-128-NEXT:  0 1 2 3 4 5 6 7 8 9 a b c d e f 0 1 2 3 4 5 6 7 8 9 a b c d e f
+CHECK-HM-128-NEXT:  0808080808080808080808080808080808080808080808080808080808080808
+CHECK-HM-128-NEXT:  0
+
+CHECK-HM-1024: (483, 1663]
+CHECK-HM-1024-NEXT: 0
+CHECK-HM-1024-NEXT: 0   1   2   3   4   5   6   7   8   9   a   b   c   d   e   f
+CHECK-HM-1024-NEXT: 048c048c048c048c048c048c048c048c048c048c048c048c048c048c048c048c
+CHECK-HM-1024-NEXT: 0
+CHECK-HM-1024-NEXT: 0
 
 CHECK-HEATMAP-BAT: PERF2BOLT: read 79 aggregated LBR entries
 CHECK-HEATMAP-BAT: HEATMAP: invalid traces: 2

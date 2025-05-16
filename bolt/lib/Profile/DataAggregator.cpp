@@ -68,6 +68,12 @@ FilterPID("pid",
   cl::Optional,
   cl::cat(AggregatorCategory));
 
+static cl::list<uint64_t>
+    HeatmapZoomOut("heatmap-zoom-out", cl::CommaSeparated,
+                   cl::desc("print secondary heatmaps with given bucket sizes"),
+                   cl::value_desc("bucket_size"), cl::Optional,
+                   cl::cat(HeatmapCategory));
+
 static cl::opt<bool>
 IgnoreBuildID("ignore-build-id",
   cl::desc("continue even if build-ids in input binary and perf.data mismatch"),
@@ -1210,54 +1216,54 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
   ErrorOr<StringRef> TypeOrErr = parseString(FieldSeparator);
   if (std::error_code EC = TypeOrErr.getError())
     return EC;
-  enum AggregatedLBREntry { TRACE, BRANCH, FT, FT_EXTERNAL_ORIGIN, INVALID };
+  enum AggregatedLBREntry {
+    TRACE,
+    SAMPLE,
+    BRANCH,
+    FT,
+    FT_EXTERNAL_ORIGIN,
+    INVALID
+  };
   auto Type = StringSwitch<AggregatedLBREntry>(TypeOrErr.get())
                   .Case("T", TRACE)
+                  .Case("S", SAMPLE)
                   .Case("B", BRANCH)
                   .Case("F", FT)
                   .Case("f", FT_EXTERNAL_ORIGIN)
                   .Default(INVALID);
   if (Type == INVALID) {
-    reportError("expected T, B, F or f");
+    reportError("expected T, S, B, F or f");
     return make_error_code(llvm::errc::io_error);
   }
 
-  while (checkAndConsumeFS()) {
-  }
-  ErrorOr<Location> From = parseLocationOrOffset();
-  if (std::error_code EC = From.getError())
-    return EC;
+  std::optional<Location> Addrs[3];
+  int AddrNum = 2;
+  if (Type == TRACE)
+    AddrNum = 3;
+  else if (Type == SAMPLE)
+    AddrNum = 1;
 
-  while (checkAndConsumeFS()) {
-  }
-  ErrorOr<Location> To = parseLocationOrOffset();
-  if (std::error_code EC = To.getError())
-    return EC;
+  int64_t Counters[2];
+  int CounterNum = 1;
+  if (Type == BRANCH)
+    CounterNum = 2;
 
-  ErrorOr<Location> TraceFtEnd = std::error_code();
-  if (Type == AggregatedLBREntry::TRACE) {
+  for (int I = 0; I < AddrNum; ++I) {
     while (checkAndConsumeFS()) {
     }
-    TraceFtEnd = parseLocationOrOffset();
-    if (std::error_code EC = TraceFtEnd.getError())
-      return EC;
+    if (ErrorOr<Location> Addr = parseLocationOrOffset())
+      Addrs[I] = Addr.get();
+    else
+      return Addr.getError();
   }
 
-  while (checkAndConsumeFS()) {
-  }
-  ErrorOr<int64_t> Frequency =
-      parseNumberField(FieldSeparator, Type != AggregatedLBREntry::BRANCH);
-  if (std::error_code EC = Frequency.getError())
-    return EC;
-
-  uint64_t Mispreds = 0;
-  if (Type == AggregatedLBREntry::BRANCH) {
+  for (int I = 0; I < CounterNum; ++I) {
     while (checkAndConsumeFS()) {
     }
-    ErrorOr<int64_t> MispredsOrErr = parseNumberField(FieldSeparator, true);
-    if (std::error_code EC = MispredsOrErr.getError())
-      return EC;
-    Mispreds = static_cast<uint64_t>(MispredsOrErr.get());
+    if (ErrorOr<int64_t> Count = parseNumberField(FieldSeparator, I + 1 == CounterNum))
+      Counters[I] = Count.get();
+    else
+      return Count.getError();
   }
 
   if (!checkAndConsumeNewLine()) {
@@ -1265,16 +1271,25 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
     return make_error_code(llvm::errc::io_error);
   }
 
-  BinaryFunction *FromFunc = getBinaryFunctionContainingAddress(From->Offset);
-  BinaryFunction *ToFunc = getBinaryFunctionContainingAddress(To->Offset);
+  const uint64_t FromOffset = Addrs[0]->Offset;
+  BinaryFunction *FromFunc = getBinaryFunctionContainingAddress(FromOffset);
+  if (FromFunc)
+    FromFunc->setHasProfileAvailable();
 
-  for (BinaryFunction *BF : {FromFunc, ToFunc})
-    if (BF)
-      BF->setHasProfileAvailable();
+  if (Type == SAMPLE) {
+    BasicSamples[FromOffset] += Counters[0];
+    return std::error_code();
+  }
 
-  uint64_t Count = static_cast<uint64_t>(Frequency.get());
+  const uint64_t ToOffset = Addrs[1]->Offset;
+  BinaryFunction *ToFunc = getBinaryFunctionContainingAddress(ToOffset);
+  if (ToFunc)
+    ToFunc->setHasProfileAvailable();
 
-  Trace Trace(From->Offset, To->Offset);
+  int64_t Count = Counters[0];
+  int64_t Mispreds = Counters[1];
+
+  Trace Trace(FromOffset, ToOffset);
   // Taken trace
   if (Type == TRACE || Type == BRANCH) {
     TakenBranchInfo &Info = BranchLBRs[Trace];
@@ -1285,8 +1300,9 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
   }
   // Construct fallthrough part of the trace
   if (Type == TRACE) {
-    Trace.From = To->Offset;
-    Trace.To = TraceFtEnd->Offset;
+    const uint64_t TraceFtEndOffset = Addrs[2]->Offset;
+    Trace.From = ToOffset;
+    Trace.To = TraceFtEndOffset;
     Type = FromFunc == ToFunc ? FT : FT_EXTERNAL_ORIGIN;
   }
   // Add fallthrough trace
@@ -1364,6 +1380,15 @@ std::error_code DataAggregator::printLBRHeatMap() {
   } else {
     HM.printCDF(opts::HeatmapOutput + ".csv");
     HM.printSectionHotness(opts::HeatmapOutput + "-section-hotness.csv");
+  }
+  // Provide coarse-grained heatmap if requested via --heatmap-zoom-out
+  for (const uint64_t NewBucketSize : opts::HeatmapZoomOut) {
+    if (!HM.resizeBucket(NewBucketSize))
+      break;
+    if (opts::HeatmapOutput == "-")
+      HM.print(opts::HeatmapOutput);
+    else
+      HM.print(formatv("{0}-{1}", opts::HeatmapOutput, NewBucketSize).str());
   }
 
   return std::error_code();
