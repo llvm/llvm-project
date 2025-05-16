@@ -70,7 +70,7 @@ public:
 
     /// Register containing the data or the register base of the memory
     /// location containing the data.
-    uint16_t CVRegister;
+    uint32_t CVRegister : 16;
 
     uint64_t static toOpaqueValue(const LocalVarDef DR) {
       uint64_t Val = 0;
