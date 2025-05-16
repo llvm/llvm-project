@@ -3,7 +3,6 @@
 
 ---
 name:            Cst
-tracksRegLiveness: true
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @Cst
@@ -14,12 +13,9 @@ body:             |
 ...
 ---
 name:            CstWithClass
-tracksRegLiveness: true
 body:             |
   bb.1:
-  ; We can't analyze %0 due to the lack of an LLT. We will get a default
-  ; constructed KnownBits back. %0 will have the correct size but we will
-  ; not know any further info.
+  ; Note: This comment should not be removed, the check lines below should be updated
   ; CHECK-LABEL: name: @CstWithClass
   ; CHECK-NEXT: %1:_ KnownBits:???????????????????????????????? SignBits:1
     %0:gpr32 = MOVi32imm 1
