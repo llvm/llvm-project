@@ -114,40 +114,78 @@ RT_API_ATTRS void CheckIntegerKind(
   }
 }
 
+template <bool RANK1>
 RT_API_ATTRS void ShallowCopyDiscontiguousToDiscontiguous(
     const Descriptor &to, const Descriptor &from) {
-  SubscriptValue toAt[maxRank], fromAt[maxRank];
-  to.GetLowerBounds(toAt);
-  from.GetLowerBounds(fromAt);
+  DescriptorIterator<RANK1> toIt{to};
+  DescriptorIterator<RANK1> fromIt{from};
   std::size_t elementBytes{to.ElementBytes()};
   for (std::size_t n{to.Elements()}; n-- > 0;
-       to.IncrementSubscripts(toAt), from.IncrementSubscripts(fromAt)) {
-    std::memcpy(
-        to.Element<char>(toAt), from.Element<char>(fromAt), elementBytes);
+      toIt.Advance(), fromIt.Advance()) {
+    // Checking the size at runtime and making sure the pointer passed to memcpy
+    // has a type that matches the element size makes it possible for the
+    // compiler to optimise out the memcpy calls altogether and can
+    // substantially improve performance for some applications.
+    if (elementBytes == 16) {
+      std::memcpy(toIt.template Get<__int128_t>(),
+          fromIt.template Get<__int128_t>(), elementBytes);
+    } else if (elementBytes == 8) {
+      std::memcpy(toIt.template Get<int64_t>(), fromIt.template Get<int64_t>(),
+          elementBytes);
+    } else if (elementBytes == 4) {
+      std::memcpy(toIt.template Get<int32_t>(), fromIt.template Get<int32_t>(),
+          elementBytes);
+    } else if (elementBytes == 2) {
+      std::memcpy(toIt.template Get<int16_t>(), fromIt.template Get<int16_t>(),
+          elementBytes);
+    } else {
+      std::memcpy(
+          toIt.template Get<char>(), fromIt.template Get<char>(), elementBytes);
+    }
   }
 }
 
+template <bool RANK1>
 RT_API_ATTRS void ShallowCopyDiscontiguousToContiguous(
     const Descriptor &to, const Descriptor &from) {
   char *toAt{to.OffsetElement()};
-  SubscriptValue fromAt[maxRank];
-  from.GetLowerBounds(fromAt);
   std::size_t elementBytes{to.ElementBytes()};
+  DescriptorIterator<RANK1> fromIt{from};
   for (std::size_t n{to.Elements()}; n-- > 0;
-       toAt += elementBytes, from.IncrementSubscripts(fromAt)) {
-    std::memcpy(toAt, from.Element<char>(fromAt), elementBytes);
+      toAt += elementBytes, fromIt.Advance()) {
+    if (elementBytes == 16) {
+      std::memcpy(toAt, fromIt.template Get<__int128_t>(), elementBytes);
+    } else if (elementBytes == 8) {
+      std::memcpy(toAt, fromIt.template Get<int64_t>(), elementBytes);
+    } else if (elementBytes == 4) {
+      std::memcpy(toAt, fromIt.template Get<int32_t>(), elementBytes);
+    } else if (elementBytes == 2) {
+      std::memcpy(toAt, fromIt.template Get<int16_t>(), elementBytes);
+    } else {
+      std::memcpy(toAt, fromIt.template Get<char>(), elementBytes);
+    }
   }
 }
 
+template <bool RANK1>
 RT_API_ATTRS void ShallowCopyContiguousToDiscontiguous(
     const Descriptor &to, const Descriptor &from) {
-  SubscriptValue toAt[maxRank];
-  to.GetLowerBounds(toAt);
   char *fromAt{from.OffsetElement()};
+  DescriptorIterator<RANK1> toIt{to};
   std::size_t elementBytes{to.ElementBytes()};
   for (std::size_t n{to.Elements()}; n-- > 0;
-       to.IncrementSubscripts(toAt), fromAt += elementBytes) {
-    std::memcpy(to.Element<char>(toAt), fromAt, elementBytes);
+      toIt.Advance(), fromAt += elementBytes) {
+    if (elementBytes == 16) {
+      std::memcpy(toIt.template Get<__int128_t>(), fromAt, elementBytes);
+    } else if (elementBytes == 8) {
+      std::memcpy(toIt.template Get<int64_t>(), fromAt, elementBytes);
+    } else if (elementBytes == 4) {
+      std::memcpy(toIt.template Get<int32_t>(), fromAt, elementBytes);
+    } else if (elementBytes == 2) {
+      std::memcpy(toIt.template Get<int16_t>(), fromAt, elementBytes);
+    } else {
+      std::memcpy(toIt.template Get<char>(), fromAt, elementBytes);
+    }
   }
 }
 
@@ -158,13 +196,25 @@ RT_API_ATTRS void ShallowCopy(const Descriptor &to, const Descriptor &from,
       std::memcpy(to.OffsetElement(), from.OffsetElement(),
           to.Elements() * to.ElementBytes());
     } else {
-      ShallowCopyDiscontiguousToContiguous(to, from);
+      if (to.rank() == 1 && from.rank() == 1) {
+        ShallowCopyDiscontiguousToContiguous<true>(to, from);
+      } else {
+        ShallowCopyDiscontiguousToContiguous<false>(to, from);
+      }
     }
   } else {
     if (fromIsContiguous) {
-      ShallowCopyContiguousToDiscontiguous(to, from);
+      if (to.rank() == 1 && from.rank() == 1) {
+        ShallowCopyContiguousToDiscontiguous<true>(to, from);
+      } else {
+        ShallowCopyContiguousToDiscontiguous<false>(to, from);
+      }
     } else {
-      ShallowCopyDiscontiguousToDiscontiguous(to, from);
+      if (to.rank() == 1 && from.rank() == 1) {
+        ShallowCopyDiscontiguousToDiscontiguous<true>(to, from);
+      } else {
+        ShallowCopyDiscontiguousToDiscontiguous<false>(to, from);
+      }
     }
   }
 }

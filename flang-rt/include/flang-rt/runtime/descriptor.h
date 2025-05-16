@@ -437,6 +437,43 @@ private:
 };
 static_assert(sizeof(Descriptor) == sizeof(ISO::CFI_cdesc_t));
 
+// Lightweight iterator-like API to simplify specialising Descriptor indexing
+// in cases where it can improve application performance. On account of the
+// purpose of this API being performance optimisation, it is up to the user to
+// do all the necessary checks to make sure the RANK1=true variant can be used
+// safely and that Advance() is not called more times than the number of
+// elements in the Descriptor allows for.
+template <bool RANK1 = false> class DescriptorIterator {
+private:
+  const Descriptor &descriptor;
+  SubscriptValue subscripts[maxRank];
+  std::size_t elementOffset = 0;
+
+public:
+  DescriptorIterator(const Descriptor &descriptor) : descriptor(descriptor) {
+    descriptor.GetLowerBounds(subscripts);
+    if constexpr (RANK1) {
+      elementOffset = descriptor.SubscriptByteOffset(0, subscripts[0]);
+    }
+  };
+
+  template <typename A> A *Get() {
+    if constexpr (RANK1) {
+      return descriptor.OffsetElement<A>(elementOffset);
+    } else {
+      return descriptor.Element<A>(subscripts);
+    }
+  }
+
+  void Advance() {
+    if constexpr (RANK1) {
+      elementOffset += descriptor.GetDimension(0).ByteStride();
+    } else {
+      descriptor.IncrementSubscripts(subscripts);
+    }
+  }
+};
+
 // Properly configured instances of StaticDescriptor will occupy the
 // exact amount of storage required for the descriptor, its dimensional
 // information, and possible addendum.  To build such a static descriptor,

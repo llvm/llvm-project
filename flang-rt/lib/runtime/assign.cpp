@@ -492,11 +492,21 @@ RT_API_ATTRS void Assign(Descriptor &to, const Descriptor &from,
         terminator.Crash("unexpected type code %d in blank padded Assign()",
             to.type().raw());
       }
-    } else { // elemental copies, possibly with character truncation
-      for (std::size_t n{toElements}; n-- > 0;
-           to.IncrementSubscripts(toAt), from.IncrementSubscripts(fromAt)) {
-        memmoveFct(to.Element<char>(toAt), from.Element<const char>(fromAt),
-            toElementBytes);
+    } else {
+      // We can't simply call ShallowCopy due to edge cases such as character
+      // truncation or assignments where the RHS is a scalar.
+      if (toElementBytes == fromElementBytes && to.IsContiguous()) {
+        if (to.rank() == 1 && from.rank() == 1) {
+          ShallowCopyDiscontiguousToContiguous<true>(to, from);
+        } else {
+          ShallowCopyDiscontiguousToContiguous<false>(to, from);
+        }
+      } else {
+        if (to.rank() == 1 && from.rank() == 1) {
+          ShallowCopyDiscontiguousToDiscontiguous<true>(to, from);
+        } else {
+          ShallowCopyDiscontiguousToDiscontiguous<false>(to, from);
+        }
       }
     }
   }
