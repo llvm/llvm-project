@@ -1764,6 +1764,7 @@ bool LoopIdiomRecognize::recognizeAndInsertStrLen() {
   }
 
   IRBuilder<> Builder(Preheader->getTerminator());
+  Builder.SetCurrentDebugLocation(CurLoop->getStartLoc());
   SCEVExpander Expander(*SE, Preheader->getModule()->getDataLayout(),
                         "strlen_idiom");
   Value *MaterialzedBase = Expander.expandCodeFor(
@@ -1777,9 +1778,6 @@ bool LoopIdiomRecognize::recognizeAndInsertStrLen() {
     StrLenFunc = emitWcsLen(MaterialzedBase, Builder, *DL, TLI);
   }
   assert(StrLenFunc && "Failed to emit strlen function.");
-
-  // Set debug location to the start of the loop.
-  cast<Instruction>(StrLenFunc)->setDebugLoc(CurLoop->getStartLoc());
 
   const SCEV *StrlenEv = SE->getSCEV(StrLenFunc);
   SmallVector<PHINode *, 4> Cleanup;
