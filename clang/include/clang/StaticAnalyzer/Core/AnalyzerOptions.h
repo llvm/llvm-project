@@ -19,6 +19,7 @@
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include <string>
 #include <utility>
 #include <vector>
@@ -269,7 +270,8 @@ public:
   unsigned NoRetryExhausted : 1;
 
   /// Emit analyzer warnings as errors.
-  bool AnalyzerWerror : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned AnalyzerWerror : 1;
 
   /// The inlining stack depth limit.
   unsigned InlineMaxStackDepth;
@@ -410,7 +412,7 @@ public:
             // an alias to the new verbose filename option because this
             // closely mimics the behavior under the old option.
             ShouldWriteStableReportFilename || ShouldWriteVerboseReportFilename,
-            AnalyzerWerror,
+            static_cast<bool>(AnalyzerWerror),
             ShouldApplyFixIts,
             ShouldDisplayCheckerNameForText};
   }
