@@ -474,10 +474,6 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
       return false;
     return this->emitDecayPtr(*FromT, *ToT, CE);
   }
-
-  case CK_LValueToRValueBitCast:
-    return this->emitBuiltinBitCast(CE);
-
   case CK_IntegralToBoolean:
   case CK_FixedPointToBoolean: {
     // HLSL uses this to cast to one-element vectors.
@@ -570,11 +566,11 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
         return false;
     }
 
+    PrimType T = classifyPrim(SubExpr->getType());
     // Init the complex value to {SubExpr, 0}.
-    if (!this->visitArrayElemInit(0, SubExpr))
+    if (!this->visitArrayElemInit(0, SubExpr, T))
       return false;
     // Zero-init the second element.
-    PrimType T = classifyPrim(SubExpr->getType());
     if (!this->visitZeroInitializer(T, SubExpr->getType(), SubExpr))
       return false;
     return this->emitInitElem(T, 1, SubExpr);
@@ -736,6 +732,11 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
 }
 
 template <class Emitter>
+bool Compiler<Emitter>::VisitBuiltinBitCastExpr(const BuiltinBitCastExpr *E) {
+  return this->emitBuiltinBitCast(E);
+}
+
+template <class Emitter>
 bool Compiler<Emitter>::VisitIntegerLiteral(const IntegerLiteral *LE) {
   if (DiscardResult)
     return true;
@@ -772,7 +773,7 @@ bool Compiler<Emitter>::VisitImaginaryLiteral(const ImaginaryLiteral *E) {
     return false;
   if (!this->emitInitElem(SubExprT, 0, SubExpr))
     return false;
-  return this->visitArrayElemInit(1, SubExpr);
+  return this->visitArrayElemInit(1, SubExpr, SubExprT);
 }
 
 template <class Emitter>
@@ -1886,6 +1887,7 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
     if (!this->emitCheckArraySize(NumElems, E))
       return false;
 
+    std::optional<PrimType> InitT = classify(CAT->getElementType());
     unsigned ElementIndex = 0;
     for (const Expr *Init : Inits) {
       if (const auto *EmbedS =
@@ -1905,7 +1907,7 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
         if (!EmbedS->doForEachDataElement(Eval, ElementIndex))
           return false;
       } else {
-        if (!this->visitArrayElemInit(ElementIndex, Init))
+        if (!this->visitArrayElemInit(ElementIndex, Init, InitT))
           return false;
         ++ElementIndex;
       }
@@ -1915,7 +1917,7 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
     // FIXME: This should go away.
     if (ArrayFiller) {
       for (; ElementIndex != NumElems; ++ElementIndex) {
-        if (!this->visitArrayElemInit(ElementIndex, ArrayFiller))
+        if (!this->visitArrayElemInit(ElementIndex, ArrayFiller, InitT))
           return false;
       }
     }
@@ -1998,13 +2000,13 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
 /// Pointer to the array(not the element!) must be on the stack when calling
 /// this.
 template <class Emitter>
-bool Compiler<Emitter>::visitArrayElemInit(unsigned ElemIndex,
-                                           const Expr *Init) {
-  if (std::optional<PrimType> T = classify(Init->getType())) {
+bool Compiler<Emitter>::visitArrayElemInit(unsigned ElemIndex, const Expr *Init,
+                                           std::optional<PrimType> InitT) {
+  if (InitT) {
     // Visit the primitive element like normal.
     if (!this->visit(Init))
       return false;
-    return this->emitInitElem(*T, ElemIndex, Init);
+    return this->emitInitElem(*InitT, ElemIndex, Init);
   }
 
   InitLinkScope<Emitter> ILS(this, InitLink::Elem(ElemIndex));
@@ -2298,6 +2300,7 @@ bool Compiler<Emitter>::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *E) {
   //   Investigate compiling this to a loop.
   const Expr *SubExpr = E->getSubExpr();
   size_t Size = E->getArraySize().getZExtValue();
+  std::optional<PrimType> SubExprT = classify(SubExpr);
 
   // So, every iteration, we execute an assignment here
   // where the LHS is on the stack (the target array)
@@ -2306,7 +2309,7 @@ bool Compiler<Emitter>::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *E) {
     ArrayIndexScope<Emitter> IndexScope(this, I);
     BlockScope<Emitter> BS(this);
 
-    if (!this->visitArrayElemInit(I, SubExpr))
+    if (!this->visitArrayElemInit(I, SubExpr, SubExprT))
       return false;
     if (!BS.destroyLocals())
       return false;
@@ -2433,7 +2436,7 @@ bool Compiler<Emitter>::VisitStringLiteral(const StringLiteral *E) {
   // emitted. Read only the array length from the string literal.
   unsigned ArraySize = CAT->getZExtSize();
   unsigned N = std::min(ArraySize, E->getLength());
-  size_t CharWidth = E->getCharByteWidth();
+  unsigned CharWidth = E->getCharByteWidth();
 
   for (unsigned I = 0; I != N; ++I) {
     uint32_t CodeUnit = E->getCodeUnit(I);
@@ -3881,7 +3884,7 @@ bool Compiler<Emitter>::VisitShuffleVectorExpr(const ShuffleVectorExpr *E) {
       return false;
   }
   for (unsigned I = 0; I != NumOutputElems; ++I) {
-    APSInt ShuffleIndex = E->getShuffleMaskIdx(Ctx.getASTContext(), I);
+    APSInt ShuffleIndex = E->getShuffleMaskIdx(I);
     assert(ShuffleIndex >= -1);
     if (ShuffleIndex == -1)
       return this->emitInvalidShuffleVectorIndex(I, E);
@@ -4105,11 +4108,8 @@ template <class Emitter> bool Compiler<Emitter>::visitBool(const Expr *E) {
     return true;
 
   // Convert pointers to bool.
-  if (T == PT_Ptr) {
-    if (!this->emitNull(*T, 0, nullptr, E))
-      return false;
-    return this->emitNE(*T, E);
-  }
+  if (T == PT_Ptr)
+    return this->emitIsNonNullPtr(E);
 
   // Or Floats.
   if (T == PT_Float)
@@ -4872,10 +4872,13 @@ bool Compiler<Emitter>::VisitBuiltinCallExpr(const CallExpr *E,
 
 template <class Emitter>
 bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
-  if (unsigned BuiltinID = E->getBuiltinCallee())
-    return VisitBuiltinCallExpr(E, BuiltinID);
-
   const FunctionDecl *FuncDecl = E->getDirectCallee();
+
+  if (FuncDecl) {
+    if (unsigned BuiltinID = FuncDecl->getBuiltinID())
+      return VisitBuiltinCallExpr(E, BuiltinID);
+  }
+
   // Calls to replaceable operator new/operator delete.
   if (FuncDecl &&
       FuncDecl->isUsableAsGlobalAllocationFunctionInConstantEvaluation()) {

@@ -219,3 +219,24 @@ program OmpAtomicUpdate
   !$omp atomic update
     w = w + g  
 end program OmpAtomicUpdate
+
+! Check that the clean-ups associated with the function call
+! are generated after the omp.atomic.update operation:
+! CHECK-LABEL:   func.func @_QPfunc_call_cleanup(
+subroutine func_call_cleanup(v, vv)
+  integer v, vv
+
+! CHECK:           %[[VAL_6:.*]]:3 = hlfir.associate %{{.*}} {adapt.valuebyref} : (i32) -> (!fir.ref<i32>, !fir.ref<i32>, i1)
+! CHECK:           %[[VAL_7:.*]] = fir.call @_QPfunc(%[[VAL_6]]#0) fastmath<contract> : (!fir.ref<i32>) -> f32
+! CHECK:           omp.atomic.update %{{.*}} : !fir.ref<i32> {
+! CHECK:           ^bb0(%[[VAL_8:.*]]: i32):
+! CHECK:             %[[VAL_9:.*]] = fir.convert %[[VAL_8]] : (i32) -> f32
+! CHECK:             %[[VAL_10:.*]] = arith.addf %[[VAL_9]], %[[VAL_7]] fastmath<contract> : f32
+! CHECK:             %[[VAL_11:.*]] = fir.convert %[[VAL_10]] : (f32) -> i32
+! CHECK:             omp.yield(%[[VAL_11]] : i32)
+! CHECK:           }
+! CHECK:           hlfir.end_associate %[[VAL_6]]#1, %[[VAL_6]]#2 : !fir.ref<i32>, i1
+  !$omp atomic update
+  v = v + func(vv + 1)
+  !$omp end atomic
+end subroutine func_call_cleanup

@@ -499,6 +499,8 @@ int llvm_symbolizer_main(int argc, char **argv, const llvm::ToolContext &) {
   Opts.DWPName = Args.getLastArgValue(OPT_dwp_EQ).str();
   Opts.FallbackDebugPath =
       Args.getLastArgValue(OPT_fallback_debug_path_EQ).str();
+  Opts.GsymFileDirectory = Args.getAllArgValues(OPT_gsym_file_directory_EQ);
+  Opts.DisableGsym = Args.hasArg(OPT_disable_gsym);
   Opts.PrintFunctions = decideHowToPrintFunctions(Args, IsAddr2Line);
   parseIntArg(Args, OPT_print_source_context_lines_EQ,
               Config.SourceContextLines);

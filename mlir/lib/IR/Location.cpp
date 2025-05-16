@@ -34,7 +34,8 @@ using namespace mlir::detail;
 namespace mlir::detail {
 struct FileLineColRangeAttrStorage final
     : public ::mlir::AttributeStorage,
-      public llvm::TrailingObjects<FileLineColRangeAttrStorage, unsigned> {
+      private llvm::TrailingObjects<FileLineColRangeAttrStorage, unsigned> {
+  friend llvm::TrailingObjects<FileLineColRangeAttrStorage, unsigned>;
   using PointerPair = llvm::PointerIntPair<StringAttr, 2>;
   using KeyTy = std::tuple<StringAttr, ::llvm::ArrayRef<unsigned>>;
 
@@ -62,7 +63,7 @@ struct FileLineColRangeAttrStorage final
       result->startLine = elements[0];
       // Copy in the element types into the trailing storage.
       llvm::uninitialized_copy(elements.drop_front(),
-                               result->getTrailingObjects<unsigned>());
+                               result->getTrailingObjects());
     }
     return result;
   }
@@ -74,12 +75,12 @@ struct FileLineColRangeAttrStorage final
     return (filenameAndTrailing.getPointer() == std::get<0>(tblgenKey)) &&
            (size() == std::get<1>(tblgenKey).size()) &&
            (startLine == std::get<1>(tblgenKey)[0]) &&
-           (ArrayRef<unsigned>{getTrailingObjects<unsigned>(), size() - 1} ==
-            ArrayRef<unsigned>{std::get<1>(tblgenKey)}.drop_front());
+           (getTrailingObjects(size() - 1) ==
+            std::get<1>(tblgenKey).drop_front());
   }
 
   unsigned getLineCols(unsigned index) const {
-    return getTrailingObjects<unsigned>()[index - 1];
+    return getTrailingObjects()[index - 1];
   }
 
   unsigned getStartLine() const { return startLine; }

@@ -13084,8 +13084,8 @@ static SDValue lowerShuffleAsBroadcast(const SDLoc &DL, MVT VT, SDValue V1,
     // uops even if the original vector load is not eliminated.
 
     // Reduce the vector load and shuffle to a broadcasted scalar load.
-    LoadSDNode *Ld = cast<LoadSDNode>(V);
-    SDValue BaseAddr = Ld->getOperand(1);
+    auto *Ld = cast<LoadSDNode>(V);
+    SDValue BaseAddr = Ld->getBasePtr();
     MVT SVT = VT.getScalarType();
     unsigned Offset = BroadcastIdx * SVT.getStoreSize();
     assert((int)(Offset * 8) == BitOffset && "Unexpected bit-offset");
@@ -56708,10 +56708,39 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
   SDValue Scale = GorS->getScale();
   EVT IndexVT = Index.getValueType();
   EVT IndexSVT = IndexVT.getVectorElementType();
+  unsigned IndexWidth = Index.getScalarValueSizeInBits();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  EVT PtrVT = TLI.getPointerTy(DAG.getDataLayout());
 
   if (DCI.isBeforeLegalize()) {
-    unsigned IndexWidth = Index.getScalarValueSizeInBits();
+    // Attempt to move shifted index into the address scale, allows further
+    // index truncation below.
+    if (Index.getOpcode() == ISD::SHL && isa<ConstantSDNode>(Scale)) {
+      unsigned ScaleAmt = Scale->getAsZExtVal();
+      assert(isPowerOf2_32(ScaleAmt) && "Scale must be a power of 2");
+      unsigned Log2ScaleAmt = Log2_32(ScaleAmt);
+      unsigned MaskBits = IndexWidth - Log2ScaleAmt;
+      APInt DemandedBits = APInt::getLowBitsSet(IndexWidth, MaskBits);
+      if (TLI.SimplifyDemandedBits(Index, DemandedBits, DCI)) {
+        if (N->getOpcode() != ISD::DELETED_NODE)
+          DCI.AddToWorklist(N);
+        return SDValue(N, 0);
+      }
+      if (auto MinShAmt = DAG.getValidMinimumShiftAmount(Index)) {
+        if (*MinShAmt >= 1 && (*MinShAmt + Log2ScaleAmt) < 4 &&
+            DAG.ComputeNumSignBits(Index.getOperand(0)) > 1) {
+          SDValue ShAmt = Index.getOperand(1);
+          SDValue NewShAmt =
+              DAG.getNode(ISD::SUB, DL, ShAmt.getValueType(), ShAmt,
+                          DAG.getConstant(1, DL, ShAmt.getValueType()));
+          SDValue NewIndex = DAG.getNode(ISD::SHL, DL, Index.getValueType(),
+                                         Index.getOperand(0), NewShAmt);
+          SDValue NewScale =
+              DAG.getConstant(ScaleAmt * 2, DL, Scale.getValueType());
+          return rebuildGatherScatter(GorS, NewIndex, Base, NewScale, DAG);
+        }
+      }
+    }
 
     // Shrink indices if they are larger than 32-bits.
     // Only do this before legalize types since v2i64 could become v2i32.
@@ -56722,8 +56751,8 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
 
       // FIXME: We could support more than just constant fold, but we need to
       // careful with costing. A truncate that can be optimized out would be
-      // fine. Otherwise we might only want to create a truncate if it avoids a
-      // split.
+      // fine. Otherwise we might only want to create a truncate if it avoids
+      // a split.
       if (SDValue TruncIndex =
               DAG.FoldConstantArithmetic(ISD::TRUNCATE, DL, NewVT, Index))
         return rebuildGatherScatter(GorS, TruncIndex, Base, Scale, DAG);
@@ -56737,10 +56766,14 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
         Index = DAG.getNode(ISD::TRUNCATE, DL, NewVT, Index);
         return rebuildGatherScatter(GorS, Index, Base, Scale, DAG);
       }
+
+      // Shrink if we remove an illegal type.
+      if (!TLI.isTypeLegal(Index.getValueType()) && TLI.isTypeLegal(NewVT)) {
+        Index = DAG.getNode(ISD::TRUNCATE, DL, NewVT, Index);
+        return rebuildGatherScatter(GorS, Index, Base, Scale, DAG);
+      }
     }
   }
-
-  EVT PtrVT = TLI.getPointerTy(DAG.getDataLayout());
 
   // Try to move splat adders from the index operand to the base
   // pointer operand. Taking care to multiply by the scale. We can only do
@@ -56789,8 +56822,6 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
   }
 
   if (DCI.isBeforeLegalizeOps()) {
-    unsigned IndexWidth = Index.getScalarValueSizeInBits();
-
     // Make sure the index is either i32 or i64
     if (IndexWidth != 32 && IndexWidth != 64) {
       MVT EltVT = IndexWidth > 32 ? MVT::i64 : MVT::i32;
@@ -58372,9 +58403,7 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
           ((VT.is256BitVector() &&
             (EltSizeInBits >= 32 || Subtarget.hasInt256())) ||
            (VT.is512BitVector() && Subtarget.useAVX512Regs() &&
-            (EltSizeInBits >= 32 || Subtarget.hasVBMI2())))) {
-        // TODO: Relax VBMI requirement for repeated shuffle ops - currently
-        // limited to targets that should always have good cross lane shuffles.
+            (EltSizeInBits >= 32 || Subtarget.useBWIRegs())))) {
         SDValue Concat0 = CombineSubOperand(VT, Ops, 0);
         SDValue Concat1 = CombineSubOperand(VT, Ops, 1);
         if (Concat0 || Concat1 ||

@@ -84,3 +84,5 @@ if(LLDB_DAP_WELCOME_MESSAGE)
     PRIVATE
     -DLLDB_DAP_WELCOME_MESSAGE=\"${LLDB_DAP_WELCOME_MESSAGE}\")
 endif()
+
+add_subdirectory(tool)

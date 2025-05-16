@@ -2151,8 +2151,8 @@ void SampleProfileLoader::removePseudoProbeInstsDiscriminator(Module &M) {
               std::optional<uint32_t> DwarfDiscriminator =
                   PseudoProbeDwarfDiscriminator::extractDwarfBaseDiscriminator(
                       Discriminator);
-              I.setDebugLoc(DIL->cloneWithDiscriminator(
-                  DwarfDiscriminator ? *DwarfDiscriminator : 0));
+              I.setDebugLoc(
+                  DIL->cloneWithDiscriminator(DwarfDiscriminator.value_or(0)));
             }
           }
       }
