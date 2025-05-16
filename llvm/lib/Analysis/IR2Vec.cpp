@@ -134,7 +134,7 @@ Embedding SymbolicEmbedder::getOperandEmbedding(const Value *Op) {
 void SymbolicEmbedder::computeEmbeddings() {
   if (F.isDeclaration())
     return;
-  for (auto &BB : F) {
+  for (const auto &BB : F) {
     auto [It, WasInserted] = BBVecMap.try_emplace(&BB, computeBB2Vec(BB));
     assert(WasInserted && "Basic block already exists in the map");
     addVectors(FuncVector, It->second);
@@ -144,7 +144,7 @@ void SymbolicEmbedder::computeEmbeddings() {
 Embedding SymbolicEmbedder::computeBB2Vec(const BasicBlock &BB) {
   Embedding BBVector(Dimension, 0);
 
-  for (auto &I : BB) {
+  for (const auto &I : BB) {
     Embedding InstVector(Dimension, 0);
 
     auto OpcVec = lookupVocab(I.getOpcodeName());
@@ -245,7 +245,7 @@ IR2VecVocabAnalysis::run(Module &M, ModuleAnalysisManager &AM) {
 
 void IR2VecPrinterPass::printVector(const Embedding &Vec) const {
   OS << " [";
-  for (auto &Elem : Vec)
+  for (const auto &Elem : Vec)
     OS << " " << format("%.2f", Elem) << " ";
   OS << "]\n";
 }

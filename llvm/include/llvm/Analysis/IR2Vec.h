@@ -155,22 +155,7 @@ public:
 
 } // namespace ir2vec
 
-class IR2VecVocabResult;
-
-/// This analysis provides the vocabulary for IR2Vec. The vocabulary provides a
-/// mapping between an entity of the IR (like opcode, type, argument, etc.) and
-/// its corresponding embedding.
-class IR2VecVocabAnalysis : public AnalysisInfoMixin<IR2VecVocabAnalysis> {
-  ir2vec::Vocab Vocabulary;
-  Error readVocabulary();
-
-public:
-  static AnalysisKey Key;
-  IR2VecVocabAnalysis() = default;
-  using Result = IR2VecVocabResult;
-  Result run(Module &M, ModuleAnalysisManager &MAM);
-};
-
+/// Class for storing the result of the IR2VecVocabAnalysis.
 class IR2VecVocabResult {
   ir2vec::Vocab Vocabulary;
   bool Valid = false;
@@ -184,6 +169,20 @@ public:
   unsigned getDimension() const;
   bool invalidate(Module &M, const PreservedAnalyses &PA,
                   ModuleAnalysisManager::Invalidator &Inv);
+};
+
+/// This analysis provides the vocabulary for IR2Vec. The vocabulary provides a
+/// mapping between an entity of the IR (like opcode, type, argument, etc.) and
+/// its corresponding embedding.
+class IR2VecVocabAnalysis : public AnalysisInfoMixin<IR2VecVocabAnalysis> {
+  ir2vec::Vocab Vocabulary;
+  Error readVocabulary();
+
+public:
+  static AnalysisKey Key;
+  IR2VecVocabAnalysis() = default;
+  using Result = IR2VecVocabResult;
+  Result run(Module &M, ModuleAnalysisManager &MAM);
 };
 
 /// This pass prints the IR2Vec embeddings for instructions, basic blocks, and
