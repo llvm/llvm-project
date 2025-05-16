@@ -162,6 +162,7 @@ raw_ostream &operator<<(raw_ostream &OS, const DescriptorTableClause &Clause);
 struct StaticSampler {
   Register Reg;
   float MipLODBias = 0.f;
+  uint32_t MaxAnisotropy = 16;
 };
 
 /// Models RootElement : RootFlags | RootConstants | RootParam
