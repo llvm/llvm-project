@@ -1059,7 +1059,7 @@ struct ConcatOpInterface
 
   bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
                                const AnalysisState &state) const {
-    return true;
+    return false;
   }
 
   bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
@@ -1069,7 +1069,7 @@ struct ConcatOpInterface
 
   AliasingValueList getAliasingValues(Operation *op, OpOperand &opOperand,
                                       const AnalysisState &state) const {
-    return {{op->getResult(0), BufferRelation::Equivalent}};
+    return {};
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
@@ -1109,7 +1109,7 @@ struct ConcatOpInterface
       sizes.push_back(rewriter.getIndexAttr(dimSize));
     }
 
-    int concatDimOffset = 0;
+    int64_t concatDimOffset = 0;
     for (auto operand : concatOp.getInputs()) {
       // Get the buffer for the operand.
       FailureOr<Value> srcBuffer = getBuffer(rewriter, operand, options);
