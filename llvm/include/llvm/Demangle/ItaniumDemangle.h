@@ -165,18 +165,18 @@ class NodeArray;
 // traversed by the printLeft/Right functions to produce a demangled string.
 class Node {
 public:
-  enum Kind : unsigned {
+  enum Kind : uint8_t {
 #define NODE(NodeKind) K##NodeKind,
 #include "ItaniumNodes.def"
   };
 
   /// Three-way bool to track a cached value. Unknown is possible if this node
   /// has an unexpanded parameter pack below it that may affect this cache.
-  enum class Cache : unsigned { Yes, No, Unknown, };
+  enum class Cache : uint8_t { Yes, No, Unknown, };
 
   /// Operator precedence for expression nodes. Used to determine required
   /// parens in expression emission.
-  enum class Prec : unsigned {
+  enum class Prec : uint8_t {
     Primary,
     Postfix,
     Unary,
@@ -2996,8 +2996,7 @@ template <typename Derived, typename Alloc> struct AbstractManglingParser {
     };
     char Enc[2];      // Encoding
     OIKind Kind;      // Kind of operator
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned Flag : 1;   // Entry-specific flag
+    bool Flag : 1;   // Entry-specific flag
     Node::Prec Prec : 7; // Precedence
     const char *Name; // Spelling
 

@@ -18,6 +18,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringTable.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Path.h"
 #include <map>
@@ -79,6 +80,7 @@ struct StaticDiagInfoRec {
   uint16_t Class : 3;
   LLVM_PREFERRED_TYPE(DiagnosticIDs::SFINAEResponse)
   uint16_t SFINAE : 2;
+  LLVM_PREFERRED_TYPE(diag::DiagCategory)
   uint16_t Category : 6;
   LLVM_PREFERRED_TYPE(bool)
   uint16_t WarnNoWerror : 1;
@@ -87,7 +89,9 @@ struct StaticDiagInfoRec {
   LLVM_PREFERRED_TYPE(bool)
   uint16_t WarnShowInSystemMacro : 1;
 
+  LLVM_PREFERRED_TYPE(diag::Group)
   uint16_t OptionGroupIndex : 15;
+
   LLVM_PREFERRED_TYPE(bool)
   uint16_t Deferrable : 1;
 
