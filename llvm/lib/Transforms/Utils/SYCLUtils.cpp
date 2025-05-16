@@ -1,4 +1,4 @@
-//===------------ Utils.cpp - SYCL utility functions ----------------------===//
+//===------------ SYCLUtils.cpp - SYCL utility functions ------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,7 +7,8 @@
 //===----------------------------------------------------------------------===//
 // SYCL utility functions.
 //===----------------------------------------------------------------------===//
-#include "llvm/Frontend/SYCL/Utils.h"
+
+#include "llvm/Transforms/Utils/SYCLUtils.h"
 
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
@@ -15,15 +16,46 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <optional>
+
 using namespace llvm;
 using namespace sycl;
 
 namespace {
 
+SmallString<0> computeFunctionCategoryForSplitting(IRSplitMode SM,
+                                                   const Function &F) {
+  static constexpr char ATTR_SYCL_MODULE_ID[] = "sycl-module-id";
+  SmallString<0> Key;
+  switch (SM) {
+  case IRSplitMode::IRSM_PER_KERNEL:
+    Key = F.getName().str();
+    break;
+  case IRSplitMode::IRSM_PER_TU:
+    Key = F.getFnAttribute(ATTR_SYCL_MODULE_ID).getValueAsString().str();
+    break;
+  default:
+    llvm_unreachable("other modes aren't expected");
+  }
+
+  return Key;
+}
+
 bool isKernel(const Function &F) {
   return F.getCallingConv() == CallingConv::SPIR_KERNEL ||
          F.getCallingConv() == CallingConv::AMDGPU_KERNEL ||
          F.getCallingConv() == CallingConv::PTX_Kernel;
+}
+
+bool isEntryPoint(const Function &F) {
+  // Skip declarations, if any: they should not be included into a vector of
+  // entry points groups or otherwise we will end up with incorrectly generated
+  // list of symbols.
+  if (F.isDeclaration())
+    return false;
+
+  // Kernels are always considered to be entry points
+  return isKernel(F);
 }
 
 } // anonymous namespace
@@ -44,15 +76,21 @@ std::optional<IRSplitMode> convertStringToSplitMode(StringRef S) {
   return It->second;
 }
 
-bool isEntryPoint(const Function &F) {
-  // Skip declarations, if any: they should not be included into a vector of
-  // entry points groups or otherwise we will end up with incorrectly generated
-  // list of symbols.
-  if (F.isDeclaration())
-    return false;
+FunctionCategorizer::FunctionCategorizer(IRSplitMode SM) : SM(SM) {
+  if (SM == IRSplitMode::IRSM_NONE)
+    llvm_unreachable("FunctionCategorizer isn't supported to none splitting.");
+}
 
-  // Kernels are always considered to be entry points
-  return isKernel(F);
+std::optional<int> FunctionCategorizer::operator()(const Function &F) {
+  if (!isEntryPoint(F))
+    return std::nullopt; // skip the function.
+
+  auto StringKey = computeFunctionCategoryForSplitting(SM, F);
+  if (auto it = StrKeyToID.find(StringRef(StringKey)); it != StrKeyToID.end())
+    return it->second;
+
+  int ID = static_cast<int>(StrKeyToID.size());
+  return StrKeyToID.try_emplace(std::move(StringKey), ID).first->second;
 }
 
 std::string makeSymbolTable(const Module &M) {

@@ -15,8 +15,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
-#include "llvm/Frontend/SYCL/SplitModule.h"
-#include "llvm/Frontend/SYCL/Utils.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/PassInstrumentation.h"
 #include "llvm/IR/PassManager.h"
@@ -35,7 +33,9 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/IPO/GlobalDCE.h"
+#include "llvm/Transforms/Utils/SYCLUtils.h"
 #include "llvm/Transforms/Utils/SplitModule.h"
+#include "llvm/Transforms/Utils/SplitModuleByCategory.h"
 
 using namespace llvm;
 
@@ -175,7 +175,9 @@ Error runSYCLSplitModule(std::unique_ptr<Module> M) {
     SplitModules.emplace_back(std::move(ModulePath), std::move(Symbols));
   };
 
-  sycl::splitModule(std::move(M), SYCLSplitMode, PostSplitCallback);
+  auto Categorizer = sycl::FunctionCategorizer(SYCLSplitMode);
+  sycl::SplitModuleByCategory(std::move(M), std::move(Categorizer),
+                              PostSplitCallback);
   writeSplitModulesAsTable(SplitModules, OutputFilename);
   return Error::success();
 }

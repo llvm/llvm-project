@@ -1,4 +1,4 @@
-//===------------ Utils.h - SYCL utility functions ------------------------===//
+//===------------ SYCLUtils.h - SYCL utility functions --------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,11 +10,14 @@
 #ifndef LLVM_FRONTEND_SYCL_UTILS_H
 #define LLVM_FRONTEND_SYCL_UTILS_H
 
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 
+#include <optional>
 #include <string>
 
 namespace llvm {
@@ -35,6 +38,40 @@ enum class IRSplitMode {
 /// returned.
 std::optional<IRSplitMode> convertStringToSplitMode(StringRef S);
 
+/// FunctionCategorizer used for splitting in SYCL compilation flow.
+class FunctionCategorizer {
+public:
+  FunctionCategorizer(IRSplitMode SM);
+
+  FunctionCategorizer() = delete;
+  FunctionCategorizer(FunctionCategorizer &) = delete;
+  FunctionCategorizer &operator=(const FunctionCategorizer &) = delete;
+  FunctionCategorizer(FunctionCategorizer &&) = default;
+  FunctionCategorizer &operator=(FunctionCategorizer &&) = default;
+
+  /// Returns integer specifying the category for the entry point.
+  /// If the given function isn't an entry point then returns std::nullopt.
+  std::optional<int> operator()(const Function &F);
+
+private:
+  struct KeyInfo {
+    static SmallString<0> getEmptyKey() { return SmallString<0>(""); }
+
+    static SmallString<0> getTombstoneKey() { return SmallString<0>("-"); }
+
+    static bool isEqual(const SmallString<0> &LHS, const SmallString<0> &RHS) {
+      return LHS == RHS;
+    }
+
+    static unsigned getHashValue(const SmallString<0> &S) {
+      return llvm::hash_value(StringRef(S));
+    }
+  };
+
+  IRSplitMode SM;
+  DenseMap<SmallString<0>, int, KeyInfo> StrKeyToID;
+};
+
 /// The structure represents a LLVM Module accompanied by additional
 /// information. Split Modules are being stored at disk due to the high RAM
 /// consumption during the whole splitting process.
@@ -51,9 +88,6 @@ struct ModuleAndSYCLMetadata {
   ModuleAndSYCLMetadata(const Twine &File, std::string Symbols)
       : ModuleFilePath(File.str()), Symbols(std::move(Symbols)) {}
 };
-
-/// Checks whether the function is a SYCL entry point.
-bool isEntryPoint(const Function &F);
 
 std::string makeSymbolTable(const Module &M);
 

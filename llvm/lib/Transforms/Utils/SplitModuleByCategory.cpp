@@ -1,4 +1,4 @@
-//===-------- SplitModule.cpp - split a module by categories --------------===//
+//===-------- SplitModuleByCategory.cpp - split a module by categories ----===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,11 +8,10 @@
 // See comments in the header.
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Frontend/SYCL/SplitModule.h"
+#include "llvm/Transforms/Utils/SplitModuleByCategory.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/Frontend/SYCL/Utils.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstIterator.h"
@@ -35,7 +34,7 @@ namespace {
 bool isKernel(const Function &F) {
   return F.getCallingConv() == CallingConv::SPIR_KERNEL ||
          F.getCallingConv() == CallingConv::AMDGPU_KERNEL ||
-         F.getCallingConv() == CallingConv::PTX_Kernel; // TODO: add test.
+         F.getCallingConv() == CallingConv::PTX_Kernel;
 }
 
 // A vector that contains a group of function with the same category.
@@ -43,7 +42,7 @@ using EntryPointSet = SetVector<const Function *>;
 
 /// Represents a group of functions with one category.
 struct EntryPointGroup {
-  std::string GroupId;
+  int ID;
   EntryPointSet Functions;
 
   EntryPointGroup() = default;
@@ -52,9 +51,8 @@ struct EntryPointGroup {
   EntryPointGroup(EntryPointGroup &&) = default;
   EntryPointGroup &operator=(EntryPointGroup &&) = default;
 
-  EntryPointGroup(std::string GroupId,
-                  EntryPointSet Functions = EntryPointSet())
-      : GroupId(GroupId), Functions(std::move(Functions)) {}
+  EntryPointGroup(int ID, EntryPointSet Functions = EntryPointSet())
+      : ID(ID), Functions(std::move(Functions)) {}
 
   void clear() { Functions.clear(); }
 
@@ -62,7 +60,7 @@ struct EntryPointGroup {
   LLVM_DUMP_METHOD void dump() const {
     constexpr size_t INDENT = 4;
     dbgs().indent(INDENT) << "ENTRY POINTS"
-                          << " " << GroupId << " {\n";
+                          << " " << ID << " {\n";
     for (const Function *F : Functions)
       dbgs().indent(INDENT) << "  " << F->getName() << "\n";
 
@@ -301,38 +299,23 @@ public:
   bool hasMoreSplits() const { return Groups.size() > 0; }
 };
 
-EntryPointGroupVec selectEntryPointGroups(const Module &M, IRSplitMode Mode) {
+EntryPointGroupVec selectEntryPointGroups(const Module &M,
+                                          FunctionCategorizer FC) {
   // std::map is used here to ensure stable ordering of entry point groups,
   // which is based on their contents, this greatly helps LIT tests
-  std::map<std::string, EntryPointSet> EntryPointsMap;
+  std::map<int, EntryPointSet> EntryPointsMap;
 
-  static constexpr char ATTR_SYCL_MODULE_ID[] = "sycl-module-id";
   for (const auto &F : M.functions()) {
-    if (!isEntryPoint(F))
-      continue;
+    if (auto Key = FC(F); Key) {
+      auto It = EntryPointsMap.find(*Key);
+      if (It == EntryPointsMap.end())
+        It = EntryPointsMap.emplace(*Key, EntryPointSet()).first;
 
-    std::string Key;
-    switch (Mode) {
-    case IRSplitMode::IRSM_PER_KERNEL:
-      Key = F.getName();
-      break;
-    case IRSplitMode::IRSM_PER_TU:
-      Key = F.getFnAttribute(ATTR_SYCL_MODULE_ID).getValueAsString();
-      break;
-    case IRSplitMode::IRSM_NONE:
-      llvm_unreachable("");
+      It->second.insert(&F);
     }
-
-    EntryPointsMap[Key].insert(&F);
   }
 
   EntryPointGroupVec Groups;
-  if (EntryPointsMap.empty()) {
-    // No entry points met, record this.
-    Groups.emplace_back("-", EntryPointSet());
-    return Groups;
-  }
-
   Groups.reserve(EntryPointsMap.size());
   // Start with properties of a source module
   for (auto &[Key, EntryPoints] : EntryPointsMap)
@@ -343,14 +326,10 @@ EntryPointGroupVec selectEntryPointGroups(const Module &M, IRSplitMode Mode) {
 
 } // namespace
 
-void llvm::sycl::splitModule(std::unique_ptr<Module> M, IRSplitMode Mode,
-                             PostSplitCallbackType Callback) {
-  if (Mode == IRSplitMode::IRSM_NONE) {
-    Callback(std::move(M));
-    return;
-  }
-
-  EntryPointGroupVec Groups = selectEntryPointGroups(*M, Mode);
+void llvm::sycl::splitModuleByCategory(std::unique_ptr<Module> M,
+                                       FunctionCategorizer FC,
+                                       PostSplitCallbackType Callback) {
+  EntryPointGroupVec Groups = selectEntryPointGroups(*M, FC);
   ModuleDesc MD = std::move(M);
   ModuleSplitter Splitter(std::move(MD), std::move(Groups));
   while (Splitter.hasMoreSplits()) {
