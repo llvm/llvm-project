@@ -17,7 +17,7 @@ include "mlir/IR/Interfaces.td"
 include "mlir/Dialect/LLVMIR/LLVMInterfaces.td"
 
 //===----------------------------------------------------------------------===//
-// Intrinsic Interface
+// X86 Intrinsic Interface
 //===----------------------------------------------------------------------===//
 
 def X86IntrinsicOpInterface
