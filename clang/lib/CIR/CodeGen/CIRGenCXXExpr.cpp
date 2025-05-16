@@ -85,13 +85,13 @@ RValue CIRGenFunction::emitCXXMemberOrOperatorMemberCallExpr(
     return RValue::get(nullptr);
   }
 
-  bool trivialForCodegen =
-      md->isTrivial() || (md->isDefaulted() && md->getParent()->isUnion());
-  bool trivialAssignment =
-      trivialForCodegen &&
-      (md->isCopyAssignmentOperator() || md->isMoveAssignmentOperator()) &&
-      !md->getParent()->mayInsertExtraPadding();
-  (void)trivialAssignment;
+  // Note on trivial assignment
+  // --------------------------
+  // Classic codegen avoids generating the trivial copy/move assignment operator
+  // when it isn't necessary, choosing instead to just produce IR with an
+  // equivalent effect. We have chosen not to do that in CIR, instead emitting
+  // trivial copy/move assignment operators and allowing later transformations
+  // to optimize them away if appropriate.
 
   // C++17 demands that we evaluate the RHS of a (possibly-compound) assignment
   // operator before the LHS.
@@ -99,9 +99,10 @@ RValue CIRGenFunction::emitCXXMemberOrOperatorMemberCallExpr(
   CallArgList *rtlArgs = nullptr;
   if (auto *oce = dyn_cast<CXXOperatorCallExpr>(ce)) {
     if (oce->isAssignmentOp()) {
-      cgm.errorNYI(
-          oce->getSourceRange(),
-          "emitCXXMemberOrOperatorMemberCallExpr: assignment operator");
+      rtlArgs = &rtlArgStorage;
+      emitCallArgs(*rtlArgs, md->getType()->castAs<FunctionProtoType>(),
+                   drop_begin(ce->arguments(), 1), ce->getDirectCallee(),
+                   /*ParamsToSkip*/ 0);
     }
   }
 
@@ -121,19 +122,9 @@ RValue CIRGenFunction::emitCXXMemberOrOperatorMemberCallExpr(
     return RValue::get(nullptr);
   }
 
-  if (trivialForCodegen) {
-    if (isa<CXXDestructorDecl>(md))
-      return RValue::get(nullptr);
-
-    if (trivialAssignment) {
-      cgm.errorNYI(ce->getSourceRange(),
-                   "emitCXXMemberOrOperatorMemberCallExpr: trivial assignment");
-      return RValue::get(nullptr);
-    }
-
-    assert(md->getParent()->mayInsertExtraPadding() &&
-           "unknown trivial member function");
-  }
+  if ((md->isTrivial() || (md->isDefaulted() && md->getParent()->isUnion())) &&
+      isa<CXXDestructorDecl>(md))
+    return RValue::get(nullptr);
 
   // Compute the function type we're calling
   const CXXMethodDecl *calleeDecl = md;
