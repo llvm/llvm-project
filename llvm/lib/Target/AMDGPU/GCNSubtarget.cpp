@@ -631,10 +631,22 @@ GCNSubtarget::getMaxNumVectorRegs(const Function &F) const {
 bool GCNSubtarget::isRealSchedDependency(MachineInstr *DefI, int DefOpIdx,
                                          MachineInstr *UseI,
                                          int UseOpIdx) const {
+  // From the (gfx942, for example) ISA:
+  // "Packed 32-bit instructions operate on 2 dwords at a time and those
+  // operands must be two-dword aligned (i.e. an even VGPR address). Output
+  // modifiers are not supported for these instructions. OPSEL and OPSEL_HI work
+  // to select the first or second DWORD for each source."
+  // -> We can save dependencies on VGPRs by analyzing the operand selection.
+  // See also
+  // https://llvm.org/docs/AMDGPUModifierSyntax.html#amdgpu-synid-op-sel
+
   if (!InstrInfo.isVOP3P(*UseI))
     return true;
   MachineOperand &DefOp = DefI->getOperand(DefOpIdx);
   if (!DefOp.isReg() || !DefOp.getReg().isPhysical())
+    return true;
+  MachineOperand &UseOp = UseI->getOperand(UseOpIdx);
+  if (!UseOp.isReg() || !UseOp.getReg().isPhysical())
     return true;
 
   AMDGPU::OpName UseModName;
@@ -654,14 +666,11 @@ bool GCNSubtarget::isRealSchedDependency(MachineInstr *DefI, int DefOpIdx,
     return true;
   // Check whether all parts of the register are being used (= op_sel and
   // op_sel_hi differ). In that case we can return early.
-  auto OpSel = UseOpMod->getImm() & SISrcMods::OP_SEL_0;
-  auto OpSelHi = UseOpMod->getImm() & SISrcMods::OP_SEL_1;
+  int64_t OpSel = UseOpMod->getImm() & SISrcMods::OP_SEL_0;
+  int64_t OpSelHi = UseOpMod->getImm() & SISrcMods::OP_SEL_1;
   if ((!OpSel || !OpSelHi) && (OpSel || OpSelHi))
     return true;
 
-  MachineOperand &UseOp = UseI->getOperand(UseOpIdx);
-  if (!UseOp.isReg() || !UseOp.getReg().isPhysical())
-    return true;
   const SIRegisterInfo *TRI = getRegisterInfo();
   const MachineRegisterInfo &MRI = UseI->getParent()->getParent()->getRegInfo();
   MCRegister DefReg = DefOp.getReg().asMCReg();
