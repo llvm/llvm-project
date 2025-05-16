@@ -87,6 +87,18 @@ foreach(suffix IN ITEMS r lr k lk ur ulr uk ulk)
     DEPENDS
       libc.src.__support.fixed_point.fx_bits
   )
+
+  add_entrypoint_object(
+    muli${suffix}
+    HDRS
+      muli${suffix}.h
+    SRCS
+      muli${suffix}.cpp
+    COMPILE_OPTIONS
+      ${libc_opt_high_flag}
+    DEPENDS
+      libc.src.__support.fixed_point.fx_bits
+  )
 endforeach()
 
 add_entrypoint_object(
