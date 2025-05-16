@@ -1,4 +1,4 @@
-//===---- XeGPUBlocking.cpp ---- XeGPU Instructionlize Pass ---------------===//
+//===---- XeGPUBlocking.cpp ---- XeGPU Blocking Pass ----------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -242,8 +242,8 @@ void XeGPUBlockingPass::runOnOperation() {
         Attribute encoding = type.getEncoding();
         ArrayRef<int64_t> shape = type.getShape();
 
-        // init count and newTy to the default value. If the layout attribute
-        // is not present, it will return the original type.
+        // init count and newTy to the default value. If the layout
+        // attribute is not present, it will return the original type.
         int count = 1;
         SmallVector<int64_t> subShape(shape);
 
