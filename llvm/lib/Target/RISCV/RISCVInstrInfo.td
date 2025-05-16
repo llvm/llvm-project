@@ -1645,6 +1645,14 @@ let Predicates = [HasStdExtC, OptForMinSize] in {
   def : SelectCompressOpt<SETNE>;
 }
 
+multiclass SelectCC_GPR_riirr<DAGOperand valty, DAGOperand imm> {
+  let usesCustomInserter = 1 in
+  def Select_GPR_Using_CC_ # NAME
+      : Pseudo<(outs valty:$dst),
+               (ins GPR:$lhs, imm:$imm, cond_code:$cc,
+                valty:$truev, valty:$falsev), []>;
+}
+
 /// Branches and jumps
 
 // Match `riscv_brcc` and lower to the appropriate RISC-V branch instruction.
