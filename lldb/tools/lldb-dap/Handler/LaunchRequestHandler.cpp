@@ -65,10 +65,11 @@ void LaunchRequestHandler::Run(const LaunchRequestArguments &arguments,
   dap.RunPostRunCommands();
 
   dap.OnConfigurationDone([&, reply = std::move(reply)]() {
-    reply(Error::success());
-
+    // Ensure we have a valid process still, otherwise a run command may have
+    // left us in a bad state.
     if (!dap.target.GetProcess().IsValid())
-      return;
+      return reply(make_error<DAPError>("invalid process"));
+    reply(Error::success());
 
     // Clients can request a baseline of currently existing threads after
     // we acknowledge the configurationDone request.

@@ -97,7 +97,9 @@ void AttachRequestHandler::Run(const AttachRequestArguments &args,
       if (llvm::Error err = dap.RunAttachCommands(args.attachCommands))
         return reply(std::move(err));
 
-      dap.target = dap.debugger.GetSelectedTarget();
+      // The custom commands might have created a new target so we should use
+      // the selected target after these commands are run.
+      dap.SetTarget(dap.debugger.GetSelectedTarget());
 
       // Validate the attachCommand results.
       if (!dap.target.GetProcess().IsValid())
@@ -138,10 +140,11 @@ void AttachRequestHandler::Run(const AttachRequestArguments &args,
   dap.RunPostRunCommands();
 
   dap.OnConfigurationDone([&, reply = std::move(reply)]() {
-    reply(Error::success());
-
+    // Ensure we have a valid process still, otherwise a run command may have
+    // left us in a bad state.
     if (!dap.target.GetProcess().IsValid())
-      return;
+      return reply(make_error<DAPError>("invalid process"));
+    reply(Error::success());
 
     // Clients can request a baseline of currently existing threads after
     // we acknowledge the configurationDone request.
