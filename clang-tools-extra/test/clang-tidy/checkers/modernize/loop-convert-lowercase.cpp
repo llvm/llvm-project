@@ -14,21 +14,21 @@ void naming() {
     printf("%d\n", arr[i]);
   }
   // CHECK-MESSAGES: :[[@LINE-3]]:3: warning: use range-based for loop instead [modernize-loop-convert]
-  // CHECK-FIXES: for (int i : arr)
+  // CHECK-FIXES: for (int i : arr) {
   // CHECK-FIXES-NEXT: printf("%d\n", i);
 
   for (int i = 0; i < n; ++i) {
     printf("%d\n", nums[i]);
   }
   // CHECK-MESSAGES: :[[@LINE-3]]:3: warning: use range-based for loop instead
-  // CHECK-FIXES: for (int num : nums)
+  // CHECK-FIXES: for (int num : nums) {
   // CHECK-FIXES-NEXT: printf("%d\n", num);
 
   for (int i = 0; i < n; ++i) {
     printf("%d\n", nums_[i]);
   }
   // CHECK-MESSAGES: :[[@LINE-3]]:3: warning: use range-based for loop instead
-  // CHECK-FIXES: for (int num : nums_)
+  // CHECK-FIXES: for (int num : nums_) {
   // CHECK-FIXES-NEXT: printf("%d\n", num);
 
   int num = 0;
@@ -36,6 +36,6 @@ void naming() {
     printf("%d\n", nums[i] + num);
   }
   // CHECK-MESSAGES: :[[@LINE-3]]:3: warning: use range-based for loop instead
-  // CHECK-FIXES: for (int i : nums)
+  // CHECK-FIXES: for (int i : nums) {
   // CHECK-FIXES-NEXT: printf("%d\n", i + num);
 }

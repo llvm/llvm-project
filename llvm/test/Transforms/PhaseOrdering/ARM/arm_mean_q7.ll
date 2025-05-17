@@ -13,25 +13,25 @@ define void @arm_mean_q7(ptr noundef %pSrc, i32 noundef %blockSize, ptr noundef 
 ; CHECK-NEXT:    br i1 [[CMP_NOT10]], label [[WHILE_END:%.*]], label [[WHILE_BODY_PREHEADER:%.*]]
 ; CHECK:       while.body.preheader:
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[BLOCKSIZE]], 4
-; CHECK-NEXT:    [[TMP0:%.*]] = and i32 [[BLOCKSIZE]], -16
 ; CHECK-NEXT:    br label [[WHILE_BODY:%.*]]
 ; CHECK:       while.body:
-; CHECK-NEXT:    [[SUM_013:%.*]] = phi i32 [ [[TMP3:%.*]], [[WHILE_BODY]] ], [ 0, [[WHILE_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[SUM_013:%.*]] = phi i32 [ [[TMP2:%.*]], [[WHILE_BODY]] ], [ 0, [[WHILE_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    [[PSRC_ADDR_012:%.*]] = phi ptr [ [[ADD_PTR:%.*]], [[WHILE_BODY]] ], [ [[PSRC:%.*]], [[WHILE_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    [[BLKCNT_011:%.*]] = phi i32 [ [[DEC:%.*]], [[WHILE_BODY]] ], [ [[SHR]], [[WHILE_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = load <16 x i8>, ptr [[PSRC_ADDR_012]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call i32 @llvm.arm.mve.addv.v16i8(<16 x i8> [[TMP1]], i32 0)
-; CHECK-NEXT:    [[TMP3]] = add i32 [[TMP2]], [[SUM_013]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[PSRC_ADDR_012]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.arm.mve.addv.v16i8(<16 x i8> [[TMP0]], i32 0)
+; CHECK-NEXT:    [[TMP2]] = add i32 [[TMP1]], [[SUM_013]]
 ; CHECK-NEXT:    [[DEC]] = add nsw i32 [[BLKCNT_011]], -1
 ; CHECK-NEXT:    [[ADD_PTR]] = getelementptr inbounds nuw i8, ptr [[PSRC_ADDR_012]], i32 16
 ; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[DEC]], 0
 ; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[WHILE_END_LOOPEXIT:%.*]], label [[WHILE_BODY]]
 ; CHECK:       while.end.loopexit:
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[PSRC]], i32 [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[BLOCKSIZE]], -16
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[PSRC]], i32 [[TMP3]]
 ; CHECK-NEXT:    br label [[WHILE_END]]
 ; CHECK:       while.end:
 ; CHECK-NEXT:    [[PSRC_ADDR_0_LCSSA:%.*]] = phi ptr [ [[PSRC]], [[ENTRY:%.*]] ], [ [[SCEVGEP]], [[WHILE_END_LOOPEXIT]] ]
-; CHECK-NEXT:    [[SUM_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[TMP3]], [[WHILE_END_LOOPEXIT]] ]
+; CHECK-NEXT:    [[SUM_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[TMP2]], [[WHILE_END_LOOPEXIT]] ]
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[BLOCKSIZE]], 15
 ; CHECK-NEXT:    [[CMP2_NOT15:%.*]] = icmp eq i32 [[AND]], 0
 ; CHECK-NEXT:    br i1 [[CMP2_NOT15]], label [[WHILE_END5:%.*]], label [[MIDDLE_BLOCK:%.*]]

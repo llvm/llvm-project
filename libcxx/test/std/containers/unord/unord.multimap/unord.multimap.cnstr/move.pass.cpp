@@ -31,181 +31,172 @@
 #include "test_allocator.h"
 #include "min_allocator.h"
 
-int main(int, char**)
-{
-    {
-        typedef std::unordered_multimap<int, std::string,
-                                   test_hash<int>,
-                                   test_equal_to<int>,
-                                   test_allocator<std::pair<const int, std::string> >
-                                   > C;
+int main(int, char**) {
+  {
+    typedef std::unordered_multimap<int,
+                                    std::string,
+                                    test_hash<int>,
+                                    test_equal_to<int>,
+                                    test_allocator<std::pair<const int, std::string> > >
+        C;
 
-        C c0(7,
-            test_hash<int>(8),
-            test_equal_to<int>(9),
-            test_allocator<std::pair<const int, std::string> >(10)
-           );
-        C c = std::move(c0);
-        LIBCPP_ASSERT(c.bucket_count() == 7);
-        assert(c.size() == 0);
-        assert(c.hash_function() == test_hash<int>(8));
-        assert(c.key_eq() == test_equal_to<int>(9));
-        assert(c.get_allocator() ==
-               (test_allocator<std::pair<const int, std::string> >(10)));
-        assert(c.empty());
-        assert(static_cast<std::size_t>(std::distance(c.begin(), c.end())) == c.size());
-        assert(static_cast<std::size_t>(std::distance(c.cbegin(), c.cend())) == c.size());
-        assert(c.load_factor() == 0);
-        assert(c.max_load_factor() == 1);
+    C c0(7, test_hash<int>(8), test_equal_to<int>(9), test_allocator<std::pair<const int, std::string> >(10));
+    C c = std::move(c0);
+    LIBCPP_ASSERT(c.bucket_count() == 7);
+    assert(c.size() == 0);
+    assert(c.hash_function() == test_hash<int>(8));
+    assert(c.key_eq() == test_equal_to<int>(9));
+    assert(c.get_allocator() == (test_allocator<std::pair<const int, std::string> >(10)));
+    assert(c.empty());
+    assert(static_cast<std::size_t>(std::distance(c.begin(), c.end())) == c.size());
+    assert(static_cast<std::size_t>(std::distance(c.cbegin(), c.cend())) == c.size());
+    assert(c.load_factor() == 0);
+    assert(c.max_load_factor() == 1);
 
-        assert(c0.empty());
-    }
-    {
-        typedef std::unordered_multimap<int, std::string,
-                                   test_hash<int>,
-                                   test_equal_to<int>,
-                                   test_allocator<std::pair<const int, std::string> >
-                                   > C;
-        typedef std::pair<int, std::string> P;
-        P a[] =
-        {
-            P(1, "one"),
-            P(2, "two"),
-            P(3, "three"),
-            P(4, "four"),
-            P(1, "four"),
-            P(2, "four"),
-        };
-        C c0(a, a + sizeof(a)/sizeof(a[0]),
-            7,
-            test_hash<int>(8),
-            test_equal_to<int>(9),
-            test_allocator<std::pair<const int, std::string> >(10)
-           );
-        C::iterator it0 = c0.begin();
-        C c = std::move(c0);
-        assert(it0 == c.begin()); // Iterators remain valid
-        LIBCPP_ASSERT(c.bucket_count() == 7);
-        assert(c.size() == 6);
-        typedef std::pair<C::const_iterator, C::const_iterator> Eq;
-        Eq eq = c.equal_range(1);
-        assert(std::distance(eq.first, eq.second) == 2);
-        std::multiset<std::string> s;
-        s.insert("one");
-        s.insert("four");
-        CheckConsecutiveKeys<C::const_iterator>(c.find(1), c.end(), 1, s);
-        eq = c.equal_range(2);
-        assert(std::distance(eq.first, eq.second) == 2);
-        s.insert("two");
-        s.insert("four");
-        CheckConsecutiveKeys<C::const_iterator>(c.find(2), c.end(), 2, s);
+    assert(c0.empty());
+  }
+  {
+    typedef std::unordered_multimap<int,
+                                    std::string,
+                                    test_hash<int>,
+                                    test_equal_to<int>,
+                                    test_allocator<std::pair<const int, std::string> > >
+        C;
+    typedef std::pair<int, std::string> P;
+    P a[] = {
+        P(1, "one"),
+        P(2, "two"),
+        P(3, "three"),
+        P(4, "four"),
+        P(1, "four"),
+        P(2, "four"),
+    };
+    C c0(a,
+         a + sizeof(a) / sizeof(a[0]),
+         7,
+         test_hash<int>(8),
+         test_equal_to<int>(9),
+         test_allocator<std::pair<const int, std::string> >(10));
+    C::iterator it0 = c0.begin();
+    C c             = std::move(c0);
+    assert(it0 == c.begin()); // Iterators remain valid
+    LIBCPP_ASSERT(c.bucket_count() == 7);
+    assert(c.size() == 6);
+    typedef std::pair<C::const_iterator, C::const_iterator> Eq;
+    Eq eq = c.equal_range(1);
+    assert(std::distance(eq.first, eq.second) == 2);
+    std::multiset<std::string> s;
+    s.insert("one");
+    s.insert("four");
+    CheckConsecutiveKeys<C::const_iterator>(c.find(1), c.end(), 1, s);
+    eq = c.equal_range(2);
+    assert(std::distance(eq.first, eq.second) == 2);
+    s.insert("two");
+    s.insert("four");
+    CheckConsecutiveKeys<C::const_iterator>(c.find(2), c.end(), 2, s);
 
-        eq = c.equal_range(3);
-        assert(std::distance(eq.first, eq.second) == 1);
-        C::const_iterator i = eq.first;
-        assert(i->first == 3);
-        assert(i->second == "three");
-        eq = c.equal_range(4);
-        assert(std::distance(eq.first, eq.second) == 1);
-        i = eq.first;
-        assert(i->first == 4);
-        assert(i->second == "four");
-        assert(static_cast<std::size_t>(std::distance(c.begin(), c.end())) == c.size());
-        assert(static_cast<std::size_t>(std::distance(c.cbegin(), c.cend())) == c.size());
-        assert(std::fabs(c.load_factor() - (float)c.size()/c.bucket_count()) < FLT_EPSILON);
-        assert(c.max_load_factor() == 1);
-        assert(c.hash_function() == test_hash<int>(8));
-        assert(c.key_eq() == test_equal_to<int>(9));
-        assert((c.get_allocator() == test_allocator<std::pair<const int, std::string> >(10)));
+    eq = c.equal_range(3);
+    assert(std::distance(eq.first, eq.second) == 1);
+    C::const_iterator i = eq.first;
+    assert(i->first == 3);
+    assert(i->second == "three");
+    eq = c.equal_range(4);
+    assert(std::distance(eq.first, eq.second) == 1);
+    i = eq.first;
+    assert(i->first == 4);
+    assert(i->second == "four");
+    assert(static_cast<std::size_t>(std::distance(c.begin(), c.end())) == c.size());
+    assert(static_cast<std::size_t>(std::distance(c.cbegin(), c.cend())) == c.size());
+    assert(std::fabs(c.load_factor() - (float)c.size() / c.bucket_count()) < FLT_EPSILON);
+    assert(c.max_load_factor() == 1);
+    assert(c.hash_function() == test_hash<int>(8));
+    assert(c.key_eq() == test_equal_to<int>(9));
+    assert((c.get_allocator() == test_allocator<std::pair<const int, std::string> >(10)));
 
-        assert(c0.empty());
-    }
-    {
-        typedef std::unordered_multimap<int, std::string,
-                                   test_hash<int>,
-                                   test_equal_to<int>,
-                                   min_allocator<std::pair<const int, std::string> >
-                                   > C;
-        C c0(7,
-            test_hash<int>(8),
-            test_equal_to<int>(9),
-            min_allocator<std::pair<const int, std::string> >()
-           );
-        C c = std::move(c0);
-        LIBCPP_ASSERT(c.bucket_count() == 7);
-        assert(c.size() == 0);
-        assert(c.hash_function() == test_hash<int>(8));
-        assert(c.key_eq() == test_equal_to<int>(9));
-        assert(c.get_allocator() ==
-               (min_allocator<std::pair<const int, std::string> >()));
-        assert(c.empty());
-        assert(static_cast<std::size_t>(std::distance(c.begin(), c.end())) == c.size());
-        assert(static_cast<std::size_t>(std::distance(c.cbegin(), c.cend())) == c.size());
-        assert(c.load_factor() == 0);
-        assert(c.max_load_factor() == 1);
+    assert(c0.empty());
+  }
+  {
+    typedef std::unordered_multimap<int,
+                                    std::string,
+                                    test_hash<int>,
+                                    test_equal_to<int>,
+                                    min_allocator<std::pair<const int, std::string> > >
+        C;
+    C c0(7, test_hash<int>(8), test_equal_to<int>(9), min_allocator<std::pair<const int, std::string> >());
+    C c = std::move(c0);
+    LIBCPP_ASSERT(c.bucket_count() == 7);
+    assert(c.size() == 0);
+    assert(c.hash_function() == test_hash<int>(8));
+    assert(c.key_eq() == test_equal_to<int>(9));
+    assert(c.get_allocator() == (min_allocator<std::pair<const int, std::string> >()));
+    assert(c.empty());
+    assert(static_cast<std::size_t>(std::distance(c.begin(), c.end())) == c.size());
+    assert(static_cast<std::size_t>(std::distance(c.cbegin(), c.cend())) == c.size());
+    assert(c.load_factor() == 0);
+    assert(c.max_load_factor() == 1);
 
-        assert(c0.empty());
-    }
-    {
-        typedef std::unordered_multimap<int, std::string,
-                                   test_hash<int>,
-                                   test_equal_to<int>,
-                                   min_allocator<std::pair<const int, std::string> >
-                                   > C;
-        typedef std::pair<int, std::string> P;
-        P a[] =
-        {
-            P(1, "one"),
-            P(2, "two"),
-            P(3, "three"),
-            P(4, "four"),
-            P(1, "four"),
-            P(2, "four"),
-        };
-        C c0(a, a + sizeof(a)/sizeof(a[0]),
-            7,
-            test_hash<int>(8),
-            test_equal_to<int>(9),
-            min_allocator<std::pair<const int, std::string> >()
-           );
-        C::iterator it0 = c0.begin();
-        C c = std::move(c0);
-        assert(it0 == c.begin()); // Iterators remain valid
-        LIBCPP_ASSERT(c.bucket_count() == 7);
-        assert(c.size() == 6);
-        typedef std::pair<C::const_iterator, C::const_iterator> Eq;
-        Eq eq = c.equal_range(1);
-        assert(std::distance(eq.first, eq.second) == 2);
-        std::multiset<std::string> s;
-        s.insert("one");
-        s.insert("four");
-        CheckConsecutiveKeys<C::const_iterator>(c.find(1), c.end(), 1, s);
-        eq = c.equal_range(2);
-        assert(std::distance(eq.first, eq.second) == 2);
-        s.insert("two");
-        s.insert("four");
-        CheckConsecutiveKeys<C::const_iterator>(c.find(2), c.end(), 2, s);
+    assert(c0.empty());
+  }
+  {
+    typedef std::unordered_multimap<int,
+                                    std::string,
+                                    test_hash<int>,
+                                    test_equal_to<int>,
+                                    min_allocator<std::pair<const int, std::string> > >
+        C;
+    typedef std::pair<int, std::string> P;
+    P a[] = {
+        P(1, "one"),
+        P(2, "two"),
+        P(3, "three"),
+        P(4, "four"),
+        P(1, "four"),
+        P(2, "four"),
+    };
+    C c0(a,
+         a + sizeof(a) / sizeof(a[0]),
+         7,
+         test_hash<int>(8),
+         test_equal_to<int>(9),
+         min_allocator<std::pair<const int, std::string> >());
+    C::iterator it0 = c0.begin();
+    C c             = std::move(c0);
+    assert(it0 == c.begin()); // Iterators remain valid
+    LIBCPP_ASSERT(c.bucket_count() == 7);
+    assert(c.size() == 6);
+    typedef std::pair<C::const_iterator, C::const_iterator> Eq;
+    Eq eq = c.equal_range(1);
+    assert(std::distance(eq.first, eq.second) == 2);
+    std::multiset<std::string> s;
+    s.insert("one");
+    s.insert("four");
+    CheckConsecutiveKeys<C::const_iterator>(c.find(1), c.end(), 1, s);
+    eq = c.equal_range(2);
+    assert(std::distance(eq.first, eq.second) == 2);
+    s.insert("two");
+    s.insert("four");
+    CheckConsecutiveKeys<C::const_iterator>(c.find(2), c.end(), 2, s);
 
-        eq = c.equal_range(3);
-        assert(std::distance(eq.first, eq.second) == 1);
-        C::const_iterator i = eq.first;
-        assert(i->first == 3);
-        assert(i->second == "three");
-        eq = c.equal_range(4);
-        assert(std::distance(eq.first, eq.second) == 1);
-        i = eq.first;
-        assert(i->first == 4);
-        assert(i->second == "four");
-        assert(static_cast<std::size_t>(std::distance(c.begin(), c.end())) == c.size());
-        assert(static_cast<std::size_t>(std::distance(c.cbegin(), c.cend())) == c.size());
-        assert(std::fabs(c.load_factor() - (float)c.size()/c.bucket_count()) < FLT_EPSILON);
-        assert(c.max_load_factor() == 1);
-        assert(c.hash_function() == test_hash<int>(8));
-        assert(c.key_eq() == test_equal_to<int>(9));
-        assert((c.get_allocator() == min_allocator<std::pair<const int, std::string> >()));
+    eq = c.equal_range(3);
+    assert(std::distance(eq.first, eq.second) == 1);
+    C::const_iterator i = eq.first;
+    assert(i->first == 3);
+    assert(i->second == "three");
+    eq = c.equal_range(4);
+    assert(std::distance(eq.first, eq.second) == 1);
+    i = eq.first;
+    assert(i->first == 4);
+    assert(i->second == "four");
+    assert(static_cast<std::size_t>(std::distance(c.begin(), c.end())) == c.size());
+    assert(static_cast<std::size_t>(std::distance(c.cbegin(), c.cend())) == c.size());
+    assert(std::fabs(c.load_factor() - (float)c.size() / c.bucket_count()) < FLT_EPSILON);
+    assert(c.max_load_factor() == 1);
+    assert(c.hash_function() == test_hash<int>(8));
+    assert(c.key_eq() == test_equal_to<int>(9));
+    assert((c.get_allocator() == min_allocator<std::pair<const int, std::string> >()));
 
-        assert(c0.empty());
-    }
+    assert(c0.empty());
+  }
 
-    return 0;
+  return 0;
 }

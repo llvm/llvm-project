@@ -104,7 +104,7 @@ public:
 
   StaticInitGVIterator(Module &M)
       : I(M.global_values().begin()), E(M.global_values().end()),
-        ObjFmt(Triple(M.getTargetTriple()).getObjectFormat()) {
+        ObjFmt(M.getTargetTriple().getObjectFormat()) {
     if (I != E) {
       if (!isStaticInitGlobal(*I))
         moveToNextStaticInitGlobal();

@@ -30,7 +30,7 @@ contains
 ! CHECK-LABEL:   func.func @_QMbindc_byvalPcall_it(
 ! CHECK-SAME:                                      %[[VAL_0:.*]]: !fir.ref<!fir.type<_QMbindc_byvalTt{{[<]?}}{i:i32}{{[>]?}}>>
 ! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]}} {uniq_name = "_QMbindc_byvalFcall_itEx"} : (!fir.ref<!fir.type<_QMbindc_byvalTt{{[<]?}}{i:i32}{{[>]?}}>>, !fir.dscope) -> (!fir.ref<!fir.type<_QMbindc_byvalTt{{[<]?}}{i:i32}{{[>]?}}>>, !fir.ref<!fir.type<_QMbindc_byvalTt{{[<]?}}{i:i32}{{[>]?}}>>)
-! CHECK:           %[[VAL_2:.*]] = fir.load %[[VAL_1]]#1 : !fir.ref<!fir.type<_QMbindc_byvalTt{{[<]?}}{i:i32}{{[>]?}}>>
+! CHECK:           %[[VAL_2:.*]] = fir.load %[[VAL_1]]#0 : !fir.ref<!fir.type<_QMbindc_byvalTt{{[<]?}}{i:i32}{{[>]?}}>>
 ! CHECK:           fir.call @test(%[[VAL_2]]) proc_attrs<bind_c> fastmath<contract> : (!fir.type<_QMbindc_byvalTt{{[<]?}}{i:i32}{{[>]?}}>) -> ()
 ! CHECK:           return
 ! CHECK:         }

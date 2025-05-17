@@ -41,7 +41,7 @@ TEST_F(VPlanHCFGTest, testBuildHCFGInnerLoop) {
 
   Function *F = M.getFunction("f");
   BasicBlock *LoopHeader = F->getEntryBlock().getSingleSuccessor();
-  auto Plan = buildHCFG(LoopHeader);
+  auto Plan = buildVPlan(LoopHeader);
 
   VPBasicBlock *Entry = Plan->getEntry()->getEntryBasicBlock();
   EXPECT_NE(nullptr, Entry->getSingleSuccessor());
@@ -51,17 +51,15 @@ TEST_F(VPlanHCFGTest, testBuildHCFGInnerLoop) {
   // Check that the region following the preheader consists of a block for the
   // original header and a separate latch.
   VPBasicBlock *VecBB = Plan->getVectorLoopRegion()->getEntryBasicBlock();
-  EXPECT_EQ(7u, VecBB->size());
+  EXPECT_EQ(11u, VecBB->size());
   EXPECT_EQ(0u, VecBB->getNumPredecessors());
-  EXPECT_EQ(1u, VecBB->getNumSuccessors());
+  EXPECT_EQ(0u, VecBB->getNumSuccessors());
   EXPECT_EQ(VecBB->getParent()->getEntryBasicBlock(), VecBB);
   EXPECT_EQ(&*Plan, VecBB->getPlan());
 
-  VPBlockBase *VecLatch = VecBB->getSingleSuccessor();
-  EXPECT_EQ(VecLatch->getParent()->getExitingBasicBlock(), VecLatch);
-  EXPECT_EQ(0u, VecLatch->getNumSuccessors());
-
   auto Iter = VecBB->begin();
+  auto *CanIV = dyn_cast<VPCanonicalIVPHIRecipe>(&*Iter++);
+  EXPECT_NE(nullptr, CanIV);
   VPWidenPHIRecipe *Phi = dyn_cast<VPWidenPHIRecipe>(&*Iter++);
   EXPECT_NE(nullptr, Phi);
 
@@ -104,7 +102,7 @@ TEST_F(VPlanHCFGTest, testBuildHCFGInnerLoop) {
   raw_string_ostream OS(FullDump);
   Plan->printDOT(OS);
   const char *ExpectedStr = R"(digraph VPlan {
-graph [labelloc=t, fontsize=30; label="Vectorization Plan\n for UF\>=1\nLive-in vp\<%0\> = vector-trip-count\nLive-in ir\<%N\> = original trip-count\n"]
+graph [labelloc=t, fontsize=30; label="Vectorization Plan\n for UF\>=1\nLive-in vp\<%0\> = VF * UF\nLive-in vp\<%1\> = vector-trip-count\nLive-in ir\<%N\> = original trip-count\n"]
 node [shape=rect, fontname=Courier, fontsize=30]
 edge [fontname=Courier, fontsize=30]
 compound=true
@@ -123,40 +121,39 @@ compound=true
     label="\<x1\> vector loop"
     N2 [label =
       "vector.body:\l" +
-      "  WIDEN-PHI ir\<%indvars.iv\> = phi ir\<0\>, ir\<%indvars.iv.next\>\l" +
+      "  EMIT vp\<%2\> = CANONICAL-INDUCTION ir\<0\>, vp\<%index.next\>\l" +
+      "  WIDEN-PHI ir\<%indvars.iv\> = phi [ ir\<0\>, vector.ph ], [ ir\<%indvars.iv.next\>, vector.body ]\l" +
       "  EMIT ir\<%arr.idx\> = getelementptr ir\<%A\>, ir\<%indvars.iv\>\l" +
       "  EMIT ir\<%l1\> = load ir\<%arr.idx\>\l" +
       "  EMIT ir\<%res\> = add ir\<%l1\>, ir\<10\>\l" +
       "  EMIT store ir\<%res\>, ir\<%arr.idx\>\l" +
       "  EMIT ir\<%indvars.iv.next\> = add ir\<%indvars.iv\>, ir\<1\>\l" +
       "  EMIT ir\<%exitcond\> = icmp ir\<%indvars.iv.next\>, ir\<%N\>\l" +
-      "Successor(s): vector.latch\l"
-    ]
-    N2 -> N4 [ label=""]
-    N4 [label =
-      "vector.latch:\l" +
+      "  EMIT vp\<%3\> = not ir\<%exitcond\>\l" +
+      "  EMIT vp\<%index.next\> = add nuw vp\<%2\>, vp\<%0\>\l" +
+      "  EMIT branch-on-count vp\<%index.next\>, vp\<%1\>\l" +
       "No successors\l"
     ]
   }
-  N4 -> N5 [ label="" ltail=cluster_N3]
-  N5 [label =
+  N2 -> N4 [ label="" ltail=cluster_N3]
+  N4 [label =
     "middle.block:\l" +
-    "  EMIT vp\<%cmp.n\> = icmp eq ir\<%N\>, vp\<%0\>\l" +
+    "  EMIT vp\<%cmp.n\> = icmp eq ir\<%N\>, vp\<%1\>\l" +
     "  EMIT branch-on-cond vp\<%cmp.n\>\l" +
     "Successor(s): ir-bb\<for.end\>, scalar.ph\l"
   ]
-  N5 -> N6 [ label="T"]
-  N5 -> N7 [ label="F"]
-  N6 [label =
+  N4 -> N5 [ label="T"]
+  N4 -> N6 [ label="F"]
+  N5 [label =
     "ir-bb\<for.end\>:\l" +
     "No successors\l"
   ]
-  N7 [label =
+  N6 [label =
     "scalar.ph:\l" +
     "Successor(s): ir-bb\<for.body\>\l"
   ]
-  N7 -> N8 [ label=""]
-  N8 [label =
+  N6 -> N7 [ label=""]
+  N7 [label =
     "ir-bb\<for.body\>:\l" +
     "  IR   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]\l" +
     "  IR   %arr.idx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv\l" +
@@ -171,10 +168,6 @@ compound=true
 )";
   EXPECT_EQ(ExpectedStr, FullDump);
 #endif
-  TargetLibraryInfoImpl TLII(Triple(M.getTargetTriple()));
-  TargetLibraryInfo TLI(TLII);
-  VPlanTransforms::VPInstructionsToVPRecipes(
-      Plan, [](PHINode *P) { return nullptr; }, *SE, TLI);
 }
 
 TEST_F(VPlanHCFGTest, testVPInstructionToVPRecipesInner) {
@@ -199,11 +192,17 @@ TEST_F(VPlanHCFGTest, testVPInstructionToVPRecipesInner) {
 
   Function *F = M.getFunction("f");
   BasicBlock *LoopHeader = F->getEntryBlock().getSingleSuccessor();
-  auto Plan = buildHCFG(LoopHeader);
+  auto Plan = buildVPlan(LoopHeader);
 
-  TargetLibraryInfoImpl TLII(Triple(M.getTargetTriple()));
+  TargetLibraryInfoImpl TLII(M.getTargetTriple());
   TargetLibraryInfo TLI(TLII);
-  VPlanTransforms::VPInstructionsToVPRecipes(
+  // Current VPlan construction doesn't add a terminator for top-level loop
+  // latches. Add it before running transform.
+  cast<VPBasicBlock>(Plan->getVectorLoopRegion()->getExiting())
+      ->appendRecipe(new VPInstruction(
+          VPInstruction::BranchOnCond,
+          {Plan->getOrAddLiveIn(ConstantInt::getTrue(F->getContext()))}));
+  VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
       Plan, [](PHINode *P) { return nullptr; }, *SE, TLI);
 
   VPBlockBase *Entry = Plan->getEntry()->getEntryBasicBlock();
@@ -214,16 +213,13 @@ TEST_F(VPlanHCFGTest, testVPInstructionToVPRecipesInner) {
   // Check that the region following the preheader consists of a block for the
   // original header and a separate latch.
   VPBasicBlock *VecBB = Plan->getVectorLoopRegion()->getEntryBasicBlock();
-  EXPECT_EQ(7u, VecBB->size());
+  EXPECT_EQ(12u, VecBB->size());
   EXPECT_EQ(0u, VecBB->getNumPredecessors());
-  EXPECT_EQ(1u, VecBB->getNumSuccessors());
+  EXPECT_EQ(0u, VecBB->getNumSuccessors());
   EXPECT_EQ(VecBB->getParent()->getEntryBasicBlock(), VecBB);
 
-  VPBlockBase *VecLatch = VecBB->getSingleSuccessor();
-  EXPECT_EQ(VecLatch->getParent()->getExitingBasicBlock(), VecLatch);
-  EXPECT_EQ(0u, VecLatch->getNumSuccessors());
-
   auto Iter = VecBB->begin();
+  EXPECT_NE(nullptr, dyn_cast<VPCanonicalIVPHIRecipe>(&*Iter++));
   EXPECT_NE(nullptr, dyn_cast<VPWidenPHIRecipe>(&*Iter++));
   EXPECT_NE(nullptr, dyn_cast<VPWidenGEPRecipe>(&*Iter++));
   EXPECT_NE(nullptr, dyn_cast<VPWidenMemoryRecipe>(&*Iter++));
@@ -231,6 +227,10 @@ TEST_F(VPlanHCFGTest, testVPInstructionToVPRecipesInner) {
   EXPECT_NE(nullptr, dyn_cast<VPWidenMemoryRecipe>(&*Iter++));
   EXPECT_NE(nullptr, dyn_cast<VPWidenRecipe>(&*Iter++));
   EXPECT_NE(nullptr, dyn_cast<VPWidenRecipe>(&*Iter++));
+  EXPECT_NE(nullptr, dyn_cast<VPInstruction>(&*Iter++));
+  EXPECT_NE(nullptr, dyn_cast<VPInstruction>(&*Iter++));
+  EXPECT_NE(nullptr, dyn_cast<VPInstruction>(&*Iter++));
+  EXPECT_NE(nullptr, dyn_cast<VPInstruction>(&*Iter++));
   EXPECT_EQ(VecBB->end(), Iter);
 }
 
@@ -261,7 +261,7 @@ TEST_F(VPlanHCFGTest, testBuildHCFGInnerLoopMultiExit) {
 
   Function *F = M.getFunction("f");
   BasicBlock *LoopHeader = F->getEntryBlock().getSingleSuccessor();
-  auto Plan = buildHCFG(LoopHeader);
+  auto Plan = buildVPlan(LoopHeader);
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   // Add an external value to check we do not print the list of external values,
@@ -271,7 +271,7 @@ TEST_F(VPlanHCFGTest, testBuildHCFGInnerLoopMultiExit) {
   raw_string_ostream OS(FullDump);
   Plan->printDOT(OS);
   const char *ExpectedStr = R"(digraph VPlan {
-graph [labelloc=t, fontsize=30; label="Vectorization Plan\n for UF\>=1\nLive-in vp\<%0\> = vector-trip-count\nLive-in ir\<%N\> = original trip-count\n"]
+graph [labelloc=t, fontsize=30; label="Vectorization Plan\n for UF\>=1\nLive-in vp\<%0\> = VF * UF\nLive-in vp\<%1\> = vector-trip-count\nLive-in ir\<%N\> = original trip-count\n"]
 node [shape=rect, fontname=Courier, fontsize=30]
 edge [fontname=Courier, fontsize=30]
 compound=true
@@ -290,7 +290,8 @@ compound=true
     label="\<x1\> vector loop"
     N2 [label =
       "vector.body:\l" +
-      "  WIDEN-PHI ir\<%iv\> = phi ir\<0\>, ir\<%iv.next\>\l" +
+      "  EMIT vp\<%2\> = CANONICAL-INDUCTION ir\<0\>, vp\<%index.next\>\l" +
+      "  WIDEN-PHI ir\<%iv\> = phi [ ir\<0\>, vector.ph ], [ ir\<%iv.next\>, loop.latch ]\l" +
       "  EMIT ir\<%arr.idx\> = getelementptr ir\<%A\>, ir\<%iv\>\l" +
       "  EMIT ir\<%l1\> = load ir\<%arr.idx\>\l" +
       "  EMIT ir\<%c\> = icmp ir\<%l1\>, ir\<0\>\l" +
@@ -303,33 +304,31 @@ compound=true
       "  EMIT store ir\<%res\>, ir\<%arr.idx\>\l" +
       "  EMIT ir\<%iv.next\> = add ir\<%iv\>, ir\<1\>\l" +
       "  EMIT ir\<%exitcond\> = icmp ir\<%iv.next\>, ir\<%N\>\l" +
-      "Successor(s): vector.latch\l"
-    ]
-    N4 -> N5 [ label=""]
-    N5 [label =
-      "vector.latch:\l" +
+      "  EMIT vp\<%3\> = not ir\<%exitcond\>\l" +
+      "  EMIT vp\<%index.next\> = add nuw vp\<%2\>, vp\<%0\>\l" +
+      "  EMIT branch-on-count vp\<%index.next\>, vp\<%1\>\l" +
       "No successors\l"
     ]
   }
-  N5 -> N6 [ label="" ltail=cluster_N3]
-  N6 [label =
+  N4 -> N5 [ label="" ltail=cluster_N3]
+  N5 [label =
     "middle.block:\l" +
-    "  EMIT vp\<%cmp.n\> = icmp eq ir\<%N\>, vp\<%0\>\l" +
+    "  EMIT vp\<%cmp.n\> = icmp eq ir\<%N\>, vp\<%1\>\l" +
     "  EMIT branch-on-cond vp\<%cmp.n\>\l" +
     "Successor(s): ir-bb\<exit.2\>, scalar.ph\l"
   ]
-  N6 -> N7 [ label="T"]
-  N6 -> N8 [ label="F"]
-  N7 [label =
+  N5 -> N6 [ label="T"]
+  N5 -> N7 [ label="F"]
+  N6 [label =
     "ir-bb\<exit.2\>:\l" +
     "No successors\l"
   ]
-  N8 [label =
+  N7 [label =
     "scalar.ph:\l" +
     "Successor(s): ir-bb\<loop.header\>\l"
   ]
-  N8 -> N9 [ label=""]
-  N9 [label =
+  N7 -> N8 [ label=""]
+  N8 [label =
     "ir-bb\<loop.header\>:\l" +
     "  IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]\l" +
     "  IR   %arr.idx = getelementptr inbounds i32, ptr %A, i64 %iv\l" +

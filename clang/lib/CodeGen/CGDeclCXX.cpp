@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CGCXXABI.h"
+#include "CGDebugInfo.h"
 #include "CGHLSLRuntime.h"
 #include "CGObjCRuntime.h"
 #include "CGOpenMPRuntime.h"
@@ -345,10 +346,7 @@ void CodeGenFunction::registerGlobalDtorWithLLVM(const VarDecl &VD,
 
 void CodeGenFunction::registerGlobalDtorWithAtExit(llvm::Constant *dtorStub) {
   // extern "C" int atexit(void (*f)(void));
-  assert(dtorStub->getType() ==
-             llvm::PointerType::get(
-                 llvm::FunctionType::get(CGM.VoidTy, false),
-                 dtorStub->getType()->getPointerAddressSpace()) &&
+  assert(dtorStub->getType()->isPointerTy() &&
          "Argument to atexit has a wrong type.");
 
   llvm::FunctionType *atexitTy =
@@ -372,10 +370,7 @@ CodeGenFunction::unregisterGlobalDtorWithUnAtExit(llvm::Constant *dtorStub) {
   // value is returned.
   //
   // extern "C" int unatexit(void (*f)(void));
-  assert(dtorStub->getType() ==
-             llvm::PointerType::get(
-                 llvm::FunctionType::get(CGM.VoidTy, false),
-                 dtorStub->getType()->getPointerAddressSpace()) &&
+  assert(dtorStub->getType()->isPointerTy() &&
          "Argument to unatexit has a wrong type.");
 
   llvm::FunctionType *unatexitTy =
@@ -453,6 +448,11 @@ llvm::Function *CodeGenModule::CreateGlobalInitOrCleanUpFunction(
 
   if (Linkage == llvm::GlobalVariable::InternalLinkage)
     SetInternalFunctionAttributes(GlobalDecl(), Fn, FI);
+  else {
+    SetLLVMFunctionAttributes(GlobalDecl(), FI, Fn, false);
+    SetLLVMFunctionAttributesForDefinition(nullptr, Fn);
+    getTargetCodeGenInfo().setTargetAttributes(nullptr, Fn, *this);
+  }
 
   Fn->setCallingConv(getRuntimeCC());
 
@@ -709,8 +709,7 @@ void CodeGenModule::EmitCXXModuleInitFunc(Module *Primary) {
   for (auto I : Primary->Exports)
     AllImports.insert(I.getPointer());
   // Ones that we only import.
-  for (Module *M : Primary->Imports)
-    AllImports.insert(M);
+  AllImports.insert_range(Primary->Imports);
   // Ones that we import in the global module fragment or the private module
   // fragment.
   for (Module *SubM : Primary->submodules()) {
@@ -720,8 +719,7 @@ void CodeGenModule::EmitCXXModuleInitFunc(Module *Primary) {
     assert(SubM->Exports.empty() &&
            "The global mdoule fragments and the private module fragments are "
            "not allowed to export import modules.");
-    for (Module *M : SubM->Imports)
-      AllImports.insert(M);
+    AllImports.insert_range(SubM->Imports);
   }
 
   SmallVector<llvm::Function *, 8> ModuleInits;
@@ -750,7 +748,6 @@ void CodeGenModule::EmitCXXModuleInitFunc(Module *Primary) {
   // Add any initializers with specified priority; this uses the same  approach
   // as EmitCXXGlobalInitFunc().
   if (!PrioritizedCXXGlobalInits.empty()) {
-    SmallVector<llvm::Function *, 8> LocalCXXGlobalInits;
     llvm::array_pod_sort(PrioritizedCXXGlobalInits.begin(),
                          PrioritizedCXXGlobalInits.end());
     for (SmallVectorImpl<GlobalInitData>::iterator
@@ -1077,9 +1074,6 @@ void CodeGenFunction::GenerateCXXGlobalVarDeclInitFunc(llvm::Function *Fn,
     EmitCXXGlobalVarDeclInit(*D, Addr, PerformInit);
   }
 
-  if (getLangOpts().HLSL)
-    CGM.getHLSLRuntime().annotateHLSLResource(D, Addr);
-
   FinishFunction();
 }
 
@@ -1161,18 +1155,35 @@ void CodeGenFunction::GenerateCXXGlobalCleanUpFunc(
       llvm::Constant *Arg;
       std::tie(CalleeTy, Callee, Arg) = DtorsOrStermFinalizers[e - i - 1];
 
-      llvm::CallInst *CI = nullptr;
+      llvm::CallBase *CI = nullptr;
       if (Arg == nullptr) {
         assert(
             CGM.getCXXABI().useSinitAndSterm() &&
             "Arg could not be nullptr unless using sinit and sterm functions.");
         CI = Builder.CreateCall(CalleeTy, Callee);
-      } else
+      } else {
+        // If the object lives in a different address space, the `this` pointer
+        // address space won't match the dtor `this` param. An addrspacecast is
+        // required.
+        assert(Arg->getType()->isPointerTy());
+        assert(CalleeTy->getParamType(0)->isPointerTy());
+        unsigned ActualAddrSpace = Arg->getType()->getPointerAddressSpace();
+        unsigned ExpectedAddrSpace =
+            CalleeTy->getParamType(0)->getPointerAddressSpace();
+        if (ActualAddrSpace != ExpectedAddrSpace) {
+          llvm::PointerType *PTy =
+              llvm::PointerType::get(getLLVMContext(), ExpectedAddrSpace);
+          Arg = llvm::ConstantExpr::getAddrSpaceCast(Arg, PTy);
+        }
         CI = Builder.CreateCall(CalleeTy, Callee, Arg);
+      }
 
       // Make sure the call and the callee agree on calling convention.
       if (llvm::Function *F = dyn_cast<llvm::Function>(Callee))
         CI->setCallingConv(F->getCallingConv());
+
+      if (CGM.shouldEmitConvergenceTokens() && CI->isConvergent())
+        CI = addConvergenceControlToken(CI);
     }
   }
 

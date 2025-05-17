@@ -6,9 +6,9 @@ define i32 @t() {
 ; CHECK-LABEL: t:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl $1, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    mfence
+; CHECK-NEXT:    lock orl $0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    lock decl -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    mfence
+; CHECK-NEXT:    lock orl $0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retq
   %i = alloca i32, align 4

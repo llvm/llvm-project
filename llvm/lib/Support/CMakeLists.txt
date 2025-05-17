@@ -144,6 +144,7 @@ add_llvm_component_library(LLVMSupport
   APInt.cpp
   APSInt.cpp
   ARMBuildAttributes.cpp
+  AArch64AttributeParser.cpp
   AArch64BuildAttributes.cpp
   ARMAttributeParser.cpp
   ARMWinEH.cpp
@@ -182,8 +183,9 @@ add_llvm_component_library(LLVMSupport
   DAGDeltaAlgorithm.cpp
   DJB.cpp
   DynamicAPInt.cpp
-  ELFAttributeParser.cpp
   ELFAttributes.cpp
+  ELFAttrParserCompact.cpp
+  ELFAttrParserExtended.cpp
   Error.cpp
   ErrorHandling.cpp
   ExponentialBackoff.cpp
@@ -205,6 +207,7 @@ add_llvm_component_library(LLVMSupport
   IntervalMap.cpp
   JSON.cpp
   KnownBits.cpp
+  KnownFPClass.cpp
   LEB128.cpp
   LineIterator.cpp
   Locale.cpp
@@ -218,6 +221,7 @@ add_llvm_component_library(LLVMSupport
   MD5.cpp
   MSP430Attributes.cpp
   MSP430AttributeParser.cpp
+  Mustache.cpp
   NativeFormatting.cpp
   OptimizedStructLayout.cpp
   Optional.cpp
@@ -291,6 +295,7 @@ add_llvm_component_library(LLVMSupport
   Path.cpp
   Process.cpp
   Program.cpp
+  ProgramStack.cpp
   RWMutex.cpp
   Signals.cpp
   Threading.cpp

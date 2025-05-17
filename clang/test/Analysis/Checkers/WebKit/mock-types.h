@@ -249,7 +249,7 @@ public:
   T *get() const { return t; }
   T *operator->() const { return t; }
   T &operator*() const { return *t; }
-  CheckedPtr &operator=(T *) { return *this; }
+  CheckedPtr &operator=(T *);
   operator bool() const { return t; }
 };
 
@@ -289,6 +289,7 @@ public:
     u.t = nullptr;
   }
   T &get() const { return *t; }
+  operator T&() const { return *t; }
   T *operator->() const { return t; }
   UniqueRef &operator=(T &) { return *this; }
 };

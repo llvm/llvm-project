@@ -90,20 +90,29 @@ bool LoongArchAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
         return false;
       }
       break;
-    case 'w': // Print LSX registers.
-      if (MO.getReg().id() >= LoongArch::VR0 &&
-          MO.getReg().id() <= LoongArch::VR31)
-        break;
-      // The modifier is 'w' but the operand is not an LSX register; Report an
-      // unknown operand error.
-      return true;
     case 'u': // Print LASX registers.
-      if (MO.getReg().id() >= LoongArch::XR0 &&
-          MO.getReg().id() <= LoongArch::XR31)
-        break;
-      // The modifier is 'u' but the operand is not an LASX register; Report an
-      // unknown operand error.
-      return true;
+    case 'w': // Print LSX registers.
+    {
+      // If the operand is an LASX, LSX or floating point register, print the
+      // name of LASX or LSX register with the same index in that register
+      // class.
+      unsigned RegID = MO.getReg().id(), FirstReg;
+      if (RegID >= LoongArch::XR0 && RegID <= LoongArch::XR31)
+        FirstReg = LoongArch::XR0;
+      else if (RegID >= LoongArch::VR0 && RegID <= LoongArch::VR31)
+        FirstReg = LoongArch::VR0;
+      else if (RegID >= LoongArch::F0_64 && RegID <= LoongArch::F31_64)
+        FirstReg = LoongArch::F0_64;
+      else if (RegID >= LoongArch::F0 && RegID <= LoongArch::F31)
+        FirstReg = LoongArch::F0;
+      else
+        return true;
+      OS << '$'
+         << LoongArchInstPrinter::getRegisterName(
+                RegID - FirstReg +
+                (ExtraCode[0] == 'u' ? LoongArch::XR0 : LoongArch::VR0));
+      return false;
+    }
       // TODO: handle other extra codes if any.
     }
   }
@@ -287,6 +296,11 @@ bool LoongArchAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   emitXRayTable();
   return true;
 }
+
+char LoongArchAsmPrinter::ID = 0;
+
+INITIALIZE_PASS(LoongArchAsmPrinter, "loongarch-asm-printer",
+                "LoongArch Assembly Printer", false, false)
 
 // Force static initialization.
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeLoongArchAsmPrinter() {

@@ -306,7 +306,7 @@ void MatcherGen::EmitOperatorMatchCode(const TreePatternNode &N,
     // The "name" of a non-leaf complex pattern (MY_PAT $op1, $op2) is
     // "MY_PAT:op1:op2". We should already have validated that the uses are
     // consistent.
-    std::string PatternName = std::string(N.getOperator()->getName());
+    std::string PatternName = N.getOperator()->getName().str();
     for (const TreePatternNode &Child : N.children()) {
       PatternName += ":";
       PatternName += Child.getName();
@@ -580,8 +580,8 @@ bool MatcherGen::EmitMatcherCode(unsigned Variant) {
   // checks (e.g. addrmode matches).  We emit this after the structural match
   // because they are generally more expensive to evaluate and more difficult to
   // factor.
-  for (unsigned i = 0, e = MatchedComplexPatterns.size(); i != e; ++i) {
-    auto &N = *MatchedComplexPatterns[i].first;
+  for (const auto &MCP : MatchedComplexPatterns) {
+    auto &N = *MCP.first;
 
     // Remember where the results of this match get stuck.
     if (N.isLeaf()) {
@@ -595,7 +595,7 @@ bool MatcherGen::EmitMatcherCode(unsigned Variant) {
     }
 
     // Get the slot we recorded the value in from the name on the node.
-    unsigned RecNodeEntry = MatchedComplexPatterns[i].second;
+    unsigned RecNodeEntry = MCP.second;
 
     const ComplexPattern *CP = N.getComplexPatternInfo(CGP);
     assert(CP && "Not a valid ComplexPattern!");

@@ -62,7 +62,7 @@ which preserves ABI compatibility with C.
 Represents a C-style enum. Contains a list of `etor` values, which have a name
 and description.
 
-A `TaggedEtor` record type also exists which addtionally takes a type. This type
+A `TaggedEtor` record type also exists which additionally takes a type. This type
 is used when the enum is used as a parameter to a function with a type-tagged
 function parameter (e.g. `olGetDeviceInfo`).
 
@@ -138,8 +138,8 @@ allow more backends to be easily added in future.
 
 A new object can be added to the API by adding to one of the existing `.td`
 files. It is also possible to add a new tablegen file to the API by adding it
-to the includes in `OffloadAPI.td`. When the offload target is rebuilt, the
-new definition will be included in the generated files.
+to the includes in `OffloadAPI.td`. When the `OffloadGenerate` target is
+rebuilt, the new definition will be included in the generated files.
 
 ### Adding a new entry point
 
@@ -147,4 +147,4 @@ When a new entry point is added (e.g. `offloadDeviceFoo`), the actual entry
 point is automatically generated, which contains validation and tracing code.
 It expects an implementation function (`offloadDeviceFoo_impl`) to be defined,
 which it will call into. The definition of this implementation function should
-be added to `src/offload_impl.cpp`
+be added to `src/OffloadImpl.cpp`

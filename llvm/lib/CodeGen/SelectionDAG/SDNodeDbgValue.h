@@ -13,6 +13,7 @@
 #ifndef LLVM_LIB_CODEGEN_SELECTIONDAG_SDNODEDBGVALUE_H
 #define LLVM_LIB_CODEGEN_SELECTIONDAG_SDNODEDBGVALUE_H
 
+#include "llvm/CodeGen/Register.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/DataTypes.h"
@@ -63,7 +64,7 @@ public:
   }
 
   /// Returns the Virtual Register for a VReg
-  unsigned getVReg() const {
+  Register getVReg() const {
     assert(kind == VREG);
     return u.VReg;
   }
@@ -74,8 +75,8 @@ public:
   static SDDbgOperand fromFrameIdx(unsigned FrameIdx) {
     return SDDbgOperand(FrameIdx, FRAMEIX);
   }
-  static SDDbgOperand fromVReg(unsigned VReg) {
-    return SDDbgOperand(VReg, VREG);
+  static SDDbgOperand fromVReg(Register VReg) {
+    return SDDbgOperand(VReg.id(), VREG);
   }
   static SDDbgOperand fromConst(const Value *Const) {
     return SDDbgOperand(Const);
@@ -164,8 +165,8 @@ public:
         IsVariadic(IsVariadic) {
     assert(IsVariadic || L.size() == 1);
     assert(!(IsVariadic && IsIndirect));
-    std::copy(L.begin(), L.end(), LocationOps);
-    std::copy(Dependencies.begin(), Dependencies.end(), AdditionalDependencies);
+    llvm::copy(L, LocationOps);
+    llvm::copy(Dependencies, AdditionalDependencies);
   }
 
   // We allocate arrays with the BumpPtrAllocator and never free or copy them,
@@ -196,8 +197,7 @@ public:
     for (const SDDbgOperand &DbgOp : getLocationOps())
       if (DbgOp.getKind() == SDDbgOperand::SDNODE)
         Dependencies.push_back(DbgOp.getSDNode());
-    for (SDNode *Node : getAdditionalDependencies())
-      Dependencies.push_back(Node);
+    llvm::append_range(Dependencies, getAdditionalDependencies());
     return Dependencies;
   }
 

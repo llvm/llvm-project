@@ -1,0 +1,19 @@
+@LIT_SITE_CFG_IN_HEADER@
+
+import sys
+
+config.llvm_tools_dir = "@LLVM_TOOLS_DIR@"
+config.flang_source_dir = "@FLANG_SOURCE_DIR@"
+config.flang_rt_source_dir = "@FLANG_RT_SOURCE_DIR@"
+config.flang_rt_binary_test_dir = os.path.dirname(__file__)
+config.flang_rt_output_resource_lib_dir = "@FLANG_RT_OUTPUT_RESOURCE_LIB_DIR@"
+config.flang_rt_experimental_offload_support = "@FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT@"
+config.cc = "@CMAKE_C_COMPILER@"
+config.flang = "@CMAKE_Fortran_COMPILER@"
+config.osx_sysroot = path(r"@CMAKE_OSX_SYSROOT@")
+
+import lit.llvm
+lit.llvm.initialize(lit_config, config)
+
+# Let the main config do the real work.
+lit_config.load_config(config, os.path.join(config.flang_rt_source_dir, 'test', 'lit.cfg.py'))

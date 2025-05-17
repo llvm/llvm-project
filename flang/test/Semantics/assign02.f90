@@ -8,6 +8,11 @@ module m1
   type t2
     sequence
     real :: t2Field
+    real, pointer :: t2FieldPtr
+  end type
+  type t3
+    type(t2) :: t3Field
+    type(t2), pointer :: t3FieldPtr
   end type
 contains
 
@@ -74,12 +79,13 @@ contains
 
   ! C1020
   subroutine s5
-    real, target :: x[*]
-    real, target, volatile :: y[*]
+    real, target, save :: x[*]
+    real, target, volatile, save :: y[*]
     real, pointer :: p
     real, pointer, volatile :: q
     p => x
     !ERROR: Pointer must be VOLATILE when target is a VOLATILE coarray
+    !ERROR: VOLATILE target associated with non-VOLATILE pointer
     p => y
     !ERROR: Pointer may not be VOLATILE when target is a non-VOLATILE coarray
     q => x
@@ -146,14 +152,63 @@ contains
     end
   end
 
-  ! C1026 (R1037) A data-target shall not be a coindexed object.
+  ! F'2023 C1029 A data-target shall not be a coindexed object.
   subroutine s10
-    real, target :: a[*]
+    real, target, save :: a[*]
     real, pointer :: b
     !ERROR: A coindexed object may not be a pointer target
     b => a[1]
   end
 
+  ! F'2023 C1027 the LHS may not be coindexed
+  subroutine s11
+    type t
+      real, pointer :: p
+    end type
+    type(t), save :: ca[*]
+    real, target :: x
+    !ERROR: The left-hand side of a pointer assignment must not be coindexed
+    ca[1]%p => x
+  end
+
+  subroutine s12
+    real, volatile, target :: x
+    real, pointer :: p
+    real, pointer, volatile :: q
+    !ERROR: VOLATILE target associated with non-VOLATILE pointer
+    p => x
+    q => x
+  end
+
+  subroutine s13
+    type(t3), target, volatile :: y = t3(t2(4.4))
+    real, pointer :: p1
+    type(t2), pointer :: p2
+    type(t3), pointer :: p3
+    real, pointer, volatile :: q1
+    type(t2), pointer, volatile :: q2
+    type(t3), pointer, volatile :: q3
+    !ERROR: VOLATILE target associated with non-VOLATILE pointer
+    p1 => y%t3Field%t2Field
+    !ERROR: VOLATILE target associated with non-VOLATILE pointer
+    p2 => y%t3Field
+    !ERROR: VOLATILE target associated with non-VOLATILE pointer
+    p3 => y
+    !OK:
+    q1 => y%t3Field%t2Field
+    !OK:
+    q2 => y%t3Field
+    !OK:
+    q3 => y
+    !ERROR: VOLATILE target associated with non-VOLATILE pointer
+    p3%t3FieldPtr => y%t3Field
+    !ERROR: VOLATILE target associated with non-VOLATILE pointer
+    p3%t3FieldPtr%t2FieldPtr => y%t3Field%t2Field
+    !OK
+    q3%t3FieldPtr => y%t3Field
+    !OK
+    q3%t3FieldPtr%t2FieldPtr => y%t3Field%t2Field
+  end
 end
 
 module m2

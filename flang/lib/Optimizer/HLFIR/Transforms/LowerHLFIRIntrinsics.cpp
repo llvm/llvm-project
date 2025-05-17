@@ -121,8 +121,14 @@ protected:
         // simplified since the fir.box lowered here are now guarenteed to
         // contain the local lower bounds thanks to the hlfir.declare (the extra
         // rebox can be removed).
-        auto [exv, cleanup] =
-            hlfir::translateToExtendedValue(loc, builder, entity);
+        // When taking arguments as descriptors, the runtime expect absent
+        // OPTIONAL to be a nullptr to a descriptor, lowering has already
+        // prepared such descriptors as needed, hence set
+        // keepScalarOptionalBoxed to avoid building descriptors with a null
+        // address for them.
+        auto [exv, cleanup] = hlfir::translateToExtendedValue(
+            loc, builder, entity, /*contiguous=*/false,
+            /*keepScalarOptionalBoxed=*/true);
         if (cleanup)
           cleanupFns.push_back(*cleanup);
         ret.emplace_back(exv);
@@ -551,8 +557,8 @@ public:
     // Pattern rewriting only requires that the resulting IR is still valid
     mlir::GreedyRewriteConfig config;
     // Prevent the pattern driver from merging blocks
-    config.enableRegionSimplification =
-        mlir::GreedySimplifyRegionLevel::Disabled;
+    config.setRegionSimplificationLevel(
+        mlir::GreedySimplifyRegionLevel::Disabled);
 
     if (mlir::failed(
             mlir::applyPatternsGreedily(module, std::move(patterns), config))) {

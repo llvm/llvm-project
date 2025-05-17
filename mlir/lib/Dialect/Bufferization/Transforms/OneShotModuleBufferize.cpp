@@ -280,42 +280,15 @@ static void removeBufferizationAttributes(BlockArgument bbArg) {
 }
 
 /// Return the func::FuncOp called by `callOp`.
-static func::FuncOp getCalledFunction(func::CallOp callOp) {
+static func::FuncOp
+getCalledFunction(func::CallOp callOp,
+                  mlir::SymbolTableCollection &symbolTable) {
   SymbolRefAttr sym =
       llvm::dyn_cast_if_present<SymbolRefAttr>(callOp.getCallableForCallee());
   if (!sym)
     return nullptr;
   return dyn_cast_or_null<func::FuncOp>(
-      SymbolTable::lookupNearestSymbolFrom(callOp, sym));
-}
-
-/// Gather equivalence info of CallOps.
-/// Note: This only adds new equivalence info if the called function was already
-/// analyzed.
-// TODO: This does not handle cyclic function call graphs etc.
-static void equivalenceAnalysis(func::FuncOp funcOp,
-                                OneShotAnalysisState &state,
-                                FuncAnalysisState &funcState) {
-  funcOp->walk([&](func::CallOp callOp) {
-    func::FuncOp calledFunction = getCalledFunction(callOp);
-    assert(calledFunction && "could not retrieved called func::FuncOp");
-
-    // No equivalence info available for the called function.
-    if (!funcState.equivalentFuncArgs.count(calledFunction))
-      return WalkResult::skip();
-
-    for (auto it : funcState.equivalentFuncArgs[calledFunction]) {
-      int64_t returnIdx = it.first;
-      int64_t bbargIdx = it.second;
-      if (!state.isInPlace(callOp->getOpOperand(bbargIdx)))
-        continue;
-      Value returnVal = callOp.getResult(returnIdx);
-      Value argVal = callOp->getOperand(bbargIdx);
-      state.unionEquivalenceClasses(returnVal, argVal);
-    }
-
-    return WalkResult::advance();
-  });
+      symbolTable.lookupNearestSymbolFrom(callOp, sym));
 }
 
 /// Return "true" if the given function signature has tensor semantics.
@@ -329,7 +302,7 @@ static bool hasTensorSignature(func::FuncOp funcOp) {
 /// Store all functions of the `moduleOp` in `orderedFuncOps`, sorted by
 /// callee-caller order (i.e., callees without callers first). Store all
 /// remaining functions (i.e., the ones that call each other recursively) in
-/// `remainingFuncOps`.
+/// `remainingFuncOps`. Does not traverse nested symbol tables.
 ///
 /// Store the map of FuncOp to all its callers in `callerMap`.
 ///
@@ -343,11 +316,15 @@ static LogicalResult getFuncOpsOrderedByCalls(
   DenseMap<func::FuncOp, DenseSet<func::FuncOp>> calledBy;
   // For each FuncOp, the number of func::CallOp it contains.
   DenseMap<func::FuncOp, unsigned> numberCallOpsContainedInFuncOp;
-  WalkResult res = moduleOp.walk([&](func::FuncOp funcOp) -> WalkResult {
+
+  // TODO Avoid recomputing the symbol tables every time.
+  mlir::SymbolTableCollection symbolTable;
+
+  for (func::FuncOp funcOp : moduleOp.getOps<func::FuncOp>()) {
     // Collect function calls and populate the caller map.
     numberCallOpsContainedInFuncOp[funcOp] = 0;
-    return funcOp.walk([&](func::CallOp callOp) -> WalkResult {
-      func::FuncOp calledFunction = getCalledFunction(callOp);
+    WalkResult res = funcOp.walk([&](func::CallOp callOp) -> WalkResult {
+      func::FuncOp calledFunction = getCalledFunction(callOp, symbolTable);
       assert(calledFunction && "could not retrieved called func::FuncOp");
       // If the called function does not have any tensors in its signature, then
       // it is not necessary to bufferize the callee before the caller.
@@ -360,9 +337,9 @@ static LogicalResult getFuncOpsOrderedByCalls(
       }
       return WalkResult::advance();
     });
-  });
-  if (res.wasInterrupted())
-    return failure();
+    if (res.wasInterrupted())
+      return failure();
+  }
 
   // Iteratively remove function operations that do not call any of the
   // functions remaining in the callCounter map and add them to ordered list.
@@ -493,9 +470,6 @@ mlir::bufferization::analyzeModuleOp(ModuleOp moduleOp,
     // Now analyzing function.
     funcState.startFunctionAnalysis(funcOp);
 
-    // Gather equivalence info for CallOps.
-    equivalenceAnalysis(funcOp, state, funcState);
-
     // Analyze funcOp.
     if (failed(analyzeOp(funcOp, state, statistics)))
       return failure();
@@ -514,9 +488,6 @@ mlir::bufferization::analyzeModuleOp(ModuleOp moduleOp,
     if (!state.getOptions().isOpAllowed(funcOp))
       continue;
 
-    // Gather equivalence info for CallOps.
-    equivalenceAnalysis(funcOp, state, funcState);
-
     // Analyze funcOp.
     if (failed(analyzeOp(funcOp, state, statistics)))
       return failure();
@@ -533,10 +504,10 @@ mlir::bufferization::analyzeModuleOp(ModuleOp moduleOp,
 
 void mlir::bufferization::removeBufferizationAttributesInModule(
     ModuleOp moduleOp) {
-  moduleOp.walk([&](func::FuncOp op) {
+  for (auto op : moduleOp.getOps<func::FuncOp>()) {
     for (BlockArgument bbArg : op.getArguments())
       removeBufferizationAttributes(bbArg);
-  });
+  }
 }
 
 LogicalResult mlir::bufferization::bufferizeModuleOp(
@@ -592,7 +563,7 @@ LogicalResult mlir::bufferization::bufferizeModuleOp(
   // Bufferize all other ops.
   for (Operation &op : llvm::make_early_inc_range(moduleOp.getOps())) {
     // Functions were already bufferized.
-    if (isa<func::FuncOp>(&op))
+    if (isa<func::FuncOp>(&op) || op.hasTrait<OpTrait::SymbolTable>())
       continue;
     if (failed(bufferizeOp(&op, options, statistics)))
       return failure();

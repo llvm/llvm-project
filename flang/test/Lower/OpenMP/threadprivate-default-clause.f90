@@ -7,10 +7,10 @@
 !CHECK-LABEL: func.func @_QPsub1() {
 !CHECK:     %[[A:.*]] = fir.address_of(@_QFsub1Ea) : !fir.ref<i32>
 !CHECK:     %[[A_DECL:.*]]:2 = hlfir.declare %[[A]]  {uniq_name = "_QFsub1Ea"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK:     %[[A_TP0:.*]] = omp.threadprivate %[[A_DECL]]#1 : !fir.ref<i32> -> !fir.ref<i32>
+!CHECK:     %[[A_TP0:.*]] = omp.threadprivate %[[A_DECL]]#0 : !fir.ref<i32> -> !fir.ref<i32>
 !CHECK:     %[[A_CVT:.*]]:2 = hlfir.declare %[[A_TP0]] {uniq_name = "_QFsub1Ea"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:     omp.parallel {
-!CHECK:       %[[A_TP:.*]] = omp.threadprivate %[[A_DECL]]#1 : !fir.ref<i32> -> !fir.ref<i32>
+!CHECK:       %[[A_TP:.*]] = omp.threadprivate %[[A_DECL]]#0 : !fir.ref<i32> -> !fir.ref<i32>
 !CHECK:       %[[A_TP_DECL:.*]]:2 = hlfir.declare %[[A_TP]] {uniq_name = "_QFsub1Ea"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:       %[[TID:.*]] = fir.call @omp_get_thread_num() proc_attrs<bind_c> fastmath<contract> : () -> i32
 !CHECK:       hlfir.assign %[[TID]] to %[[A_TP_DECL]]#0 : i32, !fir.ref<i32>

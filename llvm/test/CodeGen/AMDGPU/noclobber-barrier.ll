@@ -5,7 +5,7 @@
 ; Check that barrier or fence in between of loads is not considered a clobber
 ; for the purpose of converting vector loads into scalar.
 
-@LDS = linkonce_odr hidden local_unnamed_addr addrspace(3) global i32 undef
+@LDS = linkonce_odr hidden local_unnamed_addr addrspace(3) global i32 poison
 
 ; GCN-LABEL: {{^}}simple_barrier:
 ; GCN: s_load_dword s
@@ -55,11 +55,11 @@ bb:
 ; GCN: s_load_dword s
 ; GCN-NOT: global_load_dword
 ; GCN: global_store_dword
-define amdgpu_kernel void @memory_phi_no_clobber(ptr addrspace(1) %arg) {
+define amdgpu_kernel void @memory_phi_no_clobber(ptr addrspace(1) %arg, i1 %cond) {
 ; CHECK-LABEL: @memory_phi_no_clobber(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[I:%.*]] = load i32, ptr addrspace(1) [[ARG:%.*]], align 4, !amdgpu.noclobber !0
-; CHECK-NEXT:    br i1 undef, label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]], !amdgpu.uniform !0
+; CHECK-NEXT:    br i1 %cond, label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]], !amdgpu.uniform !0
 ; CHECK:       if.then:
 ; CHECK-NEXT:    tail call void @llvm.amdgcn.s.barrier()
 ; CHECK-NEXT:    br label [[IF_END:%.*]], !amdgpu.uniform !0
@@ -76,7 +76,7 @@ define amdgpu_kernel void @memory_phi_no_clobber(ptr addrspace(1) %arg) {
 ;
 bb:
   %i = load i32, ptr addrspace(1) %arg, align 4
-  br i1 undef, label %if.then, label %if.else
+  br i1 %cond, label %if.then, label %if.else
 
 if.then:
   tail call void @llvm.amdgcn.s.barrier()
@@ -101,11 +101,11 @@ if.end:
 ; GCN: global_store_dword
 ; GCN: global_load_dword
 ; GCN: global_store_dword
-define amdgpu_kernel void @memory_phi_clobber1(ptr addrspace(1) %arg) {
+define amdgpu_kernel void @memory_phi_clobber1(ptr addrspace(1) %arg, i1 %cond) {
 ; CHECK-LABEL: @memory_phi_clobber1(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[I:%.*]] = load i32, ptr addrspace(1) [[ARG:%.*]], align 4, !amdgpu.noclobber !0
-; CHECK-NEXT:    br i1 undef, label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]], !amdgpu.uniform !0
+; CHECK-NEXT:    br i1 %cond, label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]], !amdgpu.uniform !0
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[ARG]], i64 3
 ; CHECK-NEXT:    store i32 1, ptr addrspace(1) [[GEP]], align 4
@@ -123,7 +123,7 @@ define amdgpu_kernel void @memory_phi_clobber1(ptr addrspace(1) %arg) {
 ;
 bb:
   %i = load i32, ptr addrspace(1) %arg, align 4
-  br i1 undef, label %if.then, label %if.else
+  br i1 %cond, label %if.then, label %if.else
 
 if.then:
   %gep = getelementptr inbounds i32, ptr addrspace(1) %arg, i64 3
@@ -149,11 +149,11 @@ if.end:
 ; GCN: s_barrier
 ; GCN: global_load_dword
 ; GCN: global_store_dword
-define amdgpu_kernel void @memory_phi_clobber2(ptr addrspace(1) %arg) {
+define amdgpu_kernel void @memory_phi_clobber2(ptr addrspace(1) %arg, i1 %cond) {
 ; CHECK-LABEL: @memory_phi_clobber2(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[I:%.*]] = load i32, ptr addrspace(1) [[ARG:%.*]], align 4, !amdgpu.noclobber !0
-; CHECK-NEXT:    br i1 undef, label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]], !amdgpu.uniform !0
+; CHECK-NEXT:    br i1 %cond, label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]], !amdgpu.uniform !0
 ; CHECK:       if.then:
 ; CHECK-NEXT:    tail call void @llvm.amdgcn.s.barrier()
 ; CHECK-NEXT:    br label [[IF_END:%.*]], !amdgpu.uniform !0
@@ -171,7 +171,7 @@ define amdgpu_kernel void @memory_phi_clobber2(ptr addrspace(1) %arg) {
 ;
 bb:
   %i = load i32, ptr addrspace(1) %arg, align 4
-  br i1 undef, label %if.then, label %if.else
+  br i1 %cond, label %if.then, label %if.else
 
 if.then:
   tail call void @llvm.amdgcn.s.barrier()

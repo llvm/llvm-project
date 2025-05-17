@@ -377,14 +377,14 @@ define void @vselect_concat_splat() {
 ; AVX512-NEXT:    vmovaps %ymm2, %ymm3
 ; AVX512-NEXT:    vpermi2ps %ymm1, %ymm0, %ymm3
 ; AVX512-NEXT:    vmovups 32, %xmm4
-; AVX512-NEXT:    vmovups 0, %ymm5
-; AVX512-NEXT:    vxorps %xmm6, %xmm6, %xmm6
-; AVX512-NEXT:    vcmpneqps %xmm6, %xmm3, %k0
+; AVX512-NEXT:    vxorps %xmm5, %xmm5, %xmm5
+; AVX512-NEXT:    vcmpneqps %xmm5, %xmm3, %k0
 ; AVX512-NEXT:    kshiftlw $4, %k0, %k1
 ; AVX512-NEXT:    korw %k1, %k0, %k1
-; AVX512-NEXT:    vpermt2ps %ymm4, %ymm2, %ymm5
 ; AVX512-NEXT:    vpermt2ps %ymm1, %ymm2, %ymm0
-; AVX512-NEXT:    vmovaps %ymm5, %ymm0 {%k1}
+; AVX512-NEXT:    vpmovsxbd {{.*#+}} ymm1 = [8,11,14,1,9,12,15,2]
+; AVX512-NEXT:    vpermi2ps 0, %ymm4, %ymm1
+; AVX512-NEXT:    vmovaps %ymm1, %ymm0 {%k1}
 ; AVX512-NEXT:    vmovups %ymm0, (%rax)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq

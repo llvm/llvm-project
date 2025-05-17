@@ -32,12 +32,12 @@ constexpr bool test() {
     });
   });
 
-  { // Vector may or may not need to reallocate because of the insertion -- make sure to test both cases.
+  {   // Vector may or may not need to reallocate because of the insertion -- make sure to test both cases.
     { // Ensure reallocation happens.
-      constexpr int N = 255;
-      bool in[N] = {};
+      constexpr int N     = 255;
+      bool in[N]          = {};
       std::vector<bool> v = {0, 0, 0, 1, 1, 0, 0, 0};
-      auto initial = v;
+      auto initial        = v;
       assert(v.capacity() < v.size() + std::ranges::size(in));
 
       v.insert_range(v.end(), in);
@@ -49,7 +49,7 @@ constexpr bool test() {
     }
 
     { // Ensure no reallocation happens.
-      bool in[] = {1, 1, 1, 1, 0, 0, 1, 1, 1, 1};
+      bool in[]           = {1, 1, 1, 1, 0, 0, 1, 1, 1, 1};
       std::vector<bool> v = {0, 0, 0, 1, 1, 0, 0, 0};
       v.reserve(v.size() + std::ranges::size(in));
       assert(v.capacity() >= v.size() + std::ranges::size(in));

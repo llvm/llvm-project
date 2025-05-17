@@ -197,9 +197,11 @@ bool ThreadPlanStepRange::InRange() {
 bool ThreadPlanStepRange::InSymbol() {
   lldb::addr_t cur_pc = GetThread().GetRegisterContext()->GetPC();
   if (m_addr_context.function != nullptr) {
-    return m_addr_context.function->GetAddressRange().ContainsLoadAddress(
-        cur_pc, &GetTarget());
-  } else if (m_addr_context.symbol && m_addr_context.symbol->ValueIsAddress()) {
+    AddressRange unused_range;
+    return m_addr_context.function->GetRangeContainingLoadAddress(
+        cur_pc, GetTarget(), unused_range);
+  }
+  if (m_addr_context.symbol && m_addr_context.symbol->ValueIsAddress()) {
     AddressRange range(m_addr_context.symbol->GetAddressRef(),
                        m_addr_context.symbol->GetByteSize());
     return range.ContainsLoadAddress(cur_pc, &GetTarget());

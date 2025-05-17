@@ -1000,6 +1000,8 @@ static void emitValueBuilder(const Operator &op,
       });
   std::string nameWithoutDialect = sanitizeName(
       op.getOperationName().substr(op.getOperationName().find('.') + 1));
+  if (nameWithoutDialect == op.getCppClassName())
+    nameWithoutDialect += "_";
   std::string params = llvm::join(valueBuilderParams, ", ");
   std::string args = llvm::join(opBuilderArgs, ", ");
   const char *type =

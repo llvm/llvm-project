@@ -8,6 +8,7 @@ declare void @init(ptr)
 define i64 @multi_exiting_to_different_exits_live_in_exit_values() {
 ; CHECK: multi_exiting_to_different_exits_live_in_exit_values
 ; CHECK-LABEL: VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VF:%.+]]> = VF
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<128> = original trip-count
@@ -23,8 +24,8 @@ define i64 @multi_exiting_to_different_exits_live_in_exit_values() {
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
-; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
-; CHECK-NEXT:     CLONE ir<%gep.src> = getelementptr inbounds ir<%src>, vp<%3>
+; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, vp<[[VF]]
+; CHECK-NEXT:     CLONE ir<%gep.src> = getelementptr inbounds ir<%src>, vp<[[STEPS]]>
 ; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%gep.src>
 ; CHECK-NEXT:     WIDEN ir<%l> = load vp<[[VEC_PTR]]>
 ; CHECK-NEXT:     WIDEN ir<%c.1> = icmp eq ir<%l>, ir<10>
@@ -39,7 +40,7 @@ define i64 @multi_exiting_to_different_exits_live_in_exit_values() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.split:
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[EA_TAKEN]]>
-; CHECK-NEXT: Successor(s): ir-bb<e1>, middle.block
+; CHECK-NEXT: Successor(s): vector.early.exit, middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
 ; CHECK-NEXT:   EMIT vp<[[MIDDLE_CMP:%.+]]> = icmp eq ir<128>, vp<[[VTC]]>
@@ -58,8 +59,11 @@ define i64 @multi_exiting_to_different_exits_live_in_exit_values() {
 ; CHECK-NEXT:  IR %p2 = phi i64 [ 1, %loop.latch ] (extra operand: ir<1> from middle.block)
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
+; CHECK-NEXT: vector.early.exit:
+; CHECK-NEXT: Successor(s): ir-bb<e1>
+; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<e1>:
-; CHECK-NEXT:   IR %p1 = phi i64 [ 0, %loop.header ] (extra operand: ir<0> from middle.split)
+; CHECK-NEXT:   IR %p1 = phi i64 [ 0, %loop.header ] (extra operand: ir<0> from vector.early.exit)
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 entry:
@@ -91,6 +95,7 @@ e2:
 define i64 @multi_exiting_to_same_exit_live_in_exit_values() {
 ; CHECK: multi_exiting_to_same_exit_live_in_exit_values
 ; CHECK-LABEL: VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VF:%.+]]> = VF
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<128> = original trip-count
@@ -106,8 +111,8 @@ define i64 @multi_exiting_to_same_exit_live_in_exit_values() {
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
-; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
-; CHECK-NEXT:     CLONE ir<%gep.src> = getelementptr inbounds ir<%src>, vp<%3>
+; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, vp<[[VF]]>
+; CHECK-NEXT:     CLONE ir<%gep.src> = getelementptr inbounds ir<%src>, vp<[[STEPS]]>
 ; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%gep.src>
 ; CHECK-NEXT:     WIDEN ir<%l> = load vp<[[VEC_PTR]]>
 ; CHECK-NEXT:     WIDEN ir<%c.1> = icmp eq ir<%l>, ir<10>
@@ -122,7 +127,7 @@ define i64 @multi_exiting_to_same_exit_live_in_exit_values() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.split:
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[EA_TAKEN]]>
-; CHECK-NEXT: Successor(s): ir-bb<exit>, middle.block
+; CHECK-NEXT: Successor(s): vector.early.exit, middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
 ; CHECK-NEXT:   EMIT vp<[[MIDDLE_CMP:%.+]]> = icmp eq ir<128>, vp<[[VTC]]>
@@ -137,8 +142,11 @@ define i64 @multi_exiting_to_same_exit_live_in_exit_values() {
 ; CHECK-NEXT:   IR   %iv = phi i64 [ %inc, %loop.latch ], [ 0, %entry ] (extra operand: vp<[[RESUME]]> from scalar.ph)
 ; CHECK:      No successors
 ; CHECK-EMPTY:
+; CHECK-NEXT: vector.early.exit:
+; CHECK-NEXT: Successor(s): ir-bb<exit>
+; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<exit>:
-; CHECK-NEXT:   IR %p = phi i64 [ 0, %loop.header ], [ 1, %loop.latch ] (extra operands: ir<1> from middle.block, ir<0> from middle.split)
+; CHECK-NEXT:   IR %p = phi i64 [ 0, %loop.header ], [ 1, %loop.latch ] (extra operands: ir<1> from middle.block, ir<0> from vector.early.exit)
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 
@@ -167,6 +175,7 @@ exit:
 define i64 @multi_exiting_to_same_exit_live_in_exit_values_2() {
 ; CHECK: multi_exiting_to_same_exit_live_in_exit_values_2
 ; CHECK-LABEL: VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VF:%.+]]> = VF
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<128> = original trip-count
@@ -182,8 +191,8 @@ define i64 @multi_exiting_to_same_exit_live_in_exit_values_2() {
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
-; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
-; CHECK-NEXT:     CLONE ir<%gep.src> = getelementptr inbounds ir<%src>, vp<%3>
+; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, vp<[[VF]]>
+; CHECK-NEXT:     CLONE ir<%gep.src> = getelementptr inbounds ir<%src>, vp<[[STEPS]]>
 ; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%gep.src>
 ; CHECK-NEXT:     WIDEN ir<%l> = load vp<[[VEC_PTR]]>
 ; CHECK-NEXT:     WIDEN ir<%c.1> = icmp eq ir<%l>, ir<10>
@@ -198,7 +207,7 @@ define i64 @multi_exiting_to_same_exit_live_in_exit_values_2() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.split:
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[EA_TAKEN]]>
-; CHECK-NEXT: Successor(s): ir-bb<exit>, middle.block
+; CHECK-NEXT: Successor(s): vector.early.exit, middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
 ; CHECK-NEXT:   EMIT vp<[[MIDDLE_CMP:%.+]]> = icmp eq ir<128>, vp<[[VTC]]>
@@ -213,8 +222,11 @@ define i64 @multi_exiting_to_same_exit_live_in_exit_values_2() {
 ; CHECK-NEXT:   IR   %iv = phi i64 [ %inc, %loop.latch ], [ 0, %entry ] (extra operand: vp<[[RESUME]]> from scalar.ph)
 ; CHECK:      No successors
 ; CHECK-EMPTY:
+; CHECK-NEXT: vector.early.exit:
+; CHECK-NEXT: Successor(s): ir-bb<exit>
+; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<exit>:
-; CHECK-NEXT:   IR %p = phi i64 [ 0, %loop.header ], [ 1, %loop.latch ] (extra operands: ir<1> from middle.block, ir<0> from middle.split)
+; CHECK-NEXT:   IR %p = phi i64 [ 0, %loop.header ], [ 1, %loop.latch ] (extra operands: ir<1> from middle.block, ir<0> from vector.early.exit)
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 
