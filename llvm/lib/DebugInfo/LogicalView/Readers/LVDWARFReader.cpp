@@ -798,8 +798,8 @@ std::string LVDWARFReader::getRegisterName(LVSmall Opcode,
     return {};
   };
   DumpOpts.GetNameForDWARFReg = GetRegName;
-  DWARFExpression::prettyPrintRegisterOp(/*U=*/nullptr, Stream, DumpOpts,
-                                         Opcode, Operands);
+  DWARFExpressionPrinter::prettyPrintRegisterOp(/*U=*/nullptr, Stream, DumpOpts,
+                                                Opcode, Operands);
   return Stream.str();
 }
 

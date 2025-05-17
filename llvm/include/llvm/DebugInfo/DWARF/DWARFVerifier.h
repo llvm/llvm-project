@@ -14,6 +14,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFAcceleratorTable.h"
 #include "llvm/DebugInfo/DWARF/DWARFAddressRange.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
+#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnitIndex.h"
 #include <cstdint>
 #include <map>
@@ -318,6 +319,23 @@ private:
   /// \returns The number of errors occurred during verification
   void verifyDebugNames(const DWARFSection &AccelSection,
                         const DataExtractor &StrData);
+
+  /// Verify that the the expression is valid within the context of unit U.
+  ///
+  /// \param E expression to verify.
+  /// \param U containing DWARFUnit, if any.
+  ///
+  /// returns true if E is a valid expression.
+  bool verifyExpression(const DWARFExpression &E, DWARFUnit *U);
+
+  /// Verify that the the expression operation is valid within the context of
+  /// unit U.
+  ///
+  /// \param Op operation to verify
+  /// \param U containing DWARFUnit, if any
+  ///
+  /// returns true if Op is a valid Dwarf operation
+  bool verifyExpressionOp(const DWARFExpression::Operation &Op, DWARFUnit *U);
 
 public:
   DWARFVerifier(raw_ostream &S, DWARFContext &D,
