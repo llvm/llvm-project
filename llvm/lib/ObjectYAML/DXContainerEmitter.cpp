@@ -11,6 +11,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/MC/DXContainerPSVInfo.h"
 #include "llvm/MC/DXContainerRootSignature.h"
@@ -295,6 +296,23 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
             Descriptor.Flags = Param.Descriptor.getEncodedFlags();
           RS.ParametersContainer.addParameter(Header, Descriptor);
           break;
+        case llvm::to_underlying(dxbc::RootParameterType::DescriptorTable): {
+          mcdxbc::DescriptorTable Table;
+          for (const auto &R : Param.Table.Ranges) {
+
+              dxbc::RTS0::v2::DescriptorRange Range;
+              Range.RangeType = R.RangeType;
+              Range.NumDescriptors = R.NumDescriptors;
+              Range.BaseShaderRegister = R.BaseShaderRegister;
+              Range.RegisterSpace = R.RegisterSpace;
+              Range.OffsetInDescriptorsFromTableStart =
+                  R.OffsetInDescriptorsFromTableStart;
+              if (RS.Version > 1)
+                Range.Flags = R.getEncodedFlags();
+              Table.Ranges.push_back(Range);
+          }
+          RS.ParametersContainer.addParameter(Header, Table);
+        } break;
         default:
           // Handling invalid parameter type edge case. We intentionally let
           // obj2yaml/yaml2obj parse and emit invalid dxcontainer data, in order
@@ -304,7 +322,6 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
       }
 
       RS.write(OS);
-      break;
     }
     uint64_t BytesWritten = OS.tell() - DataStart;
     RollingOffset += BytesWritten;

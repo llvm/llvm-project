@@ -6,9 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/STLForwardCompat.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/BinaryFormat/DXContainer.h"
 #include <cstdint>
 #include <limits>
+#include <variant>
 
 namespace llvm {
 
@@ -25,11 +28,25 @@ struct RootParameterInfo {
       : Header(Header), Location(Location) {}
 };
 
+
+struct DescriptorTable {
+  SmallVector<dxbc::RTS0::v2::DescriptorRange> Ranges;
+
+  SmallVector<dxbc::RTS0::v2::DescriptorRange>::const_iterator begin() const {
+    return Ranges.begin();
+  }
+  SmallVector<dxbc::RTS0::v2::DescriptorRange>::const_iterator end() const {
+    return Ranges.end();
+  }
+};
+
+
+
 struct RootParametersContainer {
   SmallVector<RootParameterInfo> ParametersInfo;
-
   SmallVector<dxbc::RootConstants> Constants;
   SmallVector<dxbc::RTS0::v2::RootDescriptor> Descriptors;
+  SmallVector<DescriptorTable> Tables;
 
   void addInfo(dxbc::RootParameterHeader Header, size_t Location) {
     ParametersInfo.push_back(RootParameterInfo(Header, Location));
@@ -51,6 +68,11 @@ struct RootParametersContainer {
     Descriptors.push_back(Descriptor);
   }
 
+  void addParameter(dxbc::RootParameterHeader H, DescriptorTable D) {
+    addInfo(H, Tables.size());
+    Tables.push_back(D);
+  }
+
   const std::pair<uint32_t, uint32_t>
   getTypeAndLocForParameter(uint32_t Location) const {
     const RootParameterInfo &Info = ParametersInfo[Location];
@@ -68,6 +90,9 @@ struct RootParametersContainer {
 
   const dxbc::RTS0::v2::RootDescriptor &getRootDescriptor(size_t Index) const {
     return Descriptors[Index];
+  }
+   const DescriptorTable &getDescriptorTable(size_t Index) const {
+    return Tables[Index];
   }
 
   size_t size() const { return ParametersInfo.size(); }
