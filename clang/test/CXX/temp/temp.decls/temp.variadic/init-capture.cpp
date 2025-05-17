@@ -22,19 +22,19 @@ template<typename ...T> void f(T ...t) {
   // Not OK: can't expand 'x' outside its scope.
   weird((void)[&...x = t] {
     return &x; // expected-error {{unexpanded parameter pack 'x'}}
-  }...         // expected-error {{does not contain any unexpanded}}
+  }...         // expected-error {{pack expansion does not contain any unexpanded parameter packs}}
   );
 
   // OK, capture only one 'slice' of 'x'.
   weird((void)[&x = t] {
     return &x;
-  }...
+  }...         // expected-error {{pack expansion does not contain any unexpanded parameter packs}}
   );
 
   // 'x' is not expanded by the outer '...', but 'T' is.
   weird((void)[&... x = t] {
     return T() + &x; // expected-error {{unexpanded parameter pack 'x'}}
-  }...               // expected-error {{does not contain any unexpanded}}
+  }...               // expected-error {{pack expansion does not contain any unexpanded parameter packs}}
   );
 }
 
@@ -43,7 +43,7 @@ static_assert(x<1,2,3>([](int a, int b, int c) { return 100 * a + 10 * b + c; })
 static_assert(x<1,2,3>([](int a, int b, int c) { return 100 * a + 10 * b + c; }) == 124); // expected-error {{failed}} \
                                                                                           // expected-note {{evaluates to '123 == 124'}}
 
-template<int ...a> constexpr auto y = [z = a...] (auto F) { return F(z...); }; // expected-error {{must appear before the name of the capture}}
+template<int ...a> constexpr auto y = [z = a...] (auto F) { return F(z...); }; // expected-error {{ellipsis in pack init-capture must appear before the name of the capture}}
 static_assert(y<1,2,3>([](int a, int b, int c) { return 100 * a + 10 * b + c; }) == 123);
 static_assert(y<1,2,3>([](int a, int b, int c) { return 100 * a + 10 * b + c; }) == 124); // expected-error {{failed}} \
                                                                                           // expected-note {{evaluates to '123 == 124'}}

@@ -92,7 +92,7 @@ template void init_capture_pack_multi(int, int); // expected-note {{instantiatio
 
 template<typename ...Args>
 void init_capture_pack_outer(Args ...args) {
-  print([as(args)] { return sizeof(as); } () ...);
+  print([as(args)] { return sizeof(as); } () ...); // expected-error{{pack expansion does not contain any unexpanded parameter packs}}
 }
 template void init_capture_pack_outer();
 template void init_capture_pack_outer(int);
