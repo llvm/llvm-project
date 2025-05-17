@@ -7262,20 +7262,34 @@ static SDValue LowerBRCOND(SDValue Op, SelectionDAG &DAG) {
 // FSHL is converted to FSHR before deciding what to do with it
 static SDValue LowerFunnelShift(SDValue Op, SelectionDAG &DAG) {
   SDValue Shifts = Op.getOperand(2);
-  // Check if the shift amount is a constant
+  // Check if the shift amount is a constant and normalise to [0, SrcBitLen)
   // If opcode is FSHL, convert it to FSHR
   if (auto *ShiftNo = dyn_cast<ConstantSDNode>(Shifts)) {
     SDLoc DL(Op);
     MVT VT = Op.getSimpleValueType();
+    unsigned int NewShiftNo = ShiftNo->getZExtValue() % VT.getFixedSizeInBits();
 
     if (Op.getOpcode() == ISD::FSHL) {
-      unsigned int NewShiftNo =
-          VT.getFixedSizeInBits() - ShiftNo->getZExtValue();
+      if (NewShiftNo == 0)
+        return Op.getOperand(0);
+
+      NewShiftNo = VT.getFixedSizeInBits() - NewShiftNo;
       return DAG.getNode(
           ISD::FSHR, DL, VT, Op.getOperand(0), Op.getOperand(1),
           DAG.getConstant(NewShiftNo, DL, Shifts.getValueType()));
-    } else if (Op.getOpcode() == ISD::FSHR) {
-      return Op;
+    }
+
+    if (Op.getOpcode() == ISD::FSHR) {
+      if (NewShiftNo == 0)
+        return Op.getOperand(1);
+
+      if (ShiftNo->getZExtValue() == NewShiftNo)
+        return Op;
+
+      // Rewrite using the normalised shift amount.
+      return DAG.getNode(
+          ISD::FSHR, DL, VT, Op.getOperand(0), Op.getOperand(1),
+          DAG.getConstant(NewShiftNo, DL, Shifts.getValueType()));
     }
   }
 
