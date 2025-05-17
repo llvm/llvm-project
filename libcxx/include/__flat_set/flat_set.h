@@ -757,8 +757,8 @@ private:
   }
 
   template <class _Key2, class _Compare2, class _KeyContainer2, class _Predicate>
-  friend typename flat_set<_Key2, _Compare2, _KeyContainer2>::size_type
-  _LIBCPP_CONSTEXPR_SINCE_CXX26 erase_if(flat_set<_Key2, _Compare2, _KeyContainer2>&, _Predicate);
+  friend typename flat_set<_Key2, _Compare2, _KeyContainer2>::size_type _LIBCPP_CONSTEXPR_SINCE_CXX26
+  erase_if(flat_set<_Key2, _Compare2, _KeyContainer2>&, _Predicate);
 
   _KeyContainer __keys_;
   _LIBCPP_NO_UNIQUE_ADDRESS key_compare __compare_;
