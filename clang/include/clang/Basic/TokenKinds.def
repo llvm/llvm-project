@@ -687,6 +687,12 @@ KEYWORD(__bool                      , KEYALTIVEC|KEYZVECTOR)
 ALIAS("__fp16", half                , KEYALL)
 KEYWORD(__bf16                      , KEYALL)
 
+// ARM NEON types
+#define NEON_VECTOR_TYPE(Name, BaseType, ElBits, NumEls, VectorKind) \
+    KEYWORD(Name, KEYACLE)
+#define SVE_TYPE(Name, Id, SingletonId)
+#include "clang/Basic/AArch64SVEACLETypes.def"
+
 // OpenCL Extension.
 KEYWORD(half                        , HALFSUPPORT)
 
