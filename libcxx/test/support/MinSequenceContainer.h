@@ -54,10 +54,12 @@ struct MinSequenceContainer {
     return from_vector_iterator(data_.insert(to_vector_iterator(p), std::move(value)));
   }
 
+#if !defined(_LIBCPP_VERSION) // libc++ supports pre-C++23 containers as an extension
   template <class Range>
   iterator insert_range(const_iterator p, Range&& rg) {
     return from_vector_iterator(data_.insert_range(to_vector_iterator(p), std::forward<Range>(rg)));
   }
+#endif // !defined(_LIBCPP_VERSION)
 
   iterator erase(const_iterator first, const_iterator last) {
     return from_vector_iterator(data_.erase(to_vector_iterator(first), to_vector_iterator(last)));
