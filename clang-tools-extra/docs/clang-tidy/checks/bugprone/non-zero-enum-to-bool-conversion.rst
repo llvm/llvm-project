@@ -12,7 +12,8 @@ and maintainability and can result in bugs.
 May produce false positives if the ``enum`` is used to store other values
 (used as a bit-mask or zero-initialized on purpose). To deal with them,
 ``// NOLINT`` or casting first to the underlying type before casting to ``bool``
-can be used.
+can be used. Enums without enumerators and enums that use ``bool`` as the
+underlying type are ignored.
 
 It is important to note that this check will not generate warnings if the
 definition of the enumeration type is not available.
