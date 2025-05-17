@@ -333,6 +333,7 @@ Clang-Tidy Checks
    :doc:`openmp-exception-escape <openmp/exception-escape>`,
    :doc:`openmp-use-default-none <openmp/use-default-none>`,
    :doc:`performance-avoid-endl <performance/avoid-endl>`, "Yes"
+   :doc:`performance-construct-reusable-objects-once <performance/construct-reusable-objects-once>`,
    :doc:`performance-enum-size <performance/enum-size>`,
    :doc:`performance-faster-string-find <performance/faster-string-find>`, "Yes"
    :doc:`performance-for-range-copy <performance/for-range-copy>`, "Yes"
