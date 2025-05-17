@@ -51,6 +51,18 @@ struct MemoryOpGroup {
   bool empty() const { return ops.empty(); }
 };
 
+// Helper function to extract base and index from a memory operation
+std::optional<std::pair<Value, int64_t>> getBaseAndIndex(Operation *op) {
+  if (auto loadOp = dyn_cast<memref::LoadOp>(op)) {
+    if (auto value = getConstantIntValue(loadOp.getIndices().front()))
+      return std::make_pair(loadOp.getMemRef(), *value);
+  } else if (auto storeOp = dyn_cast<memref::StoreOp>(op)) {
+    if (auto value = getConstantIntValue(storeOp.getIndices().front()))
+      return std::make_pair(storeOp.getMemRef(), *value);
+  }
+  return std::nullopt;
+}
+
 // Extract contiguous groups from a MemoryOpGroup
 SmallVector<MemoryOpGroup> extractContiguousGroups(const MemoryOpGroup &group) {
   SmallVector<MemoryOpGroup> result;
@@ -67,23 +79,11 @@ SmallVector<MemoryOpGroup> extractContiguousGroups(const MemoryOpGroup &group) {
       continue;
 
     // Get base and index of current operation
-    Value base;
-    int64_t index = -1;
-    if (group.isLoadGroup()) {
-      auto loadOp = cast<memref::LoadOp>(op);
-      if (auto value = getConstantIntValue(loadOp.getIndices().front())) {
-        index = *value;
-        base = loadOp.getMemRef();
-      }
-    } else {
-      auto storeOp = cast<memref::StoreOp>(op);
-      if (auto value = getConstantIntValue(storeOp.getIndices().front())) {
-        index = *value;
-        base = storeOp.getMemRef();
-      }
-    }
-    if (index == -1)
+    auto baseAndIndex = getBaseAndIndex(op);
+    if (!baseAndIndex)
       continue;
+
+    auto [base, index] = *baseAndIndex;
 
     // Start a new group with this operation
     result.emplace_back(group.type);
@@ -103,25 +103,14 @@ SmallVector<MemoryOpGroup> extractContiguousGroups(const MemoryOpGroup &group) {
         if (processedOps.contains(otherOp))
           continue;
 
-        Value otherBase;
-        int64_t otherIndex = -1;
-        if (group.isLoadGroup()) {
-          auto loadOp = cast<memref::LoadOp>(otherOp);
-          if (auto value = getConstantIntValue(loadOp.getIndices().front())) {
-            otherIndex = *value;
-            otherBase = loadOp.getMemRef();
-          }
-        } else {
-          auto storeOp = cast<memref::StoreOp>(otherOp);
-          if (auto value = getConstantIntValue(storeOp.getIndices().front())) {
-            otherIndex = *value;
-            otherBase = storeOp.getMemRef();
-          }
-        }
+        auto otherBaseAndIndex = getBaseAndIndex(otherOp);
+        if (!otherBaseAndIndex)
+          continue;
+
+        auto [otherBase, otherIndex] = *otherBaseAndIndex;
 
         // Check if this operation has the same base and adjacent index
-        if (otherIndex != -1 && otherBase == base &&
-            otherIndex == currentGroup.ops.size()) {
+        if (otherBase == base && otherIndex == currentGroup.ops.size()) {
           currentGroup.ops.push_back(otherOp);
           processedOps.insert(otherOp);
           foundMore = true;
