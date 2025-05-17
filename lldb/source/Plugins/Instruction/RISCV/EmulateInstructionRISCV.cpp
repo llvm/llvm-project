@@ -349,9 +349,10 @@ bool AtomicSequence(EmulateInstructionRISCV &emulator) {
   if (!inst || (!std::holds_alternative<LR_W>(inst->decoded) &&
                 !std::holds_alternative<LR_D>(inst->decoded)))
     return false;
+  current_pc += 4;
 
-  // The second instruction should be BNE to exit address
-  inst = emulator.ReadInstructionAt(current_pc += 4);
+  // The second instruction should be BNE or C.BNEZ to exit address
+  inst = emulator.ReadInstructionAt(current_pc);
   if (!inst || !std::holds_alternative<B>(inst->decoded))
     return false;
   auto bne_exit = std::get<B>(inst->decoded);
@@ -359,15 +360,18 @@ bool AtomicSequence(EmulateInstructionRISCV &emulator) {
     return false;
   // save the exit address to check later
   const auto exit_pc = current_pc + SextW(bne_exit.imm);
+  // Can be C.BNEZ (2 bytes) or BNE (4 bytes)
+  current_pc += inst->is_rvc ? 2 : 4;
 
   // The third instruction should be SC.W or SC.D
-  inst = emulator.ReadInstructionAt(current_pc += 4);
+  inst = emulator.ReadInstructionAt(current_pc);
   if (!inst || (!std::holds_alternative<SC_W>(inst->decoded) &&
                 !std::holds_alternative<SC_D>(inst->decoded)))
     return false;
+  current_pc += 4;
 
-  // The fourth instruction should be BNE to entry address
-  inst = emulator.ReadInstructionAt(current_pc += 4);
+  // The fourth instruction should be BNE or C.BNEZ to entry address
+  inst = emulator.ReadInstructionAt(current_pc);
   if (!inst || !std::holds_alternative<B>(inst->decoded))
     return false;
   auto bne_start = std::get<B>(inst->decoded);
@@ -375,8 +379,9 @@ bool AtomicSequence(EmulateInstructionRISCV &emulator) {
     return false;
   if (entry_pc != current_pc + SextW(bne_start.imm))
     return false;
+  // Can be C.BNEZ (2 bytes) or BNE (4 bytes)
+  current_pc += inst->is_rvc ? 2 : 4;
 
-  current_pc += 4;
   // check the exit address and jump to it
   return exit_pc == current_pc && emulator.WritePC(current_pc);
 }
