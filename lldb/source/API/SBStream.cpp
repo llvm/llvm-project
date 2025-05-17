@@ -11,6 +11,7 @@
 #include "lldb/API/SBFile.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/StreamFile.h"
+#include "lldb/Utility/AnsiTerminal.h"
 #include "lldb/Utility/Instrumentation.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Status.h"
@@ -75,6 +76,15 @@ void SBStream::Printf(const char *format, ...) {
   va_start(args, format);
   ref().PrintfVarArg(format, args);
   va_end(args);
+}
+
+bool SBStream::HasColor() {
+  return m_opaque_up->AsRawOstream().colors_enabled();
+}
+
+void SBStream::FormatAnsiTerminalCodes(llvm::StringRef format) {
+  if (HasColor())
+    m_opaque_up->PutCString(ansi::FormatAnsiTerminalCodes(format));
 }
 
 void SBStream::RedirectToFile(const char *path, bool append) {
