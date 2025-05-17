@@ -456,6 +456,22 @@ private:
   /// A helper that reunites sexts in an instruction.
   bool reuniteExts(Instruction *I);
 
+  /// Sink constant offset in a GEP chain to tail. For example,
+  /// %gep0 = getelementptr half, ptr addrspace(3) %ptr, i32 512
+  /// %gep1 = getelementptr half, ptr addrspace(3) %gep0, i32 %ofst0
+  /// %gep2 = getelementptr half, ptr addrspace(3) %gep1, i32 %ofst1
+  /// %data = load half, ptr addrspace(3) %gep2, align 2
+  /// ==>
+  /// %gep0 = getelementptr half, ptr addrspace(3) %ptr, i32 %ofst0
+  /// %gep1 = getelementptr half, ptr addrspace(3) %gep0, i32 %ofst1
+  /// %gep2 = getelementptr half, ptr addrspace(3) %gep1, i32 512
+  /// %data = load half, ptr addrspace(3) %gep2, align 2
+  bool sinkGEPConstantOffset(Function &F);
+
+  /// A helper that does sink action for a root in a gep chain.
+  /// Return true if Ptr is a candidate for upper GEP in recursive calling.
+  bool sinkGEPConstantOffset(Value *Ptr, bool &Changed);
+
   /// Find the closest dominator of <Dominatee> that is equivalent to <Key>.
   Instruction *findClosestMatchingDominator(
       ExprKey Key, Instruction *Dominatee,
@@ -1255,6 +1271,8 @@ bool SeparateConstOffsetFromGEP::run(Function &F) {
 
   Changed |= reuniteExts(F);
 
+  Changed |= sinkGEPConstantOffset(F);
+
   if (VerifyNoDeadCode)
     verifyNoDeadCode(F);
 
@@ -1341,6 +1359,116 @@ bool SeparateConstOffsetFromGEP::reuniteExts(Function &F) {
     for (Instruction &I : llvm::make_early_inc_range(*BB))
       Changed |= reuniteExts(&I);
   }
+  return Changed;
+}
+
+bool SeparateConstOffsetFromGEP::sinkGEPConstantOffset(Value *Ptr,
+                                                       bool &Changed) {
+  // The purpose of this function is to sink the constant offsets in the GEP
+  // chain to the tail of the chain.
+  // This algorithm is implemented recursively, the algorithm starts from the
+  // tail of the chain through the DFS method and shifts the constant offset
+  // of the GEP step by step upwards by bottom-up DFS method, i.e. step by step
+  // down to the tail.
+  // A simple example is given:
+  /// %gep0 = getelementptr half, ptr addrspace(3) %ptr, i32 512
+  /// %gep1 = getelementptr half, ptr addrspace(3) %gep0, i32 %ofst0
+  /// %gep2 = getelementptr half, ptr addrspace(3) %gep1, i32 %ofst1
+  /// %data = load half, ptr addrspace(3) %gep2, align 2
+  /// ==>
+  /// %gep0 = getelementptr half, ptr addrspace(3) %ptr, i32 %ofst0
+  /// %gep1 = getelementptr half, ptr addrspace(3) %gep0, i32 %ofst1
+  /// %gep2 = getelementptr half, ptr addrspace(3) %gep1, i32 512
+  /// %data = load half, ptr addrspace(3) %gep2, align 2
+  GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Ptr);
+  if (!GEP)
+    return false;
+
+  if (!GEP->getParent())
+    return false;
+
+  bool BaseResult = sinkGEPConstantOffset(GEP->getPointerOperand(), Changed);
+
+  if (GEP->getNumIndices() != 1)
+    return false;
+
+  ConstantInt *C = nullptr;
+  Value *Idx = GEP->getOperand(1);
+  bool MatchConstant = match(Idx, m_ConstantInt(C));
+
+  if (!BaseResult)
+    return MatchConstant;
+
+  Type *ResTy = GEP->getResultElementType();
+  GetElementPtrInst *BaseGEP =
+      cast<GetElementPtrInst>(GEP->getPointerOperand());
+  Value *BaseIdx = BaseGEP->getOperand(1);
+  Type *BaseResTy = BaseGEP->getResultElementType();
+
+  if (MatchConstant) {
+    // %gep0 = getelementptr half, ptr addrspace(3) %ptr, i32 8
+    // %gep1 = getelementptr half, ptr addrspace(3) %gep0, i32 4
+    // as:
+    // %gep1 = getelementptr half, ptr addrspace(3) %ptr, i32 12
+    Type *NewResTy = nullptr;
+    int64_t NewIdxValue = 0;
+    if (ResTy == BaseResTy) {
+      NewResTy = ResTy;
+      NewIdxValue = cast<ConstantInt>(BaseIdx)->getSExtValue() +
+                    cast<ConstantInt>(Idx)->getSExtValue();
+    } else {
+      NewResTy = Type::getInt8Ty(GEP->getContext());
+      NewIdxValue = (cast<ConstantInt>(BaseIdx)->getSExtValue() *
+                     DL->getTypeAllocSize(BaseResTy)) +
+                    (cast<ConstantInt>(Idx)->getSExtValue() *
+                     DL->getTypeAllocSize(ResTy));
+    }
+    assert(NewResTy);
+    Type *NewIdxType = (Idx->getType()->getPrimitiveSizeInBits() >
+                      BaseIdx->getType()->getPrimitiveSizeInBits())
+                         ? Idx->getType() : BaseIdx->getType();
+    Constant *NewIdx = ConstantInt::get(NewIdxType, NewIdxValue);
+    auto *NewGEP = GetElementPtrInst::Create(
+        NewResTy, BaseGEP->getPointerOperand(), NewIdx);
+    NewGEP->setIsInBounds(GEP->isInBounds());
+    NewGEP->insertBefore(GEP->getIterator());
+    NewGEP->takeName(GEP);
+
+    GEP->replaceAllUsesWith(NewGEP);
+    RecursivelyDeleteTriviallyDeadInstructions(GEP);
+
+    Changed = true;
+    return true;
+  }
+
+  // %gep0 = getelementptr half, ptr addrspace(3) %ptr, i32 8
+  // %gep1 = getelementptr half, ptr addrspace(3) %gep0, i32 %idx
+  // as:
+  // %gepx0 = getelementptr half, ptr addrspace(3) %ptr, i32 %idx
+  // %gepx1 = getelementptr half, ptr addrspace(3) %gepx0, i32 8
+  auto *GEPX0 =
+      GetElementPtrInst::Create(ResTy, BaseGEP->getPointerOperand(), Idx);
+  GEPX0->setIsInBounds(BaseGEP->isInBounds());
+  GEPX0->insertBefore(GEP->getIterator());
+  auto *GEPX1 = GetElementPtrInst::Create(BaseResTy, GEPX0, BaseIdx);
+  GEPX1->setIsInBounds(GEP->isInBounds());
+  GEPX1->insertBefore(GEP->getIterator());
+  GEPX1->takeName(GEP);
+
+  GEP->replaceAllUsesWith(GEPX1);
+  RecursivelyDeleteTriviallyDeadInstructions(GEP);
+
+  Changed = true;
+  return true;
+}
+
+bool SeparateConstOffsetFromGEP::sinkGEPConstantOffset(Function &F) {
+  bool Changed = false;
+  for (BasicBlock &B : F)
+    for (Instruction &I : B)
+      if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(&I))
+        sinkGEPConstantOffset(GEP, Changed);
+
   return Changed;
 }
 
