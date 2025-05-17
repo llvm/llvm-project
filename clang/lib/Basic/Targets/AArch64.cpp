@@ -1346,7 +1346,7 @@ AArch64TargetInfo::checkCallingConvention(CallingConv CC) const {
   case CC_PreserveMost:
   case CC_PreserveAll:
   case CC_PreserveNone:
-  case CC_OpenCLKernel:
+  case CC_DeviceKernel:
   case CC_AArch64VectorCall:
   case CC_AArch64SVEPCS:
   case CC_Win64:
@@ -1704,7 +1704,7 @@ WindowsARM64TargetInfo::checkCallingConvention(CallingConv CC) const {
   case CC_X86FastCall:
     return CCCR_Ignore;
   case CC_C:
-  case CC_OpenCLKernel:
+  case CC_DeviceKernel:
   case CC_PreserveMost:
   case CC_PreserveAll:
   case CC_PreserveNone:
