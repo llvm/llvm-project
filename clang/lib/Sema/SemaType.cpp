@@ -2321,9 +2321,9 @@ static bool CheckBitIntElementType(Sema &S, SourceLocation AttrLoc,
                                    bool ForMatrixType = false) {
   // Only support _BitInt elements with byte-sized power of 2 NumBits.
   unsigned NumBits = BIT->getNumBits();
-  if (!llvm::isPowerOf2_32(NumBits) || NumBits < 8)
+  if (!llvm::isPowerOf2_32(NumBits))
     return S.Diag(AttrLoc, diag::err_attribute_invalid_bitint_vector_type)
-           << ForMatrixType << (NumBits < 8);
+           << ForMatrixType;
   return false;
 }
 
