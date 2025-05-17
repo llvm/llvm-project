@@ -2498,8 +2498,12 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
     // taken) are used as branch hints. Here we add branch taken prefix for
     // jump instruction with higher probability than threshold.
     if (getSubtarget().hasBranchHint() && EnableBranchHint) {
-      const MachineBranchProbabilityInfo *MBPI =
-          &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
+      const MachineBranchProbabilityInfo *MBPI = nullptr;
+      if (inNewPassManager())
+        MBPI = &MFAM->getResult<MachineBranchProbabilityAnalysis>(*MF);
+      else
+        MBPI =
+            &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
       MachineBasicBlock *DestBB = MI->getOperand(0).getMBB();
       BranchProbability EdgeProb =
           MBPI->getEdgeProbability(MI->getParent(), DestBB);
