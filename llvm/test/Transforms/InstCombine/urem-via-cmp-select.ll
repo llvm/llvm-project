@@ -19,6 +19,26 @@ define i8 @urem_assume(i8 %x, i8 %n) {
   ret i8 %out
 }
 
+; https://alive2.llvm.org/ce/z/NXHJJD
+define i8 @urem_assume_a(i8 %x, i8 %n, i8 %a) {
+; CHECK-LABEL: @urem_assume_a(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[X_FR:%.*]], [[N:%.*]]
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[CMP_A:%.*]] = icmp ult i8 [[A:%.*]], [[N]]
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP_A]])
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i8 [[X_FR]], [[A]]
+; CHECK-NEXT:    [[OUT:%.*]] = urem i8 [[ADD]], [[N]]
+; CHECK-NEXT:    ret i8 [[OUT]]
+;
+  %cmp = icmp ult i8 %x, %n
+  tail call void @llvm.assume(i1 %cmp)
+  %cmp_a = icmp ult i8 %a, %n
+  tail call void @llvm.assume(i1 %cmp_a)
+  %add = add nuw i8 %x, %a
+  %out = urem i8 %add, %n
+  ret i8 %out
+}
+
 ; https://alive2.llvm.org/ce/z/MGgtYN
 define i8 @urem_assume_without_nuw(i8 %x, i8 %n) {
 ; CHECK-LABEL: @urem_assume_without_nuw(
@@ -54,6 +74,48 @@ define i8 @urem_assume_eq(i8 %x, i8 %n) {
 }
 
 ; Negative test: The assume is false
+define i8 @urem_assume_eq_x(i8 %x, i8 %n, i8 %a) {
+; CHECK-LABEL: @urem_assume_eq_x(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X:%.*]], [[N:%.*]]
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[CMP_A:%.*]] = icmp ult i8 [[A:%.*]], [[N]]
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP_A]])
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X]], 1
+; CHECK-NEXT:    [[OUT:%.*]] = urem i8 [[ADD]], [[N]]
+; CHECK-NEXT:    ret i8 [[OUT]]
+;
+  %cmp = icmp eq i8 %x, %n
+  tail call void @llvm.assume(i1 %cmp)
+  %cmp_a = icmp ult i8 %a, %n
+  tail call void @llvm.assume(i1 %cmp_a)
+  %add = add i8 %x, 1
+  %out = urem i8 %add, %n
+  ret i8 %out
+}
+
+; Negative test: The assume is false
+define i8 @urem_assume_eq_a(i8 %x, i8 %n, i8 %a) {
+; CHECK-LABEL: @urem_assume_eq_a(
+; CHECK-NEXT:    [[X_FR:%.*]] = freeze i8 [[X:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[X_FR]], [[N:%.*]]
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[CMP_A:%.*]] = icmp eq i8 [[A:%.*]], [[N]]
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP_A]])
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X_FR]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[ADD]], [[N]]
+; CHECK-NEXT:    [[OUT:%.*]] = select i1 [[TMP1]], i8 0, i8 [[ADD]]
+; CHECK-NEXT:    ret i8 [[OUT]]
+;
+  %cmp = icmp ult i8 %x, %n
+  tail call void @llvm.assume(i1 %cmp)
+  %cmp_a = icmp eq i8 %a, %n
+  tail call void @llvm.assume(i1 %cmp_a)
+  %add = add i8 %x, 1
+  %out = urem i8 %add, %n
+  ret i8 %out
+}
+
+; Negative test: The assume is false
 define i8 @urem_assume_ne(i8 %x, i8 %n) {
 ; CHECK-LABEL: @urem_assume_ne(
 ; CHECK-NEXT:  start:
@@ -66,6 +128,52 @@ define i8 @urem_assume_ne(i8 %x, i8 %n) {
 start:
   %cmp = icmp ne i8 %x, %n
   tail call void @llvm.assume(i1 %cmp)
+  %add = add i8 %x, 1
+  %out = urem i8 %add, %n
+  ret i8 %out
+}
+
+; Negative test: The assume is false
+define i8 @urem_assume_ne_x(i8 %x, i8 %n, i8 %a) {
+; CHECK-LABEL: @urem_assume_ne_x(
+; CHECK-NEXT:  start:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[X:%.*]], [[N:%.*]]
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[CMP_A:%.*]] = icmp ult i8 [[A:%.*]], [[N]]
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP_A]])
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X]], 1
+; CHECK-NEXT:    [[OUT:%.*]] = urem i8 [[ADD]], [[N]]
+; CHECK-NEXT:    ret i8 [[OUT]]
+;
+start:
+  %cmp = icmp ne i8 %x, %n
+  tail call void @llvm.assume(i1 %cmp)
+  %cmp_a = icmp ult i8 %a, %n
+  tail call void @llvm.assume(i1 %cmp_a)
+  %add = add i8 %x, 1
+  %out = urem i8 %add, %n
+  ret i8 %out
+}
+
+; Negative test: The assume is false
+define i8 @urem_assume_ne_a(i8 %x, i8 %n, i8 %a) {
+; CHECK-LABEL: @urem_assume_ne_a(
+; CHECK-NEXT:  start:
+; CHECK-NEXT:    [[X_FR:%.*]] = freeze i8 [[X:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[X_FR]], [[N:%.*]]
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[CMP_A:%.*]] = icmp ne i8 [[A:%.*]], [[N]]
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP_A]])
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X_FR]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i8 [[ADD]], [[N]]
+; CHECK-NEXT:    [[OUT:%.*]] = select i1 [[TMP0]], i8 0, i8 [[ADD]]
+; CHECK-NEXT:    ret i8 [[OUT]]
+;
+start:
+  %cmp = icmp ult i8 %x, %n
+  tail call void @llvm.assume(i1 %cmp)
+  %cmp_a = icmp ne i8 %a, %n
+  tail call void @llvm.assume(i1 %cmp_a)
   %add = add i8 %x, 1
   %out = urem i8 %add, %n
   ret i8 %out
@@ -99,6 +207,36 @@ define i8 @urem_without_assume(i8 %arg, i8 %arg2) {
 ;
   %x = urem i8 %arg, %arg2
   %add = add i8 %x, 1
+  %out = urem i8 %add, %arg2
+  ret i8 %out
+}
+
+; Negative test: The add constant is not less than %arg2
+define i8 @urem_without_assume_a_var(i8 %arg, i8 %arg2, i8 %a) {
+; CHECK-LABEL: @urem_without_assume_a_var(
+; CHECK-NEXT:    [[X:%.*]] = urem i8 [[ARG:%.*]], [[ARG2:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X]], [[A:%.*]]
+; CHECK-NEXT:    [[OUT:%.*]] = urem i8 [[ADD]], [[ARG2]]
+; CHECK-NEXT:    ret i8 [[OUT]]
+;
+  %x = urem i8 %arg, %arg2
+  %add = add i8 %x, %a
+  %out = urem i8 %add, %arg2
+  ret i8 %out
+}
+
+; https://alive2.llvm.org/ce/z/tcdf4d
+define i8 @urem_without_assume_a(i8 %arg, i8 %arg2, i8 %a) {
+; CHECK-LABEL: @urem_without_assume_a(
+; CHECK-NEXT:    [[X_REM:%.*]] = urem i8 [[ARG:%.*]], [[ARG2:%.*]]
+; CHECK-NEXT:    [[A_REM:%.*]] = urem i8 [[A:%.*]], [[ARG2]]
+; CHECK-NEXT:    [[ADDD:%.*]] = add i8 [[X_REM]], [[A_REM]]
+; CHECK-NEXT:    [[OUT:%.*]] = urem i8 [[ADDD]], [[ARG2]]
+; CHECK-NEXT:    ret i8 [[OUT]]
+;
+  %x_rem = urem i8 %arg, %arg2
+  %a_rem = urem i8 %a, %arg2
+  %add = add i8 %x_rem, %a_rem
   %out = urem i8 %add, %arg2
   ret i8 %out
 }
@@ -174,6 +312,62 @@ define noundef i8 @urem_with_opposite_condition(i8 %x, i8 %n) {
   %out = urem i8 %add, %n
   ret i8 %out
 .bb1:
+  ret i8 0
+}
+
+; Negative test
+define noundef i8 @urem_with_opposite_condition_x(i8 %x, i8 %n, i8 %a) {
+; CHECK-LABEL: @urem_with_opposite_condition_x(
+; CHECK-NEXT:    [[COND:%.*]] = icmp ult i8 [[X:%.*]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[COND]], label [[DOTBB2:%.*]], label [[DOTBB0:%.*]]
+; CHECK:       .bb0:
+; CHECK-NEXT:    [[COND2:%.*]] = icmp ult i8 [[A:%.*]], [[N]]
+; CHECK-NEXT:    br i1 [[COND2]], label [[DOTBB1:%.*]], label [[DOTBB2]]
+; CHECK:       .bb1:
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X]], [[A]]
+; CHECK-NEXT:    [[OUT:%.*]] = urem i8 [[ADD]], [[N]]
+; CHECK-NEXT:    ret i8 [[OUT]]
+; CHECK:       .bb2:
+; CHECK-NEXT:    ret i8 0
+;
+  %cond = icmp ult i8 %x, %n
+  br i1 %cond, label %.bb2, label %.bb0 ; Revert the condition
+.bb0:
+  %cond2 = icmp ult i8 %a, %n
+  br i1 %cond2, label %.bb1, label %.bb2
+.bb1:
+  %add = add i8 %x, %a
+  %out = urem i8 %add, %n
+  ret i8 %out
+.bb2:
+  ret i8 0
+}
+
+; Negative test
+define noundef i8 @urem_with_opposite_condition_a(i8 %x, i8 %n, i8 %a) {
+; CHECK-LABEL: @urem_with_opposite_condition_a(
+; CHECK-NEXT:    [[COND:%.*]] = icmp ult i8 [[X:%.*]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[COND]], label [[DOTBB0:%.*]], label [[DOTBB2:%.*]]
+; CHECK:       .bb0:
+; CHECK-NEXT:    [[COND2:%.*]] = icmp ult i8 [[A:%.*]], [[N]]
+; CHECK-NEXT:    br i1 [[COND2]], label [[DOTBB2]], label [[DOTBB1:%.*]]
+; CHECK:       .bb1:
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X]], [[A]]
+; CHECK-NEXT:    [[OUT:%.*]] = urem i8 [[ADD]], [[N]]
+; CHECK-NEXT:    ret i8 [[OUT]]
+; CHECK:       .bb2:
+; CHECK-NEXT:    ret i8 0
+;
+  %cond = icmp ult i8 %x, %n
+  br i1 %cond, label %.bb0, label %.bb2
+.bb0:
+  %cond2 = icmp ult i8 %a, %n
+  br i1 %cond2, label %.bb2, label %.bb1 ; Revert the condition
+.bb1:
+  %add = add i8 %x, %a
+  %out = urem i8 %add, %n
+  ret i8 %out
+.bb2:
   ret i8 0
 }
 
