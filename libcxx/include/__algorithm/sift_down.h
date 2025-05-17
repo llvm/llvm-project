@@ -51,7 +51,7 @@ __sift_down(_RandomAccessIterator __first,
   }
 
   // check if we are in heap-order
-  if (__comp(*__child_i, *__start))
+  if (!__comp(*__start, *__child_i))
     // we are, __start is larger than its largest child
     return;
 
@@ -75,7 +75,7 @@ __sift_down(_RandomAccessIterator __first,
     }
 
     // check if we are in heap-order
-  } while (!__comp(*__child_i, __top));
+  } while (__comp(__top, *__child_i));
   *__start = std::move(__top);
 }
 
