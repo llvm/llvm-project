@@ -73,6 +73,8 @@ bool VPRecipeBase::mayWriteToMemory() const {
   case VPBlendSC:
   case VPReductionEVLSC:
   case VPReductionSC:
+  case VPExtendedReductionSC:
+  case VPMulAccumulateReductionSC:
   case VPVectorPointerSC:
   case VPWidenCanonicalIVSC:
   case VPWidenCastSC:
@@ -120,6 +122,8 @@ bool VPRecipeBase::mayReadFromMemory() const {
   case VPBlendSC:
   case VPReductionEVLSC:
   case VPReductionSC:
+  case VPExtendedReductionSC:
+  case VPMulAccumulateReductionSC:
   case VPVectorPointerSC:
   case VPWidenCanonicalIVSC:
   case VPWidenCastSC:
@@ -157,6 +161,8 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   case VPBlendSC:
   case VPReductionEVLSC:
   case VPReductionSC:
+  case VPExtendedReductionSC:
+  case VPMulAccumulateReductionSC:
   case VPScalarIVStepsSC:
   case VPVectorPointerSC:
   case VPWidenCanonicalIVSC:
@@ -1177,7 +1183,7 @@ void VPIRPhi::execute(VPTransformState &State) {
   PHINode *Phi = &getIRPhi();
   for (const auto &[Idx, Op] : enumerate(operands())) {
     VPValue *ExitValue = Op;
-    auto Lane = vputils::isUniformAfterVectorization(ExitValue)
+    auto Lane = vputils::isSingleScalar(ExitValue)
                     ? VPLane::getFirstLane()
                     : VPLane::getLastLaneForVF(State.VF);
     VPBlockBase *Pred = getParent()->getPredecessors()[Idx];
@@ -2509,15 +2515,11 @@ InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
   unsigned Opcode = RecurrenceDescriptor::getOpcode(RdxKind);
   FastMathFlags FMFs = getFastMathFlags();
 
-  // TODO: Support any-of and in-loop reductions.
+  // TODO: Support any-of reductions.
   assert(
       (!RecurrenceDescriptor::isAnyOfRecurrenceKind(RdxKind) ||
        ForceTargetInstructionCost.getNumOccurrences() > 0) &&
       "Any-of reduction not implemented in VPlan-based cost model currently.");
-  assert(
-      (!cast<VPReductionPHIRecipe>(getOperand(0))->isInLoop() ||
-       ForceTargetInstructionCost.getNumOccurrences() > 0) &&
-      "In-loop reduction not implemented in VPlan-based cost model currently.");
 
   // Cost = Reduction cost + BinOp cost
   InstructionCost Cost =
@@ -2574,6 +2576,59 @@ void VPReductionEVLRecipe::print(raw_ostream &O, const Twine &Indent,
   }
   O << ")";
 }
+
+void VPExtendedReductionRecipe::print(raw_ostream &O, const Twine &Indent,
+                                      VPSlotTracker &SlotTracker) const {
+  O << Indent << "EXTENDED-REDUCE ";
+  printAsOperand(O, SlotTracker);
+  O << " = ";
+  getChainOp()->printAsOperand(O, SlotTracker);
+  O << " +";
+  O << " reduce."
+    << Instruction::getOpcodeName(
+           RecurrenceDescriptor::getOpcode(getRecurrenceKind()))
+    << " (";
+  getVecOp()->printAsOperand(O, SlotTracker);
+  printFlags(O);
+  O << Instruction::getOpcodeName(ExtOp) << " to " << *getResultType();
+  if (isConditional()) {
+    O << ", ";
+    getCondOp()->printAsOperand(O, SlotTracker);
+  }
+  O << ")";
+}
+
+void VPMulAccumulateReductionRecipe::print(raw_ostream &O, const Twine &Indent,
+                                           VPSlotTracker &SlotTracker) const {
+  O << Indent << "MULACC-REDUCE ";
+  printAsOperand(O, SlotTracker);
+  O << " = ";
+  getChainOp()->printAsOperand(O, SlotTracker);
+  O << " + ";
+  O << "reduce."
+    << Instruction::getOpcodeName(
+           RecurrenceDescriptor::getOpcode(getRecurrenceKind()))
+    << " (";
+  O << "mul";
+  printFlags(O);
+  if (isExtended())
+    O << "(";
+  getVecOp0()->printAsOperand(O, SlotTracker);
+  if (isExtended())
+    O << " " << Instruction::getOpcodeName(ExtOp) << " to " << *getResultType()
+      << "), (";
+  else
+    O << ", ";
+  getVecOp1()->printAsOperand(O, SlotTracker);
+  if (isExtended())
+    O << " " << Instruction::getOpcodeName(ExtOp) << " to " << *getResultType()
+      << ")";
+  if (isConditional()) {
+    O << ", ";
+    getCondOp()->printAsOperand(O, SlotTracker);
+  }
+  O << ")";
+}
 #endif
 
 /// A helper function to scalarize a single Instruction in the innermost loop.
@@ -2611,7 +2666,7 @@ static void scalarizeInstruction(const Instruction *Instr,
   for (const auto &I : enumerate(RepRecipe->operands())) {
     auto InputLane = Lane;
     VPValue *Operand = I.value();
-    if (vputils::isUniformAfterVectorization(Operand))
+    if (vputils::isSingleScalar(Operand))
       InputLane = VPLane::getFirstLane();
     Cloned->setOperand(I.index(), State.get(Operand, InputLane));
   }
@@ -2636,7 +2691,7 @@ static void scalarizeInstruction(const Instruction *Instr,
 void VPReplicateRecipe::execute(VPTransformState &State) {
   Instruction *UI = getUnderlyingInstr();
   if (State.Lane) { // Generate a single instance.
-    assert((State.VF.isScalar() || !isUniform()) &&
+    assert((State.VF.isScalar() || !isSingleScalar()) &&
            "uniform recipe shouldn't be predicated");
     assert(!State.VF.isScalable() && "Can't scalarize a scalable vector");
     scalarizeInstruction(UI, this, *State.Lane, State);
@@ -2654,7 +2709,7 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
     return;
   }
 
-  if (IsUniform) {
+  if (IsSingleScalar) {
     // Uniform within VL means we need to generate lane 0.
     scalarizeInstruction(UI, this, VPLane(0), State);
     return;
@@ -2662,8 +2717,7 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
 
   // A store of a loop varying value to a uniform address only needs the last
   // copy of the store.
-  if (isa<StoreInst>(UI) &&
-      vputils::isUniformAfterVectorization(getOperand(1))) {
+  if (isa<StoreInst>(UI) && vputils::isSingleScalar(getOperand(1))) {
     auto Lane = VPLane::getLastLaneForVF(State.VF);
     scalarizeInstruction(UI, this, VPLane(Lane), State);
     return;
@@ -2724,7 +2778,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
                UI->getOpcode(), ResultTy, CostKind,
                {TargetTransformInfo::OK_AnyValue, TargetTransformInfo::OP_None},
                Op2Info, Operands, UI, &Ctx.TLI) *
-           (isUniform() ? 1 : VF.getKnownMinValue());
+           (isSingleScalar() ? 1 : VF.getKnownMinValue());
   }
   }
 
@@ -2734,7 +2788,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPReplicateRecipe::print(raw_ostream &O, const Twine &Indent,
                               VPSlotTracker &SlotTracker) const {
-  O << Indent << (IsUniform ? "CLONE " : "REPLICATE ");
+  O << Indent << (IsSingleScalar ? "CLONE " : "REPLICATE ");
 
   if (!getUnderlyingInstr()->getType()->isVoidTy()) {
     printAsOperand(O, SlotTracker);
