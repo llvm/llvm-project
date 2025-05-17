@@ -999,21 +999,17 @@ static void findForkedSCEVs(
       break;
     }
 
-    // Scale up the offsets by the size of the type, then add to the bases.
-    const SCEV *Base0 = get<0>(BaseScevs[0]);
-    const SCEV *Base1 = get<0>(BaseScevs[1]);
-    const SCEV *Offset0 = get<0>(OffsetScevs[0]);
-    const SCEV *Offset1 = get<0>(OffsetScevs[1]);
-    const SCEV *Scaled0 = SE->getTruncateOrSignExtend(
-        SE->getMulExpr(SE->getSizeOfExpr(Offset0->getType(), SourceTy),
-                       Offset0),
-        Base0->getType());
-    const SCEV *Scaled1 = SE->getTruncateOrSignExtend(
-        SE->getMulExpr(SE->getSizeOfExpr(Offset1->getType(), SourceTy),
-                       Offset1),
-        Base1->getType());
-    ScevList.emplace_back(SE->getAddExpr(Base0, Scaled0), NeedsFreeze);
-    ScevList.emplace_back(SE->getAddExpr(Base1, Scaled1), NeedsFreeze);
+    for (auto [B, O] : zip(BaseScevs, OffsetScevs)) {
+      const SCEV *Base = get<0>(B);
+      const SCEV *Offset = get<0>(O);
+
+      // Scale up the offsets by the size of the type, then add to the bases.
+      const SCEV *Scaled = SE->getTruncateOrSignExtend(
+          SE->getMulExpr(SE->getSizeOfExpr(Offset->getType(), SourceTy),
+                         Offset),
+          Base->getType());
+      ScevList.emplace_back(SE->getAddExpr(Base, Scaled), NeedsFreeze);
+    }
     break;
   }
   case Instruction::Select: {
@@ -1023,10 +1019,9 @@ static void findForkedSCEVs(
     // then we just bail out and return the generic SCEV.
     findForkedSCEVs(SE, L, I->getOperand(1), ChildScevs, Depth);
     findForkedSCEVs(SE, L, I->getOperand(2), ChildScevs, Depth);
-    if (ChildScevs.size() == 2) {
-      ScevList.push_back(ChildScevs[0]);
-      ScevList.push_back(ChildScevs[1]);
-    } else
+    if (ChildScevs.size() == 2)
+      append_range(ScevList, ChildScevs);
+    else
       ScevList.emplace_back(Scev, !isGuaranteedNotToBeUndefOrPoison(Ptr));
     break;
   }
@@ -1039,10 +1034,9 @@ static void findForkedSCEVs(
       findForkedSCEVs(SE, L, I->getOperand(0), ChildScevs, Depth);
       findForkedSCEVs(SE, L, I->getOperand(1), ChildScevs, Depth);
     }
-    if (ChildScevs.size() == 2) {
-      ScevList.push_back(ChildScevs[0]);
-      ScevList.push_back(ChildScevs[1]);
-    } else
+    if (ChildScevs.size() == 2)
+      append_range(ScevList, ChildScevs);
+    else
       ScevList.emplace_back(Scev, !isGuaranteedNotToBeUndefOrPoison(Ptr));
     break;
   }
@@ -1069,12 +1063,9 @@ static void findForkedSCEVs(
       break;
     }
 
-    ScevList.emplace_back(
-        GetBinOpExpr(Opcode, get<0>(LScevs[0]), get<0>(RScevs[0])),
-        NeedsFreeze);
-    ScevList.emplace_back(
-        GetBinOpExpr(Opcode, get<0>(LScevs[1]), get<0>(RScevs[1])),
-        NeedsFreeze);
+    for (auto [L, R] : zip(LScevs, RScevs))
+      ScevList.emplace_back(GetBinOpExpr(Opcode, get<0>(L), get<0>(R)),
+                            NeedsFreeze);
     break;
   }
   default:
