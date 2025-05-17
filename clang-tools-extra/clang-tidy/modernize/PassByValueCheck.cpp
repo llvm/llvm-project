@@ -214,6 +214,7 @@ void PassByValueCheck::registerMatchers(MatchFinder *Finder) {
       traverse(
           TK_AsIs,
           cxxConstructorDecl(
+              ofClass(cxxRecordDecl().bind("outer")),
               forEachConstructorInitializer(
                   cxxCtorInitializer(
                       unless(isBaseInitializer()),
