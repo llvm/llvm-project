@@ -344,6 +344,43 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootFlagsTest) {
   ASSERT_TRUE(Consumer->isSatisfied());
 }
 
+TEST_F(ParseHLSLRootSignatureTest, ValidParseRootParamsTest) {
+  const llvm::StringLiteral Source = R"cc(
+    CBV(),
+    SRV(),
+    UAV()
+  )cc";
+
+  TrivialModuleLoader ModLoader;
+  auto PP = createPP(Source, ModLoader);
+  auto TokLoc = SourceLocation();
+
+  hlsl::RootSignatureLexer Lexer(Source, TokLoc);
+  SmallVector<RootElement> Elements;
+  hlsl::RootSignatureParser Parser(Elements, Lexer, *PP);
+
+  // Test no diagnostics produced
+  Consumer->setNoDiag();
+
+  ASSERT_FALSE(Parser.parse());
+
+  ASSERT_EQ(Elements.size(), 3u);
+
+  RootElement Elem = Elements[0];
+  ASSERT_TRUE(std::holds_alternative<RootParam>(Elem));
+  ASSERT_EQ(std::get<RootParam>(Elem).Type, ParamType::CBuffer);
+
+  Elem = Elements[1];
+  ASSERT_TRUE(std::holds_alternative<RootParam>(Elem));
+  ASSERT_EQ(std::get<RootParam>(Elem).Type, ParamType::SRV);
+
+  Elem = Elements[2];
+  ASSERT_TRUE(std::holds_alternative<RootParam>(Elem));
+  ASSERT_EQ(std::get<RootParam>(Elem).Type, ParamType::UAV);
+
+  ASSERT_TRUE(Consumer->isSatisfied());
+}
+
 TEST_F(ParseHLSLRootSignatureTest, ValidTrailingCommaTest) {
   // This test will checks we can handling trailing commas ','
   const llvm::StringLiteral Source = R"cc(
