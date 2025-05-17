@@ -77,9 +77,12 @@
 #include "InputFiles.h"
 #include "LinkerScript.h"
 #include "OutputSections.h"
+#include "Relocations.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
+#include "Target.h"
+#include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Object/ELF.h"
 #include "llvm/Support/Parallel.h"
@@ -104,17 +107,22 @@ private:
   void segregate(size_t begin, size_t end, uint32_t eqClassBase, bool constant);
 
   template <class RelTy>
-  bool constantEq(const InputSection *a, Relocs<RelTy> relsA,
-                  const InputSection *b, Relocs<RelTy> relsB);
+  bool constantEq(InputSection *a, Relocs<RelTy> relsA, InputSection *b,
+                  Relocs<RelTy> relsB);
 
   template <class RelTy>
-  bool variableEq(const InputSection *a, Relocs<RelTy> relsA,
-                  const InputSection *b, Relocs<RelTy> relsB);
+  bool variableEq(InputSection *a, Relocs<RelTy> relsA, InputSection *b,
+                  Relocs<RelTy> relsB);
 
-  bool equalsConstant(const InputSection *a, const InputSection *b);
-  bool equalsVariable(const InputSection *a, const InputSection *b);
+  bool equalsConstant(InputSection *a, InputSection *b);
+  bool equalsVariable(InputSection *a, InputSection *b);
 
   size_t findBoundary(size_t begin, size_t end);
+
+  // A relocation with side-effects is considered non-trivial. Eg: relocation
+  // creates GOT entry or TLS slot.
+  template <class RelTy>
+  bool isTrivialRelocation(InputSection *a, Symbol &s, RelTy reloc);
 
   void forEachClassRange(size_t begin, size_t end,
                          llvm::function_ref<void(size_t, size_t)> fn);
@@ -234,11 +242,30 @@ void ICF<ELFT>::segregate(size_t begin, size_t end, uint32_t eqClassBase,
   }
 }
 
+template <class ELFT>
+template <class RelTy>
+bool ICF<ELFT>::isTrivialRelocation(InputSection *a, Symbol &s, RelTy reloc) {
+  OffsetGetter getter(*a);
+  uint64_t offset = getter.get(ctx, reloc.r_offset);
+  RelExpr expr = ctx.target->getRelExpr(reloc.getType(ctx.arg.isMips64EL), s,
+                                        a->content().data() + offset);
+
+  if (needsGot(expr) || needsTls(s, expr))
+    return false;
+  return true;
+}
+
+// Two symbols referenced by relocations can be merged together safely
+// when their addends are same.
+static bool canMergeSymbols(uint64_t addA, uint64_t addB) {
+  return addA == addB;
+}
+
 // Compare two lists of relocations.
 template <class ELFT>
 template <class RelTy>
-bool ICF<ELFT>::constantEq(const InputSection *secA, Relocs<RelTy> ra,
-                           const InputSection *secB, Relocs<RelTy> rb) {
+bool ICF<ELFT>::constantEq(InputSection *secA, Relocs<RelTy> ra,
+                           InputSection *secB, Relocs<RelTy> rb) {
   if (ra.size() != rb.size())
     return false;
   auto rai = ra.begin(), rae = ra.end(), rbi = rb.begin();
@@ -286,9 +313,14 @@ bool ICF<ELFT>::constantEq(const InputSection *secA, Relocs<RelTy> ra,
     // Relocations referring to InputSections are constant-equal if their
     // section offsets are equal.
     if (isa<InputSection>(da->section)) {
-      if (da->value + addA == db->value + addB)
+      if (da->value + addA == db->value + addB) {
+        // For non-trivial relocations, if we cannot merge symbols together,
+        // we must not merge sections either.
+        if (!isTrivialRelocation(secA, sa, *rai) &&
+            !canMergeSymbols(addA, addB))
+          return false;
         continue;
-      return false;
+      }
     }
 
     // Relocations referring to MergeInputSections are constant-equal if their
@@ -314,7 +346,7 @@ bool ICF<ELFT>::constantEq(const InputSection *secA, Relocs<RelTy> ra,
 // Compare "non-moving" part of two InputSections, namely everything
 // except relocation targets.
 template <class ELFT>
-bool ICF<ELFT>::equalsConstant(const InputSection *a, const InputSection *b) {
+bool ICF<ELFT>::equalsConstant(InputSection *a, InputSection *b) {
   if (a->flags != b->flags || a->getSize() != b->getSize() ||
       a->content() != b->content())
     return false;
@@ -333,12 +365,35 @@ bool ICF<ELFT>::equalsConstant(const InputSection *a, const InputSection *b) {
              : constantEq(a, ra.relas, b, rb.relas);
 }
 
+template <class ELFT, class RelTy>
+static SmallVector<std::pair<Symbol *, uint64_t>>
+getReloc(const InputSection *sec, Relocs<RelTy> relocs) {
+  SmallVector<std::pair<Symbol *, uint64_t>> syms;
+  for (auto ri = relocs.begin(), re = relocs.end(); ri != re; ++ri) {
+    Symbol &sym = sec->file->getRelocTargetSym(*ri);
+    syms.emplace_back(&sym, getAddend<ELFT>(*ri));
+  }
+  return syms;
+}
+
+template <class ELFT>
+static SmallVector<std::pair<Symbol *, uint64_t>>
+getRelocTargetSyms(const InputSection *sec) {
+  const RelsOrRelas<ELFT> rel = sec->template relsOrRelas<ELFT>();
+  if (rel.areRelocsCrel())
+    return getReloc<ELFT>(sec, rel.crels);
+  if (rel.areRelocsRel())
+    return getReloc<ELFT>(sec, rel.rels);
+
+  return getReloc<ELFT>(sec, rel.relas);
+}
+
 // Compare two lists of relocations. Returns true if all pairs of
 // relocations point to the same section in terms of ICF.
 template <class ELFT>
 template <class RelTy>
-bool ICF<ELFT>::variableEq(const InputSection *secA, Relocs<RelTy> ra,
-                           const InputSection *secB, Relocs<RelTy> rb) {
+bool ICF<ELFT>::variableEq(InputSection *secA, Relocs<RelTy> ra,
+                           InputSection *secB, Relocs<RelTy> rb) {
   assert(ra.size() == rb.size());
 
   auto rai = ra.begin(), rae = ra.end(), rbi = rb.begin();
@@ -351,6 +406,15 @@ bool ICF<ELFT>::variableEq(const InputSection *secA, Relocs<RelTy> ra,
 
     auto *da = cast<Defined>(&sa);
     auto *db = cast<Defined>(&sb);
+
+    // Prevent sections containing local symbols from merging into sections with
+    // global symbols, or vice-versa. This is to prevent local-global symbols
+    // getting merged into each other (done later in ICF). We do this as
+    // post-ICF passes cannot handle duplicates when iterating over local
+    // symbols. There are also assertions that prevent this.
+    if ((!da->isGlobal() || !db->isGlobal()) &&
+        !isTrivialRelocation(secA, sa, *rai))
+      return false;
 
     // We already dealt with absolute and non-InputSection symbols in
     // constantEq, and for InputSections we have already checked everything
@@ -375,7 +439,7 @@ bool ICF<ELFT>::variableEq(const InputSection *secA, Relocs<RelTy> ra,
 
 // Compare "moving" part of two InputSections, namely relocation targets.
 template <class ELFT>
-bool ICF<ELFT>::equalsVariable(const InputSection *a, const InputSection *b) {
+bool ICF<ELFT>::equalsVariable(InputSection *a, InputSection *b) {
   const RelsOrRelas<ELFT> ra = a->template relsOrRelas<ELFT>();
   const RelsOrRelas<ELFT> rb = b->template relsOrRelas<ELFT>();
   if (ra.areRelocsCrel() || rb.areRelocsCrel())
@@ -537,14 +601,28 @@ template <class ELFT> void ICF<ELFT>::run() {
   auto print = [&ctx = ctx]() -> ELFSyncStream {
     return {ctx, ctx.arg.printIcfSections ? DiagLevel::Msg : DiagLevel::None};
   };
+
+  EquivalenceClasses<Symbol *> symbolEquivalence;
   // Merge sections by the equivalence class.
+  // Merge symbols identified as equivalent during ICF.
   forEachClassRange(0, sections.size(), [&](size_t begin, size_t end) {
     if (end - begin == 1)
       return;
     print() << "selected section " << sections[begin];
+    SmallVector<std::pair<Symbol *, uint64_t>> syms =
+        getRelocTargetSyms<ELFT>(sections[begin]);
     for (size_t i = begin + 1; i < end; ++i) {
       print() << "  removing identical section " << sections[i];
       sections[begin]->replace(sections[i]);
+      SmallVector<std::pair<Symbol *, uint64_t>> replacedSyms =
+          getRelocTargetSyms<ELFT>(sections[i]);
+      assert(syms.size() == replacedSyms.size() &&
+             "Should have same number of syms!");
+      for (size_t i = 0; i < syms.size(); i++) {
+        if (!canMergeSymbols(syms[i].second, replacedSyms[i].second))
+          continue;
+        symbolEquivalence.unionSets(syms[i].first, replacedSyms[i].first);
+      }
 
       // At this point we know sections merged are fully identical and hence
       // we want to remove duplicate implicit dependencies such as link order
@@ -563,11 +641,26 @@ template <class ELFT> void ICF<ELFT>::run() {
           d->folded = true;
         }
   };
-  for (Symbol *sym : ctx.symtab->getSymbols())
+  for (Symbol *sym : ctx.symtab->getSymbols()) {
     fold(sym);
+    auto it = symbolEquivalence.findLeader(sym);
+    if (it != symbolEquivalence.member_end() && *it != sym) {
+      print() << "redirecting '" << sym->getName() << "' in symtab to '"
+              << (*it)->getName() << "'";
+      ctx.symtab->redirect(sym, *it);
+    }
+  }
   parallelForEach(ctx.objectFiles, [&](ELFFileBase *file) {
     for (Symbol *sym : file->getLocalSymbols())
       fold(sym);
+    for (Symbol *&sym : file->getMutableGlobalSymbols()) {
+      auto it = symbolEquivalence.findLeader(sym);
+      if (it != symbolEquivalence.member_end() && *it != sym) {
+        print() << "redirecting '" << sym->getName() << "' to '"
+                << (*it)->getName() << "'";
+        sym = *it;
+      }
+    }
   });
 
   // InputSectionDescription::sections is populated by processSectionCommands().

@@ -26,6 +26,7 @@
 #include "Target.h"
 #include "InputFiles.h"
 #include "OutputSections.h"
+#include "Relocations.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
