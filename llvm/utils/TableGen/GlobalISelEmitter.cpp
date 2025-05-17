@@ -90,12 +90,10 @@ namespace {
 
 static std::string explainPredicates(const TreePatternNode &N) {
   std::string Explanation;
-  StringRef Separator = "";
+  ListSeparator LS;
   for (const TreePredicateCall &Call : N.getPredicateCalls()) {
     const TreePredicateFn &P = Call.Fn;
-    Explanation +=
-        (Separator + P.getOrigPatFragRecord()->getRecord()->getName()).str();
-    Separator = ", ";
+    Explanation += Twine(LS) + P.getOrigPatFragRecord()->getRecord()->getName();
 
     if (P.isAlwaysTrue())
       Explanation += " always-true";
@@ -120,22 +118,21 @@ static std::string explainPredicates(const TreePatternNode &N) {
       Explanation += " truncstore";
 
     if (const Record *VT = P.getMemoryVT())
-      Explanation += (" MemVT=" + VT->getName()).str();
+      Explanation += " MemVT=" + VT->getName();
     if (const Record *VT = P.getScalarMemoryVT())
-      Explanation += (" ScalarVT(MemVT)=" + VT->getName()).str();
+      Explanation += " ScalarVT(MemVT)=" + VT->getName();
 
     if (const ListInit *AddrSpaces = P.getAddressSpaces()) {
       raw_string_ostream OS(Explanation);
       OS << " AddressSpaces=[";
 
-      StringRef AddrSpaceSeparator;
+      ListSeparator AS;
       for (const Init *Val : AddrSpaces->getElements()) {
         const IntInit *IntVal = dyn_cast<IntInit>(Val);
         if (!IntVal)
           continue;
 
-        OS << AddrSpaceSeparator << IntVal->getValue();
-        AddrSpaceSeparator = ", ";
+        OS << AS << IntVal->getValue();
       }
 
       OS << ']';
@@ -194,7 +191,7 @@ static Error failedImport(const Twine &Reason) {
 
 static Error isTrivialOperatorNode(const TreePatternNode &N) {
   std::string Explanation;
-  std::string Separator;
+  ListSeparator LS;
 
   bool HasUnsupportedPredicate = false;
   for (const TreePredicateCall &Call : N.getPredicateCalls()) {
@@ -255,11 +252,9 @@ static Error isTrivialOperatorNode(const TreePatternNode &N) {
       continue;
 
     HasUnsupportedPredicate = true;
-    Explanation = Separator + "Has a predicate (" + explainPredicates(N) + ")";
-    Separator = ", ";
-    Explanation += (Separator + "first-failing:" +
-                    Predicate.getOrigPatFragRecord()->getRecord()->getName())
-                       .str();
+    Explanation += Twine(LS) + "Has a predicate (" + explainPredicates(N) + ")";
+    Explanation += Twine(LS) + "first-failing:" +
+                   Predicate.getOrigPatFragRecord()->getRecord()->getName();
     break;
   }
 
@@ -996,10 +991,8 @@ Error GlobalISelEmitter::importChildMatcher(
     // The "name" of a non-leaf complex pattern (MY_PAT $op1, $op2) is
     // "MY_PAT:op1:op2" and the ones with same "name" represent same operand.
     std::string PatternName = SrcChild.getOperator()->getName().str();
-    for (const TreePatternNode &Child : SrcChild.children()) {
-      PatternName += ":";
-      PatternName += Child.getName();
-    }
+    for (const TreePatternNode &Child : SrcChild.children())
+      PatternName += ":" + Child.getName();
     SrcChildName = PatternName;
   }
 

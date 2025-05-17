@@ -183,3 +183,9 @@ LLVM_DUMP_METHOD void Twine::dumpRepr() const {
   printRepr(dbgs());
 }
 #endif
+
+std::string &llvm::operator+=(std::string &LHS, const Twine &RHS) {
+  raw_string_ostream OS(LHS);
+  RHS.print(OS);
+  return LHS;
+}

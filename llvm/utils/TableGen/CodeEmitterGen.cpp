@@ -153,20 +153,19 @@ bool CodeEmitterGen::addCodeToMergeInOperand(const Record *R,
   // If the source operand has a custom encoder, use it.
   if (!EncoderMethodName.empty()) {
     if (UseAPInt) {
-      Case += "      " + EncoderMethodName + "(MI, " + utostr(OpIdx);
+      Case += "      " + EncoderMethodName + "(MI, " + Twine(OpIdx);
       Case += ", op";
     } else {
-      Case += "      op = " + EncoderMethodName + "(MI, " + utostr(OpIdx);
+      Case += "      op = " + EncoderMethodName + "(MI, " + Twine(OpIdx);
     }
     Case += ", Fixups, STI);\n";
   } else {
     if (UseAPInt) {
-      Case +=
-          "      getMachineOpValue(MI, MI.getOperand(" + utostr(OpIdx) + ")";
+      Case += "      getMachineOpValue(MI, MI.getOperand(" + Twine(OpIdx) + ")";
       Case += ", op, Fixups, STI";
     } else {
-      Case += "      op = getMachineOpValue(MI, MI.getOperand(" +
-              utostr(OpIdx) + ")";
+      Case += "      op = getMachineOpValue(MI, MI.getOperand(" + Twine(OpIdx) +
+              ")";
       Case += ", Fixups, STI";
     }
     Case += ");\n";
@@ -228,19 +227,16 @@ bool CodeEmitterGen::addCodeToMergeInOperand(const Record *R,
     unsigned LoBit = BeginVarBit - N + 1;
     unsigned HiBit = LoBit + N;
     unsigned LoInstBit = BeginInstBit - N + 1;
+    int DeltaBits = HiBit - LoBit;
     BitOffset = LoInstBit;
     if (UseAPInt) {
-      std::string ExtractStr;
       if (N >= 64) {
-        ExtractStr = "op.extractBits(" + itostr(HiBit - LoBit) + ", " +
-                     itostr(LoBit) + ")";
-        Case += "      Value.insertBits(" + ExtractStr + ", " +
-                itostr(LoInstBit) + ");\n";
+        Case += "      Value.insertBits(op.extractBits(" + Twine(DeltaBits) +
+                ", " + Twine(LoBit) + "), " + Twine(LoInstBit) + ");\n";
       } else {
-        ExtractStr = "op.extractBitsAsZExtValue(" + itostr(HiBit - LoBit) +
-                     ", " + itostr(LoBit) + ")";
-        Case += "      Value.insertBits(" + ExtractStr + ", " +
-                itostr(LoInstBit) + ", " + itostr(HiBit - LoBit) + ");\n";
+        Case += "      Value.insertBits(op.extractBitsAsZExtValue(" +
+                Twine(DeltaBits) + ", " + Twine(LoBit) + "), " +
+                Twine(LoInstBit) + ", " + Twine(DeltaBits) + ");\n";
       }
     } else {
       uint64_t OpMask = ~(uint64_t)0 >> (64 - N);
@@ -309,7 +305,7 @@ CodeEmitterGen::getInstructionCases(const Record *R,
               "      case " + itostr(DefaultMode) + ": InstBitsByHw = InstBits";
         } else {
           Case += "      case " + itostr(ModeId) +
-                  ": InstBitsByHw = InstBits_" + HWM.getMode(ModeId).Name.str();
+                  ": InstBitsByHw = InstBits_" + HWM.getMode(ModeId).Name;
         }
         Case += "; break;\n";
       }
@@ -380,13 +376,8 @@ void CodeEmitterGen::addInstructionCasesForEncoding(
   }
 
   StringRef PostEmitter = R->getValueAsString("PostEncoderMethod");
-  if (!PostEmitter.empty()) {
-    Case += "      Value = ";
-    Case += PostEmitter;
-    Case += "(MI, Value";
-    Case += ", STI";
-    Case += ");\n";
-  }
+  if (!PostEmitter.empty())
+    Case += "      Value = " + PostEmitter + "(MI, Value, STI);\n";
 }
 
 static void emitInstBits(raw_ostream &OS, const APInt &Bits) {

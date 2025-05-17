@@ -1028,16 +1028,13 @@ std::string TreePredicateFn::getPredCode() const {
     }
 
     int64_t MinAlign = getMinAlignment();
-    if (MinAlign > 0) {
-      Code += "if (cast<MemSDNode>(N)->getAlign() < Align(";
-      Code += utostr(MinAlign);
-      Code += "))\nreturn false;\n";
-    }
+    if (MinAlign > 0)
+      Code += "if (cast<MemSDNode>(N)->getAlign() < Align(" + Twine(MinAlign) +
+              "))\nreturn false;\n";
 
     if (const Record *MemoryVT = getMemoryVT())
-      Code += ("if (cast<MemSDNode>(N)->getMemoryVT() != MVT::" +
-               MemoryVT->getName() + ") return false;\n")
-                  .str();
+      Code += "if (cast<MemSDNode>(N)->getMemoryVT() != MVT::" +
+              MemoryVT->getName() + ") return false;\n";
   }
 
   if (isAtomic() && isAtomicOrderingMonotonic())
@@ -1100,10 +1097,9 @@ std::string TreePredicateFn::getPredCode() const {
     StringRef SDNodeName = isLoad() ? "LoadSDNode" : "StoreSDNode";
 
     if (isUnindexed())
-      Code += ("if (cast<" + SDNodeName +
-               ">(N)->getAddressingMode() != ISD::UNINDEXED) "
-               "return false;\n")
-                  .str();
+      Code += "if (cast<" + SDNodeName +
+              ">(N)->getAddressingMode() != ISD::UNINDEXED) "
+              "return false;\n";
 
     if (isLoad()) {
       if ((isNonExtLoad() + isAnyExtLoad() + isSignExtLoad() +
@@ -1137,10 +1133,9 @@ std::string TreePredicateFn::getPredCode() const {
     }
 
     if (const Record *ScalarMemoryVT = getScalarMemoryVT())
-      Code += ("if (cast<" + SDNodeName +
-               ">(N)->getMemoryVT().getScalarType() != MVT::" +
-               ScalarMemoryVT->getName() + ") return false;\n")
-                  .str();
+      Code += "if (cast<" + SDNodeName +
+              ">(N)->getMemoryVT().getScalarType() != MVT::" +
+              ScalarMemoryVT->getName() + ") return false;\n";
   }
 
   if (hasNoUse())
@@ -1148,8 +1143,8 @@ std::string TreePredicateFn::getPredCode() const {
   if (hasOneUse())
     Code += "if (!N->hasNUsesOfValue(1, 0)) return false;\n";
 
-  std::string PredicateCode =
-      PatFragRec->getRecord()->getValueAsString("PredicateCode").str();
+  StringRef PredicateCode =
+      PatFragRec->getRecord()->getValueAsString("PredicateCode");
 
   Code += PredicateCode;
 

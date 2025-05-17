@@ -173,9 +173,8 @@ InstrInfoEmitter::GetOperandInfo(const CodeGenInstruction &Inst) {
         Res += "|(1<<MCOI::BranchTarget)";
 
       // Fill in operand type.
-      Res += ", ";
       assert(!Op.OperandType.empty() && "Invalid operand type.");
-      Res += Op.OperandType;
+      Res += ", " + Op.OperandType;
 
       // Fill in constraint info.
       Res += ", ";
@@ -186,7 +185,7 @@ InstrInfoEmitter::GetOperandInfo(const CodeGenInstruction &Inst) {
         Res += "MCOI_EARLY_CLOBBER";
       } else {
         assert(Constraint.isTied());
-        Res += "MCOI_TIED_TO(" + utostr(Constraint.getTiedOperand()) + ")";
+        Res += "MCOI_TIED_TO(" + Twine(Constraint.getTiedOperand()) + ")";
       }
 
       Result.push_back(Res);
@@ -616,7 +615,7 @@ static std::string
 getNameForFeatureBitset(ArrayRef<const Record *> FeatureBitset) {
   std::string Name = "CEFBS";
   for (const Record *Feature : FeatureBitset)
-    Name += ("_" + Feature->getName()).str();
+    Name += "_" + Feature->getName();
   return Name;
 }
 

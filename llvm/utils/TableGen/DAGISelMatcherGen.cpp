@@ -307,10 +307,8 @@ void MatcherGen::EmitOperatorMatchCode(const TreePatternNode &N,
     // "MY_PAT:op1:op2". We should already have validated that the uses are
     // consistent.
     std::string PatternName = N.getOperator()->getName().str();
-    for (const TreePatternNode &Child : N.children()) {
-      PatternName += ":";
-      PatternName += Child.getName();
-    }
+    for (const TreePatternNode &Child : N.children())
+      PatternName += ":" + Child.getName();
 
     if (recordUniqueNode(PatternName)) {
       auto NodeAndOpNum = std::pair(&N, NextRecordedOperandNo - 1);
@@ -467,11 +465,9 @@ bool MatcherGen::recordUniqueNode(ArrayRef<std::string> Names) {
   if (Entry == 0) {
     // If it is a named node, we must emit a 'Record' opcode.
     std::string WhatFor;
-    for (const std::string &Name : Names) {
-      if (!WhatFor.empty())
-        WhatFor += ',';
-      WhatFor += "$" + Name;
-    }
+    ListSeparator LS(",");
+    for (const std::string &Name : Names)
+      WhatFor += Twine(LS) + "$" + Name;
     AddMatcher(new RecordMatcher(WhatFor, NextRecordedOperandNo));
     Entry = ++NextRecordedOperandNo;
     NewRecord = true;
