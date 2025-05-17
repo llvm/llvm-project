@@ -704,7 +704,7 @@ define amdgpu_kernel void @commute_uno_2.0_f64(ptr addrspace(1) %out, ptr addrsp
 define amdgpu_kernel void @commute_frameindex(ptr addrspace(1) nocapture %out) #0 {
 entry:
   %stack0 = alloca i32, addrspace(5)
-  %ptr0 = load volatile ptr addrspace(5), ptr addrspace(1) undef
+  %ptr0 = load volatile ptr addrspace(5), ptr addrspace(1) poison
   %eq = icmp eq ptr addrspace(5) %ptr0, %stack0
   %ext = zext i1 %eq to i32
   store volatile i32 %ext, ptr addrspace(1) %out

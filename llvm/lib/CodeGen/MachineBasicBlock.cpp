@@ -92,15 +92,15 @@ MCSymbol *MachineBasicBlock::getSymbol() const {
   return CachedMCSymbol;
 }
 
-MCSymbol *MachineBasicBlock::getEHCatchretSymbol() const {
-  if (!CachedEHCatchretMCSymbol) {
+MCSymbol *MachineBasicBlock::getEHContSymbol() const {
+  if (!CachedEHContMCSymbol) {
     const MachineFunction *MF = getParent();
     SmallString<128> SymbolName;
     raw_svector_ostream(SymbolName)
         << "$ehgcr_" << MF->getFunctionNumber() << '_' << getNumber();
-    CachedEHCatchretMCSymbol = MF->getContext().getOrCreateSymbol(SymbolName);
+    CachedEHContMCSymbol = MF->getContext().getOrCreateSymbol(SymbolName);
   }
-  return CachedEHCatchretMCSymbol;
+  return CachedEHContMCSymbol;
 }
 
 MCSymbol *MachineBasicBlock::getEndSymbol() const {
@@ -1137,6 +1137,9 @@ public:
   }
 };
 
+MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
+    MachineBasicBlock *Succ, Pass *P, MachineFunctionAnalysisManager *MFAM,
+    std::vector<SparseBitVector<>> *LiveInSets, MachineDomTreeUpdater *MDTU) {
 #define GET_RESULT(RESULT, GETTER, INFIX)                                      \
   [MF, P, MFAM]() {                                                            \
     if (P) {                                                                   \
@@ -1146,10 +1149,19 @@ public:
     return MFAM->getCachedResult<RESULT##Analysis>(*MF);                       \
   }()
 
-MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
-    MachineBasicBlock *Succ, Pass *P, MachineFunctionAnalysisManager *MFAM,
-    std::vector<SparseBitVector<>> *LiveInSets, MachineDomTreeUpdater *MDTU) {
   assert((P || MFAM) && "Need a way to get analysis results!");
+  MachineFunction *MF = getParent();
+  LiveIntervals *LIS = GET_RESULT(LiveIntervals, getLIS, );
+  SlotIndexes *Indexes = GET_RESULT(SlotIndexes, getSI, );
+  LiveVariables *LV = GET_RESULT(LiveVariables, getLV, );
+  MachineLoopInfo *MLI = GET_RESULT(MachineLoop, getLI, Info);
+  return SplitCriticalEdge(Succ, {LIS, Indexes, LV, MLI}, LiveInSets, MDTU);
+#undef GET_RESULT
+}
+
+MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
+    MachineBasicBlock *Succ, const SplitCriticalEdgeAnalyses &Analyses,
+    std::vector<SparseBitVector<>> *LiveInSets, MachineDomTreeUpdater *MDTU) {
   if (!canSplitCriticalEdge(Succ))
     return nullptr;
 
@@ -1172,19 +1184,16 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
   LLVM_DEBUG(dbgs() << "Splitting critical edge: " << printMBBReference(*this)
                     << " -- " << printMBBReference(*NMBB) << " -- "
                     << printMBBReference(*Succ) << '\n');
-
-  LiveIntervals *LIS = GET_RESULT(LiveIntervals, getLIS, );
-  SlotIndexes *Indexes = GET_RESULT(SlotIndexes, getSI, );
+  auto *LIS = Analyses.LIS;
   if (LIS)
     LIS->insertMBBInMaps(NMBB);
-  else if (Indexes)
-    Indexes->insertMBBInMaps(NMBB);
+  else if (Analyses.SI)
+    Analyses.SI->insertMBBInMaps(NMBB);
 
   // On some targets like Mips, branches may kill virtual registers. Make sure
   // that LiveVariables is properly updated after updateTerminator replaces the
   // terminators.
-  LiveVariables *LV = GET_RESULT(LiveVariables, getLV, );
-
+  auto *LV = Analyses.LV;
   // Collect a list of virtual registers killed by the terminators.
   SmallVector<Register, 4> KilledRegs;
   if (LV)
@@ -1223,7 +1232,7 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
   // as the fallthrough successor
   if (Succ == PrevFallthrough)
     PrevFallthrough = NMBB;
-
+  auto *Indexes = Analyses.SI;
   if (!ChangedIndirectJump) {
     SlotIndexUpdateDelegate SlotUpdater(*MF, Indexes);
     updateTerminator(PrevFallthrough);
@@ -1351,7 +1360,7 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
   if (MDTU)
     MDTU->splitCriticalEdge(this, Succ, NMBB);
 
-  if (MachineLoopInfo *MLI = GET_RESULT(MachineLoop, getLI, Info))
+  if (MachineLoopInfo *MLI = Analyses.MLI)
     if (MachineLoop *TIL = MLI->getLoopFor(this)) {
       // If one or the other blocks were not in a loop, the new block is not
       // either, and thus LI doesn't need to be updated.
@@ -1578,20 +1587,36 @@ MachineBasicBlock::getSuccProbability(const_succ_iterator Succ) const {
     return BranchProbability(1, succ_size());
 
   const auto &Prob = *getProbabilityIterator(Succ);
-  if (Prob.isUnknown()) {
-    // For unknown probabilities, collect the sum of all known ones, and evenly
-    // ditribute the complemental of the sum to each unknown probability.
-    unsigned KnownProbNum = 0;
-    auto Sum = BranchProbability::getZero();
-    for (const auto &P : Probs) {
-      if (!P.isUnknown()) {
-        Sum += P;
-        KnownProbNum++;
-      }
-    }
-    return Sum.getCompl() / (Probs.size() - KnownProbNum);
-  } else
+  if (!Prob.isUnknown())
     return Prob;
+  // For unknown probabilities, collect the sum of all known ones, and evenly
+  // ditribute the complemental of the sum to each unknown probability.
+  unsigned KnownProbNum = 0;
+  auto Sum = BranchProbability::getZero();
+  for (const auto &P : Probs) {
+    if (!P.isUnknown()) {
+      Sum += P;
+      KnownProbNum++;
+    }
+  }
+  return Sum.getCompl() / (Probs.size() - KnownProbNum);
+}
+
+bool MachineBasicBlock::canPredictBranchProbabilities() const {
+  if (succ_size() <= 1)
+    return true;
+  if (!hasSuccessorProbabilities())
+    return true;
+
+  SmallVector<BranchProbability, 8> Normalized(Probs.begin(), Probs.end());
+  BranchProbability::normalizeProbabilities(Normalized);
+
+  // Normalize assuming unknown probabilities. This will assign equal
+  // probabilities to all successors.
+  SmallVector<BranchProbability, 8> Equal(Normalized.size());
+  BranchProbability::normalizeProbabilities(Equal);
+
+  return llvm::equal(Normalized, Equal);
 }
 
 /// Set successor probability of a given iterator.
@@ -1764,7 +1789,7 @@ MachineBasicBlock::liveout_iterator MachineBasicBlock::liveout_begin() const {
       "Liveness information is accurate");
 
   const TargetLowering &TLI = *MF.getSubtarget().getTargetLowering();
-  MCPhysReg ExceptionPointer = 0, ExceptionSelector = 0;
+  MCRegister ExceptionPointer, ExceptionSelector;
   if (MF.getFunction().hasPersonalityFn()) {
     auto PersonalityFn = MF.getFunction().getPersonalityFn();
     ExceptionPointer = TLI.getExceptionPointerRegister(PersonalityFn);

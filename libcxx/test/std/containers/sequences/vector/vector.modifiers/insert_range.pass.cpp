@@ -34,9 +34,9 @@ constexpr bool test() {
   });
   test_sequence_insert_range_move_only<std::vector>();
 
-  { // Vector may or may not need to reallocate because of the insertion -- make sure to test both cases.
+  {   // Vector may or may not need to reallocate because of the insertion -- make sure to test both cases.
     { // Ensure reallocation happens.
-      int in[] = {-1, -2, -3, -4, -5, -6, -7, -8, -9, -10};
+      int in[]           = {-1, -2, -3, -4, -5, -6, -7, -8, -9, -10};
       std::vector<int> v = {1, 2, 3, 4, 5, 6, 7, 8};
       v.shrink_to_fit();
       assert(v.capacity() < v.size() + std::ranges::size(in));
@@ -46,7 +46,7 @@ constexpr bool test() {
     }
 
     { // Ensure no reallocation happens.
-      int in[] = {-1, -2, -3, -4, -5, -6, -7, -8, -9, -10};
+      int in[]           = {-1, -2, -3, -4, -5, -6, -7, -8, -9, -10};
       std::vector<int> v = {1, 2, 3, 4, 5, 6, 7, 8};
       v.reserve(v.size() + std::ranges::size(in));
       assert(v.capacity() >= v.size() + std::ranges::size(in));
@@ -62,6 +62,22 @@ constexpr bool test() {
       v.insert_range(v.begin(), std::views::counted(input_iter{std::ranges::begin(in)}, std::ranges::ssize(in)));
       assert(std::ranges::equal(v, std::vector<int>{1, 2, 3, 4, -5, -6}));
     }
+  }
+
+  { // Ensure that insert_range doesn't use unexpected assignment.
+    struct Wrapper {
+      constexpr Wrapper(int n) : n_(n) {}
+      void operator=(int) = delete;
+
+      int n_;
+    };
+
+    int a[]{1, 2, 3, 4, 5};
+    std::vector<Wrapper> v;
+    v.insert_range(v.end(), a);
+    assert(v.size() == std::size(a));
+    for (std::size_t i = 0; i != std::size(a); ++i)
+      assert(v[i].n_ == a[i]);
   }
 
   return true;

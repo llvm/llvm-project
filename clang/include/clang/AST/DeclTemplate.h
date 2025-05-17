@@ -195,7 +195,8 @@ public:
   ///
   /// The constraints in the resulting list are to be treated as if in a
   /// conjunction ("and").
-  void getAssociatedConstraints(llvm::SmallVectorImpl<const Expr *> &AC) const;
+  void getAssociatedConstraints(
+      llvm::SmallVectorImpl<AssociatedConstraint> &AC) const;
 
   bool hasAssociatedConstraints() const;
 
@@ -422,7 +423,8 @@ public:
   /// including constraint-expressions derived from the requires-clause,
   /// trailing requires-clause (for functions and methods) and constrained
   /// template parameters.
-  void getAssociatedConstraints(llvm::SmallVectorImpl<const Expr *> &AC) const;
+  void getAssociatedConstraints(
+      llvm::SmallVectorImpl<AssociatedConstraint> &AC) const;
 
   bool hasAssociatedConstraints() const;
 
@@ -779,16 +781,15 @@ protected:
   bool loadLazySpecializationsImpl(llvm::ArrayRef<TemplateArgument> Args,
                                    TemplateParameterList *TPL = nullptr) const;
 
-  template <class EntryType, typename ...ProfileArguments>
-  typename SpecEntryTraits<EntryType>::DeclType*
+  template <class EntryType, typename... ProfileArguments>
+  typename SpecEntryTraits<EntryType>::DeclType *
   findSpecializationImpl(llvm::FoldingSetVector<EntryType> &Specs,
-                         void *&InsertPos, ProfileArguments &&...ProfileArgs);
+                         void *&InsertPos, ProfileArguments... ProfileArgs);
 
   template <class EntryType, typename... ProfileArguments>
   typename SpecEntryTraits<EntryType>::DeclType *
   findSpecializationLocally(llvm::FoldingSetVector<EntryType> &Specs,
-                            void *&InsertPos,
-                            ProfileArguments &&...ProfileArgs);
+                            void *&InsertPos, ProfileArguments... ProfileArgs);
 
   template <class Derived, class EntryType>
   void addSpecializationImpl(llvm::FoldingSetVector<EntryType> &Specs,
@@ -1015,6 +1016,17 @@ public:
     return getTemplatedDecl()->isInstantiatedFromMemberTemplate() ||
            isThisDeclarationADefinition();
   }
+
+  // This bit closely tracks 'RedeclarableTemplateDecl::InstantiatedFromMember',
+  // except this is per declaration, while the redeclarable field is
+  // per chain. This indicates a template redeclaration which
+  // is compatible with the definition, in the non-trivial case
+  // where this is not already a definition.
+  // This is only really needed for instantiating the definition of friend
+  // function templates, which can have redeclarations in different template
+  // contexts.
+  // The bit is actually stored in the FunctionDecl for space efficiency
+  // reasons.
   void setInstantiatedFromMemberTemplate(FunctionTemplateDecl *D) {
     getTemplatedDecl()->setInstantiatedFromMemberTemplate();
     RedeclarableTemplateDecl::setInstantiatedFromMemberTemplate(D);
@@ -1185,13 +1197,8 @@ class TemplateTypeParmDecl final : public TypeDecl,
   /// type constraint.
   bool TypeConstraintInitialized : 1;
 
-  /// Whether this type template parameter is an "expanded"
-  /// parameter pack, meaning that its type is a pack expansion and we
-  /// already know the set of types that expansion expands to.
-  bool ExpandedParameterPack : 1;
-
-  /// The number of type parameters in an expanded parameter pack.
-  unsigned NumExpanded = 0;
+  /// The number of type parameters in an expanded parameter pack, if any.
+  UnsignedOrNone NumExpanded = std::nullopt;
 
   /// The default template argument, if any.
   using DefArgStorage =
@@ -1200,19 +1207,17 @@ class TemplateTypeParmDecl final : public TypeDecl,
 
   TemplateTypeParmDecl(DeclContext *DC, SourceLocation KeyLoc,
                        SourceLocation IdLoc, IdentifierInfo *Id, bool Typename,
-                       bool HasTypeConstraint,
-                       std::optional<unsigned> NumExpanded)
+                       bool HasTypeConstraint, UnsignedOrNone NumExpanded)
       : TypeDecl(TemplateTypeParm, DC, IdLoc, Id, KeyLoc), Typename(Typename),
         HasTypeConstraint(HasTypeConstraint), TypeConstraintInitialized(false),
-        ExpandedParameterPack(NumExpanded),
-        NumExpanded(NumExpanded.value_or(0)) {}
+        NumExpanded(NumExpanded) {}
 
 public:
   static TemplateTypeParmDecl *
   Create(const ASTContext &C, DeclContext *DC, SourceLocation KeyLoc,
          SourceLocation NameLoc, unsigned D, unsigned P, IdentifierInfo *Id,
          bool Typename, bool ParameterPack, bool HasTypeConstraint = false,
-         std::optional<unsigned> NumExpanded = std::nullopt);
+         UnsignedOrNone NumExpanded = std::nullopt);
   static TemplateTypeParmDecl *CreateDeserialized(const ASTContext &C,
                                                   GlobalDeclID ID);
   static TemplateTypeParmDecl *CreateDeserialized(const ASTContext &C,
@@ -1314,13 +1319,8 @@ public:
   /// expanded parameter pack. For example, instantiating
   /// \c X<int, unsigned int> results in \c Convertibles being an expanded
   /// parameter pack of size 2 (use getNumExpansionTypes() to get this number).
-  bool isExpandedParameterPack() const { return ExpandedParameterPack; }
-
-  /// Retrieves the number of parameters in an expanded parameter pack.
-  unsigned getNumExpansionParameters() const {
-    assert(ExpandedParameterPack && "Not an expansion parameter pack");
-    return NumExpanded;
-  }
+  /// Retrieves the number of parameters in an expanded parameter pack, if any.
+  UnsignedOrNone getNumExpansionParameters() const { return NumExpanded; }
 
   /// Returns the type constraint associated with this template parameter (if
   /// any).
@@ -1330,7 +1330,8 @@ public:
   }
 
   void setTypeConstraint(ConceptReference *CR,
-                         Expr *ImmediatelyDeclaredConstraint);
+                         Expr *ImmediatelyDeclaredConstraint,
+                         UnsignedOrNone ArgPackSubstIndex);
 
   /// Determine whether this template parameter has a type-constraint.
   bool hasTypeConstraint() const {
@@ -1342,9 +1343,11 @@ public:
   ///
   /// Use this instead of getTypeConstraint for concepts APIs that
   /// accept an ArrayRef of constraint expressions.
-  void getAssociatedConstraints(llvm::SmallVectorImpl<const Expr *> &AC) const {
+  void getAssociatedConstraints(
+      llvm::SmallVectorImpl<AssociatedConstraint> &AC) const {
     if (HasTypeConstraint)
-      AC.push_back(getTypeConstraint()->getImmediatelyDeclaredConstraint());
+      AC.emplace_back(getTypeConstraint()->getImmediatelyDeclaredConstraint(),
+                      getTypeConstraint()->getArgPackSubstIndex());
   }
 
   SourceRange getSourceRange() const override LLVM_READONLY;
@@ -1563,9 +1566,10 @@ public:
   ///
   /// Use this instead of getPlaceholderImmediatelyDeclaredConstraint for
   /// concepts APIs that accept an ArrayRef of constraint expressions.
-  void getAssociatedConstraints(llvm::SmallVectorImpl<const Expr *> &AC) const {
+  void getAssociatedConstraints(
+      llvm::SmallVectorImpl<AssociatedConstraint> &AC) const {
     if (Expr *E = getPlaceholderTypeConstraint())
-      AC.push_back(E);
+      AC.emplace_back(E);
   }
 
   // Implement isa/cast/dyncast/etc.
@@ -1850,15 +1854,23 @@ class ClassTemplateSpecializationDecl : public CXXRecordDecl,
   LLVM_PREFERRED_TYPE(TemplateSpecializationKind)
   unsigned SpecializationKind : 3;
 
+  /// Indicate that we have matched a parameter pack with a non pack
+  /// argument, when the opposite match is also allowed.
+  /// This needs to be cached as deduction is performed during declaration,
+  /// and we need the information to be preserved so that it is consistent
+  /// during instantiation.
+  bool StrictPackMatch : 1;
+
 protected:
   ClassTemplateSpecializationDecl(ASTContext &Context, Kind DK, TagKind TK,
                                   DeclContext *DC, SourceLocation StartLoc,
                                   SourceLocation IdLoc,
                                   ClassTemplateDecl *SpecializedTemplate,
                                   ArrayRef<TemplateArgument> Args,
+                                  bool StrictPackMatch,
                                   ClassTemplateSpecializationDecl *PrevDecl);
 
-  explicit ClassTemplateSpecializationDecl(ASTContext &C, Kind DK);
+  ClassTemplateSpecializationDecl(ASTContext &C, Kind DK);
 
 public:
   friend class ASTDeclReader;
@@ -1868,7 +1880,7 @@ public:
   Create(ASTContext &Context, TagKind TK, DeclContext *DC,
          SourceLocation StartLoc, SourceLocation IdLoc,
          ClassTemplateDecl *SpecializedTemplate,
-         ArrayRef<TemplateArgument> Args,
+         ArrayRef<TemplateArgument> Args, bool StrictPackMatch,
          ClassTemplateSpecializationDecl *PrevDecl);
   static ClassTemplateSpecializationDecl *CreateDeserialized(ASTContext &C,
                                                              GlobalDeclID ID);
@@ -1938,6 +1950,10 @@ public:
   void setSpecializationKind(TemplateSpecializationKind TSK) {
     SpecializationKind = TSK;
   }
+
+  bool hasStrictPackMatch() const { return StrictPackMatch; }
+
+  void setStrictPackMatch(bool Val) { StrictPackMatch = Val; }
 
   /// Get the point of instantiation (if any), or null if none.
   SourceLocation getPointOfInstantiation() const {
@@ -2146,7 +2162,8 @@ public:
   ///
   /// The constraints in the resulting list are to be treated as if in a
   /// conjunction ("and").
-  void getAssociatedConstraints(llvm::SmallVectorImpl<const Expr *> &AC) const {
+  void getAssociatedConstraints(
+      llvm::SmallVectorImpl<AssociatedConstraint> &AC) const {
     TemplateParams->getAssociatedConstraints(AC);
   }
 
@@ -2920,7 +2937,8 @@ public:
   ///
   /// The constraints in the resulting list are to be treated as if in a
   /// conjunction ("and").
-  void getAssociatedConstraints(llvm::SmallVectorImpl<const Expr *> &AC) const {
+  void getAssociatedConstraints(
+      llvm::SmallVectorImpl<AssociatedConstraint> &AC) const {
     TemplateParams->getAssociatedConstraints(AC);
   }
 
@@ -3348,10 +3366,10 @@ inline TemplateDecl *getAsTypeTemplateDecl(Decl *D) {
 ///
 /// In \c A<int,int>::B, \c NTs and \c TTs have expanded pack size 2, and \c Us
 /// is not a pack expansion, so returns an empty Optional.
-inline std::optional<unsigned> getExpandedPackSize(const NamedDecl *Param) {
+inline UnsignedOrNone getExpandedPackSize(const NamedDecl *Param) {
   if (const auto *TTP = dyn_cast<TemplateTypeParmDecl>(Param)) {
-    if (TTP->isExpandedParameterPack())
-      return TTP->getNumExpansionParameters();
+    if (UnsignedOrNone Num = TTP->getNumExpansionParameters())
+      return Num;
   }
 
   if (const auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(Param)) {
@@ -3369,7 +3387,7 @@ inline std::optional<unsigned> getExpandedPackSize(const NamedDecl *Param) {
 
 /// Internal helper used by Subst* nodes to retrieve the parameter list
 /// for their AssociatedDecl.
-TemplateParameterList *getReplacedTemplateParameterList(Decl *D);
+TemplateParameterList *getReplacedTemplateParameterList(const Decl *D);
 
 } // namespace clang
 

@@ -3,12 +3,15 @@
 ;; See llvm/test/Transforms/MemProfContextDisambiguation/recursive.ll for
 ;; information on how the test was created.
 
+;; -stats requires asserts
+; REQUIRES: asserts
+
 ; RUN: opt -thinlto-bc %s >%t.o
 
 ;; Check behavior when we enable cloning of contexts involved with recursive
-;; cycles, but not through the cycle itself. I.e. until full support for
-;; recursion is added, the cloned recursive call from C back to B (line 12) will
-;; not be updated to call a clone.
+;; cycles, but not through the cycle itself. I.e. with full support for cloning
+;; recursive cycles off, the cloned recursive call from C back to B (line 12)
+;; will not be updated to call a clone.
 ; RUN: llvm-lto2 run %t.o -enable-memprof-context-disambiguation \
 ; RUN:  -supports-hot-cold-new \
 ; RUN:  -r=%t.o,_Z1Dv,plx \
@@ -19,8 +22,9 @@
 ; RUN:  -memprof-verify-ccg -memprof-verify-nodes \
 ; RUN:  -pass-remarks=memprof-context-disambiguation \
 ; RUN:	-memprof-allow-recursive-callsites=true \
+; RUN:	-memprof-clone-recursive-contexts=false \
 ; RUN:  -o %t.out 2>&1 | FileCheck %s \
-; RUN:  --implicit-check-not "memprof_recursive3.cc:12:10: call in clone _Z1Ci.memprof.1 assigned" \
+; RUN:  --implicit-check-not "memprof_recursive.cc:12:10: call in clone _Z1Ci.memprof.1 assigned" \
 ; RUN:  --check-prefix=ALLOW-RECUR-CALLSITES --check-prefix=ALLOW-RECUR-CONTEXTS
 
 ;; Skipping recursive callsites should result in no cloning.
@@ -35,11 +39,11 @@
 ; RUN:  -pass-remarks=memprof-context-disambiguation \
 ; RUN:	-memprof-allow-recursive-callsites=false \
 ; RUN:  -o %t.out 2>&1 | FileCheck %s --allow-empty \
-; RUN:  --implicit-check-not "memprof_recursive3.cc:12:10: call in clone _Z1Ci.memprof.1 assigned" \
+; RUN:  --implicit-check-not "memprof_recursive.cc:12:10: call in clone _Z1Ci.memprof.1 assigned" \
 ; RUN:  --implicit-check-not="created clone" \
 ; RUN:	--implicit-check-not="marked with memprof allocation attribute cold"
 
-;; Check the default behavior (disabled recursive callsites).
+;; Check the default behavior (clone recursive callsites).
 ; RUN: llvm-lto2 run %t.o -enable-memprof-context-disambiguation \
 ; RUN:  -supports-hot-cold-new \
 ; RUN:  -r=%t.o,_Z1Dv,plx \
@@ -47,12 +51,19 @@
 ; RUN:  -r=%t.o,_Z1Bi,plx \
 ; RUN:  -r=%t.o,main,plx \
 ; RUN:  -r=%t.o,_Znam, \
-; RUN:  -memprof-verify-ccg -memprof-verify-nodes \
+; RUN:  -memprof-verify-ccg -memprof-verify-nodes -stats \
+; RUN:  -memprof-export-to-dot -memprof-dot-file-path-prefix=%t. \
 ; RUN:  -pass-remarks=memprof-context-disambiguation \
-; RUN:  -o %t.out 2>&1 | FileCheck %s --allow-empty \
-; RUN:  --implicit-check-not "memprof_recursive3.cc:12:10: call in clone _Z1Ci.memprof.1 assigned" \
-; RUN:  --implicit-check-not="created clone" \
-; RUN:	--implicit-check-not="marked with memprof allocation attribute cold"
+; RUN:  -o %t.out 2>&1 | FileCheck %s \
+; RUN:  --check-prefix=ALLOW-RECUR-CALLSITES --check-prefix=ALLOW-RECUR-CONTEXTS \
+; RUN:	--check-prefix=CLONE-RECUR-CALLSITES
+
+;; Check that the backedge was correctly detected and emitted to the dot file
+;; as a dotted edge.
+; RUN: cat %t.ccg.postbuild.dot | FileCheck %s --check-prefix=DOT
+; DOT-DAG: Node[[B:0x[a-f0-9]+]] {{.*}}_Z1Bi -\> _Z1Ci
+; DOT-DAG: Node[[C:0x[a-f0-9]+]] {{.*}}_Z1Ci -\> _Z1Bi
+; DOT-DAG: Node[[C]] -> Node[[B]]{{.*}}style="dotted"
 
 ;; Skipping recursive contexts should prevent spurious call to cloned version of
 ;; B from the context starting at memprof_recursive.cc:19:13, which is actually
@@ -68,8 +79,9 @@
 ; RUN:  -pass-remarks=memprof-context-disambiguation \
 ; RUN:	-memprof-allow-recursive-callsites=true \
 ; RUN:	-memprof-allow-recursive-contexts=false \
+; RUN:	-memprof-clone-recursive-contexts=false \
 ; RUN:  -o %t.out 2>&1 | FileCheck %s \
-; RUN:  --implicit-check-not "memprof_recursive3.cc:12:10: call in clone _Z1Ci.memprof.1 assigned" \
+; RUN:  --implicit-check-not "memprof_recursive.cc:12:10: call in clone _Z1Ci.memprof.1 assigned" \
 ; RUN:  --check-prefix=ALLOW-RECUR-CALLSITES --check-prefix=SKIP-RECUR-CONTEXTS
 
 ; ALLOW-RECUR-CALLSITES: memprof_recursive.cc:4:0: created clone _Z1Dv.memprof.1
@@ -77,6 +89,7 @@
 ; ALLOW-RECUR-CALLSITES: memprof_recursive.cc:5:10: call in clone _Z1Dv.memprof.1 marked with memprof allocation attribute cold
 ; ALLOW-RECUR-CALLSITES: memprof_recursive.cc:8:0: created clone _Z1Ci.memprof.1
 ; ALLOW-RECUR-CALLSITES: memprof_recursive.cc:10:12: call in clone _Z1Ci.memprof.1 assigned to call function clone _Z1Dv.memprof.1
+; CLONE-RECUR-CALLSITES: memprof_recursive.cc:12:10: call in clone _Z1Ci.memprof.1 assigned to call function clone _Z1Bi.memprof.1
 ; ALLOW-RECUR-CALLSITES: memprof_recursive.cc:14:0: created clone _Z1Bi.memprof.1
 ; ALLOW-RECUR-CALLSITES: memprof_recursive.cc:15:10: call in clone _Z1Bi.memprof.1 assigned to call function clone _Z1Ci.memprof.1
 ;; We should only call the cold clone for the recursive context if we enabled
@@ -84,6 +97,7 @@
 ; ALLOW-RECUR-CONTEXTS: memprof_recursive.cc:19:13: call in clone main assigned to call function clone _Z1Bi.memprof.1
 ; SKIP-RECUR-CONTEXTS-NOT: memprof_recursive.cc:19:13: call in clone main assigned to call function clone _Z1Bi.memprof.1
 ; ALLOW-RECUR-CALLSITES: memprof_recursive.cc:20:13: call in clone main assigned to call function clone _Z1Bi.memprof.1
+; CLONE-RECUR-CALLSITES: 1 memprof-context-disambiguation - Number of backedges with deferred cloning
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

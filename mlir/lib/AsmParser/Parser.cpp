@@ -271,6 +271,17 @@ ParseResult Parser::parseToken(Token::Kind expectedToken,
   return emitWrongTokenError(message);
 }
 
+/// Parses a quoted string token if present.
+ParseResult Parser::parseOptionalString(std::string *string) {
+  if (!getToken().is(Token::string))
+    return failure();
+
+  if (string)
+    *string = getToken().getStringValue();
+  consumeToken();
+  return success();
+}
+
 /// Parse an optional integer value from the stream.
 OptionalParseResult Parser::parseOptionalInteger(APInt &result) {
   // Parse `false` and `true` keywords as 0 and 1 respectively.
@@ -412,15 +423,26 @@ ParseResult Parser::parseOptionalKeyword(StringRef *keyword) {
   return success();
 }
 
+ParseResult Parser::parseOptionalKeywordOrString(std::string *result) {
+  StringRef keyword;
+  if (succeeded(parseOptionalKeyword(&keyword))) {
+    *result = keyword.str();
+    return success();
+  }
+
+  return parseOptionalString(result);
+}
+
 //===----------------------------------------------------------------------===//
 // Resource Parsing
+//===----------------------------------------------------------------------===//
 
 FailureOr<AsmDialectResourceHandle>
 Parser::parseResourceHandle(const OpAsmDialectInterface *dialect,
-                            StringRef &name) {
+                            std::string &name) {
   assert(dialect && "expected valid dialect interface");
   SMLoc nameLoc = getToken().getLoc();
-  if (failed(parseOptionalKeyword(&name)))
+  if (failed(parseOptionalKeywordOrString(&name)))
     return emitError("expected identifier key for 'resource' entry");
   auto &resources = getState().symbols.dialectResources;
 
@@ -451,12 +473,13 @@ Parser::parseResourceHandle(Dialect *dialect) {
     return emitError() << "dialect '" << dialect->getNamespace()
                        << "' does not expect resource handles";
   }
-  StringRef resourceName;
+  std::string resourceName;
   return parseResourceHandle(interface, resourceName);
 }
 
 //===----------------------------------------------------------------------===//
 // Code Completion
+//===----------------------------------------------------------------------===//
 
 ParseResult Parser::codeCompleteDialectName() {
   state.codeCompleteContext->completeDialectName();
@@ -799,6 +822,12 @@ private:
   /// their first reference, to allow checking for use of undefined values.
   DenseMap<Value, SMLoc> forwardRefPlaceholders;
 
+  /// Operations that define the placeholders. These are kept until the end of
+  /// of the lifetime of the parser because some custom parsers may store
+  /// references to them in local state and use them after forward references
+  /// have been resolved.
+  DenseSet<Operation *> forwardRefOps;
+
   /// Deffered locations: when parsing `loc(#loc42)` we add an entry to this
   /// map. After parsing the definition `#loc42 = ...` we'll patch back users
   /// of this location.
@@ -812,8 +841,8 @@ private:
 };
 } // namespace
 
-MLIR_DECLARE_EXPLICIT_TYPE_ID(OperationParser::DeferredLocInfo *)
-MLIR_DEFINE_EXPLICIT_TYPE_ID(OperationParser::DeferredLocInfo *)
+MLIR_DECLARE_EXPLICIT_SELF_OWNING_TYPE_ID(OperationParser::DeferredLocInfo *)
+MLIR_DEFINE_EXPLICIT_SELF_OWNING_TYPE_ID(OperationParser::DeferredLocInfo *)
 
 OperationParser::OperationParser(ParserState &state, ModuleOp topLevelOp)
     : Parser(state), opBuilder(topLevelOp.getRegion()), topLevelOp(topLevelOp) {
@@ -826,11 +855,11 @@ OperationParser::OperationParser(ParserState &state, ModuleOp topLevelOp)
 }
 
 OperationParser::~OperationParser() {
-  for (auto &fwd : forwardRefPlaceholders) {
+  for (Operation *op : forwardRefOps) {
     // Drop all uses of undefined forward declared reference and destroy
     // defining operation.
-    fwd.first.dropAllUses();
-    fwd.first.getDefiningOp()->destroy();
+    op->dropAllUses();
+    op->destroy();
   }
   for (const auto &scope : forwardRef) {
     for (const auto &fwd : scope) {
@@ -986,7 +1015,6 @@ ParseResult OperationParser::addDefinition(UnresolvedOperand useInfo,
     // the actual definition instead, delete the forward ref, and remove it
     // from our set of forward references we track.
     existing.replaceAllUsesWith(value);
-    existing.getDefiningOp()->destroy();
     forwardRefPlaceholders.erase(existing);
 
     // If a definition of the value already exists, replace it in the assembly
@@ -1173,6 +1201,7 @@ Value OperationParser::createForwardRefPlaceholder(SMLoc loc, Type type) {
       /*attributes=*/std::nullopt, /*properties=*/nullptr, /*successors=*/{},
       /*numRegions=*/0);
   forwardRefPlaceholders[op->getResult(0)] = loc;
+  forwardRefOps.insert(op);
   return op->getResult(0);
 }
 
@@ -1976,6 +2005,11 @@ private:
 
 FailureOr<OperationName> OperationParser::parseCustomOperationName() {
   Token nameTok = getToken();
+  // Accept keywords here as they may be interpreted as a shortened operation
+  // name, e.g., `dialect.keyword` can be spelled as just `keyword` within a
+  // region of an operation from `dialect`.
+  if (nameTok.getKind() != Token::bare_identifier && !nameTok.isKeyword())
+    return emitError("expected bare identifier or keyword");
   StringRef opName = nameTok.getSpelling();
   if (opName.empty())
     return (emitError("empty operation name is invalid"), failure());
@@ -2207,6 +2241,14 @@ ParseResult OperationParser::parseRegionBody(Region &region, SMLoc startLoc,
 
   // Parse the first block directly to allow for it to be unnamed.
   auto owningBlock = std::make_unique<Block>();
+  auto failureCleanup = llvm::make_scope_exit([&] {
+    if (owningBlock) {
+      // If parsing failed, as indicated by the fact that `owningBlock` still
+      // owns the block, drop all forward references from preceding operations
+      // to definitions within the parsed block.
+      owningBlock->dropAllDefinedValueUses();
+    }
+  });
   Block *block = owningBlock.get();
 
   // If this block is not defined in the source file, add a definition for it
@@ -2530,8 +2572,8 @@ private:
 /// textual format.
 class ParsedResourceEntry : public AsmParsedResourceEntry {
 public:
-  ParsedResourceEntry(StringRef key, SMLoc keyLoc, Token value, Parser &p)
-      : key(key), keyLoc(keyLoc), value(value), p(p) {}
+  ParsedResourceEntry(std::string key, SMLoc keyLoc, Token value, Parser &p)
+      : key(std::move(key)), keyLoc(keyLoc), value(value), p(p) {}
   ~ParsedResourceEntry() override = default;
 
   StringRef getKey() const final { return key; }
@@ -2607,7 +2649,7 @@ public:
   }
 
 private:
-  StringRef key;
+  std::string key;
   SMLoc keyLoc;
   Token value;
   Parser &p;
@@ -2736,7 +2778,7 @@ ParseResult TopLevelOperationParser::parseDialectResourceFileMetadata() {
     return parseCommaSeparatedListUntil(Token::r_brace, [&]() -> ParseResult {
       // Parse the name of the resource entry.
       SMLoc keyLoc = getToken().getLoc();
-      StringRef key;
+      std::string key;
       if (failed(parseResourceHandle(handler, key)) ||
           parseToken(Token::colon, "expected ':'"))
         return failure();
@@ -2763,8 +2805,8 @@ ParseResult TopLevelOperationParser::parseExternalResourceFileMetadata() {
     return parseCommaSeparatedListUntil(Token::r_brace, [&]() -> ParseResult {
       // Parse the name of the resource entry.
       SMLoc keyLoc = getToken().getLoc();
-      StringRef key;
-      if (failed(parseOptionalKeyword(&key)))
+      std::string key;
+      if (failed(parseOptionalKeywordOrString(&key)))
         return emitError(
             "expected identifier key for 'external_resources' entry");
       if (parseToken(Token::colon, "expected ':'"))

@@ -84,7 +84,7 @@ define i32 @callee_many_scalars(i8 %a, i16 %b, i32 %c, i64 %d, i32 %e, i32 %f, i
 ; RV32I-FPELIM:       # %bb.0:
 ; RV32I-FPELIM-NEXT:    lw t0, 4(sp)
 ; RV32I-FPELIM-NEXT:    lw t1, 0(sp)
-; RV32I-FPELIM-NEXT:    andi a0, a0, 255
+; RV32I-FPELIM-NEXT:    zext.b a0, a0
 ; RV32I-FPELIM-NEXT:    slli a1, a1, 16
 ; RV32I-FPELIM-NEXT:    xor a3, a3, a7
 ; RV32I-FPELIM-NEXT:    srli a1, a1, 16
@@ -107,7 +107,7 @@ define i32 @callee_many_scalars(i8 %a, i16 %b, i32 %c, i64 %d, i32 %e, i32 %f, i
 ; RV32I-WITHFP-NEXT:    addi s0, sp, 16
 ; RV32I-WITHFP-NEXT:    lw t0, 4(s0)
 ; RV32I-WITHFP-NEXT:    lw t1, 0(s0)
-; RV32I-WITHFP-NEXT:    andi a0, a0, 255
+; RV32I-WITHFP-NEXT:    zext.b a0, a0
 ; RV32I-WITHFP-NEXT:    slli a1, a1, 16
 ; RV32I-WITHFP-NEXT:    xor a3, a3, a7
 ; RV32I-WITHFP-NEXT:    srli a1, a1, 16

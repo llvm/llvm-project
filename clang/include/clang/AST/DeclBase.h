@@ -492,7 +492,7 @@ public:
   /// perform non-Decl specific checks based on the object's type and strict
   /// flex array level.
   static bool isFlexibleArrayMemberLike(
-      ASTContext &Context, const Decl *D, QualType Ty,
+      const ASTContext &Context, const Decl *D, QualType Ty,
       LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel,
       bool IgnoreTemplateOrMacroSubstitution);
 
@@ -1257,8 +1257,11 @@ public:
   int64_t getID() const;
 
   /// Looks through the Decl's underlying type to extract a FunctionType
-  /// when possible. Will return null if the type underlying the Decl does not
-  /// have a FunctionType.
+  /// when possible. This includes direct FunctionDecls, along with various
+  /// function types and typedefs. This includes function pointers/references,
+  /// member function pointers, and optionally if \p BlocksToo is set
+  /// Objective-C block pointers. Returns nullptr if the type underlying the
+  /// Decl does not have a FunctionType.
   const FunctionType *getFunctionType(bool BlocksToo = true) const;
 
   // Looks through the Decl's underlying type to determine if it's a
@@ -2236,9 +2239,13 @@ public:
     return DC && this->getPrimaryContext() == DC->getPrimaryContext();
   }
 
-  /// Determine whether this declaration context encloses the
+  /// Determine whether this declaration context semantically encloses the
   /// declaration context DC.
   bool Encloses(const DeclContext *DC) const;
+
+  /// Determine whether this declaration context lexically encloses the
+  /// declaration context DC.
+  bool LexicallyEncloses(const DeclContext *DC) const;
 
   /// Find the nearest non-closure ancestor of this context,
   /// i.e. the innermost semantic parent of this context which is not

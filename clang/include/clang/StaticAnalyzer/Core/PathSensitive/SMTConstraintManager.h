@@ -324,8 +324,6 @@ protected:
 
     // Construct the logical AND of all the constraints
     if (I != IE) {
-      std::vector<llvm::SMTExprRef> ASTs;
-
       llvm::SMTExprRef Constraint = I++->second;
       while (I != IE) {
         Constraint = Solver->mkAnd(Constraint, I++->second);
@@ -353,12 +351,7 @@ protected:
     addStateConstraints(NewState);
 
     std::optional<bool> res = Solver->check();
-    if (!res)
-      Cached[hash] = ConditionTruthVal();
-    else
-      Cached[hash] = ConditionTruthVal(*res);
-
-    return Cached[hash];
+    return Cached[hash] = res ? ConditionTruthVal(*res) : ConditionTruthVal();
   }
 
   // Cache the result of an SMT query (true, false, unknown). The key is the

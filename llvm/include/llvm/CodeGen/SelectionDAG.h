@@ -873,7 +873,7 @@ public:
   /// for integers, a type wider than) VT's element type.
   SDValue getSplatBuildVector(EVT VT, const SDLoc &DL, SDValue Op) {
     // VerifySDNode (via InsertNode) checks BUILD_VECTOR later.
-    if (Op.getOpcode() == ISD::UNDEF) {
+    if (Op.isUndef()) {
       assert((VT.getVectorElementType() == Op.getValueType() ||
               (VT.isInteger() &&
                VT.getVectorElementType().bitsLE(Op.getValueType()))) &&
@@ -889,7 +889,7 @@ public:
   // Return a splat ISD::SPLAT_VECTOR node, consisting of Op splatted to all
   // elements.
   SDValue getSplatVector(EVT VT, const SDLoc &DL, SDValue Op) {
-    if (Op.getOpcode() == ISD::UNDEF) {
+    if (Op.isUndef()) {
       assert((VT.getVectorElementType() == Op.getValueType() ||
               (VT.isInteger() &&
                VT.getVectorElementType().bitsLE(Op.getValueType()))) &&
@@ -923,6 +923,36 @@ public:
   ///
   /// Example: shuffle A, B, <0,5,2,7> -> shuffle B, A, <4,1,6,3>
   SDValue getCommutedVectorShuffle(const ShuffleVectorSDNode &SV);
+
+  /// Extract element at \p Idx from \p Vec.  See EXTRACT_VECTOR_ELT
+  /// description for result type handling.
+  SDValue getExtractVectorElt(const SDLoc &DL, EVT VT, SDValue Vec,
+                              unsigned Idx) {
+    return getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, Vec,
+                   getVectorIdxConstant(Idx, DL));
+  }
+
+  /// Insert \p Elt into \p Vec at offset \p Idx.  See INSERT_VECTOR_ELT
+  /// description for element type handling.
+  SDValue getInsertVectorElt(const SDLoc &DL, SDValue Vec, SDValue Elt,
+                             unsigned Idx) {
+    return getNode(ISD::INSERT_VECTOR_ELT, DL, Vec.getValueType(), Vec, Elt,
+                   getVectorIdxConstant(Idx, DL));
+  }
+
+  /// Insert \p SubVec at the \p Idx element of \p Vec.
+  SDValue getInsertSubvector(const SDLoc &DL, SDValue Vec, SDValue SubVec,
+                             unsigned Idx) {
+    return getNode(ISD::INSERT_SUBVECTOR, DL, Vec.getValueType(), Vec, SubVec,
+                   getVectorIdxConstant(Idx, DL));
+  }
+
+  /// Return the \p VT typed sub-vector of \p Vec at \p Idx
+  SDValue getExtractSubvector(const SDLoc &DL, EVT VT, SDValue Vec,
+                              unsigned Idx) {
+    return getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Vec,
+                   getVectorIdxConstant(Idx, DL));
+  }
 
   /// Convert Op, which must be of float type, to the
   /// float type VT, by either extending or rounding (by truncation).
@@ -1130,6 +1160,9 @@ public:
     return getNode(ISD::UNDEF, SDLoc(), VT);
   }
 
+  /// Return a POISON node. POISON does not have a useful SDLoc.
+  SDValue getPOISON(EVT VT) { return getNode(ISD::POISON, SDLoc(), VT); }
+
   /// Return a node that represents the runtime scaling 'MulImm * RuntimeVL'.
   SDValue getVScale(const SDLoc &DL, EVT VT, APInt MulImm,
                     bool ConstantFold = true);
@@ -1322,16 +1355,16 @@ public:
   SDValue getAtomic(unsigned Opcode, const SDLoc &dl, EVT MemVT, SDValue Chain,
                     SDValue Ptr, SDValue Val, MachineMemOperand *MMO);
 
-  /// Gets a node for an atomic op, produces result and chain and
-  /// takes 1 operand.
-  SDValue getAtomic(unsigned Opcode, const SDLoc &dl, EVT MemVT, EVT VT,
-                    SDValue Chain, SDValue Ptr, MachineMemOperand *MMO);
-
   /// Gets a node for an atomic op, produces result and chain and takes N
   /// operands.
   SDValue getAtomic(unsigned Opcode, const SDLoc &dl, EVT MemVT,
                     SDVTList VTList, ArrayRef<SDValue> Ops,
-                    MachineMemOperand *MMO);
+                    MachineMemOperand *MMO,
+                    ISD::LoadExtType ExtType = ISD::NON_EXTLOAD);
+
+  SDValue getAtomicLoad(ISD::LoadExtType ExtType, const SDLoc &dl, EVT MemVT,
+                        EVT VT, SDValue Chain, SDValue Ptr,
+                        MachineMemOperand *MMO);
 
   /// Creates a MemIntrinsicNode that may produce a
   /// result and takes a list of operands. Opcode may be INTRINSIC_VOID,
@@ -1342,7 +1375,8 @@ public:
       EVT MemVT, MachinePointerInfo PtrInfo, Align Alignment,
       MachineMemOperand::Flags Flags = MachineMemOperand::MOLoad |
                                        MachineMemOperand::MOStore,
-      LocationSize Size = 0, const AAMDNodes &AAInfo = AAMDNodes());
+      LocationSize Size = LocationSize::precise(0),
+      const AAMDNodes &AAInfo = AAMDNodes());
 
   inline SDValue getMemIntrinsicNode(
       unsigned Opcode, const SDLoc &dl, SDVTList VTList, ArrayRef<SDValue> Ops,
@@ -1350,7 +1384,8 @@ public:
       MaybeAlign Alignment = std::nullopt,
       MachineMemOperand::Flags Flags = MachineMemOperand::MOLoad |
                                        MachineMemOperand::MOStore,
-      LocationSize Size = 0, const AAMDNodes &AAInfo = AAMDNodes()) {
+      LocationSize Size = LocationSize::precise(0),
+      const AAMDNodes &AAInfo = AAMDNodes()) {
     // Ensure that codegen never sees alignment 0
     return getMemIntrinsicNode(Opcode, dl, VTList, Ops, MemVT, PtrInfo,
                                Alignment.value_or(getEVTAlign(MemVT)), Flags,
@@ -1461,6 +1496,9 @@ public:
                         SDValue Ptr, EVT SVT, MachineMemOperand *MMO);
   SDValue getIndexedStore(SDValue OrigStore, const SDLoc &dl, SDValue Base,
                           SDValue Offset, ISD::MemIndexedMode AM);
+  SDValue getStore(SDValue Chain, const SDLoc &dl, SDValue Val, SDValue Ptr,
+                   SDValue Offset, EVT SVT, MachineMemOperand *MMO,
+                   ISD::MemIndexedMode AM, bool IsTruncating = false);
 
   SDValue getLoadVP(ISD::MemIndexedMode AM, ISD::LoadExtType ExtType, EVT VT,
                     const SDLoc &dl, SDValue Chain, SDValue Ptr, SDValue Offset,
@@ -1606,11 +1644,6 @@ public:
   /// Return the specified value casted to
   /// the target's desired shift amount type.
   SDValue getShiftAmountOperand(EVT LHSTy, SDValue Op);
-
-  /// Create the DAG equivalent of vector_partial_reduce where Op1 and Op2 are
-  /// its operands and ReducedTY is the intrinsic's return type.
-  SDValue getPartialReduceAdd(SDLoc DL, EVT ReducedTy, SDValue Op1,
-                              SDValue Op2);
 
   /// Expands a node with multiple results to an FP or vector libcall. The
   /// libcall is expected to take all the operands of the \p Node followed by
@@ -1772,7 +1805,7 @@ public:
 
   /// Creates a VReg SDDbgValue node.
   SDDbgValue *getVRegDbgValue(DIVariable *Var, DIExpression *Expr,
-                              unsigned VReg, bool IsIndirect,
+                              Register VReg, bool IsIndirect,
                               const DebugLoc &DL, unsigned O);
 
   /// Creates a SDDbgValue node from a list of locations.
@@ -2145,9 +2178,23 @@ public:
   bool isBaseWithConstantOffset(SDValue Op) const;
 
   /// Test whether the given SDValue (or all elements of it, if it is a
+  /// vector) is known to never be NaN in \p DemandedElts. If \p SNaN is true,
+  /// returns if \p Op is known to never be a signaling NaN (it may still be a
+  /// qNaN).
+  bool isKnownNeverNaN(SDValue Op, const APInt &DemandedElts, bool SNaN = false,
+                       unsigned Depth = 0) const;
+
+  /// Test whether the given SDValue (or all elements of it, if it is a
   /// vector) is known to never be NaN. If \p SNaN is true, returns if \p Op is
   /// known to never be a signaling NaN (it may still be a qNaN).
   bool isKnownNeverNaN(SDValue Op, bool SNaN = false, unsigned Depth = 0) const;
+
+  /// \returns true if \p Op is known to never be a signaling NaN in \p
+  /// DemandedElts.
+  bool isKnownNeverSNaN(SDValue Op, const APInt &DemandedElts,
+                        unsigned Depth = 0) const {
+    return isKnownNeverNaN(Op, DemandedElts, true, Depth);
+  }
 
   /// \returns true if \p Op is known to never be a signaling NaN.
   bool isKnownNeverSNaN(SDValue Op, unsigned Depth = 0) const {
@@ -2450,6 +2497,9 @@ public:
                                 const SDLoc &DLoc);
 
 private:
+#ifndef NDEBUG
+  void verifyNode(SDNode *N) const;
+#endif
   void InsertNode(SDNode *N);
   bool RemoveNodeFromCSEMaps(SDNode *N);
   void AddModifiedNodeToCSEMaps(SDNode *N);

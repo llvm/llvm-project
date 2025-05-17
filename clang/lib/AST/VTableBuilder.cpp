@@ -1169,12 +1169,13 @@ void ItaniumVTableBuilder::ComputeThisAdjustments() {
       //
       // Do not set ThunkInfo::Method if Idx is already in VTableThunks. This
       // can happen when covariant return adjustment is required too.
-      if (!VTableThunks.count(Idx)) {
+      auto [It, Inserted] = VTableThunks.try_emplace(Idx);
+      if (Inserted) {
         const CXXMethodDecl *Method = VTables.findOriginalMethodInMap(MD);
-        VTableThunks[Idx].Method = Method;
-        VTableThunks[Idx].ThisType = Method->getThisType().getTypePtr();
+        It->second.Method = Method;
+        It->second.ThisType = Method->getThisType().getTypePtr();
       }
-      VTableThunks[Idx].This = ThisAdjustment;
+      It->second.This = ThisAdjustment;
     };
 
     SetThisAdjustmentThunk(VTableIndex);
@@ -1653,8 +1654,9 @@ void ItaniumVTableBuilder::AddMethods(
     // findOriginalMethod to find the method that created the entry if the
     // method in the entry requires adjustment.
     if (!ReturnAdjustment.isEmpty()) {
-      VTableThunks[Components.size()].Method = MD;
-      VTableThunks[Components.size()].ThisType = MD->getThisType().getTypePtr();
+      auto &VTT = VTableThunks[Components.size()];
+      VTT.Method = MD;
+      VTT.ThisType = MD->getThisType().getTypePtr();
     }
 
     AddMethod(Overrider.Method, ReturnAdjustment);
@@ -2113,8 +2115,8 @@ void ItaniumVTableBuilder::dumpLayout(raw_ostream &Out) {
 
     // Dump the next address point.
     uint64_t NextIndex = Index + 1;
-    if (AddressPointsByIndex.count(NextIndex)) {
-      if (AddressPointsByIndex.count(NextIndex) == 1) {
+    if (unsigned Count = AddressPointsByIndex.count(NextIndex)) {
+      if (Count == 1) {
         const BaseSubobject &Base =
           AddressPointsByIndex.find(NextIndex)->second;
 
@@ -3734,8 +3736,7 @@ void MicrosoftVTableContext::computeVTableRelatedInformation(
     }
   }
 
-  MethodVFTableLocations.insert(NewMethodLocations.begin(),
-                                NewMethodLocations.end());
+  MethodVFTableLocations.insert_range(NewMethodLocations);
   if (Context.getLangOpts().DumpVTableLayouts)
     dumpMethodLocations(RD, NewMethodLocations, llvm::outs());
 }
@@ -3822,8 +3823,7 @@ const VirtualBaseInfo &MicrosoftVTableContext::computeVBTableRelatedInformation(
     // virtual bases come first so that the layout is the same.
     const VirtualBaseInfo &BaseInfo =
         computeVBTableRelatedInformation(VBPtrBase);
-    VBI->VBTableIndices.insert(BaseInfo.VBTableIndices.begin(),
-                               BaseInfo.VBTableIndices.end());
+    VBI->VBTableIndices.insert_range(BaseInfo.VBTableIndices);
   }
 
   // New vbases are added to the end of the vbtable.

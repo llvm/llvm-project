@@ -776,12 +776,34 @@ define <4 x double> @shuffle_v4f64_0044(<4 x double> %a, <4 x double> %b) {
 }
 
 define <4 x double> @shuffle_v4f64_0044_v2f64(<2 x double> %a, <2 x double> %b) {
-; ALL-LABEL: shuffle_v4f64_0044_v2f64:
-; ALL:       # %bb.0:
-; ALL-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; ALL-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; ALL-NEXT:    vmovddup {{.*#+}} ymm0 = ymm0[0,0,2,2]
-; ALL-NEXT:    retq
+; AVX1OR2-LABEL: shuffle_v4f64_0044_v2f64:
+; AVX1OR2:       # %bb.0:
+; AVX1OR2-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX1OR2-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1OR2-NEXT:    vmovddup {{.*#+}} ymm0 = ymm0[0,0,2,2]
+; AVX1OR2-NEXT:    retq
+;
+; AVX512VL-SLOW-LABEL: shuffle_v4f64_0044_v2f64:
+; AVX512VL-SLOW:       # %bb.0:
+; AVX512VL-SLOW-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX512VL-SLOW-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX512VL-SLOW-NEXT:    vmovddup {{.*#+}} ymm0 = ymm0[0,0,2,2]
+; AVX512VL-SLOW-NEXT:    retq
+;
+; AVX512VL-FAST-ALL-LABEL: shuffle_v4f64_0044_v2f64:
+; AVX512VL-FAST-ALL:       # %bb.0:
+; AVX512VL-FAST-ALL-NEXT:    # kill: def $xmm1 killed $xmm1 def $ymm1
+; AVX512VL-FAST-ALL-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX512VL-FAST-ALL-NEXT:    vpmovsxbq {{.*#+}} ymm2 = [0,0,4,4]
+; AVX512VL-FAST-ALL-NEXT:    vpermt2pd %ymm1, %ymm2, %ymm0
+; AVX512VL-FAST-ALL-NEXT:    retq
+;
+; AVX512VL-FAST-PERLANE-LABEL: shuffle_v4f64_0044_v2f64:
+; AVX512VL-FAST-PERLANE:       # %bb.0:
+; AVX512VL-FAST-PERLANE-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX512VL-FAST-PERLANE-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX512VL-FAST-PERLANE-NEXT:    vmovddup {{.*#+}} ymm0 = ymm0[0,0,2,2]
+; AVX512VL-FAST-PERLANE-NEXT:    retq
   %1 = shufflevector <2 x double> %a, <2 x double> poison, <2 x i32> <i32 0, i32 0>
   %2 = shufflevector <2 x double> %b, <2 x double> poison, <2 x i32> <i32 0, i32 0>
   %3 = shufflevector <2 x double> %1, <2 x double> %2, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -789,12 +811,34 @@ define <4 x double> @shuffle_v4f64_0044_v2f64(<2 x double> %a, <2 x double> %b) 
 }
 
 define <4 x double> @shuffle_v4f64_1032_v2f64(<2 x double> %a, <2 x double> %b) {
-; ALL-LABEL: shuffle_v4f64_1032_v2f64:
-; ALL:       # %bb.0:
-; ALL-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; ALL-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; ALL-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[1,0,3,2]
-; ALL-NEXT:    retq
+; AVX1OR2-LABEL: shuffle_v4f64_1032_v2f64:
+; AVX1OR2:       # %bb.0:
+; AVX1OR2-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX1OR2-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1OR2-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[1,0,3,2]
+; AVX1OR2-NEXT:    retq
+;
+; AVX512VL-SLOW-LABEL: shuffle_v4f64_1032_v2f64:
+; AVX512VL-SLOW:       # %bb.0:
+; AVX512VL-SLOW-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX512VL-SLOW-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX512VL-SLOW-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[1,0,3,2]
+; AVX512VL-SLOW-NEXT:    retq
+;
+; AVX512VL-FAST-ALL-LABEL: shuffle_v4f64_1032_v2f64:
+; AVX512VL-FAST-ALL:       # %bb.0:
+; AVX512VL-FAST-ALL-NEXT:    # kill: def $xmm1 killed $xmm1 def $ymm1
+; AVX512VL-FAST-ALL-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX512VL-FAST-ALL-NEXT:    vpmovsxbq {{.*#+}} ymm2 = [1,0,5,4]
+; AVX512VL-FAST-ALL-NEXT:    vpermt2pd %ymm1, %ymm2, %ymm0
+; AVX512VL-FAST-ALL-NEXT:    retq
+;
+; AVX512VL-FAST-PERLANE-LABEL: shuffle_v4f64_1032_v2f64:
+; AVX512VL-FAST-PERLANE:       # %bb.0:
+; AVX512VL-FAST-PERLANE-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX512VL-FAST-PERLANE-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX512VL-FAST-PERLANE-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[1,0,3,2]
+; AVX512VL-FAST-PERLANE-NEXT:    retq
   %1 = shufflevector <2 x double> %a, <2 x double> poison, <2 x i32> <i32 1, i32 0>
   %2 = shufflevector <2 x double> %b, <2 x double> poison, <2 x i32> <i32 1, i32 0>
   %3 = shufflevector <2 x double> %1, <2 x double> %2, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -1610,12 +1654,27 @@ define <4 x i64> @shuffle_v4i64_0044_v2i64(<2 x i64> %a, <2 x i64> %b) {
 ; AVX2-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,1,0,1,4,5,4,5]
 ; AVX2-NEXT:    retq
 ;
-; AVX512VL-LABEL: shuffle_v4i64_0044_v2i64:
-; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; AVX512VL-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX512VL-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,1,0,1,4,5,4,5]
-; AVX512VL-NEXT:    retq
+; AVX512VL-SLOW-LABEL: shuffle_v4i64_0044_v2i64:
+; AVX512VL-SLOW:       # %bb.0:
+; AVX512VL-SLOW-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX512VL-SLOW-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX512VL-SLOW-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,1,0,1,4,5,4,5]
+; AVX512VL-SLOW-NEXT:    retq
+;
+; AVX512VL-FAST-ALL-LABEL: shuffle_v4i64_0044_v2i64:
+; AVX512VL-FAST-ALL:       # %bb.0:
+; AVX512VL-FAST-ALL-NEXT:    # kill: def $xmm1 killed $xmm1 def $ymm1
+; AVX512VL-FAST-ALL-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX512VL-FAST-ALL-NEXT:    vpmovsxbq {{.*#+}} ymm2 = [0,0,4,4]
+; AVX512VL-FAST-ALL-NEXT:    vpermt2q %ymm1, %ymm2, %ymm0
+; AVX512VL-FAST-ALL-NEXT:    retq
+;
+; AVX512VL-FAST-PERLANE-LABEL: shuffle_v4i64_0044_v2i64:
+; AVX512VL-FAST-PERLANE:       # %bb.0:
+; AVX512VL-FAST-PERLANE-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX512VL-FAST-PERLANE-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX512VL-FAST-PERLANE-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,1,0,1,4,5,4,5]
+; AVX512VL-FAST-PERLANE-NEXT:    retq
   %1 = shufflevector <2 x i64> %a, <2 x i64> poison, <2 x i32> <i32 0, i32 0>
   %2 = shufflevector <2 x i64> %b, <2 x i64> poison, <2 x i32> <i32 0, i32 0>
   %3 = shufflevector <2 x i64> %1, <2 x i64> %2, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -1623,12 +1682,41 @@ define <4 x i64> @shuffle_v4i64_0044_v2i64(<2 x i64> %a, <2 x i64> %b) {
 }
 
 define <4 x i64> @shuffle_v4i64_1032_v2i64(<2 x i64> %a, <2 x i64> %b) {
-; ALL-LABEL: shuffle_v4i64_1032_v2i64:
-; ALL:       # %bb.0:
-; ALL-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; ALL-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; ALL-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[2,3,0,1,6,7,4,5]
-; ALL-NEXT:    retq
+; AVX1-LABEL: shuffle_v4i64_1032_v2i64:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[1,0,3,2]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: shuffle_v4i64_1032_v2i64:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX2-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX2-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[2,3,0,1,6,7,4,5]
+; AVX2-NEXT:    retq
+;
+; AVX512VL-SLOW-LABEL: shuffle_v4i64_1032_v2i64:
+; AVX512VL-SLOW:       # %bb.0:
+; AVX512VL-SLOW-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX512VL-SLOW-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX512VL-SLOW-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[2,3,0,1,6,7,4,5]
+; AVX512VL-SLOW-NEXT:    retq
+;
+; AVX512VL-FAST-ALL-LABEL: shuffle_v4i64_1032_v2i64:
+; AVX512VL-FAST-ALL:       # %bb.0:
+; AVX512VL-FAST-ALL-NEXT:    # kill: def $xmm1 killed $xmm1 def $ymm1
+; AVX512VL-FAST-ALL-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX512VL-FAST-ALL-NEXT:    vpmovsxbq {{.*#+}} ymm2 = [1,0,5,4]
+; AVX512VL-FAST-ALL-NEXT:    vpermt2q %ymm1, %ymm2, %ymm0
+; AVX512VL-FAST-ALL-NEXT:    retq
+;
+; AVX512VL-FAST-PERLANE-LABEL: shuffle_v4i64_1032_v2i64:
+; AVX512VL-FAST-PERLANE:       # %bb.0:
+; AVX512VL-FAST-PERLANE-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX512VL-FAST-PERLANE-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX512VL-FAST-PERLANE-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[2,3,0,1,6,7,4,5]
+; AVX512VL-FAST-PERLANE-NEXT:    retq
   %1 = shufflevector <2 x i64> %a, <2 x i64> poison, <2 x i32> <i32 1, i32 0>
   %2 = shufflevector <2 x i64> %b, <2 x i64> poison, <2 x i32> <i32 1, i32 0>
   %3 = shufflevector <2 x i64> %1, <2 x i64> %2, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -2277,6 +2365,97 @@ define <4 x double> @unpckh_v4f64(<4 x double> %x, <4 x double> %y) {
 ; ALL-NEXT:    retq
   %unpckh = shufflevector <4 x double> %x, <4 x double> %y, <4 x i32> <i32 1, i32 7, i32 poison, i32 poison>
   ret <4 x double> %unpckh
+}
+
+define <4 x double> @blend_broadcasts_v1f64(ptr %p0, ptr %p1) {
+; AVX1-LABEL: blend_broadcasts_v1f64:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX1-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; AVX1-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm1[0],xmm0[0]
+; AVX1-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: blend_broadcasts_v1f64:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vbroadcastsd (%rsi), %ymm0
+; AVX2-NEXT:    vbroadcastsd (%rdi), %ymm1
+; AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1],ymm0[2,3,4,5],ymm1[6,7]
+; AVX2-NEXT:    retq
+;
+; AVX512VL-LABEL: blend_broadcasts_v1f64:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vbroadcastsd (%rsi), %ymm0
+; AVX512VL-NEXT:    vbroadcastsd (%rdi), %ymm1
+; AVX512VL-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1],ymm0[2,3,4,5],ymm1[6,7]
+; AVX512VL-NEXT:    retq
+  %ld0 = load <1 x double>, ptr %p0, align 32
+  %ld1 = load <1 x double>, ptr %p1, align 32
+  %blend = shufflevector <1 x double> %ld0, <1 x double> %ld1, <4 x i32> <i32 0, i32 1, i32 1, i32 0>
+  ret <4 x double> %blend
+}
+
+define <4 x double> @blend_broadcasts_v1f64_4x(ptr %p0, ptr %p1) {
+; AVX1-LABEL: blend_broadcasts_v1f64_4x:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX1-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; AVX1-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm1[0],xmm0[0]
+; AVX1-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: blend_broadcasts_v1f64_4x:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vbroadcastsd (%rsi), %ymm0
+; AVX2-NEXT:    vbroadcastsd (%rdi), %ymm1
+; AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1],ymm0[2,3,4,5],ymm1[6,7]
+; AVX2-NEXT:    retq
+;
+; AVX512VL-LABEL: blend_broadcasts_v1f64_4x:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vbroadcastsd (%rsi), %ymm0
+; AVX512VL-NEXT:    vbroadcastsd (%rdi), %ymm1
+; AVX512VL-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1],ymm0[2,3,4,5],ymm1[6,7]
+; AVX512VL-NEXT:    retq
+  %ld0 = load <1 x double>, ptr %p0, align 32
+  %ld1 = load <1 x double>, ptr %p1, align 32
+  %bcst0 = shufflevector <1 x double> %ld0, <1 x double> poison, <4 x i32> zeroinitializer
+  %bcst1 = shufflevector <1 x double> %ld1, <1 x double> poison, <4 x i32> zeroinitializer
+  %blend = shufflevector <4 x double> %bcst0, <4 x double> %bcst1, <4 x i32> <i32 0, i32 5, i32 6, i32 3>
+  ret <4 x double> %blend
+}
+
+define <4 x double> @blend_broadcasts_v1f64_2x(ptr %p0, ptr %p1) {
+; AVX1-LABEL: blend_broadcasts_v1f64_2x:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX1-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; AVX1-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm1[0],xmm0[0]
+; AVX1-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: blend_broadcasts_v1f64_2x:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vbroadcastsd (%rsi), %ymm0
+; AVX2-NEXT:    vbroadcastsd (%rdi), %ymm1
+; AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1],ymm0[2,3,4,5],ymm1[6,7]
+; AVX2-NEXT:    retq
+;
+; AVX512VL-LABEL: blend_broadcasts_v1f64_2x:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vbroadcastsd (%rsi), %ymm0
+; AVX512VL-NEXT:    vbroadcastsd (%rdi), %ymm1
+; AVX512VL-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1],ymm0[2,3,4,5],ymm1[6,7]
+; AVX512VL-NEXT:    retq
+  %ld0 = load <1 x double>, ptr %p0, align 32
+  %ld1 = load <1 x double>, ptr %p1, align 32
+  %bcst0 = shufflevector <1 x double> %ld0, <1 x double> poison, <2 x i32> zeroinitializer
+  %bcst1 = shufflevector <1 x double> %ld1, <1 x double> poison, <2 x i32> zeroinitializer
+  %blend = shufflevector <2 x double> %bcst0, <2 x double> %bcst1, <4 x i32> <i32 0, i32 2, i32 3, i32 1>
+  ret <4 x double> %blend
 }
 
 !llvm.module.flags = !{!0}

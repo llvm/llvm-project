@@ -23,8 +23,9 @@ namespace llvm {
 
 class AArch64MCExpr : public MCTargetExpr {
 public:
-  enum VariantKind {
+  enum Specifier : uint16_t {
     // clang-format off
+    None          = 0,
     // Symbol locations specifying (roughly speaking) what calculation should be
     // performed to construct the final address for the relocated
     // symbol. E.g. direct, via the GOT, ...
@@ -120,31 +121,45 @@ public:
     VK_SECREL_LO12       = VK_SECREL       | VK_PAGEOFF,
     VK_SECREL_HI12       = VK_SECREL       | VK_HI12,
 
+    // ELF relocation specifiers in data directives:
+    VK_PLT          = 0x400,
+    VK_GOTPCREL,
+
+    // Mach-O @ relocation specifiers:
+    M_GOT,
+    M_GOTPAGE,
+    M_GOTPAGEOFF,
+    M_PAGE,
+    M_PAGEOFF,
+    M_TLVP,
+    M_TLVPPAGE,
+    M_TLVPPAGEOFF,
+
     VK_INVALID  = 0xfff
     // clang-format on
   };
 
 private:
   const MCExpr *Expr;
-  const VariantKind Kind;
+  const Specifier specifier;
 
 protected:
-  explicit AArch64MCExpr(const MCExpr *Expr, VariantKind Kind)
-    : Expr(Expr), Kind(Kind) {}
+  explicit AArch64MCExpr(const MCExpr *Expr, Specifier S)
+      : Expr(Expr), specifier(S) {}
 
 public:
   /// @name Construction
   /// @{
 
-  static const AArch64MCExpr *create(const MCExpr *Expr, VariantKind Kind,
-                                   MCContext &Ctx);
+  static const AArch64MCExpr *create(const MCExpr *Expr, Specifier,
+                                     MCContext &Ctx);
 
   /// @}
   /// @name Accessors
   /// @{
 
   /// Get the kind of this expression.
-  VariantKind getKind() const { return Kind; }
+  Specifier getSpecifier() const { return specifier; }
 
   /// Get the expression this modifier applies to.
   const MCExpr *getSubExpr() const { return Expr; }
@@ -153,21 +168,21 @@ public:
   /// @name VariantKind information extractors.
   /// @{
 
-  static VariantKind getSymbolLoc(VariantKind Kind) {
-    return static_cast<VariantKind>(Kind & VK_SymLocBits);
+  static Specifier getSymbolLoc(Specifier S) {
+    return static_cast<Specifier>(S & VK_SymLocBits);
   }
 
-  static VariantKind getAddressFrag(VariantKind Kind) {
-    return static_cast<VariantKind>(Kind & VK_AddressFragBits);
+  static Specifier getAddressFrag(Specifier S) {
+    return static_cast<Specifier>(S & VK_AddressFragBits);
   }
 
-  static bool isNotChecked(VariantKind Kind) { return Kind & VK_NC; }
+  static bool isNotChecked(Specifier S) { return S & VK_NC; }
 
   /// @}
 
-  /// Convert the variant kind into an ELF-appropriate modifier
+  /// Return the string representation of the ELF relocation specifier
   /// (e.g. ":got:", ":lo12:").
-  StringRef getVariantKindName() const;
+  StringRef getSpecifierName() const;
 
   void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
 
@@ -175,11 +190,8 @@ public:
 
   MCFragment *findAssociatedFragment() const override;
 
-  bool evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
-                                 const MCFixup *Fixup) const override;
-
-  void fixELFSymbolsInTLSFixups(MCAssembler &Asm) const override;
-
+  bool evaluateAsRelocatableImpl(MCValue &Res,
+                                 const MCAssembler *Asm) const override;
   static bool classof(const MCExpr *E) {
     return E->getKind() == MCExpr::Target;
   }
@@ -201,7 +213,7 @@ public:
 
   AArch64PACKey::ID getKey() const { return Key; }
   uint16_t getDiscriminator() const { return Discriminator; }
-  bool hasAddressDiversity() const { return getKind() == VK_AUTHADDR; }
+  bool hasAddressDiversity() const { return getSpecifier() == VK_AUTHADDR; }
 
   void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
 
@@ -209,15 +221,12 @@ public:
 
   MCFragment *findAssociatedFragment() const override;
 
-  bool evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
-                                 const MCFixup *Fixup) const override;
-
   static bool classof(const MCExpr *E) {
     return isa<AArch64MCExpr>(E) && classof(cast<AArch64MCExpr>(E));
   }
 
   static bool classof(const AArch64MCExpr *E) {
-    return E->getKind() == VK_AUTH || E->getKind() == VK_AUTHADDR;
+    return E->getSpecifier() == VK_AUTH || E->getSpecifier() == VK_AUTHADDR;
   }
 };
 } // end namespace llvm

@@ -1,4 +1,5 @@
 // UNSUPPORTED: target={{.*-windows-gnu}}
+// XFAIL: msvc
 
 // This is a host program for DLL tests.
 //

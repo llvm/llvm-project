@@ -230,9 +230,7 @@ defm V_NOP : VOP1Inst <"v_nop", VOP_NOP_PROFILE>;
 
 def VOPProfile_MOV : VOPProfile <[i32, i32, untyped, untyped]> {
   let InsVOPDX = (ins Src0RC32:$src0X);
-  let InsVOPDXDeferred = (ins VSrc_f32_Deferred:$src0X);
   let InsVOPDY = (ins Src0RC32:$src0Y);
-  let InsVOPDYDeferred = (ins VSrc_f32_Deferred:$src0Y);
 }
 
 let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
@@ -243,7 +241,7 @@ defm V_MOV_B64 : VOP1Inst <"v_mov_b64", VOP_I64_I64>;
 } // End isMoveImm = 1
 
 def VOP_READFIRSTLANE : VOPProfile <[i32, i32, untyped, untyped]> {
-  let DstRC = RegisterOperand<SReg_32>;
+  let DstRC = RegisterOperand<SReg_32_XM0>;
   let Src0RC32 = VRegOrLdsSrc_32;
   let Asm32 = " $vdst, $src0";
 }
@@ -317,7 +315,7 @@ defm V_CVT_F32_BF16 : VOP1Inst_t16 <"v_cvt_f32_bf16", VOP_F32_BF16>;
 let ReadsModeReg = 0, mayRaiseFPException = 0 in {
 defm V_CVT_RPI_I32_F32 : VOP1Inst <"v_cvt_rpi_i32_f32", VOP_I32_F32, cvt_rpi_i32_f32>;
 defm V_CVT_FLR_I32_F32 : VOP1Inst <"v_cvt_flr_i32_f32", VOP_I32_F32, cvt_flr_i32_f32>;
-defm V_CVT_OFF_F32_I4 : VOP1Inst  <"v_cvt_off_f32_i4", VOP1_F32_I32>;
+defm V_CVT_OFF_F32_I4 : VOP1Inst  <"v_cvt_off_f32_i4", VOP1_F32_I32, int_amdgcn_cvt_off_f32_i4>;
 } // End ReadsModeReg = 0, mayRaiseFPException = 0
 } // End SchedRW = [WriteFloatCvt]
 
@@ -776,6 +774,7 @@ let SubtargetPredicate = isGFX11Plus in {
   // Restrict src0 to be VGPR
   def V_PERMLANE64_B32 : VOP1_Pseudo<"v_permlane64_b32", VOP_MOVRELS,
                                       [], /*VOP1Only=*/ 1>;
+  let isAsCheapAsAMove = 1 in
   defm V_MOV_B16        : VOP1Inst_t16<"v_mov_b16", VOP_I16_I16>;
   defm V_NOT_B16        : VOP1Inst_t16<"v_not_b16", VOP_I16_I16>;
   defm V_CVT_I32_I16    : VOP1Inst_t16<"v_cvt_i32_i16", VOP_I32_I16>;
@@ -1471,16 +1470,9 @@ def : GCNPat <
 
 } // End OtherPredicates = [isGFX8Plus, p]
 
-let True16Predicate = UseFakeTrue16Insts in {
-def : GCNPat<
-  (i32 (DivergentUnaryFrag<anyext> i16:$src)),
-  (COPY $src)
->;
-} // End True16Predicate = UseFakeTrue16Insts
-
 let True16Predicate = UseRealTrue16Insts in {
 def : GCNPat<
-  (i32 (UniformUnaryFrag<anyext> (i16 SReg_32:$src))),
+  (i32 (UniformUnaryFrag<anyext> i16:$src)),
   (COPY $src)
 >;
 

@@ -13,6 +13,7 @@
 #include "llvm/ExecutionEngine/JITLink/MachO_x86_64.h"
 #include "llvm/ExecutionEngine/JITLink/DWARFRecordSectionSplitter.h"
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
+#include "llvm/ExecutionEngine/Orc/Shared/MachOObjectFormat.h"
 
 #include "CompactUnwindSupport.h"
 #include "DefineExternalSectionStartAndEndSymbols.h"
@@ -511,6 +512,7 @@ struct CompactUnwindTraits_MachO_x86_64
   constexpr static endianness Endianness = endianness::little;
 
   constexpr static uint32_t EncodingModeMask = 0x0f000000;
+  constexpr static uint32_t DWARFSectionOffsetMask = 0x00ffffff;
 
   using GOTManager = x86_64::GOTTableManager;
 
@@ -544,7 +546,8 @@ void link_MachO_x86_64(std::unique_ptr<LinkGraph> G,
     // Create a compact-unwind manager for use in passes below.
     auto CompactUnwindMgr = std::make_shared<
         CompactUnwindManager<CompactUnwindTraits_MachO_x86_64>>(
-        "__LD,__compact_unwind", "__TEXT,__unwind_info", "__TEXT,__eh_frame");
+        orc::MachOCompactUnwindSectionName, orc::MachOUnwindInfoSectionName,
+        orc::MachOEHFrameSectionName);
 
     // Add compact unwind prepare pass.
     Config.PrePrunePasses.push_back([CompactUnwindMgr](LinkGraph &G) {
@@ -581,11 +584,11 @@ void link_MachO_x86_64(std::unique_ptr<LinkGraph> G,
 }
 
 LinkGraphPassFunction createEHFrameSplitterPass_MachO_x86_64() {
-  return DWARFRecordSectionSplitter("__TEXT,__eh_frame");
+  return DWARFRecordSectionSplitter(orc::MachOEHFrameSectionName);
 }
 
 LinkGraphPassFunction createEHFrameEdgeFixerPass_MachO_x86_64() {
-  return EHFrameEdgeFixer("__TEXT,__eh_frame", x86_64::PointerSize,
+  return EHFrameEdgeFixer(orc::MachOEHFrameSectionName, x86_64::PointerSize,
                           x86_64::Pointer32, x86_64::Pointer64, x86_64::Delta32,
                           x86_64::Delta64, x86_64::NegDelta32);
 }

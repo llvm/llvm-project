@@ -384,6 +384,7 @@ __host__ __device__ void __nv_tex_surf_handler(const char *name, T *ptr,
 // will continue to fail as it does now.
 #endif // CUDA_VERSION
 #endif // __cplusplus >= 201103L && CUDA_VERSION >= 9000
+#include "surface_indirect_functions.h"
 #include "texture_fetch_functions.h"
 #include "texture_indirect_functions.h"
 

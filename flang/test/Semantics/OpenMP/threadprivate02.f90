@@ -7,6 +7,9 @@ program threadprivate02
   integer :: arr1(10)
   common /blk1/ a1
   real, save :: eq_a, eq_b, eq_c, eq_d
+  integer :: eq_e, eq_f
+  equivalence(eq_e, eq_f)
+  common /blk2/ eq_e
 
   !$omp threadprivate(arr1)
 
@@ -24,6 +27,9 @@ program threadprivate02
   !ERROR: A variable in a THREADPRIVATE directive cannot appear in an EQUIVALENCE statement
   !$omp threadprivate(eq_c)
   equivalence(eq_c, eq_d)
+
+  !ERROR: A variable in a THREADPRIVATE directive cannot appear in an EQUIVALENCE statement (variable 'eq_e' from common block '/blk2/')
+  !$omp threadprivate(/blk2/)
 
 contains
   subroutine func()

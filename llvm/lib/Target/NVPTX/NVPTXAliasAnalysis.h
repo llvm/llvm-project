@@ -36,6 +36,12 @@ public:
 
   ModRefInfo getModRefInfoMask(const MemoryLocation &Loc, AAQueryInfo &AAQI,
                                bool IgnoreLocals);
+
+  MemoryEffects getMemoryEffects(const CallBase *Call, AAQueryInfo &AAQI);
+
+  MemoryEffects getMemoryEffects(const Function *F) {
+    return MemoryEffects::unknown();
+  }
 };
 
 /// Analysis pass providing a never-invalidated alias analysis result.
@@ -79,9 +85,12 @@ public:
 
 // Wrapper around ExternalAAWrapperPass so that the default
 // constructor gets the callback.
+// Note that NVPTXAA will run before BasicAA for compile time considerations.
 class NVPTXExternalAAWrapper : public ExternalAAWrapperPass {
 public:
   static char ID;
+
+  bool runEarly() override { return true; }
 
   NVPTXExternalAAWrapper()
       : ExternalAAWrapperPass([](Pass &P, Function &, AAResults &AAR) {
@@ -89,12 +98,14 @@ public:
                   P.getAnalysisIfAvailable<NVPTXAAWrapperPass>())
             AAR.addAAResult(WrapperPass->getResult());
         }) {}
+
+  StringRef getPassName() const override {
+    return "NVPTX Address space based Alias Analysis Wrapper";
+  }
 };
 
 ImmutablePass *createNVPTXAAWrapperPass();
-void initializeNVPTXAAWrapperPassPass(PassRegistry &);
 ImmutablePass *createNVPTXExternalAAWrapperPass();
-void initializeNVPTXExternalAAWrapperPass(PassRegistry &);
 
 } // end namespace llvm
 

@@ -14,7 +14,7 @@ int f1(int n, ABC v1, ABC v2) {
   // CHECK-FIXES: int f1(int n, const ABC& v1, const ABC& v2) {
   return v1.get(n) + v2.get(n);
 }
-int f2(int n, ABC v2) {
-  // CHECK-MESSAGES: [[@LINE-1]]:19: warning: the parameter 'v2' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
-  // CHECK-FIXES: int f2(int n, const ABC& v2) {
+void f2(int n, ABC v2) {
+  // CHECK-MESSAGES: [[@LINE-1]]:20: warning: the parameter 'v2' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
+  // CHECK-FIXES: void f2(int n, const ABC& v2) {
 }

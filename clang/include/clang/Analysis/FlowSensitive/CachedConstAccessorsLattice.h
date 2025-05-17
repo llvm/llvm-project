@@ -65,23 +65,6 @@ public:
 
   /// Creates or returns a previously created `StorageLocation` associated with
   /// a const method call `obj.getFoo()` where `RecordLoc` is the
-  /// `RecordStorageLocation` of `obj`.
-  ///
-  /// The callback `Initialize` runs on the storage location if newly created.
-  /// Returns nullptr if unable to find or create a value.
-  ///
-  /// Requirements:
-  ///
-  ///  - `CE` should return a location (GLValue or a record type).
-  ///
-  /// DEPRECATED: switch users to the below overload which takes Callee and Type
-  /// directly.
-  StorageLocation *getOrCreateConstMethodReturnStorageLocation(
-      const RecordStorageLocation &RecordLoc, const CallExpr *CE,
-      Environment &Env, llvm::function_ref<void(StorageLocation &)> Initialize);
-
-  /// Creates or returns a previously created `StorageLocation` associated with
-  /// a const method call `obj.getFoo()` where `RecordLoc` is the
   /// `RecordStorageLocation` of `obj`, `Callee` is the decl for `getFoo`.
   ///
   /// The callback `Initialize` runs on the storage location if newly created.
@@ -206,29 +189,6 @@ Value *CachedConstAccessorsLattice<Base>::getOrCreateConstMethodReturnValue(
   if (Val != nullptr)
     ObjMap.insert({DirectCallee, Val});
   return Val;
-}
-
-template <typename Base>
-StorageLocation *
-CachedConstAccessorsLattice<Base>::getOrCreateConstMethodReturnStorageLocation(
-    const RecordStorageLocation &RecordLoc, const CallExpr *CE,
-    Environment &Env, llvm::function_ref<void(StorageLocation &)> Initialize) {
-  assert(!CE->getType().isNull());
-  assert(CE->isGLValue() || CE->getType()->isRecordType());
-  auto &ObjMap = ConstMethodReturnStorageLocations[&RecordLoc];
-  const FunctionDecl *DirectCallee = CE->getDirectCallee();
-  if (DirectCallee == nullptr)
-    return nullptr;
-  auto it = ObjMap.find(DirectCallee);
-  if (it != ObjMap.end())
-    return it->second;
-
-  StorageLocation &Loc =
-      Env.createStorageLocation(CE->getType().getNonReferenceType());
-  Initialize(Loc);
-
-  ObjMap.insert({DirectCallee, &Loc});
-  return &Loc;
 }
 
 template <typename Base>

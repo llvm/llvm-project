@@ -52,6 +52,9 @@ define void @foo(ptr %ptr) {
   auto *F = Ctx.createFunction(&LLVMF);
   auto *BB = &*F->begin();
   auto &Tracker = Ctx.getTracker();
+  // Check empty().
+  EXPECT_TRUE(Ctx.getTracker().empty());
+
   Tracker.save();
   auto It = BB->begin();
   auto *Gep0 = &*It++;
@@ -64,6 +67,9 @@ define void @foo(ptr %ptr) {
   EXPECT_EQ(St->getOperand(0), Ld);
   EXPECT_EQ(St->getOperand(1), Gep1);
   EXPECT_EQ(Ld->getOperand(0), Gep1);
+
+  // Check empty().
+  EXPECT_FALSE(Ctx.getTracker().empty());
 
   Ctx.getTracker().revert();
   EXPECT_NE(St->getOperand(0), Ld);

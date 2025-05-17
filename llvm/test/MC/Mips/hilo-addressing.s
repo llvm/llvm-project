@@ -7,14 +7,15 @@
 # RUN: llvm-mc -filetype=obj -triple=mipsel-unknown-linux %s \
 # RUN:  | llvm-readobj -r - | FileCheck %s -check-prefix=CHECK-REL
 
+# RUN: not llvm-mc -filetype=obj -triple=mipsel %s --defsym ERR=1 2>&1 | FileCheck %s --check-prefix=ERR --implicit-check-not=error:
 
 # Check that 1 is added to the high 16 bits if bit 15 of the low part is 1.
 
         .equ    addr, 0xdeadbeef
         lui     $4, %hi(addr)
         lb      $2, %lo(addr)($4)
-# CHECK-ENC: # encoding: [0x3c,0x04,0xde,0xae]
-# CHECK-ENC: # encoding: [0x80,0x82,0xbe,0xef]
+# CHECK-ENC: # encoding: [0x3c,0x04,A,A]
+# CHECK-ENC: # encoding: [0x80,0x82,A,A]
 
 
 # Check that assembler can handle %hi(label1 - label2) and %lo(label1 - label2)
@@ -40,3 +41,8 @@ $L3:
 # %lo(label1 - label2) expressions.
 
 # CHECK-REL-NOT:    R_MIPS
+
+.ifdef ERR
+# ERR: <unknown>:0: error: expected relocatable expression
+lui $4, %hi(und-$L3)
+.endif

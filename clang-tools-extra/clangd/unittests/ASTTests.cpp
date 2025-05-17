@@ -329,7 +329,7 @@ TEST(ClangdAST, GetContainedAutoParamType) {
        auto &&d,
        auto *&e,
        auto (*f)(int)
-    ){};
+    ){ return 0; };
 
     int withoutAuto(
       int a,
@@ -338,7 +338,7 @@ TEST(ClangdAST, GetContainedAutoParamType) {
       int &&d,
       int *&e,
       int (*f)(int)
-    ){};
+    ){ return 0; };
   )cpp");
   TU.ExtraArgs.push_back("-std=c++20");
   auto AST = TU.build();

@@ -24,6 +24,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/InterleavedRange.h"
 #include "llvm/Support/TypeSize.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
@@ -217,10 +218,8 @@ bool TypeSetByHwMode::operator==(const TypeSetByHwMode &VTS) const {
     return false;
 
   SmallSet<unsigned, 4> Modes;
-  for (auto &I : *this)
-    Modes.insert(I.first);
-  for (const auto &I : VTS)
-    Modes.insert(I.first);
+  Modes.insert_range(llvm::make_first_range(*this));
+  Modes.insert_range(llvm::make_first_range(VTS));
 
   if (HaveDefault) {
     // Both sets have default mode.
@@ -912,7 +911,7 @@ std::string TreePredicateFn::getPredCode() const {
 
   if (!isLoad() && !isStore() && !isAtomic() && getMemoryVT())
     PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
-                    "MemoryVT requires IsLoad or IsStore");
+                    "MemoryVT requires IsLoad or IsStore or IsAtomic");
 
   if (!isLoad() && !isStore()) {
     if (isUnindexed())
@@ -935,22 +934,19 @@ std::string TreePredicateFn::getPredCode() const {
         getMinAlignment() < 1)
       PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
                       "IsLoad cannot be used by itself");
-  } else {
+  } else if (!isAtomic()) {
     if (isNonExtLoad())
       PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
-                      "IsNonExtLoad requires IsLoad");
+                      "IsNonExtLoad requires IsLoad or IsAtomic");
     if (isAnyExtLoad())
       PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
-                      "IsAnyExtLoad requires IsLoad");
-
-    if (!isAtomic()) {
-      if (isSignExtLoad())
-        PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
-                        "IsSignExtLoad requires IsLoad or IsAtomic");
-      if (isZeroExtLoad())
-        PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
-                        "IsZeroExtLoad requires IsLoad or IsAtomic");
-    }
+                      "IsAnyExtLoad requires IsLoad or IsAtomic");
+    if (isSignExtLoad())
+      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
+                      "IsSignExtLoad requires IsLoad or IsAtomic");
+    if (isZeroExtLoad())
+      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
+                      "IsZeroExtLoad requires IsLoad or IsAtomic");
   }
 
   if (isStore()) {
@@ -969,11 +965,12 @@ std::string TreePredicateFn::getPredCode() const {
   }
 
   if (isAtomic()) {
-    if (getMemoryVT() == nullptr && !isAtomicOrderingMonotonic() &&
-        getAddressSpaces() == nullptr &&
+    if (getMemoryVT() == nullptr && getAddressSpaces() == nullptr &&
         // FIXME: Should atomic loads be IsLoad, IsAtomic, or both?
-        !isZeroExtLoad() && !isSignExtLoad() && !isAtomicOrderingAcquire() &&
-        !isAtomicOrderingRelease() && !isAtomicOrderingAcquireRelease() &&
+        !isNonExtLoad() && !isAnyExtLoad() && !isZeroExtLoad() &&
+        !isSignExtLoad() && !isAtomicOrderingMonotonic() &&
+        !isAtomicOrderingAcquire() && !isAtomicOrderingRelease() &&
+        !isAtomicOrderingAcquireRelease() &&
         !isAtomicOrderingSequentiallyConsistent() &&
         !isAtomicOrderingAcquireOrStronger() &&
         !isAtomicOrderingReleaseOrStronger() &&
@@ -1077,9 +1074,27 @@ std::string TreePredicateFn::getPredCode() const {
         "if (isReleaseOrStronger(cast<AtomicSDNode>(N)->getMergedOrdering())) "
         "return false;\n";
 
-  // TODO: Handle atomic sextload/zextload normally when ATOMIC_LOAD is removed.
-  if (isAtomic() && (isZeroExtLoad() || isSignExtLoad()))
-    Code += "return false;\n";
+  if (isAtomic()) {
+    if ((isNonExtLoad() + isAnyExtLoad() + isSignExtLoad() + isZeroExtLoad()) >
+        1)
+      PrintFatalError(
+          getOrigPatFragRecord()->getRecord()->getLoc(),
+          "IsNonExtLoad, IsAnyExtLoad, IsSignExtLoad, and IsZeroExtLoad are "
+          "mutually exclusive");
+
+    if (isNonExtLoad())
+      Code += "if (cast<AtomicSDNode>(N)->getExtensionType() != "
+              "ISD::NON_EXTLOAD) return false;\n";
+    if (isAnyExtLoad())
+      Code += "if (cast<AtomicSDNode>(N)->getExtensionType() != ISD::EXTLOAD) "
+              "return false;\n";
+    if (isSignExtLoad())
+      Code += "if (cast<AtomicSDNode>(N)->getExtensionType() != ISD::SEXTLOAD) "
+              "return false;\n";
+    if (isZeroExtLoad())
+      Code += "if (cast<AtomicSDNode>(N)->getExtensionType() != ISD::ZEXTLOAD) "
+              "return false;\n";
+  }
 
   if (isLoad() || isStore()) {
     StringRef SDNodeName = isLoad() ? "LoadSDNode" : "StoreSDNode";
@@ -1129,12 +1144,12 @@ std::string TreePredicateFn::getPredCode() const {
   }
 
   if (hasNoUse())
-    Code += "if (!SDValue(N, 0).use_empty()) return false;\n";
+    Code += "if (N->hasAnyUseOfValue(0)) return false;\n";
   if (hasOneUse())
-    Code += "if (!SDValue(N, 0).hasOneUse()) return false;\n";
+    Code += "if (!N->hasNUsesOfValue(1, 0)) return false;\n";
 
   std::string PredicateCode =
-      std::string(PatFragRec->getRecord()->getValueAsString("PredicateCode"));
+      PatFragRec->getRecord()->getValueAsString("PredicateCode").str();
 
   Code += PredicateCode;
 
@@ -1149,8 +1164,7 @@ bool TreePredicateFn::hasImmCode() const {
 }
 
 std::string TreePredicateFn::getImmCode() const {
-  return std::string(
-      PatFragRec->getRecord()->getValueAsString("ImmediateCode"));
+  return PatFragRec->getRecord()->getValueAsString("ImmediateCode").str();
 }
 
 bool TreePredicateFn::immCodeUsesAPInt() const {
@@ -1271,11 +1285,13 @@ const Record *TreePredicateFn::getScalarMemoryVT() const {
     return nullptr;
   return R->getValueAsDef("ScalarMemoryVT");
 }
+
 bool TreePredicateFn::hasGISelPredicateCode() const {
   return !PatFragRec->getRecord()
               ->getValueAsString("GISelPredicateCode")
               .empty();
 }
+
 std::string TreePredicateFn::getGISelPredicateCode() const {
   return std::string(
       PatFragRec->getRecord()->getValueAsString("GISelPredicateCode"));
@@ -1360,11 +1376,11 @@ std::string TreePredicateFn::getCodeToRunOnSDNode() const {
 
     std::string Result = ("    " + getImmType() + " Imm = ").str();
     if (immCodeUsesAPFloat())
-      Result += "cast<ConstantFPSDNode>(Node)->getValueAPF();\n";
+      Result += "cast<ConstantFPSDNode>(Op.getNode())->getValueAPF();\n";
     else if (immCodeUsesAPInt())
-      Result += "Node->getAsAPIntVal();\n";
+      Result += "Op->getAsAPIntVal();\n";
     else
-      Result += "cast<ConstantSDNode>(Node)->getSExtValue();\n";
+      Result += "cast<ConstantSDNode>(Op.getNode())->getSExtValue();\n";
     return Result + ImmCode;
   }
 
@@ -1395,9 +1411,9 @@ std::string TreePredicateFn::getCodeToRunOnSDNode() const {
 
   std::string Result;
   if (ClassName == "SDNode")
-    Result = "    SDNode *N = Node;\n";
+    Result = "    SDNode *N = Op.getNode();\n";
   else
-    Result = "    auto *N = cast<" + ClassName.str() + ">(Node);\n";
+    Result = "    auto *N = cast<" + ClassName.str() + ">(Op.getNode());\n";
 
   return (Twine(Result) + "    (void)N;\n" + getPredCode()).str();
 }
@@ -2390,8 +2406,9 @@ TreePatternNode::getComplexPatternInfo(const CodeGenDAGPatterns &CGP) const {
     if (!DI)
       return nullptr;
     Rec = DI->getDef();
-  } else
+  } else {
     Rec = getOperator();
+  }
 
   if (!Rec->isSubClassOf("ComplexPattern"))
     return nullptr;
@@ -2900,7 +2917,7 @@ TreePatternNodePtr TreePattern::ParseTreePattern(const Init *TheInit,
     if (R->getName() == "node" && !OpName.empty()) {
       if (OpName.empty())
         error("'node' argument requires a name to match with operand list");
-      Args.push_back(std::string(OpName));
+      Args.push_back(OpName.str());
     }
 
     Res->setName(OpName);
@@ -2912,7 +2929,7 @@ TreePatternNodePtr TreePattern::ParseTreePattern(const Init *TheInit,
     if (OpName.empty())
       error("'?' argument requires a name to match with operand list");
     TreePatternNodePtr Res = makeIntrusiveRefCnt<TreePatternNode>(TheInit, 1);
-    Args.push_back(std::string(OpName));
+    Args.push_back(OpName.str());
     Res->setName(OpName);
     return Res;
   }
@@ -3152,7 +3169,7 @@ bool TreePattern::InferAllTypes(
       if (InNamedTypes) {
         auto InIter = InNamedTypes->find(Entry.getKey());
         if (InIter == InNamedTypes->end()) {
-          error("Node '" + std::string(Entry.getKey()) +
+          error("Node '" + Entry.getKey().str() +
                 "' in output pattern but not input pattern");
           return true;
         }
@@ -3203,13 +3220,8 @@ bool TreePattern::InferAllTypes(
 
 void TreePattern::print(raw_ostream &OS) const {
   OS << getRecord()->getName();
-  if (!Args.empty()) {
-    OS << "(";
-    ListSeparator LS;
-    for (const std::string &Arg : Args)
-      OS << LS << Arg;
-    OS << ")";
-  }
+  if (!Args.empty())
+    OS << '(' << llvm::interleaved(Args) << ')';
   OS << ": ";
 
   if (Trees.size() > 1)
@@ -3289,7 +3301,7 @@ void CodeGenDAGPatterns::ParseNodeTransforms() {
        reverse(Records.getAllDerivedDefinitions("SDNodeXForm"))) {
     const Record *SDNode = XFormNode->getValueAsDef("Opcode");
     StringRef Code = XFormNode->getValueAsString("XFormFunction");
-    SDNodeXForms.insert({XFormNode, NodeXForm(SDNode, std::string(Code))});
+    SDNodeXForms.insert({XFormNode, NodeXForm(SDNode, Code.str())});
   }
 }
 
@@ -3321,8 +3333,7 @@ void CodeGenDAGPatterns::ParsePatternFragments(bool OutFrags) {
     std::vector<std::string> &Args = P->getArgList();
     // Copy the args so we can take StringRefs to them.
     auto ArgsCopy = Args;
-    SmallDenseSet<StringRef, 4> OperandsSet;
-    OperandsSet.insert(ArgsCopy.begin(), ArgsCopy.end());
+    SmallDenseSet<StringRef, 4> OperandsSet(llvm::from_range, ArgsCopy);
 
     if (OperandsSet.count(""))
       P->error("Cannot have unnamed 'node' values in pattern fragment!");
@@ -3349,7 +3360,7 @@ void CodeGenDAGPatterns::ParsePatternFragments(bool OutFrags) {
       if (!OperandsSet.erase(ArgNameStr))
         P->error("'" + ArgNameStr +
                  "' does not occur in pattern or was multiply specified!");
-      Args.push_back(std::string(ArgNameStr));
+      Args.push_back(ArgNameStr.str());
     }
 
     if (!OperandsSet.empty())
@@ -4139,23 +4150,19 @@ void CodeGenDAGPatterns::InferInstructionFlags() {
 
   // If requested by the target, guess any undefined properties.
   if (Target.guessInstructionProperties()) {
-    for (unsigned i = 0, e = Instructions.size(); i != e; ++i) {
-      CodeGenInstruction *InstInfo =
-          const_cast<CodeGenInstruction *>(Instructions[i]);
+    for (const CodeGenInstruction *InstInfo : Instructions) {
       if (InstInfo->InferredFrom)
         continue;
       // The mayLoad and mayStore flags default to false.
       // Conservatively assume hasSideEffects if it wasn't explicit.
       if (InstInfo->hasSideEffects_Unset)
-        InstInfo->hasSideEffects = true;
+        const_cast<CodeGenInstruction *>(InstInfo)->hasSideEffects = true;
     }
     return;
   }
 
   // Complain about any flags that are still undefined.
-  for (unsigned i = 0, e = Instructions.size(); i != e; ++i) {
-    CodeGenInstruction *InstInfo =
-        const_cast<CodeGenInstruction *>(Instructions[i]);
+  for (const CodeGenInstruction *InstInfo : Instructions) {
     if (InstInfo->InferredFrom)
       continue;
     if (InstInfo->hasSideEffects_Unset)

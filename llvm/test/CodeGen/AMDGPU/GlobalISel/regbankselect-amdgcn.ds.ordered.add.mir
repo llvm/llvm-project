@@ -34,7 +34,7 @@ body: |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
-    ; CHECK-NEXT: [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[COPY]](s32), implicit $exec
+    ; CHECK-NEXT: [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[COPY]](s32), implicit $exec
     ; CHECK-NEXT: [[INT:%[0-9]+]]:vgpr(s32) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.ds.ordered.add), [[V_READFIRSTLANE_B32_]](s32), [[COPY2]](s32), 0, 0, 0, 0, 0, 0
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $sgpr0
@@ -53,7 +53,7 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr1
-    ; CHECK-NEXT: [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[COPY]](s32), implicit $exec
+    ; CHECK-NEXT: [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[COPY]](s32), implicit $exec
     ; CHECK-NEXT: [[INT:%[0-9]+]]:vgpr(s32) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.ds.ordered.add), [[V_READFIRSTLANE_B32_]](s32), [[COPY1]](s32), 0, 0, 0, 0, 0, 0
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1

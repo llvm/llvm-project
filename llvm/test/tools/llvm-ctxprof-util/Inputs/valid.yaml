@@ -1,13 +1,21 @@
 
-- Guid:            1000
-  Counters:        [ 1, 2, 3 ]
-  Callsites:
-    - [  ]
-    - - Guid:            2000
-        Counters:        [ 4, 5 ]
-      - Guid:            18446744073709551613
-        Counters:        [ 6, 7, 8 ]
-    - - Guid:            3000
-        Counters:        [ 40, 50 ]
-- Guid:            18446744073709551612
-  Counters:        [ 5, 9, 10 ]
+Contexts:
+  - Guid:            1000
+    TotalRootEntryCount: 5
+    Counters:        [ 1, 2, 3 ]
+    Callsites:
+      - [  ]
+      - - Guid:            2000
+          Counters:        [ 4, 5 ]
+        - Guid:            18446744073709551613
+          Counters:        [ 6, 7, 8 ]
+      - - Guid:            3000
+          Counters:        [ 40, 50 ]
+  - Guid:            18446744073709551612
+    TotalRootEntryCount: 45
+    Counters:        [ 5, 9, 10 ]
+FlatProfiles:
+  - Guid:            1234
+    Counters:        [ 5, 6, 7 ]
+  - Guid:            5555
+    Counters:        [ 1 ]

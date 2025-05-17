@@ -122,7 +122,8 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
   // Claim and report unsupported -mabi=. Note: we don't support "sysv_abi" or
   // "ms_abi" as default function attributes.
   if (const Arg *A = Args.getLastArg(clang::driver::options::OPT_mabi_EQ)) {
-    StringRef DefaultAbi = Triple.isOSWindows() ? "ms" : "sysv";
+    StringRef DefaultAbi =
+        (Triple.isOSWindows() || Triple.isUEFI()) ? "ms" : "sysv";
     if (A->getValue() != DefaultAbi)
       D.Diag(diag::err_drv_unsupported_opt_for_target)
           << A->getSpelling() << Triple.getTriple();
@@ -237,15 +238,28 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
 
     bool IsNegative = Name.consume_front("no-");
 
-#ifndef NDEBUG
-    assert(Name.starts_with("avx10.") && "Invalid AVX10 feature name.");
     StringRef Version, Width;
     std::tie(Version, Width) = Name.substr(6).split('-');
+    assert(Name.starts_with("avx10.") && "Invalid AVX10 feature name.");
     assert((Version == "1" || Version == "2") && "Invalid AVX10 feature name.");
-    assert((Width == "256" || Width == "512") && "Invalid AVX10 feature name.");
-#endif
 
-    Features.push_back(Args.MakeArgString((IsNegative ? "-" : "+") + Name));
+    if (Width == "") {
+      if (IsNegative)
+        Features.push_back(Args.MakeArgString("-" + Name + "-256"));
+      else
+        Features.push_back(Args.MakeArgString("+" + Name + "-512"));
+    } else {
+      if (Width == "512")
+        D.Diag(diag::warn_drv_deprecated_arg) << Name << 1 << Name.drop_back(4);
+      else if (Width == "256")
+        D.Diag(diag::warn_drv_deprecated_custom)
+            << Name
+            << "no alternative argument provided because "
+               "AVX10/256 is not supported and will be removed";
+      else
+        assert((Width == "256" || Width == "512") && "Invalid vector length.");
+      Features.push_back(Args.MakeArgString((IsNegative ? "-" : "+") + Name));
+    }
   }
 
   // Now add any that the user explicitly requested on the command line,
@@ -271,6 +285,13 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
     if (Not64Bit && Name == "uintr")
       D.Diag(diag::err_drv_unsupported_opt_for_target)
           << A->getSpelling() << Triple.getTriple();
+
+    if (A->getOption().matches(options::OPT_mevex512) ||
+        A->getOption().matches(options::OPT_mno_evex512))
+      D.Diag(diag::warn_drv_deprecated_custom)
+          << Name
+          << "no alternative argument provided because "
+             "AVX10/256 is not supported and will be removed";
 
     if (A->getOption().matches(options::OPT_mapx_features_EQ) ||
         A->getOption().matches(options::OPT_mno_apx_features_EQ)) {

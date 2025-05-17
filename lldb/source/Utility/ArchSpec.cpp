@@ -353,6 +353,8 @@ static const ArchDefinitionEntry g_macho_arch_entries[] = {
     {ArchSpec::eCore_x86_64_x86_64,   llvm::MachO::CPU_TYPE_X86_64,     llvm::MachO::CPU_SUBTYPE_X86_ARCH1,     UINT32_MAX, SUBTYPE_MASK},
     {ArchSpec::eCore_x86_64_x86_64h,  llvm::MachO::CPU_TYPE_X86_64,     llvm::MachO::CPU_SUBTYPE_X86_64_H,      UINT32_MAX, SUBTYPE_MASK},
     {ArchSpec::eCore_x86_64_x86_64,   llvm::MachO::CPU_TYPE_X86_64,     CPU_ANY, UINT32_MAX, UINT32_MAX},
+    {ArchSpec::eCore_riscv32,         llvm::MachO::CPU_TYPE_RISCV,      llvm::MachO::CPU_SUBTYPE_RISCV_ALL,     UINT32_MAX, SUBTYPE_MASK},
+    {ArchSpec::eCore_riscv32,         llvm::MachO::CPU_TYPE_RISCV,      CPU_ANY,                                UINT32_MAX, SUBTYPE_MASK},
     // Catch any unknown mach architectures so we can always use the object and symbol mach-o files
     {ArchSpec::eCore_uknownMach32,    0,                                0,                                      0xFF000000u, 0x00000000u},
     {ArchSpec::eCore_uknownMach64,    llvm::MachO::CPU_ARCH_ABI64,      0,                                      0xFF000000u, 0x00000000u}};
@@ -1040,6 +1042,12 @@ bool ArchSpec::IsMatch(const ArchSpec &rhs, MatchType match) const {
          rhs_triple_os == llvm::Triple::IOS &&
          rhs_triple_env == llvm::Triple::MacABI))
       return true;
+    // x86_64-apple-driverkit, x86_64-apple-macosx are compatible, no match.
+    if ((lhs_triple_os == llvm::Triple::DriverKit &&
+         rhs_triple_os == llvm::Triple::MacOSX) ||
+        (lhs_triple_os == llvm::Triple::MacOSX &&
+         rhs_triple_os == llvm::Triple::DriverKit))
+      return true;
   }
 
   // x86_64-apple-ios-macabi and x86_64-apple-ios are not compatible.
@@ -1447,7 +1455,6 @@ bool ArchSpec::IsFullySpecifiedTriple() const {
 }
 
 bool ArchSpec::IsAlwaysThumbInstructions() const {
-  std::string Status;
   if (GetTriple().getArch() == llvm::Triple::arm ||
       GetTriple().getArch() == llvm::Triple::thumb) {
     // v. https://en.wikipedia.org/wiki/ARM_Cortex-M

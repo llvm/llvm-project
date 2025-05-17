@@ -15,15 +15,14 @@ subroutine out(x)
 
   ! CHECK:     %[[V_65:[0-9]+]] = fir.address_of(@_QQro._QM__fortran_builtinsT__builtin_ieee_flag_type.0) : !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_flag_type{_QM__fortran_builtinsT__builtin_ieee_flag_type.flag:i8}>>
   ! CHECK:     %[[V_66:[0-9]+]] = fir.declare %[[V_65]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro._QM__fortran_builtinsT__builtin_ieee_flag_type.0"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_flag_type{_QM__fortran_builtinsT__builtin_ieee_flag_type.flag:i8}>>) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_flag_type{_QM__fortran_builtinsT__builtin_ieee_flag_type.flag:i8}>>
-  ! CHECK:     %[[V_67:[0-9]+]] = fir.field_index _QM__fortran_builtinsT__builtin_ieee_flag_type.flag, !fir.type<_QM__fortran_builtinsT__builtin_ieee_flag_type{_QM__fortran_builtinsT__builtin_ieee_flag_type.flag:i8}>
-  ! CHECK:     %[[V_68:[0-9]+]] = fir.coordinate_of %[[V_66]], %[[V_67]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_flag_type{_QM__fortran_builtinsT__builtin_ieee_flag_type.flag:i8}>>, !fir.field) -> !fir.ref<i8>
+  ! CHECK:     %[[V_68:[0-9]+]] = fir.coordinate_of %[[V_66]], _QM__fortran_builtinsT__builtin_ieee_flag_type.flag : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_flag_type{_QM__fortran_builtinsT__builtin_ieee_flag_type.flag:i8}>>) -> !fir.ref<i8>
   ! CHECK:     %[[V_69:[0-9]+]] = fir.load %[[V_68]] : !fir.ref<i8>
   ! CHECK:     %[[V_70:[0-9]+]] = fir.convert %[[V_69]] : (i8) -> i32
   ! CHECK:     %[[V_71:[0-9]+]] = fir.call @_FortranAMapException(%[[V_70]]) fastmath<contract> : (i32) -> i32
   ! CHECK:     fir.if %false{{[_0-9]*}} {
-  ! CHECK:       %[[V_101:[0-9]+]] = fir.call @feraiseexcept(%[[V_71]]) fastmath<contract> : (i32) -> i32
+  ! CHECK:       fir.call {{.*}}feraiseexcept(%[[V_71]]) fastmath<contract> : (i32)
   ! CHECK:     } else {
-  ! CHECK:       %[[V_101:[0-9]+]] = fir.call @feclearexcept(%[[V_71]]) fastmath<contract> : (i32) -> i32
+  ! CHECK:       fir.call {{.*}}feclearexcept(%[[V_71]]) fastmath<contract> : (i32)
   ! CHECK:     }
   call ieee_set_flag(ieee_divide_by_zero, .false.)
 
@@ -32,7 +31,7 @@ subroutine out(x)
   ! CHECK:     %[[V_74:[0-9]+]] = arith.cmpf oeq, %[[V_72]], %cst{{[_0-9]*}} {{.*}} : f64
   ! CHECK:     %[[V_75:[0-9]+]] = fir.if %[[V_74]] -> (f64) {
   ! CHECK:       %[[V_101:[0-9]+]] = fir.call @_FortranAMapException(%c4{{.*}}) fastmath<contract> : (i32) -> i32
-  ! CHECK:       %[[V_102:[0-9]+]] = fir.call @feraiseexcept(%[[V_101]]) fastmath<contract> : (i32) -> i32
+  ! CHECK:       fir.call {{.*}}feraiseexcept(%[[V_101]]) fastmath<contract> : (i32)
   ! CHECK:       fir.result %cst{{[_0-9]*}} : f64
   ! CHECK:     } else {
   ! CHECK:       %[[V_101:[0-9]+]] = arith.shli %[[V_73]], %c1{{.*}} : i64
@@ -53,11 +52,11 @@ subroutine out(x)
   r = ieee_logb(x)
 
   ! CHECK:     %[[V_76:[0-9]+]] = fir.declare %[[V_65]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro._QM__fortran_builtinsT__builtin_ieee_flag_type.0"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_flag_type{_QM__fortran_builtinsT__builtin_ieee_flag_type.flag:i8}>>) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_flag_type{_QM__fortran_builtinsT__builtin_ieee_flag_type.flag:i8}>>
-  ! CHECK:     %[[V_77:[0-9]+]] = fir.coordinate_of %[[V_76]], %[[V_67]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_flag_type{_QM__fortran_builtinsT__builtin_ieee_flag_type.flag:i8}>>, !fir.field) -> !fir.ref<i8>
+  ! CHECK:     %[[V_77:[0-9]+]] = fir.coordinate_of %[[V_76]], _QM__fortran_builtinsT__builtin_ieee_flag_type.flag : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_flag_type{_QM__fortran_builtinsT__builtin_ieee_flag_type.flag:i8}>>) -> !fir.ref<i8>
   ! CHECK:     %[[V_78:[0-9]+]] = fir.load %[[V_77]] : !fir.ref<i8>
   ! CHECK:     %[[V_79:[0-9]+]] = fir.convert %[[V_78]] : (i8) -> i32
   ! CHECK:     %[[V_80:[0-9]+]] = fir.call @_FortranAMapException(%[[V_79]]) fastmath<contract> : (i32) -> i32
-  ! CHECK:     %[[V_81:[0-9]+]] = fir.call @fetestexcept(%[[V_80]]) fastmath<contract> : (i32) -> i32
+  ! CHECK:     %[[V_81:[0-9]+]] = fir.call {{.*}}fetestexcept(%[[V_80]]) fastmath<contract> : (i32) -> i32
   ! CHECK:     %[[V_82:[0-9]+]] = arith.cmpi ne, %[[V_81]], %c0{{.*}} : i32
   ! CHECK:     %[[V_83:[0-9]+]] = fir.convert %[[V_82]] : (i1) -> !fir.logical<4>
   ! CHECK:     fir.store %[[V_83]] to %[[V_61]] : !fir.ref<!fir.logical<4>>

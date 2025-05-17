@@ -132,7 +132,7 @@ define float @float_(ptr nocapture readonly %a, ptr nocapture readonly %b, i32 %
 ;CHECK-LABEL: float_
 ;CHECK: LV(REG): VF = 1
 ;CHECK: LV(REG): Found max usage: 2 item
-;CHECK-NEXT: LV(REG): RegisterClass: PPC::GPRRC, 2 registers
+;CHECK-NEXT: LV(REG): RegisterClass: PPC::GPRRC, 3 registers
 ;CHECK-NEXT: LV(REG): RegisterClass: PPC::VSXRC, 3 registers
 ;CHECK: LV(REG): Found invariant usage: 1 item
 ;CHECK-NEXT: LV(REG): RegisterClass: PPC::GPRRC, 1 registers
@@ -175,14 +175,14 @@ define void @double_(ptr nocapture %A, i32 %n) nounwind uwtable ssp {
 ;CHECK-PWR8-NEXT: LV(REG): RegisterClass: PPC::GPRRC, 2 registers
 ;CHECK-PWR8-NEXT: LV(REG): RegisterClass: PPC::VSXRC, 5 registers
 ;CHECK-PWR8: LV(REG): Found invariant usage: 1 item
-;CHECK-PWR8-NEXT: LV(REG): RegisterClass: PPC::GPRRC, 1 registers
+;CHECK-PWR8-NEXT: LV(REG): RegisterClass: PPC::GPRRC, 2 registers
 
 ;CHECK-PWR9: LV(REG): VF = 1
 ;CHECK-PWR9: LV(REG): Found max usage: 2 item
 ;CHECK-PWR9-NEXT: LV(REG): RegisterClass: PPC::GPRRC, 2 registers
 ;CHECK-PWR9-NEXT: LV(REG): RegisterClass: PPC::VSXRC, 5 registers
 ;CHECK-PWR9: LV(REG): Found invariant usage: 1 item
-;CHECK-PWR9-NEXT: LV(REG): RegisterClass: PPC::GPRRC, 1 registers
+;CHECK-PWR9-NEXT: LV(REG): RegisterClass: PPC::GPRRC, 2 registers
 
   %1 = sext i32 %n to i64
   br label %2
@@ -248,8 +248,12 @@ define void @fp16_(ptr nocapture readonly %pIn, ptr nocapture %pOut, i32 %numRow
 ;CHECK-LABEL: fp16_
 ;CHECK: LV(REG): VF = 1
 ;CHECK: LV(REG): Found max usage: 2 item
-;CHECK: LV(REG): RegisterClass: PPC::GPRRC, 4 registers
+;CHECK: LV(REG): RegisterClass: PPC::GPRRC, 3 registers
 ;CHECK: LV(REG): RegisterClass: PPC::VSXRC, 2 registers
+;CHECK: LV(REG): Found invariant usage: 2 item
+;CHECK: LV(REG): RegisterClass: PPC::GPRRC, 1 registers
+;CHECK: LV(REG): RegisterClass: PPC::VSXRC, 1 registers
+
 entry:
   %tmp.0.extract.trunc = trunc i32 %scale.coerce to i16
   %0 = bitcast i16 %tmp.0.extract.trunc to half

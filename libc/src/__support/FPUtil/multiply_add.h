@@ -46,13 +46,25 @@ multiply_add(T x, T y, T z) {
 namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 
+#ifdef LIBC_TARGET_CPU_HAS_FMA_FLOAT
 LIBC_INLINE float multiply_add(float x, float y, float z) {
+#if __has_builtin(__builtin_elementwise_fma)
+  return __builtin_elementwise_fma(x, y, z);
+#else
   return __builtin_fmaf(x, y, z);
+#endif
 }
+#endif // LIBC_TARGET_CPU_HAS_FMA_FLOAT
 
+#ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
 LIBC_INLINE double multiply_add(double x, double y, double z) {
+#if __has_builtin(__builtin_elementwise_fma)
+  return __builtin_elementwise_fma(x, y, z);
+#else
   return __builtin_fma(x, y, z);
+#endif
 }
+#endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE
 
 } // namespace fputil
 } // namespace LIBC_NAMESPACE_DECL

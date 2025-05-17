@@ -569,8 +569,7 @@ void PrintPPOutputPPCallbacks::MacroDefined(const Token &MacroNameTok,
   SourceLocation DefLoc = MI->getDefinitionLoc();
   if (DirectivesOnly && !MI->isUsed()) {
     SourceManager &SM = PP.getSourceManager();
-    if (SM.isWrittenInBuiltinFile(DefLoc) ||
-        SM.isWrittenInCommandLineFile(DefLoc))
+    if (SM.isInPredefinedFile(DefLoc))
       return;
   }
   MoveToLine(DefLoc, /*RequireStartOfLine=*/true);
@@ -974,11 +973,10 @@ static void PrintPreprocessedTokens(Preprocessor &PP, Token &Tok,
       // Loop over the contents and print them as a comma-delimited list of
       // values.
       bool PrintComma = false;
-      for (auto Iter = Data->BinaryData.begin(), End = Data->BinaryData.end();
-           Iter != End; ++Iter) {
+      for (unsigned char Byte : Data->BinaryData.bytes()) {
         if (PrintComma)
           *Callbacks->OS << ", ";
-        *Callbacks->OS << static_cast<unsigned>(*Iter);
+        *Callbacks->OS << static_cast<int>(Byte);
         PrintComma = true;
       }
     } else if (Tok.isAnnotation()) {

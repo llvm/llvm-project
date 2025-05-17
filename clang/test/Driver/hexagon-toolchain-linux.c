@@ -127,6 +127,7 @@
 // RUN:    --target=hexagon-unknown-linux-musl %s -### 2>&1 \
 // RUN:    | FileCheck -check-prefix=CHECK011 %s
 // CHECK011:   InstalledDir: [[INSTALLED_DIR:.+]]
+// CHECK011:   "--eh-frame-hdr"
 // CHECK011:   crt1.o
 // CHECK011-NOT:  "-lunwind"
 // CHECK011-NOT:  "-lgcc_eh"

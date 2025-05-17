@@ -41,11 +41,16 @@
 // CHECK-CC-NOLTO-SAME: -emit-obj
 // CHECK-CC-NOLTO-NOT: -ffat-lto-objects
 
+// RUN: %clang --target=x86_64-unknown-linux-gnu -flto -ffat-lto-objects -fno-fat-lto-objects -### %s -c 2>&1 | FileCheck %s -check-prefix=CHECK-CC-NOLTO
+
 /// We need to pass an additional flag (--fat-lto-objects) to lld when linking w/ -flto -ffat-lto-objects
 /// But it should not be there when LTO is disabled w/ -fno-lto
 // RUN: %clang --target=x86_64-unknown-linux-gnu --sysroot=%S/Inputs/basic_cross_linux_tree %s \
 // RUN:   -fuse-ld=lld -flto -ffat-lto-objects -### 2>&1 | FileCheck --check-prefix=LTO %s
 // RUN: %clang --target=x86_64-unknown-linux-gnu --sysroot=%S/Inputs/basic_cross_linux_tree %s \
 // RUN:   -fuse-ld=lld -fno-lto -ffat-lto-objects -### 2>&1 | FileCheck --check-prefix=NOLTO %s
+// RUN: %clang --target=x86_64-unknown-linux-gnu --sysroot=%S/Inputs/basic_cross_linux_tree %s \
+// RUN:   -fuse-ld=lld --ld-path=%S/Inputs/basic_cross_linux_tree/usr/x86_64-unknown-linux-gnu/bin/lld-wrapper \
+// RUN:   -flto -ffat-lto-objects -### 2>&1 | FileCheck --check-prefix=LTO %s
 // LTO: "--fat-lto-objects"
 // NOLTO-NOT: "--fat-lto-objects"

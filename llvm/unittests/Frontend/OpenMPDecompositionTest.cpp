@@ -188,7 +188,7 @@ struct StringifyClause {
   }
 
   static std::string to_str(llvm::omp::Directive D) {
-    return getOpenMPDirectiveName(D).str();
+    return getOpenMPDirectiveName(D, llvm::omp::FallbackVersion).str();
   }
   static std::string to_str(llvm::omp::Clause C) {
     return getOpenMPClauseName(C).str();
@@ -279,7 +279,7 @@ struct StringifyClause {
 std::string stringify(const omp::DirectiveWithClauses &DWC) {
   std::stringstream Stream;
 
-  Stream << getOpenMPDirectiveName(DWC.id).str();
+  Stream << getOpenMPDirectiveName(DWC.id, llvm::omp::FallbackVersion).str();
   for (const omp::Clause &C : DWC.clauses)
     Stream << ' ' << StringifyClause(C).Str;
 

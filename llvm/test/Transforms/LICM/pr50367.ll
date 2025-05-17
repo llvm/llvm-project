@@ -2,7 +2,7 @@
 ; RUN: opt -S -passes='loop-mssa(licm)' < %s | FileCheck %s
 @e = external dso_local global ptr, align 8
 
-define void @main(i1 %arg) {
+define void @main(i1 %arg, ptr %arg1) {
 ; CHECK-LABEL: @main(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP1:%.*]]
@@ -11,8 +11,47 @@ define void @main(i1 %arg) {
 ; CHECK:       loop2:
 ; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[LOOP2_LATCH:%.*]], label [[LOOP_LATCH:%.*]]
 ; CHECK:       loop2.latch:
+; CHECK-NEXT:    store i32 0, ptr [[ARG1:%.*]], align 4
 ; CHECK-NEXT:    br label [[LOOP2]]
 ; CHECK:       loop.latch:
+; CHECK-NEXT:    store ptr null, ptr @e, align 8, !tbaa [[TBAA0:![0-9]+]]
+; CHECK-NEXT:    [[PTR:%.*]] = load ptr, ptr @e, align 8, !tbaa [[TBAA0]]
+; CHECK-NEXT:    store i32 0, ptr [[PTR]], align 4, !tbaa [[TBAA4:![0-9]+]]
+; CHECK-NEXT:    br label [[LOOP1]]
+;
+entry:
+  br label %loop1
+
+loop1:
+  br label %loop2
+
+loop2:
+  br i1 %arg, label %loop2.latch, label %loop.latch
+
+loop2.latch:
+  store i32 0, ptr %arg1, align 4
+  br label %loop2
+
+loop.latch:
+  store ptr null, ptr @e, align 8, !tbaa !0
+  %ptr = load ptr, ptr @e, align 8, !tbaa !0
+  store i32 0, ptr %ptr, align 4, !tbaa !4
+  br label %loop1
+}
+
+define void @store_null(i1 %arg) {
+; CHECK-LABEL: @store_null(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP1:%.*]]
+; CHECK:       loop1:
+; CHECK-NEXT:    br label [[LOOP2:%.*]]
+; CHECK:       loop2:
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[LOOP2_LATCH:%.*]], label [[LOOP_LATCH:%.*]]
+; CHECK:       loop2.latch:
+; CHECK-NEXT:    store i32 0, ptr null, align 4
+; CHECK-NEXT:    br label [[LOOP2]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    store i32 0, ptr null, align 4, !tbaa [[TBAA4]]
 ; CHECK-NEXT:    br label [[LOOP1]]
 ;
 entry:

@@ -18,7 +18,7 @@
 using namespace llvm;
 
 static bool finalizeLinkage(Module &M) {
-  SmallPtrSet<Function *, 8> Funcs;
+  SmallVector<Function *> Funcs;
 
   // Collect non-entry and non-exported functions to set to internal linkage.
   for (Function &EF : M.functions()) {
@@ -26,7 +26,7 @@ static bool finalizeLinkage(Module &M) {
       continue;
     if (EF.hasFnAttribute("hlsl.shader") || EF.hasFnAttribute("hlsl.export"))
       continue;
-    Funcs.insert(&EF);
+    Funcs.push_back(&EF);
   }
 
   for (Function *F : Funcs) {
