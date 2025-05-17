@@ -17,6 +17,7 @@
 #include "CIRGenFunctionInfo.h"
 #include "CIRGenRecordLayout.h"
 
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/Type.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 
@@ -38,6 +39,7 @@ namespace clang::CIRGen {
 
 class CallArgList;
 class CIRGenBuilderTy;
+class CIRGenCXXABI;
 class CIRGenModule;
 
 /// This class organizes the cross-module state that is used while lowering
@@ -46,6 +48,7 @@ class CIRGenTypes {
   CIRGenModule &cgm;
   clang::ASTContext &astContext;
   CIRGenBuilderTy &builder;
+  CIRGenCXXABI &theCXXABI;
 
   const ABIInfo &theABIInfo;
 
@@ -80,6 +83,11 @@ public:
   /// (i.e. doesn't depend on an incomplete tag type).
   bool isFuncTypeConvertible(const clang::FunctionType *ft);
   bool isFuncParamTypeConvertible(clang::QualType type);
+
+  /// Derives the 'this' type for CIRGen purposes, i.e. ignoring method CVR
+  /// qualification.
+  clang::CanQualType deriveThisType(const clang::CXXRecordDecl *rd,
+                                    const clang::CXXMethodDecl *md);
 
   /// This map of clang::Type to mlir::Type (which includes CIR type) is a
   /// cache of types that have already been processed.
@@ -151,6 +159,20 @@ public:
   /// LLVM zeroinitializer.
   bool isZeroInitializable(clang::QualType ty);
   bool isZeroInitializable(const RecordDecl *rd);
+
+  const CIRGenFunctionInfo &
+  arrangeCXXMethodCall(const CallArgList &args,
+                       const clang::FunctionProtoType *type,
+                       RequiredArgs required, unsigned numPrefixArgs);
+
+  /// C++ methods have some special rules and also have implicit parameters.
+  const CIRGenFunctionInfo &
+  arrangeCXXMethodDeclaration(const clang::CXXMethodDecl *md);
+
+  const CIRGenFunctionInfo &
+  arrangeCXXMethodType(const clang::CXXRecordDecl *rd,
+                       const clang::FunctionProtoType *ftp,
+                       const clang::CXXMethodDecl *md);
 
   const CIRGenFunctionInfo &arrangeFreeFunctionCall(const CallArgList &args,
                                                     const FunctionType *fnType);
