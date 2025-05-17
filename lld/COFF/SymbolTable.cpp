@@ -47,6 +47,8 @@ static COFFSyncStream errorOrWarn(COFFLinkerContext &ctx) {
 
 // Causes the file associated with a lazy symbol to be linked in.
 static void forceLazy(Symbol *s) {
+  if (s->pendingArchiveLoad)
+    return;
   s->pendingArchiveLoad = true;
   switch (s->kind()) {
   case Symbol::Kind::LazyArchiveKind: {
@@ -56,11 +58,6 @@ static void forceLazy(Symbol *s) {
   }
   case Symbol::Kind::LazyObjectKind: {
     InputFile *file = cast<LazyObject>(s)->file;
-    // FIXME: Remove this once we resolve all defineds before all undefineds in
-    //        ObjFile::initializeSymbols().
-    if (!file->lazy)
-      return;
-    file->lazy = false;
     file->symtab.ctx.driver.addFile(file);
     break;
   }
@@ -747,7 +744,6 @@ void SymbolTable::addLazyArchive(ArchiveFile *f, const Archive::Symbol &sym) {
 }
 
 void SymbolTable::addLazyObject(InputFile *f, StringRef n) {
-  assert(f->lazy);
   if (isEC() && !checkLazyECPair<LazyObject>(this, n, f))
     return;
   auto [s, wasInserted] = insert(n, f);
@@ -759,7 +755,6 @@ void SymbolTable::addLazyObject(InputFile *f, StringRef n) {
   if (!u || (u->weakAlias && !u->isECAlias(machine)) || s->pendingArchiveLoad)
     return;
   s->pendingArchiveLoad = true;
-  f->lazy = false;
   ctx.driver.addFile(f);
 }
 
@@ -1372,8 +1367,7 @@ void SymbolTable::compileBitcodeFiles() {
     lto->add(*f);
   for (InputFile *newObj : lto->compile()) {
     ObjFile *obj = cast<ObjFile>(newObj);
-    obj->parse();
-    ctx.objFileInstances.push_back(obj);
+    obj->maybeParse();
   }
 }
 
