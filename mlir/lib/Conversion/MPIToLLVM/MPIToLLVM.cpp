@@ -446,6 +446,62 @@ struct InitOpLowering : public ConvertOpToLLVMPattern<mpi::InitOp> {
 };
 
 //===----------------------------------------------------------------------===//
+// CommSizeOpLowering
+//===----------------------------------------------------------------------===//
+
+struct CommSizeOpLowering : public ConvertOpToLLVMPattern<mpi::CommSizeOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(mpi::CommSizeOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    // get some helper vars
+    Location loc = op.getLoc();
+    MLIRContext *context = rewriter.getContext();
+    Type i32 = rewriter.getI32Type();
+
+    // ptrType `!llvm.ptr`
+    Type ptrType = LLVM::LLVMPointerType::get(context);
+
+    // grab a reference to the global module op:
+    auto moduleOp = op->getParentOfType<ModuleOp>();
+
+    auto mpiTraits = MPIImplTraits::get(moduleOp);
+    // get communicator
+    Value comm = mpiTraits->castComm(loc, rewriter, adaptor.getComm());
+
+    // LLVM Function type representing `i32 MPI_Comm_size(ptr, ptr)`
+    auto rankFuncType =
+        LLVM::LLVMFunctionType::get(i32, {comm.getType(), ptrType});
+    // get or create function declaration:
+    LLVM::LLVMFuncOp initDecl = getOrDefineFunction(
+        moduleOp, loc, rewriter, "MPI_Comm_size", rankFuncType);
+
+    // replace with function call
+    auto one = rewriter.create<LLVM::ConstantOp>(loc, i32, 1);
+    auto sizeptr = rewriter.create<LLVM::AllocaOp>(loc, ptrType, i32, one);
+    auto callOp = rewriter.create<LLVM::CallOp>(
+        loc, initDecl, ValueRange{comm, sizeptr.getRes()});
+
+    // load the rank into a register
+    auto loadedRank =
+        rewriter.create<LLVM::LoadOp>(loc, i32, sizeptr.getResult());
+
+    // if retval is checked, replace uses of retval with the results from the
+    // call op
+    SmallVector<Value> replacements;
+    if (op.getRetval())
+      replacements.push_back(callOp.getResult());
+
+    // replace all uses, then erase op
+    replacements.push_back(loadedRank.getRes());
+    rewriter.replaceOp(op, replacements);
+
+    return success();
+  }
+};
+
+//===----------------------------------------------------------------------===//
 // FinalizeOpLowering
 //===----------------------------------------------------------------------===//
 
@@ -801,7 +857,7 @@ void mpi::populateMPIToLLVMConversionPatterns(LLVMTypeConverter &converter,
   });
   patterns.add<CommRankOpLowering, CommSplitOpLowering, CommWorldOpLowering,
                FinalizeOpLowering, InitOpLowering, SendOpLowering,
-               RecvOpLowering, AllReduceOpLowering>(converter);
+               RecvOpLowering, AllReduceOpLowering, CommSizeOpLowering>(converter);
 }
 
 void mpi::registerConvertMPIToLLVMInterface(DialectRegistry &registry) {
