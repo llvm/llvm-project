@@ -138,8 +138,8 @@ struct SLPGraphNode {
   bool isRoot = false;
 
   SLPGraphNode() = default;
-  SLPGraphNode(Operation *op) { ops.push_back(op); }
-  void addOp(Operation *op) { ops.push_back(op); }
+  SLPGraphNode(ArrayRef<Operation *> operations)
+      : ops(operations.begin(), operations.end()) {}
 };
 
 /// A graph of vectorizable operations
@@ -148,15 +148,23 @@ public:
   SLPGraph() = default;
   ~SLPGraph() = default;
 
+  // Delete copy constructor and assignment operator
+  SLPGraph(const SLPGraph &) = delete;
+  SLPGraph &operator=(const SLPGraph &) = delete;
+
+  // Allow move operations
+  SLPGraph(SLPGraph &&) = default;
+  SLPGraph &operator=(SLPGraph &&) = default;
+
   /// Add a new node to the graph
-  SLPGraphNode *addNode(Operation *op) {
-    nodes.push_back(std::make_unique<SLPGraphNode>(op));
+  SLPGraphNode *addNode(ArrayRef<Operation *> operations) {
+    nodes.push_back(std::make_unique<SLPGraphNode>(operations));
     return nodes.back().get();
   }
 
   /// Add a root node (memory operation)
-  SLPGraphNode *addRoot(Operation *op) {
-    auto *node = addNode(op);
+  SLPGraphNode *addRoot(ArrayRef<Operation *> operations) {
+    auto *node = addNode(operations);
     node->isRoot = true;
     return node;
   }
@@ -251,7 +259,25 @@ private:
   SmallVector<MemoryOpGroup> collectMemoryOpGroups(Block &block);
 };
 
-} // namespace
+/// Build the SLP graph starting from memory operation groups
+SLPGraph buildSLPGraph(const SmallVector<MemoryOpGroup> &rootGroups) {
+  SLPGraph graph;
+
+  // First, create nodes for each contiguous memory operation group
+  for (const auto &group : rootGroups) {
+    // Create a new node for this group
+    auto *node = graph.addRoot(group.ops);
+    node->isRoot = true;
+
+    LLVM_DEBUG({
+      llvm::dbgs() << "Created " << (group.isLoadGroup() ? "LOAD" : "STORE")
+                   << " group node with " << node->ops.size()
+                   << " operations\n";
+    });
+  }
+
+  return graph;
+}
 
 SmallVector<MemoryOpGroup>
 SLPVectorizerPass::collectMemoryOpGroups(Block &block) {
@@ -314,8 +340,16 @@ void SLPVectorizerPass::runOnOperation() {
       });
       rootGroups.append(contiguousGroups.begin(), contiguousGroups.end());
     }
+
+    // Build the SLP graph from root groups
+    SLPGraph graph = buildSLPGraph(rootGroups);
+
+    // Print the graph structure
+    LLVM_DEBUG(graph.print());
   });
 }
+
+} // namespace
 
 std::unique_ptr<Pass> mlir::vector::createSLPVectorizerPass() {
   return std::make_unique<SLPVectorizerPass>();
