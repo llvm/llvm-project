@@ -1112,6 +1112,16 @@ bool DWARFASTParserClang::ParseObjCMethod(
   return true;
 }
 
+static bool IsStructorDIE(DWARFDIE const &die, DWARFDIE const &parent_die) {
+  llvm::StringRef name = die.GetName();
+  llvm::StringRef parent_name = parent_die.GetName();
+
+  name.consume_front("~");
+  parent_name = parent_name.substr(0, parent_name.find('<'));
+
+  return name == parent_name;
+}
+
 std::pair<bool, TypeSP> DWARFASTParserClang::ParseCXXMethod(
     const DWARFDIE &die, CompilerType clang_type,
     const ParsedDWARFTypeAttributes &attrs, const DWARFDIE &decl_ctx_die,
@@ -1212,11 +1222,22 @@ std::pair<bool, TypeSP> DWARFASTParserClang::ParseCXXMethod(
   const auto accessibility =
       attrs.accessibility == eAccessNone ? eAccessPublic : attrs.accessibility;
 
+  // TODO: we should also include mangled name in identifier for
+  // better diagnostics and easier debugging when reading the
+  // expression evaluator IR.
+  std::string mangled_name;
+  if (IsStructorDIE(die, decl_ctx_die))
+    mangled_name = llvm::formatv("$__lldb_func_{0}:{1}", die.GetModule().get(),
+                                 die.GetID())
+                       .str();
+
+  char const *mangled =
+      mangled_name.empty() ? attrs.mangled_name : mangled_name.c_str();
+
   clang::CXXMethodDecl *cxx_method_decl = m_ast.AddMethodToCXXRecordType(
-      class_opaque_type.GetOpaqueQualType(), attrs.name.GetCString(),
-      attrs.mangled_name, clang_type, accessibility, attrs.is_virtual,
-      is_static, attrs.is_inline, attrs.is_explicit, is_attr_used,
-      attrs.is_artificial);
+      class_opaque_type.GetOpaqueQualType(), attrs.name.GetCString(), mangled,
+      clang_type, accessibility, attrs.is_virtual, is_static, attrs.is_inline,
+      attrs.is_explicit, is_attr_used, attrs.is_artificial);
 
   if (cxx_method_decl) {
     LinkDeclContextToDIE(cxx_method_decl, die);
