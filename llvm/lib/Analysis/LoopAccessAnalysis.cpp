@@ -1112,7 +1112,7 @@ static iterator_range<PointerIntPair<const SCEV *, 1, bool> *> getRTCheckPtrs(
     if (SAR)
       P.setInt(false);
 
-    if (auto *PtrVal = SAR ? SAR : AR)
+    if (auto *PtrVal = SAR ? SAR : AR; PtrVal && PtrVal->isAffine())
       P.setPointer(PtrVal);
     else if (!PSE.getSE()->isLoopInvariant(P.getPointer(), L))
       return {ForkedSCEVs.end(), ForkedSCEVs.end()};
