@@ -1107,7 +1107,7 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
   // openmp_wrappers folder which contains alternative system headers.
   if (JA.isDeviceOffloading(Action::OFK_OpenMP) &&
       !Args.hasArg(options::OPT_nostdinc) &&
-      !Args.hasArg(options::OPT_nogpuinc) &&
+      Args.hasFlag(options::OPT_gpuinc, options::OPT_nogpuinc, true) &&
       getToolChain().getTriple().isGPU()) {
     if (!Args.hasArg(options::OPT_nobuiltininc)) {
       // Add openmp_wrappers/* to our system include path.  This lets us wrap
@@ -1290,7 +1290,7 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
   // TODO: This should be moved to `AddClangSystemIncludeArgs` by passing the
   //       OffloadKind as an argument.
   if (!Args.hasArg(options::OPT_nostdinc) &&
-      !Args.hasArg(options::OPT_nogpuinc) &&
+      Args.hasFlag(options::OPT_gpuinc, options::OPT_nogpuinc, true) &&
       !Args.hasArg(options::OPT_nobuiltininc)) {
     // Without an offloading language we will include these headers directly.
     // Offloading languages will instead only use the declarations stored in

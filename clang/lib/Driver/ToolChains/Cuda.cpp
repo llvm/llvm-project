@@ -305,7 +305,7 @@ void CudaInstallationDetector::AddCudaIncludeArgs(
     CC1Args.push_back(DriverArgs.MakeArgString(P));
   }
 
-  if (DriverArgs.hasArg(options::OPT_nogpuinc))
+  if (!DriverArgs.hasFlag(options::OPT_gpuinc, options::OPT_nogpuinc, true))
     return;
 
   if (!isValid()) {
@@ -931,7 +931,7 @@ llvm::DenormalMode CudaToolChain::getDefaultDenormalModeForType(
 void CudaToolChain::AddCudaIncludeArgs(const ArgList &DriverArgs,
                                        ArgStringList &CC1Args) const {
   // Check our CUDA version if we're going to include the CUDA headers.
-  if (!DriverArgs.hasArg(options::OPT_nogpuinc) &&
+  if (DriverArgs.hasFlag(options::OPT_gpuinc, options::OPT_nogpuinc, true) &&
       !DriverArgs.hasArg(options::OPT_no_cuda_version_check)) {
     StringRef Arch = DriverArgs.getLastArgValue(options::OPT_march_EQ);
     assert(!Arch.empty() && "Must have an explicit GPU arch.");
@@ -1004,7 +1004,8 @@ void CudaToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
                                               ArgStringList &CC1Args) const {
   HostTC.AddClangSystemIncludeArgs(DriverArgs, CC1Args);
 
-  if (!DriverArgs.hasArg(options::OPT_nogpuinc) && CudaInstallation.isValid())
+  if (DriverArgs.hasFlag(options::OPT_gpuinc, options::OPT_nogpuinc, true) &&
+      CudaInstallation.isValid())
     CC1Args.append(
         {"-internal-isystem",
          DriverArgs.MakeArgString(CudaInstallation.getIncludePath())});
