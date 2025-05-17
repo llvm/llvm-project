@@ -9,6 +9,7 @@
 #include "mlir/Analysis/AliasAnalysis/LocalAliasAnalysis.h"
 
 #include "mlir/Analysis/AliasAnalysis.h"
+#include "mlir/Dialect/Bufferization/IR/BufferViewFlowOpInterface.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Block.h"
 #include "mlir/IR/Matchers.h"
@@ -130,6 +131,26 @@ static void collectUnderlyingAddressValues(OpResult result, unsigned maxDepth,
   if (ViewLikeOpInterface view = dyn_cast<ViewLikeOpInterface>(op))
     return collectUnderlyingAddressValues(view.getViewSource(), maxDepth,
                                           visited, output);
+
+  // If this is a buffer view, unwarp to the operands viewed from.
+  if (mlir::bufferization::BufferViewFlowOpInterface bufferView =
+          dyn_cast<mlir::bufferization::BufferViewFlowOpInterface>(op)) {
+    SmallVector<Value> viewSources;
+    bufferView.populateDependencies(
+        [&](ValueRange operands, ValueRange results) {
+          if (results.size() == 1 && results[0] == result) {
+            viewSources.append(operands.begin(), operands.end());
+          }
+        });
+
+    if (!viewSources.empty()) {
+      for (Value viewSource : viewSources) {
+        collectUnderlyingAddressValues(viewSource, maxDepth, visited, output);
+      }
+      return;
+    }
+  }
+
   // Check to see if we can reason about the control flow of this op.
   if (auto branch = dyn_cast<RegionBranchOpInterface>(op)) {
     return collectUnderlyingAddressValues(branch, /*region=*/nullptr, result,
