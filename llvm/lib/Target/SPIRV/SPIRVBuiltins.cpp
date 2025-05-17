@@ -372,18 +372,15 @@ static MachineInstr *getBlockStructInstr(Register ParamReg,
   // We expect the following sequence of instructions:
   //   %0:_(pN) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.spv.alloca)
   //   or       = G_GLOBAL_VALUE @block_literal_global
-  //   %1:_(pN) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.spv.bitcast), %0
-  //   %2:_(p4) = G_ADDRSPACE_CAST %1:_(pN)
+  //   %1:_(p4) = G_ADDRSPACE_CAST %0:_(pN)
   MachineInstr *MI = MRI->getUniqueVRegDef(ParamReg);
   assert(MI->getOpcode() == TargetOpcode::G_ADDRSPACE_CAST &&
          MI->getOperand(1).isReg());
-  Register BitcastReg = MI->getOperand(1).getReg();
-  MachineInstr *BitcastMI = MRI->getUniqueVRegDef(BitcastReg);
-  assert(isSpvIntrinsic(*BitcastMI, Intrinsic::spv_bitcast) &&
-         BitcastMI->getOperand(2).isReg());
-  Register ValueReg = BitcastMI->getOperand(2).getReg();
-  MachineInstr *ValueMI = MRI->getUniqueVRegDef(ValueReg);
-  return ValueMI;
+  Register PtrReg = MI->getOperand(1).getReg();
+  MachineInstr *PtrMI = MRI->getUniqueVRegDef(PtrReg);
+  assert(PtrMI->getOpcode() == TargetOpcode::G_GLOBAL_VALUE ||
+         isSpvIntrinsic(*PtrMI, Intrinsic::spv_alloca));
+  return PtrMI;
 }
 
 // Return an integer constant corresponding to the given register and
@@ -697,7 +694,8 @@ static bool buildAtomicStoreInst(const SPIRV::IncomingCall *Call,
                                  MachineIRBuilder &MIRBuilder,
                                  SPIRVGlobalRegistry *GR) {
   if (Call->isSpirvOp())
-    return buildOpFromWrapper(MIRBuilder, SPIRV::OpAtomicStore, Call, Register(0));
+    return buildOpFromWrapper(MIRBuilder, SPIRV::OpAtomicStore, Call,
+                              Register(0));
 
   Register ScopeRegister =
       buildConstantIntReg32(SPIRV::Scope::Device, MIRBuilder, GR);
@@ -2461,20 +2459,69 @@ static bool buildEnqueueKernel(const SPIRV::IncomingCall *Call,
   MachineInstr *BlockMI = getBlockStructInstr(Call->Arguments[BlockFIdx], MRI);
   assert(BlockMI->getOpcode() == TargetOpcode::G_GLOBAL_VALUE);
   // Invoke: Pointer to invoke function.
-  MIB.addGlobalAddress(BlockMI->getOperand(1).getGlobal());
+  Register BlockFReg = BlockMI->getOperand(0).getReg();
+  MIB.addUse(BlockFReg);
+  MRI->setRegClass(BlockFReg, &SPIRV::pIDRegClass);
 
   Register BlockLiteralReg = Call->Arguments[BlockFIdx + 1];
   // Param: Pointer to block literal.
   MIB.addUse(BlockLiteralReg);
+  BlockMI = MRI->getUniqueVRegDef(BlockLiteralReg);
+  Register BlockMIReg =
+      stripAddrspaceCast(BlockMI->getOperand(1).getReg(), *MRI);
+  BlockMI = MRI->getUniqueVRegDef(BlockMIReg);
 
-  Type *PType = const_cast<Type *>(getBlockStructType(BlockLiteralReg, MRI));
-  // TODO: these numbers should be obtained from block literal structure.
-  // Param Size: Size of block literal structure.
-  MIB.addUse(buildConstantIntReg32(DL.getTypeStoreSize(PType), MIRBuilder, GR));
-  // Param Aligment: Aligment of block literal structure.
-  MIB.addUse(buildConstantIntReg32(DL.getPrefTypeAlign(PType).value(),
-                                   MIRBuilder, GR));
-
+  if (BlockMI->getOpcode() == TargetOpcode::G_GLOBAL_VALUE) {
+    // Size and align are given explicitly here.
+    const GlobalValue *GV = BlockMI->getOperand(1).getGlobal();
+    const GlobalVariable *BlockGV = dyn_cast<GlobalVariable>(GV);
+    assert(BlockGV->hasInitializer() &&
+           "Block literal should have an initializer");
+    const Constant *Init = BlockGV->getInitializer();
+    const ConstantStruct *CS = dyn_cast<ConstantStruct>(Init);
+    // Extract fields
+    const ConstantInt *SizeConst = dyn_cast<ConstantInt>(CS->getOperand(0));
+    const ConstantInt *AlignConst = dyn_cast<ConstantInt>(CS->getOperand(1));
+    uint64_t BlockSize = SizeConst->getZExtValue();
+    uint64_t BlockAlign = AlignConst->getZExtValue();
+    MIB.addUse(buildConstantIntReg32(BlockSize, MIRBuilder, GR));
+    MIB.addUse(buildConstantIntReg32(BlockAlign, MIRBuilder, GR));
+  } else {
+    bool ParamSizeVal = false;
+    bool ParamAlignVal = false;
+    for (MachineInstr &U : MRI->use_instructions(BlockMIReg)) {
+      if (isSpvIntrinsic(U, Intrinsic::spv_gep)) {
+        if (U.getNumOperands() < 5)
+          continue;
+        MachineInstr *CIInstr = MRI->getUniqueVRegDef(U.getOperand(5).getReg());
+        auto CI1 = CIInstr->getOperand(1);
+        if (!CI1.isCImm())
+          continue;
+        uint64_t FieldIndex = CI1.getCImm()->getZExtValue();
+        for (MachineInstr &I :
+             MRI->use_instructions(U.getOperand(0).getReg())) {
+          if (I.getOpcode() == SPIRV::G_STORE) {
+            if (FieldIndex == 0) {
+              MIB.addUse(I.getOperand(0).getReg());
+              ParamSizeVal = true;
+            }
+            if (FieldIndex == 1) {
+              MIB.addUse(I.getOperand(0).getReg());
+              ParamAlignVal = true;
+            }
+          }
+        }
+      }
+    }
+    Type *PType = const_cast<Type *>(getBlockStructType(BlockLiteralReg, MRI));
+    // Fallback to default if not found
+    if (!ParamSizeVal)
+      MIB.addUse(
+          buildConstantIntReg32(DL.getTypeStoreSize(PType), MIRBuilder, GR));
+    if (!ParamAlignVal)
+      MIB.addUse(buildConstantIntReg32(DL.getPrefTypeAlign(PType).value(),
+                                       MIRBuilder, GR));
+  }
   for (unsigned i = 0; i < LocalSizes.size(); i++)
     MIB.addUse(LocalSizes[i]);
   return true;
