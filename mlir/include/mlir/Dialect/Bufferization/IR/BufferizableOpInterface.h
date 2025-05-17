@@ -582,12 +582,77 @@ private:
 /// bufferization process.
 class BufferizationState {
 public:
-  /// Get the cached symbol tables.
-  /// The user is expected to update / invalidate the cached symbol tables if
-  /// the bufferized operation have the Symbol or SymbolTable traits.
-  SymbolTableCollection &getSymbolTables();
+  /// Base class for BufferizationState extensions that allow BufferizationState
+  /// to contain user-specified information in the state object. The extension
+  /// mechanism of BufferizationState mirrors the one of OneShotAnalysisState.
+  class Extension {
+  public:
+    /// Base virtual destructor.
+    // Out-of-line definition ensures symbols are emitted in a single object
+    // file.
+    virtual ~Extension();
 
-private:
+  protected:
+    /// Constructs an extension of the given state object.
+    Extension(BufferizationState &state) : state(state) {}
+
+    /// Provides read-only access to the parent OneShotAnalysisState object.
+    const BufferizationState &getBufferizationState() const { return state; }
+
+  private:
+    /// Back-reference to the state that is being extended.
+    BufferizationState &state;
+  };
+
+  /// Adds a new Extension of the type specified as template parameter,
+  /// constructing it with the arguments provided. The extension is owned by the
+  /// BufferizationState. It is expected that the state does not already have an
+  /// extension of the same type. Extension constructors are expected to take a
+  /// reference to BufferizationState as first argument, automatically supplied
+  /// by this call.
+  template <typename Ty, typename... Args>
+  Ty &addExtension(Args &&...args) {
+    static_assert(std::is_base_of<Extension, Ty>::value,
+                  "only a class derived from "
+                  "BufferizationState::Extension is allowed");
+    auto ptr = std::make_unique<Ty>(*this, std::forward<Args>(args)...);
+    auto result = extensions.try_emplace(TypeID::get<Ty>(), std::move(ptr));
+    assert(result.second && "extension already added");
+    return *static_cast<Ty *>(result.first->second.get());
+  }
+
+  /// Returns the extension of the specified type.
+  template <typename Ty>
+  Ty *getExtension() {
+    static_assert(std::is_base_of<Extension, Ty>::value,
+                  "only a class derived from "
+                  "BufferizationState::Extension is allowed");
+    auto iter = extensions.find(TypeID::get<Ty>());
+    if (iter == extensions.end())
+      return nullptr;
+    return static_cast<Ty *>(iter->second.get());
+  }
+
+  /// Returns the extension of the specified type.
+  template <typename Ty>
+  const Ty *getExtension() const {
+    return const_cast<BufferizationState *>(this)->getExtension<Ty>();
+  }
+
+  /// Extensions attached to the state, identified by the TypeID of their type.
+  /// Only one extension of any given type is allowed.
+  DenseMap<TypeID, std::unique_ptr<Extension>> extensions;
+};
+
+/// Extra bufferization state that is required for bufferization of operations
+/// declaring a symbol or a symbol table.
+struct SymbolBufferizationState : public BufferizationState::Extension {
+  SymbolBufferizationState(BufferizationState &state)
+      : BufferizationState::Extension(state) {}
+
+  /// The cached symbol tables.
+  /// The user is expected to update / invalidate the cached symbol tables if
+  /// the bufferized operation has the Symbol or SymbolTable traits.
   SymbolTableCollection symbolTables;
 };
 

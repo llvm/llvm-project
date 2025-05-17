@@ -9,6 +9,7 @@
 #include "mlir/Dialect/MLProgram/Transforms/BufferizableOpInterfaceImpl.h"
 
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
+#include "mlir/Dialect/Bufferization/Transforms/BufferUtils.h"
 #include "mlir/Dialect/MLProgram/IR/MLProgram.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 
@@ -58,10 +59,7 @@ struct GlobalOpInterface
     if (!globalOp.getValue().has_value())
       return globalOp.emitError("global op must have a value");
 
-    SymbolTable &symbolTable = state.getSymbolTables().getSymbolTable(
-        globalOp->getParentWithTrait<OpTrait::SymbolTable>());
-
-    symbolTable.remove(globalOp);
+    bufferization::removeSymbol(globalOp, state);
 
     auto tensorType = cast<TensorType>(globalOp.getType());
     auto memrefType = getMemRefTypeWithStaticIdentityLayout(tensorType);
@@ -74,7 +72,7 @@ struct GlobalOpInterface
         /*constant=*/!globalOp.getIsMutable(),
         /*alignment=*/nullptr);
 
-    symbolTable.insert(replacement);
+    bufferization::insertSymbol(replacement, state);
     return success();
   }
 };
