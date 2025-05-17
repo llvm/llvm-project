@@ -388,6 +388,21 @@ multiclass VPatVFPMADBinaryV_VX_RM<string intrinsic, string instruction,
   }
 }
 
+def VD4DOT_M1 : LMULInfo<0b000,  8,   VR, VR,   VR,   VR,   VR, "M1">;
+def VD4DOT_M2 : LMULInfo<0b001, 16, VRM2, VRM2, VR,   VR,   VR, "M2">;
+def VD4DOT_M4 : LMULInfo<0b010, 32, VRM4, VRM4, VRM2, VR,   VR, "M4">;
+def VD4DOT_M8 : LMULInfo<0b011, 64, VRM8, VRM8, VRM4, VRM2, VR, "M8">;
+
+defvar MxListVD4DOT = [V_MF2, VD4DOT_M1, VD4DOT_M2, VD4DOT_M4, VD4DOT_M8];
+
+multiclass VPseudoVD4DOT_VV {
+  foreach m = MxListVD4DOT in {
+    defm "" : VPseudoBinaryV_VV<m>,
+              SchedBinary<"WriteVIALUV", "ReadVIALUV", "ReadVIALUV", m.MX,
+                          forcePassthruRead=true>;
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // XAndesPerf
 //===----------------------------------------------------------------------===//
@@ -499,3 +514,38 @@ defm PseudoNDS_VFPMADB : VPseudoVFPMAD_VF_RM;
 
 defm : VPatVFPMADBinaryV_VX_RM<"int_riscv_nds_vfpmadt", "PseudoNDS_VFPMADT", AllFP16Vectors>;
 defm : VPatVFPMADBinaryV_VX_RM<"int_riscv_nds_vfpmadb", "PseudoNDS_VFPMADB", AllFP16Vectors>;
+
+let Predicates = [HasVendorXAndesVDot] in {
+defm PseudoNDS_VD4DOTS  : VPseudoVD4DOT_VV;
+defm PseudoNDS_VD4DOTU  : VPseudoVD4DOT_VV;
+defm PseudoNDS_VD4DOTSU : VPseudoVD4DOT_VV;
+}
+
+defset list<VTypeInfoToWide> AllQuadWidenableVD4DOTVectors = {
+  def : VTypeInfoToWide<VI8MF2,  VI32MF2>;
+  def : VTypeInfoToWide<VI8M1,   VI32M1>;
+  def : VTypeInfoToWide<VI8M2,   VI32M2>;
+  def : VTypeInfoToWide<VI8M4,   VI32M4>;
+  def : VTypeInfoToWide<VI8M8,   VI32M8>;
+  def : VTypeInfoToWide<VI16M1,  VI64M1>;
+  def : VTypeInfoToWide<VI16M2,  VI64M2>;
+  def : VTypeInfoToWide<VI16M4,  VI64M4>;
+  def : VTypeInfoToWide<VI16M8,  VI64M8>;
+}
+
+multiclass VPatTernaryVD4DOT_VV<string intrinsic, string instruction,
+                                list<VTypeInfoToWide> vtilist> {
+  foreach vtiToWti = vtilist in {
+    defvar vti = vtiToWti.Vti;
+    defvar wti = vtiToWti.Wti;
+    let Predicates = GetVTypePredicates<wti>.Predicates in
+    defm : VPatTernaryWithPolicy<intrinsic, instruction, "VV",
+                                 wti.Vector, vti.Vector, vti.Vector,
+                                 wti.Mask, wti.Log2SEW, vti.LMul,
+                                 wti.RegClass, vti.RegClass, vti.RegClass>;
+  }
+}
+
+defm : VPatTernaryVD4DOT_VV<"int_riscv_nds_vd4dots", "PseudoNDS_VD4DOTS", AllQuadWidenableVD4DOTVectors>;
+defm : VPatTernaryVD4DOT_VV<"int_riscv_nds_vd4dotu", "PseudoNDS_VD4DOTU", AllQuadWidenableVD4DOTVectors>;
+defm : VPatTernaryVD4DOT_VV<"int_riscv_nds_vd4dotsu", "PseudoNDS_VD4DOTSU", AllQuadWidenableVD4DOTVectors>;
