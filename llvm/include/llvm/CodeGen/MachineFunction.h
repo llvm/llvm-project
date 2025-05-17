@@ -214,6 +214,25 @@ public:
     return *this;
   }
 
+  // Per property has/set/reset accessors.
+#define PPACCESSORS(X)                                                         \
+  bool has##X() const { return hasProperty(Property::X); }                     \
+  MachineFunctionProperties &set##X(void) { return set(Property::X); }         \
+  MachineFunctionProperties &reset##X(void) { return reset(Property::X); }
+
+  PPACCESSORS(IsSSA)
+  PPACCESSORS(NoPHIs)
+  PPACCESSORS(TracksLiveness)
+  PPACCESSORS(NoVRegs)
+  PPACCESSORS(FailedISel)
+  PPACCESSORS(Legalized)
+  PPACCESSORS(RegBankSelected)
+  PPACCESSORS(Selected)
+  PPACCESSORS(TiedOpsRewritten)
+  PPACCESSORS(FailsVerification)
+  PPACCESSORS(FailedRegAlloc)
+  PPACCESSORS(TracksDebugUserValues)
+
   /// Reset all the properties.
   MachineFunctionProperties &reset() {
     Properties.reset();
