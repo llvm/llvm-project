@@ -272,6 +272,7 @@ void AMDGPUTTIImpl::getUnrollingPreferences(
 void AMDGPUTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
                                           TTI::PeelingPreferences &PP) const {
   BaseT::getPeelingPreferences(L, SE, PP);
+  PP.AggresiveEliminateCompares = false;
 }
 
 uint64_t AMDGPUTTIImpl::getMaxMemIntrinsicInlineSizeThreshold() const {
