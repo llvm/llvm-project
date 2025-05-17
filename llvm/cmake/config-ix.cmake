@@ -173,7 +173,7 @@ if(LLVM_ENABLE_ZLIB)
     # library on a 64-bit system which would result in a link-time failure.
     cmake_push_check_state()
     list(APPEND CMAKE_REQUIRED_INCLUDES ${ZLIB_INCLUDE_DIRS})
-    list(APPEND CMAKE_REQUIRED_LIBRARIES ${ZLIB_LIBRARY})
+    list(APPEND CMAKE_REQUIRED_LIBRARIES ZLIB::ZLIB)
     check_symbol_exists(compress2 zlib.h HAVE_ZLIB)
     cmake_pop_check_state()
     if(LLVM_ENABLE_ZLIB STREQUAL FORCE_ON AND NOT HAVE_ZLIB)
