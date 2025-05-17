@@ -35,36 +35,6 @@
 
 using namespace llvm;
 
-static cl::opt<std::string> RenameExcludeFunctionPrefixes(
-    "rename-exclude-function-prefixes",
-    cl::desc("Prefixes for functions that don't need to be renamed, separated "
-             "by a comma"),
-    cl::Hidden);
-
-static cl::opt<std::string> RenameExcludeAliasPrefixes(
-    "rename-exclude-alias-prefixes",
-    cl::desc("Prefixes for aliases that don't need to be renamed, separated "
-             "by a comma"),
-    cl::Hidden);
-
-static cl::opt<std::string> RenameExcludeGlobalPrefixes(
-    "rename-exclude-global-prefixes",
-    cl::desc(
-        "Prefixes for global values that don't need to be renamed, separated "
-        "by a comma"),
-    cl::Hidden);
-
-static cl::opt<std::string> RenameExcludeStructPrefixes(
-    "rename-exclude-struct-prefixes",
-    cl::desc("Prefixes for structs that don't need to be renamed, separated "
-             "by a comma"),
-    cl::Hidden);
-
-static cl::opt<bool>
-    RenameOnlyInst("rename-only-inst", cl::init(false),
-                   cl::desc("only rename the instructions in the function"),
-                   cl::Hidden);
-
 static const char *const metaNames[] = {
   // See http://en.wikipedia.org/wiki/Metasyntactic_variable
   "foo", "bar", "baz", "quux", "barney", "snork", "zot", "blam", "hoge",
@@ -96,18 +66,6 @@ struct Renamer {
   PRNG prng;
 };
 
-static void
-parseExcludedPrefixes(StringRef PrefixesStr,
-                      SmallVectorImpl<StringRef> &ExcludedPrefixes) {
-  for (;;) {
-    auto PrefixesSplit = PrefixesStr.split(',');
-    if (PrefixesSplit.first.empty())
-      break;
-    ExcludedPrefixes.push_back(PrefixesSplit.first);
-    PrefixesStr = PrefixesSplit.second;
-  }
-}
-
 void MetaRenameOnlyInstructions(Function &F) {
   for (auto &I : instructions(F))
     if (!I.getType()->isVoidTy() && I.getName().empty())
@@ -129,7 +87,8 @@ void MetaRename(Function &F) {
 }
 
 void MetaRename(Module &M,
-                function_ref<TargetLibraryInfo &(Function &)> GetTLI) {
+                function_ref<TargetLibraryInfo &(Function &)> GetTLI,
+                const MetaRenamerOptions &Options) {
   // Seed our PRNG with simple additive sum of ModuleID. We're looking to
   // simply avoid always having the same function names, and we need to
   // remain deterministic.
@@ -139,17 +98,8 @@ void MetaRename(Module &M,
 
   Renamer renamer(randSeed);
 
-  SmallVector<StringRef, 8> ExcludedAliasesPrefixes;
-  SmallVector<StringRef, 8> ExcludedGlobalsPrefixes;
-  SmallVector<StringRef, 8> ExcludedStructsPrefixes;
-  SmallVector<StringRef, 8> ExcludedFuncPrefixes;
-  parseExcludedPrefixes(RenameExcludeAliasPrefixes, ExcludedAliasesPrefixes);
-  parseExcludedPrefixes(RenameExcludeGlobalPrefixes, ExcludedGlobalsPrefixes);
-  parseExcludedPrefixes(RenameExcludeStructPrefixes, ExcludedStructsPrefixes);
-  parseExcludedPrefixes(RenameExcludeFunctionPrefixes, ExcludedFuncPrefixes);
-
   auto IsNameExcluded = [](StringRef &Name,
-                           SmallVectorImpl<StringRef> &ExcludedPrefixes) {
+                           const SmallVectorImpl<StringRef> &ExcludedPrefixes) {
     return any_of(ExcludedPrefixes,
                   [&Name](auto &Prefix) { return Name.starts_with(Prefix); });
   };
@@ -161,10 +111,10 @@ void MetaRename(Module &M,
     StringRef Name = F.getName();
     return Name.starts_with("llvm.") || (!Name.empty() && Name[0] == 1) ||
            GetTLI(F).getLibFunc(F, Tmp) ||
-           IsNameExcluded(Name, ExcludedFuncPrefixes);
+           IsNameExcluded(Name, Options.ExcludedFunctionsPrefixes);
   };
 
-  if (RenameOnlyInst) {
+  if (Options.RenameOnlyInst) {
     // Rename all functions
     for (auto &F : M) {
       if (ExcludeLibFuncs(F))
@@ -178,7 +128,7 @@ void MetaRename(Module &M,
   for (GlobalAlias &GA : M.aliases()) {
     StringRef Name = GA.getName();
     if (Name.starts_with("llvm.") || (!Name.empty() && Name[0] == 1) ||
-        IsNameExcluded(Name, ExcludedAliasesPrefixes))
+        IsNameExcluded(Name, Options.ExcludedAliasesPrefixes))
       continue;
 
     GA.setName("alias");
@@ -188,7 +138,7 @@ void MetaRename(Module &M,
   for (GlobalVariable &GV : M.globals()) {
     StringRef Name = GV.getName();
     if (Name.starts_with("llvm.") || (!Name.empty() && Name[0] == 1) ||
-        IsNameExcluded(Name, ExcludedGlobalsPrefixes))
+        IsNameExcluded(Name, Options.ExcludedGlobalsPrefixes))
       continue;
 
     GV.setName("global");
@@ -200,7 +150,7 @@ void MetaRename(Module &M,
   for (StructType *STy : StructTypes) {
     StringRef Name = STy->getName();
     if (STy->isLiteral() || Name.empty() ||
-        IsNameExcluded(Name, ExcludedStructsPrefixes))
+        IsNameExcluded(Name, Options.ExcludedStructsPrefixes))
       continue;
 
     SmallString<128> NameStorage;
@@ -230,7 +180,7 @@ PreservedAnalyses MetaRenamerPass::run(Module &M, ModuleAnalysisManager &AM) {
   auto GetTLI = [&FAM](Function &F) -> TargetLibraryInfo & {
     return FAM.getResult<TargetLibraryAnalysis>(F);
   };
-  MetaRename(M, GetTLI);
+  MetaRename(M, GetTLI, Options);
 
   return PreservedAnalyses::all();
 }
