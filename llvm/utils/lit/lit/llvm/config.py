@@ -674,7 +674,11 @@ class LLVMConfig(object):
                 (
                     "%itanium_abi_triple",
                     self.normalize_triple(
-                        self.make_itanium_abi_triple(self.config.target_triple)
+                        self.make_itanium_abi_triple(
+                            self.get_process_output(
+                                [self.config.clang, "--print-target-triple"]
+                            )[0].split("\n")[0]
+                        )
                     ),
                 )
             )
