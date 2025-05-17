@@ -1278,6 +1278,19 @@ bool WaitcntGeneratorPreGFX12::applyPreexistingWaitcnt(
     if (Opcode == AMDGPU::S_WAITCNT) {
       unsigned IEnc = II.getOperand(0).getImm();
       AMDGPU::Waitcnt OldWait = AMDGPU::decodeWaitcnt(IV, IEnc);
+
+      // These pseudo waitcnt instructions are only needed to synchronize DS
+      // operations with direct LDS loads that use vmcnt. We can safely relax
+      // them when no outstanding direct LDS loads exist, even if other vmcnt
+      // events are pending.
+      if (II.getOpcode() == AMDGPU::S_WAITCNT_VMCNT_LDS_DMA_soft) {
+        unsigned RegNo = SQ_MAX_PGM_VGPRS + EXTRA_VGPR_LDS;
+        AMDGPU::Waitcnt LDSDMAWait;
+        ScoreBrackets.determineWait(LOAD_CNT, RegNo, LDSDMAWait);
+        if (LDSDMAWait.LoadCnt == ~0u)
+          OldWait.LoadCnt = ~0u;
+      }
+
       if (TrySimplify)
         ScoreBrackets.simplifyWaitcnt(OldWait);
       Wait = Wait.combined(OldWait);
