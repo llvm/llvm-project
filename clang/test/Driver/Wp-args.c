@@ -7,7 +7,7 @@
 //
 // CHECK: "-cc1"
 // CHECK-NOT: -MD
-// CHECK: "-dependency-file" "FOO.d"
+// CHECK: "-dependency-file" "FOO.d{{[^\"]*}}"
 // CHECK: "-MT"
 //
 // PR4062
@@ -18,7 +18,7 @@
 
 // MMD: "-cc1"
 // MMD-NOT: -MMD
-// MMD: "-dependency-file" "Wp-args.d"
+// MMD: "-dependency-file" "Wp-args.d{{[^\"]*}}"
 
 // Ensure response files are properly expanded with -Wp
 // RUN: echo -DTEST > %t.rsp
