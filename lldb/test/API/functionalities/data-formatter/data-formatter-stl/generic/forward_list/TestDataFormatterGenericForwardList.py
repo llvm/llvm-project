@@ -50,7 +50,7 @@ class TestDataFormatterGenericForwardList(TestBase):
         self.expect(
             "settings show target.max-children-count",
             matching=True,
-            substrs=["target.max-children-count (unsigned) = 256"],
+            substrs=["target.max-children-count (unsigned) = 24"],
         )
 
         self.expect(
