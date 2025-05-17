@@ -309,6 +309,28 @@ static uint64_t resolveX86(uint64_t Type, uint64_t Offset, uint64_t S,
   }
 }
 
+static bool supportsXtensa(uint64_t Type) {
+  switch (Type) {
+  case ELF::R_XTENSA_NONE:
+  case ELF::R_XTENSA_32:
+    return true;
+  default:
+    return false;
+  }
+}
+
+static uint64_t resolveXtensa(uint64_t Type, uint64_t Offset, uint64_t S,
+                              uint64_t LocData, int64_t Addend) {
+  switch (Type) {
+  case ELF::R_XTENSA_NONE:
+    return LocData;
+  case ELF::R_XTENSA_32:
+    return (S + Addend + LocData) & 0xFFFFFFFF;
+  default:
+    llvm_unreachable("Invalid relocation type");
+  }
+}
+
 static bool supportsPPC32(uint64_t Type) {
   switch (Type) {
   case ELF::R_PPC_ADDR32:
@@ -825,6 +847,8 @@ getRelocationResolver(const ObjectFile &Obj) {
     switch (Obj.getArch()) {
     case Triple::x86:
       return {supportsX86, resolveX86};
+    case Triple::xtensa:
+      return {supportsXtensa, resolveXtensa};
     case Triple::ppcle:
     case Triple::ppc:
       return {supportsPPC32, resolvePPC32};
@@ -890,11 +914,12 @@ uint64_t resolveRelocation(RelocationResolver Resolver, const RelocationRef &R,
 
       if (GetRelSectionType() == ELF::SHT_RELA) {
         Addend = getELFAddend(R);
-        // LoongArch and RISCV relocations use both LocData and Addend.
+        // LoongArch, RISCV, and Xtensa relocations use both LocData and Addend.
         if (Obj->getArch() != Triple::loongarch32 &&
             Obj->getArch() != Triple::loongarch64 &&
             Obj->getArch() != Triple::riscv32 &&
-            Obj->getArch() != Triple::riscv64)
+            Obj->getArch() != Triple::riscv64 &&
+            Obj->getArch() != Triple::xtensa)
           LocData = 0;
       }
     }
