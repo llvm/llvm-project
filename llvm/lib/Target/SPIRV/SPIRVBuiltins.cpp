@@ -1076,6 +1076,24 @@ static bool buildTernaryBitwiseFunctionINTELInst(
   return true;
 }
 
+/// Helper function for building Intel's 2d block io instructions.
+static bool build2DBlockIOINTELInst(const SPIRV::IncomingCall *Call,
+                                    unsigned Opcode,
+                                    MachineIRBuilder &MIRBuilder,
+                                    SPIRVGlobalRegistry *GR) {
+  // Generate SPIRV instruction accordingly.
+  if (Call->isSpirvOp())
+    return buildOpFromWrapper(MIRBuilder, Opcode, Call, Register(0));
+
+  auto MIB = MIRBuilder.buildInstr(Opcode)
+                 .addDef(Call->ReturnRegister)
+                 .addUse(GR->getSPIRVTypeID(Call->ReturnType));
+  for (unsigned i = 0; i < Call->Arguments.size(); ++i)
+    MIB.addUse(Call->Arguments[i]);
+
+  return true;
+}
+
 static unsigned getNumComponentsForDim(SPIRV::Dim::Dim dim) {
   switch (dim) {
   case SPIRV::Dim::DIM_1D:
@@ -2319,6 +2337,17 @@ generateTernaryBitwiseFunctionINTELInst(const SPIRV::IncomingCall *Call,
   return buildTernaryBitwiseFunctionINTELInst(Call, Opcode, MIRBuilder, GR);
 }
 
+static bool generate2DBlockIOINTELInst(const SPIRV::IncomingCall *Call,
+                                       MachineIRBuilder &MIRBuilder,
+                                       SPIRVGlobalRegistry *GR) {
+  // Lookup the instruction opcode in the TableGen records.
+  const SPIRV::DemangledBuiltin *Builtin = Call->Builtin;
+  unsigned Opcode =
+      SPIRV::lookupNativeBuiltin(Builtin->Name, Builtin->Set)->Opcode;
+
+  return build2DBlockIOINTELInst(Call, Opcode, MIRBuilder, GR);
+}
+
 static bool buildNDRange(const SPIRV::IncomingCall *Call,
                          MachineIRBuilder &MIRBuilder,
                          SPIRVGlobalRegistry *GR) {
@@ -2902,6 +2931,8 @@ std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
     return generateBindlessImageINTELInst(Call.get(), MIRBuilder, GR);
   case SPIRV::TernaryBitwiseINTEL:
     return generateTernaryBitwiseFunctionINTELInst(Call.get(), MIRBuilder, GR);
+  case SPIRV::Block2DLoadStore:
+    return generate2DBlockIOINTELInst(Call.get(), MIRBuilder, GR);
   }
   return false;
 }

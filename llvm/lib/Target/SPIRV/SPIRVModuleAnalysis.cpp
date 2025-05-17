@@ -1739,6 +1739,30 @@ void addInstrRequirements(const MachineInstr &MI,
     Reqs.addExtension(SPIRV::Extension::SPV_INTEL_bindless_images);
     Reqs.addCapability(SPIRV::Capability::BindlessImagesINTEL);
     break;
+  case SPIRV::OpSubgroup2DBlockLoadINTEL:
+  case SPIRV::OpSubgroup2DBlockLoadTransposeINTEL:
+  case SPIRV::OpSubgroup2DBlockLoadTransformINTEL:
+  case SPIRV::OpSubgroup2DBlockPrefetchINTEL:
+  case SPIRV::OpSubgroup2DBlockStoreINTEL: {
+    if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_2d_block_io))
+      report_fatal_error("OpSubgroup2DBlock[Load/LoadTranspose/LoadTransform/"
+                         "Prefetch/Store]INTEL instructions require the "
+                         "following SPIR-V extension: SPV_INTEL_2d_block_io",
+                         false);
+    Reqs.addExtension(SPIRV::Extension::SPV_INTEL_2d_block_io);
+    Reqs.addCapability(SPIRV::Capability::Subgroup2DBlockIOINTEL);
+
+    const auto OpCode = MI.getOpcode();
+    if (OpCode == SPIRV::OpSubgroup2DBlockLoadTransposeINTEL) {
+      Reqs.addCapability(SPIRV::Capability::Subgroup2DBlockTransposeINTEL);
+      break;
+    }
+    if (OpCode == SPIRV::OpSubgroup2DBlockLoadTransformINTEL) {
+      Reqs.addCapability(SPIRV::Capability::Subgroup2DBlockTransformINTEL);
+      break;
+    }
+    break;
+  }
   case SPIRV::OpKill: {
     Reqs.addCapability(SPIRV::Capability::Shader);
   } break;
