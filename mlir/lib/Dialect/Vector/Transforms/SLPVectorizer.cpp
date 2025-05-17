@@ -72,29 +72,19 @@ SLPVectorizerPass::collectMemoryOpGroups(Block &block) {
   SmallVector<MemoryOpGroup> groups;
   MemoryOpGroup *currentGroup = nullptr;
 
-  LLVM_DEBUG(llvm::dbgs() << "Scanning block for memory operations...\n");
-
   for (Operation &op : block) {
-    LLVM_DEBUG(llvm::dbgs() << "Checking operation: " << op.getName() << "\n");
-
     // Skip non-memory operations
-    if (!isa<memref::LoadOp, memref::StoreOp>(op)) {
-      LLVM_DEBUG(llvm::dbgs() << "  Not a memory operation\n");
+    if (!isa<memref::LoadOp, memref::StoreOp>(op))
       continue;
-    }
 
     bool isLoad = isa<memref::LoadOp>(op);
     MemoryOpGroup::Type type =
         isLoad ? MemoryOpGroup::Type::Load : MemoryOpGroup::Type::Store;
 
-    LLVM_DEBUG(llvm::dbgs()
-               << "  Found " << (isLoad ? "load" : "store") << " operation\n");
-
     // Start a new group if:
     // 1. We don't have a current group, or
     // 2. The current operation is a different type than the current group
     if (!currentGroup || currentGroup->type != type) {
-      LLVM_DEBUG(llvm::dbgs() << "  Starting new group\n");
       groups.emplace_back(type);
       currentGroup = &groups.back();
     }
@@ -107,15 +97,6 @@ SLPVectorizerPass::collectMemoryOpGroups(Block &block) {
                               [](const MemoryOpGroup &g) { return g.empty(); }),
                groups.end());
 
-  LLVM_DEBUG({
-    llvm::dbgs() << "Found " << groups.size() << " memory operation groups:\n";
-    for (const auto &group : groups) {
-      llvm::dbgs() << "  Group type: "
-                   << (group.isLoadGroup() ? "Load" : "Store")
-                   << ", size: " << group.size() << "\n";
-    }
-  });
-
   return groups;
 }
 
@@ -123,40 +104,17 @@ void SLPVectorizerPass::runOnOperation() {
   Operation *op = getOperation();
   MLIRContext *context = &getContext();
 
-  LLVM_DEBUG(llvm::dbgs() << "Running SLP Vectorizer pass on operation: "
-                          << op->getName() << "\n");
+  // Walk all blocks recursively
+  op->walk([&](Block *block) {
+    LLVM_DEBUG(llvm::dbgs() << "Processing block in operation: "
+                            << block->getParentOp()->getName() << "\n");
 
-  // Process each function in the module
-  for (Region &region : op->getRegions()) {
-    for (Block &block : region) {
-      for (Operation &op : block) {
-        // If this is a function, process its body
-        if (auto funcOp = dyn_cast<func::FuncOp>(op)) {
-          LLVM_DEBUG(llvm::dbgs()
-                     << "Processing function: " << funcOp.getName() << "\n");
+    // Collect memory operation groups
+    SmallVector<MemoryOpGroup> groups = collectMemoryOpGroups(*block);
 
-          // Process each block in the function
-          for (Block &funcBlock : funcOp.getBody()) {
-            // Collect memory operation groups
-            SmallVector<MemoryOpGroup> groups =
-                collectMemoryOpGroups(funcBlock);
-
-            LLVM_DEBUG({
-              llvm::dbgs() << "Found " << groups.size()
-                           << " memory operation groups:\n";
-              for (const auto &group : groups) {
-                llvm::dbgs() << "  Group type: "
-                             << (group.isLoadGroup() ? "Load" : "Store")
-                             << ", size: " << group.size() << "\n";
-              }
-            });
-          }
-        }
-      }
-    }
-  }
-
-  llvm::errs() << "Running SLP Vectorizer pass\n";
+    LLVM_DEBUG(llvm::dbgs() << "Found " << groups.size()
+                            << " memory operation groups in block\n");
+  });
 }
 
 std::unique_ptr<Pass> mlir::vector::createSLPVectorizerPass() {
