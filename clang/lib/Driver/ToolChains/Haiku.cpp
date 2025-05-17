@@ -274,6 +274,8 @@ void Haiku::AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
   addSystemInclude(DriverArgs, CC1Args, concat(D.SysRoot,
                    "/boot/system/develop/headers/posix"));
   addSystemInclude(DriverArgs, CC1Args, concat(D.SysRoot,
+                   "/boot/system/develop/headers/gcc/include"));
+  addSystemInclude(DriverArgs, CC1Args, concat(D.SysRoot,
                    "/boot/system/develop/headers"));
 }
 

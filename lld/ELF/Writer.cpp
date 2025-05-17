@@ -1615,7 +1615,7 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
       sec->addr = 0;
 
   // If addrExpr is set, the address may not be a multiple of the alignment.
-  // Warn because this is error-prone. In addition, warn if the address
+  // Warn because this is error-prone. In addition, error if the address
   // is smaller than the image base when SECTIONS is absent (e.g. when -Ttext
   // is specified and smaller than the default target image base for no-pie).
   uint64_t imageBase = ctx.script->hasSectionsCommand || ctx.arg.relocatable
@@ -1627,10 +1627,10 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
       continue;
     OutputSection *osec = &osd->osec;
     if (osec->addr < imageBase && (osec->flags & SHF_ALLOC)) {
-      Warn(ctx) << "section '" << osec->name << "' address (0x"
-                << Twine::utohexstr(osec->addr)
-                << ") is smaller than image base (0x"
-                << Twine::utohexstr(imageBase) << "); specify --image-base";
+      Err(ctx) << "section '" << osec->name << "' address (0x"
+               << Twine::utohexstr(osec->addr)
+               << ") is smaller than image base (0x"
+               << Twine::utohexstr(imageBase) << "); specify --image-base";
     }
 
     if (osec->addr % osec->addralign != 0)
