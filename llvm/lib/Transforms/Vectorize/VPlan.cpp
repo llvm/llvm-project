@@ -1445,7 +1445,23 @@ void VPSlotTracker::assignName(const VPValue *V) {
   std::string Name;
   if (UV) {
     raw_string_ostream S(Name);
-    UV->printAsOperand(S, false);
+    if (MST) {
+      UV->printAsOperand(S, false, *MST);
+    } else if (isa<Instruction>(UV) && !UV->hasName()) {
+      // Lazily create the ModuleSlotTracker when we first hit an unnamed
+      // instruction
+      auto *IUV = cast<Instruction>(UV);
+      // This check is required to support unit tests with incomplete IR.
+      if (IUV->getParent()) {
+        MST = std::make_unique<ModuleSlotTracker>(IUV->getModule());
+        MST->incorporateFunction(*IUV->getFunction());
+      } else {
+        MST = std::make_unique<ModuleSlotTracker>(nullptr);
+      }
+      UV->printAsOperand(S, false, *MST);
+    } else {
+      UV->printAsOperand(S, false);
+    }
   } else
     Name = VPI->getName();
 
