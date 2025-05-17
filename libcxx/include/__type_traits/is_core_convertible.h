@@ -10,7 +10,6 @@
 #define _LIBCPP___TYPE_TRAITS_IS_CORE_CONVERTIBLE_H
 
 #include <__config>
-#include <__type_traits/integral_constant.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -24,16 +23,16 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // and __is_core_convertible<immovable-type,immovable-type> is true in C++17 and later.
 
 template <class _Tp, class _Up, class = void>
-struct __is_core_convertible : false_type {};
+inline const bool __is_core_convertible_v = false;
 
 template <class _Tp, class _Up>
-struct __is_core_convertible<_Tp, _Up, decltype(static_cast<void (*)(_Up)>(0)(static_cast<_Tp (*)()>(0)()))>
-    : true_type {};
+inline const bool
+    __is_core_convertible_v<_Tp, _Up, decltype(static_cast<void (*)(_Up)>(0)(static_cast<_Tp (*)()>(0)()))> = true;
 
 #if _LIBCPP_STD_VER >= 20
 
 template <class _Tp, class _Up>
-concept __core_convertible_to = __is_core_convertible<_Tp, _Up>::value;
+concept __core_convertible_to = __is_core_convertible_v<_Tp, _Up>;
 
 #endif // _LIBCPP_STD_VER >= 20
 
