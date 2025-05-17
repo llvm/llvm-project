@@ -200,3 +200,15 @@ entry:
   ret void
 }
 attributes #10 = {"amdgpu-flat-work-group-size"="256,256" "amdgpu-waves-per-eu"="2,2"}
+
+; At most 2 waves per execution unit.
+; CHECK-LABEL: {{^}}empty_at_most_2:
+; CHECK: SGPRBlocks: 12
+; CHECK: VGPRBlocks: 21
+; CHECK: NumSGPRsForWavesPerEU: 102
+; CHECK: NumVGPRsForWavesPerEU: 85
+define amdgpu_kernel void @empty_at_most_2() #11 {
+entry:
+  ret void
+}
+attributes #11 = {"amdgpu-waves-per-eu"="0,2"}
