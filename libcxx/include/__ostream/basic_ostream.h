@@ -71,7 +71,7 @@ protected:
 
 public:
   // 27.7.2.4 Prefix/suffix:
-  class sentry;
+  class _LIBCPP_INNER_CLASS_IN_TEMPLATE_VIS sentry;
 
   // 27.7.2.6 Formatted output:
   inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 basic_ostream& operator<<(basic_ostream& (*__pf)(basic_ostream&)) {
