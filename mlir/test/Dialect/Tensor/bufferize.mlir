@@ -617,7 +617,7 @@ func.func @tensor.splat(%f: f32) -> tensor<10x2x4xf32> {
 
 // CHECK-LABEL:   func @tensor.concat(
 // CHECK-SAME:        %[[F:.*]]: tensor<8xf32>)
-// CHECK:           %[[F_MEMREF:.*]] = bufferization.to_memref %[[F]]
+// CHECK:           %[[F_MEMREF:.*]] = bufferization.to_buffer %[[F]]
 // CHECK:           %[[ALLOC:.*]] = memref.alloc() {{.*}} : memref<16xf32>
 // CHECK:           %[[SUBVIEW1:.*]] = memref.subview %[[ALLOC]][0] [8] [1]
 // CHECK:           memref.copy %[[F_MEMREF]], %[[SUBVIEW1]]
@@ -636,8 +636,8 @@ func.func @tensor.concat(%f: tensor<8xf32>) -> tensor<16xf32> {
 // CHECK-LABEL:   func @tensor.concat_different_shapes(
 // CHECK-SAME:        %[[F:.*]]: tensor<8x4xf32>
 // CHECK-SAME:        %[[G:.*]]: tensor<8x5xf32>
-// CHECK-DAG:       %[[F_MEMREF:.*]] = bufferization.to_memref %[[F]]
-// CHECK-DAG:       %[[G_MEMREF:.*]] = bufferization.to_memref %[[G]]
+// CHECK-DAG:       %[[F_MEMREF:.*]] = bufferization.to_buffer %[[F]]
+// CHECK-DAG:       %[[G_MEMREF:.*]] = bufferization.to_buffer %[[G]]
 // CHECK:           %[[ALLOC:.*]] = memref.alloc() {{.*}} : memref<8x9xf32>
 // CHECK:           %[[SUBVIEW1:.*]] = memref.subview %[[ALLOC]][0, 0] [8, 4] [1, 1]
 // CHECK:           memref.copy %[[F_MEMREF]], %[[SUBVIEW1]]
@@ -656,8 +656,8 @@ func.func @tensor.concat_different_shapes(%f: tensor<8x4xf32>, %g: tensor<8x5xf3
 // CHECK-LABEL:   func @tensor.concat_dynamic(
 // CHECK-SAME:        %[[F:.*]]: tensor<8x?xf32>,
 // CHECK-SAME:        %[[G:.*]]: tensor<8x?xf32>
-// CHECK-DAG:       %[[F_MEMREF:.*]] = bufferization.to_memref %[[F]]
-// CHECK-DAG:       %[[G_MEMREF:.*]] = bufferization.to_memref %[[G]]
+// CHECK-DAG:       %[[F_MEMREF:.*]] = bufferization.to_buffer %[[F]]
+// CHECK-DAG:       %[[G_MEMREF:.*]] = bufferization.to_buffer %[[G]]
 // CHECK-DAG:       %[[c1:.*]] = arith.constant 1 : index
 // CHECK-DAG:       %[[F_DIM:.*]] = memref.dim %[[F_MEMREF]], %[[c1]]
 // CHECK-DAG:       %[[G_DIM:.*]] = memref.dim %[[G_MEMREF]], %[[c1]]
@@ -682,8 +682,8 @@ func.func @tensor.concat_dynamic(%f: tensor<8x?xf32>, %g: tensor<8x?xf32>) -> te
 // CHECK-LABEL:   func @tensor.concat_dynamic_nonconcat_dim(
 // CHECK-SAME:        %[[F:.*]]: tensor<?x?xf32>,
 // CHECK-SAME:        %[[G:.*]]: tensor<?x?xf32>
-// CHECK-DAG:       %[[F_MEMREF:.*]] = bufferization.to_memref %[[F]]
-// CHECK-DAG:       %[[G_MEMREF:.*]] = bufferization.to_memref %[[G]]
+// CHECK-DAG:       %[[F_MEMREF:.*]] = bufferization.to_buffer %[[F]]
+// CHECK-DAG:       %[[G_MEMREF:.*]] = bufferization.to_buffer %[[G]]
 // CHECK-DAG:       %[[c1:.*]] = arith.constant 1 : index
 // CHECK-DAG:       %[[c0:.*]] = arith.constant 0 : index
 // CHECK-DAG:       %[[F_DIM:.*]] = memref.dim %[[F_MEMREF]], %[[c1]]

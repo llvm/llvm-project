@@ -1094,7 +1094,7 @@ struct ConcatOpInterface
     MemRefType memrefType =
         MemRefType::get(concatOp.getResultType().getShape(),
                         concatOp.getResultType().getElementType(), layout);
-    Value dstBuffer = rewriter.create<bufferization::ToMemrefOp>(
+    Value dstBuffer = rewriter.create<bufferization::ToBufferOp>(
         op->getLoc(), memrefType, *tensorAlloc);
 
     // Extract the dimension for the concat op
