@@ -36,7 +36,7 @@ prefix_pat = re.compile(f"^# {args.prefix}: (.*)")
 fdata_pat = re.compile(r"([01].*) (?P<exec>\d+) (?P<mispred>\d+)")
 
 # Pre-aggregated profile:
-# {T|S|B|F|f} <start> [<end>] [<ft_end>] <count> [<mispred_count>]
+# {T|S|E|B|F|f} <start> [<end>] [<ft_end>] <count> [<mispred_count>]
 # <loc>: [<id>:]<offset>
 preagg_pat = re.compile(r"(?P<type>[TSBFf]) (?P<offsets_count>.*)")
 
