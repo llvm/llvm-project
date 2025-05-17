@@ -150,10 +150,8 @@ define { <2 x i32>, <2 x i1> } @fold_simple_splat_constant_with_or_fail(<2 x i32
 
 define i32 @uadd_with_zext(i32 %x, i32 %y) {
 ; CHECK-LABEL: @uadd_with_zext(
-; CHECK-NEXT:    [[CONV:%.*]] = zext i32 [[X:%.*]] to i64
-; CHECK-NEXT:    [[CONV1:%.*]] = zext i32 [[Y:%.*]] to i64
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i64 [[CONV]], [[CONV1]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i64 [[ADD]], 4294967295
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[Y:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[COND:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[COND]]
 ;
@@ -167,12 +165,11 @@ define i32 @uadd_with_zext(i32 %x, i32 %y) {
 
 define i32 @uadd_with_zext_use_and(i32 %x, i32 %y) {
 ; CHECK-LABEL: @uadd_with_zext_use_and(
-; CHECK-NEXT:    [[CONV:%.*]] = zext i32 [[X:%.*]] to i64
-; CHECK-NEXT:    [[CONV1:%.*]] = zext i32 [[Y:%.*]] to i64
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i64 [[CONV]], [[CONV1]]
-; CHECK-NEXT:    [[AND:%.*]] = and i64 [[ADD]], 65535
+; CHECK-NEXT:    [[UADD_VALUE:%.*]] = add i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[UADD_VALUE]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[UADD_VALUE]], 65535
+; CHECK-NEXT:    [[AND:%.*]] = zext nneg i32 [[TMP1]] to i64
 ; CHECK-NEXT:    call void @usei64(i64 [[AND]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i64 [[ADD]], 4294967295
 ; CHECK-NEXT:    [[COND:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[COND]]
 ;
@@ -188,10 +185,8 @@ define i32 @uadd_with_zext_use_and(i32 %x, i32 %y) {
 
 define i32 @uadd_with_zext_inverse(i32 %x, i32 %y) {
 ; CHECK-LABEL: @uadd_with_zext_inverse(
-; CHECK-NEXT:    [[CONV:%.*]] = zext i32 [[X:%.*]] to i64
-; CHECK-NEXT:    [[CONV1:%.*]] = zext i32 [[Y:%.*]] to i64
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i64 [[CONV]], [[CONV1]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i64 [[ADD]], 4294967296
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i32 [[Y:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[COND:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[COND]]
 ;
