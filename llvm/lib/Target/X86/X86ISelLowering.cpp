@@ -10009,6 +10009,14 @@ static bool IsElementEquivalent(int MaskSize, SDValue Op, SDValue ExpectedOp,
   case X86ISD::VBROADCAST_LOAD:
     // TODO: Handle MaskSize != VT.getVectorNumElements()?
     return (Op == ExpectedOp && (int)VT.getVectorNumElements() == MaskSize);
+  case X86ISD::SUBV_BROADCAST_LOAD:
+    // TODO: Handle MaskSize != VT.getVectorNumElements()?
+    if (Op == ExpectedOp && (int)VT.getVectorNumElements() == MaskSize) {
+      auto *MemOp = cast<MemSDNode>(Op);
+      unsigned NumMemElts = MemOp->getMemoryVT().getVectorNumElements();
+      return (Idx % NumMemElts) == (ExpectedIdx % NumMemElts);
+    }
+    break;
   case X86ISD::HADD:
   case X86ISD::HSUB:
   case X86ISD::FHADD:
