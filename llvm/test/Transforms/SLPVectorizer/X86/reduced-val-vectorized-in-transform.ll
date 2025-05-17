@@ -16,10 +16,10 @@ define i32 @test(i1 %cond) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = or <4 x i32> zeroinitializer, [[TMP4]]
 ; CHECK-NEXT:    [[OR92]] = or i32 1, 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vector.reduce.xor.v4i32(<4 x i32> [[TMP5]])
-; CHECK-NEXT:    [[OP_RDX:%.*]] = xor i32 [[TMP6]], [[OR92]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x i32> <i32 poison, i32 1>, i32 [[TMP6]], i32 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x i32> <i32 poison, i32 0>, i32 [[OR92]], i32 0
 ; CHECK-NEXT:    [[TMP8]] = xor <2 x i32> [[TMP9]], [[TMP7]]
+; CHECK-NEXT:    [[OP_RDX:%.*]] = xor i32 [[TMP6]], [[OR92]]
 ; CHECK-NEXT:    br i1 [[COND]], label %[[EXIT:.*]], label %[[BB]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret i32 [[OP_RDX]]
