@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.3-compute %s -emit-llvm -o - | FileCheck %s -DTARGET=dx
+// RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.4-compute %s -emit-llvm -o - | FileCheck %s -DTARGET=dx
 // RUN: %clang_cc1 -finclude-default-header -triple spirv-pc-vulkan-compute %s -emit-llvm -o - | FileCheck %s -DTARGET=spv
 
 // Test basic lowering to runtime function call.
@@ -16,4 +16,9 @@ int test(uint x, uint y, int acc) {
   // CHECK:    [[ACC0:%.*]] = load i32, ptr [[ACC_ADDR]], align 4
   // CHECK:    call i32 @llvm.[[TARGET]].dot4add.i8packed(i32 [[ACC0]], i32 [[X0]], i32 [[Y0]])
   return dot4add_i8packed(x, y, acc);
+}
+
+[numthreads(1,1,1)]
+void main() {
+  test(0, 0, 0);
 }
