@@ -56718,7 +56718,8 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
         return SDValue(N, 0);
       }
       if (auto MinShAmt = DAG.getValidMinimumShiftAmount(Index)) {
-        if (*MinShAmt >= 1 && (*MinShAmt + Log2ScaleAmt) < 4 &&
+        if (*MinShAmt >= 1 &&
+            (((*MinShAmt + Log2ScaleAmt) < 4) || (1 + Log2ScaleAmt < 4)) &&
             DAG.ComputeNumSignBits(Index.getOperand(0)) > 1) {
           SDValue ShAmt = Index.getOperand(1);
           SDValue NewShAmt =
