@@ -35,7 +35,7 @@ class TestDAP_restart(lldbdap_testcase.DAPTestCaseBase):
         # Restart then check we stop back at A and program state has been reset.
         resp = self.dap_server.request_restart()
         self.assertTrue(resp["success"])
-        self.continue_to_breakpoints([bp_A])
+        self.verify_breakpoint_hit([bp_A])
         self.assertEqual(
             int(self.dap_server.get_local_variable_value("i")),
             0,
@@ -50,6 +50,9 @@ class TestDAP_restart(lldbdap_testcase.DAPTestCaseBase):
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program, stopOnEntry=True)
         [bp_main] = self.set_function_breakpoints(["main"])
+
+        self.dap_server.request_configurationDone()
+        self.dap_server.wait_for_stopped()
         # Once the "configuration done" event is sent, we should get a stopped
         # event immediately because of stopOnEntry.
         self.assertTrue(
