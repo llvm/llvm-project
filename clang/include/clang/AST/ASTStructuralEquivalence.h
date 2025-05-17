@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_ASTIMPORTER_ASTSTRUCTURALEQUIVALENCE_H
-#define LLVM_CLANG_ASTIMPORTER_ASTSTRUCTURALEQUIVALENCE_H
+#ifndef LLVM_CLANG_AST_ASTSTRUCTURALEQUIVALENCE_H
+#define LLVM_CLANG_AST_ASTSTRUCTURALEQUIVALENCE_H
 
 #include "clang/AST/DeclBase.h"
 #include "llvm/ADT/DenseMap.h"
@@ -154,4 +154,4 @@ private:
 
 } // namespace clang
 
-#endif // LLVM_CLANG_ASTIMPORTER_ASTSTRUCTURALEQUIVALENCE_H
+#endif // LLVM_CLANG_AST_ASTSTRUCTURALEQUIVALENCE_H
