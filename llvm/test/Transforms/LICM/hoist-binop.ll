@@ -371,13 +371,13 @@ loop:
 define void @add_nuw_nsw(i64 %c1, i64 %c2) {
 ; CHECK-LABEL: @add_nuw_nsw(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = add nuw i64 [[C1:%.*]], [[C2:%.*]]
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = add nuw nsw i64 [[C1:%.*]], [[C2:%.*]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT_REASS:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[STEP_ADD:%.*]] = add nuw nsw i64 [[INDEX]], [[C1]]
 ; CHECK-NEXT:    call void @use(i64 [[STEP_ADD]])
-; CHECK-NEXT:    [[INDEX_NEXT_REASS]] = add nuw i64 [[INDEX]], [[INVARIANT_OP]]
+; CHECK-NEXT:    [[INDEX_NEXT_REASS]] = add nuw nsw i64 [[INDEX]], [[INVARIANT_OP]]
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
 entry:
