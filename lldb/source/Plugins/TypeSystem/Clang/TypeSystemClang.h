@@ -826,7 +826,8 @@ public:
 
   // Exploring the type
 
-  const llvm::fltSemantics &GetFloatTypeSemantics(size_t byte_size) override;
+  const llvm::fltSemantics &
+  GetFloatTypeSemantics(size_t byte_size, bool prefer_float128) override;
 
   llvm::Expected<uint64_t> GetByteSize(lldb::opaque_compiler_type_t type,
                                        ExecutionContextScope *exe_scope) {
