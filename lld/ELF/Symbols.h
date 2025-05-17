@@ -204,6 +204,7 @@ public:
   uint64_t getGotVA(Ctx &) const;
   uint64_t getGotPltOffset(Ctx &) const;
   uint64_t getGotPltVA(Ctx &) const;
+  uint64_t getPltOffset(Ctx &) const;
   uint64_t getPltVA(Ctx &) const;
   uint64_t getSize() const;
   OutputSection *getOutputSection() const;
