@@ -99,6 +99,7 @@
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/GraphTraits.h"
+#include "llvm/ADT/IntervalMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetOperations.h"
@@ -1347,6 +1348,8 @@ struct InformationCache {
 
   /// Return the flat address space if the associated target has.
   std::optional<unsigned> getFlatAddressSpace() const;
+
+  virtual unsigned getMaxAddrSpace() const { return ~(0); }
 
 private:
   struct FunctionInfo {
@@ -6333,6 +6336,47 @@ struct AAAddressSpace : public StateWrapper<BooleanState, AbstractAttribute> {
 protected:
   // Invalid address space which indicates the associated value is dead.
   static const uint32_t InvalidAddressSpace = ~0U;
+};
+
+/// An abstract interface for potential address space information.
+struct AANoAliasAddrSpace
+    : public StateWrapper<BooleanState, AbstractAttribute> {
+  using Base = StateWrapper<BooleanState, AbstractAttribute>;
+  using RangeMap = IntervalMap<unsigned, bool>;
+  AANoAliasAddrSpace(const IRPosition &IRP, Attributor &A)
+      : Base(IRP), Map(Allocator) {}
+
+  /// See AbstractAttribute::isValidIRPositionForInit
+  static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
+    if (!IRP.getAssociatedType()->isPtrOrPtrVectorTy())
+      return false;
+    return AbstractAttribute::isValidIRPositionForInit(A, IRP);
+  }
+
+  /// See AbstractAttribute::requiresCallersForArgOrFunction
+  static bool requiresCallersForArgOrFunction() { return true; }
+
+  /// Create an abstract attribute view for the position \p IRP.
+  static AANoAliasAddrSpace &createForPosition(const IRPosition &IRP,
+                                               Attributor &A);
+  /// See AbstractAttribute::getName()
+  const std::string getName() const override { return "AANoAliasAddrSpace"; }
+
+  /// See AbstractAttribute::getIdAddr()
+  const char *getIdAddr() const override { return &ID; }
+
+  /// This function should return true if the type of the \p AA is
+  /// AAAssumptionInfo
+  static bool classof(const AbstractAttribute *AA) {
+    return (AA->getIdAddr() == &ID);
+  }
+
+  /// Unique ID (due to the unique address)
+  static const char ID;
+
+protected:
+  RangeMap::Allocator Allocator;
+  RangeMap Map;
 };
 
 struct AAAllocationInfo : public StateWrapper<BooleanState, AbstractAttribute> {
