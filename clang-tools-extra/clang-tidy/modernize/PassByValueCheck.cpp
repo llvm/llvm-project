@@ -44,6 +44,18 @@ AST_MATCHER(CXXRecordDecl, isMoveConstructible) {
 }
 } // namespace
 
+static bool isFriendOfClass(const CXXRecordDecl *Class,
+                            const CXXRecordDecl *Friend) {
+  return llvm::any_of(
+      Class->friends(), [Friend](FriendDecl *FriendDecl) -> bool {
+        if (TypeSourceInfo *FriendTypeSource = FriendDecl->getFriendType()) {
+          const QualType FriendType = FriendTypeSource->getType();
+          return FriendType->getAsCXXRecordDecl() == Friend;
+        }
+        return false;
+      });
+}
+
 static TypeMatcher notTemplateSpecConstRefType() {
   return lValueReferenceType(
       pointee(unless(elaboratedType(namesType(templateSpecializationType()))),
