@@ -2733,7 +2733,7 @@ extern "C" __device__ double test_j1(double x) {
 // FINITEONLY-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC_I]], [[X]]
 // FINITEONLY-NEXT:    br i1 [[EXITCOND_NOT]], label [[_ZL3JNFIF_EXIT]], label [[FOR_BODY_I]], !llvm.loop [[LOOP14:![0-9]+]]
 // FINITEONLY:       _ZL3jnfif.exit:
-// FINITEONLY-NEXT:    [[RETVAL_0_I:%.*]] = phi float [ [[CALL_I20_I]], [[IF_THEN_I]] ], [ [[CALL_I22_I]], [[IF_THEN2_I]] ], [ [[CALL_I21_I]], [[IF_END4_I]] ], [ [[SUB_I]], [[FOR_BODY_I]] ]
+// FINITEONLY-NEXT:    [[RETVAL_0_I:%.*]] = phi nnan ninf float [ [[CALL_I20_I]], [[IF_THEN_I]] ], [ [[CALL_I22_I]], [[IF_THEN2_I]] ], [ [[CALL_I21_I]], [[IF_END4_I]] ], [ [[SUB_I]], [[FOR_BODY_I]] ]
 // FINITEONLY-NEXT:    ret float [[RETVAL_0_I]]
 //
 // APPROX-LABEL: @test_jnf(
@@ -2902,7 +2902,7 @@ extern "C" __device__ float test_jnf(int x, float y) {
 // FINITEONLY-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC_I]], [[X]]
 // FINITEONLY-NEXT:    br i1 [[EXITCOND_NOT]], label [[_ZL2JNID_EXIT]], label [[FOR_BODY_I]], !llvm.loop [[LOOP15:![0-9]+]]
 // FINITEONLY:       _ZL2jnid.exit:
-// FINITEONLY-NEXT:    [[RETVAL_0_I:%.*]] = phi double [ [[CALL_I20_I]], [[IF_THEN_I]] ], [ [[CALL_I22_I]], [[IF_THEN2_I]] ], [ [[CALL_I21_I]], [[IF_END4_I]] ], [ [[SUB_I]], [[FOR_BODY_I]] ]
+// FINITEONLY-NEXT:    [[RETVAL_0_I:%.*]] = phi nnan ninf double [ [[CALL_I20_I]], [[IF_THEN_I]] ], [ [[CALL_I22_I]], [[IF_THEN2_I]] ], [ [[CALL_I21_I]], [[IF_END4_I]] ], [ [[SUB_I]], [[FOR_BODY_I]] ]
 // FINITEONLY-NEXT:    ret double [[RETVAL_0_I]]
 //
 // APPROX-LABEL: @test_jn(
@@ -7068,7 +7068,7 @@ extern "C" __device__ double test_y1(double x) {
 // FINITEONLY-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC_I]], [[X]]
 // FINITEONLY-NEXT:    br i1 [[EXITCOND_NOT]], label [[_ZL3YNFIF_EXIT]], label [[FOR_BODY_I]], !llvm.loop [[LOOP24:![0-9]+]]
 // FINITEONLY:       _ZL3ynfif.exit:
-// FINITEONLY-NEXT:    [[RETVAL_0_I:%.*]] = phi float [ [[CALL_I20_I]], [[IF_THEN_I]] ], [ [[CALL_I22_I]], [[IF_THEN2_I]] ], [ [[CALL_I21_I]], [[IF_END4_I]] ], [ [[SUB_I]], [[FOR_BODY_I]] ]
+// FINITEONLY-NEXT:    [[RETVAL_0_I:%.*]] = phi nnan ninf float [ [[CALL_I20_I]], [[IF_THEN_I]] ], [ [[CALL_I22_I]], [[IF_THEN2_I]] ], [ [[CALL_I21_I]], [[IF_END4_I]] ], [ [[SUB_I]], [[FOR_BODY_I]] ]
 // FINITEONLY-NEXT:    ret float [[RETVAL_0_I]]
 //
 // APPROX-LABEL: @test_ynf(
@@ -7237,7 +7237,7 @@ extern "C" __device__ float test_ynf(int x, float y) {
 // FINITEONLY-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC_I]], [[X]]
 // FINITEONLY-NEXT:    br i1 [[EXITCOND_NOT]], label [[_ZL2YNID_EXIT]], label [[FOR_BODY_I]], !llvm.loop [[LOOP25:![0-9]+]]
 // FINITEONLY:       _ZL2ynid.exit:
-// FINITEONLY-NEXT:    [[RETVAL_0_I:%.*]] = phi double [ [[CALL_I20_I]], [[IF_THEN_I]] ], [ [[CALL_I22_I]], [[IF_THEN2_I]] ], [ [[CALL_I21_I]], [[IF_END4_I]] ], [ [[SUB_I]], [[FOR_BODY_I]] ]
+// FINITEONLY-NEXT:    [[RETVAL_0_I:%.*]] = phi nnan ninf double [ [[CALL_I20_I]], [[IF_THEN_I]] ], [ [[CALL_I22_I]], [[IF_THEN2_I]] ], [ [[CALL_I21_I]], [[IF_END4_I]] ], [ [[SUB_I]], [[FOR_BODY_I]] ]
 // FINITEONLY-NEXT:    ret double [[RETVAL_0_I]]
 //
 // APPROX-LABEL: @test_yn(
