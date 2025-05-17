@@ -39,6 +39,7 @@ class Function;
 class Instruction;
 class IRBuilderBase;
 class Value;
+struct OverflowTracking;
 
 /// A private "module" namespace for types and utilities used by Reassociate.
 /// These are implementation details and should not be used by clients.
@@ -62,17 +63,6 @@ struct Factor {
   unsigned Power;
 
   Factor(Value *Base, unsigned Power) : Base(Base), Power(Power) {}
-};
-
-struct OverflowTracking {
-  bool HasNUW = true;
-  bool HasNSW = true;
-  bool AllKnownNonNegative = true;
-  bool AllKnownNonZero = true;
-  // Note: AllKnownNonNegative can be true in a case where one of the operands
-  // is negative, but one the operators is not NSW. AllKnownNonNegative should
-  // not be used independently of HasNSW
-  OverflowTracking() = default;
 };
 
 class XorOpnd;
@@ -115,7 +105,7 @@ private:
   void ReassociateExpression(BinaryOperator *I);
   void RewriteExprTree(BinaryOperator *I,
                        SmallVectorImpl<reassociate::ValueEntry> &Ops,
-                       reassociate::OverflowTracking Flags);
+                       OverflowTracking Flags);
   Value *OptimizeExpression(BinaryOperator *I,
                             SmallVectorImpl<reassociate::ValueEntry> &Ops);
   Value *OptimizeAdd(Instruction *I,
