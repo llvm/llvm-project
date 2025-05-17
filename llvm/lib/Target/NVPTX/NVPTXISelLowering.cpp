@@ -85,11 +85,16 @@ static cl::opt<unsigned> FMAContractLevelOpt(
              " 1: do it  2: do it aggressively"),
     cl::init(2));
 
-static cl::opt<int> UsePrecDivF32(
+static cl::opt<NVPTX::DivPrecisionLevel> UsePrecDivF32(
     "nvptx-prec-divf32", cl::Hidden,
     cl::desc("NVPTX Specifies: 0 use div.approx, 1 use div.full, 2 use"
              " IEEE Compliant F32 div.rnd if available."),
-    cl::init(2));
+    cl::values(clEnumValN(NVPTX::DivPrecisionLevel::Approx, "0",
+                          "Use div.approx"),
+               clEnumValN(NVPTX::DivPrecisionLevel::Full, "1", "Use div.full"),
+               clEnumValN(NVPTX::DivPrecisionLevel::IEEE754, "2",
+                          "Use IEEE Compliant F32 div.rnd if available")),
+    cl::init(NVPTX::DivPrecisionLevel::IEEE754));
 
 static cl::opt<bool> UsePrecSqrtF32(
     "nvptx-prec-sqrtf32", cl::Hidden,
@@ -109,17 +114,22 @@ static cl::opt<bool> ForceMinByValParamAlign(
              " params of device functions."),
     cl::init(false));
 
-int NVPTXTargetLowering::getDivF32Level() const {
-  if (UsePrecDivF32.getNumOccurrences() > 0) {
-    // If nvptx-prec-div32=N is used on the command-line, always honor it
+NVPTX::DivPrecisionLevel
+NVPTXTargetLowering::getDivF32Level(const MachineFunction &MF,
+                                    const SDNode &N) const {
+  // If nvptx-prec-div32=N is used on the command-line, always honor it
+  if (UsePrecDivF32.getNumOccurrences() > 0)
     return UsePrecDivF32;
-  } else {
-    // Otherwise, use div.approx if fast math is enabled
-    if (getTargetMachine().Options.UnsafeFPMath)
-      return 0;
-    else
-      return 2;
-  }
+
+  // Otherwise, use div.approx if fast math is enabled
+  if (allowUnsafeFPMath(MF))
+    return NVPTX::DivPrecisionLevel::Approx;
+
+  const SDNodeFlags Flags = N.getFlags();
+  if (Flags.hasApproximateFuncs())
+    return NVPTX::DivPrecisionLevel::Approx;
+
+  return NVPTX::DivPrecisionLevel::IEEE754;
 }
 
 bool NVPTXTargetLowering::usePrecSqrtF32() const {
@@ -4975,7 +4985,7 @@ bool NVPTXTargetLowering::allowFMA(MachineFunction &MF,
   return allowUnsafeFPMath(MF);
 }
 
-bool NVPTXTargetLowering::allowUnsafeFPMath(MachineFunction &MF) const {
+bool NVPTXTargetLowering::allowUnsafeFPMath(const MachineFunction &MF) const {
   // Honor TargetOptions flags that explicitly say unsafe math is okay.
   if (MF.getTarget().Options.UnsafeFPMath)
     return true;
