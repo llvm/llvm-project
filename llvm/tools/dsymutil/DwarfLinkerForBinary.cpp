@@ -770,6 +770,39 @@ bool DwarfLinkerForBinary::linkImpl(
         MaxDWARFVersion = std::max(Unit.getVersion(), MaxDWARFVersion);
       };
 
+  for (const auto &Obj : Map.objects()) {
+    auto DLBRelocMap = std::make_shared<DwarfLinkerForBinaryRelocationMap>();
+    if (ErrorOr<std::unique_ptr<DWARFFile>> ErrorOrObj =
+            loadObject(*Obj, Map, RL, DLBRelocMap)) {
+      ObjectsForLinking.emplace_back(std::move(*ErrorOrObj), DLBRelocMap);
+      GeneralLinker->addObjectFile(*ObjectsForLinking.back().Object, Loader,
+                                   OnCUDieLoaded);
+    } else {
+      ObjectsForLinking.push_back(
+          {std::make_unique<DWARFFile>(Obj->getObjectFilename(), nullptr,
+                                       nullptr),
+           DLBRelocMap});
+      GeneralLinker->addObjectFile(*ObjectsForLinking.back().Object);
+    }
+  }
+
+  // If we haven't seen any CUs, pick an arbitrary valid Dwarf version anyway.
+  if (MaxDWARFVersion == 0)
+    MaxDWARFVersion = 3;
+
+  if (Error E = GeneralLinker->setTargetDWARFVersion(MaxDWARFVersion))
+    return error(toString(std::move(E)));
+
+  setAcceleratorTables<Linker>(*GeneralLinker, Options.TheAccelTableKind,
+                               MaxDWARFVersion);
+
+  // link debug info for loaded object files.
+  if (Error E = GeneralLinker->link())
+    return error(toString(std::move(E)));
+
+  // Emit the __swift_ast section last because it can be the largest section.
+  // Any subsequent sections may have a section offset with more than 32 bits,
+  // which is not possible in MachO.
   llvm::StringSet<> SwiftModules;
   for (const auto &Obj : Map.objects()) {
     // N_AST objects (swiftmodule files) should get dumped directly into the
@@ -827,38 +860,8 @@ bool DwarfLinkerForBinary::linkImpl(
       // Copy the module into the .swift_ast section.
       if (!Options.NoOutput)
         Streamer->emitSwiftAST((*ErrorOrMem)->getBuffer());
-
-      continue;
-    }
-
-    auto DLBRelocMap = std::make_shared<DwarfLinkerForBinaryRelocationMap>();
-    if (ErrorOr<std::unique_ptr<DWARFFile>> ErrorOrObj =
-            loadObject(*Obj, Map, RL, DLBRelocMap)) {
-      ObjectsForLinking.emplace_back(std::move(*ErrorOrObj), DLBRelocMap);
-      GeneralLinker->addObjectFile(*ObjectsForLinking.back().Object, Loader,
-                                   OnCUDieLoaded);
-    } else {
-      ObjectsForLinking.push_back(
-          {std::make_unique<DWARFFile>(Obj->getObjectFilename(), nullptr,
-                                       nullptr),
-           DLBRelocMap});
-      GeneralLinker->addObjectFile(*ObjectsForLinking.back().Object);
     }
   }
-
-  // If we haven't seen any CUs, pick an arbitrary valid Dwarf version anyway.
-  if (MaxDWARFVersion == 0)
-    MaxDWARFVersion = 3;
-
-  if (Error E = GeneralLinker->setTargetDWARFVersion(MaxDWARFVersion))
-    return error(toString(std::move(E)));
-
-  setAcceleratorTables<Linker>(*GeneralLinker, Options.TheAccelTableKind,
-                               MaxDWARFVersion);
-
-  // link debug info for loaded object files.
-  if (Error E = GeneralLinker->link())
-    return error(toString(std::move(E)));
 
   StringRef ArchName = Map.getTriple().getArchName();
   if (Error E = emitRemarks(Options, Map.getBinaryPath(), ArchName, RL))
