@@ -82,7 +82,8 @@ static bool isCallInstruction(const MachineInstr &MI) {
 bool X86AvoidTrailingCallPass::runOnMachineFunction(MachineFunction &MF) {
   const X86Subtarget &STI = MF.getSubtarget<X86Subtarget>();
   const X86InstrInfo &TII = *STI.getInstrInfo();
-  assert(STI.isTargetWin64() && "pass only runs on Win64");
+  assert((STI.isTargetWin64() || STI.isTargetUEFI64()) &&
+         "pass only runs on Win64 and UEFI64");
 
   // We don't need to worry about any of the invariants described above if there
   // is no unwind info (CFI).
