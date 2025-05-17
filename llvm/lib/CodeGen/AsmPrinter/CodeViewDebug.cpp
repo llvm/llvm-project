@@ -627,8 +627,6 @@ void CodeViewDebug::beginModule(Module *M) {
 
   CurrentSourceLanguage = MapDWLangToCVLang(CU->getSourceLanguage());
 
-  collectGlobalVariableInfo();
-
   // Check if we should emit type record hashes.
   ConstantInt *GH =
       mdconst::extract_or_null<ConstantInt>(M->getModuleFlag("CodeViewGHash"));
@@ -638,6 +636,8 @@ void CodeViewDebug::beginModule(Module *M) {
 void CodeViewDebug::endModule() {
   if (!Asm || !Asm->hasDebugInfo())
     return;
+
+  collectGlobalVariableInfo();
 
   // The COFF .debug$S section consists of several subsections, each starting
   // with a 4-byte control code (e.g. 0xF1, 0xF2, etc) and then a 4-byte length
@@ -652,6 +652,8 @@ void CodeViewDebug::endModule() {
   emitObjName();
   emitCompilerInformation();
   endCVSubsection(CompilerInfo);
+
+  emitSecureHotPatchInformation();
 
   emitInlineeLinesSubsection();
 
@@ -805,6 +807,28 @@ void CodeViewDebug::emitObjName() {
   emitNullTerminatedSymbolName(OS, PathRef);
 
   endSymbolRecord(CompilerEnd);
+}
+
+void CodeViewDebug::emitSecureHotPatchInformation() {
+  MCSymbol *hotPatchInfo = nullptr;
+
+  for (const auto &F : MMI->getModule()->functions()) {
+    if (!F.isDeclarationForLinker() &&
+        F.hasFnAttribute(Attribute::MarkedForWindowsHotPatching)) {
+      if (hotPatchInfo == nullptr)
+        hotPatchInfo = beginCVSubsection(DebugSubsectionKind::Symbols);
+      MCSymbol *HotPatchEnd = beginSymbolRecord(SymbolKind::S_HOTPATCHFUNC);
+      auto *SP = F.getSubprogram();
+      OS.AddComment("Function");
+      OS.emitInt32(getFuncIdForSubprogram(SP).getIndex());
+      OS.AddComment("Name");
+      emitNullTerminatedSymbolName(OS, F.getName());
+      endSymbolRecord(HotPatchEnd);
+    }
+  }
+
+  if (hotPatchInfo != nullptr)
+    endCVSubsection(hotPatchInfo);
 }
 
 namespace {
