@@ -364,5 +364,18 @@ void Heatmap::printSectionHotness(raw_ostream &OS) const {
     OS << formatv("[unmapped], 0x0, 0x0, {0:f4}, 0, 0\n",
                   100.0 * UnmappedHotness / NumTotalCounts);
 }
+
+bool Heatmap::resizeBucket(uint64_t TargetSize) {
+  if (TargetSize <= BucketSize)
+    return false;
+  std::map<uint64_t, uint64_t> NewMap;
+  for (const auto [Bucket, Count] : Map) {
+    const uint64_t Address = Bucket * BucketSize;
+    NewMap[Address / TargetSize] += Count;
+  }
+  Map = NewMap;
+  BucketSize = TargetSize;
+  return true;
+}
 } // namespace bolt
 } // namespace llvm
