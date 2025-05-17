@@ -80,6 +80,11 @@ if(NOT MSVC)
   list(APPEND ASAN_UNITTEST_COMMON_LINK_FLAGS --driver-mode=g++)
 endif()
 
+# unittest will test asan sources which may require atomic library.
+ if (${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+   list(APPEND ASAN_UNITTEST_COMMON_LINK_FLAGS -latomic)
+ endif()
+
 # x86_64 FreeBSD 9.2 additionally requires libc++ to build the tests.
 if(CMAKE_SYSTEM MATCHES "FreeBSD-9.2-RELEASE")
   list(APPEND ASAN_UNITTEST_COMMON_LINK_FLAGS "-lc++")
@@ -240,7 +245,8 @@ function(add_asan_tests arch test_runtime)
     LINK_FLAGS ${ASAN_UNITTEST_INSTRUMENTED_LINK_FLAGS} ${TARGET_LINK_FLAGS})
 endfunction()
 
-if(COMPILER_RT_CAN_EXECUTE_TESTS AND NOT ANDROID)
+# AIX can not run unittest because of shared library interception issue.
+if(COMPILER_RT_CAN_EXECUTE_TESTS AND NOT ANDROID AND NOT ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
   set(ASAN_TEST_ARCH ${ASAN_SUPPORTED_ARCH})
   if(APPLE)
     darwin_filter_host_archs(ASAN_SUPPORTED_ARCH ASAN_TEST_ARCH)

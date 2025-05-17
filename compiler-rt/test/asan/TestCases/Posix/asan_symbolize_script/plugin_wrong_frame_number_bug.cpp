@@ -3,6 +3,10 @@
 // UNSUPPORTED: android
 // UNSUPPORTED: ios
 
+// Asan on AIX doesn't print the full path for user libraries or executables, so this test fails to
+// symbolize.
+// UNSUPPORTED: target={{.*}}-aix{{.*}}
+
 // RUN: %clangxx_asan -O0 -g %s -o %t
 // RUN: %env_asan_opts=symbolize=0 not %run %t DUMMY_ARG > %t.asan_report 2>&1
 // RUN: %asan_symbolize --log-level debug --log-dest %t_debug_log_output.txt -l %t.asan_report --plugins %S/plugin_wrong_frame_number_bug.py > %t.asan_report_sym

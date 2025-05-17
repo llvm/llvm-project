@@ -19,9 +19,9 @@ struct C {
 int main(int argc, char **argv) {
   C *buffer = new C[argc];
   buffer[-2].x = 10;
-// CHECK: AddressSanitizer: heap-buffer-overflow
-// CHECK: in main {{.*}}new_array_cookie_test.cpp:[[@LINE-2]]
-// CHECK: is located 0 bytes inside of 12-byte region
-// NO_COOKIE: ZZZZZZZZ
+  // CHECK: AddressSanitizer: heap-buffer-overflow
+  // CHECK: in {{\.?main}} {{.*}}new_array_cookie_test.cpp:[[@LINE-2]]
+  // CHECK: is located 0 bytes inside of 12-byte region
+  // NO_COOKIE: ZZZZZZZZ
   delete [] buffer;
 }

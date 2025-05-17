@@ -6,6 +6,10 @@
 // UNSUPPORTED: i386-darwin
 // XFAIL: android
 
+// Asan on AIX passes /proc/<pid>/object/<object_id> to the symbolizer at runtime, instead of the
+// real path to the module.
+// UNSUPPORTED: target={{.*}}-aix{{.*}}
+
 // Tests __sanitizer_get_module_and_offset_for_pc.
 
 #include <assert.h>
