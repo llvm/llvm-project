@@ -750,7 +750,6 @@ void DylibVerifier::visitSymbolInDylib(const Record &R, SymbolContext &SymCtx) {
   // Missing declarations are dropped for ErrorsOnly mode. It is the last
   // remaining mode.
   updateState(Result::Ignore);
-  return;
 }
 
 void DylibVerifier::visitGlobal(const GlobalRecord &R) {

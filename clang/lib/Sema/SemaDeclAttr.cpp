@@ -3982,7 +3982,6 @@ static void handleFormatMatchesAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
   S.Diag(AL.getLoc(), diag::err_format_nonliteral)
       << FormatStrExpr->getSourceRange();
-  return;
 }
 
 /// Handle __attribute__((callback(CalleeIdx, PayloadIdx0, ...))) attributes.
