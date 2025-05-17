@@ -589,7 +589,7 @@ void PipelineSolver::populateReadyList(
   }
 
   if (UseCostHeur)
-    std::sort(ReadyList.begin(), ReadyList.end(), llvm::less_second());
+    llvm::sort(ReadyList, llvm::less_second());
 
   assert(ReadyList.size() == CurrSU.second.size());
 }
