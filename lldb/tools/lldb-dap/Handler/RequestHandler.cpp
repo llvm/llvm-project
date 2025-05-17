@@ -209,7 +209,7 @@ llvm::Error BaseRequestHandler::LaunchProcess(
 
       // The custom commands might have created a new target so we should use
       // the selected target after these commands are run.
-      dap.target = dap.debugger.GetSelectedTarget();
+      dap.SetTarget(dap.debugger.GetSelectedTarget());
     }
   }
 
