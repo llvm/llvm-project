@@ -30,61 +30,6 @@ static cl::opt<bool>
 AArch64SelectionDAGInfo::AArch64SelectionDAGInfo()
     : SelectionDAGGenTargetInfo(AArch64GenSDNodeInfo) {}
 
-const char *AArch64SelectionDAGInfo::getTargetNodeName(unsigned Opcode) const {
-#define MAKE_CASE(V)                                                           \
-  case V:                                                                      \
-    return #V;
-
-  // These nodes don't have corresponding entries in *.td files yet.
-  switch (static_cast<AArch64ISD::NodeType>(Opcode)) {
-    MAKE_CASE(AArch64ISD::LD2post)
-    MAKE_CASE(AArch64ISD::LD3post)
-    MAKE_CASE(AArch64ISD::LD4post)
-    MAKE_CASE(AArch64ISD::ST2post)
-    MAKE_CASE(AArch64ISD::ST3post)
-    MAKE_CASE(AArch64ISD::ST4post)
-    MAKE_CASE(AArch64ISD::LD1x2post)
-    MAKE_CASE(AArch64ISD::LD1x3post)
-    MAKE_CASE(AArch64ISD::LD1x4post)
-    MAKE_CASE(AArch64ISD::ST1x2post)
-    MAKE_CASE(AArch64ISD::ST1x3post)
-    MAKE_CASE(AArch64ISD::ST1x4post)
-    MAKE_CASE(AArch64ISD::LD1DUPpost)
-    MAKE_CASE(AArch64ISD::LD2DUPpost)
-    MAKE_CASE(AArch64ISD::LD3DUPpost)
-    MAKE_CASE(AArch64ISD::LD4DUPpost)
-    MAKE_CASE(AArch64ISD::LD1LANEpost)
-    MAKE_CASE(AArch64ISD::LD2LANEpost)
-    MAKE_CASE(AArch64ISD::LD3LANEpost)
-    MAKE_CASE(AArch64ISD::LD4LANEpost)
-    MAKE_CASE(AArch64ISD::ST2LANEpost)
-    MAKE_CASE(AArch64ISD::ST3LANEpost)
-    MAKE_CASE(AArch64ISD::ST4LANEpost)
-    MAKE_CASE(AArch64ISD::SVE_LD2_MERGE_ZERO)
-    MAKE_CASE(AArch64ISD::SVE_LD3_MERGE_ZERO)
-    MAKE_CASE(AArch64ISD::SVE_LD4_MERGE_ZERO)
-    MAKE_CASE(AArch64ISD::GLD1Q_INDEX_MERGE_ZERO)
-    MAKE_CASE(AArch64ISD::GLDNT1_INDEX_MERGE_ZERO)
-    MAKE_CASE(AArch64ISD::SST1Q_INDEX_PRED)
-    MAKE_CASE(AArch64ISD::SSTNT1_INDEX_PRED)
-    MAKE_CASE(AArch64ISD::INDEX_VECTOR)
-    MAKE_CASE(AArch64ISD::MRRS)
-    MAKE_CASE(AArch64ISD::MSRR)
-  }
-#undef MAKE_CASE
-
-  return SelectionDAGGenTargetInfo::getTargetNodeName(Opcode);
-}
-
-bool AArch64SelectionDAGInfo::isTargetMemoryOpcode(unsigned Opcode) const {
-  // These nodes don't have corresponding entries in *.td files yet.
-  if (Opcode >= AArch64ISD::FIRST_MEMORY_OPCODE &&
-      Opcode <= AArch64ISD::LAST_MEMORY_OPCODE)
-    return true;
-
-  return SelectionDAGGenTargetInfo::isTargetMemoryOpcode(Opcode);
-}
-
 void AArch64SelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
                                                const SDNode *N) const {
 #ifndef NDEBUG

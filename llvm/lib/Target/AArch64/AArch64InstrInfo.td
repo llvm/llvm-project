@@ -1044,6 +1044,19 @@ def AArch64mrs : SDNode<"AArch64ISD::MRS",
                                              SDTCisVT<2, i32>]>,
                         [SDNPHasChain]>;
 
+// 128-bit system register accesses
+// lo64, hi64, chain = MRRS(chain, sysregname)
+def AArch64mrrs : SDNode<"AArch64ISD::MRRS",
+                          SDTypeProfile<2, 1, [SDTCisVT<0, i64>,
+                                               SDTCisVT<1, i64>]>,
+                          [SDNPHasChain]>;
+
+// chain = MSRR(chain, sysregname, lo64, hi64)
+def AArch64msrr : SDNode<"AArch64ISD::MSRR",
+                          SDTypeProfile<0, 3, [SDTCisVT<1, i64>,
+                                               SDTCisVT<2, i64>]>,
+                          [SDNPHasChain]>;
+
 def SD_AArch64rshrnb : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisVec<1>, SDTCisInt<2>]>;
 def AArch64rshrnb : SDNode<"AArch64ISD::RSHRNB_I", SD_AArch64rshrnb>;
 def AArch64rshrnb_pf : PatFrags<(ops node:$rs, node:$i),
@@ -1052,6 +1065,66 @@ def AArch64rshrnb_pf : PatFrags<(ops node:$rs, node:$i),
 
 def AArch64CttzElts : SDNode<"AArch64ISD::CTTZ_ELTS", SDTypeProfile<1, 1,
                              [SDTCisInt<0>, SDTCisVec<1>]>, []>;
+
+def AArch64ld2post : SDNode<"AArch64ISD::LD2post", SDTypeProfile<3, 2, []>, [
+    SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def AArch64ld3post : SDNode<"AArch64ISD::LD3post", SDTypeProfile<4, 2, []>, [
+    SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def AArch64ld4post : SDNode<"AArch64ISD::LD4post", SDTypeProfile<5, 2, []>, [
+    SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def AArch64st2post : SDNode<"AArch64ISD::ST2post", SDTypeProfile<1, 4, []>, [
+    SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+def AArch64st3post : SDNode<"AArch64ISD::ST3post", SDTypeProfile<1, 5, []>, [
+    SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+def AArch64st4post : SDNode<"AArch64ISD::ST4post", SDTypeProfile<1, 6, []>, [
+    SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+def AArch64ld1x2post : SDNode<"AArch64ISD::LD1x2post", SDTypeProfile<3, 2, []>, [
+    SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def AArch64ld1x3post : SDNode<"AArch64ISD::LD1x3post", SDTypeProfile<4, 2, []>, [
+    SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def AArch64ld1x4post : SDNode<"AArch64ISD::LD1x4post", SDTypeProfile<5, 2, []>, [
+    SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def AArch64st1x2post : SDNode<"AArch64ISD::ST1x2post", SDTypeProfile<1, 4, []>, [
+    SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+def AArch64st1x3post : SDNode<"AArch64ISD::ST1x3post", SDTypeProfile<1, 5, []>, [
+    SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+def AArch64st1x4post : SDNode<"AArch64ISD::ST1x4post", SDTypeProfile<1, 6, []>, [
+    SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+def AArch64ld1duppost : SDNode<"AArch64ISD::LD1DUPpost", SDTypeProfile<2, 2, []>, [
+    SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def AArch64ld2duppost : SDNode<"AArch64ISD::LD2DUPpost", SDTypeProfile<3, 2, []>, [
+    SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def AArch64ld3duppost: SDNode<"AArch64ISD::LD3DUPpost", SDTypeProfile<4, 2, []>, [
+    SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def AArch64ld4duppost: SDNode<"AArch64ISD::LD4DUPpost", SDTypeProfile<5, 2, []>, [
+    SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def AArch64ld1lanepost: SDNode<"AArch64ISD::LD1LANEpost", SDTypeProfile<2, 4, []>, [
+    SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def AArch64ld2lanepost : SDNode<"AArch64ISD::LD2LANEpost", SDTypeProfile<3, 5, []>, [
+    SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def AArch64ld3lanepost: SDNode<"AArch64ISD::LD3LANEpost", SDTypeProfile<4, 6, []>, [
+    SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def AArch64ld4lanepost: SDNode<"AArch64ISD::LD4LANEpost", SDTypeProfile<5, 7, []>, [
+    SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def AArch64st2lanepost : SDNode<"AArch64ISD::ST2LANEpost", SDTypeProfile<1, 5, []>, [
+    SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+def AArch64st3lanepost : SDNode<"AArch64ISD::ST3LANEpost", SDTypeProfile<1, 6, []>, [
+    SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+def AArch64st4lanepost : SDNode<"AArch64ISD::ST4LANEpost", SDTypeProfile<1, 7, []>, [
+    SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+
+// Scatter store
+def AArch64sstnt1_index_pred: SDNode<"AArch64ISD::SSTNT1_INDEX_PRED", SDTypeProfile<0, 5, []>, [
+    SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+// Non-temporal scatter store
+def AArch64sst1q_index_pred: SDNode<"AArch64ISD::SST1Q_INDEX_PRED", SDTypeProfile<0, 5, []>, [
+    SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+// Non-temporal gather loads
+def AArch64gldnt1_index_merge_zero: SDNode<"AArch64ISD::GLDNT1_INDEX_MERGE_ZERO", SDTypeProfile<1, 4, []>, [
+    SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+// Unsigned gather loads.
+def AArch64gld1q_index_merge_zero: SDNode<"AArch64ISD::GLD1Q_INDEX_MERGE_ZERO", SDTypeProfile<1, 4, []>, [
+    SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 
 // Match add node and also treat an 'or' node is as an 'add' if the or'ed operands
 // have no common bits.
@@ -5701,14 +5774,14 @@ def : Pat<(v2i64 (bswap (v2i64 V128:$Rn))),
           (v2i64 (REV64v16i8 (v2i64 V128:$Rn)))>;
 
 // Patterns for funnel shifts to be matched to equivalent REV instructions
-def : Pat<(v2i64 (or (v2i64 (AArch64vshl (v2i64 V128:$Rn), (i32 32))), 
-                     (v2i64 (AArch64vlshr (v2i64 V128:$Rn), (i32 32))))), 
+def : Pat<(v2i64 (or (v2i64 (AArch64vshl (v2i64 V128:$Rn), (i32 32))),
+                     (v2i64 (AArch64vlshr (v2i64 V128:$Rn), (i32 32))))),
           (v2i64 (REV64v4i32 (v2i64 V128:$Rn)))>;
-def : Pat<(v4i32 (or (v4i32 (AArch64vshl (v4i32 V128:$Rn), (i32 16))), 
-                     (v4i32 (AArch64vlshr (v4i32 V128:$Rn), (i32 16))))), 
+def : Pat<(v4i32 (or (v4i32 (AArch64vshl (v4i32 V128:$Rn), (i32 16))),
+                     (v4i32 (AArch64vlshr (v4i32 V128:$Rn), (i32 16))))),
           (v4i32 (REV32v8i16 (v4i32 V128:$Rn)))>;
-def : Pat<(v2i32 (or (v2i32 (AArch64vshl (v2i32 V64:$Rn), (i32 16))), 
-                     (v2i32 (AArch64vlshr (v2i32 V64:$Rn), (i32 16))))), 
+def : Pat<(v2i32 (or (v2i32 (AArch64vshl (v2i32 V64:$Rn), (i32 16))),
+                     (v2i32 (AArch64vlshr (v2i32 V64:$Rn), (i32 16))))),
           (v2i32 (REV32v4i16 (v2i32 V64:$Rn)))>;
 
 //===----------------------------------------------------------------------===//
