@@ -604,14 +604,14 @@ Value *VPInstruction::generate(VPTransformState &State) {
     return Builder.CreateVectorSplat(
         State.VF, State.get(getOperand(0), /*IsScalar*/ true), "broadcast");
   }
-  case VPInstruction::ComputeFindLastIVResult: {
+  case VPInstruction::ComputeFindIVResult: {
     // FIXME: The cross-recipe dependency on VPReductionPHIRecipe is temporary
     // and will be removed by breaking up the recipe further.
     auto *PhiR = cast<VPReductionPHIRecipe>(getOperand(0));
     // Get its reduction variable descriptor.
     const RecurrenceDescriptor &RdxDesc = PhiR->getRecurrenceDescriptor();
     [[maybe_unused]] RecurKind RK = RdxDesc.getRecurrenceKind();
-    assert(RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK) &&
+    assert(RecurrenceDescriptor::isFindIVRecurrenceKind(RK) &&
            "Unexpected reduction kind");
     assert(!PhiR->isInLoop() &&
            "In-loop FindLastIV reduction is not supported yet");
@@ -621,8 +621,16 @@ Value *VPInstruction::generate(VPTransformState &State) {
     unsigned UF = getNumOperands() - 2;
     Value *ReducedPartRdx = State.get(getOperand(2));
     for (unsigned Part = 1; Part < UF; ++Part) {
-      ReducedPartRdx = createMinMaxOp(Builder, RecurKind::SMax, ReducedPartRdx,
-                                      State.get(getOperand(2 + Part)));
+      if (RK == RecurKind::FindLastIV)
+        ReducedPartRdx =
+            createMinMaxOp(Builder, RecurKind::SMax, ReducedPartRdx,
+                           State.get(getOperand(2 + Part)));
+      else
+        ReducedPartRdx =
+            createMinMaxOp(Builder,
+                           RK == RecurKind::FindFirstIVSMin ? RecurKind::SMin
+                                                            : RecurKind::UMin,
+                           ReducedPartRdx, State.get(getOperand(2 + Part)));
     }
 
     return createFindLastIVReduction(Builder, ReducedPartRdx,
@@ -637,8 +645,8 @@ Value *VPInstruction::generate(VPTransformState &State) {
     const RecurrenceDescriptor &RdxDesc = PhiR->getRecurrenceDescriptor();
 
     RecurKind RK = RdxDesc.getRecurrenceKind();
-    assert(!RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK) &&
-           "should be handled by ComputeFindLastIVResult");
+    assert(!RecurrenceDescriptor::isFindIVRecurrenceKind(RK) &&
+           "should be handled by ComputeFindIVResult");
 
     Type *PhiTy = OrigPhi->getType();
     // The recipe's operands are the reduction phi, followed by one operand for
@@ -835,7 +843,7 @@ bool VPInstruction::isVectorToScalar() const {
          getOpcode() == VPInstruction::ExtractPenultimateElement ||
          getOpcode() == Instruction::ExtractElement ||
          getOpcode() == VPInstruction::FirstActiveLane ||
-         getOpcode() == VPInstruction::ComputeFindLastIVResult ||
+         getOpcode() == VPInstruction::ComputeFindIVResult ||
          getOpcode() == VPInstruction::ComputeReductionResult ||
          getOpcode() == VPInstruction::AnyOf;
 }
@@ -932,7 +940,7 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
     return true;
   case VPInstruction::PtrAdd:
     return Op == getOperand(0) || vputils::onlyFirstLaneUsed(this);
-  case VPInstruction::ComputeFindLastIVResult:
+  case VPInstruction::ComputeFindIVResult:
     return Op == getOperand(1);
   };
   llvm_unreachable("switch should return");
@@ -1015,8 +1023,8 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
   case VPInstruction::ExtractPenultimateElement:
     O << "extract-penultimate-element";
     break;
-  case VPInstruction::ComputeFindLastIVResult:
-    O << "compute-find-last-iv-result";
+  case VPInstruction::ComputeFindIVResult:
+    O << "compute-find-iv-result";
     break;
   case VPInstruction::ComputeReductionResult:
     O << "compute-reduction-result";
@@ -3847,7 +3855,7 @@ void VPReductionPHIRecipe::execute(VPTransformState &State) {
       Builder.SetInsertPoint(VectorPH->getTerminator());
       StartV = Iden = State.get(StartVPV);
     }
-  } else if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK)) {
+  } else if (RecurrenceDescriptor::isFindIVRecurrenceKind(RK)) {
     // [I|F]FindLastIV will use a sentinel value to initialize the reduction
     // phi or the resume value from the main vector loop when vectorizing the
     // epilogue loop. In the exit block, ComputeReductionResult will generate

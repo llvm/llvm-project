@@ -1809,20 +1809,51 @@ define i16 @non_reduction_index(i16 noundef %val) {
 ; CHECK-LABEL: define i16 @non_reduction_index(
 ; CHECK-SAME: i16 noundef [[VAL:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i16> poison, i16 [[VAL]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i16> [[BROADCAST_SPLATINSERT]], <4 x i16> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i16> [ <i16 12, i16 11, i16 10, i16 9>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i16> [ splat (i16 32767), %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i32 [[INDEX]] to i16
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i16 12, [[DOTCAST]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [13 x i16], ptr @table, i16 0, i16 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i16, ptr [[TMP8]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i16, ptr [[TMP1]], i32 -3
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i16>, ptr [[TMP2]], align 1
+; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x i16> [[WIDE_LOAD]], <4 x i16> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt <4 x i16> [[REVERSE]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP4:%.*]] = add nsw <4 x i16> [[VEC_IND]], splat (i16 -1)
+; CHECK-NEXT:    [[TMP5]] = select <4 x i1> [[TMP3]], <4 x i16> [[TMP4]], <4 x i16> [[VEC_PHI]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i16> [[VEC_IND]], splat (i16 -4)
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], 12
+; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP32:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP7:%.*]] = call i16 @llvm.vector.reduce.smin.v4i16(<4 x i16> [[TMP5]])
+; CHECK-NEXT:    [[RDX_SELECT_CMP:%.*]] = icmp ne i16 [[TMP7]], 32767
+; CHECK-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[RDX_SELECT_CMP]], i16 [[TMP7]], i16 0
+; CHECK-NEXT:    br i1 true, label %[[FOR_COND_CLEANUP:.*]], label %[[SCALAR_PH]]
+; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 0, %[[MIDDLE_BLOCK]] ], [ 12, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i16 [ [[RDX_SELECT]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_COND_CLEANUP:.*]]:
-; CHECK-NEXT:    [[SPEC_SELECT_LCSSA:%.*]] = phi i16 [ [[SPEC_SELECT:%.*]], %[[FOR_BODY]] ]
+; CHECK:       [[FOR_COND_CLEANUP]]:
+; CHECK-NEXT:    [[SPEC_SELECT_LCSSA:%.*]] = phi i16 [ [[SPEC_SELECT:%.*]], %[[FOR_BODY]] ], [ [[RDX_SELECT]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i16 [[SPEC_SELECT_LCSSA]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[I_05:%.*]] = phi i16 [ 12, %[[ENTRY]] ], [ [[SUB:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[K_04:%.*]] = phi i16 [ 0, %[[ENTRY]] ], [ [[SPEC_SELECT]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[I_05:%.*]] = phi i16 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[SUB:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[K_04:%.*]] = phi i16 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[SPEC_SELECT]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [13 x i16], ptr @table, i16 0, i16 [[I_05]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[ARRAYIDX]], align 1
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i16 [[TMP0]], [[VAL]]
 ; CHECK-NEXT:    [[SUB]] = add nsw i16 [[I_05]], -1
 ; CHECK-NEXT:    [[SPEC_SELECT]] = select i1 [[CMP1]], i16 [[SUB]], i16 [[K_04]]
 ; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i16 [[SUB]], 0
-; CHECK-NEXT:    br i1 [[CMP_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]]
+; CHECK-NEXT:    br i1 [[CMP_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]], !llvm.loop [[LOOP33:![0-9]+]]
 ;
 entry:
   br label %for.body
@@ -1849,20 +1880,51 @@ define i16 @non_reduction_index_half(half noundef %val) {
 ; CHECK-LABEL: define i16 @non_reduction_index_half(
 ; CHECK-SAME: half noundef [[VAL:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x half> poison, half [[VAL]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x half> [[BROADCAST_SPLATINSERT]], <4 x half> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i16> [ <i16 12, i16 11, i16 10, i16 9>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i16> [ splat (i16 32767), %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i32 [[INDEX]] to i16
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i16 12, [[DOTCAST]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [13 x i16], ptr @table, i16 0, i16 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds half, ptr [[TMP8]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds half, ptr [[TMP1]], i32 -3
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x half>, ptr [[TMP2]], align 1
+; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x half> [[WIDE_LOAD]], <4 x half> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[TMP3:%.*]] = fcmp ugt <4 x half> [[REVERSE]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP4:%.*]] = add nsw <4 x i16> [[VEC_IND]], splat (i16 -1)
+; CHECK-NEXT:    [[TMP5]] = select <4 x i1> [[TMP3]], <4 x i16> [[TMP4]], <4 x i16> [[VEC_PHI]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i16> [[VEC_IND]], splat (i16 -4)
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], 12
+; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP34:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP7:%.*]] = call i16 @llvm.vector.reduce.smin.v4i16(<4 x i16> [[TMP5]])
+; CHECK-NEXT:    [[RDX_SELECT_CMP:%.*]] = icmp ne i16 [[TMP7]], 32767
+; CHECK-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[RDX_SELECT_CMP]], i16 [[TMP7]], i16 0
+; CHECK-NEXT:    br i1 true, label %[[FOR_COND_CLEANUP:.*]], label %[[SCALAR_PH]]
+; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 0, %[[MIDDLE_BLOCK]] ], [ 12, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i16 [ [[RDX_SELECT]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_COND_CLEANUP:.*]]:
-; CHECK-NEXT:    [[SPEC_SELECT_LCSSA:%.*]] = phi i16 [ [[SPEC_SELECT:%.*]], %[[FOR_BODY]] ]
+; CHECK:       [[FOR_COND_CLEANUP]]:
+; CHECK-NEXT:    [[SPEC_SELECT_LCSSA:%.*]] = phi i16 [ [[SPEC_SELECT:%.*]], %[[FOR_BODY]] ], [ [[RDX_SELECT]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i16 [[SPEC_SELECT_LCSSA]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[I_05:%.*]] = phi i16 [ 12, %[[ENTRY]] ], [ [[SUB:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[K_04:%.*]] = phi i16 [ 0, %[[ENTRY]] ], [ [[SPEC_SELECT]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[I_05:%.*]] = phi i16 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[SUB:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[K_04:%.*]] = phi i16 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[SPEC_SELECT]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [13 x i16], ptr @table, i16 0, i16 [[I_05]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load half, ptr [[ARRAYIDX]], align 1
 ; CHECK-NEXT:    [[FCMP1:%.*]] = fcmp ugt half [[TMP0]], [[VAL]]
 ; CHECK-NEXT:    [[SUB]] = add nsw i16 [[I_05]], -1
 ; CHECK-NEXT:    [[SPEC_SELECT]] = select i1 [[FCMP1]], i16 [[SUB]], i16 [[K_04]]
 ; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i16 [[SUB]], 0
-; CHECK-NEXT:    br i1 [[CMP_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]]
+; CHECK-NEXT:    br i1 [[CMP_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]], !llvm.loop [[LOOP35:![0-9]+]]
 ;
 entry:
   br label %for.body
@@ -1916,4 +1978,8 @@ for.body:                                         ; preds = %entry, %for.body
 ; CHECK: [[LOOP29]] = distinct !{[[LOOP29]], [[META2]], [[META1]]}
 ; CHECK: [[LOOP30]] = distinct !{[[LOOP30]], [[META1]], [[META2]]}
 ; CHECK: [[LOOP31]] = distinct !{[[LOOP31]], [[META2]], [[META1]]}
+; CHECK: [[LOOP32]] = distinct !{[[LOOP32]], [[META1]], [[META2]]}
+; CHECK: [[LOOP33]] = distinct !{[[LOOP33]], [[META2]], [[META1]]}
+; CHECK: [[LOOP34]] = distinct !{[[LOOP34]], [[META1]], [[META2]]}
+; CHECK: [[LOOP35]] = distinct !{[[LOOP35]], [[META2]], [[META1]]}
 ;.
