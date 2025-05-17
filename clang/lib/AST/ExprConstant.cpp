@@ -3492,11 +3492,33 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
 
   APValue::LValueBase Base(VD, Frame ? Frame->Index : 0, Version);
 
+  auto CheckUninitReference = [&](bool IsLocalVariable) {
+    if (!Result->hasValue() && VD->getType()->isReferenceType()) {
+      // C++23 [expr.const]p8
+      // ... For such an object that is not usable in constant expressions, the
+      // dynamic type of the object is constexpr-unknown. For such a reference
+      // that is not usable in constant expressions, the reference is treated
+      // as binding to an unspecified object of the referenced type whose
+      // lifetime and that of all subobjects includes the entire constant
+      // evaluation and whose dynamic type is constexpr-unknown.
+      //
+      // Variables that are part of the current evaluation are not
+      // constexpr-unknown.
+      if (!AllowConstexprUnknown || IsLocalVariable) {
+        if (!Info.checkingPotentialConstantExpression())
+          Info.FFDiag(E, diag::note_constexpr_use_uninit_reference);
+        return false;
+      }
+      Result = &Info.CurrentCall->createConstexprUnknownAPValues(VD, Base);
+    }
+    return true;
+  };
+
   // If this is a local variable, dig out its value.
   if (Frame) {
     Result = Frame->getTemporary(VD, Version);
     if (Result)
-      return true;
+      return CheckUninitReference(/*IsLocalVariable=*/true);
 
     if (!isa<ParmVarDecl>(VD)) {
       // Assume variables referenced within a lambda's call operator that were
@@ -3521,7 +3543,7 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
   // in-flight value.
   if (Info.EvaluatingDecl == Base) {
     Result = Info.EvaluatingDeclValue;
-    return true;
+    return CheckUninitReference(/*IsLocalVariable=*/false);
   }
 
   // P2280R4 struck the restriction that variable of reference type lifetime
@@ -3594,11 +3616,7 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
   // type so we can no longer assume we have an Init.
   // Used to be C++20 [expr.const]p5.12:
   //  ... reference has a preceding initialization and either ...
-  if (Init && !VD->evaluateValue()) {
-    if (AllowConstexprUnknown) {
-      Result = &Info.CurrentCall->createConstexprUnknownAPValues(VD, Base);
-      return true;
-    }
+  if (Init && !VD->evaluateValue() && !AllowConstexprUnknown) {
     Info.FFDiag(E, diag::note_constexpr_var_init_non_constant, 1) << VD;
     NoteLValueLocation(Info, Base);
     return false;
@@ -3636,18 +3654,14 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
 
   Result = VD->getEvaluatedValue();
 
-  // C++23 [expr.const]p8
-  // ... For such an object that is not usable in constant expressions, the
-  // dynamic type of the object is constexpr-unknown. For such a reference that
-  // is not usable in constant expressions, the reference is treated as binding
-  // to an unspecified object of the referenced type whose lifetime and that of
-  // all subobjects includes the entire constant evaluation and whose dynamic
-  // type is constexpr-unknown.
-  if (AllowConstexprUnknown) {
-    if (!Result)
+  if (!Result) {
+    if (AllowConstexprUnknown)
       Result = &Info.CurrentCall->createConstexprUnknownAPValues(VD, Base);
+    else
+      return false;
   }
-  return true;
+
+  return CheckUninitReference(/*IsLocalVariable=*/false);
 }
 
 /// Get the base index of the given base class within an APValue representing
@@ -8953,12 +8967,7 @@ bool LValueExprEvaluator::VisitDeclRefExpr(const DeclRefExpr *E) {
   return Error(E);
 }
 
-
 bool LValueExprEvaluator::VisitVarDecl(const Expr *E, const VarDecl *VD) {
-  // C++23 [expr.const]p8 If we have a reference type allow unknown references
-  // and pointers.
-  bool AllowConstexprUnknown =
-      Info.getLangOpts().CPlusPlus23 && VD->getType()->isReferenceType();
   // If we are within a lambda's call operator, check whether the 'VD' referred
   // to within 'E' actually represents a lambda-capture that maps to a
   // data-member/field within the closure object, and if so, evaluate to the
@@ -9025,26 +9034,6 @@ bool LValueExprEvaluator::VisitVarDecl(const Expr *E, const VarDecl *VD) {
   APValue *V;
   if (!evaluateVarDeclInit(Info, E, VD, Frame, Version, V))
     return false;
-  if (!V->hasValue()) {
-    // FIXME: Is it possible for V to be indeterminate here? If so, we should
-    // adjust the diagnostic to say that.
-    // C++23 [expr.const]p8 If we have a variable that is unknown reference
-    // or pointer it may not have a value but still be usable later on so do not
-    // diagnose.
-    if (!Info.checkingPotentialConstantExpression() && !AllowConstexprUnknown)
-      Info.FFDiag(E, diag::note_constexpr_use_uninit_reference);
-
-    // C++23 [expr.const]p8 If we have a variable that is unknown reference or
-    // pointer try to recover it from the frame and set the result accordingly.
-    if (VD->getType()->isReferenceType() && AllowConstexprUnknown) {
-      if (Frame) {
-        Result.set({VD, Frame->Index, Version});
-        return true;
-      }
-      return Success(VD);
-    }
-    return false;
-  }
 
   return Success(*V, E);
 }
