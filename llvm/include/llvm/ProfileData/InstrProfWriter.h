@@ -20,7 +20,7 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/Object/BuildID.h"
 #include "llvm/ProfileData/InstrProf.h"
-#include "llvm/ProfileData/MemProf.h"
+#include "llvm/ProfileData/IndexedMemProfData.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
 #include <memory>
