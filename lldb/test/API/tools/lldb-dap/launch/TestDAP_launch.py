@@ -87,7 +87,8 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         """
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program, stopOnEntry=True)
-
+        self.dap_server.request_configurationDone()
+        self.dap_server.wait_for_stopped()
         self.assertTrue(
             len(self.dap_server.thread_stop_reasons) > 0,
             "expected stopped event during launch",
@@ -357,7 +358,6 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         terminateCommands = ["expr 4+2"]
         self.build_and_launch(
             program,
-            stopOnEntry=True,
             initCommands=initCommands,
             preRunCommands=preRunCommands,
             postRunCommands=postRunCommands,
