@@ -114,6 +114,9 @@ Improvements to clang-tidy
 - Fixed bug in :program:`run_clang_tidy.py` where the program would not
   correctly display the checks enabled by the top-level `.clang-tidy` file.
 
+- New :program:`clang-tidy` config property `ClangQueryChecks` that allows adding
+  custom checks based on a :program:`clang-query` syntax
+
 New checks
 ^^^^^^^^^^
 
