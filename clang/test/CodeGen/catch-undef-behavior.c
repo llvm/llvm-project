@@ -366,11 +366,17 @@ void call_memcpy_nonnull(void *p, void *q, int sz) {
   // CHECK-TRAP: call void @llvm.ubsantrap(i8 16)
   // CHECK-COMMON-NOT: call
 
-  // CHECK-COMMON: icmp ne ptr {{.*}}, null
+  // CHECK-COMMON: icmp ne ptr %[[#]], null
   // CHECK-UBSAN: call void @__ubsan_handle_nonnull_arg
   // CHECK-TRAP: call void @llvm.ubsantrap(i8 16)
-  // CHECK-COMMON-NOT: call
-
+  //
+  // CHECK-COMMON: icmp eq i64 %conv, 0
+  // CHECK-COMMON: icmp ne ptr %0, null
+  // CHECK-COMMON: or i1 %[[#]], %[[#]]
+  // CHECK-COMMON: call void @llvm.assume(i1 %[[#]])
+  // CHECK-COMMON: icmp ne ptr %1, null
+  // CHECK-COMMON: or i1 %[[#]], %[[#]]
+  // CHECK-COMMON: call void @llvm.assume(i1 %[[#]])
   // CHECK-COMMON: call void @llvm.memcpy.p0.p0.i64(ptr align 1 %0, ptr align 1 %1, i64 %conv, i1 false)
   memcpy(p, q, sz);
 }
