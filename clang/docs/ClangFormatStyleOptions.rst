@@ -163,9 +163,6 @@ the configuration (without a prefix: ``Auto``).
   * ``Chromium``
     A style complying with `Chromium's style guide
     <https://chromium.googlesource.com/chromium/src/+/refs/heads/main/styleguide/styleguide.md>`_
-  * ``Mozilla``
-    A style complying with `Mozilla's style guide
-    <https://firefox-source-docs.mozilla.org/code-quality/coding-style/index.html>`_
   * ``WebKit``
     A style complying with `WebKit's style guide
     <https://www.webkit.org/coding/coding-style.html>`_
@@ -175,6 +172,8 @@ the configuration (without a prefix: ``Auto``).
   * ``GNU``
     A style complying with the `GNU coding standards
     <https://www.gnu.org/prep/standards/standards.html>`_
+  * ``Mozilla``
+    The Mozilla coding style is deprecated upstream and retained for legacy support.
   * ``InheritParentConfig``
     Not a real style, but allows to use the ``.clang-format`` file from the
     parent directory (or its parent if there is none). If there is no parent
