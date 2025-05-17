@@ -279,6 +279,23 @@ struct TypeBuilderImpl {
     bool isPolymorphic = (Fortran::semantics::IsPolymorphic(symbol) ||
                           Fortran::semantics::IsUnlimitedPolymorphic(symbol)) &&
                          !Fortran::semantics::IsAssumedType(symbol);
+    if (const auto *assocDetails =
+            ultimate.detailsIf<Fortran::semantics::AssocEntityDetails>()) {
+      const auto &selector = assocDetails->expr();
+
+      if (selector && selector->Rank() > 0) {
+        auto shapeExpr = Fortran::evaluate::GetShape(
+            converter.getFoldingContext(), selector);
+
+        fir::SequenceType::Shape shape;
+        // If there is no shapExpr, this is an assumed-rank, and the empty shape
+        // will build the desired fir.array<*:T> type.
+        if (shapeExpr)
+          translateShape(shape, std::move(*shapeExpr));
+        ty = fir::SequenceType::get(shape, ty);
+      }
+    }
+
     if (ultimate.IsObjectArray()) {
       auto shapeExpr =
           Fortran::evaluate::GetShape(converter.getFoldingContext(), ultimate);
