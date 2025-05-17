@@ -435,6 +435,8 @@ void equalizeBBCounts(DataflowInfoManager &Info, BinaryFunction &BF) {
 }
 
 void EstimateEdgeCounts::runOnFunction(BinaryFunction &BF) {
+  if (BF.isIgnored())
+    return;
   EdgeWeightMap PredEdgeWeights;
   EdgeWeightMap SuccEdgeWeights;
   if (!opts::IterativeGuess) {
