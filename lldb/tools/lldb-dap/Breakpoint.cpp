@@ -79,27 +79,15 @@ protocol::Breakpoint Breakpoint::ToProtocolBreakpoint() {
       breakpoint.source = CreateSource(line_entry);
     } else {
       // Breakpoint made by assembly
-      auto symbol_context = bp_addr.GetSymbolContext(
-          lldb::eSymbolContextSymbol | lldb::eSymbolContextModule);
-      if (symbol_context.IsValid()) {
-        auto symbol = symbol_context.GetSymbol();
+      auto symbol = bp_addr.GetSymbol();
+      if (symbol.IsValid()) {
         breakpoint.line =
             m_bp.GetTarget()
                 .ReadInstructions(symbol.GetStartAddress(), bp_addr, nullptr)
                 .GetSize() +
             1;
-        protocol::Source source;
-        source.name = symbol.GetName();
 
-        auto module = symbol_context.GetModule();
-        if (module.IsValid()) {
-          std::string path = module.GetFileSpec().GetDirectory();
-          path += "/";
-          path += module.GetFileSpec().GetFilename();
-          source.path = std::move(path);
-        }
-
-        breakpoint.source = std::move(source);
+        breakpoint.source = CreateAssemblySource(m_dap.target, bp_addr);
       }
     }
   }

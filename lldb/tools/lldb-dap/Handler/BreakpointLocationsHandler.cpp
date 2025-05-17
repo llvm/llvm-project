@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "DAP.h"
-#include "LLDBUtils.h"
 #include "RequestHandler.h"
 #include <vector>
 
@@ -108,15 +107,11 @@ template <unsigned N>
 void BreakpointLocationsRequestHandler::AddAssemblyBreakpointLocations(
     llvm::SmallVector<std::pair<uint32_t, uint32_t>, N> &locations,
     int64_t sourceReference, uint32_t start_line, uint32_t end_line) const {
-  lldb::SBProcess process = dap.target.GetProcess();
-  lldb::SBThread thread =
-      process.GetThreadByIndexID(GetLLDBThreadIndexID(sourceReference));
-  lldb::SBFrame frame = thread.GetFrameAtIndex(GetLLDBFrameID(sourceReference));
-
-  if (!frame.IsValid())
+  lldb::SBAddress address(sourceReference, dap.target);
+  if (!address.IsValid())
     return;
 
-  lldb::SBSymbol symbol = frame.GetSymbol();
+  lldb::SBSymbol symbol = address.GetSymbol();
   if (!symbol.IsValid())
     return;
 

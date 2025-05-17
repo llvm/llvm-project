@@ -19,6 +19,7 @@
 
 #include <cinttypes>
 #include <climits>
+#include <string>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -145,6 +146,13 @@ uint32_t SBFileSpec::GetPath(char *dst_path, size_t dst_len) const {
   if (result == 0 && dst_path && dst_len > 0)
     *dst_path = '\0';
   return result;
+}
+
+bool SBFileSpec::GetPath(SBStream &dst_path) const {
+  LLDB_INSTRUMENT_VA(this, dst_path);
+
+  std::string path = m_opaque_up->GetPath();
+  return dst_path->PutCString(path.c_str()) > 0;
 }
 
 const lldb_private::FileSpec *SBFileSpec::operator->() const {

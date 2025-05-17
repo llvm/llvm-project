@@ -9,7 +9,6 @@
 #include "DAP.h"
 #include "EventHelper.h"
 #include "JSONUtils.h"
-#include "LLDBUtils.h"
 #include "Protocol/ProtocolRequests.h"
 #include "RequestHandler.h"
 #include <vector>
@@ -99,15 +98,11 @@ SetBreakpointsRequestHandler::SetAssemblyBreakpoints(
   std::vector<protocol::Breakpoint> response_breakpoints;
   int64_t sourceReference = source.sourceReference.value_or(0);
 
-  lldb::SBProcess process = dap.target.GetProcess();
-  lldb::SBThread thread =
-      process.GetThreadByIndexID(GetLLDBThreadIndexID(sourceReference));
-  lldb::SBFrame frame = thread.GetFrameAtIndex(GetLLDBFrameID(sourceReference));
-
-  if (!frame.IsValid())
+  lldb::SBAddress address(sourceReference, dap.target);
+  if (!address.IsValid())
     return response_breakpoints;
 
-  lldb::SBSymbol symbol = frame.GetSymbol();
+  lldb::SBSymbol symbol = address.GetSymbol();
   if (!symbol.IsValid())
     return response_breakpoints; // Not yet supporting breakpoints in assembly
                                  // without a valid symbol
