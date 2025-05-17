@@ -27,6 +27,7 @@ class DataLayout;
 class DataLayoutEntryInterface;
 class DLTIQueryInterface;
 class TargetDeviceSpecInterface;
+struct TargetSpec;
 class TargetSystemSpecInterface;
 using DataLayoutEntryKey = llvm::PointerUnion<Type, StringAttr>;
 // Using explicit SmallVector size because we cannot infer the size from the
@@ -305,6 +306,13 @@ private:
   mutable std::optional<uint64_t> stackAlignment;
 };
 
+/// Helper struct for storing a target specification.
+struct TargetSpec {
+  /// Target system spec.
+  TargetSystemSpecInterface systemSpec;
+  /// Target data layout.
+  DataLayoutSpecInterface dataLayout;
+};
 } // namespace mlir
 
 #endif // MLIR_INTERFACES_DATALAYOUTINTERFACES_H
