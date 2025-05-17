@@ -22,6 +22,21 @@ macro(mlir_configure_python_dev_packages)
     find_package(Python3 ${LLVM_MINIMUM_PYTHON_VERSION}
       COMPONENTS Interpreter ${_python_development_component} REQUIRED)
 
+    # We look for both Python3 and Python, the search algorithm should be
+    # consistent, otherwise disastrous result is almost guaranteed.
+    # Warn if the policies for treating virtual environment are not defined
+    # consistently.
+    # For more details check issue #126162.
+    if(((DEFINED Python_FIND_VIRTUALENV) AND (NOT DEFINED Python3_FIND_VIRTUALENV)) OR
+       ((NOT DEFINED Python_FIND_VIRTUALENV) AND (DEFINED Python3_FIND_VIRTUALENV)))
+      message(WARNING "Only one of Python3_FIND_VIRTUALENV and Python_FIND_VIRTUALENV variables is defined. "
+                      "Make sure that both variables are defined and have the same value.")
+    elseif((DEFINED Python_FIND_VIRTUALENV) AND (DEFINED Python3_FIND_VIRTUALENV) AND
+           (NOT Python_FIND_VIRTUALENV STREQUAL Python3_FIND_VIRTUALENV))
+      message(WARNING "Python3_FIND_VIRTUALENV and Python_FIND_VIRTUALENV are defined differently. "
+                      "Make sure that the variables have the same values.")
+    endif()
+
     # It's a little silly to detect Python a second time, but nanobind's cmake
     # code looks for Python_ not Python3_.
     find_package(Python ${LLVM_MINIMUM_PYTHON_VERSION}

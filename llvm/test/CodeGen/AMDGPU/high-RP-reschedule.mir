@@ -1,6 +1,8 @@
 # REQUIRES: asserts
-# RUN: llc -mtriple=amdgcn -mcpu=gfx908 -verify-misched -run-pass=machine-scheduler -verify-misched -debug-only=machine-scheduler -o - %s 2>&1 | FileCheck -check-prefix=GCN %s
-# RUN: llc -mtriple=amdgcn -mcpu=gfx908 -verify-misched -run-pass=machine-scheduler -amdgpu-use-amdgpu-trackers=1 -verify-misched -debug-only=machine-scheduler -o - %s 2>&1 | FileCheck -check-prefix=GCN-GCNTRACKER %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx908 -verify-misched -run-pass=machine-scheduler -debug-only=machine-scheduler -o - %s 2>&1 | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx908 -verify-misched -passes=machine-scheduler -debug-only=machine-scheduler -o - %s 2>&1 | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx908 -verify-misched -run-pass=machine-scheduler -amdgpu-use-amdgpu-trackers=1 -debug-only=machine-scheduler -o - %s 2>&1 | FileCheck -check-prefix=GCN-GCNTRACKER %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx908 -verify-misched -passes=machine-scheduler -amdgpu-use-amdgpu-trackers=1 -debug-only=machine-scheduler -o - %s 2>&1 | FileCheck -check-prefix=GCN-GCNTRACKER %s
 
 --- |
   define amdgpu_kernel void @high-RP-reschedule() { ret void }

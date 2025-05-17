@@ -14,18 +14,17 @@
 //
 //  Requires: (is_same_v<T, U> && ...) is true. Otherwise the program is ill-formed.
 
-
 #include <array>
 #include <cassert>
 #include <cstddef>
 
 #include "test_macros.h"
 
-int main(int, char**)
-{
-    {
-    std::array arr{1,2,3L}; // expected-error-re {{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}array'}}
-    }
+int main(int, char**) {
+  {
+    std::array arr{1, 2, 3L};
+    // expected-error-re@-1 {{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}array'}}
+  }
 
   return 0;
 }

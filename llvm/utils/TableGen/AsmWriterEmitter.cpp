@@ -192,7 +192,7 @@ void AsmWriterEmitter::FindUniqueOperandCommands(
       InstIdxs[idx].push_back(i);
     } else {
       UniqueOperandCommands.push_back(std::move(Command));
-      InstrsForCase.push_back(std::string(Inst.CGI->TheDef->getName()));
+      InstrsForCase.push_back(Inst.CGI->TheDef->getName().str());
       InstIdxs.emplace_back();
       InstIdxs.back().push_back(i);
 
@@ -592,9 +592,9 @@ emitRegisterNameString(raw_ostream &O, StringRef AltName,
     // "NoRegAltName" is special. We don't need to do a lookup for that,
     // as it's just a reference to the default register name.
     if (AltName == "" || AltName == "NoRegAltName") {
-      AsmName = std::string(Reg.TheDef->getValueAsString("AsmName"));
+      AsmName = Reg.TheDef->getValueAsString("AsmName").str();
       if (AsmName.empty())
-        AsmName = std::string(Reg.getName());
+        AsmName = Reg.getName().str();
     } else {
       // Make sure the register has an alternate name for this index.
       std::vector<const Record *> AltNameList =
@@ -612,7 +612,7 @@ emitRegisterNameString(raw_ostream &O, StringRef AltName,
           PrintFatalError(Reg.TheDef->getLoc(),
                           "Register definition missing alt name for '" +
                               AltName + "'.");
-        AsmName = std::string(AltNames[Idx]);
+        AsmName = AltNames[Idx].str();
       }
     }
     StringTable.add(AsmName);
@@ -660,8 +660,9 @@ void AsmWriterEmitter::EmitGetRegisterName(raw_ostream &O) {
   if (hasAltNames) {
     for (const Record *R : AltNameIndices)
       emitRegisterNameString(O, R->getName(), Registers);
-  } else
+  } else {
     emitRegisterNameString(O, "", Registers);
+  }
 
   if (hasAltNames) {
     O << "  switch(AltIdx) {\n"
@@ -869,9 +870,6 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
   DenseMap<const Record *, unsigned> MCOpPredicateMap;
 
   for (auto &Aliases : AliasMap) {
-    // Collection of instruction alias rules. May contain ambiguous rules.
-    std::vector<IAPrinter> IAPs;
-
     for (auto &Alias : Aliases.second) {
       const CodeGenInstAlias &CGA = Alias.first;
       unsigned LastOpNo = CGA.ResultInstOperandIndex.size();
@@ -942,7 +940,7 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
                                              }) -
                                PrintMethods.begin();
               if (static_cast<unsigned>(PrintMethodIdx) == PrintMethods.size())
-                PrintMethods.emplace_back(std::string(PrintMethod), IsPCRel);
+                PrintMethods.emplace_back(PrintMethod.str(), IsPCRel);
             }
           }
 
@@ -967,14 +965,14 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
             IAP.addOperand(ROName, MIOpNum, PrintMethodIdx);
 
             // There might be an additional predicate on the MCOperand
-            unsigned Entry = MCOpPredicateMap[Rec];
+            unsigned &Entry = MCOpPredicateMap[Rec];
             if (!Entry) {
               if (!Rec->isValueUnset("MCOperandPredicate")) {
                 MCOpPredicates.push_back(Rec);
                 Entry = MCOpPredicates.size();
-                MCOpPredicateMap[Rec] = Entry;
-              } else
+              } else {
                 break; // No conditions on this operand at all
+              }
             }
             IAP.addCond(
                 std::string(formatv("AliasPatternCond::K_Custom, {}", Entry)));

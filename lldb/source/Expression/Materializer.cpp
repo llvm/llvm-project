@@ -78,8 +78,9 @@ public:
     const bool zero_memory = false;
 
     lldb::addr_t mem = map.Malloc(
-        m_persistent_variable_sp->GetByteSize().value_or(0), 8,
-        lldb::ePermissionsReadable | lldb::ePermissionsWritable,
+        llvm::expectedToOptional(m_persistent_variable_sp->GetByteSize())
+            .value_or(0),
+        8, lldb::ePermissionsReadable | lldb::ePermissionsWritable,
         IRMemoryMap::eAllocationPolicyMirror, zero_memory, allocate_error);
 
     if (!allocate_error.Success()) {
@@ -116,9 +117,11 @@ public:
 
     Status write_error;
 
-    map.WriteMemory(mem, m_persistent_variable_sp->GetValueBytes(),
-                    m_persistent_variable_sp->GetByteSize().value_or(0),
-                    write_error);
+    map.WriteMemory(
+        mem, m_persistent_variable_sp->GetValueBytes(),
+        llvm::expectedToOptional(m_persistent_variable_sp->GetByteSize())
+            .value_or(0),
+        write_error);
 
     if (!write_error.Success()) {
       err = Status::FromErrorStringWithFormat(
@@ -246,7 +249,8 @@ public:
             map.GetBestExecutionContextScope(),
             m_persistent_variable_sp.get()->GetCompilerType(),
             m_persistent_variable_sp->GetName(), location, eAddressTypeLoad,
-            m_persistent_variable_sp->GetByteSize().value_or(0));
+            llvm::expectedToOptional(m_persistent_variable_sp->GetByteSize())
+                .value_or(0));
 
         if (frame_top != LLDB_INVALID_ADDRESS &&
             frame_bottom != LLDB_INVALID_ADDRESS && location >= frame_bottom &&
@@ -291,7 +295,8 @@ public:
         LLDB_LOGF(log, "Dematerializing %s from 0x%" PRIx64 " (size = %llu)",
                   m_persistent_variable_sp->GetName().GetCString(),
                   (uint64_t)mem,
-                  (unsigned long long)m_persistent_variable_sp->GetByteSize()
+                  (unsigned long long)llvm::expectedToOptional(
+                      m_persistent_variable_sp->GetByteSize())
                       .value_or(0));
 
         // Read the contents of the spare memory area
@@ -300,9 +305,11 @@ public:
 
         Status read_error;
 
-        map.ReadMemory(m_persistent_variable_sp->GetValueBytes(), mem,
-                       m_persistent_variable_sp->GetByteSize().value_or(0),
-                       read_error);
+        map.ReadMemory(
+            m_persistent_variable_sp->GetValueBytes(), mem,
+            llvm::expectedToOptional(m_persistent_variable_sp->GetByteSize())
+                .value_or(0),
+            read_error);
 
         if (!read_error.Success()) {
           err = Status::FromErrorStringWithFormat(
@@ -383,12 +390,16 @@ public:
       if (!err.Success()) {
         dump_stream.Printf("  <could not be read>\n");
       } else {
-        DataBufferHeap data(m_persistent_variable_sp->GetByteSize().value_or(0),
-                            0);
+        DataBufferHeap data(
+            llvm::expectedToOptional(m_persistent_variable_sp->GetByteSize())
+                .value_or(0),
+            0);
 
-        map.ReadMemory(data.GetBytes(), target_address,
-                       m_persistent_variable_sp->GetByteSize().value_or(0),
-                       err);
+        map.ReadMemory(
+            data.GetBytes(), target_address,
+            llvm::expectedToOptional(m_persistent_variable_sp->GetByteSize())
+                .value_or(0),
+            err);
 
         if (!err.Success()) {
           dump_stream.Printf("  <could not be read>\n");
@@ -529,7 +540,8 @@ public:
           return;
         }
 
-        if (data.GetByteSize() < GetByteSize(scope)) {
+        if (data.GetByteSize() <
+            llvm::expectedToOptional(GetByteSize(scope)).value_or(0)) {
           if (data.GetByteSize() == 0 && !LocationExpressionIsValid()) {
             err = Status::FromErrorStringWithFormat(
                 "the variable '%s' has no location, "
@@ -539,7 +551,8 @@ public:
             err = Status::FromErrorStringWithFormat(
                 "size of variable %s (%" PRIu64
                 ") is larger than the ValueObject's size (%" PRIu64 ")",
-                GetName().AsCString(), GetByteSize(scope).value_or(0),
+                GetName().AsCString(),
+                llvm::expectedToOptional(GetByteSize(scope)).value_or(0),
                 data.GetByteSize());
           }
           return;
@@ -632,8 +645,10 @@ public:
 
       Status extract_error;
 
-      map.GetMemoryData(data, m_temporary_allocation,
-                        valobj_sp->GetByteSize().value_or(0), extract_error);
+      map.GetMemoryData(
+          data, m_temporary_allocation,
+          llvm::expectedToOptional(valobj_sp->GetByteSize()).value_or(0),
+          extract_error);
 
       if (!extract_error.Success()) {
         err = Status::FromErrorStringWithFormat(
@@ -776,7 +791,7 @@ private:
   ///
   /// \returns On success, returns byte size of the type associated
   ///          with this variable. Returns std::nullopt otherwise.
-  virtual std::optional<uint64_t>
+  virtual llvm::Expected<uint64_t>
   GetByteSize(ExecutionContextScope *scope) const = 0;
 
   /// Returns 'true' if the location expression associated with this variable
@@ -817,7 +832,7 @@ public:
     return ValueObjectVariable::Create(scope, m_variable_sp);
   }
 
-  std::optional<uint64_t>
+  llvm::Expected<uint64_t>
   GetByteSize(ExecutionContextScope *scope) const override {
     return m_variable_sp->GetType()->GetByteSize(scope);
   }
@@ -860,12 +875,12 @@ public:
     return m_valobj_sp;
   }
 
-  std::optional<uint64_t>
+  llvm::Expected<uint64_t>
   GetByteSize(ExecutionContextScope *scope) const override {
     if (m_valobj_sp)
       return m_valobj_sp->GetCompilerType().GetByteSize(scope);
 
-    return {};
+    return llvm::createStringError("no value object");
   }
 
   bool LocationExpressionIsValid() const override {
@@ -937,12 +952,12 @@ public:
       if (!exe_scope)
         exe_scope = map.GetBestExecutionContextScope();
 
-      std::optional<uint64_t> byte_size = m_type.GetByteSize(exe_scope);
-      if (!byte_size) {
-        err = Status::FromErrorStringWithFormat(
-            "can't get size of type \"%s\"", m_type.GetTypeName().AsCString());
+      auto byte_size_or_err = m_type.GetByteSize(exe_scope);
+      if (!byte_size_or_err) {
+        err = Status::FromError(byte_size_or_err.takeError());
         return;
       }
+      auto byte_size = *byte_size_or_err;
 
       std::optional<size_t> opt_bit_align = m_type.GetTypeBitAlign(exe_scope);
       if (!opt_bit_align) {
@@ -958,10 +973,10 @@ public:
       const bool zero_memory = true;
 
       m_temporary_allocation = map.Malloc(
-          *byte_size, byte_align,
+          byte_size, byte_align,
           lldb::ePermissionsReadable | lldb::ePermissionsWritable,
           IRMemoryMap::eAllocationPolicyMirror, zero_memory, alloc_error);
-      m_temporary_allocation_size = *byte_size;
+      m_temporary_allocation_size = byte_size;
 
       if (!alloc_error.Success()) {
         err = Status::FromErrorStringWithFormat(
@@ -1085,7 +1100,8 @@ public:
 
     ret->ValueUpdated();
 
-    const size_t pvar_byte_size = ret->GetByteSize().value_or(0);
+    const size_t pvar_byte_size =
+        llvm::expectedToOptional(ret->GetByteSize()).value_or(0);
     uint8_t *pvar_data = ret->GetValueBytes();
 
     map.ReadMemory(pvar_data, address, pvar_byte_size, read_error);
@@ -1187,6 +1203,9 @@ public:
 
 private:
   CompilerType m_type;
+  /// This is used both to control whether this result entity can (and should)
+  /// track the value in inferior memory, as well as to control whether LLDB
+  /// needs to allocate memory for the variable during materialization.
   bool m_is_program_reference;
   bool m_keep_in_memory;
 

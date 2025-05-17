@@ -1869,7 +1869,7 @@ static Value *simplifyX86extrq(IntrinsicInst &II, Value *Op0,
     // If we were an EXTRQ call, we'll save registers if we convert to EXTRQI.
     if (II.getIntrinsicID() == Intrinsic::x86_sse4a_extrq) {
       Value *Args[] = {Op0, CILength, CIIndex};
-      return Builder.CreateIntrinsic(Intrinsic::x86_sse4a_extrqi, {}, Args);
+      return Builder.CreateIntrinsic(Intrinsic::x86_sse4a_extrqi, Args);
     }
   }
 
@@ -1966,7 +1966,7 @@ static Value *simplifyX86insertq(IntrinsicInst &II, Value *Op0, Value *Op1,
     Constant *CIIndex = ConstantInt::get(IntTy8, Index, false);
 
     Value *Args[] = {Op0, Op1, CILength, CIIndex};
-    return Builder.CreateIntrinsic(Intrinsic::x86_sse4a_insertqi, {}, Args);
+    return Builder.CreateIntrinsic(Intrinsic::x86_sse4a_insertqi, Args);
   }
 
   return nullptr;

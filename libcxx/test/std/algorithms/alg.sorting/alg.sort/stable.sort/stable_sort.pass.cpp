@@ -18,7 +18,9 @@
 #include <algorithm>
 #include <cassert>
 #include <iterator>
+#include <limits>
 #include <random>
+#include <type_traits>
 #include <vector>
 
 #include "count_new.h"
@@ -68,6 +70,13 @@ TEST_CONSTEXPR_CXX26 std::vector<T> generate_sawtooth(int N, int M) {
     if (++x == M)
       x = 0;
   }
+
+  if (std::is_signed<T>::value) {
+    for (auto& a : v) {
+      a -= (M / 2);
+    }
+  }
+
   return v;
 }
 
@@ -193,12 +202,62 @@ TEST_CONSTEXPR_CXX26 bool test() {
   return true;
 }
 
+template <class T>
+bool test_floating_special_values() {
+  static_assert(std::is_floating_point<T>::value, "");
+
+  auto v = generate_sawtooth<T>(1024, 512);
+  v.insert(v.end(), 256, static_cast<T>(0.0));
+  v.insert(v.end(), 256, static_cast<T>(-0.0));
+  v.insert(v.end(), 256, std::numeric_limits<T>::infinity());
+  v.insert(v.end(), 256, -std::numeric_limits<T>::infinity());
+
+  std::mt19937 randomness;
+  std::shuffle(v.begin(), v.end(), randomness);
+
+  std::stable_sort(v.begin(), v.end());
+  assert(std::is_sorted(v.begin(), v.end()));
+
+  return true;
+}
+
+template <class T>
+bool test_floating() {
+  return test<T>() && test_floating_special_values<T>();
+}
+
+enum struct Enum : int { a, b, c, d, e, f, g, h };
+TEST_CONSTEXPR_CXX26 bool operator<(Enum x, Enum y) { return static_cast<int>(x) > static_cast<int>(y); }
+
+TEST_CONSTEXPR_CXX26 bool test_enum() {
+  auto v = std::vector<Enum>(128, Enum::a);
+  v.resize(v.size() + 128, Enum::b);
+  v.resize(v.size() + 128, Enum::c);
+  v.resize(v.size() + 128, Enum::d);
+  v.resize(v.size() + 128, Enum::e);
+  v.resize(v.size() + 128, Enum::f);
+  v.resize(v.size() + 128, Enum::g);
+  v.resize(v.size() + 128, Enum::h);
+
+  // Order is reversed by definition
+  std::stable_sort(v.begin(), v.end());
+  assert(std::is_sorted(v.begin(), v.end()));
+
+  return true;
+}
+
 int main(int, char**) {
   test<int>();
-  test<float>();
+  test_floating<float>();
+  test_floating<double>();
+  test_floating<long double>();
+  test_enum();
 #if TEST_STD_VER >= 26
   static_assert(test<int>());
   static_assert(test<float>());
+  static_assert(test<double>());
+  // test constexprness of radix sort branch
+  static_assert(test<char>());
 #endif
   return 0;
 }

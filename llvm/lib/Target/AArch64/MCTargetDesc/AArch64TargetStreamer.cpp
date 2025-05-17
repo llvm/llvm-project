@@ -15,6 +15,7 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/ConstantPools.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -153,8 +154,8 @@ MCTargetStreamer *llvm::createAArch64NullTargetStreamer(MCStreamer &S) {
 }
 
 void AArch64TargetStreamer::emitAtributesSubsection(
-    StringRef VendorName, AArch64BuildAttrs::SubsectionOptional IsOptional,
-    AArch64BuildAttrs::SubsectionType ParameterType) {
+    StringRef VendorName, AArch64BuildAttributes::SubsectionOptional IsOptional,
+    AArch64BuildAttributes::SubsectionType ParameterType) {
 
   // If exists, return.
   for (MCELFStreamer::AttributeSubSection &SubSection : AttributeSubSections) {
@@ -193,8 +194,7 @@ AArch64TargetStreamer::getAtributesSubsectionByName(StringRef Name) {
 }
 
 void AArch64TargetStreamer::emitAttribute(StringRef VendorName, unsigned Tag,
-                                          unsigned Value, std::string String,
-                                          bool Override) {
+                                          unsigned Value, std::string String) {
 
   if (unsigned(-1) == Value && "" == String) {
     assert(0 && "Arguments error");
@@ -214,22 +214,14 @@ void AArch64TargetStreamer::emitAttribute(StringRef VendorName, unsigned Tag,
         return;
       }
       for (MCELFStreamer::AttributeItem &Item : SubSection.Content) {
+        // Tag already exists
         if (Item.Tag == Tag) {
-          if (!Override) {
-            if ((unsigned(-1) != Value && Item.IntValue != Value) ||
-                ("" != String && Item.StringValue != String)) {
-              assert(0 &&
-                     "Can not add AArch64 build attribute: An attribute with "
-                     "the same tag and a different value already exists");
-              return;
-            } else {
-              // Case Item.IntValue == Value, no need to emit twice
-              assert(0 &&
-                     "AArch64 build attribute: An attribute with the same tag "
-                     "and a same value already exists");
-              return;
-            }
-          }
+          Item.Type = unsigned(-1) != Value
+                          ? MCELFStreamer::AttributeItem::NumericAttribute
+                          : MCELFStreamer::AttributeItem::TextAttribute;
+          Item.IntValue = unsigned(-1) != Value ? Value : unsigned(-1);
+          Item.StringValue = unsigned(-1) != Value ? "" : String;
+          return;
         }
       }
       if (unsigned(-1) != Value)

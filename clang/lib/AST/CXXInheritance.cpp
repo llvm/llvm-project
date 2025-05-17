@@ -411,59 +411,6 @@ bool CXXRecordDecl::hasMemberName(DeclarationName Name) const {
       Paths);
 }
 
-static bool
-findOrdinaryMemberInDependentClasses(const CXXBaseSpecifier *Specifier,
-                                     CXXBasePath &Path, DeclarationName Name) {
-  const TemplateSpecializationType *TST =
-      Specifier->getType()->getAs<TemplateSpecializationType>();
-  if (!TST) {
-    auto *RT = Specifier->getType()->getAs<RecordType>();
-    if (!RT)
-      return false;
-    return findOrdinaryMember(cast<CXXRecordDecl>(RT->getDecl()), Path, Name);
-  }
-  TemplateName TN = TST->getTemplateName();
-  const auto *TD = dyn_cast_or_null<ClassTemplateDecl>(TN.getAsTemplateDecl());
-  if (!TD)
-    return false;
-  CXXRecordDecl *RD = TD->getTemplatedDecl();
-  if (!RD)
-    return false;
-  return findOrdinaryMember(RD, Path, Name);
-}
-
-std::vector<const NamedDecl *> CXXRecordDecl::lookupDependentName(
-    DeclarationName Name,
-    llvm::function_ref<bool(const NamedDecl *ND)> Filter) {
-  std::vector<const NamedDecl *> Results;
-  // Lookup in the class.
-  bool AnyOrdinaryMembers = false;
-  for (const NamedDecl *ND : lookup(Name)) {
-    if (isOrdinaryMember(ND))
-      AnyOrdinaryMembers = true;
-    if (Filter(ND))
-      Results.push_back(ND);
-  }
-  if (AnyOrdinaryMembers)
-    return Results;
-
-  // Perform lookup into our base classes.
-  CXXBasePaths Paths;
-  Paths.setOrigin(this);
-  if (!lookupInBases(
-          [&](const CXXBaseSpecifier *Specifier, CXXBasePath &Path) {
-            return findOrdinaryMemberInDependentClasses(Specifier, Path, Name);
-          },
-          Paths, /*LookupInDependent=*/true))
-    return Results;
-  for (DeclContext::lookup_iterator I = Paths.front().Decls, E = I.end();
-       I != E; ++I) {
-    if (isOrdinaryMember(*I) && Filter(*I))
-      Results.push_back(*I);
-  }
-  return Results;
-}
-
 void OverridingMethods::add(unsigned OverriddenSubobject,
                             UniqueVirtualMethod Overriding) {
   SmallVectorImpl<UniqueVirtualMethod> &SubobjectOverrides

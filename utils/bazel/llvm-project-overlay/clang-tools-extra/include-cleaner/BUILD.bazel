@@ -119,6 +119,7 @@ expand_template(
     lit_test(
         name = "%s.test" % src,
         srcs = [src],
+        args = ["-svv"],
         data = glob(["test/Inputs/**/*"]) + [
             "test/lit.cfg.py",
             "test/lit.site.cfg.py",
@@ -127,7 +128,6 @@ expand_template(
             "//llvm:count",
             "//llvm:not",
         ],
-        args = ["-svv"],
     )
     for src in glob(["test/*.cpp"])
 ]

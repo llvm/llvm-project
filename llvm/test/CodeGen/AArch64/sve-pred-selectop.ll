@@ -910,8 +910,8 @@ define <vscale x 4 x i32> @addqr_v4i32(<vscale x 4 x i32> %z, <vscale x 4 x i32>
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp eq <vscale x 4 x i32> %z, zeroinitializer
-  %i = insertelement <vscale x 4 x i32> undef, i32 %y, i32 0
-  %ys = shufflevector <vscale x 4 x i32> %i, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
+  %i = insertelement <vscale x 4 x i32> poison, i32 %y, i32 0
+  %ys = shufflevector <vscale x 4 x i32> %i, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
   %a = add <vscale x 4 x i32> %x, %ys
   %b = select <vscale x 4 x i1> %c, <vscale x 4 x i32> %a, <vscale x 4 x i32> %z
   ret <vscale x 4 x i32> %b
@@ -928,8 +928,8 @@ define <vscale x 8 x i16> @addqr_v8i16(<vscale x 8 x i16> %z, <vscale x 8 x i16>
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp eq <vscale x 8 x i16> %z, zeroinitializer
-  %i = insertelement <vscale x 8 x i16> undef, i16 %y, i32 0
-  %ys = shufflevector <vscale x 8 x i16> %i, <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer
+  %i = insertelement <vscale x 8 x i16> poison, i16 %y, i32 0
+  %ys = shufflevector <vscale x 8 x i16> %i, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
   %a = add <vscale x 8 x i16> %x, %ys
   %b = select <vscale x 8 x i1> %c, <vscale x 8 x i16> %a, <vscale x 8 x i16> %z
   ret <vscale x 8 x i16> %b
@@ -946,8 +946,8 @@ define <vscale x 16 x i8> @addqr_v16i8(<vscale x 16 x i8> %z, <vscale x 16 x i8>
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp eq <vscale x 16 x i8> %z, zeroinitializer
-  %i = insertelement <vscale x 16 x i8> undef, i8 %y, i32 0
-  %ys = shufflevector <vscale x 16 x i8> %i, <vscale x 16 x i8> undef, <vscale x 16 x i32> zeroinitializer
+  %i = insertelement <vscale x 16 x i8> poison, i8 %y, i32 0
+  %ys = shufflevector <vscale x 16 x i8> %i, <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
   %a = add <vscale x 16 x i8> %x, %ys
   %b = select <vscale x 16 x i1> %c, <vscale x 16 x i8> %a, <vscale x 16 x i8> %z
   ret <vscale x 16 x i8> %b
@@ -964,8 +964,8 @@ define <vscale x 4 x i32> @subqr_v4i32(<vscale x 4 x i32> %z, <vscale x 4 x i32>
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp eq <vscale x 4 x i32> %z, zeroinitializer
-  %i = insertelement <vscale x 4 x i32> undef, i32 %y, i32 0
-  %ys = shufflevector <vscale x 4 x i32> %i, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
+  %i = insertelement <vscale x 4 x i32> poison, i32 %y, i32 0
+  %ys = shufflevector <vscale x 4 x i32> %i, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
   %a = sub <vscale x 4 x i32> %x, %ys
   %b = select <vscale x 4 x i1> %c, <vscale x 4 x i32> %a, <vscale x 4 x i32> %z
   ret <vscale x 4 x i32> %b
@@ -982,8 +982,8 @@ define <vscale x 8 x i16> @subqr_v8i16(<vscale x 8 x i16> %z, <vscale x 8 x i16>
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp eq <vscale x 8 x i16> %z, zeroinitializer
-  %i = insertelement <vscale x 8 x i16> undef, i16 %y, i32 0
-  %ys = shufflevector <vscale x 8 x i16> %i, <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer
+  %i = insertelement <vscale x 8 x i16> poison, i16 %y, i32 0
+  %ys = shufflevector <vscale x 8 x i16> %i, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
   %a = sub <vscale x 8 x i16> %x, %ys
   %b = select <vscale x 8 x i1> %c, <vscale x 8 x i16> %a, <vscale x 8 x i16> %z
   ret <vscale x 8 x i16> %b
@@ -1000,8 +1000,8 @@ define <vscale x 16 x i8> @subqr_v16i8(<vscale x 16 x i8> %z, <vscale x 16 x i8>
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp eq <vscale x 16 x i8> %z, zeroinitializer
-  %i = insertelement <vscale x 16 x i8> undef, i8 %y, i32 0
-  %ys = shufflevector <vscale x 16 x i8> %i, <vscale x 16 x i8> undef, <vscale x 16 x i32> zeroinitializer
+  %i = insertelement <vscale x 16 x i8> poison, i8 %y, i32 0
+  %ys = shufflevector <vscale x 16 x i8> %i, <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
   %a = sub <vscale x 16 x i8> %x, %ys
   %b = select <vscale x 16 x i1> %c, <vscale x 16 x i8> %a, <vscale x 16 x i8> %z
   ret <vscale x 16 x i8> %b
@@ -1018,8 +1018,8 @@ define <vscale x 4 x i32> @mulqr_v4i32(<vscale x 4 x i32> %z, <vscale x 4 x i32>
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp eq <vscale x 4 x i32> %z, zeroinitializer
-  %i = insertelement <vscale x 4 x i32> undef, i32 %y, i32 0
-  %ys = shufflevector <vscale x 4 x i32> %i, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
+  %i = insertelement <vscale x 4 x i32> poison, i32 %y, i32 0
+  %ys = shufflevector <vscale x 4 x i32> %i, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
   %a = mul <vscale x 4 x i32> %x, %ys
   %b = select <vscale x 4 x i1> %c, <vscale x 4 x i32> %a, <vscale x 4 x i32> %z
   ret <vscale x 4 x i32> %b
@@ -1036,8 +1036,8 @@ define <vscale x 8 x i16> @mulqr_v8i16(<vscale x 8 x i16> %z, <vscale x 8 x i16>
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp eq <vscale x 8 x i16> %z, zeroinitializer
-  %i = insertelement <vscale x 8 x i16> undef, i16 %y, i32 0
-  %ys = shufflevector <vscale x 8 x i16> %i, <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer
+  %i = insertelement <vscale x 8 x i16> poison, i16 %y, i32 0
+  %ys = shufflevector <vscale x 8 x i16> %i, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
   %a = mul <vscale x 8 x i16> %x, %ys
   %b = select <vscale x 8 x i1> %c, <vscale x 8 x i16> %a, <vscale x 8 x i16> %z
   ret <vscale x 8 x i16> %b
@@ -1054,8 +1054,8 @@ define <vscale x 16 x i8> @mulqr_v16i8(<vscale x 16 x i8> %z, <vscale x 16 x i8>
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp eq <vscale x 16 x i8> %z, zeroinitializer
-  %i = insertelement <vscale x 16 x i8> undef, i8 %y, i32 0
-  %ys = shufflevector <vscale x 16 x i8> %i, <vscale x 16 x i8> undef, <vscale x 16 x i32> zeroinitializer
+  %i = insertelement <vscale x 16 x i8> poison, i8 %y, i32 0
+  %ys = shufflevector <vscale x 16 x i8> %i, <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
   %a = mul <vscale x 16 x i8> %x, %ys
   %b = select <vscale x 16 x i1> %c, <vscale x 16 x i8> %a, <vscale x 16 x i8> %z
   ret <vscale x 16 x i8> %b
@@ -1073,8 +1073,8 @@ define <vscale x 4 x float> @faddqr_v4f32(<vscale x 4 x float> %z, <vscale x 4 x
 ; CHECK-NEXT:    ret
 entry:
   %c = fcmp oeq <vscale x 4 x float> %z, zeroinitializer
-  %i = insertelement <vscale x 4 x float> undef, float %y, i32 0
-  %ys = shufflevector <vscale x 4 x float> %i, <vscale x 4 x float> undef, <vscale x 4 x i32> zeroinitializer
+  %i = insertelement <vscale x 4 x float> poison, float %y, i32 0
+  %ys = shufflevector <vscale x 4 x float> %i, <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer
   %a = fadd <vscale x 4 x float> %x, %ys
   %b = select <vscale x 4 x i1> %c, <vscale x 4 x float> %a, <vscale x 4 x float> %z
   ret <vscale x 4 x float> %b
@@ -1092,8 +1092,8 @@ define <vscale x 8 x half> @faddqr_v8f16(<vscale x 8 x half> %z, <vscale x 8 x h
 ; CHECK-NEXT:    ret
 entry:
   %c = fcmp oeq <vscale x 8 x half> %z, zeroinitializer
-  %i = insertelement <vscale x 8 x half> undef, half %y, i32 0
-  %ys = shufflevector <vscale x 8 x half> %i, <vscale x 8 x half> undef, <vscale x 8 x i32> zeroinitializer
+  %i = insertelement <vscale x 8 x half> poison, half %y, i32 0
+  %ys = shufflevector <vscale x 8 x half> %i, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
   %a = fadd <vscale x 8 x half> %x, %ys
   %b = select <vscale x 8 x i1> %c, <vscale x 8 x half> %a, <vscale x 8 x half> %z
   ret <vscale x 8 x half> %b
@@ -1111,8 +1111,8 @@ define <vscale x 4 x float> @fsubqr_v4f32(<vscale x 4 x float> %z, <vscale x 4 x
 ; CHECK-NEXT:    ret
 entry:
   %c = fcmp oeq <vscale x 4 x float> %z, zeroinitializer
-  %i = insertelement <vscale x 4 x float> undef, float %y, i32 0
-  %ys = shufflevector <vscale x 4 x float> %i, <vscale x 4 x float> undef, <vscale x 4 x i32> zeroinitializer
+  %i = insertelement <vscale x 4 x float> poison, float %y, i32 0
+  %ys = shufflevector <vscale x 4 x float> %i, <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer
   %a = fsub <vscale x 4 x float> %x, %ys
   %b = select <vscale x 4 x i1> %c, <vscale x 4 x float> %a, <vscale x 4 x float> %z
   ret <vscale x 4 x float> %b
@@ -1130,8 +1130,8 @@ define <vscale x 8 x half> @fsubqr_v8f16(<vscale x 8 x half> %z, <vscale x 8 x h
 ; CHECK-NEXT:    ret
 entry:
   %c = fcmp oeq <vscale x 8 x half> %z, zeroinitializer
-  %i = insertelement <vscale x 8 x half> undef, half %y, i32 0
-  %ys = shufflevector <vscale x 8 x half> %i, <vscale x 8 x half> undef, <vscale x 8 x i32> zeroinitializer
+  %i = insertelement <vscale x 8 x half> poison, half %y, i32 0
+  %ys = shufflevector <vscale x 8 x half> %i, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
   %a = fsub <vscale x 8 x half> %x, %ys
   %b = select <vscale x 8 x i1> %c, <vscale x 8 x half> %a, <vscale x 8 x half> %z
   ret <vscale x 8 x half> %b
@@ -1149,8 +1149,8 @@ define <vscale x 4 x float> @fmulqr_v4f32(<vscale x 4 x float> %z, <vscale x 4 x
 ; CHECK-NEXT:    ret
 entry:
   %c = fcmp oeq <vscale x 4 x float> %z, zeroinitializer
-  %i = insertelement <vscale x 4 x float> undef, float %y, i32 0
-  %ys = shufflevector <vscale x 4 x float> %i, <vscale x 4 x float> undef, <vscale x 4 x i32> zeroinitializer
+  %i = insertelement <vscale x 4 x float> poison, float %y, i32 0
+  %ys = shufflevector <vscale x 4 x float> %i, <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer
   %a = fmul <vscale x 4 x float> %x, %ys
   %b = select <vscale x 4 x i1> %c, <vscale x 4 x float> %a, <vscale x 4 x float> %z
   ret <vscale x 4 x float> %b
@@ -1168,8 +1168,8 @@ define <vscale x 8 x half> @fmulqr_v8f16(<vscale x 8 x half> %z, <vscale x 8 x h
 ; CHECK-NEXT:    ret
 entry:
   %c = fcmp oeq <vscale x 8 x half> %z, zeroinitializer
-  %i = insertelement <vscale x 8 x half> undef, half %y, i32 0
-  %ys = shufflevector <vscale x 8 x half> %i, <vscale x 8 x half> undef, <vscale x 8 x i32> zeroinitializer
+  %i = insertelement <vscale x 8 x half> poison, half %y, i32 0
+  %ys = shufflevector <vscale x 8 x half> %i, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
   %a = fmul <vscale x 8 x half> %x, %ys
   %b = select <vscale x 8 x i1> %c, <vscale x 8 x half> %a, <vscale x 8 x half> %z
   ret <vscale x 8 x half> %b
@@ -1186,8 +1186,8 @@ define <vscale x 4 x i32> @sadd_satqr_v4i32(<vscale x 4 x i32> %z, <vscale x 4 x
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp eq <vscale x 4 x i32> %z, zeroinitializer
-  %i = insertelement <vscale x 4 x i32> undef, i32 %y, i32 0
-  %ys = shufflevector <vscale x 4 x i32> %i, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
+  %i = insertelement <vscale x 4 x i32> poison, i32 %y, i32 0
+  %ys = shufflevector <vscale x 4 x i32> %i, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
   %a = call <vscale x 4 x i32> @llvm.sadd.sat.v4i32(<vscale x 4 x i32> %x, <vscale x 4 x i32> %ys)
   %b = select <vscale x 4 x i1> %c, <vscale x 4 x i32> %a, <vscale x 4 x i32> %z
   ret <vscale x 4 x i32> %b
@@ -1204,8 +1204,8 @@ define <vscale x 8 x i16> @sadd_satqr_v8i16(<vscale x 8 x i16> %z, <vscale x 8 x
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp eq <vscale x 8 x i16> %z, zeroinitializer
-  %i = insertelement <vscale x 8 x i16> undef, i16 %y, i32 0
-  %ys = shufflevector <vscale x 8 x i16> %i, <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer
+  %i = insertelement <vscale x 8 x i16> poison, i16 %y, i32 0
+  %ys = shufflevector <vscale x 8 x i16> %i, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
   %a = call <vscale x 8 x i16> @llvm.sadd.sat.v8i16(<vscale x 8 x i16> %x, <vscale x 8 x i16> %ys)
   %b = select <vscale x 8 x i1> %c, <vscale x 8 x i16> %a, <vscale x 8 x i16> %z
   ret <vscale x 8 x i16> %b
@@ -1222,8 +1222,8 @@ define <vscale x 16 x i8> @sadd_satqr_v16i8(<vscale x 16 x i8> %z, <vscale x 16 
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp eq <vscale x 16 x i8> %z, zeroinitializer
-  %i = insertelement <vscale x 16 x i8> undef, i8 %y, i32 0
-  %ys = shufflevector <vscale x 16 x i8> %i, <vscale x 16 x i8> undef, <vscale x 16 x i32> zeroinitializer
+  %i = insertelement <vscale x 16 x i8> poison, i8 %y, i32 0
+  %ys = shufflevector <vscale x 16 x i8> %i, <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
   %a = call <vscale x 16 x i8> @llvm.sadd.sat.v16i8(<vscale x 16 x i8> %x, <vscale x 16 x i8> %ys)
   %b = select <vscale x 16 x i1> %c, <vscale x 16 x i8> %a, <vscale x 16 x i8> %z
   ret <vscale x 16 x i8> %b
@@ -1240,8 +1240,8 @@ define <vscale x 4 x i32> @uadd_satqr_v4i32(<vscale x 4 x i32> %z, <vscale x 4 x
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp eq <vscale x 4 x i32> %z, zeroinitializer
-  %i = insertelement <vscale x 4 x i32> undef, i32 %y, i32 0
-  %ys = shufflevector <vscale x 4 x i32> %i, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
+  %i = insertelement <vscale x 4 x i32> poison, i32 %y, i32 0
+  %ys = shufflevector <vscale x 4 x i32> %i, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
   %a = call <vscale x 4 x i32> @llvm.uadd.sat.v4i32(<vscale x 4 x i32> %x, <vscale x 4 x i32> %ys)
   %b = select <vscale x 4 x i1> %c, <vscale x 4 x i32> %a, <vscale x 4 x i32> %z
   ret <vscale x 4 x i32> %b
@@ -1258,8 +1258,8 @@ define <vscale x 8 x i16> @uadd_satqr_v8i16(<vscale x 8 x i16> %z, <vscale x 8 x
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp eq <vscale x 8 x i16> %z, zeroinitializer
-  %i = insertelement <vscale x 8 x i16> undef, i16 %y, i32 0
-  %ys = shufflevector <vscale x 8 x i16> %i, <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer
+  %i = insertelement <vscale x 8 x i16> poison, i16 %y, i32 0
+  %ys = shufflevector <vscale x 8 x i16> %i, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
   %a = call <vscale x 8 x i16> @llvm.uadd.sat.v8i16(<vscale x 8 x i16> %x, <vscale x 8 x i16> %ys)
   %b = select <vscale x 8 x i1> %c, <vscale x 8 x i16> %a, <vscale x 8 x i16> %z
   ret <vscale x 8 x i16> %b
@@ -1276,8 +1276,8 @@ define <vscale x 16 x i8> @uadd_satqr_v16i8(<vscale x 16 x i8> %z, <vscale x 16 
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp eq <vscale x 16 x i8> %z, zeroinitializer
-  %i = insertelement <vscale x 16 x i8> undef, i8 %y, i32 0
-  %ys = shufflevector <vscale x 16 x i8> %i, <vscale x 16 x i8> undef, <vscale x 16 x i32> zeroinitializer
+  %i = insertelement <vscale x 16 x i8> poison, i8 %y, i32 0
+  %ys = shufflevector <vscale x 16 x i8> %i, <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
   %a = call <vscale x 16 x i8> @llvm.uadd.sat.v16i8(<vscale x 16 x i8> %x, <vscale x 16 x i8> %ys)
   %b = select <vscale x 16 x i1> %c, <vscale x 16 x i8> %a, <vscale x 16 x i8> %z
   ret <vscale x 16 x i8> %b
@@ -1294,8 +1294,8 @@ define <vscale x 4 x i32> @ssub_satqr_v4i32(<vscale x 4 x i32> %z, <vscale x 4 x
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp eq <vscale x 4 x i32> %z, zeroinitializer
-  %i = insertelement <vscale x 4 x i32> undef, i32 %y, i32 0
-  %ys = shufflevector <vscale x 4 x i32> %i, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
+  %i = insertelement <vscale x 4 x i32> poison, i32 %y, i32 0
+  %ys = shufflevector <vscale x 4 x i32> %i, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
   %a = call <vscale x 4 x i32> @llvm.ssub.sat.v4i32(<vscale x 4 x i32> %x, <vscale x 4 x i32> %ys)
   %b = select <vscale x 4 x i1> %c, <vscale x 4 x i32> %a, <vscale x 4 x i32> %z
   ret <vscale x 4 x i32> %b
@@ -1312,8 +1312,8 @@ define <vscale x 8 x i16> @ssub_satqr_v8i16(<vscale x 8 x i16> %z, <vscale x 8 x
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp eq <vscale x 8 x i16> %z, zeroinitializer
-  %i = insertelement <vscale x 8 x i16> undef, i16 %y, i32 0
-  %ys = shufflevector <vscale x 8 x i16> %i, <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer
+  %i = insertelement <vscale x 8 x i16> poison, i16 %y, i32 0
+  %ys = shufflevector <vscale x 8 x i16> %i, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
   %a = call <vscale x 8 x i16> @llvm.ssub.sat.v8i16(<vscale x 8 x i16> %x, <vscale x 8 x i16> %ys)
   %b = select <vscale x 8 x i1> %c, <vscale x 8 x i16> %a, <vscale x 8 x i16> %z
   ret <vscale x 8 x i16> %b
@@ -1330,8 +1330,8 @@ define <vscale x 16 x i8> @ssub_satqr_v16i8(<vscale x 16 x i8> %z, <vscale x 16 
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp eq <vscale x 16 x i8> %z, zeroinitializer
-  %i = insertelement <vscale x 16 x i8> undef, i8 %y, i32 0
-  %ys = shufflevector <vscale x 16 x i8> %i, <vscale x 16 x i8> undef, <vscale x 16 x i32> zeroinitializer
+  %i = insertelement <vscale x 16 x i8> poison, i8 %y, i32 0
+  %ys = shufflevector <vscale x 16 x i8> %i, <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
   %a = call <vscale x 16 x i8> @llvm.ssub.sat.v16i8(<vscale x 16 x i8> %x, <vscale x 16 x i8> %ys)
   %b = select <vscale x 16 x i1> %c, <vscale x 16 x i8> %a, <vscale x 16 x i8> %z
   ret <vscale x 16 x i8> %b
@@ -1348,8 +1348,8 @@ define <vscale x 4 x i32> @usub_satqr_v4i32(<vscale x 4 x i32> %z, <vscale x 4 x
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp eq <vscale x 4 x i32> %z, zeroinitializer
-  %i = insertelement <vscale x 4 x i32> undef, i32 %y, i32 0
-  %ys = shufflevector <vscale x 4 x i32> %i, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
+  %i = insertelement <vscale x 4 x i32> poison, i32 %y, i32 0
+  %ys = shufflevector <vscale x 4 x i32> %i, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
   %a = call <vscale x 4 x i32> @llvm.usub.sat.v4i32(<vscale x 4 x i32> %x, <vscale x 4 x i32> %ys)
   %b = select <vscale x 4 x i1> %c, <vscale x 4 x i32> %a, <vscale x 4 x i32> %z
   ret <vscale x 4 x i32> %b
@@ -1366,8 +1366,8 @@ define <vscale x 8 x i16> @usub_satqr_v8i16(<vscale x 8 x i16> %z, <vscale x 8 x
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp eq <vscale x 8 x i16> %z, zeroinitializer
-  %i = insertelement <vscale x 8 x i16> undef, i16 %y, i32 0
-  %ys = shufflevector <vscale x 8 x i16> %i, <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer
+  %i = insertelement <vscale x 8 x i16> poison, i16 %y, i32 0
+  %ys = shufflevector <vscale x 8 x i16> %i, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
   %a = call <vscale x 8 x i16> @llvm.usub.sat.v8i16(<vscale x 8 x i16> %x, <vscale x 8 x i16> %ys)
   %b = select <vscale x 8 x i1> %c, <vscale x 8 x i16> %a, <vscale x 8 x i16> %z
   ret <vscale x 8 x i16> %b
@@ -1384,8 +1384,8 @@ define <vscale x 16 x i8> @usub_satqr_v16i8(<vscale x 16 x i8> %z, <vscale x 16 
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp eq <vscale x 16 x i8> %z, zeroinitializer
-  %i = insertelement <vscale x 16 x i8> undef, i8 %y, i32 0
-  %ys = shufflevector <vscale x 16 x i8> %i, <vscale x 16 x i8> undef, <vscale x 16 x i32> zeroinitializer
+  %i = insertelement <vscale x 16 x i8> poison, i8 %y, i32 0
+  %ys = shufflevector <vscale x 16 x i8> %i, <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
   %a = call <vscale x 16 x i8> @llvm.usub.sat.v16i8(<vscale x 16 x i8> %x, <vscale x 16 x i8> %ys)
   %b = select <vscale x 16 x i1> %c, <vscale x 16 x i8> %a, <vscale x 16 x i8> %z
   ret <vscale x 16 x i8> %b

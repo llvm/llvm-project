@@ -907,6 +907,23 @@ define void @memcpy_immut_escape_after(ptr align 4 noalias %val) {
   ret void
 }
 
+declare void @two_args(ptr, ptr)
+
+; Should not perform call slot optimization: The function accepts the
+; destination as an argument and may read/write it.
+define void @test(ptr noalias writable dereferenceable(4) %p) {
+; CHECK-LABEL: @test(
+; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[RET:%.*]] = call ptr @two_args(ptr [[A]], ptr captures(ret: address, provenance) [[P:%.*]]) #[[ATTR2]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[P]], ptr [[A]], i64 4, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %a = alloca i32
+  %ret = call ptr @two_args(ptr %a, ptr captures(ret: address, provenance) %p) nounwind
+  call void @llvm.memcpy(ptr align 4 %p, ptr %a, i64 4, i1 false)
+  ret void
+}
+
 !0 = !{!0}
 !1 = !{!1, !0}
 !2 = !{!1}

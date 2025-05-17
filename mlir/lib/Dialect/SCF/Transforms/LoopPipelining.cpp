@@ -119,6 +119,10 @@ bool LoopPipelinerInternal::initializeLoopInfo(
     int64_t ubImm = upperBoundCst.value();
     int64_t lbImm = lowerBoundCst.value();
     int64_t stepImm = stepCst.value();
+    if (stepImm <= 0) {
+      LDBG("--invalid loop step -> BAIL");
+      return false;
+    }
     int64_t numIteration = llvm::divideCeilSigned(ubImm - lbImm, stepImm);
     if (numIteration > maxStage) {
       dynamicLoop = false;
@@ -203,9 +207,7 @@ bool LoopPipelinerInternal::initializeLoopInfo(
 static SetVector<Value> getNestedOperands(Operation *op) {
   SetVector<Value> operands;
   op->walk([&](Operation *nestedOp) {
-    for (Value operand : nestedOp->getOperands()) {
-      operands.insert(operand);
-    }
+    operands.insert_range(nestedOp->getOperands());
   });
   return operands;
 }
@@ -415,8 +417,9 @@ scf::ForOp LoopPipelinerInternal::createKernelLoop(
                       [maxStage - defStage->second];
       assert(valueVersion);
       newLoopArg.push_back(valueVersion);
-    } else
+    } else {
       newLoopArg.push_back(forOp.getInitArgs()[retVal.index()]);
+    }
   }
   for (auto escape : crossStageValues) {
     LiverangeInfo &info = escape.second;

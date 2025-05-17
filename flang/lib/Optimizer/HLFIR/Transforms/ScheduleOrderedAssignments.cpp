@@ -377,7 +377,7 @@ void Scheduler::startSchedulingAssignment(hlfir::RegionAssignOp assign,
   // Unconditionally collect effects of the evaluations of LHS and RHS
   // in case they need to be analyzed for any parent that might be
   // affected by conflicts of these evaluations.
-  // This collection migth be skipped, if there are no such parents,
+  // This collection might be skipped, if there are no such parents,
   // but for the time being we run it always.
   gatherAssignEvaluationEffects(assign, leafRegionsMayOnlyRead,
                                 assignEvaluateEffects);
@@ -597,9 +597,12 @@ hlfir::buildEvaluationSchedule(hlfir::OrderedAssignmentTreeOpInterface root,
     // Look for conflicts between the RHS/LHS evaluation and the assignments.
     // The LHS yield has no implicit read effect on the produced variable (the
     // variable is not read before the assignment).
+    // During pointer assignments, the RHS data is not read, only the address
+    // is taken.
     scheduler.startIndependentEvaluationGroup();
-    scheduler.saveEvaluationIfConflict(assign.getRhsRegion(),
-                                       leafRegionsMayOnlyRead);
+    scheduler.saveEvaluationIfConflict(
+        assign.getRhsRegion(), leafRegionsMayOnlyRead,
+        /*yieldIsImplicitRead=*/!assign.isPointerAssignment());
     // There is no point to save the LHS outside of Forall and assignment to a
     // vector subscripted LHS because the LHS is already fully evaluated and
     // saved in the resulting SSA address value (that may be a descriptor or

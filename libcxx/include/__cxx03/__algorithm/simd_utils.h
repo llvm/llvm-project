@@ -10,7 +10,6 @@
 #define _LIBCPP___CXX03___ALGORITHM_SIMD_UTILS_H
 
 #include <__cxx03/__algorithm/min.h>
-#include <__cxx03/__bit/bit_cast.h>
 #include <__cxx03/__bit/countl.h>
 #include <__cxx03/__bit/countr.h>
 #include <__cxx03/__config>
@@ -28,11 +27,7 @@ _LIBCPP_PUSH_MACROS
 #include <__cxx03/__undef_macros>
 
 // TODO: Find out how altivec changes things and allow vectorizations there too.
-#if _LIBCPP_STD_VER >= 14 && defined(_LIBCPP_CLANG_VER) && !defined(__ALTIVEC__)
-#  define _LIBCPP_HAS_ALGORITHM_VECTOR_UTILS 1
-#else
-#  define _LIBCPP_HAS_ALGORITHM_VECTOR_UTILS 0
-#endif
+#define _LIBCPP_HAS_ALGORITHM_VECTOR_UTILS 0
 
 #if _LIBCPP_HAS_ALGORITHM_VECTOR_UTILS && !defined(__OPTIMIZE_SIZE__)
 #  define _LIBCPP_VECTORIZE_ALGORITHMS 1

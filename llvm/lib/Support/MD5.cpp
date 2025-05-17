@@ -296,3 +296,11 @@ MD5::MD5Result MD5::hash(ArrayRef<uint8_t> Data) {
 
   return Res;
 }
+
+#undef F
+#undef G
+#undef H
+#undef I
+#undef STEP
+#undef SET
+#undef GET

@@ -265,7 +265,7 @@ std::unique_ptr<Module> loadModuleForTwoRounds(BitcodeModule &OrigModule,
 Expected<stable_hash> mergeCodeGenData(ArrayRef<StringRef> ObjectFiles);
 
 void warn(Error E, StringRef Whence = "");
-void warn(Twine Message, std::string Whence = "", std::string Hint = "");
+void warn(Twine Message, StringRef Whence = "", StringRef Hint = "");
 
 } // end namespace cgdata
 

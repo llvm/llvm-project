@@ -16,6 +16,7 @@
 #include "VPlan.h"
 #include "VPlanCFG.h"
 #include "VPlanDominatorTree.h"
+#include "VPlanHelpers.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/TypeSwitch.h"
 
@@ -77,7 +78,9 @@ bool VPlanVerifier::verifyPhiRecipes(const VPBasicBlock *VPBB) {
     if (isa<VPActiveLaneMaskPHIRecipe>(RecipeI))
       NumActiveLaneMaskPhiRecipes++;
 
-    if (IsHeaderVPBB && !isa<VPHeaderPHIRecipe, VPWidenPHIRecipe>(*RecipeI)) {
+    if (IsHeaderVPBB && !isa<VPHeaderPHIRecipe, VPWidenPHIRecipe>(*RecipeI) &&
+        !isa<VPInstruction>(*RecipeI) &&
+        cast<VPInstruction>(RecipeI)->getOpcode() == Instruction::PHI) {
       errs() << "Found non-header PHI recipe in header VPBB";
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
       errs() << ": ";
@@ -93,6 +96,18 @@ bool VPlanVerifier::verifyPhiRecipes(const VPBasicBlock *VPBB) {
       RecipeI->dump();
 #endif
       return false;
+    }
+
+    // Check if the recipe operands match the number of predecessors.
+    // TODO Extend to other phi-like recipes.
+    if (auto *PhiIRI = dyn_cast<VPIRPhi>(&*RecipeI)) {
+      if (PhiIRI->getNumOperands() != VPBB->getNumPredecessors()) {
+        errs() << "Phi-like recipe with different number of operands and "
+                  "predecessors.\n";
+        // TODO: Print broken recipe. At the moment printing an ill-formed
+        // phi-like recipe may crash.
+        return false;
+      }
     }
 
     RecipeI++;
@@ -143,15 +158,13 @@ bool VPlanVerifier::verifyEVLRecipe(const VPInstruction &EVL) const {
         })
         .Case<VPWidenStoreEVLRecipe, VPReductionEVLRecipe>(
             [&](const VPRecipeBase *S) { return VerifyEVLUse(*S, 2); })
-        .Case<VPWidenLoadEVLRecipe, VPReverseVectorPointerRecipe>(
+        .Case<VPWidenLoadEVLRecipe, VPVectorEndPointerRecipe>(
             [&](const VPRecipeBase *R) { return VerifyEVLUse(*R, 1); })
-        .Case<VPWidenEVLRecipe>([&](const VPWidenEVLRecipe *W) {
-          return VerifyEVLUse(*W,
-                              Instruction::isUnaryOp(W->getOpcode()) ? 1 : 2);
-        })
-        .Case<VPScalarCastRecipe>(
-            [&](const VPScalarCastRecipe *S) { return VerifyEVLUse(*S, 0); })
+        .Case<VPInstructionWithType>(
+            [&](const VPInstructionWithType *S) { return VerifyEVLUse(*S, 0); })
         .Case<VPInstruction>([&](const VPInstruction *I) {
+          if (I->getOpcode() == Instruction::PHI)
+            return VerifyEVLUse(*I, 1);
           if (I->getOpcode() != Instruction::Add) {
             errs() << "EVL is used as an operand in non-VPInstruction::Add\n";
             return false;
@@ -209,23 +222,31 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
         auto *UI = cast<VPRecipeBase>(U);
         // TODO: check dominance of incoming values for phis properly.
         if (!UI ||
-            isa<VPHeaderPHIRecipe, VPWidenPHIRecipe, VPPredInstPHIRecipe>(UI))
+            isa<VPHeaderPHIRecipe, VPWidenPHIRecipe, VPPredInstPHIRecipe,
+                VPIRPhi>(UI) ||
+            (isa<VPInstruction>(UI) &&
+             cast<VPInstruction>(UI)->getOpcode() == Instruction::PHI))
           continue;
 
         // If the user is in the same block, check it comes after R in the
         // block.
         if (UI->getParent() == VPBB) {
-          if (RecipeNumbering[UI] < RecipeNumbering[&R]) {
-            errs() << "Use before def!\n";
-            return false;
-          }
-          continue;
+          if (RecipeNumbering[UI] >= RecipeNumbering[&R])
+            continue;
+        } else {
+          if (VPDT.dominates(VPBB, UI->getParent()))
+            continue;
         }
 
-        if (!VPDT.dominates(VPBB, UI->getParent())) {
-          errs() << "Use before def!\n";
-          return false;
-        }
+        errs() << "Use before def!\n";
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+        VPSlotTracker Tracker(VPBB->getPlan());
+        UI->print(errs(), "  ", Tracker);
+        errs() << "\n  before\n";
+        R.print(errs(), "  ", Tracker);
+        errs() << "\n";
+#endif
+        return false;
       }
     }
     if (const auto *EVL = dyn_cast<VPInstruction>(&R)) {

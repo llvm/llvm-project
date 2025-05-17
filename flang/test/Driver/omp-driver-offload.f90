@@ -130,13 +130,13 @@
 ! RUN: %flang -### %s -o %t 2>&1 \
 ! RUN: -fopenmp --offload-arch=gfx90a \
 ! RUN: -fopenmp-targets=amdgcn-amd-amdhsa \
-! RUN: -fopenmp-target-debug -nogpulib\
-! RUN: | FileCheck %s --check-prefixes=CHECK-TARGET-DEBUG
+! RUN: -fopenmp-target-debug=111 -nogpulib\
+! RUN: | FileCheck %s --check-prefixes=CHECK-TARGET-DEBUG-EQ
 ! RUN: %flang -### %s -o %t 2>&1 \
 ! RUN: -fopenmp --offload-arch=sm_70 \
 ! RUN: -fopenmp-targets=nvptx64-nvidia-cuda \
-! RUN: -fopenmp-target-debug \
-! RUN: | FileCheck %s --check-prefixes=CHECK-TARGET-DEBUG
+! RUN: -fopenmp-target-debug=111 \
+! RUN: | FileCheck %s --check-prefixes=CHECK-TARGET-DEBUG-EQ
 ! CHECK-TARGET-DEBUG-EQ: "{{[^"]*}}flang" "-fc1" {{.*}} "-fopenmp" {{.*}} "-fopenmp-is-target-device" "-fopenmp-target-debug=111" {{.*}}.f90"
 
 ! RUN: %flang -S -### %s -o %t 2>&1 \
@@ -180,6 +180,11 @@
 ! RUN:      --rocm-path=%S/Inputs/rocm %s 2>&1 \
 ! RUN:   | FileCheck --check-prefix=ROCM-PATH %s
 ! ROCM-PATH: Found HIP installation: {{.*Inputs.*rocm}}, version 3.6.20214-a2917cd
+
+! RUN: %flang -### -target x86_64-pc-linux-gnu -fopenmp --offload-arch=gfx900 \
+! RUN:      --rocm-device-lib-path=%S/Inputs/rocm/amdgcn/bitcode %s  2>&1 | \
+! RUN: FileCheck %s --check-prefix=ROCM-DEVICE-LIB
+! ROCM-DEVICE-LIB: "-fc1" {{.*}}ocml.bc"{{.*}}oclc_daz_opt_off.bc"{{.*}}oclc_unsafe_math_off.bc"{{.*}}oclc_finite_only_off.bc"{{.*}}oclc_correctly_rounded_sqrt_on.bc"{{.*}}oclc_wavefrontsize64_on.bc"{{.*}}oclc_isa_version_900.bc"
 
 ! Test -fopenmp-force-usm option without offload
 ! RUN: %flang -S -### %s -o %t 2>&1 \

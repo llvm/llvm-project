@@ -22,6 +22,6 @@ entry:
   store double %tmp16, ptr addrspace(3) %gep2, align 8
   %tmp17 = load <2 x double>, ptr addrspace(3) getelementptr inbounds ([9 x double], ptr addrspace(3) @L, i32 2, i32 1), align 8
   %tmp19 = extractelement <2 x double> %tmp17, i32 1
-  store double %tmp19, ptr addrspace(3) undef, align 8
+  store double %tmp19, ptr addrspace(3) poison, align 8
   ret void
 }

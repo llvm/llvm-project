@@ -363,7 +363,7 @@ void ScopDetection::detect(Function &F) {
 
   // Prune non-profitable regions.
   for (auto &DIt : DetectionContextMap) {
-    DetectionContext &DC = *DIt.getSecond().get();
+    DetectionContext &DC = *DIt.getSecond();
     if (DC.Log.hasErrors())
       continue;
     if (!ValidRegions.count(&DC.CurRegion))
@@ -428,7 +428,7 @@ bool ScopDetection::isMaxRegionInScop(const Region &R, bool Verify) {
     Entry = std::make_unique<DetectionContext>(const_cast<Region &>(R), AA,
                                                /*Verifying=*/false);
 
-    return isValidRegion(*Entry.get());
+    return isValidRegion(*Entry);
   }
 
   return true;
@@ -497,7 +497,7 @@ bool ScopDetection::onlyValidRequiredInvariantLoads(
     }
   }
 
-  Context.RequiredILS.insert(RequiredILS.begin(), RequiredILS.end());
+  Context.RequiredILS.insert_range(RequiredILS);
 
   return true;
 }
@@ -1493,7 +1493,7 @@ Region *ScopDetection::expandRegion(Region &R) {
     std::unique_ptr<DetectionContext> &Entry = DetectionContextMap[P];
     Entry = std::make_unique<DetectionContext>(*ExpandedRegion, AA,
                                                /*Verifying=*/false);
-    DetectionContext &Context = *Entry.get();
+    DetectionContext &Context = *Entry;
 
     POLLY_DEBUG(dbgs() << "\t\tTrying " << ExpandedRegion->getNameStr()
                        << "\n");
@@ -1551,7 +1551,7 @@ static bool regionWithoutLoops(Region &R, LoopInfo &LI) {
 void ScopDetection::removeCachedResultsRecursively(const Region &R) {
   for (auto &SubRegion : R) {
     if (ValidRegions.count(SubRegion.get())) {
-      removeCachedResults(*SubRegion.get());
+      removeCachedResults(*SubRegion);
     } else
       removeCachedResultsRecursively(*SubRegion);
   }
@@ -1565,7 +1565,7 @@ void ScopDetection::findScops(Region &R) {
   std::unique_ptr<DetectionContext> &Entry =
       DetectionContextMap[getBBPairForRegion(&R)];
   Entry = std::make_unique<DetectionContext>(R, AA, /*Verifying=*/false);
-  DetectionContext &Context = *Entry.get();
+  DetectionContext &Context = *Entry;
 
   bool DidBailout = true;
   if (!PollyProcessUnprofitable && regionWithoutLoops(R, LI))
@@ -1831,7 +1831,7 @@ void ScopDetection::printLocations(Function &F) {
 
 void ScopDetection::emitMissedRemarks(const Function &F) {
   for (auto &DIt : DetectionContextMap) {
-    DetectionContext &DC = *DIt.getSecond().get();
+    DetectionContext &DC = *DIt.getSecond();
     if (DC.Log.hasErrors())
       emitRejectionRemarks(DIt.getFirst(), DC.Log, ORE);
   }

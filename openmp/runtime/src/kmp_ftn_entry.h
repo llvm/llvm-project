@@ -428,6 +428,129 @@ omp_allocator_handle_t FTN_STDCALL FTN_GET_DEFAULT_ALLOCATOR(void) {
 #endif
 }
 
+/* OpenMP 6.0 (TR11) Memory Management support */
+omp_memspace_handle_t FTN_STDCALL
+FTN_GET_DEVICES_MEMSPACE(int KMP_DEREF ndevs, const int *devs,
+                         omp_memspace_handle_t KMP_DEREF memspace) {
+#ifdef KMP_STUB
+  return NULL;
+#else
+  return __kmp_get_devices_memspace(KMP_DEREF ndevs, devs, KMP_DEREF memspace,
+                                    0 /* host */);
+#endif
+}
+
+omp_memspace_handle_t FTN_STDCALL FTN_GET_DEVICE_MEMSPACE(
+    int KMP_DEREF dev, omp_memspace_handle_t KMP_DEREF memspace) {
+#ifdef KMP_STUB
+  return NULL;
+#else
+  int dev_num = KMP_DEREF dev;
+  return __kmp_get_devices_memspace(1, &dev_num, KMP_DEREF memspace, 0);
+#endif
+}
+
+omp_memspace_handle_t FTN_STDCALL
+FTN_GET_DEVICES_AND_HOST_MEMSPACE(int KMP_DEREF ndevs, const int *devs,
+                                  omp_memspace_handle_t KMP_DEREF memspace) {
+#ifdef KMP_STUB
+  return NULL;
+#else
+  return __kmp_get_devices_memspace(KMP_DEREF ndevs, devs, KMP_DEREF memspace,
+                                    1);
+#endif
+}
+
+omp_memspace_handle_t FTN_STDCALL FTN_GET_DEVICE_AND_HOST_MEMSPACE(
+    int KMP_DEREF dev, omp_memspace_handle_t KMP_DEREF memspace) {
+#ifdef KMP_STUB
+  return NULL;
+#else
+  int dev_num = KMP_DEREF dev;
+  return __kmp_get_devices_memspace(1, &dev_num, KMP_DEREF memspace, 1);
+#endif
+}
+
+omp_memspace_handle_t FTN_STDCALL
+FTN_GET_DEVICES_ALL_MEMSPACE(omp_memspace_handle_t KMP_DEREF memspace) {
+#ifdef KMP_STUB
+  return NULL;
+#else
+  return __kmp_get_devices_memspace(0, NULL, KMP_DEREF memspace, 1);
+#endif
+}
+
+omp_allocator_handle_t FTN_STDCALL
+FTN_GET_DEVICES_ALLOCATOR(int KMP_DEREF ndevs, const int *devs,
+                          omp_allocator_handle_t KMP_DEREF memspace) {
+#ifdef KMP_STUB
+  return NULL;
+#else
+  return __kmp_get_devices_allocator(KMP_DEREF ndevs, devs, KMP_DEREF memspace,
+                                     0 /* host */);
+#endif
+}
+
+omp_allocator_handle_t FTN_STDCALL FTN_GET_DEVICE_ALLOCATOR(
+    int KMP_DEREF dev, omp_allocator_handle_t KMP_DEREF memspace) {
+#ifdef KMP_STUB
+  return NULL;
+#else
+  int dev_num = KMP_DEREF dev;
+  return __kmp_get_devices_allocator(1, &dev_num, KMP_DEREF memspace, 0);
+#endif
+}
+
+omp_allocator_handle_t FTN_STDCALL
+FTN_GET_DEVICES_AND_HOST_ALLOCATOR(int KMP_DEREF ndevs, const int *devs,
+                                   omp_allocator_handle_t KMP_DEREF memspace) {
+#ifdef KMP_STUB
+  return NULL;
+#else
+  return __kmp_get_devices_allocator(KMP_DEREF ndevs, devs, KMP_DEREF memspace,
+                                     1);
+#endif
+}
+
+omp_allocator_handle_t FTN_STDCALL FTN_GET_DEVICE_AND_HOST_ALLOCATOR(
+    int KMP_DEREF dev, omp_allocator_handle_t KMP_DEREF memspace) {
+#ifdef KMP_STUB
+  return NULL;
+#else
+  int dev_num = KMP_DEREF dev;
+  return __kmp_get_devices_allocator(1, &dev_num, KMP_DEREF memspace, 1);
+#endif
+}
+
+omp_allocator_handle_t FTN_STDCALL
+FTN_GET_DEVICES_ALL_ALLOCATOR(omp_allocator_handle_t KMP_DEREF memspace) {
+#ifdef KMP_STUB
+  return NULL;
+#else
+  return __kmp_get_devices_allocator(0, NULL, KMP_DEREF memspace, 1);
+#endif
+}
+
+int FTN_STDCALL
+FTN_GET_MEMSPACE_NUM_RESOURCES(omp_memspace_handle_t KMP_DEREF memspace) {
+#ifdef KMP_STUB
+  return 0;
+#else
+  return __kmp_get_memspace_num_resources(KMP_DEREF memspace);
+#endif
+}
+
+omp_memspace_handle_t FTN_STDCALL
+FTN_GET_SUBMEMSPACE(omp_memspace_handle_t KMP_DEREF memspace,
+                    int KMP_DEREF num_resources, int *resources) {
+#ifdef KMP_STUB
+  return NULL;
+#else
+  return __kmp_get_submemspace(KMP_DEREF memspace, KMP_DEREF num_resources,
+                               resources);
+#endif
+}
+
 /* OpenMP 5.0 affinity format support */
 #ifndef KMP_STUB
 static void __kmp_fortran_strncpy_truncate(char *buffer, size_t buf_size,
@@ -582,7 +705,8 @@ int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_THREAD_NUM)(void) {
   int gtid;
 
 #if KMP_OS_DARWIN || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||    \
-    KMP_OS_OPENBSD || KMP_OS_HURD || KMP_OS_SOLARIS || KMP_OS_AIX
+    KMP_OS_OPENBSD || KMP_OS_HAIKU || KMP_OS_HURD || KMP_OS_SOLARIS ||         \
+    KMP_OS_AIX
   gtid = __kmp_entry_gtid();
 #elif KMP_OS_WINDOWS
   if (!__kmp_init_parallel ||

@@ -35,7 +35,7 @@ class XtensaInstrInfo : public XtensaGenInstrInfo {
 public:
   XtensaInstrInfo(const XtensaSubtarget &STI);
 
-  void adjustStackPtr(unsigned SP, int64_t Amount, MachineBasicBlock &MBB,
+  void adjustStackPtr(MCRegister SP, int64_t Amount, MachineBasicBlock &MBB,
                       MachineBasicBlock::iterator I) const;
 
   unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
@@ -50,7 +50,7 @@ public:
                               int &FrameIndex) const override;
 
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-                   const DebugLoc &DL, MCRegister DestReg, MCRegister SrcReg,
+                   const DebugLoc &DL, Register DestReg, Register SrcReg,
                    bool KillSrc, bool RenamableDest = false,
                    bool RenamableSrc = false) const override;
 
@@ -73,7 +73,7 @@ public:
   // Emit code before MBBI in MI to move immediate value Value into
   // physical register Reg.
   void loadImmediate(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-                     unsigned *Reg, int64_t Value) const;
+                     MCRegister *Reg, int64_t Value) const;
 
   bool
   reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const override;

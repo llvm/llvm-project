@@ -24,14 +24,6 @@ class Triple;
 
 namespace RISCV {
 
-namespace RISCVExtensionBitmaskTable {
-struct RISCVExtensionBitmask {
-  const char *Name;
-  unsigned GroupID;
-  unsigned BitPosition;
-};
-} // namespace RISCVExtensionBitmaskTable
-
 struct CPUModel {
   uint32_t MVendorID;
   uint64_t MArchID;
@@ -49,6 +41,7 @@ struct CPUInfo {
 
 // We use 64 bits as the known part in the scalable vector types.
 static constexpr unsigned RVVBitsPerBlock = 64;
+static constexpr unsigned RVVBytesPerBlock = RVVBitsPerBlock / 8;
 
 void getFeaturesForCPU(StringRef CPU,
                        SmallVectorImpl<std::string> &EnabledFeatures,
@@ -65,7 +58,7 @@ CPUModel getCPUModel(StringRef CPU);
 
 } // namespace RISCV
 
-namespace RISCVII {
+namespace RISCVVType {
 enum VLMUL : uint8_t {
   LMUL_1 = 0,
   LMUL_2,
@@ -82,9 +75,7 @@ enum {
   TAIL_AGNOSTIC = 1,
   MASK_AGNOSTIC = 2,
 };
-} // namespace RISCVII
 
-namespace RISCVVType {
 // Is this a SEW value that can be encoded into the VTYPE format.
 inline static bool isValidSEW(unsigned SEW) {
   return isPowerOf2_32(SEW) && SEW >= 8 && SEW <= 64;
@@ -95,21 +86,21 @@ inline static bool isValidLMUL(unsigned LMUL, bool Fractional) {
   return isPowerOf2_32(LMUL) && LMUL <= 8 && (!Fractional || LMUL != 1);
 }
 
-unsigned encodeVTYPE(RISCVII::VLMUL VLMUL, unsigned SEW, bool TailAgnostic,
+unsigned encodeVTYPE(VLMUL VLMUL, unsigned SEW, bool TailAgnostic,
                      bool MaskAgnostic);
 
-inline static RISCVII::VLMUL getVLMUL(unsigned VType) {
-  unsigned VLMUL = VType & 0x7;
-  return static_cast<RISCVII::VLMUL>(VLMUL);
+inline static VLMUL getVLMUL(unsigned VType) {
+  unsigned VLMul = VType & 0x7;
+  return static_cast<VLMUL>(VLMul);
 }
 
 // Decode VLMUL into 1,2,4,8 and fractional indicator.
-std::pair<unsigned, bool> decodeVLMUL(RISCVII::VLMUL VLMUL);
+std::pair<unsigned, bool> decodeVLMUL(VLMUL VLMul);
 
-inline static RISCVII::VLMUL encodeLMUL(unsigned LMUL, bool Fractional) {
+inline static VLMUL encodeLMUL(unsigned LMUL, bool Fractional) {
   assert(isValidLMUL(LMUL, Fractional) && "Unsupported LMUL");
   unsigned LmulLog2 = Log2_32(LMUL);
-  return static_cast<RISCVII::VLMUL>(Fractional ? 8 - LmulLog2 : LmulLog2);
+  return static_cast<VLMUL>(Fractional ? 8 - LmulLog2 : LmulLog2);
 }
 
 inline static unsigned decodeVSEW(unsigned VSEW) {
@@ -133,10 +124,9 @@ inline static bool isMaskAgnostic(unsigned VType) { return VType & 0x80; }
 
 void printVType(unsigned VType, raw_ostream &OS);
 
-unsigned getSEWLMULRatio(unsigned SEW, RISCVII::VLMUL VLMul);
+unsigned getSEWLMULRatio(unsigned SEW, VLMUL VLMul);
 
-std::optional<RISCVII::VLMUL>
-getSameRatioLMUL(unsigned SEW, RISCVII::VLMUL VLMUL, unsigned EEW);
+std::optional<VLMUL> getSameRatioLMUL(unsigned SEW, VLMUL VLMUL, unsigned EEW);
 } // namespace RISCVVType
 
 } // namespace llvm

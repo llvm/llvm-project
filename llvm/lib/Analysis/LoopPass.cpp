@@ -388,9 +388,7 @@ bool LoopPass::skipLoop(const Loop *L) const {
   return false;
 }
 
-LCSSAVerificationPass::LCSSAVerificationPass() : FunctionPass(ID) {
-  initializeLCSSAVerificationPassPass(*PassRegistry::getPassRegistry());
-}
+LCSSAVerificationPass::LCSSAVerificationPass() : FunctionPass(ID) {}
 
 char LCSSAVerificationPass::ID = 0;
 INITIALIZE_PASS(LCSSAVerificationPass, "lcssa-verification", "LCSSA Verifier",

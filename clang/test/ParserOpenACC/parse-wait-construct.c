@@ -8,12 +8,15 @@ void func() {
   // expected-error@+1{{invalid OpenACC clause 'clause'}}
   #pragma acc wait clause-list
 
+  // expected-error@+3{{expected expression}}
   // expected-error@+2{{expected ')'}}
   // expected-note@+1{{to match this '('}}
   #pragma acc wait (
 
+  // expected-error@+1{{expected expression}}
   #pragma acc wait ()
 
+  // expected-error@+2{{expected expression}}
   // expected-error@+1{{invalid OpenACC clause 'clause'}}
   #pragma acc wait () clause-list
 
@@ -41,21 +44,27 @@ void func() {
   // expected-error@+1{{invalid OpenACC clause 'clause'}}
   #pragma acc wait (devnum: i + j) clause-list
 
+  // expected-error@+3{{expected expression}}
   // expected-error@+2{{expected ')'}}
   // expected-note@+1{{to match this '('}}
   #pragma acc wait (queues:
 
+  // expected-error@+1{{expected expression}}
   #pragma acc wait (queues:)
 
+  // expected-error@+2{{expected expression}}
   // expected-error@+1{{invalid OpenACC clause 'clause'}}
   #pragma acc wait (queues:) clause-list
 
+  // expected-error@+3{{expected expression}}
   // expected-error@+2{{expected ')'}}
   // expected-note@+1{{to match this '('}}
   #pragma acc wait (devnum: i + j:queues:
 
+  // expected-error@+1{{expected expression}}
   #pragma acc wait (devnum: i + j:queues:)
 
+  // expected-error@+2{{expected expression}}
   // expected-error@+1{{invalid OpenACC clause 'clause'}}
   #pragma acc wait (devnum: i + j:queues:) clause-list
 

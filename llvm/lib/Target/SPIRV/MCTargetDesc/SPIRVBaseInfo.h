@@ -222,6 +222,11 @@ struct ExtendedBuiltin {
   InstructionSet::InstructionSet Set;
   uint32_t Number;
 };
+
+enum InstFlags {
+  // It is a half type
+  INST_PRINTER_WIDTH16 = 1
+};
 } // namespace SPIRV
 
 using CapabilityList = SmallVector<SPIRV::Capability::Capability, 8>;

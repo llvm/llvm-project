@@ -80,6 +80,17 @@ static bool canExprResolveTo(const Expr *Source, const Expr *Target) {
 
 namespace {
 
+// `ArraySubscriptExpr` can switch base and idx, e.g. `a[4]` is the same as
+// `4[a]`. When type is dependent, we conservatively assume both sides are base.
+AST_MATCHER_P(ArraySubscriptExpr, hasBaseConservative,
+              ast_matchers::internal::Matcher<Expr>, InnerMatcher) {
+  if (Node.isTypeDependent()) {
+    return InnerMatcher.matches(*Node.getLHS(), Finder, Builder) ||
+           InnerMatcher.matches(*Node.getRHS(), Finder, Builder);
+  }
+  return InnerMatcher.matches(*Node.getBase(), Finder, Builder);
+}
+
 AST_MATCHER(Type, isDependentType) { return Node.isDependentType(); }
 
 AST_MATCHER_P(LambdaExpr, hasCaptureInit, const Expr *, E) {
@@ -513,8 +524,8 @@ ExprMutationAnalyzer::Analyzer::findArrayElementMutation(const Expr *Exp) {
   // Check whether any element of an array is mutated.
   const auto SubscriptExprs = match(
       findAll(arraySubscriptExpr(
-                  anyOf(hasBase(canResolveToExpr(Exp)),
-                        hasBase(implicitCastExpr(allOf(
+                  anyOf(hasBaseConservative(canResolveToExpr(Exp)),
+                        hasBaseConservative(implicitCastExpr(allOf(
                             hasCastKind(CK_ArrayToPointerDecay),
                             hasSourceExpression(canResolveToExpr(Exp)))))))
                   .bind(NodeID<Expr>::value)),
@@ -716,7 +727,8 @@ ExprMutationAnalyzer::Analyzer::findPointeeValueMutation(const Expr *Exp) {
                    unaryOperator(hasOperatorName("*"),
                                  hasUnaryOperand(canResolveToExprPointee(Exp))),
                    // deref by []
-                   arraySubscriptExpr(hasBase(canResolveToExprPointee(Exp)))))
+                   arraySubscriptExpr(
+                       hasBaseConservative(canResolveToExprPointee(Exp)))))
               .bind(NodeID<Expr>::value))),
       Stm, Context);
   return findExprMutation(Matches);
@@ -806,17 +818,15 @@ FunctionParmMutationAnalyzer::FunctionParmMutationAnalyzer(
 
 const Stmt *
 FunctionParmMutationAnalyzer::findMutation(const ParmVarDecl *Parm) {
-  const auto Memoized = Results.find(Parm);
-  if (Memoized != Results.end())
-    return Memoized->second;
+  auto [Place, Inserted] = Results.try_emplace(Parm);
+  if (!Inserted)
+    return Place->second;
+
   // To handle call A -> call B -> call A. Assume parameters of A is not mutated
   // before analyzing parameters of A. Then when analyzing the second "call A",
   // FunctionParmMutationAnalyzer can use this memoized value to avoid infinite
   // recursion.
-  Results[Parm] = nullptr;
-  if (const Stmt *S = BodyAnalyzer.findMutation(Parm))
-    return Results[Parm] = S;
-  return Results[Parm];
+  return Place->second = BodyAnalyzer.findMutation(Parm);
 }
 
 } // namespace clang

@@ -130,7 +130,7 @@ const char* VZeroUpperInserter::getBlockExitStateName(BlockExitState ST) {
 
 /// VZEROUPPER cleans state that is related to Y/ZMM0-15 only.
 /// Thus, there is no need to check for Y/ZMM16 and above.
-static bool isYmmOrZmmReg(unsigned Reg) {
+static bool isYmmOrZmmReg(MCRegister Reg) {
   return (Reg >= X86::YMM0 && Reg <= X86::YMM15) ||
          (Reg >= X86::ZMM0 && Reg <= X86::ZMM15);
 }
@@ -163,7 +163,7 @@ static bool hasYmmOrZmmReg(MachineInstr &MI) {
       continue;
     if (MO.isDebug())
       continue;
-    if (isYmmOrZmmReg(MO.getReg()))
+    if (isYmmOrZmmReg(MO.getReg().asMCReg()))
       return true;
   }
   return false;

@@ -18,9 +18,9 @@ class tfoo {
 };
 
 template<typename T>
-int decltype(tfoo<T>())::i; // expected-error{{nested name specifier 'decltype(tfoo<T>())::' for declaration does not refer into a class, class template or class template partial specialization}}
+int decltype(tfoo<T>())::i; // expected-error{{nested name specifier 'decltype(tfoo<T>())' for declaration does not refer into a class, class template or class template partial specialization}}
 template<typename T>
-void decltype(tfoo<T>())::func() { // expected-error{{nested name specifier 'decltype(tfoo<T>())::' for declaration does not refer into a class, class template or class template partial specialization}}
+void decltype(tfoo<T>())::func() { // expected-error{{nested name specifier 'decltype(tfoo<T>())' for declaration does not refer into a class, class template or class template partial specialization}}
 }
 
 // An init-declarator named with a qualified-id can refer to an element of the

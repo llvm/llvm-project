@@ -1019,7 +1019,7 @@ define i16 @test_ignored_rightbits(i32 %dst, i32 %in) {
 define void @sameOperandBFI(i64 %src, i64 %src2, ptr %ptr) {
 ; LLC-LABEL: sameOperandBFI:
 ; LLC:       // %bb.0: // %entry
-; LLC-NEXT:    cbnz wzr, .LBB30_2
+; LLC-NEXT:    cbnz w8, .LBB30_2
 ; LLC-NEXT:  // %bb.1: // %if.else
 ; LLC-NEXT:    lsr x8, x0, #47
 ; LLC-NEXT:    and w9, w1, #0x3
@@ -1032,7 +1032,7 @@ define void @sameOperandBFI(i64 %src, i64 %src2, ptr %ptr) {
 ; OPT-NEXT:  entry:
 ; OPT-NEXT:    [[SHR47:%.*]] = lshr i64 [[SRC:%.*]], 47
 ; OPT-NEXT:    [[SRC2_TRUNC:%.*]] = trunc i64 [[SRC2:%.*]] to i32
-; OPT-NEXT:    br i1 undef, label [[END:%.*]], label [[IF_ELSE:%.*]]
+; OPT-NEXT:    br i1 poison, label [[END:%.*]], label [[IF_ELSE:%.*]]
 ; OPT:       if.else:
 ; OPT-NEXT:    [[AND3:%.*]] = and i32 [[SRC2_TRUNC]], 3
 ; OPT-NEXT:    [[SHL2:%.*]] = shl nuw nsw i64 [[SHR47]], 2
@@ -1050,7 +1050,7 @@ define void @sameOperandBFI(i64 %src, i64 %src2, ptr %ptr) {
 entry:
   %shr47 = lshr i64 %src, 47
   %src2.trunc = trunc i64 %src2 to i32
-  br i1 undef, label %end, label %if.else
+  br i1 poison, label %end, label %if.else
 
 if.else:
   %and3 = and i32 %src2.trunc, 3
@@ -1066,4 +1066,19 @@ if.else:
 
 end:
   ret void
+}
+
+define i64 @sign_extend_lsb(i64 %arg) nounwind {
+; LLC-LABEL: sign_extend_lsb:
+; LLC:       // %bb.0:
+; LLC-NEXT:    sbfx x0, x0, #0, #1
+; LLC-NEXT:    ret
+; OPT-LABEL: @sign_extend_lsb(
+; OPT-NEXT:    [[AND:%.*]] = and i64 [[ARG:%.*]], 1
+; OPT-NEXT:    [[NEG:%.*]] = sub i64 0, [[AND]]
+; OPT-NEXT:    ret i64 [[NEG]]
+;
+  %and = and i64 %arg, 1
+  %neg = sub i64 0, %and
+  ret i64 %neg
 }

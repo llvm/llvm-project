@@ -35,15 +35,21 @@ set(BOLT_RT_FLAGS
   -fno-exceptions
   -fno-rtti
   -fno-stack-protector
-  -fPIC
-  -mgeneral-regs-only)
+  -fPIC)
 if (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64")
-  set(BOLT_RT_FLAGS ${BOLT_RT_FLAGS} "-mno-sse")
+  set(BOLT_RT_FLAGS ${BOLT_RT_FLAGS} 
+    -mno-sse 
+    -mgeneral-regs-only)
+endif()
+if (CMAKE_SYSTEM_PROCESSOR MATCHES "riscv64")
+  set(BOLT_RT_FLAGS ${BOLT_RT_FLAGS})
 endif()
 if (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
   check_cxx_compiler_flag("-mno-outline-atomics" CXX_SUPPORTS_OUTLINE_ATOMICS)
   if (CXX_SUPPORTS_OUTLINE_ATOMICS)
-    set(BOLT_RT_FLAGS ${BOLT_RT_FLAGS} "-mno-outline-atomics")
+    set(BOLT_RT_FLAGS ${BOLT_RT_FLAGS} 
+      -mno-outline-atomics 
+      -mgeneral-regs-only)
   endif()
 endif()
 

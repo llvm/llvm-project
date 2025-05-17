@@ -1138,13 +1138,12 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache,
   auto getBaseForInput = [&](Value *Input, Instruction *InsertPt) {
     Value *BDV = findBaseOrBDV(Input, Cache, KnownBases);
     Value *Base = nullptr;
-    if (!States.count(BDV)) {
+    if (auto It = States.find(BDV); It == States.end()) {
       assert(areBothVectorOrScalar(BDV, Input));
       Base = BDV;
     } else {
       // Either conflict or base.
-      assert(States.count(BDV));
-      Base = States[BDV].getBaseValue();
+      Base = It->second.getBaseValue();
     }
     assert(Base && "Can't be null");
     // The cast is needed since base traversal may strip away bitcasts
@@ -1183,11 +1182,12 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache,
       for (unsigned i = 0; i < NumPHIValues; i++) {
         Value *InVal = PN->getIncomingValue(i);
         BasicBlock *InBB = PN->getIncomingBlock(i);
-        if (!BlockToValue.count(InBB))
-          BlockToValue[InBB] = getBaseForInput(InVal, InBB->getTerminator());
+        auto [It, Inserted] = BlockToValue.try_emplace(InBB);
+        if (Inserted)
+          It->second = getBaseForInput(InVal, InBB->getTerminator());
         else {
 #ifndef NDEBUG
-          Value *OldBase = BlockToValue[InBB];
+          Value *OldBase = It->second;
           Value *Base = getBaseForInput(InVal, nullptr);
 
           // We can't use `stripPointerCasts` instead of this function because
@@ -1207,7 +1207,7 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache,
                  "findBaseOrBDV should be pure!");
 #endif
         }
-        Value *Base = BlockToValue[InBB];
+        Value *Base = It->second;
         BasePHI->setIncomingValue(i, Base);
       }
     } else if (SelectInst *BaseSI =
@@ -1377,8 +1377,7 @@ static Instruction *rematerializeChain(ArrayRef<Instruction *> ChainToBase,
   Instruction *LastClonedValue = nullptr;
   Instruction *LastValue = nullptr;
   // Walk backwards to visit top-most instructions first.
-  for (Instruction *Instr :
-       make_range(ChainToBase.rbegin(), ChainToBase.rend())) {
+  for (Instruction *Instr : reverse(ChainToBase)) {
     // Only GEP's and casts are supported as we need to be careful to not
     // introduce any new uses of pointers not in the liveset.
     // Note that it's fine to introduce new uses of pointers which were
@@ -1546,9 +1545,10 @@ static void CreateGCRelocates(ArrayRef<Value *> LiveVariables,
     Value *LiveIdx = Builder.getInt32(i);
 
     Type *Ty = LiveVariables[i]->getType();
-    if (!TypeToDeclMap.count(Ty))
-      TypeToDeclMap[Ty] = getGCRelocateDecl(Ty);
-    Function *GCRelocateDecl = TypeToDeclMap[Ty];
+    auto [It, Inserted] = TypeToDeclMap.try_emplace(Ty);
+    if (Inserted)
+      It->second = getGCRelocateDecl(Ty);
+    Function *GCRelocateDecl = It->second;
 
     // only specify a debug name if we can give a useful one
     CallInst *Reloc = Builder.CreateCall(
@@ -2379,9 +2379,9 @@ findRematerializationCandidates(PointerToBaseTy PointerToBase,
 
     // Handle the scenario where the RootOfChain is not equal to the
     // Base Value, but they are essentially the same phi values.
-    if (RootOfChain != PointerToBase[Derived]) {
+    if (Value *BaseVal = PointerToBase[Derived]; RootOfChain != BaseVal) {
       PHINode *OrigRootPhi = dyn_cast<PHINode>(RootOfChain);
-      PHINode *AlternateRootPhi = dyn_cast<PHINode>(PointerToBase[Derived]);
+      PHINode *AlternateRootPhi = dyn_cast<PHINode>(BaseVal);
       if (!OrigRootPhi || !AlternateRootPhi)
         continue;
       // PHI nodes that have the same incoming values, and belonging to the same
@@ -2903,7 +2903,7 @@ static void stripNonValidAttributesFromPrototype(Function &F) {
   // assumes that the attributes defined in Intrinsic.td are conservatively
   // correct for both physical and abstract model.
   if (Intrinsic::ID id = F.getIntrinsicID()) {
-    F.setAttributes(Intrinsic::getAttributes(Ctx, id));
+    F.setAttributes(Intrinsic::getAttributes(Ctx, id, F.getFunctionType()));
     return;
   }
 
@@ -3054,7 +3054,8 @@ bool RewriteStatepointsForGC::runOnFunction(Function &F, DominatorTree &DT,
       // non-leaf memcpy/memmove without deopt state just treat it as a leaf
       // copy and don't produce a statepoint.
       if (!AllowStatepointWithNoDeoptInfo && !Call->hasDeoptState()) {
-        assert((isa<AtomicMemCpyInst>(Call) || isa<AtomicMemMoveInst>(Call)) &&
+        assert(isa<AnyMemTransferInst>(Call) &&
+               cast<AnyMemTransferInst>(Call)->isAtomic() &&
                "Don't expect any other calls here!");
         return false;
       }
@@ -3287,21 +3288,22 @@ static void computeLiveInValues(DominatorTree &DT, Function &F,
   // Seed the liveness for each individual block
   for (BasicBlock &BB : F) {
     Data.KillSet[&BB] = computeKillSet(&BB, GC);
-    Data.LiveSet[&BB].clear();
-    computeLiveInValues(BB.rbegin(), BB.rend(), Data.LiveSet[&BB], GC);
+    auto &LiveSet = Data.LiveSet[&BB];
+    LiveSet.clear();
+    computeLiveInValues(BB.rbegin(), BB.rend(), LiveSet, GC);
 
 #ifndef NDEBUG
     for (Value *Kill : Data.KillSet[&BB])
       assert(!Data.LiveSet[&BB].count(Kill) && "live set contains kill");
 #endif
 
-    Data.LiveOut[&BB] = SetVector<Value *>();
-    computeLiveOutSeed(&BB, Data.LiveOut[&BB], GC);
-    Data.LiveIn[&BB] = Data.LiveSet[&BB];
-    Data.LiveIn[&BB].set_union(Data.LiveOut[&BB]);
-    Data.LiveIn[&BB].set_subtract(Data.KillSet[&BB]);
-    if (!Data.LiveIn[&BB].empty())
-      Worklist.insert(pred_begin(&BB), pred_end(&BB));
+    auto &Out = Data.LiveOut[&BB] = SetVector<Value *>();
+    computeLiveOutSeed(&BB, Out, GC);
+    auto &In = Data.LiveIn[&BB] = Data.LiveSet[&BB];
+    In.set_union(Out);
+    In.set_subtract(Data.KillSet[&BB]);
+    if (!In.empty())
+      Worklist.insert_range(predecessors(&BB));
   }
 
   // Propagate that liveness until stable
@@ -3310,7 +3312,7 @@ static void computeLiveInValues(DominatorTree &DT, Function &F,
 
     // Compute our new liveout set, then exit early if it hasn't changed despite
     // the contribution of our successor.
-    SetVector<Value *> LiveOut = Data.LiveOut[BB];
+    SetVector<Value *> &LiveOut = Data.LiveOut[BB];
     const auto OldLiveOutSize = LiveOut.size();
     for (BasicBlock *Succ : successors(BB)) {
       assert(Data.LiveIn.count(Succ));
@@ -3323,7 +3325,6 @@ static void computeLiveInValues(DominatorTree &DT, Function &F,
       // hasn't changed.
       continue;
     }
-    Data.LiveOut[BB] = LiveOut;
 
     // Apply the effects of this basic block
     SetVector<Value *> LiveTmp = LiveOut;
@@ -3331,11 +3332,11 @@ static void computeLiveInValues(DominatorTree &DT, Function &F,
     LiveTmp.set_subtract(Data.KillSet[BB]);
 
     assert(Data.LiveIn.count(BB));
-    const SetVector<Value *> &OldLiveIn = Data.LiveIn[BB];
-    // assert: OldLiveIn is a subset of LiveTmp
-    if (OldLiveIn.size() != LiveTmp.size()) {
-      Data.LiveIn[BB] = LiveTmp;
-      Worklist.insert(pred_begin(BB), pred_end(BB));
+    SetVector<Value *> &LiveIn = Data.LiveIn[BB];
+    // assert: LiveIn is a subset of LiveTmp
+    if (LiveIn.size() != LiveTmp.size()) {
+      LiveIn = std::move(LiveTmp);
+      Worklist.insert_range(predecessors(BB));
     }
   } // while (!Worklist.empty())
 
@@ -3362,7 +3363,7 @@ static void findLiveSetAtInst(Instruction *Inst, GCPtrLivenessData &Data,
   computeLiveInValues(BB->rbegin(), ++Inst->getIterator().getReverse(), LiveOut,
                       GC);
   LiveOut.remove(Inst);
-  Out.insert(LiveOut.begin(), LiveOut.end());
+  Out.insert_range(LiveOut);
 }
 
 static void recomputeLiveInValues(GCPtrLivenessData &RevisedLivenessData,

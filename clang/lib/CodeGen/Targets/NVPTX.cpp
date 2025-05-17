@@ -77,6 +77,10 @@ public:
     return true;
   }
 
+  unsigned getOpenCLKernelCallingConv() const override {
+    return llvm::CallingConv::PTX_Kernel;
+  }
+
   // Adds a NamedMDNode with GV, Name, and Operand as operands, and adds the
   // resulting MDNode to the nvvm.annotations MDNode.
   static void addNVVMMetadata(llvm::GlobalValue *GV, StringRef Name,
@@ -192,14 +196,18 @@ ABIArgInfo NVPTXABIInfo::classifyArgumentType(QualType Ty) const {
         return ABIArgInfo::getDirect(
             CGInfo.getCUDADeviceBuiltinTextureDeviceType());
     }
-    return getNaturalAlignIndirect(Ty, /* byval */ true);
+    return getNaturalAlignIndirect(
+        Ty, /* AddrSpace */ getDataLayout().getAllocaAddrSpace(),
+        /* byval */ true);
   }
 
   if (const auto *EIT = Ty->getAs<BitIntType>()) {
     if ((EIT->getNumBits() > 128) ||
         (!getContext().getTargetInfo().hasInt128Type() &&
          EIT->getNumBits() > 64))
-      return getNaturalAlignIndirect(Ty, /* byval */ true);
+      return getNaturalAlignIndirect(
+          Ty, /* AddrSpace */ getDataLayout().getAllocaAddrSpace(),
+          /* byval */ true);
   }
 
   return (isPromotableIntegerTypeForABI(Ty) ? ABIArgInfo::getExtend(Ty)
@@ -353,17 +361,13 @@ void CodeGenModule::handleCUDALaunchBoundsAttr(llvm::Function *F,
                                                int32_t *MaxThreadsVal,
                                                int32_t *MinBlocksVal,
                                                int32_t *MaxClusterRankVal) {
-  // Create !{<func-ref>, metadata !"maxntidx", i32 <val>} node
   llvm::APSInt MaxThreads(32);
   MaxThreads = Attr->getMaxThreads()->EvaluateKnownConstInt(getContext());
   if (MaxThreads > 0) {
     if (MaxThreadsVal)
       *MaxThreadsVal = MaxThreads.getExtValue();
-    if (F) {
-      // Create !{<func-ref>, metadata !"maxntidx", i32 <val>} node
-      NVPTXTargetCodeGenInfo::addNVVMMetadata(F, "maxntidx",
-                                              MaxThreads.getExtValue());
-    }
+    if (F)
+      F->addFnAttr("nvvm.maxntid", llvm::utostr(MaxThreads.getExtValue()));
   }
 
   // min and max blocks is an optional argument for CUDALaunchBoundsAttr. If it
@@ -375,11 +379,8 @@ void CodeGenModule::handleCUDALaunchBoundsAttr(llvm::Function *F,
     if (MinBlocks > 0) {
       if (MinBlocksVal)
         *MinBlocksVal = MinBlocks.getExtValue();
-      if (F) {
-        // Create !{<func-ref>, metadata !"minctasm", i32 <val>} node
-        NVPTXTargetCodeGenInfo::addNVVMMetadata(F, "minctasm",
-                                                MinBlocks.getExtValue());
-      }
+      if (F)
+        F->addFnAttr("nvvm.minctasm", llvm::utostr(MinBlocks.getExtValue()));
     }
   }
   if (Attr->getMaxBlocks()) {
@@ -388,11 +389,9 @@ void CodeGenModule::handleCUDALaunchBoundsAttr(llvm::Function *F,
     if (MaxBlocks > 0) {
       if (MaxClusterRankVal)
         *MaxClusterRankVal = MaxBlocks.getExtValue();
-      if (F) {
-        // Create !{<func-ref>, metadata !"maxclusterrank", i32 <val>} node
-        NVPTXTargetCodeGenInfo::addNVVMMetadata(F, "maxclusterrank",
-                                                MaxBlocks.getExtValue());
-      }
+      if (F)
+        F->addFnAttr("nvvm.maxclusterrank",
+                     llvm::utostr(MaxBlocks.getExtValue()));
     }
   }
 }

@@ -47,8 +47,8 @@ const char *stripRegisterPrefix(const char *RegName);
 /// The operand number argument will be useful when we need to extend this
 /// to instructions that use both Altivec and VSX numbering (for different
 /// operands).
-unsigned getRegNumForOperand(const MCInstrDesc &Desc, unsigned Reg,
-                             unsigned OpNo);
+MCRegister getRegNumForOperand(const MCInstrDesc &Desc, MCRegister Reg,
+                               unsigned OpNo);
 
 } // namespace PPC
 
@@ -293,6 +293,10 @@ static inline bool isVFRegister(unsigned Reg) {
 
 static inline bool isVRRegister(unsigned Reg) {
   return Reg >= PPC::V0 && Reg <= PPC::V31;
+}
+
+static inline bool isDMRROWpRegister(unsigned Reg) {
+  return Reg >= PPC::DMRROWp0 && Reg <= PPC::DMRROWp31;
 }
 } // namespace PPC
 } // namespace llvm

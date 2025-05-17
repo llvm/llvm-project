@@ -46,7 +46,7 @@
 #ifndef LLVM_SUPPORT_TRAILINGOBJECTS_H
 #define LLVM_SUPPORT_TRAILINGOBJECTS_H
 
-#include "llvm/Support/AlignOf.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
@@ -300,6 +300,41 @@ public:
     // function templates can't be specialized.
     return this->getTrailingObjectsImpl(
         static_cast<BaseTy *>(this), TrailingObjectsBase::OverloadToken<T>());
+  }
+
+  // getTrailingObjects() specialization for a single trailing type.
+  using FirstTrailingType =
+      typename std::tuple_element_t<0, std::tuple<TrailingTys...>>;
+
+  const FirstTrailingType *getTrailingObjects() const {
+    static_assert(sizeof...(TrailingTys) == 1,
+                  "Can use non-templated getTrailingObjects() only when there "
+                  "is a single trailing type");
+    return getTrailingObjects<FirstTrailingType>();
+  }
+
+  FirstTrailingType *getTrailingObjects() {
+    static_assert(sizeof...(TrailingTys) == 1,
+                  "Can use non-templated getTrailingObjects() only when there "
+                  "is a single trailing type");
+    return getTrailingObjects<FirstTrailingType>();
+  }
+
+  // Functions that return the trailing objects as ArrayRefs.
+  template <typename T> MutableArrayRef<T> getTrailingObjects(size_t N) {
+    return MutableArrayRef(getTrailingObjects<T>(), N);
+  }
+
+  template <typename T> ArrayRef<T> getTrailingObjects(size_t N) const {
+    return ArrayRef(getTrailingObjects<T>(), N);
+  }
+
+  MutableArrayRef<FirstTrailingType> getTrailingObjects(size_t N) {
+    return MutableArrayRef(getTrailingObjects(), N);
+  }
+
+  ArrayRef<FirstTrailingType> getTrailingObjects(size_t N) const {
+    return ArrayRef(getTrailingObjects(), N);
   }
 
   /// Returns the size of the trailing data, if an object were

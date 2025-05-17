@@ -20,18 +20,16 @@
 #define LIBC_SRC_STRING_MEMORY_UTILS_MEMSET inline_memset_x86
 #elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
 #include "src/string/memory_utils/aarch64/inline_memset.h"
-#define LIBC_SRC_STRING_MEMORY_UTILS_MEMSET inline_memset_aarch64
+#define LIBC_SRC_STRING_MEMORY_UTILS_MEMSET inline_memset_aarch64_dispatch
 #elif defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
 #include "src/string/memory_utils/riscv/inline_memset.h"
 #define LIBC_SRC_STRING_MEMORY_UTILS_MEMSET inline_memset_riscv
-#elif defined(LIBC_TARGET_ARCH_IS_ARM)
-#include "src/string/memory_utils/generic/byte_per_byte.h"
-#define LIBC_SRC_STRING_MEMORY_UTILS_MEMSET inline_memset_byte_per_byte
 #elif defined(LIBC_TARGET_ARCH_IS_GPU)
 #include "src/string/memory_utils/generic/builtin.h"
 #define LIBC_SRC_STRING_MEMORY_UTILS_MEMSET inline_memset_builtin
 #else
-#error "Unsupported architecture"
+#include "src/string/memory_utils/generic/byte_per_byte.h"
+#define LIBC_SRC_STRING_MEMORY_UTILS_MEMSET inline_memset_byte_per_byte
 #endif
 
 namespace LIBC_NAMESPACE_DECL {

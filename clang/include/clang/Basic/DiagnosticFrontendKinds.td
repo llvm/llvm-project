@@ -175,11 +175,11 @@ def err_verify_invalid_content : Error<
 def err_verify_missing_regex : Error<
     "cannot find start of regex ('{{') in %0">;
 def err_verify_inconsistent_diags : Error<
-    "'%0' diagnostics %select{expected|seen}1 but not %select{seen|expected}1: "
-    "%2">;
+    "%select{|'%1-%2' }0diagnostics %select{with '%2' severity |}0"
+    "%select{expected|seen}3 but not %select{seen|expected}3: "
+    "%4">;
 def err_verify_invalid_no_diags : Error<
-    "%select{expected|'%0-no-diagnostics'}1 directive cannot follow "
-    "%select{'%0-no-diagnostics' directive|other expected directives}1">;
+    "'%0' directive cannot follow %select{'%2' directive|other expected directives}1">;
 def err_verify_no_directives : Error<
     "no expected directives found: consider use of '%0-no-diagnostics'">;
 def err_verify_nonconst_addrspace : Error<
@@ -260,13 +260,17 @@ def err_modules_embed_file_not_found :
   DefaultFatal;
 def err_module_header_file_not_found :
   Error<"module header file '%0' not found">, DefaultFatal;
+def err_frontend_action_unsupported_input_format
+    : Error<"%0 does not support input file format of file '%1': "
+            "'%select{Source|ModuleMap|Precompiled|Unknown}2'">,
+      DefaultFatal;
 
 def err_test_module_file_extension_version : Error<
   "test module file extension '%0' has different version (%1.%2) than expected "
   "(%3.%4)">;
 
 def warn_eagerly_load_for_standard_cplusplus_modules : Warning<
-  "the form '-fmodule-file=<BMI-path>' is deprecated for standard C++ named modules;"
+  "the form '-fmodule-file=<BMI-path>' is deprecated for standard C++ named modules; "
   "consider to use '-fmodule-file=<module-name>=<BMI-path>' instead">,
   InGroup<DiagGroup<"eager-load-cxx-named-modules">>;
 
@@ -379,6 +383,8 @@ def err_ast_action_on_llvm_ir : Error<
   "cannot apply AST actions to LLVM IR file '%0'">,
   DefaultFatal;
 
+def err_invalid_llvm_ir : Error<"invalid LLVM IR input: %0">;
+
 def err_os_unsupport_riscv_fmv : Error<
   "function multiversioning is currently only supported on Linux">;
 
@@ -386,4 +392,12 @@ def warn_hlsl_langstd_minimal :
   Warning<"support for HLSL language version %0 is incomplete, "
           "recommend using %1 instead">,
   InGroup<HLSLDXCCompat>;
+
+// ClangIR frontend errors
+def err_cir_to_cir_transform_failed : Error<
+    "CIR-to-CIR transformation failed">, DefaultFatal;
+
+def err_cir_verification_failed_pre_passes : Error<
+    "CIR module verification error before running CIR-to-CIR passes">,
+    DefaultFatal;
 }

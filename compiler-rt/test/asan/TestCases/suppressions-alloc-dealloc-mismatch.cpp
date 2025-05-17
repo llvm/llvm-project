@@ -9,6 +9,11 @@
 // FIXME: Upload suppressions to device.
 // XFAIL: android
 
+// FIXME: atos does not work for inlined functions, yet llvm-symbolizer
+// does not always work with debug info on Darwin. Behavior is similar on MSVC x86 outside of /Od.
+// UNSUPPORTED: darwin
+// UNSUPPORTED: target={{.*windows-msvc.*}} && asan-32-bits
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

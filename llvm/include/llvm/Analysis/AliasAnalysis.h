@@ -521,6 +521,10 @@ public:
   /// the same memory locations.
   ModRefInfo getModRefInfo(const Instruction *I, const CallBase *Call);
 
+  /// Return information about whether two instructions may refer to the same
+  /// memory locations.
+  ModRefInfo getModRefInfo(const Instruction *I1, const Instruction *I2);
+
   /// Return information about whether a particular call site modifies
   /// or reads the specified memory location \p MemLoc before instruction \p I
   /// in a BasicBlock.
@@ -600,6 +604,8 @@ public:
   ModRefInfo getModRefInfo(const Instruction *I,
                            const std::optional<MemoryLocation> &OptLoc,
                            AAQueryInfo &AAQIP);
+  ModRefInfo getModRefInfo(const Instruction *I1, const Instruction *I2,
+                           AAQueryInfo &AAQI);
   ModRefInfo callCapturesBefore(const Instruction *I,
                                 const MemoryLocation &MemLoc, DominatorTree *DT,
                                 AAQueryInfo &AAQIP);
@@ -1006,6 +1012,18 @@ struct ExternalAAWrapperPass : ImmutablePass {
   ExternalAAWrapperPass();
 
   explicit ExternalAAWrapperPass(CallbackT CB);
+
+  /// Returns whether this external AA should run before Basic AA.
+  ///
+  /// By default, external AA passes are run after Basic AA. If this returns
+  /// true, the external AA will be run before Basic AA during alias analysis.
+  ///
+  /// For some targets, we prefer to run the external AA early to improve
+  /// compile time as it has more target-specific information. This is
+  /// particularly useful when the external AA can provide more precise results
+  /// than Basic AA so that Basic AA does not need to spend time recomputing
+  /// them.
+  virtual bool runEarly() { return false; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();

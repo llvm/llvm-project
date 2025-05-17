@@ -374,7 +374,7 @@ define <vscale x 4 x i1> @one_zero(<vscale x 4 x float> %x) {
 define <vscale x 4 x i1> @ueq_zero(<vscale x 4 x float> %x) {
 ; CHECK-LABEL: ueq_zero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z1.s, #0 // =0x0
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    fcmuo p1.s, p0/z, z0.s, z1.s
 ; CHECK-NEXT:    fcmeq p0.s, p0/z, z0.s, #0.0
