@@ -16,8 +16,8 @@
 
 #include "gmock/gmock.h"
 
-#include "clang/AST/ASTImporter.h"
-#include "clang/AST/ASTImporterSharedState.h"
+#include "clang/ASTImporter/ASTImporter.h"
+#include "clang/ASTImporter/ASTImporterSharedState.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Testing/CommandLineArgs.h"
 #include "llvm/Support/Error.h"
@@ -30,8 +30,6 @@
 
 namespace clang {
 
-class ASTImporter;
-class ASTImporterSharedState;
 class ASTUnit;
 
 namespace ast_matchers {

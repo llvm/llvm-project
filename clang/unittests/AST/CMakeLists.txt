@@ -38,6 +38,7 @@ add_clang_unittest(ASTTests
   UnresolvedSetTest.cpp
   CLANG_LIBS
   clangAST
+  clangASTImporter
   clangASTMatchers
   clangBasic
   clangFrontend

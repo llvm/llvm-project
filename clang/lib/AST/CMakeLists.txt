@@ -27,8 +27,6 @@ add_clang_library(clangAST
   ASTContext.cpp
   ASTDiagnostic.cpp
   ASTDumper.cpp
-  ASTImporter.cpp
-  ASTImporterLookupTable.cpp
   ASTStructuralEquivalence.cpp
   ASTTypeTraits.cpp
   AttrDocTable.cpp
@@ -63,7 +61,6 @@ add_clang_library(clangAST
   ExprConstant.cpp
   ExprCXX.cpp
   ExprObjC.cpp
-  ExternalASTMerger.cpp
   ExternalASTSource.cpp
   FormatString.cpp
   InheritViz.cpp

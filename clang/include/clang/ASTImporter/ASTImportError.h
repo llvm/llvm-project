@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_AST_ASTIMPORTERROR_H
-#define LLVM_CLANG_AST_ASTIMPORTERROR_H
+#ifndef LLVM_CLANG_ASTIMPORTER_ASTIMPORTERROR_H
+#define LLVM_CLANG_ASTIMPORTER_ASTIMPORTERROR_H
 
 #include "llvm/Support/Error.h"
 
@@ -47,4 +47,4 @@ public:
 
 } // namespace clang
 
-#endif // LLVM_CLANG_AST_ASTIMPORTERROR_H
+#endif // LLVM_CLANG_ASTIMPORTER_ASTIMPORTERROR_H
