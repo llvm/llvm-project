@@ -14,7 +14,9 @@
 #ifndef LLVM_TARGETPARSER_PPCTARGETPARSER_H
 #define LLVM_TARGETPARSER_PPCTARGETPARSER_H
 
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/TargetParser/Triple.h"
 
 namespace llvm {
@@ -34,6 +36,9 @@ StringRef getNormalizedPPCTuneCPU(const Triple &T, StringRef CPUName = "");
 // For PPC, there are some cpu names for same CPU, like pwr10 and power10,
 // normalize them.
 StringRef normalizeCPUName(StringRef CPUName);
+
+std::optional<llvm::StringMap<bool>>
+getPPCDefaultTargetFeatures(const Triple &T, StringRef CPUName);
 } // namespace PPC
 } // namespace llvm
 
