@@ -678,10 +678,6 @@ Value *VPInstruction::generate(VPTransformState &State) {
     }
     // Reduce all of the unrolled parts into a single vector.
     Value *ReducedPartRdx = RdxParts[0];
-    unsigned Op = RdxDesc.getOpcode();
-    if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK))
-      Op = Instruction::Or;
-
     if (PhiR->isOrdered()) {
       ReducedPartRdx = RdxParts[UF - 1];
     } else {
@@ -690,11 +686,12 @@ Value *VPInstruction::generate(VPTransformState &State) {
       Builder.setFastMathFlags(RdxDesc.getFastMathFlags());
       for (unsigned Part = 1; Part < UF; ++Part) {
         Value *RdxPart = RdxParts[Part];
-        if (Op != Instruction::ICmp && Op != Instruction::FCmp)
-          ReducedPartRdx = Builder.CreateBinOp(
-              (Instruction::BinaryOps)Op, RdxPart, ReducedPartRdx, "bin.rdx");
-        else
+        if (RecurrenceDescriptor::isMinMaxRecurrenceKind(RK))
           ReducedPartRdx = createMinMaxOp(Builder, RK, ReducedPartRdx, RdxPart);
+        else
+          ReducedPartRdx =
+              Builder.CreateBinOp((Instruction::BinaryOps)RdxDesc.getOpcode(),
+                                  RdxPart, ReducedPartRdx, "bin.rdx");
       }
     }
 
