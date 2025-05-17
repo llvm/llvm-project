@@ -1475,7 +1475,9 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
        (PreviousNonComment->ClosesTemplateDeclaration ||
         PreviousNonComment->ClosesRequiresClause ||
         (PreviousNonComment->is(TT_AttributeMacro) &&
-         Current.isNot(tok::l_paren)) ||
+         Current.isNot(tok::l_paren) &&
+         !Current.endsSequence(TT_StartOfName, TT_AttributeMacro,
+                               TT_PointerOrReference)) ||
         PreviousNonComment->isOneOf(
             TT_AttributeRParen, TT_AttributeSquare, TT_FunctionAnnotationRParen,
             TT_JavaAnnotation, TT_LeadingJavaAnnotation))) ||
