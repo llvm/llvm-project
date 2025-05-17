@@ -999,23 +999,16 @@ static void findForkedSCEVs(
       break;
     }
 
-    // Find the pointer type we need to extend to.
-    Type *IntPtrTy = SE->getEffectiveSCEVType(
-        SE->getSCEV(GEP->getPointerOperand())->getType());
-
-    // Find the size of the type being pointed to. We only have a single
-    // index term (guarded above) so we don't need to index into arrays or
-    // structures, just get the size of the scalar value.
-    const SCEV *Size = SE->getSizeOfExpr(IntPtrTy, SourceTy);
-
     // Scale up the offsets by the size of the type, then add to the bases.
+    const SCEV *Offset0 = get<0>(OffsetScevs[0]);
+    const SCEV *Offset1 = get<0>(OffsetScevs[1]);
+    const SCEV *Scaled0 = SE->getMulExpr(
+        SE->getSizeOfExpr(Offset0->getType(), SourceTy), Offset0);
     const SCEV *Scaled1 = SE->getMulExpr(
-        Size, SE->getTruncateOrSignExtend(get<0>(OffsetScevs[0]), IntPtrTy));
-    const SCEV *Scaled2 = SE->getMulExpr(
-        Size, SE->getTruncateOrSignExtend(get<0>(OffsetScevs[1]), IntPtrTy));
-    ScevList.emplace_back(SE->getAddExpr(get<0>(BaseScevs[0]), Scaled1),
+        SE->getSizeOfExpr(Offset1->getType(), SourceTy), Offset1);
+    ScevList.emplace_back(SE->getAddExpr(get<0>(BaseScevs[0]), Scaled0),
                           NeedsFreeze);
-    ScevList.emplace_back(SE->getAddExpr(get<0>(BaseScevs[1]), Scaled2),
+    ScevList.emplace_back(SE->getAddExpr(get<0>(BaseScevs[1]), Scaled1),
                           NeedsFreeze);
     break;
   }
