@@ -226,7 +226,8 @@ class BoolArgument<string name, bit opt = 0, bit fake = 0> : Argument<name, opt,
 class IdentifierArgument<string name, bit opt = 0> : Argument<name, opt>;
 class IntArgument<string name, bit opt = 0> : Argument<name, opt>;
 class StringArgument<string name, bit opt = 0> : Argument<name, opt>;
-class ExprArgument<string name, bit opt = 0> : Argument<name, opt>;
+class ExprArgument<string name, bit opt = 0, bit fake = 0> : Argument<name, opt,
+                                                                      fake>;
 class DeclArgument<DeclNode kind, string name, bit opt = 0, bit fake = 0>
     : Argument<name, opt, fake> {
   DeclNode Kind = kind;
@@ -1351,7 +1352,8 @@ def OSConsumesThis : InheritableAttr {
 
 def Cleanup : InheritableAttr {
   let Spellings = [GCC<"cleanup">];
-  let Args = [DeclArgument<Function, "FunctionDecl">];
+  let Args = [DeclArgument<Function, "FunctionDecl">,
+              ExprArgument<"Expr", /*fake=*/1>];
   let Subjects = SubjectList<[LocalVar]>;
   let Documentation = [CleanupDocs];
 }
