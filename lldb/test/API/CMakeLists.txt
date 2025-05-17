@@ -214,3 +214,70 @@ add_lit_testsuite(check-lldb-api "Running lldb api test suite"
   ${CMAKE_CURRENT_BINARY_DIR}
   EXCLUDE_FROM_CHECK_ALL
   DEPENDS lldb-api-test-deps)
+
+if(LLDB_API_JSON_CONFIG)
+  file(READ ${LLDB_API_JSON_CONFIG} API_TEST_CONFIGS)
+  set(IDX 0)
+  while(true)
+    macro(set_test_info out_var key)
+      string(JSON ${out_var} ERROR_VARIABLE ERROR_VAR GET ${API_TEST_CONFIGS} ${IDX} ${key})
+      if (NOT ${ERROR_VAR} MATCHES .*NOTFOUND)
+        break()
+      endif()
+    endmacro()
+
+    set_test_info(TEST_NAME test_pack_name)
+    set_test_info(TEST_DESC test_pack_desc)
+    set_test_info(CHECK_ALL_NEEDED check_all)
+
+    set(TO_PARAMS "" CACHE STRING "internal variable to be given to lit config params" FORCE)
+    # function to add a separate param to run lit.cfg with.
+    function(add_param key substr)
+      string(JSON RES ERROR_VARIABLE ERROR_VAR GET ${API_TEST_CONFIGS} ${IDX} ${key})
+      if (${ERROR_VAR} MATCHES .*NOTFOUND)
+	      list(APPEND TO_PARAMS "${substr}=${RES}")
+      endif()
+      set(TO_PARAMS ${TO_PARAMS} PARENT_SCOPE)
+    endfunction()
+    # function to add a list of params to run lit.cfg with.
+    function (add_list_param key substr)
+      set(LIST_IDX 0)
+      set(FULL_LINE_TO_ADD "")
+      while (true)
+        string(JSON RES ERROR_VARIABLE ERROR_VAR GET ${API_TEST_CONFIGS} ${IDX} ${key} ${LIST_IDX})
+	if (${RES} MATCHES .*NOTFOUND)
+          break()
+	endif()
+        list(APPEND FULL_LINE_TO_ADD "${RES}")
+        MATH(EXPR LIST_IDX "${LIST_IDX} + 1")
+      endwhile()
+      if (NOT "${FULL_LINE_TO_ADD}" STREQUAL "")
+	string (REPLACE ";" ":" FULL_LINE_TO_ADD_STR "${FULL_LINE_TO_ADD}")
+        list(APPEND TO_PARAMS "${substr}=${FULL_LINE_TO_ADD_STR}")
+        set(TO_PARAMS ${TO_PARAMS} PARENT_SCOPE)
+      endif()
+    endfunction()
+
+    add_param(test_compiler "test_compiler")
+    add_param(test_arch "test_arch")
+    add_param(test_simulator "lldb-run-with-simulator")
+    add_list_param(extra_flags "extra_flags")
+    add_list_param(skip_categories "skip_categories")
+    add_list_param(xfail_categories "xfail_categories")
+
+    # Create test targets
+    if (CHECK_ALL_NEEDED)
+      add_lit_testsuite(${TEST_NAME}  ${TEST_DESC}
+	    ${CMAKE_CURRENT_BINARY_DIR}
+	    PARAMS ${TO_PARAMS}
+            DEPENDS lldb-api-test-deps)
+    else()
+      add_lit_testsuite(${TEST_NAME}  ${TEST_DESC}
+	    ${CMAKE_CURRENT_BINARY_DIR}
+	    PARAMS ${TO_PARAMS}
+            EXCLUDE_FROM_CHECK_ALL
+            DEPENDS lldb-api-test-deps)
+    endif()
+    MATH(EXPR IDX "${IDX}+1")
+  endwhile()
+endif()
