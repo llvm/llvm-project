@@ -61,6 +61,8 @@ C++ Specific Potentially Breaking Changes
 - A workaround for libstdc++4.7 has been removed. Note that 4.8.3 remains the oldest
   supported libstdc++ version.
 
+- Added ``!nonnull/!align`` metadata to load of references for better codegen.
+
 ABI Changes in This Version
 ---------------------------
 
