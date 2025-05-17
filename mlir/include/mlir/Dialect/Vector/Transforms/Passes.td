@@ -34,4 +34,16 @@ def LowerVectorMultiReduction : Pass<"lower-vector-multi-reduction", "func::Func
   ];
 }
 
+def SLPVectorizer : Pass<"slp-vectorizer", "ModuleOp"> {
+  let summary = "SLP Vectorizer Pass";
+  let description = [{
+    This pass implements the SLP (Superword Level Parallelism) vectorizer.
+    It detects consecutive operations that can be put together into vector
+    operations. The pass works bottom-up, across basic blocks, in search of
+    scalars to combine.
+  }];
+  let constructor = "mlir::vector::createSLPVectorizerPass()";
+  let dependentDialects = ["mlir::vector::VectorDialect"];
+}
+
 #endif // MLIR_DIALECT_VECTOR_TRANSFORMS_PASSES

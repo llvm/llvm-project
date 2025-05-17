@@ -12,6 +12,7 @@ add_mlir_dialect_library(MLIRVectorTransforms
   LowerVectorStep.cpp
   LowerVectorTransfer.cpp
   LowerVectorTranspose.cpp
+  SLPVectorizer.cpp
   SubsetOpInterfaceImpl.cpp
   VectorDistribute.cpp
   VectorDropLeadUnitDim.cpp
