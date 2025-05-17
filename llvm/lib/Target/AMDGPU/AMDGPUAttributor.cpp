@@ -1139,6 +1139,7 @@ struct AAAMDWavesPerEU : public AAAMDSizeRangeAttribute {
       Function *Func = getAssociatedFunction();
       LLVM_DEBUG(dbgs() << '[' << getName() << "] Call " << Caller->getName()
                         << "->" << Func->getName() << '\n');
+      (void)Func;
 
       const auto *CallerAA = A.getAAFor<AAAMDWavesPerEU>(
           *this, IRPosition::function(*Caller), DepClassTy::REQUIRED);
