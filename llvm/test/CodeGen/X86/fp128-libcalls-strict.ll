@@ -452,7 +452,7 @@ define fp128 @fma(fp128 %x, fp128 %y, fp128 %z) nounwind strictfp {
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    calll fmal
+; X86-NEXT:    calll fmaf128
 ; X86-NEXT:    addl $60, %esp
 ; X86-NEXT:    movaps (%esp), %xmm0
 ; X86-NEXT:    movaps %xmm0, (%esi)
@@ -473,7 +473,7 @@ define fp128 @fma(fp128 %x, fp128 %y, fp128 %z) nounwind strictfp {
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %r8
-; WIN-NEXT:    callq fmal
+; WIN-NEXT:    callq fmaf128
 ; WIN-NEXT:    addq $88, %rsp
 ; WIN-NEXT:    retq
 ;
@@ -500,7 +500,7 @@ define fp128 @fma(fp128 %x, fp128 %y, fp128 %z) nounwind strictfp {
 ; WIN-X86-NEXT:    pushl 16(%ebp)
 ; WIN-X86-NEXT:    pushl 12(%ebp)
 ; WIN-X86-NEXT:    pushl %eax
-; WIN-X86-NEXT:    calll _fmal
+; WIN-X86-NEXT:    calll _fmaf128
 ; WIN-X86-NEXT:    addl $52, %esp
 ; WIN-X86-NEXT:    movl (%esp), %eax
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -552,7 +552,7 @@ define fp128 @frem(fp128 %x, fp128 %y) nounwind strictfp {
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    calll fmodl
+; X86-NEXT:    calll fmodf128
 ; X86-NEXT:    addl $44, %esp
 ; X86-NEXT:    movaps (%esp), %xmm0
 ; X86-NEXT:    movaps %xmm0, (%esi)
@@ -570,7 +570,7 @@ define fp128 @frem(fp128 %x, fp128 %y) nounwind strictfp {
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
-; WIN-NEXT:    callq fmodl
+; WIN-NEXT:    callq fmodf128
 ; WIN-NEXT:    addq $72, %rsp
 ; WIN-NEXT:    retq
 ;
@@ -593,7 +593,7 @@ define fp128 @frem(fp128 %x, fp128 %y) nounwind strictfp {
 ; WIN-X86-NEXT:    pushl 16(%ebp)
 ; WIN-X86-NEXT:    pushl 12(%ebp)
 ; WIN-X86-NEXT:    pushl %eax
-; WIN-X86-NEXT:    calll _fmodl
+; WIN-X86-NEXT:    calll _fmodf128
 ; WIN-X86-NEXT:    addl $36, %esp
 ; WIN-X86-NEXT:    movl (%esp), %eax
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -641,7 +641,7 @@ define fp128 @ceil(fp128 %x) nounwind strictfp {
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    calll ceill
+; X86-NEXT:    calll ceilf128
 ; X86-NEXT:    addl $28, %esp
 ; X86-NEXT:    movaps (%esp), %xmm0
 ; X86-NEXT:    movaps %xmm0, (%esi)
@@ -656,7 +656,7 @@ define fp128 @ceil(fp128 %x) nounwind strictfp {
 ; WIN-NEXT:    movaps (%rcx), %xmm0
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; WIN-NEXT:    callq ceill
+; WIN-NEXT:    callq ceilf128
 ; WIN-NEXT:    addq $56, %rsp
 ; WIN-NEXT:    retq
 ;
@@ -675,7 +675,7 @@ define fp128 @ceil(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    pushl 16(%ebp)
 ; WIN-X86-NEXT:    pushl 12(%ebp)
 ; WIN-X86-NEXT:    pushl %eax
-; WIN-X86-NEXT:    calll _ceill
+; WIN-X86-NEXT:    calll _ceilf128
 ; WIN-X86-NEXT:    addl $20, %esp
 ; WIN-X86-NEXT:    movl (%esp), %eax
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -723,7 +723,7 @@ define fp128 @acos(fp128 %x) nounwind strictfp {
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    calll acosl
+; X86-NEXT:    calll acosf128
 ; X86-NEXT:    addl $28, %esp
 ; X86-NEXT:    movaps (%esp), %xmm0
 ; X86-NEXT:    movaps %xmm0, (%esi)
@@ -738,7 +738,7 @@ define fp128 @acos(fp128 %x) nounwind strictfp {
 ; WIN-NEXT:    movaps (%rcx), %xmm0
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; WIN-NEXT:    callq acosl
+; WIN-NEXT:    callq acosf128
 ; WIN-NEXT:    addq $56, %rsp
 ; WIN-NEXT:    retq
 ;
@@ -757,7 +757,7 @@ define fp128 @acos(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    pushl 16(%ebp)
 ; WIN-X86-NEXT:    pushl 12(%ebp)
 ; WIN-X86-NEXT:    pushl %eax
-; WIN-X86-NEXT:    calll _acosl
+; WIN-X86-NEXT:    calll _acosf128
 ; WIN-X86-NEXT:    addl $20, %esp
 ; WIN-X86-NEXT:    movl (%esp), %eax
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -805,7 +805,7 @@ define fp128 @cos(fp128 %x) nounwind strictfp {
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    calll cosl
+; X86-NEXT:    calll cosf128
 ; X86-NEXT:    addl $28, %esp
 ; X86-NEXT:    movaps (%esp), %xmm0
 ; X86-NEXT:    movaps %xmm0, (%esi)
@@ -820,7 +820,7 @@ define fp128 @cos(fp128 %x) nounwind strictfp {
 ; WIN-NEXT:    movaps (%rcx), %xmm0
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; WIN-NEXT:    callq cosl
+; WIN-NEXT:    callq cosf128
 ; WIN-NEXT:    addq $56, %rsp
 ; WIN-NEXT:    retq
 ;
@@ -839,7 +839,7 @@ define fp128 @cos(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    pushl 16(%ebp)
 ; WIN-X86-NEXT:    pushl 12(%ebp)
 ; WIN-X86-NEXT:    pushl %eax
-; WIN-X86-NEXT:    calll _cosl
+; WIN-X86-NEXT:    calll _cosf128
 ; WIN-X86-NEXT:    addl $20, %esp
 ; WIN-X86-NEXT:    movl (%esp), %eax
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -887,7 +887,7 @@ define fp128 @cosh(fp128 %x) nounwind strictfp {
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    calll coshl
+; X86-NEXT:    calll coshf128
 ; X86-NEXT:    addl $28, %esp
 ; X86-NEXT:    movaps (%esp), %xmm0
 ; X86-NEXT:    movaps %xmm0, (%esi)
@@ -902,7 +902,7 @@ define fp128 @cosh(fp128 %x) nounwind strictfp {
 ; WIN-NEXT:    movaps (%rcx), %xmm0
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; WIN-NEXT:    callq coshl
+; WIN-NEXT:    callq coshf128
 ; WIN-NEXT:    addq $56, %rsp
 ; WIN-NEXT:    retq
 ;
@@ -921,7 +921,7 @@ define fp128 @cosh(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    pushl 16(%ebp)
 ; WIN-X86-NEXT:    pushl 12(%ebp)
 ; WIN-X86-NEXT:    pushl %eax
-; WIN-X86-NEXT:    calll _coshl
+; WIN-X86-NEXT:    calll _coshf128
 ; WIN-X86-NEXT:    addl $20, %esp
 ; WIN-X86-NEXT:    movl (%esp), %eax
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -969,7 +969,7 @@ define fp128 @exp(fp128 %x) nounwind strictfp {
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    calll expl
+; X86-NEXT:    calll expf128
 ; X86-NEXT:    addl $28, %esp
 ; X86-NEXT:    movaps (%esp), %xmm0
 ; X86-NEXT:    movaps %xmm0, (%esi)
@@ -984,7 +984,7 @@ define fp128 @exp(fp128 %x) nounwind strictfp {
 ; WIN-NEXT:    movaps (%rcx), %xmm0
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; WIN-NEXT:    callq expl
+; WIN-NEXT:    callq expf128
 ; WIN-NEXT:    addq $56, %rsp
 ; WIN-NEXT:    retq
 ;
@@ -1003,7 +1003,7 @@ define fp128 @exp(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    pushl 16(%ebp)
 ; WIN-X86-NEXT:    pushl 12(%ebp)
 ; WIN-X86-NEXT:    pushl %eax
-; WIN-X86-NEXT:    calll _expl
+; WIN-X86-NEXT:    calll _expf128
 ; WIN-X86-NEXT:    addl $20, %esp
 ; WIN-X86-NEXT:    movl (%esp), %eax
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -1051,7 +1051,7 @@ define fp128 @exp2(fp128 %x) nounwind strictfp {
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    calll exp2l
+; X86-NEXT:    calll exp2f128
 ; X86-NEXT:    addl $28, %esp
 ; X86-NEXT:    movaps (%esp), %xmm0
 ; X86-NEXT:    movaps %xmm0, (%esi)
@@ -1066,7 +1066,7 @@ define fp128 @exp2(fp128 %x) nounwind strictfp {
 ; WIN-NEXT:    movaps (%rcx), %xmm0
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; WIN-NEXT:    callq exp2l
+; WIN-NEXT:    callq exp2f128
 ; WIN-NEXT:    addq $56, %rsp
 ; WIN-NEXT:    retq
 ;
@@ -1085,7 +1085,7 @@ define fp128 @exp2(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    pushl 16(%ebp)
 ; WIN-X86-NEXT:    pushl 12(%ebp)
 ; WIN-X86-NEXT:    pushl %eax
-; WIN-X86-NEXT:    calll _exp2l
+; WIN-X86-NEXT:    calll _exp2f128
 ; WIN-X86-NEXT:    addl $20, %esp
 ; WIN-X86-NEXT:    movl (%esp), %eax
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -1133,7 +1133,7 @@ define fp128 @floor(fp128 %x) nounwind strictfp {
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    calll floorl
+; X86-NEXT:    calll floorf128
 ; X86-NEXT:    addl $28, %esp
 ; X86-NEXT:    movaps (%esp), %xmm0
 ; X86-NEXT:    movaps %xmm0, (%esi)
@@ -1148,7 +1148,7 @@ define fp128 @floor(fp128 %x) nounwind strictfp {
 ; WIN-NEXT:    movaps (%rcx), %xmm0
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; WIN-NEXT:    callq floorl
+; WIN-NEXT:    callq floorf128
 ; WIN-NEXT:    addq $56, %rsp
 ; WIN-NEXT:    retq
 ;
@@ -1167,7 +1167,7 @@ define fp128 @floor(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    pushl 16(%ebp)
 ; WIN-X86-NEXT:    pushl 12(%ebp)
 ; WIN-X86-NEXT:    pushl %eax
-; WIN-X86-NEXT:    calll _floorl
+; WIN-X86-NEXT:    calll _floorf128
 ; WIN-X86-NEXT:    addl $20, %esp
 ; WIN-X86-NEXT:    movl (%esp), %eax
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -1215,7 +1215,7 @@ define fp128 @log(fp128 %x) nounwind strictfp {
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    calll logl
+; X86-NEXT:    calll logf128
 ; X86-NEXT:    addl $28, %esp
 ; X86-NEXT:    movaps (%esp), %xmm0
 ; X86-NEXT:    movaps %xmm0, (%esi)
@@ -1230,7 +1230,7 @@ define fp128 @log(fp128 %x) nounwind strictfp {
 ; WIN-NEXT:    movaps (%rcx), %xmm0
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; WIN-NEXT:    callq logl
+; WIN-NEXT:    callq logf128
 ; WIN-NEXT:    addq $56, %rsp
 ; WIN-NEXT:    retq
 ;
@@ -1249,7 +1249,7 @@ define fp128 @log(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    pushl 16(%ebp)
 ; WIN-X86-NEXT:    pushl 12(%ebp)
 ; WIN-X86-NEXT:    pushl %eax
-; WIN-X86-NEXT:    calll _logl
+; WIN-X86-NEXT:    calll _logf128
 ; WIN-X86-NEXT:    addl $20, %esp
 ; WIN-X86-NEXT:    movl (%esp), %eax
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -1297,7 +1297,7 @@ define fp128 @log10(fp128 %x) nounwind strictfp {
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    calll log10l
+; X86-NEXT:    calll log10f128
 ; X86-NEXT:    addl $28, %esp
 ; X86-NEXT:    movaps (%esp), %xmm0
 ; X86-NEXT:    movaps %xmm0, (%esi)
@@ -1312,7 +1312,7 @@ define fp128 @log10(fp128 %x) nounwind strictfp {
 ; WIN-NEXT:    movaps (%rcx), %xmm0
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; WIN-NEXT:    callq log10l
+; WIN-NEXT:    callq log10f128
 ; WIN-NEXT:    addq $56, %rsp
 ; WIN-NEXT:    retq
 ;
@@ -1331,7 +1331,7 @@ define fp128 @log10(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    pushl 16(%ebp)
 ; WIN-X86-NEXT:    pushl 12(%ebp)
 ; WIN-X86-NEXT:    pushl %eax
-; WIN-X86-NEXT:    calll _log10l
+; WIN-X86-NEXT:    calll _log10f128
 ; WIN-X86-NEXT:    addl $20, %esp
 ; WIN-X86-NEXT:    movl (%esp), %eax
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -1379,7 +1379,7 @@ define fp128 @log2(fp128 %x) nounwind strictfp {
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    calll log2l
+; X86-NEXT:    calll log2f128
 ; X86-NEXT:    addl $28, %esp
 ; X86-NEXT:    movaps (%esp), %xmm0
 ; X86-NEXT:    movaps %xmm0, (%esi)
@@ -1394,7 +1394,7 @@ define fp128 @log2(fp128 %x) nounwind strictfp {
 ; WIN-NEXT:    movaps (%rcx), %xmm0
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; WIN-NEXT:    callq log2l
+; WIN-NEXT:    callq log2f128
 ; WIN-NEXT:    addq $56, %rsp
 ; WIN-NEXT:    retq
 ;
@@ -1413,7 +1413,7 @@ define fp128 @log2(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    pushl 16(%ebp)
 ; WIN-X86-NEXT:    pushl 12(%ebp)
 ; WIN-X86-NEXT:    pushl %eax
-; WIN-X86-NEXT:    calll _log2l
+; WIN-X86-NEXT:    calll _log2f128
 ; WIN-X86-NEXT:    addl $20, %esp
 ; WIN-X86-NEXT:    movl (%esp), %eax
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -1465,7 +1465,7 @@ define fp128 @maxnum(fp128 %x, fp128 %y) nounwind strictfp {
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    calll fmaxl
+; X86-NEXT:    calll fmaxf128
 ; X86-NEXT:    addl $44, %esp
 ; X86-NEXT:    movaps (%esp), %xmm0
 ; X86-NEXT:    movaps %xmm0, (%esi)
@@ -1483,7 +1483,7 @@ define fp128 @maxnum(fp128 %x, fp128 %y) nounwind strictfp {
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
-; WIN-NEXT:    callq fmaxl
+; WIN-NEXT:    callq fmaxf128
 ; WIN-NEXT:    addq $72, %rsp
 ; WIN-NEXT:    retq
 ;
@@ -1506,7 +1506,7 @@ define fp128 @maxnum(fp128 %x, fp128 %y) nounwind strictfp {
 ; WIN-X86-NEXT:    pushl 16(%ebp)
 ; WIN-X86-NEXT:    pushl 12(%ebp)
 ; WIN-X86-NEXT:    pushl %eax
-; WIN-X86-NEXT:    calll _fmaxl
+; WIN-X86-NEXT:    calll _fmaxf128
 ; WIN-X86-NEXT:    addl $36, %esp
 ; WIN-X86-NEXT:    movl (%esp), %eax
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -1558,7 +1558,7 @@ define fp128 @minnum(fp128 %x, fp128 %y) nounwind strictfp {
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    calll fminl
+; X86-NEXT:    calll fminf128
 ; X86-NEXT:    addl $44, %esp
 ; X86-NEXT:    movaps (%esp), %xmm0
 ; X86-NEXT:    movaps %xmm0, (%esi)
@@ -1576,7 +1576,7 @@ define fp128 @minnum(fp128 %x, fp128 %y) nounwind strictfp {
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
-; WIN-NEXT:    callq fminl
+; WIN-NEXT:    callq fminf128
 ; WIN-NEXT:    addq $72, %rsp
 ; WIN-NEXT:    retq
 ;
@@ -1599,7 +1599,7 @@ define fp128 @minnum(fp128 %x, fp128 %y) nounwind strictfp {
 ; WIN-X86-NEXT:    pushl 16(%ebp)
 ; WIN-X86-NEXT:    pushl 12(%ebp)
 ; WIN-X86-NEXT:    pushl %eax
-; WIN-X86-NEXT:    calll _fminl
+; WIN-X86-NEXT:    calll _fminf128
 ; WIN-X86-NEXT:    addl $36, %esp
 ; WIN-X86-NEXT:    movl (%esp), %eax
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -1647,7 +1647,7 @@ define fp128 @nearbyint(fp128 %x) nounwind strictfp {
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    calll nearbyintl
+; X86-NEXT:    calll nearbyintf128
 ; X86-NEXT:    addl $28, %esp
 ; X86-NEXT:    movaps (%esp), %xmm0
 ; X86-NEXT:    movaps %xmm0, (%esi)
@@ -1662,7 +1662,7 @@ define fp128 @nearbyint(fp128 %x) nounwind strictfp {
 ; WIN-NEXT:    movaps (%rcx), %xmm0
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; WIN-NEXT:    callq nearbyintl
+; WIN-NEXT:    callq nearbyintf128
 ; WIN-NEXT:    addq $56, %rsp
 ; WIN-NEXT:    retq
 ;
@@ -1681,7 +1681,7 @@ define fp128 @nearbyint(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    pushl 16(%ebp)
 ; WIN-X86-NEXT:    pushl 12(%ebp)
 ; WIN-X86-NEXT:    pushl %eax
-; WIN-X86-NEXT:    calll _nearbyintl
+; WIN-X86-NEXT:    calll _nearbyintf128
 ; WIN-X86-NEXT:    addl $20, %esp
 ; WIN-X86-NEXT:    movl (%esp), %eax
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -1733,7 +1733,7 @@ define fp128 @pow(fp128 %x, fp128 %y) nounwind strictfp {
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    calll powl
+; X86-NEXT:    calll powf128
 ; X86-NEXT:    addl $44, %esp
 ; X86-NEXT:    movaps (%esp), %xmm0
 ; X86-NEXT:    movaps %xmm0, (%esi)
@@ -1751,7 +1751,7 @@ define fp128 @pow(fp128 %x, fp128 %y) nounwind strictfp {
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
-; WIN-NEXT:    callq powl
+; WIN-NEXT:    callq powf128
 ; WIN-NEXT:    addq $72, %rsp
 ; WIN-NEXT:    retq
 ;
@@ -1774,7 +1774,7 @@ define fp128 @pow(fp128 %x, fp128 %y) nounwind strictfp {
 ; WIN-X86-NEXT:    pushl 16(%ebp)
 ; WIN-X86-NEXT:    pushl 12(%ebp)
 ; WIN-X86-NEXT:    pushl %eax
-; WIN-X86-NEXT:    calll _powl
+; WIN-X86-NEXT:    calll _powf128
 ; WIN-X86-NEXT:    addl $36, %esp
 ; WIN-X86-NEXT:    movl (%esp), %eax
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -1913,7 +1913,7 @@ define fp128 @rint(fp128 %x) nounwind strictfp {
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    calll rintl
+; X86-NEXT:    calll rintf128
 ; X86-NEXT:    addl $28, %esp
 ; X86-NEXT:    movaps (%esp), %xmm0
 ; X86-NEXT:    movaps %xmm0, (%esi)
@@ -1928,7 +1928,7 @@ define fp128 @rint(fp128 %x) nounwind strictfp {
 ; WIN-NEXT:    movaps (%rcx), %xmm0
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; WIN-NEXT:    callq rintl
+; WIN-NEXT:    callq rintf128
 ; WIN-NEXT:    addq $56, %rsp
 ; WIN-NEXT:    retq
 ;
@@ -1947,7 +1947,7 @@ define fp128 @rint(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    pushl 16(%ebp)
 ; WIN-X86-NEXT:    pushl 12(%ebp)
 ; WIN-X86-NEXT:    pushl %eax
-; WIN-X86-NEXT:    calll _rintl
+; WIN-X86-NEXT:    calll _rintf128
 ; WIN-X86-NEXT:    addl $20, %esp
 ; WIN-X86-NEXT:    movl (%esp), %eax
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -1995,7 +1995,7 @@ define fp128 @round(fp128 %x) nounwind strictfp {
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    calll roundl
+; X86-NEXT:    calll roundf128
 ; X86-NEXT:    addl $28, %esp
 ; X86-NEXT:    movaps (%esp), %xmm0
 ; X86-NEXT:    movaps %xmm0, (%esi)
@@ -2010,7 +2010,7 @@ define fp128 @round(fp128 %x) nounwind strictfp {
 ; WIN-NEXT:    movaps (%rcx), %xmm0
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; WIN-NEXT:    callq roundl
+; WIN-NEXT:    callq roundf128
 ; WIN-NEXT:    addq $56, %rsp
 ; WIN-NEXT:    retq
 ;
@@ -2029,7 +2029,7 @@ define fp128 @round(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    pushl 16(%ebp)
 ; WIN-X86-NEXT:    pushl 12(%ebp)
 ; WIN-X86-NEXT:    pushl %eax
-; WIN-X86-NEXT:    calll _roundl
+; WIN-X86-NEXT:    calll _roundf128
 ; WIN-X86-NEXT:    addl $20, %esp
 ; WIN-X86-NEXT:    movl (%esp), %eax
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -2077,7 +2077,7 @@ define fp128 @roundeven(fp128 %x) nounwind strictfp {
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    calll roundevenl
+; X86-NEXT:    calll roundevenf128
 ; X86-NEXT:    addl $28, %esp
 ; X86-NEXT:    movaps (%esp), %xmm0
 ; X86-NEXT:    movaps %xmm0, (%esi)
@@ -2092,7 +2092,7 @@ define fp128 @roundeven(fp128 %x) nounwind strictfp {
 ; WIN-NEXT:    movaps (%rcx), %xmm0
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; WIN-NEXT:    callq roundevenl
+; WIN-NEXT:    callq roundevenf128
 ; WIN-NEXT:    addq $56, %rsp
 ; WIN-NEXT:    retq
 ;
@@ -2111,7 +2111,7 @@ define fp128 @roundeven(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    pushl 16(%ebp)
 ; WIN-X86-NEXT:    pushl 12(%ebp)
 ; WIN-X86-NEXT:    pushl %eax
-; WIN-X86-NEXT:    calll _roundevenl
+; WIN-X86-NEXT:    calll _roundevenf128
 ; WIN-X86-NEXT:    addl $20, %esp
 ; WIN-X86-NEXT:    movl (%esp), %eax
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -2159,7 +2159,7 @@ define fp128 @asin(fp128 %x) nounwind strictfp {
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    calll asinl
+; X86-NEXT:    calll asinf128
 ; X86-NEXT:    addl $28, %esp
 ; X86-NEXT:    movaps (%esp), %xmm0
 ; X86-NEXT:    movaps %xmm0, (%esi)
@@ -2174,7 +2174,7 @@ define fp128 @asin(fp128 %x) nounwind strictfp {
 ; WIN-NEXT:    movaps (%rcx), %xmm0
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; WIN-NEXT:    callq asinl
+; WIN-NEXT:    callq asinf128
 ; WIN-NEXT:    addq $56, %rsp
 ; WIN-NEXT:    retq
 ;
@@ -2193,7 +2193,7 @@ define fp128 @asin(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    pushl 16(%ebp)
 ; WIN-X86-NEXT:    pushl 12(%ebp)
 ; WIN-X86-NEXT:    pushl %eax
-; WIN-X86-NEXT:    calll _asinl
+; WIN-X86-NEXT:    calll _asinf128
 ; WIN-X86-NEXT:    addl $20, %esp
 ; WIN-X86-NEXT:    movl (%esp), %eax
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -2241,7 +2241,7 @@ define fp128 @sin(fp128 %x) nounwind strictfp {
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    calll sinl
+; X86-NEXT:    calll sinf128
 ; X86-NEXT:    addl $28, %esp
 ; X86-NEXT:    movaps (%esp), %xmm0
 ; X86-NEXT:    movaps %xmm0, (%esi)
@@ -2256,7 +2256,7 @@ define fp128 @sin(fp128 %x) nounwind strictfp {
 ; WIN-NEXT:    movaps (%rcx), %xmm0
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; WIN-NEXT:    callq sinl
+; WIN-NEXT:    callq sinf128
 ; WIN-NEXT:    addq $56, %rsp
 ; WIN-NEXT:    retq
 ;
@@ -2275,7 +2275,7 @@ define fp128 @sin(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    pushl 16(%ebp)
 ; WIN-X86-NEXT:    pushl 12(%ebp)
 ; WIN-X86-NEXT:    pushl %eax
-; WIN-X86-NEXT:    calll _sinl
+; WIN-X86-NEXT:    calll _sinf128
 ; WIN-X86-NEXT:    addl $20, %esp
 ; WIN-X86-NEXT:    movl (%esp), %eax
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -2323,7 +2323,7 @@ define fp128 @sinh(fp128 %x) nounwind strictfp {
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    calll sinhl
+; X86-NEXT:    calll sinhf128
 ; X86-NEXT:    addl $28, %esp
 ; X86-NEXT:    movaps (%esp), %xmm0
 ; X86-NEXT:    movaps %xmm0, (%esi)
@@ -2338,7 +2338,7 @@ define fp128 @sinh(fp128 %x) nounwind strictfp {
 ; WIN-NEXT:    movaps (%rcx), %xmm0
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; WIN-NEXT:    callq sinhl
+; WIN-NEXT:    callq sinhf128
 ; WIN-NEXT:    addq $56, %rsp
 ; WIN-NEXT:    retq
 ;
@@ -2357,7 +2357,7 @@ define fp128 @sinh(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    pushl 16(%ebp)
 ; WIN-X86-NEXT:    pushl 12(%ebp)
 ; WIN-X86-NEXT:    pushl %eax
-; WIN-X86-NEXT:    calll _sinhl
+; WIN-X86-NEXT:    calll _sinhf128
 ; WIN-X86-NEXT:    addl $20, %esp
 ; WIN-X86-NEXT:    movl (%esp), %eax
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -2405,7 +2405,7 @@ define fp128 @sqrt(fp128 %x) nounwind strictfp {
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    calll sqrtl
+; X86-NEXT:    calll sqrtf128
 ; X86-NEXT:    addl $28, %esp
 ; X86-NEXT:    movaps (%esp), %xmm0
 ; X86-NEXT:    movaps %xmm0, (%esi)
@@ -2420,7 +2420,7 @@ define fp128 @sqrt(fp128 %x) nounwind strictfp {
 ; WIN-NEXT:    movaps (%rcx), %xmm0
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; WIN-NEXT:    callq sqrtl
+; WIN-NEXT:    callq sqrtf128
 ; WIN-NEXT:    addq $56, %rsp
 ; WIN-NEXT:    retq
 ;
@@ -2439,7 +2439,7 @@ define fp128 @sqrt(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    pushl 16(%ebp)
 ; WIN-X86-NEXT:    pushl 12(%ebp)
 ; WIN-X86-NEXT:    pushl %eax
-; WIN-X86-NEXT:    calll _sqrtl
+; WIN-X86-NEXT:    calll _sqrtf128
 ; WIN-X86-NEXT:    addl $20, %esp
 ; WIN-X86-NEXT:    movl (%esp), %eax
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -2487,7 +2487,7 @@ define fp128 @atan(fp128 %x) nounwind strictfp {
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    calll atanl
+; X86-NEXT:    calll atanf128
 ; X86-NEXT:    addl $28, %esp
 ; X86-NEXT:    movaps (%esp), %xmm0
 ; X86-NEXT:    movaps %xmm0, (%esi)
@@ -2502,7 +2502,7 @@ define fp128 @atan(fp128 %x) nounwind strictfp {
 ; WIN-NEXT:    movaps (%rcx), %xmm0
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; WIN-NEXT:    callq atanl
+; WIN-NEXT:    callq atanf128
 ; WIN-NEXT:    addq $56, %rsp
 ; WIN-NEXT:    retq
 ;
@@ -2521,7 +2521,7 @@ define fp128 @atan(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    pushl 16(%ebp)
 ; WIN-X86-NEXT:    pushl 12(%ebp)
 ; WIN-X86-NEXT:    pushl %eax
-; WIN-X86-NEXT:    calll _atanl
+; WIN-X86-NEXT:    calll _atanf128
 ; WIN-X86-NEXT:    addl $20, %esp
 ; WIN-X86-NEXT:    movl (%esp), %eax
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -2573,7 +2573,7 @@ define fp128 @atan2(fp128 %x, fp128 %y) nounwind strictfp {
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    calll atan2l
+; X86-NEXT:    calll atan2f128
 ; X86-NEXT:    addl $44, %esp
 ; X86-NEXT:    movaps (%esp), %xmm0
 ; X86-NEXT:    movaps %xmm0, (%esi)
@@ -2591,7 +2591,7 @@ define fp128 @atan2(fp128 %x, fp128 %y) nounwind strictfp {
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
-; WIN-NEXT:    callq atan2l
+; WIN-NEXT:    callq atan2f128
 ; WIN-NEXT:    addq $72, %rsp
 ; WIN-NEXT:    retq
 ;
@@ -2614,7 +2614,7 @@ define fp128 @atan2(fp128 %x, fp128 %y) nounwind strictfp {
 ; WIN-X86-NEXT:    pushl 16(%ebp)
 ; WIN-X86-NEXT:    pushl 12(%ebp)
 ; WIN-X86-NEXT:    pushl %eax
-; WIN-X86-NEXT:    calll _atan2l
+; WIN-X86-NEXT:    calll _atan2f128
 ; WIN-X86-NEXT:    addl $36, %esp
 ; WIN-X86-NEXT:    movl (%esp), %eax
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -2662,7 +2662,7 @@ define fp128 @tan(fp128 %x) nounwind strictfp {
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    calll tanl
+; X86-NEXT:    calll tanf128
 ; X86-NEXT:    addl $28, %esp
 ; X86-NEXT:    movaps (%esp), %xmm0
 ; X86-NEXT:    movaps %xmm0, (%esi)
@@ -2677,7 +2677,7 @@ define fp128 @tan(fp128 %x) nounwind strictfp {
 ; WIN-NEXT:    movaps (%rcx), %xmm0
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; WIN-NEXT:    callq tanl
+; WIN-NEXT:    callq tanf128
 ; WIN-NEXT:    addq $56, %rsp
 ; WIN-NEXT:    retq
 ;
@@ -2696,7 +2696,7 @@ define fp128 @tan(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    pushl 16(%ebp)
 ; WIN-X86-NEXT:    pushl 12(%ebp)
 ; WIN-X86-NEXT:    pushl %eax
-; WIN-X86-NEXT:    calll _tanl
+; WIN-X86-NEXT:    calll _tanf128
 ; WIN-X86-NEXT:    addl $20, %esp
 ; WIN-X86-NEXT:    movl (%esp), %eax
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -2744,7 +2744,7 @@ define fp128 @tanh(fp128 %x) nounwind strictfp {
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    calll tanhl
+; X86-NEXT:    calll tanhf128
 ; X86-NEXT:    addl $28, %esp
 ; X86-NEXT:    movaps (%esp), %xmm0
 ; X86-NEXT:    movaps %xmm0, (%esi)
@@ -2759,7 +2759,7 @@ define fp128 @tanh(fp128 %x) nounwind strictfp {
 ; WIN-NEXT:    movaps (%rcx), %xmm0
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; WIN-NEXT:    callq tanhl
+; WIN-NEXT:    callq tanhf128
 ; WIN-NEXT:    addq $56, %rsp
 ; WIN-NEXT:    retq
 ;
@@ -2778,7 +2778,7 @@ define fp128 @tanh(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    pushl 16(%ebp)
 ; WIN-X86-NEXT:    pushl 12(%ebp)
 ; WIN-X86-NEXT:    pushl %eax
-; WIN-X86-NEXT:    calll _tanhl
+; WIN-X86-NEXT:    calll _tanhf128
 ; WIN-X86-NEXT:    addl $20, %esp
 ; WIN-X86-NEXT:    movl (%esp), %eax
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -2826,7 +2826,7 @@ define fp128 @trunc(fp128 %x) nounwind strictfp {
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    calll truncl
+; X86-NEXT:    calll truncf128
 ; X86-NEXT:    addl $28, %esp
 ; X86-NEXT:    movaps (%esp), %xmm0
 ; X86-NEXT:    movaps %xmm0, (%esi)
@@ -2841,7 +2841,7 @@ define fp128 @trunc(fp128 %x) nounwind strictfp {
 ; WIN-NEXT:    movaps (%rcx), %xmm0
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; WIN-NEXT:    callq truncl
+; WIN-NEXT:    callq truncf128
 ; WIN-NEXT:    addq $56, %rsp
 ; WIN-NEXT:    retq
 ;
@@ -2860,7 +2860,7 @@ define fp128 @trunc(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    pushl 16(%ebp)
 ; WIN-X86-NEXT:    pushl 12(%ebp)
 ; WIN-X86-NEXT:    pushl %eax
-; WIN-X86-NEXT:    calll _truncl
+; WIN-X86-NEXT:    calll _truncf128
 ; WIN-X86-NEXT:    addl $20, %esp
 ; WIN-X86-NEXT:    movl (%esp), %eax
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -2903,7 +2903,7 @@ define i32 @lrint(fp128 %x) nounwind strictfp {
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    calll lrintl
+; X86-NEXT:    calll lrintf128
 ; X86-NEXT:    addl $28, %esp
 ; X86-NEXT:    retl
 ;
@@ -2913,7 +2913,7 @@ define i32 @lrint(fp128 %x) nounwind strictfp {
 ; WIN-NEXT:    movaps (%rcx), %xmm0
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; WIN-NEXT:    callq lrintl
+; WIN-NEXT:    callq lrintf128
 ; WIN-NEXT:    addq $56, %rsp
 ; WIN-NEXT:    retq
 ;
@@ -2923,7 +2923,7 @@ define i32 @lrint(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; WIN-X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; WIN-X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; WIN-X86-NEXT:    calll _lrintl
+; WIN-X86-NEXT:    calll _lrintf128
 ; WIN-X86-NEXT:    addl $16, %esp
 ; WIN-X86-NEXT:    retl
 entry:
@@ -2953,7 +2953,7 @@ define i64 @llrint(fp128 %x) nounwind strictfp {
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    calll llrintl
+; X86-NEXT:    calll llrintf128
 ; X86-NEXT:    addl $28, %esp
 ; X86-NEXT:    retl
 ;
@@ -2963,7 +2963,7 @@ define i64 @llrint(fp128 %x) nounwind strictfp {
 ; WIN-NEXT:    movaps (%rcx), %xmm0
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; WIN-NEXT:    callq llrintl
+; WIN-NEXT:    callq llrintf128
 ; WIN-NEXT:    addq $56, %rsp
 ; WIN-NEXT:    retq
 ;
@@ -2973,7 +2973,7 @@ define i64 @llrint(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; WIN-X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; WIN-X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; WIN-X86-NEXT:    calll _llrintl
+; WIN-X86-NEXT:    calll _llrintf128
 ; WIN-X86-NEXT:    addl $16, %esp
 ; WIN-X86-NEXT:    retl
 entry:
@@ -3003,7 +3003,7 @@ define i32 @lround(fp128 %x) nounwind strictfp {
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    calll lroundl
+; X86-NEXT:    calll lroundf128
 ; X86-NEXT:    addl $28, %esp
 ; X86-NEXT:    retl
 ;
@@ -3013,7 +3013,7 @@ define i32 @lround(fp128 %x) nounwind strictfp {
 ; WIN-NEXT:    movaps (%rcx), %xmm0
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; WIN-NEXT:    callq lroundl
+; WIN-NEXT:    callq lroundf128
 ; WIN-NEXT:    addq $56, %rsp
 ; WIN-NEXT:    retq
 ;
@@ -3023,7 +3023,7 @@ define i32 @lround(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; WIN-X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; WIN-X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; WIN-X86-NEXT:    calll _lroundl
+; WIN-X86-NEXT:    calll _lroundf128
 ; WIN-X86-NEXT:    addl $16, %esp
 ; WIN-X86-NEXT:    retl
 entry:
@@ -3053,7 +3053,7 @@ define i64 @llround(fp128 %x) nounwind strictfp {
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    calll llroundl
+; X86-NEXT:    calll llroundf128
 ; X86-NEXT:    addl $28, %esp
 ; X86-NEXT:    retl
 ;
@@ -3063,7 +3063,7 @@ define i64 @llround(fp128 %x) nounwind strictfp {
 ; WIN-NEXT:    movaps (%rcx), %xmm0
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; WIN-NEXT:    callq llroundl
+; WIN-NEXT:    callq llroundf128
 ; WIN-NEXT:    addq $56, %rsp
 ; WIN-NEXT:    retq
 ;
@@ -3073,7 +3073,7 @@ define i64 @llround(fp128 %x) nounwind strictfp {
 ; WIN-X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; WIN-X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; WIN-X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; WIN-X86-NEXT:    calll _llroundl
+; WIN-X86-NEXT:    calll _llroundf128
 ; WIN-X86-NEXT:    addl $16, %esp
 ; WIN-X86-NEXT:    retl
 entry:

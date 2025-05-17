@@ -51,7 +51,7 @@ define double @f2_errno(double %x) {
 
 define fp128 @f3(fp128 %x) {
 ; CHECK-OPT-LABEL: f3:
-; CHECK-OPT: brasl %r14, sincosl@PLT
+; CHECK-OPT: brasl %r14, sincosf128@PLT
 ; CHECK-OPT: axbr
   %tmp1 = call fp128 @sinl(fp128 %x) readnone
   %tmp2 = call fp128 @cosl(fp128 %x) readnone

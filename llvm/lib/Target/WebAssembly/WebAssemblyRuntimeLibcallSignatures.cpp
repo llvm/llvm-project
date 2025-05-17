@@ -535,6 +535,7 @@ struct StaticLibcallNameMap {
 #undef HANDLE_LIBCALL
     };
     for (const auto &NameLibcall : NameLibcalls) {
+      fprintf(stderr, "libcall: %s", NameLibcall.first);
       if (NameLibcall.first != nullptr &&
           getRuntimeLibcallSignatures().Table[NameLibcall.second] !=
               unsupported) {
@@ -543,6 +544,53 @@ struct StaticLibcallNameMap {
         Map[NameLibcall.first] = NameLibcall.second;
       }
     }
+
+    // Libcalls from the .def file use `*f128` symbols by default, but for
+    // Wasm wind up fixed up to `*l` versions. Add these to the map so we can
+    // work with either (`long double` is f128 on wasm).
+    Map["acosl"] = RTLIB::ACOS_F128;
+    Map["asinl"] = RTLIB::ASIN_F128;
+    Map["atan2l"] = RTLIB::ATAN2_F128;
+    Map["atanl"] = RTLIB::ATAN_F128;
+    Map["cbrtl"] = RTLIB::CBRT_F128;
+    Map["ceill"] = RTLIB::CEIL_F128;
+    Map["copysignl"] = RTLIB::COPYSIGN_F128;
+    Map["coshl"] = RTLIB::COSH_F128;
+    Map["cosl"] = RTLIB::COS_F128;
+    Map["exp10l"] = RTLIB::EXP10_F128;
+    Map["exp2l"] = RTLIB::EXP2_F128;
+    Map["expl"] = RTLIB::EXP_F128;
+    Map["floorl"] = RTLIB::FLOOR_F128;
+    Map["fmal"] = RTLIB::FMA_F128;
+    Map["fmaximum_numl"] = RTLIB::FMAXIMUMNUM_F128;
+    Map["fmaximuml"] = RTLIB::FMAXIMUM_F128;
+    Map["fmaxl"] = RTLIB::FMAX_F128;
+    Map["fminimum_numl"] = RTLIB::FMINIMUMNUM_F128;
+    Map["fminimuml"] = RTLIB::FMINIMUM_F128;
+    Map["fminl"] = RTLIB::FMIN_F128;
+    Map["fmodl"] = RTLIB::REM_F128;
+    Map["frexpl"] = RTLIB::FREXP_F128;
+    Map["ldexpl"] = RTLIB::LDEXP_F128;
+    Map["llrintl"] = RTLIB::LLRINT_F128;
+    Map["llroundl"] = RTLIB::LLROUND_F128;
+    Map["log10l"] = RTLIB::LOG10_F128;
+    Map["log2l"] = RTLIB::LOG2_F128;
+    Map["logl"] = RTLIB::LOG_F128;
+    Map["lrintl"] = RTLIB::LRINT_F128;
+    Map["lroundl"] = RTLIB::LROUND_F128;
+    Map["modfl"] = RTLIB::MODF_F128;
+    Map["nearbyintl"] = RTLIB::NEARBYINT_F128;
+    Map["powl"] = RTLIB::POW_F128;
+    Map["rintl"] = RTLIB::RINT_F128;
+    Map["roundevenl"] = RTLIB::ROUNDEVEN_F128;
+    Map["roundl"] = RTLIB::ROUND_F128;
+    Map["sincospil"] = RTLIB::SINCOSPI_F128;
+    Map["sinhl"] = RTLIB::SINH_F128;
+    Map["sinl"] = RTLIB::SIN_F128;
+    Map["sqrtl"] = RTLIB::SQRT_F128;
+    Map["tanhl"] = RTLIB::TANH_F128;
+    Map["tanl"] = RTLIB::TAN_F128;
+    Map["truncl"] = RTLIB::TRUNC_F128;
 
     Map["emscripten_return_address"] = RTLIB::RETURN_ADDRESS;
   }
