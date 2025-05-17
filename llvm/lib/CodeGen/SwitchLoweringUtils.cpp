@@ -362,6 +362,39 @@ void SwitchCG::SwitchLowering::findBitTestClusters(CaseClusterVector &Clusters,
     }
   }
   Clusters.resize(DstIndex);
+
+  unsigned ZeroIdx = -1;
+  for (const auto &[Idx, C] : enumerate(Clusters)) {
+    if (C.Kind != CC_Range || C.Low != C.High)
+      continue;
+    if (C.Low->isZero()) {
+      ZeroIdx = Idx;
+      break;
+    }
+  }
+
+  if (ZeroIdx == -1u)
+    return;
+
+  unsigned Pow2Idx = -1;
+  for (const auto &[Idx, C] : enumerate(Clusters)) {
+    if (C.Kind != CC_Range || C.Low != C.High || C.MBB != Clusters[ZeroIdx].MBB)
+      continue;
+    if (C.Low->getValue().isPowerOf2()) {
+      Pow2Idx = Idx;
+      break;
+    }
+  }
+
+  if (Pow2Idx == -1u)
+    return;
+
+  APInt Pow2 = Clusters[Pow2Idx].Low->getValue();
+  APInt NewC = (Pow2 + 1) * -1;
+  Clusters[ZeroIdx].Low = ConstantInt::get(SI->getContext(), NewC);
+  Clusters[ZeroIdx].Low = ConstantInt::get(SI->getContext(), NewC);
+  Clusters[ZeroIdx].Kind = CC_And;
+  Clusters.erase(Clusters.begin() + Pow2Idx);
 }
 
 bool SwitchCG::SwitchLowering::buildBitTests(CaseClusterVector &Clusters,

@@ -35,7 +35,8 @@ enum CaseClusterKind {
   /// A cluster of cases suitable for jump table lowering.
   CC_JumpTable,
   /// A cluster of cases suitable for bit test lowering.
-  CC_BitTests
+  CC_BitTests,
+  CC_And
 };
 
 /// A cluster of case labels.
