@@ -10,6 +10,7 @@
 #include "AArch64RegisterInfo.h"
 
 #if defined(__aarch64__) && defined(__linux__)
+#include <errno.h>
 #include <linux/prctl.h> // For PR_PAC_* constants
 #include <sys/prctl.h>
 #ifndef PR_PAC_SET_ENABLED_KEYS
@@ -199,6 +200,14 @@ private:
     PM.add(createAArch64ExpandPseudoPass());
   }
 
+#if defined(__aarch64__) && defined(__linux__)
+  // Converts variadic arguments to `long` and passes zeros for the unused
+  // arg2-arg5, as tested by the Linux kernel.
+  static long prctl_wrapper(int op, long arg2 = 0, long arg3 = 0) {
+    return prctl(op, arg2, arg3, /*arg4=*/0L, /*arg5=*/0L);
+  }
+#endif
+
   const char *getIgnoredOpcodeReasonOrNull(const LLVMState &State,
                                            unsigned Opcode) const override {
     if (const char *Reason =
@@ -207,18 +216,38 @@ private:
 
     if (isPointerAuth(Opcode)) {
 #if defined(__aarch64__) && defined(__linux__)
+      // For some systems with existing PAC keys set, it is better to
+      // check the existing state of the key before setting it.
+      // For systems without PAC, this is a No-op but with PAC, it is
+      // better to check the existing key state and then disable/enable them
+      // to avoid runtime crashes owing to unsupported prctl opcodes or if the
+      // CPU implements FEAT_PAuth with FEAT_FPAC (in which case this method
+      // would silently return.).
+      // Hence the guard for switching.
+      errno = 0;
+      unsigned long PacKeys = prctl_wrapper(PR_PAC_GET_ENABLED_KEYS);
+      if (static_cast<long> PacKeys < 0 || errno == EINVAL)
+        return nullptr;
+
       // Disable all PAC keys. Note that while we expect the measurements to
       // be the same with PAC keys disabled, they could potentially be lower
       // since authentication checks are bypassed.
-      if (prctl(PR_PAC_SET_ENABLED_KEYS,
-                PR_PAC_APIAKEY | PR_PAC_APIBKEY | PR_PAC_APDAKEY |
-                    PR_PAC_APDBKEY, // all keys
-                0,                  // disable all
-                0, 0) < 0) {
-        return "Failed to disable PAC keys";
+      if (static_cast<long> PacKeys != 0) {
+        // Operate on all keys.
+        const long KeysToControl =
+            PR_PAC_APIAKEY | PR_PAC_APIBKEY | PR_PAC_APDAKEY | PR_PAC_APDBKEY;
+        // Disable all.
+        const long EnabledBitMask = 0;
+        if (prctl_wrapper(PR_PAC_SET_ENABLED_KEYS, KeysToControl,
+                          EnabledBitMask) < 0) {
+          return "Failed to disable PAC keys";
+        }
+        llvm::errs() << "llvm-exegesis: PAC keys were disabled at runtime for "
+                        "benchmarking.\n";
       }
 #else
-      return "Unsupported opcode: isPointerAuth";
+      // Silently return nullptr to ensure forward progress
+      return nullptr;
 #endif
     }
 
