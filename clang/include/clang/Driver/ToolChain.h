@@ -780,6 +780,10 @@ public:
   virtual Expected<SmallVector<std::string>>
   getSystemGPUArchs(const llvm::opt::ArgList &Args) const;
 
+  /// getHIPDefaultOffloadArchs - Get the default offload arch's for HIP.
+  virtual SmallVector<StringRef>
+  getHIPDefaultOffloadArchs(const llvm::opt::ArgList &Args) const;
+
   /// addProfileRTLibs - When -fprofile-instr-profile is specified, try to pass
   /// a suitable profile runtime library to the linker.
   virtual void addProfileRTLibs(const llvm::opt::ArgList &Args,

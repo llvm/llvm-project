@@ -1574,6 +1574,32 @@ ToolChain::getSystemGPUArchs(const llvm::opt::ArgList &Args) const {
   return SmallVector<std::string>();
 }
 
+SmallVector<StringRef>
+ToolChain::getHIPDefaultOffloadArchs(const llvm::opt::ArgList &Args) const {
+  if (getTriple().isSPIRV()) {
+    if (getTriple().getVendor() == llvm::Triple::AMD)
+      return {OffloadArchToString(OffloadArch::AMDGCNSPIRV)};
+    return {OffloadArchToString(OffloadArch::Generic)};
+  }
+
+  if (!getTriple().isAMDGPU())
+    return {};
+
+  SmallVector<StringRef> GpuArchList;
+  auto GPUsOrErr = getSystemGPUArchs(Args);
+  if (GPUsOrErr) {
+    for (auto &G : *GPUsOrErr)
+      GpuArchList.push_back(Args.MakeArgString(G));
+    return GpuArchList;
+  }
+  llvm::consumeError(GPUsOrErr.takeError());
+  auto Prog = GetProgramPath("amd-llvm-spirv");
+  if (!Prog.empty() && llvm::sys::fs::can_execute(Prog))
+    return {OffloadArchToString(OffloadArch::AMDGCNSPIRV)};
+
+  return {OffloadArchToString(OffloadArch::HIPDefault)};
+}
+
 SanitizerMask ToolChain::getSupportedSanitizers() const {
   // Return sanitizers which don't require runtime support and are not
   // platform dependent.
