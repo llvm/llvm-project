@@ -366,6 +366,20 @@ The command to obtain the output shown in the example is:
 Initially, we will focus on summary strings, and then describe the Python
 binding mechanism.
 
+Summary Format Matching On Pointers
+----------------------
+
+A summary formatter for a type ``T`` might or might not be appropriate to use
+for pointers to that type. If the formatter is only appropriate for the type and
+not its pointers, use the ``-p`` option to restrict it to match SBValues of type
+``T``. If you want the formatter to also match pointers to the type, you can use
+the ``-d`` option to specify how many pointer layers the formatter should match.
+The default value is 1, so if you don't specify ``-p`` or ``-d``, your formatter
+will be used on SBValues of type ``T`` and ``T*``. If you want to also match
+``T**`` set ``-d`` to 2, etc. In all cases, the SBValue passed to the summary
+formatter will be the matched ValueObject. lldb doesn't dereference the matched
+value down to the SBValue of type ``T`` before passing it to your formatter.
+
 Summary Strings
 ---------------
 
