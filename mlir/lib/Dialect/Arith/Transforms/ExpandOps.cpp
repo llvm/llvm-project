@@ -291,7 +291,7 @@ struct BFloat16TruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
     // Constant used to make the rounding bias.
     Value c7FFF = createConst(op.getLoc(), i32Ty, 0x7fff, rewriter);
     // Constant used to generate a quiet NaN.
-    Value c7FC0_i16 = createConst(op.getLoc(), i16Ty, 0x7fc0, rewriter);
+    Value c7FC0I16 = createConst(op.getLoc(), i16Ty, 0x7fc0, rewriter);
     // Small constants used to address bits.
     Value c16 = createConst(op.getLoc(), i32Ty, 16, rewriter);
     Value c1 = createConst(op.getLoc(), i32Ty, 1, rewriter);
@@ -313,13 +313,115 @@ struct BFloat16TruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
     // Now that the rounding-bias has been added, truncating the low bits
     // yields the correctly rounded result.
     Value biasedAndShifted = b.create<arith::ShRUIOp>(biased, c16);
-    Value normalCaseResult_i16 =
+    Value normalCaseResultI16 =
         b.create<arith::TruncIOp>(i16Ty, biasedAndShifted);
     // Select either the above-computed result, or a quiet NaN constant
     // if the input was NaN.
     Value select =
-        b.create<arith::SelectOp>(isNan, c7FC0_i16, normalCaseResult_i16);
+        b.create<arith::SelectOp>(isNan, c7FC0I16, normalCaseResultI16);
     Value result = b.create<arith::BitcastOp>(resultTy, select);
+    rewriter.replaceOp(op, result);
+    return success();
+  }
+};
+
+struct F8E8M0ExtFOpConverter : public OpRewritePattern<arith::ExtFOp> {
+  using OpRewritePattern::OpRewritePattern;
+  LogicalResult matchAndRewrite(arith::ExtFOp op,
+                                PatternRewriter &rewriter) const final {
+    ImplicitLocOpBuilder b(op.getLoc(), rewriter);
+    auto operand = op.getOperand();
+    Type operandTy = operand.getType();
+    Type resultTy = op.getType();
+    Type operandETy = getElementTypeOrSelf(operandTy);
+    Type resultETy = getElementTypeOrSelf(resultTy);
+
+    if (!operandETy.isF8E8M0FNU()) {
+      return rewriter.notifyMatchFailure(op, "not a ext of F8E8M0FNU");
+    }
+
+    if (!resultETy.isBF16() && !resultETy.isF16() && !resultETy.isF32()) {
+      return rewriter.notifyMatchFailure(
+          op, "not a ext of F8M0FNU on a larger 16-bit or 32-bit width float.");
+    }
+
+    Type i8Ty = b.getI8Type();
+    Type i32Ty = b.getI32Type();
+    Type f32Ty = b.getF32Type();
+    if (auto shapedTy = dyn_cast<ShapedType>(operandTy)) {
+      i8Ty = shapedTy.clone(i8Ty);
+      i32Ty = shapedTy.clone(i32Ty);
+      f32Ty = shapedTy.clone(f32Ty);
+    }
+
+    Value bitcast = b.create<arith::BitcastOp>(i8Ty, operand);
+    // create constants for NaNs
+    Value cF8NaN = createConst(op.getLoc(), i8Ty, 0xff, rewriter);
+    Value cF32NaN = createConst(op.getLoc(), i32Ty, 0xffffffff, rewriter);
+    Value cF32MantissaWidth = createConst(op->getLoc(), i32Ty, 23, rewriter);
+
+    Value exti = b.create<arith::ExtUIOp>(i32Ty, bitcast);
+    Value f32Bits = b.create<arith::ShLIOp>(exti, cF32MantissaWidth);
+
+    Value isNan =
+        b.create<arith::CmpIOp>(arith::CmpIPredicate::eq, bitcast, cF8NaN);
+    // select for NaNs
+    f32Bits = b.create<arith::SelectOp>(isNan, cF32NaN, f32Bits);
+    Value result = b.create<arith::BitcastOp>(f32Ty, f32Bits);
+    if (resultETy.isBF16()) {
+      result = b.create<arith::TruncFOp>(resultTy, result);
+    } else if (resultETy.isF16()) {
+      result = b.create<arith::TruncFOp>(resultTy, result);
+    }
+    rewriter.replaceOp(op, result);
+    return success();
+  }
+};
+
+/*
+TruncF to F8E8M0 is expected to extract exponent bits out of F32 type
+Since All kinds of Infs and NaNs are mapped to same exponent bits in F32 type,
+they all map to NaN in F8E8M0 Type.
+*/
+struct F8E8M0TruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
+  using OpRewritePattern::OpRewritePattern;
+  LogicalResult matchAndRewrite(arith::TruncFOp op,
+                                PatternRewriter &rewriter) const final {
+    ImplicitLocOpBuilder b(op.getLoc(), rewriter);
+    auto operand = op.getOperand();
+    Type operandTy = operand.getType();
+    Type operandETy = getElementTypeOrSelf(operandTy);
+    Type resultTy = op.getType();
+    Type resultETy = getElementTypeOrSelf(resultTy);
+    if (!resultETy.isF8E8M0FNU()) {
+      return rewriter.notifyMatchFailure(op, "not a truncf to f8E8M0FNU");
+    }
+    if (!operandETy.isBF16() && !operandETy.isF16() && !operandETy.isF32()) {
+      return rewriter.notifyMatchFailure(
+          op, "not a truncf of 16-bit or 32-bit float to f8E8M0FNU.");
+    }
+
+    if (op.getRoundingmodeAttr()) {
+      return rewriter.notifyMatchFailure(
+          op, "only applicable to default rounding mode.");
+    }
+
+    Type i8Ty = b.getI8Type();
+    Type i32Ty = b.getI32Type();
+    Type f32Ty = b.getF32Type();
+    if (auto shapedTy = dyn_cast<ShapedType>(operandTy)) {
+      i8Ty = shapedTy.clone(i8Ty);
+      i32Ty = shapedTy.clone(i32Ty);
+      f32Ty = shapedTy.clone(f32Ty);
+    }
+    if (!operandETy.isF32()) {
+      operand = b.create<arith::ExtFOp>(f32Ty, operand);
+    }
+    Value f32Bits = b.create<arith::BitcastOp>(i32Ty, operand);
+    Value cF32MantissaWidth = createConst(op->getLoc(), i32Ty, 23, rewriter);
+    Value f32SignExp = b.create<arith::ShRUIOp>(f32Bits, cF32MantissaWidth);
+    Value exp8Bits = b.create<arith::TruncIOp>(i8Ty, f32SignExp);
+    Value result = b.create<arith::BitcastOp>(resultTy, exp8Bits);
     rewriter.replaceOp(op, result);
     return success();
   }
@@ -351,23 +453,36 @@ struct ArithExpandOpsPass
       arith::MinNumFOp
     >();
 
-    if (includeBf16) {
+    if(includeBf16) {
       arith::populateExpandBFloat16Patterns(patterns);
+    }
+    if(includeF8E8M0) {
+      arith::populateExpandF8E8M0Patterns(patterns);
+    }
+    if (includeBf16 || includeF8E8M0) {
       target.addDynamicallyLegalOp<arith::ExtFOp>(
-        [](arith::ExtFOp op) {
+        [=](arith::ExtFOp op) {
           Type inETy = getElementTypeOrSelf(op.getOperand().getType());
           Type outETy = getElementTypeOrSelf(op.getType());
-          return !(inETy.isBF16() && outETy.isF32());
+          if(includeBf16 && includeF8E8M0)
+            return !(inETy.isBF16() && outETy.isF32()) && !(inETy.isF8E8M0FNU() && (outETy.isF32() || outETy.isBF16() || outETy.isF16()));
+          if(includeBf16)
+            return !(inETy.isBF16() && outETy.isF32());
+          return !(inETy.isF8E8M0FNU() && (outETy.isF32() || outETy.isBF16() || outETy.isF16()));
         });
 
       target.addDynamicallyLegalOp<arith::TruncFOp>(
-        [](arith::TruncFOp op)  {
+        [=](arith::TruncFOp op)  {
           Type inETy = getElementTypeOrSelf(op.getOperand().getType());
           Type outETy = getElementTypeOrSelf(op.getType());
-          return !(inETy.isF32() && outETy.isBF16());
+          if(includeBf16 && includeF8E8M0) 
+            return !(inETy.isF32() && outETy.isBF16()) && !(outETy.isF8E8M0FNU() && (inETy.isF32() || inETy.isF16() || inETy.isBF16())); 
+          if(includeBf16)
+            return !(inETy.isF32() && outETy.isBF16());
+          return 
+            !(outETy.isF8E8M0FNU() && (inETy.isF32() || inETy.isF16() || inETy.isBF16())); 
         });
     }
-
     // clang-format on
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))
@@ -386,6 +501,11 @@ void mlir::arith::populateCeilFloorDivExpandOpsPatterns(
 
 void mlir::arith::populateExpandBFloat16Patterns(RewritePatternSet &patterns) {
   patterns.add<BFloat16ExtFOpConverter, BFloat16TruncFOpConverter>(
+      patterns.getContext());
+}
+
+void mlir::arith::populateExpandF8E8M0Patterns(RewritePatternSet &patterns) {
+  patterns.add<F8E8M0ExtFOpConverter, F8E8M0TruncFOpConverter>(
       patterns.getContext());
 }
 
