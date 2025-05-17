@@ -658,6 +658,7 @@ struct TestVectorDistribution
       vector::populatePropagateWarpVectorDistributionPatterns(
           patterns, distributionFn, shuffleFn, /*benefit=*/1,
           /*readBenefit=*/0);
+      vector::populateWarpSimplificationPatterns(patterns);
       vector::populateDistributeReduction(patterns, warpReduction, 1);
       populateDistributeTransferWriteOpPatterns(patterns, distributionFn, 2);
       (void)applyPatternsGreedily(getOperation(), std::move(patterns));
@@ -670,6 +671,7 @@ struct TestVectorDistribution
       RewritePatternSet patterns(ctx);
       vector::populatePropagateWarpVectorDistributionPatterns(
           patterns, distributionFn, shuffleFn);
+      vector::populateWarpSimplificationPatterns(patterns);
       vector::populateDistributeReduction(patterns, warpReduction);
       (void)applyPatternsGreedily(getOperation(), std::move(patterns));
     }
