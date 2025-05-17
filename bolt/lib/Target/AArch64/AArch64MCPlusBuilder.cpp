@@ -196,6 +196,37 @@ public:
     return {AArch64::LR};
   }
 
+  ErrorOr<MCPhysReg> getSignedReg(const MCInst &Inst) const override {
+    switch (Inst.getOpcode()) {
+    case AArch64::PACIAZ:
+    case AArch64::PACIBZ:
+    case AArch64::PACIASP:
+    case AArch64::PACIBSP:
+    case AArch64::PACIASPPC:
+    case AArch64::PACIBSPPC:
+      return AArch64::LR;
+
+    case AArch64::PACIA1716:
+    case AArch64::PACIB1716:
+    case AArch64::PACIA171615:
+    case AArch64::PACIB171615:
+      return AArch64::X17;
+
+    case AArch64::PACIA:
+    case AArch64::PACIB:
+    case AArch64::PACDA:
+    case AArch64::PACDB:
+    case AArch64::PACIZA:
+    case AArch64::PACIZB:
+    case AArch64::PACDZA:
+    case AArch64::PACDZB:
+      return Inst.getOperand(0).getReg();
+
+    default:
+      return getNoRegister();
+    }
+  }
+
   ErrorOr<MCPhysReg> getAuthenticatedReg(const MCInst &Inst) const override {
     switch (Inst.getOpcode()) {
     case AArch64::AUTIAZ:
@@ -248,6 +279,25 @@ public:
     default:
       return getNoRegister();
     }
+  }
+
+  bool isPSignOnLR(const MCInst &Inst) const override {
+    ErrorOr<MCPhysReg> SignReg = getSignedReg(Inst);
+    return SignReg && *SignReg != getNoRegister() && *SignReg == AArch64::LR;
+  }
+
+  bool isPAuthOnLR(const MCInst &Inst) const override {
+    ErrorOr<MCPhysReg> AutReg = getAuthenticatedReg(Inst);
+    return AutReg && *AutReg != getNoRegister() && *AutReg == AArch64::LR;
+  }
+
+  bool isPAuthAndRet(const MCInst &Inst) const override {
+    return Inst.getOpcode() == AArch64::RETAA ||
+           Inst.getOpcode() == AArch64::RETAB ||
+           Inst.getOpcode() == AArch64::RETAASPPCi ||
+           Inst.getOpcode() == AArch64::RETABSPPCi ||
+           Inst.getOpcode() == AArch64::RETAASPPCr ||
+           Inst.getOpcode() == AArch64::RETABSPPCr;
   }
 
   bool isAuthenticationOfReg(const MCInst &Inst, MCPhysReg Reg) const override {
