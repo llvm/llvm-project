@@ -43,13 +43,11 @@ define void @v_test_canonicalize__half(half addrspace(1)* %out) nounwind {
 ;
 ; AVX512-LABEL: v_test_canonicalize__half:
 ; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    movzwl (%rdi), %eax
-; AVX512-NEXT:    movzwl {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ecx
-; AVX512-NEXT:    vmovd %ecx, %xmm0
+; AVX512-NEXT:    vpinsrw $0, (%rdi), %xmm0, %xmm0
+; AVX512-NEXT:    vpmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
 ; AVX512-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX512-NEXT:    vmovd %eax, %xmm1
-; AVX512-NEXT:    vcvtph2ps %xmm1, %xmm1
-; AVX512-NEXT:    vmulss %xmm0, %xmm1, %xmm0
+; AVX512-NEXT:    vcvtph2ps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; AVX512-NEXT:    vmulss %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; AVX512-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX512-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
@@ -144,9 +142,7 @@ define half @complex_canonicalize_fmul_half(half %a, half %b) nounwind {
 ; AVX512-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; AVX512-NEXT:    vpmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
 ; AVX512-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX512-NEXT:    movzwl {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %eax
-; AVX512-NEXT:    vmovd %eax, %xmm2
-; AVX512-NEXT:    vcvtph2ps %xmm2, %xmm2
+; AVX512-NEXT:    vcvtph2ps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; AVX512-NEXT:    vmulss %xmm2, %xmm0, %xmm0
 ; AVX512-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; AVX512-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3]
@@ -228,9 +224,7 @@ define void @v_test_canonicalize_v2half(<2 x half> addrspace(1)* %out) nounwind 
 ; AVX512-LABEL: v_test_canonicalize_v2half:
 ; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX512-NEXT:    movzwl {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %eax
-; AVX512-NEXT:    vmovd %eax, %xmm1
-; AVX512-NEXT:    vcvtph2ps %xmm1, %xmm1
+; AVX512-NEXT:    vcvtph2ps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; AVX512-NEXT:    vpshufb {{.*#+}} xmm2 = xmm0[2,3],zero,zero,zero,zero,zero,zero,xmm0[u,u,u,u,u,u,u,u]
 ; AVX512-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; AVX512-NEXT:    vmulss %xmm1, %xmm2, %xmm2
