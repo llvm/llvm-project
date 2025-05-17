@@ -14,6 +14,7 @@
 #include <string>
 #include <vector>
 
+#include "lldb/ValueObject/ValueObject.h"
 #include "lldb/lldb-private.h"
 #include "llvm/Support/JSON.h"
 
@@ -31,12 +32,19 @@ public:
 
   llvm::StringRef GetSignalAsStringRef(int32_t signo) const;
 
+  virtual std::string
+  GetSignalDescriptionFromSiginfo(lldb::ValueObjectSP siginfo_sp) const {
+    return "";
+  };
+
   std::string
   GetSignalDescription(int32_t signo,
                        std::optional<int32_t> code = std::nullopt,
                        std::optional<lldb::addr_t> addr = std::nullopt,
                        std::optional<lldb::addr_t> lower = std::nullopt,
-                       std::optional<lldb::addr_t> upper = std::nullopt) const;
+                       std::optional<lldb::addr_t> upper = std::nullopt,
+                       std::optional<uint32_t> pid = std::nullopt,
+                       std::optional<uint32_t> uid = std::nullopt) const;
 
   bool SignalIsValid(int32_t signo) const;
 
@@ -105,7 +113,7 @@ public:
                  llvm::StringRef description,
                  llvm::StringRef alias = llvm::StringRef());
 
-  enum SignalCodePrintOption { None, Address, Bounds };
+  enum SignalCodePrintOption { None, Address, Bounds, Sender };
 
   // Instead of calling this directly, use a ADD_SIGCODE macro to get compile
   // time checks when on the native platform.
