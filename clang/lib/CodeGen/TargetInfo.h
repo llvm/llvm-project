@@ -455,6 +455,11 @@ public:
   initBranchProtectionFnAttributes(const TargetInfo::BranchProtectionInfo &BPI,
                                    llvm::AttrBuilder &FuncAttrs);
 
+  // Set the ptrauth-* attributes of the Function accordingly to the Opts.
+  // Remove attributes that contradict with current Opts.
+  static void setPointerAuthFnAttributes(const PointerAuthOptions &Opts,
+                                         llvm::Function &F);
+
   // Add the ptrauth-* Attributes to the FuncAttrs.
   static void initPointerAuthFnAttributes(const PointerAuthOptions &Opts,
                                           llvm::AttrBuilder &FuncAttrs);

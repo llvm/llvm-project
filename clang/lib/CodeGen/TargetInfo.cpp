@@ -258,6 +258,21 @@ void TargetCodeGenInfo::initBranchProtectionFnAttributes(
     FuncAttrs.addAttribute("guarded-control-stack");
 }
 
+void TargetCodeGenInfo::setPointerAuthFnAttributes(
+    const PointerAuthOptions &Opts, llvm::Function &F) {
+  auto UpdateAttr = [&F](bool AttrShouldExist, StringRef AttrName) {
+    if (AttrShouldExist && !F.hasFnAttribute(AttrName))
+      F.addFnAttr(AttrName);
+    if (!AttrShouldExist && F.hasFnAttribute(AttrName))
+      F.removeFnAttr(AttrName);
+  };
+  UpdateAttr(Opts.ReturnAddresses, "ptrauth-returns");
+  UpdateAttr((bool)Opts.FunctionPointers, "ptrauth-calls");
+  UpdateAttr(Opts.AuthTraps, "ptrauth-auth-traps");
+  UpdateAttr(Opts.IndirectGotos, "ptrauth-indirect-gotos");
+  UpdateAttr(Opts.AArch64JumpTableHardening, "aarch64-jump-table-hardening");
+}
+
 void TargetCodeGenInfo::initPointerAuthFnAttributes(
     const PointerAuthOptions &Opts, llvm::AttrBuilder &FuncAttrs) {
   if (Opts.ReturnAddresses)
