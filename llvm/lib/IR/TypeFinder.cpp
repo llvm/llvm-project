@@ -142,7 +142,7 @@ void TypeFinder::incorporateType(Type *Ty) {
 
 /// incorporateValue - This method is used to walk operand lists finding types
 /// hiding in constant expressions and other operands that won't be walked in
-/// other ways.  GlobalValues, basic blocks, instructions, and inst operands are
+/// other ways. GlobalValues, basic blocks, instructions, and inst operands are
 /// all explicitly enumerated.
 void TypeFinder::incorporateValue(const Value *V) {
   if (const auto *M = dyn_cast<MetadataAsValue>(V)) {
