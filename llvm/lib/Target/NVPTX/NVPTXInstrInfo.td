@@ -154,8 +154,8 @@ def doMulWide      : Predicate<"doMulWide">;
 def do_DIVF32_APPROX : Predicate<"getDivF32Level()==0">;
 def do_DIVF32_FULL : Predicate<"getDivF32Level()==1">;
 
-def do_SQRTF32_APPROX : Predicate<"!usePrecSqrtF32()">;
-def do_SQRTF32_RN : Predicate<"usePrecSqrtF32()">;
+def do_SQRTF32_APPROX : Predicate<"!usePrecSqrtF32(*MF)">;
+def do_SQRTF32_RN : Predicate<"usePrecSqrtF32(*MF)">;
 
 def hasHWROT32 : Predicate<"Subtarget->hasHWROT32()">;
 def noHWROT32 : Predicate<"!Subtarget->hasHWROT32()">;
