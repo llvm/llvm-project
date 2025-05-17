@@ -891,6 +891,8 @@ private:
 
   bool DwarfUsesRelocationsAcrossSections = false;
 
+  void emitGlobalVariable(const GlobalVariable *GV, MaybeAlign OverAlignment);
+
   /// This method emits the header for the current function.
   virtual void emitFunctionHeader();
 
@@ -946,6 +948,9 @@ protected:
   virtual bool shouldEmitWeakSwiftAsyncExtendedFramePointerFlags() const {
     return false;
   }
+  virtual MaybeAlign getRequiredGlobalAlignment(const GlobalVariable &GV) {
+    return std::nullopt;
+  };
 };
 
 } // end namespace llvm
