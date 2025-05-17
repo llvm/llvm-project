@@ -1053,13 +1053,45 @@ Instruction *InstCombinerImpl::visitLoadInst(LoadInst &LI) {
   // separated by a few arithmetic operations.
   bool IsLoadCSE = false;
   BatchAAResults BatchAA(*AA);
-  if (Value *AvailableVal = FindAvailableLoadedValue(&LI, BatchAA, &IsLoadCSE)) {
+  int64_t Offset = 0;
+  if (Value *AvailableVal =
+          FindAvailableLoadedValue(&LI, BatchAA, &IsLoadCSE, Offset)) {
     if (IsLoadCSE)
       combineMetadataForCSE(cast<LoadInst>(AvailableVal), &LI, false);
 
-    return replaceInstUsesWith(
-        LI, Builder.CreateBitOrPointerCast(AvailableVal, LI.getType(),
-                                           LI.getName() + ".cast"));
+    /// Perform simplification of load's. If we have memcpy A which copies X to
+    /// Y, and load instruction B which loads from Y, then we can rewrite B to
+    /// be a load instruction loads from X. This allows later passes to remove
+    /// the memcpy A or identify the source of the load instruction.
+    if (auto *MemCpy = dyn_cast<MemCpyInst>(AvailableVal)) {
+      Value *NewSrc = MemCpy->getSource();
+      Value *OldSrc = LI.getPointerOperand();
+      MaybeAlign NewAlign = MemCpy->getSourceAlign();
+      if (Offset != 0) {
+        if (NewAlign.has_value())
+          NewAlign = commonAlignment(*NewAlign, Offset);
+        // Avoid increasing instructions
+        if (isa<Instruction>(OldSrc) && OldSrc->hasOneUse())
+          NewSrc =
+              Builder.CreateInBoundsPtrAdd(NewSrc, Builder.getInt64(Offset));
+        else
+          NewSrc = nullptr;
+      }
+      // Avoid infinite loops
+      if (NewSrc && !BatchAA.isMustAlias(OldSrc, NewSrc))
+        AvailableVal = Builder.CreateAlignedLoad(LI.getType(), NewSrc, NewAlign,
+                                                 LI.getName());
+      else {
+        AvailableVal = nullptr;
+        if (NewSrc && NewSrc->use_empty())
+          cast<Instruction>(NewSrc)->eraseFromParent();
+      }
+    } else
+      AvailableVal = Builder.CreateBitOrPointerCast(AvailableVal, LI.getType(),
+                                                    LI.getName() + ".cast");
+
+    if (AvailableVal)
+      return replaceInstUsesWith(LI, AvailableVal);
   }
 
   // None of the following transforms are legal for volatile/ordered atomic

@@ -713,8 +713,31 @@ Value *llvm::findAvailablePtrLoadStore(
   return nullptr;
 }
 
+static Value *availableMemCpySrc(LoadInst *LI, MemCpyInst *MemCpy,
+                                 int64_t &Offset) {
+  if (!LI->isSimple() || MemCpy->isVolatile())
+    return nullptr;
+  const DataLayout &DL = LI->getDataLayout();
+  u_int64_t Size = DL.getTypeStoreSize(LI->getType()).getKnownMinValue();
+  if (Size == 0)
+    return nullptr;
+  Value *OldSrc = LI->getPointerOperand();
+
+  if (OldSrc != MemCpy->getDest()) {
+    std::optional<int64_t> PointerOffset =
+        OldSrc->getPointerOffsetFrom(MemCpy->getDest(), DL);
+    if (!PointerOffset || *PointerOffset < 0)
+      return nullptr;
+    Offset = *PointerOffset;
+  }
+  auto *CopyLen = dyn_cast<ConstantInt>(MemCpy->getLength());
+  if (!CopyLen || CopyLen->getZExtValue() < Size + Offset)
+    return nullptr;
+  return MemCpy;
+}
+
 Value *llvm::FindAvailableLoadedValue(LoadInst *Load, BatchAAResults &AA,
-                                      bool *IsLoadCSE,
+                                      bool *IsLoadCSE, int64_t &Offset,
                                       unsigned MaxInstsToScan) {
   const DataLayout &DL = Load->getDataLayout();
   Value *StrippedPtr = Load->getPointerOperand()->stripPointerCasts();
@@ -739,6 +762,9 @@ Value *llvm::FindAvailableLoadedValue(LoadInst *Load, BatchAAResults &AA,
 
     Available = getAvailableLoadStore(&Inst, StrippedPtr, AccessTy,
                                       AtLeastAtomic, DL, IsLoadCSE);
+    if (auto *MemCpy = dyn_cast<MemCpyInst>(&Inst))
+      Available = availableMemCpySrc(Load, MemCpy, Offset);
+
     if (Available)
       break;
 
@@ -753,6 +779,12 @@ Value *llvm::FindAvailableLoadedValue(LoadInst *Load, BatchAAResults &AA,
     for (Instruction *Inst : MustNotAliasInsts)
       if (isModSet(AA.getModRefInfo(Inst, Loc)))
         return nullptr;
+    if (auto *MemCpy = dyn_cast<MemCpyInst>(Available)) {
+      MemoryLocation Loc = MemoryLocation::getForSource(MemCpy);
+      for (Instruction *Inst : MustNotAliasInsts)
+        if (isModSet(AA.getModRefInfo(Inst, Loc)))
+          return nullptr;
+    }
   }
 
   return Available;
