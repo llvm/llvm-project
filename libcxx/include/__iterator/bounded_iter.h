@@ -105,6 +105,18 @@ private:
         __begin <= __current, "__bounded_iter(current, begin, end): current and begin are inconsistent");
     _LIBCPP_ASSERT_INTERNAL(
         __current <= __end, "__bounded_iter(current, begin, end): current and end are inconsistent");
+
+    // Add assumptions to help the compiler reason about bounds checks. For example, std::vector sets the end of
+    // the __bounded_iter's valid range to the capacity of the vector, not vector::end(). To translate container-end
+    // fenceposts into hardening-end fenceposts, we must know that container-end <= hardening-end.
+    pointer __begin_ptr   = std::__to_address(__begin);
+    pointer __current_ptr = std::__to_address(__current);
+    pointer __end_ptr     = std::__to_address(__end);
+    _LIBCPP_ASSUME(__begin_ptr <= __current_ptr);
+    _LIBCPP_ASSUME(__current_ptr <= __end_ptr);
+    (void)__begin_ptr;
+    (void)__current_ptr;
+    (void)__end_ptr;
   }
 
   template <class _It>
