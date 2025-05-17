@@ -119,6 +119,9 @@ addPassesToGenerateCode(CodeGenTargetMachineImpl &TM, PassManagerBase &PM,
   PM.add(PassConfig);
   PM.add(&MMIWP);
 
+  for (auto& C : *TargetMachine::TargetPassConfigCallbacks)
+    C(TM, PM, PassConfig);
+
   if (PassConfig->addISelPasses())
     return nullptr;
   PassConfig->addMachinePasses();
