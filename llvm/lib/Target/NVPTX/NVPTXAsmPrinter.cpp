@@ -745,8 +745,8 @@ void NVPTXAsmPrinter::emitHeader(Module &M, raw_ostream &O,
     switch(CU->getEmissionKind()) {
     case DICompileUnit::NoDebug:
     case DICompileUnit::DebugDirectivesOnly:
-      break;
     case DICompileUnit::LineTablesOnly:
+      break;
     case DICompileUnit::FullDebug:
       HasFullDebugInfo = true;
       break;
