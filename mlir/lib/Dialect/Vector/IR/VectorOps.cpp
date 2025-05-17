@@ -33,6 +33,7 @@
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "mlir/IR/ValueRange.h"
 #include "mlir/Interfaces/SubsetOpInterface.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "mlir/Support/LLVM.h"
@@ -2385,9 +2386,105 @@ static LogicalResult rewriteFromElementsAsSplat(FromElementsOp fromElementsOp,
   return success();
 }
 
+/// Rewrite vector.from_elements as vector.shape_cast, if possible.
+///
+/// Example:
+///   %0 = vector.extract %source[0, 0] : i8 from vector<1x2xi8>
+///   %1 = vector.extract %source[0, 1] : i8 from vector<1x2xi8>
+///   %2 = vector.from_elements %0, %1 : vector<2xi8>
+///
+/// becomes
+///   %2 = vector.shape_cast %source : vector<1x2xi8> to vector<2xi8>
+///
+/// The requirements for this to be valid are
+/// i) source and from_elements result have the same number of elements,
+/// ii) all elements are extracted from the same vector (%source),
+/// iii) the elements are extracted in ascending order.
+///
+/// It might be possible to rewrite vector.from_elements as a single
+/// vector.extract if (i) is not satisifed, or in some cases as a
+/// a single vector_extract_strided_slice if (i) and (iii) are not satisfied,
+/// this is left for future consideration.
+class FromElementsToShapCast : public OpRewritePattern<FromElementsOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(FromElementsOp fromElements,
+                                PatternRewriter &rewriter) const override {
+
+    // The source of the first element. This is initialized in the first
+    // iteration of the loop over elements.
+    TypedValue<VectorType> firstElementSource;
+
+    for (auto [insertIndex, element] :
+         llvm::enumerate(fromElements.getElements())) {
+
+      // Check that the element is from a vector.extract operation.
+      auto extractOp =
+          dyn_cast_if_present<vector::ExtractOp>(element.getDefiningOp());
+      if (!extractOp) {
+        return rewriter.notifyMatchFailure(fromElements,
+                                           "element not from vector.extract");
+      }
+
+      // Check condition (i) on the first element. As we will check that all
+      // elements have the same source, we don't need to check condition (i) for
+      // any other elements.
+      if (insertIndex == 0) {
+        firstElementSource = extractOp.getVector();
+        if (static_cast<size_t>(
+                firstElementSource.getType().getNumElements()) !=
+            fromElements.getType().getNumElements()) {
+          return rewriter.notifyMatchFailure(fromElements,
+                                             "number of elements differ");
+        }
+      }
+
+      // Check condition (ii), by checking that all elements have same source as
+      // the first element.
+      Value currentSource = extractOp.getVector();
+      if (currentSource != firstElementSource) {
+        return rewriter.notifyMatchFailure(fromElements,
+                                           "element from different vector");
+      }
+
+      // Check condition (iii).
+      // First, get the index that the element is extracted from.
+      int64_t extractIndex{0};
+      int64_t stride{1};
+      ArrayRef<int64_t> position = extractOp.getStaticPosition();
+      assert(position.size() ==
+                 static_cast<size_t>(firstElementSource.getType().getRank()) &&
+             "scalar extract must have full rank position");
+      for (auto [pos, size] :
+           llvm::zip(llvm::reverse(position),
+                     llvm::reverse(firstElementSource.getType().getShape()))) {
+        if (pos == ShapedType::kDynamic) {
+          return rewriter.notifyMatchFailure(
+              fromElements, "elements not in ascending order (dynamic order)");
+        }
+        extractIndex += pos * stride;
+        stride *= size;
+      }
+
+      // Second, check that the index of extraction from source and insertion in
+      // from_elements are the same.
+      if (extractIndex != static_cast<int64_t>(insertIndex)) {
+        return rewriter.notifyMatchFailure(
+            fromElements, "elements not in ascending order (static order)");
+      }
+    }
+
+    rewriter.replaceOpWithNewOp<ShapeCastOp>(
+        fromElements, fromElements.getType(), firstElementSource);
+    return success();
+  }
+};
+
 void FromElementsOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                  MLIRContext *context) {
   results.add(rewriteFromElementsAsSplat);
+  results.add<FromElementsToShapCast>(context);
 }
 
 //===----------------------------------------------------------------------===//
