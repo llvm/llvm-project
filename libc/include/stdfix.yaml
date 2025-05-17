@@ -238,6 +238,14 @@ functions:
     arguments:
       - type: unsigned long accum
     guard: LIBC_COMPILER_HAS_FIXED_POINT
+  - name: divir
+    standards:
+      - stdc_ext
+    return_type: int
+    arguments:
+      - type: int
+      - type: fract
+    guard: LIBC_COMPILER_HAS_FIXED_POINT
   - name: idivr
     standards:
       - stdc_ext
