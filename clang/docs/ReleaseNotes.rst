@@ -875,6 +875,9 @@ AST Matchers
 - Extend ``templateArgumentCountIs`` to support function and variable template
   specialization.
 
+- Fixed `isStaticStorageClass` not matching the definition if the definition was
+  not marked `static` as well.
+
 clang-format
 ------------
 
