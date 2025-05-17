@@ -8508,14 +8508,45 @@ and copied back to the argument after the callee returns.
   }];
 }
 
+def AnnotateDeclDocs : Documentation {
+  let Category = DocCatType;
+  let Heading = "annotate_decl";
+  let Content = [{
+This attribute is used to add annotations to declarations, typically for use by
+static analysis tools that are not integrated into the core Clang compiler
+(e.g., Clang-Tidy checks or out-of-tree Clang-based tools). See also the
+`annotate_type` attribute, which serves the same purpose, but for types.
+
+The attribute takes a mandatory string literal argument specifying the
+annotation category and an arbitrary number of optional arguments that provide
+additional information specific to the annotation category. The optional
+arguments must be constant expressions of arbitrary type.
+
+For example:
+
+.. code-block:: c++
+
+  [[clang::annotate_decl("category", "foo", 1)]] int i;
+
+The attribute does not have any effect on the semantics of the declaration or
+the code that should be produced for it.
+
+There is no requirement that different declarations of an entity (i.e.
+redeclarations) use the same `annotate_decl` annotations, so that the annotation
+can be used as flexibly as possible. If a Clang-based tool wants to impose
+additional rules for specific annotations, it needs to check for and enforce
+these itself.
+  }];
+}
+
 def AnnotateTypeDocs : Documentation {
   let Category = DocCatType;
   let Heading = "annotate_type";
   let Content = [{
 This attribute is used to add annotations to types, typically for use by static
 analysis tools that are not integrated into the core Clang compiler (e.g.,
-Clang-Tidy checks or out-of-tree Clang-based tools). It is a counterpart to the
-`annotate` attribute, which serves the same purpose, but for declarations.
+Clang-Tidy checks or out-of-tree Clang-based tools). See also the
+`annotate_decl` attribute, which serves the same purpose, but for declarations.
 
 The attribute takes a mandatory string literal argument specifying the
 annotation category and an arbitrary number of optional arguments that provide
