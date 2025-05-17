@@ -104,7 +104,7 @@ bool SPIRVExtensionsParser::parse(cl::Option &O, StringRef ArgName,
                                   std::set<SPIRV::Extension::Extension> &Vals) {
   SmallVector<StringRef, 10> Tokens;
   ArgValue.split(Tokens, ",", -1, false);
-  std::sort(Tokens.begin(), Tokens.end());
+  llvm::sort(Tokens);
 
   std::set<SPIRV::Extension::Extension> EnabledExtensions;
 
