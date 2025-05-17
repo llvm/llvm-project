@@ -51,6 +51,96 @@ struct MemoryOpGroup {
   bool empty() const { return ops.empty(); }
 };
 
+// Extract contiguous groups from a MemoryOpGroup
+SmallVector<MemoryOpGroup> extractContiguousGroups(const MemoryOpGroup &group) {
+  SmallVector<MemoryOpGroup> result;
+  if (group.ops.empty())
+    return result;
+
+  // Keep track of which operations we've processed
+  DenseSet<Operation *> processedOps;
+
+  // Process each operation
+  for (Operation *op : group.ops) {
+    // Skip if we've already processed this operation
+    if (processedOps.contains(op))
+      continue;
+
+    // Get base and index of current operation
+    Value base;
+    int64_t index = -1;
+    if (group.isLoadGroup()) {
+      auto loadOp = cast<memref::LoadOp>(op);
+      if (auto value = getConstantIntValue(loadOp.getIndices().front())) {
+        index = *value;
+        base = loadOp.getMemRef();
+      }
+    } else {
+      auto storeOp = cast<memref::StoreOp>(op);
+      if (auto value = getConstantIntValue(storeOp.getIndices().front())) {
+        index = *value;
+        base = storeOp.getMemRef();
+      }
+    }
+    if (index == -1)
+      continue;
+
+    // Start a new group with this operation
+    result.emplace_back(group.type);
+    MemoryOpGroup &currentGroup = result.back();
+    currentGroup.ops.push_back(op);
+    processedOps.insert(op);
+
+    LLVM_DEBUG(llvm::dbgs() << "Starting new group at base " << base
+                            << " index " << index << "\n");
+
+    // Try to find operations with adjacent indices
+    bool foundMore;
+    do {
+      foundMore = false;
+      // Look for operations with index+1
+      for (Operation *otherOp : group.ops) {
+        if (processedOps.contains(otherOp))
+          continue;
+
+        Value otherBase;
+        int64_t otherIndex = -1;
+        if (group.isLoadGroup()) {
+          auto loadOp = cast<memref::LoadOp>(otherOp);
+          if (auto value = getConstantIntValue(loadOp.getIndices().front())) {
+            otherIndex = *value;
+            otherBase = loadOp.getMemRef();
+          }
+        } else {
+          auto storeOp = cast<memref::StoreOp>(otherOp);
+          if (auto value = getConstantIntValue(storeOp.getIndices().front())) {
+            otherIndex = *value;
+            otherBase = storeOp.getMemRef();
+          }
+        }
+
+        // Check if this operation has the same base and adjacent index
+        if (otherIndex != -1 && otherBase == base &&
+            otherIndex == currentGroup.ops.size()) {
+          currentGroup.ops.push_back(otherOp);
+          processedOps.insert(otherOp);
+          foundMore = true;
+          LLVM_DEBUG(llvm::dbgs()
+                     << "Added operation with index " << otherIndex << "\n");
+          break;
+        }
+      }
+    } while (foundMore);
+  }
+
+  // Remove empty groups
+  result.erase(std::remove_if(result.begin(), result.end(),
+                              [](const MemoryOpGroup &g) { return g.empty(); }),
+               result.end());
+
+  return result;
+}
+
 /// This pass implements the SLP vectorizer. It detects consecutive operations
 /// that can be put together into vector operations. The pass works bottom-up,
 /// across basic blocks, in search of scalars to combine.
@@ -112,8 +202,20 @@ void SLPVectorizerPass::runOnOperation() {
     // Collect memory operation groups
     SmallVector<MemoryOpGroup> groups = collectMemoryOpGroups(*block);
 
-    LLVM_DEBUG(llvm::dbgs() << "Found " << groups.size()
-                            << " memory operation groups in block\n");
+    // Process each group to find contiguous sequences
+    for (const auto &group : groups) {
+      SmallVector<MemoryOpGroup> contiguousGroups =
+          extractContiguousGroups(group);
+      LLVM_DEBUG({
+        llvm::dbgs() << "Found " << contiguousGroups.size()
+                     << " contiguous groups in "
+                     << (group.isLoadGroup() ? "load" : "store") << " group\n";
+        for (const auto &contigGroup : contiguousGroups) {
+          llvm::dbgs() << "  Contiguous group with " << contigGroup.size()
+                       << " operations\n";
+        }
+      });
+    }
   });
 }
 
