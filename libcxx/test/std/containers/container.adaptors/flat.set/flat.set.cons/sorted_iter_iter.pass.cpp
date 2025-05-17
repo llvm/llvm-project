@@ -34,7 +34,8 @@ constexpr void test() {
   {
     // flat_set(sorted_unique_t, InputIterator, InputIterator);
     // cpp17_input_iterator
-    using M  = std::flat_set<int, std::less<int>, KeyContainer>;
+    using M = std::flat_set<int, std::less<int>, KeyContainer>;
+
     int ar[] = {1, 2, 4, 5};
     auto m   = M(std::sorted_unique, cpp17_input_iterator<const int*>(ar), cpp17_input_iterator<const int*>(ar + 4));
     auto expected = M{1, 2, 4, 5};
