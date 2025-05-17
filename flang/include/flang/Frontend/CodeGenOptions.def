@@ -47,5 +47,72 @@ ENUM_CODEGENOPT(FramePointer, llvm::FramePointerKind, 2, llvm::FramePointerKind:
 
 ENUM_CODEGENOPT(DoConcurrentMapping, DoConcurrentMappingKind, 2, DoConcurrentMappingKind::DCMK_None) ///< Map `do concurrent` to OpenMP
 
+CODEGENOPT(SanitizeAddressUseAfterScope , 1, 0) ///< Enable use-after-scope detection
+                                                ///< in AddressSanitizer
+ENUM_CODEGENOPT(SanitizeAddressUseAfterReturn,
+                llvm::AsanDetectStackUseAfterReturnMode, 2,
+                llvm::AsanDetectStackUseAfterReturnMode::Runtime
+                ) ///< Set detection mode for stack-use-after-return.
+CODEGENOPT(SanitizeAddressPoisonCustomArrayCookie, 1,
+           0) ///< Enable poisoning operator new[] which is not a replaceable
+              ///< global allocation function in AddressSanitizer
+CODEGENOPT(SanitizeAddressGlobalsDeadStripping, 1, 0) ///< Enable linker dead stripping
+                                                      ///< of globals in AddressSanitizer
+CODEGENOPT(SanitizeAddressUseOdrIndicator, 1, 0) ///< Enable ODR indicator globals
+CODEGENOPT(SanitizeMemoryTrackOrigins, 2, 0) ///< Enable tracking origins in
+                                             ///< MemorySanitizer
+ENUM_CODEGENOPT(SanitizeAddressDtor, llvm::AsanDtorKind, 2,
+                llvm::AsanDtorKind::Global)  ///< Set how ASan global
+                                             ///< destructors are emitted.
+CODEGENOPT(SanitizeMemoryParamRetval, 1, 0) ///< Enable detection of uninitialized
+                                            ///< parameters and return values
+                                            ///< in MemorySanitizer
+CODEGENOPT(SanitizeMemoryUseAfterDtor, 1, 0) ///< Enable use-after-delete detection
+                                             ///< in MemorySanitizer
+CODEGENOPT(SanitizeCfiCrossDso, 1, 0) ///< Enable cross-dso support in CFI.
+CODEGENOPT(SanitizeMinimalRuntime, 1, 0) ///< Use "_minimal" sanitizer runtime for
+                                         ///< diagnostics.
+CODEGENOPT(SanitizeCfiICallGeneralizePointers, 1, 0) ///< Generalize pointer types in
+                                                     ///< CFI icall function signatures
+CODEGENOPT(SanitizeCfiICallNormalizeIntegers, 1, 0) ///< Normalize integer types in
+                                                    ///< CFI icall function signatures
+CODEGENOPT(SanitizeCfiCanonicalJumpTables, 1, 0) ///< Make jump table symbols canonical
+                                                 ///< instead of creating a local jump table.
+CODEGENOPT(UniqueSourceFileNames, 1, 0) ///< Allow the compiler to assume that TUs
+                                        ///< have unique source file names at link time
+CODEGENOPT(SanitizeKcfiArity, 1, 0) ///< Embed arity in KCFI patchable function prefix
+CODEGENOPT(SanitizeCoverageType, 2, 0) ///< Type of sanitizer coverage
+                                       ///< instrumentation.
+CODEGENOPT(SanitizeCoverageIndirectCalls, 1, 0) ///< Enable sanitizer coverage
+                                                ///< for indirect calls.
+CODEGENOPT(SanitizeCoverageTraceBB, 1, 0) ///< Enable basic block tracing in
+                                          ///< in sanitizer coverage.
+CODEGENOPT(SanitizeCoverageTraceCmp, 1, 0) ///< Enable cmp instruction tracing
+                                           ///< in sanitizer coverage.
+CODEGENOPT(SanitizeCoverageTraceDiv, 1, 0) ///< Enable div instruction tracing
+                                           ///< in sanitizer coverage.
+CODEGENOPT(SanitizeCoverageTraceGep, 1, 0) ///< Enable GEP instruction tracing
+                                           ///< in sanitizer coverage.
+CODEGENOPT(SanitizeCoverage8bitCounters, 1, 0) ///< Use 8-bit frequency counters
+                                               ///< in sanitizer coverage.
+CODEGENOPT(SanitizeCoverageTracePC, 1, 0) ///< Enable PC tracing
+                                          ///< in sanitizer coverage.
+CODEGENOPT(SanitizeCoverageTracePCGuard, 1, 0) ///< Enable PC tracing with guard
+                                               ///< in sanitizer coverage.
+CODEGENOPT(SanitizeCoverageInline8bitCounters, 1, 0) ///< Use inline 8bit counters.
+CODEGENOPT(SanitizeCoverageInlineBoolFlag, 1, 0) ///< Use inline bool flag.
+CODEGENOPT(SanitizeCoveragePCTable, 1, 0) ///< Create a PC Table.
+CODEGENOPT(SanitizeCoverageControlFlow, 1, 0) ///< Collect control flow
+CODEGENOPT(SanitizeCoverageNoPrune, 1, 0) ///< Disable coverage pruning.
+CODEGENOPT(SanitizeCoverageStackDepth, 1, 0) ///< Enable max stack depth tracing
+CODEGENOPT(SanitizeCoverageTraceLoads, 1, 0) ///< Enable tracing of loads.
+CODEGENOPT(SanitizeCoverageTraceStores, 1, 0) ///< Enable tracing of stores.
+CODEGENOPT(SanitizeBinaryMetadataCovered, 1, 0) ///< Emit PCs for covered functions.
+CODEGENOPT(SanitizeBinaryMetadataAtomics, 1, 0) ///< Emit PCs for atomic operations.
+CODEGENOPT(SanitizeBinaryMetadataUAR, 1, 0) ///< Emit PCs for start of functions
+                                            ///< that are subject for use-after-return checking.
+CODEGENOPT(SanitizeStats     , 1, 0) ///< Collect statistics for sanitizers.
+CODEGENOPT(DisableIntegratedAS, 1, 0) ///< -no-integrated-as
+
 #undef CODEGENOPT
 #undef ENUM_CODEGENOPT
