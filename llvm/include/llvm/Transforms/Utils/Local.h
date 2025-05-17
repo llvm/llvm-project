@@ -563,6 +563,7 @@ bool inferAttributesFromOthers(Function &F);
 struct OverflowTracking {
   bool HasNUW = true;
   bool HasNSW = true;
+  bool IsDisjoint = true;
   bool AllKnownNonNegative = true;
   bool AllKnownNonZero = true;
   // Note: AllKnownNonNegative can be true in a case where one of the operands
