@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-slp-vectorization | FileCheck %s
+// RUN: mlir-opt %s --slp-vectorizer | FileCheck %s
 
 // CHECK-LABEL: func @basic_slp
 func.func @basic_slp(%arg0: memref<8xi32>, %arg1: memref<8xi32>) {
