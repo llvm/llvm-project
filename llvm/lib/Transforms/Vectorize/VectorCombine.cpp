@@ -16,6 +16,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
@@ -32,8 +33,10 @@
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include <numeric>
+#include <optional>
 #include <queue>
 #include <set>
+#include <tuple>
 
 #define DEBUG_TYPE "vector-combine"
 #include "llvm/Transforms/Utils/InstructionWorklist.h"
@@ -131,6 +134,7 @@ private:
   bool foldSelectShuffle(Instruction &I, bool FromReduction = false);
   bool foldInterleaveIntrinsics(Instruction &I);
   bool shrinkType(Instruction &I);
+  bool shrinkLoadForShuffles(Instruction &I);
 
   void replaceValue(Value &Old, Value &New) {
     LLVM_DEBUG(dbgs() << "VC: Replacing: " << Old << '\n');
@@ -3483,6 +3487,127 @@ bool VectorCombine::foldInterleaveIntrinsics(Instruction &I) {
   return true;
 }
 
+// Attempt to shrink loads that are only used by shufflevector instructions.
+bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
+  auto *OldLoad = dyn_cast<LoadInst>(&I);
+  if (!OldLoad || !OldLoad->isSimple())
+    return false;
+
+  auto *VecTy = dyn_cast<FixedVectorType>(OldLoad->getType());
+  if (!VecTy)
+    return false;
+
+  // Search all uses of load. If all uses are shufflevector instructions, and
+  // the second operands are all poison values, find the minimum and maximum
+  // indices of the vector elements referenced by all shuffle masks.
+  // Otherwise return `std::nullopt`.
+  using IndexRange = std::pair<int, int>;
+  auto GetIndexRangeInShuffles = [&]() -> std::optional<IndexRange> {
+    IndexRange OutputRange = IndexRange(VecTy->getNumElements(), -1);
+    for (auto &Use : I.uses()) {
+      // Ensure all uses match the required pattern.
+      User *Shuffle = Use.getUser();
+      Value *Op0 = nullptr;
+      ArrayRef<int> Mask;
+
+      if (!match(Shuffle, m_Shuffle(m_Value(Op0), m_Undef(), m_Mask(Mask))))
+        return std::nullopt;
+
+      // Ignore shufflevector instructions that have no uses.
+      if (!Shuffle->hasNUsesOrMore(1u))
+        continue;
+
+      // Find the min and max indices used by the shufflevector instruction.
+      auto *Op0Ty = cast<FixedVectorType>(Op0->getType());
+      auto NumElems = int(Op0Ty->getNumElements());
+
+      for (int Index : Mask) {
+        if (Index >= 0) {
+          Index %= NumElems;
+          OutputRange.first = std::min(Index, OutputRange.first);
+          OutputRange.second = std::max(Index, OutputRange.second);
+        }
+      }
+    }
+
+    if (OutputRange.second < OutputRange.first)
+      return std::nullopt;
+
+    return OutputRange;
+  };
+
+  // Get the range of vector elements used by shufflevector instructions.
+  if (auto Indices = GetIndexRangeInShuffles()) {
+    unsigned OldSize = VecTy->getNumElements();
+    unsigned NewSize = Indices->second + 1u;
+
+    // If the range of vector elements is smaller than the full load, attempt
+    // to create a smaller load.
+    if (NewSize < OldSize) {
+      auto Builder = IRBuilder(&I);
+      Builder.SetCurrentDebugLocation(I.getDebugLoc());
+
+      // Create new load of smaller vector.
+      auto *ElemTy = VecTy->getElementType();
+      auto *NewVecTy = FixedVectorType::get(ElemTy, NewSize);
+      auto *PtrOp = OldLoad->getPointerOperand();
+      auto *NewLoad = cast<LoadInst>(
+          Builder.CreateAlignedLoad(NewVecTy, PtrOp, OldLoad->getAlign()));
+      NewLoad->copyMetadata(I);
+
+      // Calculate costs of old and new ops.
+      auto OldCost = TTI.getMemoryOpCost(
+          Instruction::Load, OldLoad->getType(), OldLoad->getAlign(),
+          OldLoad->getPointerAddressSpace(), CostKind);
+      auto NewCost = TTI.getMemoryOpCost(
+          Instruction::Load, NewLoad->getType(), NewLoad->getAlign(),
+          NewLoad->getPointerAddressSpace(), CostKind);
+
+      using UseEntry = std::pair<ShuffleVectorInst *, std::vector<int>>;
+      auto NewUses = SmallVector<UseEntry, 4u>();
+      auto SizeDiff = OldSize - NewSize;
+
+      for (auto &Use : I.uses()) {
+        auto *Shuffle = cast<ShuffleVectorInst>(Use.getUser());
+        auto OldMask = Shuffle->getShuffleMask();
+
+        // Create entry for new use.
+        NewUses.push_back({Shuffle, {}});
+        auto &NewMask = NewUses.back().second;
+        for (auto Index : OldMask)
+          NewMask.push_back(Index >= int(OldSize) ? Index - SizeDiff : Index);
+
+        // Update costs.
+        OldCost += TTI.getShuffleCost(TTI::SK_PermuteSingleSrc, VecTy, OldMask,
+                                      CostKind);
+        NewCost += TTI.getShuffleCost(TTI::SK_PermuteSingleSrc, NewVecTy,
+                                      NewMask, CostKind);
+      }
+
+      if (OldCost < NewCost || !NewCost.isValid()) {
+        NewLoad->eraseFromParent();
+        return false;
+      }
+
+      // Replace all uses.
+      for (auto &Use : NewUses) {
+        auto *Shuffle = Use.first;
+        auto &NewMask = Use.second;
+
+        Builder.SetInsertPoint(Shuffle);
+        Builder.SetCurrentDebugLocation(Shuffle->getDebugLoc());
+        auto *NewShuffle = Builder.CreateShuffleVector(
+            NewLoad, PoisonValue::get(NewVecTy), NewMask);
+
+        replaceValue(*Shuffle, *NewShuffle);
+      }
+
+      return true;
+    }
+  }
+  return false;
+}
+
 /// This is the entry point for all transforms. Pass manager differences are
 /// handled in the callers of this function.
 bool VectorCombine::run() {
@@ -3557,6 +3682,9 @@ bool VectorCombine::run() {
         MadeChange |= foldShuffleOfIntrinsics(I);
         MadeChange |= foldSelectShuffle(I);
         MadeChange |= foldShuffleToIdentity(I);
+        break;
+      case Instruction::Load:
+        MadeChange |= shrinkLoadForShuffles(I);
         break;
       case Instruction::BitCast:
         MadeChange |= foldBitcastShuffle(I);
