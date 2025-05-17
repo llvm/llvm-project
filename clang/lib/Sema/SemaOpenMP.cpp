@@ -14924,6 +14924,21 @@ StmtResult SemaOpenMP::ActOnOpenMPUnrollDirective(ArrayRef<OMPClause *> Clauses,
   SourceLocation FactorLoc;
   if (Expr *FactorVal = PartialClause->getFactor();
       FactorVal && !FactorVal->containsErrors()) {
+    if (!VerifyPositiveIntegerConstantInClause(FactorVal, OMPC_partial,
+                                               /*StrictlyPositive=*/true,
+                                               /*SuppressExprDiags=*/false)
+             .isUsable())
+      return StmtError();
+    // Check that the iterator variable’s type can hold the factor’s bit-width
+    unsigned factorValWidth =
+        FactorVal->getIntegerConstantExpr(Context)->getActiveBits();
+    unsigned iteratorVWidth = Context.getTypeSize(OrigVar->getType());
+    if (factorValWidth > iteratorVWidth) {
+      Diag(FactorVal->getExprLoc(), diag::err_omp_unroll_factor_width_mismatch)
+          << factorValWidth << OrigVar->getType() << iteratorVWidth;
+      return StmtError();
+    }
+
     Factor = FactorVal->getIntegerConstantExpr(Context)->getZExtValue();
     FactorLoc = FactorVal->getExprLoc();
   } else {
