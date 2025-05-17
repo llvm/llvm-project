@@ -72,11 +72,13 @@ static SourceLocation getInlineTokenLocation(SourceRange RangeLocation,
 }
 
 void RedundantInlineSpecifierCheck::registerMatchers(MatchFinder *Finder) {
+  const auto IsPartOfRecordDecl = hasAncestor(recordDecl());
   Finder->addMatcher(
       functionDecl(isInlineSpecified(),
-                   anyOf(isConstexpr(), isDeleted(), isDefaulted(),
+                   anyOf(isConstexpr(), isDeleted(),
+                         allOf(isDefaulted(), IsPartOfRecordDecl),
                          isInternalLinkage(StrictMode),
-                         allOf(isDefinition(), hasAncestor(recordDecl()))))
+                         allOf(isDefinition(), IsPartOfRecordDecl)))
           .bind("fun_decl"),
       this);
 
@@ -88,7 +90,6 @@ void RedundantInlineSpecifierCheck::registerMatchers(MatchFinder *Finder) {
         this);
 
   if (getLangOpts().CPlusPlus17) {
-    const auto IsPartOfRecordDecl = hasAncestor(recordDecl());
     Finder->addMatcher(
         varDecl(
             isInlineSpecified(),
