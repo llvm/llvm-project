@@ -72,6 +72,8 @@ jobs:
     if: github.repository_owner == 'llvm'
     needs: abi-dump-setup
     runs-on: ubuntu-latest
+    container:
+      image: 'ghcr.io/llvm/ci-ubuntu-22.04:latest'
     strategy:
       matrix:
         name:
@@ -108,13 +110,13 @@ jobs:
       - name: Configure
         run: |
           mkdir install
-          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DLLVM_TARGETS_TO_BUILD="" -DLLVM_BUILD_LLVM_DYLIB=ON -DCMAKE_C_FLAGS_DEBUG="-g1 -Og" -DCMAKE_CXX_FLAGS_DEBUG="-g1 -Og" -DCMAKE_INSTALL_PREFIX="$(pwd)"/install llvm
+          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DLLVM_TARGETS_TO_BUILD="" -DLLVM_BUILD_LLVM_DYLIB=ON -DCMAKE_C_FLAGS_DEBUG="-g -Og" -DCMAKE_CXX_FLAGS_DEBUG="-g -Og" -DCMAKE_INSTALL_PREFIX="$(pwd)"/install llvm
       - name: Build
         # Need to run install-LLVM twice to ensure the symlink is installed (this is a bug).
         run: |
-          ninja -C build install-LLVM
-          ninja -C build install-LLVM
-          ninja -C build install-llvm-headers
+          ninja -v -C build install-LLVM
+          ninja -v -C build install-LLVM
+          ninja -v -C build install-llvm-headers
       - name: Dump ABI
         run: |
           if [ "${{ needs.abi-dump-setup.outputs.ABI_HEADERS }}" = "llvm-c" ]; then
