@@ -56,10 +56,17 @@ addi a2, a1, 1
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -     addi	a2, a1, 1
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     01234567
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     01234567
 
 # CHECK:      [0,0]     DeeeeeER   ld	a1, 0(a0)
-# CHECK-NEXT: [0,1]     D====eER   addi	a2, a1, 1
+# CHECK-NEXT: [0,1]     DPPPPeER   addi	a2, a1, 1
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions

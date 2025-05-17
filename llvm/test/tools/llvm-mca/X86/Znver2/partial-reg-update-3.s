@@ -57,27 +57,34 @@ xor %bx, %dx
 # CHECK-NEXT:  -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -     xorw	%bx, %dx
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789
 # CHECK-NEXT: Index     0123456789          0
 
 # CHECK:      [0,0]     DeER .    .    .    .   addw	%cx, %dx
-# CHECK-NEXT: [0,1]     D=eER.    .    .    .   movw	%ax, %dx
-# CHECK-NEXT: [0,2]     D==eER    .    .    .   xorw	%bx, %dx
-# CHECK-NEXT: [1,0]     D===eER   .    .    .   addw	%cx, %dx
-# CHECK-NEXT: [1,1]     .D===eER  .    .    .   movw	%ax, %dx
-# CHECK-NEXT: [1,2]     .D====eER .    .    .   xorw	%bx, %dx
-# CHECK-NEXT: [2,0]     .D=====eER.    .    .   addw	%cx, %dx
-# CHECK-NEXT: [2,1]     .D======eER    .    .   movw	%ax, %dx
-# CHECK-NEXT: [2,2]     . D======eER   .    .   xorw	%bx, %dx
-# CHECK-NEXT: [3,0]     . D=======eER  .    .   addw	%cx, %dx
-# CHECK-NEXT: [3,1]     . D========eER .    .   movw	%ax, %dx
-# CHECK-NEXT: [3,2]     . D=========eER.    .   xorw	%bx, %dx
-# CHECK-NEXT: [4,0]     .  D=========eER    .   addw	%cx, %dx
-# CHECK-NEXT: [4,1]     .  D==========eER   .   movw	%ax, %dx
-# CHECK-NEXT: [4,2]     .  D===========eER  .   xorw	%bx, %dx
-# CHECK-NEXT: [5,0]     .  D============eER .   addw	%cx, %dx
-# CHECK-NEXT: [5,1]     .   D============eER.   movw	%ax, %dx
-# CHECK-NEXT: [5,2]     .   D=============eER   xorw	%bx, %dx
+# CHECK-NEXT: [0,1]     DPeER.    .    .    .   movw	%ax, %dx
+# CHECK-NEXT: [0,2]     DPPeER    .    .    .   xorw	%bx, %dx
+# CHECK-NEXT: [1,0]     DPPPeER   .    .    .   addw	%cx, %dx
+# CHECK-NEXT: [1,1]     .DPPPeER  .    .    .   movw	%ax, %dx
+# CHECK-NEXT: [1,2]     .DPPPPeER .    .    .   xorw	%bx, %dx
+# CHECK-NEXT: [2,0]     .DPPPPPeER.    .    .   addw	%cx, %dx
+# CHECK-NEXT: [2,1]     .DPPPPPPeER    .    .   movw	%ax, %dx
+# CHECK-NEXT: [2,2]     . DPPPPPPeER   .    .   xorw	%bx, %dx
+# CHECK-NEXT: [3,0]     . DPPPPPPPeER  .    .   addw	%cx, %dx
+# CHECK-NEXT: [3,1]     . DPPPPPPPPeER .    .   movw	%ax, %dx
+# CHECK-NEXT: [3,2]     . DPPPPPPPPPeER.    .   xorw	%bx, %dx
+# CHECK-NEXT: [4,0]     .  DPPPPPPPPPeER    .   addw	%cx, %dx
+# CHECK-NEXT: [4,1]     .  DPPPPPPPPPPeER   .   movw	%ax, %dx
+# CHECK-NEXT: [4,2]     .  DPPPPPPPPPPPeER  .   xorw	%bx, %dx
+# CHECK-NEXT: [5,0]     .  DPPPPPPPPPPPPeER .   addw	%cx, %dx
+# CHECK-NEXT: [5,1]     .   DPPPPPPPPPPPPeER.   movw	%ax, %dx
+# CHECK-NEXT: [5,2]     .   DPPPPPPPPPPPPPeER   xorw	%bx, %dx
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions

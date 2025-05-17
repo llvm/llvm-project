@@ -97,18 +97,25 @@ vaddps  %ymm1, %ymm1, %ymm0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -     2.00    -      -      -      -      -      -     vblendps	$2, %ymm1, %ymm2, %ymm3
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeER  .   vaddps	%ymm0, %ymm0, %ymm1
 # CHECK-NEXT: [0,1]     DeeE---R  .   vxorps	%ymm1, %ymm1, %ymm1
-# CHECK-NEXT: [0,2]     .D=eeE-R  .   vblendps	$2, %ymm1, %ymm2, %ymm3
+# CHECK-NEXT: [0,2]     .DPeeE-R  .   vblendps	$2, %ymm1, %ymm2, %ymm3
 # CHECK-NEXT: [1,0]     .DeeeeeER .   vaddps	%ymm0, %ymm0, %ymm1
 # CHECK-NEXT: [1,1]     . DeeE--R .   vxorps	%ymm1, %ymm1, %ymm1
-# CHECK-NEXT: [1,2]     . D==eeER .   vblendps	$2, %ymm1, %ymm2, %ymm3
+# CHECK-NEXT: [1,2]     . DPPeeER .   vblendps	$2, %ymm1, %ymm2, %ymm3
 # CHECK-NEXT: [2,0]     .  DeeeeeER   vaddps	%ymm0, %ymm0, %ymm1
 # CHECK-NEXT: [2,1]     .  D=eeE--R   vxorps	%ymm1, %ymm1, %ymm1
-# CHECK-NEXT: [2,2]     .   D==eeER   vblendps	$2, %ymm1, %ymm2, %ymm3
+# CHECK-NEXT: [2,2]     .   DPPeeER   vblendps	$2, %ymm1, %ymm2, %ymm3
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -183,18 +190,25 @@ vaddps  %ymm1, %ymm1, %ymm0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -     2.00    -      -      -      -      -      -     vblendpd	$2, %ymm1, %ymm2, %ymm3
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeER  .   vaddpd	%ymm0, %ymm0, %ymm1
 # CHECK-NEXT: [0,1]     DeeE---R  .   vxorpd	%ymm1, %ymm1, %ymm1
-# CHECK-NEXT: [0,2]     .D=eeE-R  .   vblendpd	$2, %ymm1, %ymm2, %ymm3
+# CHECK-NEXT: [0,2]     .DPeeE-R  .   vblendpd	$2, %ymm1, %ymm2, %ymm3
 # CHECK-NEXT: [1,0]     .DeeeeeER .   vaddpd	%ymm0, %ymm0, %ymm1
 # CHECK-NEXT: [1,1]     . DeeE--R .   vxorpd	%ymm1, %ymm1, %ymm1
-# CHECK-NEXT: [1,2]     . D==eeER .   vblendpd	$2, %ymm1, %ymm2, %ymm3
+# CHECK-NEXT: [1,2]     . DPPeeER .   vblendpd	$2, %ymm1, %ymm2, %ymm3
 # CHECK-NEXT: [2,0]     .  DeeeeeER   vaddpd	%ymm0, %ymm0, %ymm1
 # CHECK-NEXT: [2,1]     .  D=eeE--R   vxorpd	%ymm1, %ymm1, %ymm1
-# CHECK-NEXT: [2,2]     .   D==eeER   vblendpd	$2, %ymm1, %ymm2, %ymm3
+# CHECK-NEXT: [2,2]     .   DPPeeER   vblendpd	$2, %ymm1, %ymm2, %ymm3
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -267,7 +281,14 @@ vaddps  %ymm1, %ymm1, %ymm0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -     1.00   1.00    -      -      -      -      -     vandnps	%ymm2, %ymm2, %ymm3
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeER .   vaddps	%ymm0, %ymm1, %ymm2
 # CHECK-NEXT: [0,1]     DeeE---R .   vandnps	%ymm2, %ymm2, %ymm3
@@ -346,7 +367,14 @@ vaddps  %ymm1, %ymm1, %ymm0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -     1.00   1.00    -      -      -      -      -     vandnps	%ymm2, %ymm2, %ymm3
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeER .   vaddps	%ymm0, %ymm1, %ymm2
 # CHECK-NEXT: [0,1]     DeeE---R .   vandnps	%ymm2, %ymm2, %ymm3
@@ -425,15 +453,22 @@ vaddps  %ymm1, %ymm1, %ymm0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     2.00    -      -      -      -      -     1.00    -      -      -      -      -      -      -      -     vaddps	%ymm1, %ymm1, %ymm0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789
 # CHECK-NEXT: Index     0123456789          0123456789
 
 # CHECK:      [0,0]     DeeeeER   .    .    .    .   .   vperm2f128	$136, %ymm0, %ymm0, %ymm1
-# CHECK-NEXT: [0,1]     . D==eeeeeER   .    .    .   .   vaddps	%ymm1, %ymm1, %ymm0
-# CHECK-NEXT: [1,0]     .  D======eeeeER    .    .   .   vperm2f128	$136, %ymm0, %ymm0, %ymm1
-# CHECK-NEXT: [1,1]     .    D========eeeeeER    .   .   vaddps	%ymm1, %ymm1, %ymm0
-# CHECK-NEXT: [2,0]     .    .D============eeeeER.   .   vperm2f128	$136, %ymm0, %ymm0, %ymm1
-# CHECK-NEXT: [2,1]     .    .  D==============eeeeeER   vaddps	%ymm1, %ymm1, %ymm0
+# CHECK-NEXT: [0,1]     . DPPeeeeeER   .    .    .   .   vaddps	%ymm1, %ymm1, %ymm0
+# CHECK-NEXT: [1,0]     .  DPPPPPPeeeeER    .    .   .   vperm2f128	$136, %ymm0, %ymm0, %ymm1
+# CHECK-NEXT: [1,1]     .    DPPPPPPPPeeeeeER    .   .   vaddps	%ymm1, %ymm1, %ymm0
+# CHECK-NEXT: [2,0]     .    .DPPPPPPPPPPPPeeeeER.   .   vperm2f128	$136, %ymm0, %ymm0, %ymm1
+# CHECK-NEXT: [2,1]     .    .  DPPPPPPPPPPPPPPeeeeeER   vaddps	%ymm1, %ymm1, %ymm0
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions

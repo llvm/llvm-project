@@ -47,17 +47,24 @@ lzcnt %ax, %bx  ## partial register stall.
 # CHECK-NEXT:  -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -     lzcntw	%ax, %bx
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          01
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeER.    ..   lzcntw	%ax, %bx
-# CHECK-NEXT: [1,0]     D=eeER    ..   lzcntw	%ax, %bx
-# CHECK-NEXT: [2,0]     D==eeER   ..   lzcntw	%ax, %bx
-# CHECK-NEXT: [3,0]     D===eeER  ..   lzcntw	%ax, %bx
-# CHECK-NEXT: [4,0]     .D===eeER ..   lzcntw	%ax, %bx
-# CHECK-NEXT: [5,0]     .D====eeER..   lzcntw	%ax, %bx
-# CHECK-NEXT: [6,0]     .D=====eeER.   lzcntw	%ax, %bx
-# CHECK-NEXT: [7,0]     .D======eeER   lzcntw	%ax, %bx
+# CHECK-NEXT: [1,0]     DPeeER    ..   lzcntw	%ax, %bx
+# CHECK-NEXT: [2,0]     DPPeeER   ..   lzcntw	%ax, %bx
+# CHECK-NEXT: [3,0]     DPPPeeER  ..   lzcntw	%ax, %bx
+# CHECK-NEXT: [4,0]     .DPPPeeER ..   lzcntw	%ax, %bx
+# CHECK-NEXT: [5,0]     .DPPPPeeER..   lzcntw	%ax, %bx
+# CHECK-NEXT: [6,0]     .DPPPPPeeER.   lzcntw	%ax, %bx
+# CHECK-NEXT: [7,0]     .DPPPPPPeeER   lzcntw	%ax, %bx
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions

@@ -64,39 +64,46 @@ vpaddd %xmm0, %xmm0, %xmm3
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     1.00    -      -      -      -      -      -     vpaddd	%xmm0, %xmm0, %xmm3
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0123456789          0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789          0123456789          0123456789
 # CHECK-NEXT: Index     0123456789          0123456789          0123456789          01234
 
 # CHECK:      [0,0]     DeeeeER   .    .    .    .    .    .    .    .    .    .    .   .   vpmuldq	%xmm0, %xmm0, %xmm1
-# CHECK-NEXT: [0,1]     D====eeER .    .    .    .    .    .    .    .    .    .    .   .   vpaddd	%xmm1, %xmm1, %xmm0
-# CHECK-NEXT: [0,2]     D======eeER    .    .    .    .    .    .    .    .    .    .   .   vpaddd	%xmm0, %xmm0, %xmm3
-# CHECK-NEXT: [1,0]     D======eeeeER  .    .    .    .    .    .    .    .    .    .   .   vpmuldq	%xmm0, %xmm0, %xmm1
-# CHECK-NEXT: [1,1]     .D=========eeER.    .    .    .    .    .    .    .    .    .   .   vpaddd	%xmm1, %xmm1, %xmm0
-# CHECK-NEXT: [1,2]     .D===========eeER   .    .    .    .    .    .    .    .    .   .   vpaddd	%xmm0, %xmm0, %xmm3
-# CHECK-NEXT: [2,0]     .D===========eeeeER .    .    .    .    .    .    .    .    .   .   vpmuldq	%xmm0, %xmm0, %xmm1
-# CHECK-NEXT: [2,1]     .D===============eeER    .    .    .    .    .    .    .    .   .   vpaddd	%xmm1, %xmm1, %xmm0
-# CHECK-NEXT: [2,2]     . D================eeER  .    .    .    .    .    .    .    .   .   vpaddd	%xmm0, %xmm0, %xmm3
-# CHECK-NEXT: [3,0]     . D================eeeeER.    .    .    .    .    .    .    .   .   vpmuldq	%xmm0, %xmm0, %xmm1
-# CHECK-NEXT: [3,1]     . D====================eeER   .    .    .    .    .    .    .   .   vpaddd	%xmm1, %xmm1, %xmm0
-# CHECK-NEXT: [3,2]     . D======================eeER .    .    .    .    .    .    .   .   vpaddd	%xmm0, %xmm0, %xmm3
-# CHECK-NEXT: [4,0]     .  D=====================eeeeER    .    .    .    .    .    .   .   vpmuldq	%xmm0, %xmm0, %xmm1
-# CHECK-NEXT: [4,1]     .  D=========================eeER  .    .    .    .    .    .   .   vpaddd	%xmm1, %xmm1, %xmm0
-# CHECK-NEXT: [4,2]     .  D===========================eeER.    .    .    .    .    .   .   vpaddd	%xmm0, %xmm0, %xmm3
-# CHECK-NEXT: [5,0]     .  D===========================eeeeER   .    .    .    .    .   .   vpmuldq	%xmm0, %xmm0, %xmm1
-# CHECK-NEXT: [5,1]     .   D==============================eeER .    .    .    .    .   .   vpaddd	%xmm1, %xmm1, %xmm0
-# CHECK-NEXT: [5,2]     .   D================================eeER    .    .    .    .   .   vpaddd	%xmm0, %xmm0, %xmm3
-# CHECK-NEXT: [6,0]     .   D================================eeeeER  .    .    .    .   .   vpmuldq	%xmm0, %xmm0, %xmm1
-# CHECK-NEXT: [6,1]     .   D====================================eeER.    .    .    .   .   vpaddd	%xmm1, %xmm1, %xmm0
-# CHECK-NEXT: [6,2]     .    D=====================================eeER   .    .    .   .   vpaddd	%xmm0, %xmm0, %xmm3
-# CHECK-NEXT: [7,0]     .    D=====================================eeeeER .    .    .   .   vpmuldq	%xmm0, %xmm0, %xmm1
-# CHECK-NEXT: [7,1]     .    D=========================================eeER    .    .   .   vpaddd	%xmm1, %xmm1, %xmm0
-# CHECK-NEXT: [7,2]     .    D===========================================eeER  .    .   .   vpaddd	%xmm0, %xmm0, %xmm3
-# CHECK-NEXT: [8,0]     .    .D==========================================eeeeER.    .   .   vpmuldq	%xmm0, %xmm0, %xmm1
-# CHECK-NEXT: [8,1]     .    .D==============================================eeER   .   .   vpaddd	%xmm1, %xmm1, %xmm0
-# CHECK-NEXT: [8,2]     .    .D================================================eeER .   .   vpaddd	%xmm0, %xmm0, %xmm3
-# CHECK-NEXT: [9,0]     .    .D================================================eeeeER   .   vpmuldq	%xmm0, %xmm0, %xmm1
-# CHECK-NEXT: [9,1]     .    . D===================================================eeER .   vpaddd	%xmm1, %xmm1, %xmm0
-# CHECK-NEXT: [9,2]     .    . D=====================================================eeER   vpaddd	%xmm0, %xmm0, %xmm3
+# CHECK-NEXT: [0,1]     DPPPPeeER .    .    .    .    .    .    .    .    .    .    .   .   vpaddd	%xmm1, %xmm1, %xmm0
+# CHECK-NEXT: [0,2]     DPPPPPPeeER    .    .    .    .    .    .    .    .    .    .   .   vpaddd	%xmm0, %xmm0, %xmm3
+# CHECK-NEXT: [1,0]     DPPPPPPeeeeER  .    .    .    .    .    .    .    .    .    .   .   vpmuldq	%xmm0, %xmm0, %xmm1
+# CHECK-NEXT: [1,1]     .DPPPPPPPPPeeER.    .    .    .    .    .    .    .    .    .   .   vpaddd	%xmm1, %xmm1, %xmm0
+# CHECK-NEXT: [1,2]     .DPPPPPPPPPPPeeER   .    .    .    .    .    .    .    .    .   .   vpaddd	%xmm0, %xmm0, %xmm3
+# CHECK-NEXT: [2,0]     .DPPPPPPPPPPPeeeeER .    .    .    .    .    .    .    .    .   .   vpmuldq	%xmm0, %xmm0, %xmm1
+# CHECK-NEXT: [2,1]     .DPPPPPPPPPPPPPPPeeER    .    .    .    .    .    .    .    .   .   vpaddd	%xmm1, %xmm1, %xmm0
+# CHECK-NEXT: [2,2]     . DPPPPPPPPPPPPPPPPeeER  .    .    .    .    .    .    .    .   .   vpaddd	%xmm0, %xmm0, %xmm3
+# CHECK-NEXT: [3,0]     . DPPPPPPPPPPPPPPPPeeeeER.    .    .    .    .    .    .    .   .   vpmuldq	%xmm0, %xmm0, %xmm1
+# CHECK-NEXT: [3,1]     . DPPPPPPPPPPPPPPPPPPPPeeER   .    .    .    .    .    .    .   .   vpaddd	%xmm1, %xmm1, %xmm0
+# CHECK-NEXT: [3,2]     . DPPPPPPPPPPPPPPPPPPPPPPeeER .    .    .    .    .    .    .   .   vpaddd	%xmm0, %xmm0, %xmm3
+# CHECK-NEXT: [4,0]     .  DPPPPPPPPPPPPPPPPPPPPPeeeeER    .    .    .    .    .    .   .   vpmuldq	%xmm0, %xmm0, %xmm1
+# CHECK-NEXT: [4,1]     .  DPPPPPPPPPPPPPPPPPPPPPPPPPeeER  .    .    .    .    .    .   .   vpaddd	%xmm1, %xmm1, %xmm0
+# CHECK-NEXT: [4,2]     .  DPPPPPPPPPPPPPPPPPPPPPPPPPPPeeER.    .    .    .    .    .   .   vpaddd	%xmm0, %xmm0, %xmm3
+# CHECK-NEXT: [5,0]     .  DPPPPPPPPPPPPPPPPPPPPPPPPPPPeeeeER   .    .    .    .    .   .   vpmuldq	%xmm0, %xmm0, %xmm1
+# CHECK-NEXT: [5,1]     .   DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeeER .    .    .    .    .   .   vpaddd	%xmm1, %xmm1, %xmm0
+# CHECK-NEXT: [5,2]     .   DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeeER    .    .    .    .   .   vpaddd	%xmm0, %xmm0, %xmm3
+# CHECK-NEXT: [6,0]     .   DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeeeeER  .    .    .    .   .   vpmuldq	%xmm0, %xmm0, %xmm1
+# CHECK-NEXT: [6,1]     .   DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeeER.    .    .    .   .   vpaddd	%xmm1, %xmm1, %xmm0
+# CHECK-NEXT: [6,2]     .    DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeeER   .    .    .   .   vpaddd	%xmm0, %xmm0, %xmm3
+# CHECK-NEXT: [7,0]     .    DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeeeeER .    .    .   .   vpmuldq	%xmm0, %xmm0, %xmm1
+# CHECK-NEXT: [7,1]     .    DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeeER    .    .   .   vpaddd	%xmm1, %xmm1, %xmm0
+# CHECK-NEXT: [7,2]     .    DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeeER  .    .   .   vpaddd	%xmm0, %xmm0, %xmm3
+# CHECK-NEXT: [8,0]     .    .DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeeeeER.    .   .   vpmuldq	%xmm0, %xmm0, %xmm1
+# CHECK-NEXT: [8,1]     .    .DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeeER   .   .   vpaddd	%xmm1, %xmm1, %xmm0
+# CHECK-NEXT: [8,2]     .    .DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeeER .   .   vpaddd	%xmm0, %xmm0, %xmm3
+# CHECK-NEXT: [9,0]     .    .DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeeeeER   .   vpmuldq	%xmm0, %xmm0, %xmm1
+# CHECK-NEXT: [9,1]     .    . DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeeER .   vpaddd	%xmm1, %xmm1, %xmm0
+# CHECK-NEXT: [9,2]     .    . DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeeER   vpaddd	%xmm0, %xmm0, %xmm3
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions

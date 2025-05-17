@@ -30,7 +30,14 @@ imull  (%rdi)
 # CHECK-NEXT:  4      9     1.00    *                   imull	(%rdi)
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     012
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          012
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeER   . .   imull	%esi

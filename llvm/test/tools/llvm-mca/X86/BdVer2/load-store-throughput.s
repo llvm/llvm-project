@@ -141,12 +141,19 @@ movaps %xmm3, (%rbx)
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   movb	%dil, (%rbx)
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     012345678
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     012345678
 
 # CHECK:      [0,0]     DeER .  .   movb	%spl, (%rax)
 # CHECK-NEXT: [0,1]     DeeeeeER.   movb	(%rcx), %bpl
 # CHECK-NEXT: [0,2]     D=eeeeeER   movb	(%rdx), %sil
-# CHECK-NEXT: [0,3]     D==eE---R   movb	%dil, (%rbx)
+# CHECK-NEXT: [0,3]     DP=eE---R   movb	%dil, (%rbx)
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -259,12 +266,19 @@ movaps %xmm3, (%rbx)
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   movw	%di, (%rbx)
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     012345678
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     012345678
 
 # CHECK:      [0,0]     DeER .  .   movw	%sp, (%rax)
 # CHECK-NEXT: [0,1]     DeeeeeER.   movw	(%rcx), %bp
 # CHECK-NEXT: [0,2]     D=eeeeeER   movw	(%rdx), %si
-# CHECK-NEXT: [0,3]     D==eE---R   movw	%di, (%rbx)
+# CHECK-NEXT: [0,3]     DP=eE---R   movw	%di, (%rbx)
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -377,12 +391,19 @@ movaps %xmm3, (%rbx)
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   movl	%edi, (%rbx)
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     012345678
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     012345678
 
 # CHECK:      [0,0]     DeER .  .   movl	%esp, (%rax)
 # CHECK-NEXT: [0,1]     DeeeeeER.   movl	(%rcx), %ebp
 # CHECK-NEXT: [0,2]     D=eeeeeER   movl	(%rdx), %esi
-# CHECK-NEXT: [0,3]     D==eE---R   movl	%edi, (%rbx)
+# CHECK-NEXT: [0,3]     DP=eE---R   movl	%edi, (%rbx)
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -495,12 +516,19 @@ movaps %xmm3, (%rbx)
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   movq	%rdi, (%rbx)
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     012345678
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     012345678
 
 # CHECK:      [0,0]     DeER .  .   movq	%rsp, (%rax)
 # CHECK-NEXT: [0,1]     DeeeeeER.   movq	(%rcx), %rbp
 # CHECK-NEXT: [0,2]     D=eeeeeER   movq	(%rdx), %rsi
-# CHECK-NEXT: [0,3]     D==eE---R   movq	%rdi, (%rbx)
+# CHECK-NEXT: [0,3]     DP=eE---R   movq	%rdi, (%rbx)
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -612,12 +640,19 @@ movaps %xmm3, (%rbx)
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     3.00    -      -      -      -      -     1.00   movd	%mm3, (%rbx)
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     012345678
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     012345678
 
 # CHECK:      [0,0]     DeeER.  .   movd	%mm0, (%rax)
 # CHECK-NEXT: [0,1]     DeeeeeER.   movd	(%rcx), %mm1
 # CHECK-NEXT: [0,2]     D=eeeeeER   movd	(%rdx), %mm2
-# CHECK-NEXT: [0,3]     D===eeE-R   movd	%mm3, (%rbx)
+# CHECK-NEXT: [0,3]     DP==eeE-R   movd	%mm3, (%rbx)
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -729,12 +764,19 @@ movaps %xmm3, (%rbx)
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     3.00    -      -      -      -      -     1.00   movaps	%xmm3, (%rbx)
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     012345678
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     012345678
 
 # CHECK:      [0,0]     DeER .  .   movaps	%xmm0, (%rax)
 # CHECK-NEXT: [0,1]     DeeeeeER.   movaps	(%rcx), %xmm1
 # CHECK-NEXT: [0,2]     D=eeeeeER   movaps	(%rdx), %xmm2
-# CHECK-NEXT: [0,3]     D===eE--R   movaps	%xmm3, (%rbx)
+# CHECK-NEXT: [0,3]     DP==eE--R   movaps	%xmm3, (%rbx)
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions

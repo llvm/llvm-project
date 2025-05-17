@@ -60,12 +60,19 @@ cmpxchg16b (%rsi)
 # CHECK-NEXT:  -      -     2.00   6.00   0.66   0.67   1.00   4.00   4.00   0.67   cmpxchg16b	(%rsi)
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0123456789          0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789          0123456789          0123456789
 # CHECK-NEXT: Index     0123456789          0123456789          0123456789          012345678
 
 # CHECK:      [0,0]     DeeeeeeeeeeeeeeeeeeeeeeER.    .    .    .    .    .    .    .    .  .   cmpxchg16b	(%rsi)
-# CHECK-NEXT: [1,0]     .    D=================eeeeeeeeeeeeeeeeeeeeeeER   .    .    .    .  .   cmpxchg16b	(%rsi)
-# CHECK-NEXT: [2,0]     .    .    D==================================eeeeeeeeeeeeeeeeeeeeeeER   cmpxchg16b	(%rsi)
+# CHECK-NEXT: [1,0]     .    DPPPPPPPPPPPPPPPPPeeeeeeeeeeeeeeeeeeeeeeER   .    .    .    .  .   cmpxchg16b	(%rsi)
+# CHECK-NEXT: [2,0]     .    .    DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeeeeeeeeeeeeeeeeeeeeeeER   cmpxchg16b	(%rsi)
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions

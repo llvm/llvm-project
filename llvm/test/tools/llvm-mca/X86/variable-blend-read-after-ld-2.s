@@ -97,38 +97,37 @@ vblendvps %xmm1, (%rdi), %xmm2, %xmm3
 # ZNVER2-NEXT:  IPC:               0.18
 # ZNVER2-NEXT:  Block RThroughput: 0.5
 
-# BDVER2:       Timeline view:
-# BDVER2-NEXT:  Index     0123456789
+# ALL:          Timeline view:
+# ALL-NEXT:     D: Instruction dispatched
+# ALL-NEXT:     e: Instruction executing
+# ALL-NEXT:     E: Instruction executed (write-back stage)
+# ALL-NEXT:     P: Instruction waiting for data dependency
+# ALL-NEXT:     =: Instruction waiting for available HW resource
+# ALL-NEXT:     -: Instruction executed, waiting to retire in order.
 
-# BDWELL:       Timeline view:
-# BDWELL-NEXT:  Index     0123456789
+# BDVER2:       Index     0123456789
 
-# BTVER2:       Timeline view:
-# BTVER2-NEXT:                      0
+# BDWELL:       Index     0123456789
+
+# BTVER2:                           0
 # BTVER2-NEXT:  Index     0123456789
 
-# HASWELL:      Timeline view:
-# HASWELL-NEXT:                     0
+# HASWELL:                          0
 # HASWELL-NEXT: Index     0123456789
 
-# IVY:          Timeline view:
-# IVY-NEXT:                         0
+# IVY:                              0
 # IVY-NEXT:     Index     0123456789
 
-# SANDY:        Timeline view:
-# SANDY-NEXT:                       0
+# SANDY:                            0
 # SANDY-NEXT:   Index     0123456789
 
-# SKYLAKE:      Timeline view:
-# SKYLAKE-NEXT:                     0
+# SKYLAKE:                          0
 # SKYLAKE-NEXT: Index     0123456789
 
-# ZNVER1:       Timeline view:
-# ZNVER1-NEXT:                      0
+# ZNVER1:                           0
 # ZNVER1-NEXT:  Index     0123456789
 
-# ZNVER2:       Timeline view:
-# ZNVER2-NEXT:                      0
+# ZNVER2:                           0
 # ZNVER2-NEXT:  Index     0123456789
 
 # BDVER2:       [0,0]     DeeeeeER .   vaddps	%xmm0, %xmm0, %xmm2

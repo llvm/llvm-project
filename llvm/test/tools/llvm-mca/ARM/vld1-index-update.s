@@ -47,19 +47,26 @@ vld1.32	{d16, d17}, [r1]!
 # CHECK-NEXT:  -      -      -     1.00   1.00    -     vld1.32	{d16, d17}, [r1]!
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     012345
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          012345
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeER .    .    .   add	r1, r1, r12
-# CHECK-NEXT: [0,1]     D=eeeeER  .    .   vld1.32	{d16, d17}, [r1]!
-# CHECK-NEXT: [1,0]     .D=eE--R  .    .   add	r1, r1, r12
-# CHECK-NEXT: [1,1]     .D==eeeeER.    .   vld1.32	{d16, d17}, [r1]!
-# CHECK-NEXT: [2,0]     . D==eE--R.    .   add	r1, r1, r12
-# CHECK-NEXT: [2,1]     . D===eeeeER   .   vld1.32	{d16, d17}, [r1]!
-# CHECK-NEXT: [3,0]     .  D===eE--R   .   add	r1, r1, r12
-# CHECK-NEXT: [3,1]     .  D====eeeeER .   vld1.32	{d16, d17}, [r1]!
-# CHECK-NEXT: [4,0]     .   D====eE--R .   add	r1, r1, r12
-# CHECK-NEXT: [4,1]     .   D=====eeeeER   vld1.32	{d16, d17}, [r1]!
+# CHECK-NEXT: [0,1]     DPeeeeER  .    .   vld1.32	{d16, d17}, [r1]!
+# CHECK-NEXT: [1,0]     .DPeE--R  .    .   add	r1, r1, r12
+# CHECK-NEXT: [1,1]     .DPPeeeeER.    .   vld1.32	{d16, d17}, [r1]!
+# CHECK-NEXT: [2,0]     . DPPeE--R.    .   add	r1, r1, r12
+# CHECK-NEXT: [2,1]     . DPPPeeeeER   .   vld1.32	{d16, d17}, [r1]!
+# CHECK-NEXT: [3,0]     .  DPPPeE--R   .   add	r1, r1, r12
+# CHECK-NEXT: [3,1]     .  DPPPPeeeeER .   vld1.32	{d16, d17}, [r1]!
+# CHECK-NEXT: [4,0]     .   DPPPPeE--R .   add	r1, r1, r12
+# CHECK-NEXT: [4,1]     .   DPPPPPeeeeER   vld1.32	{d16, d17}, [r1]!
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions

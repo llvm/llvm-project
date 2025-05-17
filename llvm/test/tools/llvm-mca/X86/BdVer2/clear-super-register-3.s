@@ -43,15 +43,22 @@ addps  %xmm0, %xmm0
 # CHECK-NEXT:  1      5     1.00                        addps	%xmm0, %xmm0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789
 # CHECK-NEXT: Index     0123456789          012
 
 # CHECK:      [0,0]     D=eeeeeeeeeER  .    . .   sqrtss	%xmm0, %xmm0
 # CHECK-NEXT: [0,1]     DeeeeeE-----R  .    . .   movss	(%eax), %xmm0
-# CHECK-NEXT: [0,2]     D======eeeeeER .    . .   addps	%xmm0, %xmm0
-# CHECK-NEXT: [1,0]     D===========eeeeeeeeeER   sqrtss	%xmm0, %xmm0
+# CHECK-NEXT: [0,2]     DPPPPP=eeeeeER .    . .   addps	%xmm0, %xmm0
+# CHECK-NEXT: [1,0]     DPPPPPPPPPPPeeeeeeeeeER   sqrtss	%xmm0, %xmm0
 # CHECK-NEXT: [1,1]     .D==eeeeeE------------R   movss	(%eax), %xmm0
-# CHECK-NEXT: [1,2]     .D=========eeeeeE-----R   addps	%xmm0, %xmm0
+# CHECK-NEXT: [1,2]     .DPPPPPPP==eeeeeE-----R   addps	%xmm0, %xmm0
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -91,15 +98,22 @@ addps  %xmm0, %xmm0
 # CHECK-NEXT:  1      5     1.00                        addps	%xmm0, %xmm0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789
 # CHECK-NEXT: Index     0123456789          012
 
 # CHECK:      [0,0]     D=eeeeeeeeeER  .    . .   sqrtsd	%xmm0, %xmm0
 # CHECK-NEXT: [0,1]     DeeeeeE-----R  .    . .   movsd	(%eax), %xmm0
-# CHECK-NEXT: [0,2]     D======eeeeeER .    . .   addps	%xmm0, %xmm0
-# CHECK-NEXT: [1,0]     D===========eeeeeeeeeER   sqrtsd	%xmm0, %xmm0
+# CHECK-NEXT: [0,2]     DPPPPP=eeeeeER .    . .   addps	%xmm0, %xmm0
+# CHECK-NEXT: [1,0]     DPPPPPPPPPPPeeeeeeeeeER   sqrtsd	%xmm0, %xmm0
 # CHECK-NEXT: [1,1]     .D==eeeeeE------------R   movsd	(%eax), %xmm0
-# CHECK-NEXT: [1,2]     .D=========eeeeeE-----R   addps	%xmm0, %xmm0
+# CHECK-NEXT: [1,2]     .DPPPPPPP==eeeeeE-----R   addps	%xmm0, %xmm0
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions

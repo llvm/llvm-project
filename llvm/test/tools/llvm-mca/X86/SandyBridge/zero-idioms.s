@@ -249,7 +249,14 @@ vpxor  %xmm3, %xmm3, %xmm5
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     vpxor	%xmm3, %xmm3, %xmm5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789
 # CHECK-NEXT: Index     0123456789          01234
 
 # CHECK:      [0,0]     DR   .    .    .    .   .   subl	%eax, %eax
@@ -257,8 +264,8 @@ vpxor  %xmm3, %xmm3, %xmm5
 # CHECK-NEXT: [0,2]     DR   .    .    .    .   .   xorl	%eax, %eax
 # CHECK-NEXT: [0,3]     DR   .    .    .    .   .   xorq	%rax, %rax
 # CHECK-NEXT: [0,4]     .DeeeER   .    .    .   .   pcmpgtb	%mm2, %mm2
-# CHECK-NEXT: [0,5]     .D===eeeER.    .    .   .   pcmpgtd	%mm2, %mm2
-# CHECK-NEXT: [0,6]     .D======eeeER  .    .   .   pcmpgtw	%mm2, %mm2
+# CHECK-NEXT: [0,5]     .DPPPeeeER.    .    .   .   pcmpgtd	%mm2, %mm2
+# CHECK-NEXT: [0,6]     .DPPPPPPeeeER  .    .   .   pcmpgtw	%mm2, %mm2
 # CHECK-NEXT: [0,7]     .D----------R  .    .   .   pcmpgtb	%xmm2, %xmm2
 # CHECK-NEXT: [0,8]     . D---------R  .    .   .   pcmpgtd	%xmm2, %xmm2
 # CHECK-NEXT: [0,9]     . D---------R  .    .   .   pcmpgtq	%xmm2, %xmm2
@@ -271,10 +278,10 @@ vpxor  %xmm3, %xmm3, %xmm5
 # CHECK-NEXT: [0,16]    .   D-------R  .    .   .   vpcmpgtd	%xmm3, %xmm3, %xmm5
 # CHECK-NEXT: [0,17]    .   D-------R  .    .   .   vpcmpgtq	%xmm3, %xmm3, %xmm5
 # CHECK-NEXT: [0,18]    .   D-------R  .    .   .   vpcmpgtw	%xmm3, %xmm3, %xmm5
-# CHECK-NEXT: [0,19]    .   D======eeeER    .   .   psubb	%mm2, %mm2
-# CHECK-NEXT: [0,20]    .    D========eeeER .   .   psubd	%mm2, %mm2
-# CHECK-NEXT: [0,21]    .    D===========eER.   .   psubq	%mm2, %mm2
-# CHECK-NEXT: [0,22]    .    D============eeeER .   psubw	%mm2, %mm2
+# CHECK-NEXT: [0,19]    .   DPPPPPPeeeER    .   .   psubb	%mm2, %mm2
+# CHECK-NEXT: [0,20]    .    DPPPPPPPPeeeER .   .   psubd	%mm2, %mm2
+# CHECK-NEXT: [0,21]    .    DPPPPPPPPPPPeER.   .   psubq	%mm2, %mm2
+# CHECK-NEXT: [0,22]    .    DPPPPPPPPPPPPeeeER .   psubw	%mm2, %mm2
 # CHECK-NEXT: [0,23]    .    D----------------R .   psubb	%xmm2, %xmm2
 # CHECK-NEXT: [0,24]    .    .D---------------R .   psubd	%xmm2, %xmm2
 # CHECK-NEXT: [0,25]    .    .D---------------R .   psubq	%xmm2, %xmm2
@@ -290,24 +297,24 @@ vpxor  %xmm3, %xmm3, %xmm5
 # CHECK-NEXT: [0,35]    .    .  DeE-----------R .   andnps	%xmm0, %xmm0
 # CHECK-NEXT: [0,36]    .    .   DeE----------R .   andnpd	%xmm1, %xmm1
 # CHECK-NEXT: [0,37]    .    .   D=eE---------R .   vandnps	%xmm2, %xmm2, %xmm2
-# CHECK-NEXT: [0,38]    .    .   D===eE-------R .   vandnpd	%xmm1, %xmm1, %xmm1
-# CHECK-NEXT: [0,39]    .    .   D==eE--------R .   vandnps	%ymm2, %ymm2, %ymm2
-# CHECK-NEXT: [0,40]    .    .    D===eE------R .   vandnpd	%ymm1, %ymm1, %ymm1
-# CHECK-NEXT: [0,41]    .    .    D==========eER.   pandn	%mm2, %mm2
-# CHECK-NEXT: [0,42]    .    .    D==eE--------R.   pandn	%xmm2, %xmm2
+# CHECK-NEXT: [0,38]    .    .   DP==eE-------R .   vandnpd	%xmm1, %xmm1, %xmm1
+# CHECK-NEXT: [0,39]    .    .   DPPeE--------R .   vandnps	%ymm2, %ymm2, %ymm2
+# CHECK-NEXT: [0,40]    .    .    DPPPeE------R .   vandnpd	%ymm1, %ymm1, %ymm1
+# CHECK-NEXT: [0,41]    .    .    DPPPPPPPPPPeER.   pandn	%mm2, %mm2
+# CHECK-NEXT: [0,42]    .    .    DPPeE--------R.   pandn	%xmm2, %xmm2
 # CHECK-NEXT: [0,43]    .    .    DeE----------R.   vpandn	%xmm3, %xmm3, %xmm3
-# CHECK-NEXT: [0,44]    .    .    .D===eE------R.   vandnps	%xmm2, %xmm2, %xmm5
-# CHECK-NEXT: [0,45]    .    .    .D====eE-----R.   vandnpd	%xmm1, %xmm1, %xmm5
+# CHECK-NEXT: [0,44]    .    .    .DPP=eE------R.   vandnps	%xmm2, %xmm2, %xmm5
+# CHECK-NEXT: [0,45]    .    .    .DPPP=eE-----R.   vandnpd	%xmm1, %xmm1, %xmm5
 # CHECK-NEXT: [0,46]    .    .    .DeE---------R.   vpandn	%xmm3, %xmm3, %xmm5
-# CHECK-NEXT: [0,47]    .    .    .D=====eE----R.   vandnps	%ymm2, %ymm2, %ymm5
-# CHECK-NEXT: [0,48]    .    .    . D=====eE---R.   vandnpd	%ymm1, %ymm1, %ymm5
+# CHECK-NEXT: [0,47]    .    .    .DPP===eE----R.   vandnps	%ymm2, %ymm2, %ymm5
+# CHECK-NEXT: [0,48]    .    .    . DPP===eE---R.   vandnpd	%ymm1, %ymm1, %ymm5
 # CHECK-NEXT: [0,49]    .    .    . D----------R.   xorps	%xmm0, %xmm0
 # CHECK-NEXT: [0,50]    .    .    . D----------R.   xorpd	%xmm1, %xmm1
 # CHECK-NEXT: [0,51]    .    .    . D----------R.   vxorps	%xmm2, %xmm2, %xmm2
 # CHECK-NEXT: [0,52]    .    .    .  D---------R.   vxorpd	%xmm1, %xmm1, %xmm1
 # CHECK-NEXT: [0,53]    .    .    .  D---------R.   vxorps	%ymm2, %ymm2, %ymm2
 # CHECK-NEXT: [0,54]    .    .    .  D---------R.   vxorpd	%ymm1, %ymm1, %ymm1
-# CHECK-NEXT: [0,55]    .    .    .  D========eER   pxor	%mm2, %mm2
+# CHECK-NEXT: [0,55]    .    .    .  DPPPPPPPPeER   pxor	%mm2, %mm2
 # CHECK-NEXT: [0,56]    .    .    .   D---------R   pxor	%xmm2, %xmm2
 # CHECK-NEXT: [0,57]    .    .    .   D---------R   vpxor	%xmm3, %xmm3, %xmm3
 # CHECK-NEXT: [0,58]    .    .    .   D---------R   vxorps	%xmm4, %xmm4, %xmm5

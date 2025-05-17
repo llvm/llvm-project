@@ -56,16 +56,23 @@ cmp x0, #4
 # CHECK-NEXT:  -      -      -      -     0.33   0.33   0.34    -      -      -     0.01   0.01   0.49   0.49    -      -      -      -     cmp	x0, #4
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     012345
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     012345
 
 # CHECK:      [0,0]     DeER .   mov	x0, x1
-# CHECK-NEXT: [0,1]     D=eER.   cmp	x0, #4
+# CHECK-NEXT: [0,1]     DPeER.   cmp	x0, #4
 # CHECK-NEXT: [1,0]     DeE-R.   mov	x0, x1
-# CHECK-NEXT: [1,1]     D=eER.   cmp	x0, #4
+# CHECK-NEXT: [1,1]     DPeER.   cmp	x0, #4
 # CHECK-NEXT: [2,0]     DeE-R.   mov	x0, x1
-# CHECK-NEXT: [2,1]     D=eER.   cmp	x0, #4
+# CHECK-NEXT: [2,1]     DPeER.   cmp	x0, #4
 # CHECK-NEXT: [3,0]     DeE-R.   mov	x0, x1
-# CHECK-NEXT: [3,1]     D==eER   cmp	x0, #4
+# CHECK-NEXT: [3,1]     DP=eER   cmp	x0, #4
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions

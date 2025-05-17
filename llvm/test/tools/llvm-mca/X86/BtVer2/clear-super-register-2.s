@@ -70,13 +70,20 @@ vandps %xmm4, %xmm1, %xmm0
 # CHECK-NEXT:  1      1     0.50                        vandps	%xmm4, %xmm1, %xmm0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0123456789          0123456789          0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789          0123456789          0123456789          0123456789
 # CHECK-NEXT: Index     0123456789          0123456789          0123456789          0123456789
 
 # CHECK:      [0,0]     DeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeER    .    .    .    .    .    .    .   .   vdivps	%ymm0, %ymm1, %ymm3
 # CHECK-NEXT: [0,1]     .DeeeE----------------------------------R    .    .    .    .    .    .    .   .   vaddps	%xmm0, %xmm1, %xmm3
-# CHECK-NEXT: [0,2]     . D==eeeE--------------------------------R   .    .    .    .    .    .    .   .   vaddps	%ymm3, %ymm1, %ymm4
-# CHECK-NEXT: [0,3]     .  D===eeeE------------------------------R   .    .    .    .    .    .    .   .   vaddps	%ymm3, %ymm1, %ymm4
+# CHECK-NEXT: [0,2]     . DPPeeeE--------------------------------R   .    .    .    .    .    .    .   .   vaddps	%ymm3, %ymm1, %ymm4
+# CHECK-NEXT: [0,3]     .  DP==eeeE------------------------------R   .    .    .    .    .    .    .   .   vaddps	%ymm3, %ymm1, %ymm4
 # CHECK-NEXT: [0,4]     .   D====eeeE-----------------------------R  .    .    .    .    .    .    .   .   vaddps	%ymm3, %ymm1, %ymm4
 # CHECK-NEXT: [0,5]     .    D=====eeeE---------------------------R  .    .    .    .    .    .    .   .   vaddps	%ymm3, %ymm1, %ymm4
 # CHECK-NEXT: [0,6]     .    .D======eeeE--------------------------R .    .    .    .    .    .    .   .   vaddps	%ymm3, %ymm1, %ymm4
@@ -90,11 +97,11 @@ vandps %xmm4, %xmm1, %xmm0
 # CHECK-NEXT: [0,14]    .    .    .   D==============eeeE--------------R  .    .    .    .    .    .   .   vaddps	%ymm3, %ymm1, %ymm4
 # CHECK-NEXT: [0,15]    .    .    .    D===============eeeE------------R  .    .    .    .    .    .   .   vaddps	%ymm3, %ymm1, %ymm4
 # CHECK-NEXT: [0,16]    .    .    .    .D================eeeE-----------R .    .    .    .    .    .   .   vaddps	%ymm3, %ymm1, %ymm4
-# CHECK-NEXT: [0,17]    .    .    .    . D==================eE----------R .    .    .    .    .    .   .   vandps	%xmm4, %xmm1, %xmm0
-# CHECK-NEXT: [1,0]     .    .    .    .  D====================eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeER.   vdivps	%ymm0, %ymm1, %ymm3
-# CHECK-NEXT: [1,1]     .    .    .    .   D=================eeeE-------------------------------------R.   vaddps	%xmm0, %xmm1, %xmm3
-# CHECK-NEXT: [1,2]     .    .    .    .    D===================eeeE-----------------------------------R   vaddps	%ymm3, %ymm1, %ymm4
-# CHECK-NEXT: [1,3]     .    .    .    .    .D====================eeeE---------------------------------R   vaddps	%ymm3, %ymm1, %ymm4
+# CHECK-NEXT: [0,17]    .    .    .    . DPPPPPPPPPPPPPPPPPPeE----------R .    .    .    .    .    .   .   vandps	%xmm4, %xmm1, %xmm0
+# CHECK-NEXT: [1,0]     .    .    .    .  DPPPPPPPPPPPPPPPPPP==eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeER.   vdivps	%ymm0, %ymm1, %ymm3
+# CHECK-NEXT: [1,1]     .    .    .    .   DPPPPPPPPPPPPPPPPPeeeE-------------------------------------R.   vaddps	%xmm0, %xmm1, %xmm3
+# CHECK-NEXT: [1,2]     .    .    .    .    DPPPPPPPPPPPPPPPPPPPeeeE-----------------------------------R   vaddps	%ymm3, %ymm1, %ymm4
+# CHECK-NEXT: [1,3]     .    .    .    .    .DPPPPPPPPPPPPPPPPPP==eeeE---------------------------------R   vaddps	%ymm3, %ymm1, %ymm4
 # CHECK-NEXT: Truncated display due to cycle limit
 
 # CHECK:      Average Wait times (based on the timeline view):
