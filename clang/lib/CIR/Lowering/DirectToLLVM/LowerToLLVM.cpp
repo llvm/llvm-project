@@ -1648,7 +1648,8 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                CIRToLLVMUnaryOpLowering,
                CIRToLLVMVecCreateOpLowering,
                CIRToLLVMVecExtractOpLowering,
-               CIRToLLVMVecInsertOpLowering
+               CIRToLLVMVecInsertOpLowering,
+               CIRToLLVMVecSplatOpLowering
       // clang-format on
       >(converter, patterns.getContext());
 
@@ -1770,6 +1771,38 @@ mlir::LogicalResult CIRToLLVMVecInsertOpLowering::matchAndRewrite(
     mlir::ConversionPatternRewriter &rewriter) const {
   rewriter.replaceOpWithNewOp<mlir::LLVM::InsertElementOp>(
       op, adaptor.getVec(), adaptor.getValue(), adaptor.getIndex());
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMVecSplatOpLowering::matchAndRewrite(
+    cir::VecSplatOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  // Vector splat can be implemented with an `insertelement` and a
+  // `shufflevector`, which is better than an `insertelement` for each
+  // element in the vector. Start with an undef vector. Insert the value into
+  // the first element. Then use a `shufflevector` with a mask of all 0 to
+  // fill out the entire vector with that value.
+  const auto vecTy = mlir::cast<cir::VectorType>(op.getType());
+  const mlir::Type llvmTy = typeConverter->convertType(vecTy);
+  const mlir::Location loc = op.getLoc();
+  const mlir::Value poison = rewriter.create<mlir::LLVM::PoisonOp>(loc, llvmTy);
+
+  const mlir::Value elementValue = adaptor.getValue();
+  if (mlir::isa<mlir::LLVM::PoisonOp>(elementValue.getDefiningOp())) {
+    // If the splat value is poison, then we can just use poison value
+    // for the entire vector.
+    rewriter.replaceOp(op, poison);
+    return mlir::success();
+  }
+
+  const mlir::Value indexValue =
+      rewriter.create<mlir::LLVM::ConstantOp>(loc, rewriter.getI64Type(), 0);
+  const mlir::Value oneElement = rewriter.create<mlir::LLVM::InsertElementOp>(
+      loc, poison, elementValue, indexValue);
+  const SmallVector<int32_t> zeroValues(vecTy.getSize(), 0);
+  const mlir::Value shuffled = rewriter.create<mlir::LLVM::ShuffleVectorOp>(
+      loc, oneElement, poison, zeroValues);
+  rewriter.replaceOp(op, shuffled);
   return mlir::success();
 }
 
