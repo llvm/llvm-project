@@ -4226,6 +4226,11 @@ the configuration (without a prefix: ``Auto``).
   ``ClassImpl.hpp`` would not have the main include file put on top
   before any other include.
 
+.. _IncludeSortIgnoreExtension:
+
+**IncludeSortIgnoreExtension** (``Boolean``) :versionbadge:`clang-format 21` :ref:`¶ <IncludeSortIgnoreExtension>`
+  When sorting includes in each block, ignore file extensions.
+
 .. _IndentAccessModifiers:
 
 **IndentAccessModifiers** (``Boolean``) :versionbadge:`clang-format 13` :ref:`¶ <IndentAccessModifiers>`

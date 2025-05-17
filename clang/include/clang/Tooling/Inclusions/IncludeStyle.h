@@ -152,6 +152,10 @@ struct IncludeStyle {
   /// \version 10
   std::string IncludeIsMainSourceRegex;
 
+  /// When sorting includes in each block, ignore file extensions.
+  /// \version 21
+  bool IncludeSortIgnoreExtension;
+
   /// Character to consider in the include directives for the main header.
   enum MainIncludeCharDiscriminator : int8_t {
     /// Main include uses quotes: ``#include "foo.hpp"`` (the default).

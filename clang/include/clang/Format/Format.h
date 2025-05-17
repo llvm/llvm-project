@@ -5397,6 +5397,8 @@ struct FormatStyle {
            IncludeStyle.IncludeIsMainSourceRegex ==
                R.IncludeStyle.IncludeIsMainSourceRegex &&
            IncludeStyle.MainIncludeChar == R.IncludeStyle.MainIncludeChar &&
+           IncludeStyle.IncludeSortIgnoreExtension ==
+               R.IncludeStyle.IncludeSortIgnoreExtension &&
            IndentAccessModifiers == R.IndentAccessModifiers &&
            IndentCaseBlocks == R.IndentCaseBlocks &&
            IndentCaseLabels == R.IndentCaseLabels &&
