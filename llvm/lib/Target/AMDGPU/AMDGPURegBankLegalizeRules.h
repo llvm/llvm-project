@@ -168,6 +168,8 @@ enum LoweringMethodID {
   DoNotLower,
   VccExtToSel,
   UniExtToSel,
+  S_BFE,
+  V_BFE,
   VgprToVccCopy,
   SplitTo32,
   Ext32To64,
