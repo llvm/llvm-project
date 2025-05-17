@@ -252,7 +252,7 @@ class zip_view<_Views...>::__iterator : public __zip_view_iterator_category_base
 
   friend class zip_view<_Views...>;
 
-  using __is_zip_view_iterator _LIBCPP_NODEBUG = true_type;
+  static constexpr bool __is_zip_view_iterator = true;
 
   friend struct __product_iterator_traits<__iterator>;
 
