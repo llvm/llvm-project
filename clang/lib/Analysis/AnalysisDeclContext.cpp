@@ -280,7 +280,7 @@ ParentMap &AnalysisDeclContext::getParentMap() {
     PM.reset(new ParentMap(getBody()));
     if (const auto *C = dyn_cast<CXXConstructorDecl>(getDecl())) {
       for (const auto *I : C->inits()) {
-        PM->addStmt(I->getInit());
+        PM->addStmt(I->getInit(), 0);
       }
     }
     if (builtCFG)
