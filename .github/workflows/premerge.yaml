@@ -16,7 +16,6 @@ on:
       - closed
   push:
     branches:
-      - 'main'
       - 'release/**'
 
 concurrency:
