@@ -118,6 +118,8 @@ private:
 
   lldb::DynamicValueType m_use_dynamic;
   bool m_use_synthetic;
+  bool m_fragile_ivar;
+  bool m_check_ptr_vs_member;
 }; // class DILParser
 
 } // namespace lldb_private::dil

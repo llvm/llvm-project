@@ -66,7 +66,8 @@ DILParser::DILParser(llvm::StringRef dil_input_expr, DILLexer lexer,
                      llvm::Error &error)
     : m_ctx_scope(frame_sp), m_input_expr(dil_input_expr),
       m_dil_lexer(std::move(lexer)), m_error(error), m_use_dynamic(use_dynamic),
-      m_use_synthetic(use_synthetic) {}
+      m_use_synthetic(use_synthetic), m_fragile_ivar(fragile_ivar),
+      m_check_ptr_vs_member(check_ptr_vs_member) {}
 
 ASTNodeUP DILParser::Run() {
   ASTNodeUP expr = ParseExpression();
@@ -130,7 +131,8 @@ ASTNodeUP DILParser::ParsePostfixExpression() {
     std::string member_id = ParseIdExpression();
     lhs = std::make_unique<MemberOfNode>(
         member_token.GetLocation(), std::move(lhs),
-        token.GetKind() == Token::arrow, member_id);
+        token.GetKind() == Token::arrow, member_id, UseDynamic(),
+        m_fragile_ivar, m_use_synthetic, m_check_ptr_vs_member);
   }
   return lhs;
 }

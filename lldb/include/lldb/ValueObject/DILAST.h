@@ -92,15 +92,24 @@ private:
 class MemberOfNode : public ASTNode {
 public:
   MemberOfNode(uint32_t location, ASTNodeUP base, bool is_arrow,
-               std::string name)
+               std::string name, lldb::DynamicValueType use_dynamic,
+               bool fragile_ivar, bool use_synth_child,
+               bool check_ptr_vs_member)
       : ASTNode(location, NodeKind::eMemberOfNode), m_base(std::move(base)),
-        m_is_arrow(is_arrow), m_field_name(std::move(name)) {}
+        m_is_arrow(is_arrow), m_field_name(std::move(name)),
+        m_use_dynamic(use_dynamic), m_fragile_ivar(fragile_ivar),
+        m_use_synth_child(use_synth_child),
+        m_check_ptr_vs_member(check_ptr_vs_member) {}
 
   llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
 
   ASTNode *GetBase() const { return m_base.get(); }
   bool GetIsArrow() const { return m_is_arrow; }
   llvm::StringRef GetFieldName() const { return llvm::StringRef(m_field_name); }
+  bool GetCheckPtrVsMember() const { return m_check_ptr_vs_member; }
+  bool GetFragileIvar() const { return m_fragile_ivar; }
+  bool GetSynthChild() const { return m_use_synth_child; }
+  lldb::DynamicValueType GetUseDynamic() const { return m_use_dynamic; }
 
   static bool classof(const ASTNode *node) {
     return node->GetKind() == NodeKind::eMemberOfNode;
@@ -110,6 +119,10 @@ private:
   ASTNodeUP m_base;
   bool m_is_arrow;
   std::string m_field_name;
+  lldb::DynamicValueType m_use_dynamic;
+  bool m_fragile_ivar;
+  bool m_use_synth_child;
+  bool m_check_ptr_vs_member;
 };
 
 class UnaryOpNode : public ASTNode {

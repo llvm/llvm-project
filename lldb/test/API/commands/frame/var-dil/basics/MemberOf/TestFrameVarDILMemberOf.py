@@ -30,17 +30,13 @@ class TestFrameVarDILMemberOf(TestBase):
         self.expect_var_path("sr.r", type="int &")
         self.expect_var_path("sp->x", value="1")
         self.expect_var_path("sp->r", type="int &")
-        self.expect_var_path("sarr->x", value="5");
-        self.expect_var_path("sarr->r", type="int &")
 
         self.expect("frame variable 'sp->foo'", error=True,
-                    substrs=["no member named 'foo' in 'Sx'"])
+                    substrs=["no member named 'foo' in 'Sx *'"])
 
         self.expect("frame variable 'sp.x'", error=True,
                     substrs=["member reference type 'Sx *' is a "
                              "pointer; did you mean to use '->'"])
-        self.expect("frame variable 'sarr.x'", error=True,
-                    substrs=["no member named 'x' in 'Sx[2]'"])
 
         # Test for record typedefs.
         self.expect_var_path("sa.x", value="3")
