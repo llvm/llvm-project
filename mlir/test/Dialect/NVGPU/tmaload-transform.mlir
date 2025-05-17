@@ -18,12 +18,12 @@ func.func @main() {
   //      CHECK: %[[M1:.*]] = memref.cast %{{.*}} : memref<64x32xf32> to memref<*xf32>
   //      CHECK: %[[c64:.*]] = arith.constant 64 : index
   //      CHECK: %[[c32:.*]] = arith.constant 32 : index
-  //      CHECK: %[[D1:.*]] = nvgpu.tma.create.descriptor %[[M1]] box[%[[c64]], %[[c32]]]
+  //      CHECK: %[[D1:.*]] = nvgpu.tma.create.descriptor %[[M1]] box [%[[c64]], %[[c32]]]
   // CHECK-SAME:   : memref<*xf32> -> <tensor = memref<64x32xf32, #gpu.address_space<workgroup>>, swizzle = none, l2promo = none, oob = zero, interleave = none>
   //      CHECK: %[[cast_2:.*]] = memref.cast %memref_0 : memref<8x32xf32> to memref<*xf32>
   //      CHECK: %[[c8_2:.*]] = arith.constant 8 : index
   //      CHECK: %[[c32_2:.*]] = arith.constant 32 : index
-  //      CHECK: %[[D2:.*]] = nvgpu.tma.create.descriptor %cast_2 box[%[[c8_2]], %[[c32_2]]]
+  //      CHECK: %[[D2:.*]] = nvgpu.tma.create.descriptor %cast_2 box [%[[c8_2]], %[[c32_2]]]
   // CHECK-SAME:   : memref<*xf32> -> <tensor = memref<8x32xf32, #gpu.address_space<workgroup>>, swizzle = none, l2promo = none, oob = zero, interleave = none>
   // CHECK: gpu.launch
   gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %c1, %grid_y = %c1, %grid_z = %c1)
