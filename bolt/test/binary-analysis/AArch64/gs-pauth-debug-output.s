@@ -57,7 +57,7 @@ simple:
 // CHECK-NEXT:     .. result: (src-state<SafeToDerefRegs: , Insts: >)
 // CHECK-NEXT:   SrcSafetyAnalysis::ComputeNext(   b       [[BB1]], src-state<SafeToDerefRegs: , Insts: >)
 // CHECK-NEXT:     .. result: (src-state<SafeToDerefRegs: , Insts: >)
-// CHECK-NEXT:   SrcSafetyAnalysis::Confluence(
+// CHECK-NEXT:   DataflowSrcSafetyAnalysis::Confluence(
 // CHECK-NEXT:     State 1: src-state<empty>
 // CHECK-NEXT:     State 2: src-state<SafeToDerefRegs: , Insts: >)
 // CHECK-NEXT:     merged state: src-state<SafeToDerefRegs: , Insts: >
@@ -71,7 +71,7 @@ simple:
 // CHECK-NEXT:     .. result: (src-state<SafeToDerefRegs: LR W30 W30_HI , Insts: >)
 // CHECK-NEXT:   SrcSafetyAnalysis::ComputeNext(   ret     x30, src-state<SafeToDerefRegs: LR W30 W30_HI , Insts: >)
 // CHECK-NEXT:     .. result: (src-state<SafeToDerefRegs: LR W30 W30_HI , Insts: >)
-// CHECK-NEXT:   SrcSafetyAnalysis::Confluence(
+// CHECK-NEXT:   DataflowSrcSafetyAnalysis::Confluence(
 // CHECK-NEXT:     State 1: src-state<SafeToDerefRegs: , Insts: >
 // CHECK-NEXT:     State 2: src-state<SafeToDerefRegs: , Insts: >)
 // CHECK-NEXT:     merged state: src-state<SafeToDerefRegs: , Insts: >
@@ -94,27 +94,27 @@ simple:
 // CHECK-NEXT: }
 // CHECK-NEXT: [[BB0]] (3 instructions, align : 1)
 // CHECK-NEXT:   Entry Point
-// CHECK-NEXT:     00000000:   paciasp # SrcSafetyAnalysis: src-state<SafeToDerefRegs: BitVector, Insts: >
-// CHECK-NEXT:     00000004:   stp     x29, x30, [sp, #-0x10]! # SrcSafetyAnalysis: src-state<SafeToDerefRegs: BitVector, Insts: >
-// CHECK-NEXT:     00000008:   b       [[BB1]] # SrcSafetyAnalysis: src-state<SafeToDerefRegs: BitVector, Insts: >
+// CHECK-NEXT:     00000000:   paciasp # DataflowSrcSafetyAnalysis: src-state<SafeToDerefRegs: BitVector, Insts: >
+// CHECK-NEXT:     00000004:   stp     x29, x30, [sp, #-0x10]! # DataflowSrcSafetyAnalysis: src-state<SafeToDerefRegs: BitVector, Insts: >
+// CHECK-NEXT:     00000008:   b       [[BB1]] # DataflowSrcSafetyAnalysis: src-state<SafeToDerefRegs: BitVector, Insts: >
 // CHECK-NEXT:   Successors: [[BB1]]
 // CHECK-EMPTY:
 // CHECK-NEXT: [[BB1]] (5 instructions, align : 1)
 // CHECK-NEXT:   Predecessors: [[BB0]]
-// CHECK-NEXT:     0000000c:   autiza  x0 # SrcSafetyAnalysis: src-state<SafeToDerefRegs: BitVector, Insts: >
-// CHECK-NEXT:     00000010:   blr     x0 # SrcSafetyAnalysis: src-state<SafeToDerefRegs: BitVector, Insts: >
-// CHECK-NEXT:     00000014:   ldp     x29, x30, [sp], #0x10 # SrcSafetyAnalysis: src-state<SafeToDerefRegs: BitVector, Insts: >
-// CHECK-NEXT:     00000018:   autiasp # SrcSafetyAnalysis: src-state<SafeToDerefRegs: BitVector, Insts: >
-// CHECK-NEXT:     0000001c:   ret # SrcSafetyAnalysis: src-state<SafeToDerefRegs: BitVector, Insts: >
+// CHECK-NEXT:     0000000c:   autiza  x0 # DataflowSrcSafetyAnalysis: src-state<SafeToDerefRegs: BitVector, Insts: >
+// CHECK-NEXT:     00000010:   blr     x0 # DataflowSrcSafetyAnalysis: src-state<SafeToDerefRegs: BitVector, Insts: >
+// CHECK-NEXT:     00000014:   ldp     x29, x30, [sp], #0x10 # DataflowSrcSafetyAnalysis: src-state<SafeToDerefRegs: BitVector, Insts: >
+// CHECK-NEXT:     00000018:   autiasp # DataflowSrcSafetyAnalysis: src-state<SafeToDerefRegs: BitVector, Insts: >
+// CHECK-NEXT:     0000001c:   ret # DataflowSrcSafetyAnalysis: src-state<SafeToDerefRegs: BitVector, Insts: >
 // CHECK-EMPTY:
 // CHECK-NEXT: DWARF CFI Instructions:
 // CHECK-NEXT:     <empty>
 // CHECK-NEXT: End of Function "simple"
 // CHECK-EMPTY:
-// PAUTH-NEXT:   Found call inst:     00000000:        blr     x0 # SrcSafetyAnalysis: src-state<SafeToDerefRegs: BitVector, Insts: >
+// PAUTH-NEXT:   Found call inst:     00000000:        blr     x0 # DataflowSrcSafetyAnalysis: src-state<SafeToDerefRegs: BitVector, Insts: >
 // PAUTH-NEXT:     Call destination reg: X0
 // PAUTH-NEXT:     SafeToDerefRegs: W0 X0 W0_HI{{[ \t]*$}}
-// CHECK-NEXT:   Found RET inst:     00000000:         ret # SrcSafetyAnalysis: src-state<SafeToDerefRegs: BitVector, Insts: >
+// CHECK-NEXT:   Found RET inst:     00000000:         ret # DataflowSrcSafetyAnalysis: src-state<SafeToDerefRegs: BitVector, Insts: >
 // CHECK-NEXT:     RetReg: LR
 // CHECK-NEXT:     Authenticated reg: (none)
 // CHECK-NEXT:     SafeToDerefRegs: LR W30 W30_HI{{[ \t]*$}}
@@ -141,7 +141,7 @@ clobber:
 // The above output was printed after first run of analysis
 
 // CHECK-EMPTY:
-// CHECK-NEXT:   Found RET inst:     00000000:         ret # SrcSafetyAnalysis: src-state<SafeToDerefRegs: BitVector, Insts: >
+// CHECK-NEXT:   Found RET inst:     00000000:         ret # DataflowSrcSafetyAnalysis: src-state<SafeToDerefRegs: BitVector, Insts: >
 // CHECK-NEXT:     RetReg: LR
 // CHECK-NEXT:     Authenticated reg: (none)
 // CHECK-NEXT:     SafeToDerefRegs: W30_HI{{[ \t]*$}}
@@ -160,8 +160,96 @@ clobber:
 // Iterating over the reports and attaching clobbering info:
 
 // CHECK-EMPTY:
-// CHECK-NEXT:   Attaching clobbering info to:     00000000:         ret # SrcSafetyAnalysis: src-state<SafeToDerefRegs: BitVector, Insts: [0](0x{{[0-9a-f]+}} )>
+// CHECK-NEXT:   Attaching clobbering info to:     00000000:         ret # DataflowSrcSafetyAnalysis: src-state<SafeToDerefRegs: BitVector, Insts: [0](0x{{[0-9a-f]+}} )>
 
+        .globl  nocfg
+        .type   nocfg,@function
+nocfg:
+        adr     x0, 1f
+        br      x0
+1:
+        ret
+        .size nocfg, .-nocfg
+
+// CHECK-LABEL:Analyzing in function nocfg, AllocatorId 1
+// CHECK-NEXT: Binary Function "nocfg"  {
+// CHECK-NEXT:   Number      : 3
+// CHECK-NEXT:   State       : disassembled
+// ...
+// CHECK:        IsSimple    : 0
+// CHECK-NEXT:   IsMultiEntry: 1
+// CHECK-NEXT:   IsSplit     : 0
+// CHECK-NEXT:   BB Count    : 0
+// CHECK-NEXT:   Secondary Entry Points : __ENTRY_nocfg@0x[[ENTRY_ADDR:[0-9a-f]+]]
+// CHECK-NEXT: }
+// CHECK-NEXT: .{{[A-Za-z0-9]+}}:
+// CHECK-NEXT:     00000000:   adr     x0, __ENTRY_nocfg@0x[[ENTRY_ADDR]]
+// CHECK-NEXT:     00000004:   br      x0 # UNKNOWN CONTROL FLOW # Offset: 4
+// CHECK-NEXT: __ENTRY_nocfg@0x[[ENTRY_ADDR]] (Entry Point):
+// CHECK-NEXT: .{{[A-Za-z0-9]+}}:
+// CHECK-NEXT:     00000008:   ret # Offset: 8
+// CHECK-NEXT: DWARF CFI Instructions:
+// CHECK-NEXT:     <empty>
+// CHECK-NEXT: End of Function "nocfg"
+// CHECK-EMPTY:
+// CHECK-NEXT: Running src register safety analysis...
+// CHECK-NEXT:   SrcSafetyAnalysis::ComputeNext(   adr     x0, __ENTRY_nocfg@0x[[ENTRY_ADDR]], src-state<SafeToDerefRegs: LR W30 W30_HI , Insts: >)
+// CHECK-NEXT:     .. result: (src-state<SafeToDerefRegs: LR W0 W30 X0 W0_HI W30_HI , Insts: >)
+// CHECK-NEXT:   SrcSafetyAnalysis::ComputeNext(  br      x0, src-state<SafeToDerefRegs: LR W0 W30 X0 W0_HI W30_HI , Insts: >)
+// CHECK-NEXT:     .. result: (src-state<SafeToDerefRegs: LR W0 W30 X0 W0_HI W30_HI , Insts: >)
+// CHECK-NEXT:   Due to label, resetting the state before:     00000000:       ret # Offset: 8
+// CHECK-NEXT:   SrcSafetyAnalysis::ComputeNext(  ret     x30, src-state<SafeToDerefRegs: , Insts: >)
+// CHECK-NEXT:     .. result: (src-state<SafeToDerefRegs: , Insts: >)
+// CHECK-NEXT: After src register safety analysis:
+// CHECK-NEXT: Binary Function "nocfg"  {
+// CHECK-NEXT:   Number      : 3
+// CHECK-NEXT:   State       : disassembled
+// ...
+// CHECK:        Secondary Entry Points : __ENTRY_nocfg@0x[[ENTRY_ADDR]]
+// CHECK-NEXT: }
+// CHECK-NEXT: .{{[A-Za-z0-9]+}}:
+// CHECK-NEXT:     00000000:   adr     x0, __ENTRY_nocfg@0x[[ENTRY_ADDR]] # CFGUnawareSrcSafetyAnalysis: src-state<SafeToDerefRegs: BitVector, Insts: >
+// CHECK-NEXT:     00000004:   br      x0 # UNKNOWN CONTROL FLOW # Offset: 4 # CFGUnawareSrcSafetyAnalysis: src-state<SafeToDerefRegs: BitVector, Insts: >
+// CHECK-NEXT: __ENTRY_nocfg@0x[[ENTRY_ADDR]] (Entry Point):
+// CHECK-NEXT: .{{[A-Za-z0-9]+}}:
+// CHECK-NEXT:     00000008:   ret # Offset: 8 # CFGUnawareSrcSafetyAnalysis: src-state<SafeToDerefRegs: BitVector, Insts: >
+// CHECK-NEXT: DWARF CFI Instructions:
+// CHECK-NEXT:     <empty>
+// CHECK-NEXT: End of Function "nocfg"
+// CHECK-EMPTY:
+// PAUTH-NEXT:   Found call inst:     00000000:        br      x0 # UNKNOWN CONTROL FLOW # Offset: 4 # CFGUnawareSrcSafetyAnalysis: src-state<SafeToDerefRegs: BitVector, Insts: >
+// PAUTH-NEXT:     Call destination reg: X0
+// PAUTH-NEXT:     SafeToDerefRegs: LR W0 W30 X0 W0_HI W30_HI
+// CHECK-NEXT:   Found RET inst:     00000000:         ret # Offset: 8 # CFGUnawareSrcSafetyAnalysis: src-state<SafeToDerefRegs: BitVector, Insts: >
+// CHECK-NEXT:     RetReg: LR
+// CHECK-NEXT:     Authenticated reg: (none)
+// CHECK-NEXT:     SafeToDerefRegs:
+// CHECK-EMPTY:
+// CHECK-NEXT: Running detailed src register safety analysis...
+// CHECK-NEXT:   SrcSafetyAnalysis::ComputeNext(   adr     x0, __ENTRY_nocfg@0x[[ENTRY_ADDR]], src-state<SafeToDerefRegs: LR W30 W30_HI , Insts: [0]()>)
+// CHECK-NEXT:     .. result: (src-state<SafeToDerefRegs: LR W0 W30 X0 W0_HI W30_HI , Insts: [0]()>)
+// CHECK-NEXT:   SrcSafetyAnalysis::ComputeNext(  br      x0, src-state<SafeToDerefRegs: LR W0 W30 X0 W0_HI W30_HI , Insts: [0]()>)
+// CHECK-NEXT:     .. result: (src-state<SafeToDerefRegs: LR W0 W30 X0 W0_HI W30_HI , Insts: [0]()>)
+// CHECK-NEXT:   Due to label, resetting the state before:     00000000:       ret # Offset: 8
+// CHECK-NEXT:   SrcSafetyAnalysis::ComputeNext(  ret     x30, src-state<SafeToDerefRegs: , Insts: [0]()>)
+// CHECK-NEXT:     .. result: (src-state<SafeToDerefRegs: , Insts: [0]()>)
+// CHECK-NEXT: After detailed src register safety analysis:
+// CHECK-NEXT: Binary Function "nocfg"  {
+// CHECK-NEXT:   Number      : 3
+// ...
+// CHECK:        Secondary Entry Points : __ENTRY_nocfg@0x[[ENTRY_ADDR]]
+// CHECK-NEXT: }
+// CHECK-NEXT: .{{[A-Za-z0-9]+}}:
+// CHECK-NEXT:     00000000:   adr     x0, __ENTRY_nocfg@0x[[ENTRY_ADDR]] # CFGUnawareSrcSafetyAnalysis: src-state<SafeToDerefRegs: BitVector, Insts: [0]()>
+// CHECK-NEXT:     00000004:   br      x0 # UNKNOWN CONTROL FLOW # Offset: 4 # CFGUnawareSrcSafetyAnalysis: src-state<SafeToDerefRegs: BitVector, Insts: [0]()>
+// CHECK-NEXT: __ENTRY_nocfg@0x[[ENTRY_ADDR]] (Entry Point):
+// CHECK-NEXT: .{{[A-Za-z0-9]+}}:
+// CHECK-NEXT:     00000008:   ret # Offset: 8 # CFGUnawareSrcSafetyAnalysis: src-state<SafeToDerefRegs: BitVector, Insts: [0]()>
+// CHECK-NEXT: DWARF CFI Instructions:
+// CHECK-NEXT:     <empty>
+// CHECK-NEXT: End of Function "nocfg"
+// CHECK-EMPTY:
+// CHECK-NEXT:   Attaching clobbering info to:     00000000:   ret # Offset: 8 # CFGUnawareSrcSafetyAnalysis: src-state<SafeToDerefRegs: BitVector, Insts: [0]()>
 
 // CHECK-LABEL:Analyzing in function main, AllocatorId 1
         .globl  main

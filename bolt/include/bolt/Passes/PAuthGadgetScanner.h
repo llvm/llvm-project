@@ -65,6 +65,14 @@ struct MCInstInBFReference {
   uint64_t Offset;
   MCInstInBFReference(BinaryFunction *BF, uint64_t Offset)
       : BF(BF), Offset(Offset) {}
+
+  static MCInstInBFReference get(const MCInst *Inst, BinaryFunction &BF) {
+    for (auto &I : BF.instrs())
+      if (Inst == &I.second)
+        return MCInstInBFReference(&BF, I.first);
+    return {};
+  }
+
   MCInstInBFReference() : BF(nullptr), Offset(0) {}
   bool operator==(const MCInstInBFReference &RHS) const {
     return BF == RHS.BF && Offset == RHS.Offset;
@@ -104,6 +112,12 @@ struct MCInstReference {
   MCInstReference(BinaryFunction *BF, uint32_t Offset)
       : MCInstReference(MCInstInBFReference(BF, Offset)) {}
 
+  static MCInstReference get(const MCInst *Inst, BinaryFunction &BF) {
+    if (BF.hasCFG())
+      return MCInstInBBReference::get(Inst, BF);
+    return MCInstInBFReference::get(Inst, BF);
+  }
+
   bool operator<(const MCInstReference &RHS) const {
     if (ParentKind != RHS.ParentKind)
       return ParentKind < RHS.ParentKind;
@@ -134,6 +148,16 @@ struct MCInstReference {
       return U.BBRef;
     case FunctionParent:
       return U.BFRef;
+    }
+    llvm_unreachable("");
+  }
+
+  operator bool() const {
+    switch (ParentKind) {
+    case BasicBlockParent:
+      return U.BBRef.BB != nullptr;
+    case FunctionParent:
+      return U.BFRef.BF != nullptr;
     }
     llvm_unreachable("");
   }
