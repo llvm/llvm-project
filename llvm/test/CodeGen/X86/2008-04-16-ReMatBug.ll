@@ -28,20 +28,20 @@ define i16 @SQLDriversW(ptr %henv, i16 zeroext  %fDir, ptr %szDrvDesc, i16 signe
 ; CHECK-NEXT:  ## %bb.4: ## %bb37
 ; CHECK-NEXT:    movw $0, 40(%edi)
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    leal (,%ecx,4), %ecx
-; CHECK-NEXT:    leal (,%ebx,4), %edx
+; CHECK-NEXT:    leal (,%ecx,4), %eax
+; CHECK-NEXT:    leal (,%ebx,4), %ecx
 ; CHECK-NEXT:    subl $12, %esp
-; CHECK-NEXT:    movzwl %bp, %eax
+; CHECK-NEXT:    movzwl %bp, %edx
+; CHECK-NEXT:    cwtl
 ; CHECK-NEXT:    movswl %cx, %ecx
-; CHECK-NEXT:    movswl %dx, %edx
 ; CHECK-NEXT:    pushl $87
+; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
+; CHECK-NEXT:    pushl %eax
+; CHECK-NEXT:    pushl $0
 ; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    pushl %ecx
 ; CHECK-NEXT:    pushl $0
-; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    pushl %edx
-; CHECK-NEXT:    pushl $0
-; CHECK-NEXT:    pushl %eax
 ; CHECK-NEXT:    pushl %edi
 ; CHECK-NEXT:    calll _SQLDrivers_Internal
 ; CHECK-NEXT:    addl $48, %esp
