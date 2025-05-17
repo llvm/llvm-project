@@ -31,7 +31,8 @@ namespace {
 
 /// Data structure holding function info for kernels.
 class KernelInfo {
-  void updateForBB(const BasicBlock &BB, OptimizationRemarkEmitter &ORE);
+  void updateForBB(const BasicBlock &BB, BlockFrequencyInfo &BFI,
+                   OptimizationRemarkEmitter &ORE);
 
 public:
   static void emitKernelInfo(Function &F, FunctionAnalysisManager &FAM,
@@ -73,9 +74,46 @@ public:
 
   /// Number of flat address space memory accesses (via load, store, etc.).
   int64_t FlatAddrspaceAccesses = 0;
+
+  /// Estimate of the number of floating point operations typically executed
+  /// based on any available profile data.  If no profile data is available, the
+  /// count is zero.
+  uint64_t ProfileFloatingPointOpCount = 0;
+
+  /// Estimate of the number bytes of floating point memory typically moved
+  /// (e.g., load or store) based on any available profile data.  If no profile
+  /// data is available, the count is zero.  LLVM memory access operations
+  /// (e.g., llvm.memcpy.*, cmpxchg) that are always encoded as operating on
+  /// integer types and never on floating point types are not included.
+  uint64_t ProfileFloatingPointBytesMoved = 0;
 };
 
 } // end anonymous namespace
+
+// For the purposes of KernelInfo::ProfileFloatingPointOpCount, should the
+// specified Instruction be considered a floating point operation?  If so,
+// return the floating point type.  Otherwise, return nullptr.
+//
+// TODO: Does this correctly identify floating point operations we care about?
+// For example, we skip phi even when it returns a floating point value, and
+// load is covered by KernelInfo::ProfileFloatingPointBytesMoved instead.  Is
+// there anything missing that should be covered here?
+//
+// TODO: Should different operations have different weights?  For example,
+// @llvm.fmuladd.* might be expensive for some targets.
+static Type *getFloatingPointOpType(const Instruction &I) {
+  if (const AtomicRMWInst *At = dyn_cast<AtomicRMWInst>(&I)) {
+    if (At->isFloatingPointOperation())
+      return At->getType();
+    return nullptr;
+  }
+  if (!I.isBinaryOp() && !I.isUnaryOp() && !isa<IntrinsicInst>(&I))
+    return nullptr;
+  Type *Ty = I.getType();
+  if (Ty->isFPOrFPVectorTy())
+    return Ty;
+  return nullptr;
+}
 
 static void identifyCallee(OptimizationRemark &R, const Module *M,
                            const Value *V, StringRef Kind = "") {
@@ -98,6 +136,19 @@ static void identifyCallee(OptimizationRemark &R, const Module *M,
 
 static void identifyFunction(OptimizationRemark &R, const Function &F) {
   identifyCallee(R, F.getParent(), &F, "function");
+}
+
+static void identifyInstruction(OptimizationRemark &R, const Instruction &I) {
+  if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I))
+    R << "'" << II->getCalledFunction()->getName() << "' call";
+  else
+    R << "'" << I.getOpcodeName() << "'";
+  if (!I.getType()->isVoidTy()) {
+    SmallString<20> Name;
+    raw_svector_ostream OS(Name);
+    I.printAsOperand(OS, /*PrintType=*/false, I.getModule());
+    R << " ('" << Name << "')";
+  }
 }
 
 static void remarkAlloca(OptimizationRemarkEmitter &ORE, const Function &Caller,
@@ -153,33 +204,66 @@ static void remarkCall(OptimizationRemarkEmitter &ORE, const Function &Caller,
 
 static void remarkFlatAddrspaceAccess(OptimizationRemarkEmitter &ORE,
                                       const Function &Caller,
-                                      const Instruction &Inst) {
+                                      const Instruction &I) {
   ORE.emit([&] {
-    OptimizationRemark R(DEBUG_TYPE, "FlatAddrspaceAccess", &Inst);
+    OptimizationRemark R(DEBUG_TYPE, "FlatAddrspaceAccess", &I);
     R << "in ";
     identifyFunction(R, Caller);
-    if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(&Inst)) {
-      R << ", '" << II->getCalledFunction()->getName() << "' call";
-    } else {
-      R << ", '" << Inst.getOpcodeName() << "' instruction";
-    }
-    if (!Inst.getType()->isVoidTy()) {
-      SmallString<20> Name;
-      raw_svector_ostream OS(Name);
-      Inst.printAsOperand(OS, /*PrintType=*/false, Caller.getParent());
-      R << " ('" << Name << "')";
-    }
+    R << ", ";
+    identifyInstruction(R, I);
     R << " accesses memory in flat address space";
     return R;
   });
 }
 
-void KernelInfo::updateForBB(const BasicBlock &BB,
+static void
+remarkFloatingPointOp(OptimizationRemarkEmitter &ORE, const Function &Caller,
+                      const Instruction &I, Type *Ty,
+                      std::optional<uint64_t> BlockProfileCount,
+                      std::optional<uint64_t> BytesMoved = std::nullopt) {
+  ORE.emit([&] {
+    OptimizationRemark R(DEBUG_TYPE,
+                         BytesMoved ? "ProfileFloatingPointBytesMoved"
+                                    : "ProfileFloatingPointOpCount",
+                         &I);
+    R << "in ";
+    identifyFunction(R, Caller);
+    R << ", ";
+    SmallString<10> TyName;
+    raw_svector_ostream OS(TyName);
+    Ty->print(OS);
+    R << TyName << " ";
+    identifyInstruction(R, I);
+    if (BlockProfileCount) {
+      if (BytesMoved)
+        R << " moved " << itostr(*BytesMoved * *BlockProfileCount)
+          << " fp bytes";
+      else
+        R << " executed " << utostr(*BlockProfileCount) << " flops";
+    } else {
+      R << " has no profile data";
+    }
+    return R;
+  });
+}
+
+void KernelInfo::updateForBB(const BasicBlock &BB, BlockFrequencyInfo &BFI,
                              OptimizationRemarkEmitter &ORE) {
   const Function &F = *BB.getParent();
   const Module &M = *F.getParent();
   const DataLayout &DL = M.getDataLayout();
+  // TODO: Is AllowSynthetic what we want?
+  std::optional<uint64_t> BlockProfileCount =
+      BFI.getBlockProfileCount(&BB, /*AllowSynthetic=*/true);
   for (const Instruction &I : BB.instructionsWithoutDebug()) {
+    auto HandleFloatingPointBytesMoved = [&]() {
+      Type *Ty = I.getAccessType();
+      if (!Ty || !Ty->isFPOrFPVectorTy())
+        return;
+      TypeSize::ScalarTy Size = DL.getTypeStoreSize(Ty).getFixedValue();
+      ProfileFloatingPointBytesMoved += BlockProfileCount.value_or(0) * Size;
+      remarkFloatingPointOp(ORE, F, I, Ty, BlockProfileCount, Size);
+    };
     if (const AllocaInst *Alloca = dyn_cast<AllocaInst>(&I)) {
       ++Allocas;
       TypeSize::ScalarTy StaticSize = 0;
@@ -237,38 +321,55 @@ void KernelInfo::updateForBB(const BasicBlock &BB,
             remarkFlatAddrspaceAccess(ORE, F, I);
           }
         }
+        // llvm.memcpy.*, llvm.memset.*, etc. are encoded as operating on
+        // integer types not floating point types, so
+        // HandleFloatingPointBytesMoved is useless here.
       }
     } else if (const LoadInst *Load = dyn_cast<LoadInst>(&I)) {
       if (Load->getPointerAddressSpace() == FlatAddrspace) {
         ++FlatAddrspaceAccesses;
         remarkFlatAddrspaceAccess(ORE, F, I);
       }
+      HandleFloatingPointBytesMoved();
     } else if (const StoreInst *Store = dyn_cast<StoreInst>(&I)) {
       if (Store->getPointerAddressSpace() == FlatAddrspace) {
         ++FlatAddrspaceAccesses;
         remarkFlatAddrspaceAccess(ORE, F, I);
       }
+      HandleFloatingPointBytesMoved();
     } else if (const AtomicRMWInst *At = dyn_cast<AtomicRMWInst>(&I)) {
       if (At->getPointerAddressSpace() == FlatAddrspace) {
         ++FlatAddrspaceAccesses;
         remarkFlatAddrspaceAccess(ORE, F, I);
       }
+      HandleFloatingPointBytesMoved();
     } else if (const AtomicCmpXchgInst *At = dyn_cast<AtomicCmpXchgInst>(&I)) {
       if (At->getPointerAddressSpace() == FlatAddrspace) {
         ++FlatAddrspaceAccesses;
         remarkFlatAddrspaceAccess(ORE, F, I);
       }
+      // cmpxchg is encoded as operating on integer types not floating point
+      // types, so HandleFloatingPointBytesMoved is useless here.
+    }
+    if (Type *Ty = getFloatingPointOpType(I)) {
+      ProfileFloatingPointOpCount += BlockProfileCount.value_or(0);
+      remarkFloatingPointOp(ORE, F, I, Ty, BlockProfileCount);
     }
   }
 }
 
-static void remarkProperty(OptimizationRemarkEmitter &ORE, const Function &F,
-                           StringRef Name, int64_t Value) {
+static std::string toString(bool Val) { return itostr(Val); }
+static std::string toString(int64_t Val) { return itostr(Val); }
+static std::string toString(uint64_t Val) { return utostr(Val); }
+
+template <typename T>
+void remarkProperty(OptimizationRemarkEmitter &ORE, const Function &F,
+                    StringRef Name, T Val) {
   ORE.emit([&] {
     OptimizationRemark R(DEBUG_TYPE, Name, &F);
     R << "in ";
     identifyFunction(R, F);
-    R << ", " << Name << " = " << itostr(Value);
+    R << ", " << Name << " = " << toString(Val);
     return R;
   });
 }
@@ -284,6 +385,7 @@ void KernelInfo::emitKernelInfo(Function &F, FunctionAnalysisManager &FAM,
                                 TargetMachine *TM) {
   KernelInfo KI;
   TargetTransformInfo &TheTTI = FAM.getResult<TargetIRAnalysis>(F);
+  BlockFrequencyInfo &BFI = FAM.getResult<BlockFrequencyAnalysis>(F);
   KI.FlatAddrspace = TheTTI.getFlatAddressSpace();
 
   // Record function properties.
@@ -296,7 +398,7 @@ void KernelInfo::emitKernelInfo(Function &F, FunctionAnalysisManager &FAM,
 
   auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
   for (const auto &BB : F)
-    KI.updateForBB(BB, ORE);
+    KI.updateForBB(BB, BFI, ORE);
 
 #define REMARK_PROPERTY(PROP_NAME)                                             \
   remarkProperty(ORE, F, #PROP_NAME, KI.PROP_NAME)
@@ -312,6 +414,8 @@ void KernelInfo::emitKernelInfo(Function &F, FunctionAnalysisManager &FAM,
   REMARK_PROPERTY(InlineAssemblyCalls);
   REMARK_PROPERTY(Invokes);
   REMARK_PROPERTY(FlatAddrspaceAccesses);
+  REMARK_PROPERTY(ProfileFloatingPointOpCount);
+  REMARK_PROPERTY(ProfileFloatingPointBytesMoved);
 #undef REMARK_PROPERTY
 }
 
