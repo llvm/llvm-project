@@ -547,7 +547,8 @@ def CopyOp : MemRef_Op<"copy", [CopyOpInterface, SameOperandsElementType,
 // DeallocOp
 //===----------------------------------------------------------------------===//
 
-def MemRef_DeallocOp : MemRef_Op<"dealloc", [MemRefsNormalizable]> {
+def MemRef_DeallocOp
+    : MemRef_Op<"dealloc", [MemRefsNormalizable, LocalEffectsOpInterface]> {
   let summary = "memory deallocation operation";
   let description = [{
     The `dealloc` operation frees the region of memory referenced by a memref
@@ -1180,6 +1181,7 @@ def LoadOp : MemRef_Op<"load",
                      "memref", "result",
                      "::llvm::cast<MemRefType>($_self).getElementType()">,
       MemRefsNormalizable,
+      LocalEffectsOpInterface,
       DeclareOpInterfaceMethods<PromotableMemOpInterface>,
       DeclareOpInterfaceMethods<DestructurableAccessorOpInterface>]> {
   let summary = "load operation";
@@ -1874,6 +1876,7 @@ def MemRef_StoreOp : MemRef_Op<"store",
                      "memref", "value",
                      "::llvm::cast<MemRefType>($_self).getElementType()">,
       MemRefsNormalizable,
+      LocalEffectsOpInterface,
       DeclareOpInterfaceMethods<PromotableMemOpInterface>,
       DeclareOpInterfaceMethods<DestructurableAccessorOpInterface>]> {
   let summary = "store operation";
