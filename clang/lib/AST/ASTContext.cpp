@@ -12909,6 +12909,9 @@ bool ASTContext::DeclMustBeEmitted(const Decl *D) {
   if (D->hasAttr<WeakRefAttr>())
     return false;
 
+  if (LangOpts.SYCLIsDevice && !D->hasAttr<SYCLKernelEntryPointAttr>())
+    return false;
+
   // Aliases and used decls are required.
   if (D->hasAttr<AliasAttr>() || D->hasAttr<UsedAttr>())
     return true;
@@ -12926,6 +12929,10 @@ bool ASTContext::DeclMustBeEmitted(const Decl *D) {
 
     // FIXME: Functions declared with SYCL_EXTERNAL are required during
     // device compilation.
+    // Functions definitions with sycl_external attribute are required during
+    // device compilation.
+    if (LangOpts.SYCLIsDevice && FD->hasAttr<SYCLExternalAttr>())
+      return true;
 
     // Constructors and destructors are required.
     if (FD->hasAttr<ConstructorAttr>() || FD->hasAttr<DestructorAttr>())
