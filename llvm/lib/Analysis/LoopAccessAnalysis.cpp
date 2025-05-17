@@ -1000,16 +1000,20 @@ static void findForkedSCEVs(
     }
 
     // Scale up the offsets by the size of the type, then add to the bases.
+    const SCEV *Base0 = get<0>(BaseScevs[0]);
+    const SCEV *Base1 = get<0>(BaseScevs[1]);
     const SCEV *Offset0 = get<0>(OffsetScevs[0]);
     const SCEV *Offset1 = get<0>(OffsetScevs[1]);
-    const SCEV *Scaled0 = SE->getMulExpr(
-        SE->getSizeOfExpr(Offset0->getType(), SourceTy), Offset0);
-    const SCEV *Scaled1 = SE->getMulExpr(
-        SE->getSizeOfExpr(Offset1->getType(), SourceTy), Offset1);
-    ScevList.emplace_back(SE->getAddExpr(get<0>(BaseScevs[0]), Scaled0),
-                          NeedsFreeze);
-    ScevList.emplace_back(SE->getAddExpr(get<0>(BaseScevs[1]), Scaled1),
-                          NeedsFreeze);
+    const SCEV *Scaled0 = SE->getTruncateOrSignExtend(
+        SE->getMulExpr(SE->getSizeOfExpr(Offset0->getType(), SourceTy),
+                       Offset0),
+        Base0->getType());
+    const SCEV *Scaled1 = SE->getTruncateOrSignExtend(
+        SE->getMulExpr(SE->getSizeOfExpr(Offset1->getType(), SourceTy),
+                       Offset1),
+        Base1->getType());
+    ScevList.emplace_back(SE->getAddExpr(Base0, Scaled0), NeedsFreeze);
+    ScevList.emplace_back(SE->getAddExpr(Base1, Scaled1), NeedsFreeze);
     break;
   }
   case Instruction::Select: {
