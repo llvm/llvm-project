@@ -125,6 +125,8 @@ void AnalysisState::resetCache() {
   insideMutuallyExclusiveRegionsCache.clear();
 }
 
+BufferizationState::Extension::~Extension() = default;
+
 Region *bufferization::getNextEnclosingRepetitiveRegion(
     Region *region, const BufferizationOptions &options) {
   assert(isRepetitiveRegion(region, options) && "expected repetitive region");
