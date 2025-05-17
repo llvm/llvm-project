@@ -23,6 +23,7 @@
 #include "CopyConstructorInitCheck.h"
 #include "CrtpConstructorAccessibilityCheck.h"
 #include "DanglingHandleCheck.h"
+#include "DataflowDeadCodeCheck.h"
 #include "DynamicStaticInitializersCheck.h"
 #include "EasilySwappableParametersCheck.h"
 #include "EmptyCatchCheck.h"
@@ -132,6 +133,8 @@ public:
         "bugprone-copy-constructor-init");
     CheckFactories.registerCheck<DanglingHandleCheck>(
         "bugprone-dangling-handle");
+    CheckFactories.registerCheck<DataflowDeadCodeCheck>(
+        "bugprone-dataflow-dead-code");
     CheckFactories.registerCheck<DynamicStaticInitializersCheck>(
         "bugprone-dynamic-static-initializers");
     CheckFactories.registerCheck<EasilySwappableParametersCheck>(
