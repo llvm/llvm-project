@@ -18,67 +18,155 @@
 #include <cassert>
 #include <string>
 
+template <class It>
+void test(It start,
+          It end,
+          char const* regex,
+          std::regex_constants::match_flag_type flags,
+          bool expect_match,
+          int expect_pos = 0,
+          int expect_len = 0,
+          bool multiline = false) {
+  std::smatch match;
+  std::regex re(regex, multiline ? std::regex::multiline : std::regex::ECMAScript);
+  if (expect_match) {
+    assert(std::regex_search(start, end, match, re, flags));
+    assert(match.position(0) == expect_pos);
+    assert(match.length(0) == expect_len);
+  } else {
+    assert(!std::regex_search(start, end, match, re, flags));
+  }
+}
+
 int main(int, char**) {
-  char str1[] = "\na";
-  auto str1_scnd = str1 + 1;
+  // The implementation of `match_prev_avail` is being corrected as per the discussions in the issue #74838.
+  {
+    std::string s = "ab";
+    test(s.cbegin() + 1, s.cend(), "^", std::regex_constants::match_default, true, 0, 0);
+    test(s.cbegin() + 1, s.cend(), "^", std::regex_constants::match_not_bol, false);
+    test(s.cbegin() + 1, s.cend(), "^", std::regex_constants::match_prev_avail, false);
+    test(s.cbegin() + 1,
+         s.cend(),
+         "^",
+         std::regex_constants::match_prev_avail | std::regex_constants::match_not_bol,
+         false);
+  }
 
-  // Assert that match_prev_avail disables match_not_bol and this matches
-  assert(std::regex_match(str1 + 1, str1 + 2, std::regex("^a"),
-                     std::regex_constants::match_not_bol |
-                         std::regex_constants::match_prev_avail));
-  // Manually passing match_prev_avail defines that --str1 is a valid position
-  assert(std::regex_match(str1_scnd, std::regex("a"),
-                     std::regex_constants::match_not_bol |
-                         std::regex_constants::match_prev_avail));
+  {
+    std::string s = "ab";
+    test(s.cbegin(), s.cend(), "^ab", std::regex_constants::match_default, true, 0, 2);
+    test(s.cbegin(), s.cend(), "^ab", std::regex_constants::match_not_bol, false);
+  }
 
-  //Assert that match_prev_avail disables match_not_bow and this matches
-  assert(std::regex_search(str1, std::regex("\\ba")));
-  assert(std::regex_match(str1 + 1, str1 + 2, std::regex("\\ba\\b"),
-                     std::regex_constants::match_not_bow |
-                         std::regex_constants::match_prev_avail));
-  assert(std::regex_search(str1_scnd, std::regex("\\ba"),
-                      std::regex_constants::match_not_bow |
-                          std::regex_constants::match_prev_avail));
+  {
+    std::string s = "ab";
+    test(s.cbegin() + 1, s.cend(), "^b", std::regex_constants::match_default, true, 0, 1);
+    test(s.cbegin() + 1, s.cend(), "^b", std::regex_constants::match_not_bol, false);
+    test(s.cbegin() + 1, s.cend(), "^b", std::regex_constants::match_prev_avail, false);
+    test(s.cbegin() + 1,
+         s.cend(),
+         "^b",
+         std::regex_constants::match_prev_avail | std::regex_constants::match_not_bol,
+         false);
+  }
 
-  //Assert that match_prev_avail disables both match_not_bow and match_not_bol
-  assert(std::regex_match(str1 + 1, str1 + 2, std::regex("^a"),
-                     std::regex_constants::match_not_bol |
-                         std::regex_constants::match_not_bow |
-                         std::regex_constants::match_prev_avail));
-  assert(std::regex_match(str1_scnd, std::regex("\\ba"),
-                     std::regex_constants::match_not_bol |
-                         std::regex_constants::match_not_bow |
-                         std::regex_constants::match_prev_avail));
+  {
+    std::string s = "ab\nb";
+    test(s.cbegin() + 1, s.cend(), "^b", std::regex_constants::match_default, true, 0, 1, true);
+    test(s.cbegin() + 1, s.cend(), "^b", std::regex_constants::match_not_bol, true, 2, 1, true); // TODO
+    test(s.cbegin() + 1, s.cend(), "^b", std::regex_constants::match_prev_avail, true, 2, 1, true);
+    test(s.cbegin() + 1,
+         s.cend(),
+         "^b",
+         std::regex_constants::match_prev_avail | std::regex_constants::match_not_bol,
+         true,
+         2,
+         1,
+         true);
+  }
 
-  // pr 42199
-  std::string S = " cd";
-  std::string::iterator Start = S.begin() + 1;
-  std::string::iterator End = S.end();
-  assert(std::regex_search(Start, End, std::regex("^cd")));
+  {
+    std::string s = "\na";
+    test(s.cbegin() + 1,
+         s.cend(),
+         "^a",
+         std::regex_constants::match_not_bol | std::regex_constants::match_prev_avail,
+         false);
+    test(s.cbegin() + 1,
+         s.cend(),
+         "a",
+         std::regex_constants::match_not_bol | std::regex_constants::match_prev_avail,
+         true,
+         0,
+         1);
 
-  assert(!std::regex_search(Start, End, std::regex("^cd"),
-            std::regex_constants::match_not_bol));
-  assert(!std::regex_search(Start, End, std::regex(".*\\bcd\\b"),
-            std::regex_constants::match_not_bow));
-  assert(!std::regex_search(Start, End, std::regex("^cd"),
-            std::regex_constants::match_not_bol |
-            std::regex_constants::match_not_bow));
-  assert(!std::regex_search(Start, End, std::regex(".*\\bcd\\b"),
-            std::regex_constants::match_not_bol |
-            std::regex_constants::match_not_bow));
+    test(s.cbegin() + 1,
+         s.cend(),
+         "\\ba",
+         std::regex_constants::match_not_bow | std::regex_constants::match_prev_avail,
+         true,
+         0,
+         1);
+    test(s.cbegin() + 1,
+         s.cend(),
+         "\\ba\\b",
+         std::regex_constants::match_not_bow | std::regex_constants::match_prev_avail,
+         true,
+         0,
+         1);
 
-  assert(std::regex_search(Start, End, std::regex("^cd"),
-            std::regex_constants::match_prev_avail));
+    test(s.cbegin() + 1,
+         s.cend(),
+         "^a",
+         std::regex_constants::match_not_bol | std::regex_constants::match_not_bow |
+             std::regex_constants::match_prev_avail,
+         false);
+    test(s.cbegin() + 1,
+         s.cend(),
+         "\\ba",
+         std::regex_constants::match_not_bol | std::regex_constants::match_not_bow |
+             std::regex_constants::match_prev_avail,
+         true,
+         0,
+         1);
+  }
 
-  assert(std::regex_search(Start, End, std::regex("^cd"),
-            std::regex_constants::match_not_bol |
-            std::regex_constants::match_prev_avail));
-  assert(std::regex_search(Start, End, std::regex("^cd"),
-            std::regex_constants::match_not_bow |
-            std::regex_constants::match_prev_avail));
-  assert(std::regex_match(Start, End, std::regex("\\bcd\\b"),
-            std::regex_constants::match_not_bol |
-            std::regex_constants::match_not_bow |
-            std::regex_constants::match_prev_avail));
+  {
+    // pr 42199
+    std::string s = " cd";
+    test(s.cbegin() + 1, s.cend(), "^cd", std::regex_constants::match_default, true, 0, 2);
+    test(s.cbegin() + 1, s.cend(), "^cd", std::regex_constants::match_not_bol, false);
+    test(s.cbegin() + 1, s.cend(), ".*\\bcd\\b", std::regex_constants::match_not_bow, false);
+    test(s.cbegin() + 1,
+         s.cend(),
+         "^cd",
+         std::regex_constants::match_not_bol | std::regex_constants::match_not_bow,
+         false);
+    test(s.cbegin() + 1,
+         s.cend(),
+         ".*\\bcd\\b",
+         std::regex_constants::match_not_bol | std::regex_constants::match_not_bow,
+         false);
+
+    test(s.cbegin() + 1, s.cend(), "^cd", std::regex_constants::match_prev_avail, false);
+    test(s.cbegin() + 1,
+         s.cend(),
+         "^cd",
+         std::regex_constants::match_not_bol | std::regex_constants::match_prev_avail,
+         false);
+    test(s.cbegin() + 1,
+         s.cend(),
+         "^cd",
+         std::regex_constants::match_not_bow | std::regex_constants::match_prev_avail,
+         false);
+    test(s.cbegin() + 1,
+         s.cend(),
+         "\\bcd\\b",
+         std::regex_constants::match_not_bol | std::regex_constants::match_not_bow |
+             std::regex_constants::match_prev_avail,
+         true,
+         0,
+         2);
+  }
   return 0;
 }
