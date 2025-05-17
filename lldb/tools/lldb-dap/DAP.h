@@ -162,10 +162,16 @@ struct DAP {
   lldb::SBFile in;
   OutputRedirector out;
   OutputRedirector err;
+
   /// Configuration specified by the launch or attach commands.
   protocol::Configuration configuration;
+
+  /// The debugger instance for this DAP session.
   lldb::SBDebugger debugger;
+
+  /// The target instance for this DAP session.
   lldb::SBTarget target;
+
   Variables variables;
   lldb::SBBroadcaster broadcaster;
   llvm::StringMap<SourceBreakpointMap> source_breakpoints;
@@ -173,39 +179,53 @@ struct DAP {
   InstructionBreakpointMap instruction_breakpoints;
   std::optional<std::vector<ExceptionBreakpoint>> exception_breakpoints;
   llvm::once_flag init_exception_breakpoints_flag;
-  // Map step in target id to list of function targets that user can choose.
+
+  /// Map step in target id to list of function targets that user can choose.
   llvm::DenseMap<lldb::addr_t, std::string> step_in_targets;
-  // A copy of the last LaunchRequest so we can reuse its arguments if we get a
-  // RestartRequest. Restarting an AttachRequest is not supported.
+
+  /// A copy of the last LaunchRequest so we can reuse its arguments if we get a
+  /// RestartRequest. Restarting an AttachRequest is not supported.
   std::optional<protocol::LaunchRequestArguments> last_launch_request;
-  lldb::tid_t focus_tid;
+
+  /// The focused thread for this DAP session.
+  lldb::tid_t focus_tid = LLDB_INVALID_THREAD_ID;
+
   bool disconnecting = false;
   llvm::once_flag terminated_event_flag;
-  bool stop_at_entry;
-  bool is_attach;
-  // The process event thread normally responds to process exited events by
-  // shutting down the entire adapter. When we're restarting, we keep the id of
-  // the old process here so we can detect this case and keep running.
-  lldb::pid_t restarting_process_id;
+  bool stop_at_entry = false;
+  bool is_attach = false;
+
+  /// The process event thread normally responds to process exited events by
+  /// shutting down the entire adapter. When we're restarting, we keep the id of
+  /// the old process here so we can detect this case and keep running.
+  lldb::pid_t restarting_process_id = LLDB_INVALID_PROCESS_ID;
+
+  /// Whether we have received the ConfigurationDone request, indicating that
+  /// the client has finished initialization of the debug adapter.
   bool configuration_done;
-  bool waiting_for_run_in_terminal;
+
+  bool waiting_for_run_in_terminal = false;
   ProgressEventReporter progress_event_reporter;
-  // Keep track of the last stop thread index IDs as threads won't go away
-  // unless we send a "thread" event to indicate the thread exited.
+
+  /// Keep track of the last stop thread index IDs as threads won't go away
+  /// unless we send a "thread" event to indicate the thread exited.
   llvm::DenseSet<lldb::tid_t> thread_ids;
-  uint32_t reverse_request_seq;
+
+  uint32_t reverse_request_seq = 0;
   std::mutex call_mutex;
   llvm::SmallDenseMap<int64_t, std::unique_ptr<ResponseHandler>>
       inflight_reverse_requests;
   ReplMode repl_mode;
   lldb::SBFormat frame_format;
   lldb::SBFormat thread_format;
-  // This is used to allow request_evaluate to handle empty expressions
-  // (ie the user pressed 'return' and expects the previous expression to
-  // repeat). If the previous expression was a command, this string will be
-  // empty; if the previous expression was a variable expression, this string
-  // will contain that expression.
+
+  /// This is used to allow request_evaluate to handle empty expressions
+  /// (ie the user pressed 'return' and expects the previous expression to
+  /// repeat). If the previous expression was a command, this string will be
+  /// empty; if the previous expression was a variable expression, this string
+  /// will contain that expression.
   std::string last_nonempty_var_expression;
+
   /// The set of features supported by the connected client.
   llvm::DenseSet<ClientFeature> clientFeatures;
 
@@ -256,8 +276,6 @@ struct DAP {
 
   /// Configures the debug adapter for launching/attaching.
   void SetConfiguration(const protocol::Configuration &confing, bool is_attach);
-
-  void SetConfigurationDone();
 
   /// Configure source maps based on the current `DAPConfiguration`.
   void ConfigureSourceMaps();
