@@ -18,7 +18,7 @@ namespace clang::tidy::portability {
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/portability/avoid-pragma-once.html
 class AvoidPragmaOnceCheck : public ClangTidyCheck {
- public:
+public:
   AvoidPragmaOnceCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context) {}
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
@@ -29,6 +29,6 @@ class AvoidPragmaOnceCheck : public ClangTidyCheck {
                            Preprocessor *ModuleExpanderPP) override;
 };
 
-}  // namespace clang::tidy::portability
+} // namespace clang::tidy::portability
 
-#endif  // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PORTABILITY_AVOIDPRAGMAONCECHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PORTABILITY_AVOIDPRAGMAONCECHECK_H

@@ -16,7 +16,7 @@
 namespace clang::tidy::portability {
 
 class PragmaOnceCallbacks : public PPCallbacks {
- public:
+public:
   PragmaOnceCallbacks(AvoidPragmaOnceCheck *Check, const SourceManager &SM)
       : Check(Check), SM(SM) {}
   void PragmaDirective(SourceLocation Loc,
@@ -35,7 +35,7 @@ class PragmaOnceCallbacks : public PPCallbacks {
     }
   }
 
- private:
+private:
   AvoidPragmaOnceCheck *Check;
   const SourceManager &SM;
 };
@@ -46,4 +46,4 @@ void AvoidPragmaOnceCheck::registerPPCallbacks(const SourceManager &SM,
   PP->addPPCallbacks(std::make_unique<PragmaOnceCallbacks>(this, SM));
 }
 
-}  // namespace clang::tidy::portability
+} // namespace clang::tidy::portability
