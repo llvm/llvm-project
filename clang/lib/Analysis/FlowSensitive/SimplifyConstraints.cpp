@@ -161,15 +161,15 @@ void simplifyConstraints(llvm::SetVector<const Formula *> &Constraints,
           atomsInEquivalenceClass(EquivalentAtoms, At);
       if (Atoms.size() == 1)
         continue;
-      std::sort(Atoms.begin(), Atoms.end());
+      llvm::sort(Atoms);
       Info->EquivalentAtoms.push_back(std::move(Atoms));
     }
     for (Atom At : TrueAtoms)
       Info->TrueAtoms.append(atomsInEquivalenceClass(EquivalentAtoms, At));
-    std::sort(Info->TrueAtoms.begin(), Info->TrueAtoms.end());
+    llvm::sort(Info->TrueAtoms);
     for (Atom At : FalseAtoms)
       Info->FalseAtoms.append(atomsInEquivalenceClass(EquivalentAtoms, At));
-    std::sort(Info->FalseAtoms.begin(), Info->FalseAtoms.end());
+    llvm::sort(Info->FalseAtoms);
   }
 }
 

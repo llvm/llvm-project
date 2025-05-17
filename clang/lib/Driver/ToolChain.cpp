@@ -377,7 +377,7 @@ ToolChain::getMultilibFlags(const llvm::opt::ArgList &Args) const {
     Result.push_back("-fexceptions");
 
   // Sort and remove duplicates.
-  std::sort(Result.begin(), Result.end());
+  llvm::sort(Result);
   Result.erase(llvm::unique(Result), Result.end());
   return Result;
 }

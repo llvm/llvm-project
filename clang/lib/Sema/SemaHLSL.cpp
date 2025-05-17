@@ -268,12 +268,11 @@ static void validatePackoffset(Sema &S, HLSLBufferDecl *BufDecl) {
   // and compare adjacent values.
   bool IsValid = true;
   ASTContext &Context = S.getASTContext();
-  std::sort(PackOffsetVec.begin(), PackOffsetVec.end(),
-            [](const std::pair<VarDecl *, HLSLPackOffsetAttr *> &LHS,
-               const std::pair<VarDecl *, HLSLPackOffsetAttr *> &RHS) {
-              return LHS.second->getOffsetInBytes() <
-                     RHS.second->getOffsetInBytes();
-            });
+  llvm::sort(
+      PackOffsetVec, [](const std::pair<VarDecl *, HLSLPackOffsetAttr *> &LHS,
+                        const std::pair<VarDecl *, HLSLPackOffsetAttr *> &RHS) {
+        return LHS.second->getOffsetInBytes() < RHS.second->getOffsetInBytes();
+      });
   for (unsigned i = 0; i < PackOffsetVec.size() - 1; i++) {
     VarDecl *Var = PackOffsetVec[i].first;
     HLSLPackOffsetAttr *Attr = PackOffsetVec[i].second;
