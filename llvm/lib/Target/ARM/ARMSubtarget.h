@@ -406,6 +406,14 @@ public:
   bool isRClass() const { return ARMProcClass == RClass; }
   bool isAClass() const { return ARMProcClass == AClass; }
 
+  bool isR4Reserved() const {
+    return ReserveR4;
+  }
+
+  bool isR5Reserved() const {
+    return ReserveR5;
+  }
+
   bool isR9Reserved() const {
     return isTargetMachO() ? (ReserveR9 || !HasV6Ops) : ReserveR9;
   }
