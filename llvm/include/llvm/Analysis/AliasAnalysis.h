@@ -894,9 +894,9 @@ bool isIdentifiedFunctionLocal(const Value *V);
 /// can be inbounds w.r.t the actual underlying object.
 bool isBaseOfObject(const Value *V);
 
-/// Returns true if the pointer is one which would have been considered an
-/// escape by isNonEscapingLocalObject.
-bool isEscapeSource(const Value *V);
+/// Returns true if the pointer cannot alias a non-escaping local object,
+/// except via the values returned in the MayAlias argument.
+bool isEscapeSource(const Value *V, SmallVectorImpl<Value *> &MayAlias);
 
 /// Return true if Object memory is not visible after an unwind, in the sense
 /// that program semantics cannot depend on Object containing any particular

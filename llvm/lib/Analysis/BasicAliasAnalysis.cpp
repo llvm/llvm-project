@@ -1609,11 +1609,21 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
     // temporary store the nocapture argument's value in a temporary memory
     // location if that memory location doesn't escape. Or it may pass a
     // nocapture value to other functions as long as they don't capture it.
-    if (isEscapeSource(O1) && AAQI.CA->isNotCapturedBefore(
-                                  O2, dyn_cast<Instruction>(O1), /*OrAt*/ true))
-      return AliasResult::NoAlias;
-    if (isEscapeSource(O2) && AAQI.CA->isNotCapturedBefore(
-                                  O1, dyn_cast<Instruction>(O2), /*OrAt*/ true))
+    auto EscapeSourceDoesNotAliasNonEscapingLocalObject = [&](const Value *O1,
+                                                              const Value *O2) {
+      SmallVector<Value *> MayAlias;
+      if (!isEscapeSource(O1, MayAlias) ||
+          !AAQI.CA->isNotCapturedBefore(O2, dyn_cast<Instruction>(O1),
+                                        /*OrAt=*/true))
+        return false;
+      for (Value *V : MayAlias)
+        if (AAQI.AAR.alias(MemoryLocation::getBeforeOrAfter(O2),
+                           MemoryLocation::getBeforeOrAfter(V), AAQI))
+          return false;
+      return true;
+    };
+    if (EscapeSourceDoesNotAliasNonEscapingLocalObject(O1, O2) ||
+        EscapeSourceDoesNotAliasNonEscapingLocalObject(O2, O1))
       return AliasResult::NoAlias;
   }
 
