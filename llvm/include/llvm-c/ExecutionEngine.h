@@ -33,8 +33,16 @@ LLVM_C_EXTERN_C_BEGIN
  * @{
  */
 
-void LLVMLinkInMCJIT(void);
-void LLVMLinkInInterpreter(void);
+/**
+ * Empty function used to force the linker to link MCJIT.
+ * Hidden because it does not apply to the dylib interface.
+ */
+LLVM_ATTRIBUTE_VISIBILITY_HIDDEN void LLVMLinkInMCJIT(void);
+/**
+ * Empty function used to force the linker to link the LLVM interpreter.
+ * Hidden because it does not apply to the dylib interface.
+ */
+LLVM_ATTRIBUTE_VISIBILITY_HIDDEN void LLVMLinkInInterpreter(void);
 
 typedef struct LLVMOpaqueGenericValue *LLVMGenericValueRef;
 typedef struct LLVMOpaqueExecutionEngine *LLVMExecutionEngineRef;
