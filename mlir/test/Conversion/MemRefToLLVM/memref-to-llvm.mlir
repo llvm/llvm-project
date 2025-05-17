@@ -427,11 +427,19 @@ func.func @atomic_rmw(%I : memref<10xi32>, %ival : i32, %F : memref<10xf32>, %fv
   // CHECK: llvm.atomicrmw umin %{{.*}}, %{{.*}} acq_rel
   memref.atomic_rmw addf %fval, %F[%i] : (f32, memref<10xf32>) -> f32
   // CHECK: llvm.atomicrmw fadd %{{.*}}, %{{.*}} acq_rel
+  memref.atomic_rmw maximumf %fval, %F[%i] : (f32, memref<10xf32>) -> f32
+  // CHECK: llvm.atomicrmw fmaximum %{{.*}}, %{{.*}} acq_rel
+  memref.atomic_rmw maxnumf %fval, %F[%i] : (f32, memref<10xf32>) -> f32
+  // CHECK: llvm.atomicrmw fmax %{{.*}}, %{{.*}} acq_rel
+  memref.atomic_rmw minimumf %fval, %F[%i] : (f32, memref<10xf32>) -> f32
+  // CHECK: llvm.atomicrmw fminimum %{{.*}}, %{{.*}} acq_rel
+  memref.atomic_rmw minnumf %fval, %F[%i] : (f32, memref<10xf32>) -> f32
+  // CHECK: llvm.atomicrmw fmin %{{.*}}, %{{.*}} acq_rel
   memref.atomic_rmw ori %ival, %I[%i] : (i32, memref<10xi32>) -> i32
   // CHECK: llvm.atomicrmw _or %{{.*}}, %{{.*}} acq_rel
   memref.atomic_rmw andi %ival, %I[%i] : (i32, memref<10xi32>) -> i32
   // CHECK: llvm.atomicrmw _and %{{.*}}, %{{.*}} acq_rel
-  // CHECK-INTERFACE-COUNT-9: llvm.atomicrmw
+  // CHECK-INTERFACE-COUNT-13: llvm.atomicrmw
   return
 }
 
