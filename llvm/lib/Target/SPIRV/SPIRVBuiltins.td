@@ -68,6 +68,8 @@ def ICarryBorrow : BuiltinGroup;
 def ExtendedBitOps : BuiltinGroup;
 def BindlessINTEL : BuiltinGroup;
 def TernaryBitwiseINTEL : BuiltinGroup;
+def IntelSubgroupsAvc: BuiltinGroup;
+def IntelSubgroupsAvcWrapper: BuiltinGroup;
 
 //===----------------------------------------------------------------------===//
 // Class defining a demangled builtin record. The information in the record
@@ -1628,6 +1630,20 @@ def : BuiltinType<"spirv.SampledImage", OpTypeSampledImage>;
 def : BuiltinType<"spirv.Pipe", OpTypePipe>;
 def : BuiltinType<"spirv.CooperativeMatrixKHR", OpTypeCooperativeMatrixKHR>;
 
+// Types from extension SPV_INTEL_device_side_avc_motion_estimation
+def : BuiltinType<"spirv.AvcMcePayloadINTEL", OpTypeAvcMcePayloadINTEL>;
+def : BuiltinType<"spirv.AvcImePayloadINTEL", OpTypeAvcImePayloadINTEL>;
+def : BuiltinType<"spirv.AvcRefPayloadINTEL", OpTypeAvcRefPayloadINTEL>;
+def : BuiltinType<"spirv.AvcSicPayloadINTEL", OpTypeAvcSicPayloadINTEL>;
+def : BuiltinType<"spirv.AvcMceResultINTEL", OpTypeAvcMceResultINTEL>;
+def : BuiltinType<"spirv.AvcImeResultINTEL", OpTypeAvcImeResultINTEL>;
+def : BuiltinType<"spirv.AvcImeResultSingleReferenceStreamoutINTEL", OpTypeAvcImeResultSingleReferenceStreamoutINTEL>;
+def : BuiltinType<"spirv.AvcImeResultDualReferenceStreamoutINTEL", OpTypeAvcImeResultDualReferenceStreamoutINTEL>;
+def : BuiltinType<"spirv.AvcImeSingleReferenceStreaminINTEL", OpTypeAvcImeSingleReferenceStreaminINTEL>;
+def : BuiltinType<"spirv.AvcImeDualReferenceStreaminINTEL", OpTypeAvcImeDualReferenceStreaminINTEL>;
+def : BuiltinType<"spirv.AvcRefResultINTEL", OpTypeAvcRefResultINTEL>;
+def : BuiltinType<"spirv.AvcSicResultINTEL", OpTypeAvcSicResultINTEL>;
+
 //===----------------------------------------------------------------------===//
 // Class matching an OpenCL builtin type name to an equivalent SPIR-V
 // builtin type literal.
@@ -1799,3 +1815,268 @@ defm : DemangledIntegerDotProductBuiltin<"_acc_sat_4x8packed_uu_uint", 3, 4, OpU
 defm : DemangledIntegerDotProductBuiltin<"_acc_sat_4x8packed_ss_int", 3, 4, OpSDotAccSat>;
 defm : DemangledIntegerDotProductBuiltin<"_acc_sat_4x8packed_us_int", 3, 4, OpSUDotAccSat>;
 defm : DemangledIntegerDotProductBuiltin<"_acc_sat_4x8packed_su_int", 3, 4, OpSUDotAccSat>;
+
+//===----------------------------------------------------------------------===//
+// This class defines SPIR-V instructions that correspond to Intel's 
+// device-side AVC motion estimation builtins, as used in the 
+// SPV_INTEL_device_side_avc_motion_estimation extension.
+//===----------------------------------------------------------------------===//
+
+// SPV_INTEL_device_side_avc_motion_estimation
+class IntelSubgroupAvcBuiltin<string name, Op operation> {
+  string Name = name;
+  Op Opcode = operation;
+  
+  bit IsRef = !or(!eq(operation, OpSubgroupAvcFmeInitializeINTEL),
+                  !eq(operation, OpSubgroupAvcBmeInitializeINTEL),
+                  !eq(operation, OpSubgroupAvcRefConvertToMcePayloadINTEL),
+                  !eq(operation, OpSubgroupAvcRefSetBidirectionalMixDisableINTEL),
+                  !eq(operation, OpSubgroupAvcRefSetBilinearFilterEnableINTEL),
+                  !eq(operation, OpSubgroupAvcRefEvaluateWithSingleReferenceINTEL),
+                  !eq(operation, OpSubgroupAvcRefEvaluateWithDualReferenceINTEL),
+                  !eq(operation, OpSubgroupAvcRefEvaluateWithMultiReferenceINTEL),
+                  !eq(operation, OpSubgroupAvcRefEvaluateWithMultiReferenceInterlacedINTEL),
+                  !eq(operation, OpSubgroupAvcRefConvertToMceResultINTEL));
+
+  bit IsSic = !or(!eq(operation, OpSubgroupAvcSicInitializeINTEL),
+                  !eq(operation, OpSubgroupAvcSicConfigureSkcINTEL),
+                  !eq(operation, OpSubgroupAvcSicConfigureIpeLumaINTEL),
+                  !eq(operation, OpSubgroupAvcSicConfigureIpeLumaChromaINTEL),
+                  !eq(operation, OpSubgroupAvcSicGetMotionVectorMaskINTEL),
+                  !eq(operation, OpSubgroupAvcSicConvertToMcePayloadINTEL),
+                  !eq(operation, OpSubgroupAvcSicSetIntraLumaShapePenaltyINTEL),
+                  !eq(operation, OpSubgroupAvcSicSetIntraLumaModeCostFunctionINTEL),
+                  !eq(operation, OpSubgroupAvcSicSetIntraChromaModeCostFunctionINTEL),
+                  !eq(operation, OpSubgroupAvcSicSetBilinearFilterEnableINTEL),
+                  !eq(operation, OpSubgroupAvcSicSetSkcForwardTransformEnableINTEL),
+                  !eq(operation, OpSubgroupAvcSicSetBlockBasedRawSkipSadINTEL),
+                  !eq(operation, OpSubgroupAvcSicEvaluateIpeINTEL),
+                  !eq(operation, OpSubgroupAvcSicEvaluateWithSingleReferenceINTEL),
+                  !eq(operation, OpSubgroupAvcSicEvaluateWithDualReferenceINTEL),
+                  !eq(operation, OpSubgroupAvcSicEvaluateWithMultiReferenceINTEL),
+                  !eq(operation, OpSubgroupAvcSicEvaluateWithMultiReferenceInterlacedINTEL),
+                  !eq(operation, OpSubgroupAvcSicConvertToMceResultINTEL),
+                  !eq(operation, OpSubgroupAvcSicGetIpeLumaShapeINTEL),
+                  !eq(operation, OpSubgroupAvcSicGetBestIpeLumaDistortionINTEL),
+                  !eq(operation, OpSubgroupAvcSicGetBestIpeChromaDistortionINTEL),
+                  !eq(operation, OpSubgroupAvcSicGetPackedIpeLumaModesINTEL),
+                  !eq(operation, OpSubgroupAvcSicGetIpeChromaModeINTEL),
+                  !eq(operation, OpSubgroupAvcSicGetPackedSkcLumaCountThresholdINTEL),
+                  !eq(operation, OpSubgroupAvcSicGetPackedSkcLumaSumThresholdINTEL),
+                  !eq(operation, OpSubgroupAvcSicGetInterRawSadsINTEL));
+
+  bit IsEvaluate = !or(!eq(operation, OpSubgroupAvcImeEvaluateWithSingleReferenceINTEL),
+                      !eq(operation, OpSubgroupAvcImeEvaluateWithDualReferenceINTEL),
+                      !eq(operation, OpSubgroupAvcImeEvaluateWithSingleReferenceStreamoutINTEL),
+                      !eq(operation, OpSubgroupAvcImeEvaluateWithDualReferenceStreamoutINTEL),
+                      !eq(operation, OpSubgroupAvcImeEvaluateWithSingleReferenceStreaminoutINTEL),
+                      !eq(operation, OpSubgroupAvcImeEvaluateWithDualReferenceStreaminoutINTEL),
+                      !eq(operation, OpSubgroupAvcRefEvaluateWithSingleReferenceINTEL),
+                      !eq(operation, OpSubgroupAvcRefEvaluateWithDualReferenceINTEL),
+                      !eq(operation, OpSubgroupAvcRefEvaluateWithMultiReferenceINTEL),
+                      !eq(operation, OpSubgroupAvcRefEvaluateWithMultiReferenceInterlacedINTEL),
+                      !eq(operation, OpSubgroupAvcSicEvaluateIpeINTEL),
+                      !eq(operation, OpSubgroupAvcSicEvaluateWithSingleReferenceINTEL),
+                      !eq(operation, OpSubgroupAvcSicEvaluateWithDualReferenceINTEL),
+                      !eq(operation, OpSubgroupAvcSicEvaluateWithMultiReferenceINTEL),
+                      !eq(operation, OpSubgroupAvcSicEvaluateWithMultiReferenceInterlacedINTEL),
+                      !eq(operation, OpSubgroupAvcImeEvaluateWithSingleReferenceStreaminINTEL),
+                      !eq(operation, OpSubgroupAvcImeEvaluateWithDualReferenceStreaminINTEL));
+}
+
+// Table gathering all the Intel sub group builtins.
+def IntelSubgroupAvcBuiltins : GenericTable {
+  let FilterClass = "IntelSubgroupAvcBuiltin";
+  let Fields = ["Name", "Opcode", "IsRef", "IsSic", "IsEvaluate"];
+}
+
+// Function to lookup group builtins by their name and set.
+def lookupIntelSubgroupAvcBuiltin : SearchIndex {
+ let Table = IntelSubgroupAvcBuiltins;
+ let Key = ["Name"];
+}
+
+
+// Multiclass used to define incoming builtin records for the SPV_INTEL_device_side_avc_motion_estimation extension
+// and corresponding work/sub group builtin records.
+multiclass DemangledIntelSubgroupsAvcBuiltin<string name, bits<8> minNumArgs, bits<8> maxNumArgs, Op operation> {
+  def : DemangledBuiltin<!strconcat("intel_sub_group_avc_", name), OpenCL_std, IntelSubgroupsAvc, minNumArgs, maxNumArgs>;
+  def : IntelSubgroupAvcBuiltin<!strconcat("intel_sub_group_avc_", name), operation>;
+}
+
+// intel_subgroup_avc_mce
+defm : DemangledIntelSubgroupsAvcBuiltin<"mce_get_default_inter_base_multi_reference_penalty", 2, 5, OpSubgroupAvcMceGetDefaultInterBaseMultiReferencePenaltyINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"mce_set_inter_base_multi_reference_penalty", 2, 5, OpSubgroupAvcMceSetInterBaseMultiReferencePenaltyINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"mce_get_default_inter_shape_penalty", 2, 5, OpSubgroupAvcMceGetDefaultInterShapePenaltyINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"mce_set_inter_shape_penalty", 2, 5, OpSubgroupAvcMceSetInterShapePenaltyINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"mce_get_default_inter_direction_penalty", 2, 5, OpSubgroupAvcMceGetDefaultInterDirectionPenaltyINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"mce_set_inter_direction_penalty", 2, 5, OpSubgroupAvcMceSetInterDirectionPenaltyINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"mce_get_default_intra_luma_shape_penalty", 2, 5, OpSubgroupAvcMceGetDefaultIntraLumaShapePenaltyINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"mce_get_default_inter_motion_vector_cost_table", 2, 5, OpSubgroupAvcMceGetDefaultInterMotionVectorCostTableINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"mce_get_default_high_penalty_cost_table", 0, 3, OpSubgroupAvcMceGetDefaultHighPenaltyCostTableINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"mce_get_default_medium_penalty_cost_table", 0, 3, OpSubgroupAvcMceGetDefaultMediumPenaltyCostTableINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"mce_get_default_low_penalty_cost_table", 0, 3, OpSubgroupAvcMceGetDefaultLowPenaltyCostTableINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"mce_set_motion_vector_cost_function", 4, 7, OpSubgroupAvcMceSetMotionVectorCostFunctionINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"mce_get_default_intra_luma_mode_penalty", 2, 5, OpSubgroupAvcMceGetDefaultIntraLumaModePenaltyINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"mce_get_default_non_dc_luma_intra_penalty", 0, 3, OpSubgroupAvcMceGetDefaultNonDcLumaIntraPenaltyINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"mce_get_default_intra_chroma_mode_base_penalty", 0, 3, OpSubgroupAvcMceGetDefaultIntraChromaModeBasePenaltyINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"mce_set_ac_only_haar", 1, 4, OpSubgroupAvcMceSetAcOnlyHaarINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"mce_set_source_interlaced_field_polarity", 2, 5, OpSubgroupAvcMceSetSourceInterlacedFieldPolarityINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"mce_set_single_reference_interlaced_field_polarity", 2, 5, OpSubgroupAvcMceSetSingleReferenceInterlacedFieldPolarityINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"mce_set_dual_reference_interlaced_field_polarities", 3, 6, OpSubgroupAvcMceSetDualReferenceInterlacedFieldPolaritiesINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"mce_convert_to_ime_payload", 1, 4, OpSubgroupAvcMceConvertToImePayloadINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"mce_convert_to_ime_result", 1, 4, OpSubgroupAvcMceConvertToImeResultINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"mce_convert_to_ref_payload", 1, 4, OpSubgroupAvcMceConvertToRefPayloadINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"mce_convert_to_ref_result", 1, 4, OpSubgroupAvcMceConvertToRefResultINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"mce_convert_to_sic_payload", 1, 4, OpSubgroupAvcMceConvertToSicPayloadINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"mce_convert_to_sic_result", 1, 4, OpSubgroupAvcMceConvertToSicResultINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"mce_get_motion_vectors", 1, 4, OpSubgroupAvcMceGetMotionVectorsINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"mce_get_inter_distortions", 1, 4, OpSubgroupAvcMceGetInterDistortionsINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"mce_get_best_inter_distortions", 1, 4, OpSubgroupAvcMceGetBestInterDistortionsINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"mce_get_inter_major_shape", 1, 4, OpSubgroupAvcMceGetInterMajorShapeINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"mce_get_inter_minor_shape", 1, 4, OpSubgroupAvcMceGetInterMinorShapeINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"mce_get_inter_directions", 1, 4, OpSubgroupAvcMceGetInterDirectionsINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"mce_get_inter_motion_vector_count", 1, 4, OpSubgroupAvcMceGetInterMotionVectorCountINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"mce_get_inter_reference_ids", 1, 4, OpSubgroupAvcMceGetInterReferenceIdsINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"mce_get_inter_reference_interlaced_field_polarities", 3, 6, OpSubgroupAvcMceGetInterReferenceInterlacedFieldPolaritiesINTEL>;
+
+// intel_sub_group_avc_ime
+defm : DemangledIntelSubgroupsAvcBuiltin<"ime_initialize", 3, 6, OpSubgroupAvcImeInitializeINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"ime_set_single_reference", 3, 6, OpSubgroupAvcImeSetSingleReferenceINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"ime_set_dual_reference", 4, 7, OpSubgroupAvcImeSetDualReferenceINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"ime_ref_window_size", 2, 5, OpSubgroupAvcImeRefWindowSizeINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"ime_adjust_ref_offset", 4, 7, OpSubgroupAvcImeAdjustRefOffsetINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"ime_convert_to_mce_payload", 1, 4, OpSubgroupAvcImeConvertToMcePayloadINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"ime_set_max_motion_vector_count", 2, 5, OpSubgroupAvcImeSetMaxMotionVectorCountINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"ime_set_unidirectional_mix_disable", 1, 4, OpSubgroupAvcImeSetUnidirectionalMixDisableINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"ime_set_early_search_termination_threshold", 2, 5, OpSubgroupAvcImeSetEarlySearchTerminationThresholdINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"ime_set_weighted_sad", 2, 5, OpSubgroupAvcImeSetWeightedSadINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"ime_evaluate_with_single_reference", 3, 6, OpSubgroupAvcImeEvaluateWithSingleReferenceINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"ime_evaluate_with_dual_reference", 4, 7, OpSubgroupAvcImeEvaluateWithDualReferenceINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"ime_evaluate_with_single_reference_streamin", 3, 6, OpSubgroupAvcImeEvaluateWithSingleReferenceStreaminINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"ime_evaluate_with_dual_reference_streamin", 4, 7, OpSubgroupAvcImeEvaluateWithDualReferenceStreaminINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"ime_evaluate_with_single_reference_streamout", 3, 6, OpSubgroupAvcImeEvaluateWithSingleReferenceStreamoutINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"ime_evaluate_with_dual_reference_streamout", 4, 7, OpSubgroupAvcImeEvaluateWithDualReferenceStreamoutINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"ime_evaluate_with_single_reference_streaminout", 5, 8, OpSubgroupAvcImeEvaluateWithSingleReferenceStreaminoutINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"ime_evaluate_with_dual_reference_streaminout", 4, 7, OpSubgroupAvcImeEvaluateWithDualReferenceStreaminoutINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"ime_convert_to_mce_result", 5, 8, OpSubgroupAvcImeConvertToMceResultINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"ime_get_single_reference_streamin", 1, 4, OpSubgroupAvcImeGetSingleReferenceStreaminINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"ime_get_dual_reference_streamin", 1, 4, OpSubgroupAvcImeGetDualReferenceStreaminINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"ime_strip_single_reference_streamout", 1, 4, OpSubgroupAvcImeStripSingleReferenceStreamoutINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"ime_strip_dual_reference_streamout", 1, 4, OpSubgroupAvcImeStripDualReferenceStreamoutINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"ime_get_streamout_major_shape_motion_vectors", 2, 5, OpSubgroupAvcImeGetStreamoutSingleReferenceMajorShapeMotionVectorsINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"ime_get_streamout_major_shape_distortions", 3, 6, OpSubgroupAvcImeGetStreamoutSingleReferenceMajorShapeDistortionsINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"ime_get_streamout_major_shape_reference_ids", 2, 5, OpSubgroupAvcImeGetStreamoutSingleReferenceMajorShapeReferenceIdsINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"ime_get_streamout_major_shape_motion_vectors", 3, 6, OpSubgroupAvcImeGetStreamoutDualReferenceMajorShapeMotionVectorsINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"ime_get_streamout_major_shape_distortions", 2, 5, OpSubgroupAvcImeGetStreamoutDualReferenceMajorShapeDistortionsINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"ime_get_streamout_major_shape_reference_ids", 3, 6, OpSubgroupAvcImeGetStreamoutDualReferenceMajorShapeReferenceIdsINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"ime_get_border_reached", 2, 5, OpSubgroupAvcImeGetBorderReachedINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"ime_get_truncated_search_indication", 1, 4, OpSubgroupAvcImeGetTruncatedSearchIndicationINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"ime_get_unidirectional_early_search_termination", 1, 4, OpSubgroupAvcImeGetUnidirectionalEarlySearchTerminationINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"ime_get_weighting_pattern_minimum_motion_vector", 1, 4, OpSubgroupAvcImeGetWeightingPatternMinimumMotionVectorINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"ime_get_weighting_pattern_minimum_distortion", 1, 4, OpSubgroupAvcImeGetWeightingPatternMinimumDistortionINTEL>;
+
+// intel_sub_group_avc_ref
+defm : DemangledIntelSubgroupsAvcBuiltin<"fme_initialize", 7, 10, OpSubgroupAvcFmeInitializeINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"bme_initialize", 8, 11, OpSubgroupAvcBmeInitializeINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"ref_convert_to_mce_payload", 1, 4, OpSubgroupAvcRefConvertToMcePayloadINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"ref_set_bidirectional_mix_disable", 1, 4, OpSubgroupAvcRefSetBidirectionalMixDisableINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"ref_set_bilinear_filter_enable", 1, 4, OpSubgroupAvcRefSetBilinearFilterEnableINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"ref_evaluate_with_single_reference", 3, 6, OpSubgroupAvcRefEvaluateWithSingleReferenceINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"ref_evaluate_with_dual_reference", 4, 7, OpSubgroupAvcRefEvaluateWithDualReferenceINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"ref_evaluate_with_multi_reference", 3, 6, OpSubgroupAvcRefEvaluateWithMultiReferenceINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"ref_evaluate_with_multi_reference", 4, 7, OpSubgroupAvcRefEvaluateWithMultiReferenceInterlacedINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"ref_convert_to_mce_result", 1, 4, OpSubgroupAvcRefConvertToMceResultINTEL>;
+
+// intel_subgroup_avc_sic
+defm : DemangledIntelSubgroupsAvcBuiltin<"sic_initialize", 1, 4, OpSubgroupAvcSicInitializeINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"sic_configure_skc", 6, 9, OpSubgroupAvcSicConfigureSkcINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"sic_configure_ipe", 8, 11, OpSubgroupAvcSicConfigureIpeLumaINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"sic_configure_ipe", 11, 14, OpSubgroupAvcSicConfigureIpeLumaChromaINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"sic_get_motion_vector_mask", 2, 5, OpSubgroupAvcSicGetMotionVectorMaskINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"sic_convert_to_mce_payload", 1, 4, OpSubgroupAvcSicConvertToMcePayloadINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"sic_set_intra_luma_shape_penalty", 1, 4, OpSubgroupAvcSicSetIntraLumaShapePenaltyINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"sic_set_intra_luma_mode_cost_function", 2, 5, OpSubgroupAvcSicSetIntraLumaModeCostFunctionINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"sic_set_intra_chroma_mode_cost_function", 2, 5, OpSubgroupAvcSicSetIntraChromaModeCostFunctionINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"sic_set_bilinear_filter_enable", 4, 7, OpSubgroupAvcSicSetBilinearFilterEnableINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"sic_set_skc_forward_transform_enable", 1, 4, OpSubgroupAvcSicSetSkcForwardTransformEnableINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"sic_set_block_based_raw_skip_sad", 2, 5, OpSubgroupAvcSicSetBlockBasedRawSkipSadINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"sic_evaluate_ipe", 2, 5, OpSubgroupAvcSicEvaluateIpeINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"sic_evaluate_with_single_reference", 2, 5, OpSubgroupAvcSicEvaluateWithSingleReferenceINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"sic_evaluate_with_dual_reference", 4, 7, OpSubgroupAvcSicEvaluateWithDualReferenceINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"sic_evaluate_with_multi_reference", 3, 6, OpSubgroupAvcSicEvaluateWithMultiReferenceINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"sic_evaluate_with_multi_reference", 4, 7, OpSubgroupAvcSicEvaluateWithMultiReferenceInterlacedINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"sic_convert_to_mce_result", 1, 4, OpSubgroupAvcSicConvertToMceResultINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"sic_get_ipe_luma_shape", 1, 4, OpSubgroupAvcSicGetIpeLumaShapeINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"sic_get_best_ipe_luma_distortion", 1, 4, OpSubgroupAvcSicGetBestIpeLumaDistortionINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"sic_get_best_ipe_chroma_distortion", 1, 4, OpSubgroupAvcSicGetBestIpeChromaDistortionINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"sic_get_packed_ipe_luma_modes", 1, 4, OpSubgroupAvcSicGetPackedIpeLumaModesINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"sic_get_ipe_chroma_mode", 1, 4, OpSubgroupAvcSicGetIpeChromaModeINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"sic_get_packed_skc_luma_count_threshold", 1, 4, OpSubgroupAvcSicGetPackedSkcLumaCountThresholdINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"sic_get_packed_skc_luma_sum_threshold", 1, 4, OpSubgroupAvcSicGetPackedSkcLumaSumThresholdINTEL>;
+defm : DemangledIntelSubgroupsAvcBuiltin<"sic_get_inter_raw_sads", 1, 4, OpSubgroupAvcSicGetInterRawSadsINTEL>;
+
+
+class IntelSubgroupAvcWrapperBuiltin<string name, Op operation> {
+  string Name = name;
+  Op Opcode = operation;
+}
+
+
+def IntelSubgroupAvcWrapperBuiltins : GenericTable {
+  let FilterClass = "IntelSubgroupAvcWrapperBuiltin";
+  let Fields = ["Name", "Opcode"];
+}
+
+// Function to lookup group builtins by their name and set.
+def lookupIntelSubgroupAvcWrapperBuiltin : SearchIndex {
+ let Table = IntelSubgroupAvcWrapperBuiltins;
+ let Key = ["Name"];
+}
+
+
+// Multiclass used to define incoming builtin records for wrapper functions the SPV_INTEL_device_side_avc_motion_estimation extension
+// and corresponding work/sub group builtin records.
+multiclass DemangledIntelSubgroupsAvcWrapperBuiltin<string name, string Kind, bits<8> minNumArgs, bits<8> maxNumArgs, Op operation> {
+  def : DemangledBuiltin<!strconcat("intel_sub_group_avc_", Kind, name), OpenCL_std, IntelSubgroupsAvcWrapper, minNumArgs, maxNumArgs>;
+  def : IntelSubgroupAvcWrapperBuiltin<!strconcat("intel_sub_group_avc_", Kind, name), operation>;
+}
+
+
+//wrapper function avc
+foreach Kind = ["sic", "ref", "ime"] in {
+defm : DemangledIntelSubgroupsAvcWrapperBuiltin<"_get_default_inter_base_multi_reference_penalty", Kind, 2, 5, OpSubgroupAvcMceGetDefaultInterBaseMultiReferencePenaltyINTEL>;
+defm : DemangledIntelSubgroupsAvcWrapperBuiltin<"_set_inter_base_multi_reference_penalty", Kind, 2, 5, OpSubgroupAvcMceSetInterBaseMultiReferencePenaltyINTEL>;
+defm : DemangledIntelSubgroupsAvcWrapperBuiltin<"_get_default_inter_shape_penalty", Kind, 2, 5, OpSubgroupAvcMceGetDefaultInterShapePenaltyINTEL>;
+defm : DemangledIntelSubgroupsAvcWrapperBuiltin<"_set_inter_shape_penalty", Kind, 2, 5, OpSubgroupAvcMceSetInterShapePenaltyINTEL>;
+defm : DemangledIntelSubgroupsAvcWrapperBuiltin<"_get_default_inter_direction_penalty", Kind, 2, 5, OpSubgroupAvcMceGetDefaultInterDirectionPenaltyINTEL>;
+defm : DemangledIntelSubgroupsAvcWrapperBuiltin<"_set_inter_direction_penalty", Kind, 2, 5, OpSubgroupAvcMceSetInterDirectionPenaltyINTEL>;
+defm : DemangledIntelSubgroupsAvcWrapperBuiltin<"_get_default_intra_luma_shape_penalty", Kind, 2, 5, OpSubgroupAvcMceGetDefaultIntraLumaShapePenaltyINTEL >;
+defm : DemangledIntelSubgroupsAvcWrapperBuiltin<"_get_default_inter_motion_vector_cost_table", Kind, 2, 5, OpSubgroupAvcMceGetDefaultInterMotionVectorCostTableINTEL >;
+defm : DemangledIntelSubgroupsAvcWrapperBuiltin<"_get_default_high_penalty_cost_table", Kind, 0, 3, OpSubgroupAvcMceGetDefaultHighPenaltyCostTableINTEL >;
+defm : DemangledIntelSubgroupsAvcWrapperBuiltin<"_get_default_medium_penalty_cost_table", Kind, 0, 3, OpSubgroupAvcMceGetDefaultMediumPenaltyCostTableINTEL >;
+defm : DemangledIntelSubgroupsAvcWrapperBuiltin<"_get_default_low_penalty_cost_table", Kind, 0, 3, OpSubgroupAvcMceGetDefaultLowPenaltyCostTableINTEL >;
+defm : DemangledIntelSubgroupsAvcWrapperBuiltin<"_set_motion_vector_cost_function", Kind, 4, 7, OpSubgroupAvcMceSetMotionVectorCostFunctionINTEL >;
+defm : DemangledIntelSubgroupsAvcWrapperBuiltin<"_get_default_intra_luma_mode_penalty", Kind, 2, 5, OpSubgroupAvcMceGetDefaultIntraLumaModePenaltyINTEL >;
+defm : DemangledIntelSubgroupsAvcWrapperBuiltin<"_get_default_non_dc_luma_intra_penalty", Kind, 0, 3, OpSubgroupAvcMceGetDefaultNonDcLumaIntraPenaltyINTEL >;
+defm : DemangledIntelSubgroupsAvcWrapperBuiltin<"_get_default_intra_chroma_mode_base_penalty", Kind, 0, 3, OpSubgroupAvcMceGetDefaultIntraChromaModeBasePenaltyINTEL >;
+defm : DemangledIntelSubgroupsAvcWrapperBuiltin<"_set_ac_only_haar", Kind, 1, 4, OpSubgroupAvcMceSetAcOnlyHaarINTEL >;
+defm : DemangledIntelSubgroupsAvcWrapperBuiltin<"_set_source_interlaced_field_polarity", Kind, 2, 5, OpSubgroupAvcMceSetSourceInterlacedFieldPolarityINTEL >;
+defm : DemangledIntelSubgroupsAvcWrapperBuiltin<"_set_single_reference_interlaced_field_polarity", Kind, 2, 5, OpSubgroupAvcMceSetSingleReferenceInterlacedFieldPolarityINTEL >;
+defm : DemangledIntelSubgroupsAvcWrapperBuiltin<"_set_dual_reference_interlaced_field_polarities", Kind, 3, 6, OpSubgroupAvcMceSetDualReferenceInterlacedFieldPolaritiesINTEL >;
+defm : DemangledIntelSubgroupsAvcWrapperBuiltin<"_convert_to_ime_payload", Kind, 1, 4, OpSubgroupAvcMceConvertToImePayloadINTEL >;
+defm : DemangledIntelSubgroupsAvcWrapperBuiltin<"_convert_to_ime_result", Kind, 1, 4, OpSubgroupAvcMceConvertToImeResultINTEL >;
+defm : DemangledIntelSubgroupsAvcWrapperBuiltin<"_convert_to_ref_payload", Kind, 1, 4, OpSubgroupAvcMceConvertToRefPayloadINTEL >;
+defm : DemangledIntelSubgroupsAvcWrapperBuiltin<"_convert_to_ref_result", Kind, 1, 4, OpSubgroupAvcMceConvertToRefResultINTEL >;
+defm : DemangledIntelSubgroupsAvcWrapperBuiltin<"_convert_to_sic_payload", Kind, 1, 4, OpSubgroupAvcMceConvertToSicPayloadINTEL >;
+defm : DemangledIntelSubgroupsAvcWrapperBuiltin<"_convert_to_sic_result", Kind, 1, 4, OpSubgroupAvcMceConvertToSicResultINTEL >;
+defm : DemangledIntelSubgroupsAvcWrapperBuiltin<"_get_motion_vectors", Kind, 1, 4, OpSubgroupAvcMceGetMotionVectorsINTEL >;
+defm : DemangledIntelSubgroupsAvcWrapperBuiltin<"_get_inter_distortions", Kind, 1, 4, OpSubgroupAvcMceGetInterDistortionsINTEL >;
+defm : DemangledIntelSubgroupsAvcWrapperBuiltin<"_get_best_inter_distortions", Kind, 1, 4, OpSubgroupAvcMceGetBestInterDistortionsINTEL >;
+defm : DemangledIntelSubgroupsAvcWrapperBuiltin<"_get_inter_major_shape", Kind, 1, 4, OpSubgroupAvcMceGetInterMajorShapeINTEL >;
+defm : DemangledIntelSubgroupsAvcWrapperBuiltin<"_get_inter_minor_shape", Kind, 1, 4, OpSubgroupAvcMceGetInterMinorShapeINTEL >;
+defm : DemangledIntelSubgroupsAvcWrapperBuiltin<"_get_inter_directions", Kind, 1, 4, OpSubgroupAvcMceGetInterDirectionsINTEL >;
+defm : DemangledIntelSubgroupsAvcWrapperBuiltin<"_get_inter_motion_vector_count", Kind, 1, 4, OpSubgroupAvcMceGetInterMotionVectorCountINTEL >;
+defm : DemangledIntelSubgroupsAvcWrapperBuiltin<"_get_inter_reference_ids", Kind, 1, 4, OpSubgroupAvcMceGetInterReferenceIdsINTEL >;
+defm : DemangledIntelSubgroupsAvcWrapperBuiltin<"_get_inter_reference_interlaced_field_polarities", Kind, 3, 6, OpSubgroupAvcMceGetInterReferenceInterlacedFieldPolaritiesINTEL >;
+}
