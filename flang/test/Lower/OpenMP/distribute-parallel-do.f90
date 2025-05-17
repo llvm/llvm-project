@@ -42,7 +42,7 @@ subroutine distribute_parallel_do_schedule()
 
   ! CHECK:      omp.parallel private({{.*}}) {
   ! CHECK:      omp.distribute {
-  ! CHECK-NEXT: omp.wsloop schedule(runtime) {
+  ! CHECK-NEXT: omp.wsloop schedule(runtime, nonmonotonic) {
   ! CHECK-NEXT: omp.loop_nest
   !$omp distribute parallel do schedule(runtime)
   do index_ = 1, 10

@@ -64,7 +64,7 @@ subroutine parallel_do_with_clauses(nt)
   ! CHECK:      %[[WS_LB:.*]] = arith.constant 1 : i32
   ! CHECK:      %[[WS_UB:.*]] = arith.constant 9 : i32
   ! CHECK:      %[[WS_STEP:.*]] = arith.constant 1 : i32
-  ! CHECK:      omp.wsloop schedule(dynamic) private({{.*}}) {
+  ! CHECK:      omp.wsloop schedule(dynamic, nonmonotonic) private({{.*}}) {
   ! CHECK-NEXT: omp.loop_nest (%[[I:.*]]) : i32 = (%[[WS_LB]]) to (%[[WS_UB]]) inclusive step (%[[WS_STEP]]) {
   !$OMP PARALLEL DO NUM_THREADS(nt) SCHEDULE(dynamic)
   do i=1, 9

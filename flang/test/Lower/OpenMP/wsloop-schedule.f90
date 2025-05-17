@@ -14,7 +14,7 @@ program wsloop_dynamic
 !CHECK:      %[[WS_LB:.*]] = arith.constant 1 : i32
 !CHECK:      %[[WS_UB:.*]] = arith.constant 9 : i32
 !CHECK:      %[[WS_STEP:.*]] = arith.constant 1 : i32
-!CHECK:      omp.wsloop nowait schedule(runtime, simd) private({{.*}}) {
+!CHECK:      omp.wsloop nowait schedule(runtime, nonmonotonic, simd) private({{.*}}) {
 !CHECK-NEXT:   omp.loop_nest (%[[I:.*]]) : i32 = (%[[WS_LB]]) to (%[[WS_UB]]) inclusive step (%[[WS_STEP]]) {
 !CHECK:          hlfir.assign %[[I]] to %[[STORE:.*]]#0 : i32, !fir.ref<i32>
 
@@ -28,9 +28,35 @@ program wsloop_dynamic
 !CHECK:          omp.yield
 !CHECK:        }
 !CHECK:      }
-!CHECK:      omp.terminator
-!CHECK:    }
 
 !$OMP END DO NOWAIT
+
+! Check that the schedule modifier is set correctly when the ordered clause is
+! used
+!$OMP DO SCHEDULE(runtime) ORDERED(1)
+!CHECK:      %[[WS_LB2:.*]] = arith.constant 1 : i32
+!CHECK:      %[[WS_UB2:.*]] = arith.constant 9 : i32
+!CHECK:      %[[WS_STEP2:.*]] = arith.constant 1 : i32
+!CHECK:      omp.wsloop nowait ordered(1) schedule(runtime, monotonic) private({{.*}}) {
+!CHECK-NEXT:   omp.loop_nest (%[[I:.*]]) : i32 = (%[[WS_LB2]]) to (%[[WS_UB2]]) inclusive step (%[[WS_STEP2]]) {
+  do i=1, 9
+    print*, i
+  end do
+!$OMP END DO NOWAIT
+
+! Check that the schedule modifier is set correctly with a static schedule
+!$OMP DO SCHEDULE(static)
+!CHECK:      %[[WS_LB3:.*]] = arith.constant 1 : i32
+!CHECK:      %[[WS_UB3:.*]] = arith.constant 9 : i32
+!CHECK:      %[[WS_STEP3:.*]] = arith.constant 1 : i32
+!CHECK:      omp.wsloop nowait schedule(static, monotonic) private({{.*}}) {
+!CHECK-NEXT:   omp.loop_nest (%[[I:.*]]) : i32 = (%[[WS_LB3]]) to (%[[WS_UB3]]) inclusive step (%[[WS_STEP3]]) {
+  do i=1, 9
+    print*, i
+  end do
+!$OMP END DO NOWAIT
+
+!CHECK:      omp.terminator
+!CHECK:    }
 !$OMP END PARALLEL
 end

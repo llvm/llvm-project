@@ -547,9 +547,23 @@ bool ClauseProcessor::processSchedule(
         mlir::omp::ClauseScheduleKindAttr::get(context, scheduleKind);
 
     mlir::omp::ScheduleModifier scheduleMod = getScheduleModifier(*clause);
-    if (scheduleMod != mlir::omp::ScheduleModifier::none)
+    if (scheduleMod != mlir::omp::ScheduleModifier::none) {
       result.scheduleMod =
           mlir::omp::ScheduleModifierAttr::get(context, scheduleMod);
+    } else {
+      // OpenMP 6.0 13.6.3:
+      // If an ordering-modifier is not specified, the effect is as if the
+      // monotonic ordering modifier is specified if the kind argument is
+      // static or an ordered clause is specified on the construct; otherwise,
+      // the effect is as if the nonmonotonic ordering modifier is specified.
+      mlir::omp::ScheduleModifier defaultMod =
+          mlir::omp::ScheduleModifier::nonmonotonic;
+      if (scheduleKind == mlir::omp::ClauseScheduleKind::Static ||
+          findUniqueClause<omp::clause::Ordered>())
+        defaultMod = mlir::omp::ScheduleModifier::monotonic;
+      result.scheduleMod =
+          mlir::omp::ScheduleModifierAttr::get(context, defaultMod);
+    }
 
     if (getSimdModifier(*clause) != mlir::omp::ScheduleModifier::none)
       result.scheduleSimd = firOpBuilder.getUnitAttr();
