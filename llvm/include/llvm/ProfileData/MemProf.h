@@ -1090,18 +1090,18 @@ private:
 
 // A convenience wrapper around FrameIdConverter and CallStackIdConverter for
 // tests.
-struct IndexedCallstackIdConveter {
-  IndexedCallstackIdConveter() = delete;
-  IndexedCallstackIdConveter(IndexedMemProfData &MemProfData)
+struct IndexedCallstackIdConverter {
+  IndexedCallstackIdConverter() = delete;
+  IndexedCallstackIdConverter(IndexedMemProfData &MemProfData)
       : FrameIdConv(MemProfData.Frames),
         CSIdConv(MemProfData.CallStacks, FrameIdConv) {}
 
   // Delete the copy constructor and copy assignment operator to avoid a
-  // situation where a copy of IndexedCallStackIdConverter gets an error in
+  // situation where a copy of IndexedCallstackIdConverter gets an error in
   // LastUnmappedId while the original instance doesn't.
-  IndexedCallstackIdConveter(const IndexedCallstackIdConveter &) = delete;
-  IndexedCallstackIdConveter &
-  operator=(const IndexedCallstackIdConveter &) = delete;
+  IndexedCallstackIdConverter(const IndexedCallstackIdConverter &) = delete;
+  IndexedCallstackIdConverter &
+  operator=(const IndexedCallstackIdConverter &) = delete;
 
   std::vector<Frame> operator()(CallStackId CSId) { return CSIdConv(CSId); }
 
