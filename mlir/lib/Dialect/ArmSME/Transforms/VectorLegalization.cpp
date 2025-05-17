@@ -724,59 +724,6 @@ struct LiftIllegalVectorTransposeToMemory
   }
 };
 
-/// A rewrite to turn unit dim transpose-like vector.shape_casts into
-/// vector.transposes. The shape_cast has to be from an illegal vector type to a
-/// legal one (as defined by isLegalVectorType).
-///
-/// The reasoning for this is if we've got to this pass and we still have
-/// shape_casts of illegal types, then they likely will not cancel out. Turning
-/// them into transposes gives LiftIllegalVectorTransposeToMemory a chance to
-/// eliminate them.
-///
-/// Example:
-///
-///  BEFORE:
-///  ```mlir
-///  %0 = vector.shape_cast %a : vector<[4]x1xf32> to vector<1x[4]xf32>
-///  ```
-///
-///  AFTER:
-///  ```mlir
-///  %0 = vector.transpose %0, [1, 0] : vector<[4]x1xf32> to vector<1x[4]xf32>
-///  ```
-struct ConvertIllegalShapeCastOpsToTransposes
-    : public OpRewritePattern<vector::ShapeCastOp> {
-  using OpRewritePattern<vector::ShapeCastOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(vector::ShapeCastOp shapeCastOp,
-                                PatternRewriter &rewriter) const override {
-    auto sourceType = shapeCastOp.getSourceVectorType();
-    auto resultType = shapeCastOp.getResultVectorType();
-    if (isLegalVectorType(sourceType) || !isLegalVectorType(resultType))
-      return rewriter.notifyMatchFailure(shapeCastOp,
-                                         kMatchFailureNotIllegalToLegal);
-
-    // Note: If we know that `sourceType` is an illegal vector type (and 2D)
-    // then dim 0 is scalable and dim 1 is fixed.
-    if (sourceType.getRank() != 2 || sourceType.getDimSize(1) != 1)
-      return rewriter.notifyMatchFailure(
-          shapeCastOp, "expected source to be a 2D scalable vector with a "
-                       "trailing unit dim");
-
-    auto loc = shapeCastOp.getLoc();
-    auto transpose = rewriter.create<vector::TransposeOp>(
-        loc, shapeCastOp.getSource(), ArrayRef<int64_t>{1, 0});
-
-    if (resultType.getRank() == 1)
-      rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(shapeCastOp, resultType,
-                                                       transpose);
-    else
-      rewriter.replaceOp(shapeCastOp, transpose);
-
-    return success();
-  }
-};
-
 /// Rewrites an illegal/unsupported SVE transfer_write(transpose) to instead use
 /// the ZA state. This workaround rewrite to support these transposes when ZA is
 /// available.
@@ -943,7 +890,6 @@ struct VectorLegalizationPass
     RewritePatternSet rewritePatterns(context);
     rewritePatterns.add<FoldExtractFromVectorOfSMELikeCreateMasks,
                         LiftIllegalVectorTransposeToMemory,
-                        ConvertIllegalShapeCastOpsToTransposes,
                         LowerIllegalTransposeStoreViaZA>(context);
     if (failed(
             applyPatternsGreedily(getOperation(), std::move(rewritePatterns))))
