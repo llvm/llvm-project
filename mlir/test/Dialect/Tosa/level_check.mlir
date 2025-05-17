@@ -1503,40 +1503,87 @@ func.func @test_while_tensor_list_size(%arg0: tensor<1x1x1x1x1x1x1xf32>, %arg1: 
 
 // -----
 
-func.func @test_cond_if_max_nested_depth(%arg0: tensor<f32>, %arg1: tensor<f32>, %arg2: tensor<i1>, %arg3: tensor<i1>) -> tensor<f32> {
-  %0 = tosa.cond_if %arg2 -> (tensor<f32>) {
-    %1 = tosa.cond_if %arg3 -> (tensor<f32>) {
-      %2 = tosa.cond_if %arg2 -> (tensor<f32>) {
-        %3 = tosa.cond_if %arg3 -> (tensor<f32>) {
-          %4 = tosa.cond_if %arg2 -> (tensor<f32>) {
+func.func @test_cond_if_max_nested_depth(%arg0: tensor<f32>, %arg1: tensor<f32>, %arg2: tensor<i1>,  %arg3: tensor<i1>) -> tensor<f32> {
+  %0 = "tosa.cond_if"(%arg2, %arg0, %arg1) ({
+
+  // COM: then graph of IF-1
+  ^bb1(%a1: tensor<f32>, %b1: tensor<f32>):
+    %cond1 = tosa.equal %a1, %b1 : (tensor<f32>, tensor<f32>) -> tensor<i1>
+    %1 = "tosa.cond_if"(%cond1, %a1, %b1) ({
+
+    // COM: then graph of IF-2
+    ^bb2(%a2: tensor<f32>, %b2: tensor<f32>):
+      %cond2 = tosa.equal %a2, %b2 : (tensor<f32>, tensor<f32>) -> tensor<i1>
+      %2 = "tosa.cond_if"(%cond2, %a2, %b2) ({
+
+      // COM: then graph of IF-3
+      ^bb3(%a3: tensor<f32>, %b3: tensor<f32>):
+        %cond3 = tosa.equal %a3, %b3 : (tensor<f32>, tensor<f32>) -> tensor<i1>
+        %3 = "tosa.cond_if"(%cond3, %a3, %b3) ({
+
+        // COM: then graph of IF-4
+        ^bb4(%a4: tensor<f32>, %b4: tensor<f32>):
+          %cond4 = tosa.equal %a4, %b4 : (tensor<f32>, tensor<f32>) -> tensor<i1>
+          %4 = "tosa.cond_if"(%cond4, %a4, %b4) ({
+
+          // COM: then graph of IF-5
+          ^bb5(%a5: tensor<f32>, %b5: tensor<f32>):
+            %cond5 = tosa.equal %a5, %b5 : (tensor<f32>, tensor<f32>) -> tensor<i1>
             // expected-error@+1 {{'tosa.cond_if' op failed level check: 6 >= MAX_NESTING}}
-            %5 = tosa.cond_if %arg3 -> (tensor<f32>) {
+            %5 = "tosa.cond_if"(%cond5, %a5, %b5) ({
+
+            // COM: then graph of IF-6
+            ^bb6(%a6: tensor<f32>, %b6: tensor<f32>):
               %res = tosa.sub %arg0, %arg1 : (tensor<f32>, tensor<f32>) -> tensor<f32>
               tosa.yield %res : tensor<f32>
-            } else {
+            },  {
+
+            // COM: else graph of IF-6
+            ^bb6(%a6: tensor<f32>, %b6: tensor<f32>):
               tosa.yield %arg0 : tensor<f32>
-            }
+            }) : (tensor<i1>, tensor<f32>, tensor<f32>) -> tensor<f32>
+
             tosa.yield %5 : tensor<f32>
-          } else {
+          },  {
+
+            // COM: else graph of IF-5
+            ^bb5(%a5: tensor<f32>, %b5: tensor<f32>):
+              tosa.yield %arg0 : tensor<f32>
+          }) : (tensor<i1>, tensor<f32>, tensor<f32>) -> tensor<f32>
+
+            tosa.yield %4 : tensor<f32>
+        },  {
+
+          // COM: else graph of IF-4
+          ^bb4(%a4: tensor<f32>, %b4: tensor<f32>):
             tosa.yield %arg0 : tensor<f32>
-          }
-          tosa.yield %4 : tensor<f32>
-        } else {
-          tosa.yield %arg0 : tensor<f32>
-        }
-        tosa.yield %3 : tensor<f32>
-      } else {
+        }) : (tensor<i1>, tensor<f32>, tensor<f32>) -> tensor<f32>
+
+          tosa.yield %3 : tensor<f32>
+      },  {
+
+      // COM: else graph of IF-3
+      ^bb3(%a3: tensor<f32>, %b3: tensor<f32>):
         tosa.yield %arg0 : tensor<f32>
-      }
-      tosa.yield %2 : tensor<f32>
-    } else {
-      tosa.yield %arg0 : tensor<f32>
-    }
-    tosa.yield %1 : tensor<f32>
-  } else {
-    %res = tosa.sub %arg0, %arg1 : (tensor<f32>, tensor<f32>) -> tensor<f32>
+      }) : (tensor<i1>, tensor<f32>, tensor<f32>) -> tensor<f32>
+
+        tosa.yield %2 : tensor<f32>
+    },  {
+
+      // COM: else graph of IF-2
+      ^bb2(%a2: tensor<f32>, %b2: tensor<f32>):
+        tosa.yield %arg0 : tensor<f32>
+    }) : (tensor<i1>, tensor<f32>, tensor<f32>) -> tensor<f32>
+
+      tosa.yield %1 : tensor<f32>
+  },  {
+
+  // COM: else graph of IF-1
+  ^bb1(%a1: tensor<f32>, %b1: tensor<f32>):
+    %res = tosa.sub %a1, %b1 : (tensor<f32>, tensor<f32>) -> tensor<f32>
     tosa.yield %res : tensor<f32>
-  }
+  }) : (tensor<i1>, tensor<f32>, tensor<f32>) -> tensor<f32>
+
   return %0 : tensor<f32>
 }
 

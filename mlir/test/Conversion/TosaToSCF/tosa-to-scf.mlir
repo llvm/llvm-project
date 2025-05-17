@@ -36,20 +36,15 @@ func.func @while_test(%arg0 : tensor<i32>) -> (tensor<i32>) {
 func.func @if_test(%arg0 : tensor<f32>, %arg1 : tensor<f32>, %arg2 : tensor<i1>) -> (tensor<f32>) {
   // CHECK: [[EX:%.+]] = tensor.extract [[ARG2]]
   // CHECK: [[IF:%.+]] = scf.if [[EX]] -> (tensor<f32>) {
-  %0 = tosa.cond_if %arg2 -> (tensor<f32>) {
-
-  // CHECK:   scf.yield [[ARG0]]
-    tosa.yield %arg0 : tensor<f32>
-
-  // CHECK: } else {
-  } else {
-
-  // CHECK:   scf.yield [[ARG1]]
-    tosa.yield %arg1 : tensor<f32>
-
-  // CHECK: }
-  // CHECK: return [[IF]]
-  }
+  %0 = "tosa.cond_if"(%arg2, %arg0, %arg1) ({
+  ^bb0(%arg3: tensor<f32>, %arg4: tensor<f32>):
+    // CHECK:   scf.yield [[ARG0]]
+    tosa.yield %arg3 : tensor<f32>
+  },  {
+  ^bb0(%arg3: tensor<f32>, %arg4: tensor<f32>):
+    // CHECK:   scf.yield [[ARG1]]
+    tosa.yield %arg4 : tensor<f32>
+  }) : (tensor<i1>, tensor<f32>, tensor<f32>) -> tensor<f32>
 
   return %0 : tensor<f32>
 }

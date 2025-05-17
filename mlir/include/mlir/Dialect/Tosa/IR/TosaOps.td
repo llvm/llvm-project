@@ -2558,7 +2558,6 @@ def Tosa_IfOp : Tosa_Op<"cond_if",
     SizedRegion<1>:$else_graph
   );
 
-  let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 }
 
