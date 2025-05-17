@@ -130,29 +130,28 @@ SmallVector<MemoryOpGroup> extractContiguousGroups(const MemoryOpGroup &group) {
   return result;
 }
 
-/// A node in the SLP graph representing a vectorizable operation
+/// A node in the SLP graph representing a group of vectorizable operations
 struct SLPGraphNode {
-  Operation *op;
+  SmallVector<Operation *> ops;
   DenseSet<SLPGraphNode *> users;
   DenseSet<SLPGraphNode *> operands;
   bool isRoot = false;
 
-  SLPGraphNode(Operation *op) : op(op) {}
+  SLPGraphNode() = default;
+  SLPGraphNode(Operation *op) { ops.push_back(op); }
+  void addOp(Operation *op) { ops.push_back(op); }
 };
 
 /// A graph of vectorizable operations
 class SLPGraph {
 public:
   SLPGraph() = default;
-  ~SLPGraph() {
-    for (auto *node : nodes)
-      delete node;
-  }
+  ~SLPGraph() = default;
 
   /// Add a new node to the graph
   SLPGraphNode *addNode(Operation *op) {
-    nodes.push_back(new SLPGraphNode(op));
-    return nodes.back();
+    nodes.push_back(std::make_unique<SLPGraphNode>(op));
+    return nodes.back().get();
   }
 
   /// Add a root node (memory operation)
@@ -171,9 +170,9 @@ public:
   /// Get all root nodes
   SmallVector<SLPGraphNode *> getRoots() const {
     SmallVector<SLPGraphNode *> roots;
-    for (auto *node : nodes)
+    for (const auto &node : nodes)
       if (node->isRoot)
-        roots.push_back(node);
+        roots.push_back(node.get());
     return roots;
   }
 
@@ -184,30 +183,50 @@ public:
 
     // First print all roots
     llvm::dbgs() << "Roots:\n";
-    for (auto *node : nodes) {
+    for (const auto &node : nodes) {
       if (!node->isRoot)
         continue;
-      llvm::dbgs() << "  " << *node->op << "\n";
+      llvm::dbgs() << "  "
+                   << (isa<memref::LoadOp>(node->ops[0]) ? "LOAD" : "STORE")
+                   << " group with " << node->ops.size() << " operations:\n";
+      for (auto *op : node->ops) {
+        llvm::dbgs() << "    " << *op << "\n";
+      }
       llvm::dbgs() << "    Users: ";
       for (auto *user : node->users) {
-        llvm::dbgs() << "\n      " << *user->op;
+        llvm::dbgs() << "\n      Group with " << user->ops.size()
+                     << " operations:";
+        for (auto *op : user->ops) {
+          llvm::dbgs() << "\n        " << *op;
+        }
       }
       llvm::dbgs() << "\n";
     }
 
     // Then print all non-root nodes
     llvm::dbgs() << "\nNon-root nodes:\n";
-    for (auto *node : nodes) {
+    for (const auto &node : nodes) {
       if (node->isRoot)
         continue;
-      llvm::dbgs() << "  " << *node->op << "\n";
+      llvm::dbgs() << "  Group with " << node->ops.size() << " operations:\n";
+      for (auto *op : node->ops) {
+        llvm::dbgs() << "    " << *op << "\n";
+      }
       llvm::dbgs() << "    Operands: ";
       for (auto *operand : node->operands) {
-        llvm::dbgs() << "\n      " << *operand->op;
+        llvm::dbgs() << "\n      Group with " << operand->ops.size()
+                     << " operations:";
+        for (auto *op : operand->ops) {
+          llvm::dbgs() << "\n        " << *op;
+        }
       }
       llvm::dbgs() << "\n    Users: ";
       for (auto *user : node->users) {
-        llvm::dbgs() << "\n      " << *user->op;
+        llvm::dbgs() << "\n      Group with " << user->ops.size()
+                     << " operations:";
+        for (auto *op : user->ops) {
+          llvm::dbgs() << "\n        " << *op;
+        }
       }
       llvm::dbgs() << "\n";
     }
@@ -215,74 +234,8 @@ public:
   }
 
 private:
-  SmallVector<SLPGraphNode *> nodes;
+  SmallVector<std::unique_ptr<SLPGraphNode>> nodes;
 };
-
-/// Build the SLP graph starting from memory operation roots
-SLPGraph buildSLPGraph(const SmallVector<MemoryOpGroup> &rootGroups) {
-  SLPGraph graph;
-  DenseMap<Operation *, SLPGraphNode *> opToNode;
-
-  // First, add all memory operations as roots
-  for (const auto &group : rootGroups) {
-    for (Operation *op : group.ops) {
-      opToNode[op] = graph.addRoot(op);
-    }
-  }
-
-  // Process each root group to build the graph
-  for (const auto &group : rootGroups) {
-    for (Operation *rootOp : group.ops) {
-      // Get the value produced by this memory operation
-      Value rootValue = group.isLoadGroup()
-                            ? cast<memref::LoadOp>(rootOp).getResult()
-                            : cast<memref::StoreOp>(rootOp).getValue();
-
-      // Find all users of this value
-      for (Operation *user : rootValue.getUsers()) {
-        // Skip if we've already processed this operation
-        if (opToNode.contains(user))
-          continue;
-
-        // Check if this is a vectorizable operation
-        if (isa<arith::AddFOp, arith::AddIOp, arith::SubFOp, arith::SubIOp,
-                arith::MulFOp, arith::MulIOp>(user)) {
-          // Check if at least one other operand is already in the graph
-          bool hasGraphOperand = false;
-          for (Value operand : user->getOperands()) {
-            if (operand == rootValue)
-              continue;
-            if (auto *defOp = operand.getDefiningOp()) {
-              if (opToNode.contains(defOp)) {
-                hasGraphOperand = true;
-                break;
-              }
-            }
-          }
-
-          // Only add the operation if it has at least one other operand in the
-          // graph
-          if (hasGraphOperand) {
-            auto *node = graph.addNode(user);
-            opToNode[user] = node;
-            graph.addEdge(opToNode[rootOp], node);
-
-            // Add edges from other operands that are in the graph
-            for (Value operand : user->getOperands()) {
-              if (auto *defOp = operand.getDefiningOp()) {
-                if (opToNode.contains(defOp)) {
-                  graph.addEdge(opToNode[defOp], node);
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  return graph;
-}
 
 /// This pass implements the SLP vectorizer. It detects consecutive operations
 /// that can be put together into vector operations. The pass works bottom-up,
@@ -361,12 +314,6 @@ void SLPVectorizerPass::runOnOperation() {
       });
       rootGroups.append(contiguousGroups.begin(), contiguousGroups.end());
     }
-
-    // Build the SLP graph from root groups
-    SLPGraph graph = buildSLPGraph(rootGroups);
-
-    // Print the graph structure
-    LLVM_DEBUG(graph.print());
   });
 }
 
