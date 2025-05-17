@@ -150,6 +150,18 @@ static bool isPermlane(const MachineInstr &MI) {
          Opcode == AMDGPU::V_PERMLANE32_SWAP_B32_e64;
 }
 
+static bool isCVTScaleConvertsF16BF16ToFP8BF8(const MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  case AMDGPU::V_CVT_SCALEF32_PK_FP8_F16_e64:
+  case AMDGPU::V_CVT_SCALEF32_PK_FP8_BF16_e64:
+  case AMDGPU::V_CVT_SCALEF32_PK_BF8_F16_e64:
+  case AMDGPU::V_CVT_SCALEF32_PK_BF8_BF16_e64:
+    return true;
+  default:
+    return false;
+  }
+}
+
 static bool isLdsDma(const MachineInstr &MI) {
   return SIInstrInfo::isVALU(MI) &&
          (SIInstrInfo::isMUBUF(MI) || SIInstrInfo::isFLAT(MI));
@@ -897,6 +909,12 @@ getDstSelForwardingOperand(const MachineInstr &MI, const GCNSubtarget &ST) {
     // Type 2: VOP3 which write the hi bits
     if (TII->getNamedImmOperand(MI, AMDGPU::OpName::src0_modifiers) &
         SISrcMods::DST_OP_SEL)
+      return TII->getNamedOperand(MI, AMDGPU::OpName::vdst);
+
+    // Special case: F16BF16 to FP8BF8 class of cvt scale instructions need nop
+    // irrespective of the op_sel value.
+    if (IsFP4OrFP8ConvOpc == AMDGPU::FPType::FP8 &&
+        isCVTScaleConvertsF16BF16ToFP8BF8(MI))
       return TII->getNamedOperand(MI, AMDGPU::OpName::vdst);
 
     // Type 3: FP8DstSelInst with op_sel[3:2] != 0)
