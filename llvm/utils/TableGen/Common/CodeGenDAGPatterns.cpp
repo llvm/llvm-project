@@ -3860,25 +3860,21 @@ void CodeGenDAGPatterns::parseInstructionPattern(CodeGenInstruction &CGI,
   std::vector<const Record *> Results;
   std::vector<unsigned> ResultIndices;
   SmallVector<TreePatternNodePtr, 2> ResNodes;
-  for (unsigned i = 0; i != NumResults; ++i) {
-    if (i == CGI.Operands.size()) {
-      const std::string &OpName =
-          llvm::find_if(
-              InstResults,
-              [](const std::pair<std::string, TreePatternNodePtr> &P) {
-                return P.second;
-              })
-              ->first;
-
-      I.error("'" + OpName + "' set but does not appear in operand list!");
-    }
-
+  for (unsigned i = 0; i != CGI.Operands.NumDefs; ++i) {
+    const CGIOperandList::OperandInfo &Op = CGI.Operands[i];
     const std::string &OpName = CGI.Operands[i].Name;
 
     // Check that it exists in InstResults.
-    auto InstResultIter = InstResults.find(OpName);
-    if (InstResultIter == InstResults.end() || !InstResultIter->second)
-      I.error("Operand $" + OpName + " does not exist in operand list!");
+    auto InstResultIter = InstResults.find(Op.Name);
+    if (InstResultIter == InstResults.end() || !InstResultIter->second) {
+      // If this operand is optional and has a default value, ignore it.
+      if (Op.Rec->isSubClassOf("OptionalDefOperand") &&
+          !getDefaultOperand(Op.Rec).DefaultOps.empty())
+        continue;
+      I.error("instruction output operand $" + OpName +
+              " does not appear in pattern outputs");
+      continue;
+    }
 
     TreePatternNodePtr RNode = InstResultIter->second;
     const Record *R = cast<DefInit>(RNode->getLeafValue())->getDef();
@@ -3901,10 +3897,19 @@ void CodeGenDAGPatterns::parseInstructionPattern(CodeGenInstruction &CGI,
     InstResultIter->second = nullptr;
   }
 
+  auto FirstExtraResult = llvm::find_if(
+      InstResults, [](const std::pair<std::string, TreePatternNodePtr> &P) {
+        return P.second;
+      });
+  if (FirstExtraResult != InstResults.end())
+    I.error("pattern output operand $" + FirstExtraResult->first +
+            " does not appear in instruction outputs");
+
   // Loop over the inputs next.
   std::vector<TreePatternNodePtr> ResultNodeOperands;
   std::vector<const Record *> Operands;
-  for (unsigned i = NumResults, e = CGI.Operands.size(); i != e; ++i) {
+  for (unsigned i = CGI.Operands.NumDefs, e = CGI.Operands.size(); i != e;
+       ++i) {
     CGIOperandList::OperandInfo &Op = CGI.Operands[i];
     const std::string &OpName = Op.Name;
     if (OpName.empty()) {
@@ -3961,6 +3966,9 @@ void CodeGenDAGPatterns::parseInstructionPattern(CodeGenInstruction &CGI,
   if (!InstInputs.empty())
     I.error("Input operand $" + InstInputs.begin()->first +
             " occurs in pattern but not in operands list!");
+
+  if (I.hasError())
+    return;
 
   TreePatternNodePtr ResultPattern = makeIntrusiveRefCnt<TreePatternNode>(
       I.getRecord(), std::move(ResultNodeOperands),
