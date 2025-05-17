@@ -3197,6 +3197,13 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_discard: {
     return selectDiscard(ResVReg, ResType, I);
   }
+  case Intrinsic::spv_max_reg_constant: {
+    int32_t MaxRegNum = I.getOperand(1).getImm();
+    auto ConstMaxRegId = buildI32Constant(MaxRegNum, I);
+    Register MaxIdRegister = ConstMaxRegId.first;
+    GR.addMaxRegConstantRegisterExt(MF, MaxIdRegister);
+    return ConstMaxRegId.second;
+  } break;
   default: {
     std::string DiagMsg;
     raw_string_ostream OS(DiagMsg);

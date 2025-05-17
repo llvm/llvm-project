@@ -149,6 +149,7 @@ class SPIRVEmitIntrinsics
                                         unsigned OperandToReplace,
                                         IRBuilder<> &B);
   void insertPtrCastOrAssignTypeInstr(Instruction *I, IRBuilder<> &B);
+  void insertMaxRegIdExecModeIntrs(Function *F, IRBuilder<> &B);
   bool shouldTryToAddMemAliasingDecoration(Instruction *Inst);
   void insertSpirvDecorations(Instruction *I, IRBuilder<> &B);
   void processGlobalValue(GlobalVariable &GV, IRBuilder<> &B);
@@ -2215,6 +2216,30 @@ void SPIRVEmitIntrinsics::processParamTypesByFunHeader(Function *F,
   }
 }
 
+void SPIRVEmitIntrinsics::insertMaxRegIdExecModeIntrs(Function *F,
+                                                      IRBuilder<> &B) {
+  MDNode *Node = F->getMetadata("RegisterAllocMode");
+
+  if (Node) {
+    Metadata *RegisterAllocMode = Node->getOperand(0).get();
+    // spv_max_reg_constant is added to add the OpConstant instruction which
+    // will be then used as operand for OpExecutionMode MaximumRegistersIdINTEL
+    if (MDNode *NestedNode = dyn_cast<MDNode>(RegisterAllocMode)) {
+      if (auto *CMD = dyn_cast<ConstantAsMetadata>(NestedNode->getOperand(0))) {
+        auto *CI = dyn_cast<ConstantInt>(CMD->getValue());
+        if (!CI)
+          return;
+        int32_t MaxRegNumExt = CI->getSExtValue();
+        B.SetInsertPointPastAllocas(F);
+        Value *MaxRegNumExtVal =
+            ConstantInt::get(Type::getInt32Ty(B.getContext()), MaxRegNumExt);
+        B.CreateIntrinsic(Intrinsic::spv_max_reg_constant, {},
+                          {MaxRegNumExtVal});
+      }
+    }
+  }
+}
+
 void SPIRVEmitIntrinsics::processParamTypes(Function *F, IRBuilder<> &B) {
   B.SetInsertPointPastAllocas(F);
   for (unsigned OpIdx = 0; OpIdx < F->arg_size(); ++OpIdx) {
@@ -2390,7 +2415,6 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
   }
 
   processParamTypesByFunHeader(CurrF, B);
-
   // StoreInst's operand type can be changed during the next transformations,
   // so we need to store it in the set. Also store already transformed types.
   for (auto &I : instructions(Func)) {
@@ -2424,6 +2448,7 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
     insertAssignTypeIntrs(I, B);
     insertPtrCastOrAssignTypeInstr(I, B);
     insertSpirvDecorations(I, B);
+    insertMaxRegIdExecModeIntrs(CurrF, B);
     // if instruction requires a pointee type set, let's check if we know it
     // already, and force it to be i8 if not
     if (Postpone && !GR->findAssignPtrTypeInstr(I))

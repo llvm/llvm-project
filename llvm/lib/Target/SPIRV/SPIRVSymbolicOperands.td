@@ -172,6 +172,8 @@ def KernelProfilingInfoOperand : OperandCategory;
 def OpcodeOperand : OperandCategory;
 def CooperativeMatrixLayoutOperand : OperandCategory;
 def CooperativeMatrixOperandsOperand : OperandCategory;
+def NamedMaximumNumberOfRegistersOperand: OperandCategory;
+
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define Extesions enum values and at the same time
@@ -315,6 +317,7 @@ defm SPV_INTEL_memory_access_aliasing : ExtensionOperand<118>;
 defm SPV_INTEL_fp_max_error : ExtensionOperand<119>;
 defm SPV_INTEL_ternary_bitwise_function : ExtensionOperand<120>;
 defm SPV_INTEL_subgroup_matrix_multiply_accumulate : ExtensionOperand<121>;
+defm SPV_INTEL_maximum_registers : ExtensionOperand<122>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define Capabilities enum values and at the same time
@@ -517,6 +520,7 @@ defm MemoryAccessAliasingINTEL : CapabilityOperand<5910, 0, 0, [SPV_INTEL_memory
 defm FPMaxErrorINTEL : CapabilityOperand<6169, 0, 0, [SPV_INTEL_fp_max_error], []>;
 defm TernaryBitwiseFunctionINTEL : CapabilityOperand<6241, 0, 0, [SPV_INTEL_ternary_bitwise_function], []>;
 defm SubgroupMatrixMultiplyAccumulateINTEL : CapabilityOperand<6236, 0, 0, [SPV_INTEL_subgroup_matrix_multiply_accumulate], []>;
+defm RegisterLimitsINTEL : CapabilityOperand<6460 , 0, 0, [SPV_INTEL_maximum_registers], []>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define SourceLanguage enum values and at the same time
@@ -714,6 +718,9 @@ defm RoundingModeRTPINTEL : ExecutionModeOperand<5620, [RoundToInfinityINTEL]>;
 defm RoundingModeRTNINTEL : ExecutionModeOperand<5621, [RoundToInfinityINTEL]>;
 defm FloatingPointModeALTINTEL : ExecutionModeOperand<5622, [FloatingPointModeINTEL]>;
 defm FloatingPointModeIEEEINTEL : ExecutionModeOperand<5623, [FloatingPointModeINTEL]>;
+defm MaximumRegistersINTEL : ExecutionModeOperand<6461, [RegisterLimitsINTEL]>;
+defm MaximumRegistersIdINTEL : ExecutionModeOperand<6462, [RegisterLimitsINTEL]>;
+defm NamedMaximumRegistersINTEL : ExecutionModeOperand<6463, [RegisterLimitsINTEL]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define StorageClass enum values and at the same time
@@ -1746,3 +1753,28 @@ defm MatrixAAndBTF32ComponentsINTEL : CooperativeMatrixOperandsOperand<0x20, [SP
 defm MatrixAAndBBFloat16ComponentsINTEL : CooperativeMatrixOperandsOperand<0x40, [SPV_INTEL_joint_matrix], [CooperativeMatrixBFloat16ComponentTypeINTEL]>;
 defm MatrixCBFloat16ComponentsINTEL : CooperativeMatrixOperandsOperand<0x80, [SPV_INTEL_joint_matrix], [CooperativeMatrixBFloat16ComponentTypeINTEL]>;
 defm MatrixResultBFloat16ComponentsINTEL : CooperativeMatrixOperandsOperand<0x100, [SPV_INTEL_joint_matrix], [CooperativeMatrixBFloat16ComponentTypeINTEL]>;
+
+//===----------------------------------------------------------------------===//
+// Multiclass used to define Named Max Number of Reg Operands enum values and at the
+// same time SymbolicOperand entries with string mnemonics, extensions and
+// capabilities.
+//===----------------------------------------------------------------------===//
+
+def NamedMaximumNumberOfRegisters : GenericEnum, Operand<i32> {
+  let FilterClass = "NamedMaximumNumberOfRegisters";
+  let NameField = "Name";
+  let ValueField = "Value";
+  let PrintMethod = !strconcat("printSymbolicOperand<OperandCategory::", FilterClass, "Operand>");
+}
+
+class NamedMaximumNumberOfRegisters<string name, bits<32> value> {
+  string Name = name;
+  bits<32> Value = value;
+}
+
+multiclass NamedMaximumNumberOfRegistersOperand<bits<32> value, list<Extension> reqExtensions, list<Capability> reqCapabilities> {
+  def : NamedMaximumNumberOfRegisters<NAME, value>;
+  defm : SymbolicOperandWithRequirements<NamedMaximumNumberOfRegistersOperand, value, NAME, 0, 0, reqExtensions, reqCapabilities>;
+}
+
+defm AutoINTEL : NamedMaximumNumberOfRegistersOperand<0x0, [SPV_INTEL_maximum_registers], [RegisterLimitsINTEL]>;
