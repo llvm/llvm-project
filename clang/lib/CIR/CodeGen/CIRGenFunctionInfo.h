@@ -112,8 +112,16 @@ public:
 
   // NOLINTNEXTLINE(readability-identifier-naming)
   void Profile(llvm::FoldingSetNodeID &id) {
-    id.AddBoolean(required.getOpaqueData());
-    getReturnType().Profile(id);
+    // It's unfortunate that we are looping over the arguments twice (here and
+    // in the static Profile function we call from here), but if the Profile
+    // functions get out of sync, we can end up with incorrect function
+    // signatures, and we don't have the argument types in the format that the
+    // static Profile function requires.
+    llvm::SmallVector<CanQualType, 16> argTypes;
+    for (const ArgInfo &argInfo : arguments())
+      argTypes.push_back(argInfo.type);
+
+    Profile(id, required, getReturnType(), argTypes);
   }
 
   llvm::ArrayRef<ArgInfo> arguments() const {
