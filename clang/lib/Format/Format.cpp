@@ -626,27 +626,17 @@ template <> struct MappingTraits<FormatStyle::ShortFunctionStyle> {
   static void enumInput(IO &IO, FormatStyle::ShortFunctionStyle &Value) {
     IO.enumCase(Value, "None", FormatStyle::ShortFunctionStyle({}));
     IO.enumCase(Value, "Empty",
-                FormatStyle::ShortFunctionStyle({/*Empty=*/true,
-                                                 /*Inline=*/false,
-                                                 /*Other=*/false}));
+                FormatStyle::ShortFunctionStyle::setEmptyOnly());
     IO.enumCase(Value, "Inline",
                 FormatStyle::ShortFunctionStyle({/*Empty=*/true,
                                                  /*Inline=*/true,
                                                  /*Other=*/false}));
     IO.enumCase(Value, "InlineOnly",
-                FormatStyle::ShortFunctionStyle({/*Empty=*/false,
-                                                 /*Inline=*/true,
-                                                 /*Other=*/false}));
-    IO.enumCase(Value, "All",
-                FormatStyle::ShortFunctionStyle({/*Empty=*/true,
-                                                 /*Inline=*/true,
-                                                 /*Other=*/true}));
+                FormatStyle::ShortFunctionStyle::setInlineOnly());
+    IO.enumCase(Value, "All", FormatStyle::ShortFunctionStyle::setAll());
 
     // For backward compatibility.
-    IO.enumCase(Value, "true",
-                FormatStyle::ShortFunctionStyle({/*Empty=*/true,
-                                                 /*Inline=*/true,
-                                                 /*Other=*/true}));
+    IO.enumCase(Value, "true", FormatStyle::ShortFunctionStyle::setAll());
     IO.enumCase(Value, "false", FormatStyle::ShortFunctionStyle({}));
   }
 
@@ -1534,9 +1524,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.AllowShortCompoundRequirementOnASingleLine = true;
   LLVMStyle.AllowShortEnumsOnASingleLine = true;
   LLVMStyle.AllowShortFunctionsOnASingleLine =
-      FormatStyle::ShortFunctionStyle({/*Empty=*/true,
-                                       /*Inline=*/true,
-                                       /*Other=*/true});
+      FormatStyle::ShortFunctionStyle::setAll();
   LLVMStyle.AllowShortIfStatementsOnASingleLine = FormatStyle::SIS_Never;
   LLVMStyle.AllowShortLambdasOnASingleLine = FormatStyle::SLS_All;
   LLVMStyle.AllowShortLoopsOnASingleLine = false;
@@ -1825,9 +1813,7 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
     GoogleStyle.AlignTrailingComments = {};
     GoogleStyle.AlignTrailingComments.Kind = FormatStyle::TCAS_Never;
     GoogleStyle.AllowShortFunctionsOnASingleLine =
-        FormatStyle::ShortFunctionStyle({/*Empty=*/true,
-                                         /*Inline=*/false,
-                                         /*Other=*/false});
+        FormatStyle::ShortFunctionStyle::setEmptyOnly();
     GoogleStyle.AllowShortIfStatementsOnASingleLine = FormatStyle::SIS_Never;
     GoogleStyle.AlwaysBreakBeforeMultilineStrings = false;
     GoogleStyle.BreakBeforeBinaryOperators = FormatStyle::BOS_NonAssignment;
@@ -1838,9 +1824,7 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
     GoogleStyle.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
     GoogleStyle.AlignOperands = FormatStyle::OAS_DontAlign;
     GoogleStyle.AllowShortFunctionsOnASingleLine =
-        FormatStyle::ShortFunctionStyle({/*Empty=*/true,
-                                         /*Inline=*/false,
-                                         /*Other=*/false});
+        FormatStyle::ShortFunctionStyle::setEmptyOnly();
     // TODO: still under discussion whether to switch to SLS_All.
     GoogleStyle.AllowShortLambdasOnASingleLine = FormatStyle::SLS_Empty;
     GoogleStyle.AlwaysBreakBeforeMultilineStrings = false;
@@ -1858,9 +1842,7 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
     GoogleStyle.SpacesInContainerLiterals = false;
   } else if (Language == FormatStyle::LK_Proto) {
     GoogleStyle.AllowShortFunctionsOnASingleLine =
-        FormatStyle::ShortFunctionStyle({/*Empty=*/true,
-                                         /*Inline=*/false,
-                                         /*Other=*/false});
+        FormatStyle::ShortFunctionStyle::setEmptyOnly();
     GoogleStyle.AlwaysBreakBeforeMultilineStrings = false;
     // This affects protocol buffer options specifications and text protos.
     // Text protos are currently mostly formatted inside C++ raw string literals
@@ -1880,9 +1862,7 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
         tooling::IncludeStyle::IBS_Preserve;
   } else if (Language == FormatStyle::LK_CSharp) {
     GoogleStyle.AllowShortFunctionsOnASingleLine =
-        FormatStyle::ShortFunctionStyle({/*Empty=*/true,
-                                         /*Inline=*/false,
-                                         /*Other=*/false});
+        FormatStyle::ShortFunctionStyle::setEmptyOnly();
     GoogleStyle.AllowShortIfStatementsOnASingleLine = FormatStyle::SIS_Never;
     GoogleStyle.BreakStringLiterals = false;
     GoogleStyle.ColumnLimit = 100;
@@ -1942,9 +1922,7 @@ FormatStyle getChromiumStyle(FormatStyle::LanguageKind Language) {
   } else {
     ChromiumStyle.AllowAllParametersOfDeclarationOnNextLine = false;
     ChromiumStyle.AllowShortFunctionsOnASingleLine =
-        FormatStyle::ShortFunctionStyle({/*Empty=*/true,
-                                         /*Inline=*/true,
-                                         /*Other=*/false});
+        FormatStyle::ShortFunctionStyle::setEmptyAndInline();
     ChromiumStyle.AllowShortIfStatementsOnASingleLine = FormatStyle::SIS_Never;
     ChromiumStyle.AllowShortLoopsOnASingleLine = false;
     ChromiumStyle.BinPackParameters = FormatStyle::BPPS_OnePerLine;
@@ -1959,9 +1937,7 @@ FormatStyle getMozillaStyle() {
   FormatStyle MozillaStyle = getLLVMStyle();
   MozillaStyle.AllowAllParametersOfDeclarationOnNextLine = false;
   MozillaStyle.AllowShortFunctionsOnASingleLine =
-      FormatStyle::ShortFunctionStyle({/*Empty=*/true,
-                                       /*Inline=*/true,
-                                       /*Other=*/false});
+      FormatStyle::ShortFunctionStyle::setEmptyAndInline();
   MozillaStyle.AlwaysBreakAfterDefinitionReturnType =
       FormatStyle::DRTBS_TopLevel;
   MozillaStyle.BinPackArguments = false;

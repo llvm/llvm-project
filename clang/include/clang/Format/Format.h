@@ -935,6 +935,18 @@ struct FormatStyle {
     ShortFunctionStyle(bool Empty, bool Inline, bool Other)
         : Empty(Empty), Inline(Inline), Other(Other) {}
     bool isAll() const { return Empty && Inline && Other; }
+    static ShortFunctionStyle setEmptyOnly() {
+      return ShortFunctionStyle(true, false, false);
+    }
+    static ShortFunctionStyle setEmptyAndInline() {
+      return ShortFunctionStyle(true, true, false);
+    }
+    static ShortFunctionStyle setInlineOnly() {
+      return ShortFunctionStyle(false, true, false);
+    }
+    static ShortFunctionStyle setAll() {
+      return ShortFunctionStyle(true, true, true);
+    }
   };
 
   /// Dependent on the value, ``int f() { return 0; }`` can be put on a

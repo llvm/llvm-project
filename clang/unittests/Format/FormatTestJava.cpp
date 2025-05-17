@@ -597,9 +597,7 @@ TEST_F(FormatTestJava, RetainsLogicalShifts) {
 TEST_F(FormatTestJava, ShortFunctions) {
   FormatStyle Style = getLLVMStyle(FormatStyle::LK_Java);
   Style.AllowShortFunctionsOnASingleLine =
-      FormatStyle::ShortFunctionStyle({/*Empty=*/true,
-                                       /*Inline=*/true,
-                                       /*Other=*/false});
+      FormatStyle::ShortFunctionStyle::setEmptyAndInline();
   verifyFormat("enum Enum {\n"
                "  E1,\n"
                "  E2;\n"

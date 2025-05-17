@@ -299,7 +299,8 @@ private:
         return true;
       }
 
-      if (Style.AllowShortFunctionsOnASingleLine.Inline) {
+      if (Style.AllowShortFunctionsOnASingleLine.Inline &&
+          !Style.AllowShortFunctionsOnASingleLine.Other) {
         // Just checking TheLine->Level != 0 is not enough, because it
         // provokes treating functions inside indented namespaces as short.
         if (Style.isJavaScript() && TheLine->Last->is(TT_FunctionLBrace))

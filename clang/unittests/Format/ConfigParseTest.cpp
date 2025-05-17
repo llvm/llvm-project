@@ -624,24 +624,16 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               FormatStyle::ShortFunctionStyle({}));
   CHECK_PARSE("AllowShortFunctionsOnASingleLine: Inline",
               AllowShortFunctionsOnASingleLine,
-              FormatStyle::ShortFunctionStyle({/*Empty=*/true,
-                                               /*Inline=*/true,
-                                               /*Other=*/false}));
+              FormatStyle::ShortFunctionStyle::setEmptyAndInline());
   CHECK_PARSE("AllowShortFunctionsOnASingleLine: Empty",
               AllowShortFunctionsOnASingleLine,
-              FormatStyle::ShortFunctionStyle({/*Empty=*/true,
-                                               /*Inline=*/false,
-                                               /*Other=*/false}));
+              FormatStyle::ShortFunctionStyle::setEmptyOnly());
   CHECK_PARSE("AllowShortFunctionsOnASingleLine: All",
               AllowShortFunctionsOnASingleLine,
-              FormatStyle::ShortFunctionStyle({/*Empty=*/true,
-                                               /*Inline=*/true,
-                                               /*Other=*/true}));
+              FormatStyle::ShortFunctionStyle::setAll());
   CHECK_PARSE("AllowShortFunctionsOnASingleLine: InlineOnly",
               AllowShortFunctionsOnASingleLine,
-              FormatStyle::ShortFunctionStyle({/*Empty=*/false,
-                                               /*Inline=*/true,
-                                               /*Other=*/false}));
+              FormatStyle::ShortFunctionStyle::setInlineOnly());
 
   // For backward compatibility:
   CHECK_PARSE("AllowShortFunctionsOnASingleLine: false",
@@ -649,9 +641,7 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               FormatStyle::ShortFunctionStyle({}));
   CHECK_PARSE("AllowShortFunctionsOnASingleLine: true",
               AllowShortFunctionsOnASingleLine,
-              FormatStyle::ShortFunctionStyle({/*Empty=*/true,
-                                               /*Inline=*/true,
-                                               /*Other=*/true}));
+              FormatStyle::ShortFunctionStyle::setAll());
 
   Style.AllowShortLambdasOnASingleLine = FormatStyle::SLS_All;
   CHECK_PARSE("AllowShortLambdasOnASingleLine: None",
