@@ -1089,11 +1089,13 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
   if (Plan.hasScalarVFOnly())
     return;
 
+  // Try to narrow wide and replicating recipes to single scalar recipes,
+  // based on VPlan analysis. Only process blocks in the loop region for now,
+  // without traversing into nested regions, as recipes in replicate regions
+  // cannot be converted yet.
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
-      // Try to narrow wide and replicating recipes to single scalar recipes,
-      // based on VPlan analysis.
       auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
       if (!RepR && !isa<VPWidenRecipe>(&R))
         continue;
@@ -1101,7 +1103,7 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
         continue;
 
       auto *RepOrWidenR = cast<VPSingleDefRecipe>(&R);
-      // Skip recipes that aren't single scalars and don't have only their
+      // Skip recipes that aren't single scalars or don't have only their
       // scalar results used. In the latter case, we would introduce extra
       // broadcasts.
       if (!vputils::isSingleScalar(RepOrWidenR) ||
