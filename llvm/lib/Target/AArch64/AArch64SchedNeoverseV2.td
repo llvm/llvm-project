@@ -1137,13 +1137,14 @@ def : InstRW<[V2Write_2c_1M], (instrs ADDG, SUBG)>;
 // Conditional compare
 def : InstRW<[V2Write_1c_1F_1Flg], (instregex "^CCM[NP][WX][ir]")>;
 
-// Convert floating-point condition flags
 def : WriteRes<WriteSys, []> { let Latency = 1; }
 
-// Flag manipulation instructions
+// Convert floating-point condition flags
 // NOTE: Releases its resources later in order to model throughput=1
-def : InstRW<[V2Write_1c_1F_1Flg_1T], (instregex "^(RMIF|CFINV)",
-                                                 "^SETF(8|16)")>;
+def : InstRW<[V2Write_1c_1F_1Flg_1T], (instrs AXFLAG, XAFLAG)>;
+
+// Flag manipulation instructions
+def : InstRW<[V2Write_1c_1F_1Flg_1T], (instrs SETF8, SETF16, RMIF, CFINV)>;
 
 // Insert Random Tags
 def : InstRW<[V2Write_2c_1M], (instrs IRG, IRGstack)>;
