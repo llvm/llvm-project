@@ -15,14 +15,15 @@ using namespace lldb_dap;
 
 class VariablesTest : public ::testing::Test {
 protected:
+  enum : bool { Permanent = true, Temporary = false };
   Variables vars;
 };
 
 TEST_F(VariablesTest, GetNewVariableReference_UniqueAndRanges) {
-  const int64_t temp1 = vars.GetNewVariableReference(false);
-  const int64_t temp2 = vars.GetNewVariableReference(false);
-  const int64_t perm1 = vars.GetNewVariableReference(true);
-  const int64_t perm2 = vars.GetNewVariableReference(true);
+  const int64_t temp1 = vars.GetNewVariableReference(Temporary);
+  const int64_t temp2 = vars.GetNewVariableReference(Temporary);
+  const int64_t perm1 = vars.GetNewVariableReference(Permanent);
+  const int64_t perm2 = vars.GetNewVariableReference(Permanent);
 
   EXPECT_NE(temp1, temp2);
   EXPECT_NE(perm1, perm2);
@@ -32,23 +33,23 @@ TEST_F(VariablesTest, GetNewVariableReference_UniqueAndRanges) {
 
 TEST_F(VariablesTest, InsertAndGetVariable_Temporary) {
   lldb::SBValue dummy;
-  const int64_t ref = vars.InsertVariable(dummy, false);
+  const int64_t ref = vars.InsertVariable(dummy, Temporary);
   lldb::SBValue out = vars.GetVariable(ref);
 
-  EXPECT_TRUE(out.IsValid() == dummy.IsValid());
+  EXPECT_EQ(out.IsValid(), dummy.IsValid());
 }
 
 TEST_F(VariablesTest, InsertAndGetVariable_Permanent) {
   lldb::SBValue dummy;
-  const int64_t ref = vars.InsertVariable(dummy, true);
+  const int64_t ref = vars.InsertVariable(dummy, Permanent);
   lldb::SBValue out = vars.GetVariable(ref);
 
-  EXPECT_TRUE(out.IsValid() == dummy.IsValid());
+  EXPECT_EQ(out.IsValid(), dummy.IsValid());
 }
 
 TEST_F(VariablesTest, IsPermanentVariableReference) {
-  const int64_t perm = vars.GetNewVariableReference(true);
-  const int64_t temp = vars.GetNewVariableReference(false);
+  const int64_t perm = vars.GetNewVariableReference(Permanent);
+  const int64_t temp = vars.GetNewVariableReference(Temporary);
 
   EXPECT_TRUE(Variables::IsPermanentVariableReference(perm));
   EXPECT_FALSE(Variables::IsPermanentVariableReference(temp));
@@ -56,12 +57,12 @@ TEST_F(VariablesTest, IsPermanentVariableReference) {
 
 TEST_F(VariablesTest, Clear_RemovesTemporaryKeepsPermanent) {
   lldb::SBValue dummy;
-  const int64_t temp = vars.InsertVariable(dummy, false);
-  const int64_t perm = vars.InsertVariable(dummy, true);
+  const int64_t temp = vars.InsertVariable(dummy, Temporary);
+  const int64_t perm = vars.InsertVariable(dummy, Permanent);
   vars.Clear();
 
   EXPECT_FALSE(vars.GetVariable(temp).IsValid());
-  EXPECT_TRUE(vars.GetVariable(perm).IsValid() == dummy.IsValid());
+  EXPECT_EQ(vars.GetVariable(perm).IsValid(), dummy.IsValid());
 }
 
 TEST_F(VariablesTest, GetTopLevelScope_ReturnsCorrectScope) {
@@ -80,5 +81,5 @@ TEST_F(VariablesTest, FindVariable_LocalsByName) {
   vars.locals.Append(dummy);
   lldb::SBValue found = vars.FindVariable(VARREF_LOCALS, "");
 
-  EXPECT_TRUE(found.IsValid() == dummy.IsValid());
+  EXPECT_EQ(found.IsValid(), dummy.IsValid());
 }
