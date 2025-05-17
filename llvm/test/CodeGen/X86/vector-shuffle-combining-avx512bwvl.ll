@@ -270,11 +270,7 @@ define i64 @PR55050() {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    testb %al, %al
-; X86-NEXT:    jne .LBB15_2
-; X86-NEXT:  # %bb.1: # %if
-; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:  .LBB15_2: # %exit
-; X86-NEXT:    movl    %eax, %edx
+; X86-NEXT:    movl %eax, %edx
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: PR55050:
