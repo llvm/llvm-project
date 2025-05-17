@@ -24,12 +24,12 @@ define i64 @f1(i64 %dummy, i64 %a, i64 %b) {
 define i64 @f2(i64 %dummy, i64 %a, i64 %b) {
 ; CHECK-LABEL: f2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    srag %r1, %r4, 63
+; CHECK-NEXT:    srag %r0, %r4, 63
 ; CHECK-NEXT:    # kill: def $r3d killed $r3d def $r2q
-; CHECK-NEXT:    srag %r0, %r3, 63
-; CHECK-NEXT:    ngr %r1, %r3
+; CHECK-NEXT:    ngr %r0, %r3
+; CHECK-NEXT:    srag %r1, %r3, 63
 ; CHECK-NEXT:    mlgr %r2, %r4
-; CHECK-NEXT:    ngr %r0, %r4
+; CHECK-NEXT:    ngr %r1, %r4
 ; CHECK-NEXT:    agr %r0, %r1
 ; CHECK-NEXT:    sgr %r2, %r0
 ; CHECK-NEXT:    br %r14
