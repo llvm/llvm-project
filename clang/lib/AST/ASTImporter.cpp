@@ -1825,6 +1825,43 @@ ExpectedType clang::ASTNodeImporter::VisitHLSLAttributedResourceType(
       ToWrappedType, ToContainedType, ToAttrs);
 }
 
+ExpectedType clang::ASTNodeImporter::VisitHLSLInlineSpirvType(
+    const clang::HLSLInlineSpirvType *T) {
+  Error Err = Error::success();
+
+  uint32_t ToOpcode = T->getOpcode();
+  uint32_t ToSize = T->getSize();
+  uint32_t ToAlignment = T->getAlignment();
+
+  llvm::SmallVector<SpirvOperand> ToOperands;
+
+  for (auto &Operand : T->getOperands()) {
+    using SpirvOperandKind = SpirvOperand::SpirvOperandKind;
+
+    switch (Operand.getKind()) {
+    case SpirvOperandKind::ConstantId:
+      ToOperands.push_back(SpirvOperand::createConstant(
+          importChecked(Err, Operand.getResultType()), Operand.getValue()));
+      break;
+    case SpirvOperandKind::Literal:
+      ToOperands.push_back(SpirvOperand::createLiteral(Operand.getValue()));
+      break;
+    case SpirvOperandKind::TypeId:
+      ToOperands.push_back(SpirvOperand::createType(
+          importChecked(Err, Operand.getResultType())));
+      break;
+    default:
+      llvm_unreachable("Invalid SpirvOperand kind");
+    }
+
+    if (Err)
+      return std::move(Err);
+  }
+
+  return Importer.getToContext().getHLSLInlineSpirvType(
+      ToOpcode, ToSize, ToAlignment, ToOperands);
+}
+
 ExpectedType clang::ASTNodeImporter::VisitConstantMatrixType(
     const clang::ConstantMatrixType *T) {
   ExpectedType ToElementTypeOrErr = import(T->getElementType());
