@@ -59,13 +59,13 @@ static bool optimizeSQRT(CallInst *Call, Function *CalledFunc,
   ORE->emit([&]() {
     return OptimizationRemark(DEBUG_TYPE, "SqrtPartiallyInlined",
                               Call->getDebugLoc(), &CurrBB)
-           << "Partially inlined call to sqrt function despite having to use "
+           << "partially inlined call to sqrt function despite having to use "
               "errno for error handling: target has fast sqrt instruction";
   });
   ORE->emit([&]() {
     return OptimizationRemarkMissed(DEBUG_TYPE, "BranchInserted",
                                     Call->getDebugLoc(), &CurrBB)
-           << "Branch to library sqrt fn had to be inserted to satisfy the "
+           << "branch to library sqrt fn had to be inserted to satisfy the "
               "current target's requirement for math functions to set errno on "
               "invalid inputs";
   });
@@ -145,7 +145,7 @@ static bool runPartiallyInlineLibCalls(Function &F, TargetLibraryInfo *TLI,
         ORE->emit([&]() {
           return OptimizationRemarkMissed(DEBUG_TYPE, "StrictFloat",
                                           Call->getDebugLoc(), &*CurrBB)
-                 << "Could not consider library function for partial inlining:"
+                 << "could not consider library function for partial inlining:"
                     " strict FP exception behavior is active";
         });
         continue;
@@ -157,7 +157,7 @@ static bool runPartiallyInlineLibCalls(Function &F, TargetLibraryInfo *TLI,
         ORE->emit([&]() {
           return OptimizationRemarkMissed(DEBUG_TYPE, "MustTailCall",
                                           Call->getDebugLoc(), &*CurrBB)
-                 << "Could not consider library function for partial inlining:"
+                 << "could not consider library function for partial inlining:"
                     " must tail call";
         });
         continue;

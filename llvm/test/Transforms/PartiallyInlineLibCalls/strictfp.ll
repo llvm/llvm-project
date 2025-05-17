@@ -3,7 +3,7 @@
 
 define float @f(float %val) strictfp {
 ; CHECK-LABEL: @f
-; CHECK-REMARK: Could not consider library function for partial inlining: strict FP exception behavior is active
+; CHECK-REMARK: could not consider library function for partial inlining: strict FP exception behavior is active
 ; CHECK: call{{.*}}@sqrtf
 ; CHECK-NOT: call{{.*}}@sqrtf
   %res = tail call float @sqrtf(float %val) strictfp

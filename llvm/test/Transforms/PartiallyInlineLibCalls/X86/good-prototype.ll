@@ -5,8 +5,8 @@
 
 define float @f(float %val) {
 ; CHECK-LABEL: @f(
-; CHECK-REMARK: Partially inlined call to sqrt function despite having to use errno for error handling: target has fast sqrt instruction
-; CHECK-REMARK: Branch to library sqrt fn had to be inserted to satisfy the current target's requirement for math functions to set errno on invalid inputs
+; CHECK-REMARK: partially inlined call to sqrt function despite having to use errno for error handling: target has fast sqrt instruction
+; CHECK-REMARK: branch to library sqrt fn had to be inserted to satisfy the current target's requirement for math functions to set errno on invalid inputs
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RES:%.*]] = tail call float @sqrtf(float [[VAL:%.*]]) #[[READNONE:.*]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = fcmp oge float [[VAL]], 0.000000e+00

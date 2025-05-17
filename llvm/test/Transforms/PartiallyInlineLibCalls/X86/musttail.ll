@@ -4,7 +4,7 @@
 
 define double @foo(double %x) {
 ; CHECK-LABEL: @foo(
-; CHECK-REMARK: Could not consider library function for partial inlining: must tail call
+; CHECK-REMARK: could not consider library function for partial inlining: must tail call
 ; CHECK-NEXT:    [[R:%.*]] = musttail call double @sqrt(double [[X:%.*]])
 ; CHECK-NEXT:    ret double [[R]]
 ;
