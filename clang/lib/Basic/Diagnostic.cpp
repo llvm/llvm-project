@@ -67,12 +67,12 @@ const StreamingDiagnostic &clang::operator<<(const StreamingDiagnostic &DB,
   return DB;
 }
 
-static void DummyArgToStringFn(DiagnosticsEngine::ArgumentKind AK, intptr_t QT,
-                            StringRef Modifier, StringRef Argument,
-                            ArrayRef<DiagnosticsEngine::ArgumentValue> PrevArgs,
-                            SmallVectorImpl<char> &Output,
-                            void *Cookie,
-                            ArrayRef<intptr_t> QualTypeVals) {
+static void
+DummyArgToStringFn(DiagnosticsEngine::ArgumentKind AK, intptr_t QT,
+                   StringRef Modifier, StringRef Argument,
+                   ArrayRef<DiagnosticsEngine::ArgumentValue> PrevArgs,
+                   SmallVectorImpl<char> &Output, void *Cookie,
+                   ArrayRef<intptr_t> QualTypeVals) {
   StringRef Str = "<can't format argument>";
   Output.append(Str.begin(), Str.end());
 }
@@ -94,9 +94,7 @@ DiagnosticsEngine::~DiagnosticsEngine() {
   setClient(nullptr);
 }
 
-void DiagnosticsEngine::dump() const {
-  DiagStatesByLoc.dump(*SourceMgr);
-}
+void DiagnosticsEngine::dump() const { DiagStatesByLoc.dump(*SourceMgr); }
 
 void DiagnosticsEngine::dump(StringRef DiagName) const {
   DiagStatesByLoc.dump(*SourceMgr, DiagName);
@@ -259,7 +257,8 @@ void DiagnosticsEngine::DiagStateMap::dump(SourceManager &SrcMgr,
 
     bool PrintedOuterHeading = false;
     auto PrintOuterHeading = [&] {
-      if (PrintedOuterHeading) return;
+      if (PrintedOuterHeading)
+        return;
       PrintedOuterHeading = true;
 
       llvm::errs() << "File " << &File << " <FileID " << ID.getHashValue()
@@ -272,8 +271,8 @@ void DiagnosticsEngine::DiagStateMap::dump(SourceManager &SrcMgr,
         llvm::errs() << " parent " << File.Parent << " <FileID "
                      << Decomp.first.getHashValue() << "> ";
         SrcMgr.getLocForStartOfFile(Decomp.first)
-              .getLocWithOffset(Decomp.second)
-              .print(llvm::errs(), SrcMgr);
+            .getLocWithOffset(Decomp.second)
+            .print(llvm::errs(), SrcMgr);
       }
       if (File.HasLocalTransitions)
         llvm::errs() << " has_local_transitions";
@@ -286,14 +285,15 @@ void DiagnosticsEngine::DiagStateMap::dump(SourceManager &SrcMgr,
     for (DiagStatePoint &Transition : File.StateTransitions) {
       bool PrintedInnerHeading = false;
       auto PrintInnerHeading = [&] {
-        if (PrintedInnerHeading) return;
+        if (PrintedInnerHeading)
+          return;
         PrintedInnerHeading = true;
 
         PrintOuterHeading();
         llvm::errs() << "  ";
         SrcMgr.getLocForStartOfFile(ID)
-              .getLocWithOffset(Transition.Offset)
-              .print(llvm::errs(), SrcMgr);
+            .getLocWithOffset(Transition.Offset)
+            .print(llvm::errs(), SrcMgr);
         llvm::errs() << ": state " << Transition.State << ":\n";
       };
 
@@ -316,11 +316,21 @@ void DiagnosticsEngine::DiagStateMap::dump(SourceManager &SrcMgr,
         llvm::errs() << ": ";
 
         switch (Mapping.second.getSeverity()) {
-        case diag::Severity::Ignored: llvm::errs() << "ignored"; break;
-        case diag::Severity::Remark: llvm::errs() << "remark"; break;
-        case diag::Severity::Warning: llvm::errs() << "warning"; break;
-        case diag::Severity::Error: llvm::errs() << "error"; break;
-        case diag::Severity::Fatal: llvm::errs() << "fatal"; break;
+        case diag::Severity::Ignored:
+          llvm::errs() << "ignored";
+          break;
+        case diag::Severity::Remark:
+          llvm::errs() << "remark";
+          break;
+        case diag::Severity::Warning:
+          llvm::errs() << "warning";
+          break;
+        case diag::Severity::Error:
+          llvm::errs() << "error";
+          break;
+        case diag::Severity::Fatal:
+          llvm::errs() << "fatal";
+          break;
         }
 
         if (!Mapping.second.isUser())
@@ -663,8 +673,8 @@ bool DiagnosticsEngine::EmitDiagnostic(const DiagnosticBuilder &DB,
     Diagnostic Info(this, DB);
 
     // Figure out the diagnostic level of this message.
-    DiagnosticIDs::Level DiagLevel
-      = Diags->getDiagnosticLevel(Info.getID(), Info.getLocation(), *this);
+    DiagnosticIDs::Level DiagLevel =
+        Diags->getDiagnosticLevel(Info.getID(), Info.getLocation(), *this);
 
     Emitted = (DiagLevel != DiagnosticIDs::Ignored);
     if (Emitted) {
@@ -716,7 +726,7 @@ Diagnostic::Diagnostic(const DiagnosticsEngine *DO, SourceLocation DiagLoc,
 DiagnosticConsumer::~DiagnosticConsumer() = default;
 
 void DiagnosticConsumer::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
-                                        const Diagnostic &Info) {
+                                          const Diagnostic &Info) {
   if (!IncludeInDiagnosticCounts())
     return;
 
@@ -730,7 +740,7 @@ void DiagnosticConsumer::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
 template <std::size_t StrLen>
 static bool ModifierIs(const char *Modifier, unsigned ModifierLen,
                        const char (&Str)[StrLen]) {
-  return StrLen-1 == ModifierLen && memcmp(Modifier, Str, StrLen-1) == 0;
+  return StrLen - 1 == ModifierLen && memcmp(Modifier, Str, StrLen - 1) == 0;
 }
 
 /// ScanForward - Scans forward, looking for the given character, skipping
@@ -738,20 +748,25 @@ static bool ModifierIs(const char *Modifier, unsigned ModifierLen,
 static const char *ScanFormat(const char *I, const char *E, char Target) {
   unsigned Depth = 0;
 
-  for ( ; I != E; ++I) {
-    if (Depth == 0 && *I == Target) return I;
-    if (Depth != 0 && *I == '}') Depth--;
+  for (; I != E; ++I) {
+    if (Depth == 0 && *I == Target)
+      return I;
+    if (Depth != 0 && *I == '}')
+      Depth--;
 
     if (*I == '%') {
       I++;
-      if (I == E) break;
+      if (I == E)
+        break;
 
       // Escaped characters get implicitly skipped here.
 
       // Format specifier.
       if (!isDigit(*I) && !isPunctuation(*I)) {
-        for (I++; I != E && !isDigit(*I) && *I != '{'; I++) ;
-        if (I == E) break;
+        for (I++; I != E && !isDigit(*I) && *I != '{'; I++)
+          ;
+        if (I == E)
+          break;
         if (*I == '{')
           Depth++;
       }
@@ -768,14 +783,15 @@ static const char *ScanFormat(const char *I, const char *E, char Target) {
 static void HandleSelectModifier(const Diagnostic &DInfo, unsigned ValNo,
                                  const char *Argument, unsigned ArgumentLen,
                                  SmallVectorImpl<char> &OutStr) {
-  const char *ArgumentEnd = Argument+ArgumentLen;
+  const char *ArgumentEnd = Argument + ArgumentLen;
 
   // Skip over 'ValNo' |'s.
   while (ValNo) {
     const char *NextVal = ScanFormat(Argument, ArgumentEnd, '|');
-    assert(NextVal != ArgumentEnd && "Value for integer select modifier was"
+    assert(NextVal != ArgumentEnd &&
+           "Value for integer select modifier was"
            " larger than the number of options in the diagnostic string!");
-    Argument = NextVal+1;  // Skip this string.
+    Argument = NextVal + 1; // Skip this string.
     --ValNo;
   }
 
@@ -974,15 +990,13 @@ static const char *getTokenDescForDiagnostic(tok::TokenKind Kind) {
 /// FormatDiagnostic - Format this diagnostic into a string, substituting the
 /// formal arguments into the %0 slots.  The result is appended onto the Str
 /// array.
-void Diagnostic::
-FormatDiagnostic(SmallVectorImpl<char> &OutStr) const {
+void Diagnostic::FormatDiagnostic(SmallVectorImpl<char> &OutStr) const {
   if (StoredDiagMessage.has_value()) {
     OutStr.append(StoredDiagMessage->begin(), StoredDiagMessage->end());
     return;
   }
 
-  StringRef Diag =
-    getDiags()->getDiagnosticIDs()->getDescription(getID());
+  StringRef Diag = getDiags()->getDiagnosticIDs()->getDescription(getID());
 
   FormatDiagnostic(Diag.begin(), Diag.end(), OutStr);
 }
@@ -1032,9 +1046,8 @@ void clang::EscapeStringForDiagnostic(StringRef Str,
   }
 }
 
-void Diagnostic::
-FormatDiagnostic(const char *DiagStr, const char *DiagEnd,
-                 SmallVectorImpl<char> &OutStr) const {
+void Diagnostic::FormatDiagnostic(const char *DiagStr, const char *DiagEnd,
+                                  SmallVectorImpl<char> &OutStr) const {
   // When the diagnostic string is only "%0", the entire string is being given
   // by an outside source.  Remove unprintable characters from this string
   // and skip all the other string processing.
@@ -1068,7 +1081,7 @@ FormatDiagnostic(const char *DiagStr, const char *DiagEnd,
       DiagStr = StrEnd;
       continue;
     } else if (isPunctuation(DiagStr[1])) {
-      OutStr.push_back(DiagStr[1]);  // %% -> %.
+      OutStr.push_back(DiagStr[1]); // %% -> %.
       DiagStr += 2;
       continue;
     }
@@ -1087,10 +1100,9 @@ FormatDiagnostic(const char *DiagStr, const char *DiagEnd,
     // Check to see if we have a modifier.  If so eat it.
     if (!isDigit(DiagStr[0])) {
       Modifier = DiagStr;
-      while (DiagStr[0] == '-' ||
-             (DiagStr[0] >= 'a' && DiagStr[0] <= 'z'))
+      while (DiagStr[0] == '-' || (DiagStr[0] >= 'a' && DiagStr[0] <= 'z'))
         ++DiagStr;
-      ModifierLen = DiagStr-Modifier;
+      ModifierLen = DiagStr - Modifier;
 
       // If we have an argument, get it next.
       if (DiagStr[0] == '{') {
@@ -1099,8 +1111,8 @@ FormatDiagnostic(const char *DiagStr, const char *DiagEnd,
 
         DiagStr = ScanFormat(DiagStr, DiagEnd, '}');
         assert(DiagStr != DiagEnd && "Mismatched {}'s in diagnostic string!");
-        ArgumentLen = DiagStr-Argument;
-        ++DiagStr;  // Skip }.
+        ArgumentLen = DiagStr - Argument;
+        ++DiagStr; // Skip }.
       }
     }
 
@@ -1114,7 +1126,7 @@ FormatDiagnostic(const char *DiagStr, const char *DiagEnd,
     if (ModifierIs(Modifier, ModifierLen, "diff")) {
       assert(*DiagStr == ',' && isDigit(*(DiagStr + 1)) &&
              "Invalid format for diff modifier");
-      ++DiagStr;  // Comma.
+      ++DiagStr; // Comma.
       ArgNo2 = *DiagStr++ - '0';
       DiagnosticsEngine::ArgumentKind Kind2 = getArgKind(ArgNo2);
       if (Kind == DiagnosticsEngine::ak_qualtype &&
@@ -1132,8 +1144,8 @@ FormatDiagnostic(const char *DiagStr, const char *DiagEnd,
                "Found too many '|'s in a %diff modifier!");
         const char *FirstDollar = ScanFormat(Argument, Pipe, '$');
         const char *SecondDollar = ScanFormat(FirstDollar + 1, Pipe, '$');
-        const char ArgStr1[] = { '%', static_cast<char>('0' + ArgNo) };
-        const char ArgStr2[] = { '%', static_cast<char>('0' + ArgNo2) };
+        const char ArgStr1[] = {'%', static_cast<char>('0' + ArgNo)};
+        const char ArgStr2[] = {'%', static_cast<char>('0' + ArgNo2)};
         FormatDiagnostic(Argument, FirstDollar, OutStr);
         FormatDiagnostic(ArgStr1, ArgStr1 + 2, OutStr);
         FormatDiagnostic(FirstDollar + 1, SecondDollar, OutStr);
@@ -1257,8 +1269,7 @@ FormatDiagnostic(const char *DiagStr, const char *DiagEnd,
       getDiags()->ConvertArgToString(Kind, getRawArg(ArgNo),
                                      StringRef(Modifier, ModifierLen),
                                      StringRef(Argument, ArgumentLen),
-                                     FormattedArgs,
-                                     OutStr, QualTypeVals);
+                                     FormattedArgs, OutStr, QualTypeVals);
       break;
     case DiagnosticsEngine::ak_qualtype_pair: {
       // Create a struct with all the info needed for printing.
@@ -1281,8 +1292,7 @@ FormatDiagnostic(const char *DiagStr, const char *DiagEnd,
         getDiags()->ConvertArgToString(Kind, val,
                                        StringRef(Modifier, ModifierLen),
                                        StringRef(Argument, ArgumentLen),
-                                       FormattedArgs,
-                                       Tree, QualTypeVals);
+                                       FormattedArgs, Tree, QualTypeVals);
         // If there is no tree information, fall back to regular printing.
         if (!Tree.empty()) {
           FormatDiagnostic(Pipe + 1, ArgumentEnd, OutStr);
@@ -1304,11 +1314,10 @@ FormatDiagnostic(const char *DiagStr, const char *DiagEnd,
       getDiags()->ConvertArgToString(Kind, val,
                                      StringRef(Modifier, ModifierLen),
                                      StringRef(Argument, ArgumentLen),
-                                     FormattedArgs,
-                                     OutStr, QualTypeVals);
+                                     FormattedArgs, OutStr, QualTypeVals);
       if (!TDT.TemplateDiffUsed)
-        FormattedArgs.push_back(std::make_pair(DiagnosticsEngine::ak_qualtype,
-                                               TDT.FromType));
+        FormattedArgs.push_back(
+            std::make_pair(DiagnosticsEngine::ak_qualtype, TDT.FromType));
 
       // Append middle text
       FormatDiagnostic(FirstDollar + 1, SecondDollar, OutStr);
@@ -1318,11 +1327,10 @@ FormatDiagnostic(const char *DiagStr, const char *DiagEnd,
       getDiags()->ConvertArgToString(Kind, val,
                                      StringRef(Modifier, ModifierLen),
                                      StringRef(Argument, ArgumentLen),
-                                     FormattedArgs,
-                                     OutStr, QualTypeVals);
+                                     FormattedArgs, OutStr, QualTypeVals);
       if (!TDT.TemplateDiffUsed)
-        FormattedArgs.push_back(std::make_pair(DiagnosticsEngine::ak_qualtype,
-                                               TDT.ToType));
+        FormattedArgs.push_back(
+            std::make_pair(DiagnosticsEngine::ak_qualtype, TDT.ToType));
 
       // Append end text
       FormatDiagnostic(SecondDollar + 1, Pipe, OutStr);
@@ -1338,8 +1346,9 @@ FormatDiagnostic(const char *DiagStr, const char *DiagEnd,
     else if (Kind != DiagnosticsEngine::ak_std_string)
       FormattedArgs.push_back(std::make_pair(Kind, getRawArg(ArgNo)));
     else
-      FormattedArgs.push_back(std::make_pair(DiagnosticsEngine::ak_c_string,
-                                        (intptr_t)getArgStdStr(ArgNo).c_str()));
+      FormattedArgs.push_back(
+          std::make_pair(DiagnosticsEngine::ak_c_string,
+                         (intptr_t)getArgStdStr(ArgNo).c_str()));
   }
 
   // Append the type tree to the end of the diagnostics.
@@ -1353,8 +1362,9 @@ StoredDiagnostic::StoredDiagnostic(DiagnosticsEngine::Level Level, unsigned ID,
 StoredDiagnostic::StoredDiagnostic(DiagnosticsEngine::Level Level,
                                    const Diagnostic &Info)
     : ID(Info.getID()), Level(Level) {
-  assert((Info.getLocation().isInvalid() || Info.hasSourceManager()) &&
-       "Valid source location without setting a source manager for diagnostic");
+  assert(
+      (Info.getLocation().isInvalid() || Info.hasSourceManager()) &&
+      "Valid source location without setting a source manager for diagnostic");
   if (Info.getLocation().isValid())
     Loc = FullSourceLoc(Info.getLocation(), Info.getSourceManager());
   SmallString<64> Message;
@@ -1369,9 +1379,8 @@ StoredDiagnostic::StoredDiagnostic(DiagnosticsEngine::Level Level, unsigned ID,
                                    ArrayRef<CharSourceRange> Ranges,
                                    ArrayRef<FixItHint> FixIts)
     : ID(ID), Level(Level), Loc(Loc), Message(Message),
-      Ranges(Ranges.begin(), Ranges.end()), FixIts(FixIts.begin(), FixIts.end())
-{
-}
+      Ranges(Ranges.begin(), Ranges.end()),
+      FixIts(FixIts.begin(), FixIts.end()) {}
 
 llvm::raw_ostream &clang::operator<<(llvm::raw_ostream &OS,
                                      const StoredDiagnostic &SD) {
@@ -1392,8 +1401,7 @@ void IgnoringDiagConsumer::anchor() {}
 ForwardingDiagnosticConsumer::~ForwardingDiagnosticConsumer() = default;
 
 void ForwardingDiagnosticConsumer::HandleDiagnostic(
-       DiagnosticsEngine::Level DiagLevel,
-       const Diagnostic &Info) {
+    DiagnosticsEngine::Level DiagLevel, const Diagnostic &Info) {
   Target.HandleDiagnostic(DiagLevel, Info);
 }
 
