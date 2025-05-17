@@ -726,7 +726,7 @@ void DAP::SetTarget(const lldb::SBTarget target) {
   }
 }
 
-bool DAP::HandleObject(const Message &M) {
+bool DAP::HandleObject(const Message &M, bool &defer) {
   TelemetryDispatcher dispatcher(&debugger);
   dispatcher.Set("client_name", transport.GetClientName().str());
   if (const auto *req = std::get_if<Request>(&M)) {
@@ -748,7 +748,7 @@ bool DAP::HandleObject(const Message &M) {
     dispatcher.Set("client_data",
                    llvm::Twine("request_command:", req->command).str());
     if (handler_pos != request_handlers.end()) {
-      handler_pos->second->Run(*req);
+      defer = handler_pos->second->Run(*req);
       return true; // Success
     }
 
@@ -918,17 +918,11 @@ llvm::Error DAP::Loop() {
 
           // The launch sequence is special and we need to carefully handle
           // packets in the right order. Until we've handled configurationDone,
-          bool add_to_pending_queue = false;
-
           if (const protocol::Request *req =
                   std::get_if<protocol::Request>(&*next)) {
             llvm::StringRef command = req->command;
             if (command == "disconnect")
               disconnecting = true;
-            if (!configuration_done)
-              add_to_pending_queue =
-                  command != "initialize" && command != "configurationDone" &&
-                  command != "disconnect" && !command.ends_with("Breakpoints");
           }
 
           const std::optional<CancelArguments> cancel_args =
@@ -956,8 +950,7 @@ llvm::Error DAP::Loop() {
 
           {
             std::lock_guard<std::mutex> guard(m_queue_mutex);
-            auto &queue = add_to_pending_queue ? m_pending_queue : m_queue;
-            queue.push_back(std::move(*next));
+            m_queue.push_back(std::move(*next));
           }
           m_queue_cv.notify_one();
         }
@@ -984,9 +977,13 @@ llvm::Error DAP::Loop() {
     // Unlock while we're processing the event.
     lock.unlock();
 
-    if (!HandleObject(next))
+    bool defer_message = false;
+    if (!HandleObject(next, defer_message))
       return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                      "unhandled packet");
+    if (defer_message) {
+      m_pending_queue.push_back(next);
+    }
   }
 
   return ToError(queue_reader.get());

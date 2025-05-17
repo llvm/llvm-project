@@ -88,4 +88,8 @@ void LaunchRequestHandler::PostRun() const {
     dap.target.GetProcess().Continue();
 }
 
+bool LaunchRequestHandler::DeferRequest() const {
+  return !dap.configuration_done;
+}
+
 } // namespace lldb_dap

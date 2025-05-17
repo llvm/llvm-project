@@ -160,4 +160,8 @@ void AttachRequestHandler::PostRun() const {
     dap.target.GetProcess().Continue();
 }
 
+bool AttachRequestHandler::DeferRequest() const {
+  return !dap.configuration_done;
+}
+
 } // namespace lldb_dap

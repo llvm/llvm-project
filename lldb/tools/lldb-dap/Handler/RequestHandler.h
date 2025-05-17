@@ -46,7 +46,14 @@ public:
 
   virtual ~BaseRequestHandler() = default;
 
-  void Run(const protocol::Request &);
+  /// Return `true` if the request should be deferred.
+  [[nodiscard]]
+  bool Run(const protocol::Request &);
+
+  [[nodiscard]]
+  virtual bool DeferRequest() const {
+    return false;
+  }
 
   virtual void operator()(const protocol::Request &request) const = 0;
 
@@ -210,6 +217,7 @@ public:
   static llvm::StringLiteral GetCommand() { return "attach"; }
   llvm::Error Run(const protocol::AttachRequestArguments &args) const override;
   void PostRun() const override;
+  bool DeferRequest() const override;
 };
 
 class BreakpointLocationsRequestHandler
@@ -309,6 +317,7 @@ public:
   llvm::Error
   Run(const protocol::LaunchRequestArguments &arguments) const override;
   void PostRun() const override;
+  bool DeferRequest() const override;
 };
 
 class RestartRequestHandler : public LegacyRequestHandler {
