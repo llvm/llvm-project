@@ -114,4 +114,5 @@ add_clang_library(clangSema
   clangEdit
   clangLex
   clangSupport
-  )
+  clangToolingInclusionsStdlib
+)
