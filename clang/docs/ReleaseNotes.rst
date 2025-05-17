@@ -558,6 +558,9 @@ Improvements to Clang's diagnostics
   between different Unicode character types (``char8_t``, ``char16_t``, ``char32_t``).
   This warning only triggers in C++ as these types are aliases in C. (#GH138526)
 
+- Split diagnosis of implicit integer comparison on negation to a new diagnostic group ``-Wimplicit-int-comparison-on-negation``, 
+  so user can turn it off independently.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
