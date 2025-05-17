@@ -52,7 +52,7 @@ class TestDAP_breakpointEvents(lldbdap_testcase.DAPTestCaseBase):
         # breakpoint events for these breakpoints but not for ones that are not
         # set via the command interpreter.
         bp_command = "breakpoint set --file foo.cpp --line %u" % (foo_bp2_line)
-        self.build_and_launch(program, stopOnEntry=True, preRunCommands=[bp_command])
+        self.build_and_launch(program, preRunCommands=[bp_command])
         main_bp_id = 0
         foo_bp_id = 0
         # Set breakpoints and verify that they got set correctly

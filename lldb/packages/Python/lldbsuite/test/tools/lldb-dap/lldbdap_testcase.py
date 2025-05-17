@@ -56,7 +56,7 @@ class DAPTestCaseBase(TestBase):
         It contains optional location/hitCondition/logMessage parameters.
         """
         response = self.dap_server.request_setBreakpoints(source_path, lines, data)
-        if response is None:
+        if response is None or not response["success"]:
             return []
         breakpoints = response["body"]["breakpoints"]
         breakpoint_ids = []
@@ -354,13 +354,9 @@ class DAPTestCaseBase(TestBase):
     def attach(
         self,
         *,
-        stopOnAttach=True,
         disconnectAutomatically=True,
         sourceInitFile=False,
         expectFailure=False,
-        sourceBreakpoints=None,
-        functionBreakpoints=None,
-        timeout=DEFAULT_TIMEOUT,
         **kwargs,
     ):
         """Build the default Makefile target, create the DAP debug adapter,
@@ -378,37 +374,13 @@ class DAPTestCaseBase(TestBase):
         self.addTearDownHook(cleanup)
         # Initialize and launch the program
         self.dap_server.request_initialize(sourceInitFile)
-        self.dap_server.wait_for_event("initialized", timeout)
-
-        # Set source breakpoints as part of the launch sequence.
-        if sourceBreakpoints:
-            for source_path, lines in sourceBreakpoints:
-                response = self.dap_server.request_setBreakpoints(source_path, lines)
-                self.assertTrue(
-                    response["success"],
-                    "setBreakpoints failed (%s)" % (response),
-                )
-
-        # Set function breakpoints as part of the launch sequence.
-        if functionBreakpoints:
-            response = self.dap_server.request_setFunctionBreakpoints(
-                functionBreakpoints
-            )
-            self.assertTrue(
-                response["success"],
-                "setFunctionBreakpoint failed (%s)" % (response),
-            )
-
-        self.dap_server.request_configurationDone()
-        response = self.dap_server.request_attach(stopOnAttach=stopOnAttach, **kwargs)
+        response = self.dap_server.request_attach(**kwargs)
         if expectFailure:
             return response
         if not (response and response["success"]):
             self.assertTrue(
                 response["success"], "attach failed (%s)" % (response["message"])
             )
-        if stopOnAttach:
-            self.dap_server.wait_for_stopped(timeout)
 
     def launch(
         self,
@@ -416,11 +388,7 @@ class DAPTestCaseBase(TestBase):
         *,
         sourceInitFile=False,
         disconnectAutomatically=True,
-        sourceBreakpoints=None,
-        functionBreakpoints=None,
         expectFailure=False,
-        stopOnEntry=True,
-        timeout=DEFAULT_TIMEOUT,
         **kwargs,
     ):
         """Sending launch request to dap"""
@@ -437,35 +405,7 @@ class DAPTestCaseBase(TestBase):
 
         # Initialize and launch the program
         self.dap_server.request_initialize(sourceInitFile)
-        self.dap_server.wait_for_event("initialized", timeout)
-
-        # Set source breakpoints as part of the launch sequence.
-        if sourceBreakpoints:
-            for source_path, lines in sourceBreakpoints:
-                response = self.dap_server.request_setBreakpoints(source_path, lines)
-                self.assertTrue(
-                    response["success"],
-                    "setBreakpoints failed (%s)" % (response),
-                )
-
-        # Set function breakpoints as part of the launch sequence.
-        if functionBreakpoints:
-            response = self.dap_server.request_setFunctionBreakpoints(
-                functionBreakpoints
-            )
-            self.assertTrue(
-                response["success"],
-                "setFunctionBreakpoint failed (%s)" % (response),
-            )
-
-        self.dap_server.request_configurationDone()
-
-        response = self.dap_server.request_launch(
-            program,
-            stopOnEntry=stopOnEntry,
-            **kwargs,
-        )
-
+        response = self.dap_server.request_launch(program, **kwargs)
         if expectFailure:
             return response
         if not (response and response["success"]):
@@ -473,10 +413,6 @@ class DAPTestCaseBase(TestBase):
                 response["success"],
                 "launch failed (%s)" % (response["body"]["error"]["format"]),
             )
-        if stopOnEntry:
-            self.dap_server.wait_for_stopped(timeout)
-
-        return response
 
     def build_and_launch(
         self,

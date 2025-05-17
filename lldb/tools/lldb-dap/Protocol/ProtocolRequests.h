@@ -370,6 +370,13 @@ struct ContinueResponseBody {
 };
 llvm::json::Value toJSON(const ContinueResponseBody &);
 
+/// Arguments for `configurationDone` request.
+using ConfigurationDoneArguments = EmptyArguments;
+
+/// Response to `configurationDone` request. This is just an acknowledgement, so
+/// no body field is required.
+using ConfigurationDoneResponse = VoidResponse;
+
 /// Arguments for `setVariable` request.
 struct SetVariableArguments {
   /// The reference of the variable container. The `variablesReference` must

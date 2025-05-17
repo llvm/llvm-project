@@ -444,7 +444,6 @@ private:
 
   /// Queue for all incoming messages.
   std::deque<protocol::Message> m_queue;
-  std::deque<protocol::Message> m_pending_queue;
   std::mutex m_queue_mutex;
   std::condition_variable m_queue_cv;
 

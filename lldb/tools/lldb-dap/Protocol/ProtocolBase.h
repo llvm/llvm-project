@@ -148,6 +148,9 @@ struct ErrorResponseBody {
 };
 llvm::json::Value toJSON(const ErrorResponseBody &);
 
+/// This is a placehold for requests with an empty, null or undefined arguments.
+using EmptyArguments = std::optional<std::monostate>;
+
 /// This is just an acknowledgement, so no body field is required.
 using VoidResponse = llvm::Error;
 
