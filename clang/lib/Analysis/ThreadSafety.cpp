@@ -2026,6 +2026,8 @@ void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
       ScopedEntry->addExclusiveUnlock(M);
     for (const auto &M : SharedLocksToRemove)
       ScopedEntry->addSharedUnlock(M);
+    for (const auto &M : GenericLocksToRemove)
+      ScopedEntry->addExclusiveUnlock(M);
     Analyzer->addLock(FSet, std::move(ScopedEntry));
   }
 }
