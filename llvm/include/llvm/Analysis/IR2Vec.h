@@ -106,10 +106,10 @@ public:
   virtual void computeEmbeddings() = 0;
 
   /// Factory method to create an Embedder object.
-  static ErrorOr<std::unique_ptr<Embedder>> create(IR2VecKind Mode,
-                                                   const Function &F,
-                                                   const Vocab &Vocabulary,
-                                                   unsigned Dimension);
+  static Expected<std::unique_ptr<Embedder>> create(IR2VecKind Mode,
+                                                    const Function &F,
+                                                    const Vocab &Vocabulary,
+                                                    unsigned Dimension);
 
   /// Returns a map containing instructions and the corresponding vector
   /// representations for a given module corresponding to the IR2Vec

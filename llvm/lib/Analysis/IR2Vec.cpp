@@ -66,16 +66,16 @@ Embedder::Embedder(const Function &F, const Vocab &Vocabulary,
       OpcWeight(::OpcWeight), TypeWeight(::TypeWeight), ArgWeight(::ArgWeight) {
 }
 
-ErrorOr<std::unique_ptr<Embedder>> Embedder::create(IR2VecKind Mode,
-                                                    const Function &F,
-                                                    const Vocab &Vocabulary,
-                                                    unsigned Dimension) {
+Expected<std::unique_ptr<Embedder>> Embedder::create(IR2VecKind Mode,
+                                                     const Function &F,
+                                                     const Vocab &Vocabulary,
+                                                     unsigned Dimension) {
   switch (Mode) {
   case IR2VecKind::Symbolic:
     return std::make_unique<SymbolicEmbedder>(F, Vocabulary, Dimension);
   default:
-    return errorToErrorCode(
-        make_error<StringError>("Unknown IR2VecKind", errc::invalid_argument));
+    return make_error<StringError>("Unknown IR2VecKind",
+                                   errc::invalid_argument);
   }
 }
 
@@ -262,12 +262,13 @@ PreservedAnalyses IR2VecPrinterPass::run(Module &M,
 
   auto Vocab = IR2VecVocabResult.getVocabulary();
   auto Dim = IR2VecVocabResult.getDimension();
-
   for (Function &F : M) {
-    ErrorOr<std::unique_ptr<Embedder>> EmbOrErr =
+    Expected<std::unique_ptr<Embedder>> EmbOrErr =
         Embedder::create(IR2VecKind::Symbolic, F, Vocab, Dim);
-    if (auto EC = EmbOrErr.getError()) {
-      OS << "Error creating IR2Vec embeddings: " << EC.message() << "\n";
+    if (auto Err = EmbOrErr.takeError()) {
+      handleAllErrors(std::move(Err), [&](const ErrorInfoBase &EI) {
+        OS << "Error creating IR2Vec embeddings: " << EI.message() << "\n";
+      });
       continue;
     }
 

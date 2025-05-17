@@ -225,10 +225,10 @@ embeddings can be computed and accessed via an ``ir2vec::Embedder`` instance.
 
       // Assuming F is an llvm::Function&
       // For example, using IR2VecKind::Symbolic:
-      ErrorOr<std::unique_ptr<ir2vec::Embedder>> EmbOrErr =
+      Expected<std::unique_ptr<ir2vec::Embedder>> EmbOrErr =
           ir2vec::Embedder::create(IR2VecKind::Symbolic, F, Vocabulary, Dimension);
 
-      if (auto EC = EmbOrErr.getError()) {
+      if (auto Err = EmbOrErr.takeError()) {
         // Handle error in embedder creation
         return;
       }
