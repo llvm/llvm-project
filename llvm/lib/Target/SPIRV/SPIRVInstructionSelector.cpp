@@ -276,6 +276,12 @@ private:
   bool selectExtInst(Register ResVReg, const SPIRVType *ResType,
                      MachineInstr &I, const ExtInstList &ExtInsts) const;
 
+  bool selectExtInstFREXP(Register ResVReg, const SPIRVType *ResType,
+                          MachineInstr &I, CL::OpenCLExtInst CLInst,
+                          GL::GLSLExtInst GLInst) const;
+  bool selectExtInstFREXP(Register ResVReg, const SPIRVType *ResType,
+                          MachineInstr &I, const ExtInstList &ExtInsts) const;
+
   bool selectLog10(Register ResVReg, const SPIRVType *ResType,
                    MachineInstr &I) const;
 
@@ -765,6 +771,9 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
   case TargetOpcode::G_FNEARBYINT:
     return selectExtInst(ResVReg, ResType, I, CL::rint, GL::RoundEven);
 
+  case TargetOpcode::G_FFREXP:
+    return selectExtInstFREXP(ResVReg, ResType, I, CL::frexp, GL::Frexp);
+
   case TargetOpcode::G_SMULH:
     return selectExtInst(ResVReg, ResType, I, CL::s_mul_hi);
   case TargetOpcode::G_UMULH:
@@ -1014,6 +1023,72 @@ bool SPIRVInstructionSelector::selectExtInst(Register ResVReg,
         MIB.add(I.getOperand(Index));
       return MIB.constrainAllUses(TII, TRI, RBI);
     }
+  }
+  return false;
+}
+
+bool SPIRVInstructionSelector::selectExtInstFREXP(
+    Register ResVReg, const SPIRVType *ResType, MachineInstr &I,
+    CL::OpenCLExtInst CLInst, GL::GLSLExtInst GLInst) const {
+  ExtInstList ExtInsts = {{SPIRV::InstructionSet::OpenCL_std, CLInst},
+                          {SPIRV::InstructionSet::GLSL_std_450, GLInst}};
+  return selectExtInstFREXP(ResVReg, ResType, I, ExtInsts);
+}
+
+bool SPIRVInstructionSelector::selectExtInstFREXP(
+    Register ResVReg, const SPIRVType *ResType, MachineInstr &I,
+    const ExtInstList &ExtInsts) const {
+
+  for (const auto &Ex : ExtInsts) {
+    SPIRV::InstructionSet::InstructionSet Set = Ex.first;
+    uint32_t Opcode = Ex.second;
+    if (!STI.canUseExtInstSet(Set))
+      continue;
+    Type *ResTy = nullptr;
+    StringRef ResName;
+
+    if (!GR.findValueAttrs(&I, ResTy, ResName))
+      report_fatal_error("Not enough info to select the frexp instruction");
+    if (!ResTy || !ResTy->isStructTy())
+      report_fatal_error("Expect struct type result for frexp instruction");
+
+    MachineIRBuilder MIRBuilder(I);
+    SPIRVType *PointeeTy = GR.getSPIRVTypeForVReg(I.getOperand(1).getReg());
+    assert((PointeeTy->getOpcode() == SPIRV::OpTypeVector ||
+            PointeeTy->getOpcode() == SPIRV::OpTypeInt) &&
+           "Expected integer or vector type for second operand");
+
+    const SPIRVType *PointerType = GR.getOrCreateSPIRVPointerType(
+        PointeeTy, MIRBuilder, SPIRV::StorageClass::Function);
+    Register PointerVReg =
+        createVirtualRegister(PointerType, &GR, MRI, MRI->getMF());
+
+    auto It = getOpVariableMBBIt(I);
+    auto MIB = BuildMI(*It->getParent(), It, It->getDebugLoc(),
+                       TII.get(SPIRV::OpVariable))
+                   .addDef(PointerVReg)
+                   .addUse(GR.getSPIRVTypeID(PointerType))
+                   .addImm(static_cast<uint32_t>(SPIRV::StorageClass::Function))
+                   .constrainAllUses(TII, TRI, RBI);
+
+    MIB = MIB &
+          BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpExtInst))
+              .addDef(ResVReg)
+              .addUse(GR.getSPIRVTypeID(
+                  GR.getSPIRVTypeForVReg(I.getOperand(2).getReg())))
+              .addImm(static_cast<uint32_t>(Ex.first))
+              .addImm(Opcode)
+              .add(I.getOperand(2))
+              .addUse(PointerVReg)
+              .constrainAllUses(TII, TRI, RBI);
+
+    MIB = MIB &
+          BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpLoad))
+              .addDef(I.getOperand(1).getReg())
+              .addUse(GR.getSPIRVTypeID(PointeeTy))
+              .addUse(PointerVReg)
+              .constrainAllUses(TII, TRI, RBI);
+    return MIB;
   }
   return false;
 }
