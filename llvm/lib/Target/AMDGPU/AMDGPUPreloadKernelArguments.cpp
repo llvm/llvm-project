@@ -224,7 +224,7 @@ public:
 
     // Allocate loads in order of offset. We need to be sure that the implicit
     // argument can actually be preloaded.
-    std::sort(ImplicitArgLoads.begin(), ImplicitArgLoads.end(), less_second());
+    llvm::sort(ImplicitArgLoads, less_second());
 
     // If we fail to preload any implicit argument we know we don't have SGPRs
     // to preload any subsequent ones with larger offsets. Find the first
