@@ -6,9 +6,9 @@ define i32 @test(i64 %l.549) {
 ; CHECK-SAME: i64 [[L_549:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[CONV3:%.*]] = sext i32 0 to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i64> poison, i64 [[CONV3]], i32 3
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i64> poison, i64 0, i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i64> [[TMP3]], i64 0, i32 1
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i64> poison, i64 [[CONV3]], i32 3
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x i64> poison, i64 [[L_549]], i32 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x i64> [[TMP8]], <4 x i64> poison, <4 x i32> <i32 poison, i32 0, i32 poison, i32 poison>
 ; CHECK-NEXT:    br label %[[IF_THEN19:.*]]
