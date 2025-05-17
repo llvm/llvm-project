@@ -196,8 +196,9 @@ private:
   void replay() {
     for (const auto &Inc : Includes) {
       OptionalFileEntryRef File;
-      if (Inc.Resolved != "")
-        File = expectedToOptional(SM.getFileManager().getFileRef(Inc.Resolved));
+      if (!Inc.Resolved.empty())
+        File = expectedToOptional(
+            SM.getFileManager().getFileRef(Inc.Resolved.ref().raw()));
 
       // Re-lex the #include directive to find its interesting parts.
       auto HashLoc = SM.getComposedLoc(SM.getMainFileID(), Inc.HashOffset);
