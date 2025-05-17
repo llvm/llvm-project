@@ -137,11 +137,18 @@ static inline constexpr T round_up(const T x) {
 /// alignment and to indicate that if the pointer is not aligned by 2MiB it
 /// belongs to a slab rather than the global allocator.
 struct Slab {
+  // Header metadata for the slab, aligned to the minimum alignment.
+  struct alignas(MIN_SIZE) Header {
+    uint32_t chunk_size;
+    uint32_t global_index;
+  };
+
   // Initialize the slab with its chunk size and index in the global table for
   // use when freeing.
   Slab(uint32_t chunk_size, uint32_t global_index) {
-    *reinterpret_cast<uint32_t *>(&memory[0]) = chunk_size;
-    *reinterpret_cast<uint32_t *>(&memory[sizeof(uint32_t)]) = global_index;
+    Header *header = reinterpret_cast<Header *>(memory);
+    header->chunk_size = chunk_size;
+    header->global_index = global_index;
 
     // This memset is expensive and likely not necessary for the current 'kfd'
     // driver. Until zeroed pages are exposed by the API we must be careful.
@@ -155,13 +162,12 @@ struct Slab {
 
   // Get the number of bytes needed to contain the bitfield bits.
   static uint32_t bitfield_bytes(uint32_t chunk_size) {
-    return ((num_chunks(chunk_size) + BITS_IN_WORD - 1) / BITS_IN_WORD) *
-           sizeof(uint32_t);
+    return ((num_chunks(chunk_size) + BITS_IN_WORD - 1) / BITS_IN_WORD) * 8;
   }
 
   // The actual amount of memory available excluding the bitfield and metadata.
   static uint32_t available_bytes(uint32_t chunk_size) {
-    return SLAB_SIZE - 2 * bitfield_bytes(chunk_size) - MIN_SIZE;
+    return SLAB_SIZE - bitfield_bytes(chunk_size) - sizeof(Header);
   }
 
   // The number of chunks that can be stored in this slab.
@@ -171,7 +177,7 @@ struct Slab {
 
   // The length in bits of the bitfield.
   static uint32_t usable_bits(uint32_t chunk_size) {
-    return ((available_bytes(chunk_size) + chunk_size - 1) / chunk_size);
+    return available_bytes(chunk_size) / chunk_size;
   }
 
   // Get the location in the memory where we will store the chunk size.
@@ -186,13 +192,13 @@ struct Slab {
 
   // Get a pointer to where the bitfield is located in the memory.
   uint32_t *get_bitfield() {
-    return reinterpret_cast<uint32_t *>(memory + MIN_SIZE);
+    return reinterpret_cast<uint32_t *>(memory + sizeof(Header));
   }
 
   // Get a pointer to where the actual memory to be allocated lives.
   uint8_t *get_memory(uint32_t chunk_size) {
     return reinterpret_cast<uint8_t *>(memory) + bitfield_bytes(chunk_size) +
-           MIN_SIZE;
+           sizeof(Header);
   }
 
   // Get a pointer to the actual memory given an index into the bitfield.
@@ -207,15 +213,14 @@ struct Slab {
            chunk_size;
   }
 
-  // Randomly walks the bitfield until it finds a free bit in the bitfield.
-  // Allocations attempt to put lanes right next to eachother for better
-  // caching and convergence.
+  // Randomly walks the bitfield until it finds a free bit. Allocations attempt
+  // to put lanes right next to each other for better caching and convergence.
   void *allocate(uint64_t lane_mask, uint64_t uniform) {
     uint32_t chunk_size = get_chunk_size();
     uint32_t state = impl::entropy();
     void *result = nullptr;
     // The uniform mask represents which lanes contain a uniform target pointer.
-    // We attempt to place these next to eachother in the bitfield.
+    // We attempt to place these next to each other.
     // TODO: We should coalesce these bits and use the result of `fetch_or` to
     //       search for free bits in parallel.
     for (uint64_t mask = ~0ull; mask; mask = gpu::ballot(lane_mask, !result)) {
@@ -229,9 +234,8 @@ struct Slab {
       if (mask & (uint64_t(1) << gpu::get_lane_id())) {
         uint32_t before = cpp::AtomicRef(get_bitfield()[slot])
                               .fetch_or(1u << bit, cpp::MemoryOrder::RELAXED);
-        if (~before & (1 << bit)) {
+        if (~before & (1 << bit))
           result = ptr_from_index(index, chunk_size);
-        }
       }
     }
 
@@ -319,14 +323,14 @@ private:
   RefCounter ref{};
 
   // A sentinel value used to claim the pointer slot.
-  static constexpr uint64_t sentinel = cpp::numeric_limits<uint64_t>::max();
+  static constexpr uint64_t SENTINEL = cpp::numeric_limits<uint64_t>::max();
 
   // Should be called be a single lane for each different pointer.
   template <typename... Args>
   T *try_lock_impl(uint32_t n, uint64_t &count, Args &&...args) {
     T *expected = ptr.load(cpp::MemoryOrder::RELAXED);
     if (!expected &&
-        ptr.compare_exchange_strong(expected, reinterpret_cast<T *>(sentinel),
+        ptr.compare_exchange_strong(expected, reinterpret_cast<T *>(SENTINEL),
                                     cpp::MemoryOrder::RELAXED,
                                     cpp::MemoryOrder::RELAXED)) {
       count = cpp::numeric_limits<uint64_t>::max();
@@ -343,7 +347,7 @@ private:
       return mem;
     }
 
-    if (!expected || expected == reinterpret_cast<T *>(sentinel))
+    if (!expected || expected == reinterpret_cast<T *>(SENTINEL))
       return nullptr;
 
     if (!ref.acquire(n, count))
@@ -460,7 +464,7 @@ void *allocate(uint64_t size) {
   if (!size)
     return nullptr;
 
-  // Allocations larger than a single slab go directly to memory.
+  // Allocations requiring a full slab or more go directly to memory.
   if (size >= SLAB_SIZE / 2)
     return impl::rpc_allocate(impl::round_up<SLAB_SIZE>(size));
 
