@@ -1111,6 +1111,16 @@ protected:
       const char *filename = m_options.file_name.c_str();
 
       bool check_inlines = false;
+      const InlineStrategy inline_strategy = target.GetInlineStrategy();
+      if (inline_strategy == eInlineBreakpointsAlways)
+        check_inlines = true;
+      auto re_compute_check_inlines =
+          [&check_inlines, &inline_strategy](const FileSpec &file_spec) {
+            if (!file_spec.IsSourceImplementationFile() &&
+                inline_strategy == eInlineBreakpointsHeaders)
+              check_inlines = true;
+          };
+
       SymbolContextList sc_list;
       size_t num_matches = 0;
 
@@ -1122,17 +1132,25 @@ protected:
             ModuleSpec module_spec(module_file_spec);
             matching_modules.Clear();
             target.GetImages().FindModules(module_spec, matching_modules);
-            num_matches += matching_modules.ResolveSymbolContextForFilePath(
-                filename, 0, check_inlines,
+            FileSpec file_spec(filename);
+            re_compute_check_inlines(file_spec);
+
+            num_matches += matching_modules.ResolveSymbolContextsForFileSpec(
+                file_spec, 1, check_inlines,
                 SymbolContextItem(eSymbolContextModule |
-                                  eSymbolContextCompUnit),
+                                  eSymbolContextCompUnit |
+                                  eSymbolContextLineEntry),
                 sc_list);
           }
         }
       } else {
-        num_matches = target.GetImages().ResolveSymbolContextForFilePath(
-            filename, 0, check_inlines,
-            eSymbolContextModule | eSymbolContextCompUnit, sc_list);
+        FileSpec file_spec(filename);
+        re_compute_check_inlines(file_spec);
+        num_matches = target.GetImages().ResolveSymbolContextsForFileSpec(
+            file_spec, 1, check_inlines,
+            eSymbolContextModule | eSymbolContextCompUnit |
+                eSymbolContextLineEntry,
+            sc_list);
       }
 
       if (num_matches == 0) {
@@ -1179,10 +1197,18 @@ protected:
           if (m_options.num_lines == 0)
             m_options.num_lines = 10;
           const uint32_t column = 0;
+
+          // Headers aren't always in the DWARF but if they have
+          // executable code (eg., inlined-functions) then the callsite's
+          // file(s) will be found and assigned to
+          // sc.comp_unit->GetPrimarySupportFile, which is NOT what we want to
+          // print. Instead, we want to print the one from the line entry.
+          lldb::SupportFileSP found_file_sp = sc.line_entry.file_sp;
+
           target.GetSourceManager().DisplaySourceLinesWithLineNumbers(
-              sc.comp_unit->GetPrimarySupportFile(),
-              m_options.start_line, column, 0, m_options.num_lines, "",
-              &result.GetOutputStream(), GetBreakpointLocations());
+              found_file_sp, m_options.start_line, column, 0,
+              m_options.num_lines, "", &result.GetOutputStream(),
+              GetBreakpointLocations());
 
           result.SetStatus(eReturnStatusSuccessFinishResult);
         } else {
