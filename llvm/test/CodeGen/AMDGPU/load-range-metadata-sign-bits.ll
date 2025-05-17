@@ -112,8 +112,9 @@ define i64 @range_metadata_sext_i8_signed_range_i64(ptr addrspace(1) %ptr) {
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off glc
 ; SDAG-NEXT:    s_waitcnt vmcnt(0)
-; SDAG-NEXT:    v_lshlrev_b32_e32 v1, 23, v0
-; SDAG-NEXT:    v_ashrrev_i64 v[0:1], 55, v[0:1]
+; SDAG-NEXT:    v_mov_b32_e32 v1, 0
+; SDAG-NEXT:    v_lshlrev_b32_e32 v2, 23, v0
+; SDAG-NEXT:    v_ashrrev_i64 v[0:1], 55, v[1:2]
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-LABEL: range_metadata_sext_i8_signed_range_i64:
