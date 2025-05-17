@@ -1104,16 +1104,17 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
 bool MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
                                                   MemCpyInst *MDep,
                                                   BatchAAResults &BAA) {
+  // We can only optimize non-volatile memcpy's.
+  if (MDep->isVolatile())
+    return false;
+
   // If dep instruction is reading from our current input, then it is a noop
   // transfer and substituting the input won't change this instruction. Just
   // ignore the input and let someone else zap MDep. This handles cases like:
   //    memcpy(a <- a)
   //    memcpy(b <- a)
-  if (M->getSource() == MDep->getSource())
-    return false;
-
-  // We can only optimize non-volatile memcpy's.
-  if (MDep->isVolatile())
+  // This also avoids infinite loops.
+  if (BAA.isMustAlias(MDep->getDest(), MDep->getSource()))
     return false;
 
   int64_t MForwardOffset = 0;
@@ -1176,10 +1177,6 @@ bool MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
     if (CopySourceAlign)
       CopySourceAlign = commonAlignment(*CopySourceAlign, MForwardOffset);
   }
-
-  // Avoid infinite loops
-  if (BAA.isMustAlias(M->getSource(), CopySource))
-    return false;
 
   // Verify that the copied-from memory doesn't change in between the two
   // transfers.  For example, in:
