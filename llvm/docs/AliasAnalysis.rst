@@ -19,7 +19,7 @@ indicating that two pointers always point to the same object, might point to the
 same object, or are known to never point to the same object.
 
 The LLVM `AliasAnalysis
-<https://llvm.org/doxygen/classllvm_1_1AliasAnalysis.html>`__ class is the
+<https://llvm.org/doxygen/classllvm_1_1AAResults.html>`__ class is the
 primary interface used by clients and implementations of alias analyses in the
 LLVM system.  This class is the common interface between clients of alias
 analysis information and the implementations providing it, and is designed to
@@ -36,7 +36,7 @@ points about what exactly results mean.
 ``AliasAnalysis`` Class Overview
 ================================
 
-The `AliasAnalysis <https://llvm.org/doxygen/classllvm_1_1AliasAnalysis.html>`__
+The `AliasAnalysis <https://llvm.org/doxygen/classllvm_1_1AAResults.html>`__
 class defines the interface that the various alias analysis implementations
 should support.  This class exports two important enums: ``AliasResult`` and
 ``ModRefResult`` which represent the result of an alias query or a mod/ref
@@ -274,7 +274,7 @@ Interfaces which may be specified
 ---------------------------------
 
 All of the `AliasAnalysis
-<https://llvm.org/doxygen/classllvm_1_1AliasAnalysis.html>`__ virtual methods
+<https://llvm.org/doxygen/classllvm_1_1AAResults.html>`__ virtual methods
 default to providing :ref:`chaining <aliasanalysis-chaining>` to another alias
 analysis implementation, which ends up returning conservatively correct
 information (returning "May" Alias and "Mod/Ref" for alias and mod/ref queries
