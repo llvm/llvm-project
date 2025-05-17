@@ -683,6 +683,30 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
 
     return Builder.CreateInsertElement(I0, A, 1);
   }
+  case AMDGPU::BI__builtin_amdgcn_image_load_2d_f32_i32: {
+    llvm::Type *RetTy = llvm::Type::getFloatTy(Builder.getContext());
+    llvm::Type *IntTy = llvm::IntegerType::get(Builder.getContext(), 32u);
+
+    llvm::Value *imm0 = llvm::ConstantInt::get(IntTy, 1);
+    llvm::Value *arg0 = EmitScalarExpr(E->getArg(0));
+    llvm::Value *arg1 = EmitScalarExpr(E->getArg(1));
+    llvm::Value *arg2 = EmitScalarExpr(E->getArg(2));
+    llvm::Value *imm1 = llvm::ConstantInt::get(IntTy, 0);
+    llvm::Value *imm2 = llvm::ConstantInt::get(IntTy, 0);
+
+    SmallVector<Value *, 6> ArgTys;
+    ArgTys.push_back(imm0);
+    ArgTys.push_back(arg0);
+    ArgTys.push_back(arg1);
+    ArgTys.push_back(arg2);
+    ArgTys.push_back(imm1);
+    ArgTys.push_back(imm2);
+
+    llvm::CallInst *Call =
+        Builder.CreateIntrinsic(RetTy, Intrinsic::amdgcn_image_load_2d, ArgTys);
+
+    return Call;
+  }
   case AMDGPU::BI__builtin_amdgcn_mfma_scale_f32_16x16x128_f8f6f4:
   case AMDGPU::BI__builtin_amdgcn_mfma_scale_f32_32x32x64_f8f6f4: {
     llvm::FixedVectorType *VT = FixedVectorType::get(Builder.getInt32Ty(), 8);
