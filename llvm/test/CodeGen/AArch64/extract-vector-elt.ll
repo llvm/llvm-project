@@ -425,10 +425,7 @@ entry:
 define float @extract_v4i32_copysign_build_vector_const(<4 x float> %a, <4 x float> %b, i32 %c) {
 ; CHECK-SD-LABEL: extract_v4i32_copysign_build_vector_const:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    adrp x8, .LCPI17_0
-; CHECK-SD-NEXT:    mvni v1.4s, #128, lsl #24
-; CHECK-SD-NEXT:    ldr q2, [x8, :lo12:.LCPI17_0]
-; CHECK-SD-NEXT:    bif v0.16b, v2.16b, v1.16b
+; CHECK-SD-NEXT:    fabs v0.4s, v0.4s
 ; CHECK-SD-NEXT:    mov s0, v0.s[2]
 ; CHECK-SD-NEXT:    ret
 ;
