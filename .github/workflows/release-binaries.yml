@@ -243,7 +243,7 @@ jobs:
         # defaults to binutils on Linux, so we need the plugin so that users can
         # enable lto while using the default linker.
         if [ "$RUNNER_OS" = "Linux" ]; then
-          apt-get install binutils-dev
+          sudo apt-get install binutils-dev
         fi
 
         # There were some issues on the ARM64 MacOS runners with trying to build x86 object,
