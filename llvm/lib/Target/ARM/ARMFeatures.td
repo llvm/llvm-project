@@ -316,6 +316,12 @@ def FeatureExpandMLx      : SubtargetFeature<"expand-fp-mlx",
 def FeatureHasVMLxHazards : SubtargetFeature<"vmlx-hazards", "HasVMLxHazards",
                                              "true", "Has VMLx hazards">;
 
+// Cortex-M4 has an alignment hazard in its prefetcher that inserts a bubble
+// during some sequences of odd-halfword aligned 32 bit instructions.
+// https://developer.arm.com/documentation/ka006138/latest
+def FeatureHasCortexM4FAlignmentHazards : SubtargetFeature<"m4f-hazards",
+    "HasCortexM4FAlignmentHazards", "true", "Has Cortex-m4f alignment hazards">;
+
 // Some targets (e.g. Cortex-A9) want to convert VMOVRS, VMOVSR and VMOVS from
 // VFP to NEON, as an execution domain optimization.
 // True if VMOVRS, VMOVSR and VMOVS will be converted from VFP to NEON.

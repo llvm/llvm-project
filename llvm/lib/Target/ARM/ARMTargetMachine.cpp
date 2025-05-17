@@ -78,6 +78,10 @@ static cl::opt<cl::boolOrDefault>
 EnableGlobalMerge("arm-global-merge", cl::Hidden,
                   cl::desc("Enable the global merge pass"));
 
+static cl::opt<cl::boolOrDefault> EnablePostRAHazardRecognizer(
+    "arm-postra-hazard-recognizer", cl::Hidden,
+    cl::desc("Enable the post-ra hazard recognizer"));
+
 namespace llvm {
   void initializeARMExecutionDomainFixPass(PassRegistry&);
 }
@@ -605,6 +609,11 @@ void ARMPassConfig::addPreEmitPass2() {
   // be inserted at the start of blocks and at within blocks so this pass has to
   // come before those below.
   addPass(createARMFixCortexA57AES1742098Pass());
+  // Enable the hazard recognizer for cortex-m4f at -O2 or higher.
+  if ((EnablePostRAHazardRecognizer == cl::BOU_UNSET &&
+       CodeGenOptLevel::Default <= getOptLevel()) ||
+      EnablePostRAHazardRecognizer == cl::BOU_TRUE)
+    addPass(&PostRAHazardRecognizerID);
   // Inserts BTIs at the start of functions and indirectly-called basic blocks,
   // so passes cannot add to the start of basic blocks once this has run.
   addPass(createARMBranchTargetsPass());
