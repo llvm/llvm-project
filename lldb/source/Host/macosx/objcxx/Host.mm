@@ -595,7 +595,9 @@ static bool GetMacOSXProcessArgs(const ProcessInstanceInfoMatch *match_info_ptr,
       const llvm::Triple::ArchType triple_arch = triple.getArch();
       const bool check_for_ios_simulator =
           (triple_arch == llvm::Triple::x86 ||
-           triple_arch == llvm::Triple::x86_64);
+           triple_arch == llvm::Triple::x86_64 ||
+           triple_arch == llvm::Triple::aarch64);
+
       const char *cstr = data.GetCStr(&offset);
       if (cstr) {
         process_info.GetExecutableFile().SetFile(cstr, FileSpec::Style::native);
@@ -621,21 +623,24 @@ static bool GetMacOSXProcessArgs(const ProcessInstanceInfoMatch *match_info_ptr,
           }
 
           Environment &proc_env = process_info.GetEnvironment();
+          bool is_simulator = false;
           while ((cstr = data.GetCStr(&offset))) {
             if (cstr[0] == '\0')
               break;
 
-            if (check_for_ios_simulator) {
-              if (strncmp(cstr, "SIMULATOR_UDID=", strlen("SIMULATOR_UDID=")) ==
-                  0)
-                process_info.GetArchitecture().GetTriple().setOS(
-                    llvm::Triple::IOS);
-              else
-                process_info.GetArchitecture().GetTriple().setOS(
-                    llvm::Triple::MacOSX);
-            }
+            if (check_for_ios_simulator &&
+                strncmp(cstr, "SIMULATOR_UDID=", strlen("SIMULATOR_UDID=")) ==
+                    0)
+              is_simulator = true;
 
             proc_env.insert(cstr);
+          }
+          llvm::Triple &triple = process_info.GetArchitecture().GetTriple();
+          if (is_simulator) {
+            triple.setOS(llvm::Triple::IOS);
+            triple.setEnvironment(llvm::Triple::Simulator);
+          } else {
+            triple.setOS(llvm::Triple::MacOSX);
           }
           return true;
         }
