@@ -661,7 +661,7 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
     // These sizes in the raw file are zero because we constructed them in the
     // Correlator.
     if (!(DataSize == 0 && NamesSize == 0 && CountersDelta == 0 &&
-          NamesDelta == 0))
+          BitmapDelta == 0 && NamesDelta == 0))
       return error(instrprof_error::unexpected_correlation_info);
     Data = Correlator->getDataPointer();
     DataEnd = Data + Correlator->getDataSize();

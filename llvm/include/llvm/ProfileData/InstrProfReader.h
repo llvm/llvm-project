@@ -470,7 +470,8 @@ private:
   bool atEnd() const { return Data == DataEnd; }
 
   void advanceData() {
-    // `CountersDelta` is a constant zero when using debug info correlation.
+    // `CountersDelta` and `BitmapDelta` are constant zero when using debug info
+    // correlation.
     if (!Correlator && !BIDFetcherCorrelator) {
       // The initial CountersDelta is the in-memory address difference between
       // the data and counts sections:
