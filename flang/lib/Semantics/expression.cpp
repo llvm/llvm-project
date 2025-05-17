@@ -421,7 +421,7 @@ static void CheckSubscripts(
 
 static void CheckSubscripts(
     semantics::SemanticsContext &context, CoarrayRef &ref) {
-  const auto &base = ref.GetBase();
+  const auto &base{ref.GetBase()};
   const Symbol &coarraySymbol{base.GetLastSymbol()};
   Shape lb, ub;
   if (FoldSubscripts(context, coarraySymbol, ref.subscript(), lb, ub)) {
