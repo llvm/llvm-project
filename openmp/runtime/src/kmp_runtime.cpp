@@ -587,9 +587,7 @@ static void __kmp_fini_allocator() {
 /* ------------------------------------------------------------------------ */
 
 #if ENABLE_LIBOMPTARGET
-static void __kmp_init_omptarget() {
-  __kmp_init_target_task();
-}
+static void __kmp_init_omptarget() { __kmp_init_target_task(); }
 #endif
 
 /* ------------------------------------------------------------------------ */
@@ -1542,7 +1540,7 @@ __kmp_fork_in_teams(ident_t *loc, int gtid, kmp_team_t *parent_team,
                              ,
                              exit_frame_p
 #endif
-                             );
+      );
     }
 
 #if OMPT_SUPPORT
@@ -1738,7 +1736,7 @@ __kmp_serial_fork_call(ident_t *loc, int gtid, enum fork_context_e call_context,
     if (!ap) {
       // revert change made in __kmpc_serialized_parallel()
       master_th->th.th_serial_team->t.t_level--;
-// Get args from parent team for teams construct
+      // Get args from parent team for teams construct
 
 #if OMPT_SUPPORT
       void *dummy;
@@ -1777,7 +1775,7 @@ __kmp_serial_fork_call(ident_t *loc, int gtid, enum fork_context_e call_context,
                                ,
                                exit_frame_p
 #endif
-                               );
+        );
       }
 
 #if OMPT_SUPPORT
@@ -1876,7 +1874,7 @@ __kmp_serial_fork_call(ident_t *loc, int gtid, enum fork_context_e call_context,
                                ,
                                exit_frame_p
 #endif
-                               );
+        );
       }
 
 #if OMPT_SUPPORT
@@ -3305,29 +3303,29 @@ static kmp_internal_control_t __kmp_get_global_icvs(void) {
   KMP_DEBUG_ASSERT(__kmp_nested_proc_bind.used > 0);
 
   kmp_internal_control_t g_icvs = {
-    0, // int serial_nesting_level; //corresponds to value of th_team_serialized
-    (kmp_int8)__kmp_global.g.g_dynamic, // internal control for dynamic
-    // adjustment of threads (per thread)
-    (kmp_int8)__kmp_env_blocktime, // int bt_set; //internal control for
-    // whether blocktime is explicitly set
-    __kmp_dflt_blocktime, // int blocktime; //internal control for blocktime
+      0, // int serial_nesting_level; //corresponds to value of
+         // th_team_serialized
+      (kmp_int8)__kmp_global.g.g_dynamic, // internal control for dynamic
+      // adjustment of threads (per thread)
+      (kmp_int8)__kmp_env_blocktime, // int bt_set; //internal control for
+      // whether blocktime is explicitly set
+      __kmp_dflt_blocktime, // int blocktime; //internal control for blocktime
 #if KMP_USE_MONITOR
-    __kmp_bt_intervals, // int bt_intervals; //internal control for blocktime
+      __kmp_bt_intervals, // int bt_intervals; //internal control for blocktime
 // intervals
 #endif
-    __kmp_dflt_team_nth, // int nproc; //internal control for # of threads for
-    // next parallel region (per thread)
-    // (use a max ub on value if __kmp_parallel_initialize not called yet)
-    __kmp_cg_max_nth, // int thread_limit;
-    __kmp_task_max_nth, // int task_thread_limit; // to set the thread_limit
-    // on task. This is used in the case of target thread_limit
-    __kmp_dflt_max_active_levels, // int max_active_levels; //internal control
-    // for max_active_levels
-    r_sched, // kmp_r_sched_t sched; //internal control for runtime schedule
-    // {sched,chunk} pair
-    __kmp_nested_proc_bind.bind_types[0],
-    __kmp_default_device,
-    NULL // struct kmp_internal_control *next;
+      __kmp_dflt_team_nth, // int nproc; //internal control for # of threads for
+      // next parallel region (per thread)
+      // (use a max ub on value if __kmp_parallel_initialize not called yet)
+      __kmp_cg_max_nth, // int thread_limit;
+      __kmp_task_max_nth, // int task_thread_limit; // to set the thread_limit
+      // on task. This is used in the case of target thread_limit
+      __kmp_dflt_max_active_levels, // int max_active_levels; //internal control
+      // for max_active_levels
+      r_sched, // kmp_r_sched_t sched; //internal control for runtime schedule
+      // {sched,chunk} pair
+      __kmp_nested_proc_bind.bind_types[0], __kmp_default_device,
+      NULL // struct kmp_internal_control *next;
   };
 
   return g_icvs;
@@ -6729,10 +6727,12 @@ static inline char *__kmp_reg_status_name() {
    env var can not be found, because the name will contain different pid. */
 // macOS* complains about name being too long with additional getuid()
 #if KMP_OS_UNIX && !KMP_OS_DARWIN && KMP_DYNAMIC_LIB
-  return __kmp_str_format("__KMP_REGISTERED_LIB_%d_%d", (int)getpid(),
-                          (int)getuid());
+  return __kmp_str_format("__KMP_REGISTERED_LIB_%" KMP_UINT32_SPEC
+                          "_%" KMP_UINT32_SPEC,
+                          (kmp_uint32)getpid(), (kmp_uint32)getuid());
 #else
-  return __kmp_str_format("__KMP_REGISTERED_LIB_%d", (int)getpid());
+  return __kmp_str_format("__KMP_REGISTERED_LIB_%" KMP_UINT32_SPEC,
+                          (kmp_uint32)getpid());
 #endif
 } // __kmp_reg_status_get
 
