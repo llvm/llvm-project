@@ -15,6 +15,7 @@
 
 #include <flat_map>
 #include <ranges>
+#include <vector>
 
 #include "boolean_testable.h"
 

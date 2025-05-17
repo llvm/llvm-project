@@ -14,6 +14,7 @@
 // value as long as the returned type is implicitly convertible to bool.
 
 #include <flat_map>
+#include <vector>
 #include <ranges>
 
 #include "boolean_testable.h"
