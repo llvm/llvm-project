@@ -5903,21 +5903,21 @@ void Process::Flush() {
   m_queue_list_stop_id = 0;
 }
 
-lldb::addr_t Process::GetCodeAddressMask() {
+addr_t Process::GetCodeAddressMask() {
   if (uint32_t num_bits_setting = GetVirtualAddressableBits())
     return AddressableBits::AddressableBitToMask(num_bits_setting);
 
   return m_code_address_mask;
 }
 
-lldb::addr_t Process::GetDataAddressMask() {
+addr_t Process::GetDataAddressMask() {
   if (uint32_t num_bits_setting = GetVirtualAddressableBits())
     return AddressableBits::AddressableBitToMask(num_bits_setting);
 
   return m_data_address_mask;
 }
 
-lldb::addr_t Process::GetHighmemCodeAddressMask() {
+addr_t Process::GetHighmemCodeAddressMask() {
   if (uint32_t num_bits_setting = GetHighmemVirtualAddressableBits())
     return AddressableBits::AddressableBitToMask(num_bits_setting);
 
@@ -5926,7 +5926,7 @@ lldb::addr_t Process::GetHighmemCodeAddressMask() {
   return GetCodeAddressMask();
 }
 
-lldb::addr_t Process::GetHighmemDataAddressMask() {
+addr_t Process::GetHighmemDataAddressMask() {
   if (uint32_t num_bits_setting = GetHighmemVirtualAddressableBits())
     return AddressableBits::AddressableBitToMask(num_bits_setting);
 
@@ -6823,9 +6823,21 @@ void Process::SetAddressableBitMasks(AddressableBits bit_masks) {
   }
 
   if (high_memory_addr_bits != 0) {
-    addr_t high_addr_mask =
-        AddressableBits::AddressableBitToMask(high_memory_addr_bits);
-    SetHighmemCodeAddressMask(high_addr_mask);
-    SetHighmemDataAddressMask(high_addr_mask);
+    // If the same high and low mem address bits were specified,
+    // and we don't have a highmem setting for code and data currently,
+    // don't set the highmem masks.
+    // When we have separate high- and low- masks, the user
+    // setting `virtual-addressable-bits` only overrides the low
+    // memory masks, which most users would be surprised by.
+    // Leave the high memory masks unset, to make it clear that only the
+    // low memory masks are active.
+    if (high_memory_addr_bits != low_memory_addr_bits ||
+        m_highmem_code_address_mask != LLDB_INVALID_ADDRESS_MASK ||
+        m_highmem_data_address_mask != LLDB_INVALID_ADDRESS_MASK) {
+      addr_t high_addr_mask =
+          AddressableBits::AddressableBitToMask(high_memory_addr_bits);
+      SetHighmemCodeAddressMask(high_addr_mask);
+      SetHighmemDataAddressMask(high_addr_mask);
+    }
   }
 }
