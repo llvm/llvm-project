@@ -882,6 +882,28 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
     }
     break;
   }
+  case TargetOpcode::G_SHUFFLE_VECTOR: {
+    // Collect the minimum number of sign bits that are shared by every vector
+    // element referenced by the shuffle.
+    APInt DemandedLHS, DemandedRHS;
+    Register Src1 = MI.getOperand(1).getReg();
+    unsigned NumElts = MRI.getType(Src1).getNumElements();
+    if (!getShuffleDemandedElts(NumElts, MI.getOperand(3).getShuffleMask(),
+                                DemandedElts, DemandedLHS, DemandedRHS))
+      return 1;
+
+    if (!!DemandedLHS)
+      FirstAnswer = computeNumSignBits(Src1, DemandedLHS, Depth + 1);
+    // If we don't know anything, early out and try computeKnownBits fall-back.
+    if (FirstAnswer == 1)
+      break;
+    if (!!DemandedRHS) {
+      unsigned Tmp2 =
+          computeNumSignBits(MI.getOperand(2).getReg(), DemandedRHS, Depth + 1);
+      FirstAnswer = std::min(FirstAnswer, Tmp2);
+    }
+    break;
+  }
   case TargetOpcode::G_INTRINSIC:
   case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
   case TargetOpcode::G_INTRINSIC_CONVERGENT:
