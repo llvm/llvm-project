@@ -13,9 +13,11 @@ define void @test_pr50940(ptr %A, ptr %B) {
 ; CHECK-NEXT:    br label [[INNER_LVER_CHECK:%.*]]
 ; CHECK:       inner.lver.check:
 ; CHECK-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[A]], i64 8
+; CHECK-NEXT:    [[SCEVGEP_FR:%.*]] = freeze ptr [[UGLYGEP]]
+; CHECK-NEXT:    [[SCEVGEP1_FR:%.*]] = freeze ptr [[UGLYGEP1]]
 ; CHECK-NEXT:    [[UGLYGEP2:%.*]] = getelementptr i8, ptr [[B:%.*]], i64 2
-; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[UGLYGEP]], [[UGLYGEP2]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[B]], [[UGLYGEP1]]
+; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[SCEVGEP_FR]], [[UGLYGEP2]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[B]], [[SCEVGEP1_FR]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[INNER_PH3_LVER_ORIG:%.*]], label [[INNER_PH3_LDIST1:%.*]]
 ; CHECK:       inner.ph3.lver.orig:
@@ -32,8 +34,8 @@ define void @test_pr50940(ptr %A, ptr %B) {
 ; CHECK-NEXT:    br label [[INNER_LDIST1:%.*]]
 ; CHECK:       inner.ldist1:
 ; CHECK-NEXT:    [[IV_LDIST1:%.*]] = phi i16 [ 0, [[INNER_PH3_LDIST1]] ], [ [[IV_NEXT_LDIST1:%.*]], [[INNER_LDIST1]] ]
-; CHECK-NEXT:    [[L_LDIST1:%.*]] = load <2 x i16>, ptr [[UGLYGEP]], align 1, !alias.scope !0, !noalias !3
-; CHECK-NEXT:    store i16 0, ptr [[GEP_A_3]], align 1, !alias.scope !0, !noalias !3
+; CHECK-NEXT:    [[L_LDIST1:%.*]] = load <2 x i16>, ptr [[UGLYGEP]], align 1, !alias.scope [[META0:![0-9]+]], !noalias [[META3:![0-9]+]]
+; CHECK-NEXT:    store i16 0, ptr [[GEP_A_3]], align 1, !alias.scope [[META0]], !noalias [[META3]]
 ; CHECK-NEXT:    [[IV_NEXT_LDIST1]] = add nuw nsw i16 [[IV_LDIST1]], 1
 ; CHECK-NEXT:    [[C_1_LDIST1:%.*]] = icmp ult i16 [[IV_LDIST1]], 38
 ; CHECK-NEXT:    br i1 [[C_1_LDIST1]], label [[INNER_LDIST1]], label [[INNER_PH3:%.*]]
@@ -41,7 +43,7 @@ define void @test_pr50940(ptr %A, ptr %B) {
 ; CHECK-NEXT:    br label [[INNER:%.*]]
 ; CHECK:       inner:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i16 [ 0, [[INNER_PH3]] ], [ [[IV_NEXT:%.*]], [[INNER]] ]
-; CHECK-NEXT:    store i16 1, ptr [[B]], align 1, !alias.scope !3
+; CHECK-NEXT:    store i16 1, ptr [[B]], align 1, !alias.scope [[META3]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i16 [[IV]], 1
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i16 [[IV]], 38
 ; CHECK-NEXT:    br i1 [[C_1]], label [[INNER]], label [[EXIT_LOOPEXIT4:%.*]]

@@ -16,8 +16,10 @@ define void @test1_select_invariant(ptr %src.1, ptr %src.2, ptr %dst, i1 %c, i8 
 ; CHECK-NEXT:    [[TMP5:%.*]] = add nuw nsw i64 [[TMP4]], 1
 ; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[DST:%.*]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[PTR_SEL]], i64 1
-; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[DST]], [[UGLYGEP1]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[PTR_SEL]], [[UGLYGEP]]
+; CHECK-NEXT:    [[PTR_SEL_FR:%.*]] = freeze ptr [[PTR_SEL]]
+; CHECK-NEXT:    [[SCEVGEP1_FR:%.*]] = freeze ptr [[UGLYGEP1]]
+; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[DST]], [[SCEVGEP1_FR]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[PTR_SEL_FR]], [[UGLYGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
@@ -169,16 +171,12 @@ define void @test_loop_dependent_select2(ptr %src.1, ptr %src.2, ptr %dst, i8 %n
 ; CHECK-NEXT:    [[TMP5:%.*]] = add nuw nsw i64 [[TMP4]], 1
 ; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[DST:%.*]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[SRC_1:%.*]], i64 1
-; CHECK-NEXT:    [[SRC_1_FR:%.*]] = freeze ptr [[SRC_1]]
-; CHECK-NEXT:    [[UGLYGEP1_FR:%.*]] = freeze ptr [[UGLYGEP1]]
 ; CHECK-NEXT:    [[UGLYGEP2:%.*]] = getelementptr i8, ptr [[SRC_2:%.*]], i64 1
-; CHECK-NEXT:    [[SRC_2_FR:%.*]] = freeze ptr [[SRC_2]]
-; CHECK-NEXT:    [[UGLYGEP2_FR:%.*]] = freeze ptr [[UGLYGEP2]]
-; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[DST]], [[UGLYGEP1_FR]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[SRC_1_FR]], [[UGLYGEP]]
+; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[DST]], [[UGLYGEP1]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[SRC_1]], [[UGLYGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; CHECK-NEXT:    [[BOUND03:%.*]] = icmp ult ptr [[DST]], [[UGLYGEP2_FR]]
-; CHECK-NEXT:    [[BOUND14:%.*]] = icmp ult ptr [[SRC_2_FR]], [[UGLYGEP]]
+; CHECK-NEXT:    [[BOUND03:%.*]] = icmp ult ptr [[DST]], [[UGLYGEP2]]
+; CHECK-NEXT:    [[BOUND14:%.*]] = icmp ult ptr [[SRC_2]], [[UGLYGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT5:%.*]] = and i1 [[BOUND03]], [[BOUND14]]
 ; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT5]]
 ; CHECK-NEXT:    br i1 [[CONFLICT_RDX]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
@@ -256,13 +254,11 @@ define void @test_loop_dependent_select_first_ptr_noundef(ptr noundef %src.1, pt
 ; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[DST:%.*]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[SRC_1:%.*]], i64 1
 ; CHECK-NEXT:    [[UGLYGEP2:%.*]] = getelementptr i8, ptr [[SRC_2:%.*]], i64 1
-; CHECK-NEXT:    [[SRC_2_FR:%.*]] = freeze ptr [[SRC_2]]
-; CHECK-NEXT:    [[UGLYGEP2_FR:%.*]] = freeze ptr [[UGLYGEP2]]
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[DST]], [[UGLYGEP1]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[SRC_1]], [[UGLYGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; CHECK-NEXT:    [[BOUND03:%.*]] = icmp ult ptr [[DST]], [[UGLYGEP2_FR]]
-; CHECK-NEXT:    [[BOUND14:%.*]] = icmp ult ptr [[SRC_2_FR]], [[UGLYGEP]]
+; CHECK-NEXT:    [[BOUND03:%.*]] = icmp ult ptr [[DST]], [[UGLYGEP2]]
+; CHECK-NEXT:    [[BOUND14:%.*]] = icmp ult ptr [[SRC_2]], [[UGLYGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT5:%.*]] = and i1 [[BOUND03]], [[BOUND14]]
 ; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT5]]
 ; CHECK-NEXT:    br i1 [[CONFLICT_RDX]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
@@ -339,11 +335,9 @@ define void @test_loop_dependent_select_second_ptr_noundef(ptr %src.1, ptr nound
 ; CHECK-NEXT:    [[TMP5:%.*]] = add nuw nsw i64 [[TMP4]], 1
 ; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[DST:%.*]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[SRC_1:%.*]], i64 1
-; CHECK-NEXT:    [[SRC_1_FR:%.*]] = freeze ptr [[SRC_1]]
-; CHECK-NEXT:    [[UGLYGEP1_FR:%.*]] = freeze ptr [[UGLYGEP1]]
 ; CHECK-NEXT:    [[UGLYGEP2:%.*]] = getelementptr i8, ptr [[SRC_2:%.*]], i64 1
-; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[DST]], [[UGLYGEP1_FR]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[SRC_1_FR]], [[UGLYGEP]]
+; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[DST]], [[UGLYGEP1]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[SRC_1]], [[UGLYGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    [[BOUND03:%.*]] = icmp ult ptr [[DST]], [[UGLYGEP2]]
 ; CHECK-NEXT:    [[BOUND14:%.*]] = icmp ult ptr [[SRC_2]], [[UGLYGEP]]

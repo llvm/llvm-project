@@ -45,8 +45,10 @@ define void @reduced(ptr %0, ptr %1, i64 %iv, ptr %2, i64 %iv76, i64 %iv93) {
 ; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[TMP0]], i64 [[TMP9]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = add i64 [[TMP9]], 4
 ; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[TMP0]], i64 [[TMP10]]
-; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[TMP1]], [[SCEVGEP3]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[SCEVGEP2]], [[SCEVGEP]]
+; CHECK-NEXT:    [[SCEVGEP2_FR:%.*]] = freeze ptr [[SCEVGEP2]]
+; CHECK-NEXT:    [[SCEVGEP3_FR:%.*]] = freeze ptr [[SCEVGEP3]]
+; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[TMP1]], [[SCEVGEP3_FR]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[SCEVGEP2_FR]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH5]], label [[VECTOR_PH6:%.*]]
 ; CHECK:       vector.ph6:
@@ -55,7 +57,7 @@ define void @reduced(ptr %0, ptr %1, i64 %iv, ptr %2, i64 %iv76, i64 %iv93) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY10:%.*]]
 ; CHECK:       vector.body9:
 ; CHECK-NEXT:    [[INDEX12:%.*]] = phi i64 [ 0, [[VECTOR_PH6]] ], [ [[INDEX_NEXT13:%.*]], [[VECTOR_BODY10]] ]
-; CHECK-NEXT:    store i32 0, ptr [[TMP1]], align 4, !alias.scope !4, !noalias !7
+; CHECK-NEXT:    store i32 0, ptr [[TMP1]], align 4, !alias.scope [[META4:![0-9]+]], !noalias [[META7:![0-9]+]]
 ; CHECK-NEXT:    [[INDEX_NEXT13]] = add nuw i64 [[INDEX12]], 4
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT13]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK12:%.*]], label [[VECTOR_BODY10]], !llvm.loop [[LOOP9:![0-9]+]]
@@ -75,8 +77,10 @@ define void @reduced(ptr %0, ptr %1, i64 %iv, ptr %2, i64 %iv76, i64 %iv93) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = shl nuw nsw i64 [[IDXPROM_I_I61]], 2
 ; CHECK-NEXT:    [[TMP13:%.*]] = add nuw nsw i64 [[TMP12]], 4
 ; CHECK-NEXT:    [[SCEVGEP16:%.*]] = getelementptr i8, ptr [[TMP0]], i64 [[TMP13]]
-; CHECK-NEXT:    [[BOUND017:%.*]] = icmp ult ptr [[TMP1]], [[SCEVGEP16]]
-; CHECK-NEXT:    [[BOUND118:%.*]] = icmp ult ptr [[ARRAYIDX_I_I62]], [[SCEVGEP15]]
+; CHECK-NEXT:    [[ARRAYIDX_I_I62_FR:%.*]] = freeze ptr [[ARRAYIDX_I_I62]]
+; CHECK-NEXT:    [[SCEVGEP17_FR:%.*]] = freeze ptr [[SCEVGEP16]]
+; CHECK-NEXT:    [[BOUND017:%.*]] = icmp ult ptr [[TMP1]], [[SCEVGEP17_FR]]
+; CHECK-NEXT:    [[BOUND118:%.*]] = icmp ult ptr [[ARRAYIDX_I_I62_FR]], [[SCEVGEP15]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT19:%.*]] = and i1 [[BOUND017]], [[BOUND118]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT19]], label [[SCALAR_PH21]], label [[VECTOR_PH24:%.*]]
 ; CHECK:       vector.ph23:
