@@ -11,16 +11,15 @@
 //
 // std::pointer_traits specialization
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+#include "test_macros.h"
 
-#include <__iterator/bounded_iter.h>
+#include TEST_LIBCPP_INTERNAL_POSSIBLY_FROZEN_INCLUDE(__iterator/bounded_iter.h)
 #include <cassert>
 #include <cstddef>
 #include <memory>
 #include <type_traits>
 
 #include "test_iterators.h"
-#include "test_macros.h"
 
 template <class Iter>
 TEST_CONSTEXPR_CXX14 bool tests() {

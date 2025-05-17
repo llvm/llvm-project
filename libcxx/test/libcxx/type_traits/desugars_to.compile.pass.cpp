@@ -6,20 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: FROZEN-CXX03-HEADERS-FIXME
-
 // This test requires variable templates
 // UNSUPPORTED: gcc && c++11
 
-#include <__type_traits/desugars_to.h>
+#include "test_macros.h"
+
+#include TEST_LIBCPP_INTERNAL_POSSIBLY_FROZEN_INCLUDE(__type_traits/desugars_to.h)
 
 struct Tag {};
 struct Operation {};
 
-namespace std {
 template <>
-bool const __desugars_to_v<Tag, Operation> = true;
-}
+bool const std::__desugars_to_v<Tag, Operation> = true;
 
 void tests() {
   // Make sure that __desugars_to is false by default

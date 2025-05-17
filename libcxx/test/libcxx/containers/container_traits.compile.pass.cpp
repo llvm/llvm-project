@@ -9,9 +9,9 @@
 // <__type_traits/container_traits.h>
 //
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+#include "test_macros.h"
 
-#include <__type_traits/container_traits.h>
+#include TEST_LIBCPP_INTERNAL_POSSIBLY_FROZEN_INCLUDE(__type_traits/container_traits.h)
 
 #include <deque>
 #include <forward_list>

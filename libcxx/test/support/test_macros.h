@@ -20,6 +20,13 @@
 #  include <ciso646>
 #endif
 
+
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  define TEST_LIBCPP_INTERNAL_POSSIBLY_FROZEN_INCLUDE(path) <__cxx03/path>
+#else
+#  define TEST_LIBCPP_INTERNAL_POSSIBLY_FROZEN_INCLUDE(path) <path>
+#endif
+
 #define TEST_STRINGIZE_IMPL(...) #__VA_ARGS__
 #define TEST_STRINGIZE(...) TEST_STRINGIZE_IMPL(__VA_ARGS__)
 

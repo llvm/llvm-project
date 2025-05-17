@@ -14,9 +14,9 @@
 // returns false when there's no constant evaluation support from the compiler.
 //  as well as when called not in a constexpr context
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+#include "test_macros.h"
 
-#include <__type_traits/is_constant_evaluated.h>
+#include TEST_LIBCPP_INTERNAL_POSSIBLY_FROZEN_INCLUDE(__type_traits/is_constant_evaluated.h)
 #include <cassert>
 
 #include "test_macros.h"

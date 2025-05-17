@@ -12,12 +12,12 @@
 // To allow checking that self-move works correctly.
 // ADDITIONAL_COMPILE_FLAGS: -Wno-self-move
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 // template<class _Alloc>
 // struct __allocation_guard;
 
-#include <__memory/allocation_guard.h>
+#include "test_macros.h"
+
+#include TEST_LIBCPP_INTERNAL_POSSIBLY_FROZEN_INCLUDE(__memory/allocation_guard.h)
 #include <cassert>
 #include <type_traits>
 #include <utility>
