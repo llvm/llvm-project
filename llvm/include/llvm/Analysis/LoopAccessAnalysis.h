@@ -192,7 +192,8 @@ public:
   /// of a write access.
   void addAccess(LoadInst *LI);
 
-  /// Check whether the dependencies between the accesses are safe.
+  /// Check whether the dependencies between the accesses are safe, and records
+  /// the dependence information in Dependences if so.
   ///
   /// Only checks sets with elements in \p CheckDeps.
   bool areDepsSafe(const DepCandidates &AccessSets,
@@ -779,10 +780,14 @@ private:
 
   /// We need to check that all of the pointers in this list are disjoint
   /// at runtime. Using std::unique_ptr to make using move ctor simpler.
+  /// This list may contain only partial information when we've failed to
+  /// analyze all the memory accesses in the loop (i.e. CanVecMem is false).
   std::unique_ptr<RuntimePointerChecking> PtrRtChecking;
 
-  /// the Memory Dependence Checker which can determine the
+  /// The Memory Dependence Checker which can determine the
   /// loop-independent and loop-carried dependences between memory accesses.
+  /// This will be empty if we've failed to analyze all the memory access in the
+  /// loop (i.e. CanVecMem is false).
   std::unique_ptr<MemoryDepChecker> DepChecker;
 
   Loop *TheLoop;
