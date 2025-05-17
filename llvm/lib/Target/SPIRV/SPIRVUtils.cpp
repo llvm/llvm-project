@@ -370,6 +370,24 @@ Type *getMDOperandAsType(const MDNode *N, unsigned I) {
   return toTypedPointer(ElementTy);
 }
 
+llvm::SmallVector<uint32_t>
+getConstantFromMetadata(llvm::SmallVector<llvm::MDNode *> &MetaDataList) {
+  llvm::SmallVector<uint32_t> res;
+  for (auto metaDataNode : MetaDataList) {
+    if (metaDataNode->getNumOperands() > 0) {
+      if (auto *CMD = llvm::dyn_cast<llvm::ConstantAsMetadata>(
+              metaDataNode->getOperand(0))) {
+        if (auto *CI = llvm::dyn_cast<llvm::ConstantInt>(CMD->getValue())) {
+          APInt val = CI->getValue();
+          int64_t decVal = val.getZExtValue();
+          res.push_back(decVal);
+        }
+      }
+    }
+  }
+  return res;
+}
+
 // The set of names is borrowed from the SPIR-V translator.
 // TODO: may be implemented in SPIRVBuiltins.td.
 static bool isPipeOrAddressSpaceCastBI(const StringRef MangledName) {

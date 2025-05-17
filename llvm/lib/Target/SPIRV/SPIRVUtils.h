@@ -243,6 +243,10 @@ bool isSpvIntrinsic(const Value *Arg);
 // Get type of i-th operand of the metadata node.
 Type *getMDOperandAsType(const MDNode *N, unsigned I);
 
+// Extract the constant value from the metadata node.
+llvm::SmallVector<uint32_t>
+getConstantFromMetadata(llvm::SmallVector<llvm::MDNode *> &MetaDataList);
+
 // If OpenCL or SPIR-V builtin function name is recognized, return a demangled
 // name, otherwise return an empty string.
 std::string getOclOrSpirvBuiltinDemangledName(StringRef Name);

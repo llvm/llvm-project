@@ -920,6 +920,12 @@ static void addOpDecorateReqs(const MachineInstr &MI, unsigned DecIndex,
   } else if (Dec == SPIRV::Decoration::FPMaxErrorDecorationINTEL) {
     Reqs.addRequirements(SPIRV::Capability::FPMaxErrorINTEL);
     Reqs.addExtension(SPIRV::Extension::SPV_INTEL_fp_max_error);
+  } else if (Dec == SPIRV::Decoration::StallEnableINTEL) {
+    Reqs.addRequirements(SPIRV::Capability::FPGAClusterAttributesINTEL);
+    Reqs.addExtension(SPIRV::Extension::SPV_INTEL_fpga_cluster_attributes);
+  } else if (Dec == SPIRV::Decoration::StallFreeINTEL) {
+    Reqs.addRequirements(SPIRV::Capability::FPGAClusterAttributesV2INTEL);
+    Reqs.addExtension(SPIRV::Extension::SPV_INTEL_fpga_cluster_attributes);
   }
 }
 
@@ -1976,6 +1982,38 @@ static void handleMIFlagDecoration(MachineInstr &I, const SPIRVSubtarget &ST,
   buildOpDecorate(DstReg, I, TII, SPIRV::Decoration::FPFastMathMode, {FMFlags});
 }
 
+static void handleFunctionDecoration(MachineInstr &MI, const SPIRVSubtarget &ST,
+                                     const SPIRVInstrInfo &TII,
+                                     SPIRV::ModuleAnalysisInfo &MAI,
+                                     llvm::Module::const_iterator F) {
+  Register FuncReg = MI.getOperand(0).getReg();
+  llvm::SmallVector<std::pair<unsigned int, llvm::MDNode *>> MetaDataList;
+
+  // Add function-level decorations based on metadata
+  F->getAllMetadata(MetaDataList);
+  for (auto &MetaData : MetaDataList) {
+    if (MetaData.second == F->getMetadata("stall_enable") ||
+        MetaData.second == F->getMetadata("stall_free")) {
+      if (ST.canUseExtension(
+              SPIRV::Extension::SPV_INTEL_fpga_cluster_attributes)) {
+        llvm::SmallVector<llvm::MDNode *> MetaDataVector;
+        MetaDataVector.push_back(MetaData.second);
+        llvm::SmallVector<uint32_t> params =
+            getConstantFromMetadata(MetaDataVector);
+
+        if (params[0] == 1) {
+          if (MetaData.second == F->getMetadata("stall_enable"))
+            buildOpDecorate(FuncReg, MI, TII,
+                            SPIRV::Decoration::StallEnableINTEL, {});
+          else
+            buildOpDecorate(FuncReg, MI, TII, SPIRV::Decoration::StallFreeINTEL,
+                            {});
+        }
+      }
+    }
+  }
+}
+
 // Walk all functions and add decorations related to MI flags.
 static void addDecorations(const Module &M, const SPIRVInstrInfo &TII,
                            MachineModuleInfo *MMI, const SPIRVSubtarget &ST,
@@ -1984,9 +2022,13 @@ static void addDecorations(const Module &M, const SPIRVInstrInfo &TII,
     MachineFunction *MF = MMI->getMachineFunction(*F);
     if (!MF)
       continue;
-    for (auto &MBB : *MF)
-      for (auto &MI : MBB)
+    for (auto &MBB : *MF) {
+      for (auto &MI : MBB) {
         handleMIFlagDecoration(MI, ST, TII, MAI.Reqs);
+        if (MI.getOpcode() == SPIRV::OpFunction)
+          handleFunctionDecoration(MI, ST, TII, MAI, F);
+      }
+    }
   }
 }
 
