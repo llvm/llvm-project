@@ -57,11 +57,15 @@ static void ForEachFormatterInModule(
       cursor.seek(cursor.tell() - 1);
       break;
     }
+    if (!cursor || cursor.tell() >= section_size)
+      break;
+
     uint64_t version = section.getULEB128(cursor);
     uint64_t record_size = section.getULEB128(cursor);
     if (version == 1) {
-      llvm::DataExtractor record(section.getData().drop_front(cursor.tell()),
-                                 le, addr_size);
+      llvm::DataExtractor record(
+          section.getData().drop_front(cursor.tell()).take_front(record_size),
+          le, addr_size);
       llvm::DataExtractor::Cursor cursor(0);
       uint64_t type_size = record.getULEB128(cursor);
       llvm::StringRef type_name = record.getBytes(cursor, type_size);
