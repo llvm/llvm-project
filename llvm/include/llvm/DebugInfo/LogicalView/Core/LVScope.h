@@ -407,6 +407,9 @@ class LVScopeCompileUnit final : public LVScope {
   // Toolchain producer.
   size_t ProducerIndex = 0;
 
+  // Source language.
+  LVSourceLanguage SourceLanguage{};
+
   // Compilation directory name.
   size_t CompilationDirectoryIndex = 0;
 
@@ -539,6 +542,9 @@ public:
   void setProducer(StringRef ProducerName) override {
     ProducerIndex = getStringPool().getIndex(ProducerName);
   }
+
+  LVSourceLanguage getSourceLanguage() const override { return SourceLanguage; }
+  void setSourceLanguage(LVSourceLanguage SL) override { SourceLanguage = SL; }
 
   void setCPUType(codeview::CPUType Type) { CompilationCPUType = Type; }
   codeview::CPUType getCPUType() { return CompilationCPUType; }
