@@ -12,10 +12,8 @@ define dso_local void @_Z4SwapP1SS0_(ptr nocapture %a, ptr nocapture %b) local_u
 ; NOAA-LABEL: _Z4SwapP1SS0_:
 ; NOAA:       # %bb.0: # %entry
 ; NOAA-NEXT:    vmovups (%rdi), %xmm0
-; NOAA-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
-; NOAA-NEXT:    vmovups (%rsi), %xmm0
-; NOAA-NEXT:    vmovups %xmm0, (%rdi)
-; NOAA-NEXT:    vmovaps -{{[0-9]+}}(%rsp), %xmm0
+; NOAA-NEXT:    vmovups (%rsi), %xmm1
+; NOAA-NEXT:    vmovups %xmm1, (%rdi)
 ; NOAA-NEXT:    vmovups %xmm0, (%rsi)
 ; NOAA-NEXT:    retq
 ;
@@ -106,8 +104,6 @@ entry:
 define dso_local void @onealloc_readback_1(ptr nocapture %a, ptr nocapture %b) local_unnamed_addr {
 ; NOAA-LABEL: onealloc_readback_1:
 ; NOAA:       # %bb.0: # %entry
-; NOAA-NEXT:    vmovups (%rdi), %xmm0
-; NOAA-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
 ; NOAA-NEXT:    vmovups (%rsi), %xmm0
 ; NOAA-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
 ; NOAA-NEXT:    vmovups %xmm0, (%rdi)
@@ -135,8 +131,6 @@ entry:
 define dso_local void @onealloc_readback_2(ptr nocapture %a, ptr nocapture %b) local_unnamed_addr {
 ; NOAA-LABEL: onealloc_readback_2:
 ; NOAA:       # %bb.0: # %entry
-; NOAA-NEXT:    vmovups (%rdi), %xmm0
-; NOAA-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
 ; NOAA-NEXT:    vmovups (%rsi), %xmm0
 ; NOAA-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
 ; NOAA-NEXT:    vmovups %xmm0, (%rdi)
