@@ -30,6 +30,7 @@
 #include "FoldInitTypeCheck.h"
 #include "ForwardDeclarationNamespaceCheck.h"
 #include "ForwardingReferenceOverloadCheck.h"
+#include "FunctionVisibilityChangeCheck.h"
 #include "ImplicitWideningOfMultiplicationResultCheck.h"
 #include "InaccurateEraseCheck.h"
 #include "IncDecInConditionsCheck.h"
@@ -143,6 +144,8 @@ public:
         "bugprone-forward-declaration-namespace");
     CheckFactories.registerCheck<ForwardingReferenceOverloadCheck>(
         "bugprone-forwarding-reference-overload");
+    CheckFactories.registerCheck<FunctionVisibilityChangeCheck>(
+        "bugprone-function-visibility-change");
     CheckFactories.registerCheck<ImplicitWideningOfMultiplicationResultCheck>(
         "bugprone-implicit-widening-of-multiplication-result");
     CheckFactories.registerCheck<InaccurateEraseCheck>(
