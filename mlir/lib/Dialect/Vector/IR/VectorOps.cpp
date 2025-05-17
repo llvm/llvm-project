@@ -6201,7 +6201,7 @@ public:
     bool inputIsScalar = !inputType;
     if (inputIsScalar) {
       rewriter.replaceOpWithNewOp<vector::BroadcastOp>(transpose, outputType,
-                                                       transpose.getVector());
+                                                       broadcast.getSource());
       return success();
     }
 
@@ -6227,6 +6227,7 @@ public:
                 transpose, "permutation not local to group");
           }
         }
+        low = high;
       }
     }
 
@@ -6241,7 +6242,7 @@ public:
            "not broadcastable directly to transpose output");
 
     rewriter.replaceOpWithNewOp<vector::BroadcastOp>(transpose, outputType,
-                                                     transpose.getVector());
+                                                     broadcast.getSource());
 
     return success();
   }
