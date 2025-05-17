@@ -628,9 +628,7 @@ template <> struct MappingTraits<FormatStyle::ShortFunctionStyle> {
     IO.enumCase(Value, "Empty",
                 FormatStyle::ShortFunctionStyle::setEmptyOnly());
     IO.enumCase(Value, "Inline",
-                FormatStyle::ShortFunctionStyle({/*Empty=*/true,
-                                                 /*Inline=*/true,
-                                                 /*Other=*/false}));
+                FormatStyle::ShortFunctionStyle::setEmptyAndInline());
     IO.enumCase(Value, "InlineOnly",
                 FormatStyle::ShortFunctionStyle::setInlineOnly());
     IO.enumCase(Value, "All", FormatStyle::ShortFunctionStyle::setAll());
