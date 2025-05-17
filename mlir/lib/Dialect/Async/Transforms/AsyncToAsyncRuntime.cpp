@@ -793,7 +793,7 @@ void AsyncToAsyncRuntimePass::runOnOperation() {
   // Returns true if operation is inside the coroutine.
   auto isInCoroutine = [&](Operation *op) -> bool {
     auto parentFunc = op->getParentOfType<func::FuncOp>();
-    return coros->find(parentFunc) != coros->end();
+    return coros->contains(parentFunc);
   };
 
   // Lower async operations to async.runtime operations.
