@@ -14,6 +14,7 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "llvm/ADT/TypeSwitch.h"
 namespace clang {
 // Simple type-trait to see if the first template arg is one of the list, so we
 // can tell whether to `if-constexpr` a bunch of stuff.
@@ -36,6 +37,76 @@ template <typename ToTest> constexpr bool isCombinedType = false;
 template <typename T>
 constexpr bool isCombinedType<CombinedConstructClauseInfo<T>> = true;
 
+namespace {
+struct DataOperandInfo {
+  mlir::Location beginLoc;
+  mlir::Value varValue;
+  llvm::StringRef name;
+  mlir::ValueRange bounds;
+
+  DataOperandInfo(mlir::Location beginLoc, mlir::Value varValue,
+                  llvm::StringRef name, mlir::ValueRange bounds)
+      : beginLoc(beginLoc), varValue(varValue), name(name), bounds(bounds) {}
+};
+
+inline mlir::Value createIntExpr(CIRGen::CIRGenFunction &cgf,
+                                 CIRGen::CIRGenBuilderTy &builder,
+                                 const Expr *intExpr) {
+  mlir::Value expr = cgf.emitScalarExpr(intExpr);
+  mlir::Location exprLoc = cgf.cgm.getLoc(intExpr->getBeginLoc());
+
+  mlir::IntegerType targetType = mlir::IntegerType::get(
+      &cgf.getMLIRContext(), cgf.getContext().getIntWidth(intExpr->getType()),
+      intExpr->getType()->isSignedIntegerOrEnumerationType()
+          ? mlir::IntegerType::SignednessSemantics::Signed
+          : mlir::IntegerType::SignednessSemantics::Unsigned);
+
+  auto conversionOp = builder.create<mlir::UnrealizedConversionCastOp>(
+      exprLoc, targetType, expr);
+  return conversionOp.getResult(0);
+}
+
+// A helper function that gets the information from an operand to a data
+// clause, so that it can be used to emit the data operations.
+inline DataOperandInfo getDataOperandInfo(CIRGen::CIRGenFunction &cgf,
+                                          CIRGen::CIRGenBuilderTy &builder,
+                                          OpenACCDirectiveKind DK,
+                                          const Expr *E) {
+  // TODO: OpenACC: Cache was different enough as to need a separate
+  // `ActOnCacheVar`, so we are going to need to do some investigations here
+  // when it comes to implement this for cache.
+  assert(DK != OpenACCDirectiveKind::Cache &&
+         "Cache has different enough functionality we need to investigate "
+         "whether this function works for it");
+  const Expr *curVarExpr = E->IgnoreParenImpCasts();
+
+  mlir::Location exprLoc = cgf.cgm.getLoc(curVarExpr->getBeginLoc());
+  llvm::SmallVector<mlir::Value> bounds;
+
+  // TODO: OpenACC: Assemble the list of bounds.
+  if (isa<ArraySectionExpr, ArraySubscriptExpr>(curVarExpr)) {
+    cgf.cgm.errorNYI(curVarExpr->getSourceRange(),
+                     "OpenACC data clause array subscript/section");
+    return {exprLoc, {}, {}, bounds};
+  }
+
+  // TODO: OpenACC: if this is a member expr, emit the VarPtrPtr correctly.
+  if (const auto *ME = dyn_cast<MemberExpr>(curVarExpr)) {
+    cgf.cgm.errorNYI(curVarExpr->getSourceRange(),
+                     "OpenACC Data clause member expr");
+    return {exprLoc, {}, {}, bounds};
+  }
+
+  // Sema has made sure that only 4 types of things can get here, array
+  // subscript, array section, member expr, or DRE to a var decl (or the former
+  // 3 wrapping a var-decl), so we should be able to assume this is right.
+  const auto *DRE = cast<DeclRefExpr>(curVarExpr);
+  const auto *VD = cast<VarDecl>(DRE->getFoundDecl()->getCanonicalDecl());
+  return {exprLoc, cgf.emitDeclRefLValue(DRE).getPointer(), VD->getName(),
+          bounds};
+}
+} //  namespace
+
 template <typename OpTy>
 class OpenACCClauseCIREmitter final
     : public OpenACCClauseVisitor<OpenACCClauseCIREmitter<OpTy>> {
@@ -54,6 +125,11 @@ class OpenACCClauseCIREmitter final
   SourceLocation dirLoc;
 
   llvm::SmallVector<mlir::acc::DeviceType> lastDeviceTypeValues;
+  // Keep track of the async-clause so that we can shortcut updating the data
+  // operands async clauses.
+  bool hasAsyncClause = false;
+  // Keep track of the data operands so that we can update their async clauses.
+  llvm::SmallVector<mlir::Operation *> dataOperands;
 
   void setLastDeviceTypeClause(const OpenACCDeviceTypeClause &clause) {
     lastDeviceTypeValues.clear();
@@ -70,18 +146,7 @@ class OpenACCClauseCIREmitter final
   }
 
   mlir::Value createIntExpr(const Expr *intExpr) {
-    mlir::Value expr = cgf.emitScalarExpr(intExpr);
-    mlir::Location exprLoc = cgf.cgm.getLoc(intExpr->getBeginLoc());
-
-    mlir::IntegerType targetType = mlir::IntegerType::get(
-        &cgf.getMLIRContext(), cgf.getContext().getIntWidth(intExpr->getType()),
-        intExpr->getType()->isSignedIntegerOrEnumerationType()
-            ? mlir::IntegerType::SignednessSemantics::Signed
-            : mlir::IntegerType::SignednessSemantics::Unsigned);
-
-    auto conversionOp = builder.create<mlir::UnrealizedConversionCastOp>(
-        exprLoc, targetType, expr);
-    return conversionOp.getResult(0);
+    return clang::createIntExpr(cgf, builder, intExpr);
   }
 
   // 'condition' as an OpenACC grammar production is used for 'if' and (some
@@ -157,6 +222,103 @@ class OpenACCClauseCIREmitter final
     computeEmitter.Visit(&c);
   }
 
+  template <typename BeforeOpTy, typename AfterOpTy>
+  void addDataOperand(const Expr *varOperand, mlir::acc::DataClause dataClause,
+                      bool structured, bool implicit) {
+    DataOperandInfo opInfo =
+        getDataOperandInfo(cgf, builder, dirKind, varOperand);
+
+    // TODO: OpenACC: we should comprehend the 'modifier-list' here for the data
+    // operand. At the moment, we don't have a uniform way to assign these
+    // properly, and the dialect cannot represent anything other than 'readonly'
+    // and 'zero' on copyin/copyout/create, so for now, we skip it.
+
+    auto beforeOp =
+        builder.create<BeforeOpTy>(opInfo.beginLoc, opInfo.varValue, structured,
+                                   implicit, opInfo.name, opInfo.bounds);
+    operation.getDataClauseOperandsMutable().append(beforeOp.getResult());
+
+    AfterOpTy afterOp;
+    {
+      mlir::OpBuilder::InsertionGuard guardCase(builder);
+      builder.setInsertionPointAfter(operation);
+      afterOp = builder.create<AfterOpTy>(opInfo.beginLoc, beforeOp.getResult(),
+                                          opInfo.varValue, structured, implicit,
+                                          opInfo.name, opInfo.bounds);
+    }
+
+    // Set the 'rest' of the info for both operations.
+    beforeOp.setDataClause(dataClause);
+    afterOp.setDataClause(dataClause);
+
+    // Make sure we record these, so 'async' values can be updated later.
+    dataOperands.push_back(beforeOp.getOperation());
+    dataOperands.push_back(afterOp.getOperation());
+  }
+
+  // Helper function that covers for the fact that we don't have this function
+  // on all operation types.
+  mlir::ArrayAttr getAsyncOnlyAttr() {
+    if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp, mlir::acc::SerialOp,
+                               mlir::acc::KernelsOp, mlir::acc::DataOp>)
+      return operation.getAsyncOnlyAttr();
+
+    // Note: 'wait' has async as well, but it cannot have data clauses, so we
+    // don't have to handle them here.
+
+    llvm_unreachable("getting asyncOnly when clause not valid on operation?");
+  }
+
+  // Helper function that covers for the fact that we don't have this function
+  // on all operation types.
+  mlir::ArrayAttr getAsyncOperandsDeviceTypeAttr() {
+    if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp, mlir::acc::SerialOp,
+                               mlir::acc::KernelsOp, mlir::acc::DataOp>)
+      return operation.getAsyncOperandsDeviceTypeAttr();
+
+    // Note: 'wait' has async as well, but it cannot have data clauses, so we
+    // don't have to handle them here.
+
+    llvm_unreachable(
+        "getting asyncOperandsDeviceType when clause not valid on operation?");
+  }
+
+  // Helper function that covers for the fact that we don't have this function
+  // on all operation types.
+  mlir::OperandRange getAsyncOperands() {
+    if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp, mlir::acc::SerialOp,
+                               mlir::acc::KernelsOp, mlir::acc::DataOp>)
+      return operation.getAsyncOperands();
+
+    // Note: 'wait' has async as well, but it cannot have data clauses, so we
+    // don't have to handle them here.
+
+    llvm_unreachable(
+        "getting asyncOperandsDeviceType when clause not valid on operation?");
+  }
+
+  // The 'data' clauses all require that we add the 'async' values from the
+  // operation to them. We've collected the data operands along the way, so use
+  // that list to get the current 'async' values.
+  void updateDataOperandAsyncValues() {
+    if (!hasAsyncClause || dataOperands.empty())
+      return;
+
+    // TODO: OpenACC: Handle this correctly for combined constructs.
+
+    for (mlir::Operation *dataOp : dataOperands) {
+      llvm::TypeSwitch<mlir::Operation *, void>(dataOp)
+          .Case<ACC_DATA_ENTRY_OPS, ACC_DATA_EXIT_OPS>([&](auto op) {
+            op.setAsyncOnlyAttr(getAsyncOnlyAttr());
+            op.setAsyncOperandsDeviceTypeAttr(getAsyncOperandsDeviceTypeAttr());
+            op.getAsyncOperandsMutable().assign(getAsyncOperands());
+          })
+          .Default([&](mlir::Operation *) {
+            llvm_unreachable("Not a data operation?");
+          });
+    }
+  }
+
 public:
   OpenACCClauseCIREmitter(OpTy &operation, CIRGen::CIRGenFunction &cgf,
                           CIRGen::CIRGenBuilderTy &builder,
@@ -166,6 +328,14 @@ public:
 
   void VisitClause(const OpenACCClause &clause) {
     clauseNotImplemented(clause);
+  }
+
+  // The entry point for the CIR emitter. All users should use this rather than
+  // 'visitClauseList', as this also handles the things that have to happen
+  // 'after' the clauses are all visited.
+  void emitClauses(ArrayRef<const OpenACCClause *> clauses) {
+    this->VisitClauseList(clauses);
+    updateDataOperandAsyncValues();
   }
 
   void VisitDefaultClause(const OpenACCDefaultClause &clause) {
@@ -250,14 +420,26 @@ public:
   }
 
   void VisitAsyncClause(const OpenACCAsyncClause &clause) {
+    hasAsyncClause = true;
     if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp, mlir::acc::SerialOp,
                                mlir::acc::KernelsOp, mlir::acc::DataOp>) {
       if (!clause.hasIntExpr())
         operation.addAsyncOnly(builder.getContext(), lastDeviceTypeValues);
-      else
-        operation.addAsyncOperand(builder.getContext(),
-                                  createIntExpr(clause.getIntExpr()),
+      else {
+
+        mlir::Value intExpr;
+        {
+          // Async int exprs can be referenced by the data operands, which means
+          // that the int-exprs have to appear before them.  IF there is a data
+          // operand already, set the insertion point to 'before' it.
+          mlir::OpBuilder::InsertionGuard guardCase(builder);
+          if (!dataOperands.empty())
+            builder.setInsertionPoint(dataOperands.front());
+          intExpr = createIntExpr(clause.getIntExpr());
+        }
+        operation.addAsyncOperand(builder.getContext(), intExpr,
                                   lastDeviceTypeValues);
+      }
     } else if constexpr (isOneOfTypes<OpTy, mlir::acc::WaitOp>) {
       // Wait doesn't have a device_type, so its handling here is slightly
       // different.
@@ -525,6 +707,20 @@ public:
       applyToLoopOp(clause);
     } else {
       llvm_unreachable("Unknown construct kind in VisitGangClause");
+    }
+  }
+
+  void VisitCopyClause(const OpenACCCopyClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp, mlir::acc::SerialOp,
+                               mlir::acc::KernelsOp>) {
+      for (auto Var : clause.getVarList())
+        addDataOperand<mlir::acc::CopyinOp, mlir::acc::CopyoutOp>(
+            Var, mlir::acc::DataClause::acc_copy, /*structured=*/true,
+            /*implicit=*/false);
+    } else {
+      // TODO: When we've implemented this for everything, switch this to an
+      // unreachable. data, declare, combined constructs remain.
+      return clauseNotImplemented(clause);
     }
   }
 };
