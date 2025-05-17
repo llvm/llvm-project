@@ -255,7 +255,7 @@ bool RecurrenceDescriptor::AddReductionVar(
   // Data used for determining if the recurrence has been type-promoted.
   Type *RecurrenceType = Phi->getType();
   SmallPtrSet<Instruction *, 4> CastInsts;
-  unsigned MinWidthCastToRecurrenceType;
+  unsigned MinWidthCastToRecurrenceType = -1ull;
   Instruction *Start = Phi;
   bool IsSigned = false;
 
@@ -310,6 +310,7 @@ bool RecurrenceDescriptor::AddReductionVar(
   //    This is either:
   //      * An instruction type other than PHI or the reduction operation.
   //      * A PHI in the header other than the initial PHI.
+  bool IsUsedByOtherRecurrence = false;
   while (!Worklist.empty()) {
     Instruction *Cur = Worklist.pop_back_val();
 
@@ -371,15 +372,37 @@ bool RecurrenceDescriptor::AddReductionVar(
 
     // Any reduction instruction must be of one of the allowed kinds. We ignore
     // the starting value (the Phi or an AND instruction if the Phi has been
-    // type-promoted).
+    // type-promoted) and other in-loop users, if they form a FindLastIV
+    // reduction. In the latter case, the user of the IVDescriptors must account
+    // for that during codegen.
     if (Cur != Start) {
       ReduxDesc =
           isRecurrenceInstr(TheLoop, Phi, Cur, Kind, ReduxDesc, FuncFMF, SE);
       ExactFPMathInst = ExactFPMathInst == nullptr
                             ? ReduxDesc.getExactFPMathInst()
                             : ExactFPMathInst;
-      if (!ReduxDesc.isRecurrence())
+      if (!ReduxDesc.isRecurrence()) {
+        if (isMinMaxRecurrenceKind(Kind)) {
+          // If the current recurrence is Min/Max, check if the current user is
+          // a select that is a FindLastIV reduction. During codegen, this
+          // recurrence needs to be turned into one that finds the first IV, as
+          // the value to compare against is a Min/Max recurrence.
+          auto *Sel = dyn_cast<SelectInst>(Cur);
+          if (!Sel || !Sel->getType()->isIntegerTy())
+            return false;
+          auto *OtherPhi = dyn_cast<PHINode>(Sel->getOperand(2));
+          if (!OtherPhi)
+            return false;
+          auto NewReduxDesc =
+              isRecurrenceInstr(TheLoop, OtherPhi, Cur, RecurKind::FindLastIV,
+                                ReduxDesc, FuncFMF, SE);
+          if (NewReduxDesc.isRecurrence()) {
+            IsUsedByOtherRecurrence = true;
+            continue;
+          }
+        }
         return false;
+      }
       // FIXME: FMF is allowed on phi, but propagation is not handled correctly.
       if (isa<FPMathOperator>(ReduxDesc.getPatternInst()) && !IsAPhi) {
         FastMathFlags CurFMF = ReduxDesc.getPatternInst()->getFastMathFlags();
@@ -503,7 +526,7 @@ bool RecurrenceDescriptor::AddReductionVar(
   // pattern or more than just a select and cmp. Zero implies that we saw a
   // llvm.min/max intrinsic, which is always OK.
   if (isMinMaxRecurrenceKind(Kind) && NumCmpSelectPatternInst != 2 &&
-      NumCmpSelectPatternInst != 0)
+      NumCmpSelectPatternInst != 0 && !IsUsedByOtherRecurrence)
     return false;
 
   if (isAnyOfRecurrenceKind(Kind) && NumCmpSelectPatternInst != 1)
@@ -535,7 +558,13 @@ bool RecurrenceDescriptor::AddReductionVar(
       ExitInstruction = cast<Instruction>(IntermediateStore->getValueOperand());
   }
 
-  if (!FoundStartPHI || !FoundReduxOp || !ExitInstruction)
+  if (!FoundStartPHI || !FoundReduxOp)
+    return false;
+
+  if (IsUsedByOtherRecurrence) {
+    if (ExitInstruction)
+      return false;
+  } else if (!ExitInstruction)
     return false;
 
   const bool IsOrdered =
@@ -586,8 +615,9 @@ bool RecurrenceDescriptor::AddReductionVar(
   //       without needing a white list of instructions to ignore.
   //       This may also be useful for the inloop reductions, if it can be
   //       kept simple enough.
-  collectCastInstrs(TheLoop, ExitInstruction, RecurrenceType, CastInsts,
-                    MinWidthCastToRecurrenceType);
+  if (ExitInstruction)
+    collectCastInstrs(TheLoop, ExitInstruction, RecurrenceType, CastInsts,
+                      MinWidthCastToRecurrenceType);
 
   // We found a reduction var if we have reached the original phi node and we
   // only have a single instruction with out-of-loop users.
@@ -600,7 +630,7 @@ bool RecurrenceDescriptor::AddReductionVar(
                           FMF, ExactFPMathInst, RecurrenceType, IsSigned,
                           IsOrdered, CastInsts, MinWidthCastToRecurrenceType);
   RedDes = RD;
-
+  RedDes.IsUsedByOtherRecurrence = IsUsedByOtherRecurrence;
   return true;
 }
 

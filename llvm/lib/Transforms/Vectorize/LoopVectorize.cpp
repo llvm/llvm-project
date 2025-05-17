@@ -8499,7 +8499,7 @@ bool VPRecipeBuilder::getScaledReductions(
     Instruction *PHI, Instruction *RdxExitInstr, VFRange &Range,
     SmallVectorImpl<std::pair<PartialReductionChain, unsigned>> &Chains) {
 
-  if (!CM.TheLoop->contains(RdxExitInstr))
+  if (!RdxExitInstr || !CM.TheLoop->contains(RdxExitInstr))
     return false;
 
   auto *Update = dyn_cast<BinaryOperator>(RdxExitInstr);
@@ -9620,6 +9620,75 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       // the original start value.
       PhiR->setOperand(0, Plan->getOrAddLiveIn(RdxDesc.getSentinelValue()));
     }
+  }
+
+  // Check if any reduction is used by another reduction, by starting from
+  // ComputeReductionResults and checking if the recurrence descriptor is marked
+  // has having another recurrence user.
+  for (auto &R : *MiddleVPBB) {
+    auto *MinMaxResult = dyn_cast<VPInstruction>(&R);
+    if (!MinMaxResult ||
+        MinMaxResult->getOpcode() != VPInstruction::ComputeReductionResult)
+      continue;
+    auto *MinMaxPhiR = cast<VPReductionPHIRecipe>(MinMaxResult->getOperand(0));
+    auto &MinMaxRdxDesc = MinMaxPhiR->getRecurrenceDescriptor();
+    if (!MinMaxRdxDesc.IsUsedByOtherRecurrence)
+      continue;
+
+    assert(RecurrenceDescriptor::isMinMaxRecurrenceKind(
+               MinMaxRdxDesc.getRecurrenceKind()) &&
+           "only min/max reductions can be used by other recurrences");
+
+    SmallVector<VPUser *> Worklist;
+    append_range(Worklist, MinMaxPhiR->users());
+    VPReductionPHIRecipe *FindIVPhiR = nullptr;
+    // Starting from MinMaxPhiR's users, find the other reduction phi using
+    // MinMaxPhiR.
+    while (!Worklist.empty()) {
+      VPUser *Cur = Worklist.pop_back_val();
+      if (isa<VPHeaderPHIRecipe>(Cur)) {
+        if (Cur != MinMaxPhiR) {
+          assert(!FindIVPhiR &&
+                 "Only the starting MinMaxPhiR or another reduction "
+                 "phi must be reachable");
+          FindIVPhiR = cast<VPReductionPHIRecipe>(Cur);
+        }
+        continue;
+      }
+      // Skip recipes outside any region.
+      if (!cast<VPSingleDefRecipe>(Cur)->getParent()->getParent())
+        continue;
+      append_range(Worklist, cast<VPSingleDefRecipe>(Cur)->users());
+    }
+
+    // Find the  recipe computing the result of the other reduction.
+    VPInstruction *FindIVResult = nullptr;
+    for (auto *U : FindIVPhiR->users()) {
+      auto *VPI = dyn_cast<VPInstruction>(U);
+      if (!VPI || VPI->getOpcode() != VPInstruction::ComputeFindIVResult)
+        continue;
+      FindIVResult = VPI;
+    }
+    assert(FindIVResult && "must find a matching ComputeFindIVResult");
+
+    // The reduction using MinMaxPhiR needs adjusting to compute the correct
+    // result:
+    //  1. We need to find the first IV for which the condition based on the
+    //  min/max recurrence is true,
+    //  2. Compare the partial min/max reduction result to its final value and,
+    //  3. Select the lanes of the partial FindLastIV reductions which
+    //  correspond to the lanes matching the min/max reduction result.
+    FindIVResult->moveAfter(MinMaxResult);
+    VPBuilder B(FindIVResult);
+    const_cast<RecurrenceDescriptor &>(FindIVPhiR->getRecurrenceDescriptor())
+        .setKind(RecurKind::FindFirstIVUMax);
+    auto *Cmp = B.createICmp(CmpInst::ICMP_EQ, MinMaxResult->getOperand(1),
+                             MinMaxResult);
+    auto *Sel = B.createSelect(
+        Cmp, FindIVResult->getOperand(2),
+        Plan->getOrAddLiveIn(
+            FindIVPhiR->getRecurrenceDescriptor().getSentinelValue()));
+    FindIVResult->setOperand(2, Sel);
   }
   for (VPRecipeBase *R : ToDelete)
     R->eraseFromParent();

@@ -296,6 +296,8 @@ public:
     }
   }
 
+  void setKind(RecurKind NewKind) { Kind = NewKind; }
+
   /// Returns a reference to the instructions used for type-promoting the
   /// recurrence.
   const SmallPtrSet<Instruction *, 8> &getCastInsts() const { return CastInsts; }
@@ -326,6 +328,10 @@ public:
   /// If there is such a store in the loop then, after successfull run of
   /// AddReductionVar method, this field will be assigned the last met store.
   StoreInst *IntermediateStore = nullptr;
+
+  /// True if this recurrence is used by another recurrence in the loop. Users
+  /// need to ensure that the final code-gen accounts for the use in the loop.
+  bool IsUsedByOtherRecurrence = false;
 
 private:
   // The starting value of the recurrence.

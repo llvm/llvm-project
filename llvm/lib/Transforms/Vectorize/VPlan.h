@@ -1804,7 +1804,8 @@ public:
   ~VPHeaderPHIRecipe() override = default;
 
   /// Method to support type inquiry through isa, cast, and dyn_cast.
-  static inline bool classof(const VPRecipeBase *B) {
+  static inline bool classof(const VPUser *U) {
+    auto *B = cast<VPRecipeBase>(U);
     return B->getVPDefID() >= VPDef::VPFirstHeaderPHISC &&
            B->getVPDefID() <= VPDef::VPLastHeaderPHISC;
   }
@@ -1812,6 +1813,10 @@ public:
     auto *B = V->getDefiningRecipe();
     return B && B->getVPDefID() >= VPRecipeBase::VPFirstHeaderPHISC &&
            B->getVPDefID() <= VPRecipeBase::VPLastHeaderPHISC;
+  }
+  static inline bool classof(const VPSingleDefRecipe *B) {
+    return B->getVPDefID() >= VPDef::VPFirstHeaderPHISC &&
+           B->getVPDefID() <= VPDef::VPLastHeaderPHISC;
   }
 
   /// Generate the phi nodes.
