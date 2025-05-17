@@ -5,9 +5,9 @@ define i32 @logical_and_2ops(i32 %n, i32 %m) {
 ; CHECK-LABEL: 'logical_and_2ops'
 ; CHECK-NEXT:  Classifying expressions for: @logical_and_2ops
 ; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: full-set S: full-set Exits: (%n umin_seq %m) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: full-set S: full-set Exits: (%n umin_seq %m) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: full-set S: full-set Exits: (1 + (%n umin_seq %m)) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nw><%loop> U: full-set S: full-set Exits: (1 + (%n umin_seq %m)) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
 ; CHECK-NEXT:    --> (%cond_p0 umin_seq %cond_p1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_2ops
@@ -33,9 +33,9 @@ define i32 @logical_or_2ops(i32 %n, i32 %m) {
 ; CHECK-LABEL: 'logical_or_2ops'
 ; CHECK-NEXT:  Classifying expressions for: @logical_or_2ops
 ; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: full-set S: full-set Exits: (%n umin_seq %m) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: full-set S: full-set Exits: (%n umin_seq %m) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: full-set S: full-set Exits: (1 + (%n umin_seq %m)) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nw><%loop> U: full-set S: full-set Exits: (1 + (%n umin_seq %m)) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %cond = select i1 %cond_p0, i1 true, i1 %cond_p1
 ; CHECK-NEXT:    --> (true + ((true + %cond_p0) umin_seq (true + %cond_p1))) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_or_2ops
@@ -61,9 +61,9 @@ define i32 @logical_and_3ops(i32 %n, i32 %m, i32 %k) {
 ; CHECK-LABEL: 'logical_and_3ops'
 ; CHECK-NEXT:  Classifying expressions for: @logical_and_3ops
 ; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: full-set S: full-set Exits: (%n umin_seq %m umin_seq %k) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: full-set S: full-set Exits: (%n umin_seq %m umin_seq %k) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: full-set S: full-set Exits: (1 + (%n umin_seq %m umin_seq %k)) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nw><%loop> U: full-set S: full-set Exits: (1 + (%n umin_seq %m umin_seq %k)) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %cond_p3 = select i1 %cond_p0, i1 %cond_p1, i1 false
 ; CHECK-NEXT:    --> (%cond_p0 umin_seq %cond_p1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %cond = select i1 %cond_p3, i1 %cond_p2, i1 false
@@ -93,9 +93,9 @@ define i32 @logical_or_3ops(i32 %n, i32 %m, i32 %k) {
 ; CHECK-LABEL: 'logical_or_3ops'
 ; CHECK-NEXT:  Classifying expressions for: @logical_or_3ops
 ; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: full-set S: full-set Exits: (%n umin_seq %m umin_seq %k) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: full-set S: full-set Exits: (%n umin_seq %m umin_seq %k) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: full-set S: full-set Exits: (1 + (%n umin_seq %m umin_seq %k)) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nw><%loop> U: full-set S: full-set Exits: (1 + (%n umin_seq %m umin_seq %k)) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %cond_p3 = select i1 %cond_p0, i1 true, i1 %cond_p1
 ; CHECK-NEXT:    --> (true + ((true + %cond_p0) umin_seq (true + %cond_p1))) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %cond = select i1 %cond_p3, i1 true, i1 %cond_p2
@@ -125,9 +125,9 @@ define i32 @logical_or_3ops_duplicate(i32 %n, i32 %m, i32 %k) {
 ; CHECK-LABEL: 'logical_or_3ops_duplicate'
 ; CHECK-NEXT:  Classifying expressions for: @logical_or_3ops_duplicate
 ; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: full-set S: full-set Exits: (%n umin_seq %m umin_seq %k) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: full-set S: full-set Exits: (%n umin_seq %m umin_seq %k) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: full-set S: full-set Exits: (1 + (%n umin_seq %m umin_seq %k)) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nw><%loop> U: full-set S: full-set Exits: (1 + (%n umin_seq %m umin_seq %k)) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %cond_p4 = select i1 %cond_p0, i1 true, i1 %cond_p1
 ; CHECK-NEXT:    --> (true + ((true + %cond_p0) umin_seq (true + %cond_p1))) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %cond_p5 = select i1 %cond_p4, i1 true, i1 %cond_p2
@@ -161,9 +161,9 @@ define i32 @logical_or_3ops_redundant_uminseq_operand(i32 %n, i32 %m, i32 %k) {
 ; CHECK-LABEL: 'logical_or_3ops_redundant_uminseq_operand'
 ; CHECK-NEXT:  Classifying expressions for: @logical_or_3ops_redundant_uminseq_operand
 ; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: full-set S: full-set Exits: ((%n umin %m) umin_seq %k) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: full-set S: full-set Exits: ((%n umin %m) umin_seq %k) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: full-set S: full-set Exits: (1 + ((%n umin %m) umin_seq %k)) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nw><%loop> U: full-set S: full-set Exits: (1 + ((%n umin %m) umin_seq %k)) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %umin = call i32 @llvm.umin.i32(i32 %n, i32 %m)
 ; CHECK-NEXT:    --> (%n umin %m) U: full-set S: full-set Exits: (%n umin %m) LoopDispositions: { %loop: Invariant }
 ; CHECK-NEXT:    %cond_p3 = select i1 %cond_p0, i1 true, i1 %cond_p1
@@ -196,9 +196,9 @@ define i32 @logical_or_3ops_redundant_umin_operand(i32 %n, i32 %m, i32 %k) {
 ; CHECK-LABEL: 'logical_or_3ops_redundant_umin_operand'
 ; CHECK-NEXT:  Classifying expressions for: @logical_or_3ops_redundant_umin_operand
 ; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: full-set S: full-set Exits: (%n umin_seq %k umin_seq %m) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: full-set S: full-set Exits: (%n umin_seq %k umin_seq %m) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: full-set S: full-set Exits: (1 + (%n umin_seq %k umin_seq %m)) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nw><%loop> U: full-set S: full-set Exits: (1 + (%n umin_seq %k umin_seq %m)) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %umin = call i32 @llvm.umin.i32(i32 %n, i32 %m)
 ; CHECK-NEXT:    --> (%n umin %m) U: full-set S: full-set Exits: (%n umin %m) LoopDispositions: { %loop: Invariant }
 ; CHECK-NEXT:    %cond_p3 = select i1 %cond_p0, i1 true, i1 %cond_p1
@@ -231,9 +231,9 @@ define i32 @logical_or_4ops_redundant_operand_across_umins(i32 %n, i32 %m, i32 %
 ; CHECK-LABEL: 'logical_or_4ops_redundant_operand_across_umins'
 ; CHECK-NEXT:  Classifying expressions for: @logical_or_4ops_redundant_operand_across_umins
 ; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: full-set S: full-set Exits: ((%n umin %m) umin_seq %k umin_seq %q) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: full-set S: full-set Exits: ((%n umin %m) umin_seq %k umin_seq %q) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: full-set S: full-set Exits: (1 + ((%n umin %m) umin_seq %k umin_seq %q)) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nw><%loop> U: full-set S: full-set Exits: (1 + ((%n umin %m) umin_seq %k umin_seq %q)) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %umin = call i32 @llvm.umin.i32(i32 %n, i32 %m)
 ; CHECK-NEXT:    --> (%n umin %m) U: full-set S: full-set Exits: (%n umin %m) LoopDispositions: { %loop: Invariant }
 ; CHECK-NEXT:    %umin2 = call i32 @llvm.umin.i32(i32 %n, i32 %q)
@@ -269,9 +269,9 @@ define i32 @logical_or_3ops_operand_wise_redundant_umin(i32 %n, i32 %m, i32 %k) 
 ; CHECK-LABEL: 'logical_or_3ops_operand_wise_redundant_umin'
 ; CHECK-NEXT:  Classifying expressions for: @logical_or_3ops_operand_wise_redundant_umin
 ; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: full-set S: full-set Exits: ((%n umin %m) umin_seq %k) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: full-set S: full-set Exits: ((%n umin %m) umin_seq %k) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: full-set S: full-set Exits: (1 + ((%n umin %m) umin_seq %k)) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nw><%loop> U: full-set S: full-set Exits: (1 + ((%n umin %m) umin_seq %k)) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %umin = call i32 @llvm.umin.i32(i32 %n, i32 %m)
 ; CHECK-NEXT:    --> (%n umin %m) U: full-set S: full-set Exits: (%n umin %m) LoopDispositions: { %loop: Invariant }
 ; CHECK-NEXT:    %umin2 = call i32 @llvm.umin.i32(i32 %n, i32 %k)
@@ -307,9 +307,9 @@ define i32 @logical_or_3ops_partially_redundant_umin(i32 %n, i32 %m, i32 %k) {
 ; CHECK-LABEL: 'logical_or_3ops_partially_redundant_umin'
 ; CHECK-NEXT:  Classifying expressions for: @logical_or_3ops_partially_redundant_umin
 ; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: full-set S: full-set Exits: (%n umin_seq (%m umin %k)) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: full-set S: full-set Exits: (%n umin_seq (%m umin %k)) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: full-set S: full-set Exits: (1 + (%n umin_seq (%m umin %k))) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nw><%loop> U: full-set S: full-set Exits: (1 + (%n umin_seq (%m umin %k))) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %umin = call i32 @llvm.umin.i32(i32 %n, i32 %m)
 ; CHECK-NEXT:    --> (%n umin %m) U: full-set S: full-set Exits: (%n umin %m) LoopDispositions: { %loop: Invariant }
 ; CHECK-NEXT:    %umin2 = call i32 @llvm.umin.i32(i32 %umin, i32 %k)
@@ -341,21 +341,21 @@ define i32 @logical_or_5ops_redundant_opearand_of_inner_uminseq(i32 %a, i32 %b, 
 ; CHECK-LABEL: 'logical_or_5ops_redundant_opearand_of_inner_uminseq'
 ; CHECK-NEXT:  Classifying expressions for: @logical_or_5ops_redundant_opearand_of_inner_uminseq
 ; CHECK-NEXT:    %first.i = phi i32 [ 0, %entry ], [ %first.i.next, %first.loop ]
-; CHECK-NEXT:    --> {0,+,1}<%first.loop> U: full-set S: full-set Exits: (%e umin_seq %d umin_seq %a) LoopDispositions: { %first.loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><%first.loop> U: full-set S: full-set Exits: (%e umin_seq %d umin_seq %a) LoopDispositions: { %first.loop: Computable }
 ; CHECK-NEXT:    %first.i.next = add i32 %first.i, 1
-; CHECK-NEXT:    --> {1,+,1}<%first.loop> U: full-set S: full-set Exits: (1 + (%e umin_seq %d umin_seq %a)) LoopDispositions: { %first.loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nw><%first.loop> U: full-set S: full-set Exits: (1 + (%e umin_seq %d umin_seq %a)) LoopDispositions: { %first.loop: Computable }
 ; CHECK-NEXT:    %cond_p3 = select i1 %cond_p0, i1 true, i1 %cond_p1
 ; CHECK-NEXT:    --> (true + ((true + %cond_p0) umin_seq (true + %cond_p1))) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %first.loop: Variant }
 ; CHECK-NEXT:    %cond_p4 = select i1 %cond_p3, i1 true, i1 %cond_p2
 ; CHECK-NEXT:    --> (true + ((true + %cond_p0) umin_seq (true + %cond_p1) umin_seq (true + %cond_p2))) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %first.loop: Variant }
 ; CHECK-NEXT:    %i = phi i32 [ 0, %first.loop.exit ], [ %i.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: full-set S: full-set Exits: (%a umin_seq %b umin_seq ((%e umin_seq %d) umin %c)) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: full-set S: full-set Exits: (%a umin_seq %b umin_seq ((%e umin_seq %d) umin %c)) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: full-set S: full-set Exits: (1 + (%a umin_seq %b umin_seq ((%e umin_seq %d) umin %c))) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nw><%loop> U: full-set S: full-set Exits: (1 + (%a umin_seq %b umin_seq ((%e umin_seq %d) umin %c))) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %umin = call i32 @llvm.umin.i32(i32 %c, i32 %d)
 ; CHECK-NEXT:    --> (%c umin %d) U: full-set S: full-set Exits: (%c umin %d) LoopDispositions: { %loop: Invariant }
 ; CHECK-NEXT:    %umin2 = call i32 @llvm.umin.i32(i32 %umin, i32 %first.i)
-; CHECK-NEXT:    --> ({0,+,1}<%first.loop> umin %c umin %d) U: full-set S: full-set --> ((%e umin_seq %d umin_seq %a) umin %c umin %d) U: full-set S: full-set Exits: ((%e umin_seq %d umin_seq %a) umin %c umin %d) LoopDispositions: { %loop: Invariant }
+; CHECK-NEXT:    --> ({0,+,1}<nuw><%first.loop> umin %c umin %d) U: full-set S: full-set --> ((%e umin_seq %d umin_seq %a) umin %c umin %d) U: full-set S: full-set Exits: ((%e umin_seq %d umin_seq %a) umin %c umin %d) LoopDispositions: { %loop: Invariant }
 ; CHECK-NEXT:    %cond_p8 = select i1 %cond_p5, i1 true, i1 %cond_p6
 ; CHECK-NEXT:    --> (true + ((true + %cond_p5) umin_seq (true + %cond_p6))) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %cond = select i1 %cond_p8, i1 true, i1 %cond_p7
@@ -501,15 +501,15 @@ define i64 @uminseq_vs_ptrtoint_complexity(i64 %n, i64 %m, ptr %ptr) {
 ; CHECK-LABEL: 'uminseq_vs_ptrtoint_complexity'
 ; CHECK-NEXT:  Classifying expressions for: @uminseq_vs_ptrtoint_complexity
 ; CHECK-NEXT:    %i = phi i64 [ 0, %entry ], [ %i.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: full-set S: full-set Exits: (%n umin_seq %m) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: full-set S: full-set Exits: (%n umin_seq %m) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i64 %i, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: full-set S: full-set Exits: (1 + (%n umin_seq %m)) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nw><%loop> U: full-set S: full-set Exits: (1 + (%n umin_seq %m)) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
 ; CHECK-NEXT:    --> (%cond_p0 umin_seq %cond_p1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %ptr.int = ptrtoint ptr %ptr to i64
 ; CHECK-NEXT:    --> (ptrtoint ptr %ptr to i64) U: full-set S: full-set
 ; CHECK-NEXT:    %r = add i64 %i, %ptr.int
-; CHECK-NEXT:    --> {(ptrtoint ptr %ptr to i64),+,1}<%loop> U: full-set S: full-set --> ((%n umin_seq %m) + (ptrtoint ptr %ptr to i64)) U: full-set S: full-set
+; CHECK-NEXT:    --> {(ptrtoint ptr %ptr to i64),+,1}<nw><%loop> U: full-set S: full-set --> ((%n umin_seq %m) + (ptrtoint ptr %ptr to i64)) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @uminseq_vs_ptrtoint_complexity
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (%n umin_seq %m)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 -1
@@ -537,9 +537,9 @@ define i32 @logical_and_implies_poison1(i32 %n) {
 ; CHECK-NEXT:    %add = add i32 %n, 1
 ; CHECK-NEXT:    --> (1 + %n) U: full-set S: full-set
 ; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: full-set S: full-set Exits: ((1 + %n) umin %n) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: full-set S: full-set Exits: ((1 + %n) umin %n) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: full-set S: full-set Exits: (1 + ((1 + %n) umin %n)) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nw><%loop> U: full-set S: full-set Exits: (1 + ((1 + %n) umin %n)) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
 ; CHECK-NEXT:    --> (%cond_p0 umin %cond_p1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_implies_poison1
@@ -568,9 +568,9 @@ define i32 @logical_and_implies_poison2(i32 %n) {
 ; CHECK-NEXT:    %add = add i32 %n, 1
 ; CHECK-NEXT:    --> (1 + %n) U: full-set S: full-set
 ; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: full-set S: full-set Exits: ((1 + %n) umin %n) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: full-set S: full-set Exits: ((1 + %n) umin %n) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: full-set S: full-set Exits: (1 + ((1 + %n) umin %n)) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nw><%loop> U: full-set S: full-set Exits: (1 + ((1 + %n) umin %n)) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
 ; CHECK-NEXT:    --> (%cond_p1 umin %cond_p0) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_implies_poison2
@@ -599,9 +599,9 @@ define i32 @logical_and_implies_poison3(i32 %n, i32 %m) {
 ; CHECK-NEXT:    %add = add i32 %n, %m
 ; CHECK-NEXT:    --> (%n + %m) U: full-set S: full-set
 ; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: full-set S: full-set Exits: ((%n + %m) umin %n) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: full-set S: full-set Exits: ((%n + %m) umin %n) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: full-set S: full-set Exits: (1 + ((%n + %m) umin %n)) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nw><%loop> U: full-set S: full-set Exits: (1 + ((%n + %m) umin %n)) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
 ; CHECK-NEXT:    --> (%cond_p1 umin %cond_p0) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_implies_poison3
@@ -630,9 +630,9 @@ define i32 @logical_and_implies_poison_wrong_direction(i32 %n, i32 %m) {
 ; CHECK-NEXT:    %add = add i32 %n, %m
 ; CHECK-NEXT:    --> (%n + %m) U: full-set S: full-set
 ; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: full-set S: full-set Exits: (%n umin_seq (%n + %m)) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: full-set S: full-set Exits: (%n umin_seq (%n + %m)) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: full-set S: full-set Exits: (1 + (%n umin_seq (%n + %m))) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nw><%loop> U: full-set S: full-set Exits: (1 + (%n umin_seq (%n + %m))) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
 ; CHECK-NEXT:    --> (%cond_p0 umin_seq %cond_p1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_implies_poison_wrong_direction
@@ -659,9 +659,9 @@ define i32 @logical_and_implies_poison_noundef(i32 %n, i32 noundef %m) {
 ; CHECK-LABEL: 'logical_and_implies_poison_noundef'
 ; CHECK-NEXT:  Classifying expressions for: @logical_and_implies_poison_noundef
 ; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: full-set S: full-set Exits: (%n umin %m) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: full-set S: full-set Exits: (%n umin %m) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: full-set S: full-set Exits: (1 + (%n umin %m)) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nw><%loop> U: full-set S: full-set Exits: (1 + (%n umin %m)) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
 ; CHECK-NEXT:    --> (%cond_p0 umin %cond_p1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_implies_poison_noundef
@@ -687,9 +687,9 @@ define i32 @logical_and_implies_poison_noundef_wrong_direction(i32 %n, i32 nound
 ; CHECK-LABEL: 'logical_and_implies_poison_noundef_wrong_direction'
 ; CHECK-NEXT:  Classifying expressions for: @logical_and_implies_poison_noundef_wrong_direction
 ; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: full-set S: full-set Exits: (%m umin_seq %n) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: full-set S: full-set Exits: (%m umin_seq %n) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: full-set S: full-set Exits: (1 + (%m umin_seq %n)) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nw><%loop> U: full-set S: full-set Exits: (1 + (%m umin_seq %n)) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
 ; CHECK-NEXT:    --> (%cond_p0 umin_seq %cond_p1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_implies_poison_noundef_wrong_direction
@@ -719,9 +719,9 @@ define i32 @logical_and_implies_poison_complex1(i32 %n, i32 %m) {
 ; CHECK-NEXT:    %add1 = add i32 %add, 1
 ; CHECK-NEXT:    --> (1 + %n + %m) U: full-set S: full-set
 ; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: full-set S: full-set Exits: ((%n + %m) umin (1 + %n + %m)) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: full-set S: full-set Exits: ((%n + %m) umin (1 + %n + %m)) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: full-set S: full-set Exits: (1 + ((%n + %m) umin (1 + %n + %m))) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nw><%loop> U: full-set S: full-set Exits: (1 + ((%n + %m) umin (1 + %n + %m))) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
 ; CHECK-NEXT:    --> (%cond_p0 umin %cond_p1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_implies_poison_complex1
@@ -753,9 +753,9 @@ define i32 @logical_and_implies_poison_complex2(i32 %n, i32 %m, i32 %l) {
 ; CHECK-NEXT:    %add1 = add i32 %add, %l
 ; CHECK-NEXT:    --> (%n + %m + %l) U: full-set S: full-set
 ; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: full-set S: full-set Exits: ((%n + %m) umin (%n + %m + %l)) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: full-set S: full-set Exits: ((%n + %m) umin (%n + %m + %l)) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: full-set S: full-set Exits: (1 + ((%n + %m) umin (%n + %m + %l))) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nw><%loop> U: full-set S: full-set Exits: (1 + ((%n + %m) umin (%n + %m + %l))) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
 ; CHECK-NEXT:    --> (%cond_p0 umin %cond_p1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_implies_poison_complex2
@@ -787,9 +787,9 @@ define i32 @logical_and_implies_poison_complex_wrong_direction(i32 %n, i32 %m, i
 ; CHECK-NEXT:    %add1 = add i32 %add, %l
 ; CHECK-NEXT:    --> (%n + %m + %l) U: full-set S: full-set
 ; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: full-set S: full-set Exits: ((%n + %m) umin_seq (%n + %m + %l)) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: full-set S: full-set Exits: ((%n + %m) umin_seq (%n + %m + %l)) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: full-set S: full-set Exits: (1 + ((%n + %m) umin_seq (%n + %m + %l))) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nw><%loop> U: full-set S: full-set Exits: (1 + ((%n + %m) umin_seq (%n + %m + %l))) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
 ; CHECK-NEXT:    --> (%cond_p0 umin_seq %cond_p1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_implies_poison_complex_wrong_direction
@@ -819,9 +819,9 @@ define i32 @logical_and_implies_multiple_ops(i32 %n, i32 %m) {
 ; CHECK-NEXT:    %add = add i32 %n, 1
 ; CHECK-NEXT:    --> (1 + %n) U: full-set S: full-set
 ; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: full-set S: full-set Exits: (((1 + %n) umin %n) umin_seq %m) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: full-set S: full-set Exits: (((1 + %n) umin %n) umin_seq %m) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: full-set S: full-set Exits: (1 + (((1 + %n) umin %n) umin_seq %m)) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nw><%loop> U: full-set S: full-set Exits: (1 + (((1 + %n) umin %n) umin_seq %m)) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
 ; CHECK-NEXT:    --> (%cond_p0 umin %cond_p1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %cond2 = select i1 %cond, i1 %cond_p2, i1 false
@@ -854,9 +854,9 @@ define i32 @logical_and_implies_multiple_ops2(i32 %n, i32 %m) {
 ; CHECK-NEXT:    %add = add i32 %n, 1
 ; CHECK-NEXT:    --> (1 + %n) U: full-set S: full-set
 ; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: full-set S: full-set Exits: (%n umin_seq ((1 + %n) umin %m)) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: full-set S: full-set Exits: (%n umin_seq ((1 + %n) umin %m)) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: full-set S: full-set Exits: (1 + (%n umin_seq ((1 + %n) umin %m))) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nw><%loop> U: full-set S: full-set Exits: (1 + (%n umin_seq ((1 + %n) umin %m))) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
 ; CHECK-NEXT:    --> (%cond_p0 umin_seq %cond_p1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %cond2 = select i1 %cond, i1 %cond_p2, i1 false
@@ -889,9 +889,9 @@ define i32 @logical_and_implies_multiple_ops3(i32 %n, i32 %m) {
 ; CHECK-NEXT:    %add = add i32 %n, 1
 ; CHECK-NEXT:    --> (1 + %n) U: full-set S: full-set
 ; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: full-set S: full-set Exits: (%m umin_seq ((1 + %n) umin %n)) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: full-set S: full-set Exits: (%m umin_seq ((1 + %n) umin %n)) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: full-set S: full-set Exits: (1 + (%m umin_seq ((1 + %n) umin %n))) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nw><%loop> U: full-set S: full-set Exits: (1 + (%m umin_seq ((1 + %n) umin %n))) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
 ; CHECK-NEXT:    --> (%cond_p0 umin_seq %cond_p1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %cond2 = select i1 %cond, i1 %cond_p2, i1 false
@@ -990,9 +990,9 @@ define i32 @logical_and_not_zero_needs_context(i32 %n, i32 %m) {
 ; CHECK-LABEL: 'logical_and_not_zero_needs_context'
 ; CHECK-NEXT:  Classifying expressions for: @logical_and_not_zero_needs_context
 ; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: full-set S: full-set Exits: (%n umin_seq %m) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: full-set S: full-set Exits: (%n umin_seq %m) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: full-set S: full-set Exits: (1 + (%n umin_seq %m)) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nw><%loop> U: full-set S: full-set Exits: (1 + (%n umin_seq %m)) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
 ; CHECK-NEXT:    --> (%cond_p0 umin_seq %cond_p1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_not_zero_needs_context
