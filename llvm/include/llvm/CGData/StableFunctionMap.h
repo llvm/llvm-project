@@ -31,16 +31,16 @@ struct StableFunction {
   /// The combined stable hash of the function.
   stable_hash Hash;
   /// The name of the function.
-  std::string FunctionName;
+  StringRef FunctionName;
   /// The name of the module the function is in.
-  std::string ModuleName;
+  StringRef ModuleName;
   /// The number of instructions.
   unsigned InstCount;
   /// A vector of pairs of IndexPair and operand hash which was skipped.
   IndexOperandHashVecType IndexOperandHashes;
 
-  StableFunction(stable_hash Hash, const std::string FunctionName,
-                 const std::string ModuleName, unsigned InstCount,
+  StableFunction(stable_hash Hash, StringRef FunctionName, StringRef ModuleName,
+                 unsigned InstCount,
                  IndexOperandHashVecType &&IndexOperandHashes)
       : Hash(Hash), FunctionName(FunctionName), ModuleName(ModuleName),
         InstCount(InstCount),
@@ -78,14 +78,14 @@ struct StableFunctionMap {
   const HashFuncsMapType &getFunctionMap() const { return HashToFuncs; }
 
   /// Get the NameToId vector for serialization.
-  const SmallVector<std::string> getNames() const { return IdToName; }
+  const SmallVector<StringRef> getNames() const { return IdToName; }
 
   /// Get an existing ID associated with the given name or create a new ID if it
   /// doesn't exist.
   unsigned getIdOrCreateForName(StringRef Name);
 
   /// Get the name associated with a given ID
-  std::optional<std::string> getNameForId(unsigned Id) const;
+  std::optional<StringRef> getNameForId(unsigned Id) const;
 
   /// Insert a `StableFunction` object into the function map. This method
   /// handles the uniquing of string names and create a `StableFunctionEntry`
@@ -124,7 +124,7 @@ private:
   /// A map from a stable_hash to a vector of functions with that hash.
   HashFuncsMapType HashToFuncs;
   /// A vector of strings to hold names.
-  SmallVector<std::string> IdToName;
+  SmallVector<StringRef> IdToName;
   /// A map from StringRef (name) to an ID.
   StringMap<unsigned> NameToId;
   /// True if the function map is finalized with minimal content.
