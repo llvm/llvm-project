@@ -27,7 +27,10 @@ define i8 @urem_assume_a(i8 %x, i8 %n, i8 %a) {
 ; CHECK-NEXT:    [[CMP_A:%.*]] = icmp ult i8 [[A:%.*]], [[N]]
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP_A]])
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw i8 [[X_FR]], [[A]]
-; CHECK-NEXT:    [[OUT:%.*]] = urem i8 [[ADD]], [[N]]
+; CHECK-NEXT:    [[ADD_FROZEN:%.*]] = freeze i8 [[ADD]]
+; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp ult i8 [[ADD_FROZEN]], [[N]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[DOTNOT]], i8 0, i8 [[N]]
+; CHECK-NEXT:    [[OUT:%.*]] = sub i8 [[ADD_FROZEN]], [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[OUT]]
 ;
   %cmp = icmp ult i8 %x, %n
@@ -231,7 +234,10 @@ define i8 @urem_without_assume_a(i8 %arg, i8 %arg2, i8 %a) {
 ; CHECK-NEXT:    [[X_REM:%.*]] = urem i8 [[ARG:%.*]], [[ARG2:%.*]]
 ; CHECK-NEXT:    [[A_REM:%.*]] = urem i8 [[A:%.*]], [[ARG2]]
 ; CHECK-NEXT:    [[ADDD:%.*]] = add i8 [[X_REM]], [[A_REM]]
-; CHECK-NEXT:    [[OUT:%.*]] = urem i8 [[ADDD]], [[ARG2]]
+; CHECK-NEXT:    [[ADD_FROZEN:%.*]] = freeze i8 [[ADDD]]
+; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp ult i8 [[ADD_FROZEN]], [[ARG2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[DOTNOT]], i8 0, i8 [[ARG2]]
+; CHECK-NEXT:    [[OUT:%.*]] = sub i8 [[ADD_FROZEN]], [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[OUT]]
 ;
   %x_rem = urem i8 %arg, %arg2

@@ -2461,6 +2461,24 @@ Instruction *InstCombinerImpl::visitURem(BinaryOperator &I) {
     }
   }
 
+  // For "(X + A) % Op1" and if (X u< Op1 && A u< Op1)
+  // => (X + A) >= Op1 ? X + A - Op1 : X + A .
+  Value *A = nullptr;
+  if (match(Op0, m_Add(m_Value(X), m_Value(A)))) {
+    Value *Val_X =
+        simplifyICmpInst(ICmpInst::ICMP_ULT, X, Op1, SQ.getWithInstruction(&I));
+    Value *Val_A =
+        simplifyICmpInst(ICmpInst::ICMP_ULT, A, Op1, SQ.getWithInstruction(&I));
+    if (Val_X && match(Val_X, m_One()) && Val_A && match(Val_A, m_One())) {
+      Value *FrozenOp0 = Op0;
+      if (!isGuaranteedNotToBeUndef(Op0))
+        FrozenOp0 = Builder.CreateFreeze(Op0, Op0->getName() + ".frozen");
+      Value *Cmp = Builder.CreateICmpUGE(FrozenOp0, Op1);
+      Value *Sub = Builder.CreateSub(FrozenOp0, Op1);
+      return SelectInst::Create(Cmp, Sub, FrozenOp0);
+    }
+  }
+
   return nullptr;
 }
 
