@@ -133,6 +133,7 @@ class DebugCommunication(object):
         self.output_condition = threading.Condition()
         self.output: dict[str, list[str]] = {}
         self.configuration_done_sent = False
+        self.initialized = False
         self.frame_scopes = {}
         self.init_commands = init_commands
         self.disassembled_instructions = {}
@@ -235,6 +236,8 @@ class DebugCommunication(object):
                 self.output_condition.release()
                 # no need to add 'output' event packets to our packets list
                 return keepGoing
+            elif event == "initialized":
+                self.initialized = True
             elif event == "process":
                 # When a new process is attached or launched, remember the
                 # details that are available in the body of the event
@@ -602,7 +605,7 @@ class DebugCommunication(object):
         exitCommands: Optional[list[str]] = None,
         terminateCommands: Optional[list[str]] = None,
         coreFile: Optional[str] = None,
-        stopOnAttach=True,
+        stopOnEntry=False,
         sourceMap: Optional[Union[list[tuple[str, str]], dict[str, str]]] = None,
         gdbRemotePort: Optional[int] = None,
         gdbRemoteHostname: Optional[str] = None,
@@ -629,8 +632,8 @@ class DebugCommunication(object):
             args_dict["attachCommands"] = attachCommands
         if coreFile:
             args_dict["coreFile"] = coreFile
-        if stopOnAttach:
-            args_dict["stopOnEntry"] = stopOnAttach
+        if stopOnEntry:
+            args_dict["stopOnEntry"] = stopOnEntry
         if postRunCommands:
             args_dict["postRunCommands"] = postRunCommands
         if sourceMap:
@@ -640,11 +643,7 @@ class DebugCommunication(object):
         if gdbRemoteHostname is not None:
             args_dict["gdb-remote-hostname"] = gdbRemoteHostname
         command_dict = {"command": "attach", "type": "request", "arguments": args_dict}
-        response = self.send_recv(command_dict)
-
-        if response["success"]:
-            self.wait_for_event("process")
-        return response
+        return self.send_recv(command_dict)
 
     def request_breakpointLocations(
         self, file_path, line, end_line=None, column=None, end_column=None
@@ -677,6 +676,7 @@ class DebugCommunication(object):
         response = self.send_recv(command_dict)
         if response:
             self.configuration_done_sent = True
+            self.request_threads()
         return response
 
     def _process_stopped(self):
@@ -824,7 +824,7 @@ class DebugCommunication(object):
         args: Optional[list[str]] = None,
         cwd: Optional[str] = None,
         env: Optional[dict[str, str]] = None,
-        stopOnEntry=True,
+        stopOnEntry=False,
         disableASLR=True,
         disableSTDIO=False,
         shellExpandArguments=False,
@@ -894,11 +894,7 @@ class DebugCommunication(object):
         if commandEscapePrefix is not None:
             args_dict["commandEscapePrefix"] = commandEscapePrefix
         command_dict = {"command": "launch", "type": "request", "arguments": args_dict}
-        response = self.send_recv(command_dict)
-
-        if response["success"]:
-            self.wait_for_event("process")
-        return response
+        return self.send_recv(command_dict)
 
     def request_next(self, threadId, granularity="statement"):
         if self.exit_status is not None:
