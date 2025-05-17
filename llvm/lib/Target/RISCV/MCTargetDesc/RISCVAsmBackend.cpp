@@ -641,8 +641,8 @@ bool RISCVAsmBackend::evaluateVendorFixup(const MCAssembler &Asm,
   }
   // End copy of MCAssembler::evaluateFixup
 
-  // If we failed to resolve, or we need to force relocations (relaxations), then
-  // record a vendor relocation too.
+  // If we failed to resolve, or we need to force relocations (relaxations),
+  // then record a vendor relocation too.
   if ((!IsResolved || shouldForceRelocation(Asm, Fixup, Target, STI)) &&
       RecordReloc) {
     // Here are the additions to emit a vendor relocation for fixups that need
