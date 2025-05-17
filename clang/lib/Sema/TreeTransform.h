@@ -9162,6 +9162,10 @@ StmtResult TreeTransform<Derived>::TransformCXXTryStmt(CXXTryStmt *S) {
     Handlers.push_back(Handler.getAs<Stmt>());
   }
 
+  if (!getSema().getLangOpts().CXXExceptions &&
+      !getSema().getCurContext()->isDependentContext())
+    getSema().Diag(S->getTryLoc(), diag::err_exceptions_disabled) << "try";
+
   if (!getDerived().AlwaysRebuild() && TryBlock.get() == S->getTryBlock() &&
       !HandlerChanged)
     return S;
@@ -14383,6 +14387,9 @@ TreeTransform<Derived>::TransformCXXThrowExpr(CXXThrowExpr *E) {
   ExprResult SubExpr = getDerived().TransformExpr(E->getSubExpr());
   if (SubExpr.isInvalid())
     return ExprError();
+
+  if (!getSema().getLangOpts().CXXExceptions && !E->isInstantiationDependent())
+    getSema().Diag(E->getThrowLoc(), diag::err_exceptions_disabled) << "throw";
 
   if (!getDerived().AlwaysRebuild() &&
       SubExpr.get() == E->getSubExpr())
