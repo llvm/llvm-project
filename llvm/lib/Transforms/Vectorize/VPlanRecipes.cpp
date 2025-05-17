@@ -679,9 +679,6 @@ Value *VPInstruction::generate(VPTransformState &State) {
     // Reduce all of the unrolled parts into a single vector.
     Value *ReducedPartRdx = RdxParts[0];
     unsigned Op = RdxDesc.getOpcode();
-    if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK))
-      Op = Instruction::Or;
-
     if (PhiR->isOrdered()) {
       ReducedPartRdx = RdxParts[UF - 1];
     } else {
