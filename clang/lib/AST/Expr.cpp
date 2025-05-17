@@ -3570,8 +3570,8 @@ bool Expr::isTemporaryObject(ASTContext &C, const CXXRecordDecl *TempTy) const {
   // refer to temporaries of that type:
 
   // - implicit derived-to-base conversions
-  if (isa<ImplicitCastExpr>(E)) {
-    switch (cast<ImplicitCastExpr>(E)->getCastKind()) {
+  if (const auto *ICE = dyn_cast<ImplicitCastExpr>(E)) {
+    switch (ICE->getCastKind()) {
     case CK_DerivedToBase:
     case CK_UncheckedDerivedToBase:
       return false;
@@ -3584,7 +3584,7 @@ bool Expr::isTemporaryObject(ASTContext &C, const CXXRecordDecl *TempTy) const {
   if (isa<MemberExpr>(E))
     return false;
 
-  if (const BinaryOperator *BO = dyn_cast<BinaryOperator>(E))
+  if (const auto *BO = dyn_cast<BinaryOperator>(E))
     if (BO->isPtrMemOp())
       return false;
 
