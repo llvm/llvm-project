@@ -2902,6 +2902,10 @@ LogicalResult TypeConverter::convertType(Type t,
 LogicalResult TypeConverter::convertType(Value v,
                                          SmallVectorImpl<Type> &results) const {
   assert(v && "expected non-null value");
+// To make the crash go away:
+//  return convertType(v.getType(), results);
+
+  llvm::errs() << "call convertType with pre-existing num results: " << results.size() << "\n";
 
   // Walk the added converters in reverse order to apply the most recently
   // registered first.
@@ -2926,6 +2930,8 @@ Type TypeConverter::convertType(Type t) const {
 }
 
 Type TypeConverter::convertType(Value v) const {
+  llvm_unreachable("test -- not reachable");
+
   // Use the multi-type result version to convert the type.
   SmallVector<Type, 1> results;
   if (failed(convertType(v, results)))

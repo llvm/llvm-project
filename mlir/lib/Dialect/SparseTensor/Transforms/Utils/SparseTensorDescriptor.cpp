@@ -34,6 +34,8 @@ static IntegerAttr optionalLevelAttr(MLIRContext *ctx,
 // `SparseTensorType`.
 static std::optional<LogicalResult>
 convertSparseTensorType(RankedTensorType rtp, SmallVectorImpl<Type> &fields) {
+  llvm::errs() << "convertSparseTensorType with pre-existing num fields: " << fields.size() << "\n";
+
   const SparseTensorType stt(rtp);
   if (!stt.hasEncoding())
     return std::nullopt;

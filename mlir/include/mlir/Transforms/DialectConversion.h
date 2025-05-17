@@ -380,6 +380,8 @@ private:
         derivedType = dyn_cast<T>(*t);
       } else if (Value *v = std::get_if<Value>(&type)) {
         derivedType = dyn_cast<T>(v->getType());
+      } else {
+        llvm_unreachable("unexpected variant");
       }
       //T derivedType = dyn_cast<T>(std::get<Type>(type));
       if (!derivedType)
@@ -513,6 +515,12 @@ private:
   mutable DenseMap<Type, SmallVector<Type, 2>> cachedMultiConversions;
   /// A mutex used for cache access
   mutable llvm::sys::SmartRWMutex<true> cacheMutex;
+  /// Whether the type converter has context-aware type conversions. I.e.,
+  /// conversion rules that depend on the SSA value instead of just the type.
+  /// Type conversion caching is deactivated when there are context-aware
+  /// conversions because the type converter may return different results for
+  /// the same input type.
+  bool hasContextAwareTypeConversions = false;
 };
 
 //===----------------------------------------------------------------------===//

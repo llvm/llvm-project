@@ -53,6 +53,7 @@ public:
     offsets.push_back(0);
     // Do the type conversion and record the offsets.
     for (Value v : op.getResults()) {
+      v.dump();
       if (failed(typeConverter->convertType(v, dstTypes)))
         return rewriter.notifyMatchFailure(op, "could not convert result type");
       offsets.push_back(dstTypes.size());
