@@ -85,6 +85,10 @@ transform::OneShotBufferizeOp::apply(transform::TransformRewriter &rewriter,
   auto payloadOps = state.getPayloadOps(getTarget());
   BufferizationState bufferizationState;
 
+  if (options.cacheSymbolTables) {
+    bufferizationState.addExtension<SymbolBufferizationState>();
+  }
+
   for (Operation *target : payloadOps) {
     if (!isa<ModuleOp, FunctionOpInterface>(target))
       return emitSilenceableError() << "expected module or function target";
@@ -166,6 +170,7 @@ public:
     registerTransformOps<
 #define GET_OP_LIST
 #include "mlir/Dialect/Bufferization/TransformOps/BufferizationTransformOps.cpp.inc"
+
         >();
   }
 };

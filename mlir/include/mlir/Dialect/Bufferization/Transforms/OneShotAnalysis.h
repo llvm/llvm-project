@@ -52,6 +52,12 @@ struct OneShotBufferizationOptions : public BufferizationOptions {
   /// `AnalysisHeuristic::Fuzzer`. The fuzzer should be used only with
   /// `testAnalysisOnly = true`.
   unsigned analysisFuzzerSeed = 0;
+
+  /// Enable caching of symbol tables. If enabled, the SymbolBufferizationState
+  /// class is attached to the bufferization state and the user is required to
+  /// keep the cached symbol tables consistent with respect to the performed
+  /// bufferizations.
+  bool cacheSymbolTables = false;
 };
 
 /// State for analysis-enabled bufferization. This class keeps track of alias
