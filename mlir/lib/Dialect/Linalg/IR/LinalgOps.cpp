@@ -2402,7 +2402,7 @@ std::string mlir::linalg::generateLibraryCallName(Operation *op) {
     }
   }
   name.reserve(128);
-  std::replace(name.begin(), name.end(), '.', '_');
+  llvm::replace(name, '.', '_');
   llvm::raw_string_ostream ss(name);
   ss << "_" << fun;
   for (Type t : op->getOperandTypes()) {
