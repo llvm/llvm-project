@@ -13,12 +13,13 @@
 #ifndef AFFINE_OPS
 #define AFFINE_OPS
 
-include "mlir/Dialect/Arith/IR/ArithBase.td"
 include "mlir/Dialect/Affine/IR/AffineMemoryOpInterfaces.td"
+include "mlir/Dialect/Arith/IR/ArithBase.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/IR/CommonTypeConstraints.td"
 
 def Affine_Dialect : Dialect {
   let name = "affine";
@@ -61,18 +62,22 @@ def AffineApplyOp : Affine_Op<"apply", [Pure]> {
     %2 = affine.apply affine_map<(i)[s0] -> (i + s0)> (%42)[%n]
     ```
   }];
-  let arguments = (ins AffineMapAttr:$map, Variadic<Index>:$mapOperands);
-  let results = (outs Index);
+  let arguments = (ins AffineMapAttr:$map, Variadic<IndexLike>:$mapOperands);
+  let results = (outs IndexLike);
 
   // TODO: The auto-generated builders should check to see if the return type
   // has a constant builder. That way we wouldn't need to explicitly specify the
   // result types here.
   let builders = [
-    OpBuilder<(ins "ArrayRef<AffineExpr> ":$exprList,"ValueRange":$mapOperands),
+    OpBuilder<(ins "ArrayRef<AffineExpr>":$exprList,"ValueRange":$mapOperands),
     [{
       build($_builder, $_state, $_builder.getIndexType(),
             AffineMap::inferFromExprList(exprList, $_builder.getContext())
                                         .front(), mapOperands);
+    }]>,
+    OpBuilder<(ins "AffineMap":$map,"ValueRange":$mapOperands),
+    [{
+      build($_builder, $_state, $_builder.getIndexType(), map, mapOperands);
     }]>
   ];
 
