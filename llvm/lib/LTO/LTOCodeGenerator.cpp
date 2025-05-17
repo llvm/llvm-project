@@ -746,7 +746,8 @@ namespace {
 class LTODiagnosticInfo : public DiagnosticInfo {
   const Twine &Msg;
 public:
-  LTODiagnosticInfo(const Twine &DiagMsg, DiagnosticSeverity Severity=DS_Error)
+  LTODiagnosticInfo(const Twine &DiagMsg LLVM_LIFETIME_BOUND,
+                    DiagnosticSeverity Severity = DS_Error)
       : DiagnosticInfo(DK_Linker, Severity), Msg(DiagMsg) {}
   void print(DiagnosticPrinter &DP) const override { DP << Msg; }
 };
