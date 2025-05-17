@@ -107,7 +107,7 @@ const DILineInfoSpecifier specifier() {
 MATCHER_P4(FrameContains, FunctionName, LineOffset, Column, Inline, "") {
   const Frame &F = arg;
 
-  const uint64_t ExpectedHash = IndexedMemProfRecord::getGUID(FunctionName);
+  const uint64_t ExpectedHash = memprof::getGUID(FunctionName);
   if (F.Function != ExpectedHash) {
     *result_listener << "Hash mismatch";
     return false;
@@ -180,7 +180,7 @@ TEST(MemProf, FillsValue) {
   ASSERT_THAT(Records, SizeIs(4));
 
   // Check the memprof record for foo.
-  const llvm::GlobalValue::GUID FooId = IndexedMemProfRecord::getGUID("foo");
+  const llvm::GlobalValue::GUID FooId = memprof::getGUID("foo");
   ASSERT_TRUE(Records.contains(FooId));
   const MemProfRecord &Foo = Records[FooId];
   ASSERT_THAT(Foo.AllocSites, SizeIs(1));
@@ -196,7 +196,7 @@ TEST(MemProf, FillsValue) {
   EXPECT_TRUE(Foo.CallSites.empty());
 
   // Check the memprof record for bar.
-  const llvm::GlobalValue::GUID BarId = IndexedMemProfRecord::getGUID("bar");
+  const llvm::GlobalValue::GUID BarId = memprof::getGUID("bar");
   ASSERT_TRUE(Records.contains(BarId));
   const MemProfRecord &Bar = Records[BarId];
   ASSERT_THAT(Bar.AllocSites, SizeIs(1));
@@ -217,7 +217,7 @@ TEST(MemProf, FillsValue) {
                               FrameContains("bar", 51U, 20U, false)))));
 
   // Check the memprof record for xyz.
-  const llvm::GlobalValue::GUID XyzId = IndexedMemProfRecord::getGUID("xyz");
+  const llvm::GlobalValue::GUID XyzId = memprof::getGUID("xyz");
   ASSERT_TRUE(Records.contains(XyzId));
   const MemProfRecord &Xyz = Records[XyzId];
   // Expect the entire frame even though in practice we only need the first
@@ -229,7 +229,7 @@ TEST(MemProf, FillsValue) {
                               FrameContains("abc", 5U, 30U, false)))));
 
   // Check the memprof record for abc.
-  const llvm::GlobalValue::GUID AbcId = IndexedMemProfRecord::getGUID("abc");
+  const llvm::GlobalValue::GUID AbcId = memprof::getGUID("abc");
   ASSERT_TRUE(Records.contains(AbcId));
   const MemProfRecord &Abc = Records[AbcId];
   EXPECT_TRUE(Abc.AllocSites.empty());
@@ -461,9 +461,9 @@ TEST(MemProf, SymbolizationFilter) {
 
 TEST(MemProf, BaseMemProfReader) {
   IndexedMemProfData MemProfData;
-  Frame F1(/*Hash=*/IndexedMemProfRecord::getGUID("foo"), /*LineOffset=*/20,
+  Frame F1(/*Hash=*/memprof::getGUID("foo"), /*LineOffset=*/20,
            /*Column=*/5, /*IsInlineFrame=*/true);
-  Frame F2(/*Hash=*/IndexedMemProfRecord::getGUID("bar"), /*LineOffset=*/10,
+  Frame F2(/*Hash=*/memprof::getGUID("bar"), /*LineOffset=*/10,
            /*Column=*/2, /*IsInlineFrame=*/false);
   auto F1Id = MemProfData.addFrame(F1);
   auto F2Id = MemProfData.addFrame(F2);
@@ -493,9 +493,9 @@ TEST(MemProf, BaseMemProfReader) {
 
 TEST(MemProf, BaseMemProfReaderWithCSIdMap) {
   IndexedMemProfData MemProfData;
-  Frame F1(/*Hash=*/IndexedMemProfRecord::getGUID("foo"), /*LineOffset=*/20,
+  Frame F1(/*Hash=*/memprof::getGUID("foo"), /*LineOffset=*/20,
            /*Column=*/5, /*IsInlineFrame=*/true);
-  Frame F2(/*Hash=*/IndexedMemProfRecord::getGUID("bar"), /*LineOffset=*/10,
+  Frame F2(/*Hash=*/memprof::getGUID("bar"), /*LineOffset=*/10,
            /*Column=*/2, /*IsInlineFrame=*/false);
   auto F1Id = MemProfData.addFrame(F1);
   auto F2Id = MemProfData.addFrame(F2);
@@ -813,7 +813,7 @@ HeapProfileRecords:
   // Verify the entire contents of MemProfData.Records.
   ASSERT_THAT(MemProfData.Records, SizeIs(1));
   const auto &[GUID, IndexedRecord] = MemProfData.Records.front();
-  EXPECT_EQ(GUID, IndexedMemProfRecord::getGUID("_Z3fooi"));
+  EXPECT_EQ(GUID, memprof::getGUID("_Z3fooi"));
 
   IndexedCallstackIdConverter CSIdConv(MemProfData);
   MemProfRecord Record = IndexedRecord.toMemProfRecord(CSIdConv);
