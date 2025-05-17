@@ -12481,8 +12481,8 @@ static bool IsKnownPredicateViaAddRecStart(ScalarEvolution &SE,
     return false;
 
   const SCEV *LStart, *RStart, *Step;
-  if (!match(LHS, m_scev_AddRec(m_SCEV(LStart), m_SCEV(Step))) ||
-      !match(RHS, m_scev_AddRec(m_SCEV(RStart), m_scev_Specific(Step))))
+  if (!match(LHS, m_scev_AffineAddRec(m_SCEV(LStart), m_SCEV(Step))) ||
+      !match(RHS, m_scev_AffineAddRec(m_SCEV(RStart), m_scev_Specific(Step))))
     return false;
   const SCEVAddRecExpr *LAR = cast<SCEVAddRecExpr>(LHS);
   const SCEVAddRecExpr *RAR = cast<SCEVAddRecExpr>(RHS);

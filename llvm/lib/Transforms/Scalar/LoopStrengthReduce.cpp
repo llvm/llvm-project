@@ -558,7 +558,7 @@ static void DoInitialMatch(const SCEV *S, Loop *L,
 
   // Look at addrec operands.
   const SCEV *Start, *Step;
-  if (match(S, m_scev_AddRec(m_SCEV(Start), m_SCEV(Step))) &&
+  if (match(S, m_scev_AffineAddRec(m_SCEV(Start), m_SCEV(Step))) &&
       !Start->isZero()) {
     DoInitialMatch(Start, L, Good, Bad, SE);
     DoInitialMatch(SE.getAddRecExpr(SE.getConstant(S->getType(), 0), Step,
@@ -1440,7 +1440,7 @@ void Cost::RateRegister(const Formula &F, const SCEV *Reg,
         TTI->isIndexedStoreLegal(TTI->MIM_PostInc, AR->getType())) {
       const SCEV *Start;
       const SCEVConstant *Step;
-      if (match(AR, m_scev_AddRec(m_SCEV(Start), m_SCEVConstant(Step))))
+      if (match(AR, m_scev_AffineAddRec(m_SCEV(Start), m_SCEVConstant(Step))))
         // If the step size matches the base offset, we could use pre-indexed
         // addressing.
         if ((AMK == TTI::AMK_PreIndexed && F.BaseOffset.isFixed() &&
@@ -2540,7 +2540,8 @@ ICmpInst *LSRInstance::OptimizeMax(ICmpInst *Cond, IVStrideUse* &CondUse) {
   // Check the relevant induction variable for conformance to
   // the pattern.
   const SCEV *IV = SE.getSCEV(Cond->getOperand(0));
-  if (!match(IV, m_scev_AddRec(m_scev_SpecificInt(1), m_scev_SpecificInt(1))))
+  if (!match(IV,
+             m_scev_AffineAddRec(m_scev_SpecificInt(1), m_scev_SpecificInt(1))))
     return Cond;
 
   assert(cast<SCEVAddRecExpr>(IV)->getLoop() == L &&
@@ -3843,7 +3844,7 @@ static const SCEV *CollectSubexprs(const SCEV *S, const SCEVConstant *C,
     return nullptr;
   }
   const SCEV *Start, *Step;
-  if (match(S, m_scev_AddRec(m_SCEV(Start), m_SCEV(Step)))) {
+  if (match(S, m_scev_AffineAddRec(m_SCEV(Start), m_SCEV(Step)))) {
     // Split a non-zero base out of an addrec.
     if (Start->isZero())
       return S;
@@ -3890,7 +3891,7 @@ static bool mayUsePostIncMode(const TargetTransformInfo &TTI,
       !LU.AccessTy.getType()->isIntOrIntVectorTy())
     return false;
   const SCEV *Start;
-  if (!match(S, m_scev_AddRec(m_SCEV(Start), m_SCEVConstant())))
+  if (!match(S, m_scev_AffineAddRec(m_SCEV(Start), m_SCEVConstant())))
     return false;
   // Check if a post-indexed load/store can be used.
   if (TTI.isIndexedLoadLegal(TTI.MIM_PostInc, S->getType()) ||
@@ -4155,7 +4156,7 @@ void LSRInstance::GenerateConstantOffsetsImpl(
   // instructions for pointer updating.
   if (AMK == TTI::AMK_PreIndexed && LU.Kind == LSRUse::Address) {
     const APInt *StepInt;
-    if (match(G, m_scev_AddRec(m_SCEV(), m_scev_APInt(StepInt)))) {
+    if (match(G, m_scev_AffineAddRec(m_SCEV(), m_scev_APInt(StepInt)))) {
       int64_t Step = StepInt->isNegative() ? StepInt->getSExtValue()
                                            : StepInt->getZExtValue();
 

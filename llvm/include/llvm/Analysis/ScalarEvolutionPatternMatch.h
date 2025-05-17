@@ -196,10 +196,9 @@ m_scev_UDiv(const Op0_t &Op0, const Op1_t &Op1) {
   return m_scev_Binary<SCEVUDivExpr>(Op0, Op1);
 }
 
-// Matches affine AddRecs.
 template <typename Op0_t, typename Op1_t>
 inline SCEVBinaryExpr_match<SCEVAddRecExpr, Op0_t, Op1_t>
-m_scev_AddRec(const Op0_t &Op0, const Op1_t &Op1) {
+m_scev_AffineAddRec(const Op0_t &Op0, const Op1_t &Op1) {
   return m_scev_Binary<SCEVAddRecExpr>(Op0, Op1);
 }
 } // namespace SCEVPatternMatch
