@@ -61,6 +61,9 @@ template <typename Class> struct class_match {
 };
 
 inline class_match<const SCEV> m_SCEV() { return class_match<const SCEV>(); }
+inline class_match<const SCEVConstant> m_SCEVConstant() {
+  return class_match<const SCEVConstant>();
+}
 
 template <typename Class> struct bind_ty {
   Class *&VR;
@@ -95,7 +98,7 @@ struct specificscev_ty {
 };
 
 /// Match if we have a specific specified SCEV.
-inline specificscev_ty m_Specific(const SCEV *S) { return S; }
+inline specificscev_ty m_scev_Specific(const SCEV *S) { return S; }
 
 struct is_specific_cst {
   uint64_t CV;
@@ -191,6 +194,12 @@ template <typename Op0_t, typename Op1_t>
 inline SCEVBinaryExpr_match<SCEVUDivExpr, Op0_t, Op1_t>
 m_scev_UDiv(const Op0_t &Op0, const Op1_t &Op1) {
   return m_scev_Binary<SCEVUDivExpr>(Op0, Op1);
+}
+
+template <typename Op0_t, typename Op1_t>
+inline SCEVBinaryExpr_match<SCEVAddRecExpr, Op0_t, Op1_t>
+m_scev_AffineAddRec(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_scev_Binary<SCEVAddRecExpr>(Op0, Op1);
 }
 } // namespace SCEVPatternMatch
 } // namespace llvm
