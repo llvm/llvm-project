@@ -11,7 +11,6 @@
 #define _LIBCPP___FUNCTIONAL_REFERENCE_WRAPPER_H
 
 #include <__compare/synth_three_way.h>
-#include <__concepts/boolean_testable.h>
 #include <__config>
 #include <__functional/weak_result_type.h>
 #include <__memory/addressof.h>
@@ -19,6 +18,7 @@
 #include <__type_traits/enable_if.h>
 #include <__type_traits/invoke.h>
 #include <__type_traits/is_const.h>
+#include <__type_traits/is_core_convertible.h>
 #include <__type_traits/remove_cvref.h>
 #include <__type_traits/void_t.h>
 #include <__utility/declval.h>
@@ -75,7 +75,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(reference_wrapper __x, reference_wrapper __y)
     requires requires {
-      { __x.get() == __y.get() } -> __boolean_testable;
+      { __x.get() == __y.get() } -> __core_convertible_to<bool>;
     }
   {
     return __x.get() == __y.get();
@@ -83,7 +83,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(reference_wrapper __x, const _Tp& __y)
     requires requires {
-      { __x.get() == __y } -> __boolean_testable;
+      { __x.get() == __y } -> __core_convertible_to<bool>;
     }
   {
     return __x.get() == __y;
@@ -91,7 +91,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(reference_wrapper __x, reference_wrapper<const _Tp> __y)
     requires(!is_const_v<_Tp>) && requires {
-      { __x.get() == __y.get() } -> __boolean_testable;
+      { __x.get() == __y.get() } -> __core_convertible_to<bool>;
     }
   {
     return __x.get() == __y.get();
