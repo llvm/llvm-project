@@ -4968,6 +4968,7 @@ MipsTargetLowering::getRegisterByName(const char *RegName, LLT VT,
     Register Reg = StringSwitch<Register>(RegName)
                        .Case("$28", Mips::GP_64)
                        .Case("sp", Mips::SP_64)
+                       .Case("$sp", Mips::SP_64)
                        .Default(Register());
     if (Reg)
       return Reg;
@@ -4975,6 +4976,7 @@ MipsTargetLowering::getRegisterByName(const char *RegName, LLT VT,
     Register Reg = StringSwitch<Register>(RegName)
                        .Case("$28", Mips::GP)
                        .Case("sp", Mips::SP)
+                       .Case("$sp", Mips::SP)
                        .Default(Register());
     if (Reg)
       return Reg;
