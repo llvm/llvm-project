@@ -37,6 +37,8 @@ class RISCVTTIImpl : public BasicTTIImplBase<RISCVTTIImpl> {
   const RISCVSubtarget *getST() const { return ST; }
   const RISCVTargetLowering *getTLI() const { return TLI; }
 
+  enum MemIntrinsicType { VECTOR_VLE_VSE };
+
   /// This function returns an estimate for VL to be used in VL based terms
   /// of the cost model.  For fixed length vectors, this is simply the
   /// vector length.  For scalable vectors, we return results consistent
@@ -155,6 +157,12 @@ public:
 
   void getPeelingPreferences(Loop *L, ScalarEvolution &SE,
                              TTI::PeelingPreferences &PP) const override;
+
+  Value *getOrCreateResultFromMemIntrinsic(IntrinsicInst *Inst,
+                                           Type *ExpectedType) const override;
+
+  bool getTgtMemIntrinsic(IntrinsicInst *Inst,
+                          MemIntrinsicInfo &Info) const override;
 
   unsigned getMinVectorRegisterBitWidth() const override {
     return ST->useRVVForFixedLengthVectors() ? 16 : 0;
