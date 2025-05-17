@@ -23,7 +23,7 @@ body:             |
   bb.0:
     ; CHECK-LABEL: name: test
     ; CHECK: [[DEF:%[0-9]+]]:_(p0) = G_IMPLICIT_DEF
-    ; CHECK: $x0 = COPY [[DEF]](p0)
+    ; CHECK-NEXT: $x0 = COPY [[DEF]](p0)
     %0:_(p0) = G_IMPLICIT_DEF
     %1:_(p0) = COPY %0(p0)
     %2:_(p0) = COPY %1(p0)
