@@ -72,11 +72,12 @@ RESOURCE<float> Buffer;
 
 // Constructor from binding
 
-// CHECK: CXXConstructorDecl {{.*}} [[RESOURCE]]<element_type> 'void (unsigned int, unsigned int, int, unsigned int)' inline
+// CHECK: CXXConstructorDecl {{.*}} [[RESOURCE]]<element_type> 'void (unsigned int, unsigned int, int, unsigned int, const char *)' inline
 // CHECK-NEXT: ParmVarDecl {{.*}} registerNo 'unsigned int'
 // CHECK-NEXT: ParmVarDecl {{.*}} spaceNo 'unsigned int'
 // CHECK-NEXT: ParmVarDecl {{.*}} range 'int'
 // CHECK-NEXT: ParmVarDecl {{.*}} index 'unsigned int'
+// CHECK-NEXT: ParmVarDecl {{.*}} name 'const char *'
 // CHECK-NEXT: CompoundStmt {{.*}}
 // CHECK-NEXT: BinaryOperator {{.*}} '='
 // CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
@@ -90,15 +91,17 @@ RESOURCE<float> Buffer;
 // CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'spaceNo' 'unsigned int'
 // CHECK-NEXT: DeclRefExpr {{.*}} 'int' ParmVar {{.*}} 'range' 'int'
 // CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'index' 'unsigned int'
+// CHECK-NEXT: DeclRefExpr {{.*}} 'const char *' ParmVar {{.*}} 'name' 'const char *'
 // CHECK-NEXT: AlwaysInlineAttr
 
 // Constructor from implicit binding
 
-// CHECK: CXXConstructorDecl {{.*}} [[RESOURCE]]<element_type> 'void (unsigned int, int, unsigned int, unsigned int)' inline
+// CHECK: CXXConstructorDecl {{.*}} [[RESOURCE]]<element_type> 'void (unsigned int, int, unsigned int, unsigned int, const char *)' inline
 // CHECK-NEXT: ParmVarDecl {{.*}} spaceNo 'unsigned int'
 // CHECK-NEXT: ParmVarDecl {{.*}} range 'int'
 // CHECK-NEXT: ParmVarDecl {{.*}} index 'unsigned int'
 // CHECK-NEXT: ParmVarDecl {{.*}} orderId 'unsigned int'
+// CHECK-NEXT: ParmVarDecl {{.*}} name 'const char *'
 // CHECK-NEXT: CompoundStmt {{.*}}
 // CHECK-NEXT: BinaryOperator {{.*}} '='
 // CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
@@ -112,6 +115,7 @@ RESOURCE<float> Buffer;
 // CHECK-NEXT: DeclRefExpr {{.*}} 'int' ParmVar {{.*}} 'range' 'int'
 // CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'index' 'unsigned int'
 // CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'orderId' 'unsigned int'
+// CHECK-NEXT: DeclRefExpr {{.*}} 'const char *' ParmVar {{.*}} 'name' 'const char *'
 // CHECK-NEXT: AlwaysInlineAttr
 
 // Subsctript operators
