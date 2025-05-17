@@ -10488,8 +10488,8 @@ its two operands.
 
 .. note::
 
-	The instruction is implemented as a call to libm's '``fmod``'
-	for some targets, and using the instruction may thus require linking libm.
+    The instruction is implemented as a call to libm's '``fmod``'
+    for some targets, and using the instruction may thus require linking libm.
 
 
 Arguments:
@@ -18072,6 +18072,54 @@ Example:
       %r = call i8 @llvm.fshr.i8(i8 15, i8 15, i8 11)  ; %r = i8: 225 (0b11100001)
       %r = call i8 @llvm.fshr.i8(i8 0, i8 255, i8 8)   ; %r = i8: 255 (0b11111111)
 
+.. clmul:
+
+'``clmul.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.clmul``
+on any integer bit width or vectors of integers.
+
+::
+
+      declare i16 @llvm.clmul.i16(i16 %a, i16 %b)
+      declare i32 @llvm.clmul.i32(i32 %a, i32 %b)
+      declare i64 @llvm.clmul.i64(i64 %a, i64 %b)
+      declare <4 x i32> @llvm.clmult.v4i32(<4 x i32> %a, <4 x i32> %b)
+
+Overview
+"""""""""
+
+The '``llvm.clmul``' family of intrinsics functions perform carryless multiplication
+(also known as xor multiplication) on the 2 arguments.
+
+Arguments
+""""""""""
+
+The arguments (%a and %b) and the result may be of integer types of any bit
+width, but they must have the same bit width. ``%a`` and ``%b`` are the two
+values that will undergo carryless multiplication.
+
+Semantics:
+""""""""""
+
+The ‘llvm.clmul’ intrinsic computes carryless multiply of ``%a`` and ``%b``, which is the result
+of applying the standard multiplication algorithm if you replace all of the aditions with exclusive ors.
+The vector intrinsics, such as llvm.clmul.v4i32, operate on a per-element basis and the element order is not affected.
+
+Examples
+"""""""""
+
+.. code-block:: llvm
+
+      %res = call i4 @llvm.clmul.i4(i4 1, i4 2)  ; %res = 2
+      %res = call i4 @llvm.clmul.i4(i4 5, i4 6)  ; %res = 14
+      %res = call i4 @llvm.clmul.i4(i4 -4, i4 2)  ; %res = -8
+      %res = call i4 @llvm.clmul.i4(i4 -4, i4 -5)  ; %res = -12
+
 Arithmetic with Overflow Intrinsics
 -----------------------------------
 
@@ -24261,14 +24309,14 @@ Examples:
 
 .. code-block:: text
 
-	 %r = call <8 x i64> @llvm.experimental.vp.strided.load.v8i64.i64(i64* %ptr, i64 %stride, <8 x i64> %mask, i32 %evl)
-	 ;; The operation can also be expressed like this:
+     %r = call <8 x i64> @llvm.experimental.vp.strided.load.v8i64.i64(i64* %ptr, i64 %stride, <8 x i64> %mask, i32 %evl)
+     ;; The operation can also be expressed like this:
 
-	 %addr = bitcast i64* %ptr to i8*
-	 ;; Create a vector of pointers %addrs in the form:
-	 ;; %addrs = <%addr, %addr + %stride, %addr + 2 * %stride, ...>
-	 %ptrs = bitcast <8 x i8* > %addrs to <8 x i64* >
-	 %also.r = call <8 x i64> @llvm.vp.gather.v8i64.v8p0i64(<8 x i64* > %ptrs, <8 x i64> %mask, i32 %evl)
+     %addr = bitcast i64* %ptr to i8*
+     ;; Create a vector of pointers %addrs in the form:
+     ;; %addrs = <%addr, %addr + %stride, %addr + 2 * %stride, ...>
+     %ptrs = bitcast <8 x i8* > %addrs to <8 x i64* >
+     %also.r = call <8 x i64> @llvm.vp.gather.v8i64.v8p0i64(<8 x i64* > %ptrs, <8 x i64> %mask, i32 %evl)
 
 
 .. _int_experimental_vp_strided_store:
@@ -24312,7 +24360,7 @@ The '``llvm.experimental.vp.strided.store``' intrinsic stores the elements of
 '``val``' in the same way as the :ref:`llvm.vp.scatter <int_vp_scatter>` intrinsic,
 where the vector of pointers is in the form:
 
-	``%ptrs = <%ptr, %ptr + %stride, %ptr + 2 * %stride, ... >``,
+    ``%ptrs = <%ptr, %ptr + %stride, %ptr + 2 * %stride, ... >``,
 
 with '``ptr``' previously casted to a pointer '``i8``', '``stride``' always interpreted as a signed
 integer and all arithmetic occurring in the pointer type.
@@ -24322,14 +24370,14 @@ Examples:
 
 .. code-block:: text
 
-	 call void @llvm.experimental.vp.strided.store.v8i64.i64(<8 x i64> %val, i64* %ptr, i64 %stride, <8 x i1> %mask, i32 %evl)
-	 ;; The operation can also be expressed like this:
+     call void @llvm.experimental.vp.strided.store.v8i64.i64(<8 x i64> %val, i64* %ptr, i64 %stride, <8 x i1> %mask, i32 %evl)
+     ;; The operation can also be expressed like this:
 
-	 %addr = bitcast i64* %ptr to i8*
-	 ;; Create a vector of pointers %addrs in the form:
-	 ;; %addrs = <%addr, %addr + %stride, %addr + 2 * %stride, ...>
-	 %ptrs = bitcast <8 x i8* > %addrs to <8 x i64* >
-	 call void @llvm.vp.scatter.v8i64.v8p0i64(<8 x i64> %val, <8 x i64*> %ptrs, <8 x i1> %mask, i32 %evl)
+     %addr = bitcast i64* %ptr to i8*
+     ;; Create a vector of pointers %addrs in the form:
+     ;; %addrs = <%addr, %addr + %stride, %addr + 2 * %stride, ...>
+     %ptrs = bitcast <8 x i8* > %addrs to <8 x i64* >
+     call void @llvm.vp.scatter.v8i64.v8p0i64(<8 x i64> %val, <8 x i64*> %ptrs, <8 x i1> %mask, i32 %evl)
 
 
 .. _int_vp_gather:

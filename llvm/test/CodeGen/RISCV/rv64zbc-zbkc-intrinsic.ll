@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+zbkc -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV64ZBC-ZBKC
 
-declare i64 @llvm.riscv.clmul.i64(i64 %a, i64 %b)
+declare i64 @llvm.clmul.i64(i64 %a, i64 %b)
 
 define i64 @clmul64(i64 %a, i64 %b) nounwind {
 ; RV64ZBC-ZBKC-LABEL: clmul64:
@@ -26,7 +26,7 @@ define i64 @clmul64h(i64 %a, i64 %b) nounwind {
   ret i64 %tmp
 }
 
-declare i32 @llvm.riscv.clmul.i32(i32 %a, i32 %b)
+declare i32 @llvm.clmul.i32(i32 %a, i32 %b)
 
 define signext i32 @clmul32(i32 signext %a, i32 signext %b) nounwind {
 ; RV64ZBC-ZBKC-LABEL: clmul32:
@@ -34,7 +34,7 @@ define signext i32 @clmul32(i32 signext %a, i32 signext %b) nounwind {
 ; RV64ZBC-ZBKC-NEXT:    clmul a0, a0, a1
 ; RV64ZBC-ZBKC-NEXT:    sext.w a0, a0
 ; RV64ZBC-ZBKC-NEXT:    ret
-  %tmp = call i32 @llvm.riscv.clmul.i32(i32 %a, i32 %b)
+  %tmp = call i32 @llvm.clmul.i32(i32 %a, i32 %b)
   ret i32 %tmp
 }
 
