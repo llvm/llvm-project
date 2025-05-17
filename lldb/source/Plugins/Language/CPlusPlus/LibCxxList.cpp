@@ -251,7 +251,7 @@ llvm::Expected<uint32_t> ForwardListFrontEnd::CalculateNumChildren() {
 
   ListEntry current(m_head);
   m_count = 0;
-  while (current && m_count < m_list_capping_size) {
+  while (current) {
     ++m_count;
     current = current.next();
   }
