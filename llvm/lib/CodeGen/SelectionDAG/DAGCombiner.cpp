@@ -12156,11 +12156,21 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
     // (select (ult x, C), x, (add x, -C)) -> (umin x, (add x, -C))
     APInt C;
     if (sd_match(Cond1, m_ConstInt(C)) && hasUMin(VT)) {
-      if ((CC == ISD::SETUGT && Cond0 == N2 &&
-           sd_match(N1, m_Add(m_Specific(N2), m_SpecificInt(~C)))) ||
-          (CC == ISD::SETULT && Cond0 == N1 &&
-           sd_match(N2, m_Add(m_Specific(N1), m_SpecificInt(-C)))))
-        return DAG.getNode(ISD::UMIN, DL, VT, N1, N2);
+      if (CC == ISD::SETUGT && Cond0 == N2 &&
+          sd_match(N1, m_Add(m_Specific(N2), m_SpecificInt(~C)))) {
+        // The resulting code relies on an unsigned wrap in ADD.
+        // Recreating ADD to drop possible nuw/nsw flags.
+        SDValue AddC = DAG.getConstant(~C, DL, VT);
+        SDValue Add = DAG.getNode(ISD::ADD, DL, VT, N2, AddC);
+        return DAG.getNode(ISD::UMIN, DL, VT, Add, N2);
+      }
+      if (CC == ISD::SETULT && Cond0 == N1 &&
+          sd_match(N2, m_Add(m_Specific(N1), m_SpecificInt(-C)))) {
+        // Ditto.
+        SDValue AddC = DAG.getConstant(-C, DL, VT);
+        SDValue Add = DAG.getNode(ISD::ADD, DL, VT, N1, AddC);
+        return DAG.getNode(ISD::UMIN, DL, VT, N1, Add);
+      }
     }
   }
 
