@@ -28,6 +28,7 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
+#include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/IntrinsicLowering.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -35478,8 +35479,27 @@ bool X86TargetLowering::isNarrowingProfitable(SDNode *N, EVT SrcVT,
   return !(SrcVT == MVT::i32 && DestVT == MVT::i16);
 }
 
-bool X86TargetLowering::shouldFoldSelectWithIdentityConstant(unsigned Opcode,
-                                                             EVT VT) const {
+bool X86TargetLowering::shouldFoldSelectWithIdentityConstant(
+    unsigned BinOpcode, EVT VT, unsigned SelectOpcode, SDValue X,
+    SDValue Y) const {
+  if (SelectOpcode == ISD::SELECT) {
+    if (VT.isVector())
+      return false;
+    if (!Subtarget.hasBMI() || (VT != MVT::i32 && VT != MVT::i64))
+      return false;
+    using namespace llvm::SDPatternMatch;
+    // BLSI
+    if (BinOpcode == ISD::AND && sd_match(Y, m_Neg(m_Specific(X))))
+      return true;
+    // BLSR
+    if (BinOpcode == ISD::AND && sd_match(Y, m_Add(m_Specific(X), m_AllOnes())))
+      return true;
+    // BLSMSK
+    if (BinOpcode == ISD::XOR && sd_match(Y, m_Add(m_Specific(X), m_AllOnes())))
+      return true;
+
+    return false;
+  }
   // TODO: This is too general. There are cases where pre-AVX512 codegen would
   //       benefit. The transform may also be profitable for scalar code.
   if (!Subtarget.hasAVX512())
