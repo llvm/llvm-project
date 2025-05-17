@@ -132,14 +132,8 @@ class RequestHandler : public BaseRequestHandler {
     response.command = request.command;
 
     llvm::Expected<Args> arguments = parseArgs<Args>(request);
-    if (!arguments) {
-      HandleErrorResponse(
-          llvm::make_error<DAPError>(
-              llvm::formatv("arguments required for command '{0}' "
-                            "but none received",
-                            request.command)
-                  .str()),
-          response);
+    if (llvm::Error err = arguments.takeError()) {
+      HandleErrorResponse(std::move(err), response);
       dap.Send(response);
       return;
     }
