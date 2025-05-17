@@ -677,6 +677,10 @@ bool TargetTransformInfo::enableInterleavedAccessVectorization() const {
   return TTIImpl->enableInterleavedAccessVectorization();
 }
 
+bool TargetTransformInfo::skipPreRASchedLargeVecFunc() const {
+  return TTIImpl->skipPreRASchedLargeVecFunc();
+}
+
 bool TargetTransformInfo::enableMaskedInterleavedAccessVectorization() const {
   return TTIImpl->enableMaskedInterleavedAccessVectorization();
 }

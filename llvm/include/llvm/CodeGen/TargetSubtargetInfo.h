@@ -184,6 +184,10 @@ public:
     return false;
   }
 
+  virtual bool enableSkipPreRASchedLargeVecFunc() const {
+    return false;
+  }
+
   /// True if the subtarget should run MachineScheduler after aggressive
   /// coalescing.
   ///

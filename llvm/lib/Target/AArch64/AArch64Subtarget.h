@@ -71,6 +71,7 @@ protected:
   unsigned MaxBytesForLoopAlignment = 0;
   unsigned MinimumJumpTableEntries = 4;
   unsigned MaxJumpTableSize = 0;
+  bool SkipPreRASchedLargeVecFunc = false;
 
   // ReserveXRegister[i] - X#i is not available as a general purpose register.
   BitVector ReserveXRegister;
@@ -159,6 +160,12 @@ public:
   bool enableMachineScheduler() const override { return true; }
   bool enablePostRAScheduler() const override { return usePostRAScheduler(); }
   bool enableSubRegLiveness() const override { return EnableSubregLiveness; }
+
+  /// Returns true if the subtarget should consider skipping the pre-RA
+  /// machine scheduler for large (hand-written) instrinsic vector functions.
+  bool enableSkipPreRASchedLargeVecFunc() const override {
+    return SkipPreRASchedLargeVecFunc;
+  }
 
   bool enableMachinePipeliner() const override;
   bool useDFAforSMS() const override { return false; }
