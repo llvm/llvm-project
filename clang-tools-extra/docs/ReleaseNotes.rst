@@ -172,6 +172,10 @@ Changes in existing checks
   <clang-tidy/checks/cert/err33-c>` check by fixing false positives when
   a function name is just prefixed with a targeted function name.
 
+- Improved :doc:`cppcoreguidelines-pro-bounds-pointer-arithmetic
+  <clang-tidy/checks/cppcoreguidelines/pro-bounds-pointer-arithmetic>` check by
+  fixing false negatives when pointer arithmetic was used through type aliases.
+
 - Improved :doc:`misc-const-correctness
   <clang-tidy/checks/misc/const-correctness>` check by adding the option
   `AllowedTypes`, that excludes specified types from const-correctness
