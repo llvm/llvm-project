@@ -115,7 +115,7 @@ class Region {
   Context::CallbackID EraseInstCB;
 
   /// Adds I to the set.
-  void add(Instruction *I);
+  void add(Instruction *I, bool TrackScore = true);
   /// Removes I from the set.
   void remove(Instruction *I);
   friend class Context; // The callbacks need to call add() and remove().
