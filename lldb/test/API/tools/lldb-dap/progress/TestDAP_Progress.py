@@ -81,7 +81,7 @@ class TestDAP_progress(lldbdap_testcase.DAPTestCaseBase):
 
         self.verify_progress_events(
             expected_title="Progress tester: Initial Indeterminate Detail",
-            expected_message="Step 1",
+            expected_message="Step 2",
             only_verify_first_update=True,
         )
 
