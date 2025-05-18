@@ -782,4 +782,38 @@ bool fromJSON(const llvm::json::Value &Params, InstructionBreakpoint &IB,
          O.mapOptional("mode", IB.mode);
 }
 
+llvm::json::Value toJSON(const DisassembledInstruction::PresentationHint &PH) {
+  switch (PH) {
+  case DisassembledInstruction::eSourcePresentationHintNormal:
+    return "normal";
+  case DisassembledInstruction::eSourcePresentationHintInvalid:
+    return "invalid";
+  }
+  llvm_unreachable("unhandled presentation hint.");
+}
+
+llvm::json::Value toJSON(const DisassembledInstruction &DI) {
+  llvm::json::Object result{{"address", DI.address},
+                            {"instruction", DI.instruction}};
+
+  if (DI.instructionBytes)
+    result.insert({"instructionBytes", *DI.instructionBytes});
+  if (DI.symbol)
+    result.insert({"symbol", *DI.symbol});
+  if (DI.location)
+    result.insert({"location", *DI.location});
+  if (DI.line)
+    result.insert({"line", *DI.line});
+  if (DI.column)
+    result.insert({"column", *DI.column});
+  if (DI.endLine)
+    result.insert({"endLine", *DI.endLine});
+  if (DI.endColumn)
+    result.insert({"endColumn", *DI.endColumn});
+  if (DI.presentationHint)
+    result.insert({"presentationHint", *DI.presentationHint});
+
+  return result;
+}
+
 } // namespace lldb_dap::protocol
