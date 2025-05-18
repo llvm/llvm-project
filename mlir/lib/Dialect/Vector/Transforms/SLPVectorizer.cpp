@@ -52,6 +52,61 @@ struct MemoryOpGroup {
   bool empty() const { return ops.empty(); }
 };
 
+static bool isReadOp(Operation *op) {
+  auto effectInterface = dyn_cast<MemoryEffectOpInterface>(op);
+  if (!effectInterface)
+    return true;
+
+  return effectInterface.hasEffect<MemoryEffects::Read>();
+}
+
+static bool isWriteOp(Operation *op) {
+  auto effectInterface = dyn_cast<MemoryEffectOpInterface>(op);
+  if (!effectInterface)
+    return true;
+
+  return effectInterface.hasEffect<MemoryEffects::Write>();
+}
+
+/// Collect all memory operations in the block into groups.
+/// Each group contains either all loads or all stores, uninterrupted by
+/// operations of the other type.
+static SmallVector<MemoryOpGroup> collectMemoryOpGroups(Block &block) {
+  SmallVector<MemoryOpGroup> groups;
+  MemoryOpGroup *currentGroup = nullptr;
+
+  for (Operation &op : block) {
+    if (currentGroup) {
+      if (currentGroup->isLoadGroup() && isWriteOp(&op)) {
+        currentGroup = nullptr;
+      } else if (currentGroup->isStoreGroup() && isReadOp(&op)) {
+        currentGroup = nullptr;
+      }
+    }
+
+    if (!isa<memref::LoadOp, memref::StoreOp>(op))
+      continue;
+
+    bool isLoad = isReadOp(&op);
+    MemoryOpGroup::Type type =
+        isLoad ? MemoryOpGroup::Type::Load : MemoryOpGroup::Type::Store;
+
+    if (!currentGroup) {
+      groups.emplace_back(type);
+      currentGroup = &groups.back();
+    }
+
+    currentGroup->ops.push_back(&op);
+  }
+
+  // Remove empty groups
+  groups.erase(std::remove_if(groups.begin(), groups.end(),
+                              [](const MemoryOpGroup &g) { return g.empty(); }),
+               groups.end());
+
+  return groups;
+}
+
 static Value getBase(Operation *op) {
   if (auto loadOp = dyn_cast<memref::LoadOp>(op))
     return loadOp.getMemRef();
@@ -449,12 +504,6 @@ private:
 struct SLPVectorizerPass
     : public mlir::vector::impl::SLPVectorizerBase<SLPVectorizerPass> {
   void runOnOperation() override;
-
-private:
-  /// Collect all memory operations in the block into groups.
-  /// Each group contains either all loads or all stores, uninterrupted by
-  /// operations of the other type.
-  SmallVector<MemoryOpGroup> collectMemoryOpGroups(Block &block);
 };
 
 using Fingerprint = std::array<uint8_t, 20>;
@@ -666,39 +715,6 @@ static SLPGraph buildSLPGraph(ArrayRef<MemoryOpGroup> rootGroups) {
   }
 
   return graph;
-}
-
-SmallVector<MemoryOpGroup>
-SLPVectorizerPass::collectMemoryOpGroups(Block &block) {
-  SmallVector<MemoryOpGroup> groups;
-  MemoryOpGroup *currentGroup = nullptr;
-
-  for (Operation &op : block) {
-    // Skip non-memory operations
-    if (!isa<memref::LoadOp, memref::StoreOp>(op))
-      continue;
-
-    bool isLoad = isa<memref::LoadOp>(op);
-    MemoryOpGroup::Type type =
-        isLoad ? MemoryOpGroup::Type::Load : MemoryOpGroup::Type::Store;
-
-    // Start a new group if:
-    // 1. We don't have a current group, or
-    // 2. The current operation is a different type than the current group
-    if (!currentGroup || currentGroup->type != type) {
-      groups.emplace_back(type);
-      currentGroup = &groups.back();
-    }
-
-    currentGroup->ops.push_back(&op);
-  }
-
-  // Remove empty groups
-  groups.erase(std::remove_if(groups.begin(), groups.end(),
-                              [](const MemoryOpGroup &g) { return g.empty(); }),
-               groups.end());
-
-  return groups;
 }
 
 void SLPVectorizerPass::runOnOperation() {
