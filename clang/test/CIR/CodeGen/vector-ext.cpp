@@ -587,3 +587,118 @@ void foo11() {
 // OGCG: %[[TMP_B:.*]] = load <4 x i32>, ptr %[[VEC_B]], align 16
 // OGCG: %[[XOR:.*]] = xor <4 x i32> %[[TMP_A]], %[[TMP_B]]
 // OGCG: store <4 x i32> %[[XOR]], ptr {{.*}}, align 16
+
+void foo12() {
+  vi4 a = {1, 2, 3, 4};
+  vi4 b = {5, 6, 7, 8};
+
+  vi4 c = a == b;
+  vi4 d = a != b;
+  vi4 e = a < b;
+  vi4 f = a > b;
+  vi4 g = a <= b;
+  vi4 h = a >= b;
+}
+
+// CIR: %[[VEC_A:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["a", init]
+// CIR: %[[VEC_B:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["b", init]
+// CIR: %[[VEC_A_VAL:.*]] = cir.vec.create({{.*}}, {{.*}}, {{.*}}, {{.*}} : !s32i, !s32i, !s32i, !s32i) :
+// CIR-SAME: !cir.vector<4 x !s32i>
+// CIR: cir.store %[[VEC_A_VAL]], %[[VEC_A]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[VEC_B_VAL:.*]] = cir.vec.create({{.*}}, {{.*}}, {{.*}}, {{.*}} : !s32i, !s32i, !s32i, !s32i) :
+// CIR-SAME: !cir.vector<4 x !s32i>
+// CIR: cir.store %[[VEC_B_VAL]], %[[VEC_B]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[TMP_A:.*]] = cir.load %[[VEC_A]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+// CIR: %[[TMP_B:.*]] = cir.load %[[VEC_B]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+// CIR: %[[EQ:.*]] = cir.vec.cmp(eq, %[[TMP_A]], %[[TMP_B]]) : !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>
+// CIR: cir.store %[[EQ]], {{.*}} : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[TMP_A:.*]] = cir.load %[[VEC_A]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+// CIR: %[[TMP_B:.*]] = cir.load %[[VEC_B]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+// CIR: %[[NE:.*]] = cir.vec.cmp(ne, %[[TMP_A]], %[[TMP_B]]) : !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>
+// CIR: cir.store %[[NE]], {{.*}} : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[TMP_A:.*]] = cir.load %[[VEC_A]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+// CIR: %[[TMP_B:.*]] = cir.load %[[VEC_B]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+// CIR: %[[LT:.*]] = cir.vec.cmp(lt, %[[TMP_A]], %[[TMP_B]]) : !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>
+// CIR: cir.store %[[LT]], {{.*}} : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[TMP_A:.*]] = cir.load %[[VEC_A]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+// CIR: %[[TMP_B:.*]] = cir.load %[[VEC_B]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+// CIR: %[[GT:.*]] = cir.vec.cmp(gt, %[[TMP_A]], %[[TMP_B]]) : !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>
+// CIR: cir.store %[[GT]], {{.*}} : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[TMP_A:.*]] = cir.load %[[VEC_A]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+// CIR: %[[TMP_B:.*]] = cir.load %[[VEC_B]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+// CIR: %[[LE:.*]] = cir.vec.cmp(le, %[[TMP_A]], %[[TMP_B]]) : !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>
+// CIR: cir.store %[[LE]], {{.*}} : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[TMP_A:.*]] = cir.load %[[VEC_A]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+// CIR: %[[TMP_B:.*]] = cir.load %[[VEC_B]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+// CIR: %[[GE:.*]] = cir.vec.cmp(ge, %[[TMP_A]], %[[TMP_B]]) : !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>
+// CIR: cir.store %[[GE]], {{.*}} : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
+
+// LLVM: %[[VEC_A:.*]] = alloca <4 x i32>, i64 1, align 16
+// LLVM: %[[VEC_B:.*]] = alloca <4 x i32>, i64 1, align 16
+// LLVM: store <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr %[[VEC_A]], align 16
+// LLVM: store <4 x i32> <i32 5, i32 6, i32 7, i32 8>, ptr %[[VEC_B]], align 16
+// LLVM: %[[TMP_A:.*]] = load <4 x i32>, ptr %[[VEC_A]], align 16
+// LLVM: %[[TMP_B:.*]] = load <4 x i32>, ptr %[[VEC_B]], align 16
+// LLVM: %[[EQ:.*]] = icmp eq <4 x i32> %[[TMP_A]], %[[TMP_B]]
+// LLVM: %[[RES:.*]] = sext <4 x i1> %[[EQ]] to <4 x i32>
+// LLVM: store <4 x i32> %[[RES]], ptr {{.*}}, align 16
+// LLVM: %[[TMP_A:.*]] = load <4 x i32>, ptr %[[VEC_A]], align 16
+// LLVM: %[[TMP_B:.*]] = load <4 x i32>, ptr %[[VEC_B]], align 16
+// LLVM: %[[NE:.*]] = icmp ne <4 x i32> %[[TMP_A]], %[[TMP_B]]
+// LLVM: %[[RES:.*]] = sext <4 x i1> %[[NE]] to <4 x i32>
+// LLVM: store <4 x i32> %[[RES]], ptr {{.*}}, align 16
+// LLVM: %[[TMP_A:.*]] = load <4 x i32>, ptr %[[VEC_A]], align 16
+// LLVM: %[[TMP_B:.*]] = load <4 x i32>, ptr %[[VEC_B]], align 16
+// LLVM: %[[LT:.*]] = icmp slt <4 x i32> %17, %18
+// LLVM: %[[RES:.*]] = sext <4 x i1> %[[LT]] to <4 x i32>
+// LLVM: store <4 x i32> %[[RES]], ptr {{.*}}, align 16
+// LLVM: %[[TMP_A:.*]] = load <4 x i32>, ptr %[[VEC_A]], align 16
+// LLVM: %[[TMP_B:.*]] = load <4 x i32>, ptr %[[VEC_B]], align 16
+// LLVM: %[[GT:.*]] = icmp sgt <4 x i32> %[[TMP_A]], %[[TMP_B]]
+// LLVM: %[[RES:.*]] = sext <4 x i1> %[[GT]] to <4 x i32>
+// LLVM: store <4 x i32> %[[RES]], ptr {{.*}}, align 16
+// LLVM: %[[TMP_A:.*]] = load <4 x i32>, ptr %[[VEC_A]], align 16
+// LLVM: %[[TMP_B:.*]] = load <4 x i32>, ptr %[[VEC_B]], align 16
+// LLVM: %[[LE:.*]] = icmp sle <4 x i32> %[[TMP_A]], %[[TMP_B]]
+// LLVM: %[[RES:.*]] = sext <4 x i1> %[[LE]] to <4 x i32>
+// LLVM: store <4 x i32> %[[RES]], ptr {{.*}}, align 16
+// LLVM: %[[TMP_A:.*]] = load <4 x i32>, ptr %[[VEC_A]], align 16
+// LLVM: %[[TMP_B:.*]] = load <4 x i32>, ptr %[[VEC_B]], align 16
+// LLVM: %[[GE:.*]] = icmp sge <4 x i32> %[[TMP_A]], %[[TMP_B]]
+// LLVM: %[[RES:.*]] = sext <4 x i1> %[[GE]] to <4 x i32>
+// LLVM: store <4 x i32> %[[RES]], ptr {{.*}}, align 16
+
+// OGCG: %[[VEC_A:.*]] = alloca <4 x i32>, align 16
+// OGCG: %[[VEC_B:.*]] = alloca <4 x i32>, align 16
+// OGCG: store <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr %[[VEC_A]], align 16
+// OGCG: store <4 x i32> <i32 5, i32 6, i32 7, i32 8>, ptr %[[VEC_B]], align 16
+// OGCG: %[[TMP_A:.*]] = load <4 x i32>, ptr %[[VEC_A]], align 16
+// OGCG: %[[TMP_B:.*]] = load <4 x i32>, ptr %[[VEC_B]], align 16
+// OGCG: %[[EQ:.*]] = icmp eq <4 x i32> %[[TMP_A]], %[[TMP_B]]
+// OGCG: %[[RES:.*]] = sext <4 x i1> %[[EQ]] to <4 x i32>
+// OGCG: store <4 x i32> %[[RES]], ptr {{.*}}, align 16
+// OGCG: %[[TMP_A:.*]] = load <4 x i32>, ptr %[[VEC_A]], align 16
+// OGCG: %[[TMP_B:.*]] = load <4 x i32>, ptr %[[VEC_B]], align 16
+// OGCG: %[[NE:.*]] = icmp ne <4 x i32> %[[TMP_A]], %[[TMP_B]]
+// OGCG: %[[RES:.*]] = sext <4 x i1> %[[NE]] to <4 x i32>
+// OGCG: store <4 x i32> %[[RES]], ptr {{.*}}, align 16
+// OGCG: %[[TMP_A:.*]] = load <4 x i32>, ptr %[[VEC_A]], align 16
+// OGCG: %[[TMP_B:.*]] = load <4 x i32>, ptr %[[VEC_B]], align 16
+// OGCG: %[[LT:.*]] = icmp slt <4 x i32> %[[TMP_A]], %[[TMP_B]]
+// OGCG: %[[RES:.*]] = sext <4 x i1> %[[LT]] to <4 x i32>
+// OGCG: store <4 x i32> %[[RES]], ptr {{.*}}, align 16
+// OGCG: %[[TMP_A:.*]] = load <4 x i32>, ptr %[[VEC_A]], align 16
+// OGCG: %[[TMP_B:.*]] = load <4 x i32>, ptr %[[VEC_B]], align 16
+// OGCG: %[[GT:.*]] = icmp sgt <4 x i32> %[[TMP_A]], %[[TMP_B]]
+// OGCG: %[[RES:.*]] = sext <4 x i1> %[[GT]] to <4 x i32>
+// OGCG: store <4 x i32> %[[RES]], ptr {{.*}}, align 16
+// OGCG: %[[TMP_A:.*]] = load <4 x i32>, ptr %[[VEC_A]], align 16
+// OGCG: %[[TMP_B:.*]] = load <4 x i32>, ptr %[[VEC_B]], align 16
+// OGCG: %[[LE:.*]] = icmp sle <4 x i32> %[[TMP_A]], %[[TMP_B]]
+// OGCG: %[[RES:.*]] = sext <4 x i1> %[[LE]] to <4 x i32>
+// OGCG: store <4 x i32> %[[RES]], ptr {{.*}}, align 16
+// OGCG: %[[TMP_A:.*]] = load <4 x i32>, ptr %[[VEC_A]], align 16
+// OGCG: %[[TMP_B:.*]] = load <4 x i32>, ptr %[[VEC_B]], align 16
+// OGCG: %[[GE:.*]] = icmp sge <4 x i32> %[[TMP_A]], %[[TMP_B]]
+// OGCG: %[[RES:.*]] = sext <4 x i1> %[[GE]] to <4 x i32>
+// OGCG: store <4 x i32> %[[RES]], ptr {{.*}}, align 16
