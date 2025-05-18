@@ -24,8 +24,10 @@
 #include "polly/ScopGraphPrinter.h"
 #include "polly/ScopInfo.h"
 #include "polly/Simplify.h"
+#include "llvm/ADT/PriorityWorklist.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Module.h"
 
 #define DEBUG_TYPE "polly-pass"
