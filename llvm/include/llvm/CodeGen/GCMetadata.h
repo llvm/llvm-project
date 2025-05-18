@@ -192,9 +192,7 @@ public:
     return Strategies.try_emplace(GCName);
   }
 
-  bool contains(StringRef GCName) const {
-    return Strategies.find(GCName) != Strategies.end();
-  }
+  bool contains(StringRef GCName) const { return Strategies.contains(GCName); }
 };
 
 /// An analysis pass which caches information about the entire Module.

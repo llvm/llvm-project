@@ -428,7 +428,6 @@ static void CheckForDuplicateLoopAttrs(Sema &S, ArrayRef<const Attr *> Attrs) {
       S.Diag((*FirstItr)->getLocation(), diag::note_previous_attribute);
     }
   }
-  return;
 }
 
 static Attr *handleMSConstexprAttr(Sema &S, Stmt *St, const ParsedAttr &A,

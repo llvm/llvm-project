@@ -1119,9 +1119,10 @@ def Dot4AddI8Packed : DXILOp<163, dot4AddPacked> {
             "accumulate to i32";
   let intrinsics = [IntrinSelect<int_dx_dot4add_i8packed>];
   let arguments = [Int32Ty, Int32Ty, Int32Ty];
-  let result = Int32Ty;
-  let stages = [Stages<DXIL1_0, [all_stages]>];
-  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+  let result = OverloadTy;
+  let overloads = [Overloads<DXIL1_4, [Int32Ty]>];
+  let stages = [Stages<DXIL1_4, [all_stages]>];
+  let attributes = [Attributes<DXIL1_4, [ReadNone]>];
 }
 
 def Dot4AddU8Packed : DXILOp<164, dot4AddPacked> {
@@ -1129,9 +1130,10 @@ def Dot4AddU8Packed : DXILOp<164, dot4AddPacked> {
             "accumulate to i32";
   let intrinsics = [IntrinSelect<int_dx_dot4add_u8packed>];
   let arguments = [Int32Ty, Int32Ty, Int32Ty];
-  let result = Int32Ty;
-  let stages = [Stages<DXIL1_0, [all_stages]>];
-  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+  let result = OverloadTy;
+  let overloads = [Overloads<DXIL1_4, [Int32Ty]>];
+  let stages = [Stages<DXIL1_4, [all_stages]>];
+  let attributes = [Attributes<DXIL1_4, [ReadNone]>];
 }
 
 def AnnotateHandle : DXILOp<216, annotateHandle> {
