@@ -12,6 +12,7 @@
 #include "flang-rt/runtime/terminator.h"
 #include "flang-rt/runtime/tools.h"
 #include "flang-rt/runtime/type-info.h"
+#include "flang-rt/runtime/work-queue.h"
 
 namespace Fortran::runtime {
 
@@ -30,180 +31,174 @@ static RT_API_ATTRS void GetComponentExtents(SubscriptValue (&extents)[maxRank],
 }
 
 RT_API_ATTRS int Initialize(const Descriptor &instance,
-    const typeInfo::DerivedType &derived, Terminator &terminator, bool hasStat,
-    const Descriptor *errMsg) {
-  const Descriptor &componentDesc{derived.component()};
-  std::size_t elements{instance.Elements()};
-  int stat{StatOk};
-  // Initialize data components in each element; the per-element iterations
-  // constitute the inner loops, not the outer ones
-  std::size_t myComponents{componentDesc.Elements()};
-  for (std::size_t k{0}; k < myComponents; ++k) {
-    const auto &comp{
-        *componentDesc.ZeroBasedIndexedElement<typeInfo::Component>(k)};
-    SubscriptValue at[maxRank];
-    instance.GetLowerBounds(at);
-    if (comp.genre() == typeInfo::Component::Genre::Allocatable ||
-        comp.genre() == typeInfo::Component::Genre::Automatic) {
-      for (std::size_t j{0}; j++ < elements; instance.IncrementSubscripts(at)) {
-        Descriptor &allocDesc{
-            *instance.ElementComponent<Descriptor>(at, comp.offset())};
-        comp.EstablishDescriptor(allocDesc, instance, terminator);
-        allocDesc.raw().attribute = CFI_attribute_allocatable;
-        if (comp.genre() == typeInfo::Component::Genre::Automatic) {
-          stat = ReturnError(
-              terminator, allocDesc.Allocate(kNoAsyncId), errMsg, hasStat);
-          if (stat == StatOk) {
-            if (const DescriptorAddendum * addendum{allocDesc.Addendum()}) {
-              if (const auto *derived{addendum->derivedType()}) {
-                if (!derived->noInitializationNeeded()) {
-                  stat = Initialize(
-                      allocDesc, *derived, terminator, hasStat, errMsg);
-                }
-              }
-            }
-          }
-          if (stat != StatOk) {
-            break;
-          }
-        }
-      }
-    } else if (const void *init{comp.initialization()}) {
-      // Explicit initialization of data pointers and
-      // non-allocatable non-automatic components
-      std::size_t bytes{comp.SizeInBytes(instance)};
-      for (std::size_t j{0}; j++ < elements; instance.IncrementSubscripts(at)) {
-        char *ptr{instance.ElementComponent<char>(at, comp.offset())};
-        std::memcpy(ptr, init, bytes);
-      }
-    } else if (comp.genre() == typeInfo::Component::Genre::Pointer) {
-      // Data pointers without explicit initialization are established
-      // so that they are valid right-hand side targets of pointer
-      // assignment statements.
-      for (std::size_t j{0}; j++ < elements; instance.IncrementSubscripts(at)) {
-        Descriptor &ptrDesc{
-            *instance.ElementComponent<Descriptor>(at, comp.offset())};
-        comp.EstablishDescriptor(ptrDesc, instance, terminator);
-        ptrDesc.raw().attribute = CFI_attribute_pointer;
-      }
-    } else if (comp.genre() == typeInfo::Component::Genre::Data &&
-        comp.derivedType() && !comp.derivedType()->noInitializationNeeded()) {
-      // Default initialization of non-pointer non-allocatable/automatic
-      // data component.  Handles parent component's elements.  Recursive.
-      SubscriptValue extents[maxRank];
-      GetComponentExtents(extents, comp, instance);
-      StaticDescriptor<maxRank, true, 0> staticDescriptor;
-      Descriptor &compDesc{staticDescriptor.descriptor()};
-      const typeInfo::DerivedType &compType{*comp.derivedType()};
-      for (std::size_t j{0}; j++ < elements; instance.IncrementSubscripts(at)) {
-        compDesc.Establish(compType,
-            instance.ElementComponent<char>(at, comp.offset()), comp.rank(),
-            extents);
-        stat = Initialize(compDesc, compType, terminator, hasStat, errMsg);
-        if (stat != StatOk) {
-          break;
-        }
-      }
-    }
-  }
+    const typeInfo::DerivedType &derived, Terminator &terminator, bool,
+    const Descriptor *) {
+  WorkQueue workQueue{terminator};
+  workQueue.BeginInitialize(instance, derived);
+  return workQueue.Run();
+}
+
+RT_API_ATTRS int InitializeTicket::Begin(WorkQueue &) {
   // Initialize procedure pointer components in each element
-  const Descriptor &procPtrDesc{derived.procPtr()};
+  const Descriptor &procPtrDesc{derived_.procPtr()};
   std::size_t myProcPtrs{procPtrDesc.Elements()};
   for (std::size_t k{0}; k < myProcPtrs; ++k) {
     const auto &comp{
         *procPtrDesc.ZeroBasedIndexedElement<typeInfo::ProcPtrComponent>(k)};
     SubscriptValue at[maxRank];
-    instance.GetLowerBounds(at);
-    for (std::size_t j{0}; j++ < elements; instance.IncrementSubscripts(at)) {
-      auto &pptr{*instance.ElementComponent<typeInfo::ProcedurePointer>(
+    instance_.GetLowerBounds(at);
+    for (std::size_t j{0}; j++ < elements_; instance_.IncrementSubscripts(at)) {
+      auto &pptr{*instance_.ElementComponent<typeInfo::ProcedurePointer>(
           at, comp.offset)};
       pptr = comp.procInitialization;
     }
   }
-  return stat;
+  return StatOkContinue;
+}
+
+RT_API_ATTRS int InitializeTicket::Continue(WorkQueue &workQueue) {
+  while (CueUpNextItem()) {
+    if (component_->genre() == typeInfo::Component::Genre::Allocatable) {
+      // Establish allocatable descriptors
+      for (; elementAt_ < elements_; AdvanceToNextElement()) {
+        Descriptor &allocDesc{*instance_.ElementComponent<Descriptor>(
+            subscripts_, component_->offset())};
+        component_->EstablishDescriptor(
+            allocDesc, instance_, workQueue.terminator());
+        allocDesc.raw().attribute = CFI_attribute_allocatable;
+      }
+    } else if (const void *init{component_->initialization()}) {
+      // Explicit initialization of data pointers and
+      // non-allocatable non-automatic components
+      std::size_t bytes{component_->SizeInBytes(instance_)};
+      for (; elementAt_ < elements_; AdvanceToNextElement()) {
+        char *ptr{instance_.ElementComponent<char>(
+            subscripts_, component_->offset())};
+        std::memcpy(ptr, init, bytes);
+      }
+    } else if (component_->genre() == typeInfo::Component::Genre::Pointer) {
+      // Data pointers without explicit initialization are established
+      // so that they are valid right-hand side targets of pointer
+      // assignment statements.
+      for (; elementAt_ < elements_; AdvanceToNextElement()) {
+        Descriptor &ptrDesc{*instance_.ElementComponent<Descriptor>(
+            subscripts_, component_->offset())};
+        component_->EstablishDescriptor(
+            ptrDesc, instance_, workQueue.terminator());
+        ptrDesc.raw().attribute = CFI_attribute_pointer;
+      }
+    } else if (component_->genre() == typeInfo::Component::Genre::Data &&
+        component_->derivedType() &&
+        !component_->derivedType()->noInitializationNeeded()) {
+      // Default initialization of non-pointer non-allocatable/automatic
+      // data component.  Handles parent component's elements.
+      SubscriptValue extents[maxRank];
+      GetComponentExtents(extents, *component_, instance_);
+      Descriptor &compDesc{componentDescriptor_.descriptor()};
+      const typeInfo::DerivedType &compType{*component_->derivedType()};
+      compDesc.Establish(compType,
+          instance_.ElementComponent<char>(subscripts_, component_->offset()),
+          component_->rank(), extents);
+      AdvanceToNextElement();
+      workQueue.BeginInitialize(compDesc, compType);
+      return StatOkContinue;
+    } else {
+      AdvanceToNextComponent();
+    }
+  }
+  return StatOk;
 }
 
 RT_API_ATTRS int InitializeClone(const Descriptor &clone,
-    const Descriptor &orig, const typeInfo::DerivedType &derived,
+    const Descriptor &original, const typeInfo::DerivedType &derived,
     Terminator &terminator, bool hasStat, const Descriptor *errMsg) {
-  const Descriptor &componentDesc{derived.component()};
-  std::size_t elements{orig.Elements()};
-  int stat{StatOk};
-
-  // Skip pointers and unallocated variables.
-  if (orig.IsPointer() || !orig.IsAllocated()) {
-    return stat;
+  if (original.IsPointer() || !original.IsAllocated()) {
+    return StatOk; // nothing to do
+  } else {
+    WorkQueue workQueue{terminator};
+    workQueue.BeginInitializeClone(clone, original, derived, hasStat, errMsg);
+    return workQueue.Run();
   }
-  // Initialize each data component.
-  std::size_t components{componentDesc.Elements()};
-  for (std::size_t i{0}; i < components; ++i) {
-    const typeInfo::Component &comp{
-        *componentDesc.ZeroBasedIndexedElement<typeInfo::Component>(i)};
-    SubscriptValue at[maxRank];
-    orig.GetLowerBounds(at);
-    // Allocate allocatable components that are also allocated in the original
-    // object.
-    if (comp.genre() == typeInfo::Component::Genre::Allocatable) {
-      // Initialize each element.
-      for (std::size_t j{0}; j < elements; ++j, orig.IncrementSubscripts(at)) {
-        Descriptor &origDesc{
-            *orig.ElementComponent<Descriptor>(at, comp.offset())};
-        Descriptor &cloneDesc{
-            *clone.ElementComponent<Descriptor>(at, comp.offset())};
-        if (origDesc.IsAllocated()) {
+}
+
+RT_API_ATTRS int InitializeCloneTicket::Continue(WorkQueue &workQueue) {
+  while (CueUpNextItem()) {
+    if (component_->genre() == typeInfo::Component::Genre::Allocatable) {
+      Descriptor &origDesc{*instance_.ElementComponent<Descriptor>(
+          subscripts_, component_->offset())};
+      if (origDesc.IsAllocated()) {
+        Descriptor &cloneDesc{*clone_.ElementComponent<Descriptor>(
+            subscripts_, component_->offset())};
+        if (phase_ == 0) {
+          ++phase_;
           cloneDesc.ApplyMold(origDesc, origDesc.rank());
-          stat = ReturnError(
-              terminator, cloneDesc.Allocate(kNoAsyncId), errMsg, hasStat);
-          if (stat == StatOk) {
-            if (const DescriptorAddendum * addendum{cloneDesc.Addendum()}) {
-              if (const typeInfo::DerivedType *
-                  derived{addendum->derivedType()}) {
-                if (!derived->noInitializationNeeded()) {
-                  // Perform default initialization for the allocated element.
-                  stat = Initialize(
-                      cloneDesc, *derived, terminator, hasStat, errMsg);
-                }
-                // Initialize derived type's allocatables.
-                if (stat == StatOk) {
-                  stat = InitializeClone(cloneDesc, origDesc, *derived,
-                      terminator, hasStat, errMsg);
-                }
+          if (int stat{ReturnError(workQueue.terminator(),
+                  cloneDesc.Allocate(kNoAsyncId), errMsg_, hasStat_)};
+              stat != StatOk) {
+            return stat;
+          }
+          if (const DescriptorAddendum * addendum{cloneDesc.Addendum()}) {
+            if (const typeInfo::DerivedType *
+                derived{addendum->derivedType()}) {
+              if (!derived->noInitializationNeeded()) {
+                // Perform default initialization for the allocated element.
+                workQueue.BeginInitialize(cloneDesc, *derived);
+                return StatOkContinue;
               }
             }
           }
         }
-        if (stat != StatOk) {
-          break;
+        if (phase_ == 1) {
+          ++phase_;
+          if (const DescriptorAddendum * addendum{cloneDesc.Addendum()}) {
+            if (const typeInfo::DerivedType *
+                derived{addendum->derivedType()}) {
+              // Initialize derived type's allocatables.
+              workQueue.BeginInitializeClone(
+                  cloneDesc, origDesc, *derived, hasStat_, errMsg_);
+              return StatOkContinue;
+            }
+          }
         }
       }
-    } else if (comp.genre() == typeInfo::Component::Genre::Data &&
-        comp.derivedType()) {
-      // Handle nested derived types.
-      const typeInfo::DerivedType &compType{*comp.derivedType()};
-      SubscriptValue extents[maxRank];
-      GetComponentExtents(extents, comp, orig);
-      // Data components don't have descriptors, allocate them.
-      StaticDescriptor<maxRank, true, 0> origStaticDesc;
-      StaticDescriptor<maxRank, true, 0> cloneStaticDesc;
-      Descriptor &origDesc{origStaticDesc.descriptor()};
-      Descriptor &cloneDesc{cloneStaticDesc.descriptor()};
-      // Initialize each element.
-      for (std::size_t j{0}; j < elements; ++j, orig.IncrementSubscripts(at)) {
+      AdvanceToNextElement();
+    } else if (component_->genre() == typeInfo::Component::Genre::Data) {
+      if (component_->derivedType()) {
+        // Handle nested derived types.
+        const typeInfo::DerivedType &compType{*component_->derivedType()};
+        SubscriptValue extents[maxRank];
+        GetComponentExtents(extents, *component_, instance_);
+        Descriptor &origDesc{componentDescriptor_.descriptor()};
+        Descriptor &cloneDesc{cloneComponentDescriptor_.descriptor()};
         origDesc.Establish(compType,
-            orig.ElementComponent<char>(at, comp.offset()), comp.rank(),
-            extents);
+            instance_.ElementComponent<char>(subscripts_, component_->offset()),
+            component_->rank(), extents);
         cloneDesc.Establish(compType,
-            clone.ElementComponent<char>(at, comp.offset()), comp.rank(),
-            extents);
-        stat = InitializeClone(
-            cloneDesc, origDesc, compType, terminator, hasStat, errMsg);
-        if (stat != StatOk) {
-          break;
-        }
+            clone_.ElementComponent<char>(subscripts_, component_->offset()),
+            component_->rank(), extents);
+        workQueue.BeginInitializeClone(
+            cloneDesc, origDesc, compType, hasStat_, errMsg_);
+        AdvanceToNextElement();
+        return StatOkContinue; // will resume at next element in this component
+      } else {
+        AdvanceToNextComponent();
       }
+    } else {
+      AdvanceToNextComponent();
     }
   }
-  return stat;
+  return StatOk;
+}
+
+// Fortran 2018 subclause 7.5.6.2
+RT_API_ATTRS void Finalize(const Descriptor &descriptor,
+    const typeInfo::DerivedType &derived, Terminator *terminator) {
+  if (!derived.noFinalizationNeeded() && descriptor.IsAllocated()) {
+    Terminator stubTerminator{"Finalize() in Fortran runtime", 0};
+    WorkQueue workQueue{terminator ? *terminator : stubTerminator};
+    workQueue.BeginFinalize(descriptor, derived);
+    workQueue.Run();
+  }
 }
 
 static RT_API_ATTRS const typeInfo::SpecialBinding *FindFinal(
@@ -221,7 +216,7 @@ static RT_API_ATTRS const typeInfo::SpecialBinding *FindFinal(
 }
 
 static RT_API_ATTRS void CallFinalSubroutine(const Descriptor &descriptor,
-    const typeInfo::DerivedType &derived, Terminator *terminator) {
+    const typeInfo::DerivedType &derived, Terminator &terminator) {
   if (const auto *special{FindFinal(derived, descriptor.rank())}) {
     if (special->which() == typeInfo::SpecialBinding::Which::ElementalFinal) {
       std::size_t elements{descriptor.Elements()};
@@ -258,9 +253,7 @@ static RT_API_ATTRS void CallFinalSubroutine(const Descriptor &descriptor,
         copy = descriptor;
         copy.set_base_addr(nullptr);
         copy.raw().attribute = CFI_attribute_allocatable;
-        Terminator stubTerminator{"CallFinalProcedure() in Fortran runtime", 0};
-        RUNTIME_CHECK(terminator ? *terminator : stubTerminator,
-            copy.Allocate(kNoAsyncId) == CFI_SUCCESS);
+        RUNTIME_CHECK(terminator, copy.Allocate(kNoAsyncId) == CFI_SUCCESS);
         ShallowCopyDiscontiguousToContiguous(copy, descriptor);
         argDescriptor = &copy;
       }
@@ -284,86 +277,84 @@ static RT_API_ATTRS void CallFinalSubroutine(const Descriptor &descriptor,
   }
 }
 
-// Fortran 2018 subclause 7.5.6.2
-RT_API_ATTRS void Finalize(const Descriptor &descriptor,
-    const typeInfo::DerivedType &derived, Terminator *terminator) {
-  if (derived.noFinalizationNeeded() || !descriptor.IsAllocated()) {
-    return;
-  }
-  CallFinalSubroutine(descriptor, derived, terminator);
-  const auto *parentType{derived.GetParentType()};
-  bool recurse{parentType && !parentType->noFinalizationNeeded()};
+RT_API_ATTRS int FinalizeTicket::Begin(WorkQueue &workQueue) {
+  CallFinalSubroutine(instance_, derived_, workQueue.terminator());
   // If there's a finalizable parent component, handle it last, as required
   // by the Fortran standard (7.5.6.2), and do so recursively with the same
   // descriptor so that the rank is preserved.
-  const Descriptor &componentDesc{derived.component()};
-  std::size_t myComponents{componentDesc.Elements()};
-  std::size_t elements{descriptor.Elements()};
-  for (auto k{recurse ? std::size_t{1}
-                      /* skip first component, it's the parent */
-                      : 0};
-       k < myComponents; ++k) {
-    const auto &comp{
-        *componentDesc.ZeroBasedIndexedElement<typeInfo::Component>(k)};
-    SubscriptValue at[maxRank];
-    descriptor.GetLowerBounds(at);
-    if (comp.genre() == typeInfo::Component::Genre::Allocatable &&
-        comp.category() == TypeCategory::Derived) {
-      // Component may be polymorphic or unlimited polymorphic. Need to use the
-      // dynamic type to check whether finalization is needed.
-      for (std::size_t j{0}; j++ < elements;
-           descriptor.IncrementSubscripts(at)) {
-        const Descriptor &compDesc{
-            *descriptor.ElementComponent<Descriptor>(at, comp.offset())};
-        if (compDesc.IsAllocated()) {
-          if (const DescriptorAddendum * addendum{compDesc.Addendum()}) {
-            if (const typeInfo::DerivedType *
-                compDynamicType{addendum->derivedType()}) {
-              if (!compDynamicType->noFinalizationNeeded()) {
-                Finalize(compDesc, *compDynamicType, terminator);
-              }
-            }
-          }
-        }
-      }
-    } else if (comp.genre() == typeInfo::Component::Genre::Allocatable ||
-        comp.genre() == typeInfo::Component::Genre::Automatic) {
-      if (const typeInfo::DerivedType * compType{comp.derivedType()}) {
-        if (!compType->noFinalizationNeeded()) {
-          for (std::size_t j{0}; j++ < elements;
-               descriptor.IncrementSubscripts(at)) {
-            const Descriptor &compDesc{
-                *descriptor.ElementComponent<Descriptor>(at, comp.offset())};
-            if (compDesc.IsAllocated()) {
-              Finalize(compDesc, *compType, terminator);
-            }
-          }
-        }
-      }
-    } else if (comp.genre() == typeInfo::Component::Genre::Data &&
-        comp.derivedType() && !comp.derivedType()->noFinalizationNeeded()) {
-      SubscriptValue extents[maxRank];
-      GetComponentExtents(extents, comp, descriptor);
-      StaticDescriptor<maxRank, true, 0> staticDescriptor;
-      Descriptor &compDesc{staticDescriptor.descriptor()};
-      const typeInfo::DerivedType &compType{*comp.derivedType()};
-      for (std::size_t j{0}; j++ < elements;
-           descriptor.IncrementSubscripts(at)) {
-        compDesc.Establish(compType,
-            descriptor.ElementComponent<char>(at, comp.offset()), comp.rank(),
-            extents);
-        Finalize(compDesc, compType, terminator);
-      }
+  finalizableParentType_ = derived_.GetParentType();
+  if (finalizableParentType_) {
+    if (!finalizableParentType_->noFinalizationNeeded()) {
+      componentAt_ = 1;
+    } else {
+      finalizableParentType_ = nullptr;
     }
   }
-  if (recurse) {
-    StaticDescriptor<maxRank, true, 8 /*?*/> statDesc;
-    Descriptor &tmpDesc{statDesc.descriptor()};
-    tmpDesc = descriptor;
+  return StatOkContinue;
+}
+
+RT_API_ATTRS int FinalizeTicket::Continue(WorkQueue &workQueue) {
+  while (CueUpNextItem()) {
+    if (component_->genre() == typeInfo::Component::Genre::Allocatable &&
+        component_->category() == TypeCategory::Derived) {
+      // Component may be polymorphic or unlimited polymorphic. Need to use the
+      // dynamic type to check whether finalization is needed.
+      const Descriptor &compDesc{*instance_.ElementComponent<Descriptor>(
+          subscripts_, component_->offset())};
+      AdvanceToNextElement();
+      if (compDesc.IsAllocated()) {
+        if (const DescriptorAddendum * addendum{compDesc.Addendum()}) {
+          if (const typeInfo::DerivedType *
+              compDynamicType{addendum->derivedType()}) {
+            if (!compDynamicType->noFinalizationNeeded()) {
+              workQueue.BeginFinalize(compDesc, *compDynamicType);
+              return StatOkContinue;
+            }
+          }
+        }
+      }
+    } else if (component_->genre() == typeInfo::Component::Genre::Allocatable ||
+        component_->genre() == typeInfo::Component::Genre::Automatic) {
+      if (const typeInfo::DerivedType * compType{component_->derivedType()};
+          compType && !compType->noFinalizationNeeded()) {
+        const Descriptor &compDesc{*instance_.ElementComponent<Descriptor>(
+            subscripts_, component_->offset())};
+        AdvanceToNextElement();
+        if (compDesc.IsAllocated()) {
+          workQueue.BeginFinalize(compDesc, *compType);
+        }
+      } else {
+        AdvanceToNextComponent();
+      }
+    } else if (component_->genre() == typeInfo::Component::Genre::Data &&
+        component_->derivedType() &&
+        !component_->derivedType()->noFinalizationNeeded()) {
+      SubscriptValue extents[maxRank];
+      GetComponentExtents(extents, *component_, instance_);
+      Descriptor &compDesc{componentDescriptor_.descriptor()};
+      const typeInfo::DerivedType &compType{*component_->derivedType()};
+      compDesc.Establish(compType,
+          instance_.ElementComponent<char>(subscripts_, component_->offset()),
+          component_->rank(), extents);
+      AdvanceToNextElement();
+      workQueue.BeginFinalize(compDesc, compType);
+      return StatOkContinue;
+    } else {
+      AdvanceToNextComponent();
+    }
+  }
+  // Last, do the parent component, if any and finalizable.
+  if (finalizableParentType_) {
+    Descriptor &tmpDesc{componentDescriptor_.descriptor()};
+    tmpDesc = instance_;
     tmpDesc.raw().attribute = CFI_attribute_pointer;
-    tmpDesc.Addendum()->set_derivedType(parentType);
-    tmpDesc.raw().elem_len = parentType->sizeInBytes();
-    Finalize(tmpDesc, *parentType, terminator);
+    tmpDesc.Addendum()->set_derivedType(finalizableParentType_);
+    tmpDesc.raw().elem_len = finalizableParentType_->sizeInBytes();
+    workQueue.BeginFinalize(tmpDesc, *finalizableParentType_);
+    finalizableParentType_ = nullptr;
+    return StatOkContinue;
+  } else {
+    return StatOk;
   }
 }
 
@@ -373,51 +364,61 @@ RT_API_ATTRS void Finalize(const Descriptor &descriptor,
 // preceding any deallocation.
 RT_API_ATTRS void Destroy(const Descriptor &descriptor, bool finalize,
     const typeInfo::DerivedType &derived, Terminator *terminator) {
-  if (derived.noDestructionNeeded() || !descriptor.IsAllocated()) {
-    return;
+  if (!derived.noFinalizationNeeded() && descriptor.IsAllocated()) {
+    Terminator stubTerminator{"Destroy() in Fortran runtime", 0};
+    WorkQueue workQueue{terminator ? *terminator : stubTerminator};
+    workQueue.BeginDestroy(descriptor, derived, finalize);
+    workQueue.Run();
   }
-  if (finalize && !derived.noFinalizationNeeded()) {
-    Finalize(descriptor, derived, terminator);
+}
+
+RT_API_ATTRS int DestroyTicket::Begin(WorkQueue &workQueue) {
+  if (finalize_ && !derived_.noFinalizationNeeded()) {
+    workQueue.BeginFinalize(instance_, derived_);
   }
+  return StatOkContinue;
+}
+
+RT_API_ATTRS int DestroyTicket::Continue(WorkQueue &workQueue) {
   // Deallocate all direct and indirect allocatable and automatic components.
   // Contrary to finalization, the order of deallocation does not matter.
-  const Descriptor &componentDesc{derived.component()};
-  std::size_t myComponents{componentDesc.Elements()};
-  std::size_t elements{descriptor.Elements()};
-  SubscriptValue at[maxRank];
-  descriptor.GetLowerBounds(at);
-  for (std::size_t k{0}; k < myComponents; ++k) {
-    const auto &comp{
-        *componentDesc.ZeroBasedIndexedElement<typeInfo::Component>(k)};
-    const bool destroyComp{
-        comp.derivedType() && !comp.derivedType()->noDestructionNeeded()};
-    if (comp.genre() == typeInfo::Component::Genre::Allocatable ||
-        comp.genre() == typeInfo::Component::Genre::Automatic) {
-      for (std::size_t j{0}; j < elements; ++j) {
-        Descriptor *d{
-            descriptor.ElementComponent<Descriptor>(at, comp.offset())};
-        if (destroyComp) {
-          Destroy(*d, /*finalize=*/false, *comp.derivedType(), terminator);
+  while (CueUpNextItem()) {
+    const auto *componentDerived{component_->derivedType()};
+    if (component_->genre() == typeInfo::Component::Genre::Allocatable ||
+        component_->genre() == typeInfo::Component::Genre::Automatic) {
+      Descriptor *d{instance_.ElementComponent<Descriptor>(
+          subscripts_, component_->offset())};
+      if (d->IsAllocated()) {
+        if (phase_ == 0) {
+          ++phase_;
+          if (componentDerived && !componentDerived->noDestructionNeeded()) {
+            workQueue.BeginDestroy(*d, *componentDerived, /*finalize=*/false);
+            return StatOkContinue;
+          }
         }
         d->Deallocate();
-        descriptor.IncrementSubscripts(at);
       }
-    } else if (destroyComp &&
-        comp.genre() == typeInfo::Component::Genre::Data) {
-      SubscriptValue extents[maxRank];
-      GetComponentExtents(extents, comp, descriptor);
-      StaticDescriptor<maxRank, true, 0> staticDescriptor;
-      Descriptor &compDesc{staticDescriptor.descriptor()};
-      const typeInfo::DerivedType &compType{*comp.derivedType()};
-      for (std::size_t j{0}; j++ < elements;
-           descriptor.IncrementSubscripts(at)) {
+      AdvanceToNextElement();
+    } else if (component_->genre() == typeInfo::Component::Genre::Data) {
+      if (!componentDerived || componentDerived->noDestructionNeeded()) {
+        AdvanceToNextComponent();
+      } else {
+        SubscriptValue extents[maxRank];
+        GetComponentExtents(extents, *component_, instance_);
+        Descriptor &compDesc{componentDescriptor_.descriptor()};
+        const typeInfo::DerivedType &compType{*componentDerived};
         compDesc.Establish(compType,
-            descriptor.ElementComponent<char>(at, comp.offset()), comp.rank(),
-            extents);
-        Destroy(compDesc, /*finalize=*/false, *comp.derivedType(), terminator);
+            instance_.ElementComponent<char>(subscripts_, component_->offset()),
+            component_->rank(), extents);
+        AdvanceToNextElement();
+        workQueue.BeginDestroy(compDesc, *componentDerived, /*finalize=*/false);
+        return StatOkContinue;
       }
+    } else {
+      AdvanceToNextComponent();
     }
   }
+  return StatOk;
 }
 
 RT_API_ATTRS bool HasDynamicComponent(const Descriptor &descriptor) {
