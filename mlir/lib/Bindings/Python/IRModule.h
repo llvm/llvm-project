@@ -83,7 +83,7 @@ public:
   }
 
   T *get() { return referrent; }
-  T *operator->() {
+  T *operator->() const {
     assert(referrent && object);
     return referrent;
   }
@@ -229,7 +229,7 @@ public:
   static size_t getLiveCount();
 
   /// Get a list of Python objects which are still in the live context map.
-  std::vector<PyOperation *> getLiveOperationObjects();
+  std::vector<nanobind::object> getLiveOperationObjects();
 
   /// Gets the count of live operations associated with this context.
   /// Used for testing.
@@ -254,9 +254,10 @@ public:
   void clearOperationsInside(PyOperationBase &op);
   void clearOperationsInside(MlirOperation op);
 
-  /// Clears the operaiton _and_ all operations inside using
-  /// `clearOperation(MlirOperation)`.
-  void clearOperationAndInside(PyOperationBase &op);
+  /// Clears the operation _and_ all operations inside using
+  /// `clearOperation(MlirOperation)`. Requires that liveOperations mutex is
+  /// held.
+  void clearOperationAndInsideLocked(PyOperationBase &op);
 
   /// Gets the count of live modules associated with this context.
   /// Used for testing.
@@ -278,6 +279,9 @@ public:
   struct ErrorCapture;
 
 private:
+  // Similar to clearOperation, but requires the liveOperations mutex to be held
+  void clearOperationLocked(MlirOperation op);
+
   // Interns the mapping of live MlirContext::ptr to PyMlirContext instances,
   // preserving the relationship that an MlirContext maps to a single
   // PyMlirContext wrapper. This could be replaced in the future with an
@@ -302,6 +306,9 @@ private:
   // attempt to access it will raise an error.
   using LiveOperationMap =
       llvm::DenseMap<void *, std::pair<nanobind::handle, PyOperation *>>;
+
+  // liveOperationsMutex guards both liveOperations and the valid field of
+  // PyOperation objects in free-threading mode.
   nanobind::ft_mutex liveOperationsMutex;
 
   // Guarded by liveOperationsMutex in free-threading mode.
@@ -336,6 +343,7 @@ public:
   }
 
   /// Accesses the context reference.
+  const PyMlirContextRef &getContext() const { return contextRef; }
   PyMlirContextRef &getContext() { return contextRef; }
 
 private:
@@ -677,6 +685,10 @@ public:
     checkValid();
     return operation;
   }
+  MlirOperation getLocked() const {
+    checkValidLocked();
+    return operation;
+  }
 
   PyOperationRef getRef() {
     return PyOperationRef(this, nanobind::borrow<nanobind::object>(handle));
@@ -692,6 +704,7 @@ public:
     attached = false;
   }
   void checkValid() const;
+  void checkValidLocked() const;
 
   /// Gets the owning block or raises an exception if the operation has no
   /// owning block.
@@ -725,11 +738,16 @@ public:
   /// parent context's live operations map, and sets the valid bit false.
   void erase();
 
-  /// Invalidate the operation.
-  void setInvalid() { valid = false; }
-
   /// Clones this operation.
   nanobind::object clone(const nanobind::object &ip);
+
+  /// Invalidate the operation.
+  void setInvalid() {
+    nanobind::ft_lock_guard lock(getContext()->liveOperationsMutex);
+    setInvalidLocked();
+  }
+  /// Like setInvalid(), but requires the liveOperations mutex to be held.
+  void setInvalidLocked() { valid = false; }
 
   PyOperation(PyMlirContextRef contextRef, MlirOperation operation);
 
@@ -737,6 +755,9 @@ private:
   static PyOperationRef createInstance(PyMlirContextRef contextRef,
                                        MlirOperation operation,
                                        nanobind::object parentKeepAlive);
+
+  // Like erase(), but requires the caller to hold the liveOperationsMutex.
+  void eraseLocked();
 
   MlirOperation operation;
   nanobind::handle handle;
@@ -748,6 +769,9 @@ private:
   // ir_operation.py regarding testing corresponding lifetime guarantees.
   nanobind::object parentKeepAlive;
   bool attached = true;
+
+  // Guarded by 'context->liveOperationsMutex'. Valid objects must be present
+  // in context->liveOperations.
   bool valid = true;
 
   friend class PyOperationBase;
