@@ -31,7 +31,7 @@ public:
 #if defined(_LIBCPP_ERROR_CATEGORY_DEFINE_LEGACY_INLINE_FUNCTIONS)
   error_category() noexcept;
 #else
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 error_category() _NOEXCEPT = default;
+  _LIBCPP_HIDE_FROM_ABI error_category() _NOEXCEPT = default;
 #endif
   error_category(const error_category&)            = delete;
   error_category& operator=(const error_category&) = delete;
