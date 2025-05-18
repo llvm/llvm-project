@@ -400,6 +400,10 @@ def order_file : Separate<["-"], "order_file">,
     MetaVarName<"<file>">,
     HelpText<"Layout functions and data according to specification in <file>">,
     Group<grp_opts>;
+def order_file_cstring : Separate<["-"], "order_file_cstring">,
+    MetaVarName<"<file>">,
+    HelpText<"Layout cstrings according to specification in <file>">,
+    Group<grp_opts>;
 def no_order_inits : Flag<["-"], "no_order_inits">,
     HelpText<"Disable default reordering of initializer and terminator functions">,
     Flags<[HelpHidden]>,
