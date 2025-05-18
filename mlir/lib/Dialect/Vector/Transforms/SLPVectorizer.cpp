@@ -145,7 +145,18 @@ static bool isAdjacentIndices(Value idx1, Value idx2) {
       return *c1 + 1 == *c2;
   }
 
-  // TODO: Check arith.add, affine.apply, etc
+  if (auto addOp2 = idx2.getDefiningOp<arith::AddIOp>()) {
+    if (addOp2.getLhs() == idx1 && getConstantIntValue(addOp2.getRhs()) == 1)
+      return true;
+
+    if (auto addOp1 = idx1.getDefiningOp<arith::AddIOp>()) {
+      if (addOp1.getLhs() == addOp2.getLhs() &&
+          isAdjacentIndices(addOp1.getRhs(), addOp2.getRhs()))
+        return true;
+    }
+  }
+
+  // TODO: affine.apply, etc
   return false;
 }
 
