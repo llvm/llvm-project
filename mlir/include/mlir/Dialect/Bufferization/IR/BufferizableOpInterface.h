@@ -639,16 +639,13 @@ public:
     return const_cast<BufferizationState *>(this)->getExtension<Ty>();
   }
 
+  /// Get a reference to the collection of cached symbol tables.
+  SymbolTableCollection &getSymbolTables();
+
+private:
   /// Extensions attached to the state, identified by the TypeID of their type.
   /// Only one extension of any given type is allowed.
   DenseMap<TypeID, std::unique_ptr<Extension>> extensions;
-};
-
-/// Extra bufferization state that is required for bufferization of operations
-/// declaring a symbol or a symbol table.
-struct SymbolBufferizationState : public BufferizationState::Extension {
-  SymbolBufferizationState(BufferizationState &state)
-      : BufferizationState::Extension(state) {}
 
   /// The cached symbol tables.
   /// The user is expected to update / invalidate the cached symbol tables if

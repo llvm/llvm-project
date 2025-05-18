@@ -127,11 +127,6 @@ FailureOr<memref::GlobalOp> getGlobalFor(arith::ConstantOp constantOp,
                                          uint64_t alignment,
                                          Attribute memorySpace = {});
 
-FailureOr<memref::GlobalOp> getGlobalFor(arith::ConstantOp op,
-                                         BufferizationState &state,
-                                         uint64_t alignment,
-                                         Attribute memorySpace);
-
 void removeSymbol(Operation *op, BufferizationState &state);
 
 void insertSymbol(Operation *op, BufferizationState &state);

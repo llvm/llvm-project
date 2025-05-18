@@ -161,40 +161,17 @@ bufferization::getGlobalFor(arith::ConstantOp constantOp,
 }
 
 namespace mlir::bufferization {
-FailureOr<memref::GlobalOp> getGlobalFor(arith::ConstantOp op,
-                                         BufferizationState &state,
-                                         uint64_t alignment,
-                                         Attribute memorySpace) {
-  if (auto *symbolBufferizationState =
-          state.getExtension<SymbolBufferizationState>()) {
-    // Use the cached symbol tables.
-    return getGlobalFor(op, symbolBufferizationState->symbolTables, alignment,
-                        memorySpace);
-  }
-
-  SymbolTableCollection symbolTables;
-  return getGlobalFor(op, symbolTables, alignment, memorySpace);
-}
-
 void removeSymbol(Operation *op, BufferizationState &state) {
-  if (auto *symbolBufferizationState =
-          state.getExtension<SymbolBufferizationState>()) {
-    SymbolTable &symbolTable =
-        symbolBufferizationState->symbolTables.getSymbolTable(
-            op->getParentWithTrait<OpTrait::SymbolTable>());
+  SymbolTable &symbolTable = state.getSymbolTables().getSymbolTable(
+      op->getParentWithTrait<OpTrait::SymbolTable>());
 
-    symbolTable.remove(op);
-  }
+  symbolTable.remove(op);
 }
 
 void insertSymbol(Operation *op, BufferizationState &state) {
-  if (auto *symbolBufferizationState =
-          state.getExtension<SymbolBufferizationState>()) {
-    SymbolTable &symbolTable =
-        symbolBufferizationState->symbolTables.getSymbolTable(
-            op->getParentWithTrait<OpTrait::SymbolTable>());
+  SymbolTable &symbolTable = state.getSymbolTables().getSymbolTable(
+      op->getParentWithTrait<OpTrait::SymbolTable>());
 
-    symbolTable.insert(op);
-  }
+  symbolTable.insert(op);
 }
 } // namespace mlir::bufferization

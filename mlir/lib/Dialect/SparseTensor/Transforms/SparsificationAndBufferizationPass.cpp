@@ -116,11 +116,6 @@ public:
 
     bufferization::BufferizationState bufferizationState;
 
-    if (updatedOptions.cacheSymbolTables) {
-      bufferizationState
-          .addExtension<bufferization::SymbolBufferizationState>();
-    }
-
     if (failed(bufferization::bufferizeModuleOp(cast<ModuleOp>(getOperation()),
                                                 updatedOptions,
                                                 bufferizationState)))

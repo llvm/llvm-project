@@ -163,10 +163,6 @@ struct OneShotBufferizePass
 
     BufferizationState state;
 
-    if (opt.cacheSymbolTables) {
-      state.addExtension<SymbolBufferizationState>();
-    }
-
     BufferizationStatistics statistics;
     ModuleOp moduleOp = getOperation();
     if (opt.bufferizeFunctionBoundaries) {
