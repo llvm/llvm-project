@@ -135,8 +135,8 @@ extractContiguousGroups(const MemoryOpGroup &group) {
 /// A node in the SLP graph representing a group of vectorizable operations
 struct SLPGraphNode {
   SmallVector<Operation *> ops;
-  llvm::SmallDenseSet<SLPGraphNode *> users;
-  llvm::SmallDenseSet<SLPGraphNode *> operands;
+  SmallVector<SLPGraphNode *> users;
+  SmallVector<SLPGraphNode *> operands;
   bool isRoot = false;
 
   SLPGraphNode() = default;
@@ -174,8 +174,8 @@ public:
 
   /// Add a dependency edge between nodes
   void addEdge(SLPGraphNode *from, SLPGraphNode *to) {
-    from->users.insert(to);
-    to->operands.insert(from);
+    from->users.push_back(to);
+    to->operands.push_back(from);
   }
 
   /// Get all root nodes
@@ -191,6 +191,80 @@ public:
   SLPGraphNode *getNodeForOp(Operation *op) const {
     auto it = opToNode.find(op);
     return it != opToNode.end() ? it->second : nullptr;
+  }
+
+  /// Topologically sort the nodes in the graph
+  SmallVector<SLPGraphNode *> topologicalSort() const {
+    SmallVector<SLPGraphNode *> result;
+    llvm::SmallDenseSet<SLPGraphNode *> visited;
+
+    SmallVector<SLPGraphNode *> stack;
+
+    // Process each node
+    for (const auto &node : nodes) {
+      if (visited.contains(node.get()))
+        continue;
+
+      stack.emplace_back(node.get());
+      while (!stack.empty()) {
+        SLPGraphNode *node = stack.pop_back_val();
+        if (visited.contains(node))
+          continue;
+
+        stack.push_back(node);
+
+        bool pushed = false;
+        for (SLPGraphNode *operand : node->operands) {
+          if (visited.contains(operand))
+            continue;
+
+          stack.push_back(operand);
+          pushed = true;
+        }
+
+        if (!pushed) {
+          visited.insert(node);
+          result.push_back(node);
+        }
+      }
+    }
+
+    return result;
+  }
+
+  /// Vectorize the operations in the graph
+  LogicalResult vectorize(IRRewriter &rewriter) {
+    if (nodes.empty())
+      return success();
+
+    LLVM_DEBUG(llvm::dbgs()
+               << "Vectorizing SLP graph with " << nodes.size() << " nodes\n");
+
+    // Get topologically sorted nodes
+    SmallVector<SLPGraphNode *> sortedNodes = topologicalSort();
+    if (sortedNodes.empty()) {
+      LLVM_DEBUG(llvm::dbgs() << "Failed to topologically sort nodes\n");
+      return failure();
+    }
+
+    LLVM_DEBUG({
+      llvm::dbgs() << "Topologically sorted nodes:\n";
+      for (auto *node : sortedNodes) {
+        llvm::dbgs() << "  Node with " << node->ops.size()
+                     << " operations: " << node->ops.front()->getName() << "\n";
+      }
+    });
+
+    // TODO: Implement vectorization logic:
+    // 1. Process nodes in topological order
+    // 2. For each node:
+    //    a. Check if all operands are vectorized
+    //    b. Create vector operation
+    //    c. Replace scalar operations with vector operation
+    // 3. Handle memory operations (loads/stores) specially
+    // 4. Update use-def chains
+
+    return success();
   }
 
   /// Print the graph structure
@@ -513,6 +587,13 @@ void SLPVectorizerPass::runOnOperation() {
 
     // Print the graph structure
     LLVM_DEBUG(graph.print());
+
+    // Vectorize the graph
+    IRRewriter rewriter(&getContext());
+    if (failed(graph.vectorize(rewriter))) {
+      LLVM_DEBUG(llvm::dbgs() << "Failed to vectorize graph\n");
+      return signalPassFailure();
+    }
   });
 }
 
