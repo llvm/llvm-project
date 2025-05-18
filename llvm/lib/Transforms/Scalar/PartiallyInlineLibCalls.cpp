@@ -57,12 +57,6 @@ static bool optimizeSQRT(CallInst *Call, Function *CalledFunc,
   //
 
   ORE->emit([&]() {
-    return OptimizationRemark(DEBUG_TYPE, "SqrtPartiallyInlined",
-                              Call->getDebugLoc(), &CurrBB)
-           << "partially inlined call to sqrt function despite having to use "
-              "errno for error handling: target has fast sqrt instruction";
-  });
-  ORE->emit([&]() {
     return OptimizationRemarkMissed(DEBUG_TYPE, "BranchInserted",
                                     Call->getDebugLoc(), &CurrBB)
            << "branch to library sqrt fn had to be inserted to satisfy the "
@@ -175,8 +169,16 @@ static bool runPartiallyInlineLibCalls(Function &F, TargetLibraryInfo *TLI,
       case LibFunc_sqrt:
         if (TTI->haveFastSqrt(Call->getType()) &&
             optimizeSQRT(Call, CalledFunc, *CurrBB, BB, TTI,
-                         DTU ? &*DTU : nullptr, ORE))
+                         DTU ? &*DTU : nullptr, ORE)) {
+          ORE->emit([&]() {
+            return OptimizationRemark(DEBUG_TYPE, "SqrtPartiallyInlined",
+                                      Call->getDebugLoc(), &*CurrBB)
+                   << "partially inlined call to sqrt function despite having "
+                      "to use errno for error handling: target has fast sqrt "
+                      "instruction";
+          });
           break;
+        }
         continue;
       default:
         continue;
