@@ -1732,11 +1732,21 @@ static void removeBranchOnCondTrue(VPlan &Plan) {
   using namespace llvm::VPlanPatternMatch;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getEntry()))) {
-    if (VPBB->getNumSuccessors() != 2 ||
-        !match(&VPBB->back(), m_BranchOnCond(m_True())))
+    VPValue *Cond;
+    if (VPBB->getNumSuccessors() != 2 || VPBB->empty() ||
+        !match(&VPBB->back(), m_BranchOnCond(m_VPValue(Cond))))
       continue;
 
-    VPBasicBlock *RemovedSucc = cast<VPBasicBlock>(VPBB->getSuccessors()[1]);
+    unsigned RemovedIdx;
+    if (match(Cond, m_True()))
+      RemovedIdx = 1;
+    else if (match(Cond, m_False()))
+      RemovedIdx = 0;
+    else
+      continue;
+
+    VPBasicBlock *RemovedSucc =
+        cast<VPBasicBlock>(VPBB->getSuccessors()[RemovedIdx]);
     const auto &Preds = RemovedSucc->getPredecessors();
     assert(count(Preds, VPBB) == 1 &&
            "There must be a single edge between VPBB and its successor");
@@ -1745,12 +1755,14 @@ static void removeBranchOnCondTrue(VPlan &Plan) {
     // Values coming from VPBB into ResumePhi recipes of RemoveSucc are removed
     // from these recipes.
     for (VPRecipeBase &R : make_early_inc_range(*RemovedSucc)) {
-      assert((!isa<VPIRInstruction>(&R) ||
-              !isa<PHINode>(cast<VPIRInstruction>(&R)->getInstruction())) &&
-             !isa<VPHeaderPHIRecipe>(&R) &&
-             "Cannot update VPIRInstructions wrapping phis or header phis yet");
-      auto *VPI = dyn_cast<VPInstruction>(&R);
-      if (!VPI || VPI->getOpcode() != VPInstruction::ResumePhi)
+      if (isa<VPIRPhi>(&R)) {
+        assert(RemovedSucc->getNumPredecessors() == 1);
+        cast<VPIRPhi>(&R)->removeIncomingValue(VPBB);
+        continue;
+      }
+
+      auto *VPI = dyn_cast<VPPhi>(&R);
+      if (!VPI)
         break;
       VPBuilder B(VPI);
       SmallVector<VPValue *> NewOperands;
@@ -1760,9 +1772,8 @@ static void removeBranchOnCondTrue(VPlan &Plan) {
           continue;
         NewOperands.push_back(Op);
       }
-      VPI->replaceAllUsesWith(B.createNaryOp(VPInstruction::ResumePhi,
-                                             NewOperands, VPI->getDebugLoc(),
-                                             VPI->getName()));
+      VPI->replaceAllUsesWith(
+          B.createScalarPhi(NewOperands, VPI->getDebugLoc(), VPI->getName()));
       VPI->eraseFromParent();
     }
     // Disconnect blocks and remove the terminator. RemovedSucc will be deleted

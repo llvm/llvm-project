@@ -38,6 +38,7 @@ class VPSlotTracker;
 class VPUser;
 class VPRecipeBase;
 class VPInterleaveRecipe;
+class VPPhiAccessors;
 
 // This is the base class of the VPlan Def/Use graph, used for modeling the data
 // flow into, within and out of the VPlan. VPValues can stand for live-ins
@@ -199,7 +200,11 @@ raw_ostream &operator<<(raw_ostream &OS, const VPRecipeBase &R);
 /// This class augments VPValue with operands which provide the inverse def-use
 /// edges from VPValue's users to their defs.
 class VPUser {
+  friend class VPPhiAccessors;
+
   SmallVector<VPValue *, 2> Operands;
+
+  void removeOperand(unsigned Idx) { Operands.erase(Operands.begin() + Idx); }
 
 protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
