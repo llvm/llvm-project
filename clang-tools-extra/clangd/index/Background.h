@@ -190,12 +190,9 @@ private:
     bool HadErrors = false;
   };
 
-  /// Given index results from a TU, only update symbols coming from files with
-  /// different digests than \p ShardVersionsSnapshot. Also stores new index
-  /// information on IndexStorage.
-  void update(llvm::StringRef MainFile, IndexFileIn Index,
-              const llvm::StringMap<ShardVersion> &ShardVersionsSnapshot,
-              bool HadErrors);
+  /// Given index results from a TU, update symbols coming from all files. Also
+  /// stores new index information on IndexStorage.
+  void update(llvm::StringRef MainFile, IndexFileIn Index, bool HadErrors);
 
   // configuration
   const ThreadsafeFS &TFS;
