@@ -159,7 +159,10 @@ public:
   /// Add a new node to the graph
   SLPGraphNode *addNode(ArrayRef<Operation *> operations) {
     nodes.push_back(std::make_unique<SLPGraphNode>(operations));
-    return nodes.back().get();
+    auto *node = nodes.back().get();
+    for (Operation *op : operations)
+      opToNode[op] = node;
+    return node;
   }
 
   /// Add a root node (memory operation)
@@ -182,6 +185,12 @@ public:
       if (node->isRoot)
         roots.push_back(node.get());
     return roots;
+  }
+
+  /// Get the node associated with an operation
+  SLPGraphNode *getNodeForOp(Operation *op) const {
+    auto it = opToNode.find(op);
+    return it != opToNode.end() ? it->second : nullptr;
   }
 
   /// Print the graph structure
@@ -243,6 +252,7 @@ public:
 
 private:
   SmallVector<std::unique_ptr<SLPGraphNode>> nodes;
+  llvm::SmallDenseMap<Operation *, SLPGraphNode *> opToNode;
 };
 
 /// This pass implements the SLP vectorizer. It detects consecutive operations
@@ -272,9 +282,7 @@ static void addDataToHash(llvm::SHA1 &hasher, const T &data) {
 }
 
 struct OperationsFingerprint {
-  OperationsFingerprint(
-      const llvm::SmallDenseMap<Operation *, SLPGraphNode *> &opToNode)
-      : opToNode(opToNode) {}
+  OperationsFingerprint(const SLPGraph &graph) : graph(graph) {}
 
   Fingerprint getFingerprint(Operation *op) {
     auto it = fingerprints.find(op);
@@ -287,7 +295,7 @@ struct OperationsFingerprint {
     while (!worklist.empty()) {
       Operation *op = worklist.pop_back_val();
       toposortedOps.emplace_back(op);
-      if (opToNode.contains(op))
+      if (graph.getNodeForOp(op))
         continue;
 
       for (Value operand : op->getOperands()) {
@@ -310,9 +318,9 @@ struct OperationsFingerprint {
         if (!defOp)
           continue;
 
-        auto it1 = opToNode.find(defOp);
-        if (it1 != opToNode.end()) {
-          addDataToHash(hasher, it1->second);
+        auto *node = graph.getNodeForOp(defOp);
+        if (node) {
+          addDataToHash(hasher, node);
           continue;
         }
 
@@ -333,7 +341,7 @@ struct OperationsFingerprint {
       fingerprints.clear();
   }
 
-  const llvm::SmallDenseMap<Operation *, SLPGraphNode *> &opToNode;
+  const SLPGraph &graph;
   DenseMap<Operation *, Fingerprint> fingerprints;
 };
 
@@ -355,16 +363,12 @@ static SLPGraph buildSLPGraph(ArrayRef<MemoryOpGroup> rootGroups) {
   LLVM_DEBUG(llvm::dbgs() << "=== Building SLP graph from " << rootGroups.size()
                           << " root groups ===\n");
   SLPGraph graph;
-  llvm::SmallDenseMap<Operation *, SLPGraphNode *> opToNode;
 
   SmallVector<SLPGraphNode *> worklist;
 
   // First, create nodes for each contiguous memory operation group
   for (const auto &group : rootGroups) {
     auto *node = graph.addRoot(group.ops);
-    for (Operation *op : group.ops)
-      opToNode[op] = node;
-
     worklist.push_back(node);
 
     LLVM_DEBUG({
@@ -374,16 +378,16 @@ static SLPGraph buildSLPGraph(ArrayRef<MemoryOpGroup> rootGroups) {
     });
   }
 
-  OperationsFingerprint fingerprints(opToNode);
+  OperationsFingerprint fingerprints(graph);
 
   auto processUse = [&](SLPGraphNode *node, OpOperand &use) {
     Operation *user = use.getOwner();
-    auto it = opToNode.find(user);
-    if (it != opToNode.end()) {
+    auto *existingNode = graph.getNodeForOp(user);
+    if (existingNode) {
       LLVM_DEBUG(llvm::dbgs()
                  << "  Adding edge from " << node->ops.front()->getName()
-                 << " to " << it->first->getName() << "\n");
-      graph.addEdge(node, it->second);
+                 << " to " << user->getName() << "\n");
+      graph.addEdge(node, existingNode);
       return;
     }
 
@@ -420,7 +424,6 @@ static SLPGraph buildSLPGraph(ArrayRef<MemoryOpGroup> rootGroups) {
     auto *newNode = graph.addNode(currentOps);
     graph.addEdge(node, newNode);
     for (Operation *op : currentOps) {
-      opToNode[op] = newNode;
       fingerprints.invalidate(op);
     }
 
