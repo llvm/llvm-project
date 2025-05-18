@@ -264,24 +264,13 @@ public:
       if (node->users.empty() && node->operands.empty())
         continue;
 
+      int64_t numElements = node->ops.size();
       Operation *op = node->ops.front();
       rewriter.setInsertionPoint(op);
       Location loc = op->getLoc();
-      int64_t numElements = node->ops.size();
-      if (auto load = dyn_cast<memref::LoadOp>(op)) {
-        auto vecType =
-            VectorType::get(numElements, load.getMemRefType().getElementType());
-        Value result = rewriter.create<vector::LoadOp>(
-            loc, vecType, load.getMemRef(), load.getIndices());
-        mapping.map(load.getResult(), result);
-      } else if (auto store = dyn_cast<memref::StoreOp>(op)) {
-        Value val = mapping.lookupOrDefault(store.getValueToStore());
-        rewriter.create<vector::StoreOp>(loc, val, store.getMemRef(),
-                                         store.getIndices());
-      } else if (isVectorizable(op)) {
-        auto vecType =
-            VectorType::get(numElements, op->getResultTypes().front());
-        for (auto [i, operand] : llvm::enumerate(op->getOperands())) {
+
+      auto handleNonVectorInputs = [&](ValueRange operands) {
+        for (auto [i, operand] : llvm::enumerate(operands)) {
           if (getNodeForOp(operand.getDefiningOp()))
             continue;
 
@@ -289,17 +278,47 @@ public:
           for (Operation *defOp : node->ops)
             args.push_back(defOp->getOperand(i));
 
+          auto vecType = VectorType::get(numElements, operand.getType());
           Value vector =
               rewriter.create<vector::FromElementsOp>(loc, vecType, args);
           mapping.map(operand, vector);
         }
+      };
 
+      auto handleNonVectorOutputs = [&](Value newResult) {
+        for (auto [i, result] : llvm::enumerate(node->ops)) {
+          for (OpOperand &use : result->getUses()) {
+            Operation *useOwner = use.getOwner();
+            if (getNodeForOp(useOwner))
+              continue;
+
+            Value elem = rewriter.create<vector::ExtractOp>(loc, newResult, i);
+            use.set(elem);
+          }
+        }
+      };
+
+      if (auto load = dyn_cast<memref::LoadOp>(op)) {
+        auto vecType =
+            VectorType::get(numElements, load.getMemRefType().getElementType());
+        Value result = rewriter.create<vector::LoadOp>(
+            loc, vecType, load.getMemRef(), load.getIndices());
+        mapping.map(load.getResult(), result);
+        handleNonVectorOutputs(result);
+      } else if (auto store = dyn_cast<memref::StoreOp>(op)) {
+        handleNonVectorInputs(store.getValueToStore());
+        Value val = mapping.lookupOrDefault(store.getValueToStore());
+        rewriter.create<vector::StoreOp>(loc, val, store.getMemRef(),
+                                         store.getIndices());
+      } else if (isVectorizable(op)) {
+        handleNonVectorInputs(op->getOperands());
         Operation *newOp = rewriter.clone(*op, mapping);
         auto resVectorType =
             VectorType::get(numElements, op->getResultTypes().front());
         newOp->getResult(0).setType(resVectorType);
 
         mapping.map(op->getResults(), newOp->getResults());
+        handleNonVectorOutputs(newOp->getResult(0));
       } else {
         op->emitError("unsupported operation");
         return failure();
