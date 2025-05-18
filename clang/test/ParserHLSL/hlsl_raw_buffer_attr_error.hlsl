@@ -5,7 +5,7 @@
 
 // expected-error@+1{{'raw_buffer' attribute takes no arguments}}
 __hlsl_resource_t [[hlsl::resource_class(UAV)]] [[hlsl::raw_buffer(3)]] res2;
-  
+
 // expected-error@+1{{use of undeclared identifier 'gibberish'}}
 __hlsl_resource_t [[hlsl::resource_class(UAV)]] [[hlsl::raw_buffer(gibberish)]] res3;
 

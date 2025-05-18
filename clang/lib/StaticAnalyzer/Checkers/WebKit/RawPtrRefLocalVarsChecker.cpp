@@ -261,6 +261,12 @@ public:
           return DynamicRecursiveASTVisitor::TraverseCompoundStmt(CS);
         return true;
       }
+
+      bool TraverseClassTemplateDecl(ClassTemplateDecl *Decl) override {
+        if (isSmartPtrClass(safeGetName(Decl)))
+          return true;
+        return DynamicRecursiveASTVisitor::TraverseClassTemplateDecl(Decl);
+      }
     };
 
     LocalVisitor visitor(this);
@@ -350,7 +356,7 @@ public:
     SmallString<100> Buf;
     llvm::raw_svector_ostream Os(Buf);
 
-    if (dyn_cast<ParmVarDecl>(V)) {
+    if (isa<ParmVarDecl>(V)) {
       Os << "Assignment to an " << ptrKind() << " parameter ";
       printQuotedQualifiedName(Os, V);
       Os << " is unsafe.";

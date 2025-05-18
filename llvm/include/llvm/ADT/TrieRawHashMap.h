@@ -72,7 +72,7 @@ public:
 private:
   template <class T> struct AllocValueType {
     char Base[TrieContentBaseSize];
-    std::aligned_union_t<sizeof(T), T> Content;
+    alignas(T) char Content[sizeof(T)];
   };
 
 protected:
@@ -90,7 +90,10 @@ public:
   static void *operator new(size_t Size) { return ::operator new(Size); }
   void operator delete(void *Ptr) { ::operator delete(Ptr); }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() const;
+#endif
+
   void print(raw_ostream &OS) const;
 
 protected:
@@ -214,7 +217,10 @@ public:
   using ThreadSafeTrieRawHashMapBase::operator delete;
   using HashType = HashT;
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   using ThreadSafeTrieRawHashMapBase::dump;
+#endif
+
   using ThreadSafeTrieRawHashMapBase::print;
 
 private:

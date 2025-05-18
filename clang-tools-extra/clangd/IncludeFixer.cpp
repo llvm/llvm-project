@@ -484,7 +484,7 @@ collectAccessibleScopes(Sema &Sem, const DeclarationNameInfo &Typo, Scope *S,
                          /*IncludeGlobalScope=*/false,
                          /*LoadExternal=*/false);
   llvm::sort(Scopes);
-  Scopes.erase(std::unique(Scopes.begin(), Scopes.end()), Scopes.end());
+  Scopes.erase(llvm::unique(Scopes), Scopes.end());
   return Scopes;
 }
 

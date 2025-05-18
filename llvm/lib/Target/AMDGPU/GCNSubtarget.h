@@ -259,8 +259,10 @@ protected:
   bool HasMinimum3Maximum3F16 = false;
   bool HasMinimum3Maximum3PKF16 = false;
   bool HasLshlAddU64Inst = false;
+  bool HasPointSampleAccel = false;
 
   bool RequiresCOV6 = false;
+  bool UseBlockVGPROpsForCSR = false;
 
   // Dummy feature to use for assembler in tablegen.
   bool FeatureDisable = false;
@@ -1276,6 +1278,8 @@ public:
 
   bool requiresCodeObjectV6() const { return RequiresCOV6; }
 
+  bool useVGPRBlockOpsForCSR() const { return UseBlockVGPROpsForCSR; }
+
   bool hasVALUMaskWriteHazard() const { return getGeneration() == GFX11; }
 
   bool hasVALUReadSGPRHazard() const { return getGeneration() == GFX12; }
@@ -1362,6 +1366,8 @@ public:
   bool hasMinimum3Maximum3PKF16() const {
     return HasMinimum3Maximum3PKF16;
   }
+
+  bool hasPointSampleAccel() const { return HasPointSampleAccel; }
 
   /// \returns The maximum number of instructions that can be enclosed in an
   /// S_CLAUSE on the given subtarget, or 0 for targets that do not support that
@@ -1499,6 +1505,9 @@ public:
   /// \returns Reserved number of SGPRs for given function \p F.
   unsigned getReservedNumSGPRs(const Function &F) const;
 
+  /// \returns Maximum number of preloaded SGPRs for the subtarget.
+  unsigned getMaxNumPreloadedSGPRs() const;
+
   /// \returns max num SGPRs. This is the common utility
   /// function called by MachineFunction and Function
   /// variants of getMaxNumSGPRs.
@@ -1567,8 +1576,10 @@ public:
 
   /// \returns max num VGPRs. This is the common utility function
   /// called by MachineFunction and Function variants of getMaxNumVGPRs.
-  unsigned getBaseMaxNumVGPRs(const Function &F,
-                              std::pair<unsigned, unsigned> WavesPerEU) const;
+  unsigned
+  getBaseMaxNumVGPRs(const Function &F,
+                     std::pair<unsigned, unsigned> NumVGPRBounds) const;
+
   /// \returns Maximum number of VGPRs that meets number of waves per execution
   /// unit requirement for function \p F, or number of VGPRs explicitly
   /// requested using "amdgpu-num-vgpr" attribute attached to function \p F.

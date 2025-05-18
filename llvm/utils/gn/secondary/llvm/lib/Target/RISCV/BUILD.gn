@@ -79,6 +79,12 @@ tablegen("RISCVGenRegisterBank") {
   td_file = "RISCV.td"
 }
 
+tablegen("RISCVGenSDNodeInfo") {
+  visibility = [ ":LLVMRISCVCodeGen" ]
+  args = [ "-gen-sd-node-info" ]
+  td_file = "RISCV.td"
+}
+
 static_library("LLVMRISCVCodeGen") {
   deps = [
     ":RISCVGenCompressInstEmitter",
@@ -90,6 +96,7 @@ static_library("LLVMRISCVCodeGen") {
     ":RISCVGenPostLegalizeGICombiner",
     ":RISCVGenPreLegalizeGICombiner",
     ":RISCVGenRegisterBank",
+    ":RISCVGenSDNodeInfo",
 
     # See https://reviews.llvm.org/D69130
     "AsmParser:RISCVGenAsmMatcher",

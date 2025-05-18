@@ -14,7 +14,7 @@
 #include "sanitizer_platform.h"
 
 #if SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD || \
-    SANITIZER_SOLARIS
+    SANITIZER_SOLARIS || SANITIZER_HAIKU
 
 #  include "sanitizer_allocator_internal.h"
 #  include "sanitizer_atomic.h"
@@ -28,13 +28,18 @@
 #  include "sanitizer_procmaps.h"
 #  include "sanitizer_solaris.h"
 
+#  if SANITIZER_HAIKU
+#    define _DEFAULT_SOURCE
+#  endif
+
 #  if SANITIZER_NETBSD
 #    // for __lwp_gettcb_fast() / __lwp_getprivate_fast()
+#    define _RTLD_SOURCE
+#    include <machine/mcontext.h>
+#    undef _RTLD_SOURCE
 #    include <sys/param.h>
-#    if defined(__NetBSD_Version__) && (__NetBSD_Version__ >= 1099001200)
+#    if __NetBSD_Version__ >= 1099001200
 #      include <machine/lwp_private.h>
-#    else
-#      define _RTLD_SOURCE
 #    endif
 #  endif
 
@@ -78,6 +83,11 @@ extern "C" int __sys_sigaction(int signum, const struct sigaction *act,
 #    include <stddef.h>
 #    include <stdlib.h>
 #    include <thread.h>
+#  endif
+
+#  if SANITIZER_HAIKU
+#    include <kernel/OS.h>
+#    include <sys/link_elf.h>
 #  endif
 
 #  if !SANITIZER_ANDROID
@@ -611,21 +621,22 @@ static void GetTls(uptr *addr, uptr *size) {
   *addr = tp - RoundUpTo(*size, align);
   *size = tp - *addr + ThreadDescriptorSize();
 #      else
-  if (SANITIZER_GLIBC)
-    *size += 1664;
-  else if (SANITIZER_FREEBSD)
-    *size += 128;  // RTLD_STATIC_TLS_EXTRA
-#        if defined(__mips__) || defined(__powerpc64__) || SANITIZER_RISCV64
+#        if SANITIZER_GLIBC
+  *size += 1664;
+#        elif SANITIZER_FREEBSD
+  *size += 128;  // RTLD_STATIC_TLS_EXTRA
+#          if defined(__mips__) || defined(__powerpc64__) || SANITIZER_RISCV64
   const uptr pre_tcb_size = TlsPreTcbSize();
   *addr -= pre_tcb_size;
   *size += pre_tcb_size;
-#        else
+#          else
   // arm and aarch64 reserve two words at TP, so this underestimates the range.
   // However, this is sufficient for the purpose of finding the pointers to
   // thread-specific data keys.
   const uptr tcb_size = ThreadDescriptorSize();
   *addr -= tcb_size;
   *size += tcb_size;
+#          endif
 #        endif
 #      endif
 #    elif SANITIZER_NETBSD
@@ -642,6 +653,7 @@ static void GetTls(uptr *addr, uptr *size) {
       *addr = (uptr)tcb->tcb_dtv[1];
     }
   }
+#    elif SANITIZER_HAIKU
 #    else
 #      error "Unknown OS"
 #    endif
@@ -712,8 +724,13 @@ static int AddModuleSegments(const char *module_name, dl_phdr_info *info,
     if (phdr->p_type == PT_LOAD) {
       uptr cur_beg = info->dlpi_addr + phdr->p_vaddr;
       uptr cur_end = cur_beg + phdr->p_memsz;
+#  if SANITIZER_HAIKU
+      bool executable = phdr->p_flags & PF_EXECUTE;
+      bool writable = phdr->p_flags & PF_WRITE;
+#  else
       bool executable = phdr->p_flags & PF_X;
       bool writable = phdr->p_flags & PF_W;
+#  endif
       cur_module.addAddressRange(cur_beg, cur_end, executable, writable);
     } else if (phdr->p_type == PT_NOTE) {
 #  ifdef NT_GNU_BUILD_ID
@@ -853,6 +870,10 @@ u32 GetNumberOfCPUs() {
 #    endif
   CHECK_EQ(internal_sysctl(req, 2, &ncpu, &len, NULL, 0), 0);
   return ncpu;
+#  elif SANITIZER_HAIKU
+  system_info info;
+  get_system_info(&info);
+  return info.cpu_count;
 #  elif SANITIZER_SOLARIS
   return sysconf(_SC_NPROCESSORS_ONLN);
 #  else

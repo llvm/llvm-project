@@ -332,7 +332,8 @@ bool RISCVTargetInfo::initFeatureMap(
 
 std::optional<std::pair<unsigned, unsigned>>
 RISCVTargetInfo::getVScaleRange(const LangOptions &LangOpts,
-                                bool IsArmStreamingFunction) const {
+                                bool IsArmStreamingFunction,
+                                llvm::StringMap<bool> *FeatureMap) const {
   // RISCV::RVVBitsPerBlock is 64.
   unsigned VScaleMin = ISAInfo->getMinVLen() / llvm::RISCV::RVVBitsPerBlock;
 
@@ -438,7 +439,7 @@ static void populateNegativeRISCVFeatures(std::vector<std::string> &Features) {
 
   std::vector<std::string> FeatStrings =
       (*RII)->toFeatures(/* AddAllExtensions */ true);
-  Features.insert(Features.end(), FeatStrings.begin(), FeatStrings.end());
+  llvm::append_range(Features, FeatStrings);
 }
 
 static void handleFullArchString(StringRef FullArchStr,
@@ -454,7 +455,7 @@ static void handleFullArchString(StringRef FullArchStr,
     populateNegativeRISCVFeatures(Features);
     std::vector<std::string> FeatStrings =
         (*RII)->toFeatures(/* AddAllExtensions */ true);
-    Features.insert(Features.end(), FeatStrings.begin(), FeatStrings.end());
+    llvm::append_range(Features, FeatStrings);
   }
 }
 

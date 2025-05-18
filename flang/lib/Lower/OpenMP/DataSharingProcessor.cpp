@@ -67,6 +67,8 @@ void DataSharingProcessor::processStep1(
 
 void DataSharingProcessor::processStep2(mlir::Operation *op, bool isLoop) {
   // 'sections' lastprivate is handled by genOMP()
+  if (mlir::isa<mlir::omp::SectionOp>(op))
+    return;
   if (!mlir::isa<mlir::omp::SectionsOp>(op)) {
     mlir::OpBuilder::InsertionGuard guard(firOpBuilder);
     copyLastPrivatize(op);

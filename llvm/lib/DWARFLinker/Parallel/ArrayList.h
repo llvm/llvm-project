@@ -82,7 +82,7 @@ public:
     forEach([&](T &Item) { SortedItems.push_back(Item); });
 
     if (SortedItems.size()) {
-      std::sort(SortedItems.begin(), SortedItems.end(), Comparator);
+      llvm::sort(SortedItems, Comparator);
 
       size_t SortedItemIdx = 0;
       forEach([&](T &Item) { Item = SortedItems[SortedItemIdx++]; });
@@ -137,7 +137,7 @@ protected:
     NewGroup->Next = nullptr;
 
     // Try to replace current group with allocated one.
-    if (AtomicGroup.compare_exchange_weak(CurGroup, NewGroup))
+    if (AtomicGroup.compare_exchange_strong(CurGroup, NewGroup))
       return true;
 
     // Put allocated group as last group.

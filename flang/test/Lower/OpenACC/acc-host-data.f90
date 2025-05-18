@@ -24,6 +24,11 @@ subroutine acc_host_data()
 ! CHECK: acc.host_data dataOperands(%[[DA]] : !fir.ref<!fir.array<10xf32>>) {
 ! CHECK: } attributes {ifPresent}
 
+  !$acc host_data use_device(a) if_present if_present
+  !$acc end host_data
+! CHECK: acc.host_data dataOperands(%{{.*}} : !fir.ref<!fir.array<10xf32>>) {
+! CHECK: } attributes {ifPresent}
+
   !$acc host_data use_device(a) if(ifCondition)
   !$acc end host_data
 

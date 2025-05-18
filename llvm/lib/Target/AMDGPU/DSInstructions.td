@@ -853,18 +853,18 @@ foreach vt = Reg32Types.types in {
 defm : DSReadPat_mc <DS_READ_B32, vt, "load_local">;
 }
 
-defm : DSReadPat_t16 <DS_READ_U8, i16, "atomic_load_8_local">;
-defm : DSReadPat_mc <DS_READ_U8, i32, "atomic_load_8_local">;
+defm : DSReadPat_t16 <DS_READ_U8, i16, "atomic_load_aext_8_local">;
+defm : DSReadPat_mc <DS_READ_U8, i32, "atomic_load_aext_8_local">;
 defm : DSReadPat_t16 <DS_READ_U8, i16, "atomic_load_zext_8_local">;
 defm : DSReadPat_mc <DS_READ_U8, i32, "atomic_load_zext_8_local">;
 defm : DSReadPat_t16 <DS_READ_I8, i16, "atomic_load_sext_8_local">;
 defm : DSReadPat_mc <DS_READ_I8, i32, "atomic_load_sext_8_local">;
-defm : DSReadPat_t16 <DS_READ_U16, i16, "atomic_load_16_local">;
-defm : DSReadPat_mc <DS_READ_U16, i32, "atomic_load_16_local">;
+defm : DSReadPat_t16 <DS_READ_U16, i16, "atomic_load_nonext_16_local">;
+defm : DSReadPat_mc <DS_READ_U16, i32, "atomic_load_aext_16_local">;
 defm : DSReadPat_mc <DS_READ_U16, i32, "atomic_load_zext_16_local">;
 defm : DSReadPat_mc <DS_READ_I16, i32, "atomic_load_sext_16_local">;
-defm : DSReadPat_mc <DS_READ_B32, i32, "atomic_load_32_local">;
-defm : DSReadPat_mc <DS_READ_B64, i64, "atomic_load_64_local">;
+defm : DSReadPat_mc <DS_READ_B32, i32, "atomic_load_nonext_32_local">;
+defm : DSReadPat_mc <DS_READ_B64, i64, "atomic_load_nonext_64_local">;
 
 let OtherPredicates = [D16PreservesUnusedBits] in {
 // TODO: Atomic loads

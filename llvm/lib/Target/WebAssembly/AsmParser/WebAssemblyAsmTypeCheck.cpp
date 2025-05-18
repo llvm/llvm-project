@@ -55,7 +55,7 @@ void WebAssemblyAsmTypeCheck::funcDecl(const wasm::WasmSignature &Sig) {
 
 void WebAssemblyAsmTypeCheck::localDecl(
     const SmallVectorImpl<wasm::ValType> &Locals) {
-  LocalTypes.insert(LocalTypes.end(), Locals.begin(), Locals.end());
+  llvm::append_range(LocalTypes, Locals);
 }
 
 void WebAssemblyAsmTypeCheck::dumpTypeStack(Twine Msg) {
@@ -126,8 +126,8 @@ SmallVector<WebAssemblyAsmTypeCheck::StackType, 4>
 WebAssemblyAsmTypeCheck::valTypesToStackTypes(
     ArrayRef<wasm::ValType> ValTypes) {
   SmallVector<StackType, 4> Types(ValTypes.size());
-  std::transform(ValTypes.begin(), ValTypes.end(), Types.begin(),
-                 [](wasm::ValType Val) -> StackType { return Val; });
+  llvm::transform(ValTypes, Types.begin(),
+                  [](wasm::ValType Val) -> StackType { return Val; });
   return Types;
 }
 
@@ -357,8 +357,7 @@ bool WebAssemblyAsmTypeCheck::checkTryTable(SMLoc ErrorLoc,
         Opcode == wasm::WASM_OPCODE_CATCH_REF) {
       if (!getSignature(ErrorLoc, Inst.getOperand(OpIdx++),
                         wasm::WASM_SYMBOL_TYPE_TAG, Sig))
-        SentTypes.insert(SentTypes.end(), Sig->Params.begin(),
-                         Sig->Params.end());
+        llvm::append_range(SentTypes, Sig->Params);
       else
         Error = true;
     }

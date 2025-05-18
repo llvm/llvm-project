@@ -590,6 +590,7 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *E, Address Dest,
     llvm::LoadInst *Load = CGF.Builder.CreateLoad(Ptr);
     Load->setAtomic(Order, Scope);
     Load->setVolatile(E->isVolatile());
+    CGF.maybeAttachRangeForLoad(Load, E->getValueType(), E->getExprLoc());
     CGF.Builder.CreateStore(Load, Dest);
     return;
   }
@@ -1083,8 +1084,8 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
       auto DestAS = getContext().getTargetAddressSpace(LangAS::opencl_generic);
       auto *DestType = llvm::PointerType::get(getLLVMContext(), DestAS);
 
-      return getTargetHooks().performAddrSpaceCast(
-          *this, V, AS, LangAS::opencl_generic, DestType, false);
+      return getTargetHooks().performAddrSpaceCast(*this, V, AS, DestType,
+                                                   false);
     };
 
     Args.add(RValue::get(CastToGenericAddrSpace(Ptr.emitRawPointer(*this),

@@ -23,13 +23,13 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
 struct _LIBCPP_NO_SPECIALIZATIONS is_trivially_destructible
-    : public integral_constant<bool, __is_trivially_destructible(_Tp)> {};
+    : integral_constant<bool, __is_trivially_destructible(_Tp)> {};
 
 #elif __has_builtin(__has_trivial_destructor)
 
 template <class _Tp>
 struct is_trivially_destructible
-    : public integral_constant<bool, is_destructible<_Tp>::value&& __has_trivial_destructor(_Tp)> {};
+    : integral_constant<bool, is_destructible<_Tp>::value&& __has_trivial_destructor(_Tp)> {};
 
 #else
 

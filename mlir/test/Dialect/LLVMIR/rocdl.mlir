@@ -889,6 +889,16 @@ llvm.func @rocdl.readlane(%src : f32) -> f32 {
 
 // -----
 
+llvm.func @rocdl.permlanex16(%src : f32) -> f32 {
+  %cst0 = llvm.mlir.constant(-1 : i32) : i32
+  // CHECK-LABEL: rocdl.permlanex16
+  // CHECK: rocdl.permlanex16 %{{.*}} %{{.*}}
+  %ret = rocdl.permlanex16 %src, %src, %cst0, %cst0, 0, -1 : f32, i32
+  llvm.return %ret : f32
+}
+
+// -----
+
 // expected-error@below {{attribute attached to unexpected op}}
 func.func private @expected_llvm_func() attributes { rocdl.kernel }
 

@@ -509,9 +509,8 @@ class SPIRVStructurizer : public FunctionPass {
       }
 
       SwitchInst *Sw = ExitBuilder.CreateSwitch(Load, Dsts[0], Dsts.size() - 1);
-      for (auto It = Dsts.begin() + 1; It != Dsts.end(); ++It) {
-        Sw->addCase(DstToIndex[*It], *It);
-      }
+      for (BasicBlock *BB : drop_begin(Dsts))
+        Sw->addCase(DstToIndex[BB], BB);
       return NewExit;
     }
   };
@@ -661,14 +660,14 @@ class SPIRVStructurizer : public FunctionPass {
     Instruction *InsertionPoint = *MergeInstructions.begin();
 
     PartialOrderingVisitor Visitor(F);
-    std::sort(MergeInstructions.begin(), MergeInstructions.end(),
-              [&Visitor](Instruction *Left, Instruction *Right) {
-                if (Left == Right)
-                  return false;
-                BasicBlock *RightMerge = getDesignatedMergeBlock(Right);
-                BasicBlock *LeftMerge = getDesignatedMergeBlock(Left);
-                return !Visitor.compare(RightMerge, LeftMerge);
-              });
+    llvm::sort(MergeInstructions,
+               [&Visitor](Instruction *Left, Instruction *Right) {
+                 if (Left == Right)
+                   return false;
+                 BasicBlock *RightMerge = getDesignatedMergeBlock(Right);
+                 BasicBlock *LeftMerge = getDesignatedMergeBlock(Left);
+                 return !Visitor.compare(RightMerge, LeftMerge);
+               });
 
     for (Instruction *I : MergeInstructions) {
       I->moveBefore(InsertionPoint->getIterator());

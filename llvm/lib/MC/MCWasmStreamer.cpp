@@ -179,9 +179,9 @@ void MCWasmStreamer::emitInstToData(const MCInst &Inst,
   MCDataFragment *DF = getOrCreateDataFragment();
 
   // Add the fixups and data.
-  for (unsigned I = 0, E = Fixups.size(); I != E; ++I) {
-    Fixups[I].setOffset(Fixups[I].getOffset() + DF->getContents().size());
-    DF->getFixups().push_back(Fixups[I]);
+  for (MCFixup &Fixup : Fixups) {
+    Fixup.setOffset(Fixup.getOffset() + DF->getContents().size());
+    DF->getFixups().push_back(Fixup);
   }
   DF->setHasInstructions(STI);
   DF->appendContents(Code);
@@ -191,21 +191,6 @@ void MCWasmStreamer::finishImpl() {
   emitFrames(nullptr);
 
   this->MCObjectStreamer::finishImpl();
-}
-
-void MCWasmStreamer::emitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) {
-  llvm_unreachable("Wasm doesn't support this directive");
-}
-
-void MCWasmStreamer::emitZerofill(MCSection *Section, MCSymbol *Symbol,
-                                  uint64_t Size, Align ByteAlignment,
-                                  SMLoc Loc) {
-  llvm_unreachable("Wasm doesn't support this directive");
-}
-
-void MCWasmStreamer::emitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
-                                    uint64_t Size, Align ByteAlignment) {
-  llvm_unreachable("Wasm doesn't support this directive");
 }
 
 MCStreamer *llvm::createWasmStreamer(MCContext &Context,

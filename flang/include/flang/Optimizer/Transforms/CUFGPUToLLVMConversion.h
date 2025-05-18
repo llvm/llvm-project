@@ -19,9 +19,9 @@ class LLVMTypeConverter;
 
 namespace cuf {
 
-void populateCUFGPUToLLVMConversionPatterns(
-    const fir::LLVMTypeConverter &converter, mlir::RewritePatternSet &patterns,
-    mlir::PatternBenefit benefit = 1);
+void populateCUFGPUToLLVMConversionPatterns(fir::LLVMTypeConverter &converter,
+                                            mlir::RewritePatternSet &patterns,
+                                            mlir::PatternBenefit benefit = 1);
 
 } // namespace cuf
 

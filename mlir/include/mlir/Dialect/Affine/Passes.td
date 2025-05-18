@@ -396,6 +396,18 @@ def LoopCoalescing : Pass<"affine-loop-coalescing", "func::FuncOp"> {
   let dependentDialects = ["affine::AffineDialect","arith::ArithDialect"];
 }
 
+def RaiseMemrefDialect : Pass<"affine-raise-from-memref", "func::FuncOp"> {
+  let summary = "Turn some memref operators to affine operators where supported";
+  let description = [{
+    Raise memref.load and memref.store to affine.store and affine.load, inferring
+    the affine map of those operators if needed. This allows passes like --affine-scalrep
+    to optimize those loads and stores (forwarding them or eliminating them).
+    They can be turned back to memref dialect ops with --lower-affine.
+  }];
+  let constructor = "mlir::affine::createRaiseMemrefToAffine()";
+  let dependentDialects = ["affine::AffineDialect"];
+}
+
 def SimplifyAffineStructures : Pass<"affine-simplify-structures", "func::FuncOp"> {
   let summary = "Simplify affine expressions in maps/sets and normalize "
                 "memrefs";

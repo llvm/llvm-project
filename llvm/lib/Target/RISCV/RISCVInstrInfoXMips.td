@@ -107,8 +107,8 @@ class SWPFormat<dag outs, dag ins, string opcodestr, string argstr>
 // MIPS extensions
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasVendorXMIPSCMove], hasSideEffects = 0, mayLoad = 0, mayStore = 0,
-                 DecoderNamespace = "Xmipscmove" in {
+let Predicates = [HasVendorXMIPSCMov], hasSideEffects = 0, mayLoad = 0, mayStore = 0,
+                 DecoderNamespace = "Xmipscmov" in {
 def MIPS_CCMOV : RVInstR4<0b11, 0b011, OPC_CUSTOM_0, (outs GPR:$rd),
                           (ins GPR:$rs1, GPR:$rs2, GPR:$rs3),
                           "mips.ccmov", "$rd, $rs2, $rs1, $rs3">,

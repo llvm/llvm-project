@@ -84,20 +84,23 @@ LogicalResult intrinsicRewrite(Operation *op, StringAttr intrinsic,
 /// Generic one-to-one conversion of simply mappable operations into calls
 /// to their respective LLVM intrinsics.
 struct OneToOneIntrinsicOpConversion
-    : public OpInterfaceRewritePattern<x86vector::OneToOneIntrinsicOp> {
-  using OpInterfaceRewritePattern<
-      x86vector::OneToOneIntrinsicOp>::OpInterfaceRewritePattern;
+    : public OpInterfaceConversionPattern<x86vector::OneToOneIntrinsicOp> {
+  using OpInterfaceConversionPattern<
+      x86vector::OneToOneIntrinsicOp>::OpInterfaceConversionPattern;
 
   OneToOneIntrinsicOpConversion(const LLVMTypeConverter &typeConverter,
                                 PatternBenefit benefit = 1)
-      : OpInterfaceRewritePattern(&typeConverter.getContext(), benefit),
+      : OpInterfaceConversionPattern(typeConverter, &typeConverter.getContext(),
+                                     benefit),
         typeConverter(typeConverter) {}
 
-  LogicalResult matchAndRewrite(x86vector::OneToOneIntrinsicOp op,
-                                PatternRewriter &rewriter) const override {
-    return intrinsicRewrite(op, rewriter.getStringAttr(op.getIntrinsicName()),
-                            op.getIntrinsicOperands(rewriter), typeConverter,
-                            rewriter);
+  LogicalResult
+  matchAndRewrite(x86vector::OneToOneIntrinsicOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    return intrinsicRewrite(
+        op, rewriter.getStringAttr(op.getIntrinsicName()),
+        op.getIntrinsicOperands(operands, typeConverter, rewriter),
+        typeConverter, rewriter);
   }
 
 private:
@@ -115,6 +118,7 @@ void mlir::populateX86VectorLegalizeForLLVMExportPatterns(
 void mlir::configureX86VectorLegalizeForExportTarget(
     LLVMConversionTarget &target) {
   target.addIllegalOp<MaskCompressOp, MaskRndScaleOp, MaskScaleFOp,
-                      Vp2IntersectOp, DotBF16Op, CvtPackedF32ToBF16Op, RsqrtOp,
-                      DotOp>();
+                      Vp2IntersectOp, DotBF16Op, CvtPackedF32ToBF16Op,
+                      CvtPackedEvenIndexedToF32Op, CvtPackedOddIndexedToF32Op,
+                      BcstToPackedF32Op, RsqrtOp, DotOp>();
 }

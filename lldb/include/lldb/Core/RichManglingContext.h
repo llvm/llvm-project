@@ -12,6 +12,7 @@
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private.h"
 
+#include "lldb/Target/Language.h"
 #include "lldb/Utility/ConstString.h"
 
 #include "llvm/ADT/Any.h"
@@ -67,11 +68,7 @@ private:
   char *m_ipd_buf;
   size_t m_ipd_buf_size = 2048;
 
-  /// Members for PluginCxxLanguage
-  /// Cannot forward declare inner class CPlusPlusLanguage::MethodName. The
-  /// respective header is in Plugins and including it from here causes cyclic
-  /// dependency. Instead keep a llvm::Any and cast it on-access in the cpp.
-  llvm::Any m_cxx_method_parser;
+  std::unique_ptr<Language::MethodName> m_cxx_method_parser;
 
   /// Clean up memory when using PluginCxxLanguage
   void ResetCxxMethodParser();
@@ -81,15 +78,6 @@ private:
 
   /// Uniform handling of string buffers for ItaniumPartialDemangler.
   llvm::StringRef processIPDStrResult(char *ipd_res, size_t res_len);
-
-  /// Cast the given parser to the given type. Ideally we would have a type
-  /// trait to deduce \a ParserT from a given InfoProvider, but unfortunately we
-  /// can't access CPlusPlusLanguage::MethodName from within the header.
-  template <class ParserT> static ParserT *get(llvm::Any parser) {
-    assert(parser.has_value());
-    assert(llvm::any_cast<ParserT *>(&parser));
-    return *llvm::any_cast<ParserT *>(&parser);
-  }
 };
 
 } // namespace lldb_private

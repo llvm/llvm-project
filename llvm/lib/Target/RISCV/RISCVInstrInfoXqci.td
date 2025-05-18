@@ -40,6 +40,12 @@ def uimm5_plus1 : RISCVOp, ImmLeaf<XLenVT,
   let EncoderMethod = "getImmOpValueMinus1";
   let DecoderMethod = "decodeUImmPlus1Operand<5>";
   let OperandType = "OPERAND_UIMM5_PLUS1";
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (!MCOp.evaluateAsConstantImm(Imm))
+      return false;
+    return (isUInt<5>(Imm) && (Imm != 0)) || (Imm == 32);
+  }];
 }
 
 def uimm5ge6_plus1 : RISCVOp<XLenVT>, ImmLeaf<XLenVT,
@@ -48,6 +54,12 @@ def uimm5ge6_plus1 : RISCVOp<XLenVT>, ImmLeaf<XLenVT,
   let EncoderMethod = "getImmOpValueMinus1";
   let DecoderMethod = "decodeUImmPlus1OperandGE<5,6>";
   let OperandType = "OPERAND_UIMM5_GE6_PLUS1";
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (!MCOp.evaluateAsConstantImm(Imm))
+      return false;
+    return (Imm >= 6) && (isUInt<5>(Imm) || (Imm == 32));
+  }];
 }
 
 def uimm5slist : RISCVOp<XLenVT>, ImmLeaf<XLenVT,
@@ -63,6 +75,15 @@ def uimm5slist : RISCVOp<XLenVT>, ImmLeaf<XLenVT,
   let EncoderMethod = "getImmOpValueSlist";
   let DecoderMethod = "decodeUImmSlistOperand";
   let OperandType = "OPERAND_UIMM5_SLIST";
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (!MCOp.evaluateAsConstantImm(Imm))
+      return false;
+    return ((Imm == 0)  || (Imm == 1)  ||
+            (Imm == 2)  || (Imm == 4)  ||
+            (Imm == 8)  || (Imm == 16) ||
+            (Imm == 15) || (Imm == 31));
+  }];
 }
 
 def uimm10 : RISCVUImmLeafOp<10>;
@@ -118,6 +139,12 @@ def simm20_li : RISCVOp<XLenVT> {
 
 def simm26 : RISCVSImmLeafOp<26>;
 
+def simm26_nosimm12 : ImmLeaf<XLenVT, [{
+  return isInt<26>(Imm) && !isInt<12>(Imm);}]>;
+
+def simm32_nosimm26 : ImmLeaf<XLenVT, [{
+  return isInt<32>(Imm) && !isInt<26>(Imm);}]>;
+
 class BareSImmNAsmOperand<int width>
     : ImmAsmOperand<"BareS", width, ""> {
   let PredicateMethod = "isBareSimmN<" # width # ">";
@@ -139,19 +166,57 @@ def bare_simm32 : RISCVOp<XLenVT> {
 }
 
 // A 32-bit signed immediate where the least significant bit is zero.
-def simm32_lsb0 : Operand<OtherVT> {
-  let ParserMatchClass = SImmAsmOperand<32, "Lsb0">;
+def bare_simm32_lsb0 : Operand<OtherVT> {
+  let ParserMatchClass = BareSImmNLsb0AsmOperand<32>;
   let PrintMethod = "printBranchOperand";
-  let EncoderMethod = "getImmOpValueAsr1";
-  let DecoderMethod = "decodeSImmOperandAndLsl1<32>";
+  let EncoderMethod = "getImmOpValueAsrN<1>";
+  let DecoderMethod = "decodeSImmOperandAndLslN<32, 1>";
   let MCOperandPredicate = [{
     int64_t Imm;
-    if (!MCOp.evaluateAsConstantImm(Imm))
-      return false;
-    return isShiftedInt<31, 1>(Imm);
+    if (MCOp.evaluateAsConstantImm(Imm))
+      return isShiftedInt<31, 1>(Imm);
+    return MCOp.isBareSymbolRef();
   }];
   let OperandType = "OPERAND_PCREL";
 }
+
+def AddLike: PatFrags<(ops node:$A, node:$B),
+                      [(add node:$A, node:$B), (or node:$A, node:$B)], [{
+    return CurDAG->isBaseWithConstantOffset(SDValue(N, 0));
+}]>;
+
+def AddShl : PatFrag<(ops node:$Ra, node:$Rb, node:$SH3),
+                     (add node:$Ra, (shl node:$Rb, node:$SH3))>;
+
+def IntCCtoQCRISCVCC : SDNodeXForm<riscv_selectcc, [{
+  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  int64_t Imm = cast<ConstantSDNode>(N->getOperand(1))->getSExtValue();
+  RISCVCC::CondCode BrCC;
+  switch (CC) {
+  default:
+   report_fatal_error("Unexpected CondCode for Xqcibi branch instructions");
+  case ISD::SETEQ:
+    BrCC = isInt<5>(Imm) ? RISCVCC::COND_QC_BEQI :  RISCVCC::COND_QC_E_BEQI;
+    break;
+  case ISD::SETNE:
+    BrCC = isInt<5>(Imm) ? RISCVCC::COND_QC_BNEI :  RISCVCC::COND_QC_E_BNEI;
+    break;
+  case ISD::SETLT:
+    BrCC = isInt<5>(Imm) ? RISCVCC::COND_QC_BLTI :  RISCVCC::COND_QC_E_BLTI;
+    break;
+  case ISD::SETGE:
+    BrCC = isInt<5>(Imm) ? RISCVCC::COND_QC_BGEI :  RISCVCC::COND_QC_E_BGEI;
+    break;
+  case ISD::SETULT:
+    BrCC = isUInt<5>(Imm) ? RISCVCC::COND_QC_BLTUI :  RISCVCC::COND_QC_E_BLTUI;
+    break;
+  case ISD::SETUGE:
+    BrCC = isUInt<5>(Imm) ? RISCVCC::COND_QC_BGEUI :  RISCVCC::COND_QC_E_BGEUI;
+    break;
+  }
+  return CurDAG->getTargetConstant(BrCC, SDLoc(N), Subtarget->getXLenVT());
+}]>;
+
 
 //===----------------------------------------------------------------------===//
 // Instruction Formats
@@ -301,7 +366,7 @@ def InsnQC_EJ : DirectiveInsnQC_EJ<(outs),
                                         uimm3:$func3,
                                         uimm2:$func2,
                                         uimm5:$func5,
-                                        simm32_lsb0:$imm31),
+                                        bare_simm32_lsb0:$imm31),
                                    "$opcode, $func3, $func2, $func5, $imm31">;
 def InsnQC_ES : DirectiveInsnQC_ES<(outs),
                                    (ins uimm7_opcode:$opcode,
@@ -353,7 +418,7 @@ def : InstAlias<".insn_qc.ej $opcode, $func3, $func2, $func5, $imm31",
                             uimm3:$func3,
                             uimm2:$func2,
                             uimm5:$func5,
-                            simm32_lsb0:$imm31)>;
+                            bare_simm32_lsb0:$imm31)>;
 def : InstAlias<".insn_qc.es $opcode, $func3, $func2, $rs2, ${imm26}(${rs1})",
                  (InsnQC_ES uimm7_opcode:$opcode,
                             uimm3:$func3,
@@ -707,8 +772,8 @@ class QCIRVInstEI<bits<3> funct3, bits<2> funct2, string opcodestr>
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class QCIRVInst48EJ<bits<2> func2, string opcodestr>
-    : RVInst48<(outs), (ins simm32_lsb0:$imm31),
-               opcodestr, "$imm31", [], InstFormatOther> {
+    : RVInst48<(outs), (ins bare_simm32_lsb0:$imm31),
+               opcodestr, "$imm31", [], InstFormatQC_EJ> {
   bits<31> imm31;
 
   let Inst{47-32} = imm31{30-15};
@@ -1223,5 +1288,254 @@ def PseudoQC_E_SW : PseudoStore<"qc.e.sw">;
 // Code Gen Patterns
 //===----------------------------------------------------------------------===//
 
+/// Generic pattern classes
+
+class PatGprNoX0Simm26NoSimm12<SDPatternOperator OpNode, RVInst48 Inst>
+    : Pat<(i32 (OpNode (i32 GPRNoX0:$rs1), simm26_nosimm12:$imm)),
+          (Inst GPRNoX0:$rs1, simm26_nosimm12:$imm)>;
+
+class PatGprNoX0Simm32NoSimm26<SDPatternOperator OpNode, RVInst48 Inst>
+    : Pat<(i32 (OpNode (i32 GPRNoX0:$rs1), simm32_nosimm26:$imm)),
+          (Inst GPRNoX0:$rs1, simm32_nosimm26:$imm)>;
+
+class PatGprNoX0GprNoX0<SDPatternOperator OpNode, RVInstR Inst>
+    : Pat<(i32 (OpNode (i32 GPRNoX0:$rs1), (i32 GPRNoX0:$rs2))),
+          (Inst GPRNoX0:$rs1, GPRNoX0:$rs2)>;
+
+class QC48LdPat<PatFrag LoadOp, RVInst48 Inst>
+    : Pat<(i32 (LoadOp (AddLike (i32 GPR:$rs1), simm26_nosimm12:$imm26))),
+          (Inst GPR:$rs1, simm26_nosimm12:$imm26)>;
+
+class QC48StPat<PatFrag StoreOp, RVInst48 Inst>
+    : Pat<(StoreOp (i32 GPR:$rs2), (AddLike (i32 GPR:$rs1), simm26_nosimm12:$imm26)),
+          (Inst GPR:$rs2, GPR:$rs1, simm26_nosimm12:$imm26)>;
+
+class QCScaledLdPat<PatFrag LoadOp, RVInst Inst>
+    : Pat<(i32 (LoadOp (AddShl (i32 GPRMem:$rs1), (i32 GPRNoX0:$rs2), uimm3:$shamt))),
+          (Inst GPRMem:$rs1, GPRNoX0:$rs2, uimm3:$shamt)>;
+
+class QCScaledStPat<PatFrag StoreOp, RVInst Inst>
+    : Pat<(StoreOp (i32 GPR:$rd), (AddShl (i32 GPRMem:$rs1), (i32 GPRNoX0:$rs2), uimm3:$shamt)),
+          (Inst GPR:$rd, GPRMem:$rs1, GPRNoX0:$rs2, uimm3:$shamt)>;
+
+// Match `riscv_brcc` and lower to the appropriate XQCIBI branch instruction.
+class BcciPat<CondCode Cond, QCIBranchInst_rii Inst, DAGOperand InTyImm>
+    : Pat<(riscv_brcc (XLenVT GPRNoX0:$rs1), InTyImm:$rs2, Cond, bb:$imm12),
+          (Inst GPRNoX0:$rs1, InTyImm:$rs2, bare_simm13_lsb0:$imm12)>;
+
+class Bcci48Pat<CondCode Cond, QCIBranchInst48_rii Inst, DAGOperand InTyImm>
+    : Pat<(riscv_brcc (XLenVT GPRNoX0:$rs1), InTyImm:$rs2, Cond, bb:$imm12),
+          (Inst GPRNoX0:$rs1, InTyImm:$rs2, bare_simm13_lsb0:$imm12)>;
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, usesCustomInserter = 1 in {
+  def Select_GPR_Using_CC_Simm5NonZero : Pseudo<(outs GPR:$dst),
+                                                (ins GPR:$lhs, simm5nonzero:$imm5,
+                                                 cond_code:$cc, GPR:$truev, GPR:$falsev), []>;
+  def Select_GPR_Using_CC_Uimm5NonZero : Pseudo<(outs GPR:$dst),
+                                                (ins GPR:$lhs, uimm5nonzero:$imm5,
+                                                 cond_code:$cc, GPR:$truev, GPR:$falsev), []>;
+  def Select_GPR_Using_CC_Simm16NonZero : Pseudo<(outs GPR:$dst),
+                                                 (ins GPR:$lhs, simm16nonzero:$imm16,
+                                                  cond_code:$cc, GPR:$truev, GPR:$falsev), []>;
+  def Select_GPR_Using_CC_Uimm16NonZero : Pseudo<(outs GPR:$dst),
+                                                 (ins GPR:$lhs, uimm16nonzero:$imm16,
+                                                  cond_code:$cc, GPR:$truev, GPR:$falsev), []>;
+}
+
+class SelectQCbi<CondCode Cond, DAGOperand InTyImm, Pseudo OpNode >
+    : Pat<(riscv_selectcc_frag:$cc (i32 GPR:$lhs), InTyImm:$Constant, Cond,
+                                   (i32 GPR:$truev), GPR:$falsev),
+          (OpNode GPR:$lhs, InTyImm:$Constant,
+           (IntCCtoQCRISCVCC $cc), GPR:$truev, GPR:$falsev)>;
+
+/// Simple arithmetic operations
+
+let Predicates = [HasVendorXqcilia, IsRV32] in {
+def : PatGprNoX0Simm32NoSimm26<add, QC_E_ADDAI>;
+def : PatGprNoX0Simm32NoSimm26<and, QC_E_ANDAI>;
+def : PatGprNoX0Simm32NoSimm26<or, QC_E_ORAI>;
+def : PatGprNoX0Simm32NoSimm26<xor, QC_E_XORAI>;
+
+def : PatGprNoX0Simm26NoSimm12<add, QC_E_ADDI>;
+def : PatGprNoX0Simm26NoSimm12<and, QC_E_ANDI>;
+def : PatGprNoX0Simm26NoSimm12<or, QC_E_ORI>;
+def : PatGprNoX0Simm26NoSimm12<xor, QC_E_XORI>;
+} // Predicates = [HasVendorXqcilia, IsRV32]
+
+/// Load/Store operations
+
+let Predicates = [HasVendorXqcilo, IsRV32], AddedComplexity = 2 in {
+  def : QC48LdPat<sextloadi8, QC_E_LB>;
+  def : QC48LdPat<extloadi8, QC_E_LBU>; // Prefer unsigned due to no c.lb in Zcb.
+  def : QC48LdPat<sextloadi16, QC_E_LH>;
+  def : QC48LdPat<extloadi16, QC_E_LH>;
+  def : QC48LdPat<load, QC_E_LW>;
+  def : QC48LdPat<zextloadi8, QC_E_LBU>;
+  def : QC48LdPat<zextloadi16, QC_E_LHU>;
+
+  def : QC48StPat<truncstorei8, QC_E_SB>;
+  def : QC48StPat<truncstorei16, QC_E_SH>;
+  def : QC48StPat<store, QC_E_SW>;
+} // Predicates = [HasVendorXqcilo, IsRV32], AddedComplexity = 2
+
+
+let Predicates = [HasVendorXqcisls, IsRV32], AddedComplexity = 1 in {
+  def : QCScaledLdPat<sextloadi8, QC_LRB>;
+  def : QCScaledLdPat<extloadi8, QC_LRBU>;
+  def : QCScaledLdPat<sextloadi16, QC_LRH>;
+  def : QCScaledLdPat<extloadi16, QC_LRH>;
+  def : QCScaledLdPat<load, QC_LRW>;
+  def : QCScaledLdPat<zextloadi8, QC_LRBU>;
+  def : QCScaledLdPat<zextloadi16, QC_LRHU>;
+
+  def : QCScaledStPat<truncstorei8, QC_SRB>;
+  def : QCScaledStPat<truncstorei16, QC_SRH>;
+  def : QCScaledStPat<store, QC_SRW>;
+} // Predicates = [HasVendorXqcisls, IsRV32], AddedComplexity = 1
+
+let Predicates = [HasVendorXqcia, IsRV32] in {
+def : PatGprNoX0GprNoX0<saddsat, QC_ADDSAT>;
+def : PatGprNoX0GprNoX0<uaddsat, QC_ADDUSAT>;
+def : PatGprNoX0GprNoX0<ssubsat, QC_SUBSAT>;
+def : PatGprNoX0GprNoX0<usubsat, QC_SUBUSAT>;
+def : PatGprNoX0GprNoX0<ushlsat, QC_SHLUSAT>;
+def : PatGprNoX0GprNoX0<sshlsat, QC_SHLSAT>;
+} // Predicates = [HasVendorXqcia, IsRV32]
+
+/// Branches
+
+let Predicates = [HasVendorXqcibi, IsRV32], AddedComplexity = 2 in {
+def : BcciPat<SETEQ, QC_BEQI, simm5nonzero>;
+def : BcciPat<SETNE, QC_BNEI, simm5nonzero>;
+def : BcciPat<SETLT, QC_BLTI, simm5nonzero>;
+def : BcciPat<SETGE, QC_BGEI, simm5nonzero>;
+def : BcciPat<SETULT, QC_BLTUI, uimm5nonzero>;
+def : BcciPat<SETUGE, QC_BGEUI, uimm5nonzero>;
+
+def : Bcci48Pat<SETEQ, QC_E_BEQI, simm16nonzero>;
+def : Bcci48Pat<SETNE, QC_E_BNEI, simm16nonzero>;
+def : Bcci48Pat<SETLT, QC_E_BLTI, simm16nonzero>;
+def : Bcci48Pat<SETGE, QC_E_BGEI, simm16nonzero>;
+def : Bcci48Pat<SETULT, QC_E_BLTUI, uimm16nonzero>;
+def : Bcci48Pat<SETUGE, QC_E_BGEUI, uimm16nonzero>;
+
+def : SelectQCbi<SETEQ, simm5nonzero, Select_GPR_Using_CC_Simm5NonZero>;
+def : SelectQCbi<SETNE, simm5nonzero, Select_GPR_Using_CC_Simm5NonZero>;
+def : SelectQCbi<SETLT, simm5nonzero, Select_GPR_Using_CC_Simm5NonZero>;
+def : SelectQCbi<SETGE, simm5nonzero, Select_GPR_Using_CC_Simm5NonZero>;
+def : SelectQCbi<SETULT, uimm5nonzero, Select_GPR_Using_CC_Uimm5NonZero>;
+def : SelectQCbi<SETUGE, uimm5nonzero, Select_GPR_Using_CC_Uimm5NonZero>;
+
+def : SelectQCbi<SETEQ, simm16nonzero, Select_GPR_Using_CC_Simm16NonZero>;
+def : SelectQCbi<SETNE, simm16nonzero, Select_GPR_Using_CC_Simm16NonZero>;
+def : SelectQCbi<SETLT, simm16nonzero, Select_GPR_Using_CC_Simm16NonZero>;
+def : SelectQCbi<SETGE, simm16nonzero, Select_GPR_Using_CC_Simm16NonZero>;
+def : SelectQCbi<SETULT, uimm16nonzero, Select_GPR_Using_CC_Uimm16NonZero>;
+def : SelectQCbi<SETUGE, uimm16nonzero, Select_GPR_Using_CC_Uimm16NonZero>;
+} // let Predicates = [HasVendorXqcibi, IsRV32], AddedComplexity = 2
+
+let Predicates = [HasVendorXqcibm, IsRV32] in {
+def : Pat<(sext_inreg (i32 GPR:$rs1), i16), (QC_EXT GPR:$rs1, 16, 0)>;
+def : Pat<(sext_inreg (i32 GPR:$rs1), i8), (QC_EXT GPR:$rs1, 8, 0)>;
+def : Pat<(sext_inreg (i32 GPR:$rs1), i1), (QC_EXT GPR:$rs1, 1, 0)>;
+} // Predicates = [HasVendorXqcibm, IsRV32]
+
 let Predicates = [HasVendorXqciint, IsRV32] in
 def : Pat<(riscv_mileaveret_glue), (QC_C_MILEAVERET)>;
+
+
+//===----------------------------------------------------------------------===/i
+// Compress Instruction tablegen backend.
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasVendorXqcisync, IsRV32] in {
+def : CompressPat<(QC_SYNC uimm5slist:$imm5), (QC_C_SYNC uimm5slist:$imm5)>;
+def : CompressPat<(QC_SYNCR uimm5slist:$imm5), (QC_C_SYNCR uimm5slist:$imm5)>;
+def : CompressPat<(QC_SYNCWL uimm5slist:$imm5), (QC_C_SYNCWL uimm5slist:$imm5)>;
+def : CompressPat<(QC_SYNCWF uimm5slist:$imm5), (QC_C_SYNCWF uimm5slist:$imm5)>;
+} // Predicates = [HasVendorXqcisync, IsRV32]
+
+let isCompressOnly = true, Predicates = [HasVendorXqcilo, HasStdExtZcb, IsRV32] in {
+def : CompressPat<(QC_E_LBU GPRC:$rd, GPRCMem:$rs1, uimm2:$imm),
+                  (C_LBU GPRC:$rd, GPRCMem:$rs1, uimm2:$imm)>;
+def : CompressPat<(QC_E_LHU GPRC:$rd, GPRCMem:$rs1, uimm2_lsb0:$imm),
+                  (C_LHU GPRC:$rd, GPRCMem:$rs1, uimm2_lsb0:$imm)>;
+def : CompressPat<(QC_E_LH GPRC:$rd, GPRCMem:$rs1, uimm2_lsb0:$imm),
+                  (C_LH GPRC:$rd, GPRCMem:$rs1, uimm2_lsb0:$imm)>;
+def : CompressPat<(QC_E_SB GPRC:$rs2, GPRCMem:$rs1, uimm2:$imm),
+                  (C_SB GPRC:$rs2, GPRCMem:$rs1, uimm2:$imm)>;
+def : CompressPat<(QC_E_SH GPRC:$rs2, GPRCMem:$rs1, uimm2_lsb0:$imm),
+                  (C_SH GPRC:$rs2, GPRCMem:$rs1, uimm2_lsb0:$imm)>;
+} // isCompressOnly = true, Predicates = [HasVendorXqcilo, HasStdExtZcb, IsRV32]
+
+let isCompressOnly = true, Predicates = [HasVendorXqcilo, IsRV32] in {
+def : CompressPat<(QC_E_LW GPRC:$rd, GPRCMem:$rs1, uimm7_lsb00:$imm),
+                  (C_LW GPRC:$rd, GPRCMem:$rs1, uimm7_lsb00:$imm)>;
+def : CompressPat<(QC_E_LW GPRNoX0:$rd, SPMem:$rs1,  uimm8_lsb00:$imm),
+                  (C_LWSP GPRNoX0:$rd, SPMem:$rs1, uimm8_lsb00:$imm)>;
+def : CompressPat<(QC_E_LB GPR:$rd, GPRMem:$rs1, simm12:$imm12),
+                  (LB GPR:$rd, GPRMem:$rs1, simm12:$imm12)>;
+def : CompressPat<(QC_E_LBU GPR:$rd, GPRMem:$rs1, simm12:$imm12),
+                  (LBU GPR:$rd, GPRMem:$rs1, simm12:$imm12)>;
+def : CompressPat<(QC_E_LH GPR:$rd, GPRMem:$rs1, simm12:$imm12),
+                  (LH GPR:$rd, GPRMem:$rs1, simm12:$imm12)>;
+def : CompressPat<(QC_E_LHU GPR:$rd, GPRMem:$rs1, simm12:$imm12),
+                  (LHU GPR:$rd, GPRMem:$rs1, simm12:$imm12)>;
+def : CompressPat<(QC_E_LW GPR:$rd, GPRMem:$rs1, simm12:$imm12),
+                  (LW GPR:$rd, GPRMem:$rs1, simm12:$imm12)>;
+
+def : CompressPat<(QC_E_SW GPRC:$rs2, GPRCMem:$rs1, uimm7_lsb00:$imm),
+                  (C_SW GPRC:$rs2, GPRCMem:$rs1, uimm7_lsb00:$imm)>;
+def : CompressPat<(QC_E_SW GPR:$rs2, SPMem:$rs1, uimm8_lsb00:$imm),
+                  (C_SWSP GPR:$rs2, SPMem:$rs1, uimm8_lsb00:$imm)>;
+def : CompressPat<(QC_E_SB GPR:$rs2, GPRMem:$rs1, simm12:$imm12),
+                  (SB GPR:$rs2, GPRMem:$rs1, simm12:$imm12)>;
+def : CompressPat<(QC_E_SH GPR:$rs2, GPRMem:$rs1, simm12:$imm12),
+                  (SH GPR:$rs2, GPRMem:$rs1, simm12:$imm12)>;
+def : CompressPat<(QC_E_SW GPR:$rs2, GPRMem:$rs1, simm12:$imm12),
+                  (SW GPR:$rs2, GPRMem:$rs1, simm12:$imm12)>;
+} // isCompressOnly = true, Predicates = [HasVendorXqcilo, IsRV32]
+
+let Predicates = [HasVendorXqcicm, IsRV32] in {
+def : CompressPat<(QC_MVEQI GPRC:$rd, GPRC:$rd, 0, GPRC:$rs1),
+                  (QC_C_MVEQZ GPRC:$rd, GPRC:$rs1)>;
+}
+
+let Predicates = [HasVendorXqcibm, IsRV32] in {
+def : CompressPat<(QC_EXTU GPRNoX0:$rd, GPRNoX0:$rd, uimm5ge6_plus1:$width, 0),
+                  (QC_C_EXTU GPRNoX0:$rd, uimm5ge6_plus1:$width)>;
+}
+
+let Predicates = [HasVendorXqcibm, HasStdExtZbs, IsRV32] in {
+def : CompressPat<(BSETI GPRC:$rs1, GPRC:$rs1, uimmlog2xlennonzero:$shamt),
+                  (QC_C_BSETI GPRC:$rs1, uimmlog2xlennonzero:$shamt)>;
+def : CompressPat<(BEXTI GPRC:$rs1, GPRC:$rs1, uimmlog2xlennonzero:$shamt),
+                  (QC_C_BEXTI GPRC:$rs1, uimmlog2xlennonzero:$shamt)>;
+} // Predicates = [HasVendorXqcibm, HasStdExtZbs, IsRV32]
+
+let isCompressOnly = true, Predicates = [HasVendorXqcilb, IsRV32] in {
+def : CompressPat<(QC_E_J bare_simm12_lsb0:$offset),
+                  (C_J bare_simm12_lsb0:$offset)>;
+def : CompressPat<(QC_E_JAL bare_simm12_lsb0:$offset),
+                  (C_JAL bare_simm12_lsb0:$offset)>;
+} // isCompressOnly = true, Predicates = [HasVendorXqcilb, IsRV32]
+
+let Predicates = [HasVendorXqcili, IsRV32] in {
+def : CompressPat<(QC_LI GPRNoX0:$rd, simm6:$imm),
+                  (C_LI GPRNoX0:$rd, simm6:$imm)>;
+
+let isCompressOnly = true in
+def : CompressPat<(QC_E_LI GPRNoX0:$rd, simm6:$imm),
+                  (C_LI GPRNoX0:$rd, simm6:$imm)>;
+} // Predicates = [HasVendorXqcili, IsRV32]
+
+let isCompressOnly = true, Predicates = [HasVendorXqcilia, IsRV32] in {
+def : CompressPat<(QC_E_ADDI GPRNoX0:$rs1, GPRNoX0:$rs1, simm6nonzero:$imm),
+                  (C_ADDI GPRNoX0:$rs1, simm6nonzero:$imm)>;
+def : CompressPat<(QC_E_ANDI GPRC:$rs1, GPRC:$rs1, simm6:$imm),
+                  (C_ANDI GPRC:$rs1, simm6:$imm)>;
+def : CompressPat<(QC_E_ADDI GPRNoX0:$rs1, GPRNoX0:$rs2, 0),
+                  (C_MV GPRNoX0:$rs1, GPRNoX0:$rs2)>;
+def : CompressPat<(QC_E_ADDI X2, X2, simm10_lsb0000nonzero:$imm),
+                  (C_ADDI16SP X2, simm10_lsb0000nonzero:$imm)>;
+} // let isCompressOnly = true, Predicates = [HasVendorXqcilia, IsRV32]

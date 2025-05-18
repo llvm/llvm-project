@@ -41,6 +41,7 @@
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/Frontend/HLSL/HLSLRootSignature.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/TrailingObjects.h"
@@ -184,7 +185,7 @@ public:
 
   PragmaMSCommentKind getCommentKind() const { return CommentKind; }
 
-  StringRef getArg() const { return getTrailingObjects<char>(); }
+  StringRef getArg() const { return getTrailingObjects(); }
 
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
@@ -216,8 +217,8 @@ public:
   static PragmaDetectMismatchDecl *
   CreateDeserialized(ASTContext &C, GlobalDeclID ID, unsigned NameValueSize);
 
-  StringRef getName() const { return getTrailingObjects<char>(); }
-  StringRef getValue() const { return getTrailingObjects<char>() + ValueStart; }
+  StringRef getName() const { return getTrailingObjects(); }
+  StringRef getValue() const { return getTrailingObjects() + ValueStart; }
 
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
@@ -1990,7 +1991,7 @@ public:
     /// Get the unqualified lookup results that should be used in this
     /// defaulted function definition.
     ArrayRef<DeclAccessPair> getUnqualifiedLookups() const {
-      return {getTrailingObjects<DeclAccessPair>(), NumLookups};
+      return getTrailingObjects<DeclAccessPair>(NumLookups);
     }
 
     StringLiteral *getDeletedMessage() const {
@@ -2541,6 +2542,38 @@ public:
   /// the `std::nothrow_t` tag, return true through IsNothrow,
   bool isReplaceableGlobalAllocationFunction(
       UnsignedOrNone *AlignmentParam = nullptr,
+      bool *IsNothrow = nullptr) const {
+    if (isTypeAwareOperatorNewOrDelete())
+      return false;
+    return isUsableAsGlobalAllocationFunctionInConstantEvaluation(
+        AlignmentParam, IsNothrow);
+  }
+
+  /// Determines whether this function is one of the replaceable global
+  /// allocation functions described in isReplaceableGlobalAllocationFunction,
+  /// or is a function that may be treated as such during constant evaluation.
+  /// This adds support for potentially templated type aware global allocation
+  /// functions of the form:
+  ///    void *operator new(type-identity, std::size_t, std::align_val_t)
+  ///    void *operator new(type-identity, std::size_t, std::align_val_t,
+  ///                       const std::nothrow_t &) noexcept;
+  ///    void *operator new[](type-identity, std::size_t, std::align_val_t)
+  ///    void *operator new[](type-identity, std::size_t, std::align_val_t,
+  ///                         const std::nothrow_t &) noexcept;
+  ///    void operator delete(type-identity, void*, std::size_t,
+  ///                         std::align_val_t) noexcept;
+  ///    void operator delete(type-identity, void*, std::size_t,
+  ///                         std::align_val_t, const std::nothrow_t&) noexcept;
+  ///    void operator delete[](type-identity, void*, std::size_t,
+  ///                         std::align_val_t) noexcept;
+  ///    void operator delete[](type-identity, void*, std::size_t,
+  ///                         std::align_val_t, const std::nothrow_t&) noexcept;
+  /// Where `type-identity` is a specialization of std::type_identity. If the
+  /// declaration is a templated function, it may not include a parameter pack
+  /// in the argument list, the type-identity parameter is required to be
+  /// dependent, and is the only permitted dependent parameter.
+  bool isUsableAsGlobalAllocationFunctionInConstantEvaluation(
+      UnsignedOrNone *AlignmentParam = nullptr,
       bool *IsNothrow = nullptr) const;
 
   /// Determine if this function provides an inline implementation of a builtin.
@@ -2548,6 +2581,20 @@ public:
 
   /// Determine whether this is a destroying operator delete.
   bool isDestroyingOperatorDelete() const;
+  void setIsDestroyingOperatorDelete(bool IsDestroyingDelete);
+
+  /// Count of mandatory parameters for type aware operator new
+  static constexpr unsigned RequiredTypeAwareNewParameterCount =
+      /* type-identity */ 1 + /* size */ 1 + /* alignment */ 1;
+
+  /// Count of mandatory parameters for type aware operator delete
+  static constexpr unsigned RequiredTypeAwareDeleteParameterCount =
+      /* type-identity */ 1 + /* address */ 1 + /* size */ 1 +
+      /* alignment */ 1;
+
+  /// Determine whether this is a type aware operator new or delete.
+  bool isTypeAwareOperatorNewOrDelete() const;
+  void setIsTypeAwareOperatorNewOrDelete(bool IsTypeAwareOperator = true);
 
   /// Compute the language linkage.
   LanguageLinkage getLanguageLinkage() const;
@@ -4733,13 +4780,9 @@ private:
 
   explicit OutlinedFunctionDecl(DeclContext *DC, unsigned NumParams);
 
-  ImplicitParamDecl *const *getParams() const {
-    return getTrailingObjects<ImplicitParamDecl *>();
-  }
+  ImplicitParamDecl *const *getParams() const { return getTrailingObjects(); }
 
-  ImplicitParamDecl **getParams() {
-    return getTrailingObjects<ImplicitParamDecl *>();
-  }
+  ImplicitParamDecl **getParams() { return getTrailingObjects(); }
 
 public:
   friend class ASTDeclReader;
@@ -4810,13 +4853,9 @@ private:
 
   explicit CapturedDecl(DeclContext *DC, unsigned NumParams);
 
-  ImplicitParamDecl *const *getParams() const {
-    return getTrailingObjects<ImplicitParamDecl *>();
-  }
+  ImplicitParamDecl *const *getParams() const { return getTrailingObjects(); }
 
-  ImplicitParamDecl **getParams() {
-    return getTrailingObjects<ImplicitParamDecl *>();
-  }
+  ImplicitParamDecl **getParams() { return getTrailingObjects(); }
 
 public:
   friend class ASTDeclReader;
@@ -5130,6 +5169,40 @@ public:
 
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
+};
+
+class HLSLRootSignatureDecl final
+    : public NamedDecl,
+      private llvm::TrailingObjects<HLSLRootSignatureDecl,
+                                    llvm::hlsl::rootsig::RootElement> {
+  friend TrailingObjects;
+
+  unsigned NumElems;
+
+  llvm::hlsl::rootsig::RootElement *getElems() { return getTrailingObjects(); }
+
+  const llvm::hlsl::rootsig::RootElement *getElems() const {
+    return getTrailingObjects();
+  }
+
+  HLSLRootSignatureDecl(DeclContext *DC, SourceLocation Loc, IdentifierInfo *ID,
+                        unsigned NumElems);
+
+public:
+  static HLSLRootSignatureDecl *
+  Create(ASTContext &C, DeclContext *DC, SourceLocation Loc, IdentifierInfo *ID,
+         ArrayRef<llvm::hlsl::rootsig::RootElement> RootElements);
+
+  static HLSLRootSignatureDecl *CreateDeserialized(ASTContext &C,
+                                                   GlobalDeclID ID);
+
+  ArrayRef<llvm::hlsl::rootsig::RootElement> getRootElements() const {
+    return {getElems(), NumElems};
+  }
+
+  // Implement isa/cast/dyncast/etc.
+  static bool classof(const Decl *D) { return classofKind(D->getKind()); }
+  static bool classofKind(Kind K) { return K == HLSLRootSignature; }
 };
 
 /// Insertion operator for diagnostics.  This allows sending NamedDecl's

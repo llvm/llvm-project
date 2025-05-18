@@ -359,7 +359,6 @@ void RedeclarableTemplateDecl::loadLazySpecializationsImpl(
 
   ExternalSource->LoadExternalSpecializations(this->getCanonicalDecl(),
                                               OnlyPartial);
-  return;
 }
 
 bool RedeclarableTemplateDecl::loadLazySpecializationsImpl(
@@ -382,12 +381,11 @@ template <class EntryType, typename... ProfileArguments>
 typename RedeclarableTemplateDecl::SpecEntryTraits<EntryType>::DeclType *
 RedeclarableTemplateDecl::findSpecializationLocally(
     llvm::FoldingSetVector<EntryType> &Specs, void *&InsertPos,
-    ProfileArguments &&...ProfileArgs) {
+    ProfileArguments... ProfileArgs) {
   using SETraits = RedeclarableTemplateDecl::SpecEntryTraits<EntryType>;
 
   llvm::FoldingSetNodeID ID;
-  EntryType::Profile(ID, std::forward<ProfileArguments>(ProfileArgs)...,
-                     getASTContext());
+  EntryType::Profile(ID, ProfileArgs..., getASTContext());
   EntryType *Entry = Specs.FindNodeOrInsertPos(ID, InsertPos);
   return Entry ? SETraits::getDecl(Entry)->getMostRecentDecl() : nullptr;
 }
@@ -396,18 +394,15 @@ template <class EntryType, typename... ProfileArguments>
 typename RedeclarableTemplateDecl::SpecEntryTraits<EntryType>::DeclType *
 RedeclarableTemplateDecl::findSpecializationImpl(
     llvm::FoldingSetVector<EntryType> &Specs, void *&InsertPos,
-    ProfileArguments &&...ProfileArgs) {
+    ProfileArguments... ProfileArgs) {
 
-  if (auto *Found = findSpecializationLocally(
-          Specs, InsertPos, std::forward<ProfileArguments>(ProfileArgs)...))
+  if (auto *Found = findSpecializationLocally(Specs, InsertPos, ProfileArgs...))
     return Found;
 
-  if (!loadLazySpecializationsImpl(
-          std::forward<ProfileArguments>(ProfileArgs)...))
+  if (!loadLazySpecializationsImpl(ProfileArgs...))
     return nullptr;
 
-  return findSpecializationLocally(
-      Specs, InsertPos, std::forward<ProfileArguments>(ProfileArgs)...);
+  return findSpecializationLocally(Specs, InsertPos, ProfileArgs...);
 }
 
 template<class Derived, class EntryType>
@@ -671,8 +666,11 @@ ClassTemplateDecl::getInjectedClassNameSpecialization() {
   ASTContext &Context = getASTContext();
   TemplateName Name = Context.getQualifiedTemplateName(
       /*NNS=*/nullptr, /*TemplateKeyword=*/false, TemplateName(this));
-  CommonPtr->InjectedClassNameType = Context.getTemplateSpecializationType(
-      Name, getTemplateParameters()->getInjectedTemplateArgs(Context));
+  auto TemplateArgs = getTemplateParameters()->getInjectedTemplateArgs(Context);
+  CommonPtr->InjectedClassNameType =
+      Context.getTemplateSpecializationType(Name,
+                                            /*SpecifiedArgs=*/TemplateArgs,
+                                            /*CanonicalArgs=*/std::nullopt);
   return CommonPtr->InjectedClassNameType;
 }
 
@@ -756,7 +754,7 @@ void TemplateTypeParmDecl::setTypeConstraint(
          "call setTypeConstraint");
   assert(!TypeConstraintInitialized &&
          "TypeConstraint was already initialized!");
-  new (getTrailingObjects<TypeConstraint>())
+  new (getTrailingObjects())
       TypeConstraint(Loc, ImmediatelyDeclaredConstraint, ArgPackSubstIndex);
   TypeConstraintInitialized = true;
 }
@@ -881,9 +879,7 @@ TemplateTemplateParmDecl::TemplateTemplateParmDecl(
     : TemplateDecl(TemplateTemplateParm, DC, L, Id, Params),
       TemplateParmPosition(D, P), Typename(Typename), ParameterPack(true),
       ExpandedParameterPack(true), NumExpandedParams(Expansions.size()) {
-  if (!Expansions.empty())
-    std::uninitialized_copy(Expansions.begin(), Expansions.end(),
-                            getTrailingObjects<TemplateParameterList *>());
+  llvm::uninitialized_copy(Expansions, getTrailingObjects());
 }
 
 TemplateTemplateParmDecl *
@@ -941,8 +937,7 @@ void TemplateTemplateParmDecl::setDefaultArgument(
 //===----------------------------------------------------------------------===//
 TemplateArgumentList::TemplateArgumentList(ArrayRef<TemplateArgument> Args)
     : NumArguments(Args.size()) {
-  std::uninitialized_copy(Args.begin(), Args.end(),
-                          getTrailingObjects<TemplateArgument>());
+  llvm::uninitialized_copy(Args, getTrailingObjects());
 }
 
 TemplateArgumentList *
@@ -1169,8 +1164,7 @@ ImplicitConceptSpecializationDecl::CreateDeserialized(
 void ImplicitConceptSpecializationDecl::setTemplateArguments(
     ArrayRef<TemplateArgument> Converted) {
   assert(Converted.size() == NumTemplateArgs);
-  std::uninitialized_copy(Converted.begin(), Converted.end(),
-                          getTrailingObjects<TemplateArgument>());
+  llvm::uninitialized_copy(Converted, getTrailingObjects());
 }
 
 //===----------------------------------------------------------------------===//

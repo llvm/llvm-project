@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if defined(__opencl_c_images)
+
 _CLC_OVERLOAD _CLC_DECL int get_image_width (image2d_t image);
 _CLC_OVERLOAD _CLC_DECL int get_image_width (image3d_t image);
 
@@ -42,3 +44,5 @@ _CLC_OVERLOAD _CLC_DECL uint4
 read_imageui(image2d_t image, sampler_t sampler, int2 coord);
 _CLC_OVERLOAD _CLC_DECL uint4
 read_imageui(image2d_t image, sampler_t sampler, float2 coord);
+
+#endif

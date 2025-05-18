@@ -596,6 +596,7 @@ _LIBCPP_END_NAMESPACE_STD
 #    include <limits>
 #    include <mutex>
 #    include <new>
+#    include <optional>
 #    include <stdexcept>
 #    include <type_traits>
 #    include <typeinfo>

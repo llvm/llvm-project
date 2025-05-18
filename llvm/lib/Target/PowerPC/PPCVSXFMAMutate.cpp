@@ -55,9 +55,7 @@ namespace {
   // copies into subregister copies with other restrictions.
   struct PPCVSXFMAMutate : public MachineFunctionPass {
     static char ID;
-    PPCVSXFMAMutate() : MachineFunctionPass(ID) {
-      initializePPCVSXFMAMutatePass(*PassRegistry::getPassRegistry());
-    }
+    PPCVSXFMAMutate() : MachineFunctionPass(ID) {}
 
     LiveIntervals *LIS;
     const PPCInstrInfo *TII;

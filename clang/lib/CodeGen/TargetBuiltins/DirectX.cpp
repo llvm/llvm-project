@@ -25,12 +25,17 @@ Value *CodeGenFunction::EmitDirectXBuiltinExpr(unsigned BuiltinID,
   case DirectX::BI__builtin_dx_dot2add: {
     Value *A = EmitScalarExpr(E->getArg(0));
     Value *B = EmitScalarExpr(E->getArg(1));
-    Value *C = EmitScalarExpr(E->getArg(2));
+    Value *Acc = EmitScalarExpr(E->getArg(2));
+
+    Value *AX = Builder.CreateExtractElement(A, Builder.getSize(0));
+    Value *AY = Builder.CreateExtractElement(A, Builder.getSize(1));
+    Value *BX = Builder.CreateExtractElement(B, Builder.getSize(0));
+    Value *BY = Builder.CreateExtractElement(B, Builder.getSize(1));
 
     Intrinsic::ID ID = llvm ::Intrinsic::dx_dot2add;
     return Builder.CreateIntrinsic(
-        /*ReturnType=*/C->getType(), ID, ArrayRef<Value *>{A, B, C}, nullptr,
-        "dx.dot2add");
+        /*ReturnType=*/Acc->getType(), ID,
+        ArrayRef<Value *>{Acc, AX, AY, BX, BY}, nullptr, "dx.dot2add");
   }
   }
   return nullptr;
