@@ -209,7 +209,7 @@ protected:
 
     off_type __newoff;
 
-    if (__builtin_add_overflow(__baseoff, __off, &__newoff) || (__newoff < off_type{0}) ||
+    if (__builtin_add_overflow(__baseoff, __off, std::addressof(__newoff)) || (__newoff < off_type{0}) ||
         std::cmp_greater(__newoff, __buf_.size()))
       return __error;
 
