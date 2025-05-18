@@ -259,9 +259,13 @@ public:
       }
     });
 
+    auto isGoodNode = [&](SLPGraphNode *node) {
+      return node->users.empty() && node->operands.empty();
+    };
+
     IRMapping mapping;
     for (auto *node : sortedNodes) {
-      if (node->users.empty() && node->operands.empty())
+      if (isGoodNode(node))
         continue;
 
       int64_t numElements = node->ops.size();
@@ -326,6 +330,9 @@ public:
     }
 
     for (auto *node : llvm::reverse(sortedNodes)) {
+      if (isGoodNode(node))
+        continue;
+
       for (Operation *op : node->ops) {
         rewriter.eraseOp(op);
       }
@@ -560,9 +567,46 @@ static SLPGraph buildSLPGraph(ArrayRef<MemoryOpGroup> rootGroups) {
 
     auto *newNode = graph.addNode(currentOps);
     graph.addEdge(node, newNode);
-    for (Operation *op : currentOps) {
+    for (Operation *op : currentOps)
       fingerprints.invalidate(op);
+
+    worklist.push_back(newNode);
+  };
+
+  auto processOperands = [&](SLPGraphNode *node, Value operand, int64_t index) {
+    Operation *srcOp = operand.getDefiningOp();
+    if (!srcOp)
+      return;
+
+    auto *existingNode = graph.getNodeForOp(srcOp);
+    if (existingNode) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << "  Adding edge from " << srcOp->getName() << " to "
+                 << node->ops.front()->getName() << "\n");
+      graph.addEdge(existingNode, node);
+      return;
     }
+
+    if (!isVectorizable(srcOp))
+      return;
+
+    SmallVector<Operation *> currentOps;
+    currentOps.emplace_back(srcOp);
+    for (Operation *op : ArrayRef(node->ops).drop_front()) {
+      Operation *otherOp = op->getOperand(index).getDefiningOp();
+      if (!otherOp || !isEquivalent(otherOp, srcOp))
+        break;
+
+      currentOps.push_back(otherOp);
+    }
+
+    if (currentOps.size() == 1)
+      return;
+
+    auto *newNode = graph.addNode(currentOps);
+    graph.addEdge(newNode, node);
+    for (Operation *op : currentOps)
+      fingerprints.invalidate(op);
 
     worklist.push_back(newNode);
   };
@@ -574,11 +618,11 @@ static SLPGraph buildSLPGraph(ArrayRef<MemoryOpGroup> rootGroups) {
                             << node->ops.front()->getName() << "\n");
 
     Operation *op = node->ops.front();
-    for (OpOperand &use : op->getUses()) {
+    for (OpOperand &use : op->getUses())
       processUse(node, use);
-      LLVM_DEBUG(llvm::dbgs() << "  Processing use in operation: "
-                              << use.getOwner()->getName() << "\n");
-    }
+
+    for (auto [i, operand] : llvm::enumerate(op->getOperands()))
+      processOperands(node, operand, i);
   }
 
   return graph;
