@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa -polly-stmt-granularity=bb '-passes=print<polly-dependences>' -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa -polly-stmt-granularity=bb '-passes=polly-custom<deps>' -polly-print-deps -disable-output < %s | FileCheck %s
 ;
 ; CHECK:      RAW dependences:
 ; CHECK-NEXT:     {  }
