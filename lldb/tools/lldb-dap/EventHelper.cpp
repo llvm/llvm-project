@@ -93,7 +93,7 @@ void SendProcessEvent(DAP &dap, LaunchMethod launch_method) {
   exe_fspec.GetPath(exe_path, sizeof(exe_path));
   llvm::json::Object event(CreateEventObject("process"));
   llvm::json::Object body;
-  EmplaceSafeString(body, "name", std::string(exe_path));
+  EmplaceSafeString(body, "name", exe_path);
   const auto pid = dap.target.GetProcess().GetProcessID();
   body.try_emplace("systemProcessId", (int64_t)pid);
   body.try_emplace("isLocalProcess", true);
