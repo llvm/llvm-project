@@ -594,11 +594,20 @@ public:
   /// the GUID computation will assume that the global has external linkage.
   static GUID getGUIDAssumingExternalLinkage(StringRef GlobalName);
 
+  /// Assign a GUID to this value based on its current name and linkage.
+  /// This GUID will remain the same even if those change. This method is
+  /// idempotent -- if a GUID has already been assigned, calling it again
+  /// will do nothing.
+  ///
+  /// Users don't need to call this method. They are assigned in batch by a
+  /// dedicated pass. The pass pipeline should be set up such that GUIDs are
+  /// always available when needed. If not, the GUID assignment pass should
+  /// be moved such that they are.
+  void assignGUID();
+
   /// Return a 64-bit global unique ID constructed from global value name
   /// (i.e. returned by getGlobalIdentifier()).
-  GUID getGUID() const {
-    return getGUIDAssumingExternalLinkage(getGlobalIdentifier());
-  }
+  GUID getGUID() const;
 
   /// @name Materialization
   /// Materialization is used to construct functions only as they're needed.
