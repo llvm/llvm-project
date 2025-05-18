@@ -110,7 +110,7 @@ bool debugInfoIsAlreadySet(mlir::Location loc) {
 // getTargetEntryUniqueInfo and
 // TargetRegionEntryInfo::getTargetRegionEntryFnName to generate the same name.
 // But even if there was a slight mismatch, it is not a problem because this
-// name is artifical and not important to debug experience.
+// name is artificial and not important to debug experience.
 mlir::StringAttr getTargetFunctionName(mlir::MLIRContext *context,
                                        mlir::Location Loc,
                                        llvm::StringRef parentName) {
@@ -478,6 +478,73 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
                                   line - 1, false);
   }
 
+  auto addTargetOpDISP = [&](bool lineTableOnly,
+     const llvm::SmallVector<mlir::LLVM::DINodeAttr> &entities) {
+    // When we process the DeclareOp inside the OpenMP target region, all the
+    // variables get the DISubprogram of the parent function of the target op as
+    // the scope. In the codegen (to llvm ir), OpenMP target op results in the
+    // creation of a separate function. As the variables in the debug info have
+    // the DISubprogram of the parent function as the scope, the variables
+    // need to be updated at codegen time to avoid verification failures.
+
+    // This updating after the fact becomes more and more difficult when types
+    // are dependent on local variables like in the case of variable size arrays
+    // or string. We not only have to generate new variables but also new types.
+    // We can avoid this problem by generating a DISubprogramAttr here for the
+    // target op and make sure that all the variables inside the target region
+    // get the correct scope in the first place.
+    funcOp.walk([&](mlir::omp::TargetOp targetOp) {
+      unsigned line = getLineFromLoc(targetOp.getLoc());
+      mlir::StringAttr name =
+          getTargetFunctionName(context, targetOp.getLoc(), funcOp.getName());
+      mlir::LLVM::DISubprogramFlags flags =
+          mlir::LLVM::DISubprogramFlags::Definition |
+          mlir::LLVM::DISubprogramFlags::LocalToUnit;
+      if (isOptimized)
+        flags = flags | mlir::LLVM::DISubprogramFlags::Optimized;
+
+      mlir::DistinctAttr id =
+          mlir::DistinctAttr::create(mlir::UnitAttr::get(context));
+      llvm::SmallVector<mlir::LLVM::DITypeAttr> types;
+      types.push_back(mlir::LLVM::DINullTypeAttr::get(context));
+      mlir::LLVM::DISubroutineTypeAttr spTy =
+          mlir::LLVM::DISubroutineTypeAttr::get(context, CC, types);
+      if (lineTableOnly) {
+        auto spAttr = mlir::LLVM::DISubprogramAttr::get(
+            context, id, compilationUnit, Scope, name, name, funcFileAttr, line,
+            line, flags, spTy, /*retainedNodes=*/{}, /*annotations=*/{});
+        targetOp->setLoc(builder.getFusedLoc({targetOp.getLoc()}, spAttr));
+        return;
+      }
+      mlir::DistinctAttr recId =
+          mlir::DistinctAttr::create(mlir::UnitAttr::get(context));
+      auto spAttr = mlir::LLVM::DISubprogramAttr::get(
+          context, recId, /*isRecSelf=*/true, id, compilationUnit, Scope, name,
+          name, funcFileAttr, line, line, flags, spTy, /*retainedNodes=*/{},
+          /*annotations=*/{});
+
+      // Make sure that information about the imported modules is copied in the
+      // new function.
+      llvm::SmallVector<mlir::LLVM::DINodeAttr> opEntities;
+      for (mlir::LLVM::DINodeAttr N : entities) {
+        if (auto entity = mlir::dyn_cast<mlir::LLVM::DIImportedEntityAttr>(N)) {
+          auto importedEntity = mlir::LLVM::DIImportedEntityAttr::get(
+              context, llvm::dwarf::DW_TAG_imported_module, spAttr,
+              entity.getEntity(), fileAttr, /*line=*/1, /*name=*/nullptr,
+              /*elements*/ {});
+          opEntities.push_back(importedEntity);
+        }
+      }
+
+      id = mlir::DistinctAttr::create(mlir::UnitAttr::get(context));
+      spAttr = mlir::LLVM::DISubprogramAttr::get(
+          context, recId, /*isRecSelf=*/false, id, compilationUnit, Scope, name,
+          name, funcFileAttr, line, line, flags, spTy, opEntities,
+          /*annotations=*/{});
+      targetOp->setLoc(builder.getFusedLoc({targetOp.getLoc()}, spAttr));
+    });
+  };
+
   // Don't process variables if user asked for line tables only.
   if (debugLevel == mlir::LLVM::DIEmissionKind::LineTablesOnly) {
     auto spAttr = mlir::LLVM::DISubprogramAttr::get(
@@ -485,6 +552,7 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
         line, line, subprogramFlags, subTypeAttr, /*retainedNodes=*/{},
         /*annotations=*/{});
     funcOp->setLoc(builder.getFusedLoc({l}, spAttr));
+    addTargetOpDISP(true, {});
     return;
   }
 
@@ -542,63 +610,7 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
       funcName, fullName, funcFileAttr, line, line, subprogramFlags,
       subTypeAttr, entities, /*annotations=*/{});
   funcOp->setLoc(builder.getFusedLoc({l}, spAttr));
-
-  /* When we process the DeclareOp inside the OpenMP target region, all the
-     variables get the DISubprogram of the parent function of the target op as
-     the scope. In the codegen (to llvm ir), OpenMP target op results in the
-     creation of a separate function. As the variables in the debug info have
-     the DISubprogram of the parent function as the scope, the variables
-     need to be updated at codegen time to avoid verification failures.
-
-     This updating after the fact becomes more and more difficult when types
-     are dependent on local variables like in the case of variable size arrays
-     or string. We not only have to generate new variables but also new types.
-     We can avoid this problem by generating a DISubprogramAttr here for the
-     target op and make sure that all the variables inside the target region
-     get the correct scope in the first place. */
-  funcOp.walk([&](mlir::omp::TargetOp targetOp) {
-    unsigned line = getLineFromLoc(targetOp.getLoc());
-    mlir::StringAttr Name =
-        getTargetFunctionName(context, targetOp.getLoc(), funcOp.getName());
-    mlir::LLVM::DISubprogramFlags flags =
-        mlir::LLVM::DISubprogramFlags::Definition |
-        mlir::LLVM::DISubprogramFlags::LocalToUnit;
-    if (isOptimized)
-      flags = flags | mlir::LLVM::DISubprogramFlags::Optimized;
-
-    mlir::DistinctAttr recId =
-        mlir::DistinctAttr::create(mlir::UnitAttr::get(context));
-    mlir::DistinctAttr Id =
-        mlir::DistinctAttr::create(mlir::UnitAttr::get(context));
-    llvm::SmallVector<mlir::LLVM::DITypeAttr> types;
-    types.push_back(mlir::LLVM::DINullTypeAttr::get(context));
-    mlir::LLVM::DISubroutineTypeAttr spTy =
-        mlir::LLVM::DISubroutineTypeAttr::get(context, CC, types);
-    auto spAttr = mlir::LLVM::DISubprogramAttr::get(
-        context, recId, /*isRecSelf=*/true, Id, compilationUnit, Scope, Name,
-        Name, funcFileAttr, line, line, flags, spTy, /*retainedNodes=*/{},
-        /*annotations=*/{});
-
-    // Make sure that information about the imported modules in copied from the
-    // parent function.
-    llvm::SmallVector<mlir::LLVM::DINodeAttr> OpEntities;
-    for (mlir::LLVM::DINodeAttr N : entities) {
-      if (auto entity = mlir::dyn_cast<mlir::LLVM::DIImportedEntityAttr>(N)) {
-        auto importedEntity = mlir::LLVM::DIImportedEntityAttr::get(
-            context, llvm::dwarf::DW_TAG_imported_module, spAttr,
-            entity.getEntity(), fileAttr, /*line=*/1, /*name=*/nullptr,
-            /*elements*/ {});
-        OpEntities.push_back(importedEntity);
-      }
-    }
-
-    Id = mlir::DistinctAttr::create(mlir::UnitAttr::get(context));
-    spAttr = mlir::LLVM::DISubprogramAttr::get(
-        context, recId, /*isRecSelf=*/false, Id, compilationUnit, Scope, Name,
-        Name, funcFileAttr, line, line, flags, spTy, OpEntities,
-        /*annotations=*/{});
-    targetOp->setLoc(builder.getFusedLoc({targetOp.getLoc()}, spAttr));
-  });
+  addTargetOpDISP(false, entities);
 
   funcOp.walk([&](fir::cg::XDeclareOp declOp) {
     mlir::LLVM::DISubprogramAttr spTy = spAttr;
