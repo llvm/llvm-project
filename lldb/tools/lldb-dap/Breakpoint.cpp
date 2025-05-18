@@ -71,10 +71,10 @@ protocol::Breakpoint Breakpoint::ToProtocolBreakpoint() {
     auto line_entry = bp_addr.GetLineEntry();
     if (!ShouldDisplayAssemblySource(line_entry, stop_disassembly_display)) {
       const auto line = line_entry.GetLine();
-      if (line != UINT32_MAX)
+      if (line != LLDB_INVALID_LINE_NUMBER)
         breakpoint.line = line;
       const auto column = line_entry.GetColumn();
-      if (column != 0)
+      if (column != LLDB_INVALID_COLUMN_NUMBER)
         breakpoint.column = column;
       breakpoint.source = CreateSource(line_entry);
     } else {

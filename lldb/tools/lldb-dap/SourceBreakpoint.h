@@ -22,11 +22,11 @@ namespace lldb_dap {
 
 class SourceBreakpoint : public Breakpoint {
 public:
-  SourceBreakpoint(DAP &d, const protocol::SourceBreakpoint &breakpoint);
+  SourceBreakpoint(DAP &d, const protocol::SourceBreakpoint &breakpoint,
+                   const protocol::Source &source);
 
   // Set this breakpoint in LLDB as a new breakpoint
-  void SetBreakpoint(const llvm::StringRef source_path);
-  void SetBreakpoint(lldb::SBSymbol &symbol);
+  void SetBreakpoint();
   void UpdateBreakpoint(const SourceBreakpoint &request_bp);
 
   void SetLogMessage();
@@ -63,6 +63,7 @@ protected:
   std::string m_log_message;
   std::vector<LogMessagePart> m_log_message_parts;
 
+  protocol::Source m_source; /// The original breakpoint source.
   uint32_t m_line;   ///< The source line of the breakpoint or logpoint
   uint32_t m_column; ///< An optional source column of the breakpoint
 };
