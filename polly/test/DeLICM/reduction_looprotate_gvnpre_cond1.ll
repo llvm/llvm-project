@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb '-passes=print<polly-delicm>' -disable-output < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb '-passes=polly-custom<delicm>' -polly-print-delicm -disable-output < %s | FileCheck %s -match-full-lines
 ;
 ; Load (but not store) of A[j] hoisted, reduction only over some iterations.
 ;

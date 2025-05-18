@@ -1,5 +1,4 @@
-; RUN: opt %loadNPMPolly -disable-basic-aa -passes=polly-codegen \
-; RUN:     -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly --aa-pipeline= '-passes=polly<no-default-opts>' -S < %s | FileCheck %s
 
 target datalayout = "e-m:o-p:32:32-f64:32:64-f80:128-n8:16:32-S128"
 

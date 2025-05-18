@@ -1,9 +1,4 @@
-; RUN: opt %loadNPMPolly -polly-process-unprofitable -polly-remarks-minimal \
-; RUN:     '-passes=polly-opt-isl,print<polly-ast>' -polly-pattern-matching-based-opts=true \
-; RUN:     -polly-target-throughput-vector-fma=1 \
-; RUN:     -polly-target-latency-vector-fma=1 \
-; RUN:     -polly-target-vector-register-bitwidth=4096 \
-; RUN:     -polly-target-1st-cache-level-associativity=3 -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -polly-process-unprofitable -polly-remarks-minimal '-passes=polly-custom<opt-isl;ast>' -polly-print-ast -polly-pattern-matching-based-opts=true -polly-target-throughput-vector-fma=1 -polly-target-latency-vector-fma=1 -polly-target-vector-register-bitwidth=4096 -polly-target-1st-cache-level-associativity=3 -disable-output < %s | FileCheck %s
 ;
 ;     /* Test that Polly does not crash due to configurations that can lead to
 ;    incorrect tile size computations.
