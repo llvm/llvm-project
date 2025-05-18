@@ -1085,6 +1085,42 @@ void VPlanTransforms::simplifyRecipes(VPlan &Plan, Type &CanonicalIVTy) {
   }
 }
 
+static void narrowToSingleScalarRecipes(VPlan &Plan) {
+  if (Plan.hasScalarVFOnly())
+    return;
+
+  // Try to narrow wide and replicating recipes to single scalar recipes,
+  // based on VPlan analysis. Only process blocks in the loop region for now,
+  // without traversing into nested regions, as recipes in replicate regions
+  // cannot be converted yet.
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
+    for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
+      auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
+      if (!RepR && !isa<VPWidenRecipe>(&R))
+        continue;
+      if (RepR && RepR->isSingleScalar())
+        continue;
+
+      auto *RepOrWidenR = cast<VPSingleDefRecipe>(&R);
+      // Skip recipes that aren't single scalars or don't have only their
+      // scalar results used. In the latter case, we would introduce extra
+      // broadcasts.
+      if (!vputils::isSingleScalar(RepOrWidenR) ||
+          any_of(RepOrWidenR->users(), [RepOrWidenR](VPUser *U) {
+            return !U->usesScalars(RepOrWidenR);
+          }))
+        continue;
+
+      auto *Clone = new VPReplicateRecipe(RepOrWidenR->getUnderlyingInstr(),
+                                          RepOrWidenR->operands(),
+                                          true /*IsSingleScalar*/);
+      Clone->insertBefore(RepOrWidenR);
+      RepOrWidenR->replaceAllUsesWith(Clone);
+    }
+  }
+}
+
 /// Normalize and simplify VPBlendRecipes. Should be run after simplifyRecipes
 /// to make sure the masks are simplified.
 static void simplifyBlends(VPlan &Plan) {
@@ -1779,6 +1815,7 @@ void VPlanTransforms::optimize(VPlan &Plan) {
   runPass(simplifyRecipes, Plan, *Plan.getCanonicalIV()->getScalarType());
   runPass(simplifyBlends, Plan);
   runPass(removeDeadRecipes, Plan);
+  runPass(narrowToSingleScalarRecipes, Plan);
   runPass(legalizeAndOptimizeInductions, Plan);
   runPass(removeRedundantExpandSCEVRecipes, Plan);
   runPass(simplifyRecipes, Plan, *Plan.getCanonicalIV()->getScalarType());
