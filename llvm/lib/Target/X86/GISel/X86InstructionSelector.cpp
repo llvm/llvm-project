@@ -77,6 +77,8 @@ private:
   unsigned getPtrLoadStoreOp(const LLT &Ty, const RegisterBank &RB,
                              unsigned Opc) const;
 
+  bool checkMemoryOpSize(const MachineInstr &MI, LLT Sz) const;
+
   bool selectLoadStoreOp(MachineInstr &I, MachineRegisterInfo &MRI,
                          MachineFunction &MF) const;
   bool selectFrameIndexOrGep(MachineInstr &I, MachineRegisterInfo &MRI,
@@ -355,6 +357,13 @@ bool X86InstructionSelector::selectCopy(MachineInstr &I,
   return true;
 }
 
+bool X86InstructionSelector::checkMemoryOpSize(const MachineInstr &MI,
+                                               LLT Sz) const {
+  assert(MI.hasOneMemOperand() &&
+         "Expected load/store to have only one mem op!");
+  return (*MI.memoperands_begin())->getMemoryType() == Sz;
+}
+
 bool X86InstructionSelector::select(MachineInstr &I) {
   assert(I.getParent() && "Instruction should be in a basic block!");
   assert(I.getParent()->getParent() && "Instruction should be in a function!");
@@ -364,7 +373,7 @@ bool X86InstructionSelector::select(MachineInstr &I) {
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
   unsigned Opcode = I.getOpcode();
-  if (!isPreISelGenericOpcode(Opcode)) {
+  if (!isPreISelGenericOpcode(Opcode) && !I.isPreISelOpcode()) {
     // Certain non-generic instructions also need some special handling.
 
     if (Opcode == TargetOpcode::LOAD_STACK_GUARD)
