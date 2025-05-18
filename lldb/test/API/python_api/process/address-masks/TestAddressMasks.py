@@ -14,12 +14,17 @@ class AddressMasksTestCase(TestBase):
         process.SetAddressMask(
             lldb.eAddressMaskTypeAll,
             lldb.LLDB_INVALID_ADDRESS_MASK,
-            lldb.eAddressMaskRangeAll,
+            lldb.eAddressMaskRangeLow,
+        )
+        process.SetAddressMask(
+            lldb.eAddressMaskTypeAll,
+            lldb.LLDB_INVALID_ADDRESS_MASK,
+            lldb.eAddressMaskRangeHigh,
         )
         self.runCmd("settings set target.process.virtual-addressable-bits 0")
         self.runCmd("settings set target.process.highmem-virtual-addressable-bits 0")
 
-    @skipIf(archs=["arm"])  # 32-bit arm ABI hardcodes Code mask, is 32-bit
+    @skipIf(archs=["arm$"])  # 32-bit arm ABI hardcodes Code mask, is 32-bit
     def test_address_masks(self):
         self.build()
         (target, process, t, bp) = lldbutil.run_to_source_breakpoint(
@@ -80,7 +85,6 @@ class AddressMasksTestCase(TestBase):
     # AArch64 can have different address masks for high and low memory, when different
     # page tables are set up.
     @skipIf(archs=no_match(["arm64", "arm64e", "aarch64"]))
-    @skipIf(archs=["arm"])  # 32-bit arm ABI hardcodes Code mask, is 32-bit
     def test_address_masks_target_supports_highmem_tests(self):
         self.build()
         (target, process, t, bp) = lldbutil.run_to_source_breakpoint(
@@ -113,7 +117,7 @@ class AddressMasksTestCase(TestBase):
     # On most targets where we have a single mask for all address range, confirm
     # that the high memory masks are ignored.
     @skipIf(archs=["arm64", "arm64e", "aarch64"])
-    @skipIf(archs=["arm"])  # 32-bit arm ABI hardcodes Code mask, is 32-bit
+    @skipIf(archs=["arm$"])  # 32-bit arm ABI hardcodes Code mask, is 32-bit
     def test_address_masks_target_no_highmem(self):
         self.build()
         (target, process, t, bp) = lldbutil.run_to_source_breakpoint(
@@ -132,3 +136,26 @@ class AddressMasksTestCase(TestBase):
         self.runCmd("settings set target.process.highmem-virtual-addressable-bits 42")
         self.assertEqual(0x0000000000007694, process.FixAddress(0x00265E950001F694))
         self.assertEqual(0xFFFFFFFFFFFFF694, process.FixAddress(0xFFA65E950000F694))
+
+    # On most targets where we have a single mask for all address range, confirm
+    # that the high memory masks are ignored.
+    @skipIf(archs=no_match(["arm64", "arm64e", "aarch64"]))
+    def test_address_unset_highmem_masks_stay_unset(self):
+        self.build()
+        (target, process, t, bp) = lldbutil.run_to_source_breakpoint(
+            self, "break here", lldb.SBFileSpec("main.c")
+        )
+        self.reset_all_masks(process)
+
+        process.SetAddressableBits(
+            lldb.eAddressMaskTypeAll, 64, lldb.eAddressMaskRangeLow
+        )
+        self.runCmd("settings set target.process.virtual-addressable-bits 47")
+        self.assertEqual(0xFFFFFE0044580BC4, process.FixAddress(0xFFE8FE0044580BC4))
+
+        self.reset_all_masks(process)
+        process.SetAddressableBits(
+            lldb.eAddressMaskTypeAll, 64, lldb.eAddressMaskRangeAll
+        )
+        self.runCmd("settings set target.process.virtual-addressable-bits 47")
+        self.assertEqual(0xFFFFFE0044580BC4, process.FixAddress(0xFFE8FE0044580BC4))
