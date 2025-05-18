@@ -295,11 +295,15 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout"> {
     }
 
     LayoutAttr dropSgLayoutAndData() {
+      if (!getInstData() && !getLaneLayout())
+        return nullptr;
       return LayoutAttr::get(getContext(), nullptr, nullptr, getInstData(),
                              getLaneLayout(), getLaneData(), getOrder());
     }
 
     LayoutAttr dropInstData() {
+      if (!getSgLayout() && !getLaneLayout())
+        return nullptr;
       return LayoutAttr::get(getContext(), getSgLayout(), getSgData(), nullptr,
                              getLaneLayout(), getLaneData(), getOrder());
     }
