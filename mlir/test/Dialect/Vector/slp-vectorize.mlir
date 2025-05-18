@@ -1,10 +1,13 @@
 // RUN: mlir-opt %s --slp-vectorizer | FileCheck %s
 
-// CHECK-LABEL: func @basic_slp
-func.func @basic_slp(%arg0: memref<8xi32>, %arg1: memref<8xi32>) {
-  // CHECK: vector.transfer_read
-  // CHECK: arith.addi
-  // CHECK: vector.transfer_write
+// CHECK-LABEL: func @read_read_add_write
+//  CHECK-SAME: (%[[ARG0:.*]]: memref<8xi32>, %[[ARG1:.*]]: memref<8xi32>)
+func.func @read_read_add_write(%arg0: memref<8xi32>, %arg1: memref<8xi32>) {
+  // CHECK:     %[[C0:.*]] = arith.constant 0 : index
+  // CHECK:     %[[A:.*]] = vector.load %[[ARG0]][%[[C0]]] : memref<8xi32>, vector<4xi32>
+  // CHECK:     %[[B:.*]] = vector.load %[[ARG1]][%[[C0]]] : memref<8xi32>, vector<4xi32>
+  // CHECK:     %[[RES:.*]] = arith.addi %[[A]], %[[B]] : vector<4xi32>
+  // CHECK:     vector.store %[[RES]], %[[ARG0]][%[[C0]]] : memref<8xi32>, vector<4xi32>
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c2 = arith.constant 2 : index
