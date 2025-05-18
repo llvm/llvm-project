@@ -1216,7 +1216,7 @@ class DebugCommunication(object):
         }
         return self.send_recv(command_dict)
 
-    def request_testGetTargetBreakpoints(self):
+    def request_testGetTargetBreakpoints(self, only_resolved=False):
         """A request packet used in the LLDB test suite to get all currently
         set breakpoint infos for all breakpoints currently set in the
         target.
@@ -1224,7 +1224,9 @@ class DebugCommunication(object):
         command_dict = {
             "command": "_testGetTargetBreakpoints",
             "type": "request",
-            "arguments": {},
+            "arguments": {
+                "onlyResolved": only_resolved,
+            },
         }
         return self.send_recv(command_dict)
 
