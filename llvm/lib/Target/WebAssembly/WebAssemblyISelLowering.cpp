@@ -2871,7 +2871,6 @@ SDValue WebAssemblyTargetLowering::LowerShift(SDValue Op,
 
 SDValue WebAssemblyTargetLowering::LowerFP_TO_INT_SAT(SDValue Op,
                                                       SelectionDAG &DAG) const {
-  SDLoc DL(Op);
   EVT ResT = Op.getValueType();
   EVT SatVT = cast<VTSDNode>(Op.getOperand(1))->getVT();
 
