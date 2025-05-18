@@ -10532,8 +10532,7 @@ getNDSWDS(const FunctionDecl *FD, ArrayRef<ParamAttrTy> ParamAttrs) {
                       }) &&
          "Invalid size");
 
-  return std::make_tuple(*std::min_element(std::begin(Sizes), std::end(Sizes)),
-                         *std::max_element(std::begin(Sizes), std::end(Sizes)),
+  return std::make_tuple(*llvm::min_element(Sizes), *llvm::max_element(Sizes),
                          OutputBecomesInput);
 }
 
