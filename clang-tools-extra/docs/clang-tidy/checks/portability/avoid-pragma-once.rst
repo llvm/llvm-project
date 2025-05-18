@@ -8,7 +8,7 @@ include guards (``#ifndef``/``#define``/``#endif``) for improved portability.
 
 ``#pragma once`` is a non-standard extension, despite being widely supported
 by modern compilers. Relying on it can lead to portability issues in
-environments.
+some environments.
 
 Some older or specialized C/C++ compilers, particularly in embedded systems,
 may not fully support ``#pragma once``.

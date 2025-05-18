@@ -22,18 +22,15 @@ public:
   void PragmaDirective(SourceLocation Loc,
                        PragmaIntroducerKind Introducer) override {
     auto Str = llvm::StringRef(SM.getCharacterData(Loc));
-    if (!Str.consume_front("#")) {
+    if (!Str.consume_front("#"))
       return;
-    }
     Str = Str.trim();
-    if (!Str.consume_front("pragma")) {
+    if (!Str.consume_front("pragma"))
       return;
-    }
     Str = Str.trim();
-    if (Str.starts_with("once")) {
+    if (Str.starts_with("once"))
       Check->diag(Loc,
                   "avoid 'pragma once' directive; use include guards instead");
-    }
   }
 
 private:
