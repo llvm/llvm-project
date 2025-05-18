@@ -5014,6 +5014,10 @@ static KnownFPClass computeKnownFPClassFromContext(const Value *V,
                                                    const SimplifyQuery &Q) {
   KnownFPClass KnownFromContext;
 
+  if (Q.CC && Q.CC->AffectedValues.contains(V))
+    computeKnownFPClassFromCond(V, Q.CC->Cond, 0, Q.CC->CondIsTrue, Q.CxtI,
+                                KnownFromContext);
+
   if (!Q.CxtI)
     return KnownFromContext;
 
