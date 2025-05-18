@@ -34,15 +34,21 @@ def LowerVectorMultiReduction : Pass<"lower-vector-multi-reduction", "func::Func
   ];
 }
 
-def SLPVectorizer : Pass<"slp-vectorizer", "ModuleOp"> {
+def GreedySLPVectorizer : Pass<"greedy-slp-vectorizer"> {
   let summary = "SLP Vectorizer Pass";
   let description = [{
     This pass implements the SLP (Superword Level Parallelism) vectorizer.
     It detects consecutive operations that can be put together into vector
-    operations. The pass works bottom-up, across basic blocks, in search of
-    scalars to combine.
+    operations. The pass works bi-directionaly, starting from reads or stores,
+    in search of scalars to combine.
+
+    This is greedy vectorizer, it doesn't have any cost model (yet) and it tries
+    to create vector ops if we have at least 2 potential ops.
+
+    It doesn't check if target actually supports resulted vectors either, user
+    will need a follow up pass which will split large and/or unaliggned vectors
+    into sizes actually supported by the target.
   }];
-  let constructor = "mlir::vector::createSLPVectorizerPass()";
   let dependentDialects = ["mlir::vector::VectorDialect"];
 }
 

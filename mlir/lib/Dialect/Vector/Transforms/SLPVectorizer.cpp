@@ -27,7 +27,7 @@
 
 namespace mlir {
 namespace vector {
-#define GEN_PASS_DEF_SLPVECTORIZER
+#define GEN_PASS_DEF_GREEDYSLPVECTORIZER
 #include "mlir/Dialect/Vector/Transforms/Passes.h.inc"
 } // namespace vector
 } // namespace mlir
@@ -115,6 +115,19 @@ static Value getBase(Operation *op) {
   return {};
 }
 
+static bool isContiguousLastDim(Value val) {
+  auto memrefType = dyn_cast<MemRefType>(val.getType());
+  if (!memrefType)
+    return false;
+
+  int64_t offset;
+  SmallVector<int64_t> strides;
+  if (failed(memrefType.getStridesAndOffset(strides, offset)))
+    return false;
+
+  return !strides.empty() && strides.back() == 1;
+}
+
 static ValueRange getIndices(Operation *op) {
   if (auto loadOp = dyn_cast<memref::LoadOp>(op))
     return loadOp.getIndices();
@@ -150,8 +163,15 @@ static bool isAdjacentIndices(ValueRange idx1, ValueRange idx2) {
 }
 
 static bool isAdjacentIndices(Operation *op1, Operation *op2) {
-  return getBase(op1) == getBase(op2) &&
-         getElementType(op1) == getElementType(op2) &&
+  Value base1 = getBase(op1);
+  Value base2 = getBase(op2);
+  if (base1 != base2)
+    return false;
+
+  if (!isContiguousLastDim(base1))
+    return false;
+
+  return getElementType(op1) == getElementType(op2) &&
          isAdjacentIndices(getIndices(op1), getIndices(op2));
 }
 
@@ -498,11 +518,9 @@ private:
   llvm::SmallDenseMap<Operation *, SLPGraphNode *> opToNode;
 };
 
-/// This pass implements the SLP vectorizer. It detects consecutive operations
-/// that can be put together into vector operations. The pass works bottom-up,
-/// across basic blocks, in search of scalars to combine.
-struct SLPVectorizerPass
-    : public mlir::vector::impl::SLPVectorizerBase<SLPVectorizerPass> {
+struct GreedySLPVectorizerPass
+    : public mlir::vector::impl::GreedySLPVectorizerBase<
+          GreedySLPVectorizerPass> {
   void runOnOperation() override;
 };
 
@@ -717,11 +735,11 @@ static SLPGraph buildSLPGraph(ArrayRef<MemoryOpGroup> rootGroups) {
   return graph;
 }
 
-void SLPVectorizerPass::runOnOperation() {
+void GreedySLPVectorizerPass::runOnOperation() {
   Operation *op = getOperation();
 
   // Walk all blocks recursively
-  op->walk([&](Block *block) {
+  op->walk([&](Block *block) -> WalkResult {
     LLVM_DEBUG(llvm::dbgs() << "Processing block in operation: "
                             << block->getParentOp()->getName() << "\n");
 
@@ -747,21 +765,18 @@ void SLPVectorizerPass::runOnOperation() {
 
     // Build the SLP graph from root groups
     SLPGraph graph = buildSLPGraph(rootGroups);
-
-    // Print the graph structure
     LLVM_DEBUG(graph.print());
 
     // Vectorize the graph
     IRRewriter rewriter(&getContext());
     if (failed(graph.vectorize(rewriter))) {
       LLVM_DEBUG(llvm::dbgs() << "Failed to vectorize graph\n");
-      return signalPassFailure();
+      signalPassFailure();
+      return WalkResult::interrupt();
     }
+
+    return WalkResult::advance();
   });
 }
 
 } // namespace
-
-std::unique_ptr<Pass> mlir::vector::createSLPVectorizerPass() {
-  return std::make_unique<SLPVectorizerPass>();
-}
