@@ -93,6 +93,11 @@ Visibility Macros
   the extern template declaration) as exported on Windows, as discussed above.
   On all other platforms, this macro has an empty definition.
 
+**_LIBCPP_INNER_CLASS_IN_TEMPLATE_VIS**
+  To keep binary compatibility purpose only of a class not marked as `dllexport`
+  that is defined in a class template. Not to add this for new class, and this
+  can be replaced to `_LIBCPP_EXPORTED_FROM_ABI` at a timing of ABI change occurs.
+
 Links
 =====
 
