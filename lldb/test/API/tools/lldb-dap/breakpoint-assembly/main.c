@@ -10,5 +10,7 @@ __attribute__((nodebug)) int assembly_func(int n) {
 
 int main(int argc, char const *argv[]) {
   assembly_func(10);
-  return 0;
+  assembly_func(20);
+  assembly_func(30);
+  return 0; // Break here
 }
