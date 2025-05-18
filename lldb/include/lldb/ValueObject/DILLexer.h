@@ -25,10 +25,12 @@ class Token {
 public:
   enum Kind {
     amp,
+    arrow,
     coloncolon,
     eof,
     identifier,
     l_paren,
+    period,
     r_paren,
     star,
   };

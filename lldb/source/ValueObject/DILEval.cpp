@@ -272,4 +272,116 @@ Interpreter::Visit(const UnaryOpNode *node) {
       m_expr, "invalid ast: unexpected binary operator", node->GetLocation());
 }
 
+llvm::Expected<lldb::ValueObjectSP>
+Interpreter::Visit(const MemberOfNode *node) {
+  auto base_or_err = Evaluate(node->GetBase());
+  if (!base_or_err)
+    return base_or_err;
+  lldb::ValueObjectSP base = *base_or_err;
+  bool check_ptr_vs_member = node->GetCheckPtrVsMember();
+  bool fragile_ivar = node->GetFragileIvar();
+  bool synth_child = node->GetSynthChild();
+  lldb::DynamicValueType use_dynamic = node->GetUseDynamic();
+
+  // Perform some basic type & correctness checking.
+  if (node->GetIsArrow()) {
+    if (!fragile_ivar) {
+      // Make sure we aren't trying to deref an objective
+      // C ivar if this is not allowed
+      const uint32_t pointer_type_flags =
+          base->GetCompilerType().GetTypeInfo(nullptr);
+      if ((pointer_type_flags & lldb::eTypeIsObjC) &&
+          (pointer_type_flags & lldb::eTypeIsPointer)) {
+        // This was an objective C object pointer and it was requested we
+        // skip any fragile ivars so return nothing here
+        return lldb::ValueObjectSP();
+      }
+    }
+
+    // If we have a non-pointer type with a synthetic value then lets check
+    // if we have a synthetic dereference specified.
+    if (!base->IsPointerType() && base->HasSyntheticValue()) {
+      Status deref_error;
+      if (lldb::ValueObjectSP synth_deref_sp =
+              base->GetSyntheticValue()->Dereference(deref_error);
+          synth_deref_sp && deref_error.Success()) {
+        base = std::move(synth_deref_sp);
+      }
+      if (!base || deref_error.Fail()) {
+        std::string errMsg = llvm::formatv(
+            "Failed to dereference synthetic value: {0}", deref_error);
+        return llvm::make_error<DILDiagnosticError>(
+            m_expr, errMsg, node->GetLocation(), node->GetFieldName().size());
+      }
+
+      // Some synthetic plug-ins fail to set the error in Dereference
+      if (!base) {
+        std::string errMsg = "Failed to dereference synthetic value";
+        return llvm::make_error<DILDiagnosticError>(
+            m_expr, errMsg, node->GetLocation(), node->GetFieldName().size());
+      }
+    }
+  }
+
+  if (check_ptr_vs_member) {
+    bool expr_is_ptr = node->GetIsArrow();
+    bool base_is_ptr = base->IsPointerType();
+
+    if (expr_is_ptr != base_is_ptr) {
+      if (base_is_ptr) {
+        std::string errMsg =
+            llvm::formatv("member reference type {0} is a pointer; "
+                          "did you mean to use '->'?",
+                          base->GetCompilerType().TypeDescription());
+        return llvm::make_error<DILDiagnosticError>(
+            m_expr, errMsg, node->GetLocation(), node->GetFieldName().size());
+      } else {
+        std::string errMsg =
+            llvm::formatv("member reference type {0} is not a pointer; "
+                          "did you mean to use '.'?",
+                          base->GetCompilerType().TypeDescription());
+        return llvm::make_error<DILDiagnosticError>(
+            m_expr, errMsg, node->GetLocation(), node->GetFieldName().size());
+      }
+    }
+  }
+
+  lldb::ValueObjectSP field_obj =
+      base->GetChildMemberWithName(node->GetFieldName());
+  if (!field_obj) {
+    if (synth_child) {
+      field_obj = base->GetSyntheticValue();
+      if (field_obj)
+        field_obj = field_obj->GetChildMemberWithName(node->GetFieldName());
+    }
+
+    if (!synth_child || !field_obj) {
+      std::string errMsg = llvm::formatv(
+          "no member named '{0}' in {1}", node->GetFieldName(),
+          base->GetCompilerType().GetFullyUnqualifiedType().TypeDescription());
+      return llvm::make_error<DILDiagnosticError>(
+          m_expr, errMsg, node->GetLocation(), node->GetFieldName().size());
+    }
+  }
+
+  if (field_obj && field_obj->GetName() == node->GetFieldName()) {
+    if (use_dynamic != lldb::eNoDynamicValues) {
+      lldb::ValueObjectSP dynamic_val_sp =
+          field_obj->GetDynamicValue(use_dynamic);
+      if (dynamic_val_sp)
+        field_obj = dynamic_val_sp;
+    }
+    return field_obj;
+  }
+
+  CompilerType base_type = base->GetCompilerType();
+  if (node->GetIsArrow() && base->IsPointerType())
+    base_type = base_type.GetPointeeType();
+  std::string errMsg =
+      llvm::formatv("no member named '{0}' in {1}", node->GetFieldName(),
+                    base_type.GetFullyUnqualifiedType().TypeDescription());
+  return llvm::make_error<DILDiagnosticError>(
+      m_expr, errMsg, node->GetLocation(), node->GetFieldName().size());
+}
+
 } // namespace lldb_private::dil
