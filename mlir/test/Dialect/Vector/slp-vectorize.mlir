@@ -1,5 +1,30 @@
 // RUN: mlir-opt %s --slp-vectorizer | FileCheck %s
 
+// CHECK-LABEL: func @read_write
+//  CHECK-SAME: (%[[ARG0:.*]]: memref<8xi32>, %[[ARG1:.*]]: memref<8xi32>)
+func.func @read_write(%arg0: memref<8xi32>, %arg1: memref<8xi32>) {
+  // CHECK:     %[[C0:.*]] = arith.constant 0 : index
+  // CHECK:     %[[RES:.*]] = vector.load %[[ARG0]][%[[C0]]] : memref<8xi32>, vector<4xi32>
+  // CHECK:     vector.store %[[RES]], %[[ARG0]][%[[C0]]] : memref<8xi32>, vector<4xi32>
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c3 = arith.constant 3 : index
+
+  %0 = memref.load %arg0[%c0] : memref<8xi32>
+  %1 = memref.load %arg0[%c1] : memref<8xi32>
+  %2 = memref.load %arg0[%c2] : memref<8xi32>
+  %3 = memref.load %arg0[%c3] : memref<8xi32>
+
+  memref.store %0, %arg0[%c0] : memref<8xi32>
+  memref.store %1, %arg0[%c1] : memref<8xi32>
+  memref.store %2, %arg0[%c2] : memref<8xi32>
+  memref.store %3, %arg0[%c3] : memref<8xi32>
+
+  return
+}
+
+
 // CHECK-LABEL: func @read_read_add_write
 //  CHECK-SAME: (%[[ARG0:.*]]: memref<8xi32>, %[[ARG1:.*]]: memref<8xi32>)
 func.func @read_read_add_write(%arg0: memref<8xi32>, %arg1: memref<8xi32>) {
