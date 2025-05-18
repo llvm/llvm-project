@@ -704,10 +704,15 @@ def topbitsallzero64: PatLeaf<(i64 GPR64:$src), [{
   }]>;
 
 // Node definitions.
+// Compare-and-branch
 def AArch64CB : SDNode<"AArch64ISD::CB", SDT_AArch64cb, [SDNPHasChain]>;
+// Page address of a TargetGlobalAddress operand.
 def AArch64adrp          : SDNode<"AArch64ISD::ADRP", SDTIntUnaryOp, []>;
 def AArch64adr           : SDNode<"AArch64ISD::ADR", SDTIntUnaryOp, []>;
+// Add the low 12 bits of a TargetGlobalAddress operand.
 def AArch64addlow        : SDNode<"AArch64ISD::ADDlow", SDTIntBinOp, []>;
+// Load from automatically generated descriptor (e.g. Global Offset Table, TLS
+// record).
 def AArch64LOADgot       : SDNode<"AArch64ISD::LOADgot", SDTIntUnaryOp>;
 def AArch64callseq_start : SDNode<"ISD::CALLSEQ_START",
                                 SDCallSeqStart<[ SDTCisVT<0, i32>,
@@ -722,21 +727,27 @@ def AArch64call          : SDNode<"AArch64ISD::CALL",
                                 [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                                  SDNPVariadic]>;
 
+// Function call followed by a BTI instruction.
 def AArch64call_bti      : SDNode<"AArch64ISD::CALL_BTI",
                                 SDTypeProfile<0, -1, [SDTCisPtrTy<0>]>,
                                 [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                                  SDNPVariadic]>;
 
+// Pseudo for a OBJC call that gets emitted together with a special `mov
+// x29, x29` marker instruction.
 def AArch64call_rvmarker: SDNode<"AArch64ISD::CALL_RVMARKER",
                              SDTypeProfile<0, -1, [SDTCisPtrTy<0>]>,
                              [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                               SDNPVariadic]>;
 
+// A call with the callee in x16, i.e. "blr x16".
 def AArch64call_arm64ec_to_x64 : SDNode<"AArch64ISD::CALL_ARM64EC_TO_X64",
                                       SDTypeProfile<0, -1, [SDTCisPtrTy<0>]>,
                                       [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                                        SDNPVariadic]>;
 
+// Function call, authenticating the callee value first:
+// AUTH_CALL chain, callee, auth key #, int disc, addr disc, operands.
 def AArch64authcall : SDNode<"AArch64ISD::AUTH_CALL",
                              SDTypeProfile<0, -1, [SDTCisPtrTy<0>,
                                                    SDTCisVT<1, i32>,
@@ -745,6 +756,8 @@ def AArch64authcall : SDNode<"AArch64ISD::AUTH_CALL",
                              [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                               SDNPVariadic]>;
 
+// AUTH_TC_RETURN chain, callee, fpdiff, auth key #, int disc, addr disc,
+// operands.
 def AArch64authtcret: SDNode<"AArch64ISD::AUTH_TC_RETURN",
                              SDTypeProfile<0, 5, [SDTCisPtrTy<0>,
                                                   SDTCisVT<2, i32>,
@@ -752,6 +765,7 @@ def AArch64authtcret: SDNode<"AArch64ISD::AUTH_TC_RETURN",
                                                   SDTCisVT<4, i64>]>,
                              [SDNPHasChain,  SDNPOptInGlue, SDNPVariadic]>;
 
+// Authenticated variant of CALL_RVMARKER.
 def AArch64authcall_rvmarker : SDNode<"AArch64ISD::AUTH_CALL_RVMARKER",
                                  SDTypeProfile<0, -1, [SDTCisPtrTy<0>,
                                                        SDTCisVT<1, i32>,
@@ -762,6 +776,7 @@ def AArch64authcall_rvmarker : SDNode<"AArch64ISD::AUTH_CALL_RVMARKER",
                                  [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                                   SDNPVariadic]>;
 
+// Conditional branch instruction; "b.cond".
 def AArch64brcond        : SDNode<"AArch64ISD::BRCOND", SDT_AArch64Brcond,
                                 [SDNPHasChain]>;
 def AArch64cbz           : SDNode<"AArch64ISD::CBZ", SDT_AArch64cbz,
@@ -775,13 +790,19 @@ def AArch64tbnz           : SDNode<"AArch64ISD::TBNZ", SDT_AArch64tbz,
 
 
 def AArch64csel          : SDNode<"AArch64ISD::CSEL", SDT_AArch64CSel>;
+// Conditional select invert.
 def AArch64csinv         : SDNode<"AArch64ISD::CSINV", SDT_AArch64CSel>;
+// Conditional select negate.
 def AArch64csneg         : SDNode<"AArch64ISD::CSNEG", SDT_AArch64CSel>;
+// Conditional select increment.
 def AArch64csinc         : SDNode<"AArch64ISD::CSINC", SDT_AArch64CSel>;
+// Return with a glue operand. Operand 0 is the chain operand.
 def AArch64retglue       : SDNode<"AArch64ISD::RET_GLUE", SDTNone,
                                 [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 def AArch64adc       : SDNode<"AArch64ISD::ADC",  SDTBinaryArithWithFlagsIn >;
 def AArch64sbc       : SDNode<"AArch64ISD::SBC",  SDTBinaryArithWithFlagsIn>;
+
+// Arithmetic instructions which write flags.
 def AArch64add_flag  : SDNode<"AArch64ISD::ADDS",  SDTBinaryArithWithFlagsOut,
                             [SDNPCommutative]>;
 def AArch64sub_flag  : SDNode<"AArch64ISD::SUBS",  SDTBinaryArithWithFlagsOut>;
@@ -790,15 +811,20 @@ def AArch64and_flag  : SDNode<"AArch64ISD::ANDS",  SDTBinaryArithWithFlagsOut,
 def AArch64adc_flag  : SDNode<"AArch64ISD::ADCS",  SDTBinaryArithWithFlagsInOut>;
 def AArch64sbc_flag  : SDNode<"AArch64ISD::SBCS",  SDTBinaryArithWithFlagsInOut>;
 
+// Conditional compares. Operands: left,right,falsecc,cc,flags
 def AArch64ccmp      : SDNode<"AArch64ISD::CCMP",  SDT_AArch64CCMP>;
 def AArch64ccmn      : SDNode<"AArch64ISD::CCMN",  SDT_AArch64CCMP>;
 def AArch64fccmp     : SDNode<"AArch64ISD::FCCMP", SDT_AArch64FCCMP>;
 
+// Pointer to the thread's local storage area. Materialised from TPIDR_EL0 on
+// ELF.
 def AArch64threadpointer : SDNode<"AArch64ISD::THREAD_POINTER", SDTPtrLeaf>;
 
+// Floating point comparison
 def AArch64fcmp         : SDNode<"AArch64ISD::FCMP", SDT_AArch64FCmp>;
 
 let IsStrictFP = true in {
+  // Strict (exception-raising) floating point comparison
   def AArch64strict_fcmp  : SDNode<"AArch64ISD::STRICT_FCMP", SDT_AArch64FCmp,
                                    [SDNPHasChain]>;
   def AArch64strict_fcmpe : SDNode<"AArch64ISD::STRICT_FCMPE", SDT_AArch64FCmp,
@@ -809,6 +835,7 @@ def AArch64any_fcmp     : PatFrags<(ops node:$lhs, node:$rhs),
                                    [(AArch64strict_fcmp node:$lhs, node:$rhs),
                                     (AArch64fcmp node:$lhs, node:$rhs)]>;
 
+// Scalar-to-vector duplication
 def AArch64dup       : SDNode<"AArch64ISD::DUP", SDT_AArch64Dup>;
 def AArch64duplane8  : SDNode<"AArch64ISD::DUPLANE8", SDT_AArch64DupLane>;
 def AArch64duplane16 : SDNode<"AArch64ISD::DUPLANE16", SDT_AArch64DupLane>;
@@ -818,6 +845,7 @@ def AArch64duplane128 : SDNode<"AArch64ISD::DUPLANE128", SDT_AArch64DupLane>;
 
 def AArch64insr      : SDNode<"AArch64ISD::INSR", SDT_AArch64Insr>;
 
+// Vector shuffles
 def AArch64zip1      : SDNode<"AArch64ISD::ZIP1", SDT_AArch64Zip>;
 def AArch64zip2      : SDNode<"AArch64ISD::ZIP2", SDT_AArch64Zip>;
 def AArch64uzp1      : SDNode<"AArch64ISD::UZP1", SDT_AArch64Zip>;
@@ -825,6 +853,7 @@ def AArch64uzp2      : SDNode<"AArch64ISD::UZP2", SDT_AArch64Zip>;
 def AArch64trn1      : SDNode<"AArch64ISD::TRN1", SDT_AArch64Zip>;
 def AArch64trn2      : SDNode<"AArch64ISD::TRN2", SDT_AArch64Zip>;
 
+// Vector immedate moves
 def AArch64movi_edit : SDNode<"AArch64ISD::MOVIedit", SDT_AArch64MOVIedit>;
 def AArch64movi_shift : SDNode<"AArch64ISD::MOVIshift", SDT_AArch64MOVIshift>;
 def AArch64movi_msl : SDNode<"AArch64ISD::MOVImsl", SDT_AArch64MOVIshift>;
@@ -838,6 +867,9 @@ def AArch64rev32 : SDNode<"AArch64ISD::REV32", SDT_AArch64Rev>;
 def AArch64rev64 : SDNode<"AArch64ISD::REV64", SDT_AArch64Rev>;
 def AArch64ext : SDNode<"AArch64ISD::EXT", SDT_AArch64ExtVec>;
 
+// Vector shift by scalar
+def AArch64vlshr : SDNode<"AArch64ISD::VLSHR", SDT_AArch64vshift>;
+def AArch64vshl : SDNode<"AArch64ISD::VSHL", SDT_AArch64vshift>;
 def AArch64vashr : SDNode<"AArch64ISD::VASHR", SDT_AArch64vshift>;
 
 def AArch64vashr_exact : PatFrag<(ops          node:$lhs, node:$rhs),
@@ -845,16 +877,18 @@ def AArch64vashr_exact : PatFrag<(ops          node:$lhs, node:$rhs),
   return N->getFlags().hasExact();
 }]>;
 
-def AArch64vlshr : SDNode<"AArch64ISD::VLSHR", SDT_AArch64vshift>;
-def AArch64vshl : SDNode<"AArch64ISD::VSHL", SDT_AArch64vshift>;
+// Vector shift by scalar (again)
 def AArch64sqshli : SDNode<"AArch64ISD::SQSHL_I", SDT_AArch64vshift>;
 def AArch64uqshli : SDNode<"AArch64ISD::UQSHL_I", SDT_AArch64vshift>;
 def AArch64sqshlui : SDNode<"AArch64ISD::SQSHLU_I", SDT_AArch64vshift>;
 def AArch64srshri : SDNode<"AArch64ISD::SRSHR_I", SDT_AArch64vshift>;
 def AArch64urshri : SDNode<"AArch64ISD::URSHR_I", SDT_AArch64vshift>;
+
 def AArch64vsli : SDNode<"AArch64ISD::VSLI", SDT_AArch64vshiftinsert>;
 def AArch64vsri : SDNode<"AArch64ISD::VSRI", SDT_AArch64vshiftinsert>;
 
+// Vector bitwise select: similar to ISD::VSELECT but not all bits within an
+// element must be identical.
 def AArch64bsp: SDNode<"AArch64ISD::BSP", SDT_AArch64trivec>;
 
 def AArch64cmeq : PatFrag<(ops node:$lhs, node:$rhs),
@@ -868,6 +902,7 @@ def AArch64cmhi : PatFrag<(ops node:$lhs, node:$rhs),
 def AArch64cmhs : PatFrag<(ops node:$lhs, node:$rhs),
                           (setcc node:$lhs, node:$rhs, SETUGE)>;
 
+// Vector comparisons
 def AArch64fcmeq: SDNode<"AArch64ISD::FCMEQ", SDT_AArch64fcmp>;
 def AArch64fcmge: SDNode<"AArch64ISD::FCMGE", SDT_AArch64fcmp>;
 def AArch64fcmgt: SDNode<"AArch64ISD::FCMGT", SDT_AArch64fcmp>;
@@ -902,6 +937,7 @@ def AArch64fcmlez : PatFrag<(ops node:$lhs),
 def AArch64fcmltz : PatFrag<(ops node:$lhs),
                             (AArch64fcmgt immAllZerosV, node:$lhs)>;
 
+// Round wide FP to narrow FP with inexact results to odd.
 def AArch64fcvtxn_n: SDNode<"AArch64ISD::FCVTXN", SDTFPRoundOp>;
 def AArch64fcvtxnsdr: PatFrags<(ops node:$Rn),
                                [(f32 (int_aarch64_sisd_fcvtxn (f64 node:$Rn))),
@@ -912,18 +948,24 @@ def AArch64fcvtxnv: PatFrags<(ops node:$Rn),
 
 //def Aarch64softf32tobf16v8: SDNode<"AArch64ISD::", SDTFPRoundOp>;
 
+// Vector immediate ops
 def AArch64bici: SDNode<"AArch64ISD::BICi", SDT_AArch64vecimm>;
 def AArch64orri: SDNode<"AArch64ISD::ORRi", SDT_AArch64vecimm>;
 
+// Tail calls
 def AArch64tcret: SDNode<"AArch64ISD::TC_RETURN", SDT_AArch64TCRET,
                   [SDNPHasChain,  SDNPOptInGlue, SDNPVariadic]>;
 
+// Custom prefetch handling
 def AArch64Prefetch        : SDNode<"AArch64ISD::PREFETCH", SDT_AArch64PREFETCH,
                                [SDNPHasChain, SDNPSideEffect]>;
 
+// {s|u}int to FP within a FP register.
 def AArch64sitof: SDNode<"AArch64ISD::SITOF", SDT_AArch64ITOF>;
 def AArch64uitof: SDNode<"AArch64ISD::UITOF", SDT_AArch64ITOF>;
 
+// Produces the full sequence of instructions for getting the thread pointer
+// offset of a variable into X0, using the TLSDesc model.
 def AArch64tlsdesc_callseq : SDNode<"AArch64ISD::TLSDESC_CALLSEQ",
                                     SDT_AArch64TLSDescCallSeq,
                                     [SDNPOutGlue, SDNPHasChain, SDNPVariadic]>;
@@ -935,6 +977,11 @@ def AArch64tlsdesc_auth_callseq : SDNode<"AArch64ISD::TLSDESC_AUTH_CALLSEQ",
 def AArch64WrapperLarge : SDNode<"AArch64ISD::WrapperLarge",
                                  SDT_AArch64WrapperLarge>;
 
+/// Natural vector cast. ISD::BITCAST is not natural in the big-endian
+/// world w.r.t vectors; which causes additional REV instructions to be
+/// generated to compensate for the byte-swapping. But sometimes we do
+/// need to re-interpret the data in SIMD vector registers in big-endian
+/// mode without emitting such REV instructions.
 def AArch64NvCast : SDNode<"AArch64ISD::NVCAST", SDTUnaryOp>;
 
 def SDT_AArch64mull : SDTypeProfile<1, 2, [SDTCisInt<0>, SDTCisInt<1>,
@@ -946,21 +993,30 @@ def AArch64smull    : SDNode<"AArch64ISD::SMULL", SDT_AArch64mull,
 def AArch64umull    : SDNode<"AArch64ISD::UMULL", SDT_AArch64mull,
                              [SDNPCommutative]>;
 
+// Reciprocal estimates and steps.
 def AArch64frecpe   : SDNode<"AArch64ISD::FRECPE", SDTFPUnaryOp>;
 def AArch64frecps   : SDNode<"AArch64ISD::FRECPS", SDTFPBinOp>;
 def AArch64frsqrte  : SDNode<"AArch64ISD::FRSQRTE", SDTFPUnaryOp>;
 def AArch64frsqrts  : SDNode<"AArch64ISD::FRSQRTS", SDTFPBinOp>;
 
+// udot/sdot/usdot instructions
 def AArch64sdot     : SDNode<"AArch64ISD::SDOT", SDT_AArch64Dot>;
 def AArch64udot     : SDNode<"AArch64ISD::UDOT", SDT_AArch64Dot>;
 def AArch64usdot    : SDNode<"AArch64ISD::USDOT", SDT_AArch64Dot>;
 
+// Vector across-lanes addition
+// Only the lower result lane is defined.
 def AArch64saddv    : SDNode<"AArch64ISD::SADDV", SDT_AArch64UnaryVec>;
 def AArch64uaddv    : SDNode<"AArch64ISD::UADDV", SDT_AArch64UnaryVec>;
+
+// Vector across-lanes min/max
+// Only the lower result lane is defined.
 def AArch64sminv    : SDNode<"AArch64ISD::SMINV", SDT_AArch64UnaryVec>;
 def AArch64uminv    : SDNode<"AArch64ISD::UMINV", SDT_AArch64UnaryVec>;
 def AArch64smaxv    : SDNode<"AArch64ISD::SMAXV", SDT_AArch64UnaryVec>;
 def AArch64umaxv    : SDNode<"AArch64ISD::UMAXV", SDT_AArch64UnaryVec>;
+
+// Unsigned sum Long across Vector
 def AArch64uaddlv   : SDNode<"AArch64ISD::UADDLV", SDT_AArch64uaddlp>;
 def AArch64saddlv   : SDNode<"AArch64ISD::SADDLV", SDT_AArch64uaddlp>;
 
@@ -971,7 +1027,9 @@ def AArch64sabd     : PatFrags<(ops node:$lhs, node:$rhs),
                                [(abds node:$lhs, node:$rhs),
                                 (int_aarch64_neon_sabd node:$lhs, node:$rhs)]>;
 
+// Add Pairwise of two vectors
 def AArch64addp_n   : SDNode<"AArch64ISD::ADDP", SDT_AArch64Zip>;
+// Add Long Pairwise
 def AArch64uaddlp_n : SDNode<"AArch64ISD::UADDLP", SDT_AArch64uaddlp>;
 def AArch64saddlp_n : SDNode<"AArch64ISD::SADDLP", SDT_AArch64uaddlp>;
 def AArch64addp     : PatFrags<(ops node:$Rn, node:$Rm),
@@ -1033,11 +1091,14 @@ def AArch64stnp : SDNode<"AArch64ISD::STNP", SDT_AArch64stnp, [SDNPHasChain, SDN
 
 def AArch64tbl : SDNode<"AArch64ISD::TBL", SDT_AArch64TBL>;
 
+// To avoid stack clash, allocation is performed by block and each block is
+// probed.
 def AArch64probedalloca
     : SDNode<"AArch64ISD::PROBED_ALLOCA",
              SDTypeProfile<0, 1, [SDTCisPtrTy<0>]>,
              [SDNPHasChain, SDNPMayStore]>;
 
+// MRS, also sets the flags via a glue.
 def AArch64mrs : SDNode<"AArch64ISD::MRS",
                         SDTypeProfile<2, 1, [SDTCisVT<0, i64>,
                                              SDTCisVT<1, i32>,
@@ -1058,6 +1119,7 @@ def AArch64msrr : SDNode<"AArch64ISD::MSRR",
                           [SDNPHasChain]>;
 
 def SD_AArch64rshrnb : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisVec<1>, SDTCisInt<2>]>;
+// Vector narrowing shift by immediate (bottom)
 def AArch64rshrnb : SDNode<"AArch64ISD::RSHRNB_I", SD_AArch64rshrnb>;
 def AArch64rshrnb_pf : PatFrags<(ops node:$rs, node:$i),
                             [(AArch64rshrnb node:$rs, node:$i),
@@ -1066,6 +1128,8 @@ def AArch64rshrnb_pf : PatFrags<(ops node:$rs, node:$i),
 def AArch64CttzElts : SDNode<"AArch64ISD::CTTZ_ELTS", SDTypeProfile<1, 1,
                              [SDTCisInt<0>, SDTCisVec<1>]>, []>;
 
+// NEON Load/Store with post-increment base updates.
+// TODO: Complete SDTypeProfile constraints.
 def AArch64ld2post : SDNode<"AArch64ISD::LD2post", SDTypeProfile<3, 2, []>, [
     SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def AArch64ld3post : SDNode<"AArch64ISD::LD3post", SDTypeProfile<4, 2, []>, [
@@ -10345,6 +10409,8 @@ def StoreSwiftAsyncContext
       : Pseudo<(outs), (ins GPR64:$ctx, GPR64sp:$base, simm9:$offset),
                []>, Sched<[]>;
 
+// Asserts that a function argument (i32) is zero-extended to i8 by
+// the caller
 def AArch64AssertZExtBool : SDNode<"AArch64ISD::ASSERT_ZEXT_BOOL", SDT_assert>;
 def : Pat<(AArch64AssertZExtBool GPR32:$op),
           (i32 GPR32:$op)>;
