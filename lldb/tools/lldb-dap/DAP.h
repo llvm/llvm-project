@@ -132,27 +132,6 @@ struct Variables {
   void Clear();
 };
 
-struct StartDebuggingRequestHandler : public lldb::SBCommandPluginInterface {
-  DAP &dap;
-  explicit StartDebuggingRequestHandler(DAP &d) : dap(d) {};
-  bool DoExecute(lldb::SBDebugger debugger, char **command,
-                 lldb::SBCommandReturnObject &result) override;
-};
-
-struct ReplModeRequestHandler : public lldb::SBCommandPluginInterface {
-  DAP &dap;
-  explicit ReplModeRequestHandler(DAP &d) : dap(d) {};
-  bool DoExecute(lldb::SBDebugger debugger, char **command,
-                 lldb::SBCommandReturnObject &result) override;
-};
-
-struct SendEventRequestHandler : public lldb::SBCommandPluginInterface {
-  DAP &dap;
-  explicit SendEventRequestHandler(DAP &d) : dap(d) {};
-  bool DoExecute(lldb::SBDebugger debugger, char **command,
-                 lldb::SBCommandReturnObject &result) override;
-};
-
 struct DAP {
   /// Path to the lldb-dap binary itself.
   static llvm::StringRef debug_adapter_path;
