@@ -325,5 +325,4 @@ TEST_F(SpecialCaseListTest, Version3) {
   EXPECT_EQ(4u, SCL->inSectionBlame("sect1", "fun", "barz"));
   EXPECT_EQ(6u, SCL->inSectionBlame("sect2", "fun", "def"));
 }
-
 }
