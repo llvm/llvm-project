@@ -441,7 +441,7 @@ using IsExpiredFn = function_ref<bool(const MachineInstr &, int WaitStates)>;
 using GetNumWaitStatesFn = function_ref<unsigned int(const MachineInstr &)>;
 
 // Search for a hazard in a block and its predecessors.
-// StateT must implement getHashValue().
+// StateT must implement getHashValue() and isEqual().
 template <typename StateT>
 static bool
 hasHazard(StateT InitialState,
@@ -449,8 +449,47 @@ hasHazard(StateT InitialState,
           function_ref<void(StateT &, const MachineInstr &)> UpdateState,
           const MachineBasicBlock *InitialMBB,
           MachineBasicBlock::const_reverse_instr_iterator InitialI) {
-  SmallVector<std::pair<const MachineBasicBlock *, StateT>> Worklist;
-  DenseSet<std::pair<const MachineBasicBlock *, unsigned>> Visited;
+  SmallVector<std::pair<const MachineBasicBlock *, unsigned>> Worklist;
+  SmallDenseSet<std::pair<const MachineBasicBlock *, unsigned>> Visited;
+  SmallVector<std::pair<unsigned, unsigned>, 1> Collisions;
+  SmallDenseMap<unsigned, unsigned> StateHash2Idx;
+  SmallVector<StateT> States;
+
+  // States contains a vector of unique state structures.
+  // StateT is hashed via getHashValue() and StateHash2Idx maps each hash
+  // to an index in the States vector.
+  // In the unlikely event of a hash collision the Collision vector provides
+  // additional hash to index associations which must be retrieved by a linear
+  // scan.
+
+  // Retrieve unique constant index for a StateT structure in the States vector.
+  auto ResolveStateIdx = [&](const StateT State) {
+    unsigned StateHash = State.getHashValue();
+    unsigned StateIdx;
+    if (!StateHash2Idx.contains(StateHash)) {
+      StateIdx = States.size();
+      States.push_back(State);
+      StateHash2Idx[StateHash] = StateIdx;
+    } else {
+      StateIdx = StateHash2Idx[StateHash];
+      if (LLVM_UNLIKELY(!StateT::isEqual(State, States[StateIdx]))) {
+        // Hash collision
+        auto *Collision = llvm::find_if(Collisions, [&](auto &C) {
+          return C.first == StateHash &&
+                 StateT::isEqual(State, States[C.second]);
+        });
+        if (Collision) {
+          StateIdx = Collision->second;
+        } else {
+          StateIdx = States.size();
+          States.push_back(State);
+          Collisions.emplace_back(StateHash, StateIdx);
+        }
+      }
+    }
+    return StateIdx;
+  };
+
   const MachineBasicBlock *MBB = InitialMBB;
   StateT State = InitialState;
   auto I = InitialI;
@@ -477,18 +516,20 @@ hasHazard(StateT InitialState,
     }
 
     if (!Expired) {
-      unsigned StateHash = State.getHashValue();
+      unsigned StateIdx = ResolveStateIdx(State);
       for (MachineBasicBlock *Pred : MBB->predecessors()) {
-        if (!Visited.insert(std::pair(Pred, StateHash)).second)
+        if (!Visited.insert(std::pair(Pred, StateIdx)).second)
           continue;
-        Worklist.emplace_back(Pred, State);
+        Worklist.emplace_back(Pred, StateIdx);
       }
     }
 
     if (Worklist.empty())
       break;
 
-    std::tie(MBB, State) = Worklist.pop_back_val();
+    unsigned StateIdx;
+    std::tie(MBB, StateIdx) = Worklist.pop_back_val();
+    State = States[StateIdx];
     I = MBB->instr_rbegin();
   }
 
@@ -1658,6 +1699,10 @@ bool GCNHazardRecognizer::fixVALUPartialForwardingHazard(MachineInstr *MI) {
     unsigned getHashValue() const {
       return hash_combine(ExecPos, VALUs, hash_combine_range(DefPos));
     }
+    static bool isEqual(const StateType &LHS, const StateType &RHS) {
+      return LHS.DefPos == RHS.DefPos && LHS.ExecPos == RHS.ExecPos &&
+             LHS.VALUs == RHS.VALUs;
+    }
   };
 
   StateType State;
@@ -1796,6 +1841,9 @@ bool GCNHazardRecognizer::fixVALUTransUseHazard(MachineInstr *MI) {
     int TRANS = 0;
 
     unsigned getHashValue() const { return hash_combine(VALUs, TRANS); }
+    static bool isEqual(const StateType &LHS, const StateType &RHS) {
+      return LHS.VALUs == RHS.VALUs && LHS.TRANS == RHS.TRANS;
+    }
   };
 
   StateType State;
