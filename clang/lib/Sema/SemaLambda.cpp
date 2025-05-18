@@ -1633,8 +1633,8 @@ static void repeatForLambdaConversionFunctionCallingConvs(
         CC_C,        CC_X86StdCall, CC_X86FastCall, CC_X86VectorCall,
         DefaultFree, DefaultMember, CallOpCC};
     llvm::sort(Convs);
-    llvm::iterator_range<CallingConv *> Range(
-        std::begin(Convs), std::unique(std::begin(Convs), std::end(Convs)));
+    llvm::iterator_range<CallingConv *> Range(std::begin(Convs),
+                                              llvm::unique(Convs));
     const TargetInfo &TI = S.getASTContext().getTargetInfo();
 
     for (CallingConv C : Range) {
