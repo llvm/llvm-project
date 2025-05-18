@@ -13,6 +13,7 @@
 #include <iterator>
 #include <random>
 #include <string>
+#include <ranges>
 #include <type_traits>
 #include <utility>
 #include <vector>
