@@ -142,6 +142,11 @@ New checks
   Finds potentially erroneous calls to ``reset`` method on smart pointers when
   the pointee type also has a ``reset`` method.
 
+- New :doc:`portability-avoid-pragma-once
+  <clang-tidy/checks/portability/avoid-pragma-once>` check.
+
+  A check that catches pragma once.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
