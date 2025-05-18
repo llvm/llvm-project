@@ -1732,7 +1732,7 @@ static void removeBranchOnCondTrue(VPlan &Plan) {
   using namespace llvm::VPlanPatternMatch;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getEntry()))) {
-    if (VPBB->getNumSuccessors() != 2 ||
+    if (VPBB->getNumSuccessors() != 2 || isa<VPIRBasicBlock>(VPBB) ||
         !match(&VPBB->back(), m_BranchOnCond(m_True())))
       continue;
 
@@ -1749,8 +1749,8 @@ static void removeBranchOnCondTrue(VPlan &Plan) {
               !isa<PHINode>(cast<VPIRInstruction>(&R)->getInstruction())) &&
              !isa<VPHeaderPHIRecipe>(&R) &&
              "Cannot update VPIRInstructions wrapping phis or header phis yet");
-      auto *VPI = dyn_cast<VPInstruction>(&R);
-      if (!VPI || VPI->getOpcode() != VPInstruction::ResumePhi)
+      auto *VPI = dyn_cast<VPPhi>(&R);
+      if (!VPI)
         break;
       VPBuilder B(VPI);
       SmallVector<VPValue *> NewOperands;
@@ -1760,9 +1760,8 @@ static void removeBranchOnCondTrue(VPlan &Plan) {
           continue;
         NewOperands.push_back(Op);
       }
-      VPI->replaceAllUsesWith(B.createNaryOp(VPInstruction::ResumePhi,
-                                             NewOperands, VPI->getDebugLoc(),
-                                             VPI->getName()));
+      VPI->replaceAllUsesWith(
+          B.createScalarPhi(NewOperands, VPI->getDebugLoc(), VPI->getName()));
       VPI->eraseFromParent();
     }
     // Disconnect blocks and remove the terminator. RemovedSucc will be deleted
