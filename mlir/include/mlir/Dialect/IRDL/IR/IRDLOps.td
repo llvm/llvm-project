@@ -634,7 +634,7 @@ def IRDL_AllOfOp : IRDL_ConstraintOp<"all_of",
     ```
 
     The above program defines a type `complex` inside the dialect `cmath` that
-    can has one parameter that must be 32-bit long and a float (in other
+    can have one parameter that must be 32-bit long and a float (in other
     words, that must be `f32`).
   }];
 
