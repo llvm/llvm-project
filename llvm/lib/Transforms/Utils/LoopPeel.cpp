@@ -343,12 +343,12 @@ bool llvm::canPeelLastIteration(const Loop &L, ScalarEvolution &SE) {
   // codegen. For now, it must
   // * exit via the latch,
   // * the exit condition must be a NE/EQ compare of an induction with step
-  // of 1.
+  // of 1 and must only be used by the exiting branch.
   BasicBlock *Latch = L.getLoopLatch();
   return Latch && Latch == L.getExitingBlock() &&
          match(Latch->getTerminator(),
-               m_Br(m_ICmp(Pred, m_Value(Inc), m_Value()), m_BasicBlock(Succ1),
-                    m_BasicBlock(Succ2))) &&
+               m_Br(m_OneUse(m_ICmp(Pred, m_Value(Inc), m_Value())),
+                    m_BasicBlock(Succ1), m_BasicBlock(Succ2))) &&
          ((Pred == CmpInst::ICMP_EQ && Succ2 == L.getHeader()) ||
           (Pred == CmpInst::ICMP_NE && Succ1 == L.getHeader())) &&
          isa<SCEVAddRecExpr>(SE.getSCEV(Inc)) &&

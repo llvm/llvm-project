@@ -635,6 +635,46 @@ exit:
   ret i64 %iv
 }
 
+; Test for https://github.com/llvm/llvm-project/issues/140444.
+define void @exit_condition_has_other_loop_users() {
+; CHECK-LABEL: define void @exit_condition_has_other_loop_users() {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
+; CHECK:       [[LOOP_HEADER]]:
+; CHECK-NEXT:    [[IV_NEXT_LCSSA:%.*]] = phi i16 [ 0, %[[ENTRY]] ], [ [[IV_NEXT_PEEL:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[IV_NEXT_PEEL]] = add i16 [[IV_NEXT_LCSSA]], 1
+; CHECK-NEXT:    [[EC_PEEL:%.*]] = icmp eq i16 [[IV_NEXT_LCSSA]], 100
+; CHECK-NEXT:    br i1 [[EC_PEEL]], label %[[LOOP_LATCH]], label %[[THEN:.*]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    call void @foo(i32 10)
+; CHECK-NEXT:    br label %[[LOOP_LATCH]]
+; CHECK:       [[LOOP_LATCH]]:
+; CHECK-NEXT:    call void @foo(i32 20)
+; CHECK-NEXT:    br i1 [[EC_PEEL]], label %[[EXIT:.*]], label %[[LOOP_HEADER]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i16 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %iv.next = add i16 %iv, 1
+  %ec = icmp eq i16 %iv, 100
+  br i1 %ec, label %loop.latch, label %then
+
+then:
+  call void @foo(i32 10)
+  br label %loop.latch
+
+loop.latch:
+  call void @foo(i32 20)
+  br i1 %ec, label %exit, label %loop.header
+
+exit:
+  ret void
+}
+
 declare void @foo(i32)
 declare i1 @cond()
 ;.
