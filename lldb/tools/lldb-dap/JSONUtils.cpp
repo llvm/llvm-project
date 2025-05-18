@@ -661,10 +661,11 @@ CreateStackFrame(lldb::SBFrame &frame, lldb::SBFormat &format,
     frame_name = name;
   }
 
-  if (frame_name.empty())
+  if (frame_name.empty()) {
     // If the function name is unavailable, display the pc address as a 16-digit
     // hex string, e.g. "0x0000000000012345"
     frame_name = GetLoadAddressString(frame.GetPC());
+  }
 
   // We only include `[opt]` if a custom frame format is not specified.
   if (!format && frame.GetFunction().GetIsOptimized())
