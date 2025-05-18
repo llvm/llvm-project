@@ -50,24 +50,24 @@ template <view _View, class _Pred>
   requires input_range<_View> && is_object_v<_Pred> && indirect_unary_predicate<const _Pred, iterator_t<_View>>
 class _LIBCPP_ABI_LLVM18_NO_UNIQUE_ADDRESS drop_while_view : public view_interface<drop_while_view<_View, _Pred>> {
 public:
-  _LIBCPP_HIDE_FROM_ABI drop_while_view()
+  drop_while_view()
     requires default_initializable<_View> && default_initializable<_Pred>
   = default;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _LIBCPP_EXPLICIT_SINCE_CXX23 drop_while_view(_View __base, _Pred __pred)
+  constexpr _LIBCPP_EXPLICIT_SINCE_CXX23 drop_while_view(_View __base, _Pred __pred)
       : __base_(std::move(__base)), __pred_(std::in_place, std::move(__pred)) {}
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _View base() const&
+  constexpr _View base() const&
     requires copy_constructible<_View>
   {
     return __base_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _View base() && { return std::move(__base_); }
+  constexpr _View base() && { return std::move(__base_); }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr const _Pred& pred() const { return *__pred_; }
+  constexpr const _Pred& pred() const { return *__pred_; }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto begin() {
+  constexpr auto begin() {
     // Note: this duplicates a check in `optional` but provides a better error message.
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         __pred_.__has_value(),
@@ -83,7 +83,7 @@ public:
     }
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto end() { return ranges::end(__base_); }
+  constexpr auto end() { return ranges::end(__base_); }
 
 private:
   _LIBCPP_NO_UNIQUE_ADDRESS _View __base_ = _View();
@@ -105,7 +105,7 @@ namespace __drop_while {
 
 struct __fn {
   template <class _Range, class _Pred>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Range&& __range, _Pred&& __pred) const
+  [[nodiscard]] constexpr auto operator()(_Range&& __range, _Pred&& __pred) const
       noexcept(noexcept(/**/ drop_while_view(std::forward<_Range>(__range), std::forward<_Pred>(__pred))))
           -> decltype(/*--*/ drop_while_view(std::forward<_Range>(__range), std::forward<_Pred>(__pred))) {
     return /*-------------*/ drop_while_view(std::forward<_Range>(__range), std::forward<_Pred>(__pred));
@@ -113,7 +113,7 @@ struct __fn {
 
   template <class _Pred>
     requires constructible_from<decay_t<_Pred>, _Pred>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Pred&& __pred) const
+  [[nodiscard]] constexpr auto operator()(_Pred&& __pred) const
       noexcept(is_nothrow_constructible_v<decay_t<_Pred>, _Pred>) {
     return __pipeable(std::__bind_back(*this, std::forward<_Pred>(__pred)));
   }

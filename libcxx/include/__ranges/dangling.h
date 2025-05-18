@@ -26,7 +26,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace ranges {
 struct dangling {
   dangling() = default;
-  _LIBCPP_HIDE_FROM_ABI constexpr dangling(auto&&...) noexcept {}
+  constexpr dangling(auto&&...) noexcept {}
 };
 
 template <range _Rp>

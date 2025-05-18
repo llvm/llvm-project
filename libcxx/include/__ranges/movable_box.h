@@ -59,19 +59,17 @@ class __movable_box {
 public:
   template <class... _Args>
     requires is_constructible_v<_Tp, _Args...>
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit __movable_box(in_place_t, _Args&&... __args) noexcept(
-      is_nothrow_constructible_v<_Tp, _Args...>)
+  constexpr explicit __movable_box(in_place_t, _Args&&... __args) noexcept(is_nothrow_constructible_v<_Tp, _Args...>)
       : __val_(in_place, std::forward<_Args>(__args)...) {}
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __movable_box() noexcept(is_nothrow_default_constructible_v<_Tp>)
+  constexpr __movable_box() noexcept(is_nothrow_default_constructible_v<_Tp>)
     requires default_initializable<_Tp>
       : __val_(in_place) {}
 
-  _LIBCPP_HIDE_FROM_ABI __movable_box(__movable_box const&) = default;
-  _LIBCPP_HIDE_FROM_ABI __movable_box(__movable_box&&)      = default;
+  __movable_box(__movable_box const&) = default;
+  __movable_box(__movable_box&&)      = default;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __movable_box&
-  operator=(__movable_box const& __other) noexcept(is_nothrow_copy_constructible_v<_Tp>)
+  constexpr __movable_box& operator=(__movable_box const& __other) noexcept(is_nothrow_copy_constructible_v<_Tp>)
 #  if _LIBCPP_STD_VER >= 23
     requires copy_constructible<_Tp>
 #  endif
@@ -85,12 +83,11 @@ public:
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI __movable_box& operator=(__movable_box&&)
+  __movable_box& operator=(__movable_box&&)
     requires movable<_Tp>
   = default;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __movable_box&
-  operator=(__movable_box&& __other) noexcept(is_nothrow_move_constructible_v<_Tp>) {
+  constexpr __movable_box& operator=(__movable_box&& __other) noexcept(is_nothrow_move_constructible_v<_Tp>) {
     if (this != std::addressof(__other)) {
       if (__other.__has_value())
         __val_.emplace(std::move(*__other));
@@ -100,13 +97,13 @@ public:
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _Tp const& operator*() const noexcept { return *__val_; }
-  _LIBCPP_HIDE_FROM_ABI constexpr _Tp& operator*() noexcept { return *__val_; }
+  constexpr _Tp const& operator*() const noexcept { return *__val_; }
+  constexpr _Tp& operator*() noexcept { return *__val_; }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr const _Tp* operator->() const noexcept { return __val_.operator->(); }
-  _LIBCPP_HIDE_FROM_ABI constexpr _Tp* operator->() noexcept { return __val_.operator->(); }
+  constexpr const _Tp* operator->() const noexcept { return __val_.operator->(); }
+  constexpr _Tp* operator->() noexcept { return __val_.operator->(); }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr bool __has_value() const noexcept { return __val_.has_value(); }
+  constexpr bool __has_value() const noexcept { return __val_.has_value(); }
 };
 
 // This partial specialization implements an optimization for when we know we don't need to store
@@ -166,8 +163,7 @@ struct __movable_box_holder {
   _Tp __val_;
 
   template <class... _Args>
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit __movable_box_holder(in_place_t, _Args&&... __args)
-      : __val_(std::forward<_Args>(__args)...) {}
+  constexpr explicit __movable_box_holder(in_place_t, _Args&&... __args) : __val_(std::forward<_Args>(__args)...) {}
 };
 
 template <class _Tp>
@@ -176,8 +172,7 @@ struct __movable_box_holder<_Tp> {
   _LIBCPP_NO_UNIQUE_ADDRESS _Tp __val_;
 
   template <class... _Args>
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit __movable_box_holder(in_place_t, _Args&&... __args)
-      : __val_(std::forward<_Args>(__args)...) {}
+  constexpr explicit __movable_box_holder(in_place_t, _Args&&... __args) : __val_(std::forward<_Args>(__args)...) {}
 };
 
 template <__movable_box_object _Tp>
@@ -188,27 +183,27 @@ class __movable_box<_Tp> {
 public:
   template <class... _Args>
     requires is_constructible_v<_Tp, _Args...>
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit __movable_box(in_place_t __inplace, _Args&&... __args) noexcept(
-      is_nothrow_constructible_v<_Tp, _Args...>)
+  constexpr explicit __movable_box(in_place_t __inplace,
+                                   _Args&&... __args) noexcept(is_nothrow_constructible_v<_Tp, _Args...>)
       : __holder_(__inplace, std::forward<_Args>(__args)...) {}
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __movable_box() noexcept(is_nothrow_default_constructible_v<_Tp>)
+  constexpr __movable_box() noexcept(is_nothrow_default_constructible_v<_Tp>)
     requires default_initializable<_Tp>
       : __holder_(in_place_t{}) {}
 
-  _LIBCPP_HIDE_FROM_ABI __movable_box(__movable_box const&) = default;
-  _LIBCPP_HIDE_FROM_ABI __movable_box(__movable_box&&)      = default;
+  __movable_box(__movable_box const&) = default;
+  __movable_box(__movable_box&&)      = default;
 
   // Implementation of assignment operators in case we perform optimization (1)
-  _LIBCPP_HIDE_FROM_ABI __movable_box& operator=(__movable_box const&)
+  __movable_box& operator=(__movable_box const&)
     requires copyable<_Tp>
   = default;
-  _LIBCPP_HIDE_FROM_ABI __movable_box& operator=(__movable_box&&)
+  __movable_box& operator=(__movable_box&&)
     requires movable<_Tp>
   = default;
 
   // Implementation of assignment operators in case we perform optimization (2)
-  _LIBCPP_HIDE_FROM_ABI constexpr __movable_box& operator=(__movable_box const& __other) noexcept {
+  constexpr __movable_box& operator=(__movable_box const& __other) noexcept {
     static_assert(is_nothrow_copy_constructible_v<_Tp>);
     static_assert(!__can_use_no_unique_address<_Tp>);
     if (this != std::addressof(__other)) {
@@ -218,7 +213,7 @@ public:
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __movable_box& operator=(__movable_box&& __other) noexcept {
+  constexpr __movable_box& operator=(__movable_box&& __other) noexcept {
     static_assert(is_nothrow_move_constructible_v<_Tp>);
     static_assert(!__can_use_no_unique_address<_Tp>);
     if (this != std::addressof(__other)) {
@@ -228,13 +223,13 @@ public:
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _Tp const& operator*() const noexcept { return __holder_.__val_; }
-  _LIBCPP_HIDE_FROM_ABI constexpr _Tp& operator*() noexcept { return __holder_.__val_; }
+  constexpr _Tp const& operator*() const noexcept { return __holder_.__val_; }
+  constexpr _Tp& operator*() noexcept { return __holder_.__val_; }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr const _Tp* operator->() const noexcept { return std::addressof(__holder_.__val_); }
-  _LIBCPP_HIDE_FROM_ABI constexpr _Tp* operator->() noexcept { return std::addressof(__holder_.__val_); }
+  constexpr const _Tp* operator->() const noexcept { return std::addressof(__holder_.__val_); }
+  constexpr _Tp* operator->() noexcept { return std::addressof(__holder_.__val_); }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr bool __has_value() const noexcept { return true; }
+  constexpr bool __has_value() const noexcept { return true; }
 };
 } // namespace ranges
 

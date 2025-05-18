@@ -74,36 +74,35 @@ private:
   }
 
 public:
-  _LIBCPP_HIDE_FROM_ABI split_view()
+  split_view()
     requires default_initializable<_View> && default_initializable<_Pattern>
   = default;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _LIBCPP_EXPLICIT_SINCE_CXX23 split_view(_View __base, _Pattern __pattern)
+  constexpr _LIBCPP_EXPLICIT_SINCE_CXX23 split_view(_View __base, _Pattern __pattern)
       : __base_(std::move(__base)), __pattern_(std::move((__pattern))) {}
 
   template <forward_range _Range>
     requires constructible_from<_View, views::all_t<_Range>> &&
                  constructible_from<_Pattern, single_view<range_value_t<_Range>>>
-  _LIBCPP_HIDE_FROM_ABI constexpr _LIBCPP_EXPLICIT_SINCE_CXX23
-  split_view(_Range&& __range, range_value_t<_Range> __elem)
+  constexpr _LIBCPP_EXPLICIT_SINCE_CXX23 split_view(_Range&& __range, range_value_t<_Range> __elem)
       : __base_(views::all(std::forward<_Range>(__range))), __pattern_(views::single(std::move(__elem))) {}
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _View base() const&
+  constexpr _View base() const&
     requires copy_constructible<_View>
   {
     return __base_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _View base() && { return std::move(__base_); }
+  constexpr _View base() && { return std::move(__base_); }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator begin() {
+  constexpr __iterator begin() {
     if (!__cached_begin_.__has_value()) {
       __cached_begin_.__emplace(__find_next(ranges::begin(__base_)));
     }
     return {*this, ranges::begin(__base_), *__cached_begin_};
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto end() {
+  constexpr auto end() {
     if constexpr (common_range<_View>) {
       return __iterator{*this, ranges::end(__base_), {}};
     } else {
@@ -136,17 +135,17 @@ public:
   using value_type        = subrange<iterator_t<_View>>;
   using difference_type   = range_difference_t<_View>;
 
-  _LIBCPP_HIDE_FROM_ABI __iterator() = default;
+  __iterator() = default;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator(
+  constexpr __iterator(
       split_view<_View, _Pattern>& __parent, iterator_t<_View> __current, subrange<iterator_t<_View>> __next)
       : __parent_(std::addressof(__parent)), __cur_(std::move(__current)), __next_(std::move(__next)) {}
 
-  _LIBCPP_HIDE_FROM_ABI constexpr iterator_t<_View> base() const { return __cur_; }
+  constexpr iterator_t<_View> base() const { return __cur_; }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr value_type operator*() const { return {__cur_, __next_.begin()}; }
+  constexpr value_type operator*() const { return {__cur_, __next_.begin()}; }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator++() {
+  constexpr __iterator& operator++() {
     __cur_ = __next_.begin();
     if (__cur_ != ranges::end(__parent_->__base_)) {
       __cur_ = __next_.end();
@@ -162,13 +161,13 @@ public:
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator operator++(int) {
+  constexpr __iterator operator++(int) {
     auto __tmp = *this;
     ++*this;
     return __tmp;
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const __iterator& __x, const __iterator& __y) {
+  friend constexpr bool operator==(const __iterator& __x, const __iterator& __y) {
     return __x.__cur_ == __y.__cur_ && __x.__trailing_empty_ == __y.__trailing_empty_;
   }
 };
@@ -180,19 +179,16 @@ struct split_view<_View, _Pattern>::__sentinel {
 private:
   _LIBCPP_NO_UNIQUE_ADDRESS sentinel_t<_View> __end_ = sentinel_t<_View>();
 
-  _LIBCPP_HIDE_FROM_ABI static constexpr bool __equals(const __iterator& __x, const __sentinel& __y) {
+  static constexpr bool __equals(const __iterator& __x, const __sentinel& __y) {
     return __x.__cur_ == __y.__end_ && !__x.__trailing_empty_;
   }
 
 public:
-  _LIBCPP_HIDE_FROM_ABI __sentinel() = default;
+  __sentinel() = default;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit __sentinel(split_view<_View, _Pattern>& __parent)
-      : __end_(ranges::end(__parent.__base_)) {}
+  constexpr explicit __sentinel(split_view<_View, _Pattern>& __parent) : __end_(ranges::end(__parent.__base_)) {}
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const __iterator& __x, const __sentinel& __y) {
-    return __equals(__x, __y);
-  }
+  friend constexpr bool operator==(const __iterator& __x, const __sentinel& __y) { return __equals(__x, __y); }
 };
 
 namespace views {
@@ -200,8 +196,7 @@ namespace __split_view {
 struct __fn {
   // clang-format off
   template <class _Range, class _Pattern>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI
-  constexpr auto operator()(_Range&& __range, _Pattern&& __pattern) const
+  [[nodiscard]] constexpr auto operator()(_Range&& __range, _Pattern&& __pattern) const
     noexcept(noexcept(split_view(std::forward<_Range>(__range), std::forward<_Pattern>(__pattern))))
     -> decltype(      split_view(std::forward<_Range>(__range), std::forward<_Pattern>(__pattern)))
     { return          split_view(std::forward<_Range>(__range), std::forward<_Pattern>(__pattern)); }
@@ -209,7 +204,7 @@ struct __fn {
 
   template <class _Pattern>
     requires constructible_from<decay_t<_Pattern>, _Pattern>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Pattern&& __pattern) const
+  [[nodiscard]] constexpr auto operator()(_Pattern&& __pattern) const
       noexcept(is_nothrow_constructible_v<decay_t<_Pattern>, _Pattern>) {
     return __pipeable(std::__bind_back(*this, std::forward<_Pattern>(__pattern)));
   }

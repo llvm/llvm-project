@@ -94,21 +94,21 @@ private:
   _LIBCPP_NO_UNIQUE_ADDRESS _InnerCache __inner_;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI join_view()
+  join_view()
     requires default_initializable<_View>
   = default;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit join_view(_View __base) : __base_(std::move(__base)) {}
+  constexpr explicit join_view(_View __base) : __base_(std::move(__base)) {}
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _View base() const&
+  constexpr _View base() const&
     requires copy_constructible<_View>
   {
     return __base_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _View base() && { return std::move(__base_); }
+  constexpr _View base() && { return std::move(__base_); }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto begin() {
+  constexpr auto begin() {
     if constexpr (forward_range<_View>) {
       constexpr bool __use_const = __simple_view<_View> && is_reference_v<range_reference_t<_View>>;
       return __iterator<__use_const>{*this, ranges::begin(__base_)};
@@ -119,14 +119,14 @@ public:
   }
 
   template <class _V2 = _View>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto begin() const
+  constexpr auto begin() const
     requires forward_range<const _V2> && is_reference_v<range_reference_t<const _V2>> &&
              input_range<range_reference_t<const _V2>>
   {
     return __iterator<true>{*this, ranges::begin(__base_)};
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto end() {
+  constexpr auto end() {
     if constexpr (forward_range<_View> && is_reference_v<_InnerRange> && forward_range<_InnerRange> &&
                   common_range<_View> && common_range<_InnerRange>)
       return __iterator<__simple_view<_View>>{*this, ranges::end(__base_)};
@@ -135,7 +135,7 @@ public:
   }
 
   template <class _V2 = _View>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto end() const
+  constexpr auto end() const
     requires forward_range<const _V2> && is_reference_v<range_reference_t<const _V2>> &&
              input_range<range_reference_t<const _V2>>
   {
@@ -161,17 +161,17 @@ private:
   sentinel_t<_Base> __end_      = sentinel_t<_Base>();
 
 public:
-  _LIBCPP_HIDE_FROM_ABI __sentinel() = default;
+  __sentinel() = default;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit __sentinel(_Parent& __parent) : __end_(ranges::end(__parent.__base_)) {}
+  constexpr explicit __sentinel(_Parent& __parent) : __end_(ranges::end(__parent.__base_)) {}
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __sentinel(__sentinel<!_Const> __s)
+  constexpr __sentinel(__sentinel<!_Const> __s)
     requires _Const && convertible_to<sentinel_t<_View>, sentinel_t<_Base>>
       : __end_(std::move(__s.__end_)) {}
 
   template <bool _OtherConst>
     requires sentinel_for<sentinel_t<_Base>, iterator_t<__maybe_const<_OtherConst, _View>>>
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const __iterator<_OtherConst>& __x, const __sentinel& __y) {
+  friend constexpr bool operator==(const __iterator<_OtherConst>& __x, const __sentinel& __y) {
     return __x.__get_outer() == __y.__end_;
   }
 };
@@ -208,7 +208,7 @@ private:
   optional<_Inner> __inner_;
   _Parent* __parent_ = nullptr;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr void __satisfy() {
+  constexpr void __satisfy() {
     for (; __get_outer() != ranges::end(__parent_->__base_); ++__get_outer()) {
       auto&& __inner = [this]() -> auto&& {
         if constexpr (__ref_is_glvalue)
@@ -225,7 +225,7 @@ private:
       __inner_.reset();
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _Outer& __get_outer() {
+  constexpr _Outer& __get_outer() {
     if constexpr (forward_range<_Base>) {
       return __outer_;
     } else {
@@ -233,7 +233,7 @@ private:
     }
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr const _Outer& __get_outer() const {
+  constexpr const _Outer& __get_outer() const {
     if constexpr (forward_range<_Base>) {
       return __outer_;
     } else {
@@ -241,19 +241,19 @@ private:
     }
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator(_Parent& __parent, _Outer __outer)
+  constexpr __iterator(_Parent& __parent, _Outer __outer)
     requires forward_range<_Base>
       : __outer_(std::move(__outer)), __parent_(std::addressof(__parent)) {
     __satisfy();
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit __iterator(_Parent& __parent)
+  constexpr explicit __iterator(_Parent& __parent)
     requires(!forward_range<_Base>)
       : __parent_(std::addressof(__parent)) {
     __satisfy();
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator(_Parent* __parent, _Outer __outer, _Inner __inner)
+  constexpr __iterator(_Parent* __parent, _Outer __outer, _Inner __inner)
     requires forward_range<_Base>
       : __outer_(std::move(__outer)), __inner_(std::move(__inner)), __parent_(__parent) {}
 
@@ -270,21 +270,21 @@ public:
 
   using difference_type = common_type_t< range_difference_t<_Base>, range_difference_t<range_reference_t<_Base>>>;
 
-  _LIBCPP_HIDE_FROM_ABI __iterator() = default;
+  __iterator() = default;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator(__iterator<!_Const> __i)
+  constexpr __iterator(__iterator<!_Const> __i)
     requires _Const && convertible_to<iterator_t<_View>, _Outer> && convertible_to<iterator_t<_InnerRange>, _Inner>
       : __outer_(std::move(__i.__outer_)), __inner_(std::move(__i.__inner_)), __parent_(__i.__parent_) {}
 
-  _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator*() const { return **__inner_; }
+  constexpr decltype(auto) operator*() const { return **__inner_; }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _Inner operator->() const
+  constexpr _Inner operator->() const
     requires __has_arrow<_Inner> && copyable<_Inner>
   {
     return *__inner_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator++() {
+  constexpr __iterator& operator++() {
     auto __get_inner_range = [&]() -> decltype(auto) {
       if constexpr (__ref_is_glvalue)
         return *__get_outer();
@@ -298,9 +298,9 @@ public:
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr void operator++(int) { ++*this; }
+  constexpr void operator++(int) { ++*this; }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator operator++(int)
+  constexpr __iterator operator++(int)
     requires __ref_is_glvalue && forward_range<_Base> && forward_range<range_reference_t<_Base>>
   {
     auto __tmp = *this;
@@ -308,7 +308,7 @@ public:
     return __tmp;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator--()
+  constexpr __iterator& operator--()
     requires __ref_is_glvalue && bidirectional_range<_Base> && bidirectional_range<range_reference_t<_Base>> &&
              common_range<range_reference_t<_Base>>
   {
@@ -324,7 +324,7 @@ public:
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator operator--(int)
+  constexpr __iterator operator--(int)
     requires __ref_is_glvalue && bidirectional_range<_Base> && bidirectional_range<range_reference_t<_Base>> &&
              common_range<range_reference_t<_Base>>
   {
@@ -333,18 +333,18 @@ public:
     return __tmp;
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const __iterator& __x, const __iterator& __y)
+  friend constexpr bool operator==(const __iterator& __x, const __iterator& __y)
     requires __ref_is_glvalue && forward_range<_Base> && equality_comparable<iterator_t<range_reference_t<_Base>>>
   {
     return __x.__outer_ == __y.__outer_ && __x.__inner_ == __y.__inner_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr decltype(auto)
+  friend constexpr decltype(auto)
   iter_move(const __iterator& __i) noexcept(noexcept(ranges::iter_move(*__i.__inner_))) {
     return ranges::iter_move(*__i.__inner_);
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr void
+  friend constexpr void
   iter_swap(const __iterator& __x,
             const __iterator& __y) noexcept(noexcept(ranges::iter_swap(*__x.__inner_, *__y.__inner_)))
     requires indirectly_swappable<_Inner>
@@ -360,7 +360,7 @@ namespace views {
 namespace __join_view {
 struct __fn : __range_adaptor_closure<__fn> {
   template <class _Range>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Range&& __range) const
+  [[nodiscard]] constexpr auto operator()(_Range&& __range) const
       noexcept(noexcept(join_view<all_t<_Range&&>>(std::forward<_Range>(__range))))
           -> decltype(join_view<all_t<_Range&&>>(std::forward<_Range>(__range))) {
     return join_view<all_t<_Range&&>>(std::forward<_Range>(__range));
@@ -384,7 +384,7 @@ struct __segmented_iterator_traits<_JoinViewIterator> {
 
   // TODO: Would it make sense to enable the optimization for other iterator types?
 
-  static constexpr _LIBCPP_HIDE_FROM_ABI __segment_iterator __segment(_JoinViewIterator __iter) {
+  static constexpr __segment_iterator __segment(_JoinViewIterator __iter) {
     if (ranges::empty(__iter.__parent_->__base_))
       return {};
     if (!__iter.__inner_.has_value())
@@ -392,7 +392,7 @@ struct __segmented_iterator_traits<_JoinViewIterator> {
     return __segment_iterator(__iter.__outer_, __iter.__parent_);
   }
 
-  static constexpr _LIBCPP_HIDE_FROM_ABI __local_iterator __local(_JoinViewIterator __iter) {
+  static constexpr __local_iterator __local(_JoinViewIterator __iter) {
     if (ranges::empty(__iter.__parent_->__base_))
       return {};
     if (!__iter.__inner_.has_value())
@@ -400,16 +400,11 @@ struct __segmented_iterator_traits<_JoinViewIterator> {
     return *__iter.__inner_;
   }
 
-  static constexpr _LIBCPP_HIDE_FROM_ABI __local_iterator __begin(__segment_iterator __iter) {
-    return ranges::begin(*__iter.__get_iter());
-  }
+  static constexpr __local_iterator __begin(__segment_iterator __iter) { return ranges::begin(*__iter.__get_iter()); }
 
-  static constexpr _LIBCPP_HIDE_FROM_ABI __local_iterator __end(__segment_iterator __iter) {
-    return ranges::end(*__iter.__get_iter());
-  }
+  static constexpr __local_iterator __end(__segment_iterator __iter) { return ranges::end(*__iter.__get_iter()); }
 
-  static constexpr _LIBCPP_HIDE_FROM_ABI _JoinViewIterator
-  __compose(__segment_iterator __seg_iter, __local_iterator __local_iter) {
+  static constexpr _JoinViewIterator __compose(__segment_iterator __seg_iter, __local_iterator __local_iter) {
     return _JoinViewIterator(
         std::move(__seg_iter).__get_data(), std::move(__seg_iter).__get_iter(), std::move(__local_iter));
   }

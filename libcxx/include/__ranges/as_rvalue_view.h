@@ -42,33 +42,33 @@ class as_rvalue_view : public view_interface<as_rvalue_view<_View>> {
   _LIBCPP_NO_UNIQUE_ADDRESS _View __base_ = _View();
 
 public:
-  _LIBCPP_HIDE_FROM_ABI as_rvalue_view()
+  as_rvalue_view()
     requires default_initializable<_View>
   = default;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit as_rvalue_view(_View __base) : __base_(std::move(__base)) {}
+  constexpr explicit as_rvalue_view(_View __base) : __base_(std::move(__base)) {}
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _View base() const&
+  constexpr _View base() const&
     requires copy_constructible<_View>
   {
     return __base_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _View base() && { return std::move(__base_); }
+  constexpr _View base() && { return std::move(__base_); }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto begin()
+  constexpr auto begin()
     requires(!__simple_view<_View>)
   {
     return move_iterator(ranges::begin(__base_));
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto begin() const
+  constexpr auto begin() const
     requires range<const _View>
   {
     return move_iterator(ranges::begin(__base_));
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto end()
+  constexpr auto end()
     requires(!__simple_view<_View>)
   {
     if constexpr (common_range<_View>) {
@@ -78,7 +78,7 @@ public:
     }
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto end() const
+  constexpr auto end() const
     requires range<const _View>
   {
     if constexpr (common_range<const _View>) {
@@ -88,13 +88,13 @@ public:
     }
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto size()
+  constexpr auto size()
     requires sized_range<_View>
   {
     return ranges::size(__base_);
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto size() const
+  constexpr auto size() const
     requires sized_range<const _View>
   {
     return ranges::size(__base_);
@@ -111,7 +111,7 @@ namespace views {
 namespace __as_rvalue {
 struct __fn : __range_adaptor_closure<__fn> {
   template <class _Range>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto
+  [[nodiscard]] static constexpr auto
   operator()(_Range&& __range) noexcept(noexcept(as_rvalue_view(std::forward<_Range>(__range))))
       -> decltype(/*--------------------------*/ as_rvalue_view(std::forward<_Range>(__range))) {
     return /*---------------------------------*/ as_rvalue_view(std::forward<_Range>(__range));
@@ -119,7 +119,7 @@ struct __fn : __range_adaptor_closure<__fn> {
 
   template <class _Range>
     requires same_as<range_rvalue_reference_t<_Range>, range_reference_t<_Range>>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto
+  [[nodiscard]] static constexpr auto
   operator()(_Range&& __range) noexcept(noexcept(views::all(std::forward<_Range>(__range))))
       -> decltype(/*--------------------------*/ views::all(std::forward<_Range>(__range))) {
     return /*---------------------------------*/ views::all(std::forward<_Range>(__range));

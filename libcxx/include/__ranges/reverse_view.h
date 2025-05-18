@@ -53,21 +53,21 @@ class reverse_view : public view_interface<reverse_view<_View>> {
   _LIBCPP_NO_UNIQUE_ADDRESS _View __base_          = _View();
 
 public:
-  _LIBCPP_HIDE_FROM_ABI reverse_view()
+  reverse_view()
     requires default_initializable<_View>
   = default;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit reverse_view(_View __view) : __base_(std::move(__view)) {}
+  constexpr explicit reverse_view(_View __view) : __base_(std::move(__view)) {}
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _View base() const&
+  constexpr _View base() const&
     requires copy_constructible<_View>
   {
     return __base_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _View base() && { return std::move(__base_); }
+  constexpr _View base() && { return std::move(__base_); }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr reverse_iterator<iterator_t<_View>> begin() {
+  constexpr reverse_iterator<iterator_t<_View>> begin() {
     if constexpr (_UseCache)
       if (__cached_begin_.__has_value())
         return *__cached_begin_;
@@ -78,35 +78,33 @@ public:
     return __tmp;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr reverse_iterator<iterator_t<_View>> begin()
+  constexpr reverse_iterator<iterator_t<_View>> begin()
     requires common_range<_View>
   {
     return std::make_reverse_iterator(ranges::end(__base_));
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto begin() const
+  constexpr auto begin() const
     requires common_range<const _View>
   {
     return std::make_reverse_iterator(ranges::end(__base_));
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr reverse_iterator<iterator_t<_View>> end() {
-    return std::make_reverse_iterator(ranges::begin(__base_));
-  }
+  constexpr reverse_iterator<iterator_t<_View>> end() { return std::make_reverse_iterator(ranges::begin(__base_)); }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto end() const
+  constexpr auto end() const
     requires common_range<const _View>
   {
     return std::make_reverse_iterator(ranges::begin(__base_));
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto size()
+  constexpr auto size()
     requires sized_range<_View>
   {
     return ranges::size(__base_);
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto size() const
+  constexpr auto size() const
     requires sized_range<const _View>
   {
     return ranges::size(__base_);
@@ -156,7 +154,7 @@ struct __unwrapped_reverse_subrange<subrange<reverse_iterator<_Iter>, reverse_it
 struct __fn : __range_adaptor_closure<__fn> {
   template <class _Range>
     requires __is_reverse_view<remove_cvref_t<_Range>>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Range&& __range) const
+  [[nodiscard]] constexpr auto operator()(_Range&& __range) const
       noexcept(noexcept(std::forward<_Range>(__range).base())) -> decltype(std::forward<_Range>(__range).base()) {
     return std::forward<_Range>(__range).base();
   }
@@ -164,7 +162,7 @@ struct __fn : __range_adaptor_closure<__fn> {
   template <class _Range,
             class _UnwrappedSubrange = typename __unwrapped_reverse_subrange<remove_cvref_t<_Range>>::type>
     requires __is_sized_reverse_subrange<remove_cvref_t<_Range>>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Range&& __range) const
+  [[nodiscard]] constexpr auto operator()(_Range&& __range) const
       noexcept(noexcept(_UnwrappedSubrange(__range.end().base(), __range.begin().base(), __range.size())))
           -> decltype(_UnwrappedSubrange(__range.end().base(), __range.begin().base(), __range.size())) {
     return _UnwrappedSubrange(__range.end().base(), __range.begin().base(), __range.size());
@@ -173,7 +171,7 @@ struct __fn : __range_adaptor_closure<__fn> {
   template <class _Range,
             class _UnwrappedSubrange = typename __unwrapped_reverse_subrange<remove_cvref_t<_Range>>::type>
     requires __is_unsized_reverse_subrange<remove_cvref_t<_Range>>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Range&& __range) const
+  [[nodiscard]] constexpr auto operator()(_Range&& __range) const
       noexcept(noexcept(_UnwrappedSubrange(__range.end().base(), __range.begin().base())))
           -> decltype(_UnwrappedSubrange(__range.end().base(), __range.begin().base())) {
     return _UnwrappedSubrange(__range.end().base(), __range.begin().base());
@@ -182,8 +180,9 @@ struct __fn : __range_adaptor_closure<__fn> {
   template <class _Range>
     requires(!__is_reverse_view<remove_cvref_t<_Range>> && !__is_sized_reverse_subrange<remove_cvref_t<_Range>> &&
              !__is_unsized_reverse_subrange<remove_cvref_t<_Range>>)
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Range&& __range) const noexcept(noexcept(reverse_view{
-      std::forward<_Range>(__range)})) -> decltype(reverse_view{std::forward<_Range>(__range)}) {
+  [[nodiscard]] constexpr auto operator()(_Range&& __range) const
+      noexcept(noexcept(reverse_view{std::forward<_Range>(__range)}))
+          -> decltype(reverse_view{std::forward<_Range>(__range)}) {
     return reverse_view{std::forward<_Range>(__range)};
   }
 };

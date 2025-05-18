@@ -41,60 +41,60 @@ class owning_view : public view_interface<owning_view<_Rp>> {
   _Rp __r_ = _Rp();
 
 public:
-  _LIBCPP_HIDE_FROM_ABI owning_view()
+  owning_view()
     requires default_initializable<_Rp>
   = default;
-  _LIBCPP_HIDE_FROM_ABI constexpr owning_view(_Rp&& __r) : __r_(std::move(__r)) {}
+  constexpr owning_view(_Rp&& __r) : __r_(std::move(__r)) {}
 
-  _LIBCPP_HIDE_FROM_ABI owning_view(owning_view&&)            = default;
-  _LIBCPP_HIDE_FROM_ABI owning_view& operator=(owning_view&&) = default;
+  owning_view(owning_view&&)            = default;
+  owning_view& operator=(owning_view&&) = default;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _Rp& base() & noexcept { return __r_; }
-  _LIBCPP_HIDE_FROM_ABI constexpr const _Rp& base() const& noexcept { return __r_; }
-  _LIBCPP_HIDE_FROM_ABI constexpr _Rp&& base() && noexcept { return std::move(__r_); }
-  _LIBCPP_HIDE_FROM_ABI constexpr const _Rp&& base() const&& noexcept { return std::move(__r_); }
+  constexpr _Rp& base() & noexcept { return __r_; }
+  constexpr const _Rp& base() const& noexcept { return __r_; }
+  constexpr _Rp&& base() && noexcept { return std::move(__r_); }
+  constexpr const _Rp&& base() const&& noexcept { return std::move(__r_); }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr iterator_t<_Rp> begin() { return ranges::begin(__r_); }
-  _LIBCPP_HIDE_FROM_ABI constexpr sentinel_t<_Rp> end() { return ranges::end(__r_); }
-  _LIBCPP_HIDE_FROM_ABI constexpr auto begin() const
+  constexpr iterator_t<_Rp> begin() { return ranges::begin(__r_); }
+  constexpr sentinel_t<_Rp> end() { return ranges::end(__r_); }
+  constexpr auto begin() const
     requires range<const _Rp>
   {
     return ranges::begin(__r_);
   }
-  _LIBCPP_HIDE_FROM_ABI constexpr auto end() const
+  constexpr auto end() const
     requires range<const _Rp>
   {
     return ranges::end(__r_);
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr bool empty()
+  constexpr bool empty()
     requires requires { ranges::empty(__r_); }
   {
     return ranges::empty(__r_);
   }
-  _LIBCPP_HIDE_FROM_ABI constexpr bool empty() const
+  constexpr bool empty() const
     requires requires { ranges::empty(__r_); }
   {
     return ranges::empty(__r_);
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto size()
+  constexpr auto size()
     requires sized_range<_Rp>
   {
     return ranges::size(__r_);
   }
-  _LIBCPP_HIDE_FROM_ABI constexpr auto size() const
+  constexpr auto size() const
     requires sized_range<const _Rp>
   {
     return ranges::size(__r_);
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto data()
+  constexpr auto data()
     requires contiguous_range<_Rp>
   {
     return ranges::data(__r_);
   }
-  _LIBCPP_HIDE_FROM_ABI constexpr auto data() const
+  constexpr auto data() const
     requires contiguous_range<const _Rp>
   {
     return ranges::data(__r_);

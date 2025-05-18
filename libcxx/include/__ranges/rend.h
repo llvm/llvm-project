@@ -61,22 +61,19 @@ class __fn {
 public:
   template <class _Tp>
     requires __member_rend<_Tp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __t) const
-      noexcept(noexcept(_LIBCPP_AUTO_CAST(__t.rend()))) {
+  [[nodiscard]] constexpr auto operator()(_Tp&& __t) const noexcept(noexcept(_LIBCPP_AUTO_CAST(__t.rend()))) {
     return _LIBCPP_AUTO_CAST(__t.rend());
   }
 
   template <class _Tp>
     requires __unqualified_rend<_Tp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __t) const
-      noexcept(noexcept(_LIBCPP_AUTO_CAST(rend(__t)))) {
+  [[nodiscard]] constexpr auto operator()(_Tp&& __t) const noexcept(noexcept(_LIBCPP_AUTO_CAST(rend(__t)))) {
     return _LIBCPP_AUTO_CAST(rend(__t));
   }
 
   template <class _Tp>
     requires __can_reverse<_Tp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __t) const
-      noexcept(noexcept(ranges::begin(__t))) {
+  [[nodiscard]] constexpr auto operator()(_Tp&& __t) const noexcept(noexcept(ranges::begin(__t))) {
     return std::make_reverse_iterator(ranges::begin(__t));
   }
 
@@ -96,7 +93,7 @@ namespace __crend {
 struct __fn {
   template <class _Tp>
     requires is_lvalue_reference_v<_Tp&&>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __t) const
+  [[nodiscard]] constexpr auto operator()(_Tp&& __t) const
       noexcept(noexcept(ranges::rend(static_cast<const remove_reference_t<_Tp>&>(__t))))
           -> decltype(ranges::rend(static_cast<const remove_reference_t<_Tp>&>(__t))) {
     return ranges::rend(static_cast<const remove_reference_t<_Tp>&>(__t));
@@ -104,8 +101,9 @@ struct __fn {
 
   template <class _Tp>
     requires is_rvalue_reference_v<_Tp&&>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __t) const noexcept(
-      noexcept(ranges::rend(static_cast<const _Tp&&>(__t)))) -> decltype(ranges::rend(static_cast<const _Tp&&>(__t))) {
+  [[nodiscard]] constexpr auto operator()(_Tp&& __t) const
+      noexcept(noexcept(ranges::rend(static_cast<const _Tp&&>(__t))))
+          -> decltype(ranges::rend(static_cast<const _Tp&&>(__t))) {
     return ranges::rend(static_cast<const _Tp&&>(__t));
   }
 };

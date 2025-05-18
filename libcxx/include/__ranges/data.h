@@ -51,13 +51,12 @@ concept __ranges_begin_invocable = !__member_data<_Tp> && __can_borrow<_Tp> && r
 
 struct __fn {
   template <__member_data _Tp>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __t) const noexcept(noexcept(__t.data())) {
+  constexpr auto operator()(_Tp&& __t) const noexcept(noexcept(__t.data())) {
     return __t.data();
   }
 
   template <__ranges_begin_invocable _Tp>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __t) const
-      noexcept(noexcept(std::to_address(ranges::begin(__t)))) {
+  constexpr auto operator()(_Tp&& __t) const noexcept(noexcept(std::to_address(ranges::begin(__t)))) {
     return std::to_address(ranges::begin(__t));
   }
 };
@@ -75,7 +74,7 @@ namespace __cdata {
 struct __fn {
   template <class _Tp>
     requires is_lvalue_reference_v<_Tp&&>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __t) const
+  [[nodiscard]] constexpr auto operator()(_Tp&& __t) const
       noexcept(noexcept(ranges::data(static_cast<const remove_reference_t<_Tp>&>(__t))))
           -> decltype(ranges::data(static_cast<const remove_reference_t<_Tp>&>(__t))) {
     return ranges::data(static_cast<const remove_reference_t<_Tp>&>(__t));
@@ -83,8 +82,9 @@ struct __fn {
 
   template <class _Tp>
     requires is_rvalue_reference_v<_Tp&&>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __t) const noexcept(
-      noexcept(ranges::data(static_cast<const _Tp&&>(__t)))) -> decltype(ranges::data(static_cast<const _Tp&&>(__t))) {
+  [[nodiscard]] constexpr auto operator()(_Tp&& __t) const
+      noexcept(noexcept(ranges::data(static_cast<const _Tp&&>(__t))))
+          -> decltype(ranges::data(static_cast<const _Tp&&>(__t))) {
     return ranges::data(static_cast<const _Tp&&>(__t));
   }
 };

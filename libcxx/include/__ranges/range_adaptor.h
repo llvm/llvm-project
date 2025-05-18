@@ -53,7 +53,7 @@ struct __range_adaptor_closure {};
 // i.e. something that can be called via the `x | f` notation.
 template <class _Fn>
 struct __pipeable : _Fn, __range_adaptor_closure<__pipeable<_Fn>> {
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit __pipeable(_Fn&& __f) : _Fn(std::move(__f)) {}
+  constexpr explicit __pipeable(_Fn&& __f) : _Fn(std::move(__f)) {}
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(__pipeable);
 
@@ -69,14 +69,14 @@ concept _RangeAdaptorClosure = !ranges::range<remove_cvref_t<_Tp>> && requires {
 
 template <ranges::range _Range, _RangeAdaptorClosure _Closure>
   requires invocable<_Closure, _Range>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto)
+[[nodiscard]] constexpr decltype(auto)
 operator|(_Range&& __range, _Closure&& __closure) noexcept(is_nothrow_invocable_v<_Closure, _Range>) {
   return std::invoke(std::forward<_Closure>(__closure), std::forward<_Range>(__range));
 }
 
 template <_RangeAdaptorClosure _Closure, _RangeAdaptorClosure _OtherClosure>
   requires constructible_from<decay_t<_Closure>, _Closure> && constructible_from<decay_t<_OtherClosure>, _OtherClosure>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator|(_Closure&& __c1, _OtherClosure&& __c2) noexcept(
+[[nodiscard]] constexpr auto operator|(_Closure&& __c1, _OtherClosure&& __c2) noexcept(
     is_nothrow_constructible_v<decay_t<_Closure>, _Closure> &&
     is_nothrow_constructible_v<decay_t<_OtherClosure>, _OtherClosure>) {
   return __pipeable(std::__compose(std::forward<_OtherClosure>(__c2), std::forward<_Closure>(__c1)));
