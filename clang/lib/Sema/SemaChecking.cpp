@@ -9155,9 +9155,7 @@ static bool IsStdFunction(const FunctionDecl *FDecl,
 enum class MathCheck { NaN, Inf };
 static bool IsInfOrNanFunction(StringRef calleeName, MathCheck Check) {
   auto MatchesAny = [&](std::initializer_list<llvm::StringRef> names) {
-    return std::any_of(names.begin(), names.end(), [&](llvm::StringRef name) {
-      return calleeName == name;
-    });
+    return llvm::is_contained(names, calleeName);
   };
 
   switch (Check) {
