@@ -25,9 +25,6 @@ std::unique_ptr<Pass> createLowerVectorMultiReductionPass(
     VectorMultiReductionLowering option =
         VectorMultiReductionLowering::InnerParallel);
 
-/// Creates a pass that implements the SLP vectorizer.
-std::unique_ptr<Pass> createSLPVectorizerPass();
-
 //===----------------------------------------------------------------------===//
 // Registration
 //===----------------------------------------------------------------------===//

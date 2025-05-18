@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --slp-vectorizer | FileCheck %s
+// RUN: mlir-opt %s --greedy-slp-vectorizer | FileCheck %s
 
 
 // CHECK-LABEL: func @read_write
