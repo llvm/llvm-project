@@ -36,33 +36,6 @@ void AArch64SelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
   switch (N->getOpcode()) {
   default:
     return SelectionDAGGenTargetInfo::verifyTargetNode(DAG, N);
-  case AArch64ISD::GLDFF1S_IMM_MERGE_ZERO:
-  case AArch64ISD::GLDFF1S_MERGE_ZERO:
-  case AArch64ISD::GLDFF1S_SCALED_MERGE_ZERO:
-  case AArch64ISD::GLDFF1S_SXTW_MERGE_ZERO:
-  case AArch64ISD::GLDFF1S_SXTW_SCALED_MERGE_ZERO:
-  case AArch64ISD::GLDFF1S_UXTW_MERGE_ZERO:
-  case AArch64ISD::GLDFF1S_UXTW_SCALED_MERGE_ZERO:
-  case AArch64ISD::GLDFF1_IMM_MERGE_ZERO:
-  case AArch64ISD::GLDFF1_MERGE_ZERO:
-  case AArch64ISD::GLDFF1_SCALED_MERGE_ZERO:
-  case AArch64ISD::GLDFF1_SXTW_MERGE_ZERO:
-  case AArch64ISD::GLDFF1_SXTW_SCALED_MERGE_ZERO:
-  case AArch64ISD::GLDFF1_UXTW_MERGE_ZERO:
-  case AArch64ISD::GLDFF1_UXTW_SCALED_MERGE_ZERO:
-  case AArch64ISD::LDFF1S_MERGE_ZERO:
-  case AArch64ISD::LDFF1_MERGE_ZERO:
-  case AArch64ISD::LDNF1S_MERGE_ZERO:
-  case AArch64ISD::LDNF1_MERGE_ZERO:
-    // invalid number of results; expected 3, got 2
-  case AArch64ISD::SMSTOP:
-  case AArch64ISD::COALESCER_BARRIER:
-    // invalid number of results; expected 2, got 1
-  case AArch64ISD::SMSTART:
-    // variadic operand #3 must be Register or RegisterMask
-  case AArch64ISD::REVD_MERGE_PASSTHRU:
-    // invalid number of operands; expected 3, got 4
-    return;
   case AArch64ISD::SADDWT:
   case AArch64ISD::SADDWB:
   case AArch64ISD::UADDWT:
