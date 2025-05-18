@@ -19,6 +19,7 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/PassRegistry.h"
@@ -243,13 +244,48 @@ bool MachineLoop::isLoopInvariantImplicitPhysReg(Register Reg) const {
       [this](const MachineInstr &MI) { return this->contains(&MI); });
 }
 
-bool MachineLoop::isLoopInvariant(MachineInstr &I,
-                                  const Register ExcludeReg) const {
+/// Return true if this is a "constant" load.
+static bool isInvariantLoad(MachineInstr &MI) {
+  assert(MI.mayLoad() && "Expected MI that loads!");
+
+  // If we lost memory operands, conservatively assume that the instruction
+  // reads from everything..
+  if (MI.memoperands_empty())
+    return false;
+
+  for (MachineMemOperand *MemOp : MI.memoperands()) {
+    if (MemOp->isInvariant())
+      continue;
+    if (const PseudoSourceValue *PSV = MemOp->getPseudoValue()) {
+      // TODO: use `!PSV->isConstant(MFI)`
+      if (!PSV->isConstantPool() && !PSV->isGOT())
+        return false;
+      continue;
+    } else if (const Value *V = MemOp->getValue()) {
+      if (!isa<UndefValue>(V))
+        return false;
+      continue;
+    } else {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bool MachineLoop::isLoopInvariant(MachineInstr &I, const Register ExcludeReg,
+                                  bool IgnoreAliasing) const {
   MachineFunction *MF = I.getParent()->getParent();
   MachineRegisterInfo *MRI = &MF->getRegInfo();
   const TargetSubtargetInfo &ST = MF->getSubtarget();
   const TargetRegisterInfo *TRI = ST.getRegisterInfo();
   const TargetInstrInfo *TII = ST.getInstrInfo();
+
+  // TODO: If the address of a load is loop-invariant and doesn't alias any
+  // store in the loop then it is loop-invariant. For now only handle constant
+  // loads.
+  if (I.mayLoad() && !isInvariantLoad(I) && !IgnoreAliasing)
+    return false;
 
   // The instruction is loop invariant if all of its operands are.
   for (const MachineOperand &MO : I.operands()) {
