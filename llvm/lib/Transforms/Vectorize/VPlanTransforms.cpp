@@ -1622,9 +1622,8 @@ static void licm(VPlan &Plan) {
       // TODO: Relax checks in the future, e.g. we could also hoist reads, if
       // their memory location is not modified in the vector loop.
       if (R.mayHaveSideEffects() || R.mayReadFromMemory() || R.isPhi() ||
-          any_of(R.operands(), [](VPValue *Op) {
-            return !Op->isDefinedOutsideLoopRegions();
-          }))
+          any_of(R.operands(),
+                 [](VPValue *Op) { return !Op->isDefinedOutsideLoop(); }))
         continue;
       R.moveBefore(*Preheader, Preheader->end());
     }
@@ -2389,6 +2388,18 @@ void VPlanTransforms::createInterleaveGroups(
         MemberR->eraseFromParent();
       }
   }
+}
+
+void VPlanTransforms::dissolveLoopRegions(VPlan &Plan) {
+  // Replace loop regions with explicity CFG.
+  SmallVector<VPRegionBlock *> LoopRegions;
+  for (VPRegionBlock *R : VPBlockUtils::blocksOnly<VPRegionBlock>(
+           vp_depth_first_deep(Plan.getEntry()))) {
+    if (!R->isReplicator())
+      LoopRegions.push_back(R);
+  }
+  for (VPRegionBlock *R : LoopRegions)
+    R->removeRegion();
 }
 
 // Expand VPExtendedReductionRecipe to VPWidenCastRecipe + VPReductionRecipe.

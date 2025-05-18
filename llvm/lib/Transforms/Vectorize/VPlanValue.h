@@ -181,8 +181,8 @@ public:
     return getUnderlyingValue();
   }
 
-  /// Returns true if the VPValue is defined outside any loop region.
-  bool isDefinedOutsideLoopRegions() const;
+  /// Returns true if the VPValue is defined outside any loop.
+  bool isDefinedOutsideLoop() const;
 
   // Set \p Val as the underlying Value of this VPValue.
   void setUnderlyingValue(Value *Val) {
