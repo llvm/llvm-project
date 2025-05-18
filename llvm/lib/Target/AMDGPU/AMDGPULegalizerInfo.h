@@ -241,8 +241,8 @@ public:
                                MachineIRBuilder &B) const;
   bool legalizeTrapHsa(MachineInstr &MI, MachineRegisterInfo &MRI,
                        MachineIRBuilder &B) const;
-  bool legalizeDebugTrap(MachineInstr &MI, MachineRegisterInfo &MRI,
-                         MachineIRBuilder &B) const;
+  bool legalizeDebugUbsanTrap(MachineInstr &MI, MachineRegisterInfo &MRI,
+                              MachineIRBuilder &B, unsigned int Opcode) const;
 
   bool legalizeIntrinsic(LegalizerHelper &Helper,
                          MachineInstr &MI) const override;
