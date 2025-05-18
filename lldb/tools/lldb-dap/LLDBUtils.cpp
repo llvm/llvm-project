@@ -247,8 +247,8 @@ std::string GetSBFileSpecPath(const lldb::SBFileSpec &file_spec) {
   const auto directory_length = ::strlen(file_spec.GetDirectory());
   const auto file_name_length = ::strlen(file_spec.GetFilename());
 
-  std::string path(directory_length + file_name_length + 2, '\0');
-  file_spec.GetPath(path.data(), path.length());
+  std::string path(directory_length + file_name_length + 1, '\0');
+  file_spec.GetPath(path.data(), path.length() + 1);
   return path;
 }
 
