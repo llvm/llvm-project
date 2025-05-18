@@ -39,6 +39,7 @@ convertSparseTensorType(RankedTensorType rtp, SmallVectorImpl<Type> &fields) {
     return std::nullopt;
 
   unsigned numFields = fields.size();
+  (void)numFields;
   foreachFieldAndTypeInSparseTensor(
       stt,
       [&](Type fieldType, FieldIndex fieldIdx,
