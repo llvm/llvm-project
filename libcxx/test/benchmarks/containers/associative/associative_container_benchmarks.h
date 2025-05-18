@@ -47,14 +47,6 @@ void associative_container_benchmarks(std::string container) {
     return std::vector<Key>(keys.begin(), keys.end());
   };
 
-  auto generate_expensive_keys = [=](std::size_t n) {
-    std::vector<Key> keys;
-    for (std::size_t i = 0; i < n; ++i) {
-      keys.push_back(Generate<Key>::expensive());
-    }
-    return keys;
-  };
-
   auto make_value_types = [](std::vector<Key> const& keys) {
     std::vector<Value> kv;
     for (Key const& k : keys)
@@ -65,7 +57,8 @@ void associative_container_benchmarks(std::string container) {
   auto get_key = [](Value const& v) { return adapt_operations<Container>::key_from_value(v); };
 
   auto bench = [&](std::string operation, auto f) {
-    benchmark::RegisterBenchmark(container + "::" + operation, f)->Arg(32)->Arg(1024)->Arg(8192);
+    // Note: Add zero to the range for empty containers.
+    benchmark::RegisterBenchmark(container + "::" + operation, f)->Arg(0)->Arg(32)->Arg(1024)->Arg(8192);
   };
 
   static constexpr bool is_multi_key_container =
@@ -180,7 +173,8 @@ void associative_container_benchmarks(std::string container) {
   // Insertion
   /////////////////////////
   bench("insert(value) (already present)", [=](auto& st) {
-    const std::size_t size = st.range(0);
+    // Make sure non-empty container for |to_insert| to be present and no segfault.
+    const std::size_t size = st.range(0) ? st.range(0) : 1;
     std::vector<Value> in  = make_value_types(generate_unique_keys(size));
     Value to_insert        = in[in.size() / 2]; // pick any existing value
     std::vector<Container> c(BatchSize, Container(in.begin(), in.end()));
@@ -333,7 +327,7 @@ void associative_container_benchmarks(std::string container) {
   // Erasure
   /////////////////////////
   bench("erase(key) (existent)", [=](auto& st) {
-    const std::size_t size = st.range(0);
+    const std::size_t size = st.range(0) ? st.range(0) : 1; // avoid empty container
     std::vector<Value> in  = make_value_types(generate_unique_keys(size));
     Value element          = in[in.size() / 2]; // pick any element
     std::vector<Container> c(BatchSize, Container(in.begin(), in.end()));
@@ -377,7 +371,7 @@ void associative_container_benchmarks(std::string container) {
   });
 
   bench("erase(iterator)", [=](auto& st) {
-    const std::size_t size = st.range(0);
+    const std::size_t size = st.range(0) ? st.range(0) : 1; // avoid empty container
     std::vector<Value> in  = make_value_types(generate_unique_keys(size));
     Value element          = in[in.size() / 2]; // pick any element
 
@@ -456,7 +450,7 @@ void associative_container_benchmarks(std::string container) {
       Container c(in.begin(), in.end());
 
       while (st.KeepRunningBatch(BatchSize)) {
-        for (std::size_t i = 0; i != BatchSize; ++i) {
+        for (std::size_t i = 0; i != keys.size(); ++i) { // possible empty keys when Arg(0)
           auto result = func(c, keys[i]);
           benchmark::DoNotOptimize(c);
           benchmark::DoNotOptimize(result);
@@ -488,37 +482,17 @@ void associative_container_benchmarks(std::string container) {
     };
   };
 
-  auto with_expensive_key_empty = [=](auto func) {
-    return [=](auto& st) {
-        const std::size_t size = st.range(0);
-        std::vector<Key> keys = generate_expensive_keys(size);
-        Container c;
-
-        while (st.KeepRunningBatch(BatchSize)) {
-          for (std::size_t i = 0; i != BatchSize; ++i) {
-            auto result = func(c, keys[i]);
-            benchmark::DoNotOptimize(c);
-            benchmark::DoNotOptimize(result);
-            benchmark::ClobberMemory();
-          }
-        }
-      };
-  };
-
   auto find = [](Container const& c, Key const& key) { return c.find(key); };
   bench("find(key) (existent)", with_existent_key(find));
   bench("find(key) (non-existent)", with_nonexistent_key(find));
-  bench("find(key) (expensive-empty)", with_expensive_key_empty(find));
 
   auto count = [](Container const& c, Key const& key) { return c.count(key); };
   bench("count(key) (existent)", with_existent_key(count));
   bench("count(key) (non-existent)", with_nonexistent_key(count));
-  bench("count(key) (expensive-empty)", with_expensive_key_empty(count));
 
   auto contains = [](Container const& c, Key const& key) { return c.contains(key); };
   bench("contains(key) (existent)", with_existent_key(contains));
   bench("contains(key) (non-existent)", with_nonexistent_key(contains));
-  bench("contains(key) (expensive-empty)", with_expensive_key_empty(contains));
 
   if constexpr (is_ordered_container) {
     auto lower_bound = [](Container const& c, Key const& key) { return c.lower_bound(key); };
