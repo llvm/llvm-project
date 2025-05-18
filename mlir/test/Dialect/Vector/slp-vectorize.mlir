@@ -403,3 +403,47 @@ func.func @read_read_add_write_interleaved_use(%arg0: memref<8xi32>, %arg1: memr
 
   return
 }
+
+
+// CHECK-LABEL: func @read_read_add_write_interleaved_use_add
+//  CHECK-SAME: (%[[ARG0:.*]]: memref<8xi32>, %[[ARG1:.*]]: memref<8xi32>)
+func.func @read_read_add_write_interleaved_use_add(%arg0: memref<8xi32>, %arg1: memref<8xi32>) {
+  // CHECK:     %[[C0:.*]] = arith.constant 0 : index
+  // CHECK:     %[[V0:.*]] = vector.load %[[ARG0]][%[[C0]]] : memref<8xi32>, vector<4xi32>
+  // CHECK:     %[[V1:.*]] = vector.extract %[[V0]][3] : i32 from vector<4xi32>
+  // CHECK:     %[[V2:.*]] = vector.load %[[ARG1]][%[[C0]]] : memref<8xi32>, vector<4xi32>
+  // CHECK:     %[[V3:.*]] = vector.extract %[[V2]][3] : i32 from vector<4xi32>
+  // CHECK:     %[[V4:.*]] = arith.subi %[[V1]], %[[V3]] : i32
+  // CHECK:     %[[V5:.*]] = arith.addi %[[V0]], %[[V2]] : vector<4xi32>
+  // CHECK:     vector.store %[[V5]], %[[ARG0]][%[[C0]]] : memref<8xi32>, vector<4xi32>
+  // CHECK:     call @use(%[[V4]]) : (i32) -> ()
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c3 = arith.constant 3 : index
+
+  %3 = memref.load %arg0[%c3] : memref<8xi32>
+  %7 = memref.load %arg1[%c3] : memref<8xi32>
+  %12 = arith.subi %3, %7 : i32
+  %11 = arith.addi %3, %7 : i32
+
+  %0 = memref.load %arg0[%c0] : memref<8xi32>
+  %4 = memref.load %arg1[%c0] : memref<8xi32>
+  %8 = arith.addi %0, %4 : i32
+
+  %2 = memref.load %arg0[%c2] : memref<8xi32>
+  %6 = memref.load %arg1[%c2] : memref<8xi32>
+  %10 = arith.addi %2, %6 : i32
+
+  %1 = memref.load %arg0[%c1] : memref<8xi32>
+  %5 = memref.load %arg1[%c1] : memref<8xi32>
+  %9 = arith.addi %1, %5 : i32
+
+  memref.store %8, %arg0[%c0] : memref<8xi32>
+  memref.store %11, %arg0[%c3] : memref<8xi32>
+  memref.store %10, %arg0[%c2] : memref<8xi32>
+  memref.store %9, %arg0[%c1] : memref<8xi32>
+
+  call @use(%12) : (i32) -> ()
+  return
+}
