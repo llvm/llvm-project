@@ -35,6 +35,7 @@ public:
   using UseT = typename ContextT::UseT;
   using InstructionT = typename ContextT::InstructionT;
   using DominatorTreeT = typename ContextT::DominatorTreeT;
+  using PostDominatorTreeT = typename ContextT::PostDominatorTreeT;
   using ThisT = GenericUniformityInfo<ContextT>;
 
   using CycleInfoT = GenericCycleInfo<ContextT>;
@@ -43,7 +44,8 @@ public:
   using TemporalDivergenceTuple =
       std::tuple<ConstValueRefT, InstructionT *, const CycleT *>;
 
-  GenericUniformityInfo(const DominatorTreeT &DT, const CycleInfoT &CI,
+  GenericUniformityInfo(const DominatorTreeT &DT, const PostDominatorTreeT &PDT,
+                        const CycleInfoT &CI,
                         const TargetTransformInfo *TTI = nullptr);
   GenericUniformityInfo() = default;
   GenericUniformityInfo(GenericUniformityInfo &&) = default;
