@@ -25,6 +25,7 @@
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/LowLevelTypeUtils.h"
@@ -35,6 +36,7 @@
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/ValueTypes.h"
@@ -296,10 +298,61 @@ struct OutgoingArgHandler : public CallLowering::OutgoingValueHandler {
     MIRBuilder.buildCopy(PhysReg, ExtReg);
   }
 
+  /// Check whether a stack argument requires lowering in a tail call.
+  static bool shouldLowerTailCallStackArg(const MachineFunction &MF,
+                                          const CCValAssign &VA,
+                                          Register ValVReg,
+                                          Register StoreAddr) {
+    // Print the defining instruction for the value.
+    auto *DefMI = MF.getRegInfo().getVRegDef(ValVReg);
+    assert(DefMI && "No defining instruction");
+    for (;;) {
+      // Look through nodes that don't alter the bits of the incoming value.
+      unsigned Op = DefMI->getOpcode();
+      if (Op == TargetOpcode::G_ZEXT || Op == TargetOpcode::G_ANYEXT ||
+          Op == TargetOpcode::G_TRUNC || Op == TargetOpcode::G_BITCAST ||
+          Op == TargetOpcode::G_ASSERT_ZEXT ||
+          Op == TargetOpcode::G_ASSERT_SEXT) {
+        DefMI = MF.getRegInfo().getVRegDef(DefMI->getOperand(1).getReg());
+        continue;
+      }
+      break;
+    }
+
+    auto *Load = dyn_cast<GLoad>(DefMI);
+    if (!Load)
+      return true;
+    Register LoadReg = Load->getPointerReg();
+    auto *LoadAddrDef = MF.getRegInfo().getVRegDef(LoadReg);
+    assert(LoadAddrDef && "No defining instruction");
+    if (LoadAddrDef->getOpcode() != TargetOpcode::G_FRAME_INDEX)
+      return true;
+    assert(LoadAddrDef && "No defining instruction");
+    const MachineFrameInfo &MFI = MF.getFrameInfo();
+    int LoadFI = LoadAddrDef->getOperand(1).getIndex();
+
+    auto *StoreAddrDef = MF.getRegInfo().getVRegDef(StoreAddr);
+    assert(StoreAddrDef && "No defining instruction");
+    if (StoreAddrDef->getOpcode() != TargetOpcode::G_FRAME_INDEX)
+      return true;
+    int StoreFI = StoreAddrDef->getOperand(1).getIndex();
+
+    if (!MFI.isImmutableObjectIndex(LoadFI))
+      return true;
+    if (MFI.getObjectOffset(LoadFI) != MFI.getObjectOffset(StoreFI))
+      return true;
+    if (Load->getMemSize() != MFI.getObjectSize(StoreFI))
+      return true;
+
+    return false;
+  }
+
   void assignValueToAddress(Register ValVReg, Register Addr, LLT MemTy,
                             const MachinePointerInfo &MPO,
                             const CCValAssign &VA) override {
     MachineFunction &MF = MIRBuilder.getMF();
+    if (!shouldLowerTailCallStackArg(MF, VA, ValVReg, Addr))
+      return;
     auto MMO = MF.getMachineMemOperand(MPO, MachineMemOperand::MOStore, MemTy,
                                        inferAlignFromPtrInfo(MF, MPO));
     MIRBuilder.buildStore(ValVReg, Addr, *MMO);
