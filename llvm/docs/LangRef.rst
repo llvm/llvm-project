@@ -18176,7 +18176,7 @@ on any integer bit width or vectors of integers.
 Overview
 """""""""
 
-The '``llvm.clmul``' family of intrinsics functions perform carryless multiplication
+The '``llvm.clmul``' family of intrinsic functions performs carryless multiplication
 (also known as xor multiplication) on the 2 arguments.
 
 Arguments
