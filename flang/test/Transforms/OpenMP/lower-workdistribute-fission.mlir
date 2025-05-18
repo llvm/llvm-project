@@ -6,20 +6,26 @@
 // CHECK:           %[[VAL_2:.*]] = arith.constant 9 : index
 // CHECK:           %[[VAL_3:.*]] = arith.constant 5.000000e+00 : f32
 // CHECK:           fir.store %[[VAL_3]] to %[[ARG2:.*]] : !fir.ref<f32>
-// CHECK:           fir.do_loop %[[VAL_4:.*]] = %[[VAL_0]] to %[[VAL_2]] step %[[VAL_1]] unordered {
-// CHECK:             %[[VAL_5:.*]] = fir.coordinate_of %[[ARG0:.*]], %[[VAL_4]] : (!fir.ref<!fir.array<10xf32>>, index) -> !fir.ref<f32>
-// CHECK:             %[[VAL_6:.*]] = fir.load %[[VAL_5]] : !fir.ref<f32>
-// CHECK:             %[[VAL_7:.*]] = fir.coordinate_of %[[ARG1:.*]], %[[VAL_4]] : (!fir.ref<!fir.array<10xf32>>, index) -> !fir.ref<f32>
-// CHECK:             fir.store %[[VAL_6]] to %[[VAL_7]] : !fir.ref<f32>
+// CHECK:           omp.parallel {
+// CHECK:             omp.wsloop {
+// CHECK:               omp.loop_nest (%[[VAL_4:.*]]) : index = (%[[VAL_0]]) to (%[[VAL_2]]) inclusive step (%[[VAL_1]]) {
+// CHECK:                 %[[VAL_5:.*]] = fir.coordinate_of %[[ARG0:.*]], %[[VAL_4]] : (!fir.ref<!fir.array<10xf32>>, index) -> !fir.ref<f32>
+// CHECK:                 %[[VAL_6:.*]] = fir.load %[[VAL_5]] : !fir.ref<f32>
+// CHECK:                 %[[VAL_7:.*]] = fir.coordinate_of %[[ARG1:.*]], %[[VAL_4]] : (!fir.ref<!fir.array<10xf32>>, index) -> !fir.ref<f32>
+// CHECK:                 fir.store %[[VAL_6]] to %[[VAL_7]] : !fir.ref<f32>
+// CHECK:                 omp.yield
+// CHECK:               }
+// CHECK:             }
+// CHECK:             omp.terminator
 // CHECK:           }
 // CHECK:           fir.call @regular_side_effect_func(%[[ARG2:.*]]) : (!fir.ref<f32>) -> ()
 // CHECK:           fir.call @my_fir_parallel_runtime_func(%[[ARG3:.*]]) : (!fir.ref<f32>) -> ()
 // CHECK:           fir.do_loop %[[VAL_8:.*]] = %[[VAL_0]] to %[[VAL_2]] step %[[VAL_1]] {
-// CHECK:             %[[VAL_9:.*]] = fir.coordinate_of %[[ARG0:.*]], %[[VAL_8]] : (!fir.ref<!fir.array<10xf32>>, index) -> !fir.ref<f32>
+// CHECK:             %[[VAL_9:.*]] = fir.coordinate_of %[[ARG0]], %[[VAL_8]] : (!fir.ref<!fir.array<10xf32>>, index) -> !fir.ref<f32>
 // CHECK:             fir.store %[[VAL_3]] to %[[VAL_9]] : !fir.ref<f32>
 // CHECK:           }
-// CHECK:           %[[VAL_10:.*]] = fir.load %[[ARG2:.*]] : !fir.ref<f32>
-// CHECK:           fir.store %[[VAL_10]] to %[[ARG3:.*]] : !fir.ref<f32>
+// CHECK:           %[[VAL_10:.*]] = fir.load %[[ARG2]] : !fir.ref<f32>
+// CHECK:           fir.store %[[VAL_10]] to %[[ARG3]] : !fir.ref<f32>
 // CHECK:           return
 // CHECK:         }
 module {

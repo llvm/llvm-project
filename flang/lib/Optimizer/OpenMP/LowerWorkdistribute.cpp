@@ -6,18 +6,22 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements the lowering of omp.workdistribute.
+// This file implements the lowering and optimisations of omp.workdistribute.
 //
 //===----------------------------------------------------------------------===//
 
+#include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "flang/Optimizer/HLFIR/Passes.h"
+#include "flang/Optimizer/OpenMP/Utils.h"
+#include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Value.h"
+#include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include <mlir/Dialect/Arith/IR/Arith.h>
 #include <mlir/Dialect/LLVMIR/LLVMTypes.h>
@@ -29,6 +33,7 @@
 #include <mlir/IR/PatternMatch.h>
 #include <mlir/Interfaces/SideEffectInterfaces.h>
 #include <mlir/Support/LLVM.h>
+#include "mlir/Transforms/RegionUtils.h"
 #include <optional>
 #include <variant>
 
@@ -86,25 +91,6 @@ static bool shouldParallelize(Operation *op) {
     // We cannot parallise anything else
     return false;
 }
-
-struct WorkdistributeToSingle : public OpRewritePattern<omp::TeamsOp> {
-    using OpRewritePattern::OpRewritePattern;
-    LogicalResult matchAndRewrite(omp::TeamsOp teamsOp,
-                                    PatternRewriter &rewriter) const override {
-        auto workdistributeOp = getPerfectlyNested<omp::WorkdistributeOp>(teamsOp);
-        if (!workdistributeOp) {
-            LLVM_DEBUG(llvm::dbgs() << DEBUG_TYPE << " No workdistribute nested\n");
-            return failure();
-        }
-      
-        Block *workdistributeBlock = &workdistributeOp.getRegion().front();
-        rewriter.eraseOp(workdistributeBlock->getTerminator());
-        rewriter.inlineBlockBefore(workdistributeBlock, teamsOp);
-        rewriter.eraseOp(teamsOp);
-        workdistributeOp.emitWarning("unable to parallelize coexecute");
-        return success();
-    }
-};
 
 /// If B() and D() are parallelizable,
 ///
@@ -210,22 +196,161 @@ struct FissionWorkdistribute
   }
 };
 
+static void
+genLoopNestClauseOps(mlir::Location loc,
+                     mlir::PatternRewriter &rewriter,
+                     fir::DoLoopOp loop,
+                     mlir::omp::LoopNestOperands &loopNestClauseOps) {
+  assert(loopNestClauseOps.loopLowerBounds.empty() &&
+         "Loop nest bounds were already emitted!");
+  loopNestClauseOps.loopLowerBounds.push_back(loop.getLowerBound());
+  loopNestClauseOps.loopUpperBounds.push_back(loop.getUpperBound());
+  loopNestClauseOps.loopSteps.push_back(loop.getStep());
+  loopNestClauseOps.loopInclusive = rewriter.getUnitAttr();
+}
+
+static void
+genWsLoopOp(mlir::PatternRewriter &rewriter,
+            fir::DoLoopOp doLoop,
+            const mlir::omp::LoopNestOperands &clauseOps) {
+
+  auto wsloopOp = rewriter.create<mlir::omp::WsloopOp>(doLoop.getLoc());
+  rewriter.createBlock(&wsloopOp.getRegion());
+
+  auto loopNestOp =
+      rewriter.create<mlir::omp::LoopNestOp>(doLoop.getLoc(), clauseOps);
+
+  // Clone the loop's body inside the loop nest construct using the
+  // mapped values.
+  rewriter.cloneRegionBefore(doLoop.getRegion(), loopNestOp.getRegion(),
+                             loopNestOp.getRegion().begin());
+  Block *clonedBlock = &loopNestOp.getRegion().back();
+  mlir::Operation *terminatorOp = clonedBlock->getTerminator();
+
+  // Erase fir.result op of do loop and create yield op.
+  if (auto resultOp = dyn_cast<fir::ResultOp>(terminatorOp)) {
+    rewriter.setInsertionPoint(terminatorOp);
+    rewriter.create<mlir::omp::YieldOp>(doLoop->getLoc());
+    rewriter.eraseOp(terminatorOp);
+  }
+  return;
+}
+
+/// If fir.do_loop id present inside teams workdistribute
+///
+/// omp.teams {
+///   omp.workdistribute {
+///     fir.do_loop unoredered {
+///       ...
+///     }
+///   }
+/// }
+///
+/// Then, its lowered to 
+///
+/// omp.teams {
+///   omp.workdistribute {
+///     omp.parallel {
+///       omp.wsloop {
+///         omp.loop_nest
+///           ...
+///         }
+///       }
+///     }
+///   }
+/// }
+
+struct TeamsWorkdistributeLowering : public OpRewritePattern<omp::TeamsOp> {
+  using OpRewritePattern::OpRewritePattern;
+  LogicalResult matchAndRewrite(omp::TeamsOp teamsOp,
+                                PatternRewriter &rewriter) const override {
+    auto teamsLoc = teamsOp->getLoc();
+    auto workdistributeOp = getPerfectlyNested<omp::WorkdistributeOp>(teamsOp);
+    if (!workdistributeOp) {
+      LLVM_DEBUG(llvm::dbgs() << DEBUG_TYPE << " No workdistribute nested\n");
+      return failure();
+    }
+    assert(teamsOp.getReductionVars().empty());
+
+    auto doLoop = getPerfectlyNested<fir::DoLoopOp>(workdistributeOp);
+    if (doLoop && shouldParallelize(doLoop)) {
+
+      auto parallelOp = rewriter.create<mlir::omp::ParallelOp>(teamsLoc);
+      rewriter.createBlock(&parallelOp.getRegion());
+      rewriter.setInsertionPoint(rewriter.create<mlir::omp::TerminatorOp>(doLoop.getLoc()));
+
+      mlir::omp::LoopNestOperands loopNestClauseOps;
+      genLoopNestClauseOps(doLoop.getLoc(), rewriter, doLoop,
+                           loopNestClauseOps);
+
+      genWsLoopOp(rewriter, doLoop, loopNestClauseOps);
+      rewriter.setInsertionPoint(doLoop);
+      rewriter.eraseOp(doLoop);
+      return success();
+    }
+    return failure();
+  }
+};
+
+
+/// If A() and B () are present inside teams workdistribute
+///
+/// omp.teams {
+///   omp.workdistribute {
+///     A()
+///     B()
+///   }
+/// }
+///
+/// Then, its lowered to
+///
+/// A()
+/// B()
+///
+
+struct TeamsWorkdistributeToSingle : public OpRewritePattern<omp::TeamsOp> {
+  using OpRewritePattern::OpRewritePattern;
+  LogicalResult matchAndRewrite(omp::TeamsOp teamsOp,
+                                  PatternRewriter &rewriter) const override {
+      auto workdistributeOp = getPerfectlyNested<omp::WorkdistributeOp>(teamsOp);
+      if (!workdistributeOp) {
+          LLVM_DEBUG(llvm::dbgs() << DEBUG_TYPE << " No workdistribute nested\n");
+          return failure();
+      }      
+      Block *workdistributeBlock = &workdistributeOp.getRegion().front();
+      rewriter.eraseOp(workdistributeBlock->getTerminator());
+      rewriter.inlineBlockBefore(workdistributeBlock, teamsOp);
+      rewriter.eraseOp(teamsOp);
+      return success();
+  }
+};
+
 class LowerWorkdistributePass
     : public flangomp::impl::LowerWorkdistributeBase<LowerWorkdistributePass> {
 public:
   void runOnOperation() override {
     MLIRContext &context = getContext();
-    RewritePatternSet patterns(&context);
     GreedyRewriteConfig config;
     // prevent the pattern driver form merging blocks
     config.setRegionSimplificationLevel(
         GreedySimplifyRegionLevel::Disabled);
-  
-    patterns.insert<FissionWorkdistribute, WorkdistributeToSingle>(&context);
+    
     Operation *op = getOperation();
-    if (failed(applyPatternsGreedily(op, std::move(patterns), config))) {
-      emitError(op->getLoc(), DEBUG_TYPE " pass failed\n");
-      signalPassFailure();
+    {
+      RewritePatternSet patterns(&context);
+      patterns.insert<FissionWorkdistribute, TeamsWorkdistributeLowering>(&context);
+      if (failed(applyPatternsGreedily(op, std::move(patterns), config))) {
+        emitError(op->getLoc(), DEBUG_TYPE " pass failed\n");
+        signalPassFailure();
+      }
+    }
+    {
+      RewritePatternSet patterns(&context);
+      patterns.insert<TeamsWorkdistributeLowering, TeamsWorkdistributeToSingle>(&context);
+      if (failed(applyPatternsGreedily(op, std::move(patterns), config))) {
+        emitError(op->getLoc(), DEBUG_TYPE " pass failed\n");
+        signalPassFailure();
+      }
     }
   }
 };
