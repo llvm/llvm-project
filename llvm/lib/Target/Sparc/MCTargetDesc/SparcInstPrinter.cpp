@@ -275,6 +275,8 @@ void SparcInstPrinter::printCTILabel(const MCInst *MI, uint64_t Address,
     int64_t Offset = Op.getImm();
     if (PrintBranchImmAsAddress) {
       uint64_t Target = Address + Offset;
+      if (STI.getTargetTriple().isSPARC32())
+        Target &= 0xffffffff;
       O << formatHex(Target);
     } else {
       O << ".";
