@@ -132,6 +132,10 @@ extractContiguousGroups(const MemoryOpGroup &group) {
   return result;
 }
 
+static bool isVectorizable(Operation *op) {
+  return OpTrait::hasElementwiseMappableTraits(op) && op->getNumResults() == 1;
+}
+
 /// A node in the SLP graph representing a group of vectorizable operations
 struct SLPGraphNode {
   SmallVector<Operation *> ops;
@@ -255,14 +259,58 @@ public:
       }
     });
 
-    // TODO: Implement vectorization logic:
-    // 1. Process nodes in topological order
-    // 2. For each node:
-    //    a. Check if all operands are vectorized
-    //    b. Create vector operation
-    //    c. Replace scalar operations with vector operation
-    // 3. Handle memory operations (loads/stores) specially
-    // 4. Update use-def chains
+    IRMapping mapping;
+    for (auto *node : sortedNodes) {
+      if (node->users.empty() && node->operands.empty())
+        continue;
+
+      Operation *op = node->ops.front();
+      rewriter.setInsertionPoint(op);
+      Location loc = op->getLoc();
+      int64_t numElements = node->ops.size();
+      if (auto load = dyn_cast<memref::LoadOp>(op)) {
+        auto vecType =
+            VectorType::get(numElements, load.getMemRefType().getElementType());
+        Value result = rewriter.create<vector::LoadOp>(
+            loc, vecType, load.getMemRef(), load.getIndices());
+        mapping.map(load.getResult(), result);
+      } else if (auto store = dyn_cast<memref::StoreOp>(op)) {
+        Value val = mapping.lookupOrDefault(store.getValueToStore());
+        rewriter.create<vector::StoreOp>(loc, val, store.getMemRef(),
+                                         store.getIndices());
+      } else if (isVectorizable(op)) {
+        auto vecType =
+            VectorType::get(numElements, op->getResultTypes().front());
+        for (auto [i, operand] : llvm::enumerate(op->getOperands())) {
+          if (getNodeForOp(operand.getDefiningOp()))
+            continue;
+
+          SmallVector<Value> args;
+          for (Operation *defOp : node->ops)
+            args.push_back(defOp->getOperand(i));
+
+          Value vector =
+              rewriter.create<vector::FromElementsOp>(loc, vecType, args);
+          mapping.map(operand, vector);
+        }
+
+        Operation *newOp = rewriter.clone(*op, mapping);
+        auto resVectorType =
+            VectorType::get(numElements, op->getResultTypes().front());
+        newOp->getResult(0).setType(resVectorType);
+
+        mapping.map(op->getResults(), newOp->getResults());
+      } else {
+        op->emitError("unsupported operation");
+        return failure();
+      }
+    }
+
+    for (auto *node : llvm::reverse(sortedNodes)) {
+      for (Operation *op : node->ops) {
+        rewriter.eraseOp(op);
+      }
+    }
 
     return success();
   }
@@ -342,10 +390,6 @@ private:
   /// operations of the other type.
   SmallVector<MemoryOpGroup> collectMemoryOpGroups(Block &block);
 };
-
-static bool isVectorizable(Operation *op) {
-  return OpTrait::hasElementwiseMappableTraits(op);
-}
 
 using Fingerprint = std::array<uint8_t, 20>;
 
