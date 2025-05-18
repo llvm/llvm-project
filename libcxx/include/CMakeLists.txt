@@ -727,6 +727,9 @@ set(files
   __ranges/views.h
   __ranges/zip_view.h
   __split_buffer
+  __stacktrace/basic_stacktrace.h
+  __stacktrace/impl.h
+  __stacktrace/stacktrace_entry.h
   __std_mbstate_t.h
   __stop_token/atomic_unique_lock.h
   __stop_token/intrusive_list_view.h
@@ -1047,6 +1050,7 @@ set(files
   span
   sstream
   stack
+  stacktrace
   stdatomic.h
   stdbool.h
   stddef.h

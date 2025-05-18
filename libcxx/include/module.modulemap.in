@@ -1985,6 +1985,19 @@ module std [system] {
     export *
   }
 
+  module stacktrace {
+    module fwd {
+      header "__stacktrace/basic_stacktrace.h"
+      header "__stacktrace/stacktrace_entry.h"
+    }
+    module impl {
+      header "__stacktrace/impl.h"
+    }
+
+    header "stacktrace"
+    export *
+  }
+
   module stdexcept {
     header "stdexcept"
     export *
