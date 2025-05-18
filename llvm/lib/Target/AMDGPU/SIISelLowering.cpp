@@ -919,6 +919,9 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BUILD_VECTOR, MVT::v2bf16, Legal);
   }
 
+  if (Subtarget->hasCvtPkF16F32Inst())
+    setOperationAction(ISD::FP_ROUND, MVT::v2f16, Custom);
+
   setTargetDAGCombine({ISD::ADD,
                        ISD::UADDO_CARRY,
                        ISD::SUB,
@@ -3717,9 +3720,10 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
     // followed by the flags and any other arguments with special meanings.
     // Pop them out of CLI.Outs and CLI.OutVals before we do any processing so
     // we don't treat them like the "real" arguments.
-    auto RequestedExecIt = std::find_if(
-        CLI.Outs.begin(), CLI.Outs.end(),
-        [](const ISD::OutputArg &Arg) { return Arg.OrigArgIndex == 2; });
+    auto RequestedExecIt =
+        llvm::find_if(CLI.Outs, [](const ISD::OutputArg &Arg) {
+          return Arg.OrigArgIndex == 2;
+        });
     assert(RequestedExecIt != CLI.Outs.end() && "No node for EXEC");
 
     size_t SpecialArgsBeginIdx = RequestedExecIt - CLI.Outs.begin();
@@ -6899,10 +6903,16 @@ SDValue SITargetLowering::getFPExtOrFPRound(SelectionDAG &DAG, SDValue Op,
 SDValue SITargetLowering::lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
   SDValue Src = Op.getOperand(0);
   EVT SrcVT = Src.getValueType();
+  EVT DstVT = Op.getValueType();
+
+  if (DstVT == MVT::v2f16) {
+    assert(Subtarget->hasCvtPkF16F32Inst() && "support v_cvt_pk_f16_f32");
+    return SrcVT == MVT::v2f32 ? Op : SDValue();
+  }
+
   if (SrcVT.getScalarType() != MVT::f64)
     return Op;
 
-  EVT DstVT = Op.getValueType();
   SDLoc DL(Op);
   if (DstVT == MVT::f16) {
     // TODO: Handle strictfp

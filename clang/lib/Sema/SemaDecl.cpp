@@ -4755,8 +4755,16 @@ void Sema::MergeVarDecl(VarDecl *New, LookupResult &Previous) {
         return;
     }
   } else {
-    Diag(New->getLocation(), diag::warn_cxx_compat_tentative_definition) << New;
-    Diag(Old->getLocation(), diag::note_previous_declaration);
+    // C++ may not have a tentative definition rule, but it has a different
+    // rule about what constitutes a definition in the first place. See
+    // [basic.def]p2 for details, but the basic idea is: if the old declaration
+    // contains the extern specifier and doesn't have an initializer, it's fine
+    // in C++.
+    if (Old->getStorageClass() != SC_Extern || Old->hasInit()) {
+      Diag(New->getLocation(), diag::warn_cxx_compat_tentative_definition)
+          << New;
+      Diag(Old->getLocation(), diag::note_previous_declaration);
+    }
   }
 
   if (haveIncompatibleLanguageLinkages(Old, New)) {
@@ -16085,8 +16093,11 @@ void Sema::computeNRVO(Stmt *Body, FunctionScopeInfo *Scope) {
 
   for (unsigned I = 0, E = Scope->Returns.size(); I != E; ++I) {
     if (const VarDecl *NRVOCandidate = Returns[I]->getNRVOCandidate()) {
-      if (!NRVOCandidate->isNRVOVariable())
+      if (!NRVOCandidate->isNRVOVariable()) {
+        Diag(Returns[I]->getRetValue()->getExprLoc(),
+             diag::warn_not_eliding_copy_on_return);
         Returns[I]->setNRVOCandidate(nullptr);
+      }
     }
   }
 }
@@ -19391,9 +19402,9 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
 
   // Verify that all the fields are okay.
   SmallVector<FieldDecl*, 32> RecFields;
-
+  const FieldDecl *PreviousField = nullptr;
   for (ArrayRef<Decl *>::iterator i = Fields.begin(), end = Fields.end();
-       i != end; ++i) {
+       i != end; PreviousField = cast<FieldDecl>(*i), ++i) {
     FieldDecl *FD = cast<FieldDecl>(*i);
 
     // Get the type for the field.
@@ -19609,6 +19620,29 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
 
     if (Record && FD->getType().isVolatileQualified())
       Record->setHasVolatileMember(true);
+    bool ReportMSBitfieldStoragePacking =
+        Record && PreviousField &&
+        !Diags.isIgnored(diag::warn_ms_bitfield_mismatched_storage_packing,
+                         Record->getLocation());
+    auto IsNonDependentBitField = [](const FieldDecl *FD) {
+      return FD->isBitField() && !FD->getType()->isDependentType();
+    };
+
+    if (ReportMSBitfieldStoragePacking && IsNonDependentBitField(FD) &&
+        IsNonDependentBitField(PreviousField)) {
+      CharUnits FDStorageSize = Context.getTypeSizeInChars(FD->getType());
+      CharUnits PreviousFieldStorageSize =
+          Context.getTypeSizeInChars(PreviousField->getType());
+      if (FDStorageSize != PreviousFieldStorageSize) {
+        Diag(FD->getLocation(),
+             diag::warn_ms_bitfield_mismatched_storage_packing)
+            << FD << FD->getType() << FDStorageSize.getQuantity()
+            << PreviousFieldStorageSize.getQuantity();
+        Diag(PreviousField->getLocation(),
+             diag::note_ms_bitfield_mismatched_storage_size_previous)
+            << PreviousField << PreviousField->getType();
+      }
+    }
     // Keep track of the number of named members.
     if (FD->getIdentifier())
       ++NumNamedMembers;

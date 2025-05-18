@@ -335,6 +335,20 @@ llvm::json::Value toJSON(const SetVariableResponseBody &SVR) {
 
   return llvm::json::Value(std::move(Body));
 }
+bool fromJSON(const llvm::json::Value &Params, ScopesArguments &SCA,
+              llvm::json::Path P) {
+  json::ObjectMapper O(Params, P);
+  return O && O.map("frameId", SCA.frameId);
+}
+
+llvm::json::Value toJSON(const ScopesResponseBody &SCR) {
+  llvm::json::Array scopes;
+  for (const Scope &scope : SCR.scopes) {
+    scopes.emplace_back(toJSON(scope));
+  }
+
+  return llvm::json::Object{{"scopes", std::move(scopes)}};
+}
 
 bool fromJSON(const json::Value &Params, SourceArguments &SA, json::Path P) {
   json::ObjectMapper O(Params, P);
