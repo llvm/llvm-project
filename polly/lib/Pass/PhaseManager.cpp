@@ -68,8 +68,8 @@ public:
     // TODO: CodePreparation doesn't actually need these analysis, it just keeps
     // them up-to-date. If they are not computed yet, can also compute after the
     // prepare phase.
-    auto &LI = FAM.getResult<LoopAnalysis>(F);
-    auto &DT = FAM.getResult<DominatorTreeAnalysis>(F);
+    LoopInfo &LI = FAM.getResult<LoopAnalysis>(F);
+    DominatorTree &DT = FAM.getResult<DominatorTreeAnalysis>(F);
     bool ModifiedIR = false;
 
     // Phase: prepare
@@ -86,9 +86,10 @@ public:
     if (!Opts.isPhaseEnabled(PassPhase::Detection))
       return false;
 
-    auto &AA = FAM.getResult<AAManager>(F);
-    auto &SE = FAM.getResult<ScalarEvolutionAnalysis>(F);
-    auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
+    AAResults &AA = FAM.getResult<AAManager>(F);
+    ScalarEvolution &SE = FAM.getResult<ScalarEvolutionAnalysis>(F);
+    OptimizationRemarkEmitter &ORE =
+        FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
 
     // ScopDetection is modifying RegionInfo, do not cache it, nor use a cached
     // version.
@@ -122,17 +123,17 @@ public:
       ViewScops("scopsonly", true);
 
     // Phase: scops
-    auto &AC = FAM.getResult<AssumptionAnalysis>(F);
+    AssumptionCache &AC = FAM.getResult<AssumptionAnalysis>(F);
     const DataLayout &DL = F.getParent()->getDataLayout();
     ScopInfo Info(DL, SD, SE, LI, AA, DT, AC, ORE);
     if (Opts.isPhaseEnabled(PassPhase::PrintScopInfo)) {
-      if (auto &&TLR = RI.getTopLevelRegion()) {
+      if (Region *TLR = RI.getTopLevelRegion()) {
         SmallVector<Region *> Regions;
         addRegionIntoQueue(*TLR, Regions);
 
         // reverse iteration because the regression tests expect it.
-        for (auto &&R : reverse(Regions)) {
-          auto *S = Info.getScop(R);
+        for (Region *R : reverse(Regions)) {
+          Scop *S = Info.getScop(R);
           outs() << "Printing analysis 'Polly - Create polyhedral "
                     "description of Scops' for region: '"
                  << R->getNameStr() << "' in function '" << F.getName()
@@ -150,7 +151,7 @@ public:
       if (S)
         Worklist.insert(R);
 
-    auto &&TTI = FAM.getResult<TargetIRAnalysis>(F);
+    TargetTransformInfo &TTI = FAM.getResult<TargetIRAnalysis>(F);
     while (!Worklist.empty()) {
       Region *R = Worklist.pop_back_val();
       if (!SD.isMaxRegionInScop(*R, /*Verify=*/false))
