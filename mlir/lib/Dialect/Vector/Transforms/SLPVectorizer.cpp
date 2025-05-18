@@ -12,14 +12,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/Passes.h"
-#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/SHA1.h"
 
@@ -371,15 +368,24 @@ public:
       }
     });
 
-    auto isGoodNode = [&](SLPGraphNode *node) {
+    auto isBadNode = [&](SLPGraphNode *node) {
       return node->users.empty() && node->operands.empty();
     };
 
+    // Update vec sizes if inputs are smaller.
+    for (auto *node : sortedNodes) {
+      size_t size = node->size();
+      for (auto *operand : node->operands)
+        size = std::min(size, operand->size());
+
+      node->ops.resize(size);
+    }
+
+    // Remove nodes that are not good (have users or operands)
+    llvm::erase_if(sortedNodes, isBadNode);
+
     IRMapping mapping;
     for (auto *node : sortedNodes) {
-      if (isGoodNode(node))
-        continue;
-
       int64_t numElements = node->size();
       Operation *op = node->ops.front();
       rewriter.setInsertionPoint(op);
@@ -462,14 +468,12 @@ public:
     }
 
     for (auto *node : llvm::reverse(sortedNodes)) {
-      if (isGoodNode(node))
-        continue;
-
       for (Operation *op : node->ops) {
         rewriter.eraseOp(op);
       }
     }
 
+    LLVM_DEBUG(llvm::dbgs() << "Vectorization completed successfully\n");
     return success();
   }
 
