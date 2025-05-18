@@ -19,7 +19,6 @@
 
 #include <cinttypes>
 #include <climits>
-#include <string>
 
 using namespace lldb;
 using namespace lldb_private;

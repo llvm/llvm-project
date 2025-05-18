@@ -1626,16 +1626,16 @@ std::vector<protocol::Breakpoint> DAP::SetSourceBreakpoints(
   std::vector<protocol::Breakpoint> response_breakpoints;
   if (source.sourceReference) {
     // breakpoint set by assembly source.
-    auto &existing_breakpoints_pos =
+    auto &existing_breakpoints =
         m_source_assembly_breakpoints[*source.sourceReference];
     response_breakpoints =
-        SetSourceBreakpoints(source, breakpoints, existing_breakpoints_pos);
+        SetSourceBreakpoints(source, breakpoints, existing_breakpoints);
   } else {
     // breakpoint set by a regular source file.
     const auto path = source.path.value_or("");
-    auto &existing_breakpoints_pos = m_source_breakpoints[path];
+    auto &existing_breakpoints = m_source_breakpoints[path];
     response_breakpoints =
-        SetSourceBreakpoints(source, breakpoints, existing_breakpoints_pos);
+        SetSourceBreakpoints(source, breakpoints, existing_breakpoints);
   }
 
   return response_breakpoints;

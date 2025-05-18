@@ -10,7 +10,6 @@
 #define LLDB_API_SBFILESPEC_H
 
 #include "lldb/API/SBDefines.h"
-#include "lldb/API/SBStream.h"
 
 namespace lldb {
 
