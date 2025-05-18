@@ -103,8 +103,9 @@ BufferPlacementTransformationBase::BufferPlacementTransformationBase(
 //===----------------------------------------------------------------------===//
 
 FailureOr<memref::GlobalOp>
-bufferization::getGlobalFor(arith::ConstantOp constantOp, uint64_t alignment,
-                            Attribute memorySpace) {
+bufferization::getGlobalFor(arith::ConstantOp constantOp,
+                            SymbolTableCollection &symbolTables,
+                            uint64_t alignment, Attribute memorySpace) {
   auto type = cast<RankedTensorType>(constantOp.getType());
   auto moduleOp = constantOp->getParentOfType<ModuleOp>();
   if (!moduleOp)
@@ -127,7 +128,7 @@ bufferization::getGlobalFor(arith::ConstantOp constantOp, uint64_t alignment,
   // Create a builder without an insertion point. We will insert using the
   // symbol table to guarantee unique names.
   OpBuilder globalBuilder(moduleOp.getContext());
-  SymbolTable symbolTable(moduleOp);
+  SymbolTable &symbolTable = symbolTables.getSymbolTable(moduleOp);
 
   // Create a pretty name.
   SmallString<64> buf;
@@ -158,3 +159,42 @@ bufferization::getGlobalFor(arith::ConstantOp constantOp, uint64_t alignment,
   global->moveBefore(&moduleOp.front());
   return global;
 }
+
+namespace mlir::bufferization {
+FailureOr<memref::GlobalOp> getGlobalFor(arith::ConstantOp op,
+                                         BufferizationState &state,
+                                         uint64_t alignment,
+                                         Attribute memorySpace) {
+  if (auto *symbolBufferizationState =
+          state.getExtension<SymbolBufferizationState>()) {
+    // Use the cached symbol tables.
+    return getGlobalFor(op, symbolBufferizationState->symbolTables, alignment,
+                        memorySpace);
+  }
+
+  SymbolTableCollection symbolTables;
+  return getGlobalFor(op, symbolTables, alignment, memorySpace);
+}
+
+void removeSymbol(Operation *op, BufferizationState &state) {
+  if (auto *symbolBufferizationState =
+          state.getExtension<SymbolBufferizationState>()) {
+    SymbolTable &symbolTable =
+        symbolBufferizationState->symbolTables.getSymbolTable(
+            op->getParentWithTrait<OpTrait::SymbolTable>());
+
+    symbolTable.remove(op);
+  }
+}
+
+void insertSymbol(Operation *op, BufferizationState &state) {
+  if (auto *symbolBufferizationState =
+          state.getExtension<SymbolBufferizationState>()) {
+    SymbolTable &symbolTable =
+        symbolBufferizationState->symbolTables.getSymbolTable(
+            op->getParentWithTrait<OpTrait::SymbolTable>());
+
+    symbolTable.insert(op);
+  }
+}
+} // namespace mlir::bufferization

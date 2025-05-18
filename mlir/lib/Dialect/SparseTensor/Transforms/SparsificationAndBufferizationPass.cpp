@@ -114,8 +114,16 @@ public:
       return false;
     });
 
+    bufferization::BufferizationState bufferizationState;
+
+    if (updatedOptions.cacheSymbolTables) {
+      bufferizationState
+          .addExtension<bufferization::SymbolBufferizationState>();
+    }
+
     if (failed(bufferization::bufferizeModuleOp(cast<ModuleOp>(getOperation()),
-                                                updatedOptions)))
+                                                updatedOptions,
+                                                bufferizationState)))
       return failure();
 
     bufferization::removeBufferizationAttributesInModule(getOperation());
