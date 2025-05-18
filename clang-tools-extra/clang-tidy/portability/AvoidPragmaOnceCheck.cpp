@@ -31,7 +31,8 @@ public:
     }
     Str = Str.trim();
     if (Str.starts_with("once")) {
-      Check->diag(Loc, "Avoid pragma once.");
+      Check->diag(Loc,
+                  "avoid 'pragma once' directive; use include guards instead");
     }
   }
 

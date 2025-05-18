@@ -13,7 +13,9 @@
 
 namespace clang::tidy::portability {
 
-/// FIXME: Write a short description.
+/// Finds uses of ``#pragma once`` and suggests replacing them with standard
+/// include guards (``#ifndef``/``#define``/``#endif``) for improved
+/// portability.
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/portability/avoid-pragma-once.html

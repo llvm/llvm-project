@@ -3,10 +3,22 @@
 portability-avoid-pragma-once
 =============================
 
-This check catches pragma once usage.
+Finds uses of ``#pragma once`` and suggests replacing them with standard
+include guards (``#ifndef``/``#define``/``#endif``) for improved portability.
 
-For example:
+`#pragma once` is a non-standard extension, despite being widely supported
+by modern compilers. Relying on it can lead to portability issues in
+environments.
 
-```
-#pragma once // Bad: Avoid pragma once.
-```
+Some older or specialized C/C++ compilers, particularly in embedded systems,
+may not fully support #pragma once.
+
+Also it can fail in certain file system configurations,like network drives
+or complex symbolic links, potentially leading to compilation issues.
+
+Consider the following header file:
+
+.. code:: c++
+
+  // my_header.h
+  #pragma once // warning: avoid 'pragma once' directive; use include guards instead

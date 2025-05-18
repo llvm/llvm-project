@@ -145,7 +145,8 @@ New checks
 - New :doc:`portability-avoid-pragma-once
   <clang-tidy/checks/portability/avoid-pragma-once>` check.
 
-  A check that catches pragma once.
+  Finds uses of ``#pragma once`` and suggests replacing them with standard
+  include guards (``#ifndef``/``#define``/``#endif``) for improved portability.
 
 New check aliases
 ^^^^^^^^^^^^^^^^^
