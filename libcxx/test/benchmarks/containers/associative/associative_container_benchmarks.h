@@ -328,7 +328,6 @@ void associative_container_benchmarks(std::string container) {
     bench("insert(iterator, iterator) (product_iterator from same type)", [=](auto& st) {
       const std::size_t size = st.range(0);
       std::vector<Value> in  = make_value_types(generate_unique_keys(size + (size / 10)));
-      std::sort(in.begin(), in.end(), [&](const auto& x, const auto& y) { return get_key(x) < get_key(y); });
       Container source(in.begin(), in.end());
 
       Container c;
