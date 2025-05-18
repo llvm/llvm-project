@@ -78,7 +78,3 @@ llvm::Expected<InitializeResponse> InitializeRequestHandler::Run(
 
   return dap.GetCapabilities();
 }
-
-void InitializeRequestHandler::PostRun() const {
-  dap.SendJSON(CreateEventObject("initialized"));
-}

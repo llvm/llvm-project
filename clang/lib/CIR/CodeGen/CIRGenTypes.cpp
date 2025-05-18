@@ -553,3 +553,17 @@ CIRGenTypes::arrangeCIRFunctionInfo(CanQualType returnType,
 
   return *fi;
 }
+
+const CIRGenFunctionInfo &CIRGenTypes::arrangeGlobalDeclaration(GlobalDecl gd) {
+  assert(!dyn_cast<ObjCMethodDecl>(gd.getDecl()) &&
+         "This is reported as a FIXME in LLVM codegen");
+  const auto *fd = cast<FunctionDecl>(gd.getDecl());
+
+  if (isa<CXXConstructorDecl>(gd.getDecl()) ||
+      isa<CXXDestructorDecl>(gd.getDecl())) {
+    cgm.errorNYI(SourceLocation(),
+                 "arrangeGlobalDeclaration for C++ constructor or destructor");
+  }
+
+  return arrangeFunctionDeclaration(fd);
+}

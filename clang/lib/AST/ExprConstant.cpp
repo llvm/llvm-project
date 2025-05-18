@@ -3314,7 +3314,11 @@ static bool HandleLValueBase(EvalInfo &Info, const Expr *E, LValue &Obj,
     return false;
 
   // Extract most-derived object and corresponding type.
-  DerivedDecl = D.MostDerivedType->getAsCXXRecordDecl();
+  // FIXME: After implementing P2280R4 it became possible to get references
+  // here. We do MostDerivedType->getAsCXXRecordDecl() in several other
+  // locations and if we see crashes in those locations in the future
+  // it may make more sense to move this fix into Lvalue::set.
+  DerivedDecl = D.MostDerivedType.getNonReferenceType()->getAsCXXRecordDecl();
   if (!CastToDerivedClass(Info, E, Obj, DerivedDecl, D.MostDerivedPathLength))
     return false;
 

@@ -905,7 +905,7 @@ llvm::json::Value CreateThreadStopped(DAP &dap, lldb::SBThread &thread,
   if (!ObjectContainsKey(body, "description")) {
     char description[1024];
     if (thread.GetStopDescription(description, sizeof(description))) {
-      EmplaceSafeString(body, "description", std::string(description));
+      EmplaceSafeString(body, "description", description);
     }
   }
   // "threadCausedFocus" is used in tests to validate breaking behavior.
