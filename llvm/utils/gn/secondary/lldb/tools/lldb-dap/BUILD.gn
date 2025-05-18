@@ -76,6 +76,7 @@ static_library("lib") {
     "RunInTerminal.cpp",
     "SourceBreakpoint.cpp",
     "Transport.cpp",
+    "Variables.cpp",
     "Watchpoint.cpp",
   ]
 }
