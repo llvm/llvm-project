@@ -18,6 +18,7 @@
 #include <__iterator/product_iterator.h>
 #include <__memory/addressof.h>
 #include <__type_traits/conditional.h>
+#include <__utility/forward.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
 
@@ -189,16 +190,21 @@ template <class _Owner, class _KeyContainer, class _MappedContainer, bool _Const
 struct __product_iterator_traits<__key_value_iterator<_Owner, _KeyContainer, _MappedContainer, _Const>> {
   static constexpr size_t __size = 2;
 
-  template <size_t _Nth>
-  _LIBCPP_HIDE_FROM_ABI static auto
-  __get_iterator_element(__key_value_iterator<_Owner, _KeyContainer, _MappedContainer, _Const> __it)
+  template <size_t _Nth, class _Iter>
+  _LIBCPP_HIDE_FROM_ABI static decltype(auto) __get_iterator_element(_Iter&& __it)
     requires(_Nth <= 1)
   {
     if constexpr (_Nth == 0) {
-      return __it.__key_iter_;
+      return std::forward<_Iter>(__it).__key_iter_;
     } else {
-      return __it.__mapped_iter_;
+      return std::forward<_Iter>(__it).__mapped_iter_;
     }
+  }
+
+  template <class _KeyIter, class _MappedIter>
+  _LIBCPP_HIDE_FROM_ABI static auto __make_product_iterator(_KeyIter&& __key_iter, _MappedIter&& __mapped_iter) {
+    return __key_value_iterator<_Owner, _KeyContainer, _MappedContainer, _Const>(
+        std::forward<_KeyIter>(__key_iter), std::forward<_MappedIter>(__mapped_iter));
   }
 };
 

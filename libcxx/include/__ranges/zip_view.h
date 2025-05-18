@@ -473,15 +473,20 @@ inline constexpr auto zip = __zip::__fn{};
 } // namespace views
 } // namespace ranges
 
-template <class _Iter>
-  requires _Iter::__is_zip_view_iterator::value
-struct __product_iterator_traits<_Iter> {
-  static constexpr size_t __size = tuple_size<decltype(std::declval<_Iter>().__current_)>::value;
+template <class _Iterator>
+  requires _Iterator::__is_zip_view_iterator
+struct __product_iterator_traits<_Iterator> {
+  static constexpr size_t __size = tuple_size<decltype(std::declval<_Iterator>().__current_)>::value;
 
-  template <size_t _Nth>
+  template <size_t _Nth, class _Iter>
     requires(_Nth < __size)
-  _LIBCPP_HIDE_FROM_ABI static constexpr auto __get_iterator_element(_Iter __it) {
-    return std::get<_Nth>(__it.__current_);
+  _LIBCPP_HIDE_FROM_ABI static constexpr decltype(auto) __get_iterator_element(_Iter&& __it) {
+    return std::get<_Nth>(std::forward<_Iter>(__it).__current_);
+  }
+
+  template <class... _Iters>
+  _LIBCPP_HIDE_FROM_ABI static constexpr _Iterator __make_product_iterator(_Iters&&... __iters) {
+    return _Iterator(std::tuple(std::forward<_Iters>(__iters)...));
   }
 };
 

@@ -80,8 +80,6 @@ struct __flat_map_utils {
     return typename _Map::iterator(std::move(__key_it), std::move(__mapped_it));
   }
 
-  // TODO: We could optimize this, see
-  // https://github.com/llvm/llvm-project/issues/108624
   template <class _Map, class _InputIterator, class _Sentinel>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 static typename _Map::size_type
   __append(_Map& __map, _InputIterator __first, _Sentinel __last) {
