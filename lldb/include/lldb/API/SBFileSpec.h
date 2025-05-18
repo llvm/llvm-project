@@ -10,6 +10,7 @@
 #define LLDB_API_SBFILESPEC_H
 
 #include "lldb/API/SBDefines.h"
+#include "lldb/API/SBStream.h"
 
 namespace lldb {
 
@@ -52,6 +53,8 @@ public:
   void SetDirectory(const char *directory);
 
   uint32_t GetPath(char *dst_path, size_t dst_len) const;
+
+  bool GetPath(lldb::SBStream &dst_path) const;
 
   static int ResolvePath(const char *src_path, char *dst_path, size_t dst_len);
 

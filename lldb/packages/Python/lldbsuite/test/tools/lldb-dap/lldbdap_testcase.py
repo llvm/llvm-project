@@ -63,6 +63,16 @@ class DAPTestCaseBase(TestBase):
         for breakpoint in breakpoints:
             breakpoint_ids.append("%i" % (breakpoint["id"]))
         return breakpoint_ids
+    
+    def set_source_breakpoints_assembly(self, source_reference, lines, data=None):
+        response = self.dap_server.request_setBreakpointsAssembly(source_reference, lines, data)
+        if response is None:
+            return []
+        breakpoints = response["body"]["breakpoints"]
+        breakpoint_ids = []
+        for breakpoint in breakpoints:
+            breakpoint_ids.append("%i" % (breakpoint["id"]))
+        return breakpoint_ids
 
     def set_function_breakpoints(self, functions, condition=None, hitCondition=None):
         """Sets breakpoints by function name given an array of function names

@@ -26,6 +26,7 @@ public:
 
   // Set this breakpoint in LLDB as a new breakpoint
   void SetBreakpoint(const llvm::StringRef source_path);
+  void SetBreakpoint(lldb::SBSymbol &symbol);
   void UpdateBreakpoint(const SourceBreakpoint &request_bp);
 
   void SetLogMessage();
