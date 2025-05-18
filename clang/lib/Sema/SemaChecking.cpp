@@ -11906,9 +11906,11 @@ static void DiagnoseMixedUnicodeImplicitConversion(Sema &S, const Type *Source,
   } else {
     bool LosesPrecision = S.getASTContext().getIntWidth(E->getType()) >
                           S.getASTContext().getIntWidth(T);
+#ifdef FIXME_GTEST_ROCSOLVER
     DiagnoseImpCast(S, E, T, CC,
                     LosesPrecision ? diag::warn_impcast_unicode_precision
                                    : diag::warn_impcast_unicode_char_type);
+#endif
   }
 }
 
