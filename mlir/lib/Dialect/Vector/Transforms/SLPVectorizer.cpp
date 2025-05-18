@@ -21,6 +21,7 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/SHA1.h"
 
 #define DEBUG_TYPE "slp-vectorizer"
 
@@ -64,7 +65,8 @@ std::optional<std::pair<Value, int64_t>> getBaseAndIndex(Operation *op) {
 }
 
 // Extract contiguous groups from a MemoryOpGroup
-SmallVector<MemoryOpGroup> extractContiguousGroups(const MemoryOpGroup &group) {
+static SmallVector<MemoryOpGroup>
+extractContiguousGroups(const MemoryOpGroup &group) {
   SmallVector<MemoryOpGroup> result;
   if (group.ops.empty())
     return result;
@@ -133,8 +135,8 @@ SmallVector<MemoryOpGroup> extractContiguousGroups(const MemoryOpGroup &group) {
 /// A node in the SLP graph representing a group of vectorizable operations
 struct SLPGraphNode {
   SmallVector<Operation *> ops;
-  DenseSet<SLPGraphNode *> users;
-  DenseSet<SLPGraphNode *> operands;
+  llvm::SmallDenseSet<SLPGraphNode *> users;
+  llvm::SmallDenseSet<SLPGraphNode *> operands;
   bool isRoot = false;
 
   SLPGraphNode() = default;
@@ -148,11 +150,9 @@ public:
   SLPGraph() = default;
   ~SLPGraph() = default;
 
-  // Delete copy constructor and assignment operator
   SLPGraph(const SLPGraph &) = delete;
   SLPGraph &operator=(const SLPGraph &) = delete;
 
-  // Allow move operations
   SLPGraph(SLPGraph &&) = default;
   SLPGraph &operator=(SLPGraph &&) = default;
 
@@ -259,21 +259,168 @@ private:
   SmallVector<MemoryOpGroup> collectMemoryOpGroups(Block &block);
 };
 
+static bool isVectorizable(Operation *op) {
+  return OpTrait::hasElementwiseMappableTraits(op);
+}
+
+using Fingerprint = std::array<uint8_t, 20>;
+
+template <typename T>
+static void addDataToHash(llvm::SHA1 &hasher, const T &data) {
+  hasher.update(
+      ArrayRef<uint8_t>(reinterpret_cast<const uint8_t *>(&data), sizeof(T)));
+}
+
+struct OperationsFingerprint {
+  OperationsFingerprint(
+      const llvm::SmallDenseMap<Operation *, SLPGraphNode *> &opToNode)
+      : opToNode(opToNode) {}
+
+  Fingerprint getFingerprint(Operation *op) {
+    auto it = fingerprints.find(op);
+    if (it != fingerprints.end())
+      return it->second;
+
+    SmallVector<Operation *> worklist;
+    SmallVector<Operation *> toposortedOps;
+    worklist.emplace_back(op);
+    while (!worklist.empty()) {
+      Operation *op = worklist.pop_back_val();
+      toposortedOps.emplace_back(op);
+      if (opToNode.contains(op))
+        continue;
+
+      for (Value operand : op->getOperands()) {
+        auto *defOp = operand.getDefiningOp();
+        if (!defOp || !isVectorizable(defOp))
+          continue;
+
+        toposortedOps.emplace_back(defOp);
+        worklist.emplace_back(defOp);
+      }
+    }
+
+    for (Operation *op : llvm::reverse(toposortedOps)) {
+      llvm::SHA1 hasher;
+      addDataToHash(hasher, op->getName().getTypeID());
+      addDataToHash(hasher, op->getRawDictionaryAttrs());
+      addDataToHash(hasher, op->hashProperties());
+      for (Value operand : op->getOperands()) {
+        auto *defOp = operand.getDefiningOp();
+        if (!defOp)
+          continue;
+
+        auto it1 = opToNode.find(defOp);
+        if (it1 != opToNode.end()) {
+          addDataToHash(hasher, it1->second);
+          continue;
+        }
+
+        auto it2 = fingerprints.find(defOp);
+        if (it2 != fingerprints.end()) {
+          addDataToHash(hasher, it2->second);
+          continue;
+        }
+      }
+      fingerprints[op] = hasher.result();
+    }
+
+    return fingerprints[op];
+  }
+
+  void invalidate(Operation *op) {
+    if (fingerprints.contains(op))
+      fingerprints.clear();
+  }
+
+  const llvm::SmallDenseMap<Operation *, SLPGraphNode *> &opToNode;
+  DenseMap<Operation *, Fingerprint> fingerprints;
+};
+
+static bool isEquivalent(Operation *op1, Operation *op2) {
+  if (op1->getName() != op2->getName())
+    return false;
+
+  if (op1->getRawDictionaryAttrs() != op2->getRawDictionaryAttrs())
+    return false;
+
+  return true;
+}
+
 /// Build the SLP graph starting from memory operation groups
-SLPGraph buildSLPGraph(const SmallVector<MemoryOpGroup> &rootGroups) {
+static SLPGraph buildSLPGraph(const SmallVector<MemoryOpGroup> &rootGroups) {
   SLPGraph graph;
+  llvm::SmallDenseMap<Operation *, SLPGraphNode *> opToNode;
+
+  SmallVector<SLPGraphNode *> worklist;
 
   // First, create nodes for each contiguous memory operation group
   for (const auto &group : rootGroups) {
-    // Create a new node for this group
     auto *node = graph.addRoot(group.ops);
-    node->isRoot = true;
+    for (Operation *op : group.ops)
+      opToNode[op] = node;
+
+    worklist.push_back(node);
 
     LLVM_DEBUG({
-      llvm::dbgs() << "Created " << (group.isLoadGroup() ? "LOAD" : "STORE")
-                   << " group node with " << node->ops.size()
-                   << " operations\n";
+      llvm::dbgs() << "Created root group node with " << node->ops.size()
+                   << " operations of type "
+                   << (group.type == MemoryOpGroup::Type::Load ? "Load"
+                                                               : "Store")
+                   << "\n";
     });
+
+    OperationsFingerprint fingerprints(opToNode);
+
+    auto processUse = [&](SLPGraphNode *node, OpOperand &use) {
+      Operation *user = use.getOwner();
+      if (opToNode.contains(user) || !isVectorizable(user))
+        return;
+
+      Fingerprint expectedFingerprint = fingerprints.getFingerprint(user);
+
+      SmallVector<Operation *> currentOps;
+      currentOps.emplace_back(user);
+      for (Operation *op : ArrayRef(node->ops).drop_front()) {
+        Operation *found = nullptr;
+        for (OpOperand &opUse : op->getUses()) {
+          if (opUse.getOperandNumber() != use.getOperandNumber())
+            continue;
+
+          Operation *useOwner = opUse.getOwner();
+          if (!isEquivalent(useOwner, user) ||
+              fingerprints.getFingerprint(useOwner) != expectedFingerprint)
+            continue;
+
+          found = useOwner;
+          break;
+        }
+        if (!found)
+          break;
+
+        currentOps.push_back(found);
+      }
+
+      if (currentOps.size() == 1)
+        return;
+
+      auto *newNode = graph.addNode(currentOps);
+      graph.addEdge(node, newNode);
+      for (Operation *op : currentOps) {
+        opToNode[op] = newNode;
+        fingerprints.invalidate(op);
+      }
+
+      worklist.push_back(newNode);
+    };
+
+    while (!worklist.empty()) {
+      SLPGraphNode *node = worklist.pop_back_val();
+
+      Operation *op = node->ops.front();
+      for (OpOperand &use : op->getUses())
+        processUse(node, use);
+    }
   }
 
   return graph;
@@ -314,7 +461,6 @@ SLPVectorizerPass::collectMemoryOpGroups(Block &block) {
 
 void SLPVectorizerPass::runOnOperation() {
   Operation *op = getOperation();
-  MLIRContext *context = &getContext();
 
   // Walk all blocks recursively
   op->walk([&](Block *block) {
