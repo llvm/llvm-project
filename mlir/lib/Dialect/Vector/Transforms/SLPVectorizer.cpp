@@ -302,6 +302,16 @@ public:
         }
       };
 
+      auto handleVecSizeMismatch = [&](Value arg) -> Value {
+        auto srcType = cast<VectorType>(arg.getType());
+        assert(srcType.getRank() == 1);
+        if (srcType.getDimSize(0) == numElements)
+          return arg;
+
+        return rewriter.create<vector::ExtractStridedSliceOp>(loc, arg, 0,
+                                                              numElements, 1);
+      };
+
       if (auto load = dyn_cast<memref::LoadOp>(op)) {
         auto vecType =
             VectorType::get(numElements, load.getMemRefType().getElementType());
@@ -312,6 +322,7 @@ public:
       } else if (auto store = dyn_cast<memref::StoreOp>(op)) {
         handleNonVectorInputs(store.getValueToStore());
         Value val = mapping.lookupOrDefault(store.getValueToStore());
+        val = handleVecSizeMismatch(val);
         rewriter.create<vector::StoreOp>(loc, val, store.getMemRef(),
                                          store.getIndices());
       } else if (isVectorizable(op)) {
@@ -319,6 +330,15 @@ public:
         Operation *newOp = rewriter.clone(*op, mapping);
         auto resVectorType =
             VectorType::get(numElements, op->getResultTypes().front());
+
+        {
+          OpBuilder::InsertionGuard guard(rewriter);
+          rewriter.setInsertionPoint(newOp);
+          for (OpOperand &operand : newOp->getOpOperands()) {
+            Value newOperand = handleVecSizeMismatch(operand.get());
+            operand.set(newOperand);
+          }
+        }
         newOp->getResult(0).setType(resVectorType);
 
         mapping.map(op->getResults(), newOp->getResults());
@@ -701,6 +721,7 @@ void SLPVectorizerPass::runOnOperation() {
       LLVM_DEBUG(llvm::dbgs() << "Failed to vectorize graph\n");
       return signalPassFailure();
     }
+    op->dump();
   });
 }
 
