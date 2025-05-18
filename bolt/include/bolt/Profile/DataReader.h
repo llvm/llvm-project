@@ -205,7 +205,7 @@ struct FuncMemData {
 
   FuncMemData() {}
 
-  FuncMemData(StringRef Name, ContainerTy Data)
+  FuncMemData(StringRef Name, ContainerTy Data = ContainerTy())
       : Name(Name), Data(std::move(Data)) {}
 };
 
@@ -241,7 +241,7 @@ struct FuncBasicSampleData {
   StringRef Name;
   ContainerTy Data;
 
-  FuncBasicSampleData(StringRef Name, ContainerTy Data)
+  FuncBasicSampleData(StringRef Name, ContainerTy Data = ContainerTy())
       : Name(Name), Data(std::move(Data)) {}
 
   /// Get the number of samples recorded in [Start, End)
