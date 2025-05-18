@@ -58,7 +58,7 @@ std::string removePureVirtualSyntax(const std::string &MethodDecl,
   return DeclString;
 }
 
-class OverridePureVirtuals : public Tweak {
+class OverridePureVirtuals final : public Tweak {
 public:
   const char *id() const final; // defined by REGISTER_TWEAK.
   bool prepare(const Selection &Sel) override;
@@ -77,7 +77,6 @@ private:
       MissingMethodsByAccess;
   // Stores the source locations of existing access specifiers in CurrentDecl.
   llvm::MapVector<AccessSpecifier, SourceLocation> AccessSpecifierLocations;
-
   // Helper function to gather information before applying the tweak.
   void collectMissingPureVirtuals();
 };
@@ -213,8 +212,8 @@ std::string generateOverridesStringForGroup(
     const LangOptions &LangOpts) {
   llvm::SmallVector<std::string> MethodsString;
   MethodsString.reserve(Methods.size());
-  std::string SS;
-  for (const auto *Method : Methods) {
+
+  for (const CXXMethodDecl *Method : Methods) {
     MethodsString.emplace_back(generateOverrideString(Method, LangOpts));
   }
 
@@ -225,11 +224,9 @@ Expected<Tweak::Effect> OverridePureVirtuals::apply(const Selection &Sel) {
   // The correctness of this tweak heavily relies on the accurate population of
   // these members.
   collectMissingPureVirtuals();
-
-  if (MissingMethodsByAccess.empty()) {
-    return llvm::make_error<llvm::StringError>(
-        "No pure virtual methods to override.", llvm::inconvertibleErrorCode());
-  }
+  // The `prepare` should prevent this. If the prepare identifies an abstract
+  // method, then is must have missing methods.
+  assert(!MissingMethodsByAccess.empty());
 
   const auto &SM = Sel.AST->getSourceManager();
   const auto &LangOpts = Sel.AST->getLangOpts();
