@@ -75,6 +75,60 @@ func.func @read_write_interleaved(%arg0: memref<8xi32>, %arg1: memref<8xi32>) {
 }
 
 
+// CHECK-LABEL: func @read_write_add_index
+//  CHECK-SAME: (%[[ARG0:.*]]: memref<8xi32>, %[[ARG1:.*]]: memref<8xi32>, %[[ARG2:.*]]: index)
+func.func @read_write_add_index(%arg0: memref<8xi32>, %arg1: memref<8xi32>, %arg2: index) {
+  // CHECK:     %[[RES:.*]] = vector.load %[[ARG0]][%[[ARG2]]] : memref<8xi32>, vector<4xi32>
+  // CHECK:     vector.store %[[RES]], %[[ARG0]][%[[ARG2]]] : memref<8xi32>, vector<4xi32>
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c3 = arith.constant 3 : index
+
+  %ind1 = arith.addi %arg2, %c1 : index
+  %ind2 = arith.addi %arg2, %c2 : index
+  %ind3 = arith.addi %arg2, %c3 : index
+
+  %0 = memref.load %arg0[%arg2] : memref<8xi32>
+  %1 = memref.load %arg0[%ind1] : memref<8xi32>
+  %2 = memref.load %arg0[%ind2] : memref<8xi32>
+  %3 = memref.load %arg0[%ind3] : memref<8xi32>
+
+  memref.store %0, %arg0[%arg2] : memref<8xi32>
+  memref.store %1, %arg0[%ind1] : memref<8xi32>
+  memref.store %2, %arg0[%ind2] : memref<8xi32>
+  memref.store %3, %arg0[%ind3] : memref<8xi32>
+
+  return
+}
+
+
+// CHECK-LABEL: func @read_write_add_index_interleaved
+//  CHECK-SAME: (%[[ARG0:.*]]: memref<8xi32>, %[[ARG1:.*]]: memref<8xi32>, %[[ARG2:.*]]: index)
+func.func @read_write_add_index_interleaved(%arg0: memref<8xi32>, %arg1: memref<8xi32>, %arg2: index) {
+  // CHECK:     %[[RES:.*]] = vector.load %[[ARG0]][%[[ARG2]]] : memref<8xi32>, vector<4xi32>
+  // CHECK:     vector.store %[[RES]], %[[ARG0]][%[[ARG2]]] : memref<8xi32>, vector<4xi32>
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c3 = arith.constant 3 : index
+
+  %ind1 = arith.addi %arg2, %c1 : index
+  %ind2 = arith.addi %arg2, %c2 : index
+  %ind3 = arith.addi %arg2, %c3 : index
+
+  %0 = memref.load %arg0[%arg2] : memref<8xi32>
+  %1 = memref.load %arg0[%ind1] : memref<8xi32>
+  %3 = memref.load %arg0[%ind3] : memref<8xi32>
+  %2 = memref.load %arg0[%ind2] : memref<8xi32>
+
+  memref.store %3, %arg0[%ind3] : memref<8xi32>
+  memref.store %0, %arg0[%arg2] : memref<8xi32>
+  memref.store %1, %arg0[%ind1] : memref<8xi32>
+  memref.store %2, %arg0[%ind2] : memref<8xi32>
+
+  return
+}
+
+
 // CHECK-LABEL: func @read_read_add
 //  CHECK-SAME: (%[[ARG0:.*]]: memref<8xi32>, %[[ARG1:.*]]: memref<8xi32>)
 func.func @read_read_add(%arg0: memref<8xi32>, %arg1: memref<8xi32>) -> (i32, i32, i32, i32){
