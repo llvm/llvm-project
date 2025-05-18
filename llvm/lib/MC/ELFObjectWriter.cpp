@@ -1378,7 +1378,6 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
     Addend += FixupOffset - Asm.getSymbolOffset(SymB);
   }
 
-  auto EMachine = TargetObjectWriter->getEMachine();
   unsigned Type;
   if (mc::isRelocRelocation(Fixup.getKind()))
     Type = Fixup.getKind() - FirstLiteralRelocationKind;
@@ -1404,7 +1403,8 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
   } else {
     // In PPC64 ELFv1, .quad .TOC.@tocbase in the .opd section is expected to
     // reference the null symbol.
-    if (Type == ELF::R_PPC64_TOC && EMachine == ELF::EM_PPC64)
+    if (Type == ELF::R_PPC64_TOC &&
+        TargetObjectWriter->getEMachine() == ELF::EM_PPC64)
       SymA = nullptr;
 
     if (SymA) {
