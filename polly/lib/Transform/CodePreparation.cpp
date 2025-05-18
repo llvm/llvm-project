@@ -45,32 +45,6 @@ static bool runCodePreprationImpl(Function &F, DominatorTree *DT, LoopInfo *LI,
   return true;
 }
 
-namespace {
-
-/// Prepare the IR for the scop detection.
-///
-class CodePreparation final : public FunctionPass {
-  CodePreparation(const CodePreparation &) = delete;
-  const CodePreparation &operator=(const CodePreparation &) = delete;
-
-  void clear();
-
-public:
-  static char ID;
-
-  explicit CodePreparation() : FunctionPass(ID) {}
-  ~CodePreparation();
-
-  /// @name FunctionPass interface.
-  //@{
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
-  void releaseMemory() override;
-  bool runOnFunction(Function &F) override;
-  void print(raw_ostream &OS, const Module *) const override;
-  //@}
-};
-} // namespace
-
 PreservedAnalyses CodePreparationPass::run(Function &F,
                                            FunctionAnalysisManager &FAM) {
   auto &DT = FAM.getResult<DominatorTreeAnalysis>(F);
@@ -85,43 +59,7 @@ PreservedAnalyses CodePreparationPass::run(Function &F,
   return PA;
 }
 
-void CodePreparation::clear() {}
-
-CodePreparation::~CodePreparation() { clear(); }
-
-void CodePreparation::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<LoopInfoWrapperPass>();
-
-  AU.addPreserved<LoopInfoWrapperPass>();
-  AU.addPreserved<RegionInfoPass>();
-  AU.addPreserved<DominatorTreeWrapperPass>();
-  AU.addPreserved<DominanceFrontierWrapperPass>();
+bool polly::runCodePreparation(Function &F, DominatorTree *DT, LoopInfo *LI,
+                               RegionInfo *RI) {
+  return runCodePreprationImpl(F, DT, LI, RI);
 }
-
-bool CodePreparation::runOnFunction(Function &F) {
-  if (skipFunction(F))
-    return false;
-
-  DominatorTree *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-  RegionInfo *RI = &getAnalysis<RegionInfoPass>().getRegionInfo();
-
-  runCodePreprationImpl(F, DT, LI, RI);
-
-  return true;
-}
-
-void CodePreparation::releaseMemory() { clear(); }
-
-void CodePreparation::print(raw_ostream &OS, const Module *) const {}
-
-char CodePreparation::ID = 0;
-char &polly::CodePreparationID = CodePreparation::ID;
-
-Pass *polly::createCodePreparationPass() { return new CodePreparation(); }
-
-INITIALIZE_PASS_BEGIN(CodePreparation, "polly-prepare",
-                      "Polly - Prepare code for polly", false, false)
-INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
-INITIALIZE_PASS_END(CodePreparation, "polly-prepare",
-                    "Polly - Prepare code for polly", false, false)
