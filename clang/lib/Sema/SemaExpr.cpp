@@ -1639,7 +1639,6 @@ static void CheckUnicodeArithmeticConversions(Sema &SemaRef, Expr *LHS,
   SemaRef.Diag(Loc, diag::warn_arith_conv_mixed_unicode_types)
       << LHS->getSourceRange() << RHS->getSourceRange() << ACK << LHSType
       << RHSType;
-  return;
 }
 
 /// UsualArithmeticConversions - Performs various conversions that are common to

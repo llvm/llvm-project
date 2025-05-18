@@ -801,9 +801,8 @@ void LVBinaryReader::processLines(LVLines *DebugLines,
 
   // Find the indexes for the lines whose address is zero.
   std::vector<size_t> AddressZero;
-  LVLines::iterator It =
-      std::find_if(std::begin(*DebugLines), std::end(*DebugLines),
-                   [](LVLine *Line) { return !Line->getAddress(); });
+  LVLines::iterator It = llvm::find_if(
+      *DebugLines, [](LVLine *Line) { return !Line->getAddress(); });
   while (It != std::end(*DebugLines)) {
     AddressZero.emplace_back(std::distance(std::begin(*DebugLines), It));
     It = std::find_if(std::next(It), std::end(*DebugLines),
@@ -930,8 +929,8 @@ void LVBinaryReader::includeInlineeLines(LVSectionIndex SectionIndex,
     if (InlineeLines->size()) {
       // First address of inlinee code.
       uint64_t InlineeStart = (InlineeLines->front())->getAddress();
-      LVLines::iterator Iter = std::find_if(
-          CULines.begin(), CULines.end(), [&](LVLine *Item) -> bool {
+      LVLines::iterator Iter =
+          llvm::find_if(CULines, [&](LVLine *Item) -> bool {
             return Item->getAddress() == InlineeStart;
           });
       if (Iter != CULines.end()) {
