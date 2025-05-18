@@ -18456,36 +18456,78 @@ static SDValue stripModuloOnShift(const TargetLowering &TLI, SDNode *N,
   return SDValue();
 }
 
-SDValue PPCTargetLowering::combineVectorSHL(SDNode *N,
-                                            DAGCombinerInfo &DCI) const {
+SDValue PPCTargetLowering::combineVectorShift(SDNode *N,
+                                              DAGCombinerInfo &DCI) const {
   EVT VT = N->getValueType(0);
   assert(VT.isVector() && "Vector type expected.");
 
+  unsigned Opc = N->getOpcode();
+  assert((Opc == ISD::SHL || Opc == ISD::SRL || Opc == ISD::SRA) &&
+         "Unexpected opcode.");
+
+  if (!isOperationLegal(N->getOpcode(), VT))
+    return SDValue();
+
+  EVT EltTy = VT.getScalarType();
+  unsigned EltBits = EltTy.getSizeInBits();
+  if (EltTy != MVT::i64 && EltTy != MVT::i32)
+    return SDValue();
+
   SDValue N1 = N->getOperand(1);
-  if (!Subtarget.hasP8Altivec() || N1.getOpcode() != ISD::BUILD_VECTOR ||
-      !isOperationLegal(ISD::ADD, VT))
+  uint64_t SplatBits = 0;
+  bool AddSplatCase = false;
+  if (N1.getOpcode() == PPCISD::VADD_SPLAT &&
+      N1.getConstantOperandVal(1) == VT.getVectorNumElements()) {
+    AddSplatCase = true;
+    SplatBits = N1.getConstantOperandVal(0);
+  }
+
+  if (!AddSplatCase) {
+    if (N1.getOpcode() != ISD::BUILD_VECTOR)
+      return SDValue();
+
+    unsigned SplatBitSize;
+    bool HasAnyUndefs;
+    APInt APSplatBits, APSplatUndef;
+    BuildVectorSDNode *BVN = cast<BuildVectorSDNode>(N1);
+    bool BVNIsConstantSplat =
+        BVN->isConstantSplat(APSplatBits, APSplatUndef, SplatBitSize,
+                             HasAnyUndefs, 0, !Subtarget.isLittleEndian());
+    if (!BVNIsConstantSplat || SplatBitSize != EltBits)
+      return SDValue();
+    SplatBits = APSplatBits.getZExtValue();
+  }
+
+  SDLoc DL(N);
+  SDValue N0 = N->getOperand(0);
+  // We can't splat immediate 31 or 63 to shift by element size - 1 for vector
+  // word and vector double shifts, but we can splat immediate all ones and
+  // do the same thing (using PPC shifts).
+  if (SplatBits == (EltBits - 1)) {
+    unsigned NewOpc;
+    switch (Opc) {
+    case ISD::SHL:
+      NewOpc = PPCISD::SHL;
+      break;
+    case ISD::SRL:
+      NewOpc = PPCISD::SRL;
+      break;
+    case ISD::SRA:
+      NewOpc = PPCISD::SRA;
+      break;
+    }
+    SDValue SplatOnes = getCanonicalConstSplat(255, 1, VT, DCI.DAG, DL);
+    return DCI.DAG.getNode(NewOpc, DL, VT, N0, SplatOnes);
+  }
+
+  if (Opc != ISD::SHL || !isOperationLegal(ISD::ADD, VT))
     return SDValue();
 
   // For 64-bit there is no splat immediate so we want to catch shift by 1 here
   // before the BUILD_VECTOR is replaced by a load.
-  EVT EltTy = VT.getScalarType();
-  if (EltTy != MVT::i64)
+  if (EltTy != MVT::i64 || SplatBits != 1)
     return SDValue();
 
-  BuildVectorSDNode *BVN = cast<BuildVectorSDNode>(N1);
-  APInt APSplatBits, APSplatUndef;
-  unsigned SplatBitSize;
-  bool HasAnyUndefs;
-  bool BVNIsConstantSplat =
-      BVN->isConstantSplat(APSplatBits, APSplatUndef, SplatBitSize,
-                           HasAnyUndefs, 0, !Subtarget.isLittleEndian());
-  if (!BVNIsConstantSplat || SplatBitSize != EltTy.getSizeInBits())
-    return SDValue();
-  uint64_t SplatBits = APSplatBits.getZExtValue();
-  if (SplatBits != 1)
-    return SDValue();
-
-  SDValue N0 = N->getOperand(0);
   return DCI.DAG.getNode(ISD::ADD, SDLoc(N), VT, N0, N0);
 }
 
@@ -18494,7 +18536,7 @@ SDValue PPCTargetLowering::combineSHL(SDNode *N, DAGCombinerInfo &DCI) const {
     return Value;
 
   if (N->getValueType(0).isVector())
-    return combineVectorSHL(N, DCI);
+    return combineVectorShift(N, DCI);
 
   SDValue N0 = N->getOperand(0);
   ConstantSDNode *CN1 = dyn_cast<ConstantSDNode>(N->getOperand(1));
@@ -18526,12 +18568,18 @@ SDValue PPCTargetLowering::combineSRA(SDNode *N, DAGCombinerInfo &DCI) const {
   if (auto Value = stripModuloOnShift(*this, N, DCI.DAG))
     return Value;
 
+  if (N->getValueType(0).isVector())
+    return combineVectorShift(N, DCI);
+
   return SDValue();
 }
 
 SDValue PPCTargetLowering::combineSRL(SDNode *N, DAGCombinerInfo &DCI) const {
   if (auto Value = stripModuloOnShift(*this, N, DCI.DAG))
     return Value;
+
+  if (N->getValueType(0).isVector())
+    return combineVectorShift(N, DCI);
 
   return SDValue();
 }
