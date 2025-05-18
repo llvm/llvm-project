@@ -185,7 +185,7 @@ public:
   }
 
   /// Print the graph structure
-  void print() const {
+  [[maybe_unused]] void print() const {
     llvm::dbgs() << "SLP Graph Structure:\n";
     llvm::dbgs() << "===================\n";
 
@@ -348,7 +348,12 @@ static bool isEquivalent(Operation *op1, Operation *op2) {
 }
 
 /// Build the SLP graph starting from memory operation groups
-static SLPGraph buildSLPGraph(const SmallVector<MemoryOpGroup> &rootGroups) {
+static SLPGraph buildSLPGraph(ArrayRef<MemoryOpGroup> rootGroups) {
+  if (rootGroups.empty())
+    return SLPGraph();
+
+  LLVM_DEBUG(llvm::dbgs() << "=== Building SLP graph from " << rootGroups.size()
+                          << " root groups ===\n");
   SLPGraph graph;
   llvm::SmallDenseMap<Operation *, SLPGraphNode *> opToNode;
 
@@ -365,61 +370,74 @@ static SLPGraph buildSLPGraph(const SmallVector<MemoryOpGroup> &rootGroups) {
     LLVM_DEBUG({
       llvm::dbgs() << "Created root group node with " << node->ops.size()
                    << " operations of type "
-                   << (group.type == MemoryOpGroup::Type::Load ? "Load"
-                                                               : "Store")
-                   << "\n";
+                   << (group.isLoadGroup() ? "Load" : "Store") << "\n";
     });
+  }
 
-    OperationsFingerprint fingerprints(opToNode);
+  OperationsFingerprint fingerprints(opToNode);
 
-    auto processUse = [&](SLPGraphNode *node, OpOperand &use) {
-      Operation *user = use.getOwner();
-      if (opToNode.contains(user) || !isVectorizable(user))
-        return;
+  auto processUse = [&](SLPGraphNode *node, OpOperand &use) {
+    Operation *user = use.getOwner();
+    auto it = opToNode.find(user);
+    if (it != opToNode.end()) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << "  Adding edge from " << node->ops.front()->getName()
+                 << " to " << it->first->getName() << "\n");
+      graph.addEdge(node, it->second);
+      return;
+    }
 
-      Fingerprint expectedFingerprint = fingerprints.getFingerprint(user);
+    if (!isVectorizable(user))
+      return;
 
-      SmallVector<Operation *> currentOps;
-      currentOps.emplace_back(user);
-      for (Operation *op : ArrayRef(node->ops).drop_front()) {
-        Operation *found = nullptr;
-        for (OpOperand &opUse : op->getUses()) {
-          if (opUse.getOperandNumber() != use.getOperandNumber())
-            continue;
+    Fingerprint expectedFingerprint = fingerprints.getFingerprint(user);
 
-          Operation *useOwner = opUse.getOwner();
-          if (!isEquivalent(useOwner, user) ||
-              fingerprints.getFingerprint(useOwner) != expectedFingerprint)
-            continue;
+    SmallVector<Operation *> currentOps;
+    currentOps.emplace_back(user);
+    for (Operation *op : ArrayRef(node->ops).drop_front()) {
+      Operation *found = nullptr;
+      for (OpOperand &opUse : op->getUses()) {
+        if (opUse.getOperandNumber() != use.getOperandNumber())
+          continue;
 
-          found = useOwner;
-          break;
-        }
-        if (!found)
-          break;
+        Operation *useOwner = opUse.getOwner();
+        if (!isEquivalent(useOwner, user) ||
+            fingerprints.getFingerprint(useOwner) != expectedFingerprint)
+          continue;
 
-        currentOps.push_back(found);
+        found = useOwner;
+        break;
       }
+      if (!found)
+        break;
 
-      if (currentOps.size() == 1)
-        return;
+      currentOps.push_back(found);
+    }
 
-      auto *newNode = graph.addNode(currentOps);
-      graph.addEdge(node, newNode);
-      for (Operation *op : currentOps) {
-        opToNode[op] = newNode;
-        fingerprints.invalidate(op);
-      }
+    if (currentOps.size() == 1)
+      return;
 
-      worklist.push_back(newNode);
-    };
+    auto *newNode = graph.addNode(currentOps);
+    graph.addEdge(node, newNode);
+    for (Operation *op : currentOps) {
+      opToNode[op] = newNode;
+      fingerprints.invalidate(op);
+    }
 
-    while (!worklist.empty()) {
-      SLPGraphNode *node = worklist.pop_back_val();
+    worklist.push_back(newNode);
+  };
 
-      Operation *op = node->ops.front();
-      for (OpOperand &use : op->getUses())
-        processUse(node, use);
+  while (!worklist.empty()) {
+    SLPGraphNode *node = worklist.pop_back_val();
+    LLVM_DEBUG(llvm::dbgs() << "Processing node with " << node->ops.size()
+                            << " operations, first op: "
+                            << node->ops.front()->getName() << "\n");
+
+    Operation *op = node->ops.front();
+    for (OpOperand &use : op->getUses()) {
+      processUse(node, use);
+      LLVM_DEBUG(llvm::dbgs() << "  Processing use in operation: "
+                              << use.getOwner()->getName() << "\n");
     }
   }
 
