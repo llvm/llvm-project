@@ -1787,6 +1787,7 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
 
     case Type::TemplateTypeParm:
     case Type::SubstTemplateTypeParmPack:
+    case Type::SubstBuiltinTemplatePack:
       llvm_unreachable("Type nodes handled above");
 
     case Type::Auto:
@@ -6843,6 +6844,11 @@ MarkUsedTemplateParameters(ASTContext &Ctx, QualType T,
     if (Subst->getReplacedParameter()->getDepth() == Depth)
       Used[Subst->getIndex()] = true;
     MarkUsedTemplateParameters(Ctx, Subst->getArgumentPack(),
+                               OnlyDeduced, Depth, Used);
+    break;
+  }
+  case Type::SubstBuiltinTemplatePack: {
+    MarkUsedTemplateParameters(Ctx, cast<SubstPackType>(T)->getArgumentPack(),
                                OnlyDeduced, Depth, Used);
     break;
   }
