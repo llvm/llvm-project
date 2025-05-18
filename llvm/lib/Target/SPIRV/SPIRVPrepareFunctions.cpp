@@ -213,14 +213,18 @@ static SmallVector<Metadata *> parseAnnotation(Value *I,
         break;
       if (Item[0] == '"') {
         Item = Item.substr(1, Item.length() - 2);
-        // Acceptable format of the string snippet is:
-        static const std::regex RStr("^(\\d+)(?:,(\\d+))*$");
-        if (std::smatch MatchStr; std::regex_match(Item, MatchStr, RStr)) {
-          for (std::size_t SubIdx = 1; SubIdx < MatchStr.size(); ++SubIdx)
-            if (std::string SubStr = MatchStr[SubIdx].str(); SubStr.length())
-              MDsItem.push_back(ConstantAsMetadata::get(
-                  ConstantInt::get(Int32Ty, std::stoi(SubStr))));
-        } else {
+        static const std::regex NumberRegex(R"(\b\d+\b)");
+        std::sregex_token_iterator It(Item.begin(), Item.end(), NumberRegex);
+        bool FoundNumber = false;
+        while (It != std::sregex_token_iterator{}) {
+          MDsItem.push_back(ConstantAsMetadata::get(
+              ConstantInt::get(Int32Ty, std::stoi(*It))));
+          ++It;
+          FoundNumber = true;
+        }
+
+        // If no numbers were found, treat it as a regular string
+        if (!FoundNumber) {
           MDsItem.push_back(MDString::get(Ctx, Item));
         }
       } else if (int32_t Num; llvm::to_integer(StringRef(Item), Num, 10)) {
