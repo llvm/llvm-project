@@ -514,6 +514,7 @@ defm FunctionFloatControlINTEL : CapabilityOperand<5821, 0, 0, [SPV_INTEL_float_
 defm LongCompositesINTEL : CapabilityOperand<6089, 0, 0, [SPV_INTEL_long_composites], []>;
 defm BindlessImagesINTEL : CapabilityOperand<6528, 0, 0, [SPV_INTEL_bindless_images], []>;
 defm MemoryAccessAliasingINTEL : CapabilityOperand<5910, 0, 0, [SPV_INTEL_memory_access_aliasing], []>;
+defm RuntimeAlignedAttributeINTEL : CapabilityOperand<5939, 0, 0, [SPV_INTEL_runtime_aligned], []>;
 defm FPMaxErrorINTEL : CapabilityOperand<6169, 0, 0, [SPV_INTEL_fp_max_error], []>;
 defm TernaryBitwiseFunctionINTEL : CapabilityOperand<6241, 0, 0, [SPV_INTEL_ternary_bitwise_function], []>;
 defm SubgroupMatrixMultiplyAccumulateINTEL : CapabilityOperand<6236, 0, 0, [SPV_INTEL_subgroup_matrix_multiply_accumulate], []>;
@@ -1167,6 +1168,7 @@ defm NoAlias : FunctionParameterAttributeOperand<4, [Kernel]>;
 defm NoCapture : FunctionParameterAttributeOperand<5, [Kernel]>;
 defm NoWrite : FunctionParameterAttributeOperand<6, [Kernel]>;
 defm NoReadWrite : FunctionParameterAttributeOperand<7, [Kernel]>;
+defm RuntimeAlignedINTEL : FunctionParameterAttributeOperand<8, [RuntimeAlignedAttributeINTEL]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define Decoration enum values and at the same time
