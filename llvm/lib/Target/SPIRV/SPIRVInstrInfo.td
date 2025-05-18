@@ -210,6 +210,21 @@ def OpTypeCooperativeMatrixKHR: Op<4456, (outs TYPE:$res),
                   (ins TYPE:$compType, ID:$scope, ID:$rows, ID:$cols, ID:$use),
                   "$res = OpTypeCooperativeMatrixKHR $compType $scope $rows $cols $use">;
 
+// SPV_INTEL_device_side_avc_motion_estimation types
+def OpTypeVmeImageINTEL: Op<5700, (outs TYPE:$res), (ins), "$res = OpTypeVmeImageINTEL">;
+def OpTypeAvcMcePayloadINTEL: Op<5704, (outs TYPE:$res), (ins), "$res = OpTypeAvcMcePayloadINTEL">;
+def OpTypeAvcImePayloadINTEL: Op<5701, (outs TYPE:$res), (ins), "$res = OpTypeAvcImePayloadINTEL">;
+def OpTypeAvcRefPayloadINTEL: Op<5702, (outs TYPE:$res), (ins), "$res = OpTypeAvcRefPayloadINTEL">;
+def OpTypeAvcSicPayloadINTEL: Op<5704, (outs TYPE:$res), (ins), "$res = OpTypeAvcSicPayloadINTEL">;
+def OpTypeAvcMceResultINTEL: Op<5705, (outs TYPE:$res), (ins), "$res = OpTypeAvcMceResultINTEL">;
+def OpTypeAvcImeResultINTEL: Op<5706, (outs TYPE:$res), (ins), "$res = OpTypeAvcImeResultINTEL">;
+def OpTypeAvcImeResultSingleReferenceStreamoutINTEL: Op<5707, (outs TYPE:$res), (ins), "$res = OpTypeAvcImeResultSingleReferenceStreamoutINTEL">;
+def OpTypeAvcImeResultDualReferenceStreamoutINTEL: Op<5708, (outs TYPE:$res), (ins), "$res = OpTypeAvcImeResultDualReferenceStreamoutINTEL">;
+def OpTypeAvcImeSingleReferenceStreaminINTEL: Op<5709, (outs TYPE:$res), (ins), "$res = OpTypeAvcImeSingleReferenceStreaminINTEL">;
+def OpTypeAvcImeDualReferenceStreaminINTEL: Op<5710, (outs TYPE:$res), (ins), "$res = OpTypeAvcImeDualReferenceStreaminINTEL">;
+def OpTypeAvcRefResultINTEL: Op<5711, (outs TYPE:$res), (ins), "$res = OpTypeAvcRefResultINTEL">;
+def OpTypeAvcSicResultINTEL: Op<5712, (outs TYPE:$res), (ins), "$res = OpTypeAvcSicResultINTEL">;
+
 // 3.42.7 Constant-Creation Instructions
 
 multiclass IntFPImm<bits<16> opCode, string name> {
@@ -856,6 +871,222 @@ def OpSubgroupImageMediaBlockReadINTEL: Op<5580, (outs ID:$res), (ins TYPE:$type
                   "$res = OpSubgroupImageMediaBlockReadINTEL $type $image $coordinate $width $height">;
 def OpSubgroupImageMediaBlockWriteINTEL: Op<5581, (outs), (ins ID:$image, ID:$coordinate, ID:$width, ID:$height, ID:$data),
                   "OpSubgroupImageMediaBlockWriteINTEL $image $coordinate $width $height $data">;
+
+// SPV_INTEL_device_side_avc_motion_estimation
+def OpSubgroupAvcMceGetDefaultInterBaseMultiReferencePenaltyINTEL: Op<5713, (outs ID:$res), (ins TYPE:$type, ID:$slicetype, ID:$qp),
+                  "$res = OpSubgroupAvcMceGetDefaultInterBaseMultiReferencePenaltyINTEL $type $slicetype $qp">;
+def OpSubgroupAvcMceSetInterBaseMultiReferencePenaltyINTEL: Op<5714, (outs ID:$res), (ins TYPE:$type, ID:$rbp, ID:$payload),
+                  "$res = OpSubgroupAvcMceSetInterBaseMultiReferencePenaltyINTEL $type $rbp $payload">;
+def OpSubgroupAvcMceGetDefaultInterShapePenaltyINTEL: Op<5715, (outs ID:$res), (ins TYPE:$type, ID:$slicetype, ID:$qp),
+                  "$res = OpSubgroupAvcMceGetDefaultInterShapePenaltyINTEL $type $slicetype $qp">;
+def OpSubgroupAvcMceSetInterShapePenaltyINTEL: Op<5716, (outs ID:$res), (ins TYPE:$type, ID:$pickedshapepenalty, ID:$payload),
+                  "$res = OpSubgroupAvcMceSetInterShapePenaltyINTEL $type $pickedshapepenalty $payload">;
+def OpSubgroupAvcMceGetDefaultInterDirectionPenaltyINTEL: Op<5717, (outs ID:$res), (ins TYPE:$type, ID:$slicetype, ID:$qp),
+                  "$res = OpSubgroupAvcMceGetDefaultInterDirectionPenaltyINTEL $type $slicetype $qp">;
+def OpSubgroupAvcMceSetInterDirectionPenaltyINTEL: Op<5718, (outs ID:$res), (ins TYPE:$type, ID:$directioncost, ID:$payload),
+                  "$res = OpSubgroupAvcMceSetInterDirectionPenaltyINTEL $type $directioncost $payload">;
+def OpSubgroupAvcMceGetDefaultIntraLumaShapePenaltyINTEL: Op<5719, (outs ID:$res), (ins TYPE:$type, ID:$slicetype, ID:$qp),
+                  "$res = OpSubgroupAvcMceGetDefaultIntraLumaShapePenaltyINTEL $type $slicetype $qp">;
+def OpSubgroupAvcMceGetDefaultInterMotionVectorCostTableINTEL: Op<5720, (outs ID:$res), (ins TYPE:$type, ID:$slicetype, ID:$qp),
+                  "$res = OpSubgroupAvcMceGetDefaultInterMotionVectorCostTableINTEL $type $slicetype $qp">;
+def OpSubgroupAvcMceGetDefaultHighPenaltyCostTableINTEL: Op<5721, (outs ID:$res), (ins TYPE:$type),
+                  "$res = OpSubgroupAvcMceGetDefaultHighPenaltyCostTableINTEL $type">;
+def OpSubgroupAvcMceGetDefaultMediumPenaltyCostTableINTEL: Op<5722, (outs ID:$res), (ins TYPE:$type),
+                  "$res = OpSubgroupAvcMceGetDefaultMediumPenaltyCostTableINTEL $type">;
+def OpSubgroupAvcMceGetDefaultLowPenaltyCostTableINTEL: Op<5723, (outs ID:$res), (ins TYPE:$type),
+                  "$res = OpSubgroupAvcMceGetDefaultLowPenaltyCostTableINTEL $type">;
+def OpSubgroupAvcMceSetMotionVectorCostFunctionINTEL: Op<5724, (outs ID:$res), (ins TYPE:$type, ID:$pccd, ID:$pct, ID:$cp, ID:$payload),
+                  "$res = OpSubgroupAvcMceSetMotionVectorCostFunctionINTEL $type $pccd $pct $cp $payload">;
+def OpSubgroupAvcMceGetDefaultIntraLumaModePenaltyINTEL: Op<5725, (outs ID:$res), (ins TYPE:$type, ID:$slicetype, ID:$qp),
+                  "$res = OpSubgroupAvcMceGetDefaultIntraLumaModePenaltyINTEL $type $slicetype $qp">;
+def OpSubgroupAvcMceGetDefaultNonDcLumaIntraPenaltyINTEL: Op<5726, (outs ID:$res), (ins TYPE:$type),
+                  "$res = OpSubgroupAvcMceGetDefaultNonDcLumaIntraPenaltyINTEL $type">;
+def OpSubgroupAvcMceGetDefaultIntraChromaModeBasePenaltyINTEL: Op<5727, (outs ID:$res), (ins TYPE:$type),
+                  "$res = OpSubgroupAvcMceGetDefaultIntraChromaModeBasePenaltyINTEL $type">;
+def OpSubgroupAvcMceSetAcOnlyHaarINTEL: Op<5728, (outs ID:$res), (ins TYPE:$type, ID:$payload),
+                  "$res = OpSubgroupAvcMceSetAcOnlyHaarINTEL $type $payload">;
+def OpSubgroupAvcMceSetSourceInterlacedFieldPolarityINTEL: Op<5729, (outs ID:$res), (ins TYPE:$type,ID:$sfp, ID:$payload),
+                  "$res = OpSubgroupAvcMceSetSourceInterlacedFieldPolarityINTEL $type $sfp $payload">;
+def OpSubgroupAvcMceSetSingleReferenceInterlacedFieldPolarityINTEL: Op<5730, (outs ID:$res), (ins TYPE:$type,ID:$rfp, ID:$payload),
+                  "$res = OpSubgroupAvcMceSetSingleReferenceInterlacedFieldPolarityINTEL $type $rfp $payload">;
+def OpSubgroupAvcMceSetDualReferenceInterlacedFieldPolaritiesINTEL: Op<5731, (outs ID:$res), (ins TYPE:$type, ID:$brfp, ID:$frfp, ID:$payload),
+                  "$res = OpSubgroupAvcMceSetDualReferenceInterlacedFieldPolaritiesINTEL $type $frfp $brfp $payload">;
+def OpSubgroupAvcMceConvertToImePayloadINTEL: Op<5732, (outs ID:$res), (ins TYPE:$type, ID:$payload),
+                  "$res = OpSubgroupAvcMceConvertToImePayloadINTEL $type $payload">;
+def OpSubgroupAvcMceConvertToImeResultINTEL: Op<5733, (outs ID:$res), (ins TYPE:$type, ID:$payload),
+                  "$res = OpSubgroupAvcMceConvertToImeResultINTEL $type $payload">;
+def OpSubgroupAvcMceConvertToRefPayloadINTEL: Op<5734, (outs ID:$res), (ins TYPE:$type, ID:$payload),
+                  "$res = OpSubgroupAvcMceConvertToRefPayloadINTEL $type $payload">;
+def OpSubgroupAvcMceConvertToRefResultINTEL: Op<5735, (outs ID:$res), (ins TYPE:$type, ID:$payload),
+                  "$res = OpSubgroupAvcMceConvertToRefResultINTEL $type $payload">;
+def OpSubgroupAvcMceConvertToSicPayloadINTEL: Op<5736, (outs ID:$res), (ins TYPE:$type, ID:$payload),
+                  "$res = OpSubgroupAvcMceConvertToSicPayloadINTEL $type $payload">;
+def OpSubgroupAvcMceConvertToSicResultINTEL: Op<5737, (outs ID:$res), (ins TYPE:$type, ID:$payload),
+                  "$res = OpSubgroupAvcMceConvertToSicResultINTEL $type $payload">;
+def OpSubgroupAvcMceGetMotionVectorsINTEL: Op<5738, (outs ID:$res), (ins TYPE:$type, ID:$payload),
+                  "$res = OpSubgroupAvcMceGetMotionVectorsINTEL $type $payload">;
+def OpSubgroupAvcMceGetInterDistortionsINTEL: Op<5739, (outs ID:$res), (ins TYPE:$type, ID:$payload),
+                  "$res = OpSubgroupAvcMceGetInterDistortionsINTEL $type $payload">;
+def OpSubgroupAvcMceGetBestInterDistortionsINTEL: Op<5740, (outs ID:$res), (ins TYPE:$type, ID:$payload),
+                  "$res = OpSubgroupAvcMceGetBestInterDistortionsINTEL $type $payload">;
+def OpSubgroupAvcMceGetInterMajorShapeINTEL: Op<5741, (outs ID:$res), (ins TYPE:$type, ID:$payload),
+                  "$res = OpSubgroupAvcMceGetInterMajorShapeINTEL $type $payload">;
+def OpSubgroupAvcMceGetInterMinorShapeINTEL: Op<5742, (outs ID:$res), (ins TYPE:$type, ID:$payload),
+                  "$res = OpSubgroupAvcMceGetInterMinorShapeINTEL $type $payload">;
+def OpSubgroupAvcMceGetInterDirectionsINTEL: Op<5743, (outs ID:$res), (ins TYPE:$type, ID:$payload),
+                  "$res = OpSubgroupAvcMceGetInterDirectionsINTEL $type $payload">;
+def OpSubgroupAvcMceGetInterMotionVectorCountINTEL: Op<5744, (outs ID:$res), (ins TYPE:$type, ID:$payload),
+                  "$res = OpSubgroupAvcMceGetInterMotionVectorCountINTEL $type $payload">;
+def OpSubgroupAvcMceGetInterReferenceIdsINTEL: Op<5745, (outs ID:$res), (ins TYPE:$type, ID:$payload),
+                  "$res = OpSubgroupAvcMceGetInterReferenceIdsINTEL $type $payload">;
+def OpSubgroupAvcMceGetInterReferenceInterlacedFieldPolaritiesINTEL: Op<5746, (outs ID:$res), (ins TYPE:$type, ID:$prid, ID:$prpfp, ID:$payload),
+                  "$res = OpSubgroupAvcMceGetInterReferenceInterlacedFieldPolaritiesINTEL $type $prid $prpfp $payload">;
+
+def OpVmeImageINTEL: Op<5699, (outs ID:$res), (ins TYPE:$type, ID:$imgtype, ID:$sampler),
+                  "$res = OpVmeImageINTEL $type $imgtype $sampler">;
+
+def OpSubgroupAvcImeInitializeINTEL: Op<5747, (outs ID:$res), (ins TYPE:$type, ID:$srccoord, ID:$partitionmask, ID:$SADadj),
+                  "$res = OpSubgroupAvcImeInitializeINTEL $type $srccoord $partitionmask $SADadj">;
+def OpSubgroupAvcImeSetSingleReferenceINTEL: Op<5748, (outs ID:$res), (ins TYPE:$type, ID:$refoffset, ID:$swc, ID:$payload),
+                  "$res = OpSubgroupAvcImeSetSingleReferenceINTEL $type $refoffset $swc $payload">;
+def OpSubgroupAvcImeSetDualReferenceINTEL: Op<5749, (outs ID:$res), (ins TYPE:$type, ID:$brefoffset, ID:$frefoffset, ID:$swc, ID:$payload),
+                  "$res = OpSubgroupAvcImeSetDualReferenceINTEL $type $brefoffset $frefoffset $swc $payload">;
+def OpSubgroupAvcImeRefWindowSizeINTEL: Op<5750, (outs ID:$res), (ins TYPE:$type, ID:$swc, ID:$dualref),
+                  "$res = OpSubgroupAvcImeRefWindowSizeINTEL $type $swc $dualref">;
+def OpSubgroupAvcImeAdjustRefOffsetINTEL: Op<5751, (outs ID:$res), (ins TYPE:$type, ID:$refoffset, ID:$srccoord, ID:$rws, ID:$imagesize),
+                  "$res = OpSubgroupAvcImeAdjustRefOffsetINTEL $type $refoffset $srccoord $rws $imagesize">;
+def OpSubgroupAvcImeConvertToMcePayloadINTEL: Op<5752, (outs ID:$res), (ins TYPE:$type, ID:$payload),
+                  "$res = OpSubgroupAvcImeConvertToMcePayloadINTEL $type $payload">;
+def OpSubgroupAvcImeSetMaxMotionVectorCountINTEL: Op<5753, (outs ID:$res), (ins TYPE:$type, ID:$maxmv, ID:$payload),
+                  "$res = OpSubgroupAvcImeSetMaxMotionVectorCountINTEL $type $maxmv $payload">;
+def OpSubgroupAvcImeSetUnidirectionalMixDisableINTEL: Op<5754, (outs ID:$res), (ins TYPE:$type, ID:$payload),
+                  "$res = OpSubgroupAvcImeSetUnidirectionalMixDisableINTEL $type $payload">;
+def OpSubgroupAvcImeSetEarlySearchTerminationThresholdINTEL: Op<5755, (outs ID:$res), (ins TYPE:$type, ID:$threshold, ID:$payload),
+                  "$res = OpSubgroupAvcImeSetEarlySearchTerminationThresholdINTEL $type $threshold $payload">;
+def OpSubgroupAvcImeSetWeightedSadINTEL: Op<5756, (outs ID:$res), (ins TYPE:$type, ID:$psw, ID:$payload),
+                  "$res = OpSubgroupAvcImeSetWeightedSadINTEL $type $psw $payload">;
+def OpSubgroupAvcImeEvaluateWithSingleReferenceINTEL: Op<5757, (outs ID:$res), (ins TYPE:$type, ID:$srcimg, ID:$refimg, ID:$payload),
+                  "$res = OpSubgroupAvcImeEvaluateWithSingleReferenceINTEL $type $srcimg $refimg $payload">;
+def OpSubgroupAvcImeEvaluateWithDualReferenceINTEL: Op<5758, (outs ID:$res), (ins TYPE:$type, ID:$srcimg, ID:$frefimg, ID:$brefimg, ID:$payload),
+                  "$res = OpSubgroupAvcImeEvaluateWithDualReferenceINTEL $type $srcimg $frefimg $brefimg $payload">;
+def OpSubgroupAvcImeEvaluateWithSingleReferenceStreamoutINTEL: Op<5761, (outs ID:$res), (ins TYPE:$type, ID:$srcimg, ID:$refimg, ID:$payload),
+                  "$res = OpSubgroupAvcImeEvaluateWithSingleReferenceStreamoutINTEL $type $srcimg $refimg $payload">;
+def OpSubgroupAvcImeEvaluateWithDualReferenceStreamoutINTEL: Op<5762, (outs ID:$res), (ins TYPE:$type, ID:$srcimg, ID:$frefimg, ID:$brefimg, ID:$payload),
+                  "$res = OpSubgroupAvcImeEvaluateWithDualReferenceStreamoutINTEL $type $srcimg $frefimg $brefimg $payload">;
+def OpSubgroupAvcImeEvaluateWithSingleReferenceStreaminINTEL: Op<5759, (outs ID:$res), (ins TYPE:$type, ID:$srcimg, ID:$refimg, ID:$payload, ID:$sc),
+                  "$res = OpSubgroupAvcImeEvaluateWithSingleReferenceStreaminINTEL $type $srcimg $refimg $payload $sc">;
+def OpSubgroupAvcImeEvaluateWithDualReferenceStreaminINTEL: Op<5760, (outs ID:$res), (ins TYPE:$type, ID:$srcimg, ID:$frefimg, ID:$brefimg, ID:$payload, ID:$sc),
+                  "$res = OpSubgroupAvcImeEvaluateWithDualReferenceStreaminINTEL $type $srcimg $frefimg $brefimg $payload $sc">;
+def OpSubgroupAvcImeEvaluateWithSingleReferenceStreaminoutINTEL: Op<5763, (outs ID:$res), (ins TYPE:$type, ID:$srcimg, ID:$refimg, ID:$payload, ID:$sc),
+                  "$res = OpSubgroupAvcImeEvaluateWithSingleReferenceStreaminoutINTEL $type $srcimg $refimg $payload $sc">;
+def OpSubgroupAvcImeEvaluateWithDualReferenceStreaminoutINTEL: Op<5764, (outs ID:$res), (ins TYPE:$type, ID:$srcimg, ID:$frefimg, ID:$brefimg, ID:$payload, ID:$sc),
+                  "$res = OpSubgroupAvcImeEvaluateWithDualReferenceStreaminoutINTEL $type $srcimg $frefimg $brefimg $payload $sc">;
+def OpSubgroupAvcImeConvertToMceResultINTEL: Op<5765, (outs ID:$res), (ins TYPE:$type, ID:$payload),
+                  "$res = OpSubgroupAvcImeConvertToMceResultINTEL $type $payload">;
+def OpSubgroupAvcImeGetSingleReferenceStreaminINTEL: Op<5766, (outs ID:$res), (ins TYPE:$type, ID:$payload),
+                  "$res = OpSubgroupAvcImeGetSingleReferenceStreaminINTEL $type $payload">;
+def OpSubgroupAvcImeGetDualReferenceStreaminINTEL: Op<5767, (outs ID:$res), (ins TYPE:$type, ID:$payload),
+                  "$res = OpSubgroupAvcImeGetDualReferenceStreaminINTEL $type $payload">;
+def OpSubgroupAvcImeStripSingleReferenceStreamoutINTEL: Op<5768, (outs ID:$res), (ins TYPE:$type, ID:$payload),
+                  "$res = OpSubgroupAvcImeStripSingleReferenceStreamoutINTEL $type $payload">;
+def OpSubgroupAvcImeStripDualReferenceStreamoutINTEL: Op<5769, (outs ID:$res), (ins TYPE:$type, ID:$payload),
+                  "$res = OpSubgroupAvcImeStripDualReferenceStreamoutINTEL $type $payload">;
+def OpSubgroupAvcImeGetStreamoutSingleReferenceMajorShapeMotionVectorsINTEL: Op<5770, (outs ID:$res), (ins TYPE:$type, ID:$payload, ID:$majshape),
+                  "$res = OpSubgroupAvcImeGetStreamoutSingleReferenceMajorShapeMotionVectorsINTEL $type $payload $majshape">;
+def OpSubgroupAvcImeGetStreamoutSingleReferenceMajorShapeDistortionsINTEL: Op<5771, (outs ID:$res), (ins TYPE:$type, ID:$payload, ID:$majshape),
+                  "$res = OpSubgroupAvcImeGetStreamoutSingleReferenceMajorShapeDistortionsINTEL $type $payload $majshape">;
+def OpSubgroupAvcImeGetStreamoutSingleReferenceMajorShapeReferenceIdsINTEL: Op<5772, (outs ID:$res), (ins TYPE:$type, ID:$payload, ID:$majshape),
+                  "$res = OpSubgroupAvcImeGetStreamoutSingleReferenceMajorShapeReferenceIdsINTEL $type $payload $majshape">;
+def OpSubgroupAvcImeGetStreamoutDualReferenceMajorShapeMotionVectorsINTEL: Op<5773, (outs ID:$res), (ins TYPE:$type, ID:$payload, ID:$majshape, ID:$dir),
+                  "$res = OpSubgroupAvcImeGetStreamoutDualReferenceMajorShapeMotionVectorsINTEL $type $payload $majshape $dir">;
+def OpSubgroupAvcImeGetStreamoutDualReferenceMajorShapeDistortionsINTEL: Op<5774, (outs ID:$res), (ins TYPE:$type, ID:$payload, ID:$majshape, ID:$dir),
+                  "$res = OpSubgroupAvcImeGetStreamoutDualReferenceMajorShapeDistortionsINTEL $type $payload $majshape $dir">;
+def OpSubgroupAvcImeGetStreamoutDualReferenceMajorShapeReferenceIdsINTEL: Op<5775, (outs ID:$res), (ins TYPE:$type, ID:$payload, ID:$majshape, ID:$dir),
+                  "$res = OpSubgroupAvcImeGetStreamoutDualReferenceMajorShapeReferenceIdsINTEL $type $payload $majshape $dir">;
+def OpSubgroupAvcImeGetBorderReachedINTEL: Op<5776, (outs ID:$res), (ins TYPE:$type, ID:$imgsel, ID:$payload),
+                  "$res = OpSubgroupAvcImeGetBorderReachedINTEL $type $imgsel $payload">;
+def OpSubgroupAvcImeGetTruncatedSearchIndicationINTEL: Op<5777, (outs ID:$res), (ins TYPE:$type, ID:$payload),
+                  "$res = OpSubgroupAvcImeGetTruncatedSearchIndicationINTEL $type $payload">;
+def OpSubgroupAvcImeGetUnidirectionalEarlySearchTerminationINTEL: Op<5778, (outs ID:$res), (ins TYPE:$type, ID:$payload),
+                  "$res = OpSubgroupAvcImeGetUnidirectionalEarlySearchTerminationINTEL $type $payload">;
+def OpSubgroupAvcImeGetWeightingPatternMinimumMotionVectorINTEL: Op<5779, (outs ID:$res), (ins TYPE:$type, ID:$payload),
+                  "$res = OpSubgroupAvcImeGetWeightingPatternMinimumMotionVectorINTEL $type $payload">;
+def OpSubgroupAvcImeGetWeightingPatternMinimumDistortionINTEL: Op<5780, (outs ID:$res), (ins TYPE:$type, ID:$payload),
+                  "$res = OpSubgroupAvcImeGetWeightingPatternMinimumDistortionINTEL $type $payload">;
+
+def OpSubgroupAvcFmeInitializeINTEL: Op<5781, (outs ID:$res), (ins TYPE:$type, ID:$srccoord, ID:$mv, ID:$majshape, ID:$minorshape, ID:$dir, ID:$pixres, ID:$sadadj),
+                  "$res = OpSubgroupAvcFmeInitializeINTEL $type $srccoord $mv $majshape $minorshape $dir $pixres $sadadj">;
+def OpSubgroupAvcBmeInitializeINTEL: Op<5782, (outs ID:$res), (ins TYPE:$type, ID:$srccoord, ID:$mv, ID:$majshape, ID:$minorshape, ID:$dir, ID:$pixres, ID:$bidirwt, ID:$sadadj),
+                  "$res = OpSubgroupAvcBmeInitializeINTEL $type $srccoord $mv $majshape $minorshape $dir $pixres $bidirwt $sadadj">;
+def OpSubgroupAvcRefConvertToMcePayloadINTEL: Op<5783, (outs ID:$res), (ins TYPE:$type, ID:$payload),
+                  "$res = OpSubgroupAvcRefConvertToMcePayloadINTEL $type $payload">;
+def OpSubgroupAvcRefSetBidirectionalMixDisableINTEL: Op<5784, (outs ID:$res), (ins TYPE:$type, ID:$payload),
+                  "$res = OpSubgroupAvcRefSetBidirectionalMixDisableINTEL $type $payload">;
+def OpSubgroupAvcRefSetBilinearFilterEnableINTEL: Op<5785, (outs ID:$res), (ins TYPE:$type, ID:$payload),
+                  "$res = OpSubgroupAvcRefSetBilinearFilterEnableINTEL $type $payload">;
+def OpSubgroupAvcRefEvaluateWithSingleReferenceINTEL: Op<5786, (outs ID:$res), (ins TYPE:$type, ID:$srcimg, ID:$refimg, ID:$payload),
+                  "$res = OpSubgroupAvcRefEvaluateWithSingleReferenceINTEL $type $srcimg $refimg $payload">;
+def OpSubgroupAvcRefEvaluateWithDualReferenceINTEL: Op<5787, (outs ID:$res), (ins TYPE:$type, ID:$srcimg, ID:$frefimg, ID:$brefimg, ID:$payload),
+                  "$res = OpSubgroupAvcRefEvaluateWithDualReferenceINTEL $type $srcimg $frefimg $brefimg $payload">;
+def OpSubgroupAvcRefEvaluateWithMultiReferenceINTEL: Op<5788, (outs ID:$res), (ins TYPE:$type, ID:$srcimg, ID:$pri, ID:$payload),
+                  "$res = OpSubgroupAvcRefEvaluateWithMultiReferenceINTEL $type $srcimg $pri $payload">;
+def OpSubgroupAvcRefEvaluateWithMultiReferenceInterlacedINTEL: Op<5789, (outs ID:$res), (ins TYPE:$type, ID:$srcimg, ID:$pri, ID:$prfp, ID:$payload),
+                  "$res = OpSubgroupAvcRefEvaluateWithMultiReferenceInterlacedINTEL $type $srcimg $pri $prfp $payload">;
+def OpSubgroupAvcRefConvertToMceResultINTEL: Op<5790, (outs ID:$res), (ins TYPE:$type, ID:$payload),
+                  "$res = OpSubgroupAvcRefConvertToMceResultINTEL $type $payload">;
+
+def OpSubgroupAvcSicInitializeINTEL: Op<5791, (outs ID:$res), (ins TYPE:$type, ID:$srccoord),
+                  "$res = OpSubgroupAvcSicInitializeINTEL $type $srccoord">;
+def OpSubgroupAvcSicConfigureSkcINTEL: Op<5792, (outs ID:$res), (ins TYPE:$type, ID:$sbpt, ID:$smvm, ID:$mv, ID:$bw, ID:$sadadj, ID:$payload),
+                  "$res = OpSubgroupAvcSicConfigureSkcINTEL $type $sbpt $smvm $mv $bw $sadadj $payload">;
+def OpSubgroupAvcSicConfigureIpeLumaINTEL: Op<5793, (outs ID:$res), (ins TYPE:$type, ID:$lipm, ID:$na, ID:$lelp, ID:$ulclp, ID:$uelp, ID:$urelp, ID:$sadadj, ID:$payload),
+                  "$res = OpSubgroupAvcSicConfigureIpeLumaINTEL $type $lipm $na $lelp $ulclp $uelp $urelp $sadadj $payload">;
+def OpSubgroupAvcSicConfigureIpeLumaChromaINTEL: Op<5794, (outs ID:$res), (ins TYPE:$type, ID:$lipm, ID:$ina, ID:$lelp, ID:$ulclp, ID:$uelp, ID:$urelp, ID:$lecp, ID:$ulccp, ID:$uecp, ID:$sadadj, ID:$payload),
+                  "$res = OpSubgroupAvcSicConfigureIpeLumaChromaINTEL $type $lipm $ina $lelp $ulclp $uelp $urelp $lecp $ulccp $uecp $sadadj $payload">;
+def OpSubgroupAvcSicGetMotionVectorMaskINTEL: Op<5776, (outs ID:$res), (ins TYPE:$type, ID:$sbpt, ID:$payload),
+                  "$res = OpSubgroupAvcSicGetMotionVectorMaskINTEL $type $sbpt $payload">;
+def OpSubgroupAvcSicConvertToMcePayloadINTEL: Op<5796, (outs ID:$res), (ins TYPE:$type, ID:$payload),
+                  "$res = OpSubgroupAvcSicConvertToMcePayloadINTEL $type $payload">;
+def OpSubgroupAvcSicSetIntraLumaShapePenaltyINTEL: Op<5797, (outs ID:$res), (ins TYPE:$type, ID:$psp, ID:$payload),
+                  "$res = OpSubgroupAvcSicSetIntraLumaShapePenaltyINTEL $type $psp $payload">;
+def OpSubgroupAvcSicSetIntraLumaModeCostFunctionINTEL: Op<5798, (outs ID:$res), (ins TYPE:$type, ID:$lmp, ID:$lpnm, ID:$lpndp, ID:$payload),
+                  "$res = OpSubgroupAvcSicSetIntraLumaModeCostFunctionINTEL $type $lmp $lpnm $lpndp $payload">;
+def OpSubgroupAvcSicSetIntraChromaModeCostFunctionINTEL: Op<5799, (outs ID:$res), (ins TYPE:$type,ID:$cmbp, ID:$payload),
+                  "$res = OpSubgroupAvcSicSetIntraChromaModeCostFunctionINTEL $type $cmbp $payload">;
+def OpSubgroupAvcSicSetBilinearFilterEnableINTEL: Op<5800, (outs ID:$res), (ins TYPE:$type, ID:$payload),
+                  "$res = OpSubgroupAvcSicSetBilinearFilterEnableINTEL $type $payload">;
+def OpSubgroupAvcSicSetSkcForwardTransformEnableINTEL: Op<5801, (outs ID:$res), (ins TYPE:$type, ID:$psc, ID:$payload),
+                  "$res = OpSubgroupAvcSicSetSkcForwardTransformEnableINTEL $type $psc $payload">;
+def OpSubgroupAvcSicSetBlockBasedRawSkipSadINTEL: Op<5802, (outs ID:$res), (ins TYPE:$type, ID:$bbst, ID:$payload),
+                  "$res = OpSubgroupAvcSicSetBlockBasedRawSkipSadINTEL $type $bbst $payload">;
+def OpSubgroupAvcSicEvaluateIpeINTEL: Op<5803, (outs ID:$res), (ins TYPE:$type, ID:$srcimg, ID:$payload),
+                  "$res = OpSubgroupAvcSicEvaluateIpeINTEL $type $srcimg $payload">;
+def OpSubgroupAvcSicEvaluateWithSingleReferenceINTEL: Op<5804, (outs ID:$res), (ins TYPE:$type, ID:$srcimg, ID: $refimg, ID:$payload),
+                  "$res = OpSubgroupAvcSicEvaluateWithSingleReferenceINTEL $type $srcimg $refimg $payload">;
+def OpSubgroupAvcSicEvaluateWithDualReferenceINTEL: Op<5805, (outs ID:$res), (ins TYPE:$type, ID:$srcimg, ID:$frefimg, ID:$brefimg, ID:$payload),
+                  "$res = OpSubgroupAvcSicEvaluateWithDualReferenceINTEL $type $srcimg $frefimg $brefimg $payload">;
+def OpSubgroupAvcSicEvaluateWithMultiReferenceINTEL: Op<5806, (outs ID:$res), (ins TYPE:$type, ID:$srcimg, ID:$pri, ID:$payload),
+                  "$res = OpSubgroupAvcSicEvaluateWithMultiReferenceINTEL $type $srcimg $pri $payload">;
+def OpSubgroupAvcSicEvaluateWithMultiReferenceInterlacedINTEL: Op<5807, (outs ID:$res), (ins TYPE:$type, ID:$srcimg, ID:$pri, ID:$prfp, ID:$payload),
+                  "$res = OpSubgroupAvcSicEvaluateWithMultiReferenceInterlacedINTEL $type $srcimg $pri $prfp $payload">;
+def OpSubgroupAvcSicConvertToMceResultINTEL: Op<5808, (outs ID:$res), (ins TYPE:$type, ID:$payload),
+                  "$res = OpSubgroupAvcSicConvertToMceResultINTEL $type $payload">;
+def OpSubgroupAvcSicGetIpeLumaShapeINTEL: Op<5809, (outs ID:$res), (ins TYPE:$type, ID:$payload),
+                  "$res = OpSubgroupAvcSicGetIpeLumaShapeINTEL $type $payload">;
+def OpSubgroupAvcSicGetBestIpeLumaDistortionINTEL: Op<5810, (outs ID:$res), (ins TYPE:$type, ID:$payload),
+                  "$res = OpSubgroupAvcSicGetBestIpeLumaDistortionINTEL $type $payload">;
+def OpSubgroupAvcSicGetBestIpeChromaDistortionINTEL: Op<5811, (outs ID:$res), (ins TYPE:$type, ID:$payload),
+                  "$res = OpSubgroupAvcSicGetBestIpeChromaDistortionINTEL $type $payload">;
+def OpSubgroupAvcSicGetPackedIpeLumaModesINTEL: Op<5812, (outs ID:$res), (ins TYPE:$type, ID:$payload),
+                  "$res = OpSubgroupAvcSicGetPackedIpeLumaModesINTEL $type $payload">;
+def OpSubgroupAvcSicGetIpeChromaModeINTEL: Op<5813, (outs ID:$res), (ins TYPE:$type, ID:$payload),
+                  "$res = OpSubgroupAvcSicGetIpeChromaModeINTEL $type $payload">;
+def OpSubgroupAvcSicGetPackedSkcLumaCountThresholdINTEL: Op<5814, (outs ID:$res), (ins TYPE:$type, ID:$payload),
+                  "$res = OpSubgroupAvcSicGetPackedSkcLumaCountThresholdINTEL $type $payload">;
+def OpSubgroupAvcSicGetPackedSkcLumaSumThresholdINTEL: Op<5815, (outs ID:$res), (ins TYPE:$type, ID:$payload),
+                  "$res = OpSubgroupAvcSicGetPackedSkcLumaSumThresholdINTEL $type $payload">;
+def OpSubgroupAvcSicGetInterRawSadsINTEL: Op<5816, (outs ID:$res), (ins TYPE:$type, ID:$payload),
+                  "$res = OpSubgroupAvcSicGetInterRawSadsINTEL $type $payload">;
 
 // - SPV_KHR_uniform_group_instructions
 def OpGroupIMulKHR: Op<6401, (outs ID:$res), (ins TYPE:$type, ID:$scope, i32imm:$groupOp, ID:$value),

@@ -1824,6 +1824,37 @@ void addInstrRequirements(const MachineInstr &MI,
     Reqs.addCapability(SPIRV::Capability::TernaryBitwiseFunctionINTEL);
     break;
   }
+  case SPIRV::OpSubgroupAvcMceGetDefaultIntraLumaShapePenaltyINTEL:
+  case SPIRV::OpSubgroupAvcMceGetDefaultIntraLumaModePenaltyINTEL:
+  case SPIRV::OpSubgroupAvcMceGetDefaultNonDcLumaIntraPenaltyINTEL:
+  case SPIRV::OpSubgroupAvcSicConfigureIpeLumaINTEL:
+  case SPIRV::OpSubgroupAvcSicSetIntraLumaModeCostFunctionINTEL:
+  case SPIRV::OpSubgroupAvcSicEvaluateIpeINTEL:
+  case SPIRV::OpSubgroupAvcSicGetIpeLumaShapeINTEL:
+  case SPIRV::OpSubgroupAvcSicGetBestIpeLumaDistortionINTEL:
+  case SPIRV::OpSubgroupAvcSicGetPackedIpeLumaModesINTEL:
+  case SPIRV::OpSubgroupAvcSicGetPackedSkcLumaCountThresholdINTEL:
+  case SPIRV::OpSubgroupAvcSicGetPackedSkcLumaSumThresholdINTEL:
+    if (ST.canUseExtension(
+            SPIRV::Extension::SPV_INTEL_device_side_avc_motion_estimation)) {
+      Reqs.addExtension(
+          SPIRV::Extension::SPV_INTEL_device_side_avc_motion_estimation);
+      Reqs.addCapability(
+          llvm::SPIRV::Capability::SubgroupAvcMotionEstimationIntraINTEL);
+    }
+    break;
+  case SPIRV::OpSubgroupAvcMceGetDefaultIntraChromaModeBasePenaltyINTEL:
+  case SPIRV::OpSubgroupAvcSicConfigureIpeLumaChromaINTEL:
+  case SPIRV::OpSubgroupAvcSicSetIntraChromaModeCostFunctionINTEL:
+  case SPIRV::OpSubgroupAvcSicGetIpeChromaModeINTEL:
+    if (ST.canUseExtension(
+            SPIRV::Extension::SPV_INTEL_device_side_avc_motion_estimation)) {
+      Reqs.addExtension(
+          SPIRV::Extension::SPV_INTEL_device_side_avc_motion_estimation);
+      Reqs.addCapability(
+          llvm::SPIRV::Capability::SubgroupAvcMotionEstimationChromaINTEL);
+    }
+    break;
 
   default:
     break;

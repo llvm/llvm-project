@@ -315,6 +315,7 @@ defm SPV_INTEL_memory_access_aliasing : ExtensionOperand<118>;
 defm SPV_INTEL_fp_max_error : ExtensionOperand<119>;
 defm SPV_INTEL_ternary_bitwise_function : ExtensionOperand<120>;
 defm SPV_INTEL_subgroup_matrix_multiply_accumulate : ExtensionOperand<121>;
+defm SPV_INTEL_device_side_avc_motion_estimation: ExtensionOperand<122>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define Capabilities enum values and at the same time
@@ -458,9 +459,9 @@ defm SubgroupShuffleINTEL : CapabilityOperand<5568, 0, 0, [SPV_INTEL_subgroups],
 defm SubgroupBufferBlockIOINTEL : CapabilityOperand<5569, 0, 0, [SPV_INTEL_subgroups], []>;
 defm SubgroupImageBlockIOINTEL : CapabilityOperand<5570, 0, 0, [SPV_INTEL_subgroups], []>;
 defm SubgroupImageMediaBlockIOINTEL : CapabilityOperand<5579, 0, 0, [SPV_INTEL_media_block_io], []>;
-defm SubgroupAvcMotionEstimationINTEL : CapabilityOperand<5696, 0, 0, [], []>;
-defm SubgroupAvcMotionEstimationIntraINTEL : CapabilityOperand<5697, 0, 0, [], []>;
-defm SubgroupAvcMotionEstimationChromaINTEL : CapabilityOperand<5698, 0, 0, [], []>;
+defm SubgroupAvcMotionEstimationINTEL : CapabilityOperand<5696, 0, 0, [SPV_INTEL_device_side_avc_motion_estimation], []>;
+defm SubgroupAvcMotionEstimationIntraINTEL : CapabilityOperand<5697, 0, 0, [SPV_INTEL_device_side_avc_motion_estimation], []>;
+defm SubgroupAvcMotionEstimationChromaINTEL : CapabilityOperand<5698, 0, 0, [SPV_INTEL_device_side_avc_motion_estimation], []>;
 defm GroupNonUniformPartitionedNV : CapabilityOperand<5297, 0, 0, [], []>;
 defm VulkanMemoryModelKHR : CapabilityOperand<5345, 0, 0, [], []>;
 defm VulkanMemoryModelDeviceScopeKHR : CapabilityOperand<5346, 0, 0, [], []>;
