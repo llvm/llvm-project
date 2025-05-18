@@ -31,6 +31,7 @@ _LIBCPP_DIAGNOSTIC_PUSH
 #  if !_LIBCPP_AVAILABILITY_HAS_BAD_EXPECTED_ACCESS_KEY_FUNCTION
 _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wweak-vtables")
 #  endif
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 template <>
 class _LIBCPP_EXPORTED_FROM_ABI bad_expected_access<void> : public exception {
 protected:
@@ -48,6 +49,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL const char* what() const noexcept override { return "bad access to std::expected"; }
 #  endif
 };
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_DIAGNOSTIC_POP
 
 template <class _Err>
