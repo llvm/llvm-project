@@ -77,6 +77,9 @@ public:
   void outputExecutionModeFromNumthreadsAttribute(
       const MCRegister &Reg, const Attribute &Attr,
       SPIRV::ExecutionMode::ExecutionMode EM);
+  void outputExecutionModeFromRegisterAllocMode(const MCRegister &Reg,
+                                                const MDNode *Node,
+                                                MachineFunction *MF);
   void outputExecutionMode(const Module &M);
   void outputAnnotations(const Module &M);
   void outputModuleSections();
@@ -493,6 +496,45 @@ void SPIRVAsmPrinter::outputExecutionModeFromNumthreadsAttribute(
   outputMCInst(Inst);
 }
 
+// outputs the execution mode for the extension SPV_INTEL_maximum_registers
+void SPIRVAsmPrinter::outputExecutionModeFromRegisterAllocMode(
+    const MCRegister &Reg, const MDNode *Node, MachineFunction *MF) {
+  MCInst Inst;
+  auto *RegisterAllocMode = Node->getOperand(0).get();
+  Inst.setOpcode(SPIRV::OpExecutionMode);
+  Inst.addOperand(MCOperand::createReg(Reg));
+
+  if (auto *MDS = dyn_cast<MDString>(RegisterAllocMode)) {
+    StringRef Str = MDS->getString();
+    if (Str.equals_insensitive("AutoINTEL")) {
+      Inst.addOperand(MCOperand::createImm(static_cast<unsigned>(
+          SPIRV::ExecutionMode::NamedMaximumRegistersINTEL)));
+      Inst.addOperand(MCOperand::createImm(static_cast<unsigned>(
+          SPIRV::NamedMaximumNumberOfRegisters::AutoINTEL)));
+    }
+  } else if (MDNode *NestedNode = dyn_cast<MDNode>(RegisterAllocMode)) {
+    if (auto *CMD = dyn_cast<ConstantAsMetadata>(NestedNode->getOperand(0))) {
+      if (ConstantInt *CI = dyn_cast<ConstantInt>(CMD->getValue())) {
+        Inst.setOpcode(SPIRV::OpExecutionModeId);
+        Inst.addOperand(MCOperand::createImm(
+            SPIRV::ExecutionMode::MaximumRegistersIdINTEL));
+        auto *GR = ST->getSPIRVGlobalRegistry();
+        Register MaxOpConstantReg = GR->getMaxRegConstantExtMap(MF);
+        MCRegister MaxRegister = MAI->getRegisterAlias(MF, MaxOpConstantReg);
+        Inst.addOperand(MCOperand::createReg(MaxRegister));
+      }
+    }
+  } else {
+
+    int64_t RegisterAllocVal =
+        mdconst::dyn_extract<ConstantInt>(RegisterAllocMode)->getZExtValue();
+    Inst.addOperand(
+        MCOperand::createImm(SPIRV::ExecutionMode::MaximumRegistersINTEL));
+    Inst.addOperand(MCOperand::createImm(RegisterAllocVal));
+  }
+  outputMCInst(Inst);
+}
+
 void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
   NamedMDNode *Node = M.getNamedMetadata("spirv.ExecutionMode");
   if (Node) {
@@ -532,6 +574,10 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
       unsigned TypeCode = encodeVecTypeHint(getMDOperandAsType(Node, 0));
       Inst.addOperand(MCOperand::createImm(TypeCode));
       outputMCInst(Inst);
+    }
+    if (MDNode *Node = F.getMetadata("RegisterAllocMode")) {
+      MachineFunction *MF = MMI->getMachineFunction(F);
+      outputExecutionModeFromRegisterAllocMode(FReg, Node, MF);
     }
     if (ST->isOpenCLEnv() && !M.getNamedMetadata("spirv.ExecutionMode") &&
         !M.getNamedMetadata("opencl.enable.FP_CONTRACT")) {

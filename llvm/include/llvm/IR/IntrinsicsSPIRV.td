@@ -153,6 +153,9 @@ let TargetPrefix = "spv" in {
 
   // FPMaxErrorDecorationINTEL
   def int_spv_assign_fpmaxerror_decoration: Intrinsic<[], [llvm_any_ty, llvm_metadata_ty]>;
+  
+  // ExecutionModeMaxRedId
+  def int_spv_max_reg_constant : Intrinsic<[], [llvm_i32_ty], [ImmArg<ArgIndex<0>>]>;
 
   // Convert between the generic storage class and a concrete one.
   def int_spv_generic_cast_to_ptr_explicit

@@ -22,6 +22,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 using namespace llvm::SPIRV;
@@ -147,7 +148,22 @@ void SPIRVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
         case SPIRV::OpMemberDecorate:
           printRemainingVariableOps(MI, NumFixedOps, OS);
           break;
-        case SPIRV::OpExecutionMode:
+        case SPIRV::OpExecutionMode: {
+          unsigned NumOperands = MI->getNumOperands();
+          if (NumOperands != NumFixedOps) {
+            const unsigned MaxRegVal =
+                MI->getOperand(FirstVariableIndex).getImm();
+            if (MaxRegVal == 0) {
+
+              OS << ' ';
+              printSymbolicOperand<
+                  OperandCategory::NamedMaximumNumberOfRegistersOperand>(
+                  MI, FirstVariableIndex, OS);
+              break;
+            }
+          }
+          printRemainingVariableOps(MI, NumFixedOps, OS);
+        } break;
         case SPIRV::OpExecutionModeId:
         case SPIRV::OpLoopMerge: {
           // Print any literals after the OPERAND_UNKNOWN argument normally.

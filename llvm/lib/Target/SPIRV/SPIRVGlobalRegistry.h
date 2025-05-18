@@ -68,6 +68,11 @@ class SPIRVGlobalRegistry : public SPIRVIRMapping {
   // Number of bits pointers and size_t integers require.
   const unsigned PointerSize;
 
+  // Maps each MachineFunction to its associated OpConstant register for the
+  // SPV_INTEL_maximum_registers extension with ExecutionModeId
+  // MaximumRegistersIdINTEL.
+  DenseMap<const MachineFunction *, Register> MaxRegConstantExtMap;
+
   // Holds the maximum ID we have in the module.
   unsigned Bound;
 
@@ -114,6 +119,15 @@ public:
   void setBound(unsigned V) { Bound = V; }
   unsigned getBound() { return Bound; }
 
+  void addMaxRegConstantRegisterExt(const MachineFunction *MF, Register Reg) {
+    MaxRegConstantExtMap[MF] = Reg;
+  }
+
+  Register getMaxRegConstantExtMap(const MachineFunction *MF) {
+    assert(MaxRegConstantExtMap.count(MF) &&
+           "MachineFunction not found in MaxRegConstantExtMap");
+    return MaxRegConstantExtMap[MF];
+  }
   void addGlobalObject(const Value *V, const MachineFunction *MF, Register R) {
     Reg2GO[std::make_pair(MF, R)] = V;
   }
