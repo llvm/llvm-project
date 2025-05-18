@@ -272,11 +272,16 @@ void SparcInstPrinter::printCTILabel(const MCInst *MI, uint64_t Address,
   // If the label has already been resolved to an immediate offset (say, when
   // we're running the disassembler), just print the immediate.
   if (Op.isImm()) {
-    const int64_t Offset = Op.getImm();
-    if (PrintBranchImmAsAddress)
-      O << formatHex(Offset);
-    else
+    int64_t Offset = Op.getImm();
+    if (PrintBranchImmAsAddress) {
+      uint64_t Target = Address + Offset;
+      O << formatHex(Target);
+    } else {
+      O << ".";
+      if (Offset >= 0)
+        O << "+";
       O << Offset;
+    }
     return;
   }
 
