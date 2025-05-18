@@ -21,7 +21,7 @@
 //   The number of underlying iterators inside the product iterator.
 //
 // - template <size_t _N>
-//   static auto Traits::__get_iterator_element(It __it)
+//   static decltype(auto) Traits::__get_iterator_element(It&& __it)
 //   Returns the _Nth iterator element of the given product iterator.
 
 #include <__config>
@@ -42,8 +42,11 @@ struct __product_iterator_traits;
 {
   static constexpr size_t __size = ...;
 
-  template <size_t _N>
-  static auto __get_iterator_element(_Iterator);
+  template <size_t _N, class _Iter>
+  static decltype(auto) __get_iterator_element(_Iter&&);
+
+  template <class... _Iters>
+  static _Iterator __make_product_iterator(_Iters&&...);
 };
 */
 

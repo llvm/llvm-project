@@ -66,6 +66,8 @@ void associative_container_benchmarks(std::string container) {
 
   static constexpr bool is_ordered_container = requires(Container c, Key k) { c.lower_bound(k); };
 
+  static constexpr bool is_map_like = requires { typename Container::mapped_type; };
+
   // These benchmarks are structured to perform the operation being benchmarked
   // a small number of times at each iteration, in order to offset the cost of
   // PauseTiming() and ResumeTiming().
@@ -321,6 +323,47 @@ void associative_container_benchmarks(std::string container) {
     }
   });
 
+  if constexpr (is_map_like) {
+    bench("insert(iterator, iterator) (product_iterator from same type)", [=](auto& st) {
+      const std::size_t size = st.range(0);
+      std::vector<Value> in  = make_value_types(generate_unique_keys(size + (size / 10)));
+      std::sort(in.begin(), in.end(), [&](const auto& x, const auto& y) { return get_key(x) < get_key(y); });
+      Container source(in.begin(), in.end());
+
+      Container c;
+
+      for ([[maybe_unused]] auto _ : st) {
+        c.insert(source.begin(), source.end());
+        benchmark::DoNotOptimize(c);
+        benchmark::ClobberMemory();
+
+        st.PauseTiming();
+        c = Container();
+        st.ResumeTiming();
+      }
+    });
+
+    bench("insert(iterator, iterator) (product_iterator from zip_view)", [=](auto& st) {
+      const std::size_t size = st.range(0);
+      std::vector<Key> keys  = generate_unique_keys(size + (size / 10));
+      std::sort(keys.begin(), keys.end());
+      std::vector<typename Container::mapped_type> mapped(keys.size());
+
+      auto source = std::views::zip(keys, mapped);
+
+      Container c;
+
+      for ([[maybe_unused]] auto _ : st) {
+        c.insert(source.begin(), source.end());
+        benchmark::DoNotOptimize(c);
+        benchmark::ClobberMemory();
+
+        st.PauseTiming();
+        c = Container();
+        st.ResumeTiming();
+      }
+    });
+  }
   /////////////////////////
   // Erasure
   /////////////////////////
