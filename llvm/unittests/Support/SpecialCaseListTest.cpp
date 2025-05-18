@@ -306,4 +306,23 @@ TEST_F(SpecialCaseListTest, Version2) {
   EXPECT_TRUE(SCL->inSection("sect2", "fun", "bar"));
   EXPECT_FALSE(SCL->inSection("sect3", "fun", "bar"));
 }
+
+TEST_F(SpecialCaseListTest, Version3) {
+  std::unique_ptr<SpecialCaseList> SCL = makeSpecialCaseList("[sect1]\n"
+                                                             "fun:foo*\n"
+                                                             "[sect1]\n"
+                                                             "fun:bar*\n"
+                                                             "[sect2]\n"
+                                                             "fun:def\n");
+  EXPECT_TRUE(SCL->inSection("sect1", "fun", "fooz"));
+  EXPECT_TRUE(SCL->inSection("sect1", "fun", "barz"));
+  EXPECT_FALSE(SCL->inSection("sect2", "fun", "fooz"));
+
+  EXPECT_TRUE(SCL->inSection("sect2", "fun", "def"));
+  EXPECT_FALSE(SCL->inSection("sect1", "fun", "def"));
+
+  EXPECT_EQ(2u, SCL->inSectionBlame("sect1", "fun", "fooz"));
+  EXPECT_EQ(4u, SCL->inSectionBlame("sect1", "fun", "barz"));
+  EXPECT_EQ(6u, SCL->inSectionBlame("sect2", "fun", "def"));
+}
 }
