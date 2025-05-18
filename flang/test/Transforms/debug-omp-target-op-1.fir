@@ -1,4 +1,5 @@
 // RUN: fir-opt --add-debug-info --mlir-print-debuginfo %s | FileCheck %s
+// RUN: fir-opt --add-debug-info="debug-level=LineTablesOnly" --mlir-print-debuginfo %s | FileCheck %s --check-prefix=LINETABLE
 
 module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
   func.func @_QQmain() attributes {fir.bindc_name = "test"} {
@@ -33,3 +34,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
 // CHECK: #llvm.di_local_variable<scope = #[[SP]], name = "y"{{.*}}line = 3, type = #[[TY]]>
 // CHECK: #llvm.di_local_variable<scope = #[[SP1]], name = "x"{{.*}}line = 7, type = #[[TY]]>
 // CHECK: #llvm.di_local_variable<scope = #[[SP1]], name = "y"{{.*}}line = 8, type = #[[TY]]>
+
+// LINETABLE: #[[SP:.*]] = #llvm.di_subprogram<{{.*}}name = "test"{{.*}}>
+// LINETABLE: #[[SP1:.*]] = #llvm.di_subprogram<{{.*}}name = "__omp_offloading_{{.*}}_QQmain_l6"{{.*}}line = 6{{.*}}subprogramFlags = "LocalToUnit|Definition"{{.*}}>
+// LINETABLE-NOT: #llvm.di_local_variable
