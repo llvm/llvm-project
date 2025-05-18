@@ -213,9 +213,6 @@ public:
   /// Give backend an opportunity to finish layout after relaxation
   virtual void finishLayout(MCAssembler const &Asm) const {}
 
-  /// Handle any target-specific assembler flags. By default, do nothing.
-  virtual void handleAssemblerFlag(MCAssemblerFlag Flag) {}
-
   /// Generate the compact unwind encoding for the CFI instructions.
   virtual uint64_t generateCompactUnwindEncoding(const MCDwarfFrameInfo *FI,
                                                  const MCContext *Ctxt) const {

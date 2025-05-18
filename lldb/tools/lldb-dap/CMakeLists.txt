@@ -23,6 +23,7 @@ add_lldb_library(lldbDAP
   RunInTerminal.cpp
   SourceBreakpoint.cpp
   Transport.cpp
+  Variables.cpp
   Watchpoint.cpp
 
   Handler/ResponseHandler.cpp
