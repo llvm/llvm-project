@@ -20,6 +20,7 @@
 #include "Protocol/ProtocolTypes.h"
 #include "SourceBreakpoint.h"
 #include "Transport.h"
+#include "Variables.h"
 #include "lldb/API/SBBroadcaster.h"
 #include "lldb/API/SBCommandInterpreter.h"
 #include "lldb/API/SBDebugger.h"
@@ -30,8 +31,6 @@
 #include "lldb/API/SBMutex.h"
 #include "lldb/API/SBTarget.h"
 #include "lldb/API/SBThread.h"
-#include "lldb/API/SBValue.h"
-#include "lldb/API/SBValueList.h"
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -52,10 +51,6 @@
 #include <thread>
 #include <vector>
 
-#define VARREF_LOCALS (int64_t)1
-#define VARREF_GLOBALS (int64_t)2
-#define VARREF_REGS (int64_t)3
-#define VARREF_FIRST_VAR_IDX (int64_t)4
 #define NO_TYPENAME "<no-type>"
 
 namespace lldb_dap {
@@ -87,50 +82,6 @@ enum class PacketStatus {
 };
 
 enum class ReplMode { Variable = 0, Command, Auto };
-
-struct Variables {
-  /// Variable_reference start index of permanent expandable variable.
-  static constexpr int64_t PermanentVariableStartIndex = (1ll << 32);
-
-  lldb::SBValueList locals;
-  lldb::SBValueList globals;
-  lldb::SBValueList registers;
-
-  int64_t next_temporary_var_ref{VARREF_FIRST_VAR_IDX};
-  int64_t next_permanent_var_ref{PermanentVariableStartIndex};
-
-  /// Variables that are alive in this stop state.
-  /// Will be cleared when debuggee resumes.
-  llvm::DenseMap<int64_t, lldb::SBValue> referenced_variables;
-  /// Variables that persist across entire debug session.
-  /// These are the variables evaluated from debug console REPL.
-  llvm::DenseMap<int64_t, lldb::SBValue> referenced_permanent_variables;
-
-  /// Check if \p var_ref points to a variable that should persist for the
-  /// entire duration of the debug session, e.g. repl expandable variables
-  static bool IsPermanentVariableReference(int64_t var_ref);
-
-  /// \return a new variableReference.
-  /// Specify is_permanent as true for variable that should persist entire
-  /// debug session.
-  int64_t GetNewVariableReference(bool is_permanent);
-
-  /// \return the expandable variable corresponding with variableReference
-  /// value of \p value.
-  /// If \p var_ref is invalid an empty SBValue is returned.
-  lldb::SBValue GetVariable(int64_t var_ref) const;
-
-  /// Insert a new \p variable.
-  /// \return variableReference assigned to this expandable variable.
-  int64_t InsertVariable(lldb::SBValue variable, bool is_permanent);
-
-  lldb::SBValueList *GetTopLevelScope(int64_t variablesReference);
-
-  lldb::SBValue FindVariable(uint64_t variablesReference, llvm::StringRef name);
-
-  /// Clear all scope variables and non-permanent expandable variables.
-  void Clear();
-};
 
 struct StartDebuggingRequestHandler : public lldb::SBCommandPluginInterface {
   DAP &dap;
