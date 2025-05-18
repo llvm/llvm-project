@@ -519,7 +519,7 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     return emitBinaryOperatorLValue(cast<BinaryOperator>(e));
   case Expr::CompoundAssignOperatorClass: {
     QualType ty = e->getType();
-    if (const AtomicType *at = ty->getAs<AtomicType>()) {
+    if (ty->getAs<AtomicType>()) {
       cgm.errorNYI(e->getSourceRange(),
                    "CompoundAssignOperator with AtomicType");
       return LValue();

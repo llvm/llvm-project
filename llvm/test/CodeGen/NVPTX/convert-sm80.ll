@@ -10,8 +10,8 @@ define <2 x bfloat> @cvt_rn_bf16x2_f32(float %f1, float %f2) {
 ; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.f32 %f1, [cvt_rn_bf16x2_f32_param_0];
-; CHECK-NEXT:    ld.param.f32 %f2, [cvt_rn_bf16x2_f32_param_1];
+; CHECK-NEXT:    ld.param.b32 %f1, [cvt_rn_bf16x2_f32_param_0];
+; CHECK-NEXT:    ld.param.b32 %f2, [cvt_rn_bf16x2_f32_param_1];
 ; CHECK-NEXT:    cvt.rn.bf16x2.f32 %r1, %f1, %f2;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
@@ -26,8 +26,8 @@ define <2 x bfloat> @cvt_rn_relu_bf16x2_f32(float %f1, float %f2) {
 ; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.f32 %f1, [cvt_rn_relu_bf16x2_f32_param_0];
-; CHECK-NEXT:    ld.param.f32 %f2, [cvt_rn_relu_bf16x2_f32_param_1];
+; CHECK-NEXT:    ld.param.b32 %f1, [cvt_rn_relu_bf16x2_f32_param_0];
+; CHECK-NEXT:    ld.param.b32 %f2, [cvt_rn_relu_bf16x2_f32_param_1];
 ; CHECK-NEXT:    cvt.rn.relu.bf16x2.f32 %r1, %f1, %f2;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
@@ -42,8 +42,8 @@ define <2 x bfloat> @cvt_rz_bf16x2_f32(float %f1, float %f2) {
 ; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.f32 %f1, [cvt_rz_bf16x2_f32_param_0];
-; CHECK-NEXT:    ld.param.f32 %f2, [cvt_rz_bf16x2_f32_param_1];
+; CHECK-NEXT:    ld.param.b32 %f1, [cvt_rz_bf16x2_f32_param_0];
+; CHECK-NEXT:    ld.param.b32 %f2, [cvt_rz_bf16x2_f32_param_1];
 ; CHECK-NEXT:    cvt.rz.bf16x2.f32 %r1, %f1, %f2;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
@@ -58,8 +58,8 @@ define <2 x bfloat> @cvt_rz_relu_bf16x2_f32(float %f1, float %f2) {
 ; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.f32 %f1, [cvt_rz_relu_bf16x2_f32_param_0];
-; CHECK-NEXT:    ld.param.f32 %f2, [cvt_rz_relu_bf16x2_f32_param_1];
+; CHECK-NEXT:    ld.param.b32 %f1, [cvt_rz_relu_bf16x2_f32_param_0];
+; CHECK-NEXT:    ld.param.b32 %f2, [cvt_rz_relu_bf16x2_f32_param_1];
 ; CHECK-NEXT:    cvt.rz.relu.bf16x2.f32 %r1, %f1, %f2;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
@@ -79,8 +79,8 @@ define <2 x half> @cvt_rn_f16x2_f32(float %f1, float %f2) {
 ; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.f32 %f1, [cvt_rn_f16x2_f32_param_0];
-; CHECK-NEXT:    ld.param.f32 %f2, [cvt_rn_f16x2_f32_param_1];
+; CHECK-NEXT:    ld.param.b32 %f1, [cvt_rn_f16x2_f32_param_0];
+; CHECK-NEXT:    ld.param.b32 %f2, [cvt_rn_f16x2_f32_param_1];
 ; CHECK-NEXT:    cvt.rn.f16x2.f32 %r1, %f1, %f2;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
@@ -95,8 +95,8 @@ define <2 x half> @cvt_rn_relu_f16x2_f32(float %f1, float %f2) {
 ; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.f32 %f1, [cvt_rn_relu_f16x2_f32_param_0];
-; CHECK-NEXT:    ld.param.f32 %f2, [cvt_rn_relu_f16x2_f32_param_1];
+; CHECK-NEXT:    ld.param.b32 %f1, [cvt_rn_relu_f16x2_f32_param_0];
+; CHECK-NEXT:    ld.param.b32 %f2, [cvt_rn_relu_f16x2_f32_param_1];
 ; CHECK-NEXT:    cvt.rn.relu.f16x2.f32 %r1, %f1, %f2;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
@@ -111,8 +111,8 @@ define <2 x half> @cvt_rz_f16x2_f32(float %f1, float %f2) {
 ; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.f32 %f1, [cvt_rz_f16x2_f32_param_0];
-; CHECK-NEXT:    ld.param.f32 %f2, [cvt_rz_f16x2_f32_param_1];
+; CHECK-NEXT:    ld.param.b32 %f1, [cvt_rz_f16x2_f32_param_0];
+; CHECK-NEXT:    ld.param.b32 %f2, [cvt_rz_f16x2_f32_param_1];
 ; CHECK-NEXT:    cvt.rz.f16x2.f32 %r1, %f1, %f2;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
@@ -127,8 +127,8 @@ define <2 x half> @cvt_rz_relu_f16x2_f32(float %f1, float %f2) {
 ; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.f32 %f1, [cvt_rz_relu_f16x2_f32_param_0];
-; CHECK-NEXT:    ld.param.f32 %f2, [cvt_rz_relu_f16x2_f32_param_1];
+; CHECK-NEXT:    ld.param.b32 %f1, [cvt_rz_relu_f16x2_f32_param_0];
+; CHECK-NEXT:    ld.param.b32 %f2, [cvt_rz_relu_f16x2_f32_param_1];
 ; CHECK-NEXT:    cvt.rz.relu.f16x2.f32 %r1, %f1, %f2;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
@@ -148,7 +148,7 @@ define bfloat @cvt_rn_bf16_f32(float %f1) {
 ; CHECK-NEXT:    .reg .b32 %f<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.f32 %f1, [cvt_rn_bf16_f32_param_0];
+; CHECK-NEXT:    ld.param.b32 %f1, [cvt_rn_bf16_f32_param_0];
 ; CHECK-NEXT:    cvt.rn.bf16.f32 %rs1, %f1;
 ; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
@@ -163,7 +163,7 @@ define bfloat @cvt_rn_relu_bf16_f32(float %f1) {
 ; CHECK-NEXT:    .reg .b32 %f<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.f32 %f1, [cvt_rn_relu_bf16_f32_param_0];
+; CHECK-NEXT:    ld.param.b32 %f1, [cvt_rn_relu_bf16_f32_param_0];
 ; CHECK-NEXT:    cvt.rn.relu.bf16.f32 %rs1, %f1;
 ; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
@@ -178,7 +178,7 @@ define bfloat @cvt_rz_bf16_f32(float %f1) {
 ; CHECK-NEXT:    .reg .b32 %f<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.f32 %f1, [cvt_rz_bf16_f32_param_0];
+; CHECK-NEXT:    ld.param.b32 %f1, [cvt_rz_bf16_f32_param_0];
 ; CHECK-NEXT:    cvt.rz.bf16.f32 %rs1, %f1;
 ; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
@@ -193,7 +193,7 @@ define bfloat @cvt_rz_relu_bf16_f32(float %f1) {
 ; CHECK-NEXT:    .reg .b32 %f<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.f32 %f1, [cvt_rz_relu_bf16_f32_param_0];
+; CHECK-NEXT:    ld.param.b32 %f1, [cvt_rz_relu_bf16_f32_param_0];
 ; CHECK-NEXT:    cvt.rz.relu.bf16.f32 %rs1, %f1;
 ; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
@@ -213,7 +213,7 @@ define i32 @cvt_rna_tf32_f32(float %f1) {
 ; CHECK-NEXT:    .reg .b32 %f<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.f32 %f1, [cvt_rna_tf32_f32_param_0];
+; CHECK-NEXT:    ld.param.b32 %f1, [cvt_rna_tf32_f32_param_0];
 ; CHECK-NEXT:    cvt.rna.tf32.f32 %r1, %f1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
@@ -231,8 +231,8 @@ define <2 x bfloat> @fold_ff2bf16x2(float %lo, float %hi) {
 ; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.f32 %f1, [fold_ff2bf16x2_param_0];
-; CHECK-NEXT:    ld.param.f32 %f2, [fold_ff2bf16x2_param_1];
+; CHECK-NEXT:    ld.param.b32 %f1, [fold_ff2bf16x2_param_0];
+; CHECK-NEXT:    ld.param.b32 %f2, [fold_ff2bf16x2_param_1];
 ; CHECK-NEXT:    cvt.rn.bf16x2.f32 %r1, %f2, %f1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
@@ -250,8 +250,8 @@ define <2 x half> @fold_ff2f16x2(float %lo, float %hi) {
 ; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.f32 %f1, [fold_ff2f16x2_param_0];
-; CHECK-NEXT:    ld.param.f32 %f2, [fold_ff2f16x2_param_1];
+; CHECK-NEXT:    ld.param.b32 %f1, [fold_ff2f16x2_param_0];
+; CHECK-NEXT:    ld.param.b32 %f2, [fold_ff2f16x2_param_1];
 ; CHECK-NEXT:    cvt.rn.f16x2.f32 %r1, %f2, %f1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;

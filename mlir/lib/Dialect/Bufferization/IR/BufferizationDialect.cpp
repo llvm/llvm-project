@@ -122,9 +122,9 @@ LogicalResult BufferizationDialect::verifyRegionArgAttribute(
     return success();
   }
   if (attr.getName() == kBufferLayoutAttrName) {
-    if (!llvm::isa<AffineMapAttr>(attr.getValue())) {
+    if (!llvm::isa<MemRefLayoutAttrInterface>(attr.getValue())) {
       return op->emitError() << "'" << kBufferLayoutAttrName
-                             << "' is expected to be a affine map attribute";
+                             << "' is expected to be a memref layout attribute";
     }
     if (!isa<FunctionOpInterface>(op))
       return op->emitError() << "expected '" << kBufferLayoutAttrName

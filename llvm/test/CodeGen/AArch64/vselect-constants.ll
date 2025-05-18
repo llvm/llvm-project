@@ -369,10 +369,9 @@ define <2 x i64> @not_signbit_mask_v2i64(<2 x i64> %a, <2 x i64> %b) {
 define <vscale x 16 x i8> @signbit_mask_xor_nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) #0 {
 ; CHECK-LABEL: signbit_mask_xor_nxv16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    cmplt p0.b, p0/z, z0.b, #0
-; CHECK-NEXT:    eor z0.d, z0.d, z1.d
-; CHECK-NEXT:    mov z0.b, p0/m, #0 // =0x0
+; CHECK-NEXT:    eor z1.d, z0.d, z1.d
+; CHECK-NEXT:    asr z0.b, z0.b, #7
+; CHECK-NEXT:    bic z0.d, z1.d, z0.d
 ; CHECK-NEXT:    ret
   %cond = icmp slt <vscale x 16 x i8> %a, zeroinitializer
   %xor = xor <vscale x 16 x i8> %a, %b

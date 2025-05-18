@@ -1,4 +1,4 @@
-// RUN: fir-opt --fir-to-llvm-ir="target=x86_64-unknown-linux-gnu" %s -o - | FileCheck %s
+// RUN: fir-opt --strict-fir-volatile-verifier --fir-to-llvm-ir="target=x86_64-unknown-linux-gnu" %s -o - | FileCheck %s
 // CHECK: llvm.store volatile %{{.+}}, %{{.+}} : i32, !llvm.ptr
 // CHECK: %{{.+}} = llvm.load volatile %{{.+}} : !llvm.ptr -> i32
 func.func @foo() {

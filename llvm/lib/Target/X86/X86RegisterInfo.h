@@ -31,6 +31,10 @@ private:
   ///
   bool IsWin64;
 
+  /// IsUEFI64 - Is UEFI 64 bit target.
+  ///
+  bool IsUEFI64;
+
   /// SlotSize - Stack slot size in bytes.
   ///
   unsigned SlotSize;
@@ -174,6 +178,8 @@ public:
 
   const TargetRegisterClass *
   constrainRegClassToNonRex2(const TargetRegisterClass *RC) const;
+
+  bool isNonRex2RegClass(const TargetRegisterClass *RC) const;
 };
 
 } // End llvm namespace

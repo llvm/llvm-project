@@ -692,7 +692,7 @@ TEST_F(AArch64GISelMITest, TestVectorNumSignBitsConstant) {
   EXPECT_EQ(2u, Info.computeNumSignBits(CopyReg32));
   EXPECT_EQ(3u, Info.computeNumSignBits(CopyRegNeg32));
   EXPECT_EQ(3u, Info.computeNumSignBits(NonSplatSameSign));
-  EXPECT_EQ(1u, Info.computeNumSignBits(NonSplatDifferentSign));
+  EXPECT_EQ(2u, Info.computeNumSignBits(NonSplatDifferentSign));
 }
 
 TEST_F(AArch64GISelMITest, TestVectorNumSignBitsSext) {

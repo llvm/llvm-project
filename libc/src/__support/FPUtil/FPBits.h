@@ -757,7 +757,7 @@ public:
       result.set_significand(number);
       result.set_biased_exponent(static_cast<StorageType>(ep + 1));
     } else {
-      result.set_significand(number >> -ep);
+      result.set_significand(number >> static_cast<unsigned>(-ep));
     }
     return RetT(result.uintval());
   }

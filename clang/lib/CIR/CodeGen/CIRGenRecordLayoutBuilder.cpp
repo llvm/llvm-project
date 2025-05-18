@@ -77,6 +77,8 @@ struct CIRRecordLowering final {
     return astContext.toCharUnitsFromBits(bitOffset);
   }
 
+  void calculateZeroInit();
+
   CharUnits getSize(mlir::Type Ty) {
     return CharUnits::fromQuantity(dataLayout.layout.getTypeSize(Ty));
   }
@@ -177,17 +179,25 @@ void CIRRecordLowering::lower() {
     return;
   }
 
-  if (isa<CXXRecordDecl>(recordDecl)) {
-    cirGenTypes.getCGModule().errorNYI(recordDecl->getSourceRange(),
-                                       "lower: class");
-    return;
-  }
-
   assert(!cir::MissingFeatures::cxxSupport());
 
   CharUnits size = astRecordLayout.getSize();
 
   accumulateFields();
+
+  if (const auto *cxxRecordDecl = dyn_cast<CXXRecordDecl>(recordDecl)) {
+    if (cxxRecordDecl->getNumBases() > 0) {
+      CIRGenModule &cgm = cirGenTypes.getCGModule();
+      cgm.errorNYI(recordDecl->getSourceRange(),
+                   "CIRRecordLowering::lower: derived CXXRecordDecl");
+      return;
+    }
+    if (members.empty()) {
+      appendPaddingBytes(size);
+      assert(!cir::MissingFeatures::bitfields());
+      return;
+    }
+  }
 
   llvm::stable_sort(members);
   // TODO: implement clipTailPadding once bitfields are implemented
@@ -199,6 +209,7 @@ void CIRRecordLowering::lower() {
   insertPadding();
   members.pop_back();
 
+  calculateZeroInit();
   fillOutputFields();
 }
 
@@ -233,6 +244,19 @@ void CIRRecordLowering::accumulateFields() {
       assert(!cir::MissingFeatures::zeroSizeRecordMembers());
       ++field;
     }
+  }
+}
+
+void CIRRecordLowering::calculateZeroInit() {
+  for (const MemberInfo &member : members) {
+    if (member.kind == MemberInfo::InfoKind::Field) {
+      if (!member.fieldDecl || isZeroInitializable(member.fieldDecl))
+        continue;
+      zeroInitializable = zeroInitializableAsBase = false;
+      return;
+    }
+    // TODO(cir): handle base types
+    assert(!cir::MissingFeatures::cxxSupport());
   }
 }
 
@@ -295,7 +319,10 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *rd, cir::RecordType *ty) {
   // If we're in C++, compute the base subobject type.
   if (llvm::isa<CXXRecordDecl>(rd) && !rd->isUnion() &&
       !rd->hasAttr<FinalAttr>()) {
-    cgm.errorNYI(rd->getSourceRange(), "computeRecordLayout: CXXRecordDecl");
+    if (lowering.astRecordLayout.getNonVirtualSize() !=
+        lowering.astRecordLayout.getSize()) {
+      cgm.errorNYI(rd->getSourceRange(), "computeRecordLayout: CXXRecordDecl");
+    }
   }
 
   // Fill in the record *after* computing the base type.  Filling in the body
@@ -304,7 +331,9 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *rd, cir::RecordType *ty) {
   assert(!cir::MissingFeatures::astRecordDeclAttr());
   ty->complete(lowering.fieldTypes, lowering.packed, lowering.padded);
 
-  auto rl = std::make_unique<CIRGenRecordLayout>(ty ? *ty : cir::RecordType());
+  auto rl = std::make_unique<CIRGenRecordLayout>(
+      ty ? *ty : cir::RecordType(), (bool)lowering.zeroInitializable,
+      (bool)lowering.zeroInitializableAsBase);
 
   assert(!cir::MissingFeatures::recordZeroInit());
   assert(!cir::MissingFeatures::cxxSupport());

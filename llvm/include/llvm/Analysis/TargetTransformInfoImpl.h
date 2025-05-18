@@ -781,8 +781,8 @@ public:
 
   virtual InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
                                              TTI::TargetCostKind CostKind,
-                                             unsigned Index, Value *Op0,
-                                             Value *Op1) const {
+                                             unsigned Index, const Value *Op0,
+                                             const Value *Op1) const {
     return 1;
   }
 
@@ -1087,10 +1087,7 @@ public:
   }
   virtual bool preferAlternateOpcodeVectorization() const { return true; }
 
-  virtual bool preferPredicatedReductionSelect(unsigned Opcode,
-                                               Type *Ty) const {
-    return false;
-  }
+  virtual bool preferPredicatedReductionSelect() const { return false; }
 
   virtual bool preferEpilogueVectorization() const { return true; }
 

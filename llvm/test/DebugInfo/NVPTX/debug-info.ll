@@ -24,10 +24,10 @@
 ; CHECK-DAG: .reg .b32       %r<6>;
 ; CHECK-DAG: .reg .b64       %rd<8>;
 ; CHECK: .loc [[DEBUG_INFO_CU:[0-9]+]] 5 0
-; CHECK: ld.param.u32    %r{{.+}}, [{{.+}}];
-; CHECK: ld.param.u64    %rd{{.+}}, [{{.+}}];
+; CHECK: ld.param.b32    %r{{.+}}, [{{.+}}];
+; CHECK: ld.param.b64    %rd{{.+}}, [{{.+}}];
 ; CHECK: cvta.to.global.u64      %rd{{.+}}, %rd{{.+}};
-; CHECK: ld.param.u64    %rd{{.+}}, [{{.+}}];
+; CHECK: ld.param.b64    %rd{{.+}}, [{{.+}}];
 ; CHECK: cvta.to.global.u64      %rd{{.+}}, %rd{{.+}};
 ; CHECK: .loc [[BUILTUIN_VARS_H:[0-9]+]] 78 180
 ; CHECK: mov.u32         %r{{.+}}, %ctaid.x;
@@ -41,18 +41,18 @@
 ; CHECK: setp.ge.s32     %p{{.+}}, %r{{.+}}, %r{{.+}};
 ; CHECK: .loc [[DEBUG_INFO_CU]] 7 7
 ; CHECK: @%p{{.+}} bra   [[BB:\$L__.+]];
-; CHECK: ld.param.f32    %f{{.+}}, [{{.+}}];
+; CHECK: ld.param.b32    %f{{.+}}, [{{.+}}];
 ; CHECK: .loc [[DEBUG_INFO_CU]] 8 13
 ; CHECK: mul.wide.u32    %rd{{.+}}, %r{{.+}}, 4;
 ; CHECK: add.s64         %rd{{.+}}, %rd{{.+}}, %rd{{.+}};
-; CHECK: ld.global.f32   %f{{.+}}, [%rd{{.+}}];
+; CHECK: ld.global.b32   %f{{.+}}, [%rd{{.+}}];
 ; CHECK: .loc [[DEBUG_INFO_CU]] 8 19
 ; CHECK: add.s64         %rd{{.+}}, %rd{{.+}}, %rd{{.+}};
-; CHECK: ld.global.f32   %f{{.+}}, [%rd{{.+}}];
+; CHECK: ld.global.b32   %f{{.+}}, [%rd{{.+}}];
 ; CHECK: .loc [[DEBUG_INFO_CU]] 3 82
 ; CHECK: fma.rn.f32      %f{{.+}}, %f{{.+}}, %f{{.+}}, %f{{.+}};
 ; CHECK: .loc [[DEBUG_INFO_CU]] 3 78
-; CHECK: st.global.f32   [%rd{{.+}}], %f{{.+}};
+; CHECK: st.global.b32   [%rd{{.+}}], %f{{.+}};
 ; CHECK: [[BB]]:
 ; CHECK: .loc [[DEBUG_INFO_CU]] 9 1
 ; CHECK: ret;
