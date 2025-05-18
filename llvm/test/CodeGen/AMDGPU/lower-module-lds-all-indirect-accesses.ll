@@ -9,8 +9,7 @@
 @B = external addrspace(3) global [0 x i32]
 
 define amdgpu_kernel void @kernel_0() {
-; CHECK-LABEL: define amdgpu_kernel void @kernel_0
-; CHECK-SAME: () #[[ATTR0:[0-9]+]] {{.*}}.amdgcn.lds.kernel.id [[META2:![0-9]+]] {
+; CHECK-LABEL: define amdgpu_kernel void @kernel_0() #0 !llvm.amdgcn.lds.kernel.id !1 {
 ; CHECK-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.kernel.kernel_0.lds) ]
 ; CHECK-NEXT:    call void @call_store_A()
 ; CHECK-NEXT:    ret void
@@ -20,8 +19,7 @@ define amdgpu_kernel void @kernel_0() {
 }
 
 define amdgpu_kernel void @kernel_1() {
-; CHECK-LABEL: define amdgpu_kernel void @kernel_1
-; CHECK-SAME: () {{.*}}.amdgcn.lds.kernel.id [[META3:![0-9]+]] {
+; CHECK-LABEL: define amdgpu_kernel void @kernel_1() !llvm.amdgcn.lds.kernel.id !2 {
 ; CHECK-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.kernel_1.dynlds) ]
 ; CHECK-NEXT:    [[PTR:%.*]] = call ptr @get_B_ptr()
 ; CHECK-NEXT:    ret void
@@ -31,8 +29,7 @@ define amdgpu_kernel void @kernel_1() {
 }
 
 define amdgpu_kernel void @kernel_2() {
-; CHECK-LABEL: define amdgpu_kernel void @kernel_2
-; CHECK-SAME: () #[[ATTR0]] {{.*}}.amdgcn.lds.kernel.id [[META4:![0-9]+]] {
+; CHECK-LABEL: define amdgpu_kernel void @kernel_2() #0 !llvm.amdgcn.lds.kernel.id !3 {
 ; CHECK-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.kernel.kernel_2.lds) ]
 ; CHECK-NEXT:    call void @store_A()
 ; CHECK-NEXT:    ret void
@@ -42,8 +39,7 @@ define amdgpu_kernel void @kernel_2() {
 }
 
 define amdgpu_kernel void @kernel_3() {
-; CHECK-LABEL: define amdgpu_kernel void @kernel_3
-; CHECK-SAME: () {{.*}}.amdgcn.lds.kernel.id [[META5:![0-9]+]] {
+; CHECK-LABEL: define amdgpu_kernel void @kernel_3() !llvm.amdgcn.lds.kernel.id !4 {
 ; CHECK-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.kernel_3.dynlds) ]
 ; CHECK-NEXT:    [[PTR:%.*]] = call ptr @get_B_ptr()
 ; CHECK-NEXT:    ret void
