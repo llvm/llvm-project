@@ -24,7 +24,7 @@ class Emplaceable {
 public:
   TEST_CONSTEXPR_CXX14 Emplaceable() : int_(0), double_(0) {}
   TEST_CONSTEXPR_CXX14 Emplaceable(int i, double d) : int_(i), double_(d) {}
-  TEST_CONSTEXPR Emplaceable(Emplaceable&& x) : int_(x.int_), double_(x.double_) {
+  TEST_CONSTEXPR_CXX14 Emplaceable(Emplaceable&& x) : int_(x.int_), double_(x.double_) {
     x.int_    = 0;
     x.double_ = 0;
   }
