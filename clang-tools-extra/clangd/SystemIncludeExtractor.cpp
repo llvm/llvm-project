@@ -253,7 +253,8 @@ namespace {
 bool isValidTarget(llvm::StringRef Triple) {
   std::shared_ptr<TargetOptions> TargetOpts(new TargetOptions);
   TargetOpts->Triple = Triple.str();
-  DiagnosticsEngine Diags(new DiagnosticIDs, new DiagnosticOptions,
+  DiagnosticOptions DiagOpts;
+  DiagnosticsEngine Diags(new DiagnosticIDs, DiagOpts,
                           new IgnoringDiagConsumer);
   llvm::IntrusiveRefCntPtr<TargetInfo> Target =
       TargetInfo::CreateTargetInfo(Diags, *TargetOpts);

@@ -4227,9 +4227,10 @@ enum CXErrorCode clang_createTranslationUnit2(CXIndex CIdx,
   FileSystemOptions FileSystemOpts;
   HeaderSearchOptions HSOpts;
 
+  DiagnosticOptions DiagOpts;
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
       CompilerInstance::createDiagnostics(*llvm::vfs::getRealFileSystem(),
-                                          new DiagnosticOptions());
+                                          DiagOpts);
   std::unique_ptr<ASTUnit> AU = ASTUnit::LoadFromASTFile(
       ast_filename, CXXIdx->getPCHContainerOperations()->getRawReader(),
       ASTUnit::LoadEverything, Diags, FileSystemOpts, HSOpts,
@@ -4299,11 +4300,11 @@ clang_parseTranslationUnit_Impl(CXIndex CIdx, const char *source_filename,
   }
 
   // Configure the diagnostics.
-  std::unique_ptr<DiagnosticOptions> DiagOpts = CreateAndPopulateDiagOpts(
+  std::shared_ptr<DiagnosticOptions> DiagOpts = CreateAndPopulateDiagOpts(
       llvm::ArrayRef(command_line_args, num_command_line_args));
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags(
       CompilerInstance::createDiagnostics(*llvm::vfs::getRealFileSystem(),
-                                          DiagOpts.release()));
+                                          *DiagOpts));
 
   if (options & CXTranslationUnit_KeepGoing)
     Diags->setFatalsAsError(true);
@@ -4387,7 +4388,7 @@ clang_parseTranslationUnit_Impl(CXIndex CIdx, const char *source_filename,
       options, llvm::ArrayRef(*Args), /*InvocationArgs=*/{}, unsaved_files);
   std::unique_ptr<ASTUnit> Unit = ASTUnit::LoadFromCommandLine(
       Args->data(), Args->data() + Args->size(),
-      CXXIdx->getPCHContainerOperations(), Diags,
+      CXXIdx->getPCHContainerOperations(), DiagOpts, Diags,
       CXXIdx->getClangResourcesPath(), CXXIdx->getStorePreamblesInMemory(),
       CXXIdx->getPreambleStoragePath(), CXXIdx->getOnlyLocalDecls(),
       CaptureDiagnostics, *RemappedFiles,

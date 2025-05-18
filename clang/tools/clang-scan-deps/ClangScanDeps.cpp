@@ -452,11 +452,11 @@ public:
   // Returns \c true if any command lines fail to round-trip. We expect
   // commands already be canonical when output by the scanner.
   bool roundTripCommands(raw_ostream &ErrOS) {
-    IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions{};
-    TextDiagnosticPrinter DiagConsumer(ErrOS, &*DiagOpts);
+    DiagnosticOptions DiagOpts;
+    TextDiagnosticPrinter DiagConsumer(ErrOS, DiagOpts);
     IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
         CompilerInstance::createDiagnostics(*llvm::vfs::getRealFileSystem(),
-                                            &*DiagOpts, &DiagConsumer,
+                                            DiagOpts, &DiagConsumer,
                                             /*ShouldOwnClient=*/false);
 
     for (auto &&M : Modules)
@@ -779,9 +779,10 @@ getCompilationDatabase(int argc, char **argv, std::string &ErrorMessage) {
         CompilationDB, ErrorMessage,
         tooling::JSONCommandLineSyntax::AutoDetect);
 
+  DiagnosticOptions DiagOpts;
   llvm::IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
       CompilerInstance::createDiagnostics(*llvm::vfs::getRealFileSystem(),
-                                          new DiagnosticOptions);
+                                          DiagOpts);
   driver::Driver TheDriver(CommandLine[0], llvm::sys::getDefaultTargetTriple(),
                            *Diags);
   TheDriver.setCheckInputsExist(false);
