@@ -255,6 +255,16 @@ struct SLPGraphNode {
       : ops(operations.begin(), operations.end()) {}
 
   size_t size() const { return ops.size(); }
+
+  Operation *getEarliestOp() const {
+    assert(!ops.empty() && "empty node");
+    Operation *ret = ops.front();
+    for (Operation *op : ArrayRef(ops).drop_front()) {
+      if (op->isBeforeInBlock(ret))
+        ret = op;
+    }
+    return ret;
+  }
 };
 
 /// A graph of vectorizable operations
@@ -388,7 +398,7 @@ public:
     for (auto *node : sortedNodes) {
       int64_t numElements = node->size();
       Operation *op = node->ops.front();
-      rewriter.setInsertionPoint(op);
+      rewriter.setInsertionPoint(node->getEarliestOp());
       Location loc = op->getLoc();
 
       auto handleNonVectorInputs = [&](ValueRange operands) {
