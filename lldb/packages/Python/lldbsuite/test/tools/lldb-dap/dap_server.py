@@ -955,6 +955,13 @@ class DebugCommunication(object):
         """
         (dir, base) = os.path.split(file_path)
         source_dict = {"name": base, "path": file_path}
+        return self.request_setBreakpoints_with_source(source_dict, line_array, data)
+
+    def request_setBreakpointsAssembly(self, sourceReference, line_array, data=None):
+        source_dict = {"sourceReference": sourceReference}
+        return self.request_setBreakpoints_with_source(source_dict, line_array, data)
+
+    def request_setBreakpoints_with_source(self, source_dict, line_array, data=None):
         args_dict = {
             "source": source_dict,
             "sourceModified": False,
