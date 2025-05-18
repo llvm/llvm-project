@@ -343,13 +343,13 @@ void APInt::clearBitsSlowCase(unsigned LoBit, unsigned HiBit) {
   // Create an initial mask for the low word with ones below loBit.
   uint64_t LoMask = ~(WORDTYPE_MAX << whichBit(LoBit));
 
-  // If hiBit is not aligned, we need a high mask.
+  // If HiBit is not aligned, we need a high mask.
   unsigned HiShiftAmt = whichBit(HiBit);
   if (HiShiftAmt != 0) {
-    // Create a high mask with ones above hiBit.
+    // Create a high mask with ones above HiBit.
     uint64_t HiMask = ~(WORDTYPE_MAX >> (APINT_BITS_PER_WORD - HiShiftAmt));
-    // If loWord and hiWord are equal, then we combine the masks. Otherwise,
-    // set the bits in hiWord.
+    // If LoWord and HiWord are equal, then we combine the masks. Otherwise,
+    // set the bits in HiWord.
     if (HiWord == LoWord)
       LoMask &= HiMask;
     else
@@ -358,7 +358,7 @@ void APInt::clearBitsSlowCase(unsigned LoBit, unsigned HiBit) {
   // Apply the mask to the low word.
   U.pVal[LoWord] &= LoMask;
 
-  // Fill any words between loWord and hiWord with all zeros.
+  // Fill any words between LoWord and HiWord with all zeros.
   for (unsigned Word = LoWord + 1; Word < HiWord; ++Word)
     U.pVal[Word] = 0;
 }

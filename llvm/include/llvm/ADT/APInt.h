@@ -1413,11 +1413,11 @@ public:
       U.pVal[whichWord(BitPosition)] &= Mask;
   }
 
-  /// Clear the bits from loBit (inclusive) to hiBit (exclusive) to 0.
-  /// This function handles case when \p loBit <= \p hiBit.
+  /// Clear the bits from LoBit (inclusive) to HiBit (exclusive) to 0.
+  /// This function handles case when \p LoBit <= \p HiBit.
   void clearBits(unsigned LoBit, unsigned HiBit) {
-    assert(HiBit <= BitWidth && "hiBit out of range");
-    assert(LoBit <= HiBit && "loBit greater than hiBit");
+    assert(HiBit <= BitWidth && "HiBit out of range");
+    assert(LoBit <= HiBit && "LoBit greater than HiBit");
     if (LoBit == HiBit)
       return;
     if (HiBit <= APINT_BITS_PER_WORD) {
@@ -2071,7 +2071,7 @@ private:
   void setBitsSlowCase(unsigned loBit, unsigned hiBit);
 
   /// out-of-line slow case for clearBits.
-  void clearBitsSlowCase(unsigned loBit, unsigned hiBit);
+  void clearBitsSlowCase(unsigned LoBit, unsigned HiBit);
 
   /// out-of-line slow case for flipAllBits.
   void flipAllBitsSlowCase();
