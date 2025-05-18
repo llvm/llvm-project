@@ -1843,6 +1843,8 @@ struct __container_traits<unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc> > {
   //  inserting a single element, the insertion has no effect.
   static _LIBCPP_CONSTEXPR const bool __emplacement_has_strong_exception_safety_guarantee =
       __is_nothrow_invocable_v<_Hash, const _Key&>;
+
+  static _LIBCPP_CONSTEXPR const bool __reservable = true;
 };
 
 template <class _Key,
@@ -2543,6 +2545,8 @@ struct __container_traits<unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc> > 
   //  inserting a single element, the insertion has no effect.
   static _LIBCPP_CONSTEXPR const bool __emplacement_has_strong_exception_safety_guarantee =
       __is_nothrow_invocable_v<_Hash, const _Key&>;
+
+  static _LIBCPP_CONSTEXPR const bool __reservable = true;
 };
 
 _LIBCPP_END_NAMESPACE_STD
