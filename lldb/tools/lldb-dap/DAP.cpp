@@ -118,13 +118,9 @@ llvm::StringRef DAP::debug_adapter_path = "";
 DAP::DAP(Log *log, const ReplMode default_repl_mode,
          std::vector<std::string> pre_init_commands, Transport &transport)
     : log(log), transport(transport), broadcaster("lldb-dap"),
-      exception_breakpoints(), focus_tid(LLDB_INVALID_THREAD_ID),
-      stop_at_entry(false), is_attach(false),
-      restarting_process_id(LLDB_INVALID_PROCESS_ID), configuration_done(false),
-      waiting_for_run_in_terminal(false),
       progress_event_reporter(
           [&](const ProgressEvent &event) { SendJSON(event.ToJSON()); }),
-      reverse_request_seq(0), repl_mode(default_repl_mode) {
+      repl_mode(default_repl_mode) {
   configuration.preInitCommands = std::move(pre_init_commands);
   RegisterRequests();
 }
