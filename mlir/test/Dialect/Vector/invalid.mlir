@@ -1747,6 +1747,24 @@ func.func @vector_mask_0d_mask(%arg0: tensor<2x4xi32>,
 
 // -----
 
+func.func @vector_mask_empty_passthru_no_return_type(%mask : vector<8xi1>,
+                                                     %passthru : vector<8xi32>) {
+  // expected-error@+1 {{'vector.mask' expects a result if passthru operand is provided}}
+  vector.mask %mask, %passthru { } : vector<8xi1>
+  return
+}
+
+// -----
+
+func.func @vector_mask_empty_passthru_empty_return_type(%mask : vector<8xi1>,
+                                                        %passthru : vector<8xi32>) {
+  // expected-error@+1 {{'vector.mask' expects a result if passthru operand is provided}}
+  vector.mask %mask, %passthru { } : vector<8xi1> -> ()
+  return
+}
+
+// -----
+
 func.func @vector_scalable_insert_unaligned(%subv: vector<4xi32>, %vec: vector<[16]xi32>) {
   // expected-error@+1 {{op failed to verify that position is a multiple of the source length.}}
   %0 = vector.scalable.insert %subv, %vec[2] : vector<4xi32> into vector<[16]xi32>
