@@ -6,12 +6,12 @@ portability-avoid-pragma-once
 Finds uses of ``#pragma once`` and suggests replacing them with standard
 include guards (``#ifndef``/``#define``/``#endif``) for improved portability.
 
-`#pragma once` is a non-standard extension, despite being widely supported
+``#pragma once`` is a non-standard extension, despite being widely supported
 by modern compilers. Relying on it can lead to portability issues in
 environments.
 
 Some older or specialized C/C++ compilers, particularly in embedded systems,
-may not fully support #pragma once.
+may not fully support ``#pragma once``.
 
 Also it can fail in certain file system configurations,like network drives
 or complex symbolic links, potentially leading to compilation issues.
