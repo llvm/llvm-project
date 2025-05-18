@@ -14,6 +14,7 @@
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -627,6 +628,33 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     unsigned PossibleLZ = SrcOpKnown.countMaxLeadingZeros();
     unsigned LowBits = llvm::bit_width(PossibleLZ);
     Known.Zero.setBitsFrom(LowBits);
+    break;
+  }
+  case TargetOpcode::G_SHUFFLE_VECTOR: {
+    APInt DemandedLHS, DemandedRHS;
+    // Collect the known bits that are shared by every vector element referenced
+    // by the shuffle.
+    unsigned NumElts = MRI.getType(MI.getOperand(1).getReg()).getNumElements();
+    if (!getShuffleDemandedElts(NumElts, MI.getOperand(3).getShuffleMask(),
+                                DemandedElts, DemandedLHS, DemandedRHS))
+      break;
+
+    // Known bits are the values that are shared by every demanded element.
+    Known.Zero.setAllBits();
+    Known.One.setAllBits();
+    if (!!DemandedLHS) {
+      computeKnownBitsImpl(MI.getOperand(1).getReg(), Known2, DemandedLHS,
+                           Depth + 1);
+      Known = Known.intersectWith(Known2);
+    }
+    // If we don't know any bits, early out.
+    if (Known.isUnknown())
+      break;
+    if (!!DemandedRHS) {
+      computeKnownBitsImpl(MI.getOperand(2).getReg(), Known2, DemandedRHS,
+                           Depth + 1);
+      Known = Known.intersectWith(Known2);
+    }
     break;
   }
   }
