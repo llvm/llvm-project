@@ -117,7 +117,8 @@ bool mayConsiderUnused(const Inclusion &Inc, ParsedAST &AST,
 
 std::vector<Diag> generateMissingIncludeDiagnostics(
     ParsedAST &AST, llvm::ArrayRef<MissingIncludeDiagInfo> MissingIncludes,
-    llvm::StringRef Code, HeaderFilter IgnoreHeaders, const ThreadsafeFS &TFS) {
+    llvm::StringRef Code, HeaderFilter IgnoreHeaders,
+    HeaderFilter AngledHeaders, const ThreadsafeFS &TFS) {
   std::vector<Diag> Result;
   const SourceManager &SM = AST.getSourceManager();
   const FileEntry *MainFile = SM.getFileEntryForID(SM.getMainFileID());
@@ -142,6 +143,13 @@ std::vector<Diag> generateMissingIncludeDiagnostics(
 
     llvm::StringRef HeaderRef{Spelling};
     bool Angled = HeaderRef.starts_with("<");
+    for (auto Filter : AngledHeaders) {
+      if (Filter(HeaderRef)) {
+        Angled = true;
+        break;
+      }
+    }
+
     // We might suggest insertion of an existing include in edge cases, e.g.,
     // include is present in a PP-disabled region, or spelling of the header
     // turns out to be the same as one of the unresolved includes in the
@@ -481,18 +489,17 @@ bool isPreferredProvider(const Inclusion &Inc,
   return false; // no header provides the symbol
 }
 
-std::vector<Diag>
-issueIncludeCleanerDiagnostics(ParsedAST &AST, llvm::StringRef Code,
-                               const IncludeCleanerFindings &Findings,
-                               const ThreadsafeFS &TFS,
-                               HeaderFilter IgnoreHeaders) {
+std::vector<Diag> issueIncludeCleanerDiagnostics(
+    ParsedAST &AST, llvm::StringRef Code,
+    const IncludeCleanerFindings &Findings, const ThreadsafeFS &TFS,
+    HeaderFilter IgnoreHeaders, HeaderFilter AngledHeaders) {
   trace::Span Tracer("IncludeCleaner::issueIncludeCleanerDiagnostics");
   std::vector<Diag> UnusedIncludes = generateUnusedIncludeDiagnostics(
       AST.tuPath(), Findings.UnusedIncludes, Code, IgnoreHeaders);
   std::optional<Fix> RemoveAllUnused = removeAllUnusedIncludes(UnusedIncludes);
 
   std::vector<Diag> MissingIncludeDiags = generateMissingIncludeDiagnostics(
-      AST, Findings.MissingIncludes, Code, IgnoreHeaders, TFS);
+      AST, Findings.MissingIncludes, Code, IgnoreHeaders, AngledHeaders, TFS);
   std::optional<Fix> AddAllMissing = addAllMissingIncludes(MissingIncludeDiags);
 
   std::optional<Fix> FixAll;
