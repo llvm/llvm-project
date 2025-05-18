@@ -39,6 +39,29 @@ AST_MATCHER(clang::ParmVarDecl, isArgvOfMain) {
   return FD ? FD->isMain() : false;
 }
 
+AST_MATCHER(clang::TypeLoc, isWithinImplicitTemplateInstantiation) {
+  const auto IsImplicitTemplateInstantiation = [](const auto *Node) {
+    return (Node != nullptr) &&
+           (Node->getTemplateSpecializationKind() == TSK_ImplicitInstantiation);
+  };
+
+  DynTypedNodeList ParentNodes = Finder->getASTContext().getParents(Node);
+  while (!ParentNodes.empty()) {
+    const DynTypedNode &ParentNode = ParentNodes[0];
+    if (IsImplicitTemplateInstantiation(
+            ParentNode.template get<clang::CXXRecordDecl>()) ||
+        IsImplicitTemplateInstantiation(
+            ParentNode.template get<clang::FunctionDecl>()) ||
+        IsImplicitTemplateInstantiation(
+            ParentNode.template get<clang::VarDecl>())) {
+      return true;
+    }
+    ParentNodes = Finder->getASTContext().getParents(ParentNode);
+  }
+
+  return false;
+}
+
 } // namespace
 
 AvoidCArraysCheck::AvoidCArraysCheck(StringRef Name, ClangTidyContext *Context)
@@ -66,22 +89,45 @@ void AvoidCArraysCheck::registerMatchers(MatchFinder *Finder) {
                            hasParent(varDecl(isExternC())),
                            hasParent(fieldDecl(
                                hasParent(recordDecl(isExternCContext())))),
-                           hasAncestor(functionDecl(isExternC())))),
+                           hasAncestor(functionDecl(isExternC())),
+                           isWithinImplicitTemplateInstantiation())),
               std::move(IgnoreStringArrayIfNeededMatcher))
           .bind("typeloc"),
       this);
+
+  Finder->addMatcher(templateArgumentLoc(hasTypeLoc(hasType(arrayType())))
+                         .bind("template_arg_with_array_type_loc"),
+                     this);
 }
 
 void AvoidCArraysCheck::check(const MatchFinder::MatchResult &Result) {
-  const auto *ArrayType = Result.Nodes.getNodeAs<TypeLoc>("typeloc");
+  TypeLoc ArrayTypeLoc{};
+
+  if (const auto *MatchedTypeLoc = Result.Nodes.getNodeAs<TypeLoc>("typeloc");
+      MatchedTypeLoc != nullptr) {
+    ArrayTypeLoc = *MatchedTypeLoc;
+  }
+
+  if (const auto *TemplateArgLoc = Result.Nodes.getNodeAs<TemplateArgumentLoc>(
+          "template_arg_with_array_type_loc");
+      TemplateArgLoc != nullptr &&
+      TemplateArgLoc->getTypeSourceInfo() != nullptr) {
+    ArrayTypeLoc = TemplateArgLoc->getTypeSourceInfo()->getTypeLoc();
+  }
+
+  // check whether an actual array type got matched (see checks above)
+  if (ArrayTypeLoc.isNull()) {
+    return;
+  }
+
   const bool IsInParam =
       Result.Nodes.getNodeAs<ParmVarDecl>("param_decl") != nullptr;
-  const bool IsVLA = ArrayType->getTypePtr()->isVariableArrayType();
+  const bool IsVLA = ArrayTypeLoc.getTypePtr()->isVariableArrayType();
   enum class RecommendType { Array, Vector, Span };
   llvm::SmallVector<const char *> RecommendTypes{};
   if (IsVLA) {
     RecommendTypes.push_back("'std::vector'");
-  } else if (ArrayType->getTypePtr()->isIncompleteArrayType() && IsInParam) {
+  } else if (ArrayTypeLoc.getTypePtr()->isIncompleteArrayType() && IsInParam) {
     // in function parameter, we also don't know the size of
     // IncompleteArrayType.
     if (Result.Context->getLangOpts().CPlusPlus20)
@@ -93,9 +139,11 @@ void AvoidCArraysCheck::check(const MatchFinder::MatchResult &Result) {
   } else {
     RecommendTypes.push_back("'std::array'");
   }
-  diag(ArrayType->getBeginLoc(),
+
+  diag(ArrayTypeLoc.getBeginLoc(),
        "do not declare %select{C-style|C VLA}0 arrays, use %1 instead")
-      << IsVLA << llvm::join(RecommendTypes, " or ");
+      << IsVLA << llvm::join(RecommendTypes, " or ")
+      << ArrayTypeLoc.getSourceRange();
 }
 
 } // namespace clang::tidy::modernize
