@@ -1588,7 +1588,7 @@ ReoptimizeBlock:
             TII->removeBranch(*Pred);
             TII->insertBranch(*Pred, MBB, PredTBB, ReversedCond, Dl);
           }
-          
+
           PredAnalyzable =
               !TII->analyzeBranch(*Pred, PredTBB, PredFBB, PredCond, true);
 
