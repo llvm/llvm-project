@@ -184,22 +184,6 @@ void MCWinCOFFStreamer::emitLabel(MCSymbol *S, SMLoc Loc) {
   MCObjectStreamer::emitLabel(Symbol, Loc);
 }
 
-void MCWinCOFFStreamer::emitAssemblerFlag(MCAssemblerFlag Flag) {
-  // Let the target do whatever target specific stuff it needs to do.
-  getAssembler().getBackend().handleAssemblerFlag(Flag);
-
-  switch (Flag) {
-  // None of these require COFF specific handling.
-  case MCAF_SyntaxUnified:
-  case MCAF_Code16:
-  case MCAF_Code32:
-  case MCAF_Code64:
-    break;
-  case MCAF_SubsectionsViaSymbols:
-    llvm_unreachable("COFF doesn't support .subsections_via_symbols");
-  }
-}
-
 bool MCWinCOFFStreamer::emitSymbolAttribute(MCSymbol *S,
                                             MCSymbolAttr Attribute) {
   auto *Symbol = cast<MCSymbolCOFF>(S);

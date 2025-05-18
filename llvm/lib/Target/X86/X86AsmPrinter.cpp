@@ -918,8 +918,11 @@ void X86AsmPrinter::emitStartOfAsmFile(Module &M) {
   // If this is not inline asm and we're in 16-bit
   // mode prefix assembly with .code16.
   bool is16 = TT.getEnvironment() == Triple::CODE16;
-  if (M.getModuleInlineAsm().empty() && is16)
-    OutStreamer->emitAssemblerFlag(MCAF_Code16);
+  if (M.getModuleInlineAsm().empty() && is16) {
+    auto *XTS =
+        static_cast<X86TargetStreamer *>(OutStreamer->getTargetStreamer());
+    XTS->emitCode16();
+  }
 }
 
 static void
@@ -1011,7 +1014,7 @@ void X86AsmPrinter::emitEndOfAsmFile(Module &M) {
     // points). If this doesn't occur, the linker can safely perform dead code
     // stripping. Since LLVM never generates code that does this, it is always
     // safe to set.
-    OutStreamer->emitAssemblerFlag(MCAF_SubsectionsViaSymbols);
+    OutStreamer->emitSubsectionsViaSymbols();
   } else if (TT.isOSBinFormatCOFF()) {
     if (usesMSVCFloatingPoint(TT, M)) {
       // In Windows' libcmt.lib, there is a file which is linked in only if the
