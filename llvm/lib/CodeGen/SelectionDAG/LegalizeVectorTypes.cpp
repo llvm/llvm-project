@@ -6111,7 +6111,6 @@ SDValue DAGTypeLegalizer::WidenVecRes_VECTOR_COMPRESS(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::WidenVecRes_MLOAD(MaskedLoadSDNode *N) {
-
   EVT WidenVT = TLI.getTypeToTransformTo(*DAG.getContext(),N->getValueType(0));
   SDValue Mask = N->getMask();
   EVT MaskVT = Mask.getValueType();
@@ -6122,7 +6121,7 @@ SDValue DAGTypeLegalizer::WidenVecRes_MLOAD(MaskedLoadSDNode *N) {
   // The mask should be widened as well
   EVT WideMaskVT = EVT::getVectorVT(*DAG.getContext(),
                                     MaskVT.getVectorElementType(),
-                                    WidenVT.getVectorNumElements());
+                                    WidenVT.getVectorElementCount());
   Mask = ModifyToType(Mask, WideMaskVT, true);
 
   SDValue Res = DAG.getMaskedLoad(
@@ -7308,13 +7307,12 @@ SDValue DAGTypeLegalizer::WidenVecOp_MSTORE(SDNode *N, unsigned OpNo) {
     EVT WideVT = StVal.getValueType();
     EVT WideMaskVT = EVT::getVectorVT(*DAG.getContext(),
                                       MaskVT.getVectorElementType(),
-                                      WideVT.getVectorNumElements());
+                                      WideVT.getVectorElementCount());
     Mask = ModifyToType(Mask, WideMaskVT, true);
   } else {
     // Widen the mask.
     EVT WideMaskVT = TLI.getTypeToTransformTo(*DAG.getContext(), MaskVT);
     Mask = ModifyToType(Mask, WideMaskVT, true);
-
     EVT ValueVT = StVal.getValueType();
     EVT WideVT = EVT::getVectorVT(*DAG.getContext(),
                                   ValueVT.getVectorElementType(),
@@ -7322,8 +7320,8 @@ SDValue DAGTypeLegalizer::WidenVecOp_MSTORE(SDNode *N, unsigned OpNo) {
     StVal = ModifyToType(StVal, WideVT);
   }
 
-  assert(Mask.getValueType().getVectorNumElements() ==
-         StVal.getValueType().getVectorNumElements() &&
+  assert(Mask.getValueType().getVectorElementCount() ==
+             StVal.getValueType().getVectorElementCount() &&
          "Mask and data vectors should have the same number of elements");
   return DAG.getMaskedStore(MST->getChain(), dl, StVal, MST->getBasePtr(),
                             MST->getOffset(), Mask, MST->getMemoryVT(),
