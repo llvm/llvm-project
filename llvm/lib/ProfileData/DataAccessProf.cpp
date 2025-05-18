@@ -48,7 +48,8 @@ DataAccessProfData::getProfileRecord(const SymbolHandleRef SymbolID) const {
 
   auto It = Records.find(Key);
   if (It != Records.end()) {
-    return DataAccessProfRecord(Key, It->second.Locations);
+    return DataAccessProfRecord(Key, It->second.AccessCount,
+                                It->second.Locations);
   }
 
   return std::nullopt;
