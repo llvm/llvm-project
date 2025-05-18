@@ -54,8 +54,6 @@ public:
 
   uint32_t GetPath(char *dst_path, size_t dst_len) const;
 
-  bool GetPath(lldb::SBStream &dst_path) const;
-
   static int ResolvePath(const char *src_path, char *dst_path, size_t dst_len);
 
   bool GetDescription(lldb::SBStream &description) const;

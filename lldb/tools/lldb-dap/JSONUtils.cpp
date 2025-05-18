@@ -542,11 +542,9 @@ protocol::Source CreateAssemblySource(const lldb::SBTarget &target,
   if (module.IsValid()) {
     lldb::SBFileSpec file_spec = module.GetFileSpec();
     if (file_spec.IsValid()) {
-      lldb::SBStream module_path;
-      if (file_spec.GetPath(module_path)) {
-        std::string path = module_path.GetData();
+      std::string path = GetSBFileSpecPath(file_spec);
+      if (!path.empty())
         source.path = path + '`' + name;
-      }
     }
   }
 

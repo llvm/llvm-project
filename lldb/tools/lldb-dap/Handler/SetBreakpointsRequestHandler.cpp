@@ -103,9 +103,10 @@ SetBreakpointsRequestHandler::SetAssemblyBreakpoints(
     return response_breakpoints;
 
   lldb::SBSymbol symbol = address.GetSymbol();
-  if (!symbol.IsValid())
-    return response_breakpoints; // Not yet supporting breakpoints in assembly
-                                 // without a valid symbol
+  if (!symbol.IsValid()) {
+    // Not yet supporting breakpoints in assembly without a valid symbol.
+    return response_breakpoints;
+  }
 
   llvm::DenseMap<uint32_t, SourceBreakpoint> request_bps;
   if (breakpoints) {
@@ -115,7 +116,7 @@ SetBreakpointsRequestHandler::SetAssemblyBreakpoints(
       const auto [iv, inserted] =
           dap.assembly_breakpoints[sourceReference].try_emplace(
               src_bp.GetLine(), src_bp);
-      // We check if this breakpoint already exists to update it
+      // We check if this breakpoint already exists to update it.
       if (inserted)
         iv->getSecond().SetBreakpoint(symbol);
       else

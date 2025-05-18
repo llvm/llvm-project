@@ -148,13 +148,6 @@ uint32_t SBFileSpec::GetPath(char *dst_path, size_t dst_len) const {
   return result;
 }
 
-bool SBFileSpec::GetPath(SBStream &dst_path) const {
-  LLDB_INSTRUMENT_VA(this, dst_path);
-
-  std::string path = m_opaque_up->GetPath();
-  return dst_path->PutCString(path.c_str()) > 0;
-}
-
 const lldb_private::FileSpec *SBFileSpec::operator->() const {
   return m_opaque_up.get();
 }

@@ -8,6 +8,7 @@
 
 #include "DAP.h"
 #include "RequestHandler.h"
+#include <optional>
 #include <vector>
 
 namespace lldb_dap {
@@ -24,15 +25,15 @@ BreakpointLocationsRequestHandler::Run(
   uint32_t end_column =
       args.endColumn.value_or(std::numeric_limits<uint32_t>::max());
 
-  // Find all relevant lines & columns
-  llvm::SmallVector<std::pair<uint32_t, uint32_t>, 8> locations;
-  if (args.source.sourceReference) {
-    AddAssemblyBreakpointLocations(locations, *args.source.sourceReference,
-                                   start_line, end_line);
-  } else {
+  // Find all relevant lines & columns.
+  std::vector<std::pair<uint32_t, uint32_t>> locations;
+  if (args.source.sourceReference)
+    locations = GetAssemblyBreakpointLocations(*args.source.sourceReference,
+                                               start_line, end_line);
+  else {
     std::string path = args.source.path.value_or("");
-    AddSourceBreakpointLocations(locations, std::move(path), start_line,
-                                 start_column, end_line, end_column);
+    locations = GetSourceBreakpointLocations(
+        std::move(path), start_line, start_column, end_line, end_column);
   }
 
   // The line entries are sorted by addresses, but we must return the list
@@ -41,23 +42,19 @@ BreakpointLocationsRequestHandler::Run(
   locations.erase(llvm::unique(locations), locations.end());
 
   std::vector<protocol::BreakpointLocation> breakpoint_locations;
-  for (auto &l : locations) {
-    protocol::BreakpointLocation lc;
-    lc.line = l.first;
-    lc.column = l.second;
-    breakpoint_locations.push_back(std::move(lc));
-  }
+  for (auto &l : locations)
+    breakpoint_locations.push_back(
+        {l.first, l.second, std::nullopt, std::nullopt});
 
   return protocol::BreakpointLocationsResponseBody{
       /*breakpoints=*/std::move(breakpoint_locations)};
 }
 
-template <unsigned N>
-void BreakpointLocationsRequestHandler::AddSourceBreakpointLocations(
-    llvm::SmallVector<std::pair<uint32_t, uint32_t>, N> &locations,
+std::vector<std::pair<uint32_t, uint32_t>>
+BreakpointLocationsRequestHandler::GetSourceBreakpointLocations(
     std::string path, uint32_t start_line, uint32_t start_column,
     uint32_t end_line, uint32_t end_column) const {
-
+  std::vector<std::pair<uint32_t, uint32_t>> locations;
   lldb::SBFileSpec file_spec(path.c_str(), true);
   lldb::SBSymbolContextList compile_units =
       dap.target.FindCompileUnits(file_spec);
@@ -101,19 +98,21 @@ void BreakpointLocationsRequestHandler::AddSourceBreakpointLocations(
       locations.emplace_back(line, column);
     }
   }
+
+  return locations;
 }
 
-template <unsigned N>
-void BreakpointLocationsRequestHandler::AddAssemblyBreakpointLocations(
-    llvm::SmallVector<std::pair<uint32_t, uint32_t>, N> &locations,
+std::vector<std::pair<uint32_t, uint32_t>>
+BreakpointLocationsRequestHandler::GetAssemblyBreakpointLocations(
     int64_t sourceReference, uint32_t start_line, uint32_t end_line) const {
+  std::vector<std::pair<uint32_t, uint32_t>> locations;
   lldb::SBAddress address(sourceReference, dap.target);
   if (!address.IsValid())
-    return;
+    return locations;
 
   lldb::SBSymbol symbol = address.GetSymbol();
   if (!symbol.IsValid())
-    return;
+    return locations;
 
   // start_line is relative to the symbol's start address
   lldb::SBInstructionList insts = symbol.GetInstructions(dap.target);
@@ -121,6 +120,8 @@ void BreakpointLocationsRequestHandler::AddAssemblyBreakpointLocations(
        ++i) {
     locations.emplace_back(i, 1);
   }
+
+  return locations;
 }
 
 } // namespace lldb_dap

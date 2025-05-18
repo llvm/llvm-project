@@ -23,6 +23,7 @@
 #include <optional>
 #include <type_traits>
 #include <variant>
+#include <vector>
 
 template <typename T> struct is_optional : std::false_type {};
 
@@ -234,15 +235,13 @@ public:
   llvm::Expected<protocol::BreakpointLocationsResponseBody>
   Run(const protocol::BreakpointLocationsArguments &args) const override;
 
-  template <unsigned N>
-  void AddSourceBreakpointLocations(
-      llvm::SmallVector<std::pair<uint32_t, uint32_t>, N> &locations,
-      std::string path, uint32_t start_line, uint32_t start_column,
-      uint32_t end_line, uint32_t end_column) const;
-  template <unsigned N>
-  void AddAssemblyBreakpointLocations(
-      llvm::SmallVector<std::pair<uint32_t, uint32_t>, N> &locations,
-      int64_t sourceReference, uint32_t start_line, uint32_t end_line) const;
+  std::vector<std::pair<uint32_t, uint32_t>>
+  GetSourceBreakpointLocations(std::string path, uint32_t start_line,
+                               uint32_t start_column, uint32_t end_line,
+                               uint32_t end_column) const;
+  std::vector<std::pair<uint32_t, uint32_t>>
+  GetAssemblyBreakpointLocations(int64_t sourceReference, uint32_t start_line,
+                                 uint32_t end_line) const;
 };
 
 class CompletionsRequestHandler : public LegacyRequestHandler {
