@@ -58,8 +58,3 @@ PreservedAnalyses CodePreparationPass::run(Function &F,
   PA.preserve<LoopAnalysis>();
   return PA;
 }
-
-bool polly::runCodePreparation(Function &F, DominatorTree *DT, LoopInfo *LI,
-                               RegionInfo *RI) {
-  return runCodePreprationImpl(F, DT, LI, RI);
-}

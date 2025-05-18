@@ -73,10 +73,14 @@ public:
     bool ModifiedIR = false;
 
     // Phase: prepare
-    // TODO: Setting ModifiedIR will invalidate any anlysis, even if DT, LI are
+    // TODO: Setting ModifiedIR will invalidate any analysis, even if DT, LI are
     // preserved.
-    if (Opts.isPhaseEnabled(PassPhase::Prepare))
-      ModifiedIR |= runCodePreparation(F, &DT, &LI, nullptr);
+    if (Opts.isPhaseEnabled(PassPhase::Prepare)) {
+      PreservedAnalyses PA = CodePreparationPass().run(F, FAM);
+      FAM.invalidate(F, PA);
+      if (!PA.areAllPreserved())
+        ModifiedIR = true;
+    }
 
     // Can't do anything without detection
     if (!Opts.isPhaseEnabled(PassPhase::Detection))

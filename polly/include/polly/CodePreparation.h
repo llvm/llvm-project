@@ -26,9 +26,6 @@ struct CodePreparationPass final : llvm::PassInfoMixin<CodePreparationPass> {
   llvm::PreservedAnalyses run(llvm::Function &F,
                               llvm::FunctionAnalysisManager &FAM);
 };
-
-bool runCodePreparation(llvm::Function &F, llvm::DominatorTree *DT,
-                        llvm::LoopInfo *LI, llvm::RegionInfo *RI);
 } // namespace polly
 
 #endif /* POLLY_CODEPREPARATION_H */
