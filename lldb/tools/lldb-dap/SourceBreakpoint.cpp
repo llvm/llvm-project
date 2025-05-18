@@ -29,23 +29,22 @@
 namespace lldb_dap {
 
 SourceBreakpoint::SourceBreakpoint(DAP &dap,
-                                   const protocol::SourceBreakpoint &breakpoint,
-                                   const protocol::Source &source)
+                                   const protocol::SourceBreakpoint &breakpoint)
     : Breakpoint(dap, breakpoint.condition, breakpoint.hitCondition),
-      m_log_message(breakpoint.logMessage.value_or("")), m_source(source),
+      m_log_message(breakpoint.logMessage.value_or("")),
       m_line(breakpoint.line),
       m_column(breakpoint.column.value_or(LLDB_INVALID_COLUMN_NUMBER)) {}
 
-void SourceBreakpoint::SetBreakpoint() {
+void SourceBreakpoint::SetBreakpoint(const protocol::Source &source) {
   lldb::SBMutex lock = m_dap.GetAPIMutex();
   std::lock_guard<lldb::SBMutex> guard(lock);
 
   if (m_line == 0)
     return;
 
-  if (m_source.sourceReference) {
+  if (source.sourceReference) {
     // breakpoint set by assembly source.
-    lldb::SBAddress source_address(*m_source.sourceReference, m_dap.target);
+    lldb::SBAddress source_address(*source.sourceReference, m_dap.target);
     if (!source_address.IsValid())
       return;
 
@@ -66,7 +65,7 @@ void SourceBreakpoint::SetBreakpoint() {
     m_bp = m_dap.target.BreakpointCreateBySBAddress(address);
   } else {
     // breakpoint set by a regular source file.
-    const auto source_path = m_source.path.value_or("");
+    const auto source_path = source.path.value_or("");
     lldb::SBFileSpecList module_list;
     m_bp = m_dap.target.BreakpointCreateByLocation(source_path.c_str(), m_line,
                                                    m_column, 0, module_list);

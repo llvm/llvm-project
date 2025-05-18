@@ -1650,7 +1650,7 @@ std::vector<protocol::Breakpoint> DAP::SetSourceBreakpoints(
   SourceBreakpointMap request_breakpoints;
   if (breakpoints) {
     for (const auto &bp : *breakpoints) {
-      SourceBreakpoint src_bp(*this, bp, source);
+      SourceBreakpoint src_bp(*this, bp);
       std::pair<uint32_t, uint32_t> bp_pos(src_bp.GetLine(),
                                            src_bp.GetColumn());
       request_breakpoints.try_emplace(bp_pos, src_bp);
@@ -1659,7 +1659,7 @@ std::vector<protocol::Breakpoint> DAP::SetSourceBreakpoints(
           existing_breakpoints.try_emplace(bp_pos, src_bp);
       // We check if this breakpoint already exists to update it.
       if (inserted)
-        iv->second.SetBreakpoint();
+        iv->second.SetBreakpoint(source);
       else
         iv->second.UpdateBreakpoint(src_bp);
 
