@@ -248,3 +248,57 @@ func.func @read_read_add_write_interleaved(%arg0: memref<8xi32>, %arg1: memref<8
 
   return
 }
+
+
+// CHECK-LABEL: func @read_read_add_add_write
+//  CHECK-SAME: (%[[ARG0:.*]]: memref<8xi32>, %[[ARG1:.*]]: memref<8xi32>
+//  CHECK-SAME: , %[[ARG2:.*]]: i32, %[[ARG3:.*]]: i32, %[[ARG4:.*]]: i32, %[[ARG5:.*]]: i32)
+func.func @read_read_add_add_write(%arg0: memref<8xi32>, %arg1: memref<8xi32>,
+                                   %arg2: i32, %arg3: i32, %arg4: i32, %arg5: i32) {
+  // CHECK:     %[[C0:.*]] = arith.constant 0 : index
+  // CHECK:     %[[A:.*]] = vector.load %[[ARG0]][%[[C0]]] : memref<8xi32>, vector<4xi32>
+  // CHECK:     %[[B:.*]] = vector.load %[[ARG1]][%[[C0]]] : memref<8xi32>, vector<4xi32>
+  // CHECK:     %[[ADD1:.*]] = arith.addi %[[A]], %[[B]] : vector<4xi32>
+  // CHECK:     %[[C:.*]] = vector.from_elements %[[ARG2]], %[[ARG3]], %[[ARG4]], %[[ARG5]] : vector<4xi32>
+  // CHECK:     %[[ADD2:.*]] = arith.addi %[[A]], %[[C]] : vector<4xi32>
+  // CHECK:     vector.store %[[ADD1]], %[[ARG0]][%[[C0]]] : memref<8xi32>, vector<4xi32>
+  // CHECK:     vector.store %[[ADD2]], %[[ARG1]][%[[C0]]] : memref<8xi32>, vector<4xi32>
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c3 = arith.constant 3 : index
+
+  %0 = memref.load %arg0[%c0] : memref<8xi32>
+  %1 = memref.load %arg0[%c1] : memref<8xi32>
+  %2 = memref.load %arg0[%c2] : memref<8xi32>
+  %3 = memref.load %arg0[%c3] : memref<8xi32>
+
+  %4 = memref.load %arg1[%c0] : memref<8xi32>
+  %5 = memref.load %arg1[%c1] : memref<8xi32>
+  %6 = memref.load %arg1[%c2] : memref<8xi32>
+  %7 = memref.load %arg1[%c3] : memref<8xi32>
+
+  %8 = arith.addi %0, %4 : i32
+  %12 = arith.addi %0, %arg2 : i32
+
+  %13 = arith.addi %1, %arg3 : i32
+  %9 = arith.addi %1, %5 : i32
+
+  %10 = arith.addi %2, %6 : i32
+  %14 = arith.addi %2, %arg4 : i32
+
+  %15 = arith.addi %3, %arg5 : i32
+  %11 = arith.addi %3, %7 : i32
+
+  memref.store %8, %arg0[%c0] : memref<8xi32>
+  memref.store %9, %arg0[%c1] : memref<8xi32>
+  memref.store %10, %arg0[%c2] : memref<8xi32>
+  memref.store %11, %arg0[%c3] : memref<8xi32>
+
+  memref.store %12, %arg1[%c0] : memref<8xi32>
+  memref.store %13, %arg1[%c1] : memref<8xi32>
+  memref.store %14, %arg1[%c2] : memref<8xi32>
+  memref.store %15, %arg1[%c3] : memref<8xi32>
+
+  return
+}
