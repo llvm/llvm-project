@@ -52,6 +52,14 @@ struct MemoryOpGroup {
   bool empty() const { return ops.empty(); }
 };
 
+static Value getBase(Operation *op) {
+  if (auto loadOp = dyn_cast<memref::LoadOp>(op))
+    return loadOp.getMemRef();
+  if (auto storeOp = dyn_cast<memref::StoreOp>(op))
+    return storeOp.getMemRef();
+  return {};
+}
+
 static ValueRange getIndices(Operation *op) {
   if (auto loadOp = dyn_cast<memref::LoadOp>(op))
     return loadOp.getIndices();
@@ -87,7 +95,8 @@ static bool isAdjacentIndices(ValueRange idx1, ValueRange idx2) {
 }
 
 static bool isAdjacentIndices(Operation *op1, Operation *op2) {
-  return getElementType(op1) == getElementType(op2) &&
+  return getBase(op1) == getBase(op2) &&
+         getElementType(op1) == getElementType(op2) &&
          isAdjacentIndices(getIndices(op1), getIndices(op2));
 }
 
