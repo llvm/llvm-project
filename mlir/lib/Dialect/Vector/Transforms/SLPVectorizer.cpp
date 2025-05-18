@@ -49,7 +49,6 @@ struct MemoryOpGroup {
   bool isStoreGroup() const { return type == Type::Store; }
 
   size_t size() const { return ops.size(); }
-  bool empty() const { return ops.empty(); }
 };
 
 static bool isReadOp(Operation *op) {
@@ -99,11 +98,6 @@ static SmallVector<MemoryOpGroup> collectMemoryOpGroups(Block &block) {
     currentGroup->ops.push_back(&op);
   }
 
-  // Remove empty groups
-  groups.erase(std::remove_if(groups.begin(), groups.end(),
-                              [](const MemoryOpGroup &g) { return g.empty(); }),
-               groups.end());
-
   return groups;
 }
 
@@ -144,14 +138,19 @@ static Type getElementType(Operation *op) {
   return {};
 }
 
+/// Check if two indices are consecutive, i.e fastest index differs by 1.
 static bool isAdjacentIndices(Value idx1, Value idx2) {
   if (auto c1 = getConstantIntValue(idx1)) {
     if (auto c2 = getConstantIntValue(idx2))
       return *c1 + 1 == *c2;
   }
+
+  // TODO: Check arith.add, affine.apply, etc
   return false;
 }
 
+/// Check if two ranges of indices are consecutive, i.e fastest index differs
+/// by 1 and all other indices are the same.
 static bool isAdjacentIndices(ValueRange idx1, ValueRange idx2) {
   if (idx1.empty() || idx1.size() != idx2.size())
     return false;
@@ -162,7 +161,10 @@ static bool isAdjacentIndices(ValueRange idx1, ValueRange idx2) {
   return isAdjacentIndices(idx1.back(), idx2.back());
 }
 
-static bool isAdjacentIndices(Operation *op1, Operation *op2) {
+/// Check if two operations are adjacent and can be combined into a vector op.
+/// This is done by checking if the base memrefs are the same, the last
+/// dimension is contiguous, and the element types and indices are compatible
+static bool isAdjacentOps(Operation *op1, Operation *op2) {
   Value base1 = getBase(op1);
   Value base2 = getBase(op2);
   if (base1 != base2)
@@ -195,6 +197,8 @@ extractContiguousGroups(const MemoryOpGroup &group) {
     currentOps.push_back(op);
     processedOps.insert(op);
 
+    // Keep adding ops to the beginning or end of the current group until no
+    // more ops can be added.
     bool foundMore;
     do {
       foundMore = false;
@@ -204,11 +208,11 @@ extractContiguousGroups(const MemoryOpGroup &group) {
 
         Operation *firstOp = currentOps.front();
         Operation *lastOp = currentOps.back();
-        if (isAdjacentIndices(otherOp, firstOp)) {
+        if (isAdjacentOps(otherOp, firstOp)) {
           currentOps.insert(currentOps.begin(), otherOp);
           processedOps.insert(otherOp);
           foundMore = true;
-        } else if (isAdjacentIndices(lastOp, otherOp)) {
+        } else if (isAdjacentOps(lastOp, otherOp)) {
           currentOps.push_back(otherOp);
           processedOps.insert(otherOp);
           foundMore = true;
@@ -222,7 +226,7 @@ extractContiguousGroups(const MemoryOpGroup &group) {
     }
 
     LLVM_DEBUG(llvm::dbgs() << "Extracted contiguous group with "
-                            << currentGroup.ops.size() << " operations\n");
+                            << currentGroup.size() << " operations\n");
   }
   return result;
 }
@@ -241,6 +245,8 @@ struct SLPGraphNode {
   SLPGraphNode() = default;
   SLPGraphNode(ArrayRef<Operation *> operations)
       : ops(operations.begin(), operations.end()) {}
+
+  size_t size() const { return ops.size(); }
 };
 
 /// A graph of vectorizable operations
@@ -349,7 +355,7 @@ public:
     LLVM_DEBUG({
       llvm::dbgs() << "Topologically sorted nodes:\n";
       for (auto *node : sortedNodes) {
-        llvm::dbgs() << "  Node with " << node->ops.size()
+        llvm::dbgs() << "  Node with " << node->size()
                      << " operations: " << node->ops.front()->getName() << "\n";
       }
     });
@@ -363,7 +369,7 @@ public:
       if (isGoodNode(node))
         continue;
 
-      int64_t numElements = node->ops.size();
+      int64_t numElements = node->size();
       Operation *op = node->ops.front();
       rewriter.setInsertionPoint(op);
       Location loc = op->getLoc();
@@ -467,15 +473,15 @@ public:
       if (!node->isRoot)
         continue;
       llvm::dbgs() << "  "
-                   << (isa<memref::LoadOp>(node->ops[0]) ? "LOAD" : "STORE")
-                   << " group with " << node->ops.size() << " operations:\n";
+                   << (isa<memref::LoadOp>(node->ops.front()) ? "LOAD"
+                                                              : "STORE")
+                   << " group with " << node->size() << " operations:\n";
       for (auto *op : node->ops) {
         llvm::dbgs() << "    " << *op << "\n";
       }
       llvm::dbgs() << "    Users: ";
       for (auto *user : node->users) {
-        llvm::dbgs() << "\n      Group with " << user->ops.size()
-                     << " operations:";
+        llvm::dbgs() << "\n      Group with " << user->size() << " operations:";
         for (auto *op : user->ops) {
           llvm::dbgs() << "\n        " << *op;
         }
@@ -488,13 +494,13 @@ public:
     for (const auto &node : nodes) {
       if (node->isRoot)
         continue;
-      llvm::dbgs() << "  Group with " << node->ops.size() << " operations:\n";
+      llvm::dbgs() << "  Group with " << node->size() << " operations:\n";
       for (auto *op : node->ops) {
         llvm::dbgs() << "    " << *op << "\n";
       }
       llvm::dbgs() << "    Operands: ";
       for (auto *operand : node->operands) {
-        llvm::dbgs() << "\n      Group with " << operand->ops.size()
+        llvm::dbgs() << "\n      Group with " << operand->size()
                      << " operations:";
         for (auto *op : operand->ops) {
           llvm::dbgs() << "\n        " << *op;
@@ -502,8 +508,7 @@ public:
       }
       llvm::dbgs() << "\n    Users: ";
       for (auto *user : node->users) {
-        llvm::dbgs() << "\n      Group with " << user->ops.size()
-                     << " operations:";
+        llvm::dbgs() << "\n      Group with " << user->size() << " operations:";
         for (auto *op : user->ops) {
           llvm::dbgs() << "\n        " << *op;
         }
@@ -518,6 +523,28 @@ private:
   llvm::SmallDenseMap<Operation *, SLPGraphNode *> opToNode;
 };
 
+/// This pass implements the greedy SLP vectorizer. It detects consecutive
+/// operations that can be put together into vector operations. The pass works
+/// bi-directionaly, starting from reads or stores, in search of scalars to
+/// combine.
+///
+/// Pass is split into multiple steps:
+/// 1. Collect memory operation groups within same block.
+/// Group is either multiple loads uninterrupted by stores or multiple stores
+/// uninterrupted by loads.
+///
+/// 2. Extract contiguous groups from memory operation groups, based on the
+/// ops base memrefs, load/store element types, and indices.
+///
+/// 3. Build SLP graph from contiguous groups. This is done by going both
+/// top-down and bottom-up through uses/operands respectively, starting from
+/// contiguous memory operation groups.
+///
+/// 4. Vectorize SLP graph. This is done by topological sort of the graph and
+/// vectorizing each node in the order of the sort.
+///
+/// Vectorization is done by cloning the operations and mapping the operands and
+/// results.
 struct GreedySLPVectorizerPass
     : public mlir::vector::impl::GreedySLPVectorizerBase<
           GreedySLPVectorizerPass> {
@@ -532,6 +559,10 @@ static void addDataToHash(llvm::SHA1 &hasher, const T &data) {
       ArrayRef<uint8_t>(reinterpret_cast<const uint8_t *>(&data), sizeof(T)));
 }
 
+/// SLP vectorizer is bi-directional, so when we go top-down we can can have
+/// multiple users with the same immediate op type, this class tries to compute
+/// fingerprint for such ops based on the entire ops graph to maximize further
+/// scalar ops merging.
 struct OperationsFingerprint {
   OperationsFingerprint(const SLPGraph &graph) : graph(graph) {}
 
@@ -606,7 +637,8 @@ static bool isEquivalent(Operation *op1, Operation *op2) {
   return true;
 }
 
-/// Build the SLP graph starting from memory operation groups
+/// Build the SLP graph starting from memory operation groups and going both
+/// top-down and bottom-up through uses/operands respectively.
 static SLPGraph buildSLPGraph(ArrayRef<MemoryOpGroup> rootGroups) {
   if (rootGroups.empty())
     return SLPGraph();
@@ -623,7 +655,7 @@ static SLPGraph buildSLPGraph(ArrayRef<MemoryOpGroup> rootGroups) {
     worklist.push_back(node);
 
     LLVM_DEBUG({
-      llvm::dbgs() << "Created root group node with " << node->ops.size()
+      llvm::dbgs() << "Created root group node with " << node->size()
                    << " operations of type "
                    << (group.isLoadGroup() ? "Load" : "Store") << "\n";
     });
@@ -631,6 +663,7 @@ static SLPGraph buildSLPGraph(ArrayRef<MemoryOpGroup> rootGroups) {
 
   OperationsFingerprint fingerprints(graph);
 
+  // Process node uses, going top-down.
   auto processUse = [&](SLPGraphNode *node, OpOperand &use) {
     Operation *user = use.getOwner();
     auto *existingNode = graph.getNodeForOp(user);
@@ -680,6 +713,7 @@ static SLPGraph buildSLPGraph(ArrayRef<MemoryOpGroup> rootGroups) {
     worklist.push_back(newNode);
   };
 
+  // Process node operands, going bottom-up.
   auto processOperands = [&](SLPGraphNode *node, Value operand, int64_t index) {
     Operation *srcOp = operand.getDefiningOp();
     if (!srcOp)
@@ -720,7 +754,7 @@ static SLPGraph buildSLPGraph(ArrayRef<MemoryOpGroup> rootGroups) {
 
   while (!worklist.empty()) {
     SLPGraphNode *node = worklist.pop_back_val();
-    LLVM_DEBUG(llvm::dbgs() << "Processing node with " << node->ops.size()
+    LLVM_DEBUG(llvm::dbgs() << "Processing node with " << node->size()
                             << " operations, first op: "
                             << node->ops.front()->getName() << "\n");
 
