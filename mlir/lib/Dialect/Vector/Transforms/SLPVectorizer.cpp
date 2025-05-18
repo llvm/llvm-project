@@ -52,16 +52,43 @@ struct MemoryOpGroup {
   bool empty() const { return ops.empty(); }
 };
 
-// Helper function to extract base and index from a memory operation
-std::optional<std::pair<Value, int64_t>> getBaseAndIndex(Operation *op) {
-  if (auto loadOp = dyn_cast<memref::LoadOp>(op)) {
-    if (auto value = getConstantIntValue(loadOp.getIndices().front()))
-      return std::make_pair(loadOp.getMemRef(), *value);
-  } else if (auto storeOp = dyn_cast<memref::StoreOp>(op)) {
-    if (auto value = getConstantIntValue(storeOp.getIndices().front()))
-      return std::make_pair(storeOp.getMemRef(), *value);
+static ValueRange getIndices(Operation *op) {
+  if (auto loadOp = dyn_cast<memref::LoadOp>(op))
+    return loadOp.getIndices();
+  if (auto storeOp = dyn_cast<memref::StoreOp>(op))
+    return storeOp.getIndices();
+  return {};
+}
+
+static Type getElementType(Operation *op) {
+  if (auto loadOp = dyn_cast<memref::LoadOp>(op))
+    return loadOp.getResult().getType();
+  if (auto storeOp = dyn_cast<memref::StoreOp>(op))
+    return storeOp.getValueToStore().getType();
+  return {};
+}
+
+static bool isAdjacentIndices(Value idx1, Value idx2) {
+  if (auto c1 = getConstantIntValue(idx1)) {
+    if (auto c2 = getConstantIntValue(idx2))
+      return *c1 + 1 == *c2;
   }
-  return std::nullopt;
+  return false;
+}
+
+static bool isAdjacentIndices(ValueRange idx1, ValueRange idx2) {
+  if (idx1.empty() || idx1.size() != idx2.size())
+    return false;
+
+  if (idx1.drop_back() != idx2.drop_back())
+    return false;
+
+  return isAdjacentIndices(idx1.back(), idx2.back());
+}
+
+static bool isAdjacentIndices(Operation *op1, Operation *op2) {
+  return getElementType(op1) == getElementType(op2) &&
+         isAdjacentIndices(getIndices(op1), getIndices(op2));
 }
 
 // Extract contiguous groups from a MemoryOpGroup
@@ -71,64 +98,48 @@ extractContiguousGroups(const MemoryOpGroup &group) {
   if (group.ops.empty())
     return result;
 
-  // Keep track of which operations we've processed
-  DenseSet<Operation *> processedOps;
+  llvm::SmallDenseSet<Operation *> processedOps;
 
-  // Process each operation
   for (Operation *op : group.ops) {
-    // Skip if we've already processed this operation
     if (processedOps.contains(op))
       continue;
-
-    // Get base and index of current operation
-    auto baseAndIndex = getBaseAndIndex(op);
-    if (!baseAndIndex)
-      continue;
-
-    auto [base, index] = *baseAndIndex;
 
     // Start a new group with this operation
     result.emplace_back(group.type);
     MemoryOpGroup &currentGroup = result.back();
-    currentGroup.ops.push_back(op);
+    auto &currentOps = currentGroup.ops;
+    currentOps.push_back(op);
     processedOps.insert(op);
 
-    LLVM_DEBUG(llvm::dbgs() << "Starting new group at base " << base
-                            << " index " << index << "\n");
-
-    // Try to find operations with adjacent indices
     bool foundMore;
     do {
       foundMore = false;
-      // Look for operations with index+1
       for (Operation *otherOp : group.ops) {
         if (processedOps.contains(otherOp))
           continue;
 
-        auto otherBaseAndIndex = getBaseAndIndex(otherOp);
-        if (!otherBaseAndIndex)
-          continue;
-
-        auto [otherBase, otherIndex] = *otherBaseAndIndex;
-
-        // Check if this operation has the same base and adjacent index
-        if (otherBase == base && otherIndex == currentGroup.ops.size()) {
-          currentGroup.ops.push_back(otherOp);
+        Operation *firstOp = currentOps.front();
+        Operation *lastOp = currentOps.back();
+        if (isAdjacentIndices(otherOp, firstOp)) {
+          currentOps.insert(currentOps.begin(), otherOp);
           processedOps.insert(otherOp);
           foundMore = true;
-          LLVM_DEBUG(llvm::dbgs()
-                     << "Added operation with index " << otherIndex << "\n");
-          break;
+        } else if (isAdjacentIndices(lastOp, otherOp)) {
+          currentOps.push_back(otherOp);
+          processedOps.insert(otherOp);
+          foundMore = true;
         }
       }
     } while (foundMore);
+
+    if (currentOps.size() <= 1) {
+      result.pop_back();
+      continue;
+    }
+
+    LLVM_DEBUG(llvm::dbgs() << "Extracted contiguous group with "
+                            << currentGroup.ops.size() << " operations\n");
   }
-
-  // Remove empty groups
-  result.erase(std::remove_if(result.begin(), result.end(),
-                              [](const MemoryOpGroup &g) { return g.empty(); }),
-               result.end());
-
   return result;
 }
 
@@ -721,7 +732,6 @@ void SLPVectorizerPass::runOnOperation() {
       LLVM_DEBUG(llvm::dbgs() << "Failed to vectorize graph\n");
       return signalPassFailure();
     }
-    op->dump();
   });
 }
 
