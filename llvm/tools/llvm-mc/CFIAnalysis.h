@@ -89,12 +89,13 @@ public:
 
   // Tries to guess Reg1's value in a form of Reg2 (before Inst's execution) +
   // Diff.
-  bool isInConstantDistanceOfEachOther(const MCInst &Inst, MCPhysReg Reg1,
+  bool isInConstantDistanceOfEachOther(const MCInst &Inst, MCPhysReg &Reg1,
                                        MCPhysReg Reg2, int &Diff) {
     {
       MCPhysReg From;
       MCPhysReg To;
-      if (EMCIA->isRegToRegMove(Inst, From, To) && From == Reg2 && To == Reg1) {
+      if (EMCIA->isRegToRegMove(Inst, From, To) && From == Reg2) {
+        Reg1 = To;
         Diff = 0;
         return true;
       }
@@ -107,89 +108,98 @@ public:
                     const CFIState &NextState,
                     const std::set<DWARFRegType> &Reads,
                     const std::set<DWARFRegType> &Writes) {
+    MCPhysReg PrevCFAPhysReg =
+        MCRI->getLLVMRegNum(PrevState.CFARegister, false).value();
+    MCPhysReg NextCFAPhysReg =
+        MCRI->getLLVMRegNum(NextState.CFARegister, false).value();
+
+    // Try to guess the next state. (widen)
+    std::vector<std::pair<DWARFRegType, int>> PossibleNextCFAStates;
+    {   // try generate
+      { // no change
+        if (!Writes.count(PrevState.CFARegister)) {
+          PossibleNextCFAStates.emplace_back(PrevState.CFARegister,
+                                             PrevState.CFAOffset);
+        }
+      }
+
+      { // const change
+        int64_t HowMuch;
+        if (doesConstantChange(Inst, PrevCFAPhysReg, HowMuch)) {
+          PossibleNextCFAStates.emplace_back(PrevState.CFARegister,
+                                             PrevState.CFAOffset - HowMuch);
+        }
+      }
+
+      { // constant distance with each other
+        int Diff;
+        MCPhysReg PossibleNewCFAReg;
+        if (isInConstantDistanceOfEachOther(Inst, PossibleNewCFAReg,
+                                            PrevCFAPhysReg, Diff)) {
+          PossibleNextCFAStates.emplace_back(
+              MCRI->getDwarfRegNum(PossibleNewCFAReg, false),
+              PrevState.CFAOffset - Diff);
+        }
+      }
+    }
+
+    for (auto &&[PossibleNextCFAReg, PossibleNextCFAOffset] :
+         PossibleNextCFAStates) {
+      if (PossibleNextCFAReg != NextState.CFARegister)
+        continue;
+
+      if (PossibleNextCFAOffset == NextState.CFAOffset) {
+        // Everything is ok!
+        return;
+      }
+
+      Context.reportError(Inst.getLoc(),
+                          formatv("Expected CFA [reg: {0}, offset: {1}] but "
+                                  "got [reg: {2}, offset: {3}].",
+                                  NextCFAPhysReg, PossibleNextCFAOffset,
+                                  NextCFAPhysReg, NextState.CFAOffset));
+      return;
+    }
+
+    // Either couldn't generate, or did, but the programmer wants to change the
+    // source of register for CFA to something not expected by the generator. So
+    // it falls back into read/write checks.
+
     if (PrevState.CFARegister == NextState.CFARegister) {
       if (PrevState.CFAOffset == NextState.CFAOffset) {
         if (Writes.count(PrevState.CFARegister)) {
-          Context.reportWarning(
+          Context.reportError(
               Inst.getLoc(),
               formatv("This instruction changes reg#{0}, which is "
                       "the CFA register, but the CFI directives do not.",
-                      MCRI->getLLVMRegNum(PrevState.CFARegister, false)));
+                      PrevCFAPhysReg));
         }
+
+        // Everything is ok!
         return;
       }
       // The offset is changed.
+
       if (!Writes.count(PrevState.CFARegister)) {
-        Context.reportWarning(
+        Context.reportError(
             Inst.getLoc(),
             formatv(
                 "You changed the CFA offset, but there is no modification to "
                 "the CFA register happening in this instruction."));
       }
-      int64_t HowMuch;
-      if (!doesConstantChange(
-              Inst, MCRI->getLLVMRegNum(PrevState.CFARegister, false).value(),
-              HowMuch)) {
-        Context.reportWarning(
-            Inst.getLoc(),
-            formatv("The CFA register changed, but I don't know how, finger "
-                    "crossed the CFI directives are correct."));
-        return;
-      }
-      // we know it is changed by HowMuch, so the CFA offset should be changed
-      // by -HowMuch, i.e. AfterState.Offset - State.Offset = -HowMuch
-      if (NextState.CFAOffset - PrevState.CFAOffset != -HowMuch) {
-        Context.reportError(
-            Inst.getLoc(),
-            formatv("The CFA offset is changed by {0}, but "
-                    "the directives changed it by {1}. (to be exact, the new "
-                    "offset should be {2}, but it is {3})",
-                    -HowMuch, NextState.CFAOffset - PrevState.CFAOffset,
-                    PrevState.CFAOffset - HowMuch, NextState.CFAOffset));
-        return;
-      }
 
-      // Everything OK!
-      return;
-    }
-    // The CFA register is changed.
-    // TODO move it up
-    MCPhysReg OldCFAReg =
-        MCRI->getLLVMRegNum(PrevState.CFARegister, false).value();
-    MCPhysReg NewCFAReg =
-        MCRI->getLLVMRegNum(NextState.CFARegister, false).value();
-    if (!Writes.count(NextState.CFARegister)) {
       Context.reportWarning(
           Inst.getLoc(),
-          formatv(
-              "The new CFA register reg#{0}'s value is not assigned by this "
-              "instruction, try to move the new CFA def to where this "
-              "value is changed, now I can't infer if this change is "
-              "correct or not.",
-              NewCFAReg));
+          "I don't know what the instruction did, but it changed the CFA reg's "
+          "value, and the offset is changed as well by the CFI directives.");
+      // Everything may be ok!
       return;
     }
-    // Because CFA should is the CFA always stays the same:
-    int OffsetDiff = PrevState.CFAOffset - NextState.CFAOffset;
-    int Diff;
-    if (!isInConstantDistanceOfEachOther(Inst, NewCFAReg, OldCFAReg, Diff)) {
-      Context.reportWarning(
-          Inst.getLoc(),
-          formatv("Based on this instruction I cannot infer that the new and "
-                  "old CFA registers are in {0} distance of each other. I "
-                  "hope it's ok.",
-                  OffsetDiff));
-      return;
-    }
-    if (Diff != OffsetDiff) {
-      Context.reportError(Inst.getLoc(),
-                          formatv("After changing the CFA register, the CFA "
-                                  "offset should be {0}, but it is {1}.",
-                                  PrevState.CFAOffset - Diff,
-                                  NextState.CFAOffset));
-      return;
-    }
-    // Everything is OK!
+    // The CFA register is changed
+    Context.reportWarning(
+        Inst.getLoc(), "The CFA register is changed to something, and I don't "
+                       "have any idea on the new register relevance to CFA.");
+    // Everything may be ok!
   }
 
   void update(MCInst &Inst, ArrayRef<MCCFIInstruction> CFIDirectives) {
