@@ -558,6 +558,9 @@ Improvements to Clang's diagnostics
   between different Unicode character types (``char8_t``, ``char16_t``, ``char32_t``).
   This warning only triggers in C++ as these types are aliases in C. (#GH138526)
 
+- Fixed a crash when checking a ``__thread``-specified variable declaration
+  with a dependent type in C++. (#GH140509)
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -741,6 +744,8 @@ Bug Fixes to C++ Support
 - Fixed a function declaration mismatch that caused inconsistencies between concepts and variable template declarations. (#GH139476)
 - Clang no longer segfaults when there is a configuration mismatch between modules and their users (http://crbug.com/400353616).
 - Fix an incorrect deduction when calling an explicit object member function template through an overload set address.
+- Fixed bug in constant evaluation that would allow using the value of a
+  reference in its own initializer in C++23 mode (#GH131330).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
