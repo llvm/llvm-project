@@ -15,6 +15,7 @@
 #include "Protocol/ProtocolBase.h"
 #include "Protocol/ProtocolRequests.h"
 #include "Protocol/ProtocolTypes.h"
+#include "lldb/API/SBAddress.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
@@ -545,6 +546,14 @@ public:
   }
   llvm::Expected<protocol::DisassembleResponseBody>
   Run(const protocol::DisassembleArguments &args) const override;
+
+  std::vector<protocol::DisassembledInstruction>
+  disassembleBackwards(lldb::SBAddress &addr, const uint32_t instruction_count,
+                       const char *flavor_string, bool resolve_symbols) const;
+  protocol::DisassembledInstruction
+  SBInstructionToDisassembledInstruction(lldb::SBInstruction &inst,
+                                         bool resolve_symbols) const;
+  protocol::DisassembledInstruction GetInvalidInstruction() const;
 };
 
 class ReadMemoryRequestHandler : public LegacyRequestHandler {

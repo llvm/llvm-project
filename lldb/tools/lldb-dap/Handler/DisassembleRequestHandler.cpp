@@ -26,8 +26,6 @@ namespace lldb_dap {
 /// `supportsDisassembleRequest` is true.
 llvm::Expected<DisassembleResponseBody>
 DisassembleRequestHandler::Run(const DisassembleArguments &args) const {
-  std::vector<DisassembledInstruction> instructions;
-
   std::optional<lldb::addr_t> addr_opt =
       DecodeMemoryReference(args.memoryReference);
   if (!addr_opt.has_value())
@@ -35,7 +33,7 @@ DisassembleRequestHandler::Run(const DisassembleArguments &args) const {
                                       args.memoryReference);
 
   lldb::addr_t addr_ptr = *addr_opt;
-  addr_ptr += args.instructionOffset.value_or(0);
+  addr_ptr += args.offset.value_or(0);
   lldb::SBAddress addr(addr_ptr, dap.target);
   if (!addr.IsValid())
     return llvm::make_error<DAPError>(
@@ -56,100 +54,185 @@ DisassembleRequestHandler::Run(const DisassembleArguments &args) const {
     }
   }
 
+  int64_t instructionOffset = args.instructionOffset.value_or(0);
+  if (instructionOffset > 0) {
+    lldb::SBInstructionList forward_insts = dap.target.ReadInstructions(
+        addr, instructionOffset + 1, flavor_string.c_str());
+    if (forward_insts.GetSize() != static_cast<size_t>(instructionOffset + 1)) {
+      return llvm::make_error<DAPError>(
+          "Failed to disassemble instructions after " +
+          std::to_string(instructionOffset) +
+          " instructions from the given address.");
+    }
+
+    addr = forward_insts.GetInstructionAtIndex(instructionOffset).GetAddress();
+  }
+
+  const bool resolve_symbols = args.resolveSymbols.value_or(false);
+  std::vector<DisassembledInstruction> instructions;
+  if (instructionOffset < 0)
+    instructions = disassembleBackwards(addr, std::abs(instructionOffset),
+                                        flavor_string.c_str(), resolve_symbols);
+
+  const auto instructions_left = args.instructionCount - instructions.size();
   lldb::SBInstructionList insts = dap.target.ReadInstructions(
-      addr, args.instructionCount, flavor_string.c_str());
+      addr, instructions_left, flavor_string.c_str());
 
   if (!insts.IsValid())
     return llvm::make_error<DAPError>(
         "Failed to find instructions for memory address.");
 
-  const bool resolve_symbols = args.resolveSymbols.value_or(false);
+  // add the disassembly from the given address forward
   const auto num_insts = insts.GetSize();
-  for (size_t i = 0; i < num_insts; ++i) {
+  for (size_t i = 0;
+       i < num_insts && instructions.size() < args.instructionCount; ++i) {
     lldb::SBInstruction inst = insts.GetInstructionAtIndex(i);
-    auto addr = inst.GetAddress();
-    const auto inst_addr = addr.GetLoadAddress(dap.target);
-    const char *m = inst.GetMnemonic(dap.target);
-    const char *o = inst.GetOperands(dap.target);
-    const char *c = inst.GetComment(dap.target);
-    auto d = inst.GetData(dap.target);
-
-    std::string bytes;
-    llvm::raw_string_ostream sb(bytes);
-    for (unsigned i = 0; i < inst.GetByteSize(); i++) {
-      lldb::SBError error;
-      uint8_t b = d.GetUnsignedInt8(error, i);
-      if (error.Success()) {
-        sb << llvm::format("%2.2x ", b);
-      }
-    }
-
-    DisassembledInstruction disassembled_inst;
-    disassembled_inst.address = inst_addr;
-    disassembled_inst.instructionBytes =
-        bytes.size() > 0 ? bytes.substr(0, bytes.size() - 1) : "";
-
-    std::string instruction;
-    llvm::raw_string_ostream si(instruction);
-
-    lldb::SBSymbol symbol = addr.GetSymbol();
-    // Only add the symbol on the first line of the function.
-    if (symbol.IsValid() && symbol.GetStartAddress() == addr) {
-      // If we have a valid symbol, append it as a label prefix for the first
-      // instruction. This is so you can see the start of a function/callsite
-      // in the assembly, at the moment VS Code (1.80) does not visualize the
-      // symbol associated with the assembly instruction.
-      si << (symbol.GetMangledName() != nullptr ? symbol.GetMangledName()
-                                                : symbol.GetName())
-         << ": ";
-
-      if (resolve_symbols)
-        disassembled_inst.symbol = symbol.GetDisplayName();
-    }
-
-    si << llvm::formatv("{0,7} {1,12}", m, o);
-    if (c && c[0]) {
-      si << " ; " << c;
-    }
-
-    disassembled_inst.instruction = instruction;
-
-    auto line_entry = addr.GetLineEntry();
-    // If the line number is 0 then the entry represents a compiler generated
-    // location.
-    if (line_entry.GetStartAddress() == addr && line_entry.IsValid() &&
-        line_entry.GetFileSpec().IsValid() && line_entry.GetLine() != 0) {
-      auto source = CreateSource(line_entry);
-      disassembled_inst.location = std::move(source);
-
-      const auto line = line_entry.GetLine();
-      if (line != 0 && line != LLDB_INVALID_LINE_NUMBER)
-        disassembled_inst.line = line;
-
-      const auto column = line_entry.GetColumn();
-      if (column != 0 && column != LLDB_INVALID_COLUMN_NUMBER)
-        disassembled_inst.column = column;
-
-      auto end_line_entry = line_entry.GetEndAddress().GetLineEntry();
-      if (end_line_entry.IsValid() &&
-          end_line_entry.GetFileSpec() == line_entry.GetFileSpec()) {
-        const auto end_line = end_line_entry.GetLine();
-        if (end_line != 0 && end_line != LLDB_INVALID_LINE_NUMBER &&
-            end_line != line) {
-          disassembled_inst.endLine = end_line;
-
-          const auto end_column = end_line_entry.GetColumn();
-          if (end_column != 0 && end_column != LLDB_INVALID_COLUMN_NUMBER &&
-              end_column != column)
-            disassembled_inst.endColumn = end_column - 1;
-        }
-      }
-    }
-
-    instructions.push_back(std::move(disassembled_inst));
+    instructions.push_back(
+        SBInstructionToDisassembledInstruction(inst, resolve_symbols));
   }
 
+  // Pad the instructions with invalid instructions if needed.
+  if (instructions.size() < args.instructionCount)
+    for (size_t i = instructions.size(); i < args.instructionCount; ++i)
+      instructions.push_back(GetInvalidInstruction());
+
   return DisassembleResponseBody{std::move(instructions)};
+}
+
+std::vector<protocol::DisassembledInstruction>
+DisassembleRequestHandler::disassembleBackwards(
+    lldb::SBAddress &addr, const uint32_t instruction_count,
+    const char *flavor_string, bool resolve_symbols) const {
+  std::vector<DisassembledInstruction> instructions;
+
+  // TODO: Simply disassemble from `addr` - `instruction_count` *
+  // `instruction_size` in architectures with a fixed instruction size.
+
+  // need to disassemble backwards, let's try from the start of the symbol if
+  // available.
+  auto symbol = addr.GetSymbol();
+  if (symbol.IsValid()) {
+    // add valid instructions before the current instruction using the symbol.
+    lldb::SBInstructionList symbol_insts = dap.target.ReadInstructions(
+        symbol.GetStartAddress(), addr, flavor_string);
+    if (symbol_insts.IsValid()) {
+      size_t backwards_insts_start =
+          symbol_insts.GetSize() >= instruction_count
+              ? symbol_insts.GetSize() - instruction_count
+              : 0;
+      for (size_t i = backwards_insts_start;
+           i < symbol_insts.GetSize() &&
+           instructions.size() < instruction_count;
+           ++i) {
+        lldb::SBInstruction inst = symbol_insts.GetInstructionAtIndex(i);
+        instructions.push_back(
+            SBInstructionToDisassembledInstruction(inst, resolve_symbols));
+      }
+    }
+  }
+
+  // pad the instructions with invalid instructions if needed.
+  while (instructions.size() < instruction_count) {
+    instructions.insert(instructions.begin(), GetInvalidInstruction());
+  }
+
+  return instructions;
+}
+
+DisassembledInstruction
+DisassembleRequestHandler::SBInstructionToDisassembledInstruction(
+    lldb::SBInstruction &inst, bool resolve_symbols) const {
+  if (!inst.IsValid())
+    return GetInvalidInstruction();
+
+  auto addr = inst.GetAddress();
+  const auto inst_addr = addr.GetLoadAddress(dap.target);
+  const char *m = inst.GetMnemonic(dap.target);
+  const char *o = inst.GetOperands(dap.target);
+  const char *c = inst.GetComment(dap.target);
+  auto d = inst.GetData(dap.target);
+
+  std::string bytes;
+  llvm::raw_string_ostream sb(bytes);
+  for (unsigned i = 0; i < inst.GetByteSize(); i++) {
+    lldb::SBError error;
+    uint8_t b = d.GetUnsignedInt8(error, i);
+    if (error.Success())
+      sb << llvm::format("%2.2x ", b);
+  }
+
+  DisassembledInstruction disassembled_inst;
+  disassembled_inst.address = inst_addr;
+  disassembled_inst.instructionBytes =
+      bytes.size() > 0 ? bytes.substr(0, bytes.size() - 1) : "";
+
+  std::string instruction;
+  llvm::raw_string_ostream si(instruction);
+
+  lldb::SBSymbol symbol = addr.GetSymbol();
+  // Only add the symbol on the first line of the function.
+  if (symbol.IsValid() && symbol.GetStartAddress() == addr) {
+    // If we have a valid symbol, append it as a label prefix for the first
+    // instruction. This is so you can see the start of a function/callsite
+    // in the assembly, at the moment VS Code (1.80) does not visualize the
+    // symbol associated with the assembly instruction.
+    si << (symbol.GetMangledName() != nullptr ? symbol.GetMangledName()
+                                              : symbol.GetName())
+       << ": ";
+
+    if (resolve_symbols)
+      disassembled_inst.symbol = symbol.GetDisplayName();
+  }
+
+  si << llvm::formatv("{0,7} {1,12}", m, o);
+  if (c && c[0]) {
+    si << " ; " << c;
+  }
+
+  disassembled_inst.instruction = std::move(instruction);
+
+  auto line_entry = addr.GetLineEntry();
+  // If the line number is 0 then the entry represents a compiler generated
+  // location.
+
+  if (line_entry.GetStartAddress() == addr && line_entry.IsValid() &&
+      line_entry.GetFileSpec().IsValid() && line_entry.GetLine() != 0) {
+    auto source = CreateSource(line_entry);
+    disassembled_inst.location = std::move(source);
+
+    const auto line = line_entry.GetLine();
+    if (line != 0 && line != LLDB_INVALID_LINE_NUMBER)
+      disassembled_inst.line = line;
+
+    const auto column = line_entry.GetColumn();
+    if (column != 0 && column != LLDB_INVALID_COLUMN_NUMBER)
+      disassembled_inst.column = column;
+
+    auto end_line_entry = line_entry.GetEndAddress().GetLineEntry();
+    if (end_line_entry.IsValid() &&
+        end_line_entry.GetFileSpec() == line_entry.GetFileSpec()) {
+      const auto end_line = end_line_entry.GetLine();
+      if (end_line != 0 && end_line != LLDB_INVALID_LINE_NUMBER &&
+          end_line != line) {
+        disassembled_inst.endLine = end_line;
+
+        const auto end_column = end_line_entry.GetColumn();
+        if (end_column != 0 && end_column != LLDB_INVALID_COLUMN_NUMBER &&
+            end_column != column)
+          disassembled_inst.endColumn = end_column - 1;
+      }
+    }
+  }
+
+  return disassembled_inst;
+}
+
+DisassembledInstruction
+DisassembleRequestHandler::GetInvalidInstruction() const {
+  DisassembledInstruction invalid_inst;
+  invalid_inst.presentationHint =
+      DisassembledInstruction::eDisassembledInstructionPresentationHintInvalid;
+  return invalid_inst;
 }
 
 } // namespace lldb_dap

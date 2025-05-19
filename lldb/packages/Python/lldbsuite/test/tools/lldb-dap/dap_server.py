@@ -735,7 +735,7 @@ class DebugCommunication(object):
         return self.send_recv(command_dict)
 
     def request_disassemble(
-        self, memoryReference, offset=-50, instructionCount=200, resolveSymbols=True
+        self, memoryReference, offset=0, instructionCount=200, resolveSymbols=True
     ):
         args_dict = {
             "memoryReference": memoryReference,
