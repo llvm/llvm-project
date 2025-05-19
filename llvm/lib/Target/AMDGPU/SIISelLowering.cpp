@@ -17579,8 +17579,8 @@ SITargetLowering::lowerIdempotentRMWIntoFencedLoad(AtomicRMWInst *AI) const {
 }
 
 bool SITargetLowering::hasAndNot(SDValue Op) const {
-  // Return false if the operation is divergent, as AND-NOT is a scalar-only
-  // instruction.
+  // AND-NOT is only valid on uniform (SGPR) values; divergent values live in
+  // VGPRs.
   if (Op->isDivergent())
     return false;
 
