@@ -2880,6 +2880,8 @@ LogicalResult TypeConverter::convertType(Type t,
       if (t.getContext()->isMultithreadingEnabled())
         cacheWriteLock.lock();
       if (!succeeded(*result)) {
+        assert(results.size() == currentCount &&
+               "failed type conversion should not change results");
         cachedDirectConversions.try_emplace(t, nullptr);
         return failure();
       }
@@ -2889,6 +2891,9 @@ LogicalResult TypeConverter::convertType(Type t,
       else
         cachedMultiConversions.try_emplace(t, llvm::to_vector<2>(newTypes));
       return success();
+    } else {
+      assert(results.size() == currentCount &&
+             "failed type conversion should not change results");
     }
   }
   return failure();
