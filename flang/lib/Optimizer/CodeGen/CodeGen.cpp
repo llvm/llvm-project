@@ -2428,9 +2428,10 @@ struct InsertOnRangeOpConversion
     // fold the inserted element value to an attribute and build an ArrayAttr
     // for the resulting array.
     if (range.isFullRange()) {
-      if (mlir::Attribute cst =
-              fir::tryFoldingLLVMInsertChain(adaptor.getVal(), rewriter)) {
-        mlir::Attribute dimVal = cst;
+      llvm::FailureOr<mlir::Attribute> cst =
+          fir::tryFoldingLLVMInsertChain(adaptor.getVal(), rewriter);
+      if (llvm::succeeded(cst)) {
+        mlir::Attribute dimVal = *cst;
         for (auto dim : llvm::reverse(dims)) {
           // Use std::vector in case the number of elements is big.
           std::vector<mlir::Attribute> elements(dim, dimVal);

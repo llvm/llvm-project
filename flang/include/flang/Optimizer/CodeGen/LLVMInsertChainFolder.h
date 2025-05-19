@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Support/LogicalResult.h"
+
 namespace mlir {
 class Attribute;
 class OpBuilder;
@@ -26,6 +28,7 @@ namespace fir {
 /// or cannot be represented as an Attribute. The operations are not deleted,
 /// but some llvm.insertvalue value operands may be folded with the builder on
 /// the way.
-mlir::Attribute tryFoldingLLVMInsertChain(mlir::Value insertChainResult,
-                                          mlir::OpBuilder &builder);
+llvm::FailureOr<mlir::Attribute>
+tryFoldingLLVMInsertChain(mlir::Value insertChainResult,
+                          mlir::OpBuilder &builder);
 } // namespace fir

@@ -67,7 +67,7 @@ private:
     if (auto structTy =
             llvm::dyn_cast_if_present<mlir::LLVM::LLVMStructType>(type))
       return structTy.getBody()[field];
-    return {};
+    return nullptr;
   }
 
   // Current element value of the aggregate value being built.
@@ -83,12 +83,18 @@ private:
 // Helper to fold the value being inserted by an llvm.insert_value.
 // This may call tryFoldingLLVMInsertChain if the value is an aggregate and
 // was itself constructed by a different insert chain.
+// Returns a nullptr Attribute if the value could not be folded.
 static mlir::Attribute getAttrIfConstant(mlir::Value val,
                                          mlir::OpBuilder &rewriter) {
   if (auto cst = val.getDefiningOp<mlir::LLVM::ConstantOp>())
     return cst.getValue();
-  if (auto insert = val.getDefiningOp<mlir::LLVM::InsertValueOp>())
-    return fir::tryFoldingLLVMInsertChain(val, rewriter);
+  if (auto insert = val.getDefiningOp<mlir::LLVM::InsertValueOp>()) {
+    llvm::FailureOr<mlir::Attribute> attr =
+        fir::tryFoldingLLVMInsertChain(val, rewriter);
+    if (succeeded(attr))
+      return *attr;
+    return nullptr;
+  }
   if (val.getDefiningOp<mlir::LLVM::ZeroOp>())
     return mlir::LLVM::ZeroAttr::get(val.getContext());
   if (val.getDefiningOp<mlir::LLVM::UndefOp>())
@@ -108,23 +114,20 @@ static mlir::Attribute getAttrIfConstant(mlir::Value val,
         return mlir::IntegerAttr::get(trunc.getType(), intAttr.getInt());
   LLVM_DEBUG(llvm::dbgs() << "cannot fold insert value operand: " << val
                           << "\n");
-  return {};
+  return nullptr;
 }
 
 mlir::Attribute
 InsertChainBackwardFolder::finalize(mlir::Attribute defaultFieldValue) {
-  std::vector<mlir::Attribute> attrs;
-  attrs.reserve(values.size());
-  for (InFlightValue &inFlight : values) {
-    if (!inFlight) {
-      attrs.push_back(defaultFieldValue);
-    } else if (auto attr = llvm::dyn_cast<mlir::Attribute>(inFlight)) {
-      attrs.push_back(attr);
-    } else {
-      auto *inFlightList = llvm::cast<InsertChainBackwardFolder *>(inFlight);
-      attrs.push_back(inFlightList->finalize(defaultFieldValue));
-    }
-  }
+  llvm::SmallVector<mlir::Attribute> attrs = llvm::map_to_vector(
+      values, [&](InFlightValue inFlight) -> mlir::Attribute {
+        if (!inFlight)
+          return defaultFieldValue;
+        if (auto attr = llvm::dyn_cast<mlir::Attribute>(inFlight))
+          return attr;
+        return llvm::cast<InsertChainBackwardFolder *>(inFlight)->finalize(
+            defaultFieldValue);
+      });
   return mlir::ArrayAttr::get(type.getContext(), attrs);
 }
 
@@ -140,8 +143,11 @@ bool InsertChainBackwardFolder::pushValue(mlir::Attribute val,
     }
     // This is the first insert to a nested field. Create a
     // InsertChainBackwardFolder for the current element value.
-    InsertChainBackwardFolder &inFlightList = folderStorage->emplace_back(
-        getSubElementType(type, at[0]), folderStorage);
+    mlir::Type subType = getSubElementType(type, at[0]);
+    if (!subType)
+      return false;
+    InsertChainBackwardFolder &inFlightList =
+        folderStorage->emplace_back(subType, folderStorage);
     inFlight = &inFlightList;
     return inFlightList.pushValue(val, at.drop_front());
   }
@@ -162,8 +168,8 @@ bool InsertChainBackwardFolder::pushValue(mlir::Attribute val,
   return inFlightList->pushValue(val, at.drop_front());
 }
 
-mlir::Attribute fir::tryFoldingLLVMInsertChain(mlir::Value val,
-                                               mlir::OpBuilder &rewriter) {
+llvm::FailureOr<mlir::Attribute>
+fir::tryFoldingLLVMInsertChain(mlir::Value val, mlir::OpBuilder &rewriter) {
   if (auto cst = val.getDefiningOp<mlir::LLVM::ConstantOp>())
     return cst.getValue();
   if (auto insert = val.getDefiningOp<mlir::LLVM::InsertValueOp>()) {
@@ -178,9 +184,9 @@ mlir::Attribute fir::tryFoldingLLVMInsertChain(mlir::Value val,
         mlir::Attribute attr =
             getAttrIfConstant(currentInsert.getValue(), rewriter);
         if (!attr)
-          return {};
+          return llvm::failure();
         if (!inFlightList.pushValue(attr, currentInsert.getPosition()))
-          return {};
+          return llvm::failure();
         lastInsert = currentInsert;
         currentInsert = currentInsert.getContainer()
                             .getDefiningOp<mlir::LLVM::InsertValueOp>();
@@ -195,10 +201,10 @@ mlir::Attribute fir::tryFoldingLLVMInsertChain(mlir::Value val,
       if (!defaultVal) {
         LLVM_DEBUG(llvm::dbgs()
                    << "insert chain initial value is not Zero or Undef\n");
-        return {};
+        return llvm::failure();
       }
       return inFlightList.finalize(defaultVal);
     }
   }
-  return {};
+  return llvm::failure();
 }
