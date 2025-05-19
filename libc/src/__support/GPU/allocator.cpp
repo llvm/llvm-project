@@ -226,7 +226,8 @@ struct Slab {
     // We attempt to place these next to each other.
     // TODO: We should coalesce these bits and use the result of `fetch_or` to
     //       search for free bits in parallel.
-    for (uint64_t mask = ~0ull; mask; mask = gpu::ballot(lane_mask, !result)) {
+    for (uint64_t mask = lane_mask; mask;
+         mask = gpu::ballot(lane_mask, !result)) {
       uint32_t id = impl::lane_count(uniform & mask);
       uint32_t index =
           (gpu::broadcast_value(lane_mask, impl::xorshift32(state)) + id) %
@@ -334,10 +335,10 @@ private:
                                     cpp::MemoryOrder::RELAXED,
                                     cpp::MemoryOrder::RELAXED)) {
       count = cpp::numeric_limits<uint64_t>::max();
-      T *mem = reinterpret_cast<T *>(impl::rpc_allocate(sizeof(T)));
-      if (!mem)
+      void *raw = impl::rpc_allocate(sizeof(T));
+      if (!raw)
         return nullptr;
-      new (mem) T(cpp::forward<Args>(args)...);
+      T *mem = new (raw) T(cpp::forward<Args>(args)...);
 
       cpp::atomic_thread_fence(cpp::MemoryOrder::RELEASE);
       ptr.store(mem, cpp::MemoryOrder::RELAXED);
