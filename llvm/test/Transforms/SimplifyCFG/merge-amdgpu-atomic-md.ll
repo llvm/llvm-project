@@ -3,7 +3,7 @@
 ;; instructions are sunk. Currently the metadata from the first instruction
 ;; is kept, which prevents full loss of optimisation information.
 
-; RUN: opt < %s -passes=simplifycfg -passes=simplifycfg -sink-common-insts -S | FileCheck %s
+; RUN: opt < %s -passes=simplifycfg -sink-common-insts -S | FileCheck %s
 
 define amdgpu_kernel void @f(i1 %pred0, i1 %pred1, ptr captures(none) %p, double %d) local_unnamed_addr {
 ; CHECK-LABEL: define amdgpu_kernel void @f(
@@ -37,6 +37,4 @@ if.end:
   ret void
 }
 
-!0 = !{!"float", !1, i64 0}
-!1 = !{!"omnipotent char", !2, i64 0}
-!2 = !{!"Simple C++ TBAA"}
+!0 = !{}
