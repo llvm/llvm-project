@@ -553,7 +553,6 @@ def IfOp : CIR_Op<"if",
   let arguments = (ins CIR_BoolType:$condition);
   let regions = (region AnyRegion:$thenRegion, AnyRegion:$elseRegion);
   let hasCustomAssemblyFormat=1;
-  let hasVerifier=1;
   let skipDefaultBuilders=1;
   let builders = [
     OpBuilder<(ins "mlir::Value":$cond, "bool":$withElseRegion,

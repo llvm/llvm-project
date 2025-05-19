@@ -751,8 +751,6 @@ void cir::IfOp::build(OpBuilder &builder, OperationState &result, Value cond,
   elseBuilder(builder, result.location);
 }
 
-LogicalResult cir::IfOp::verify() { return success(); }
-
 //===----------------------------------------------------------------------===//
 // ScopeOp
 //===----------------------------------------------------------------------===//
