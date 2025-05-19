@@ -2091,7 +2091,9 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
 
       // Get the next non-meta instruction in FBB.
       FI = skipDebugInstructionsForward(FI, FE, false);
-      assert(TI->isIdenticalTo(*FI, MachineInstr::CheckKillDead) &&
+      // NOTE: The loop above checks CheckKillDead but we can't do that here as
+      // it goes on to modifies some kill markers.
+      assert(TI->isIdenticalTo(*FI, MachineInstr::CheckDefs) &&
              "Expected non-debug lockstep");
 
       // Merge debug locs on hoisted instructions.
