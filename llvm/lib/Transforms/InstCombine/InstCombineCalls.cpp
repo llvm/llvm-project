@@ -76,8 +76,6 @@
 #include <utility>
 #include <vector>
 
-#include<iostream>
-
 #define DEBUG_TYPE "instcombine"
 #include "llvm/Transforms/Utils/InstructionWorklist.h"
 
