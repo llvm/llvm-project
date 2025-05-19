@@ -2092,7 +2092,7 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
       // Get the next non-meta instruction in FBB.
       FI = skipDebugInstructionsForward(FI, FE, false);
       // NOTE: The loop above checks CheckKillDead but we can't do that here as
-      // it goes on to modifies some kill markers.
+      // it modifies some kill markers after the check.
       assert(TI->isIdenticalTo(*FI, MachineInstr::CheckDefs) &&
              "Expected non-debug lockstep");
 
