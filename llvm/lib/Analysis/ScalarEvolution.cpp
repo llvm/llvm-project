@@ -12480,18 +12480,13 @@ static bool IsKnownPredicateViaAddRecStart(ScalarEvolution &SE,
   if (!ICmpInst::isRelational(Pred))
     return false;
 
-  const SCEVAddRecExpr *LAR = dyn_cast<SCEVAddRecExpr>(LHS);
-  if (!LAR)
+  const SCEV *LStart, *RStart, *Step;
+  if (!match(LHS, m_scev_AffineAddRec(m_SCEV(LStart), m_SCEV(Step))) ||
+      !match(RHS, m_scev_AffineAddRec(m_SCEV(RStart), m_scev_Specific(Step))))
     return false;
-  const SCEVAddRecExpr *RAR = dyn_cast<SCEVAddRecExpr>(RHS);
-  if (!RAR)
-    return false;
+  const SCEVAddRecExpr *LAR = cast<SCEVAddRecExpr>(LHS);
+  const SCEVAddRecExpr *RAR = cast<SCEVAddRecExpr>(RHS);
   if (LAR->getLoop() != RAR->getLoop())
-    return false;
-  if (!LAR->isAffine() || !RAR->isAffine())
-    return false;
-
-  if (LAR->getStepRecurrence(SE) != RAR->getStepRecurrence(SE))
     return false;
 
   SCEV::NoWrapFlags NW = ICmpInst::isSigned(Pred) ?
@@ -12499,7 +12494,7 @@ static bool IsKnownPredicateViaAddRecStart(ScalarEvolution &SE,
   if (!LAR->getNoWrapFlags(NW) || !RAR->getNoWrapFlags(NW))
     return false;
 
-  return SE.isKnownPredicate(Pred, LAR->getStart(), RAR->getStart());
+  return SE.isKnownPredicate(Pred, LStart, RStart);
 }
 
 /// Is LHS `Pred` RHS true on the virtue of LHS or RHS being a Min or Max
@@ -12716,7 +12711,7 @@ static bool isKnownPredicateExtendIdiom(CmpPredicate Pred, const SCEV *LHS,
   case ICmpInst::ICMP_SLE: {
     // If operand >=s 0 then ZExt == SExt. If operand <s 0 then SExt <s ZExt.
     return match(LHS, m_scev_SExt(m_SCEV(Op))) &&
-           match(RHS, m_scev_ZExt(m_Specific(Op)));
+           match(RHS, m_scev_ZExt(m_scev_Specific(Op)));
   }
   case ICmpInst::ICMP_UGE:
     std::swap(LHS, RHS);
@@ -12724,7 +12719,7 @@ static bool isKnownPredicateExtendIdiom(CmpPredicate Pred, const SCEV *LHS,
   case ICmpInst::ICMP_ULE: {
     // If operand >=u 0 then ZExt == SExt.  If operand <u 0 then ZExt <u SExt.
     return match(LHS, m_scev_ZExt(m_SCEV(Op))) &&
-           match(RHS, m_scev_SExt(m_Specific(Op)));
+           match(RHS, m_scev_SExt(m_scev_Specific(Op)));
   }
   default:
     return false;

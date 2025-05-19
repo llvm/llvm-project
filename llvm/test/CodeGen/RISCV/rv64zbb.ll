@@ -2118,3 +2118,55 @@ define i32 @sub_if_uge_C_swapped_i32(i32 signext %x) {
   %cond = select i1 %cmp, i32 %x, i32 %sub
   ret i32 %cond
 }
+
+define i7 @sub_if_uge_C_nsw_i7(i7 %a) {
+; RV64I-LABEL: sub_if_uge_C_nsw_i7:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    ori a0, a0, 51
+; RV64I-NEXT:    andi a1, a0, 127
+; RV64I-NEXT:    sltiu a1, a1, 111
+; RV64I-NEXT:    addi a1, a1, -1
+; RV64I-NEXT:    andi a1, a1, 17
+; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBB-LABEL: sub_if_uge_C_nsw_i7:
+; RV64ZBB:       # %bb.0:
+; RV64ZBB-NEXT:    ori a0, a0, 51
+; RV64ZBB-NEXT:    andi a1, a0, 127
+; RV64ZBB-NEXT:    addi a0, a0, 17
+; RV64ZBB-NEXT:    andi a0, a0, 92
+; RV64ZBB-NEXT:    minu a0, a0, a1
+; RV64ZBB-NEXT:    ret
+  %x = or i7 %a, 51
+  %c = icmp ugt i7 %x, -18
+  %add = add nsw i7 %x, 17
+  %s = select i1 %c, i7 %add, i7 %x
+  ret i7 %s
+}
+
+define i7 @sub_if_uge_C_swapped_nsw_i7(i7 %a) {
+; RV64I-LABEL: sub_if_uge_C_swapped_nsw_i7:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    ori a0, a0, 51
+; RV64I-NEXT:    andi a1, a0, 127
+; RV64I-NEXT:    sltiu a1, a1, 111
+; RV64I-NEXT:    addi a1, a1, -1
+; RV64I-NEXT:    andi a1, a1, 17
+; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBB-LABEL: sub_if_uge_C_swapped_nsw_i7:
+; RV64ZBB:       # %bb.0:
+; RV64ZBB-NEXT:    ori a0, a0, 51
+; RV64ZBB-NEXT:    andi a1, a0, 127
+; RV64ZBB-NEXT:    addi a0, a0, 17
+; RV64ZBB-NEXT:    andi a0, a0, 92
+; RV64ZBB-NEXT:    minu a0, a1, a0
+; RV64ZBB-NEXT:    ret
+  %x = or i7 %a, 51
+  %c = icmp ult i7 %x, -17
+  %add = add nsw i7 %x, 17
+  %s = select i1 %c, i7 %x, i7 %add
+  ret i7 %s
+}
