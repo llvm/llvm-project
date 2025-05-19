@@ -1061,12 +1061,19 @@ LogicalResult spirv::Deserializer::processCooperativeMatrixTypeKHR(
            << operands[2];
   }
 
-  unsigned rows = getConstantInt(operands[3]).getInt();
-  unsigned columns = getConstantInt(operands[4]).getInt();
+  IntegerAttr rowsAttr = getConstantInt(operands[3]);
+  assert(rowsAttr);
+  unsigned rows = rowsAttr.getInt();
+
+  IntegerAttr columnsAttr = getConstantInt(operands[4]);
+  assert(columnsAttr);
+  unsigned columns = columnsAttr.getInt();
+
+  IntegerAttr useAttr = getConstantInt(operands[5]);
+  assert(useAttr);
 
   std::optional<spirv::CooperativeMatrixUseKHR> use =
-      spirv::symbolizeCooperativeMatrixUseKHR(
-          getConstantInt(operands[5]).getInt());
+      spirv::symbolizeCooperativeMatrixUseKHR(useAttr.getInt());
   if (!use) {
     return emitError(
                unknownLoc,
