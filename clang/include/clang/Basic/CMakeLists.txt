@@ -79,6 +79,12 @@ clang_tablegen(CXX11AttributeInfo.inc -gen-cxx11-attribute-info
   TARGET CXX11AttributeInfo
   )
 
+  clang_tablegen(AttributeSpellingList.inc -gen-attribute-spelling-list
+  -I ${CMAKE_CURRENT_SOURCE_DIR}/../../
+  SOURCE Attr.td
+  TARGET AttributeSpellingList
+  )
+
 clang_tablegen(Builtins.inc -gen-clang-builtins
   SOURCE Builtins.td
   TARGET ClangBuiltins)

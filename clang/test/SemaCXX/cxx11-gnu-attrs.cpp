@@ -3,7 +3,7 @@
 // Error cases.
 
 [[gnu::this_attribute_does_not_exist]] int unknown_attr;
-// expected-warning@-1 {{unknown attribute 'this_attribute_does_not_exist' ignored}}
+// expected-warning@-1 {{unknown attribute 'gnu::this_attribute_does_not_exist' ignored}}
 int [[gnu::unused]] attr_on_type;
 // expected-error@-1 {{'unused' attribute cannot be applied to types}}
 int *[[gnu::unused]] attr_on_ptr;
