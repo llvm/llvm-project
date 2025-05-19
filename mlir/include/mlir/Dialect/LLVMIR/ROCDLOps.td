@@ -713,6 +713,10 @@ def ROCDL_V2I16Type : FixedVectorOfLengthAndType<[2], [I16]>,
                         BuildableType<"::mlir::VectorType::get("
                           "{2},$_builder.getI16Type())">;
 
+def ROCDL_V2F32Type : FixedVectorOfLengthAndType<[2], [F32]>,
+                        BuildableType<"::mlir::VectorType::get("
+                          "{2},$_builder.getF32Type())">;
+
 def ROCDL_V2F16Type : FixedVectorOfLengthAndType<[2], [F16]>,
                         BuildableType<"::mlir::VectorType::get("
                           "{2},$_builder.getF16Type())">;
@@ -1005,6 +1009,120 @@ def ROCDL_CvtScaleF32SrBf8F32Op :
   }];
 }
 
+//===---------------------------------------------------------------------===//
+// 4-bit float scale intrinsics
+//===---------------------------------------------------------------------===//
+def ROCDL_CvtScaleF32PkFp4F32Op :
+    ROCDL_IntrOp<"cvt.scalef32.pk.fp4.f32", [], [], [Pure], 1>,
+    Arguments<(ins I32:$old, F32:$src0, F32:$src1, F32: $scale, I32:$byteSel)> {
+    let summary = "Convert f32 to packed fp4 and scale";
+    let description = [{ Convert `src` based on $byteSe to packed fp4, then scale
+    the packed values by the exponent in `scale`.
+  }];
+  let assemblyFormat = [{
+    attr-dict $src0 `,` $src1 `,` $scale `->` $old `[` $byteSel `]` `:` type($res)
+  }];
+}
+
+def ROCDL_CvtScaleF32PkFp4F16Op :
+    ROCDL_IntrOp<"cvt.scalef32.pk.fp4.f16", [], [], [Pure], 1>,
+    Arguments<(ins I32:$old, ROCDL_V2F16Type:$src, F32: $scale, I32:$byteSel)> {
+    let summary = "Convert f16 to packed fp4 and scale";
+    let description = [{ Convert `src` based on $byteSel to packed fp4, then scale
+    the packed values by the exponent in `scale`.
+  }];
+  let assemblyFormat = [{
+    attr-dict $src `,` $scale `->` $old `[` $byteSel `]` `:` type($res)
+  }];
+}
+
+def ROCDL_CvtScaleF32PkFp4Bf16Op :
+    ROCDL_IntrOp<"cvt.scalef32.pk.fp4.bf16", [], [], [Pure], 1>,
+    Arguments<(ins I32:$old, ROCDL_V2BF16Type:$src, F32: $scale, I32:$byteSel)> {
+    let summary = "Convert bf16 to packed fp4 and scale";
+    let description = [{ Convert `src` based on $byteSel to packed fp4, then scale
+    the packed values by the exponent in `scale`.
+  }];
+  let assemblyFormat = [{
+    attr-dict $src `,` $scale `->` $old `[` $byteSel `]` `:` type($res)
+  }];
+}
+
+def ROCDL_CvtScaleF32SrPkFp4F32Op :
+    ROCDL_IntrOp<"cvt.scalef32.sr.pk.fp4.f32", [], [], [Pure], 1>,
+    Arguments<(ins I32:$old, ROCDL_V2F32Type:$src, I32:$seed, F32: $scale, I32:$byteSel)> {
+    let summary = "Scale and convert f32 to packed fp4 using stochastic rounding";
+    let description = [{
+       Scale `src` by the exponent in `scale` then convert to packed fp4 with stochastic rounding
+       using seed data in `seed`. store into the `byteSel`th byte of `old`, preserving the others.
+    }];
+  let assemblyFormat = [{
+    attr-dict $src `,` $seed `,` $scale `->` $old `[` $byteSel `]` `:` type($res)
+  }];
+}
+
+def ROCDL_CvtScaleF32SrPkFp4F16Op :
+    ROCDL_IntrOp<"cvt.scalef32.sr.pk.fp4.f16", [], [], [Pure], 1>,
+    Arguments<(ins I32:$old, ROCDL_V2F16Type:$src, I32:$seed, F32: $scale, I32:$byteSel)> {
+    let summary = "Scale and convert f16 to packed fp4 using stochastic rounding";
+    let description = [{
+       Scale `src` by the exponent in `scale` then convert to packed fp4 with stochastic rounding
+       using seed data in `seed`. store into the `byteSel`th byte of `old`, preserving the others.
+    }];
+  let assemblyFormat = [{
+    attr-dict $src `,` $seed `,` $scale `->` $old `[` $byteSel `]` `:` type($res)
+  }];
+}
+
+def ROCDL_CvtScaleF32SrPkFp4Bf16Op :
+    ROCDL_IntrOp<"cvt.scalef32.sr.pk.fp4.bf16", [], [], [Pure], 1>,
+    Arguments<(ins I32:$old, ROCDL_V2BF16Type:$src, I32:$seed, F32: $scale, I32:$byteSel)> {
+    let summary = "Scale and convert bf16 to packed fp4 using stochastic rounding";
+    let description = [{
+       Scale `src` by the exponent in `scale` then convert to packed fp4 with stochastic rounding
+       using seed data in `seed`. store into the `byteSel`th byte of `old`, preserving the others.
+    }];
+  let assemblyFormat = [{
+    attr-dict $src `,` $seed `,` $scale `->` $old `[` $byteSel `]` `:` type($res)
+  }];
+}
+
+def ROCDL_CvtScaleF32PkF32Fp4Op :
+    ROCDL_IntrOp<"cvt.scalef32.pk.f32.fp4", [], [], [Pure], 1>,
+    Arguments<(ins I32:$src, F32:$scale, I32:$byteSel)> {
+    let summary = "Convert fp4 to packed f32 and scale";
+    let description = [{ Convert `src` based on $byteSel to packed f32, then scale
+    the packed values by the exponent in `scale`.
+  }];
+  let assemblyFormat = [{
+    attr-dict $src `[` $byteSel `]` `,` $scale `:` type($res)
+  }];
+}
+
+
+def ROCDL_CvtScaleF32PkF16Fp4Op :
+    ROCDL_IntrOp<"cvt.scalef32.pk.f16.fp4", [], [], [Pure], 1>,
+    Arguments<(ins I32:$src, F32:$scale, I32:$byteSel)> {
+    let summary = "Convert fp4 to packed f16 and scale";
+    let description = [{ Convert `src` based on $byteSel to packed f16, then scale
+    the packed values by the exponent in `scale`.
+  }];
+  let assemblyFormat = [{
+    attr-dict $src `[` $byteSel `]` `,` $scale `:` type($res)
+  }];
+}
+
+def ROCDL_CvtScaleF32PkBf16Fp4Op :
+    ROCDL_IntrOp<"cvt.scalef32.pk.bf16.fp4", [], [], [Pure], 1>,
+    Arguments<(ins I32:$src, F32:$scale, I32:$byteSel)> {
+    let summary = "Convert fp4 to packed bf16 and scale";
+    let description = [{ Convert `src` based on $byteSel to packed bf16, then scale
+    the packed values by the exponent in `scale`.
+  }];
+  let assemblyFormat = [{
+    attr-dict $src `[` $byteSel `]` `,` $scale `:` type($res)
+  }];
+}
 //===---------------------------------------------------------------------===//
 // 8-bit float intrinsics
 //===---------------------------------------------------------------------===//
