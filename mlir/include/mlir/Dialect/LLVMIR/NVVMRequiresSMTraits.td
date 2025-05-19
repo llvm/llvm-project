@@ -27,6 +27,8 @@ def RequiresSMInterface: OpInterface<"RequiresSMInterface"> {
   ];
 }
 
+// OP requires a specified minimum SM value or higher; 
+// it is not architecture-specific.
 class NVVMRequiresSM<int minVersion> :
   ParamNativeOpTrait<"NVVMRequiresSM", !cast<string>(minVersion)>;
 
@@ -35,6 +37,8 @@ class StrJoin<string sep, list<string> str_list> {
                !if(!eq(a, ""), b, !if(!eq(b, ""), a, !strconcat(a, sep, b))));
 }
 
+// OP requires an exact SM match along with 
+// architecture acceleration.
 class NVVMRequiresSMa<list<int> smVersions> :
   ParamNativeOpTrait<"NVVMRequiresSMa",
                       StrJoin<",", !foreach(vers, smVersions,
