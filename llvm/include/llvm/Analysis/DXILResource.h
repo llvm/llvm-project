@@ -16,9 +16,7 @@
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/Alignment.h"
 #include "llvm/Support/DXILABI.h"
-#include <climits>
 #include <cstdint>
 
 namespace llvm {
@@ -31,6 +29,10 @@ class Value;
 class DXILResourceTypeMap;
 
 namespace dxil {
+
+// Returns the resource name from dx_resource_handlefrombinding or
+// dx_resource_handlefromimplicitbinding call
+StringRef getResourceNameFromBindingCall(CallInst *CI);
 
 /// The dx.RawBuffer target extension type
 ///
@@ -358,6 +360,7 @@ public:
 private:
   ResourceBinding Binding;
   TargetExtType *HandleTy;
+  StringRef Name;
   GlobalVariable *Symbol = nullptr;
 
 public:
@@ -365,10 +368,10 @@ public:
   ResourceCounterDirection CounterDirection = ResourceCounterDirection::Unknown;
 
   ResourceInfo(uint32_t RecordID, uint32_t Space, uint32_t LowerBound,
-               uint32_t Size, TargetExtType *HandleTy,
+               uint32_t Size, TargetExtType *HandleTy, StringRef Name = "",
                GlobalVariable *Symbol = nullptr)
       : Binding{RecordID, Space, LowerBound, Size}, HandleTy(HandleTy),
-        Symbol(Symbol) {}
+        Name(Name), Symbol(Symbol) {}
 
   void setBindingID(unsigned ID) { Binding.RecordID = ID; }
 
@@ -378,10 +381,12 @@ public:
 
   const ResourceBinding &getBinding() const { return Binding; }
   TargetExtType *getHandleTy() const { return HandleTy; }
-  StringRef getName() const { return Symbol ? Symbol->getName() : ""; }
+  const StringRef getName() const {
+    return Name.empty() ? (Symbol ? Symbol->getName() : "") : Name;
+  }
 
   bool hasSymbol() const { return Symbol; }
-  GlobalVariable *createSymbol(Module &M, StructType *Ty, StringRef Name = "");
+  GlobalVariable *createSymbol(Module &M, StructType *Ty);
   MDTuple *getAsMetadata(Module &M, dxil::ResourceTypeInfo &RTI) const;
 
   std::pair<uint32_t, uint32_t>
