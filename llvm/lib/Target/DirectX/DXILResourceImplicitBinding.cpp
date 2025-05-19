@@ -32,11 +32,10 @@ namespace {
 static void diagnoseImplicitBindingNotFound(CallInst *ImplBindingCall) {
   Function *F = ImplBindingCall->getFunction();
   LLVMContext &Context = F->getParent()->getContext();
-  // FIXME: include the name of the resource in the error message
-  // (llvm/llvm-project#137868)
-  Context.diagnose(
-      DiagnosticInfoGenericWithLoc("resource cannot be allocated", *F,
-                                   ImplBindingCall->getDebugLoc(), DS_Error));
+  StringRef Name = getResourceNameFromBindingCall(ImplBindingCall);
+  Context.diagnose(DiagnosticInfoGenericWithLoc(
+      Twine("resource ") + Name + " cannot be allocated", *F,
+      ImplBindingCall->getDebugLoc(), DS_Error));
 }
 
 static bool assignBindings(Module &M, DXILResourceBindingInfo &DRBI,
