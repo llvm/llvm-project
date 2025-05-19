@@ -71,6 +71,10 @@ export class DebugSessionTracker
   /** Clear information from the active session. */
   private onExit(session: vscode.DebugSession) {
     this.modules.delete(session);
+    // close when there is no more sessions
+    if (this.modules.size <= 0) {
+      this.showModulesTreeView(false);
+    }
     this.modulesChanged.fire();
   }
 
@@ -98,6 +102,9 @@ export class DebugSessionTracker
           } else {
             modules.push(module);
           }
+          if (modules.length == 1) {
+            this.showModulesTreeView(true);
+          }
           break;
         }
         case "removed": {
@@ -112,7 +119,6 @@ export class DebugSessionTracker
           break;
       }
 
-      this.showModulesTreeView(modules.length > 0);
       this.modules.set(session, modules);
       this.modulesChanged.fire();
     }
