@@ -37,9 +37,7 @@ void SimpleTypoCorrection::add(const IdentifierInfo *Candidate) {
     add(Candidate->getName());
 }
 
-unsigned SimpleTypoCorrection::getCorrectionIndex() const {
-  return BestIndex;
-}
+unsigned SimpleTypoCorrection::getCorrectionIndex() const { return BestIndex; }
 
 std::optional<StringRef> SimpleTypoCorrection::getCorrection() const {
   if (hasCorrection())
