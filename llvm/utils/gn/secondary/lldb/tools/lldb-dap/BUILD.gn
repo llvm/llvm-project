@@ -21,6 +21,7 @@ static_library("lib") {
   sources = [
     "Breakpoint.cpp",
     "BreakpointBase.cpp",
+    "CommandPlugins.cpp",
     "DAP.cpp",
     "DAPError.cpp",
     "DAPLog.cpp",
@@ -76,6 +77,7 @@ static_library("lib") {
     "RunInTerminal.cpp",
     "SourceBreakpoint.cpp",
     "Transport.cpp",
+    "Variables.cpp",
     "Watchpoint.cpp",
   ]
 }

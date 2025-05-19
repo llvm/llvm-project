@@ -1486,7 +1486,7 @@ CodeGenFunction::createProfileWeights(ArrayRef<uint64_t> Weights) const {
     return nullptr;
 
   // Check for empty weights.
-  uint64_t MaxWeight = *std::max_element(Weights.begin(), Weights.end());
+  uint64_t MaxWeight = *llvm::max_element(Weights);
   if (MaxWeight == 0)
     return nullptr;
 
