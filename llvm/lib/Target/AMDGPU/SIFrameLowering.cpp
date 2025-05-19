@@ -2212,7 +2212,6 @@ bool SIFrameLowering::spillCalleeSavedRegisters(
   }
 
   MachineFrameInfo &FrameInfo = MF->getFrameInfo();
-  SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
   SIMachineFunctionInfo *FuncInfo = MF->getInfo<SIMachineFunctionInfo>();
 
   const TargetRegisterClass *BlockRegClass =
@@ -2239,7 +2238,7 @@ bool SIFrameLowering::spillCalleeSavedRegisters(
             TII->get(AMDGPU::SI_BLOCK_SPILL_V1024_CFI_SAVE))
         .addReg(Reg, getKillRegState(false))
         .addFrameIndex(FrameIndex)
-        .addReg(MFI->getStackPtrOffsetReg())
+        .addReg(FuncInfo->getStackPtrOffsetReg())
         .addImm(0)
         .addImm(Mask)
         .addMemOperand(MMO);
