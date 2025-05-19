@@ -1327,10 +1327,10 @@ class Bcci48Pat<CondCode Cond, QCIBranchInst48_rii Inst, DAGOperand InTyImm>
     : Pat<(riscv_brcc (XLenVT GPRNoX0:$rs1), InTyImm:$rs2, Cond, bb:$imm12),
           (Inst GPRNoX0:$rs1, InTyImm:$rs2, bare_simm13_lsb0:$imm12)>;
 
-defm SImm5NonZero  : SelectCC_GPR_riirr<GPR, simm5nonzero>;
-defm UImm5NonZero  : SelectCC_GPR_riirr<GPR, uimm5nonzero>;
-defm SImm16NonZero : SelectCC_GPR_riirr<GPR, simm16nonzero>;
-defm UImm16NonZero : SelectCC_GPR_riirr<GPR, uimm16nonzero>;
+defm CC_SImm5NonZero  : SelectCC_GPR_riirr<GPR, simm5nonzero>;
+defm CC_UImm5NonZero  : SelectCC_GPR_riirr<GPR, uimm5nonzero>;
+defm CC_SImm16NonZero : SelectCC_GPR_riirr<GPR, simm16nonzero>;
+defm CC_UImm16NonZero : SelectCC_GPR_riirr<GPR, uimm16nonzero>;
 
 class SelectQCbi<CondCode Cond, DAGOperand InTyImm, Pseudo OpNode >
     : Pat<(riscv_selectcc_frag:$cc (i32 GPR:$lhs), InTyImm:$Constant, Cond,
