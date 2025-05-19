@@ -1,4 +1,6 @@
-# REQUIRES: x86
+## Does not work on windows (yet?) PDB debug-info likely does something wrong
+## with the header files.
+# XFAIL: system-windows
 
 ## Test that `list header.h:<line>` works correctly when header is available.
 ## 
