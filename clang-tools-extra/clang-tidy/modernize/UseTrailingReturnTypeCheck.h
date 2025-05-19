@@ -11,7 +11,6 @@
 
 #include "../ClangTidyCheck.h"
 #include "clang/Lex/Token.h"
-#include <optional>
 
 namespace clang::tidy::modernize {
 

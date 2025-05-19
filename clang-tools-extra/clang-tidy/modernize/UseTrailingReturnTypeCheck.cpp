@@ -274,7 +274,6 @@ classifyTokensBeforeFunctionName(const FunctionDecl &F, const ASTContext &Ctx,
         const MacroInfo *MI = PP->getMacroInfo(&Info);
         if (!MI || MI->isFunctionLike()) {
           // Cannot handle function style macros.
-          // diag(F.getLocation(), MessageFunction);
           return std::nullopt;
         }
       }
@@ -286,7 +285,6 @@ classifyTokensBeforeFunctionName(const FunctionDecl &F, const ASTContext &Ctx,
     if (std::optional<ClassifiedToken> CT = classifyToken(F, *PP, T))
       ClassifiedTokens.push_back(*CT);
     else {
-      // diag(F.getLocation(), MessageFunction);
       return std::nullopt;
     }
   }
@@ -316,7 +314,6 @@ findReturnTypeAndCVSourceRange(const FunctionDecl &F, const TypeLoc &ReturnLoc,
   if (ReturnTypeRange.isInvalid()) {
     // Happens if e.g. clang cannot resolve all includes and the return type is
     // unknown.
-    // diag(F.getLocation(), MessageFunction);
     return {};
   }
 
