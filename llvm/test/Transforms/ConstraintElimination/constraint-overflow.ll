@@ -62,7 +62,8 @@ define i1 @pr140481(i32 %x) {
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[X]], 5001000
 ; CHECK-NEXT:    [[MUL1:%.*]] = mul nsw i32 [[ADD]], -5001000
 ; CHECK-NEXT:    [[MUL2:%.*]] = mul nsw i32 [[MUL1]], 5001000
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[MUL2]], 0
+; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
 entry:
   %cond = icmp slt i32 %x, 0
