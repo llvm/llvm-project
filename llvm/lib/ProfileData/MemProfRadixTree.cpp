@@ -5,11 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// This file contains logic that implements a space efficient radix tree 
+// This file contains logic that implements a space efficient radix tree
 // encoding for callstacks used by MemProf.
 //
 //===----------------------------------------------------------------------===//
-
 
 #include "llvm/ProfileData/MemProfRadixTree.h"
 

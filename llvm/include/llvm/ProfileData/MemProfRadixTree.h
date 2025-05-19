@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// A custom Radix Tree builder for memprof data to optimize for space.  
+// A custom Radix Tree builder for memprof data to optimize for space.
 //
 //===----------------------------------------------------------------------===//
 
@@ -210,7 +210,6 @@ struct CallerCalleePairExtractor {
     }
   }
 };
-
 
 // A convenience wrapper around FrameIdConverter and CallStackIdConverter for
 // tests.
