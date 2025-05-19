@@ -12780,6 +12780,7 @@ struct AAAddressSpaceCallSiteArgument final : AAAddressSpaceImpl {
 } // namespace
 
 /// ------------------------ No Alias Address Space  ---------------------------
+// This attrubte assumes flat address space can alias all other address space
 namespace {
 struct AANoAliasAddrSpaceImpl : public AANoAliasAddrSpace {
   AANoAliasAddrSpaceImpl(const IRPosition &IRP, Attributor &A)
@@ -12825,7 +12826,6 @@ struct AANoAliasAddrSpaceImpl : public AANoAliasAddrSpace {
     auto *AUO = A.getOrCreateAAFor<AAUnderlyingObjects>(getIRPosition(), this,
                                                         DepClassTy::REQUIRED);
     if (!AUO->forallUnderlyingObjects(CheckAddressSpace)) {
-      resetASRanges(A);
       return indicatePessimisticFixpoint();
     }
 
@@ -12840,7 +12840,7 @@ struct AANoAliasAddrSpaceImpl : public AANoAliasAddrSpace {
       llvm_unreachable("Must have flat address space!");
 
     unsigned AS = getAssociatedType()->getPointerAddressSpace();
-    if (AS != FlatAS.value())
+    if (AS != FlatAS.value() || Map.empty())
       return ChangeStatus::UNCHANGED;
 
     LLVMContext &Ctx = getAssociatedValue().getContext();
@@ -12851,15 +12851,11 @@ struct AANoAliasAddrSpaceImpl : public AANoAliasAddrSpace {
       unsigned Lower = I.start();
       if (NoAliasASNode == nullptr) {
         NoAliasASNode = MDB.createRange(APInt(32, Lower), APInt(32, Upper + 1));
-      } else {
-        MDNode *ASRange =
-            MDB.createRange(APInt(32, Lower), APInt(32, Upper + 1));
-        NoAliasASNode = MDNode::getMostGenericRange(NoAliasASNode, ASRange);
+        continue;
       }
+      MDNode *ASRange = MDB.createRange(APInt(32, Lower), APInt(32, Upper + 1));
+      NoAliasASNode = MDNode::getMostGenericRange(NoAliasASNode, ASRange);
     }
-
-    if (!NoAliasASNode)
-      return ChangeStatus::UNCHANGED;
 
     Value *AssociatedValue = &getAssociatedValue();
     bool Changed = false;
@@ -12910,12 +12906,10 @@ private:
       I.erase();
       if (Upper == Lower)
         return;
-      if (AS != ~((unsigned)0) && AS + 1 <= Upper) {
+      if (AS != ~((unsigned)0) && AS + 1 <= Upper)
         Map.insert(AS + 1, Upper, true);
-      }
-      if (AS != 0 && Lower <= AS - 1) {
+      if (AS != 0 && Lower <= AS - 1)
         Map.insert(Lower, AS - 1, true);
-      }
     }
   }
 

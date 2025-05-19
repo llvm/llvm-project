@@ -1349,7 +1349,7 @@ struct InformationCache {
   /// Return the flat address space if the associated target has.
   std::optional<unsigned> getFlatAddressSpace() const;
 
-  virtual unsigned getMaxAddrSpace() const { return ~(0); }
+  virtual unsigned getMaxAddrSpace() const { return ~0U; }
 
 private:
   struct FunctionInfo {
