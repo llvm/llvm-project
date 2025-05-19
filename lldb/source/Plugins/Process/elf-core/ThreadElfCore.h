@@ -85,8 +85,8 @@ struct ThreadData {
   lldb::tid_t tid;
   std::string name;
   llvm::StringRef siginfo_bytes;
-  int prstatus_sig;
-  int signo;
+  int prstatus_sig = 0;
+  int signo = 0;
 };
 
 class ELFLinuxSigInfo {
