@@ -40,16 +40,22 @@ define i1 @test_get_rounding_sideeffect() #0 {
 ; RV32IF-NEXT:    frrm a0
 ; RV32IF-NEXT:    lui a1, 66
 ; RV32IF-NEXT:    slli a0, a0, 2
-; RV32IF-NEXT:    addi a1, a1, 769
-; RV32IF-NEXT:    srl s0, a1, a0
+; RV32IF-NEXT:    addi s0, a1, 769
+; RV32IF-NEXT:    srl a0, s0, a0
+; RV32IF-NEXT:    andi a0, a0, 7
+; RV32IF-NEXT:    beqz a0, .LBB1_2
+; RV32IF-NEXT:  # %bb.1:
 ; RV32IF-NEXT:    li a0, 0
-; RV32IF-NEXT:    andi s0, s0, 7
-; RV32IF-NEXT:    bnez s0, .LBB1_2
-; RV32IF-NEXT:  # %bb.1: # %if.end
+; RV32IF-NEXT:    j .LBB1_3
+; RV32IF-NEXT:  .LBB1_2: # %if.end
 ; RV32IF-NEXT:    call fesetround
-; RV32IF-NEXT:    addi s0, s0, -1
-; RV32IF-NEXT:    seqz a0, s0
-; RV32IF-NEXT:  .LBB1_2: # %return
+; RV32IF-NEXT:    frrm a0
+; RV32IF-NEXT:    slli a0, a0, 2
+; RV32IF-NEXT:    srl a0, s0, a0
+; RV32IF-NEXT:    andi a0, a0, 7
+; RV32IF-NEXT:    addi a0, a0, -1
+; RV32IF-NEXT:    seqz a0, a0
+; RV32IF-NEXT:  .LBB1_3: # %return
 ; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IF-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32IF-NEXT:    .cfi_restore ra
@@ -71,16 +77,22 @@ define i1 @test_get_rounding_sideeffect() #0 {
 ; RV64IF-NEXT:    frrm a0
 ; RV64IF-NEXT:    lui a1, 66
 ; RV64IF-NEXT:    slli a0, a0, 2
-; RV64IF-NEXT:    addiw a1, a1, 769
-; RV64IF-NEXT:    srl s0, a1, a0
+; RV64IF-NEXT:    addiw s0, a1, 769
+; RV64IF-NEXT:    srl a0, s0, a0
+; RV64IF-NEXT:    andi a0, a0, 7
+; RV64IF-NEXT:    beqz a0, .LBB1_2
+; RV64IF-NEXT:  # %bb.1:
 ; RV64IF-NEXT:    li a0, 0
-; RV64IF-NEXT:    andi s0, s0, 7
-; RV64IF-NEXT:    bnez s0, .LBB1_2
-; RV64IF-NEXT:  # %bb.1: # %if.end
+; RV64IF-NEXT:    j .LBB1_3
+; RV64IF-NEXT:  .LBB1_2: # %if.end
 ; RV64IF-NEXT:    call fesetround
-; RV64IF-NEXT:    addi s0, s0, -1
-; RV64IF-NEXT:    seqz a0, s0
-; RV64IF-NEXT:  .LBB1_2: # %return
+; RV64IF-NEXT:    frrm a0
+; RV64IF-NEXT:    slli a0, a0, 2
+; RV64IF-NEXT:    srl a0, s0, a0
+; RV64IF-NEXT:    andi a0, a0, 7
+; RV64IF-NEXT:    addi a0, a0, -1
+; RV64IF-NEXT:    seqz a0, a0
+; RV64IF-NEXT:  .LBB1_3: # %return
 ; RV64IF-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IF-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; RV64IF-NEXT:    .cfi_restore ra

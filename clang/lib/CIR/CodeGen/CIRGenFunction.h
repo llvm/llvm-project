@@ -534,6 +534,21 @@ public:
   mlir::LogicalResult emitCXXForRangeStmt(const CXXForRangeStmt &s,
                                           llvm::ArrayRef<const Attr *> attrs);
 
+  RValue emitCXXMemberCallExpr(const clang::CXXMemberCallExpr *e,
+                               ReturnValueSlot returnValue);
+
+  RValue emitCXXMemberOrOperatorCall(
+      const clang::CXXMethodDecl *md, const CIRGenCallee &callee,
+      ReturnValueSlot returnValue, mlir::Value thisPtr,
+      mlir::Value implicitParam, clang::QualType implicitParamTy,
+      const clang::CallExpr *ce, CallArgList *rtlArgs);
+
+  RValue emitCXXMemberOrOperatorMemberCallExpr(
+      const clang::CallExpr *ce, const clang::CXXMethodDecl *md,
+      ReturnValueSlot returnValue, bool hasQualifier,
+      clang::NestedNameSpecifier *qualifier, bool isArrow,
+      const clang::Expr *base);
+
   mlir::LogicalResult emitDoStmt(const clang::DoStmt &s);
 
   /// Emit an expression as an initializer for an object (variable, field, etc.)
