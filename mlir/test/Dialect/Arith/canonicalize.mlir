@@ -754,12 +754,20 @@ func.func @truncExtf3(%arg0: f32) -> f16 {
 }
 
 // CHECK-LABEL: @truncSitofp
-//       CHECK-NOT: truncf
 //       CHECK:     %[[SITOFP:.*]] = arith.sitofp %[[ARG0:.*]] : i32 to f32
+//       CHECK-NOT: truncf
 //       CHECK:     return %[[SITOFP]]
 func.func @truncSitofp(%arg0: i32) -> f32 {
   %sitofp = arith.sitofp %arg0 : i32 to f64
   %trunc = arith.truncf %sitofp : f64 to f32
+  return %trunc : f32
+}
+
+// CHECK-LABEL: @truncSitofpConstrained
+//       CHECK: truncf
+func.func @truncSitofpConstrained(%arg0: i32) -> f32 {
+  %sitofp = arith.sitofp %arg0 : i32 to f64
+  %trunc = arith.truncf %sitofp to_nearest_even : f64 to f32
   return %trunc : f32
 }
 
