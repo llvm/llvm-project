@@ -67,9 +67,8 @@ unsigned SanitizerSpecialCaseList::inSectionBlame(SanitizerMask Mask,
     if (S.Mask & Mask) {
       unsigned lineNum =
           SpecialCaseList::inSectionBlame(S.Entries, Prefix, Query, Category);
-      if (lineNum > 0) {
+      if (lineNum > 0)
         return lineNum;
-      }
     }
   }
   return 0;
