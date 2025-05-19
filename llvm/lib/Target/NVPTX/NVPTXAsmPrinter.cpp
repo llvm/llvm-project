@@ -1399,8 +1399,6 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
       if (PTy) {
         O << "\t.param .u" << PTySizeInBits << " .ptr";
 
-        bool IsCUDA = static_cast<NVPTXTargetMachine &>(TM).getDrvInterface() ==
-                      NVPTX::CUDA;
         switch (PTy->getAddressSpace()) {
         default:
           break;
@@ -1408,18 +1406,12 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
           O << " .global";
           break;
         case ADDRESS_SPACE_SHARED:
-          if (IsCUDA)
-            report_fatal_error(".shared ptr kernel args unsupported in CUDA.");
           O << " .shared";
           break;
         case ADDRESS_SPACE_CONST:
-          if (IsCUDA)
-            report_fatal_error(".const ptr kernel args unsupported in CUDA.");
           O << " .const";
           break;
         case ADDRESS_SPACE_LOCAL:
-          if (IsCUDA)
-            report_fatal_error(".local ptr kernel args unsupported in CUDA.");
           O << " .local";
           break;
         }

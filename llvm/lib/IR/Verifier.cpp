@@ -119,6 +119,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/ModRef.h"
+#include "llvm/Support/NVPTXAddrSpace.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -2927,6 +2928,20 @@ void Verifier::visitFunction(const Function &F) {
           "Calling convention does not support varargs or "
           "perfect forwarding!",
           &F);
+    if (F.getCallingConv() == CallingConv::PTX_Kernel &&
+        TT.getOS() == Triple::CUDA) {
+      for (const Argument &Arg : F.args()) {
+        if (Arg.getType()->isPointerTy()) {
+          auto AS = Arg.getType()->getPointerAddressSpace();
+          Check(AS != NVPTXAS::AddressSpace::ADDRESS_SPACE_SHARED,
+                ".shared ptr kernel args unsupported in CUDA.", &Arg, &F);
+          Check(AS != NVPTXAS::AddressSpace::ADDRESS_SPACE_CONST,
+                ".const ptr kernel args unsupported in CUDA.", &Arg, &F);
+          Check(AS != NVPTXAS::AddressSpace::ADDRESS_SPACE_LOCAL,
+                ".local ptr kernel args unsupported in CUDA.", &Arg, &F);
+        }
+      }
+    }
     break;
   }
 
