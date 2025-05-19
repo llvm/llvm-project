@@ -627,6 +627,64 @@ struct InstructionBreakpoint {
 bool fromJSON(const llvm::json::Value &, InstructionBreakpoint &,
               llvm::json::Path);
 
+/// Properties of a single disassembled instruction, returned by `disassemble`
+/// request.
+struct DisassembledInstruction {
+  enum PresentationHint : unsigned {
+    eDisassembledInstructionPresentationHintNormal,
+    eDisassembledInstructionPresentationHintInvalid,
+  };
+
+  /// The address of the instruction. Treated as a hex value if prefixed with
+  /// `0x`, or as a decimal value otherwise.
+  lldb::addr_t address;
+
+  /// Raw bytes representing the instruction and its operands, in an
+  /// implementation-defined format.
+  std::optional<std::string> instructionBytes;
+
+  /// Text representing the instruction and its operands, in an
+  /// implementation-defined format.
+  std::string instruction;
+
+  /// Name of the symbol that corresponds with the location of this instruction,
+  /// if any.
+  std::optional<std::string> symbol;
+
+  /// Source location that corresponds to this instruction, if any.
+  /// Should always be set (if available) on the first instruction returned,
+  /// but can be omitted afterwards if this instruction maps to the same source
+  /// file as the previous instruction.
+  std::optional<protocol::Source> location;
+
+  /// The line within the source location that corresponds to this instruction,
+  /// if any.
+  std::optional<uint32_t> line;
+
+  /// The column within the line that corresponds to this instruction, if any.
+  std::optional<uint32_t> column;
+
+  /// The end line of the range that corresponds to this instruction, if any.
+  std::optional<uint32_t> endLine;
+
+  /// The end column of the range that corresponds to this instruction, if any.
+  std::optional<uint32_t> endColumn;
+
+  /// A hint for how to present the instruction in the UI.
+  ///
+  /// A value of `invalid` may be used to indicate this instruction is 'filler'
+  /// and cannot be reached by the program. For example, unreadable memory
+  /// addresses may be presented is 'invalid.'
+  /// Values: 'normal', 'invalid'
+  std::optional<PresentationHint> presentationHint;
+};
+bool fromJSON(const llvm::json::Value &,
+              DisassembledInstruction::PresentationHint &, llvm::json::Path);
+llvm::json::Value toJSON(const DisassembledInstruction::PresentationHint &);
+bool fromJSON(const llvm::json::Value &, DisassembledInstruction &,
+              llvm::json::Path);
+llvm::json::Value toJSON(const DisassembledInstruction &);
+
 } // namespace lldb_dap::protocol
 
 #endif

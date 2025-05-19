@@ -534,14 +534,17 @@ public:
   void operator()(const llvm::json::Object &request) const override;
 };
 
-class DisassembleRequestHandler : public LegacyRequestHandler {
+class DisassembleRequestHandler final
+    : public RequestHandler<protocol::DisassembleArguments,
+                            llvm::Expected<protocol::DisassembleResponseBody>> {
 public:
-  using LegacyRequestHandler::LegacyRequestHandler;
+  using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "disassemble"; }
   FeatureSet GetSupportedFeatures() const override {
     return {protocol::eAdapterFeatureDisassembleRequest};
   }
-  void operator()(const llvm::json::Object &request) const override;
+  llvm::Expected<protocol::DisassembleResponseBody>
+  Run(const protocol::DisassembleArguments &args) const override;
 };
 
 class ReadMemoryRequestHandler : public LegacyRequestHandler {
