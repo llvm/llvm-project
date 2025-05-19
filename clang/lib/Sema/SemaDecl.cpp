@@ -15889,6 +15889,9 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
   ExprEvalContexts.back().InImmediateEscalatingFunctionContext =
       getLangOpts().CPlusPlus20 && FD->isImmediateEscalating();
 
+  // A function that is not a lambda is never in a discarded statement
+  ExprEvalContexts.back().InDiscardedStatement = false;
+
   // Check for defining attributes before the check for redefinition.
   if (const auto *Attr = FD->getAttr<AliasAttr>()) {
     Diag(Attr->getLocation(), diag::err_alias_is_definition) << FD << 0;

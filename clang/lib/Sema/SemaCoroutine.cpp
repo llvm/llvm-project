@@ -699,6 +699,9 @@ bool Sema::ActOnCoroutineBodyStart(Scope *SC, SourceLocation KWLoc,
   // Ignore previous expr evaluation contexts.
   EnterExpressionEvaluationContext PotentiallyEvaluated(
       *this, Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
+
+  ExprEvalContexts.back().InDiscardedStatement = false;
+
   if (!checkCoroutineContext(*this, KWLoc, Keyword))
     return false;
   auto *ScopeInfo = getCurFunction();

@@ -6825,8 +6825,9 @@ public:
 
     bool isDiscardedStatementContext() const {
       return Context == ExpressionEvaluationContext::DiscardedStatement ||
-             (Context ==
-                  ExpressionEvaluationContext::ImmediateFunctionContext &&
+             ((Context ==
+                   ExpressionEvaluationContext::ImmediateFunctionContext ||
+               isPotentiallyEvaluated()) &&
               InDiscardedStatement);
     }
   };
