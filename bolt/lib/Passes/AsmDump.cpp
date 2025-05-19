@@ -109,7 +109,7 @@ void dumpFunction(const BinaryFunction &BF) {
   }
 
   std::string PrintName = BF.getPrintName();
-  std::replace(PrintName.begin(), PrintName.end(), '/', '-');
+  llvm::replace(PrintName, '/', '-');
   std::string Filename =
       opts::AsmDump.empty()
           ? (PrintName + ".s")

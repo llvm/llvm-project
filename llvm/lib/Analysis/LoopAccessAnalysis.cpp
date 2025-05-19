@@ -1325,6 +1325,8 @@ bool AccessAnalysis::canCheckPtrAtRT(
   RtCheck.Need = CanDoRT ? RtCheck.getNumberOfChecks() != 0 : MayNeedRTCheck;
 
   bool CanDoRTIfNeeded = !RtCheck.Need || CanDoRT;
+  assert(CanDoRTIfNeeded == (CanDoRT || !MayNeedRTCheck) &&
+         "CanDoRTIfNeeded depends on RtCheck.Need");
   if (!CanDoRTIfNeeded)
     RtCheck.reset();
   return CanDoRTIfNeeded;
