@@ -474,11 +474,11 @@ hasHazard(StateT InitialState,
       StateIdx = StateHash2Idx[StateHash];
       if (LLVM_UNLIKELY(!StateT::isEqual(State, States[StateIdx]))) {
         // Hash collision
-        auto *Collision = llvm::find_if(Collisions, [&](auto &C) {
+        auto Collision = llvm::find_if(Collisions, [&](auto &C) {
           return C.first == StateHash &&
                  StateT::isEqual(State, States[C.second]);
         });
-        if (Collision) {
+        if (Collision != Collisions.end()) {
           StateIdx = Collision->second;
         } else {
           StateIdx = States.size();
