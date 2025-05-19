@@ -3326,7 +3326,7 @@ void BinaryFunction::duplicateConstantIslands() {
 static std::string constructFilename(std::string Filename,
                                      std::string Annotation,
                                      std::string Suffix) {
-  std::replace(Filename.begin(), Filename.end(), '/', '-');
+  llvm::replace(Filename, '/', '-');
   if (!Annotation.empty())
     Annotation.insert(0, "-");
   if (Filename.size() + Annotation.size() + Suffix.size() > MAX_PATH) {

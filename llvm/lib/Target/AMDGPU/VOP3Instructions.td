@@ -740,13 +740,13 @@ let OtherPredicates = [HasFP8ConversionInsts], mayRaiseFPException = 0,
       defm V_CVT_PK_FP8_F32_gfx1250 : VOP3Inst<"v_cvt_pk_fp8_f32_gfx1250", VOP3_CVT_PK_F8_F32_Profile<true>>;
     defm V_CVT_PK_BF8_F32 : VOP3Inst<"v_cvt_pk_bf8_f32", VOP3_CVT_PK_F8_F32_Profile<>>;
 
-    let SubtargetPredicate = isGFX12Plus in {
+    let SubtargetPredicate = isGFX11Plus in {
       let OtherPredicates = [HasFP8ConversionInsts, NotHasFP8E5M3Insts] in
         defm V_CVT_SR_FP8_F32_gfx12 : VOP3Inst<"v_cvt_sr_fp8_f32_gfx12", VOP3_CVT_SR_F8_ByteSel_Profile<f32>>;
       let OtherPredicates = [HasFP8ConversionInsts, HasFP8E5M3Insts] in
         defm V_CVT_SR_FP8_F32_gfx1250 : VOP3Inst<"v_cvt_sr_fp8_f32_gfx1250", VOP3_CVT_SR_F8_ByteSel_Profile<f32, true>>;
       defm V_CVT_SR_BF8_F32_gfx12 : VOP3Inst<"v_cvt_sr_bf8_f32_gfx12", VOP3_CVT_SR_F8_ByteSel_Profile<f32>>;
-    } // End SubtargetPredicate = isGFX12Plus
+    } // End SubtargetPredicate = isGFX11Plus
   }
 
   // These instructions have non-standard use of op_sel. In particular they are
@@ -805,7 +805,7 @@ let SubtargetPredicate = isGFX940Plus in {
   }
 }
 
-let SubtargetPredicate = isGFX12Plus in {
+let SubtargetPredicate = isGFX11Plus in {
   let OtherPredicates = [HasFP8ConversionInsts, NotHasFP8E5M3Insts] in
     def : Cvt_SR_F8_ByteSel_Pat<int_amdgcn_cvt_sr_fp8_f32, V_CVT_SR_FP8_F32_gfx12_e64, f32>;
   let OtherPredicates = [HasFP8ConversionInsts, HasFP8E5M3Insts] in {
@@ -813,7 +813,7 @@ let SubtargetPredicate = isGFX12Plus in {
     def : Cvt_SR_F8_ByteSel_E5M3_Pat<int_amdgcn_cvt_sr_fp8_f32_e5m3, V_CVT_SR_FP8_F32_gfx1250_e64, f32, DSTCLAMP.ENABLE>;
   }
   def : Cvt_SR_F8_ByteSel_Pat<int_amdgcn_cvt_sr_bf8_f32, V_CVT_SR_BF8_F32_gfx12_e64, f32>;
-} // End SubtargetPredicate = isGFX12Plus
+} // End SubtargetPredicate = isGFX11Plus
 }
 
 class ThreeOp_i32_Pats <SDPatternOperator op1, SDPatternOperator op2, Instruction inst> : GCNPat <
@@ -1994,13 +1994,6 @@ defm V_MAXIMUM_F16            : VOP3Only_Realtriple_t16_and_fake16_gfx12_gfx13<0
 defm V_PERMLANE16_VAR_B32  : VOP3Only_Real_Base_gfx12_gfx13<0x30f, 0x315>;
 defm V_PERMLANEX16_VAR_B32 : VOP3Only_Real_Base_gfx12_gfx13<0x310, 0x316>;
 
-defm V_CVT_PK_FP8_F32         : VOP3Only_Realtriple_gfx12_not_gfx1250_gfx13<0x369, 0x37a>;
-defm V_CVT_PK_FP8_F32_gfx1250 : VOP3Only_Realtriple_with_name_gfx1250<0x369, "V_CVT_PK_FP8_F32_gfx1250", "v_cvt_pk_fp8_f32">;
-defm V_CVT_PK_BF8_F32         : VOP3Only_Realtriple_gfx12_gfx13<0x36a, 0x37b>;
-defm V_CVT_SR_FP8_F32_gfx12   : VOP3Only_Realtriple_with_name_gfx12_not_gfx1250_gfx13<0x36b, 0x337, "V_CVT_SR_FP8_F32_gfx12", "v_cvt_sr_fp8_f32">;
-defm V_CVT_SR_FP8_F32_gfx1250 : VOP3Only_Realtriple_with_name_gfx1250<0x36b, "V_CVT_SR_FP8_F32_gfx1250", "v_cvt_sr_fp8_f32">;
-defm V_CVT_SR_BF8_F32_gfx12   : VOP3_Realtriple_with_name_gfx12_gfx13<0x36c, 0x338, "V_CVT_SR_BF8_F32_gfx12", "v_cvt_sr_bf8_f32">;
-
 defm V_BITOP3_B16         : VOP3_Real_BITOP3_gfx1250_gfx13<0x233>;
 defm V_BITOP3_B32         : VOP3_Real_BITOP3_gfx1250_gfx13<0x234>;
 
@@ -2024,12 +2017,6 @@ defm V_PERMLANE_IDX_GEN_B32 : VOP3Only_Real_Base_gfx12_gfx13<0x314, 0x317>;
 //===----------------------------------------------------------------------===//
 // GFX11, GFX12, GFX13
 //===----------------------------------------------------------------------===//
-
-multiclass VOP3_Real_with_name_gfx11_gfx12_gfx13<
-    bits<10> op, string opName, string asmName> :
-  VOP3_Real_with_name<GFX11Gen, op, opName, asmName>,
-  VOP3_Real_with_name<GFX12Gen, op, opName, asmName>,
-  VOP3_Real_with_name<GFX13Gen, op, opName, asmName>;
 
 multiclass VOP3_Realtriple_gfx11_gfx12_gfx13<
     bits<10> preGFX13Op, bits<10> op = preGFX13Op> :
@@ -2208,6 +2195,13 @@ defm V_XOR_B16             : VOP3Only_Realtriple_t16_and_fake16_gfx11_gfx12_gfx1
 def : AMDGPUMnemonicAlias<"v_perm_pk4_b8_u8", "v_perm_b32"> {
   let AssemblerPredicate = isGFX13Plus;
 }
+
+defm V_CVT_PK_FP8_F32         : VOP3Only_Realtriple_gfx11_gfx12_not_gfx1250_gfx13<0x369, 0x37a>;
+defm V_CVT_PK_FP8_F32_gfx1250 : VOP3Only_Realtriple_with_name_gfx1250<0x369, "V_CVT_PK_FP8_F32_gfx1250", "v_cvt_pk_fp8_f32">;
+defm V_CVT_PK_BF8_F32         : VOP3Only_Realtriple_gfx11_gfx12_gfx13<0x36a, 0x37b>;
+defm V_CVT_SR_FP8_F32_gfx12   : VOP3_Realtriple_with_name_gfx11_gfx12_not_gfx1250_gfx13<0x36b, 0x337, "V_CVT_SR_FP8_F32_gfx12", "v_cvt_sr_fp8_f32">;
+defm V_CVT_SR_FP8_F32_gfx1250 : VOP3Only_Realtriple_with_name_gfx1250<0x36b, "V_CVT_SR_FP8_F32_gfx1250", "v_cvt_sr_fp8_f32">;
+defm V_CVT_SR_BF8_F32_gfx12   : VOP3_Realtriple_with_name_gfx11_gfx12_gfx13<0x36c, 0x338, "V_CVT_SR_BF8_F32_gfx12", "v_cvt_sr_bf8_f32">;
 
 let AssemblerPredicate = isGFX11Plus in {
   def : AMDGPUMnemonicAlias<"v_add3_nc_u32", "v_add3_u32">;

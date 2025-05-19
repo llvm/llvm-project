@@ -916,20 +916,10 @@ llvm::Error DAP::Loop() {
             return errWrapper;
           }
 
-          // The launch sequence is special and we need to carefully handle
-          // packets in the right order. Until we've handled configurationDone,
-          bool add_to_pending_queue = false;
-
           if (const protocol::Request *req =
-                  std::get_if<protocol::Request>(&*next)) {
-            llvm::StringRef command = req->command;
-            if (command == "disconnect")
-              disconnecting = true;
-            if (!configuration_done)
-              add_to_pending_queue =
-                  command != "initialize" && command != "configurationDone" &&
-                  command != "disconnect" && !command.ends_with("Breakpoints");
-          }
+                  std::get_if<protocol::Request>(&*next);
+              req && req->arguments == "disconnect")
+            disconnecting = true;
 
           const std::optional<CancelArguments> cancel_args =
               getArgumentsIfRequest<CancelArguments>(*next, "cancel");
@@ -956,8 +946,7 @@ llvm::Error DAP::Loop() {
 
           {
             std::lock_guard<std::mutex> guard(m_queue_mutex);
-            auto &queue = add_to_pending_queue ? m_pending_queue : m_queue;
-            queue.push_back(std::move(*next));
+            m_queue.push_back(std::move(*next));
           }
           m_queue_cv.notify_one();
         }
@@ -1253,16 +1242,6 @@ void DAP::SetConfiguration(const protocol::Configuration &config,
     SetFrameFormat(*configuration.customFrameFormat);
   if (configuration.customThreadFormat)
     SetThreadFormat(*configuration.customThreadFormat);
-}
-
-void DAP::SetConfigurationDone() {
-  {
-    std::lock_guard<std::mutex> guard(m_queue_mutex);
-    std::copy(m_pending_queue.begin(), m_pending_queue.end(),
-              std::front_inserter(m_queue));
-    configuration_done = true;
-  }
-  m_queue_cv.notify_all();
 }
 
 void DAP::SetFrameFormat(llvm::StringRef format) {
