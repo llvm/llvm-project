@@ -14,8 +14,8 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
-#include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
 #include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
+#include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
 #include "mlir/Transforms/DialectConversion.h"
 
 namespace mlir {
@@ -29,7 +29,8 @@ using namespace mlir;
 
 namespace {
 
-static std::pair<SmallVector<int64_t>, int> computeTileShapeAndCount(ArrayRef<int64_t> shape, xegpu::LayoutAttr layout) {
+static std::pair<SmallVector<int64_t>, int>
+computeTileShapeAndCount(ArrayRef<int64_t> shape, xegpu::LayoutAttr layout) {
   // init count and subShape to the default value. If the LayoutAttr
   // is not present, it will return a VectorType with original shape.
   int count = 1;
@@ -42,7 +43,8 @@ static std::pair<SmallVector<int64_t>, int> computeTileShapeAndCount(ArrayRef<in
         tileShape = llvm::to_vector_of<int64_t>(sgDataAttr.asArrayRef());
       else
         tileShape = computeShapeRatio(shape, sgLayout).value_or(tileShape);
-      SmallVector<int64_t> distUnit = computeElementwiseMul(sgLayout, tileShape);
+      SmallVector<int64_t> distUnit =
+          computeElementwiseMul(sgLayout, tileShape);
       for (size_t i = 0; i < distUnit.size(); ++i)
         distUnit[i] = std::min(shape[i], distUnit[i]);
       count = computeProduct(shape) / computeProduct(distUnit);
@@ -271,8 +273,7 @@ struct WgToSgDpasOp : public OpConversionPattern<xegpu::DpasOp> {
     if (resultTy.getRank() != 2)
       return failure();
 
-    auto originalLayout =
-        llvm::dyn_cast_or_null<xegpu::LayoutAttr>(op->getAttr("layout_result_0"));
+    auto originalLayout = xegpu::getLayoutAttr(op.getResult());
     if (!originalLayout)
       return failure();
 
@@ -294,10 +295,8 @@ struct WgToSgDpasOp : public OpConversionPattern<xegpu::DpasOp> {
             llvm::cast<VectorType>(bVec.getType()).getShape();
         VectorType resTy = VectorType::get({aVecShape[0], bVecShape[1]},
                                            resultTy.getElementType());
-        tmpC = rewriter.create<xegpu::DpasOp>(
-            loc, resTy, operands,
-            llvm::ArrayRef<NamedAttribute>(
-                {"layout_result_0", originalLayout.dropSgLayoutAndData()}));
+        tmpC = rewriter.create<xegpu::DpasOp>(loc, resTy, operands);
+        xegpu::setLayoutAttr(cast<OpResult>(tmpC), originalLayout.dropSgLayoutAndData());
         newDpasOps.push_back(tmpC);
       }
     }
@@ -320,26 +319,16 @@ struct WgToSgPrefetchNdOp : public OpConversionPattern<xegpu::PrefetchNdOp> {
   }
 };
 
-static SmallVector<Value> flattenValues(ArrayRef<ValueRange> values) {
-  SmallVector<Value> result;
-  for (const auto &vals : values)
-    llvm::append_range(result, vals);
-  return result;
-}
-
 struct UnrealizedConversionCastOpPattern
     : public OpConversionPattern<mlir::UnrealizedConversionCastOp> {
   using OpConversionPattern<
       mlir::UnrealizedConversionCastOp>::OpConversionPattern;
 
   mlir::LogicalResult
-  matchAndRewrite(mlir::UnrealizedConversionCastOp op,
-                  OneToNOpAdaptor adaptor,
+  matchAndRewrite(mlir::UnrealizedConversionCastOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     if (op.getNumOperands() == 1 && op.getNumResults() == 1) {
-      llvm::dbgs() << "\n\nUnrealizedConversionCastOp: " << op
-                   << "\n is replaced with: " << flattenValues(adaptor.getInputs())[0] << "\n";
-      rewriter.replaceOpWithMultiple(op, flattenValues(adaptor.getInputs()));
+      rewriter.replaceOpWithMultiple(op, xegpu::flattenValues(adaptor.getInputs()));
       return mlir::success();
     }
     return mlir::failure();
@@ -397,7 +386,7 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
   });
 
   target.addDynamicallyLegalOp<xegpu::DpasOp>([=](xegpu::DpasOp op) -> bool {
-    auto layout = dyn_cast_or_null<xegpu::LayoutAttr>(op->getAttr("layout_result_0"));
+    auto layout = xegpu::getLayoutAttr(op.getResult());
     return isLegal(layout);
   });
 
@@ -415,8 +404,8 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
 
         int count;
         SmallVector<int64_t> subShape;
-        std::tie(subShape, count) =
-            computeTileShapeAndCount(shape, dyn_cast<xegpu::LayoutAttr>(type.getEncoding()));
+        std::tie(subShape, count) = computeTileShapeAndCount(
+            shape, dyn_cast<xegpu::LayoutAttr>(type.getEncoding()));
 
         auto newTy = VectorType::get(subShape, elemTy);
         result.append(count, newTy);
@@ -439,7 +428,8 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
         if (layout)
           layout = layout.dropSgLayoutAndData();
 
-        auto newTy = xegpu::TensorDescType::get(type.getContext(), subShape, elemTy, type.getEncoding(), layout);
+        auto newTy = xegpu::TensorDescType::get(
+            type.getContext(), subShape, elemTy, type.getEncoding(), layout);
         result.append(count, newTy);
         return success();
       });

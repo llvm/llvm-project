@@ -79,6 +79,9 @@ void setLayoutAttr(OpOperand &opr, LayoutAttr layout);
 /// Set the LayoutAttr for the given OpResult by attching it to the defining op
 void setLayoutAttr(OpResult result, LayoutAttr layout);
 
+/// Flatten a set of ValueRange into a single SmallVector<Value>
+SmallVector<Value> flattenValues(ArrayRef<ValueRange> values);
+
 /// Set the LayoutAttr for each OpOperand and OpResult of the given operation.
 /// If the operation contains regions, it is also applied recursively to the
 /// contained operations

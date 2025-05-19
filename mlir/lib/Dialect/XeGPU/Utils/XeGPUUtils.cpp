@@ -26,14 +26,6 @@
 
 using namespace mlir;
 
-/// convert ArrayRef<ValueRange> into SmallVector<Value>
-static SmallVector<Value> flattenValues(ArrayRef<ValueRange> values) {
-  SmallVector<Value> result;
-  for (const auto &vals : values)
-    llvm::append_range(result, vals);
-  return result;
-}
-
 FailureOr<VectorType>
 mlir::xegpu::getDistributedVectorType(xegpu::TensorDescType tdescTy) {
   auto layout = llvm::dyn_cast_if_present<LayoutAttr>(tdescTy.getLayout());
@@ -177,6 +169,13 @@ void xegpu::setLayoutAttrs(Operation *mod,
       setLayoutAttr(opr, layout);
     }
   });
+}
+
+SmallVector<Value> xegpu::flattenValues(ArrayRef<ValueRange> values) {
+  SmallVector<Value> result;
+  for (const auto &vals : values)
+    llvm::append_range(result, vals);
+  return result;
 }
 
 SmallVector<Value>
@@ -370,8 +369,5 @@ void xegpu::doSCFStructuralTypeConversionWithTensorType(
     scf::populateSCFStructuralTypeConversionsAndLegality(converter, patterns,
                                                          target);
     (void)mlir::applyPartialConversion(op, target, std::move(patterns));
-  llvm::dbgs() << "\n\nDumpAfter: \n";
-  op->dump();
-  llvm::dbgs() << "\n";
   }
 }
