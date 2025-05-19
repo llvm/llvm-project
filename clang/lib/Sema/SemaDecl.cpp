@@ -14622,7 +14622,8 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
       Diag(var->getLocation(), diag::err_thread_nontrivial_dtor);
       if (getLangOpts().CPlusPlus11)
         Diag(var->getLocation(), diag::note_use_thread_local);
-    } else if (getLangOpts().CPlusPlus && var->hasInit()) {
+    } else if (getLangOpts().CPlusPlus && var->hasInit() &&
+               !var->getType()->isDependentType()) {
       if (!checkConstInit()) {
         // GNU C++98 edits for __thread, [basic.start.init]p4:
         //   An object of thread storage duration shall not require dynamic
