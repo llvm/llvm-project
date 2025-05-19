@@ -5706,7 +5706,7 @@ LLVM_DUMP_METHOD void FunctionEffectKindSet::dump(llvm::raw_ostream &OS) const {
 FunctionEffectsRef
 FunctionEffectsRef::create(ArrayRef<FunctionEffect> FX,
                            ArrayRef<EffectConditionExpr> Conds) {
-  assert(std::is_sorted(FX.begin(), FX.end()) && "effects should be sorted");
+  assert(llvm::is_sorted(FX) && "effects should be sorted");
   assert((Conds.empty() || Conds.size() == FX.size()) &&
          "effects size should match conditions size");
   return FunctionEffectsRef(FX, Conds);
