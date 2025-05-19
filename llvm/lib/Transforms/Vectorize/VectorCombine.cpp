@@ -3722,12 +3722,12 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
         return std::nullopt;
 
       // Ignore shufflevector instructions that have no uses.
-      if (!Shuffle->hasNUsesOrMore(1u))
+      if (Shuffle->use_empty())
         continue;
 
       // Find the min and max indices used by the shufflevector instruction.
-      auto *Op0Ty = cast<FixedVectorType>(Op0->getType());
-      auto NumElems = int(Op0Ty->getNumElements());
+      FixedVectorType *Op0Ty = cast<FixedVectorType>(Op0->getType());
+      int NumElems = static_cast<int>(Op0Ty->getNumElements());
 
       for (int Index : Mask) {
         if (Index >= 0) {
