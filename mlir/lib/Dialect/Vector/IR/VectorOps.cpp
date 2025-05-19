@@ -2379,6 +2379,7 @@ std::optional<SmallVector<int64_t, 4>> FMAOp::getShapeForUnroll() {
 /// ==> rewrite to vector.splat %a : vector<3xf32>
 static LogicalResult rewriteFromElementsAsSplat(FromElementsOp fromElementsOp,
                                                 PatternRewriter &rewriter) {
+
   if (!llvm::all_equal(fromElementsOp.getElements()))
     return failure();
   rewriter.replaceOpWithNewOp<SplatOp>(fromElementsOp, fromElementsOp.getType(),
@@ -2386,35 +2387,44 @@ static LogicalResult rewriteFromElementsAsSplat(FromElementsOp fromElementsOp,
   return success();
 }
 
-/// Rewrite vector.from_elements as vector.shape_cast, if possible.
+/// Rewrite vector.from_elements(vector.extract, vector.extract, ...) as 
+///         vector.shape_cast(vector.extact) if possible. 
 ///
 /// Example:
-///   %0 = vector.extract %source[0, 0] : i8 from vector<1x2xi8>
-///   %1 = vector.extract %source[0, 1] : i8 from vector<1x2xi8>
+///   %0 = vector.extract %source[0, 0] : i8 from vector<2x2xi8>
+///   %1 = vector.extract %source[0, 1] : i8 from vector<2x2xi8>
 ///   %2 = vector.from_elements %0, %1 : vector<2xi8>
 ///
 /// becomes
-///   %2 = vector.shape_cast %source : vector<1x2xi8> to vector<2xi8>
+///   %1 = vector.extract %source[0] : vector<1x2xi8> from vector<2x2xi8>
+///   %2 = vector.shape_cast %1 : vector<1x2xi8> to vector<2xi8>
 ///
 /// The requirements for this to be valid are
-/// i) source and from_elements result have the same number of elements,
-/// ii) all elements are extracted from the same vector (%source),
-/// iii) the elements are extracted in ascending order.
 ///
-/// It might be possible to rewrite vector.from_elements as a single
-/// vector.extract if (i) is not satisifed, or in some cases as a
-/// a single vector_extract_strided_slice if (i) and (iii) are not satisfied,
-/// this is left for future consideration.
-class FromElementsToShapCast : public OpRewritePattern<FromElementsOp> {
+/// i) all elements are extracted from the same vector (%source)
+/// ii) the elements form a suffix of %source
+/// iii) the elements are extracted contiguously in ascending order
+
+class FromElementsToShapeCast
+    : public OpRewritePattern<FromElementsOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(FromElementsOp fromElements,
                                 PatternRewriter &rewriter) const override {
 
-    // The source of the first element. This is initialized in the first
-    // iteration of the loop over elements.
+    // Left for `rewriteFromElementsAsSplat` to avoid divergent
+    // canonicalizations
+    if (fromElements.getType().getNumElements() == 1) {
+      return failure();
+    }
+
+    // The source of the first element, the position (N-d vector) that the first
+    // element is extracted from, and the flattened position (index). These are
+    // all obtained in the first iteration of the loop over elements.
     TypedValue<VectorType> firstElementSource;
+    ArrayRef<int64_t> firstElementExtractPosition;
+    int64_t firstElementExtractIndex;
 
     for (auto [insertIndex, element] :
          llvm::enumerate(fromElements.getElements())) {
@@ -2427,32 +2437,19 @@ public:
                                            "element not from vector.extract");
       }
 
-      // Check condition (i) on the first element. As we will check that all
-      // elements have the same source, we don't need to check condition (i) for
-      // any other elements.
+      // Check condition (i) by checking that all elements have same source as
+      // the first element.
       if (insertIndex == 0) {
         firstElementSource = extractOp.getVector();
-        if (static_cast<size_t>(
-                firstElementSource.getType().getNumElements()) !=
-            fromElements.getType().getNumElements()) {
-          return rewriter.notifyMatchFailure(fromElements,
-                                             "number of elements differ");
-        }
-      }
-
-      // Check condition (ii), by checking that all elements have same source as
-      // the first element.
-      Value currentSource = extractOp.getVector();
-      if (currentSource != firstElementSource) {
+      } else if (extractOp.getVector() != firstElementSource) {
         return rewriter.notifyMatchFailure(fromElements,
                                            "element from different vector");
       }
 
-      // Check condition (iii).
-      // First, get the index that the element is extracted from.
+      // Obtain the flattened index of extraction from the N-d position.
+      ArrayRef<int64_t> position = extractOp.getStaticPosition();
       int64_t extractIndex{0};
       int64_t stride{1};
-      ArrayRef<int64_t> position = extractOp.getStaticPosition();
       assert(position.size() ==
                  static_cast<size_t>(firstElementSource.getType().getRank()) &&
              "scalar extract must have full rank position");
@@ -2467,16 +2464,51 @@ public:
         stride *= size;
       }
 
-      // Second, check that the index of extraction from source and insertion in
-      // from_elements are the same.
-      if (extractIndex != static_cast<int64_t>(insertIndex)) {
+      // Check condition (ii) using the extraction index of the first element.
+      // We check that the position that the first element is extracted
+      // from has sufficient trailing 0s. For example, in
+      // ```
+      // %elm0 = vector.extract %source[1, 0, 0] : i8 from vector<2x3x4xi8>
+      // [...]
+      // %n = vector.from_elements %elm0, [...] : vector<12xi8>
+      // ```
+      // The 2 trailing 0s in the position of extraction of %0 cover 3*4 = 12
+      // elements, which is the number of elements of %n, so this is valid.
+      if (insertIndex == 0) {
+        const int64_t numFinalElements =
+            fromElements.getType().getNumElements();
+        int64_t numElementsInSourceSuffix = 1;
+        int index = position.size();
+        while (index > 0 && position[index - 1] == 0 &&
+               numElementsInSourceSuffix < numFinalElements) {
+          numElementsInSourceSuffix *=
+              firstElementSource.getType().getDimSize(index - 1);
+          --index;
+        }
+        if (numElementsInSourceSuffix != numFinalElements) {
+          return rewriter.notifyMatchFailure(
+              fromElements, "elements do not form a suffix of source");
+        }
+        firstElementExtractIndex = extractIndex;
+        firstElementExtractPosition =
+            position.drop_back(position.size() - index);
+      }
+
+      // Check condition (iii) by checking the index of extraction relative
+      // the first element.
+      else if (static_cast<int64_t>(insertIndex) + firstElementExtractIndex !=
+               extractIndex) {
         return rewriter.notifyMatchFailure(
             fromElements, "elements not in ascending order (static order)");
       }
     }
 
-    rewriter.replaceOpWithNewOp<ShapeCastOp>(
-        fromElements, fromElements.getType(), firstElementSource);
+    auto extracted = rewriter.createOrFold<vector::ExtractOp>(
+        fromElements.getLoc(), firstElementSource, firstElementExtractPosition);
+
+    rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(
+        fromElements, fromElements.getType(), extracted);
+
     return success();
   }
 };
@@ -2484,7 +2516,7 @@ public:
 void FromElementsOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                  MLIRContext *context) {
   results.add(rewriteFromElementsAsSplat);
-  results.add<FromElementsToShapCast>(context);
+  results.add<FromElementsToShapeCast>(context);
 }
 
 //===----------------------------------------------------------------------===//

@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -canonicalize="test-convergence" -split-input-file -allow-unregistered-dialect | FileCheck %s
+// RUN: mlir-opt --mlir-disable-threading %s -canonicalize="test-convergence" -split-input-file -allow-unregistered-dialect | FileCheck %s
 
 // This file contains some tests of folding/canonicalizing vector.from_elements
 
@@ -109,6 +109,39 @@ func.func @to_shape_cast_rank1_to_rank3(%arg0: vector<8xi8>) -> vector<2x2x2xi8>
   return %8 : vector<2x2x2xi8>
 }
 
+
+// -----
+
+//   func.func @bar(%arg0: vector<2x3x4xi8>) -> vector<12xi8> {
+//     %0 = vector.extract %arg0[1] : vector<3x4xi8> from vector<2x3x4xi8>
+//     %1 = vector.shape_cast %0 : vector<3x4xi8> to vector<12xi8>
+//     return %1 : vector<12xi8>
+
+// CHECK-LABEL: func @source_larger_than_out(
+//  CHECK-SAME:     %[[A:.*]]: vector<2x3x4xi8>)
+//       CHECK: %[[EXTRACT:.*]] = vector.extract %[[A]] [1] : vector<3x4xi8> from vector<2x3x4xi8>
+//       CHECK: %[[SHAPE_CAST:.*]] = vector.shape_cast %[[EXTRACT]] : vector<3x4xi8> to vector<12xi8>
+//       CHECK: return %[[SHAPE_CAST]] : vector<12xi8>
+
+func.func @source_larger_than_out(%arg0: vector<2x3x4xi8>) -> vector<12xi8> {
+  %0 = vector.extract %arg0[1, 0, 0] : i8 from vector<2x3x4xi8>
+  %1 = vector.extract %arg0[1, 0, 1] : i8 from vector<2x3x4xi8>
+  %2 = vector.extract %arg0[1, 0, 2] : i8 from vector<2x3x4xi8>
+  %3 = vector.extract %arg0[1, 0, 3] : i8 from vector<2x3x4xi8>
+  %4 = vector.extract %arg0[1, 1, 0] : i8 from vector<2x3x4xi8>
+  %5 = vector.extract %arg0[1, 1, 1] : i8 from vector<2x3x4xi8>
+  %6 = vector.extract %arg0[1, 1, 2] : i8 from vector<2x3x4xi8>
+  %7 = vector.extract %arg0[1, 1, 3] : i8 from vector<2x3x4xi8>
+  %8 = vector.extract %arg0[1, 2, 0] : i8 from vector<2x3x4xi8>
+  %9 = vector.extract %arg0[1, 2, 1] : i8 from vector<2x3x4xi8>
+  %10 = vector.extract %arg0[1, 2, 2] : i8 from vector<2x3x4xi8>
+  %11 = vector.extract %arg0[1, 2, 3] : i8 from vector<2x3x4xi8>
+  %12 = vector.from_elements %0, %1, %2, %3, %4, %5, %6, %7, %8, %9, %10, %11 : vector<12xi8>
+  return %12 : vector<12xi8>
+}
+
+// TODO(newling) add more tests where the source is not the same size as out. 
+
 // -----
 
 // The extracted elements are recombined into a single vector, but in a new order.
@@ -166,4 +199,3 @@ func.func @negative_nobijection_order(%arg0: vector<1x3xi8>) -> vector<3xi8> {
   %2 = vector.from_elements %0, %0, %1 : vector<3xi8>
   return %2 : vector<3xi8>
 }
-
