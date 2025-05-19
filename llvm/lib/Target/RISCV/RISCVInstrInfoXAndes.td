@@ -403,6 +403,19 @@ multiclass VPseudoVD4DOT_VV {
   }
 }
 
+multiclass VPatTernaryVD4DOT_VV<string intrinsic, string instruction,
+                                list<VTypeInfoToWide> vtilist> {
+  foreach vtiToWti = vtilist in {
+    defvar vti = vtiToWti.Vti;
+    defvar wti = vtiToWti.Wti;
+    let Predicates = GetVTypePredicates<wti>.Predicates in
+    defm : VPatTernaryWithPolicy<intrinsic, instruction, "VV",
+                                 wti.Vector, vti.Vector, vti.Vector,
+                                 wti.Mask, wti.Log2SEW, vti.LMul,
+                                 wti.RegClass, vti.RegClass, vti.RegClass>;
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // XAndesPerf
 //===----------------------------------------------------------------------===//
@@ -531,19 +544,6 @@ defset list<VTypeInfoToWide> AllQuadWidenableVD4DOTVectors = {
   def : VTypeInfoToWide<VI16M2,  VI64M2>;
   def : VTypeInfoToWide<VI16M4,  VI64M4>;
   def : VTypeInfoToWide<VI16M8,  VI64M8>;
-}
-
-multiclass VPatTernaryVD4DOT_VV<string intrinsic, string instruction,
-                                list<VTypeInfoToWide> vtilist> {
-  foreach vtiToWti = vtilist in {
-    defvar vti = vtiToWti.Vti;
-    defvar wti = vtiToWti.Wti;
-    let Predicates = GetVTypePredicates<wti>.Predicates in
-    defm : VPatTernaryWithPolicy<intrinsic, instruction, "VV",
-                                 wti.Vector, vti.Vector, vti.Vector,
-                                 wti.Mask, wti.Log2SEW, vti.LMul,
-                                 wti.RegClass, vti.RegClass, vti.RegClass>;
-  }
 }
 
 defm : VPatTernaryVD4DOT_VV<"int_riscv_nds_vd4dots", "PseudoNDS_VD4DOTS", AllQuadWidenableVD4DOTVectors>;
