@@ -76,8 +76,8 @@ public:
 #    include <vcruntime_typeinfo.h>
 #  else
 
-namespace std // purposefully not using versioning namespace
-{
+_LIBCPP_BEGIN_UNVERSIONED_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 #    if defined(_LIBCPP_ABI_MICROSOFT)
 
@@ -348,7 +348,8 @@ public:
   const char* what() const _NOEXCEPT override;
 };
 
-} // namespace std
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
+_LIBCPP_END_UNVERSIONED_NAMESPACE_STD
 
 #  endif // defined(_LIBCPP_ABI_VCRUNTIME)
 
