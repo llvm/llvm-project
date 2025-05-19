@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// REQUIRES: std-at-least-c++20
 
 // ITER_TRAITS(I)
 
@@ -19,6 +19,7 @@
 // random_access_iterator_tag.
 // (1.4) -- Otherwise, ITER_CONCEPT(I) does not denote a type.
 
+#include <__iterator/concepts.h>
 #include <__type_traits/is_valid_expansion.h>
 #include <cstddef>
 #include <iterator>
@@ -30,19 +31,19 @@ struct OtherTagTwo : std::output_iterator_tag {};
 
 struct MyIter {
   using iterator_category = std::random_access_iterator_tag;
-  using iterator_concept = int;
-  using value_type = char;
-  using difference_type = std::ptrdiff_t;
-  using pointer = char*;
-  using reference = char&;
+  using iterator_concept  = int;
+  using value_type        = char;
+  using difference_type   = std::ptrdiff_t;
+  using pointer           = char*;
+  using reference         = char&;
 };
 
 struct MyIter2 {
   using iterator_category = OtherTag;
-  using value_type = char;
-  using difference_type = std::ptrdiff_t;
-  using pointer = char*;
-  using reference = char&;
+  using value_type        = char;
+  using difference_type   = std::ptrdiff_t;
+  using pointer           = char*;
+  using reference         = char&;
 };
 
 struct MyIter3 {};
@@ -52,10 +53,10 @@ struct EmptyWithSpecial {};
 template <>
 struct std::iterator_traits<MyIter3> {
   using iterator_category = OtherTagTwo;
-  using value_type = char;
-  using difference_type = std::ptrdiff_t;
-  using pointer = char*;
-  using reference = char&;
+  using value_type        = char;
+  using difference_type   = std::ptrdiff_t;
+  using pointer           = char*;
+  using reference         = char&;
 };
 
 template <>
@@ -63,29 +64,18 @@ struct std::iterator_traits<EmptyWithSpecial> {
   // empty non-default.
 };
 
-int main(int, char**) {
-  // If the qualified-id ITER_TRAITS(I)::iterator_concept is valid and names a type,
-  // then ITER_CONCEPT(I) denotes that type.
-  {
-#if TEST_STD_VER > 17
-    ASSERT_SAME_TYPE(std::_ITER_CONCEPT<char*>, std::contiguous_iterator_tag);
-#endif
-    ASSERT_SAME_TYPE(std::_ITER_CONCEPT<MyIter>, int);
-  }
-  // Otherwise, if the qualified-id ITER_TRAITS(I)::iterator_category is valid
-  // and names a type, then ITER_CONCEPT(I) denotes that type.
-  {
-    ASSERT_SAME_TYPE(std::_ITER_CONCEPT<MyIter2>, OtherTag);
-    ASSERT_SAME_TYPE(std::_ITER_CONCEPT<MyIter3>, OtherTagTwo);
-  }
-  // FIXME - This requirement makes no sense to me. Why does an empty type with
-  // an empty default iterator_traits get a category of random?
-  {
-    ASSERT_SAME_TYPE(std::_ITER_CONCEPT<Empty>, std::random_access_iterator_tag);
-  }
-  {
-    static_assert(!std::_IsValidExpansion<std::_ITER_CONCEPT, EmptyWithSpecial>::value, "");
-  }
+// If the qualified-id ITER_TRAITS(I)::iterator_concept is valid and names a type,
+// then ITER_CONCEPT(I) denotes that type.
+ASSERT_SAME_TYPE(std::_ITER_CONCEPT<char*>, std::contiguous_iterator_tag);
+ASSERT_SAME_TYPE(std::_ITER_CONCEPT<MyIter>, int);
 
-  return 0;
-}
+// Otherwise, if the qualified-id ITER_TRAITS(I)::iterator_category is valid
+// and names a type, then ITER_CONCEPT(I) denotes that type.
+ASSERT_SAME_TYPE(std::_ITER_CONCEPT<MyIter2>, OtherTag);
+ASSERT_SAME_TYPE(std::_ITER_CONCEPT<MyIter3>, OtherTagTwo);
+
+// FIXME - This requirement makes no sense to me. Why does an empty type with
+// an empty default iterator_traits get a category of random?
+ASSERT_SAME_TYPE(std::_ITER_CONCEPT<Empty>, std::random_access_iterator_tag);
+
+static_assert(!std::_IsValidExpansion<std::_ITER_CONCEPT, EmptyWithSpecial>::value);
