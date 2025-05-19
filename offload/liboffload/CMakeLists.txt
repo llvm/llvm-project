@@ -1,5 +1,3 @@
-set(LIBOFFLOAD_ROOT "${CMAKE_CURRENT_SOURCE_DIR}")
-
 add_subdirectory(API)
 
 add_llvm_library(
