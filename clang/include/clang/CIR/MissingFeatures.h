@@ -198,6 +198,9 @@ struct MissingFeatures {
   static bool emitTypeCheck() { return false; }
   static bool cxxabiThisDecl() { return false; }
   static bool cxxabiThisAlignment() { return false; }
+  static bool writebacks() { return false; }
+  static bool cleanupsToDeactivate() { return false; }
+  static bool stackBase() { return false; }
 
   // Missing types
   static bool dataMemberType() { return false; }

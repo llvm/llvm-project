@@ -115,7 +115,11 @@ public:
   /// be used to emit a call.
   void addFrom(const CallArgList &other) {
     insert(end(), other.begin(), other.end());
-    // TODO: Writebacks, CleanupsToDeactivate, StackBase???
+    // Classic codegen has handling for these here. We may not need it here for
+    // CIR, but if not we should implement equivalent handling in lowering.
+    assert(!cir::MissingFeatures::writebacks());
+    assert(!cir::MissingFeatures::cleanupsToDeactivate());
+    assert(!cir::MissingFeatures::stackBase());
   }
 };
 

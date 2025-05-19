@@ -84,10 +84,15 @@ static void appendParameterTypes(const CIRGenTypes &cgt,
 CanQualType CIRGenTypes::deriveThisType(const CXXRecordDecl *rd,
                                         const CXXMethodDecl *md) {
   QualType recTy;
-  if (rd)
+  if (rd) {
     recTy = getASTContext().getTagDeclType(rd)->getCanonicalTypeInternal();
-  else
+  } else {
+    // This can happen with the MS ABI. It shouldn't need anything more than
+    // setting recTy to VoidTy here, but we're flagging it for now because we
+    // don't have the full handling implemented.
+    cgm.errorNYI("deriveThisType: no record decl");
     recTy = getASTContext().VoidTy;
+  }
 
   if (md)
     recTy = getASTContext().getAddrSpaceQualType(
