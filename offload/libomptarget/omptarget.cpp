@@ -600,7 +600,9 @@ postProcessingTargetDataEnd(DeviceTy *Device,
         // TODO/FIXME: Look into a better longterm solution, such as a different
         // mapping combination for descriptors or performing a similar base
         // address skip that we've done elsewhere in the omptarget runtime.
-        if (*ShadowPtr.HstPtrAddr == nullptr && ShadowPtr.IsDescriptorBaseAddr)
+        bool isUSMMode = PM->getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY;
+        if ((*ShadowPtr.HstPtrAddr == nullptr || isUSMMode) &&
+            ShadowPtr.IsDescriptorBaseAddr)
           return OFFLOAD_SUCCESS;
         *ShadowPtr.HstPtrAddr = ShadowPtr.HstPtrVal;
         DP("Restoring original host pointer value " DPxMOD " for host "
@@ -852,7 +854,9 @@ static int targetDataContiguous(ident_t *Loc, DeviceTy &Device, void *ArgsBase,
               // different mapping combination for descriptors or performing a
               // similar base address skip that we've done elsewhere in the
               // omptarget runtime.
-              if (*ShadowPtr.HstPtrAddr == nullptr &&
+              bool isUSMMode =
+                  PM->getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY;
+              if ((*ShadowPtr.HstPtrAddr == nullptr || isUSMMode) &&
                   ShadowPtr.IsDescriptorBaseAddr)
                 return OFFLOAD_SUCCESS;
               *ShadowPtr.HstPtrAddr = ShadowPtr.HstPtrVal;

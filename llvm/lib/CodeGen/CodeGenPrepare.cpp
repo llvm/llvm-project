@@ -5771,6 +5771,35 @@ static bool IsNonLocalValue(Value *V, BasicBlock *BB) {
   return false;
 }
 
+// Find an insert position of Addr for MemoryInst. We can't guarantee MemoryInst
+// is the first instruction that will use Addr. So we need to find the first
+// user of Addr in current BB.
+static BasicBlock::iterator findInsertPos(Value *Addr, Instruction *MemoryInst,
+                                          Value *SunkAddr) {
+  if (Addr->hasOneUse())
+    return MemoryInst->getIterator();
+
+  // We already have a SunkAddr in current BB, but we may need to insert cast
+  // instruction after it.
+  if (SunkAddr) {
+    if (Instruction *AddrInst = dyn_cast<Instruction>(SunkAddr))
+      return std::next(AddrInst->getIterator());
+  }
+
+  // Find the first user of Addr in current BB.
+  Instruction *Earliest = MemoryInst;
+  for (User *U : Addr->users()) {
+    Instruction *UserInst = dyn_cast<Instruction>(U);
+    if (UserInst && UserInst->getParent() == MemoryInst->getParent()) {
+      if (isa<PHINode>(UserInst) || UserInst->isDebugOrPseudoInst())
+        continue;
+      if (UserInst->comesBefore(Earliest))
+        Earliest = UserInst;
+    }
+  }
+  return Earliest->getIterator();
+}
+
 /// Sink addressing mode computation immediate before MemoryInst if doing so
 /// can be done without increasing register pressure.  The need for the
 /// register pressure constraint means this can end up being an all or nothing
@@ -5895,11 +5924,6 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
     return Modified;
   }
 
-  // Insert this computation right after this user.  Since our caller is
-  // scanning from the top of the BB to the bottom, reuse of the expr are
-  // guaranteed to happen later.
-  IRBuilder<> Builder(MemoryInst);
-
   // Now that we determined the addressing expression we want to use and know
   // that we have to sink it into this block.  Check to see if we have already
   // done this for some other load/store instr in this block.  If so, reuse
@@ -5910,6 +5934,13 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
 
   Value *SunkAddr = SunkAddrVH.pointsToAliveValue() ? SunkAddrVH : nullptr;
   Type *IntPtrTy = DL->getIntPtrType(Addr->getType());
+
+  // The current BB may be optimized multiple times, we can't guarantee the
+  // reuse of Addr happens later, call findInsertPos to find an appropriate
+  // insert position.
+  IRBuilder<> Builder(MemoryInst->getParent(),
+                      findInsertPos(Addr, MemoryInst, SunkAddr));
+
   if (SunkAddr) {
     LLVM_DEBUG(dbgs() << "CGP: Reusing nonlocal addrmode: " << AddrMode
                       << " for " << *MemoryInst << "\n");

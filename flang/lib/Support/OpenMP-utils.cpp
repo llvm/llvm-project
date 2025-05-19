@@ -89,8 +89,14 @@ mlir::omp::MapInfoOp createMapInfoOp(mlir::OpBuilder &builder,
 mlir::Value mapTemporaryValue(fir::FirOpBuilder &firOpBuilder,
     mlir::omp::TargetOp targetOp, mlir::Value val, llvm::StringRef name) {
   mlir::OpBuilder::InsertionGuard guard(firOpBuilder);
+  mlir::Operation *valOp = val.getDefiningOp();
 
-  firOpBuilder.setInsertionPointAfterValue(val);
+  if (valOp)
+    firOpBuilder.setInsertionPointAfter(valOp);
+  else
+    // This means val is a block argument
+    firOpBuilder.setInsertionPoint(targetOp);
+
   auto copyVal = firOpBuilder.createTemporary(val.getLoc(), val.getType());
   firOpBuilder.createStoreWithConvert(copyVal.getLoc(), val, copyVal);
 
@@ -160,14 +166,13 @@ void cloneOrMapRegionOutsiders(fir::FirOpBuilder &firOpBuilder,
   while (!valuesDefinedAbove.empty()) {
     for (mlir::Value val : valuesDefinedAbove) {
       mlir::Operation *valOp = val.getDefiningOp();
-      assert(valOp != nullptr);
 
       // NOTE: We skip BoxDimsOp's as the lesser of two evils is to map the
       // indices separately, as the alternative is to eventually map the Box,
       // which comes with a fairly large overhead comparatively. We could be
       // more robust about this and check using a BackwardsSlice to see if we
       // run the risk of mapping a box.
-      if (mlir::isMemoryEffectFree(valOp) &&
+      if (valOp && mlir::isMemoryEffectFree(valOp) &&
           !mlir::isa<fir::BoxDimsOp>(valOp)) {
         mlir::Operation *clonedOp = valOp->clone();
         entryBlock->push_front(clonedOp);

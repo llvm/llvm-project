@@ -230,7 +230,7 @@ Value *VPTransformState::get(const VPValue *Def, const VPLane &Lane) {
   if (hasScalarValue(Def, Lane))
     return Data.VPV2Scalars[Def][Lane.mapToCacheIndex(VF)];
 
-  if (!Lane.isFirstLane() && vputils::isUniformAfterVectorization(Def) &&
+  if (!Lane.isFirstLane() && vputils::isSingleScalar(Def) &&
       hasScalarValue(Def, VPLane::getFirstLane())) {
     return Data.VPV2Scalars[Def][0];
   }
@@ -303,17 +303,17 @@ Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
     return ScalarValue;
   }
 
-  bool IsUniform = vputils::isUniformAfterVectorization(Def);
+  bool IsSingleScalar = vputils::isSingleScalar(Def);
 
-  VPLane LastLane(IsUniform ? 0 : VF.getKnownMinValue() - 1);
+  VPLane LastLane(IsSingleScalar ? 0 : VF.getKnownMinValue() - 1);
   // Check if there is a scalar value for the selected lane.
   if (!hasScalarValue(Def, LastLane)) {
     // At the moment, VPWidenIntOrFpInductionRecipes, VPScalarIVStepsRecipes and
-    // VPExpandSCEVRecipes can also be uniform.
+    // VPExpandSCEVRecipes can also be a single scalar.
     assert((isa<VPWidenIntOrFpInductionRecipe, VPScalarIVStepsRecipe,
                 VPExpandSCEVRecipe>(Def->getDefiningRecipe())) &&
            "unexpected recipe found to be invariant");
-    IsUniform = true;
+    IsSingleScalar = true;
     LastLane = 0;
   }
 
@@ -334,7 +334,7 @@ Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
   // resulting vectors are stored in State, we will only generate the
   // insertelements once.
   Value *VectorValue = nullptr;
-  if (IsUniform) {
+  if (IsSingleScalar) {
     VectorValue = GetBroadcastInstrs(ScalarValue);
     set(Def, VectorValue);
   } else {
@@ -411,12 +411,16 @@ void VPBasicBlock::connectToPredecessors(VPTransformState &State) {
   // Register NewBB in its loop. In innermost loops its the same for all
   // BB's.
   Loop *ParentLoop = State.CurrentParentLoop;
-  // If this block has a sole successor that is an exit block then it needs
-  // adding to the same parent loop as the exit block.
-  VPBlockBase *SuccVPBB = getSingleSuccessor();
-  if (SuccVPBB && State.Plan->isExitBlock(SuccVPBB))
-    ParentLoop =
-        State.LI->getLoopFor(cast<VPIRBasicBlock>(SuccVPBB)->getIRBasicBlock());
+  // If this block has a sole successor that is an exit block or is an exit
+  // block itself then it needs adding to the same parent loop as the exit
+  // block.
+  VPBlockBase *SuccOrExitVPB = getSingleSuccessor();
+  SuccOrExitVPB = SuccOrExitVPB ? SuccOrExitVPB : this;
+  if (State.Plan->isExitBlock(SuccOrExitVPB)) {
+    ParentLoop = State.LI->getLoopFor(
+        cast<VPIRBasicBlock>(SuccOrExitVPB)->getIRBasicBlock());
+  }
+
   if (ParentLoop && !State.LI->getLoopFor(NewBB))
     ParentLoop->addBasicBlockToLoop(NewBB, *State.LI);
 
@@ -1164,11 +1168,16 @@ VPlan *VPlan::duplicate() {
   const auto &[NewEntry, __] = cloneFrom(Entry);
 
   BasicBlock *ScalarHeaderIRBB = getScalarHeader()->getIRBasicBlock();
-  VPIRBasicBlock *NewScalarHeader = cast<VPIRBasicBlock>(*find_if(
-      vp_depth_first_shallow(NewEntry), [ScalarHeaderIRBB](VPBlockBase *VPB) {
-        auto *VPIRBB = dyn_cast<VPIRBasicBlock>(VPB);
-        return VPIRBB && VPIRBB->getIRBasicBlock() == ScalarHeaderIRBB;
-      }));
+  VPIRBasicBlock *NewScalarHeader = nullptr;
+  if (getScalarHeader()->getNumPredecessors() == 0) {
+    NewScalarHeader = createVPIRBasicBlock(ScalarHeaderIRBB);
+  } else {
+    NewScalarHeader = cast<VPIRBasicBlock>(*find_if(
+        vp_depth_first_shallow(NewEntry), [ScalarHeaderIRBB](VPBlockBase *VPB) {
+          auto *VPIRBB = dyn_cast<VPIRBasicBlock>(VPB);
+          return VPIRBB && VPIRBB->getIRBasicBlock() == ScalarHeaderIRBB;
+        }));
+  }
   // Create VPlan, clone live-ins and remap operands in the cloned blocks.
   auto *NewPlan = new VPlan(cast<VPBasicBlock>(NewEntry), NewScalarHeader);
   DenseMap<VPValue *, VPValue *> Old2NewVPValues;
@@ -1183,8 +1192,7 @@ VPlan *VPlan::duplicate() {
     NewPlan->BackedgeTakenCount = new VPValue();
     Old2NewVPValues[BackedgeTakenCount] = NewPlan->BackedgeTakenCount;
   }
-  assert(TripCount && "trip count must be set");
-  if (TripCount->isLiveIn())
+  if (TripCount && TripCount->isLiveIn())
     Old2NewVPValues[TripCount] =
         NewPlan->getOrAddLiveIn(TripCount->getLiveInIRValue());
   // else NewTripCount will be created and inserted into Old2NewVPValues when
@@ -1197,9 +1205,11 @@ VPlan *VPlan::duplicate() {
   NewPlan->UFs = UFs;
   // TODO: Adjust names.
   NewPlan->Name = Name;
-  assert(Old2NewVPValues.contains(TripCount) &&
-         "TripCount must have been added to Old2NewVPValues");
-  NewPlan->TripCount = Old2NewVPValues[TripCount];
+  if (TripCount) {
+    assert(Old2NewVPValues.contains(TripCount) &&
+           "TripCount must have been added to Old2NewVPValues");
+    NewPlan->TripCount = Old2NewVPValues[TripCount];
+  }
 
   // Transfer all cloned blocks (the second half of all current blocks) from
   // current to new VPlan.

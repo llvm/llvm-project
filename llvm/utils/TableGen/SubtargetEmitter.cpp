@@ -579,7 +579,7 @@ void SubtargetEmitter::emitStageAndOperandCycleData(
       std::string ItinStageString;
       unsigned NStages = 0;
       if (ItinData)
-        formItineraryStageString(std::string(Name), ItinData, ItinStageString,
+        formItineraryStageString(Name.str(), ItinData, ItinStageString,
                                  NStages);
 
       // Get string and operand cycle count
@@ -590,7 +590,7 @@ void SubtargetEmitter::emitStageAndOperandCycleData(
         formItineraryOperandCycleString(ItinData, ItinOperandCycleString,
                                         NOperandCycles);
 
-        formItineraryBypassString(std::string(Name), ItinData, ItinBypassString,
+        formItineraryBypassString(Name.str(), ItinData, ItinBypassString,
                                   NOperandCycles);
       }
 
@@ -1382,7 +1382,7 @@ void SubtargetEmitter::genSchedClassTables(const CodeGenProcModel &ProcModel,
       for (unsigned I = 0, E = WriteLatencies.size(); I < E; ++I)
         if (SchedTables.WriterNames[Idx + I].find(WriterNames[I]) ==
             std::string::npos) {
-          SchedTables.WriterNames[Idx + I] += std::string("_") + WriterNames[I];
+          SchedTables.WriterNames[Idx + I] += "_" + WriterNames[I];
         }
     } else {
       SCDesc.WriteLatencyIdx = SchedTables.WriteLatencies.size();

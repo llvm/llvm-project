@@ -47,6 +47,8 @@
 #include <iterator>
 #include <numeric>
 
+#define DEBUG_TYPE "omp-map-info-finalization"
+#define PDBGS() (llvm::dbgs() << "[" << DEBUG_TYPE << "]: ")
 namespace flangomp {
 #define GEN_PASS_DEF_MAPINFOFINALIZATIONPASS
 #include "flang/Optimizer/OpenMP/Passes.h.inc"
@@ -260,17 +262,26 @@ class MapInfoFinalizationPass
   /// allowing `to` mappings, and `target update` not allowing both `to` and
   /// `from` simultaneously. We currently try to maintain the `implicit` flag
   /// where necessary, although it does not seem strictly required.
+  ///
+  /// Currently, if it is a has_device_addr clause, we opt to not apply the
+  /// descriptor tag to it as it's used differently to a regular mapping
+  /// and some of the runtime descriptor behaviour at the moment can cause
+  /// issues.
   unsigned long getDescriptorMapType(unsigned long mapTypeFlag,
-                                     mlir::Operation *target) {
+                                     mlir::Operation *target,
+                                     bool IsHasDeviceAddr) {
     using mapFlags = llvm::omp::OpenMPOffloadMappingFlags;
+ 
     if (llvm::isa_and_nonnull<mlir::omp::TargetExitDataOp,
-                              mlir::omp::TargetUpdateOp>(target))
-      return llvm::to_underlying(
-          mapFlags(mapTypeFlag) |
-          llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_DESCRIPTOR);
+                              mlir::omp::TargetUpdateOp>(target)) {
+      mapFlags flags = mapFlags(mapTypeFlag);
+       if (!IsHasDeviceAddr)
+        flags |= mapFlags::OMP_MAP_DESCRIPTOR;
+      return llvm::to_underlying(flags);
+    }
 
     mapFlags flags = mapFlags::OMP_MAP_TO |
-                     (mapFlags(mapTypeFlag) & mapFlags::OMP_MAP_IMPLICIT);
+            (mapFlags(mapTypeFlag) & mapFlags::OMP_MAP_IMPLICIT);
     // Descriptors for objects will always be copied. This is because the
     // descriptor can be rematerialized by the compiler, and so the addres
     // of the descriptor for a given object at one place in the code may
@@ -284,7 +295,8 @@ class MapInfoFinalizationPass
               mapFlags::OMP_MAP_CLOSE)
                  ? mapFlags::OMP_MAP_CLOSE
                  : mapFlags::OMP_MAP_ALWAYS;
-    flags |= mapFlags::OMP_MAP_DESCRIPTOR;
+    if (!IsHasDeviceAddr)
+      flags |= mapFlags::OMP_MAP_DESCRIPTOR;
     return llvm::to_underlying(flags);
   }
 
@@ -379,7 +391,7 @@ class MapInfoFinalizationPass
             mlir::TypeAttr::get(fir::unwrapRefType(descriptor.getType())),
             builder.getIntegerAttr(
                 builder.getIntegerType(64, false),
-                getDescriptorMapType(op.getMapType(), target)),
+                getDescriptorMapType(op.getMapType(), target, IsHasDeviceAddr)),
             op.getMapCaptureTypeAttr(), /*varPtrPtr=*/mlir::Value{}, newMembers,
             newMembersAttr, /*bounds=*/mlir::SmallVector<mlir::Value>{},
             /*mapperId*/ mlir::FlatSymbolRefAttr(), op.getNameAttr(),
@@ -560,7 +572,38 @@ class MapInfoFinalizationPass
       // iterations from previous function scopes.
       localBoxAllocas.clear();
 
-      // First, walk `omp.map.info` ops to see if any record members should be
+      // First, walk `omp.map.info` ops to see if any of them have varPtrs
+      // with an underlying type of fir.char<k, ?>, i.e a character
+      // with dynamic length. If so, check if they need bounds added.
+      func->walk([&](mlir::omp::MapInfoOp op) {
+        if (!op.getBounds().empty())
+          return;
+
+        mlir::Value varPtr = op.getVarPtr();
+        mlir::Type underlyingVarType = fir::unwrapRefType(varPtr.getType());
+
+        if (!fir::characterWithDynamicLen(underlyingVarType))
+          return;
+
+        fir::factory::AddrAndBoundsInfo info =
+            fir::factory::getDataOperandBaseAddr(
+                builder, varPtr, /*isOptional=*/false, varPtr.getLoc());
+        fir::ExtendedValue extendedValue =
+            hlfir::translateToExtendedValue(varPtr.getLoc(), builder,
+                                            hlfir::Entity{info.addr},
+                                            /*continguousHint=*/true)
+                .first;
+        builder.setInsertionPoint(op);
+        llvm::SmallVector<mlir::Value> boundsOps =
+            fir::factory::genImplicitBoundsOps<mlir::omp::MapBoundsOp,
+                                               mlir::omp::MapBoundsType>(
+                builder, info, extendedValue,
+                /*dataExvIsAssumedSize=*/false, varPtr.getLoc());
+
+        op.getBoundsMutable().append(boundsOps);
+      });
+
+      // Next, walk `omp.map.info` ops to see if any record members should be
       // implicitly mapped.
       // TODO/FIXME/UPDATE: I believe we need to add implicit capture of
       // allocatable members of arbitrary depths for this before we can

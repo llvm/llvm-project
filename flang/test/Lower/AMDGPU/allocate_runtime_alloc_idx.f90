@@ -1,4 +1,4 @@
-! RUN: %flang -target amdgcn-- -ffast-amd-memory-allocator -mmlir -use-alloc-runtime -S -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK
+! RUN: %flang -target amdgcn-- -ffast-amd-memory-allocator -S -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK
 subroutine allocate_deallocate()
   real, allocatable :: x
 ! CHECK: call void @_FortranAAMDAllocatableSetAllocIdx({{.*}}, i32 1)
