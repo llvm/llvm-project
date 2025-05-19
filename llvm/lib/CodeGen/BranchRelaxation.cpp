@@ -559,7 +559,6 @@ bool BranchRelaxation::fixupConditionalBranch(MachineInstr &MI) {
 
 bool BranchRelaxation::fixupUnconditionalBranch(MachineInstr &MI) {
   MachineBasicBlock *MBB = MI.getParent();
-  SmallVector<MachineOperand, 4> Cond;
   unsigned OldBrSize = TII->getInstSizeInBytes(MI);
   MachineBasicBlock *DestBB = TII->getBranchDestBlock(MI);
 

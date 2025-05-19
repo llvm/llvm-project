@@ -133,6 +133,7 @@
 // CHECK-NEXT: NoThreadSafetyAnalysis (SubjectMatchRule_function)
 // CHECK-NEXT: NoThrow (SubjectMatchRule_hasType_functionType)
 // CHECK-NEXT: NoUwtable (SubjectMatchRule_hasType_functionType)
+// CHECK-NEXT: NonString (SubjectMatchRule_variable, SubjectMatchRule_field)
 // CHECK-NEXT: NotTailCalled (SubjectMatchRule_function)
 // CHECK-NEXT: OMPAssume (SubjectMatchRule_function, SubjectMatchRule_objc_method)
 // CHECK-NEXT: OSConsumed (SubjectMatchRule_variable_is_parameter)

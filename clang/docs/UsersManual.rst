@@ -921,7 +921,7 @@ Clang options that don't fit neatly into other categories.
 
   Instruct clang not to emit the signature string for blocks. Disabling the
   string can potentially break existing code that relies on it. Users should
-  carefully consider this possibiilty when using the flag.
+  carefully consider this possibility when using the flag.
 
 .. _configuration-files:
 
@@ -2792,6 +2792,9 @@ usual build cycle when using sample profilers for optimization:
 
      $ llvm-profgen --binary=./code --output=code.prof --perfdata=perf.data
 
+   Please note, ``perf.data`` must be collected with ``-b`` flag to Linux ``perf``
+   for the above step to work.
+
    When using SEP the output is in the textual format corresponding to
    ``llvm-profgen --perfscript``. For example:
 
@@ -3195,7 +3198,7 @@ indexed format, regardeless whether it is produced by frontend or the IR pass.
 .. option:: -fprofile-continuous
 
   Enables the continuous instrumentation profiling where profile counter updates
-  are continuously synced to a file. This option sets any neccessary modifiers
+  are continuously synced to a file. This option sets any necessary modifiers
   (currently ``%c``) in the default profile filename and passes any necessary
   flags to the middle-end to support this mode. Value profiling is not supported
   in continuous mode.
@@ -3324,7 +3327,7 @@ on the ``-fprofile-generate`` and the ``-fprofile-use`` flags.
  * ``__LLVM_INSTR_PROFILE_USE``: defined when one of
    ``-fprofile-use``/``-fprofile-instr-use`` is in effect.
 
-The two macros can be used to provide more flexibiilty so a user program
+The two macros can be used to provide more flexibility so a user program
 can execute code specifically intended for profile generate or profile use.
 For example, a user program can have special logging during profile generate:
 
@@ -3394,9 +3397,9 @@ This can be done using the ``-fprofile-list`` option.
 
     $ clang++ -O2 -fprofile-instr-generate -fcoverage-mapping -fprofile-list=fun.list -fprofile-list=code.list code.cc -o code
 
-Supported sections are ``[clang]``, ``[llvm]``, and ``[csllvm]`` representing
-clang PGO, IRPGO, and CSIRPGO, respectively. Supported prefixes are ``function``
-and ``source``. Supported categories are ``allow``, ``skip``, and ``forbid``.
+Supported sections are ``[clang]``, ``[llvm]``, ``[csllvm]``, and ``[sample-coldcov]`` representing
+clang PGO, IRPGO, CSIRPGO and sample PGO based cold function coverage, respectively. Supported prefixes 
+are ``function`` and ``source``. Supported categories are ``allow``, ``skip``, and ``forbid``.
 ``skip`` adds the ``skipprofile`` attribute while ``forbid`` adds the
 ``noprofile`` attribute to the appropriate function. Use
 ``default:<allow|skip|forbid>`` to specify the default category.
@@ -4151,7 +4154,7 @@ There is a set of concrete HW architectures that OpenCL can be compiled for.
 Generic Targets
 ^^^^^^^^^^^^^^^
 
-- A SPIR-V binary can be produced for 32 or 64 bit targets.
+- A SPIR-V binary can be produced for 32- or 64-bit targets.
 
    .. code-block:: console
 

@@ -186,19 +186,19 @@ TEST(DependencyScanningFilesystem, DiagnoseStaleStatFailures) {
   DependencyScanningFilesystemSharedCache SharedCache;
   DependencyScanningWorkerFilesystem DepFS(SharedCache, InMemoryFS);
 
-  bool Path1Exists = DepFS.exists("/path1");
+  bool Path1Exists = DepFS.exists("/path1.suffix");
   EXPECT_EQ(Path1Exists, false);
 
   // Adding a file that has been stat-ed,
-  InMemoryFS->addFile("/path1", 0, llvm::MemoryBuffer::getMemBuffer(""));
-  Path1Exists = DepFS.exists("/path1");
+  InMemoryFS->addFile("/path1.suffix", 0, llvm::MemoryBuffer::getMemBuffer(""));
+  Path1Exists = DepFS.exists("/path1.suffix");
   // Due to caching in SharedCache, path1 should not exist in
   // DepFS's eyes.
   EXPECT_EQ(Path1Exists, false);
 
   std::vector<llvm::StringRef> InvalidPaths =
-      SharedCache.getInvalidNegativeStatCachedPaths(*InMemoryFS.get());
+      SharedCache.getInvalidNegativeStatCachedPaths(*InMemoryFS);
 
   EXPECT_EQ(InvalidPaths.size(), 1u);
-  ASSERT_STREQ("/path1", InvalidPaths[0].str().c_str());
+  ASSERT_STREQ("/path1.suffix", InvalidPaths[0].str().c_str());
 }

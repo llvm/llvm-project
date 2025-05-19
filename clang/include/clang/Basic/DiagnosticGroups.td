@@ -103,12 +103,15 @@ def AnonEnumEnumConversion : DiagGroup<"anon-enum-enum-conversion",
                                    [DeprecatedAnonEnumEnumConversion]>;
 def EnumEnumConversion : DiagGroup<"enum-enum-conversion",
                                    [DeprecatedEnumEnumConversion]>;
+def ImplicitEnumEnumCast : DiagGroup<"implicit-enum-enum-cast">;
 def EnumFloatConversion : DiagGroup<"enum-float-conversion",
                                     [DeprecatedEnumFloatConversion]>;
 def EnumConversion : DiagGroup<"enum-conversion",
                                [EnumEnumConversion,
+                                ImplicitEnumEnumCast,
                                 EnumFloatConversion,
                                 EnumCompareConditional]>;
+def CharacterConversion : DiagGroup<"character-conversion">;
 def DeprecatedOFast : DiagGroup<"deprecated-ofast">;
 def ObjCSignedCharBoolImplicitIntConversion :
   DiagGroup<"objc-signed-char-bool-implicit-int-conversion">;
@@ -155,7 +158,34 @@ def C99Compat : DiagGroup<"c99-compat">;
 def C23Compat : DiagGroup<"c23-compat">;
 def : DiagGroup<"c2x-compat", [C23Compat]>;
 
-def CXXCompat: DiagGroup<"c++-compat">;
+def CppKeywordInC : DiagGroup<"c++-keyword">;
+def DuplicateDeclSpecifier : DiagGroup<"duplicate-decl-specifier">;
+def InitStringTooLongMissingNonString :
+  DiagGroup<"unterminated-string-initialization">;
+def InitStringTooLongForCpp :
+  DiagGroup<"c++-unterminated-string-initialization">;
+def HiddenCppDecl : DiagGroup<"c++-hidden-decl">;
+def DefaultConstInitFieldUnsafe : DiagGroup<"default-const-init-field-unsafe">;
+def DefaultConstInitVarUnsafe : DiagGroup<"default-const-init-var-unsafe">;
+def DefaultConstInitUnsafe : DiagGroup<"default-const-init-unsafe",
+                                       [DefaultConstInitFieldUnsafe,
+                                        DefaultConstInitVarUnsafe]>;
+def DefaultConstInitField : DiagGroup<"default-const-init-field">;
+def DefaultConstInitVar : DiagGroup<"default-const-init-var">;
+def DefaultConstInit : DiagGroup<"default-const-init",
+                                 [DefaultConstInitField, DefaultConstInitVar,
+                                  DefaultConstInitUnsafe]>;
+def ImplicitVoidPtrCast : DiagGroup<"implicit-void-ptr-cast">;
+def ImplicitIntToEnumCast : DiagGroup<"implicit-int-enum-cast",
+                                      [ImplicitEnumEnumCast]>;
+def JumpBypassesInit : DiagGroup<"jump-misses-init">;
+def TentativeDefnCompat : DiagGroup<"tentative-definition-compat">;
+def CXXCompat: DiagGroup<"c++-compat", [ImplicitVoidPtrCast, DefaultConstInit,
+                                        ImplicitIntToEnumCast, HiddenCppDecl,
+                                        InitStringTooLongForCpp, CppKeywordInC,
+                                        TentativeDefnCompat, JumpBypassesInit,
+                                        DuplicateDeclSpecifier]>;
+
 def ExternCCompat : DiagGroup<"extern-c-compat">;
 def KeywordCompat : DiagGroup<"keyword-compat">;
 def GNUCaseRange : DiagGroup<"gnu-case-range">;
@@ -392,13 +422,12 @@ def CXX11WarnSuggestOverride : DiagGroup<"suggest-override">;
 def WarnUnnecessaryVirtualSpecifier : DiagGroup<"unnecessary-virtual-specifier"> {
   code Documentation = [{
 Warns when a ``final`` class contains a virtual method (including virtual
-destructors). Since ``final`` classes cannot be subclassed, their methods
-cannot be overridden, and hence the ``virtual`` specifier is useless.
+destructors) that does not override anything. Since ``final`` classes cannot
+be subclassed, their methods cannot be overridden, so there is no point to
+introducing new ``virtual`` methods.
 
 The warning also detects virtual methods in classes whose destructor is
 ``final``, for the same reason.
-
-The warning does not fire on virtual methods which are also marked ``override``.
   }];
 }
 
@@ -592,6 +621,7 @@ def ModuleImport : DiagGroup<"module-import">;
 def ModuleConflict : DiagGroup<"module-conflict">;
 def ModuleFileExtension : DiagGroup<"module-file-extension">;
 def ModuleIncludeDirectiveTranslation : DiagGroup<"module-include-translation">;
+def ModuleMap : DiagGroup<"module-map">;
 def RoundTripCC1Args : DiagGroup<"round-trip-cc1-args">;
 def NewlineEOF : DiagGroup<"newline-eof">;
 def Nullability : DiagGroup<"nullability">;
@@ -661,6 +691,52 @@ def Packed : DiagGroup<"packed", [PackedNonPod]>;
 def PaddedBitField : DiagGroup<"padded-bitfield">;
 def Padded : DiagGroup<"padded", [PaddedBitField]>;
 def UnalignedAccess : DiagGroup<"unaligned-access">;
+def MSBitfieldCompatibility : DiagGroup<"ms-bitfield-padding"> {
+  code Documentation = [{
+    Under the Microsoft ABI, adjacent bit-fields are not packed if the
+    underlying type has a different storage size. This warning indicates that a
+    pair of adjacent bit-fields may not pack in the same way due to this behavioural
+    difference.
+
+    This can occur when mixing different types explicitly:
+
+    .. code-block:: c++
+
+      struct S {
+        uint16_t field1 : 1;
+        uint32_t field2 : 1;
+      };
+
+    or more subtly through enums
+
+    .. code-block:: c++
+
+      enum Enum1 { /* ... */ };
+      enum class Enum2 : unsigned char { /* ... */ };
+      struct S {
+        Enum1 field1 : 1;
+        Enum2 field2 : 1;
+      };
+
+    In each of these cases under the Microsoft ABI the second bit-field
+    will not be packed with the preceding bit-field, and instead will be aligned
+    as if the fields were each separately defined integer fields of their respective
+    storage size. For binary compatibility this is obviously and observably
+    incompatible, however where bit-fields are being used solely for memory use
+    reduction this incomplete packing may silently increase the size of objects vs
+    what is expected.
+
+    This issue can be addressed by ensuring the storage type of each bit-field is
+    the same, either by explicitly using the same integer type, or in the case of
+    enum types declaring the enum types with the same storage size. For enum types
+    where you cannot specify the underlying type, the options are to either switch
+    to int sized storage for all specifiers or to resort to declaring the
+    bit-fields with explicit integer storage types and cast in and out of the field.
+    If such a solution is required the
+    :ref:`preferred_type <langext-preferred_type_documentation>` attribute can be
+    used to convey the actual field type to debuggers and other tooling.
+  }];
+}
 
 def PessimizingMove : DiagGroup<"pessimizing-move">;
 def ReturnStdMove : DiagGroup<"return-std-move">;
@@ -800,7 +876,6 @@ def TautologicalCompare : DiagGroup<"tautological-compare",
                                      TautologicalObjCBoolCompare,
                                      TautologicalNegationCompare]>;
 def HeaderHygiene : DiagGroup<"header-hygiene">;
-def DuplicateDeclSpecifier : DiagGroup<"duplicate-decl-specifier">;
 def CompareDistinctPointerType : DiagGroup<"compare-distinct-pointer-types">;
 def GNUUnionCast : DiagGroup<"gnu-union-cast">;
 def GNUVariableSizedTypeNotAtEnd : DiagGroup<"gnu-variable-sized-type-not-at-end">;
@@ -1045,6 +1120,7 @@ def Parentheses : DiagGroup<"parentheses",
 //   - __null-to-integer conversion warnings are on by default
 def Conversion : DiagGroup<"conversion",
                            [BoolConversion,
+                            CharacterConversion,
                             ConstantConversion,
                             EnumConversion,
                             BitFieldEnumConversion,
@@ -1134,6 +1210,8 @@ def Extra : DiagGroup<"extra", [
     StringConcatation,
     FUseLdPath,
     CastFunctionTypeMismatch,
+    InitStringTooLongMissingNonString,
+    WarnUnnecessaryVirtualSpecifier,
   ]>;
 
 def Most : DiagGroup<"most", [

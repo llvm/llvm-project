@@ -439,7 +439,10 @@ void APFixedPoint::print(raw_ostream &OS) const {
   Sema.print(OS);
   OS << "})";
 }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void APFixedPoint::dump() const { print(llvm::errs()); }
+#endif
 
 APFixedPoint APFixedPoint::negate(bool *Overflow) const {
   if (!isSaturated()) {

@@ -21,7 +21,15 @@ target_link_libraries(clang-doc
 
 set(assets
   index.js
+  mustache-index.js
   clang-doc-default-stylesheet.css
+  clang-doc-mustache.css
+  class-template.mustache
+  comments-template.mustache
+  enum-template.mustache
+  function-template.mustache
+  namespace-template.mustache
+  template.mustache
 )
 
 set(asset_dir "${CMAKE_CURRENT_SOURCE_DIR}/../assets")

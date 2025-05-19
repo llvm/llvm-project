@@ -503,6 +503,7 @@
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__117bad_function_callD0Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__117bad_function_callD1Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__117bad_function_callD2Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
+{'import_export': 'EXP', 'is_defined': True, 'name': '_ZNKSt3__117bad_function_call4whatEv', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__117iostream_categoryEv', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__117moneypunct_bynameIcLb0EE4initEPKc', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__117moneypunct_bynameIcLb1EE4initEPKc', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
@@ -1066,7 +1067,6 @@
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTv0_n24_NSt3__19strstreamD1Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'IMP', 'is_defined': False, 'name': '_ZNKSt11logic_error4whatEv', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'IMP', 'is_defined': False, 'name': '_ZNKSt13runtime_error4whatEv', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
-{'import_export': 'IMP', 'is_defined': False, 'name': '_ZNKSt9exception4whatEv', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'IMP', 'is_defined': False, 'name': '_ZNSt11logic_errorD2Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'IMP', 'is_defined': False, 'name': '_ZNSt12length_errorD1Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'IMP', 'is_defined': False, 'name': '_ZNSt12out_of_rangeD1Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}

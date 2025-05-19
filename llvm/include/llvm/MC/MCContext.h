@@ -259,13 +259,9 @@ private:
           SelectionKey(SelectionKey), UniqueID(UniqueID) {}
 
     bool operator<(const COFFSectionKey &Other) const {
-      if (SectionName != Other.SectionName)
-        return SectionName < Other.SectionName;
-      if (GroupName != Other.GroupName)
-        return GroupName < Other.GroupName;
-      if (SelectionKey != Other.SelectionKey)
-        return SelectionKey < Other.SelectionKey;
-      return UniqueID < Other.UniqueID;
+      return std::tie(SectionName, GroupName, SelectionKey, UniqueID) <
+             std::tie(Other.SectionName, Other.GroupName, Other.SelectionKey,
+                      Other.UniqueID);
     }
   };
 
@@ -279,11 +275,8 @@ private:
         : SectionName(SectionName), GroupName(GroupName), UniqueID(UniqueID) {}
 
     bool operator<(const WasmSectionKey &Other) const {
-      if (SectionName != Other.SectionName)
-        return SectionName < Other.SectionName;
-      if (GroupName != Other.GroupName)
-        return GroupName < Other.GroupName;
-      return UniqueID < Other.UniqueID;
+      return std::tie(SectionName, GroupName, UniqueID) <
+             std::tie(Other.SectionName, Other.GroupName, Other.UniqueID);
     }
   };
 

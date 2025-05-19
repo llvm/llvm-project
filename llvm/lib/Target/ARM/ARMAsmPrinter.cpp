@@ -50,7 +50,7 @@ using namespace llvm;
 
 ARMAsmPrinter::ARMAsmPrinter(TargetMachine &TM,
                              std::unique_ptr<MCStreamer> Streamer)
-    : AsmPrinter(TM, std::move(Streamer)), Subtarget(nullptr), AFI(nullptr),
+    : AsmPrinter(TM, std::move(Streamer), ID), Subtarget(nullptr), AFI(nullptr),
       MCP(nullptr), InConstantPool(false), OptimizationGoals(-1) {}
 
 void ARMAsmPrinter::emitFunctionBodyEnd() {
@@ -66,10 +66,10 @@ void ARMAsmPrinter::emitFunctionEntryLabel() {
   auto &TS =
       static_cast<ARMTargetStreamer &>(*OutStreamer->getTargetStreamer());
   if (AFI->isThumbFunction()) {
-    OutStreamer->emitAssemblerFlag(MCAF_Code16);
+    TS.emitCode16();
     TS.emitThumbFunc(CurrentFnSym);
   } else {
-    OutStreamer->emitAssemblerFlag(MCAF_Code32);
+    TS.emitCode32();
   }
 
   // Emit symbol for CMSE non-secure entry point
@@ -171,7 +171,9 @@ bool ARMAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   // These are created per function, rather than per TU, since it's
   // relatively easy to exceed the thumb branch range within a TU.
   if (! ThumbIndirectPads.empty()) {
-    OutStreamer->emitAssemblerFlag(MCAF_Code16);
+    auto &TS =
+        static_cast<ARMTargetStreamer &>(*OutStreamer->getTargetStreamer());
+    TS.emitCode16();
     emitAlignment(Align(2));
     for (std::pair<unsigned, MCSymbol *> &TIP : ThumbIndirectPads) {
       OutStreamer->emitLabel(TIP.second);
@@ -489,24 +491,30 @@ void ARMAsmPrinter::emitInlineAsmEnd(const MCSubtargetInfo &StartInfo,
   // the start mode, then restore the start mode.
   const bool WasThumb = isThumb(StartInfo);
   if (!EndInfo || WasThumb != isThumb(*EndInfo)) {
-    OutStreamer->emitAssemblerFlag(WasThumb ? MCAF_Code16 : MCAF_Code32);
+    auto &TS =
+        static_cast<ARMTargetStreamer &>(*OutStreamer->getTargetStreamer());
+    if (WasThumb)
+      TS.emitCode16();
+    else
+      TS.emitCode32();
   }
 }
 
 void ARMAsmPrinter::emitStartOfAsmFile(Module &M) {
   const Triple &TT = TM.getTargetTriple();
+  auto &TS =
+      static_cast<ARMTargetStreamer &>(*OutStreamer->getTargetStreamer());
   // Use unified assembler syntax.
-  OutStreamer->emitAssemblerFlag(MCAF_SyntaxUnified);
+  TS.emitSyntaxUnified();
 
   // Emit ARM Build Attributes
   if (TT.isOSBinFormatELF())
     emitAttributes();
 
   // Use the triple's architecture and subarchitecture to determine
-  // if we're thumb for the purposes of the top level code16 assembler
-  // flag.
+  // if we're thumb for the purposes of the top level code16 state.
   if (!M.getModuleInlineAsm().empty() && TT.isThumb())
-    OutStreamer->emitAssemblerFlag(MCAF_Code16);
+    TS.emitCode16();
 }
 
 static void
@@ -575,7 +583,7 @@ void ARMAsmPrinter::emitEndOfAsmFile(Module &M) {
     // implementation of multiple entry points).  If this doesn't occur, the
     // linker can safely perform dead code stripping.  Since LLVM never
     // generates code that does this, it is always safe to set.
-    OutStreamer->emitAssemblerFlag(MCAF_SubsectionsViaSymbols);
+    OutStreamer->emitSubsectionsViaSymbols();
   }
 
   // The last attribute to be emitted is ABI_optimization_goals
@@ -1442,9 +1450,8 @@ void ARMAsmPrinter::EmitUnwindingInstruction(const MachineInstr *MI) {
 #include "ARMGenMCPseudoLowering.inc"
 
 void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
-  // TODOD FIXME: Enable feature predicate checks once all the test pass.
-  // ARM_MC::verifyInstructionPredicates(MI->getOpcode(),
-  //                                   getSubtargetInfo().getFeatureBits());
+  ARM_MC::verifyInstructionPredicates(MI->getOpcode(),
+                                      getSubtargetInfo().getFeatureBits());
 
   const DataLayout &DL = getDataLayout();
   MCTargetStreamer &TS = *OutStreamer->getTargetStreamer();
@@ -2433,6 +2440,11 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
   EmitToStreamer(*OutStreamer, TmpInst);
 }
+
+char ARMAsmPrinter::ID = 0;
+
+INITIALIZE_PASS(ARMAsmPrinter, "arm-asm-printer", "ARM Assembly Printer", false,
+                false)
 
 //===----------------------------------------------------------------------===//
 // Target Registry Stuff

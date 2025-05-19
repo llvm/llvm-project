@@ -12,6 +12,7 @@
 
 #include "LoongArchAsmBackend.h"
 #include "LoongArchFixupKinds.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
@@ -26,6 +27,12 @@
 #define DEBUG_TYPE "loongarch-asmbackend"
 
 using namespace llvm;
+
+LoongArchAsmBackend::LoongArchAsmBackend(const MCSubtargetInfo &STI,
+                                         uint8_t OSABI, bool Is64Bit,
+                                         const MCTargetOptions &Options)
+    : MCAsmBackend(llvm::endianness::little, ELF::R_LARCH_RELAX), STI(STI),
+      OSABI(OSABI), Is64Bit(Is64Bit), TargetOptions(Options) {}
 
 std::optional<MCFixupKind>
 LoongArchAsmBackend::getFixupKind(StringRef Name) const {
@@ -429,11 +436,16 @@ bool LoongArchAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
   return true;
 }
 
-bool LoongArchAsmBackend::handleAddSubRelocations(const MCAssembler &Asm,
-                                                  const MCFragment &F,
-                                                  const MCFixup &Fixup,
-                                                  const MCValue &Target,
-                                                  uint64_t &FixedValue) const {
+bool LoongArchAsmBackend::addReloc(MCAssembler &Asm, const MCFragment &F,
+                                   const MCFixup &Fixup, const MCValue &Target,
+                                   uint64_t &FixedValue, bool IsResolved,
+                                   const MCSubtargetInfo *CurSTI) {
+  auto Fallback = [&]() {
+    return MCAsmBackend::addReloc(Asm, F, Fixup, Target, FixedValue, IsResolved,
+                                  CurSTI);
+  };
+  if (!Target.getSubSym())
+    return Fallback();
   assert(Target.getSpecifier() == 0 &&
          "relocatable SymA-SymB cannot have relocation specifier");
   std::pair<MCFixupKind, MCFixupKind> FK;
@@ -451,7 +463,7 @@ bool LoongArchAsmBackend::handleAddSubRelocations(const MCAssembler &Asm,
     // is not same as the section of Fixup, it will report error. Just return
     // false and then this work can be finished by handleFixup.
     if (&SecA != &SecB)
-      return false;
+      return Fallback();
 
     // In SecA == SecB case. If the linker relaxation is enabled, we need record
     // the ADD, SUB relocations. Otherwise the FixedValue has already been calc-
@@ -483,9 +495,8 @@ bool LoongArchAsmBackend::handleAddSubRelocations(const MCAssembler &Asm,
   MCValue B = MCValue::get(Target.getSubSym());
   auto FA = MCFixup::create(Fixup.getOffset(), nullptr, std::get<0>(FK));
   auto FB = MCFixup::create(Fixup.getOffset(), nullptr, std::get<1>(FK));
-  auto &Assembler = const_cast<MCAssembler &>(Asm);
-  Asm.getWriter().recordRelocation(Assembler, &F, FA, A, FixedValueA);
-  Asm.getWriter().recordRelocation(Assembler, &F, FB, B, FixedValueB);
+  Asm.getWriter().recordRelocation(Asm, &F, FA, A, FixedValueA);
+  Asm.getWriter().recordRelocation(Asm, &F, FB, B, FixedValueB);
   FixedValue = FixedValueA - FixedValueB;
   return true;
 }

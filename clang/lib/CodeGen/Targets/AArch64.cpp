@@ -136,13 +136,15 @@ public:
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
                            CodeGen::CodeGenModule &CGM) const override {
-    const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D);
-    if (!FD)
+    auto *Fn = dyn_cast<llvm::Function>(GV);
+    if (!Fn)
       return;
 
+    const auto *FD = dyn_cast_or_null<FunctionDecl>(D);
     TargetInfo::BranchProtectionInfo BPI(CGM.getLangOpts());
 
-    if (const auto *TA = FD->getAttr<TargetAttr>()) {
+    if (FD && FD->hasAttr<TargetAttr>()) {
+      const auto *TA = FD->getAttr<TargetAttr>();
       ParsedTargetAttr Attr =
           CGM.getTarget().parseTargetAttr(TA->getFeaturesStr());
       if (!Attr.BranchProtection.empty()) {
@@ -152,7 +154,6 @@ public:
         assert(Error.empty());
       }
     }
-    auto *Fn = cast<llvm::Function>(GV);
     setBranchProtectionFnAttributes(BPI, *Fn);
   }
 

@@ -51,12 +51,6 @@
 #  define _LIBCPP_ABI_FIX_UNORDERED_NODE_POINTER_UB
 #  define _LIBCPP_ABI_FORWARD_LIST_REMOVE_NODE_POINTER_UB
 #  define _LIBCPP_ABI_FIX_UNORDERED_CONTAINER_SIZE_TYPE
-// Override the default return value of exception::what() for bad_function_call::what()
-// with a string that is specific to bad_function_call (see http://wg21.link/LWG2233).
-// This is an ABI break on platforms that sign and authenticate vtable function pointers
-// because it changes the mangling of the virtual function located in the vtable, which
-// changes how it gets signed.
-#  define _LIBCPP_ABI_BAD_FUNCTION_CALL_GOOD_WHAT_MESSAGE
 // Give reverse_iterator<T> one data member of type T, not two.
 // Also, in C++17 and later, don't derive iterator types from std::iterator.
 #  define _LIBCPP_ABI_NO_ITERATOR_BASES

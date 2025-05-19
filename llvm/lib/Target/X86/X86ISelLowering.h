@@ -724,6 +724,10 @@ namespace llvm {
     MCVTSI2P,
     MCVTUI2P,
 
+    // Custom handling for FP_TO_xINT_SAT
+    FP_TO_SINT_SAT,
+    FP_TO_UINT_SAT,
+
     // Vector float to bfloat16.
     // Convert packed single data to packed BF16 data
     CVTNEPS2BF16,
@@ -916,10 +920,6 @@ namespace llvm {
 
     // Load x87 FPU environment from memory.
     FLDENVm,
-
-    // Custom handling for FP_TO_xINT_SAT
-    FP_TO_SINT_SAT,
-    FP_TO_UINT_SAT,
 
     /// This instruction implements FP_TO_SINT with the
     /// integer destination in memory and a FP reg source.  This corresponds
@@ -1337,8 +1337,8 @@ namespace llvm {
                                    unsigned Depth) const override;
 
     bool isTargetCanonicalConstantNode(SDValue Op) const override {
-      // Peek through bitcasts/extracts/inserts to see if we have a broadcast
-      // vector from memory.
+      // Peek through bitcasts/extracts/inserts to see if we have a vector
+      // load/broadcast from memory.
       while (Op.getOpcode() == ISD::BITCAST ||
              Op.getOpcode() == ISD::EXTRACT_SUBVECTOR ||
              (Op.getOpcode() == ISD::INSERT_SUBVECTOR &&
@@ -1346,6 +1346,9 @@ namespace llvm {
         Op = Op.getOperand(Op.getOpcode() == ISD::INSERT_SUBVECTOR ? 1 : 0);
 
       return Op.getOpcode() == X86ISD::VBROADCAST_LOAD ||
+             Op.getOpcode() == X86ISD::SUBV_BROADCAST_LOAD ||
+             (Op.getOpcode() == ISD::LOAD &&
+              getTargetConstantFromLoad(cast<LoadSDNode>(Op))) ||
              TargetLowering::isTargetCanonicalConstantNode(Op);
     }
 

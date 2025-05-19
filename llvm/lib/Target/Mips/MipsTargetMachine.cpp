@@ -60,6 +60,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMipsTarget() {
 
   PassRegistry *PR = PassRegistry::getPassRegistry();
   initializeGlobalISel(*PR);
+  initializeMipsAsmPrinterPass(*PR);
   initializeMipsDelaySlotFillerPass(*PR);
   initializeMipsBranchExpansionPass(*PR);
   initializeMicroMipsSizeReducePass(*PR);
@@ -298,7 +299,7 @@ MipsTargetMachine::getTargetTransformInfo(const Function &F) const {
   }
 
   LLVM_DEBUG(errs() << "Target Transform Info Pass Added\n");
-  return TargetTransformInfo(MipsTTIImpl(this, F));
+  return TargetTransformInfo(std::make_unique<MipsTTIImpl>(this, F));
 }
 
 MachineFunctionInfo *MipsTargetMachine::createMachineFunctionInfo(

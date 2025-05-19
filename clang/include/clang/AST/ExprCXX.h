@@ -41,6 +41,7 @@
 #include "clang/Basic/TypeTraits.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/PointerUnion.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Casting.h"
@@ -2944,7 +2945,7 @@ public:
 
   /// Retrieve the argument types.
   ArrayRef<TypeSourceInfo *> getArgs() const {
-    return llvm::ArrayRef(getTrailingObjects<TypeSourceInfo *>(), getNumArgs());
+    return getTrailingObjects<TypeSourceInfo *>(getNumArgs());
   }
 
   SourceLocation getBeginLoc() const LLVM_READONLY { return Loc; }
@@ -3618,7 +3619,7 @@ public:
                                   ArrayRef<CleanupObject> objects);
 
   ArrayRef<CleanupObject> getObjects() const {
-    return llvm::ArrayRef(getTrailingObjects<CleanupObject>(), getNumObjects());
+    return getTrailingObjects<CleanupObject>(getNumObjects());
   }
 
   unsigned getNumObjects() const { return ExprWithCleanupsBits.NumObjects; }
@@ -4417,7 +4418,7 @@ class SizeOfPackExpr final
     assert((!Length || PartialArgs.empty()) &&
            "have partial args for non-dependent sizeof... expression");
     auto *Args = getTrailingObjects<TemplateArgument>();
-    std::uninitialized_copy(PartialArgs.begin(), PartialArgs.end(), Args);
+    llvm::uninitialized_copy(PartialArgs, Args);
     setDependence(Length ? ExprDependence::None
                          : ExprDependence::ValueInstantiation);
   }
@@ -4522,8 +4523,7 @@ class PackIndexingExpr final
         FullySubstituted(FullySubstituted) {
 
     auto *Exprs = getTrailingObjects<Expr *>();
-    std::uninitialized_copy(SubstitutedExprs.begin(), SubstitutedExprs.end(),
-                            Exprs);
+    llvm::uninitialized_copy(SubstitutedExprs, Exprs);
 
     setDependence(computeDependence(this));
     if (!isInstantiationDependent())
@@ -4547,6 +4547,7 @@ public:
   static PackIndexingExpr *CreateDeserialized(ASTContext &Context,
                                               unsigned NumTransformedExprs);
 
+  // The index expression and all elements of the pack have been substituted.
   bool isFullySubstituted() const { return FullySubstituted; }
 
   /// Determine if the expression was expanded to empty.
@@ -5124,20 +5125,20 @@ public:
 
   void updateDependence() { setDependence(computeDependence(this)); }
 
-  ArrayRef<Expr *> getInitExprs() {
-    return ArrayRef(getTrailingObjects<Expr *>(), NumExprs);
+  MutableArrayRef<Expr *> getInitExprs() {
+    return getTrailingObjects<Expr *>(NumExprs);
   }
 
-  const ArrayRef<Expr *> getInitExprs() const {
-    return ArrayRef(getTrailingObjects<Expr *>(), NumExprs);
+  ArrayRef<Expr *> getInitExprs() const {
+    return getTrailingObjects<Expr *>(NumExprs);
   }
 
   ArrayRef<Expr *> getUserSpecifiedInitExprs() {
-    return ArrayRef(getTrailingObjects<Expr *>(), NumUserSpecifiedExprs);
+    return getTrailingObjects<Expr *>(NumUserSpecifiedExprs);
   }
 
-  const ArrayRef<Expr *> getUserSpecifiedInitExprs() const {
-    return ArrayRef(getTrailingObjects<Expr *>(), NumUserSpecifiedExprs);
+  ArrayRef<Expr *> getUserSpecifiedInitExprs() const {
+    return getTrailingObjects<Expr *>(NumUserSpecifiedExprs);
   }
 
   SourceLocation getBeginLoc() const LLVM_READONLY { return LParenLoc; }

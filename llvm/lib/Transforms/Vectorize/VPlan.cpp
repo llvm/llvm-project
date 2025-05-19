@@ -216,12 +216,12 @@ VPBasicBlock::iterator VPBasicBlock::getFirstNonPhi() {
 
 VPTransformState::VPTransformState(const TargetTransformInfo *TTI,
                                    ElementCount VF, LoopInfo *LI,
-                                   DominatorTree *DT, IRBuilderBase &Builder,
-                                   InnerLoopVectorizer *ILV, VPlan *Plan,
+                                   DominatorTree *DT, AssumptionCache *AC,
+                                   IRBuilderBase &Builder, VPlan *Plan,
                                    Loop *CurrentParentLoop, Type *CanonicalIVTy)
-    : TTI(TTI), VF(VF), CFG(DT), LI(LI), Builder(Builder), ILV(ILV), Plan(Plan),
-      CurrentParentLoop(CurrentParentLoop), LVer(nullptr),
-      TypeAnalysis(CanonicalIVTy), VPDT(*Plan) {}
+    : TTI(TTI), VF(VF), CFG(DT), LI(LI), AC(AC), Builder(Builder), Plan(Plan),
+      CurrentParentLoop(CurrentParentLoop), TypeAnalysis(CanonicalIVTy),
+      VPDT(*Plan) {}
 
 Value *VPTransformState::get(const VPValue *Def, const VPLane &Lane) {
   if (Def->isLiveIn())
@@ -230,7 +230,7 @@ Value *VPTransformState::get(const VPValue *Def, const VPLane &Lane) {
   if (hasScalarValue(Def, Lane))
     return Data.VPV2Scalars[Def][Lane.mapToCacheIndex(VF)];
 
-  if (!Lane.isFirstLane() && vputils::isUniformAfterVectorization(Def) &&
+  if (!Lane.isFirstLane() && vputils::isSingleScalar(Def) &&
       hasScalarValue(Def, VPLane::getFirstLane())) {
     return Data.VPV2Scalars[Def][0];
   }
@@ -303,17 +303,17 @@ Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
     return ScalarValue;
   }
 
-  bool IsUniform = vputils::isUniformAfterVectorization(Def);
+  bool IsSingleScalar = vputils::isSingleScalar(Def);
 
-  VPLane LastLane(IsUniform ? 0 : VF.getKnownMinValue() - 1);
+  VPLane LastLane(IsSingleScalar ? 0 : VF.getKnownMinValue() - 1);
   // Check if there is a scalar value for the selected lane.
   if (!hasScalarValue(Def, LastLane)) {
     // At the moment, VPWidenIntOrFpInductionRecipes, VPScalarIVStepsRecipes and
-    // VPExpandSCEVRecipes can also be uniform.
+    // VPExpandSCEVRecipes can also be a single scalar.
     assert((isa<VPWidenIntOrFpInductionRecipe, VPScalarIVStepsRecipe,
                 VPExpandSCEVRecipe>(Def->getDefiningRecipe())) &&
            "unexpected recipe found to be invariant");
-    IsUniform = true;
+    IsSingleScalar = true;
     LastLane = 0;
   }
 
@@ -334,7 +334,7 @@ Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
   // resulting vectors are stored in State, we will only generate the
   // insertelements once.
   Value *VectorValue = nullptr;
-  if (IsUniform) {
+  if (IsSingleScalar) {
     VectorValue = GetBroadcastInstrs(ScalarValue);
     set(Def, VectorValue);
   } else {
@@ -348,30 +348,6 @@ Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
   }
   Builder.restoreIP(OldIP);
   return VectorValue;
-}
-
-BasicBlock *VPTransformState::CFGState::getPreheaderBBFor(VPRecipeBase *R) {
-  VPRegionBlock *LoopRegion = R->getParent()->getEnclosingLoopRegion();
-  return VPBB2IRBB[LoopRegion->getPreheaderVPBB()];
-}
-
-void VPTransformState::addNewMetadata(Instruction *To,
-                                      const Instruction *Orig) {
-  // If the loop was versioned with memchecks, add the corresponding no-alias
-  // metadata.
-  if (LVer && isa<LoadInst, StoreInst>(Orig))
-    LVer->annotateInstWithNoAlias(To, Orig);
-}
-
-void VPTransformState::addMetadata(Value *To, Instruction *From) {
-  // No source instruction to transfer metadata from?
-  if (!From)
-    return;
-
-  if (Instruction *ToI = dyn_cast<Instruction>(To)) {
-    propagateMetadata(ToI, From);
-    addNewMetadata(ToI, From);
-  }
 }
 
 void VPTransformState::setDebugLocFrom(DebugLoc DL) {
@@ -435,12 +411,16 @@ void VPBasicBlock::connectToPredecessors(VPTransformState &State) {
   // Register NewBB in its loop. In innermost loops its the same for all
   // BB's.
   Loop *ParentLoop = State.CurrentParentLoop;
-  // If this block has a sole successor that is an exit block then it needs
-  // adding to the same parent loop as the exit block.
-  VPBlockBase *SuccVPBB = getSingleSuccessor();
-  if (SuccVPBB && State.Plan->isExitBlock(SuccVPBB))
-    ParentLoop =
-        State.LI->getLoopFor(cast<VPIRBasicBlock>(SuccVPBB)->getIRBasicBlock());
+  // If this block has a sole successor that is an exit block or is an exit
+  // block itself then it needs adding to the same parent loop as the exit
+  // block.
+  VPBlockBase *SuccOrExitVPB = getSingleSuccessor();
+  SuccOrExitVPB = SuccOrExitVPB ? SuccOrExitVPB : this;
+  if (State.Plan->isExitBlock(SuccOrExitVPB)) {
+    ParentLoop = State.LI->getLoopFor(
+        cast<VPIRBasicBlock>(SuccOrExitVPB)->getIRBasicBlock());
+  }
+
   if (ParentLoop && !State.LI->getLoopFor(NewBB))
     ParentLoop->addBasicBlockToLoop(NewBB, *State.LI);
 
@@ -565,7 +545,6 @@ VPBasicBlock *VPBasicBlock::splitAt(iterator SplitAt) {
   assert((SplitAt == end() || SplitAt->getParent() == this) &&
          "can only split at a position in the same block");
 
-  SmallVector<VPBlockBase *, 2> Succs(successors());
   // Create new empty block after the block to split.
   auto *SplitBlock = getPlan()->createVPBasicBlock(getName() + ".split");
   VPBlockUtils::insertBlockAfter(SplitBlock, this);
@@ -799,6 +778,25 @@ InstructionCost VPBasicBlock::cost(ElementCount VF, VPCostContext &Ctx) {
   for (VPRecipeBase &R : Recipes)
     Cost += R.cost(VF, Ctx);
   return Cost;
+}
+
+const VPBasicBlock *VPBasicBlock::getCFGPredecessor(unsigned Idx) const {
+  const VPBlockBase *Pred = nullptr;
+  if (getNumPredecessors() > 0) {
+    Pred = getPredecessors()[Idx];
+  } else {
+    auto *Region = getParent();
+    assert(Region && !Region->isReplicator() && Region->getEntry() == this &&
+           "must be in the entry block of a non-replicate region");
+    assert(Idx < 2 && Region->getNumPredecessors() == 1 &&
+           "loop region has a single predecessor (preheader), its entry block "
+           "has 2 incoming blocks");
+
+    // Idx ==  0 selects the predecessor of the region, Idx == 1 selects the
+    // region itself whose exiting block feeds the phi across the backedge.
+    Pred = Idx == 0 ? Region->getSinglePredecessor() : Region;
+  }
+  return Pred->getExitingBasicBlock();
 }
 
 InstructionCost VPRegionBlock::cost(ElementCount VF, VPCostContext &Ctx) {

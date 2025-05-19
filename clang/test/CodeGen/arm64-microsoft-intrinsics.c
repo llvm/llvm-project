@@ -35,6 +35,62 @@ __int64 test_InterlockedAdd64_constant(__int64 volatile *Addend) {
 // CHECK-MSVC: ret i64 %[[NEWVAL:[0-9]+]]
 // CHECK-LINUX: error: call to undeclared function '_InterlockedAdd64'
 
+void check__dmb(void) {
+  __dmb(0);
+}
+
+// CHECK-MSVC: @llvm.aarch64.dmb(i32 0)
+// CHECK-LINUX: error: call to undeclared function '__dmb'
+
+void check__dsb(void) {
+  __dsb(0);
+}
+
+// CHECK-MSVC: @llvm.aarch64.dsb(i32 0)
+// CHECK-LINUX: error: call to undeclared function '__dsb'
+
+void check__isb(void) {
+  __isb(0);
+}
+
+// CHECK-MSVC: @llvm.aarch64.isb(i32 0)
+// CHECK-LINUX: error: call to undeclared function '__isb'
+
+void check__yield(void) {
+  __yield();
+}
+
+// CHECK-MSVC: @llvm.aarch64.hint(i32 1)
+// CHECK-LINUX: error: call to undeclared function '__yield'
+
+void check__wfe(void) {
+  __wfe();
+}
+
+// CHECK-MSVC: @llvm.aarch64.hint(i32 2)
+// CHECK-LINUX: error: call to undeclared function '__wfe'
+
+void check__wfi(void) {
+  __wfi();
+}
+
+// CHECK-MSVC: @llvm.aarch64.hint(i32 3)
+// CHECK-LINUX: error: call to undeclared function '__wfi'
+
+void check__sev(void) {
+  __sev();
+}
+
+// CHECK-MSVC: @llvm.aarch64.hint(i32 4)
+// CHECK-LINUX: error: call to undeclared function '__sev'
+
+void check__sevl(void) {
+  __sevl();
+}
+
+// CHECK-MSVC: @llvm.aarch64.hint(i32 5)
+// CHECK-LINUX: error: call to undeclared function '__sevl'
+
 void check_ReadWriteBarrier(void) {
   _ReadWriteBarrier();
 }

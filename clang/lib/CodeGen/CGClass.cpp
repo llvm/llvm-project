@@ -2042,6 +2042,8 @@ void CodeGenFunction::EmitCXXAggrConstructorCall(const CXXConstructorDecl *ctor,
   cur->addIncoming(arrayBegin, entryBB);
 
   // Inside the loop body, emit the constructor call on the array element.
+  if (CGM.shouldEmitConvergenceTokens())
+    ConvergenceTokenStack.push_back(emitConvergenceLoopToken(loopBB));
 
   // The alignment of the base, adjusted by the size of a single element,
   // provides a conservative estimate of the alignment of every element.
@@ -2101,6 +2103,9 @@ void CodeGenFunction::EmitCXXAggrConstructorCall(const CXXConstructorDecl *ctor,
   // Patch the earlier check to skip over the loop.
   if (zeroCheckBranch) zeroCheckBranch->setSuccessor(0, contBB);
 
+  if (CGM.shouldEmitConvergenceTokens())
+    ConvergenceTokenStack.pop_back();
+
   EmitBlock(contBB);
 }
 
@@ -2132,8 +2137,8 @@ void CodeGenFunction::EmitCXXConstructorCall(const CXXConstructorDecl *D,
     unsigned TargetThisAS = getContext().getTargetAddressSpace(ThisAS);
     llvm::Type *NewType =
         llvm::PointerType::get(getLLVMContext(), TargetThisAS);
-    ThisPtr = getTargetHooks().performAddrSpaceCast(*this, ThisPtr, ThisAS,
-                                                    SlotAS, NewType);
+    ThisPtr =
+        getTargetHooks().performAddrSpaceCast(*this, ThisPtr, ThisAS, NewType);
   }
 
   // Push the this ptr.
@@ -2779,6 +2784,29 @@ void CodeGenFunction::EmitTypeMetadataCodeForVCall(const CXXRecordDecl *RD,
   }
 }
 
+/// Converts the CFITypeCheckKind into SanitizerKind::SanitizerOrdinal and
+/// llvm::SanitizerStatKind.
+static std::pair<SanitizerKind::SanitizerOrdinal, llvm::SanitizerStatKind>
+SanitizerInfoFromCFICheckKind(CodeGenFunction::CFITypeCheckKind TCK) {
+  switch (TCK) {
+  case CodeGenFunction::CFITCK_VCall:
+    return std::make_pair(SanitizerKind::SO_CFIVCall, llvm::SanStat_CFI_VCall);
+  case CodeGenFunction::CFITCK_NVCall:
+    return std::make_pair(SanitizerKind::SO_CFINVCall,
+                          llvm::SanStat_CFI_NVCall);
+  case CodeGenFunction::CFITCK_DerivedCast:
+    return std::make_pair(SanitizerKind::SO_CFIDerivedCast,
+                          llvm::SanStat_CFI_DerivedCast);
+  case CodeGenFunction::CFITCK_UnrelatedCast:
+    return std::make_pair(SanitizerKind::SO_CFIUnrelatedCast,
+                          llvm::SanStat_CFI_UnrelatedCast);
+  case CodeGenFunction::CFITCK_ICall:
+  case CodeGenFunction::CFITCK_NVMFCall:
+  case CodeGenFunction::CFITCK_VMFCall:
+    llvm_unreachable("unexpected sanitizer kind");
+  }
+}
+
 void CodeGenFunction::EmitVTablePtrCheckForCall(const CXXRecordDecl *RD,
                                                 llvm::Value *VTable,
                                                 CFITypeCheckKind TCK,
@@ -2842,30 +2870,7 @@ void CodeGenFunction::EmitVTablePtrCheck(const CXXRecordDecl *RD,
       !CGM.HasHiddenLTOVisibility(RD))
     return;
 
-  SanitizerKind::SanitizerOrdinal M;
-  llvm::SanitizerStatKind SSK;
-  switch (TCK) {
-  case CFITCK_VCall:
-    M = SanitizerKind::SO_CFIVCall;
-    SSK = llvm::SanStat_CFI_VCall;
-    break;
-  case CFITCK_NVCall:
-    M = SanitizerKind::SO_CFINVCall;
-    SSK = llvm::SanStat_CFI_NVCall;
-    break;
-  case CFITCK_DerivedCast:
-    M = SanitizerKind::SO_CFIDerivedCast;
-    SSK = llvm::SanStat_CFI_DerivedCast;
-    break;
-  case CFITCK_UnrelatedCast:
-    M = SanitizerKind::SO_CFIUnrelatedCast;
-    SSK = llvm::SanStat_CFI_UnrelatedCast;
-    break;
-  case CFITCK_ICall:
-  case CFITCK_NVMFCall:
-  case CFITCK_VMFCall:
-    llvm_unreachable("unexpected sanitizer kind");
-  }
+  auto [M, SSK] = SanitizerInfoFromCFICheckKind(TCK);
 
   std::string TypeName = RD->getQualifiedNameAsString();
   if (getContext().getNoSanitizeList().containsType(
@@ -2895,7 +2900,8 @@ void CodeGenFunction::EmitVTablePtrCheck(const CXXRecordDecl *RD,
   }
 
   if (CGM.getCodeGenOpts().SanitizeTrap.has(M)) {
-    EmitTrapCheck(TypeTest, SanitizerHandler::CFICheckFail);
+    bool NoMerge = !CGM.getCodeGenOpts().SanitizeMergeHandlers.has(M);
+    EmitTrapCheck(TypeTest, SanitizerHandler::CFICheckFail, NoMerge);
     return;
   }
 

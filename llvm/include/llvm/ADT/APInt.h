@@ -1366,11 +1366,10 @@ public:
   /// This function handles case when \p loBit <= \p hiBit.
   void setBits(unsigned loBit, unsigned hiBit) {
     assert(hiBit <= BitWidth && "hiBit out of range");
-    assert(loBit <= BitWidth && "loBit out of range");
     assert(loBit <= hiBit && "loBit greater than hiBit");
     if (loBit == hiBit)
       return;
-    if (loBit < APINT_BITS_PER_WORD && hiBit <= APINT_BITS_PER_WORD) {
+    if (hiBit <= APINT_BITS_PER_WORD) {
       uint64_t mask = WORDTYPE_MAX >> (APINT_BITS_PER_WORD - (hiBit - loBit));
       mask <<= loBit;
       if (isSingleWord())
@@ -1916,8 +1915,10 @@ public:
   ///  FoldingSets.
   void Profile(FoldingSetNodeID &id) const;
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// debug method
-  void dump() const;
+  LLVM_DUMP_METHOD void dump() const;
+#endif
 
   /// Returns whether this instance allocated memory.
   bool needsCleanup() const { return !isSingleWord(); }
@@ -2256,12 +2257,12 @@ inline const APInt &umax(const APInt &A, const APInt &B) {
 }
 
 /// Determine the absolute difference of two APInts considered to be signed.
-inline const APInt abds(const APInt &A, const APInt &B) {
+inline APInt abds(const APInt &A, const APInt &B) {
   return A.sge(B) ? (A - B) : (B - A);
 }
 
 /// Determine the absolute difference of two APInts considered to be unsigned.
-inline const APInt abdu(const APInt &A, const APInt &B) {
+inline APInt abdu(const APInt &A, const APInt &B) {
   return A.uge(B) ? (A - B) : (B - A);
 }
 

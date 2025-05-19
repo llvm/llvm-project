@@ -469,9 +469,6 @@ enabled sub-projects. Nearly all of these variable names begin with
   combination with ``-DLLVM_ENABLE_DOXYGEN_QT_HELP=ON``; otherwise
   it has no effect.
 
-**LLVM_DOXYGEN_SVG**:BOOL
-  Uses .svg files instead of .png files for graphs in the Doxygen output.
-  Defaults to OFF.
 
 .. _llvm_enable_assertions:
 
@@ -592,7 +589,7 @@ enabled sub-projects. Nearly all of these variable names begin with
 
   .. note::
     Some projects listed here can also go in ``LLVM_ENABLE_RUNTIMES``. They
-    should only appear in one of the two lists. If a project is a valid possiblity
+    should only appear in one of the two lists. If a project is a valid possibility
     for both, prefer putting it in ``LLVM_ENABLE_RUNTIMES``.
 
 **LLVM_ENABLE_RTTI**:BOOL

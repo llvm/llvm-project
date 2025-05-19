@@ -132,8 +132,6 @@ struct char_traits<char> {
 
   static _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 const char_type*
   find(const char_type* __s, size_t __n, const char_type& __a) _NOEXCEPT {
-    if (__n == 0)
-      return nullptr;
     return std::__constexpr_memchr(__s, __a, __n);
   }
 
@@ -250,8 +248,6 @@ struct char_traits<wchar_t> : __char_traits_base<wchar_t, wint_t, static_cast<wi
 
   static _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 const char_type*
   find(const char_type* __s, size_t __n, const char_type& __a) _NOEXCEPT {
-    if (__n == 0)
-      return nullptr;
     return std::__constexpr_wmemchr(__s, __a, __n);
   }
 };
@@ -352,7 +348,7 @@ inline _LIBCPP_CONSTEXPR_SINCE_CXX17 size_t char_traits<char32_t>::length(const 
 template <class _CharT, class _SizeT, class _Traits, _SizeT __npos>
 inline _SizeT _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI
 __str_find(const _CharT* __p, _SizeT __sz, _CharT __c, _SizeT __pos) _NOEXCEPT {
-  if (__pos >= __sz)
+  if (__pos > __sz)
     return __npos;
   const _CharT* __r = _Traits::find(__p + __pos, __sz - __pos, __c);
   if (__r == nullptr)

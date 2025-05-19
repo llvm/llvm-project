@@ -489,8 +489,6 @@ ARMSubtarget::PushPopSplitVariation
 ARMSubtarget::getPushPopSplitVariation(const MachineFunction &MF) const {
   const Function &F = MF.getFunction();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  const std::vector<CalleeSavedInfo> CSI =
-      MF.getFrameInfo().getCalleeSavedInfo();
 
   // Thumb1 always splits the pushes at R7, because the Thumb1 push instruction
   // cannot use high registers except for lr.
