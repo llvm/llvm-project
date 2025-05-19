@@ -388,15 +388,8 @@ multiclass VPatVFPMADBinaryV_VX_RM<string intrinsic, string instruction,
   }
 }
 
-def VD4DOT_M1 : LMULInfo<0b000,  8,   VR, VR,   VR,   VR,   VR, "M1">;
-def VD4DOT_M2 : LMULInfo<0b001, 16, VRM2, VRM2, VR,   VR,   VR, "M2">;
-def VD4DOT_M4 : LMULInfo<0b010, 32, VRM4, VRM4, VRM2, VR,   VR, "M4">;
-def VD4DOT_M8 : LMULInfo<0b011, 64, VRM8, VRM8, VRM4, VRM2, VR, "M8">;
-
-defvar MxListVD4DOT = [V_MF2, VD4DOT_M1, VD4DOT_M2, VD4DOT_M4, VD4DOT_M8];
-
 multiclass VPseudoVD4DOT_VV {
-  foreach m = MxListVD4DOT in {
+  foreach m = [V_MF2, V_M1, V_M2, V_M4, V_M8] in {
     defm "" : VPseudoBinaryV_VV<m>,
               SchedBinary<"WriteVIALUV", "ReadVIALUV", "ReadVIALUV", m.MX,
                           forcePassthruRead=true>;
