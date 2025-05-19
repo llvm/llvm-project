@@ -3,7 +3,8 @@
 // RUN: llvm-mc -triple=aarch64 %s -filetype=obj -o %t.o
 // RUN: not ld.lld %t.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR
 
-// ERR: Pauth Data mismatch: file contains both GNU properties and AArch64 build attributes sections with different Pauth data
+// ERR: Pauth TagPlatform mismatch: file contains different values in GNU properties and AArch64 build attributes sections: GNU = 0x00000012345678, AArch64 = 0x00000000000005
+// ERR-NEXT: Pauth TagSchema mismatch: file contains different values in GNU properties and AArch64 build attributes sections: GNU = 0x00000087654321, AArch64 = 0x00000000000005
 // ERR-NEXT: Features Data mismatch: file contains both GNU properties and AArch64 build attributes sections with different And Features data
 
 .aeabi_subsection aeabi_pauthabi, required, uleb128

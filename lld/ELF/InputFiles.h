@@ -245,7 +245,7 @@ public:
   std::array<uint8_t, 16> aarch64PauthAbiCoreInfoStorage;
 };
 
-struct gnuPropertiesInfo {
+struct GnuPropertiesInfo {
   uint32_t andFeatures = 0;
   ArrayRef<uint8_t> aarch64PauthAbiCoreInfo;
 };
