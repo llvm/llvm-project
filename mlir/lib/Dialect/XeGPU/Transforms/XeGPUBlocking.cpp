@@ -33,7 +33,12 @@ using namespace mlir;
 
 namespace {
 
-void resolveUnrealizedConversionCastOp(UnrealizedConversionCastOp castOp) {
+// reslove the unrealized conversion cast ops generated when doing SCF
+// Structural Type Conversion. It will have two formats, N:1 vector
+// cast and 1:N vector cast. vector::insert_strided_slice ops will be
+// used for the first case, and vector::extract_strided_slice ops will be
+// used for the second case.
+static void resolveUnrealizedConversionCastOp(UnrealizedConversionCastOp castOp) {
   ValueRange inputs = castOp.getInputs();
   ValueRange outputs = castOp.getOutputs();
 

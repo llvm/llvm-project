@@ -103,6 +103,8 @@ Value createVectorWithShapeFromValues(OpBuilder &builder, Location loc,
 /// first converted into RankedTensorType, where the layout attribute can be
 /// attached. And then upstream SCF structural type conversion patterns are
 /// applied with the provided converter.
+/// TODO: This is a temporary solution. We should refactor it when context-aware
+/// type conversion is available.
 void doSCFStructuralTypeConversionWithTensorType(Operation *op,
                                                  TypeConverter converter);
 

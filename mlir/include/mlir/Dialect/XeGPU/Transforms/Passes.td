@@ -39,7 +39,7 @@ def XeGPUSubgroupDistribute : Pass<"xegpu-subgroup-distribute"> {
 }
 
 def XeGPUBlocking: Pass<"xegpu-blocking"> {
-  let summary = "Instructionlize XeGPU ops";
+  let summary = "Block XeGPU ops into smaller size.";
   let description = [{
     The pass unrolls XeGPU ops working on large shapes into ops working on small shapes
     (given by the inst_data in the layout attr), such that each of them can be dispatch
