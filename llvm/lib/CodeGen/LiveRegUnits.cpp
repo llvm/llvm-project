@@ -88,7 +88,7 @@ void LiveRegUnits::accumulate(const MachineInstr &MI) {
 static void addBlockLiveIns(LiveRegUnits &LiveUnits,
                             const MachineBasicBlock &MBB) {
   for (const auto &LI : MBB.liveins())
-    LiveUnits.addRegMasked(LI, LaneBitmask::getAll());
+    LiveUnits.addRegMasked(LI);
 }
 
 /// Adds all callee saved registers to \p LiveUnits.

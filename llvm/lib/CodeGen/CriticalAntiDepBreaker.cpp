@@ -67,9 +67,9 @@ void CriticalAntiDepBreaker::StartBlock(MachineBasicBlock *BB) {
   for (const MachineBasicBlock *Succ : BB->successors())
     for (const auto &LI : Succ->liveins()) {
       for (MCRegAliasIterator AI(LI, TRI, true); AI.isValid(); ++AI) {
-        unsigned Reg = (*AI).id();
-        Classes[Reg] = reinterpret_cast<TargetRegisterClass *>(-1);
-        KillIndices[Reg] = BBSize;
+        MCRegister Reg = *AI;
+        Classes[Reg.id()] = reinterpret_cast<TargetRegisterClass *>(-1);
+        KillIndices[Reg.id()] = BBSize;
         DefIndices[Reg] = ~0u;
       }
     }

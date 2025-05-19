@@ -728,12 +728,9 @@ void printMBB(raw_ostream &OS, MFPrintState &State,
   if (!MBB.livein_empty()) {
     const TargetRegisterInfo &TRI = *MRI.getTargetRegisterInfo();
     OS.indent(2) << "liveins: ";
-    bool First = true;
-    for (const Register Reg : MBB.liveins_dbg()) {
-      if (!First)
-        OS << ", ";
-      First = false;
-      OS << printReg(Reg, &TRI);
+    ListSeparator LS;
+    for (const auto &LI : MBB.liveins_dbg()) {
+      OS << LS << printReg(LI, &TRI);
     }
     OS << "\n";
     HasLineAttributes = true;

@@ -427,7 +427,7 @@ void MachineBasicBlock::print(raw_ostream &OS, ModuleSlotTracker &MST,
     OS.indent(2) << "liveins: ";
 
     ListSeparator LS;
-    for (const MCRegister Reg : liveins()) {
+    for (MCRegister Reg : liveins()) {
       OS << LS << printReg(Reg, TRI);
     }
     HasLineAttributes = true;
@@ -656,7 +656,7 @@ bool MachineBasicBlock::isLiveIn(MCRegister Reg, LaneBitmask LaneMask) const {
 Register
 MachineBasicBlock::addLiveIn(MCRegister PhysReg, const TargetRegisterClass *RC) {
   assert(getParent() && "MBB must be inserted in function");
-  assert(PhysReg && "Expected physreg");
+  assert(PhysReg.isPhysical() && "Expected physreg");
   assert(RC && "Register class is required");
   assert((isEHPad() || this == &getParent()->front()) &&
          "Only the entry block and landing pads can have physreg live ins");
