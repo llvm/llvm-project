@@ -178,7 +178,7 @@ void MachineLateInstrsCleanup::removeRedundantDef(MachineInstr *MI) {
 // and the only reg it may use is FrameReg. Typically this is an immediate
 // load or a load-address instruction.
 static bool isCandidate(const MachineInstr *MI, Register &DefedReg,
-                        Register FrameReg) {
+                        Register FrameReg, const TargetRegisterInfo *TRI) {
   DefedReg = MCRegister::NoRegister;
   bool SawStore = true;
   if (!MI->isSafeToMove(SawStore) || MI->isImplicitDef() || MI->isInlineAsm())
@@ -192,11 +192,7 @@ static bool isCandidate(const MachineInstr *MI, Register &DefedReg,
         else if (i != 0 && DefedReg != MCRegister::NoRegister) {
           if (MO.isDead() && MO.isImplicit())
             continue;
-          if (MO.isImplicit() && MI->getParent()
-                                     ->getParent()
-                                     ->getSubtarget()
-                                     .getRegisterInfo()
-                                     ->isSubRegister(MO.getReg(), DefedReg))
+          if (MO.isImplicit() && TRI->regsOverlap(MO.getReg(), DefedReg))
             continue;
           return false;
         } else
@@ -245,7 +241,7 @@ bool MachineLateInstrsCleanup::processBlock(MachineBasicBlock *MBB) {
     }
 
     Register DefedReg;
-    bool IsCandidate = isCandidate(&MI, DefedReg, FrameReg);
+    bool IsCandidate = isCandidate(&MI, DefedReg, FrameReg, TRI);
 
     // Check for an earlier identical and reusable instruction.
     if (IsCandidate && MBBDefs.hasIdentical(DefedReg, &MI)) {
