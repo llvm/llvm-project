@@ -1327,20 +1327,10 @@ class Bcci48Pat<CondCode Cond, QCIBranchInst48_rii Inst, DAGOperand InTyImm>
     : Pat<(riscv_brcc (XLenVT GPRNoX0:$rs1), InTyImm:$rs2, Cond, bb:$imm12),
           (Inst GPRNoX0:$rs1, InTyImm:$rs2, bare_simm13_lsb0:$imm12)>;
 
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0, usesCustomInserter = 1 in {
-  def Select_GPR_Using_CC_Simm5NonZero : Pseudo<(outs GPR:$dst),
-                                                (ins GPR:$lhs, simm5nonzero:$imm5,
-                                                 cond_code:$cc, GPR:$truev, GPR:$falsev), []>;
-  def Select_GPR_Using_CC_Uimm5NonZero : Pseudo<(outs GPR:$dst),
-                                                (ins GPR:$lhs, uimm5nonzero:$imm5,
-                                                 cond_code:$cc, GPR:$truev, GPR:$falsev), []>;
-  def Select_GPR_Using_CC_Simm16NonZero : Pseudo<(outs GPR:$dst),
-                                                 (ins GPR:$lhs, simm16nonzero:$imm16,
-                                                  cond_code:$cc, GPR:$truev, GPR:$falsev), []>;
-  def Select_GPR_Using_CC_Uimm16NonZero : Pseudo<(outs GPR:$dst),
-                                                 (ins GPR:$lhs, uimm16nonzero:$imm16,
-                                                  cond_code:$cc, GPR:$truev, GPR:$falsev), []>;
-}
+defm CC_SImm5NonZero  : SelectCC_GPR_riirr<GPR, simm5nonzero>;
+defm CC_UImm5NonZero  : SelectCC_GPR_riirr<GPR, uimm5nonzero>;
+defm CC_SImm16NonZero : SelectCC_GPR_riirr<GPR, simm16nonzero>;
+defm CC_UImm16NonZero : SelectCC_GPR_riirr<GPR, uimm16nonzero>;
 
 class SelectQCbi<CondCode Cond, DAGOperand InTyImm, Pseudo OpNode >
     : Pat<(riscv_selectcc_frag:$cc (i32 GPR:$lhs), InTyImm:$Constant, Cond,
@@ -1419,19 +1409,19 @@ def : Bcci48Pat<SETGE, QC_E_BGEI, simm16nonzero>;
 def : Bcci48Pat<SETULT, QC_E_BLTUI, uimm16nonzero>;
 def : Bcci48Pat<SETUGE, QC_E_BGEUI, uimm16nonzero>;
 
-def : SelectQCbi<SETEQ, simm5nonzero, Select_GPR_Using_CC_Simm5NonZero>;
-def : SelectQCbi<SETNE, simm5nonzero, Select_GPR_Using_CC_Simm5NonZero>;
-def : SelectQCbi<SETLT, simm5nonzero, Select_GPR_Using_CC_Simm5NonZero>;
-def : SelectQCbi<SETGE, simm5nonzero, Select_GPR_Using_CC_Simm5NonZero>;
-def : SelectQCbi<SETULT, uimm5nonzero, Select_GPR_Using_CC_Uimm5NonZero>;
-def : SelectQCbi<SETUGE, uimm5nonzero, Select_GPR_Using_CC_Uimm5NonZero>;
+def : SelectQCbi<SETEQ, simm5nonzero, Select_GPR_Using_CC_SImm5NonZero>;
+def : SelectQCbi<SETNE, simm5nonzero, Select_GPR_Using_CC_SImm5NonZero>;
+def : SelectQCbi<SETLT, simm5nonzero, Select_GPR_Using_CC_SImm5NonZero>;
+def : SelectQCbi<SETGE, simm5nonzero, Select_GPR_Using_CC_SImm5NonZero>;
+def : SelectQCbi<SETULT, uimm5nonzero, Select_GPR_Using_CC_UImm5NonZero>;
+def : SelectQCbi<SETUGE, uimm5nonzero, Select_GPR_Using_CC_UImm5NonZero>;
 
-def : SelectQCbi<SETEQ, simm16nonzero, Select_GPR_Using_CC_Simm16NonZero>;
-def : SelectQCbi<SETNE, simm16nonzero, Select_GPR_Using_CC_Simm16NonZero>;
-def : SelectQCbi<SETLT, simm16nonzero, Select_GPR_Using_CC_Simm16NonZero>;
-def : SelectQCbi<SETGE, simm16nonzero, Select_GPR_Using_CC_Simm16NonZero>;
-def : SelectQCbi<SETULT, uimm16nonzero, Select_GPR_Using_CC_Uimm16NonZero>;
-def : SelectQCbi<SETUGE, uimm16nonzero, Select_GPR_Using_CC_Uimm16NonZero>;
+def : SelectQCbi<SETEQ, simm16nonzero, Select_GPR_Using_CC_SImm16NonZero>;
+def : SelectQCbi<SETNE, simm16nonzero, Select_GPR_Using_CC_SImm16NonZero>;
+def : SelectQCbi<SETLT, simm16nonzero, Select_GPR_Using_CC_SImm16NonZero>;
+def : SelectQCbi<SETGE, simm16nonzero, Select_GPR_Using_CC_SImm16NonZero>;
+def : SelectQCbi<SETULT, uimm16nonzero, Select_GPR_Using_CC_UImm16NonZero>;
+def : SelectQCbi<SETUGE, uimm16nonzero, Select_GPR_Using_CC_UImm16NonZero>;
 } // let Predicates = [HasVendorXqcibi, IsRV32], AddedComplexity = 2
 
 let Predicates = [HasVendorXqcibm, IsRV32] in {
