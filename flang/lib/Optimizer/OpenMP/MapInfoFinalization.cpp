@@ -262,17 +262,26 @@ class MapInfoFinalizationPass
   /// allowing `to` mappings, and `target update` not allowing both `to` and
   /// `from` simultaneously. We currently try to maintain the `implicit` flag
   /// where necessary, although it does not seem strictly required.
+  ///
+  /// Currently, if it is a has_device_addr clause, we opt to not apply the
+  /// descriptor tag to it as it's used differently to a regular mapping
+  /// and some of the runtime descriptor behaviour at the moment can cause
+  /// issues.
   unsigned long getDescriptorMapType(unsigned long mapTypeFlag,
-                                     mlir::Operation *target) {
+                                     mlir::Operation *target,
+                                     bool IsHasDeviceAddr) {
     using mapFlags = llvm::omp::OpenMPOffloadMappingFlags;
+ 
     if (llvm::isa_and_nonnull<mlir::omp::TargetExitDataOp,
-                              mlir::omp::TargetUpdateOp>(target))
-      return llvm::to_underlying(
-          mapFlags(mapTypeFlag) |
-          llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_DESCRIPTOR);
+                              mlir::omp::TargetUpdateOp>(target)) {
+      mapFlags flags = mapFlags(mapTypeFlag);
+       if (!IsHasDeviceAddr)
+        flags |= mapFlags::OMP_MAP_DESCRIPTOR;
+      return llvm::to_underlying(flags);
+    }
 
     mapFlags flags = mapFlags::OMP_MAP_TO |
-                     (mapFlags(mapTypeFlag) & mapFlags::OMP_MAP_IMPLICIT);
+            (mapFlags(mapTypeFlag) & mapFlags::OMP_MAP_IMPLICIT);
     // Descriptors for objects will always be copied. This is because the
     // descriptor can be rematerialized by the compiler, and so the addres
     // of the descriptor for a given object at one place in the code may
@@ -286,7 +295,8 @@ class MapInfoFinalizationPass
               mapFlags::OMP_MAP_CLOSE)
                  ? mapFlags::OMP_MAP_CLOSE
                  : mapFlags::OMP_MAP_ALWAYS;
-    flags |= mapFlags::OMP_MAP_DESCRIPTOR;
+    if (!IsHasDeviceAddr)
+      flags |= mapFlags::OMP_MAP_DESCRIPTOR;
     return llvm::to_underlying(flags);
   }
 
@@ -381,7 +391,7 @@ class MapInfoFinalizationPass
             mlir::TypeAttr::get(fir::unwrapRefType(descriptor.getType())),
             builder.getIntegerAttr(
                 builder.getIntegerType(64, false),
-                getDescriptorMapType(op.getMapType(), target)),
+                getDescriptorMapType(op.getMapType(), target, IsHasDeviceAddr)),
             op.getMapCaptureTypeAttr(), /*varPtrPtr=*/mlir::Value{}, newMembers,
             newMembersAttr, /*bounds=*/mlir::SmallVector<mlir::Value>{},
             /*mapperId*/ mlir::FlatSymbolRefAttr(), op.getNameAttr(),

@@ -313,6 +313,8 @@ New Compiler Flags
 
 - New option ``-ftime-report-json`` added which outputs the same timing data as ``-ftime-report`` but formatted as JSON.
 
+- New option ``-Wnrvo`` added and disabled by default to warn about missed NRVO opportunites.
+
 Deprecated Compiler Flags
 -------------------------
 
@@ -503,7 +505,7 @@ Improvements to Clang's diagnostics
 
 - An error is now emitted when a ``musttail`` call is made to a function marked with the ``not_tail_called`` attribute. (#GH133509).
 
-- ``-Whigher-precisision-for-complex-divison`` warns when:
+- ``-Whigher-precision-for-complex-divison`` warns when:
 
   -	The divisor is complex.
   -	When the complex division happens in a higher precision type due to arithmetic promotion.
@@ -567,6 +569,10 @@ Improvements to Clang's diagnostics
       s.a = 12; // Previously diagnosed, now silenced
     }
 
+
+- A new ``-Wcharacter-conversion`` warns where comparing or implicitly converting
+  between different Unicode character types (``char8_t``, ``char16_t``, ``char32_t``).
+  This warning only triggers in C++ as these types are aliases in C. (#GH138526)
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -634,11 +640,12 @@ Bug Fixes in This Version
 - Fixed an assertion failure in constant compound literal statements. (#GH139160)
 - Fix crash due to unknown references and pointer implementation and handling of
   base classes. (GH139452)
+- Fixed an assertion failure in serialization of constexpr structs containing unions. (#GH140130)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- The behvaiour of ``__add_pointer`` and ``__remove_pointer`` for Objective-C++'s ``id`` and interfaces has been fixed.
+- The behaviour of ``__add_pointer`` and ``__remove_pointer`` for Objective-C++'s ``id`` and interfaces has been fixed.
 
 - The signature for ``__builtin___clear_cache`` was changed from
   ``void(char *, char *)`` to ``void(void *, void *)`` to match GCC's signature
@@ -713,7 +720,7 @@ Bug Fixes to C++ Support
   not in the last position.
 - Disallow overloading on struct vs class on dependent types, which is IFNDR, as
   this makes the problem diagnosable.
-- Improved preservation of the presence or abscence of typename specifier when
+- Improved preservation of the presence or absence of typename specifier when
   printing types in diagnostics.
 - Clang now correctly parses ``if constexpr`` expressions in immediate function context. (#GH123524)
 - Fixed an assertion failure affecting code that uses C++23 "deducing this". (#GH130272)
@@ -734,6 +741,7 @@ Bug Fixes to C++ Support
   in a ``constexpr`` function. (#GH131432)
 - Fixed an incorrect TreeTransform for calls to ``consteval`` functions if a conversion template is present. (#GH137885)
 - Clang now emits a warning when class template argument deduction for alias templates is used in C++17. (#GH133806)
+- Fix missed initializer instantiation bug for variable templates. (#GH138122)
 - Fix a crash when checking the template template parameters of a dependent lambda appearing in an alias declaration.
   (#GH136432), (#GH137014), (#GH138018)
 - Fixed an assertion when trying to constant-fold various builtins when the argument

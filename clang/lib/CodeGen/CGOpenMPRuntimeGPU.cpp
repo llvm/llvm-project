@@ -1990,7 +1990,6 @@ void CGOpenMPRuntimeGPU::emitReduction(
           CGF.getTarget().getGridValue(),
           C.getLangOpts().OpenMPCUDAReductionBufNum, RTLoc));
   CGF.Builder.restoreIP(AfterIP);
-  return;
 }
 
 const VarDecl *

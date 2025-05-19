@@ -14,6 +14,7 @@
 #include "CheckExprLifetime.h"
 #include "clang/AST/APValue.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/ASTDiagnostic.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/AttrIterator.h"
 #include "clang/AST/CharUnits.h"
@@ -7525,11 +7526,10 @@ bool DecomposePrintfHandler::GetSpecifiers(
   if (H.HadError)
     return false;
 
-  std::stable_sort(
-      Args.begin(), Args.end(),
-      [](const EquatableFormatArgument &A, const EquatableFormatArgument &B) {
-        return A.getPosition() < B.getPosition();
-      });
+  llvm::stable_sort(Args, [](const EquatableFormatArgument &A,
+                             const EquatableFormatArgument &B) {
+    return A.getPosition() < B.getPosition();
+  });
   return true;
 }
 
@@ -9155,9 +9155,7 @@ static bool IsStdFunction(const FunctionDecl *FDecl,
 enum class MathCheck { NaN, Inf };
 static bool IsInfOrNanFunction(StringRef calleeName, MathCheck Check) {
   auto MatchesAny = [&](std::initializer_list<llvm::StringRef> names) {
-    return std::any_of(names.begin(), names.end(), [&](llvm::StringRef name) {
-      return calleeName == name;
-    });
+    return llvm::is_contained(names, calleeName);
   };
 
   switch (Check) {
@@ -11871,6 +11869,49 @@ static void DiagnoseIntInBoolContext(Sema &S, Expr *E) {
   }
 }
 
+static void DiagnoseMixedUnicodeImplicitConversion(Sema &S, const Type *Source,
+                                                   const Type *Target, Expr *E,
+                                                   QualType T,
+                                                   SourceLocation CC) {
+  assert(Source->isUnicodeCharacterType() && Target->isUnicodeCharacterType() &&
+         Source != Target);
+  Expr::EvalResult Result;
+  if (E->EvaluateAsInt(Result, S.getASTContext(), Expr::SE_AllowSideEffects,
+                       S.isConstantEvaluatedContext())) {
+    llvm::APSInt Value(32);
+    Value = Result.Val.getInt();
+    bool IsASCII = Value <= 0x7F;
+    bool IsBMP = Value <= 0xD7FF || (Value >= 0xE000 && Value <= 0xFFFF);
+    bool ConversionPreservesSemantics =
+        IsASCII || (!Source->isChar8Type() && !Target->isChar8Type() && IsBMP);
+
+    if (!ConversionPreservesSemantics) {
+      auto IsSingleCodeUnitCP = [](const QualType &T,
+                                   const llvm::APSInt &Value) {
+        if (T->isChar8Type())
+          return llvm::IsSingleCodeUnitUTF8Codepoint(Value.getExtValue());
+        if (T->isChar16Type())
+          return llvm::IsSingleCodeUnitUTF16Codepoint(Value.getExtValue());
+        assert(T->isChar32Type());
+        return llvm::IsSingleCodeUnitUTF32Codepoint(Value.getExtValue());
+      };
+
+      S.Diag(CC, diag::warn_impcast_unicode_char_type_constant)
+          << E->getType() << T
+          << IsSingleCodeUnitCP(E->getType().getUnqualifiedType(), Value)
+          << FormatUTFCodeUnitAsCodepoint(Value.getExtValue(), E->getType());
+    }
+  } else {
+    bool LosesPrecision = S.getASTContext().getIntWidth(E->getType()) >
+                          S.getASTContext().getIntWidth(T);
+#ifdef FIXME_GTEST_ROCSOLVER
+    DiagnoseImpCast(S, E, T, CC,
+                    LosesPrecision ? diag::warn_impcast_unicode_precision
+                                   : diag::warn_impcast_unicode_char_type);
+#endif
+  }
+}
+
 void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
                                    bool *ICContext, bool IsListInit) {
   if (E->isTypeDependent() || E->isValueDependent()) return;
@@ -12207,6 +12248,11 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
   DiagnoseNullConversion(*this, E, T, CC);
 
   DiscardMisalignedMemberAddress(Target, E);
+
+  if (Source->isUnicodeCharacterType() && Target->isUnicodeCharacterType()) {
+    DiagnoseMixedUnicodeImplicitConversion(*this, Source, Target, E, T, CC);
+    return;
+  }
 
   if (Target->isBooleanType())
     DiagnoseIntInBoolContext(*this, E);
