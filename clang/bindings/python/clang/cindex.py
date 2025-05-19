@@ -2961,7 +2961,6 @@ SPELLING_CACHE = {
 
 class CompletionChunk:
     class Kind:
-
         def __init__(self, name: str):
             self.name = name
 
@@ -3053,7 +3052,6 @@ completionChunkKindMap = {
 
 class CompletionString(ClangObject):
     class Availability:
-
         def __init__(self, name):
             self.name = name
 
@@ -3147,7 +3145,6 @@ class CCRStructure(Structure):
 
 
 class CodeCompletionResults(ClangObject):
-
     def __init__(self, ptr: _Pointer[CCRStructure]):
         assert isinstance(ptr, POINTER(CCRStructure)) and ptr
         self.ptr = self._as_parameter_ = ptr
