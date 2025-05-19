@@ -43,6 +43,33 @@ using namespace clang;
 using namespace CodeGen;
 using namespace llvm;
 
+/// Some builtins do not have library implementation on some targets and
+/// are instead emitted as LLVM IRs by some target builtin emitters.
+/// FIXME: Remove this when library support is added
+static bool shouldEmitBuiltinAsIR(unsigned BuiltinID,
+                                  const Builtin::Context &BI,
+                                  const CodeGenFunction &CGF) {
+  if (!CGF.CGM.getLangOpts().MathErrno &&
+      CGF.CurFPFeatures.getExceptionMode() ==
+          LangOptions::FPExceptionModeKind::FPE_Ignore &&
+      !CGF.CGM.getTargetCodeGenInfo().supportsLibCall()) {
+    switch (BuiltinID) {
+    default:
+      return false;
+    case Builtin::BIlogbf:
+    case Builtin::BI__builtin_logbf:
+    case Builtin::BIlogb:
+    case Builtin::BI__builtin_logb:
+    case Builtin::BIscalbnf:
+    case Builtin::BI__builtin_scalbnf:
+    case Builtin::BIscalbn:
+    case Builtin::BI__builtin_scalbn:
+      return true;
+    }
+  }
+  return false;
+}
+
 static Value *EmitTargetArchBuiltinExpr(CodeGenFunction *CGF,
                                         unsigned BuiltinID, const CallExpr *E,
                                         ReturnValueSlot ReturnValue,
@@ -2622,7 +2649,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   // disabled.
   // Math intrinsics are generated only when math-errno is disabled. Any pragmas
   // or attributes that affect math-errno should prevent or allow math
-  // intrincs to be generated. Intrinsics are generated:
+  // intrinsics to be generated. Intrinsics are generated:
   //   1- In fast math mode, unless math-errno is overriden
   //      via '#pragma float_control(precise, on)', or via an
   //      'attribute__((optnone))'.
@@ -6223,13 +6250,15 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   // If this is an alias for a lib function (e.g. __builtin_sin), emit
   // the call using the normal call path, but using the unmangled
   // version of the function name.
-  if (getContext().BuiltinInfo.isLibFunction(BuiltinID))
+  const auto &BI = getContext().BuiltinInfo;
+  if (!shouldEmitBuiltinAsIR(BuiltinID, BI, *this) &&
+      BI.isLibFunction(BuiltinID))
     return emitLibraryCall(*this, FD, E,
                            CGM.getBuiltinLibFunction(FD, BuiltinID));
 
   // If this is a predefined lib function (e.g. malloc), emit the call
   // using exactly the normal call path.
-  if (getContext().BuiltinInfo.isPredefinedLibFunction(BuiltinID))
+  if (BI.isPredefinedLibFunction(BuiltinID))
     return emitLibraryCall(*this, FD, E, CGM.getRawFunctionPointer(FD));
 
   // Check that a call to a target specific builtin has the correct target
