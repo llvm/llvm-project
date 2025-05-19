@@ -170,11 +170,34 @@ define amdgpu_kernel void @memmove_flat_to_flat_replace_src_with_group(ptr %dest
   ret void
 }
 
+define amdgpu_kernel void @load_to_lds_global_as_flat(ptr addrspace(1) %global.ptr, ptr addrspace(3) %group.ptr) #0 {
+; CHECK-LABEL: define amdgpu_kernel void @load_to_lds_global_as_flat(
+; CHECK-SAME: ptr addrspace(1) [[GLOBAL_PTR:%.*]], ptr addrspace(3) [[GROUP_PTR:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    call void @llvm.amdgcn.load.to.lds.p1(ptr addrspace(1) [[GLOBAL_PTR]], ptr addrspace(3) [[GROUP_PTR]], i32 4, i32 0, i32 0)
+; CHECK-NEXT:    ret void
+;
+  %cast = addrspacecast ptr addrspace(1) %global.ptr to ptr
+  call void @llvm.amdgcn.load.to.lds.p0(ptr %cast, ptr addrspace(3) %group.ptr, i32 4, i32 0, i32 0)
+  ret void
+}
+
+define amdgpu_kernel void @load_to_lds_fat_pointer_as_flat(ptr addrspace(7) %buffer.fat.ptr, ptr addrspace(3) %group.ptr) #0 {
+; CHECK-LABEL: define amdgpu_kernel void @load_to_lds_fat_pointer_as_flat(
+; CHECK-SAME: ptr addrspace(7) [[BUFFER_FAT_PTR:%.*]], ptr addrspace(3) [[GROUP_PTR:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    call void @llvm.amdgcn.load.to.lds.p7(ptr addrspace(7) [[BUFFER_FAT_PTR]], ptr addrspace(3) [[GROUP_PTR]], i32 4, i32 0, i32 0)
+; CHECK-NEXT:    ret void
+;
+  %cast = addrspacecast ptr addrspace(7) %buffer.fat.ptr to ptr
+  call void @llvm.amdgcn.load.to.lds.p0(ptr %cast, ptr addrspace(3) %group.ptr, i32 4, i32 0, i32 0)
+  ret void
+}
+
 declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1) #1
 declare void @llvm.memcpy.p0.p0.i64(ptr nocapture writeonly, ptr nocapture readonly, i64, i1) #1
 declare void @llvm.memcpy.inline.p0.p0.i64(ptr nocapture writeonly, ptr nocapture readonly, i64, i1) #1
 declare void @llvm.memcpy.p0.p3.i32(ptr nocapture writeonly, ptr addrspace(3) nocapture readonly, i32, i1) #1
 declare void @llvm.memmove.p0.p0.i64(ptr nocapture writeonly, ptr nocapture readonly, i64, i1) #1
+declare void @llvm.amdgcn.load.to.lds.p0(ptr nocapture readonly, ptr addrspace(3) nocapture writeonly, i32 immarg, i32 immarg, i32 immarg) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { argmemonly nounwind }
