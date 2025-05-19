@@ -209,7 +209,7 @@ struct MissingFeatures {
   static bool setTargetAttributes() { return false; }
   static bool coverageMapping() { return false; }
   static bool peepholeProtection() { return false; }
-  static bool instrumenation() { return false; }
+  static bool instrumentation() { return false; }
 
   // Missing types
   static bool dataMemberType() { return false; }

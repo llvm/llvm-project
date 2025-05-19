@@ -956,8 +956,8 @@ public:
         mlir::Value rhsCond = cgf.evaluateExprAsBool(e->getRHS());
 
         if (instrumentRegions) {
-          assert(!cir::MissingFeatures::instrumenation());
-          cgf.cgm.errorNYI(e->getExprLoc(), "instrumenation");
+          assert(!cir::MissingFeatures::instrumentation());
+          cgf.cgm.errorNYI(e->getExprLoc(), "instrumentation");
         }
         // ZExt result to int or bool.
         return builder.createZExtOrBitCast(rhsCond.getLoc(), rhsCond, resTy);
@@ -1029,8 +1029,8 @@ public:
         mlir::Value rhsCond = cgf.evaluateExprAsBool(e->getRHS());
 
         if (instrumentRegions) {
-          assert(!cir::MissingFeatures::instrumenation());
-          cgf.cgm.errorNYI(e->getExprLoc(), "instrumenation");
+          assert(!cir::MissingFeatures::instrumentation());
+          cgf.cgm.errorNYI(e->getExprLoc(), "instrumentation");
         }
         // ZExt result to int or bool.
         return builder.createZExtOrBitCast(rhsCond.getLoc(), rhsCond, resTy);
