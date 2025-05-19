@@ -181,6 +181,8 @@ def Tosa_TensorUpto4D : AnyTypeOf<[
 
 def Tosa_Int32TensorUpto4D : AnyTypeOf<[
   Tosa_UnrankedTensor, TosaTensorRankOf<[Tosa_Int32], [0,1,2,3,4]>]>;
+def Tosa_Int32Tensor2D : AnyTypeOf<[
+  Tosa_UnrankedTensor, TosaTensorRankOf<[Tosa_Int32], [2]>]>;
 
 def Tosa_TensorAtLeast1D : AnyTypeOf<[
   Tosa_UnrankedTensor, TosaRankedTensorOf<[Tosa_AnyNumber], [AtLeastRankOne]>], "tosa-conformant tensor of at least rank 1", "::mlir::TensorType">;
