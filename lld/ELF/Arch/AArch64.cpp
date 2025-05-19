@@ -8,10 +8,13 @@
 
 #include "InputFiles.h"
 #include "OutputSections.h"
+#include "Relocations.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
 #include "lld/Common/ErrorHandler.h"
+#include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/Endian.h"
 
@@ -83,6 +86,7 @@ public:
                 uint64_t val) const override;
   RelExpr adjustTlsExpr(RelType type, RelExpr expr) const override;
   void relocateAlloc(InputSectionBase &sec, uint8_t *buf) const override;
+  bool canFoldSection(const SmallVector<Relocation> &relocs) const override;
 
 private:
   void relaxTlsGdToLe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
@@ -973,6 +977,20 @@ void AArch64::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
     }
     relocate(loc, rel, val);
   }
+}
+
+bool AArch64::canFoldSection(const SmallVector<Relocation> &relocs) const {
+  // Section cannot be folded as part of ICF if it contains unpaired relocations
+  // eg: ADR_GOT_PAGE and LD64_GOT_LO12_NC don't point to same symbol.
+  SmallSet<Symbol*, 4> syms;
+  for (const Relocation &reloc : relocs) {
+    if (reloc.type == R_AARCH64_ADR_GOT_PAGE)
+      syms.insert(reloc.sym);
+    else if (reloc.type == R_AARCH64_LD64_GOT_LO12_NC && !syms.contains(reloc.sym))
+      return false;
+  }
+
+  return true;
 }
 
 // AArch64 may use security features in variant PLT sequences. These are:

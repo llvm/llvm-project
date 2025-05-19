@@ -77,9 +77,11 @@
 #include "InputFiles.h"
 #include "LinkerScript.h"
 #include "OutputSections.h"
+#include "Relocations.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
+#include "Target.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Object/ELF.h"
 #include "llvm/Support/Parallel.h"
@@ -239,6 +241,7 @@ template <class ELFT>
 template <class RelTy>
 bool ICF<ELFT>::constantEq(const InputSection *secA, Relocs<RelTy> ra,
                            const InputSection *secB, Relocs<RelTy> rb) {
+  SmallVector<Relocation> relocsA, relocsB;
   if (ra.size() != rb.size())
     return false;
   auto rai = ra.begin(), rae = ra.end(), rbi = rb.begin();
@@ -247,11 +250,21 @@ bool ICF<ELFT>::constantEq(const InputSection *secA, Relocs<RelTy> ra,
         rai->getType(ctx.arg.isMips64EL) != rbi->getType(ctx.arg.isMips64EL))
       return false;
 
-    uint64_t addA = getAddend<ELFT>(*rai);
-    uint64_t addB = getAddend<ELFT>(*rbi);
+    int64_t addA = getAddend<ELFT>(*rai);
+    int64_t addB = getAddend<ELFT>(*rbi);
 
     Symbol &sa = secA->file->getRelocTargetSym(*rai);
     Symbol &sb = secB->file->getRelocTargetSym(*rbi);
+
+    // We only need relocation type and relocation target symbol. Offset is
+    // not used (as of now). So we don't bother populating one.
+    relocsA.push_back(
+        {ctx.target->getRelExpr(rai->getType(ctx.arg.isMips64EL), sa, 0),
+         rai->getType(ctx.arg.isMips64EL), 0, addA, &sa});
+    relocsB.push_back(
+        {ctx.target->getRelExpr(rbi->getType(ctx.arg.isMips64EL), sb, 0),
+         rbi->getType(ctx.arg.isMips64EL), 0, addB, &sb});
+
     if (&sa == &sb) {
       if (addA == addB)
         continue;
@@ -307,6 +320,10 @@ bool ICF<ELFT>::constantEq(const InputSection *secA, Relocs<RelTy> ra,
     if (offsetA != offsetB)
       return false;
   }
+
+  // Target-specific section-folding logic based on section's relocation list
+  if (!ctx.target->canFoldSection(relocsA) || !ctx.target->canFoldSection(relocsB))
+    return false;
 
   return true;
 }
