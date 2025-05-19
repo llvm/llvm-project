@@ -157,9 +157,9 @@ std::basic_stacktrace<A> test2(A& alloc) {
     Returns: A basic_stacktrace object with frames_ storing the stacktrace of the current evaluation
     in the current thread of execution, or an empty basic_stacktrace object if the initialization of
     frames_ failed. alloc is passed to the constructor of the frames_ object.
-    [Note 1: If the stacktrace was successfully obtained, then frames_.front() is the stacktrace_entry
+    [Note 1: If the stacktrace was successfully obtained, then frames_.front() is the stacktrace_entry
     representing approximately the current evaluation, and frames_.back() is the stacktrace_entry
-    representing approximately the initial function of the current thread of execution. — end note]
+    representing approximately the initial function of the current thread of execution. - end note]
   */
 _LIBCPP_NO_TAIL_CALLS _LIBCPP_NOINLINE void test_current() {
   test_alloc<std::stacktrace_entry> alloc;
@@ -196,7 +196,7 @@ _LIBCPP_NO_TAIL_CALLS _LIBCPP_NOINLINE void test_current() {
   [2]
   static basic_stacktrace current(size_type skip,
                               const allocator_type& alloc = allocator_type()) noexcept;
-  Let t be a stacktrace as-if obtained via basic_stacktrace​::​current(alloc). Let n be t.size().
+  Let t be a stacktrace as-if obtained via basic_stacktrace::current(alloc). Let n be t.size().
   Returns: A basic_stacktrace object where frames_ is direct-non-list-initialized from arguments
   t.begin() + min(n, skip), t.end(), and alloc, or an empty basic_stacktrace object if the
   initialization of frames_ failed.
@@ -219,7 +219,7 @@ _LIBCPP_NO_TAIL_CALLS _LIBCPP_NOINLINE void test_current_with_skip() {
   [3]
   static basic_stacktrace current(size_type skip, size_type max_depth,
                               const allocator_type& alloc = allocator_type()) noexcept;
-  Let t be a stacktrace as-if obtained via basic_stacktrace​::​current(alloc). Let n be t.size().
+  Let t be a stacktrace as-if obtained via basic_stacktrace::current(alloc). Let n be t.size().
   Preconditions: skip <= skip + max_depth is true.
   Returns: A basic_stacktrace object where frames_ is direct-non-list-initialized from arguments
   t.begin() + min(n, skip), t.begin() + min(n, skip + max_depth), and alloc, or an empty
