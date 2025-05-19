@@ -20,6 +20,7 @@ define void @forward_i128_offset_difference(ptr %this, i128 %loop.limit) {
 ;
 entry:
   br label %loop
+
 loop:
   %iv = phi i128 [ 0, %entry ], [ %iv.next, %loop ]
   %iv.mul.8 = mul i128 %iv, 8
@@ -31,6 +32,7 @@ loop:
   %iv.next = add nuw nsw i128 %iv, 1
   %exit.cond = icmp ult i128 %iv.next, %loop.limit
   br i1 %exit.cond, label %loop, label %exit
+
 exit:
   ret void
 }
