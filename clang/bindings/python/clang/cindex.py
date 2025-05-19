@@ -395,11 +395,11 @@ class SourceRange(Structure):
         return conf.lib.clang_getRangeEnd(self)  # type: ignore [no-any-return]
 
     def __eq__(self, other):
-        return isinstance(other, SourceRange) and conf.lib.clang_equalRanges(self, other)
-
         return isinstance(other, SourceRange) and conf.lib.clang_equalRanges(
             self, other
         )
+
+    def __ne__(self, other):
         return not self.__eq__(other)
 
     def __contains__(self, other):
