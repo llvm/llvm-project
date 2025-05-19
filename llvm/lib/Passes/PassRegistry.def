@@ -474,6 +474,8 @@ FUNCTION_PASS("sccp", SCCPPass())
 FUNCTION_PASS("select-optimize", SelectOptimizePass(TM))
 FUNCTION_PASS("separate-const-offset-from-gep",
               SeparateConstOffsetFromGEPPass())
+FUNCTION_PASS("sink-gep-const-offset",
+              SinkGEPConstOffsetPass())
 FUNCTION_PASS("sink", SinkingPass())
 FUNCTION_PASS("sjlj-eh-prepare", SjLjEHPreparePass(TM))
 FUNCTION_PASS("slp-vectorizer", SLPVectorizerPass())
