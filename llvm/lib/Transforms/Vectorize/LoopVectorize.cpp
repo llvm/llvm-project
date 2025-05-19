@@ -8071,7 +8071,7 @@ VPRecipeBuilder::tryToWidenHistogram(const HistogramInfo *HI,
   return new VPHistogramRecipe(Opcode, HGramOps, HI->Store->getDebugLoc());
 }
 
-VPReplicateRecipe *
+VPSingleDefRecipe *
 VPRecipeBuilder::handleReplication(Instruction *I, ArrayRef<VPValue *> Operands,
                                    VFRange &Range) {
   bool IsUniform = LoopVectorizationPlanner::getDecisionAndClampRange(
@@ -8129,6 +8129,13 @@ VPRecipeBuilder::handleReplication(Instruction *I, ArrayRef<VPValue *> Operands,
   assert((Range.Start.isScalar() || !IsUniform || !IsPredicated ||
           (Range.Start.isScalable() && isa<IntrinsicInst>(I))) &&
          "Should not predicate a uniform recipe");
+  if (IsUniform && Instruction::isCast(I->getOpcode())) {
+    auto *Recipe = new VPInstructionWithType(I->getOpcode(), Operands,
+                                             I->getType(), VPIRFlags(*I),
+                                             I->getDebugLoc(), I->getName());
+    Recipe->setUnderlyingValue(I);
+    return Recipe;
+  }
   auto *Recipe = new VPReplicateRecipe(I, Operands, IsUniform, BlockInMask,
                                        VPIRMetadata(*I, LVer));
   return Recipe;

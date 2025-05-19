@@ -890,6 +890,9 @@ class VPInstruction : public VPRecipeWithIRFlags,
                       public VPUnrollPartAccessor<1> {
   friend class VPlanSlp;
 
+  /// True if the VPInstruction produces a single scalar value.
+  bool IsSingleScalar;
+
 public:
   /// VPlan opcodes, extending LLVM IR with idiomatics instructions.
   enum {
@@ -980,7 +983,7 @@ public:
 
   VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands,
                 const VPIRFlags &Flags, DebugLoc DL = {},
-                const Twine &Name = "");
+                const Twine &Name = "", bool IsSingleScalar = false);
 
   VP_CLASSOF_IMPL(VPDef::VPInstructionSC)
 
@@ -1068,7 +1071,8 @@ public:
   VPInstructionWithType(unsigned Opcode, ArrayRef<VPValue *> Operands,
                         Type *ResultTy, const VPIRFlags &Flags, DebugLoc DL,
                         const Twine &Name = "")
-      : VPInstruction(Opcode, Operands, Flags, DL, Name), ResultTy(ResultTy) {}
+      : VPInstruction(Opcode, Operands, Flags, DL, Name, true),
+        ResultTy(ResultTy) {}
 
   static inline bool classof(const VPRecipeBase *R) {
     // VPInstructionWithType are VPInstructions with specific opcodes requiring
@@ -1104,10 +1108,7 @@ public:
 
   /// Return the cost of this VPInstruction.
   InstructionCost computeCost(ElementCount VF,
-                              VPCostContext &Ctx) const override {
-    // TODO: Compute accurate cost after retiring the legacy cost model.
-    return 0;
-  }
+                              VPCostContext &Ctx) const override;
 
   Type *getResultType() const { return ResultTy; }
 
