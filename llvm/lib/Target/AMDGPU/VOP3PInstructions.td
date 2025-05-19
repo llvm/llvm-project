@@ -539,7 +539,6 @@ def VOP3P_DOTF8_Profile : VOP3P_Profile<VOPProfile <[f32, i32, i32, f32]>,
 multiclass VOP3PDOTF8Inst <string OpName, SDPatternOperator intrinsic_node> {
   defm NAME : VOP3PInst<OpName, VOP3P_DOTF8_Profile, null_frag, 1>;
 
-  let SubtargetPredicate = isGFX12Plus in
   def : GCNPat <(intrinsic_node i32:$src0, i32:$src1,
                                 (VOP3Mods f32:$src2, i32:$src2_modifiers)),
                 (!cast<Instruction>(NAME) i32:$src0, i32:$src1,
@@ -1856,6 +1855,14 @@ multiclass VOP3P_Realtriple<GFXGen Gen, bits<8> op, string backing_ps_name = NAM
       VOP3P_Real_dpp<Gen, op, backing_ps_name, asmName>,
       VOP3P_Real_dpp8<Gen, op, backing_ps_name, asmName>;
 
+multiclass VOP3P_Realtriple_gfx11_gfx12<bits<8> op>
+  : VOP3P_Realtriple<GFX11Gen, op>, VOP3P_Realtriple<GFX12Gen, op>;
+
+defm V_DOT4_F32_FP8_BF8 : VOP3P_Realtriple_gfx11_gfx12<0x24>;
+defm V_DOT4_F32_BF8_FP8 : VOP3P_Realtriple_gfx11_gfx12<0x25>;
+defm V_DOT4_F32_FP8_FP8 : VOP3P_Realtriple_gfx11_gfx12<0x26>;
+defm V_DOT4_F32_BF8_BF8 : VOP3P_Realtriple_gfx11_gfx12<0x27>;
+
 //===----------------------------------------------------------------------===//
 // GFX12
 //===----------------------------------------------------------------------===//
@@ -1872,11 +1879,6 @@ defm V_PK_MAX_NUM_F16 : VOP3P_Real_with_name_gfx12<0x1c, "V_PK_MAX_F16", "v_pk_m
 
 defm V_PK_MINIMUM_F16 : VOP3P_Real_gfx12<0x1d>;
 defm V_PK_MAXIMUM_F16 : VOP3P_Real_gfx12<0x1e>;
-
-defm V_DOT4_F32_FP8_BF8 : VOP3P_Realtriple<GFX12Gen, 0x24>;
-defm V_DOT4_F32_BF8_FP8 : VOP3P_Realtriple<GFX12Gen, 0x25>;
-defm V_DOT4_F32_FP8_FP8 : VOP3P_Realtriple<GFX12Gen, 0x26>;
-defm V_DOT4_F32_BF8_BF8 : VOP3P_Realtriple<GFX12Gen, 0x27>;
 
 //===----------------------------------------------------------------------===//
 // GFX11
