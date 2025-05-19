@@ -76,6 +76,8 @@
 #include <utility>
 #include <vector>
 
+#include<iostream>
+
 #define DEBUG_TYPE "instcombine"
 #include "llvm/Transforms/Utils/InstructionWorklist.h"
 
@@ -1171,6 +1173,84 @@ static Instruction *moveAddAfterMinMax(IntrinsicInst *II,
   return IsSigned ? BinaryOperator::CreateNSWAdd(NewMinMax, Add->getOperand(1))
                   : BinaryOperator::CreateNUWAdd(NewMinMax, Add->getOperand(1));
 }
+
+//Try canonicalize min/max(x << shamt, c<<shamt) into max(x, c) << shamt
+static Instruction *moveShiftAfterMinMax(IntrinsicInst *II, InstCombiner::BuilderTy &Builder) {
+  Intrinsic::ID MinMaxID = II->getIntrinsicID();
+  assert((MinMaxID == Intrinsic::smax || MinMaxID == Intrinsic::smin ||
+    MinMaxID == Intrinsic::umax || MinMaxID == Intrinsic::umin) &&
+   "Expected a min or max intrinsic");
+  
+  Value *Op0 = II->getArgOperand(0), *Op1 = II->getArgOperand(1);
+  Value *InnerMax;
+  const APInt *C;
+  if (!match(Op0, m_OneUse(m_BinOp(m_Value(InnerMax), m_APInt(C)))) || 
+      !match(Op1, m_APInt(C)))
+      return nullptr;
+  
+  auto* BinOpInst = cast<BinaryOperator>(Op0);
+  Instruction::BinaryOps BinOp = BinOpInst->getOpcode();
+  Value *X;
+  InnerMax = BinOpInst->getOperand(0);
+  // std::cout<< InnerMax->dump() <<std::endl;
+  if(!match(InnerMax,m_OneUse(m_Intrinsic<Intrinsic::umax>(m_Value(X),m_APInt(C))))){
+  if(!match(InnerMax,m_OneUse(m_Intrinsic<Intrinsic::smax>(m_Value(X),m_APInt(C))))){
+  if(!match(InnerMax,m_OneUse(m_Intrinsic<Intrinsic::umin>(m_Value(X),m_APInt(C))))){
+  if(!match(InnerMax,m_OneUse(m_Intrinsic<Intrinsic::smin>(m_Value(X),m_APInt(C))))){
+     return nullptr;
+  }}}}
+  
+  auto *InnerMaxInst = cast<IntrinsicInst>(InnerMax);
+
+  bool IsSigned = MinMaxID == Intrinsic::smax || MinMaxID == Intrinsic::smin;
+  if((IsSigned && !BinOpInst->hasNoSignedWrap()) ||
+     (!IsSigned && !BinOpInst->hasNoUnsignedWrap())) 
+     return nullptr;
+
+  // Check if BinOp is a left shift
+  if (BinOp != Instruction::Shl) {
+    return nullptr;
+  }
+
+  APInt C2=llvm::dyn_cast<llvm::ConstantInt>(BinOpInst->getOperand(1))->getValue() ;
+  APInt C3=llvm::dyn_cast<llvm::ConstantInt>(II->getArgOperand(1))->getValue();
+  APInt C1=llvm::dyn_cast<llvm::ConstantInt>(InnerMaxInst->getOperand(1))->getValue();
+
+  // Compute C1 * 2^C2
+  APInt Two = APInt(C2.getBitWidth(), 2);
+  APInt Pow2C2 = Two.shl(C2); // 2^C2
+  APInt C1TimesPow2C2 = C1 * Pow2C2; // C1 * 2^C2
+
+  // Check C3 >= C1 * 2^C2
+  if (C3.ult(C1TimesPow2C2)) {
+    return nullptr;
+  }
+
+  //Create new x binop c2
+  Value *NewBinOp = Builder.CreateBinOp(BinOp, InnerMaxInst->getOperand(0), BinOpInst->getOperand(1) );
+  
+  //Create new min/max intrinsic with new binop and c3
+  
+    if(IsSigned){
+      cast<Instruction>(NewBinOp) -> setHasNoSignedWrap(true);
+      cast<Instruction>(NewBinOp) -> setHasNoUnsignedWrap(false);
+    }else{
+      cast<Instruction>(NewBinOp) -> setHasNoUnsignedWrap(true);
+      cast<Instruction>(NewBinOp) -> setHasNoSignedWrap(false);
+    }
+  
+
+  // Get the intrinsic function for MinMaxID
+  Type *Ty = II->getType();
+  Function *MinMaxFn = Intrinsic::getDeclaration(II->getModule(), MinMaxID, {Ty});
+
+  // Create new min/max intrinsic: MinMaxID(NewBinOp, C3) (not inserted)
+  Value *Args[] = {NewBinOp, Op1};
+  Instruction *NewMax = CallInst::Create(MinMaxFn, Args, "", nullptr);
+
+  return NewMax;
+}
+
 /// Match a sadd_sat or ssub_sat which is using min/max to clamp the value.
 Instruction *InstCombinerImpl::matchSAddSubSat(IntrinsicInst &MinMax1) {
   Type *Ty = MinMax1.getType();
@@ -2034,6 +2114,11 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
     if (Instruction *I = moveAddAfterMinMax(II, Builder))
       return I;
+
+    // minmax(x << shamt , c << shamt) -> minmax(x, c) << shamt
+    if (Instruction *I = moveShiftAfterMinMax(II, Builder))  
+      return I;
+
 
     // minmax (X & NegPow2C, Y & NegPow2C) --> minmax(X, Y) & NegPow2C
     const APInt *RHSC;
