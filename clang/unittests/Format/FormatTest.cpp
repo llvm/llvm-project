@@ -15093,6 +15093,13 @@ TEST_F(FormatTest, PullInlineFunctionDefinitionsIntoSingleLine) {
                "};",
                MergeInlineOnly);
 
+  MergeInlineOnly.AlignEscapedNewlines = FormatStyle::ENAS_Left;
+  verifyFormat("#define Foo                \\\n"
+               "  struct S {               \\\n"
+               "    void foo() { return; } \\\n"
+               "  }",
+               MergeInlineOnly);
+
   // Also verify behavior when BraceWrapping.AfterFunction = true
   MergeInlineOnly.BreakBeforeBraces = FormatStyle::BS_Custom;
   MergeInlineOnly.BraceWrapping.AfterFunction = true;
