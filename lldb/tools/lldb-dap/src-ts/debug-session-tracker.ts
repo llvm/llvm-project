@@ -52,6 +52,7 @@ export class DebugSessionTracker
   createDebugAdapterTracker(
     session: vscode.DebugSession,
   ): vscode.ProviderResult<vscode.DebugAdapterTracker> {
+    this.showModulesTreeView(false);
     return {
       onDidSendMessage: (message) => this.onDidSendMessage(session, message),
       onExit: () => this.onExit(session),
@@ -71,6 +72,14 @@ export class DebugSessionTracker
   private onExit(session: vscode.DebugSession) {
     this.modules.delete(session);
     this.modulesChanged.fire();
+  }
+
+  private showModulesTreeView(showModules: boolean) {
+    vscode.commands.executeCommand(
+      "setContext",
+      "lldb-dap.showModules",
+      showModules,
+    );
   }
 
   private onDidSendMessage(
@@ -102,6 +111,8 @@ export class DebugSessionTracker
           console.error("unexpected module event reason");
           break;
       }
+
+      this.showModulesTreeView(modules.length > 0);
       this.modules.set(session, modules);
       this.modulesChanged.fire();
     }
