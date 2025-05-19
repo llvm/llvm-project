@@ -50,19 +50,25 @@ struct CreatorOpShardingInterface
                         IRMapping &spmdizationMap,
                         SymbolTableCollection &symbolTable,
                         OpBuilder &builder) const {
-    auto mesh =
-        mesh::getMesh(op, resultShardings[0].getMeshAttr(), symbolTable);
-    auto shardType = cast<ShapedType>(
-        mesh::shardType(op->getResult(0).getType(), mesh, resultShardings[0]));
+    assert(resultShardings.size() == 1);
+    auto resType = cast<RankedTensorType>(op->getResult(0).getType());
+    mlir::mesh::MeshOp mesh;
+    ShapedType shardType;
+    if (resType.getRank() > 0) {
+      mesh = mesh::getMesh(op, resultShardings[0].getMeshAttr(), symbolTable);
+      shardType =
+          cast<ShapedType>(mesh::shardType(resType, mesh, resultShardings[0]));
+    } else {
+      shardType = resType;
+    }
     Operation *newOp = nullptr;
     // if the sharding introduces a new dynamic dimension, we take it from
     // the dynamic sharding info. For now bail out if it's not
     // provided.
-    assert(resultShardings.size() == 1);
     if (!shardType.hasStaticShape()) {
       assert(op->getResult(0).hasOneUse());
       SmallVector<Value> newOperands;
-      auto oldType = cast<ShapedType>(op->getResult(0).getType());
+      auto oldType = cast<ShapedType>(resType);
       assert(oldType.getRank() == shardType.getRank());
       int currOldOprndNum = -1;
       mesh::ShardShapeOp shapeForDevice;

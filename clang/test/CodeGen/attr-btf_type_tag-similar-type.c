@@ -1,8 +1,21 @@
 // RUN: %clang_cc1 -triple %itanium_abi_triple -debug-info-kind=limited -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple %itanium_abi_triple -DDOUBLE_BRACKET_ATTRS=1 -debug-info-kind=limited -emit-llvm -o - %s | FileCheck %s
+
+#if DOUBLE_BRACKET_ATTRS
+#define __tag1 [[clang::btf_type_tag("tag1")]]
+#define __tag2 [[clang::btf_type_tag("tag2")]]
+#define __tag3 [[clang::btf_type_tag("tag3")]]
+#define __tag4 [[clang::btf_type_tag("tag4")]]
+#else
+#define __tag1 __attribute__((btf_type_tag("tag1")))
+#define __tag2 __attribute__((btf_type_tag("tag2")))
+#define __tag3 __attribute__((btf_type_tag("tag3")))
+#define __tag4 __attribute__((btf_type_tag("tag4")))
+#endif
 
 struct map_value {
-        int __attribute__((btf_type_tag("tag1"))) __attribute__((btf_type_tag("tag3"))) *a;
-        int __attribute__((btf_type_tag("tag2"))) __attribute__((btf_type_tag("tag4"))) *b;
+        int __tag1 __tag3 *a;
+        int __tag2 __tag4 *b;
 };
 
 struct map_value *func(void);

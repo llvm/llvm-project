@@ -16,6 +16,9 @@ class F<string name, string help>: Flag<["--"], name>, HelpText<help>;
 def grp_mach_o : OptionGroup<"kind">,
                  HelpText<"llvm-symbolizer Mach-O Specific Options">;
 
+def grp_gsym : OptionGroup<"kind">,
+               HelpText<"llvm-symbolizer GSYM Related Options">;
+
 def addresses : F<"addresses", "Show address before line information">;
 defm adjust_vma
     : Eq<"adjust-vma", "Add specified offset to object file addresses">,
@@ -31,9 +34,11 @@ defm default_arch
     : Eq<"default-arch", "Default architecture (for multi-arch objects)">,
       Group<grp_mach_o>;
 defm demangle : B<"demangle", "Demangle function names", "Don't demangle function names">;
+def disable_gsym : F<"disable-gsym", "Don't consider using GSYM files for symbolication">, Group<grp_gsym>;
 def filter_markup : Flag<["--"], "filter-markup">, HelpText<"Filter symbolizer markup from stdin.">;
 def functions : F<"functions", "Print function name for a given address">;
 def functions_EQ : Joined<["--"], "functions=">, HelpText<"Print function name for a given address">, Values<"none,short,linkage">;
+defm gsym_file_directory : Eq<"gsym-file-directory", "Path to directory where to look for GSYM files">, MetaVarName<"<dir>">, Group<grp_gsym>;
 def help : F<"help", "Display this help">;
 defm dwp : Eq<"dwp", "Path to DWP file to be use for any split CUs">, MetaVarName<"<file>">;
 defm dsym_hint

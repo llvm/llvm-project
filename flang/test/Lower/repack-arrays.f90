@@ -1,7 +1,7 @@
-! RUN: bbc -emit-hlfir -frepack-arrays -fstack-arrays -frepack-arrays-continuity-whole %s -o - -I nowhere | FileCheck --check-prefixes=ALL,STACK,WHOLE %s
-! RUN: bbc -emit-hlfir -frepack-arrays -fstack-arrays=false -frepack-arrays-continuity-whole %s -o - -I nowhere | FileCheck --check-prefixes=ALL,HEAP,WHOLE %s
-! RUN: bbc -emit-hlfir -frepack-arrays -fstack-arrays -frepack-arrays-continuity-whole=false %s -o - -I nowhere | FileCheck --check-prefixes=ALL,STACK,INNER %s
-! RUN: bbc -emit-hlfir -frepack-arrays -fstack-arrays=false -frepack-arrays-continuity-whole=false %s -o - -I nowhere | FileCheck --check-prefixes=ALL,HEAP,INNER %s
+! RUN: bbc -emit-hlfir -frepack-arrays -fstack-repack-arrays -frepack-arrays-continuity-whole %s -o - -I nowhere | FileCheck --check-prefixes=ALL,STACK,WHOLE %s
+! RUN: bbc -emit-hlfir -frepack-arrays -fstack-repack-arrays=false -frepack-arrays-continuity-whole %s -o - -I nowhere | FileCheck --check-prefixes=ALL,HEAP,WHOLE %s
+! RUN: bbc -emit-hlfir -frepack-arrays -fstack-repack-arrays -frepack-arrays-continuity-whole=false %s -o - -I nowhere | FileCheck --check-prefixes=ALL,STACK,INNER %s
+! RUN: bbc -emit-hlfir -frepack-arrays -fstack-repack-arrays=false -frepack-arrays-continuity-whole=false %s -o - -I nowhere | FileCheck --check-prefixes=ALL,HEAP,INNER %s
 
 ! ALL-LABEL:   func.func @_QPtest1(
 ! ALL-SAME:                        %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x"}) {

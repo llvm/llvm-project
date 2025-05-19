@@ -71,8 +71,6 @@ bool CSKYMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
                                            const MCAssembler *Asm) const {
   if (!getSubExpr()->evaluateAsRelocatable(Res, Asm))
     return false;
-
-  Res =
-      MCValue::get(Res.getSymA(), Res.getSymB(), Res.getConstant(), specifier);
-  return !Res.getSymB();
+  Res.setSpecifier(specifier);
+  return !Res.getSubSym();
 }

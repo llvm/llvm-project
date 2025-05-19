@@ -325,7 +325,7 @@ define i64 @andnofff(i64 %x) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    lui a2, 1044480
 ; RV32-NEXT:    and a1, a1, a2
-; RV32-NEXT:    andi a0, a0, 255
+; RV32-NEXT:    zext.b a0, a0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: andnofff:

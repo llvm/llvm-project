@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Hexagon.h"
 #include "HexagonInstrInfo.h"
 #include "HexagonRegisterInfo.h"
 #include "HexagonSubtarget.h"
@@ -43,13 +44,6 @@
 #define DEBUG_TYPE "hsdr"
 
 using namespace llvm;
-
-namespace llvm {
-
-  FunctionPass *createHexagonSplitDoubleRegs();
-  void initializeHexagonSplitDoubleRegsPass(PassRegistry&);
-
-} // end namespace llvm
 
 static cl::opt<int> MaxHSDR("max-hsdr", cl::Hidden, cl::init(-1),
     cl::desc("Maximum number of split partitions"));

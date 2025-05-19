@@ -387,7 +387,7 @@ struct ChainEdge {
   void appendJump(JumpT *Jump) { Jumps.push_back(Jump); }
 
   void moveJumps(ChainEdge *Other) {
-    Jumps.insert(Jumps.end(), Other->Jumps.begin(), Other->Jumps.end());
+    llvm::append_range(Jumps, Other->Jumps);
     Other->Jumps.clear();
     Other->Jumps.shrink_to_fit();
   }
@@ -986,16 +986,15 @@ private:
     }
 
     // Sorting chains by density in the decreasing order.
-    std::sort(SortedChains.begin(), SortedChains.end(),
-              [&](const ChainT *L, const ChainT *R) {
-                // Place the entry point at the beginning of the order.
-                if (L->isEntry() != R->isEntry())
-                  return L->isEntry();
+    llvm::sort(SortedChains, [&](const ChainT *L, const ChainT *R) {
+      // Place the entry point at the beginning of the order.
+      if (L->isEntry() != R->isEntry())
+        return L->isEntry();
 
-                // Compare by density and break ties by chain identifiers.
-                return std::make_tuple(-L->density(), L->Id) <
-                       std::make_tuple(-R->density(), R->Id);
-              });
+      // Compare by density and break ties by chain identifiers.
+      return std::make_tuple(-L->density(), L->Id) <
+             std::make_tuple(-R->density(), R->Id);
+    });
 
     // Collect the nodes in the order specified by their chains.
     std::vector<uint64_t> Order;
@@ -1355,14 +1354,12 @@ private:
     }
 
     // Sort chains by density in the decreasing order.
-    std::sort(SortedChains.begin(), SortedChains.end(),
-              [&](const ChainT *L, const ChainT *R) {
-                const double DL = ChainDensity[L];
-                const double DR = ChainDensity[R];
-                // Compare by density and break ties by chain identifiers.
-                return std::make_tuple(-DL, L->Id) <
-                       std::make_tuple(-DR, R->Id);
-              });
+    llvm::sort(SortedChains, [&](const ChainT *L, const ChainT *R) {
+      const double DL = ChainDensity[L];
+      const double DR = ChainDensity[R];
+      // Compare by density and break ties by chain identifiers.
+      return std::make_tuple(-DL, L->Id) < std::make_tuple(-DR, R->Id);
+    });
 
     // Collect the nodes in the order specified by their chains.
     std::vector<uint64_t> Order;

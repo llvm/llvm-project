@@ -48,6 +48,7 @@ private:
 
   bool tryMergeLessLess();
   bool tryMergeGreaterGreater();
+  bool tryMergeUserDefinedLiteral();
   bool tryMergeNSStringLiteral();
   bool tryMergeJSPrivateIdentifier();
   bool tryMergeCSharpStringLiteral();
@@ -133,6 +134,7 @@ private:
       VariableTemplates;
 
   bool FormattingDisabled;
+  llvm::Regex FormatOffRegex; // For one line.
 
   llvm::Regex MacroBlockBeginRegex;
   llvm::Regex MacroBlockEndRegex;

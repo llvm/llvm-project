@@ -9,6 +9,7 @@
 // load/store instructions.
 //===----------------------------------------------------------------------===//
 
+#include "Hexagon.h"
 #include "HexagonInstrInfo.h"
 #include "HexagonSubtarget.h"
 #include "MCTargetDesc/HexagonBaseInfo.h"
@@ -49,13 +50,6 @@ static cl::opt<int> CodeGrowthLimit("hexagon-amode-growth-limit",
   "optimization"));
 
 extern cl::opt<unsigned> RDFFuncBlockLimit;
-
-namespace llvm {
-
-  FunctionPass *createHexagonOptAddrMode();
-  void initializeHexagonOptAddrModePass(PassRegistry&);
-
-} // end namespace llvm
 
 namespace {
 
@@ -490,10 +484,9 @@ bool HexagonOptAddrMode::findFirstReachedInst(
   for (auto &InstIter : *CurrentMBB) {
     // If the instruction is an Addi and is in the AddiList
     if (InstIter.getOpcode() == Hexagon::A2_addi) {
-      auto Iter = std::find_if(
-          AddiList.begin(), AddiList.end(), [&InstIter](const auto &SUPair) {
-            return SUPair.first.Addr->getCode() == &InstIter;
-          });
+      auto Iter = llvm::find_if(AddiList, [&InstIter](const auto &SUPair) {
+        return SUPair.first.Addr->getCode() == &InstIter;
+      });
       if (Iter != AddiList.end()) {
         UseSN = Iter->first;
         return true;
@@ -539,7 +532,7 @@ bool HexagonOptAddrMode::processAddBases(NodeAddr<StmtNode *> AddSN,
       [](const MachineInstr *MI,
          const DenseSet<MachineInstr *> &ProcessedAddiInsts) -> bool {
     // If we've already processed this Addi, just return
-    if (ProcessedAddiInsts.find(MI) != ProcessedAddiInsts.end()) {
+    if (ProcessedAddiInsts.contains(MI)) {
       LLVM_DEBUG(dbgs() << "\t\t\tAddi already found in ProcessedAddiInsts: "
                         << *MI << "\n\t\t\tSkipping...");
       return true;

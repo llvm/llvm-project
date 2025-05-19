@@ -163,8 +163,7 @@ void LVCodeViewReader::cacheRelocations() {
     const coff_section *CoffSection = getObj().getCOFFSection(Section);
 
     auto &RM = RelocMap[CoffSection];
-    for (const RelocationRef &Relocacion : Section.relocations())
-      RM.push_back(Relocacion);
+    llvm::append_range(RM, Section.relocations());
 
     // Sort relocations by address.
     llvm::sort(RM, [](RelocationRef L, RelocationRef R) {

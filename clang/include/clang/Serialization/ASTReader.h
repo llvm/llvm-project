@@ -237,6 +237,18 @@ public:
     return true;
   }
 
+  /// Overloaded member function of \c visitInputFile that should
+  /// be defined when there is a distinction between
+  /// the file name and name-as-requested. For example, when deserializing input
+  /// files from precompiled AST files.
+  ///
+  /// \returns true to continue receiving the next input file, false to stop.
+  virtual bool visitInputFile(StringRef FilenameAsRequested, StringRef Filename,
+                              bool isSystem, bool isOverridden,
+                              bool isExplicitModule) {
+    return true;
+  }
+
   /// Returns true if this \c ASTReaderListener wants to receive the
   /// imports of the AST file via \c visitImport, false otherwise.
   virtual bool needsImportVisitation() const { return false; }
@@ -1079,8 +1091,11 @@ private:
   /// from the current compiler instance.
   bool AllowConfigurationMismatch;
 
-  /// Whether validate system input files.
+  /// Whether to validate system input files.
   bool ValidateSystemInputs;
+
+  /// Whether to force the validation of user input files.
+  bool ForceValidateUserInputs;
 
   /// Whether validate headers and module maps using hash based on contents.
   bool ValidateASTInputFilesContent;
@@ -1391,6 +1406,10 @@ private:
   std::string SuggestedPredefines;
 
   llvm::DenseMap<const Decl *, bool> DefinitionSource;
+
+  /// Friend functions that were defined but might have had their bodies
+  /// removed.
+  llvm::DenseSet<const FunctionDecl *> ThisDeclarationWasADefinitionSet;
 
   bool shouldDisableValidationForFile(const serialization::ModuleFile &M) const;
 
@@ -1751,6 +1770,7 @@ public:
             bool AllowASTWithCompilerErrors = false,
             bool AllowConfigurationMismatch = false,
             bool ValidateSystemInputs = false,
+            bool ForceValidateUserInputs = true,
             bool ValidateASTInputFilesContent = false,
             bool UseGlobalIndex = true,
             std::unique_ptr<llvm::Timer> ReadTimer = {});
@@ -2374,6 +2394,8 @@ public:
 
   ExtKind hasExternalDefinitions(const Decl *D) override;
 
+  bool wasThisDeclarationADefinition(const FunctionDecl *FD) override;
+
   /// Retrieve a selector from the given module with its local ID
   /// number.
   Selector getLocalSelector(ModuleFile &M, unsigned LocalID);
@@ -2653,7 +2675,7 @@ inline bool shouldSkipCheckingODR(const Decl *D) {
 
 /// Calculate a hash value for the primary module name of the given module.
 /// \returns std::nullopt if M is not a C++ standard module.
-std::optional<unsigned> getPrimaryModuleHash(const Module *M);
+UnsignedOrNone getPrimaryModuleHash(const Module *M);
 
 } // namespace clang
 

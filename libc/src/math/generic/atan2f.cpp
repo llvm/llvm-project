@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/atan2f.h"
+#include "hdr/fenv_macros.h"
 #include "inv_trigf_utils.h"
+#include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/double_double.h"
@@ -264,8 +266,11 @@ LLVM_LIBC_FUNCTION(float, atan2f, (float y, float x)) {
   double den_d = static_cast<double>(den_f);
 
   if (LIBC_UNLIKELY(max_abs >= 0x7f80'0000U || num_d == 0.0)) {
-    if (x_bits.is_nan() || y_bits.is_nan())
+    if (x_bits.is_nan() || y_bits.is_nan()) {
+      if (x_bits.is_signaling_nan() || y_bits.is_signaling_nan())
+        fputil::raise_except_if_required(FE_INVALID);
       return FPBits::quiet_nan().get_val();
+    }
     double x_d = static_cast<double>(x);
     double y_d = static_cast<double>(y);
     size_t x_except = (x_d == 0.0) ? 0 : (x_abs == 0x7f80'0000 ? 2 : 1);

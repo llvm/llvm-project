@@ -86,8 +86,8 @@ attributes #0 = { "target-cpu"="knl" }
 ; FORCE-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; FORCE:       vector.body:
 ; FORCE-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE4:%.*]] ]
-; FORCE-NEXT:    [[VEC_IND:%.*]] = phi <2 x i32> [ <i32 0, i32 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_STORE_CONTINUE4]] ]
-; FORCE-NEXT:    [[TMP2:%.*]] = icmp ule <2 x i32> [[VEC_IND]], splat (i32 2)
+; FORCE-NEXT:    [[VEC_IND:%.*]] = phi <2 x i8> [ <i8 0, i8 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_STORE_CONTINUE4]] ]
+; FORCE-NEXT:    [[TMP2:%.*]] = icmp ule <2 x i8> [[VEC_IND]], splat (i8 2)
 ; FORCE-NEXT:    [[TMP3:%.*]] = extractelement <2 x i1> [[TMP2]], i32 0
 ; FORCE-NEXT:    br i1 [[TMP3]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; FORCE:       pred.store.if:
@@ -103,7 +103,7 @@ attributes #0 = { "target-cpu"="knl" }
 ; FORCE-NEXT:    br label [[PRED_STORE_CONTINUE4]]
 ; FORCE:       pred.store.continue2:
 ; FORCE-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
-; FORCE-NEXT:    [[VEC_IND_NEXT]] = add <2 x i32> [[VEC_IND]], splat (i32 2)
+; FORCE-NEXT:    [[VEC_IND_NEXT]] = add <2 x i8> [[VEC_IND]], splat (i8 2)
 ; FORCE-NEXT:    [[TMP15:%.*]] = icmp eq i32 [[INDEX_NEXT]], 4
 ; FORCE-NEXT:    br i1 [[TMP15]], label {{%.*}}, label [[VECTOR_BODY]]
 ;

@@ -41,11 +41,25 @@ enum CondCode {
   COND_GE,
   COND_LTU,
   COND_GEU,
+  COND_CV_BEQIMM,
+  COND_CV_BNEIMM,
+  COND_QC_BEQI,
+  COND_QC_BNEI,
+  COND_QC_BLTI,
+  COND_QC_BGEI,
+  COND_QC_BLTUI,
+  COND_QC_BGEUI,
+  COND_QC_E_BEQI,
+  COND_QC_E_BNEI,
+  COND_QC_E_BLTI,
+  COND_QC_E_BGEI,
+  COND_QC_E_BLTUI,
+  COND_QC_E_BGEUI,
   COND_INVALID
 };
 
 CondCode getOppositeBranchCondition(CondCode);
-unsigned getBrCond(const RISCVSubtarget &STI, CondCode CC, bool Imm = false);
+unsigned getBrCond(CondCode CC);
 
 } // end of namespace RISCVCC
 
@@ -65,7 +79,7 @@ public:
   explicit RISCVInstrInfo(RISCVSubtarget &STI);
 
   MCInst getNop() const override;
-  const MCInstrDesc &getBrCond(RISCVCC::CondCode CC, bool Imm = false) const;
+  const MCInstrDesc &getBrCond(RISCVCC::CondCode CC) const;
 
   Register isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex) const override;
@@ -240,6 +254,8 @@ public:
                                        unsigned OpIdx1,
                                        unsigned OpIdx2) const override;
 
+  bool simplifyInstruction(MachineInstr &MI) const override;
+
   MachineInstr *convertToThreeAddress(MachineInstr &MI, LiveVariables *LV,
                                       LiveIntervals *LIS) const override;
 
@@ -306,6 +322,17 @@ public:
 
   static bool isLdStSafeToPair(const MachineInstr &LdSt,
                                const TargetRegisterInfo *TRI);
+#define GET_INSTRINFO_HELPER_DECLS
+#include "RISCVGenInstrInfo.inc"
+
+  /// Return the result of the evaluation of C0 CC C1, where CC is a
+  /// RISCVCC::CondCode.
+  static bool evaluateCondBranch(unsigned CC, int64_t C0, int64_t C1);
+
+  /// Return true if the operand is a load immediate instruction and
+  /// sets Imm to the immediate value.
+  static bool isFromLoadImm(const MachineRegisterInfo &MRI,
+                            const MachineOperand &Op, int64_t &Imm);
 
 protected:
   const RISCVSubtarget &STI;
@@ -322,11 +349,6 @@ private:
 };
 
 namespace RISCV {
-
-// Returns true if this is the sext.w pattern, addiw rd, rs1, 0.
-bool isSEXT_W(const MachineInstr &MI);
-bool isZEXT_W(const MachineInstr &MI);
-bool isZEXT_B(const MachineInstr &MI);
 
 // Returns true if the given MI is an RVV instruction opcode for which we may
 // expect to see a FrameIndex operand.

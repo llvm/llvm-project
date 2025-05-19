@@ -1564,6 +1564,9 @@ class FixedPointLiteral : public Expr, public APIntStorage {
   /// Returns an empty fixed-point literal.
   static FixedPointLiteral *Create(const ASTContext &C, EmptyShell Empty);
 
+  /// Returns an internal integer representation of the literal.
+  llvm::APInt getValue() const { return APIntStorage::getValue(); }
+
   SourceLocation getBeginLoc() const LLVM_READONLY { return Loc; }
   SourceLocation getEndLoc() const LLVM_READONLY { return Loc; }
 
@@ -2020,7 +2023,7 @@ class PredefinedExpr final
   void setFunctionName(StringLiteral *SL) {
     assert(hasFunctionName() &&
            "This PredefinedExpr has no storage for a function name!");
-    *getTrailingObjects<Stmt *>() = SL;
+    *getTrailingObjects() = SL;
   }
 
 public:
@@ -2047,13 +2050,13 @@ public:
 
   StringLiteral *getFunctionName() {
     return hasFunctionName()
-               ? static_cast<StringLiteral *>(*getTrailingObjects<Stmt *>())
+               ? static_cast<StringLiteral *>(*getTrailingObjects())
                : nullptr;
   }
 
   const StringLiteral *getFunctionName() const {
     return hasFunctionName()
-               ? static_cast<StringLiteral *>(*getTrailingObjects<Stmt *>())
+               ? static_cast<StringLiteral *>(*getTrailingObjects())
                : nullptr;
   }
 
@@ -2075,13 +2078,11 @@ public:
 
   // Iterators
   child_range children() {
-    return child_range(getTrailingObjects<Stmt *>(),
-                       getTrailingObjects<Stmt *>() + hasFunctionName());
+    return child_range(getTrailingObjects(hasFunctionName()));
   }
 
   const_child_range children() const {
-    return const_child_range(getTrailingObjects<Stmt *>(),
-                             getTrailingObjects<Stmt *>() + hasFunctionName());
+    return const_child_range(getTrailingObjects(hasFunctionName()));
   }
 };
 
@@ -2245,18 +2246,14 @@ class UnaryOperator final
       private llvm::TrailingObjects<UnaryOperator, FPOptionsOverride> {
   Stmt *Val;
 
-  size_t numTrailingObjects(OverloadToken<FPOptionsOverride>) const {
-    return UnaryOperatorBits.HasFPFeatures ? 1 : 0;
-  }
-
   FPOptionsOverride &getTrailingFPFeatures() {
     assert(UnaryOperatorBits.HasFPFeatures);
-    return *getTrailingObjects<FPOptionsOverride>();
+    return *getTrailingObjects();
   }
 
   const FPOptionsOverride &getTrailingFPFeatures() const {
     assert(UnaryOperatorBits.HasFPFeatures);
-    return *getTrailingObjects<FPOptionsOverride>();
+    return *getTrailingObjects();
   }
 
 public:
@@ -2577,13 +2574,11 @@ public:
   }
 
   const OffsetOfNode &getComponent(unsigned Idx) const {
-    assert(Idx < NumComps && "Subscript out of range");
-    return getTrailingObjects<OffsetOfNode>()[Idx];
+    return getTrailingObjects<OffsetOfNode>(NumComps)[Idx];
   }
 
   void setComponent(unsigned Idx, OffsetOfNode ON) {
-    assert(Idx < NumComps && "Subscript out of range");
-    getTrailingObjects<OffsetOfNode>()[Idx] = ON;
+    getTrailingObjects<OffsetOfNode>(NumComps)[Idx] = ON;
   }
 
   unsigned getNumComponents() const {
@@ -2591,18 +2586,15 @@ public:
   }
 
   Expr* getIndexExpr(unsigned Idx) {
-    assert(Idx < NumExprs && "Subscript out of range");
-    return getTrailingObjects<Expr *>()[Idx];
+    return getTrailingObjects<Expr *>(NumExprs)[Idx];
   }
 
   const Expr *getIndexExpr(unsigned Idx) const {
-    assert(Idx < NumExprs && "Subscript out of range");
-    return getTrailingObjects<Expr *>()[Idx];
+    return getTrailingObjects<Expr *>(NumExprs)[Idx];
   }
 
   void setIndexExpr(unsigned Idx, Expr* E) {
-    assert(Idx < NumComps && "Subscript out of range");
-    getTrailingObjects<Expr *>()[Idx] = E;
+    getTrailingObjects<Expr *>(NumComps)[Idx] = E;
   }
 
   unsigned getNumExpressions() const {
@@ -4563,9 +4555,11 @@ public:
 
   void setExprs(const ASTContext &C, ArrayRef<Expr *> Exprs);
 
-  llvm::APSInt getShuffleMaskIdx(const ASTContext &Ctx, unsigned N) const {
+  llvm::APSInt getShuffleMaskIdx(unsigned N) const {
     assert((N < NumExprs - 2) && "Shuffle idx out of range!");
-    return getExpr(N+2)->EvaluateKnownConstInt(Ctx);
+    assert(isa<ConstantExpr>(getExpr(N + 2)) &&
+           "Index expression must be a ConstantExpr");
+    return cast<ConstantExpr>(getExpr(N + 2))->getAPValueResult().getInt();
   }
 
   // Iterators
@@ -4614,12 +4608,12 @@ private:
 
   FPOptionsOverride &getTrailingFPFeatures() {
     assert(ConvertVectorExprBits.HasFPFeatures);
-    return *getTrailingObjects<FPOptionsOverride>();
+    return *getTrailingObjects();
   }
 
   const FPOptionsOverride &getTrailingFPFeatures() const {
     assert(ConvertVectorExprBits.HasFPFeatures);
-    return *getTrailingObjects<FPOptionsOverride>();
+    return *getTrailingObjects();
   }
 
 public:
@@ -4958,6 +4952,9 @@ private:
 /// Stores data related to a single #embed directive.
 struct EmbedDataStorage {
   StringLiteral *BinaryData;
+  // FileName string already includes braces, i.e. it is <files/my_file> for a
+  // directive #embed <files/my_file>.
+  StringRef FileName;
   size_t getDataElementCount() const { return BinaryData->getByteLength(); }
 };
 
@@ -5004,6 +5001,7 @@ public:
   SourceLocation getEndLoc() const { return EmbedKeywordLoc; }
 
   StringLiteral *getDataStringLiteral() const { return Data->BinaryData; }
+  StringRef getFileName() const { return Data->FileName; }
   EmbedDataStorage *getData() const { return Data; }
 
   unsigned getStartingElementPos() const { return Begin; }
@@ -5696,13 +5694,11 @@ public:
   unsigned getNumSubExprs() const { return NumSubExprs; }
 
   Expr *getSubExpr(unsigned Idx) const {
-    assert(Idx < NumSubExprs && "Subscript out of range");
-    return cast<Expr>(getTrailingObjects<Stmt *>()[Idx]);
+    return cast<Expr>(getTrailingObjects(NumSubExprs)[Idx]);
   }
 
   void setSubExpr(unsigned Idx, Expr *E) {
-    assert(Idx < NumSubExprs && "Subscript out of range");
-    getTrailingObjects<Stmt *>()[Idx] = E;
+    getTrailingObjects(NumSubExprs)[Idx] = E;
   }
 
   /// Replaces the designator at index @p Idx with the series
@@ -5721,11 +5717,11 @@ public:
 
   // Iterators
   child_range children() {
-    Stmt **begin = getTrailingObjects<Stmt *>();
+    Stmt **begin = getTrailingObjects();
     return child_range(begin, begin + NumSubExprs);
   }
   const_child_range children() const {
-    Stmt * const *begin = getTrailingObjects<Stmt *>();
+    Stmt *const *begin = getTrailingObjects();
     return const_child_range(begin, begin + NumSubExprs);
   }
 
@@ -5985,9 +5981,7 @@ public:
     return const_cast<ParenListExpr *>(this)->getExpr(Init);
   }
 
-  Expr **getExprs() {
-    return reinterpret_cast<Expr **>(getTrailingObjects<Stmt *>());
-  }
+  Expr **getExprs() { return reinterpret_cast<Expr **>(getTrailingObjects()); }
 
   ArrayRef<Expr *> exprs() { return llvm::ArrayRef(getExprs(), getNumExprs()); }
 
@@ -6002,12 +5996,10 @@ public:
 
   // Iterators
   child_range children() {
-    return child_range(getTrailingObjects<Stmt *>(),
-                       getTrailingObjects<Stmt *>() + getNumExprs());
+    return child_range(getTrailingObjects(getNumExprs()));
   }
   const_child_range children() const {
-    return const_child_range(getTrailingObjects<Stmt *>(),
-                             getTrailingObjects<Stmt *>() + getNumExprs());
+    return const_child_range(getTrailingObjects(getNumExprs()));
   }
 };
 
@@ -6412,14 +6404,12 @@ public:
   }
 
   child_range children() {
-    return child_range(getTrailingObjects<Stmt *>(),
-                       getTrailingObjects<Stmt *>() +
-                           numTrailingObjects(OverloadToken<Stmt *>()));
+    return child_range(getTrailingObjects<Stmt *>(
+        numTrailingObjects(OverloadToken<Stmt *>())));
   }
   const_child_range children() const {
-    return const_child_range(getTrailingObjects<Stmt *>(),
-                             getTrailingObjects<Stmt *>() +
-                                 numTrailingObjects(OverloadToken<Stmt *>()));
+    return const_child_range(getTrailingObjects<Stmt *>(
+        numTrailingObjects(OverloadToken<Stmt *>())));
   }
 };
 
@@ -6638,11 +6628,6 @@ class PseudoObjectExpr final
   // in to Create, which is an index within the semantic forms.
   // Note also that ASTStmtWriter assumes this encoding.
 
-  Expr **getSubExprsBuffer() { return getTrailingObjects<Expr *>(); }
-  const Expr * const *getSubExprsBuffer() const {
-    return getTrailingObjects<Expr *>();
-  }
-
   PseudoObjectExpr(QualType type, ExprValueKind VK,
                    Expr *syntactic, ArrayRef<Expr*> semantic,
                    unsigned resultIndex);
@@ -6668,8 +6653,8 @@ public:
   /// Return the syntactic form of this expression, i.e. the
   /// expression it actually looks like.  Likely to be expressed in
   /// terms of OpaqueValueExprs bound in the semantic form.
-  Expr *getSyntacticForm() { return getSubExprsBuffer()[0]; }
-  const Expr *getSyntacticForm() const { return getSubExprsBuffer()[0]; }
+  Expr *getSyntacticForm() { return getTrailingObjects()[0]; }
+  const Expr *getSyntacticForm() const { return getTrailingObjects()[0]; }
 
   /// Return the index of the result-bearing expression into the semantics
   /// expressions, or PseudoObjectExpr::NoResult if there is none.
@@ -6682,7 +6667,7 @@ public:
   Expr *getResultExpr() {
     if (PseudoObjectExprBits.ResultIndex == 0)
       return nullptr;
-    return getSubExprsBuffer()[PseudoObjectExprBits.ResultIndex];
+    return getTrailingObjects()[PseudoObjectExprBits.ResultIndex];
   }
   const Expr *getResultExpr() const {
     return const_cast<PseudoObjectExpr*>(this)->getResultExpr();
@@ -6692,29 +6677,26 @@ public:
 
   typedef Expr * const *semantics_iterator;
   typedef const Expr * const *const_semantics_iterator;
-  semantics_iterator semantics_begin() {
-    return getSubExprsBuffer() + 1;
-  }
+  semantics_iterator semantics_begin() { return getTrailingObjects() + 1; }
   const_semantics_iterator semantics_begin() const {
-    return getSubExprsBuffer() + 1;
+    return getTrailingObjects() + 1;
   }
   semantics_iterator semantics_end() {
-    return getSubExprsBuffer() + getNumSubExprs();
+    return getTrailingObjects() + getNumSubExprs();
   }
   const_semantics_iterator semantics_end() const {
-    return getSubExprsBuffer() + getNumSubExprs();
+    return getTrailingObjects() + getNumSubExprs();
   }
 
   ArrayRef<Expr*> semantics() {
-    return ArrayRef(semantics_begin(), semantics_end());
+    return getTrailingObjects(getNumSubExprs()).drop_front();
   }
   ArrayRef<const Expr*> semantics() const {
-    return ArrayRef(semantics_begin(), semantics_end());
+    return getTrailingObjects(getNumSubExprs()).drop_front();
   }
 
   Expr *getSemanticExpr(unsigned index) {
-    assert(index + 1 < getNumSubExprs());
-    return getSubExprsBuffer()[index + 1];
+    return getTrailingObjects(getNumSubExprs())[index + 1];
   }
   const Expr *getSemanticExpr(unsigned index) const {
     return const_cast<PseudoObjectExpr*>(this)->getSemanticExpr(index);
@@ -6739,7 +6721,7 @@ public:
   }
   const_child_range children() const {
     Stmt *const *cs = const_cast<Stmt *const *>(
-        reinterpret_cast<const Stmt *const *>(getSubExprsBuffer()));
+        reinterpret_cast<const Stmt *const *>(getTrailingObjects()));
     return const_child_range(cs, cs + getNumSubExprs());
   }
 
@@ -6757,7 +6739,7 @@ public:
 /// and corresponding __opencl_atomic_* for OpenCL 2.0.
 /// All of these instructions take one primary pointer, at least one memory
 /// order. The instructions for which getScopeModel returns non-null value
-/// take one synch scope.
+/// take one sync scope.
 class AtomicExpr : public Expr {
 public:
   enum AtomicOp {
@@ -7378,6 +7360,14 @@ private:
   friend class ASTStmtReader;
   friend class ASTStmtWriter;
 };
+
+/// Insertion operator for diagnostics.  This allows sending
+/// Expr into a diagnostic with <<.
+inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
+                                             const Expr *E) {
+  DB.AddTaggedVal(reinterpret_cast<uint64_t>(E), DiagnosticsEngine::ak_expr);
+  return DB;
+}
 
 } // end namespace clang
 

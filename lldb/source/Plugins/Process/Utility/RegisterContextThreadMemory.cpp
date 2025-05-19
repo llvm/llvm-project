@@ -25,6 +25,8 @@ RegisterContextThreadMemory::RegisterContextThreadMemory(
 RegisterContextThreadMemory::~RegisterContextThreadMemory() = default;
 
 void RegisterContextThreadMemory::UpdateRegisterContext() {
+  std::lock_guard<std::mutex> lock(m_update_register_ctx_lock);
+
   ThreadSP thread_sp(m_thread_wp.lock());
   if (thread_sp) {
     ProcessSP process_sp(thread_sp->GetProcess());

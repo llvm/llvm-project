@@ -77,8 +77,7 @@ static void getRelevantOperands(Instruction *I, SmallVectorImpl<Value *> &Ops) {
     Ops.push_back(I->getOperand(2));
     break;
   case Instruction::PHI:
-    for (Value *V : cast<PHINode>(I)->incoming_values())
-      Ops.push_back(V);
+    llvm::append_range(Ops, cast<PHINode>(I)->incoming_values());
     break;
   default:
     llvm_unreachable("Unreachable!");

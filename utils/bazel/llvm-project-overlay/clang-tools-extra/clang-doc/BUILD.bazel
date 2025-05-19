@@ -12,11 +12,21 @@ package(
 licenses(["notice"])
 
 cc_library(
+    name = "clang-doc-support",
+    srcs = glob(["support/*.cpp"]),
+    hdrs = glob(["support/*.h"]),
+    deps = [
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "lib",
     srcs = glob(["*.cpp"]),
     hdrs = glob(["*.h"]),
     includes = ["."],
     deps = [
+        ":clang-doc-support",
         "//clang:ast",
         "//clang:basic",
         "//clang:frontend",
