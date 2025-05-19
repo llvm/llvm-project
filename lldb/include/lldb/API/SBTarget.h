@@ -349,6 +349,10 @@ public:
 
   SBError SetLabel(const char *label);
 
+  uint32_t GetMinimumOpcodeByteSize() const;
+
+  uint32_t GetMaximumOpcodeByteSize() const;
+
   /// Architecture data byte width accessor
   ///
   /// \return

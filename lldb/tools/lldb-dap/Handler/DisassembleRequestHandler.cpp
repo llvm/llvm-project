@@ -105,28 +105,47 @@ DisassembleRequestHandler::disassembleBackwards(
     const char *flavor_string, bool resolve_symbols) const {
   std::vector<DisassembledInstruction> instructions;
 
-  // TODO: Simply disassemble from `addr` - `instruction_count` *
-  // `instruction_size` in architectures with a fixed instruction size.
-
-  // need to disassemble backwards, let's try from the start of the symbol if
-  // available.
-  auto symbol = addr.GetSymbol();
-  if (symbol.IsValid()) {
-    // add valid instructions before the current instruction using the symbol.
-    lldb::SBInstructionList symbol_insts = dap.target.ReadInstructions(
-        symbol.GetStartAddress(), addr, flavor_string);
-    if (symbol_insts.IsValid()) {
-      size_t backwards_insts_start =
-          symbol_insts.GetSize() >= instruction_count
-              ? symbol_insts.GetSize() - instruction_count
-              : 0;
-      for (size_t i = backwards_insts_start;
-           i < symbol_insts.GetSize() &&
-           instructions.size() < instruction_count;
-           ++i) {
-        lldb::SBInstruction inst = symbol_insts.GetInstructionAtIndex(i);
+  if (dap.target.GetMinimumOpcodeByteSize() ==
+      dap.target.GetMaximumOpcodeByteSize()) {
+    // If the target has a fixed opcode size, we can disassemble backwards
+    // directly.
+    lldb::addr_t disassemble_start_load_addr =
+        addr.GetLoadAddress(dap.target) -
+        (instruction_count * dap.target.GetMinimumOpcodeByteSize());
+    lldb::SBAddress disassemble_start_addr(disassemble_start_load_addr,
+                                           dap.target);
+    lldb::SBInstructionList backwards_insts =
+        dap.target.ReadInstructions(addr, instruction_count, flavor_string);
+    if (backwards_insts.IsValid()) {
+      for (size_t i = 0; i < backwards_insts.GetSize(); ++i) {
+        lldb::SBInstruction inst = backwards_insts.GetInstructionAtIndex(i);
         instructions.push_back(
             SBInstructionToDisassembledInstruction(inst, resolve_symbols));
+      }
+      return instructions;
+    }
+  } else {
+    // There is no opcode fixed size so we have no idea where are the valid
+    // instructions before the current address. let's try from the start of the
+    // symbol if available.
+    auto symbol = addr.GetSymbol();
+    if (symbol.IsValid()) {
+      // add valid instructions before the current instruction using the symbol.
+      lldb::SBInstructionList symbol_insts = dap.target.ReadInstructions(
+          symbol.GetStartAddress(), addr, flavor_string);
+      if (symbol_insts.IsValid()) {
+        size_t backwards_insts_start =
+            symbol_insts.GetSize() >= instruction_count
+                ? symbol_insts.GetSize() - instruction_count
+                : 0;
+        for (size_t i = backwards_insts_start;
+             i < symbol_insts.GetSize() &&
+             instructions.size() < instruction_count;
+             ++i) {
+          lldb::SBInstruction inst = symbol_insts.GetInstructionAtIndex(i);
+          instructions.push_back(
+              SBInstructionToDisassembledInstruction(inst, resolve_symbols));
+        }
       }
     }
   }
