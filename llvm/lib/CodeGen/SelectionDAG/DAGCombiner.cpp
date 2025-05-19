@@ -2656,9 +2656,11 @@ SDValue DAGCombiner::visitPTRADD(SDNode *N) {
     //   * x is a null pointer; or
     //   * y is a constant and z has one use; or
     //   * y is a constant and (ptradd x, y) has one use; or
+    //   * y and z are both constants; or
     //   * (ptradd x, y) and z have one use and z is not a constant.
     if (isNullConstant(X) || (YIsConstant && ZOneUse) ||
-        (YIsConstant && N0OneUse) || (N0OneUse && ZOneUse && !ZIsConstant)) {
+        (YIsConstant && N0OneUse) || (YIsConstant && ZIsConstant) ||
+        (N0OneUse && ZOneUse && !ZIsConstant)) {
       SDValue Add = DAG.getNode(ISD::ADD, DL, IntVT, {Y, Z});
       AddToWorklist(Add.getNode());
       return DAG.getMemBasePlusOffset(X, Add, DL, SDNodeFlags());
