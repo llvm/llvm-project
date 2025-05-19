@@ -824,13 +824,13 @@ bool fromJSON(const llvm::json::Value &Params, DisassembledInstruction &DI,
   std::optional<llvm::StringRef> raw_address =
       Params.getAsObject()->getString("address");
   if (!raw_address) {
-    P.report("missing `address` field");
+    P.report("missing 'address' field");
     return false;
   }
 
   std::optional<lldb::addr_t> address = DecodeMemoryReference(*raw_address);
   if (!address) {
-    P.report("invalid `address`");
+    P.report("invalid 'address'");
     return false;
   }
 

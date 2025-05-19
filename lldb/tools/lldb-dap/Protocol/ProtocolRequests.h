@@ -753,12 +753,15 @@ struct DisassembleArguments {
 };
 bool fromJSON(const llvm::json::Value &, DisassembleArguments &,
               llvm::json::Path);
+llvm::json::Value toJSON(const DisassembleArguments &);
 
 /// Response to `disassemble` request.
 struct DisassembleResponseBody {
   /// The list of disassembled instructions.
   std::vector<DisassembledInstruction> instructions;
 };
+bool fromJSON(const llvm::json::Value &, DisassembleResponseBody &,
+              llvm::json::Path);
 llvm::json::Value toJSON(const DisassembleResponseBody &);
 
 } // namespace lldb_dap::protocol

@@ -63,7 +63,7 @@ DisassembleRequestHandler::Run(const DisassembleArguments &args) const {
     return llvm::make_error<DAPError>(
         "Failed to find instructions for memory address.");
 
-  const bool resolveSymbols = args.resolveSymbols.value_or(false);
+  const bool resolve_symbols = args.resolveSymbols.value_or(false);
   const auto num_insts = insts.GetSize();
   for (size_t i = 0; i < num_insts; ++i) {
     lldb::SBInstruction inst = insts.GetInstructionAtIndex(i);
@@ -103,7 +103,7 @@ DisassembleRequestHandler::Run(const DisassembleArguments &args) const {
                                                 : symbol.GetName())
          << ": ";
 
-      if (resolveSymbols)
+      if (resolve_symbols)
         disassembled_inst.symbol = symbol.GetDisplayName();
     }
 
