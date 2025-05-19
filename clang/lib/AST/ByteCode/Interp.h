@@ -2936,13 +2936,14 @@ inline bool InvalidCast(InterpState &S, CodePtr OpPC, CastKind Kind,
         << static_cast<unsigned>(Kind) << S.Current->getRange(OpPC);
     return !Fatal;
   } else if (Kind == CastKind::Volatile) {
-    // FIXME: Technically not a cast.
-    const auto *E = cast<CastExpr>(S.Current->getExpr(OpPC));
-    if (S.getLangOpts().CPlusPlus)
-      S.FFDiag(E, diag::note_constexpr_access_volatile_type)
-          << AK_Read << E->getSubExpr()->getType();
-    else
-      S.FFDiag(E);
+    if (!S.checkingPotentialConstantExpression()) {
+      const auto *E = cast<CastExpr>(S.Current->getExpr(OpPC));
+      if (S.getLangOpts().CPlusPlus)
+        S.FFDiag(E, diag::note_constexpr_access_volatile_type)
+            << AK_Read << E->getSubExpr()->getType();
+      else
+        S.FFDiag(E);
+    }
 
     return false;
   } else if (Kind == CastKind::Dynamic) {
