@@ -15600,6 +15600,10 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
   std::optional<bool> CacheHasConstInit;
   const Expr *CacheCulprit = nullptr;
   auto checkConstInit = [&]() mutable {
+    const Expr *Init = var->getInit();
+    if (Init->isInstantiationDependent())
+      return true;
+
     if (!CacheHasConstInit)
       CacheHasConstInit = var->getInit()->isConstantInitializer(
             Context, var->getType()->isReferenceType(), &CacheCulprit);
