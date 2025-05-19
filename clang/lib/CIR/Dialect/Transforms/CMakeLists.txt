@@ -1,5 +1,6 @@
 add_clang_library(MLIRCIRTransforms
   CIRCanonicalize.cpp
+  CIRSimplify.cpp
   FlattenCFG.cpp
   HoistAllocas.cpp
 

@@ -169,6 +169,11 @@ public:
 
   virtual void annotateTLSDescriptorSequence(const MCSymbolRefExpr *SRE);
 
+  virtual void emitSyntaxUnified();
+
+  virtual void emitCode16();
+  virtual void emitCode32();
+
   // Note in the output that the specified \p Symbol is a Thumb mode function.
   virtual void emitThumbFunc(MCSymbol *Symbol);
   virtual void emitThumbSet(MCSymbol *Symbol, const MCExpr *Value);
@@ -255,11 +260,8 @@ class MCStreamer {
   bool AllowAutoPadding = false;
 
 protected:
-  // True if we are processing SEH directives in an epilogue.
-  bool InEpilogCFI = false;
-
   // Symbol of the current epilog for which we are processing SEH directives.
-  MCSymbol *CurrentEpilog = nullptr;
+  WinEH::FrameInfo::Epilog *CurrentWinEpilog = nullptr;
 
   MCFragment *CurFrag = nullptr;
 
@@ -342,9 +344,11 @@ public:
     return WinFrameInfos;
   }
 
-  MCSymbol *getCurrentEpilog() const { return CurrentEpilog; }
+  WinEH::FrameInfo::Epilog *getCurrentWinEpilog() const {
+    return CurrentWinEpilog;
+  }
 
-  bool isInEpilogCFI() const { return InEpilogCFI; }
+  bool isInEpilogCFI() const { return CurrentWinEpilog; }
 
   void generateCompactUnwindEncodings(MCAsmBackend *MAB);
 
@@ -472,8 +476,8 @@ public:
 
   virtual void emitEHSymAttributes(const MCSymbol *Symbol, MCSymbol *EHSymbol);
 
-  /// Note in the output the specified \p Flag.
-  virtual void emitAssemblerFlag(MCAssemblerFlag Flag);
+  /// Emit a .subsection_via_symbols directive.
+  virtual void emitSubsectionsViaSymbols();
 
   /// Emit the given list \p Options of strings as linker
   /// options into the output.
@@ -1026,6 +1030,8 @@ public:
   virtual void emitWinCFIEndProlog(SMLoc Loc = SMLoc());
   virtual void emitWinCFIBeginEpilogue(SMLoc Loc = SMLoc());
   virtual void emitWinCFIEndEpilogue(SMLoc Loc = SMLoc());
+  virtual void emitWinCFIUnwindV2Start(SMLoc Loc = SMLoc());
+  virtual void emitWinCFIUnwindVersion(uint8_t Version, SMLoc Loc = SMLoc());
   virtual void emitWinEHHandler(const MCSymbol *Sym, bool Unwind, bool Except,
                                 SMLoc Loc = SMLoc());
   virtual void emitWinEHHandlerData(SMLoc Loc = SMLoc());

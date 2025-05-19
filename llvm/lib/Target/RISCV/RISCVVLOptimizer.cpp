@@ -83,8 +83,7 @@ struct OperandInfo {
   OperandInfo() = delete;
 
   static bool EMULAndEEWAreEqual(const OperandInfo &A, const OperandInfo &B) {
-    return A.Log2EEW == B.Log2EEW && A.EMUL->first == B.EMUL->first &&
-           A.EMUL->second == B.EMUL->second;
+    return A.Log2EEW == B.Log2EEW && A.EMUL == B.EMUL;
   }
 
   static bool EEWAreEqual(const OperandInfo &A, const OperandInfo &B) {

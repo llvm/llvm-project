@@ -207,13 +207,12 @@ UnsignedOrNone clang::getStackIndexOfNearestEnclosingCaptureCapableLambda(
     // checking whether all enclosing lambdas of the capture-ready lambda allow
     // the capture - i.e. make sure it is capture-capable.
     QualType CaptureType, DeclRefType;
-    const bool CanCaptureVariable =
-        !S.tryCaptureVariable(VarToCapture,
-                              /*ExprVarIsUsedInLoc*/ SourceLocation(),
-                              clang::Sema::TryCapture_Implicit,
-                              /*EllipsisLoc*/ SourceLocation(),
-                              /*BuildAndDiagnose*/ false, CaptureType,
-                              DeclRefType, &IndexOfCaptureReadyLambda);
+    const bool CanCaptureVariable = !S.tryCaptureVariable(
+        VarToCapture,
+        /*ExprVarIsUsedInLoc*/ SourceLocation(), TryCaptureKind::Implicit,
+        /*EllipsisLoc*/ SourceLocation(),
+        /*BuildAndDiagnose*/ false, CaptureType, DeclRefType,
+        &IndexOfCaptureReadyLambda);
     if (!CanCaptureVariable)
       return NoLambdaIsCaptureCapable;
   } else {
@@ -1348,8 +1347,9 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
     if (C->Init.isUsable()) {
       addInitCapture(LSI, cast<VarDecl>(Var), C->Kind == LCK_ByRef);
     } else {
-      TryCaptureKind Kind = C->Kind == LCK_ByRef ? TryCapture_ExplicitByRef
-                                                 : TryCapture_ExplicitByVal;
+      TryCaptureKind Kind = C->Kind == LCK_ByRef
+                                ? TryCaptureKind::ExplicitByRef
+                                : TryCaptureKind::ExplicitByVal;
       tryCaptureVariable(Var, C->Loc, Kind, EllipsisLoc);
     }
     if (!LSI->Captures.empty())
@@ -1633,8 +1633,8 @@ static void repeatForLambdaConversionFunctionCallingConvs(
         CC_C,        CC_X86StdCall, CC_X86FastCall, CC_X86VectorCall,
         DefaultFree, DefaultMember, CallOpCC};
     llvm::sort(Convs);
-    llvm::iterator_range<CallingConv *> Range(
-        std::begin(Convs), std::unique(std::begin(Convs), std::end(Convs)));
+    llvm::iterator_range<CallingConv *> Range(std::begin(Convs),
+                                              llvm::unique(Convs));
     const TargetInfo &TI = S.getASTContext().getTargetInfo();
 
     for (CallingConv C : Range) {

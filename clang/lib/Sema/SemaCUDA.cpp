@@ -330,9 +330,10 @@ void SemaCUDA::EraseUnwantedMatches(
   };
 
   // Find the best call preference among the functions in Matches.
-  CUDAFunctionPreference BestCFP = GetCFP(*std::max_element(
-      Matches.begin(), Matches.end(),
-      [&](const Pair &M1, const Pair &M2) { return GetCFP(M1) < GetCFP(M2); }));
+  CUDAFunctionPreference BestCFP =
+      GetCFP(*llvm::max_element(Matches, [&](const Pair &M1, const Pair &M2) {
+        return GetCFP(M1) < GetCFP(M2);
+      }));
 
   // Erase all functions with lower priority.
   llvm::erase_if(Matches,
@@ -450,8 +451,7 @@ bool SemaCUDA::inferTargetForImplicitSpecialMember(CXXRecordDecl *ClassDecl,
         if (Diagnose) {
           Diag(ClassDecl->getLocation(),
                diag::note_implicit_member_target_infer_collision)
-              << (unsigned)CSM << llvm::to_underlying(*InferredTarget)
-              << llvm::to_underlying(BaseMethodTarget);
+              << (unsigned)CSM << *InferredTarget << BaseMethodTarget;
         }
         MemberDecl->addAttr(
             CUDAInvalidTargetAttr::CreateImplicit(getASTContext()));
@@ -496,8 +496,7 @@ bool SemaCUDA::inferTargetForImplicitSpecialMember(CXXRecordDecl *ClassDecl,
         if (Diagnose) {
           Diag(ClassDecl->getLocation(),
                diag::note_implicit_member_target_infer_collision)
-              << (unsigned)CSM << llvm::to_underlying(*InferredTarget)
-              << llvm::to_underlying(FieldMethodTarget);
+              << (unsigned)CSM << *InferredTarget << FieldMethodTarget;
         }
         MemberDecl->addAttr(
             CUDAInvalidTargetAttr::CreateImplicit(getASTContext()));
@@ -713,7 +712,7 @@ void SemaCUDA::checkAllowedInitializer(VarDecl *VD) {
       if (InitFnTarget != CUDAFunctionTarget::Host &&
           InitFnTarget != CUDAFunctionTarget::HostDevice) {
         Diag(VD->getLocation(), diag::err_ref_bad_target_global_initializer)
-            << llvm::to_underlying(InitFnTarget) << InitFn;
+            << InitFnTarget << InitFn;
         Diag(InitFn->getLocation(), diag::note_previous_decl) << InitFn;
         VD->setInvalidDecl();
       }
@@ -952,8 +951,8 @@ bool SemaCUDA::CheckCall(SourceLocation Loc, FunctionDecl *Callee) {
 
   SemaDiagnosticBuilder(DiagKind, Loc, diag::err_ref_bad_target, Caller,
                         SemaRef)
-      << llvm::to_underlying(IdentifyTarget(Callee)) << /*function*/ 0 << Callee
-      << llvm::to_underlying(IdentifyTarget(Caller));
+      << IdentifyTarget(Callee) << /*function*/ 0 << Callee
+      << IdentifyTarget(Caller);
   if (!Callee->getBuiltinID())
     SemaDiagnosticBuilder(DiagKind, Callee->getLocation(),
                           diag::note_previous_decl, Caller, SemaRef)
@@ -1049,8 +1048,7 @@ void SemaCUDA::checkTargetOverload(FunctionDecl *NewFD,
           (NewTarget == CUDAFunctionTarget::Global) ||
           (OldTarget == CUDAFunctionTarget::Global)) {
         Diag(NewFD->getLocation(), diag::err_cuda_ovl_target)
-            << llvm::to_underlying(NewTarget) << NewFD->getDeclName()
-            << llvm::to_underlying(OldTarget) << OldFD;
+            << NewTarget << NewFD->getDeclName() << OldTarget << OldFD;
         Diag(OldFD->getLocation(), diag::note_previous_declaration);
         NewFD->setInvalidDecl();
         break;
@@ -1060,7 +1058,7 @@ void SemaCUDA::checkTargetOverload(FunctionDecl *NewFD,
           (NewTarget == CUDAFunctionTarget::Device &&
            OldTarget == CUDAFunctionTarget::Host)) {
         Diag(NewFD->getLocation(), diag::warn_offload_incompatible_redeclare)
-            << llvm::to_underlying(NewTarget) << llvm::to_underlying(OldTarget);
+            << NewTarget << OldTarget;
         Diag(OldFD->getLocation(), diag::note_previous_declaration);
       }
     }

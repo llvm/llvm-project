@@ -1074,10 +1074,9 @@ PHIExpression *NewGVN::createPHIExpression(ArrayRef<ValPair> PHIOperands,
     HasBackedge = HasBackedge || isBackedge(BB, PHIBlock);
     return lookupOperandLeader(P.first) != I;
   });
-  std::transform(Filtered.begin(), Filtered.end(), op_inserter(E),
-                 [&](const ValPair &P) -> Value * {
-                   return lookupOperandLeader(P.first);
-                 });
+  llvm::transform(Filtered, op_inserter(E), [&](const ValPair &P) -> Value * {
+    return lookupOperandLeader(P.first);
+  });
   return E;
 }
 
@@ -2738,7 +2737,6 @@ NewGVN::makePossiblePHIOfOps(Instruction *I,
   if (!isCycleFree(I))
     return nullptr;
 
-  SmallPtrSet<const Value *, 8> ProcessedPHIs;
   // TODO: We don't do phi translation on memory accesses because it's
   // complicated. For a load, we'd need to be able to simulate a new memoryuse,
   // which we don't have a good way of doing ATM.

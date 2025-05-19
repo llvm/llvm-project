@@ -553,9 +553,12 @@ void MachineCopyPropagation::readSuccessorLiveIns(
   // If a copy result is livein to a successor, it is not dead.
   for (const MachineBasicBlock *Succ : MBB.successors()) {
     for (const auto &LI : Succ->liveins()) {
-      for (MCRegUnit Unit : TRI->regunits(LI.PhysReg)) {
-        if (MachineInstr *Copy = Tracker.findCopyForUnit(Unit, *TRI))
-          MaybeDeadCopies.remove(Copy);
+      for (MCRegUnitMaskIterator U(LI.PhysReg, TRI); U.isValid(); ++U) {
+        auto [Unit, Mask] = *U;
+        if ((Mask & LI.LaneMask).any()) {
+          if (MachineInstr *Copy = Tracker.findCopyForUnit(Unit, *TRI))
+            MaybeDeadCopies.remove(Copy);
+        }
       }
     }
   }
@@ -869,6 +872,12 @@ void MachineCopyPropagation::forwardUses(MachineInstr &MI) {
 
     ++NumCopyForwards;
     Changed = true;
+  }
+  // Attempt to canonicalize/optimize the instruction now its arguments have
+  // been mutated.
+  if (TII->simplifyInstruction(MI)) {
+    Changed = true;
+    LLVM_DEBUG(dbgs() << "MCP: After optimizeInstruction: " << MI);
   }
 }
 
@@ -1200,7 +1209,7 @@ void MachineCopyPropagation::BackwardCopyPropagateBlock(
     // Ignore non-trivial COPYs.
     std::optional<DestSourcePair> CopyOperands =
         isCopyInstr(MI, *TII, UseCopyInstr);
-    if (CopyOperands) {
+    if (CopyOperands && MI.getNumImplicitOperands() == 0) {
       Register DefReg = CopyOperands->Destination->getReg();
       Register SrcReg = CopyOperands->Source->getReg();
 

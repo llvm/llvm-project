@@ -51,19 +51,19 @@ unsigned LoongArchELFObjectWriter::getRelocType(MCContext &Ctx,
                                                 const MCFixup &Fixup,
                                                 bool IsPCRel) const {
   switch (Target.getSpecifier()) {
-  case LoongArchMCExpr::VK_TLS_LE_HI20:
-  case LoongArchMCExpr::VK_TLS_IE_PC_HI20:
-  case LoongArchMCExpr::VK_TLS_IE_HI20:
-  case LoongArchMCExpr::VK_TLS_LD_PC_HI20:
-  case LoongArchMCExpr::VK_TLS_LD_HI20:
-  case LoongArchMCExpr::VK_TLS_GD_PC_HI20:
-  case LoongArchMCExpr::VK_TLS_GD_HI20:
-  case LoongArchMCExpr::VK_TLS_DESC_PC_HI20:
-  case LoongArchMCExpr::VK_TLS_DESC_HI20:
-  case LoongArchMCExpr::VK_TLS_LE_HI20_R:
-  case LoongArchMCExpr::VK_TLS_LD_PCREL20_S2:
-  case LoongArchMCExpr::VK_TLS_GD_PCREL20_S2:
-  case LoongArchMCExpr::VK_TLS_DESC_PCREL20_S2:
+  case ELF::R_LARCH_TLS_LE_HI20:
+  case ELF::R_LARCH_TLS_IE_PC_HI20:
+  case ELF::R_LARCH_TLS_IE_HI20:
+  case ELF::R_LARCH_TLS_LD_PC_HI20:
+  case ELF::R_LARCH_TLS_LD_HI20:
+  case ELF::R_LARCH_TLS_GD_PC_HI20:
+  case ELF::R_LARCH_TLS_GD_HI20:
+  case ELF::R_LARCH_TLS_DESC_PC_HI20:
+  case ELF::R_LARCH_TLS_DESC_HI20:
+  case ELF::R_LARCH_TLS_LE_HI20_R:
+  case ELF::R_LARCH_TLS_LD_PCREL20_S2:
+  case ELF::R_LARCH_TLS_GD_PCREL20_S2:
+  case ELF::R_LARCH_TLS_DESC_PCREL20_S2:
     if (auto *SA = Target.getAddSym())
       cast<MCSymbolELF>(SA)->setType(ELF::STT_TLS);
     break;

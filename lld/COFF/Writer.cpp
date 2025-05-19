@@ -215,6 +215,7 @@ private:
   void appendImportThunks();
   void locateImportTables();
   void createExportTable();
+  void mergeSection(const std::map<StringRef, StringRef>::value_type &p);
   void mergeSections();
   void sortECChunks();
   void appendECImportTables();
@@ -239,6 +240,7 @@ private:
   void createRuntimePseudoRelocs();
   void createECChunks();
   void insertCtorDtorSymbols();
+  void insertBssDataStartEndSymbols();
   void markSymbolsWithRelocations(ObjFile *file, SymbolRVASet &usedSymbols);
   void createGuardCFTables();
   void markSymbolsForRVATable(ObjFile *file,
@@ -314,6 +316,7 @@ private:
 
   OutputSection *textSec;
   OutputSection *hexpthkSec;
+  OutputSection *bssSec;
   OutputSection *rdataSec;
   OutputSection *buildidSec;
   OutputSection *dataSec;
@@ -1076,7 +1079,7 @@ void Writer::createSections() {
   textSec = createSection(".text", code | r | x);
   if (isArm64EC(ctx.config.machine))
     hexpthkSec = createSection(".hexpthk", code | r | x);
-  createSection(".bss", bss | r | w);
+  bssSec = createSection(".bss", bss | r | w);
   rdataSec = createSection(".rdata", data | r);
   buildidSec = createSection(".buildid", data | r);
   dataSec = createSection(".data", data | r | w);
@@ -1259,8 +1262,10 @@ void Writer::createMiscChunks() {
   if (config->autoImport)
     createRuntimePseudoRelocs();
 
-  if (config->mingw)
+  if (config->mingw) {
     insertCtorDtorSymbols();
+    insertBssDataStartEndSymbols();
+  }
 }
 
 // Create .idata section for the DLL-imported symbol table.
@@ -1369,7 +1374,7 @@ void Writer::createExportTable() {
       }
     }
   }
-  ctx.forEachSymtab([&](SymbolTable &symtab) {
+  ctx.forEachActiveSymtab([&](SymbolTable &symtab) {
     if (symtab.edataStart) {
       if (symtab.hadExplicitExports)
         Warn(ctx) << "literal .edata sections override exports";
@@ -1566,6 +1571,30 @@ void Writer::createSymbolAndStringTable() {
   fileSize = alignTo(fileOff, ctx.config.fileAlign);
 }
 
+void Writer::mergeSection(const std::map<StringRef, StringRef>::value_type &p) {
+  StringRef toName = p.second;
+  if (p.first == toName)
+    return;
+  StringSet<> names;
+  while (true) {
+    if (!names.insert(toName).second)
+      Fatal(ctx) << "/merge: cycle found for section '" << p.first << "'";
+    auto i = ctx.config.merge.find(toName);
+    if (i == ctx.config.merge.end())
+      break;
+    toName = i->second;
+  }
+  OutputSection *from = findSection(p.first);
+  OutputSection *to = findSection(toName);
+  if (!from)
+    return;
+  if (!to) {
+    from->name = toName;
+    return;
+  }
+  to->merge(from);
+}
+
 void Writer::mergeSections() {
   llvm::TimeTraceScope timeScope("Merge sections");
   if (!pdataSec->chunks.empty()) {
@@ -1594,28 +1623,16 @@ void Writer::mergeSections() {
   }
 
   for (auto &p : ctx.config.merge) {
-    StringRef toName = p.second;
-    if (p.first == toName)
-      continue;
-    StringSet<> names;
-    while (true) {
-      if (!names.insert(toName).second)
-        Fatal(ctx) << "/merge: cycle found for section '" << p.first << "'";
-      auto i = ctx.config.merge.find(toName);
-      if (i == ctx.config.merge.end())
-        break;
-      toName = i->second;
-    }
-    OutputSection *from = findSection(p.first);
-    OutputSection *to = findSection(toName);
-    if (!from)
-      continue;
-    if (!to) {
-      from->name = toName;
-      continue;
-    }
-    to->merge(from);
+    if (p.first != ".bss")
+      mergeSection(p);
   }
+
+  // Because .bss contains all zeros, it should be merged at the end of
+  // whatever section it is being merged into (usually .data) so that the image
+  // need not actually contain all of the zeros.
+  auto it = ctx.config.merge.find(".bss");
+  if (it != ctx.config.merge.end())
+    mergeSection(*it);
 }
 
 // EC targets may have chunks of various architectures mixed together at this
@@ -1759,7 +1776,8 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
   assert(coffHeaderOffset == buf - buffer->getBufferStart());
   auto *coff = reinterpret_cast<coff_file_header *>(buf);
   buf += sizeof(*coff);
-  SymbolTable &symtab = ctx.hybridSymtab ? *ctx.hybridSymtab : ctx.symtab;
+  SymbolTable &symtab =
+      ctx.config.machine == ARM64X ? *ctx.hybridSymtab : ctx.symtab;
   coff->Machine = symtab.isEC() ? AMD64 : symtab.machine;
   coff->NumberOfSections = ctx.outputSections.size();
   coff->Characteristics = IMAGE_FILE_EXECUTABLE_IMAGE;
@@ -2368,6 +2386,31 @@ void Writer::insertCtorDtorSymbols() {
   }
 }
 
+// MinGW (really, Cygwin) specific.
+// The Cygwin startup code uses __data_start__ __data_end__ __bss_start__
+// and __bss_end__ to know what to copy during fork emulation.
+void Writer::insertBssDataStartEndSymbols() {
+  if (!dataSec->chunks.empty()) {
+    Symbol *dataStartSym = ctx.symtab.find("__data_start__");
+    Symbol *dataEndSym = ctx.symtab.find("__data_end__");
+    Chunk *endChunk = dataSec->chunks.back();
+    replaceSymbol<DefinedSynthetic>(dataStartSym, dataStartSym->getName(),
+                                    dataSec->chunks.front());
+    replaceSymbol<DefinedSynthetic>(dataEndSym, dataEndSym->getName(), endChunk,
+                                    endChunk->getSize());
+  }
+
+  if (!bssSec->chunks.empty()) {
+    Symbol *bssStartSym = ctx.symtab.find("__bss_start__");
+    Symbol *bssEndSym = ctx.symtab.find("__bss_end__");
+    Chunk *endChunk = bssSec->chunks.back();
+    replaceSymbol<DefinedSynthetic>(bssStartSym, bssStartSym->getName(),
+                                    bssSec->chunks.front());
+    replaceSymbol<DefinedSynthetic>(bssEndSym, bssEndSym->getName(), endChunk,
+                                    endChunk->getSize());
+  }
+}
+
 // Handles /section options to allow users to overwrite
 // section attributes.
 void Writer::setSectionPermissions() {
@@ -2391,7 +2434,7 @@ void Writer::setECSymbols() {
     return a.first->getRVA() < b.first->getRVA();
   });
 
-  ChunkRange &chpePdata = ctx.hybridSymtab ? hybridPdata : pdata;
+  ChunkRange &chpePdata = ctx.config.machine == ARM64X ? hybridPdata : pdata;
   Symbol *rfeTableSym = ctx.symtab.findUnderscore("__arm64x_extra_rfe_table");
   replaceSymbol<DefinedSynthetic>(rfeTableSym, "__arm64x_extra_rfe_table",
                                   chpePdata.first);
@@ -2436,7 +2479,7 @@ void Writer::setECSymbols() {
       delayIdata.getAuxIatCopy().empty() ? nullptr
                                          : delayIdata.getAuxIatCopy().front());
 
-  if (ctx.hybridSymtab) {
+  if (ctx.config.machine == ARM64X) {
     // For the hybrid image, set the alternate entry point to the EC entry
     // point. In the hybrid view, it is swapped to the native entry point
     // using ARM64X relocations.
@@ -2826,7 +2869,7 @@ void Writer::fixTlsAlignment() {
 }
 
 void Writer::prepareLoadConfig() {
-  ctx.forEachSymtab([&](SymbolTable &symtab) {
+  ctx.forEachActiveSymtab([&](SymbolTable &symtab) {
     if (!symtab.loadConfigSym)
       return;
 
@@ -2886,7 +2929,7 @@ void Writer::prepareLoadConfig(SymbolTable &symtab, T *loadConfig) {
   IF_CONTAINS(CHPEMetadataPointer) {
     // On ARM64X, only the EC version of the load config contains
     // CHPEMetadataPointer. Copy its value to the native load config.
-    if (ctx.hybridSymtab && !symtab.isEC() &&
+    if (ctx.config.machine == ARM64X && !symtab.isEC() &&
         ctx.symtab.loadConfigSize >=
             offsetof(T, CHPEMetadataPointer) + sizeof(T::CHPEMetadataPointer)) {
       OutputSection *sec =

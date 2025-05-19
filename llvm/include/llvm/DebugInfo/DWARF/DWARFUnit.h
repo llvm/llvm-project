@@ -566,6 +566,9 @@ public:
 
   Error tryExtractDIEsIfNeeded(bool CUDieOnly);
 
+  /// clearDIEs - Clear parsed DIEs to keep memory usage low.
+  void clearDIEs(bool KeepCUDie, bool KeepDWODies = false);
+
 private:
   /// Size in bytes of the .debug_info data associated with this compile unit.
   size_t getDebugInfoSize() const {
@@ -580,9 +583,6 @@ private:
   /// extractDIEsToVector - Appends all parsed DIEs to a vector.
   void extractDIEsToVector(bool AppendCUDie, bool AppendNonCUDIEs,
                            std::vector<DWARFDebugInfoEntry> &DIEs) const;
-
-  /// clearDIEs - Clear parsed DIEs to keep memory usage low.
-  void clearDIEs(bool KeepCUDie);
 
   /// parseDWO - Parses .dwo file for current compile unit. Returns true if
   /// it was actually constructed.

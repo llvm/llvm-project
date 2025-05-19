@@ -260,6 +260,23 @@ multiclass F3_S<string OpcStr, bits<6> Op3Val, bit XVal, SDNode OpNode,
                  itin>;
 }
 
+// 4-operand instructions.
+class F3_4<bits<6> op3val, bits<4> op5val, dag outs, dag ins,
+           string asmstr, list<dag> pattern = [], InstrItinClass itin = NoItinerary>
+   : F3<outs, ins, asmstr, pattern, itin> {
+  bits<4> op5;
+  bits<5> rs3;
+  bits<5> rs2;
+
+  let op         = 2;
+  let op3        = op3val;
+  let op5        = op5val;
+
+  let Inst{13-9} = rs3;
+  let Inst{8-5}  = op5;
+  let Inst{4-0}  = rs2;
+}
+
 class F4<bits<6> op3, dag outs, dag ins, string asmstr, list<dag> pattern,
          InstrItinClass itin = NoItinerary>
    : InstSP<outs, ins, asmstr, pattern, itin> {

@@ -11,7 +11,7 @@ define i8 @cvt_u8_f32(float %x) {
 ; CHECK-NEXT:    .reg .b32 %f<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.f32 %f1, [cvt_u8_f32_param_0];
+; CHECK-NEXT:    ld.param.b32 %f1, [cvt_u8_f32_param_0];
 ; CHECK-NEXT:    cvt.rzi.u16.f32 %rs1, %f1;
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
@@ -28,7 +28,7 @@ define i8 @cvt_u8_f64(double %x) {
 ; CHECK-NEXT:    .reg .b64 %fd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.f64 %fd1, [cvt_u8_f64_param_0];
+; CHECK-NEXT:    ld.param.b64 %fd1, [cvt_u8_f64_param_0];
 ; CHECK-NEXT:    cvt.rzi.u16.f64 %rs1, %fd1;
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
@@ -44,9 +44,9 @@ define float @cvt_f32_i8(i8 %x) {
 ; CHECK-NEXT:    .reg .b32 %f<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u8 %rs1, [cvt_f32_i8_param_0];
+; CHECK-NEXT:    ld.param.b8 %rs1, [cvt_f32_i8_param_0];
 ; CHECK-NEXT:    cvt.rn.f32.u16 %f1, %rs1;
-; CHECK-NEXT:    st.param.f32 [func_retval0], %f1;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %f1;
 ; CHECK-NEXT:    ret;
   %a = uitofp i8 %x to float
   ret float %a
@@ -59,9 +59,9 @@ define double @cvt_f64_i8(i8 %x) {
 ; CHECK-NEXT:    .reg .b64 %fd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u8 %rs1, [cvt_f64_i8_param_0];
+; CHECK-NEXT:    ld.param.b8 %rs1, [cvt_f64_i8_param_0];
 ; CHECK-NEXT:    cvt.rn.f64.u16 %fd1, %rs1;
-; CHECK-NEXT:    st.param.f64 [func_retval0], %fd1;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %fd1;
 ; CHECK-NEXT:    ret;
   %a = uitofp i8 %x to double
   ret double %a
@@ -76,7 +76,7 @@ define float @cvt_f32_s8(i8 %x) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.s8 %rs1, [cvt_f32_s8_param_0];
 ; CHECK-NEXT:    cvt.rn.f32.s16 %f1, %rs1;
-; CHECK-NEXT:    st.param.f32 [func_retval0], %f1;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %f1;
 ; CHECK-NEXT:    ret;
   %a = sitofp i8 %x to float
   ret float %a
@@ -91,7 +91,7 @@ define double @cvt_f64_s8(i8 %x) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.s8 %rs1, [cvt_f64_s8_param_0];
 ; CHECK-NEXT:    cvt.rn.f64.s16 %fd1, %rs1;
-; CHECK-NEXT:    st.param.f64 [func_retval0], %fd1;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %fd1;
 ; CHECK-NEXT:    ret;
   %a = sitofp i8 %x to double
   ret double %a
@@ -105,7 +105,7 @@ define i8 @cvt_s8_f32(float %x) {
 ; CHECK-NEXT:    .reg .b32 %f<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.f32 %f1, [cvt_s8_f32_param_0];
+; CHECK-NEXT:    ld.param.b32 %f1, [cvt_s8_f32_param_0];
 ; CHECK-NEXT:    cvt.rzi.s16.f32 %rs1, %f1;
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
 ; CHECK-NEXT:    and.b32 %r2, %r1, 255;
@@ -123,7 +123,7 @@ define i8 @cvt_s8_f64(double %x) {
 ; CHECK-NEXT:    .reg .b64 %fd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.f64 %fd1, [cvt_s8_f64_param_0];
+; CHECK-NEXT:    ld.param.b64 %fd1, [cvt_s8_f64_param_0];
 ; CHECK-NEXT:    cvt.rzi.s16.f64 %rs1, %fd1;
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
 ; CHECK-NEXT:    and.b32 %r2, %r1, 255;

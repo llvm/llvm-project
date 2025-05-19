@@ -43,11 +43,11 @@ void TestInst() {
 #pragma acc init if (T::value < T{})
 #pragma acc init device_type(radeon) device_num(getI()) if (getI() < getS())
   // expected-error@+2{{OpenACC 'device_num' clause cannot appear more than once on a 'init' directive}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'device_num' clause is here}}
 #pragma acc init device_type(multicore) device_type(host) device_num(t) if (t < T::value) device_num(getI()) 
 
   // expected-error@+2{{OpenACC 'if' clause cannot appear more than once on a 'init' directive}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'if' clause is here}}
 #pragma acc init if(t < T::value) if (getI() < getS())
 
   // expected-error@+1{{value of type 'const NotConvertible' is not contextually convertible to 'bool'}}

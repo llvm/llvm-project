@@ -40,6 +40,12 @@ struct TBAATree {
 
     mlir::LLVM::TBAATagAttr getTag(llvm::StringRef uniqueId) const;
 
+    /// Create a TBAA tag pointing to the root of this subtree,
+    /// i.e. all the children tags will alias with this tag.
+    mlir::LLVM::TBAATagAttr getTag() const;
+
+    mlir::LLVM::TBAATypeDescriptorAttr getRoot() const { return parent; }
+
   private:
     SubtreeState(mlir::MLIRContext *ctx, std::string name,
                  mlir::LLVM::TBAANodeAttr grandParent)
@@ -51,17 +57,44 @@ struct TBAATree {
     const std::string parentId;
     mlir::MLIRContext *const context;
     mlir::LLVM::TBAATypeDescriptorAttr parent;
-    llvm::DenseMap<llvm::StringRef, mlir::LLVM::TBAATagAttr> tagDedup;
   };
 
+  /// A subtree for POINTER/TARGET variables data.
+  /// Any POINTER variable must use a tag that points
+  /// to the root of this subtree.
+  /// A TARGET dummy argument must also point to this root.
+  SubtreeState targetDataTree;
+  /// A subtree for global variables data (e.g. user module variables).
   SubtreeState globalDataTree;
+  /// A subtree for variables allocated via fir.alloca or fir.allocmem.
   SubtreeState allocatedDataTree;
+  /// A subtree for subprogram's dummy arguments.
+  /// It only contains children for the dummy arguments
+  /// that are not POINTER/TARGET. They all do not conflict
+  /// with each other and with any other data access, except
+  /// with unknown data accesses (FIR alias analysis uses
+  /// SourceKind::Indirect for sources of such accesses).
   SubtreeState dummyArgDataTree;
+  /// A subtree for global variables descriptors.
   SubtreeState directDataTree;
   mlir::LLVM::TBAATypeDescriptorAttr anyAccessDesc;
   mlir::LLVM::TBAATypeDescriptorAttr boxMemberTypeDesc;
   mlir::LLVM::TBAATypeDescriptorAttr anyDataTypeDesc;
 
+  // Structure of the created tree:
+  //   Function root
+  //   |
+  //   "any access"
+  //   |
+  //   |- "descriptor member"
+  //   |- "any data access"
+  //      |
+  //      |- "dummy arg data"
+  //      |- "target data"
+  //         |
+  //         |- "allocated data"
+  //         |- "direct data"
+  //         |- "global data"
   static TBAATree buildTree(mlir::StringAttr functionName);
 
 private:

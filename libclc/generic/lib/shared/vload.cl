@@ -118,7 +118,6 @@ VLOAD_ADDR_SPACES(half)
 
 #define __CLC_BODY "vload_half.inc"
 #include <clc/math/gentype.inc>
-#undef __CLC_BODY
 #undef FUNC
 #undef __FUNC
 #undef VEC_LOAD16

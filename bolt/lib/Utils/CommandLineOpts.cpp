@@ -28,7 +28,7 @@ const char *BoltRevision =
 
 namespace opts {
 
-bool HeatmapMode = false;
+HeatmapModeKind HeatmapMode = HM_None;
 bool BinaryAnalysisMode = false;
 
 cl::OptionCategory BoltCategory("BOLT generic options");
@@ -60,6 +60,11 @@ cl::opt<unsigned>
     BucketsPerLine("line-size",
                    cl::desc("number of entries per line (default 256)"),
                    cl::init(256), cl::Optional, cl::cat(HeatmapCategory));
+
+cl::opt<bool>
+    CompactCodeModel("compact-code-model",
+                     cl::desc("generate code for binaries <128MB on AArch64"),
+                     cl::init(false), cl::cat(BoltCategory));
 
 cl::opt<bool>
 DiffOnly("diff-only",
@@ -118,6 +123,10 @@ cl::opt<bool> HeatmapPrintMappings(
     cl::desc("print mappings in the legend, between characters/blocks and text "
              "sections (default false)"),
     cl::Optional, cl::cat(HeatmapCategory));
+
+cl::opt<std::string> HeatmapOutput("heatmap",
+                                   cl::desc("print heatmap to a given file"),
+                                   cl::Optional, cl::cat(HeatmapCategory));
 
 cl::opt<bool> HotData("hot-data",
                       cl::desc("hot data symbols support (relocation mode)"),
