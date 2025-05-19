@@ -154,7 +154,7 @@ void CallingConvEmitter::emitAction(const Record *Action, indent Indent,
     O << Indent << "static const MCPhysReg " << RLName << "[] = {\n";
     O << Indent << "  ";
     ListSeparator LS;
-    for (const Init *V : RL->getValues())
+    for (const Init *V : RL->getElements())
       O << LS << getQualifiedRegisterName(V);
     O << "\n" << Indent << "};\n";
   };
