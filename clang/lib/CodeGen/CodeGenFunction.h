@@ -2818,11 +2818,6 @@ private:
   void emitStoresForInitAfterBZero(llvm::Constant *Init, Address Loc,
                                    bool isVolatile, bool IsAutoInit);
 
-  /// Returns debug info, with additional annotation if enabled by
-  /// CGM.getCodeGenOpts().SanitizeAnnotateDebugInfo[CheckKindOrdinal].
-  llvm::DILocation *
-  SanitizerAnnotateDebugInfo(SanitizerKind::SanitizerOrdinal CheckKindOrdinal);
-
 public:
   // Captures all the allocas created during the scope of its RAII object.
   struct AllocaTrackerRAII {
@@ -3372,6 +3367,11 @@ public:
   void EmitBoundsCheckImpl(const Expr *E, llvm::Value *Bound,
                            llvm::Value *Index, QualType IndexType,
                            QualType IndexedType, bool Accessed);
+
+  /// Returns debug info, with additional annotation if enabled by
+  /// CGM.getCodeGenOpts().SanitizeAnnotateDebugInfo[CheckKindOrdinal].
+  llvm::DILocation *
+  SanitizerAnnotateDebugInfo(SanitizerKind::SanitizerOrdinal CheckKindOrdinal);
 
   llvm::Value *GetCountedByFieldExprGEP(const Expr *Base, const FieldDecl *FD,
                                         const FieldDecl *CountDecl);
