@@ -1,0 +1,37 @@
+// RUN: rm -rf %t
+// RUN: split-file %s %t
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=signed-integer-overflow -fsanitize-ignorelist=%t/src.ignorelist -emit-llvm %t/test1.c -o - | FileCheck %s -check-prefix=CHECK-ALLOWLIST
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=signed-integer-overflow -fsanitize-ignorelist=%t/src.ignorelist -emit-llvm %t/test2.c -o - | FileCheck %s -check-prefix=CHECK-IGNORELIST
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=signed-integer-overflow -fsanitize-ignorelist=%t/src.ignorelist.contradict1 -emit-llvm %t/test1.c -o - | FileCheck %s -check-prefix=CHECK-ALLOWLISTOVERIDE1
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=signed-integer-overflow -fsanitize-ignorelist=%t/src.ignorelist.contradict2 -emit-llvm %t/test1.c -o - | FileCheck %s -check-prefix=CHECK-ALLOWLISTOVERIDE2
+
+
+// Verify ubsan only emits checks for files in the allowlist
+
+//--- src.ignorelist
+src:*
+src:*/test1.c=sanitize
+
+//--- src.ignorelist.contradict1
+src:*
+src:*/test1.c=sanitize
+src:*/test1.c
+
+//--- src.ignorelist.contradict2
+src:*
+src:*/test1.c
+src:*/test1.c=sanitize
+
+//--- test1.c
+int add1(int a, int b) {
+// CHECK-ALLOWLIST: llvm.sadd.with.overflow.i32
+// CHECK-ALLOWLISTOVERIDE1-NOT: llvm.sadd.with.overflow.i32
+// CHECK-ALLOWLISTOVERIDE2: llvm.sadd.with.overflow.i32
+    return a+b;
+}
+
+//--- test2.c
+int add2(int a, int b) {
+// CHECK-IGNORELIST-NOT: llvm.sadd.with.overflow.i32
+    return a+b;
+}
