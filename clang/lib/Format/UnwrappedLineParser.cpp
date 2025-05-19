@@ -1142,8 +1142,8 @@ void UnwrappedLineParser::parsePPEndIf() {
   // If the #endif of a potential include guard is the last thing in the file,
   // then we found an include guard.
   if (IncludeGuard == IG_Defined && PPBranchLevel == -1 && Tokens->isEOF() &&
-      !(Style.IndentPPDirectives == FormatStyle::PPDIS_None ||
-        Style.IndentPPDirectives == FormatStyle::PPDIS_Leave)) {
+      Style.IndentPPDirectives != FormatStyle::PPDIS_None &&
+      Style.IndentPPDirectives != FormatStyle::PPDIS_Leave) {
     IncludeGuard = IG_Found;
   }
 }
