@@ -44,9 +44,9 @@ public:
                  StringRef Category = StringRef()) const;
 
   // Query ignorelisted entries if any bit in Mask matches the entry's section.
-  // Return 0 if not found. If found, return the line number (starts with 1). 
+  // Return 0 if not found. If found, return the line number (starts with 1).
   unsigned inSectionBlame(SanitizerMask Mask, StringRef Prefix, StringRef Query,
-                 StringRef Category = StringRef()) const;
+                          StringRef Category = StringRef()) const;
 
 protected:
   // Initialize SanitizerSections.
@@ -54,7 +54,7 @@ protected:
 
   struct SanitizerSection {
     SanitizerSection(SanitizerMask SM, SectionEntries &E)
-        : Mask(SM), Entries(E){};
+        : Mask(SM), Entries(E) {};
 
     SanitizerMask Mask;
     SectionEntries &Entries;
