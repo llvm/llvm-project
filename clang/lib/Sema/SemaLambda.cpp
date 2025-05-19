@@ -15,9 +15,7 @@
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/MangleNumberingContext.h"
-#include "clang/AST/Type.h"
 #include "clang/Basic/TargetInfo.h"
-#include "clang/Lex/Lexer.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
@@ -30,7 +28,6 @@
 #include "clang/Sema/SemaSYCL.h"
 #include "clang/Sema/Template.h"
 #include "llvm/ADT/STLExtras.h"
-
 #include <optional>
 using namespace clang;
 using namespace sema;
@@ -1189,28 +1186,15 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
       CheckCXXThisCapture(C->Loc, /*Explicit=*/true, /*BuildAndDiagnose*/ true,
                           /*FunctionScopeIndexToStopAtPtr*/ nullptr,
                           C->Kind == LCK_StarThis);
-      if (!LSI->Captures.empty()) {
-        SourceManager &SourceMgr = Context.getSourceManager();
-        const LangOptions &LangOpts = Context.getLangOpts();
-        SourceRange TrimmedRange =
-            Lexer::makeFileCharRange(
-                CharSourceRange::getTokenRange(C->ExplicitRange), SourceMgr,
-                LangOpts)
-                .getAsRange();
-        LSI->ExplicitCaptureRanges[LSI->Captures.size() - 1] = TrimmedRange;
-      }
-      continue; // skip further processing for `this` and `*this` captures.
-    }
-
-    if (!C->Id) {
-      Diag(C->Loc, diag::err_expected_identifier_for_lambda_capture);
+      if (!LSI->Captures.empty())
+        LSI->ExplicitCaptureRanges[LSI->Captures.size() - 1] = C->ExplicitRange;
       continue;
     }
 
-    if (C->Init.isInvalid()) {
-      Diag(C->Loc, diag::err_invalid_lambda_capture_initializer_type);
+    assert(C->Id && "missing identifier for capture");
+
+    if (C->Init.isInvalid())
       continue;
-    }
 
     ValueDecl *Var = nullptr;
     if (C->Init.isUsable()) {
@@ -1223,57 +1207,12 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
       // for e.g., [n{0}] { }; <-- if no <initializer_list> is included.
       // FIXME: we should create the init capture variable and mark it invalid
       // in this case.
-      // Ensure the initialization is valid before proceeding
+      if (C->InitCaptureType.get().isNull())
+        continue;
 
-      if (!C->InitCaptureType || C->InitCaptureType.get().isNull()) {
-        if (!C->Init.isUsable()) {
-          Diag(C->Loc, diag::err_invalid_lambda_capture_initializer_type);
-          continue;
-        }
-
-        if (!C->Init.get())
-          continue;
-
-        ASTContext &Ctx = this->Context;
-        QualType DeducedType = C->Init.get()->getType();
-
-        if (DeducedType.isNull())
-          continue;
-
-        if (DeducedType->isVoidType()) {
-          if (!DeducedType->isDependentType()) {
-            C->InitCaptureType = ParsedType::make(Ctx.DependentTy);
-          } else {
-            Diag(C->Loc, diag::err_invalid_lambda_capture_initializer_type);
-          }
-          continue;
-        }
-
-        if (isa<InitListExpr>(C->Init.get())) {
-          IdentifierInfo *DummyID = &Ctx.Idents.get("lambda_tmp_var");
-          QualType DummyType = Ctx.UnknownAnyTy;
-
-          auto *TempVarDecl =
-              VarDecl::Create(Ctx, nullptr, C->Loc, C->Loc, DummyID, DummyType,
-                              nullptr, SC_None);
-
-          if (!TempVarDecl)
-            continue;
-
-          DeducedType = deduceVarTypeFromInitializer(
-              TempVarDecl, TempVarDecl->getDeclName(), TempVarDecl->getType(),
-              nullptr, TempVarDecl->getSourceRange(), false, C->Init.get());
-
-          if (DeducedType.isNull()) {
-            Diag(C->Loc, diag::err_invalid_lambda_capture_initializer_type);
-            C->InitCaptureType = ParsedType::make(Ctx.DependentTy);
-            continue;
-          }
-        }
-
-        if (!DeducedType.isNull())
-          C->InitCaptureType = ParsedType::make(DeducedType);
-      }
+      if (C->Init.get()->containsUnexpandedParameterPack() &&
+          !C->InitCaptureType.get()->getAs<PackExpansionType>())
+        DiagnoseUnexpandedParameterPack(C->Init.get(), UPPC_Initializer);
 
       unsigned InitStyle;
       switch (C->InitKind) {
@@ -1308,12 +1247,12 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
       if (C->Kind == LCK_ByRef && Intro.Default == LCD_ByRef) {
         Diag(C->Loc, diag::err_reference_capture_with_reference_default)
             << FixItHint::CreateRemoval(
-                   SourceRange(getLocForEndOfToken(PrevCaptureLoc), C->Loc));
+                SourceRange(getLocForEndOfToken(PrevCaptureLoc), C->Loc));
         continue;
       } else if (C->Kind == LCK_ByCopy && Intro.Default == LCD_ByCopy) {
         Diag(C->Loc, diag::err_copy_capture_with_copy_default)
             << FixItHint::CreateRemoval(
-                   SourceRange(getLocForEndOfToken(PrevCaptureLoc), C->Loc));
+                SourceRange(getLocForEndOfToken(PrevCaptureLoc), C->Loc));
         continue;
       }
 
@@ -1413,16 +1352,8 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
                                 : TryCaptureKind::ExplicitByVal;
       tryCaptureVariable(Var, C->Loc, Kind, EllipsisLoc);
     }
-    if (!LSI->Captures.empty()) {
-      SourceManager &SourceMgr = Context.getSourceManager();
-      const LangOptions &LangOpts = Context.getLangOpts();
-      SourceRange TrimmedRange =
-          Lexer::makeFileCharRange(
-              CharSourceRange::getTokenRange(C->ExplicitRange), SourceMgr,
-              LangOpts)
-              .getAsRange();
-      LSI->ExplicitCaptureRanges[LSI->Captures.size() - 1] = TrimmedRange;
-    }
+    if (!LSI->Captures.empty())
+      LSI->ExplicitCaptureRanges[LSI->Captures.size() - 1] = C->ExplicitRange;
   }
   finishLambdaExplicitCaptures(LSI);
   LSI->ContainsUnexpandedParameterPack |= ContainsUnexpandedParameterPack;
@@ -1702,8 +1633,8 @@ static void repeatForLambdaConversionFunctionCallingConvs(
         CC_C,        CC_X86StdCall, CC_X86FastCall, CC_X86VectorCall,
         DefaultFree, DefaultMember, CallOpCC};
     llvm::sort(Convs);
-    llvm::iterator_range<CallingConv *> Range(
-        std::begin(Convs), std::unique(std::begin(Convs), std::end(Convs)));
+    llvm::iterator_range<CallingConv *> Range(std::begin(Convs),
+                                              llvm::unique(Convs));
     const TargetInfo &TI = S.getASTContext().getTargetInfo();
 
     for (CallingConv C : Range) {
@@ -1781,9 +1712,9 @@ static void addFunctionPointerConversion(Sema &S, SourceRange IntroducerRange,
   QualType ConvTy = S.Context.getFunctionType(PtrToFunctionTy, {}, ConvExtInfo);
 
   SourceLocation Loc = IntroducerRange.getBegin();
-  DeclarationName ConversionName 
+  DeclarationName ConversionName
     = S.Context.DeclarationNames.getCXXConversionFunctionName(
-          S.Context.getCanonicalType(PtrToFunctionTy));
+        S.Context.getCanonicalType(PtrToFunctionTy));
   // Construct a TypeSourceInfo for the conversion function, and wire
   // all the parameters appropriately for the FunctionProtoTypeLoc
   // so that everything works during transformation/instantiation of
@@ -1822,7 +1753,7 @@ static void addFunctionPointerConversion(Sema &S, SourceRange IntroducerRange,
   FunctionProtoTypeLoc CallOpConvTL =
       PtrToFunctionTL.getPointeeLoc().getAs<FunctionProtoTypeLoc>();
   FunctionProtoTypeLoc CallOpConvNameTL =
-      ConvNamePtrToFunctionTL.getPointeeLoc().getAs<FunctionProtoTypeLoc>();
+    ConvNamePtrToFunctionTL.getPointeeLoc().getAs<FunctionProtoTypeLoc>();
 
   // Wire up the FunctionProtoTypeLocs with the call operator's parameters.
   // These parameter's are essentially used to transform the name and
@@ -1947,9 +1878,9 @@ static void addFunctionPointerConversions(Sema &S, SourceRange IntroducerRange,
 
 /// Add a lambda's conversion to block pointer.
 static void addBlockPointerConversion(Sema &S,
-  SourceRange IntroducerRange,
-  CXXRecordDecl *Class,
-  CXXMethodDecl *CallOperator) {
+                                      SourceRange IntroducerRange,
+                                      CXXRecordDecl *Class,
+                                      CXXMethodDecl *CallOperator) {
   const FunctionProtoType *CallOpProto =
       CallOperator->getType()->castAs<FunctionProtoType>();
   QualType FunctionTy = S.getLambdaConversionFunctionResultType(
@@ -1965,8 +1896,8 @@ static void addBlockPointerConversion(Sema &S,
 
   SourceLocation Loc = IntroducerRange.getBegin();
   DeclarationName Name
-      = S.Context.DeclarationNames.getCXXConversionFunctionName(
-          S.Context.getCanonicalType(BlockPtrTy));
+    = S.Context.DeclarationNames.getCXXConversionFunctionName(
+        S.Context.getCanonicalType(BlockPtrTy));
   DeclarationNameLoc NameLoc = DeclarationNameLoc::makeNamedTypeLoc(
       S.Context.getTrivialTypeSourceInfo(BlockPtrTy, Loc));
   CXXConversionDecl *Conversion = CXXConversionDecl::Create(
@@ -2023,7 +1954,7 @@ ExprResult Sema::BuildCaptureInit(const Capture &Cap,
     ValueDecl *Var = Cap.getVariable();
     Name = Var->getIdentifier();
     Init = BuildDeclarationNameExpr(
-        CXXScopeSpec(), DeclarationNameInfo(Var->getDeclName(), Loc), Var);
+      CXXScopeSpec(), DeclarationNameInfo(Var->getDeclName(), Loc), Var);
   }
 
   // In OpenMP, the capture kind doesn't actually describe how to capture:
@@ -2038,7 +1969,8 @@ ExprResult Sema::BuildCaptureInit(const Capture &Cap,
   Expr *InitExpr = Init.get();
   InitializedEntity Entity = InitializedEntity::InitializeLambdaCapture(
       Name, Cap.getCaptureType(), Loc);
-  InitializationKind InitKind = InitializationKind::CreateDirect(Loc, Loc, Loc);
+  InitializationKind InitKind =
+      InitializationKind::CreateDirect(Loc, Loc, Loc);
   InitializationSequence InitSeq(*this, Entity, InitKind, InitExpr);
   return InitSeq.Perform(*this, Entity, InitKind, InitExpr);
 }
@@ -2209,8 +2141,8 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
 
     // True if the current capture has a used capture or default before it.
     bool CurHasPreviousCapture = CaptureDefault != LCD_None;
-    SourceLocation PrevCaptureLoc =
-        CurHasPreviousCapture ? CaptureDefaultLoc : IntroducerRange.getBegin();
+    SourceLocation PrevCaptureLoc = CurHasPreviousCapture ?
+        CaptureDefaultLoc : IntroducerRange.getBegin();
 
     for (unsigned I = 0, N = LSI->Captures.size(); I != N; ++I) {
       const Capture &From = LSI->Captures[I];
@@ -2227,34 +2159,26 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
       SourceRange CaptureRange = LSI->ExplicitCaptureRanges[I];
 
       // Warn about unused explicit captures.
-
       bool IsCaptureUsed = true;
-
       if (!CurContext->isDependentContext() && !IsImplicit &&
           !From.isODRUsed()) {
-        // Handle non-ODR used init captures separately.
+        // Initialized captures that are non-ODR used may not be eliminated.
+        // FIXME: Where did the IsGenericLambda here come from?
         bool NonODRUsedInitCapture =
             IsGenericLambda && From.isNonODRUsed() && From.isInitCapture();
-
         if (!NonODRUsedInitCapture) {
           bool IsLast = (I + 1) == LSI->NumExplicitCaptures;
           SourceRange FixItRange;
-
           if (CaptureRange.isValid()) {
             if (!CurHasPreviousCapture && !IsLast) {
-              // No previous capture and not the last capture: remove current
-              // and next comma.
-              FixItRange =
-                  SourceRange(CaptureRange.getBegin(),
-                              getLocForEndOfToken(CaptureRange.getEnd()));
-            } else if (CurHasPreviousCapture && !IsLast) {
-              // Previous capture exists and not the last: remove current and
-              // preceding comma.
+              // If there are no captures preceding this capture, remove the
+              // following comma.
+              FixItRange = SourceRange(CaptureRange.getBegin(),
+                                       getLocForEndOfToken(CaptureRange.getEnd()));
+            } else {
+              // Otherwise, remove the comma since the last used capture.
               FixItRange = SourceRange(getLocForEndOfToken(PrevCaptureLoc),
                                        CaptureRange.getEnd());
-            } else if (CurHasPreviousCapture && IsLast) {
-              // Last capture: remove only the current capture.
-              FixItRange = CaptureRange;
             }
           }
 
@@ -2445,12 +2369,11 @@ ExprResult Sema::BuildBlockForLambdaConversion(SourceLocation CurrentLocation,
   // to any actual memory location. However, the initializer copy-initializes
   // the lambda object.
   TypeSourceInfo *CapVarTSI =
-    Context.getTrivialTypeSourceInfo(Src->getType());
-  VarDecl *CapVar =
-      VarDecl::Create(Context, Block, ConvLocation,
-                      ConvLocation, nullptr,
-                      Src->getType(), CapVarTSI,
-                      SC_None);
+      Context.getTrivialTypeSourceInfo(Src->getType());
+  VarDecl *CapVar = VarDecl::Create(Context, Block, ConvLocation,
+                                    ConvLocation, nullptr,
+                                    Src->getType(), CapVarTSI,
+                                    SC_None);
   BlockDecl::Capture Capture(/*variable=*/CapVar, /*byRef=*/false,
                              /*nested=*/false, /*copy=*/Init.get());
   Block->setCaptures(Context, Capture, /*CapturesCXXThis=*/false);
