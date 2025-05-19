@@ -457,7 +457,7 @@ TEST_F(InstrProfTest, test_memprof_v2_full_schema) {
   ASSERT_THAT_ERROR(RecordOr.takeError(), Succeeded());
   const memprof::MemProfRecord &Record = RecordOr.get();
 
-  memprof::IndexedCallstackIdConveter CSIdConv(MemProfData);
+  memprof::IndexedCallstackIdConverter CSIdConv(MemProfData);
 
   const ::llvm::memprof::MemProfRecord WantRecord =
       IndexedMR.toMemProfRecord(CSIdConv);
@@ -491,7 +491,7 @@ TEST_F(InstrProfTest, test_memprof_v2_partial_schema) {
   ASSERT_THAT_ERROR(RecordOr.takeError(), Succeeded());
   const memprof::MemProfRecord &Record = RecordOr.get();
 
-  memprof::IndexedCallstackIdConveter CSIdConv(MemProfData);
+  memprof::IndexedCallstackIdConverter CSIdConv(MemProfData);
 
   const ::llvm::memprof::MemProfRecord WantRecord =
       IndexedMR.toMemProfRecord(CSIdConv);
@@ -609,7 +609,7 @@ TEST_F(InstrProfTest, test_memprof_merge) {
 
   std::optional<memprof::FrameId> LastUnmappedFrameId;
 
-  memprof::IndexedCallstackIdConveter CSIdConv(MemProfData);
+  memprof::IndexedCallstackIdConverter CSIdConv(MemProfData);
 
   const ::llvm::memprof::MemProfRecord WantRecord =
       IndexedMR.toMemProfRecord(CSIdConv);
