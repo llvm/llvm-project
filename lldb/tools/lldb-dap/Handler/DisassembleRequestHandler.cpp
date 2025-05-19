@@ -13,7 +13,9 @@
 #include "Protocol/ProtocolTypes.h"
 #include "RequestHandler.h"
 #include "lldb/API/SBInstruction.h"
+#include "lldb/lldb-types.h"
 #include "llvm/ADT/StringExtras.h"
+#include <optional>
 
 using namespace lldb_dap::protocol;
 
@@ -26,7 +28,8 @@ llvm::Expected<DisassembleResponseBody>
 DisassembleRequestHandler::Run(const DisassembleArguments &args) const {
   std::vector<DisassembledInstruction> instructions;
 
-  auto addr_opt = DecodeMemoryReference(args.memoryReference);
+  std::optional<lldb::addr_t> addr_opt =
+      DecodeMemoryReference(args.memoryReference);
   if (!addr_opt.has_value())
     return llvm::make_error<DAPError>("Malformed memory reference: " +
                                       args.memoryReference);
