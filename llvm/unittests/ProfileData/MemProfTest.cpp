@@ -15,6 +15,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/ProfileData/MemProfData.inc"
+#include "llvm/ProfileData/MemProfRadixTree.h"
 #include "llvm/ProfileData/MemProfReader.h"
 #include "llvm/ProfileData/MemProfYAML.h"
 #include "llvm/Support/raw_ostream.h"
