@@ -10000,12 +10000,12 @@ static bool IsElementEquivalent(int MaskSize, SDValue Op, SDValue ExpectedOp,
       }
       if ((VT.getScalarSizeInBits() % SrcVT.getScalarSizeInBits()) == 0) {
         unsigned Scale = VT.getScalarSizeInBits() / SrcVT.getScalarSizeInBits();
-        bool AllEquiv = true;
-        for (unsigned I = 0; I != Scale && AllEquiv; ++I)
-          AllEquiv &=
-              IsElementEquivalent(SrcVT.getVectorNumElements(), Src, Src,
-                                  (Idx * Scale) + I, (ExpectedIdx * Scale) + I);
-        return AllEquiv;
+        for (unsigned I = 0; I != Scale; ++I)
+          if (!IsElementEquivalent(SrcVT.getVectorNumElements(), Src, Src,
+                                   (Idx * Scale) + I,
+                                   (ExpectedIdx * Scale) + I))
+            return false;
+        return true;
       }
     }
     break;
