@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define __CLC_BODY <clc/math/ilogb.inc>
+#define __CLC_FUNCTION ilogb
+#define __CLC_BODY <clc/math/unary_decl_with_int_return.inc>
 
 #include <clc/math/gentype.inc>
+
+#undef __CLC_FUNCTION

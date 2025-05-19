@@ -1358,15 +1358,15 @@ size_t SymbolFileDWARF::ParseBlocksRecursive(CompileUnit &comp_unit,
         if (decl_file || decl_line || decl_column)
           decl_up = std::make_unique<Declaration>(
               comp_unit.GetSupportFiles().GetFileSpecAtIndex(
-                  decl_file ? *decl_file : 0),
-              decl_line ? *decl_line : 0, decl_column ? *decl_column : 0);
+                  decl_file.value_or(0)),
+              decl_line.value_or(0), decl_column.value_or(0));
 
         std::unique_ptr<Declaration> call_up;
         if (call_file || call_line || call_column)
           call_up = std::make_unique<Declaration>(
               comp_unit.GetSupportFiles().GetFileSpecAtIndex(
-                  call_file ? *call_file : 0),
-              call_line ? *call_line : 0, call_column ? *call_column : 0);
+                  call_file.value_or(0)),
+              call_line.value_or(0), call_column.value_or(0));
 
         block->SetInlinedFunctionInfo(name, mangled_name, decl_up.get(),
                                       call_up.get());
