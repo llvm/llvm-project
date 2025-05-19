@@ -33,7 +33,9 @@ class TestDAP_InstructionBreakpointTestCase(lldbdap_testcase.DAPTestCaseBase):
         self.build_and_launch(program)
 
         # Set source breakpoint 1
-        response = self.dap_server.request_setBreakpoints(self.main_path, [main_line])
+        response = self.dap_server.request_setBreakpoints(
+            self.dap_server.get_source_for_path(self.main_path), [main_line]
+        )
         breakpoints = response["body"]["breakpoints"]
         self.assertEqual(len(breakpoints), 1)
         breakpoint = breakpoints[0]

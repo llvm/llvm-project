@@ -1658,9 +1658,16 @@ std::vector<protocol::Breakpoint> DAP::SetSourceBreakpoints(
       const auto [iv, inserted] =
           existing_breakpoints.try_emplace(bp_pos, src_bp);
       // We check if this breakpoint already exists to update it.
-      if (inserted)
-        iv->second.SetBreakpoint(source);
-      else
+      if (inserted) {
+        if (auto error = iv->second.SetBreakpoint(source)) {
+          protocol::Breakpoint invalid_breakpoint;
+          invalid_breakpoint.message = llvm::toString(std::move(error));
+          invalid_breakpoint.verified = false;
+          response_breakpoints.push_back(std::move(invalid_breakpoint));
+          existing_breakpoints.erase(iv);
+          continue;
+        }
+      } else
         iv->second.UpdateBreakpoint(src_bp);
 
       protocol::Breakpoint response_breakpoint =
@@ -1673,7 +1680,7 @@ std::vector<protocol::Breakpoint> DAP::SetSourceBreakpoints(
       if (!response_breakpoint.column &&
           src_bp.GetColumn() != LLDB_INVALID_COLUMN_NUMBER)
         response_breakpoint.column = src_bp.GetColumn();
-      response_breakpoints.push_back(response_breakpoint);
+      response_breakpoints.push_back(std::move(response_breakpoint));
     }
   }
 

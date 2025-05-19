@@ -20,6 +20,7 @@
 #include "lldb/API/SBThread.h"
 #include "lldb/API/SBValue.h"
 #include "lldb/lldb-enumerations.h"
+#include "llvm/Support/Error.h"
 #include <cassert>
 #include <cctype>
 #include <cstdlib>
@@ -35,29 +36,34 @@ SourceBreakpoint::SourceBreakpoint(DAP &dap,
       m_line(breakpoint.line),
       m_column(breakpoint.column.value_or(LLDB_INVALID_COLUMN_NUMBER)) {}
 
-void SourceBreakpoint::SetBreakpoint(const protocol::Source &source) {
+llvm::Error SourceBreakpoint::SetBreakpoint(const protocol::Source &source) {
   lldb::SBMutex lock = m_dap.GetAPIMutex();
   std::lock_guard<lldb::SBMutex> guard(lock);
 
   if (m_line == 0)
-    return;
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Invalid line number.");
 
   if (source.sourceReference) {
     // breakpoint set by assembly source.
     lldb::SBAddress source_address(*source.sourceReference, m_dap.target);
     if (!source_address.IsValid())
-      return;
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "Invalid sourceReference.");
 
     lldb::SBSymbol symbol = source_address.GetSymbol();
     if (!symbol.IsValid()) {
       // Not yet supporting breakpoints in assembly without a valid symbol.
-      return;
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "Breakpoints in assembly without a valid "
+                                     "symbol are not supported yet.");
     }
 
     lldb::SBInstructionList inst_list =
         m_dap.target.ReadInstructions(symbol.GetStartAddress(), m_line);
     if (inst_list.GetSize() < m_line)
-      return;
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "Invalid instruction list size.");
 
     lldb::SBAddress address =
         inst_list.GetInstructionAtIndex(m_line - 1).GetAddress();
@@ -74,6 +80,7 @@ void SourceBreakpoint::SetBreakpoint(const protocol::Source &source) {
   if (!m_log_message.empty())
     SetLogMessage();
   Breakpoint::SetBreakpoint();
+  return llvm::Error::success();
 }
 
 void SourceBreakpoint::UpdateBreakpoint(const SourceBreakpoint &request_bp) {

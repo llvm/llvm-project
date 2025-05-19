@@ -1,5 +1,3 @@
-#include <stddef.h>
-
 __attribute__((nodebug)) int assembly_func(int n) {
   n += 1;
   n += 2;
@@ -12,5 +10,5 @@ int main(int argc, char const *argv[]) {
   assembly_func(10);
   assembly_func(20);
   assembly_func(30);
-  return 0; // Break here
+  return 0;
 }

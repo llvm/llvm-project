@@ -239,7 +239,7 @@ public:
                                uint32_t start_column, uint32_t end_line,
                                uint32_t end_column) const;
   std::vector<std::pair<uint32_t, uint32_t>>
-  GetAssemblyBreakpointLocations(int64_t sourceReference, uint32_t start_line,
+  GetAssemblyBreakpointLocations(int64_t source_reference, uint32_t start_line,
                                  uint32_t end_line) const;
 };
 

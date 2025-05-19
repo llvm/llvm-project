@@ -551,6 +551,14 @@ class DebugCommunication(object):
                 return child
         return None
 
+    def get_source_for_source_reference(self, source_reference):
+        return {"sourceReference": source_reference}
+
+    def get_source_for_path(self, file_path):
+        (dir, base) = os.path.split(file_path)
+        source_dict = {"name": base, "path": file_path}
+        return source_dict
+
     def replay_packets(self, replay_file_path):
         f = open(replay_file_path, "r")
         mode = "invalid"
@@ -948,20 +956,11 @@ class DebugCommunication(object):
         command_dict = {"command": "scopes", "type": "request", "arguments": args_dict}
         return self.send_recv(command_dict)
 
-    def request_setBreakpoints(self, file_path, line_array, data=None):
+    def request_setBreakpoints(self, source_dict, line_array, data=None):
         """data is array of parameters for breakpoints in line_array.
         Each parameter object is 1:1 mapping with entries in line_entry.
         It contains optional location/hitCondition/logMessage parameters.
         """
-        (dir, base) = os.path.split(file_path)
-        source_dict = {"name": base, "path": file_path}
-        return self.request_setBreakpoints_with_source(source_dict, line_array, data)
-
-    def request_setBreakpointsAssembly(self, sourceReference, line_array, data=None):
-        source_dict = {"sourceReference": sourceReference}
-        return self.request_setBreakpoints_with_source(source_dict, line_array, data)
-
-    def request_setBreakpoints_with_source(self, source_dict, line_array, data=None):
         args_dict = {
             "source": source_dict,
             "sourceModified": False,
@@ -1388,7 +1387,9 @@ def run_vscode(dbg, args, options):
                 else:
                     source_to_lines[path] = [int(line)]
         for source in source_to_lines:
-            dbg.request_setBreakpoints(source, source_to_lines[source])
+            dbg.request_setBreakpoints(
+                dbg.get_source_for_path(source), source_to_lines[source]
+            )
     if options.funcBreakpoints:
         dbg.request_setFunctionBreakpoints(options.funcBreakpoints)
 

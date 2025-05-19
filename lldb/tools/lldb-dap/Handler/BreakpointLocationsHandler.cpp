@@ -104,9 +104,9 @@ BreakpointLocationsRequestHandler::GetSourceBreakpointLocations(
 
 std::vector<std::pair<uint32_t, uint32_t>>
 BreakpointLocationsRequestHandler::GetAssemblyBreakpointLocations(
-    int64_t sourceReference, uint32_t start_line, uint32_t end_line) const {
+    int64_t source_reference, uint32_t start_line, uint32_t end_line) const {
   std::vector<std::pair<uint32_t, uint32_t>> locations;
-  lldb::SBAddress address(sourceReference, dap.target);
+  lldb::SBAddress address(source_reference, dap.target);
   if (!address.IsValid())
     return locations;
 

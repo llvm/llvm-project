@@ -58,7 +58,7 @@ class TestDAP_breakpointEvents(lldbdap_testcase.DAPTestCaseBase):
         # Set breakpoints and verify that they got set correctly
         dap_breakpoint_ids = []
         response = self.dap_server.request_setBreakpoints(
-            main_source_path, [main_bp_line]
+            self.dap_server.get_source_for_path(main_source_path), [main_bp_line]
         )
         self.assertTrue(response["success"])
         breakpoints = response["body"]["breakpoints"]
@@ -70,7 +70,7 @@ class TestDAP_breakpointEvents(lldbdap_testcase.DAPTestCaseBase):
             )
 
         response = self.dap_server.request_setBreakpoints(
-            foo_source_path, [foo_bp1_line]
+            self.dap_server.get_source_for_path(foo_source_path), [foo_bp1_line]
         )
         self.assertTrue(response["success"])
         breakpoints = response["body"]["breakpoints"]
