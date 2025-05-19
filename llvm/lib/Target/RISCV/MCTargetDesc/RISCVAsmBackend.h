@@ -48,9 +48,9 @@ public:
                            const MCSubtargetInfo *STI,
                            uint64_t &Value) override;
 
-  bool handleAddSubRelocations(const MCAssembler &Asm, const MCFragment &F,
-                               const MCFixup &Fixup, const MCValue &Target,
-                               uint64_t &FixedValue) const override;
+  bool addReloc(MCAssembler &Asm, const MCFragment &F, const MCFixup &Fixup,
+                const MCValue &Target, uint64_t &FixedValue, bool IsResolved,
+                const MCSubtargetInfo *) override;
 
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,

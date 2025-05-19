@@ -1350,13 +1350,9 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
                  MCFixupKindInfo::FKF_IsPCRel;
   uint64_t FixupOffset = Asm.getFragmentOffset(*Fragment) + Fixup.getOffset();
   uint64_t Addend = Target.getConstant();
-  if (auto *RefB = Target.getSubSym()) {
-    // When there is no relocation specifier, a linker relaxation target may
-    // emit ADD/SUB relocations for A-B+C.
-    if (SymA && Backend.handleAddSubRelocations(Asm, *Fragment, Fixup, Target,
-                                                FixedValue))
-      return;
+  // Handle special fixups like ADD/SUB relocation pairs.
 
+  if (auto *RefB = Target.getSubSym()) {
     const auto &SymB = cast<MCSymbolELF>(*RefB);
     if (SymB.isUndefined()) {
       Ctx.reportError(Fixup.getLoc(),
