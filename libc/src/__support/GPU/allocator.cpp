@@ -31,6 +31,7 @@ constexpr static uint64_t ARRAY_SIZE = MAX_SIZE / SLAB_SIZE;
 constexpr static uint64_t SLAB_ALIGNMENT = SLAB_SIZE - 1;
 constexpr static uint32_t BITS_IN_WORD = sizeof(uint32_t) * 8;
 constexpr static uint32_t MIN_SIZE = 16;
+constexpr static uint32_t MIN_ALIGNMENT = MIN_SIZE - 1;
 
 // A sentinel used to indicate an invalid but non-null pointer value.
 constexpr static uint64_t SENTINEL = cpp::numeric_limits<uint64_t>::max();
@@ -63,8 +64,8 @@ static void rpc_free(void *ptr) {
   port.close();
 }
 
-// Convert a potentially disjoint bitmask into an increasing integer for use
-// with indexing between gpu lanes.
+// Convert a potentially disjoint bitmask into an increasing integer per-lane
+// for use with indexing between gpu lanes.
 static inline uint32_t lane_count(uint64_t lane_mask) {
   return cpp::popcount(lane_mask & ((uint64_t(1) << gpu::get_lane_id()) - 1));
 }
@@ -78,7 +79,7 @@ static inline uint32_t entropy() {
          0x9e3779bb;
 }
 
-// Generate a random number and update the state using the xorshift*32 PRNG.
+// Generate a random number and update the state using the xorshift32* PRNG.
 static inline uint32_t xorshift32(uint32_t &state) {
   state ^= state << 13;
   state ^= state >> 17;
@@ -109,12 +110,12 @@ static inline uint32_t get_chunk_size(uint32_t x) {
   uint32_t s3 = 0b1000 << (pow2 - 3);
 
   if (s0 > y)
-    return (s0 + 15) & ~15;
+    return (s0 + MIN_ALIGNMENT) & ~MIN_ALIGNMENT;
   if (s1 > y)
-    return (s1 + 15) & ~15;
+    return (s1 + MIN_ALIGNMENT) & ~MIN_ALIGNMENT;
   if (s2 > y)
-    return (s2 + 15) & ~15;
-  return (s3 + 15) & ~15;
+    return (s2 + MIN_ALIGNMENT) & ~MIN_ALIGNMENT;
+  return (s3 + MIN_ALIGNMENT) & ~MIN_ALIGNMENT;
 }
 
 // Rounds to the nearest power of two.
@@ -126,7 +127,7 @@ static inline constexpr T round_up(const T x) {
 
 } // namespace impl
 
-/// A slab allocator used to hand out indentically sized slabs of memory.
+/// A slab allocator used to hand out identically sized slabs of memory.
 /// Allocation is done through random walks of a bitfield until a free bit is
 /// encountered. This reduces contention and is highly parallel on a GPU.
 ///
@@ -158,39 +159,39 @@ struct Slab {
     __builtin_memset(get_bitfield(), 0, bitfield_bytes(chunk_size));
   }
 
-  // Get the number of chunks that can theoretically fit inside this array.
-  static uint32_t num_chunks(uint32_t chunk_size) {
+  // Get the number of chunks that can theoretically fit inside this slab.
+  constexpr static uint32_t num_chunks(uint32_t chunk_size) {
     return SLAB_SIZE / chunk_size;
   }
 
   // Get the number of bytes needed to contain the bitfield bits.
-  static uint32_t bitfield_bytes(uint32_t chunk_size) {
+  constexpr static uint32_t bitfield_bytes(uint32_t chunk_size) {
     return ((num_chunks(chunk_size) + BITS_IN_WORD - 1) / BITS_IN_WORD) * 8;
   }
 
   // The actual amount of memory available excluding the bitfield and metadata.
-  static uint32_t available_bytes(uint32_t chunk_size) {
+  constexpr static uint32_t available_bytes(uint32_t chunk_size) {
     return SLAB_SIZE - bitfield_bytes(chunk_size) - sizeof(Header);
   }
 
   // The number of chunks that can be stored in this slab.
-  static uint32_t available_chunks(uint32_t chunk_size) {
+  constexpr static uint32_t available_chunks(uint32_t chunk_size) {
     return available_bytes(chunk_size) / chunk_size;
   }
 
   // The length in bits of the bitfield.
-  static uint32_t usable_bits(uint32_t chunk_size) {
+  constexpr static uint32_t usable_bits(uint32_t chunk_size) {
     return available_bytes(chunk_size) / chunk_size;
   }
 
   // Get the location in the memory where we will store the chunk size.
   uint32_t get_chunk_size() const {
-    return *reinterpret_cast<const uint32_t *>(memory);
+    return reinterpret_cast<const Header *>(memory)->chunk_size;
   }
 
   // Get the location in the memory where we will store the global index.
   uint32_t get_global_index() const {
-    return *reinterpret_cast<const uint32_t *>(memory + sizeof(uint32_t));
+    return reinterpret_cast<const Header *>(memory)->global_index;
   }
 
   // Get a pointer to where the bitfield is located in the memory.
@@ -200,8 +201,8 @@ struct Slab {
 
   // Get a pointer to where the actual memory to be allocated lives.
   uint8_t *get_memory(uint32_t chunk_size) {
-    return reinterpret_cast<uint8_t *>(memory) + bitfield_bytes(chunk_size) +
-           sizeof(Header);
+    return reinterpret_cast<uint8_t *>(get_bitfield()) +
+           bitfield_bytes(chunk_size);
   }
 
   // Get a pointer to the actual memory given an index into the bitfield.
@@ -221,11 +222,12 @@ struct Slab {
   void *allocate(uint64_t lane_mask, uint64_t uniform) {
     uint32_t chunk_size = get_chunk_size();
     uint32_t state = impl::entropy();
-    void *result = nullptr;
+
     // The uniform mask represents which lanes contain a uniform target pointer.
     // We attempt to place these next to each other.
     // TODO: We should coalesce these bits and use the result of `fetch_or` to
     //       search for free bits in parallel.
+    void *result = nullptr;
     for (uint64_t mask = lane_mask; mask;
          mask = gpu::ballot(lane_mask, !result)) {
       uint32_t id = impl::lane_count(uniform & mask);
@@ -235,7 +237,7 @@ struct Slab {
 
       uint32_t slot = index / BITS_IN_WORD;
       uint32_t bit = index % BITS_IN_WORD;
-      if (mask & (uint64_t(1) << gpu::get_lane_id())) {
+      if (!result) {
         uint32_t before = cpp::AtomicRef(get_bitfield()[slot])
                               .fetch_or(1u << bit, cpp::MemoryOrder::RELAXED);
         if (~before & (1 << bit))
@@ -274,7 +276,7 @@ private:
     static constexpr uint64_t INVALID = uint64_t(1) << 63;
 
     // If a read preempts an unlock call we indicate this so the following
-    // unlock call can swap out the helped bit and maintain exlusive ownership.
+    // unlock call can swap out the helped bit and maintain exclusive ownership.
     static constexpr uint64_t HELPED = uint64_t(1) << 62;
 
     // Resets the reference counter, cannot be reset to zero safely.
@@ -293,8 +295,8 @@ private:
     // called following a valid acquire call.
     bool release(uint32_t n) {
       // If this thread caused the counter to reach zero we try to invalidate it
-      // and obtain exclusive rights to descontruct it. If the CAS failed either
-      // another thread resurrced the counter and we quit, or a parallel read
+      // and obtain exclusive rights to deconstruct it. If the CAS failed either
+      // another thread resurrected the counter and we quit, or a parallel read
       // helped us invalidating it. For the latter, claim that flag and return.
       if (counter.fetch_sub(n, cpp::MemoryOrder::RELAXED) == n) {
         uint64_t expected = 0;
@@ -497,7 +499,7 @@ void deallocate(void *ptr) {
   if (!ptr)
     return;
 
-  // All non-slab allocations will be alinged on a 2MiB boundary.
+  // All non-slab allocations will be aligned on a 2MiB boundary.
   if ((reinterpret_cast<uintptr_t>(ptr) & SLAB_ALIGNMENT) == 0)
     return impl::rpc_free(ptr);
 
