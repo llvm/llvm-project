@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "DataAccessPerfReader.h"
 #include "ErrorHandling.h"
 #include "PerfReader.h"
 #include "ProfileGenerator.h"
@@ -20,6 +21,13 @@
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/VirtualFileSystem.h"
+
+namespace {
+enum ProfileKinds {
+  SamplePGO,
+  DataAccessProfile,
+};
+} // namespace
 
 static cl::OptionCategory ProfGenCategory("ProfGen Options");
 
@@ -66,6 +74,11 @@ static cl::opt<std::string> DebugBinPath(
     cl::desc("Path of debug info binary, llvm-profgen will load the DWARF info "
              "from it instead of the executable binary."),
     cl::cat(ProfGenCategory));
+
+static cl::opt<ProfileKinds> ProfileKind(
+    "profile-kind", cl::value_desc("profile-kind"),
+    cl::desc("Profile kind to be generated, default is sample profile."),
+    cl::init(DataAccessProfile), cl::cat(ProfGenCategory));
 
 extern cl::opt<bool> ShowDisassemblyOnly;
 extern cl::opt<bool> ShowSourceLocations;
@@ -156,37 +169,52 @@ int main(int argc, const char *argv[]) {
   if (ShowDisassemblyOnly)
     return EXIT_SUCCESS;
 
-  if (SampleProfFilename.getNumOccurrences()) {
-    LLVMContext Context;
-    auto FS = vfs::getRealFileSystem();
-    auto ReaderOrErr =
-        SampleProfileReader::create(SampleProfFilename, Context, *FS);
-    std::unique_ptr<sampleprof::SampleProfileReader> Reader =
-        std::move(ReaderOrErr.get());
-    Reader->read();
-    std::unique_ptr<ProfileGeneratorBase> Generator =
-        ProfileGeneratorBase::create(Binary.get(), Reader->getProfiles(),
-                                     Reader->profileIsCS());
-    Generator->generateProfile();
-    Generator->write();
+  if (ProfileKind == SamplePGO) {
+    if (SampleProfFilename.getNumOccurrences()) {
+      LLVMContext Context;
+      auto FS = vfs::getRealFileSystem();
+      auto ReaderOrErr =
+          SampleProfileReader::create(SampleProfFilename, Context, *FS);
+      std::unique_ptr<sampleprof::SampleProfileReader> Reader =
+          std::move(ReaderOrErr.get());
+      Reader->read();
+      std::unique_ptr<ProfileGeneratorBase> Generator =
+          ProfileGeneratorBase::create(Binary.get(), Reader->getProfiles(),
+                                       Reader->profileIsCS());
+      Generator->generateProfile();
+      Generator->write();
+    } else {
+      std::optional<uint32_t> PIDFilter;
+      if (ProcessId.getNumOccurrences())
+        PIDFilter = ProcessId;
+      PerfInputFile PerfFile = getPerfInputFile();
+      std::unique_ptr<PerfReaderBase> Reader =
+          PerfReaderBase::create(Binary.get(), PerfFile, PIDFilter);
+      // Parse perf events and samples
+      Reader->parsePerfTraces();
+
+      if (SkipSymbolization)
+        return EXIT_SUCCESS;
+
+      std::unique_ptr<ProfileGeneratorBase> Generator =
+          ProfileGeneratorBase::create(Binary.get(),
+                                       &Reader->getSampleCounters(),
+                                       Reader->profileIsCS());
+      Generator->generateProfile();
+      Generator->write();
+    }
   } else {
-    std::optional<uint32_t> PIDFilter;
-    if (ProcessId.getNumOccurrences())
-      PIDFilter = ProcessId;
-    PerfInputFile PerfFile = getPerfInputFile();
-    std::unique_ptr<PerfReaderBase> Reader =
-        PerfReaderBase::create(Binary.get(), PerfFile, PIDFilter);
-    // Parse perf events and samples
+    assert(Binary.get() &&
+           "Binary should be initialized for data access profile");
+    errs() << "binary text segment offset is "
+           << format("0x%" PRIx64 ":", Binary->getTextSegmentOffset()) << "\n";
+    // data access profile.
+    SmallVector<StringRef, 4> PerfTraces{PerfScriptFilename};
+    auto Reader = std::make_unique<DataAccessPerfReader>(
+        Binary.get(), PerfScriptFilename, std::nullopt);
     Reader->parsePerfTraces();
 
-    if (SkipSymbolization)
-      return EXIT_SUCCESS;
-
-    std::unique_ptr<ProfileGeneratorBase> Generator =
-        ProfileGeneratorBase::create(Binary.get(), &Reader->getSampleCounters(),
-                                     Reader->profileIsCS());
-    Generator->generateProfile();
-    Generator->write();
+    Reader->print();
   }
 
   return EXIT_SUCCESS;

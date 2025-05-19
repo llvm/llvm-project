@@ -478,6 +478,8 @@ void PerfScriptReader::updateBinaryAddress(const MMapEvent &Event) {
     // Only update for the first executable segment and assume all other
     // segments are loaded at consecutive memory addresses, which is the case on
     // X64.
+    errs() << "Setting " << Binary->getPath() << " base address to "
+           << format("0x%" PRIx64, Event.Address) << "\n";
     Binary->setBaseAddress(Event.Address);
     Binary->setIsLoadedByMMap(true);
   } else {

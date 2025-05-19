@@ -60,6 +60,10 @@ static cl::opt<bool>
     KernelBinary("kernel",
                  cl::desc("Generate the profile for Linux kernel binary."));
 
+static cl::opt<bool> RecordDataSegment("record-data-segment", cl::init(false),
+                                       cl::desc("Record data segment size "
+                                                "in the profile."));
+
 extern cl::opt<bool> ShowDetailedWarning;
 extern cl::opt<bool> InferMissingFrames;
 
@@ -337,6 +341,12 @@ void ProfiledBinary::setPreferredTextSegmentAddresses(const ELFFile<ELFT> &Obj,
                                                 ~(PageSize - 1U));
         TextSegmentOffsets.push_back(Phdr.p_offset & ~(PageSize - 1U));
       }
+      // else if ((Phdr.p_flags & ELF::PF_R) && !TextSegmentOffsets.empty()) {
+      //   if (RecordDataSegment) {
+      //     ReadOnlyDataSegmentOffsets.push_back(Phdr.p_offset &
+      //                                          ~(PageSize - 1U));
+      //   }
+      // }
     }
   }
 
