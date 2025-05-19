@@ -563,11 +563,14 @@ bool inferAttributesFromOthers(Function &F);
 struct OverflowTracking {
   bool HasNUW = true;
   bool HasNSW = true;
+
+  // Note: At the moment, users are responsible to manage AllKnownNonNegative
+  // and AllKnownNonZero manually. AllKnownNonNegative can be true in a case
+  // where one of the operands is negative, but one the operators is not NSW.
+  // AllKnownNonNegative should not be used independently of HasNSW
   bool AllKnownNonNegative = true;
   bool AllKnownNonZero = true;
-  // Note: AllKnownNonNegative can be true in a case where one of the operands
-  // is negative, but one the operators is not NSW. AllKnownNonNegative should
-  // not be used independently of HasNSW
+
   OverflowTracking() = default;
 
   /// Merge in the no-wrap flags from \p I.
