@@ -70,7 +70,7 @@ inline DataOperandInfo getDataOperandInfo(CIRGen::CIRGenFunction &cgf,
   // TODO: OpenACC: Cache was different enough as to need a separate
   // `ActOnCacheVar`, so we are going to need to do some investigations here
   // when it comes to implement this for cache.
-  if (dk != OpenACCDirectiveKind::Cache) {
+  if (dk == OpenACCDirectiveKind::Cache) {
     cgf.cgm.errorNYI(e->getSourceRange(),
                      "OpenACC data operand for 'cache' directive");
     return {cgf.cgm.getLoc(e->getBeginLoc()), {}, {}};
