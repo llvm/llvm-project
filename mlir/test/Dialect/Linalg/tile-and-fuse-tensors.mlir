@@ -327,35 +327,32 @@ func.func @pad_generic_static(%small_input: tensor<58x1xf32>, %large_input: tens
 #map3 = affine_map<(d0, d1, d2) -> (d0, d2)>
 #map4 = affine_map<(d0, d1, d2) -> (d2, d1)>
 #map5 = affine_map<(d0, d1, d2) -> (d0, d1)>
-func.func @rank_reduced_extract_slice(%arg0: tensor<1x6x5xf32>, %arg1: tensor<1x5x6xf32>, %arg2: tensor<4x6xf32>) -> tensor<4x6xf32> {
+func.func @rank_reduced_extract_slice(
+    %arg0: tensor<1x6x5xf32>, %arg1: tensor<1x5x6xf32>, %arg2: tensor<4x6xf32>,
+    %arg3: tensor<1x6x6xf32>, %arg4: tensor<4x6xf32>, %arg5: tensor<4x2xf32>
+) -> tensor<4x6xf32> {
   %c0 = arith.constant 0 : index
   %c2 = arith.constant 2 : index
   %c6 = arith.constant 6 : index
-  %cst = arith.constant 0.0 : f32
-  %init1 = tensor.empty() : tensor<1x6x6xf32>
-  %fill1 = linalg.fill ins(%cst : f32) outs(%init1 : tensor<1x6x6xf32>) -> tensor<1x6x6xf32>
   %0 = linalg.generic
     {indexing_maps = [#map0, #map1, #map2], iterator_types = ["parallel", "parallel", "parallel", "reduction"]}
-    ins(%arg0, %arg1 : tensor<1x6x5xf32>, tensor<1x5x6xf32>) outs(%fill1 : tensor<1x6x6xf32>) {
+    ins(%arg0, %arg1 : tensor<1x6x5xf32>, tensor<1x5x6xf32>) outs(%arg3 : tensor<1x6x6xf32>) {
   ^bb0(%in: f32, %in_1: f32, %out: f32):
     %10 = arith.mulf %in, %in_1 : f32
     %11 = arith.addf %out, %10 : f32
     linalg.yield %11 : f32
   } -> tensor<1x6x6xf32>
-  %init2 = tensor.empty() : tensor<4x6xf32>
-  %1 = scf.for %arg4 = %c0 to %c6 step %c2 iter_args(%arg3 = %init2) -> (tensor<4x6xf32>) {
-    %2 = tensor.extract_slice %0[0, 0, %arg4] [1, 6, 2] [1, 1, 1] : tensor<1x6x6xf32> to tensor<6x2xf32>
-    %init3 = tensor.empty() : tensor<4x2xf32>
-    %fill3 = linalg.fill ins(%cst : f32) outs(%init3 : tensor<4x2xf32>) -> tensor<4x2xf32>
+  %1 = scf.for %arg7 = %c0 to %c6 step %c2 iter_args(%arg6 = %arg4) -> (tensor<4x6xf32>) {
+    %2 = tensor.extract_slice %0[0, 0, %arg7] [1, 6, 2] [1, 1, 1] : tensor<1x6x6xf32> to tensor<6x2xf32>
     %3 = linalg.generic
      {indexing_maps = [#map3, #map4, #map5], iterator_types = ["parallel", "parallel", "reduction"]}
-     ins(%arg2, %2 : tensor<4x6xf32>, tensor<6x2xf32>) outs(%fill3 : tensor<4x2xf32>) {
+     ins(%arg2, %2 : tensor<4x6xf32>, tensor<6x2xf32>) outs(%arg5 : tensor<4x2xf32>) {
     ^bb0(%in: f32, %in_1: f32, %out: f32):
       %20 = arith.mulf %in, %in_1 : f32
       %21 = arith.addf %out, %20 : f32
       linalg.yield %21 : f32
     } -> tensor<4x2xf32>
-    %4 = tensor.insert_slice %3 into %arg3[0, %arg4] [4, 2] [1, 1]  : tensor<4x2xf32> into tensor<4x6xf32>
+    %4 = tensor.insert_slice %3 into %arg6[0, %arg7] [4, 2] [1, 1]  : tensor<4x2xf32> into tensor<4x6xf32>
     scf.yield %4 : tensor<4x6xf32>
   }
   return %1 : tensor<4x6xf32>
@@ -365,24 +362,22 @@ func.func @rank_reduced_extract_slice(%arg0: tensor<1x6x5xf32>, %arg1: tensor<1x
 //  CHECK-SAME: %[[ARG0:[0-9a-z]*]]: tensor<1x6x5xf32>
 //  CHECK-SAME: %[[ARG1:[0-9a-z]*]]: tensor<1x5x6xf32>
 //  CHECK-SAME: %[[ARG2:[0-9a-z]*]]: tensor<4x6xf32>
+//  CHECK-SAME: %[[ARG3:[0-9a-z]*]]: tensor<1x6x6xf32>
+//  CHECK-SAME: %[[ARG4:[0-9a-z]*]]: tensor<4x6xf32>
+//  CHECK-SAME: %[[ARG5:[0-9a-z]*]]: tensor<4x2xf32>
 
 //   CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
 //   CHECK-DAG: %[[C2:.*]] = arith.constant 2 : index
 //   CHECK-DAG: %[[C6:.*]] = arith.constant 6 : index
-//   CHECK-DAG: %[[CST:.*]] = arith.constant 0.000000e+00 : f32
-//       CHECK: %[[EMPTY_PROD:.*]] = tensor.empty() : tensor<1x6x6xf32>
-//  CHECK-NEXT: %[[FILL_PROD:.*]] = linalg.fill ins(%[[CST]] : f32) outs(%[[EMPTY_PROD]] : tensor<1x6x6xf32>) -> tensor<1x6x6xf32>
-//  CHECK-NEXT: %[[EMPTY_FOR:.*]] = tensor.empty() : tensor<4x6xf32>
-//  CHECK-NEXT: %[[EMPTY_CONS:.*]] = tensor.empty() : tensor<4x2xf32>
-//  CHECK-NEXT: %[[FILL_CONS:.*]] = linalg.fill ins(%[[CST]] : f32)
 
 //  For loop right after tensor alloc & fill, no linalg.generic.
-//  CHECK-NEXT: %[[FOR:.*]] = scf.for %[[I:[0-9a-z]*]] = %[[C0]] to %[[C6]] step %[[C2]] iter_args(%[[ARG_ITER:.*]] = %[[EMPTY_FOR]])
+//   CHECK-NOT: linalg.generic
+//  CHECK-NEXT: %[[FOR:.*]] = scf.for %[[I:[0-9a-z]*]] = %[[C0]] to %[[C6]] step %[[C2]] iter_args(%[[ARG_ITER:.*]] = %[[ARG4]])
 
 //  Producer linalg.generic now inside the loop, with tiled args sliced before
 //  it.
 //   CHECK-DAG:   %[[ARG1_SLICE:.*]] = tensor.extract_slice %[[ARG1]][0, 0, %[[I]]] [1, 5, 2] [1, 1, 1]  : tensor<1x5x6xf32> to tensor<1x5x2xf32>
-//   CHECK-DAG:   %[[PROD_SLICE:.*]] = tensor.extract_slice %[[FILL_PROD]][0, 0, %[[I]]] [1, 6, 2] [1, 1, 1]  : tensor<1x6x6xf32> to tensor<1x6x2xf32>
+//   CHECK-DAG:   %[[PROD_SLICE:.*]] = tensor.extract_slice %[[ARG3]][0, 0, %[[I]]] [1, 6, 2] [1, 1, 1]  : tensor<1x6x6xf32> to tensor<1x6x2xf32>
 //       CHECK:    %[[MMUL_PROD:.*]] = linalg.generic
 //  CHECK-SAME:        ins(%[[ARG0]], %[[ARG1_SLICE]] : tensor<1x6x5xf32>, tensor<1x5x2xf32>)
 //  CHECK-SAME:        outs(%[[PROD_SLICE]] : tensor<1x6x2xf32>)
@@ -392,7 +387,7 @@ func.func @rank_reduced_extract_slice(%arg0: tensor<1x6x5xf32>, %arg1: tensor<1x
 //       CHECK:    %[[PROD_COLLAPSE:.*]] = tensor.collapse_shape %[[MMUL_PROD]] {{\[\[0, 1\], \[2\]\]}} : tensor<1x6x2xf32> into tensor<6x2xf32>
 //       CHECK:    %[[MMUL_CONS:.*]] = linalg.generic
 //  CHECK-SAME:        ins(%[[ARG2]], %[[PROD_COLLAPSE]] : tensor<4x6xf32>, tensor<6x2xf32>)
-//  CHECK-SAME:        outs(%[[FILL_CONS]] : tensor<4x2xf32>)
+//  CHECK-SAME:        outs(%[[ARG5]] : tensor<4x2xf32>)
 //       CHECK:   %[[CONS_SLICE:.*]] = tensor.insert_slice %[[MMUL_CONS]] into %[[ARG_ITER]][0, %[[I]]] [4, 2] [1, 1] : tensor<4x2xf32> into tensor<4x6xf32>
 //       CHECK:   scf.yield %[[CONS_SLICE]] : tensor<4x6xf32>
 //       CHECK: return %[[FOR]] : tensor<4x6xf32>

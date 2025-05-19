@@ -242,32 +242,30 @@ static tensor::CollapseShapeOp
 dropGivenUnitDims(OpBuilder &b, Location loc, Value from,
                   const llvm::SmallBitVector &dropDims) {
   auto fromType = cast<ShapedType>(from.getType());
-  assert(fromType.getRank() == static_cast<int64_t>(dropDims.size()) &&
+  int64_t rank = fromType.getRank();
+  assert(rank == static_cast<int64_t>(dropDims.size()) &&
          "dropDims dimension does not match from tensor rank");
+  assert(llvm::all_of(
+             dropDims.set_bits(),
+             [&](unsigned dim) { return fromType.getShape()[dim] == 1; }) &&
+         "Dropping non unit dimension");
   // Computed reassociation map for the corresponding tensor.collapse_shape.
   SmallVector<ReassociationIndices, 2> reassocMaps;
   // Current reassociation group to add dropped dimension to.
-  ReassociationIndices reassocGroup;
 
-  bool foundKeptDim = false;
-  // Dropped dimensions might be at the beginning or end of the shape so
-  // combine all contiguous dimensions before and after a given non dropped
-  // dimension in reassocGroup until another non dropped dimension is found.
-  // When that happens, add the reassociation indices to the map.
-  for (int dim = 0; dim < fromType.getRank(); dim++) {
-    if (dropDims.test(dim))
-      assert(fromType.getShape()[dim] == 1 && "Dropping non unit dimension");
-    else {
-      if (foundKeptDim) {
-        reassocMaps.push_back(reassocGroup);
-        reassocGroup.clear();
-      }
-      foundKeptDim = true;
-    }
-    reassocGroup.push_back(dim);
+  int64_t nextDimToGroup = 0;
+  llvm::SmallBitVector keptDims(dropDims);
+  keptDims.flip();
+  int64_t lastSetBit = keptDims.find_last();
+  for(int64_t setBit : keptDims.set_bits()) {
+    // Group consecutive dropped dimension with the next non-dropped dimension.
+    // If this is the last set dimension, also group all subsequent dropped
+    // dimension, if any.
+    int64_t upTo = setBit == lastSetBit ? rank - 1 : setBit;
+    auto seq = llvm::seq_inclusive(nextDimToGroup, upTo);
+    reassocMaps.emplace_back(llvm::make_range(seq.begin(), seq.end()));
+    nextDimToGroup = setBit + 1;
   }
-  if (!reassocGroup.empty())
-    reassocMaps.push_back(reassocGroup);
   return b.create<tensor::CollapseShapeOp>(loc, from, reassocMaps);
 }
 
@@ -311,7 +309,7 @@ mlir::linalg::fuseProducerOfTensor(OpBuilder &b, OpResult producerOpResult,
   // Replace use.
   Value def = fusedProducer->getResult(producerOpResult.getResultNumber());
   Type consumerType = consumerOpOperand.get().getType();
-  // Rank-reduction occured as part of the extract_slice.
+  // Rank-reduction occurred as part of the extract_slice.
   if (cast<ShapedType>(consumerType).getRank() !=
       cast<ShapedType>(def.getType()).getRank())
     def = dropGivenUnitDims(b, fusedProducer.getLoc(), def, droppedDims);
