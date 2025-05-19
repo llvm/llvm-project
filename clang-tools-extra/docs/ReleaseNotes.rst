@@ -133,7 +133,8 @@ New checks
 - New :doc:`cppcoreguidelines-use-enum-class
   <clang-tidy/checks/cppcoreguidelines/use-enum-class>` check.
 
-  Finds plain non-class ``enum`` definitions that could use ``enum class``.
+  Finds unscoped (non-class) ``enum`` declarations and suggests using
+  ``enum class`` instead.
 
 - New :doc:`readability-ambiguous-smartptr-reset-call
   <clang-tidy/checks/readability/ambiguous-smartptr-reset-call>` check.
