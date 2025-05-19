@@ -46,14 +46,13 @@ define double @fold_addi_from_different_bb(i32 %k, i32 %n, ptr %a) nounwind {
 ; CHECK-NEXT:    mv s0, a2
 ; CHECK-NEXT:    mv s1, a1
 ; CHECK-NEXT:    slli a0, a0, 4
-; CHECK-NEXT:    add a0, a2, a0
-; CHECK-NEXT:    addi s4, a0, 8
+; CHECK-NEXT:    add s4, a2, a0
 ; CHECK-NEXT:    fcvt.d.w s2, zero
 ; CHECK-NEXT:  .LBB2_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    mv a0, s0
 ; CHECK-NEXT:    call f
-; CHECK-NEXT:    ld a0, 0(s4)
+; CHECK-NEXT:    ld a0, 8(s4)
 ; CHECK-NEXT:    addi s1, s1, -1
 ; CHECK-NEXT:    fadd.d s2, a0, s2
 ; CHECK-NEXT:    bnez s1, .LBB2_2
@@ -102,11 +101,10 @@ define void @split_offset(ptr %dest, double %x) {
 ; CHECK-NEXT:    mv a3, a2
 ; CHECK-NEXT:    addi a0, a0, 2047
 ; CHECK-NEXT:    mv a2, a1
-; CHECK-NEXT:    addi a1, a0, 1
 ; CHECK-NEXT:    sd a2, 1(a0)
-; CHECK-NEXT:    sd a2, 8(a1)
-; CHECK-NEXT:    sd a2, 16(a1)
-; CHECK-NEXT:    sd a2, 24(a1)
+; CHECK-NEXT:    sd a2, 9(a0)
+; CHECK-NEXT:    sd a2, 17(a0)
+; CHECK-NEXT:    sd a2, 25(a0)
 ; CHECK-NEXT:    ret
   %p1 = getelementptr double, ptr %dest, i32 256
   store double %x, ptr %p1
