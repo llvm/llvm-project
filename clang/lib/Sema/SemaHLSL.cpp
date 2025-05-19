@@ -2045,19 +2045,6 @@ static bool CheckAllArgTypesAreCorrect(
   return false;
 }
 
-static bool CheckFloatOrHalfVecRepresentation(Sema *S, SourceLocation Loc,
-                                              int ArgOrdinal,
-                                              clang::QualType PassedType) {
-  if (auto *VecTy = PassedType->getAs<VectorType>())
-    if (VecTy->getElementType()->isHalfType() ||
-        VecTy->getElementType()->isFloat32Type())
-      return false;
-
-  return S->Diag(Loc, diag::err_builtin_invalid_arg_type)
-         << ArgOrdinal << /* vector of */ 4 << /* no int */ 0
-         << /* half or float */ 2 << PassedType;
-}
-
 static bool CheckFloatOrHalfRepresentation(Sema *S, SourceLocation Loc,
                                            int ArgOrdinal,
                                            clang::QualType PassedType) {
@@ -2085,11 +2072,14 @@ static bool CheckModifiableLValue(Sema *S, CallExpr *TheCall,
 
 static bool CheckNoDoubleVectors(Sema *S, SourceLocation Loc, int ArgOrdinal,
                                  clang::QualType PassedType) {
-  if (const auto *VecTy = PassedType->getAs<VectorType>())
-    if (VecTy->getElementType()->isDoubleType())
-      return S->Diag(Loc, diag::err_builtin_invalid_arg_type)
-             << ArgOrdinal << /* scalar */ 1 << /* no int */ 0 << /* fp */ 1
-             << PassedType;
+  const auto *VecTy = PassedType->getAs<VectorType>();
+  if (!VecTy)
+    return false;
+
+  if (VecTy->getElementType()->isDoubleType())
+    return S->Diag(Loc, diag::err_builtin_invalid_arg_type)
+           << ArgOrdinal << /* scalar */ 1 << /* no int */ 0 << /* fp */ 1
+           << PassedType;
   return false;
 }
 
@@ -2383,11 +2373,15 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   case Builtin::BI__builtin_hlsl_asdouble: {
     if (SemaRef.checkArgCount(TheCall, 2))
       return true;
-    if (CheckScalarOrVector(&SemaRef, TheCall, SemaRef.Context.UnsignedIntTy,
-                            0)) // only check for uint
+    if (CheckScalarOrVector(
+            &SemaRef, TheCall,
+            /*only check for uint*/ SemaRef.Context.UnsignedIntTy,
+            /* arg index */ 0))
       return true;
-    if (CheckScalarOrVector(&SemaRef, TheCall, SemaRef.Context.UnsignedIntTy,
-                            1)) // only check for uint
+    if (CheckScalarOrVector(
+            &SemaRef, TheCall,
+            /*only check for uint*/ SemaRef.Context.UnsignedIntTy,
+            /* arg index */ 1))
       return true;
     if (CheckAllArgsHaveSameType(&SemaRef, TheCall))
       return true;
@@ -2402,45 +2396,8 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     break;
   }
-  case Builtin::BI__builtin_hlsl_cross: {
-    if (SemaRef.checkArgCount(TheCall, 2))
-      return true;
-
-    // ensure args are a half3 or float3
-    if (CheckAllArgTypesAreCorrect(&SemaRef, TheCall,
-                                   CheckFloatOrHalfVecRepresentation))
-      return true;
-    if (CheckAllArgsHaveSameType(&SemaRef, TheCall))
-      return true;
-    // ensure both args have 3 elements
-    int NumElementsArg1 =
-        TheCall->getArg(0)->getType()->castAs<VectorType>()->getNumElements();
-    int NumElementsArg2 =
-        TheCall->getArg(1)->getType()->castAs<VectorType>()->getNumElements();
-
-    if (NumElementsArg1 != 3) {
-      int LessOrMore = NumElementsArg1 > 3 ? 1 : 0;
-      SemaRef.Diag(TheCall->getBeginLoc(),
-                   diag::err_vector_incorrect_num_elements)
-          << LessOrMore << 3 << NumElementsArg1 << /*operand*/ 1;
-      return true;
-    }
-    if (NumElementsArg2 != 3) {
-      int LessOrMore = NumElementsArg2 > 3 ? 1 : 0;
-
-      SemaRef.Diag(TheCall->getBeginLoc(),
-                   diag::err_vector_incorrect_num_elements)
-          << LessOrMore << 3 << NumElementsArg2 << /*operand*/ 1;
-      return true;
-    }
-
-    ExprResult A = TheCall->getArg(0);
-    QualType ArgTyA = A.get()->getType();
-    // return type is the same as the input type
-    TheCall->setType(ArgTyA);
-    break;
-  }
   case Builtin::BI__builtin_hlsl_dot: {
+    // arg count is checked by BuiltinVectorToScalarMath
     if (SemaRef.BuiltinVectorToScalarMath(TheCall))
       return true;
     if (CheckAllArgTypesAreCorrect(&SemaRef, TheCall, CheckNoDoubleVectors))
