@@ -187,12 +187,23 @@ static bool isCandidate(const MachineInstr *MI, Register &DefedReg,
     const MachineOperand &MO = MI->getOperand(i);
     if (MO.isReg()) {
       if (MO.isDef()) {
+        // To get the \DefedReg value, we need to check that 1st MachineOperand
+        // is not dead and not implicit def.
+        // For example:
+        // renamable $r9d = MOV32r0 implicit-def dead $eflags, implicit-def $r9
+        // First operand is $r9d and it is not implicit def and not dead, So
+        // it is valid and we can use it in \DefedReg.
         if (i == 0 && !MO.isImplicit() && !MO.isDead())
           DefedReg = MO.getReg();
-        else if (i != 0 && DefedReg != MCRegister::NoRegister) {
+        // If DefedReg has a valid register, check the other operands
+        else if (DefedReg != MCRegister::NoRegister) {
+          // If the machineOperand is Dead and Implicit then continue
+          // to next operand.
           if (MO.isDead() && MO.isImplicit())
             continue;
-          if (MO.isImplicit() && TRI->regsOverlap(MO.getReg(), DefedReg))
+          // If the machineOperand is Implicit and alias with DefedReg then
+          // continue to next operand.
+          if (MO.isImplicit() && TRI->isSubRegister(MO.getReg(), DefedReg))
             continue;
           return false;
         } else
