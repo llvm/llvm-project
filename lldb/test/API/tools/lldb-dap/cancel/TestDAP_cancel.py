@@ -44,7 +44,7 @@ class TestDAP_cancel(lldbdap_testcase.DAPTestCaseBase):
         Tests cancelling a pending request.
         """
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program, stopOnEntry=True)
+        self.build_and_launch(program)
 
         # Use a relatively short timeout since this is only to ensure the
         # following request is queued.
@@ -76,7 +76,7 @@ class TestDAP_cancel(lldbdap_testcase.DAPTestCaseBase):
         Tests cancelling an inflight request.
         """
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program, stopOnEntry=True)
+        self.build_and_launch(program)
 
         blocking_seq = self.async_blocking_request(duration=self.DEFAULT_TIMEOUT / 2)
         # Wait for the sleep to start to cancel the inflight request.
