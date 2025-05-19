@@ -62,28 +62,28 @@ define void @slsr_after_reassociate_geps(ptr %arr, i32 %i) {
 ; PTX: mul.wide.s32 [[i4:%rd[0-9]+]], [[i]], 4;
 ; PTX: add.s64 [[base1:%rd[0-9]+]], [[arr]], [[i4]];
   %v1 = load float, ptr %p1, align 4
-; PTX: ld.b32 {{%f[0-9]+}}, [[[base1]]+20];
+; PTX: ld.b32 {{%r[0-9]+}}, [[[base1]]+20];
   call void @foo(float %v1)
 
   %j2 = add nsw i32 %i2, 5
   %p2 = getelementptr inbounds float, ptr %arr, i32 %j2
 ; PTX: add.s64 [[base2:%rd[0-9]+]], [[base1]], [[i4]];
   %v2 = load float, ptr %p2, align 4
-; PTX: ld.b32 {{%f[0-9]+}}, [[[base2]]+20];
+; PTX: ld.b32 {{%r[0-9]+}}, [[[base2]]+20];
   call void @foo(float %v2)
 
   %j3 = add nsw i32 %i3, 5
   %p3 = getelementptr inbounds float, ptr %arr, i32 %j3
 ; PTX: add.s64 [[base3:%rd[0-9]+]], [[base2]], [[i4]];
   %v3 = load float, ptr %p3, align 4
-; PTX: ld.b32 {{%f[0-9]+}}, [[[base3]]+20];
+; PTX: ld.b32 {{%r[0-9]+}}, [[[base3]]+20];
   call void @foo(float %v3)
 
   %j4 = add nsw i32 %i4, 5
   %p4 = getelementptr inbounds float, ptr %arr, i32 %j4
 ; PTX: add.s64 [[base4:%rd[0-9]+]], [[base3]], [[i4]];
   %v4 = load float, ptr %p4, align 4
-; PTX: ld.b32 {{%f[0-9]+}}, [[[base4]]+20];
+; PTX: ld.b32 {{%r[0-9]+}}, [[[base4]]+20];
   call void @foo(float %v4)
 
   ret void

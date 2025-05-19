@@ -30,24 +30,24 @@
 ---
 name:            test
 registers:
-  - { id: 0, class: float32regs }
-  - { id: 1, class: float64regs }
+  - { id: 0, class: int32regs }
+  - { id: 1, class: int64regs }
   - { id: 2, class: int32regs }
-  - { id: 3, class: float64regs }
-  - { id: 4, class: float32regs }
-  - { id: 5, class: float32regs }
-  - { id: 6, class: float32regs }
-  - { id: 7, class: float32regs }
+  - { id: 3, class: int64regs }
+  - { id: 4, class: int32regs }
+  - { id: 5, class: int32regs }
+  - { id: 6, class: int32regs }
+  - { id: 7, class: int32regs }
 body: |
   bb.0.entry:
     %0 = LD_f32 0, 0, 4, 2, 32, &test_param_0, 0
     %1 = CVT_f64_f32 %0, 0
     %2 = LD_i32 0, 0, 4, 0, 32, &test_param_1, 0
-  ; CHECK: %3:float64regs = FADD_rnf64ri %1, double 3.250000e+00
+  ; CHECK: %3:int64regs = FADD_rnf64ri %1, double 3.250000e+00
     %3 = FADD_rnf64ri %1, double 3.250000e+00
     %4 = CVT_f32_f64 %3, 5
     %5 = CVT_f32_s32 %2, 5
-  ; CHECK: %6:float32regs = FADD_rnf32ri %5, float 6.250000e+00
+  ; CHECK: %6:int32regs = FADD_rnf32ri %5, float 6.250000e+00
     %6 = FADD_rnf32ri %5, float 6.250000e+00
     %7 = FMUL_rnf32rr %6, %4
     StoreRetvalF32 %7, 0
@@ -56,24 +56,24 @@ body: |
 ---
 name:            test2
 registers:
-  - { id: 0, class: float32regs }
-  - { id: 1, class: float64regs }
+  - { id: 0, class: int32regs }
+  - { id: 1, class: int64regs }
   - { id: 2, class: int32regs }
-  - { id: 3, class: float64regs }
-  - { id: 4, class: float32regs }
-  - { id: 5, class: float32regs }
-  - { id: 6, class: float32regs }
-  - { id: 7, class: float32regs }
+  - { id: 3, class: int64regs }
+  - { id: 4, class: int32regs }
+  - { id: 5, class: int32regs }
+  - { id: 6, class: int32regs }
+  - { id: 7, class: int32regs }
 body: |
   bb.0.entry:
     %0 = LD_f32 0, 0, 4, 2, 32, &test2_param_0, 0
     %1 = CVT_f64_f32 %0, 0
     %2 = LD_i32 0, 0, 4, 0, 32, &test2_param_1, 0
-  ; CHECK: %3:float64regs = FADD_rnf64ri %1, double 0x7FF8000000000000
+  ; CHECK: %3:int64regs = FADD_rnf64ri %1, double 0x7FF8000000000000
     %3 = FADD_rnf64ri %1, double 0x7FF8000000000000
     %4 = CVT_f32_f64 %3, 5
     %5 = CVT_f32_s32 %2, 5
-  ; CHECK: %6:float32regs = FADD_rnf32ri %5, float 0x7FF8000000000000
+  ; CHECK: %6:int32regs = FADD_rnf32ri %5, float 0x7FF8000000000000
     %6 = FADD_rnf32ri %5, float 0x7FF8000000000000
     %7 = FMUL_rnf32rr %6, %4
     StoreRetvalF32 %7, 0
