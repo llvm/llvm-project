@@ -378,8 +378,8 @@ define void @multi_exit(ptr %dst, ptr %src.1, ptr %src.2, i64 %A, i64 %B) #0 {
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq <2 x i64> [[BROADCAST_SPLAT]], zeroinitializer
 ; CHECK-NEXT:    [[TMP16:%.*]] = icmp ne <2 x i64> [[BROADCAST_SPLAT10]], zeroinitializer
 ; CHECK-NEXT:    [[TMP17:%.*]] = and <2 x i1> [[TMP16]], [[TMP15]]
-; CHECK-NEXT:    [[TMP18:%.*]] = zext <2 x i1> [[TMP17]] to <2 x i8>
-; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <2 x i8> [[TMP18]], i32 0
+; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <2 x i1> [[TMP17]], i32 0
+; CHECK-NEXT:    [[TMP19:%.*]] = zext i1 [[TMP18]] to i8
 ; CHECK-NEXT:    store i8 [[TMP19]], ptr [[DST]], align 1, !alias.scope [[META10:![0-9]+]], !noalias [[META12:![0-9]+]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]

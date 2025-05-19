@@ -1189,14 +1189,14 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
            vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
       auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
-      if (!RepR && !isa<VPWidenRecipe>(&R))
+      if (!RepR && !isa<VPWidenRecipe, VPWidenCastRecipe>(&R))
         continue;
       if (RepR && (RepR->isSingleScalar() || RepR->isPredicated()))
         continue;
 
       auto *RepOrWidenR = cast<VPSingleDefRecipe>(&R);
-      Instruction *UI = RepOrWidenR->getUnderlyingInstr();
-      if (!UI)
+      Value *UV = RepOrWidenR->getUnderlyingValue();
+      if (!UV)
         continue;
 
       // Skip recipes that aren't single scalars or don't have only their
@@ -1207,7 +1207,7 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
                  [RepOrWidenR](VPUser *U) {
                    return !U->usesScalars(RepOrWidenR);
                  }) ||
-          UI->getType() != TypeInfo.inferScalarType(RepOrWidenR))
+          UV->getType() != TypeInfo.inferScalarType(RepOrWidenR))
         continue;
 
       auto *Clone = new VPReplicateRecipe(RepOrWidenR->getUnderlyingInstr(),
