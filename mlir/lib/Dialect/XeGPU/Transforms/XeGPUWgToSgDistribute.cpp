@@ -29,6 +29,28 @@ using namespace mlir;
 
 namespace {
 
+static std::pair<SmallVector<int64_t>, int> computeTileShapeAndCount(ArrayRef<int64_t> shape, xegpu::LayoutAttr layout) {
+  // init count and subShape to the default value. If the LayoutAttr
+  // is not present, it will return a VectorType with original shape.
+  int count = 1;
+  SmallVector<int64_t> tileShape(shape);
+
+  if (layout) {
+    if (DenseI32ArrayAttr sgLayoutAttr = layout.getSgLayout()) {
+      auto sgLayout = llvm::to_vector_of<int64_t>(sgLayoutAttr.asArrayRef());
+      if (DenseI32ArrayAttr sgDataAttr = layout.getSgData())
+        tileShape = llvm::to_vector_of<int64_t>(sgDataAttr.asArrayRef());
+      else
+        tileShape = computeShapeRatio(shape, sgLayout).value_or(tileShape);
+      SmallVector<int64_t> distUnit = computeElementwiseMul(sgLayout, tileShape);
+      for (size_t i = 0; i < distUnit.size(); ++i)
+        distUnit[i] = std::min(shape[i], distUnit[i]);
+      count = computeProduct(shape) / computeProduct(distUnit);
+    }
+  }
+  return std::make_pair(tileShape, count);
+}
+
 /// This pattern transforms the CreateNdDescOp to create a subgroup descriptor
 /// from a workgroup descriptor. It replaces the offsets and sizes with
 /// appropriate values for the subgroup.
@@ -141,7 +163,7 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
       sgDataDim[i] = rewriter.create<arith::ConstantIndexOp>(loc, sgShape[i]);
     }
 
-    auto deLinearizeSgId =
+    FailureOr<SmallVector<Value>> deLinearizeSgId =
         affine::delinearizeIndex(rewriter, loc, linearSgId, sgLayoutDim);
     if (failed(deLinearizeSgId))
       return failure();
@@ -150,7 +172,6 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
     // Calculate distribution unit shape and local offsets for subgroup
     SmallVector<int64_t> distUnitShape(sgLayout.size());
     SmallVector<Value> localOffset(sgLayout.size());
-    ArrayRef<int64_t> shape = tdescTy.getShape();
     for (size_t i = 0; i < sgLayout.size(); i++) {
       distUnitShape[i] = std::min(sgLayout[i] * sgShape[i], wgShape[i]);
       localOffset[i] =
@@ -316,6 +337,8 @@ struct UnrealizedConversionCastOpPattern
                   OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     if (op.getNumOperands() == 1 && op.getNumResults() == 1) {
+      llvm::dbgs() << "\n\nUnrealizedConversionCastOp: " << op
+                   << "\n is replaced with: " << flattenValues(adaptor.getInputs())[0] << "\n";
       rewriter.replaceOpWithMultiple(op, flattenValues(adaptor.getInputs()));
       return mlir::success();
     }
@@ -379,9 +402,49 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
   });
 
   target.addIllegalOp<UnrealizedConversionCastOp>();
+
   target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });
 
-  xegpu::doSCFStructuralTypeConversionWithTensorType(getOperation());
+  TypeConverter converter;
+  converter.addConversion([&](Type type) -> Type { return type; });
+  converter.addConversion(
+      [&](RankedTensorType type,
+          SmallVectorImpl<Type> &result) -> std::optional<LogicalResult> {
+        Type elemTy = type.getElementType();
+        ArrayRef<int64_t> shape = type.getShape();
+
+        int count;
+        SmallVector<int64_t> subShape;
+        std::tie(subShape, count) =
+            computeTileShapeAndCount(shape, dyn_cast<xegpu::LayoutAttr>(type.getEncoding()));
+
+        auto newTy = VectorType::get(subShape, elemTy);
+        result.append(count, newTy);
+        return success();
+      });
+
+  converter.addConversion(
+      [&](xegpu::TensorDescType type,
+          SmallVectorImpl<Type> &result) -> std::optional<LogicalResult> {
+        Type elemTy = type.getElementType();
+        ArrayRef<int64_t> shape = type.getShape();
+
+        // init count and newTy to the default value. If the layout
+        // attribute is not present, it will return the original type.
+        int count;
+        SmallVector<int64_t> subShape;
+        xegpu::LayoutAttr layout = type.getLayoutAttr();
+        std::tie(subShape, count) = computeTileShapeAndCount(shape, layout);
+
+        if (layout)
+          layout = layout.dropSgLayoutAndData();
+
+        auto newTy = xegpu::TensorDescType::get(type.getContext(), subShape, elemTy, type.getEncoding(), layout);
+        result.append(count, newTy);
+        return success();
+      });
+
+  xegpu::doSCFStructuralTypeConversionWithTensorType(getOperation(), converter);
 
   xegpu::populateXeGPUWgToSgDistributePatterns(patterns);
   if (failed(
