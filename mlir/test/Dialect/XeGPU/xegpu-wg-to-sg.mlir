@@ -121,4 +121,13 @@ gpu.func @test_dpas(%a: memref<24x32xf32>, %b: memref<32x24xf32>) {
       : !xegpu.tensor_desc<24x32xf32, #xegpu.layout<sg_layout = [2, 4], sg_data = [12, 8], lane_layout = [2, 8], lane_data = [1, 1]>>
     gpu.return
   }
+
+  // CHECK-LABEL: test_dpas_with_no_create_nd_desc
+  gpu.func @test_dpas_with_no_create_nd_desc(%a: vector<24x32xf32>, %b: vector<32x24xf32>) {
+    // CHECK-NOT: vector<12x12xf32>
+    %dpas = xegpu.dpas %a, %b
+      {layout =  #xegpu.layout<sg_layout = [2, 2], sg_data = [12, 12], lane_layout = [2, 2], lane_data = [1, 1]>}
+      : vector<24x32xf32>, vector<32x24xf32> -> vector<24x24xf32>
+    gpu.return
+  }
 }
