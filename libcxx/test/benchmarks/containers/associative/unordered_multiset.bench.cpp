@@ -27,7 +27,8 @@ struct support::adapt_operations<std::unordered_multiset<K>> {
 
 int main(int argc, char** argv) {
   support::associative_container_benchmarks<std::unordered_multiset<int>>("std::unordered_multiset<int>");
-  support::associative_container_benchmarks<std::unordered_multiset<std::string>>("std::unordered_multiset<std::string>");
+  support::associative_container_benchmarks<std::unordered_multiset<std::string>>(
+      "std::unordered_multiset<std::string>");
 
   benchmark::Initialize(&argc, argv);
   benchmark::RunSpecifiedBenchmarks();
