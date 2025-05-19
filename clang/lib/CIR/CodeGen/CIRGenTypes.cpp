@@ -15,7 +15,7 @@ using namespace clang::CIRGen;
 
 CIRGenTypes::CIRGenTypes(CIRGenModule &genModule)
     : cgm(genModule), astContext(genModule.getASTContext()),
-      builder(cgm.getBuilder()),
+      builder(cgm.getBuilder()), theCXXABI(cgm.getCXXABI()),
       theABIInfo(cgm.getTargetCIRGenInfo().getABIInfo()) {}
 
 CIRGenTypes::~CIRGenTypes() {
