@@ -2881,12 +2881,15 @@ StackOffset AArch64FrameLowering::resolveFrameOffsetReference(
     StackOffset SVECalleeSavedStack =
         StackOffset::getScalable(AFI->getSVECalleeSavedStackSize());
     if (UseFP) {
-      if (!isFixed)
-        ScalableOffset = SVECalleeSavedStack - SVEStackSize;
-      else
+      if (isFixed)
         ScalableOffset = SVECalleeSavedStack;
-    } else if (!UseFP && isFixed) {
-      ScalableOffset = SVEStackSize;
+      else if (!isCSR)
+        ScalableOffset = SVECalleeSavedStack - SVEStackSize;
+    } else {
+      if (isFixed)
+        ScalableOffset = SVEStackSize;
+      else if (isCSR)
+        ScalableOffset = SVEStackSize - SVECalleeSavedStack;
     }
   } else {
     if (UseFP && !(isFixed || isCSR))
