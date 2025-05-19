@@ -1350,8 +1350,6 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
                  MCFixupKindInfo::FKF_IsPCRel;
   uint64_t FixupOffset = Asm.getFragmentOffset(*Fragment) + Fixup.getOffset();
   uint64_t Addend = Target.getConstant();
-  // Handle special fixups like ADD/SUB relocation pairs.
-
   if (auto *RefB = Target.getSubSym()) {
     const auto &SymB = cast<MCSymbolELF>(*RefB);
     if (SymB.isUndefined()) {
@@ -1397,12 +1395,6 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
     SymA = cast<MCSymbolELF>(SecA->getBeginSymbol());
     SymA->setUsedInReloc();
   } else {
-    // In PPC64 ELFv1, .quad .TOC.@tocbase in the .opd section is expected to
-    // reference the null symbol.
-    if (Type == ELF::R_PPC64_TOC &&
-        TargetObjectWriter->getEMachine() == ELF::EM_PPC64)
-      SymA = nullptr;
-
     if (SymA) {
       if (const MCSymbolELF *R = Renames.lookup(SymA))
         SymA = R;
