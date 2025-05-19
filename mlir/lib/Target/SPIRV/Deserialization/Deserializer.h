@@ -121,7 +121,10 @@ class Deserializer {
 public:
   /// Creates a deserializer for the given SPIR-V `binary` module.
   /// The SPIR-V ModuleOp will be created into `context.
-  explicit Deserializer(ArrayRef<uint32_t> binary, MLIRContext *context);
+  /// `enableControlFlowStructurization` is used to enable control flow
+  /// structurization.
+  explicit Deserializer(ArrayRef<uint32_t> binary, MLIRContext *context,
+                        bool enableControlFlowStructurization);
 
   /// Deserializes the remembered SPIR-V binary module.
   LogicalResult deserialize();
@@ -621,6 +624,9 @@ private:
 
   /// A list of all structs which have unresolved member types.
   SmallVector<DeferredStructTypeInfo, 0> deferredStructTypesInfos;
+
+  /// A flag to enable or disable structurizer
+  bool enableControlFlowStructurization;
 
 #ifndef NDEBUG
   /// A logger used to emit information during the deserialzation process.
