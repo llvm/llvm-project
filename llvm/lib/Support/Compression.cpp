@@ -252,8 +252,7 @@ Error zstd::decompress(ArrayRef<uint8_t> Input,
                        size_t UncompressedSize) {
   llvm_unreachable("zstd::decompress is unavailable");
 }
-Error zstd::getDecompressedSize(ArrayRef<uint8_t> Input,
-                                size_t &UncompressedSize) {
+Expected<uint64_t> zstd::getDecompressedSize(ArrayRef<uint8_t> Input) {
   llvm_unreachable("zstd::getDecompressedSize is unavailable");
 }
 #endif
