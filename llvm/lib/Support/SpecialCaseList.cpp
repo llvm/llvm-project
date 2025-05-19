@@ -132,18 +132,24 @@ bool SpecialCaseList::createInternal(const MemoryBuffer *MB,
 Expected<SpecialCaseList::Section *>
 SpecialCaseList::addSection(StringRef SectionStr, unsigned LineNo,
                             bool UseGlobs) {
-  Sections.emplace_back();
-  auto &Section = Sections.back();
-  Section.SectionStr = SectionStr;
-
-  if (auto Err = Section.SectionMatcher->insert(SectionStr, LineNo, UseGlobs)) {
+  auto it =
+      std::find_if(Sections.begin(), Sections.end(), [&](const Section &s) {
+        return s.SectionStr == SectionStr;
+      });
+  if (it == Sections.end()) {
+    Sections.emplace_back();
+    auto &sec = Sections.back();
+    sec.SectionStr = SectionStr;
+  }
+  it = std::prev(Sections.end());
+  if (auto Err = it->SectionMatcher->insert(SectionStr, LineNo, UseGlobs)) {
     return createStringError(errc::invalid_argument,
                              "malformed section at line " + Twine(LineNo) +
                                  ": '" + SectionStr +
                                  "': " + toString(std::move(Err)));
   }
 
-  return &Section;
+  return &(*it);
 }
 
 bool SpecialCaseList::parse(const MemoryBuffer *MB, std::string &Error) {
