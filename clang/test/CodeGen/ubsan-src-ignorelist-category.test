@@ -17,7 +17,7 @@ src:*
 src:*/test1.c=sanitize
 src:*/test1.c
 
-//--- src.ignorelist.contradict1
+//--- src.ignorelist.contradict2
 src:*
 src:*/test1.c
 src:*/test1.c=sanitize

@@ -56,7 +56,12 @@ void SanitizerSpecialCaseList::createSanitizerSections() {
 bool SanitizerSpecialCaseList::inSection(SanitizerMask Mask, StringRef Prefix,
                                          StringRef Query,
                                          StringRef Category) const {
-  return inSectionBlame(Mask, Prefix, Query, Category) > 0;
+  for (auto &S : SanitizerSections)
+    if ((S.Mask & Mask) &&
+        SpecialCaseList::inSectionBlame(S.Entries, Prefix, Query, Category))
+      return true;
+
+  return false;
 }
 
 unsigned SanitizerSpecialCaseList::inSectionBlame(SanitizerMask Mask,
