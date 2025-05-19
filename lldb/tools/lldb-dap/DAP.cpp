@@ -1017,45 +1017,6 @@ lldb::SBError DAP::WaitForProcessToStop(std::chrono::seconds seconds) {
   return error;
 }
 
-void Variables::Clear() {
-  locals.Clear();
-  globals.Clear();
-  registers.Clear();
-  referenced_variables.clear();
-}
-
-int64_t Variables::GetNewVariableReference(bool is_permanent) {
-  if (is_permanent)
-    return next_permanent_var_ref++;
-  return next_temporary_var_ref++;
-}
-
-bool Variables::IsPermanentVariableReference(int64_t var_ref) {
-  return var_ref >= PermanentVariableStartIndex;
-}
-
-lldb::SBValue Variables::GetVariable(int64_t var_ref) const {
-  if (IsPermanentVariableReference(var_ref)) {
-    auto pos = referenced_permanent_variables.find(var_ref);
-    if (pos != referenced_permanent_variables.end())
-      return pos->second;
-  } else {
-    auto pos = referenced_variables.find(var_ref);
-    if (pos != referenced_variables.end())
-      return pos->second;
-  }
-  return lldb::SBValue();
-}
-
-int64_t Variables::InsertVariable(lldb::SBValue variable, bool is_permanent) {
-  int64_t var_ref = GetNewVariableReference(is_permanent);
-  if (is_permanent)
-    referenced_permanent_variables.insert(std::make_pair(var_ref, variable));
-  else
-    referenced_variables.insert(std::make_pair(var_ref, variable));
-  return var_ref;
-}
-
 bool StartDebuggingRequestHandler::DoExecute(
     lldb::SBDebugger debugger, char **command,
     lldb::SBCommandReturnObject &result) {
@@ -1290,60 +1251,6 @@ DAP::GetInstructionBPFromStopReason(lldb::SBThread &thread) {
       return nullptr;
   }
   return inst_bp;
-}
-
-lldb::SBValueList *Variables::GetTopLevelScope(int64_t variablesReference) {
-  switch (variablesReference) {
-  case VARREF_LOCALS:
-    return &locals;
-  case VARREF_GLOBALS:
-    return &globals;
-  case VARREF_REGS:
-    return &registers;
-  default:
-    return nullptr;
-  }
-}
-
-lldb::SBValue Variables::FindVariable(uint64_t variablesReference,
-                                      llvm::StringRef name) {
-  lldb::SBValue variable;
-  if (lldb::SBValueList *top_scope = GetTopLevelScope(variablesReference)) {
-    bool is_duplicated_variable_name = name.contains(" @");
-    // variablesReference is one of our scopes, not an actual variable it is
-    // asking for a variable in locals or globals or registers
-    int64_t end_idx = top_scope->GetSize();
-    // Searching backward so that we choose the variable in closest scope
-    // among variables of the same name.
-    for (int64_t i = end_idx - 1; i >= 0; --i) {
-      lldb::SBValue curr_variable = top_scope->GetValueAtIndex(i);
-      std::string variable_name = CreateUniqueVariableNameForDisplay(
-          curr_variable, is_duplicated_variable_name);
-      if (variable_name == name) {
-        variable = curr_variable;
-        break;
-      }
-    }
-  } else {
-    // This is not under the globals or locals scope, so there are no
-    // duplicated names.
-
-    // We have a named item within an actual variable so we need to find it
-    // withing the container variable by name.
-    lldb::SBValue container = GetVariable(variablesReference);
-    variable = container.GetChildMemberWithName(name.data());
-    if (!variable.IsValid()) {
-      if (name.starts_with("[")) {
-        llvm::StringRef index_str(name.drop_front(1));
-        uint64_t index = 0;
-        if (!index_str.consumeInteger(0, index)) {
-          if (index_str == "]")
-            variable = container.GetChildAtIndex(index);
-        }
-      }
-    }
-  }
-  return variable;
 }
 
 protocol::Capabilities DAP::GetCapabilities() {

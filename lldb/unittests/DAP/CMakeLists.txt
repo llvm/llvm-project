@@ -6,6 +6,7 @@ add_lldb_unittest(DAPTests
   ProtocolTypesTest.cpp
   TestBase.cpp
   TransportTest.cpp
+  VariablesTest.cpp
 
   LINK_LIBS
     lldbDAP
