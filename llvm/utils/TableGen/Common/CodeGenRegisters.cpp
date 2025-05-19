@@ -650,8 +650,7 @@ struct TupleExpander : SetTheory::Expander {
 
       // Take the cost list of the first register in the tuple.
       const ListInit *CostList = Proto->getValueAsListInit("CostPerUse");
-      SmallVector<const Init *, 2> CostPerUse;
-      llvm::append_range(CostPerUse, *CostList);
+      SmallVector<const Init *, 2> CostPerUse(CostList->getValues());
 
       const StringInit *AsmName = StringInit::get(RK, "");
       if (!RegNames.empty()) {
