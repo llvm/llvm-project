@@ -1214,7 +1214,7 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, bool PeelLast, LoopInfo *LI,
     // Now adjust users of the original exit values by replacing them with the
     // exit value from the peeled iteration.
     for (const auto &[P, E] : ExitValues)
-      P->replaceAllUsesWith(VMap.lookup(E));
+      P->replaceAllUsesWith(isa<Constant>(E) ? E : &*VMap.lookup(E));
     formLCSSA(*L, DT, LI, SE);
   } else {
     // Now adjust the phi nodes in the loop header to get their initial values
