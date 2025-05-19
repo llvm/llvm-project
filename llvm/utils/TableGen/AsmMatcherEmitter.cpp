@@ -1908,7 +1908,7 @@ void MatchableInfo::buildAliasResultOperands(bool AliasConstraintsAreChecked) {
     }
 
     // Handle all the suboperands for this operand.
-    const std::string &OpName = OpInfo.Name;
+    StringRef OpName = OpInfo.Name;
     for (; AliasOpNo < LastOpNo &&
            CGA.ResultInstOperandIndex[AliasOpNo].first == Idx;
          ++AliasOpNo) {

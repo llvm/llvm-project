@@ -142,8 +142,8 @@ bool CodeEmitterGen::addCodeToMergeInOperand(const Record *R,
   }
 
   std::pair<unsigned, unsigned> SO = CGI.Operands.getSubOperandNumber(OpIdx);
-  std::string &EncoderMethodName =
-      CGI.Operands[SO.first].EncoderMethodNames[SO.second];
+  const std::string EncoderMethodName =
+      CGI.Operands[SO.first].EncoderMethodNames[SO.second].str();
 
   if (UseAPInt)
     Case += "      op.clearAllBits();\n";
