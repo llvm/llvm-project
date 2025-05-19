@@ -5254,20 +5254,32 @@ TypeSystemSwiftTypeRef::GetFullyUnqualifiedType(opaque_compiler_type_t type) {
 }
 uint32_t
 TypeSystemSwiftTypeRef::GetNumDirectBaseClasses(opaque_compiler_type_t type) {
-  // We forward the call to SwiftASTContext because an implementation of
-  // this function would require it to have an execution context being passed
-  // in. Given the purpose of TypeSystemSwiftTypeRef, it's unlikely this
-  // function will be called much.
-  FORWARD_TO_EXPRAST_ONLY(GetNumDirectBaseClasses, (ReconstructType(type)), {});
+  auto impl = [&]() -> uint32_t {
+    CompilerType class_ty(weak_from_this(), type);
+    if (auto target_sp = GetTargetWP().lock())
+      if (auto *runtime = SwiftLanguageRuntime::Get(target_sp->GetProcessSP()))
+        if (runtime->GetBaseClass(class_ty))
+          return 1;
+    return 0;
+  };
+
+  VALIDATE_AND_RETURN(impl, GetNumDirectBaseClasses, type, g_no_exe_ctx,
+                      (ReconstructType(type)));
 }
 CompilerType TypeSystemSwiftTypeRef::GetDirectBaseClassAtIndex(
     opaque_compiler_type_t type, size_t idx, uint32_t *bit_offset_ptr) {
-  // We forward the call to SwiftASTContext because an implementation of
-  // this function would require it to have an execution context being passed
-  // in. Given the purpose of TypeSystemSwiftTypeRef, it's unlikely this
-  // function will be called much.
-  FORWARD_TO_EXPRAST_ONLY(GetDirectBaseClassAtIndex,
-                          (ReconstructType(type), idx, bit_offset_ptr), {});
+  auto impl = [&]() {
+    if (idx != 0)
+      return CompilerType();
+    CompilerType class_ty(weak_from_this(), type);
+    if (auto target_sp = GetTargetWP().lock())
+      if (auto *runtime = SwiftLanguageRuntime::Get(target_sp->GetProcessSP()))
+        return runtime->GetBaseClass(class_ty);
+    return CompilerType();
+  };
+
+  VALIDATE_AND_RETURN(impl, GetDirectBaseClassAtIndex, type, g_no_exe_ctx,
+                      (ReconstructType(type), idx, nullptr));
 }
 bool TypeSystemSwiftTypeRef::IsReferenceType(opaque_compiler_type_t type,
                                              CompilerType *pointee_type,

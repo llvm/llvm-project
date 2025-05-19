@@ -1702,6 +1702,29 @@ llvm::Expected<CompilerType> SwiftLanguageRuntime::GetChildCompilerTypeAtIndex(
   return child_type;
 }
 
+CompilerType SwiftLanguageRuntime::GetBaseClass(CompilerType class_ty) {
+  ThreadSafeReflectionContext reflection_ctx = GetReflectionContext();
+  if (!reflection_ctx)
+    return {};
+  auto ts_sp = class_ty.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
+  if (!ts_sp)
+    return {};
+  auto tr_ts = ts_sp->GetTypeSystemSwiftTypeRef();
+  if (!tr_ts)
+    return {};
+  auto type_ref_or_err =
+      reflection_ctx->GetTypeRef(class_ty.GetMangledTypeName().GetStringRef(),
+                                 tr_ts->GetDescriptorFinder());
+  if (!type_ref_or_err) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Expressions | LLDBLog::Types),
+                   type_ref_or_err.takeError(), "{0}");
+    return {};
+  }
+  auto *super_tr = reflection_ctx->LookupSuperclass(
+      *type_ref_or_err, tr_ts->GetDescriptorFinder());
+  return GetTypeFromTypeRef(*tr_ts, super_tr);
+}
+
 bool SwiftLanguageRuntime::ForEachSuperClassType(
     ValueObject &instance, std::function<bool(SuperClassType)> fn) {
   ThreadSafeReflectionContext reflection_ctx = GetReflectionContext();
@@ -2094,38 +2117,22 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Class(
   instance_ptr = FixupAddress(instance_ptr, class_type, error);
   if (!error.Success())
     return false;
-
-  auto tss = class_type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
-  if (!tss) {
-    // This could be an Objective-C type implemented in Swift. Get the
-    // Swift typesystem.
-    if (auto module_sp = in_value.GetModule()) {
-      auto type_system_or_err =
-          module_sp->GetTypeSystemForLanguage(lldb::eLanguageTypeSwift);
-      if (!type_system_or_err) {
-        llvm::consumeError(type_system_or_err.takeError());
-        return false;
-      }
-      auto ts_sp = *type_system_or_err;
-      tss =
-          llvm::cast<TypeSystemSwift>(ts_sp.get())->GetTypeSystemSwiftTypeRef();
-    } else if (auto target_sp = in_value.GetTargetSP()) {
-      auto type_system_or_err =
-          target_sp->GetScratchTypeSystemForLanguage(lldb::eLanguageTypeSwift);
-      if (!type_system_or_err) {
-        llvm::consumeError(type_system_or_err.takeError());
-        return false;
-      }
-      auto ts_sp = *type_system_or_err;
-      tss =
-          llvm::cast<TypeSystemSwift>(ts_sp.get())->GetTypeSystemSwiftTypeRef();
-    }
-  }
-  if (!tss)
-    return false;
-
   address.SetRawAddress(instance_ptr);
-  auto ts = tss->GetTypeSystemSwiftTypeRef();
+
+  // We are going to use process information to resolve the type, so
+  // the result needs to be in the target's scratch context, not a
+  // long-lived per-module typesystem.
+  TypeSystemSwiftTypeRefSP ts;
+  if (auto target_sp = in_value.GetTargetSP()) {
+    auto type_system_or_err =
+        target_sp->GetScratchTypeSystemForLanguage(lldb::eLanguageTypeSwift);
+    if (!type_system_or_err) {
+      llvm::consumeError(type_system_or_err.takeError());
+      return false;
+    }
+    auto ts_sp = *type_system_or_err;
+    ts = llvm::cast<TypeSystemSwift>(ts_sp.get())->GetTypeSystemSwiftTypeRef();
+  }
   if (!ts)
     return false;
 

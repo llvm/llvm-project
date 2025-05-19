@@ -297,6 +297,7 @@ public:
   llvm::Error GetObjectDescription(Stream &str, ValueObject &object) override;
   CompilerType GetConcreteType(ExecutionContextScope *exe_scope,
                                ConstString abstract_type_name) override;
+  CompilerType GetBaseClass(CompilerType class_ty);
 
   CompilerType GetTypeFromMetadata(TypeSystemSwift &tss, Address address);
   /// Build the artificial type metadata variable name for \p swift_type.

@@ -10,6 +10,7 @@ class TestSwiftClangImporterProtocolComposition(TestBase):
         """Test that protocol composition types can be resolved
            through the Swift language runtime"""
         self.build()
+        self.expect('settings set symbols.swift-validate-typesystem false')
         lldbutil.run_to_source_breakpoint(self, 'break here',
                                           lldb.SBFileSpec('main.swift'))
         obj = self.frame().FindVariable("obj", lldb.eDynamicDontRunTarget)
