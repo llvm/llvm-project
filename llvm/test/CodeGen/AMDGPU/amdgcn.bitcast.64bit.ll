@@ -17499,9 +17499,9 @@ define inreg <8 x i8> @bitcast_v4bf16_to_v8i8_scalar(<4 x bfloat> inreg %a, i32 
 ; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 8, v9
 ; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX11-FAKE16-NEXT:    v_lshrrev_b64 v[3:4], 24, v[9:10]
-; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v4, v8
 ; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v7, 24, v10
 ; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v5, 8, v10
+; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v4, v8
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-FAKE16-NEXT:  .LBB109_3:
 ; GFX11-FAKE16-NEXT:    ; implicit-def: $sgpr3
