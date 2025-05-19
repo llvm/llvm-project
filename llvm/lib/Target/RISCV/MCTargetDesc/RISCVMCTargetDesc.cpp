@@ -247,7 +247,9 @@ public:
       return false;
     case RISCV::C_ADDI:
     case RISCV::ADDI: {
-      if (auto TargetRegState = getGPRState(Inst.getOperand(1).getReg())) {
+      MCRegister Reg = Inst.getOperand(1).getReg();
+      auto TargetRegState = getGPRState(Reg);
+      if (TargetRegState && Reg != RISCV::X0) {
         Target = *TargetRegState + Inst.getOperand(2).getImm();
         Target &= maskTrailingOnes<uint64_t>(ArchRegWidth);
         return true;
@@ -256,7 +258,9 @@ public:
     }
     case RISCV::C_ADDIW:
     case RISCV::ADDIW: {
-      if (auto TargetRegState = getGPRState(Inst.getOperand(1).getReg())) {
+      MCRegister Reg = Inst.getOperand(1).getReg();
+      auto TargetRegState = getGPRState(Reg);
+      if (TargetRegState && Reg != RISCV::X0) {
         Target = *TargetRegState + Inst.getOperand(2).getImm();
         Target = SignExtend64<32>(Target);
         return true;
@@ -288,7 +292,9 @@ public:
     case RISCV::C_LW:
     case RISCV::C_FSW:
     case RISCV::C_FLW: {
-      if (auto TargetRegState = getGPRState(Inst.getOperand(1).getReg())) {
+      MCRegister Reg = Inst.getOperand(1).getReg();
+      auto TargetRegState = getGPRState(Reg);
+      if (TargetRegState && Reg != RISCV::X0) {
         Target = *TargetRegState + Inst.getOperand(2).getImm();
         return true;
       }
