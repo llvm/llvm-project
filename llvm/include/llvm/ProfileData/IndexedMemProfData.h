@@ -69,15 +69,15 @@ private:
 
   // Compute a CallStackId for a given call stack.
   CallStackId hashCallStack(ArrayRef<FrameId> CS) const {
-  llvm::HashBuilder<llvm::TruncatedBLAKE3<8>, llvm::endianness::little>
-      HashBuilder;
-  for (FrameId F : CS)
-    HashBuilder.add(F);
-  llvm::BLAKE3Result<8> Hash = HashBuilder.final();
-  CallStackId CSId;
-  std::memcpy(&CSId, Hash.data(), sizeof(Hash));
-  return CSId;
-}
+    llvm::HashBuilder<llvm::TruncatedBLAKE3<8>, llvm::endianness::little>
+        HashBuilder;
+    for (FrameId F : CS)
+      HashBuilder.add(F);
+    llvm::BLAKE3Result<8> Hash = HashBuilder.final();
+    CallStackId CSId;
+    std::memcpy(&CSId, Hash.data(), sizeof(Hash));
+    return CSId;
+  }
 };
 } // namespace memprof
 

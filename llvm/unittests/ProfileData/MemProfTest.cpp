@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ProfileData/MemProf.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLForwardCompat.h"
@@ -14,7 +15,6 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/ProfileData/IndexedMemProfData.h"
-#include "llvm/ProfileData/MemProf.h"
 #include "llvm/ProfileData/MemProfData.inc"
 #include "llvm/ProfileData/MemProfRadixTree.h"
 #include "llvm/ProfileData/MemProfReader.h"
