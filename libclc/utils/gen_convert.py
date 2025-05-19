@@ -355,7 +355,6 @@ def generate_saturated_conversion(src, dst, size):
         print("  return x;")
 
     elif src in float_types:
-
         # Conversion from float to int
         print(
             f"""  {dstn} y = __clc_convert_{dstn}(x);
@@ -364,7 +363,6 @@ def generate_saturated_conversion(src, dst, size):
   return y;"""
         )
     else:
-
         # Integer to integer convesion with sizeof(src) == sizeof(dst)
         if sizeof_type[src] == sizeof_type[dst]:
             if src in unsigned_types:
