@@ -243,6 +243,19 @@ def BF16X2RT : RegTyInfo<v2bf16, Int32Regs, ?, ?, supports_imm = 0>;
 // This class provides a basic wrapper around an NVPTXInst that abstracts the
 // specific syntax of most PTX instructions. It automatically handles the
 // construction of the asm string based on the provided dag arguments.
+// For example, the following asm-strings would be computed:
+//
+//   * BasicFlagsNVPTXInst<(outs Int32Regs:$dst),
+//                         (ins Int32Regs:$a, Int32Regs:$b), (ins),
+//                         "add.s32">;
+//         ---> "add.s32 \t$dst, $a, $b;"
+//
+//   * BasicFlagsNVPTXInst<(outs Int32Regs:$d),
+//                         (ins Int32Regs:$a, Int32Regs:$b, Hexu32imm:$c),
+//                         (ins PrmtMode:$mode),
+//                         "prmt.b32${mode}">;
+//         ---> "prmt.b32${mode} \t$dst, $a, $b, $c;"
+//
 class BasicFlagsNVPTXInst<dag outs_dag, dag ins_dag, dag flags_dag, string asmstr,
                           list<dag> pattern = []>
   : NVPTXInst<
