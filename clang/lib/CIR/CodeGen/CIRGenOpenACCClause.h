@@ -42,16 +42,11 @@ struct DataOperandInfo {
   mlir::Location beginLoc;
   mlir::Value varValue;
   llvm::StringRef name;
-  mlir::ValueRange bounds;
-
-  DataOperandInfo(mlir::Location beginLoc, mlir::Value varValue,
-                  llvm::StringRef name, mlir::ValueRange bounds)
-      : beginLoc(beginLoc), varValue(varValue), name(name), bounds(bounds) {}
 };
 
-inline mlir::Value createIntExpr(CIRGen::CIRGenFunction &cgf,
-                                 CIRGen::CIRGenBuilderTy &builder,
-                                 const Expr *intExpr) {
+inline mlir::Value emitOpenACCIntExpr(CIRGen::CIRGenFunction &cgf,
+                                      CIRGen::CIRGenBuilderTy &builder,
+                                      const Expr *intExpr) {
   mlir::Value expr = cgf.emitScalarExpr(intExpr);
   mlir::Location exprLoc = cgf.cgm.getLoc(intExpr->getBeginLoc());
 
@@ -70,40 +65,41 @@ inline mlir::Value createIntExpr(CIRGen::CIRGenFunction &cgf,
 // clause, so that it can be used to emit the data operations.
 inline DataOperandInfo getDataOperandInfo(CIRGen::CIRGenFunction &cgf,
                                           CIRGen::CIRGenBuilderTy &builder,
-                                          OpenACCDirectiveKind DK,
-                                          const Expr *E) {
+                                          OpenACCDirectiveKind dk,
+                                          const Expr *e) {
   // TODO: OpenACC: Cache was different enough as to need a separate
   // `ActOnCacheVar`, so we are going to need to do some investigations here
   // when it comes to implement this for cache.
-  assert(DK != OpenACCDirectiveKind::Cache &&
-         "Cache has different enough functionality we need to investigate "
-         "whether this function works for it");
-  const Expr *curVarExpr = E->IgnoreParenImpCasts();
+  if(dk != OpenACCDirectiveKind::Cache) {
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     "OpenACC data operand for 'cache' directive");
+    return {cgf.cgm.getLoc(e->getBeginLoc()), {}, {}};
+  }
+
+  const Expr *curVarExpr = e->IgnoreParenImpCasts();
 
   mlir::Location exprLoc = cgf.cgm.getLoc(curVarExpr->getBeginLoc());
-  llvm::SmallVector<mlir::Value> bounds;
 
   // TODO: OpenACC: Assemble the list of bounds.
   if (isa<ArraySectionExpr, ArraySubscriptExpr>(curVarExpr)) {
     cgf.cgm.errorNYI(curVarExpr->getSourceRange(),
                      "OpenACC data clause array subscript/section");
-    return {exprLoc, {}, {}, bounds};
+    return {exprLoc, {}, {}};
   }
 
   // TODO: OpenACC: if this is a member expr, emit the VarPtrPtr correctly.
-  if (const auto *ME = dyn_cast<MemberExpr>(curVarExpr)) {
+  if (isa<MemberExpr>(curVarExpr)) {
     cgf.cgm.errorNYI(curVarExpr->getSourceRange(),
                      "OpenACC Data clause member expr");
-    return {exprLoc, {}, {}, bounds};
+    return {exprLoc, {}, {}};
   }
 
   // Sema has made sure that only 4 types of things can get here, array
   // subscript, array section, member expr, or DRE to a var decl (or the former
   // 3 wrapping a var-decl), so we should be able to assume this is right.
-  const auto *DRE = cast<DeclRefExpr>(curVarExpr);
-  const auto *VD = cast<VarDecl>(DRE->getFoundDecl()->getCanonicalDecl());
-  return {exprLoc, cgf.emitDeclRefLValue(DRE).getPointer(), VD->getName(),
-          bounds};
+  const auto *dre = cast<DeclRefExpr>(curVarExpr);
+  const auto *vd  = cast<VarDecl>(dre->getFoundDecl()->getCanonicalDecl());
+  return {exprLoc, cgf.emitDeclRefLValue(dre).getPointer(), vd->getName()};
 }
 } //  namespace
 
@@ -145,8 +141,8 @@ class OpenACCClauseCIREmitter final
     cgf.cgm.errorNYI(c.getSourceRange(), "OpenACC Clause", c.getClauseKind());
   }
 
-  mlir::Value createIntExpr(const Expr *intExpr) {
-    return clang::createIntExpr(cgf, builder, intExpr);
+  mlir::Value emitOpenACCIntExpr(const Expr *intExpr) {
+    return clang::emitOpenACCIntExpr(cgf, builder, intExpr);
   }
 
   // 'condition' as an OpenACC grammar production is used for 'if' and (some
@@ -227,6 +223,7 @@ class OpenACCClauseCIREmitter final
                       bool structured, bool implicit) {
     DataOperandInfo opInfo =
         getDataOperandInfo(cgf, builder, dirKind, varOperand);
+    mlir::ValueRange bounds;
 
     // TODO: OpenACC: we should comprehend the 'modifier-list' here for the data
     // operand. At the moment, we don't have a uniform way to assign these
@@ -235,7 +232,7 @@ class OpenACCClauseCIREmitter final
 
     auto beforeOp =
         builder.create<BeforeOpTy>(opInfo.beginLoc, opInfo.varValue, structured,
-                                   implicit, opInfo.name, opInfo.bounds);
+                                   implicit, opInfo.name, bounds);
     operation.getDataClauseOperandsMutable().append(beforeOp.getResult());
 
     AfterOpTy afterOp;
@@ -244,7 +241,7 @@ class OpenACCClauseCIREmitter final
       builder.setInsertionPointAfter(operation);
       afterOp = builder.create<AfterOpTy>(opInfo.beginLoc, beforeOp.getResult(),
                                           opInfo.varValue, structured, implicit,
-                                          opInfo.name, opInfo.bounds);
+                                          opInfo.name, bounds);
     }
 
     // Set the 'rest' of the info for both operations.
@@ -397,7 +394,7 @@ public:
     if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp,
                                mlir::acc::KernelsOp>) {
       operation.addNumWorkersOperand(builder.getContext(),
-                                     createIntExpr(clause.getIntExpr()),
+                                     emitOpenACCIntExpr(clause.getIntExpr()),
                                      lastDeviceTypeValues);
     } else if constexpr (isCombinedType<OpTy>) {
       applyToComputeOp(clause);
@@ -410,7 +407,7 @@ public:
     if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp,
                                mlir::acc::KernelsOp>) {
       operation.addVectorLengthOperand(builder.getContext(),
-                                       createIntExpr(clause.getIntExpr()),
+                                       emitOpenACCIntExpr(clause.getIntExpr()),
                                        lastDeviceTypeValues);
     } else if constexpr (isCombinedType<OpTy>) {
       applyToComputeOp(clause);
@@ -435,7 +432,7 @@ public:
           mlir::OpBuilder::InsertionGuard guardCase(builder);
           if (!dataOperands.empty())
             builder.setInsertionPoint(dataOperands.front());
-          intExpr = createIntExpr(clause.getIntExpr());
+          intExpr = emitOpenACCIntExpr(clause.getIntExpr());
         }
         operation.addAsyncOperand(builder.getContext(), intExpr,
                                   lastDeviceTypeValues);
@@ -447,7 +444,7 @@ public:
         operation.setAsync(true);
       else
         operation.getAsyncOperandMutable().append(
-            createIntExpr(clause.getIntExpr()));
+            emitOpenACCIntExpr(clause.getIntExpr()));
     } else if constexpr (isCombinedType<OpTy>) {
       applyToComputeOp(clause);
     } else {
@@ -503,7 +500,7 @@ public:
     if constexpr (isOneOfTypes<OpTy, mlir::acc::InitOp, mlir::acc::ShutdownOp,
                                mlir::acc::SetOp>) {
       operation.getDeviceNumMutable().append(
-          createIntExpr(clause.getIntExpr()));
+          emitOpenACCIntExpr(clause.getIntExpr()));
     } else {
       llvm_unreachable(
           "init, shutdown, set, are only valid device_num constructs");
@@ -515,7 +512,7 @@ public:
                                mlir::acc::KernelsOp>) {
       llvm::SmallVector<mlir::Value> values;
       for (const Expr *E : clause.getIntExprs())
-        values.push_back(createIntExpr(E));
+        values.push_back(emitOpenACCIntExpr(E));
 
       operation.addNumGangsOperands(builder.getContext(), values,
                                     lastDeviceTypeValues);
@@ -534,9 +531,9 @@ public:
       } else {
         llvm::SmallVector<mlir::Value> values;
         if (clause.hasDevNumExpr())
-          values.push_back(createIntExpr(clause.getDevNumExpr()));
+          values.push_back(emitOpenACCIntExpr(clause.getDevNumExpr()));
         for (const Expr *E : clause.getQueueIdExprs())
-          values.push_back(createIntExpr(E));
+          values.push_back(emitOpenACCIntExpr(E));
         operation.addWaitOperands(builder.getContext(), clause.hasDevNumExpr(),
                                   values, lastDeviceTypeValues);
       }
@@ -552,7 +549,7 @@ public:
   void VisitDefaultAsyncClause(const OpenACCDefaultAsyncClause &clause) {
     if constexpr (isOneOfTypes<OpTy, mlir::acc::SetOp>) {
       operation.getDefaultAsyncMutable().append(
-          createIntExpr(clause.getIntExpr()));
+          emitOpenACCIntExpr(clause.getIntExpr()));
     } else {
       llvm_unreachable("set, is only valid device_num constructs");
     }
@@ -642,7 +639,7 @@ public:
     if constexpr (isOneOfTypes<OpTy, mlir::acc::LoopOp>) {
       if (clause.hasIntExpr())
         operation.addWorkerNumOperand(builder.getContext(),
-                                      createIntExpr(clause.getIntExpr()),
+                                      emitOpenACCIntExpr(clause.getIntExpr()),
                                       lastDeviceTypeValues);
       else
         operation.addEmptyWorker(builder.getContext(), lastDeviceTypeValues);
@@ -660,7 +657,7 @@ public:
     if constexpr (isOneOfTypes<OpTy, mlir::acc::LoopOp>) {
       if (clause.hasIntExpr())
         operation.addVectorOperand(builder.getContext(),
-                                   createIntExpr(clause.getIntExpr()),
+                                   emitOpenACCIntExpr(clause.getIntExpr()),
                                    lastDeviceTypeValues);
       else
         operation.addEmptyVector(builder.getContext(), lastDeviceTypeValues);
@@ -696,7 +693,7 @@ public:
           } else if (isa<OpenACCAsteriskSizeExpr>(expr)) {
             values.push_back(createConstantInt(exprLoc, 64, -1));
           } else {
-            values.push_back(createIntExpr(expr));
+            values.push_back(emitOpenACCIntExpr(expr));
           }
         }
 
@@ -713,9 +710,9 @@ public:
   void VisitCopyClause(const OpenACCCopyClause &clause) {
     if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp, mlir::acc::SerialOp,
                                mlir::acc::KernelsOp>) {
-      for (auto Var : clause.getVarList())
+      for (auto var : clause.getVarList())
         addDataOperand<mlir::acc::CopyinOp, mlir::acc::CopyoutOp>(
-            Var, mlir::acc::DataClause::acc_copy, /*structured=*/true,
+            var, mlir::acc::DataClause::acc_copy, /*structured=*/true,
             /*implicit=*/false);
     } else {
       // TODO: When we've implemented this for everything, switch this to an
