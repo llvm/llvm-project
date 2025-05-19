@@ -1343,6 +1343,11 @@ llvm::Value *CodeGenFunction::EmitLifetimeStart(llvm::TypeSize Size,
   if (!ShouldEmitLifetimeMarkers)
     return nullptr;
 
+  // No lifetimes on promise alloca, or middle end passes will assume promise
+  // dead after lifetime.end, leading to mis-optimization
+  if (Addr->getName() == "__promise")
+    return nullptr;
+
   assert(Addr->getType()->getPointerAddressSpace() ==
              CGM.getDataLayout().getAllocaAddrSpace() &&
          "Pointer should be in alloca address space");

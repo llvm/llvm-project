@@ -52,7 +52,7 @@ coroutine ArrayInitCoro() {
     // CHECK-NEXT:  store ptr %arrayinit.element, ptr %arrayinit.endOfInit.reload.addr, align 8
     co_await Awaiter{}
     // CHECK-NEXT:  @_ZNSt14suspend_always11await_readyEv
-    // CHECK-NEXT:  br i1 %{{.+}}, label %await.ready, label %CoroSave30
+    // CHECK-NEXT:  br i1 %{{.+}}, label %await.ready, label %CoroSave29
   };
   // CHECK:       await.cleanup:                                    ; preds = %AfterCoroSuspend{{.*}}
   // CHECK-NEXT:    br label %cleanup{{.*}}.from.await.cleanup

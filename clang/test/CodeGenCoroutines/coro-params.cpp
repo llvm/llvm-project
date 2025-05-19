@@ -84,7 +84,6 @@ void f(int val, MoveOnly moParam, MoveAndCopy mcParam, TrivialABI trivialParam) 
   // CHECK-NEXT: call void @_ZN11MoveAndCopyC1EOS_(ptr {{[^,]*}} %[[McCopy]], ptr noundef nonnull align 4 dereferenceable(4) %[[McParam]]) #
   // CHECK-NEXT: call void @llvm.lifetime.start.p0(
   // CHECK-NEXT: call void @_ZN10TrivialABIC1EOS_(ptr {{[^,]*}} %[[TrivialCopy]], ptr {{[^,]*}} %[[TrivialAlloca]])
-  // CHECK-NEXT: call void @llvm.lifetime.start.p0(
   // CHECK-NEXT: invoke void @_ZNSt16coroutine_traitsIJvi8MoveOnly11MoveAndCopy10TrivialABIEE12promise_typeC1Ev(
 
   // CHECK: call void @_ZN14suspend_always12await_resumeEv(
@@ -106,7 +105,6 @@ void f(int val, MoveOnly moParam, MoveAndCopy mcParam, TrivialABI trivialParam) 
 
   // Destroy promise, then parameter copies:
   // CHECK: call void @_ZNSt16coroutine_traitsIJvi8MoveOnly11MoveAndCopy10TrivialABIEE12promise_typeD1Ev(ptr {{[^,]*}} %__promise)
-  // CHECK-NEXT: call void @llvm.lifetime.end.p0(
   // CHECK-NEXT: call void @_ZN10TrivialABID1Ev(ptr {{[^,]*}} %[[TrivialCopy]])
   // CHECK-NEXT: call void @llvm.lifetime.end.p0(
   // CHECK-NEXT: call void @_ZN11MoveAndCopyD1Ev(ptr {{[^,]*}} %[[McCopy]])
@@ -135,7 +133,6 @@ void dependent_params(T x, U, U y) {
   // CHECK-NEXT: call void @_ZN1BC1EOS_(ptr {{[^,]*}} %[[unnamed_copy]], ptr noundef nonnull align 4 dereferenceable(512) %0)
   // CHECK-NEXT: call void @llvm.lifetime.start.p0(
   // CHECK-NEXT: call void @_ZN1BC1EOS_(ptr {{[^,]*}} %[[y_copy]], ptr noundef nonnull align 4 dereferenceable(512) %y)
-  // CHECK-NEXT: call void @llvm.lifetime.start.p0(
   // CHECK-NEXT: invoke void @_ZNSt16coroutine_traitsIJv1A1BS1_EE12promise_typeC1Ev(
 
   co_return;
