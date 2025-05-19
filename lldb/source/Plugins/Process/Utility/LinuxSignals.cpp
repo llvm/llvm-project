@@ -185,48 +185,77 @@ std::string LinuxSignals::GetSignalDescriptionFromSiginfo(
   if (code == 0)
     return GetSignalDescription(signo, code);
 
-  lldb::ValueObjectSP sifields =
-      siginfo_sp->GetChildMemberWithName("_sifields");
+  auto sifields = siginfo_sp->GetChildMemberWithName("_sifields");
+  if (!sifields)
+    return GetSignalDescription(signo, code);
+
+  // declare everything that we can populate later.
+  std::optional<lldb::addr_t> addr;
+  std::optional<lldb::addr_t> upper;
+  std::optional<lldb::addr_t> lower;
+  std::optional<uint32_t> pid;
+  std::optional<uint32_t> uid;
+
   // The negative si_codes are special and mean this signal was sent from user
   // space not the kernel. These take precedence because they break some of the
   // invariants around kernel sent signals. Such as SIGSEGV won't have an
   // address.
   if (code < 0) {
-    lldb::ValueObjectSP sikill = sifields->GetChildMemberWithName("_kill");
-    uint32_t pid =
-        sikill->GetChildMemberWithName("si_pid")->GetValueAsUnsigned(-1);
-    uint32_t uid =
-        sikill->GetChildMemberWithName("si_uid")->GetValueAsUnsigned(-1);
-    return GetSignalDescription(signo, code, std::nullopt, std::nullopt,
-                                std::nullopt, pid, uid);
+    auto sikill = sifields->GetChildMemberWithName("_kill");
+    if (sikill) {
+      auto pid_sp = sikill->GetChildMemberWithName("si_pid");
+      if (pid_sp)
+        pid = pid_sp->GetValueAsUnsigned(-1);
+      auto uid_sp = sikill->GetChildMemberWithName("si_uid");
+      if (uid_sp)
+        uid = uid_sp->GetValueAsUnsigned(-1);
+    }
+  } else {
+
+    switch (signo) {
+    case SIGILL:
+    case SIGFPE:
+    case SIGBUS: {
+      auto sigfault = sifields->GetChildMemberWithName("_sigfault");
+      if (!sigfault)
+        break;
+
+      auto addr_sp = sigfault->GetChildMemberWithName("si_addr");
+      if (addr_sp)
+        addr = addr_sp->GetValueAsUnsigned(-1);
+      break;
+    }
+    case SIGSEGV: {
+      auto sigfault = sifields->GetChildMemberWithName("_sigfault");
+      if (!sigfault)
+        break;
+
+      auto addr_sp = sigfault->GetChildMemberWithName("si_addr");
+      if (addr_sp)
+        addr = addr_sp->GetValueAsUnsigned(-1);
+
+      auto bounds_sp = sigfault->GetChildMemberWithName("_bounds");
+      if (!bounds_sp)
+        break;
+
+      auto addr_bnds_sp = bounds_sp->GetChildMemberWithName("_addr_bnd");
+      if (!addr_bnds_sp)
+        break;
+
+      auto lower_sp = addr_bnds_sp->GetChildMemberWithName("_lower");
+      if (lower_sp)
+        lower = lower_sp->GetValueAsUnsigned(-1);
+
+      auto upper_sp = addr_bnds_sp->GetChildMemberWithName("_upper");
+      if (upper_sp)
+        upper = upper_sp->GetValueAsUnsigned(-1);
+
+      break;
+    }
+    default:
+      break;
+    }
   }
 
-  switch (signo) {
-  case SIGILL:
-  case SIGFPE:
-  case SIGBUS: {
-    lldb::ValueObjectSP sigfault =
-        sifields->GetChildMemberWithName("_sigfault");
-    lldb::addr_t addr =
-        sigfault->GetChildMemberWithName("si_addr")->GetValueAsUnsigned(-1);
-    return GetSignalDescription(signo, code, addr);
-  }
-  case SIGSEGV: {
-    lldb::ValueObjectSP sigfault =
-        sifields->GetChildMemberWithName("_sigfault");
-    lldb::addr_t addr =
-        sigfault->GetChildMemberWithName("si_addr")->GetValueAsUnsigned(-1);
-
-    lldb::ValueObjectSP bounds =
-        sigfault->GetChildMemberWithName("_bounds")->GetChildMemberWithName(
-            "_addr_bnd");
-    lldb::addr_t lower =
-        bounds->GetChildMemberWithName("_lower")->GetValueAsUnsigned(-1);
-    lldb::addr_t upper =
-        bounds->GetChildMemberWithName("_upper")->GetValueAsUnsigned(-1);
-    return GetSignalDescription(signo, code, addr, lower, upper);
-  }
-  default:
-    return GetSignalDescription(signo, code);
-  }
+  return GetSignalDescription(signo, code, addr, lower, upper, uid, pid);
 }
