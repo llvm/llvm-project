@@ -545,7 +545,7 @@ public:
 /// Checker families (where a single backend class implements multiple related
 /// frontends) should derive from this template, specify all the implemented
 /// callbacks (i.e. classes like `check::PreStmt` or `eval::Call`) as template
-/// arguments of `FamilyChecker`.
+/// arguments of `CheckerFamily`.
 template <typename... CHECKs>
 class CheckerFamily : public CheckerBackend, public CHECKs... {
 public:
