@@ -1293,11 +1293,10 @@ StringRef CppEmitter::getOrCreateInductionVarName(Value val) {
 
     if (identifier >= 'i' && identifier <= 't') {
       valueMapper.insert(val,
-                         formatv("{0}_{1}", (char)identifier, ++valueCount));
+                         formatv("{0}{1}", (char)identifier, ++valueCount));
     } else {
-      // If running out of letters, continue with zX
-      valueMapper.insert(
-          val, formatv("u{0}_{1}", identifier - 't' - 1, ++valueCount));
+      // If running out of letters, continue with uX
+      valueMapper.insert(val, formatv("u{0}", ++valueCount));
     }
   }
   return *valueMapper.begin(val);
