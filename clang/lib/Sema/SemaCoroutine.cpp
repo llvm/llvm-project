@@ -697,10 +697,9 @@ static void checkReturnStmtInCoroutine(Sema &S, FunctionScopeInfo *FSI) {
 bool Sema::ActOnCoroutineBodyStart(Scope *SC, SourceLocation KWLoc,
                                    StringRef Keyword) {
   // Ignore previous expr evaluation contexts.
-  EnterExpressionEvaluationContext PotentiallyEvaluated(
-      *this, Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
-
-  ExprEvalContexts.back().InDiscardedStatement = false;
+  EnterExpressionEvaluationContextForFunction PotentiallyEvaluated(
+      *this, Sema::ExpressionEvaluationContext::PotentiallyEvaluated,
+      dyn_cast_or_null<FunctionDecl>(CurContext));
 
   if (!checkCoroutineContext(*this, KWLoc, Keyword))
     return false;

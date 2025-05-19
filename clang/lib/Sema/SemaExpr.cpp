@@ -17748,6 +17748,47 @@ Sema::PushExpressionEvaluationContext(
   PushExpressionEvaluationContext(NewContext, ClosureContextDecl, ExprContext);
 }
 
+void Sema::PushExpressionEvaluationContextForFunction(
+    ExpressionEvaluationContext NewContext, FunctionDecl *FD) {
+  // [expr.const]/p14.1
+  // An expression or conversion is in an immediate function context if it is
+  // potentially evaluated and either: its innermost enclosing non-block scope
+  // is a function parameter scope of an immediate function.
+  PushExpressionEvaluationContext(
+      FD && FD->isConsteval()
+          ? ExpressionEvaluationContext::ImmediateFunctionContext
+          : NewContext);
+  const Sema::ExpressionEvaluationContextRecord &Parent =
+      parentEvaluationContext();
+  Sema::ExpressionEvaluationContextRecord &Current = currentEvaluationContext();
+
+  Current.InDiscardedStatement = false;
+
+  if (FD) {
+
+    // Each ExpressionEvaluationContextRecord also keeps track of whether the
+    // context is nested in an immediate function context, so smaller contexts
+    // that appear inside immediate functions (like variable initializers) are
+    // considered to be inside an immediate function context even though by
+    // themselves they are not immediate function contexts. But when a new
+    // function is entered, we need to reset this tracking, since the entered
+    // function might be not an immediate function.
+
+    Current.InImmediateEscalatingFunctionContext =
+        getLangOpts().CPlusPlus20 && FD->isImmediateEscalating();
+
+    if (isLambdaMethod(FD)) {
+      Current.InDiscardedStatement = Parent.isDiscardedStatementContext();
+      Current.InImmediateFunctionContext =
+          FD->isConsteval() ||
+          (isLambdaMethod(FD) && (Parent.isConstantEvaluated() ||
+                                  Parent.isImmediateFunctionContext()));
+    } else {
+      Current.InImmediateFunctionContext = FD->isConsteval();
+    }
+  }
+}
+
 namespace {
 
 const DeclRefExpr *CheckPossibleDeref(Sema &S, const Expr *PossibleDeref) {
