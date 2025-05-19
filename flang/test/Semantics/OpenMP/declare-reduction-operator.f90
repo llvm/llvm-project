@@ -28,7 +28,7 @@ contains
     type(t1), intent(in), dimension(10) :: a
     type(t1), intent(out) :: r
     integer :: i
-    !$omp do parallel reduction(.fluffy.:r)
+    !$omp parallel do reduction(.fluffy.:r)
     do i=1,10
        r = r .fluffy. a(i)
     end do
