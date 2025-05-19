@@ -38,6 +38,7 @@ using namespace mlir;
 using namespace mlir::vector;
 
 namespace {
+
 /// Unrolls 2 or more dimensional `vector.gather` ops by unrolling the
 /// outermost dimension. For example:
 /// ```
@@ -81,22 +82,68 @@ struct UnrollGather : OpRewritePattern<vector::GatherOp> {
     VectorType subTy = VectorType::Builder(resultTy).dropDim(0);
 
     for (int64_t i = 0, e = resultTy.getShape().front(); i < e; ++i) {
-      int64_t thisIdx[1] = {i};
-
-      Value indexSubVec =
-          rewriter.create<vector::ExtractOp>(loc, indexVec, thisIdx);
-      Value maskSubVec =
-          rewriter.create<vector::ExtractOp>(loc, maskVec, thisIdx);
+      Value indexSubVec = rewriter.create<vector::ExtractOp>(loc, indexVec, i);
+      Value maskSubVec = rewriter.create<vector::ExtractOp>(loc, maskVec, i);
       Value passThruSubVec =
-          rewriter.create<vector::ExtractOp>(loc, passThruVec, thisIdx);
+          rewriter.create<vector::ExtractOp>(loc, passThruVec, i);
       Value subGather = rewriter.create<vector::GatherOp>(
           loc, subTy, op.getBase(), op.getIndices(), indexSubVec, maskSubVec,
           passThruSubVec);
-      result =
-          rewriter.create<vector::InsertOp>(loc, subGather, result, thisIdx);
+      result = rewriter.create<vector::InsertOp>(loc, subGather, result, i);
     }
 
     rewriter.replaceOp(op, result);
+    return success();
+  }
+};
+
+/// Unrolls 2 or more dimensional `vector.scatter` ops by unrolling the
+/// outermost dimension. For example:
+/// ```
+/// %g = vector.scatter %base[%c0][%v], %mask, %valueToStore : ...
+/// vector<2x3xf32>
+///
+/// ==>
+///
+/// %g0  = vector.extract %valueToStore[0] : vector<3xf32> from vector<2x3xf32>
+///        vector.scatter %base[%c0][%v0], %mask0, %g0
+/// %g1  = vector.extract %valueToStore[1] : vector<3xf32> from vector<2x3xf32>
+///        vector.scatter %base[%c0][%v0], %mask0, %g1
+/// ```
+///
+/// When applied exhaustively, this will produce a sequence of 1-d scatter ops.
+///
+/// Supports vector types with a fixed leading dimension.
+struct UnrollScatter : OpRewritePattern<vector::ScatterOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::ScatterOp op,
+                                PatternRewriter &rewriter) const override {
+    VectorType vectorTy = op.getVectorType();
+    if (vectorTy.getRank() < 2)
+      return rewriter.notifyMatchFailure(op, "already 1-D");
+
+    // Unrolling doesn't take vscale into account. Pattern is disabled for
+    // vectors with leading scalable dim(s).
+    if (vectorTy.getScalableDims().front())
+      return rewriter.notifyMatchFailure(op, "cannot unroll scalable dim");
+
+    Location loc = op.getLoc();
+    Value indexVec = op.getIndexVec();
+    Value maskVec = op.getMask();
+    Value valueToStoreVec = op.getValueToStore();
+
+    for (int64_t i = 0, e = vectorTy.getShape().front(); i < e; ++i) {
+      Value indexSubVec = rewriter.create<vector::ExtractOp>(loc, indexVec, i);
+      Value maskSubVec = rewriter.create<vector::ExtractOp>(loc, maskVec, i);
+      Value valueToStoreSubVec =
+          rewriter.create<vector::ExtractOp>(loc, valueToStoreVec, i);
+      rewriter.create<vector::ScatterOp>(loc, op.getBase(), op.getIndices(),
+                                         indexSubVec, maskSubVec,
+                                         valueToStoreSubVec);
+    }
+
+    rewriter.eraseOp(op);
     return success();
   }
 };
@@ -268,9 +315,9 @@ struct Gather1DToConditionalLoads : OpRewritePattern<vector::GatherOp> {
 };
 } // namespace
 
-void mlir::vector::populateVectorGatherLoweringPatterns(
+void mlir::vector::populateVectorGatherScatterLoweringPatterns(
     RewritePatternSet &patterns, PatternBenefit benefit) {
-  patterns.add<UnrollGather>(patterns.getContext(), benefit);
+  patterns.add<UnrollGather, UnrollScatter>(patterns.getContext(), benefit);
 }
 
 void mlir::vector::populateVectorGatherToConditionalLoadPatterns(
