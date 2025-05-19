@@ -7571,11 +7571,10 @@ bool DecomposePrintfHandler::GetSpecifiers(
   if (H.HadError)
     return false;
 
-  std::stable_sort(
-      Args.begin(), Args.end(),
-      [](const EquatableFormatArgument &A, const EquatableFormatArgument &B) {
-        return A.getPosition() < B.getPosition();
-      });
+  llvm::stable_sort(Args, [](const EquatableFormatArgument &A,
+                             const EquatableFormatArgument &B) {
+    return A.getPosition() < B.getPosition();
+  });
   return true;
 }
 
