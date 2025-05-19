@@ -38,14 +38,9 @@ steps:
       targetRidArgs='/p:TargetRid=${{ parameters.platform.targetRID }}'
     fi
 
-    runtimeOsArgs=
-    if [ '${{ parameters.platform.runtimeOS }}' != '' ]; then
-      runtimeOsArgs='/p:RuntimeOS=${{ parameters.platform.runtimeOS }}'
-    fi
-
-    baseOsArgs=
-    if [ '${{ parameters.platform.baseOS }}' != '' ]; then
-      baseOsArgs='/p:BaseOS=${{ parameters.platform.baseOS }}'
+    baseRidArgs=
+    if [ '${{ parameters.platform.baseRID }}' != '' ]; then
+      baseRidArgs='/p:BaseRid=${{ parameters.platform.baseRID }}'
     fi
 
     portableBuildArgs=
@@ -56,14 +51,12 @@ steps:
     ${{ coalesce(parameters.platform.buildScript, './build.sh') }} --ci \
       --configuration $buildConfig \
       --restore --build --pack -bl \
+      --source-build \
       ${{ parameters.platform.buildArguments }} \
       $internalRuntimeDownloadArgs \
       $targetRidArgs \
-      $runtimeOsArgs \
-      $baseOsArgs \
+      $baseRidArgs \
       $portableBuildArgs \
-      /p:DotNetBuildSourceOnly=true \
-      /p:DotNetBuildRepo=true \
   displayName: Build
 
 - template: /eng/common/core-templates/steps/publish-pipeline-artifacts.yml

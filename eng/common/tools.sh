@@ -5,6 +5,9 @@
 # CI mode - set to true on CI server for PR validation build or official build.
 ci=${ci:-false}
 
+# Build mode
+source_build=${source_build:-false}
+
 # Set to true to use the pipelines logger which will enable Azure logging output.
 # https://github.com/Microsoft/azure-pipelines-tasks/blob/master/docs/authoring/commands.md
 # This flag is meant as a temporary opt-opt for the feature while validate it across
@@ -58,7 +61,8 @@ use_installed_dotnet_cli=${use_installed_dotnet_cli:-true}
 dotnetInstallScriptVersion=${dotnetInstallScriptVersion:-'v1'}
 
 # True to use global NuGet cache instead of restoring packages to repository-local directory.
-if [[ "$ci" == true ]]; then
+# Keep in sync with NuGetPackageroot in Arcade SDK's RepositoryLayout.props.
+if [[ "$ci" == true || "$source_build" == true ]]; then
   use_global_nuget_cache=${use_global_nuget_cache:-false}
 else
   use_global_nuget_cache=${use_global_nuget_cache:-true}
@@ -503,7 +507,7 @@ function MSBuild-Core {
 
       # When running on Azure Pipelines, override the returned exit code to avoid double logging.
       # Skip this when the build is a child of the VMR orchestrator build.
-      if [[ "$ci" == true && -n ${SYSTEM_TEAMPROJECT:-} && "$product_build" != true && "$properties" != *"DotNetBuildRepo=true"* ]]; then
+      if [[ "$ci" == true && -n ${SYSTEM_TEAMPROJECT:-} && "$product_build" != true ]]; then
         Write-PipelineSetResult -result "Failed" -message "msbuild execution failed."
         # Exiting with an exit code causes the azure pipelines task to log yet another "noise" error
         # The above Write-PipelineSetResult will cause the task to be marked as failure without adding yet another error

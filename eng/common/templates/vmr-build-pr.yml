@@ -1,0 +1,33 @@
+trigger: none
+pr:
+  branches:
+    include:
+    - main
+    - release/*
+  paths:
+    exclude:
+    - documentation/*
+    - README.md
+    - CODEOWNERS
+
+variables:
+- template: /eng/common/templates/variables/pool-providers.yml@self
+
+- name: skipComponentGovernanceDetection  # we run CG on internal builds only
+  value: true
+
+- name: Codeql.Enabled  # we run CodeQL on internal builds only
+  value: false
+
+resources:
+  repositories:
+  - repository: vmr
+    type: github
+    name: dotnet/dotnet
+    endpoint: dotnet
+
+stages:
+- template: /eng/pipelines/templates/stages/vmr-build.yml@vmr
+  parameters:
+    isBuiltFromVmr: false
+    scope: lite

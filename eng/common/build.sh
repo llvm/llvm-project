@@ -129,14 +129,14 @@ while [[ $# > 0 ]]; do
     -pack)
       pack=true
       ;;
-    -sourcebuild|-sb)
+    -sourcebuild|-source-build|-sb)
       build=true
       source_build=true
       product_build=true
       restore=true
       pack=true
       ;;
-    -productbuild|-pb)
+    -productbuild|-product-build|-pb)
       build=true
       product_build=true
       restore=true
