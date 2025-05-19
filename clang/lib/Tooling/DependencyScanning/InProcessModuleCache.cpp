@@ -75,29 +75,29 @@ public:
     return std::make_unique<ReaderWriterLock>(CompilationMutex);
   }
 
-  bool isMarkedUpToDate(StringRef Filename) override {
-    auto &IsUpToDate = [&]() -> std::atomic<bool> & {
+  std::time_t getModuleTimestamp(StringRef Filename) override {
+    auto &Timestamp = [&]() -> std::atomic<std::time_t> & {
       std::lock_guard<std::mutex> Lock(Entries.Mutex);
       auto &Entry = Entries.Map[Filename];
       if (!Entry)
         Entry = std::make_unique<ModuleCacheEntry>();
-      return Entry->UpToDate;
+      return Entry->Timestamp;
     }();
 
-    return IsUpToDate;
+    return Timestamp.load();
   }
 
-  void markUpToDate(StringRef Filename) override {
+  void updateModuleTimestamp(StringRef Filename) override {
     // Note: This essentially replaces FS contention with mutex contention.
-    auto &IsUpToDate = [&]() -> std::atomic<bool> & {
+    auto &Timestamp = [&]() -> std::atomic<std::time_t> & {
       std::lock_guard<std::mutex> Lock(Entries.Mutex);
       auto &Entry = Entries.Map[Filename];
       if (!Entry)
         Entry = std::make_unique<ModuleCacheEntry>();
-      return Entry->UpToDate;
+      return Entry->Timestamp;
     }();
 
-    IsUpToDate = true;
+    Timestamp.store(llvm::sys::toTimeT(std::chrono::system_clock::now()));
   }
 
   InMemoryModuleCache &getInMemoryModuleCache() override { return InMemory; }
