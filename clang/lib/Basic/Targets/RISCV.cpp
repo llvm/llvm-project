@@ -241,6 +241,25 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
 
   if (Opts.CFProtectionReturn && ISAInfo->hasExtension("zicfiss"))
     Builder.defineMacro("__riscv_shadow_stack");
+
+  if (Opts.CFProtectionBranch) {
+    auto Scheme = Opts.getCFBranchLabelScheme();
+    if (Scheme == CFBranchLabelSchemeKind::Default)
+      Scheme = getDefaultCFBranchLabelScheme();
+
+    Builder.defineMacro("__riscv_landing_pad");
+    switch (Scheme) {
+    case CFBranchLabelSchemeKind::Unlabeled:
+      Builder.defineMacro("__riscv_landing_pad_unlabeled");
+      break;
+    case CFBranchLabelSchemeKind::FuncSig:
+      // TODO: Define macros after the func-sig scheme is implemented
+      break;
+    case CFBranchLabelSchemeKind::Default:
+      llvm_unreachable("default cf-branch-label scheme should already be "
+                       "transformed to other scheme");
+    }
+  }
 }
 
 static constexpr int NumRVVBuiltins =

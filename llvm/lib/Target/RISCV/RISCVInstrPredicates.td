@@ -49,7 +49,7 @@ def isSelectPseudo
                    MCReturnStatement<
                      CheckOpcode<[
                        Select_GPR_Using_CC_GPR,
-                       Select_GPR_Using_CC_Imm,
+                       Select_GPR_Using_CC_SImm5,
                        Select_FPR16_Using_CC_GPR,
                        Select_FPR16INX_Using_CC_GPR,
                        Select_FPR32_Using_CC_GPR,
