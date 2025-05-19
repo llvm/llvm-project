@@ -270,9 +270,7 @@ bool ThreadElfCore::CalculateStopInfo() {
 
   lldb::ValueObjectSP siginfo = GetSiginfoValue();
   if (!siginfo || !siginfo->GetValueIsValid()) {
-    std::string description = unix_signals_sp->GetSignalDescription(m_signo, 0);
-    SetStopInfo(StopInfo::CreateStopReasonWithSignal(*this, m_signo,
-                                                     description.c_str(), 0));
+    SetStopInfo(StopInfo::CreateStopReasonWithSignal(*this, m_signo));
   } else {
     std::string description =
         unix_signals_sp->GetSignalDescriptionFromSiginfo(siginfo);
@@ -284,7 +282,6 @@ bool ThreadElfCore::CalculateStopInfo() {
         *this, signo, description.c_str(), code));
   }
 
-  SetStopInfo(m_stop_info_sp);
   return true;
 }
 

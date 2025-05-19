@@ -232,7 +232,7 @@ Status ProcessElfCore::DoLoadCore() {
   bool prstatus_signal_found = false;
   // Check we found a signal in a SIGINFO note.
   for (const auto &thread_data : m_thread_data) {
-    if (!thread_data.siginfo_bytes.empty())
+    if (!thread_data.siginfo_bytes.empty() || thread_data.signo != 0)
       siginfo_signal_found = true;
     if (thread_data.prstatus_sig != 0)
       prstatus_signal_found = true;
