@@ -18,6 +18,7 @@ add_clang_library(clangCIR
   CIRGenExprScalar.cpp
   CIRGenFunction.cpp
   CIRGenModule.cpp
+  CIRGenOpenACCClause.cpp
   CIRGenRecordLayoutBuilder.cpp
   CIRGenStmt.cpp
   CIRGenStmtOpenACC.cpp
