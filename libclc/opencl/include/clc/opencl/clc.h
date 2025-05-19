@@ -36,13 +36,13 @@
 #include <clc/opencl/as_type.h>
 
 /* 6.11.1 Work-Item Functions */
-#include <clc/opencl/workitem/get_global_size.h>
 #include <clc/opencl/workitem/get_global_id.h>
-#include <clc/opencl/workitem/get_local_size.h>
-#include <clc/opencl/workitem/get_local_id.h>
-#include <clc/opencl/workitem/get_num_groups.h>
-#include <clc/opencl/workitem/get_group_id.h>
 #include <clc/opencl/workitem/get_global_offset.h>
+#include <clc/opencl/workitem/get_global_size.h>
+#include <clc/opencl/workitem/get_group_id.h>
+#include <clc/opencl/workitem/get_local_id.h>
+#include <clc/opencl/workitem/get_local_size.h>
+#include <clc/opencl/workitem/get_num_groups.h>
 #include <clc/opencl/workitem/get_work_dim.h>
 
 /* 6.11.2 Math Functions */
@@ -58,17 +58,17 @@
 #include <clc/opencl/math/atanh.h>
 #include <clc/opencl/math/atanpi.h>
 #include <clc/opencl/math/cbrt.h>
+#include <clc/opencl/math/ceil.h>
 #include <clc/opencl/math/copysign.h>
 #include <clc/opencl/math/cos.h>
 #include <clc/opencl/math/cosh.h>
 #include <clc/opencl/math/cospi.h>
-#include <clc/opencl/math/ceil.h>
 #include <clc/opencl/math/erf.h>
 #include <clc/opencl/math/erfc.h>
 #include <clc/opencl/math/exp.h>
-#include <clc/opencl/math/expm1.h>
 #include <clc/opencl/math/exp10.h>
 #include <clc/opencl/math/exp2.h>
+#include <clc/opencl/math/expm1.h>
 #include <clc/opencl/math/fabs.h>
 #include <clc/opencl/math/fdim.h>
 #include <clc/opencl/math/floor.h>
@@ -107,25 +107,6 @@
 #include <clc/opencl/math/minmag.h>
 #include <clc/opencl/math/modf.h>
 #include <clc/opencl/math/nan.h>
-#include <clc/opencl/math/nextafter.h>
-#include <clc/opencl/math/pow.h>
-#include <clc/opencl/math/pown.h>
-#include <clc/opencl/math/powr.h>
-#include <clc/opencl/math/remainder.h>
-#include <clc/opencl/math/remquo.h>
-#include <clc/opencl/math/rint.h>
-#include <clc/opencl/math/rootn.h>
-#include <clc/opencl/math/round.h>
-#include <clc/opencl/math/sin.h>
-#include <clc/opencl/math/sincos.h>
-#include <clc/opencl/math/sinh.h>
-#include <clc/opencl/math/sinpi.h>
-#include <clc/opencl/math/sqrt.h>
-#include <clc/opencl/math/tan.h>
-#include <clc/opencl/math/tanh.h>
-#include <clc/opencl/math/tanpi.h>
-#include <clc/opencl/math/tgamma.h>
-#include <clc/opencl/math/trunc.h>
 #include <clc/opencl/math/native_cos.h>
 #include <clc/opencl/math/native_divide.h>
 #include <clc/opencl/math/native_exp.h>
@@ -136,11 +117,30 @@
 #include <clc/opencl/math/native_log2.h>
 #include <clc/opencl/math/native_powr.h>
 #include <clc/opencl/math/native_recip.h>
+#include <clc/opencl/math/native_rsqrt.h>
 #include <clc/opencl/math/native_sin.h>
 #include <clc/opencl/math/native_sqrt.h>
-#include <clc/opencl/math/native_rsqrt.h>
 #include <clc/opencl/math/native_tan.h>
+#include <clc/opencl/math/nextafter.h>
+#include <clc/opencl/math/pow.h>
+#include <clc/opencl/math/pown.h>
+#include <clc/opencl/math/powr.h>
+#include <clc/opencl/math/remainder.h>
+#include <clc/opencl/math/remquo.h>
+#include <clc/opencl/math/rint.h>
+#include <clc/opencl/math/rootn.h>
+#include <clc/opencl/math/round.h>
 #include <clc/opencl/math/rsqrt.h>
+#include <clc/opencl/math/sin.h>
+#include <clc/opencl/math/sincos.h>
+#include <clc/opencl/math/sinh.h>
+#include <clc/opencl/math/sinpi.h>
+#include <clc/opencl/math/sqrt.h>
+#include <clc/opencl/math/tan.h>
+#include <clc/opencl/math/tanh.h>
+#include <clc/opencl/math/tanpi.h>
+#include <clc/opencl/math/tgamma.h>
+#include <clc/opencl/math/trunc.h>
 
 /* 6.11.2.1 Floating-point macros */
 #include <clc/float/definitions.h>
@@ -175,8 +175,8 @@
 
 /* 6.11.4 Common Functions */
 #include <clc/opencl/common/degrees.h>
-#include <clc/opencl/common/radians.h>
 #include <clc/opencl/common/mix.h>
+#include <clc/opencl/common/radians.h>
 #include <clc/opencl/common/sign.h>
 #include <clc/opencl/common/smoothstep.h>
 #include <clc/opencl/common/step.h>
@@ -212,8 +212,8 @@
 #include <clc/opencl/relational/signbit.h>
 
 /* 6.11.8 Synchronization Functions */
-#include <clc/opencl/synchronization/cl_mem_fence_flags.h>
 #include <clc/opencl/synchronization/barrier.h>
+#include <clc/opencl/synchronization/cl_mem_fence_flags.h>
 
 /* 6.11.9 Explicit Memory Fence Functions */
 #include <clc/opencl/explicit_fence/explicit_memory_fence.h>
@@ -259,8 +259,8 @@
 #include <clc/opencl/misc/shuffle2.h>
 
 /* 6.11.13 Image Read and Write Functions */
-#include <clc/opencl/image/image_defines.h>
 #include <clc/opencl/image/image.h>
+#include <clc/opencl/image/image_defines.h>
 
 #pragma OPENCL EXTENSION all : disable
 

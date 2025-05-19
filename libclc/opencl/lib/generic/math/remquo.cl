@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/clc.h>
 #include <clc/math/clc_remquo.h>
+#include <clc/opencl/clc.h>
 
 #define __CLC_BODY <remquo.inc>
 #define __CLC_ADDRESS_SPACE global

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/clc.h>
 #include <clc/math/clc_expm1.h>
+#include <clc/opencl/clc.h>
 
 #define FUNCTION expm1
 #define __CLC_BODY <clc/shared/unary_def.inc>

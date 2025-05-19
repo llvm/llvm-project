@@ -8,9 +8,7 @@
 
 #include <clc/opencl/clc.h>
 
-_CLC_OVERLOAD _CLC_DEF float normalize(float p) {
-  return sign(p);
-}
+_CLC_OVERLOAD _CLC_DEF float normalize(float p) { return sign(p); }
 
 _CLC_OVERLOAD _CLC_DEF float2 normalize(float2 p) {
   if (all(p == (float2)0.0F))
@@ -76,9 +74,7 @@ _CLC_OVERLOAD _CLC_DEF float4 normalize(float4 p) {
 
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 
-_CLC_OVERLOAD _CLC_DEF double normalize(double p) {
-  return sign(p);
-}
+_CLC_OVERLOAD _CLC_DEF double normalize(double p) { return sign(p); }
 
 _CLC_OVERLOAD _CLC_DEF double2 normalize(double2 p) {
   if (all(p == (double2)0.0))

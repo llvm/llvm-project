@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/clc.h>
 #include <clc/math/clc_tanpi.h>
+#include <clc/opencl/clc.h>
 
 #define FUNCTION tanpi
 #define __CLC_BODY <clc/shared/unary_def.inc>

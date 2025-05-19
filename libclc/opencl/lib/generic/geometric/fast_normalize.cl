@@ -8,9 +8,7 @@
 
 #include <clc/opencl/clc.h>
 
-_CLC_OVERLOAD _CLC_DEF float fast_normalize(float p) {
-  return normalize(p);
-}
+_CLC_OVERLOAD _CLC_DEF float fast_normalize(float p) { return normalize(p); }
 
 #define __CLC_BODY <fast_normalize.inc>
 #define __FLOAT_ONLY

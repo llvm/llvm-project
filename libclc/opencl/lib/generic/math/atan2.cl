@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/clc.h>
 #include <clc/clcmacro.h>
 #include <clc/math/clc_atan2.h>
+#include <clc/opencl/clc.h>
 
 #define FUNCTION atan2
 #define __CLC_BODY <clc/shared/binary_def.inc>

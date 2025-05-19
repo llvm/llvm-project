@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/clc.h>
 #include <clc/math/clc_half_divide.h>
+#include <clc/opencl/clc.h>
 
 #define __FLOAT_ONLY
 #define FUNCTION half_divide

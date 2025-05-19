@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/clc.h>
 #include <clc/integer/clc_clz.h>
+#include <clc/opencl/clc.h>
 
 #define FUNCTION clz
 #define __CLC_BODY <clc/shared/unary_def.inc>

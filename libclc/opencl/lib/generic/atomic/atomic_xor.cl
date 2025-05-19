@@ -8,10 +8,10 @@
 
 #include <clc/opencl/clc.h>
 
-#define IMPL(TYPE, AS) \
-_CLC_OVERLOAD _CLC_DEF TYPE atomic_xor(volatile AS TYPE *p, TYPE val) { \
-  return __sync_fetch_and_xor(p, val); \
-}
+#define IMPL(TYPE, AS)                                                         \
+  _CLC_OVERLOAD _CLC_DEF TYPE atomic_xor(volatile AS TYPE *p, TYPE val) {      \
+    return __sync_fetch_and_xor(p, val);                                       \
+  }
 
 IMPL(int, global)
 IMPL(unsigned int, global)

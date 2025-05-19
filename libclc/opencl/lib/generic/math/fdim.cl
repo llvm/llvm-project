@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/clc.h>
 #include <clc/math/clc_fdim.h>
+#include <clc/opencl/clc.h>
 
 #define FUNCTION fdim
 #define __CLC_BODY <clc/shared/binary_def.inc>

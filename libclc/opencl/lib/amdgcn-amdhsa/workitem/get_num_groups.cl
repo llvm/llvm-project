@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 #include <clc/opencl/clc.h>
 
 _CLC_DEF _CLC_OVERLOAD size_t get_num_groups(uint dim) {

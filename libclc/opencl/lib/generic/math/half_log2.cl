@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/clc.h>
 #include <clc/math/clc_half_log2.h>
+#include <clc/opencl/clc.h>
 
 #define __FLOAT_ONLY
 #define FUNCTION half_log2

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/clc.h>
 #include <clc/geometric/clc_length.h>
+#include <clc/opencl/clc.h>
 
 #define FUNCTION length
 #define __CLC_BODY <clc/geometric/unary_def.inc>

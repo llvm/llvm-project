@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/clc.h>
 #include <clc/integer/clc_hadd.h>
+#include <clc/opencl/clc.h>
 
 #define FUNCTION hadd
 #define __CLC_BODY <clc/shared/binary_def.inc>

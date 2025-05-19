@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/clc.h>
 #include <clc/clcmacro.h>
 #include <clc/math/clc_nextafter.h>
+#include <clc/opencl/clc.h>
 
 _CLC_DEFINE_BINARY_BUILTIN_NO_SCALARIZE(float, nextafter, __clc_nextafter,
                                         float, float)

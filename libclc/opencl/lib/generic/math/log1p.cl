@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/clc.h>
 #include <clc/math/clc_log1p.h>
+#include <clc/opencl/clc.h>
 
 #define FUNCTION log1p
 #define __CLC_BODY <clc/shared/unary_def.inc>

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/clc.h>
 #include <clc/geometric/clc_dot.h>
+#include <clc/opencl/clc.h>
 
 _CLC_OVERLOAD _CLC_DEF float dot(float p0, float p1) {
   return __clc_dot(p0, p1);

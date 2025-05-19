@@ -8,8 +8,8 @@
 
 #if __OPENCL_C_VERSION__ >= CL_VERSION_2_0
 
-#include <clc/opencl/clc.h>
 #include <clc/integer/clc_ctz.h>
+#include <clc/opencl/clc.h>
 
 #define FUNCTION ctz
 #define __CLC_BODY <clc/shared/unary_def.inc>

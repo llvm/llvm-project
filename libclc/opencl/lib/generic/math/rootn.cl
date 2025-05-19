@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/clc.h>
 #include <clc/math/clc_rootn.h>
+#include <clc/opencl/clc.h>
 
 #define FUNCTION rootn
 #define __CLC_BODY <clc/math/binary_def_with_int_second_arg.inc>

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/clc.h>
 #include <clc/math/clc_cbrt.inc>
+#include <clc/opencl/clc.h>
 
 #define FUNCTION cbrt
 #define __CLC_BODY <clc/shared/unary_def.inc>

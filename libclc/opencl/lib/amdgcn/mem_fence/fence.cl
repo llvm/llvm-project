@@ -19,10 +19,10 @@ void __clc_amdgcn_s_waitcnt(unsigned flags);
 
 // Newer clang supports __builtin_amdgcn_s_waitcnt
 #if __clang_major__ >= 5
-#  define __waitcnt(x) __builtin_amdgcn_s_waitcnt(x)
+#define __waitcnt(x) __builtin_amdgcn_s_waitcnt(x)
 #else
-#  define __waitcnt(x) __clc_amdgcn_s_waitcnt(x)
-_CLC_DEF void __clc_amdgcn_s_waitcnt(unsigned)  __asm("llvm.amdgcn.s.waitcnt");
+#define __waitcnt(x) __clc_amdgcn_s_waitcnt(x)
+_CLC_DEF void __clc_amdgcn_s_waitcnt(unsigned) __asm("llvm.amdgcn.s.waitcnt");
 #endif
 
 _CLC_DEF _CLC_OVERLOAD void mem_fence(cl_mem_fence_flags flags) {

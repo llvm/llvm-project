@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/clc.h>
 #include <clc/clcmacro.h>
 #include <clc/math/clc_fma.h>
 #include <clc/math/math.h>
+#include <clc/opencl/clc.h>
 
 _CLC_DEFINE_TERNARY_BUILTIN(float, fma, __clc_fma, float, float, float)
 

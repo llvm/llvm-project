@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/clc.h>
 #include <clc/math/clc_acospi.h>
+#include <clc/opencl/clc.h>
 
 #define FUNCTION acospi
 #define __CLC_BODY <clc/shared/unary_def.inc>

@@ -16,10 +16,10 @@ _CLC_OVERLOAD _CLC_DEF float atomic_xchg(volatile local float *p, float val) {
   return as_float(atomic_xchg((volatile local uint *)p, as_uint(val)));
 }
 
-#define IMPL(TYPE, AS) \
-_CLC_OVERLOAD _CLC_DEF TYPE atomic_xchg(volatile AS TYPE *p, TYPE val) { \
-  return __sync_swap_4(p, val); \
-}
+#define IMPL(TYPE, AS)                                                         \
+  _CLC_OVERLOAD _CLC_DEF TYPE atomic_xchg(volatile AS TYPE *p, TYPE val) {     \
+    return __sync_swap_4(p, val);                                              \
+  }
 
 IMPL(int, global)
 IMPL(unsigned int, global)

@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/clc.h>
 #include <clc/clcmacro.h>
 #include <clc/common/clc_radians.h>
+#include <clc/opencl/clc.h>
 
 _CLC_DEFINE_UNARY_BUILTIN(float, radians, __clc_radians, float)
 

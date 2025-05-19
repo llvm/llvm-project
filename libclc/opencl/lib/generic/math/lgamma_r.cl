@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/clc.h>
 #include <clc/math/clc_lgamma_r.h>
+#include <clc/opencl/clc.h>
 
 #define FUNCTION lgamma_r
 #define __CLC_BODY <clc/math/unary_def_with_int_ptr.inc>

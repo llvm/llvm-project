@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/clc.h>
 #include <clc/clcmacro.h>
 #include <clc/common/clc_degrees.h>
+#include <clc/opencl/clc.h>
 
 _CLC_DEFINE_UNARY_BUILTIN(float, degrees, __clc_degrees, float)
 

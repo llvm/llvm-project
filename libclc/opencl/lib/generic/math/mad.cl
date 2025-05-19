@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/clc.h>
 #include <clc/clcmacro.h>
 #include <clc/math/clc_mad.h>
+#include <clc/opencl/clc.h>
 
 _CLC_DEFINE_TERNARY_BUILTIN(float, mad, __clc_mad, float, float, float)
 

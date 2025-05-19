@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/clc.h>
 #include <clc/geometric/clc_fast_length.h>
+#include <clc/opencl/clc.h>
 
 #define __FLOAT_ONLY
 #define FUNCTION fast_length
