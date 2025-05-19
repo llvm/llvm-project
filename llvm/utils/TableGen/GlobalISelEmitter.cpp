@@ -129,7 +129,7 @@ static std::string explainPredicates(const TreePatternNode &N) {
       OS << " AddressSpaces=[";
 
       StringRef AddrSpaceSeparator;
-      for (const Init *Val : AddrSpaces->getValues()) {
+      for (const Init *Val : AddrSpaces->getElements()) {
         const IntInit *IntVal = dyn_cast<IntInit>(Val);
         if (!IntVal)
           continue;
@@ -600,7 +600,7 @@ Expected<InstructionMatcher &> GlobalISelEmitter::addBuiltinPredicates(
     if (const ListInit *AddrSpaces = Predicate.getAddressSpaces()) {
       SmallVector<unsigned, 4> ParsedAddrSpaces;
 
-      for (const Init *Val : AddrSpaces->getValues()) {
+      for (const Init *Val : AddrSpaces->getElements()) {
         const IntInit *IntVal = dyn_cast<IntInit>(Val);
         if (!IntVal)
           return failedImport("Address space is not an integer");
