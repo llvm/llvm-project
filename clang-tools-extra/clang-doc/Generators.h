@@ -57,6 +57,7 @@ std::string getTagType(TagTypeKind AS);
 extern volatile int YAMLGeneratorAnchorSource;
 extern volatile int MDGeneratorAnchorSource;
 extern volatile int HTMLGeneratorAnchorSource;
+extern volatile int MHTMLGeneratorAnchorSource;
 
 } // namespace doc
 } // namespace clang

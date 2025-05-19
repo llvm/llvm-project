@@ -1034,6 +1034,9 @@ ComplexDeinterleavingGraph::identifyPartialReduction(Value *R, Value *I) {
   if (!isa<VectorType>(R->getType()) || !isa<VectorType>(I->getType()))
     return nullptr;
 
+  if (!R->hasUseList() || !I->hasUseList())
+    return nullptr;
+
   auto CommonUser =
       findCommonBetweenCollections<Value *>(R->users(), I->users());
   if (!CommonUser)
@@ -1729,6 +1732,10 @@ void ComplexDeinterleavingGraph::identifyReductionNodes() {
     // We want to check that we have 2 operands, but the function attributes
     // being counted as operands bloats this value.
     if (Processed[i] || Real->getNumOperands() < 2)
+      continue;
+
+    // Can only combined integer reductions at the moment.
+    if (!ReductionInfo[Real].second->getType()->isIntegerTy())
       continue;
 
     RealPHI = ReductionInfo[Real].first;

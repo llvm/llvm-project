@@ -983,7 +983,7 @@ static RT_API_ATTRS bool EditDelimitedCharacterInput(
       }
     }
     if (length > 0) {
-      *x++ = *ch;
+      *x++ = static_cast<CHAR>(*ch);
       --length;
     }
   }
@@ -1030,7 +1030,7 @@ static RT_API_ATTRS bool EditListDirectedCharacterInput(
       break;
     }
     if (length > 0) {
-      *x++ = *ch;
+      *x++ = static_cast<CHAR>(*ch);
       --length;
     } else if (edit.IsNamelist()) {
       // GNU compatibility
@@ -1111,7 +1111,7 @@ RT_API_ATTRS bool EditCharacterInput(IoStatementState &io, const DataEdit &edit,
             (sizeof *x == 2 && *ucs > 0xffff)) {
           *x++ = '?';
         } else {
-          *x++ = *ucs;
+          *x++ = static_cast<CHAR>(*ucs);
         }
         --lengthChars;
       } else if (chunkBytes == 0) {
@@ -1130,7 +1130,7 @@ RT_API_ATTRS bool EditCharacterInput(IoStatementState &io, const DataEdit &edit,
             (sizeof *x == 2 && buffer > 0xffff)) {
           *x++ = '?';
         } else {
-          *x++ = buffer;
+          *x++ = static_cast<CHAR>(buffer);
         }
         --lengthChars;
       }

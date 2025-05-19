@@ -176,11 +176,9 @@ static cl::opt<bool>
                         cl::desc("Salvage stale MemProf profile"),
                         cl::init(false), cl::Hidden);
 
-cl::opt<unsigned> MinClonedColdBytePercent(
-    "memprof-cloning-cold-threshold", cl::init(100), cl::Hidden,
-    cl::desc("Min percent of cold bytes to hint alloc cold during cloning"));
-
 extern cl::opt<bool> MemProfReportHintedSizes;
+extern cl::opt<unsigned> MinClonedColdBytePercent;
+extern cl::opt<unsigned> MinCallsiteColdBytePercent;
 
 static cl::opt<unsigned> MinMatchedColdBytePercent(
     "memprof-matching-cold-threshold", cl::init(100), cl::Hidden,
@@ -292,6 +290,13 @@ private:
   ShadowMapping Mapping;
   Function *MemProfCtorFunction = nullptr;
 };
+
+// Options under which we need to record the context size info in the alloc trie
+// used to build metadata.
+bool recordContextSizeInfo() {
+  return MemProfReportHintedSizes || MinClonedColdBytePercent < 100 ||
+         MinCallsiteColdBytePercent < 100;
+}
 
 } // end anonymous namespace
 
@@ -758,7 +763,7 @@ static AllocationType addCallStack(CallStackTrie &AllocTrie,
                                 AllocInfo->Info.getAllocCount(),
                                 AllocInfo->Info.getTotalLifetime());
   std::vector<ContextTotalSize> ContextSizeInfo;
-  if (MemProfReportHintedSizes || MinClonedColdBytePercent < 100) {
+  if (recordContextSizeInfo()) {
     auto TotalSize = AllocInfo->Info.getTotalSize();
     assert(TotalSize);
     assert(FullStackId != 0);
@@ -1141,8 +1146,7 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
                                                  InlinedCallStack)) {
             NumOfMemProfMatchedAllocContexts++;
             uint64_t FullStackId = 0;
-            if (ClPrintMemProfMatchInfo || MemProfReportHintedSizes ||
-                MinClonedColdBytePercent < 100)
+            if (ClPrintMemProfMatchInfo || recordContextSizeInfo())
               FullStackId = computeFullStackId(AllocInfo->CallStack);
             auto AllocType = addCallStack(AllocTrie, AllocInfo, FullStackId);
             TotalSize += AllocInfo->Info.getTotalSize();

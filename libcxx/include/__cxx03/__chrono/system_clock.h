@@ -29,7 +29,7 @@ public:
   typedef duration::rep rep;
   typedef duration::period period;
   typedef chrono::time_point<system_clock> time_point;
-  static _LIBCPP_CONSTEXPR_SINCE_CXX14 const bool is_steady = false;
+  static const bool is_steady = false;
 
   static time_point now() _NOEXCEPT;
   static time_t to_time_t(const time_point& __t) _NOEXCEPT;

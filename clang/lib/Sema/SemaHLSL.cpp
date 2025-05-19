@@ -29,6 +29,7 @@
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/Initialization.h"
+#include "clang/Sema/Lookup.h"
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/Template.h"
@@ -536,6 +537,18 @@ void createHostLayoutStructForBuffer(Sema &S, HLSLBufferDecl *BufDecl) {
   BufDecl->addLayoutStruct(LS);
 }
 
+static void addImplicitBindingAttrToBuffer(Sema &S, HLSLBufferDecl *BufDecl,
+                                           uint32_t ImplicitBindingOrderID) {
+  RegisterType RT =
+      BufDecl->isCBuffer() ? RegisterType::CBuffer : RegisterType::SRV;
+  auto *Attr =
+      HLSLResourceBindingAttr::CreateImplicit(S.getASTContext(), "", "0", {});
+  std::optional<unsigned> RegSlot;
+  Attr->setBinding(RT, RegSlot, 0);
+  Attr->setImplicitBindingOrderID(ImplicitBindingOrderID);
+  BufDecl->addAttr(Attr);
+}
+
 // Handle end of cbuffer/tbuffer declaration
 void SemaHLSL::ActOnFinishBuffer(Decl *Dcl, SourceLocation RBrace) {
   auto *BufDecl = cast<HLSLBufferDecl>(Dcl);
@@ -546,9 +559,17 @@ void SemaHLSL::ActOnFinishBuffer(Decl *Dcl, SourceLocation RBrace) {
   // create buffer layout struct
   createHostLayoutStructForBuffer(SemaRef, BufDecl);
 
-  if (std::none_of(Dcl->attr_begin(), Dcl->attr_end(),
-                   [](Attr *A) { return isa<HLSLResourceBindingAttr>(A); }))
+  HLSLResourceBindingAttr *RBA = Dcl->getAttr<HLSLResourceBindingAttr>();
+  if (!RBA || !RBA->hasRegisterSlot()) {
     SemaRef.Diag(Dcl->getLocation(), diag::warn_hlsl_implicit_binding);
+    // Use HLSLResourceBindingAttr to transfer implicit binding order_ID
+    // to codegen. If it does not exist, create an implicit attribute.
+    uint32_t OrderID = getNextImplicitBindingOrderID();
+    if (RBA)
+      RBA->setImplicitBindingOrderID(OrderID);
+    else
+      addImplicitBindingAttrToBuffer(SemaRef, BufDecl, OrderID);
+  }
 
   SemaRef.PopDeclContext();
 }
@@ -948,6 +969,33 @@ void SemaHLSL::emitLogicalOperatorFixIt(Expr *LHS, Expr *RHS,
   SourceRange FullRange = SourceRange(LHS->getBeginLoc(), RHS->getEndLoc());
   SemaRef.Diag(LHS->getBeginLoc(), diag::note_function_suggestion)
       << NewFnName << FixItHint::CreateReplacement(FullRange, OS.str());
+}
+
+void SemaHLSL::handleRootSignatureAttr(Decl *D, const ParsedAttr &AL) {
+  if (AL.getNumArgs() != 1) {
+    Diag(AL.getLoc(), diag::err_attribute_wrong_number_arguments) << AL << 1;
+    return;
+  }
+
+  IdentifierInfo *Ident = AL.getArgAsIdent(0)->getIdentifierInfo();
+  if (auto *RS = D->getAttr<RootSignatureAttr>()) {
+    if (RS->getSignatureIdent() != Ident) {
+      Diag(AL.getLoc(), diag::err_disallowed_duplicate_attribute) << RS;
+      return;
+    }
+
+    Diag(AL.getLoc(), diag::warn_duplicate_attribute_exact) << RS;
+    return;
+  }
+
+  LookupResult R(SemaRef, Ident, SourceLocation(), Sema::LookupOrdinaryName);
+  if (SemaRef.LookupQualifiedName(R, D->getDeclContext()))
+    if (auto *SignatureDecl =
+            dyn_cast<HLSLRootSignatureDecl>(R.getFoundDecl())) {
+      // Perform validation of constructs here
+      D->addAttr(::new (getASTContext()) RootSignatureAttr(
+          getASTContext(), AL, Ident, SignatureDecl));
+    }
 }
 
 void SemaHLSL::handleNumThreadsAttr(Decl *D, const ParsedAttr &AL) {
@@ -1972,6 +2020,8 @@ void SemaHLSL::ActOnEndOfTranslationUnit(TranslationUnitDecl *TU) {
     HLSLBufferDecl *DefaultCBuffer = HLSLBufferDecl::CreateDefaultCBuffer(
         SemaRef.getASTContext(), SemaRef.getCurLexicalContext(),
         DefaultCBufferDecls);
+    addImplicitBindingAttrToBuffer(SemaRef, DefaultCBuffer,
+                                   getNextImplicitBindingOrderID());
     SemaRef.getCurLexicalContext()->addDecl(DefaultCBuffer);
     createHostLayoutStructForBuffer(SemaRef, DefaultCBuffer);
 
@@ -1979,7 +2029,7 @@ void SemaHLSL::ActOnEndOfTranslationUnit(TranslationUnitDecl *TU) {
     for (const Decl *VD : DefaultCBufferDecls) {
       const HLSLResourceBindingAttr *RBA =
           VD->getAttr<HLSLResourceBindingAttr>();
-      if (RBA && !RBA->isImplicit() &&
+      if (RBA && RBA->hasRegisterSlot() &&
           RBA->getRegisterType() == HLSLResourceBindingAttr::RegisterType::C) {
         DefaultCBuffer->setHasValidPackoffset(true);
         break;
@@ -2420,6 +2470,20 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
         CheckArgTypeMatches(&SemaRef, TheCall->getArg(1), AST.UnsignedIntTy) ||
         CheckArgTypeMatches(&SemaRef, TheCall->getArg(2), AST.UnsignedIntTy) ||
         CheckArgTypeMatches(&SemaRef, TheCall->getArg(3), AST.IntTy) ||
+        CheckArgTypeMatches(&SemaRef, TheCall->getArg(4), AST.UnsignedIntTy))
+      return true;
+    // use the type of the handle (arg0) as a return type
+    QualType ResourceTy = TheCall->getArg(0)->getType();
+    TheCall->setType(ResourceTy);
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_resource_handlefromimplicitbinding: {
+    ASTContext &AST = SemaRef.getASTContext();
+    if (SemaRef.checkArgCount(TheCall, 5) ||
+        CheckResourceHandle(&SemaRef, TheCall, 0) ||
+        CheckArgTypeMatches(&SemaRef, TheCall->getArg(1), AST.UnsignedIntTy) ||
+        CheckArgTypeMatches(&SemaRef, TheCall->getArg(2), AST.IntTy) ||
+        CheckArgTypeMatches(&SemaRef, TheCall->getArg(3), AST.UnsignedIntTy) ||
         CheckArgTypeMatches(&SemaRef, TheCall->getArg(4), AST.UnsignedIntTy))
       return true;
     // use the type of the handle (arg0) as a return type
@@ -3258,8 +3322,10 @@ static bool initVarDeclWithCtor(Sema &S, VarDecl *VD,
       VD->getLocation(), SourceLocation(), SourceLocation());
 
   InitializationSequence InitSeq(S, Entity, Kind, Args);
-  ExprResult Init = InitSeq.Perform(S, Entity, Kind, Args);
+  if (InitSeq.Failed())
+    return false;
 
+  ExprResult Init = InitSeq.Perform(S, Entity, Kind, Args);
   if (!Init.get())
     return false;
 
@@ -3269,27 +3335,42 @@ static bool initVarDeclWithCtor(Sema &S, VarDecl *VD,
   return true;
 }
 
-static bool initGlobalResourceDecl(Sema &S, VarDecl *VD) {
+bool SemaHLSL::initGlobalResourceDecl(VarDecl *VD) {
+  std::optional<uint32_t> RegisterSlot;
+  uint32_t SpaceNo = 0;
   HLSLResourceBindingAttr *RBA = VD->getAttr<HLSLResourceBindingAttr>();
-  if (!RBA || RBA->isImplicit())
-    // FIXME: add support for implicit binding (llvm/llvm-project#110722)
-    return false;
+  if (RBA) {
+    if (RBA->hasRegisterSlot())
+      RegisterSlot = RBA->getSlotNumber();
+    SpaceNo = RBA->getSpaceNumber();
+  }
 
-  ASTContext &AST = S.getASTContext();
+  ASTContext &AST = SemaRef.getASTContext();
   uint64_t UIntTySize = AST.getTypeSize(AST.UnsignedIntTy);
   uint64_t IntTySize = AST.getTypeSize(AST.IntTy);
-  Expr *Args[] = {
-      IntegerLiteral::Create(AST, llvm::APInt(UIntTySize, RBA->getSlotNumber()),
-                             AST.UnsignedIntTy, SourceLocation()),
-      IntegerLiteral::Create(AST,
-                             llvm::APInt(UIntTySize, RBA->getSpaceNumber()),
-                             AST.UnsignedIntTy, SourceLocation()),
-      IntegerLiteral::Create(AST, llvm::APInt(IntTySize, 1), AST.IntTy,
-                             SourceLocation()),
-      IntegerLiteral::Create(AST, llvm::APInt(UIntTySize, 0), AST.UnsignedIntTy,
-                             SourceLocation())};
+  IntegerLiteral *RangeSize = IntegerLiteral::Create(
+      AST, llvm::APInt(IntTySize, 1), AST.IntTy, SourceLocation());
+  IntegerLiteral *Index = IntegerLiteral::Create(
+      AST, llvm::APInt(UIntTySize, 0), AST.UnsignedIntTy, SourceLocation());
+  IntegerLiteral *Space =
+      IntegerLiteral::Create(AST, llvm::APInt(UIntTySize, SpaceNo),
+                             AST.UnsignedIntTy, SourceLocation());
 
-  return initVarDeclWithCtor(S, VD, Args);
+  // resource with explicit binding
+  if (RegisterSlot.has_value()) {
+    IntegerLiteral *RegSlot = IntegerLiteral::Create(
+        AST, llvm::APInt(UIntTySize, RegisterSlot.value()), AST.UnsignedIntTy,
+        SourceLocation());
+    Expr *Args[] = {RegSlot, Space, RangeSize, Index};
+    return initVarDeclWithCtor(SemaRef, VD, Args);
+  }
+
+  // resource with implicit binding
+  IntegerLiteral *OrderId = IntegerLiteral::Create(
+      AST, llvm::APInt(UIntTySize, getNextImplicitBindingOrderID()),
+      AST.UnsignedIntTy, SourceLocation());
+  Expr *Args[] = {Space, RangeSize, Index, OrderId};
+  return initVarDeclWithCtor(SemaRef, VD, Args);
 }
 
 // Returns true if the initialization has been handled.
@@ -3307,8 +3388,9 @@ bool SemaHLSL::ActOnUninitializedVarDecl(VarDecl *VD) {
   // FIXME: We currectly support only simple resources - no arrays of resources
   // or resources in user defined structs.
   // (llvm/llvm-project#133835, llvm/llvm-project#133837)
-  if (VD->getType()->isHLSLResourceRecord())
-    return initGlobalResourceDecl(SemaRef, VD);
+  // Initialize resources at the global scope
+  if (VD->hasGlobalStorage() && VD->getType()->isHLSLResourceRecord())
+    return initGlobalResourceDecl(VD);
 
   return false;
 }
@@ -3356,7 +3438,7 @@ void SemaHLSL::processExplicitBindingsOnDecl(VarDecl *VD) {
   bool HasBinding = false;
   for (Attr *A : VD->attrs()) {
     HLSLResourceBindingAttr *RBA = dyn_cast<HLSLResourceBindingAttr>(A);
-    if (!RBA || RBA->isImplicit())
+    if (!RBA || !RBA->hasRegisterSlot())
       continue;
     HasBinding = true;
 

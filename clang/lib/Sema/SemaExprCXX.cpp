@@ -395,11 +395,10 @@ ParsedType Sema::getDestructorName(const IdentifierInfo &II,
   FoundDecls.resize(NumNonExtensionDecls);
 
   // List types before non-types.
-  std::stable_sort(FoundDecls.begin(), FoundDecls.end(),
-                   [](NamedDecl *A, NamedDecl *B) {
-                     return isa<TypeDecl>(A->getUnderlyingDecl()) >
-                            isa<TypeDecl>(B->getUnderlyingDecl());
-                   });
+  llvm::stable_sort(FoundDecls, [](NamedDecl *A, NamedDecl *B) {
+    return isa<TypeDecl>(A->getUnderlyingDecl()) >
+           isa<TypeDecl>(B->getUnderlyingDecl());
+  });
 
   // Suggest a fixit to properly name the destroyed type.
   auto MakeFixItHint = [&]{
@@ -6448,6 +6447,9 @@ void DiagnoseBuiltinDeprecation(Sema& S, TypeTrait Kind,
       break;
     case UTT_HasTrivialDestructor:
       Replacement = UTT_IsTriviallyDestructible;
+      break;
+    case UTT_IsTriviallyRelocatable:
+      Replacement = clang::UTT_IsCppTriviallyRelocatable;
       break;
     default:
       return;

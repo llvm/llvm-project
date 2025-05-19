@@ -365,12 +365,12 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
   if (Subtarget.hasMips32r6()) {
     setOperationAction(ISD::FMINNUM_IEEE, MVT::f32, Legal);
     setOperationAction(ISD::FMAXNUM_IEEE, MVT::f32, Legal);
-    setOperationAction(ISD::FMINNUM, MVT::f32, Expand);
-    setOperationAction(ISD::FMAXNUM, MVT::f32, Expand);
+    setOperationAction(ISD::FMINNUM, MVT::f32, Legal);
+    setOperationAction(ISD::FMAXNUM, MVT::f32, Legal);
     setOperationAction(ISD::FMINNUM_IEEE, MVT::f64, Legal);
     setOperationAction(ISD::FMAXNUM_IEEE, MVT::f64, Legal);
-    setOperationAction(ISD::FMINNUM, MVT::f64, Expand);
-    setOperationAction(ISD::FMAXNUM, MVT::f64, Expand);
+    setOperationAction(ISD::FMINNUM, MVT::f64, Legal);
+    setOperationAction(ISD::FMAXNUM, MVT::f64, Legal);
     setOperationAction(ISD::IS_FPCLASS, MVT::f32, Legal);
     setOperationAction(ISD::IS_FPCLASS, MVT::f64, Legal);
   } else {
@@ -519,6 +519,9 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
   }
 
   setOperationAction(ISD::TRAP, MVT::Other, Legal);
+
+  setOperationAction(ISD::ConstantFP, MVT::f32, Custom);
+  setOperationAction(ISD::ConstantFP, MVT::f64, Custom);
 
   setTargetDAGCombine({ISD::SDIVREM, ISD::UDIVREM, ISD::SELECT, ISD::AND,
                        ISD::OR, ISD::ADD, ISD::SUB, ISD::AssertZext, ISD::SHL,
@@ -1355,6 +1358,8 @@ LowerOperation(SDValue Op, SelectionDAG &DAG) const
   case ISD::FP_TO_SINT:         return lowerFP_TO_SINT(Op, DAG);
   case ISD::READCYCLECOUNTER:
     return lowerREADCYCLECOUNTER(Op, DAG);
+  case ISD::ConstantFP:
+    return lowerConstantFP(Op, DAG);
   }
   return SDValue();
 }
@@ -3013,6 +3018,30 @@ SDValue MipsTargetLowering::lowerFP_TO_SINT(SDValue Op,
   SDValue Trunc = DAG.getNode(MipsISD::TruncIntFP, SDLoc(Op), FPTy,
                               Op.getOperand(0));
   return DAG.getNode(ISD::BITCAST, SDLoc(Op), Op.getValueType(), Trunc);
+}
+
+SDValue MipsTargetLowering::lowerConstantFP(SDValue Op,
+                                            SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  EVT VT = Op.getSimpleValueType();
+  SDNode *N = Op.getNode();
+  ConstantFPSDNode *CFP = cast<ConstantFPSDNode>(N);
+
+  if (!CFP->isNaN() || Subtarget.isNaN2008()) {
+    return SDValue();
+  }
+
+  APFloat NaNValue = CFP->getValueAPF();
+  auto &Sem = NaNValue.getSemantics();
+
+  // The MSB of the mantissa should be zero for QNaNs in the MIPS legacy NaN
+  // encodings, and one for sNaNs. Check every NaN constants and make sure
+  // they are correctly encoded for legacy encodings.
+  if (!NaNValue.isSignaling()) {
+    APFloat RealQNaN = NaNValue.getSNaN(Sem);
+    return DAG.getConstantFP(RealQNaN, DL, VT);
+  }
+  return SDValue();
 }
 
 //===----------------------------------------------------------------------===//

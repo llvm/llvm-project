@@ -999,6 +999,11 @@ Decl *TemplateDeclInstantiator::VisitHLSLBufferDecl(HLSLBufferDecl *Decl) {
   llvm_unreachable("HLSL buffer declarations cannot be instantiated");
 }
 
+Decl *TemplateDeclInstantiator::VisitHLSLRootSignatureDecl(
+    HLSLRootSignatureDecl *Decl) {
+  llvm_unreachable("HLSL root signature declarations cannot be instantiated");
+}
+
 Decl *
 TemplateDeclInstantiator::VisitPragmaCommentDecl(PragmaCommentDecl *D) {
   llvm_unreachable("pragma comment cannot be instantiated");
@@ -5751,8 +5756,7 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
     RebuildTypeSourceInfoForDefaultSpecialMembers();
     SetDeclDefaulted(Function, PatternDecl->getLocation());
   } else {
-    NamedDecl *ND = Function;
-    DeclContext *DC = ND->getLexicalDeclContext();
+    DeclContext *DC = Function->getLexicalDeclContext();
     std::optional<ArrayRef<TemplateArgument>> Innermost;
     if (auto *Primary = Function->getPrimaryTemplate();
         Primary &&
@@ -6028,11 +6032,11 @@ void Sema::BuildVariableInstantiation(
   Context.setStaticLocalNumber(NewVar, Context.getStaticLocalNumber(OldVar));
 
   // Figure out whether to eagerly instantiate the initializer.
-  if (InstantiatingVarTemplate || InstantiatingVarTemplatePartialSpec) {
-    // We're producing a template. Don't instantiate the initializer yet.
-  } else if (NewVar->getType()->isUndeducedType()) {
+  if (NewVar->getType()->isUndeducedType()) {
     // We need the type to complete the declaration of the variable.
     InstantiateVariableInitializer(NewVar, OldVar, TemplateArgs);
+  } else if (InstantiatingVarTemplate || InstantiatingVarTemplatePartialSpec) {
+    // We're producing a template. Don't instantiate the initializer yet.
   } else if (InstantiatingSpecFromTemplate ||
              (OldVar->isInline() && OldVar->isThisDeclarationADefinition() &&
               !NewVar->isThisDeclarationADefinition())) {

@@ -141,11 +141,10 @@ public:
                   "Expected LoadInst or StoreInst!");
     assert(all_of(Seeds, [](auto *S) { return isa<LoadOrStoreT>(S); }) &&
            "Expected Load or Store instructions!");
-    auto Cmp = [&SE](Instruction *I0, Instruction *I1) {
+    llvm::sort(Seeds, [&SE](Instruction *I0, Instruction *I1) {
       return Utils::atLowerAddress(cast<LoadOrStoreT>(I0),
                                    cast<LoadOrStoreT>(I1), SE);
-    };
-    std::sort(Seeds.begin(), Seeds.end(), Cmp);
+    });
   }
   explicit MemSeedBundle(LoadOrStoreT *MemI) : SeedBundle(MemI) {
     static_assert(std::is_same<LoadOrStoreT, LoadInst>::value ||
@@ -160,7 +159,7 @@ public:
                                    cast<LoadOrStoreT>(I1), SE);
     };
     // Find the first element after I in mem. Then insert I before it.
-    insertAt(std::upper_bound(begin(), end(), I, Cmp), I);
+    insertAt(llvm::upper_bound(*this, I, Cmp), I);
   }
 };
 

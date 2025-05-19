@@ -176,7 +176,9 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BR_CC, MVT::f32, Expand);
     setOperationAction(ISD::FMA, MVT::f32, Legal);
     setOperationAction(ISD::FMINNUM_IEEE, MVT::f32, Legal);
+    setOperationAction(ISD::FMINNUM, MVT::f32, Legal);
     setOperationAction(ISD::FMAXNUM_IEEE, MVT::f32, Legal);
+    setOperationAction(ISD::FMAXNUM, MVT::f32, Legal);
     setOperationAction(ISD::STRICT_FSETCCS, MVT::f32, Legal);
     setOperationAction(ISD::STRICT_FSETCC, MVT::f32, Legal);
     setOperationAction(ISD::IS_FPCLASS, MVT::f32, Legal);
@@ -215,7 +217,9 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::STRICT_FSETCC, MVT::f64, Legal);
     setOperationAction(ISD::FMA, MVT::f64, Legal);
     setOperationAction(ISD::FMINNUM_IEEE, MVT::f64, Legal);
+    setOperationAction(ISD::FMINNUM, MVT::f64, Legal);
     setOperationAction(ISD::FMAXNUM_IEEE, MVT::f64, Legal);
+    setOperationAction(ISD::FMAXNUM, MVT::f64, Legal);
     setOperationAction(ISD::IS_FPCLASS, MVT::f64, Legal);
     setOperationAction(ISD::FSIN, MVT::f64, Expand);
     setOperationAction(ISD::FCOS, MVT::f64, Expand);
@@ -1026,45 +1030,53 @@ static SDValue lowerVECTOR_SHUFFLE_VSHUF4I(const SDLoc &DL, ArrayRef<int> Mask,
                                            MVT VT, SDValue V1, SDValue V2,
                                            SelectionDAG &DAG) {
 
-  // When the size is less than 4, lower cost instructions may be used.
-  if (Mask.size() < 4)
-    return SDValue();
+  unsigned SubVecSize = 4;
+  if (VT == MVT::v2f64 || VT == MVT::v2i64 || VT == MVT::v4f64 ||
+      VT == MVT::v4i64) {
+    SubVecSize = 2;
+  }
 
   int SubMask[4] = {-1, -1, -1, -1};
-  for (unsigned i = 0; i < 4; ++i) {
-    for (unsigned j = i; j < Mask.size(); j += 4) {
-      int Idx = Mask[j];
+  for (unsigned i = 0; i < SubVecSize; ++i) {
+    for (unsigned j = i; j < Mask.size(); j += SubVecSize) {
+      int M = Mask[j];
 
       // Convert from vector index to 4-element subvector index
       // If an index refers to an element outside of the subvector then give up
-      if (Idx != -1) {
-        Idx -= 4 * (j / 4);
-        if (Idx < 0 || Idx >= 4)
+      if (M != -1) {
+        M -= 4 * (j / SubVecSize);
+        if (M < 0 || M >= 4)
           return SDValue();
       }
 
       // If the mask has an undef, replace it with the current index.
       // Note that it might still be undef if the current index is also undef
       if (SubMask[i] == -1)
-        SubMask[i] = Idx;
+        SubMask[i] = M;
       // Check that non-undef values are the same as in the mask. If they
       // aren't then give up
-      else if (Idx != -1 && Idx != SubMask[i])
+      else if (M != -1 && M != SubMask[i])
         return SDValue();
     }
   }
 
   // Calculate the immediate. Replace any remaining undefs with zero
   APInt Imm(64, 0);
-  for (int i = 3; i >= 0; --i) {
-    int Idx = SubMask[i];
+  for (int i = SubVecSize - 1; i >= 0; --i) {
+    int M = SubMask[i];
 
-    if (Idx == -1)
-      Idx = 0;
+    if (M == -1)
+      M = 0;
 
     Imm <<= 2;
-    Imm |= Idx & 0x3;
+    Imm |= M & 0x3;
   }
+
+  // Return vshuf4i.d and xvshuf4i.d
+  if (VT == MVT::v2f64 || VT == MVT::v2i64 || VT == MVT::v4f64 ||
+      VT == MVT::v4i64)
+    return DAG.getNode(LoongArchISD::VSHUF4I, DL, VT, V1, V2,
+                       DAG.getConstant(Imm, DL, MVT::i64));
 
   return DAG.getNode(LoongArchISD::VSHUF4I, DL, VT, V1,
                      DAG.getConstant(Imm, DL, MVT::i64));
@@ -1389,6 +1401,9 @@ static SDValue lower128BitShuffle(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
     return Result;
   if ((Result = lowerVECTOR_SHUFFLE_VPICKOD(DL, Mask, VT, V1, V2, DAG)))
     return Result;
+  if ((VT.SimpleTy == MVT::v2i64 || VT.SimpleTy == MVT::v2f64) &&
+      (Result = lowerVECTOR_SHUFFLE_VSHUF4I(DL, Mask, VT, V1, V2, DAG)))
+    return Result;
   if ((Result = lowerVECTOR_SHUFFLEAsZeroOrAnyExtend(DL, Mask, VT, V1, V2, DAG,
                                                      Zeroable)))
     return Result;
@@ -1447,10 +1462,6 @@ static SDValue lowerVECTOR_SHUFFLE_XVREPLVEI(const SDLoc &DL,
 static SDValue lowerVECTOR_SHUFFLE_XVSHUF4I(const SDLoc &DL, ArrayRef<int> Mask,
                                             MVT VT, SDValue V1, SDValue V2,
                                             SelectionDAG &DAG) {
-  // When the size is less than or equal to 4, lower cost instructions may be
-  // used.
-  if (Mask.size() <= 4)
-    return SDValue();
   return lowerVECTOR_SHUFFLE_VSHUF4I(DL, Mask, VT, V1, V2, DAG);
 }
 
@@ -1831,6 +1842,9 @@ static SDValue lower256BitShuffle(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
   if ((Result = lowerVECTOR_SHUFFLE_XVPICKEV(DL, NewMask, VT, V1, V2, DAG)))
     return Result;
   if ((Result = lowerVECTOR_SHUFFLE_XVPICKOD(DL, NewMask, VT, V1, V2, DAG)))
+    return Result;
+  if ((VT.SimpleTy == MVT::v4i64 || VT.SimpleTy == MVT::v4f64) &&
+      (Result = lowerVECTOR_SHUFFLE_XVSHUF4I(DL, NewMask, VT, V1, V2, DAG)))
     return Result;
   if ((Result =
            lowerVECTOR_SHUFFLEAsShift(DL, NewMask, VT, V1, V2, DAG, Zeroable)))

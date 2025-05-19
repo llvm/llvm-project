@@ -3982,7 +3982,6 @@ static void handleFormatMatchesAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
   S.Diag(AL.getLoc(), diag::err_format_nonliteral)
       << FormatStrExpr->getSourceRange();
-  return;
 }
 
 /// Handle __attribute__((callback(CalleeIdx, PayloadIdx0, ...))) attributes.
@@ -5397,6 +5396,9 @@ bool Sema::CheckCallingConvAttr(const ParsedAttr &Attrs, CallingConv &CC,
     }
   }
 
+  bool IsTargetDefaultMSABI =
+      Context.getTargetInfo().getTriple().isOSWindows() ||
+      Context.getTargetInfo().getTriple().isUEFI();
   // TODO: diagnose uses of these conventions on the wrong target.
   switch (Attrs.getKind()) {
   case ParsedAttr::AT_CDecl:
@@ -5436,12 +5438,10 @@ bool Sema::CheckCallingConvAttr(const ParsedAttr &Attrs, CallingConv &CC,
     CC = CC_X86RegCall;
     break;
   case ParsedAttr::AT_MSABI:
-    CC = Context.getTargetInfo().getTriple().isOSWindows() ? CC_C :
-                                                             CC_Win64;
+    CC = IsTargetDefaultMSABI ? CC_C : CC_Win64;
     break;
   case ParsedAttr::AT_SysVABI:
-    CC = Context.getTargetInfo().getTriple().isOSWindows() ? CC_X86_64SysV :
-                                                             CC_C;
+    CC = IsTargetDefaultMSABI ? CC_X86_64SysV : CC_C;
     break;
   case ParsedAttr::AT_Pcs: {
     StringRef StrRef;
@@ -6861,13 +6861,16 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   // though they were unknown attributes.
   if (AL.getKind() == ParsedAttr::UnknownAttribute ||
       !AL.existsInTarget(S.Context.getTargetInfo())) {
-    S.Diag(AL.getLoc(),
-           AL.isRegularKeywordAttribute()
-               ? (unsigned)diag::err_keyword_not_supported_on_target
-           : AL.isDeclspecAttribute()
-               ? (unsigned)diag::warn_unhandled_ms_attribute_ignored
-               : (unsigned)diag::warn_unknown_attribute_ignored)
-        << AL << AL.getRange();
+    if (AL.isRegularKeywordAttribute() || AL.isDeclspecAttribute()) {
+      S.Diag(AL.getLoc(), AL.isRegularKeywordAttribute()
+                              ? diag::err_keyword_not_supported_on_target
+                              : diag::warn_unhandled_ms_attribute_ignored)
+          << AL.getAttrName() << AL.getRange();
+    } else {
+      S.Diag(AL.getNormalizedRange().getBegin(),
+             diag::warn_unknown_attribute_ignored)
+          << "'" + AL.getNormalizedFullName() + "'" << AL.getNormalizedRange();
+    }
     return;
   }
 
@@ -7477,6 +7480,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
 
   // HLSL attributes:
+  case ParsedAttr::AT_RootSignature:
+    S.HLSL().handleRootSignatureAttr(D, AL);
+    break;
   case ParsedAttr::AT_HLSLNumThreads:
     S.HLSL().handleNumThreadsAttr(D, AL);
     break;

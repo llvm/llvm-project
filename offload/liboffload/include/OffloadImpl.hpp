@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 #pragma once
 
+#include "PluginInterface.h"
 #include <OffloadAPI.h>
 #include <iostream>
 #include <memory>
@@ -93,9 +94,7 @@ struct ol_impl_result_t {
     ol_errc_t ErrCode;
     llvm::StringRef Details;
     llvm::handleAllErrors(std::move(Error), [&](llvm::StringError &Err) {
-      // TODO: PluginInterface doesn't yet have a way to communicate offload
-      // error codes
-      ErrCode = OL_ERRC_UNKNOWN;
+      ErrCode = GetErrorCode(Err.convertToErrorCode());
       Details = errorStrs().insert(Err.getMessage()).first->getKeyData();
     });
 
@@ -105,5 +104,13 @@ struct ol_impl_result_t {
   operator ol_result_t() { return Result; }
 
 private:
+  static ol_errc_t GetErrorCode(std::error_code Code) {
+    if (Code.category() ==
+        error::make_error_code(error::ErrorCode::SUCCESS).category()) {
+      return static_cast<ol_errc_t>(Code.value());
+    }
+    return OL_ERRC_UNKNOWN;
+  }
+
   ol_result_t Result;
 };
