@@ -3233,8 +3233,8 @@ TEST(Hover, ParseProviderInfo) {
   struct Case {
     HoverInfo HI;
     llvm::StringRef ExpectedMarkdown;
-  } Cases[] = {{HIFoo, "### `foo`  \nprovided by `\"foo.h\"`"},
-               {HIFooBar, "### `foo`  \nprovided by `<bar.h>`"}};
+  } Cases[] = {{HIFoo, "### `foo`\n\nprovided by `\"foo.h\"`"},
+               {HIFooBar, "### `foo`\n\nprovided by `<bar.h>`"}};
 
   for (const auto &Case : Cases)
     EXPECT_EQ(Case.HI.present().asMarkdown(), Case.ExpectedMarkdown);
@@ -3441,6 +3441,7 @@ TEST(Hover, Present) {
           R"(class foo
 
 Size: 10 bytes
+
 documentation
 
 template <typename T, typename C = bool> class Foo {})",
@@ -3465,8 +3466,8 @@ template <typename T, typename C = bool> class Foo {})",
           },
           "function foo\n"
           "\n"
-          "→ ret_type (aka can_ret_type)\n"
-          "Parameters:\n"
+          "→ ret_type (aka can_ret_type)\n\n"
+          "Parameters:\n\n"
           "- \n"
           "- type (aka can_type)\n"
           "- type foo (aka can_type)\n"
@@ -3491,8 +3492,11 @@ template <typename T, typename C = bool> class Foo {})",
           R"(field foo
 
 Type: type (aka can_type)
+
 Value = value
+
 Offset: 12 bytes
+
 Size: 4 bytes (+4 bytes padding), alignment 4 bytes
 
 // In test::Bar
@@ -3514,8 +3518,11 @@ def)",
           R"(field foo
 
 Type: type (aka can_type)
+
 Value = value
+
 Offset: 4 bytes and 3 bits
+
 Size: 25 bits (+4 bits padding), alignment 8 bytes
 
 // In test::Bar
@@ -3573,6 +3580,7 @@ protected: size_t method())",
           R"(constructor cls
 
 Parameters:
+
 - int a
 - int b = 5
 
@@ -3609,7 +3617,9 @@ private: union foo {})",
           R"(variable foo
 
 Type: int
+
 Value = 3
+
 Passed as arg_a
 
 // In test::Bar
@@ -3644,7 +3654,9 @@ Passed by value)",
           R"(variable foo
 
 Type: int
+
 Value = 3
+
 Passed by reference as arg_a
 
 // In test::Bar
@@ -3667,7 +3679,9 @@ int foo = 3)",
           R"(variable foo
 
 Type: int
+
 Value = 3
+
 Passed as arg_a (converted to alias_int)
 
 // In test::Bar
@@ -3705,7 +3719,9 @@ int foo = 3)",
           R"(variable foo
 
 Type: int
+
 Value = 3
+
 Passed by const reference as arg_a (converted to int)
 
 // In test::Bar
@@ -3752,57 +3768,67 @@ TEST(Hover, ParseDocumentation) {
     llvm::StringRef ExpectedRenderPlainText;
   } Cases[] = {{
                    " \n foo\nbar",
-                   "foo bar",
+                   "foo\nbar",
                    "foo bar",
                },
                {
                    "foo\nbar \n  ",
-                   "foo bar",
+                   "foo\nbar",
                    "foo bar",
                },
                {
                    "foo  \nbar",
-                   "foo bar",
-                   "foo bar",
+                   "foo  \nbar",
+                   "foo\nbar",
                },
                {
                    "foo    \nbar",
-                   "foo bar",
-                   "foo bar",
+                   "foo    \nbar",
+                   "foo\nbar",
                },
                {
                    "foo\n\n\nbar",
-                   "foo  \nbar",
-                   "foo\nbar",
+                   "foo\n\nbar",
+                   "foo\n\nbar",
                },
                {
                    "foo\n\n\n\tbar",
-                   "foo  \nbar",
-                   "foo\nbar",
+                   "foo\n\n\tbar",
+                   "foo\n\nbar",
+               },
+               {
+                   "foo\n\n\n    bar",
+                   "foo\n\n    bar",
+                   "foo\n\nbar",
+               },
+               {
+                   "foo\n\n\n   bar",
+                   "foo\n\n   bar",
+                   "foo\n\nbar",
                },
                {
                    "foo\n\n\n bar",
-                   "foo  \nbar",
-                   "foo\nbar",
+                   "foo\n\n bar",
+                   "foo\n\nbar",
                },
                {
                    "foo.\nbar",
-                   "foo.  \nbar",
+                   "foo.\nbar",
                    "foo.\nbar",
                },
                {
                    "foo. \nbar",
-                   "foo.  \nbar",
+                   "foo. \nbar",
                    "foo.\nbar",
                },
                {
                    "foo\n*bar",
-                   "foo  \n\\*bar",
+                   "foo\n*bar",
                    "foo\n*bar",
                },
                {
                    "foo\nbar",
-                   "foo bar",
+                   "foo\nbar",
                    "foo bar",
                },
                {
@@ -3812,15 +3838,16 @@ TEST(Hover, ParseDocumentation) {
                },
                {
                    "'`' should not occur in `Code`",
-                   "'\\`' should not occur in `Code`",
+                   "'`' should not occur in `Code`",
                    "'`' should not occur in `Code`",
                },
                {
                    "`not\nparsed`",
-                   "\\`not parsed\\`",
+                   "`not parsed`",
                    "`not parsed`",
                }};
 
+  //Case C = Cases[2];
   for (const auto &C : Cases) {
     markup::Document Output;
     parseDocumentation(C.Documentation, Output);
@@ -3850,10 +3877,10 @@ TEST(Hover, PresentRulers) {
   HI.Definition = "def";
 
   llvm::StringRef ExpectedMarkdown = //
-      "### variable `foo`  \n"
+      "### variable `foo`\n"
       "\n"
       "---\n"
-      "Value = `val`  \n"
+      "Value = `val`\n"
       "\n"
       "---\n"
       "```cpp\n"

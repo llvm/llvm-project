@@ -33,26 +33,25 @@ MATCHER(escapedNone, "") {
 TEST(Render, Escaping) {
   // Check all ASCII punctuation.
   std::string Punctuation = R"txt(!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~)txt";
-  std::string EscapedPunc = R"txt(!"#$%&'()\*+,-./:;<=>?@[\\]^\_\`{|}~)txt";
-  EXPECT_EQ(escape(Punctuation), EscapedPunc);
+  EXPECT_EQ(escape(Punctuation), Punctuation);
 
   // Inline code
-  EXPECT_EQ(escape("`foo`"), R"(\`foo\`)");
-  EXPECT_EQ(escape("`foo"), R"(\`foo)");
-  EXPECT_EQ(escape("foo`"), R"(foo\`)");
-  EXPECT_EQ(escape("``foo``"), R"(\`\`foo\`\`)");
+  EXPECT_THAT(escape("`foo`"), escapedNone());
+  EXPECT_THAT(escape("`foo"), escapedNone());
+  EXPECT_THAT(escape("foo`"), escapedNone());
+  EXPECT_THAT(escape("``foo``"), escapedNone());
   // Code blocks
-  EXPECT_EQ(escape("```"), R"(\`\`\`)"); // This could also be inline code!
-  EXPECT_EQ(escape("~~~"), R"(\~~~)");
+  EXPECT_THAT(escape("```"), escapedNone());
+  EXPECT_THAT(escape("~~~"), escapedNone());
 
   // Rulers and headings
-  EXPECT_THAT(escape("## Heading"), escaped('#'));
+  EXPECT_THAT(escape("## Heading"), escapedNone());
   EXPECT_THAT(escape("Foo # bar"), escapedNone());
-  EXPECT_EQ(escape("---"), R"(\---)");
-  EXPECT_EQ(escape("-"), R"(\-)");
-  EXPECT_EQ(escape("==="), R"(\===)");
-  EXPECT_EQ(escape("="), R"(\=)");
-  EXPECT_EQ(escape("***"), R"(\*\*\*)"); // \** could start emphasis!
+  EXPECT_THAT(escape("---"), escapedNone());
+  EXPECT_THAT(escape("-"), escapedNone());
+  EXPECT_THAT(escape("==="), escapedNone());
+  EXPECT_THAT(escape("="), escapedNone());
+  EXPECT_THAT(escape("***"), escapedNone()); // \** could start emphasis!
 
   // HTML tags.
   EXPECT_THAT(escape("<pre"), escaped('<'));
@@ -68,24 +67,24 @@ TEST(Render, Escaping) {
   EXPECT_THAT(escape("Website <http://foo.bar>"), escapedNone());
 
   // Bullet lists.
-  EXPECT_THAT(escape("- foo"), escaped('-'));
-  EXPECT_THAT(escape("* foo"), escaped('*'));
-  EXPECT_THAT(escape("+ foo"), escaped('+'));
-  EXPECT_THAT(escape("+"), escaped('+'));
+  EXPECT_THAT(escape("- foo"), escapedNone());
+  EXPECT_THAT(escape("* foo"), escapedNone());
+  EXPECT_THAT(escape("+ foo"), escapedNone());
+  EXPECT_THAT(escape("+"), escapedNone());
   EXPECT_THAT(escape("a + foo"), escapedNone());
   EXPECT_THAT(escape("a+ foo"), escapedNone());
-  EXPECT_THAT(escape("1. foo"), escaped('.'));
+  EXPECT_THAT(escape("1. foo"), escapedNone());
   EXPECT_THAT(escape("a. foo"), escapedNone());
 
   // Emphasis.
-  EXPECT_EQ(escape("*foo*"), R"(\*foo\*)");
-  EXPECT_EQ(escape("**foo**"), R"(\*\*foo\*\*)");
-  EXPECT_THAT(escape("*foo"), escaped('*'));
+  EXPECT_THAT(escape("*foo*"), escapedNone());
+  EXPECT_THAT(escape("**foo**"), escapedNone());
+  EXPECT_THAT(escape("*foo"), escapedNone());
   EXPECT_THAT(escape("foo *"), escapedNone());
   EXPECT_THAT(escape("foo * bar"), escapedNone());
   EXPECT_THAT(escape("foo_bar"), escapedNone());
-  EXPECT_THAT(escape("foo _bar"), escaped('_'));
-  EXPECT_THAT(escape("foo_ bar"), escaped('_'));
+  EXPECT_THAT(escape("foo _bar"), escapedNone());
+  EXPECT_THAT(escape("foo_ bar"), escapedNone());
   EXPECT_THAT(escape("foo _ bar"), escapedNone());
 
   // HTML entities.
@@ -97,8 +96,8 @@ TEST(Render, Escaping) {
   EXPECT_THAT(escape("foo &?; bar"), escapedNone());
 
   // Links.
-  EXPECT_THAT(escape("[foo](bar)"), escaped(']'));
-  EXPECT_THAT(escape("[foo]: bar"), escaped(']'));
+  EXPECT_THAT(escape("[foo](bar)"), escapedNone());
+  EXPECT_THAT(escape("[foo]: bar"), escapedNone());
   // No need to escape these, as the target never exists.
   EXPECT_THAT(escape("[foo][]"), escapedNone());
   EXPECT_THAT(escape("[foo][bar]"), escapedNone());
@@ -182,14 +181,87 @@ TEST(Paragraph, SeparationOfChunks) {
   P.appendCode("no").appendCode("space");
   EXPECT_EQ(P.asMarkdown(), "after `foobar` bat`no` `space`");
   EXPECT_EQ(P.asPlainText(), "after foobar batno space");
+
+  P.appendText(" text");
+  EXPECT_EQ(P.asMarkdown(), "after `foobar` bat`no` `space` text");
+  EXPECT_EQ(P.asPlainText(), "after foobar batno space text");
+
+  P.appendSpace().appendCode("code").appendText(".\n  newline");
+  EXPECT_EQ(P.asMarkdown(), "after `foobar` bat`no` `space` text `code`.\n  newline");
+  EXPECT_EQ(P.asPlainText(), "after foobar batno space text code.\nnewline");
+}
+
+TEST(Paragraph, SeparationOfChunks2) {
+  // This test keeps appending contents to a single Paragraph and checks
+  // expected accumulated contents after each one.
+  // Purpose is to check for separation between different chunks
+  // where the spacing is in the appended string rather set by appendSpace.
+  Paragraph P;
+
+  P.appendText("after ");
+  EXPECT_EQ(P.asMarkdown(), "after");
+  EXPECT_EQ(P.asPlainText(), "after");
+
+  P.appendText("foobar");
+  EXPECT_EQ(P.asMarkdown(), "after foobar");
+  EXPECT_EQ(P.asPlainText(), "after foobar");
+
+  P.appendText(" bat");
+  EXPECT_EQ(P.asMarkdown(), "after foobar bat");
+  EXPECT_EQ(P.asPlainText(), "after foobar bat");
+
+  P.appendText("baz");
+  EXPECT_EQ(P.asMarkdown(), "after foobar batbaz");
+  EXPECT_EQ(P.asPlainText(), "after foobar batbaz");
+
+  P.appendText(" faz ");
+  EXPECT_EQ(P.asMarkdown(), "after foobar batbaz faz");
+  EXPECT_EQ(P.asPlainText(), "after foobar batbaz faz");
+
+  P.appendText("  bar  ");
+  EXPECT_EQ(P.asMarkdown(), "after foobar batbaz faz   bar");
+  EXPECT_EQ(P.asPlainText(), "after foobar batbaz faz bar");
+
+  P.appendText("qux");
+  EXPECT_EQ(P.asMarkdown(), "after foobar batbaz faz   bar  qux");
+  EXPECT_EQ(P.asPlainText(), "after foobar batbaz faz bar qux");
+}
+
+TEST(Paragraph, SeparationOfChunks3) {
+  // This test keeps appending contents to a single Paragraph and checks
+  // expected accumulated contents after each one.
+  // Purpose is to check for separation between different chunks
+  // where the spacing is in the appended string rather set by appendSpace.
+  Paragraph P;
+
+  P.appendText("after  \n");
+  EXPECT_EQ(P.asMarkdown(), "after");
+  EXPECT_EQ(P.asPlainText(), "after");
+
+  P.appendText("  foobar\n");
+  EXPECT_EQ(P.asMarkdown(), "after  \n  foobar");
+  EXPECT_EQ(P.asPlainText(), "after\nfoobar");
+
+  P.appendText("- bat\n");
+  EXPECT_EQ(P.asMarkdown(), "after  \n  foobar\n- bat");
+  EXPECT_EQ(P.asPlainText(), "after\nfoobar\n- bat");
+
+  P.appendText("- baz");
+  EXPECT_EQ(P.asMarkdown(), "after  \n  foobar\n- bat\n- baz");
+  EXPECT_EQ(P.asPlainText(), "after\nfoobar\n- bat\n- baz");
+
+  P.appendText(" faz ");
+  EXPECT_EQ(P.asMarkdown(), "after  \n  foobar\n- bat\n- baz faz");
+  EXPECT_EQ(P.asPlainText(), "after\nfoobar\n- bat\n- baz faz");
 }
 
 TEST(Paragraph, ExtraSpaces) {
-  // Make sure spaces inside chunks are dropped.
+  // Make sure spaces inside chunks are preserved for markdown
+  // and dropped for plain text.
   Paragraph P;
   P.appendText("foo\n   \t   baz");
   P.appendCode(" bar\n");
-  EXPECT_EQ(P.asMarkdown(), "foo baz`bar`");
+  EXPECT_EQ(P.asMarkdown(), "foo\n   \t   baz`bar`");
   EXPECT_EQ(P.asPlainText(), "foo bazbar");
 }
 
@@ -197,7 +269,7 @@ TEST(Paragraph, SpacesCollapsed) {
   Paragraph P;
   P.appendText(" foo bar ");
   P.appendText(" baz ");
-  EXPECT_EQ(P.asMarkdown(), "foo bar baz");
+  EXPECT_EQ(P.asMarkdown(), "foo bar  baz");
   EXPECT_EQ(P.asPlainText(), "foo bar baz");
 }
 
@@ -206,8 +278,38 @@ TEST(Paragraph, NewLines) {
   Paragraph P;
   P.appendText(" \n foo\nbar\n ");
   P.appendCode(" \n foo\nbar \n ");
-  EXPECT_EQ(P.asMarkdown(), "foo bar `foo bar`");
+  EXPECT_EQ(P.asMarkdown(), "foo\nbar\n `foo bar`");
   EXPECT_EQ(P.asPlainText(), "foo bar foo bar");
+}
+
+TEST(Paragraph, BoldText) {
+  Paragraph P;
+  P.appendBoldText("");
+  EXPECT_EQ(P.asMarkdown(), "");
+  EXPECT_EQ(P.asPlainText(), "");
+
+  P.appendBoldText(" \n foo\nbar\n ");
+  EXPECT_EQ(P.asMarkdown(), "**foo bar**");
+  EXPECT_EQ(P.asPlainText(), "**foo bar**");
+
+  P.appendSpace().appendBoldText("foobar");
+  EXPECT_EQ(P.asMarkdown(), "**foo bar** **foobar**");
+  EXPECT_EQ(P.asPlainText(), "**foo bar** **foobar**");
+}
+
+TEST(Paragraph, EmphasizedText) {
+  Paragraph P;
+  P.appendEmphasizedText("");
+  EXPECT_EQ(P.asMarkdown(), "");
+  EXPECT_EQ(P.asPlainText(), "");
+
+  P.appendEmphasizedText(" \n foo\nbar\n ");
+  EXPECT_EQ(P.asMarkdown(), "*foo bar*");
+  EXPECT_EQ(P.asPlainText(), "*foo bar*");
+
+  P.appendSpace().appendEmphasizedText("foobar");
+  EXPECT_EQ(P.asMarkdown(), "*foo bar* *foobar*");
+  EXPECT_EQ(P.asPlainText(), "*foo bar* *foobar*");
 }
 
 TEST(Document, Separators) {
@@ -216,7 +318,8 @@ TEST(Document, Separators) {
   D.addCodeBlock("test");
   D.addParagraph().appendText("bar");
 
-  const char ExpectedMarkdown[] = R"md(foo  
+  const char ExpectedMarkdown[] = R"md(foo
+
 ```cpp
 test
 ```
@@ -238,7 +341,7 @@ TEST(Document, Ruler) {
 
   // Ruler followed by paragraph.
   D.addParagraph().appendText("bar");
-  EXPECT_EQ(D.asMarkdown(), "foo  \n\n---\nbar");
+  EXPECT_EQ(D.asMarkdown(), "foo\n\n---\nbar");
   EXPECT_EQ(D.asPlainText(), "foo\n\nbar");
 
   D = Document();
@@ -246,7 +349,7 @@ TEST(Document, Ruler) {
   D.addRuler();
   D.addCodeBlock("bar");
   // Ruler followed by a codeblock.
-  EXPECT_EQ(D.asMarkdown(), "foo  \n\n---\n```cpp\nbar\n```");
+  EXPECT_EQ(D.asMarkdown(), "foo\n\n---\n```cpp\nbar\n```");
   EXPECT_EQ(D.asPlainText(), "foo\n\nbar");
 
   // Ruler followed by another ruler
@@ -260,7 +363,7 @@ TEST(Document, Ruler) {
   // Multiple rulers between blocks
   D.addRuler();
   D.addParagraph().appendText("foo");
-  EXPECT_EQ(D.asMarkdown(), "foo  \n\n---\nfoo");
+  EXPECT_EQ(D.asMarkdown(), "foo\n\n---\nfoo");
   EXPECT_EQ(D.asPlainText(), "foo\n\nfoo");
 }
 
@@ -272,7 +375,7 @@ TEST(Document, Append) {
   E.addRuler();
   E.addParagraph().appendText("bar");
   D.append(std::move(E));
-  EXPECT_EQ(D.asMarkdown(), "foo  \n\n---\nbar");
+  EXPECT_EQ(D.asMarkdown(), "foo\n\n---\nbar");
 }
 
 TEST(Document, Heading) {
@@ -280,8 +383,8 @@ TEST(Document, Heading) {
   D.addHeading(1).appendText("foo");
   D.addHeading(2).appendText("bar");
   D.addParagraph().appendText("baz");
-  EXPECT_EQ(D.asMarkdown(), "# foo  \n## bar  \nbaz");
-  EXPECT_EQ(D.asPlainText(), "foo\nbar\nbaz");
+  EXPECT_EQ(D.asMarkdown(), "# foo\n\n## bar\n\nbaz");
+  EXPECT_EQ(D.asPlainText(), "foo\n\nbar\n\nbaz");
 }
 
 TEST(CodeBlock, Render) {
@@ -336,7 +439,7 @@ TEST(BulletList, Render) {
 
   // Nested list, with a single item.
   Document &D = L.addItem();
-  // First item with foo\nbaz
+  // First item with 2 paragraphs - foo\n\n  baz
   D.addParagraph().appendText("foo");
   D.addParagraph().appendText("baz");
 
@@ -352,18 +455,26 @@ TEST(BulletList, Render) {
   DeepDoc.addParagraph().appendText("baz");
   StringRef ExpectedMarkdown = R"md(- foo
 - bar
-- foo  
-  baz  
-  - foo  
-    - baz  
+- foo
+
+  baz
+
+  - foo
+
+    - baz
+
       baz)md";
   EXPECT_EQ(L.asMarkdown(), ExpectedMarkdown);
   StringRef ExpectedPlainText = R"pt(- foo
 - bar
 - foo
+
   baz
+
   - foo
+
     - baz
+
       baz)pt";
   EXPECT_EQ(L.asPlainText(), ExpectedPlainText);
 
@@ -371,21 +482,30 @@ TEST(BulletList, Render) {
   Inner.addParagraph().appendText("after");
   ExpectedMarkdown = R"md(- foo
 - bar
-- foo  
-  baz  
-  - foo  
-    - baz  
+- foo
+
+  baz
+
+  - foo
+
+    - baz
+
       baz
-    
+
     after)md";
   EXPECT_EQ(L.asMarkdown(), ExpectedMarkdown);
   ExpectedPlainText = R"pt(- foo
 - bar
 - foo
+
   baz
+
   - foo
+
     - baz
+
       baz
+
     after)pt";
   EXPECT_EQ(L.asPlainText(), ExpectedPlainText);
 }

@@ -960,42 +960,6 @@ std::optional<HoverInfo> getHoverContents(const Attr *A, ParsedAST &AST) {
   return HI;
 }
 
-bool isParagraphBreak(llvm::StringRef Rest) {
-  return Rest.ltrim(" \t").starts_with("\n");
-}
-
-bool punctuationIndicatesLineBreak(llvm::StringRef Line) {
-  constexpr llvm::StringLiteral Punctuation = R"txt(.:,;!?)txt";
-
-  Line = Line.rtrim();
-  return !Line.empty() && Punctuation.contains(Line.back());
-}
-
-bool isHardLineBreakIndicator(llvm::StringRef Rest) {
-  // '-'/'*' md list, '@'/'\' documentation command, '>' md blockquote,
-  // '#' headings, '`' code blocks
-  constexpr llvm::StringLiteral LinebreakIndicators = R"txt(-*@\>#`)txt";
-
-  Rest = Rest.ltrim(" \t");
-  if (Rest.empty())
-    return false;
-
-  if (LinebreakIndicators.contains(Rest.front()))
-    return true;
-
-  if (llvm::isDigit(Rest.front())) {
-    llvm::StringRef AfterDigit = Rest.drop_while(llvm::isDigit);
-    if (AfterDigit.starts_with(".") || AfterDigit.starts_with(")"))
-      return true;
-  }
-  return false;
-}
-
-bool isHardLineBreakAfter(llvm::StringRef Line, llvm::StringRef Rest) {
-  // Should we also consider whether Line is short?
-  return punctuationIndicatesLineBreak(Line) || isHardLineBreakIndicator(Rest);
-}
-
 void addLayoutInfo(const NamedDecl &ND, HoverInfo &HI) {
   if (ND.isInvalidDecl())
     return;
@@ -1601,51 +1565,32 @@ std::optional<llvm::StringRef> getBacktickQuoteRange(llvm::StringRef Line,
   return Line.slice(Offset, Next + 1);
 }
 
-void parseDocumentationLine(llvm::StringRef Line, markup::Paragraph &Out) {
+void parseDocumentationParagraph(llvm::StringRef Text, markup::Paragraph &Out) {
   // Probably this is appendText(Line), but scan for something interesting.
-  for (unsigned I = 0; I < Line.size(); ++I) {
-    switch (Line[I]) {
+  for (unsigned I = 0; I < Text.size(); ++I) {
+    switch (Text[I]) {
     case '`':
-      if (auto Range = getBacktickQuoteRange(Line, I)) {
-        Out.appendText(Line.substr(0, I));
+      if (auto Range = getBacktickQuoteRange(Text, I)) {
+        Out.appendText(Text.substr(0, I));
         Out.appendCode(Range->trim("`"), /*Preserve=*/true);
-        return parseDocumentationLine(Line.substr(I + Range->size()), Out);
+        return parseDocumentationParagraph(Text.substr(I + Range->size()), Out);
       }
       break;
     }
   }
-  Out.appendText(Line).appendSpace();
+  Out.appendText(Text);
 }
 
 void parseDocumentation(llvm::StringRef Input, markup::Document &Output) {
-  std::vector<llvm::StringRef> ParagraphLines;
-  auto FlushParagraph = [&] {
-    if (ParagraphLines.empty())
-      return;
-    auto &P = Output.addParagraph();
-    for (llvm::StringRef Line : ParagraphLines)
-      parseDocumentationLine(Line, P);
-    ParagraphLines.clear();
-  };
+  llvm::StringRef Paragraph, Rest;
+  for (std::tie(Paragraph, Rest) = Input.split("\n\n");
+       !(Paragraph.empty() && Rest.empty());
+       std::tie(Paragraph, Rest) = Rest.split("\n\n")) {
 
-  llvm::StringRef Line, Rest;
-  for (std::tie(Line, Rest) = Input.split('\n');
-       !(Line.empty() && Rest.empty());
-       std::tie(Line, Rest) = Rest.split('\n')) {
-
-    // After a linebreak remove spaces to avoid 4 space markdown code blocks.
-    // FIXME: make FlushParagraph handle this.
-    Line = Line.ltrim();
-    if (!Line.empty())
-      ParagraphLines.push_back(Line);
-
-    if (isParagraphBreak(Rest) || isHardLineBreakAfter(Line, Rest)) {
-      FlushParagraph();
-    }
+    if (!Paragraph.empty())
+      parseDocumentationParagraph(Paragraph, Output.addParagraph());
   }
-  FlushParagraph();
 }
-
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
                               const HoverInfo::PrintedType &T) {
   OS << T.Type;
