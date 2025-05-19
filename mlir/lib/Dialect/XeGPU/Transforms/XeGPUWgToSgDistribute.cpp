@@ -7,15 +7,16 @@
 //===----------------------------------------------------------------------===//
 #include "mlir/Dialect/XeGPU/Transforms/Passes.h"
 
+#include "mlir/Dialect/Affine/Utils.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/Index/IR/IndexDialect.h"
+#include "mlir/Dialect/Index/IR/IndexOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
 #include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include <mlir/Dialect/GPU/IR/GPUDialect.h>
-#include <mlir/Dialect/Index/IR/IndexOps.h>
 
 namespace mlir {
 namespace xegpu {
@@ -71,34 +72,14 @@ namespace {
 struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
   using OpConversionPattern<xegpu::CreateNdDescOp>::OpConversionPattern;
 
-  // Convert linear subgroup ID to 2D coordinates
-  // TODO: Delinearize for nD
-  SmallVector<Value> delinearizeSubgroupId(ConversionPatternRewriter &rewriter,
-                                           Location loc, Value sgID,
-                                           Value sgDimX, Value sgDimY) const {
-    return {rewriter.create<index::DivUOp>(loc, sgID, sgDimY),
-            rewriter.create<index::RemUOp>(loc, sgID, sgDimY)};
-  }
-
   // Calculate offset for each subgroup
   SmallVector<OpFoldResult>
   calculateGlobalOffsets(ConversionPatternRewriter &rewriter, Location loc,
                          const SmallVector<OpFoldResult> &originalOffsets,
                          const SmallVector<Value> &localOffset,
                          const SmallVector<int64_t> &distUnitBaseAddr) const {
-
-    Value constOffsetX =
-        rewriter.create<arith::ConstantIndexOp>(loc, distUnitBaseAddr[0]);
-    Value constOffsetY =
-        rewriter.create<arith::ConstantIndexOp>(loc, distUnitBaseAddr[1]);
-
-    Value offsetX =
-        rewriter.createOrFold<index::AddOp>(loc, localOffset[0], constOffsetX);
-    Value offsetY =
-        rewriter.createOrFold<index::AddOp>(loc, localOffset[1], constOffsetY);
-
-    size_t lastDimIndex = originalOffsets.size() - 1;
-    size_t secondLastDimIndex = lastDimIndex - 1;
+    assert(localOffset.size() == distUnitBaseAddr.size() &&
+           "localOffset and distUnitBaseAddr must have the same rank");
 
     // Convert originalOffsets to Value
     auto getValueFromOpFoldResult = [&](OpFoldResult ofr) -> Value {
@@ -111,18 +92,20 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
       llvm_unreachable("Unsupported OpFoldResult kind");
     };
 
-    Value origOffsetX =
-        getValueFromOpFoldResult(originalOffsets[secondLastDimIndex]);
-    Value origOffsetY = getValueFromOpFoldResult(originalOffsets[lastDimIndex]);
-    Value globalOffsetX =
-        rewriter.createOrFold<index::AddOp>(loc, origOffsetX, offsetX);
-    Value globalOffsetY =
-        rewriter.createOrFold<index::AddOp>(loc, origOffsetY, offsetY);
-
     SmallVector<OpFoldResult> globalOffsets(originalOffsets.begin(),
                                             originalOffsets.end());
-    globalOffsets[secondLastDimIndex] = globalOffsetX;
-    globalOffsets[lastDimIndex] = globalOffsetY;
+    size_t rank = localOffset.size();
+    for (size_t i = 0; i < rank; ++i) {
+      size_t dimIdx = originalOffsets.size() - rank + i;
+      Value constOffset =
+          rewriter.create<arith::ConstantIndexOp>(loc, distUnitBaseAddr[i]);
+      Value offset =
+          rewriter.createOrFold<index::AddOp>(loc, localOffset[i], constOffset);
+      Value origOffset = getValueFromOpFoldResult(originalOffsets[dimIdx]);
+      Value globalOffset =
+          rewriter.createOrFold<index::AddOp>(loc, origOffset, offset);
+      globalOffsets[dimIdx] = globalOffset;
+    }
 
     return globalOffsets;
   }
@@ -145,7 +128,8 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
 
     // TODO : Handle order attribute
     // Get the subgroup ID
-    auto linearSgId = rewriter.create<gpu::SubgroupIdOp>(loc, nullptr);
+    auto linearSgId =
+        rewriter.create<gpu::SubgroupIdOp>(loc, /*upper_bound=*/nullptr);
 
     // Create constants for layout dimensions
     SmallVector<Value> sgLayoutDim(sgLayout.size());
@@ -157,18 +141,18 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
       sgDataDim[i] = rewriter.create<arith::ConstantIndexOp>(loc, sgShape[i]);
     }
 
-    // Delinearize the 1D subgroup id into 2d
-    SmallVector<Value> sgIds = delinearizeSubgroupId(
-        rewriter, loc, linearSgId, sgLayoutDim[0], sgLayoutDim[1]);
+    auto deLinearizeSgId =
+        affine::delinearizeIndex(rewriter, loc, linearSgId, sgLayoutDim);
+    if (failed(deLinearizeSgId))
+      return failure();
+    SmallVector<Value> sgIds = *deLinearizeSgId;
 
     // Calculate distribution unit shape and local offsets for subgroup
     SmallVector<int64_t> distUnitShape(sgLayout.size());
     SmallVector<Value> localOffset(sgLayout.size());
     ArrayRef<int64_t> shape = tdescTy.getShape();
     for (size_t i = 0; i < sgLayout.size(); i++) {
-      distUnitShape[i] = sgLayout[i] * sgShape[i];
-      if (distUnitShape[i] > shape[i])
-        distUnitShape[i] = shape[i];
+      distUnitShape[i] = std::min(sgLayout[i] * sgShape[i], wgShape[i]);
       localOffset[i] =
           rewriter.createOrFold<index::MulOp>(loc, sgIds[i], sgDataDim[i]);
     }
@@ -271,9 +255,9 @@ struct WgToSgDpasOp : public OpConversionPattern<xegpu::DpasOp> {
     if (!originalLayout)
       return failure();
 
+    size_t i = 0;
     SmallVector<Value> newDpasOps;
     for (auto aVec : adaptor.getLhs()) {
-      size_t i = 0;
       for (auto bVec : adaptor.getRhs()) {
 
         llvm::SmallVector<Value> operands({aVec, bVec});
@@ -292,7 +276,7 @@ struct WgToSgDpasOp : public OpConversionPattern<xegpu::DpasOp> {
         tmpC = rewriter.create<xegpu::DpasOp>(
             loc, resTy, operands,
             llvm::ArrayRef<NamedAttribute>(
-                {"layout", originalLayout.dropSgLayoutAndData()}));
+                {"layout_result_0", originalLayout.dropSgLayoutAndData()}));
         newDpasOps.push_back(tmpC);
       }
     }
