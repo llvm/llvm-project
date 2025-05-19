@@ -1,5 +1,6 @@
 add_lldb_unittest(DAPTests
   DAPTest.cpp
+  FifoFilesTest.cpp
   Handler/DisconnectTest.cpp
   JSONUtilsTest.cpp
   LLDBUtilsTest.cpp
