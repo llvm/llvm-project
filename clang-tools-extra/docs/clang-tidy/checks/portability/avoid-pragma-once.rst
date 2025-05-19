@@ -13,7 +13,7 @@ some environments.
 Some older or specialized C/C++ compilers, particularly in embedded systems,
 may not fully support ``#pragma once``.
 
-It can also fail in certain file system configurations,like network drives
+It can also fail in certain file system configurations, like network drives
 or complex symbolic links, potentially leading to compilation issues.
 
 Consider the following header file:
@@ -29,7 +29,7 @@ The warning suggests using include guards:
 .. code:: c++
 
   // my_header.h
-  #ifndef PATH_TO_MY_HEADER_H
+  #ifndef PATH_TO_MY_HEADER_H // Good: use include guards.
   #define PATH_TO_MY_HEADER_H
 
   #endif // PATH_TO_MY_HEADER_H
