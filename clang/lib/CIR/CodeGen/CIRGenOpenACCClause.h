@@ -70,7 +70,7 @@ inline DataOperandInfo getDataOperandInfo(CIRGen::CIRGenFunction &cgf,
   // TODO: OpenACC: Cache was different enough as to need a separate
   // `ActOnCacheVar`, so we are going to need to do some investigations here
   // when it comes to implement this for cache.
-  if(dk != OpenACCDirectiveKind::Cache) {
+  if (dk != OpenACCDirectiveKind::Cache) {
     cgf.cgm.errorNYI(e->getSourceRange(),
                      "OpenACC data operand for 'cache' directive");
     return {cgf.cgm.getLoc(e->getBeginLoc()), {}, {}};
@@ -98,7 +98,7 @@ inline DataOperandInfo getDataOperandInfo(CIRGen::CIRGenFunction &cgf,
   // subscript, array section, member expr, or DRE to a var decl (or the former
   // 3 wrapping a var-decl), so we should be able to assume this is right.
   const auto *dre = cast<DeclRefExpr>(curVarExpr);
-  const auto *vd  = cast<VarDecl>(dre->getFoundDecl()->getCanonicalDecl());
+  const auto *vd = cast<VarDecl>(dre->getFoundDecl()->getCanonicalDecl());
   return {exprLoc, cgf.emitDeclRefLValue(dre).getPointer(), vd->getName()};
 }
 } //  namespace
