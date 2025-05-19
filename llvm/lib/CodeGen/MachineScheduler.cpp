@@ -2195,12 +2195,12 @@ void BaseMemOpClusterMutation::clusterNeighboringMemOps(
   // Add cluster group information.
   // Iterate over all of the equivalence sets.
   auto &AllClusters = DAG->getClusters();
-  for (auto &I : Clusters) {
+  for (const EquivalenceClasses<SUnit *>::ECValue *I : Clusters) {
     if (!I->isLeader())
       continue;
     ClusterInfo Group;
     unsigned ClusterIdx = AllClusters.size();
-    for (auto *MemberI : Clusters.members(*I)) {
+    for (SUnit *MemberI : Clusters.members(*I)) {
       MemberI->ParentClusterIdx = ClusterIdx;
       Group.insert(MemberI);
     }
@@ -4273,7 +4273,7 @@ void GenericScheduler::schedNode(SUnit *SU, bool IsTopNode) {
       dbgs() << "  Top Cluster: ";
       for (auto *N : *TopCluster)
         dbgs() << N->NodeNum << '\t';
-      dbgs() << "\n";
+      dbgs() << '\n';
     });
     Top.bumpNode(SU);
     if (SU->hasPhysRegUses)
@@ -4285,7 +4285,7 @@ void GenericScheduler::schedNode(SUnit *SU, bool IsTopNode) {
       dbgs() << "  Bot Cluster: ";
       for (auto *N : *BotCluster)
         dbgs() << N->NodeNum << '\t';
-      dbgs() << "\n";
+      dbgs() << '\n';
     });
     Bot.bumpNode(SU);
     if (SU->hasPhysRegDefs)
