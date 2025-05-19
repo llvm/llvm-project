@@ -398,7 +398,7 @@ private:
 
   pid_t m_pid;           // Process ID of child process
   cpu_type_t m_cpu_type; // The CPU type of this process
-  uint32_t m_platform;   // The platform of this process
+  std::optional<uint32_t> m_platform;   // The platform of this process
   int m_child_stdin;
   int m_child_stdout;
   int m_child_stderr;

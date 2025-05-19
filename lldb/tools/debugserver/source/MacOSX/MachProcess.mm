@@ -1039,9 +1039,9 @@ struct dyld_process_cache_info {
 };
 
 uint32_t MachProcess::GetPlatform() {
-  if (m_platform == 0)
+  if (!m_platform)
     m_platform = MachProcess::GetProcessPlatformViaDYLDSPI();
-  return m_platform;
+  return *m_platform;
 }
 
 uint32_t MachProcess::GetProcessPlatformViaDYLDSPI() {
@@ -1323,7 +1323,7 @@ void MachProcess::Clear(bool detaching) {
   // Clear any cached thread list while the pid and task are still valid
 
   m_task.Clear();
-  m_platform = 0;
+  m_platform.reset();
   // Now clear out all member variables
   m_pid = INVALID_NUB_PROCESS;
   if (!detaching)
@@ -1754,7 +1754,7 @@ bool MachProcess::Detach() {
 
   // NULL our task out as we have already restored all exception ports
   m_task.Clear();
-  m_platform = 0;
+  m_platform.reset();
 
   // Clear out any notion of the process we once were
   const bool detaching = true;
