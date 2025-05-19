@@ -27,12 +27,17 @@ def RequiresSMInterface: OpInterface<"RequiresSMInterface"> {
   ];
 }
 
-class NVVMRequiresSM<int minVersion, string isArchAccelerated = "false",
-                    string exactMatch = "false"> :
-  ParamNativeOpTrait<"NVVMRequiresSM",
-                    !cast<string>(minVersion) # "," # isArchAccelerated # ","
-                      # exactMatch>;
-                      
-class NVVMRequiresSMa<int version> : NVVMRequiresSM<version, "true", "true">;
+class NVVMRequiresSM<int minVersion> :
+  ParamNativeOpTrait<"NVVMRequiresSM", !cast<string>(minVersion)>;
+
+class StrJoin<string sep, list<string> str_list> {
+  string ret = !foldl("", str_list, a, b,
+               !if(!eq(a, ""), b, !if(!eq(b, ""), a, !strconcat(a, sep, b))));
+}
+
+class NVVMRequiresSMa<list<int> smVersions> :
+  ParamNativeOpTrait<"NVVMRequiresSMa",
+                      StrJoin<",", !foreach(vers, smVersions,
+                                            !cast<string>(vers))>.ret>;
 
 #endif //NVVM_REQUIRES_SM_TRAITS

@@ -2805,20 +2805,20 @@ def TestLinalgFillOp :
 // Test NVVM RequiresSM trait.
 //===----------------------------------------------------------------------===//
 
-def TestNVVMRequiresSMOp : TEST_Op<"nvvm_requires_sm_80",
-                                    [NVVMRequiresSM<80>]> {
+def TestNVVMRequiresSMOp :
+    TEST_Op<"nvvm_requires_sm_80", [NVVMRequiresSM<80>]> {
   let arguments = (ins );
   let assemblyFormat = "attr-dict";
 }
 
-def TestNVVMRequiresAtleastSMArchCondOp : 
-    TEST_Op<"nvvm_requires_sm_atleast_90_aa", [NVVMRequiresSM<90, "true">]> {
+def TestNVVMRequiresSMArchCondOp :
+    TEST_Op<"nvvm_requires_sm_90a", [NVVMRequiresSMa<[90]>]> {
   let arguments = (ins );
   let assemblyFormat = "attr-dict";
 }
 
-def TestNVVMRequiresExactSMArchCondOp : TEST_Op<"nvvm_requires_sm_90a",
-                                          [NVVMRequiresSMa<90>]> {
+def TestNVVMRequirestSMArchCondMultiOp : 
+    TEST_Op<"nvvm_requires_sm_90a_or_sm_100a", [NVVMRequiresSMa<[90, 100]>]> {
   let arguments = (ins );
   let assemblyFormat = "attr-dict";
 }
