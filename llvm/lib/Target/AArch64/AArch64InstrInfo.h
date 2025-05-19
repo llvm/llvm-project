@@ -726,6 +726,19 @@ static inline bool isIndirectBranchOpcode(int Opc) {
   return false;
 }
 
+static inline bool isIndirectCallOpcode(unsigned Opc) {
+  switch (Opc) {
+  case AArch64::BLR:
+  case AArch64::BLRAA:
+  case AArch64::BLRAB:
+  case AArch64::BLRAAZ:
+  case AArch64::BLRABZ:
+    return true;
+  default:
+    return false;
+  }
+}
+
 static inline bool isPTrueOpcode(unsigned Opc) {
   switch (Opc) {
   case AArch64::PTRUE_B:

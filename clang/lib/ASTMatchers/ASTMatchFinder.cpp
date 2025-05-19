@@ -584,7 +584,8 @@ public:
 
         if (LE->hasExplicitResultType())
           TraverseTypeLoc(Proto.getReturnLoc());
-        TraverseStmt(LE->getTrailingRequiresClause());
+        TraverseStmt(
+            const_cast<Expr *>(LE->getTrailingRequiresClause().ConstraintExpr));
       }
 
       TraverseStmt(LE->getBody());

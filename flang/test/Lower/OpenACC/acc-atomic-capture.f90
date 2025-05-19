@@ -6,9 +6,9 @@ program acc_atomic_capture_test
     integer :: x, y
 
 !CHECK: %[[X:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFEx"}
-!CHECK: %[[X_DECL:.*]]:2 = hlfir.declare %0 {uniq_name = "_QFEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: %[[X_DECL:.*]]:2 = hlfir.declare %[[X]] {uniq_name = "_QFEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[Y:.*]] = fir.alloca i32 {bindc_name = "y", uniq_name = "_QFEy"}
-!CHECK: %[[Y_DECL:.*]]:2 = hlfir.declare %2 {uniq_name = "_QFEy"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: %[[Y_DECL:.*]]:2 = hlfir.declare %[[Y]] {uniq_name = "_QFEy"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[temp:.*]] = fir.load %[[X_DECL]]#0 : !fir.ref<i32>
 !CHECK: acc.atomic.capture {
 !CHECK: acc.atomic.read %[[X_DECL]]#0 = %[[Y_DECL]]#0 : !fir.ref<i32>, !fir.ref<i32>, i32
@@ -306,3 +306,60 @@ end subroutine comp_ref_in_atomic_capture2
 ! CHECK:             }
 ! CHECK:             acc.atomic.read %[[V_DECL]]#0 = %[[C]] : !fir.ref<i32>, !fir.ref<i32>, i32
 ! CHECK:           }
+
+! CHECK-LABEL:   func.func @_QPatomic_capture_with_associate() {
+subroutine atomic_capture_with_associate
+  interface
+     integer function func(x)
+       integer :: x
+     end function func
+  end interface
+! CHECK:           %[[X_DECL:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFatomic_capture_with_associateEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[Y_DECL:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFatomic_capture_with_associateEy"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[Z_DECL:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFatomic_capture_with_associateEz"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  integer :: x, y, z
+
+! CHECK:           %[[VAL_10:.*]]:3 = hlfir.associate %{{.*}} {adapt.valuebyref} : (i32) -> (!fir.ref<i32>, !fir.ref<i32>, i1)
+! CHECK:           %[[VAL_11:.*]] = fir.call @_QPfunc(%[[VAL_10]]#0) fastmath<contract> : (!fir.ref<i32>) -> i32
+! CHECK:           acc.atomic.capture {
+! CHECK:             acc.atomic.read %[[X_DECL]]#0 = %[[Y_DECL]]#0 : !fir.ref<i32>, !fir.ref<i32>, i32
+! CHECK:             acc.atomic.write %[[Y_DECL]]#0 = %[[VAL_11]] : !fir.ref<i32>, i32
+! CHECK:           }
+! CHECK:           hlfir.end_associate %[[VAL_10]]#1, %[[VAL_10]]#2 : !fir.ref<i32>, i1
+  !$acc atomic capture
+  x = y
+  y = func(z + 1)
+  !$acc end atomic
+
+! CHECK:           %[[VAL_15:.*]]:3 = hlfir.associate %{{.*}} {adapt.valuebyref} : (i32) -> (!fir.ref<i32>, !fir.ref<i32>, i1)
+! CHECK:           %[[VAL_16:.*]] = fir.call @_QPfunc(%[[VAL_15]]#0) fastmath<contract> : (!fir.ref<i32>) -> i32
+! CHECK:           acc.atomic.capture {
+! CHECK:             acc.atomic.update %[[Y_DECL]]#0 : !fir.ref<i32> {
+! CHECK:             ^bb0(%[[VAL_17:.*]]: i32):
+! CHECK:               %[[VAL_18:.*]] = arith.muli %[[VAL_16]], %[[VAL_17]] : i32
+! CHECK:               acc.yield %[[VAL_18]] : i32
+! CHECK:             }
+! CHECK:             acc.atomic.read %[[X_DECL]]#0 = %[[Y_DECL]]#0 : !fir.ref<i32>, !fir.ref<i32>, i32
+! CHECK:           }
+! CHECK:           hlfir.end_associate %[[VAL_15]]#1, %[[VAL_15]]#2 : !fir.ref<i32>, i1
+  !$acc atomic capture
+  y = func(z + 1) * y
+  x = y
+  !$acc end atomic
+
+! CHECK:           %[[VAL_22:.*]]:3 = hlfir.associate %{{.*}} {adapt.valuebyref} : (i32) -> (!fir.ref<i32>, !fir.ref<i32>, i1)
+! CHECK:           %[[VAL_23:.*]] = fir.call @_QPfunc(%[[VAL_22]]#0) fastmath<contract> : (!fir.ref<i32>) -> i32
+! CHECK:           acc.atomic.capture {
+! CHECK:             acc.atomic.read %[[X_DECL]]#0 = %[[Y_DECL]]#0 : !fir.ref<i32>, !fir.ref<i32>, i32
+! CHECK:             acc.atomic.update %[[Y_DECL]]#0 : !fir.ref<i32> {
+! CHECK:             ^bb0(%[[VAL_24:.*]]: i32):
+! CHECK:               %[[VAL_25:.*]] = arith.addi %[[VAL_23]], %[[VAL_24]] : i32
+! CHECK:               acc.yield %[[VAL_25]] : i32
+! CHECK:             }
+! CHECK:           }
+! CHECK:           hlfir.end_associate %[[VAL_22]]#1, %[[VAL_22]]#2 : !fir.ref<i32>, i1
+  !$acc atomic capture
+  x = y
+  y = func(z + 1) + y
+  !$acc end atomic
+end subroutine atomic_capture_with_associate

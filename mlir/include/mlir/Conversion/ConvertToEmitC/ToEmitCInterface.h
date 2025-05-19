@@ -26,12 +26,6 @@ class ConvertToEmitCPatternInterface
 public:
   ConvertToEmitCPatternInterface(Dialect *dialect) : Base(dialect) {}
 
-  /// Hook for derived dialect interface to load the dialects they
-  /// target. The EmitC dialect is implicitly already loaded, but this
-  /// method allows to load other intermediate dialects used in the
-  /// conversion.
-  virtual void loadDependentDialects(MLIRContext *context) const {}
-
   /// Hook for derived dialect interface to provide conversion patterns
   /// and mark dialect legal for the conversion target.
   virtual void populateConvertToEmitCConversionPatterns(

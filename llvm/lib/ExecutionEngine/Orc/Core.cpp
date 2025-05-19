@@ -127,8 +127,7 @@ void UnsatisfiedSymbolDependencies::log(raw_ostream &OS) const {
 SymbolsNotFound::SymbolsNotFound(std::shared_ptr<SymbolStringPool> SSP,
                                  SymbolNameSet Symbols)
     : SSP(std::move(SSP)) {
-  for (auto &Sym : Symbols)
-    this->Symbols.push_back(Sym);
+  llvm::append_range(this->Symbols, Symbols);
   assert(!this->Symbols.empty() && "Can not fail to resolve an empty set");
 }
 
@@ -1143,8 +1142,9 @@ void JITDylib::dump(raw_ostream &OS) {
     std::vector<std::pair<SymbolStringPtr, SymbolTableEntry *>> SymbolsSorted;
     for (auto &KV : Symbols)
       SymbolsSorted.emplace_back(KV.first, &KV.second);
-    std::sort(SymbolsSorted.begin(), SymbolsSorted.end(),
-              [](const auto &L, const auto &R) { return *L.first < *R.first; });
+    llvm::sort(SymbolsSorted, [](const auto &L, const auto &R) {
+      return *L.first < *R.first;
+    });
 
     for (auto &KV : SymbolsSorted) {
       OS << "    \"" << *KV.first << "\": ";
@@ -2387,8 +2387,8 @@ void ExecutionSession::OL_applyQueryPhase1(
       // Build the definition generator stack for this JITDylib.
       runSessionLocked([&] {
         IPLS->CurDefGeneratorStack.reserve(JD.DefGenerators.size());
-        for (auto &DG : reverse(JD.DefGenerators))
-          IPLS->CurDefGeneratorStack.push_back(DG);
+        llvm::append_range(IPLS->CurDefGeneratorStack,
+                           reverse(JD.DefGenerators));
       });
 
       // Flag that we've done our initialization.

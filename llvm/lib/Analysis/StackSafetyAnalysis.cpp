@@ -1048,9 +1048,7 @@ PreservedAnalyses StackSafetyPrinterPass::run(Function &F,
 
 char StackSafetyInfoWrapperPass::ID = 0;
 
-StackSafetyInfoWrapperPass::StackSafetyInfoWrapperPass() : FunctionPass(ID) {
-  initializeStackSafetyInfoWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+StackSafetyInfoWrapperPass::StackSafetyInfoWrapperPass() : FunctionPass(ID) {}
 
 void StackSafetyInfoWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequiredTransitive<ScalarEvolutionWrapperPass>();
@@ -1091,10 +1089,7 @@ PreservedAnalyses StackSafetyGlobalPrinterPass::run(Module &M,
 char StackSafetyGlobalInfoWrapperPass::ID = 0;
 
 StackSafetyGlobalInfoWrapperPass::StackSafetyGlobalInfoWrapperPass()
-    : ModulePass(ID) {
-  initializeStackSafetyGlobalInfoWrapperPassPass(
-      *PassRegistry::getPassRegistry());
-}
+    : ModulePass(ID) {}
 
 StackSafetyGlobalInfoWrapperPass::~StackSafetyGlobalInfoWrapperPass() = default;
 

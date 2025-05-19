@@ -97,7 +97,8 @@ public:
   HardClauseType getHardClauseType(const MachineInstr &MI) {
     if (MI.mayLoad() || (MI.mayStore() && ST->shouldClusterStores())) {
       if (ST->getGeneration() == AMDGPUSubtarget::GFX10) {
-        if (SIInstrInfo::isVMEM(MI) || SIInstrInfo::isSegmentSpecificFLAT(MI)) {
+        if ((SIInstrInfo::isVMEM(MI) && !SIInstrInfo::isFLAT(MI)) ||
+            SIInstrInfo::isSegmentSpecificFLAT(MI)) {
           if (ST->hasNSAClauseBug()) {
             const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(MI.getOpcode());
             if (Info && Info->MIMGEncoding == AMDGPU::MIMGEncGfx10NSA)
@@ -121,7 +122,8 @@ public:
                                               : HARDCLAUSE_MIMG_LOAD
                               : HARDCLAUSE_MIMG_STORE;
         }
-        if (SIInstrInfo::isVMEM(MI) || SIInstrInfo::isSegmentSpecificFLAT(MI)) {
+        if ((SIInstrInfo::isVMEM(MI) && !SIInstrInfo::isFLAT(MI)) ||
+            SIInstrInfo::isSegmentSpecificFLAT(MI)) {
           return MI.mayLoad() ? MI.mayStore() ? HARDCLAUSE_VMEM_ATOMIC
                                               : HARDCLAUSE_VMEM_LOAD
                               : HARDCLAUSE_VMEM_STORE;
@@ -199,7 +201,7 @@ public:
 
         int64_t Dummy1;
         bool Dummy2;
-        LocationSize Dummy3 = 0;
+        LocationSize Dummy3 = LocationSize::precise(0);
         SmallVector<const MachineOperand *, 4> BaseOps;
         if (Type <= LAST_REAL_HARDCLAUSE_TYPE) {
           if (!SII->getMemOperandsWithOffsetWidth(MI, BaseOps, Dummy1, Dummy2,

@@ -10,6 +10,7 @@
 
 #include "clang/Serialization/InMemoryModuleCache.h"
 #include "llvm/Support/AdvisoryLock.h"
+#include "llvm/Support/Chrono.h"
 
 #include <mutex>
 
@@ -50,7 +51,7 @@ public:
 };
 
 class InProcessModuleCache : public ModuleCache {
-  ModuleCacheMutexes &Mutexes;
+  ModuleCacheEntries &Entries;
 
   // TODO: If we changed the InMemoryModuleCache API and relied on strict
   // context hash, we could probably create more efficient thread-safe
@@ -59,19 +60,44 @@ class InProcessModuleCache : public ModuleCache {
   InMemoryModuleCache InMemory;
 
 public:
-  InProcessModuleCache(ModuleCacheMutexes &Mutexes) : Mutexes(Mutexes) {}
+  InProcessModuleCache(ModuleCacheEntries &Entries) : Entries(Entries) {}
 
   void prepareForGetLock(StringRef Filename) override {}
 
   std::unique_ptr<llvm::AdvisoryLock> getLock(StringRef Filename) override {
-    auto &Mtx = [&]() -> std::shared_mutex & {
-      std::lock_guard<std::mutex> Lock(Mutexes.Mutex);
-      auto &Mutex = Mutexes.Map[Filename];
-      if (!Mutex)
-        Mutex = std::make_unique<std::shared_mutex>();
-      return *Mutex;
+    auto &CompilationMutex = [&]() -> std::shared_mutex & {
+      std::lock_guard<std::mutex> Lock(Entries.Mutex);
+      auto &Entry = Entries.Map[Filename];
+      if (!Entry)
+        Entry = std::make_unique<ModuleCacheEntry>();
+      return Entry->CompilationMutex;
     }();
-    return std::make_unique<ReaderWriterLock>(Mtx);
+    return std::make_unique<ReaderWriterLock>(CompilationMutex);
+  }
+
+  std::time_t getModuleTimestamp(StringRef Filename) override {
+    auto &Timestamp = [&]() -> std::atomic<std::time_t> & {
+      std::lock_guard<std::mutex> Lock(Entries.Mutex);
+      auto &Entry = Entries.Map[Filename];
+      if (!Entry)
+        Entry = std::make_unique<ModuleCacheEntry>();
+      return Entry->Timestamp;
+    }();
+
+    return Timestamp.load();
+  }
+
+  void updateModuleTimestamp(StringRef Filename) override {
+    // Note: This essentially replaces FS contention with mutex contention.
+    auto &Timestamp = [&]() -> std::atomic<std::time_t> & {
+      std::lock_guard<std::mutex> Lock(Entries.Mutex);
+      auto &Entry = Entries.Map[Filename];
+      if (!Entry)
+        Entry = std::make_unique<ModuleCacheEntry>();
+      return Entry->Timestamp;
+    }();
+
+    Timestamp.store(llvm::sys::toTimeT(std::chrono::system_clock::now()));
   }
 
   InMemoryModuleCache &getInMemoryModuleCache() override { return InMemory; }
@@ -82,6 +108,6 @@ public:
 } // namespace
 
 IntrusiveRefCntPtr<ModuleCache>
-dependencies::makeInProcessModuleCache(ModuleCacheMutexes &Mutexes) {
-  return llvm::makeIntrusiveRefCnt<InProcessModuleCache>(Mutexes);
+dependencies::makeInProcessModuleCache(ModuleCacheEntries &Entries) {
+  return llvm::makeIntrusiveRefCnt<InProcessModuleCache>(Entries);
 }

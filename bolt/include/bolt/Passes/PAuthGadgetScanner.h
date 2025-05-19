@@ -43,9 +43,7 @@ struct MCInstInBBReference {
     return BB == RHS.BB && BBIndex == RHS.BBIndex;
   }
   bool operator<(const MCInstInBBReference &RHS) const {
-    if (BB != RHS.BB)
-      return BB < RHS.BB;
-    return BBIndex < RHS.BBIndex;
+    return std::tie(BB, BBIndex) < std::tie(RHS.BB, RHS.BBIndex);
   }
   operator MCInst &() const {
     assert(BB != nullptr);
@@ -175,8 +173,8 @@ raw_ostream &operator<<(raw_ostream &OS, const MCInstReference &);
 
 namespace PAuthGadgetScanner {
 
-class PacRetAnalysis;
-struct State;
+class SrcSafetyAnalysis;
+struct SrcState;
 
 /// Description of a gadget kind that can be detected. Intended to be
 /// statically allocated to be attached to reports by reference.
@@ -248,6 +246,9 @@ struct FunctionAnalysisResult {
 };
 
 class Analysis : public BinaryFunctionPass {
+  /// Only search for pac-ret violations.
+  bool PacRetGadgetsOnly;
+
   void runOnFunction(BinaryFunction &Function,
                      MCPlusBuilder::AllocatorIdTy AllocatorId);
   FunctionAnalysisResult findGadgets(BinaryFunction &BF,
@@ -261,7 +262,8 @@ class Analysis : public BinaryFunctionPass {
   std::mutex AnalysisResultsMutex;
 
 public:
-  explicit Analysis() : BinaryFunctionPass(false) {}
+  explicit Analysis(bool PacRetGadgetsOnly)
+      : BinaryFunctionPass(false), PacRetGadgetsOnly(PacRetGadgetsOnly) {}
 
   const char *getName() const override { return "pauth-gadget-scanner"; }
 

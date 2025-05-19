@@ -300,9 +300,7 @@ PreservedAnalyses CallGraphSCCsPrinterPass::run(Module &M,
 // Implementations of the CallGraphWrapperPass class methods.
 //
 
-CallGraphWrapperPass::CallGraphWrapperPass() : ModulePass(ID) {
-  initializeCallGraphWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+CallGraphWrapperPass::CallGraphWrapperPass() : ModulePass(ID) {}
 
 CallGraphWrapperPass::~CallGraphWrapperPass() = default;
 

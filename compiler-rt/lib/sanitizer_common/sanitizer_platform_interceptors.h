@@ -244,7 +244,8 @@ SANITIZER_WEAK_IMPORT void *aligned_alloc(__sanitizer::usize __alignment,
   (SANITIZER_INTERCEPT_PRINTF && SI_GLIBC)
 
 #define SANITIZER_INTERCEPT_FREXP SI_NOT_FUCHSIA
-#define SANITIZER_INTERCEPT_FREXPF_FREXPL SI_POSIX
+#define SANITIZER_INTERCEPT_FREXPF SI_POSIX
+#define SANITIZER_INTERCEPT_FREXPL SI_POSIX
 
 #define SANITIZER_INTERCEPT_GETPWNAM_AND_FRIENDS SI_POSIX
 #define SANITIZER_INTERCEPT_GETPWNAM_R_AND_FRIENDS \
@@ -645,6 +646,10 @@ SANITIZER_WEAK_IMPORT void *aligned_alloc(__sanitizer::usize __alignment,
 #  define SI_MAC_OS_DEPLOYMENT_MIN_13_00 0
 #endif
 #define SANITIZER_INTERCEPT_FREADLINK (SI_MAC && SI_MAC_OS_DEPLOYMENT_MIN_13_00)
+#define SANITIZER_INTERCEPT_GETSERVENT_R SI_GLIBC
+#define SANITIZER_INTERCEPT_GETSERVBYNAME_R SI_GLIBC
+#define SANITIZER_INTERCEPT_GETSERVBYPORT_R SI_GLIBC
+
 // This macro gives a way for downstream users to override the above
 // interceptor macros irrespective of the platform they are on. They have
 // to do two things:

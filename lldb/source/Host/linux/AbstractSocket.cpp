@@ -15,6 +15,9 @@ using namespace lldb_private;
 
 AbstractSocket::AbstractSocket() : DomainSocket(ProtocolUnixAbstract) {}
 
+AbstractSocket::AbstractSocket(NativeSocket socket, bool should_close)
+    : DomainSocket(ProtocolUnixAbstract, socket, should_close) {}
+
 size_t AbstractSocket::GetNameOffset() const { return 1; }
 
 void AbstractSocket::DeleteSocketFile(llvm::StringRef name) {}

@@ -11,6 +11,7 @@
 #include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/Complex.h"
 #include "flang/Optimizer/Builder/MutableBox.h"
+#include "flang/Optimizer/Builder/Runtime/Allocatable.h"
 #include "flang/Optimizer/Builder/Runtime/Assign.h"
 #include "flang/Optimizer/Builder/Runtime/Derived.h"
 #include "flang/Optimizer/Builder/Todo.h"
@@ -104,9 +105,9 @@ fir::FirOpBuilder::getNamedGlobal(mlir::ModuleOp modOp,
   return modOp.lookupSymbol<fir::GlobalOp>(name);
 }
 
-mlir::Type fir::FirOpBuilder::getRefType(mlir::Type eleTy) {
+mlir::Type fir::FirOpBuilder::getRefType(mlir::Type eleTy, bool isVolatile) {
   assert(!mlir::isa<fir::ReferenceType>(eleTy) && "cannot be a reference type");
-  return fir::ReferenceType::get(eleTy);
+  return fir::ReferenceType::get(eleTy, isVolatile);
 }
 
 mlir::Type fir::FirOpBuilder::getVarLenSeqTy(mlir::Type eleTy, unsigned rank) {
@@ -279,6 +280,9 @@ mlir::Block *fir::FirOpBuilder::getAllocaBlock() {
   if (auto cufKernelOp = getRegion().getParentOfType<cuf::KernelOp>())
     return &cufKernelOp.getRegion().front();
 
+  if (auto doConcurentOp = getRegion().getParentOfType<fir::DoConcurrentOp>())
+    return doConcurentOp.getBody();
+
   return getEntryBlock();
 }
 
@@ -360,6 +364,72 @@ mlir::Value fir::FirOpBuilder::createHeapTemporary(
   assert(!mlir::isa<fir::ReferenceType>(type) && "cannot be a reference");
   return create<fir::AllocMemOp>(loc, type, /*unique_name=*/llvm::StringRef{},
                                  name, dynamicLength, dynamicShape, attrs);
+}
+
+std::pair<mlir::Value, bool> fir::FirOpBuilder::createArrayTemp(
+    mlir::Location loc, fir::SequenceType arrayType, mlir::Value shape,
+    llvm::ArrayRef<mlir::Value> extents, llvm::ArrayRef<mlir::Value> typeParams,
+    const std::function<decltype(FirOpBuilder::genTempDeclareOp)> &genDeclare,
+    mlir::Value polymorphicMold, bool useStack, llvm::StringRef tmpName) {
+  if (polymorphicMold) {
+    // Create *allocated* polymorphic temporary using the dynamic type
+    // of the mold and the provided shape/extents. The created temporary
+    // array will be written element per element, that is why it has to be
+    // allocated.
+    mlir::Type boxHeapType = fir::HeapType::get(arrayType);
+    mlir::Value alloc = fir::factory::genNullBoxStorage(
+        *this, loc, fir::ClassType::get(boxHeapType));
+    fir::FortranVariableFlagsAttr declAttrs =
+        fir::FortranVariableFlagsAttr::get(
+            getContext(), fir::FortranVariableFlagsEnum::allocatable);
+
+    mlir::Value base = genDeclare(*this, loc, alloc, tmpName,
+                                  /*shape=*/nullptr, typeParams, declAttrs);
+
+    int rank = extents.size();
+    fir::runtime::genAllocatableApplyMold(*this, loc, alloc, polymorphicMold,
+                                          rank);
+    if (!extents.empty()) {
+      mlir::Type idxTy = getIndexType();
+      mlir::Value one = createIntegerConstant(loc, idxTy, 1);
+      unsigned dim = 0;
+      for (mlir::Value extent : extents) {
+        mlir::Value dimIndex = createIntegerConstant(loc, idxTy, dim++);
+        fir::runtime::genAllocatableSetBounds(*this, loc, alloc, dimIndex, one,
+                                              extent);
+      }
+    }
+    if (!typeParams.empty()) {
+      // We should call AllocatableSetDerivedLength() here.
+      // TODO: does the mold provide the length parameters or
+      // the operation itself or should they be in sync?
+      TODO(loc, "polymorphic type with length parameters");
+    }
+    fir::runtime::genAllocatableAllocate(*this, loc, alloc);
+
+    return {base, /*isHeapAllocation=*/true};
+  }
+  mlir::Value allocmem;
+  if (useStack)
+    allocmem = createTemporary(loc, arrayType, tmpName, extents, typeParams);
+  else
+    allocmem =
+        createHeapTemporary(loc, arrayType, tmpName, extents, typeParams);
+  mlir::Value base = genDeclare(*this, loc, allocmem, tmpName, shape,
+                                typeParams, fir::FortranVariableFlagsAttr{});
+  return {base, !useStack};
+}
+
+mlir::Value fir::FirOpBuilder::genTempDeclareOp(
+    fir::FirOpBuilder &builder, mlir::Location loc, mlir::Value memref,
+    llvm::StringRef name, mlir::Value shape,
+    llvm::ArrayRef<mlir::Value> typeParams,
+    fir::FortranVariableFlagsAttr fortranAttrs) {
+  auto nameAttr = mlir::StringAttr::get(builder.getContext(), name);
+  return builder.create<fir::DeclareOp>(loc, memref.getType(), memref, shape,
+                                        typeParams,
+                                        /*dummy_scope=*/nullptr, nameAttr,
+                                        fortranAttrs, cuf::DataAttributeAttr{});
 }
 
 mlir::Value fir::FirOpBuilder::genStackSave(mlir::Location loc) {
@@ -510,6 +580,23 @@ mlir::Value fir::FirOpBuilder::convertWithSemantics(
   return createConvert(loc, toTy, val);
 }
 
+mlir::Value fir::FirOpBuilder::createVolatileCast(mlir::Location loc,
+                                                  bool isVolatile,
+                                                  mlir::Value val) {
+  mlir::Type volatileAdjustedType =
+      fir::updateTypeWithVolatility(val.getType(), isVolatile);
+  if (volatileAdjustedType == val.getType())
+    return val;
+  return create<fir::VolatileCastOp>(loc, volatileAdjustedType, val);
+}
+
+mlir::Value fir::FirOpBuilder::createConvertWithVolatileCast(mlir::Location loc,
+                                                             mlir::Type toTy,
+                                                             mlir::Value val) {
+  val = createVolatileCast(loc, fir::isa_volatile_type(toTy), val);
+  return createConvert(loc, toTy, val);
+}
+
 mlir::Value fir::factory::createConvert(mlir::OpBuilder &builder,
                                         mlir::Location loc, mlir::Type toTy,
                                         mlir::Value val) {
@@ -531,8 +618,9 @@ mlir::Value fir::FirOpBuilder::createConvert(mlir::Location loc,
 void fir::FirOpBuilder::createStoreWithConvert(mlir::Location loc,
                                                mlir::Value val,
                                                mlir::Value addr) {
-  mlir::Value cast =
-      createConvert(loc, fir::unwrapRefType(addr.getType()), val);
+  mlir::Type unwrapedRefType = fir::unwrapRefType(addr.getType());
+  val = createVolatileCast(loc, fir::isa_volatile_type(unwrapedRefType), val);
+  mlir::Value cast = createConvert(loc, unwrapedRefType, val);
   create<fir::StoreOp>(loc, cast, addr);
 }
 
@@ -672,19 +760,20 @@ mlir::Value fir::FirOpBuilder::createBox(mlir::Location loc,
         << itemAddr.getType();
     llvm_unreachable("not a memory reference type");
   }
+  const bool isVolatile = fir::isa_volatile_type(itemAddr.getType());
   mlir::Type boxTy;
   mlir::Value tdesc;
   // Avoid to wrap a box/class with box/class.
   if (mlir::isa<fir::BaseBoxType>(elementType)) {
     boxTy = elementType;
   } else {
-    boxTy = fir::BoxType::get(elementType);
+    boxTy = fir::BoxType::get(elementType, isVolatile);
     if (isPolymorphic) {
       elementType = fir::updateTypeForUnlimitedPolymorphic(elementType);
       if (isAssumedType)
-        boxTy = fir::BoxType::get(elementType);
+        boxTy = fir::BoxType::get(elementType, isVolatile);
       else
-        boxTy = fir::ClassType::get(elementType);
+        boxTy = fir::ClassType::get(elementType, isVolatile);
     }
   }
 
@@ -1824,4 +1913,30 @@ llvm::SmallVector<mlir::Value> fir::factory::updateRuntimeExtentsForEmptyArrays(
         builder.create<mlir::arith::SelectOp>(loc, isEmpty, zero, extent));
   }
   return newExtents;
+}
+
+void fir::factory::genDimInfoFromBox(
+    fir::FirOpBuilder &builder, mlir::Location loc, mlir::Value box,
+    llvm::SmallVectorImpl<mlir::Value> *lbounds,
+    llvm::SmallVectorImpl<mlir::Value> *extents,
+    llvm::SmallVectorImpl<mlir::Value> *strides) {
+  auto boxType = mlir::dyn_cast<fir::BaseBoxType>(box.getType());
+  assert(boxType && "must be a box");
+  if (!lbounds && !extents && !strides)
+    return;
+
+  unsigned rank = fir::getBoxRank(boxType);
+  assert(rank != 0 && "must be an array of known rank");
+  mlir::Type idxTy = builder.getIndexType();
+  for (unsigned i = 0; i < rank; ++i) {
+    mlir::Value dim = builder.createIntegerConstant(loc, idxTy, i);
+    auto dimInfo =
+        builder.create<fir::BoxDimsOp>(loc, idxTy, idxTy, idxTy, box, dim);
+    if (lbounds)
+      lbounds->push_back(dimInfo.getLowerBound());
+    if (extents)
+      extents->push_back(dimInfo.getExtent());
+    if (strides)
+      strides->push_back(dimInfo.getByteStride());
+  }
 }

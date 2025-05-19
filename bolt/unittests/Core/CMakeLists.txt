@@ -19,6 +19,7 @@ target_link_libraries(CoreTests
   LLVMBOLTCore
   LLVMBOLTRewrite
   LLVMBOLTProfile
+  LLVMBOLTUtils
   LLVMTestingSupport
   )
 

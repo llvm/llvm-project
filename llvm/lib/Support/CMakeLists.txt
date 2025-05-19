@@ -112,7 +112,7 @@ if(LLVM_INTEGRATED_CRT_ALLOC)
   if((LLVM_INTEGRATED_CRT_ALLOC MATCHES "rpmalloc$") OR LLVM_ENABLE_RPMALLOC)
     add_compile_definitions(ENABLE_OVERRIDE ENABLE_PRELOAD)
     set(ALLOCATOR_FILES "${LLVM_INTEGRATED_CRT_ALLOC}/rpmalloc/rpmalloc.c")
-    set(delayload_flags "${delayload_flags} ${WL}-INCLUDE:malloc")
+    list(APPEND delayload_flags "${WL}-INCLUDE:malloc")
   elseif(LLVM_INTEGRATED_CRT_ALLOC MATCHES "snmalloc$")
     set(ALLOCATOR_FILES "${LLVM_INTEGRATED_CRT_ALLOC}/src/snmalloc/override/new.cc")
     set(system_libs ${system_libs} "mincore.lib" "${WL}-INCLUDE:malloc")
@@ -207,6 +207,7 @@ add_llvm_component_library(LLVMSupport
   IntervalMap.cpp
   JSON.cpp
   KnownBits.cpp
+  KnownFPClass.cpp
   LEB128.cpp
   LineIterator.cpp
   Locale.cpp
@@ -220,7 +221,7 @@ add_llvm_component_library(LLVMSupport
   MD5.cpp
   MSP430Attributes.cpp
   MSP430AttributeParser.cpp
-  Mustache.cpp      
+  Mustache.cpp
   NativeFormatting.cpp
   OptimizedStructLayout.cpp
   Optional.cpp
@@ -294,6 +295,7 @@ add_llvm_component_library(LLVMSupport
   Path.cpp
   Process.cpp
   Program.cpp
+  ProgramStack.cpp
   RWMutex.cpp
   Signals.cpp
   Threading.cpp

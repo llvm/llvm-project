@@ -689,6 +689,13 @@ TEST_F(FormatTestCSharp, CSharpNewOperator) {
                Style);
 }
 
+TEST_F(FormatTestCSharp, NewModifier) {
+  verifyFormat("public new class NestedC {\n"
+               "  public int x = 100;\n"
+               "}",
+               getLLVMStyle(FormatStyle::LK_CSharp));
+}
+
 TEST_F(FormatTestCSharp, CSharpLambdas) {
   FormatStyle GoogleStyle = getGoogleStyle(FormatStyle::LK_CSharp);
   FormatStyle MicrosoftStyle = getMicrosoftStyle(FormatStyle::LK_CSharp);
@@ -1312,6 +1319,12 @@ TEST_F(FormatTestCSharp, CSharpGenericTypeConstraints) {
 
   verifyFormat("class ItemFactory<T>\n"
                "    where T : new() {\n"
+               "}",
+               Style);
+
+  verifyFormat("namespace A {\n"
+               "  delegate T MyDelegate<T>()\n"
+               "      where T : new();\n"
                "}",
                Style);
 

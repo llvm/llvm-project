@@ -558,7 +558,7 @@ class MetadataLoader::MetadataLoaderImpl {
           SetVector<Metadata *> EntitiesToRemove;
           for (Metadata *Op : CU->getImportedEntities()->operands()) {
             auto *IE = cast<DIImportedEntity>(Op);
-            if (dyn_cast_or_null<DILocalScope>(IE->getScope())) {
+            if (isa_and_nonnull<DILocalScope>(IE->getScope())) {
               EntitiesToRemove.insert(IE);
             }
           }
@@ -1538,6 +1538,39 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
         GET_OR_DISTINCT(DIBasicType,
                         (Context, Record[1], getMDString(Record[2]), Record[3],
                          Record[4], Record[5], NumExtraInhabitants, Flags)),
+        NextMetadataNo);
+    NextMetadataNo++;
+    break;
+  }
+  case bitc::METADATA_FIXED_POINT_TYPE: {
+    if (Record.size() < 11)
+      return error("Invalid record");
+
+    IsDistinct = Record[0];
+    DINode::DIFlags Flags = static_cast<DINode::DIFlags>(Record[6]);
+
+    size_t Offset = 9;
+
+    auto ReadWideInt = [&]() {
+      uint64_t Encoded = Record[Offset++];
+      unsigned NumWords = Encoded >> 32;
+      unsigned BitWidth = Encoded & 0xffffffff;
+      auto Value = readWideAPInt(ArrayRef(&Record[Offset], NumWords), BitWidth);
+      Offset += NumWords;
+      return Value;
+    };
+
+    APInt Numerator = ReadWideInt();
+    APInt Denominator = ReadWideInt();
+
+    if (Offset != Record.size())
+      return error("Invalid record");
+
+    MetadataList.assignValue(
+        GET_OR_DISTINCT(DIFixedPointType,
+                        (Context, Record[1], getMDString(Record[2]), Record[3],
+                         Record[4], Record[5], Flags, Record[7], Record[8],
+                         Numerator, Denominator)),
         NextMetadataNo);
     NextMetadataNo++;
     break;

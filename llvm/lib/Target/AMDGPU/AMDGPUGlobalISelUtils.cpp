@@ -10,7 +10,7 @@
 #include "AMDGPURegisterBankInfo.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
+#include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
@@ -24,7 +24,8 @@ using namespace MIPatternMatch;
 
 std::pair<Register, unsigned>
 AMDGPU::getBaseWithConstantOffset(MachineRegisterInfo &MRI, Register Reg,
-                                  GISelKnownBits *KnownBits, bool CheckNUW) {
+                                  GISelValueTracking *ValueTracking,
+                                  bool CheckNUW) {
   MachineInstr *Def = getDefIgnoringCopies(Reg, MRI);
   if (Def->getOpcode() == TargetOpcode::G_CONSTANT) {
     unsigned Offset;
@@ -55,8 +56,9 @@ AMDGPU::getBaseWithConstantOffset(MachineRegisterInfo &MRI, Register Reg,
   }
 
   Register Base;
-  if (KnownBits && mi_match(Reg, MRI, m_GOr(m_Reg(Base), m_ICst(Offset))) &&
-      KnownBits->maskedValueIsZero(Base, APInt(32, Offset, /*isSigned=*/true)))
+  if (ValueTracking && mi_match(Reg, MRI, m_GOr(m_Reg(Base), m_ICst(Offset))) &&
+      ValueTracking->maskedValueIsZero(Base,
+                                       APInt(32, Offset, /*isSigned=*/true)))
     return std::pair(Base, Offset);
 
   // Handle G_PTRTOINT (G_PTR_ADD base, const) case

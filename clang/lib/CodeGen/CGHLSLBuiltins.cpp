@@ -66,13 +66,13 @@ static Value *handleHlslClip(const CallExpr *E, CodeGenFunction *CGF) {
     CMP = CGF->Builder.CreateIntrinsic(
         CGF->Builder.getInt1Ty(), CGF->CGM.getHLSLRuntime().getAnyIntrinsic(),
         {FCompInst});
-  } else
+  } else {
     CMP = CGF->Builder.CreateFCmpOLT(Op0, FZeroConst);
+  }
 
-  if (CGF->CGM.getTarget().getTriple().isDXIL())
-    LastInstr =
-        CGF->Builder.CreateIntrinsic(CGF->VoidTy, Intrinsic::dx_discard, {CMP});
-  else if (CGF->CGM.getTarget().getTriple().isSPIRV()) {
+  if (CGF->CGM.getTarget().getTriple().isDXIL()) {
+    LastInstr = CGF->Builder.CreateIntrinsic(Intrinsic::dx_discard, {CMP});
+  } else if (CGF->CGM.getTarget().getTriple().isSPIRV()) {
     BasicBlock *LT0 = CGF->createBasicBlock("lt0", CGF->CurFn);
     BasicBlock *End = CGF->createBasicBlock("end", CGF->CurFn);
 
@@ -80,7 +80,7 @@ static Value *handleHlslClip(const CallExpr *E, CodeGenFunction *CGF) {
 
     CGF->Builder.SetInsertPoint(LT0);
 
-    CGF->Builder.CreateIntrinsic(CGF->VoidTy, Intrinsic::spv_discard, {});
+    CGF->Builder.CreateIntrinsic(Intrinsic::spv_discard, {});
 
     LastInstr = CGF->Builder.CreateBr(End);
     CGF->Builder.SetInsertPoint(End);
@@ -109,7 +109,6 @@ static Value *handleHlslSplitdouble(const CallExpr *E, CodeGenFunction *CGF) {
   Value *HighBits = nullptr;
 
   if (CGF->CGM.getTarget().getTriple().isDXIL()) {
-
     llvm::Type *RetElementTy = CGF->Int32Ty;
     if (auto *Op0VecTy = E->getArg(0)->getType()->getAs<clang::VectorType>())
       RetElementTy = llvm::VectorType::get(
@@ -121,7 +120,6 @@ static Value *handleHlslSplitdouble(const CallExpr *E, CodeGenFunction *CGF) {
 
     LowBits = CGF->Builder.CreateExtractValue(CI, 0);
     HighBits = CGF->Builder.CreateExtractValue(CI, 1);
-
   } else {
     // For Non DXIL targets we generate the instructions.
 
@@ -282,12 +280,43 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *HandleOp = EmitScalarExpr(E->getArg(0));
     Value *IndexOp = EmitScalarExpr(E->getArg(1));
 
-    // TODO: Map to an hlsl_device address space.
-    llvm::Type *RetTy = llvm::PointerType::getUnqual(getLLVMContext());
-
+    llvm::Type *RetTy = ConvertType(E->getType());
     return Builder.CreateIntrinsic(
         RetTy, CGM.getHLSLRuntime().getCreateResourceGetPointerIntrinsic(),
         ArrayRef<Value *>{HandleOp, IndexOp});
+  }
+  case Builtin::BI__builtin_hlsl_resource_uninitializedhandle: {
+    llvm::Type *HandleTy = CGM.getTypes().ConvertType(E->getType());
+    return llvm::PoisonValue::get(HandleTy);
+  }
+  case Builtin::BI__builtin_hlsl_resource_handlefrombinding: {
+    llvm::Type *HandleTy = CGM.getTypes().ConvertType(E->getType());
+    Value *RegisterOp = EmitScalarExpr(E->getArg(1));
+    Value *SpaceOp = EmitScalarExpr(E->getArg(2));
+    Value *RangeOp = EmitScalarExpr(E->getArg(3));
+    Value *IndexOp = EmitScalarExpr(E->getArg(4));
+    // FIXME: NonUniformResourceIndex bit is not yet implemented
+    // (llvm/llvm-project#135452)
+    Value *NonUniform =
+        llvm::ConstantInt::get(llvm::Type::getInt1Ty(getLLVMContext()), false);
+    return Builder.CreateIntrinsic(
+        HandleTy, CGM.getHLSLRuntime().getCreateHandleFromBindingIntrinsic(),
+        ArrayRef<Value *>{SpaceOp, RegisterOp, RangeOp, IndexOp, NonUniform});
+  }
+  case Builtin::BI__builtin_hlsl_resource_handlefromimplicitbinding: {
+    llvm::Type *HandleTy = CGM.getTypes().ConvertType(E->getType());
+    Value *SpaceOp = EmitScalarExpr(E->getArg(1));
+    Value *RangeOp = EmitScalarExpr(E->getArg(2));
+    Value *IndexOp = EmitScalarExpr(E->getArg(3));
+    Value *OrderID = EmitScalarExpr(E->getArg(4));
+    // FIXME: NonUniformResourceIndex bit is not yet implemented
+    // (llvm/llvm-project#135452)
+    Value *NonUniform =
+        llvm::ConstantInt::get(llvm::Type::getInt1Ty(getLLVMContext()), false);
+    return Builder.CreateIntrinsic(
+        HandleTy,
+        CGM.getHLSLRuntime().getCreateHandleFromImplicitBindingIntrinsic(),
+        ArrayRef<Value *>{OrderID, SpaceOp, RangeOp, IndexOp, NonUniform});
   }
   case Builtin::BI__builtin_hlsl_all: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
@@ -370,20 +399,12 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
           "Scalar dot product is only supported on ints and floats.");
     }
     // For vectors, validate types and emit the appropriate intrinsic
-
-    // A VectorSplat should have happened
-    assert(T0->isVectorTy() && T1->isVectorTy() &&
-           "Dot product of vector and scalar is not supported.");
+    assert(CGM.getContext().hasSameUnqualifiedType(E->getArg(0)->getType(),
+                                                   E->getArg(1)->getType()) &&
+           "Dot product operands must have the same type.");
 
     auto *VecTy0 = E->getArg(0)->getType()->castAs<VectorType>();
-    [[maybe_unused]] auto *VecTy1 =
-        E->getArg(1)->getType()->castAs<VectorType>();
-
-    assert(VecTy0->getElementType() == VecTy1->getElementType() &&
-           "Dot product of vectors need the same element types.");
-
-    assert(VecTy0->getNumElements() == VecTy1->getNumElements() &&
-           "Dot product requires vectors to be of the same size.");
+    assert(VecTy0 && "Dot product argument must be a vector.");
 
     return Builder.CreateIntrinsic(
         /*ReturnType=*/T0->getScalarType(),
@@ -391,24 +412,28 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
         ArrayRef<Value *>{Op0, Op1}, nullptr, "hlsl.dot");
   }
   case Builtin::BI__builtin_hlsl_dot4add_i8packed: {
-    Value *A = EmitScalarExpr(E->getArg(0));
-    Value *B = EmitScalarExpr(E->getArg(1));
-    Value *C = EmitScalarExpr(E->getArg(2));
+    Value *X = EmitScalarExpr(E->getArg(0));
+    Value *Y = EmitScalarExpr(E->getArg(1));
+    Value *Acc = EmitScalarExpr(E->getArg(2));
 
     Intrinsic::ID ID = CGM.getHLSLRuntime().getDot4AddI8PackedIntrinsic();
+    // Note that the argument order disagrees between the builtin and the
+    // intrinsic here.
     return Builder.CreateIntrinsic(
-        /*ReturnType=*/C->getType(), ID, ArrayRef<Value *>{A, B, C}, nullptr,
-        "hlsl.dot4add.i8packed");
+        /*ReturnType=*/Acc->getType(), ID, ArrayRef<Value *>{Acc, X, Y},
+        nullptr, "hlsl.dot4add.i8packed");
   }
   case Builtin::BI__builtin_hlsl_dot4add_u8packed: {
-    Value *A = EmitScalarExpr(E->getArg(0));
-    Value *B = EmitScalarExpr(E->getArg(1));
-    Value *C = EmitScalarExpr(E->getArg(2));
+    Value *X = EmitScalarExpr(E->getArg(0));
+    Value *Y = EmitScalarExpr(E->getArg(1));
+    Value *Acc = EmitScalarExpr(E->getArg(2));
 
     Intrinsic::ID ID = CGM.getHLSLRuntime().getDot4AddU8PackedIntrinsic();
+    // Note that the argument order disagrees between the builtin and the
+    // intrinsic here.
     return Builder.CreateIntrinsic(
-        /*ReturnType=*/C->getType(), ID, ArrayRef<Value *>{A, B, C}, nullptr,
-        "hlsl.dot4add.u8packed");
+        /*ReturnType=*/Acc->getType(), ID, ArrayRef<Value *>{Acc, X, Y},
+        nullptr, "hlsl.dot4add.u8packed");
   }
   case Builtin::BI__builtin_hlsl_elementwise_firstbithigh: {
     Value *X = EmitScalarExpr(E->getArg(0));

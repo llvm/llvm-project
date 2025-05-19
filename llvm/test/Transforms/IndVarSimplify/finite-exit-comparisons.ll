@@ -932,17 +932,17 @@ for.end:                                          ; preds = %for.body, %entry
 define i16 @ult_multiuse_profit(i16 %n.raw, i8 %start) mustprogress {
 ; CHECK-LABEL: @ult_multiuse_profit(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = add i8 [[START:%.*]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[TMP0]] to i16
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc i16 254 to i8
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc i16 254 to i8
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ [[IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[START]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[IV_NEXT]], [[TMP2]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[IV_NEXT]], [[TMP0]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END:%.*]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    [[UMAX:%.*]] = call i16 @llvm.umax.i16(i16 [[TMP1]], i16 254)
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[START:%.*]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i8 [[TMP1]] to i16
+; CHECK-NEXT:    [[UMAX:%.*]] = call i16 @llvm.umax.i16(i16 [[TMP2]], i16 254)
 ; CHECK-NEXT:    ret i16 [[UMAX]]
 ;
 entry:

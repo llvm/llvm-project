@@ -186,7 +186,7 @@ def GpuROCDLAttachTarget: Pass<"rocdl-attach-target", ""> {
            /*default=*/"\"\"",
            "Target features.">,
     Option<"abiVersion", "abi", "std::string",
-           /*default=*/"\"500\"",
+           /*default=*/"\"600\"",
            "ABI version.">,
     Option<"optLevel", "O", "unsigned",
            /*default=*/"2",

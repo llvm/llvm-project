@@ -95,18 +95,10 @@ int textual(int *p) {
 // `safe_buffers_test_optout`, which uses another top-level module
 // `safe_buffers_test_base`. (So the module dependencies form a DAG.)
 
-// No expected warnings from base.h because base.h is a separate
-// module and in a separate TU that is not textually included.  The
-// explicit command that builds base.h has no `-Wunsafe-buffer-usage`.
+// No expected warnings from base.h, test_sub1, or test_sub2 because they are
+// in seperate modules, and the explicit commands that builds them have no
+// `-Wunsafe-buffer-usage`.
 
-// expected-warning@base.h:3{{unsafe buffer access}}
-// expected-note@base.h:3{{pass -fsafe-buffer-usage-suggestions to receive code hardening suggestions}}
-// expected-warning@test_sub1.h:5{{unsafe buffer access}}
-// expected-note@test_sub1.h:5{{pass -fsafe-buffer-usage-suggestions to receive code hardening suggestions}}
-// expected-warning@test_sub1.h:14{{unsafe buffer access}}
-// expected-note@test_sub1.h:14{{pass -fsafe-buffer-usage-suggestions to receive code hardening suggestions}}
-// expected-warning@test_sub2.h:5{{unsafe buffer access}}
-// expected-note@test_sub2.h:5{{pass -fsafe-buffer-usage-suggestions to receive code hardening suggestions}}
 int foo(int * p) {
   int x = p[5]; // expected-warning{{unsafe buffer access}} expected-note{{pass -fsafe-buffer-usage-suggestions to receive code hardening suggestions}}
 #pragma clang unsafe_buffer_usage begin
@@ -129,14 +121,10 @@ int foo(int * p) {
 // `safe_buffers_test_optout`, which uses another top-level module
 // `safe_buffers_test_base`. (So the module dependencies form a DAG.)
 
-// expected-warning@base.h:3{{unsafe buffer access}}
-// expected-note@base.h:3{{pass -fsafe-buffer-usage-suggestions to receive code hardening suggestions}}
-// expected-warning@test_sub1.h:5{{unsafe buffer access}}
-// expected-note@test_sub1.h:5{{pass -fsafe-buffer-usage-suggestions to receive code hardening suggestions}}
-// expected-warning@test_sub1.h:14{{unsafe buffer access}}
-// expected-note@test_sub1.h:14{{pass -fsafe-buffer-usage-suggestions to receive code hardening suggestions}}
-// expected-warning@test_sub2.h:5{{unsafe buffer access}}
-// expected-note@test_sub2.h:5{{pass -fsafe-buffer-usage-suggestions to receive code hardening suggestions}}
+// No expected warnings from base.h, test_sub1, or test_sub2 because they are
+// in seperate modules, and the explicit commands that builds them have no
+// `-Wunsafe-buffer-usage`.
+
 int foo(int * p) {
   int x = p[5]; // expected-warning{{unsafe buffer access}} expected-note{{pass -fsafe-buffer-usage-suggestions to receive code hardening suggestions}}
 #pragma clang unsafe_buffer_usage begin

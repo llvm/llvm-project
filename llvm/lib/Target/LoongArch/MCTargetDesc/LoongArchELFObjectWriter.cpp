@@ -50,33 +50,30 @@ unsigned LoongArchELFObjectWriter::getRelocType(MCContext &Ctx,
                                                 const MCValue &Target,
                                                 const MCFixup &Fixup,
                                                 bool IsPCRel) const {
-  switch (Target.getRefKind()) {
-  case LoongArchMCExpr::VK_TLS_LE_HI20:
-  case LoongArchMCExpr::VK_TLS_IE_PC_HI20:
-  case LoongArchMCExpr::VK_TLS_IE_HI20:
-  case LoongArchMCExpr::VK_TLS_LD_PC_HI20:
-  case LoongArchMCExpr::VK_TLS_LD_HI20:
-  case LoongArchMCExpr::VK_TLS_GD_PC_HI20:
-  case LoongArchMCExpr::VK_TLS_GD_HI20:
-  case LoongArchMCExpr::VK_TLS_DESC_PC_HI20:
-  case LoongArchMCExpr::VK_TLS_DESC_HI20:
-  case LoongArchMCExpr::VK_TLS_LE_HI20_R:
-  case LoongArchMCExpr::VK_TLS_LD_PCREL20_S2:
-  case LoongArchMCExpr::VK_TLS_GD_PCREL20_S2:
-  case LoongArchMCExpr::VK_TLS_DESC_PCREL20_S2:
-    if (auto *S = Target.getSymA())
-      cast<MCSymbolELF>(S->getSymbol()).setType(ELF::STT_TLS);
+  switch (Target.getSpecifier()) {
+  case ELF::R_LARCH_TLS_LE_HI20:
+  case ELF::R_LARCH_TLS_IE_PC_HI20:
+  case ELF::R_LARCH_TLS_IE_HI20:
+  case ELF::R_LARCH_TLS_LD_PC_HI20:
+  case ELF::R_LARCH_TLS_LD_HI20:
+  case ELF::R_LARCH_TLS_GD_PC_HI20:
+  case ELF::R_LARCH_TLS_GD_HI20:
+  case ELF::R_LARCH_TLS_DESC_PC_HI20:
+  case ELF::R_LARCH_TLS_DESC_HI20:
+  case ELF::R_LARCH_TLS_LE_HI20_R:
+  case ELF::R_LARCH_TLS_LD_PCREL20_S2:
+  case ELF::R_LARCH_TLS_GD_PCREL20_S2:
+  case ELF::R_LARCH_TLS_DESC_PCREL20_S2:
+    if (auto *SA = Target.getAddSym())
+      cast<MCSymbolELF>(SA)->setType(ELF::STT_TLS);
     break;
   default:
     break;
   }
 
-  // Determine the type of the relocation
   unsigned Kind = Fixup.getTargetKind();
-
-  if (Kind >= FirstLiteralRelocationKind)
-    return Kind - FirstLiteralRelocationKind;
-
+  if (mc::isRelocation(Fixup.getKind()))
+    return Kind;
   switch (Kind) {
   default:
     Ctx.reportError(Fixup.getLoc(), "Unsupported relocation type");
@@ -105,17 +102,6 @@ unsigned LoongArchELFObjectWriter::getRelocType(MCContext &Ctx,
     return ELF::R_LARCH_ABS64_LO20;
   case LoongArch::fixup_loongarch_abs64_hi12:
     return ELF::R_LARCH_ABS64_HI12;
-  case LoongArch::fixup_loongarch_tls_le_hi20:
-    return ELF::R_LARCH_TLS_LE_HI20;
-  case LoongArch::fixup_loongarch_tls_le_lo12:
-    return ELF::R_LARCH_TLS_LE_LO12;
-  case LoongArch::fixup_loongarch_tls_le64_lo20:
-    return ELF::R_LARCH_TLS_LE64_LO20;
-  case LoongArch::fixup_loongarch_tls_le64_hi12:
-    return ELF::R_LARCH_TLS_LE64_HI12;
-  case LoongArch::fixup_loongarch_call36:
-    return ELF::R_LARCH_CALL36;
-    // TODO: Handle more fixup-kinds.
   }
 }
 

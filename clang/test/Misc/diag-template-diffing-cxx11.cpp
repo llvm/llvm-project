@@ -265,14 +265,14 @@ int k9 = f9(V9<double>());
 // CHECK-ELIDE-TREE:   S9<
 // CHECK-ELIDE-TREE:     [2 * ...],
 // CHECK-ELIDE-TREE:     U9<
-// CHECK-ELIDE-TREE:       [(no qualifiers) != const] double>>
+// CHECK-ELIDE-TREE:       [double != const double]>>
 // CHECK-NOELIDE-TREE: no matching function for call to 'f9'
 // CHECK-NOELIDE-TREE: candidate function not viable: no known conversion from argument type to parameter type for 1st argument
 // CHECK-NOELIDE-TREE:   S9<
 // CHECK-NOELIDE-TREE:     int,
 // CHECK-NOELIDE-TREE:     char,
 // CHECK-NOELIDE-TREE:     U9<
-// CHECK-NOELIDE-TREE:       [(no qualifiers) != const] double>>
+// CHECK-NOELIDE-TREE:       [double != const double]>>
 
 template<typename ...A> class class_types {};
 void set10(class_types<int, int>) {}

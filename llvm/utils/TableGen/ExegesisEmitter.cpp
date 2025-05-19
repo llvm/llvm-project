@@ -103,7 +103,7 @@ ExegesisEmitter::ExegesisEmitter(const RecordKeeper &RK)
     PrintFatalError("No 'Target' subclasses defined!");
   if (Targets.size() != 1)
     PrintFatalError("Multiple subclasses of Target defined!");
-  Target = std::string(Targets[0]->getName());
+  Target = Targets[0]->getName().str();
 }
 
 struct ValidationCounterInfo {
@@ -141,8 +141,7 @@ void ExegesisEmitter::emitPfmCountersInfo(const Record &Def,
            ValidationCounter->getValueAsDef("EventType")->getName(),
            getPfmCounterId(ValidationCounter->getValueAsString("Counter"))});
     }
-    std::sort(ValidationCounters.begin(), ValidationCounters.end(),
-              EventNumberLess);
+    llvm::sort(ValidationCounters, EventNumberLess);
     OS << "\nstatic const std::pair<ValidationEvent, const char*> " << Target
        << Def.getName() << "ValidationCounters[] = {\n";
     for (const ValidationCounterInfo &VCI : ValidationCounters) {

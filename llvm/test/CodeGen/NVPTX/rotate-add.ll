@@ -10,7 +10,7 @@ define i32 @test_simple_rotl(i32 %x) {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [test_simple_rotl_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [test_simple_rotl_param_0];
 ; CHECK-NEXT:    shf.l.wrap.b32 %r2, %r1, %r1, 7;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
@@ -26,7 +26,7 @@ define i32 @test_simple_rotr(i32 %x) {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [test_simple_rotr_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [test_simple_rotr_param_0];
 ; CHECK-NEXT:    shf.l.wrap.b32 %r2, %r1, %r1, 25;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
@@ -39,16 +39,13 @@ define i32 @test_simple_rotr(i32 %x) {
 define i32 @test_rotl_var(i32 %x, i32 %y) {
 ; CHECK-LABEL: test_rotl_var(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<7>;
+; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [test_rotl_var_param_0];
-; CHECK-NEXT:    ld.param.u32 %r2, [test_rotl_var_param_1];
-; CHECK-NEXT:    shl.b32 %r3, %r1, %r2;
-; CHECK-NEXT:    sub.s32 %r4, 32, %r2;
-; CHECK-NEXT:    shr.u32 %r5, %r1, %r4;
-; CHECK-NEXT:    add.s32 %r6, %r3, %r5;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r6;
+; CHECK-NEXT:    ld.param.b32 %r1, [test_rotl_var_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [test_rotl_var_param_1];
+; CHECK-NEXT:    shf.l.wrap.b32 %r3, %r1, %r1, %r2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
   %shl = shl i32 %x, %y
   %sub = sub i32 32, %y
@@ -60,16 +57,13 @@ define i32 @test_rotl_var(i32 %x, i32 %y) {
 define i32 @test_rotr_var(i32 %x, i32 %y) {
 ; CHECK-LABEL: test_rotr_var(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<7>;
+; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [test_rotr_var_param_0];
-; CHECK-NEXT:    ld.param.u32 %r2, [test_rotr_var_param_1];
-; CHECK-NEXT:    shr.u32 %r3, %r1, %r2;
-; CHECK-NEXT:    sub.s32 %r4, 32, %r2;
-; CHECK-NEXT:    shl.b32 %r5, %r1, %r4;
-; CHECK-NEXT:    add.s32 %r6, %r3, %r5;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r6;
+; CHECK-NEXT:    ld.param.b32 %r1, [test_rotr_var_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [test_rotr_var_param_1];
+; CHECK-NEXT:    shf.r.wrap.b32 %r3, %r1, %r1, %r2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
   %shr = lshr i32 %x, %y
   %sub = sub i32 32, %y
@@ -84,8 +78,8 @@ define i32 @test_invalid_rotl_var_and(i32 %x, i32 %y) {
 ; CHECK-NEXT:    .reg .b32 %r<8>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [test_invalid_rotl_var_and_param_0];
-; CHECK-NEXT:    ld.param.u32 %r2, [test_invalid_rotl_var_and_param_1];
+; CHECK-NEXT:    ld.param.b32 %r1, [test_invalid_rotl_var_and_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [test_invalid_rotl_var_and_param_1];
 ; CHECK-NEXT:    shl.b32 %r3, %r1, %r2;
 ; CHECK-NEXT:    neg.s32 %r4, %r2;
 ; CHECK-NEXT:    and.b32 %r5, %r4, 31;
@@ -107,8 +101,8 @@ define i32 @test_invalid_rotr_var_and(i32 %x, i32 %y) {
 ; CHECK-NEXT:    .reg .b32 %r<8>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [test_invalid_rotr_var_and_param_0];
-; CHECK-NEXT:    ld.param.u32 %r2, [test_invalid_rotr_var_and_param_1];
+; CHECK-NEXT:    ld.param.b32 %r1, [test_invalid_rotr_var_and_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [test_invalid_rotr_var_and_param_1];
 ; CHECK-NEXT:    shr.u32 %r3, %r1, %r2;
 ; CHECK-NEXT:    neg.s32 %r4, %r2;
 ; CHECK-NEXT:    and.b32 %r5, %r4, 31;
@@ -127,18 +121,14 @@ define i32 @test_invalid_rotr_var_and(i32 %x, i32 %y) {
 define i32 @test_fshl_special_case(i32 %x0, i32 %x1, i32 %y) {
 ; CHECK-LABEL: test_fshl_special_case(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<9>;
+; CHECK-NEXT:    .reg .b32 %r<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [test_fshl_special_case_param_0];
-; CHECK-NEXT:    ld.param.u32 %r2, [test_fshl_special_case_param_2];
-; CHECK-NEXT:    shl.b32 %r3, %r1, %r2;
-; CHECK-NEXT:    ld.param.u32 %r4, [test_fshl_special_case_param_1];
-; CHECK-NEXT:    shr.u32 %r5, %r4, 1;
-; CHECK-NEXT:    xor.b32 %r6, %r2, 31;
-; CHECK-NEXT:    shr.u32 %r7, %r5, %r6;
-; CHECK-NEXT:    add.s32 %r8, %r3, %r7;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r8;
+; CHECK-NEXT:    ld.param.b32 %r1, [test_fshl_special_case_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [test_fshl_special_case_param_1];
+; CHECK-NEXT:    ld.param.b32 %r3, [test_fshl_special_case_param_2];
+; CHECK-NEXT:    shf.l.wrap.b32 %r4, %r2, %r1, %r3;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r4;
 ; CHECK-NEXT:    ret;
   %shl = shl i32 %x0, %y
   %srli = lshr i32 %x1, 1
@@ -151,18 +141,14 @@ define i32 @test_fshl_special_case(i32 %x0, i32 %x1, i32 %y) {
 define i32 @test_fshr_special_case(i32 %x0, i32 %x1, i32 %y) {
 ; CHECK-LABEL: test_fshr_special_case(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<9>;
+; CHECK-NEXT:    .reg .b32 %r<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [test_fshr_special_case_param_0];
-; CHECK-NEXT:    ld.param.u32 %r2, [test_fshr_special_case_param_1];
-; CHECK-NEXT:    ld.param.u32 %r3, [test_fshr_special_case_param_2];
-; CHECK-NEXT:    shr.u32 %r4, %r2, %r3;
-; CHECK-NEXT:    shl.b32 %r5, %r1, 1;
-; CHECK-NEXT:    xor.b32 %r6, %r3, 31;
-; CHECK-NEXT:    shl.b32 %r7, %r5, %r6;
-; CHECK-NEXT:    add.s32 %r8, %r4, %r7;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r8;
+; CHECK-NEXT:    ld.param.b32 %r1, [test_fshr_special_case_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [test_fshr_special_case_param_1];
+; CHECK-NEXT:    ld.param.b32 %r3, [test_fshr_special_case_param_2];
+; CHECK-NEXT:    shf.r.wrap.b32 %r4, %r2, %r1, %r3;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r4;
 ; CHECK-NEXT:    ret;
   %shl = lshr i32 %x1, %y
   %srli = shl i32 %x0, 1
@@ -179,7 +165,7 @@ define i64 @test_rotl_udiv_special_case(i64 %i) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [test_rotl_udiv_special_case_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_rotl_udiv_special_case_param_0];
 ; CHECK-NEXT:    mul.hi.u64 %rd2, %rd1, -6148914691236517205;
 ; CHECK-NEXT:    shr.u64 %rd3, %rd2, 1;
 ; CHECK-NEXT:    mov.b64 {%r1, %r2}, %rd3;
@@ -201,7 +187,7 @@ define i32 @test_rotl_mul_special_case(i32 %i) {
 ; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [test_rotl_mul_special_case_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [test_rotl_mul_special_case_param_0];
 ; CHECK-NEXT:    mul.lo.s32 %r2, %r1, 9;
 ; CHECK-NEXT:    shf.l.wrap.b32 %r3, %r2, %r2, 7;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
@@ -220,7 +206,7 @@ define i64 @test_rotl_mul_with_mask_special_case(i64 %i) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [test_rotl_mul_with_mask_special_case_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_rotl_mul_with_mask_special_case_param_0];
 ; CHECK-NEXT:    mul.lo.s64 %rd2, %rd1, 9;
 ; CHECK-NEXT:    mov.b64 {%r1, %r2}, %rd1;
 ; CHECK-NEXT:    mov.b64 {%r3, %r4}, %rd2;
@@ -244,7 +230,7 @@ define i32 @test_fshl_with_mask_special_case(i32 %x) {
 ; CHECK-NEXT:    .reg .b32 %r<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [test_fshl_with_mask_special_case_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [test_fshl_with_mask_special_case_param_0];
 ; CHECK-NEXT:    or.b32 %r2, %r1, 1;
 ; CHECK-NEXT:    shf.l.wrap.b32 %r3, %r1, %r2, 5;
 ; CHECK-NEXT:    and.b32 %r4, %r3, -31;

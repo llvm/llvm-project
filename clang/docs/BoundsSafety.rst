@@ -227,7 +227,7 @@ meaning they do not have ABI implications.
   annotated with ``__ended_by(Q)``. In this case, the end of the range extends
   to the pointer ``Q``. This is used for "iterator" support in C where you're
   iterating from one pointer value to another until a final pointer value is
-  reached (and the final pointer value is not dereferencable).
+  reached (and the final pointer value is not dereferenceable).
 
 Accessing a pointer outside the specified bounds causes a run-time trap or a
 compile-time error. Also, the model maintains correctness of bounds annotations
@@ -507,7 +507,7 @@ Default pointer types in ``typeof()``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 When ``typeof()`` takes an expression, it respects the bounds annotation on
-the expression type, including the bounds annotation is implcit. For example,
+the expression type, including the bounds annotation is implicit. For example,
 the global variable ``g`` in the following code is implicitly ``__single`` so
 ``typeof(g)`` gets ``char *__single``. The similar is true for the parameter
 ``p``, so ``typeof(p)`` returns ``void *__single``. The local variable ``l`` is

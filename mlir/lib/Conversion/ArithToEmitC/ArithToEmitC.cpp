@@ -27,9 +27,6 @@ namespace {
 /// Implement the interface to convert Arith to EmitC.
 struct ArithToEmitCDialectInterface : public ConvertToEmitCPatternInterface {
   using ConvertToEmitCPatternInterface::ConvertToEmitCPatternInterface;
-  void loadDependentDialects(MLIRContext *context) const final {
-    context->loadDialect<emitc::EmitCDialect>();
-  }
 
   /// Hook for derived dialect interface to provide conversion patterns
   /// and mark dialect legal for the conversion target.

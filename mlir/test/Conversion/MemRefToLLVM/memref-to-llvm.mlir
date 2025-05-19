@@ -3,12 +3,14 @@
 
 // Same below, but using the `ConvertToLLVMPatternInterface` entry point
 // and the generic `convert-to-llvm` pass. This produces slightly different IR
-// because the conversion target is set up differently. Only one test case is
-// checked.
+// because the conversion target is set up differently.
 // RUN: mlir-opt --convert-to-llvm="filter-dialects=memref" --split-input-file %s | FileCheck --check-prefix=CHECK-INTERFACE %s
 
 // CHECK-LABEL: func @view(
 // CHECK: %[[ARG0F:.*]]: index, %[[ARG1F:.*]]: index, %[[ARG2F:.*]]: index
+// CHECK-INTERFACE-LABEL: func @view(
+// CHECK-INTERFACE-NOT: memref.alloc
+// CHECK-INTERFACE-NOT: memref.view
 func.func @view(%arg0 : index, %arg1 : index, %arg2 : index) {
   // CHECK-DAG: %[[ARG2:.*]] = builtin.unrealized_conversion_cast %[[ARG2F]]
   // CHECK-DAG: %[[ARG0:.*]] = builtin.unrealized_conversion_cast %[[ARG0F]]
@@ -141,9 +143,11 @@ func.func @view_empty_memref(%offset: index, %mem: memref<0xi8>) {
 // CHECK32:         %[[ARG0:[a-zA-Z0-9]*]]: index,
 // CHECK32:         %[[ARG1:[a-zA-Z0-9]*]]: index,
 // CHECK32:         %[[ARG2:.*]]: index)
+// CHECK-INTERFACE-LABEL: func @subview(
 func.func @subview(%0 : memref<64x4xf32, strided<[4, 1], offset: 0>>, %arg0 : index, %arg1 : index, %arg2 : index) {
   // CHECK: memref.subview %[[MEMREF]][%[[ARG0]], %[[ARG1]]] [%[[ARG0]], %[[ARG1]]]
   // CHECK32: memref.subview %[[MEMREF]][%[[ARG0]], %[[ARG1]]] [%[[ARG0]], %[[ARG1]]] [%[[ARG0]], %[[ARG1]]]
+  // CHECK-INTERFACE: memref.subview
   %1 = memref.subview %0[%arg0, %arg1][%arg0, %arg1][%arg0, %arg1] :
     memref<64x4xf32, strided<[4, 1], offset: 0>>
   to memref<?x?xf32, strided<[?, ?], offset: ?>>
@@ -153,11 +157,13 @@ func.func @subview(%0 : memref<64x4xf32, strided<[4, 1], offset: 0>>, %arg0 : in
 // -----
 
 // CHECK-LABEL: func @assume_alignment(
+// CHECK-INTERFACE-LABEL: func @assume_alignment(
 func.func @assume_alignment(%0 : memref<4x4xf16>) {
   // CHECK: %[[PTR:.*]] = llvm.extractvalue %[[MEMREF:.*]][1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
   // CHECK-NEXT: %[[TRUE:.*]] = llvm.mlir.constant(true) : i1
   // CHECK-NEXT: %[[ALIGN:.*]] = llvm.mlir.constant(16 : index) : i64
-    // CHECK-NEXT: llvm.intr.assume %[[TRUE]] ["align"(%[[PTR]], %[[ALIGN]] : !llvm.ptr, i64)] : i1
+  // CHECK-NEXT: llvm.intr.assume %[[TRUE]] ["align"(%[[PTR]], %[[ALIGN]] : !llvm.ptr, i64)] : i1
+  // CHECK-INTERFACE: llvm.intr.assume
   memref.assume_alignment %0, 16 : memref<4x4xf16>
   return
 }
@@ -165,13 +171,15 @@ func.func @assume_alignment(%0 : memref<4x4xf16>) {
 // -----
 
 // CHECK-LABEL: func @assume_alignment_w_offset
+// CHECK-INTERFACE-LABEL: func @assume_alignment_w_offset
 func.func @assume_alignment_w_offset(%0 : memref<4x4xf16, strided<[?, ?], offset: ?>>) {
   // CHECK-DAG: %[[PTR:.*]] = llvm.extractvalue %[[MEMREF:.*]][1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
   // CHECK-DAG: %[[OFFSET:.*]] = llvm.extractvalue %[[MEMREF]][2] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
   // CHECK-DAG: %[[BUFF_ADDR:.*]] =  llvm.getelementptr %[[PTR]][%[[OFFSET]]] : (!llvm.ptr, i64) -> !llvm.ptr, f16
   // CHECK-DAG: %[[TRUE:.*]] = llvm.mlir.constant(true) : i1
   // CHECK-DAG: %[[ALIGN:.*]] = llvm.mlir.constant(16 : index) : i64
-    // CHECK-NEXT: llvm.intr.assume %[[TRUE]] ["align"(%[[BUFF_ADDR]], %[[ALIGN]] : !llvm.ptr, i64)] : i1
+  // CHECK-NEXT: llvm.intr.assume %[[TRUE]] ["align"(%[[BUFF_ADDR]], %[[ALIGN]] : !llvm.ptr, i64)] : i1
+  // CHECK-INTERFACE: llvm.intr.assume
   memref.assume_alignment %0, 16 : memref<4x4xf16, strided<[?, ?], offset: ?>>
   return
 }
@@ -179,6 +187,7 @@ func.func @assume_alignment_w_offset(%0 : memref<4x4xf16, strided<[?, ?], offset
 
 // CHECK-LABEL: func @dim_of_unranked
 // CHECK32-LABEL: func @dim_of_unranked
+// CHECK-INTERFACE-LABEL: func @dim_of_unranked
 func.func @dim_of_unranked(%unranked: memref<*xi32>) -> index {
   %c0 = arith.constant 0 : index
   %dim = memref.dim %unranked, %c0 : memref<*xi32>
@@ -202,17 +211,23 @@ func.func @dim_of_unranked(%unranked: memref<*xi32>) -> index {
 
 // CHECK32: %[[SIZE:.*]] = llvm.load %{{.*}} : !llvm.ptr -> i32
 
+// CHECK-INTERFACE-NOT: memref.dim
+
 // -----
 
 // CHECK-LABEL: func @address_space(
+// CHECK-INTERFACE-LABEL: func @address_space(
 func.func @address_space(%arg0 : memref<32xf32, affine_map<(d0) -> (d0)>, 7>) {
   // CHECK: %[[MEMORY:.*]] = llvm.call @malloc(%{{.*}})
   // CHECK: %[[CAST:.*]] = llvm.addrspacecast %[[MEMORY]] : !llvm.ptr to !llvm.ptr<5>
   // CHECK: llvm.insertvalue %[[CAST]], %{{[[:alnum:]]+}}[0]
   // CHECK: llvm.insertvalue %[[CAST]], %{{[[:alnum:]]+}}[1]
+  // CHECK-INTERFACE: llvm.call @malloc
+  // CHECK-INTERFACE: llvm.addrspacecast
   %0 = memref.alloc() : memref<32xf32, affine_map<(d0) -> (d0)>, 5>
   %1 = arith.constant 7 : index
   // CHECK: llvm.load %{{.*}} : !llvm.ptr<5> -> f32
+  // CHECK-INTERFACE: llvm.load
   %2 = memref.load %0[%1] : memref<32xf32, affine_map<(d0) -> (d0)>, 5>
   func.return
 }
@@ -236,6 +251,8 @@ func.func @address_space(%arg0 : memref<32xf32, affine_map<(d0) -> (d0)>, 7>) {
 //       CHECK:    llvm.insertvalue {{.*}}[3, 2] : !llvm.struct<(ptr, ptr, i64, array<3 x i64>, array<3 x i64>)>
 //       CHECK:   llvm.extractvalue {{.*}}[4, 1] : !llvm.struct<(ptr, ptr, i64, array<3 x i64>, array<3 x i64>)>
 //       CHECK:    llvm.insertvalue {{.*}}[4, 2] : !llvm.struct<(ptr, ptr, i64, array<3 x i64>, array<3 x i64>)>
+// CHECK-INTERFACE-LABEL: func @transpose
+// CHECK-INTERFACE-NOT: memref.transpose
 func.func @transpose(%arg0: memref<?x?x?xf32, strided<[?, ?, 1], offset: ?>>) {
   %0 = memref.transpose %arg0 (i, j, k) -> (k, i, j) : memref<?x?x?xf32, strided<[?, ?, 1], offset: ?>> to memref<?x?x?xf32, strided<[1, ?, ?], offset: ?>>
   return
@@ -247,16 +264,20 @@ func.func @transpose(%arg0: memref<?x?x?xf32, strided<[?, ?, 1], offset: ?>>) {
 // CHECK-NEXT:     %0 = llvm.mlir.undef : !llvm.array<2 x f32>
 // CHECK-NEXT:     llvm.return %0 : !llvm.array<2 x f32>
 // CHECK-NEXT:   }
+// CHECK-INTERFACE: llvm.mlir.global external
 memref.global @gv0 : memref<2xf32> = uninitialized
 
 // CHECK: llvm.mlir.global private @gv1() {addr_space = 0 : i32} : !llvm.array<2 x f32>
+// CHECK-INTERFACE: llvm.mlir.global private
 memref.global "private" @gv1 : memref<2xf32>
 
 // CHECK: llvm.mlir.global external @gv2(dense<{{\[\[}}0.000000e+00, 1.000000e+00, 2.000000e+00], [3.000000e+00, 4.000000e+00, 5.000000e+00]]> : tensor<2x3xf32>) {addr_space = 0 : i32} : !llvm.array<2 x array<3 x f32>>
+// CHECK-INTERFACE: llvm.mlir.global external
 memref.global @gv2 : memref<2x3xf32> = dense<[[0.0, 1.0, 2.0], [3.0, 4.0, 5.0]]>
 
 // Test 1D memref.
 // CHECK-LABEL: func @get_gv0_memref
+// CHECK-INTERFACE-LABEL: func @get_gv0_memref
 func.func @get_gv0_memref() {
   %0 = memref.get_global @gv0 : memref<2xf32>
   // CHECK: %[[DIM:.*]] = llvm.mlir.constant(2 : index) : i64
@@ -272,11 +293,14 @@ func.func @get_gv0_memref() {
   // CHECK: llvm.insertvalue %[[OFFSET]], {{.*}}[2] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
   // CHECK: llvm.insertvalue %[[DIM]], {{.*}}[3, 0] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
   // CHECK: llvm.insertvalue %[[STRIDE]], {{.*}}[4, 0] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
+  // CHECK-INTERFACE: llvm.mlir.addressof
+  // CHECK-INTERFACE: llvm.getelementptr
   return
 }
 
 // Test 2D memref.
 // CHECK-LABEL: func @get_gv2_memref
+// CHECK-INTERFACE-LABEL: func @get_gv2_memref
 func.func @get_gv2_memref() {
   // CHECK: %[[DIM0:.*]] = llvm.mlir.constant(2 : index) : i64
   // CHECK: %[[DIM1:.*]] = llvm.mlir.constant(3 : index) : i64
@@ -294,6 +318,8 @@ func.func @get_gv2_memref() {
   // CHECK: llvm.insertvalue %[[DIM1]], {{.*}}[3, 1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
   // CHECK: llvm.insertvalue %[[DIM1]], {{.*}}[4, 0] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
   // CHECK: llvm.insertvalue %[[STRIDE1]], {{.*}}[4, 1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+  // CHECK-INTERFACE: llvm.mlir.addressof
+  // CHECK-INTERFACE: llvm.getelementptr
 
   %0 = memref.get_global @gv2 : memref<2x3xf32>
   return
@@ -304,6 +330,7 @@ func.func @get_gv2_memref() {
 memref.global @gv3 : memref<f32> = dense<1.0>
 
 // CHECK-LABEL: func @get_gv3_memref
+// CHECK-INTERFACE-LABEL: func @get_gv3_memref
 func.func @get_gv3_memref() {
   // CHECK: %[[ADDR:.*]] = llvm.mlir.addressof @gv3 : !llvm.ptr
   // CHECK: %[[GEP:.*]] = llvm.getelementptr %[[ADDR]][0] : (!llvm.ptr) -> !llvm.ptr, f32
@@ -314,12 +341,15 @@ func.func @get_gv3_memref() {
   // CHECK: llvm.insertvalue %[[GEP]], {{.*}}[1] : !llvm.struct<(ptr, ptr, i64)>
   // CHECK: %[[OFFSET:.*]] = llvm.mlir.constant(0 : index) : i64
   // CHECK: llvm.insertvalue %[[OFFSET]], {{.*}}[2] : !llvm.struct<(ptr, ptr, i64)>
+  // CHECK-INTERFACE: llvm.mlir.addressof
+  // CHECK-INTERFACE: llvm.getelementptr
   %0 = memref.get_global @gv3 : memref<f32>
   return
 }
 
 // Test scalar memref with an alignment.
 // CHECK: llvm.mlir.global private @gv4(1.000000e+00 : f32) {addr_space = 0 : i32, alignment = 64 : i64} : f32
+// CHECK-INTERFACE: llvm.mlir.global private
 memref.global "private" @gv4 : memref<f32> = dense<1.0> {alignment = 64}
 
 // -----
@@ -327,8 +357,10 @@ memref.global "private" @gv4 : memref<f32> = dense<1.0> {alignment = 64}
 // Expand shapes need to be expanded outside of the memref-to-llvm pass.
 // CHECK-LABEL: func @expand_shape_static(
 // CHECK-SAME:         %[[ARG:.*]]: memref<{{.*}}>)
+// CHECK-INTERFACE-LABEL: func @expand_shape_static(
 func.func @expand_shape_static(%arg0: memref<3x4x5xf32>) -> memref<1x3x4x1x5xf32> {
   // CHECK: memref.expand_shape %[[ARG]] {{\[}}[0, 1], [2], [3, 4]] output_shape [1, 3, 4, 1, 5]
+  // CHECK-INTERFACE: memref.expand_shape
   // Reshapes that expand a contiguous tensor with some 1's.
   %0 = memref.expand_shape %arg0 [[0, 1], [2], [3, 4]] output_shape [1, 3, 4, 1, 5]
       : memref<3x4x5xf32> into memref<1x3x4x1x5xf32>
@@ -340,7 +372,10 @@ func.func @expand_shape_static(%arg0: memref<3x4x5xf32>) -> memref<1x3x4x1x5xf32
 // Collapse shapes need to be expanded outside of the memref-to-llvm pass.
 // CHECK-LABEL: func @collapse_shape_static
 // CHECK-SAME: %[[ARG:.*]]: memref<1x3x4x1x5xf32>) -> memref<3x4x5xf32> {
+// CHECK-INTERFACE-LABEL: func @collapse_shape_static
 func.func @collapse_shape_static(%arg0: memref<1x3x4x1x5xf32>) -> memref<3x4x5xf32> {
+  // CHECK: memref.collapse_shape %[[ARG]]
+  // CHECK-INTERFACE: memref.collapse_shape
   %0 = memref.collapse_shape %arg0 [[0, 1], [2], [3, 4]] :
     memref<1x3x4x1x5xf32> into memref<3x4x5xf32>
   return %0 : memref<3x4x5xf32>
@@ -350,6 +385,7 @@ func.func @collapse_shape_static(%arg0: memref<1x3x4x1x5xf32>) -> memref<3x4x5xf
 
 // CHECK-LABEL: func @rank_of_unranked
 // CHECK32-LABEL: func @rank_of_unranked
+// CHECK-INTERFACE-LABEL: func @rank_of_unranked
 func.func @rank_of_unranked(%unranked: memref<*xi32>) {
   %rank = memref.rank %unranked : memref<*xi32>
   return
@@ -357,19 +393,25 @@ func.func @rank_of_unranked(%unranked: memref<*xi32>) {
 // CHECK: %[[UNRANKED_DESC:.*]] = builtin.unrealized_conversion_cast
 // CHECK-NEXT: llvm.extractvalue %[[UNRANKED_DESC]][0] : !llvm.struct<(i64, ptr)>
 // CHECK32: llvm.extractvalue %{{.*}}[0] : !llvm.struct<(i32, ptr)>
+// CHECK-INTERFACE-NOT: memref.rank
+
+// -----
 
 // CHECK-LABEL: func @rank_of_ranked
 // CHECK32-LABEL: func @rank_of_ranked
+// CHECK-INTERFACE-LABEL: func @rank_of_ranked
 func.func @rank_of_ranked(%ranked: memref<?xi32>) {
   %rank = memref.rank %ranked : memref<?xi32>
   return
 }
 // CHECK: llvm.mlir.constant(1 : index) : i64
 // CHECK32: llvm.mlir.constant(1 : index) : i32
+// CHECK-INTERFACE: llvm.mlir.constant(1 : index) : i64
 
 // -----
 
 // CHECK-LABEL: func @atomic_rmw
+// CHECK-INTERFACE-LABEL: func @atomic_rmw
 func.func @atomic_rmw(%I : memref<10xi32>, %ival : i32, %F : memref<10xf32>, %fval : f32, %i : index) {
   memref.atomic_rmw assign %fval, %F[%i] : (f32, memref<10xf32>) -> f32
   // CHECK: llvm.atomicrmw xchg %{{.*}}, %{{.*}} acq_rel
@@ -389,6 +431,7 @@ func.func @atomic_rmw(%I : memref<10xi32>, %ival : i32, %F : memref<10xf32>, %fv
   // CHECK: llvm.atomicrmw _or %{{.*}}, %{{.*}} acq_rel
   memref.atomic_rmw andi %ival, %I[%i] : (i32, memref<10xi32>) -> i32
   // CHECK: llvm.atomicrmw _and %{{.*}}, %{{.*}} acq_rel
+  // CHECK-INTERFACE-COUNT-9: llvm.atomicrmw
   return
 }
 
@@ -410,10 +453,16 @@ func.func @atomic_rmw_with_offset(%I : memref<10xi32, strided<[1], offset: 5>>, 
 // CHECK:        %[[PTR:.+]] = llvm.getelementptr %[[OFFSET_PTR]][%[[INDEX]]] : (!llvm.ptr, i64) -> !llvm.ptr, i32
 // CHECK:        llvm.atomicrmw _and %[[PTR]], %[[ARG1]] acq_rel
 
+// CHECK-INTERFACE-LABEL:  func @atomic_rmw_with_offset
+// CHECK-INTERFACE: llvm.atomicrmw
+
 // -----
 
 // CHECK-LABEL: func @generic_atomic_rmw
-func.func @generic_atomic_rmw(%I : memref<10xi32>, %i : index) {
+// CHECK-INTERFACE-LABEL: func @generic_atomic_rmw
+llvm.func @generic_atomic_rmw() {
+  %I = "test.foo"() : () -> (memref<10xi32>)
+  %i = "test.foo"() : () -> (index)
   %x = memref.generic_atomic_rmw %I[%i] : memref<10xi32> {
     ^bb0(%old_value : i32):
       memref.atomic_yield %old_value : i32
@@ -429,10 +478,13 @@ func.func @generic_atomic_rmw(%I : memref<10xi32>, %i : index) {
 // CHECK-NEXT:   %[[OK:.*]] = llvm.extractvalue %[[PAIR]][1]
 // CHECK-NEXT:   llvm.cond_br %[[OK]], ^bb2, ^bb1(%[[NEW]] : i32)
 
+// CHECK-INTERFACE: llvm.cmpxchg
+
 // -----
 
 // CHECK-LABEL: func @generic_atomic_rmw_in_alloca_scope
-func.func @generic_atomic_rmw_in_alloca_scope(){
+// CHECK-INTERFACE-LABEL: func @generic_atomic_rmw_in_alloca_scope
+llvm.func @generic_atomic_rmw_in_alloca_scope() {
   %c1 = arith.constant 1 : index
   %alloc = memref.alloc() : memref<2x3xi32>
   memref.alloca_scope  {
@@ -441,7 +493,7 @@ func.func @generic_atomic_rmw_in_alloca_scope(){
       memref.atomic_yield %arg0 : i32
     }
   }
-  return
+  llvm.return
 }
 // CHECK:        %[[STACK_SAVE:.*]] = llvm.intr.stacksave : !llvm.ptr
 // CHECK-NEXT:   llvm.br ^bb1
@@ -460,9 +512,12 @@ func.func @generic_atomic_rmw_in_alloca_scope(){
 // CHECK-NEXT: ^bb4:
 // CHECK-NEXT:   return
 
+// CHECK-INTERFACE: llvm.cmpxchg
+
 // -----
 
 // CHECK-LABEL: func @memref_copy_ranked
+// CHECK-INTERFACE-LABEL: func @memref_copy_ranked
 func.func @memref_copy_ranked() {
   %0 = memref.alloc() : memref<2xf32>
   // CHECK: llvm.mlir.constant(2 : index) : i64
@@ -487,6 +542,7 @@ func.func @memref_copy_ranked() {
   // CHECK: [[EXTRACT2O:%.*]] = llvm.extractvalue {{%.*}}[2] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
   // CHECK: [[GEP2:%.*]] = llvm.getelementptr [[EXTRACT2P]][[[EXTRACT2O]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
   // CHECK: "llvm.intr.memcpy"([[GEP2]], [[GEP1]], [[SIZE]]) <{isVolatile = false}>
+  // CHECK-INTERFACE: llvm.intr.memcpy
   return
 }
 
@@ -494,6 +550,7 @@ func.func @memref_copy_ranked() {
 // -----
 
 // CHECK-LABEL: func @memref_copy_contiguous
+// CHECK-INTERFACE-LABEL: func @memref_copy_contiguous
 func.func @memref_copy_contiguous(%in: memref<16x4xi32>, %offset: index) {
   %buf = memref.alloc() : memref<1x2xi32>
   %sub = memref.subview %in[%offset, 0] [1, 2] [1, 1] : memref<16x4xi32> to memref<1x2xi32, strided<[4, 1], offset: ?>>
@@ -518,35 +575,41 @@ func.func @memref_copy_contiguous(%in: memref<16x4xi32>, %offset: index) {
   // CHECK: [[EXTRACT2O:%.*]] = llvm.extractvalue {{%.*}}[2] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
   // CHECK: [[GEP2:%.*]] = llvm.getelementptr [[EXTRACT2P]][[[EXTRACT2O]]] : (!llvm.ptr, i64) -> !llvm.ptr, i32
   // CHECK: "llvm.intr.memcpy"([[GEP2]], [[GEP1]], [[SIZE]]) <{isVolatile = false}>
+  // CHECK-INTERFACE: llvm.intr.memcpy
   return
 }
 
 // -----
 
 // CHECK-LABEL: func @memref_copy_0d_offset
+// CHECK-INTERFACE-LABEL: func @memref_copy_0d_offset
 func.func @memref_copy_0d_offset(%in: memref<2xi32>) {
   %buf = memref.alloc() : memref<i32>
   %sub = memref.subview %in[1] [1] [1] : memref<2xi32> to memref<1xi32, strided<[1], offset: 1>>
   %scalar = memref.collapse_shape %sub [] : memref<1xi32, strided<[1], offset: 1>> into memref<i32, strided<[], offset: 1>>
   memref.copy %scalar, %buf : memref<i32, strided<[], offset: 1>> to memref<i32>
   // CHECK: llvm.intr.memcpy
+  // CHECK-INTERFACE: llvm.intr.memcpy
   return
 }
 
 // -----
 
 // CHECK-LABEL: func @memref_copy_noncontiguous
+// CHECK-INTERFACE-LABEL: func @memref_copy_noncontiguous
 func.func @memref_copy_noncontiguous(%in: memref<16x2xi32>, %offset: index) {
   %buf = memref.alloc() : memref<2x1xi32>
   %sub = memref.subview %in[%offset, 0] [2, 1] [1, 1] : memref<16x2xi32> to memref<2x1xi32, strided<[2, 1], offset: ?>>
   memref.copy %sub, %buf : memref<2x1xi32, strided<[2, 1], offset: ?>> to memref<2x1xi32>
   // CHECK: llvm.call @memrefCopy
+  // CHECK-INTERFACE: llvm.call @memrefCopy
   return
 }
 
 // -----
 
 // CHECK-LABEL: func @memref_copy_unranked
+// CHECK-INTERFACE-LABEL: func @memref_copy_unranked
 func.func @memref_copy_unranked() {
   %0 = memref.alloc() : memref<2xi1>
   // CHECK: llvm.mlir.constant(2 : index) : i64
@@ -574,17 +637,20 @@ func.func @memref_copy_unranked() {
   // CHECK: [[SIZE:%.*]] = llvm.ptrtoint [[SIZEPTR]] : !llvm.ptr to i64
   // CHECK: llvm.call @memrefCopy([[SIZE]], [[ALLOCA2]], [[ALLOCA3]]) : (i64, !llvm.ptr, !llvm.ptr) -> ()
   // CHECK: llvm.intr.stackrestore [[STACKSAVE]]
+  // CHECK-INTERFACE: llvm.call @memrefCopy
   return
 }
 
 // -----
 
 // CHECK-LABEL: func @extract_aligned_pointer_as_index
+// CHECK-INTERFACE-LABEL: func @extract_aligned_pointer_as_index
 func.func @extract_aligned_pointer_as_index(%m: memref<?xf32>) -> index {
   %0 = memref.extract_aligned_pointer_as_index %m: memref<?xf32> -> index
   // CHECK: %[[E:.*]] = llvm.extractvalue %{{.*}}[1] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
   // CHECK: %[[I64:.*]] = llvm.ptrtoint %[[E]] : !llvm.ptr to i64
   // CHECK: %[[R:.*]] = builtin.unrealized_conversion_cast %[[I64]] : i64 to index
+  // CHECK-INTERFACE-NOT: memref.extract_aligned_pointer_as_index
 
   // CHECK: return %[[R:.*]] : index
   return %0: index
@@ -593,6 +659,7 @@ func.func @extract_aligned_pointer_as_index(%m: memref<?xf32>) -> index {
 // -----
 
 // CHECK-LABEL: func @extract_aligned_pointer_as_index_unranked
+// CHECK-INTERFACE-LABEL: func @extract_aligned_pointer_as_index_unranked
 func.func @extract_aligned_pointer_as_index_unranked(%m: memref<*xf32>) -> index {
   %0 = memref.extract_aligned_pointer_as_index %m: memref<*xf32> -> index
   // CHECK: %[[PTR:.*]] = llvm.extractvalue %{{.*}}[1] : !llvm.struct<(i64, ptr)>
@@ -600,6 +667,7 @@ func.func @extract_aligned_pointer_as_index_unranked(%m: memref<*xf32>) -> index
   // CHECK: %[[ALIGNED_PTR:.*]] = llvm.load %[[ALIGNED_FIELD]] : !llvm.ptr -> !llvm.ptr
   // CHECK: %[[I64:.*]] = llvm.ptrtoint %[[ALIGNED_PTR]] : !llvm.ptr to i64
   // CHECK: %[[R:.*]] = builtin.unrealized_conversion_cast %[[I64]] : i64 to index
+  // CHECK-INTERFACE-NOT: memref.extract_aligned_pointer_as_index
 
   // CHECK: return %[[R]] : index
   return %0: index
@@ -622,6 +690,10 @@ func.func @extract_aligned_pointer_as_index_unranked(%m: memref<*xf32>) -> index
 // CHECK: %[[SIZE1:.*]] = llvm.extractvalue %[[MEM_DESC]][3, 1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 // CHECK: %[[STRIDE0:.*]] = llvm.extractvalue %[[MEM_DESC]][4, 0] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 // CHECK: %[[STRIDE1:.*]] = llvm.extractvalue %[[MEM_DESC]][4, 1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+
+// CHECK-INTERFACE-LABEL: func @extract_strided_metadata
+// CHECK-INTERFACE-NOT: memref.extract_strided_metadata
+
 func.func @extract_strided_metadata(
     %ref: memref<?x?xf32, strided<[?,?], offset: ?>>) {
 
@@ -637,9 +709,11 @@ func.func @extract_strided_metadata(
 // -----
 
 // CHECK-LABEL: func @load_non_temporal(
+// CHECK-INTERFACE-LABEL: func @load_non_temporal(
 func.func @load_non_temporal(%arg0 : memref<32xf32, affine_map<(d0) -> (d0)>>) {
   %1 = arith.constant 7 : index
   // CHECK: llvm.load %{{.*}} {nontemporal} : !llvm.ptr -> f32
+  // CHECK-INTERFACE: llvm.load
   %2 = memref.load %arg0[%1] {nontemporal = true} : memref<32xf32, affine_map<(d0) -> (d0)>>
   func.return
 }
@@ -647,10 +721,12 @@ func.func @load_non_temporal(%arg0 : memref<32xf32, affine_map<(d0) -> (d0)>>) {
 // -----
 
 // CHECK-LABEL: func @store_non_temporal(
+// CHECK-INTERFACE-LABEL: func @store_non_temporal(
 func.func @store_non_temporal(%input : memref<32xf32, affine_map<(d0) -> (d0)>>, %output : memref<32xf32, affine_map<(d0) -> (d0)>>) {
   %1 = arith.constant 7 : index
   %2 = memref.load %input[%1] {nontemporal = true} : memref<32xf32, affine_map<(d0) -> (d0)>>
   // CHECK: llvm.store %{{.*}}, %{{.*}}  {nontemporal} : f32, !llvm.ptr
+  // CHECK-INTERFACE: llvm.store
   memref.store %2, %output[%1] {nontemporal = true} : memref<32xf32, affine_map<(d0) -> (d0)>>
   func.return
 }
@@ -660,8 +736,10 @@ func.func @store_non_temporal(%input : memref<32xf32, affine_map<(d0) -> (d0)>>,
 // Ensure unconvertable memory space not cause a crash
 
 // CHECK-LABEL: @alloca_unconvertable_memory_space
+// CHECK-INTERFACE-LABEL: @alloca_unconvertable_memory_space
 func.func @alloca_unconvertable_memory_space() {
   // CHECK: memref.alloca
+  // CHECK-INTERFACE: memref.alloca
   %alloca = memref.alloca() : memref<1x32x33xi32, #spirv.storage_class<StorageBuffer>>
   func.return
 }

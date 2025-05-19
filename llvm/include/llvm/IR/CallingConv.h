@@ -290,6 +290,27 @@ namespace CallingConv {
 
 } // end namespace CallingConv
 
+/// \return true if the calling convention allows the function to be called
+/// directly or indirectly via a call-like instruction.
+constexpr bool isCallableCC(CallingConv::ID CC) {
+  switch (CC) {
+  case CallingConv::AMDGPU_CS_Chain:
+  case CallingConv::AMDGPU_CS_ChainPreserve:
+  case CallingConv::AMDGPU_CS:
+  case CallingConv::AMDGPU_ES:
+  case CallingConv::AMDGPU_GS:
+  case CallingConv::AMDGPU_HS:
+  case CallingConv::AMDGPU_KERNEL:
+  case CallingConv::AMDGPU_LS:
+  case CallingConv::AMDGPU_PS:
+  case CallingConv::AMDGPU_VS:
+  case CallingConv::SPIR_KERNEL:
+    return false;
+  default:
+    return true;
+  }
+}
+
 } // end namespace llvm
 
 #endif // LLVM_IR_CALLINGCONV_H

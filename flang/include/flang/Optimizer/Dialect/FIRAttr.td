@@ -178,4 +178,45 @@ def fir_PackArrayHeuristicsAttr
   let assemblyFormat = "`<` $value `>`";
 }
 
+def fir_OpenACCSafeTempArrayCopyAttr : fir_Attr<"OpenACCSafeTempArrayCopy"> {
+  let mnemonic = "acc_safe_temp_array_copy";
+  let description = [{
+    An attribute implementing SafeTempArrayCopyAttrInterface.
+    It specifies whether it is possible to dynamically check
+    if creating a temporary copy of a Fortran array is safe
+    in the context of OpenACC.
+    It also provides the methods to generate those dynamic checks.
+  }];
+}
+
+def fir_OpenMPSafeTempArrayCopyAttr : fir_Attr<"OpenMPSafeTempArrayCopy"> {
+  let mnemonic = "omp_safe_temp_array_copy";
+  let description = [{
+    An attribute implementing SafeTempArrayCopyAttrInterface.
+    It specifies whether it is possible to dynamically check
+    if creating a temporary copy of a Fortran array is safe
+    in the context of OpenMP.
+    It also provides the methods to generate those dynamic checks.
+  }];
+}
+
+def LocalitySpecTypeLocal : I32EnumAttrCase<"Local", 0, "local">;
+def LocalitySpecTypeLocalInit
+    : I32EnumAttrCase<"LocalInit", 1, "local_init">;
+
+def LocalitySpecifierType : I32EnumAttr<
+    "LocalitySpecifierType",
+    "Type of a locality specifier", [
+      LocalitySpecTypeLocal,
+      LocalitySpecTypeLocalInit
+    ]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::fir";
+}
+
+def LocalitySpecifierTypeAttr : EnumAttr<FIROpsDialect, LocalitySpecifierType,
+                                                "locality_specifier_type"> {
+  let assemblyFormat = "`{` `type` `=` $value `}`";
+}
+
 #endif // FIR_DIALECT_FIR_ATTRS
