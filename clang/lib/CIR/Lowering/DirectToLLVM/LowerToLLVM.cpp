@@ -1198,19 +1198,15 @@ mlir::LogicalResult CIRToLLVMBinOpLowering::matchAndRewrite(
     return op.emitError() << "inconsistent operands' types not supported yet";
 
   mlir::Type type = op.getRhs().getType();
-  assert(!cir::MissingFeatures::vectorType());
   if (!mlir::isa<cir::IntType, cir::BoolType, cir::CIRFPTypeInterface,
-                 mlir::IntegerType>(type))
+                 mlir::IntegerType, cir::VectorType>(type))
     return op.emitError() << "operand type not supported yet";
 
-  auto llvmTy = getTypeConverter()->convertType(op.getType());
-  mlir::Type llvmEltTy =
-      mlir::isa<mlir::VectorType>(llvmTy)
-          ? mlir::cast<mlir::VectorType>(llvmTy).getElementType()
-          : llvmTy;
-  auto rhs = adaptor.getRhs();
-  auto lhs = adaptor.getLhs();
+  const mlir::Type llvmTy = getTypeConverter()->convertType(op.getType());
+  const mlir::Type llvmEltTy = elementTypeIfVector(llvmTy);
 
+  const mlir::Value rhs = adaptor.getRhs();
+  const mlir::Value lhs = adaptor.getLhs();
   type = elementTypeIfVector(type);
 
   switch (op.getKind()) {
@@ -1294,7 +1290,6 @@ mlir::LogicalResult CIRToLLVMBinOpLowering::matchAndRewrite(
     }
     break;
   }
-
   return mlir::LogicalResult::success();
 }
 
