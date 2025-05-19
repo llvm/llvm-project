@@ -1,0 +1,22 @@
+RUN: llvm-remarkutil instruction-mix --parser=yaml %p/Inputs/instruction-mix.yaml | FileCheck %s
+RUN: llvm-remarkutil yaml2bitstream %p/Inputs/instruction-mix.yaml | llvm-remarkutil instruction-mix --parser=bitstream | FileCheck %s
+RUN: llvm-remarkutil instruction-mix --parser=yaml %p/Inputs/instruction-mix.yaml --report_style=human | FileCheck %s
+RUN: llvm-remarkutil instruction-mix --parser=yaml %p/Inputs/instruction-mix.yaml --report_style=csv | FileCheck %s --check-prefix=CSV
+RUN: llvm-remarkutil instruction-mix --parser=yaml %p/Inputs/instruction-mix.yaml --filter=meow | FileCheck %s --check-prefix=MEOW
+
+; CHECK-LABEL: Instruction Count
+; CHECK-NEXT:  ----------- -----
+; CHECK-NEXT:  mul         20
+; CHECK-NEXT:  add         15
+; CHECK-NEXT:  nop         10
+
+; CSV-LABEL: Instruction,Count
+; CSV-NEXT: mul,20
+; CSV-NEXT: add,15
+; CSV-NEXT: nop,10
+
+; MEOW:      Instruction Count
+; MEOW-NEXT: ----------- -----
+; MEOW-NEXT: mul         15
+; MEOW-NEXT: add         12
+; MEOW-NEXT: nop         9
