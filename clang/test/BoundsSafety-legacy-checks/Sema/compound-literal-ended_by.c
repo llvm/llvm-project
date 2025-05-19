@@ -176,10 +176,9 @@ struct eb_with_other_data field_initializers_with_side_effects(struct eb_with_ot
 
 struct eb_with_other_data global_eb_with_other_data_side_effect_init = 
   (struct eb_with_other_data) {
-    // FIXME: Location of first non-constant is wrong (rdar://81135826)
-    .start = 0x0, // both-error{{initializer element is not a compile-time constant}}
+    .start = 0x0,
     .end = 0x0,
-    .other = side_effect() 
+    .other = side_effect() // both-error{{initializer element is not a compile-time constant}}
 };
 
 struct eb_with_other_data side_effects_in_ptrs(struct eb_with_other_data* s) {
