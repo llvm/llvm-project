@@ -118,7 +118,6 @@ export class DebugSessionTracker
           console.error("unexpected module event reason");
           break;
       }
-
       this.modules.set(session, modules);
       this.modulesChanged.fire();
     }
