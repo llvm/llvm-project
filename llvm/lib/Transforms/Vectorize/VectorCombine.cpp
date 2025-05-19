@@ -4008,9 +4008,9 @@ bool VectorCombine::shrinkPhiOfShuffles(Instruction &I) {
   ArrayRef<int> Mask0;
   ArrayRef<int> Mask1;
 
-  if (!match(Phi->getOperand(0u), 
+  if (!match(Phi->getOperand(0u),
              m_OneUse(m_Shuffle(m_Value(Op), m_Poison(), m_Mask(Mask0)))) ||
-      !match(Phi->getOperand(1u), 
+      !match(Phi->getOperand(1u),
              m_OneUse(m_Shuffle(m_Specific(Op), m_Poison(), m_Mask(Mask1)))))
     return false;
 
