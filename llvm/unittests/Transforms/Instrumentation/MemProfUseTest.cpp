@@ -107,10 +107,9 @@ declare !dbg !19 void @_Z2f3v()
   // locations.
   EXPECT_THAT(
       CallSites,
-      ElementsAre(
-          Pair(LineLocation(1, 3), memprof::getGUID("_Z2f1v")),
-          Pair(LineLocation(2, 3), memprof::getGUID("_Z2f2v")),
-          Pair(LineLocation(2, 9), memprof::getGUID("_Z2f3v"))));
+      ElementsAre(Pair(LineLocation(1, 3), memprof::getGUID("_Z2f1v")),
+                  Pair(LineLocation(2, 3), memprof::getGUID("_Z2f2v")),
+                  Pair(LineLocation(2, 9), memprof::getGUID("_Z2f3v"))));
 }
 
 TEST(MemProf, ExtractDirectCallsFromIRInline) {
@@ -206,25 +205,22 @@ declare !dbg !25 void @_Z2g2v() local_unnamed_addr
   EXPECT_EQ(FooCallerGUID, memprof::getGUID("_Z3foov"));
   EXPECT_THAT(
       FooCallSites,
-      ElementsAre(
-          Pair(LineLocation(1, 3), memprof::getGUID("_ZL2f3v")),
-          Pair(LineLocation(2, 9), memprof::getGUID("_ZL2g3v"))));
+      ElementsAre(Pair(LineLocation(1, 3), memprof::getGUID("_ZL2f3v")),
+                  Pair(LineLocation(2, 9), memprof::getGUID("_ZL2g3v"))));
 
   auto F2It = Calls.find(memprof::getGUID("_ZL2f2v"));
   ASSERT_NE(F2It, Calls.end());
   const auto &[F2CallerGUID, F2CallSites] = *F2It;
   EXPECT_EQ(F2CallerGUID, memprof::getGUID("_ZL2f2v"));
-  EXPECT_THAT(F2CallSites,
-              ElementsAre(Pair(LineLocation(2, 3),
-                               memprof::getGUID("_Z2f1v"))));
+  EXPECT_THAT(F2CallSites, ElementsAre(Pair(LineLocation(2, 3),
+                                            memprof::getGUID("_Z2f1v"))));
 
   auto F3It = Calls.find(memprof::getGUID("_ZL2f3v"));
   ASSERT_NE(F3It, Calls.end());
   const auto &[F3CallerGUID, F3CallSites] = *F3It;
   EXPECT_EQ(F3CallerGUID, memprof::getGUID("_ZL2f3v"));
-  EXPECT_THAT(F3CallSites,
-              ElementsAre(Pair(LineLocation(1, 10),
-                               memprof::getGUID("_ZL2f2v"))));
+  EXPECT_THAT(F3CallSites, ElementsAre(Pair(LineLocation(1, 10),
+                                            memprof::getGUID("_ZL2f2v"))));
 
   auto G3It = Calls.find(memprof::getGUID("_ZL2g3v"));
   ASSERT_NE(G3It, Calls.end());
@@ -232,9 +228,8 @@ declare !dbg !25 void @_Z2g2v() local_unnamed_addr
   EXPECT_EQ(G3CallerGUID, memprof::getGUID("_ZL2g3v"));
   EXPECT_THAT(
       G3CallSites,
-      ElementsAre(
-          Pair(LineLocation(1, 8), memprof::getGUID("_Z2g1v")),
-          Pair(LineLocation(2, 3), memprof::getGUID("_Z2g2v"))));
+      ElementsAre(Pair(LineLocation(1, 8), memprof::getGUID("_Z2g1v")),
+                  Pair(LineLocation(2, 3), memprof::getGUID("_Z2g2v"))));
 }
 
 TEST(MemProf, ExtractDirectCallsFromIRCallingNew) {
