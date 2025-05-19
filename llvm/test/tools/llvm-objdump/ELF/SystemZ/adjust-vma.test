@@ -1,3 +1,5 @@
+## SystemZDisassembler sets the branch target information during getInstruction instead of printInst.
+## Test we display the branch targets correctly in the presence of --adjust-vma.
 # RUN: rm -rf %t && split-file %s %t && cd %t
 # RUN: yaml2obj a.yaml -o out
 # RUN: llvm-objdump -td --adjust-vma=0x200000 --no-show-raw-insn out | FileCheck %s --match-full-lines
