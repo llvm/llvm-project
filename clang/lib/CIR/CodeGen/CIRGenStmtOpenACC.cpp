@@ -39,8 +39,7 @@ mlir::LogicalResult CIRGenFunction::emitOpenACCOpAssociatedStmt(
     // Sets insertion point before the 'op', since every new expression needs to
     // be before the operation.
     builder.setInsertionPoint(op);
-    makeClauseEmitter(op, *this, builder, dirKind, dirLoc)
-        .VisitClauseList(clauses);
+    makeClauseEmitter(op, *this, builder, dirKind, dirLoc).emitClauses(clauses);
   }
 
   {
@@ -115,7 +114,7 @@ mlir::LogicalResult CIRGenFunction::emitOpenACCOpCombinedConstruct(
       // We don't bother setting the insertion point, since the clause emitter
       // is going to have to do this correctly.
       makeClauseEmitter(inf, *this, builder, dirKind, dirLoc)
-          .VisitClauseList(clauses);
+          .emitClauses(clauses);
     }
 
     builder.create<TermOp>(end);
@@ -137,8 +136,7 @@ Op CIRGenFunction::emitOpenACCOp(
     // Sets insertion point before the 'op', since every new expression needs to
     // be before the operation.
     builder.setInsertionPoint(op);
-    makeClauseEmitter(op, *this, builder, dirKind, dirLoc)
-        .VisitClauseList(clauses);
+    makeClauseEmitter(op, *this, builder, dirKind, dirLoc).emitClauses(clauses);
   }
   return op;
 }

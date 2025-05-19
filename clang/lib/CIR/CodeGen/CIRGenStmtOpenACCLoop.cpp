@@ -96,7 +96,7 @@ CIRGenFunction::emitOpenACCLoopConstruct(const OpenACCLoopConstruct &s) {
     builder.setInsertionPoint(op);
     makeClauseEmitter(op, *this, builder, s.getDirectiveKind(),
                       s.getDirectiveLoc())
-        .VisitClauseList(s.clauses());
+        .emitClauses(s.clauses());
   }
 
   mlir::LogicalResult stmtRes = mlir::success();
