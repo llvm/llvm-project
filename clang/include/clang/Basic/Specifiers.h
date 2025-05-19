@@ -98,12 +98,6 @@ namespace clang {
 #define GENERIC_IMAGE_TYPE(ImgType, Id)                                      \
     TST_##ImgType##_t, // OpenCL image types
 #include "clang/Basic/OpenCLImageTypes.def"
-
-#define NEON_VECTOR_TYPE(Name, BaseType, ElBits, NumEls, VectorKind)         \
-    TST_##Name,
-#define SVE_TYPE(Name, Id, SingletonId)
-#include "clang/Basic/AArch64SVEACLETypes.def"
-
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                          \
     TST_##Name, // HLSL Intangible Types
 #include "clang/Basic/HLSLIntangibleTypes.def"

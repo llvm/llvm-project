@@ -4442,15 +4442,6 @@ void Parser::ParseDeclarationSpecifiers(
         goto DoneWithDeclSpec; \
       break;
 #include "clang/Basic/OpenCLImageTypes.def"
-
-#define NEON_VECTOR_TYPE(Name, BaseType, ElBits, NumEls, VectorKind)           \
-  case tok::kw_##Name:                                                         \
-    isInvalid = DS.SetTypeSpecType(DeclSpec::TST_##Name, Loc, PrevSpec,        \
-                                   DiagID, Policy);                            \
-    break;
-#define SVE_TYPE(Name, Id, SingletonId)
-#include "clang/Basic/AArch64SVEACLETypes.def"
-
     case tok::kw___unknown_anytype:
       isInvalid = DS.SetTypeSpecType(TST_unknown_anytype, Loc,
                                      PrevSpec, DiagID, Policy);
@@ -5964,10 +5955,6 @@ bool Parser::isDeclarationSpecifier(
   case tok::kw___read_only:
   case tok::kw___read_write:
   case tok::kw___write_only:
-#define NEON_VECTOR_TYPE(Name, BaseType, ElBits, NumEls, VectorKind)           \
-  case tok::kw_##Name:
-#define SVE_TYPE(Name, Id, SingletonId)
-#include "clang/Basic/AArch64SVEACLETypes.def"
 #define GENERIC_IMAGE_TYPE(ImgType, Id) case tok::kw_##ImgType##_t:
 #include "clang/Basic/OpenCLImageTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case tok::kw_##Name:

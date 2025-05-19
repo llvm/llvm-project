@@ -203,9 +203,6 @@ void LangOptions::setLangDefaults(LangOptions &Opts, Language Lang,
     Opts.setDefaultFPContractMode(LangOptions::FPM_Fast);
   }
 
-  if (T.isARM() || T.isAArch64())
-    Opts.ACLE = true;
-
   // OpenCL, C++ and C23 have bool, true, false keywords.
   Opts.Bool = Opts.OpenCL || Opts.CPlusPlus || Opts.C23;
 
