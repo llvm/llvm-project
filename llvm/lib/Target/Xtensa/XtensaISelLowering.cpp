@@ -113,6 +113,7 @@ XtensaTargetLowering::XtensaTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::BR_CC, MVT::f32, Expand);
 
   setOperationAction(ISD::SELECT, MVT::i32, Expand);
+  setOperationAction(ISD::SELECT, MVT::f32, Expand);
   setOperationAction(ISD::SELECT_CC, MVT::i32, Custom);
   setOperationAction(ISD::SELECT_CC, MVT::f32, Expand);
 
@@ -188,8 +189,6 @@ XtensaTargetLowering::XtensaTargetLowering(const TargetMachine &TM,
   for (unsigned I = MVT::FIRST_FP_VALUETYPE; I <= MVT::LAST_FP_VALUETYPE; ++I) {
     MVT VT = MVT::SimpleValueType(I);
     if (isTypeLegal(VT)) {
-      // We can use FI for FRINT.
-      // setOperationAction(ISD::FRINT, VT, Legal);
       if (VT.getSizeInBits() == 32 && Subtarget.hasSingleFloat()) {
         setOperationAction(ISD::FABS, VT, Legal);
         setOperationAction(ISD::FADD, VT, Legal);
@@ -208,36 +207,13 @@ XtensaTargetLowering::XtensaTargetLowering(const TargetMachine &TM,
 
       // TODO: once implemented in InstrInfo uncomment
       setOperationAction(ISD::FSQRT, VT, Expand);
-
-      // No special instructions for these.
-      setOperationAction(ISD::FCBRT, VT, Expand);
-      setOperationAction(ISD::FCEIL, VT, Expand);
       setOperationAction(ISD::FSIN, VT, Expand);
       setOperationAction(ISD::FCOS, VT, Expand);
       setOperationAction(ISD::FREM, VT, Expand);
       setOperationAction(ISD::FDIV, VT, Expand);
-      setOperationAction(ISD::FEXP, VT, Expand);
-      setOperationAction(ISD::FEXP2, VT, Expand);
-      setOperationAction(ISD::FFLOOR, VT, Expand);
-      setOperationAction(ISD::FLOG, VT, Expand);
-      setOperationAction(ISD::FLOG2, VT, Expand);
-      setOperationAction(ISD::FLOG10, VT, Expand);
-      setOperationAction(ISD::FMAXIMUM, VT, Expand);
-      setOperationAction(ISD::FMINIMUM, VT, Expand);
-      setOperationAction(ISD::FMAXNUM, VT, Expand);
-      setOperationAction(ISD::FMINNUM, VT, Expand);
-      setOperationAction(ISD::FNEARBYINT, VT, Expand);
       setOperationAction(ISD::FPOW, VT, Expand);
-      setOperationAction(ISD::FPOWI, VT, Expand);
-      setOperationAction(ISD::FRINT, VT, Expand);
-      setOperationAction(ISD::FROUND, VT, Expand);
-      setOperationAction(ISD::FSINCOS, VT, Expand);
       setOperationAction(ISD::FSQRT, VT, Expand);
-      setOperationAction(ISD::FTRUNC, VT, Expand);
-      setOperationAction(ISD::LLRINT, VT, Expand);
-      setOperationAction(ISD::LLROUND, VT, Expand);
-      setOperationAction(ISD::LRINT, VT, Expand);
-      setOperationAction(ISD::LROUND, VT, Expand);
+      setOperationAction(ISD::FCOPYSIGN, VT, Expand);
     }
   }
 
@@ -263,20 +239,6 @@ XtensaTargetLowering::XtensaTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FP_TO_UINT, MVT::i32, Expand);
     setOperationAction(ISD::FP_TO_SINT, MVT::i32, Expand);
   }
-  setOperationAction(ISD::FMA, MVT::f64, Expand);
-  setOperationAction(ISD::SETCC, MVT::f64, Expand);
-  setOperationAction(ISD::BITCAST, MVT::i64, Expand);
-  setOperationAction(ISD::BITCAST, MVT::f64, Expand);
-  setOperationAction(ISD::UINT_TO_FP, MVT::i64, Expand);
-  setOperationAction(ISD::SINT_TO_FP, MVT::i64, Expand);
-  setOperationAction(ISD::FP_TO_UINT, MVT::i64, Expand);
-  setOperationAction(ISD::FP_TO_SINT, MVT::i64, Expand);
-
-  // Needed so that we don't try to implement f128 constant loads using
-  // a load-and-extend of a f80 constant (in cases where the constant
-  // would fit in an f80).
-  for (MVT VT : MVT::fp_valuetypes())
-    setLoadExtAction(ISD::EXTLOAD, VT, MVT::f80, Expand);
 
   // Floating-point truncation and stores need to be done separately.
   setTruncStoreAction(MVT::f64, MVT::f32, Expand);

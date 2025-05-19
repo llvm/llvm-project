@@ -129,26 +129,26 @@ static DecodeStatus DecodeFPRRegisterClass(MCInst &Inst, uint64_t RegNo,
   return MCDisassembler::Success;
 }
 
-static const MCPhysReg URDecoderTable[] = {Xtensa::FCR, 232, Xtensa::FSR, 233};
-
 static DecodeStatus DecodeURRegisterClass(MCInst &Inst, uint64_t RegNo,
                                           uint64_t Address,
-                                          const void *Decoder) {
+                                          const MCDisassembler *Decoder) {
   const llvm::MCSubtargetInfo STI =
       ((const MCDisassembler *)Decoder)->getSubtargetInfo();
 
   if (RegNo > 255)
     return MCDisassembler::Fail;
 
-  for (unsigned i = 0; i < std::size(URDecoderTable); i += 2) {
-    if (URDecoderTable[i + 1] == RegNo) {
-      MCPhysReg Reg = URDecoderTable[i];
-      Inst.addOperand(MCOperand::createReg(Reg));
-      return MCDisassembler::Success;
-    }
-  }
+  Xtensa::RegisterAccessType RAType = Inst.getOpcode() == Xtensa::WUR
+                                          ? Xtensa::REGISTER_WRITE
+                                          : Xtensa::REGISTER_READ;
 
-  return MCDisassembler::Fail;
+  MCPhysReg Reg = Xtensa::getUserRegister(RegNo);
+  if (!Xtensa::checkRegister(Reg, Decoder->getSubtargetInfo().getFeatureBits(),
+                             RAType))
+    return MCDisassembler::Fail;
+
+  Inst.addOperand(MCOperand::createReg(Reg));
+  return MCDisassembler::Success;
 }
 
 struct DecodeRegister {

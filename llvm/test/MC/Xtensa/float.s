@@ -175,3 +175,35 @@ LBL0:
 # CHECK-INST: wfr f2, a3
 # CHECK: encoding: [0x50,0x23,0xfa]
 	wfr f2, a3
+
+# CHECK-INST: rur a3, fcr
+# CHECK: encoding: [0x80,0x3e,0xe3]
+	rur a3, fcr
+
+# CHECK-INST: rur a3, fcr
+# CHECK: encoding: [0x80,0x3e,0xe3]
+	rur a3, 232
+
+# CHECK-INST: rur a3, fcr
+# CHECK: encoding: [0x80,0x3e,0xe3]
+	rur.fcr a3
+
+# CHECK-INST: wur a3, fcr
+# CHECK: encoding: [0x30,0xe8,0xf3]
+	wur a3, fcr
+
+# CHECK-INST: rur a3, fsr
+# CHECK: encoding: [0x90,0x3e,0xe3]
+	rur a3, fsr
+
+# CHECK-INST: rur a3, fsr
+# CHECK: encoding: [0x90,0x3e,0xe3]
+	rur a3, 233
+
+# CHECK-INST: rur a3, fsr
+# CHECK: encoding: [0x90,0x3e,0xe3]
+	rur.fsr a3
+
+# CHECK-INST: wur a3, fsr
+# CHECK: encoding: [0x30,0xe9,0xf3]
+	wur a3, fsr

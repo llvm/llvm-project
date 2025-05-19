@@ -566,6 +566,26 @@ def XSR : RSR_Inst<0x00, 0x01, 0x06, (outs AR:$ard, SR:$srd), (ins AR:$t, SR:$sr
 }
 
 //===----------------------------------------------------------------------===//
+// User Registers read/write instructions
+//===----------------------------------------------------------------------===//
+
+def WUR : RRR_Inst<0x00, 0x03, 0x0F, (outs UR:$ur), (ins AR:$t),
+                  "wur\t$t, $ur", []> {
+  bits<8> ur;
+
+  let r = ur{7-4};
+  let s = ur{3-0};
+}
+
+def RUR : RRR_Inst<0x00, 0x03, 0x0E, (outs AR:$r), (ins UR:$ur),
+                  "rur\t$r, $ur", []> {
+  bits<8> ur;
+
+  let s = ur{7-4};
+  let t = ur{3-0};
+}
+
+//===----------------------------------------------------------------------===//
 // Stack allocation
 //===----------------------------------------------------------------------===//
 
@@ -878,6 +898,19 @@ let Constraints = "$dr = $r,@earlyclobber $dr" in {
 
   def MOVT : RRR_Inst<0x00, 0x03, 0x0D, (outs AR:$dr), (ins AR:$r, AR:$s, BR:$t),
                    "movt\t$r, $s, $t", []>, Requires<[HasBoolean]>;
+}
+
+let Predicates = [HasBoolean] in {
+  def SPILL_BOOL: Pseudo<(outs), (ins BR:$b, mem8:$mem),
+                            "!spill_bool $b, $mem",[]> {
+    let mayStore = 1;
+  }
+
+  def RESTORE_BOOL: Pseudo<(outs BR:$out), (ins mem8:$mem),
+                            "!restore_bool $out, $mem",[]> {
+    let mayLoad = 1;
+    let Defs = [BREG];
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -1223,7 +1256,7 @@ def NEXP01_S : RRR_Inst<0x00, 0x0A, 0x0F, (outs FPR:$r), (ins FPR:$s),
 
 def NEG_S : RRR_Inst<0x00, 0x0A, 0x0F, (outs FPR:$r), (ins FPR:$s),
                     "neg.s\t$r, $s",
-                    [(set FPR:$r, (fneg FPR:$s))]> {
+                    [(set FPR:$r, (fneg FPR:$s))]>, Requires<[HasSingleFloat]> {
   let t = 0x06;
 }
 
@@ -1234,7 +1267,7 @@ def RECIP0_S : RRR_Inst<0x00, 0x0A, 0x0F, (outs FPR:$r), (ins FPR:$s),
 
 def RFR : RRR_Inst<0x00, 0x0A, 0x0f, (outs AR:$r), (ins FPR:$s),
                   "rfr\t$r, $s",
-                  [(set AR:$r, (bitconvert FPR:$s))]> {
+                  [(set AR:$r, (bitconvert FPR:$s))]>, Requires<[HasSingleFloat]> {
   let t = 0x04;
 }
 
@@ -1256,7 +1289,7 @@ def SQRT0_S : RRR_Inst<0x00, 0x0A, 0x0F, (outs FPR:$r), (ins FPR:$s),
 }
 
 def TRUNC_S : RRR_Inst<0x00, 0x0A, 0x09, (outs AR:$r), (ins FPR:$s, uimm4:$imm),
-                      "trunc.s\t$r, $s, $imm", []> {
+                      "trunc.s\t$r, $s, $imm", []>, Requires<[HasSingleFloat]>  {
   bits<4> imm;
 
   let t = imm;
@@ -1265,7 +1298,7 @@ def TRUNC_S : RRR_Inst<0x00, 0x0A, 0x09, (outs AR:$r), (ins FPR:$s, uimm4:$imm),
 def : Pat<(i32 (fp_to_sint FPR:$s)), (TRUNC_S FPR:$s, 0)>;
 
 def UFLOAT_S : RRR_Inst<0x00, 0x0A, 0x0D, (outs FPR:$r), (ins AR:$s, uimm4:$imm),
-                       "ufloat.s\t$r, $s, $imm", []> {
+                       "ufloat.s\t$r, $s, $imm", []>, Requires<[HasSingleFloat]>  {
   bits<4> imm;
 
   let t = imm;
@@ -1274,7 +1307,7 @@ def UFLOAT_S : RRR_Inst<0x00, 0x0A, 0x0D, (outs FPR:$r), (ins AR:$s, uimm4:$imm)
 def : Pat<(f32 (uint_to_fp AR:$s)), (UFLOAT_S AR:$s, 0)>;
 
 def UTRUNC_S : RRR_Inst<0x00, 0x0A, 0x0e, (outs AR:$r), (ins FPR:$s, uimm4:$imm),
-                       "utrunc.s\t$r, $s, $imm", []> {
+                       "utrunc.s\t$r, $s, $imm", []>, Requires<[HasSingleFloat]>  {
   bits<4> imm;
 
   let t = imm;
@@ -1284,7 +1317,7 @@ def : Pat<(i32 (fp_to_uint FPR:$s)), (UTRUNC_S FPR:$s, 0)>;
 
 def WFR : RRR_Inst<0x00, 0x0A, 0x0f, (outs FPR:$r), (ins AR:$s),
                   "wfr\t$r, $s",
-                  [(set FPR:$r, (bitconvert AR:$s))]> {
+                  [(set FPR:$r, (bitconvert AR:$s))]>, Requires<[HasSingleFloat]>  {
   let t = 0x05;
 }
 
