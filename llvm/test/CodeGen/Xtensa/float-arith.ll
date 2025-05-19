@@ -9,8 +9,8 @@ define float @fadd_s(float %a, float %b) nounwind {
 ; XTENSA-NEXT:    add.s f8, f9, f8
 ; XTENSA-NEXT:    rfr a2, f8
 ; XTENSA-NEXT:    ret
-  %1 = fadd float %a, %b
-  ret float %1
+  %res = fadd float %a, %b
+  ret float %res
 }
 
 define float @fsub_s(float %a, float %b) nounwind {
@@ -21,8 +21,8 @@ define float @fsub_s(float %a, float %b) nounwind {
 ; XTENSA-NEXT:    sub.s f8, f9, f8
 ; XTENSA-NEXT:    rfr a2, f8
 ; XTENSA-NEXT:    ret
-  %1 = fsub float %a, %b
-  ret float %1
+  %res = fsub float %a, %b
+  ret float %res
 }
 
 define float @fmul_s(float %a, float %b) nounwind {
@@ -33,8 +33,8 @@ define float @fmul_s(float %a, float %b) nounwind {
 ; XTENSA-NEXT:    mul.s f8, f9, f8
 ; XTENSA-NEXT:    rfr a2, f8
 ; XTENSA-NEXT:    ret
-  %1 = fmul float %a, %b
-  ret float %1
+  %res = fmul float %a, %b
+  ret float %res
 }
 
 define float @fdiv_s(float %a, float %b) nounwind {
@@ -49,8 +49,8 @@ define float @fdiv_s(float %a, float %b) nounwind {
 ; XTENSA-NEXT:    addi a8, a1, 16
 ; XTENSA-NEXT:    or a1, a8, a8
 ; XTENSA-NEXT:    ret
-  %1 = fdiv float %a, %b
-  ret float %1
+  %res = fdiv float %a, %b
+  ret float %res
 }
 
 declare float @llvm.sqrt.f32(float)
@@ -67,8 +67,8 @@ define float @fsqrt_s(float %a) nounwind {
 ; XTENSA-NEXT:    addi a8, a1, 16
 ; XTENSA-NEXT:    or a1, a8, a8
 ; XTENSA-NEXT:    ret
-  %1 = call float @llvm.sqrt.f32(float %a)
-  ret float %1
+  %res = call float @llvm.sqrt.f32(float %a)
+  ret float %res
 }
 
 declare float @llvm.fabs.f32(float)
@@ -83,10 +83,10 @@ define float @fabs_s(float %a, float %b) nounwind {
 ; XTENSA-NEXT:    add.s f8, f9, f8
 ; XTENSA-NEXT:    rfr a2, f8
 ; XTENSA-NEXT:    ret
-  %1 = fadd float %a, %b
-  %2 = call float @llvm.fabs.f32(float %1)
-  %3 = fadd float %2, %1
-  ret float %3
+  %fa = fadd float %a, %b
+  %call_res = call float @llvm.fabs.f32(float %fa)
+  %res = fadd float %call_res, %fa
+  ret float %res
 }
 
 declare float @llvm.minnum.f32(float, float)
@@ -103,8 +103,8 @@ define float @fmin_s(float %a, float %b) nounwind {
 ; XTENSA-NEXT:    addi a8, a1, 16
 ; XTENSA-NEXT:    or a1, a8, a8
 ; XTENSA-NEXT:    ret
-  %1 = call float @llvm.minnum.f32(float %a, float %b)
-  ret float %1
+  %res = call float @llvm.minnum.f32(float %a, float %b)
+  ret float %res
 }
 
 declare float @llvm.maxnum.f32(float, float)
@@ -121,8 +121,8 @@ define float @fmax_s(float %a, float %b) nounwind {
 ; XTENSA-NEXT:    addi a8, a1, 16
 ; XTENSA-NEXT:    or a1, a8, a8
 ; XTENSA-NEXT:    ret
-  %1 = call float @llvm.maxnum.f32(float %a, float %b)
-  ret float %1
+  %res = call float @llvm.maxnum.f32(float %a, float %b)
+  ret float %res
 }
 
 declare float @llvm.fma.f32(float, float, float)
@@ -136,8 +136,8 @@ define float @fmadd_s(float %a, float %b, float %c) nounwind {
 ; XTENSA-NEXT:    madd.s f10, f9, f8
 ; XTENSA-NEXT:    rfr a2, f10
 ; XTENSA-NEXT:    ret
-  %1 = call float @llvm.fma.f32(float %a, float %b, float %c)
-  ret float %1
+  %res = call float @llvm.fma.f32(float %a, float %b, float %c)
+  ret float %res
 }
 
 define float @fmsub_s(float %a, float %b, float %c) nounwind {
@@ -155,8 +155,8 @@ define float @fmsub_s(float %a, float %b, float %c) nounwind {
 ; XTENSA-NEXT:    ret
   %c_ = fadd float 0.0, %c ; avoid negation using xor
   %negc = fsub float -0.0, %c_
-  %1 = call float @llvm.fma.f32(float %a, float %b, float %negc)
-  ret float %1
+  %res = call float @llvm.fma.f32(float %a, float %b, float %negc)
+  ret float %res
 }
 
 define float @fnmadd_s(float %a, float %b, float %c) nounwind {
@@ -178,8 +178,8 @@ define float @fnmadd_s(float %a, float %b, float %c) nounwind {
   %c_ = fadd float 0.0, %c
   %nega = fsub float -0.0, %a_
   %negc = fsub float -0.0, %c_
-  %1 = call float @llvm.fma.f32(float %nega, float %b, float %negc)
-  ret float %1
+  %res = call float @llvm.fma.f32(float %nega, float %b, float %negc)
+  ret float %res
 }
 
 define float @fnmadd_s_2(float %a, float %b, float %c) nounwind {
@@ -201,8 +201,8 @@ define float @fnmadd_s_2(float %a, float %b, float %c) nounwind {
   %c_ = fadd float 0.0, %c
   %negb = fsub float -0.0, %b_
   %negc = fsub float -0.0, %c_
-  %1 = call float @llvm.fma.f32(float %a, float %negb, float %negc)
-  ret float %1
+  %res = call float @llvm.fma.f32(float %a, float %negb, float %negc)
+  ret float %res
 }
 
 define float @fnmadd_s_3(float %a, float %b, float %c) nounwind {
@@ -216,8 +216,8 @@ define float @fnmadd_s_3(float %a, float %b, float %c) nounwind {
 ; XTENSA-NEXT:    l32r a9, .LCPI12_0
 ; XTENSA-NEXT:    xor a2, a8, a9
 ; XTENSA-NEXT:    ret
-  %1 = call float @llvm.fma.f32(float %a, float %b, float %c)
-  %neg = fneg float %1
+  %res = call float @llvm.fma.f32(float %a, float %b, float %c)
+  %neg = fneg float %res
   ret float %neg
 }
 
@@ -232,8 +232,8 @@ define float @fnmadd_nsz(float %a, float %b, float %c) nounwind {
 ; XTENSA-NEXT:    l32r a9, .LCPI13_0
 ; XTENSA-NEXT:    xor a2, a8, a9
 ; XTENSA-NEXT:    ret
-  %1 = call nsz float @llvm.fma.f32(float %a, float %b, float %c)
-  %neg = fneg nsz float %1
+  %res = call nsz float @llvm.fma.f32(float %a, float %b, float %c)
+  %neg = fneg nsz float %res
   ret float %neg
 }
 
@@ -252,8 +252,8 @@ define float @fnmsub_s(float %a, float %b, float %c) nounwind {
 ; XTENSA-NEXT:    ret
   %a_ = fadd float 0.0, %a
   %nega = fsub float -0.0, %a_
-  %1 = call float @llvm.fma.f32(float %nega, float %b, float %c)
-  ret float %1
+  %res = call float @llvm.fma.f32(float %nega, float %b, float %c)
+  ret float %res
 }
 
 define float @fnmsub_s_2(float %a, float %b, float %c) nounwind {
@@ -271,8 +271,8 @@ define float @fnmsub_s_2(float %a, float %b, float %c) nounwind {
 ; XTENSA-NEXT:    ret
   %b_ = fadd float 0.0, %b
   %negb = fsub float -0.0, %b_
-  %1 = call float @llvm.fma.f32(float %a, float %negb, float %c)
-  ret float %1
+  %res = call float @llvm.fma.f32(float %a, float %negb, float %c)
+  ret float %res
 }
 
 define float @fmadd_s_contract(float %a, float %b, float %c) nounwind {
@@ -285,9 +285,9 @@ define float @fmadd_s_contract(float %a, float %b, float %c) nounwind {
 ; XTENSA-NEXT:    add.s f8, f8, f9
 ; XTENSA-NEXT:    rfr a2, f8
 ; XTENSA-NEXT:    ret
-  %1 = fmul contract float %a, %b
-  %2 = fadd contract float %1, %c
-  ret float %2
+  %fm = fmul contract float %a, %b
+  %res = fadd contract float %fm, %c
+  ret float %res
 }
 
 define float @fmsub_s_contract(float %a, float %b, float %c) nounwind {
@@ -304,9 +304,9 @@ define float @fmsub_s_contract(float %a, float %b, float %c) nounwind {
 ; XTENSA-NEXT:    rfr a2, f8
 ; XTENSA-NEXT:    ret
   %c_ = fadd float 0.0, %c ; avoid negation using xor
-  %1 = fmul contract float %a, %b
-  %2 = fsub contract float %1, %c_
-  ret float %2
+  %fm = fmul contract float %a, %b
+  %res = fsub contract float %fm, %c_
+  ret float %res
 }
 
 define float @fnmadd_s_contract(float %a, float %b, float %c) nounwind {
@@ -328,10 +328,10 @@ define float @fnmadd_s_contract(float %a, float %b, float %c) nounwind {
   %a_ = fadd float 0.0, %a ; avoid negation using xor
   %b_ = fadd float 0.0, %b ; avoid negation using xor
   %c_ = fadd float 0.0, %c ; avoid negation using xor
-  %1 = fmul contract float %a_, %b_
-  %2 = fneg float %1
-  %3 = fsub contract float %2, %c_
-  ret float %3
+  %fm = fmul contract float %a_, %b_
+  %fn = fneg float %fm
+  %res = fsub contract float %fn, %c_
+  ret float %res
 }
 
 define float @fnmsub_s_contract(float %a, float %b, float %c) nounwind {
@@ -350,9 +350,9 @@ define float @fnmsub_s_contract(float %a, float %b, float %c) nounwind {
 ; XTENSA-NEXT:    ret
   %a_ = fadd float 0.0, %a ; avoid negation using xor
   %b_ = fadd float 0.0, %b ; avoid negation using xor
-  %1 = fmul contract float %a_, %b_
-  %2 = fsub contract float %c, %1
-  ret float %2
+  %fm = fmul contract float %a_, %b_
+  %res = fsub contract float %c, %fm
+  ret float %res
 }
 
 declare float @llvm.powi.f32(float, i32)
@@ -370,8 +370,8 @@ define float @powi_f32(float %a, i32 %b) nounwind {
 ; XTENSA-NEXT:    or a1, a8, a8
 ; XTENSA-NEXT:    ret
 
-  %1 = call float @llvm.powi.f32(float %a, i32 %b)
-  ret float %1
+  %res = call float @llvm.powi.f32(float %a, i32 %b)
+  ret float %res
 }
 
 declare float @llvm.sin.f32(float)
@@ -388,8 +388,8 @@ define float @sin_f32(float %a) nounwind {
 ; XTENSA-NEXT:    addi a8, a1, 16
 ; XTENSA-NEXT:    or a1, a8, a8
 ; XTENSA-NEXT:    ret
-  %1 = call float @llvm.sin.f32(float %a)
-  ret float %1
+  %res = call float @llvm.sin.f32(float %a)
+  ret float %res
 }
 
 declare float @llvm.cos.f32(float)
@@ -406,8 +406,8 @@ define float @cos_f32(float %a) nounwind {
 ; XTENSA-NEXT:    addi a8, a1, 16
 ; XTENSA-NEXT:    or a1, a8, a8
 ; XTENSA-NEXT:    ret
-  %1 = call float @llvm.cos.f32(float %a)
-  ret float %1
+  %res = call float @llvm.cos.f32(float %a)
+  ret float %res
 }
 declare float @llvm.exp.f32(float)
 
@@ -423,8 +423,8 @@ define float @exp_f32(float %a) nounwind {
 ; XTENSA-NEXT:    addi a8, a1, 16
 ; XTENSA-NEXT:    or a1, a8, a8
 ; XTENSA-NEXT:    ret
-  %1 = call float @llvm.exp.f32(float %a)
-  ret float %1
+  %res = call float @llvm.exp.f32(float %a)
+  ret float %res
 }
 
 define float @log_f32(float %a) nounwind {
@@ -439,8 +439,8 @@ define float @log_f32(float %a) nounwind {
 ; XTENSA-NEXT:    addi a8, a1, 16
 ; XTENSA-NEXT:    or a1, a8, a8
 ; XTENSA-NEXT:    ret
-  %1 = call float @llvm.log.f32(float %a)
-  ret float %1
+  %res = call float @llvm.log.f32(float %a)
+  ret float %res
 }
 
 declare float @llvm.log10.f32(float)
@@ -457,8 +457,8 @@ define float @log10_f32(float %a) nounwind {
 ; XTENSA-NEXT:    addi a8, a1, 16
 ; XTENSA-NEXT:    or a1, a8, a8
 ; XTENSA-NEXT:    ret
-  %1 = call float @llvm.log10.f32(float %a)
-  ret float %1
+  %res = call float @llvm.log10.f32(float %a)
+  ret float %res
 }
 
 declare float @llvm.log2.f32(float)
@@ -475,8 +475,8 @@ define float @log2_f32(float %a) nounwind {
 ; XTENSA-NEXT:    addi a8, a1, 16
 ; XTENSA-NEXT:    or a1, a8, a8
 ; XTENSA-NEXT:    ret
-  %1 = call float @llvm.log2.f32(float %a)
-  ret float %1
+  %res = call float @llvm.log2.f32(float %a)
+  ret float %res
 }
 
 declare float @llvm.floor.f32(float)
@@ -493,8 +493,8 @@ define float @floor_f32(float %a) nounwind {
 ; XTENSA-NEXT:    addi a8, a1, 16
 ; XTENSA-NEXT:    or a1, a8, a8
 ; XTENSA-NEXT:    ret
-  %1 = call float @llvm.floor.f32(float %a)
-  ret float %1
+  %res = call float @llvm.floor.f32(float %a)
+  ret float %res
 }
 
 declare float @llvm.ceil.f32(float)
@@ -511,8 +511,8 @@ define float @ceil_f32(float %a) nounwind {
 ; XTENSA-NEXT:    addi a8, a1, 16
 ; XTENSA-NEXT:    or a1, a8, a8
 ; XTENSA-NEXT:    ret
-  %1 = call float @llvm.ceil.f32(float %a)
-  ret float %1
+  %res = call float @llvm.ceil.f32(float %a)
+  ret float %res
 }
 declare float @llvm.rint.f32(float)
 
@@ -528,8 +528,8 @@ define float @rint_f32(float %a) nounwind {
 ; XTENSA-NEXT:    addi a8, a1, 16
 ; XTENSA-NEXT:    or a1, a8, a8
 ; XTENSA-NEXT:    ret
-  %1 = call float @llvm.rint.f32(float %a)
-  ret float %1
+  %res = call float @llvm.rint.f32(float %a)
+  ret float %res
 }
 
 declare float @llvm.nearbyint.f32(float)
@@ -546,8 +546,8 @@ define float @nearbyint_f32(float %a) nounwind {
 ; XTENSA-NEXT:    addi a8, a1, 16
 ; XTENSA-NEXT:    or a1, a8, a8
 ; XTENSA-NEXT:    ret
-  %1 = call float @llvm.nearbyint.f32(float %a)
-  ret float %1
+  %res = call float @llvm.nearbyint.f32(float %a)
+  ret float %res
 }
 
 declare float @llvm.round.f32(float)
@@ -564,6 +564,45 @@ define float @round_f32(float %a) nounwind {
 ; XTENSA-NEXT:    addi a8, a1, 16
 ; XTENSA-NEXT:    or a1, a8, a8
 ; XTENSA-NEXT:    ret
-  %1 = call float @llvm.round.f32(float %a)
-  ret float %1
+  %res = call float @llvm.round.f32(float %a)
+  ret float %res
 }
+
+
+define float @fneg_s(float %a) nounwind {
+; XTENSA-LABEL: fneg_s:
+; XTENSA:       # %bb.0:
+; XTENSA-NEXT:    l32r a8, .LCPI32_0
+; XTENSA-NEXT:    and a2, a2, a8
+; XTENSA-NEXT:    ret
+  %res = call float @llvm.fabs.f32(float %a)
+  ret float %res
+}
+
+define i32 @fptosi(float %f) {
+; XTENSA-LABEL: fptosi:
+; XTENSA:         .cfi_startproc
+; XTENSA-NEXT:  # %bb.0:
+; XTENSA-NEXT:    wfr f8, a2
+; XTENSA-NEXT:    trunc.s a2, f8, 0
+; XTENSA-NEXT:    ret
+  %conv = fptosi float %f to i32
+  ret i32 %conv
+}
+
+define i32 @fptoui(float %f) {
+; XTENSA-LABEL: fptoui:
+; XTENSA:         .cfi_startproc
+; XTENSA-NEXT:  # %bb.0:
+; XTENSA-NEXT:    wfr f8, a2
+; XTENSA-NEXT:    utrunc.s a2, f8, 0
+; XTENSA-NEXT:    ret
+  %conv = fptoui float %f to i32
+  ret i32 %conv
+}
+
+;define float @copysign_f32(float %a, float %b) {
+;entry:
+;  %c = call float @llvm.copysign.f32(float %a, float %b)
+;  ret float %c
+;}

@@ -101,6 +101,9 @@ bool Xtensa::checkRegister(MCRegister RegNo, const FeatureBitset &FeatureBits) {
     return FeatureBits[Xtensa::FeatureMiscSR];
   case Xtensa::VECBASE:
     return FeatureBits[Xtensa::FeatureRelocatableVector];
+  case Xtensa::FCR:
+  case Xtensa::FSR:
+    return FeatureBits[FeatureSingleFloat];
   case Xtensa::WINDOWBASE:
   case Xtensa::WINDOWSTART:
     return FeatureBits[Xtensa::FeatureWindowed];
@@ -109,6 +112,17 @@ bool Xtensa::checkRegister(MCRegister RegNo, const FeatureBitset &FeatureBits) {
   }
 
   return true;
+}
+
+// Get Xtensa User Register by encoding value.
+MCRegister Xtensa::getUserRegister(unsigned Code) {
+  switch (Code) {
+  case 232:
+    return Xtensa::FCR;
+  case 233:
+    return Xtensa::FSR;
+  }
+  return Xtensa::NoRegister;
 }
 
 static MCAsmInfo *createXtensaMCAsmInfo(const MCRegisterInfo &MRI,
