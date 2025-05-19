@@ -158,8 +158,7 @@ void DiagnosticsEngine::Reset(bool soft /*=false*/) {
 
 DiagnosticMapping &
 DiagnosticsEngine::DiagState::getOrAddMapping(diag::kind Diag) {
-  std::pair<iterator, bool> Result =
-      DiagMap.insert(std::make_pair(Diag, DiagnosticMapping()));
+  std::pair<iterator, bool> Result = DiagMap.try_emplace(Diag);
 
   // Initialize the entry if we added it.
   if (Result.second) {
