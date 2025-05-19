@@ -13,19 +13,24 @@
 
 namespace clang::tidy::bugprone {
 
-/// Check function visibility changes in subclasses.
+/// Checks function visibility changes in subclasses.
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/function-visibility-change.html
 class FunctionVisibilityChangeCheck : public ClangTidyCheck {
 public:
-  FunctionVisibilityChangeCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
+  enum class ChangeKind { Any, Widening, Narrowing };
+
+  FunctionVisibilityChangeCheck(StringRef Name, ClangTidyContext *Context);
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus;
   }
+
+private:
+  ChangeKind DetectVisibilityChange;
 };
 
 } // namespace clang::tidy::bugprone

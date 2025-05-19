@@ -98,7 +98,7 @@ Clang-Tidy Checks
    :doc:`bugprone-fold-init-type <bugprone/fold-init-type>`,
    :doc:`bugprone-forward-declaration-namespace <bugprone/forward-declaration-namespace>`,
    :doc:`bugprone-forwarding-reference-overload <bugprone/forwarding-reference-overload>`,
-   :doc:`bugprone-function-visibility-change <bugprone/function-visibility-change>`, "Yes"
+   :doc:`bugprone-function-visibility-change <bugprone/function-visibility-change>`,
    :doc:`bugprone-implicit-widening-of-multiplication-result <bugprone/implicit-widening-of-multiplication-result>`, "Yes"
    :doc:`bugprone-inaccurate-erase <bugprone/inaccurate-erase>`, "Yes"
    :doc:`bugprone-inc-dec-in-conditions <bugprone/inc-dec-in-conditions>`,

@@ -127,7 +127,7 @@ New checks
 - New :doc:`bugprone-function-visibility-change
   <clang-tidy/checks/bugprone/function-visibility-change>` check.
 
-  Check function visibility changes in subclasses.
+  Checks function visibility changes in subclasses.
 
 - New :doc:`bugprone-unintended-char-ostream-output
   <clang-tidy/checks/bugprone/unintended-char-ostream-output>` check.

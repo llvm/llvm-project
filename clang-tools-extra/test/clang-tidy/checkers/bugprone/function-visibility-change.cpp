@@ -1,5 +1,5 @@
-// RUN: %check_clang_tidy %s bugprone-function-visibility-change %t
-
+// RUN: %check_clang_tidy %s bugprone-function-visibility-change %t -- -- -I %S/Inputs/function-visibility-change
+#include <test-system-header.h>
 class A {
 public:
   virtual void pub_foo1() {}
@@ -104,12 +104,12 @@ class B: private A {
 public:
   void pub_foo1() override;
   // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: visibility of function 'pub_foo1' is changed from private (through private inheritance of class 'A') to public
-  // CHECK-MESSAGES: :103:10: note: this inheritance would make 'pub_foo1' private
+  // CHECK-MESSAGES: :103:10: note: 'A' is inherited as private here
   // CHECK-MESSAGES: :5:16: note: function declared here as public
 protected:
   void prot_foo1() override;
   // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: visibility of function 'prot_foo1' is changed from private (through private inheritance of class 'A') to protected
-  // CHECK-MESSAGES: :103:10: note: this inheritance would make 'prot_foo1' private
+  // CHECK-MESSAGES: :103:10: note: 'A' is inherited as private here
   // CHECK-MESSAGES: :9:16: note: function declared here as protected
 private:
   void priv_foo1() override;
@@ -117,7 +117,7 @@ private:
 public:
   void prot_foo2() override;
   // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: visibility of function 'prot_foo2' is changed from private (through private inheritance of class 'A') to public
-  // CHECK-MESSAGES: :103:10: note: this inheritance would make 'prot_foo2' private
+  // CHECK-MESSAGES: :103:10: note: 'A' is inherited as private here
   // CHECK-MESSAGES: :10:16: note: function declared here as protected
   void priv_foo2() override;
   // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: visibility of function 'priv_foo2' is changed from private in class 'A' to public
@@ -135,7 +135,7 @@ class D: public C {
 public:
   void pub_foo1() override;
   // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: visibility of function 'pub_foo1' is changed from private (through private inheritance of class 'A') to public
-  // CHECK-MESSAGES: :131:10: note: this inheritance would make 'pub_foo1' private
+  // CHECK-MESSAGES: :131:10: note: 'A' is inherited as private here
   // CHECK-MESSAGES: :5:16: note: function declared here as public
 };
 
@@ -181,24 +181,30 @@ struct B: public B1, public B2 {
 public:
   void pub_foo1() override;
   // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: visibility of function 'pub_foo1' is changed from private (through private inheritance of class 'A') to public
-  // CHECK-MESSAGES: :179:12: note: this inheritance would make 'pub_foo1' private
+  // CHECK-MESSAGES: :179:12: note: 'A' is inherited as private here
   // CHECK-MESSAGES: :5:16: note: function declared here as public
 };
 
 }
 
-namespace test6 {
+namespace test_using {
+
 class A {
 private:
   A(int);
+protected:
+  virtual void f();
 };
+
 class B: public A {
 public:
   using A::A;
+  using A::f;
 };
+
 }
 
-namespace test7 {
+namespace test_template {
 
 template <typename T>
 class A {
@@ -211,7 +217,7 @@ class B: public A<T> {
 private:
   T foo() override;
   // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: visibility of function 'foo' is changed from protected in class 'A<int>' to private
-  // CHECK-MESSAGES: :206:13: note: function declared here as protected
+  // CHECK-MESSAGES: :[[@LINE-8]]:13: note: function declared here as protected
 };
 
 template <typename T>
@@ -219,8 +225,8 @@ class C: private A<T> {
 public:
   T foo() override;
   // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: visibility of function 'foo' is changed from private (through private inheritance of class 'A<int>') to public
-  // CHECK-MESSAGES: :218:10: note: this inheritance would make 'foo' private
-  // CHECK-MESSAGES: :206:13: note: function declared here as protected
+  // CHECK-MESSAGES: :[[@LINE-4]]:10: note: 'A<int>' is inherited as private here
+  // CHECK-MESSAGES: :[[@LINE-17]]:13: note: function declared here as protected
 };
 
 B<int> fB() {
@@ -230,5 +236,54 @@ B<int> fB() {
 C<int> fC() {
   return C<int>{};
 }
+
+}
+
+namespace test_system_header {
+
+struct SysDerived: public sys::Base {
+private:
+  void publicF();
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: visibility of function 'publicF' is changed from public in class 'Base' to private
+};
+
+}
+
+namespace test_destructor {
+
+class A {
+public:
+  virtual ~A();
+};
+
+class B: public A {
+protected:
+  ~B();
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: visibility of function '~B'
+  // CHECK-MESSAGES: :[[@LINE-7]]:11: note: function declared here
+};
+
+}
+
+namespace test_operator {
+
+class A {
+  virtual int operator()(int);
+  virtual A& operator++();
+  virtual operator double() const;
+};
+
+class B: public A {
+protected:
+  int operator()(int);
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: visibility of function 'operator()'
+  // CHECK-MESSAGES: :[[@LINE-9]]:15: note: function declared here
+  A& operator++();
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: visibility of function 'operator++'
+  // CHECK-MESSAGES: :[[@LINE-11]]:14: note: function declared here
+  operator double() const;
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: visibility of function 'operator double'
+  // CHECK-MESSAGES: :[[@LINE-13]]:11: note: function declared here
+};
 
 }

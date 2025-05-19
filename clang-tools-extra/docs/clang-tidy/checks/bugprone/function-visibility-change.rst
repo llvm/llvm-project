@@ -3,10 +3,13 @@
 bugprone-function-visibility-change
 ===================================
 
-Check changes in visibility of C++ member functions in subclasses. The check
-detects if a virtual function is overridden with a different visibility than in
-the base class declaration. Only normal functions are detected, no constructors,
-operators, conversions or other special functions.
+Checks changes in visibility of C++ member functions in subclasses. This
+includes for example if a virtual function declared as `private` is overridden
+and declared as `public` in a subclass. The detected change is the modification
+of visibility resulting from keywords `public`, `protected`, `private` at
+overridden virtual functions. Use of the `using` keyword is not considered by
+this check. The check applies to any normal virtual function and optionally to
+destructors or operators.
 
 .. code-block:: c++
 
@@ -36,8 +39,7 @@ operators, conversions or other special functions.
                   // public
   };
 
-The changed visibility can be an indicator of bad design or a result of
-coding error or code changes. If it is intentional, it can be avoided by
-adding an additional virtual function with the new access.
-
-
+If the visibility is changed in this way, it can indicate bad design or
+programming error. If the change is necessary, it can be achieved by the
+``using`` keyword in a more safe way (this has no effect on the visibility
+in further subclasses).
