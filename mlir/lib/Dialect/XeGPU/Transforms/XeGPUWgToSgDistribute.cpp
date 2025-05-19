@@ -150,7 +150,7 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
     SmallVector<int64_t> distUnitShape(sgLayout.size());
     SmallVector<Value> localOffset(sgLayout.size());
     for (size_t i = 0; i < sgLayout.size(); i++) {
-      distUnitShape[i] = sgLayout[i] * sgShape[i];
+      distUnitShape[i] = std::min(sgLayout[i] * sgShape[i], wgShape[i]);
       localOffset[i] =
           rewriter.createOrFold<index::MulOp>(loc, sgIds[i], sgDataDim[i]);
     }
