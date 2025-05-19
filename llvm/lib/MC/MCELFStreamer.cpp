@@ -35,6 +35,7 @@
 #include "llvm/Support/LEB128.h"
 #include <cassert>
 #include <cstdint>
+#include <type_traits>
 
 using namespace llvm;
 
@@ -448,13 +449,13 @@ void MCELFStreamer::emitInstToData(const MCInst &Inst,
                                            DF->getFixups(), STI);
 
   auto Fixups = MutableArrayRef(DF->getFixups()).slice(FixupStartIndex);
-  for (auto &Fixup : Fixups)
+  for (auto &Fixup : Fixups) {
     Fixup.setOffset(Fixup.getOffset() + CodeOffset);
+    if (Fixup.needsRelax())
+      DF->setLinkerRelaxable();
+  }
 
   DF->setHasInstructions(STI);
-  if (!Fixups.empty() && Fixups.back().getTargetKind() ==
-                             getAssembler().getBackend().RelaxFixupKind)
-    DF->setLinkerRelaxable();
 }
 
 void MCELFStreamer::emitBundleAlignMode(Align Alignment) {

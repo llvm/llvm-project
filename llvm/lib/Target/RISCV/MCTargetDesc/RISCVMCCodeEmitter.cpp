@@ -209,16 +209,10 @@ void RISCVMCCodeEmitter::expandAddTPRel(const MCInst &MI,
   assert(Expr && Expr->getSpecifier() == ELF::R_RISCV_TPREL_ADD &&
          "Expected tprel_add relocation on TP-relative symbol");
 
-  // Emit the correct tprel_add relocation for the symbol.
   Fixups.push_back(
       MCFixup::create(0, Expr, ELF::R_RISCV_TPREL_ADD, MI.getLoc()));
-
-  // Emit R_RISCV_RELAX for tprel_add where the relax feature is enabled.
-  if (STI.hasFeature(RISCV::FeatureRelax)) {
-    const MCConstantExpr *Dummy = MCConstantExpr::create(0, Ctx);
-    Fixups.push_back(
-        MCFixup::create(0, Dummy, ELF::R_RISCV_RELAX, MI.getLoc()));
-  }
+  if (STI.hasFeature(RISCV::FeatureRelax))
+    Fixups.back().setNeedsRelax();
 
   // Emit a normal ADD instruction with the given operands.
   MCInst TmpInst = MCInstBuilder(RISCV::ADD)
@@ -655,19 +649,13 @@ uint64_t RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
 
   assert(FixupKind != RISCV::fixup_riscv_invalid && "Unhandled expression!");
 
-  Fixups.push_back(
-      MCFixup::create(0, Expr, MCFixupKind(FixupKind), MI.getLoc()));
+  Fixups.push_back(MCFixup::create(0, Expr, FixupKind, MI.getLoc()));
+  // If linker relaxation is enabled and supported by this relocation, set
+  // a bit so that if fixup is unresolved, a R_RISCV_RELAX relocation will be
+  // appended.
+  if (EnableRelax && RelaxCandidate)
+    Fixups.back().setNeedsRelax();
   ++MCNumFixups;
-
-  // Ensure an R_RISCV_RELAX relocation will be emitted if linker relaxation is
-  // enabled and the current fixup will result in a relocation that may be
-  // relaxed.
-  if (EnableRelax && RelaxCandidate) {
-    const MCConstantExpr *Dummy = MCConstantExpr::create(0, Ctx);
-    Fixups.push_back(
-        MCFixup::create(0, Dummy, ELF::R_RISCV_RELAX, MI.getLoc()));
-    ++MCNumFixups;
-  }
 
   return 0;
 }
