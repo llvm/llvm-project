@@ -403,6 +403,10 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
       unsigned CstBitWidth = C->getType()->getPrimitiveSizeInBits();
       RegBitWidth = RegBitWidth ? RegBitWidth : CstBitWidth;
       for (const FixupEntry &Fixup : Fixups) {
+        // Always uses the smallest possible constant load with opt/minsize,
+        // otherwise use the smallest instruction that doesn't affect
+        // performance.
+        // TODO: If constant has been hoisted from loop, use smallest constant.
         if (Fixup.Op && (OptSize || NewOpcPreferable(Fixup, RegBitWidth))) {
           // Construct a suitable constant and adjust the MI to use the new
           // constant pool entry.
