@@ -12714,6 +12714,13 @@ TEST_F(FormatTest, UnderstandsAttributes) {
   verifyGoogleFormat("SomeType* absl_nullable s{InitValue};");
   verifyGoogleFormat("SomeType* absl_nullability_unknown s(InitValue);");
   verifyGoogleFormat("SomeType* absl_nullability_unknown s{InitValue};");
+
+  auto Style = getLLVMStyleWithColumns(60);
+  Style.AttributeMacros.push_back("my_fancy_attr");
+  Style.PointerAlignment = FormatStyle::PAS_Left;
+  verifyFormat("void foo(const MyLongTypeNameeeeeeeeeeeee* my_fancy_attr\n"
+               "             testttttttttt);",
+               Style);
 }
 
 TEST_F(FormatTest, UnderstandsPointerQualifiersInCast) {
