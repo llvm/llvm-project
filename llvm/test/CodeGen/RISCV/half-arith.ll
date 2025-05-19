@@ -25,18 +25,18 @@
 ; respectively. Some other half-*.ll files in this folder exercise LLVM IR
 ; instructions that don't directly match a RISC-V instruction.
 
-define half @fadd_s(half %a, half %b) nounwind {
-; CHECKIZFH-LABEL: fadd_s:
+define half @fadd_h(half %a, half %b) nounwind {
+; CHECKIZFH-LABEL: fadd_h:
 ; CHECKIZFH:       # %bb.0:
 ; CHECKIZFH-NEXT:    fadd.h fa0, fa0, fa1
 ; CHECKIZFH-NEXT:    ret
 ;
-; CHECKIZHINX-LABEL: fadd_s:
+; CHECKIZHINX-LABEL: fadd_h:
 ; CHECKIZHINX:       # %bb.0:
 ; CHECKIZHINX-NEXT:    fadd.h a0, a0, a1
 ; CHECKIZHINX-NEXT:    ret
 ;
-; RV32I-LABEL: fadd_s:
+; RV32I-LABEL: fadd_h:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
@@ -62,7 +62,7 @@ define half @fadd_s(half %a, half %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV64I-LABEL: fadd_s:
+; RV64I-LABEL: fadd_h:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -32
 ; RV64I-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
@@ -88,7 +88,7 @@ define half @fadd_s(half %a, half %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
-; CHECKIZFHMIN-LABEL: fadd_s:
+; CHECKIZFHMIN-LABEL: fadd_h:
 ; CHECKIZFHMIN:       # %bb.0:
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa1
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h fa4, fa0
@@ -96,7 +96,7 @@ define half @fadd_s(half %a, half %b) nounwind {
 ; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECKIZFHMIN-NEXT:    ret
 ;
-; CHECKIZHINXMIN-LABEL: fadd_s:
+; CHECKIZHINXMIN-LABEL: fadd_h:
 ; CHECKIZHINXMIN:       # %bb.0:
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a1, a1
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a0, a0
@@ -107,18 +107,18 @@ define half @fadd_s(half %a, half %b) nounwind {
   ret half %1
 }
 
-define half @fsub_s(half %a, half %b) nounwind {
-; CHECKIZFH-LABEL: fsub_s:
+define half @fsub_h(half %a, half %b) nounwind {
+; CHECKIZFH-LABEL: fsub_h:
 ; CHECKIZFH:       # %bb.0:
 ; CHECKIZFH-NEXT:    fsub.h fa0, fa0, fa1
 ; CHECKIZFH-NEXT:    ret
 ;
-; CHECKIZHINX-LABEL: fsub_s:
+; CHECKIZHINX-LABEL: fsub_h:
 ; CHECKIZHINX:       # %bb.0:
 ; CHECKIZHINX-NEXT:    fsub.h a0, a0, a1
 ; CHECKIZHINX-NEXT:    ret
 ;
-; RV32I-LABEL: fsub_s:
+; RV32I-LABEL: fsub_h:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
@@ -144,7 +144,7 @@ define half @fsub_s(half %a, half %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV64I-LABEL: fsub_s:
+; RV64I-LABEL: fsub_h:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -32
 ; RV64I-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
@@ -170,7 +170,7 @@ define half @fsub_s(half %a, half %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
-; CHECKIZFHMIN-LABEL: fsub_s:
+; CHECKIZFHMIN-LABEL: fsub_h:
 ; CHECKIZFHMIN:       # %bb.0:
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa1
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h fa4, fa0
@@ -178,7 +178,7 @@ define half @fsub_s(half %a, half %b) nounwind {
 ; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECKIZFHMIN-NEXT:    ret
 ;
-; CHECKIZHINXMIN-LABEL: fsub_s:
+; CHECKIZHINXMIN-LABEL: fsub_h:
 ; CHECKIZHINXMIN:       # %bb.0:
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a1, a1
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a0, a0
@@ -189,18 +189,18 @@ define half @fsub_s(half %a, half %b) nounwind {
   ret half %1
 }
 
-define half @fmul_s(half %a, half %b) nounwind {
-; CHECKIZFH-LABEL: fmul_s:
+define half @fmul_h(half %a, half %b) nounwind {
+; CHECKIZFH-LABEL: fmul_h:
 ; CHECKIZFH:       # %bb.0:
 ; CHECKIZFH-NEXT:    fmul.h fa0, fa0, fa1
 ; CHECKIZFH-NEXT:    ret
 ;
-; CHECKIZHINX-LABEL: fmul_s:
+; CHECKIZHINX-LABEL: fmul_h:
 ; CHECKIZHINX:       # %bb.0:
 ; CHECKIZHINX-NEXT:    fmul.h a0, a0, a1
 ; CHECKIZHINX-NEXT:    ret
 ;
-; RV32I-LABEL: fmul_s:
+; RV32I-LABEL: fmul_h:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
@@ -226,7 +226,7 @@ define half @fmul_s(half %a, half %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV64I-LABEL: fmul_s:
+; RV64I-LABEL: fmul_h:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -32
 ; RV64I-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
@@ -252,7 +252,7 @@ define half @fmul_s(half %a, half %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
-; CHECKIZFHMIN-LABEL: fmul_s:
+; CHECKIZFHMIN-LABEL: fmul_h:
 ; CHECKIZFHMIN:       # %bb.0:
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa1
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h fa4, fa0
@@ -260,7 +260,7 @@ define half @fmul_s(half %a, half %b) nounwind {
 ; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECKIZFHMIN-NEXT:    ret
 ;
-; CHECKIZHINXMIN-LABEL: fmul_s:
+; CHECKIZHINXMIN-LABEL: fmul_h:
 ; CHECKIZHINXMIN:       # %bb.0:
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a1, a1
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a0, a0
@@ -271,18 +271,18 @@ define half @fmul_s(half %a, half %b) nounwind {
   ret half %1
 }
 
-define half @fdiv_s(half %a, half %b) nounwind {
-; CHECKIZFH-LABEL: fdiv_s:
+define half @fdiv_h(half %a, half %b) nounwind {
+; CHECKIZFH-LABEL: fdiv_h:
 ; CHECKIZFH:       # %bb.0:
 ; CHECKIZFH-NEXT:    fdiv.h fa0, fa0, fa1
 ; CHECKIZFH-NEXT:    ret
 ;
-; CHECKIZHINX-LABEL: fdiv_s:
+; CHECKIZHINX-LABEL: fdiv_h:
 ; CHECKIZHINX:       # %bb.0:
 ; CHECKIZHINX-NEXT:    fdiv.h a0, a0, a1
 ; CHECKIZHINX-NEXT:    ret
 ;
-; RV32I-LABEL: fdiv_s:
+; RV32I-LABEL: fdiv_h:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
@@ -308,7 +308,7 @@ define half @fdiv_s(half %a, half %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV64I-LABEL: fdiv_s:
+; RV64I-LABEL: fdiv_h:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -32
 ; RV64I-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
@@ -334,7 +334,7 @@ define half @fdiv_s(half %a, half %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
-; CHECKIZFHMIN-LABEL: fdiv_s:
+; CHECKIZFHMIN-LABEL: fdiv_h:
 ; CHECKIZFHMIN:       # %bb.0:
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa1
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h fa4, fa0
@@ -342,7 +342,7 @@ define half @fdiv_s(half %a, half %b) nounwind {
 ; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECKIZFHMIN-NEXT:    ret
 ;
-; CHECKIZHINXMIN-LABEL: fdiv_s:
+; CHECKIZHINXMIN-LABEL: fdiv_h:
 ; CHECKIZHINXMIN:       # %bb.0:
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a1, a1
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a0, a0
@@ -355,18 +355,18 @@ define half @fdiv_s(half %a, half %b) nounwind {
 
 declare half @llvm.sqrt.f16(half)
 
-define half @fsqrt_s(half %a) nounwind {
-; CHECKIZFH-LABEL: fsqrt_s:
+define half @fsqrt_h(half %a) nounwind {
+; CHECKIZFH-LABEL: fsqrt_h:
 ; CHECKIZFH:       # %bb.0:
 ; CHECKIZFH-NEXT:    fsqrt.h fa0, fa0
 ; CHECKIZFH-NEXT:    ret
 ;
-; CHECKIZHINX-LABEL: fsqrt_s:
+; CHECKIZHINX-LABEL: fsqrt_h:
 ; CHECKIZHINX:       # %bb.0:
 ; CHECKIZHINX-NEXT:    fsqrt.h a0, a0
 ; CHECKIZHINX-NEXT:    ret
 ;
-; RV32I-LABEL: fsqrt_s:
+; RV32I-LABEL: fsqrt_h:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
@@ -379,7 +379,7 @@ define half @fsqrt_s(half %a) nounwind {
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV64I-LABEL: fsqrt_s:
+; RV64I-LABEL: fsqrt_h:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
@@ -392,14 +392,14 @@ define half @fsqrt_s(half %a) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; CHECKIZFHMIN-LABEL: fsqrt_s:
+; CHECKIZFHMIN-LABEL: fsqrt_h:
 ; CHECKIZFHMIN:       # %bb.0:
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; CHECKIZFHMIN-NEXT:    fsqrt.s fa5, fa5
 ; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECKIZFHMIN-NEXT:    ret
 ;
-; CHECKIZHINXMIN-LABEL: fsqrt_s:
+; CHECKIZHINXMIN-LABEL: fsqrt_h:
 ; CHECKIZHINXMIN:       # %bb.0:
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a0, a0
 ; CHECKIZHINXMIN-NEXT:    fsqrt.s a0, a0
@@ -411,109 +411,81 @@ define half @fsqrt_s(half %a) nounwind {
 
 declare half @llvm.copysign.f16(half, half)
 
-define half @fsgnj_s(half %a, half %b) nounwind {
-; CHECKIZFH-LABEL: fsgnj_s:
+define half @fsgnj_h(half %a, half %b) nounwind {
+; CHECKIZFH-LABEL: fsgnj_h:
 ; CHECKIZFH:       # %bb.0:
 ; CHECKIZFH-NEXT:    fsgnj.h fa0, fa0, fa1
 ; CHECKIZFH-NEXT:    ret
 ;
-; CHECKIZHINX-LABEL: fsgnj_s:
+; CHECKIZHINX-LABEL: fsgnj_h:
 ; CHECKIZHINX:       # %bb.0:
 ; CHECKIZHINX-NEXT:    fsgnj.h a0, a0, a1
 ; CHECKIZHINX-NEXT:    ret
 ;
-; RV32I-LABEL: fsgnj_s:
+; RV32I-LABEL: fsgnj_h:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a2, 1048568
-; RV32I-NEXT:    and a1, a1, a2
 ; RV32I-NEXT:    slli a0, a0, 17
+; RV32I-NEXT:    and a1, a1, a2
 ; RV32I-NEXT:    srli a0, a0, 17
 ; RV32I-NEXT:    or a0, a0, a1
 ; RV32I-NEXT:    ret
 ;
-; RV64I-LABEL: fsgnj_s:
+; RV64I-LABEL: fsgnj_h:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a2, 1048568
-; RV64I-NEXT:    and a1, a1, a2
 ; RV64I-NEXT:    slli a0, a0, 49
+; RV64I-NEXT:    and a1, a1, a2
 ; RV64I-NEXT:    srli a0, a0, 49
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
-; RV32IZFHMIN-LABEL: fsgnj_s:
+; RV32IZFHMIN-LABEL: fsgnj_h:
 ; RV32IZFHMIN:       # %bb.0:
-; RV32IZFHMIN-NEXT:    addi sp, sp, -16
-; RV32IZFHMIN-NEXT:    fsh fa1, 12(sp)
-; RV32IZFHMIN-NEXT:    lbu a0, 13(sp)
+; RV32IZFHMIN-NEXT:    fmv.x.h a0, fa1
+; RV32IZFHMIN-NEXT:    lui a1, 1048568
+; RV32IZFHMIN-NEXT:    and a0, a0, a1
 ; RV32IZFHMIN-NEXT:    fmv.x.h a1, fa0
 ; RV32IZFHMIN-NEXT:    slli a1, a1, 17
-; RV32IZFHMIN-NEXT:    andi a2, a0, 128
-; RV32IZFHMIN-NEXT:    srli a0, a1, 17
-; RV32IZFHMIN-NEXT:    beqz a2, .LBB5_2
-; RV32IZFHMIN-NEXT:  # %bb.1:
-; RV32IZFHMIN-NEXT:    lui a1, 1048568
-; RV32IZFHMIN-NEXT:    or a0, a0, a1
-; RV32IZFHMIN-NEXT:  .LBB5_2:
-; RV32IZFHMIN-NEXT:    fmv.h.x fa5, a0
-; RV32IZFHMIN-NEXT:    fcvt.s.h fa5, fa5
-; RV32IZFHMIN-NEXT:    fcvt.h.s fa0, fa5
-; RV32IZFHMIN-NEXT:    addi sp, sp, 16
+; RV32IZFHMIN-NEXT:    srli a1, a1, 17
+; RV32IZFHMIN-NEXT:    or a0, a1, a0
+; RV32IZFHMIN-NEXT:    fmv.h.x fa0, a0
 ; RV32IZFHMIN-NEXT:    ret
 ;
-; RV64IZFHMIN-LABEL: fsgnj_s:
+; RV64IZFHMIN-LABEL: fsgnj_h:
 ; RV64IZFHMIN:       # %bb.0:
-; RV64IZFHMIN-NEXT:    addi sp, sp, -16
-; RV64IZFHMIN-NEXT:    fsh fa1, 8(sp)
-; RV64IZFHMIN-NEXT:    lbu a0, 9(sp)
+; RV64IZFHMIN-NEXT:    fmv.x.h a0, fa1
+; RV64IZFHMIN-NEXT:    lui a1, 1048568
+; RV64IZFHMIN-NEXT:    and a0, a0, a1
 ; RV64IZFHMIN-NEXT:    fmv.x.h a1, fa0
 ; RV64IZFHMIN-NEXT:    slli a1, a1, 49
-; RV64IZFHMIN-NEXT:    andi a2, a0, 128
-; RV64IZFHMIN-NEXT:    srli a0, a1, 49
-; RV64IZFHMIN-NEXT:    beqz a2, .LBB5_2
-; RV64IZFHMIN-NEXT:  # %bb.1:
-; RV64IZFHMIN-NEXT:    lui a1, 1048568
-; RV64IZFHMIN-NEXT:    or a0, a0, a1
-; RV64IZFHMIN-NEXT:  .LBB5_2:
-; RV64IZFHMIN-NEXT:    fmv.h.x fa5, a0
-; RV64IZFHMIN-NEXT:    fcvt.s.h fa5, fa5
-; RV64IZFHMIN-NEXT:    fcvt.h.s fa0, fa5
-; RV64IZFHMIN-NEXT:    addi sp, sp, 16
+; RV64IZFHMIN-NEXT:    srli a1, a1, 49
+; RV64IZFHMIN-NEXT:    or a0, a1, a0
+; RV64IZFHMIN-NEXT:    fmv.h.x fa0, a0
 ; RV64IZFHMIN-NEXT:    ret
 ;
-; RV32IZHINXMIN-LABEL: fsgnj_s:
+; RV32IZHINXMIN-LABEL: fsgnj_h:
 ; RV32IZHINXMIN:       # %bb.0:
-; RV32IZHINXMIN-NEXT:    addi sp, sp, -16
-; RV32IZHINXMIN-NEXT:    sh a1, 12(sp)
-; RV32IZHINXMIN-NEXT:    lbu a1, 13(sp)
+; RV32IZHINXMIN-NEXT:    # kill: def $x11_h killed $x11_h def $x11
+; RV32IZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h def $x10
+; RV32IZHINXMIN-NEXT:    lui a2, 1048568
 ; RV32IZHINXMIN-NEXT:    slli a0, a0, 17
-; RV32IZHINXMIN-NEXT:    andi a1, a1, 128
+; RV32IZHINXMIN-NEXT:    and a1, a1, a2
 ; RV32IZHINXMIN-NEXT:    srli a0, a0, 17
-; RV32IZHINXMIN-NEXT:    beqz a1, .LBB5_2
-; RV32IZHINXMIN-NEXT:  # %bb.1:
-; RV32IZHINXMIN-NEXT:    lui a1, 1048568
 ; RV32IZHINXMIN-NEXT:    or a0, a0, a1
-; RV32IZHINXMIN-NEXT:  .LBB5_2:
-; RV32IZHINXMIN-NEXT:    fcvt.s.h a0, a0
-; RV32IZHINXMIN-NEXT:    fcvt.h.s a0, a0
-; RV32IZHINXMIN-NEXT:    addi sp, sp, 16
+; RV32IZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h killed $x10
 ; RV32IZHINXMIN-NEXT:    ret
 ;
-; RV64IZHINXMIN-LABEL: fsgnj_s:
+; RV64IZHINXMIN-LABEL: fsgnj_h:
 ; RV64IZHINXMIN:       # %bb.0:
-; RV64IZHINXMIN-NEXT:    addi sp, sp, -16
-; RV64IZHINXMIN-NEXT:    sh a1, 8(sp)
-; RV64IZHINXMIN-NEXT:    lbu a1, 9(sp)
+; RV64IZHINXMIN-NEXT:    # kill: def $x11_h killed $x11_h def $x11
+; RV64IZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h def $x10
+; RV64IZHINXMIN-NEXT:    lui a2, 1048568
 ; RV64IZHINXMIN-NEXT:    slli a0, a0, 49
-; RV64IZHINXMIN-NEXT:    andi a1, a1, 128
+; RV64IZHINXMIN-NEXT:    and a1, a1, a2
 ; RV64IZHINXMIN-NEXT:    srli a0, a0, 49
-; RV64IZHINXMIN-NEXT:    beqz a1, .LBB5_2
-; RV64IZHINXMIN-NEXT:  # %bb.1:
-; RV64IZHINXMIN-NEXT:    lui a1, 1048568
 ; RV64IZHINXMIN-NEXT:    or a0, a0, a1
-; RV64IZHINXMIN-NEXT:  .LBB5_2:
-; RV64IZHINXMIN-NEXT:    fcvt.s.h a0, a0
-; RV64IZHINXMIN-NEXT:    fcvt.h.s a0, a0
-; RV64IZHINXMIN-NEXT:    addi sp, sp, 16
+; RV64IZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h killed $x10
 ; RV64IZHINXMIN-NEXT:    ret
   %1 = call half @llvm.copysign.f16(half %a, half %b)
   ret half %1
@@ -521,22 +493,22 @@ define half @fsgnj_s(half %a, half %b) nounwind {
 
 ; This function performs extra work to ensure that
 ; DAGCombiner::visitBITCAST doesn't replace the fneg with an xor.
-define i32 @fneg_s(half %a, half %b) nounwind {
-; CHECKIZFH-LABEL: fneg_s:
+define i32 @fneg_h(half %a, half %b) nounwind {
+; CHECKIZFH-LABEL: fneg_h:
 ; CHECKIZFH:       # %bb.0:
 ; CHECKIZFH-NEXT:    fadd.h fa5, fa0, fa0
 ; CHECKIZFH-NEXT:    fneg.h fa4, fa5
 ; CHECKIZFH-NEXT:    feq.h a0, fa5, fa4
 ; CHECKIZFH-NEXT:    ret
 ;
-; CHECKIZHINX-LABEL: fneg_s:
+; CHECKIZHINX-LABEL: fneg_h:
 ; CHECKIZHINX:       # %bb.0:
 ; CHECKIZHINX-NEXT:    fadd.h a0, a0, a0
 ; CHECKIZHINX-NEXT:    fneg.h a1, a0
 ; CHECKIZHINX-NEXT:    feq.h a0, a0, a1
 ; CHECKIZHINX-NEXT:    ret
 ;
-; RV32I-LABEL: fneg_s:
+; RV32I-LABEL: fneg_h:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
@@ -567,7 +539,7 @@ define i32 @fneg_s(half %a, half %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV64I-LABEL: fneg_s:
+; RV64I-LABEL: fneg_h:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -32
 ; RV64I-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
@@ -598,26 +570,26 @@ define i32 @fneg_s(half %a, half %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
-; CHECKIZFHMIN-LABEL: fneg_s:
+; CHECKIZFHMIN-LABEL: fneg_h:
 ; CHECKIZFHMIN:       # %bb.0:
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa0
+; CHECKIZFHMIN-NEXT:    lui a0, 1048568
 ; CHECKIZFHMIN-NEXT:    fadd.s fa5, fa5, fa5
 ; CHECKIZFHMIN-NEXT:    fcvt.h.s fa5, fa5
-; CHECKIZFHMIN-NEXT:    fmv.x.h a0, fa5
-; CHECKIZFHMIN-NEXT:    lui a1, 1048568
-; CHECKIZFHMIN-NEXT:    xor a0, a0, a1
+; CHECKIZFHMIN-NEXT:    fmv.x.h a1, fa5
+; CHECKIZFHMIN-NEXT:    xor a0, a1, a0
 ; CHECKIZFHMIN-NEXT:    fmv.h.x fa4, a0
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h fa4, fa4
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa5
 ; CHECKIZFHMIN-NEXT:    feq.s a0, fa5, fa4
 ; CHECKIZFHMIN-NEXT:    ret
 ;
-; CHECKIZHINXMIN-LABEL: fneg_s:
+; CHECKIZHINXMIN-LABEL: fneg_h:
 ; CHECKIZHINXMIN:       # %bb.0:
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; CHECKIZHINXMIN-NEXT:    lui a1, 1048568
 ; CHECKIZHINXMIN-NEXT:    fadd.s a0, a0, a0
 ; CHECKIZHINXMIN-NEXT:    fcvt.h.s a0, a0
-; CHECKIZHINXMIN-NEXT:    lui a1, 1048568
 ; CHECKIZHINXMIN-NEXT:    xor a1, a0, a1
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a1, a1
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a0, a0
@@ -632,20 +604,20 @@ define i32 @fneg_s(half %a, half %b) nounwind {
 
 ; This function performs extra work to ensure that
 ; DAGCombiner::visitBITCAST doesn't replace the fneg with an xor.
-define half @fsgnjn_s(half %a, half %b) nounwind {
-; CHECKIZFH-LABEL: fsgnjn_s:
+define half @fsgnjn_h(half %a, half %b) nounwind {
+; CHECKIZFH-LABEL: fsgnjn_h:
 ; CHECKIZFH:       # %bb.0:
 ; CHECKIZFH-NEXT:    fadd.h fa5, fa0, fa1
 ; CHECKIZFH-NEXT:    fsgnjn.h fa0, fa0, fa5
 ; CHECKIZFH-NEXT:    ret
 ;
-; CHECKIZHINX-LABEL: fsgnjn_s:
+; CHECKIZHINX-LABEL: fsgnjn_h:
 ; CHECKIZHINX:       # %bb.0:
 ; CHECKIZHINX-NEXT:    fadd.h a1, a0, a1
 ; CHECKIZHINX-NEXT:    fsgnjn.h a0, a0, a1
 ; CHECKIZHINX-NEXT:    ret
 ;
-; RV32I-LABEL: fsgnjn_s:
+; RV32I-LABEL: fsgnjn_h:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -32
 ; RV32I-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
@@ -672,8 +644,8 @@ define half @fsgnjn_s(half %a, half %b) nounwind {
 ; RV32I-NEXT:    xor a0, a0, a1
 ; RV32I-NEXT:    call __truncsfhf2
 ; RV32I-NEXT:    lui a1, 1048568
-; RV32I-NEXT:    and a0, a0, a1
 ; RV32I-NEXT:    slli s1, s1, 17
+; RV32I-NEXT:    and a0, a0, a1
 ; RV32I-NEXT:    srli s1, s1, 17
 ; RV32I-NEXT:    or a0, s1, a0
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
@@ -684,7 +656,7 @@ define half @fsgnjn_s(half %a, half %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
-; RV64I-LABEL: fsgnjn_s:
+; RV64I-LABEL: fsgnjn_h:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -48
 ; RV64I-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
@@ -711,8 +683,8 @@ define half @fsgnjn_s(half %a, half %b) nounwind {
 ; RV64I-NEXT:    xor a0, a0, a1
 ; RV64I-NEXT:    call __truncsfhf2
 ; RV64I-NEXT:    lui a1, 1048568
-; RV64I-NEXT:    and a0, a0, a1
 ; RV64I-NEXT:    slli s1, s1, 49
+; RV64I-NEXT:    and a0, a0, a1
 ; RV64I-NEXT:    srli s1, s1, 49
 ; RV64I-NEXT:    or a0, s1, a0
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
@@ -723,110 +695,70 @@ define half @fsgnjn_s(half %a, half %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
-; RV32IZFHMIN-LABEL: fsgnjn_s:
+; RV32IZFHMIN-LABEL: fsgnjn_h:
 ; RV32IZFHMIN:       # %bb.0:
-; RV32IZFHMIN-NEXT:    addi sp, sp, -16
 ; RV32IZFHMIN-NEXT:    fcvt.s.h fa5, fa1
 ; RV32IZFHMIN-NEXT:    fcvt.s.h fa4, fa0
+; RV32IZFHMIN-NEXT:    lui a0, 1048568
 ; RV32IZFHMIN-NEXT:    fadd.s fa5, fa4, fa5
 ; RV32IZFHMIN-NEXT:    fcvt.h.s fa5, fa5
 ; RV32IZFHMIN-NEXT:    fmv.x.h a1, fa5
-; RV32IZFHMIN-NEXT:    lui a0, 1048568
-; RV32IZFHMIN-NEXT:    xor a1, a1, a0
-; RV32IZFHMIN-NEXT:    fmv.h.x fa5, a1
-; RV32IZFHMIN-NEXT:    fsh fa5, 12(sp)
-; RV32IZFHMIN-NEXT:    lbu a1, 13(sp)
-; RV32IZFHMIN-NEXT:    fmv.x.h a2, fa0
-; RV32IZFHMIN-NEXT:    slli a2, a2, 17
-; RV32IZFHMIN-NEXT:    andi a3, a1, 128
-; RV32IZFHMIN-NEXT:    srli a1, a2, 17
-; RV32IZFHMIN-NEXT:    bnez a3, .LBB7_2
-; RV32IZFHMIN-NEXT:  # %bb.1:
-; RV32IZFHMIN-NEXT:    fmv.h.x fa5, a1
-; RV32IZFHMIN-NEXT:    j .LBB7_3
-; RV32IZFHMIN-NEXT:  .LBB7_2:
+; RV32IZFHMIN-NEXT:    not a1, a1
+; RV32IZFHMIN-NEXT:    and a0, a1, a0
+; RV32IZFHMIN-NEXT:    fmv.x.h a1, fa0
+; RV32IZFHMIN-NEXT:    slli a1, a1, 17
+; RV32IZFHMIN-NEXT:    srli a1, a1, 17
 ; RV32IZFHMIN-NEXT:    or a0, a1, a0
-; RV32IZFHMIN-NEXT:    fmv.h.x fa5, a0
-; RV32IZFHMIN-NEXT:  .LBB7_3:
-; RV32IZFHMIN-NEXT:    fcvt.s.h fa5, fa5
-; RV32IZFHMIN-NEXT:    fcvt.h.s fa0, fa5
-; RV32IZFHMIN-NEXT:    addi sp, sp, 16
+; RV32IZFHMIN-NEXT:    fmv.h.x fa0, a0
 ; RV32IZFHMIN-NEXT:    ret
 ;
-; RV64IZFHMIN-LABEL: fsgnjn_s:
+; RV64IZFHMIN-LABEL: fsgnjn_h:
 ; RV64IZFHMIN:       # %bb.0:
-; RV64IZFHMIN-NEXT:    addi sp, sp, -16
 ; RV64IZFHMIN-NEXT:    fcvt.s.h fa5, fa1
 ; RV64IZFHMIN-NEXT:    fcvt.s.h fa4, fa0
+; RV64IZFHMIN-NEXT:    lui a0, 1048568
 ; RV64IZFHMIN-NEXT:    fadd.s fa5, fa4, fa5
 ; RV64IZFHMIN-NEXT:    fcvt.h.s fa5, fa5
 ; RV64IZFHMIN-NEXT:    fmv.x.h a1, fa5
-; RV64IZFHMIN-NEXT:    lui a0, 1048568
-; RV64IZFHMIN-NEXT:    xor a1, a1, a0
-; RV64IZFHMIN-NEXT:    fmv.h.x fa5, a1
-; RV64IZFHMIN-NEXT:    fsh fa5, 8(sp)
-; RV64IZFHMIN-NEXT:    lbu a1, 9(sp)
-; RV64IZFHMIN-NEXT:    fmv.x.h a2, fa0
-; RV64IZFHMIN-NEXT:    slli a2, a2, 49
-; RV64IZFHMIN-NEXT:    andi a3, a1, 128
-; RV64IZFHMIN-NEXT:    srli a1, a2, 49
-; RV64IZFHMIN-NEXT:    bnez a3, .LBB7_2
-; RV64IZFHMIN-NEXT:  # %bb.1:
-; RV64IZFHMIN-NEXT:    fmv.h.x fa5, a1
-; RV64IZFHMIN-NEXT:    j .LBB7_3
-; RV64IZFHMIN-NEXT:  .LBB7_2:
+; RV64IZFHMIN-NEXT:    not a1, a1
+; RV64IZFHMIN-NEXT:    and a0, a1, a0
+; RV64IZFHMIN-NEXT:    fmv.x.h a1, fa0
+; RV64IZFHMIN-NEXT:    slli a1, a1, 49
+; RV64IZFHMIN-NEXT:    srli a1, a1, 49
 ; RV64IZFHMIN-NEXT:    or a0, a1, a0
-; RV64IZFHMIN-NEXT:    fmv.h.x fa5, a0
-; RV64IZFHMIN-NEXT:  .LBB7_3:
-; RV64IZFHMIN-NEXT:    fcvt.s.h fa5, fa5
-; RV64IZFHMIN-NEXT:    fcvt.h.s fa0, fa5
-; RV64IZFHMIN-NEXT:    addi sp, sp, 16
+; RV64IZFHMIN-NEXT:    fmv.h.x fa0, a0
 ; RV64IZFHMIN-NEXT:    ret
 ;
-; RV32IZHINXMIN-LABEL: fsgnjn_s:
+; RV32IZHINXMIN-LABEL: fsgnjn_h:
 ; RV32IZHINXMIN:       # %bb.0:
-; RV32IZHINXMIN-NEXT:    addi sp, sp, -16
+; RV32IZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h def $x10
 ; RV32IZHINXMIN-NEXT:    fcvt.s.h a1, a1
 ; RV32IZHINXMIN-NEXT:    fcvt.s.h a2, a0
 ; RV32IZHINXMIN-NEXT:    fadd.s a1, a2, a1
-; RV32IZHINXMIN-NEXT:    fcvt.h.s a2, a1
-; RV32IZHINXMIN-NEXT:    lui a1, 1048568
-; RV32IZHINXMIN-NEXT:    xor a2, a2, a1
-; RV32IZHINXMIN-NEXT:    sh a2, 12(sp)
-; RV32IZHINXMIN-NEXT:    lbu a2, 13(sp)
+; RV32IZHINXMIN-NEXT:    lui a2, 1048568
 ; RV32IZHINXMIN-NEXT:    slli a0, a0, 17
-; RV32IZHINXMIN-NEXT:    andi a2, a2, 128
+; RV32IZHINXMIN-NEXT:    fcvt.h.s a1, a1
+; RV32IZHINXMIN-NEXT:    not a1, a1
+; RV32IZHINXMIN-NEXT:    and a1, a1, a2
 ; RV32IZHINXMIN-NEXT:    srli a0, a0, 17
-; RV32IZHINXMIN-NEXT:    beqz a2, .LBB7_2
-; RV32IZHINXMIN-NEXT:  # %bb.1:
 ; RV32IZHINXMIN-NEXT:    or a0, a0, a1
-; RV32IZHINXMIN-NEXT:  .LBB7_2:
-; RV32IZHINXMIN-NEXT:    fcvt.s.h a0, a0
-; RV32IZHINXMIN-NEXT:    fcvt.h.s a0, a0
-; RV32IZHINXMIN-NEXT:    addi sp, sp, 16
+; RV32IZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h killed $x10
 ; RV32IZHINXMIN-NEXT:    ret
 ;
-; RV64IZHINXMIN-LABEL: fsgnjn_s:
+; RV64IZHINXMIN-LABEL: fsgnjn_h:
 ; RV64IZHINXMIN:       # %bb.0:
-; RV64IZHINXMIN-NEXT:    addi sp, sp, -16
+; RV64IZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h def $x10
 ; RV64IZHINXMIN-NEXT:    fcvt.s.h a1, a1
 ; RV64IZHINXMIN-NEXT:    fcvt.s.h a2, a0
 ; RV64IZHINXMIN-NEXT:    fadd.s a1, a2, a1
-; RV64IZHINXMIN-NEXT:    fcvt.h.s a2, a1
-; RV64IZHINXMIN-NEXT:    lui a1, 1048568
-; RV64IZHINXMIN-NEXT:    xor a2, a2, a1
-; RV64IZHINXMIN-NEXT:    sh a2, 8(sp)
-; RV64IZHINXMIN-NEXT:    lbu a2, 9(sp)
+; RV64IZHINXMIN-NEXT:    lui a2, 1048568
 ; RV64IZHINXMIN-NEXT:    slli a0, a0, 49
-; RV64IZHINXMIN-NEXT:    andi a2, a2, 128
+; RV64IZHINXMIN-NEXT:    fcvt.h.s a1, a1
+; RV64IZHINXMIN-NEXT:    not a1, a1
+; RV64IZHINXMIN-NEXT:    and a1, a1, a2
 ; RV64IZHINXMIN-NEXT:    srli a0, a0, 49
-; RV64IZHINXMIN-NEXT:    beqz a2, .LBB7_2
-; RV64IZHINXMIN-NEXT:  # %bb.1:
 ; RV64IZHINXMIN-NEXT:    or a0, a0, a1
-; RV64IZHINXMIN-NEXT:  .LBB7_2:
-; RV64IZHINXMIN-NEXT:    fcvt.s.h a0, a0
-; RV64IZHINXMIN-NEXT:    fcvt.h.s a0, a0
-; RV64IZHINXMIN-NEXT:    addi sp, sp, 16
+; RV64IZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h killed $x10
 ; RV64IZHINXMIN-NEXT:    ret
   %1 = fadd half %a, %b
   %2 = fneg half %1
@@ -838,22 +770,22 @@ declare half @llvm.fabs.f16(half)
 
 ; This function performs extra work to ensure that
 ; DAGCombiner::visitBITCAST doesn't replace the fabs with an and.
-define half @fabs_s(half %a, half %b) nounwind {
-; CHECKIZFH-LABEL: fabs_s:
+define half @fabs_h(half %a, half %b) nounwind {
+; CHECKIZFH-LABEL: fabs_h:
 ; CHECKIZFH:       # %bb.0:
 ; CHECKIZFH-NEXT:    fadd.h fa5, fa0, fa1
 ; CHECKIZFH-NEXT:    fabs.h fa4, fa5
 ; CHECKIZFH-NEXT:    fadd.h fa0, fa4, fa5
 ; CHECKIZFH-NEXT:    ret
 ;
-; CHECKIZHINX-LABEL: fabs_s:
+; CHECKIZHINX-LABEL: fabs_h:
 ; CHECKIZHINX:       # %bb.0:
 ; CHECKIZHINX-NEXT:    fadd.h a0, a0, a1
 ; CHECKIZHINX-NEXT:    fabs.h a1, a0
 ; CHECKIZHINX-NEXT:    fadd.h a0, a1, a0
 ; CHECKIZHINX-NEXT:    ret
 ;
-; RV32I-LABEL: fabs_s:
+; RV32I-LABEL: fabs_h:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
@@ -890,7 +822,7 @@ define half @fabs_s(half %a, half %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV64I-LABEL: fabs_s:
+; RV64I-LABEL: fabs_h:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -32
 ; RV64I-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
@@ -927,7 +859,7 @@ define half @fabs_s(half %a, half %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
-; RV32IZFHMIN-LABEL: fabs_s:
+; RV32IZFHMIN-LABEL: fabs_h:
 ; RV32IZFHMIN:       # %bb.0:
 ; RV32IZFHMIN-NEXT:    fcvt.s.h fa5, fa1
 ; RV32IZFHMIN-NEXT:    fcvt.s.h fa4, fa0
@@ -943,7 +875,7 @@ define half @fabs_s(half %a, half %b) nounwind {
 ; RV32IZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; RV32IZFHMIN-NEXT:    ret
 ;
-; RV64IZFHMIN-LABEL: fabs_s:
+; RV64IZFHMIN-LABEL: fabs_h:
 ; RV64IZFHMIN:       # %bb.0:
 ; RV64IZFHMIN-NEXT:    fcvt.s.h fa5, fa1
 ; RV64IZFHMIN-NEXT:    fcvt.s.h fa4, fa0
@@ -959,7 +891,7 @@ define half @fabs_s(half %a, half %b) nounwind {
 ; RV64IZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; RV64IZFHMIN-NEXT:    ret
 ;
-; RV32IZHINXMIN-LABEL: fabs_s:
+; RV32IZHINXMIN-LABEL: fabs_h:
 ; RV32IZHINXMIN:       # %bb.0:
 ; RV32IZHINXMIN-NEXT:    fcvt.s.h a1, a1
 ; RV32IZHINXMIN-NEXT:    fcvt.s.h a0, a0
@@ -973,7 +905,7 @@ define half @fabs_s(half %a, half %b) nounwind {
 ; RV32IZHINXMIN-NEXT:    fcvt.h.s a0, a0
 ; RV32IZHINXMIN-NEXT:    ret
 ;
-; RV64IZHINXMIN-LABEL: fabs_s:
+; RV64IZHINXMIN-LABEL: fabs_h:
 ; RV64IZHINXMIN:       # %bb.0:
 ; RV64IZHINXMIN-NEXT:    fcvt.s.h a1, a1
 ; RV64IZHINXMIN-NEXT:    fcvt.s.h a0, a0
@@ -994,18 +926,18 @@ define half @fabs_s(half %a, half %b) nounwind {
 
 declare half @llvm.minnum.f16(half, half)
 
-define half @fmin_s(half %a, half %b) nounwind {
-; CHECKIZFH-LABEL: fmin_s:
+define half @fmin_h(half %a, half %b) nounwind {
+; CHECKIZFH-LABEL: fmin_h:
 ; CHECKIZFH:       # %bb.0:
 ; CHECKIZFH-NEXT:    fmin.h fa0, fa0, fa1
 ; CHECKIZFH-NEXT:    ret
 ;
-; CHECKIZHINX-LABEL: fmin_s:
+; CHECKIZHINX-LABEL: fmin_h:
 ; CHECKIZHINX:       # %bb.0:
 ; CHECKIZHINX-NEXT:    fmin.h a0, a0, a1
 ; CHECKIZHINX-NEXT:    ret
 ;
-; RV32I-LABEL: fmin_s:
+; RV32I-LABEL: fmin_h:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
@@ -1031,7 +963,7 @@ define half @fmin_s(half %a, half %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV64I-LABEL: fmin_s:
+; RV64I-LABEL: fmin_h:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -32
 ; RV64I-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
@@ -1057,7 +989,7 @@ define half @fmin_s(half %a, half %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
-; CHECKIZFHMIN-LABEL: fmin_s:
+; CHECKIZFHMIN-LABEL: fmin_h:
 ; CHECKIZFHMIN:       # %bb.0:
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa1
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h fa4, fa0
@@ -1065,7 +997,7 @@ define half @fmin_s(half %a, half %b) nounwind {
 ; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECKIZFHMIN-NEXT:    ret
 ;
-; CHECKIZHINXMIN-LABEL: fmin_s:
+; CHECKIZHINXMIN-LABEL: fmin_h:
 ; CHECKIZHINXMIN:       # %bb.0:
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a1, a1
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a0, a0
@@ -1078,18 +1010,18 @@ define half @fmin_s(half %a, half %b) nounwind {
 
 declare half @llvm.maxnum.f16(half, half)
 
-define half @fmax_s(half %a, half %b) nounwind {
-; CHECKIZFH-LABEL: fmax_s:
+define half @fmax_h(half %a, half %b) nounwind {
+; CHECKIZFH-LABEL: fmax_h:
 ; CHECKIZFH:       # %bb.0:
 ; CHECKIZFH-NEXT:    fmax.h fa0, fa0, fa1
 ; CHECKIZFH-NEXT:    ret
 ;
-; CHECKIZHINX-LABEL: fmax_s:
+; CHECKIZHINX-LABEL: fmax_h:
 ; CHECKIZHINX:       # %bb.0:
 ; CHECKIZHINX-NEXT:    fmax.h a0, a0, a1
 ; CHECKIZHINX-NEXT:    ret
 ;
-; RV32I-LABEL: fmax_s:
+; RV32I-LABEL: fmax_h:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
@@ -1115,7 +1047,7 @@ define half @fmax_s(half %a, half %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV64I-LABEL: fmax_s:
+; RV64I-LABEL: fmax_h:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -32
 ; RV64I-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
@@ -1141,7 +1073,7 @@ define half @fmax_s(half %a, half %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
-; CHECKIZFHMIN-LABEL: fmax_s:
+; CHECKIZFHMIN-LABEL: fmax_h:
 ; CHECKIZFHMIN:       # %bb.0:
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa1
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h fa4, fa0
@@ -1149,7 +1081,7 @@ define half @fmax_s(half %a, half %b) nounwind {
 ; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECKIZFHMIN-NEXT:    ret
 ;
-; CHECKIZHINXMIN-LABEL: fmax_s:
+; CHECKIZHINXMIN-LABEL: fmax_h:
 ; CHECKIZHINXMIN:       # %bb.0:
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a1, a1
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a0, a0
@@ -1162,18 +1094,18 @@ define half @fmax_s(half %a, half %b) nounwind {
 
 declare half @llvm.fma.f16(half, half, half)
 
-define half @fmadd_s(half %a, half %b, half %c) nounwind {
-; CHECKIZFH-LABEL: fmadd_s:
+define half @fmadd_h(half %a, half %b, half %c) nounwind {
+; CHECKIZFH-LABEL: fmadd_h:
 ; CHECKIZFH:       # %bb.0:
 ; CHECKIZFH-NEXT:    fmadd.h fa0, fa0, fa1, fa2
 ; CHECKIZFH-NEXT:    ret
 ;
-; CHECKIZHINX-LABEL: fmadd_s:
+; CHECKIZHINX-LABEL: fmadd_h:
 ; CHECKIZHINX:       # %bb.0:
 ; CHECKIZHINX-NEXT:    fmadd.h a0, a0, a1, a2
 ; CHECKIZHINX-NEXT:    ret
 ;
-; RV32I-LABEL: fmadd_s:
+; RV32I-LABEL: fmadd_h:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -32
 ; RV32I-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
@@ -1206,7 +1138,7 @@ define half @fmadd_s(half %a, half %b, half %c) nounwind {
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
-; RV64I-LABEL: fmadd_s:
+; RV64I-LABEL: fmadd_h:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -48
 ; RV64I-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
@@ -1239,7 +1171,7 @@ define half @fmadd_s(half %a, half %b, half %c) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
-; CHECKIZFHMIN-LABEL: fmadd_s:
+; CHECKIZFHMIN-LABEL: fmadd_h:
 ; CHECKIZFHMIN:       # %bb.0:
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa2
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h fa4, fa1
@@ -1248,7 +1180,7 @@ define half @fmadd_s(half %a, half %b, half %c) nounwind {
 ; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECKIZFHMIN-NEXT:    ret
 ;
-; CHECKIZHINXMIN-LABEL: fmadd_s:
+; CHECKIZHINXMIN-LABEL: fmadd_h:
 ; CHECKIZHINXMIN:       # %bb.0:
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a2, a2
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a1, a1
@@ -1260,21 +1192,21 @@ define half @fmadd_s(half %a, half %b, half %c) nounwind {
   ret half %1
 }
 
-define half @fmsub_s(half %a, half %b, half %c) nounwind {
-; CHECKIZFH-LABEL: fmsub_s:
+define half @fmsub_h(half %a, half %b, half %c) nounwind {
+; CHECKIZFH-LABEL: fmsub_h:
 ; CHECKIZFH:       # %bb.0:
 ; CHECKIZFH-NEXT:    fmv.h.x fa5, zero
 ; CHECKIZFH-NEXT:    fadd.h fa5, fa2, fa5
 ; CHECKIZFH-NEXT:    fmsub.h fa0, fa0, fa1, fa5
 ; CHECKIZFH-NEXT:    ret
 ;
-; CHECKIZHINX-LABEL: fmsub_s:
+; CHECKIZHINX-LABEL: fmsub_h:
 ; CHECKIZHINX:       # %bb.0:
 ; CHECKIZHINX-NEXT:    fadd.h a2, a2, zero
 ; CHECKIZHINX-NEXT:    fmsub.h a0, a0, a1, a2
 ; CHECKIZHINX-NEXT:    ret
 ;
-; RV32I-LABEL: fmsub_s:
+; RV32I-LABEL: fmsub_h:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -32
 ; RV32I-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
@@ -1318,7 +1250,7 @@ define half @fmsub_s(half %a, half %b, half %c) nounwind {
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
-; RV64I-LABEL: fmsub_s:
+; RV64I-LABEL: fmsub_h:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -48
 ; RV64I-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
@@ -1362,32 +1294,32 @@ define half @fmsub_s(half %a, half %b, half %c) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
-; CHECKIZFHMIN-LABEL: fmsub_s:
+; CHECKIZFHMIN-LABEL: fmsub_h:
 ; CHECKIZFHMIN:       # %bb.0:
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa2
 ; CHECKIZFHMIN-NEXT:    fmv.w.x fa4, zero
+; CHECKIZFHMIN-NEXT:    lui a0, 1048568
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa3, fa1
 ; CHECKIZFHMIN-NEXT:    fadd.s fa5, fa5, fa4
 ; CHECKIZFHMIN-NEXT:    fcvt.h.s fa5, fa5
-; CHECKIZFHMIN-NEXT:    fmv.x.h a0, fa5
-; CHECKIZFHMIN-NEXT:    lui a1, 1048568
-; CHECKIZFHMIN-NEXT:    xor a0, a0, a1
+; CHECKIZFHMIN-NEXT:    fmv.x.h a1, fa5
+; CHECKIZFHMIN-NEXT:    xor a0, a1, a0
 ; CHECKIZFHMIN-NEXT:    fmv.h.x fa5, a0
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa5
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa4, fa1
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa3, fa0
-; CHECKIZFHMIN-NEXT:    fmadd.s fa5, fa3, fa4, fa5
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa4, fa0
+; CHECKIZFHMIN-NEXT:    fmadd.s fa5, fa4, fa3, fa5
 ; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECKIZFHMIN-NEXT:    ret
 ;
-; CHECKIZHINXMIN-LABEL: fmsub_s:
+; CHECKIZHINXMIN-LABEL: fmsub_h:
 ; CHECKIZHINXMIN:       # %bb.0:
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a2, a2
+; CHECKIZHINXMIN-NEXT:    lui a3, 1048568
+; CHECKIZHINXMIN-NEXT:    fcvt.s.h a1, a1
 ; CHECKIZHINXMIN-NEXT:    fadd.s a2, a2, zero
 ; CHECKIZHINXMIN-NEXT:    fcvt.h.s a2, a2
-; CHECKIZHINXMIN-NEXT:    lui a3, 1048568
 ; CHECKIZHINXMIN-NEXT:    xor a2, a2, a3
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a2, a2
-; CHECKIZHINXMIN-NEXT:    fcvt.s.h a1, a1
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a0, a0
 ; CHECKIZHINXMIN-NEXT:    fmadd.s a0, a0, a1, a2
 ; CHECKIZHINXMIN-NEXT:    fcvt.h.s a0, a0
@@ -1398,8 +1330,8 @@ define half @fmsub_s(half %a, half %b, half %c) nounwind {
   ret half %1
 }
 
-define half @fnmadd_s(half %a, half %b, half %c) nounwind {
-; CHECKIZFH-LABEL: fnmadd_s:
+define half @fnmadd_h(half %a, half %b, half %c) nounwind {
+; CHECKIZFH-LABEL: fnmadd_h:
 ; CHECKIZFH:       # %bb.0:
 ; CHECKIZFH-NEXT:    fmv.h.x fa5, zero
 ; CHECKIZFH-NEXT:    fadd.h fa4, fa0, fa5
@@ -1407,14 +1339,14 @@ define half @fnmadd_s(half %a, half %b, half %c) nounwind {
 ; CHECKIZFH-NEXT:    fnmadd.h fa0, fa4, fa1, fa5
 ; CHECKIZFH-NEXT:    ret
 ;
-; CHECKIZHINX-LABEL: fnmadd_s:
+; CHECKIZHINX-LABEL: fnmadd_h:
 ; CHECKIZHINX:       # %bb.0:
 ; CHECKIZHINX-NEXT:    fadd.h a0, a0, zero
 ; CHECKIZHINX-NEXT:    fadd.h a2, a2, zero
 ; CHECKIZHINX-NEXT:    fnmadd.h a0, a0, a1, a2
 ; CHECKIZHINX-NEXT:    ret
 ;
-; RV32I-LABEL: fnmadd_s:
+; RV32I-LABEL: fnmadd_h:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -32
 ; RV32I-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
@@ -1472,7 +1404,7 @@ define half @fnmadd_s(half %a, half %b, half %c) nounwind {
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
-; RV64I-LABEL: fnmadd_s:
+; RV64I-LABEL: fnmadd_h:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -48
 ; RV64I-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
@@ -1530,21 +1462,21 @@ define half @fnmadd_s(half %a, half %b, half %c) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
-; CHECKIZFHMIN-LABEL: fnmadd_s:
+; CHECKIZFHMIN-LABEL: fnmadd_h:
 ; CHECKIZFHMIN:       # %bb.0:
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; CHECKIZFHMIN-NEXT:    fmv.w.x fa4, zero
-; CHECKIZFHMIN-NEXT:    fadd.s fa5, fa5, fa4
-; CHECKIZFHMIN-NEXT:    fcvt.h.s fa5, fa5
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h fa3, fa2
+; CHECKIZFHMIN-NEXT:    lui a0, 1048568
+; CHECKIZFHMIN-NEXT:    fadd.s fa5, fa5, fa4
 ; CHECKIZFHMIN-NEXT:    fadd.s fa4, fa3, fa4
+; CHECKIZFHMIN-NEXT:    fcvt.h.s fa5, fa5
 ; CHECKIZFHMIN-NEXT:    fcvt.h.s fa4, fa4
-; CHECKIZFHMIN-NEXT:    fmv.x.h a0, fa5
-; CHECKIZFHMIN-NEXT:    lui a1, 1048568
-; CHECKIZFHMIN-NEXT:    xor a0, a0, a1
-; CHECKIZFHMIN-NEXT:    fmv.h.x fa5, a0
-; CHECKIZFHMIN-NEXT:    fmv.x.h a0, fa4
-; CHECKIZFHMIN-NEXT:    xor a0, a0, a1
+; CHECKIZFHMIN-NEXT:    fmv.x.h a1, fa5
+; CHECKIZFHMIN-NEXT:    fmv.x.h a2, fa4
+; CHECKIZFHMIN-NEXT:    xor a1, a1, a0
+; CHECKIZFHMIN-NEXT:    xor a0, a2, a0
+; CHECKIZFHMIN-NEXT:    fmv.h.x fa5, a1
 ; CHECKIZFHMIN-NEXT:    fmv.h.x fa4, a0
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h fa4, fa4
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa5
@@ -1553,15 +1485,15 @@ define half @fnmadd_s(half %a, half %b, half %c) nounwind {
 ; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECKIZFHMIN-NEXT:    ret
 ;
-; CHECKIZHINXMIN-LABEL: fnmadd_s:
+; CHECKIZHINXMIN-LABEL: fnmadd_h:
 ; CHECKIZHINXMIN:       # %bb.0:
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a0, a0
-; CHECKIZHINXMIN-NEXT:    fadd.s a0, a0, zero
-; CHECKIZHINXMIN-NEXT:    fcvt.h.s a0, a0
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a2, a2
-; CHECKIZHINXMIN-NEXT:    fadd.s a2, a2, zero
-; CHECKIZHINXMIN-NEXT:    fcvt.h.s a2, a2
 ; CHECKIZHINXMIN-NEXT:    lui a3, 1048568
+; CHECKIZHINXMIN-NEXT:    fadd.s a0, a0, zero
+; CHECKIZHINXMIN-NEXT:    fadd.s a2, a2, zero
+; CHECKIZHINXMIN-NEXT:    fcvt.h.s a0, a0
+; CHECKIZHINXMIN-NEXT:    fcvt.h.s a2, a2
 ; CHECKIZHINXMIN-NEXT:    xor a0, a0, a3
 ; CHECKIZHINXMIN-NEXT:    xor a2, a2, a3
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a2, a2
@@ -1578,8 +1510,8 @@ define half @fnmadd_s(half %a, half %b, half %c) nounwind {
   ret half %1
 }
 
-define half @fnmadd_s_2(half %a, half %b, half %c) nounwind {
-; CHECKIZFH-LABEL: fnmadd_s_2:
+define half @fnmadd_h_2(half %a, half %b, half %c) nounwind {
+; CHECKIZFH-LABEL: fnmadd_h_2:
 ; CHECKIZFH:       # %bb.0:
 ; CHECKIZFH-NEXT:    fmv.h.x fa5, zero
 ; CHECKIZFH-NEXT:    fadd.h fa4, fa1, fa5
@@ -1587,14 +1519,14 @@ define half @fnmadd_s_2(half %a, half %b, half %c) nounwind {
 ; CHECKIZFH-NEXT:    fnmadd.h fa0, fa4, fa0, fa5
 ; CHECKIZFH-NEXT:    ret
 ;
-; CHECKIZHINX-LABEL: fnmadd_s_2:
+; CHECKIZHINX-LABEL: fnmadd_h_2:
 ; CHECKIZHINX:       # %bb.0:
 ; CHECKIZHINX-NEXT:    fadd.h a1, a1, zero
 ; CHECKIZHINX-NEXT:    fadd.h a2, a2, zero
 ; CHECKIZHINX-NEXT:    fnmadd.h a0, a1, a0, a2
 ; CHECKIZHINX-NEXT:    ret
 ;
-; RV32I-LABEL: fnmadd_s_2:
+; RV32I-LABEL: fnmadd_h_2:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -32
 ; RV32I-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
@@ -1652,7 +1584,7 @@ define half @fnmadd_s_2(half %a, half %b, half %c) nounwind {
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
-; RV64I-LABEL: fnmadd_s_2:
+; RV64I-LABEL: fnmadd_h_2:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -48
 ; RV64I-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
@@ -1710,21 +1642,21 @@ define half @fnmadd_s_2(half %a, half %b, half %c) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
-; CHECKIZFHMIN-LABEL: fnmadd_s_2:
+; CHECKIZFHMIN-LABEL: fnmadd_h_2:
 ; CHECKIZFHMIN:       # %bb.0:
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa1
 ; CHECKIZFHMIN-NEXT:    fmv.w.x fa4, zero
-; CHECKIZFHMIN-NEXT:    fadd.s fa5, fa5, fa4
-; CHECKIZFHMIN-NEXT:    fcvt.h.s fa5, fa5
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h fa3, fa2
+; CHECKIZFHMIN-NEXT:    lui a0, 1048568
+; CHECKIZFHMIN-NEXT:    fadd.s fa5, fa5, fa4
 ; CHECKIZFHMIN-NEXT:    fadd.s fa4, fa3, fa4
+; CHECKIZFHMIN-NEXT:    fcvt.h.s fa5, fa5
 ; CHECKIZFHMIN-NEXT:    fcvt.h.s fa4, fa4
-; CHECKIZFHMIN-NEXT:    fmv.x.h a0, fa5
-; CHECKIZFHMIN-NEXT:    lui a1, 1048568
-; CHECKIZFHMIN-NEXT:    xor a0, a0, a1
-; CHECKIZFHMIN-NEXT:    fmv.h.x fa5, a0
-; CHECKIZFHMIN-NEXT:    fmv.x.h a0, fa4
-; CHECKIZFHMIN-NEXT:    xor a0, a0, a1
+; CHECKIZFHMIN-NEXT:    fmv.x.h a1, fa5
+; CHECKIZFHMIN-NEXT:    fmv.x.h a2, fa4
+; CHECKIZFHMIN-NEXT:    xor a1, a1, a0
+; CHECKIZFHMIN-NEXT:    xor a0, a2, a0
+; CHECKIZFHMIN-NEXT:    fmv.h.x fa5, a1
 ; CHECKIZFHMIN-NEXT:    fmv.h.x fa4, a0
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h fa4, fa4
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa5
@@ -1733,15 +1665,15 @@ define half @fnmadd_s_2(half %a, half %b, half %c) nounwind {
 ; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECKIZFHMIN-NEXT:    ret
 ;
-; CHECKIZHINXMIN-LABEL: fnmadd_s_2:
+; CHECKIZHINXMIN-LABEL: fnmadd_h_2:
 ; CHECKIZHINXMIN:       # %bb.0:
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a1, a1
-; CHECKIZHINXMIN-NEXT:    fadd.s a1, a1, zero
-; CHECKIZHINXMIN-NEXT:    fcvt.h.s a1, a1
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a2, a2
-; CHECKIZHINXMIN-NEXT:    fadd.s a2, a2, zero
-; CHECKIZHINXMIN-NEXT:    fcvt.h.s a2, a2
 ; CHECKIZHINXMIN-NEXT:    lui a3, 1048568
+; CHECKIZHINXMIN-NEXT:    fadd.s a1, a1, zero
+; CHECKIZHINXMIN-NEXT:    fadd.s a2, a2, zero
+; CHECKIZHINXMIN-NEXT:    fcvt.h.s a1, a1
+; CHECKIZHINXMIN-NEXT:    fcvt.h.s a2, a2
 ; CHECKIZHINXMIN-NEXT:    xor a1, a1, a3
 ; CHECKIZHINXMIN-NEXT:    xor a2, a2, a3
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a2, a2
@@ -1758,33 +1690,32 @@ define half @fnmadd_s_2(half %a, half %b, half %c) nounwind {
   ret half %1
 }
 
-define half @fnmadd_s_3(half %a, half %b, half %c) nounwind {
-; RV32IZFH-LABEL: fnmadd_s_3:
+define half @fnmadd_h_3(half %a, half %b, half %c) nounwind {
+; RV32IZFH-LABEL: fnmadd_h_3:
 ; RV32IZFH:       # %bb.0:
 ; RV32IZFH-NEXT:    fmadd.h ft0, fa0, fa1, fa2
 ; RV32IZFH-NEXT:    fneg.h fa0, ft0
 ; RV32IZFH-NEXT:    ret
 ;
-; RV64IZFH-LABEL: fnmadd_s_3:
+; RV64IZFH-LABEL: fnmadd_h_3:
 ; RV64IZFH:       # %bb.0:
 ; RV64IZFH-NEXT:    fmadd.h ft0, fa0, fa1, fa2
 ; RV64IZFH-NEXT:    fneg.h fa0, ft0
 ; RV64IZFH-NEXT:    ret
 ;
-; CHECKIZFH-LABEL: fnmadd_s_3:
+; CHECKIZFH-LABEL: fnmadd_h_3:
 ; CHECKIZFH:       # %bb.0:
 ; CHECKIZFH-NEXT:    fmadd.h fa5, fa0, fa1, fa2
 ; CHECKIZFH-NEXT:    fneg.h fa0, fa5
 ; CHECKIZFH-NEXT:    ret
 ;
-; CHECKIZHINX-LABEL: fnmadd_s_3:
+; CHECKIZHINX-LABEL: fnmadd_h_3:
 ; CHECKIZHINX:       # %bb.0:
 ; CHECKIZHINX-NEXT:    fmadd.h a0, a0, a1, a2
-; CHECKIZHINX-NEXT:    lui a1, 1048568
-; CHECKIZHINX-NEXT:    xor a0, a0, a1
+; CHECKIZHINX-NEXT:    fneg.h a0, a0
 ; CHECKIZHINX-NEXT:    ret
 ;
-; RV32I-LABEL: fnmadd_s_3:
+; RV32I-LABEL: fnmadd_h_3:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -32
 ; RV32I-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
@@ -1819,7 +1750,7 @@ define half @fnmadd_s_3(half %a, half %b, half %c) nounwind {
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
-; RV64I-LABEL: fnmadd_s_3:
+; RV64I-LABEL: fnmadd_h_3:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -48
 ; RV64I-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
@@ -1854,7 +1785,7 @@ define half @fnmadd_s_3(half %a, half %b, half %c) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
-; CHECKIZFHMIN-LABEL: fnmadd_s_3:
+; CHECKIZFHMIN-LABEL: fnmadd_h_3:
 ; CHECKIZFHMIN:       # %bb.0:
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa2
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h fa4, fa1
@@ -1867,7 +1798,7 @@ define half @fnmadd_s_3(half %a, half %b, half %c) nounwind {
 ; CHECKIZFHMIN-NEXT:    fmv.h.x fa0, a0
 ; CHECKIZFHMIN-NEXT:    ret
 ;
-; CHECKIZHINXMIN-LABEL: fnmadd_s_3:
+; CHECKIZHINXMIN-LABEL: fnmadd_h_3:
 ; CHECKIZHINXMIN:       # %bb.0:
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a2, a2
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a1, a1
@@ -1876,6 +1807,7 @@ define half @fnmadd_s_3(half %a, half %b, half %c) nounwind {
 ; CHECKIZHINXMIN-NEXT:    fcvt.h.s a0, a0
 ; CHECKIZHINXMIN-NEXT:    lui a1, 1048568
 ; CHECKIZHINXMIN-NEXT:    xor a0, a0, a1
+; CHECKIZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h killed $x10
 ; CHECKIZHINXMIN-NEXT:    ret
   %1 = call half @llvm.fma.f16(half %a, half %b, half %c)
   %neg = fneg half %1
@@ -1901,9 +1833,7 @@ define half @fnmadd_nsz(half %a, half %b, half %c) nounwind {
 ;
 ; CHECKIZHINX-LABEL: fnmadd_nsz:
 ; CHECKIZHINX:       # %bb.0:
-; CHECKIZHINX-NEXT:    fmadd.h a0, a0, a1, a2
-; CHECKIZHINX-NEXT:    lui a1, 1048568
-; CHECKIZHINX-NEXT:    xor a0, a0, a1
+; CHECKIZHINX-NEXT:    fnmadd.h a0, a0, a1, a2
 ; CHECKIZHINX-NEXT:    ret
 ;
 ; RV32I-LABEL: fnmadd_nsz:
@@ -1998,27 +1928,28 @@ define half @fnmadd_nsz(half %a, half %b, half %c) nounwind {
 ; CHECKIZHINXMIN-NEXT:    fcvt.h.s a0, a0
 ; CHECKIZHINXMIN-NEXT:    lui a1, 1048568
 ; CHECKIZHINXMIN-NEXT:    xor a0, a0, a1
+; CHECKIZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h killed $x10
 ; CHECKIZHINXMIN-NEXT:    ret
   %1 = call nsz half @llvm.fma.f16(half %a, half %b, half %c)
   %neg = fneg nsz half %1
   ret half %neg
 }
 
-define half @fnmsub_s(half %a, half %b, half %c) nounwind {
-; CHECKIZFH-LABEL: fnmsub_s:
+define half @fnmsub_h(half %a, half %b, half %c) nounwind {
+; CHECKIZFH-LABEL: fnmsub_h:
 ; CHECKIZFH:       # %bb.0:
 ; CHECKIZFH-NEXT:    fmv.h.x fa5, zero
 ; CHECKIZFH-NEXT:    fadd.h fa5, fa0, fa5
 ; CHECKIZFH-NEXT:    fnmsub.h fa0, fa5, fa1, fa2
 ; CHECKIZFH-NEXT:    ret
 ;
-; CHECKIZHINX-LABEL: fnmsub_s:
+; CHECKIZHINX-LABEL: fnmsub_h:
 ; CHECKIZHINX:       # %bb.0:
 ; CHECKIZHINX-NEXT:    fadd.h a0, a0, zero
 ; CHECKIZHINX-NEXT:    fnmsub.h a0, a0, a1, a2
 ; CHECKIZHINX-NEXT:    ret
 ;
-; RV32I-LABEL: fnmsub_s:
+; RV32I-LABEL: fnmsub_h:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -32
 ; RV32I-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
@@ -2061,7 +1992,7 @@ define half @fnmsub_s(half %a, half %b, half %c) nounwind {
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
-; RV64I-LABEL: fnmsub_s:
+; RV64I-LABEL: fnmsub_h:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -48
 ; RV64I-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
@@ -2104,32 +2035,32 @@ define half @fnmsub_s(half %a, half %b, half %c) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
-; CHECKIZFHMIN-LABEL: fnmsub_s:
+; CHECKIZFHMIN-LABEL: fnmsub_h:
 ; CHECKIZFHMIN:       # %bb.0:
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; CHECKIZFHMIN-NEXT:    fmv.w.x fa4, zero
+; CHECKIZFHMIN-NEXT:    lui a0, 1048568
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa3, fa2
 ; CHECKIZFHMIN-NEXT:    fadd.s fa5, fa5, fa4
 ; CHECKIZFHMIN-NEXT:    fcvt.h.s fa5, fa5
-; CHECKIZFHMIN-NEXT:    fmv.x.h a0, fa5
-; CHECKIZFHMIN-NEXT:    lui a1, 1048568
-; CHECKIZFHMIN-NEXT:    xor a0, a0, a1
+; CHECKIZFHMIN-NEXT:    fmv.x.h a1, fa5
+; CHECKIZFHMIN-NEXT:    xor a0, a1, a0
 ; CHECKIZFHMIN-NEXT:    fmv.h.x fa5, a0
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa5
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa4, fa2
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa3, fa1
-; CHECKIZFHMIN-NEXT:    fmadd.s fa5, fa5, fa3, fa4
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa4, fa1
+; CHECKIZFHMIN-NEXT:    fmadd.s fa5, fa5, fa4, fa3
 ; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECKIZFHMIN-NEXT:    ret
 ;
-; CHECKIZHINXMIN-LABEL: fnmsub_s:
+; CHECKIZHINXMIN-LABEL: fnmsub_h:
 ; CHECKIZHINXMIN:       # %bb.0:
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; CHECKIZHINXMIN-NEXT:    lui a3, 1048568
+; CHECKIZHINXMIN-NEXT:    fcvt.s.h a2, a2
 ; CHECKIZHINXMIN-NEXT:    fadd.s a0, a0, zero
 ; CHECKIZHINXMIN-NEXT:    fcvt.h.s a0, a0
-; CHECKIZHINXMIN-NEXT:    lui a3, 1048568
 ; CHECKIZHINXMIN-NEXT:    xor a0, a0, a3
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a0, a0
-; CHECKIZHINXMIN-NEXT:    fcvt.s.h a2, a2
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a1, a1
 ; CHECKIZHINXMIN-NEXT:    fmadd.s a0, a0, a1, a2
 ; CHECKIZHINXMIN-NEXT:    fcvt.h.s a0, a0
@@ -2140,21 +2071,21 @@ define half @fnmsub_s(half %a, half %b, half %c) nounwind {
   ret half %1
 }
 
-define half @fnmsub_s_2(half %a, half %b, half %c) nounwind {
-; CHECKIZFH-LABEL: fnmsub_s_2:
+define half @fnmsub_h_2(half %a, half %b, half %c) nounwind {
+; CHECKIZFH-LABEL: fnmsub_h_2:
 ; CHECKIZFH:       # %bb.0:
 ; CHECKIZFH-NEXT:    fmv.h.x fa5, zero
 ; CHECKIZFH-NEXT:    fadd.h fa5, fa1, fa5
 ; CHECKIZFH-NEXT:    fnmsub.h fa0, fa5, fa0, fa2
 ; CHECKIZFH-NEXT:    ret
 ;
-; CHECKIZHINX-LABEL: fnmsub_s_2:
+; CHECKIZHINX-LABEL: fnmsub_h_2:
 ; CHECKIZHINX:       # %bb.0:
 ; CHECKIZHINX-NEXT:    fadd.h a1, a1, zero
 ; CHECKIZHINX-NEXT:    fnmsub.h a0, a1, a0, a2
 ; CHECKIZHINX-NEXT:    ret
 ;
-; RV32I-LABEL: fnmsub_s_2:
+; RV32I-LABEL: fnmsub_h_2:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -32
 ; RV32I-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
@@ -2198,7 +2129,7 @@ define half @fnmsub_s_2(half %a, half %b, half %c) nounwind {
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
-; RV64I-LABEL: fnmsub_s_2:
+; RV64I-LABEL: fnmsub_h_2:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -48
 ; RV64I-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
@@ -2242,32 +2173,32 @@ define half @fnmsub_s_2(half %a, half %b, half %c) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
-; CHECKIZFHMIN-LABEL: fnmsub_s_2:
+; CHECKIZFHMIN-LABEL: fnmsub_h_2:
 ; CHECKIZFHMIN:       # %bb.0:
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa1
 ; CHECKIZFHMIN-NEXT:    fmv.w.x fa4, zero
+; CHECKIZFHMIN-NEXT:    lui a0, 1048568
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa3, fa2
 ; CHECKIZFHMIN-NEXT:    fadd.s fa5, fa5, fa4
 ; CHECKIZFHMIN-NEXT:    fcvt.h.s fa5, fa5
-; CHECKIZFHMIN-NEXT:    fmv.x.h a0, fa5
-; CHECKIZFHMIN-NEXT:    lui a1, 1048568
-; CHECKIZFHMIN-NEXT:    xor a0, a0, a1
+; CHECKIZFHMIN-NEXT:    fmv.x.h a1, fa5
+; CHECKIZFHMIN-NEXT:    xor a0, a1, a0
 ; CHECKIZFHMIN-NEXT:    fmv.h.x fa5, a0
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa5
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa4, fa2
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa3, fa0
-; CHECKIZFHMIN-NEXT:    fmadd.s fa5, fa3, fa5, fa4
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa4, fa0
+; CHECKIZFHMIN-NEXT:    fmadd.s fa5, fa4, fa5, fa3
 ; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECKIZFHMIN-NEXT:    ret
 ;
-; CHECKIZHINXMIN-LABEL: fnmsub_s_2:
+; CHECKIZHINXMIN-LABEL: fnmsub_h_2:
 ; CHECKIZHINXMIN:       # %bb.0:
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a1, a1
+; CHECKIZHINXMIN-NEXT:    lui a3, 1048568
+; CHECKIZHINXMIN-NEXT:    fcvt.s.h a2, a2
 ; CHECKIZHINXMIN-NEXT:    fadd.s a1, a1, zero
 ; CHECKIZHINXMIN-NEXT:    fcvt.h.s a1, a1
-; CHECKIZHINXMIN-NEXT:    lui a3, 1048568
 ; CHECKIZHINXMIN-NEXT:    xor a1, a1, a3
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a1, a1
-; CHECKIZHINXMIN-NEXT:    fcvt.s.h a2, a2
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a0, a0
 ; CHECKIZHINXMIN-NEXT:    fmadd.s a0, a0, a1, a2
 ; CHECKIZHINXMIN-NEXT:    fcvt.h.s a0, a0
@@ -2278,18 +2209,18 @@ define half @fnmsub_s_2(half %a, half %b, half %c) nounwind {
   ret half %1
 }
 
-define half @fmadd_s_contract(half %a, half %b, half %c) nounwind {
-; CHECKIZFH-LABEL: fmadd_s_contract:
+define half @fmadd_h_contract(half %a, half %b, half %c) nounwind {
+; CHECKIZFH-LABEL: fmadd_h_contract:
 ; CHECKIZFH:       # %bb.0:
 ; CHECKIZFH-NEXT:    fmadd.h fa0, fa0, fa1, fa2
 ; CHECKIZFH-NEXT:    ret
 ;
-; CHECKIZHINX-LABEL: fmadd_s_contract:
+; CHECKIZHINX-LABEL: fmadd_h_contract:
 ; CHECKIZHINX:       # %bb.0:
 ; CHECKIZHINX-NEXT:    fmadd.h a0, a0, a1, a2
 ; CHECKIZHINX-NEXT:    ret
 ;
-; RV32I-LABEL: fmadd_s_contract:
+; RV32I-LABEL: fmadd_h_contract:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -32
 ; RV32I-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
@@ -2327,7 +2258,7 @@ define half @fmadd_s_contract(half %a, half %b, half %c) nounwind {
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
-; RV64I-LABEL: fmadd_s_contract:
+; RV64I-LABEL: fmadd_h_contract:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -48
 ; RV64I-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
@@ -2365,7 +2296,7 @@ define half @fmadd_s_contract(half %a, half %b, half %c) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
-; CHECKIZFHMIN-LABEL: fmadd_s_contract:
+; CHECKIZFHMIN-LABEL: fmadd_h_contract:
 ; CHECKIZFHMIN:       # %bb.0:
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa1
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h fa4, fa0
@@ -2377,7 +2308,7 @@ define half @fmadd_s_contract(half %a, half %b, half %c) nounwind {
 ; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECKIZFHMIN-NEXT:    ret
 ;
-; CHECKIZHINXMIN-LABEL: fmadd_s_contract:
+; CHECKIZHINXMIN-LABEL: fmadd_h_contract:
 ; CHECKIZHINXMIN:       # %bb.0:
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a1, a1
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a0, a0
@@ -2393,21 +2324,21 @@ define half @fmadd_s_contract(half %a, half %b, half %c) nounwind {
   ret half %2
 }
 
-define half @fmsub_s_contract(half %a, half %b, half %c) nounwind {
-; CHECKIZFH-LABEL: fmsub_s_contract:
+define half @fmsub_h_contract(half %a, half %b, half %c) nounwind {
+; CHECKIZFH-LABEL: fmsub_h_contract:
 ; CHECKIZFH:       # %bb.0:
 ; CHECKIZFH-NEXT:    fmv.h.x fa5, zero
 ; CHECKIZFH-NEXT:    fadd.h fa5, fa2, fa5
 ; CHECKIZFH-NEXT:    fmsub.h fa0, fa0, fa1, fa5
 ; CHECKIZFH-NEXT:    ret
 ;
-; CHECKIZHINX-LABEL: fmsub_s_contract:
+; CHECKIZHINX-LABEL: fmsub_h_contract:
 ; CHECKIZHINX:       # %bb.0:
 ; CHECKIZHINX-NEXT:    fadd.h a2, a2, zero
 ; CHECKIZHINX-NEXT:    fmsub.h a0, a0, a1, a2
 ; CHECKIZHINX-NEXT:    ret
 ;
-; RV32I-LABEL: fmsub_s_contract:
+; RV32I-LABEL: fmsub_h_contract:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -32
 ; RV32I-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
@@ -2451,7 +2382,7 @@ define half @fmsub_s_contract(half %a, half %b, half %c) nounwind {
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
-; RV64I-LABEL: fmsub_s_contract:
+; RV64I-LABEL: fmsub_h_contract:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -48
 ; RV64I-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
@@ -2495,15 +2426,15 @@ define half @fmsub_s_contract(half %a, half %b, half %c) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
-; CHECKIZFHMIN-LABEL: fmsub_s_contract:
+; CHECKIZFHMIN-LABEL: fmsub_h_contract:
 ; CHECKIZFHMIN:       # %bb.0:
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa2
 ; CHECKIZFHMIN-NEXT:    fmv.w.x fa4, zero
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa3, fa1
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa2, fa0
 ; CHECKIZFHMIN-NEXT:    fadd.s fa5, fa5, fa4
+; CHECKIZFHMIN-NEXT:    fmul.s fa4, fa2, fa3
 ; CHECKIZFHMIN-NEXT:    fcvt.h.s fa5, fa5
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa4, fa1
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa3, fa0
-; CHECKIZFHMIN-NEXT:    fmul.s fa4, fa3, fa4
 ; CHECKIZFHMIN-NEXT:    fcvt.h.s fa4, fa4
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa5
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h fa4, fa4
@@ -2511,16 +2442,16 @@ define half @fmsub_s_contract(half %a, half %b, half %c) nounwind {
 ; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECKIZFHMIN-NEXT:    ret
 ;
-; CHECKIZHINXMIN-LABEL: fmsub_s_contract:
+; CHECKIZHINXMIN-LABEL: fmsub_h_contract:
 ; CHECKIZHINXMIN:       # %bb.0:
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a2, a2
-; CHECKIZHINXMIN-NEXT:    fadd.s a2, a2, zero
-; CHECKIZHINXMIN-NEXT:    fcvt.h.s a2, a2
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a1, a1
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; CHECKIZHINXMIN-NEXT:    fadd.s a2, a2, zero
 ; CHECKIZHINXMIN-NEXT:    fmul.s a0, a0, a1
+; CHECKIZHINXMIN-NEXT:    fcvt.h.s a1, a2
 ; CHECKIZHINXMIN-NEXT:    fcvt.h.s a0, a0
-; CHECKIZHINXMIN-NEXT:    fcvt.s.h a1, a2
+; CHECKIZHINXMIN-NEXT:    fcvt.s.h a1, a1
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a0, a0
 ; CHECKIZHINXMIN-NEXT:    fsub.s a0, a0, a1
 ; CHECKIZHINXMIN-NEXT:    fcvt.h.s a0, a0
@@ -2531,8 +2462,8 @@ define half @fmsub_s_contract(half %a, half %b, half %c) nounwind {
   ret half %2
 }
 
-define half @fnmadd_s_contract(half %a, half %b, half %c) nounwind {
-; CHECKIZFH-LABEL: fnmadd_s_contract:
+define half @fnmadd_h_contract(half %a, half %b, half %c) nounwind {
+; CHECKIZFH-LABEL: fnmadd_h_contract:
 ; CHECKIZFH:       # %bb.0:
 ; CHECKIZFH-NEXT:    fmv.h.x fa5, zero
 ; CHECKIZFH-NEXT:    fadd.h fa4, fa0, fa5
@@ -2541,7 +2472,7 @@ define half @fnmadd_s_contract(half %a, half %b, half %c) nounwind {
 ; CHECKIZFH-NEXT:    fnmadd.h fa0, fa4, fa3, fa5
 ; CHECKIZFH-NEXT:    ret
 ;
-; CHECKIZHINX-LABEL: fnmadd_s_contract:
+; CHECKIZHINX-LABEL: fnmadd_h_contract:
 ; CHECKIZHINX:       # %bb.0:
 ; CHECKIZHINX-NEXT:    fadd.h a0, a0, zero
 ; CHECKIZHINX-NEXT:    fadd.h a1, a1, zero
@@ -2549,7 +2480,7 @@ define half @fnmadd_s_contract(half %a, half %b, half %c) nounwind {
 ; CHECKIZHINX-NEXT:    fnmadd.h a0, a0, a1, a2
 ; CHECKIZHINX-NEXT:    ret
 ;
-; RV32I-LABEL: fnmadd_s_contract:
+; RV32I-LABEL: fnmadd_h_contract:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -32
 ; RV32I-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
@@ -2610,7 +2541,7 @@ define half @fnmadd_s_contract(half %a, half %b, half %c) nounwind {
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
-; RV64I-LABEL: fnmadd_s_contract:
+; RV64I-LABEL: fnmadd_h_contract:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -48
 ; RV64I-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
@@ -2671,25 +2602,25 @@ define half @fnmadd_s_contract(half %a, half %b, half %c) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
-; CHECKIZFHMIN-LABEL: fnmadd_s_contract:
+; CHECKIZFHMIN-LABEL: fnmadd_h_contract:
 ; CHECKIZFHMIN:       # %bb.0:
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; CHECKIZFHMIN-NEXT:    fmv.w.x fa4, zero
-; CHECKIZFHMIN-NEXT:    fadd.s fa5, fa5, fa4
-; CHECKIZFHMIN-NEXT:    fcvt.h.s fa5, fa5
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h fa3, fa1
-; CHECKIZFHMIN-NEXT:    fadd.s fa3, fa3, fa4
-; CHECKIZFHMIN-NEXT:    fcvt.h.s fa3, fa3
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h fa2, fa2
+; CHECKIZFHMIN-NEXT:    lui a0, 1048568
+; CHECKIZFHMIN-NEXT:    fadd.s fa5, fa5, fa4
+; CHECKIZFHMIN-NEXT:    fadd.s fa3, fa3, fa4
 ; CHECKIZFHMIN-NEXT:    fadd.s fa4, fa2, fa4
+; CHECKIZFHMIN-NEXT:    fcvt.h.s fa5, fa5
+; CHECKIZFHMIN-NEXT:    fcvt.h.s fa3, fa3
 ; CHECKIZFHMIN-NEXT:    fcvt.h.s fa4, fa4
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h fa3, fa3
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa5
 ; CHECKIZFHMIN-NEXT:    fmul.s fa5, fa5, fa3
 ; CHECKIZFHMIN-NEXT:    fcvt.h.s fa5, fa5
-; CHECKIZFHMIN-NEXT:    fmv.x.h a0, fa5
-; CHECKIZFHMIN-NEXT:    lui a1, 1048568
-; CHECKIZFHMIN-NEXT:    xor a0, a0, a1
+; CHECKIZFHMIN-NEXT:    fmv.x.h a1, fa5
+; CHECKIZFHMIN-NEXT:    xor a0, a1, a0
 ; CHECKIZFHMIN-NEXT:    fmv.h.x fa5, a0
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa5
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h fa4, fa4
@@ -2697,22 +2628,22 @@ define half @fnmadd_s_contract(half %a, half %b, half %c) nounwind {
 ; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECKIZFHMIN-NEXT:    ret
 ;
-; CHECKIZHINXMIN-LABEL: fnmadd_s_contract:
+; CHECKIZHINXMIN-LABEL: fnmadd_h_contract:
 ; CHECKIZHINXMIN:       # %bb.0:
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a0, a0
-; CHECKIZHINXMIN-NEXT:    fadd.s a0, a0, zero
-; CHECKIZHINXMIN-NEXT:    fcvt.h.s a0, a0
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a1, a1
-; CHECKIZHINXMIN-NEXT:    fadd.s a1, a1, zero
-; CHECKIZHINXMIN-NEXT:    fcvt.h.s a1, a1
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a2, a2
-; CHECKIZHINXMIN-NEXT:    fadd.s a2, a2, zero
-; CHECKIZHINXMIN-NEXT:    fcvt.h.s a2, a2
+; CHECKIZHINXMIN-NEXT:    fadd.s a0, a0, zero
+; CHECKIZHINXMIN-NEXT:    fadd.s a1, a1, zero
+; CHECKIZHINXMIN-NEXT:    fcvt.h.s a0, a0
+; CHECKIZHINXMIN-NEXT:    fcvt.h.s a1, a1
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a1, a1
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a0, a0
 ; CHECKIZHINXMIN-NEXT:    fmul.s a0, a0, a1
-; CHECKIZHINXMIN-NEXT:    fcvt.h.s a0, a0
 ; CHECKIZHINXMIN-NEXT:    lui a1, 1048568
+; CHECKIZHINXMIN-NEXT:    fadd.s a2, a2, zero
+; CHECKIZHINXMIN-NEXT:    fcvt.h.s a2, a2
+; CHECKIZHINXMIN-NEXT:    fcvt.h.s a0, a0
 ; CHECKIZHINXMIN-NEXT:    xor a0, a0, a1
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a0, a0
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a1, a2
@@ -2728,8 +2659,8 @@ define half @fnmadd_s_contract(half %a, half %b, half %c) nounwind {
   ret half %3
 }
 
-define half @fnmsub_s_contract(half %a, half %b, half %c) nounwind {
-; CHECKIZFH-LABEL: fnmsub_s_contract:
+define half @fnmsub_h_contract(half %a, half %b, half %c) nounwind {
+; CHECKIZFH-LABEL: fnmsub_h_contract:
 ; CHECKIZFH:       # %bb.0:
 ; CHECKIZFH-NEXT:    fmv.h.x fa5, zero
 ; CHECKIZFH-NEXT:    fadd.h fa4, fa0, fa5
@@ -2737,14 +2668,14 @@ define half @fnmsub_s_contract(half %a, half %b, half %c) nounwind {
 ; CHECKIZFH-NEXT:    fnmsub.h fa0, fa4, fa5, fa2
 ; CHECKIZFH-NEXT:    ret
 ;
-; CHECKIZHINX-LABEL: fnmsub_s_contract:
+; CHECKIZHINX-LABEL: fnmsub_h_contract:
 ; CHECKIZHINX:       # %bb.0:
 ; CHECKIZHINX-NEXT:    fadd.h a0, a0, zero
 ; CHECKIZHINX-NEXT:    fadd.h a1, a1, zero
 ; CHECKIZHINX-NEXT:    fnmsub.h a0, a0, a1, a2
 ; CHECKIZHINX-NEXT:    ret
 ;
-; RV32I-LABEL: fnmsub_s_contract:
+; RV32I-LABEL: fnmsub_h_contract:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -32
 ; RV32I-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
@@ -2795,7 +2726,7 @@ define half @fnmsub_s_contract(half %a, half %b, half %c) nounwind {
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
-; RV64I-LABEL: fnmsub_s_contract:
+; RV64I-LABEL: fnmsub_h_contract:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -48
 ; RV64I-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
@@ -2846,14 +2777,14 @@ define half @fnmsub_s_contract(half %a, half %b, half %c) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
-; CHECKIZFHMIN-LABEL: fnmsub_s_contract:
+; CHECKIZFHMIN-LABEL: fnmsub_h_contract:
 ; CHECKIZFHMIN:       # %bb.0:
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; CHECKIZFHMIN-NEXT:    fmv.w.x fa4, zero
-; CHECKIZFHMIN-NEXT:    fadd.s fa5, fa5, fa4
-; CHECKIZFHMIN-NEXT:    fcvt.h.s fa5, fa5
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h fa3, fa1
+; CHECKIZFHMIN-NEXT:    fadd.s fa5, fa5, fa4
 ; CHECKIZFHMIN-NEXT:    fadd.s fa4, fa3, fa4
+; CHECKIZFHMIN-NEXT:    fcvt.h.s fa5, fa5
 ; CHECKIZFHMIN-NEXT:    fcvt.h.s fa4, fa4
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h fa4, fa4
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa5
@@ -2865,13 +2796,13 @@ define half @fnmsub_s_contract(half %a, half %b, half %c) nounwind {
 ; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECKIZFHMIN-NEXT:    ret
 ;
-; CHECKIZHINXMIN-LABEL: fnmsub_s_contract:
+; CHECKIZHINXMIN-LABEL: fnmsub_h_contract:
 ; CHECKIZHINXMIN:       # %bb.0:
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a0, a0
-; CHECKIZHINXMIN-NEXT:    fadd.s a0, a0, zero
-; CHECKIZHINXMIN-NEXT:    fcvt.h.s a0, a0
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a1, a1
+; CHECKIZHINXMIN-NEXT:    fadd.s a0, a0, zero
 ; CHECKIZHINXMIN-NEXT:    fadd.s a1, a1, zero
+; CHECKIZHINXMIN-NEXT:    fcvt.h.s a0, a0
 ; CHECKIZHINXMIN-NEXT:    fcvt.h.s a1, a1
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a1, a1
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a0, a0
@@ -2954,97 +2885,51 @@ define half @fsgnjx_f16(half %x, half %y) nounwind {
 ;
 ; RV32IZFHMIN-LABEL: fsgnjx_f16:
 ; RV32IZFHMIN:       # %bb.0:
-; RV32IZFHMIN-NEXT:    addi sp, sp, -16
-; RV32IZFHMIN-NEXT:    fsh fa0, 12(sp)
-; RV32IZFHMIN-NEXT:    lbu a0, 13(sp)
-; RV32IZFHMIN-NEXT:    andi a0, a0, 128
-; RV32IZFHMIN-NEXT:    bnez a0, .LBB23_2
-; RV32IZFHMIN-NEXT:  # %bb.1:
 ; RV32IZFHMIN-NEXT:    lui a0, %hi(.LCPI23_0)
-; RV32IZFHMIN-NEXT:    flh fa5, %lo(.LCPI23_0)(a0)
-; RV32IZFHMIN-NEXT:    fcvt.s.h fa5, fa5
-; RV32IZFHMIN-NEXT:    j .LBB23_3
-; RV32IZFHMIN-NEXT:  .LBB23_2:
-; RV32IZFHMIN-NEXT:    lui a0, 784384
-; RV32IZFHMIN-NEXT:    fmv.w.x fa5, a0
-; RV32IZFHMIN-NEXT:  .LBB23_3:
-; RV32IZFHMIN-NEXT:    fcvt.h.s fa5, fa5
+; RV32IZFHMIN-NEXT:    lhu a0, %lo(.LCPI23_0)(a0)
+; RV32IZFHMIN-NEXT:    fmv.x.h a1, fa0
+; RV32IZFHMIN-NEXT:    lui a2, 1048568
+; RV32IZFHMIN-NEXT:    and a1, a1, a2
+; RV32IZFHMIN-NEXT:    slli a0, a0, 17
+; RV32IZFHMIN-NEXT:    srli a0, a0, 17
+; RV32IZFHMIN-NEXT:    or a0, a0, a1
+; RV32IZFHMIN-NEXT:    fmv.h.x fa5, a0
 ; RV32IZFHMIN-NEXT:    fcvt.s.h fa5, fa5
 ; RV32IZFHMIN-NEXT:    fcvt.s.h fa4, fa1
 ; RV32IZFHMIN-NEXT:    fmul.s fa5, fa5, fa4
 ; RV32IZFHMIN-NEXT:    fcvt.h.s fa0, fa5
-; RV32IZFHMIN-NEXT:    addi sp, sp, 16
 ; RV32IZFHMIN-NEXT:    ret
 ;
 ; RV64IZFHMIN-LABEL: fsgnjx_f16:
 ; RV64IZFHMIN:       # %bb.0:
-; RV64IZFHMIN-NEXT:    addi sp, sp, -16
-; RV64IZFHMIN-NEXT:    fsh fa0, 8(sp)
-; RV64IZFHMIN-NEXT:    lbu a0, 9(sp)
-; RV64IZFHMIN-NEXT:    andi a0, a0, 128
-; RV64IZFHMIN-NEXT:    bnez a0, .LBB23_2
-; RV64IZFHMIN-NEXT:  # %bb.1:
 ; RV64IZFHMIN-NEXT:    lui a0, %hi(.LCPI23_0)
-; RV64IZFHMIN-NEXT:    flh fa5, %lo(.LCPI23_0)(a0)
-; RV64IZFHMIN-NEXT:    fcvt.s.h fa5, fa5
-; RV64IZFHMIN-NEXT:    j .LBB23_3
-; RV64IZFHMIN-NEXT:  .LBB23_2:
-; RV64IZFHMIN-NEXT:    lui a0, 784384
-; RV64IZFHMIN-NEXT:    fmv.w.x fa5, a0
-; RV64IZFHMIN-NEXT:  .LBB23_3:
-; RV64IZFHMIN-NEXT:    fcvt.h.s fa5, fa5
+; RV64IZFHMIN-NEXT:    lhu a0, %lo(.LCPI23_0)(a0)
+; RV64IZFHMIN-NEXT:    fmv.x.h a1, fa0
+; RV64IZFHMIN-NEXT:    lui a2, 1048568
+; RV64IZFHMIN-NEXT:    and a1, a1, a2
+; RV64IZFHMIN-NEXT:    slli a0, a0, 49
+; RV64IZFHMIN-NEXT:    srli a0, a0, 49
+; RV64IZFHMIN-NEXT:    or a0, a0, a1
+; RV64IZFHMIN-NEXT:    fmv.h.x fa5, a0
 ; RV64IZFHMIN-NEXT:    fcvt.s.h fa5, fa5
 ; RV64IZFHMIN-NEXT:    fcvt.s.h fa4, fa1
 ; RV64IZFHMIN-NEXT:    fmul.s fa5, fa5, fa4
 ; RV64IZFHMIN-NEXT:    fcvt.h.s fa0, fa5
-; RV64IZFHMIN-NEXT:    addi sp, sp, 16
 ; RV64IZFHMIN-NEXT:    ret
 ;
-; RV32IZHINXMIN-LABEL: fsgnjx_f16:
-; RV32IZHINXMIN:       # %bb.0:
-; RV32IZHINXMIN-NEXT:    addi sp, sp, -16
-; RV32IZHINXMIN-NEXT:    sh a0, 12(sp)
-; RV32IZHINXMIN-NEXT:    lbu a0, 13(sp)
-; RV32IZHINXMIN-NEXT:    andi a0, a0, 128
-; RV32IZHINXMIN-NEXT:    bnez a0, .LBB23_2
-; RV32IZHINXMIN-NEXT:  # %bb.1:
-; RV32IZHINXMIN-NEXT:    lui a0, %hi(.LCPI23_0)
-; RV32IZHINXMIN-NEXT:    lh a0, %lo(.LCPI23_0)(a0)
-; RV32IZHINXMIN-NEXT:    fcvt.s.h a0, a0
-; RV32IZHINXMIN-NEXT:    j .LBB23_3
-; RV32IZHINXMIN-NEXT:  .LBB23_2:
-; RV32IZHINXMIN-NEXT:    lui a0, 784384
-; RV32IZHINXMIN-NEXT:  .LBB23_3:
-; RV32IZHINXMIN-NEXT:    fcvt.h.s a0, a0
-; RV32IZHINXMIN-NEXT:    fcvt.s.h a0, a0
-; RV32IZHINXMIN-NEXT:    fcvt.s.h a1, a1
-; RV32IZHINXMIN-NEXT:    fmul.s a0, a0, a1
-; RV32IZHINXMIN-NEXT:    fcvt.h.s a0, a0
-; RV32IZHINXMIN-NEXT:    addi sp, sp, 16
-; RV32IZHINXMIN-NEXT:    ret
-;
-; RV64IZHINXMIN-LABEL: fsgnjx_f16:
-; RV64IZHINXMIN:       # %bb.0:
-; RV64IZHINXMIN-NEXT:    addi sp, sp, -16
-; RV64IZHINXMIN-NEXT:    sh a0, 8(sp)
-; RV64IZHINXMIN-NEXT:    lbu a0, 9(sp)
-; RV64IZHINXMIN-NEXT:    andi a0, a0, 128
-; RV64IZHINXMIN-NEXT:    bnez a0, .LBB23_2
-; RV64IZHINXMIN-NEXT:  # %bb.1:
-; RV64IZHINXMIN-NEXT:    lui a0, %hi(.LCPI23_0)
-; RV64IZHINXMIN-NEXT:    lh a0, %lo(.LCPI23_0)(a0)
-; RV64IZHINXMIN-NEXT:    fcvt.s.h a0, a0
-; RV64IZHINXMIN-NEXT:    j .LBB23_3
-; RV64IZHINXMIN-NEXT:  .LBB23_2:
-; RV64IZHINXMIN-NEXT:    lui a0, 784384
-; RV64IZHINXMIN-NEXT:  .LBB23_3:
-; RV64IZHINXMIN-NEXT:    fcvt.h.s a0, a0
-; RV64IZHINXMIN-NEXT:    fcvt.s.h a0, a0
-; RV64IZHINXMIN-NEXT:    fcvt.s.h a1, a1
-; RV64IZHINXMIN-NEXT:    fmul.s a0, a0, a1
-; RV64IZHINXMIN-NEXT:    fcvt.h.s a0, a0
-; RV64IZHINXMIN-NEXT:    addi sp, sp, 16
-; RV64IZHINXMIN-NEXT:    ret
+; CHECKIZHINXMIN-LABEL: fsgnjx_f16:
+; CHECKIZHINXMIN:       # %bb.0:
+; CHECKIZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h def $x10
+; CHECKIZHINXMIN-NEXT:    lui a2, 1048568
+; CHECKIZHINXMIN-NEXT:    and a0, a0, a2
+; CHECKIZHINXMIN-NEXT:    li a2, 15
+; CHECKIZHINXMIN-NEXT:    slli a2, a2, 10
+; CHECKIZHINXMIN-NEXT:    or a0, a0, a2
+; CHECKIZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; CHECKIZHINXMIN-NEXT:    fcvt.s.h a1, a1
+; CHECKIZHINXMIN-NEXT:    fmul.s a0, a0, a1
+; CHECKIZHINXMIN-NEXT:    fcvt.h.s a0, a0
+; CHECKIZHINXMIN-NEXT:    ret
   %z = call half @llvm.copysign.f16(half 1.0, half %x)
   %mul = fmul half %z, %y
   ret half %mul

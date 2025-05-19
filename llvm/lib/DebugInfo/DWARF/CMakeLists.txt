@@ -10,7 +10,6 @@ add_llvm_component_library(LLVMDebugInfoDWARF
   DWARFDebugArangeSet.cpp
   DWARFDebugAranges.cpp
   DWARFDebugFrame.cpp
-  DWARFTypePrinter.cpp
   DWARFDebugInfoEntry.cpp
   DWARFDebugLine.cpp
   DWARFDebugLoc.cpp

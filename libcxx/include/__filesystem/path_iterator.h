@@ -14,9 +14,6 @@
 #include <__config>
 #include <__filesystem/path.h>
 #include <__iterator/iterator_traits.h>
-#include <cstddef>
-#include <string>
-#include <string_view>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -25,6 +22,7 @@
 #if _LIBCPP_STD_VER >= 17
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 class _LIBCPP_EXPORTED_FROM_ABI path::iterator {
 public:
@@ -108,6 +106,7 @@ inline _LIBCPP_HIDE_FROM_ABI bool operator!=(const path::iterator& __lhs, const 
   return !(__lhs == __rhs);
 }
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_FILESYSTEM
 
 #endif // _LIBCPP_STD_VER >= 17

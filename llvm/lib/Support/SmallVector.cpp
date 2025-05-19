@@ -108,10 +108,18 @@ static size_t getNewCapacity(size_t MinSize, size_t TSize, size_t OldCapacity) {
   return std::clamp(NewCapacity, MinSize, MaxSize);
 }
 
-template <class Size_T>
-void *SmallVectorBase<Size_T>::replaceAllocation(void *NewElts, size_t TSize,
-                                                 size_t NewCapacity,
-                                                 size_t VSize) {
+/// If vector was first created with capacity 0, getFirstEl() points to the
+/// memory right after, an area unallocated. If a subsequent allocation,
+/// that grows the vector, happens to return the same pointer as getFirstEl(),
+/// get a new allocation, otherwise isSmall() will falsely return that no
+/// allocation was done (true) and the memory will not be freed in the
+/// destructor. If a VSize is given (vector size), also copy that many
+/// elements to the new allocation - used if realloca fails to increase
+/// space, and happens to allocate precisely at BeginX.
+/// This is unlikely to be called often, but resolves a memory leak when the
+/// situation does occur.
+static void *replaceAllocation(void *NewElts, size_t TSize, size_t NewCapacity,
+                               size_t VSize = 0) {
   void *NewEltsReplace = llvm::safe_malloc(NewCapacity * TSize);
   if (VSize)
     memcpy(NewEltsReplace, NewElts, VSize * TSize);

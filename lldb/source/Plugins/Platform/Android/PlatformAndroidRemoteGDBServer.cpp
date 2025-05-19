@@ -64,7 +64,7 @@ static Status DeleteForwardPortWithAdb(uint16_t local_port,
 
 static Status FindUnusedPort(uint16_t &port) {
   Status error;
-  std::unique_ptr<TCPSocket> tcp_socket(new TCPSocket(true, false));
+  std::unique_ptr<TCPSocket> tcp_socket(new TCPSocket(true));
   if (error.Fail())
     return error;
 
@@ -189,8 +189,8 @@ Status PlatformAndroidRemoteGDBServer::MakeConnectURL(
   Status error;
 
   auto forward = [&](const uint16_t local, const uint16_t remote) {
-    error = ForwardPortWithAdb(local, remote, remote_socket_name,
-                               m_socket_namespace, m_device_id);
+    Status error = ForwardPortWithAdb(local, remote, remote_socket_name,
+                                      m_socket_namespace, m_device_id);
     if (error.Success()) {
       m_port_forwards[pid] = local;
       std::ostringstream url_str;

@@ -29,7 +29,7 @@ end
 subroutine zero
   complex, parameter :: a(0) = [(((k,k=1,10),j=-2,2,-1),i=2,-2,-2)]
   complex, parameter :: b(0) = [(7,i=3,-3)]
-  ! CHECK: fir.address_of(@_QQro.0xz4.null.0) : !fir.ref<!fir.array<0x!fir.complex<4>>>
+  ! CHECK: fir.address_of(@_QQro.0xz4.null.0) : !fir.ref<!fir.array<0xcomplex<f32>>>
   ! CHECK-NOT: _QQro
   print*, '>', a, '<'
   print*, '>', b, '<'
@@ -41,6 +41,6 @@ program prog
   call zero
 end
 
-! CHECK: fir.global internal @_QFzeroECa constant : !fir.array<0x!fir.complex<4>>
-! CHECK:   %0 = fir.undefined !fir.array<0x!fir.complex<4>>
-! CHECK:   fir.has_value %0 : !fir.array<0x!fir.complex<4>>
+! CHECK: fir.global internal @_QFzeroECa constant : !fir.array<0xcomplex<f32>>
+! CHECK:   %0 = fir.undefined !fir.array<0xcomplex<f32>>
+! CHECK:   fir.has_value %0 : !fir.array<0xcomplex<f32>>

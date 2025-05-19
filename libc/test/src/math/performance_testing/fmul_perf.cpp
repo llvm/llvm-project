@@ -6,18 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "BinaryOpSingleOutputPerf.h"
+#include "PerfTest.h"
+#include "src/__support/FPUtil/generic/mul.h"
 #include "src/math/fmul.h"
 
 static constexpr size_t DOUBLE_ROUNDS = 40;
 
 float fmul_placeholder_binary(double x, double y) {
-  return static_cast<float>(x * y);
+  return LIBC_NAMESPACE::fputil::generic::mul<float>(x, y);
 }
 
 int main() {
-  BINARY_OP_SINGLE_OUTPUT_PERF_EX(float, double, LIBC_NAMESPACE::fmul,
-                                  fmul_placeholder_binary, DOUBLE_ROUNDS,
-                                  "fmul_perf.log")
+  BINARY_INPUT_SINGLE_OUTPUT_PERF_EX(float, double, LIBC_NAMESPACE::fmul,
+                                     fmul_placeholder_binary, DOUBLE_ROUNDS,
+                                     "fmul_perf.log")
   return 0;
 }

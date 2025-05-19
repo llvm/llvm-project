@@ -64,13 +64,14 @@ body:             |
 
     ; CHECK-LABEL: name: test_ms1
     ; CHECK: liveins: $w1, $w2, $x0
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY $w2
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY1]](s32)
-    ; CHECK: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[COPY2]](s32)
-    ; CHECK: G_MEMSET [[COPY]](p0), [[TRUNC]](s8), [[ZEXT]](s64), 1 :: (store (s8) into %ir.dst)
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $w2
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY1]](s32)
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[COPY2]](s32)
+    ; CHECK-NEXT: G_MEMSET [[COPY]](p0), [[TRUNC]](s8), [[ZEXT]](s64), 1 :: (store (s8) into %ir.dst)
+    ; CHECK-NEXT: RET_ReallyLR
     %0:_(p0) = COPY $x0
     %1:_(s32) = COPY $w1
     %2:_(s32) = COPY $w2
@@ -90,17 +91,18 @@ body:             |
 
     ; CHECK-LABEL: name: test_ms2_const
     ; CHECK: liveins: $w1, $x0
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY1]](s32)
-    ; CHECK: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[TRUNC]](s8)
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 72340172838076673
-    ; CHECK: [[MUL:%[0-9]+]]:_(s64) = G_MUL [[ZEXT]], [[C]]
-    ; CHECK: G_STORE [[MUL]](s64), [[COPY]](p0) :: (store (s64) into %ir.dst, align 1)
-    ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-    ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C1]](s64)
-    ; CHECK: G_STORE [[MUL]](s64), [[PTR_ADD]](p0) :: (store (s64) into %ir.dst + 8, align 1)
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY1]](s32)
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[TRUNC]](s8)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 72340172838076673
+    ; CHECK-NEXT: [[MUL:%[0-9]+]]:_(s64) = G_MUL [[ZEXT]], [[C]]
+    ; CHECK-NEXT: G_STORE [[MUL]](s64), [[COPY]](p0) :: (store (s64) into %ir.dst, align 1)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
+    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C1]](s64)
+    ; CHECK-NEXT: G_STORE [[MUL]](s64), [[PTR_ADD]](p0) :: (store (s64) into %ir.dst + 8, align 1)
+    ; CHECK-NEXT: RET_ReallyLR
     %0:_(p0) = COPY $x0
     %1:_(s32) = COPY $w1
     %3:_(s64) = G_CONSTANT i64 16
@@ -119,20 +121,21 @@ body:             |
 
     ; CHECK-LABEL: name: test_zero_const
     ; CHECK: liveins: $w1, $x0
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64)
-    ; CHECK: G_STORE [[BUILD_VECTOR]](<2 x s64>), [[COPY]](p0) :: (store (<2 x s64>) into %ir.dst, align 1)
-    ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-    ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C1]](s64)
-    ; CHECK: G_STORE [[BUILD_VECTOR]](<2 x s64>), [[PTR_ADD]](p0) :: (store (<2 x s64>) into %ir.dst + 16, align 1)
-    ; CHECK: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
-    ; CHECK: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C2]](s64)
-    ; CHECK: G_STORE [[BUILD_VECTOR]](<2 x s64>), [[PTR_ADD1]](p0) :: (store (<2 x s64>) into %ir.dst + 32, align 1)
-    ; CHECK: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 48
-    ; CHECK: [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C3]](s64)
-    ; CHECK: G_STORE [[BUILD_VECTOR]](<2 x s64>), [[PTR_ADD2]](p0) :: (store (<2 x s64>) into %ir.dst + 48, align 1)
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64)
+    ; CHECK-NEXT: G_STORE [[BUILD_VECTOR]](<2 x s64>), [[COPY]](p0) :: (store (<2 x s64>) into %ir.dst, align 1)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C1]](s64)
+    ; CHECK-NEXT: G_STORE [[BUILD_VECTOR]](<2 x s64>), [[PTR_ADD]](p0) :: (store (<2 x s64>) into %ir.dst + 16, align 1)
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
+    ; CHECK-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C2]](s64)
+    ; CHECK-NEXT: G_STORE [[BUILD_VECTOR]](<2 x s64>), [[PTR_ADD1]](p0) :: (store (<2 x s64>) into %ir.dst + 32, align 1)
+    ; CHECK-NEXT: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 48
+    ; CHECK-NEXT: [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C3]](s64)
+    ; CHECK-NEXT: G_STORE [[BUILD_VECTOR]](<2 x s64>), [[PTR_ADD2]](p0) :: (store (<2 x s64>) into %ir.dst + 48, align 1)
+    ; CHECK-NEXT: RET_ReallyLR
     %0:_(p0) = COPY $x0
     %1:_(s32) = G_CONSTANT i32 0
     %3:_(s64) = G_CONSTANT i64 64
@@ -152,13 +155,14 @@ body:             |
 
     ; CHECK-LABEL: name: test_ms3_const_both
     ; CHECK: liveins: $x0
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4629771061636907072
-    ; CHECK: G_STORE [[C]](s64), [[COPY]](p0) :: (store (s64) into %ir.dst, align 1)
-    ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-    ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C1]](s64)
-    ; CHECK: G_STORE [[C]](s64), [[PTR_ADD]](p0) :: (store (s64) into %ir.dst + 8, align 1)
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4629771061636907072
+    ; CHECK-NEXT: G_STORE [[C]](s64), [[COPY]](p0) :: (store (s64) into %ir.dst, align 1)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
+    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C1]](s64)
+    ; CHECK-NEXT: G_STORE [[C]](s64), [[PTR_ADD]](p0) :: (store (s64) into %ir.dst + 8, align 1)
+    ; CHECK-NEXT: RET_ReallyLR
     %0:_(p0) = COPY $x0
     %1:_(s8) = G_CONSTANT i8 64
     %2:_(s64) = G_CONSTANT i64 16
@@ -176,24 +180,25 @@ body:             |
 
     ; CHECK-LABEL: name: test_ms_vector
     ; CHECK: liveins: $w1, $x0
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY1]](s32)
-    ; CHECK: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[TRUNC]](s8)
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 72340172838076673
-    ; CHECK: [[MUL:%[0-9]+]]:_(s64) = G_MUL [[ZEXT]], [[C]]
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[MUL]](s64), [[MUL]](s64)
-    ; CHECK: G_STORE [[BUILD_VECTOR]](<2 x s64>), [[COPY]](p0) :: (store (<2 x s64>) into %ir.dst, align 1)
-    ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-    ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C1]](s64)
-    ; CHECK: G_STORE [[BUILD_VECTOR]](<2 x s64>), [[PTR_ADD]](p0) :: (store (<2 x s64>) into %ir.dst + 16, align 1)
-    ; CHECK: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
-    ; CHECK: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C2]](s64)
-    ; CHECK: G_STORE [[BUILD_VECTOR]](<2 x s64>), [[PTR_ADD1]](p0) :: (store (<2 x s64>) into %ir.dst + 32, align 1)
-    ; CHECK: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 44
-    ; CHECK: [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C3]](s64)
-    ; CHECK: G_STORE [[BUILD_VECTOR]](<2 x s64>), [[PTR_ADD2]](p0) :: (store (<2 x s64>) into %ir.dst + 44, align 1)
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY1]](s32)
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[TRUNC]](s8)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 72340172838076673
+    ; CHECK-NEXT: [[MUL:%[0-9]+]]:_(s64) = G_MUL [[ZEXT]], [[C]]
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[MUL]](s64), [[MUL]](s64)
+    ; CHECK-NEXT: G_STORE [[BUILD_VECTOR]](<2 x s64>), [[COPY]](p0) :: (store (<2 x s64>) into %ir.dst, align 1)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C1]](s64)
+    ; CHECK-NEXT: G_STORE [[BUILD_VECTOR]](<2 x s64>), [[PTR_ADD]](p0) :: (store (<2 x s64>) into %ir.dst + 16, align 1)
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
+    ; CHECK-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C2]](s64)
+    ; CHECK-NEXT: G_STORE [[BUILD_VECTOR]](<2 x s64>), [[PTR_ADD1]](p0) :: (store (<2 x s64>) into %ir.dst + 32, align 1)
+    ; CHECK-NEXT: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 44
+    ; CHECK-NEXT: [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C3]](s64)
+    ; CHECK-NEXT: G_STORE [[BUILD_VECTOR]](<2 x s64>), [[PTR_ADD2]](p0) :: (store (<2 x s64>) into %ir.dst + 44, align 1)
+    ; CHECK-NEXT: RET_ReallyLR
     %0:_(p0) = COPY $x0
     %1:_(s32) = COPY $w1
     %3:_(s64) = G_CONSTANT i64 60
@@ -212,17 +217,18 @@ body:             |
 
     ; CHECK-LABEL: name: test_ms4_const_both_unaligned
     ; CHECK: liveins: $x0
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4629771061636907072
-    ; CHECK: G_STORE [[C]](s64), [[COPY]](p0) :: (store (s64) into %ir.dst, align 1)
-    ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-    ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C1]](s64)
-    ; CHECK: G_STORE [[C]](s64), [[PTR_ADD]](p0) :: (store (s64) into %ir.dst + 8, align 1)
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[C]](s64)
-    ; CHECK: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-    ; CHECK: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C2]](s64)
-    ; CHECK: G_STORE [[TRUNC]](s16), [[PTR_ADD1]](p0) :: (store (s16) into %ir.dst + 16, align 1)
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4629771061636907072
+    ; CHECK-NEXT: G_STORE [[C]](s64), [[COPY]](p0) :: (store (s64) into %ir.dst, align 1)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
+    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C1]](s64)
+    ; CHECK-NEXT: G_STORE [[C]](s64), [[PTR_ADD]](p0) :: (store (s64) into %ir.dst + 8, align 1)
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s16) = G_CONSTANT i16 16448
+    ; CHECK-NEXT: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+    ; CHECK-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C3]](s64)
+    ; CHECK-NEXT: G_STORE [[C2]](s16), [[PTR_ADD1]](p0) :: (store (s16) into %ir.dst + 16, align 1)
+    ; CHECK-NEXT: RET_ReallyLR
     %0:_(p0) = COPY $x0
     %1:_(s8) = G_CONSTANT i8 64
     %2:_(s64) = G_CONSTANT i64 18
@@ -239,17 +245,18 @@ body:             |
     liveins: $w1, $x0
     ; CHECK-LABEL: name: minsize
     ; CHECK: liveins: $w1, $x0
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY1]](s32)
-    ; CHECK: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[TRUNC]](s8)
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 72340172838076673
-    ; CHECK: [[MUL:%[0-9]+]]:_(s64) = G_MUL [[ZEXT]], [[C]]
-    ; CHECK: G_STORE [[MUL]](s64), [[COPY]](p0) :: (store (s64) into %ir.dst, align 1)
-    ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-    ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C1]](s64)
-    ; CHECK: G_STORE [[MUL]](s64), [[PTR_ADD]](p0) :: (store (s64) into %ir.dst + 8, align 1)
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY1]](s32)
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[TRUNC]](s8)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 72340172838076673
+    ; CHECK-NEXT: [[MUL:%[0-9]+]]:_(s64) = G_MUL [[ZEXT]], [[C]]
+    ; CHECK-NEXT: G_STORE [[MUL]](s64), [[COPY]](p0) :: (store (s64) into %ir.dst, align 1)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
+    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C1]](s64)
+    ; CHECK-NEXT: G_STORE [[MUL]](s64), [[PTR_ADD]](p0) :: (store (s64) into %ir.dst + 8, align 1)
+    ; CHECK-NEXT: RET_ReallyLR
     %0:_(p0) = COPY $x0
     %1:_(s32) = COPY $w1
     %3:_(s64) = G_CONSTANT i64 16

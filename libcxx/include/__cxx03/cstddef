@@ -1,0 +1,64 @@
+// -*- C++ -*-
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef _LIBCPP___CXX03_CSTDDEF
+#define _LIBCPP___CXX03_CSTDDEF
+
+/*
+    cstddef synopsis
+
+Macros:
+
+    offsetof(type,member-designator)
+    NULL
+
+namespace std
+{
+
+Types:
+
+    ptrdiff_t
+    size_t
+    max_align_t // C++11
+    nullptr_t
+    byte // C++17
+
+}  // std
+
+*/
+
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/enable_if.h>
+#include <__cxx03/__type_traits/integral_constant.h>
+#include <__cxx03/__type_traits/is_integral.h>
+#include <__cxx03/version>
+
+#include <__cxx03/stddef.h>
+
+#ifndef _LIBCPP___CXX03_STDDEF_H
+#   error <cstddef> tried including <stddef.h> but didn't find libc++'s <stddef.h> header. \
+          This usually means that your header search paths are not configured properly. \
+          The header search paths should contain the C++ Standard Library headers before \
+          any C Standard Library, and you are probably using compiler flags that make that \
+          not be the case.
+#endif
+
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#  pragma GCC system_header
+#endif
+
+_LIBCPP_BEGIN_NAMESPACE_STD
+
+using ::nullptr_t;
+using ::ptrdiff_t _LIBCPP_USING_IF_EXISTS;
+using ::size_t _LIBCPP_USING_IF_EXISTS;
+
+_LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP___CXX03_CSTDDEF

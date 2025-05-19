@@ -59,13 +59,13 @@ public:
       if (C->getBeginLoc().isMacroID()) {
         CharSourceRange Range =
             MyRewriter.getSourceMgr().getExpansionRange(C->getSourceRange());
-        MyRewriter.ReplaceText(Range, Macro.str());
+        MyRewriter.ReplaceText(Range, Buffer);
       } else {
         Macro << ";";
         SourceLocation InsertLoc = Lexer::getLocForEndOfToken(
             Body->getBeginLoc(), 0, MyRewriter.getSourceMgr(),
             MyRewriter.getLangOpts());
-        MyRewriter.InsertTextAfter(InsertLoc, Macro.str());
+        MyRewriter.InsertTextAfter(InsertLoc, Buffer);
       }
       break;
     }

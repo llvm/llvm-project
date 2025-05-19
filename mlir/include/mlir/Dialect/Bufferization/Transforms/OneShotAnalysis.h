@@ -127,9 +127,9 @@ public:
   /// Return true if the buffer of the given tensor value is writable.
   bool isWritable(Value value) const;
 
-  /// Find the definitions of the given tensor value or retrieve them from the
-  /// cache.
-  const SetVector<Value> &findDefinitionsCached(Value value);
+  /// Find the definitions of the given operand's value or
+  /// retrieve them from the cache.
+  const SetVector<Value> &findDefinitionsCached(OpOperand *opOperand);
 
   /// Reset cached data structures.
   void resetCache() override;
@@ -224,17 +224,8 @@ public:
   }
 
 private:
-  /// llvm::EquivalenceClasses wants comparable elements. This comparator uses
-  /// pointer comparison on the defining op. This is a poor man's comparison
-  /// but it's not like UnionFind needs ordering anyway.
-  struct ValueComparator {
-    bool operator()(const Value &lhs, const Value &rhs) const {
-      return lhs.getImpl() < rhs.getImpl();
-    }
-  };
-
-  using EquivalenceClassRangeType = llvm::iterator_range<
-      llvm::EquivalenceClasses<Value, ValueComparator>::member_iterator>;
+  using EquivalenceClassRangeType =
+      llvm::iterator_range<llvm::EquivalenceClasses<Value>::member_iterator>;
   /// Check that aliasInfo for `v` exists and return a reference to it.
   EquivalenceClassRangeType getAliases(Value v) const;
 
@@ -249,7 +240,7 @@ private:
   /// value may alias with one of multiple other values. The concrete aliasing
   /// value may not even be known at compile time. All such values are
   /// considered to be aliases.
-  llvm::EquivalenceClasses<Value, ValueComparator> aliasInfo;
+  llvm::EquivalenceClasses<Value> aliasInfo;
 
   /// Auxiliary structure to store all the equivalent buffer classes. Equivalent
   /// buffer information is "must be" conservative: Only if two values are
@@ -257,7 +248,7 @@ private:
   /// possible that, in the presence of branches, it cannot be determined
   /// statically if two values are equivalent. In that case, the values are
   /// considered to be not equivalent.
-  llvm::EquivalenceClasses<Value, ValueComparator> equivalentInfo;
+  llvm::EquivalenceClasses<Value> equivalentInfo;
 
   // Bufferization statistics.
   int64_t statNumTensorOutOfPlace = 0;

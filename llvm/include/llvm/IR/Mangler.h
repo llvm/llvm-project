@@ -25,6 +25,8 @@ class Triple;
 class Twine;
 class raw_ostream;
 
+constexpr std::string_view HybridPatchableTargetSuffix = "$hp_target";
+
 class Mangler {
   /// We need to give global values the same name every time they are mangled.
   /// This keeps track of the number we give to anonymous ones.
@@ -53,8 +55,19 @@ void emitLinkerFlagsForGlobalCOFF(raw_ostream &OS, const GlobalValue *GV,
 void emitLinkerFlagsForUsedCOFF(raw_ostream &OS, const GlobalValue *GV,
                                 const Triple &T, Mangler &M);
 
+/// Returns the ARM64EC mangled function name unless the input is already
+/// mangled.
 std::optional<std::string> getArm64ECMangledFunctionName(StringRef Name);
+
+/// Returns the ARM64EC demangled function name, unless the input is not
+/// mangled.
 std::optional<std::string> getArm64ECDemangledFunctionName(StringRef Name);
+
+/// Check if an ARM64EC function name is mangled.
+bool inline isArm64ECMangledFunctionName(StringRef Name) {
+  return Name[0] == '#' ||
+         (Name[0] == '?' && Name.find("@$$h") != StringRef::npos);
+}
 
 } // End llvm namespace
 

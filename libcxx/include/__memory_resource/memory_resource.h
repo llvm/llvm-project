@@ -10,8 +10,9 @@
 #define _LIBCPP___MEMORY_RESOURCE_MEMORY_RESOURCE_H
 
 #include <__config>
+#include <__cstddef/max_align_t.h>
+#include <__cstddef/size_t.h>
 #include <__fwd/memory_resource.h>
-#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -20,6 +21,7 @@
 #if _LIBCPP_STD_VER >= 17
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 namespace pmr {
 
@@ -81,6 +83,7 @@ null_memory_resource() noexcept;
 
 } // namespace pmr
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 17

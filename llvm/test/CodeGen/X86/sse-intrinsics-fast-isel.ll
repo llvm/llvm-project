@@ -96,6 +96,7 @@ define <4 x float> @test_mm_andnot_ps(<4 x float> %a0, <4 x float> %a1) nounwind
 ; AVX512-LABEL: test_mm_andnot_ps:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpternlogq $15, %xmm0, %xmm0, %xmm0 # encoding: [0x62,0xf3,0xfd,0x08,0x25,0xc0,0x0f]
+; AVX512-NEXT:    # xmm0 = ~xmm0
 ; AVX512-NEXT:    vpand %xmm1, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0xdb,0xc1]
 ; AVX512-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
 ;

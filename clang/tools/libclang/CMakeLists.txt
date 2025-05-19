@@ -20,7 +20,6 @@ endif()
 #       to clean up previous inconsistencies.
 
 set(SOURCES
-  ARCMigrate.cpp
   BuildSystem.cpp
   CIndex.cpp
   CIndexCXX.cpp
@@ -71,10 +70,6 @@ set(LIBS
   clangTooling
 )
 
-if (CLANG_ENABLE_ARCMT)
-  list(APPEND LIBS clangARCMigrate)
-endif ()
-
 if (HAVE_LIBDL)
   list(APPEND LIBS ${CMAKE_DL_LIBS})
 elseif (CLANG_BUILT_STANDALONE)
@@ -111,7 +106,7 @@ if (LLVM_EXPORTED_SYMBOL_FILE)
                      DEPENDS ${LIBCLANG_VERSION_SCRIPT_FILE})
 endif()
 
-if(LLVM_ENABLE_PIC OR (WIN32 AND NOT LIBCLANG_BUILD_STATIC))
+if(LLVM_ENABLE_PIC OR ((WIN32 OR CYGWIN) AND NOT LIBCLANG_BUILD_STATIC))
   set(ENABLE_SHARED SHARED)
 endif()
 
@@ -167,6 +162,10 @@ if(ENABLE_SHARED)
       PROPERTIES
       VERSION ${LIBCLANG_LIBRARY_VERSION}
       DEFINE_SYMBOL _CINDEX_LIB_)
+      # Avoid declaring clang c++ symbols that are statically linked into libclang as dllimport'ed.
+      # If llvm/libclang-cpp dll is also being built for windows clang c++ symbols will still be
+      # implicitly be exported from libclang.
+      target_compile_definitions(libclang PRIVATE CLANG_BUILD_STATIC)
   elseif(APPLE)
     set(LIBCLANG_LINK_FLAGS " -Wl,-compatibility_version -Wl,1")
     set(LIBCLANG_LINK_FLAGS "${LIBCLANG_LINK_FLAGS} -Wl,-current_version -Wl,${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}")
@@ -204,9 +203,6 @@ if(ENABLE_SHARED)
       target_link_options(libclang PRIVATE "-Wl,--version-script,${CMAKE_CURRENT_SOURCE_DIR}/libclang.map")
     endif()
     # Ensure that libclang.so gets rebuilt when the linker script changes.
-    set_property(SOURCE ARCMigrate.cpp APPEND PROPERTY
-                 OBJECT_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/libclang.map)
-
     set_target_properties(libclang PROPERTIES
                           VERSION ${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}${LLVM_VERSION_SUFFIX}
                           ${LIBCLANG_SOVERSION_ARG})

@@ -224,9 +224,9 @@ bool promoteLoopAccessesToScalars(
     bool AllowSpeculation, bool HasReadsOutsideSet);
 
 /// Does a BFS from a given node to all of its children inside a given loop.
-/// The returned vector of nodes includes the starting point.
-SmallVector<DomTreeNode *, 16> collectChildrenInLoop(DomTreeNode *N,
-                                                     const Loop *CurLoop);
+/// The returned vector of basic blocks includes the starting point.
+SmallVector<BasicBlock *, 16>
+collectChildrenInLoop(DominatorTree *DT, DomTreeNode *N, const Loop *CurLoop);
 
 /// Returns the instructions that use values defined in the loop.
 SmallVector<Instruction *, 8> findDefsUsedOutsideOfLoop(Loop *L);
@@ -318,8 +318,8 @@ void addStringMetadataToLoop(Loop *TheLoop, const char *MDString,
 /// Returns a loop's estimated trip count based on branch weight metadata.
 /// In addition if \p EstimatedLoopInvocationWeight is not null it is
 /// initialized with weight of loop's latch leading to the exit.
-/// Returns 0 when the count is estimated to be 0, or std::nullopt when a
-/// meaningful estimate can not be made.
+/// Returns a valid positive trip count, saturated at UINT_MAX, or std::nullopt
+/// when a meaningful estimate cannot be made.
 std::optional<unsigned>
 getLoopEstimatedTripCount(Loop *L,
                           unsigned *EstimatedLoopInvocationWeight = nullptr);
@@ -365,6 +365,8 @@ constexpr Intrinsic::ID getReductionIntrinsicID(RecurKind RK);
 
 /// Returns the arithmetic instruction opcode used when expanding a reduction.
 unsigned getArithmeticReductionInstruction(Intrinsic::ID RdxID);
+/// Returns the reduction intrinsic id corresponding to the binary operation.
+Intrinsic::ID getReductionForBinop(Instruction::BinaryOps Opc);
 
 /// Returns the min/max intrinsic used when expanding a min/max reduction.
 Intrinsic::ID getMinMaxReductionIntrinsicOp(Intrinsic::ID RdxID);
@@ -377,6 +379,14 @@ RecurKind getMinMaxReductionRecurKind(Intrinsic::ID RdxID);
 
 /// Returns the comparison predicate used when expanding a min/max reduction.
 CmpInst::Predicate getMinMaxReductionPredicate(RecurKind RK);
+
+/// Given information about an @llvm.vector.reduce.* intrinsic, return
+/// the identity value for the reduction.
+Value *getReductionIdentity(Intrinsic::ID RdxID, Type *Ty, FastMathFlags FMF);
+
+/// Given information about an recurrence kind, return the identity
+/// for the @llvm.vector.reduce.* used to generate it.
+Value *getRecurrenceIdentity(RecurKind K, Type *Tp, FastMathFlags FMF);
 
 /// Returns a Min/Max operation corresponding to MinMaxRecurrenceKind.
 /// The Builder's fast-math-flags must be set to propagate the expected values.
@@ -393,42 +403,36 @@ Value *getShuffleReduction(IRBuilderBase &Builder, Value *Src, unsigned Op,
                            TargetTransformInfo::ReductionShuffle RS,
                            RecurKind MinMaxKind = RecurKind::None);
 
-/// Create a target reduction of the given vector. The reduction operation
+/// Create a reduction of the given vector. The reduction operation
 /// is described by the \p Opcode parameter. min/max reductions require
 /// additional information supplied in \p RdxKind.
-/// The target is queried to determine if intrinsics or shuffle sequences are
-/// required to implement the reduction.
 /// Fast-math-flags are propagated using the IRBuilder's setting.
-Value *createSimpleTargetReduction(IRBuilderBase &B, Value *Src,
-                                   RecurKind RdxKind);
-/// Overloaded function to generate vector-predication intrinsics for target
+Value *createSimpleReduction(IRBuilderBase &B, Value *Src,
+                             RecurKind RdxKind);
+/// Overloaded function to generate vector-predication intrinsics for
 /// reduction.
-Value *createSimpleTargetReduction(VectorBuilder &VB, Value *Src,
-                                   const RecurrenceDescriptor &Desc);
+Value *createSimpleReduction(VectorBuilder &VB, Value *Src, RecurKind RdxKind);
 
-/// Create a target reduction of the given vector \p Src for a reduction of the
+/// Create a reduction of the given vector \p Src for a reduction of the
 /// kind RecurKind::IAnyOf or RecurKind::FAnyOf. The reduction operation is
 /// described by \p Desc.
-Value *createAnyOfTargetReduction(IRBuilderBase &B, Value *Src,
-                                  const RecurrenceDescriptor &Desc,
-                                  PHINode *OrigPhi);
+Value *createAnyOfReduction(IRBuilderBase &B, Value *Src,
+                            const RecurrenceDescriptor &Desc,
+                            PHINode *OrigPhi);
 
-/// Create a generic target reduction using a recurrence descriptor \p Desc
-/// The target is queried to determine if intrinsics or shuffle sequences are
-/// required to implement the reduction.
-/// Fast-math-flags are propagated using the RecurrenceDescriptor.
-Value *createTargetReduction(IRBuilderBase &B, const RecurrenceDescriptor &Desc,
-                             Value *Src, PHINode *OrigPhi = nullptr);
+/// Create a reduction of the given vector \p Src for a reduction of the
+/// kind RecurKind::IFindLastIV or RecurKind::FFindLastIV. The reduction
+/// operation is described by \p Desc.
+Value *createFindLastIVReduction(IRBuilderBase &B, Value *Src, Value *Start,
+                                 const RecurrenceDescriptor &Desc);
 
 /// Create an ordered reduction intrinsic using the given recurrence
-/// descriptor \p Desc.
-Value *createOrderedReduction(IRBuilderBase &B,
-                              const RecurrenceDescriptor &Desc, Value *Src,
+/// kind \p RdxKind.
+Value *createOrderedReduction(IRBuilderBase &B, RecurKind RdxKind, Value *Src,
                               Value *Start);
 /// Overloaded function to generate vector-predication intrinsics for ordered
 /// reduction.
-Value *createOrderedReduction(VectorBuilder &VB,
-                              const RecurrenceDescriptor &Desc, Value *Src,
+Value *createOrderedReduction(VectorBuilder &VB, RecurKind RdxKind, Value *Src,
                               Value *Start);
 
 /// Get the intersection (logical and) of all of the potential IR flags

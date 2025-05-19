@@ -26,12 +26,12 @@ class NSDictionarySyntheticTestCase(TestBase):
     def test_rdar11988289_with_run_command_no_const(self):
         """Test that NSDictionary reports its synthetic children properly."""
         disable_constant_classes = {
-            "CC": "xcrun clang",  # FIXME: Remove when flags are available upstream.
             "CFLAGS_EXTRAS": "-fno-constant-nsnumber-literals "
             + "-fno-constant-nsarray-literals "
             + "-fno-constant-nsdictionary-literals",
         }
-        self.build(dictionary=disable_constant_classes)
+        # FIXME: Remove when flags are available upstream.
+        self.build(dictionary=disable_constant_classes, compiler="xcrun clang")
         self.run_tests()
 
     def run_tests(self):

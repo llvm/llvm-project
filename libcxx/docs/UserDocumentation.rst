@@ -7,29 +7,29 @@ User documentation
 .. contents::
   :local:
 
-This page contains information about configuration knobs that can be used by
-users when they know libc++ is used by their toolchain, and how to use libc++
-when it is not the default library used by their toolchain. It is aimed at
-users of libc++: a separate page contains documentation aimed at vendors who
-build and ship libc++ as part of their toolchain.
+This page contains information for users of libc++: how to use libc++ if it is not
+the default library used by the toolchain, and what configuration knobs are available
+if libc++ is used by the toolchain. This page is aimed at users of libc++, whereas a
+separate page contains documentation aimed at vendors who build and ship libc++
+as part of their toolchain.
 
 
 Using a different version of the C++ Standard
 =============================================
 
-Libc++ implements the various versions of the C++ Standard. Changing the version of
+Libc++ implements the various versions of the C++ standard. Changing the version of
 the standard can be done by passing ``-std=c++XY`` to the compiler. Libc++ will
-automatically detect what Standard is being used and will provide functionality that
-matches that Standard in the library.
+automatically detect what standard is being used and will provide functionality that
+matches that standard in the library.
 
 .. code-block:: bash
 
   $ clang++ -std=c++17 test.cpp
 
-Note that using ``-std=c++XY`` with a version of the Standard that has not been ratified
+Note that using ``-std=c++XY`` with a version of the standard that has not been ratified
 yet is considered unstable. While we strive to maintain stability, libc++ may be forced to
-make breaking changes to features shipped in a Standard that hasn't been ratified yet. Use
-these versions of the Standard at your own risk.
+make breaking changes to features shipped in a C++ standard that has not been ratified yet.
+Use these versions of the standard at your own risk.
 
 
 Using libc++ when it is not the system default
@@ -39,16 +39,16 @@ Usually, libc++ is packaged and shipped by a vendor through some delivery vehicl
 (operating system distribution, SDK, toolchain, etc) and users don't need to do
 anything special in order to use the library.
 
-On systems where libc++ is provided but is not the default, Clang provides a flag
-called ``-stdlib=`` that can be used to decide which standard library is used.
+However, on systems where libc++ is provided but is not the default, Clang can be invoked
+with the ``-stdlib=`` flag to select which standard library is used.
 Using ``-stdlib=libc++`` will select libc++:
 
 .. code-block:: bash
 
   $ clang++ -stdlib=libc++ test.cpp
 
-On systems where libc++ is the library in use by default such as macOS and FreeBSD,
-this flag is not required.
+This flag is not required on systems where libc++ is the default standard library,
+such as macOS and FreeBSD.
 
 
 Enabling experimental C++ Library features
@@ -56,9 +56,9 @@ Enabling experimental C++ Library features
 
 Libc++ provides implementations of some experimental features. Experimental features
 are either Technical Specifications (TSes) or official features that were voted to
-the Standard but whose implementation is not complete or stable yet in libc++. Those
-are disabled by default because they are neither API nor ABI stable. However, the
-``-fexperimental-library`` compiler flag can be defined to turn those features on.
+the C++ standard but whose implementation is not complete or stable yet in libc++.
+Those are disabled by default because they are neither API nor ABI stable. However,
+users can enable the ``-fexperimental-library`` compiler flag to turn those features on.
 
 On compilers that do not support the ``-fexperimental-library`` flag (such as GCC),
 users can define the ``_LIBCPP_ENABLE_EXPERIMENTAL`` macro and manually link against
@@ -69,14 +69,13 @@ The following features are currently considered experimental and are only provid
 when ``-fexperimental-library`` is passed:
 
 * The parallel algorithms library (``<execution>`` and the associated algorithms)
-* ``std::stop_token``, ``std::stop_source`` and ``std::stop_callback``
-* ``std::jthread``
 * ``std::chrono::tzdb`` and related time zone functionality
+* ``<syncstream>``
 
 .. note::
   Experimental libraries are experimental.
     * The contents of the ``<experimental/...>`` headers and the associated static
-      library will not remain compatible between versions.
+      library may not remain compatible between versions.
     * No guarantees of API or ABI stability are provided.
     * When the standardized version of an experimental feature is implemented,
       the experimental feature is removed two releases after the non-experimental
@@ -95,6 +94,24 @@ enable or disable extended libc++ behavior.
   only intended to be used by vendors and changing their value from the one provided
   in your toolchain can lead to unexpected behavior.
 
+**_LIBCPP_DISABLE_DEPRECATION_WARNINGS**:
+  This macro disables warnings when using deprecated components. For example,
+  using `std::auto_ptr` when compiling in C++11 mode will normally trigger a
+  warning saying that `std::auto_ptr` is deprecated. If the macro is defined,
+  no warning will be emitted. By default, this macro is not defined.
+
+**_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS**:
+  This macro is used to disable all visibility annotations inside libc++.
+  Defining this macro and then building libc++ with hidden visibility gives a
+  build of libc++ which does not export any symbols, which can be useful when
+  building statically for inclusion into another library.
+
+**_LIBCPP_ENABLE_EXPERIMENTAL**:
+  This macro enables experimental features. This can be used on compilers that do
+  not support the ``-fexperimental-library`` flag. When used, users also need to
+  ensure that the appropriate experimental library (usually ``libc++experimental.a``)
+  is linked into their program.
+
 **_LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS**:
   This macro is used to enable -Wthread-safety annotations on libc++'s
   ``std::mutex`` and ``std::lock_guard``. By default, these annotations are
@@ -102,12 +119,6 @@ enable or disable extended libc++ behavior.
 
 **_LIBCPP_HARDENING_MODE**:
   This macro is used to choose the :ref:`hardening mode <using-hardening-modes>`.
-
-**_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS**:
-  This macro is used to disable all visibility annotations inside libc++.
-  Defining this macro and then building libc++ with hidden visibility gives a
-  build of libc++ which does not export any symbols, which can be useful when
-  building statically for inclusion into another library.
 
 **_LIBCPP_NO_VCRUNTIME**:
   Microsoft's C and C++ headers are fairly entangled, and some of their C++
@@ -129,17 +140,27 @@ enable or disable extended libc++ behavior.
   replacement scenarios from working, e.g. replacing `operator new` and
   expecting a non-replaced `operator new[]` to call the replaced `operator new`.
 
-**_LIBCPP_DISABLE_DEPRECATION_WARNINGS**:
-  This macro disables warnings when using deprecated components. For example,
-  using `std::auto_ptr` when compiling in C++11 mode will normally trigger a
-  warning saying that `std::auto_ptr` is deprecated. If the macro is defined,
-  no warning will be emitted. By default, this macro is not defined.
+**_LIBCPP_REMOVE_TRANSITIVE_INCLUDES**:
+  When this macro is defined, the standard library headers will adhere to a
+  stricter policy regarding the (transitive) inclusion of other standard library
+  headers, only guaranteeing to provide those definitions explicitly mandated by
+  the standard. Please notice that defining this macro might break existing codebases
+  that implicitly rely on standard headers providing definitions not explicitly
+  required by the standard.
 
-**_LIBCPP_ENABLE_EXPERIMENTAL**:
-  This macro enables experimental features. This can be used on compilers that do
-  not support the ``-fexperimental-library`` flag. When used, users also need to
-  ensure that the appropriate experimental library (usually ``libc++experimental.a``)
-  is linked into their program.
+  The primary motivation for this configuration macro is to improve compilation
+  times. In most standard library implementations, header files include more
+  definitions than officially required because the implementation details give rise
+  to internal dependencies. The common practice is to have the standard headers
+  internally include other standard headers, but this generally results in
+  increased compilation overhead. This configuration option attempts to mitigate
+  this problem by avoiding such unnecessary inclusions. Compiling
+  a codebase with this macro may improve portability by identifying
+  missing standard header inclusions.
+
+  However, be aware that enabling this macro may lead to breakages
+  when updating to a newer version of the library, since transitive includes
+  that your code was previously relying on may have been removed.
 
 C++17 Specific Configuration Macros
 -----------------------------------
@@ -157,19 +178,15 @@ C++17 Specific Configuration Macros
 **_LIBCPP_ENABLE_CXX17_REMOVED_RANDOM_SHUFFLE**:
   This macro is used to re-enable the `random_shuffle` algorithm.
 
+**_LIBCPP_ENABLE_CXX17_REMOVED_UNARY_BINARY_FUNCTION**:
+  This macro is used to re-enable `unary_function` and `binary_function`.
+
 **_LIBCPP_ENABLE_CXX17_REMOVED_UNEXPECTED_FUNCTIONS**:
   This macro is used to re-enable `set_unexpected`, `get_unexpected`, and
   `unexpected`.
 
 C++20 Specific Configuration Macros
 -----------------------------------
-**_LIBCPP_ENABLE_CXX20_REMOVED_UNCAUGHT_EXCEPTION**:
-  This macro is used to re-enable `uncaught_exception`.
-
-**_LIBCPP_ENABLE_CXX20_REMOVED_SHARED_PTR_UNIQUE**:
-  This macro is used to re-enable the function
-  ``std::shared_ptr<...>::unique()``.
-
 **_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS**:
   This macro is used to re-enable the `argument_type`, `result_type`,
   `first_argument_type`, and `second_argument_type` members of class
@@ -182,13 +199,25 @@ C++20 Specific Configuration Macros
 **_LIBCPP_ENABLE_CXX20_REMOVED_RAW_STORAGE_ITERATOR**:
   This macro is used to re-enable `raw_storage_iterator`.
 
+**_LIBCPP_ENABLE_CXX20_REMOVED_SHARED_PTR_UNIQUE**:
+  This macro is used to re-enable the function
+  ``std::shared_ptr<...>::unique()``.
+
+**_LIBCPP_ENABLE_CXX20_REMOVED_TEMPORARY_BUFFER**:
+  This macro is used to re-enable `get_temporary_buffer` and `return_temporary_buffer`.
+
 **_LIBCPP_ENABLE_CXX20_REMOVED_TYPE_TRAITS**:
   This macro is used to re-enable `is_literal_type`, `is_literal_type_v`,
   `result_of` and `result_of_t`.
 
+**_LIBCPP_ENABLE_CXX20_REMOVED_UNCAUGHT_EXCEPTION**:
+  This macro is used to re-enable `uncaught_exception`.
 
 C++26 Specific Configuration Macros
 -----------------------------------
+
+**_LIBCPP_ENABLE_CXX26_REMOVED_ALLOCATOR_MEMBERS**:
+  This macro is used to re-enable redundant member of ``allocator<T>::is_always_equal``.
 
 **_LIBCPP_ENABLE_CXX26_REMOVED_CODECVT**:
   This macro is used to re-enable all named declarations in ``<codecvt>``.
@@ -196,9 +225,6 @@ C++26 Specific Configuration Macros
 **_LIBCPP_ENABLE_CXX26_REMOVED_STRING_RESERVE**:
   This macro is used to re-enable the function
   ``std::basic_string<...>::reserve()``.
-
-**_LIBCPP_ENABLE_CXX26_REMOVED_ALLOCATOR_MEMBERS**:
-  This macro is used to re-enable redundant member of ``allocator<T>::is_always_equal``.
 
 **_LIBCPP_ENABLE_CXX26_REMOVED_STRSTREAM**:
   This macro is used to re-enable all named declarations in ``<strstream>``.
@@ -210,23 +236,23 @@ C++26 Specific Configuration Macros
 Libc++ Extensions
 =================
 
-This section documents various extensions provided by libc++, how they're
-provided, and any information regarding how to use them.
+This section documents various extensions provided by libc++
+and any information regarding how to use them.
 
 Extended integral type support
 ------------------------------
 
-Several platforms support types that are not specified in the Standard, such as
-the 128-bit integral types ``__int128_t`` and ``__uint128_t``. As an extension,
-libc++ does a best-effort attempt to support these types like other integral
-types, by supporting them notably in:
+Several platforms support types that are not specified in the C++ standard,
+such as the 128-bit integral types ``__int128_t`` and ``__uint128_t``.
+As an extension, libc++ does a best-effort attempt to support these types like
+other integral types, by supporting them notably in:
 
 * ``<bits>``
 * ``<charconv>``
 * ``<functional>``
-* ``<type_traits>``
 * ``<format>``
 * ``<random>``
+* ``<type_traits>``
 
 Additional types supported in random distributions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -245,11 +271,10 @@ The exposition only type ``basic-format-string`` and its typedefs
 ``format_string``, and ``wformat_string`` in C++23. Libc++ makes these types
 available in C++20 as an extension.
 
-For padding Unicode strings the ``format`` library relies on the Unicode
-Standard. Libc++ retroactively updates the Unicode Standard in older C++
-versions. This allows the library to have better estimates for newly introduced
-Unicode code points, without requiring the user to use the latest C++ version
-in their code base.
+For padding Unicode strings the ``format`` library relies on the Unicode standard.
+Libc++ retroactively updates the Unicode standard in older C++ versions.
+This allows the library to have better estimates for newly introduced Unicode code points,
+without requiring the user to use the latest C++ version in their code base.
 
 In C++26 formatting pointers gained a type ``P`` and allows to use
 zero-padding. These options have been retroactively applied to C++20.
@@ -270,8 +295,8 @@ pointer to heap-allocated memory, depending on the length of the string.
 As of C++20, the constructors are now declared ``constexpr``, which permits strings to be used
 during constant-evaluation time. In libc++, as in other common implementations, it is also possible
 to constant-initialize a string object (e.g. via declaring a variable with ``constinit`` or
-``constexpr``), but, only if the string is short enough to not require a heap allocation. Reliance
-upon this should be discouraged in portable code, as the allowed length differs based on the
+``constexpr``), but only if the string is short enough to not require a heap allocation.
+Reliance upon this is discouraged in portable code, as the allowed length differs based on the
 standard-library implementation and also based on whether the platform uses 32-bit or 64-bit
 pointers.
 
@@ -290,12 +315,15 @@ Turning off ASan annotation in containers
 -----------------------------------------
 
 ``__asan_annotate_container_with_allocator`` is a customization point to allow users to disable
-`Address Sanitizer annotations for containers <https://github.com/google/sanitizers/wiki/AddressSanitizerContainerOverflow>`_ for specific allocators. This may be necessary for allocators that access allocated memory.
+`Address Sanitizer annotations for containers <https://github.com/google/sanitizers/wiki/AddressSanitizerContainerOverflow>`_ for specific allocators.
+This may be necessary for allocators that access allocated memory.
 This customization point exists only when ``_LIBCPP_HAS_ASAN_CONTAINER_ANNOTATIONS_FOR_ALL_ALLOCATORS`` Feature Test Macro is defined.
 
-For allocators not running destructors, it is also possible to `bulk-unpoison memory <https://github.com/google/sanitizers/wiki/AddressSanitizerManualPoisoning>`_ instead of disabling annotations altogether.
+For allocators not running destructors, it is also possible to `bulk-unpoison memory <https://github.com/google/sanitizers/wiki/AddressSanitizerManualPoisoning>`_
+instead of disabling annotations altogether.
 
-The struct may be specialized for user-defined allocators. It is a `Cpp17UnaryTypeTrait <http://eel.is/c++draft/type.traits#meta.rqmts>`_ with a base characteristic of ``true_type`` if the container is allowed to use annotations and ``false_type`` otherwise.
+The struct may be specialized for user-defined allocators. It is a `Cpp17UnaryTypeTrait <http://eel.is/c++draft/type.traits#meta.rqmts>`_
+with a base characteristic of ``true_type`` if the container is allowed to use annotations and ``false_type`` otherwise.
 
 The annotations for a ``user_allocator`` can be disabled like this:
 
@@ -314,6 +342,15 @@ Unpoisoning may not be an option, if (for example) you are not maintaining the a
 
 * You are using allocator, which does not call destructor during deallocation.
 * You are aware that memory allocated with an allocator may be accessed, even when unused by container.
+
+Support for compiler extensions
+-------------------------------
+
+Clang, GCC and other compilers all provide their own set of language extensions. These extensions
+have often been developed without particular consideration for their interaction with the library,
+and as such, libc++ does not go out of its way to support them. The library may support specific
+compiler extensions which would then be documented explicitly, but the basic expectation should be
+that no special support is provided for arbitrary compiler extensions.
 
 Platform specific behavior
 ==========================
@@ -335,7 +372,7 @@ locale behave differently than they otherwise do. By default, wide character
 streams don't convert wide characters but input/output them as is. If a
 specific locale is imbued, the IO with the underlying stream happens with
 regular ``char`` elements, which are converted to/from wide characters
-according to the locale. Note that this doesn't behave as expected if the
+according to the locale. Note that this will not behave as expected if the
 stream has been set in Unicode mode.
 
 
@@ -343,6 +380,35 @@ Third-party Integrations
 ========================
 
 Libc++ provides integration with a few third-party tools.
+
+Debugging libc++ internals in LLDB
+----------------------------------
+
+LLDB hides the implementation details of libc++ by default.
+
+E.g., when setting a breakpoint in a comparator passed to ``std::sort``, the
+backtrace will read as
+
+.. code-block::
+
+  (lldb) thread backtrace
+  * thread #1, name = 'a.out', stop reason = breakpoint 3.1
+    * frame #0: 0x000055555555520e a.out`my_comparator(a=1, b=8) at test-std-sort.cpp:6:3
+      frame #7: 0x0000555555555615 a.out`void std::__1::sort[abi:ne200000]<std::__1::__wrap_iter<int*>, bool (*)(int, int)>(__first=(item = 8), __last=(item = 0), __comp=(a.out`my_less(int, int) at test-std-sort.cpp:5)) at sort.h:1003:3
+      frame #8: 0x000055555555531a a.out`main at test-std-sort.cpp:24:3
+
+Note how the caller of ``my_comparator`` is shown as ``std::sort``. Looking at
+the frame numbers, we can see that frames #1 until #6 were hidden. Those frames
+represent internal implementation details such as ``__sort4`` and similar
+utility functions.
+
+To also show those implementation details, use ``thread backtrace -u``.
+Alternatively, to disable those compact backtraces, use ``frame recognizer list``
+and ``frame recognizer disable`` on the "libc++ frame recognizer".
+
+Futhermore, stepping into libc++ functions is disabled by default. This is controlled via the
+setting ``target.process.thread.step-avoid-regexp`` which defaults to ``^std::`` and can be
+disabled using ``settings set target.process.thread.step-avoid-regexp ""``.
 
 GDB Pretty printers for libc++
 ------------------------------

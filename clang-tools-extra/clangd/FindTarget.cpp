@@ -8,7 +8,6 @@
 
 #include "FindTarget.h"
 #include "AST.h"
-#include "HeuristicResolver.h"
 #include "support/Logger.h"
 #include "clang/AST/ASTConcept.h"
 #include "clang/AST/ASTTypeTraits.h"
@@ -35,6 +34,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
+#include "clang/Sema/HeuristicResolver.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -57,7 +57,7 @@ LLVM_ATTRIBUTE_UNUSED std::string nodeToString(const DynTypedNode &N) {
     OS << ": ";
     N.print(OS, PrintingPolicy(LangOptions()));
   }
-  std::replace(S.begin(), S.end(), '\n', ' ');
+  llvm::replace(S, '\n', ' ');
   return S;
 }
 
@@ -496,12 +496,10 @@ public:
       return;
     case NestedNameSpecifier::Identifier:
       if (Resolver) {
-        add(QualType(Resolver->resolveNestedNameSpecifierToType(NNS), 0),
-            Flags);
+        add(Resolver->resolveNestedNameSpecifierToType(NNS), Flags);
       }
       return;
     case NestedNameSpecifier::TypeSpec:
-    case NestedNameSpecifier::TypeSpecWithTemplate:
       add(QualType(NNS->getAsType(), 0), Flags);
       return;
     case NestedNameSpecifier::Global:

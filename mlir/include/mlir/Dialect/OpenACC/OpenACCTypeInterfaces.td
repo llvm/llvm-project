@@ -28,6 +28,133 @@ def OpenACC_PointerLikeTypeInterface : TypeInterface<"PointerLikeType"> {
       /*retTy=*/"::mlir::Type",
       /*methodName=*/"getElementType"
     >,
+    InterfaceMethod<
+      /*description=*/[{
+        Returns the type category of the pointee. The `var` is provided because
+        a dialect's type system may be incomplete. For example, consider a
+        dialect which computes interior pointers - so a float array element
+        may be represented as `ptr<f32>`. The type system says the pointee
+        is `f32` but this is not a scalar from the point-of-view of OpenACC.
+        It is an array element and thus the appropriate type category is
+        "array" - therefore being able to look up how a variable is computed
+        is important for a complete type determination.
+        The `varType` is provided in cases where a dialect's type system
+        erased the target type.
+      }],
+      /*retTy=*/"::mlir::acc::VariableTypeCategory",
+      /*methodName=*/"getPointeeTypeCategory",
+      /*args=*/(ins "::mlir::TypedValue<::mlir::acc::PointerLikeType>":$varPtr,
+                    "::mlir::Type":$varType),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return ::mlir::acc::VariableTypeCategory::uncategorized;
+      }]
+    >,
+  ];
+}
+
+def OpenACC_MappableTypeInterface : TypeInterface<"MappableType"> {
+  let cppNamespace = "::mlir::acc";
+
+  let description = [{
+    An interface to capture type-based semantics for mapping in a manner that
+    makes it convertible to size-based semantics.
+  }];
+
+  let methods = [
+    InterfaceMethod<
+      /*description=*/[{
+        Returns the pointer to the `var` if recoverable (such as in cases
+        where the current operation is a load from a memory slot).
+      }],
+      /*retTy=*/"::mlir::TypedValue<::mlir::acc::PointerLikeType>",
+      /*methodName=*/"getVarPtr",
+      /*args=*/(ins "::mlir::Value":$var),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        if (auto ptr = mlir::dyn_cast<mlir::TypedValue<mlir::acc::PointerLikeType>>(
+              var))
+          return ptr;
+        return {};
+      }]
+    >,
+    InterfaceMethod<
+      /*description=*/[{
+        Returns the size in bytes when computable. If this is an array-like
+        type, avoiding passing `accBounds` ensures a computation of the size
+        of whole type.
+      }],
+      /*retTy=*/"::std::optional<::llvm::TypeSize>",
+      /*methodName=*/"getSizeInBytes",
+      /*args=*/(ins "::mlir::Value":$var,
+                    "::mlir::ValueRange":$accBounds,
+                    "const ::mlir::DataLayout &":$dataLayout),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        // Bounds operations are typically created for array types. In the
+        // generic implementation, it is not straightforward to distinguish
+        // between array types and ensure the size and offset take into account
+        // just the slice requested. Thus return not-computable for now.
+        if (!accBounds.empty())
+          return {};
+        return {dataLayout.getTypeSize($_type)};
+      }]
+    >,
+    InterfaceMethod<
+      /*description=*/[{
+        Returns the offset in bytes when computable.
+      }],
+      /*retTy=*/"::std::optional<::int64_t>",
+      /*methodName=*/"getOffsetInBytes",
+      /*args=*/(ins "::mlir::Value":$var,
+                    "::mlir::ValueRange":$accBounds,
+                    "const ::mlir::DataLayout &":$dataLayout),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        // Bounds operations are typically created for array types. In the
+        // generic implementation, it is not straightforward to distinguish
+        // between array types and ensure the size and offset take into account
+        // just the slice requested. Thus return not-computable for now.
+        if (!accBounds.empty())
+          return {};
+
+        // If the type size is computable, it means it is trivial. Assume
+        // offset of 0.
+        if (::mlir::cast<::mlir::acc::MappableType>($_type).getSizeInBytes(
+              var, accBounds, dataLayout).has_value()) {
+          return {0};
+        }
+
+        return {};
+      }]
+    >,
+    InterfaceMethod<
+      /*description=*/[{
+        Returns explicit `acc.bounds` operations that envelop the whole
+        data structure. These operations are inserted using the provided builder
+        at the location set before calling this API.
+      }],
+      /*retTy=*/"::llvm::SmallVector<::mlir::Value>",
+      /*methodName=*/"generateAccBounds",
+      /*args=*/(ins "::mlir::Value":$var,
+                    "::mlir::OpBuilder &":$builder),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return {};
+      }]
+    >,
+    InterfaceMethod<
+      /*description=*/[{
+        Returns the OpenACC type category.
+      }],
+      /*retTy=*/"::mlir::acc::VariableTypeCategory",
+      /*methodName=*/"getTypeCategory",
+      /*args=*/(ins "::mlir::Value":$var),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return ::mlir::acc::VariableTypeCategory::uncategorized;
+      }]
+    >,
   ];
 }
 

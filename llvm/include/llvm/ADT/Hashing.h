@@ -44,6 +44,7 @@
 #ifndef LLVM_ADT_HASHING_H
 #define LLVM_ADT_HASHING_H
 
+#include "llvm/ADT/ADL.h"
 #include "llvm/Config/abi-breaking.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -311,10 +312,7 @@ struct hash_state {
 /// depend on the particular hash values. On platforms without ASLR, this is
 /// still likely non-deterministic per build.
 inline uint64_t get_execution_seed() {
-  // Work around x86-64 negative offset folding for old Clang -fno-pic
-  // https://reviews.llvm.org/D93931
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS &&                                         \
-    (!defined(__clang__) || __clang_major__ > 11)
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
   return static_cast<uint64_t>(
       reinterpret_cast<uintptr_t>(&install_fatal_error_handler));
 #else
@@ -472,6 +470,10 @@ hash_code hash_combine_range(InputIteratorT first, InputIteratorT last) {
   return ::llvm::hashing::detail::hash_combine_range_impl(first, last);
 }
 
+// A wrapper for hash_combine_range above.
+template <typename RangeT> hash_code hash_combine_range(RangeT &&R) {
+  return hash_combine_range(adl_begin(R), adl_end(R));
+}
 
 // Implementation details for hash_combine.
 namespace hashing {
@@ -647,7 +649,7 @@ template <typename... Ts> hash_code hash_value(const std::tuple<Ts...> &arg) {
 // infrastructure is available.
 template <typename T>
 hash_code hash_value(const std::basic_string<T> &arg) {
-  return hash_combine_range(arg.begin(), arg.end());
+  return hash_combine_range(arg);
 }
 
 template <typename T> hash_code hash_value(const std::optional<T> &arg) {

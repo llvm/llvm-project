@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify=expected,both %s
-// RUN: %clang_cc1 -verify=ref,both %s
+// RUN: %clang_cc1 -verify=expected,both -std=c++20 %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -verify=ref,both      -std=c++20 %s
 
 /// FIXME: Slight difference in diagnostic output here.
 
@@ -7,15 +7,15 @@ struct Foo {
   int a;
 };
 
-constexpr int dead1() { // expected-error {{never produces a constant expression}}
+constexpr int dead1() {
 
   Foo *F2 = nullptr;
   {
-    Foo F{12}; // expected-note 2{{declared here}}
+    Foo F{12}; // expected-note {{declared here}}
     F2 = &F;
   } // Ends lifetime of F.
 
-  return F2->a; // expected-note 2{{read of variable whose lifetime has ended}} \
+  return F2->a; // expected-note {{read of variable whose lifetime has ended}} \
                 // ref-note {{read of object outside its lifetime is not allowed in a constant expression}}
 }
 static_assert(dead1() == 1, ""); // both-error {{not an integral constant expression}} \
@@ -67,4 +67,42 @@ namespace PrimitiveMoveFn {
     const float y = 100;
     const float &x = y;
   }
+}
+
+/// FIXME:
+///  1) This doesn't work for parameters
+///  2) We need to do this for all fields in composite scenarios
+namespace PseudoDtor {
+  typedef int I;
+  constexpr bool foo() { // both-error {{never produces a constant expression}}
+    {
+      int a; // both-note {{destroying object 'a' whose lifetime has already ended}}
+      a.~I();
+    }
+    return true;
+  }
+
+  int k;
+  struct T {
+    int n : (k.~I(), 1); // both-error {{constant expression}} \
+                         // both-note {{visible outside that expression}}
+  };
+}
+
+/// Diagnostic differences
+namespace CallScope {
+  struct Q {
+    int n = 0;
+    constexpr int f() const { return 0; }
+  };
+  constexpr Q *out_of_lifetime(Q q) { return &q; } // both-warning {{address of stack}}
+  constexpr int k3 = out_of_lifetime({})->n; // both-error {{must be initialized by a constant expression}} \
+                                             // expected-note {{read of temporary whose lifetime has ended}} \
+                                             // expected-note {{temporary created here}} \
+                                             // ref-note {{read of object outside its lifetime}}
+
+  constexpr int k4 = out_of_lifetime({})->f(); // both-error {{must be initialized by a constant expression}} \
+                                               // expected-note {{member call on temporary whose lifetime has ended}} \
+                                               // expected-note {{temporary created here}} \
+                                               // ref-note {{member call on object outside its lifetime}}
 }

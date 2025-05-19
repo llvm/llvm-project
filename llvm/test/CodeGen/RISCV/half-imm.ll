@@ -32,12 +32,14 @@ define half @half_imm() nounwind {
 ; RV32IZHINX:       # %bb.0:
 ; RV32IZHINX-NEXT:    lui a0, 4
 ; RV32IZHINX-NEXT:    addi a0, a0, 512
+; RV32IZHINX-NEXT:    # kill: def $x10_h killed $x10_h killed $x10
 ; RV32IZHINX-NEXT:    ret
 ;
 ; RV64IZHINX-LABEL: half_imm:
 ; RV64IZHINX:       # %bb.0:
 ; RV64IZHINX-NEXT:    lui a0, 4
 ; RV64IZHINX-NEXT:    addiw a0, a0, 512
+; RV64IZHINX-NEXT:    # kill: def $x10_h killed $x10_h killed $x10
 ; RV64IZHINX-NEXT:    ret
 ;
 ; CHECKIZFHMIN-LABEL: half_imm:
@@ -50,12 +52,14 @@ define half @half_imm() nounwind {
 ; RV32IZHINXMIN:       # %bb.0:
 ; RV32IZHINXMIN-NEXT:    lui a0, 4
 ; RV32IZHINXMIN-NEXT:    addi a0, a0, 512
+; RV32IZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h killed $x10
 ; RV32IZHINXMIN-NEXT:    ret
 ;
 ; RV64IZHINXMIN-LABEL: half_imm:
 ; RV64IZHINXMIN:       # %bb.0:
 ; RV64IZHINXMIN-NEXT:    lui a0, 4
 ; RV64IZHINXMIN-NEXT:    addiw a0, a0, 512
+; RV64IZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h killed $x10
 ; RV64IZHINXMIN-NEXT:    ret
   ret half 3.0
 }
@@ -70,15 +74,15 @@ define half @half_imm_op(half %a) nounwind {
 ;
 ; RV32IZHINX-LABEL: half_imm_op:
 ; RV32IZHINX:       # %bb.0:
-; RV32IZHINX-NEXT:    lui a1, %hi(.LCPI1_0)
-; RV32IZHINX-NEXT:    lh a1, %lo(.LCPI1_0)(a1)
+; RV32IZHINX-NEXT:    li a1, 15
+; RV32IZHINX-NEXT:    slli a1, a1, 10
 ; RV32IZHINX-NEXT:    fadd.h a0, a0, a1
 ; RV32IZHINX-NEXT:    ret
 ;
 ; RV64IZHINX-LABEL: half_imm_op:
 ; RV64IZHINX:       # %bb.0:
-; RV64IZHINX-NEXT:    lui a1, %hi(.LCPI1_0)
-; RV64IZHINX-NEXT:    lh a1, %lo(.LCPI1_0)(a1)
+; RV64IZHINX-NEXT:    li a1, 15
+; RV64IZHINX-NEXT:    slli a1, a1, 10
 ; RV64IZHINX-NEXT:    fadd.h a0, a0, a1
 ; RV64IZHINX-NEXT:    ret
 ;

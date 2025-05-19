@@ -15,8 +15,10 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/iterator.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/InterleavedRange.h"
 
 #define DEBUG_TYPE "transform-dialect"
 #define DEBUG_TYPE_FULL "transform-dialect-full"
@@ -330,7 +332,7 @@ void transform::TransformState::forgetMapping(Value opHandle,
   for (Operation *op : mappings.direct[opHandle])
     dropMappingEntry(mappings.reverse, op, opHandle);
   mappings.direct.erase(opHandle);
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
   // Payload IR is removed from the mapping. This invalidates the respective
   // iterators.
   mappings.incrementTimestamp(opHandle);
@@ -342,7 +344,7 @@ void transform::TransformState::forgetMapping(Value opHandle,
     for (Value resultHandle : resultHandles) {
       Mappings &localMappings = getMapping(resultHandle);
       dropMappingEntry(localMappings.values, resultHandle, opResult);
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
       // Payload IR is removed from the mapping. This invalidates the respective
       // iterators.
       mappings.incrementTimestamp(resultHandle);
@@ -358,7 +360,7 @@ void transform::TransformState::forgetValueMapping(
   for (Value payloadValue : mappings.reverseValues[valueHandle])
     dropMappingEntry(mappings.reverseValues, payloadValue, valueHandle);
   mappings.values.erase(valueHandle);
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
   // Payload IR is removed from the mapping. This invalidates the respective
   // iterators.
   mappings.incrementTimestamp(valueHandle);
@@ -372,7 +374,7 @@ void transform::TransformState::forgetValueMapping(
       dropMappingEntry(localMappings.direct, opHandle, payloadOp);
       dropMappingEntry(localMappings.reverse, payloadOp, opHandle);
 
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
       // Payload IR is removed from the mapping. This invalidates the respective
       // iterators.
       localMappings.incrementTimestamp(opHandle);
@@ -452,7 +454,7 @@ transform::TransformState::replacePayloadValue(Value value, Value replacement) {
     // between the handles and the IR objects
     if (!replacement) {
       dropMappingEntry(mappings.values, handle, value);
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
       // Payload IR is removed from the mapping. This invalidates the respective
       // iterators.
       mappings.incrementTimestamp(handle);
@@ -486,11 +488,11 @@ void transform::TransformState::recordOpHandleInvalidationOne(
     return;
 
   FULL_LDBG("--recordOpHandleInvalidationOne\n");
-  DEBUG_WITH_TYPE(
-      DEBUG_TYPE_FULL,
-      llvm::interleaveComma(potentialAncestors, DBGS() << "--ancestors: ",
-                            [](Operation *op) { llvm::dbgs() << *op; });
-      llvm::dbgs() << "\n");
+  DEBUG_WITH_TYPE(DEBUG_TYPE_FULL, {
+    (DBGS() << "--ancestors: "
+            << llvm::interleaved(llvm::make_pointee_range(potentialAncestors))
+            << "\n");
+  });
 
   Operation *owner = consumingHandle.getOwner();
   unsigned operandNo = consumingHandle.getOperandNumber();
@@ -804,7 +806,7 @@ checkRepeatedConsumptionInOperand(ArrayRef<T> payload,
 void transform::TransformState::compactOpHandles() {
   for (Value handle : opHandlesToCompact) {
     Mappings &mappings = getMapping(handle, /*allowOutOfScope=*/true);
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
     if (llvm::find(mappings.direct[handle], nullptr) !=
         mappings.direct[handle].end())
       // Payload IR is removed from the mapping. This invalidates the respective
@@ -934,12 +936,10 @@ transform::TransformState::applyTransform(TransformOpInterface transform) {
     assert(scopeIt != regionStack.rend() &&
            "could not find region scope for handle");
     RegionScope *scope = *scopeIt;
-    for (Operation *user : handle.getUsers()) {
-      if (user != scope->currentTransform &&
-          !happensBefore(user, scope->currentTransform))
-        return false;
-    }
-    return true;
+    return llvm::all_of(handle.getUsers(), [&](Operation *user) {
+      return user == scope->currentTransform ||
+             happensBefore(user, scope->currentTransform);
+    });
   };
   transform::ErrorCheckingTrackingListener trackingListener(*this, transform,
                                                             config);
@@ -1392,6 +1392,21 @@ void transform::ErrorCheckingTrackingListener::notifyPayloadReplacementNotFound(
   ++errorCounter;
 }
 
+std::string
+transform::ErrorCheckingTrackingListener::getLatestMatchFailureMessage() {
+  if (!matchFailure) {
+    return "";
+  }
+  return matchFailure->str();
+}
+
+void transform::ErrorCheckingTrackingListener::notifyMatchFailure(
+    Location loc, function_ref<void(Diagnostic &)> reasonCallback) {
+  Diagnostic diag(loc, DiagnosticSeverity::Remark);
+  reasonCallback(diag);
+  matchFailure = std::move(diag);
+}
+
 //===----------------------------------------------------------------------===//
 // TransformRewriter
 //===----------------------------------------------------------------------===//
@@ -1477,19 +1492,19 @@ transform::detail::checkApplyToOne(Operation *transformOp,
     if (ptr.isNull())
       continue;
     if (llvm::isa<TransformHandleTypeInterface>(res.getType()) &&
-        !ptr.is<Operation *>()) {
+        !isa<Operation *>(ptr)) {
       return emitDiag() << "application of " << transformOpName
                         << " expected to produce an Operation * for result #"
                         << res.getResultNumber();
     }
     if (llvm::isa<TransformParamTypeInterface>(res.getType()) &&
-        !ptr.is<Attribute>()) {
+        !isa<Attribute>(ptr)) {
       return emitDiag() << "application of " << transformOpName
                         << " expected to produce an Attribute for result #"
                         << res.getResultNumber();
     }
     if (llvm::isa<TransformValueHandleTypeInterface>(res.getType()) &&
-        !ptr.is<Value>()) {
+        !isa<Value>(ptr)) {
       return emitDiag() << "application of " << transformOpName
                         << " expected to produce a Value for result #"
                         << res.getResultNumber();
@@ -1501,7 +1516,7 @@ transform::detail::checkApplyToOne(Operation *transformOp,
 template <typename T>
 static SmallVector<T> castVector(ArrayRef<transform::MappedValue> range) {
   return llvm::to_vector(llvm::map_range(
-      range, [](transform::MappedValue value) { return value.get<T>(); }));
+      range, [](transform::MappedValue value) { return cast<T>(value); }));
 }
 
 void transform::detail::setApplyToOneResults(
@@ -1644,7 +1659,6 @@ void transform::detail::getPotentialTopLevelEffects(
       if (!iface)
         continue;
 
-      SmallVector<MemoryEffects::EffectInstance, 2> nestedEffects;
       iface.getEffects(effects);
     }
     return;
@@ -1999,7 +2013,9 @@ LogicalResult transform::detail::verifyTransformOpInterface(Operation *op) {
 LogicalResult transform::applyTransforms(
     Operation *payloadRoot, TransformOpInterface transform,
     const RaggedArray<MappedValue> &extraMapping,
-    const TransformOptions &options, bool enforceToplevelTransformOp) {
+    const TransformOptions &options, bool enforceToplevelTransformOp,
+    function_ref<void(TransformState &)> stateInitializer,
+    function_ref<LogicalResult(TransformState &)> stateExporter) {
   if (enforceToplevelTransformOp) {
     if (!transform->hasTrait<PossibleTopLevelTransformOpTrait>() ||
         transform->getNumOperands() != 0) {
@@ -2013,7 +2029,13 @@ LogicalResult transform::applyTransforms(
 
   TransformState state(transform->getParentRegion(), payloadRoot, extraMapping,
                        options);
-  return state.applyTransform(transform).checkAndReport();
+  if (stateInitializer)
+    stateInitializer(state);
+  if (state.applyTransform(transform).checkAndReport().failed())
+    return failure();
+  if (stateExporter)
+    return stateExporter(state);
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

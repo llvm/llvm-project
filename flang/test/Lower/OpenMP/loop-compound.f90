@@ -5,7 +5,7 @@
 ! RUN: %flang_fc1 -fopenmp -emit-hlfir %s -o - | FileCheck %s
 
 program main
-  integer :: i
+  integer :: i,j
 
   ! TODO When composite constructs are supported add:
   ! - TASKLOOP SIMD
@@ -231,4 +231,38 @@ program main
   do i = 1, 10
   end do
   !$omp end teams distribute simd
+
+  ! ----------------------------------------------------------------------------
+  ! Unstructured control-flow in loop
+  ! ----------------------------------------------------------------------------
+  ! CHECK:      omp.target
+  ! CHECK:      omp.teams
+  ! CHECK:      omp.parallel
+  ! CHECK:      omp.distribute
+  ! CHECK-NEXT: omp.wsloop
+  ! CHECK-NEXT: omp.loop_nest
+  !
+  ! Verify the conrol-flow of the unstructured inner loop.
+  ! CHECK:        cf.br ^[[BB1:.*]]
+  ! CHECK:      ^[[BB1]]:
+  ! CHECK:        cf.br ^[[BB2:.*]]
+  ! CHECK:      ^[[BB2]]:
+  ! CHECK:        cf.cond_br %{{.*}}, ^[[BB3:.*]], ^[[BB6:.*]]
+  ! CHECK:      ^[[BB3]]:
+  ! CHECK:        cf.cond_br %{{.*}}, ^[[BB4:.*]], ^[[BB5:.*]]
+  ! CHECK:      ^[[BB4]]:
+  ! CHECK:        cf.br ^[[BB6]]
+  ! CHECK:      ^[[BB5]]:
+  ! CHECK:        cf.br ^[[BB2]]
+  ! CHECK:      ^[[BB6]]:
+  ! CHECK-NEXT:   omp.yield
+  !$omp target teams distribute parallel do
+  do i = 1, 10
+    outerloop: do j = i-1, i+i
+      if (j == i) then
+        exit outerloop
+      end if
+    end do outerloop
+  end do
+  !$omp end target teams distribute parallel do
 end program main

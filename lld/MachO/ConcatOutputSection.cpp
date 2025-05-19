@@ -133,8 +133,16 @@ bool TextOutputSection::needsThunks() const {
   // we've already processed in this segment needs thunks, so do the
   // rest.
   bool needsThunks = parent && parent->needsThunks;
+
+  // Calculate the total size of all branch target sections
+  uint64_t branchTargetsSize = in.stubs->getSize();
+
+  // Add the size of __objc_stubs section if it exists
+  if (in.objcStubs && in.objcStubs->isNeeded())
+    branchTargetsSize += in.objcStubs->getSize();
+
   if (!needsThunks &&
-      isecAddr - addr + in.stubs->getSize() <=
+      isecAddr - addr + branchTargetsSize <=
           std::min(target->backwardBranchRange, target->forwardBranchRange))
     return false;
   // Yes, this program is large enough to need thunks.
@@ -145,14 +153,14 @@ bool TextOutputSection::needsThunks() const {
     for (Reloc &r : isec->relocs) {
       if (!target->hasAttr(r.type, RelocAttrBits::BRANCH))
         continue;
-      auto *sym = r.referent.get<Symbol *>();
+      auto *sym = cast<Symbol *>(r.referent);
       // Pre-populate the thunkMap and memoize call site counts for every
       // InputSection and ThunkInfo. We do this for the benefit of
-      // estimateStubsInRangeVA().
+      // estimateBranchTargetThresholdVA().
       ThunkInfo &thunkInfo = thunkMap[sym];
       // Knowing ThunkInfo call site count will help us know whether or not we
       // might need to create more for this referent at the time we are
-      // estimating distance to __stubs in estimateStubsInRangeVA().
+      // estimating distance to __stubs in estimateBranchTargetThresholdVA().
       ++thunkInfo.callSiteCount;
       // We can avoid work on InputSections that have no BRANCH relocs.
       isec->hasCallSites = true;
@@ -161,10 +169,11 @@ bool TextOutputSection::needsThunks() const {
   return true;
 }
 
-// Since __stubs is placed after __text, we must estimate the address
-// beyond which stubs are within range of a simple forward branch.
-// This is called exactly once, when the last input section has been finalized.
-uint64_t TextOutputSection::estimateStubsInRangeVA(size_t callIdx) const {
+// Estimate the address beyond which branch targets (like __stubs and
+// __objc_stubs) are within range of a simple forward branch. This is called
+// exactly once, when the last input section has been finalized.
+uint64_t
+TextOutputSection::estimateBranchTargetThresholdVA(size_t callIdx) const {
   // Tally the functions which still have call sites remaining to process,
   // which yields the maximum number of thunks we might yet place.
   size_t maxPotentialThunks = 0;
@@ -172,8 +181,8 @@ uint64_t TextOutputSection::estimateStubsInRangeVA(size_t callIdx) const {
     ThunkInfo &ti = tp.second;
     // This overcounts: Only sections that are in forward jump range from the
     // currently-active section get finalized, and all input sections are
-    // finalized when estimateStubsInRangeVA() is called. So only backward
-    // jumps will need thunks, but we count all jumps.
+    // finalized when estimateBranchTargetThresholdVA() is called. So only
+    // backward jumps will need thunks, but we count all jumps.
     if (ti.callSitesUsed < ti.callSiteCount)
       maxPotentialThunks += 1;
   }
@@ -184,23 +193,66 @@ uint64_t TextOutputSection::estimateStubsInRangeVA(size_t callIdx) const {
     InputSection *isec = inputs[i];
     isecEnd = alignToPowerOf2(isecEnd, isec->align) + isec->getSize();
   }
-  // Estimate the address after which call sites can safely call stubs
-  // directly rather than through intermediary thunks.
+
+  // Tally up any thunks that have already been placed that have VA higher than
+  // inputs[callIdx]. First, find the index of the first thunk that is beyond
+  // the current inputs[callIdx].
+  auto itPostcallIdxThunks =
+      llvm::partition_point(thunks, [isecVA](const ConcatInputSection *t) {
+        return t->getVA() <= isecVA;
+      });
+  uint64_t existingForwardThunks = thunks.end() - itPostcallIdxThunks;
+
   uint64_t forwardBranchRange = target->forwardBranchRange;
   assert(isecEnd > forwardBranchRange &&
          "should not run thunk insertion if all code fits in jump range");
   assert(isecEnd - isecVA <= forwardBranchRange &&
          "should only finalize sections in jump range");
-  uint64_t stubsInRangeVA = isecEnd + maxPotentialThunks * target->thunkSize +
-                            in.stubs->getSize() - forwardBranchRange;
+
+  // Estimate the maximum size of the code, right before the branch target
+  // sections.
+  uint64_t maxTextSize = 0;
+  // Add the size of all the inputs, including the unprocessed ones.
+  maxTextSize += isecEnd;
+
+  // Add the size of the thunks that have already been created that are ahead of
+  // inputs[callIdx]. These are already created thunks that will be interleaved
+  // with inputs[callIdx...end].
+  maxTextSize += existingForwardThunks * target->thunkSize;
+
+  // Add the size of the thunks that may be created in the future. Since
+  // 'maxPotentialThunks' overcounts, this is an estimate of the upper limit.
+  maxTextSize += maxPotentialThunks * target->thunkSize;
+
+  // Calculate the total size of all late branch target sections
+  uint64_t branchTargetsSize = 0;
+
+  // Add the size of __stubs section
+  branchTargetsSize += in.stubs->getSize();
+
+  // Add the size of __objc_stubs section if it exists
+  if (in.objcStubs && in.objcStubs->isNeeded())
+    branchTargetsSize += in.objcStubs->getSize();
+
+  // Estimated maximum VA of the last branch target.
+  uint64_t maxVAOfLastBranchTarget = maxTextSize + branchTargetsSize;
+
+  // Estimate the address after which call sites can safely call branch targets
+  // directly rather than through intermediary thunks.
+  uint64_t branchTargetThresholdVA =
+      maxVAOfLastBranchTarget - forwardBranchRange;
+
   log("thunks = " + std::to_string(thunkMap.size()) +
       ", potential = " + std::to_string(maxPotentialThunks) +
-      ", stubs = " + std::to_string(in.stubs->getSize()) + ", isecVA = " +
-      utohexstr(isecVA) + ", threshold = " + utohexstr(stubsInRangeVA) +
-      ", isecEnd = " + utohexstr(isecEnd) +
+      ", stubs = " + std::to_string(in.stubs->getSize()) +
+      (in.objcStubs && in.objcStubs->isNeeded()
+           ? ", objc_stubs = " + std::to_string(in.objcStubs->getSize())
+           : "") +
+      ", isecVA = " + utohexstr(isecVA) + ", threshold = " +
+      utohexstr(branchTargetThresholdVA) + ", isecEnd = " + utohexstr(isecEnd) +
       ", tail = " + utohexstr(isecEnd - isecVA) +
       ", slop = " + utohexstr(forwardBranchRange - (isecEnd - isecVA)));
-  return stubsInRangeVA;
+  return branchTargetThresholdVA;
 }
 
 void ConcatOutputSection::finalizeOne(ConcatInputSection *isec) {
@@ -226,7 +278,7 @@ void TextOutputSection::finalize() {
 
   uint64_t forwardBranchRange = target->forwardBranchRange;
   uint64_t backwardBranchRange = target->backwardBranchRange;
-  uint64_t stubsInRangeVA = TargetInfo::outOfRangeVA;
+  uint64_t branchTargetThresholdVA = TargetInfo::outOfRangeVA;
   size_t thunkSize = target->thunkSize;
   size_t relocCount = 0;
   size_t callSiteCount = 0;
@@ -269,16 +321,18 @@ void TextOutputSection::finalize() {
     if (!isec->hasCallSites)
       continue;
 
-    if (finalIdx == endIdx && stubsInRangeVA == TargetInfo::outOfRangeVA) {
-      // When we have finalized all input sections, __stubs (destined
-      // to follow __text) comes within range of forward branches and
-      // we can estimate the threshold address after which we can
-      // reach any stub with a forward branch. Note that although it
-      // sits in the middle of a loop, this code executes only once.
+    if (finalIdx == endIdx &&
+        branchTargetThresholdVA == TargetInfo::outOfRangeVA) {
+      // When we have finalized all input sections, branch target sections (like
+      // __stubs and __objc_stubs) (destined to follow __text) come within range
+      // of forward branches and we can estimate the threshold address after
+      // which we can reach any branch target with a forward branch. Note that
+      // although it sits in the middle of a loop, this code executes only once.
       // It is in the loop because we need to call it at the proper
       // time: the earliest call site from which the end of __text
-      // (and start of __stubs) comes within range of a forward branch.
-      stubsInRangeVA = estimateStubsInRangeVA(callIdx);
+      // (and start of branch target sections) comes within range of a forward
+      // branch.
+      branchTargetThresholdVA = estimateBranchTargetThresholdVA(callIdx);
     }
     // Process relocs by ascending address, i.e., ascending offset within isec
     std::vector<Reloc> &relocs = isec->relocs;
@@ -297,13 +351,17 @@ void TextOutputSection::finalize() {
           backwardBranchRange < callVA ? callVA - backwardBranchRange : 0;
       uint64_t highVA = callVA + forwardBranchRange;
       // Calculate our call referent address
-      auto *funcSym = r.referent.get<Symbol *>();
+      auto *funcSym = cast<Symbol *>(r.referent);
       ThunkInfo &thunkInfo = thunkMap[funcSym];
       // The referent is not reachable, so we need to use a thunk ...
-      if (funcSym->isInStubs() && callVA >= stubsInRangeVA) {
+      if ((funcSym->isInStubs() ||
+           (in.objcStubs && in.objcStubs->isNeeded() &&
+            ObjCStubsSection::isObjCStubSymbol(funcSym))) &&
+          callVA >= branchTargetThresholdVA) {
         assert(callVA != TargetInfo::outOfRangeVA);
-        // ... Oh, wait! We are close enough to the end that __stubs
-        // are now within range of a simple forward branch.
+        // ... Oh, wait! We are close enough to the end that branch target
+        // sections (__stubs, __objc_stubs) are now within range of a simple
+        // forward branch.
         continue;
       }
       uint64_t funcVA = funcSym->resolveBranchVA();

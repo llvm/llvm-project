@@ -94,7 +94,6 @@ static std::string PrintValue(llvm::Value *V, bool truncate = false) {
   std::string s;
   raw_string_ostream rso(s);
   V->print(rso);
-  rso.flush();
   if (truncate)
     s.resize(s.length() - 1);
   return s;
@@ -241,7 +240,7 @@ protected:
 
     FunctionType *fun_ty = FunctionType::get(
         llvm::Type::getVoidTy(m_module.getContext()), params, true);
-    PointerType *fun_ptr_ty = PointerType::getUnqual(fun_ty);
+    PointerType *fun_ptr_ty = PointerType::getUnqual(m_module.getContext());
     Constant *fun_addr_int =
         ConstantInt::get(GetIntptrTy(), start_address, false);
     return {fun_ty, ConstantExpr::getIntToPtr(fun_addr_int, fun_ptr_ty)};
@@ -265,7 +264,7 @@ protected:
 
     FunctionType *fun_ty = FunctionType::get(
         llvm::Type::getVoidTy(m_module.getContext()), params, true);
-    PointerType *fun_ptr_ty = PointerType::getUnqual(fun_ty);
+    PointerType *fun_ptr_ty = PointerType::getUnqual(m_module.getContext());
     Constant *fun_addr_int =
         ConstantInt::get(GetIntptrTy(), start_address, false);
     return {fun_ty, ConstantExpr::getIntToPtr(fun_addr_int, fun_ptr_ty)};
@@ -331,7 +330,8 @@ protected:
       return false;
 
     // Insert an instruction to call the helper with the result
-    CallInst::Create(m_valid_pointer_check_func, dereferenced_ptr, "", inst);
+    CallInst::Create(m_valid_pointer_check_func, dereferenced_ptr, "",
+                     inst->getIterator());
 
     return true;
   }
@@ -418,7 +418,7 @@ protected:
 
     ArrayRef<llvm::Value *> args(arg_array, 2);
 
-    CallInst::Create(m_objc_object_check_func, args, "", inst);
+    CallInst::Create(m_objc_object_check_func, args, "", inst->getIterator());
 
     return true;
   }
@@ -552,8 +552,6 @@ bool IRDynamicChecks::runOnModule(llvm::Module &M) {
     raw_string_ostream oss(s);
 
     M.print(oss, nullptr);
-
-    oss.flush();
 
     LLDB_LOGF(log, "Module after dynamic checks: \n%s", s.c_str());
   }

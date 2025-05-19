@@ -53,7 +53,7 @@ public:
   bool isFixedValueOnly() const { return !HasDynamicSegment; }
 };
 
-void emitVarLenCodeEmitter(RecordKeeper &R, raw_ostream &OS);
+void emitVarLenCodeEmitter(const RecordKeeper &R, raw_ostream &OS);
 
 } // end namespace llvm
 

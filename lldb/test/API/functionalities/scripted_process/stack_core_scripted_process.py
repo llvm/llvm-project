@@ -46,22 +46,63 @@ class StackCoreScriptedProcess(ScriptedProcess):
         if len(self.threads) == 2:
             self.threads[len(self.threads) - 1].is_stopped = True
 
-        corefile_module = self.get_module_with_name(
-            self.corefile_target, "libbaz.dylib"
-        )
-        if not corefile_module or not corefile_module.IsValid():
-            return
-        module_path = os.path.join(
-            corefile_module.GetFileSpec().GetDirectory(),
-            corefile_module.GetFileSpec().GetFilename(),
-        )
-        if not os.path.exists(module_path):
-            return
-        module_load_addr = corefile_module.GetObjectFileHeaderAddress().GetLoadAddress(
-            self.corefile_target
-        )
+        custom_modules = args.GetValueForKey("custom_modules")
+        if custom_modules.GetType() == lldb.eStructuredDataTypeArray:
+            for id in range(custom_modules.GetSize()):
 
-        self.loaded_images.append({"path": module_path, "load_addr": module_load_addr})
+                custom_module = custom_modules.GetItemAtIndex(id)
+                if (
+                    not custom_module
+                    or not custom_module.IsValid()
+                    or not custom_module.GetType() == lldb.eStructuredDataTypeDictionary
+                ):
+                    continue
+
+                # Get custom module path from args
+                module_path_arg = custom_module.GetValueForKey("path")
+                module_path = None
+                if (
+                    not module_path_arg
+                    or not module_path_arg.IsValid()
+                    or not module_path_arg.GetType() == lldb.eStructuredDataTypeString
+                ):
+                    continue
+
+                module_path = module_path_arg.GetStringValue(100)
+
+                # Get custom module load address from args
+                module_load_addr = None
+                module_load_addr_arg = custom_module.GetValueForKey("load_addr")
+                if (
+                    module_load_addr_arg
+                    and module_load_addr_arg.IsValid()
+                    and module_load_addr_arg.GetType()
+                    == lldb.eStructuredDataTypeInteger
+                ):
+                    module_load_addr = module_load_addr_arg.GetIntegerValue()
+
+                # If module load address is not specified/valid, try to find it from corefile module
+                if module_load_addr is None:
+                    module_name = os.path.basename(module_path)
+                    corefile_module = self.get_module_with_name(
+                        self.corefile_target, module_name
+                    )
+
+                    if not corefile_module or not corefile_module.IsValid():
+                        continue
+
+                    module_load_addr = (
+                        corefile_module.GetObjectFileHeaderAddress().GetLoadAddress(
+                            self.corefile_target
+                        )
+                    )
+
+                self.loaded_images.append(
+                    {
+                        "path": module_path,
+                        "load_addr": module_load_addr,
+                    }
+                )
 
     def get_memory_region_containing_address(
         self, addr: int

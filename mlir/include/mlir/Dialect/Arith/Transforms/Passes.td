@@ -20,7 +20,7 @@ def ArithExpandOpsPass : Pass<"arith-expand"> {
   ];
 }
 
-def ArithUnsignedWhenEquivalent : Pass<"arith-unsigned-when-equivalent"> {
+def ArithUnsignedWhenEquivalentPass : Pass<"arith-unsigned-when-equivalent"> {
   let summary = "Replace signed ops with unsigned ones where they are proven equivalent";
   let description = [{
     Replace signed ops with their unsigned equivalents when integer range analysis
@@ -33,7 +33,6 @@ def ArithUnsignedWhenEquivalent : Pass<"arith-unsigned-when-equivalent"> {
     The affect ops include division, remainder, shifts, min, max, and integer
     comparisons.
   }];
-  let constructor = "mlir::arith::createArithUnsignedWhenEquivalentPass()";
 }
 
 def ArithIntRangeOpts : Pass<"int-range-optimizations"> {
@@ -43,6 +42,28 @@ def ArithIntRangeOpts : Pass<"int-range-optimizations"> {
     results. It replaces operations with known-constant results with said constants,
     rewrites `(0 <= %x < D) mod D` to `%x`.
   }];
+  // Explicitly depend on "arith" because this pass could create operations in
+  // `arith` out of thin air in some cases.
+  let dependentDialects = [
+    "::mlir::arith::ArithDialect"
+  ];
+}
+
+def ArithIntRangeNarrowing : Pass<"arith-int-range-narrowing"> {
+  let summary = "Reduce integer operations bitwidth based on integer range analysis";
+  let description = [{
+    This pass runs integer range analysis and tries to narrow arith ops to the
+    specified bitwidth based on its results.
+
+    `bitwidthsSupported` assumed to be not wider than `index` type.
+    TODO: get index width from DLTI.
+  }];
+
+  let options = [
+    ListOption<"bitwidthsSupported", "int-bitwidths-supported", "unsigned",
+               "Integer bitwidths supported">,
+  ];
+
   // Explicitly depend on "arith" because this pass could create operations in
   // `arith` out of thin air in some cases.
   let dependentDialects = [
@@ -91,19 +112,5 @@ def ArithEmulateWideInt : Pass<"arith-emulate-wide-int"> {
   ];
   let dependentDialects = ["vector::VectorDialect"];
 }
-
-def ArithIntNarrowing : Pass<"arith-int-narrowing"> {
-  let summary = "Reduce integer operation bitwidth";
-  let description = [{
-    Reduce bitwidths of integer types used in arith operations. This pass
-    prefers the narrowest available integer bitwidths that are guaranteed to
-    produce the same results.
-  }];
-  let dependentDialects = ["vector::VectorDialect"];
-  let options = [
-    ListOption<"bitwidthsSupported", "int-bitwidths-supported", "unsigned",
-               "Integer bitwidths supported">,
-  ];
- }
 
 #endif // MLIR_DIALECT_ARITH_TRANSFORMS_PASSES

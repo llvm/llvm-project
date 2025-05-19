@@ -21,40 +21,46 @@ typedef __UINT32_TYPE__ uint32_t;
 typedef __UINT16_TYPE__ uint16_t;
 typedef __UINT8_TYPE__ uint8_t;
 
-#define PRIdMAX "lld"
-#define PRId64 "lld"
+#if __WORDSIZE == 64
+# define __PRI64_PREFIX	"l"
+#else
+# define __PRI64_PREFIX	"ll"
+#endif
+
+#define PRIdMAX __PRI64_PREFIX "d"
+#define PRId64 __PRI64_PREFIX "d"
 #define PRId32 "d"
 #define PRId16 "hd"
 #define PRId8  "hhd"
 
-#define PRIiMAX "lli"
-#define PRIi64 "lli"
+#define PRIiMAX __PRI64_PREFIX "i"
+#define PRIi64 __PRI64_PREFIX "i"
 #define PRIi32 "i"
 #define PRIi16 "hi"
 #define PRIi8  "hhi"
 
-#define PRIiFAST64 "lli"
+#define PRIiFAST64 __PRI64_PREFIX "i"
 #define PRIiFAST32 "i"
 #define PRIiFAST16 "hi"
 #define PRIiFAST8  "hhi"
 
-#define PRIiLEAST64 "lli"
+#define PRIiLEAST64 __PRI64_PREFIX "i"
 #define PRIiLEAST32 "i"
 #define PRIiLEAST16 "hi"
 #define PRIiLEAST8  "hhi"
 
-#define PRIuMAX "llu"
-#define PRIu64 "llu"
+#define PRIuMAX __PRI64_PREFIX "u"
+#define PRIu64 __PRI64_PREFIX "u"
 #define PRIu32 "u"
 #define PRIu16 "hu"
 #define PRIu8  "hhu"
 
-#define PRIuFAST64 "llu"
+#define PRIuFAST64 __PRI64_PREFIX "u"
 #define PRIuFAST32 "u"
 #define PRIuFAST16 "hu"
 #define PRIuFAST8  "hhu"
 
-#define PRIuLEAST64 "llu"
+#define PRIuLEAST64 __PRI64_PREFIX "u"
 #define PRIuLEAST32 "u"
 #define PRIuLEAST16 "hu"
 #define PRIuLEAST8  "hhu"

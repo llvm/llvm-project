@@ -9,6 +9,7 @@
 #include "MemIndex.h"
 #include "FuzzyMatch.h"
 #include "Quality.h"
+#include "index/Index.h"
 #include "support/Trace.h"
 
 namespace clang {
@@ -31,7 +32,7 @@ bool MemIndex::fuzzyFind(
   trace::Span Tracer("MemIndex fuzzyFind");
 
   TopN<std::pair<float, const Symbol *>> Top(
-      Req.Limit ? *Req.Limit : std::numeric_limits<size_t>::max());
+      Req.Limit.value_or(std::numeric_limits<size_t>::max()));
   FuzzyMatcher Filter(Req.Query);
   bool More = false;
   for (const auto &Pair : Index) {
@@ -80,6 +81,25 @@ bool MemIndex::refs(const RefsRequest &Req,
         return true; // More refs were available.
       --Remaining;
       Callback(O);
+    }
+  }
+  return false; // We reported all refs.
+}
+
+bool MemIndex::containedRefs(
+    const ContainedRefsRequest &Req,
+    llvm::function_ref<void(const ContainedRefsResult &)> Callback) const {
+  trace::Span Tracer("MemIndex refersTo");
+  uint32_t Remaining = Req.Limit.value_or(std::numeric_limits<uint32_t>::max());
+  for (const auto &Pair : Refs) {
+    for (const auto &R : Pair.second) {
+      if (!static_cast<int>(ContainedRefsRequest::SupportedRefKinds & R.Kind) ||
+          Req.ID != R.Container)
+        continue;
+      if (Remaining == 0)
+        return true; // More refs were available.
+      --Remaining;
+      Callback({R.Location, R.Kind, Pair.first});
     }
   }
   return false; // We reported all refs.

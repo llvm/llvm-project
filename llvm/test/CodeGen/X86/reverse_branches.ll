@@ -37,7 +37,7 @@ define i32 @test_branches_order() uwtable ssp {
 ; CHECK-NEXT:    leaq -{{[0-9]+}}(%rsp), %r14
 ; CHECK-NEXT:    movq %rsp, %r15
 ; CHECK-NEXT:    jmp LBB0_1
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  LBB0_6: ## %for.inc9
 ; CHECK-NEXT:    ## in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    incl %ebx
@@ -51,7 +51,7 @@ define i32 @test_branches_order() uwtable ssp {
 ; CHECK-NEXT:    movl $-1, %ebp
 ; CHECK-NEXT:    movq %r15, %rdi
 ; CHECK-NEXT:    movq %r14, %r12
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  LBB0_3: ## %for.cond1
 ; CHECK-NEXT:    ## Parent Loop BB0_1 Depth=1
 ; CHECK-NEXT:    ## => This Inner Loop Header: Depth=2
@@ -75,7 +75,7 @@ define i32 @test_branches_order() uwtable ssp {
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    movq %rsp, %rcx
 ; CHECK-NEXT:    jmp LBB0_8
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  LBB0_15: ## %for.inc38
 ; CHECK-NEXT:    ## in Loop: Header=BB0_8 Depth=1
 ; CHECK-NEXT:    incl %eax
@@ -91,7 +91,7 @@ define i32 @test_branches_order() uwtable ssp {
 ; CHECK-NEXT:    xorl %esi, %esi
 ; CHECK-NEXT:    xorl %edi, %edi
 ; CHECK-NEXT:    jmp LBB0_10
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  LBB0_14: ## %exit
 ; CHECK-NEXT:    ## in Loop: Header=BB0_10 Depth=2
 ; CHECK-NEXT:    addq %rsi, %r8
@@ -109,7 +109,7 @@ define i32 @test_branches_order() uwtable ssp {
 ; CHECK-NEXT:  ## %bb.11: ## %for.body20
 ; CHECK-NEXT:    ## in Loop: Header=BB0_10 Depth=2
 ; CHECK-NEXT:    movq $-1000, %r8 ## imm = 0xFC18
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  LBB0_12: ## %do.body.i
 ; CHECK-NEXT:    ## Parent Loop BB0_8 Depth=1
 ; CHECK-NEXT:    ## Parent Loop BB0_10 Depth=2

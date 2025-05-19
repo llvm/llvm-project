@@ -3,7 +3,7 @@
 // RUN: %clang %cflags -Wl,-z,notext -shared -Wl,-q %s -o %t.so
 // RUN: llvm-bolt %t.so -o %t.so.bolt
 // RUN: llvm-nm -n %t.so.bolt > %t.out.txt
-// RUN: llvm-objdump -dj .rodata %t.so.bolt >> %t.out.txt
+// RUN: llvm-objdump -z -dj .rodata %t.so.bolt >> %t.out.txt
 // RUN: FileCheck %s --input-file=%t.out.txt
 
 # CHECK: w func_1

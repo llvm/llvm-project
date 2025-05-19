@@ -8,7 +8,6 @@
 
 #include "MCTargetDesc/BPFMCFixups.h"
 #include "MCTargetDesc/BPFMCTargetDesc.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
@@ -36,10 +35,7 @@ public:
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override;
 
-  unsigned getNumFixupKinds() const override {
-    return BPF::NumTargetFixupKinds;
-  }
-  const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
+  MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
 
   bool writeNopData(raw_ostream &OS, uint64_t Count,
                     const MCSubtargetInfo *STI) const override;
@@ -47,8 +43,7 @@ public:
 
 } // end anonymous namespace
 
-const MCFixupKindInfo &
-BPFAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
+MCFixupKindInfo BPFAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   const static MCFixupKindInfo Infos[BPF::NumTargetFixupKinds] = {
     { "FK_BPF_PCRel_4",  0, 32, MCFixupKindInfo::FKF_IsPCRel },
   };
@@ -56,7 +51,7 @@ BPFAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   if (Kind < FirstTargetFixupKind)
     return MCAsmBackend::getFixupKindInfo(Kind);
 
-  assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
+  assert(unsigned(Kind - FirstTargetFixupKind) < BPF::NumTargetFixupKinds &&
          "Invalid kind!");
   return Infos[Kind - FirstTargetFixupKind];
 }

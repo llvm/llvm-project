@@ -40,7 +40,8 @@ define void @osfx(ptr %this) comdat personality ptr @__CxxFrameHandler3 {
 ; CHECK-NEXT:  // %bb.1: // %invoke.cont12
 ; CHECK-NEXT:    str wzr, [x20]
 ; CHECK-NEXT:    str wzr, [x21]
-; CHECK-NEXT:  .LBB0_2: // %try.cont
+; CHECK-NEXT:  .LBB0_2: // Block address taken
+; CHECK-NEXT:    // %try.cont
 ; CHECK-NEXT:  $ehgcr_0_2:
 ; CHECK-NEXT:    .seh_startepilogue
 ; CHECK-NEXT:    sub sp, x29, #24
@@ -55,7 +56,7 @@ define void @osfx(ptr %this) comdat personality ptr @__CxxFrameHandler3 {
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:    .seh_endfunclet
 ; CHECK-NEXT:    .seh_handlerdata
-; CHECK-NEXT:    .word ($cppxdata$osfx)@IMGREL
+; CHECK-NEXT:    .word $cppxdata$osfx@IMGREL
 ; CHECK-NEXT:    .section .text,"xr",discard,osfx
 ; CHECK-NEXT:    .seh_endproc
 ; CHECK-NEXT:    .def "?catch$3@?0?osfx@4HA";

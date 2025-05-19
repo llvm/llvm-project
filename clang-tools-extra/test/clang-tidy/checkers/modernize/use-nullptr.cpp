@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s modernize-use-nullptr %t -- \
+// RUN: %check_clang_tidy --match-partial-fixes %s modernize-use-nullptr %t -- \
 // RUN:   -config="{CheckOptions: {modernize-use-nullptr.NullMacros: 'MY_NULL,NULL'}}"
 
 #define NULL 0
@@ -82,6 +82,31 @@ void test_macro_expansion4() {
   // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: use nullptr [modernize-use-nullptr]
   // CHECK-FIXES: int *p = nullptr;
 #undef MY_NULL
+}
+
+template <typename T> struct pear {
+  // If you say __null (or NULL), we assume that T will always be a pointer
+  // type, so we suggest replacing it with nullptr. (We only check __null here,
+  // because in this test NULL is defined as 0, but real library implementations
+  // it is often defined as __null and the check will catch it.)
+  void f() { x = __null; }
+  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: use nullptr [modernize-use-nullptr]
+  // CHECK-FIXES: x = nullptr;
+
+  // But if you say 0, we allow the possibility that T can be used with integral
+  // and pointer types, and "0" is an acceptable initializer (even if "{}" might
+  // be even better).
+  void g() { y = 0; }
+  // CHECK-MESSAGES-NOT: :[[@LINE-1]] warning: use nullptr
+
+  T x;
+  T y;
+};
+void test_templated() {
+  pear<int*> p;
+  p.f();
+  p.g();
+  dummy(p.x);
 }
 
 #define IS_EQ(x, y) if (x != y) return;

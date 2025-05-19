@@ -961,7 +961,7 @@ printed one by one.
 [1] The `max_children` argument is optional (since lldb 3.8.0) and indicates the
 maximum number of children that lldb is interested in (at this moment). If the
 computation of the number of children is expensive (for example, requires
-travesing a linked list to determine its size) your implementation may return
+traversing a linked list to determine its size) your implementation may return
 `max_children` rather than the actual number. If the computation is cheap (e.g., the
 number is stored as a field of the object), then you can always return the true
 number of children (that is, ignore the `max_children` argument).
@@ -1226,13 +1226,13 @@ By default, several categories are created in LLDB:
 - CoreServices: CS classes
 - VectorTypes: compact display for several vector types
 
-If you want to use a custom category for your formatters, all the type ... add
-provide a --category (-w) option, that names the category to add the formatter
+If you want to use a custom category for your formatters, all the ``type ... add``
+provide a ``--category`` (``-w``) option, that names the category to add the formatter
 to. To delete the formatter, you then have to specify the correct category.
 
 Categories can be in one of two states: enabled and disabled. A category is
-initially disabled, and can be enabled using the type category enable command.
-To disable an enabled category, the command to use is type category disable.
+initially disabled, and can be enabled using the ``type category enable`` command.
+To disable an enabled category, the command to use is ``type category disable``.
 
 The order in which categories are enabled or disabled is significant, in that
 LLDB uses that order when looking for formatters. Therefore, when you enable a

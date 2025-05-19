@@ -137,7 +137,7 @@ SBBreakpointLocation SBBreakpoint::FindLocationByAddress(addr_t vm_addr) {
           bkpt_sp->GetTarget().GetAPIMutex());
       Address address;
       Target &target = bkpt_sp->GetTarget();
-      if (!target.GetSectionLoadList().ResolveLoadAddress(vm_addr, address)) {
+      if (!target.ResolveLoadAddress(vm_addr, address)) {
         address.SetRawAddress(vm_addr);
       }
       sb_bp_location.SetLocation(bkpt_sp->FindLocationByAddress(address));
@@ -157,7 +157,7 @@ break_id_t SBBreakpoint::FindLocationIDByAddress(addr_t vm_addr) {
         bkpt_sp->GetTarget().GetAPIMutex());
     Address address;
     Target &target = bkpt_sp->GetTarget();
-    if (!target.GetSectionLoadList().ResolveLoadAddress(vm_addr, address)) {
+    if (!target.ResolveLoadAddress(vm_addr, address)) {
       address.SetRawAddress(vm_addr);
     }
     break_id = bkpt_sp->FindLocationIDByAddress(address);
@@ -622,7 +622,7 @@ SBError SBBreakpoint::SetScriptCallbackFunction(
                                                callback_function_name,
                                                extra_args.m_impl_up
                                                    ->GetObjectSP());
-    sb_error.SetError(error);
+    sb_error.SetError(std::move(error));
   } else
     sb_error = Status::FromErrorString("invalid breakpoint");
 
@@ -645,7 +645,7 @@ SBError SBBreakpoint::SetScriptCallbackBody(const char *callback_body_text) {
             .GetScriptInterpreter()
             ->SetBreakpointCommandCallback(bp_options, callback_body_text,
                                            /*is_callback=*/false);
-    sb_error.SetError(error);
+    sb_error.SetError(std::move(error));
   } else
     sb_error = Status::FromErrorString("invalid breakpoint");
 
@@ -670,7 +670,7 @@ SBError SBBreakpoint::AddNameWithErrorHandling(const char *new_name) {
         bkpt_sp->GetTarget().GetAPIMutex());
     Status error;
     bkpt_sp->GetTarget().AddNameToBreakpoint(bkpt_sp, new_name, error);
-    status.SetError(error);
+    status.SetError(std::move(error));
   } else {
     status = Status::FromErrorString("invalid breakpoint");
   }

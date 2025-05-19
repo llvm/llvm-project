@@ -26,6 +26,7 @@ struct NameUniquer;
 #define GEN_PASS_DECL_CODEGENREWRITE
 #define GEN_PASS_DECL_TARGETREWRITEPASS
 #define GEN_PASS_DECL_BOXEDPROCEDUREPASS
+#define GEN_PASS_DECL_LOWERREPACKARRAYSPASS
 #include "flang/Optimizer/CodeGen/CGPasses.h.inc"
 
 /// FIR to LLVM translation pass options.
@@ -72,9 +73,9 @@ std::unique_ptr<mlir::Pass> createLLVMDialectToLLVMPass(
         [](llvm::Module &m, llvm::raw_ostream &out) { m.print(out, nullptr); });
 
 /// Populate the given list with patterns that convert from FIR to LLVM.
-void populateFIRToLLVMConversionPatterns(fir::LLVMTypeConverter &converter,
-                                         mlir::RewritePatternSet &patterns,
-                                         fir::FIRToLLVMPassOptions &options);
+void populateFIRToLLVMConversionPatterns(
+    const fir::LLVMTypeConverter &converter, mlir::RewritePatternSet &patterns,
+    fir::FIRToLLVMPassOptions &options);
 
 /// Populate the pattern set with the PreCGRewrite patterns.
 void populatePreCGRewritePatterns(mlir::RewritePatternSet &patterns,

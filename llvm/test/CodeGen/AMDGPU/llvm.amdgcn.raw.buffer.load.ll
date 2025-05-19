@@ -45,7 +45,7 @@ main_body:
   %data = call <4 x float> @llvm.amdgcn.raw.buffer.load.v4f32(<4 x i32> %0, i32 0, i32 0, i32 0)
   %data_glc = call <4 x float> @llvm.amdgcn.raw.buffer.load.v4f32(<4 x i32> %0, i32 0, i32 0, i32 1)
   %data_slc = call <4 x float> @llvm.amdgcn.raw.buffer.load.v4f32(<4 x i32> %0, i32 0, i32 0, i32 2)
-  %r0 = insertvalue {<4 x float>, <4 x float>, <4 x float>} undef, <4 x float> %data, 0
+  %r0 = insertvalue {<4 x float>, <4 x float>, <4 x float>} poison, <4 x float> %data, 0
   %r1 = insertvalue {<4 x float>, <4 x float>, <4 x float>} %r0, <4 x float> %data_glc, 1
   %r2 = insertvalue {<4 x float>, <4 x float>, <4 x float>} %r1, <4 x float> %data_slc, 2
   ret {<4 x float>, <4 x float>, <4 x float>} %r2
@@ -90,7 +90,7 @@ main_body:
   %data = call <4 x float> @llvm.amdgcn.raw.buffer.load.v4f32(<4 x i32> %0, i32 0, i32 0, i32 4)
   %data_glc = call <4 x float> @llvm.amdgcn.raw.buffer.load.v4f32(<4 x i32> %0, i32 0, i32 0, i32 5)
   %data_slc = call <4 x float> @llvm.amdgcn.raw.buffer.load.v4f32(<4 x i32> %0, i32 0, i32 0, i32 6)
-  %r0 = insertvalue {<4 x float>, <4 x float>, <4 x float>} undef, <4 x float> %data, 0
+  %r0 = insertvalue {<4 x float>, <4 x float>, <4 x float>} poison, <4 x float> %data, 0
   %r1 = insertvalue {<4 x float>, <4 x float>, <4 x float>} %r0, <4 x float> %data_glc, 1
   %r2 = insertvalue {<4 x float>, <4 x float>, <4 x float>} %r1, <4 x float> %data_slc, 2
   ret {<4 x float>, <4 x float>, <4 x float>} %r2
@@ -556,7 +556,7 @@ main_body:
   %r5 = call float @llvm.amdgcn.raw.buffer.load.f32(<4 x i32> %rsrc, i32 %a5, i32 0, i32 0)
   %r6 = call float @llvm.amdgcn.raw.buffer.load.f32(<4 x i32> %rsrc, i32 %a6, i32 0, i32 0)
   call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r1, float %r2, float %r3, float %r4, i1 true, i1 true)
-  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r5, float %r6, float undef, float undef, i1 true, i1 true)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r5, float %r6, float poison, float poison, i1 true, i1 true)
   ret void
 }
 
@@ -644,7 +644,7 @@ main_body:
   %r5 = call float @llvm.amdgcn.raw.buffer.load.f32(<4 x i32> %rsrc, i32 %a5, i32 0, i32 0)
   %r6 = call float @llvm.amdgcn.raw.buffer.load.f32(<4 x i32> %rsrc, i32 %a6, i32 0, i32 0)
   call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r1, float %r2, float %r3, float %r4, i1 true, i1 true)
-  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r5, float %r6, float undef, float undef, i1 true, i1 true)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r5, float %r6, float poison, float poison, i1 true, i1 true)
   ret void
 }
 
@@ -709,7 +709,7 @@ main_body:
   %r5 = call float @llvm.amdgcn.raw.buffer.load.f32(<4 x i32> %rsrc, i32 %a5, i32 0, i32 3)
   %r6 = call float @llvm.amdgcn.raw.buffer.load.f32(<4 x i32> %rsrc, i32 %a6, i32 0, i32 3)
   call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r1, float %r2, float %r3, float %r4, i1 true, i1 true)
-  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r5, float %r6, float undef, float undef, i1 true, i1 true)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r5, float %r6, float poison, float poison, i1 true, i1 true)
   ret void
 }
 
@@ -851,7 +851,7 @@ main_body:
   %r5 = call float @llvm.amdgcn.raw.buffer.load.f32(<4 x i32> %rsrc, i32 28, i32 0, i32 0)
   %r6 = call float @llvm.amdgcn.raw.buffer.load.f32(<4 x i32> %rsrc, i32 32, i32 0, i32 0)
   call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r1, float %r2, float %r3, float %r4, i1 true, i1 true)
-  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r5, float %r6, float undef, float undef, i1 true, i1 true)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r5, float %r6, float poison, float poison, i1 true, i1 true)
   ret void
 }
 
@@ -936,7 +936,7 @@ main_body:
   %fdata = bitcast <4 x i32> %data to <4 x float>
   %fdata_glc = bitcast <2 x i32> %data_glc to <2 x float>
   %fdata_slc = bitcast i32 %data_slc to float
-  %r0 = insertvalue {<4 x float>, <2 x float>, float} undef, <4 x float> %fdata, 0
+  %r0 = insertvalue {<4 x float>, <2 x float>, float} poison, <4 x float> %fdata, 0
   %r1 = insertvalue {<4 x float>, <2 x float>, float} %r0, <2 x float> %fdata_glc, 1
   %r2 = insertvalue {<4 x float>, <2 x float>, float} %r1, float %fdata_slc, 2
   ret {<4 x float>, <2 x float>, float} %r2
@@ -1308,12 +1308,12 @@ main_body:
   %r5 = call float @llvm.amdgcn.raw.buffer.load.f32(<4 x i32> %rsrc, i32 28, i32 0, i32 0)
   %r6 = call float @llvm.amdgcn.raw.buffer.load.f32(<4 x i32> %rsrc, i32 32, i32 0, i32 0)
   call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r1, float %r2, float %r3, float %r4, i1 true, i1 true)
-  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r5, float %r6, float undef, float undef, i1 true, i1 true)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r5, float %r6, float poison, float poison, i1 true, i1 true)
   ret void
 }
 
-define amdgpu_ps void @raw_buffer_load_x1_offset_swizzled_not_merged(<4 x i32> inreg %rsrc) {
-; PREGFX10-LABEL: raw_buffer_load_x1_offset_swizzled_not_merged:
+define amdgpu_ps void @raw_buffer_load_x1_offset_swizzled_not_merged_pregfx12(<4 x i32> inreg %rsrc) {
+; PREGFX10-LABEL: raw_buffer_load_x1_offset_swizzled_not_merged_pregfx12:
 ; PREGFX10:       ; %bb.0: ; %main_body
 ; PREGFX10-NEXT:    buffer_load_dword v0, off, s[0:3], 0 offset:4
 ; PREGFX10-NEXT:    buffer_load_dword v1, off, s[0:3], 0 offset:8
@@ -1327,7 +1327,7 @@ define amdgpu_ps void @raw_buffer_load_x1_offset_swizzled_not_merged(<4 x i32> i
 ; PREGFX10-NEXT:    exp mrt0 v4, v5, v0, v0 done vm
 ; PREGFX10-NEXT:    s_endpgm
 ;
-; GFX10-LABEL: raw_buffer_load_x1_offset_swizzled_not_merged:
+; GFX10-LABEL: raw_buffer_load_x1_offset_swizzled_not_merged_pregfx12:
 ; GFX10:       ; %bb.0: ; %main_body
 ; GFX10-NEXT:    s_clause 0x5
 ; GFX10-NEXT:    buffer_load_dword v0, off, s[0:3], 0 offset:4
@@ -1342,7 +1342,7 @@ define amdgpu_ps void @raw_buffer_load_x1_offset_swizzled_not_merged(<4 x i32> i
 ; GFX10-NEXT:    exp mrt0 v4, v5, v0, v0 done vm
 ; GFX10-NEXT:    s_endpgm
 ;
-; GFX11-LABEL: raw_buffer_load_x1_offset_swizzled_not_merged:
+; GFX11-LABEL: raw_buffer_load_x1_offset_swizzled_not_merged_pregfx12:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    s_clause 0x5
 ; GFX11-NEXT:    buffer_load_b32 v0, off, s[0:3], 0 offset:4
@@ -1357,7 +1357,7 @@ define amdgpu_ps void @raw_buffer_load_x1_offset_swizzled_not_merged(<4 x i32> i
 ; GFX11-NEXT:    exp mrt0 v4, v5, v0, v0 done
 ; GFX11-NEXT:    s_endpgm
 ;
-; GFX12-LABEL: raw_buffer_load_x1_offset_swizzled_not_merged:
+; GFX12-LABEL: raw_buffer_load_x1_offset_swizzled_not_merged_pregfx12:
 ; GFX12:       ; %bb.0: ; %main_body
 ; GFX12-NEXT:    s_clause 0x1
 ; GFX12-NEXT:    buffer_load_b128 v[0:3], off, s[0:3], null offset:4 scope:SCOPE_SE
@@ -1375,7 +1375,66 @@ main_body:
   %r5 = call float @llvm.amdgcn.raw.buffer.load.f32(<4 x i32> %rsrc, i32 28, i32 0, i32 8)
   %r6 = call float @llvm.amdgcn.raw.buffer.load.f32(<4 x i32> %rsrc, i32 32, i32 0, i32 8)
   call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r1, float %r2, float %r3, float %r4, i1 true, i1 true)
-  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r5, float %r6, float undef, float undef, i1 true, i1 true)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r5, float %r6, float poison, float poison, i1 true, i1 true)
+  ret void
+}
+
+define amdgpu_ps void @raw_buffer_load_x1_offset_swizzled_not_merged(<4 x i32> inreg %rsrc) {
+; PREGFX10-LABEL: raw_buffer_load_x1_offset_swizzled_not_merged:
+; PREGFX10:       ; %bb.0: ; %main_body
+; PREGFX10-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], 0 offset:4
+; PREGFX10-NEXT:    buffer_load_dwordx2 v[4:5], off, s[0:3], 0 offset:28
+; PREGFX10-NEXT:    s_waitcnt vmcnt(1)
+; PREGFX10-NEXT:    exp mrt0 v0, v1, v2, v3 done vm
+; PREGFX10-NEXT:    s_waitcnt vmcnt(0)
+; PREGFX10-NEXT:    exp mrt0 v4, v5, v0, v0 done vm
+; PREGFX10-NEXT:    s_endpgm
+;
+; GFX10-LABEL: raw_buffer_load_x1_offset_swizzled_not_merged:
+; GFX10:       ; %bb.0: ; %main_body
+; GFX10-NEXT:    s_clause 0x1
+; GFX10-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], 0 offset:4
+; GFX10-NEXT:    buffer_load_dwordx2 v[4:5], off, s[0:3], 0 offset:28
+; GFX10-NEXT:    s_waitcnt vmcnt(1)
+; GFX10-NEXT:    exp mrt0 v0, v1, v2, v3 done vm
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    exp mrt0 v4, v5, v0, v0 done vm
+; GFX10-NEXT:    s_endpgm
+;
+; GFX11-LABEL: raw_buffer_load_x1_offset_swizzled_not_merged:
+; GFX11:       ; %bb.0: ; %main_body
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    buffer_load_b128 v[0:3], off, s[0:3], 0 offset:4
+; GFX11-NEXT:    buffer_load_b64 v[4:5], off, s[0:3], 0 offset:28
+; GFX11-NEXT:    s_waitcnt vmcnt(1)
+; GFX11-NEXT:    exp mrt0 v0, v1, v2, v3 done
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    exp mrt0 v4, v5, v0, v0 done
+; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: raw_buffer_load_x1_offset_swizzled_not_merged:
+; GFX12:       ; %bb.0: ; %main_body
+; GFX12-NEXT:    s_clause 0x5
+; GFX12-NEXT:    buffer_load_b32 v0, off, s[0:3], null offset:4
+; GFX12-NEXT:    buffer_load_b32 v1, off, s[0:3], null offset:8
+; GFX12-NEXT:    buffer_load_b32 v2, off, s[0:3], null offset:12
+; GFX12-NEXT:    buffer_load_b32 v3, off, s[0:3], null offset:16
+; GFX12-NEXT:    buffer_load_b32 v4, off, s[0:3], null offset:28
+; GFX12-NEXT:    buffer_load_b32 v5, off, s[0:3], null offset:32
+; GFX12-NEXT:    s_wait_loadcnt 0x2
+; GFX12-NEXT:    export mrt0 v0, v1, v2, v3 done
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    export mrt0 v4, v5, v0, v0 done
+; GFX12-NEXT:    s_endpgm
+main_body:
+  %r1 = call float @llvm.amdgcn.raw.buffer.load.f32(<4 x i32> %rsrc, i32 4, i32 0, i32 64)
+  %r2 = call float @llvm.amdgcn.raw.buffer.load.f32(<4 x i32> %rsrc, i32 8, i32 0, i32 64)
+  %r3 = call float @llvm.amdgcn.raw.buffer.load.f32(<4 x i32> %rsrc, i32 12, i32 0, i32 64)
+  %r4 = call float @llvm.amdgcn.raw.buffer.load.f32(<4 x i32> %rsrc, i32 16, i32 0, i32 64)
+  %r5 = call float @llvm.amdgcn.raw.buffer.load.f32(<4 x i32> %rsrc, i32 28, i32 0, i32 64)
+  %r6 = call float @llvm.amdgcn.raw.buffer.load.f32(<4 x i32> %rsrc, i32 32, i32 0, i32 64)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r1, float %r2, float %r3, float %r4, i1 true, i1 true)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r5, float %r6, float poison, float poison, i1 true, i1 true)
   ret void
 }
 

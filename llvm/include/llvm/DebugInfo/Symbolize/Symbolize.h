@@ -58,11 +58,13 @@ public:
     bool RelativeAddresses = false;
     bool UntagAddresses = false;
     bool UseDIA = false;
+    bool DisableGsym = false;
     std::string DefaultArch;
     std::vector<std::string> DsymHints;
     std::string FallbackDebugPath;
     std::string DWPName;
     std::vector<std::string> DebugFileDirectory;
+    std::vector<std::string> GsymFileDirectory;
     size_t MaxCacheSize =
         sizeof(size_t) == 4
             ? 512 * 1024 * 1024 /* 512 MiB */
@@ -120,8 +122,7 @@ public:
   void pruneCache();
 
   static std::string
-  DemangleName(const std::string &Name,
-               const SymbolizableModule *DbiModuleDescriptor);
+  DemangleName(StringRef Name, const SymbolizableModule *DbiModuleDescriptor);
 
   void setBuildIDFetcher(std::unique_ptr<BuildIDFetcher> Fetcher) {
     BIDFetcher = std::move(Fetcher);
@@ -178,6 +179,7 @@ private:
   ObjectFile *lookUpBuildIDObject(const std::string &Path,
                                   const ELFObjectFileBase *Obj,
                                   const std::string &ArchName);
+  std::string lookUpGsymFile(const std::string &Path);
 
   bool findDebugBinary(const std::string &OrigPath,
                        const std::string &DebuglinkName, uint32_t CRCHash,

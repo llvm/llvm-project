@@ -16,6 +16,39 @@ using namespace llvm;
 using namespace lldb;
 using namespace lldb_private;
 
+/// The 0th frame is the artificial inline frame generated to store
+/// the verbose_trap message. So, starting with the current parent frame,
+/// find the first frame that's not inside of the STL.
+static StackFrameSP FindMostRelevantFrame(Thread &selected_thread) {
+  // Defensive upper-bound of when we stop walking up the frames in
+  // case we somehow ended up looking at an infinite recursion.
+  const size_t max_stack_depth = 128;
+
+  // Start at parent frame.
+  size_t stack_idx = 1;
+  StackFrameSP most_relevant_frame_sp =
+      selected_thread.GetStackFrameAtIndex(stack_idx);
+
+  while (most_relevant_frame_sp && stack_idx <= max_stack_depth) {
+    auto const &sc =
+        most_relevant_frame_sp->GetSymbolContext(eSymbolContextEverything);
+    ConstString frame_name = sc.GetFunctionName();
+    if (!frame_name)
+      return nullptr;
+
+    // Found a frame outside of the `std` namespace. That's the
+    // first frame in user-code that ended up triggering the
+    // verbose_trap. Hence that's the one we want to display.
+    if (!frame_name.GetStringRef().starts_with("std::"))
+      return most_relevant_frame_sp;
+
+    ++stack_idx;
+    most_relevant_frame_sp = selected_thread.GetStackFrameAtIndex(stack_idx);
+  }
+
+  return nullptr;
+}
+
 VerboseTrapRecognizedStackFrame::VerboseTrapRecognizedStackFrame(
     StackFrameSP most_relevant_frame_sp, std::string stop_desc)
     : m_most_relevant_frame(most_relevant_frame_sp) {
@@ -30,7 +63,7 @@ VerboseTrapFrameRecognizer::RecognizeFrame(lldb::StackFrameSP frame_sp) {
   ThreadSP thread_sp = frame_sp->GetThread();
   ProcessSP process_sp = thread_sp->GetProcess();
 
-  StackFrameSP most_relevant_frame_sp = thread_sp->GetStackFrameAtIndex(1);
+  StackFrameSP most_relevant_frame_sp = FindMostRelevantFrame(*thread_sp);
 
   if (!most_relevant_frame_sp) {
     Log *log = GetLog(LLDBLog::Unwind);

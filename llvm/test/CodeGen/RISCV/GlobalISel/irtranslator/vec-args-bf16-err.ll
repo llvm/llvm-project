@@ -11,6 +11,6 @@ entry:
   ret void
 }
 
-; CHECK: LLVM ERROR: unable to lower arguments: ptr (in function: test_args_nxv1bf16)
+; CHECK: LLVM ERROR: unable to lower arguments: void (<vscale x 1 x bfloat>) (in function: test_args_nxv1bf16)
 
 

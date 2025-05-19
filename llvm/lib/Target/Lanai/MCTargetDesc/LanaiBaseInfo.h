@@ -37,8 +37,8 @@ enum TOF {
 };
 } // namespace LanaiII
 
-static inline unsigned getLanaiRegisterNumbering(unsigned Reg) {
-  switch (Reg) {
+static inline unsigned getLanaiRegisterNumbering(MCRegister Reg) {
+  switch (Reg.id()) {
   case Lanai::R0:
     return 0;
   case Lanai::R1:

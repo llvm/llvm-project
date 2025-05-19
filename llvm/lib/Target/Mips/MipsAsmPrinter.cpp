@@ -17,12 +17,12 @@
 #include "MCTargetDesc/MipsInstPrinter.h"
 #include "MCTargetDesc/MipsMCNaCl.h"
 #include "MCTargetDesc/MipsMCTargetDesc.h"
+#include "MCTargetDesc/MipsTargetStreamer.h"
 #include "Mips.h"
 #include "MipsMCInstLower.h"
 #include "MipsMachineFunction.h"
 #include "MipsSubtarget.h"
 #include "MipsTargetMachine.h"
-#include "MipsTargetStreamer.h"
 #include "TargetInfo/MipsTargetInfo.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
@@ -81,12 +81,8 @@ bool MipsAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
 
   MipsFI = MF.getInfo<MipsFunctionInfo>();
   if (Subtarget->inMips16Mode())
-    for (const auto &I : MipsFI->StubsNeeded) {
-      const char *Symbol = I.first;
-      const Mips16HardFloatInfo::FuncSignature *Signature = I.second;
-      if (StubsNeeded.find(Symbol) == StubsNeeded.end())
-        StubsNeeded[Symbol] = Signature;
-    }
+    for (const auto &I : MipsFI->StubsNeeded)
+      StubsNeeded.insert(I);
   MCP = MF.getConstantPool();
 
   // In NaCl, all indirect jump targets must be aligned to bundle size.
@@ -384,7 +380,7 @@ void MipsAsmPrinter::emitFrameDirective() {
   const TargetRegisterInfo &RI = *MF->getSubtarget().getRegisterInfo();
 
   Register stackReg = RI.getFrameRegister(*MF);
-  unsigned returnReg = RI.getRARegister();
+  MCRegister returnReg = RI.getRARegister();
   unsigned stackSize = MF->getFrameInfo().getStackSize();
 
   getTargetStreamer().emitFrame(stackReg, stackSize, returnReg);
@@ -718,9 +714,8 @@ printMemOperandEA(const MachineInstr *MI, int opNum, raw_ostream &O) {
   printOperand(MI, opNum+1, O);
 }
 
-void MipsAsmPrinter::
-printFCCOperand(const MachineInstr *MI, int opNum, raw_ostream &O,
-                const char *Modifier) {
+void MipsAsmPrinter::printFCCOperand(const MachineInstr *MI, int opNum,
+                                     raw_ostream &O) {
   const MachineOperand &MO = MI->getOperand(opNum);
   O << Mips::MipsFCCToString((Mips::CondCode)MO.getImm());
 }
@@ -734,70 +729,73 @@ printRegisterList(const MachineInstr *MI, int opNum, raw_ostream &O) {
 }
 
 void MipsAsmPrinter::emitStartOfAsmFile(Module &M) {
-  MipsTargetStreamer &TS = getTargetStreamer();
-
-  // MipsTargetStreamer has an initialization order problem when emitting an
-  // object file directly (see MipsTargetELFStreamer for full details). Work
-  // around it by re-initializing the PIC state here.
-  TS.setPic(OutContext.getObjectFileInfo()->isPositionIndependent());
-
-  // Try to get target-features from the first function.
-  StringRef FS = TM.getTargetFeatureString();
-  Module::iterator F = M.begin();
-  if (FS.empty() && M.size() && F->hasFnAttribute("target-features"))
-    FS = F->getFnAttribute("target-features").getValueAsString();
-
-  // Compute MIPS architecture attributes based on the default subtarget
-  // that we'd have constructed.
-  // FIXME: For ifunc related functions we could iterate over and look
-  // for a feature string that doesn't match the default one.
   const Triple &TT = TM.getTargetTriple();
-  StringRef CPU = MIPS_MC::selectMipsCPU(TT, TM.getTargetCPU());
-  const MipsTargetMachine &MTM = static_cast<const MipsTargetMachine &>(TM);
-  const MipsSubtarget STI(TT, CPU, FS, MTM.isLittleEndian(), MTM, std::nullopt);
 
-  bool IsABICalls = STI.isABICalls();
-  const MipsABIInfo &ABI = MTM.getABI();
-  if (IsABICalls) {
-    TS.emitDirectiveAbiCalls();
-    // FIXME: This condition should be a lot more complicated that it is here.
-    //        Ideally it should test for properties of the ABI and not the ABI
-    //        itself.
-    //        For the moment, I'm only correcting enough to make MIPS-IV work.
-    if (!isPositionIndependent() && STI.hasSym32())
-      TS.emitDirectiveOptionPic0();
+  if (TT.isOSBinFormatELF()) {
+    MipsTargetStreamer &TS = getTargetStreamer();
+
+    // MipsTargetStreamer has an initialization order problem when emitting an
+    // object file directly (see MipsTargetELFStreamer for full details). Work
+    // around it by re-initializing the PIC state here.
+    TS.setPic(OutContext.getObjectFileInfo()->isPositionIndependent());
+
+    // Try to get target-features from the first function.
+    StringRef FS = TM.getTargetFeatureString();
+    Module::iterator F = M.begin();
+    if (FS.empty() && M.size() && F->hasFnAttribute("target-features"))
+      FS = F->getFnAttribute("target-features").getValueAsString();
+
+    // Compute MIPS architecture attributes based on the default subtarget
+    // that we'd have constructed.
+    // FIXME: For ifunc related functions we could iterate over and look
+    // for a feature string that doesn't match the default one.
+    StringRef CPU = MIPS_MC::selectMipsCPU(TT, TM.getTargetCPU());
+    const MipsTargetMachine &MTM = static_cast<const MipsTargetMachine &>(TM);
+    const MipsSubtarget STI(TT, CPU, FS, MTM.isLittleEndian(), MTM,
+                            std::nullopt);
+
+    bool IsABICalls = STI.isABICalls();
+    const MipsABIInfo &ABI = MTM.getABI();
+    if (IsABICalls) {
+      TS.emitDirectiveAbiCalls();
+      // FIXME: This condition should be a lot more complicated that it is here.
+      //        Ideally it should test for properties of the ABI and not the ABI
+      //        itself.
+      //        For the moment, I'm only correcting enough to make MIPS-IV work.
+      if (!isPositionIndependent() && STI.hasSym32())
+        TS.emitDirectiveOptionPic0();
+    }
+
+    // Tell the assembler which ABI we are using
+    std::string SectionName = std::string(".mdebug.") + getCurrentABIString();
+    OutStreamer->switchSection(
+        OutContext.getELFSection(SectionName, ELF::SHT_PROGBITS, 0));
+
+    // NaN: At the moment we only support:
+    // 1. .nan legacy (default)
+    // 2. .nan 2008
+    STI.isNaN2008() ? TS.emitDirectiveNaN2008() : TS.emitDirectiveNaNLegacy();
+
+    // TODO: handle O64 ABI
+
+    TS.updateABIInfo(STI);
+
+    // We should always emit a '.module fp=...' but binutils 2.24 does not
+    // accept it. We therefore emit it when it contradicts the ABI defaults
+    // (-mfpxx or -mfp64) and omit it otherwise.
+    if ((ABI.IsO32() && (STI.isABI_FPXX() || STI.isFP64bit())) ||
+        STI.useSoftFloat())
+      TS.emitDirectiveModuleFP();
+
+    // We should always emit a '.module [no]oddspreg' but binutils 2.24 does not
+    // accept it. We therefore emit it when it contradicts the default or an
+    // option has changed the default (i.e. FPXX) and omit it otherwise.
+    if (ABI.IsO32() && (!STI.useOddSPReg() || STI.isABI_FPXX()))
+      TS.emitDirectiveModuleOddSPReg();
+
+    // Switch to the .text section.
+    OutStreamer->switchSection(getObjFileLowering().getTextSection());
   }
-
-  // Tell the assembler which ABI we are using
-  std::string SectionName = std::string(".mdebug.") + getCurrentABIString();
-  OutStreamer->switchSection(
-      OutContext.getELFSection(SectionName, ELF::SHT_PROGBITS, 0));
-
-  // NaN: At the moment we only support:
-  // 1. .nan legacy (default)
-  // 2. .nan 2008
-  STI.isNaN2008() ? TS.emitDirectiveNaN2008()
-                  : TS.emitDirectiveNaNLegacy();
-
-  // TODO: handle O64 ABI
-
-  TS.updateABIInfo(STI);
-
-  // We should always emit a '.module fp=...' but binutils 2.24 does not accept
-  // it. We therefore emit it when it contradicts the ABI defaults (-mfpxx or
-  // -mfp64) and omit it otherwise.
-  if ((ABI.IsO32() && (STI.isABI_FPXX() || STI.isFP64bit())) ||
-      STI.useSoftFloat())
-    TS.emitDirectiveModuleFP();
-
-  // We should always emit a '.module [no]oddspreg' but binutils 2.24 does not
-  // accept it. We therefore emit it when it contradicts the default or an
-  // option has changed the default (i.e. FPXX) and omit it otherwise.
-  if (ABI.IsO32() && (!STI.useOddSPReg() || STI.isABI_FPXX()))
-    TS.emitDirectiveModuleOddSPReg();
-
-  // Switch to the .text section.
-  OutStreamer->switchSection(getObjFileLowering().getTextSection());
 }
 
 void MipsAsmPrinter::emitInlineAsmStart() const {
@@ -820,6 +818,29 @@ void MipsAsmPrinter::emitInlineAsmEnd(const MCSubtargetInfo &StartInfo,
                                       const MCSubtargetInfo *EndInfo) const {
   OutStreamer->addBlankLine();
   getTargetStreamer().emitDirectiveSetPop();
+}
+
+void MipsAsmPrinter::emitJumpTableEntry(const MachineJumpTableInfo &MJTI,
+                                        const MachineBasicBlock *MBB,
+                                        unsigned uid) const {
+  MCSymbol *MBBSym = MBB->getSymbol();
+  switch (MJTI.getEntryKind()) {
+  case MachineJumpTableInfo::EK_BlockAddress:
+    OutStreamer->emitValue(MCSymbolRefExpr::create(MBBSym, OutContext),
+                           getDataLayout().getPointerSize());
+    break;
+  case MachineJumpTableInfo::EK_GPRel32BlockAddress:
+    // Each entry is a GP-relative value targeting the block symbol.
+    getTargetStreamer().emitGPRel32Value(
+        MCSymbolRefExpr::create(MBBSym, OutContext));
+    break;
+  case MachineJumpTableInfo::EK_GPRel64BlockAddress:
+    getTargetStreamer().emitGPRel64Value(
+        MCSymbolRefExpr::create(MBBSym, OutContext));
+    break;
+  default:
+    llvm_unreachable("");
+  }
 }
 
 void MipsAsmPrinter::EmitJal(const MCSubtargetInfo &STI, MCSymbol *Symbol) {
@@ -1177,8 +1198,7 @@ void MipsAsmPrinter::EmitSled(const MachineInstr &MI, SledKind Kind) {
 
   // Emit "B .tmpN" instruction, which jumps over the nop sled to the actual
   // start of function
-  const MCExpr *TargetExpr = MCSymbolRefExpr::create(
-      Target, MCSymbolRefExpr::VariantKind::VK_None, OutContext);
+  const MCExpr *TargetExpr = MCSymbolRefExpr::create(Target, OutContext);
   EmitToStreamer(*OutStreamer, MCInstBuilder(Mips::BEQ)
                                    .addReg(Mips::ZERO)
                                    .addReg(Mips::ZERO)
@@ -1224,13 +1244,13 @@ void MipsAsmPrinter::PrintDebugValueComment(const MachineInstr *MI,
 // and value for debug thread local expression.
 void MipsAsmPrinter::emitDebugValue(const MCExpr *Value, unsigned Size) const {
   if (auto *MipsExpr = dyn_cast<MipsMCExpr>(Value)) {
-    if (MipsExpr && MipsExpr->getKind() == MipsMCExpr::MEK_DTPREL) {
+    if (MipsExpr && MipsExpr->getSpecifier() == MipsMCExpr::MEK_DTPREL) {
       switch (Size) {
       case 4:
-        OutStreamer->emitDTPRel32Value(MipsExpr->getSubExpr());
+        getTargetStreamer().emitDTPRel32Value(MipsExpr->getSubExpr());
         break;
       case 8:
-        OutStreamer->emitDTPRel64Value(MipsExpr->getSubExpr());
+        getTargetStreamer().emitDTPRel64Value(MipsExpr->getSubExpr());
         break;
       default:
         llvm_unreachable("Unexpected size of expression value.");
@@ -1271,6 +1291,11 @@ bool MipsAsmPrinter::isLongBranchPseudo(int Opcode) const {
           || Opcode == Mips::LONG_BRANCH_DADDiu
           || Opcode == Mips::LONG_BRANCH_DADDiu2Op);
 }
+
+char MipsAsmPrinter::ID = 0;
+
+INITIALIZE_PASS(MipsAsmPrinter, "mips-asm-printer", "Mips Assembly Printer",
+                false, false)
 
 // Force static initialization.
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMipsAsmPrinter() {

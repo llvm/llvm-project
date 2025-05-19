@@ -10,9 +10,7 @@ define float @pred_fadda_nxv2f32(float %x, <vscale x 2 x float> %y, <vscale x 2 
 ; CHECK-NEXT:    fadda s0, p0, s0, z1.s
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $z0
 ; CHECK-NEXT:    ret
-  %i = insertelement <vscale x 2 x float> poison, float -0.000000e+00, i32 0
-  %minus0 = shufflevector <vscale x 2 x float> %i, <vscale x 2 x float> poison, <vscale x 2 x i32> zeroinitializer
-  %sel = select <vscale x 2 x i1> %mask, <vscale x 2 x float> %y, <vscale x 2 x float> %minus0
+  %sel = select <vscale x 2 x i1> %mask, <vscale x 2 x float> %y, <vscale x 2 x float> splat(float -0.000000e+00)
   %fadda = call float @llvm.vector.reduce.fadd.nxv2f32(float %x, <vscale x 2 x float> %sel)
   ret float %fadda
 }
@@ -24,9 +22,7 @@ define float @pred_fadda_nxv4f32(float %x, <vscale x 4 x float> %y, <vscale x 4 
 ; CHECK-NEXT:    fadda s0, p0, s0, z1.s
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $z0
 ; CHECK-NEXT:    ret
-  %i = insertelement <vscale x 4 x float> poison, float -0.000000e+00, i32 0
-  %minus0 = shufflevector <vscale x 4 x float> %i, <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer
-  %sel = select <vscale x 4 x i1> %mask, <vscale x 4 x float> %y, <vscale x 4 x float> %minus0
+  %sel = select <vscale x 4 x i1> %mask, <vscale x 4 x float> %y, <vscale x 4 x float> splat(float -0.000000e+00)
   %fadda = call float @llvm.vector.reduce.fadd.nxv4f32(float %x, <vscale x 4 x float> %sel)
   ret float %fadda
 }
@@ -38,9 +34,7 @@ define double @pred_fadda_nxv2f64(double %x, <vscale x 2 x double> %y, <vscale x
 ; CHECK-NEXT:    fadda d0, p0, d0, z1.d
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
-  %i = insertelement <vscale x 2 x double> poison, double -0.000000e+00, i32 0
-  %minus0 = shufflevector <vscale x 2 x double> %i, <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer
-  %sel = select <vscale x 2 x i1> %mask, <vscale x 2 x double> %y, <vscale x 2 x double> %minus0
+  %sel = select <vscale x 2 x i1> %mask, <vscale x 2 x double> %y, <vscale x 2 x double> splat(double -0.000000e+00)
   %fadda = call double @llvm.vector.reduce.fadd.nxv2f64(double %x, <vscale x 2 x double> %sel)
   ret double %fadda
 }
@@ -52,9 +46,7 @@ define half @pred_fadda_nxv2f16(half %x, <vscale x 2 x half> %y, <vscale x 2 x i
 ; CHECK-NEXT:    fadda h0, p0, h0, z1.h
 ; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $z0
 ; CHECK-NEXT:    ret
-  %i = insertelement <vscale x 2 x half> poison, half -0.000000e+00, i32 0
-  %minus0 = shufflevector <vscale x 2 x half> %i, <vscale x 2 x half> poison, <vscale x 2 x i32> zeroinitializer
-  %sel = select <vscale x 2 x i1> %mask, <vscale x 2 x half> %y, <vscale x 2 x half> %minus0
+  %sel = select <vscale x 2 x i1> %mask, <vscale x 2 x half> %y, <vscale x 2 x half> splat(half -0.000000e+00)
   %fadda = call half @llvm.vector.reduce.fadd.nxv2f16(half %x, <vscale x 2 x half> %sel)
   ret half %fadda
 }
@@ -66,9 +58,7 @@ define half @pred_fadda_nxv4f16(half %x, <vscale x 4 x half> %y, <vscale x 4 x i
 ; CHECK-NEXT:    fadda h0, p0, h0, z1.h
 ; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $z0
 ; CHECK-NEXT:    ret
-  %i = insertelement <vscale x 4 x half> poison, half -0.000000e+00, i32 0
-  %minus0 = shufflevector <vscale x 4 x half> %i, <vscale x 4 x half> poison, <vscale x 4 x i32> zeroinitializer
-  %sel = select <vscale x 4 x i1> %mask, <vscale x 4 x half> %y, <vscale x 4 x half> %minus0
+  %sel = select <vscale x 4 x i1> %mask, <vscale x 4 x half> %y, <vscale x 4 x half> splat(half -0.000000e+00)
   %fadda = call half @llvm.vector.reduce.fadd.nxv4f16(half %x, <vscale x 4 x half> %sel)
   ret half %fadda
 }
@@ -80,9 +70,7 @@ define half @pred_fadda_nxv8f16(half %x, <vscale x 8 x half> %y, <vscale x 8 x i
 ; CHECK-NEXT:    fadda h0, p0, h0, z1.h
 ; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $z0
 ; CHECK-NEXT:    ret
-  %i = insertelement <vscale x 8 x half> poison, half -0.000000e+00, i32 0
-  %minus0 = shufflevector <vscale x 8 x half> %i, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
-  %sel = select <vscale x 8 x i1> %mask, <vscale x 8 x half> %y, <vscale x 8 x half> %minus0
+  %sel = select <vscale x 8 x i1> %mask, <vscale x 8 x half> %y, <vscale x 8 x half> splat(half -0.000000e+00)
   %fadda = call half @llvm.vector.reduce.fadd.nxv8f16(half %x, <vscale x 8 x half> %sel)
   ret half %fadda
 }

@@ -22,13 +22,10 @@ add_mlir_dialect_library(MLIRMemRefTransforms
   MLIRMemRefPassIncGen
 
   LINK_LIBS PUBLIC
-  MLIRAffineDialect
   MLIRAffineTransforms
   MLIRAffineUtils
   MLIRArithDialect
   MLIRArithTransforms
-  MLIRBufferizationDialect
-  MLIRBufferizationTransforms
   MLIRDialectUtils
   MLIRFuncDialect
   MLIRGPUDialect

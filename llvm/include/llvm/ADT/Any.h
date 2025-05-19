@@ -25,7 +25,7 @@
 
 namespace llvm {
 
-class LLVM_EXTERNAL_VISIBILITY Any {
+class LLVM_ABI Any {
 
   // The `Typeid<T>::Id` static data member below is a globally unique
   // identifier for the type `T`. It is explicitly marked with default

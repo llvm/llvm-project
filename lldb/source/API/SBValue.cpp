@@ -21,8 +21,6 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Core/Value.h"
-#include "lldb/Core/ValueObject.h"
-#include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/DataFormatters/DataVisualization.h"
 #include "lldb/DataFormatters/DumpValueObjectOptions.h"
 #include "lldb/Symbol/Block.h"
@@ -38,6 +36,8 @@
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/ValueObject/ValueObject.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
 
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBExpressionOptions.h"
@@ -270,7 +270,7 @@ SBError SBValue::GetError() {
   ValueLocker locker;
   lldb::ValueObjectSP value_sp(GetSP(locker));
   if (value_sp)
-    sb_error.SetError(value_sp->GetError());
+    sb_error.SetError(value_sp->GetError().Clone());
   else
     sb_error = Status::FromErrorStringWithFormat("error: %s",
                                                  locker.GetError().AsCString());
@@ -329,7 +329,7 @@ size_t SBValue::GetByteSize() {
   ValueLocker locker;
   lldb::ValueObjectSP value_sp(GetSP(locker));
   if (value_sp) {
-    result = value_sp->GetByteSize().value_or(0);
+    result = llvm::expectedToOptional(value_sp->GetByteSize()).value_or(0);
   }
 
   return result;
@@ -380,8 +380,10 @@ const char *SBValue::GetObjectDescription() {
     return nullptr;
 
   llvm::Expected<std::string> str = value_sp->GetObjectDescription();
-  if (!str)
-    return ConstString("error: " + toString(str.takeError())).AsCString();
+  if (!str) {
+    llvm::consumeError(str.takeError());
+    return nullptr;
+  }
   return ConstString(*str).AsCString();
 }
 
@@ -645,6 +647,22 @@ lldb::SBValue SBValue::CreateValueFromData(const char *name, SBData data,
   return sb_value;
 }
 
+lldb::SBValue SBValue::CreateBoolValue(const char *name, bool value) {
+  LLDB_INSTRUMENT_VA(this, name);
+
+  lldb::SBValue sb_value;
+  lldb::ValueObjectSP new_value_sp;
+  ValueLocker locker;
+  lldb::ValueObjectSP value_sp(GetSP(locker));
+  lldb::TargetSP target_sp = m_opaque_sp->GetTargetSP();
+  if (value_sp && target_sp) {
+    new_value_sp =
+        ValueObject::CreateValueObjectFromBool(target_sp, value, name);
+  }
+  sb_value.SetSP(new_value_sp);
+  return sb_value;
+}
+
 SBValue SBValue::GetChildAtIndex(uint32_t idx) {
   LLDB_INSTRUMENT_VA(this, idx);
 
@@ -686,13 +704,15 @@ SBValue SBValue::GetChildAtIndex(uint32_t idx,
 uint32_t SBValue::GetIndexOfChildWithName(const char *name) {
   LLDB_INSTRUMENT_VA(this, name);
 
-  uint32_t idx = UINT32_MAX;
   ValueLocker locker;
   lldb::ValueObjectSP value_sp(GetSP(locker));
   if (value_sp) {
-    idx = value_sp->GetIndexOfChildWithName(name);
+    if (auto idx_or_err = value_sp->GetIndexOfChildWithName(name))
+      return *idx_or_err;
+    else
+      llvm::consumeError(idx_or_err.takeError());
   }
-  return idx;
+  return UINT32_MAX;
 }
 
 SBValue SBValue::GetChildMemberWithName(const char *name) {
@@ -1476,7 +1496,7 @@ lldb::SBWatchpoint SBValue::Watch(bool resolve_location, bool read, bool write,
     CompilerType type(value_sp->GetCompilerType());
     WatchpointSP watchpoint_sp =
         target_sp->CreateWatchpoint(addr, byte_size, &type, watch_type, rc);
-    error.SetError(rc);
+    error.SetError(std::move(rc));
 
     if (watchpoint_sp) {
       sb_watchpoint.SetSP(watchpoint_sp);

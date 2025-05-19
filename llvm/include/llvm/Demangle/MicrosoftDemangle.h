@@ -9,6 +9,7 @@
 #ifndef LLVM_DEMANGLE_MICROSOFTDEMANGLE_H
 #define LLVM_DEMANGLE_MICROSOFTDEMANGLE_H
 
+#include "llvm/Demangle/Demangle.h"
 #include "llvm/Demangle/MicrosoftDemangleNodes.h"
 
 #include <cassert>
@@ -141,6 +142,9 @@ enum class FunctionIdentifierCodeGroup { Basic, Under, DoubleUnder };
 // It has a set of functions to parse mangled symbols into Type instances.
 // It also has a set of functions to convert Type instances to strings.
 class Demangler {
+  friend std::optional<size_t>
+  llvm::getArm64ECInsertionPointInMangledName(std::string_view MangledName);
+
 public:
   Demangler() = default;
   virtual ~Demangler() = default;
@@ -168,6 +172,14 @@ private:
   FunctionSymbolNode *demangleFunctionEncoding(std::string_view &MangledName);
 
   Qualifiers demanglePointerExtQualifiers(std::string_view &MangledName);
+
+  bool isMemberPointer(std::string_view MangledName, bool &Error);
+
+  std::optional<PointerAuthQualifierNode::ArgArray>
+  demanglePointerAuthQualifier(std::string_view &MangledName);
+
+  PointerAuthQualifierNode *
+  createPointerAuthQualifier(std::string_view &MangledName);
 
   // Parser functions. This is a recursive-descent parser.
   TypeNode *demangleType(std::string_view &MangledName,

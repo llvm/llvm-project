@@ -23,6 +23,7 @@
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver2          | FileCheck %s --check-prefixes=CHECK,SLOW-DIVQ
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver3          | FileCheck %s --check-prefixes=CHECK,SLOW-DIVQ
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver4          | FileCheck %s --check-prefixes=CHECK,SLOW-DIVQ
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver5          | FileCheck %s --check-prefixes=CHECK,SLOW-DIVQ
 
 ; Additional tests for 64-bit divide bypass
 

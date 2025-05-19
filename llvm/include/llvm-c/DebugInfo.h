@@ -138,6 +138,7 @@ typedef enum {
   LLVMDWARFSourceLanguageRuby,
   LLVMDWARFSourceLanguageMove,
   LLVMDWARFSourceLanguageHylo,
+  LLVMDWARFSourceLanguageMetal,
 
   // Vendor extensions:
   LLVMDWARFSourceLanguageMips_Assembler,
@@ -157,6 +158,8 @@ typedef enum {
 /**
  * The kind of metadata nodes.
  */
+// NOTE: New entries should always be appended instead of matching the order
+// in Metadata.def.
 enum {
   LLVMMDStringMetadataKind,
   LLVMConstantAsMetadataMetadataKind,
@@ -194,6 +197,8 @@ enum {
   LLVMDIGenericSubrangeMetadataKind,
   LLVMDIArgListMetadataKind,
   LLVMDIAssignIDMetadataKind,
+  LLVMDISubrangeTypeMetadataKind,
+  LLVMDIFixedPointTypeMetadataKind,
 };
 typedef unsigned LLVMMetadataKind;
 
@@ -625,6 +630,19 @@ LLVMMetadataRef LLVMDIBuilderCreateEnumerator(LLVMDIBuilderRef Builder,
                                               LLVMBool IsUnsigned);
 
 /**
+ * Create debugging information entry for an enumerator of arbitrary precision.
+ * @param Builder        The DIBuilder.
+ * @param Name           Enumerator name.
+ * @param NameLen        Length of enumerator name.
+ * @param SizeInBits     Number of bits of the value.
+ * @param Words          The words that make up the value.
+ * @param IsUnsigned     True if the value is unsigned.
+ */
+LLVMMetadataRef LLVMDIBuilderCreateEnumeratorOfArbitraryPrecision(
+    LLVMDIBuilderRef Builder, const char *Name, size_t NameLen,
+    uint64_t SizeInBits, const uint64_t Words[], LLVMBool IsUnsigned);
+
+/**
  * Create debugging information entry for an enumeration.
  * \param Builder        The DIBuilder.
  * \param Scope          Scope in which this enumeration is defined.
@@ -869,13 +887,16 @@ LLVMDIBuilderCreateObjCProperty(LLVMDIBuilderRef Builder,
                                 LLVMMetadataRef Ty);
 
 /**
- * Create a uniqued DIType* clone with FlagObjectPointer and FlagArtificial set.
+ * Create a uniqued DIType* clone with FlagObjectPointer. If \c Implicit
+ * is true, then also set FlagArtificial.
  * \param Builder   The DIBuilder.
  * \param Type      The underlying type to which this pointer points.
+ * \param Implicit  Indicates whether this pointer was implicitly generated
+ *                  (i.e., not spelled out in source).
  */
-LLVMMetadataRef
-LLVMDIBuilderCreateObjectPointerType(LLVMDIBuilderRef Builder,
-                                     LLVMMetadataRef Type);
+LLVMMetadataRef LLVMDIBuilderCreateObjectPointerType(LLVMDIBuilderRef Builder,
+                                                     LLVMMetadataRef Type,
+                                                     LLVMBool Implicit);
 
 /**
  * Create debugging information entry for a qualified
@@ -1414,6 +1435,52 @@ LLVMMetadataRef LLVMInstructionGetDebugLoc(LLVMValueRef Inst);
  * @see llvm::Instruction::setDebugLoc()
  */
 void LLVMInstructionSetDebugLoc(LLVMValueRef Inst, LLVMMetadataRef Loc);
+
+/**
+ * Create a new descriptor for a label
+ *
+ * \param Builder         The DIBuilder.
+ * \param Scope           The scope to create the label in.
+ * \param Name            Variable name.
+ * \param NameLen         Length of variable name.
+ * \param File            The file to create the label in.
+ * \param LineNo          Line Number.
+ * \param AlwaysPreserve  Preserve the label regardless of optimization.
+ *
+ * @see llvm::DIBuilder::createLabel()
+ */
+LLVMMetadataRef LLVMDIBuilderCreateLabel(
+    LLVMDIBuilderRef Builder,
+    LLVMMetadataRef Context, const char *Name, size_t NameLen,
+    LLVMMetadataRef File, unsigned LineNo, LLVMBool AlwaysPreserve);
+
+/**
+ * Insert a new llvm.dbg.label intrinsic call
+ *
+ * \param Builder         The DIBuilder.
+ * \param LabelInfo       The Label's debug info descriptor
+ * \param Location        The debug info location
+ * \param InsertBefore    Location for the new intrinsic.
+ *
+ * @see llvm::DIBuilder::insertLabel()
+ */
+LLVMDbgRecordRef LLVMDIBuilderInsertLabelBefore(
+    LLVMDIBuilderRef Builder, LLVMMetadataRef LabelInfo,
+    LLVMMetadataRef Location, LLVMValueRef InsertBefore);
+
+/**
+ * Insert a new llvm.dbg.label intrinsic call
+ *
+ * \param Builder         The DIBuilder.
+ * \param LabelInfo       The Label's debug info descriptor
+ * \param Location        The debug info location
+ * \param InsertAtEnd     Location for the new intrinsic.
+ *
+ * @see llvm::DIBuilder::insertLabel()
+ */
+LLVMDbgRecordRef LLVMDIBuilderInsertLabelAtEnd(
+    LLVMDIBuilderRef Builder, LLVMMetadataRef LabelInfo,
+    LLVMMetadataRef Location, LLVMBasicBlockRef InsertAtEnd);
 
 /**
  * Obtain the enumerated type of a Metadata instance.

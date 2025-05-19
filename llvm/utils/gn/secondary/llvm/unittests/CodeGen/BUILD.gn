@@ -26,7 +26,9 @@ unittest("CodeGenTests") {
     "CCStateTest.cpp",
     "DIEHashTest.cpp",
     "DIETest.cpp",
+    "DroppedVariableStatsMIRTest.cpp",
     "DwarfStringPoolEntryRefTest.cpp",
+    "GCMetadata.cpp",
     "InstrRefLDVTest.cpp",
     "LexicalScopesTest.cpp",
     "LowLevelTypeTest.cpp",
@@ -45,6 +47,7 @@ unittest("CodeGenTests") {
     "TargetOptionsTest.cpp",
     "TestAsmPrinter.cpp",
     "TypeTraitsTest.cpp",
+    "X86MCInstLowerTest.cpp",
   ]
   has_custom_main = true
 }

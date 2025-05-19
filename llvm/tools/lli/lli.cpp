@@ -24,12 +24,13 @@
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/MCJIT.h"
 #include "llvm/ExecutionEngine/ObjectCache.h"
+#include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
 #include "llvm/ExecutionEngine/Orc/DebugUtils.h"
 #include "llvm/ExecutionEngine/Orc/Debugging/DebuggerSupport.h"
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
-#include "llvm/ExecutionEngine/Orc/EPCEHFrameRegistrar.h"
 #include "llvm/ExecutionEngine/Orc/EPCGenericRTDyldMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
+#include "llvm/ExecutionEngine/Orc/IRPartitionLayer.h"
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/ExecutionEngine/Orc/ObjectTransformLayer.h"
@@ -49,6 +50,7 @@
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/Format.h"
@@ -66,7 +68,6 @@
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
-#include "llvm/Transforms/Instrumentation.h"
 #include <cerrno>
 #include <optional>
 
@@ -284,8 +285,8 @@ namespace {
 }
 
 LLVM_ATTRIBUTE_USED void linkComponents() {
-  errs() << (void *)&llvm_orc_registerEHFrameSectionWrapper
-         << (void *)&llvm_orc_deregisterEHFrameSectionWrapper
+  errs() << (void *)&llvm_orc_registerEHFrameSectionAllocAction
+         << (void *)&llvm_orc_deregisterEHFrameSectionAllocAction
          << (void *)&llvm_orc_registerJITLoaderGDBWrapper
          << (void *)&llvm_orc_registerJITLoaderGDBAllocAction;
 }
@@ -372,13 +373,12 @@ private:
 // currently handle external linking) we add a secondary module which defines
 // an empty '__main' function.
 static void addCygMingExtraModule(ExecutionEngine &EE, LLVMContext &Context,
-                                  StringRef TargetTripleStr) {
+                                  const Triple &TargetTriple) {
   IRBuilder<> Builder(Context);
-  Triple TargetTriple(TargetTripleStr);
 
   // Create a new module.
   std::unique_ptr<Module> M = std::make_unique<Module>("CygMingHelper", Context);
-  M->setTargetTriple(TargetTripleStr);
+  M->setTargetTriple(TargetTriple);
 
   // Create an empty function named "__main".
   Type *ReturnTy;
@@ -491,7 +491,7 @@ int main(int argc, char **argv, char * const *envp) {
 
   // If we are supposed to override the target triple, do so now.
   if (!TargetTriple.empty())
-    Mod->setTargetTriple(Triple::normalize(TargetTriple));
+    Mod->setTargetTriple(Triple(Triple::normalize(TargetTriple)));
 
   // Enable MCJIT if desired.
   RTDyldMemoryManager *RTDyldMM = nullptr;
@@ -587,7 +587,7 @@ int main(int argc, char **argv, char * const *envp) {
 
   // If the target is Cygwin/MingW and we are generating remote code, we
   // need an extra module to help out with linking.
-  if (RemoteMCJIT && Triple(Mod->getTargetTriple()).isOSCygMing()) {
+  if (RemoteMCJIT && Mod->getTargetTriple().isOSCygMing()) {
     addCygMingExtraModule(*EE, Context, Mod->getTargetTriple());
   }
 
@@ -751,7 +751,7 @@ int main(int argc, char **argv, char * const *envp) {
 
 // JITLink debug support plugins put information about JITed code in this GDB
 // JIT Interface global from OrcTargetProcess.
-extern "C" struct jit_descriptor __jit_debug_descriptor;
+extern "C" LLVM_ABI struct jit_descriptor __jit_debug_descriptor;
 
 static struct jit_code_entry *
 findNextDebugDescriptorEntry(struct jit_code_entry *Latest) {
@@ -931,7 +931,7 @@ int runOrcJIT(const char *ProgName) {
   std::optional<DataLayout> DL;
   MainModule.withModuleDo([&](Module &M) {
       if (!M.getTargetTriple().empty())
-        TT = Triple(M.getTargetTriple());
+        TT = M.getTargetTriple();
       if (!M.getDataLayout().isDefault())
         DL = M.getDataLayout();
     });
@@ -1030,13 +1030,8 @@ int runOrcJIT(const char *ProgName) {
     Builder.getJITTargetMachineBuilder()
         ->setRelocationModel(Reloc::PIC_)
         .setCodeModel(CodeModel::Small);
-    Builder.setObjectLinkingLayerCreator([&P](orc::ExecutionSession &ES,
-                                              const Triple &TT) {
-      auto L = std::make_unique<orc::ObjectLinkingLayer>(ES);
-      if (P != LLJITPlatform::ExecutorNative)
-        L->addPlugin(std::make_unique<orc::EHFrameRegistrationPlugin>(
-            ES, ExitOnErr(orc::EPCEHFrameRegistrar::Create(ES))));
-      return L;
+    Builder.setObjectLinkingLayerCreator([&](orc::ExecutionSession &ES) {
+      return std::make_unique<orc::ObjectLinkingLayer>(ES);
     });
   }
 
@@ -1061,7 +1056,7 @@ int runOrcJIT(const char *ProgName) {
   }
 
   if (PerModuleLazy)
-    J->setPartitionFunction(orc::CompileOnDemandLayer::compileWholeModule);
+    J->setPartitionFunction(orc::IRPartitionLayer::compileWholeModule);
 
   auto IRDump = createIRDebugDumper();
   J->getIRTransformLayer().setTransform(

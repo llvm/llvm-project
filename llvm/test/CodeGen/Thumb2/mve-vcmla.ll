@@ -121,3 +121,27 @@ entry:
   %res = fadd <4 x float> %d, %a
   ret <4 x float> %res
 }
+
+define arm_aapcs_vfpcc <8 x half> @same_register_f16(<8 x half> %a) {
+; CHECK-LABEL: same_register_f16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vcmla.f16 q0, q0, q0, #0
+; CHECK-NEXT:    bx lr
+entry:
+  %d = tail call <8 x half> @llvm.arm.mve.vcmlaq.v8f16(i32 0, <8 x half> zeroinitializer, <8 x half> %a, <8 x half> %a)
+  %res = fadd fast <8 x half> %d, %a
+  ret <8 x half> %res
+}
+
+define arm_aapcs_vfpcc <4 x float> @same_register_f32(<4 x float> %a) {
+; CHECK-LABEL: same_register_f32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov q1, q0
+; CHECK-NEXT:    vcmla.f32 q1, q0, q0, #0
+; CHECK-NEXT:    vmov q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %d = tail call <4 x float> @llvm.arm.mve.vcmlaq.v4f32(i32 0, <4 x float> zeroinitializer, <4 x float> %a, <4 x float> %a)
+  %res = fadd fast <4 x float> %d, %a
+  ret <4 x float> %res
+}

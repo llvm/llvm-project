@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "ReduceDIMetadata.h"
-#include "Delta.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
@@ -39,7 +38,7 @@ void identifyUninterestingMDNodes(Oracle &O, MDNodeList &MDs) {
     MDNode *MD = ToLook.back();
     ToLook.pop_back();
 
-    if (Visited.count(MD))
+    if (!Visited.insert(MD))
       continue;
 
     // Determine if the current MDNode is DebugInfo
@@ -55,8 +54,6 @@ void identifyUninterestingMDNodes(Oracle &O, MDNodeList &MDs) {
     for (Metadata *Op : MD->operands())
       if (MDNode *OMD = dyn_cast_or_null<MDNode>(Op))
         ToLook.push_back(OMD);
-
-    Visited.insert(MD);
   }
 
   for (auto &T : Tuples) {
@@ -70,15 +67,15 @@ void identifyUninterestingMDNodes(Oracle &O, MDNodeList &MDs) {
           // Don't add uninteresting operands to the tuple.
           if (!O.shouldKeep())
             continue;
-        TN.push_back(Op);
       }
+      TN.push_back(Tup->getOperand(I));
     }
     if (TN.size() != Tup->getNumOperands())
       DbgNode->replaceOperandWith(OpIdx, DbgNode->get(DbgNode->getContext(), TN));
   }
 }
 
-static void extractDIMetadataFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
+void llvm::reduceDIMetadataDeltaPass(Oracle &O, ReducerWorkItem &WorkItem) {
   Module &Program = WorkItem.getModule();
 
   MDNodeList MDs;
@@ -95,8 +92,4 @@ static void extractDIMetadataFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
         MDs.push_back(DI);
   }
   identifyUninterestingMDNodes(O, MDs);
-}
-
-void llvm::reduceDIMetadataDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, extractDIMetadataFromModule, "Reducing DIMetadata");
 }

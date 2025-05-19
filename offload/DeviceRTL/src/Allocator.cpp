@@ -12,14 +12,12 @@
 
 #include "Allocator.h"
 #include "Configuration.h"
+#include "DeviceTypes.h"
+#include "DeviceUtils.h"
 #include "Mapping.h"
 #include "Synchronization.h"
-#include "Types.h"
-#include "Utils.h"
 
 using namespace ompx;
-
-#pragma omp begin declare target device_type(nohost)
 
 [[gnu::used, gnu::retain, gnu::weak,
   gnu::visibility(
@@ -77,5 +75,3 @@ void *allocator::alloc(uint64_t Size) { return BumpAllocator.alloc(Size); }
 void allocator::free(void *Ptr) { BumpAllocator.free(Ptr); }
 
 ///}
-
-#pragma omp end declare target

@@ -3,9 +3,9 @@
 // RUN: mlir-opt %s -test-loop-unrolling='unroll-factor=2 loop-depth=0' | FileCheck %s --check-prefix UNROLL-OUTER-BY-2
 // RUN: mlir-opt %s -test-loop-unrolling='unroll-factor=2 loop-depth=1' | FileCheck %s --check-prefix UNROLL-INNER-BY-2
 // RUN: mlir-opt %s -test-loop-unrolling='unroll-factor=2 annotate=true' | FileCheck %s --check-prefix UNROLL-BY-2-ANNOTATE
-// RUN: mlir-opt %s --affine-loop-unroll='unroll-factor=6 unroll-up-to-factor=true' | FileCheck %s --check-prefix UNROLL-UP-TO
-// RUN: mlir-opt %s --affine-loop-unroll='unroll-factor=5 cleanup-unroll=true' | FileCheck %s --check-prefix CLEANUP-UNROLL-BY-5
-// RUN: mlir-opt %s --affine-loop-unroll --split-input-file | FileCheck %s
+// RUN: mlir-opt %s -pass-pipeline="builtin.module(func.func(affine-loop-unroll{unroll-factor=6 unroll-up-to-factor=true}))" | FileCheck %s --check-prefix UNROLL-UP-TO
+// RUN: mlir-opt %s -pass-pipeline="builtin.module(func.func(affine-loop-unroll{unroll-factor=5 cleanup-unroll=true}))" | FileCheck %s --check-prefix CLEANUP-UNROLL-BY-5
+// RUN: mlir-opt %s -pass-pipeline="builtin.module(func.func(affine-loop-unroll))" --split-input-file | FileCheck %s
 
 func.func @dynamic_loop_unroll(%arg0 : index, %arg1 : index, %arg2 : index,
                           %arg3: memref<?xf32>) {
@@ -489,3 +489,32 @@ func.func @static_loop_unroll_with_integer_iv() -> (f32, f32) {
 //  UNROLL-BY-3-NEXT:     scf.yield %[[EADD]], %[[EMUL]] : f32, f32
 //  UNROLL-BY-3-NEXT:   }
 //  UNROLL-BY-3-NEXT:   return %[[EFOR]]#0, %[[EFOR]]#1 : f32, f32
+
+// -----
+
+// Test loop unrolling when the yielded value is defined above the loop.
+func.func @loop_unroll_static_yield_value_defined_above(%init: i32) {
+  %c42 = arith.constant 42 : i32
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c4 = arith.constant 4 : index
+  %103:2 = scf.for %i = %c0 to %c4 step %c1
+      iter_args(%iter1 = %c42, %iter2 = %init) -> (i32, i32) {
+    %0 = arith.andi %iter2, %iter1 : i32
+    scf.yield %0, %init : i32, i32
+  }
+  return
+}
+// UNROLL-OUTER-BY-2-LABEL: @loop_unroll_static_yield_value_defined_above(
+// UNROLL-OUTER-BY-2-SAME:    %[[INIT:.*]]: i32) {
+// UNROLL-OUTER-BY-2-DAG:   %[[C42:.*]] = arith.constant 42 : i32
+// UNROLL-OUTER-BY-2-DAG:   %[[C0:.*]] = arith.constant 0 : index
+// UNROLL-OUTER-BY-2-DAG:   %[[C4:.*]] = arith.constant 4 : index
+// UNROLL-OUTER-BY-2-DAG:   %[[C2:.*]] = arith.constant 2 : index
+// UNROLL-OUTER-BY-2:       scf.for %{{.*}} = %[[C0]] to %[[C4]] step %[[C2]]
+// UNROLL-OUTER-BY-2-SAME:      iter_args(%[[ITER1:.*]] = %[[C42]],
+// UNROLL-OUTER-BY-2-SAME:                %[[ITER2:.*]] = %[[INIT]])
+// UNROLL-OUTER-BY-2:         %[[SUM:.*]] = arith.andi %[[ITER2]], %[[ITER1]]
+// UNROLL-OUTER-BY-2:         %[[SUM1:.*]] = arith.andi %[[INIT]], %[[SUM]]
+// UNROLL-OUTER-BY-2:         scf.yield %[[SUM1]], %[[INIT]] : i32, i32
+

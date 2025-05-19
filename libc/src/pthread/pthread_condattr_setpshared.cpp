@@ -10,8 +10,8 @@
 
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
+#include "src/errno/libc_errno.h"
 
-#include <errno.h> // EINVAL
 #include <pthread.h> // pthread_condattr_t, PTHREAD_PROCESS_SHARED, PTHREAD_PROCESS_PRIVATE
 
 namespace LIBC_NAMESPACE_DECL {

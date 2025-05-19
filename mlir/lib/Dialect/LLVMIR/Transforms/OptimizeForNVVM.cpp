@@ -15,10 +15,10 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace mlir {
-namespace NVVM {
-#define GEN_PASS_DEF_NVVMOPTIMIZEFORTARGET
+namespace LLVM {
+#define GEN_PASS_DEF_NVVMOPTIMIZEFORTARGETPASS
 #include "mlir/Dialect/LLVMIR/Transforms/Passes.h.inc"
-} // namespace NVVM
+} // namespace LLVM
 } // namespace mlir
 
 using namespace mlir;
@@ -40,7 +40,7 @@ private:
 };
 
 struct NVVMOptimizeForTarget
-    : public NVVM::impl::NVVMOptimizeForTargetBase<NVVMOptimizeForTarget> {
+    : public LLVM::impl::NVVMOptimizeForTargetPassBase<NVVMOptimizeForTarget> {
   void runOnOperation() override;
 
   void getDependentDialects(DialectRegistry &registry) const override {
@@ -96,10 +96,6 @@ void NVVMOptimizeForTarget::runOnOperation() {
   MLIRContext *ctx = getOperation()->getContext();
   RewritePatternSet patterns(ctx);
   patterns.add<ExpandDivF16>(ctx);
-  if (failed(applyPatternsAndFoldGreedily(getOperation(), std::move(patterns))))
+  if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
     return signalPassFailure();
-}
-
-std::unique_ptr<Pass> NVVM::createOptimizeForTargetPass() {
-  return std::make_unique<NVVMOptimizeForTarget>();
 }

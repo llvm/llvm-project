@@ -161,11 +161,14 @@ public:
       return;
     if (procName.starts_with("ieee_set_modes_") ||
         procName.starts_with("ieee_set_status_"))
-      proc->mayModifyHaltingMode = proc->mayModifyRoundingMode = true;
+      proc->mayModifyHaltingMode = proc->mayModifyRoundingMode =
+          proc->mayModifyUnderflowMode = true;
     else if (procName.starts_with("ieee_set_halting_mode_"))
       proc->mayModifyHaltingMode = true;
     else if (procName.starts_with("ieee_set_rounding_mode_"))
       proc->mayModifyRoundingMode = true;
+    else if (procName.starts_with("ieee_set_underflow_mode_"))
+      proc->mayModifyUnderflowMode = true;
   }
 
   /// Convert an IfStmt into an IfConstruct, retaining the IfStmt as the
@@ -875,8 +878,18 @@ private:
             lower::pft::Evaluation *target{
                 labelEvaluationMap->find(label)->second};
             assert(target && "missing branch target evaluation");
-            if (!target->isA<parser::FormatStmt>())
+            if (!target->isA<parser::FormatStmt>()) {
               target->isNewBlock = true;
+              for (lower::pft::Evaluation *parent = target->parentConstruct;
+                   parent; parent = parent->parentConstruct) {
+                parent->isUnstructured = true;
+                // The exit of an enclosing DO or IF construct is a new block.
+                if (parent->constructExit &&
+                    (parent->isA<parser::DoConstruct>() ||
+                     parent->isA<parser::IfConstruct>()))
+                  parent->constructExit->isNewBlock = true;
+              }
+            }
             auto iter = assignSymbolLabelMap->find(*sym);
             if (iter == assignSymbolLabelMap->end()) {
               lower::pft::LabelSet labelSet{};
@@ -1566,6 +1579,14 @@ private:
       return 0;
     LLVM_DEBUG(llvm::dbgs() << "analyze symbol " << &sym << " in <"
                             << &sym.owner() << ">: " << sym << '\n');
+    const semantics::Symbol &ultimate = sym.GetUltimate();
+    if (const auto *details = ultimate.detailsIf<semantics::GenericDetails>()) {
+      // Procedure pointers may be "hidden" behind to the generic symbol if they
+      // have the same name.
+      if (const semantics::Symbol *specific = details->specific())
+        analyze(*specific);
+      return 0;
+    }
     const bool isProcedurePointerOrDummy =
         semantics::IsProcedurePointer(sym) ||
         (semantics::IsProcedure(sym) && IsDummy(sym));
@@ -1582,7 +1603,6 @@ private:
     if (sym.owner().IsDerivedType())
       return 0;
 
-    semantics::Symbol ultimate = sym.GetUltimate();
     if (const auto *details =
             ultimate.detailsIf<semantics::NamelistDetails>()) {
       // handle namelist group symbols

@@ -37,11 +37,9 @@ class TargetLoweringObjectFileELF : public TargetLoweringObjectFile {
   SmallPtrSet<GlobalObject *, 2> Used;
 
 protected:
-  MCSymbolRefExpr::VariantKind PLTRelativeVariantKind =
-      MCSymbolRefExpr::VK_None;
+  uint16_t PLTRelativeSpecifier = 0;
 
 public:
-  TargetLoweringObjectFileELF();
   ~TargetLoweringObjectFileELF() override = default;
 
   void Initialize(MCContext &Ctx, const TargetMachine &TM) override;
@@ -52,13 +50,27 @@ public:
   void emitModuleMetadata(MCStreamer &Streamer, Module &M) const override;
 
   void emitPersonalityValue(MCStreamer &Streamer, const DataLayout &DL,
-                            const MCSymbol *Sym) const override;
+                            const MCSymbol *Sym,
+                            const MachineModuleInfo *MMI) const override;
+
+  virtual void emitPersonalityValueImpl(MCStreamer &Streamer,
+                                        const DataLayout &DL,
+                                        const MCSymbol *Sym,
+                                        const MachineModuleInfo *MMI) const;
+
+  void emitLinkerDirectives(MCStreamer &Streamer, Module &M) const override;
 
   /// Given a constant with the SectionKind, return a section that it should be
   /// placed in.
   MCSection *getSectionForConstant(const DataLayout &DL, SectionKind Kind,
                                    const Constant *C,
                                    Align &Alignment) const override;
+
+  /// Similar to the function above, but append \p SectionSuffix to the section
+  /// name.
+  MCSection *getSectionForConstant(const DataLayout &DL, SectionKind Kind,
+                                   const Constant *C, Align &Alignment,
+                                   StringRef SectionSuffix) const override;
 
   MCSection *getExplicitSectionGlobal(const GlobalObject *GO, SectionKind Kind,
                                       const TargetMachine &TM) const override;
@@ -68,6 +80,9 @@ public:
 
   MCSection *getSectionForJumpTable(const Function &F,
                                     const TargetMachine &TM) const override;
+  MCSection *
+  getSectionForJumpTable(const Function &F, const TargetMachine &TM,
+                         const MachineJumpTableEntry *JTE) const override;
   MCSection *getSectionForLSDA(const Function &F, const MCSymbol &FnSym,
                                const TargetMachine &TM) const override;
 
@@ -102,11 +117,18 @@ public:
   MCSection *getStaticDtorSection(unsigned Priority,
                                   const MCSymbol *KeySym) const override;
 
-  const MCExpr *lowerRelativeReference(const GlobalValue *LHS,
-                                       const GlobalValue *RHS,
-                                       const TargetMachine &TM) const override;
+  virtual const MCExpr *createTargetMCExpr(const MCExpr *Expr,
+                                           uint8_t Specifier) const {
+    return nullptr;
+  }
+  const MCExpr *
+  lowerSymbolDifference(const MCSymbol *LHS, const MCSymbol *RHS,
+                        int64_t Addend,
+                        std::optional<int64_t> PCRelativeOffset) const;
 
-  const MCExpr *lowerDSOLocalEquivalent(const DSOLocalEquivalent *Equiv,
+  const MCExpr *lowerDSOLocalEquivalent(const MCSymbol *LHS,
+                                        const MCSymbol *RHS, int64_t Addend,
+                                        std::optional<int64_t> PCRelativeOffset,
                                         const TargetMachine &TM) const override;
 
   MCSection *getSectionForCommandLines() const override;
@@ -124,6 +146,8 @@ public:
 
   /// Emit the module flags that specify the garbage collection information.
   void emitModuleMetadata(MCStreamer &Streamer, Module &M) const override;
+
+  void emitLinkerDirectives(MCStreamer &Streamer, Module &M) const override;
 
   MCSection *SelectSectionForGlobal(const GlobalObject *GO, SectionKind Kind,
                                     const TargetMachine &TM) const override;
@@ -186,13 +210,16 @@ public:
   /// Emit Obj-C garbage collection and linker options.
   void emitModuleMetadata(MCStreamer &Streamer, Module &M) const override;
 
+  void emitLinkerDirectives(MCStreamer &Streamer, Module &M) const override;
+
   MCSection *getStaticCtorSection(unsigned Priority,
                                   const MCSymbol *KeySym) const override;
   MCSection *getStaticDtorSection(unsigned Priority,
                                   const MCSymbol *KeySym) const override;
 
   const MCExpr *lowerRelativeReference(const GlobalValue *LHS,
-                                       const GlobalValue *RHS,
+                                       const GlobalValue *RHS, int64_t Addend,
+                                       std::optional<int64_t> PCRelativeOffset,
                                        const TargetMachine &TM) const override;
 
   /// Given a mergeable constant with the specified size and relocation
@@ -200,9 +227,6 @@ public:
   MCSection *getSectionForConstant(const DataLayout &DL, SectionKind Kind,
                                    const Constant *C,
                                    Align &Alignment) const override;
-
-private:
-  void emitLinkerDirectives(MCStreamer &Streamer, Module &M) const;
 };
 
 class TargetLoweringObjectFileWasm : public TargetLoweringObjectFile {
@@ -229,10 +253,6 @@ public:
                                   const MCSymbol *KeySym) const override;
   MCSection *getStaticDtorSection(unsigned Priority,
                                   const MCSymbol *KeySym) const override;
-
-  const MCExpr *lowerRelativeReference(const GlobalValue *LHS,
-                                       const GlobalValue *RHS,
-                                       const TargetMachine &TM) const override;
 };
 
 class TargetLoweringObjectFileXCOFF : public TargetLoweringObjectFile {
@@ -257,10 +277,6 @@ public:
                                   const MCSymbol *KeySym) const override;
   MCSection *getStaticDtorSection(unsigned Priority,
                                   const MCSymbol *KeySym) const override;
-
-  const MCExpr *lowerRelativeReference(const GlobalValue *LHS,
-                                       const GlobalValue *RHS,
-                                       const TargetMachine &TM) const override;
 
   MCSection *SelectSectionForGlobal(const GlobalObject *GO, SectionKind Kind,
                                     const TargetMachine &TM) const override;

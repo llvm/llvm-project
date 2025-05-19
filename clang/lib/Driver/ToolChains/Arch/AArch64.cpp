@@ -135,14 +135,20 @@ getAArch64ArchFeaturesFromMarch(const Driver &D, StringRef March,
   return true;
 }
 
-static bool
-getAArch64ArchFeaturesFromMcpu(const Driver &D, StringRef Mcpu,
-                               const ArgList &Args,
-                               llvm::AArch64::ExtensionSet &Extensions) {
+static bool getAArch64ArchFeaturesFromMcpu(
+    const Driver &D, StringRef Mcpu, const ArgList &Args,
+    llvm::AArch64::ExtensionSet &Extensions, std::vector<StringRef> &Features) {
   StringRef CPU;
   std::string McpuLowerCase = Mcpu.lower();
   if (!DecodeAArch64Mcpu(D, McpuLowerCase, CPU, Extensions))
     return false;
+
+  if (Mcpu == "native") {
+    llvm::StringMap<bool> HostFeatures = llvm::sys::getHostCPUFeatures();
+    for (auto &[Feature, Enabled] : HostFeatures) {
+      Features.push_back(Args.MakeArgString((Enabled ? "+" : "-") + Feature));
+    }
+  }
 
   return true;
 }
@@ -190,7 +196,7 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
                                        const llvm::Triple &Triple,
                                        const ArgList &Args,
                                        std::vector<StringRef> &Features,
-                                       bool ForAS) {
+                                       bool ForAS, bool ForMultilib) {
   Arg *A;
   bool success = true;
   llvm::StringRef WaMArch;
@@ -210,11 +216,11 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
     success =
         getAArch64ArchFeaturesFromMarch(D, A->getValue(), Args, Extensions);
   else if ((A = Args.getLastArg(options::OPT_mcpu_EQ)))
-    success =
-        getAArch64ArchFeaturesFromMcpu(D, A->getValue(), Args, Extensions);
+    success = getAArch64ArchFeaturesFromMcpu(D, A->getValue(), Args, Extensions,
+                                             Features);
   else if (isCPUDeterminedByTriple(Triple))
     success = getAArch64ArchFeaturesFromMcpu(
-        D, getAArch64TargetCPU(Args, Triple, A), Args, Extensions);
+        D, getAArch64TargetCPU(Args, Triple, A), Args, Extensions, Features);
   else
     // Default to 'A' profile if the architecture is not specified.
     success = getAArch64ArchFeaturesFromMarch(D, "armv8-a", Args, Extensions);
@@ -325,6 +331,19 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
       Features.push_back("+strict-align");
   } else if (Triple.isOSOpenBSD())
     Features.push_back("+strict-align");
+
+  // Generate execute-only output (no data access to code sections).
+  // This only makes sense for the compiler, not for the assembler.
+  // It's not needed for multilib selection and may hide an unused
+  // argument diagnostic if the code is always run.
+  if (!ForAS && !ForMultilib) {
+    if (Arg *A = Args.getLastArg(options::OPT_mexecute_only,
+                                 options::OPT_mno_execute_only)) {
+      if (A->getOption().matches(options::OPT_mexecute_only)) {
+        Features.push_back("+execute-only");
+      }
+    }
+  }
 
   if (Args.hasArg(options::OPT_ffixed_x1))
     Features.push_back("+reserve-x1");

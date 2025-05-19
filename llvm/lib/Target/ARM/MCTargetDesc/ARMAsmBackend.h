@@ -18,14 +18,9 @@
 namespace llvm {
 
 class ARMAsmBackend : public MCAsmBackend {
-  bool isThumbMode;    // Currently emitting Thumb code.
 public:
-  ARMAsmBackend(const Target &T, bool isThumb, llvm::endianness Endian)
-      : MCAsmBackend(Endian), isThumbMode(isThumb) {}
-
-  unsigned getNumFixupKinds() const override {
-    return ARM::NumTargetFixupKinds;
-  }
+  ARMAsmBackend(const Target &T, llvm::endianness Endian)
+      : MCAsmBackend(Endian) {}
 
   bool hasNOP(const MCSubtargetInfo *STI) const {
     return STI->hasFeature(ARM::HasV6T2Ops);
@@ -33,7 +28,7 @@ public:
 
   std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
 
-  const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
+  MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
 
   bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
                              const MCValue &Target,
@@ -57,8 +52,9 @@ public:
   const char *reasonForFixupRelaxation(const MCFixup &Fixup,
                                        uint64_t Value) const;
 
-  bool fixupNeedsRelaxation(const MCFixup &Fixup,
-                            uint64_t Value) const override;
+  bool fixupNeedsRelaxationAdvanced(const MCAssembler &,
+                                    const MCFixup &, const MCValue &, uint64_t,
+                                    bool) const override;
 
   void relaxInstruction(MCInst &Inst,
                         const MCSubtargetInfo &STI) const override;
@@ -66,11 +62,7 @@ public:
   bool writeNopData(raw_ostream &OS, uint64_t Count,
                     const MCSubtargetInfo *STI) const override;
 
-  void handleAssemblerFlag(MCAssemblerFlag Flag) override;
-
   unsigned getPointerSize() const { return 4; }
-  bool isThumb() const { return isThumbMode; }
-  void setIsThumb(bool it) { isThumbMode = it; }
 };
 } // end namespace llvm
 

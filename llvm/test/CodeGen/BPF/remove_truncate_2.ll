@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=bpf -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -mtriple=bpf -mcpu=v1 -verify-machineinstrs | FileCheck %s
 
 ; Source code:
 ; struct xdp_md {

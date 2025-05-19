@@ -10,7 +10,6 @@
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <errno.h>
 #include <sys/wait.h>
 
 // The test here is a simpl test for WNOHANG functionality. For a more

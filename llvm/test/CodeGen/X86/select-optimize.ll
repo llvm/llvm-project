@@ -2,8 +2,6 @@
 ; RUN: opt -mtriple=x86_64-unknown-unknown -select-optimize -S < %s | FileCheck %s
 ; RUN: opt -mtriple=x86_64-unknown-unknown -passes='require<profile-summary>,function(select-optimize)' -S < %s | FileCheck %s
 
-; RUN: opt -mtriple=x86_64-unknown-unknown -select-optimize -S < %s --try-experimental-debuginfo-iterators | FileCheck %s
-; RUN: opt -mtriple=x86_64-unknown-unknown -passes='require<profile-summary>,function(select-optimize)' -S < %s --try-experimental-debuginfo-iterators | FileCheck %s
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Test base heuristic 1:

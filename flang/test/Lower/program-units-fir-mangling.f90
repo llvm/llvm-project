@@ -134,22 +134,22 @@ subroutine should_not_collide()
 end subroutine
 end program
 
-! CHECK-LABEL: func @omp_get_num_threads() -> f32 attributes {fir.bindc_name = "omp_get_num_threads"} {
+! CHECK-LABEL: func @omp_get_num_threads() -> f32 attributes {fir.bindc_name = "omp_get_num_threads", fir.proc_attrs = #fir.proc_attrs<bind_c>} {
 function omp_get_num_threads() bind(c)
 ! CHECK: }
 end function
 
-! CHECK-LABEL: func @get_threads() -> f32 attributes {fir.bindc_name = "get_threads"} {
+! CHECK-LABEL: func @get_threads() -> f32 attributes {fir.bindc_name = "get_threads", fir.proc_attrs = #fir.proc_attrs<bind_c>} {
 function omp_get_num_threads_1() bind(c, name ="get_threads")
 ! CHECK: }
 end function
 
-! CHECK-LABEL: func @bEtA() -> f32 attributes {fir.bindc_name = "bEtA"} {
+! CHECK-LABEL: func @bEtA() -> f32 attributes {fir.bindc_name = "bEtA", fir.proc_attrs = #fir.proc_attrs<bind_c>} {
 function alpha() bind(c, name =" bEtA ")
 ! CHECK: }
 end function
 
-! CHECK-LABEL: func @bc1() attributes {fir.bindc_name = "bc1"} {
+! CHECK-LABEL: func @bc1() attributes {fir.bindc_name = "bc1", fir.proc_attrs = #fir.proc_attrs<bind_c>} {
 subroutine bind_c_s() Bind(C,Name='bc1')
   ! CHECK: return
 end subroutine bind_c_s
@@ -175,11 +175,11 @@ end
 ! Test that BIND(C) label is taken into account for ENTRY symbols.
 ! CHECK-LABEL: func @_QPsub_with_entries() {
 subroutine sub_with_entries
-! CHECK-LABEL: func @bar() attributes {fir.bindc_name = "bar"} {
+! CHECK-LABEL: func @bar() attributes {fir.bindc_name = "bar", fir.proc_attrs = #fir.proc_attrs<bind_c>} {
  entry some_entry() bind(c, name="bar")
 ! CHECK-LABEL: func @_QPnormal_entry() {
  entry normal_entry()
-! CHECK-LABEL: func @some_other_entry() attributes {fir.bindc_name = "some_other_entry"} {
+! CHECK-LABEL: func @some_other_entry() attributes {fir.bindc_name = "some_other_entry", fir.proc_attrs = #fir.proc_attrs<bind_c>} {
  entry some_other_entry() bind(c)
 end subroutine
 
@@ -196,24 +196,24 @@ module testMod3
     end subroutine
   end interface
  contains
-! CHECK-LABEL: func @ok3() -> f32 attributes {fir.bindc_name = "ok3"} {
+! CHECK-LABEL: func @ok3() -> f32 attributes {fir.bindc_name = "ok3", fir.proc_attrs = #fir.proc_attrs<bind_c>} {
   real function f2() bind(c,name=foo//'3')
     character*(*), parameter :: foo = ok
 ! CHECK: fir.call @ok1() {{.*}}: () -> f32
-! CHECK-LABEL: func @ok4() -> f32 attributes {fir.bindc_name = "ok4"} {
+! CHECK-LABEL: func @ok4() -> f32 attributes {fir.bindc_name = "ok4", fir.proc_attrs = #fir.proc_attrs<bind_c>} {
     entry f3() bind(c,name=foo//'4')
 ! CHECK: fir.call @ok1() {{.*}}: () -> f32
     f2 = f1()
   end function
-! CHECK-LABEL: func @ok5() attributes {fir.bindc_name = "ok5"} {
+! CHECK-LABEL: func @ok5() attributes {fir.bindc_name = "ok5", fir.proc_attrs = #fir.proc_attrs<bind_c>} {
   subroutine s2() bind(c,name=foo//'5')
     character*(*), parameter :: foo = ok
 ! CHECK: fir.call @ok2() {{.*}}: () -> ()
-! CHECK-LABEL: func @ok6() attributes {fir.bindc_name = "ok6"} {
+! CHECK-LABEL: func @ok6() attributes {fir.bindc_name = "ok6", fir.proc_attrs = #fir.proc_attrs<bind_c>} {
     entry s3() bind(c,name=foo//'6')
 ! CHECK: fir.call @ok2() {{.*}}: () -> ()
     continue ! force end of specification part
-! CHECK-LABEL: func @ok7() attributes {fir.bindc_name = "ok7"} {
+! CHECK-LABEL: func @ok7() attributes {fir.bindc_name = "ok7", fir.proc_attrs = #fir.proc_attrs<bind_c>} {
     entry s4() bind(c,name=foo//'7')
 ! CHECK: fir.call @ok2() {{.*}}: () -> ()
     call s1

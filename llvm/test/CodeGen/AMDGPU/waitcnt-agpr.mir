@@ -321,8 +321,8 @@ body: |
     ; GCN-NEXT: BUNDLE implicit-def $agpr0, implicit $vgpr2_vgpr3 {
     ; GCN-NEXT:   $agpr0 = FLAT_LOAD_DWORD $vgpr2_vgpr3, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: }
-    ; GCN-NEXT: S_WAITCNT 112
     ; GCN-NEXT: BUNDLE implicit $agpr0, implicit $vgpr2_vgpr3 {
+    ; GCN-NEXT:   S_WAITCNT 112
     ; GCN-NEXT:   FLAT_STORE_DWORD $vgpr2_vgpr3, $agpr0, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: }
     BUNDLE implicit-def $agpr0, implicit $vgpr2_vgpr3 {

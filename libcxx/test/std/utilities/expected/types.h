@@ -162,7 +162,7 @@ template <int Constant>
 struct TailClobberer {
   constexpr TailClobberer() noexcept {
     if (!std::is_constant_evaluated()) {
-      std::memset(this, Constant, sizeof(*this));
+      std::memset(static_cast<void*>(this), Constant, sizeof(*this));
     }
     // Always set `b` itself to `false` so that the comparison works.
     b = false;
@@ -245,7 +245,7 @@ struct BoolWithPadding {
   constexpr explicit BoolWithPadding() noexcept : BoolWithPadding(false) {}
   constexpr BoolWithPadding(bool val) noexcept {
     if (!std::is_constant_evaluated()) {
-      std::memset(this, 0, sizeof(*this));
+      std::memset(static_cast<void*>(this), 0, sizeof(*this));
     }
     val_ = val;
   }
@@ -268,7 +268,7 @@ struct IntWithoutPadding {
   constexpr explicit IntWithoutPadding() noexcept : IntWithoutPadding(0) {}
   constexpr IntWithoutPadding(int val) noexcept {
     if (!std::is_constant_evaluated()) {
-      std::memset(this, 0, sizeof(*this));
+      std::memset(static_cast<void*>(this), 0, sizeof(*this));
     }
     val_ = val;
   }
@@ -335,5 +335,18 @@ struct CheckForInvalidWrites : public CheckForInvalidWritesBase<WithPaddedExpect
     return true;
   }
 };
+
+struct NonComparable {};
+
+struct EqualityComparable {
+  int i;
+  constexpr EqualityComparable(int ii) : i(ii) {}
+
+  friend constexpr bool operator==(const EqualityComparable& data, int ii) { return data.i == ii; }
+};
+
+// Test constraint
+template <class T1, class T2>
+concept CanCompare = requires(T1 t1, T2 t2) { t1 == t2; };
 
 #endif // TEST_STD_UTILITIES_EXPECTED_TYPES_H

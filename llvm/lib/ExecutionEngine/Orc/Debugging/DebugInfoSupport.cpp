@@ -33,10 +33,9 @@ static DenseSet<StringRef> DWARFSectionNames = {
 static void preserveDWARFSection(LinkGraph &G, Section &Sec) {
   DenseMap<Block *, Symbol *> Preserved;
   for (auto Sym : Sec.symbols()) {
-    if (Sym->isLive())
-      Preserved[&Sym->getBlock()] = Sym;
-    else if (!Preserved.count(&Sym->getBlock()))
-      Preserved[&Sym->getBlock()] = Sym;
+    auto [It, Inserted] = Preserved.try_emplace(&Sym->getBlock());
+    if (Inserted || Sym->isLive())
+      It->second = Sym;
   }
   for (auto Block : Sec.blocks()) {
     auto &PSym = Preserved[Block];
@@ -50,7 +49,7 @@ static void preserveDWARFSection(LinkGraph &G, Section &Sec) {
 static SmallVector<char, 0> getSectionData(Section &Sec) {
   SmallVector<char, 0> SecData;
   SmallVector<Block *, 8> SecBlocks(Sec.blocks().begin(), Sec.blocks().end());
-  std::sort(SecBlocks.begin(), SecBlocks.end(), [](Block *LHS, Block *RHS) {
+  llvm::sort(SecBlocks, [](Block *LHS, Block *RHS) {
     return LHS->getAddress() < RHS->getAddress();
   });
   // Convert back to what object file would have, one blob of section content

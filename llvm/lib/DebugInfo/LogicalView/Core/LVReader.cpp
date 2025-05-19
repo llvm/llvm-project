@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/LogicalView/Core/LVReader.h"
-#include "llvm/DebugInfo/LogicalView/Core/LVLine.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVScope.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatAdapters.h"
@@ -66,10 +65,9 @@ bool checkIntegrityScopesTree(LVScope *Root) {
   TraverseScope(Root);
   bool PassIntegrity = true;
   if (Duplicate.size()) {
-    std::stable_sort(begin(Duplicate), end(Duplicate),
-                     [](const auto &l, const auto &r) {
-                       return std::get<0>(l)->getID() < std::get<0>(r)->getID();
-                     });
+    llvm::stable_sort(Duplicate, [](const auto &l, const auto &r) {
+      return std::get<0>(l)->getID() < std::get<0>(r)->getID();
+    });
 
     auto PrintIndex = [](unsigned Index) {
       if (Index)

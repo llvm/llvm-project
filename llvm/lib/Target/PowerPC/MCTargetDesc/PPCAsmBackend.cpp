@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/PPCFixupKinds.h"
+#include "MCTargetDesc/PPCMCExpr.h"
 #include "MCTargetDesc/PPCMCTargetDesc.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/BinaryFormat/MachO.h"
@@ -16,7 +17,6 @@
 #include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCMachObjectWriter.h"
 #include "llvm/MC/MCObjectWriter.h"
-#include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbolELF.h"
 #include "llvm/MC/MCSymbolXCOFF.h"
@@ -91,11 +91,7 @@ public:
                                          : llvm::endianness::big),
         TT(TT) {}
 
-  unsigned getNumFixupKinds() const override {
-    return PPC::NumTargetFixupKinds;
-  }
-
-  const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override {
+  MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override {
     const static MCFixupKindInfo InfosBE[PPC::NumTargetFixupKinds] = {
       // name                    offset  bits  flags
       { "fixup_ppc_br24",        6,      24,   MCFixupKindInfo::FKF_IsPCRel },
@@ -125,17 +121,29 @@ public:
 
     // Fixup kinds from .reloc directive are like R_PPC_NONE/R_PPC64_NONE. They
     // do not require any extra processing.
-    if (Kind >= FirstLiteralRelocationKind)
+    if (mc::isRelocation(Kind))
       return MCAsmBackend::getFixupKindInfo(FK_NONE);
 
     if (Kind < FirstTargetFixupKind)
       return MCAsmBackend::getFixupKindInfo(Kind);
 
-    assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
+    assert(Kind - FirstTargetFixupKind < PPC::NumTargetFixupKinds &&
            "Invalid kind!");
     return (Endian == llvm::endianness::little
                 ? InfosLE
                 : InfosBE)[Kind - FirstTargetFixupKind];
+  }
+
+  bool addReloc(MCAssembler &Asm, const MCFragment &F, const MCFixup &Fixup,
+                const MCValue &TargetVal, uint64_t &FixedValue, bool IsResolved,
+                const MCSubtargetInfo *STI) override {
+    // In PPC64 ELFv1, .quad .TOC.@tocbase in the .opd section is expected to
+    // reference the null symbol.
+    auto Target = TargetVal;
+    if (Target.getSpecifier() == PPCMCExpr::VK_TOCBASE)
+      Target.setAddSym(nullptr);
+    return MCAsmBackend::addReloc(Asm, F, Fixup, Target, FixedValue, IsResolved,
+                                  STI);
   }
 
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
@@ -143,7 +151,7 @@ public:
                   uint64_t Value, bool IsResolved,
                   const MCSubtargetInfo *STI) const override {
     MCFixupKind Kind = Fixup.getKind();
-    if (Kind >= FirstLiteralRelocationKind)
+    if (mc::isRelocation(Kind))
       return;
     Value = adjustFixupValue(Kind, Value);
     if (!Value) return;           // Doesn't change encoding.
@@ -164,28 +172,32 @@ public:
   bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
                              const MCValue &Target,
                              const MCSubtargetInfo *STI) override {
+    // If there is a @ specifier, unless it is optimized out (e.g. constant @l),
+    // force a relocation.
+    if (Target.getSpecifier())
+      return true;
     MCFixupKind Kind = Fixup.getKind();
     switch ((unsigned)Kind) {
     default:
-      return Kind >= FirstLiteralRelocationKind;
+      return false;
     case PPC::fixup_ppc_br24:
     case PPC::fixup_ppc_br24abs:
     case PPC::fixup_ppc_br24_notoc:
       // If the target symbol has a local entry point we must not attempt
       // to resolve the fixup directly.  Emit a relocation and leave
       // resolution of the final target address to the linker.
-      if (const MCSymbolRefExpr *A = Target.getSymA()) {
-        if (const auto *S = dyn_cast<MCSymbolELF>(&A->getSymbol())) {
+      if (const auto *A = Target.getAddSym()) {
+        if (const auto *S = dyn_cast<MCSymbolELF>(A)) {
           // The "other" values are stored in the last 6 bits of the second
           // byte. The traditional defines for STO values assume the full byte
           // and thus the shift to pack it.
           unsigned Other = S->getOther() << 2;
           if ((Other & ELF::STO_PPC64_LOCAL_MASK) != 0)
             return true;
-        } else if (const auto *S = dyn_cast<MCSymbolXCOFF>(&A->getSymbol())) {
+        } else if (const auto *S = dyn_cast<MCSymbolXCOFF>(A)) {
           return !Target.isAbsolute() && S->isExternal() &&
                  S->getStorageClass() == XCOFF::C_WEAKEXT;
-       }
+        }
       }
       return false;
     }

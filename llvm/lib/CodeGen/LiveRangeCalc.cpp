@@ -25,7 +25,6 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
 #include <iterator>
 #include <tuple>
@@ -84,7 +83,7 @@ void LiveRangeCalc::updateFromLiveIns() {
   LiveIn.clear();
 }
 
-void LiveRangeCalc::extend(LiveRange &LR, SlotIndex Use, unsigned PhysReg,
+void LiveRangeCalc::extend(LiveRange &LR, SlotIndex Use, Register PhysReg,
                            ArrayRef<SlotIndex> Undefs) {
   assert(Use.isValid() && "Invalid SlotIndex");
   assert(Indexes && "Missing SlotIndexes");
@@ -189,7 +188,7 @@ bool LiveRangeCalc::isDefOnEntry(LiveRange &LR, ArrayRef<SlotIndex> Undefs,
 }
 
 bool LiveRangeCalc::findReachingDefs(LiveRange &LR, MachineBasicBlock &UseMBB,
-                                     SlotIndex Use, unsigned PhysReg,
+                                     SlotIndex Use, Register PhysReg,
                                      ArrayRef<SlotIndex> Undefs) {
   unsigned UseMBBNum = UseMBB.getNumber();
 
@@ -208,7 +207,7 @@ bool LiveRangeCalc::findReachingDefs(LiveRange &LR, MachineBasicBlock &UseMBB,
 
 #ifndef NDEBUG
     if (MBB->pred_empty()) {
-      MBB->getParent()->verify();
+      MBB->getParent()->verify(nullptr, nullptr, &errs());
       errs() << "Use of " << printReg(PhysReg, MRI->getTargetRegisterInfo())
              << " does not have a corresponding definition on every path:\n";
       const MachineInstr *MI = Indexes->getInstructionFromIndex(Use);
@@ -217,13 +216,13 @@ bool LiveRangeCalc::findReachingDefs(LiveRange &LR, MachineBasicBlock &UseMBB,
       report_fatal_error("Use not jointly dominated by defs.");
     }
 
-    if (Register::isPhysicalRegister(PhysReg)) {
+    if (PhysReg.isPhysical()) {
       const TargetRegisterInfo *TRI = MRI->getTargetRegisterInfo();
       bool IsLiveIn = MBB->isLiveIn(PhysReg);
       for (MCRegAliasIterator Alias(PhysReg, TRI, false); !IsLiveIn && Alias.isValid(); ++Alias)
         IsLiveIn = MBB->isLiveIn(*Alias);
       if (!IsLiveIn) {
-        MBB->getParent()->verify();
+        MBB->getParent()->verify(nullptr, nullptr, &errs());
         errs() << "The register " << printReg(PhysReg, TRI)
                << " needs to be live in to " << printMBBReference(*MBB)
                << ", but is missing from the live-in list.\n";
@@ -442,15 +441,21 @@ bool LiveRangeCalc::isJointlyDominated(const MachineBasicBlock *MBB,
   for (SlotIndex I : Defs)
     DefBlocks.set(Indexes.getMBBFromIndex(I)->getNumber());
 
+  unsigned EntryNum = MF.front().getNumber();
   SetVector<unsigned> PredQueue;
   PredQueue.insert(MBB->getNumber());
   for (unsigned i = 0; i != PredQueue.size(); ++i) {
     unsigned BN = PredQueue[i];
     if (DefBlocks[BN])
-      return true;
+      continue;
+    if (BN == EntryNum) {
+      // We found a path from MBB back to the entry block without hitting any of
+      // the def blocks.
+      return false;
+    }
     const MachineBasicBlock *B = MF.getBlockNumbered(BN);
     for (const MachineBasicBlock *P : B->predecessors())
       PredQueue.insert(P->getNumber());
   }
-  return false;
+  return true;
 }

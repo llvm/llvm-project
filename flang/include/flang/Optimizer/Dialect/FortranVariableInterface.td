@@ -22,51 +22,57 @@ def fir_FortranVariableOpInterface : OpInterface<"FortranVariableOpInterface"> {
     query about all their Fortran properties.
   }];
 
-  let methods = [
-    InterfaceMethod<
-      /*desc=*/"Get the address produced by the definition",
-      /*retTy=*/"mlir::Value",
-      /*methodName=*/"getBase",
-      /*args=*/(ins),
-      /*methodBody=*/[{}],
-      /*defaultImplementation=*/[{
+  let methods =
+      [InterfaceMethod<
+           /*desc=*/"Get the address produced by the definition",
+           /*retTy=*/"mlir::Value",
+           /*methodName=*/"getBase",
+           /*args=*/(ins),
+           /*methodBody=*/[{}],
+           /*defaultImplementation=*/[{
         ConcreteOp op = mlir::cast<ConcreteOp>(this->getOperation());
         return op.getResult();
-      }]
-    >,
-    InterfaceMethod<
-      /*desc=*/"Get Fortran attributes",
-      /*retTy=*/"std::optional<fir::FortranVariableFlagsEnum>",
-      /*methodName=*/"getFortranAttrs",
-      /*args=*/(ins),
-      /*methodBody=*/[{}],
-      /*defaultImplementation=*/[{
+      }]>,
+       InterfaceMethod<
+           /*desc=*/"Get Fortran attributes",
+           /*retTy=*/"std::optional<fir::FortranVariableFlagsEnum>",
+           /*methodName=*/"getFortranAttrs",
+           /*args=*/(ins),
+           /*methodBody=*/[{}],
+           /*defaultImplementation=*/[{
         ConcreteOp op = mlir::cast<ConcreteOp>(this->getOperation());
         return op.getFortran_attrs();
-      }]
-    >,
-    InterfaceMethod<
-      /*desc=*/"Get the shape of the variable. May be a null value.",
-      /*retTy=*/"mlir::Value",
-      /*methodName=*/"getShape",
-      /*args=*/(ins),
-      /*methodBody=*/[{}],
-      /*defaultImplementation=*/[{
+      }]>,
+       InterfaceMethod<
+           /*desc=*/"Get the shape of the variable. May be a null value.",
+           /*retTy=*/"mlir::Value",
+           /*methodName=*/"getShape",
+           /*args=*/(ins),
+           /*methodBody=*/[{}],
+           /*defaultImplementation=*/[{
         ConcreteOp op = mlir::cast<ConcreteOp>(this->getOperation());
         return op.getShape();
-      }]
-    >,
-    InterfaceMethod<
-      /*desc=*/"Get explicit type parameters of the variable",
-      /*retTy=*/"mlir::OperandRange",
-      /*methodName=*/"getExplicitTypeParams",
-      /*args=*/(ins),
-      /*methodBody=*/[{}],
-      /*defaultImplementation=*/[{
+      }]>,
+       InterfaceMethod<
+           /*desc=*/"Get explicit type parameters of the variable",
+           /*retTy=*/"mlir::OperandRange",
+           /*methodName=*/"getExplicitTypeParams",
+           /*args=*/(ins),
+           /*methodBody=*/[{}],
+           /*defaultImplementation=*/[{
         ConcreteOp op = mlir::cast<ConcreteOp>(this->getOperation());
         return op.getTypeparams();
-      }]
-    >,
+      }]>,
+       InterfaceMethod<
+           /*desc=*/"Set Fortran attributes",
+           /*retTy=*/"void",
+           /*methodName=*/"setFortranAttrs",
+           /*args=*/(ins "fir::FortranVariableFlagsEnum":$flags),
+           /*methodBody=*/[{}],
+           /*defaultImplementation=*/[{
+        ConcreteOp op = mlir::cast<ConcreteOp>(this->getOperation());
+        op.setFortran_attrs(fir::FortranVariableFlagsAttr::get(op->getContext(), flags));
+      }]>,
   ];
 
   let extraClassDeclaration = [{
@@ -182,6 +188,13 @@ def fir_FortranVariableOpInterface : OpInterface<"FortranVariableOpInterface"> {
       auto attrs = getFortranAttrs();
       return attrs && bitEnumContainsAny(*attrs,
                         fir::FortranVariableFlagsEnum::target);
+    }
+
+    /// Is this variable captured in an internal procedure via Fortran host association?
+    bool isCapturedInInternalProcedure() {
+      auto attrs = getFortranAttrs();
+      return attrs && bitEnumContainsAny(*attrs,
+                        fir::FortranVariableFlagsEnum::internal_assoc);
     }
 
     /// Is this variable a Fortran intent(in)?

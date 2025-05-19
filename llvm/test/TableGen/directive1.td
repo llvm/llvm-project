@@ -53,6 +53,7 @@ def TDL_DirA : Directive<"dira"> {
 // CHECK-EMPTY:
 // CHECK-NEXT:  #include "llvm/ADT/ArrayRef.h"
 // CHECK-NEXT:  #include "llvm/ADT/BitmaskEnum.h"
+// CHECK-NEXT:  #include "llvm/Support/Compiler.h"
 // CHECK-NEXT:  #include <cstddef>
 // CHECK-EMPTY:
 // CHECK-NEXT:  namespace llvm {
@@ -82,6 +83,14 @@ def TDL_DirA : Directive<"dira"> {
 // CHECK-NEXT:  };
 // CHECK-EMPTY:
 // CHECK-NEXT:  static constexpr std::size_t Category_enumSize = 6;
+// CHECK-EMPTY:
+// CHECK-NEXT:  enum class SourceLanguage : uint32_t {
+// CHECK-NEXT:    C = 1U,
+// CHECK-NEXT:    Fortran = 2U,
+// CHECK-NEXT:    LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/Fortran)
+// CHECK-NEXT:  };
+// CHECK-EMPTY:
+// CHECK-NEXT:  static constexpr std::size_t SourceLanguage_enumSize = 2;
 // CHECK-EMPTY:
 // CHECK-NEXT:  enum class Directive {
 // CHECK-NEXT:    TDLD_dira,
@@ -114,22 +123,23 @@ def TDL_DirA : Directive<"dira"> {
 // CHECK-NEXT:  constexpr auto TDLCV_valc = llvm::tdl::AKind::TDLCV_valc;
 // CHECK-EMPTY:
 // CHECK-NEXT:  // Enumeration helper functions
-// CHECK-NEXT:  Directive getTdlDirectiveKind(llvm::StringRef Str);
+// CHECK-NEXT:  LLVM_ABI Directive getTdlDirectiveKind(llvm::StringRef Str);
 // CHECK-EMPTY:
-// CHECK-NEXT:  llvm::StringRef getTdlDirectiveName(Directive D);
+// CHECK-NEXT:  LLVM_ABI llvm::StringRef getTdlDirectiveName(Directive D);
 // CHECK-EMPTY:
-// CHECK-NEXT:  Clause getTdlClauseKind(llvm::StringRef Str);
+// CHECK-NEXT:  LLVM_ABI Clause getTdlClauseKind(llvm::StringRef Str);
 // CHECK-EMPTY:
-// CHECK-NEXT:  llvm::StringRef getTdlClauseName(Clause C);
+// CHECK-NEXT:  LLVM_ABI llvm::StringRef getTdlClauseName(Clause C);
 // CHECK-EMPTY:
 // CHECK-NEXT:  /// Return true if \p C is a valid clause for \p D in version \p Version.
-// CHECK-NEXT:  bool isAllowedClauseForDirective(Directive D, Clause C, unsigned Version);
+// CHECK-NEXT:  LLVM_ABI bool isAllowedClauseForDirective(Directive D, Clause C, unsigned Version);
 // CHECK-EMPTY:
 // CHECK-NEXT:  constexpr std::size_t getMaxLeafCount() { return 0; }
-// CHECK-NEXT:  Association getDirectiveAssociation(Directive D);
-// CHECK-NEXT:  Category getDirectiveCategory(Directive D);
-// CHECK-NEXT:  AKind getAKind(StringRef);
-// CHECK-NEXT:  llvm::StringRef getTdlAKindName(AKind);
+// CHECK-NEXT:  LLVM_ABI Association getDirectiveAssociation(Directive D);
+// CHECK-NEXT:  LLVM_ABI Category getDirectiveCategory(Directive D);
+// CHECK-NEXT:  LLVM_ABI SourceLanguage getDirectiveLanguages(Directive D);
+// CHECK-NEXT:  LLVM_ABI AKind getAKind(StringRef);
+// CHECK-NEXT:  LLVM_ABI llvm::StringRef getTdlAKindName(AKind);
 // CHECK-EMPTY:
 // CHECK-NEXT:  } // namespace tdl
 // CHECK-NEXT:  } // namespace llvm
@@ -386,6 +396,14 @@ def TDL_DirA : Directive<"dira"> {
 // IMPL-NEXT:    case llvm::tdl::TDLD_dira:
 // IMPL-NEXT:      return llvm::tdl::Category::Executable;
 // IMPL-NEXT:    } // switch (Dir)
+// IMPL-NEXT:    llvm_unreachable("Unexpected directive");
+// IMPL-NEXT:  }
+// IMPL-EMPTY:
+// IMPL-NEXT:  llvm::tdl::SourceLanguage llvm::tdl::getDirectiveLanguages(llvm::tdl::Directive D) {
+// IMPL-NEXT:    switch (D) {
+// IMPL-NEXT:    case llvm::tdl::TDLD_dira:
+// IMPL-NEXT:      return llvm::tdl::SourceLanguage::C | llvm::tdl::SourceLanguage::Fortran;
+// IMPL-NEXT:    } // switch(D)
 // IMPL-NEXT:    llvm_unreachable("Unexpected directive");
 // IMPL-NEXT:  }
 // IMPL-EMPTY:

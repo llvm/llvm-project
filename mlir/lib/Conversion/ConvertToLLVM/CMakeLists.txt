@@ -7,6 +7,7 @@ add_mlir_conversion_library(MLIRConvertToLLVMInterface
   ToLLVMInterface.cpp
 
   DEPENDS
+  MLIRConvertToLLVMInterfaceIncGen
 
   LINK_LIBS PUBLIC
   MLIRIR
@@ -20,8 +21,8 @@ add_mlir_conversion_library(MLIRConvertToLLVMPass
   MLIRConversionPassIncGen
 
   LINK_LIBS PUBLIC
-  MLIRConvertToLLVMInterface
   MLIRIR
+  MLIRConvertToLLVMInterface
   MLIRLLVMCommonConversion
   MLIRLLVMDialect
   MLIRPass

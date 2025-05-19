@@ -7,8 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBSaveCoreOptions.h"
+#include "lldb/API/SBMemoryRegionInfo.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Symbol/SaveCoreOptions.h"
+#include "lldb/Target/ThreadCollection.h"
 #include "lldb/Utility/Instrumentation.h"
 
 #include "Utils.h"
@@ -40,8 +42,7 @@ SBSaveCoreOptions::operator=(const SBSaveCoreOptions &rhs) {
 
 SBError SBSaveCoreOptions::SetPluginName(const char *name) {
   LLDB_INSTRUMENT_VA(this, name);
-  lldb_private::Status error = m_opaque_up->SetPluginName(name);
-  return SBError(error);
+  return SBError(m_opaque_up->SetPluginName(name));
 }
 
 void SBSaveCoreOptions::SetStyle(lldb::SaveCoreStyle style) {
@@ -90,11 +91,43 @@ bool SBSaveCoreOptions::RemoveThread(lldb::SBThread thread) {
   return m_opaque_up->RemoveThread(thread.GetSP());
 }
 
+lldb::SBError
+SBSaveCoreOptions::AddMemoryRegionToSave(const SBMemoryRegionInfo &region) {
+  LLDB_INSTRUMENT_VA(this, region);
+  // Currently add memory region can't fail, so we always return a success
+  // SBerror, but because these API's live forever, this is the most future
+  // proof thing to do.
+  m_opaque_up->AddMemoryRegionToSave(region.ref());
+  return SBError();
+}
+
+lldb::SBThreadCollection SBSaveCoreOptions::GetThreadsToSave() const {
+  LLDB_INSTRUMENT_VA(this);
+  lldb::ThreadCollectionSP threadcollection_sp =
+      std::make_shared<lldb_private::ThreadCollection>(
+          m_opaque_up->GetThreadsToSave());
+  return SBThreadCollection(threadcollection_sp);
+}
+
 void SBSaveCoreOptions::Clear() {
   LLDB_INSTRUMENT_VA(this);
   m_opaque_up->Clear();
 }
 
+uint64_t SBSaveCoreOptions::GetCurrentSizeInBytes(SBError &error) {
+  LLDB_INSTRUMENT_VA(this, error);
+  llvm::Expected<uint64_t> expected_bytes =
+      m_opaque_up->GetCurrentSizeInBytes();
+  if (!expected_bytes) {
+    error =
+        SBError(lldb_private::Status::FromError(expected_bytes.takeError()));
+    return 0;
+  }
+  // Clear the error, so if the clearer uses it we set it to success.
+  error.Clear();
+  return *expected_bytes;
+}
+
 lldb_private::SaveCoreOptions &SBSaveCoreOptions::ref() const {
-  return *m_opaque_up.get();
+  return *m_opaque_up;
 }

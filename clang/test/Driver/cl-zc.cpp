@@ -99,6 +99,9 @@
 // RUN: %clang_cl /Zc:threadSafeInit /c -### -- %s 2>&1 | FileCheck -check-prefix=ThreadSafeStatics %s
 // ThreadSafeStatics-NOT: "-fno-threadsafe-statics"
 
+// RUN: %clang_cl /Zc:tlsGuards- /c -### -- %s 2>&1 | FileCheck -check-prefix=NoTlsGuards %s
+// NoTlsGuards: "-fno-ms-tls-guards"
+
 // RUN: %clang_cl /Zc:dllexportInlines- /c -### -- %s 2>&1 | FileCheck -check-prefix=NoDllExportInlines %s
 // NoDllExportInlines: "-fno-dllexport-inlines"
 // RUN: %clang_cl /Zc:dllexportInlines /c -### -- %s 2>&1 | FileCheck -check-prefix=DllExportInlines %s
@@ -133,9 +136,9 @@
 // RUN:   /Zc:inline \
 // RUN:   /Zc:rvalueCast \
 // RUN:   /Zc:ternary \
-// RUN:   -### -- %s 2>&1 | FileCheck -check-prefix=IGNORED %s
+// RUN:   -### -- %s 2>&1 | FileCheck -DMSG=%errc_ENOENT -check-prefix=IGNORED %s
 // IGNORED-NOT: argument unused during compilation
-// IGNORED-NOT: no such file or directory
+// IGNORED-NOT: [[MSG]]
 
 // Negated form warns:
 // RUN: %clang_cl /c \

@@ -33,7 +33,7 @@ define amdgpu_kernel void @rcp_legacy_f32_constant_100.0(ptr addrspace(1) %out) 
 ; GCN-LABEL: {{^}}rcp_legacy_undef_f32:
 ; GCN-NOT: v_rcp_legacy_f32
 define amdgpu_kernel void @rcp_legacy_undef_f32(ptr addrspace(1) %out) #1 {
-  %rcp = call float @llvm.amdgcn.rcp.legacy(float undef)
+  %rcp = call float @llvm.amdgcn.rcp.legacy(float poison)
   store float %rcp, ptr addrspace(1) %out, align 4
   ret void
 }

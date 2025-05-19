@@ -13,7 +13,7 @@ define i32 @main(i1 %tobool.not, i32 %0) {
 ; CHECK-NEXT:  .LBB0_1: # %j.preheader
 ; CHECK-NEXT:    xorl %r9d, %r9d
 ; CHECK-NEXT:    jmp .LBB0_2
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_5: # %if.then4
 ; CHECK-NEXT:    # in Loop: Header=BB0_2 Depth=1
 ; CHECK-NEXT:    movl $1, %eax

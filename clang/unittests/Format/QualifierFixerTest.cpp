@@ -531,6 +531,11 @@ TEST_F(QualifierFixerTest, RightQualifier) {
   verifyFormat("float (C::*const p)(int);", Style);
   verifyFormat("float (C::*p)(int) const;", Style);
   verifyFormat("float const (C::*p)(int);", "const float (C::*p)(int);", Style);
+
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterFunction = true;
+  verifyFormat("auto foo() -> T const { return bar; }",
+               "auto foo() -> const T { return bar; }", Style);
 }
 
 TEST_F(QualifierFixerTest, LeftQualifier) {
@@ -1272,6 +1277,33 @@ TEST_F(QualifierFixerTest, WithConstraints) {
                "  requires Concept1<F> && Concept2<F>\n"
                "constexpr constructor();",
                Style);
+}
+
+TEST_F(QualifierFixerTest, WithCpp11Attribute) {
+  FormatStyle Style = getLLVMStyle();
+  Style.QualifierAlignment = FormatStyle::QAS_Custom;
+  Style.QualifierOrder = {"static", "constexpr", "inline", "type"};
+
+  verifyFormat("[[nodiscard]] static constexpr inline int func() noexcept {}",
+               "[[nodiscard]] inline constexpr static int func() noexcept {}",
+               Style);
+  verifyFormat("[[maybe_unused]] static constexpr int A",
+               "[[maybe_unused]] constexpr static int A", Style);
+}
+
+TEST_F(QualifierFixerTest, WithQualifiedTypeName) {
+  auto Style = getLLVMStyle();
+  Style.QualifierAlignment = FormatStyle::QAS_Custom;
+  Style.QualifierOrder = {"constexpr", "type", "const"};
+
+  verifyFormat("constexpr ::int64_t x{1};", "::int64_t constexpr x{1};", Style);
+  verifyFormat("constexpr std::int64_t x{123};",
+               "std::int64_t constexpr x{123};", Style);
+  verifyFormat("constexpr ::std::int64_t x{123};",
+               "::std::int64_t constexpr x{123};", Style);
+
+  Style.TypeNames.push_back("bar");
+  verifyFormat("constexpr foo::bar x{12};", "foo::bar constexpr x{12};", Style);
 }
 
 TEST_F(QualifierFixerTest, DisableRegions) {

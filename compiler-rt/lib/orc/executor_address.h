@@ -22,7 +22,7 @@
 #include <cassert>
 #include <type_traits>
 
-namespace __orc_rt {
+namespace orc_rt {
 
 using ExecutorAddrDiff = uint64_t;
 
@@ -30,7 +30,7 @@ using ExecutorAddrDiff = uint64_t;
 class ExecutorAddr {
 public:
   /// A wrap/unwrap function that leaves pointers unmodified.
-  template <typename T> using rawPtr = __orc_rt::identity<T *>;
+  template <typename T> using rawPtr = orc_rt::identity<T *>;
 
   /// Default wrap function to use on this host.
   template <typename T> using defaultWrap = rawPtr<T>;
@@ -247,13 +247,13 @@ public:
 
 using SPSExecutorAddrRangeSequence = SPSSequence<SPSExecutorAddrRange>;
 
-} // End namespace __orc_rt
+} // End namespace orc_rt
 
 namespace std {
 
 // Make ExecutorAddr hashable.
-template <> struct hash<__orc_rt::ExecutorAddr> {
-  size_t operator()(const __orc_rt::ExecutorAddr &A) const {
+template <> struct hash<orc_rt::ExecutorAddr> {
+  size_t operator()(const orc_rt::ExecutorAddr &A) const {
     return hash<uint64_t>()(A.getValue());
   }
 };

@@ -25,7 +25,7 @@ if (p0) jump #1f
 .section b15, "ax"
 1:
 
-# CHECK: relocation R_HEX_B22_PCREL out of range: 8388612 is not in [-2097152, 2097151]
+# CHECK: relocation R_HEX_B22_PCREL out of range: 8388612 is not in [-8388608, 8388607]
 jump #1f
 .space (1<<23)
 .section b22, "ax"

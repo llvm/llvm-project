@@ -60,7 +60,7 @@ public:
          I != E; ++I) {
       std::unique_ptr<llvm::MemoryBuffer> Buf =
           llvm::MemoryBuffer::getMemBuffer(I->Code);
-      const FileEntry *Entry = SM.getFileManager().getVirtualFile(
+      FileEntryRef Entry = SM.getFileManager().getVirtualFileRef(
           I->FileName, Buf->getBufferSize(), /*ModificationTime=*/0);
       SM.overrideFileContents(Entry, std::move(Buf));
     }

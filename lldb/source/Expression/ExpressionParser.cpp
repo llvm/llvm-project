@@ -63,9 +63,8 @@ ExpressionParser::RunStaticInitializers(IRExecutionUnitSP &execution_unit_sp,
             exe_ctx, call_static_initializer, options, execution_errors);
 
     if (results != eExpressionCompleted) {
-      err = Status::FromErrorStringWithFormat(
-          "couldn't run static initializer: %s",
-          execution_errors.GetString().c_str());
+      err = Status::FromError(execution_errors.GetAsError(
+          lldb::eExpressionSetupError, "couldn't run static initializer:"));
       return err;
     }
   }

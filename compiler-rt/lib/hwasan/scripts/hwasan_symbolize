@@ -316,7 +316,7 @@ class Symbolizer:
       self.__last_access_tag = int(match.group(2), 16)
 
   def process_tag_dump_line(self, line, ignore_tags=False):
-    m = re.match(r'.*?(0x[0-9a-f]+):' + '([ ]*[\[ ][0-9a-f][0-9a-f]\]?)' * 16, line)
+    m = re.match(r'.*?(0x[0-9a-f]+):' + r'([ ]*[\[ ][0-9a-f][0-9a-f]\]?)' * 16, line)
     if m is None:
       return False
     addr = m.group(1)

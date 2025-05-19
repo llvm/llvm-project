@@ -27,7 +27,9 @@ add_llvm_unittest(CodeGenTests
   CCStateTest.cpp
   DIEHashTest.cpp
   DIETest.cpp
+  DroppedVariableStatsMIRTest.cpp
   DwarfStringPoolEntryRefTest.cpp
+  GCMetadata.cpp
   InstrRefLDVTest.cpp
   LowLevelTypeTest.cpp
   LexicalScopesTest.cpp
@@ -46,6 +48,7 @@ add_llvm_unittest(CodeGenTests
   TargetOptionsTest.cpp
   TestAsmPrinter.cpp
   MLRegAllocDevelopmentFeatures.cpp
+  X86MCInstLowerTest.cpp
   )
 
 add_subdirectory(GlobalISel)

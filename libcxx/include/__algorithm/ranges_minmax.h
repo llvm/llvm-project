@@ -24,6 +24,7 @@
 #include <__ranges/access.h>
 #include <__ranges/concepts.h>
 #include <__type_traits/desugars_to.h>
+#include <__type_traits/is_integral.h>
 #include <__type_traits/is_reference.h>
 #include <__type_traits/is_trivially_copyable.h>
 #include <__type_traits/remove_cvref.h>

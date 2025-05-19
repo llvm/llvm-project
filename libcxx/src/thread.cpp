@@ -6,8 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <__system_error/throw_system_error.h>
 #include <__thread/poll_with_backoff.h>
 #include <__thread/timed_backoff_policy.h>
+#include <__utility/pair.h>
 #include <exception>
 #include <future>
 #include <limits>
@@ -31,6 +33,7 @@
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 thread::~thread() {
   if (!__libcpp_thread_isnull(&__t_))
@@ -46,7 +49,7 @@ void thread::join() {
   }
 
   if (ec)
-    __throw_system_error(ec, "thread::join failed");
+    std::__throw_system_error(ec, "thread::join failed");
 }
 
 void thread::detach() {
@@ -58,7 +61,7 @@ void thread::detach() {
   }
 
   if (ec)
-    __throw_system_error(ec, "thread::detach failed");
+    std::__throw_system_error(ec, "thread::detach failed");
 }
 
 unsigned thread::hardware_concurrency() noexcept {
@@ -170,4 +173,5 @@ void __thread_struct::notify_all_at_thread_exit(condition_variable* cv, mutex* m
 
 void __thread_struct::__make_ready_at_thread_exit(__assoc_sub_state* __s) { __p_->__make_ready_at_thread_exit(__s); }
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD

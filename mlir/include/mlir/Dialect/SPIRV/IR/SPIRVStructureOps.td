@@ -101,7 +101,7 @@ def SPIRV_ConstantOp : SPIRV_Op<"Constant",
 
     ```mlir
     %0 = spirv.Constant true
-    %1 = spirv.Constant dense<[2, 3]> : vector<2xf32>
+    %1 = spirv.Constant dense<[2.0, 3.0]> : vector<2xf32>
     %2 = spirv.Constant [dense<3.0> : vector<2xf32>] : !spirv.array<1xvector<2xf32>>
     ```
 

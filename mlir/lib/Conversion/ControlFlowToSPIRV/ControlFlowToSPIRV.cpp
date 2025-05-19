@@ -109,7 +109,7 @@ struct CondBranchOpPattern final : OpConversionPattern<cf::CondBranchOp> {
 //===----------------------------------------------------------------------===//
 
 void mlir::cf::populateControlFlowToSPIRVPatterns(
-    SPIRVTypeConverter &typeConverter, RewritePatternSet &patterns) {
+    const SPIRVTypeConverter &typeConverter, RewritePatternSet &patterns) {
   MLIRContext *context = patterns.getContext();
 
   patterns.add<BranchOpPattern, CondBranchOpPattern>(typeConverter, context);

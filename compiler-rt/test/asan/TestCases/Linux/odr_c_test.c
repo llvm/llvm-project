@@ -10,6 +10,9 @@
 // RUN: %clang_asan -fcommon %s -fPIC -shared -mllvm -asan-use-private-alias=1 -o %dynamiclib2  -DFILE2
 // RUN: %run %t 2>&1 | count 0
 
+// Unaligned accesses don't work on strict-alignment targets like SPARC.
+// UNSUPPORTED: sparc-target-arch
+
 // CHECK: The following global variable is not properly aligned.
 // CHECK: ERROR: AddressSanitizer: odr-violation
 #if defined(FILE1)

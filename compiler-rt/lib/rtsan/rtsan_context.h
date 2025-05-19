@@ -35,9 +35,22 @@ private:
   int bypass_depth_{0};
 };
 
+class ScopedBypass {
+public:
+  [[nodiscard]] explicit ScopedBypass(Context &context) : context_(context) {
+    context_.BypassPush();
+  }
+
+  ~ScopedBypass() { context_.BypassPop(); }
+
+  ScopedBypass(const ScopedBypass &) = delete;
+  ScopedBypass &operator=(const ScopedBypass &) = delete;
+  ScopedBypass(ScopedBypass &&) = delete;
+  ScopedBypass &operator=(ScopedBypass &&) = delete;
+
+private:
+  Context &context_;
+};
+
 Context &GetContextForThisThread();
-
-void ExpectNotRealtime(Context &context, const char *intercepted_function_name);
-void PrintDiagnostics(const char *intercepted_function_name);
-
 } // namespace __rtsan

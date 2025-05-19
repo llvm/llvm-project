@@ -1,4 +1,5 @@
 # RUN: llc -mtriple=amdgcn  -run-pass=early-machinelicm -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgcn  -passes=early-machinelicm -o - %s | FileCheck %s
 
 # Test to check machine LICM does not hoist convergent instructions,
 # DS_PERMUTE_B32 in this example.

@@ -7,28 +7,12 @@ define dso_local void @_Z4testP1S(ptr %p) local_unnamed_addr {
 ; CHECK-LABEL: @_Z4testP1S(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr [[P:%.*]], i64 0, i32 1, i64 0
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[P]], i64 0, i32 2, i64 15
-; CHECK-NEXT:    [[I1:%.*]] = load i32, ptr [[ARRAYIDX1]], align 4
-; CHECK-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[P]], i64 0, i32 2, i64 6
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[ARRAYIDX13]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX20:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[P]], i64 0, i32 2, i64 4
-; CHECK-NEXT:    [[I7:%.*]] = load i32, ptr [[ARRAYIDX20]], align 4
-; CHECK-NEXT:    [[ARRAYIDX27:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[P]], i64 0, i32 2, i64 12
-; CHECK-NEXT:    [[ARRAYIDX41:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[P]], i64 0, i32 2, i64 14
-; CHECK-NEXT:    [[I13:%.*]] = load i32, ptr [[ARRAYIDX41]], align 4
-; CHECK-NEXT:    [[ARRAYIDX48:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[P]], i64 0, i32 2, i64 5
-; CHECK-NEXT:    [[I15:%.*]] = load i32, ptr [[ARRAYIDX48]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[ARRAYIDX27]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i32>, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i32> poison, i32 [[I1]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> poison, <8 x i32> <i32 1, i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <8 x i32> [[TMP3]], <8 x i32> [[TMP4]], <8 x i32> <i32 0, i32 8, i32 9, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x i32> [[TMP5]], i32 [[I7]], i32 3
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x i32> [[TMP6]], i32 [[I13]], i32 6
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <8 x i32> [[TMP7]], i32 [[I15]], i32 7
-; CHECK-NEXT:    [[TMP9:%.*]] = call <8 x i32> @llvm.vector.insert.v8i32.v2i32(<8 x i32> [[TMP8]], <2 x i32> [[TMP1]], i64 4)
-; CHECK-NEXT:    [[TMP10:%.*]] = add nsw <8 x i32> [[TMP9]], [[TMP2]]
-; CHECK-NEXT:    store <8 x i32> [[TMP10]], ptr [[P]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = call <12 x i32> @llvm.masked.load.v12i32.p0(ptr [[ARRAYIDX20]], i32 4, <12 x i1> <i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 true, i1 true>, <12 x i32> poison)
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <12 x i32> [[TMP1]], <12 x i32> poison, <8 x i32> <i32 11, i32 3, i32 2, i32 0, i32 8, i32 9, i32 10, i32 1>
+; CHECK-NEXT:    [[TMP7:%.*]] = add nsw <8 x i32> [[TMP6]], [[TMP2]]
+; CHECK-NEXT:    store <8 x i32> [[TMP7]], ptr [[P]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:

@@ -8,7 +8,8 @@
 
 #if !defined(__APPLE__) && !defined(__linux__) && !defined(__FreeBSD__) &&     \
     !defined(__Fuchsia__) && !(defined(__sun__) && defined(__svr4__)) &&       \
-    !defined(__NetBSD__) && !defined(_WIN32) && !defined(_AIX)
+    !defined(__NetBSD__) && !defined(_WIN32) && !defined(_AIX) &&              \
+    !defined(__wasm__) && !defined(__HAIKU__)
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -26,7 +27,6 @@ static const char *VNamesFirst = NULL;
 static const char *VNamesLast = NULL;
 static char *CountersFirst = NULL;
 static char *CountersLast = NULL;
-static uint32_t *OrderFileFirst = NULL;
 
 static const void *getMinAddr(const void *A1, const void *A2) {
   return A1 < A2 ? A1 : A2;
@@ -107,9 +107,6 @@ COMPILER_RT_VISIBILITY
 char *__llvm_profile_begin_bitmap(void) { return BitmapFirst; }
 COMPILER_RT_VISIBILITY
 char *__llvm_profile_end_bitmap(void) { return BitmapLast; }
-/* TODO: correctly set up OrderFileFirst. */
-COMPILER_RT_VISIBILITY
-uint32_t *__llvm_profile_begin_orderfile(void) { return OrderFileFirst; }
 
 COMPILER_RT_VISIBILITY
 ValueProfNode *__llvm_profile_begin_vnodes(void) {

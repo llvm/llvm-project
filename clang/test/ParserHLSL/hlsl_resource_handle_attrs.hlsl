@@ -1,15 +1,19 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -ast-dump -o - %s | FileCheck %s
+// RUN: %clang_cc1 -Wno-hlsl-implicit-binding -triple dxil-pc-shadermodel6.3-library -x hlsl -ast-dump -o - %s | FileCheck %s
 
-// CHECK: -ClassTemplateSpecializationDecl 0x{{[0-9a-f]+}} <<invalid sloc>> <invalid sloc> class RWBuffer definition implicit_instantiation
-// CHECK: -FieldDecl 0x{{[0-9a-f]+}} <<invalid sloc>> <invalid sloc> implicit referenced h 'float *'
-// CHECK: -HLSLResourceClassAttr 0x{{[0-9a-f]+}} <<invalid sloc>> Implicit UAV
-// CHECK: -HLSLResourceAttr 0x{{[0-9a-f]+}} <<invalid sloc>> Implicit TypedBuffer
+// CHECK: ClassTemplateSpecializationDecl {{.*}} class RWBuffer definition implicit_instantiation
+// CHECK: TemplateArgument type 'float'
+// CHECK: BuiltinType {{.*}} 'float'
+// CHECK: FieldDecl {{.*}} implicit referenced __handle '__hlsl_resource_t
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
+// CHECK-SAME{LITERAL}: [[hlsl::contained_type(float)]]
 RWBuffer<float> Buffer1;
 
-// CHECK: -ClassTemplateDecl 0x{{[0-9a-f]+}} <<invalid sloc>> <invalid sloc> implicit RasterizerOrderedBuffer
-// CHECK: -CXXRecordDecl 0x{{[0-9a-f]+}} <<invalid sloc>> <invalid sloc> implicit class RasterizerOrderedBuffer definition
-// CHECK: -FieldDecl 0x{{[0-9a-f]+}} <<invalid sloc>> <invalid sloc> implicit h 'element_type *'
-// CHECK: -HLSLResourceClassAttr 0x{{[0-9a-f]+}} <<invalid sloc>> Implicit UAV
-// CHECK: -HLSLResourceAttr 0x{{[0-9a-f]+}} <<invalid sloc>> Implicit TypedBuffer
-// CHECK: -HLSLROVAttr 0x{{[0-9a-f]+}} <<invalid sloc>> Implicit
-RasterizerOrderedBuffer<vector<float, 4> > BufferArray3[4] : register(u4, space1);
+// CHECK: ClassTemplateSpecializationDecl {{.*}} class RasterizerOrderedBuffer definition implicit_instantiation
+// CHECK: TemplateArgument type 'vector<float, 4>'
+// CHECK: ExtVectorType {{.*}} 'vector<float, 4>' 4
+// CHECK: BuiltinType {{.*}} 'float'
+// CHECK: FieldDecl {{.*}} implicit referenced __handle '__hlsl_resource_t
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class(UAV)]
+// CHECK-SAME{LITERAL}: [[hlsl::is_rov]]
+// CHECK-SAME{LITERAL}: [[hlsl::contained_type(vector<float, 4>)]]
+RasterizerOrderedBuffer<vector<float, 4> > BufferArray3[4];

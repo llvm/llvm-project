@@ -36,7 +36,7 @@ extern template class LoopBase<BasicBlock, Loop>;
 
 /// Represents a single loop in the control flow graph.  Note that not all SCCs
 /// in the CFG are necessarily loops.
-class LLVM_EXTERNAL_VISIBILITY Loop : public LoopBase<BasicBlock, Loop> {
+class LLVM_ABI Loop : public LoopBase<BasicBlock, Loop> {
 public:
   /// A range representing the start and end location of a loop.
   class LocRange {
@@ -529,7 +529,7 @@ public:
   }
 
   // Return true if a new use of V added in ExitBB would require an LCSSA PHI
-  // to be inserted at the begining of the block.  Note that V is assumed to
+  // to be inserted at the beginning of the block.  Note that V is assumed to
   // dominate ExitBB, and ExitBB must be the exit block of some loop.  The
   // IR is assumed to be in LCSSA form before the planned insertion.
   bool wouldBeOutOfLoopUseRequiringLCSSA(const Value *V,

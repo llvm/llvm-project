@@ -51,9 +51,13 @@ public:
     K_Temp = 2,
     K_Decl = 3,
     K_Elem = 5,
+    K_RVO = 6,
+    K_InitList = 7
   };
 
   static InitLink This() { return InitLink{K_This}; }
+  static InitLink InitList() { return InitLink{K_InitList}; }
+  static InitLink RVO() { return InitLink{K_RVO}; }
   static InitLink Field(unsigned Offset) {
     InitLink IL{K_Field};
     IL.Offset = Offset;
@@ -98,6 +102,8 @@ struct VarCreationState {
   bool notCreated() const { return !S; }
 };
 
+enum class ScopeKind { Call, Block };
+
 /// Compilation context for expressions.
 template <class Emitter>
 class Compiler : public ConstStmtVisitor<Compiler<Emitter>, bool>,
@@ -122,17 +128,22 @@ public:
 
   // Expressions.
   bool VisitCastExpr(const CastExpr *E);
+  bool VisitBuiltinBitCastExpr(const BuiltinBitCastExpr *E);
   bool VisitIntegerLiteral(const IntegerLiteral *E);
   bool VisitFloatingLiteral(const FloatingLiteral *E);
   bool VisitImaginaryLiteral(const ImaginaryLiteral *E);
+  bool VisitFixedPointLiteral(const FixedPointLiteral *E);
   bool VisitParenExpr(const ParenExpr *E);
   bool VisitBinaryOperator(const BinaryOperator *E);
   bool VisitLogicalBinOp(const BinaryOperator *E);
   bool VisitPointerArithBinOp(const BinaryOperator *E);
   bool VisitComplexBinOp(const BinaryOperator *E);
+  bool VisitVectorBinOp(const BinaryOperator *E);
+  bool VisitFixedPointBinOp(const BinaryOperator *E);
+  bool VisitFixedPointUnaryOperator(const UnaryOperator *E);
   bool VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *E);
   bool VisitCallExpr(const CallExpr *E);
-  bool VisitBuiltinCallExpr(const CallExpr *E);
+  bool VisitBuiltinCallExpr(const CallExpr *E, unsigned BuiltinID);
   bool VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *E);
   bool VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *E);
   bool VisitCXXNullPtrLiteralExpr(const CXXNullPtrLiteralExpr *E);
@@ -172,6 +183,7 @@ public:
   bool VisitPredefinedExpr(const PredefinedExpr *E);
   bool VisitCXXThrowExpr(const CXXThrowExpr *E);
   bool VisitCXXReinterpretCastExpr(const CXXReinterpretCastExpr *E);
+  bool VisitCXXDynamicCastExpr(const CXXDynamicCastExpr *E);
   bool VisitCXXNoexceptExpr(const CXXNoexceptExpr *E);
   bool VisitCXXConstructExpr(const CXXConstructExpr *E);
   bool VisitSourceLocExpr(const SourceLocExpr *E);
@@ -201,10 +213,11 @@ public:
   bool VisitCXXNewExpr(const CXXNewExpr *E);
   bool VisitCXXDeleteExpr(const CXXDeleteExpr *E);
   bool VisitBlockExpr(const BlockExpr *E);
+  bool VisitCXXTypeidExpr(const CXXTypeidExpr *E);
 
   // Statements.
   bool visitCompoundStmt(const CompoundStmt *S);
-  bool visitDeclStmt(const DeclStmt *DS);
+  bool visitDeclStmt(const DeclStmt *DS, bool EvaluateConditionDecl = false);
   bool visitReturnStmt(const ReturnStmt *RS);
   bool visitIfStmt(const IfStmt *IS);
   bool visitWhileStmt(const WhileStmt *S);
@@ -221,7 +234,7 @@ public:
 
 protected:
   bool visitStmt(const Stmt *S);
-  bool visitExpr(const Expr *E) override;
+  bool visitExpr(const Expr *E, bool DestroyToplevelScope) override;
   bool visitFunc(const FunctionDecl *F) override;
 
   bool visitDeclAndReturn(const VarDecl *VD, bool ConstantContext) override;
@@ -265,7 +278,7 @@ protected:
   /// Evaluates an expression and places the result on the stack. If the
   /// expression is of composite type, a local variable will be created
   /// and a pointer to said variable will be placed on the stack.
-  bool visit(const Expr *E);
+  bool visit(const Expr *E) override;
   /// Compiles an initializer. This is like visit() but it will never
   /// create a variable and instead rely on a variable already having
   /// been created. visitInitializer() then relies on a pointer to this
@@ -277,11 +290,13 @@ protected:
   /// intact.
   bool delegate(const Expr *E);
   /// Creates and initializes a variable from the given decl.
-  VarCreationState visitVarDecl(const VarDecl *VD, bool Toplevel = false);
-  VarCreationState visitDecl(const VarDecl *VD);
+  VarCreationState visitVarDecl(const VarDecl *VD, bool Toplevel = false,
+                                bool IsConstexprUnknown = false);
+  VarCreationState visitDecl(const VarDecl *VD,
+                             bool IsConstexprUnknown = false);
   /// Visit an APValue.
   bool visitAPValue(const APValue &Val, PrimType ValType, const Expr *E);
-  bool visitAPValueInitializer(const APValue &Val, const Expr *E);
+  bool visitAPValueInitializer(const APValue &Val, const Expr *E, QualType T);
   /// Visit the given decl as if we have a reference to it.
   bool visitDeclRef(const ValueDecl *D, const Expr *E);
 
@@ -290,16 +305,22 @@ protected:
 
   bool visitInitList(ArrayRef<const Expr *> Inits, const Expr *ArrayFiller,
                      const Expr *E);
-  bool visitArrayElemInit(unsigned ElemIndex, const Expr *Init);
+  bool visitArrayElemInit(unsigned ElemIndex, const Expr *Init,
+                          std::optional<PrimType> InitT);
+  bool visitCallArgs(ArrayRef<const Expr *> Args, const FunctionDecl *FuncDecl);
 
   /// Creates a local primitive value.
   unsigned allocateLocalPrimitive(DeclTy &&Decl, PrimType Ty, bool IsConst,
-                                  bool IsExtended = false);
+                                  const ValueDecl *ExtendingDecl = nullptr,
+                                  ScopeKind SC = ScopeKind::Block,
+                                  bool IsConstexprUnknown = false);
 
   /// Allocates a space storing a local given its type.
   std::optional<unsigned>
-  allocateLocal(DeclTy &&Decl, const ValueDecl *ExtendingDecl = nullptr);
-  unsigned allocateTemporary(const Expr *E);
+  allocateLocal(DeclTy &&Decl, QualType Ty = QualType(),
+                const ValueDecl *ExtendingDecl = nullptr,
+                ScopeKind = ScopeKind::Block, bool IsConstexprUnknown = false);
+  std::optional<unsigned> allocateTemporary(const Expr *E);
 
 private:
   friend class VariableScope<Emitter>;
@@ -320,6 +341,7 @@ private:
   /// Emits a zero initializer.
   bool visitZeroInitializer(PrimType T, QualType QT, const Expr *E);
   bool visitZeroRecordInitializer(const Record *R, const Expr *E);
+  bool visitZeroArrayInitializer(QualType T, const Expr *E);
 
   /// Emits an APSInt constant.
   bool emitConst(const llvm::APSInt &Value, PrimType Ty, const Expr *E);
@@ -331,6 +353,9 @@ private:
   /// Emits an integer constant.
   template <typename T> bool emitConst(T Value, PrimType Ty, const Expr *E);
   template <typename T> bool emitConst(T Value, const Expr *E);
+  bool emitBool(bool V, const Expr *E) override {
+    return this->emitConst(V, E);
+  }
 
   llvm::RoundingMode getRoundingMode(const Expr *E) const {
     FPOptions FPO = E->getFPFeaturesInEffect(Ctx.getLangOpts());
@@ -339,6 +364,10 @@ private:
       return llvm::RoundingMode::NearestTiesToEven;
 
     return FPO.getRoundingMode();
+  }
+
+  uint32_t getFPOptions(const Expr *E) const {
+    return E->getFPFeaturesInEffect(Ctx.getLangOpts()).getAsOpaqueInt();
   }
 
   bool emitPrimCast(PrimType FromT, PrimType ToT, QualType ToQT, const Expr *E);
@@ -359,16 +388,19 @@ private:
   bool emitComplexBoolCast(const Expr *E);
   bool emitComplexComparison(const Expr *LHS, const Expr *RHS,
                              const BinaryOperator *E);
-
-  bool emitRecordDestruction(const Record *R);
-  bool emitDestruction(const Descriptor *Desc);
+  bool emitRecordDestruction(const Record *R, SourceInfo Loc);
+  bool emitDestruction(const Descriptor *Desc, SourceInfo Loc);
+  bool emitDummyPtr(const DeclTy &D, const Expr *E);
   unsigned collectBaseOffset(const QualType BaseType,
                              const QualType DerivedType);
   bool emitLambdaStaticInvokerBody(const CXXMethodDecl *MD);
+  bool emitBuiltinBitCast(const CastExpr *E);
   bool compileConstructor(const CXXConstructorDecl *Ctor);
   bool compileDestructor(const CXXDestructorDecl *Dtor);
+  bool compileUnionAssignmentOperator(const CXXMethodDecl *MD);
 
   bool checkLiteralType(const Expr *E);
+  bool maybeEmitDeferredVarInit(const VarDecl *VD);
 
 protected:
   /// Variable to storage mapping.
@@ -405,8 +437,12 @@ protected:
   /// Switch case mapping.
   CaseMap CaseLabels;
 
+  /// Scope to cleanup until when we see a break statement.
+  VariableScope<Emitter> *BreakVarScope = nullptr;
   /// Point to break to.
   OptLabelTy BreakLabel;
+  /// Scope to cleanup until when we see a continue statement.
+  VariableScope<Emitter> *ContinueVarScope = nullptr;
   /// Point to continue to.
   OptLabelTy ContinueLabel;
   /// Default case label.
@@ -419,28 +455,16 @@ extern template class Compiler<EvalEmitter>;
 /// Scope chain managing the variable lifetimes.
 template <class Emitter> class VariableScope {
 public:
-  VariableScope(Compiler<Emitter> *Ctx, const ValueDecl *VD)
-      : Ctx(Ctx), Parent(Ctx->VarScope), ValDecl(VD) {
+  VariableScope(Compiler<Emitter> *Ctx, const ValueDecl *VD,
+                ScopeKind Kind = ScopeKind::Block)
+      : Ctx(Ctx), Parent(Ctx->VarScope), ValDecl(VD), Kind(Kind) {
     Ctx->VarScope = this;
   }
 
   virtual ~VariableScope() { Ctx->VarScope = this->Parent; }
 
-  void add(const Scope::Local &Local, bool IsExtended) {
-    if (IsExtended)
-      this->addExtended(Local);
-    else
-      this->addLocal(Local);
-  }
-
   virtual void addLocal(const Scope::Local &Local) {
-    if (this->Parent)
-      this->Parent->addLocal(Local);
-  }
-
-  virtual void addExtended(const Scope::Local &Local) {
-    if (this->Parent)
-      this->Parent->addExtended(Local);
+    llvm_unreachable("Shouldn't be called");
   }
 
   void addExtended(const Scope::Local &Local, const ValueDecl *ExtendingDecl) {
@@ -464,10 +488,28 @@ public:
       this->addLocal(Local);
   }
 
+  /// Like addExtended, but adds to the nearest scope of the given kind.
+  void addForScopeKind(const Scope::Local &Local, ScopeKind Kind) {
+    VariableScope *P = this;
+    while (P) {
+      if (P->Kind == Kind) {
+        P->addLocal(Local);
+        return;
+      }
+      P = P->Parent;
+      if (!P)
+        break;
+    }
+
+    // Add to this scope.
+    this->addLocal(Local);
+  }
+
   virtual void emitDestruction() {}
   virtual bool emitDestructors(const Expr *E = nullptr) { return true; }
   virtual bool destroyLocals(const Expr *E = nullptr) { return true; }
   VariableScope *getParent() const { return Parent; }
+  ScopeKind getKind() const { return Kind; }
 
 protected:
   /// Compiler instance.
@@ -475,12 +517,14 @@ protected:
   /// Link to the parent scope.
   VariableScope *Parent;
   const ValueDecl *ValDecl = nullptr;
+  ScopeKind Kind;
 };
 
 /// Generic scope for local variables.
 template <class Emitter> class LocalScope : public VariableScope<Emitter> {
 public:
-  LocalScope(Compiler<Emitter> *Ctx) : VariableScope<Emitter>(Ctx, nullptr) {}
+  LocalScope(Compiler<Emitter> *Ctx, ScopeKind Kind = ScopeKind::Block)
+      : VariableScope<Emitter>(Ctx, nullptr, Kind) {}
   LocalScope(Compiler<Emitter> *Ctx, const ValueDecl *VD)
       : VariableScope<Emitter>(Ctx, VD) {}
 
@@ -506,9 +550,10 @@ public:
     if (!Idx)
       return true;
 
+    // NB: We are *not* resetting Idx here as to allow multiple
+    // calls to destroyLocals().
     bool Success = this->emitDestructors(E);
     this->Ctx->emitDestroy(*Idx, E);
-    this->Idx = std::nullopt;
     return Success;
   }
 
@@ -527,12 +572,12 @@ public:
       return true;
     // Emit destructor calls for local variables of record
     // type with a destructor.
-    for (Scope::Local &Local : this->Ctx->Descriptors[*Idx]) {
+    for (Scope::Local &Local : llvm::reverse(this->Ctx->Descriptors[*Idx])) {
       if (!Local.Desc->isPrimitive() && !Local.Desc->isPrimitiveArray()) {
         if (!this->Ctx->emitGetPtrLocal(Local.Offset, E))
           return false;
 
-        if (!this->Ctx->emitDestruction(Local.Desc))
+        if (!this->Ctx->emitDestruction(Local.Desc, Local.Desc->getLoc()))
           return false;
 
         if (!this->Ctx->emitPopPtr(E))
@@ -566,16 +611,11 @@ public:
 };
 
 /// Scope for storage declared in a compound statement.
+// FIXME: Remove?
 template <class Emitter> class BlockScope final : public LocalScope<Emitter> {
 public:
-  BlockScope(Compiler<Emitter> *Ctx) : LocalScope<Emitter>(Ctx) {}
-
-  void addExtended(const Scope::Local &Local) override {
-    // If we to this point, just add the variable as a normal local
-    // variable. It will be destroyed at the end of the block just
-    // like all others.
-    this->addLocal(Local);
-  }
+  BlockScope(Compiler<Emitter> *Ctx, ScopeKind Kind = ScopeKind::Block)
+      : LocalScope<Emitter>(Ctx, Kind) {}
 };
 
 template <class Emitter> class ArrayIndexScope final {

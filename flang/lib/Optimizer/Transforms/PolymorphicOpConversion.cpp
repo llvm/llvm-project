@@ -205,10 +205,9 @@ struct DispatchOpConv : public OpConversionPattern<fir::DispatchOp> {
     // Make the call.
     llvm::SmallVector<mlir::Value> args{funcPtr};
     args.append(dispatch.getArgs().begin(), dispatch.getArgs().end());
-    // FIXME: add procedure_attrs to fir.dispatch and propagate to fir.call.
     rewriter.replaceOpWithNewOp<fir::CallOp>(
-        dispatch, resTypes, nullptr, args,
-        /*procedure_attrs=*/fir::FortranProcedureFlagsEnumAttr{});
+        dispatch, resTypes, nullptr, args, dispatch.getArgAttrsAttr(),
+        dispatch.getResAttrsAttr(), dispatch.getProcedureAttrsAttr());
     return mlir::success();
   }
 
@@ -402,10 +401,14 @@ llvm::LogicalResult SelectTypeConv::genTypeLadderStep(
     {
       // Since conversion is done in parallel for each fir.select_type
       // operation, the runtime function insertion must be threadsafe.
+      auto runtimeAttr =
+          mlir::NamedAttribute(fir::FIROpsDialect::getFirRuntimeAttrName(),
+                               mlir::UnitAttr::get(rewriter.getContext()));
       callee =
           fir::createFuncOp(rewriter.getUnknownLoc(), mod, fctName,
                             rewriter.getFunctionType({descNoneTy, typeDescTy},
-                                                     rewriter.getI1Type()));
+                                                     rewriter.getI1Type()),
+                            {runtimeAttr});
     }
     cmp = rewriter
               .create<fir::CallOp>(loc, callee,

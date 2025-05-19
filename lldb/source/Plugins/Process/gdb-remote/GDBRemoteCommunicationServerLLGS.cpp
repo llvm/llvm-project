@@ -277,7 +277,7 @@ Status GDBRemoteCommunicationServerLLGS::LaunchProcess() {
     // lldb-server on Windows.
 #if !defined(_WIN32)
     if (llvm::Error Err = m_process_launch_info.SetUpPtyRedirection())
-      return Status(std::move(Err));
+      return Status::FromError(std::move(Err));
 #endif
   }
 
@@ -287,7 +287,7 @@ Status GDBRemoteCommunicationServerLLGS::LaunchProcess() {
                                            "process but one already exists");
     auto process_or = m_process_manager.Launch(m_process_launch_info, *this);
     if (!process_or)
-      return Status(process_or.takeError());
+      return Status::FromError(process_or.takeError());
     m_continue_process = m_current_process = process_or->get();
     m_debugged_processes.emplace(
         m_current_process->GetID(),
@@ -356,7 +356,7 @@ Status GDBRemoteCommunicationServerLLGS::AttachToProcess(lldb::pid_t pid) {
   // Try to attach.
   auto process_or = m_process_manager.Attach(pid, *this);
   if (!process_or) {
-    Status status(process_or.takeError());
+    Status status = Status::FromError(process_or.takeError());
     llvm::errs() << llvm::formatv("failed to attach to process {0}: {1}\n", pid,
                                   status);
     return status;
@@ -716,6 +716,7 @@ static const char *GetStopReasonString(StopReason stop_reason) {
     return "vforkdone";
   case eStopReasonInterrupt:
     return "async interrupt";
+  case eStopReasonHistoryBoundary:
   case eStopReasonInstrumentation:
   case eStopReasonInvalid:
   case eStopReasonPlanComplete:
@@ -1367,7 +1368,7 @@ GDBRemoteCommunicationServerLLGS::Handle_jLLDBTraceGetBinaryData(
       llvm::json::parse<TraceGetBinaryDataRequest>(packet.Peek(),
                                                    "TraceGetBinaryDataRequest");
   if (!request)
-    return SendErrorResponse(Status(request.takeError()));
+    return SendErrorResponse(Status::FromError(request.takeError()));
 
   if (Expected<std::vector<uint8_t>> bytes =
           m_current_process->TraceGetBinaryData(*request)) {
@@ -2796,11 +2797,18 @@ GDBRemoteCommunicationServerLLGS::Handle_qMemoryRegionInfo(
     // Flags
     MemoryRegionInfo::OptionalBool memory_tagged =
         region_info.GetMemoryTagged();
-    if (memory_tagged != MemoryRegionInfo::eDontKnow) {
+    MemoryRegionInfo::OptionalBool is_shadow_stack =
+        region_info.IsShadowStack();
+
+    if (memory_tagged != MemoryRegionInfo::eDontKnow ||
+        is_shadow_stack != MemoryRegionInfo::eDontKnow) {
       response.PutCString("flags:");
-      if (memory_tagged == MemoryRegionInfo::eYes) {
-        response.PutCString("mt");
-      }
+      // Space is the separator.
+      if (memory_tagged == MemoryRegionInfo::eYes)
+        response.PutCString("mt ");
+      if (is_shadow_stack == MemoryRegionInfo::eYes)
+        response.PutCString("ss ");
+
       response.PutChar(';');
     }
 

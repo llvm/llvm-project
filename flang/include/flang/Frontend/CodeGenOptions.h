@@ -15,6 +15,7 @@
 #ifndef FORTRAN_FRONTEND_CODEGENOPTIONS_H
 #define FORTRAN_FRONTEND_CODEGENOPTIONS_H
 
+#include "flang/Optimizer/OpenMP/Utils.h"
 #include "llvm/Frontend/Debug/Options.h"
 #include "llvm/Frontend/Driver/CodeGenOptions.h"
 #include "llvm/Support/CodeGen.h"
@@ -63,6 +64,9 @@ public:
   /// The directory where temp files are stored if specified by -save-temps
   std::optional<std::string> SaveTempsDir;
 
+  /// The string containing the commandline for the llvm.commandline metadata.
+  std::optional<std::string> RecordCommandLine;
+
   /// The name of the file to which the backend should save YAML optimization
   /// records.
   std::string OptRecordFile;
@@ -91,7 +95,7 @@ public:
 
   /// \brief Code object version for AMDGPU.
   llvm::CodeObjectVersionKind CodeObjectVersion =
-      llvm::CodeObjectVersionKind::COV_5;
+      llvm::CodeObjectVersionKind::COV_None;
 
   /// Optimization remark with an optional regular expression pattern.
   struct OptRemark {
@@ -139,6 +143,10 @@ public:
   /// The code model-specific large data threshold to use
   /// (-mlarge-data-threshold).
   uint64_t LargeDataThreshold;
+
+  /// Optionally map `do concurrent` loops to OpenMP. This is only valid of
+  /// OpenMP is enabled.
+  using DoConcurrentMappingKind = flangomp::DoConcurrentMappingKind;
 
   // Define accessors/mutators for code generation options of enumeration type.
 #define CODEGENOPT(Name, Bits, Default)

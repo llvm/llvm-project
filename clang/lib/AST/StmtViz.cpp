@@ -34,15 +34,14 @@ struct DOTGraphTraits<const Stmt*> : public DefaultDOTGraphTraits {
   static std::string getNodeLabel(const Stmt* Node, const Stmt* Graph) {
 
 #ifndef NDEBUG
-    std::string OutSStr;
-    llvm::raw_string_ostream Out(OutSStr);
+    std::string OutStr;
+    llvm::raw_string_ostream Out(OutStr);
 
     if (Node)
       Out << Node->getStmtClassName();
     else
       Out << "<NULL>";
 
-    std::string OutStr = Out.str();
     if (OutStr[0] == '\n') OutStr.erase(OutStr.begin());
 
     // Process string output to make it nicer...

@@ -1507,8 +1507,8 @@ Simplex Simplex::makeProduct(const Simplex &a, const Simplex &b) {
   auto concat = [](ArrayRef<Unknown> v, ArrayRef<Unknown> w) {
     SmallVector<Unknown, 8> result;
     result.reserve(v.size() + w.size());
-    result.insert(result.end(), v.begin(), v.end());
-    result.insert(result.end(), w.begin(), w.end());
+    llvm::append_range(result, v);
+    llvm::append_range(result, w);
     return result;
   };
   result.con = concat(a.con, b.con);
@@ -2153,9 +2153,16 @@ void SimplexBase::print(raw_ostream &os) const {
   for (unsigned col = 2, e = getNumColumns(); col < e; ++col)
     os << ", c" << col << ": " << colUnknown[col];
   os << '\n';
-  for (unsigned row = 0, numRows = getNumRows(); row < numRows; ++row) {
+  PrintTableMetrics ptm = {0, 0, "-"};
+  for (unsigned row = 0, numRows = getNumRows(); row < numRows; ++row)
     for (unsigned col = 0, numCols = getNumColumns(); col < numCols; ++col)
-      os << tableau(row, col) << '\t';
+      updatePrintMetrics<DynamicAPInt>(tableau(row, col), ptm);
+  unsigned MIN_SPACING = 1;
+  for (unsigned row = 0, numRows = getNumRows(); row < numRows; ++row) {
+    for (unsigned col = 0, numCols = getNumColumns(); col < numCols; ++col) {
+      printWithPrintMetrics<DynamicAPInt>(os, tableau(row, col), MIN_SPACING,
+                                          ptm);
+    }
     os << '\n';
   }
   os << '\n';

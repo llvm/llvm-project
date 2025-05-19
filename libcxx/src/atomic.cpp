@@ -50,6 +50,7 @@
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 #ifdef __linux__
 
@@ -94,11 +95,11 @@ static void __libcpp_platform_wake_by_address(__cxx_atomic_contention_t const vo
 
 static void
 __libcpp_platform_wait_on_address(__cxx_atomic_contention_t const volatile* __ptr, __cxx_contention_t __val) {
-  _umtx_op(const_cast<__cxx_atomic_contention_t*>(__ptr), UMTX_OP_WAIT, __val, NULL, NULL);
+  _umtx_op(const_cast<__cxx_atomic_contention_t*>(__ptr), UMTX_OP_WAIT, __val, nullptr, nullptr);
 }
 
 static void __libcpp_platform_wake_by_address(__cxx_atomic_contention_t const volatile* __ptr, bool __notify_one) {
-  _umtx_op(const_cast<__cxx_atomic_contention_t*>(__ptr), UMTX_OP_WAKE, __notify_one ? 1 : INT_MAX, NULL, NULL);
+  _umtx_op(const_cast<__cxx_atomic_contention_t*>(__ptr), UMTX_OP_WAKE, __notify_one ? 1 : INT_MAX, nullptr, nullptr);
 }
 
 #else // <- Add other operating systems here
@@ -204,4 +205,5 @@ __libcpp_atomic_wait(__cxx_atomic_contention_t const volatile* __location, __cxx
   __libcpp_contention_wait(&__libcpp_contention_state(__location)->__contention_state, __location, __old_value);
 }
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD

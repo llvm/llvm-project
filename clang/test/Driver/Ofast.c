@@ -1,14 +1,14 @@
-// RUN: %clang -Ofast -### %s 2>&1 | FileCheck -check-prefix=CHECK-OFAST %s
-// RUN: %clang -O2 -Ofast -### %s 2>&1 | FileCheck -check-prefix=CHECK-OFAST %s
-// RUN: %clang -fno-fast-math -Ofast -### %s 2>&1 | FileCheck -check-prefix=CHECK-OFAST %s
-// RUN: %clang -fno-strict-aliasing -Ofast -### %s 2>&1 | FileCheck -check-prefix=CHECK-OFAST %s
-// RUN: %clang -fno-vectorize -Ofast -### %s 2>&1 | FileCheck -check-prefix=CHECK-OFAST %s
-// RUN: %clang -Ofast -O2 -### -Werror %s 2>&1 | FileCheck -check-prefix=CHECK-OFAST-O2 \
+// RUN: %clang -c -Ofast -### %s 2>&1 | FileCheck -check-prefix=CHECK-OFAST %s
+// RUN: %clang -c -O2 -Ofast -### %s 2>&1 | FileCheck -check-prefix=CHECK-OFAST %s
+// RUN: %clang -c -fno-fast-math -Ofast -### %s 2>&1 | FileCheck -check-prefix=CHECK-OFAST %s
+// RUN: %clang -c -fno-strict-aliasing -Ofast -### %s 2>&1 | FileCheck -check-prefix=CHECK-OFAST %s
+// RUN: %clang -c -fno-vectorize -Ofast -### %s 2>&1 | FileCheck -check-prefix=CHECK-OFAST %s
+// RUN: %clang -c -Ofast -O2 -### -Werror %s 2>&1 | FileCheck -check-prefix=CHECK-OFAST-O2 \
 // RUN:  %if target={{.*-windows-msvc.*}} %{ --check-prefix=CHECK-OFAST-O2-ALIASING-MSVC %} \
 // RUN:  %else %{ --check-prefix=CHECK-OFAST-O2-ALIASING %} %s
-// RUN: %clang -Ofast -fno-fast-math -### %s 2>&1 | FileCheck -check-prefix=CHECK-OFAST-NO-FAST-MATH %s
-// RUN: %clang -Ofast -fno-strict-aliasing -### %s 2>&1 | FileCheck -check-prefix=CHECK-OFAST-NO-STRICT-ALIASING %s
-// RUN: %clang -Ofast -fno-vectorize -### %s 2>&1 | FileCheck -check-prefix=CHECK-OFAST-NO-VECTORIZE %s
+// RUN: %clang -c -Ofast -fno-fast-math -### %s 2>&1 | FileCheck -check-prefix=CHECK-OFAST-NO-FAST-MATH %s
+// RUN: %clang -c -Ofast -fno-strict-aliasing -### %s 2>&1 | FileCheck -check-prefix=CHECK-OFAST-NO-STRICT-ALIASING %s
+// RUN: %clang -c -Ofast -fno-vectorize -### %s 2>&1 | FileCheck -check-prefix=CHECK-OFAST-NO-VECTORIZE %s
 
 // CHECK-OFAST: use '-O3 -ffast-math' for the same behavior, or '-O3' to enable only conforming optimizations
 // CHECK-OFAST: -cc1

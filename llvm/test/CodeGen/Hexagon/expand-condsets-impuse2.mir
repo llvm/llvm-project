@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -run-pass=expand-condsets %s -o - | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass=expand-condsets %s -o - | FileCheck %s
 
 # Check that there is a tied implicit use despite having an explicit (but
 # untied) use:
@@ -6,12 +6,12 @@
 
 name: f0
 tracksRegLiveness: true
+isSSA: false
 body: |
   bb.0:
     successors: %bb.1
     liveins: $r0, $r1
     %0:intregs = COPY $r0
-    %0:intregs = COPY $r0       ; defeat IsSSA detection
     %1:intregs = COPY $r1
     %2:intregs = COPY $r0
     %3:intregs = M2_mpyi %2, %1

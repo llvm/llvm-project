@@ -1127,7 +1127,7 @@ json::Value Breakpoint::GetStatistics() {
     llvm::raw_string_ostream ss(buffer);
     json::OStream json_os(ss);
     bp_data_sp->Serialize(json_os);
-    if (auto expected_value = llvm::json::parse(ss.str())) {
+    if (auto expected_value = llvm::json::parse(buffer)) {
       bp.try_emplace("details", std::move(*expected_value));
     } else {
       std::string details_error = toString(expected_value.takeError());
@@ -1138,3 +1138,5 @@ json::Value Breakpoint::GetStatistics() {
   }
   return json::Value(std::move(bp));
 }
+
+void Breakpoint::ResetStatistics() { m_resolve_time.reset(); }

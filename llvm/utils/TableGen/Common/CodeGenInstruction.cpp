@@ -22,33 +22,35 @@ using namespace llvm;
 // CGIOperandList Implementation
 //===----------------------------------------------------------------------===//
 
-CGIOperandList::CGIOperandList(Record *R) : TheDef(R) {
+CGIOperandList::CGIOperandList(const Record *R) : TheDef(R) {
   isPredicable = false;
   hasOptionalDef = false;
   isVariadic = false;
 
-  DagInit *OutDI = R->getValueAsDag("OutOperandList");
+  const DagInit *OutDI = R->getValueAsDag("OutOperandList");
 
-  if (DefInit *Init = dyn_cast<DefInit>(OutDI->getOperator())) {
+  if (const DefInit *Init = dyn_cast<DefInit>(OutDI->getOperator())) {
     if (Init->getDef()->getName() != "outs")
       PrintFatalError(R->getLoc(),
                       R->getName() +
                           ": invalid def name for output list: use 'outs'");
-  } else
+  } else {
     PrintFatalError(R->getLoc(),
                     R->getName() + ": invalid output list: use 'outs'");
+  }
 
   NumDefs = OutDI->getNumArgs();
 
-  DagInit *InDI = R->getValueAsDag("InOperandList");
-  if (DefInit *Init = dyn_cast<DefInit>(InDI->getOperator())) {
+  const DagInit *InDI = R->getValueAsDag("InOperandList");
+  if (const DefInit *Init = dyn_cast<DefInit>(InDI->getOperator())) {
     if (Init->getDef()->getName() != "ins")
       PrintFatalError(R->getLoc(),
                       R->getName() +
                           ": invalid def name for input list: use 'ins'");
-  } else
+  } else {
     PrintFatalError(R->getLoc(),
                     R->getName() + ": invalid input list: use 'ins'");
+  }
 
   unsigned MIOperandNo = 0;
   std::set<std::string> OperandNames;
@@ -56,7 +58,7 @@ CGIOperandList::CGIOperandList(Record *R) : TheDef(R) {
   OperandList.reserve(e);
   bool VariadicOuts = false;
   for (unsigned i = 0; i != e; ++i) {
-    Init *ArgInit;
+    const Init *ArgInit;
     StringRef ArgName;
     if (i < NumDefs) {
       ArgInit = OutDI->getArg(i);
@@ -66,33 +68,33 @@ CGIOperandList::CGIOperandList(Record *R) : TheDef(R) {
       ArgName = InDI->getArgNameStr(i - NumDefs);
     }
 
-    DagInit *SubArgDag = dyn_cast<DagInit>(ArgInit);
+    const DagInit *SubArgDag = dyn_cast<DagInit>(ArgInit);
     if (SubArgDag)
       ArgInit = SubArgDag->getOperator();
 
-    DefInit *Arg = dyn_cast<DefInit>(ArgInit);
+    const DefInit *Arg = dyn_cast<DefInit>(ArgInit);
     if (!Arg)
       PrintFatalError(R->getLoc(), "Illegal operand for the '" + R->getName() +
                                        "' instruction!");
 
-    Record *Rec = Arg->getDef();
+    const Record *Rec = Arg->getDef();
     std::string PrintMethod = "printOperand";
     std::string EncoderMethod;
     std::string OperandType = "OPERAND_UNKNOWN";
     std::string OperandNamespace = "MCOI";
     unsigned NumOps = 1;
-    DagInit *MIOpInfo = nullptr;
+    const DagInit *MIOpInfo = nullptr;
     if (Rec->isSubClassOf("RegisterOperand")) {
-      PrintMethod = std::string(Rec->getValueAsString("PrintMethod"));
-      OperandType = std::string(Rec->getValueAsString("OperandType"));
-      OperandNamespace = std::string(Rec->getValueAsString("OperandNamespace"));
-      EncoderMethod = std::string(Rec->getValueAsString("EncoderMethod"));
+      PrintMethod = Rec->getValueAsString("PrintMethod").str();
+      OperandType = Rec->getValueAsString("OperandType").str();
+      OperandNamespace = Rec->getValueAsString("OperandNamespace").str();
+      EncoderMethod = Rec->getValueAsString("EncoderMethod").str();
     } else if (Rec->isSubClassOf("Operand")) {
-      PrintMethod = std::string(Rec->getValueAsString("PrintMethod"));
-      OperandType = std::string(Rec->getValueAsString("OperandType"));
-      OperandNamespace = std::string(Rec->getValueAsString("OperandNamespace"));
+      PrintMethod = Rec->getValueAsString("PrintMethod").str();
+      OperandType = Rec->getValueAsString("OperandType").str();
+      OperandNamespace = Rec->getValueAsString("OperandNamespace").str();
       // If there is an explicit encoder method, use it.
-      EncoderMethod = std::string(Rec->getValueAsString("EncoderMethod"));
+      EncoderMethod = Rec->getValueAsString("EncoderMethod").str();
       MIOpInfo = Rec->getValueAsDag("MIOperandInfo");
 
       // Verify that MIOpInfo has an 'ops' root value.
@@ -130,14 +132,14 @@ CGIOperandList::CGIOperandList(Record *R) : TheDef(R) {
       PrintFatalError(R->getLoc(), "In instruction '" + R->getName() +
                                        "', operand #" + Twine(i) +
                                        " has no name!");
-    if (!OperandNames.insert(std::string(ArgName)).second)
+    if (!OperandNames.insert(ArgName.str()).second)
       PrintFatalError(R->getLoc(),
                       "In instruction '" + R->getName() + "', operand #" +
                           Twine(i) +
                           " has the same name as a previous operand!");
 
     OperandInfo &OpInfo = OperandList.emplace_back(
-        Rec, std::string(ArgName), std::string(PrintMethod),
+        Rec, ArgName.str(), std::string(std::move(PrintMethod)),
         OperandNamespace + "::" + OperandType, MIOperandNo, NumOps, MIOpInfo);
 
     if (SubArgDag) {
@@ -161,7 +163,7 @@ CGIOperandList::CGIOperandList(Record *R) : TheDef(R) {
           PrintFatalError(R->getLoc(), "In instruction '" + R->getName() +
                                            "', operand #" + Twine(i) +
                                            " has no name!");
-        if (!OperandNames.insert(std::string(SubArgName)).second)
+        if (!OperandNames.insert(SubArgName.str()).second)
           PrintFatalError(R->getLoc(),
                           "In instruction '" + R->getName() + "', operand #" +
                               Twine(i) + " sub-arg #" + Twine(j) +
@@ -175,12 +177,12 @@ CGIOperandList::CGIOperandList(Record *R) : TheDef(R) {
         }
 
         OpInfo.SubOpNames[j] = SubArgName;
-        SubOpAliases[SubArgName] = std::pair(i, j);
+        SubOpAliases[SubArgName] = {i, j};
       }
     } else if (!EncoderMethod.empty()) {
       // If we have no explicit sub-op dag, but have an top-level encoder
       // method, the single encoder will multiple sub-ops, itself.
-      OpInfo.EncoderMethodNames[0] = EncoderMethod;
+      OpInfo.EncoderMethodNames[0] = std::move(EncoderMethod);
       for (unsigned j = 1; j < NumOps; ++j)
         OpInfo.DoNotEncode[j] = true;
     }
@@ -276,11 +278,11 @@ CGIOperandList::ParseOperandName(StringRef Op, bool AllowWholeOp) {
                           Op + "'");
 
     // Otherwise, return the operand.
-    return std::pair(OpIdx, 0U);
+    return {OpIdx, 0U};
   }
 
   // Find the suboperand number involved.
-  DagInit *MIOpInfo = OperandList[OpIdx].MIOperandInfo;
+  const DagInit *MIOpInfo = OperandList[OpIdx].MIOperandInfo;
   if (!MIOpInfo)
     PrintFatalError(TheDef->getLoc(), TheDef->getName() +
                                           ": unknown suboperand name in '" +
@@ -289,16 +291,17 @@ CGIOperandList::ParseOperandName(StringRef Op, bool AllowWholeOp) {
   // Find the operand with the right name.
   for (unsigned i = 0, e = MIOpInfo->getNumArgs(); i != e; ++i)
     if (MIOpInfo->getArgNameStr(i) == SubOpName)
-      return std::pair(OpIdx, i);
+      return {OpIdx, i};
 
   // Otherwise, didn't find it!
   PrintFatalError(TheDef->getLoc(), TheDef->getName() +
                                         ": unknown suboperand name in '" + Op +
                                         "'");
-  return std::pair(0U, 0U);
+  return {0U, 0U};
 }
 
-static void ParseConstraint(StringRef CStr, CGIOperandList &Ops, Record *Rec) {
+static void ParseConstraint(StringRef CStr, CGIOperandList &Ops,
+                            const Record *Rec) {
   // EARLY_CLOBBER: @early $reg
   StringRef::size_type wpos = CStr.find_first_of(" \t");
   StringRef::size_type start = CStr.find_first_not_of(" \t");
@@ -391,7 +394,8 @@ static void ParseConstraint(StringRef CStr, CGIOperandList &Ops, Record *Rec) {
   Ops[SrcOp.first].Constraints[SrcOp.second] = NewConstraint;
 }
 
-static void ParseConstraints(StringRef CStr, CGIOperandList &Ops, Record *Rec) {
+static void ParseConstraints(StringRef CStr, CGIOperandList &Ops,
+                             const Record *Rec) {
   if (CStr.empty())
     return;
 
@@ -428,10 +432,10 @@ void CGIOperandList::ProcessDisableEncoding(StringRef DisableEncoding) {
 // CodeGenInstruction Implementation
 //===----------------------------------------------------------------------===//
 
-CodeGenInstruction::CodeGenInstruction(Record *R)
+CodeGenInstruction::CodeGenInstruction(const Record *R)
     : TheDef(R), Operands(R), InferredFrom(nullptr) {
   Namespace = R->getValueAsString("Namespace");
-  AsmString = std::string(R->getValueAsString("AsmString"));
+  AsmString = R->getValueAsString("AsmString").str();
 
   isPreISelOpcode = R->getValueAsBit("isPreISelOpcode");
   isReturn = R->getValueAsBit("isReturn");
@@ -499,9 +503,8 @@ CodeGenInstruction::CodeGenInstruction(Record *R)
   // First check for a ComplexDeprecationPredicate.
   if (R->getValue("ComplexDeprecationPredicate")) {
     HasComplexDeprecationPredicate = true;
-    DeprecatedReason =
-        std::string(R->getValueAsString("ComplexDeprecationPredicate"));
-  } else if (RecordVal *Dep = R->getValue("DeprecatedFeatureMask")) {
+    DeprecatedReason = R->getValueAsString("ComplexDeprecationPredicate").str();
+  } else if (const RecordVal *Dep = R->getValue("DeprecatedFeatureMask")) {
     // Check if we have a Subtarget feature mask.
     HasComplexDeprecationPredicate = false;
     DeprecatedReason = Dep->getValue()->getAsString();
@@ -521,7 +524,7 @@ MVT::SimpleValueType CodeGenInstruction::HasOneImplicitDefWithKnownVT(
     return MVT::Other;
 
   // Check to see if the first implicit def has a resolvable type.
-  Record *FirstImplicitDef = ImplicitDefs[0];
+  const Record *FirstImplicitDef = ImplicitDefs[0];
   assert(FirstImplicitDef->isSubClassOf("Register"));
   const std::vector<ValueTypeByHwMode> &RegVTs =
       TargetInfo.getRegisterVTs(FirstImplicitDef);
@@ -564,7 +567,8 @@ std::string CodeGenInstruction::FlattenAsmStringVariants(StringRef Cur,
     }
 
     // Select the Nth variant (or empty).
-    StringRef Selection = Cur.slice(VariantsStart, VariantsEnd);
+    StringRef Selection =
+        Cur.substr(VariantsStart, VariantsEnd - VariantsStart);
     for (unsigned i = 0; i != Variant; ++i)
       Selection = Selection.split('|').second;
     Res += Selection.split('|').first;
@@ -579,11 +583,11 @@ std::string CodeGenInstruction::FlattenAsmStringVariants(StringRef Cur,
 
 bool CodeGenInstruction::isOperandImpl(StringRef OpListName, unsigned i,
                                        StringRef PropertyName) const {
-  DagInit *ConstraintList = TheDef->getValueAsDag(OpListName);
+  const DagInit *ConstraintList = TheDef->getValueAsDag(OpListName);
   if (!ConstraintList || i >= ConstraintList->getNumArgs())
     return false;
 
-  DefInit *Constraint = dyn_cast<DefInit>(ConstraintList->getArg(i));
+  const DefInit *Constraint = dyn_cast<DefInit>(ConstraintList->getArg(i));
   if (!Constraint)
     return false;
 

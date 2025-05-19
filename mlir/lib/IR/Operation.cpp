@@ -322,8 +322,8 @@ void Operation::setAttrs(DictionaryAttr newAttrs) {
 }
 void Operation::setAttrs(ArrayRef<NamedAttribute> newAttrs) {
   if (getPropertiesStorageSize()) {
-    // We're spliting the providing array of attributes by removing the inherentAttr
-    // which will be stored in the properties.
+    // We're spliting the providing array of attributes by removing the
+    // inherentAttr which will be stored in the properties.
     SmallVector<NamedAttribute> discardableAttrs;
     discardableAttrs.reserve(newAttrs.size());
     for (NamedAttribute attr : newAttrs) {
@@ -406,7 +406,7 @@ void Operation::updateOrderIfNecessary() {
   assert(block && "expected valid parent");
 
   // If the order is valid for this operation there is nothing to do.
-  if (hasValidOrder())
+  if (hasValidOrder() || llvm::hasSingleElement(*block))
     return;
   Operation *blockFront = &block->front();
   Operation *blockBack = &block->back();
@@ -560,6 +560,8 @@ void Operation::moveBefore(Operation *existingOp) {
 /// before `iterator` in the specified basic block.
 void Operation::moveBefore(Block *block,
                            llvm::iplist<Operation>::iterator iterator) {
+  assert(getBlock() &&
+         "cannot move an operation that isn't contained in a block");
   block->getOperations().splice(iterator, getBlock()->getOperations(),
                                 getIterator());
 }
@@ -1309,10 +1311,10 @@ LogicalResult OpTrait::impl::verifyNoRegionArguments(Operation *op) {
 
 LogicalResult OpTrait::impl::verifyElementwise(Operation *op) {
   auto isMappableType = llvm::IsaPred<VectorType, TensorType>;
-  auto resultMappableTypes = llvm::to_vector<1>(
-      llvm::make_filter_range(op->getResultTypes(), isMappableType));
-  auto operandMappableTypes = llvm::to_vector<2>(
-      llvm::make_filter_range(op->getOperandTypes(), isMappableType));
+  auto resultMappableTypes =
+      llvm::filter_to_vector<1>(op->getResultTypes(), isMappableType);
+  auto operandMappableTypes =
+      llvm::filter_to_vector<2>(op->getOperandTypes(), isMappableType);
 
   // If the op only has scalar operand/result types, then we have nothing to
   // check.

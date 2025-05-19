@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/X86MCExpr.h"
 #include "X86MCTargetDesc.h"
 #include "X86TargetStreamer.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
@@ -31,15 +32,19 @@ public:
                               MCInstPrinter &InstPrinter)
       : X86TargetStreamer(S), OS(OS), InstPrinter(InstPrinter) {}
 
+  void emitCode16() override;
+  void emitCode32() override;
+  void emitCode64() override;
+
   bool emitFPOProc(const MCSymbol *ProcSym, unsigned ParamsSize,
                    SMLoc L) override;
   bool emitFPOEndPrologue(SMLoc L) override;
   bool emitFPOEndProc(SMLoc L) override;
   bool emitFPOData(const MCSymbol *ProcSym, SMLoc L) override;
-  bool emitFPOPushReg(unsigned Reg, SMLoc L) override;
+  bool emitFPOPushReg(MCRegister Reg, SMLoc L) override;
   bool emitFPOStackAlloc(unsigned StackAlloc, SMLoc L) override;
   bool emitFPOStackAlign(unsigned Align, SMLoc L) override;
-  bool emitFPOSetFrame(unsigned Reg, SMLoc L) override;
+  bool emitFPOSetFrame(MCRegister Reg, SMLoc L) override;
 };
 
 /// Represents a single FPO directive.
@@ -80,8 +85,6 @@ class X86WinCOFFTargetStreamer : public X86TargetStreamer {
 
   MCSymbol *emitFPOLabel();
 
-  MCContext &getContext() { return getStreamer().getContext(); }
-
 public:
   X86WinCOFFTargetStreamer(MCStreamer &S) : X86TargetStreamer(S) {}
 
@@ -90,17 +93,23 @@ public:
   bool emitFPOEndPrologue(SMLoc L) override;
   bool emitFPOEndProc(SMLoc L) override;
   bool emitFPOData(const MCSymbol *ProcSym, SMLoc L) override;
-  bool emitFPOPushReg(unsigned Reg, SMLoc L) override;
+  bool emitFPOPushReg(MCRegister Reg, SMLoc L) override;
   bool emitFPOStackAlloc(unsigned StackAlloc, SMLoc L) override;
   bool emitFPOStackAlign(unsigned Align, SMLoc L) override;
-  bool emitFPOSetFrame(unsigned Reg, SMLoc L) override;
+  bool emitFPOSetFrame(MCRegister Reg, SMLoc L) override;
 };
 } // end namespace
+
+void X86WinCOFFAsmTargetStreamer::emitCode16() { OS << "\t.code16\n"; }
+
+void X86WinCOFFAsmTargetStreamer::emitCode32() { OS << "\t.code32\n"; }
+
+void X86WinCOFFAsmTargetStreamer::emitCode64() { OS << "\t.code64\n"; }
 
 bool X86WinCOFFAsmTargetStreamer::emitFPOProc(const MCSymbol *ProcSym,
                                               unsigned ParamsSize, SMLoc L) {
   OS << "\t.cv_fpo_proc\t";
-  ProcSym->print(OS, getStreamer().getContext().getAsmInfo());
+  ProcSym->print(OS, getContext().getAsmInfo());
   OS << ' ' << ParamsSize << '\n';
   return false;
 }
@@ -123,7 +132,7 @@ bool X86WinCOFFAsmTargetStreamer::emitFPOData(const MCSymbol *ProcSym,
   return false;
 }
 
-bool X86WinCOFFAsmTargetStreamer::emitFPOPushReg(unsigned Reg, SMLoc L) {
+bool X86WinCOFFAsmTargetStreamer::emitFPOPushReg(MCRegister Reg, SMLoc L) {
   OS << "\t.cv_fpo_pushreg\t";
   InstPrinter.printRegName(OS, Reg);
   OS << '\n';
@@ -141,7 +150,7 @@ bool X86WinCOFFAsmTargetStreamer::emitFPOStackAlign(unsigned Align, SMLoc L) {
   return false;
 }
 
-bool X86WinCOFFAsmTargetStreamer::emitFPOSetFrame(unsigned Reg, SMLoc L) {
+bool X86WinCOFFAsmTargetStreamer::emitFPOSetFrame(MCRegister Reg, SMLoc L) {
   OS << "\t.cv_fpo_setframe\t";
   InstPrinter.printRegName(OS, Reg);
   OS << '\n';
@@ -201,7 +210,7 @@ bool X86WinCOFFTargetStreamer::emitFPOEndProc(SMLoc L) {
   return false;
 }
 
-bool X86WinCOFFTargetStreamer::emitFPOSetFrame(unsigned Reg, SMLoc L) {
+bool X86WinCOFFTargetStreamer::emitFPOSetFrame(MCRegister Reg, SMLoc L) {
   if (checkInFPOPrologue(L))
     return true;
   FPOInstruction Inst;
@@ -212,7 +221,7 @@ bool X86WinCOFFTargetStreamer::emitFPOSetFrame(unsigned Reg, SMLoc L) {
   return false;
 }
 
-bool X86WinCOFFTargetStreamer::emitFPOPushReg(unsigned Reg, SMLoc L) {
+bool X86WinCOFFTargetStreamer::emitFPOPushReg(MCRegister Reg, SMLoc L) {
   if (checkInFPOPrologue(L))
     return true;
   FPOInstruction Inst;
@@ -453,9 +462,9 @@ MCTargetStreamer *llvm::createX86AsmTargetStreamer(MCStreamer &S,
 
 MCTargetStreamer *
 llvm::createX86ObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI) {
-  // No need to register a target streamer.
+  // No need for a special target streamer.
   if (!STI.getTargetTriple().isOSBinFormatCOFF())
-    return nullptr;
+    return new X86TargetStreamer(S);
   // Registers itself to the MCStreamer.
   return new X86WinCOFFTargetStreamer(S);
 }

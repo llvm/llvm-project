@@ -64,7 +64,8 @@ protected:
   bool UseDwarfRIS;
 
   // whether cpu v4 insns are enabled.
-  bool HasLdsx, HasMovsx, HasBswap, HasSdivSmod, HasGotol, HasStoreImm;
+  bool HasLdsx, HasMovsx, HasBswap, HasSdivSmod, HasGotol, HasStoreImm,
+      HasLoadAcqStoreRel;
 
   std::unique_ptr<CallLowering> CallLoweringInfo;
   std::unique_ptr<InstructionSelector> InstSelector;
@@ -92,6 +93,7 @@ public:
   bool hasSdivSmod() const { return HasSdivSmod; }
   bool hasGotol() const { return HasGotol; }
   bool hasStoreImm() const { return HasStoreImm; }
+  bool hasLoadAcqStoreRel() const { return HasLoadAcqStoreRel; }
 
   bool isLittleEndian() const { return IsLittleEndian; }
 

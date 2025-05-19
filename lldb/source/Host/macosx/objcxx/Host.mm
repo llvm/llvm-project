@@ -316,7 +316,7 @@ LaunchInNewTerminalWithAppleScript(const char *exe_path,
       unix_socket_name, [&] { return AcceptPIDFromInferior(connect_url); });
 
   if (!accept_thread)
-    return Status(accept_thread.takeError());
+    return Status::FromError(accept_thread.takeError());
 
   [applescript executeAndReturnError:nil];
 
@@ -447,6 +447,38 @@ llvm::Error Host::OpenFileInExternalEditor(llvm::StringRef editor,
     return llvm::createStringError(
         llvm::inconvertibleErrorCode(),
         llvm::formatv("LSOpenURLsWithRole failed: error {0}", error));
+
+  return llvm::Error::success();
+#endif // TARGET_OS_OSX
+}
+
+llvm::Error Host::OpenURL(llvm::StringRef url) {
+#if !TARGET_OS_OSX
+  return llvm::errorCodeToError(
+      std::error_code(ENOTSUP, std::system_category()));
+#else  // !TARGET_OS_OSX
+  if (url.empty())
+    return llvm::createStringError("Cannot open empty URL.");
+
+  LLDB_LOG(GetLog(LLDBLog::Host), "Opening URL: {0}", url);
+
+  CFCString url_cfstr(url.data(), kCFStringEncodingUTF8);
+  CFCReleaser<CFURLRef> cfurl = ::CFURLCreateWithString(
+      /*allocator=*/NULL,
+      /*URLString*/ url_cfstr.get(),
+      /*baseURL=*/NULL);
+
+  if (!cfurl.get())
+    return llvm::createStringError(
+        llvm::formatv("could not create CFURL from URL \"{0}\"", url));
+
+  OSStatus error = ::LSOpenCFURLRef(
+      /*inURL=*/cfurl.get(),
+      /*outLaunchedURL=*/NULL);
+
+  if (error != noErr)
+    return llvm::createStringError(
+        llvm::formatv("LSOpenCFURLRef failed: error {0:x}", error));
 
   return llvm::Error::success();
 #endif // TARGET_OS_OSX
@@ -891,6 +923,10 @@ static short GetPosixspawnFlags(const ProcessLaunchInfo &launch_info) {
   return flags;
 }
 
+static void finalize_xpc(void *xpc_object) {
+  xpc_release((xpc_object_t)xpc_object);
+}
+
 static Status LaunchProcessXPC(const char *exe_path,
                                ProcessLaunchInfo &launch_info,
                                lldb::pid_t &pid) {
@@ -956,7 +992,7 @@ static Status LaunchProcessXPC(const char *exe_path,
     }
   });
 
-  xpc_connection_set_finalizer_f(conn, xpc_finalizer_t(xpc_release));
+  xpc_connection_set_finalizer_f(conn, finalize_xpc);
   xpc_connection_resume(conn);
   xpc_object_t message = xpc_dictionary_create(nil, nil, 0);
 
@@ -1064,7 +1100,7 @@ static bool AddPosixSpawnFileAction(void *_file_actions, const FileAction *info,
     else if (info->GetActionArgument() == -1)
       error = Status::FromErrorString(
           "invalid duplicate fd for posix_spawn_file_actions_adddup2(...)");
-    else {
+    else if (info->GetFD() != info->GetActionArgument()) {
       error =
           Status(::posix_spawn_file_actions_adddup2(file_actions, info->GetFD(),
                                                     info->GetActionArgument()),
@@ -1074,6 +1110,15 @@ static bool AddPosixSpawnFileAction(void *_file_actions, const FileAction *info,
                  "error: {0}, posix_spawn_file_actions_adddup2 "
                  "(action={1}, fd={2}, dup_fd={3})",
                  error, file_actions, info->GetFD(), info->GetActionArgument());
+    } else {
+      error =
+          Status(::posix_spawn_file_actions_addinherit_np(file_actions, info->GetFD()),
+                 eErrorTypePOSIX);
+      if (error.Fail())
+        LLDB_LOG(log,
+                 "error: {0}, posix_spawn_file_actions_addinherit_np "
+                 "(action={1}, fd={2})",
+                 error, file_actions, info->GetFD());
     }
     break;
 
@@ -1435,7 +1480,7 @@ Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
       char *wd = getcwd(nullptr, 0);
       if (wd == nullptr) {
         error = Status::FromErrorStringWithFormat(
-            "cwd does not exist; cannot launch with shell argument expansion");
+            "cwd does not exist: Cannot launch with shell argument expansion");
         return error;
       } else {
         FileSpec working_dir(wd);

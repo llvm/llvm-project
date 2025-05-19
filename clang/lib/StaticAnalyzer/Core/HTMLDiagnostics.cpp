@@ -193,7 +193,8 @@ void ento::createHTMLDiagnosticConsumer(
   if (OutputDir.empty())
     return;
 
-  C.push_back(new HTMLDiagnostics(std::move(DiagOpts), OutputDir, PP, true));
+  C.emplace_back(std::make_unique<HTMLDiagnostics>(std::move(DiagOpts),
+                                                   OutputDir, PP, true));
 }
 
 void ento::createHTMLSingleFileDiagnosticConsumer(
@@ -208,7 +209,8 @@ void ento::createHTMLSingleFileDiagnosticConsumer(
   if (OutputDir.empty())
     return;
 
-  C.push_back(new HTMLDiagnostics(std::move(DiagOpts), OutputDir, PP, false));
+  C.emplace_back(std::make_unique<HTMLDiagnostics>(std::move(DiagOpts),
+                                                   OutputDir, PP, false));
 }
 
 void ento::createPlistHTMLDiagnosticConsumer(
@@ -1211,18 +1213,19 @@ const arrowIndices = )<<<";
                      OS.str());
 }
 
-std::string getSpanBeginForControl(const char *ClassName, unsigned Index) {
+static std::string getSpanBeginForControl(const char *ClassName,
+                                          unsigned Index) {
   std::string Result;
   llvm::raw_string_ostream OS(Result);
   OS << "<span id=\"" << ClassName << Index << "\">";
   return Result;
 }
 
-std::string getSpanBeginForControlStart(unsigned Index) {
+static std::string getSpanBeginForControlStart(unsigned Index) {
   return getSpanBeginForControl("start", Index);
 }
 
-std::string getSpanBeginForControlEnd(unsigned Index) {
+static std::string getSpanBeginForControlEnd(unsigned Index) {
   return getSpanBeginForControl("end", Index);
 }
 

@@ -39,6 +39,15 @@ public:
 private:
   bool legalizeBuildVector(MachineInstr &MI, MachineRegisterInfo &MRI,
                            LegalizerHelper &Helper) const;
+
+  bool legalizeFPTOUI(MachineInstr &MI, MachineRegisterInfo &MRI,
+                      LegalizerHelper &Helper) const;
+
+  bool legalizeUITOFP(MachineInstr &MI, MachineRegisterInfo &MRI,
+                      LegalizerHelper &Helper) const;
+
+  bool legalizeNarrowingStore(MachineInstr &MI, MachineRegisterInfo &MRI,
+                              LegalizerHelper &Helper) const;
 };
 } // namespace llvm
 #endif

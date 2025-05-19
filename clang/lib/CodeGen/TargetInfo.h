@@ -71,6 +71,10 @@ public:
     return *SwiftInfo;
   }
 
+  /// supportsLibCall - Query to whether or not target supports all
+  /// lib calls.
+  virtual bool supportsLibCall() const { return true; }
+
   /// setTargetAttributes - Provides a convenient hook to handle extra
   /// target-specific attributes for the given global.
   virtual void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
@@ -97,6 +101,24 @@ public:
                                     const FunctionDecl *Callee,
                                     const CallArgList &Args,
                                     QualType ReturnType) const {}
+
+  /// Returns true if inlining the function call would produce incorrect code
+  /// for the current target and should be ignored (even with the always_inline
+  /// or flatten attributes).
+  ///
+  /// Note: This probably should be handled in LLVM. However, the LLVM
+  /// `alwaysinline` attribute currently means the inliner will ignore
+  /// mismatched attributes (which sometimes can generate invalid code). So,
+  /// this hook allows targets to avoid adding the LLVM `alwaysinline` attribute
+  /// based on C/C++ attributes or other target-specific reasons.
+  ///
+  /// See previous discussion here:
+  /// https://discourse.llvm.org/t/rfc-avoid-inlining-alwaysinline-functions-when-they-cannot-be-inlined/79528
+  virtual bool
+  wouldInliningViolateFunctionCallABI(const FunctionDecl *Caller,
+                                      const FunctionDecl *Callee) const {
+    return false;
+  }
 
   /// Determines the size of struct _Unwind_Exception on this platform,
   /// in 8-bit units.  The Itanium ABI defines this as:
@@ -298,8 +320,7 @@ public:
   virtual LangAS getASTAllocaAddressSpace() const { return LangAS::Default; }
 
   Address performAddrSpaceCast(CodeGen::CodeGenFunction &CGF, Address Addr,
-                               LangAS SrcAddr, LangAS DestAddr,
-                               llvm::Type *DestTy,
+                               LangAS SrcAddr, llvm::Type *DestTy,
                                bool IsNonNull = false) const;
 
   /// Perform address space cast of an expression of pointer type.
@@ -310,7 +331,7 @@ public:
   /// \param IsNonNull is the flag indicating \p V is known to be non null.
   virtual llvm::Value *performAddrSpaceCast(CodeGen::CodeGenFunction &CGF,
                                             llvm::Value *V, LangAS SrcAddr,
-                                            LangAS DestAddr, llvm::Type *DestTy,
+                                            llvm::Type *DestTy,
                                             bool IsNonNull = false) const;
 
   /// Perform address space cast of a constant expression of pointer type.
@@ -320,7 +341,7 @@ public:
   /// \param DestTy is the destination LLVM pointer type.
   virtual llvm::Constant *performAddrSpaceCast(CodeGenModule &CGM,
                                                llvm::Constant *V,
-                                               LangAS SrcAddr, LangAS DestAddr,
+                                               LangAS SrcAddr,
                                                llvm::Type *DestTy) const;
 
   /// Get address space of pointer parameter for __cxa_atexit.
@@ -336,7 +357,9 @@ public:
 
   /// Allow the target to apply other metadata to an atomic instruction
   virtual void setTargetAtomicMetadata(CodeGenFunction &CGF,
-                                       llvm::AtomicRMWInst &RMW) const {}
+                                       llvm::Instruction &AtomicInst,
+                                       const AtomicExpr *Expr = nullptr) const {
+  }
 
   /// Interface class for filling custom fields of a block literal for OpenCL.
   class TargetOpenCLBlockHelper {
@@ -380,7 +403,7 @@ public:
   virtual bool shouldEmitDWARFBitFieldSeparators() const { return false; }
 
   virtual void setCUDAKernelCallingConvention(const FunctionType *&FT) const {}
-
+  virtual void setOCLKernelStubCallingConvention(const FunctionType *&FT) const;
   /// Return the device-side type for the CUDA device builtin surface type.
   virtual llvm::Type *getCUDADeviceBuiltinSurfaceDeviceType() const {
     // By default, no change from the original one.
@@ -419,7 +442,9 @@ public:
   }
 
   /// Return an LLVM type that corresponds to a HLSL type
-  virtual llvm::Type *getHLSLType(CodeGenModule &CGM, const Type *T) const {
+  virtual llvm::Type *
+  getHLSLType(CodeGenModule &CGM, const Type *T,
+              const SmallVector<int32_t> *Packoffsets = nullptr) const {
     return nullptr;
   }
 
@@ -503,6 +528,9 @@ std::unique_ptr<TargetCodeGenInfo>
 createMIPSTargetCodeGenInfo(CodeGenModule &CGM, bool IsOS32);
 
 std::unique_ptr<TargetCodeGenInfo>
+createWindowsMIPSTargetCodeGenInfo(CodeGenModule &CGM, bool IsOS32);
+
+std::unique_ptr<TargetCodeGenInfo>
 createMSP430TargetCodeGenInfo(CodeGenModule &CGM);
 
 std::unique_ptr<TargetCodeGenInfo>
@@ -554,6 +582,9 @@ createTCETargetCodeGenInfo(CodeGenModule &CGM);
 
 std::unique_ptr<TargetCodeGenInfo>
 createVETargetCodeGenInfo(CodeGenModule &CGM);
+
+std::unique_ptr<TargetCodeGenInfo>
+createDirectXTargetCodeGenInfo(CodeGenModule &CGM);
 
 enum class WebAssemblyABIKind {
   MVP = 0,

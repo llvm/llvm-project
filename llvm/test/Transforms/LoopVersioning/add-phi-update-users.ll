@@ -27,7 +27,7 @@ define void @f1() {
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[T0]], i64 2
 ; CHECK-NEXT:    br label [[FOR_BODY_LVER_CHECK:%.*]]
 ; CHECK:       for.body.lver.check:
-; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[T0]], getelementptr inbounds (i8, ptr @b, i64 2)
+; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[T0]], getelementptr inbounds nuw (i8, ptr @b, i64 2)
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr @b, [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[FOR_BODY_PH_LVER_ORIG:%.*]], label [[FOR_BODY_PH:%.*]]

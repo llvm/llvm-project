@@ -25,8 +25,6 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/IR/Function.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
@@ -132,9 +130,7 @@ bool PadShortFunc::runOnMachineFunction(MachineFunction &MF) {
     MachineBasicBlock *MBB = ReturnBB.first;
     unsigned Cycles = ReturnBB.second;
 
-    // Function::hasOptSize is already checked above.
-    bool OptForSize = llvm::shouldOptimizeForSize(MBB, PSI, MBFI);
-    if (OptForSize)
+    if (llvm::shouldOptimizeForSize(MBB, PSI, MBFI))
       continue;
 
     if (Cycles < Threshold) {
@@ -167,7 +163,8 @@ void PadShortFunc::findReturns(MachineBasicBlock *MBB, unsigned int Cycles) {
     return;
 
   if (hasReturn) {
-    ReturnBBs[MBB] = std::max(ReturnBBs[MBB], Cycles);
+    unsigned int &NumCycles = ReturnBBs[MBB];
+    NumCycles = std::max(NumCycles, Cycles);
     return;
   }
 
@@ -184,10 +181,9 @@ void PadShortFunc::findReturns(MachineBasicBlock *MBB, unsigned int Cycles) {
 bool PadShortFunc::cyclesUntilReturn(MachineBasicBlock *MBB,
                                      unsigned int &Cycles) {
   // Return cached result if BB was previously visited
-  DenseMap<MachineBasicBlock*, VisitedBBInfo>::iterator it
-    = VisitedBBs.find(MBB);
-  if (it != VisitedBBs.end()) {
-    VisitedBBInfo BBInfo = it->second;
+  auto [It, Inserted] = VisitedBBs.try_emplace(MBB);
+  if (!Inserted) {
+    VisitedBBInfo BBInfo = It->second;
     Cycles += BBInfo.Cycles;
     return BBInfo.HasReturn;
   }
@@ -199,7 +195,7 @@ bool PadShortFunc::cyclesUntilReturn(MachineBasicBlock *MBB,
     // functions do not count because the called function will be padded,
     // if necessary.
     if (MI.isReturn() && !MI.isCall()) {
-      VisitedBBs[MBB] = VisitedBBInfo(true, CyclesToEnd);
+      It->second = VisitedBBInfo(true, CyclesToEnd);
       Cycles += CyclesToEnd;
       return true;
     }
@@ -207,7 +203,7 @@ bool PadShortFunc::cyclesUntilReturn(MachineBasicBlock *MBB,
     CyclesToEnd += TSM.computeInstrLatency(&MI);
   }
 
-  VisitedBBs[MBB] = VisitedBBInfo(false, CyclesToEnd);
+  It->second = VisitedBBInfo(false, CyclesToEnd);
   Cycles += CyclesToEnd;
   return false;
 }

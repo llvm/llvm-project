@@ -33,12 +33,11 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Operator.h"
-#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <cassert>
 #include <optional>
@@ -289,24 +288,35 @@ static bool processICmp(ICmpInst *Cmp, LazyValueInfo *LVI) {
   if (!Cmp->getOperand(0)->getType()->isIntOrIntVectorTy())
     return false;
 
-  if (!Cmp->isSigned())
+  if (!Cmp->isSigned() && (!Cmp->isUnsigned() || Cmp->hasSameSign()))
     return false;
 
-  ICmpInst::Predicate UnsignedPred =
-      ConstantRange::getEquivalentPredWithFlippedSignedness(
-          Cmp->getPredicate(),
-          LVI->getConstantRangeAtUse(Cmp->getOperandUse(0),
-                                     /*UndefAllowed*/ true),
-          LVI->getConstantRangeAtUse(Cmp->getOperandUse(1),
-                                     /*UndefAllowed*/ true));
+  bool Changed = false;
 
-  if (UnsignedPred == ICmpInst::Predicate::BAD_ICMP_PREDICATE)
-    return false;
+  ConstantRange CR1 = LVI->getConstantRangeAtUse(Cmp->getOperandUse(0),
+                                                 /*UndefAllowed=*/false),
+                CR2 = LVI->getConstantRangeAtUse(Cmp->getOperandUse(1),
+                                                 /*UndefAllowed=*/false);
 
-  ++NumSICmps;
-  Cmp->setPredicate(UnsignedPred);
+  if (Cmp->isSigned()) {
+    ICmpInst::Predicate UnsignedPred =
+        ConstantRange::getEquivalentPredWithFlippedSignedness(
+            Cmp->getPredicate(), CR1, CR2);
 
-  return true;
+    if (UnsignedPred == ICmpInst::Predicate::BAD_ICMP_PREDICATE)
+      return false;
+
+    ++NumSICmps;
+    Cmp->setPredicate(UnsignedPred);
+    Changed = true;
+  }
+
+  if (ConstantRange::areInsensitiveToSignednessOfICmpPredicate(CR1, CR2)) {
+    Cmp->setSameSign();
+    Changed = true;
+  }
+
+  return Changed;
 }
 
 /// See if LazyValueInfo's ability to exploit edge conditions or range
@@ -400,9 +410,8 @@ static bool processSwitch(SwitchInst *I, LazyValueInfo *LVI,
       ++ReachableCaseCount;
     }
 
-    BasicBlock *DefaultDest = SI->getDefaultDest();
-    if (ReachableCaseCount > 1 &&
-        !isa<UnreachableInst>(DefaultDest->getFirstNonPHIOrDbg())) {
+    if (ReachableCaseCount > 1 && !SI->defaultDestUnreachable()) {
+      BasicBlock *DefaultDest = SI->getDefaultDest();
       ConstantRange CR = LVI->getConstantRangeAtUse(I->getOperandUse(0),
                                                     /*UndefAllowed*/ false);
       // The default dest is unreachable if all cases are covered.
@@ -832,9 +841,7 @@ static bool expandUDivOrURem(BinaryOperator *Instr, const ConstantRange &XCR,
 
   // Even if we don't know X's range, the divisor may be so large, X can't ever
   // be 2x larger than that. I.e. if divisor is always negative.
-  if (!XCR.icmp(ICmpInst::ICMP_ULT,
-                YCR.umul_sat(APInt(YCR.getBitWidth(), 2))) &&
-      !YCR.isAllNegative())
+  if (!XCR.icmp(ICmpInst::ICMP_ULT, YCR.uadd_sat(YCR)) && !YCR.isAllNegative())
     return false;
 
   IRBuilder<> B(Instr);
@@ -1204,9 +1211,42 @@ static bool processAnd(BinaryOperator *BinOp, LazyValueInfo *LVI) {
   return true;
 }
 
+static bool processTrunc(TruncInst *TI, LazyValueInfo *LVI) {
+  if (TI->hasNoSignedWrap() && TI->hasNoUnsignedWrap())
+    return false;
+
+  ConstantRange Range =
+      LVI->getConstantRangeAtUse(TI->getOperandUse(0), /*UndefAllowed=*/false);
+  uint64_t DestWidth = TI->getDestTy()->getScalarSizeInBits();
+  bool Changed = false;
+
+  if (!TI->hasNoUnsignedWrap()) {
+    if (Range.getActiveBits() <= DestWidth) {
+      TI->setHasNoUnsignedWrap(true);
+      ++NumNUW;
+      Changed = true;
+    }
+  }
+
+  if (!TI->hasNoSignedWrap()) {
+    if (Range.getMinSignedBits() <= DestWidth) {
+      TI->setHasNoSignedWrap(true);
+      ++NumNSW;
+      Changed = true;
+    }
+  }
+
+  return Changed;
+}
+
 static bool runImpl(Function &F, LazyValueInfo *LVI, DominatorTree *DT,
                     const SimplifyQuery &SQ) {
   bool FnChanged = false;
+  std::optional<ConstantRange> RetRange;
+  if (F.hasExactDefinition() && F.getReturnType()->isIntOrIntVectorTy())
+    RetRange =
+        ConstantRange::getEmpty(F.getReturnType()->getScalarSizeInBits());
+
   // Visiting in a pre-order depth-first traversal causes us to simplify early
   // blocks before querying later blocks (which require us to analyze early
   // blocks).  Eagerly simplifying shallow blocks means there is strictly less
@@ -1262,6 +1302,9 @@ static bool runImpl(Function &F, LazyValueInfo *LVI, DominatorTree *DT,
       case Instruction::And:
         BBChanged |= processAnd(cast<BinaryOperator>(&II), LVI);
         break;
+      case Instruction::Trunc:
+        BBChanged |= processTrunc(cast<TruncInst>(&II), LVI);
+        break;
       }
     }
 
@@ -1277,6 +1320,11 @@ static bool runImpl(Function &F, LazyValueInfo *LVI, DominatorTree *DT,
       // constant folding the return values of callees.
       auto *RetVal = RI->getReturnValue();
       if (!RetVal) break; // handle "ret void"
+      if (RetRange && !RetRange->isFullSet())
+        RetRange =
+            RetRange->unionWith(LVI->getConstantRange(RetVal, RI,
+                                                      /*UndefAllowed=*/false));
+
       if (isa<Constant>(RetVal)) break; // nothing to do
       if (auto *C = getConstantAt(RetVal, RI, LVI)) {
         ++NumReturns;
@@ -1289,6 +1337,18 @@ static bool runImpl(Function &F, LazyValueInfo *LVI, DominatorTree *DT,
     FnChanged |= BBChanged;
   }
 
+  // Infer range attribute on return value.
+  if (RetRange && !RetRange->isFullSet()) {
+    Attribute RangeAttr = F.getRetAttribute(Attribute::Range);
+    if (RangeAttr.isValid())
+      RetRange = RetRange->intersectWith(RangeAttr.getRange());
+    // Don't add attribute for constant integer returns to reduce noise. These
+    // are propagated across functions by IPSCCP.
+    if (!RetRange->isEmptySet() && !RetRange->isSingleElement()) {
+      F.addRangeRetAttr(*RetRange);
+      FnChanged = true;
+    }
+  }
   return FnChanged;
 }
 

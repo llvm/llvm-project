@@ -10,6 +10,7 @@
 #ifndef _LIBCPP___THREAD_THIS_THREAD_H
 #define _LIBCPP___THREAD_THIS_THREAD_H
 
+#include <__chrono/duration.h>
 #include <__chrono/steady_clock.h>
 #include <__chrono/time_point.h>
 #include <__condition_variable/condition_variable.h>
@@ -29,7 +30,11 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace this_thread {
 
+#if _LIBCPP_HAS_THREADS
+
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_EXPORTED_FROM_ABI void sleep_for(const chrono::nanoseconds& __ns);
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 
 template <class _Rep, class _Period>
 _LIBCPP_HIDE_FROM_ABI void sleep_for(const chrono::duration<_Rep, _Period>& __d) {
@@ -64,6 +69,8 @@ inline _LIBCPP_HIDE_FROM_ABI void sleep_until(const chrono::time_point<chrono::s
 }
 
 inline _LIBCPP_HIDE_FROM_ABI void yield() _NOEXCEPT { __libcpp_thread_yield(); }
+
+#endif // _LIBCPP_HAS_THREADS
 
 } // namespace this_thread
 

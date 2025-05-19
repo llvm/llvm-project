@@ -19,10 +19,11 @@
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 namespace chrono {
 
-#ifndef _LIBCPP_HAS_NO_MONOTONIC_CLOCK
+#if _LIBCPP_HAS_MONOTONIC_CLOCK
 class _LIBCPP_EXPORTED_FROM_ABI steady_clock {
 public:
   typedef nanoseconds duration;
@@ -37,6 +38,7 @@ public:
 
 } // namespace chrono
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___CHRONO_STEADY_CLOCK_H

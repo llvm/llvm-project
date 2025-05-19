@@ -53,7 +53,6 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Pass.h"
 #include "llvm/PassRegistry.h"
 #include "llvm/Support/Debug.h"
@@ -71,9 +70,7 @@ namespace {
 class ARMFixCortexA57AES1742098 : public MachineFunctionPass {
 public:
   static char ID;
-  explicit ARMFixCortexA57AES1742098() : MachineFunctionPass(ID) {
-    initializeARMFixCortexA57AES1742098Pass(*PassRegistry::getPassRegistry());
-  }
+  explicit ARMFixCortexA57AES1742098() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &F) override;
 

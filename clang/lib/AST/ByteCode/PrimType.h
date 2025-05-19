@@ -26,6 +26,7 @@ class Boolean;
 class Floating;
 class FunctionPointer;
 class MemberPointer;
+class FixedPoint;
 template <bool Signed> class IntegralAP;
 template <unsigned Bits, bool Signed> class Integral;
 
@@ -42,34 +43,39 @@ enum PrimType : unsigned {
   PT_IntAP = 8,
   PT_IntAPS = 9,
   PT_Bool = 10,
-  PT_Float = 11,
-  PT_Ptr = 12,
-  PT_FnPtr = 13,
+  PT_FixedPoint = 11,
+  PT_Float = 12,
+  PT_Ptr = 13,
   PT_MemberPtr = 14,
 };
 
 inline constexpr bool isPtrType(PrimType T) {
-  return T == PT_Ptr || T == PT_FnPtr || T == PT_MemberPtr;
+  return T == PT_Ptr || T == PT_MemberPtr;
 }
 
 enum class CastKind : uint8_t {
   Reinterpret,
-  Atomic,
+  Volatile,
+  Dynamic,
 };
+
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
                                      interp::CastKind CK) {
   switch (CK) {
   case interp::CastKind::Reinterpret:
     OS << "reinterpret_cast";
     break;
-  case interp::CastKind::Atomic:
-    OS << "atomic";
+  case interp::CastKind::Volatile:
+    OS << "volatile";
+    break;
+  case interp::CastKind::Dynamic:
+    OS << "dynamic";
     break;
   }
   return OS;
 }
 
-constexpr bool isIntegralType(PrimType T) { return T <= PT_Bool; }
+constexpr bool isIntegralType(PrimType T) { return T <= PT_FixedPoint; }
 
 /// Mapping from primitive types to their representation.
 template <PrimType T> struct PrimConv;
@@ -112,11 +118,11 @@ template <> struct PrimConv<PT_Bool> {
 template <> struct PrimConv<PT_Ptr> {
   using T = Pointer;
 };
-template <> struct PrimConv<PT_FnPtr> {
-  using T = FunctionPointer;
-};
 template <> struct PrimConv<PT_MemberPtr> {
   using T = MemberPointer;
+};
+template <> struct PrimConv<PT_FixedPoint> {
+  using T = FixedPoint;
 };
 
 /// Returns the size of a primitive type in bytes.
@@ -161,8 +167,8 @@ static inline bool aligned(const void *P) {
       TYPE_SWITCH_CASE(PT_Float, B)                                            \
       TYPE_SWITCH_CASE(PT_Bool, B)                                             \
       TYPE_SWITCH_CASE(PT_Ptr, B)                                              \
-      TYPE_SWITCH_CASE(PT_FnPtr, B)                                            \
       TYPE_SWITCH_CASE(PT_MemberPtr, B)                                        \
+      TYPE_SWITCH_CASE(PT_FixedPoint, B)                                       \
     }                                                                          \
   } while (0)
 

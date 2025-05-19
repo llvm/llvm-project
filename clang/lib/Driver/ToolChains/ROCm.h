@@ -13,6 +13,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/Options.h"
+#include "clang/Driver/SanitizerArgs.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Option/ArgList.h"
@@ -36,9 +37,11 @@ struct DeviceLibABIVersion {
   /// and below works with ROCm 5.0 and below which does not have
   /// abi_version_*.bc. Code object v5 requires abi_version_500.bc.
   bool requiresLibrary() { return ABIVersion >= 500; }
-  std::string toString() {
+  std::string toString() { return Twine(getAsCodeObjectVersion()).str(); }
+
+  unsigned getAsCodeObjectVersion() const {
     assert(ABIVersion % 100 == 0 && "Not supported");
-    return Twine(ABIVersion / 100).str();
+    return ABIVersion / 100;
   }
 };
 
@@ -126,7 +129,6 @@ private:
 
   // Libraries that are always linked depending on the language
   SmallString<0> OpenCL;
-  SmallString<0> HIP;
 
   // Asan runtime library
   SmallString<0> AsanRTL;
@@ -148,7 +150,7 @@ private:
   bool Verbose;
 
   bool allGenericLibsValid() const {
-    return !OCML.empty() && !OCKL.empty() && !OpenCL.empty() && !HIP.empty() &&
+    return !OCML.empty() && !OCKL.empty() && !OpenCL.empty() &&
            WavefrontSize64.isValid() && FiniteOnly.isValid() &&
            UnsafeMath.isValid() && DenormalsAreZero.isValid() &&
            CorrectlyRoundedSqrt.isValid();
@@ -173,12 +175,11 @@ public:
 
   /// Get file paths of default bitcode libraries common to AMDGPU based
   /// toolchains.
-  llvm::SmallVector<std::string, 12>
-  getCommonBitcodeLibs(const llvm::opt::ArgList &DriverArgs,
-                       StringRef LibDeviceFile, bool Wave64, bool DAZ,
-                       bool FiniteOnly, bool UnsafeMathOpt,
-                       bool FastRelaxedMath, bool CorrectSqrt,
-                       DeviceLibABIVersion ABIVer, bool isOpenMP) const;
+  llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12> getCommonBitcodeLibs(
+      const llvm::opt::ArgList &DriverArgs, StringRef LibDeviceFile,
+      bool Wave64, bool DAZ, bool FiniteOnly, bool UnsafeMathOpt,
+      bool FastRelaxedMath, bool CorrectSqrt, DeviceLibABIVersion ABIVer,
+      bool GPUSan, bool isOpenMP) const;
   /// Check file paths of default bitcode libraries common to AMDGPU based
   /// toolchains. \returns false if there are invalid or missing files.
   bool checkCommonBitcodeLibs(StringRef GPUArch, StringRef LibDeviceFile,
@@ -227,11 +228,6 @@ public:
   StringRef getOpenCLPath() const {
     assert(!OpenCL.empty());
     return OpenCL;
-  }
-
-  StringRef getHIPPath() const {
-    assert(!HIP.empty());
-    return HIP;
   }
 
   /// Returns empty string of Asan runtime library is not available.

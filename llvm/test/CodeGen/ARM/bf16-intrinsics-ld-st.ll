@@ -60,7 +60,7 @@ entry:
 define arm_aapcs_vfpcc [2 x <2 x i32>] @test_vld1_bf16_x2(ptr %ptr) {
 ; CHECK-LABEL: test_vld1_bf16_x2:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vld1.16 {d0, d1}, [r0:64]
+; CHECK-NEXT:    vld1.16 {d0, d1}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
   %vld1xN = tail call { <4 x bfloat>, <4 x bfloat> } @llvm.arm.neon.vld1x2.v4bf16.p0(ptr %ptr)
@@ -76,7 +76,7 @@ entry:
 define arm_aapcs_vfpcc [2 x <4 x i32>] @test_vld1q_bf16_x2(ptr %ptr) {
 ; CHECK-LABEL: test_vld1q_bf16_x2:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vld1.16 {d0, d1, d2, d3}, [r0:256]
+; CHECK-NEXT:    vld1.16 {d0, d1, d2, d3}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
   %vld1xN = tail call { <8 x bfloat>, <8 x bfloat> } @llvm.arm.neon.vld1x2.v8bf16.p0(ptr %ptr)
@@ -92,7 +92,7 @@ entry:
 define arm_aapcs_vfpcc [3 x <2 x i32>] @test_vld1_bf16_x3(ptr %ptr) {
 ; CHECK-LABEL: test_vld1_bf16_x3:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vld1.16 {d0, d1, d2}, [r0:64]
+; CHECK-NEXT:    vld1.16 {d0, d1, d2}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
   %vld1xN = tail call { <4 x bfloat>, <4 x bfloat>, <4 x bfloat> } @llvm.arm.neon.vld1x3.v4bf16.p0(ptr %ptr)
@@ -111,8 +111,8 @@ entry:
 define arm_aapcs_vfpcc [3 x <4 x i32>] @test_vld1q_bf16_x3(ptr %ptr) {
 ; CHECK-LABEL: test_vld1q_bf16_x3:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vld1.16 {d0, d1, d2}, [r0:64]!
-; CHECK-NEXT:    vld1.16 {d3, d4, d5}, [r0:64]
+; CHECK-NEXT:    vld1.16 {d0, d1, d2}, [r0]!
+; CHECK-NEXT:    vld1.16 {d3, d4, d5}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
   %vld1xN = tail call { <8 x bfloat>, <8 x bfloat>, <8 x bfloat> } @llvm.arm.neon.vld1x3.v8bf16.p0(ptr %ptr)
@@ -131,7 +131,7 @@ entry:
 define arm_aapcs_vfpcc [4 x <2 x i32>] @test_vld1_bf16_x4(ptr %ptr) {
 ; CHECK-LABEL: test_vld1_bf16_x4:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vld1.16 {d0, d1, d2, d3}, [r0:256]
+; CHECK-NEXT:    vld1.16 {d0, d1, d2, d3}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
   %vld1xN = tail call { <4 x bfloat>, <4 x bfloat>, <4 x bfloat>, <4 x bfloat> } @llvm.arm.neon.vld1x4.v4bf16.p0(ptr %ptr)
@@ -153,8 +153,8 @@ entry:
 define arm_aapcs_vfpcc [4 x <4 x i32>] @test_vld1q_bf16_x4(ptr %ptr) {
 ; CHECK-LABEL: test_vld1q_bf16_x4:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vld1.16 {d0, d1, d2, d3}, [r0:256]!
-; CHECK-NEXT:    vld1.16 {d4, d5, d6, d7}, [r0:256]
+; CHECK-NEXT:    vld1.16 {d0, d1, d2, d3}, [r0]!
+; CHECK-NEXT:    vld1.16 {d4, d5, d6, d7}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
   %vld1xN = tail call { <8 x bfloat>, <8 x bfloat>, <8 x bfloat>, <8 x bfloat> } @llvm.arm.neon.vld1x4.v8bf16.p0(ptr %ptr)
@@ -635,7 +635,7 @@ define arm_aapcs_vfpcc void @test_vst1_bf16_x2(ptr nocapture %ptr, [2 x <2 x i32
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    @ kill: def $d1 killed $d1 killed $q0 def $q0
 ; CHECK-NEXT:    @ kill: def $d0 killed $d0 killed $q0 def $q0
-; CHECK-NEXT:    vst1.16 {d0, d1}, [r0:64]
+; CHECK-NEXT:    vst1.16 {d0, d1}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
   %val.coerce.fca.0.extract = extractvalue [2 x <2 x i32>] %val.coerce, 0
@@ -651,7 +651,7 @@ define arm_aapcs_vfpcc void @test_vst1q_bf16_x2(ptr nocapture %ptr, [2 x <4 x i3
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    @ kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    @ kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-NEXT:    vst1.16 {d0, d1, d2, d3}, [r0:256]
+; CHECK-NEXT:    vst1.16 {d0, d1, d2, d3}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
   %val.coerce.fca.0.extract = extractvalue [2 x <4 x i32>] %val.coerce, 0
@@ -668,7 +668,7 @@ define arm_aapcs_vfpcc void @test_vst1_bf16_x3(ptr nocapture %ptr, [3 x <2 x i32
 ; CHECK-NEXT:    @ kill: def $d2 killed $d2 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    @ kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    @ kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
-; CHECK-NEXT:    vst1.16 {d0, d1, d2}, [r0:64]
+; CHECK-NEXT:    vst1.16 {d0, d1, d2}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
   %val.coerce.fca.0.extract = extractvalue [3 x <2 x i32>] %val.coerce, 0
@@ -687,8 +687,8 @@ define arm_aapcs_vfpcc void @test_vst1q_bf16_x3(ptr nocapture %ptr, [3 x <4 x i3
 ; CHECK-NEXT:    @ kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-NEXT:    @ kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-NEXT:    @ kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-NEXT:    vst1.16 {d0, d1, d2}, [r0:64]!
-; CHECK-NEXT:    vst1.16 {d3, d4, d5}, [r0:64]
+; CHECK-NEXT:    vst1.16 {d0, d1, d2}, [r0]!
+; CHECK-NEXT:    vst1.16 {d3, d4, d5}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
   %val.coerce.fca.0.extract = extractvalue [3 x <4 x i32>] %val.coerce, 0
@@ -708,7 +708,7 @@ define arm_aapcs_vfpcc void @test_vst1_bf16_x4(ptr nocapture %ptr, [4 x <2 x i32
 ; CHECK-NEXT:    @ kill: def $d2 killed $d2 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    @ kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    @ kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
-; CHECK-NEXT:    vst1.16 {d0, d1, d2, d3}, [r0:256]
+; CHECK-NEXT:    vst1.16 {d0, d1, d2, d3}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
   %val.coerce.fca.0.extract = extractvalue [4 x <2 x i32>] %val.coerce, 0
@@ -730,8 +730,8 @@ define arm_aapcs_vfpcc void @test_vst1q_bf16_x4(ptr nocapture %ptr, [4 x <4 x i3
 ; CHECK-NEXT:    @ kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-NEXT:    @ kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-NEXT:    @ kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-NEXT:    vst1.16 {d0, d1, d2, d3}, [r0:256]!
-; CHECK-NEXT:    vst1.16 {d4, d5, d6, d7}, [r0:256]
+; CHECK-NEXT:    vst1.16 {d0, d1, d2, d3}, [r0]!
+; CHECK-NEXT:    vst1.16 {d4, d5, d6, d7}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
   %val.coerce.fca.0.extract = extractvalue [4 x <4 x i32>] %val.coerce, 0

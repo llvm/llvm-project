@@ -18,13 +18,12 @@ class XtensaInstrInfo;
 class XtensaRegisterInfo;
 
 class XtensaFrameLowering : public TargetFrameLowering {
+  const XtensaSubtarget &STI;
   const XtensaInstrInfo &TII;
   const XtensaRegisterInfo *TRI;
 
 public:
   XtensaFrameLowering(const XtensaSubtarget &STI);
-
-  bool hasFP(const MachineFunction &MF) const override;
 
   /// emitProlog/emitEpilog - These methods insert prolog and epilog code into
   /// the function.
@@ -50,6 +49,9 @@ public:
 
   void processFunctionBeforeFrameFinalized(MachineFunction &MF,
                                            RegScavenger *RS) const override;
+
+protected:
+  bool hasFPImpl(const MachineFunction &MF) const override;
 };
 
 } // namespace llvm

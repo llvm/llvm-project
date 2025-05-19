@@ -21,8 +21,6 @@
 
 #include "test/UnitTest/Test.h"
 
-#include <stdio.h>
-
 namespace printf_test {
 #ifndef LIBC_COPT_STDIO_USE_SYSTEM_FILE
 using LIBC_NAMESPACE::fclose;

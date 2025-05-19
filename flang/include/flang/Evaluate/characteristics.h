@@ -18,13 +18,13 @@
 #include "shape.h"
 #include "tools.h"
 #include "type.h"
-#include "flang/Common/Fortran-features.h"
-#include "flang/Common/Fortran.h"
 #include "flang/Common/enum-set.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
 #include "flang/Parser/char-block.h"
 #include "flang/Semantics/symbol.h"
+#include "flang/Support/Fortran-features.h"
+#include "flang/Support/Fortran.h"
 #include <optional>
 #include <string>
 #include <variant>
@@ -60,8 +60,7 @@ bool ShapesAreCompatible(const std::optional<Shape> &,
 
 class TypeAndShape {
 public:
-  ENUM_CLASS(
-      Attr, AssumedRank, AssumedShape, AssumedSize, DeferredShape, Coarray)
+  ENUM_CLASS(Attr, AssumedRank, AssumedShape, AssumedSize, DeferredShape)
   using Attrs = common::EnumSet<Attr, Attr_enumSize>;
 
   explicit TypeAndShape(DynamicType t) : type_{t}, shape_{Shape{}} {
@@ -102,6 +101,7 @@ public:
     }
     if (auto type{x.GetType()}) {
       TypeAndShape result{*type, GetShape(context, x, invariantOnly)};
+      result.corank_ = GetCorank(x);
       if (type->category() == TypeCategory::Character) {
         if (const auto *chExpr{UnwrapExpr<Expr<SomeCharacter>>(x)}) {
           if (auto length{chExpr->LEN()}) {
@@ -174,15 +174,23 @@ public:
   }
   const std::optional<Shape> &shape() const { return shape_; }
   const Attrs &attrs() const { return attrs_; }
+  Attrs &attrs() { return attrs_; }
+  bool isPossibleSequenceAssociation() const {
+    return isPossibleSequenceAssociation_;
+  }
+  TypeAndShape &set_isPossibleSequenceAssociation(bool yes) {
+    isPossibleSequenceAssociation_ = yes;
+    return *this;
+  }
   int corank() const { return corank_; }
+  void set_corank(int n) { corank_ = n; }
 
   // Return -1 for assumed-rank as a safety.
   int Rank() const { return shape_ ? GetRank(*shape_) : -1; }
 
   // Can sequence association apply to this argument?
   bool CanBeSequenceAssociated() const {
-    constexpr Attrs notAssumedOrExplicitShape{
-        ~Attrs{Attr::AssumedSize, Attr::Coarray}};
+    constexpr Attrs notAssumedOrExplicitShape{~Attrs{Attr::AssumedSize}};
     return Rank() > 0 && (attrs() & notAssumedOrExplicitShape).none();
   }
 
@@ -209,18 +217,18 @@ private:
   void AcquireLEN();
   void AcquireLEN(const semantics::Symbol &);
 
-protected:
   DynamicType type_;
   std::optional<Expr<SubscriptInteger>> LEN_;
   std::optional<Shape> shape_;
   Attrs attrs_;
+  bool isPossibleSequenceAssociation_{false};
   int corank_{0};
 };
 
 // 15.3.2.2
 struct DummyDataObject {
   ENUM_CLASS(Attr, Optional, Allocatable, Asynchronous, Contiguous, Value,
-      Volatile, Pointer, Target, DeducedFromActual)
+      Volatile, Pointer, Target, DeducedFromActual, OnlyIntrinsicInquiry)
   using Attrs = common::EnumSet<Attr, Attr_enumSize>;
   static bool IdenticalSignificantAttrs(const Attrs &x, const Attrs &y) {
     return (x - Attr::DeducedFromActual) == (y - Attr::DeducedFromActual);
@@ -349,8 +357,8 @@ struct FunctionResult {
 
 // 15.3.1
 struct Procedure {
-  ENUM_CLASS(
-      Attr, Pure, Elemental, BindC, ImplicitInterface, NullPointer, Subroutine)
+  ENUM_CLASS(Attr, Pure, Elemental, BindC, ImplicitInterface, NullPointer,
+      NullAllocatable, Subroutine)
   using Attrs = common::EnumSet<Attr, Attr_enumSize>;
   Procedure(){};
   Procedure(FunctionResult &&, DummyArguments &&, Attrs);

@@ -9,6 +9,8 @@
 #include "lldb/API/SBError.h"
 #include "Utils.h"
 #include "lldb/API/SBStream.h"
+#include "lldb/API/SBStructuredData.h"
+#include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Utility/Instrumentation.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/VASPrintf.h"
@@ -23,7 +25,8 @@ SBError::SBError() { LLDB_INSTRUMENT_VA(this); }
 SBError::SBError(const SBError &rhs) {
   LLDB_INSTRUMENT_VA(this, rhs);
 
-  m_opaque_up = clone(rhs.m_opaque_up);
+  if (rhs.m_opaque_up)
+    m_opaque_up = std::make_unique<Status>(rhs.m_opaque_up->Clone());
 }
 
 SBError::SBError(const char *message) {
@@ -32,8 +35,8 @@ SBError::SBError(const char *message) {
   SetErrorString(message);
 }
 
-SBError::SBError(const lldb_private::Status &status)
-    : m_opaque_up(new Status(status)) {
+SBError::SBError(lldb_private::Status &&status)
+    : m_opaque_up(new Status(std::move(status))) {
   LLDB_INSTRUMENT_VA(this, status);
 }
 
@@ -43,7 +46,9 @@ const SBError &SBError::operator=(const SBError &rhs) {
   LLDB_INSTRUMENT_VA(this, rhs);
 
   if (this != &rhs)
-    m_opaque_up = clone(rhs.m_opaque_up);
+    if (rhs.m_opaque_up)
+      m_opaque_up = std::make_unique<Status>(rhs.m_opaque_up->Clone());
+
   return *this;
 }
 
@@ -94,6 +99,18 @@ uint32_t SBError::GetError() const {
   return err;
 }
 
+SBStructuredData SBError::GetErrorData() const {
+  LLDB_INSTRUMENT_VA(this);
+
+  SBStructuredData sb_data;
+  if (!m_opaque_up)
+    return sb_data;
+
+  StructuredData::ObjectSP data(m_opaque_up->GetAsStructuredData());
+  sb_data.m_impl_up->SetObjectSP(data);
+  return sb_data;
+}
+
 ErrorType SBError::GetType() const {
   LLDB_INSTRUMENT_VA(this);
 
@@ -111,9 +128,9 @@ void SBError::SetError(uint32_t err, ErrorType type) {
   *m_opaque_up = Status(err, type);
 }
 
-void SBError::SetError(const Status &lldb_error) {
+void SBError::SetError(Status &&lldb_error) {
   CreateIfNeeded();
-  *m_opaque_up = lldb_error;
+  *m_opaque_up = std::move(lldb_error);
 }
 
 void SBError::SetErrorToErrno() {

@@ -16,6 +16,7 @@
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Support/ScaledNumber.h"
+#include <vector>
 
 namespace llvm {
 

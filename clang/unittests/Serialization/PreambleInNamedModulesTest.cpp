@@ -75,10 +75,10 @@ export using ::E;
   )cpp",
           MainFilePath);
 
-  IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-      CompilerInstance::createDiagnostics(new DiagnosticOptions());
   IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS =
       llvm::vfs::createPhysicalFileSystem();
+  IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
+      CompilerInstance::createDiagnostics(*VFS, new DiagnosticOptions());
 
   CreateInvocationOptions CIOpts;
   CIOpts.Diags = Diags;
@@ -110,9 +110,7 @@ export using ::E;
   EXPECT_TRUE(BuiltPreamble->CanReuse(*Invocation, *Buffer, Bounds, *VFS));
   BuiltPreamble->OverridePreamble(*Invocation, VFS, Buffer.get());
 
-  auto Clang = std::make_unique<CompilerInstance>(
-      std::make_shared<PCHContainerOperations>());
-  Clang->setInvocation(std::move(Invocation));
+  auto Clang = std::make_unique<CompilerInstance>(std::move(Invocation));
   Clang->setDiagnostics(Diags.get());
 
   if (auto VFSWithRemapping = createVFSFromCompilerInvocation(

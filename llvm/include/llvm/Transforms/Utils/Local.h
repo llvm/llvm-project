@@ -412,14 +412,6 @@ Instruction *removeUnwindEdge(BasicBlock *BB, DomTreeUpdater *DTU = nullptr);
 bool removeUnreachableBlocks(Function &F, DomTreeUpdater *DTU = nullptr,
                              MemorySSAUpdater *MSSAU = nullptr);
 
-/// Combine the metadata of two instructions so that K can replace J. Some
-/// metadata kinds can only be kept if K does not move, meaning it dominated
-/// J in the original IR.
-///
-/// Metadata not listed as known via KnownIDs is removed
-void combineMetadata(Instruction *K, const Instruction *J,
-                     ArrayRef<unsigned> KnownIDs, bool DoesKMove);
-
 /// Combine the metadata of two instructions so that K can replace J. This
 /// specifically handles the case of CSE-like transformations. Some
 /// metadata can only be kept if K dominates J. For this to be correct,
@@ -428,6 +420,11 @@ void combineMetadata(Instruction *K, const Instruction *J,
 /// Unknown metadata is removed.
 void combineMetadataForCSE(Instruction *K, const Instruction *J,
                            bool DoesKMove);
+
+/// Combine metadata of two instructions, where instruction J is a memory
+/// access that has been merged into K. This will intersect alias-analysis
+/// metadata, while preserving other known metadata.
+void combineAAMetadata(Instruction *K, const Instruction *J);
 
 /// Copy the metadata from the source instruction to the destination (the
 /// replacement for the source instruction).
@@ -558,6 +555,30 @@ Value *invertCondition(Value *Condition);
 /// If we can infer one attribute from another on the declaration of a
 /// function, explicitly materialize the maximal set in the IR.
 bool inferAttributesFromOthers(Function &F);
+
+//===----------------------------------------------------------------------===//
+//  Helpers to track and update flags on instructions.
+//
+
+struct OverflowTracking {
+  bool HasNUW = true;
+  bool HasNSW = true;
+
+  // Note: At the moment, users are responsible to manage AllKnownNonNegative
+  // and AllKnownNonZero manually. AllKnownNonNegative can be true in a case
+  // where one of the operands is negative, but one the operators is not NSW.
+  // AllKnownNonNegative should not be used independently of HasNSW
+  bool AllKnownNonNegative = true;
+  bool AllKnownNonZero = true;
+
+  OverflowTracking() = default;
+
+  /// Merge in the no-wrap flags from \p I.
+  void mergeFlags(Instruction &I);
+
+  /// Apply the no-wrap flags to \p I if applicable.
+  void applyFlags(Instruction &I);
+};
 
 } // end namespace llvm
 

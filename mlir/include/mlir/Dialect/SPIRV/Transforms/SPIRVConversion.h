@@ -20,7 +20,6 @@
 #include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-#include "mlir/Transforms/OneToNTypeConversion.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Support/LogicalResult.h"
 
@@ -135,7 +134,7 @@ private:
 /// `func` op to the SPIR-V dialect. These patterns do not handle shader
 /// interface/ABI; they convert function parameters to be of SPIR-V allowed
 /// types.
-void populateBuiltinFuncToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
+void populateBuiltinFuncToSPIRVPatterns(const SPIRVTypeConverter &typeConverter,
                                         RewritePatternSet &patterns);
 
 void populateFuncOpVectorRewritePatterns(RewritePatternSet &patterns);

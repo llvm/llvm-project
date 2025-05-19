@@ -92,8 +92,8 @@ def SparseTensor_AssembleOp : SparseTensor_Op<"assemble", [Pure]> {
     ```
   }];
 
-  let arguments = (ins Variadic<TensorOf<[AnySignlessIntegerOrIndex]>>:$levels,
-                   TensorOf<[AnyType]>:$values);
+  let arguments = (ins Variadic<RankedTensorOf<[AnySignlessIntegerOrIndex]>>:$levels,
+                       RankedTensorOf<[AnyType]>:$values);
   let results = (outs AnySparseTensor: $result);
   let assemblyFormat =
     "` ` `(` $levels       `)` `,` $values attr-dict `:`"
@@ -138,12 +138,12 @@ def SparseTensor_DisassembleOp : SparseTensor_Op<"disassemble", [Pure, SameVaria
   }];
 
   let arguments = (ins AnySparseTensor:$tensor,
-                   Variadic<TensorOf<[AnySignlessIntegerOrIndex]>>:$out_levels,
-                   TensorOf<[AnyType]>:$out_values);
-  let results = (outs Variadic<TensorOf<[AnySignlessIntegerOrIndex]>>:$ret_levels,
-                  TensorOf<[AnyType]>:$ret_values,
-                  Variadic<AnyIndexingScalarLike>:$lvl_lens,
-                  AnyIndexingScalarLike:$val_len);
+                       Variadic<RankedTensorOf<[AnySignlessIntegerOrIndex]>>:$out_levels,
+                       RankedTensorOf<[AnyType]>:$out_values);
+  let results = (outs Variadic<RankedTensorOf<[AnySignlessIntegerOrIndex]>>:$ret_levels,
+                      RankedTensorOf<[AnyType]>:$ret_values,
+                      Variadic<AnyIndexingScalarLike>:$lvl_lens,
+                      AnyIndexingScalarLike:$val_len);
   let assemblyFormat =
     "$tensor attr-dict `:` type($tensor)"
     "`out_lvls` `(` $out_levels `:` type($out_levels) `)` "
@@ -196,8 +196,8 @@ def SparseTensor_ConvertOp : SparseTensor_Op<"convert",
 
   }];
 
-  let arguments = (ins AnyTensor:$source);
-  let results = (outs AnyTensor:$dest);
+  let arguments = (ins AnyRankedTensor:$source);
+  let results = (outs AnyRankedTensor:$dest);
   let assemblyFormat = "$source attr-dict `:` type($source) `to` type($dest)";
 
   let extraClassDeclaration = [{
@@ -266,9 +266,9 @@ def SparseTensor_ToPositionsOp : SparseTensor_Op<"positions",
   let summary = "Extracts the `level`-th positions array of the `tensor`";
   let description = [{
     Returns the positions array of the tensor's storage at the given
-    level.  This is similar to the `bufferization.to_memref` operation
+    level.  This is similar to the `bufferization.to_buffer` operation
     in the sense that it provides a bridge between a tensor world view
-    and a bufferized world view.  Unlike the `bufferization.to_memref`
+    and a bufferized world view.  Unlike the `bufferization.to_buffer`
     operation, however, this sparse operation actually lowers into code
     that extracts the positions array from the sparse storage itself
     (either by calling a support library or through direct code).
@@ -295,9 +295,9 @@ def SparseTensor_ToCoordinatesOp : SparseTensor_Op<"coordinates",
   let summary = "Extracts the `level`-th coordinates array of the `tensor`";
   let description = [{
     Returns the coordinates array of the tensor's storage at the given
-    level.  This is similar to the `bufferization.to_memref` operation
+    level.  This is similar to the `bufferization.to_buffer` operation
     in the sense that it provides a bridge between a tensor world view
-    and a bufferized world view.  Unlike the `bufferization.to_memref`
+    and a bufferized world view.  Unlike the `bufferization.to_buffer`
     operation, however, this sparse operation actually lowers into code
     that extracts the coordinates array from the sparse storage itself
     (either by calling a support library or through direct code).
@@ -326,9 +326,9 @@ def SparseTensor_ToCoordinatesBufferOp : SparseTensor_Op<"coordinates_buffer",
     Returns the linear coordinates array for a sparse tensor with
     a trailing COO region with at least two levels.  It is an error
     if the tensor doesn't contain such a COO region.  This is similar
-    to the `bufferization.to_memref` operation in the sense that it
+    to the `bufferization.to_buffer` operation in the sense that it
     provides a bridge between a tensor world view and a bufferized
-    world view.  Unlike the `bufferization.to_memref` operation,
+    world view.  Unlike the `bufferization.to_buffer` operation,
     however, this operation actually lowers into code that extracts
     the linear coordinates array from the sparse storage scheme that
     stores the coordinates for the COO region as an array of structures.
@@ -359,9 +359,9 @@ def SparseTensor_ToValuesOp : SparseTensor_Op<"values",
   let description = [{
     Returns the values array of the sparse storage format for the given
     sparse tensor, independent of the actual dimension. This is similar to
-    the `bufferization.to_memref` operation in the sense that it provides a bridge
+    the `bufferization.to_buffer` operation in the sense that it provides a bridge
     between a tensor world view and a bufferized world view. Unlike the
-    `bufferization.to_memref` operation, however, this sparse operation actually
+    `bufferization.to_buffer` operation, however, this sparse operation actually
     lowers into code that extracts the values array from the sparse storage
     scheme (either by calling a support library or through direct code).
 
@@ -1447,7 +1447,7 @@ def SparseTensor_ForeachOp : SparseTensor_Op<"foreach",
   ];
 
   let regions = (region SizedRegion<1>:$region);
-  let arguments = (ins AnyTensor:$tensor,
+  let arguments = (ins AnyRankedTensor:$tensor,
                        Variadic<AnyType>:$initArgs,
                        OptionalAttr<AffineMapAttr>:$order);
   let results = (outs Variadic<AnyType>:$results);

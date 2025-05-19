@@ -10,6 +10,8 @@
 /// \file
 /// This is a generic pass for adding attributes to functions.
 //===----------------------------------------------------------------------===//
+#include "flang/Optimizer/Dialect/FIROpsSupport.h"
+#include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -26,6 +28,8 @@ namespace {
 class FunctionAttrPass : public fir::impl::FunctionAttrBase<FunctionAttrPass> {
 public:
   FunctionAttrPass(const fir::FunctionAttrOptions &options) {
+    instrumentFunctionEntry = options.instrumentFunctionEntry;
+    instrumentFunctionExit = options.instrumentFunctionExit;
     framePointerKind = options.framePointerKind;
     noInfsFPMath = options.noInfsFPMath;
     noNaNsFPMath = options.noNaNsFPMath;
@@ -45,6 +49,24 @@ void FunctionAttrPass::runOnOperation() {
 
   LLVM_DEBUG(llvm::dbgs() << "Func-name:" << func.getSymName() << "\n");
 
+  llvm::StringRef name = func.getSymName();
+  auto deconstructed = fir::NameUniquer::deconstruct(name);
+  bool isFromModule = !deconstructed.second.modules.empty();
+
+  if ((isFromModule || !func.isDeclaration()) &&
+      !fir::hasBindcAttr(func.getOperation())) {
+    llvm::StringRef nocapture = mlir::LLVM::LLVMDialect::getNoCaptureAttrName();
+    mlir::UnitAttr unitAttr = mlir::UnitAttr::get(func.getContext());
+
+    for (auto [index, argType] : llvm::enumerate(func.getArgumentTypes())) {
+      if (mlir::isa<fir::ReferenceType>(argType) &&
+          !func.getArgAttr(index, fir::getTargetAttrName()) &&
+          !func.getArgAttr(index, fir::getAsynchronousAttrName()) &&
+          !func.getArgAttr(index, fir::getVolatileAttrName()))
+        func.setArgAttr(index, nocapture, unitAttr);
+    }
+  }
+
   mlir::MLIRContext *context = &getContext();
   if (framePointerKind != mlir::LLVM::framePointerKind::FramePointerKind::None)
     func->setAttr("frame_pointer", mlir::LLVM::FramePointerKindAttr::get(
@@ -52,6 +74,14 @@ void FunctionAttrPass::runOnOperation() {
 
   auto llvmFuncOpName =
       mlir::OperationName(mlir::LLVM::LLVMFuncOp::getOperationName(), context);
+  if (!instrumentFunctionEntry.empty())
+    func->setAttr(mlir::LLVM::LLVMFuncOp::getInstrumentFunctionEntryAttrName(
+                      llvmFuncOpName),
+                  mlir::StringAttr::get(context, instrumentFunctionEntry));
+  if (!instrumentFunctionExit.empty())
+    func->setAttr(mlir::LLVM::LLVMFuncOp::getInstrumentFunctionExitAttrName(
+                      llvmFuncOpName),
+                  mlir::StringAttr::get(context, instrumentFunctionExit));
   if (noInfsFPMath)
     func->setAttr(
         mlir::LLVM::LLVMFuncOp::getNoInfsFpMathAttrName(llvmFuncOpName),

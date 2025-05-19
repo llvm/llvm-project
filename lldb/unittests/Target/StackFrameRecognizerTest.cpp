@@ -19,7 +19,6 @@
 #include "gtest/gtest.h"
 
 using namespace lldb_private;
-using namespace lldb_private::repro;
 using namespace lldb;
 
 namespace {
@@ -69,8 +68,8 @@ TEST_F(StackFrameRecognizerTest, NullModuleRegex) {
   RegisterDummyStackFrameRecognizer(manager);
 
   bool any_printed = false;
-  manager.ForEach([&any_printed](uint32_t recognizer_id, std::string name,
-                                 std::string function,
+  manager.ForEach([&any_printed](uint32_t recognizer_id, bool enabled,
+                                 std::string name, std::string function,
                                  llvm::ArrayRef<ConstString> symbols,
                                  Mangled::NamePreference symbol_mangling,
                                  bool regexp) { any_printed = true; });

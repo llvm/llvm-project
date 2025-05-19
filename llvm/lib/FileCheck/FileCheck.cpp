@@ -386,15 +386,12 @@ Expected<std::unique_ptr<NumericVariableUse>> Pattern::parseNumericVariableUse(
   // that happens, we create a dummy variable so that parsing can continue. All
   // uses of undefined variables, whether string or numeric, are then diagnosed
   // in printNoMatch() after failing to match.
-  auto VarTableIter = Context->GlobalNumericVariableTable.find(Name);
-  NumericVariable *NumericVariable;
-  if (VarTableIter != Context->GlobalNumericVariableTable.end())
-    NumericVariable = VarTableIter->second;
-  else {
-    NumericVariable = Context->makeNumericVariable(
+  auto [VarTableIter, Inserted] =
+      Context->GlobalNumericVariableTable.try_emplace(Name);
+  if (Inserted)
+    VarTableIter->second = Context->makeNumericVariable(
         Name, ExpressionFormat(ExpressionFormat::Kind::Unsigned));
-    Context->GlobalNumericVariableTable[Name] = NumericVariable;
-  }
+  NumericVariable *NumericVariable = VarTableIter->second;
 
   std::optional<size_t> DefLineNumber = NumericVariable->getDefLineNumber();
   if (DefLineNumber && LineNumber && *DefLineNumber == *LineNumber)
@@ -1013,8 +1010,10 @@ bool Pattern::parsePattern(StringRef PatternStr, StringRef Prefix,
         // Handle substitution of string variables that were defined earlier on
         // the same line by emitting a backreference. Expressions do not
         // support substituting a numeric variable defined on the same line.
-        if (!IsNumBlock && VariableDefs.find(SubstStr) != VariableDefs.end()) {
-          unsigned CaptureParenGroup = VariableDefs[SubstStr];
+        decltype(VariableDefs)::iterator It;
+        if (!IsNumBlock &&
+            (It = VariableDefs.find(SubstStr)) != VariableDefs.end()) {
+          unsigned CaptureParenGroup = It->second;
           if (CaptureParenGroup < 1 || CaptureParenGroup > 9) {
             SM.PrintMessage(SMLoc::getFromPointer(SubstStr.data()),
                             SourceMgr::DK_Error,
@@ -1641,13 +1640,11 @@ static const char *DefaultCommentPrefixes[] = {"COM", "RUN"};
 
 static void addDefaultPrefixes(FileCheckRequest &Req) {
   if (Req.CheckPrefixes.empty()) {
-    for (const char *Prefix : DefaultCheckPrefixes)
-      Req.CheckPrefixes.push_back(Prefix);
+    llvm::append_range(Req.CheckPrefixes, DefaultCheckPrefixes);
     Req.IsDefaultCheckPrefix = true;
   }
   if (Req.CommentPrefixes.empty())
-    for (const char *Prefix : DefaultCommentPrefixes)
-      Req.CommentPrefixes.push_back(Prefix);
+    llvm::append_range(Req.CommentPrefixes, DefaultCommentPrefixes);
 }
 
 struct PrefixMatcher {
@@ -1766,8 +1763,7 @@ void FileCheckPatternContext::createLineVariable() {
 }
 
 FileCheck::FileCheck(FileCheckRequest Req)
-    : Req(Req), PatternContext(std::make_unique<FileCheckPatternContext>()),
-      CheckStrings(std::make_unique<std::vector<FileCheckString>>()) {}
+    : Req(Req), PatternContext(std::make_unique<FileCheckPatternContext>()) {}
 
 FileCheck::~FileCheck() = default;
 
@@ -1916,7 +1912,7 @@ bool FileCheck::readCheckFile(
     // Verify that CHECK-NEXT/SAME/EMPTY lines have at least one CHECK line before them.
     if ((CheckTy == Check::CheckNext || CheckTy == Check::CheckSame ||
          CheckTy == Check::CheckEmpty) &&
-        CheckStrings->empty()) {
+        CheckStrings.empty()) {
       StringRef Type = CheckTy == Check::CheckNext
                            ? "NEXT"
                            : CheckTy == Check::CheckEmpty ? "EMPTY" : "SAME";
@@ -1934,8 +1930,8 @@ bool FileCheck::readCheckFile(
     }
 
     // Okay, add the string we captured to the output vector and move on.
-    CheckStrings->emplace_back(P, UsedPrefix, PatternLoc);
-    std::swap(DagNotMatches, CheckStrings->back().DagNotStrings);
+    CheckStrings.emplace_back(std::move(P), UsedPrefix, PatternLoc,
+                              std::move(DagNotMatches));
     DagNotMatches = ImplicitNegativeChecks;
   }
 
@@ -1962,10 +1958,10 @@ bool FileCheck::readCheckFile(
   // Add an EOF pattern for any trailing --implicit-check-not/CHECK-DAG/-NOTs,
   // and use the first prefix as a filler for the error message.
   if (!DagNotMatches.empty()) {
-    CheckStrings->emplace_back(
+    CheckStrings.emplace_back(
         Pattern(Check::CheckEOF, PatternContext.get(), LineNumber + 1),
-        *Req.CheckPrefixes.begin(), SMLoc::getFromPointer(Buffer.data()));
-    std::swap(DagNotMatches, CheckStrings->back().DagNotStrings);
+        *Req.CheckPrefixes.begin(), SMLoc::getFromPointer(Buffer.data()),
+        std::move(DagNotMatches));
   }
 
   return false;
@@ -2493,14 +2489,10 @@ static bool ValidatePrefixes(StringRef Kind, StringSet<> &UniquePrefixes,
 bool FileCheck::ValidateCheckPrefixes() {
   StringSet<> UniquePrefixes;
   // Add default prefixes to catch user-supplied duplicates of them below.
-  if (Req.CheckPrefixes.empty()) {
-    for (const char *Prefix : DefaultCheckPrefixes)
-      UniquePrefixes.insert(Prefix);
-  }
-  if (Req.CommentPrefixes.empty()) {
-    for (const char *Prefix : DefaultCommentPrefixes)
-      UniquePrefixes.insert(Prefix);
-  }
+  if (Req.CheckPrefixes.empty())
+    UniquePrefixes.insert_range(DefaultCheckPrefixes);
+  if (Req.CommentPrefixes.empty())
+    UniquePrefixes.insert_range(DefaultCommentPrefixes);
   // Do not validate the default prefixes, or diagnostics about duplicates might
   // incorrectly indicate that they were supplied by the user.
   if (!ValidatePrefixes("check", UniquePrefixes, Req.CheckPrefixes))
@@ -2676,13 +2668,13 @@ bool FileCheck::checkInput(SourceMgr &SM, StringRef Buffer,
                            std::vector<FileCheckDiag> *Diags) {
   bool ChecksFailed = false;
 
-  unsigned i = 0, j = 0, e = CheckStrings->size();
+  unsigned i = 0, j = 0, e = CheckStrings.size();
   while (true) {
     StringRef CheckRegion;
     if (j == e) {
       CheckRegion = Buffer;
     } else {
-      const FileCheckString &CheckLabelStr = (*CheckStrings)[j];
+      const FileCheckString &CheckLabelStr = CheckStrings[j];
       if (CheckLabelStr.Pat.getCheckTy() != Check::CheckLabel) {
         ++j;
         continue;
@@ -2708,7 +2700,7 @@ bool FileCheck::checkInput(SourceMgr &SM, StringRef Buffer,
       PatternContext->clearLocalVars();
 
     for (; i != j; ++i) {
-      const FileCheckString &CheckStr = (*CheckStrings)[i];
+      const FileCheckString &CheckStr = CheckStrings[i];
 
       // Check each string within the scanned region, including a second check
       // of any final CHECK-LABEL (to verify CHECK-NOT and CHECK-DAG)

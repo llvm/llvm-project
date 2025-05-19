@@ -48,11 +48,9 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/LEB128.h"
-#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cstdint>
 #include <deque>
 #include <map>
@@ -624,7 +622,9 @@ public:
       return getNormalTypeUnitMap();
   }
 
-
+  Error doWorkThreadSafely(function_ref<Error()> Work) override {
+    return Work();
+  }
 };
 
 class ThreadSafeState : public ThreadUnsafeDWARFContextState {
@@ -739,6 +739,11 @@ public:
   getTypeUnitMap(bool IsDWO) override {
     std::unique_lock<std::recursive_mutex> LockGuard(Mutex);
     return ThreadUnsafeDWARFContextState::getTypeUnitMap(IsDWO);
+  }
+
+  Error doWorkThreadSafely(function_ref<Error()> Work) override {
+    std::unique_lock<std::recursive_mutex> LockGuard(Mutex);
+    return ThreadUnsafeDWARFContextState::doWorkThreadSafely(Work);
   }
 };
 } // namespace
@@ -1345,8 +1350,7 @@ void DWARFContext::dump(
     getDebugNames().dump(OS);
 }
 
-DWARFTypeUnit *DWARFContext::getTypeUnitForHash(uint16_t Version, uint64_t Hash,
-                                                bool IsDWO) {
+DWARFTypeUnit *DWARFContext::getTypeUnitForHash(uint64_t Hash, bool IsDWO) {
   DWARFUnitVector &DWOUnits = State->getDWOUnits();
   if (const auto &TUI = getTUIndex()) {
     if (const auto *R = TUI.getFromHash(Hash))
@@ -1733,13 +1737,14 @@ DWARFContext::getLocalsForAddress(object::SectionedAddress Address) {
   return Result;
 }
 
-DILineInfo DWARFContext::getLineInfoForAddress(object::SectionedAddress Address,
-                                               DILineInfoSpecifier Spec) {
-  DILineInfo Result;
+std::optional<DILineInfo>
+DWARFContext::getLineInfoForAddress(object::SectionedAddress Address,
+                                    DILineInfoSpecifier Spec) {
   DWARFCompileUnit *CU = getCompileUnitForCodeAddress(Address.Address);
   if (!CU)
-    return Result;
+    return std::nullopt;
 
+  DILineInfo Result;
   getFunctionNameAndStartLineForAddress(
       CU, Address.Address, Spec.FNKind, Spec.FLIKind, Result.FunctionName,
       Result.StartFileName, Result.StartLine, Result.StartAddress);
@@ -1754,7 +1759,7 @@ DILineInfo DWARFContext::getLineInfoForAddress(object::SectionedAddress Address,
   return Result;
 }
 
-DILineInfo
+std::optional<DILineInfo>
 DWARFContext::getLineInfoForDataAddress(object::SectionedAddress Address) {
   DILineInfo Result;
   DWARFCompileUnit *CU = getCompileUnitForDataAddress(Address.Address);
@@ -2478,3 +2483,5 @@ uint8_t DWARFContext::getCUAddrSize() {
   auto CUs = compile_units();
   return CUs.empty() ? 0 : (*CUs.begin())->getAddressByteSize();
 }
+
+bool DWARFContext::isDWP() const { return !DObj->getCUIndexSection().empty(); }

@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "XCoreFrameLowering.h"
-#include "XCore.h"
 #include "XCoreInstrInfo.h"
 #include "XCoreMachineFunctionInfo.h"
 #include "XCoreSubtarget.h"
@@ -23,7 +22,6 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/TargetLowering.h"
-#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetOptions.h"
@@ -215,7 +213,7 @@ XCoreFrameLowering::XCoreFrameLowering(const XCoreSubtarget &sti)
   // Do nothing
 }
 
-bool XCoreFrameLowering::hasFP(const MachineFunction &MF) const {
+bool XCoreFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   return MF.getTarget().Options.DisableFramePointerElim(MF) ||
          MF.getFrameInfo().hasVarSizedObjects();
 }
@@ -427,7 +425,7 @@ bool XCoreFrameLowering::spillCalleeSavedRegisters(
     DL = MI->getDebugLoc();
 
   for (const CalleeSavedInfo &I : CSI) {
-    Register Reg = I.getReg();
+    MCRegister Reg = I.getReg();
     assert(Reg != XCore::LR && !(Reg == XCore::R10 && hasFP(*MF)) &&
            "LR & FP are always handled in emitPrologue");
 
@@ -455,7 +453,7 @@ bool XCoreFrameLowering::restoreCalleeSavedRegisters(
   if (!AtStart)
     --BeforeI;
   for (const CalleeSavedInfo &CSR : CSI) {
-    Register Reg = CSR.getReg();
+    MCRegister Reg = CSR.getReg();
     assert(Reg != XCore::LR && !(Reg == XCore::R10 && hasFP(*MF)) &&
            "LR & FP are always handled in emitEpilogue");
 
@@ -578,7 +576,7 @@ processFunctionBeforeFrameFinalized(MachineFunction &MF,
   unsigned Size = TRI.getSpillSize(RC);
   Align Alignment = TRI.getSpillAlign(RC);
   if (XFI->isLargeFrame(MF) || hasFP(MF))
-    RS->addScavengingFrameIndex(MFI.CreateStackObject(Size, Alignment, false));
+    RS->addScavengingFrameIndex(MFI.CreateSpillStackObject(Size, Alignment));
   if (XFI->isLargeFrame(MF) && !hasFP(MF))
-    RS->addScavengingFrameIndex(MFI.CreateStackObject(Size, Alignment, false));
+    RS->addScavengingFrameIndex(MFI.CreateSpillStackObject(Size, Alignment));
 }

@@ -14,7 +14,7 @@
 #include <__config>
 #include <__memory/addressof.h>
 #include <__mutex/tag_types.h>
-#include <__system_error/system_error.h>
+#include <__system_error/throw_system_error.h>
 #include <__utility/swap.h>
 #include <cerrno>
 
@@ -25,7 +25,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Mutex>
-class _LIBCPP_TEMPLATE_VIS unique_lock {
+class unique_lock {
 public:
   typedef _Mutex mutex_type;
 
@@ -34,28 +34,28 @@ private:
   bool __owns_;
 
 public:
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI unique_lock() _NOEXCEPT : __m_(nullptr), __owns_(false) {}
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI explicit unique_lock(mutex_type& __m)
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI unique_lock() _NOEXCEPT : __m_(nullptr), __owns_(false) {}
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI explicit unique_lock(mutex_type& __m)
       : __m_(std::addressof(__m)), __owns_(true) {
     __m_->lock();
   }
 
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI unique_lock(mutex_type& __m, defer_lock_t) _NOEXCEPT
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI unique_lock(mutex_type& __m, defer_lock_t) _NOEXCEPT
       : __m_(std::addressof(__m)),
         __owns_(false) {}
 
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI unique_lock(mutex_type& __m, try_to_lock_t)
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI unique_lock(mutex_type& __m, try_to_lock_t)
       : __m_(std::addressof(__m)), __owns_(__m.try_lock()) {}
 
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI unique_lock(mutex_type& __m, adopt_lock_t)
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI unique_lock(mutex_type& __m, adopt_lock_t)
       : __m_(std::addressof(__m)), __owns_(true) {}
 
   template <class _Clock, class _Duration>
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI unique_lock(mutex_type& __m, const chrono::time_point<_Clock, _Duration>& __t)
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI unique_lock(mutex_type& __m, const chrono::time_point<_Clock, _Duration>& __t)
       : __m_(std::addressof(__m)), __owns_(__m.try_lock_until(__t)) {}
 
   template <class _Rep, class _Period>
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI unique_lock(mutex_type& __m, const chrono::duration<_Rep, _Period>& __d)
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI unique_lock(mutex_type& __m, const chrono::duration<_Rep, _Period>& __d)
       : __m_(std::addressof(__m)), __owns_(__m.try_lock_for(__d)) {}
 
   _LIBCPP_HIDE_FROM_ABI ~unique_lock() {
@@ -66,7 +66,7 @@ public:
   unique_lock(unique_lock const&)            = delete;
   unique_lock& operator=(unique_lock const&) = delete;
 
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI unique_lock(unique_lock&& __u) _NOEXCEPT
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI unique_lock(unique_lock&& __u) _NOEXCEPT
       : __m_(__u.__m_),
         __owns_(__u.__owns_) {
     __u.__m_    = nullptr;
@@ -116,9 +116,9 @@ _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(unique_lock);
 template <class _Mutex>
 _LIBCPP_HIDE_FROM_ABI void unique_lock<_Mutex>::lock() {
   if (__m_ == nullptr)
-    __throw_system_error(EPERM, "unique_lock::lock: references null mutex");
+    std::__throw_system_error(EPERM, "unique_lock::lock: references null mutex");
   if (__owns_)
-    __throw_system_error(EDEADLK, "unique_lock::lock: already locked");
+    std::__throw_system_error(EDEADLK, "unique_lock::lock: already locked");
   __m_->lock();
   __owns_ = true;
 }
@@ -126,9 +126,9 @@ _LIBCPP_HIDE_FROM_ABI void unique_lock<_Mutex>::lock() {
 template <class _Mutex>
 _LIBCPP_HIDE_FROM_ABI bool unique_lock<_Mutex>::try_lock() {
   if (__m_ == nullptr)
-    __throw_system_error(EPERM, "unique_lock::try_lock: references null mutex");
+    std::__throw_system_error(EPERM, "unique_lock::try_lock: references null mutex");
   if (__owns_)
-    __throw_system_error(EDEADLK, "unique_lock::try_lock: already locked");
+    std::__throw_system_error(EDEADLK, "unique_lock::try_lock: already locked");
   __owns_ = __m_->try_lock();
   return __owns_;
 }
@@ -137,9 +137,9 @@ template <class _Mutex>
 template <class _Rep, class _Period>
 _LIBCPP_HIDE_FROM_ABI bool unique_lock<_Mutex>::try_lock_for(const chrono::duration<_Rep, _Period>& __d) {
   if (__m_ == nullptr)
-    __throw_system_error(EPERM, "unique_lock::try_lock_for: references null mutex");
+    std::__throw_system_error(EPERM, "unique_lock::try_lock_for: references null mutex");
   if (__owns_)
-    __throw_system_error(EDEADLK, "unique_lock::try_lock_for: already locked");
+    std::__throw_system_error(EDEADLK, "unique_lock::try_lock_for: already locked");
   __owns_ = __m_->try_lock_for(__d);
   return __owns_;
 }
@@ -148,9 +148,9 @@ template <class _Mutex>
 template <class _Clock, class _Duration>
 _LIBCPP_HIDE_FROM_ABI bool unique_lock<_Mutex>::try_lock_until(const chrono::time_point<_Clock, _Duration>& __t) {
   if (__m_ == nullptr)
-    __throw_system_error(EPERM, "unique_lock::try_lock_until: references null mutex");
+    std::__throw_system_error(EPERM, "unique_lock::try_lock_until: references null mutex");
   if (__owns_)
-    __throw_system_error(EDEADLK, "unique_lock::try_lock_until: already locked");
+    std::__throw_system_error(EDEADLK, "unique_lock::try_lock_until: already locked");
   __owns_ = __m_->try_lock_until(__t);
   return __owns_;
 }
@@ -158,7 +158,7 @@ _LIBCPP_HIDE_FROM_ABI bool unique_lock<_Mutex>::try_lock_until(const chrono::tim
 template <class _Mutex>
 _LIBCPP_HIDE_FROM_ABI void unique_lock<_Mutex>::unlock() {
   if (!__owns_)
-    __throw_system_error(EPERM, "unique_lock::unlock: not locked");
+    std::__throw_system_error(EPERM, "unique_lock::unlock: not locked");
   __m_->unlock();
   __owns_ = false;
 }
