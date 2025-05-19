@@ -1050,18 +1050,18 @@ void Writer::createOutputSegments() {
   }
 
   // Sort segments by type, placing .bss last
-  std::stable_sort(segments.begin(), segments.end(),
-                   [](const OutputSegment *a, const OutputSegment *b) {
-                     auto order = [](StringRef name) {
-                       return StringSwitch<int>(name)
-                           .StartsWith(".tdata", 0)
-                           .StartsWith(".rodata", 1)
-                           .StartsWith(".data", 2)
-                           .StartsWith(".bss", 4)
-                           .Default(3);
-                     };
-                     return order(a->name) < order(b->name);
-                   });
+  llvm::stable_sort(segments,
+                    [](const OutputSegment *a, const OutputSegment *b) {
+                      auto order = [](StringRef name) {
+                        return StringSwitch<int>(name)
+                            .StartsWith(".tdata", 0)
+                            .StartsWith(".rodata", 1)
+                            .StartsWith(".data", 2)
+                            .StartsWith(".bss", 4)
+                            .Default(3);
+                      };
+                      return order(a->name) < order(b->name);
+                    });
 
   for (size_t i = 0; i < segments.size(); ++i)
     segments[i]->index = i;
