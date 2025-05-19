@@ -101,7 +101,7 @@ namespace Foundation1010 {
       uint32_t _used;
       uint32_t _offset;
       uint32_t _size : 28;
-      uint64_t _priv1 : 4;
+      uint32_t _priv1 : 4;
       uint32_t _priv2;
       uint32_t _data;
     };
