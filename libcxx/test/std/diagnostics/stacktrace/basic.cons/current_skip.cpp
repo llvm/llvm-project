@@ -21,7 +21,7 @@
 #include <stacktrace>
 
 /*
-  Let t be a stacktrace as-if obtained via basic_stacktrace​::​current(alloc). Let n be t.size().
+  Let t be a stacktrace as-if obtained via basic_stacktrace::current(alloc). Let n be t.size().
   Returns: A basic_stacktrace object where frames_ is direct-non-list-initialized from arguments
   t.begin() + min(n, skip), t.end(), and alloc, or an empty basic_stacktrace object if the
   initialization of frames_ failed.
