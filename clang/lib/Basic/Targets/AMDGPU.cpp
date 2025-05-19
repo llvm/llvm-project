@@ -310,7 +310,7 @@ void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,
   // e.g. gfx10-1-generic -> gfx10_1_generic
   if (GPUKind >= llvm::AMDGPU::GK_AMDGCN_GENERIC_FIRST &&
       GPUKind <= llvm::AMDGPU::GK_AMDGCN_GENERIC_LAST) {
-    std::replace(CanonName.begin(), CanonName.end(), '-', '_');
+    llvm::replace(CanonName, '-', '_');
   }
 
   Builder.defineMacro(Twine("__") + Twine(CanonName) + Twine("__"));
@@ -329,7 +329,7 @@ void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,
       auto Loc = OffloadArchFeatures.find(F);
       if (Loc != OffloadArchFeatures.end()) {
         std::string NewF = F.str();
-        std::replace(NewF.begin(), NewF.end(), '-', '_');
+        llvm::replace(NewF, '-', '_');
         Builder.defineMacro(Twine("__amdgcn_feature_") + Twine(NewF) +
                                 Twine("__"),
                             Loc->second ? "1" : "0");
