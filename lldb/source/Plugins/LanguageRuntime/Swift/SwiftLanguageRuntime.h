@@ -19,6 +19,7 @@
 #include "lldb/Breakpoint/BreakpointPrecondition.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Target/LanguageRuntime.h"
+#include "lldb/Target/Process.h"
 #include "lldb/lldb-private.h"
 #include "swift/Demangling/ManglingFlavor.h"
 
@@ -902,6 +903,10 @@ GetAsyncUnwindRegisterNumbers(llvm::Triple::ArchType triple);
 /// Inspects thread local storage to find the address of the currently executing
 /// task.
 llvm::Expected<lldb::addr_t> GetTaskAddrFromThreadLocalStorage(Thread &thread);
+
+llvm::Expected<std::optional<std::string>> GetTaskName(lldb::addr_t task,
+                                                       Process &process);
+
 } // namespace lldb_private
 
 #endif // liblldb_SwiftLanguageRuntime_h_

@@ -49,13 +49,8 @@ private:
   /// If a thread for task_id had been created in the last stop, return it.
   /// Otherwise, create a new MemoryThread for it.
   lldb::ThreadSP FindOrCreateSwiftThread(ThreadList &old_thread_list,
-                                         uint64_t task_id);
-
-  /// Find the Task ID of the task being executed by `thread`, if any.
-  std::optional<uint64_t> FindTaskId(Thread &thread);
-
-  /// The offset of the Job ID inside a Task data structure.
-  size_t m_job_id_offset;
+                                         uint64_t task_id,
+                                         std::optional<std::string> task_name);
 };
 } // namespace lldb_private
 

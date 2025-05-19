@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Support/Error.h"
+#include <optional>
 #if LLDB_ENABLE_SWIFT
 
 #include "OperatingSystemSwiftTasks.h"
@@ -74,16 +76,11 @@ OperatingSystemSwiftTasks::~OperatingSystemSwiftTasks() = default;
 
 OperatingSystemSwiftTasks::OperatingSystemSwiftTasks(
     lldb_private::Process &process)
-    : OperatingSystem(&process) {
-  size_t ptr_size = process.GetAddressByteSize();
-  // Offset of a Task ID inside a Task data structure, guaranteed by the ABI.
-  // See Job in swift/RemoteInspection/RuntimeInternals.h.
-  m_job_id_offset = 4 * ptr_size + 4;
-}
+    : OperatingSystem(&process) {}
 
-ThreadSP
-OperatingSystemSwiftTasks::FindOrCreateSwiftThread(ThreadList &old_thread_list,
-                                                   uint64_t task_id) {
+ThreadSP OperatingSystemSwiftTasks::FindOrCreateSwiftThread(
+    ThreadList &old_thread_list, uint64_t task_id,
+    std::optional<std::string> task_name) {
   // Mask higher bits to avoid conflicts with core thread IDs.
   uint64_t masked_task_id = 0x0000000f00000000 | task_id;
 
@@ -92,10 +89,58 @@ OperatingSystemSwiftTasks::FindOrCreateSwiftThread(ThreadList &old_thread_list,
       IsOperatingSystemPluginThread(old_thread))
     return old_thread;
 
-  std::string name = llvm::formatv("Swift Task {0}", task_id);
+  std::string name;
+  if (task_name)
+    name = llvm::formatv("{0} (Task {1})", *task_name, task_id);
+  else
+    name = llvm::formatv("Task {0}", task_id);
+
   return std::make_shared<ThreadMemoryProvidingName>(*m_process, masked_task_id,
                                                      /*register_data_addr*/ 0,
                                                      name);
+}
+
+static std::optional<addr_t> FindTaskAddress(Thread &thread) {
+  llvm::Expected<addr_t> task_addr = GetTaskAddrFromThreadLocalStorage(thread);
+  if (!task_addr) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::OS), task_addr.takeError(),
+                   "OperatingSystemSwiftTasks: failed to find task address in "
+                   "thread local storage: {0}");
+    return {};
+  }
+  if (*task_addr == 0 || *task_addr == LLDB_INVALID_ADDRESS)
+    return std::nullopt;
+  return *task_addr;
+}
+
+static std::optional<uint64_t> FindTaskId(addr_t task_addr, Process &process) {
+  size_t ptr_size = process.GetAddressByteSize();
+  // Offset of a Task ID inside a Task data structure, guaranteed by the ABI.
+  // See Job in swift/RemoteInspection/RuntimeInternals.h.
+  const offset_t job_id_offset = 4 * ptr_size + 4;
+
+  Status error;
+  // The Task ID is at offset job_id_offset from the Task pointer.
+  constexpr uint32_t num_bytes_task_id = 4;
+  auto task_id = process.ReadUnsignedIntegerFromMemory(
+      task_addr + job_id_offset, num_bytes_task_id, LLDB_INVALID_ADDRESS,
+      error);
+  if (error.Fail())
+    return {};
+  return task_id;
+}
+
+static std::optional<std::string> FindTaskName(addr_t task_addr,
+                                               Process &process) {
+  auto task_name_or_err = GetTaskName(task_addr, process);
+  if (auto err = task_name_or_err.takeError()) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::OS), std::move(err),
+                   "OperatingSystemSwiftTasks: failed while looking for name "
+                   "of task {1:x}: {0}",
+                   task_addr);
+    return {};
+  }
+  return *task_name_or_err;
 }
 
 bool OperatingSystemSwiftTasks::UpdateThreadList(ThreadList &old_thread_list,
@@ -105,10 +150,10 @@ bool OperatingSystemSwiftTasks::UpdateThreadList(ThreadList &old_thread_list,
   LLDB_LOG(log, "OperatingSystemSwiftTasks: Updating thread list");
 
   for (const ThreadSP &real_thread : core_thread_list.Threads()) {
-    std::optional<uint64_t> task_id = FindTaskId(*real_thread);
+    std::optional<addr_t> task_addr = FindTaskAddress(*real_thread);
 
     // If this is not a thread running a Task, add it to the list as is.
-    if (!task_id) {
+    if (!task_addr) {
       new_thread_list.AddThread(real_thread);
       LLDB_LOGF(log,
                 "OperatingSystemSwiftTasks: thread %" PRIx64
@@ -117,7 +162,16 @@ bool OperatingSystemSwiftTasks::UpdateThreadList(ThreadList &old_thread_list,
       continue;
     }
 
-    ThreadSP swift_thread = FindOrCreateSwiftThread(old_thread_list, *task_id);
+    assert(m_process != nullptr);
+    std::optional<uint64_t> task_id = FindTaskId(*task_addr, *m_process);
+    if (!task_id) {
+      LLDB_LOG(log, "OperatingSystemSwiftTasks: could not get ID of Task {0:x}",
+               *task_addr);
+      continue;
+    }
+
+    ThreadSP swift_thread = FindOrCreateSwiftThread(
+        old_thread_list, *task_id, FindTaskName(*task_addr, *m_process));
     swift_thread->SetBackingThread(real_thread);
     new_thread_list.AddThread(swift_thread);
     LLDB_LOGF(log,
@@ -140,26 +194,6 @@ RegisterContextSP OperatingSystemSwiftTasks::CreateRegisterContextForThread(
 StopInfoSP OperatingSystemSwiftTasks::CreateThreadStopReason(
     lldb_private::Thread *thread) {
   return thread->GetStopInfo();
-}
-
-std::optional<uint64_t> OperatingSystemSwiftTasks::FindTaskId(Thread &thread) {
-  llvm::Expected<addr_t> task_addr = GetTaskAddrFromThreadLocalStorage(thread);
-  if (!task_addr) {
-    LLDB_LOG_ERROR(GetLog(LLDBLog::OS), task_addr.takeError(),
-                   "OperatingSystemSwiftTasks: failed to find task address in "
-                   "thread local storage: {0}");
-    return {};
-  }
-
-  Status error;
-  // The Task ID is at offset m_job_id_offset from the Task pointer.
-  constexpr uint32_t num_bytes_task_id = 4;
-  auto task_id = m_process->ReadUnsignedIntegerFromMemory(
-      *task_addr + m_job_id_offset, num_bytes_task_id, LLDB_INVALID_ADDRESS,
-      error);
-  if (error.Fail())
-    return {};
-  return task_id;
 }
 
 #endif // #if LLDB_ENABLE_SWIFT

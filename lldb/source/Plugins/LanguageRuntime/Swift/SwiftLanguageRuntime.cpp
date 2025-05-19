@@ -39,12 +39,15 @@
 #include "lldb/Symbol/FuncUnwinders.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/VariableList.h"
+#include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/UnwindLLDB.h"
+#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/ErrorMessages.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/OptionParsing.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/Timer.h"
 #include "lldb/ValueObject/ValueObject.h"
@@ -68,6 +71,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/Memory.h"
+#include <optional>
 
 // FIXME: we should not need this
 #include "Plugins/Language/Swift/SwiftFormatters.h"
@@ -2961,4 +2965,109 @@ llvm::Expected<lldb::addr_t> GetTaskAddrFromThreadLocalStorage(Thread &thread) {
   return task_addr;
 #endif
 }
+
+namespace {
+
+/// Lightweight wrapper around TaskStatusRecord pointers, providing:
+///   * traversal over the embedded linnked list of status records
+///   * information contained within records
+///
+/// Currently supports TaskNameStatusRecord. See swift/ABI/TaskStatus.h
+struct TaskStatusRecord {
+  Process &process;
+  addr_t addr;
+  size_t addr_size;
+
+  TaskStatusRecord(Process &process, addr_t addr)
+      : process(process), addr(addr) {
+    addr_size = process.GetAddressByteSize();
+  }
+
+  operator bool() const { return addr && addr != LLDB_INVALID_ADDRESS; }
+
+  // The offset of TaskStatusRecord members. The unit is pointers, and must be
+  // converted to bytes based on the target's address size.
+  static constexpr unsigned FlagsPointerOffset = 0;
+  static constexpr unsigned ParentPointerOffset = 1;
+  static constexpr unsigned TaskNamePointerOffset = 2;
+
+  enum Kind : uint64_t {
+    TaskName = 6,
+  };
+
+  uint64_t getKind(Status &status) {
+    const offset_t flagsByteOffset = FlagsPointerOffset * addr_size;
+    if (status.Success())
+      return process.ReadUnsignedIntegerFromMemory(
+          addr + flagsByteOffset, addr_size, UINT64_MAX, status);
+    return UINT64_MAX;
+  }
+
+  std::optional<std::string> getName(Status &status) {
+    if (getKind(status) != Kind::TaskName)
+      return {};
+
+    const offset_t taskNameByteOffset = TaskNamePointerOffset * addr_size;
+    addr_t name_addr =
+        process.ReadPointerFromMemory(addr + taskNameByteOffset, status);
+    if (!status.Success())
+      return {};
+
+    std::string name;
+    process.ReadCStringFromMemory(name_addr, name, status);
+    if (status.Success())
+      return name;
+
+    return {};
+  }
+
+  addr_t getParent(Status &status) {
+    const offset_t parentByteOffset = ParentPointerOffset * addr_size;
+    addr_t parent = LLDB_INVALID_ADDRESS;
+    if (*this && status.Success())
+      parent = process.ReadPointerFromMemory(addr + parentByteOffset, status);
+    return parent;
+  }
+};
+
+/// Lightweight wrapper around Task pointers, providing access to a Task's
+/// active status record. See swift/ABI/Task.h
+struct Task {
+  Process &process;
+  addr_t addr;
+
+  operator bool() const { return addr && addr != LLDB_INVALID_ADDRESS; }
+
+  // The offset of the active TaskStatusRecord pointer. The unit is pointers,
+  // and must be converted to bytes based on the target's address size.
+  static constexpr unsigned ActiveTaskStatusRecordPointerOffset = 13;
+
+  TaskStatusRecord getActiveTaskStatusRecord(Status &status) {
+    const offset_t activeTaskStatusRecordByteOffset =
+        ActiveTaskStatusRecordPointerOffset * process.GetAddressByteSize();
+    addr_t status_record = LLDB_INVALID_ADDRESS;
+    if (status.Success())
+      status_record = process.ReadPointerFromMemory(
+          addr + activeTaskStatusRecordByteOffset, status);
+    return {process, status_record};
+  }
+};
+
+}; // namespace
+
+llvm::Expected<std::optional<std::string>> GetTaskName(lldb::addr_t task_addr,
+                                                       Process &process) {
+  Status status;
+  Task task{process, task_addr};
+  auto status_record = task.getActiveTaskStatusRecord(status);
+  while (status_record) {
+    if (auto name = status_record.getName(status))
+      return *name;
+    status_record.addr = status_record.getParent(status);
+  }
+  if (status.Success())
+    return std::nullopt;
+  return status.takeError();
+}
+
 } // namespace lldb_private
