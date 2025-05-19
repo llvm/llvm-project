@@ -9,14 +9,16 @@
 ; the innermost loop has a reduction operation which is however not in a form
 ; that loop interchange can handle. Interchanging the outermost and the
 ; middle loops would intervene with the reduction and cause miscompile.
+;
+; FIXME: Currently interchanges are rejected for dependence reasons.
 
 ; REMARKS: --- !Missed
 ; REMARKS-NEXT: Pass:            loop-interchange
-; REMARKS-NEXT: Name:            UnsupportedPHIInner
+; REMARKS-NEXT: Name:            Dependence
 ; REMARKS-NEXT: Function:        test7
 ; REMARKS: --- !Missed
 ; REMARKS-NEXT: Pass:            loop-interchange
-; REMARKS-NEXT: Name:            UnsupportedPHIInner
+; REMARKS-NEXT: Name:            Dependence
 ; REMARKS-NEXT: Function:        test7
 
 define i32 @test7() {
