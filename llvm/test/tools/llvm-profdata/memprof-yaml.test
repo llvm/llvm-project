@@ -7,7 +7,7 @@
 ; RUN: llvm-profdata show --memory %t/memprof-out.indexed > %t/memprof-out.yaml
 ; RUN: diff -b %t/memprof-in.yaml %t/memprof-out.yaml
 
-; memprof-in-no-dap has empty data access profiles.
+; memprof-in-no-dap.yaml has empty data access profiles.
 ; RUN: llvm-profdata merge --memprof-version=4 %t/memprof-in-no-dap.yaml -o %t/memprof-out.indexed
 ; RUN: llvm-profdata show --memory %t/memprof-out.indexed > %t/memprof-out-no-dap.yaml
 ; RUN: diff -b %t/memprof-in-no-dap.yaml %t/memprof-out-no-dap.yaml
