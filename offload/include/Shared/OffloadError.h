@@ -14,10 +14,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 
-namespace llvm {
-namespace omp {
-namespace target {
-namespace plugin {
+namespace error {
 
 enum class ErrorCode {
 #define OFFLOAD_ERRC(Name, _, Value) Name = Value,
@@ -25,21 +22,13 @@ enum class ErrorCode {
 #undef OFFLOAD_ERRC
 };
 
-} // namespace plugin
-} // namespace target
-} // namespace omp
-} // namespace llvm
+} // namespace error
 
 namespace std {
-template <>
-struct is_error_code_enum<llvm::omp::target::plugin::ErrorCode>
-    : std::true_type {};
+template <> struct is_error_code_enum<error::ErrorCode> : std::true_type {};
 } // namespace std
 
-namespace llvm {
-namespace omp {
-namespace target {
-namespace plugin {
+namespace error {
 
 const std::error_category &OffloadErrCategory();
 
@@ -48,17 +37,15 @@ inline std::error_code make_error_code(ErrorCode E) {
 }
 
 /// Base class for errors originating in DIA SDK, e.g. COM calls
-class OffloadError : public ErrorInfo<OffloadError, StringError> {
+class OffloadError : public llvm::ErrorInfo<OffloadError, llvm::StringError> {
 public:
   using ErrorInfo<OffloadError, StringError>::ErrorInfo;
 
-  OffloadError(const Twine &S) : ErrorInfo(S, ErrorCode::UNKNOWN) {}
+  OffloadError(const llvm::Twine &S) : ErrorInfo(S, ErrorCode::UNKNOWN) {}
 
+  // The definition for this resides in the plugin static library
   static char ID;
 };
-} // namespace plugin
-} // namespace target
-} // namespace omp
-} // namespace llvm
+} // namespace error
 
 #endif

@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "OffloadError.h"
+#include "Shared/OffloadError.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
-using namespace llvm::omp::target::plugin;
+using namespace error;
 
 namespace {
 // OffloadError inherits from llvm::StringError which requires a
@@ -32,7 +32,7 @@ public:
 };
 } // namespace
 
-const std::error_category &llvm::omp::target::plugin::OffloadErrCategory() {
+const std::error_category &error::OffloadErrCategory() {
   static OffloadErrorCategory MSFCategory;
   return MSFCategory;
 }

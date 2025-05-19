@@ -24,13 +24,13 @@
 #include "Shared/Debug.h"
 #include "Shared/Environment.h"
 #include "Shared/EnvironmentVar.h"
+#include "Shared/OffloadError.h"
 #include "Shared/Requirements.h"
 #include "Shared/Utils.h"
 
 #include "GlobalHandler.h"
 #include "JIT.h"
 #include "MemoryManager.h"
-#include "OffloadError.h"
 #include "RPC.h"
 #include "omptarget.h"
 
@@ -1382,23 +1382,23 @@ static inline Error success() { return Error::success(); }
 
 /// Create an Offload error.
 template <typename... ArgsTy>
-static Error error(ErrorCode Code, const char *ErrFmt, ArgsTy... Args) {
+static Error error(error::ErrorCode Code, const char *ErrFmt, ArgsTy... Args) {
   std::string Buffer;
   raw_string_ostream(Buffer) << format(ErrFmt, Args...);
-  return make_error<OffloadError>(Code, Buffer);
+  return make_error<error::OffloadError>(Code, Buffer);
 }
 
 template <typename... ArgsTy>
 static Error error(const char *ErrFmt, ArgsTy... Args) {
-  return error(ErrorCode::UNKNOWN, ErrFmt, Args...);
+  return error(error::ErrorCode::UNKNOWN, ErrFmt, Args...);
 }
 
-inline Error error(ErrorCode Code, const char *S) {
-  return make_error<OffloadError>(Code, S);
+inline Error error(error::ErrorCode Code, const char *S) {
+  return make_error<error::OffloadError>(Code, S);
 }
 
 inline Error error(const char *S) {
-  return make_error<OffloadError>(ErrorCode::UNKNOWN, S);
+  return make_error<error::OffloadError>(error::ErrorCode::UNKNOWN, S);
 }
 
 /// Check the plugin-specific error code and return an error or success

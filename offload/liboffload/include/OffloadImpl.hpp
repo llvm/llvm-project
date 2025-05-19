@@ -105,9 +105,8 @@ struct ol_impl_result_t {
 
 private:
   static ol_errc_t GetErrorCode(std::error_code Code) {
-    if (Code.category() == llvm::omp::target::plugin::make_error_code(
-                               llvm::omp::target::plugin::ErrorCode::SUCCESS)
-                               .category()) {
+    if (Code.category() ==
+        error::make_error_code(error::ErrorCode::SUCCESS).category()) {
       return static_cast<ol_errc_t>(Code.value());
     }
     return OL_ERRC_UNKNOWN;
