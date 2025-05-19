@@ -537,6 +537,9 @@ Improvements to Clang's diagnostics
   constant expression. Prior to this, the error inaccurately implied that assert
   could not be used at all in a constant expression (#GH130458)
 
+- No longer crashing during code generation due to delayed typo correction not
+  causing an unrecoverable error until the end of the translation unit. (#GH140461)
+
 - A new off-by-default warning ``-Wms-bitfield-padding`` has been added to alert to cases where bit-field
   packing may differ under the MS struct ABI (#GH117428).
 

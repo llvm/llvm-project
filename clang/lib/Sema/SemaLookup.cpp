@@ -5419,6 +5419,13 @@ TypoExpr *Sema::CorrectTypoDelayed(
     TypoDiagnosticGenerator TDG, TypoRecoveryCallback TRC, CorrectTypoKind Mode,
     DeclContext *MemberContext, bool EnteringContext,
     const ObjCObjectPointerType *OPT) {
+
+  // A typo is an unrecoverable diagnostic. However, we sometimes perform code
+  // gen incrementally rather than waiting until the end of the TU, which means
+  // we want to tell the diagnostics engine that an unrecoverable error will
+  // occur eventually.
+  getDiagnostics().setUnrecoverableErrorWillOccur();
+
   auto Consumer = makeTypoCorrectionConsumer(
       TypoName, LookupKind, S, SS, CCC, MemberContext, EnteringContext, OPT,
       Mode == CorrectTypoKind::ErrorRecovery);
