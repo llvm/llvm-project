@@ -212,10 +212,10 @@ void VarLenInst::buildRec(const DagInit *DI) {
 
     if (NeedSwap) {
       // Normalization: Hi bit should always be the second argument.
-      const Init *const NewArgs[] = {OperandName, LoBit, HiBit};
-      // TODO: This creates an invalid DagInit with 3 Args but 0 ArgNames.
-      // Extend unit test to exercise this and fix it.
-      Segments.push_back({NumBits, DagInit::get(DI->getOperator(), NewArgs, {}),
+      SmallVector<std::pair<const Init *, const StringInit *>> NewArgs(
+          DI->getArgAndNames());
+      std::swap(NewArgs[1], NewArgs[2]);
+      Segments.push_back({NumBits, DagInit::get(DI->getOperator(), NewArgs),
                           CustomEncoder, CustomDecoder});
     } else {
       Segments.push_back({NumBits, DI, CustomEncoder, CustomDecoder});
