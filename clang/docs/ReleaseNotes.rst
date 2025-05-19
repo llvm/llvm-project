@@ -558,6 +558,9 @@ Improvements to Clang's diagnostics
   between different Unicode character types (``char8_t``, ``char16_t``, ``char32_t``).
   This warning only triggers in C++ as these types are aliases in C. (#GH138526)
 
+- Fixed a crash when checking a ``__thread``-specified variable declaration
+  with a dependent type in C++. (#GH140509)
+
 Improvements to Clang's time-trace
 ----------------------------------
 
