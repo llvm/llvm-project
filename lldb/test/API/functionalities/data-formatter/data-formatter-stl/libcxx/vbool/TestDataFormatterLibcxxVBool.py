@@ -47,10 +47,8 @@ class LibcxxVBoolDataFormatterTestCase(TestBase):
         # Execute the cleanup function during test case tear down.
         self.addTearDownHook(cleanup)
 
-        self.runCmd("settings set target.max-children-count 49", check=False)
-
         self.expect(
-            "frame variable vBool",
+            "frame variable -A vBool",
             substrs=[
                 "size=49",
                 "[0] = false",
@@ -64,7 +62,7 @@ class LibcxxVBoolDataFormatterTestCase(TestBase):
         )
 
         self.expect(
-            "expr vBool",
+            "expr -A -- vBool",
             substrs=[
                 "size=49",
                 "[0] = false",

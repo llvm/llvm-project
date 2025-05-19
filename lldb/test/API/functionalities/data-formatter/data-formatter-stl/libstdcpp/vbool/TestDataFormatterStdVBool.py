@@ -47,7 +47,7 @@ class StdVBoolDataFormatterTestCase(TestBase):
         self.addTearDownHook(cleanup)
 
         self.expect(
-            "frame variable vBool",
+            "frame variable -A vBool",
             substrs=[
                 "size=49",
                 "[0] = false",
@@ -61,7 +61,7 @@ class StdVBoolDataFormatterTestCase(TestBase):
         )
 
         self.expect(
-            "expr vBool",
+            "expr -A -- vBool",
             substrs=[
                 "size=49",
                 "[0] = false",

@@ -73,7 +73,7 @@ class TestDataFormatterGenericForwardList(TestBase):
         self.expect(
             "frame variable thousand_elts",
             matching=True,
-            substrs=["size=256", "[0]", "[1]", "[2]", "..."],
+            substrs=["size=24", "[0]", "[1]", "[2]", "..."],
         )
 
     def do_test_ptr_and_ref(self, stdlib_type):
