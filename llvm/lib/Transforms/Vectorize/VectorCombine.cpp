@@ -4004,22 +4004,21 @@ bool VectorCombine::shrinkPhiOfShuffles(Instruction &I) {
   if (!Phi || Phi->getNumIncomingValues() != 2u)
     return false;
 
-  auto *Shuf0 = dyn_cast<ShuffleVectorInst>(Phi->getOperand(0u));
-  auto *Shuf1 = dyn_cast<ShuffleVectorInst>(Phi->getOperand(1u));
-  if (!Shuf0 || !Shuf1)
+  Value *Op = nullptr;
+  ArrayRef<int> Mask0;
+  ArrayRef<int> Mask1;
+
+  if (!match(Phi->getOperand(0u), 
+             m_OneUse(m_Shuffle(m_Value(Op), m_Poison(), m_Mask(Mask0)))) ||
+      !match(Phi->getOperand(1u), 
+             m_OneUse(m_Shuffle(m_Specific(Op), m_Poison(), m_Mask(Mask1)))))
     return false;
 
-  Value *Op0 = nullptr;
-  Value *Op1 = nullptr;
-
-  if (!match(Shuf0, m_OneUse(m_Shuffle(m_Value(Op0), m_Poison()))) ||
-      !match(Shuf1, m_OneUse(m_Shuffle(m_Value(Op1), m_Poison()))) ||
-      Op0 != Op1)
-    return false;
+  auto *Shuf = cast<ShuffleVectorInst>(Phi->getOperand(0u));
 
   // Ensure result vectors are wider than the argument vector.
-  auto *InputVT = cast<FixedVectorType>(Op0->getType());
-  auto *ResultVT = cast<FixedVectorType>(Shuf0->getType());
+  auto *InputVT = cast<FixedVectorType>(Op->getType());
+  auto *ResultVT = cast<FixedVectorType>(Shuf->getType());
   auto const InputNumElements = InputVT->getNumElements();
 
   if (InputNumElements >= ResultVT->getNumElements())
@@ -4027,8 +4026,6 @@ bool VectorCombine::shrinkPhiOfShuffles(Instruction &I) {
 
   // Take the difference of the two shuffle masks at each index. Ignore poison
   // values at the same index in both masks.
-  ArrayRef Mask0 = Shuf0->getShuffleMask();
-  ArrayRef Mask1 = Shuf1->getShuffleMask();
   SmallVector<int, 16> NewMask;
   NewMask.reserve(Mask0.size());
 
@@ -4070,22 +4067,22 @@ bool VectorCombine::shrinkPhiOfShuffles(Instruction &I) {
 
   // Create new shuffles and narrowed phi.
   auto Builder = IRBuilder(&I);
-  Builder.SetInsertPoint(Shuf0);
-  Builder.SetCurrentDebugLocation(Shuf0->getDebugLoc());
+  Builder.SetInsertPoint(Shuf);
+  Builder.SetCurrentDebugLocation(Shuf->getDebugLoc());
   auto *PoisonVal = PoisonValue::get(InputVT);
-  auto *NewShuf0 = Builder.CreateShuffleVector(Op0, PoisonVal, NewMask);
+  auto *NewShuf0 = Builder.CreateShuffleVector(Op, PoisonVal, NewMask);
 
   Builder.SetInsertPoint(Phi);
   Builder.SetCurrentDebugLocation(Phi->getDebugLoc());
   auto *NewPhi = Builder.CreatePHI(NewShuf0->getType(), 2u);
   NewPhi->addIncoming(NewShuf0, Phi->getIncomingBlock(0u));
-  NewPhi->addIncoming(Op1, Phi->getIncomingBlock(1u));
+  NewPhi->addIncoming(Op, Phi->getIncomingBlock(1u));
 
   Builder.SetInsertPoint(*NewPhi->getInsertionPointAfterDef());
   PoisonVal = PoisonValue::get(NewPhi->getType());
-  auto *NewShuf2 = Builder.CreateShuffleVector(NewPhi, PoisonVal, Mask1);
+  auto *NewShuf1 = Builder.CreateShuffleVector(NewPhi, PoisonVal, Mask1);
 
-  replaceValue(*Phi, *NewShuf2);
+  replaceValue(*Phi, *NewShuf1);
   return true;
 }
 
