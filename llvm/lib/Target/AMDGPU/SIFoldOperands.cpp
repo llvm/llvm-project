@@ -2211,7 +2211,7 @@ bool SIFoldOperandsImpl::tryFoldImmRegSequence(MachineInstr &MI) {
     return false;
 
   SmallVector<std::pair<MachineOperand *, unsigned>, 32> Defs;
-  if (!getRegSeqInit(Defs, Reg, MCOI::OPERAND_REGISTER))
+  if (!getRegSeqInit(Defs, Reg))
     return false;
 
   // Only attempting to fold immediate materializations.
