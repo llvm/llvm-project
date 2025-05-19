@@ -403,35 +403,21 @@ void macho::PriorityBuilder::parseOrderFileCString(StringRef path) {
     uint32_t hash = 0;
     if (!to_integer(line, hash))
       continue;
-    auto it = cStringPriorities.find(hash);
-    if (it == cStringPriorities.end())
-      cStringPriorities[hash] = ++priority;
-    else
-      assert(it->second <= priority);
+    auto [it, wasInserted] = cStringPriorities.try_emplace(hash, priority);
+    if (wasInserted)
+      ++priority;
   }
 }
 
 std::vector<StringPiecePair> macho::PriorityBuilder::buildCStringPriorities(
     ArrayRef<CStringInputSection *> inputs) {
-  std::vector<StringPiecePair> orderedStringPieces;
-  if (config->cStringOrderFilePath.empty()) {
-    for (CStringInputSection *isec : inputs) {
-      for (const auto &[stringPieceIdx, piece] :
-           llvm::enumerate(isec->pieces)) {
-        if (!piece.live)
-          continue;
-        orderedStringPieces.emplace_back(isec, stringPieceIdx);
-      }
-    }
-    return orderedStringPieces;
-  }
-
   // Split the input strings into hold and cold sets.
   // Order hot set based on -order_file_cstring for performance improvement;
   // TODO: Order cold set of cstrings for compression via BP.
   std::vector<std::pair<int, StringPiecePair>>
       hotStringPrioritiesAndStringPieces;
   std::vector<StringPiecePair> coldStringPieces;
+  std::vector<StringPiecePair> orderedStringPieces;
 
   for (CStringInputSection *isec : inputs) {
     for (const auto &[stringPieceIdx, piece] : llvm::enumerate(isec->pieces)) {
