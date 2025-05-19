@@ -2908,8 +2908,8 @@ template <class ELFT> void Writer<ELFT>::openFile() {
   unsigned flags = 0;
   if (!ctx.arg.relocatable)
     flags |= FileOutputBuffer::F_executable;
-  if (!ctx.arg.mmapOutputFile)
-    flags |= FileOutputBuffer::F_no_mmap;
+  if (ctx.arg.mmapOutputFile)
+    flags |= FileOutputBuffer::F_mmap;
   Expected<std::unique_ptr<FileOutputBuffer>> bufferOrErr =
       FileOutputBuffer::create(ctx.arg.outputFile, fileSize, flags);
 
@@ -2960,9 +2960,12 @@ template <class ELFT> void Writer<ELFT>::writeTrapInstr() {
       if (p->p_type == PT_LOAD)
         last = p.get();
 
-    if (last && (last->p_flags & PF_X))
-      last->p_memsz = last->p_filesz =
-          alignToPowerOf2(last->p_filesz, ctx.arg.maxPageSize);
+    if (last && (last->p_flags & PF_X)) {
+      last->p_filesz = alignToPowerOf2(last->p_filesz, ctx.arg.maxPageSize);
+      // p_memsz might be larger than the aligned p_filesz due to trailing BSS
+      // sections. Don't decrease it.
+      last->p_memsz = std::max(last->p_memsz, last->p_filesz);
+    }
   }
 }
 

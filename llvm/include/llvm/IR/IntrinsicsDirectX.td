@@ -27,6 +27,15 @@ def int_dx_resource_handlefrombinding
           [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i1_ty],
           [IntrNoMem]>;
 
+// Create resource handle with implicit binding in given register space.
+// Returns a `target("dx.")` type appropriate for the kind of resource and
+// the range size and index of the binding.
+def int_dx_resource_handlefromimplicitbinding
+    : DefaultAttrsIntrinsic<
+          [llvm_any_ty],
+          [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i1_ty],
+          [IntrNoMem]>;
+
 def int_dx_resource_getpointer
     : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [llvm_any_ty, llvm_i32_ty],
                             [IntrNoMem]>;

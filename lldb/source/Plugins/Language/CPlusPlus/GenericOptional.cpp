@@ -39,11 +39,12 @@ public:
   llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
     if (name == "$$dereference$$")
       return 0;
-    size_t idx = formatters::ExtractIndexFromString(name.GetCString());
-    if (idx == UINT32_MAX)
+    auto optional_idx = formatters::ExtractIndexFromString(name.GetCString());
+    if (!optional_idx) {
       return llvm::createStringError("Type has no child named '%s'",
                                      name.AsCString());
-    return idx;
+    }
+    return *optional_idx;
   }
 
   llvm::Expected<uint32_t> CalculateNumChildren() override {

@@ -202,6 +202,13 @@ class LldbGdbServerTestCase(
         self.set_inferior_startup_launch()
         self.qThreadInfo_matches_qC()
 
+    # This test is flaky on AArch64 Linux. Sometimes it causes an unhandled Error:
+    # Operation not permitted in lldb_private::process_linux::NativeProcessLinux::Attach(int).
+    @skipIf(
+        oslist=["linux"],
+        archs=["aarch64"],
+        bugnumber="github.com/llvm/llvm-project/issues/138085",
+    )
     @expectedFailureAll(oslist=["windows"])  # expect one more thread stopped
     def test_qThreadInfo_matches_qC_attach(self):
         self.build()

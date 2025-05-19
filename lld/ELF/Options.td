@@ -340,7 +340,7 @@ def noinhibit_exec: F<"noinhibit-exec">,
   HelpText<"Retain the executable output file whenever it is still usable">;
 
 def no_warn_mismatch: F<"no-warn-mismatch">,
-  HelpText<"Suppress errors for certain unknown seciton types">;
+  HelpText<"Suppress errors for certain unknown section types">;
 
 def no_nmagic: F<"no-nmagic">, MetaVarName<"<magic>">,
   HelpText<"Page align sections (default)">;
