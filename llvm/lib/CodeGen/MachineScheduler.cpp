@@ -4917,8 +4917,7 @@ unsigned ResourceSegments::getFirstAvailableAt(
     unsigned CurrCycle, unsigned AcquireAtCycle, unsigned ReleaseAtCycle,
     std::function<ResourceSegments::IntervalTy(unsigned, unsigned, unsigned)>
         IntervalBuilder) const {
-  assert(std::is_sorted(std::begin(_Intervals), std::end(_Intervals),
-                        sortIntervals) &&
+  assert(llvm::is_sorted(_Intervals, sortIntervals) &&
          "Cannot execute on an un-sorted set of intervals.");
 
   // Zero resource usage is allowed by TargetSchedule.td but we do not construct
