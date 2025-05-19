@@ -16,6 +16,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
+#include "llvm/Support/Error.h"
 
 namespace llvm {
 template <typename T> class SmallVectorImpl;
@@ -75,7 +76,7 @@ LLVM_ABI Error decompress(ArrayRef<uint8_t> Input,
                           size_t UncompressedSize);
 
 // Get the size of the decompressed data.
-Error getDecompressedSize(ArrayRef<uint8_t> Input, size_t &UncompressedSize);
+Expected<uint64_t> getDecompressedSize(ArrayRef<uint8_t> Input);
 } // End of namespace zstd
 
 enum class Format {

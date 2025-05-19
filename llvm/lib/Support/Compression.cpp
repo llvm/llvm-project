@@ -225,18 +225,15 @@ Error zstd::decompress(ArrayRef<uint8_t> Input,
   return E;
 }
 
-Error zstd::getDecompressedSize(ArrayRef<uint8_t> Input,
-                                size_t &UncompressedSize) {
+Expected<uint64_t> zstd::getDecompressedSize(ArrayRef<uint8_t> Input) {
 
   unsigned long long Res = ZSTD_getFrameContentSize(Input.data(), Input.size());
 
-  // ZSTD_getFrameContentSize returns unsigned long long, but the size
-  // of uncompressed data should be bounded by size_t.
-  UncompressedSize = static_cast<size_t>(Res);
+  if (ZSTD_isError(Res))
+    return make_error<StringError>(ZSTD_getErrorName(Res),
+                                                     inconvertibleErrorCode());
 
-  return ZSTD_isError(Res) ? make_error<StringError>(ZSTD_getErrorName(Res),
-                                                     inconvertibleErrorCode())
-                           : Error::success();
+  return Res;
 }
 
 #else
