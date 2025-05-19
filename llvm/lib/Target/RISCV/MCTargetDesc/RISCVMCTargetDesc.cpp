@@ -164,7 +164,7 @@ class RISCVMCInstrAnalysis : public MCInstrAnalysis {
   }
 
 public:
-  explicit RISCVMCInstrAnalysis(const MCInstrInfo *Info, int ArchRegWidth)
+  explicit RISCVMCInstrAnalysis(const MCInstrInfo *Info, unsigned int ArchRegWidth)
       : MCInstrAnalysis(Info), ArchRegWidth(ArchRegWidth) {}
 
   void resetState() override { GPRValidMask.reset(); }
