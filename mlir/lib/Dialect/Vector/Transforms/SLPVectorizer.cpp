@@ -659,6 +659,9 @@ static bool isEquivalent(Operation *op1, Operation *op2) {
   if (op1->getRawDictionaryAttrs() != op2->getRawDictionaryAttrs())
     return false;
 
+  if (op1->getBlock() != op2->getBlock())
+    return false;
+
   return true;
 }
 
