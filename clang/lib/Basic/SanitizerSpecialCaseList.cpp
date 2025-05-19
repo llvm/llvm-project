@@ -60,7 +60,7 @@ bool SanitizerSpecialCaseList::inSection(SanitizerMask Mask, StringRef Prefix,
 }
 
 unsigned SanitizerSpecialCaseList::inSectionBlame(SanitizerMask Mask,
-                                              sp    StringRef Prefix,
+                                                  StringRef Prefix,
                                                   StringRef Query,
                                                   StringRef Category) const {
   for (auto &S : SanitizerSections) {
