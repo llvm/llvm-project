@@ -1,4 +1,4 @@
-//===---- XeGPUBlocking.cpp ---- XeGPU Instructionlize Pass ---------------===//
+//===---- XeGPUBlocking.cpp ---- XeGPU Blocking Pass ----------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,6 +16,7 @@
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
+#include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace mlir {
@@ -207,7 +208,65 @@ void XeGPUBlockingPass::runOnOperation() {
   xegpu::setLayoutAttrs(mod, [&](Value v) { return xegpu::getLayoutAttr(v); });
 
   // Perform type conversion for SCF control folow ops
-  xegpu::doSCFStructuralTypeConversionWithTensorType(mod);
+  TypeConverter converter;
+  converter.addConversion([&](Type type) -> Type { return type; });
+  converter.addConversion(
+      [&](RankedTensorType type,
+          SmallVectorImpl<Type> &result) -> std::optional<LogicalResult> {
+        Type elemTy = type.getElementType();
+        ArrayRef<int64_t> shape = type.getShape();
+
+        // init count and subShape to the default value. If the LayoutAttr
+        // is not present, it will return a VectorType with original shape.
+        int count = 1;
+        SmallVector<int64_t> subShape(shape);
+        if (auto layout = llvm::dyn_cast_if_present<xegpu::LayoutAttr>(
+                type.getEncoding())) {
+          if (layout.isWgLayout())
+            return failure();
+          if (DenseI32ArrayAttr instData = layout.getInstData()) {
+            // for unrolling, the subShape is determined by inst_data
+            subShape = llvm::to_vector_of<int64_t>(instData.asArrayRef());
+            count = computeProduct(shape) / computeProduct(subShape);
+          }
+        }
+        auto newTy = VectorType::get(subShape, elemTy);
+        result.append(count, newTy);
+        return success();
+      });
+
+  converter.addConversion(
+      [&](xegpu::TensorDescType type,
+          SmallVectorImpl<Type> &result) -> std::optional<LogicalResult> {
+        MLIRContext *ctx = type.getContext();
+        Type elemTy = type.getElementType();
+        Attribute encoding = type.getEncoding();
+        ArrayRef<int64_t> shape = type.getShape();
+
+        // init count and newTy to the default value. If the layout
+        // attribute is not present, it will return the original type.
+        int count = 1;
+        SmallVector<int64_t> subShape(shape);
+
+        xegpu::LayoutAttr layout = type.getLayoutAttr();
+
+        if (layout) {
+          if (layout.isWgLayout())
+            return failure();
+
+          if (DenseI32ArrayAttr instData = layout.getInstData()) {
+            // for unrolling, the subShape is determined by inst_data
+            subShape = llvm::to_vector_of<int64_t>(instData.asArrayRef());
+            count = computeProduct(shape) / computeProduct(subShape);
+            layout = layout.dropInstData();
+          }
+        }
+        auto newTy =
+            xegpu::TensorDescType::get(ctx, subShape, elemTy, encoding, layout);
+        result.append(count, newTy);
+        return success();
+      });
+  xegpu::doSCFStructuralTypeConversionWithTensorType(mod, converter);
 
   xegpu::UnrollOptions options;
   options.setFilterConstraint([&](Operation *op) -> LogicalResult {
