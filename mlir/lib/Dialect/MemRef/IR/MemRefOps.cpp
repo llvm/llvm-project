@@ -3105,7 +3105,7 @@ FailureOr<Value> SubViewOp::rankReduceIfNeeded(OpBuilder &b, Location loc,
 /// is the case if the all offsets are zero, all strides are 1, and the source
 /// shape is same as the size of the subview. In such cases, the subview can
 /// be folded into its source.
-static bool isTrivialSubViewOp(SubViewOp subViewOp) {
+static bool isTrivialSubViewOp(OpBuilder &b, SubViewOp subViewOp) {
   if (subViewOp.getSourceType().getRank() != subViewOp.getType().getRank())
     return false;
 
@@ -3127,15 +3127,24 @@ static bool isTrivialSubViewOp(SubViewOp subViewOp) {
       }))
     return false;
 
-  // Check all size values are static and matches the (static) source shape.
+  // Check all size values match the source shape.
   ArrayRef<int64_t> sourceShape = subViewOp.getSourceType().getShape();
-  for (const auto &size : llvm::enumerate(mixedSizes)) {
-    std::optional<int64_t> intValue = getConstantIntValue(size.value());
-    if (!intValue || *intValue != sourceShape[size.index()])
-      return false;
+  if (llvm::all_of_zip(mixedSizes, sourceShape,
+                       [](OpFoldResult mixedSize, int64_t staticSize) {
+                         std::optional<int64_t> constSize =
+                             getConstantIntValue(mixedSize);
+                         return constSize.has_value() &&
+                                *constSize == staticSize;
+                       })) {
+    return true;
   }
-  // All conditions met. The `SubViewOp` is foldable as a no-op.
-  return true;
+  auto sourceOpResult = dyn_cast<OpResult>(subViewOp.getSource());
+  if (!sourceOpResult)
+    return false;
+  ReifiedRankedShapedTypeDims resultDims;
+  if (failed(reifyResultShapes(b, sourceOpResult.getOwner(), resultDims)))
+    return false;
+  return llvm::equal(mixedSizes, resultDims[sourceOpResult.getResultNumber()]);
 }
 
 namespace {
@@ -3206,7 +3215,7 @@ public:
 
   LogicalResult matchAndRewrite(SubViewOp subViewOp,
                                 PatternRewriter &rewriter) const override {
-    if (!isTrivialSubViewOp(subViewOp))
+    if (!isTrivialSubViewOp(rewriter, subViewOp))
       return failure();
     if (subViewOp.getSourceType() == subViewOp.getType()) {
       rewriter.replaceOp(subViewOp, subViewOp.getSource());

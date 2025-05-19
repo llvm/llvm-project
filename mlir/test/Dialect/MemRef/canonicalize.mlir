@@ -70,6 +70,20 @@ func.func @subview_of_static_full_size(%arg0 : memref<4x6x16x32xi8>) -> memref<4
 
 // -----
 
+// CHECK-LABEL: func @subview_of_dynamic_full_size
+//  CHECK-SAME:   %[[ARG0:.+]]: memref<?xi8>
+//  CHECK-SAME:   %[[SIZE:.+]]: index
+//       CHECK:   %[[EXPAND_SHAPE:.+]] = memref.expand_shape
+//   CHECK-NOT:   memref.subview
+//       CHECK:   return %[[EXPAND_SHAPE]] : memref<?x?xi8>
+func.func @subview_of_dynamic_full_size(%arg0 : memref<?xi8>, %size : index) -> memref<?x?xi8> {
+  %0 = memref.expand_shape %arg0 [[0, 1]] output_shape [%size, %size] : memref<?xi8> into memref<?x?xi8>
+  %1 = memref.subview %0[0, 0] [%size, %size] [1, 1] : memref<?x?xi8> to memref<?x?xi8>
+  return %1 : memref<?x?xi8>
+}
+
+// -----
+
 // CHECK-LABEL: func @negative_subview_of_static_full_size
 //  CHECK-SAME:   %[[ARG0:.+]]: memref<16x4xf32,  strided<[4, 1], offset: ?>>
 //  CHECK-SAME:   %[[IDX:.+]]: index
