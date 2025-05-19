@@ -739,6 +739,21 @@ private:
       SourceLocation dirLoc, llvm::ArrayRef<const OpenACCClause *> clauses,
       const Stmt *loopStmt);
 
+  template <typename Op>
+  void emitOpenACCClauses(Op &op, OpenACCDirectiveKind dirKind,
+                          SourceLocation dirLoc,
+                          ArrayRef<const OpenACCClause *> clauses);
+  // The second template argument doesn't need to be a template, since it should
+  // always be an mlir::acc::LoopOp, but as this is a template anyway, we make
+  // it a template argument as this way we can avoid including the OpenACC MLIR
+  // headers here. We will count on linker failures/explicit instantiation to
+  // ensure we don't mess this up, but it is only called from 1 place, and
+  // instantiated 3x.
+  template <typename ComputeOp, typename LoopOp>
+  void emitOpenACCClauses(ComputeOp &op, LoopOp &loopOp,
+                          OpenACCDirectiveKind dirKind, SourceLocation dirLoc,
+                          ArrayRef<const OpenACCClause *> clauses);
+
 public:
   mlir::LogicalResult
   emitOpenACCComputeConstruct(const OpenACCComputeConstruct &s);
