@@ -10,7 +10,6 @@
 #define _LIBCPP___NEW_ALLOCATE_H
 
 #include <__config>
-#include <__cstddef/max_align_t.h>
 #include <__cstddef/size_t.h>
 #include <__new/align_val_t.h>
 #include <__new/global_new_delete.h> // for _LIBCPP_HAS_SIZED_DEALLOCATION
@@ -24,11 +23,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 _LIBCPP_CONSTEXPR inline _LIBCPP_HIDE_FROM_ABI bool __is_overaligned_for_new(size_t __align) _NOEXCEPT {
-#ifdef __STDCPP_DEFAULT_NEW_ALIGNMENT__
   return __align > __STDCPP_DEFAULT_NEW_ALIGNMENT__;
-#else
-  return __align > _LIBCPP_ALIGNOF(max_align_t);
-#endif
 }
 
 template <class... _Args>
