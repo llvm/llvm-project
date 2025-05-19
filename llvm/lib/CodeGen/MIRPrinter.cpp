@@ -24,9 +24,11 @@
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionAnalysis.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineModuleSlotTracker.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -103,8 +105,8 @@ struct MFPrintState {
   /// Synchronization scope names registered with LLVMContext.
   SmallVector<StringRef, 8> SSNs;
 
-  MFPrintState(const MachineModuleInfo &MMI, const MachineFunction &MF)
-      : MST(MMI, &MF) {}
+  MFPrintState(MFGetterFnT Fn, const MachineFunction &MF)
+      : MST(std::move(Fn), &MF) {}
 };
 
 } // end anonymous namespace
@@ -168,9 +170,10 @@ static void convertCalledGlobals(yaml::MachineFunction &YMF,
                                  const MachineFunction &MF,
                                  MachineModuleSlotTracker &MST);
 
-static void printMF(raw_ostream &OS, const MachineModuleInfo &MMI,
+static void printMF(raw_ostream &OS, MFGetterFnT Fn,
                     const MachineFunction &MF) {
-  MFPrintState State(MMI, MF);
+  MFPrintState State(std::move(Fn), MF);
+
   State.RegisterMaskIds = initRegisterMaskIds(MF);
 
   yaml::MachineFunction YamlMF;
@@ -983,11 +986,23 @@ void llvm::printMIR(raw_ostream &OS, const Module &M) {
   Out << const_cast<Module &>(M);
 }
 
-void llvm::printMIR(raw_ostream &OS, const MachineModuleInfo &MMI,
-                    const MachineFunction &MF) {
+void llvm::printMIR(raw_ostream &OS, MachineModuleInfo *MMI,
+                    FunctionAnalysisManager *FAM, const MachineFunction &MF) {
   // RemoveDIs: as there's no textual form for DbgRecords yet, print debug-info
   // in dbg.value format.
   ScopedDbgInfoFormatSetter FormatSetter(
       const_cast<Function &>(MF.getFunction()), UseNewDbgInfoFormat);
-  printMF(OS, MMI, MF);
+  if (MMI) {
+    printMF(
+        OS, [&](const Function &F) { return MMI->getMachineFunction(F); }, MF);
+  } else {
+    printMF(
+        OS,
+        [&](const Function &F) {
+          return &FAM->getResult<MachineFunctionAnalysis>(
+                         const_cast<Function &>(F))
+                      .getMF();
+        },
+        MF);
+  }
 }
