@@ -202,7 +202,7 @@ struct MissingFeatures {
   static bool cleanupsToDeactivate() { return false; }
   static bool stackBase() { return false; }
   static bool peepholeProtection() { return false; }
-  static bool instrumenation() { return false; }
+  static bool instrumentation() { return false; }
 
   // Missing types
   static bool dataMemberType() { return false; }
