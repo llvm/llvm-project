@@ -17,7 +17,7 @@ declare i32 @llvm.OpenCL.sampler.get.resource.id(i32) readnone
 define <4 x float> @__clc_v4f_from_v2f(<2 x float> %v) alwaysinline {
   %e0 = extractelement <2 x float> %v, i32 0
   %e1 = extractelement <2 x float> %v, i32 1
-  %res.0 = insertelement <4 x float> undef,  float %e0, i32 0
+  %res.0 = insertelement <4 x float> poison, float %e0, i32 0
   %res.1 = insertelement <4 x float> %res.0, float %e1, i32 1
   %res.2 = insertelement <4 x float> %res.1, float 0.0, i32 2
   %res.3 = insertelement <4 x float> %res.2, float 0.0, i32 3

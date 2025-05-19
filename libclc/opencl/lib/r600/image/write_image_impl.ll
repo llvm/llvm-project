@@ -23,7 +23,7 @@ define void @__clc_write_imageui_2d(
   ; Coordinate int2 -> int4.
   %e0 = extractelement <2 x i32> %coord, i32 0
   %e1 = extractelement <2 x i32> %coord, i32 1
-  %coord.0 = insertelement <4 x i32> undef,    i32 %e0, i32 0
+  %coord.0 = insertelement <4 x i32> poison,   i32 %e0, i32 0
   %coord.1 = insertelement <4 x i32> %coord.0, i32 %e1, i32 1
   %coord.2 = insertelement <4 x i32> %coord.1, i32 0,  i32 2
   %coord.3 = insertelement <4 x i32> %coord.2, i32 0,  i32 3
