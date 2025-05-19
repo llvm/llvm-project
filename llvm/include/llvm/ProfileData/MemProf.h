@@ -1,5 +1,18 @@
-#ifndef LLVM_PROFILEDATA_MEMPROF_H_
-#define LLVM_PROFILEDATA_MEMPROF_H_
+//===- MemProf.h - MemProf support ------------------------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file contains common definitions used in the reading and writing of
+// memory profile data.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef LLVM_PROFILEDATA_MEMPROF_H
+#define LLVM_PROFILEDATA_MEMPROF_H
 
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/MapVector.h"
@@ -844,5 +857,4 @@ struct LineLocation {
 using CallEdgeTy = std::pair<LineLocation, uint64_t>;
 } // namespace memprof
 } // namespace llvm
-
-#endif // LLVM_PROFILEDATA_MEMPROF_H_
+#endif // LLVM_PROFILEDATA_MEMPROF_H
