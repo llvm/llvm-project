@@ -24,7 +24,7 @@ public:
   AvoidPragmaOnceCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context) {}
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
-    return LangOpts.CPlusPlus;
+    return LangOpts.CPlusPlus || LangOpts.C99;
   }
 
   void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,

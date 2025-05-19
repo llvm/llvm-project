@@ -13,7 +13,7 @@ some environments.
 Some older or specialized C/C++ compilers, particularly in embedded systems,
 may not fully support ``#pragma once``.
 
-Also it can fail in certain file system configurations,like network drives
+It can also fail in certain file system configurations,like network drives
 or complex symbolic links, potentially leading to compilation issues.
 
 Consider the following header file:
@@ -22,3 +22,14 @@ Consider the following header file:
 
   // my_header.h
   #pragma once // warning: avoid 'pragma once' directive; use include guards instead
+
+
+The warning suggests using include guards:
+
+.. code:: c++
+
+  // my_header.h
+  #ifndef PATH_TO_MY_HEADER_H
+  #define PATH_TO_MY_HEADER_H
+
+  #endif // PATH_TO_MY_HEADER_H
