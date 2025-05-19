@@ -11770,7 +11770,7 @@ CGOpenMPRuntime::LastprivateConditionalRAII::LastprivateConditionalRAII(
     LastprivateConditionalData &Data =
         CGM.getOpenMPRuntime().LastprivateConditionalStack.emplace_back();
     for (const Decl *VD : NeedToAddForLPCsAsDisabled)
-      Data.DeclToUniqueName.insert(std::make_pair(VD, SmallString<16>()));
+      Data.DeclToUniqueName.try_emplace(VD);
     Data.Fn = CGF.CurFn;
     Data.Disabled = true;
   }
