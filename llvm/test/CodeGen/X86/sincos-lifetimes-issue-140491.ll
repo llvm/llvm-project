@@ -10,13 +10,15 @@ define hidden noundef i32 @sincos_stack_slot_with_lifetime(float %in) local_unna
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    subq $16, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    subq $32, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    .cfi_offset %rbx, -16
 ; CHECK-NEXT:    leaq 12(%rsp), %rdi
 ; CHECK-NEXT:    leaq 8(%rsp), %rbx
 ; CHECK-NEXT:    movq %rbx, %rsi
 ; CHECK-NEXT:    callq sincosf@PLT
+; CHECK-NEXT:    movss 8(%rsp), %xmm0 # xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movaps %xmm0, 16(%rsp) # 16-byte Spill
 ; CHECK-NEXT:    movq %rbx, %rdi
 ; CHECK-NEXT:    callq use_ptr
 ; CHECK-NEXT:    movss 12(%rsp), %xmm0 # xmm0 = mem[0],zero,zero,zero
@@ -24,13 +26,13 @@ define hidden noundef i32 @sincos_stack_slot_with_lifetime(float %in) local_unna
 ; CHECK-NEXT:    movss %xmm0, 8(%rsp)
 ; CHECK-NEXT:    leaq 8(%rsp), %rdi
 ; CHECK-NEXT:    callq use_ptr
-; CHECK-NEXT:    movss 8(%rsp), %xmm0 # xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movaps 16(%rsp), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    movss %xmm0, 8(%rsp)
 ; CHECK-NEXT:    leaq 8(%rsp), %rdi
 ; CHECK-NEXT:    callq use_ptr
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    addq $16, %rsp
+; CHECK-NEXT:    addq $32, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
