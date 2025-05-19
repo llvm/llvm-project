@@ -960,7 +960,7 @@ winogradConv2DHelper(RewriterBase &rewriter, linalg::Conv2DNhwcFhwcOp convOp,
       F_2_3, F_4_3, F_2_5};
 
   TransformMapKeyTy key = {m, r};
-  auto it = std::find(validConfigs.begin(), validConfigs.end(), key);
+  auto it = llvm::find(validConfigs, key);
   // If we cannot find the constant transformation matrix, it means we do
   // not support this configuration yet.
   if (it == validConfigs.end())

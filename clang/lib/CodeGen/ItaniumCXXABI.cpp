@@ -91,8 +91,6 @@ public:
 
       case Dtor_Comdat:
         llvm_unreachable("emitting dtor comdat as function?");
-      case Dtor_VectorDeleting:
-        llvm_unreachable("unexpected dtor kind for this ABI");
       }
       llvm_unreachable("bad dtor kind");
     }
@@ -181,7 +179,6 @@ public:
   }
 
   bool shouldTypeidBeNullChecked(QualType SrcRecordTy) override;
-  bool hasVectorDeletingDtors() override { return false; }
   void EmitBadTypeidCall(CodeGenFunction &CGF) override;
   llvm::Value *EmitTypeid(CodeGenFunction &CGF, QualType SrcRecordTy,
                           Address ThisPtr,
@@ -451,8 +448,7 @@ public:
        if (!IsInlined)
          continue;
 
-       StringRef Name = CGM.getMangledName(
-           VtableComponent.getGlobalDecl(/*HasVectorDeletingDtors=*/false));
+       StringRef Name = CGM.getMangledName(VtableComponent.getGlobalDecl());
        auto *Entry = CGM.GetGlobalValue(Name);
        // This checks if virtual inline function has already been emitted.
        // Note that it is possible that this inline function would be emitted
@@ -707,6 +703,9 @@ CGCallee ItaniumCXXABI::EmitLoadOfMemberFunctionPointer(
 
   {
     CodeGenFunction::SanitizerScope SanScope(&CGF);
+    ApplyDebugLocation ApplyTrapDI(
+        CGF, CGF.SanitizerAnnotateDebugInfo(SanitizerKind::SO_CFIMFCall));
+
     llvm::Value *TypeId = nullptr;
     llvm::Value *CheckResult = nullptr;
 
@@ -804,6 +803,8 @@ CGCallee ItaniumCXXABI::EmitLoadOfMemberFunctionPointer(
     CXXRecordDecl *RD = MPT->getMostRecentCXXRecordDecl();
     if (RD->hasDefinition()) {
       CodeGenFunction::SanitizerScope SanScope(&CGF);
+      ApplyDebugLocation ApplyTrapDI(
+          CGF, CGF.SanitizerAnnotateDebugInfo(SanitizerKind::SO_CFIMFCall));
 
       llvm::Constant *StaticData[] = {
           llvm::ConstantInt::get(CGF.Int8Ty, CodeGenFunction::CFITCK_NVMFCall),
@@ -3758,7 +3759,7 @@ static bool ShouldUseExternalRTTIDescriptor(CodeGenModule &CGM,
     bool IsDLLImport = RD->hasAttr<DLLImportAttr>();
 
     // Don't import the RTTI but emit it locally.
-    if (CGM.getTriple().isWindowsGNUEnvironment())
+    if (CGM.getTriple().isOSCygMing())
       return false;
 
     if (CGM.getVTables().isVTableExternal(RD)) {
@@ -4045,10 +4046,7 @@ static llvm::GlobalVariable::LinkageTypes getTypeInfoLinkage(CodeGenModule &CGM,
           return llvm::GlobalValue::ExternalLinkage;
       // MinGW always uses LinkOnceODRLinkage for type info.
       if (RD->isDynamicClass() &&
-          !CGM.getContext()
-               .getTargetInfo()
-               .getTriple()
-               .isWindowsGNUEnvironment())
+          !CGM.getContext().getTargetInfo().getTriple().isOSCygMing())
         return CGM.getVTableLinkage(RD);
     }
 

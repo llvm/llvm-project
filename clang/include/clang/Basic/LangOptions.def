@@ -161,7 +161,6 @@ LANGOPT(Coroutines        , 1, 0, "C++20 coroutines")
 LANGOPT(CoroAlignedAllocation, 1, 0, "prefer Aligned Allocation according to P2014 Option 2")
 LANGOPT(DllExportInlines  , 1, 1, "dllexported classes dllexport inline methods")
 LANGOPT(ExperimentalLibrary, 1, 0, "enable unstable and experimental library features")
-LANGOPT(RetainSubstTemplateTypeParmTypeAstNodes, 1, 0, "retain SubstTemplateTypeParmType nodes in the AST's representation of alias template specializations")
 
 LANGOPT(PointerAuthIntrinsics, 1, 0, "pointer authentication intrinsics")
 LANGOPT(PointerAuthCalls  , 1, 0, "function pointer authentication")

@@ -33,6 +33,7 @@
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Casting.h"
@@ -130,6 +131,61 @@ LogicalResult CvtFloatToTF32Op::verify() {
     return emitError(
         "Only {rn,rz,rna} rounding modes supported for CvtFloatToTF32Op.");
   }
+  return success();
+}
+
+LogicalResult CvtF32x2ToF8x2Op::verify() {
+  using RndMode = NVVM::FPRoundingMode;
+  using SatMode = NVVM::SaturationMode;
+
+  bool isRoundingModeRN = getRnd() == RndMode::RN;
+  bool isRoundingModeRZ = getRnd() == RndMode::RZ;
+  bool isRoundingModeRP = getRnd() == RndMode::RP;
+  bool isSatFinite = getSat() == SatMode::SATFINITE;
+
+  bool hasRelu = getRelu();
+
+  switch (getType()) {
+  case CVTFP8Type::E4M3:
+  case CVTFP8Type::E5M2:
+    if (!isRoundingModeRN)
+      return emitOpError("Only RN rounding mode is supported for conversions "
+                         "from f32x2 to .e4m3x2 or .e5m2x2 types");
+    if (!isSatFinite)
+      return emitOpError("Only SATFINITE saturation mode is supported for "
+                         "conversions from f32x2 to .e4m3x2 or .e5m2x2 types");
+    break;
+  case CVTFP8Type::UE8M0:
+    if (!(isRoundingModeRZ || isRoundingModeRP))
+      return emitOpError("Only RZ or RP rounding modes are supported for "
+                         "conversions from f32x2 to .ue8m0x2 type");
+    if (hasRelu)
+      return emitOpError("relu not supported for conversions to .ue8m0x2 type");
+    break;
+  }
+  return success();
+}
+
+LogicalResult CvtF16x2ToF8x2Op::verify() {
+  if (getType() == CVTFP8Type::UE8M0)
+    return emitOpError("Only .e4m3 or .e5m2 types are supported for "
+                       "conversions from f16x2 to f8x2.");
+
+  return success();
+}
+
+LogicalResult CvtBF16x2ToF8x2Op::verify() {
+  using RndMode = NVVM::FPRoundingMode;
+
+  if (getType() != CVTFP8Type::UE8M0)
+    return emitOpError(
+        "Only .ue8m0 type is supported for conversions from bf16x2 to f8x2.");
+
+  auto rnd = getRnd();
+  if (!(rnd == RndMode::RZ || rnd == RndMode::RP))
+    return emitOpError("Only RZ and RP rounding modes are supported for "
+                       "conversions from bf16x2 to f8x2.");
+
   return success();
 }
 
@@ -1148,6 +1204,13 @@ LogicalResult NVVM::VoteSyncOp::verify() {
   return success();
 }
 
+llvm::Value *
+NVVM::DotAccumulate4WayOp::getPackedArg(llvm::Value *arg,
+                                        llvm::IRBuilderBase &builder) {
+  return builder.CreateBitCast(arg,
+                               llvm::Type::getInt32Ty(builder.getContext()));
+}
+
 //===----------------------------------------------------------------------===//
 // getIntrinsicID/getIntrinsicIDAndArgs methods
 //===----------------------------------------------------------------------===//
@@ -1188,6 +1251,34 @@ CpAsyncOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
     args.push_back(mt.lookupValue(cpAsyncOp.getCpSize()));
 
   return id;
+}
+
+mlir::NVVM::IDArgPair CpAsyncBulkSharedCTAToGlobalOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::CpAsyncBulkSharedCTAToGlobalOp>(op);
+  llvm::SmallVector<llvm::Value *> args;
+  llvm::Intrinsic::ID id =
+      llvm::Intrinsic::nvvm_cp_async_bulk_shared_cta_to_global;
+
+  // Fill the Intrinsic Args
+  args.push_back(mt.lookupValue(thisOp.getDstMem()));
+  args.push_back(mt.lookupValue(thisOp.getSrcMem()));
+  args.push_back(mt.lookupValue(thisOp.getSize()));
+
+  mlir::Value cacheHint = thisOp.getL2CacheHint();
+  const bool hasCacheHint = static_cast<bool>(cacheHint);
+  llvm::Value *i64Unused =
+      llvm::ConstantInt::get(llvm::Type::getInt64Ty(mt.getLLVMContext()), 0);
+  args.push_back(hasCacheHint ? mt.lookupValue(cacheHint) : i64Unused);
+  args.push_back(builder.getInt1(hasCacheHint));
+
+  // Choose the bytemask variant
+  if (mlir::Value byteMask = thisOp.getByteMask()) {
+    args.push_back(mt.lookupValue(byteMask));
+    id = llvm::Intrinsic::nvvm_cp_async_bulk_shared_cta_to_global_bytemask;
+  }
+
+  return {id, std::move(args)};
 }
 
 llvm::Intrinsic::ID CpAsyncBulkTensorPrefetchOp::getIntrinsicID(int tensorDims,
@@ -1287,6 +1378,84 @@ llvm::Intrinsic::ID CvtFloatToTF32Op::getIntrinsicID(NVVM::FPRoundingMode rnd,
     return GET_CVT_F2TF32_ID(rna, _none, _satfinite);
   default:
     llvm_unreachable("Invalid RoundingMode for CvtFloatToTF32Op");
+  }
+}
+
+#define GET_F32x2_TO_F6x2_ID(type, has_relu)                                   \
+  has_relu ? llvm::Intrinsic::nvvm_ff_to_##type##_rn_relu_satfinite            \
+           : llvm::Intrinsic::nvvm_ff_to_##type##_rn_satfinite
+
+llvm::Intrinsic::ID CvtF32x2ToF6x2Op::getIntrinsicID(NVVM::CVTFP6Type type,
+                                                     bool hasRelu) {
+  switch (type) {
+  case NVVM::CVTFP6Type::E2M3:
+    return GET_F32x2_TO_F6x2_ID(e2m3x2, hasRelu);
+  case NVVM::CVTFP6Type::E3M2:
+    return GET_F32x2_TO_F6x2_ID(e3m2x2, hasRelu);
+  }
+}
+
+#define GET_F32x2_TO_F8X2_US_ID(rnd, has_satf)                                 \
+  has_satf ? llvm::Intrinsic::nvvm_ff_to_ue8m0x2_##rnd##_satfinite             \
+           : llvm::Intrinsic::nvvm_ff_to_ue8m0x2_##rnd
+
+#define GET_F32x2_TO_F8X2_S_ID(type, has_relu)                                 \
+  has_relu ? llvm::Intrinsic::nvvm_ff_to_##type##_rn_relu                      \
+           : llvm::Intrinsic::nvvm_ff_to_##type##_rn
+
+llvm::Intrinsic::ID CvtF32x2ToF8x2Op::getIntrinsicID(NVVM::CVTFP8Type type,
+                                                     NVVM::FPRoundingMode rnd,
+                                                     NVVM::SaturationMode sat,
+                                                     bool hasRelu) {
+  bool hasSatFinite = (sat == NVVM::SaturationMode::SATFINITE);
+  bool hasRoundingModeRZ = (rnd == NVVM::FPRoundingMode::RZ);
+  bool hasRoundingModeRP = (rnd == NVVM::FPRoundingMode::RP);
+
+  switch (type) {
+  case NVVM::CVTFP8Type::E4M3:
+    return GET_F32x2_TO_F8X2_S_ID(e4m3x2, hasRelu);
+  case NVVM::CVTFP8Type::E5M2:
+    return GET_F32x2_TO_F8X2_S_ID(e5m2x2, hasRelu);
+  case NVVM::CVTFP8Type::UE8M0:
+    if (hasRoundingModeRZ)
+      return GET_F32x2_TO_F8X2_US_ID(rz, hasSatFinite);
+    else if (hasRoundingModeRP)
+      return GET_F32x2_TO_F8X2_US_ID(rp, hasSatFinite);
+  }
+  llvm_unreachable("Invalid conversion in CvtFloatToF8x2Op");
+}
+
+#define GET_F16x2_TO_F8X2_ID(type, has_relu)                                   \
+  has_relu ? llvm::Intrinsic::nvvm_f16x2_to_##type##_rn_relu                   \
+           : llvm::Intrinsic::nvvm_f16x2_to_##type##_rn
+
+llvm::Intrinsic::ID CvtF16x2ToF8x2Op::getIntrinsicID(NVVM::CVTFP8Type type,
+                                                     bool hasRelu) {
+  switch (type) {
+  case NVVM::CVTFP8Type::E4M3:
+    return GET_F16x2_TO_F8X2_ID(e4m3x2, hasRelu);
+  case NVVM::CVTFP8Type::E5M2:
+    return GET_F16x2_TO_F8X2_ID(e5m2x2, hasRelu);
+  default:
+    llvm_unreachable("Invalid CVTFP8Type for CvtF16x2ToF8x2Op");
+  }
+}
+
+#define GET_BF16X2_TO_F8X2_ID(rnd, has_satf)                                   \
+  has_satf ? llvm::Intrinsic::nvvm_bf16x2_to_ue8m0x2_##rnd##_satfinite         \
+           : llvm::Intrinsic::nvvm_bf16x2_to_ue8m0x2_##rnd
+
+llvm::Intrinsic::ID
+CvtBF16x2ToF8x2Op::getIntrinsicID(NVVM::FPRoundingMode rnd,
+                                  NVVM::SaturationMode sat) {
+  bool hasSatFinite = (sat == NVVM::SaturationMode::SATFINITE);
+  switch (rnd) {
+  case NVVM::FPRoundingMode::RZ:
+    return GET_BF16X2_TO_F8X2_ID(rz, hasSatFinite);
+  case NVVM::FPRoundingMode::RP:
+    return GET_BF16X2_TO_F8X2_ID(rp, hasSatFinite);
+  default:
+    llvm_unreachable("Invalid rounding mode for CvtBF16x2ToF8x2Op");
   }
 }
 
@@ -1454,6 +1623,26 @@ static void nvvmInferResultRanges(Operation *op, Value result,
   if (auto rangeAttr = op->getAttrOfType<LLVM::ConstantRangeAttr>("range")) {
     setResultRanges(result, {rangeAttr.getLower(), rangeAttr.getUpper(),
                              rangeAttr.getLower(), rangeAttr.getUpper()});
+  }
+}
+
+llvm::Intrinsic::ID
+DotAccumulate4WayOp::getIntrinsicID(NVVM::DotAccumulate4WayType a_type,
+                                    NVVM::DotAccumulate4WayType b_type) {
+  bool is_a_siext = a_type == NVVM::DotAccumulate4WayType::S8;
+  bool is_b_siext = b_type == NVVM::DotAccumulate4WayType::S8;
+  unsigned type = (is_a_siext << 1) | is_b_siext;
+  switch (type) {
+  case 0:
+    return llvm::Intrinsic::nvvm_idp4a_u_u;
+  case 1:
+    return llvm::Intrinsic::nvvm_idp4a_u_s;
+  case 2:
+    return llvm::Intrinsic::nvvm_idp4a_s_u;
+  case 3:
+    return llvm::Intrinsic::nvvm_idp4a_s_s;
+  default:
+    llvm_unreachable("Invalid DP4a type");
   }
 }
 

@@ -25,6 +25,7 @@ def LLVM_PointerGeneric : LLVM_PointerInAddressSpace<0>;
 def LLVM_PointerGlobal : LLVM_PointerInAddressSpace<1>;
 def LLVM_PointerShared : LLVM_PointerInAddressSpace<3>;
 def LLVM_PointerTensor : LLVM_PointerInAddressSpace<6>;
+def LLVM_PointerSharedCluster : LLVM_PointerInAddressSpace<7>;
 
 //===----------------------------------------------------------------------===//
 // NVVM dialect definitions
@@ -233,6 +234,76 @@ def NVVM_GlobalTimerOp : NVVM_SpecialRegisterOp<"read.ptx.sreg.globaltimer">;
 // envreg registers
 foreach index = !range(0, 32) in {
   def NVVM_EnvReg # index # Op : NVVM_SpecialRegisterOp<"read.ptx.sreg.envreg" # index>;
+}
+
+//===----------------------------------------------------------------------===//
+// Inline PTX op definition
+//===----------------------------------------------------------------------===//
+
+def NVVM_InlinePtxOp : NVVM_Op<"inline_ptx", 
+  [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>, 
+    AttrSizedOperandSegments]>
+{
+  let summary = "Inline PTX Op";
+  let description = [{This op allows using PTX directly within the NVVM 
+    dialect, while greatly simplifying llvm.inline_asm generation. It 
+    automatically handles register size selection and sets the correct 
+    read/write access for each operand. The operation leverages the 
+    `BasicPtxBuilderInterface` to abstract away low-level details of 
+    PTX assembly formatting.
+
+    The `predicate` attribute is used to specify a predicate for the 
+    PTX instruction.
+
+    Example 1: Read-only Parameters
+    ```mlir
+    nvvm.inline_ptx "mbarrier.init.b64 [$0], $1;" (%barrier_gen, %count) : !llvm.ptr, i32
+
+    // Lowers to:
+    llvm.inline_asm has_side_effects asm_dialect = att 
+      "mbarrier.init.b64 [$0], $1;", "l,r" %arg0, %arg2 : (!llvm.ptr, i32) -> ()
+    ```
+
+    Example 2: Read-only and Write-only Parameters
+    ```mlir
+    %0 = nvvm.inline_ptx "ex2.approx.ftz.f32 $0, $1;" (%input) : f32 -> f32
+
+    // Lowers to:
+    %0 = llvm.inline_asm has_side_effects asm_dialect = att 
+      "ex2.approx.ftz.f32 $0, $1;", "=f,f" %arg0 : (f32) -> f32
+    ```
+
+    Example 3: Predicate Usage
+    ```mlir
+    nvvm.inline_ptx "mbarrier.init.b64 [$0], $1;" (%barrier_gen, %count), 
+      predicate = %pred : !llvm.ptr, i32, i1
+
+    // Lowers to:
+    llvm.inline_asm has_side_effects asm_dialect = att 
+      "@$2 mbarrier.init.b64 [$0], $1;", "l,r,b" %arg0, %arg2, %arg3 
+      : (!llvm.ptr, i32, i1) -> ()
+    ```
+  }];
+
+  let arguments = (ins Variadic<AnyType>:$readOnlyArgs, 
+                       StrAttr:$ptxCode,
+                       PtxPredicate:$predicate);
+                      
+  let results = (outs Variadic<AnyType>:$writeOnlyArgs);
+
+  let assemblyFormat = [{ 
+    $ptxCode `(` $readOnlyArgs `)` 
+    (`,` `predicate` `=` $predicate^)? attr-dict 
+    `:` type(operands) 
+    (`->` type($writeOnlyArgs)^)?
+  }];
+  
+  let extraClassDefinition = [{
+    std::string $cppClass::getPtx() {
+      StringRef ptxInstStr = getPtxCode();
+      return std::string(ptxInstStr.data());
+    }
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -1063,6 +1134,207 @@ def NVVM_CvtFloatToTF32Op : NVVM_Op<"cvt.float.to.tf32"> {
   string llvmBuilder = [{
     auto intId = NVVM::CvtFloatToTF32Op::getIntrinsicID($rnd, $sat, $relu);
     $res = createIntrinsicCall(builder, intId, {$src});
+  }];
+}
+
+def CVTFP6E2M3 : I32EnumAttrCase<"E2M3", 0, "e2m3">;
+def CVTFP6E3M2 : I32EnumAttrCase<"E3M2", 1, "e3m2">;
+
+def CVTFP6Type : I32EnumAttr<"CVTFP6Type", "NVVM CVTFP6Type kind",
+  [CVTFP6E2M3, CVTFP6E3M2]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::NVVM";
+}
+def CVTFP6TypeAttr : EnumAttr<NVVM_Dialect, CVTFP6Type, "cvt_fp6_type"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
+def NVVM_CvtF32x2ToF6x2Op : NVVM_Op<"cvt.f32x2.to.f6x2"> {
+  let summary = "Convert a pair of float inputs to f6x2";
+  let description = [{
+    This Op converts each of the given float inputs to the specified fp6 type.
+    The result `dst` is represented either as an i16 type or as a vector
+    of two i8 types.
+    If `dst` is returned as an i16 type, the converted values are packed such 
+    that the value converted from `a` is stored in the upper 8 bits of `dst` 
+    with 2 MSB bits padded with zeros and the value converted from `b` is 
+    stored in the lower 8 bits of `dst` with 2 MSB bits padded with zeros.
+    If `dst` is returned as a vector type, each converted value is stored as an 
+    i8 element in the vector.
+    The `relu` attribute, when set, lowers to the '.relu' variant of
+    the cvt instruction.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cvt)
+  }];
+
+  let results = (outs AnyTypeOf<[I16, VectorOfLengthAndType<[2], [I8]>]>:$dst);
+  let arguments = (ins 
+    CVTFP6TypeAttr:$type,
+    F32:$a,
+    F32:$b,
+    DefaultValuedAttr<BoolAttr, "false">:$relu);
+  let assemblyFormat = "$type $a `,` $b attr-dict `:` type($dst)";
+  
+  let extraClassDeclaration = [{
+    static llvm::Intrinsic::ID getIntrinsicID(NVVM::CVTFP6Type,
+                                              bool hasRelu);
+  }];
+
+  string llvmBuilder = [{
+    auto intId = NVVM::CvtF32x2ToF6x2Op::getIntrinsicID($type, $relu);
+    llvm::Value *packedI16 = createIntrinsicCall(builder, intId, {$a, $b});
+    if(op.getDst().getType().isInteger(16))
+      $dst = packedI16;
+    else
+      $dst = builder.CreateBitCast(packedI16,
+                      llvm::FixedVectorType::get(llvm::Type::getInt8Ty(builder.getContext()), 2));
+  }];
+}
+
+def CVTFP8E4M3 : I32EnumAttrCase<"E4M3", 0, "e4m3">;
+def CVTFP8E5M2 : I32EnumAttrCase<"E5M2", 1, "e5m2">;
+def CVTFP8UE8M0 : I32EnumAttrCase<"UE8M0", 2, "ue8m0">;
+
+def CVTFP8Type : I32EnumAttr<"CVTFP8Type", "NVVM CVTFP8Type kind",
+  [CVTFP8E4M3, CVTFP8E5M2, CVTFP8UE8M0]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::NVVM";
+}
+def CVTFP8TypeAttr : EnumAttr<NVVM_Dialect, CVTFP8Type, "cvt_fp8_type"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
+def NVVM_CvtF32x2ToF8x2Op : NVVM_Op<"cvt.f32x2.to.f8x2"> {
+  let summary = "Convert a pair of float inputs to f8x2";
+  let description = [{
+    This Op converts each of the given float inputs to the specified fp8 type.
+    The result `dst` is represented as an i16 type or as a vector
+    of two i8 types.
+    If `dst` is returned as an i16 type, the converted values are packed such 
+    that the value converted from `a` is stored in the upper 8 bits of `dst` 
+    and the value converted from `b` is stored in the lower 8 bits of `dst`.
+    If `dst` is returned as a vector type, each converted value is stored as an 
+    i8 element in the vector.
+    The `rnd` and `sat` attributes specify the rounding and saturation modes respectively.
+    The `relu` attribute, when set, lowers to the '.relu' variant of
+    the cvt instruction.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cvt)
+  }];
+
+  let hasVerifier = 1;
+  let results = (outs AnyTypeOf<[I16, VectorOfLengthAndType<[2], [I8]>]>:$dst);
+  let arguments = (ins
+    CVTFP8TypeAttr:$type,
+    F32:$a,
+    F32:$b,
+    DefaultValuedAttr<FPRoundingModeAttr, "FPRoundingMode::NONE">:$rnd,
+    DefaultValuedAttr<SaturationModeAttr, "SaturationMode::NONE">:$sat,
+    DefaultValuedAttr<BoolAttr, "false">:$relu);
+  let assemblyFormat = "$type $a `,` $b attr-dict `:` type($dst)";
+
+  let extraClassDeclaration = [{
+    static llvm::Intrinsic::ID getIntrinsicID(NVVM::CVTFP8Type to,
+                                              NVVM::FPRoundingMode rnd,
+                                              NVVM::SaturationMode sat,
+                                              bool hasRelu);
+  }];
+  
+  string llvmBuilder = [{
+    auto intId = NVVM::CvtF32x2ToF8x2Op::getIntrinsicID($type, $rnd, $sat, $relu);
+    llvm::Value *packedI16 = createIntrinsicCall(builder, intId, {$a, $b});
+    if(op.getDst().getType().isInteger(16))
+      $dst = packedI16;
+    else
+      $dst = builder.CreateBitCast(packedI16,
+                      llvm::FixedVectorType::get(llvm::Type::getInt8Ty(builder.getContext()), 2));
+  }];
+}
+
+def NVVM_CvtF16x2ToF8x2Op : NVVM_Op<"cvt.f16x2.to.f8x2"> {
+  let summary = "Convert an f16x2 input to f8x2";
+  let description = [{
+    This Op converts the given f16 inputs in an f16x2 vector to the specified 
+    f8 type.
+    The result `dst` is represented as an i16 type or as a vector
+    of two i8 types.
+    If `dst` is returned as an i16 type, the converted values from `a`
+    are packed such that the value converted from the first element of `a`
+    is stored in the upper 8 bits of `dst` and the value converted from the
+    second element of `a` is stored in the lower 8 bits of `dst`.
+    If `dst` is returned as a vector type, each converted value is stored as an 
+    i8 element in the vector.
+    The `relu` attribute, when set, lowers to the '.relu' variant of
+    the cvt instruction.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cvt)
+  }];
+
+  let hasVerifier = 1;
+  let results = (outs AnyTypeOf<[I16, VectorOfLengthAndType<[2], [I8]>]>:$dst);
+  let arguments = (ins
+    CVTFP8TypeAttr:$type,
+    VectorOfLengthAndType<[2], [F16]>:$a,
+    DefaultValuedAttr<BoolAttr, "false">:$relu);
+  let assemblyFormat = "$type $a attr-dict `:` type($a) `->` type($dst)";
+
+  let extraClassDeclaration = [{
+    static llvm::Intrinsic::ID getIntrinsicID(NVVM::CVTFP8Type to,
+                                              bool hasRelu);
+  }];
+
+  string llvmBuilder = [{
+    auto intId = NVVM::CvtF16x2ToF8x2Op::getIntrinsicID($type, $relu);
+    llvm::Value *packedI16 = createIntrinsicCall(builder, intId, {$a});
+    if(op.getDst().getType().isInteger(16))
+      $dst = packedI16;
+    else
+      $dst = builder.CreateBitCast(packedI16,
+                      llvm::FixedVectorType::get(llvm::Type::getInt8Ty(builder.getContext()), 2));
+  }];
+}
+
+def NVVM_CvtBF16x2ToF8x2Op : NVVM_Op<"cvt.bf16x2.to.f8x2"> {
+  let summary = "Convert a pair of bf16 inputs to f8x2";
+  let description = [{
+    This Op converts the given bf16 inputs in a bf16x2 vector to the specified 
+    f8 type.
+    The result `dst` is represented as an i16 type or as a vector
+    of two i8 types.
+    If `dst` is returned as an i16 type, the converted values from `a`
+    are packed such that the value converted from the first element of `a`
+    is stored in the upper 8 bits of `dst` and the value converted from the
+    second element of `a` is stored in the lower 8 bits of `dst`.
+    If `dst` is returned as a vector type, each converted value is stored as an 
+    i8 element in the vector.
+    The `rnd` and `sat` attributes specify the rounding and saturation modes 
+    respectively.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cvt)
+  }];
+
+  let hasVerifier = 1;
+  let results = (outs AnyTypeOf<[I16, VectorOfLengthAndType<[2], [I8]>]>:$dst);
+  let arguments = (ins
+    CVTFP8TypeAttr:$type,
+    VectorOfLengthAndType<[2], [BF16]>:$a,
+    DefaultValuedAttr<FPRoundingModeAttr, "FPRoundingMode::NONE">:$rnd,
+    DefaultValuedAttr<SaturationModeAttr, "SaturationMode::NONE">:$sat);
+  let assemblyFormat = "$type $a attr-dict `:` type($a) `->` type($dst)";
+  
+  let extraClassDeclaration = [{
+    static llvm::Intrinsic::ID getIntrinsicID(NVVM::FPRoundingMode rnd,
+                                              NVVM::SaturationMode sat);
+  }];
+
+  string llvmBuilder = [{
+    auto intId = NVVM::CvtBF16x2ToF8x2Op::getIntrinsicID($rnd, $sat);
+    llvm::Value *packedI16 = createIntrinsicCall(builder, intId, {$a});
+    if(op.getDst().getType().isInteger(16))
+      $dst = packedI16;
+    else
+      $dst = builder.CreateBitCast(packedI16,
+                      llvm::FixedVectorType::get(llvm::Type::getInt8Ty(builder.getContext()), 2));
   }];
 }
 
@@ -2252,7 +2524,7 @@ def NVVM_CpAsyncBulkGlobalToSharedClusterOp :
   }];
 
   let arguments = (ins
-    LLVM_PointerShared:$dstMem,
+    LLVM_PointerSharedCluster:$dstMem,
     LLVM_PointerGlobal:$srcMem,
     LLVM_PointerShared:$mbar,
     I32:$size,
@@ -2309,7 +2581,7 @@ def NVVM_CpAsyncBulkSharedCTAToSharedClusterOp :
   }];
 
   let arguments = (ins
-    LLVM_PointerShared:$dstMem,
+    LLVM_PointerSharedCluster:$dstMem,
     LLVM_PointerShared:$srcMem,
     LLVM_PointerShared:$mbar,
     I32:$size);
@@ -2327,15 +2599,37 @@ def NVVM_CpAsyncBulkSharedCTAToSharedClusterOp :
 }
 
 def NVVM_CpAsyncBulkSharedCTAToGlobalOp :
-  NVVM_Op<"cp.async.bulk.global.shared.cta"> {
+  NVVM_Op<"cp.async.bulk.global.shared.cta", [AttrSizedOperandSegments]> {
   let summary = "Async bulk copy from Shared CTA memory to Global memory";
   let description = [{
     Initiates an asynchronous copy operation from Shared CTA memory to
-    global memory.
+    global memory. The 32-bit operand `size` specifies the amount of
+    memory to be copied, in terms of number of bytes. `size` must be a
+    multiple of 16. The `l2CacheHint` operand is optional, and it is used
+    to specify cache eviction policy that may be used during the memory
+    access. The `byteMask` operand is optional. The i-th bit in the 16-bit
+    wide `byteMask` specifies whether the i-th byte of each 16-byte wide
+    chunk of source data is copied to the destination. If the bit is set,
+    the byte is copied.
 
-    The `l2CacheHint` operand is optional, and it is used to specify cache
-    eviction policy that may be used during the memory access.
-    
+    Example:
+    ```mlir
+      nvvm.cp.async.bulk.global.shared.cta %dst, %src, %size
+          : !llvm.ptr<1>, !llvm.ptr<3>
+
+      // with l2_cache_hint
+      nvvm.cp.async.bulk.global.shared.cta %dst, %src, %size l2_cache_hint = %ch
+          : !llvm.ptr<1>, !llvm.ptr<3>
+
+      // with byte_mask
+      nvvm.cp.async.bulk.global.shared.cta %dst, %src, %size byte_mask = %mask
+          : !llvm.ptr<1>, !llvm.ptr<3>
+
+      // with both l2_cache_hint and byte_mask
+      nvvm.cp.async.bulk.global.shared.cta %dst, %src, %size l2_cache_hint = %ch byte_mask = %mask
+          : !llvm.ptr<1>, !llvm.ptr<3>
+    ```
+
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk)
   }];
 
@@ -2343,35 +2637,25 @@ def NVVM_CpAsyncBulkSharedCTAToGlobalOp :
     LLVM_PointerGlobal:$dstMem,
     LLVM_PointerShared:$srcMem,
     I32:$size,
-    Optional<I64>:$l2CacheHint);
+    Optional<I64>:$l2CacheHint,
+    Optional<I16>:$byteMask);
 
   let assemblyFormat = [{
     $dstMem `,` $srcMem `,` $size
     (`l2_cache_hint` `=` $l2CacheHint^ )?
-    attr-dict  `:` type($dstMem) `,` type($srcMem)
+    (`byte_mask` `=` $byteMask^ )?
+    attr-dict `:` type($dstMem) `,` type($srcMem)
   }];
 
+  let extraClassDeclaration = [{
+    static mlir::NVVM::IDArgPair
+    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                          llvm::IRBuilderBase& builder);
+  }];
   string llvmBuilder = [{
-    // Arguments to the intrinsic:
-    // dst, src, size, cache_hint,
-    // Flag for cache_hint
-    //
-    llvm::SmallVector<llvm::Value *> translatedOperands;
-    translatedOperands.push_back($dstMem);
-    translatedOperands.push_back($srcMem);
-    translatedOperands.push_back($size);
-
-    // Cachehint, if available
-    llvm::LLVMContext &ctx = moduleTranslation.getLLVMContext();
-    auto *i64Unused = llvm::ConstantInt::get(llvm::Type::getInt64Ty(ctx), 0);
-    bool isCacheHint = op.getL2CacheHint() ? true : false;
-    translatedOperands.push_back(isCacheHint ? $l2CacheHint : i64Unused);
-
-    // Flag argument for cachehint
-    translatedOperands.push_back(builder.getInt1(isCacheHint));
-
-    createIntrinsicCall(builder,
-      llvm::Intrinsic::nvvm_cp_async_bulk_shared_cta_to_global, translatedOperands);
+    auto [id, args] = NVVM::CpAsyncBulkSharedCTAToGlobalOp::getIntrinsicIDAndArgs(
+                      *op, moduleTranslation, builder);
+    createIntrinsicCall(builder, id, args);
   }];
 }
 
@@ -3243,10 +3527,74 @@ def NVVM_Tcgen05StOp : NVVM_Op<"tcgen05.st"> {
 }
 
 //===----------------------------------------------------------------------===//
+// NVVM dot.accumulate.4way Op
+//===----------------------------------------------------------------------===//
+
+def DotAccumulate4WayS8 : I32EnumAttrCase<"S8", 1, "s8">;
+def DotAccumulate4WayU8 : I32EnumAttrCase<"U8", 0, "u8">;
+
+def DotAccumulate4WayType : I32EnumAttr<"DotAccumulate4WayType",
+                              "NVVM DotAccumulate4WayType",
+                              [DotAccumulate4WayS8, DotAccumulate4WayU8]> {
+  let cppNamespace = "::mlir::NVVM";
+  let genSpecializedAttr = 0;
+}
+
+def DotAccumulate4WayTypeAttr : EnumAttr<NVVM_Dialect, DotAccumulate4WayType, "dot_accumulate_4way_type"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
+def NVVM_DotAccumulate4WayOp : NVVM_Op<"dot.accumulate.4way"> {
+  let summary = "Four-way byte dot product-accumulate instruction.";
+  let description = [{
+    Performs a four-way byte dot-product which is accumulated in a 32-bit
+    result.
+    Operand `a` and `b` are vectors of 4 bytes between which the dot product is 
+    computed.
+    The `a_type` and `b_type` attributes specify the type of the elements in `a`
+    and `b` respectively.
+    If `a_type` or `b_type` is `s8`, then the elements in the corresponding 
+    vector are sign-extended to 32-bit before the dot product is computed.
+    If `a_type` or `b_type` is `u8`, then the elements in the corresponding 
+    vector are zero-extended to 32-bit instead.
+    Operand `c` is a 32-bit integer to which the result is accumulated. It is
+    treated as holding a signed integer if any of `a_type` or `b_type` is `s8`.
+    
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#integer-arithmetic-instructions-dp4a)
+  }];
+  
+  let arguments = (ins
+    VectorOfLengthAndType<[4], [I8]>:$a,
+    DotAccumulate4WayTypeAttr:$a_type,
+    VectorOfLengthAndType<[4], [I8]>:$b,
+    DotAccumulate4WayTypeAttr:$b_type,
+    I32:$c
+  );
+
+  let results = (outs I32:$res);
+
+  let assemblyFormat = "$a $a_type `,` $b $b_type `,` $c attr-dict `:` type($a) `,` type($b)";
+  
+  let extraClassDeclaration = [{
+    static llvm::Intrinsic::ID
+    getIntrinsicID(NVVM::DotAccumulate4WayType a_type, 
+                   NVVM::DotAccumulate4WayType b_type);
+    llvm::Value* getPackedArg(llvm::Value* arg, llvm::IRBuilderBase& builder);
+  }];
+
+  string llvmBuilder = [{
+    llvm::Intrinsic::ID id = NVVM::DotAccumulate4WayOp::getIntrinsicID($a_type, $b_type);
+    llvm::Value* argA = op.getPackedArg($a, builder);
+    llvm::Value* argB = op.getPackedArg($b, builder);
+    $res = createIntrinsicCall(builder, id, {argA, argB, $c});
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // NVVM target attribute.
 //===----------------------------------------------------------------------===//
 
-def NVVM_TargettAttr : NVVM_Attr<"NVVMTarget", "target"> {
+def NVVM_TargetAttr : NVVM_Attr<"NVVMTarget", "target"> {
   let description = [{
     GPU target attribute for controlling compilation of NVIDIA targets. All
     parameters decay into default values if not present.

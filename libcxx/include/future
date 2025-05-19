@@ -420,6 +420,7 @@ _LIBCPP_PUSH_MACROS
 #    include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 // enum class future_errc
 _LIBCPP_DECLARE_STRONG_ENUM(future_errc){
@@ -440,7 +441,7 @@ _LIBCPP_DECLARE_STRONG_ENUM_EPILOG(launch)
 
 #    ifndef _LIBCPP_CXX03_LANG
 
-typedef underlying_type<launch>::type __launch_underlying_type;
+using __launch_underlying_type _LIBCPP_NODEBUG = __underlying_type_t<launch>;
 
 inline _LIBCPP_HIDE_FROM_ABI constexpr launch operator&(launch __x, launch __y) {
   return static_cast<launch>(static_cast<__launch_underlying_type>(__x) & static_cast<__launch_underlying_type>(__y));
@@ -2061,6 +2062,7 @@ inline shared_future<_Rp&> future<_Rp&>::share() _NOEXCEPT {
 
 inline shared_future<void> future<void>::share() _NOEXCEPT { return shared_future<void>(std::move(*this)); }
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS

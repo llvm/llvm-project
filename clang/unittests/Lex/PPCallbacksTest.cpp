@@ -139,7 +139,7 @@ protected:
         Diags(DiagID, DiagOpts.get(), new IgnoringDiagConsumer()),
         SourceMgr(Diags, FileMgr), TargetOpts(new TargetOptions()) {
     TargetOpts->Triple = "x86_64-apple-darwin11.1.0";
-    Target = TargetInfo::CreateTargetInfo(Diags, TargetOpts);
+    Target = TargetInfo::CreateTargetInfo(Diags, *TargetOpts);
   }
 
   IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem;
@@ -237,14 +237,13 @@ protected:
   }
 
   std::vector<CondDirectiveCallbacks::Result>
-  DirectiveExprRange(StringRef SourceText) {
+  DirectiveExprRange(StringRef SourceText, PreprocessorOptions PPOpts = {}) {
     HeaderSearchOptions HSOpts;
     TrivialModuleLoader ModLoader;
     std::unique_ptr<llvm::MemoryBuffer> Buf =
         llvm::MemoryBuffer::getMemBuffer(SourceText);
     SourceMgr.setMainFileID(SourceMgr.createFileID(std::move(Buf)));
     HeaderSearch HeaderInfo(HSOpts, SourceMgr, Diags, LangOpts, Target.get());
-    PreprocessorOptions PPOpts;
     Preprocessor PP(PPOpts, Diags, LangOpts, SourceMgr, HeaderInfo, ModLoader,
                     /*IILookup=*/nullptr, /*OwnsHeaderSearch=*/false);
     PP.Initialize(*Target);
@@ -569,6 +568,24 @@ TEST_F(PPCallbacksTest, DirectiveExprRanges) {
       Lexer::getSourceText(CharSourceRange(Results8[0].ConditionRange, false),
                            SourceMgr, LangOpts),
       "__FILE__ > FLOOFY");
+
+  const char *MultiExprIf = "#if defined(FLOOFY) || defined(FLUZZY)\n#endif\n";
+  const auto &Results9 = DirectiveExprRange(MultiExprIf);
+  EXPECT_EQ(Results9.size(), 1U);
+  EXPECT_EQ(
+      Lexer::getSourceText(CharSourceRange(Results9[0].ConditionRange, false),
+                           SourceMgr, LangOpts),
+      "defined(FLOOFY) || defined(FLUZZY)");
+
+  PreprocessorOptions PPOptsSingleFileParse;
+  PPOptsSingleFileParse.SingleFileParseMode = true;
+  const auto &Results10 =
+      DirectiveExprRange(MultiExprIf, PPOptsSingleFileParse);
+  EXPECT_EQ(Results10.size(), 1U);
+  EXPECT_EQ(
+      Lexer::getSourceText(CharSourceRange(Results10[0].ConditionRange, false),
+                           SourceMgr, LangOpts),
+      "defined(FLOOFY) || defined(FLUZZY)");
 }
 
 } // namespace

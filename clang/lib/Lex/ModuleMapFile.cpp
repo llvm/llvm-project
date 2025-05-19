@@ -169,7 +169,10 @@ modulemap::parseModuleMap(FileID ID, clang::DirectoryEntryRef Dir,
 
   if (Failed)
     return std::nullopt;
+  Parser.MMF.ID = ID;
+  Parser.MMF.Dir = Dir;
   Parser.MMF.Start = Start;
+  Parser.MMF.IsSystem = IsSystem;
   return std::move(Parser.MMF);
 }
 

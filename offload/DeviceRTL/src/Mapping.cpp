@@ -16,8 +16,6 @@
 #include "State.h"
 #include "gpuintrin.h"
 
-#include "llvm/Frontend/OpenMP/OMPGridValues.h"
-
 using namespace ompx;
 
 // FIXME: This resolves the handling for the AMDGPU workgroup size when the ABI

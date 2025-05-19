@@ -241,6 +241,25 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
 
   if (Opts.CFProtectionReturn && ISAInfo->hasExtension("zicfiss"))
     Builder.defineMacro("__riscv_shadow_stack");
+
+  if (Opts.CFProtectionBranch) {
+    auto Scheme = Opts.getCFBranchLabelScheme();
+    if (Scheme == CFBranchLabelSchemeKind::Default)
+      Scheme = getDefaultCFBranchLabelScheme();
+
+    Builder.defineMacro("__riscv_landing_pad");
+    switch (Scheme) {
+    case CFBranchLabelSchemeKind::Unlabeled:
+      Builder.defineMacro("__riscv_landing_pad_unlabeled");
+      break;
+    case CFBranchLabelSchemeKind::FuncSig:
+      // TODO: Define macros after the func-sig scheme is implemented
+      break;
+    case CFBranchLabelSchemeKind::Default:
+      llvm_unreachable("default cf-branch-label scheme should already be "
+                       "transformed to other scheme");
+    }
+  }
 }
 
 static constexpr int NumRVVBuiltins =
@@ -332,7 +351,8 @@ bool RISCVTargetInfo::initFeatureMap(
 
 std::optional<std::pair<unsigned, unsigned>>
 RISCVTargetInfo::getVScaleRange(const LangOptions &LangOpts,
-                                bool IsArmStreamingFunction) const {
+                                bool IsArmStreamingFunction,
+                                llvm::StringMap<bool> *FeatureMap) const {
   // RISCV::RVVBitsPerBlock is 64.
   unsigned VScaleMin = ISAInfo->getMinVLen() / llvm::RISCV::RVVBitsPerBlock;
 
@@ -438,7 +458,7 @@ static void populateNegativeRISCVFeatures(std::vector<std::string> &Features) {
 
   std::vector<std::string> FeatStrings =
       (*RII)->toFeatures(/* AddAllExtensions */ true);
-  Features.insert(Features.end(), FeatStrings.begin(), FeatStrings.end());
+  llvm::append_range(Features, FeatStrings);
 }
 
 static void handleFullArchString(StringRef FullArchStr,
@@ -454,7 +474,7 @@ static void handleFullArchString(StringRef FullArchStr,
     populateNegativeRISCVFeatures(Features);
     std::vector<std::string> FeatStrings =
         (*RII)->toFeatures(/* AddAllExtensions */ true);
-    Features.insert(Features.end(), FeatStrings.begin(), FeatStrings.end());
+    llvm::append_range(Features, FeatStrings);
   }
 }
 

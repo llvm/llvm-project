@@ -103,7 +103,7 @@ CodeGenTargetMachineImpl::CodeGenTargetMachineImpl(
 
 TargetTransformInfo
 CodeGenTargetMachineImpl::getTargetTransformInfo(const Function &F) const {
-  return TargetTransformInfo(BasicTTIImpl(this, F));
+  return TargetTransformInfo(std::make_unique<BasicTTIImpl>(this, F));
 }
 
 /// addPassesToX helper drives creation and initialization of TargetPassConfig.

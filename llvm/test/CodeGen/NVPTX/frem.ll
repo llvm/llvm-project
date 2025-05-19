@@ -9,7 +9,7 @@ define half @frem_f16(half %a, half %b) {
 ; FAST-LABEL: frem_f16(
 ; FAST:       {
 ; FAST-NEXT:    .reg .b16 %rs<4>;
-; FAST-NEXT:    .reg .f32 %f<7>;
+; FAST-NEXT:    .reg .b32 %f<7>;
 ; FAST-EMPTY:
 ; FAST-NEXT:  // %bb.0:
 ; FAST-NEXT:    ld.param.b16 %rs1, [frem_f16_param_0];
@@ -28,7 +28,7 @@ define half @frem_f16(half %a, half %b) {
 ; NORMAL:       {
 ; NORMAL-NEXT:    .reg .pred %p<2>;
 ; NORMAL-NEXT:    .reg .b16 %rs<4>;
-; NORMAL-NEXT:    .reg .f32 %f<8>;
+; NORMAL-NEXT:    .reg .b32 %f<8>;
 ; NORMAL-EMPTY:
 ; NORMAL-NEXT:  // %bb.0:
 ; NORMAL-NEXT:    ld.param.b16 %rs1, [frem_f16_param_0];
@@ -51,33 +51,33 @@ define half @frem_f16(half %a, half %b) {
 define float @frem_f32(float %a, float %b) {
 ; FAST-LABEL: frem_f32(
 ; FAST:       {
-; FAST-NEXT:    .reg .f32 %f<7>;
+; FAST-NEXT:    .reg .b32 %f<7>;
 ; FAST-EMPTY:
 ; FAST-NEXT:  // %bb.0:
-; FAST-NEXT:    ld.param.f32 %f1, [frem_f32_param_0];
-; FAST-NEXT:    ld.param.f32 %f2, [frem_f32_param_1];
+; FAST-NEXT:    ld.param.b32 %f1, [frem_f32_param_0];
+; FAST-NEXT:    ld.param.b32 %f2, [frem_f32_param_1];
 ; FAST-NEXT:    div.approx.f32 %f3, %f1, %f2;
 ; FAST-NEXT:    cvt.rzi.f32.f32 %f4, %f3;
 ; FAST-NEXT:    neg.f32 %f5, %f4;
 ; FAST-NEXT:    fma.rn.f32 %f6, %f5, %f2, %f1;
-; FAST-NEXT:    st.param.f32 [func_retval0], %f6;
+; FAST-NEXT:    st.param.b32 [func_retval0], %f6;
 ; FAST-NEXT:    ret;
 ;
 ; NORMAL-LABEL: frem_f32(
 ; NORMAL:       {
 ; NORMAL-NEXT:    .reg .pred %p<2>;
-; NORMAL-NEXT:    .reg .f32 %f<8>;
+; NORMAL-NEXT:    .reg .b32 %f<8>;
 ; NORMAL-EMPTY:
 ; NORMAL-NEXT:  // %bb.0:
-; NORMAL-NEXT:    ld.param.f32 %f1, [frem_f32_param_0];
-; NORMAL-NEXT:    ld.param.f32 %f2, [frem_f32_param_1];
+; NORMAL-NEXT:    ld.param.b32 %f1, [frem_f32_param_0];
+; NORMAL-NEXT:    ld.param.b32 %f2, [frem_f32_param_1];
 ; NORMAL-NEXT:    div.rn.f32 %f3, %f1, %f2;
 ; NORMAL-NEXT:    cvt.rzi.f32.f32 %f4, %f3;
 ; NORMAL-NEXT:    neg.f32 %f5, %f4;
 ; NORMAL-NEXT:    fma.rn.f32 %f6, %f5, %f2, %f1;
 ; NORMAL-NEXT:    testp.infinite.f32 %p1, %f2;
 ; NORMAL-NEXT:    selp.f32 %f7, %f1, %f6, %p1;
-; NORMAL-NEXT:    st.param.f32 [func_retval0], %f7;
+; NORMAL-NEXT:    st.param.b32 [func_retval0], %f7;
 ; NORMAL-NEXT:    ret;
   %r = frem float %a, %b
   ret float %r
@@ -86,33 +86,33 @@ define float @frem_f32(float %a, float %b) {
 define double @frem_f64(double %a, double %b) {
 ; FAST-LABEL: frem_f64(
 ; FAST:       {
-; FAST-NEXT:    .reg .f64 %fd<7>;
+; FAST-NEXT:    .reg .b64 %fd<7>;
 ; FAST-EMPTY:
 ; FAST-NEXT:  // %bb.0:
-; FAST-NEXT:    ld.param.f64 %fd1, [frem_f64_param_0];
-; FAST-NEXT:    ld.param.f64 %fd2, [frem_f64_param_1];
+; FAST-NEXT:    ld.param.b64 %fd1, [frem_f64_param_0];
+; FAST-NEXT:    ld.param.b64 %fd2, [frem_f64_param_1];
 ; FAST-NEXT:    div.rn.f64 %fd3, %fd1, %fd2;
 ; FAST-NEXT:    cvt.rzi.f64.f64 %fd4, %fd3;
 ; FAST-NEXT:    neg.f64 %fd5, %fd4;
 ; FAST-NEXT:    fma.rn.f64 %fd6, %fd5, %fd2, %fd1;
-; FAST-NEXT:    st.param.f64 [func_retval0], %fd6;
+; FAST-NEXT:    st.param.b64 [func_retval0], %fd6;
 ; FAST-NEXT:    ret;
 ;
 ; NORMAL-LABEL: frem_f64(
 ; NORMAL:       {
 ; NORMAL-NEXT:    .reg .pred %p<2>;
-; NORMAL-NEXT:    .reg .f64 %fd<8>;
+; NORMAL-NEXT:    .reg .b64 %fd<8>;
 ; NORMAL-EMPTY:
 ; NORMAL-NEXT:  // %bb.0:
-; NORMAL-NEXT:    ld.param.f64 %fd1, [frem_f64_param_0];
-; NORMAL-NEXT:    ld.param.f64 %fd2, [frem_f64_param_1];
+; NORMAL-NEXT:    ld.param.b64 %fd1, [frem_f64_param_0];
+; NORMAL-NEXT:    ld.param.b64 %fd2, [frem_f64_param_1];
 ; NORMAL-NEXT:    div.rn.f64 %fd3, %fd1, %fd2;
 ; NORMAL-NEXT:    cvt.rzi.f64.f64 %fd4, %fd3;
 ; NORMAL-NEXT:    neg.f64 %fd5, %fd4;
 ; NORMAL-NEXT:    fma.rn.f64 %fd6, %fd5, %fd2, %fd1;
 ; NORMAL-NEXT:    testp.infinite.f64 %p1, %fd2;
 ; NORMAL-NEXT:    selp.f64 %fd7, %fd1, %fd6, %p1;
-; NORMAL-NEXT:    st.param.f64 [func_retval0], %fd7;
+; NORMAL-NEXT:    st.param.b64 [func_retval0], %fd7;
 ; NORMAL-NEXT:    ret;
   %r = frem double %a, %b
   ret double %r
@@ -122,7 +122,7 @@ define half @frem_f16_ninf(half %a, half %b) {
 ; FAST-LABEL: frem_f16_ninf(
 ; FAST:       {
 ; FAST-NEXT:    .reg .b16 %rs<4>;
-; FAST-NEXT:    .reg .f32 %f<7>;
+; FAST-NEXT:    .reg .b32 %f<7>;
 ; FAST-EMPTY:
 ; FAST-NEXT:  // %bb.0:
 ; FAST-NEXT:    ld.param.b16 %rs1, [frem_f16_ninf_param_0];
@@ -140,7 +140,7 @@ define half @frem_f16_ninf(half %a, half %b) {
 ; NORMAL-LABEL: frem_f16_ninf(
 ; NORMAL:       {
 ; NORMAL-NEXT:    .reg .b16 %rs<4>;
-; NORMAL-NEXT:    .reg .f32 %f<7>;
+; NORMAL-NEXT:    .reg .b32 %f<7>;
 ; NORMAL-EMPTY:
 ; NORMAL-NEXT:  // %bb.0:
 ; NORMAL-NEXT:    ld.param.b16 %rs1, [frem_f16_ninf_param_0];
@@ -161,30 +161,30 @@ define half @frem_f16_ninf(half %a, half %b) {
 define float @frem_f32_ninf(float %a, float %b) {
 ; FAST-LABEL: frem_f32_ninf(
 ; FAST:       {
-; FAST-NEXT:    .reg .f32 %f<7>;
+; FAST-NEXT:    .reg .b32 %f<7>;
 ; FAST-EMPTY:
 ; FAST-NEXT:  // %bb.0:
-; FAST-NEXT:    ld.param.f32 %f1, [frem_f32_ninf_param_0];
-; FAST-NEXT:    ld.param.f32 %f2, [frem_f32_ninf_param_1];
+; FAST-NEXT:    ld.param.b32 %f1, [frem_f32_ninf_param_0];
+; FAST-NEXT:    ld.param.b32 %f2, [frem_f32_ninf_param_1];
 ; FAST-NEXT:    div.approx.f32 %f3, %f1, %f2;
 ; FAST-NEXT:    cvt.rzi.f32.f32 %f4, %f3;
 ; FAST-NEXT:    neg.f32 %f5, %f4;
 ; FAST-NEXT:    fma.rn.f32 %f6, %f5, %f2, %f1;
-; FAST-NEXT:    st.param.f32 [func_retval0], %f6;
+; FAST-NEXT:    st.param.b32 [func_retval0], %f6;
 ; FAST-NEXT:    ret;
 ;
 ; NORMAL-LABEL: frem_f32_ninf(
 ; NORMAL:       {
-; NORMAL-NEXT:    .reg .f32 %f<7>;
+; NORMAL-NEXT:    .reg .b32 %f<7>;
 ; NORMAL-EMPTY:
 ; NORMAL-NEXT:  // %bb.0:
-; NORMAL-NEXT:    ld.param.f32 %f1, [frem_f32_ninf_param_0];
-; NORMAL-NEXT:    ld.param.f32 %f2, [frem_f32_ninf_param_1];
+; NORMAL-NEXT:    ld.param.b32 %f1, [frem_f32_ninf_param_0];
+; NORMAL-NEXT:    ld.param.b32 %f2, [frem_f32_ninf_param_1];
 ; NORMAL-NEXT:    div.rn.f32 %f3, %f1, %f2;
 ; NORMAL-NEXT:    cvt.rzi.f32.f32 %f4, %f3;
 ; NORMAL-NEXT:    neg.f32 %f5, %f4;
 ; NORMAL-NEXT:    fma.rn.f32 %f6, %f5, %f2, %f1;
-; NORMAL-NEXT:    st.param.f32 [func_retval0], %f6;
+; NORMAL-NEXT:    st.param.b32 [func_retval0], %f6;
 ; NORMAL-NEXT:    ret;
   %r = frem ninf float %a, %b
   ret float %r
@@ -193,30 +193,30 @@ define float @frem_f32_ninf(float %a, float %b) {
 define double @frem_f64_ninf(double %a, double %b) {
 ; FAST-LABEL: frem_f64_ninf(
 ; FAST:       {
-; FAST-NEXT:    .reg .f64 %fd<7>;
+; FAST-NEXT:    .reg .b64 %fd<7>;
 ; FAST-EMPTY:
 ; FAST-NEXT:  // %bb.0:
-; FAST-NEXT:    ld.param.f64 %fd1, [frem_f64_ninf_param_0];
-; FAST-NEXT:    ld.param.f64 %fd2, [frem_f64_ninf_param_1];
+; FAST-NEXT:    ld.param.b64 %fd1, [frem_f64_ninf_param_0];
+; FAST-NEXT:    ld.param.b64 %fd2, [frem_f64_ninf_param_1];
 ; FAST-NEXT:    div.rn.f64 %fd3, %fd1, %fd2;
 ; FAST-NEXT:    cvt.rzi.f64.f64 %fd4, %fd3;
 ; FAST-NEXT:    neg.f64 %fd5, %fd4;
 ; FAST-NEXT:    fma.rn.f64 %fd6, %fd5, %fd2, %fd1;
-; FAST-NEXT:    st.param.f64 [func_retval0], %fd6;
+; FAST-NEXT:    st.param.b64 [func_retval0], %fd6;
 ; FAST-NEXT:    ret;
 ;
 ; NORMAL-LABEL: frem_f64_ninf(
 ; NORMAL:       {
-; NORMAL-NEXT:    .reg .f64 %fd<7>;
+; NORMAL-NEXT:    .reg .b64 %fd<7>;
 ; NORMAL-EMPTY:
 ; NORMAL-NEXT:  // %bb.0:
-; NORMAL-NEXT:    ld.param.f64 %fd1, [frem_f64_ninf_param_0];
-; NORMAL-NEXT:    ld.param.f64 %fd2, [frem_f64_ninf_param_1];
+; NORMAL-NEXT:    ld.param.b64 %fd1, [frem_f64_ninf_param_0];
+; NORMAL-NEXT:    ld.param.b64 %fd2, [frem_f64_ninf_param_1];
 ; NORMAL-NEXT:    div.rn.f64 %fd3, %fd1, %fd2;
 ; NORMAL-NEXT:    cvt.rzi.f64.f64 %fd4, %fd3;
 ; NORMAL-NEXT:    neg.f64 %fd5, %fd4;
 ; NORMAL-NEXT:    fma.rn.f64 %fd6, %fd5, %fd2, %fd1;
-; NORMAL-NEXT:    st.param.f64 [func_retval0], %fd6;
+; NORMAL-NEXT:    st.param.b64 [func_retval0], %fd6;
 ; NORMAL-NEXT:    ret;
   %r = frem ninf double %a, %b
   ret double %r
@@ -225,26 +225,26 @@ define double @frem_f64_ninf(double %a, double %b) {
 define float @frem_f32_imm1(float %a) {
 ; FAST-LABEL: frem_f32_imm1(
 ; FAST:       {
-; FAST-NEXT:    .reg .f32 %f<5>;
+; FAST-NEXT:    .reg .b32 %f<5>;
 ; FAST-EMPTY:
 ; FAST-NEXT:  // %bb.0:
-; FAST-NEXT:    ld.param.f32 %f1, [frem_f32_imm1_param_0];
+; FAST-NEXT:    ld.param.b32 %f1, [frem_f32_imm1_param_0];
 ; FAST-NEXT:    mul.f32 %f2, %f1, 0f3E124925;
 ; FAST-NEXT:    cvt.rzi.f32.f32 %f3, %f2;
 ; FAST-NEXT:    fma.rn.f32 %f4, %f3, 0fC0E00000, %f1;
-; FAST-NEXT:    st.param.f32 [func_retval0], %f4;
+; FAST-NEXT:    st.param.b32 [func_retval0], %f4;
 ; FAST-NEXT:    ret;
 ;
 ; NORMAL-LABEL: frem_f32_imm1(
 ; NORMAL:       {
-; NORMAL-NEXT:    .reg .f32 %f<5>;
+; NORMAL-NEXT:    .reg .b32 %f<5>;
 ; NORMAL-EMPTY:
 ; NORMAL-NEXT:  // %bb.0:
-; NORMAL-NEXT:    ld.param.f32 %f1, [frem_f32_imm1_param_0];
+; NORMAL-NEXT:    ld.param.b32 %f1, [frem_f32_imm1_param_0];
 ; NORMAL-NEXT:    div.rn.f32 %f2, %f1, 0f40E00000;
 ; NORMAL-NEXT:    cvt.rzi.f32.f32 %f3, %f2;
 ; NORMAL-NEXT:    fma.rn.f32 %f4, %f3, 0fC0E00000, %f1;
-; NORMAL-NEXT:    st.param.f32 [func_retval0], %f4;
+; NORMAL-NEXT:    st.param.b32 [func_retval0], %f4;
 ; NORMAL-NEXT:    ret;
   %r = frem float %a, 7.0
   ret float %r
@@ -253,25 +253,25 @@ define float @frem_f32_imm1(float %a) {
 define float @frem_f32_imm2(float %a) {
 ; FAST-LABEL: frem_f32_imm2(
 ; FAST:       {
-; FAST-NEXT:    .reg .f32 %f<7>;
+; FAST-NEXT:    .reg .b32 %f<7>;
 ; FAST-EMPTY:
 ; FAST-NEXT:  // %bb.0:
-; FAST-NEXT:    ld.param.f32 %f1, [frem_f32_imm2_param_0];
+; FAST-NEXT:    ld.param.b32 %f1, [frem_f32_imm2_param_0];
 ; FAST-NEXT:    mov.b32 %f2, 0f40E00000;
 ; FAST-NEXT:    div.approx.f32 %f3, %f2, %f1;
 ; FAST-NEXT:    cvt.rzi.f32.f32 %f4, %f3;
 ; FAST-NEXT:    neg.f32 %f5, %f4;
 ; FAST-NEXT:    fma.rn.f32 %f6, %f5, %f1, 0f40E00000;
-; FAST-NEXT:    st.param.f32 [func_retval0], %f6;
+; FAST-NEXT:    st.param.b32 [func_retval0], %f6;
 ; FAST-NEXT:    ret;
 ;
 ; NORMAL-LABEL: frem_f32_imm2(
 ; NORMAL:       {
 ; NORMAL-NEXT:    .reg .pred %p<2>;
-; NORMAL-NEXT:    .reg .f32 %f<8>;
+; NORMAL-NEXT:    .reg .b32 %f<8>;
 ; NORMAL-EMPTY:
 ; NORMAL-NEXT:  // %bb.0:
-; NORMAL-NEXT:    ld.param.f32 %f1, [frem_f32_imm2_param_0];
+; NORMAL-NEXT:    ld.param.b32 %f1, [frem_f32_imm2_param_0];
 ; NORMAL-NEXT:    mov.b32 %f2, 0f40E00000;
 ; NORMAL-NEXT:    div.rn.f32 %f3, %f2, %f1;
 ; NORMAL-NEXT:    cvt.rzi.f32.f32 %f4, %f3;
@@ -279,7 +279,7 @@ define float @frem_f32_imm2(float %a) {
 ; NORMAL-NEXT:    fma.rn.f32 %f6, %f5, %f1, 0f40E00000;
 ; NORMAL-NEXT:    testp.infinite.f32 %p1, %f1;
 ; NORMAL-NEXT:    selp.f32 %f7, 0f40E00000, %f6, %p1;
-; NORMAL-NEXT:    st.param.f32 [func_retval0], %f7;
+; NORMAL-NEXT:    st.param.b32 [func_retval0], %f7;
 ; NORMAL-NEXT:    ret;
   %r = frem float 7.0, %a
   ret float %r

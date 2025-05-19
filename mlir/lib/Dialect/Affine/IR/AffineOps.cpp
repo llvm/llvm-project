@@ -305,6 +305,8 @@ bool mlir::affine::isValidDim(Value value) {
 // *) It is valid as a symbol.
 // *) It is an induction variable.
 // *) It is the result of an affine apply operation with dimension id operands.
+// *) It is the result of a more specialized index transformation (ex.
+// delinearize_index or linearize_index) with dimension id operands.
 bool mlir::affine::isValidDim(Value value, Region *region) {
   // The value must be an index type.
   if (!value.getType().isIndex())
@@ -325,6 +327,11 @@ bool mlir::affine::isValidDim(Value value, Region *region) {
   // Affine apply operation is ok if all of its operands are ok.
   if (auto applyOp = dyn_cast<AffineApplyOp>(op))
     return applyOp.isValidDim(region);
+  // delinearize_index and linearize_index are special forms of apply
+  // and so are valid dimensions if all their arguments are valid dimensions.
+  if (isa<AffineDelinearizeIndexOp, AffineLinearizeIndexOp>(op))
+    return llvm::all_of(op->getOperands(),
+                        [&](Value arg) { return ::isValidDim(arg, region); });
   // The dim op is okay if its operand memref/tensor is defined at the top
   // level.
   if (auto dimOp = dyn_cast<ShapedDimOpInterface>(op))
@@ -577,6 +584,15 @@ LogicalResult AffineApplyOp::verify() {
   // Verify that the map only produces one result.
   if (affineMap.getNumResults() != 1)
     return emitOpError("mapping must produce one value");
+
+  // Do not allow valid dims to be used in symbol positions. We do allow
+  // affine.apply to use operands for values that may neither qualify as affine
+  // dims or affine symbols due to usage outside of affine ops, analyses, etc.
+  Region *region = getAffineScope(*this);
+  for (Value operand : getMapOperands().drop_front(affineMap.getNumDims())) {
+    if (::isValidDim(operand, region) && !::isValidSymbol(operand, region))
+      return emitError("dimensional operand cannot be used as a symbol");
+  }
 
   return success();
 }
@@ -1359,10 +1375,61 @@ static void canonicalizePromotedSymbols(MapOrSet *mapOrSet,
 
   resultOperands.append(remappedSymbols.begin(), remappedSymbols.end());
   *operands = resultOperands;
-  *mapOrSet = mapOrSet->replaceDimsAndSymbols(dimRemapping, {}, nextDim,
-                                              oldNumSyms + nextSym);
+  *mapOrSet = mapOrSet->replaceDimsAndSymbols(
+      dimRemapping, /*symReplacements=*/{}, nextDim, oldNumSyms + nextSym);
 
   assert(mapOrSet->getNumInputs() == operands->size() &&
+         "map/set inputs must match number of operands");
+}
+
+/// A valid affine dimension may appear as a symbol in affine.apply operations.
+/// Given an application of `operands` to an affine map or integer set
+/// `mapOrSet`, this function canonicalizes symbols of `mapOrSet` that are valid
+/// dims, but not valid symbols into actual dims. Without such a legalization,
+/// the affine.apply will be invalid. This method is the exact inverse of
+/// canonicalizePromotedSymbols.
+template <class MapOrSet>
+static void legalizeDemotedDims(MapOrSet &mapOrSet,
+                                SmallVectorImpl<Value> &operands) {
+  if (!mapOrSet || operands.empty())
+    return;
+
+  unsigned numOperands = operands.size();
+
+  assert(mapOrSet.getNumInputs() == numOperands &&
+         "map/set inputs must match number of operands");
+
+  auto *context = mapOrSet.getContext();
+  SmallVector<Value, 8> resultOperands;
+  resultOperands.reserve(numOperands);
+  SmallVector<Value, 8> remappedDims;
+  remappedDims.reserve(numOperands);
+  SmallVector<Value, 8> symOperands;
+  symOperands.reserve(mapOrSet.getNumSymbols());
+  unsigned nextSym = 0;
+  unsigned nextDim = 0;
+  unsigned oldNumDims = mapOrSet.getNumDims();
+  SmallVector<AffineExpr, 8> symRemapping(mapOrSet.getNumSymbols());
+  resultOperands.assign(operands.begin(), operands.begin() + oldNumDims);
+  for (unsigned i = oldNumDims, e = mapOrSet.getNumInputs(); i != e; ++i) {
+    if (operands[i] && isValidDim(operands[i]) && !isValidSymbol(operands[i])) {
+      // This is a valid dim that appears as a symbol, legalize it.
+      symRemapping[i - oldNumDims] =
+          getAffineDimExpr(oldNumDims + nextDim++, context);
+      remappedDims.push_back(operands[i]);
+    } else {
+      symRemapping[i - oldNumDims] = getAffineSymbolExpr(nextSym++, context);
+      symOperands.push_back(operands[i]);
+    }
+  }
+
+  append_range(resultOperands, remappedDims);
+  append_range(resultOperands, symOperands);
+  operands = resultOperands;
+  mapOrSet = mapOrSet.replaceDimsAndSymbols(
+      /*dimReplacements=*/{}, symRemapping, oldNumDims + nextDim, nextSym);
+
+  assert(mapOrSet.getNumInputs() == operands.size() &&
          "map/set inputs must match number of operands");
 }
 
@@ -1380,6 +1447,7 @@ static void canonicalizeMapOrSetAndOperands(MapOrSet *mapOrSet,
          "map/set inputs must match number of operands");
 
   canonicalizePromotedSymbols<MapOrSet>(mapOrSet, operands);
+  legalizeDemotedDims<MapOrSet>(*mapOrSet, *operands);
 
   // Check to see what dims are used.
   llvm::SmallBitVector usedDims(mapOrSet->getNumDims());
@@ -2133,7 +2201,7 @@ static void printBound(AffineMapAttr boundMap,
     // Print bound that consists of a single SSA symbol if the map is over a
     // single symbol.
     if (map.getNumDims() == 0 && map.getNumSymbols() == 1) {
-      if (dyn_cast<AffineSymbolExpr>(expr)) {
+      if (isa<AffineSymbolExpr>(expr)) {
         p.printOperand(*boundOperands.begin());
         return;
       }
@@ -4977,8 +5045,7 @@ OpFoldResult AffineLinearizeIndexOp::fold(FoldAdaptor adaptor) {
   if (getMultiIndex().size() == 1)
     return getMultiIndex().front();
 
-  if (llvm::any_of(adaptor.getMultiIndex(),
-                   [](Attribute a) { return a == nullptr; }))
+  if (llvm::is_contained(adaptor.getMultiIndex(), nullptr))
     return nullptr;
 
   if (!adaptor.getDynamicBasis().empty())

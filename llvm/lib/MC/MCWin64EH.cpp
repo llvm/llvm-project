@@ -8,14 +8,57 @@
 
 #include "llvm/MC/MCWin64EH.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/MCValue.h"
 #include "llvm/Support/Win64EH.h"
+
 namespace llvm {
 class MCSection;
+
+/// MCExpr that represents the epilog unwind code in an unwind table.
+class MCUnwindV2EpilogTargetExpr final : public MCTargetExpr {
+  const MCSymbol *FunctionEnd;
+  const MCSymbol *UnwindV2Start;
+  const MCSymbol *EpilogEnd;
+  uint8_t EpilogSize;
+  SMLoc Loc;
+
+  MCUnwindV2EpilogTargetExpr(const WinEH::FrameInfo &FrameInfo,
+                             const WinEH::FrameInfo::Epilog &Epilog,
+                             uint8_t EpilogSize_)
+      : FunctionEnd(FrameInfo.FuncletOrFuncEnd),
+        UnwindV2Start(Epilog.UnwindV2Start), EpilogEnd(Epilog.End),
+        EpilogSize(EpilogSize_), Loc(Epilog.Loc) {}
+
+public:
+  static MCUnwindV2EpilogTargetExpr *
+  create(const WinEH::FrameInfo &FrameInfo,
+         const WinEH::FrameInfo::Epilog &Epilog, uint8_t EpilogSize_,
+         MCContext &Ctx) {
+    return new (Ctx) MCUnwindV2EpilogTargetExpr(FrameInfo, Epilog, EpilogSize_);
+  }
+
+  void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override {
+    OS << ":epilog:";
+    UnwindV2Start->print(OS, MAI);
+  }
+
+  bool evaluateAsRelocatableImpl(MCValue &Res,
+                                 const MCAssembler *Asm) const override;
+
+  void visitUsedExpr(MCStreamer &Streamer) const override {
+    // Contains no sub-expressions.
+  }
+
+  MCFragment *findAssociatedFragment() const override {
+    return UnwindV2Start->getFragment();
+  }
+};
 }
 
 using namespace llvm;
@@ -163,20 +206,91 @@ static void EmitRuntimeFunction(MCStreamer &streamer,
                                              context), 4);
 }
 
+static std::optional<int64_t>
+GetOptionalAbsDifference(const MCAssembler &Assembler, const MCSymbol *LHS,
+                         const MCSymbol *RHS) {
+  MCContext &Context = Assembler.getContext();
+  const MCExpr *Diff =
+      MCBinaryExpr::createSub(MCSymbolRefExpr::create(LHS, Context),
+                              MCSymbolRefExpr::create(RHS, Context), Context);
+  // It should normally be possible to calculate the length of a function
+  // at this point, but it might not be possible in the presence of certain
+  // unusual constructs, like an inline asm with an alignment directive.
+  int64_t value;
+  if (!Diff->evaluateAsAbsolute(value, Assembler))
+    return std::nullopt;
+  return value;
+}
+
 static void EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info) {
   // If this UNWIND_INFO already has a symbol, it's already been emitted.
   if (info->Symbol)
     return;
 
   MCContext &context = streamer.getContext();
+  MCObjectStreamer *OS = (MCObjectStreamer *)(&streamer);
   MCSymbol *Label = context.createTempSymbol();
 
   streamer.emitValueToAlignment(Align(4));
   streamer.emitLabel(Label);
   info->Symbol = Label;
 
-  // Upper 3 bits are the version number (currently 1).
-  uint8_t flags = 0x01;
+  uint8_t numCodes = CountOfUnwindCodes(info->Instructions);
+  bool LastEpilogIsAtEnd = false;
+  bool AddPaddingEpilogCode = false;
+  uint8_t EpilogSize = 0;
+  bool EnableUnwindV2 = (info->Version >= 2) && !info->EpilogMap.empty();
+  if (EnableUnwindV2) {
+    auto &LastEpilog = info->EpilogMap.back().second;
+
+    // Calculate the size of the epilogs. Note that we +1 to the size so that
+    // the terminator instruction is also included in the epilog (the Windows
+    // unwinder does a simple range check versus the current instruction pointer
+    // so, although there are terminators that are large than 1 byte, the
+    // starting address of the terminator instruction will always be considered
+    // inside the epilog).
+    auto MaybeSize = GetOptionalAbsDifference(
+        OS->getAssembler(), LastEpilog.End, LastEpilog.UnwindV2Start);
+    if (!MaybeSize) {
+      context.reportError(LastEpilog.Loc,
+                          "Failed to evaluate epilog size for Unwind v2");
+      return;
+    }
+    assert(*MaybeSize >= 0);
+    if (*MaybeSize >= (int64_t)UINT8_MAX) {
+      context.reportError(LastEpilog.Loc,
+                          "Epilog size is too large for Unwind v2");
+      return;
+    }
+    EpilogSize = *MaybeSize + 1;
+
+    // If the last epilog is at the end of the function, we can use a special
+    // encoding for it. Because of our +1 trick for the size, this will only
+    // work where that final terminator instruction is 1 byte long.
+    auto LastEpilogToFuncEnd = GetOptionalAbsDifference(
+        OS->getAssembler(), info->FuncletOrFuncEnd, LastEpilog.UnwindV2Start);
+    LastEpilogIsAtEnd = (LastEpilogToFuncEnd == EpilogSize);
+
+    // If we have an odd number of epilog codes, we need to add a padding code.
+    size_t numEpilogCodes =
+        info->EpilogMap.size() + (LastEpilogIsAtEnd ? 0 : 1);
+    if ((numEpilogCodes % 2) != 0) {
+      AddPaddingEpilogCode = true;
+      numEpilogCodes++;
+    }
+
+    // Too many epilogs to handle.
+    if ((size_t)numCodes + numEpilogCodes > UINT8_MAX) {
+      context.reportError(info->FunctionLoc,
+                          "Too many unwind codes with Unwind v2 enabled");
+      return;
+    }
+
+    numCodes += numEpilogCodes;
+  }
+
+  // Upper 3 bits are the version number.
+  uint8_t flags = info->Version;
   if (info->ChainedParent)
     flags |= Win64EH::UNW_ChainInfo << 3;
   else {
@@ -192,7 +306,6 @@ static void EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info) {
   else
     streamer.emitInt8(0);
 
-  uint8_t numCodes = CountOfUnwindCodes(info->Instructions);
   streamer.emitInt8(numCodes);
 
   uint8_t frame = 0;
@@ -202,6 +315,35 @@ static void EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info) {
     frame = (frameInst.Register & 0x0F) | (frameInst.Offset & 0xF0);
   }
   streamer.emitInt8(frame);
+
+  // Emit the epilog instructions.
+  if (EnableUnwindV2) {
+    MCDataFragment *DF = OS->getOrCreateDataFragment();
+
+    bool IsLast = true;
+    for (const auto &Epilog : llvm::reverse(info->EpilogMap)) {
+      if (IsLast) {
+        IsLast = false;
+        uint8_t Flags = LastEpilogIsAtEnd ? 0x01 : 0;
+        streamer.emitInt8(EpilogSize);
+        streamer.emitInt8((Flags << 4) | Win64EH::UOP_Epilog);
+
+        if (LastEpilogIsAtEnd)
+          continue;
+      }
+
+      // Each epilog is emitted as a fixup, since we can't measure the distance
+      // between the start of the epilog and the end of the function until
+      // layout has been completed.
+      auto *MCE = MCUnwindV2EpilogTargetExpr::create(*info, Epilog.second,
+                                                     EpilogSize, context);
+      MCFixup Fixup = MCFixup::create(DF->getContents().size(), MCE, FK_Data_2);
+      DF->getFixups().push_back(Fixup);
+      DF->appendContents(2, 0);
+    }
+  }
+  if (AddPaddingEpilogCode)
+    streamer.emitInt16(Win64EH::UOP_Epilog << 8);
 
   // Emit unwind instructions (in reverse order).
   uint8_t numInst = info->Instructions.size();
@@ -232,6 +374,39 @@ static void EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info) {
     // than 2 slots used in the unwind code array, we have to pad to 8 bytes.
     streamer.emitInt32(0);
   }
+}
+
+bool MCUnwindV2EpilogTargetExpr::evaluateAsRelocatableImpl(
+    MCValue &Res, const MCAssembler *Asm) const {
+  // Calculate the offset to this epilog, and validate it's within the allowed
+  // range.
+  auto Offset = GetOptionalAbsDifference(*Asm, FunctionEnd, UnwindV2Start);
+  if (!Offset) {
+    Asm->getContext().reportError(
+        Loc, "Failed to evaluate epilog offset for Unwind v2");
+    return false;
+  }
+  assert(*Offset > 0);
+  constexpr uint16_t MaxEpilogOffset = 0x0fff;
+  if (*Offset > MaxEpilogOffset) {
+    Asm->getContext().reportError(Loc,
+                                  "Epilog offset is too large for Unwind v2");
+    return false;
+  }
+
+  // Sanity check that all epilogs are the same size.
+  auto Size = GetOptionalAbsDifference(*Asm, EpilogEnd, UnwindV2Start);
+  if (Size != (EpilogSize - 1)) {
+    Asm->getContext().reportError(
+        Loc,
+        "Size of this epilog does not match size of last epilog in function");
+    return false;
+  }
+
+  auto HighBits = *Offset >> 8;
+  Res = MCValue::get((HighBits << 12) | (Win64EH::UOP_Epilog << 8) |
+                     (*Offset & 0xFF));
+  return true;
 }
 
 void llvm::Win64EH::UnwindEmitter::Emit(MCStreamer &Streamer) const {
@@ -276,18 +451,8 @@ static const MCExpr *GetSubDivExpr(MCStreamer &Streamer, const MCSymbol *LHS,
 static std::optional<int64_t> GetOptionalAbsDifference(MCStreamer &Streamer,
                                                        const MCSymbol *LHS,
                                                        const MCSymbol *RHS) {
-  MCContext &Context = Streamer.getContext();
-  const MCExpr *Diff =
-      MCBinaryExpr::createSub(MCSymbolRefExpr::create(LHS, Context),
-                              MCSymbolRefExpr::create(RHS, Context), Context);
   MCObjectStreamer *OS = (MCObjectStreamer *)(&Streamer);
-  // It should normally be possible to calculate the length of a function
-  // at this point, but it might not be possible in the presence of certain
-  // unusual constructs, like an inline asm with an alignment directive.
-  int64_t value;
-  if (!Diff->evaluateAsAbsolute(value, OS->getAssembler()))
-    return std::nullopt;
-  return value;
+  return GetOptionalAbsDifference(OS->getAssembler(), LHS, RHS);
 }
 
 static int64_t GetAbsDifference(MCStreamer &Streamer, const MCSymbol *LHS,
@@ -421,6 +586,9 @@ static uint32_t ARM64CountOfUnwindCodes(ArrayRef<WinEH::Instruction> Insns) {
     case Win64EH::UOP_PACSignLR:
       Count += 1;
       break;
+    case Win64EH::UOP_AllocZ:
+      Count += 2;
+      break;
     case Win64EH::UOP_SaveAnyRegI:
     case Win64EH::UOP_SaveAnyRegIP:
     case Win64EH::UOP_SaveAnyRegD:
@@ -433,6 +601,8 @@ static uint32_t ARM64CountOfUnwindCodes(ArrayRef<WinEH::Instruction> Insns) {
     case Win64EH::UOP_SaveAnyRegDPX:
     case Win64EH::UOP_SaveAnyRegQX:
     case Win64EH::UOP_SaveAnyRegQPX:
+    case Win64EH::UOP_SaveZReg:
+    case Win64EH::UOP_SavePReg:
       Count += 3;
       break;
     }
@@ -637,6 +807,37 @@ static void ARM64EmitUnwindCode(MCStreamer &streamer,
     b = inst.Register | (Writeback << 5) | (Paired << 6);
     streamer.emitInt8(b);
     b = Offset | (Mode << 6);
+    streamer.emitInt8(b);
+    break;
+  }
+  case Win64EH::UOP_AllocZ: {
+    b = 0xDF;
+    streamer.emitInt8(b);
+    b = inst.Offset;
+    streamer.emitInt8(b);
+    break;
+  }
+  case Win64EH::UOP_SaveZReg: {
+    assert(inst.Register >= 8 && inst.Register <= 23);
+    assert(inst.Offset < 256);
+    b = 0xE7;
+    streamer.emitInt8(b);
+    reg = inst.Register - 8;
+    b = ((inst.Offset & 0xC0) >> 1) | reg;
+    streamer.emitInt8(b);
+    b = 0xC0 | (inst.Offset & 0x3F);
+    streamer.emitInt8(b);
+    break;
+  }
+  case Win64EH::UOP_SavePReg: {
+    assert(inst.Register >= 4 && inst.Register <= 15);
+    assert(inst.Offset < 256);
+    b = 0xE7;
+    streamer.emitInt8(b);
+    reg = inst.Register;
+    b = ((inst.Offset & 0xC0) >> 1) | 0x10 | reg;
+    streamer.emitInt8(b);
+    b = 0xC0 | (inst.Offset & 0x3F);
     streamer.emitInt8(b);
     break;
   }
@@ -1015,6 +1216,11 @@ static bool tryARM64PackedUnwind(WinEH::FrameInfo *info, uint32_t FuncLength,
     case Win64EH::UOP_AddFP:
       // "add x29, sp, #N" doesn't show up in the canonical pattern (except for
       // N=0, which is UOP_SetFP).
+      return false;
+    case Win64EH::UOP_AllocZ:
+    case Win64EH::UOP_SaveZReg:
+    case Win64EH::UOP_SavePReg:
+      // Canonical prologues don't support spilling SVE registers.
       return false;
     case Win64EH::UOP_TrapFrame:
     case Win64EH::UOP_Context:

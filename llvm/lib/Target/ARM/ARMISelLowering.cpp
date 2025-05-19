@@ -1221,7 +1221,10 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::ROTR, VT, Expand);
   }
   setOperationAction(ISD::CTTZ,  MVT::i32, Custom);
+  // TODO: These two should be set to LibCall, but this currently breaks
+  //   the Linux kernel build. See #101786.
   setOperationAction(ISD::CTPOP, MVT::i32, Expand);
+  setOperationAction(ISD::CTPOP, MVT::i64, Expand);
   if (!Subtarget->hasV5TOps() || Subtarget->isThumb1Only()) {
     setOperationAction(ISD::CTLZ, MVT::i32, Expand);
     setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i32, LibCall);
@@ -10621,7 +10624,6 @@ SDValue ARMTargetLowering::LowerSPONENTRY(SDValue Op, SelectionDAG &DAG) const {
   MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
 
   EVT VT = getPointerTy(DAG.getDataLayout());
-  SDLoc DL(Op);
   int FI = MFI.CreateFixedObject(4, 0, false);
   return DAG.getFrameIndex(FI, VT);
 }
@@ -12450,7 +12452,6 @@ static void attachMEMCPYScratchRegs(const ARMSubtarget *Subtarget,
                                     MachineInstr &MI, const SDNode *Node) {
   bool isThumb1 = Subtarget->isThumb1Only();
 
-  DebugLoc DL = MI.getDebugLoc();
   MachineFunction *MF = MI.getParent()->getParent();
   MachineRegisterInfo &MRI = MF->getRegInfo();
   MachineInstrBuilder MIB(*MF, MI);
@@ -16316,10 +16317,10 @@ static SDValue CombineBaseUpdate(SDNode *N,
   // Try to fold with other users. Non-constant updates are considered
   // first, and constant updates are sorted to not break a sequence of
   // strided accesses (if there is any).
-  std::stable_sort(BaseUpdates.begin(), BaseUpdates.end(),
-                   [](const BaseUpdateUser &LHS, const BaseUpdateUser &RHS) {
-                     return LHS.ConstInc < RHS.ConstInc;
-                   });
+  llvm::stable_sort(BaseUpdates,
+                    [](const BaseUpdateUser &LHS, const BaseUpdateUser &RHS) {
+                      return LHS.ConstInc < RHS.ConstInc;
+                    });
   for (BaseUpdateUser &User : BaseUpdates) {
     if (TryCombineBaseUpdate(Target, User, /*SimpleConstIncOnly=*/false, DCI))
       return SDValue();
@@ -16771,7 +16772,7 @@ static SDValue PerformSplittingToNarrowingStores(StoreSDNode *St,
   // Details about the old store
   SDValue Ch = St->getChain();
   SDValue BasePtr = St->getBasePtr();
-  Align Alignment = St->getOriginalAlign();
+  Align Alignment = St->getBaseAlign();
   MachineMemOperand::Flags MMOFlags = St->getMemOperand()->getFlags();
   AAMDNodes AAInfo = St->getAAInfo();
 
@@ -16822,7 +16823,7 @@ static SDValue PerformSplittingMVETruncToNarrowingStores(StoreSDNode *St,
   // Details about the old store
   SDValue Ch = St->getChain();
   SDValue BasePtr = St->getBasePtr();
-  Align Alignment = St->getOriginalAlign();
+  Align Alignment = St->getBaseAlign();
   MachineMemOperand::Flags MMOFlags = St->getMemOperand()->getFlags();
   AAMDNodes AAInfo = St->getAAInfo();
 
@@ -16870,7 +16871,7 @@ static SDValue PerformExtractFpToIntStores(StoreSDNode *St, SelectionDAG &DAG) {
   // Create a new integer store to replace the existing floating point version.
   SDValue Ch = St->getChain();
   SDValue BasePtr = St->getBasePtr();
-  Align Alignment = St->getOriginalAlign();
+  Align Alignment = St->getBaseAlign();
   MachineMemOperand::Flags MMOFlags = St->getMemOperand()->getFlags();
   AAMDNodes AAInfo = St->getAAInfo();
   EVT NewToVT = EVT::getIntegerVT(C, VT.getSizeInBits());
@@ -16921,7 +16922,7 @@ static SDValue PerformSTORECombine(SDNode *N,
     SDValue BasePtr = St->getBasePtr();
     SDValue NewST1 = DAG.getStore(
         St->getChain(), DL, StVal.getNode()->getOperand(isBigEndian ? 1 : 0),
-        BasePtr, St->getPointerInfo(), St->getOriginalAlign(),
+        BasePtr, St->getPointerInfo(), St->getBaseAlign(),
         St->getMemOperand()->getFlags());
 
     SDValue OffsetPtr = DAG.getNode(ISD::ADD, DL, MVT::i32, BasePtr,
@@ -16929,8 +16930,7 @@ static SDValue PerformSTORECombine(SDNode *N,
     return DAG.getStore(NewST1.getValue(0), DL,
                         StVal.getNode()->getOperand(isBigEndian ? 0 : 1),
                         OffsetPtr, St->getPointerInfo().getWithOffset(4),
-                        St->getOriginalAlign(),
-                        St->getMemOperand()->getFlags());
+                        St->getBaseAlign(), St->getMemOperand()->getFlags());
   }
 
   if (StVal.getValueType() == MVT::i64 &&
@@ -17912,7 +17912,7 @@ static SDValue PerformSplittingToWideningLoad(SDNode *N, SelectionDAG &DAG) {
   // Details about the old load
   SDValue Ch = LD->getChain();
   SDValue BasePtr = LD->getBasePtr();
-  Align Alignment = LD->getOriginalAlign();
+  Align Alignment = LD->getBaseAlign();
   MachineMemOperand::Flags MMOFlags = LD->getMemOperand()->getFlags();
   AAMDNodes AAInfo = LD->getAAInfo();
 
@@ -18818,7 +18818,7 @@ static SDValue PerformSplittingMVEEXTToWideningLoad(SDNode *N,
   // Details about the old load
   SDValue Ch = LD->getChain();
   SDValue BasePtr = LD->getBasePtr();
-  Align Alignment = LD->getOriginalAlign();
+  Align Alignment = LD->getBaseAlign();
   MachineMemOperand::Flags MMOFlags = LD->getMemOperand()->getFlags();
   AAMDNodes AAInfo = LD->getAAInfo();
 
@@ -20275,9 +20275,9 @@ bool ARMTargetLowering::ExpandInlineAsm(CallInst *CI) const {
     SplitString(AsmStr, AsmPieces, " \t,");
 
     // rev $0, $1
-    if (AsmPieces.size() == 3 &&
-        AsmPieces[0] == "rev" && AsmPieces[1] == "$0" && AsmPieces[2] == "$1" &&
-        IA->getConstraintString().compare(0, 4, "=l,l") == 0) {
+    if (AsmPieces.size() == 3 && AsmPieces[0] == "rev" &&
+        AsmPieces[1] == "$0" && AsmPieces[2] == "$1" &&
+        IA->getConstraintString().starts_with("=l,l")) {
       IntegerType *Ty = dyn_cast<IntegerType>(CI->getType());
       if (Ty && Ty->getBitWidth() == 32)
         return IntrinsicLowering::LowerToByteSwap(CI);

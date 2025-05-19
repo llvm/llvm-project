@@ -521,12 +521,12 @@ Sema::ActOnCaseExpr(SourceLocation CaseLoc, ExprResult Val) {
       // constant expression of the promoted type of the switch condition.
       llvm::APSInt TempVal;
       return CheckConvertedConstantExpression(E, CondType, TempVal,
-                                              CCEK_CaseValue);
+                                              CCEKind::CaseValue);
     }
 
     ExprResult ER = E;
     if (!E->isValueDependent())
-      ER = VerifyIntegerConstantExpression(E, AllowFold);
+      ER = VerifyIntegerConstantExpression(E, AllowFoldKind::Allow);
     if (!ER.isInvalid())
       ER = DefaultLvalueConversion(ER.get());
     if (!ER.isInvalid())
@@ -714,6 +714,13 @@ bool Sema::checkMustTailAttr(const Stmt *St, const Attr &MTA) {
 
   if (!CE) {
     Diag(St->getBeginLoc(), diag::err_musttail_needs_call) << &MTA;
+    return false;
+  }
+
+  if (const FunctionDecl *CalleeDecl = CE->getDirectCallee();
+      CalleeDecl && CalleeDecl->hasAttr<NotTailCalledAttr>()) {
+    Diag(St->getBeginLoc(), diag::err_musttail_mismatch) << /*show-function-callee=*/true << CalleeDecl;
+    Diag(CalleeDecl->getLocation(), diag::note_musttail_disabled_by_not_tail_called);
     return false;
   }
 
@@ -1616,8 +1623,7 @@ Sema::ActOnFinishSwitchStmt(SourceLocation SwitchLoc, Stmt *Switch,
         EnumVals.push_back(std::make_pair(Val, EDI));
       }
       llvm::stable_sort(EnumVals, CmpEnumVals);
-      auto EI = EnumVals.begin(), EIEnd =
-        std::unique(EnumVals.begin(), EnumVals.end(), EqEnumVals);
+      auto EI = EnumVals.begin(), EIEnd = llvm::unique(EnumVals, EqEnumVals);
 
       // See which case values aren't in enum.
       for (CaseValsTy::const_iterator CI = CaseVals.begin();
@@ -1770,8 +1776,7 @@ Sema::DiagnoseAssignmentEnum(QualType DstType, QualType SrcType,
           if (EnumVals.empty())
             return;
           llvm::stable_sort(EnumVals, CmpEnumVals);
-          EnumValsTy::iterator EIend =
-              std::unique(EnumVals.begin(), EnumVals.end(), EqEnumVals);
+          EnumValsTy::iterator EIend = llvm::unique(EnumVals, EqEnumVals);
 
           // See which values aren't in the enum.
           EnumValsTy::const_iterator EI = EnumVals.begin();
@@ -3853,7 +3858,8 @@ Sema::ActOnReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
         << FSI->getFirstCoroutineStmtKeyword();
   }
 
-  CheckInvalidBuiltinCountedByRef(RetVal.get(), ReturnArgKind);
+  CheckInvalidBuiltinCountedByRef(RetVal.get(),
+                                  BuiltinCountedByRefKind::ReturnArg);
 
   StmtResult R =
       BuildReturnStmt(ReturnLoc, RetVal.get(), /*AllowRecovery=*/true);
@@ -4312,7 +4318,7 @@ StmtResult Sema::ActOnCXXTryBlock(SourceLocation TryLoc, Stmt *TryBlock,
   // Exceptions aren't allowed in CUDA device code.
   if (getLangOpts().CUDA)
     CUDA().DiagIfDeviceCode(TryLoc, diag::err_cuda_device_exceptions)
-        << "try" << llvm::to_underlying(CUDA().CurrentTarget());
+        << "try" << CUDA().CurrentTarget();
 
   if (getCurScope() && getCurScope()->isOpenMPSimdDirectiveScope())
     Diag(TryLoc, diag::err_omp_simd_region_cannot_use_stmt) << "try";

@@ -1,5 +1,7 @@
-;; Tests that extending poison results in undef.
-;; Also tests that there are redundant instructions loading 0 into argument registers for unused arguments.
+;; Tests that extending poison results in poison.
+;; Also tests that there are no redundant instructions loading 0 into argument registers for unused arguments.
+
+; REQUIRES: asserts
 
 ; REQUIRES: asserts
 
@@ -62,7 +64,7 @@ entry:
 ; CHECKISEL64-NEXT:   t7: i64 = Register $x1
 ; CHECKISEL64-NEXT:       t0: ch,glue = EntryToken
 ; CHECKISEL64-NEXT:     t6: ch,glue = callseq_start t0, TargetConstant:i64<112>, TargetConstant:i64<0>
-; CHECKISEL64-NEXT:   t11: ch,glue = CopyToReg t6, Register:i64 $x3, Constant:i64<0> 
+; CHECKISEL64-NEXT:   t11: ch,glue = CopyToReg t6, Register:i64 $x3, poison:i64
 ; CHECKISEL64-NEXT:   t13: ch,glue = CopyToReg t11, Register:i64 $x4, Constant:i64<255>, t11:1
 ; CHECKISEL64-NEXT:   t17: ch,glue = PPCISD::CALL_NOP t13, MCSymbol:i64, Register:i64 $x3, Register:i64 $x4, Register:i64 $x2, RegisterMask:Untyped, t13:1
 ; CHECKISEL64-NEXT:     t18: ch,glue = callseq_end t17, TargetConstant:i64<112>, TargetConstant:i64<0>, t17:1
@@ -72,7 +74,6 @@ entry:
 ; CHECKASM64-NEXT: # %bb.0:                                # %entry
 ; CHECKASM64-NEXT:         mflr 0
 ; CHECKASM64-NEXT:         stdu 1, -112(1)
-; CHECKASM64-NEXT:         li 3, 0
 ; CHECKASM64-NEXT:         li 4, 255
 ; CHECKASM64-NEXT:         std 0, 128(1)
 ; CHECKASM64-NEXT:         bl .bar32
@@ -104,7 +105,7 @@ entry:
 ; CHECKISEL32-NEXT:   t9: i32 = Register $r1
 ; CHECKISEL32-NEXT:       t0: ch,glue = EntryToken
 ; CHECKISEL32-NEXT:     t8: ch,glue = callseq_start t0, TargetConstant:i32<56>, TargetConstant:i32<0>
-; CHECKISEL32-NEXT:   t11: ch,glue = CopyToReg t8, Register:i32 $r3, Constant:i32<0> 
+; CHECKISEL32-NEXT:   t11: ch,glue = CopyToReg t8, Register:i32 $r3, poison:i32
 ; CHECKISEL32-NEXT:   t13: ch,glue = CopyToReg t11, Register:i32 $r4, Constant:i32<255>, t11:1
 ; CHECKISEL32-NEXT:   t17: ch,glue = PPCISD::CALL_NOP t13, MCSymbol:i32, Register:i32 $r3, Register:i32 $r4, Register:i32 $r2, RegisterMask:Untyped, t13:1
 ; CHECKISEL32-NEXT:     t18: ch,glue = callseq_end t17, TargetConstant:i32<56>, TargetConstant:i32<0>, t17:1
@@ -114,7 +115,6 @@ entry:
 ; CHECKASM32-NEXT: # %bb.0:                                # %entry
 ; CHECKASM32-NEXT:         mflr 0
 ; CHECKASM32-NEXT:         stwu 1, -64(1)
-; CHECKASM32-NEXT:         li 3, 0
 ; CHECKASM32-NEXT:         li 4, 255
 ; CHECKASM32-NEXT:         stw 0, 72(1)
 ; CHECKASM32-NEXT:         bl .bar8
@@ -128,7 +128,6 @@ entry:
 ; CHECKASM64-NEXT: # %bb.0:                                # %entry
 ; CHECKASM64-NEXT:         mflr 0
 ; CHECKASM64-NEXT:         stdu 1, -112(1)
-; CHECKASM64-NEXT:         li 3, 0
 ; CHECKASM64-NEXT:         li 4, 255
 ; CHECKASM64-NEXT:         std 0, 128(1)
 ; CHECKASM64-NEXT:         bl .bar8
@@ -143,12 +142,12 @@ entry:
 ; CHECKISEL64-NEXT:   t1: i64 = GlobalAddress<ptr @bar8> 0
 ; CHECKISEL64-NEXT:   t2: i8 = poison
 ; CHECKISEL64-NEXT:   t3: i8 = Constant<-1>
-; CHECKISEL64-NEXT:   t4: i32 = Constant<0> 
+; CHECKISEL64-NEXT:   t4: i32 = poison
 ; CHECKISEL64-NEXT:   t5: i32 = Constant<255>
 ; CHECKISEL64-NEXT:   t9: i64 = Register $x1
 ; CHECKISEL64-NEXT:       t0: ch,glue = EntryToken
 ; CHECKISEL64-NEXT:     t8: ch,glue = callseq_start t0, TargetConstant:i64<112>, TargetConstant:i64<0>
-; CHECKISEL64-NEXT:   t13: ch,glue = CopyToReg t8, Register:i64 $x3, Constant:i64<0> 
+; CHECKISEL64-NEXT:   t13: ch,glue = CopyToReg t8, Register:i64 $x3, poison:i64
 ; CHECKISEL64-NEXT:   t15: ch,glue = CopyToReg t13, Register:i64 $x4, Constant:i64<255>, t13:1
 ; CHECKISEL64-NEXT:   t19: ch,glue = PPCISD::CALL_NOP t15, MCSymbol:i64, Register:i64 $x3, Register:i64 $x4, Register:i64 $x2, RegisterMask:Untyped, t15:1
 ; CHECKISEL64-NEXT:     t20: ch,glue = callseq_end t19, TargetConstant:i64<112>, TargetConstant:i64<0>, t19:1

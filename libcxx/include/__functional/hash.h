@@ -239,7 +239,9 @@ private:
 };
 
 #if _LIBCPP_AVAILABILITY_HAS_HASH_MEMORY
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 [[__gnu__::__pure__]] _LIBCPP_EXPORTED_FROM_ABI size_t __hash_memory(_LIBCPP_NOESCAPE const void*, size_t) _NOEXCEPT;
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 #else
 _LIBCPP_HIDE_FROM_ABI inline size_t __hash_memory(const void* __ptr, size_t __size) _NOEXCEPT {
   return __murmur2_or_cityhash<size_t>()(__ptr, __size);
@@ -504,7 +506,7 @@ struct hash<long double> : public __scalar_hash<long double> {
 template <class _Tp, bool = is_enum<_Tp>::value>
 struct __enum_hash : public __unary_function<_Tp, size_t> {
   _LIBCPP_HIDE_FROM_ABI size_t operator()(_Tp __v) const _NOEXCEPT {
-    typedef typename underlying_type<_Tp>::type type;
+    using type = __underlying_type_t<_Tp>;
     return hash<type>()(static_cast<type>(__v));
   }
 };

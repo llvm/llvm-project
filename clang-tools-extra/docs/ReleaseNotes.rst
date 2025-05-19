@@ -88,6 +88,14 @@ Improvements to clang-doc
 Improvements to clang-query
 ---------------------------
 
+Improvements to include-cleaner
+-------------------------------
+- Deprecated the ``-insert`` and ``-remove`` command line options, and added
+  the ``-disable-remove`` and ``-disable-insert`` command line options as
+  replacements. The previous command line options were confusing because they
+  did not imply the default state of the option (which is inserts and removes
+  being enabled). The new options are easier to understand the semantics of.
+
 Improvements to clang-tidy
 --------------------------
 
@@ -103,6 +111,9 @@ Improvements to clang-tidy
 - Fixed bug in :program:`clang-tidy` by which `HeaderFilterRegex` did not take
   effect when passed via the `.clang-tidy` file.
 
+- Fixed bug in :program:`run_clang_tidy.py` where the program would not
+  correctly display the checks enabled by the top-level `.clang-tidy` file.
+
 New checks
 ^^^^^^^^^^
 
@@ -112,6 +123,12 @@ New checks
   Finds lambda captures and ``bind`` function calls that capture the ``this``
   pointer and store it as class members without handle the copy and move
   constructors and the assignments.
+
+- New :doc:`bugprone-misleading-setter-of-reference
+  <clang-tidy/checks/bugprone/misleading-setter-of-reference>` check.
+
+  Finds setter-like member functions that take a pointer parameter and set a
+  reference member of the same class with the pointed value.
 
 - New :doc:`bugprone-unintended-char-ostream-output
   <clang-tidy/checks/bugprone/unintended-char-ostream-output>` check.
@@ -155,6 +172,10 @@ Changes in existing checks
   <clang-tidy/checks/cert/err33-c>` check by fixing false positives when
   a function name is just prefixed with a targeted function name.
 
+- Improved :doc:`concurrency-mt-unsafe
+  <clang-tidy/checks/concurrency/mt-unsafe>` check by fixing a false positive
+  where ``strerror`` was flagged as MT-unsafe.
+
 - Improved :doc:`misc-const-correctness
   <clang-tidy/checks/misc/const-correctness>` check by adding the option
   `AllowedTypes`, that excludes specified types from const-correctness
@@ -181,6 +202,10 @@ Changes in existing checks
   <clang-tidy/checks/modernize/use-default-member-init>` check by matching
   ``constexpr`` and ``static``` values on member initialization and by detecting
   explicit casting of built-in types within member list initialization.
+
+- Improved :doc:`modernize-use-designated-initializers
+  <clang-tidy/checks/modernize/use-designated-initializers>` check by avoiding
+  diagnosing designated initializers for ``std::array`` initializations.
 
 - Improved :doc:`modernize-use-ranges
   <clang-tidy/checks/modernize/use-ranges>` check by updating suppress 

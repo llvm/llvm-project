@@ -1,5 +1,7 @@
 add_llvm_component_library(LLVMProfileData
+  DataAccessProf.cpp
   GCOV.cpp
+  IndexedMemProfData.cpp
   InstrProf.cpp
   InstrProfCorrelator.cpp
   InstrProfReader.cpp

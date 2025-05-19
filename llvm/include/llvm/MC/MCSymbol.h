@@ -257,9 +257,7 @@ public:
   }
 
   /// isUndefined - Check if this symbol undefined (i.e., implicitly defined).
-  bool isUndefined(bool SetUsed = true) const {
-    return getFragment(SetUsed) == nullptr;
-  }
+  bool isUndefined() const { return getFragment() == nullptr; }
 
   /// isAbsolute - Check if this is an absolute symbol.
   bool isAbsolute() const {
@@ -395,7 +393,7 @@ public:
     return SymbolContents == SymContentsTargetCommon;
   }
 
-  MCFragment *getFragment(bool SetUsed = true) const {
+  MCFragment *getFragment(bool SetUsed = false) const {
     if (Fragment || !isVariable() || isWeakExternal())
       return Fragment;
     // If the symbol is a non-weak alias, get information about

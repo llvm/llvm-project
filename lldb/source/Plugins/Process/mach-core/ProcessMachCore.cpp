@@ -426,6 +426,22 @@ void ProcessMachCore::LoadBinariesViaExhaustiveSearch() {
   std::vector<addr_t> dylds_found;
   std::vector<addr_t> kernels_found;
 
+  // To do an exhaustive search, we'll need to create data extractors
+  // to get correctly sized/endianness fields.  If we had a main binary
+  // already, we would have set the Target to that - so here we'll use
+  // the corefile's cputype/cpusubtype as the best guess.
+  if (!GetTarget().GetArchitecture().IsValid()) {
+    // The corefile's architecture is our best starting point.
+    ArchSpec arch(m_core_module_sp->GetArchitecture());
+    if (arch.IsValid()) {
+      LLDB_LOGF(log,
+                "ProcessMachCore::%s: Setting target ArchSpec based on "
+                "corefile mach-o cputype/cpusubtype",
+                __FUNCTION__);
+      GetTarget().SetArchitecture(arch);
+    }
+  }
+
   const size_t num_core_aranges = m_core_aranges.GetSize();
   for (size_t i = 0; i < num_core_aranges; ++i) {
     const VMRangeToFileOffset::Entry *entry = m_core_aranges.GetEntryAtIndex(i);
@@ -569,6 +585,7 @@ Status ProcessMachCore::DoLoadCore() {
     error = Status::FromErrorString("invalid core module");
     return error;
   }
+  Log *log(GetLog(LLDBLog::DynamicLoader | LLDBLog::Target));
 
   ObjectFile *core_objfile = m_core_module_sp->GetObjectFile();
   if (core_objfile == nullptr) {
@@ -578,20 +595,47 @@ Status ProcessMachCore::DoLoadCore() {
 
   SetCanJIT(false);
 
+  // If we have an executable binary in the Target already,
+  // use that to set the Target's ArchSpec.
+  //
+  // Don't initialize the ArchSpec based on the corefile's cputype/cpusubtype
+  // here, the corefile creator may not know the correct subtype of the code
+  // that is executing, initialize the Target to that, and if the
+  // main binary has Python code which initializes based on the Target arch,
+  // get the wrong subtype value.
+  ModuleSP exe_module_sp = GetTarget().GetExecutableModule();
+  if (exe_module_sp && exe_module_sp->GetArchitecture().IsValid()) {
+    LLDB_LOGF(log,
+              "ProcessMachCore::%s: Was given binary + corefile, setting "
+              "target ArchSpec to binary to start",
+              __FUNCTION__);
+    GetTarget().SetArchitecture(exe_module_sp->GetArchitecture());
+  }
+
   CreateMemoryRegions();
 
   LoadBinariesAndSetDYLD();
 
   CleanupMemoryRegionPermissions();
 
-  ModuleSP exe_module_sp = GetTarget().GetExecutableModule();
+  exe_module_sp = GetTarget().GetExecutableModule();
   if (exe_module_sp && exe_module_sp->GetArchitecture().IsValid()) {
+    LLDB_LOGF(log,
+              "ProcessMachCore::%s: have executable binary in the Target "
+              "after metadata/scan.  Setting Target's ArchSpec based on "
+              "that.",
+              __FUNCTION__);
     GetTarget().SetArchitecture(exe_module_sp->GetArchitecture());
   } else {
     // The corefile's architecture is our best starting point.
     ArchSpec arch(m_core_module_sp->GetArchitecture());
-    if (arch.IsValid())
+    if (arch.IsValid()) {
+      LLDB_LOGF(log,
+                "ProcessMachCore::%s: Setting target ArchSpec based on "
+                "corefile mach-o cputype/cpusubtype",
+                __FUNCTION__);
       GetTarget().SetArchitecture(arch);
+    }
   }
 
   AddressableBits addressable_bits = core_objfile->GetAddressableBits();

@@ -216,6 +216,8 @@ def ROCDL_BlockIdXOp : ROCDL_SpecialIdRegisterOp<"workgroup.id.x">;
 def ROCDL_BlockIdYOp : ROCDL_SpecialIdRegisterOp<"workgroup.id.y">;
 def ROCDL_BlockIdZOp : ROCDL_SpecialIdRegisterOp<"workgroup.id.z">;
 
+def ROCDL_WavefrontSizeOp : ROCDL_SpecialIdRegisterOp<"wavefrontsize">;
+
 //===----------------------------------------------------------------------===//
 // Thread range and Block range
 //===----------------------------------------------------------------------===//
@@ -444,17 +446,40 @@ def ROCDL_ds_read_tr6_b96 : ROCDL_LDS_Read_Tr_IntrOp<"ds.read.tr6.b96">;
 def ROCDL_ds_read_tr16_b64 : ROCDL_LDS_Read_Tr_IntrOp<"ds.read.tr16.b64">;
 
 //===---------------------------------------------------------------------===//
-// Global load to LDS intrinsic (available in GFX950)
+// Load to LDS intrinsic (available in GFX9 and GFX10)
+//===---------------------------------------------------------------------===//
+
+def ROCDL_LoadToLDSOp :
+  ROCDL_IntrOp<"load.to.lds", [], [0], [], 0, 0, 1, [2, 3, 4], ["size", "offset", "aux"]> {
+  dag args = (ins Arg<LLVM_AnyPointer, "", [MemRead]>:$globalPtr,
+                 Arg<ROCDLBufferLDS, "", [MemWrite]>:$ldsPtr,
+                 I32Attr:$size,
+                 I32Attr:$offset,
+                 I32Attr:$aux);
+  let arguments = !con(args, aliasAttrs);
+  let assemblyFormat = [{
+    $globalPtr `,`  $ldsPtr `,` $size `,` $offset `,` $aux
+    attr-dict `:` type($globalPtr)
+  }];
+  let extraClassDefinition = [{
+    ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
+      return {getGlobalPtr(), getLdsPtr()};
+    }
+  }];
+}
 
 def ROCDL_GlobalLoadLDSOp :
-  ROCDL_IntrOp<"global.load.lds", [], [], [], 0, 0, 1> {
+  ROCDL_IntrOp<"global.load.lds", [], [], [], 0, 0, 1, [2, 3, 4], ["size", "offset", "aux"]> {
   dag args = (ins Arg<ROCDLGlobalBuffer, "", [MemRead]>:$globalPtr,
                  Arg<ROCDLBufferLDS, "", [MemWrite]>:$ldsPtr,
-                 I32:$size,
-                 I32:$offset,
-                 I32:$aux);
+                 I32Attr:$size,
+                 I32Attr:$offset,
+                 I32Attr:$aux);
   let arguments = !con(args, aliasAttrs);
-  let assemblyFormat = "operands attr-dict";
+  let assemblyFormat = [{
+    $globalPtr `,`  $ldsPtr `,` $size `,` $offset `,` $aux
+    attr-dict
+  }];
   let extraClassDefinition = [{
     ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
       return {getGlobalPtr(), getLdsPtr()};
@@ -665,6 +690,22 @@ def ROCDL_DPPUpdateOp : ROCDL_IntrOp<"update.dpp", [], [0],
   let results = (outs LLVM_Type:$res);
   let assemblyFormat = [{
     attr-dict $old `,` $src `with` $dppCtrl `,` $rowMask `,` $bankMask `,` $boundCtrl `:` type($src)
+  }];
+}
+
+// PermLaneX16 intrinsic operation
+def ROCDL_PermlaneX16Op : ROCDL_IntrOp<"permlanex16", [], [0],
+    [AllTypesMatch<["res", "old", "src0"]>, AllTypesMatch<["src1", "src2"]>], 1, 0, 0,
+    [4, 5], ["fi", "boundControl"]>,
+  Arguments<(ins LLVM_Type:$old, LLVM_Type:$src0, LLVM_Type:$src1, LLVM_Type:$src2,
+             I1Attr:$fi, I1Attr:$boundControl)> {
+  let results = (outs LLVM_Type:$res);
+  let assemblyFormat = [{
+    attr-dict $old `,` $src0 `,` $src1 `,` $src2 `,` $fi `,` $boundControl `:` type($src0) `,` type($src1)
+  }];
+  let description = [{
+    Performs a `permlanex16` operation with the given operands, applying the
+    permutation specified by $fi to the provided inputs.
   }];
 }
 

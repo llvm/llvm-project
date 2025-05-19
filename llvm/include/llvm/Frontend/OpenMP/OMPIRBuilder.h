@@ -686,6 +686,16 @@ public:
                                     Value *IfCondition,
                                     omp::Directive CanceledDirective);
 
+  /// Generator for '#omp cancellation point'
+  ///
+  /// \param Loc The location where the directive was encountered.
+  /// \param CanceledDirective The kind of directive that is cancled.
+  ///
+  /// \returns The insertion point after the barrier.
+  InsertPointOrErrorTy
+  createCancellationPoint(const LocationDescription &Loc,
+                          omp::Directive CanceledDirective);
+
   /// Generator for '#omp parallel'
   ///
   /// \param Loc The insert and source location description.
@@ -3072,7 +3082,7 @@ public:
       TargetBodyGenCallbackTy BodyGenCB,
       TargetGenArgAccessorsCallbackTy ArgAccessorFuncCB,
       CustomMapperCallbackTy CustomMapperCB,
-      SmallVector<DependData> Dependencies = {}, bool HasNowait = false);
+      const SmallVector<DependData> &Dependencies, bool HasNowait = false);
 
   /// Returns __kmpc_for_static_init_* runtime function for the specified
   /// size \a IVSize and sign \a IVSigned. Will create a distribute call
@@ -3285,11 +3295,12 @@ public:
   /// \param Expr		The value to store.
   /// \param AO			Atomic ordering of the generated atomic
   ///               instructions.
+  /// \param AllocaIP           Insert point for allocas
   ///
   /// \return Insertion point after generated atomic Write IR.
   InsertPointTy createAtomicWrite(const LocationDescription &Loc,
                                   AtomicOpValue &X, Value *Expr,
-                                  AtomicOrdering AO);
+                                  AtomicOrdering AO, InsertPointTy AllocaIP);
 
   /// Emit atomic update for constructs: X = X BinOp Expr ,or X = Expr BinOp X
   /// For complex Operations: X = UpdateOp(X) => CmpExch X, old_X, UpdateOp(X)

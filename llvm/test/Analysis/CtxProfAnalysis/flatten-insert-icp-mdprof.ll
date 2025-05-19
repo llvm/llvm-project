@@ -11,7 +11,7 @@
 ; PRELINK-NEXT: call void %p(), !prof ![[VPPROF:[0-9]+]]
 ; PRELINK-NEXT: call void @llvm.instrprof.callsite(ptr @foo, i64 1234, i32 2, i32 1, ptr @bar)
 ; PRELINK-NEXT: call void @bar(){{$}}
-; PRELINK:      ![[VPPROF]] = !{!"VP", i32 0, i64 5, i64 5678, i64 4, i64 5555, i64 1}
+; PRELINK:      ![[VPPROF]] = !{!"VP", i32 0, i64 25, i64 5678, i64 20, i64 5555, i64 5}
 
 ; RUN: cp %t/example.ll %t/1234.ll
 ; RUN: opt -passes=ctx-prof-flatten %t/1234.ll -use-ctx-profile=%t/profile.ctxprofdata \

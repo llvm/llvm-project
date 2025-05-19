@@ -325,6 +325,7 @@ ConstantFoldCountZeros(Register Src, const MachineRegisterInfo &MRI,
 
 std::optional<SmallVector<APInt>>
 ConstantFoldICmp(unsigned Pred, const Register Op1, const Register Op2,
+                 unsigned DstScalarSizeInBits, unsigned ExtOp,
                  const MachineRegisterInfo &MRI);
 
 /// Test if the given value is known to have exactly one bit set. This differs

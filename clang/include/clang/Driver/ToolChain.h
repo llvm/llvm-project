@@ -226,6 +226,9 @@ protected:
 
   /// \name Utilities for implementing subclasses.
   ///@{
+  static void addSystemFrameworkInclude(const llvm::opt::ArgList &DriverArgs,
+                                        llvm::opt::ArgStringList &CC1Args,
+                                        const Twine &Path);
   static void addSystemInclude(const llvm::opt::ArgList &DriverArgs,
                                llvm::opt::ArgStringList &CC1Args,
                                const Twine &Path);
@@ -236,6 +239,9 @@ protected:
       addExternCSystemIncludeIfExists(const llvm::opt::ArgList &DriverArgs,
                                       llvm::opt::ArgStringList &CC1Args,
                                       const Twine &Path);
+  static void addSystemFrameworkIncludes(const llvm::opt::ArgList &DriverArgs,
+                                         llvm::opt::ArgStringList &CC1Args,
+                                         ArrayRef<StringRef> Paths);
   static void addSystemIncludes(const llvm::opt::ArgList &DriverArgs,
                                 llvm::opt::ArgStringList &CC1Args,
                                 ArrayRef<StringRef> Paths);
@@ -520,6 +526,10 @@ public:
   virtual void
   addFortranRuntimeLibraryPath(const llvm::opt::ArgList &Args,
                                llvm::opt::ArgStringList &CmdArgs) const;
+
+  /// Add the path for libflang_rt.runtime.a
+  void addFlangRTLibPath(const llvm::opt::ArgList &Args,
+                         llvm::opt::ArgStringList &CmdArgs) const;
 
   const char *getCompilerRTArgString(const llvm::opt::ArgList &Args,
                                      StringRef Component,

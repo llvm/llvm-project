@@ -842,6 +842,10 @@ TEST(IOApiTests, FormatIntegerValues) {
       {"(G0.2)", -1, "-1"},
       {"(G0.2)", 999, "999"},
       {"(G0.4)", 999, "999"},
+      {"(I)", 999, "999"},
+      {"(G)", 999, "999"},
+      {"('x',I)", 999, "x 999"},
+      {"('x',G)", 999, "x 999"},
   };
 
   for (auto const &[fmt, value, expect] : intTestCases) {

@@ -659,15 +659,26 @@ template <> struct ScalarEnumerationTraits<FormatStyle::ShortLambdaStyle> {
   }
 };
 
-template <> struct ScalarEnumerationTraits<FormatStyle::SortIncludesOptions> {
-  static void enumeration(IO &IO, FormatStyle::SortIncludesOptions &Value) {
-    IO.enumCase(Value, "Never", FormatStyle::SI_Never);
-    IO.enumCase(Value, "CaseInsensitive", FormatStyle::SI_CaseInsensitive);
-    IO.enumCase(Value, "CaseSensitive", FormatStyle::SI_CaseSensitive);
+template <> struct MappingTraits<FormatStyle::SortIncludesOptions> {
+  static void enumInput(IO &IO, FormatStyle::SortIncludesOptions &Value) {
+    IO.enumCase(Value, "Never", FormatStyle::SortIncludesOptions({}));
+    IO.enumCase(Value, "CaseInsensitive",
+                FormatStyle::SortIncludesOptions({/*Enabled=*/true,
+                                                  /*IgnoreCase=*/true}));
+    IO.enumCase(Value, "CaseSensitive",
+                FormatStyle::SortIncludesOptions({/*Enabled=*/true,
+                                                  /*IgnoreCase=*/false}));
 
     // For backward compatibility.
-    IO.enumCase(Value, "false", FormatStyle::SI_Never);
-    IO.enumCase(Value, "true", FormatStyle::SI_CaseSensitive);
+    IO.enumCase(Value, "false", FormatStyle::SortIncludesOptions({}));
+    IO.enumCase(Value, "true",
+                FormatStyle::SortIncludesOptions({/*Enabled=*/true,
+                                                  /*IgnoreCase=*/false}));
+  }
+
+  static void mapping(IO &IO, FormatStyle::SortIncludesOptions &Value) {
+    IO.mapOptional("Enabled", Value.Enabled);
+    IO.mapOptional("IgnoreCase", Value.IgnoreCase);
   }
 };
 
@@ -1100,6 +1111,7 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("ObjCSpaceAfterProperty", Style.ObjCSpaceAfterProperty);
     IO.mapOptional("ObjCSpaceBeforeProtocolList",
                    Style.ObjCSpaceBeforeProtocolList);
+    IO.mapOptional("OneLineFormatOffRegex", Style.OneLineFormatOffRegex);
     IO.mapOptional("PackConstructorInitializers",
                    Style.PackConstructorInitializers);
     IO.mapOptional("PenaltyBreakAssignment", Style.PenaltyBreakAssignment);
@@ -1151,6 +1163,8 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("SortUsingDeclarations", Style.SortUsingDeclarations);
     IO.mapOptional("SpaceAfterCStyleCast", Style.SpaceAfterCStyleCast);
     IO.mapOptional("SpaceAfterLogicalNot", Style.SpaceAfterLogicalNot);
+    IO.mapOptional("SpaceAfterOperatorKeyword",
+                   Style.SpaceAfterOperatorKeyword);
     IO.mapOptional("SpaceAfterTemplateKeyword",
                    Style.SpaceAfterTemplateKeyword);
     IO.mapOptional("SpaceAroundPointerQualifiers",
@@ -1435,7 +1449,7 @@ static void expandPresetsBraceWrapping(FormatStyle &Expanded) {
         /*AfterExternBlock=*/true,
         /*BeforeCatch=*/true,
         /*BeforeElse=*/true,
-        /*BeforeLambdaBody=*/false,
+        /*BeforeLambdaBody=*/true,
         /*BeforeWhile=*/true,
         /*IndentBraces=*/true,
         /*SplitEmptyFunction=*/true,
@@ -1633,11 +1647,12 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.SeparateDefinitionBlocks = FormatStyle::SDS_Leave;
   LLVMStyle.ShortNamespaceLines = 1;
   LLVMStyle.SkipMacroDefinitionBody = false;
-  LLVMStyle.SortIncludes = FormatStyle::SI_CaseSensitive;
+  LLVMStyle.SortIncludes = {/*Enabled=*/true, /*IgnoreCase=*/false};
   LLVMStyle.SortJavaStaticImport = FormatStyle::SJSIO_Before;
   LLVMStyle.SortUsingDeclarations = FormatStyle::SUD_LexicographicNumeric;
   LLVMStyle.SpaceAfterCStyleCast = false;
   LLVMStyle.SpaceAfterLogicalNot = false;
+  LLVMStyle.SpaceAfterOperatorKeyword = false;
   LLVMStyle.SpaceAfterTemplateKeyword = true;
   LLVMStyle.SpaceAroundPointerQualifiers = FormatStyle::SAPQ_Default;
   LLVMStyle.SpaceBeforeAssignmentOperators = true;
@@ -1897,7 +1912,6 @@ FormatStyle getChromiumStyle(FormatStyle::LanguageKind Language) {
         "java",
         "javax",
     };
-    ChromiumStyle.SortIncludes = FormatStyle::SI_CaseSensitive;
   } else if (Language == FormatStyle::LK_JavaScript) {
     ChromiumStyle.AllowShortIfStatementsOnASingleLine = FormatStyle::SIS_Never;
     ChromiumStyle.AllowShortLoopsOnASingleLine = false;
@@ -2025,7 +2039,7 @@ FormatStyle getClangFormatStyle() {
 FormatStyle getNoStyle() {
   FormatStyle NoStyle = getLLVMStyle();
   NoStyle.DisableFormat = true;
-  NoStyle.SortIncludes = FormatStyle::SI_Never;
+  NoStyle.SortIncludes = {};
   NoStyle.SortUsingDeclarations = FormatStyle::SUD_Never;
   return NoStyle;
 }
@@ -2427,19 +2441,23 @@ public:
 private:
   void editEnumTrailingComma(SmallVectorImpl<AnnotatedLine *> &Lines,
                              tooling::Replacements &Result) {
+    bool InEnumBraces = false;
+    const FormatToken *BeforeRBrace = nullptr;
     const auto &SourceMgr = Env.getSourceManager();
     for (auto *Line : Lines) {
       if (!Line->Children.empty())
         editEnumTrailingComma(Line->Children, Result);
-      if (!Line->Affected)
-        continue;
       for (const auto *Token = Line->First; Token && !Token->Finalized;
            Token = Token->Next) {
-        if (Token->isNot(TT_EnumRBrace))
+        if (Token->isNot(TT_EnumRBrace)) {
+          if (Token->is(TT_EnumLBrace))
+            InEnumBraces = true;
+          else if (InEnumBraces && Token->isNot(tok::comment))
+            BeforeRBrace = Line->Affected ? Token : nullptr;
           continue;
-        const auto *BeforeRBrace = Token->getPreviousNonComment();
-        assert(BeforeRBrace);
-        if (BeforeRBrace->is(TT_EnumLBrace)) // Empty braces.
+        }
+        InEnumBraces = false;
+        if (!BeforeRBrace) // Empty braces or Line not affected.
           continue;
         if (BeforeRBrace->is(tok::comma)) {
           if (Style.EnumTrailingComma == FormatStyle::ETC_Remove)
@@ -2448,6 +2466,7 @@ private:
           cantFail(Result.add(tooling::Replacement(
               SourceMgr, BeforeRBrace->Tok.getEndLoc(), 0, ",")));
         }
+        BeforeRBrace = nullptr;
       }
     }
   }
@@ -3082,9 +3101,8 @@ private:
               FormatTok->isOneOf(tok::numeric_constant, tok::l_square,
                                  tok::l_brace))) ||
             (FormatTok->Tok.isAnyIdentifier() &&
-             std::binary_search(std::begin(FoundationIdentifiers),
-                                std::end(FoundationIdentifiers),
-                                FormatTok->TokenText)) ||
+             llvm::binary_search(FoundationIdentifiers,
+                                 FormatTok->TokenText)) ||
             FormatTok->is(TT_ObjCStringLiteral) ||
             FormatTok->isOneOf(Keywords.kw_NS_CLOSED_ENUM, Keywords.kw_NS_ENUM,
                                Keywords.kw_NS_ERROR_ENUM,
@@ -3212,7 +3230,7 @@ static void sortCppIncludes(const FormatStyle &Style,
   SmallVector<unsigned, 16> Indices =
       llvm::to_vector<16>(llvm::seq<unsigned>(0, Includes.size()));
 
-  if (Style.SortIncludes == FormatStyle::SI_CaseInsensitive) {
+  if (Style.SortIncludes.Enabled && Style.SortIncludes.IgnoreCase) {
     stable_sort(Indices, [&](unsigned LHSI, unsigned RHSI) {
       const auto LHSFilenameLower = Includes[LHSI].Filename.lower();
       const auto RHSFilenameLower = Includes[RHSI].Filename.lower();
@@ -3239,11 +3257,11 @@ static void sortCppIncludes(const FormatStyle &Style,
   }
 
   // Deduplicate #includes.
-  Indices.erase(std::unique(Indices.begin(), Indices.end(),
-                            [&](unsigned LHSI, unsigned RHSI) {
-                              return Includes[LHSI].Text.trim() ==
-                                     Includes[RHSI].Text.trim();
-                            }),
+  Indices.erase(llvm::unique(Indices,
+                             [&](unsigned LHSI, unsigned RHSI) {
+                               return Includes[LHSI].Text.trim() ==
+                                      Includes[RHSI].Text.trim();
+                             }),
                 Indices.end());
 
   int CurrentCategory = Includes.front().Category;
@@ -3471,10 +3489,10 @@ static void sortJavaImports(const FormatStyle &Style,
   });
 
   // Deduplicate imports.
-  Indices.erase(std::unique(Indices.begin(), Indices.end(),
-                            [&](unsigned LHSI, unsigned RHSI) {
-                              return Imports[LHSI].Text == Imports[RHSI].Text;
-                            }),
+  Indices.erase(llvm::unique(Indices,
+                             [&](unsigned LHSI, unsigned RHSI) {
+                               return Imports[LHSI].Text == Imports[RHSI].Text;
+                             }),
                 Indices.end());
 
   bool CurrentIsStatic = Imports[Indices.front()].IsStatic;
@@ -3587,17 +3605,16 @@ tooling::Replacements sortIncludes(const FormatStyle &Style, StringRef Code,
                                    ArrayRef<tooling::Range> Ranges,
                                    StringRef FileName, unsigned *Cursor) {
   tooling::Replacements Replaces;
-  if (!Style.SortIncludes || Style.DisableFormat)
+  if (!Style.SortIncludes.Enabled || Style.DisableFormat)
     return Replaces;
   if (isLikelyXml(Code))
     return Replaces;
-  if (Style.Language == FormatStyle::LanguageKind::LK_JavaScript &&
-      isMpegTS(Code)) {
-    return Replaces;
-  }
-  if (Style.Language == FormatStyle::LanguageKind::LK_JavaScript)
+  if (Style.isJavaScript()) {
+    if (isMpegTS(Code))
+      return Replaces;
     return sortJavaScriptImports(Style, Code, Ranges, FileName);
-  if (Style.Language == FormatStyle::LanguageKind::LK_Java)
+  }
+  if (Style.isJava())
     return sortJavaImports(Style, Code, Ranges, FileName, Replaces);
   if (Style.isCpp())
     sortCppIncludes(Style, Code, Ranges, FileName, Replaces, Cursor);
@@ -3777,7 +3794,7 @@ reformat(const FormatStyle &Style, StringRef Code,
     return {tooling::Replacements(), 0};
   if (isLikelyXml(Code))
     return {tooling::Replacements(), 0};
-  if (Expanded.Language == FormatStyle::LK_JavaScript && isMpegTS(Code))
+  if (Expanded.isJavaScript() && isMpegTS(Code))
     return {tooling::Replacements(), 0};
 
   // JSON only needs the formatting passing.

@@ -105,7 +105,8 @@ let Predicates = [FeatureVector] in {
 
 let Predicates = [FeatureVector] in {
   // Load.
-  defm VL : UnaryVRXAlign<"vl", 0xE706>;
+  let SimpleBDXLoad = 1 in
+      defm VL : UnaryVRXAlign<"vl", 0xE706>;
 
   // Load to block boundary.  The number of loaded bytes is only known
   // at run time.  The instruction is really polymorphic, but v128b matches
@@ -141,7 +142,8 @@ let Predicates = [FeatureVector] in {
   // LEY and LDY offer full 20-bit displacement fields.  It's often better
   // to use those instructions rather than force a 20-bit displacement
   // into a GPR temporary.
-  let mayLoad = 1, canFoldAsLoad = 1 in {
+  let mayLoad = 1, SimpleBDXLoad = 1, canFoldAsLoad = 1 in {
+    def VL16 : UnaryAliasVRX<z_load, v16hb, bdxaddr12pair>;
     def VL32 : UnaryAliasVRX<z_load, v32sb, bdxaddr12pair>;
     def VL64 : UnaryAliasVRX<z_load, v64db, bdxaddr12pair>;
   }
@@ -213,7 +215,8 @@ defm : ReplicatePeephole<VLREPG, v2f64, z_load, f64>;
 
 let Predicates = [FeatureVector] in {
   // Store.
-  defm VST : StoreVRXAlign<"vst", 0xE70E>;
+  let SimpleBDXStore = 1 in
+      defm VST : StoreVRXAlign<"vst", 0xE70E>;
 
   // Store with length.  The number of stored bytes is only known at run time.
   def VSTL : StoreLengthVRSb<"vstl", 0xE73F, int_s390_vstl, 0>;
@@ -237,7 +240,8 @@ let Predicates = [FeatureVector] in {
   // STEY and STDY offer full 20-bit displacement fields.  It's often better
   // to use those instructions rather than force a 20-bit displacement
   // into a GPR temporary.
-  let mayStore = 1 in {
+  let mayStore = 1, SimpleBDXStore = 1 in {
+    def VST16 : StoreAliasVRX<store, v16hb, bdxaddr12pair>;
     def VST32 : StoreAliasVRX<store, v32sb, bdxaddr12pair>;
     def VST64 : StoreAliasVRX<store, v64db, bdxaddr12pair>;
   }
@@ -2206,6 +2210,8 @@ let Predicates = [FeatureVector] in {
   def : Pat<(f32 (bitconvert (i32 GR32:$src))), (LEFR GR32:$src)>;
   def : Pat<(i32 (bitconvert (f32 VR32:$src))),
             (EXTRACT_SUBREG (LFER VR32:$src), subreg_l32)>;
+  def LEFR_16 : UnaryAliasVRS<VR16, GR32>;
+  def LFER_16 : UnaryAliasVRS<GR32, VR16>;
 }
 
 // Floating-point values are stored in element 0 of the corresponding

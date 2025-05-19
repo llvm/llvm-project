@@ -500,13 +500,13 @@ static void emitDWOBuilder(const std::string &DWOName,
          SplitCU.getContext().dwo_info_section_units()) {
       if (!CU->isTypeUnit())
         continue;
-      emitUnit(DWODIEBuilder, *Streamer, *CU.get());
+      emitUnit(DWODIEBuilder, *Streamer, *CU);
     }
     emitUnit(DWODIEBuilder, *Streamer, SplitCU);
   } else {
     for (std::unique_ptr<llvm::DWARFUnit> &CU :
          SplitCU.getContext().dwo_compile_units())
-      emitUnit(DWODIEBuilder, *Streamer, *CU.get());
+      emitUnit(DWODIEBuilder, *Streamer, *CU);
 
     // emit debug_types sections for dwarf4
     for (DWARFUnit *CU : DWODIEBuilder.getDWARF4TUVector())
@@ -685,8 +685,8 @@ void DWARFRewriter::updateDebugInfo() {
     DebugLocWriter &DebugLocWriter =
         *LocListWritersByCU[LocListWritersIndexByCU[Unit.getOffset()]].get();
     DebugRangesSectionWriter &RangesSectionWriter =
-        Unit.getVersion() >= 5 ? *RangeListsSectionWriter.get()
-                               : *LegacyRangesSectionWriter.get();
+        Unit.getVersion() >= 5 ? *RangeListsSectionWriter
+                               : *LegacyRangesSectionWriter;
     DebugAddrWriter &AddressWriter =
         *AddressWritersByCU[Unit.getOffset()].get();
     if (Unit.getVersion() >= 5)
@@ -698,7 +698,7 @@ void DWARFRewriter::updateDebugInfo() {
       if (!SplitCU)
         StrOffstsWriter->finalizeSection(Unit, DIEBlder);
     } else if (SplitCU) {
-      RangesBase = LegacyRangesSectionWriter.get()->getSectionOffset();
+      RangesBase = LegacyRangesSectionWriter->getSectionOffset();
     }
 
     updateUnitDebugInfo(Unit, DIEBlder, DebugLocWriter, RangesSectionWriter,
@@ -750,7 +750,7 @@ void DWARFRewriter::updateDebugInfo() {
       auto DWODIEBuilderPtr = std::make_unique<DIEBuilder>(
           BC, &(**SplitCU).getContext(), DebugNamesTable, CU);
       DIEBuilder &DWODIEBuilder =
-          *DWODIEBuildersByCU.emplace_back(std::move(DWODIEBuilderPtr)).get();
+          *DWODIEBuildersByCU.emplace_back(std::move(DWODIEBuilderPtr));
       if (CU->getVersion() >= 5)
         StrOffstsWriter->finalizeSection(*CU, DIEBlder);
       // Important to capture CU and SplitCU by value here, otherwise when the
@@ -1403,7 +1403,7 @@ void DWARFRewriter::updateLineTableOffsets(const MCAssembler &Asm) {
       continue;
 
     std::optional<uint64_t> StmtOffset =
-        GetStatementListValue(CU.get()->getUnitDIE());
+        GetStatementListValue(CU->getUnitDIE());
     if (!StmtOffset)
       continue;
 
@@ -1479,13 +1479,13 @@ CUOffsetMap DWARFRewriter::finalizeTypeSections(DIEBuilder &DIEBlder,
   for (std::unique_ptr<llvm::DWARFUnit> &CU : BC.DwCtx->info_section_units()) {
     if (!CU->isTypeUnit())
       continue;
-    updateLineTable(*CU.get());
-    emitUnit(DIEBlder, Streamer, *CU.get());
+    updateLineTable(*CU);
+    emitUnit(DIEBlder, Streamer, *CU);
     uint32_t StartOffset = CUOffset;
-    DIE *UnitDIE = DIEBlder.getUnitDIEbyUnit(*CU.get());
-    CUOffset += CU.get()->getHeaderSize();
+    DIE *UnitDIE = DIEBlder.getUnitDIEbyUnit(*CU);
+    CUOffset += CU->getHeaderSize();
     CUOffset += UnitDIE->getSize();
-    CUMap[CU.get()->getOffset()] = {StartOffset, CUOffset - StartOffset - 4};
+    CUMap[CU->getOffset()] = {StartOffset, CUOffset - StartOffset - 4};
   }
 
   // Emit Type Unit of DWARF 4 to .debug_type section
