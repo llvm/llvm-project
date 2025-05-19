@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "DataAccessPerfReader.h"
 #include "ErrorHandling.h"
 #include "PerfReader.h"
 #include "ProfileGenerator.h"
@@ -20,6 +21,13 @@
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/VirtualFileSystem.h"
+
+namespace {
+enum ProfileKinds {
+  SamplePGO,
+  DataAccessProfile,
+};
+} // namespace
 
 static cl::OptionCategory ProfGenCategory("ProfGen Options");
 
@@ -65,6 +73,11 @@ static cl::opt<std::string> DebugBinPath(
     "debug-binary", cl::value_desc("debug-binary"),
     cl::desc("Path of debug info binary, llvm-profgen will load the DWARF info "
              "from it instead of the executable binary."),
+    cl::cat(ProfGenCategory));
+
+static cl::opt<std::string> DataAccessProfileFilename(
+    "data-access-profile", cl::value_desc("data-access-profile"),
+    cl::desc("Path of the data access profile to be generated."),
     cl::cat(ProfGenCategory));
 
 extern cl::opt<bool> ShowDisassemblyOnly;
@@ -185,6 +198,17 @@ int main(int argc, const char *argv[]) {
     std::unique_ptr<ProfileGeneratorBase> Generator =
         ProfileGeneratorBase::create(Binary.get(), &Reader->getSampleCounters(),
                                      Reader->profileIsCS());
+    assert(Binary.get() &&
+           "Binary should be initialized for data access profile");
+
+    // data access profile.
+    auto DAPReader = std::make_unique<DataAccessPerfReader>(
+        Binary.get(), DataAccessProfileFilename, PIDFilter);
+    DAPReader->parsePerfTraces();
+
+    DAPReader->print();
+    // Create a dap profile reader, set it to profile generator, and generate
+    // the profile.
     Generator->generateProfile();
     Generator->write();
   }

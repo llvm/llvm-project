@@ -18,6 +18,7 @@ set(LLVM_LINK_COMPONENTS
 add_llvm_tool(llvm-profgen
   llvm-profgen.cpp
   PerfReader.cpp
+  DataAccessPerfReader.cpp
   CSPreInliner.cpp
   ProfiledBinary.cpp
   ProfileGenerator.cpp
