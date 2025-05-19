@@ -52,8 +52,13 @@ body:             |
     ; CHECK: Bad machine code: G_SHUFFLE_VECTOR cannot change element type
     %21:_(s16) = G_SHUFFLE_VECTOR %3, %4, shufflemask(0)
 
+    ; CHECK: Bad machine code: G_SHUFFLE_VECTOR must have vector src
+    %22:_(<2 x s32>) = G_SHUFFLE_VECTOR %3, %4, shufflemask(0, 0)
+
+    ; CHECK: Bad machine code: G_SHUFFLE_VECTOR must have vector dst
+    %23:_(s32) = G_SHUFFLE_VECTOR %0, %1, shufflemask(0)
+
     ; CHECK: Bad machine code: Out of bounds shuffle index
-    %22:_(s32) = G_IMPLICIT_DEF
-    %20:_(<2 x s32>) = G_SHUFFLE_VECTOR %22, %22, shufflemask(0, 2)
+    %20:_(<2 x s32>) = G_SHUFFLE_VECTOR %0, %1, shufflemask(0, 7)
 
 ...

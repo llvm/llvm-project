@@ -3331,6 +3331,51 @@ bool IRTranslator::translateShuffleVector(const User &U,
     Mask = SVI->getShuffleMask();
   else
     Mask = cast<ConstantExpr>(U).getShuffleMask();
+
+  unsigned DstElts = cast<FixedVectorType>(U.getType())->getNumElements();
+  unsigned SrcElts =
+      cast<FixedVectorType>(U.getOperand(0)->getType())->getNumElements();
+  if (DstElts == 1) {
+    int M = Mask[0];
+    if (SrcElts == 1) {
+      if (M == 0 || M == 1) {
+        return translateCopy(U, *U.getOperand(M), MIRBuilder);
+      }
+      MIRBuilder.buildUndef(getOrCreateVReg(U));
+      return true;
+    } else {
+      if (M < SrcElts) {
+        MIRBuilder.buildExtractVectorElementConstant(
+            getOrCreateVReg(U), getOrCreateVReg(*U.getOperand(0)), M);
+      } else if (M < SrcElts * 2) {
+        MIRBuilder.buildExtractVectorElementConstant(
+            getOrCreateVReg(U), getOrCreateVReg(*U.getOperand(1)), M - SrcElts);
+      } else {
+        MIRBuilder.buildUndef(getOrCreateVReg(U));
+      }
+      return true;
+    }
+  }
+
+  if (SrcElts == 1) {
+    SmallVector<Register> Ops;
+    for (int M : Mask) {
+      Register Undef = 0;
+      LLT SrcTy = getLLTForType(*U.getOperand(0)->getType(), *DL);
+      if (M == 0 || M == 1) {
+        Ops.push_back(getOrCreateVReg(*U.getOperand(M)));
+      } else {
+        if (Undef.isValid()) {
+          Undef = MRI->createGenericVirtualRegister(SrcTy);
+          MIRBuilder.buildUndef(Undef);
+        }
+        Ops.push_back(Undef);
+      }
+    }
+    MIRBuilder.buildBuildVector(getOrCreateVReg(U), Ops);
+    return true;
+  }
+
   ArrayRef<int> MaskAlloc = MF->allocateShuffleMask(Mask);
   MIRBuilder
       .buildInstr(TargetOpcode::G_SHUFFLE_VECTOR, {getOrCreateVReg(U)},
