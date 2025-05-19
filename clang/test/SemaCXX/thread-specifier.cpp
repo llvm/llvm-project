@@ -12,6 +12,12 @@ void instantiated() {
                                          expected-note {{use 'thread_local' to allow this}}
 }
 
+template <typename T>
+void nondependent_var() {
+  // Verify that the dependence of the initializer is what really matters.
+  static __thread int my_wrapper = T{};
+}
+
 struct S {
   S() {}
 };
@@ -19,6 +25,6 @@ struct S {
 void f() {
   instantiated<int>();
   instantiated<S>(); // expected-note {{in instantiation of function template specialization 'GH140509::instantiated<GH140509::S>' requested here}}
+  nondependent_var<int>();
 }
 } // namespace GH140509
-

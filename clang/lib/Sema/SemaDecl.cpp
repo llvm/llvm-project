@@ -14608,6 +14608,10 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
   std::optional<bool> CacheHasConstInit;
   const Expr *CacheCulprit = nullptr;
   auto checkConstInit = [&]() mutable {
+    const Expr *Init = var->getInit();
+    if (Init->isInstantiationDependent())
+      return true;
+
     if (!CacheHasConstInit)
       CacheHasConstInit = var->getInit()->isConstantInitializer(
             Context, var->getType()->isReferenceType(), &CacheCulprit);
@@ -14622,8 +14626,7 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
       Diag(var->getLocation(), diag::err_thread_nontrivial_dtor);
       if (getLangOpts().CPlusPlus11)
         Diag(var->getLocation(), diag::note_use_thread_local);
-    } else if (getLangOpts().CPlusPlus && var->hasInit() &&
-               !var->getType()->isDependentType()) {
+    } else if (getLangOpts().CPlusPlus && var->hasInit()) {
       if (!checkConstInit()) {
         // GNU C++98 edits for __thread, [basic.start.init]p4:
         //   An object of thread storage duration shall not require dynamic
