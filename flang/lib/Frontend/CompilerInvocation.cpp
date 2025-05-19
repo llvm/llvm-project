@@ -196,6 +196,7 @@ static bool parseVectorLibArg(Fortran::frontend::CodeGenOptions &opts,
       llvm::StringSwitch<std::optional<VectorLibrary>>(arg->getValue())
           .Case("Accelerate", VectorLibrary::Accelerate)
           .Case("libmvec", VectorLibrary::LIBMVEC)
+          .Case("AMDLIBM", VectorLibrary::AMDLIBM)
           .Case("MASSV", VectorLibrary::MASSV)
           .Case("SVML", VectorLibrary::SVML)
           .Case("SLEEF", VectorLibrary::SLEEF)
