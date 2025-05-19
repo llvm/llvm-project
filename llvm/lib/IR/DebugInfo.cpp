@@ -241,9 +241,8 @@ void DebugInfoFinder::processCompileUnit(DICompileUnit *CU) {
       processType(T);
     else
       processSubprogram(cast<DISubprogram>(RT));
-  for (auto *Import : CU->getImportedEntities()) {
+  for (auto *Import : CU->getImportedEntities())
     processImportedEntity(Import);
-  }
 }
 
 void DebugInfoFinder::processInstruction(const Module &M,
@@ -355,11 +354,12 @@ void DebugInfoFinder::processSubprogram(DISubprogram *SP) {
     }
   }
 
-  for (auto *N : SP->getRetainedNodes())
+  for (auto *N : SP->getRetainedNodes()) {
     if (auto *Var = dyn_cast_or_null<DILocalVariable>(N))
       processVariable(Var);
     else if (auto *Import = dyn_cast_or_null<DIImportedEntity>(N))
       processImportedEntity(Import);
+  }
 }
 
 void DebugInfoFinder::processVariable(DILocalVariable *DV) {
