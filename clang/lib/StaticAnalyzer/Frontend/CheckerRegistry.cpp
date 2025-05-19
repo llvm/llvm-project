@@ -56,8 +56,8 @@ CheckerRegistry::CheckerRegistry(
   // Register builtin checkers.
 #define GET_CHECKERS
 #define CHECKER(FULLNAME, CLASS, HELPTEXT, DOC_URI, IS_HIDDEN)                 \
-  addChecker(register##CLASS, shouldRegister##CLASS, FULLNAME, HELPTEXT,       \
-             DOC_URI, IS_HIDDEN);
+  addChecker(register##CLASS, shouldRegister##CLASS, FULLNAME, #CLASS,         \
+             HELPTEXT, DOC_URI, IS_HIDDEN);
 
 #define GET_PACKAGES
 #define PACKAGE(FULLNAME) addPackage(FULLNAME);
@@ -433,9 +433,10 @@ void CheckerRegistry::addPackageOption(StringRef OptionType,
 
 void CheckerRegistry::addChecker(RegisterCheckerFn Rfn,
                                  ShouldRegisterFunction Sfn, StringRef Name,
-                                 StringRef Desc, StringRef DocsUri,
-                                 bool IsHidden) {
-  Data.Checkers.emplace_back(Rfn, Sfn, Name, Desc, DocsUri, IsHidden);
+                                 StringRef DebugName, StringRef Desc,
+                                 StringRef DocsUri, bool IsHidden) {
+  Data.Checkers.emplace_back(Rfn, Sfn, Name, DebugName, Desc, DocsUri,
+                             IsHidden);
 
   // Record the presence of the checker in its packages.
   StringRef PackageName, LeafName;
@@ -462,6 +463,7 @@ void CheckerRegistry::initializeManager(CheckerManager &CheckerMgr) const {
   // Initialize the CheckerManager with all enabled checkers.
   for (const auto *Checker : Data.EnabledCheckers) {
     CheckerMgr.setCurrentCheckerName(CheckerNameRef(Checker->FullName));
+    CheckerMgr.setCurrentCheckerDebugName(CheckerNameRef(Checker->DebugName));
     Checker->Initialize(CheckerMgr);
   }
 }

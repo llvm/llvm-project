@@ -551,7 +551,8 @@ class CheckerFamily : public CheckerBackend, public CHECKs... {
 public:
   template <typename CHECKER>
   static void _register(CHECKER *Chk, CheckerManager &Mgr) {
-    Chk->CheckerBackendName = Mgr.getCurrentCheckerName();
+    if (Chk->getDebugName().empty())
+      Chk->CheckerBackendName = Mgr.getCurrentCheckerDebugName();
     (CHECKs::_register(Chk, Mgr), ...);
   }
 

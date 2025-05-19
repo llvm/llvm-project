@@ -50,8 +50,8 @@
 // checker.
 //
 // The clang_registerCheckers function may add any number of checkers to the
-// registry. If any checkers require additional initialization, use the three-
-// argument form of CheckerRegistry::addChecker.
+// registry. If any checkers require additional initialization, use the
+// non-templated form of CheckerRegistry::addChecker.
 //
 // To load a checker plugin, specify the full path to the dynamic library as
 // the argument to the -load option in the cc1 frontend. You can then enable
@@ -115,9 +115,22 @@ private:
 public:
   /// Adds a checker to the registry. Use this non-templated overload when your
   /// checker requires custom initialization.
-  void addChecker(RegisterCheckerFn Fn, ShouldRegisterFunction sfn,
+  void addChecker(RegisterCheckerFn Fn, ShouldRegisterFunction Sfn,
+                  StringRef FullName, StringRef DebugName, StringRef Desc,
+                  StringRef DocsUri, bool IsHidden);
+
+  /// Adds a checker to the registry. This overload doesn't take a `DebugName`
+  /// (which usually looks like `DivZeroChecker`), so it uses the user-facing
+  /// `FullName` (which usually looks like ``core.DivideZero`) as a debug name.
+  /// THIS IS DEPRECATED and is only provided to preserve compatibility with
+  /// legacy plugins.
+  /// TODO: Eventually remove this from the codebase.
+  void addChecker(RegisterCheckerFn Fn, ShouldRegisterFunction Sfn,
                   StringRef FullName, StringRef Desc, StringRef DocsUri,
-                  bool IsHidden);
+                  bool IsHidden) {
+    addChecker(Fn, Sfn, FullName, /*DebugName =*/FullName, Desc, DocsUri,
+               IsHidden);
+  }
 
   /// Adds a checker to the registry. Use this templated overload when your
   /// checker does not require any custom initialization.

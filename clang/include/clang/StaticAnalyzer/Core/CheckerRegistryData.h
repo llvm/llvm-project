@@ -104,6 +104,7 @@ struct CheckerInfo {
   RegisterCheckerFn Initialize = nullptr;
   ShouldRegisterFunction ShouldRegister = nullptr;
   StringRef FullName;
+  StringRef DebugName;
   StringRef Desc;
   StringRef DocumentationUri;
   CmdLineOptionList CmdLineOptions;
@@ -128,9 +129,9 @@ struct CheckerInfo {
   }
 
   CheckerInfo(RegisterCheckerFn Fn, ShouldRegisterFunction sfn, StringRef Name,
-              StringRef Desc, StringRef DocsUri, bool IsHidden)
-      : Initialize(Fn), ShouldRegister(sfn), FullName(Name), Desc(Desc),
-        DocumentationUri(DocsUri), IsHidden(IsHidden) {}
+              StringRef DName, StringRef Desc, StringRef DocsUri, bool IsHidden)
+      : Initialize(Fn), ShouldRegister(sfn), FullName(Name), DebugName(DName),
+        Desc(Desc), DocumentationUri(DocsUri), IsHidden(IsHidden) {}
 
   // Used for lower_bound.
   explicit CheckerInfo(StringRef FullName) : FullName(FullName) {}
