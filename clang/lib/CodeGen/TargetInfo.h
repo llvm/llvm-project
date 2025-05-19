@@ -71,6 +71,10 @@ public:
     return *SwiftInfo;
   }
 
+  /// supportsLibCall - Query to whether or not target supports all
+  /// lib calls.
+  virtual bool supportsLibCall() const { return true; }
+
   /// setTargetAttributes - Provides a convenient hook to handle extra
   /// target-specific attributes for the given global.
   virtual void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
