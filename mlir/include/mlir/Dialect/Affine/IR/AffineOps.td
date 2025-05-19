@@ -1113,6 +1113,10 @@ def AffineDelinearizeIndexOp : Affine_Op<"delinearize_index", [Pure]> {
     Due to the constraints of affine maps, all the basis elements must
     be strictly positive. A dynamic basis element being 0 or negative causes
     undefined behavior.
+
+    As with other affine operations, lowerings of delinearize_index may assume
+    that the underlying computations do not overflow the index type in a signed sense
+    - that is, the product of all basis elements is positive as an `index` as well.
   }];
 
   let arguments = (ins Index:$linear_index,
@@ -1195,8 +1199,12 @@ def AffineLinearizeIndexOp : Affine_Op<"linearize_index",
     If the `disjoint` property is present, this is an optimization hint that,
     for all `i`, `0 <= %idx_i < B_i` - that is, no index affects any other index,
     except that `%idx_0` may be negative to make the index as a whole negative.
+    In addition, `disjoint` is an assertion that all bases elements are non-negative.
 
     Note that the outputs of `affine.delinearize_index` are, by definition, `disjoint`.
+
+    As with other affine ops, undefined behavior occurs if the linearization
+    computation overflows in the signed sense.
 
     Example:
 

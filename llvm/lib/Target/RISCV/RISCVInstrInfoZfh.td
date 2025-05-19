@@ -75,7 +75,7 @@ def ZhinxminZdinxExt    : ExtInfo<"_INX", "Zfinx",
                                   ?, ?, FPR32INX, FPR64INX, FPR16INX>;
 def ZhinxZdinx32Ext     : ExtInfo<"_IN32X", "ZdinxGPRPairRV32",
                                   [HasStdExtZhinx, HasStdExtZdinx, IsRV32],
-                                  ?, ?, FPR32INX, FPR64IN32X, FPR16INX >;
+                                  ?, ?, FPR32INX, FPR64IN32X, FPR16INX>;
 def ZhinxminZdinx32Ext  : ExtInfo<"_IN32X", "ZdinxGPRPairRV32",
                                   [HasStdExtZhinxmin, HasStdExtZdinx, IsRV32],
                                   ?, ?, FPR32INX, FPR64IN32X, FPR16INX>;

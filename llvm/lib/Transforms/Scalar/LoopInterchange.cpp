@@ -249,10 +249,6 @@ static std::optional<bool> isLexicographicallyPositive(std::vector<char> &DV,
   return std::nullopt;
 }
 
-static std::optional<bool> isLexicographicallyPositive(std::vector<char> &DV) {
-  return isLexicographicallyPositive(DV, 0, DV.size());
-}
-
 // Checks if it is legal to interchange 2 loops.
 static bool isLegalToInterChangeLoops(CharMatrix &DepMatrix,
                                       unsigned InnerLoopId,
@@ -273,10 +269,10 @@ static bool isLegalToInterChangeLoops(CharMatrix &DepMatrix,
 
     // Check if the direction vector is lexicographically positive (or zero)
     // for both before/after exchanged.
-    if (isLexicographicallyPositive(Cur) == false)
+    if (isLexicographicallyPositive(Cur, OuterLoopId, Cur.size()) == false)
       return false;
     std::swap(Cur[InnerLoopId], Cur[OuterLoopId]);
-    if (isLexicographicallyPositive(Cur) == false)
+    if (isLexicographicallyPositive(Cur, OuterLoopId, Cur.size()) == false)
       return false;
   }
   return true;

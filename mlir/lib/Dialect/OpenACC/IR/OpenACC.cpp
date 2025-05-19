@@ -272,11 +272,12 @@ static LogicalResult checkWaitAndAsyncConflict(Op op) {
        ++dtypeInt) {
     auto dtype = static_cast<acc::DeviceType>(dtypeInt);
 
-    // The async attribute represent the async clause without value. Therefore
-    // the attribute and operand cannot appear at the same time.
+    // The asyncOnly attribute represent the async clause without value.
+    // Therefore the attribute and operand cannot appear at the same time.
     if (hasDeviceType(op.getAsyncOperandsDeviceType(), dtype) &&
         op.hasAsyncOnly(dtype))
-      return op.emitError("async attribute cannot appear with asyncOperand");
+      return op.emitError(
+          "asyncOnly attribute cannot appear with asyncOperand");
 
     // The wait attribute represent the wait clause without values. Therefore
     // the attribute and operands cannot appear at the same time.
@@ -1680,6 +1681,90 @@ static void printDeviceTypeOperandsWithKeywordOnly(
       hasDeviceTypeValues(deviceTypes))
     p << ", ";
   printDeviceTypeOperands(p, op, operands, types, deviceTypes);
+  p << ")";
+}
+
+static ParseResult parseOperandWithKeywordOnly(
+    mlir::OpAsmParser &parser,
+    std::optional<OpAsmParser::UnresolvedOperand> &operand,
+    mlir::Type &operandType, mlir::UnitAttr &attr) {
+  // Keyword only
+  if (failed(parser.parseOptionalLParen())) {
+    attr = mlir::UnitAttr::get(parser.getContext());
+    return success();
+  }
+
+  OpAsmParser::UnresolvedOperand op;
+  if (failed(parser.parseOperand(op)))
+    return failure();
+  operand = op;
+  if (failed(parser.parseColon()))
+    return failure();
+  if (failed(parser.parseType(operandType)))
+    return failure();
+  if (failed(parser.parseRParen()))
+    return failure();
+
+  return success();
+}
+
+static void printOperandWithKeywordOnly(mlir::OpAsmPrinter &p,
+                                        mlir::Operation *op,
+                                        std::optional<mlir::Value> operand,
+                                        mlir::Type operandType,
+                                        mlir::UnitAttr attr) {
+  if (attr)
+    return;
+
+  p << "(";
+  p.printOperand(*operand);
+  p << " : ";
+  p.printType(operandType);
+  p << ")";
+}
+
+static ParseResult parseOperandsWithKeywordOnly(
+    mlir::OpAsmParser &parser,
+    llvm::SmallVectorImpl<mlir::OpAsmParser::UnresolvedOperand> &operands,
+    llvm::SmallVectorImpl<Type> &types, mlir::UnitAttr &attr) {
+  // Keyword only
+  if (failed(parser.parseOptionalLParen())) {
+    attr = mlir::UnitAttr::get(parser.getContext());
+    return success();
+  }
+
+  if (failed(parser.parseCommaSeparatedList([&]() {
+        if (parser.parseOperand(operands.emplace_back()))
+          return failure();
+        return success();
+      })))
+    return failure();
+  if (failed(parser.parseColon()))
+    return failure();
+  if (failed(parser.parseCommaSeparatedList([&]() {
+        if (parser.parseType(types.emplace_back()))
+          return failure();
+        return success();
+      })))
+    return failure();
+  if (failed(parser.parseRParen()))
+    return failure();
+
+  return success();
+}
+
+static void printOperandsWithKeywordOnly(mlir::OpAsmPrinter &p,
+                                         mlir::Operation *op,
+                                         mlir::OperandRange operands,
+                                         mlir::TypeRange types,
+                                         mlir::UnitAttr attr) {
+  if (attr)
+    return;
+
+  p << "(";
+  llvm::interleaveComma(operands, p, [&](auto it) { p << it; });
+  p << " : ";
+  llvm::interleaveComma(types, p, [&](auto it) { p << it; });
   p << ")";
 }
 
@@ -3505,7 +3590,7 @@ bool UpdateOp::hasAsyncOnly() {
 }
 
 bool UpdateOp::hasAsyncOnly(mlir::acc::DeviceType deviceType) {
-  return hasDeviceType(getAsync(), deviceType);
+  return hasDeviceType(getAsyncOnly(), deviceType);
 }
 
 mlir::Value UpdateOp::getAsyncValue() {
