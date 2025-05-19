@@ -85,3 +85,33 @@ void func() {
   static const int b; // zero-init-var-warning {{default initialization of an object of type 'const int' is incompatible with C++}} \
                          cxx-error {{default initialization of an object of const type 'const int'}}
 }
+
+// Test the behavior of flexible array members. Those cannot be initialized
+// when a stack-allocated object of the structure type is created. We handle
+// degenerate flexible arrays similarly, but only if the array does not
+// actually specify any storage. Note that C++ does not have flexible array
+// members at all, which is why the test is disabled there.
+#ifndef __cplusplus
+struct RealFAM {
+  int len;
+  const char fam[];
+};
+
+struct FakeFAM {
+  int len;
+  const char fam[0];
+};
+
+struct NotTreatedAsAFAM {
+  int len;
+  const char fam[1];              // unsafe-field-note {{member 'fam' declared 'const' here}} \
+                                     unsafe-field-compat-note {{member 'fam' declared 'const' here}}
+};
+
+void test_fams() {
+  struct RealFAM One;
+  struct FakeFAM Two;
+  struct NotTreatedAsAFAM Three;  // unsafe-field-warning {{default initialization of an object of type 'struct NotTreatedAsAFAM' with const member leaves the object uninitialized}} \
+                                     unsafe-field-compat-warning {{default initialization of an object of type 'struct NotTreatedAsAFAM' with const member leaves the object uninitialized and is incompatible with C++}}
+}
+#endif // !defined(__cplusplus)
