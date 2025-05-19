@@ -4009,23 +4009,16 @@ bool VectorCombine::shrinkPhiOfShuffles(Instruction &I) {
   if (!Shuf0 || !Shuf1)
     return false;
 
-  if (!Shuf0->hasOneUse() && !Shuf1->hasOneUse())
-    return false;
+  Value *Op0 = nullptr;
+  Value *Op1 = nullptr;
 
-  auto *Shuf0Op0 = Shuf0->getOperand(0u);
-  auto *Shuf0Op1 = Shuf0->getOperand(1u);
-  auto *Shuf1Op0 = Shuf1->getOperand(0u);
-  auto *Shuf1Op1 = Shuf1->getOperand(1u);
-
-  auto IsPoison = [](Value *Val) -> bool {
-    return isa<PoisonValue>(Val) || isa<UndefValue>(Val);
-  };
-
-  if (Shuf0Op0 != Shuf1Op0 || !IsPoison(Shuf0Op1) || !IsPoison(Shuf1Op1))
+  if (!match(Shuf0, m_OneUse(m_Shuffle(m_Value(Op0), m_Poison()))) ||
+      !match(Shuf1, m_OneUse(m_Shuffle(m_Value(Op1), m_Poison()))) ||
+      Op0 != Op1)
     return false;
 
   // Ensure result vectors are wider than the argument vector.
-  auto *InputVT = cast<FixedVectorType>(Shuf0Op0->getType());
+  auto *InputVT = cast<FixedVectorType>(Op0->getType());
   auto *ResultVT = cast<FixedVectorType>(Shuf0->getType());
   auto const InputNumElements = InputVT->getNumElements();
 
@@ -4034,46 +4027,43 @@ bool VectorCombine::shrinkPhiOfShuffles(Instruction &I) {
 
   // Take the difference of the two shuffle masks at each index. Ignore poison
   // values at the same index in both masks.
-  auto Mask0 = Shuf0->getShuffleMask();
-  auto Mask1 = Shuf1->getShuffleMask();
-  auto NewMask0 = std::vector<int>();
-  NewMask0.reserve(Mask0.size());
+  ArrayRef Mask0 = Shuf0->getShuffleMask();
+  ArrayRef Mask1 = Shuf1->getShuffleMask();
+  SmallVector<int, 16> NewMask;
+  NewMask.reserve(Mask0.size());
 
   for (auto I = 0u; I < Mask0.size(); ++I) {
     if (Mask0[I] >= 0 && Mask1[I] >= 0)
-      NewMask0.push_back(Mask0[I] - Mask1[I]);
+      NewMask.push_back(Mask0[I] - Mask1[I]);
     else if (Mask0[I] == -1 && Mask1[I] == -1)
       continue;
     else
       return false;
   }
 
-  if (NewMask0.empty() ||
-      !std::equal(NewMask0.begin() + 1u, NewMask0.end(), NewMask0.begin()))
+  // Ensure all elements of the new mask are equal. If the difference between
+  // the incoming mask elements is the same, the two must be constant offsets
+  // of one another.
+  if (NewMask.empty() ||
+      !std::equal(NewMask.begin() + 1u, NewMask.end(), NewMask.begin()))
     return false;
 
   // Create new mask using difference of the two incoming masks.
-  auto MaskOffset = NewMask0[0u];
-  if (!Shuf0->hasOneUse()) {
-    std::swap(Shuf0, Shuf1);
-    std::swap(Mask0, Mask1);
-    MaskOffset *= -1;
-  }
+  int MaskOffset = NewMask[0u];
+  unsigned Index = (InputNumElements - MaskOffset) % InputNumElements;
+  NewMask.clear();
 
-  auto Index = (InputNumElements - MaskOffset) % InputNumElements;
-  NewMask0.clear();
-
-  for (auto I = 0u; I < InputNumElements; ++I) {
-    NewMask0.push_back(Index);
+  for (unsigned I = 0u; I < InputNumElements; ++I) {
+    NewMask.push_back(Index);
     Index = (Index + 1u) % InputNumElements;
   }
 
   // Calculate costs for worst cases and compare.
   auto const Kind = TTI::SK_PermuteSingleSrc;
-  auto OldCost = std::max(TTI.getShuffleCost(Kind, InputVT, ResultVT, Mask0, CostKind),
-                          TTI.getShuffleCost(Kind, InputVT, ResultVT, Mask1, CostKind));
-  auto NewCost = TTI.getShuffleCost(Kind, InputVT, InputVT, NewMask0, CostKind) +
-                 TTI.getShuffleCost(Kind, InputVT, ResultVT, Mask1, CostKind);
+  auto OldCost = std::max(TTI.getShuffleCost(Kind, InputVT, Mask0, CostKind),
+                          TTI.getShuffleCost(Kind, InputVT, Mask1, CostKind));
+  auto NewCost = TTI.getShuffleCost(Kind, InputVT, NewMask, CostKind) +
+                 TTI.getShuffleCost(Kind, InputVT, Mask1, CostKind);
 
   if (NewCost > OldCost)
     return false;
@@ -4082,17 +4072,18 @@ bool VectorCombine::shrinkPhiOfShuffles(Instruction &I) {
   auto Builder = IRBuilder(&I);
   Builder.SetInsertPoint(Shuf0);
   Builder.SetCurrentDebugLocation(Shuf0->getDebugLoc());
-  auto *NewShuf0 = Builder.CreateShuffleVector(Shuf0Op0, Shuf0Op1, NewMask0);
+  auto *PoisonVal = PoisonValue::get(InputVT);
+  auto *NewShuf0 = Builder.CreateShuffleVector(Op0, PoisonVal, NewMask);
 
   Builder.SetInsertPoint(Phi);
   Builder.SetCurrentDebugLocation(Phi->getDebugLoc());
   auto *NewPhi = Builder.CreatePHI(NewShuf0->getType(), 2u);
   NewPhi->addIncoming(NewShuf0, Phi->getIncomingBlock(0u));
-  NewPhi->addIncoming(Shuf1Op0, Phi->getIncomingBlock(1u));
+  NewPhi->addIncoming(Op1, Phi->getIncomingBlock(1u));
 
   Builder.SetInsertPoint(*NewPhi->getInsertionPointAfterDef());
-  auto *NewPoison = PoisonValue::get(NewPhi->getType());
-  auto *NewShuf2 = Builder.CreateShuffleVector(NewPhi, NewPoison, Mask1);
+  PoisonVal = PoisonValue::get(NewPhi->getType());
+  auto *NewShuf2 = Builder.CreateShuffleVector(NewPhi, PoisonVal, Mask1);
 
   replaceValue(*Phi, *NewShuf2);
   return true;
