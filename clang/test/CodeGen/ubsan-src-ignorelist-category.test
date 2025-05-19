@@ -31,7 +31,7 @@ src:*/test1.c=sanitize
 // CHECK1-LABEL: define dso_local i32 @add
 int add(int a, int b) {
 // IGNORE: %add = add nsw
-// SANITIZE: %add = llvm.sadd.with.overflow.i32
+// SANITIZE: = call { i32, i1 } @llvm.sadd.with.overflow.i32
     return a+b;
 }
 
