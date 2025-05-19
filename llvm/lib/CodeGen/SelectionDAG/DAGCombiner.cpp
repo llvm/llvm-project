@@ -1097,7 +1097,7 @@ bool DAGCombiner::reassociationCanBreakAddressingModePattern(unsigned Opc,
   // (load/store (add, (add, x, y), offset2)) ->
   // (load/store (add, (add, x, offset2), y)).
 
-  if (N0.getOpcode() != ISD::ADD && N0.getOpcode() != ISD::PTRADD)
+  if (!ISD::isPtrAdd(N0.getOpcode()))
     return false;
 
   // Check for vscale addressing modes.
@@ -2391,7 +2391,7 @@ static bool canFoldInAddressingMode(SDNode *N, SDNode *Use, SelectionDAG &DAG,
   }
 
   TargetLowering::AddrMode AM;
-  if (N->getOpcode() == ISD::ADD || N->getOpcode() == ISD::PTRADD) {
+  if (ISD::isPtrAdd(N->getOpcode())) {
     AM.HasBaseReg = true;
     ConstantSDNode *Offset = dyn_cast<ConstantSDNode>(N->getOperand(1));
     if (Offset)

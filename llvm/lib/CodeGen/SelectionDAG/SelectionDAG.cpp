@@ -5641,8 +5641,7 @@ bool SelectionDAG::isADDLike(SDValue Op, bool NoWrap) const {
 
 bool SelectionDAG::isBaseWithConstantOffset(SDValue Op) const {
   return Op.getNumOperands() == 2 && isa<ConstantSDNode>(Op.getOperand(1)) &&
-         (Op.getOpcode() == ISD::ADD || Op.getOpcode() == ISD::PTRADD ||
-          isADDLike(Op));
+         (ISD::isPtrAdd(Op.getOpcode()) || isADDLike(Op));
 }
 
 bool SelectionDAG::isKnownNeverNaN(SDValue Op, bool SNaN,

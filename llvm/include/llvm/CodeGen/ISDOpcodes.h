@@ -1502,7 +1502,7 @@ enum NodeType {
   // Outputs: [rv], output chain, glue
   PATCHPOINT,
 
-  // PTRADD represents pointer arithmatic semantics, for targets that opt in
+  // PTRADD represents pointer arithmetic semantics, for targets that opt in
   // using shouldPreservePtrArith().
   // ptr = PTRADD ptr, offset
   PTRADD,
@@ -1732,6 +1732,10 @@ inline bool isExtVecInRegOpcode(unsigned Opcode) {
   return Opcode == ISD::ANY_EXTEND_VECTOR_INREG ||
          Opcode == ISD::ZERO_EXTEND_VECTOR_INREG ||
          Opcode == ISD::SIGN_EXTEND_VECTOR_INREG;
+}
+
+inline bool isPtrAdd(unsigned Opcode) {
+  return (Opcode == ISD::ADD) || (Opcode == ISD::PTRADD);
 }
 
 namespace GlobalISel {
