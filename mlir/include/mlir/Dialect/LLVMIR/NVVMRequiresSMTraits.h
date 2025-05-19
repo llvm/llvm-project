@@ -54,7 +54,7 @@ struct NVVMCheckSMVersion {
     } else {
       return targetSM.smVersionList[0] >= smVersionList[0];
     }
-    
+
     return false;
   }
 
