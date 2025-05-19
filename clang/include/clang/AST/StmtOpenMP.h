@@ -5790,7 +5790,9 @@ class OMPReverseDirective final : public OMPLoopTransformationDirective {
   explicit OMPReverseDirective(SourceLocation StartLoc, SourceLocation EndLoc)
       : OMPLoopTransformationDirective(OMPReverseDirectiveClass,
                                        llvm::omp::OMPD_reverse, StartLoc,
-                                       EndLoc, 1) {}
+                                       EndLoc, 1) {
+    setNumGeneratedLoops(1);
+  }
 
   void setPreInits(Stmt *PreInits) {
     Data->getChildren()[PreInitsOffset] = PreInits;
@@ -5857,7 +5859,7 @@ class OMPInterchangeDirective final : public OMPLoopTransformationDirective {
       : OMPLoopTransformationDirective(OMPInterchangeDirectiveClass,
                                        llvm::omp::OMPD_interchange, StartLoc,
                                        EndLoc, NumLoops) {
-    setNumGeneratedLoops(3 * NumLoops);
+    setNumGeneratedLoops(NumLoops);
   }
 
   void setPreInits(Stmt *PreInits) {
