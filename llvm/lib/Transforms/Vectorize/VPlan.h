@@ -2589,7 +2589,8 @@ public:
 
   /// Return if this MulAcc recipe contains extend instructions.
   bool isExtended() const {
-    return getVecOp0Info().ExtOp != Instruction::CastOps::CastOpsEnd;
+    return getVecOp0Info().ExtOp != Instruction::CastOps::CastOpsEnd ||
+           getVecOp1Info().ExtOp != Instruction::CastOps::CastOpsEnd;
   }
 
   /// Return if the operands of mul instruction come from same extend.
