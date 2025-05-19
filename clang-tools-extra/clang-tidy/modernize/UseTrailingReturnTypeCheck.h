@@ -44,29 +44,8 @@ private:
   const bool TransformFunctions;
   const TransformLambda TransformLambdas;
 
-  SourceLocation findTrailingReturnTypeSourceLocation(
-      const FunctionDecl &F, const FunctionTypeLoc &FTL, const ASTContext &Ctx,
-      const SourceManager &SM, const LangOptions &LangOpts);
-  std::optional<SmallVector<ClassifiedToken, 8>>
-  classifyTokensBeforeFunctionName(const FunctionDecl &F, const ASTContext &Ctx,
-                                   const SourceManager &SM,
-                                   const LangOptions &LangOpts);
-  SourceRange findReturnTypeAndCVSourceRange(const FunctionDecl &F,
-                                             const TypeLoc &ReturnLoc,
-                                             const ASTContext &Ctx,
-                                             const SourceManager &SM,
-                                             const LangOptions &LangOpts);
-  void keepSpecifiers(std::string &ReturnType, std::string &Auto,
-                      SourceRange ReturnTypeCVRange, const FunctionDecl &F,
-                      const FriendDecl *Fr, const ASTContext &Ctx,
-                      const SourceManager &SM, const LangOptions &LangOpts);
-
   void diagOnLambda(const LambdaExpr *Lambda,
                     const ast_matchers::MatchFinder::MatchResult &Result);
-  SourceLocation findLambdaTrailingReturnInsertLoc(const CXXMethodDecl *Method,
-                                                   const SourceManager &SM,
-                                                   const LangOptions &LangOpts,
-                                                   const ASTContext &Ctx);
 };
 
 } // namespace clang::tidy::modernize
