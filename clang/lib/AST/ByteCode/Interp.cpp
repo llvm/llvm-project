@@ -851,6 +851,21 @@ bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
   if (F->isLambdaStaticInvoker())
     return true;
 
+  // Diagnose failed assertions specially.
+  if (S.Current->getLocation(OpPC).isMacroID() &&
+      F->getDecl()->getIdentifier()) {
+    // FIXME: Instead of checking for an implementation-defined function,
+    // check and evaluate the assert() macro.
+    StringRef Name = F->getDecl()->getName();
+    bool AssertFailed =
+        Name == "__assert_rtn" || Name == "__assert_fail" || Name == "_wassert";
+    if (AssertFailed) {
+      S.FFDiag(S.Current->getLocation(OpPC),
+               diag::note_constexpr_assert_failed);
+      return false;
+    }
+  }
+
   if (S.getLangOpts().CPlusPlus11) {
     const FunctionDecl *DiagDecl = F->getDecl();
 
