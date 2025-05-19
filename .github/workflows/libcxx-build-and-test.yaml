@@ -239,7 +239,7 @@ jobs:
 
   windows:
     runs-on: windows-2022
-    needs: [ stage2 ]
+    #needs: [ stage2 ]
     strategy:
       fail-fast: false
       matrix:
@@ -263,10 +263,24 @@ jobs:
         if: ${{ matrix.mingw != true }}
         run: |
           choco install -y llvm --version=19.1.7 --allow-downgrade
+      - name: Download test llvm-mingw
+        if: ${{ matrix.mingw == true }}
+        shell: bash
+        run: |
+          ARTIFACT_URL=https://github.com/jeremyd2019/llvm-mingw/actions/runs/15080594305/artifacts/3143907630
+          case "$ARTIFACT_URL" in
+          https://github.com/*/actions/runs/[0-9]*/artifacts/[0-9]*)
+            ARTIFACT_URL="$(echo "$ARTIFACT_URL" |
+              sed 's|^\(https://\)\(github.com/\)\(.*/actions/\)runs/[0-9]*/\(artifacts/[0-9]*\)$|\1api.\2repos/\3\4/zip|')"
+              ;;
+          esac
+          curl -H "Authorization: token ${{secrets.GITHUB_TOKEN}}" \
+              -fLo artifact.zip "$ARTIFACT_URL"
+          powershell Expand-Archive artifact.zip -DestinationPath .
+          rm -f artifact.zip
       - name: Install llvm-mingw
         if: ${{ matrix.mingw == true }}
         run: |
-          curl -LO https://github.com/mstorsjo/llvm-mingw/releases/download/20250114/llvm-mingw-20250114-ucrt-x86_64.zip
           powershell Expand-Archive llvm-mingw*.zip -DestinationPath .
           del llvm-mingw*.zip
           mv llvm-mingw* c:\llvm-mingw
