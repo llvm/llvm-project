@@ -717,7 +717,8 @@ lldb_private::Address ObjectFileXCOFF::GetEntryPointAddress() {
 }
 
 lldb_private::Address ObjectFileXCOFF::GetBaseAddress() {
-  return lldb_private::Address();
+  // Get base address of the section
+  return Address(GetSectionList()->GetSectionAtIndex(0), 0);
 }
 
 ObjectFile::Type ObjectFileXCOFF::CalculateType() {
