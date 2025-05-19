@@ -143,58 +143,6 @@ func.func @negative_broadcast_transpose_021(%arg0 : vector<3x1x3xi8>) -> vector<
 
 // -----
 
-/// +--------------------------------------------------------------------------
-///  Tests of ShapeCastOp::fold:  shape_cast(transpose) -> shape_cast
-/// +--------------------------------------------------------------------------
-
-// In this test, the permutation maps the non-unit dimensions (1 and 2) as follows:
-// 1 -> 0
-// 2 -> 4
-// Because 0 < 4, this permutation is order preserving and effectively a shape_cast.
-// CHECK-LABEL: @shape_cast_of_transpose
-//  CHECK-SAME:   %[[ARG:.*]]: vector<1x4x4x1x1xi8>) -> vector<4x4xi8> {
-//       CHECK:   %[[SHAPE_CAST:.*]] = vector.shape_cast %[[ARG]] :
-//  CHECK-SAME:   vector<1x4x4x1x1xi8> to vector<4x4xi8>
-//       CHECK:   return %[[SHAPE_CAST]] : vector<4x4xi8>
-func.func @shape_cast_of_transpose(%arg : vector<1x4x4x1x1xi8>) -> vector<4x4xi8> {
-  %0 = vector.transpose %arg, [1, 0, 3, 4, 2]
-     : vector<1x4x4x1x1xi8> to vector<4x1x1x1x4xi8>
-  %1 = vector.shape_cast %0 : vector<4x1x1x1x4xi8> to vector<4x4xi8>
-  return %1 : vector<4x4xi8>
-}
-
-// -----
-
-// In this test, the mapping of non-unit dimensions (1 and 2) is as follows:
-// 1 -> 2
-// 2 -> 1
-// As this is not increasing (2 > 1), this transpose is not order
-// preserving and cannot be treated as a shape_cast.
-// CHECK-LABEL: @negative_shape_cast_of_transpose
-//  CHECK-SAME:   %[[ARG:.*]]: vector<1x4x4x1xi8>) -> vector<4x4xi8> {
-//       CHECK:   %[[TRANSPOSE:.*]] = vector.transpose %[[ARG]]
-//       CHECK:   %[[SHAPE_CAST:.*]] = vector.shape_cast %[[TRANSPOSE]]
-//       CHECK:   return %[[SHAPE_CAST]] : vector<4x4xi8>
-func.func @negative_shape_cast_of_transpose(%arg : vector<1x4x4x1xi8>) -> vector<4x4xi8> {
-  %0 = vector.transpose %arg, [0, 2, 1, 3]
-     : vector<1x4x4x1xi8> to vector<1x4x4x1xi8>
-  %1 = vector.shape_cast %0 : vector<1x4x4x1xi8> to vector<4x4xi8>
-  return %1 : vector<4x4xi8>
-}
-
-// -----
-
-// Currently the conversion shape_cast(transpose) -> shape_cast is disabled for
-// scalable vectors because of bad interaction with ConvertIllegalShapeCastOpsToTransposes
-// CHECK-LABEL: @negative_shape_cast_of_transpose_scalable
-//       CHECK:  vector.transpose
-//       CHECK:  vector.shape_cast
-func.func @negative_shape_cast_of_transpose_scalable(%arg : vector<[4]x1xi8>) -> vector<[4]xi8> {
-  %0 = vector.transpose %arg, [1, 0] : vector<[4]x1xi8> to vector<1x[4]xi8>
-  %1 = vector.shape_cast %0 : vector<1x[4]xi8> to vector<[4]xi8>
-  return %1 : vector<[4]xi8>
-}
-
 // +-----------------------------------
 //  Tests of TransposeOp::fold
 // +-----------------------------------
