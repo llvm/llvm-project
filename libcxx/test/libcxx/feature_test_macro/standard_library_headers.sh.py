@@ -9,6 +9,7 @@
 # RUN: %{python} %s %{libcxx-dir}/utils %{libcxx-dir}/test/libcxx/feature_test_macro/test_data.json
 
 import sys
+
 import unittest
 
 UTILS = sys.argv[1]
@@ -25,14 +26,18 @@ class Test(unittest.TestCase):
         self.maxDiff = None  # This causes the diff to be printed when the test fails
 
     def test_implementation(self):
-        # FTM not available in C++14.
-        self.assertEqual(self.ftm.is_implemented("__cpp_lib_any", "c++14"), False)
-        self.assertEqual(self.ftm.is_implemented("__cpp_lib_any", "c++17"), True)
-
-        self.assertEqual(self.ftm.is_implemented("__cpp_lib_format", "c++20"), False)
-
-        # FTM C++20 202106L, libc++ has 202102L
-        self.assertEqual(self.ftm.is_implemented("__cpp_lib_variant", "c++20"), False)
+        self.assertEqual(
+            sorted(self.ftm.standard_library_headers),
+            [
+                "algorithm",
+                "any",
+                "barrier",
+                "charconv",
+                "format",
+                "numeric",
+                "variant",
+            ],
+        )
 
 
 if __name__ == "__main__":
