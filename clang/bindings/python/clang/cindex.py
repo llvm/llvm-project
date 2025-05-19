@@ -335,7 +335,9 @@ class SourceLocation(Structure):
         return conf.lib.clang_Location_isInSystemHeader(self)  # type: ignore [no-any-return]
 
     def __eq__(self, other):
-        return isinstance(other, SourceLocation) and conf.lib.clang_equalLocations(self, other)
+        return isinstance(other, SourceLocation) and conf.lib.clang_equalLocations(
+            self, other
+        )
 
     def __ne__(self, other):
         return not self.__eq__(other)
