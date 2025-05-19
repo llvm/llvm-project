@@ -58,16 +58,49 @@ void uses(int IntParam, short *PointerParam, float ArrayParam[5], Complete Compo
   // expected-error@+1{{OpenACC variable is not a valid variable name, sub-array, array element, member of a composite variable, or composite variable member}}
 #pragma acc data create((float)ArrayParam[2])
   ;
-  // expected-error@+2{{invalid tag 'invalid' on 'create' clause}}
+  // expected-error@+2{{unknown modifier 'invalid' in OpenACC modifier-list on 'create' clause}}
   // expected-error@+1{{OpenACC variable is not a valid variable name, sub-array, array element, member of a composite variable, or composite variable member}}
 #pragma acc data create(invalid:(float)ArrayParam[2])
   ;
 
-  // expected-error@+2{{OpenACC 'exit data' construct must have at least one 'copyout', 'delete' or 'detach' clause}}
+  // expected-error@+2{{OpenACC 'exit data' construct must have at least one 'copyout', 'delete', or 'detach' clause}}
   // expected-error@+1{{OpenACC 'create' clause is not valid on 'exit data' directive}}
 #pragma acc exit data create(LocalInt)
   // expected-error@+2{{OpenACC 'host_data' construct must have at least one 'use_device' clause}}
   // expected-error@+1{{OpenACC 'pcreate' clause is not valid on 'host_data' directive}}
 #pragma acc host_data pcreate(LocalInt)
   ;
+}
+
+void ModList() {
+  int V1;
+  // expected-error@+4{{OpenACC 'always' modifier not valid on 'create' clause}}
+  // expected-error@+3{{OpenACC 'alwaysin' modifier not valid on 'create' clause}}
+  // expected-error@+2{{OpenACC 'alwaysout' modifier not valid on 'create' clause}}
+  // expected-error@+1{{OpenACC 'readonly' modifier not valid on 'create' clause}}
+#pragma acc data create(always, alwaysin, alwaysout, zero, readonly: V1)
+  // expected-error@+1{{OpenACC 'always' modifier not valid on 'create' clause}}
+#pragma acc data create(always: V1)
+  // expected-error@+1{{OpenACC 'alwaysin' modifier not valid on 'create' clause}}
+#pragma acc data create(alwaysin: V1)
+  // expected-error@+1{{OpenACC 'alwaysout' modifier not valid on 'create' clause}}
+#pragma acc data create(alwaysout: V1)
+  // expected-error@+1{{OpenACC 'readonly' modifier not valid on 'create' clause}}
+#pragma acc data create(readonly: V1)
+#pragma acc data create(zero: V1)
+
+  // expected-error@+4{{OpenACC 'always' modifier not valid on 'create' clause}}
+  // expected-error@+3{{OpenACC 'alwaysin' modifier not valid on 'create' clause}}
+  // expected-error@+2{{OpenACC 'alwaysout' modifier not valid on 'create' clause}}
+  // expected-error@+1{{OpenACC 'readonly' modifier not valid on 'create' clause}}
+#pragma acc enter data create(always, alwaysin, alwaysout, zero, readonly: V1)
+  // expected-error@+1{{OpenACC 'always' modifier not valid on 'create' clause}}
+#pragma acc enter data create(always: V1)
+  // expected-error@+1{{OpenACC 'alwaysin' modifier not valid on 'create' clause}}
+#pragma acc enter data create(alwaysin: V1)
+  // expected-error@+1{{OpenACC 'alwaysout' modifier not valid on 'create' clause}}
+#pragma acc enter data create(alwaysout: V1)
+  // expected-error@+1{{OpenACC 'readonly' modifier not valid on 'create' clause}}
+#pragma acc enter data create(readonly: V1)
+#pragma acc enter data create(zero: V1)
 }

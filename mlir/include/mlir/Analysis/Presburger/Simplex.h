@@ -344,7 +344,7 @@ protected:
   SmallVector<UndoLogEntry, 8> undoLog;
 
   /// Holds a vector of bases. The ith saved basis is the basis that should be
-  /// restored when processing the ith occurrance of UndoLogEntry::RestoreBasis
+  /// restored when processing the ith occurrence of UndoLogEntry::RestoreBasis
   /// in undoLog. This is used by getSnapshotBasis.
   SmallVector<SmallVector<int, 8>, 8> savedBases;
 
@@ -367,7 +367,7 @@ protected:
 ///
 /// This does not directly support negative-valued variables, so it uses the big
 /// M parameter trick to make all the variables non-negative. Basically we
-/// introduce an artifical variable M that is considered to have a value of
+/// introduce an artificial variable M that is considered to have a value of
 /// +infinity and instead of the variables x, y, z, we internally use variables
 /// M + x, M + y, M + z, which are now guaranteed to be non-negative. See the
 /// documentation for SimplexBase for more details. M is also considered to be
@@ -561,7 +561,7 @@ struct SymbolicLexOpt {
 /// negative for all values in the symbol domain, the row needs to be pivoted
 /// irrespective of the precise value of the symbols. To answer queries like
 /// "Is this symbolic sample always negative in the symbol domain?", we maintain
-/// a `LexSimplex domainSimplex` correponding to the symbol domain.
+/// a `LexSimplex domainSimplex` corresponding to the symbol domain.
 ///
 /// In other cases, it may be that the symbolic sample is violated at some
 /// values in the symbol domain and not violated at others. In this case,

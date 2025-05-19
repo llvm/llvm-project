@@ -391,8 +391,8 @@ define i32 @casts_no_users() {
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %r175 = sitofp <2 x i16> undef to <2 x float>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %r176 = uitofp <2 x i32> undef to <2 x float>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %r177 = sitofp <2 x i32> undef to <2 x float>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %r178 = uitofp <2 x i64> undef to <2 x float>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %r179 = sitofp <2 x i64> undef to <2 x float>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:1 SizeLat:1 for: %r178 = uitofp <2 x i64> undef to <2 x float>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:1 SizeLat:1 for: %r179 = sitofp <2 x i64> undef to <2 x float>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %r180 = uitofp <2 x i1> undef to <2 x double>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %r181 = sitofp <2 x i1> undef to <2 x double>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %r182 = uitofp <2 x i8> undef to <2 x double>
@@ -411,8 +411,8 @@ define i32 @casts_no_users() {
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %r195 = sitofp <4 x i16> undef to <4 x float>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %r196 = uitofp <4 x i32> undef to <4 x float>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %r197 = sitofp <4 x i32> undef to <4 x float>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:1 Lat:1 SizeLat:1 for: %r198 = uitofp <4 x i64> undef to <4 x float>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:1 Lat:1 SizeLat:1 for: %r199 = sitofp <4 x i64> undef to <4 x float>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:1 Lat:1 SizeLat:1 for: %r198 = uitofp <4 x i64> undef to <4 x float>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:1 Lat:1 SizeLat:1 for: %r199 = sitofp <4 x i64> undef to <4 x float>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %r200 = uitofp <4 x i1> undef to <4 x double>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %r201 = sitofp <4 x i1> undef to <4 x double>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:1 Lat:1 SizeLat:1 for: %r202 = uitofp <4 x i8> undef to <4 x double>
@@ -431,8 +431,8 @@ define i32 @casts_no_users() {
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %r215 = sitofp <8 x i16> undef to <8 x float>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %r216 = uitofp <8 x i32> undef to <8 x float>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %r217 = sitofp <8 x i32> undef to <8 x float>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:1 Lat:1 SizeLat:1 for: %r218 = uitofp <8 x i64> undef to <8 x float>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:1 Lat:1 SizeLat:1 for: %r219 = sitofp <8 x i64> undef to <8 x float>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:36 CodeSize:1 Lat:1 SizeLat:1 for: %r218 = uitofp <8 x i64> undef to <8 x float>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:36 CodeSize:1 Lat:1 SizeLat:1 for: %r219 = sitofp <8 x i64> undef to <8 x float>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:1 Lat:1 SizeLat:1 for: %r220 = uitofp <8 x i1> undef to <8 x double>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:1 Lat:1 SizeLat:1 for: %r221 = sitofp <8 x i1> undef to <8 x double>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:19 CodeSize:1 Lat:1 SizeLat:1 for: %r222 = uitofp <8 x i8> undef to <8 x double>
@@ -451,8 +451,8 @@ define i32 @casts_no_users() {
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:1 SizeLat:1 for: %r235 = sitofp <16 x i16> undef to <16 x float>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %r236 = uitofp <16 x i32> undef to <16 x float>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %r237 = sitofp <16 x i32> undef to <16 x float>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:1 Lat:1 SizeLat:1 for: %r238 = uitofp <16 x i64> undef to <16 x float>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:1 Lat:1 SizeLat:1 for: %r239 = sitofp <16 x i64> undef to <16 x float>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:72 CodeSize:1 Lat:1 SizeLat:1 for: %r238 = uitofp <16 x i64> undef to <16 x float>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:72 CodeSize:1 Lat:1 SizeLat:1 for: %r239 = sitofp <16 x i64> undef to <16 x float>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:1 Lat:1 SizeLat:1 for: %r240 = uitofp <16 x i1> undef to <16 x double>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:1 Lat:1 SizeLat:1 for: %r241 = sitofp <16 x i1> undef to <16 x double>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:39 CodeSize:1 Lat:1 SizeLat:1 for: %r242 = uitofp <16 x i8> undef to <16 x double>
@@ -972,9 +972,9 @@ define i32 @store_truncs() {
 
 define void @extend_extract() {
 ; CHECK-LABEL: 'extend_extract'
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %e8 = extractelement <8 x i8> undef, i32 1
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %e16 = extractelement <8 x i16> undef, i32 1
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %e32 = extractelement <8 x i32> undef, i32 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %e8 = extractelement <8 x i8> undef, i32 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %e16 = extractelement <8 x i16> undef, i32 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %e32 = extractelement <8 x i32> undef, i32 1
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %s8_16 = sext i8 %e8 to i16
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %z8_16 = zext i8 %e8 to i16
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %s8_32 = sext i8 %e8 to i32

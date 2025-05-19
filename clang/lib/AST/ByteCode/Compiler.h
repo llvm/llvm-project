@@ -126,6 +126,7 @@ public:
 
   // Expressions.
   bool VisitCastExpr(const CastExpr *E);
+  bool VisitBuiltinBitCastExpr(const BuiltinBitCastExpr *E);
   bool VisitIntegerLiteral(const IntegerLiteral *E);
   bool VisitFloatingLiteral(const FloatingLiteral *E);
   bool VisitImaginaryLiteral(const ImaginaryLiteral *E);
@@ -180,6 +181,7 @@ public:
   bool VisitPredefinedExpr(const PredefinedExpr *E);
   bool VisitCXXThrowExpr(const CXXThrowExpr *E);
   bool VisitCXXReinterpretCastExpr(const CXXReinterpretCastExpr *E);
+  bool VisitCXXDynamicCastExpr(const CXXDynamicCastExpr *E);
   bool VisitCXXNoexceptExpr(const CXXNoexceptExpr *E);
   bool VisitCXXConstructExpr(const CXXConstructExpr *E);
   bool VisitSourceLocExpr(const SourceLocExpr *E);
@@ -286,8 +288,10 @@ protected:
   /// intact.
   bool delegate(const Expr *E);
   /// Creates and initializes a variable from the given decl.
-  VarCreationState visitVarDecl(const VarDecl *VD, bool Toplevel = false);
-  VarCreationState visitDecl(const VarDecl *VD);
+  VarCreationState visitVarDecl(const VarDecl *VD, bool Toplevel = false,
+                                bool IsConstexprUnknown = false);
+  VarCreationState visitDecl(const VarDecl *VD,
+                             bool IsConstexprUnknown = false);
   /// Visit an APValue.
   bool visitAPValue(const APValue &Val, PrimType ValType, const Expr *E);
   bool visitAPValueInitializer(const APValue &Val, const Expr *E, QualType T);
@@ -299,16 +303,19 @@ protected:
 
   bool visitInitList(ArrayRef<const Expr *> Inits, const Expr *ArrayFiller,
                      const Expr *E);
-  bool visitArrayElemInit(unsigned ElemIndex, const Expr *Init);
+  bool visitArrayElemInit(unsigned ElemIndex, const Expr *Init,
+                          std::optional<PrimType> InitT);
 
   /// Creates a local primitive value.
   unsigned allocateLocalPrimitive(DeclTy &&Decl, PrimType Ty, bool IsConst,
-                                  const ValueDecl *ExtendingDecl = nullptr);
+                                  const ValueDecl *ExtendingDecl = nullptr,
+                                  bool IsConstexprUnknown = false);
 
   /// Allocates a space storing a local given its type.
   std::optional<unsigned>
   allocateLocal(DeclTy &&Decl, QualType Ty = QualType(),
-                const ValueDecl *ExtendingDecl = nullptr);
+                const ValueDecl *ExtendingDecl = nullptr,
+                bool IsConstexprUnknown = false);
   std::optional<unsigned> allocateTemporary(const Expr *E);
 
 private:
@@ -531,9 +538,10 @@ public:
     if (!Idx)
       return true;
 
+    // NB: We are *not* resetting Idx here as to allow multiple
+    // calls to destroyLocals().
     bool Success = this->emitDestructors(E);
     this->Ctx->emitDestroy(*Idx, E);
-    this->Idx = std::nullopt;
     return Success;
   }
 

@@ -255,7 +255,7 @@ However, when optimizations are enabled, the printed result changes drastically:
   {__resume_fn = 0x401280 <coro_task(int)>, __destroy_fn = 0x401390 <coro_task(int)>, __promise = {count = 1}, __int_32_0 = 43, __coro_index = 1 '\001'}
 
 Unused values are optimized out, as well as the name of the local variable `a`.
-The only information remained is the value of a 32 bit integer. In this simple
+The only information remained is the value of a 32-bit integer. In this simple
 case, it seems to be pretty clear that `__int_32_0` represents `a`. However, it
 is not true.
 

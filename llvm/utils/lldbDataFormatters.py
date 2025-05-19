@@ -43,16 +43,6 @@ def __lldb_init_module(debugger, internal_dict):
         '-x "^llvm::ArrayRef<.+>$"'
     )
     debugger.HandleCommand(
-        "type synthetic add -w llvm "
-        f"-l {__name__}.OptionalSynthProvider "
-        '-x "^llvm::Optional<.+>$"'
-    )
-    debugger.HandleCommand(
-        "type summary add -w llvm "
-        f"-e -F {__name__}.OptionalSummaryProvider "
-        '-x "^llvm::Optional<.+>$"'
-    )
-    debugger.HandleCommand(
         "type summary add -w llvm "
         f"-F {__name__}.SmallStringSummaryProvider "
         '-x "^llvm::SmallString<.+>$"'
@@ -175,53 +165,6 @@ class ArrayRefSynthProvider:
         self.data_type = self.data.GetType().GetPointeeType()
         self.type_size = self.data_type.GetByteSize()
         assert self.type_size != 0
-
-
-def GetOptionalValue(valobj):
-    storage = valobj.GetChildMemberWithName("Storage")
-    if not storage:
-        storage = valobj
-
-    failure = 2
-    hasVal = storage.GetChildMemberWithName("hasVal").GetValueAsUnsigned(failure)
-    if hasVal == failure:
-        return "<could not read llvm::Optional>"
-
-    if hasVal == 0:
-        return None
-
-    underlying_type = storage.GetType().GetTemplateArgumentType(0)
-    storage = storage.GetChildMemberWithName("value")
-    return storage.Cast(underlying_type)
-
-
-def OptionalSummaryProvider(valobj, internal_dict):
-    val = GetOptionalValue(valobj)
-    if val is None:
-        return "None"
-    if val.summary:
-        return val.summary
-    return ""
-
-
-class OptionalSynthProvider:
-    """Provides deref support to llvm::Optional<T>"""
-
-    def __init__(self, valobj, internal_dict):
-        self.valobj = valobj
-
-    def num_children(self):
-        return self.valobj.num_children
-
-    def get_child_index(self, name):
-        if name == "$$dereference$$":
-            return self.valobj.num_children
-        return self.valobj.GetIndexOfChildWithName(name)
-
-    def get_child_at_index(self, index):
-        if index < self.valobj.num_children:
-            return self.valobj.GetChildAtIndex(index)
-        return GetOptionalValue(self.valobj) or lldb.SBValue()
 
 
 def SmallStringSummaryProvider(valobj, internal_dict):

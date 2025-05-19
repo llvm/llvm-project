@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s bugprone-posix-return %t
+// RUN: %check_clang_tidy --match-partial-fixes %s bugprone-posix-return %t
 
 #define NULL nullptr
 #define ZERO 0

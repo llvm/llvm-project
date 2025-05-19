@@ -22,6 +22,7 @@
 #include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Runtime/CUDA/registration.h"
 #include "flang/Runtime/entry-names.h"
+#include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Value.h"
@@ -111,6 +112,10 @@ struct CUFComputeSharedMemoryOffsetsAndSize
             llvm::alignTo(sharedMemSize, align) + llvm::alignTo(size, align);
         alignment = std::max(alignment, align);
       }
+
+      if (nbDynamicSharedVariables == 0 && nbStaticSharedVariables == 0)
+        continue;
+
       if (nbDynamicSharedVariables > 0 && nbStaticSharedVariables > 0)
         mlir::emitError(
             funcOp.getLoc(),

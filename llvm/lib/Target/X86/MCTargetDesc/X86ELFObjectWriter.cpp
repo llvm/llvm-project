@@ -338,9 +338,7 @@ unsigned X86ELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
                                           const MCFixup &Fixup,
                                           bool IsPCRel) const {
   MCFixupKind Kind = Fixup.getKind();
-  if (Kind >= FirstLiteralRelocationKind)
-    return Kind - FirstLiteralRelocationKind;
-  auto Specifier = X86MCExpr::Specifier(Target.getAccessVariant());
+  auto Specifier = X86MCExpr::Specifier(Target.getSpecifier());
   switch (Specifier) {
   case X86MCExpr::VK_GOTTPOFF:
   case X86MCExpr::VK_INDNTPOFF:
@@ -353,8 +351,8 @@ unsigned X86ELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
   case X86MCExpr::VK_TLSLDM:
   case X86MCExpr::VK_TPOFF:
   case X86MCExpr::VK_DTPOFF:
-    if (auto *S = Target.getSymA())
-      cast<MCSymbolELF>(S->getSymbol()).setType(ELF::STT_TLS);
+    if (auto *S = Target.getAddSym())
+      cast<MCSymbolELF>(S)->setType(ELF::STT_TLS);
     break;
   default:
     break;
@@ -391,7 +389,7 @@ unsigned X86ELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
 bool X86ELFObjectWriter::needsRelocateWithSymbol(const MCValue &V,
                                                  const MCSymbol &Sym,
                                                  unsigned Type) const {
-  switch (getSpecifier(V.getSymA())) {
+  switch (V.getSpecifier()) {
   case X86MCExpr::VK_GOT:
   case X86MCExpr::VK_PLT:
   case X86MCExpr::VK_GOTPCREL:

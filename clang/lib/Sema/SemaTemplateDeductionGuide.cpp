@@ -200,7 +200,7 @@ buildDeductionGuide(Sema &SemaRef, TemplateDecl *OriginalTemplate,
                     TypeSourceInfo *TInfo, SourceLocation LocStart,
                     SourceLocation Loc, SourceLocation LocEnd, bool IsImplicit,
                     llvm::ArrayRef<TypedefNameDecl *> MaterializedTypedefs = {},
-                    Expr *FunctionTrailingRC = nullptr) {
+                    const AssociatedConstraint &FunctionTrailingRC = {}) {
   DeclContext *DC = OriginalTemplate->getDeclContext();
   auto DeductionGuideName =
       SemaRef.Context.DeclarationNames.getCXXDeductionGuideName(
@@ -252,9 +252,7 @@ TemplateTypeParmDecl *transformTemplateTypeParam(
       SemaRef.Context, DC, TTP->getBeginLoc(), TTP->getLocation(), NewDepth,
       NewIndex, TTP->getIdentifier(), TTP->wasDeclaredWithTypename(),
       TTP->isParameterPack(), TTP->hasTypeConstraint(),
-      TTP->isExpandedParameterPack()
-          ? std::optional<unsigned>(TTP->getNumExpansionParameters())
-          : std::nullopt);
+      TTP->getNumExpansionParameters());
   if (const auto *TC = TTP->getTypeConstraint())
     SemaRef.SubstTypeConstraint(NewTTP, TC, Args,
                                 /*EvaluateConstraint=*/EvaluateConstraint);
@@ -356,7 +354,7 @@ struct ConvertConstructorToDeductionGuideTransform {
     TemplateParameterList *TemplateParams =
         SemaRef.GetTemplateParameterList(Template);
     SmallVector<TemplateArgument, 16> Depth1Args;
-    Expr *OuterRC = TemplateParams->getRequiresClause();
+    AssociatedConstraint OuterRC(TemplateParams->getRequiresClause());
     if (FTD) {
       TemplateParameterList *InnerParams = FTD->getTemplateParameters();
       SmallVector<NamedDecl *, 16> AllParams;
@@ -456,18 +454,19 @@ struct ConvertConstructorToDeductionGuideTransform {
     // At this point, the function parameters are already 'instantiated' in the
     // current scope. Substitute into the constructor's trailing
     // requires-clause, if any.
-    Expr *FunctionTrailingRC = nullptr;
-    if (Expr *RC = CD->getTrailingRequiresClause()) {
+    AssociatedConstraint FunctionTrailingRC;
+    if (const AssociatedConstraint &RC = CD->getTrailingRequiresClause()) {
       MultiLevelTemplateArgumentList Args;
       Args.setKind(TemplateSubstitutionKind::Rewrite);
       Args.addOuterTemplateArguments(Depth1Args);
       Args.addOuterRetainedLevel();
       if (NestedPattern)
         Args.addOuterRetainedLevels(NestedPattern->getTemplateDepth());
-      ExprResult E = SemaRef.SubstConstraintExprWithoutSatisfaction(RC, Args);
+      ExprResult E = SemaRef.SubstConstraintExprWithoutSatisfaction(
+          const_cast<Expr *>(RC.ConstraintExpr), Args);
       if (!E.isUsable())
         return nullptr;
-      FunctionTrailingRC = E.get();
+      FunctionTrailingRC = AssociatedConstraint(E.get(), RC.ArgPackSubstIndex);
     }
 
     // C++ [over.match.class.deduct]p1:
@@ -480,13 +479,19 @@ struct ConvertConstructorToDeductionGuideTransform {
     if (OuterRC) {
       // The outer template parameters are not transformed, so their
       // associated constraints don't need substitution.
+      // FIXME: Should simply add another field for the OuterRC, instead of
+      // combining them like this.
       if (!FunctionTrailingRC)
         FunctionTrailingRC = OuterRC;
       else
-        FunctionTrailingRC = BinaryOperator::Create(
-            SemaRef.Context, /*lhs=*/OuterRC, /*rhs=*/FunctionTrailingRC,
-            BO_LAnd, SemaRef.Context.BoolTy, VK_PRValue, OK_Ordinary,
-            TemplateParams->getTemplateLoc(), FPOptionsOverride());
+        FunctionTrailingRC = AssociatedConstraint(
+            BinaryOperator::Create(
+                SemaRef.Context,
+                /*lhs=*/const_cast<Expr *>(OuterRC.ConstraintExpr),
+                /*rhs=*/const_cast<Expr *>(FunctionTrailingRC.ConstraintExpr),
+                BO_LAnd, SemaRef.Context.BoolTy, VK_PRValue, OK_Ordinary,
+                TemplateParams->getTemplateLoc(), FPOptionsOverride()),
+            FunctionTrailingRC.ArgPackSubstIndex);
     }
 
     return buildDeductionGuide(
@@ -621,7 +626,7 @@ private:
     TypeSourceInfo *NewDI;
     if (auto PackTL = OldDI->getTypeLoc().getAs<PackExpansionTypeLoc>()) {
       // Expand out the one and only element in each inner pack.
-      Sema::ArgumentPackSubstitutionIndexRAII SubstIndex(SemaRef, 0);
+      Sema::ArgPackSubstIndexRAII SubstIndex(SemaRef, 0u);
       NewDI =
           SemaRef.SubstType(PackTL.getPatternLoc(), Args,
                             OldParam->getLocation(), OldParam->getDeclName());
@@ -684,6 +689,26 @@ SmallVector<unsigned> TemplateParamsReferencedInTemplateArgumentList(
   llvm::SmallBitVector ReferencedTemplateParams(TemplateParamsList->size());
   SemaRef.MarkUsedTemplateParameters(
       DeducedArgs, TemplateParamsList->getDepth(), ReferencedTemplateParams);
+
+  auto MarkDefaultArgs = [&](auto *Param) {
+    if (!Param->hasDefaultArgument())
+      return;
+    SemaRef.MarkUsedTemplateParameters(
+        Param->getDefaultArgument().getArgument(),
+        TemplateParamsList->getDepth(), ReferencedTemplateParams);
+  };
+
+  for (unsigned Index = 0; Index < TemplateParamsList->size(); ++Index) {
+    if (!ReferencedTemplateParams[Index])
+      continue;
+    auto *Param = TemplateParamsList->getParam(Index);
+    if (auto *TTPD = dyn_cast<TemplateTypeParmDecl>(Param))
+      MarkDefaultArgs(TTPD);
+    else if (auto *NTTPD = dyn_cast<NonTypeTemplateParmDecl>(Param))
+      MarkDefaultArgs(NTTPD);
+    else
+      MarkDefaultArgs(cast<TemplateTemplateParmDecl>(Param));
+  }
 
   SmallVector<unsigned> Results;
   for (unsigned Index = 0; Index < TemplateParamsList->size(); ++Index) {
@@ -1238,14 +1263,17 @@ void DeclareImplicitDeductionGuidesForTypeAlias(
       // FIXME: Here the synthesized deduction guide is not a templated
       // function. Per [dcl.decl]p4, the requires-clause shall be present only
       // if the declarator declares a templated function, a bug in standard?
-      auto *Constraint = buildIsDeducibleConstraint(
-          SemaRef, AliasTemplate, Transformed->getReturnType(), {});
-      if (auto *RC = DG->getTrailingRequiresClause()) {
-        auto Conjunction =
-            SemaRef.BuildBinOp(SemaRef.getCurScope(), SourceLocation{},
-                               BinaryOperatorKind::BO_LAnd, RC, Constraint);
-        if (!Conjunction.isInvalid())
-          Constraint = Conjunction.getAs<Expr>();
+      AssociatedConstraint Constraint(buildIsDeducibleConstraint(
+          SemaRef, AliasTemplate, Transformed->getReturnType(), {}));
+      if (const AssociatedConstraint &RC = DG->getTrailingRequiresClause()) {
+        auto Conjunction = SemaRef.BuildBinOp(
+            SemaRef.getCurScope(), SourceLocation{},
+            BinaryOperatorKind::BO_LAnd, const_cast<Expr *>(RC.ConstraintExpr),
+            const_cast<Expr *>(Constraint.ConstraintExpr));
+        if (!Conjunction.isInvalid()) {
+          Constraint.ConstraintExpr = Conjunction.getAs<Expr>();
+          Constraint.ArgPackSubstIndex = RC.ArgPackSubstIndex;
+        }
       }
       Transformed->setTrailingRequiresClause(Constraint);
       continue;
@@ -1340,8 +1368,7 @@ FunctionTemplateDecl *Sema::DeclareAggregateDeductionGuideFromInitList(
 
   // In case we were expanding a pack when we attempted to declare deduction
   // guides, turn off pack expansion for everything we're about to do.
-  ArgumentPackSubstitutionIndexRAII SubstIndex(*this,
-                                               /*NewSubstitutionIndex=*/-1);
+  ArgPackSubstIndexRAII SubstIndex(*this, std::nullopt);
   // Create a template instantiation record to track the "instantiation" of
   // constructors into deduction guides.
   InstantiatingTemplate BuildingDeductionGuides(
@@ -1390,7 +1417,7 @@ void Sema::DeclareImplicitDeductionGuides(TemplateDecl *Template,
 
   // In case we were expanding a pack when we attempted to declare deduction
   // guides, turn off pack expansion for everything we're about to do.
-  ArgumentPackSubstitutionIndexRAII SubstIndex(*this, -1);
+  ArgPackSubstIndexRAII SubstIndex(*this, std::nullopt);
   // Create a template instantiation record to track the "instantiation" of
   // constructors into deduction guides.
   InstantiatingTemplate BuildingDeductionGuides(

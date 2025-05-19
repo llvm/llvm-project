@@ -42,6 +42,36 @@ static LogicalResult verifyImageOperands(Operation *imageOp,
   // The order we process operands is important. In case of multiple argument
   // taking operands, the arguments are ordered starting with operands having
   // smaller-numbered bits first.
+  if (spirv::bitEnumContainsAny(attr.getValue(), spirv::ImageOperands::Bias)) {
+    if (!isa<spirv::ImplicitLodOpInterface>(imageOp))
+      return imageOp->emitError(
+          "Bias is only valid with implicit-lod instructions");
+
+    if (index + 1 > operands.size())
+      return imageOp->emitError("Bias operand requires 1 argument");
+
+    if (!isa<FloatType>(operands[index].getType()))
+      return imageOp->emitError("Bias must be a floating-point type scalar");
+
+    auto samplingOp = cast<spirv::SamplingOpInterface>(imageOp);
+    auto sampledImageType =
+        cast<spirv::SampledImageType>(samplingOp.getSampledImage().getType());
+    auto imageType = cast<spirv::ImageType>(sampledImageType.getImageType());
+
+    if (!llvm::is_contained({spirv::Dim::Dim1D, spirv::Dim::Dim2D,
+                             spirv::Dim::Dim3D, spirv::Dim::Cube},
+                            imageType.getDim()))
+      return imageOp->emitError(
+          "Bias must only be used with an image type that has "
+          "a dim operand of 1D, 2D, 3D, or Cube");
+
+    if (imageType.getSamplingInfo() != spirv::ImageSamplingInfo::SingleSampled)
+      return imageOp->emitError("Bias must only be used with an image type "
+                                "that has a MS operand of 0");
+
+    ++index;
+  }
+
   if (spirv::bitEnumContainsAny(attr.getValue(), spirv::ImageOperands::Lod)) {
     if (!isa<spirv::ExplicitLodOpInterface>(imageOp) &&
         !isa<spirv::FetchOpInterface>(imageOp))
@@ -74,12 +104,13 @@ static LogicalResult verifyImageOperands(Operation *imageOp,
     if (!llvm::is_contained({spirv::Dim::Dim1D, spirv::Dim::Dim2D,
                              spirv::Dim::Dim3D, spirv::Dim::Cube},
                             imageType.getDim()))
-      return imageOp->emitError("Lod only be used with an image type that has "
-                                "a dim operand of 1D, 2D, 3D, or Cube");
+      return imageOp->emitError(
+          "Lod must only be used with an image type that has "
+          "a dim operand of 1D, 2D, 3D, or Cube");
 
     if (imageType.getSamplingInfo() != spirv::ImageSamplingInfo::SingleSampled)
-      return imageOp->emitError(
-          "Lod only be used with an image type that has a MS operand of 0");
+      return imageOp->emitError("Lod must only be used with an image type that "
+                                "has a MS operand of 0");
 
     ++index;
   }
@@ -99,8 +130,8 @@ static LogicalResult verifyImageOperands(Operation *imageOp,
     auto imageType = cast<spirv::ImageType>(sampledImageType.getImageType());
 
     if (imageType.getSamplingInfo() != spirv::ImageSamplingInfo::SingleSampled)
-      return imageOp->emitError(
-          "Grad only be used with an image type that has a MS operand of 0");
+      return imageOp->emitError("Grad must only be used with an image type "
+                                "that has a MS operand of 0");
 
     int64_t numberOfComponents = 0;
 
@@ -147,10 +178,9 @@ static LogicalResult verifyImageOperands(Operation *imageOp,
 
   // TODO: Add the validation rules for the following Image Operands.
   spirv::ImageOperands noSupportOperands =
-      spirv::ImageOperands::Bias | spirv::ImageOperands::ConstOffset |
-      spirv::ImageOperands::Offset | spirv::ImageOperands::ConstOffsets |
-      spirv::ImageOperands::Sample | spirv::ImageOperands::MinLod |
-      spirv::ImageOperands::MakeTexelAvailable |
+      spirv::ImageOperands::ConstOffset | spirv::ImageOperands::Offset |
+      spirv::ImageOperands::ConstOffsets | spirv::ImageOperands::Sample |
+      spirv::ImageOperands::MinLod | spirv::ImageOperands::MakeTexelAvailable |
       spirv::ImageOperands::MakeTexelVisible |
       spirv::ImageOperands::SignExtend | spirv::ImageOperands::ZeroExtend;
 

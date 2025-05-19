@@ -30,7 +30,7 @@ define void @vec3_setcc_crash(ptr %in, ptr %out) {
 ; RV32-NEXT:    and a0, a4, a0
 ; RV32-NEXT:    and a2, a5, a2
 ; RV32-NEXT:    slli a3, a3, 8
-; RV32-NEXT:    andi a0, a0, 255
+; RV32-NEXT:    zext.b a0, a0
 ; RV32-NEXT:    or a0, a0, a3
 ; RV32-NEXT:    sh a0, 0(a1)
 ; RV32-NEXT:    sb a2, 2(a1)
@@ -57,7 +57,7 @@ define void @vec3_setcc_crash(ptr %in, ptr %out) {
 ; RV64-NEXT:    and a0, a4, a0
 ; RV64-NEXT:    and a2, a5, a2
 ; RV64-NEXT:    slli a3, a3, 8
-; RV64-NEXT:    andi a0, a0, 255
+; RV64-NEXT:    zext.b a0, a0
 ; RV64-NEXT:    or a0, a0, a3
 ; RV64-NEXT:    sh a0, 0(a1)
 ; RV64-NEXT:    sb a2, 2(a1)

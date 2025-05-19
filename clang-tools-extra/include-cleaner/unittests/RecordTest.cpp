@@ -618,14 +618,14 @@ TEST_F(PragmaIncludeTest, ExportInUnnamedBuffer) {
                  llvm::MemoryBuffer::getMemBufferCopy(Extra.getValue(),
                                                       /*BufferName=*/""));
 
-  auto Clang = std::make_unique<CompilerInstance>(
-      std::make_shared<PCHContainerOperations>());
-  Clang->createDiagnostics(*VFS);
+  auto DiagOpts = llvm::makeIntrusiveRefCnt<DiagnosticOptions>();
+  auto Diags = CompilerInstance::createDiagnostics(*VFS, DiagOpts.get());
+  auto Invocation = std::make_unique<CompilerInvocation>();
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(*Invocation, {Filename.data()},
+                                                 *Diags, "clang"));
 
-  Clang->setInvocation(std::make_unique<CompilerInvocation>());
-  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(
-      Clang->getInvocation(), {Filename.data()}, Clang->getDiagnostics(),
-      "clang"));
+  auto Clang = std::make_unique<CompilerInstance>(std::move(Invocation));
+  Clang->createDiagnostics(*VFS);
 
   auto *FM = Clang->createFileManager(VFS);
   ASSERT_TRUE(Clang->ExecuteAction(*Inputs.MakeAction()));

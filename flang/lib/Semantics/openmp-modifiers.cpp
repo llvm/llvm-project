@@ -241,6 +241,38 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpExpectation>() {
 }
 
 template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpInteropPreference>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"interop-preference",
+      /*props=*/
+      {
+          {52, {OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {52, {Clause::OMPC_init}},
+      },
+  };
+  return desc;
+}
+
+template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpInteropType>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"interop-type",
+      /*props=*/
+      {
+          {52, {OmpProperty::Required}},
+      },
+      /*clauses=*/
+      {
+          {52, {Clause::OMPC_init}},
+      },
+  };
+  return desc;
+}
+
+template <>
 const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpIterator>() {
   static const OmpModifierDescriptor desc{
       /*name=*/"iterator",
