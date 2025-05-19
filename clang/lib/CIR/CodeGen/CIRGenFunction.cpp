@@ -12,6 +12,7 @@
 
 #include "CIRGenFunction.h"
 
+#include "CIRGenCXXABI.h"
 #include "CIRGenCall.h"
 #include "CIRGenValue.h"
 #include "mlir/IR/Location.h"
@@ -481,8 +482,13 @@ clang::QualType CIRGenFunction::buildFunctionArgList(clang::GlobalDecl gd,
   QualType retTy = fd->getReturnType();
 
   const auto *md = dyn_cast<CXXMethodDecl>(fd);
-  if (md && md->isInstance())
-    cgm.errorNYI(fd->getSourceRange(), "buildFunctionArgList: CXXMethodDecl");
+  if (md && md->isInstance()) {
+    if (cgm.getCXXABI().hasThisReturn(gd))
+      cgm.errorNYI(fd->getSourceRange(), "this return");
+    else if (cgm.getCXXABI().hasMostDerivedReturn(gd))
+      cgm.errorNYI(fd->getSourceRange(), "most derived return");
+    cgm.getCXXABI().buildThisParam(*this, args);
+  }
 
   if (isa<CXXConstructorDecl>(fd))
     cgm.errorNYI(fd->getSourceRange(),

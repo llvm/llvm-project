@@ -109,6 +109,18 @@ public:
 class CallArgList : public llvm::SmallVector<CallArg, 8> {
 public:
   void add(RValue rvalue, clang::QualType type) { emplace_back(rvalue, type); }
+
+  /// Add all the arguments from another CallArgList to this one. After doing
+  /// this, the old CallArgList retains its list of arguments, but must not
+  /// be used to emit a call.
+  void addFrom(const CallArgList &other) {
+    insert(end(), other.begin(), other.end());
+    // Classic codegen has handling for these here. We may not need it here for
+    // CIR, but if not we should implement equivalent handling in lowering.
+    assert(!cir::MissingFeatures::writebacks());
+    assert(!cir::MissingFeatures::cleanupsToDeactivate());
+    assert(!cir::MissingFeatures::stackBase());
+  }
 };
 
 /// Contains the address where the return value of a function can be stored, and
