@@ -35,7 +35,6 @@
 #include "llvm/Support/LEB128.h"
 #include <cassert>
 #include <cstdint>
-#include <type_traits>
 
 using namespace llvm;
 
