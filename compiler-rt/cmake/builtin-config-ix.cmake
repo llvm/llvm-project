@@ -27,6 +27,8 @@ builtin_check_c_compiler_flag(-Wbuiltin-declaration-mismatch COMPILER_RT_HAS_WBU
 builtin_check_c_compiler_flag(/Zl COMPILER_RT_HAS_ZL_FLAG)
 builtin_check_c_compiler_flag(-fcf-protection=full COMPILER_RT_HAS_FCF_PROTECTION_FLAG)
 builtin_check_c_compiler_flag(-nostdinc++          COMPILER_RT_HAS_NOSTDINCXX_FLAG)
+builtin_check_c_compiler_flag(-mexecute-only       COMPILER_RT_HAS_MEXECUTE_ONLY_FLAG)
+builtin_check_c_compiler_flag(-mpure-code          COMPILER_RT_HAS_MPURE_CODE_FLAG)
 
 builtin_check_c_compiler_source(COMPILER_RT_HAS_ATOMIC_KEYWORD
 "

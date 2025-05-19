@@ -13,7 +13,11 @@
 // The content of this file is arm64-only
 #if defined(__arm64__) || defined(__aarch64__)
 
+#if defined(__ELF__) && defined(COMPILER_RT_EXECUTE_ONLY_CODE)
+        .section .text,"axy",@progbits,unique,0
+#else
         .text
+#endif
 
         // Saves GPRs, calls __orc_rt_resolve
         .globl __orc_rt_sysv_reenter
