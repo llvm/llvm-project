@@ -3807,10 +3807,15 @@ void PragmaMSIntrinsicHandler::HandlePragma(Preprocessor &PP,
     if (!II->getBuiltinID())
       PP.Diag(Tok.getLocation(), diag::warn_pragma_intrinsic_builtin)
           << II << SuggestIntrinH;
-    /// Store the location at which the builtin was used in a #pragma intrinsic
-    /// so we don't emit a missing header warning later.
-    Actions.PragmaIntrinsicBuiltinIDMap[II->getBuiltinID()].insert(
-        Tok.getLocation());
+    // If the builtin hasn't already been declared, declare it now.
+    DeclarationNameInfo NameInfo(II, Tok.getLocation());
+    LookupResult Previous(Actions, NameInfo, Sema::LookupOrdinaryName,
+                          Actions.forRedeclarationInCurContext());
+    Actions.LookupName(Previous, Actions.getCurScope(),
+                       /*CreateBuiltins*/ false);
+    if (Previous.empty())
+      Actions.LazilyCreateBuiltin(II, II->getBuiltinID(), Actions.getCurScope(),
+                                  /*ForRedeclaration*/ true, Tok.getLocation());
     PP.Lex(Tok);
     if (Tok.isNot(tok::comma))
       break;
