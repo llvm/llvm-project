@@ -1597,12 +1597,13 @@ bool VPIRFlags::flagsValidForOpcode(unsigned Opcode) const {
   switch (OpType) {
   case OperationType::OverflowingBinOp:
     return Opcode == Instruction::Add || Opcode == Instruction::Sub ||
-           Opcode == Instruction::Mul ||
+           Opcode == Instruction::Mul || Opcode == Instruction::Shl ||
            Opcode == VPInstruction::VPInstruction::CanonicalIVIncrementForPart;
   case OperationType::DisjointOp:
     return Opcode == Instruction::Or;
   case OperationType::PossiblyExactOp:
-    return Opcode == Instruction::AShr;
+    return Opcode == Instruction::AShr || Opcode == Instruction::LShr ||
+           Opcode == Instruction::SDiv || Opcode == Instruction::UDiv;
   case OperationType::GEPOp:
     return Opcode == Instruction::GetElementPtr ||
            Opcode == VPInstruction::PtrAdd;

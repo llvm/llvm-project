@@ -8453,12 +8453,20 @@ VPRecipeBuilder::handleReplication(Instruction *I, ArrayRef<VPValue *> Operands,
   assert((Range.Start.isScalar() || !IsUniform || !IsPredicated ||
           (Range.Start.isScalable() && isa<IntrinsicInst>(I))) &&
          "Should not predicate a uniform recipe");
-  if (IsUniform && Instruction::isCast(I->getOpcode())) {
-    auto *Recipe = new VPInstructionWithType(I->getOpcode(), Operands,
-                                             I->getType(), VPIRFlags(*I),
-                                             I->getDebugLoc(), I->getName());
-    Recipe->setUnderlyingValue(I);
-    return Recipe;
+  if (IsUniform && !IsPredicated) {
+    VPInstruction *VPI = nullptr;
+    if (Instruction::isCast(I->getOpcode())) {
+      VPI = new VPInstructionWithType(I->getOpcode(), Operands, I->getType(),
+                                      VPIRFlags(*I), I->getDebugLoc(),
+                                      I->getName());
+    } else if (Instruction::isBinaryOp(I->getOpcode())) {
+      VPI = new VPInstruction(I->getOpcode(), Operands, VPIRFlags(*I),
+                              I->getDebugLoc(), I->getName(), true);
+    }
+    if (VPI) {
+      VPI->setUnderlyingValue(I);
+      return VPI;
+    }
   }
   auto *Recipe = new VPReplicateRecipe(I, Operands, IsUniform, BlockInMask,
                                        VPIRMetadata(*I, LVer));

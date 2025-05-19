@@ -62,7 +62,7 @@ define void @test_pr63368(i1 %c, ptr %A) {
 ; CHECK-NEXT:    [[INDEX_NEXT6]] = add nuw i32 [[INDEX5]], 4
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i32 [[INDEX_NEXT6]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK7:%.*]], label [[VECTOR_BODY4]], !llvm.loop [[LOOP4:![0-9]+]]
-; CHECK:       middle.block7:
+; CHECK:       middle.block8:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP2]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT_2:%.*]], label [[SCALAR_PH2]]
 ; CHECK:       scalar.ph2:

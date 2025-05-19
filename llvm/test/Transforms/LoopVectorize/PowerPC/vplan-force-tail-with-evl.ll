@@ -94,7 +94,7 @@ define void @safe_dep(ptr %p) {
 ; CHECK-NEXT:     CLONE ir<%a1> = getelementptr ir<%p>, vp<[[STEPS]]>
 ; CHECK-NEXT:     vp<[[VPTR1:%.+]]> = vector-pointer ir<%a1>
 ; CHECK-NEXT:     WIDEN ir<%v> = load vp<[[VPTR1]]>
-; CHECK-NEXT:     CLONE ir<%offset> = add vp<[[STEPS]]>, ir<100>
+; CHECK-NEXT:     SINGLE-SCALAR ir<%offset> = add vp<[[STEPS]]>, ir<100>
 ; CHECK-NEXT:     CLONE ir<%a2> = getelementptr ir<%p>, ir<%offset>
 ; CHECK-NEXT:     vp<[[VPTR2:%.+]]> = vector-pointer ir<%a2>
 ; CHECK-NEXT:     WIDEN store vp<[[VPTR2]]>, ir<%v>

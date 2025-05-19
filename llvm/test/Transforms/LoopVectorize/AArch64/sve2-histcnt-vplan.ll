@@ -32,7 +32,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT:     SINGLE-SCALAR [[EXT_IDX:.*]] = zext [[IDX]]
 ; CHECK-NEXT:     CLONE [[GEP_BUCKET:.*]] = getelementptr inbounds ir<%buckets>, [[EXT_IDX]]
 ; CHECK-NEXT:     CLONE [[HISTVAL:.*]] = load [[GEP_BUCKET]]
-; CHECK-NEXT:     CLONE [[UPDATE:.*]] = add nsw [[HISTVAL]], ir<1>
+; CHECK-NEXT:     SINGLE-SCALAR [[UPDATE:.*]] = add nsw [[HISTVAL]], ir<1>
 ; CHECK-NEXT:     CLONE store [[UPDATE]], [[GEP_BUCKET]]
 ; CHECK-NEXT:     EMIT [[IV_NEXT]] = add nuw [[IV]], [[VFxUF]]
 ; CHECK-NEXT:     EMIT branch-on-count [[IV_NEXT]], [[VTC]]

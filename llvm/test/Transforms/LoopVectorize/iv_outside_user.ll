@@ -1424,8 +1424,6 @@ define i64 @test_iv_increment_incremented(ptr %dst) {
 ; INTERLEAVE-NEXT:    [[TMP1:%.*]] = getelementptr i16, ptr [[DST]], i64 2
 ; INTERLEAVE-NEXT:    store i16 1, ptr [[TMP0]], align 2
 ; INTERLEAVE-NEXT:    store i16 1, ptr [[TMP1]], align 2
-; INTERLEAVE-NEXT:    [[TMP2:%.*]] = add i64 1, -1
-; INTERLEAVE-NEXT:    [[TMP3:%.*]] = add i64 [[TMP2]], 1
 ; INTERLEAVE-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; INTERLEAVE:       [[MIDDLE_BLOCK]]:
 ; INTERLEAVE-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -1443,7 +1441,7 @@ define i64 @test_iv_increment_incremented(ptr %dst) {
 ; INTERLEAVE-NEXT:    [[IV_1_NEXT]] = add i64 [[IV_2_NEXT]], 1
 ; INTERLEAVE-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], {{!llvm.loop ![0-9]+}}
 ; INTERLEAVE:       [[EXIT]]:
-; INTERLEAVE-NEXT:    [[IV_1_NEXT_LCSSA:%.*]] = phi i64 [ [[IV_1_NEXT]], %[[LOOP]] ], [ [[TMP3]], %[[MIDDLE_BLOCK]] ]
+; INTERLEAVE-NEXT:    [[IV_1_NEXT_LCSSA:%.*]] = phi i64 [ [[IV_1_NEXT]], %[[LOOP]] ], [ 1, %[[MIDDLE_BLOCK]] ]
 ; INTERLEAVE-NEXT:    ret i64 [[IV_1_NEXT_LCSSA]]
 ;
 entry:

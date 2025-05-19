@@ -154,6 +154,10 @@ static bool sinkScalarOperands(VPlan &Plan) {
     if (auto *RepR = dyn_cast<VPReplicateRecipe>(SinkCandidate)) {
       if (!ScalarVFOnly && RepR->isSingleScalar())
         continue;
+    } else if (auto *RepR = dyn_cast<VPInstruction>(SinkCandidate)) {
+      if ((!ScalarVFOnly && RepR->isSingleScalar()) ||
+          !RepR->getUnderlyingValue())
+        continue;
     } else if (!isa<VPScalarIVStepsRecipe>(SinkCandidate))
       continue;
 
@@ -196,6 +200,15 @@ static bool sinkScalarOperands(VPlan &Plan) {
       SinkCandidate->replaceUsesWithIf(Clone, [SinkTo](VPUser &U, unsigned) {
         return cast<VPRecipeBase>(&U)->getParent() != SinkTo;
       });
+    } else {
+      if (auto *VPI = dyn_cast<VPInstruction>(SinkCandidate)) {
+        auto *OldCand = SinkCandidate;
+        SinkCandidate = new VPReplicateRecipe(VPI->getUnderlyingInstr(),
+                                              SinkCandidate->operands(), true,
+                                              nullptr /*Mask*/);
+        SinkCandidate->insertBefore(OldCand);
+        OldCand->replaceAllUsesWith(SinkCandidate);
+      }
     }
     SinkCandidate->moveBefore(*SinkTo, SinkTo->getFirstNonPhi());
     for (VPValue *Op : SinkCandidate->operands())
