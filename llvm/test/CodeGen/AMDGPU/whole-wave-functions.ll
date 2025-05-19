@@ -417,3 +417,86 @@ define amdgpu_gfx_whole_wave i64 @ret_64(i1 %active, i64 %a, i64 %b) {
   %ret = call i64 @llvm.amdgcn.update.dpp.i64(i64 %x, i64 %y, i32 1, i32 1, i32 1, i1 false)
   ret i64 %ret
 }
+
+define amdgpu_gfx_whole_wave void @inreg_args(i1 %active, i32 inreg %i32, <4 x i32> inreg %v4i32, float inreg %float, ptr addrspace(5) inreg %ptr, ptr addrspace(5) inreg %ptr2) {
+; DAGISEL-LABEL: inreg_args:
+; DAGISEL:       ; %bb.0:
+; DAGISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; DAGISEL-NEXT:    s_wait_expcnt 0x0
+; DAGISEL-NEXT:    s_wait_samplecnt 0x0
+; DAGISEL-NEXT:    s_wait_bvhcnt 0x0
+; DAGISEL-NEXT:    s_wait_kmcnt 0x0
+; DAGISEL-NEXT:    s_xor_saveexec_b32 s0, -1
+; DAGISEL-NEXT:    s_clause 0x5
+; DAGISEL-NEXT:    scratch_store_b32 off, v0, s32
+; DAGISEL-NEXT:    scratch_store_b32 off, v1, s32 offset:4
+; DAGISEL-NEXT:    scratch_store_b32 off, v2, s32 offset:8
+; DAGISEL-NEXT:    scratch_store_b32 off, v3, s32 offset:12
+; DAGISEL-NEXT:    scratch_store_b32 off, v4, s32 offset:16
+; DAGISEL-NEXT:    scratch_store_b32 off, v5, s32 offset:20
+; DAGISEL-NEXT:    s_mov_b32 exec_lo, -1
+; DAGISEL-NEXT:    v_dual_mov_b32 v4, s4 :: v_dual_mov_b32 v5, s9
+; DAGISEL-NEXT:    v_dual_mov_b32 v0, s5 :: v_dual_mov_b32 v1, s6
+; DAGISEL-NEXT:    v_dual_mov_b32 v2, s7 :: v_dual_mov_b32 v3, s8
+; DAGISEL-NEXT:    scratch_store_b32 off, v4, s10
+; DAGISEL-NEXT:    s_clause 0x1
+; DAGISEL-NEXT:    scratch_store_b128 off, v[0:3], s11
+; DAGISEL-NEXT:    scratch_store_b32 off, v5, s11
+; DAGISEL-NEXT:    s_wait_alu 0xfffe
+; DAGISEL-NEXT:    s_xor_b32 exec_lo, s0, -1
+; DAGISEL-NEXT:    s_clause 0x5
+; DAGISEL-NEXT:    scratch_load_b32 v0, off, s32
+; DAGISEL-NEXT:    scratch_load_b32 v1, off, s32 offset:4
+; DAGISEL-NEXT:    scratch_load_b32 v2, off, s32 offset:8
+; DAGISEL-NEXT:    scratch_load_b32 v3, off, s32 offset:12
+; DAGISEL-NEXT:    scratch_load_b32 v4, off, s32 offset:16
+; DAGISEL-NEXT:    scratch_load_b32 v5, off, s32 offset:20
+; DAGISEL-NEXT:    s_mov_b32 exec_lo, s0
+; DAGISEL-NEXT:    s_wait_loadcnt 0x0
+; DAGISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-LABEL: inreg_args:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GISEL-NEXT:    s_wait_expcnt 0x0
+; GISEL-NEXT:    s_wait_samplecnt 0x0
+; GISEL-NEXT:    s_wait_bvhcnt 0x0
+; GISEL-NEXT:    s_wait_kmcnt 0x0
+; GISEL-NEXT:    s_xor_saveexec_b32 s34, -1
+; GISEL-NEXT:    s_clause 0x5
+; GISEL-NEXT:    scratch_store_b32 off, v0, s32
+; GISEL-NEXT:    scratch_store_b32 off, v1, s32 offset:4
+; GISEL-NEXT:    scratch_store_b32 off, v2, s32 offset:8
+; GISEL-NEXT:    scratch_store_b32 off, v3, s32 offset:12
+; GISEL-NEXT:    scratch_store_b32 off, v4, s32 offset:16
+; GISEL-NEXT:    scratch_store_b32 off, v5, s32 offset:20
+; GISEL-NEXT:    s_mov_b32 exec_lo, -1
+; GISEL-NEXT:    s_mov_b32 s0, s5
+; GISEL-NEXT:    s_mov_b32 s1, s6
+; GISEL-NEXT:    s_mov_b32 s2, s7
+; GISEL-NEXT:    s_mov_b32 s3, s8
+; GISEL-NEXT:    v_mov_b32_e32 v4, s4
+; GISEL-NEXT:    s_wait_alu 0xfffe
+; GISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v3, s3
+; GISEL-NEXT:    v_dual_mov_b32 v1, s1 :: v_dual_mov_b32 v2, s2
+; GISEL-NEXT:    v_mov_b32_e32 v5, s9
+; GISEL-NEXT:    scratch_store_b32 off, v4, s10
+; GISEL-NEXT:    s_clause 0x1
+; GISEL-NEXT:    scratch_store_b128 off, v[0:3], s11
+; GISEL-NEXT:    scratch_store_b32 off, v5, s11
+; GISEL-NEXT:    s_xor_b32 exec_lo, s34, -1
+; GISEL-NEXT:    s_clause 0x5
+; GISEL-NEXT:    scratch_load_b32 v0, off, s32
+; GISEL-NEXT:    scratch_load_b32 v1, off, s32 offset:4
+; GISEL-NEXT:    scratch_load_b32 v2, off, s32 offset:8
+; GISEL-NEXT:    scratch_load_b32 v3, off, s32 offset:12
+; GISEL-NEXT:    scratch_load_b32 v4, off, s32 offset:16
+; GISEL-NEXT:    scratch_load_b32 v5, off, s32 offset:20
+; GISEL-NEXT:    s_mov_b32 exec_lo, s34
+; GISEL-NEXT:    s_wait_loadcnt 0x0
+; GISEL-NEXT:    s_setpc_b64 s[30:31]
+  store i32 %i32, ptr addrspace(5) %ptr
+  store <4 x i32> %v4i32, ptr addrspace(5) %ptr2
+  store float %float, ptr addrspace(5) %ptr2
+  ret void
+}
