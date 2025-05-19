@@ -1555,9 +1555,9 @@ ReoptimizeBlock:
     if (TII->isUnconditionalTailCall(TailCall)) {
       SmallVector<MachineBasicBlock *> PredsChanged;
       for (auto *Pred : MBB->predecessors()) {
-        bool IsPGOInfoAvailable = false;
+        bool PredHasHotSuccessor = false;
         for (MachineBasicBlock *const PredSucc : Pred->successors()) {
-          IsPGOInfoAvailable |= MBPI.isEdgeHot(Pred, PredSucc);
+          PredHasHotSuccessor |= MBPI.isEdgeHot(Pred, PredSucc);
         }
 
         MachineBasicBlock *PredTBB = nullptr, *PredFBB = nullptr;
@@ -1567,11 +1567,11 @@ ReoptimizeBlock:
 
         bool IsEdgeCold = !MBPI.isEdgeHot(Pred, MBB);
         bool CanFoldFallThrough =
-            IsPGOInfoAvailable && IsEdgeCold &&
+            PredHasHotSuccessor && IsEdgeCold &&
             (MBB == PredFBB ||
              (PredFBB == nullptr && Pred->getFallThrough() == MBB));
         bool CanFoldTakenBlock =
-            (MBB == PredTBB && (IsPGOInfoAvailable ? IsEdgeCold : true));
+            (MBB == PredTBB && (PredHasHotSuccessor ? IsEdgeCold : true));
 
         // When we have PGO (or equivalent) information, we want to fold the
         // fallthrough if it's cold. Folding a fallthrough puts it behind a
