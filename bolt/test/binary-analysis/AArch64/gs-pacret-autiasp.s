@@ -141,24 +141,9 @@ f_nonx30_ret_ok:
         stp     x29, x30, [sp, #-16]!
         mov     x29, sp
         bl      g
-        add     x0, x0, #3
         ldp     x29, x30, [sp], #16
-        // FIXME: Should the scanner understand that an authenticated register (below x30,
-        //        after the autiasp instruction), is OK to be moved to another register
-        //        and then that register being used to return?
-        //        This respects that pac-ret hardening intent, but the scanner currently
-        //        will produce a false positive for this.
-        //        Is it worthwhile to make the scanner more complex for this case?
-        //        So far, scanning many millions of instructions across a linux distro,
-        //        I haven't encountered such an example.
-        //        The ".if 0" block below tests this case and currently fails.
-.if 0
         autiasp
         mov     x16, x30
-.else
-        mov     x16, x30
-        autia   x16, sp
-.endif
 // CHECK-NOT: function f_nonx30_ret_ok
         ret     x16
         .size f_nonx30_ret_ok, .-f_nonx30_ret_ok
@@ -183,17 +168,14 @@ f_tail_called:
         .globl  f_nonx30_ret_non_auted
         .type   f_nonx30_ret_non_auted,@function
 f_nonx30_ret_non_auted:
-// FIXME: x1 is not authenticated, so should this be reported?
-//        Note that we assume it's fine for x30 to not be authenticated before
-//        returning to, as assuming that x30 is not attacker controlled at function
-//        entry is part (implicitly) of the pac-ret hardening scheme.
-//        It's probably an open question whether for other hardening schemes, such as
-//        PAuthABI, which registers should be considered "clean" or not at function entry.
-//        In other words, which registers have to be authenticated before being used as
-//        a pointer and which ones not?
-//        For a more detailed discussion, see
-//        https://github.com/llvm/llvm-project/pull/122304#discussion_r1923662744
-// CHECK-NOT: f_nonx30_ret_non_auted
+// x1 is neither authenticated nor implicitly considered safe at function entry.
+// Note that we assume it's fine for x30 to not be authenticated before
+// returning to, as assuming that x30 is not attacker controlled at function
+// entry is part (implicitly) of the pac-ret hardening scheme.
+//
+// CHECK-LABEL: GS-PAUTH: non-protected ret found in function f_nonx30_ret_non_auted, basic block {{[0-9a-zA-Z.]+}}, at address
+// CHECK-NEXT:    The instruction is     {{[0-9a-f]+}}:       ret
+// CHECK-NEXT:    The 0 instructions that write to the affected registers after any authentication are:
         ret     x1
         .size f_nonx30_ret_non_auted, .-f_nonx30_ret_non_auted
 
@@ -230,6 +212,16 @@ f_callclobbered_calleesaved:
         ret x19
         .size f_callclobbered_calleesaved, .-f_callclobbered_calleesaved
 
+        .globl  f_unreachable_instruction
+        .type   f_unreachable_instruction,@function
+f_unreachable_instruction:
+// CHECK-LABEL: GS-PAUTH: Warning: unreachable instruction found in function f_unreachable_instruction, basic block {{[0-9a-zA-Z.]+}}, at address
+// CHECK-NEXT:    The instruction is     {{[0-9a-f]+}}:       add     x0, x1, x2
+        b       1f
+        add     x0, x1, x2
+1:
+        ret
+        .size f_unreachable_instruction, .-f_unreachable_instruction
 
 /// Now do a basic sanity check on every different Authentication instruction:
 

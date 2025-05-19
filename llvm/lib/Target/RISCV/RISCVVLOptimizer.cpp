@@ -83,8 +83,7 @@ struct OperandInfo {
   OperandInfo() = delete;
 
   static bool EMULAndEEWAreEqual(const OperandInfo &A, const OperandInfo &B) {
-    return A.Log2EEW == B.Log2EEW && A.EMUL->first == B.EMUL->first &&
-           A.EMUL->second == B.EMUL->second;
+    return A.Log2EEW == B.Log2EEW && A.EMUL == B.EMUL;
   }
 
   static bool EEWAreEqual(const OperandInfo &A, const OperandInfo &B) {
@@ -1323,6 +1322,7 @@ std::optional<MachineOperand>
 RISCVVLOptimizer::checkUsers(const MachineInstr &MI) const {
   std::optional<MachineOperand> CommonVL;
   SmallSetVector<MachineOperand *, 8> Worklist;
+  SmallPtrSet<const MachineInstr *, 4> PHISeen;
   for (auto &UserOp : MRI->use_operands(MI.getOperand(0).getReg()))
     Worklist.insert(&UserOp);
 
@@ -1337,6 +1337,16 @@ RISCVVLOptimizer::checkUsers(const MachineInstr &MI) const {
       LLVM_DEBUG(dbgs() << "    Peeking through uses of COPY\n");
       for (auto &CopyUse : MRI->use_operands(UserMI.getOperand(0).getReg()))
         Worklist.insert(&CopyUse);
+      continue;
+    }
+
+    if (UserMI.isPHI()) {
+      // Don't follow PHI cycles
+      if (!PHISeen.insert(&UserMI).second)
+        continue;
+      LLVM_DEBUG(dbgs() << "    Peeking through uses of PHI\n");
+      for (auto &PhiUse : MRI->use_operands(UserMI.getOperand(0).getReg()))
+        Worklist.insert(&PhiUse);
       continue;
     }
 

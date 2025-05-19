@@ -144,6 +144,9 @@ void SPIRVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
           printRemainingVariableOps(MI, NumFixedOps, OS, false, true);
           break;
         }
+        case SPIRV::OpMemberDecorate:
+          printRemainingVariableOps(MI, NumFixedOps, OS);
+          break;
         case SPIRV::OpExecutionMode:
         case SPIRV::OpExecutionModeId:
         case SPIRV::OpLoopMerge: {
@@ -356,8 +359,7 @@ static void printExpr(const MCExpr *Expr, raw_ostream &O) {
 }
 
 void SPIRVInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
-                                    raw_ostream &O, const char *Modifier) {
-  assert((Modifier == 0 || Modifier[0] == 0) && "No modifiers supported");
+                                    raw_ostream &O) {
   if (OpNo < MI->getNumOperands()) {
     const MCOperand &Op = MI->getOperand(OpNo);
     if (Op.isReg())

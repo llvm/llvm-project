@@ -19,5 +19,13 @@ void b8 (void) { for (static struct { int i; } s;s.i;); } /* c11-warning {{decla
 void b9 (void) { for (struct { int i; } (*s)(struct { int j; } o) = 0;s;); }
 void b10(void) { for (typedef struct { int i; } (*s)(struct { int j; });;); } /* c11-warning {{non-variable declaration in 'for' loop is a C23 extension}}
                                                                                  c23-warning {{non-variable declaration in 'for' loop is incompatible with C standards before C23}} */
+
+#if __has_feature(c_thread_local)
 void b11 (void) { for (static _Thread_local struct { int i; } s;s.i;); } /* c11-warning {{declaration of non-local variable in 'for' loop is a C23 extension}}
                                                                             c23-warning {{declaration of non-local variable in 'for' loop is incompatible with C standards before C23}} */
+#endif
+
+void b12(void) {
+  for(_Static_assert(1, "");;) {} /* c11-warning {{non-variable declaration in 'for' loop is a C23 extension}}
+                                     c23-warning {{non-variable declaration in 'for' loop is incompatible with C standards before C23}} */
+}

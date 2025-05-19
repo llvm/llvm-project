@@ -251,7 +251,7 @@ void loadEngineFor() {
 }
 
 template <class T> struct TBase {
-  void* operator new(T size, int); // expected-error {{'operator new' cannot take a dependent type as first parameter; use size_t}}
+  void* operator new(T size, int); // expected-error {{'operator new' cannot take a dependent type as its 1st parameter; use size_t}}
 };
 
 TBase<int> t1;
@@ -466,7 +466,7 @@ namespace TemplateDestructors {
 
 namespace DeleteParam {
   struct X {
-    void operator delete(X*); // expected-error{{first parameter of 'operator delete' must have type 'void *'}}
+    void operator delete(X*); // expected-error{{1st parameter of 'operator delete' must have type 'void *'}}
   };
 
   struct Y {

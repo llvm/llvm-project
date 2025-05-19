@@ -25,14 +25,14 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _IntType = int>
-class _LIBCPP_TEMPLATE_VIS binomial_distribution {
+class binomial_distribution {
   static_assert(__libcpp_random_is_valid_inttype<_IntType>::value, "IntType must be a supported integer type");
 
 public:
   // types
   typedef _IntType result_type;
 
-  class _LIBCPP_TEMPLATE_VIS param_type {
+  class param_type {
     result_type __t_;
     double __p_;
     double __pr_;
@@ -99,7 +99,9 @@ public:
 
 // The LLVM C library provides this with conflicting `noexcept` attributes.
 #if !defined(_LIBCPP_MSVCRT_LIKE) && !defined(__LLVM_LIBC__)
-extern "C" double lgamma_r(double, int*);
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
+_LIBCPP_EXPORTED_FROM_ABI extern "C" double lgamma_r(double, int*);
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 #endif
 
 inline _LIBCPP_HIDE_FROM_ABI double __libcpp_lgamma(double __d) {

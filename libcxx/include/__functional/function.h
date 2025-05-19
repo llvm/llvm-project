@@ -57,6 +57,7 @@ _LIBCPP_DIAGNOSTIC_PUSH
 #  if !_LIBCPP_AVAILABILITY_HAS_BAD_FUNCTION_CALL_KEY_FUNCTION
 _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wweak-vtables")
 #  endif
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 class _LIBCPP_EXPORTED_FROM_ABI bad_function_call : public exception {
 public:
   _LIBCPP_HIDE_FROM_ABI bad_function_call() _NOEXCEPT                                    = default;
@@ -71,10 +72,11 @@ public:
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL ~bad_function_call() _NOEXCEPT override {}
 #  endif
 
-#  ifdef _LIBCPP_ABI_BAD_FUNCTION_CALL_GOOD_WHAT_MESSAGE
+#  if _LIBCPP_AVAILABILITY_HAS_BAD_FUNCTION_CALL_GOOD_WHAT_MESSAGE
   const char* what() const _NOEXCEPT override;
 #  endif
 };
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_DIAGNOSTIC_POP
 
 [[__noreturn__]] inline _LIBCPP_HIDE_FROM_ABI void __throw_bad_function_call() {
@@ -86,7 +88,7 @@ _LIBCPP_DIAGNOSTIC_POP
 }
 
 template <class _Fp>
-class _LIBCPP_TEMPLATE_VIS function; // undefined
+class function; // undefined
 
 namespace __function {
 
@@ -234,8 +236,9 @@ public:
 // __base provides an abstract interface for copyable functors.
 
 template <class _Fp>
-class _LIBCPP_TEMPLATE_VIS __base;
+class __base;
 
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 template <class _Rp, class... _ArgTypes>
 class __base<_Rp(_ArgTypes...)> {
 public:
@@ -334,6 +337,8 @@ const std::type_info& __func<_Fp, _Alloc, _Rp(_ArgTypes...)>::target_type() cons
 }
 
 #  endif // _LIBCPP_HAS_RTTI
+
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 
 // __value_func creates a value-type from a __func.
 
@@ -827,7 +832,7 @@ public:
 } // namespace __function
 
 template <class _Rp, class... _ArgTypes>
-class _LIBCPP_TEMPLATE_VIS function<_Rp(_ArgTypes...)>
+class function<_Rp(_ArgTypes...)>
     : public __function::__maybe_derive_from_unary_function<_Rp(_ArgTypes...)>,
       public __function::__maybe_derive_from_binary_function<_Rp(_ArgTypes...)> {
 #  ifndef _LIBCPP_ABI_OPTIMIZED_FUNCTION

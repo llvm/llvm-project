@@ -125,8 +125,8 @@ void ExceptionInfoRequestHandler::operator()(
     else if (stopReason == lldb::eStopReasonBreakpoint) {
       ExceptionBreakpoint *exc_bp = dap.GetExceptionBPFromStopReason(thread);
       if (exc_bp) {
-        EmplaceSafeString(body, "exceptionId", exc_bp->filter);
-        EmplaceSafeString(body, "description", exc_bp->label);
+        EmplaceSafeString(body, "exceptionId", exc_bp->GetFilter());
+        EmplaceSafeString(body, "description", exc_bp->GetLabel());
       } else {
         body.try_emplace("exceptionId", "exception");
       }
@@ -136,7 +136,7 @@ void ExceptionInfoRequestHandler::operator()(
     if (!ObjectContainsKey(body, "description")) {
       char description[1024];
       if (thread.GetStopDescription(description, sizeof(description))) {
-        EmplaceSafeString(body, "description", std::string(description));
+        EmplaceSafeString(body, "description", description);
       }
     }
     body.try_emplace("breakMode", "always");

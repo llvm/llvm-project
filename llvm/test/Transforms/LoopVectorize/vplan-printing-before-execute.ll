@@ -9,6 +9,7 @@ target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; CHECK:      LV: Scalarizing:  %cmp =
 ; CHECK:      VPlan 'Initial VPlan for VF={8},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VF:%.+]]> = VF
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: vp<[[TC:%.+]]> = original trip-count
@@ -26,7 +27,7 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<[[CAN_IV_NEXT:%.+]]>
-; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
+; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:     EMIT vp<[[PADD:%.+]]> = ptradd ir<%A>, vp<[[STEPS]]>
 ; CHECK-NEXT:     vp<[[VPTR:%.]]> = vector-pointer vp<[[PADD]]>
 ; CHECK-NEXT:     WIDEN ir<%l> = load vp<[[VPTR]]>
@@ -76,8 +77,7 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; CHECK-NEXT: Successor(s): vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.body:
-; CHECK-NEXT:   vp<[[STEPS1:%.+]]> = SCALAR-STEPS ir<0>, ir<1>
-; CHECK-NEXT:   EMIT vp<[[PADD1:%.+]]> = ptradd ir<%A>, vp<[[STEPS1]]>
+; CHECK-NEXT:   EMIT vp<[[PADD1:%.+]]> = ptradd ir<%A>, ir<0>
 ; CHECK-NEXT:   vp<[[VPTR1:%.]]> = vector-pointer vp<[[PADD1]]>
 ; CHECK-NEXT:   vp<[[VPTR2:%.]]> = vector-pointer vp<[[PADD1]]>, ir<1>
 ; CHECK-NEXT:   WIDEN ir<%l> = load vp<[[VPTR1]]>

@@ -47,7 +47,11 @@ static cl::opt<double> PartialSampleProfileWorkingSetSizeScaleFactor(
 // any backend passes (IR level instrumentation, for example). This method
 // checks if the Summary is null and if so checks if the summary metadata is now
 // available in the module and parses it to get the Summary object.
-void ProfileSummaryInfo::refresh() {
+void ProfileSummaryInfo::refresh(std::unique_ptr<ProfileSummary> &&Other) {
+  if (Other) {
+    Summary.swap(Other);
+    return;
+  }
   if (hasProfileSummary())
     return;
   // First try to get context sensitive ProfileSummary.
@@ -223,9 +227,7 @@ INITIALIZE_PASS(ProfileSummaryInfoWrapperPass, "profile-summary-info",
                 "Profile summary info", false, true)
 
 ProfileSummaryInfoWrapperPass::ProfileSummaryInfoWrapperPass()
-    : ImmutablePass(ID) {
-  initializeProfileSummaryInfoWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+    : ImmutablePass(ID) {}
 
 bool ProfileSummaryInfoWrapperPass::doInitialization(Module &M) {
   PSI.reset(new ProfileSummaryInfo(M));

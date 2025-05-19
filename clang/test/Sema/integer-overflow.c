@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -verify -fsyntax-only -triple x86_64-pc-linux-gnu
+// RUN: %clang_cc1 %s -verify -fsyntax-only -triple x86_64-pc-linux-gnu -fexperimental-new-constant-interpreter
 typedef unsigned long long uint64_t;
 typedef unsigned int uint32_t;
 

@@ -32,8 +32,8 @@ modes are:
   including heuristic checks that might have significant performance overhead as
   well as internal library assertions. This mode should be used in
   non-production environments (such as test suites, CI, or local development).
-  We don’t commit to a particular level of performance in this mode and it’s
-  *not* intended to be used in production.
+  We do not commit to a particular level of performance in this mode.
+  In particular, this mode is *not* intended to be used in production.
 
 .. note::
 
@@ -155,13 +155,13 @@ easier to reason about the high-level semantics of a hardening mode.
   in the library -- whatever the consequences are, they will happen in the user
   code.
 
-- ``pedantic`` -- checks preconditions that are imposed by the Standard, but
-  violating which happens to be benign in libc++.
+- ``pedantic`` -- checks preconditions that are imposed by the C++ standard,
+  but violating which happens to be benign in libc++.
 
 - ``semantic-requirement`` -- checks that the given argument satisfies the
-  semantic requirements imposed by the Standard. Typically, there is no simple
-  way to completely prove that a semantic requirement is satisfied; thus, this
-  would often be a heuristic check and it might be quite expensive.
+  semantic requirements imposed by the C++ standard. Typically, there is no
+  simple way to completely prove that a semantic requirement is satisfied;
+  thus, this would often be a heuristic check and it might be quite expensive.
 
 - ``internal`` -- checks that internal invariants of the library hold. These
   assertions don't depend on user input.
@@ -239,7 +239,7 @@ Mapping between the hardening modes and the assertion categories
 
 .. note::
 
-  The categories enabled by each mode are subject to change and users should not
+  The categories enabled by each mode are subject to change. Users should not
   rely on the precise assertions enabled by a mode at a given point in time.
   However, the library does guarantee to keep the hardening modes stable and
   to fulfill the semantics documented here.

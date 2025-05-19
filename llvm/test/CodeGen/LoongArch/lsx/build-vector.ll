@@ -374,9 +374,7 @@ define void @extract1_i32_zext_insert0_i64_undef(ptr %src, ptr %dst) nounwind {
 ; CHECK-LABEL: extract1_i32_zext_insert0_i64_undef:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr0, $a0, 0
-; CHECK-NEXT:    vpickve2gr.w $a0, $vr0, 1
-; CHECK-NEXT:    bstrpick.d $a0, $a0, 31, 0
-; CHECK-NEXT:    vinsgr2vr.d $vr0, $a0, 0
+; CHECK-NEXT:    vsrli.d $vr0, $vr0, 32
 ; CHECK-NEXT:    vst $vr0, $a1, 0
 ; CHECK-NEXT:    ret
   %v = load volatile <4 x i32>, ptr %src

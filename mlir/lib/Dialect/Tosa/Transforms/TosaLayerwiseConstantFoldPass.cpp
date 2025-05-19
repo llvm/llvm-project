@@ -45,9 +45,7 @@ void populateTosaOpsCanonicalizationPatterns(MLIRContext *ctx,
 struct TosaLayerwiseConstantFoldPass
     : public tosa::impl::TosaLayerwiseConstantFoldPassBase<
           TosaLayerwiseConstantFoldPass> {
-  TosaLayerwiseConstantFoldPass(
-      const TosaLayerwiseConstantFoldPassOptions &options)
-      : TosaLayerwiseConstantFoldPassBase(options) {}
+  using Base::Base;
 
   void runOnOperation() override {
     auto *ctx = &getContext();
@@ -66,13 +64,3 @@ struct TosaLayerwiseConstantFoldPass
 };
 
 } // namespace
-
-std::unique_ptr<Pass> mlir::tosa::createTosaLayerwiseConstantFoldPass() {
-  return std::make_unique<TosaLayerwiseConstantFoldPass>(
-      TosaLayerwiseConstantFoldPassOptions{false});
-}
-
-std::unique_ptr<Pass> mlir::tosa::createTosaLayerwiseConstantFoldPass(
-    const TosaLayerwiseConstantFoldPassOptions &options) {
-  return std::make_unique<TosaLayerwiseConstantFoldPass>(options);
-}

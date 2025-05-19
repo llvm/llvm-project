@@ -11,6 +11,12 @@ def: Flag<["-"], "h">,
   Alias<help>,
   HelpText<"Alias for --help">;
 
+def version: F<"version">,
+  HelpText<"Prints out the lldb-dap version.">;
+def: Flag<["-"], "v">,
+  Alias<version>,
+  HelpText<"Alias for --version">;
+
 def wait_for_debugger: F<"wait-for-debugger">,
   HelpText<"Pause the program at startup.">;
 def: Flag<["-"], "g">,

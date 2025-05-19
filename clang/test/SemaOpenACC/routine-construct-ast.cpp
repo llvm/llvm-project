@@ -24,16 +24,16 @@ int function();
 // CHECK-NEXT: vector clause
 // CHECK-NEXT: bind clause identifier 'identifier'
 
-#pragma acc routine(function) device_type(Something) seq
+#pragma acc routine(function) device_type(acc_device_nvidia) seq
 // CHECK-NEXT: OpenACCRoutineDecl{{.*}} routine
 // CHECK-NEXT: DeclRefExpr{{.*}} 'function' 'int ()'
-// CHECK-NEXT: device_type(Something)
+// CHECK-NEXT: device_type(acc_device_nvidia)
 // CHECK-NEXT: seq clause
-#pragma acc routine(function) nohost dtype(Something) vector
+#pragma acc routine(function) nohost dtype(nvidia) vector
 // CHECK-NEXT: OpenACCRoutineDecl{{.*}} routine
 // CHECK-NEXT: DeclRefExpr{{.*}} 'function' 'int ()'
 // CHECK-NEXT: nohost clause
-// CHECK-NEXT: dtype(Something)
+// CHECK-NEXT: dtype(nvidia)
 // CHECK-NEXT: vector clause
 
 #pragma acc routine nohost vector
@@ -172,15 +172,15 @@ struct S {
 // CHECK-NEXT: OpenACCRoutineDecl{{.*}} routine
 // CHECK-NEXT: DeclRefExpr{{.*}} 'Lambda' 'const S::(lambda at
 // CHECK-NEXT: worker clause
-#pragma acc routine(Lambda) worker device_type(Lambda)
+#pragma acc routine(Lambda) worker device_type(host)
 // CHECK-NEXT: OpenACCRoutineDecl{{.*}} routine
 // CHECK-NEXT: DeclRefExpr{{.*}} 'Lambda' 'const S::(lambda at
 // CHECK-NEXT: worker clause
-// CHECK-NEXT: device_type(Lambda)
-#pragma acc routine(Lambda) dtype(Lambda) vector
+// CHECK-NEXT: device_type(host)
+#pragma acc routine(Lambda) dtype(radeon) vector
 // CHECK-NEXT: OpenACCRoutineDecl{{.*}} routine
 // CHECK-NEXT: DeclRefExpr{{.*}} 'Lambda' 'const S::(lambda at
-// CHECK-NEXT: dtype(Lambda)
+// CHECK-NEXT: dtype(radeon)
 // CHECK-NEXT: vector clause
 };
 
@@ -294,12 +294,12 @@ struct DepS {
 // CHECK-NEXT: DeclRefExpr{{.*}} 'StaticMemFunc' 'T ()'
 // CHECK-NEXT: NestedNameSpecifier{{.*}} 'DepS<T>'
 // CHECK-NEXT: worker clause
-#pragma acc routine(DepS<T>::StaticMemFunc) worker device_type(T)
+#pragma acc routine(DepS<T>::StaticMemFunc) worker device_type(multicore)
 // CHECK-NEXT: OpenACCRoutineDecl{{.*}} routine 
 // CHECK-NEXT: DeclRefExpr{{.*}} 'StaticMemFunc' 'T ()'
 // CHECK-NEXT: NestedNameSpecifier{{.*}} 'DepS<T>'
 // CHECK-NEXT: worker clause
-// CHECK-NEXT: device_type(T)
+// CHECK-NEXT: device_type(multicore)
 
 // Instantiation:
 // CHECK: ClassTemplateSpecializationDecl{{.*}}struct DepS
@@ -398,7 +398,7 @@ struct DepS {
 // CHECK-NEXT: DeclRefExpr{{.*}} 'StaticMemFunc' 'int ()'
 // CHECK-NEXT: NestedNameSpecifier{{.*}} 'DepS<int>'
 // CHECK-NEXT: worker clause
-// CHECK-NEXT: device_type(T)
+// CHECK-NEXT: device_type(multicore)
 };
 
 #pragma acc routine(DepS<int>::Lambda) gang(dim:1)

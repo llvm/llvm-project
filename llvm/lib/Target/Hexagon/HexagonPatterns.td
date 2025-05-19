@@ -109,7 +109,12 @@ def pfalse: PatFrag<(ops), (HexagonPFALSE)>;
 def pnot:   PatFrag<(ops node:$Pu), (xor node:$Pu, ptrue)>;
 
 def: Pat<(v8i1 (HexagonPFALSE)), (C2_tfrrp (A2_tfrsi (i32 0)))>;
+def: Pat<(v4i1 (HexagonPFALSE)), (C2_tfrrp (A2_tfrsi (i32 0)))>;
+def: Pat<(v2i1 (HexagonPFALSE)), (C2_tfrrp (A2_tfrsi (i32 0)))>;
+
 def: Pat<(v8i1 (HexagonPTRUE)), (C2_tfrrp (A2_tfrsi (i32 -1)))>;
+def: Pat<(v4i1 (HexagonPTRUE)), (C2_tfrrp (A2_tfrsi (i32 -1)))>;
+def: Pat<(v2i1 (HexagonPTRUE)), (C2_tfrrp (A2_tfrsi (i32 -1)))>;
 
 def valign: PatFrag<(ops node:$Vt, node:$Vs, node:$Ru),
                     (HexagonVALIGN node:$Vt, node:$Vs, node:$Ru)>;
@@ -1574,8 +1579,8 @@ def: OpR_RR_pat<C2_and,       Mul,        v8i1,  V8I1>;
 def: OpR_RR_pat<F2_sfadd,     pf2<fadd>,    f32, F32>;
 def: OpR_RR_pat<F2_sfsub,     pf2<fsub>,    f32, F32>;
 def: OpR_RR_pat<F2_sfmpy,     pf2<fmul>,    f32, F32>;
-def: OpR_RR_pat<F2_sfmin,     pf2<fminnum>, f32, F32>;
-def: OpR_RR_pat<F2_sfmax,     pf2<fmaxnum>, f32, F32>;
+def: OpR_RR_pat<F2_sfmin,     pf2<fminimumnum>, f32, F32>;
+def: OpR_RR_pat<F2_sfmax,     pf2<fmaximumnum>, f32, F32>;
 
 let Predicates = [HasV66] in {
   def: OpR_RR_pat<F2_dfadd,     pf2<fadd>,    f64, F64>;
@@ -1595,8 +1600,8 @@ let Predicates = [HasV67,UseUnsafeMath], AddedComplexity = 50 in {
   def: Pat<(fmul F64:$Rs, F64:$Rt), (DfMpy $Rs, $Rt)>;
 }
 let Predicates = [HasV67] in {
-  def: OpR_RR_pat<F2_dfmin,     pf2<fminnum>, f64, F64>;
-  def: OpR_RR_pat<F2_dfmax,     pf2<fmaxnum>, f64, F64>;
+  def: OpR_RR_pat<F2_dfmin,     pf2<fminimumnum>, f64, F64>;
+  def: OpR_RR_pat<F2_dfmax,     pf2<fmaximumnum>, f64, F64>;
 
   def: Pat<(fmul F64:$Rs, F64:$Rt), (DfMpy (F2_dfmpyfix $Rs, $Rt),
                                            (F2_dfmpyfix $Rt, $Rs))>;
@@ -2130,7 +2135,7 @@ def sextloadv4i8: PatFrag<(ops node:$ptr), (sextload node:$ptr), [{
 
 // Patterns to select load-indexed: Rs + Off.
 // - frameindex [+ imm],
-multiclass Loadxfi_pat<PatFrag Load, ValueType VT, PatLeaf ImmPred,
+multiclass Loadxfi_pat<PatFrags Load, ValueType VT, PatLeaf ImmPred,
                        InstHexagon MI> {
   def: Pat<(VT (Load (add (i32 AddrFI:$fi), ImmPred:$Off))),
            (VT (MI AddrFI:$fi, imm:$Off))>;
@@ -2141,7 +2146,7 @@ multiclass Loadxfi_pat<PatFrag Load, ValueType VT, PatLeaf ImmPred,
 
 // Patterns to select load-indexed: Rs + Off.
 // - base reg [+ imm]
-multiclass Loadxgi_pat<PatFrag Load, ValueType VT, PatLeaf ImmPred,
+multiclass Loadxgi_pat<PatFrags Load, ValueType VT, PatLeaf ImmPred,
                        InstHexagon MI> {
   def: Pat<(VT (Load (add I32:$Rs, ImmPred:$Off))),
            (VT (MI IntRegs:$Rs, imm:$Off))>;
@@ -2151,7 +2156,7 @@ multiclass Loadxgi_pat<PatFrag Load, ValueType VT, PatLeaf ImmPred,
 }
 
 // Patterns to select load-indexed: Rs + Off. Combines Loadxfi + Loadxgi.
-multiclass Loadxi_pat<PatFrag Load, ValueType VT, PatLeaf ImmPred,
+multiclass Loadxi_pat<PatFrags Load, ValueType VT, PatLeaf ImmPred,
                       InstHexagon MI> {
   defm: Loadxfi_pat<Load, VT, ImmPred, MI>;
   defm: Loadxgi_pat<Load, VT, ImmPred, MI>;
@@ -2221,7 +2226,7 @@ class Loadxum_pat<PatFrag Load, ValueType VT, PatFrag ImmPred, PatFrag ValueMod,
         (VT (ValueMod (MI IntRegs:$Rt, imm:$u2, ImmPred:$Addr)))>;
 
 // Pattern to select load absolute.
-class Loada_pat<PatFrag Load, ValueType VT, PatFrag Addr, InstHexagon MI>
+class Loada_pat<PatFrags Load, ValueType VT, PatFrag Addr, InstHexagon MI>
   : Pat<(VT (Load Addr:$addr)), (MI Addr:$addr)>;
 
 // Pattern to select load absolute with value modifier.
@@ -2256,10 +2261,10 @@ let AddedComplexity = 20 in {
   defm: Loadxi_pat<load,            f64,   anyimm3, L2_loadrd_io>;
   // No sextloadi1.
 
-  defm: Loadxi_pat<atomic_load_8 ,  i32, anyimm0, L2_loadrub_io>;
-  defm: Loadxi_pat<atomic_load_16,  i32, anyimm1, L2_loadruh_io>;
-  defm: Loadxi_pat<atomic_load_32,  i32, anyimm2, L2_loadri_io>;
-  defm: Loadxi_pat<atomic_load_64,  i64, anyimm3, L2_loadrd_io>;
+  defm: Loadxi_pat<atomic_load_azext_8 ,  i32, anyimm0, L2_loadrub_io>;
+  defm: Loadxi_pat<atomic_load_azext_16,  i32, anyimm1, L2_loadruh_io>;
+  defm: Loadxi_pat<atomic_load_nonext_32,  i32, anyimm2, L2_loadri_io>;
+  defm: Loadxi_pat<atomic_load_nonext_64,  i64, anyimm3, L2_loadrd_io>;
 }
 
 let AddedComplexity = 30 in {
@@ -2418,10 +2423,10 @@ let AddedComplexity  = 60 in {
   def: Loada_pat<load,            f32,   anyimm2, PS_loadriabs>;
   def: Loada_pat<load,            f64,   anyimm3, PS_loadrdabs>;
 
-  def: Loada_pat<atomic_load_8,   i32, anyimm0, PS_loadrubabs>;
-  def: Loada_pat<atomic_load_16,  i32, anyimm1, PS_loadruhabs>;
-  def: Loada_pat<atomic_load_32,  i32, anyimm2, PS_loadriabs>;
-  def: Loada_pat<atomic_load_64,  i64, anyimm3, PS_loadrdabs>;
+  def: Loada_pat<atomic_load_azext_8,   i32, anyimm0, PS_loadrubabs>;
+  def: Loada_pat<atomic_load_azext_16,  i32, anyimm1, PS_loadruhabs>;
+  def: Loada_pat<atomic_load_nonext_32,  i32, anyimm2, PS_loadriabs>;
+  def: Loada_pat<atomic_load_nonext_64,  i64, anyimm3, PS_loadrdabs>;
 }
 
 let AddedComplexity  = 30 in {
@@ -2463,10 +2468,10 @@ let AddedComplexity  = 100 in {
   def: Loada_pat<load,            f32,   addrgp,  L2_loadrigp>;
   def: Loada_pat<load,            f64,   addrgp,  L2_loadrdgp>;
 
-  def: Loada_pat<atomic_load_8,   i32, addrgp,  L2_loadrubgp>;
-  def: Loada_pat<atomic_load_16,  i32, addrgp,  L2_loadruhgp>;
-  def: Loada_pat<atomic_load_32,  i32, addrgp,  L2_loadrigp>;
-  def: Loada_pat<atomic_load_64,  i64, addrgp,  L2_loadrdgp>;
+  def: Loada_pat<atomic_load_azext_8,   i32, addrgp,  L2_loadrubgp>;
+  def: Loada_pat<atomic_load_azext_16,  i32, addrgp,  L2_loadruhgp>;
+  def: Loada_pat<atomic_load_nonext_32,  i32, addrgp,  L2_loadrigp>;
+  def: Loada_pat<atomic_load_nonext_64,  i64, addrgp,  L2_loadrdgp>;
 }
 
 let AddedComplexity  = 70 in {

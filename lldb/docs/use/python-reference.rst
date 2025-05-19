@@ -153,16 +153,16 @@ pass them to the Python print function:
 
    (lldb) script
    Python Interactive Interpreter. To exit, type 'quit()', 'exit()' or Ctrl-D.
-   >>> print lldb.debugger
+   >>> print(lldb.debugger)
    Debugger (instance: "debugger_1", id: 1)
-   >>> print lldb.target
+   >>> print(lldb.target)
    a.out
-   >>> print lldb.process
-   SBProcess: pid = 59289, state = stopped, threads = 1, executable = a.out
-   >>> print lldb.thread
-   SBThread: tid = 0x1f03
-   >>> print lldb.frame
-   frame #0: 0x0000000100000bb6 a.out main + 54 at main.c:16
+   >>> print(lldb.process)
+   SBProcess: pid = 58842, state = stopped, threads = 1, executable = a.out
+   >>> print(lldb.thread)
+   thread #1: tid = 0x2265ce3, 0x0000000100000334 a.out`main at t.c:2:3, queue = 'com.apple.main-thread', stop reason = breakpoint 1.1
+   >>> print(lldb.frame)
+   frame #0: 0x0000000100000334 a.out`main at t.c:2:3
 
 
 Running a python script when a breakpoint gets hit
@@ -252,7 +252,7 @@ Here is the code:
    > # Get the name of the function
    > name = frame.GetFunctionName()
    > # Print the order and the function name
-   > print '[%i] %s' % (counter, name)
+   > print('[%i] %s' % (counter, name))
    > # Disable the current breakpoint location so it doesn't get hit again
    > bp_loc.SetEnabled(False)
    > # No need to stop here
@@ -588,7 +588,7 @@ say
 
 .. code-block:: python
 
-  print >>result, "my command does lots of cool stuff"
+  print("my command does lots of cool stuff", file=result)
 
 SBCommandReturnObject and SBStream both support this file-like behavior by
 providing write() and flush() calls at the Python layer.
@@ -712,7 +712,7 @@ your lldb.ParsedCommand subclass should implement:
     """
 
 And to handle the completion of arguments:
-    
+
 .. code-block:: python
 
     def handle_argument_completion(self, args, arg_pos, cursor_pos):
@@ -826,7 +826,7 @@ a function that can be used by LLDB's python command code:
   # And the initialization code to add your commands
   def __lldb_init_module(debugger, internal_dict):
       debugger.HandleCommand('command script add -f ls.ls ls')
-      print 'The "ls" python command has been installed and is ready for use.'
+      print('The "ls" python command has been installed and is ready for use.')
 
 Now we can load the module into LLDB and use it
 
@@ -964,16 +964,18 @@ script that will launch a program from the current working directory called
 "a.out", set a breakpoint at "main", and then run and hit the breakpoint, and
 print the process, thread and frame objects if the process stopped:
 
-::
+.. code-block:: python
 
-  #!/usr/bin/env python
+  #!/usr/bin/env python3
 
   import lldb
   import os
 
+
   def disassemble_instructions(insts):
       for i in insts:
-          print i
+          print(i)
+
 
   # Set the path to the executable to debug
   exe = "./a.out"
@@ -983,54 +985,56 @@ print the process, thread and frame objects if the process stopped:
 
   # When we step or continue, don't return from the function until the process
   # stops. Otherwise we would have to handle the process events ourselves which, while doable is
-  #a little tricky.  We do this by setting the async mode to false.
-  debugger.SetAsync (False)
+  # a little tricky.  We do this by setting the async mode to false.
+  debugger.SetAsync(False)
 
   # Create a target from a file and arch
-  print "Creating a target for '%s'" % exe
+  print("Creating a target for '%s'" % exe)
 
-  target = debugger.CreateTargetWithFileAndArch (exe, lldb.LLDB_ARCH_DEFAULT)
+  target = debugger.CreateTargetWithFileAndArch(exe, lldb.LLDB_ARCH_DEFAULT)
 
   if target:
       # If the target is valid set a breakpoint at main
-      main_bp = target.BreakpointCreateByName ("main", target.GetExecutable().GetFilename());
+      main_bp = target.BreakpointCreateByName(
+          "main", target.GetExecutable().GetFilename()
+      )
 
-      print main_bp
+      print(main_bp)
 
       # Launch the process. Since we specified synchronous mode, we won't return
       # from this function until we hit the breakpoint at main
-      process = target.LaunchSimple (None, None, os.getcwd())
+      process = target.LaunchSimple(None, None, os.getcwd())
 
       # Make sure the launch went ok
       if process:
           # Print some simple process info
-          state = process.GetState ()
-          print process
+          state = process.GetState()
+          print(process)
           if state == lldb.eStateStopped:
               # Get the first thread
-              thread = process.GetThreadAtIndex (0)
+              thread = process.GetThreadAtIndex(0)
               if thread:
                   # Print some simple thread info
-                  print thread
+                  print(thread)
                   # Get the first frame
-                  frame = thread.GetFrameAtIndex (0)
+                  frame = thread.GetFrameAtIndex(0)
                   if frame:
                       # Print some simple frame info
-                      print frame
+                      print(frame)
                       function = frame.GetFunction()
                       # See if we have debug info (a function)
                       if function:
                           # We do have a function, print some info for the function
-                          print function
+                          print(function)
                           # Now get all instructions for this function and print them
                           insts = function.GetInstructions(target)
-                          disassemble_instructions (insts)
+                          disassemble_instructions(insts)
                       else:
                           # See if we have a symbol in the symbol table for where we stopped
-                          symbol = frame.GetSymbol();
+                          symbol = frame.GetSymbol()
                           if symbol:
                               # We do have a symbol, print some info for the symbol
-                              print symbol
+                              print(symbol)
 
 Writing lldb frame recognizers in Python
 ----------------------------------------

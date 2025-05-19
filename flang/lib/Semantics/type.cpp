@@ -9,6 +9,7 @@
 #include "flang/Semantics/type.h"
 #include "check-declarations.h"
 #include "compute-offsets.h"
+#include "flang/Common/type-kinds.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Evaluate/type.h"
@@ -125,7 +126,7 @@ void DerivedTypeSpec::EvaluateParameters(SemanticsContext &context) {
         auto restorer{foldingContext.WithPDTInstance(*this)};
         auto folded{Fold(foldingContext, KindExpr{intrinType->kind()})};
         if (auto k{evaluate::ToInt64(folded)}; k &&
-            evaluate::IsValidKindOfIntrinsicType(TypeCategory::Integer, *k)) {
+            common::IsValidKindOfIntrinsicType(TypeCategory::Integer, *k)) {
           parameterKind = static_cast<int>(*k);
         } else {
           messages.Say(

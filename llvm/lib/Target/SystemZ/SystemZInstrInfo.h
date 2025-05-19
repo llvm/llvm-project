@@ -232,6 +232,10 @@ public:
                                int &FrameIndex) const override;
   Register isStoreToStackSlot(const MachineInstr &MI,
                               int &FrameIndex) const override;
+  Register isLoadFromStackSlotPostFE(const MachineInstr &MI,
+                                     int &FrameIndex) const override;
+  Register isStoreToStackSlotPostFE(const MachineInstr &MI,
+                                    int &FrameIndex) const override;
   bool isStackSlotCopy(const MachineInstr &MI, int &DestFrameIndex,
                        int &SrcFrameIndex) const override;
   bool analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
@@ -254,10 +258,6 @@ public:
                     const DebugLoc &DL, Register DstReg,
                     ArrayRef<MachineOperand> Cond, Register TrueReg,
                     Register FalseReg) const override;
-  MachineInstr *optimizeLoadInstr(MachineInstr &MI,
-                                  const MachineRegisterInfo *MRI,
-                                  Register &FoldAsLoadDefReg,
-                                  MachineInstr *&DefMI) const override;
   bool foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI, Register Reg,
                      MachineRegisterInfo *MRI) const override;
 
@@ -386,6 +386,9 @@ public:
 
   bool getConstValDefinedInReg(const MachineInstr &MI, const Register Reg,
                                int64_t &ImmVal) const override;
+
+  std::optional<DestSourcePair>
+  isCopyInstrImpl(const MachineInstr &MI) const override;
 };
 
 } // end namespace llvm
