@@ -140,7 +140,7 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr8_sgpr9
     ; CHECK-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 42
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_]], %subreg.sub1
-    ; CHECK-NEXT: S_CMP_EQ_U64 [[COPY]], 42, implicit-def $scc
+    ; CHECK-NEXT: S_CMP_EQ_U64 [[COPY]], [[REG_SEQUENCE]], implicit-def $scc
     ; CHECK-NEXT: S_ENDPGM 0, implicit $scc
     %0:sgpr_64 = COPY $sgpr8_sgpr9
     %1:sreg_32 = S_MOV_B32 42
