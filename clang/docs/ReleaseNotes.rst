@@ -959,6 +959,7 @@ Sanitizers
 Python Binding Changes
 ----------------------
 - Made ``Cursor`` hashable.
+- Added ``Cursor.from_translation_unit``, mirroring ``TranslationUnit.cursor``.
 - Added ``Cursor.has_attrs``, a binding for ``clang_Cursor_hasAttrs``, to check
   whether a cursor has any attributes.
 - Added ``Cursor.specialized_template``, a binding for

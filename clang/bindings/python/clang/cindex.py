@@ -1595,6 +1595,10 @@ class Cursor(Structure):
     def from_location(tu: TranslationUnit, location: SourceLocation) -> Cursor | None:
         return Cursor.from_result(conf.lib.clang_getCursor(tu, location), tu)
 
+    @staticmethod
+    def from_translation_unit(tu: TranslationUnit) -> Cursor | None:
+        return Cursor.from_result(conf.lib.clang_getTranslationUnitCursor(tu), tu)
+
     # This function is not null-guarded because it is used in cursor_null_guard itself
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Cursor):

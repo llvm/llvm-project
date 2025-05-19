@@ -1064,3 +1064,9 @@ struct B {};
             nc.is_definition()
         with self.assertRaises(Exception):
             nc.spelling
+
+    def test_cursor_from_tu(self):
+        tu = get_tu("int a = 0;")
+        cursor = Cursor.from_translation_unit(tu)
+        reference_cursor = tu.cursor
+        self.assertEqual(cursor, reference_cursor)        
