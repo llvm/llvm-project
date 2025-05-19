@@ -1207,6 +1207,20 @@ void AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
     }
   }
 
+  // Update RSRC reg to 128b if r128 flag is present.
+  int R128Idx =
+      AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::r128);
+  if (AMDGPU::hasMIMG_R128(STI) && R128Idx != -1 &&
+      MI.getOperand(R128Idx).getImm()) {
+    // Get first subregister of RSRC
+    MCRegister RsrcReg = MI.getOperand(RsrcIdx).getReg();
+    MCRegister RsrcSubReg0 = MRI.getSubReg(RsrcReg, AMDGPU::sub0);
+    MCRegister NewRsrcReg = MRI.getMatchingSuperReg(
+        RsrcSubReg0, AMDGPU::sub0,
+        &MRI.getRegClass(AMDGPU::SReg_128_XNULLRegClassID));
+    MI.getOperand(RsrcIdx) = MCOperand::createReg(NewRsrcReg);
+  }
+
   unsigned DMask = MI.getOperand(DMaskIdx).getImm() & 0xf;
   unsigned DstSize = IsGather4 ? 4 : std::max(llvm::popcount(DMask), 1);
 
