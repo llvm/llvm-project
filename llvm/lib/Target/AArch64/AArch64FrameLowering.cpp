@@ -44,6 +44,10 @@
 // |                                   |
 // |-----------------------------------|
 // |                                   |
+// | (Win64 only) callee-saved SVE reg |
+// |                                   |
+// |-----------------------------------|
+// |                                   |
 // | callee-saved gpr registers        | <--.
 // |                                   |    | On Darwin platforms these
 // |- - - - - - - - - - - - - - - - - -|    | callee saves are swapped,
@@ -2877,11 +2881,11 @@ StackOffset AArch64FrameLowering::resolveFrameOffsetReference(
     StackOffset SVECalleeSavedStack =
         StackOffset::getScalable(AFI->getSVECalleeSavedStackSize());
     if (UseFP) {
-      if (!(isFixed || isCSR))
+      if (!isFixed)
         ScalableOffset = SVECalleeSavedStack - SVEStackSize;
       else
         ScalableOffset = SVECalleeSavedStack;
-    } else if (!UseFP && (isFixed || isCSR)) {
+    } else if (!UseFP && isFixed) {
       ScalableOffset = SVEStackSize;
     }
   } else {
