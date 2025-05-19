@@ -174,7 +174,7 @@ Changes in existing checks
 
 - Improved :doc:`concurrency-mt-unsafe
   <clang-tidy/checks/concurrency/mt-unsafe>` check by fixing a false positive
-  where `strerror` was flagged as MT-unsafe.
+  where ``strerror`` was flagged as MT-unsafe.
 
 - Improved :doc:`misc-const-correctness
   <clang-tidy/checks/misc/const-correctness>` check by adding the option
