@@ -2935,7 +2935,7 @@ void ASTStmtReader::VisitOpenACCCacheConstruct(OpenACCCacheConstruct *S) {
   S->ParensLoc = Record.readSourceRange();
   S->ReadOnlyLoc = Record.readSourceLocation();
   for (unsigned I = 0; I < S->NumVars; ++I)
-    S->getVarListPtr()[I] = cast<Expr>(Record.readSubStmt());
+    S->getVarList()[I] = cast<Expr>(Record.readSubStmt());
 }
 
 void ASTStmtReader::VisitOpenACCAtomicConstruct(OpenACCAtomicConstruct *S) {
