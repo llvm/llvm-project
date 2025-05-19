@@ -6201,7 +6201,7 @@ public:
     bool inputIsScalar = !inputType;
     if (inputIsScalar) {
       rewriter.replaceOpWithNewOp<vector::BroadcastOp>(transpose, outputType,
-                                                       transpose.getVector());
+                                                       broadcast.getSource());
       return success();
     }
 
@@ -6227,6 +6227,7 @@ public:
                 transpose, "permutation not local to group");
           }
         }
+        low = high;
       }
     }
 
@@ -6241,7 +6242,7 @@ public:
            "not broadcastable directly to transpose output");
 
     rewriter.replaceOpWithNewOp<vector::BroadcastOp>(transpose, outputType,
-                                                     transpose.getVector());
+                                                     broadcast.getSource());
 
     return success();
   }
@@ -6516,9 +6517,15 @@ ParseResult MaskOp::parse(OpAsmParser &parser, OperationState &result) {
   if (parser.resolveOperand(mask, maskType, result.operands))
     return failure();
 
-  if (parsePassthru.succeeded())
+  if (parsePassthru.succeeded()) {
+    if (resultTypes.empty())
+      return parser.emitError(
+          parser.getNameLoc(),
+          "expects a result if passthru operand is provided");
+
     if (parser.resolveOperand(passthru, resultTypes[0], result.operands))
       return failure();
+  }
 
   return success();
 }

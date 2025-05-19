@@ -90,7 +90,6 @@ struct MissingFeatures {
   static bool opCallArgEvaluationOrder() { return false; }
   static bool opCallCallConv() { return false; }
   static bool opCallSideEffect() { return false; }
-  static bool opCallChainCall() { return false; }
   static bool opCallNoPrototypeFunc() { return false; }
   static bool opCallMustTail() { return false; }
   static bool opCallIndirect() { return false; }
@@ -106,6 +105,13 @@ struct MissingFeatures {
   static bool opCallCIRGenFuncInfoExtParamInfo() { return false; }
   static bool opCallLandingPad() { return false; }
   static bool opCallContinueBlock() { return false; }
+
+  // FnInfoOpts -- This is used to track whether calls are chain calls or
+  // instance methods. Classic codegen uses chain call to track and extra free
+  // register for x86 and uses instance method as a condition for a thunk
+  // generation special case. It's not clear that we need either of these in
+  // pre-lowering CIR codegen.
+  static bool opCallFnInfoOpts() { return false; }
 
   // ScopeOp handling
   static bool opScopeCleanupRegion() { return false; }
@@ -189,6 +195,12 @@ struct MissingFeatures {
   static bool constEmitterArrayILE() { return false; }
   static bool constEmitterVectorILE() { return false; }
   static bool needsGlobalCtorDtor() { return false; }
+  static bool emitTypeCheck() { return false; }
+  static bool cxxabiThisDecl() { return false; }
+  static bool cxxabiThisAlignment() { return false; }
+  static bool writebacks() { return false; }
+  static bool cleanupsToDeactivate() { return false; }
+  static bool stackBase() { return false; }
 
   // Missing types
   static bool dataMemberType() { return false; }

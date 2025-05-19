@@ -263,3 +263,30 @@ void SparcInstPrinter::printPrefetchTag(const MCInst *MI, int opNum,
   else
     O << Imm;
 }
+
+void SparcInstPrinter::printCTILabel(const MCInst *MI, uint64_t Address,
+                                     unsigned OpNum, const MCSubtargetInfo &STI,
+                                     raw_ostream &O) {
+  const MCOperand &Op = MI->getOperand(OpNum);
+
+  // If the label has already been resolved to an immediate offset (say, when
+  // we're running the disassembler), just print the immediate.
+  if (Op.isImm()) {
+    int64_t Offset = Op.getImm();
+    if (PrintBranchImmAsAddress) {
+      uint64_t Target = Address + Offset;
+      if (STI.getTargetTriple().isSPARC32())
+        Target &= 0xffffffff;
+      O << formatHex(Target);
+    } else {
+      O << ".";
+      if (Offset >= 0)
+        O << "+";
+      O << Offset;
+    }
+    return;
+  }
+
+  // Otherwise, just print the expression.
+  Op.getExpr()->print(O, &MAI);
+}

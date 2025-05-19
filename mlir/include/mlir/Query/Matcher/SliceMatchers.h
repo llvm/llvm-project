@@ -14,6 +14,7 @@
 #define MLIR_TOOLS_MLIRQUERY_MATCHERS_SLICEMATCHERS_H
 
 #include "mlir/Analysis/SliceAnalysis.h"
+#include "mlir/IR/Operation.h"
 
 /// A matcher encapsulating `getBackwardSlice` method from SliceAnalysis.h.
 /// Additionally, it limits the slice computation to a certain depth level using
