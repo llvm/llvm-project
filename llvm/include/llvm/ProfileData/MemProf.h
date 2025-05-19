@@ -472,12 +472,12 @@ struct IndexedMemProfRecord {
   // translate CallStackId to call stacks with frames inline.
   MemProfRecord toMemProfRecord(
       llvm::function_ref<std::vector<Frame>(const CallStackId)> Callback) const;
-
-  // Returns the GUID for the function name after canonicalization. For
-  // memprof, we remove any .llvm suffix added by LTO. MemProfRecords are
-  // mapped to functions using this GUID.
-  static GlobalValue::GUID getGUID(const StringRef FunctionName);
 };
+
+// Returns the GUID for the function name after canonicalization. For
+// memprof, we remove any .llvm suffix added by LTO. MemProfRecords are
+// mapped to functions using this GUID.
+GlobalValue::GUID getGUID(const StringRef FunctionName);
 
 // Holds call site information with frame contents inline.
 struct CallSiteInfo {
