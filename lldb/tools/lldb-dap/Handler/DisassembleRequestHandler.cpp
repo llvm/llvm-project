@@ -82,7 +82,7 @@ DisassembleRequestHandler::Run(const DisassembleArguments &args) const {
     }
 
     DisassembledInstruction disassembled_inst;
-    disassembled_inst.address = "0x" + llvm::utohexstr(inst_addr);
+    disassembled_inst.address = inst_addr;
     disassembled_inst.instructionBytes =
         bytes.size() > 0 ? bytes.substr(0, bytes.size() - 1) : "";
 

@@ -7,6 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "Protocol/ProtocolTypes.h"
+#include "JSONUtils.h"
+#include "lldb/lldb-types.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/JSON.h"
@@ -782,18 +785,69 @@ bool fromJSON(const llvm::json::Value &Params, InstructionBreakpoint &IB,
          O.mapOptional("mode", IB.mode);
 }
 
+bool fromJSON(const llvm::json::Value &Params,
+              DisassembledInstruction::PresentationHint &PH,
+              llvm::json::Path P) {
+  auto rawHint = Params.getAsString();
+  if (!rawHint) {
+    P.report("expected a string");
+    return false;
+  }
+  std::optional<DisassembledInstruction::PresentationHint> hint =
+      StringSwitch<std::optional<DisassembledInstruction::PresentationHint>>(
+          *rawHint)
+          .Case("normal", DisassembledInstruction::
+                              eDisassembledInstructionPresentationHintNormal)
+          .Case("invalid", DisassembledInstruction::
+                               eDisassembledInstructionPresentationHintInvalid)
+          .Default(std::nullopt);
+  if (!hint) {
+    P.report("unexpected value");
+    return false;
+  }
+  PH = *hint;
+  return true;
+}
+
 llvm::json::Value toJSON(const DisassembledInstruction::PresentationHint &PH) {
   switch (PH) {
-  case DisassembledInstruction::eSourcePresentationHintNormal:
+  case DisassembledInstruction::eDisassembledInstructionPresentationHintNormal:
     return "normal";
-  case DisassembledInstruction::eSourcePresentationHintInvalid:
+  case DisassembledInstruction::eDisassembledInstructionPresentationHintInvalid:
     return "invalid";
   }
   llvm_unreachable("unhandled presentation hint.");
 }
 
+bool fromJSON(const llvm::json::Value &Params, DisassembledInstruction &DI,
+              llvm::json::Path P) {
+  std::optional<llvm::StringRef> raw_address =
+      Params.getAsObject()->getString("address");
+  if (!raw_address) {
+    P.report("missing `address` field");
+    return false;
+  }
+
+  std::optional<lldb::addr_t> address = DecodeMemoryReference(*raw_address);
+  if (!address) {
+    P.report("invalid `address`");
+    return false;
+  }
+
+  DI.address = *address;
+  llvm::json::ObjectMapper O(Params, P);
+  return O && O.map("instruction", DI.instruction) &&
+         O.mapOptional("instructionBytes", DI.instructionBytes) &&
+         O.mapOptional("symbol", DI.symbol) &&
+         O.mapOptional("location", DI.location) &&
+         O.mapOptional("line", DI.line) && O.mapOptional("column", DI.column) &&
+         O.mapOptional("endLine", DI.endLine) &&
+         O.mapOptional("endColumn", DI.endColumn) &&
+         O.mapOptional("presentationHint", DI.presentationHint);
+}
+
 llvm::json::Value toJSON(const DisassembledInstruction &DI) {
-  llvm::json::Object result{{"address", DI.address},
+  llvm::json::Object result{{"address", "0x" + llvm::utohexstr(DI.address)},
                             {"instruction", DI.instruction}};
 
   if (DI.instructionBytes)

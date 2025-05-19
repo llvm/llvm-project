@@ -631,13 +631,13 @@ bool fromJSON(const llvm::json::Value &, InstructionBreakpoint &,
 /// request.
 struct DisassembledInstruction {
   enum PresentationHint : unsigned {
-    eSourcePresentationHintNormal,
-    eSourcePresentationHintInvalid,
+    eDisassembledInstructionPresentationHintNormal,
+    eDisassembledInstructionPresentationHintInvalid,
   };
 
   /// The address of the instruction. Treated as a hex value if prefixed with
   /// `0x`, or as a decimal value otherwise.
-  std::string address;
+  lldb::addr_t address;
 
   /// Raw bytes representing the instruction and its operands, in an
   /// implementation-defined format.
@@ -678,7 +678,11 @@ struct DisassembledInstruction {
   /// Values: 'normal', 'invalid'
   std::optional<PresentationHint> presentationHint;
 };
+bool fromJSON(const llvm::json::Value &,
+              DisassembledInstruction::PresentationHint &, llvm::json::Path);
 llvm::json::Value toJSON(const DisassembledInstruction::PresentationHint &);
+bool fromJSON(const llvm::json::Value &, DisassembledInstruction &,
+              llvm::json::Path);
 llvm::json::Value toJSON(const DisassembledInstruction &);
 
 } // namespace lldb_dap::protocol
