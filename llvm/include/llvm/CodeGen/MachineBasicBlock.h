@@ -134,8 +134,10 @@ public:
     MCRegister PhysReg;
     LaneBitmask LaneMask;
 
-    RegisterMaskPair(MCPhysReg PhysReg, LaneBitmask LaneMask)
-        : PhysReg(PhysReg), LaneMask(LaneMask) {}
+    RegisterMaskPair(MCRegister PhysReg, LaneBitmask LaneMask)
+        : PhysReg(PhysReg), LaneMask(LaneMask) {
+      assert(PhysReg.isPhysical());
+    }
 
     bool operator==(const RegisterMaskPair &other) const {
       return PhysReg == other.PhysReg && LaneMask == other.LaneMask;
