@@ -336,9 +336,8 @@ void emitOption(const DocumentedOption &Option, const Record *DocInfo,
   });
   assert(!SphinxOptionIDs.empty() && "no flags for option");
   static std::map<std::string, int> NextSuffix;
-  int SphinxWorkaroundSuffix = NextSuffix[*std::max_element(
-      SphinxOptionIDs.begin(), SphinxOptionIDs.end(),
-      [&](const std::string &A, const std::string &B) {
+  int SphinxWorkaroundSuffix = NextSuffix[*llvm::max_element(
+      SphinxOptionIDs, [&](const std::string &A, const std::string &B) {
         return NextSuffix[A] < NextSuffix[B];
       })];
   for (auto &S : SphinxOptionIDs)

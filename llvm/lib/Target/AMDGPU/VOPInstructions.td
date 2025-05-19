@@ -2001,6 +2001,10 @@ multiclass VOP3Dot_Realtriple_gfx11_gfx12<bits<10> op, string asmName, bit isSin
   VOP3Dot_Realtriple<GFX11Gen, op, asmName, isSingle, opName>,
   VOP3Dot_Realtriple<GFX12Gen, op, asmName, isSingle, opName>;
 
+multiclass VOP3_Real_with_name_gfx11_gfx12<bits<10> op, string opName,
+                                           string asmName> :
+  VOP3_Real_with_name<GFX11Gen, op, opName, asmName>,
+  VOP3_Real_with_name<GFX12Gen, op, opName, asmName>;
 
 //===----------------------------------------------------------------------===//
 

@@ -178,10 +178,7 @@ void InstrProfWriter::overlapRecord(NamedInstrProfRecord &&Other,
     return;
   }
   auto &ProfileDataMap = It->second;
-  bool NewFunc;
-  ProfilingData::iterator Where;
-  std::tie(Where, NewFunc) =
-      ProfileDataMap.insert(std::make_pair(Hash, InstrProfRecord()));
+  auto [Where, NewFunc] = ProfileDataMap.try_emplace(Hash);
   if (NewFunc) {
     Overlap.addOneMismatch(FuncLevelOverlap.Test);
     return;
@@ -200,10 +197,7 @@ void InstrProfWriter::addRecord(StringRef Name, uint64_t Hash,
                                 function_ref<void(Error)> Warn) {
   auto &ProfileDataMap = FunctionData[Name];
 
-  bool NewFunc;
-  ProfilingData::iterator Where;
-  std::tie(Where, NewFunc) =
-      ProfileDataMap.insert(std::make_pair(Hash, InstrProfRecord()));
+  auto [Where, NewFunc] = ProfileDataMap.try_emplace(Hash);
   InstrProfRecord &Dest = Where->second;
 
   auto MapWarn = [&](instrprof_error E) {

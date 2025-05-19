@@ -595,6 +595,7 @@ def VOP3_CVT_SR_F8_F32_Profile : VOP3_Profile<VOPProfile<[i32, f32, i32, f32]>,
   let HasExtVOP3DPP = 1;
   let HasOpSel = 1;
   let HasFP8DstByteSel = 1;
+  let HasFP8ByteSel = 0; // It works as a dst-bytesel, but does not have byte_sel operand.
   let AsmVOP3OpSel = !subst(", $src2_modifiers", "",
                             getAsmVOP3OpSel<3, HasClamp, HasOMod,
                                             HasSrc0FloatMods, HasSrc1FloatMods,
@@ -609,16 +610,6 @@ class VOP3_CVT_SR_F8_ByteSel_Profile<ValueType SrcVT> :
   VOP3_Profile<VOPProfile<[i32, SrcVT, i32, untyped]>> {
   let HasFP8DstByteSel = 1;
   let HasClamp = 0;
-  defvar bytesel = (ins VGPR_32:$vdst_in, ByteSel:$byte_sel);
-  let Ins64 = !con(getIns64<Src0RC64, Src1RC64, Src2RC64, NumSrcArgs,
-                            HasClamp, HasModifiers, HasSrc2Mods,
-                            HasOMod, Src0Mod, Src1Mod, Src2Mod>.ret,
-                   bytesel);
-  let InsVOP3Base = !con(
-    getInsVOP3Base<Src0VOP3DPP, Src1VOP3DPP,
-                   Src2VOP3DPP, NumSrcArgs, HasClamp, HasModifiers, HasSrc2Mods, HasOMod,
-                   Src0ModVOP3DPP, Src1ModVOP3DPP, Src2ModVOP3DPP, HasOpSel>.ret,
-    bytesel);
 }
 
 def IsPow2Plus1: PatLeaf<(i32 imm), [{
@@ -689,7 +680,7 @@ let OtherPredicates = [HasFP8ConversionInsts], mayRaiseFPException = 0,
     defm V_CVT_PK_FP8_F32 : VOP3Inst<"v_cvt_pk_fp8_f32", VOP3_CVT_PK_F8_F32_Profile>;
     defm V_CVT_PK_BF8_F32 : VOP3Inst<"v_cvt_pk_bf8_f32", VOP3_CVT_PK_F8_F32_Profile>;
 
-    let SubtargetPredicate = isGFX12Plus in {
+    let SubtargetPredicate = isGFX11Plus in {
       defm V_CVT_SR_FP8_F32_gfx12 : VOP3Inst<"v_cvt_sr_fp8_f32_gfx12", VOP3_CVT_SR_F8_ByteSel_Profile<f32>>;
       defm V_CVT_SR_BF8_F32_gfx12 : VOP3Inst<"v_cvt_sr_bf8_f32_gfx12", VOP3_CVT_SR_F8_ByteSel_Profile<f32>>;
     }
@@ -734,7 +725,7 @@ let SubtargetPredicate = isGFX940Plus in {
   }
 }
 
-let SubtargetPredicate = isGFX12Plus in {
+let SubtargetPredicate = isGFX11Plus in {
   def : Cvt_SR_F8_ByteSel_Pat<int_amdgcn_cvt_sr_fp8_f32, V_CVT_SR_FP8_F32_gfx12_e64, f32>;
   def : Cvt_SR_F8_ByteSel_Pat<int_amdgcn_cvt_sr_bf8_f32, V_CVT_SR_BF8_F32_gfx12_e64, f32>;
 }
@@ -1653,19 +1644,9 @@ defm V_MAXIMUM_F16        : VOP3Only_Realtriple_t16_and_fake16_gfx12<0x368, "v_m
 defm V_PERMLANE16_VAR_B32  : VOP3Only_Real_Base_gfx12<0x30f>;
 defm V_PERMLANEX16_VAR_B32 : VOP3Only_Real_Base_gfx12<0x310>;
 
-defm V_CVT_PK_FP8_F32  : VOP3Only_Realtriple_gfx12<0x369>;
-defm V_CVT_PK_BF8_F32  : VOP3Only_Realtriple_gfx12<0x36a>;
-defm V_CVT_SR_FP8_F32_gfx12 : VOP3_Realtriple_with_name_gfx12<0x36b, "V_CVT_SR_FP8_F32_gfx12", "v_cvt_sr_fp8_f32" >;
-defm V_CVT_SR_BF8_F32_gfx12 : VOP3_Realtriple_with_name_gfx12<0x36c, "V_CVT_SR_BF8_F32_gfx12", "v_cvt_sr_bf8_f32">;
-
 //===----------------------------------------------------------------------===//
 // GFX11, GFX12
 //===----------------------------------------------------------------------===//
-
-multiclass VOP3_Real_with_name_gfx11_gfx12<bits<10> op, string opName,
-                                           string asmName> :
-  VOP3_Real_with_name<GFX11Gen, op, opName, asmName>,
-  VOP3_Real_with_name<GFX12Gen, op, opName, asmName>;
 
 multiclass VOP3_Realtriple_gfx11_gfx12<bits<10> op> :
   VOP3_Realtriple<GFX11Gen, op>, VOP3_Realtriple<GFX12Gen, op>;
@@ -1817,6 +1798,11 @@ let InOperandList = (ins SSrcOrLds_b32:$src0, SCSrc_b32:$src1, VGPR_32:$vdst_in)
 defm V_AND_B16             : VOP3Only_Realtriple_t16_and_fake16_gfx11_gfx12<0x362, "v_and_b16">;
 defm V_OR_B16              : VOP3Only_Realtriple_t16_and_fake16_gfx11_gfx12<0x363, "v_or_b16">;
 defm V_XOR_B16             : VOP3Only_Realtriple_t16_and_fake16_gfx11_gfx12<0x364, "v_xor_b16">;
+
+defm V_CVT_PK_FP8_F32       : VOP3Only_Realtriple_gfx11_gfx12<0x369>;
+defm V_CVT_PK_BF8_F32       : VOP3Only_Realtriple_gfx11_gfx12<0x36a>;
+defm V_CVT_SR_FP8_F32_gfx12 : VOP3_Realtriple_with_name_gfx11_gfx12<0x36b, "V_CVT_SR_FP8_F32_gfx12", "v_cvt_sr_fp8_f32">;
+defm V_CVT_SR_BF8_F32_gfx12 : VOP3_Realtriple_with_name_gfx11_gfx12<0x36c, "V_CVT_SR_BF8_F32_gfx12", "v_cvt_sr_bf8_f32">;
 
 let AssemblerPredicate = isGFX11Plus in {
   def : AMDGPUMnemonicAlias<"v_add3_nc_u32", "v_add3_u32">;

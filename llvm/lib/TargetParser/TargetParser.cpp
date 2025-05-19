@@ -419,6 +419,8 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       break;
     case GK_GFX1170:
       // TODO-GFX1170: Update features map for gfx1170
+      Features["fp8-conversion-insts"] = true;
+      [[fallthrough]];
     case GK_GFX115F:
     case GK_GFX115E:
     case GK_GFX1153:
