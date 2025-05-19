@@ -1492,6 +1492,9 @@ private:
   /// Memoized values for the getConstantMultiple
   DenseMap<const SCEV *, APInt> ConstantMultipleCache;
 
+  // Holds how many more Values we can consider in current SCEV calculation
+  std::optional<unsigned> MaxNumOfValuesToConsider;
+
   /// Return the Value set from which the SCEV expr is generated.
   ArrayRef<Value *> getSCEVValues(const SCEV *S);
 
@@ -1770,6 +1773,11 @@ private:
   /// *add* recurrences with loop invariant steps aren't represented by
   /// SCEVUnknowns and thus don't use this mechanism.
   ConstantRange getRangeForUnknownRecurrence(const SCEVUnknown *U);
+
+  /// Return a SCEV expression for the full generality of the specified
+  /// expression. Return Unknown if the SCEV Calculation involves more Values
+  // than MaxNumOfValuesToConsider
+  const SCEV *getSCEVWithLimits(Value *V);
 
   /// We know that there is no SCEV for the specified value.  Analyze the
   /// expression recursively.
