@@ -63,3 +63,19 @@ bool SanitizerSpecialCaseList::inSection(SanitizerMask Mask, StringRef Prefix,
 
   return false;
 }
+
+unsigned SanitizerSpecialCaseList::inSectionBlame(SanitizerMask Mask,
+                                                  StringRef Prefix,
+                                                  StringRef Query,
+                                                  StringRef Category) const {
+  for (auto &S : SanitizerSections) {
+    if (S.Mask & Mask) {
+      unsigned lineNum =
+          SpecialCaseList::inSectionBlame(S.Entries, Prefix, Query, Category);
+      if (lineNum > 0) {
+        return lineNum;
+      }
+    }
+  }
+  return 0;
+}
