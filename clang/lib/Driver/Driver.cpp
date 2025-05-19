@@ -7289,7 +7289,7 @@ static void applyOneOverrideOption(raw_ostream &OS,
 void driver::applyOverrideOptions(SmallVectorImpl<const char *> &Args,
                                   const char *OverrideStr,
                                   llvm::StringSet<> &SavedStrings,
-                                  raw_ostream *OS) {
+                                  StringRef EnvVar, raw_ostream *OS) {
   if (!OS)
     OS = &llvm::nulls();
 
@@ -7298,7 +7298,7 @@ void driver::applyOverrideOptions(SmallVectorImpl<const char *> &Args,
     OS = &llvm::nulls();
   }
 
-  *OS << "### CCC_OVERRIDE_OPTIONS: " << OverrideStr << "\n";
+  *OS << "### " << EnvVar << ": " << OverrideStr << "\n";
 
   // This does not need to be efficient.
 

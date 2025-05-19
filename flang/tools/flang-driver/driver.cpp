@@ -111,6 +111,13 @@ int main(int argc, const char **argv) {
     }
   }
 
+  llvm::StringSet<> SavedStrings;
+  // Handle FCC_OVERRIDE_OPTIONS, used for editing a command line behind the
+  // scenes.
+  if (const char *OverrideStr = ::getenv("FCC_OVERRIDE_OPTIONS"))
+    clang::driver::applyOverrideOptions(args, OverrideStr, SavedStrings,
+                                        "FCC_OVERRIDE_OPTIONS", &llvm::errs());
+
   // Not in the frontend mode - continue in the compiler driver mode.
 
   // Create DiagnosticsEngine for the compiler driver
