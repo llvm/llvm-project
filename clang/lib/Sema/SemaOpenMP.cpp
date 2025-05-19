@@ -24476,6 +24476,8 @@ ExprResult SemaOpenMP::ActOnOMPIteratorExpr(Scope *S,
         VarDecl::Create(Context, SemaRef.CurContext, StartLoc, D.DeclIdentLoc,
                         D.DeclIdent, DeclTy, TInfo, SC_None);
     VD->setImplicit();
+    VD->addAttr(OMPIteratorAttr::CreateImplicit(
+        Context, SourceRange(StartLoc)));
     if (S) {
       // Check for conflicting previous declaration.
       DeclarationNameInfo NameInfo(VD->getDeclName(), D.DeclIdentLoc);
