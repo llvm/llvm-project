@@ -1501,6 +1501,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::GET_ACTIVE_LANE_MASK, VT, Legal);
     }
 
+    setOperationAction(ISD::GET_ACTIVE_LANE_MASK, MVT::nxv32i1, Custom);
+
     for (auto VT : {MVT::v16i8, MVT::v8i8, MVT::v4i16, MVT::v2i32})
       setOperationAction(ISD::GET_ACTIVE_LANE_MASK, VT, Custom);
   }
@@ -27328,6 +27330,29 @@ void AArch64TargetLowering::ReplaceExtractSubVectorResults(
   Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, VT, Half));
 }
 
+void AArch64TargetLowering::ReplaceGetActiveLaneMaskResults(
+    SDNode *N, SmallVectorImpl<SDValue> &Results, SelectionDAG &DAG) const {
+  if (!Subtarget->hasSVE2p1())
+    return;
+
+  SDLoc DL(N);
+  SDValue Idx = N->getOperand(0);
+  SDValue TC = N->getOperand(1);
+  if (Idx.getValueType() != MVT::i64) {
+    Idx = DAG.getZExtOrTrunc(Idx, DL, MVT::i64);
+    TC = DAG.getZExtOrTrunc(TC, DL, MVT::i64);
+  }
+
+  SDValue ID =
+      DAG.getTargetConstant(Intrinsic::aarch64_sve_whilelo_x2, DL, MVT::i64);
+  EVT HalfVT = N->getValueType(0).getHalfNumVectorElementsVT(*DAG.getContext());
+  auto WideMask =
+      DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, {HalfVT, HalfVT}, {ID, Idx, TC});
+
+  Results.push_back(DAG.getNode(ISD::CONCAT_VECTORS, DL, N->getValueType(0),
+                                {WideMask.getValue(0), WideMask.getValue(1)}));
+}
+
 // Create an even/odd pair of X registers holding integer value V.
 static SDValue createGPRPairNode(SelectionDAG &DAG, SDValue V) {
   SDLoc dl(V.getNode());
@@ -27713,6 +27738,9 @@ void AArch64TargetLowering::ReplaceNodeResults(
     // Custom lowering has been requested for INSERT_SUBVECTOR and
     // CONCAT_VECTORS -- but delegate to common code for result type
     // legalisation
+    return;
+  case ISD::GET_ACTIVE_LANE_MASK:
+    ReplaceGetActiveLaneMaskResults(N, Results, DAG);
     return;
   case ISD::INTRINSIC_WO_CHAIN: {
     EVT VT = N->getValueType(0);
