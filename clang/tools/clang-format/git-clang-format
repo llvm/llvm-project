@@ -172,6 +172,10 @@ def main():
         ),
     ),
     p.add_argument(
+        "--fallback-style",
+        help="passed to clang-format",
+    ),
+    p.add_argument(
         "-f",
         "--force",
         action="store_true",
@@ -279,7 +283,11 @@ def main():
         old_tree = create_tree_from_workdir(changed_lines)
         revision = None
     new_tree = run_clang_format_and_save_to_tree(
-        changed_lines, revision, binary=opts.binary, style=opts.style
+        changed_lines,
+        revision,
+        binary=opts.binary,
+        style=opts.style,
+        fallback_style=opts.fallback_style,
     )
     if opts.verbose >= 1:
         print("old tree: %s" % old_tree)
@@ -531,7 +539,11 @@ def create_tree_from_index(filenames):
 
 
 def run_clang_format_and_save_to_tree(
-    changed_lines, revision=None, binary="clang-format", style=None
+    changed_lines,
+    revision=None,
+    binary="clang-format",
+    style=None,
+    fallback_style=None,
 ):
     """Run clang-format on each file and save the result to a git tree.
 
@@ -583,6 +595,7 @@ def run_clang_format_and_save_to_tree(
                 revision=revision,
                 binary=binary,
                 style=style,
+                fallback_style=fallback_style,
                 env=env,
             )
             yield "%s %s\t%s" % (mode, blob_id, filename)
@@ -616,6 +629,7 @@ def clang_format_to_blob(
     revision=None,
     binary="clang-format",
     style=None,
+    fallback_style=None,
     env=None,
 ):
     """Run clang-format on the given file and save the result to a git blob.
@@ -628,6 +642,8 @@ def clang_format_to_blob(
     clang_format_cmd = [binary]
     if style:
         clang_format_cmd.extend(["--style=" + style])
+    if fallback_style:
+        clang_format_cmd.extend(["--fallback-style=" + fallback_style])
     clang_format_cmd.extend(
         [
             "--lines=%s:%s" % (start_line, start_line + line_count - 1)
