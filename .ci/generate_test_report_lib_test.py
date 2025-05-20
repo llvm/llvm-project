@@ -111,7 +111,7 @@ class TestReports(unittest.TestCase):
 
               [Download](https://buildkite.com/organizations/organization_slug/pipelines/pipeline_slug/builds/build_number/jobs/job_id/download.txt) the build's log file to see the details.
               
-              If these failures are unrelated to your changes (e.g., tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues."""
+              If these failures are unrelated to your changes (e.g., tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues and add the infrastructure label."""
                 ),
                 "error",
             ),
@@ -173,7 +173,7 @@ class TestReports(unittest.TestCase):
           ```
           </details>
           
-          If these failures are unrelated to your changes (e.g., tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues."""
+          If these failures are unrelated to your changes (e.g., tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues and add the infrastructure label."""
                 ),
                 "error",
             ),
@@ -209,7 +209,7 @@ class TestReports(unittest.TestCase):
         ```
         </details>
         
-        If these failures are unrelated to your changes (e.g., tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues."""
+        If these failures are unrelated to your changes (e.g., tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues and add the infrastructure label."""
         ),
         "error",
     )
@@ -319,7 +319,7 @@ class TestReports(unittest.TestCase):
 
           Failed tests and their output was too large to report. Download the build's log file to see the details.
           
-          If these failures are unrelated to your changes (e.g., tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues."""
+          If these failures are unrelated to your changes (e.g., tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues and add the infrastructure label."""
                 ),
                 "error",
             ),
@@ -362,7 +362,7 @@ class TestReports(unittest.TestCase):
 
           Failed tests and their output was too large to report. [Download](https://buildkite.com/organizations/organization_slug/pipelines/pipeline_slug/builds/build_number/jobs/job_id/download.txt) the build's log file to see the details.
           
-          If these failures are unrelated to your changes (e.g., tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues."""
+          If these failures are unrelated to your changes (e.g., tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues and add the infrastructure label."""
                 ),
                 "error",
             ),
@@ -402,7 +402,7 @@ class TestReports(unittest.TestCase):
 
           Failed tests and their output was too large to report. Download the build's log file to see the details.
           
-          If these failures are unrelated to your changes (e.g., tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues."""
+          If these failures are unrelated to your changes (e.g., tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues and add the infrastructure label."""
                 ),
                 "error",
             ),

@@ -128,7 +128,8 @@ def generate_report(
                 "",
                 "If these failures are unrelated to your changes (e.g., tests are "
                 "broken or flaky at HEAD), please open an issue at "
-                "https://github.com/llvm/llvm-project/issues.",
+                "https://github.com/llvm/llvm-project/issues and add the "
+                "infrastructure label.",
             ]
         )
 
