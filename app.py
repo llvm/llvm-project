@@ -20,9 +20,9 @@ results = {}
 def run_script(script):
     try:
         output = subprocess.check_output(["python3", script], stderr=subprocess.STDOUT)
-        results[script] = output.decode("utf-8")
+        results[script] = {"status": "✅ Passed", "output": output.decode("utf-8")}
     except subprocess.CalledProcessError as e:
-        results[script] = e.output.decode("utf-8")
+        results[script] = {"status": "❌ Failed", "output": e.output.decode("utf-8")}
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -51,6 +51,6 @@ def index():
         return render_template("results.html", results=results, pr_number=pr_number)
 
     return render_template("index.html")
-    
+
 if __name__ == "__main__":
     app.run(debug=True)

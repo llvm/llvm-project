@@ -1,14 +1,24 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>LLVM PR Checker</title>
+  <meta charset="UTF-8">
+  <title>LLVM PR Checker</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
-<body>
-    <h2>🔍 Enter Pull Request Number</h2>
-    <form method="POST">
-        <label>PR Number:</label>
-        <input type="number" name="pr_number" required />
-        <button type="submit">Run Checks</button>
-    </form>
+<body class="bg-light">
+  <div class="container mt-5">
+    <div class="card shadow">
+      <div class="card-body">
+        <h2 class="card-title">🔍 LLVM PR Checker</h2>
+        <form method="POST">
+          <div class="mb-3">
+            <label class="form-label">Enter Pull Request Number</label>
+            <input type="number" name="pr_number" class="form-control" required placeholder="e.g., 13" />
+          </div>
+          <button type="submit" class="btn btn-primary">Run Checks</button>
+        </form>
+      </div>
+    </div>
+  </div>
 </body>
 </html>
