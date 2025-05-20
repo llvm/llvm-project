@@ -1742,17 +1742,11 @@ public:
 
   /// See CGDebugInfo::addInstToCurrentSourceAtom.
   void addInstToCurrentSourceAtom(llvm::Instruction *KeyInstruction,
-                                  llvm::Value *Backup) {
-    if (CGDebugInfo *DI = getDebugInfo())
-      DI->addInstToCurrentSourceAtom(KeyInstruction, Backup);
-  }
+                                  llvm::Value *Backup);
 
   /// See CGDebugInfo::addRetToOverrideOrNewSourceAtom.
   void addRetToOverrideOrNewSourceAtom(llvm::ReturnInst *Ret,
-                                       llvm::Value *Backup) {
-    if (CGDebugInfo *DI = getDebugInfo())
-      DI->addRetToOverrideOrNewSourceAtom(Ret, Backup);
-  }
+                                       llvm::Value *Backup);
 
 private:
   /// SwitchInsn - This is nearest current switch instruction. It is null if

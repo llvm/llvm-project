@@ -3326,3 +3326,15 @@ CodeGenFunction::EmitPointerAuthAuth(const CGPointerAuthInfo &PointerAuth,
   return EmitPointerAuthCommon(*this, PointerAuth, Pointer,
                                llvm::Intrinsic::ptrauth_auth);
 }
+
+void CodeGenFunction::addInstToCurrentSourceAtom(
+    llvm::Instruction *KeyInstruction, llvm::Value *Backup) {
+  if (CGDebugInfo *DI = getDebugInfo())
+    DI->addInstToCurrentSourceAtom(KeyInstruction, Backup);
+}
+
+void CodeGenFunction::addRetToOverrideOrNewSourceAtom(llvm::ReturnInst *Ret,
+                                                      llvm::Value *Backup) {
+  if (CGDebugInfo *DI = getDebugInfo())
+    DI->addRetToOverrideOrNewSourceAtom(Ret, Backup);
+}
