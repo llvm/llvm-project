@@ -13,6 +13,7 @@
 #ifndef LLVM_PROFILEDATA_MEMPROFRADIXTREE_H
 #define LLVM_PROFILEDATA_MEMPROFRADIXTREE_H
 
+#include "llvm/ProfileData/IndexedMemProfData.h"
 #include "llvm/ProfileData/MemProf.h"
 
 namespace llvm {
