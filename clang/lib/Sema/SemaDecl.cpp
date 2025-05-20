@@ -7008,8 +7008,12 @@ bool Sema::inferObjCARCLifetime(ValueDecl *decl) {
 }
 
 void Sema::deduceOpenCLAddressSpace(ValueDecl *Decl) {
-  if (Decl->getType().hasAddressSpace())
-    return;
+  // Address space is only meaningful for pointer type
+  if (Decl->getType()->isPointerType()) {
+    const PointerType *T = dyn_cast<PointerType>(Decl->getType().getTypePtr());
+    if (T->getPointeeType().hasAddressSpace())
+      return;
+  }
   if (Decl->getType()->isDependentType())
     return;
   if (VarDecl *Var = dyn_cast<VarDecl>(Decl)) {

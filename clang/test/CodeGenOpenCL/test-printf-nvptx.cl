@@ -6,7 +6,7 @@ int printf(__constant const char* st, ...) __attribute__((format(printf, 1, 2)))
 // NV-LABEL: define dso_local spir_kernel void @test_printf(
 // NV-SAME: ) #[[ATTR0:[0-9]+]] !kernel_arg_addr_space !4 !kernel_arg_access_qual !4 !kernel_arg_type !4 !kernel_arg_base_type !4 !kernel_arg_type_qual !4 {
 // NV-NEXT:  entry:
-// NV-NEXT:    [[CALL:%.*]] = call i32 (ptr addrspace(4), ...) @printf(ptr addrspace(4) noundef @.str) #[[ATTR2:[0-9]+]]
+// NV-NEXT:    [[TMP0:%.*]] = call i32 @vprintf(ptr addrspacecast (ptr addrspace(4) @.str to ptr), ptr null)
 // NV-NEXT:    ret void
 //
 __kernel void test_printf() {
