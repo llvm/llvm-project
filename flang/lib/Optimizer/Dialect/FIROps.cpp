@@ -4804,6 +4804,19 @@ bool fir::reboxPreservesContinuity(fir::ReboxOp rebox, bool checkWhole) {
   return false;
 }
 
+std::optional<int64_t> fir::getAllocaByteSize(fir::AllocaOp alloca,
+                                              const mlir::DataLayout &dl,
+                                              const fir::KindMapping &kindMap) {
+  mlir::Type type = alloca.getInType();
+  // TODO: should use the constant operands when all info is not available in
+  // the type.
+  if (!alloca.isDynamic())
+    if (auto sizeAndAlignment =
+            getTypeSizeAndAlignment(alloca.getLoc(), type, dl, kindMap))
+      return sizeAndAlignment->first;
+  return std::nullopt;
+}
+
 //===----------------------------------------------------------------------===//
 // DeclareOp
 //===----------------------------------------------------------------------===//
