@@ -781,7 +781,8 @@ private:
   /// We need to check that all of the pointers in this list are disjoint
   /// at runtime. Using std::unique_ptr to make using move ctor simpler.
   /// This list may contain only partial information when we've failed to
-  /// analyze all the memory accesses in the loop (i.e. CanVecMem is false).
+  /// analyze all the memory accesses in the loop, in which case
+  /// HasCompletePtrRtChecking will be false.
   std::unique_ptr<RuntimePointerChecking> PtrRtChecking;
 
   /// The Memory Dependence Checker which can determine the
@@ -798,6 +799,7 @@ private:
   /// Cache the result of analyzeLoop.
   bool CanVecMem = false;
   bool HasConvergentOp = false;
+  bool HasCompletePtrRtChecking = false;
 
   /// Indicator that there are two non vectorizable stores to the same uniform
   /// address.

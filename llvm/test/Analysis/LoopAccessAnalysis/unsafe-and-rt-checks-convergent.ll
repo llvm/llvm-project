@@ -40,7 +40,6 @@ define void @rtchecks_needed(ptr %a, ptr %b, ptr %c) {
 ; CHECK-NEXT:        Group [[GRP3]]:
 ; CHECK-NEXT:          (Low: %c High: (40 + %c))
 ; CHECK-NEXT:            Member: {%c,+,2}<nuw><%for.body>
-; CHECK-NEXT:      Generated run-time checks are incomplete
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:

@@ -287,7 +287,6 @@ define i32 @store_with_pointer_phi_incoming_phi(ptr %A, ptr %B, ptr %C, i1 %c.0,
 ; CHECK-NEXT:          (Low: %A High: (256000 + %A))
 ; CHECK-NEXT:            Member: {%A,+,8}<nuw><%loop.header>
 ; CHECK-NEXT:            Member: %A
-; CHECK-NEXT:      Generated run-time checks are incomplete
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -371,7 +370,6 @@ define i32 @store_with_pointer_phi_incoming_phi_irreducible_cycle(ptr %A, ptr %B
 ; CHECK-NEXT:          (Low: %A High: (256000 + %A))
 ; CHECK-NEXT:            Member: {%A,+,8}<nuw><%loop.header>
 ; CHECK-NEXT:            Member: %A
-; CHECK-NEXT:      Generated run-time checks are incomplete
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -542,7 +540,6 @@ define void @phi_load_store_memdep_check(i1 %c, ptr %A, ptr %B, ptr %C) {
 ; CHECK-NEXT:          (Low: %B High: (2 + %B))
 ; CHECK-NEXT:            Member: %B
 ; CHECK-NEXT:            Member: %B
-; CHECK-NEXT:      Generated run-time checks are incomplete
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
