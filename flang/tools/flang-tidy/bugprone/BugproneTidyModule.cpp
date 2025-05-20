@@ -15,6 +15,7 @@
 #include "ImpliedSaveCheck.h"
 #include "MismatchedIntentCheck.h"
 #include "MissingActionCheck.h"
+#include "MissingDefaultCheck.h"
 
 namespace Fortran::tidy {
 namespace bugprone {
@@ -34,6 +35,8 @@ public:
     CheckFactories.registerCheck<MismatchedIntentCheck>(
         "bugprone-mismatched-intent");
     CheckFactories.registerCheck<MissingActionCheck>("bugprone-missing-action");
+    CheckFactories.registerCheck<MissingDefaultCheck>(
+        "bugprone-missing-default-case");
   }
 };
 

@@ -23,3 +23,4 @@ Flang-Tidy Checks
    :doc:`bugprone-implied-save <bugprone/implied-save>`,
    :doc:`bugprone-mismatched-intent <bugprone/mismatched-intent>`,
    :doc:`bugprone-missing-action <bugprone/missing-action>`,
+   :doc:`bugprone-missing-default-case <bugprone/missing-default-case>`,

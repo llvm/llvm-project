@@ -7,6 +7,7 @@ add_flang_library(flangTidyBugproneModule STATIC
   ImpliedSaveCheck.cpp
   MismatchedIntentCheck.cpp
   MissingActionCheck.cpp
+  MissingDefaultCheck.cpp
 
   LINK_LIBS
   FortranSupport
