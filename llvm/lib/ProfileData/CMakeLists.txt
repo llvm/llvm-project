@@ -26,6 +26,7 @@ add_llvm_component_library(LLVMProfileData
 
   LINK_COMPONENTS
   BitstreamReader
+  Core
   Object
   Support
   Demangle
