@@ -2585,9 +2585,9 @@ def : AMDGPUPatIgnoreCopies <
                 (COPY_TO_REGCLASS VSrc_b32:$z, VGPR_32))
 >;
 
-// 64-bit version
+foreach vt = [i64, v2i32] in {
 def : AMDGPUPatIgnoreCopies <
-  (DivergentBinFrag<xor> i64:$z, (and i64:$x, (xor i64:$y, i64:$z))),
+  (DivergentBinFrag<xor> vt:$z, (and vt:$x, (xor vt:$y, vt:$z))),
   (REG_SEQUENCE VReg_64,
     (V_BFI_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$x, sub0)),
               (i32 (EXTRACT_SUBREG VReg_64:$y, sub0)),
@@ -2596,6 +2596,7 @@ def : AMDGPUPatIgnoreCopies <
               (i32 (EXTRACT_SUBREG VReg_64:$y, sub1)),
               (i32 (EXTRACT_SUBREG VReg_64:$z, sub1))), sub1)
 >;
+}
 
 def : AMDGPUPat <
   (fcopysign f32:$src0, f32:$src1),
@@ -2669,30 +2670,25 @@ def : GCNPat<(fshr i32:$src0, i32:$src1, i32:$src2),
 } // end True16Predicate = NotHasTrue16BitInsts
 
 let True16Predicate = UseRealTrue16Insts in {
-def : GCNPat <
-  (rotr i32:$src0, i32:$src1),
-  (V_ALIGNBIT_B32_t16_e64 /* src0_modifiers */ 0, $src0,
-                          /* src1_modifiers */ 0, $src0,
-                          /* src2_modifiers */ 0,
-                          (EXTRACT_SUBREG $src1, lo16),
-                          /* clamp */ 0, /* op_sel */ 0)
->;
+  def : GCNPat<(rotr i32:$src0, i32:$src1),
+               (V_ALIGNBIT_B32_t16_e64 /* src0_modifiers */ 0, $src0,
+                   /* src1_modifiers */ 0, $src0,
+                   /* src2_modifiers */ 0, (EXTRACT_SUBREG $src1, lo16),
+                   /* clamp */ 0, /* op_sel */ 0)>;
 
-def : GCNPat<(i32 (trunc (srl i64:$src0, (i32 ShiftAmt32Imm:$src1)))),
-          (V_ALIGNBIT_B32_t16_e64 0, /* src0_modifiers */
-                          (i32 (EXTRACT_SUBREG (i64 $src0), sub1)),
-                          0, /* src1_modifiers */
-                          (i32 (EXTRACT_SUBREG (i64 $src0), sub0)),
-                          0, /* src2_modifiers */
-                          (i16 (EXTRACT_SUBREG VGPR_32:$src1, lo16)),
-                          /* clamp */ 0, /* op_sel */ 0)>;
+  def : GCNPat<
+            (i32(trunc(srl i64:$src0, (i32 ShiftAmt32Imm:$src1)))),
+            (V_ALIGNBIT_B32_t16_e64 0,                     /* src0_modifiers */
+                (i32(EXTRACT_SUBREG(i64 $src0), sub1)), 0, /* src1_modifiers */
+                (i32(EXTRACT_SUBREG(i64 $src0), sub0)), 0, /* src2_modifiers */
+                (i16(EXTRACT_SUBREG VGPR_32:$src1, lo16)),
+                /* clamp */ 0, /* op_sel */ 0)>;
 
-def : GCNPat<(fshr i32:$src0, i32:$src1, i32:$src2),
-          (V_ALIGNBIT_B32_t16_e64 /* src0_modifiers */ 0, $src0,
-                          /* src1_modifiers */ 0, $src1,
-                          /* src2_modifiers */ 0,
-                          (EXTRACT_SUBREG VGPR_32:$src2, lo16),
-                          /* clamp */ 0, /* op_sel */ 0)>;
+  def : GCNPat<(fshr i32:$src0, i32:$src1, i32:$src2),
+               (V_ALIGNBIT_B32_t16_e64 /* src0_modifiers */ 0, $src0,
+                   /* src1_modifiers */ 0, $src1,
+                   /* src2_modifiers */ 0, (EXTRACT_SUBREG VGPR_32:$src2, lo16),
+                   /* clamp */ 0, /* op_sel */ 0)>;
 } // end True16Predicate = UseRealTrue16Insts
 
 let True16Predicate = UseFakeTrue16Insts in {

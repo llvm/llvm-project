@@ -4047,9 +4047,8 @@ SDValue AMDGPUTargetLowering::performIntrinsicWOChainCombine(
 /// Split the 64-bit value \p LHS into two 32-bit components, and perform the
 /// binary operation \p Opc to it with the corresponding constant operands.
 SDValue AMDGPUTargetLowering::splitBinaryBitConstantOpImpl(
-  DAGCombinerInfo &DCI, const SDLoc &SL,
-  unsigned Opc, SDValue LHS,
-  uint32_t ValLo, uint32_t ValHi) const {
+    DAGCombinerInfo &DCI, const SDLoc &SL, unsigned Opc, SDValue LHS,
+    uint32_t ValLo, uint32_t ValHi) const {
   SelectionDAG &DAG = DCI.DAG;
   SDValue Lo, Hi;
   std::tie(Lo, Hi) = split64BitValue(LHS, DAG);
@@ -4077,6 +4076,53 @@ SDValue AMDGPUTargetLowering::performShlCombine(SDNode *N,
   ConstantSDNode *CRHS = dyn_cast<ConstantSDNode>(RHS);
   SDLoc SL(N);
   SelectionDAG &DAG = DCI.DAG;
+
+  // When the shl64_reduce optimisation code is passed through vector
+  // legalization some scalarising occurs. After ISD::AND was legalised, this
+  // resulted in the AND instructions no longer being elided, as mentioned
+  // below. The following code should make sure this takes place.
+  if (RHS->getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
+    SDValue VAND = RHS.getOperand(0);
+    if (ConstantSDNode *CRRHS = dyn_cast<ConstantSDNode>(RHS->getOperand(1))) {
+      uint64_t AndIndex = RHS->getConstantOperandVal(1);
+      if (VAND->getOpcode() == ISD::AND && CRRHS) {
+        SDValue LHSAND = VAND.getOperand(0);
+        SDValue RHSAND = VAND.getOperand(1);
+        if (RHSAND->getOpcode() == ISD::BUILD_VECTOR) {
+          // Part of shlcombine is to optimise for the case where its possible
+          // to reduce shl64 to shl32 if shift range is [63-32]. This
+          // transforms: DST = shl i64 X, Y to [0, shl i32 X, (Y & 31) ]. The
+          // '&' is then elided by ISel. The vector code for this was being
+          // completely scalarised by the vector legalizer, but now v2i32 is
+          // made legal the vector legaliser only partially scalarises the
+          // vector operations and the and was not elided. This check enables us
+          // to locate and scalarise the v2i32 and and re-enable ISel to elide
+          // the and instruction.
+          ConstantSDNode *CANDL =
+              dyn_cast<ConstantSDNode>(RHSAND->getOperand(0));
+          ConstantSDNode *CANDR =
+              dyn_cast<ConstantSDNode>(RHSAND->getOperand(1));
+          if (CANDL && CANDR && RHSAND->getConstantOperandVal(0) == 0x1f &&
+              RHSAND->getConstantOperandVal(1) == 0x1f) {
+            // Get the non-const AND operands and produce scalar AND
+            const SDValue Zero = DAG.getConstant(0, SL, MVT::i32);
+            const SDValue One = DAG.getConstant(1, SL, MVT::i32);
+            SDValue Lo = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32,
+                                     LHSAND, Zero);
+            SDValue Hi =
+                DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32, LHSAND, One);
+            SDValue AndMask = DAG.getConstant(0x1f, SL, MVT::i32);
+            SDValue LoAnd = DAG.getNode(ISD::AND, SL, MVT::i32, Lo, AndMask);
+            SDValue HiAnd = DAG.getNode(ISD::AND, SL, MVT::i32, Hi, AndMask);
+            SDValue Trunc = DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, LHS);
+            if (AndIndex == 0 || AndIndex == 1)
+              return DAG.getNode(ISD::SHL, SL, MVT::i32, Trunc,
+                                 AndIndex == 0 ? LoAnd : HiAnd, N->getFlags());
+          }
+        }
+      }
+    }
+  }
 
   unsigned RHSVal;
   if (CRHS) {
@@ -4118,8 +4164,6 @@ SDValue AMDGPUTargetLowering::performShlCombine(SDNode *N,
 
   if (VT.getScalarType() != MVT::i64)
     return SDValue();
-
-  // i64 (shl x, C) -> (build_pair 0, (shl x, C - 32))
 
   // On some subtargets, 64-bit shift is a quarter rate instruction. In the
   // common case, splitting this into a move and a 32-bit shift is faster and
@@ -4281,6 +4325,53 @@ SDValue AMDGPUTargetLowering::performSrlCombine(SDNode *N,
   SelectionDAG &DAG = DCI.DAG;
   SDLoc SL(N);
   unsigned RHSVal;
+
+  // When the shl64_reduce optimisation code is passed through vector
+  // legalization some scalarising occurs. After ISD::AND was legalised, this
+  // resulted in the AND instructions no longer being elided, as mentioned
+  // below. The following code should make sure this takes place.
+  if (RHS->getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
+    SDValue VAND = RHS.getOperand(0);
+    if (ConstantSDNode *CRRHS = dyn_cast<ConstantSDNode>(RHS->getOperand(1))) {
+      uint64_t AndIndex = RHS->getConstantOperandVal(1);
+      if (VAND->getOpcode() == ISD::AND && CRRHS) {
+        SDValue LHSAND = VAND.getOperand(0);
+        SDValue RHSAND = VAND.getOperand(1);
+        if (RHSAND->getOpcode() == ISD::BUILD_VECTOR) {
+          // Part of srlcombine is to optimise for the case where its possible
+          // to reduce shl64 to shl32 if shift range is [63-32]. This
+          // transforms: DST = shl i64 X, Y to [0, srl i32 X, (Y & 31) ]. The
+          // '&' is then elided by ISel. The vector code for this was being
+          // completely scalarised by the vector legalizer, but now v2i32 is
+          // made legal the vector legaliser only partially scalarises the
+          // vector operations and the and was not elided. This check enables us
+          // to locate and scalarise the v2i32 and and re-enable ISel to elide
+          // the and instruction.
+          ConstantSDNode *CANDL =
+              dyn_cast<ConstantSDNode>(RHSAND->getOperand(0));
+          ConstantSDNode *CANDR =
+              dyn_cast<ConstantSDNode>(RHSAND->getOperand(1));
+          if (CANDL && CANDR && RHSAND->getConstantOperandVal(0) == 0x1f &&
+              RHSAND->getConstantOperandVal(1) == 0x1f) {
+            // Get the non-const AND operands and produce scalar AND
+            const SDValue Zero = DAG.getConstant(0, SL, MVT::i32);
+            const SDValue One = DAG.getConstant(1, SL, MVT::i32);
+            SDValue Lo = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32,
+                                     LHSAND, Zero);
+            SDValue Hi =
+                DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32, LHSAND, One);
+            SDValue AndMask = DAG.getConstant(0x1f, SL, MVT::i32);
+            SDValue LoAnd = DAG.getNode(ISD::AND, SL, MVT::i32, Lo, AndMask);
+            SDValue HiAnd = DAG.getNode(ISD::AND, SL, MVT::i32, Hi, AndMask);
+            SDValue Trunc = DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, LHS);
+            if (AndIndex == 0 || AndIndex == 1)
+              return DAG.getNode(ISD::SRL, SL, MVT::i32, Trunc,
+                                 AndIndex == 0 ? LoAnd : HiAnd, N->getFlags());
+          }
+        }
+      }
+    }
+  }
 
   if (CRHS) {
     RHSVal = CRHS->getZExtValue();
@@ -4795,8 +4886,26 @@ AMDGPUTargetLowering::foldFreeOpFromSelect(TargetLowering::DAGCombinerInfo &DCI,
     if (!AMDGPUTargetLowering::allUsesHaveSourceMods(N.getNode()))
       return SDValue();
 
-    return distributeOpThroughSelect(DCI, LHS.getOpcode(),
-                                     SDLoc(N), Cond, LHS, RHS);
+    // select c, (fneg (f32 bitcast i32 x)), (fneg (f32 bitcast i32 y)) can be
+    // lowered directly to a V_CNDMASK_. So prevent the fneg from being pulled
+    // out in this case. For now I've made the logic as specific to the case as
+    // possible, hopefully this can be relaxed in future.
+    if (LHS.getOpcode() == ISD::FNEG && RHS.getOpcode() == ISD::FNEG) {
+      SDValue LHSB = LHS.getOperand(0);
+      SDValue RHSB = RHS.getOperand(0);
+      if (LHSB.getOpcode() == ISD::BITCAST &&
+          RHSB->getOpcode() == ISD::BITCAST) {
+        EVT LHSBOpTy = LHSB->getOperand(0).getValueType();
+        EVT RHSBOpTy = RHSB->getOperand(0).getValueType();
+        if (LHSB.getValueType() == MVT::f32 &&
+            RHSB.getValueType() == MVT::f32 && LHSBOpTy == MVT::i32 &&
+            RHSBOpTy == MVT::i32)
+          return SDValue();
+      }
+    }
+
+    return distributeOpThroughSelect(DCI, LHS.getOpcode(), SDLoc(N), Cond, LHS,
+                                     RHS);
   }
 
   bool Inv = false;
@@ -4849,8 +4958,8 @@ AMDGPUTargetLowering::foldFreeOpFromSelect(TargetLowering::DAGCombinerInfo &DCI,
       if (Inv)
         std::swap(NewLHS, NewRHS);
 
-      SDValue NewSelect = DAG.getNode(ISD::SELECT, SL, VT,
-                                      Cond, NewLHS, NewRHS);
+      SDValue NewSelect =
+          DAG.getNode(ISD::SELECT, SL, VT, Cond, NewLHS, NewRHS);
       DCI.AddToWorklist(NewSelect.getNode());
       return DAG.getNode(LHS.getOpcode(), SL, VT, NewSelect);
     }
@@ -5188,8 +5297,25 @@ SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
   }
   case ISD::SELECT: {
     // fneg (select c, a, b) -> select c, (fneg a), (fneg b)
+    // This combine became necessary recently to prevent a regression in
+    // fneg-modifier-casting.ll caused by this patch legalising v2i32 xor.
+    // Specifically, additional instructions were added to the final codegen.
+    // When adding this combine a case was added to performFNEGCombine to
+    // prevent this combine from being undone under certain conditions.
     // TODO: Invert conditions of foldFreeOpFromSelect
-    return SDValue();
+    SDValue Cond = N0.getOperand(0);
+    SDValue LHS = N0.getOperand(1);
+    SDValue RHS = N0.getOperand(2);
+    EVT LHVT = LHS.getValueType();
+    EVT RHVT = RHS.getValueType();
+    // The regression was limited to i32 v2/i32.
+    if (RHVT != MVT::i32 && LHVT != MVT::i32)
+      return SDValue();
+
+    SDValue LFNeg = DAG.getNode(ISD::FNEG, SL, LHVT, LHS);
+    SDValue RFNeg = DAG.getNode(ISD::FNEG, SL, RHVT, RHS);
+    SDValue Op = DAG.getNode(Opc, SL, LHVT, Cond, LFNeg, RFNeg);
+    return Op;
   }
   case ISD::BITCAST: {
     SDLoc SL(N);
