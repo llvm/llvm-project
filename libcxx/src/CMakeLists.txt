@@ -46,7 +46,8 @@ set(LIBCXX_SOURCES
   stacktrace/to_string.cpp
   stacktrace/tools.cpp
   stacktrace/unwind.cpp
-  stacktrace/windows.cpp
+  stacktrace/win/dll.cpp
+  stacktrace/win/impl.cpp
   stdexcept.cpp
   string.cpp
   support/runtime/exception_fallback.ipp

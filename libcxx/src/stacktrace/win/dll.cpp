@@ -6,16 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "stacktrace/config.h"
+#include <__config>
 
-#if defined(_LIBCPP_STACKTRACE_WINDOWS)
+#if defined(_LIBCPP_WIN32API)
 
 #  include <__stacktrace/base.h>
 
 #  include "stacktrace/alloc.h"
 #  include "stacktrace/config.h"
 #  include "stacktrace/utils.h"
-#  include "stacktrace/windows.h"
+#  include "stacktrace/win/dll.h"
+#  include "stacktrace/win/impl.h"
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __stacktrace {
@@ -243,4 +244,4 @@ if (!getFunc(&EnumProcessModules, "EnumProcessModules")) { return; }
 } // namespace __stacktrace
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_STACKTRACE_WINDOWS
+#endif // _LIBCPP_WIN32API

@@ -16,8 +16,11 @@
 #include "stacktrace/macos.h"
 #include "stacktrace/tools.h"
 #include "stacktrace/unwind.h"
-#include "stacktrace/utils.h"
-#include "stacktrace/windows.h"
+#include "stacktrace/utils/debug.h"
+#include "stacktrace/utils/failed.h"
+#include "stacktrace/utils/fd.h"
+#include "stacktrace/win/dll.h"
+#include "stacktrace/win/impl.h"
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
