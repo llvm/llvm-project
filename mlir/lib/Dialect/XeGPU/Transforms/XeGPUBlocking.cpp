@@ -188,20 +188,20 @@ bool XeGPUBlockingPass::needsUnroll(Operation *op) const {
   for (auto &opr : op->getOpOperands()) {
     std::optional<SmallVector<int64_t>> tileShape = getTileShape(opr);
     auto shapedType = dyn_cast<ShapedType>(opr.get().getType());
-    if (!shapedType)
+    if (!shapedType || !tileShape)
       continue;
 
-    if (tileShape && !llvm::equal(*tileShape, shapedType.getShape()))
+    if (!llvm::equal(*tileShape, shapedType.getShape()))
       return true;
   }
 
   for (auto result : op->getOpResults()) {
     std::optional<SmallVector<int64_t>> tileShape = getTileShape(result);
     auto shapedType = dyn_cast<ShapedType>(result.getType());
-    if (!shapedType)
+    if (!shapedType || !tileShape)
       continue;
 
-    if (tileShape && !llvm::equal(*tileShape, shapedType.getShape()))
+    if (!llvm::equal(*tileShape, shapedType.getShape()))
       return true;
   }
   return false;
