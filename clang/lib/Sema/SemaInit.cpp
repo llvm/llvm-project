@@ -6602,8 +6602,10 @@ void InitializationSequence::InitializeFrom(Sema &S,
       }
       // If the record has any members which are const (recursively checked),
       // then we want to diagnose those as being uninitialized if there is no
-      // initializer present.
-      if (!Initializer) {
+      // initializer present. However, we only do this for structure types, not
+      // union types, because an unitialized field in a union is generally
+      // reasonable, especially in C where unions can be used for type punning.
+      if (!Initializer && !Rec->isUnion()) {
         if (const FieldDecl *FD = getConstField(Rec)) {
           unsigned DiagID = diag::warn_default_init_const_field_unsafe;
           if (Var->getStorageDuration() == SD_Static ||

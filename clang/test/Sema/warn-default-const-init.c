@@ -35,6 +35,8 @@ struct V { int i; const struct A a; }; // unsafe-field-note {{member 'a' declare
 struct W { struct A a; const int j; }; // unsafe-field-note {{member 'j' declared 'const' here}} \
                                           unsafe-field-compat-note {{member 'j' declared 'const' here}} \
                                           cxx-note {{default constructor of 'W' is implicitly deleted because field 'j' of const-qualified type 'const int' would not be initialized}}
+union Z1 { int i; const int j; };
+union Z2 { int i; const struct A a; };
 
 void f() {
   struct S s1; // unsafe-field-warning {{default initialization of an object of type 'struct S' with const member leaves the object uninitialized}} \
@@ -66,6 +68,14 @@ void y() {
   struct W w2 = { 0 };
   struct W w3 = { { 0 }, 0 };
 }
+void z() {
+  // Note, we explicitly do not diagnose default initialization of unions with
+  // a const member. Those can be reasonable, the only problematic case is if
+  // the only member of the union is const, but that's a very odd situation to
+  // begin with so we accept it as a false negative.
+  union Z1 z1;
+  union Z2 z2;
+}
 
 // Test a tentative definition which does eventually get an initializer.
 extern const int i;
@@ -77,6 +87,8 @@ const int k;        // zero-init-var-warning {{default initialization of an obje
                        cxx-error {{default initialization of an object of const type 'const int'}}
 const struct S s;   // zero-init-var-warning {{default initialization of an object of type 'const struct S' is incompatible with C++}} \
                        cxx-error {{call to implicitly-deleted default constructor of 'const struct S'}}
+const union Z1 z3;  // zero-init-var-warning {{default initialization of an object of type 'const union Z1' is incompatible with C++}} \
+                       cxx-error {{default initialization of an object of const type 'const union Z1' without a user-provided default constructor}}
 
 void func() {
   const int a;        // unsafe-var-warning {{default initialization of an object of type 'const int' leaves the object uninitialized}} \
