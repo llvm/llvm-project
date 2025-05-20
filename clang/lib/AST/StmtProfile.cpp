@@ -2189,10 +2189,7 @@ StmtProfiler::VisitCXXPseudoDestructorExpr(const CXXPseudoDestructorExpr *S) {
 
 void StmtProfiler::VisitOverloadExpr(const OverloadExpr *S) {
   VisitExpr(S);
-  if (S->getNumDecls() == 1)
-    VisitDecl(*S->decls_begin());
-  else
-    VisitNestedNameSpecifier(S->getQualifier());
+  VisitNestedNameSpecifier(S->getQualifier());
   VisitName(S->getName(), /*TreatAsDecl*/ true);
   ID.AddBoolean(S->hasExplicitTemplateArgs());
   if (S->hasExplicitTemplateArgs())
