@@ -195,7 +195,7 @@ std::optional<int64_t> CompositeType::getSizeInBytes() {
 
 struct spirv::detail::CooperativeMatrixTypeStorage final : TypeStorage {
   using KeyTy =
-      std::tuple<Type, uint32_t, uint32_t, Scope, CooperativeMatrixUseKHR>;
+      std::tuple<Type, int64_t, int64_t, Scope, CooperativeMatrixUseKHR>;
 
   static CooperativeMatrixTypeStorage *
   construct(TypeStorageAllocator &allocator, const KeyTy &key) {
@@ -204,17 +204,17 @@ struct spirv::detail::CooperativeMatrixTypeStorage final : TypeStorage {
   }
 
   bool operator==(const KeyTy &key) const {
-    return key == KeyTy(elementType, rows, columns, scope, use);
+    return key == KeyTy(elementType, shape[0], shape[1], scope, use);
   }
 
   CooperativeMatrixTypeStorage(const KeyTy &key)
-      : elementType(std::get<0>(key)), rows(std::get<1>(key)),
-        columns(std::get<2>(key)), scope(std::get<3>(key)),
+      : elementType(std::get<0>(key)),
+        shape({std::get<1>(key), std::get<2>(key)}), scope(std::get<3>(key)),
         use(std::get<4>(key)) {}
 
   Type elementType;
-  uint32_t rows;
-  uint32_t columns;
+  // [#rows, #columns]
+  SmallVector<int64_t, 2> shape;
   Scope scope;
   CooperativeMatrixUseKHR use;
 };
@@ -231,10 +231,16 @@ Type CooperativeMatrixType::getElementType() const {
   return getImpl()->elementType;
 }
 
-uint32_t CooperativeMatrixType::getRows() const { return getImpl()->rows; }
+uint32_t CooperativeMatrixType::getRows() const {
+  return static_cast<uint32_t>(getImpl()->shape[0]);
+}
 
 uint32_t CooperativeMatrixType::getColumns() const {
-  return getImpl()->columns;
+  return static_cast<uint32_t>(getImpl()->shape[1]);
+}
+
+ArrayRef<int64_t> CooperativeMatrixType::getShape() const {
+  return getImpl()->shape;
 }
 
 Scope CooperativeMatrixType::getScope() const { return getImpl()->scope; }

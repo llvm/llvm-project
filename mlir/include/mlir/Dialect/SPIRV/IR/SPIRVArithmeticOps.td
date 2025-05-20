@@ -18,12 +18,21 @@ include "mlir/Dialect/SPIRV/IR/SPIRVBase.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
+class SPIRV_SameCoopMatrix<string lhs, string rhs> : PredOpTrait<
+  "cooperative matrix types match",
+  CPred<"(::llvm::isa<::mlir::spirv::CooperativeMatrixType>($" # lhs # ".getType()) "
+        "&& ::llvm::isa<::mlir::spirv::CooperativeMatrixType>($" # rhs # ".getType()))"
+        "? $" # lhs # ".getType() == $" # rhs # ".getType() : true">
+>;
+
 class SPIRV_ArithmeticBinaryOp<string mnemonic, Type type,
                                list<Trait> traits = []> :
       // Operands type same as result type.
       SPIRV_BinaryOp<mnemonic, type, type,
                    !listconcat(traits,
-                               [Pure, SameOperandsAndResultType])> {
+                               [Pure, SameOperandsAndResultType,
+                                SPIRV_SameCoopMatrix<"operand1", "operand2">,
+                                SPIRV_SameCoopMatrix<"operand2", "result">])> {
   // In addition to normal types arithmetic instructions can support cooperative
   // matrix.
   let arguments = (ins
@@ -42,7 +51,8 @@ class SPIRV_ArithmeticUnaryOp<string mnemonic, Type type,
       // Operand type same as result type.
       SPIRV_UnaryOp<mnemonic, type, type,
                    !listconcat(traits,
-                               [Pure, SameOperandsAndResultType])> {
+                               [Pure, SameOperandsAndResultType,
+                                SPIRV_SameCoopMatrix<"operand", "result">])> {
   // In addition to normal types arithmetic instructions can support cooperative
   // matrix.
   let arguments = (ins

@@ -524,7 +524,7 @@ spirv.func @matrix_times_scalar(%a: !matA_f32, %b: f32) "None" {
 
 spirv.func @iadd(%a: !spirv.coopmatrix<2x2xi32, Subgroup, MatrixA>,
                  %b: !spirv.coopmatrix<2x2xi32, Subgroup, MatrixB>) "None" {
-  // expected-error @+1 {{op requires the same type for all operands and results}}
+  // expected-error @+1 {{op failed to verify that cooperative matrix types match}}
   %q = "spirv.IAdd"(%a, %b) :
     (!spirv.coopmatrix<2x2xi32, Subgroup, MatrixA>, !spirv.coopmatrix<2x2xi32, Subgroup, MatrixB>)
     -> !spirv.coopmatrix<2x2xi32, Subgroup, MatrixA>
@@ -535,7 +535,7 @@ spirv.func @iadd(%a: !spirv.coopmatrix<2x2xi32, Subgroup, MatrixA>,
 
 spirv.func @fadd(%a: !spirv.coopmatrix<2x2xf32, Subgroup, MatrixA>,
                  %b: !spirv.coopmatrix<2x2xf32, Subgroup, MatrixAcc>) "None" {
-  // expected-error @+1 {{op requires the same type for all operands and results}}
+  // expected-error @+1 {{op failed to verify that cooperative matrix types match}}
   %q = "spirv.FAdd"(%a, %b) :
     (!spirv.coopmatrix<2x2xf32, Subgroup, MatrixA>, !spirv.coopmatrix<2x2xf32, Subgroup, MatrixAcc>)
     -> !spirv.coopmatrix<2x2xf32, Subgroup, MatrixAcc>
