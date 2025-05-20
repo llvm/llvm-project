@@ -20,7 +20,10 @@ target_link_libraries(flangTidy
   flangFrontendTool
   )
 
+add_subdirectory(bugprone)
+
 set(ALL_FLANG_TIDY_CHECKS
+  flangTidyBugproneModule
   )
 
 set(ALL_FLANG_TIDY_CHECKS ${ALL_FLANG_TIDY_CHECKS} PARENT_SCOPE)
