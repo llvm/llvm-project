@@ -24,8 +24,8 @@
 
 using namespace llvm;
 
-MCAsmBackend::MCAsmBackend(llvm::endianness Endian, unsigned RelaxFixupKind)
-    : Endian(Endian), RelaxFixupKind(RelaxFixupKind) {}
+MCAsmBackend::MCAsmBackend(llvm::endianness Endian, bool LinkerRelaxation)
+    : Endian(Endian), LinkerRelaxation(LinkerRelaxation) {}
 
 MCAsmBackend::~MCAsmBackend() = default;
 
