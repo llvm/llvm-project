@@ -941,6 +941,7 @@ filegroup(
 cc_library(
     name = "Core",
     srcs = glob([
+        "include/llvm/ProfileData/MemProfCommon.h",
         "lib/IR/*.cpp",
         "lib/IR/*.h",
     ]),
@@ -1146,7 +1147,6 @@ cc_library(
     deps = [
         ":BitstreamReader",
         ":BitstreamWriter",
-        ":Core",
         ":DebugInfo",
         ":DebugInfoDWARF",
         ":Demangle",
