@@ -1744,7 +1744,7 @@ namespace slpvectorizer {
 
 /// Bottom Up SLP Vectorizer.
 class BoUpSLP {
-  struct TreeEntry;
+  class TreeEntry;
   class ScheduleEntity;
   class ScheduleData;
   class ScheduleBundle;
@@ -3607,7 +3607,8 @@ private:
   /// opportunities.
   void reorderGatherNode(TreeEntry &TE);
 
-  struct TreeEntry {
+  class TreeEntry {
+  public:
     using VecTreeTy = SmallVector<std::unique_ptr<TreeEntry>, 8>;
     TreeEntry(VecTreeTy &Container) : Container(Container) {}
 
@@ -3774,6 +3775,9 @@ private:
     /// Interleaving factor for interleaved loads Vectorize nodes.
     unsigned InterleaveFactor = 0;
 
+    /// True if the node does not require scheduling.
+    bool DoesNotNeedToSchedule = false;
+
     /// Set this bundle's \p OpIdx'th operand to \p OpVL.
     void setOperand(unsigned OpIdx, ArrayRef<Value *> OpVL) {
       if (Operands.size() < OpIdx + 1)
@@ -3790,6 +3794,16 @@ private:
     unsigned getInterleaveFactor() const { return InterleaveFactor; }
     /// Sets interleaving factor for the interleaving nodes.
     void setInterleave(unsigned Factor) { InterleaveFactor = Factor; }
+
+    /// Marks the node as one that does not require scheduling.
+    void setDoesNotNeedToSchedule() {
+      assert(::doesNotNeedToSchedule(Scalars) &&
+             "Expected to not need scheduling");
+      DoesNotNeedToSchedule = true;
+    }
+    /// Returns true if the node is marked as one that does not require
+    /// scheduling.
+    bool doesNotNeedToSchedule() const { return DoesNotNeedToSchedule; }
 
     /// Set this bundle's operands from \p Operands.
     void setOperands(ArrayRef<ValueList> Operands) {
@@ -4107,6 +4121,8 @@ private:
         }
       }
     } else if (!Last->isGather()) {
+      if (doesNotNeedToSchedule(VL))
+        Last->setDoesNotNeedToSchedule();
       SmallPtrSet<Value *, 4> Processed;
       for (Value *V : VL) {
         if (isa<PoisonValue>(V))
@@ -4124,7 +4140,7 @@ private:
       // Update the scheduler bundle to point to this TreeEntry.
       assert((!Bundle.getBundle().empty() || isa<PHINode>(S.getMainOp()) ||
               isVectorLikeInstWithConstOps(S.getMainOp()) ||
-              doesNotNeedToSchedule(VL)) &&
+              Last->doesNotNeedToSchedule()) &&
              "Bundle and VL out of sync");
       if (!Bundle.getBundle().empty()) {
 #if !defined(NDEBUG) || defined(EXPENSIVE_CHECKS)
@@ -15331,8 +15347,8 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
       }
 
       if (!TEUseEI.UserTE->isGather() && !UserPHI &&
-          doesNotNeedToSchedule(TEUseEI.UserTE->Scalars) !=
-              doesNotNeedToSchedule(UseEI.UserTE->Scalars) &&
+          TEUseEI.UserTE->doesNotNeedToSchedule() !=
+              UseEI.UserTE->doesNotNeedToSchedule() &&
           is_contained(UseEI.UserTE->Scalars, TEInsertPt))
         continue;
       // Check if the user node of the TE comes after user node of TEPtr,
@@ -16127,7 +16143,7 @@ void BoUpSLP::setInsertPointAfterBundle(const TreeEntry *E) {
   }
   if (IsPHI ||
       (!E->isGather() && E->State != TreeEntry::SplitVectorize &&
-       doesNotNeedToSchedule(E->Scalars)) ||
+       E->doesNotNeedToSchedule()) ||
       (GatheredLoadsEntriesFirst.has_value() &&
        E->Idx >= *GatheredLoadsEntriesFirst && !E->isGather() &&
        E->getOpcode() == Instruction::Load)) {
@@ -19803,7 +19819,7 @@ void BoUpSLP::scheduleBlock(BlockScheduling *BS) {
     if (ScheduleData *SD = BS->getScheduleData(I)) {
       [[maybe_unused]] ArrayRef<TreeEntry *> SDTEs = getTreeEntries(I);
       assert((isVectorLikeInstWithConstOps(SD->getInst()) || SDTEs.empty() ||
-              doesNotNeedToSchedule(SDTEs.front()->Scalars)) &&
+              SDTEs.front()->doesNotNeedToSchedule()) &&
              "scheduler and vectorizer bundle mismatch");
       SD->setSchedulingPriority(Idx++);
       continue;
