@@ -10,6 +10,7 @@
 #include "../FlangTidyModuleRegistry.h"
 #include "ArithmeticGotoCheck.h"
 #include "ArithmeticIfStmtCheck.h"
+#include "ContiguousArrayCheck.h"
 
 namespace Fortran::tidy {
 namespace bugprone {
@@ -21,6 +22,8 @@ public:
         "bugprone-arithmetic-goto");
     CheckFactories.registerCheck<ArithmeticIfStmtCheck>(
         "bugprone-arithmetic-if");
+    CheckFactories.registerCheck<ContiguousArrayCheck>(
+        "bugprone-contiguous-array");
   }
 };
 

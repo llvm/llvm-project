@@ -17,4 +17,5 @@ Flang-Tidy Checks
    :header: "Name", "Offers fixes"
 
    :doc:`bugprone-arithmetic-goto <bugprone/arithmetic-goto>`,
-    :doc:`bugprone-arithmetic-if <bugprone/arithmetic-if>`,
+   :doc:`bugprone-arithmetic-if <bugprone/arithmetic-if>`,
+   :doc:`bugprone-contiguous-array <bugprone/contiguous-array>`,
