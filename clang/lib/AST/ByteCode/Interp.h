@@ -1135,6 +1135,14 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
     }
   }
 
+  if (LHS.isUnknownSizeArray() && RHS.isUnknownSizeArray()) {
+    const SourceInfo &Loc = S.Current->getSource(OpPC);
+    S.FFDiag(Loc, diag::note_constexpr_pointer_comparison_zero_sized)
+        << LHS.toDiagnosticString(S.getASTContext())
+        << RHS.toDiagnosticString(S.getASTContext());
+    return false;
+  }
+
   S.Stk.push<BoolT>(BoolT::from(Fn(ComparisonCategoryResult::Unordered)));
   return true;
 }
