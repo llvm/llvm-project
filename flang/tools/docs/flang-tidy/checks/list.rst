@@ -21,3 +21,4 @@ Flang-Tidy Checks
    :doc:`bugprone-contiguous-array <bugprone/contiguous-array>`,
    :doc:`bugprone-implicit-declaration <bugprone/implicit-declaration>`,
    :doc:`bugprone-implied-save <bugprone/implied-save>`,
+   :doc:`bugprone-mismatched-intent <bugprone/mismatched-intent>`,

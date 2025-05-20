@@ -13,6 +13,7 @@
 #include "ContiguousArrayCheck.h"
 #include "ImplicitDeclCheck.h"
 #include "ImpliedSaveCheck.h"
+#include "MismatchedIntentCheck.h"
 
 namespace Fortran::tidy {
 namespace bugprone {
@@ -29,6 +30,8 @@ public:
     CheckFactories.registerCheck<ImplicitDeclCheck>(
         "bugprone-implicit-declaration");
     CheckFactories.registerCheck<ImpliedSaveCheck>("bugprone-implied-save");
+    CheckFactories.registerCheck<MismatchedIntentCheck>(
+        "bugprone-mismatched-intent");
   }
 };
 
