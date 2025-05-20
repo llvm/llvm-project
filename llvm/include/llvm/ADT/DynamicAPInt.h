@@ -17,6 +17,7 @@
 #define LLVM_ADT_DYNAMICAPINT_H
 
 #include "llvm/ADT/SlowDynamicAPInt.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
 #include <numeric>
 
@@ -213,9 +214,10 @@ public:
 
   friend hash_code hash_value(const DynamicAPInt &x); // NOLINT
 
-  void static_assert_layout(); // NOLINT
+  LLVM_ABI void static_assert_layout(); // NOLINT
 
-  raw_ostream &print(raw_ostream &OS) const;
+  LLVM_ABI raw_ostream &print(raw_ostream &OS) const;
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() const;
 #endif
@@ -228,7 +230,7 @@ inline raw_ostream &operator<<(raw_ostream &OS, const DynamicAPInt &X) {
 
 /// Redeclarations of friend declaration above to
 /// make it discoverable by lookups.
-hash_code hash_value(const DynamicAPInt &X); // NOLINT
+LLVM_ABI hash_code hash_value(const DynamicAPInt &X); // NOLINT
 
 /// This just calls through to the operator int64_t, but it's useful when a
 /// function pointer is required. (Although this is marked inline, it is still

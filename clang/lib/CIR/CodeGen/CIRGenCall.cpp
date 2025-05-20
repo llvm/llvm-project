@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CIRGenCall.h"
+#include "CIRGenCXXABI.h"
 #include "CIRGenFunction.h"
 #include "CIRGenFunctionInfo.h"
 #include "clang/CIR/MissingFeatures.h"
@@ -76,11 +77,35 @@ static void appendParameterTypes(const CIRGenTypes &cgt,
   cgt.getCGModule().errorNYI("appendParameterTypes: hasExtParameterInfos");
 }
 
+/// Derives the 'this' type for CIRGen purposes, i.e. ignoring method CVR
+/// qualification. Either or both of `rd` and `md` may be null. A null `rd`
+/// indicates that there is no meaningful 'this' type, and a null `md` can occur
+/// when calling a method pointer.
+CanQualType CIRGenTypes::deriveThisType(const CXXRecordDecl *rd,
+                                        const CXXMethodDecl *md) {
+  QualType recTy;
+  if (rd) {
+    recTy = getASTContext().getTagDeclType(rd)->getCanonicalTypeInternal();
+  } else {
+    // This can happen with the MS ABI. It shouldn't need anything more than
+    // setting recTy to VoidTy here, but we're flagging it for now because we
+    // don't have the full handling implemented.
+    cgm.errorNYI("deriveThisType: no record decl");
+    recTy = getASTContext().VoidTy;
+  }
+
+  if (md)
+    recTy = getASTContext().getAddrSpaceQualType(
+        recTy, md->getMethodQualifiers().getAddressSpace());
+  return getASTContext().getPointerType(CanQualType::CreateUnsafe(recTy));
+}
+
 /// Arrange the CIR function layout for a value of the given function type, on
 /// top of any implicit parameters already stored.
 static const CIRGenFunctionInfo &
 arrangeCIRFunctionInfo(CIRGenTypes &cgt, SmallVectorImpl<CanQualType> &prefix,
                        CanQual<FunctionProtoType> ftp) {
+  assert(!cir::MissingFeatures::opCallFnInfoOpts());
   RequiredArgs required =
       RequiredArgs::getFromProtoWithExtraSlots(ftp, prefix.size());
   assert(!cir::MissingFeatures::opCallExtParameterInfo());
@@ -112,7 +137,32 @@ arrangeFreeFunctionLikeCall(CIRGenTypes &cgt, CIRGenModule &cgm,
   CanQualType retType = fnType->getReturnType()
                             ->getCanonicalTypeUnqualified()
                             .getUnqualifiedType();
+
+  assert(!cir::MissingFeatures::opCallFnInfoOpts());
   return cgt.arrangeCIRFunctionInfo(retType, argTypes, required);
+}
+
+/// Arrange a call to a C++ method, passing the given arguments.
+///
+/// numPrefixArgs is the number of the ABI-specific prefix arguments we have. It
+/// does not count `this`.
+const CIRGenFunctionInfo &CIRGenTypes::arrangeCXXMethodCall(
+    const CallArgList &args, const FunctionProtoType *proto,
+    RequiredArgs required, unsigned numPrefixArgs) {
+  assert(!cir::MissingFeatures::opCallExtParameterInfo());
+  assert(numPrefixArgs + 1 <= args.size() &&
+         "Emitting a call with less args than the required prefix?");
+
+  // FIXME: Kill copy.
+  llvm::SmallVector<CanQualType, 16> argTypes;
+  for (const CallArg &arg : args)
+    argTypes.push_back(astContext.getCanonicalParamType(arg.ty));
+
+  assert(!cir::MissingFeatures::opCallFnInfoOpts());
+  return arrangeCIRFunctionInfo(proto->getReturnType()
+                                    ->getCanonicalTypeUnqualified()
+                                    .getUnqualifiedType(),
+                                argTypes, required);
 }
 
 const CIRGenFunctionInfo &
@@ -121,15 +171,54 @@ CIRGenTypes::arrangeFreeFunctionCall(const CallArgList &args,
   return arrangeFreeFunctionLikeCall(*this, cgm, args, fnType);
 }
 
+/// Arrange the argument and result information for a declaration or definition
+/// of the given C++ non-static member function. The member function must be an
+/// ordinary function, i.e. not a constructor or destructor.
+const CIRGenFunctionInfo &
+CIRGenTypes::arrangeCXXMethodDeclaration(const CXXMethodDecl *md) {
+  assert(!isa<CXXConstructorDecl>(md) && "wrong method for constructors!");
+  assert(!isa<CXXDestructorDecl>(md) && "wrong method for destructors!");
+
+  auto prototype =
+      md->getType()->getCanonicalTypeUnqualified().getAs<FunctionProtoType>();
+  assert(!cir::MissingFeatures::cudaSupport());
+
+  if (md->isInstance()) {
+    // The abstract case is perfectly fine.
+    auto *thisType = theCXXABI.getThisArgumentTypeForMethod(md);
+    return arrangeCXXMethodType(thisType, prototype.getTypePtr(), md);
+  }
+
+  return arrangeFreeFunctionType(prototype);
+}
+
+/// Arrange the argument and result information for a call to an unknown C++
+/// non-static member function of the given abstract type. (A null RD means we
+/// don't have any meaningful "this" argument type, so fall back to a generic
+/// pointer type). The member fucntion must be an ordinary function, i.e. not a
+/// constructor or destructor.
+const CIRGenFunctionInfo &
+CIRGenTypes::arrangeCXXMethodType(const CXXRecordDecl *rd,
+                                  const FunctionProtoType *ftp,
+                                  const CXXMethodDecl *md) {
+  llvm::SmallVector<CanQualType, 16> argTypes;
+
+  // Add the 'this' pointer.
+  argTypes.push_back(deriveThisType(rd, md));
+
+  assert(!cir::MissingFeatures::opCallFnInfoOpts());
+  return ::arrangeCIRFunctionInfo(
+      *this, argTypes,
+      ftp->getCanonicalTypeUnqualified().getAs<FunctionProtoType>());
+}
+
 /// Arrange the argument and result information for the declaration or
 /// definition of the given function.
 const CIRGenFunctionInfo &
 CIRGenTypes::arrangeFunctionDeclaration(const FunctionDecl *fd) {
-  if (const auto *md = dyn_cast<CXXMethodDecl>(fd)) {
-    if (md->isInstance()) {
-      cgm.errorNYI("arrangeFunctionDeclaration: instance method");
-    }
-  }
+  if (const auto *md = dyn_cast<CXXMethodDecl>(fd))
+    if (md->isInstance())
+      return arrangeCXXMethodDeclaration(md);
 
   CanQualType funcTy = fd->getType()->getCanonicalTypeUnqualified();
 
@@ -142,6 +231,7 @@ CIRGenTypes::arrangeFunctionDeclaration(const FunctionDecl *fd) {
   if (CanQual<FunctionNoProtoType> noProto =
           funcTy.getAs<FunctionNoProtoType>()) {
     assert(!cir::MissingFeatures::opCallCIRGenFuncInfoExtParamInfo());
+    assert(!cir::MissingFeatures::opCallFnInfoOpts());
     return arrangeCIRFunctionInfo(noProto->getReturnType(), std::nullopt,
                                   RequiredArgs::All);
   }
@@ -167,12 +257,14 @@ emitCallLikeOp(CIRGenFunction &cgf, mlir::Location callLoc,
 const CIRGenFunctionInfo &
 CIRGenTypes::arrangeFreeFunctionType(CanQual<FunctionProtoType> fpt) {
   SmallVector<CanQualType, 16> argTypes;
+  assert(!cir::MissingFeatures::opCallFnInfoOpts());
   return ::arrangeCIRFunctionInfo(*this, argTypes, fpt);
 }
 
 const CIRGenFunctionInfo &
 CIRGenTypes::arrangeFreeFunctionType(CanQual<FunctionNoProtoType> fnpt) {
   CanQualType resultType = fnpt->getReturnType().getUnqualifiedType();
+  assert(!cir::MissingFeatures::opCallFnInfoOpts());
   return arrangeCIRFunctionInfo(resultType, {}, RequiredArgs(0));
 }
 
