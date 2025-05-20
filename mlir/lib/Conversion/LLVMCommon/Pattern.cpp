@@ -59,8 +59,9 @@ Value ConvertToLLVMPattern::createIndexAttrConstant(OpBuilder &builder,
 }
 
 Value ConvertToLLVMPattern::getStridedElementPtr(
-    Location loc, MemRefType type, Value memRefDesc, ValueRange indices,
-    ConversionPatternRewriter &rewriter) const {
+    ConversionPatternRewriter &rewriter, Location loc, MemRefType type,
+    Value memRefDesc, ValueRange indices,
+    LLVM::GEPNoWrapFlags noWrapFlags) const {
 
   auto [strides, offset] = type.getStridesAndOffset();
 
@@ -91,7 +92,7 @@ Value ConvertToLLVMPattern::getStridedElementPtr(
   return index ? rewriter.create<LLVM::GEPOp>(
                      loc, elementPtrType,
                      getTypeConverter()->convertType(type.getElementType()),
-                     base, index)
+                     base, index, noWrapFlags)
                : base;
 }
 
