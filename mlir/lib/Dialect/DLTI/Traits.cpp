@@ -28,7 +28,26 @@ DataLayoutSpecInterface mlir::impl::getDataLayoutSpec(Operation *op) {
       DLTIDialect::kDataLayoutAttrName);
 }
 
+void mlir::impl::setDataLayoutSpec(Operation *op,
+                                   DataLayoutSpecInterface spec) {
+  return op->setAttr(DLTIDialect::kDataLayoutAttrName, spec);
+}
+
 TargetSystemSpecInterface mlir::impl::getTargetSystemSpec(Operation *op) {
   return op->getAttrOfType<TargetSystemSpecAttr>(
       DLTIDialect::kTargetSystemDescAttrName);
+}
+
+void mlir::impl::setTargetSystemSpec(Operation *op,
+                                     TargetSystemSpecInterface spec) {
+  return op->setAttr(DLTIDialect::kTargetSystemDescAttrName, spec);
+}
+
+TargetAttrInterface mlir::impl::getTargetAttr(Operation *op) {
+  return op->getAttrOfType<TargetAttrInterface>(
+      DLTIDialect::kTargetDescAttrName);
+}
+
+void mlir::impl::setTargetAttr(Operation *op, TargetAttrInterface target) {
+  return op->setAttr(DLTIDialect::kTargetDescAttrName, target);
 }

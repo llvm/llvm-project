@@ -23,6 +23,7 @@
 #include "mlir/Dialect/Async/Passes.h"
 #include "mlir/Dialect/Bufferization/Pipelines/Passes.h"
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h"
+#include "mlir/Dialect/DLTI/Transforms/Passes.h"
 #include "mlir/Dialect/EmitC/Transforms/Passes.h"
 #include "mlir/Dialect/Func/Transforms/Passes.h"
 #include "mlir/Dialect/GPU/Pipelines/Passes.h"
@@ -75,6 +76,7 @@ inline void registerAllPasses() {
   bufferization::registerBufferizationPasses();
   func::registerFuncPasses();
   registerGPUPasses();
+  registerDLTIPasses();
   registerLinalgPasses();
   registerNVGPUPasses();
   registerSparseTensorPasses();

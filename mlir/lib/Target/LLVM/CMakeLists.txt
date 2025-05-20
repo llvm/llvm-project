@@ -1,3 +1,8 @@
+set(LLVM_OPTIONAL_SOURCES
+  ModuleToObject.cpp
+  Target.cpp
+  )
+
 add_mlir_library(MLIRTargetLLVM
   ModuleToObject.cpp
 
@@ -19,6 +24,18 @@ add_mlir_library(MLIRTargetLLVM
   LINK_LIBS PUBLIC
   MLIRExecutionEngineUtils
   MLIRTargetLLVMIRExport
+)
+
+add_mlir_library(MLIRTargetInfo
+  Target.cpp
+
+  LINK_COMPONENTS
+  Core
+  MC
+  Support
+  Target
+  LINK_LIBS PUBLIC
+  MLIRDataLayoutInterfaces
 )
 
 if ("NVPTX" IN_LIST LLVM_TARGETS_TO_BUILD)
@@ -47,6 +64,8 @@ add_mlir_dialect_library(MLIRNVVMTarget
   MLIRGPUDialect
   MLIRTargetLLVM
   MLIRNVVMToLLVMIRTranslation
+  MLIRTargetInfo
+  MLIRTargetLLVMIRImport
   )
 
 if ("NVPTX" IN_LIST LLVM_TARGETS_TO_BUILD)

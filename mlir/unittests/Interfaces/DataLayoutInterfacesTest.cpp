@@ -35,7 +35,7 @@ constexpr static llvm::StringLiteral kGlobalKeyName =
     "dltest.global_memory_space";
 constexpr static llvm::StringLiteral kStackAlignmentKeyName =
     "dltest.stack_alignment";
-
+constexpr static llvm::StringLiteral kTargetAttrName = "dltest.target";
 constexpr static llvm::StringLiteral kTargetSystemDescAttrName =
     "dl_target_sys_desc_test.target_system_spec";
 
@@ -273,9 +273,25 @@ struct OpWithLayout : public Op<OpWithLayout, DataLayoutOpInterface::Trait> {
     return getOperation()->getAttrOfType<DataLayoutSpecInterface>(kAttrName);
   }
 
+  void setDataLayoutSpec(DataLayoutSpecInterface spec) {
+    return getOperation()->setAttr(kAttrName, spec);
+  }
+
   TargetSystemSpecInterface getTargetSystemSpec() {
     return getOperation()->getAttrOfType<TargetSystemSpecInterface>(
         kTargetSystemDescAttrName);
+  }
+
+  void setTargetSystemSpec(TargetSystemSpecInterface spec) {
+    return getOperation()->setAttr(kTargetSystemDescAttrName, spec);
+  }
+
+  TargetAttrInterface getTargetAttr() {
+    return getOperation()->getAttrOfType<TargetAttrInterface>(kTargetAttrName);
+  }
+
+  void setTargetAttr(TargetAttrInterface target) {
+    return getOperation()->setAttr(kTargetAttrName, target);
   }
 
   static llvm::TypeSize getTypeSizeInBits(Type type,
@@ -325,9 +341,25 @@ struct OpWith7BitByte
     return getOperation()->getAttrOfType<DataLayoutSpecInterface>(kAttrName);
   }
 
+  void setDataLayoutSpec(DataLayoutSpecInterface spec) {
+    return getOperation()->setAttr(kAttrName, spec);
+  }
+
   TargetSystemSpecInterface getTargetSystemSpec() {
     return getOperation()->getAttrOfType<TargetSystemSpecInterface>(
         kTargetSystemDescAttrName);
+  }
+
+  void setTargetSystemSpec(TargetSystemSpecInterface spec) {
+    return getOperation()->setAttr(kTargetSystemDescAttrName, spec);
+  }
+
+  TargetAttrInterface getTargetAttr() {
+    return getOperation()->getAttrOfType<TargetAttrInterface>(kTargetAttrName);
+  }
+
+  void setTargetAttr(TargetAttrInterface target) {
+    return getOperation()->setAttr(kTargetAttrName, target);
   }
 
   // Bytes are assumed to be 7-bit here.

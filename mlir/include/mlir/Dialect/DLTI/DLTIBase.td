@@ -39,6 +39,10 @@ def DLTI_Dialect : Dialect {
     constexpr const static ::llvm::StringLiteral
     kTargetDeviceDescAttrName = "dlti.target_device_spec";
 
+    // Top-level attribute name for target information.
+    constexpr const static ::llvm::StringLiteral
+    kTargetDescAttrName = "dlti.target";
+
     // Constants used in entries.
     constexpr const static ::llvm::StringLiteral
     kDataLayoutEndiannessKey = "dlti.endianness";
