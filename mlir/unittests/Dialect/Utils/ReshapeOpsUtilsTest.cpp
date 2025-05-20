@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Utils/ReshapeOpsUtils.h"
+#include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "llvm/ADT/STLExtras.h"
 #include "gtest/gtest.h"
 #include <optional>
@@ -18,6 +19,29 @@ using namespace mlir;
 static std::optional<SmallVector<ReassociationIndices>>
 makeOptionalIndices(std::initializer_list<ReassociationIndices> list) {
   return std::optional<SmallVector<ReassociationIndices>>(list);
+}
+
+TEST(ReassociationIndicesForCollapse, ScalarTest) {
+  EXPECT_EQ(getReassociationIndicesForCollapse({1}, {}),
+            makeOptionalIndices({{0}}));
+  EXPECT_EQ(getReassociationIndicesForCollapse({1, 1}, {}),
+            makeOptionalIndices({{0, 1}}));
+  EXPECT_EQ(getReassociationIndicesForCollapse({ShapedType::kDynamic}, {}),
+            makeOptionalIndices({{0}}));
+  EXPECT_EQ(getReassociationIndicesForCollapse({1, ShapedType::kDynamic,
+                                                ShapedType::kDynamic, 1,
+                                                ShapedType::kDynamic},
+                                               {}),
+            makeOptionalIndices({{0, 1, 2, 3, 4}}));
+}
+
+TEST(ReassociationIndicesForCollapse, ScalarTestFailure) {
+  EXPECT_EQ(getReassociationIndicesForCollapse({}, {}), std::nullopt);
+  EXPECT_EQ(getReassociationIndicesForCollapse({}, {1}), std::nullopt);
+  EXPECT_EQ(getReassociationIndicesForCollapse({2}, {}), std::nullopt);
+  EXPECT_EQ(
+      getReassociationIndicesForCollapse({1, 2, ShapedType::kDynamic, 1}, {}),
+      std::nullopt);
 }
 
 TEST(ReassociationIndicesForCollapse, StaticTest) {

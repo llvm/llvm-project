@@ -292,7 +292,8 @@ mlir::getReassociationIndicesForCollapse(ArrayRef<int64_t> sourceShape,
     return std::nullopt;
   // Early handling for scalar target types.
   if (numTargetDims == 0) {
-    ReassociationIndices allSourceIndices(numSourceDims);
+    ReassociationIndices allSourceIndices;
+    allSourceIndices.reserve(numSourceDims);
     for (unsigned sourceDimIdx = 0; sourceDimIdx < numSourceDims;
          ++sourceDimIdx) {
       int64_t sourceSize = sourceShape[sourceDimIdx];
