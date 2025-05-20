@@ -63,6 +63,11 @@ Error SpecialCaseList::Matcher::insert(StringRef Pattern, unsigned LineNumber,
                        .moveInto(Pair.first))
       return Err;
     Pair.second = LineNumber;
+  } else {
+    // We should update the new line number if an entry with the same pattern
+    // repeats.
+    auto &Pair = It->getValue();
+    Pair.second = LineNumber;
   }
   return Error::success();
 }
@@ -132,18 +137,25 @@ bool SpecialCaseList::createInternal(const MemoryBuffer *MB,
 Expected<SpecialCaseList::Section *>
 SpecialCaseList::addSection(StringRef SectionStr, unsigned LineNo,
                             bool UseGlobs) {
-  Sections.emplace_back();
-  auto &Section = Sections.back();
-  Section.SectionStr = SectionStr;
-
-  if (auto Err = Section.SectionMatcher->insert(SectionStr, LineNo, UseGlobs)) {
+  auto it =
+      std::find_if(Sections.begin(), Sections.end(), [&](const Section &s) {
+        return s.SectionStr == SectionStr && s.LineNo == LineNo;
+      });
+  if (it == Sections.end()) {
+    Sections.emplace_back();
+    auto &sec = Sections.back();
+    sec.SectionStr = SectionStr;
+    sec.LineNo = LineNo;
+    it = std::prev(Sections.end());
+  }
+  if (auto Err = it->SectionMatcher->insert(SectionStr, LineNo, UseGlobs)) {
     return createStringError(errc::invalid_argument,
                              "malformed section at line " + Twine(LineNo) +
                                  ": '" + SectionStr +
                                  "': " + toString(std::move(Err)));
   }
 
-  return &Section;
+  return &(*it);
 }
 
 bool SpecialCaseList::parse(const MemoryBuffer *MB, std::string &Error) {
