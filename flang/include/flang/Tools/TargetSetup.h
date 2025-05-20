@@ -95,7 +95,7 @@ namespace Fortran::tools {
     targetCharacteristics.set_isOSWindows(true);
 
   targetCharacteristics.set_pointerSize(
-    targetTriple.getArchPointerBitWidth() / 8);
+      targetTriple.getArchPointerBitWidth() / 8);
 
   // TODO: use target machine data layout to set-up the target characteristics
   // type size and alignment info.

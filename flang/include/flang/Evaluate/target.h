@@ -132,9 +132,7 @@ public:
   const IeeeFeatures &ieeeFeatures() const { return ieeeFeatures_; }
 
   std::size_t pointerSize() { return pointerSize_; }
-  void set_pointerSize(std::size_t pointerSize) {
-    pointerSize_ = pointerSize;
-  }
+  void set_pointerSize(std::size_t pointerSize) { pointerSize_ = pointerSize; }
 
 private:
   static constexpr int maxKind{common::maxKind};
