@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_ARM_NEON_VECTOR_TRANSFORMOPS_VECTORTRANSFORMOPS_H
-#define MLIR_DIALECT_ARM_NEON_VECTOR_TRANSFORMOPS_VECTORTRANSFORMOPS_H
+#ifndef MLIR_DIALECT_ARM_NEON_TRANSFORMOPS_VECTORTRANSFORMOPS_H
+#define MLIR_DIALECT_ARM_NEON_TRANSFORMOPS_VECTORTRANSFORMOPS_H
 
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/IR/OpImplementation.h"
@@ -28,4 +28,4 @@ void registerTransformDialectExtension(DialectRegistry &registry);
 } // namespace arm_neon
 } // namespace mlir
 
-#endif // MLIR_DIALECT_ARM_NEON_VECTOR_TRANSFORMOPS_VECTORTRANSFORMOPS_H
+#endif // MLIR_DIALECT_ARM_NEON_TRANSFORMOPS_VECTORTRANSFORMOPS_H
