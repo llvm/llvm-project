@@ -2239,9 +2239,13 @@ public:
     return DC && this->getPrimaryContext() == DC->getPrimaryContext();
   }
 
-  /// Determine whether this declaration context encloses the
+  /// Determine whether this declaration context semantically encloses the
   /// declaration context DC.
   bool Encloses(const DeclContext *DC) const;
+
+  /// Determine whether this declaration context lexically encloses the
+  /// declaration context DC.
+  bool LexicallyEncloses(const DeclContext *DC) const;
 
   /// Find the nearest non-closure ancestor of this context,
   /// i.e. the innermost semantic parent of this context which is not

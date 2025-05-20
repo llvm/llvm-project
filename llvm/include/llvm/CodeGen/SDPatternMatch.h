@@ -730,6 +730,11 @@ inline BinaryOpc_match<LHS, RHS, true> m_Xor(const LHS &L, const RHS &R) {
 }
 
 template <typename LHS, typename RHS>
+inline auto m_BitwiseLogic(const LHS &L, const RHS &R) {
+  return m_AnyOf(m_And(L, R), m_Or(L, R), m_Xor(L, R));
+}
+
+template <typename LHS, typename RHS>
 inline BinaryOpc_match<LHS, RHS, true> m_SMin(const LHS &L, const RHS &R) {
   return BinaryOpc_match<LHS, RHS, true>(ISD::SMIN, L, R);
 }
@@ -1156,7 +1161,6 @@ template <typename... PatternTs> struct ReassociatableOpc_match {
     // std::get<J>(Patterns)) == true
     std::array<SmallBitVector, NumPatterns> Matches;
     for (size_t I = 0; I != NumPatterns; I++) {
-      SmallVector<bool> MatchResults;
       std::apply(
           [&](auto &...P) {
             (Matches[I].push_back(sd_context_match(Leaves[I], Ctx, P)), ...);

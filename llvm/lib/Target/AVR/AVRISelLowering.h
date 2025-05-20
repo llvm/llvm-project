@@ -19,64 +19,6 @@
 
 namespace llvm {
 
-namespace AVRISD {
-
-/// AVR Specific DAG Nodes
-enum NodeType {
-  /// Start the numbering where the builtin ops leave off.
-  FIRST_NUMBER = ISD::BUILTIN_OP_END,
-  /// Return from subroutine.
-  RET_GLUE,
-  /// Return from ISR.
-  RETI_GLUE,
-  /// Represents an abstract call instruction,
-  /// which includes a bunch of information.
-  CALL,
-  /// A wrapper node for TargetConstantPool,
-  /// TargetExternalSymbol, and TargetGlobalAddress.
-  WRAPPER,
-  LSL,     ///< Logical shift left.
-  LSLBN,   ///< Byte logical shift left N bits.
-  LSLWN,   ///< Word logical shift left N bits.
-  LSLHI,   ///< Higher 8-bit of word logical shift left.
-  LSLW,    ///< Wide logical shift left.
-  LSR,     ///< Logical shift right.
-  LSRBN,   ///< Byte logical shift right N bits.
-  LSRWN,   ///< Word logical shift right N bits.
-  LSRLO,   ///< Lower 8-bit of word logical shift right.
-  LSRW,    ///< Wide logical shift right.
-  ASR,     ///< Arithmetic shift right.
-  ASRBN,   ///< Byte arithmetic shift right N bits.
-  ASRWN,   ///< Word arithmetic shift right N bits.
-  ASRLO,   ///< Lower 8-bit of word arithmetic shift right.
-  ASRW,    ///< Wide arithmetic shift right.
-  ROR,     ///< Bit rotate right.
-  ROL,     ///< Bit rotate left.
-  LSLLOOP, ///< A loop of single logical shift left instructions.
-  LSRLOOP, ///< A loop of single logical shift right instructions.
-  ROLLOOP, ///< A loop of single left bit rotate instructions.
-  RORLOOP, ///< A loop of single right bit rotate instructions.
-  ASRLOOP, ///< A loop of single arithmetic shift right instructions.
-  /// AVR conditional branches. Operand 0 is the chain operand, operand 1
-  /// is the block to branch if condition is true, operand 2 is the
-  /// condition code, and operand 3 is the flag operand produced by a CMP
-  /// or TEST instruction.
-  BRCOND,
-  /// Compare instruction.
-  CMP,
-  /// Compare with carry instruction.
-  CMPC,
-  /// Test for zero or minus instruction.
-  TST,
-  /// Swap Rd[7:4] <-> Rd[3:0].
-  SWAP,
-  /// Operand 0 and operand 1 are selection variable, operand 2
-  /// is condition code and operand 3 is flag operand.
-  SELECT_CC
-};
-
-} // end of namespace AVRISD
-
 class AVRSubtarget;
 class AVRTargetMachine;
 
@@ -94,8 +36,6 @@ public:
   MVT::SimpleValueType getCmpLibcallReturnType() const override {
     return MVT::i8;
   }
-
-  const char *getTargetNodeName(unsigned Opcode) const override;
 
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
 

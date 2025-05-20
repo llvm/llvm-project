@@ -51,7 +51,7 @@ struct ExpressionFormat {
   };
 
 private:
-  Kind Value;
+  Kind Value = Kind::NoFormat;
   unsigned Precision = 0;
   /// printf-like "alternate form" selected.
   bool AlternateForm = false;
@@ -78,7 +78,7 @@ public:
   /// \returns the format specifier corresponding to this format as a string.
   StringRef toString() const;
 
-  ExpressionFormat() : Value(Kind::NoFormat){};
+  ExpressionFormat() = default;
   explicit ExpressionFormat(Kind Value) : Value(Value), Precision(0){};
   explicit ExpressionFormat(Kind Value, unsigned Precision)
       : Value(Value), Precision(Precision){};

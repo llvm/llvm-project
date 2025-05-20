@@ -877,15 +877,6 @@ public:
   }
 /// @}
 
-  /// Destroy ConstantArrays in LLVMContext if they are not used.
-  /// ConstantArrays constructed during linking can cause quadratic memory
-  /// explosion. Releasing all unused constants can cause a 20% LTO compile-time
-  /// slowdown for a large application.
-  ///
-  /// NOTE: Constants are currently owned by LLVMContext. This can then only
-  /// be called where all uses of the LLVMContext are understood.
-  void dropTriviallyDeadConstantArrays();
-
 /// @name Utility functions for printing and dumping Module objects
 /// @{
 
@@ -963,10 +954,10 @@ public:
   /// @name Utility function for querying and setting the large data threshold
   /// @{
 
-  /// Returns the code model (tiny, small, kernel, medium or large model)
+  /// Returns the large data threshold.
   std::optional<uint64_t> getLargeDataThreshold() const;
 
-  /// Set the code model (tiny, small, kernel, medium or large)
+  /// Set the large data threshold.
   void setLargeDataThreshold(uint64_t Threshold);
   /// @}
 

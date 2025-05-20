@@ -470,7 +470,7 @@ unsigned GCNSubtarget::getMaxNumSGPRs(const MachineFunction &MF) const {
                             getReservedNumSGPRs(MF));
 }
 
-static unsigned getMaxNumPreloadedSGPRs() {
+unsigned GCNSubtarget::getMaxNumPreloadedSGPRs() const {
   using USI = GCNUserSGPRUsageInfo;
   // Max number of user SGPRs
   const unsigned MaxUserSGPRs =
@@ -501,47 +501,32 @@ unsigned GCNSubtarget::getMaxNumSGPRs(const Function &F) const {
 }
 
 unsigned GCNSubtarget::getBaseMaxNumVGPRs(
-    const Function &F, std::pair<unsigned, unsigned> WavesPerEU) const {
+    const Function &F, std::pair<unsigned, unsigned> NumVGPRBounds) const {
+  const auto &[Min, Max] = NumVGPRBounds;
+
+  // Check if maximum number of VGPRs was explicitly requested using
+  // "amdgpu-num-vgpr" attribute.
+
+  unsigned Requested = F.getFnAttributeAsParsedInteger("amdgpu-num-vgpr", Max);
+  if (Requested != Max && hasGFX90AInsts())
+    Requested *= 2;
+
+  // Make sure requested value is inside the range of possible VGPR usage.
+  return std::clamp(Requested, Min, Max);
+}
+
+unsigned GCNSubtarget::getMaxNumVGPRs(const Function &F) const {
   // Temporarily check both the attribute and the subtarget feature, until the
   // latter is removed.
   bool IsDynamicVGPR = isDynamicVGPREnabled() || AMDGPU::hasDynamicVGPR(F);
 
-  // Compute maximum number of VGPRs function can use using default/requested
-  // minimum number of waves per execution unit.
-  unsigned MaxNumVGPRs = getMaxNumVGPRs(WavesPerEU.first, IsDynamicVGPR);
-
-  // Check if maximum number of VGPRs was explicitly requested using
-  // "amdgpu-num-vgpr" attribute.
-  unsigned Requested =
-      F.getFnAttributeAsParsedInteger("amdgpu-num-vgpr", MaxNumVGPRs);
-  if (Requested != MaxNumVGPRs) {
-    if (hasGFX90AInsts())
-      Requested *= 2;
-
-    // Make sure requested value is compatible with values implied by
-    // default/requested minimum/maximum number of waves per execution unit.
-    if (Requested &&
-        Requested > getMaxNumVGPRs(WavesPerEU.first, IsDynamicVGPR))
-      Requested = 0;
-    if (WavesPerEU.second && Requested &&
-        Requested < getMinNumVGPRs(WavesPerEU.second, IsDynamicVGPR))
-      Requested = 0;
-
-    if (Requested)
-      MaxNumVGPRs = Requested;
-  }
-
-  return MaxNumVGPRs;
-}
-
-unsigned GCNSubtarget::getMaxNumVGPRs(const Function &F) const {
-  return getBaseMaxNumVGPRs(F, getWavesPerEU(F));
+  std::pair<unsigned, unsigned> Waves = getWavesPerEU(F);
+  return getBaseMaxNumVGPRs(F, {getMinNumVGPRs(Waves.second, IsDynamicVGPR),
+                                getMaxNumVGPRs(Waves.first, IsDynamicVGPR)});
 }
 
 unsigned GCNSubtarget::getMaxNumVGPRs(const MachineFunction &MF) const {
-  const Function &F = MF.getFunction();
-  const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
-  return getBaseMaxNumVGPRs(F, MFI.getWavesPerEU());
+  return getMaxNumVGPRs(MF.getFunction());
 }
 
 void GCNSubtarget::adjustSchedDependency(

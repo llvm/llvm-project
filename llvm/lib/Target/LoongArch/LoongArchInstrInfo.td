@@ -26,6 +26,11 @@ def SDT_LoongArchIntBinOpW : SDTypeProfile<1, 2, [
   SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisVT<0, i64>
 ]>;
 
+def SDT_LoongArchSelectCC : SDTypeProfile<1, 5, [SDTCisSameAs<1, 2>,
+                                                 SDTCisVT<3, OtherVT>,
+                                                 SDTCisSameAs<0, 4>,
+                                                 SDTCisSameAs<4, 5>]>;
+
 def SDT_LoongArchBStrIns: SDTypeProfile<1, 4, [
   SDTCisInt<0>, SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisInt<3>,
   SDTCisSameAs<3, 4>
@@ -81,6 +86,7 @@ def loongarch_call_large : SDNode<"LoongArchISD::CALL_LARGE", SDT_LoongArchCall,
 def loongarch_tail_large : SDNode<"LoongArchISD::TAIL_LARGE", SDT_LoongArchCall,
                                   [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                                    SDNPVariadic]>;
+def loongarch_selectcc : SDNode<"LoongArchISD::SELECT_CC", SDT_LoongArchSelectCC>;
 def loongarch_sll_w : SDNode<"LoongArchISD::SLL_W", SDT_LoongArchIntBinOpW>;
 def loongarch_sra_w : SDNode<"LoongArchISD::SRA_W", SDT_LoongArchIntBinOpW>;
 def loongarch_srl_w : SDNode<"LoongArchISD::SRL_W", SDT_LoongArchIntBinOpW>;
@@ -769,7 +775,6 @@ class IOCSRWR<bits<32> op>
 def ADD_W : ALU_3R<0x00100000>;
 def SUB_W : ALU_3R<0x00110000>;
 def ADDI_W : ALU_2RI12<0x02800000, simm12_addlike>;
-def ALSL_W : ALU_3RI2<0x00040000, uimm2_plus1>;
 let isReMaterializable = 1 in {
 def LU12I_W : ALU_1RI20<0x14000000, simm20_lu12iw>;
 }
@@ -777,15 +782,11 @@ def SLT  : ALU_3R<0x00120000>;
 def SLTU : ALU_3R<0x00128000>;
 def SLTI  : ALU_2RI12<0x02000000, simm12>;
 def SLTUI : ALU_2RI12<0x02400000, simm12>;
-def PCADDI    : ALU_1RI20<0x18000000, simm20_pcaddi>;
 def PCADDU12I : ALU_1RI20<0x1c000000, simm20>;
-def PCALAU12I : ALU_1RI20<0x1a000000, simm20_pcalau12i>;
 def AND  : ALU_3R<0x00148000>;
 def OR   : ALU_3R<0x00150000>;
 def NOR  : ALU_3R<0x00140000>;
 def XOR  : ALU_3R<0x00158000>;
-def ANDN : ALU_3R<0x00168000>;
-def ORN  : ALU_3R<0x00160000>;
 def ANDI : ALU_2RI12<0x03400000, uimm12>;
 // See LoongArchInstrInfo::isAsCheapAsAMove for more details.
 let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
@@ -806,11 +807,73 @@ def MOD_WU  : ALU_3R<0x00218000>;
 def SLL_W  : ALU_3R<0x00170000>;
 def SRL_W  : ALU_3R<0x00178000>;
 def SRA_W  : ALU_3R<0x00180000>;
-def ROTR_W : ALU_3R<0x001b0000>;
 
 def SLLI_W  : ALU_2RI5<0x00408000, uimm5>;
 def SRLI_W  : ALU_2RI5<0x00448000, uimm5>;
 def SRAI_W  : ALU_2RI5<0x00488000, uimm5>;
+
+// Branch Instructions
+def BEQ  : BrCC_2RI16<0x58000000>;
+def BNE  : BrCC_2RI16<0x5c000000>;
+def BLT  : BrCC_2RI16<0x60000000>;
+def BGE  : BrCC_2RI16<0x64000000>;
+def BLTU : BrCC_2RI16<0x68000000>;
+def BGEU : BrCC_2RI16<0x6c000000>;
+def B : Br_I26<0x50000000>;
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCall = 1, Defs=[R1] in
+def BL : FmtI26<0x54000000, (outs), (ins simm26_symbol:$imm26), "$imm26">;
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+def JIRL : Fmt2RI16<0x4c000000, (outs GPR:$rd),
+                    (ins GPR:$rj, simm16_lsl2:$imm16), "$rd, $rj, $imm16">;
+
+// Common Memory Access Instructions
+def LD_B  : LOAD_2RI12<0x28000000>;
+def LD_H  : LOAD_2RI12<0x28400000>;
+def LD_W  : LOAD_2RI12<0x28800000>;
+def LD_BU : LOAD_2RI12<0x2a000000>;
+def LD_HU : LOAD_2RI12<0x2a400000>;
+def ST_B : STORE_2RI12<0x29000000>;
+def ST_H : STORE_2RI12<0x29400000>;
+def ST_W : STORE_2RI12<0x29800000>;
+let hasSideEffects = 0, mayLoad = 1, mayStore = 1 in
+def PRELD : FmtPRELD<(outs), (ins uimm5:$imm5, GPR:$rj, simm12:$imm12),
+                     "$imm5, $rj, $imm12">;
+
+// Atomic Memory Access Instructions
+def LL_W : LLBase<0x20000000>;
+def SC_W : SCBase<0x21000000>;
+
+// Barrier Instructions
+def DBAR : MISC_I15<0x38720000>;
+def IBAR : MISC_I15<0x38728000>;
+
+// Other Miscellaneous Instructions
+def SYSCALL : MISC_I15<0x002b0000>;
+def BREAK   : MISC_I15<0x002a0000>;
+def RDTIMEL_W : RDTIME_2R<0x00006000>;
+def RDTIMEH_W : RDTIME_2R<0x00006400>;
+
+// The CPUCFG instruction offers a reliable way to probing CPU features.
+// Although support is not guaranteed on LA32R, having compiler support
+// nevertheless enables applications to rely on its presence, potentially
+// via kernel emulation if not available natively.
+def CPUCFG : ALU_2R<0x00006c00>;
+
+// Cache Maintenance Instructions
+def CACOP : FmtCACOP<(outs), (ins uimm5:$op, GPR:$rj, simm12:$imm12),
+                     "$op, $rj, $imm12">;
+
+let Predicates = [Has32S] in {
+// Arithmetic Operation Instructions
+def ALSL_W : ALU_3RI2<0x00040000, uimm2_plus1>;
+def ANDN : ALU_3R<0x00168000>;
+def ORN  : ALU_3R<0x00160000>;
+def PCADDI    : ALU_1RI20<0x18000000, simm20_pcaddi>;
+def PCALAU12I : ALU_1RI20<0x1a000000, simm20_pcalau12i>;
+
+// Bit-shift Instructions
+def ROTR_W : ALU_3R<0x001b0000>;
 def ROTRI_W : ALU_2RI5<0x004c8000, uimm5>;
 
 // Bit-manipulation Instructions
@@ -836,55 +899,9 @@ def MASKEQZ : ALU_3R<0x00130000>;
 def MASKNEZ : ALU_3R<0x00138000>;
 
 // Branch Instructions
-def BEQ  : BrCC_2RI16<0x58000000>;
-def BNE  : BrCC_2RI16<0x5c000000>;
-def BLT  : BrCC_2RI16<0x60000000>;
-def BGE  : BrCC_2RI16<0x64000000>;
-def BLTU : BrCC_2RI16<0x68000000>;
-def BGEU : BrCC_2RI16<0x6c000000>;
 def BEQZ : BrCCZ_1RI21<0x40000000>;
 def BNEZ : BrCCZ_1RI21<0x44000000>;
-def B : Br_I26<0x50000000>;
-
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCall = 1, Defs=[R1] in
-def BL : FmtI26<0x54000000, (outs), (ins simm26_symbol:$imm26), "$imm26">;
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-def JIRL : Fmt2RI16<0x4c000000, (outs GPR:$rd),
-                    (ins GPR:$rj, simm16_lsl2:$imm16), "$rd, $rj, $imm16">;
-
-// Common Memory Access Instructions
-def LD_B  : LOAD_2RI12<0x28000000>;
-def LD_H  : LOAD_2RI12<0x28400000>;
-def LD_W  : LOAD_2RI12<0x28800000>;
-def LD_BU : LOAD_2RI12<0x2a000000>;
-def LD_HU : LOAD_2RI12<0x2a400000>;
-def ST_B : STORE_2RI12<0x29000000>;
-def ST_H : STORE_2RI12<0x29400000>;
-def ST_W : STORE_2RI12<0x29800000>;
-let hasSideEffects = 0, mayLoad = 1, mayStore = 1 in
-def PRELD : FmtPRELD<(outs), (ins uimm5:$imm5, GPR:$rj, simm12:$imm12),
-                     "$imm5, $rj, $imm12">;
-
-// Atomic Memory Access Instructions
-def LL_W : LLBase<0x20000000>;
-def SC_W : SCBase<0x21000000>;
-def LLACQ_W : LLBase_ACQ<0x38578000>;
-def SCREL_W : SCBase_REL<0x38578400>;
-
-// Barrier Instructions
-def DBAR : MISC_I15<0x38720000>;
-def IBAR : MISC_I15<0x38728000>;
-
-// Other Miscellaneous Instructions
-def SYSCALL : MISC_I15<0x002b0000>;
-def BREAK   : MISC_I15<0x002a0000>;
-def RDTIMEL_W : RDTIME_2R<0x00006000>;
-def RDTIMEH_W : RDTIME_2R<0x00006400>;
-def CPUCFG : ALU_2R<0x00006c00>;
-
-// Cache Maintenance Instructions
-def CACOP : FmtCACOP<(outs), (ins uimm5:$op, GPR:$rj, simm12:$imm12),
-                     "$op, $rj, $imm12">;
+} // Predicates = [Has32S]
 
 /// LA64 instructions
 
@@ -1054,6 +1071,8 @@ def AMCAS__DB_D  : AMCAS_3R<0x385b8000>;
 def LL_D : LLBase<0x22000000>;
 def SC_D : SCBase<0x23000000>;
 def SC_Q : SCBase_128<0x38570000>;
+def LLACQ_W : LLBase_ACQ<0x38578000>;
+def SCREL_W : SCBase_REL<0x38578400>;
 def LLACQ_D : LLBase_ACQ<0x38578800>;
 def SCREL_D : SCBase_REL<0x38578C00>;
 
@@ -1145,6 +1164,9 @@ def : PatGprGpr<urem, MOD_WU>;
 def : PatGprGpr<mul, MUL_W>;
 def : PatGprGpr<mulhs, MULH_W>;
 def : PatGprGpr<mulhu, MULH_WU>;
+} // Predicates = [IsLA32]
+
+let Predicates = [IsLA32, Has32S] in {
 def : PatGprGpr<shiftop<rotr>, ROTR_W>;
 def : PatGprImm<rotr, ROTRI_W, uimm5>;
 
@@ -1154,7 +1176,7 @@ foreach Idx = 1...3 in {
   def : Pat<(or (shl GPR:$rk, (i32 ShamtA)), (srl GPR:$rj, (i32 ShamtB))),
             (BYTEPICK_W GPR:$rj, GPR:$rk, Idx)>;
 }
-} // Predicates = [IsLA32]
+} // Predicates = [IsLA32, Has32S]
 
 let Predicates = [IsLA64] in {
 def : PatGprGpr<add, ADD_D>;
@@ -1214,7 +1236,7 @@ def : Pat<(sext_inreg (add GPR:$rj, (AddiPair:$im)), i32),
                   (AddiPairImmSmall AddiPair:$im))>;
 } // Predicates = [IsLA64]
 
-let Predicates = [IsLA32] in {
+let Predicates = [IsLA32, Has32S] in {
 foreach Idx0 = 1...4 in {
   foreach Idx1 = 1...4 in {
     defvar CImm = !add(1, !shl(!add(1, !shl(1, Idx0)), Idx1));
@@ -1232,7 +1254,7 @@ foreach Idx0 = 1...4 in {
                       (ALSL_W GPR:$r, GPR:$r, (i32 Idx0)), (i32 Idx1))>;
   }
 }
-} // Predicates = [IsLA32]
+} // Predicates = [IsLA32, Has32S]
 
 let Predicates = [IsLA64] in {
 foreach Idx0 = 1...4 in {
@@ -1260,11 +1282,11 @@ foreach Idx0 = 1...4 in {
 }
 } // Predicates = [IsLA64]
 
-let Predicates = [IsLA32] in {
+let Predicates = [IsLA32, Has32S] in {
 def : Pat<(mul GPR:$rj, (AlslSlliImm:$im)),
           (SLLI_W (ALSL_W GPR:$rj, GPR:$rj, (AlslSlliImmI0 AlslSlliImm:$im)),
                   (AlslSlliImmI1 AlslSlliImm:$im))>;
-} // Predicates = [IsLA32]
+} // Predicates = [IsLA32, Has32S]
 
 let Predicates = [IsLA64] in {
 def : Pat<(sext_inreg (mul GPR:$rj, (AlslSlliImm:$im)), i32),
@@ -1305,11 +1327,11 @@ def : Pat<(not (or GPR:$rj, GPR:$rk)), (NOR GPR:$rj, GPR:$rk)>;
 def : Pat<(or GPR:$rj, (not GPR:$rk)), (ORN GPR:$rj, GPR:$rk)>;
 def : Pat<(and GPR:$rj, (not GPR:$rk)), (ANDN GPR:$rj, GPR:$rk)>;
 
-let Predicates = [IsLA32] in {
+let Predicates = [IsLA32, Has32S] in {
 def : Pat<(and GPR:$rj, BstrinsImm:$imm),
           (BSTRINS_W GPR:$rj, R0, (BstrinsMsb BstrinsImm:$imm),
                      (BstrinsLsb BstrinsImm:$imm))>;
-} // Predicates = [IsLA32]
+} // Predicates = [IsLA32, Has32S]
 
 let Predicates = [IsLA64] in {
 def : Pat<(and GPR:$rj, BstrinsImm:$imm),
@@ -1345,12 +1367,12 @@ def : Pat<(loongarch_clzw (not GPR:$rj)), (CLO_W GPR:$rj)>;
 def : Pat<(loongarch_ctzw (not GPR:$rj)), (CTO_W GPR:$rj)>;
 } // Predicates = [IsLA64]
 
-let Predicates = [IsLA32] in {
+let Predicates = [IsLA32, Has32S] in {
 def : PatGpr<ctlz, CLZ_W>;
 def : PatGpr<cttz, CTZ_W>;
 def : Pat<(ctlz (not GPR:$rj)), (CLO_W GPR:$rj)>;
 def : Pat<(cttz (not GPR:$rj)), (CTO_W GPR:$rj)>;
-} // Predicates = [IsLA32]
+} // Predicates = [IsLA32, Has32S]
 
 /// FrameIndex calculations
 let Predicates = [IsLA32] in {
@@ -1363,10 +1385,10 @@ def : Pat<(AddLike (i64 BaseAddr:$rj), simm12:$imm12),
 } // Predicates = [IsLA64]
 
 /// Shifted addition
-let Predicates = [IsLA32] in {
+let Predicates = [IsLA32, Has32S] in {
 def : Pat<(add GPR:$rk, (shl GPR:$rj, uimm2_plus1:$imm2)),
           (ALSL_W GPR:$rj, GPR:$rk, uimm2_plus1:$imm2)>;
-} // Predicates = [IsLA32]
+} // Predicates = [IsLA32, Has32S]
 let Predicates = [IsLA64] in {
 def : Pat<(add GPR:$rk, (shl GPR:$rj, uimm2_plus1:$imm2)),
           (ALSL_D GPR:$rj, GPR:$rk, uimm2_plus1:$imm2)>;
@@ -1402,8 +1424,10 @@ def : PatGprImm<srl, SRLI_D, uimm6>;
 
 /// sext and zext
 
+let Predicates = [Has32S] in {
 def : Pat<(sext_inreg GPR:$rj, i8), (EXT_W_B GPR:$rj)>;
 def : Pat<(sext_inreg GPR:$rj, i16), (EXT_W_H GPR:$rj)>;
+} // Predicates = [Has32S]
 
 let Predicates = [IsLA64] in {
 def : Pat<(sext_inreg GPR:$rj, i32), (ADDI_W GPR:$rj, 0)>;
@@ -1447,10 +1471,43 @@ def : Pat<(setle GPR:$rj, GPR:$rk), (XORI (SLT GPR:$rk, GPR:$rj), 1)>;
 
 /// Select
 
+def IntCCtoBranchOpc : SDNodeXForm<loongarch_selectcc, [{
+  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  unsigned BrCC = getBranchOpcForIntCC(CC);
+  return CurDAG->getTargetConstant(BrCC, SDLoc(N), Subtarget->getGRLenVT());
+}]>;
+
+def loongarch_selectcc_frag : PatFrag<(ops node:$lhs, node:$rhs, node:$cc,
+                                           node:$truev, node:$falsev),
+                                      (loongarch_selectcc node:$lhs, node:$rhs,
+                                                          node:$cc, node:$truev,
+                                                          node:$falsev), [{}],
+                                      IntCCtoBranchOpc>;
+
+multiclass SelectCC_GPR_rrirr<DAGOperand valty, ValueType vt> {
+  let usesCustomInserter = 1 in
+  def _Using_CC_GPR : Pseudo<(outs valty:$dst),
+                             (ins GPR:$lhs, GPR:$rhs, GPR:$cc,
+                              valty:$truev, valty:$falsev),
+                             [(set valty:$dst,
+                               (loongarch_selectcc_frag:$cc (GRLenVT GPR:$lhs), GPR:$rhs, cond,
+                                                            (vt valty:$truev), valty:$falsev))]>;
+  // Explicitly select 0 in the condition to R0. The register coalescer doesn't
+  // always do it.
+  def : Pat<(loongarch_selectcc_frag:$cc (GRLenVT GPR:$lhs), 0, cond, (vt valty:$truev),
+                                         valty:$falsev),
+            (!cast<Instruction>(NAME#"_Using_CC_GPR") GPR:$lhs, (GRLenVT R0),
+             (IntCCtoBranchOpc $cc), valty:$truev, valty:$falsev)>;
+}
+
+defm Select_GPR : SelectCC_GPR_rrirr<GPR, GRLenVT>;
+
+let Predicates = [Has32S] in {
 def : Pat<(select GPR:$cond, GPR:$t, 0), (MASKEQZ GPR:$t, GPR:$cond)>;
 def : Pat<(select GPR:$cond, 0, GPR:$f), (MASKNEZ GPR:$f, GPR:$cond)>;
 def : Pat<(select GPR:$cond, GPR:$t, GPR:$f),
           (OR (MASKEQZ GPR:$t, GPR:$cond), (MASKNEZ GPR:$f, GPR:$cond))>;
+} // Predicates = [Has32S]
 
 /// Branches and jumps
 
@@ -1476,6 +1533,7 @@ def : BccSwapPat<setle, BGE>;
 def : BccSwapPat<setugt, BLTU>;
 def : BccSwapPat<setule, BGEU>;
 
+let Predicates = [Has32S] in {
 // An extra pattern is needed for a brcond without a setcc (i.e. where the
 // condition was calculated elsewhere).
 def : Pat<(brcond GPR:$rj, bb:$imm21), (BNEZ GPR:$rj, bb:$imm21)>;
@@ -1484,6 +1542,16 @@ def : Pat<(brcond (GRLenVT (seteq GPR:$rj, 0)), bb:$imm21),
           (BEQZ GPR:$rj, bb:$imm21)>;
 def : Pat<(brcond (GRLenVT (setne GPR:$rj, 0)), bb:$imm21),
           (BNEZ GPR:$rj, bb:$imm21)>;
+} // Predicates = [Has32S]
+
+// An extra pattern is needed for a brcond without a setcc (i.e. where the
+// condition was calculated elsewhere).
+def : Pat<(brcond GPR:$rj, bb:$imm16), (BNE GPR:$rj, R0, bb:$imm16)>;
+
+def : Pat<(brcond (GRLenVT (seteq GPR:$rj, 0)), bb:$imm16),
+          (BEQ GPR:$rj, R0, bb:$imm16)>;
+def : Pat<(brcond (GRLenVT (setne GPR:$rj, 0)), bb:$imm16),
+          (BNE GPR:$rj, R0, bb:$imm16)>;
 
 let isBarrier = 1, isBranch = 1, isTerminator = 1 in
 def PseudoBR : Pseudo<(outs), (ins simm26_b:$imm26), [(br bb:$imm26)]>,
@@ -1741,12 +1809,12 @@ def : InstAlias<"la.local $dst, $tmp, $src",
 
 /// BSTRINS and BSTRPICK
 
-let Predicates = [IsLA32] in {
+let Predicates = [IsLA32, Has32S] in {
 def : Pat<(loongarch_bstrins GPR:$rd, GPR:$rj, uimm5:$msbd, uimm5:$lsbd),
           (BSTRINS_W GPR:$rd, GPR:$rj, uimm5:$msbd, uimm5:$lsbd)>;
 def : Pat<(loongarch_bstrpick GPR:$rj, uimm5:$msbd, uimm5:$lsbd),
           (BSTRPICK_W GPR:$rj, uimm5:$msbd, uimm5:$lsbd)>;
-} // Predicates = [IsLA32]
+} // Predicates = [IsLA32, Has32S]
 
 let Predicates = [IsLA64] in {
 def : Pat<(loongarch_bstrins GPR:$rd, GPR:$rj, uimm6:$msbd, uimm6:$lsbd),
@@ -1760,12 +1828,12 @@ def : Pat<(loongarch_bstrpick GPR:$rj, uimm6:$msbd, uimm6:$lsbd),
 def : Pat<(loongarch_revb_2h GPR:$rj), (REVB_2H GPR:$rj)>;
 def : Pat<(loongarch_bitrev_4b GPR:$rj), (BITREV_4B GPR:$rj)>;
 
-let Predicates = [IsLA32] in {
+let Predicates = [IsLA32, Has32S] in {
 def : Pat<(bswap GPR:$rj), (ROTRI_W (REVB_2H GPR:$rj), 16)>;
 def : Pat<(bitreverse GPR:$rj), (BITREV_W GPR:$rj)>;
 def : Pat<(bswap (bitreverse GPR:$rj)), (BITREV_4B GPR:$rj)>;
 def : Pat<(bitreverse (bswap GPR:$rj)), (BITREV_4B GPR:$rj)>;
-} // Predicates = [IsLA32]
+} // Predicates = [IsLA32, Has32S]
 
 let Predicates = [IsLA64] in {
 def : Pat<(loongarch_revb_2w GPR:$rj), (REVB_2W GPR:$rj)>;
@@ -1779,7 +1847,7 @@ def : Pat<(bitreverse (bswap GPR:$rj)), (BITREV_8B GPR:$rj)>;
 
 /// Loads
 
-multiclass LdPat<PatFrag LoadOp, LAInst Inst, ValueType vt = GRLenVT> {
+multiclass LdPat<PatFrags LoadOp, LAInst Inst, ValueType vt = GRLenVT> {
   def : Pat<(vt (LoadOp BaseAddr:$rj)), (Inst BaseAddr:$rj, 0)>;
   def : Pat<(vt (LoadOp (AddrConstant GPR:$rj, simm12:$imm12))),
             (Inst GPR:$rj, simm12:$imm12)>;
@@ -1890,9 +1958,10 @@ def : Pat<(atomic_fence 5, timm), (DBAR 0b10010)>; // release
 def : Pat<(atomic_fence 6, timm), (DBAR 0b10000)>; // acqrel
 def : Pat<(atomic_fence 7, timm), (DBAR 0b10000)>; // seqcst
 
-defm : LdPat<atomic_load_8, LD_B>;
-defm : LdPat<atomic_load_16, LD_H>;
-defm : LdPat<atomic_load_32, LD_W>;
+defm : LdPat<atomic_load_asext_8, LD_B>;
+defm : LdPat<atomic_load_asext_16, LD_H>;
+defm : LdPat<atomic_load_nonext_32, LD_W>, Requires<[IsLA32]>;
+defm : LdPat<atomic_load_asext_32, LD_W>, Requires<[IsLA64]>;
 
 class release_seqcst_store<PatFrag base>
     : PatFrag<(ops node:$val, node:$ptr), (base node:$val, node:$ptr), [{
@@ -1933,7 +2002,7 @@ def PseudoAtomicStoreD
 def : Pat<(atomic_store_release_seqcst_64 GPR:$rj, GPR:$rk),
           (PseudoAtomicStoreD GPR:$rj, GPR:$rk)>;
 
-defm : LdPat<atomic_load_64, LD_D>;
+defm : LdPat<atomic_load_nonext_64, LD_D>;
 defm : StPat<atomic_store_unordered_monotonic_32, ST_W, GPR, i64>;
 defm : StPat<atomic_store_unordered_monotonic_64, ST_D, GPR, i64>;
 } // Predicates = [IsLA64]
@@ -2296,6 +2365,10 @@ def : InstAlias<"move $dst, $src", (OR GPR:$dst, GPR:$src, R0)>;
 // later).
 def : InstAlias<"ret", (JIRL R0, R1, 0)>;
 def : InstAlias<"jr $rj", (JIRL R0, GPR:$rj, 0)>;
+
+def : InstAlias<"rdcntid.w $rj", (RDTIMEL_W R0, GPR:$rj)>;
+def : InstAlias<"rdcntvh.w $rd", (RDTIMEH_W GPR:$rd, R0)>;
+def : InstAlias<"rdcntvl.w $rd", (RDTIMEL_W GPR:$rd, R0)>;
 
 // Branches implemented with aliases.
 // Disassemble branch instructions not having a $zero operand to the

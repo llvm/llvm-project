@@ -11654,7 +11654,7 @@ bool ARMAsmParser::parseDirectiveThumb(SMLoc L) {
   if (!isThumb())
     SwitchMode();
 
-  getParser().getStreamer().emitAssemblerFlag(MCAF_Code16);
+  getTargetStreamer().emitCode16();
   getParser().getStreamer().emitCodeAlignment(Align(2), &getSTI(), 0);
   return false;
 }
@@ -11667,7 +11667,7 @@ bool ARMAsmParser::parseDirectiveARM(SMLoc L) {
 
   if (isThumb())
     SwitchMode();
-  getParser().getStreamer().emitAssemblerFlag(MCAF_Code32);
+  getTargetStreamer().emitCode32();
   getParser().getStreamer().emitCodeAlignment(Align(4), &getSTI(), 0);
   return false;
 }
@@ -11715,7 +11715,7 @@ bool ARMAsmParser::parseDirectiveThumbFunc(SMLoc L) {
   if (!isThumb())
     SwitchMode();
 
-  getParser().getStreamer().emitAssemblerFlag(MCAF_Code16);
+  getTargetStreamer().emitCode16();
 
   NextSymbolIsThumb = true;
   return false;
@@ -11768,14 +11768,14 @@ bool ARMAsmParser::parseDirectiveCode(SMLoc L) {
 
     if (!isThumb())
       SwitchMode();
-    getParser().getStreamer().emitAssemblerFlag(MCAF_Code16);
+    getTargetStreamer().emitCode16();
   } else {
     if (!hasARM())
       return Error(L, "target does not support ARM mode");
 
     if (isThumb())
       SwitchMode();
-    getParser().getStreamer().emitAssemblerFlag(MCAF_Code32);
+    getTargetStreamer().emitCode32();
   }
 
   return false;
@@ -11824,8 +11824,10 @@ void ARMAsmParser::FixModeAfterArchChange(bool WasThumb, SMLoc Loc) {
       SwitchMode();
     } else {
       // Mode switch forced, because the new arch doesn't support the old mode.
-      getParser().getStreamer().emitAssemblerFlag(isThumb() ? MCAF_Code16
-                                                            : MCAF_Code32);
+      if (isThumb())
+        getTargetStreamer().emitCode16();
+      else
+        getTargetStreamer().emitCode32();
       // Warn about the implcit mode switch. GAS does not switch modes here,
       // but instead stays in the old mode, reporting an error on any following
       // instructions as the mode does not exist on the target.
@@ -11846,7 +11848,6 @@ bool ARMAsmParser::parseDirectiveArch(SMLoc L) {
     return Error(L, "Unknown arch name");
 
   bool WasThumb = isThumb();
-  Triple T;
   MCSubtargetInfo &STI = copySTI();
   STI.setDefaultFeatures("", /*TuneCPU*/ "",
                          ("+" + ARM::getArchName(ID)).str());

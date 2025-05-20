@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/BasicTTIImpl.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/Debug.h"
@@ -80,7 +81,6 @@ unsigned SystemZTTIImpl::adjustInliningThreshold(const CallBase *CB) const {
   const Function *Callee = CB->getCalledFunction();
   if (!Callee)
     return 0;
-  const Module *M = Caller->getParent();
 
   // Increase the threshold if an incoming argument is used only as a memcpy
   // source.
@@ -92,25 +92,37 @@ unsigned SystemZTTIImpl::adjustInliningThreshold(const CallBase *CB) const {
     }
   }
 
-  // Give bonus for globals used much in both caller and callee.
-  std::set<const GlobalVariable *> CalleeGlobals;
-  std::set<const GlobalVariable *> CallerGlobals;
-  for (const GlobalVariable &Global : M->globals())
-    for (const User *U : Global.users())
-      if (const Instruction *User = dyn_cast<Instruction>(U)) {
-        if (User->getParent()->getParent() == Callee)
-          CalleeGlobals.insert(&Global);
-        if (User->getParent()->getParent() == Caller)
-          CallerGlobals.insert(&Global);
+  // Give bonus for globals used much in both caller and a relatively small
+  // callee.
+  unsigned InstrCount = 0;
+  SmallDenseMap<const Value *, unsigned> Ptr2NumUses;
+  for (auto &I : instructions(Callee)) {
+    if (++InstrCount == 200) {
+      Ptr2NumUses.clear();
+      break;
+    }
+    if (const auto *SI = dyn_cast<StoreInst>(&I)) {
+      if (!SI->isVolatile())
+        if (auto *GV = dyn_cast<GlobalVariable>(SI->getPointerOperand()))
+          Ptr2NumUses[GV]++;
+    } else if (const auto *LI = dyn_cast<LoadInst>(&I)) {
+      if (!LI->isVolatile())
+        if (auto *GV = dyn_cast<GlobalVariable>(LI->getPointerOperand()))
+          Ptr2NumUses[GV]++;
+    } else if (const auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
+      if (auto *GV = dyn_cast<GlobalVariable>(GEP->getPointerOperand())) {
+        unsigned NumStores = 0, NumLoads = 0;
+        countNumMemAccesses(GEP, NumStores, NumLoads, Callee);
+        Ptr2NumUses[GV] += NumLoads + NumStores;
       }
-  for (auto *GV : CalleeGlobals)
-    if (CallerGlobals.count(GV)) {
-      unsigned CalleeStores = 0, CalleeLoads = 0;
+    }
+  }
+
+  for (auto [Ptr, NumCalleeUses] : Ptr2NumUses)
+    if (NumCalleeUses > 10) {
       unsigned CallerStores = 0, CallerLoads = 0;
-      countNumMemAccesses(GV, CalleeStores, CalleeLoads, Callee);
-      countNumMemAccesses(GV, CallerStores, CallerLoads, Caller);
-      if ((CalleeStores + CalleeLoads) > 10 &&
-          (CallerStores + CallerLoads) > 10) {
+      countNumMemAccesses(Ptr, CallerStores, CallerLoads, Caller);
+      if (CallerStores + CallerLoads > 10) {
         Bonus = 1000;
         break;
       }
@@ -485,7 +497,7 @@ bool SystemZTTIImpl::hasDivRemOp(Type *DataType, bool IsSigned) const {
   return (VT.isScalarInteger() && TLI->isTypeLegal(VT));
 }
 
-static bool isFreeEltLoad(Value *Op) {
+static bool isFreeEltLoad(const Value *Op) {
   if (isa<LoadInst>(Op) && Op->hasOneUse()) {
     const Instruction *UserI = cast<Instruction>(*Op->user_begin());
     return !isa<StoreInst>(UserI); // Prefer MVC
@@ -495,7 +507,8 @@ static bool isFreeEltLoad(Value *Op) {
 
 InstructionCost SystemZTTIImpl::getScalarizationOverhead(
     VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract,
-    TTI::TargetCostKind CostKind, ArrayRef<Value *> VL) const {
+    TTI::TargetCostKind CostKind, bool ForPoisonSrc,
+    ArrayRef<Value *> VL) const {
   unsigned NumElts = cast<FixedVectorType>(Ty)->getNumElements();
   InstructionCost Cost = 0;
 
@@ -517,7 +530,7 @@ InstructionCost SystemZTTIImpl::getScalarizationOverhead(
   }
 
   Cost += BaseT::getScalarizationOverhead(Ty, DemandedElts, Insert, Extract,
-                                          CostKind, VL);
+                                          CostKind, ForPoisonSrc, VL);
   return Cost;
 }
 
@@ -1181,8 +1194,9 @@ InstructionCost SystemZTTIImpl::getCmpSelInstrCost(
 
 InstructionCost SystemZTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
                                                    TTI::TargetCostKind CostKind,
-                                                   unsigned Index, Value *Op0,
-                                                   Value *Op1) const {
+                                                   unsigned Index,
+                                                   const Value *Op0,
+                                                   const Value *Op1) const {
   if (Opcode == Instruction::InsertElement) {
     // Vector Element Load.
     if (Op1 != nullptr && isFreeEltLoad(Op1))

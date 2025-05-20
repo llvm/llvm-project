@@ -43,7 +43,9 @@ struct olLaunchKernelTest : OffloadQueueTest {
   ol_kernel_launch_size_args_t LaunchArgs{};
 };
 
-TEST_F(olLaunchKernelTest, Success) {
+OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olLaunchKernelTest);
+
+TEST_P(olLaunchKernelTest, Success) {
   void *Mem;
   ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED, 64, &Mem));
   struct {
@@ -63,7 +65,7 @@ TEST_F(olLaunchKernelTest, Success) {
   ASSERT_SUCCESS(olMemFree(Mem));
 }
 
-TEST_F(olLaunchKernelTest, SuccessSynchronous) {
+TEST_P(olLaunchKernelTest, SuccessSynchronous) {
   void *Mem;
   ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED, 64, &Mem));
 

@@ -71,6 +71,10 @@ public:
     return Records.getAllDerivedDefinitions("Category");
   }
 
+  ArrayRef<const Record *> getSourceLanguages() const {
+    return Records.getAllDerivedDefinitions("SourceLanguage");
+  }
+
   ArrayRef<const Record *> getDirectives() const {
     return Records.getAllDerivedDefinitions("Directive");
   }
@@ -107,18 +111,16 @@ public:
 
   StringRef getName() const { return Def->getValueAsString("name"); }
 
-  StringRef getAlternativeName() const {
-    return Def->getValueAsString("alternativeName");
-  }
-
   // Returns the name of the directive formatted for output. Whitespace are
   // replaced with underscores.
-  std::string getFormattedName() const {
-    StringRef Name = Def->getValueAsString("name");
+  static std::string getFormattedName(const Record *R) {
+    StringRef Name = R->getValueAsString("name");
     std::string N = Name.str();
-    std::replace(N.begin(), N.end(), ' ', '_');
+    llvm::replace(N, ' ', '_');
     return N;
   }
+
+  std::string getFormattedName() const { return getFormattedName(Def); }
 
   bool isDefault() const { return Def->getValueAsBit("isDefault"); }
 
@@ -160,6 +162,10 @@ public:
   }
 
   const Record *getCategory() const { return Def->getValueAsDef("category"); }
+
+  std::vector<const Record *> getSourceLanguages() const {
+    return Def->getValueAsListOfDefs("languages");
+  }
 
   // Clang uses a different format for names of its directives enum.
   std::string getClangAccSpelling() const {
@@ -211,7 +217,7 @@ public:
     StringRef Name = Def->getValueAsString("name");
     std::string N = Name.str();
     bool Cap = true;
-    std::transform(N.begin(), N.end(), N.begin(), [&Cap](unsigned char C) {
+    llvm::transform(N, N.begin(), [&Cap](unsigned char C) {
       if (Cap == true) {
         C = toUpper(C);
         Cap = false;

@@ -114,13 +114,13 @@ define void @fun2(ptr %0, ptr %Dst) {
 ; CHECK:       [[BB4]]:
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[BB5]]:
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[DST]], i64 24
+; CHECK-NEXT:    store i64 [[TMP2]], ptr [[TMP6]], align 8
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[DST]], i64 16
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i64> <i64 0, i64 poison>, i64 [[TMP2]], i32 1
-; CHECK-NEXT:    store <2 x i64> [[TMP8]], ptr [[TMP7]], align 8
+; CHECK-NEXT:    store i64 0, ptr [[TMP7]], align 8
 ; CHECK-NEXT:    br label %[[BB4]]
 ;
-; Looks like there is bug in TTI, where insertion into index 1 is free, while insertion in to index 0 is 1.
-; REMARK: Function: fun2
+; REMARK-NOT: Function: fun2
 
   %3 = load i64, ptr %0, align 8
   %4 = icmp eq i64 %3, 0

@@ -548,7 +548,6 @@ static void EmitHLSLScalarFlatCast(CodeGenFunction &CGF, Address DestVal,
     }
     CGF.Builder.CreateStore(Cast, StoreGEPList[I].first);
   }
-  return;
 }
 
 // emit a flat cast where the RHS is an aggregate
@@ -1814,7 +1813,6 @@ void AggExprEmitter::VisitCXXParenListOrInitListExpr(
 
   // We'll need to enter cleanup scopes in case any of the element
   // initializers throws an exception.
-  SmallVector<EHScopeStack::stable_iterator, 16> cleanups;
   CodeGenFunction::CleanupDeactivationScope DeactivateCleanups(CGF);
 
   unsigned curInitIndex = 0;

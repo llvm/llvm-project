@@ -96,7 +96,7 @@ TEST(ToolChainTest, VFSGCCInstallation) {
       C->getDefaultToolChain().printVerboseInfo(OS);
     }
     if (is_style_windows(llvm::sys::path::Style::native))
-      std::replace(S.begin(), S.end(), '\\', '/');
+      llvm::replace(S, '\\', '/');
     EXPECT_EQ(
         "Found candidate GCC installation: "
         "/usr/lib/gcc/arm-linux-gnueabihf/4.6.3\n"
@@ -120,7 +120,7 @@ TEST(ToolChainTest, VFSGCCInstallation) {
       C->getDefaultToolChain().printVerboseInfo(OS);
     }
     if (is_style_windows(llvm::sys::path::Style::native))
-      std::replace(S.begin(), S.end(), '\\', '/');
+      llvm::replace(S, '\\', '/');
     // Test that 4.5.3 from --sysroot is not overridden by 4.6.3 (larger
     // version) from /usr.
     EXPECT_EQ("Found candidate GCC installation: "
@@ -162,7 +162,7 @@ TEST(ToolChainTest, VFSGCCInstallationRelativeDir) {
     C->getDefaultToolChain().printVerboseInfo(OS);
   }
   if (is_style_windows(llvm::sys::path::Style::native))
-    std::replace(S.begin(), S.end(), '\\', '/');
+    llvm::replace(S, '\\', '/');
   EXPECT_EQ("Found candidate GCC installation: "
             "/home/test/bin/../lib/gcc/arm-linux-gnueabi/4.6.1\n"
             "Selected GCC installation: "
@@ -213,7 +213,7 @@ TEST(ToolChainTest, VFSSolarisMultiGCCInstallation) {
       C->getDefaultToolChain().printVerboseInfo(OS);
     }
     if (is_style_windows(llvm::sys::path::Style::native))
-      std::replace(S.begin(), S.end(), '\\', '/');
+      llvm::replace(S, '\\', '/');
     EXPECT_EQ("Found candidate GCC installation: "
               "/usr/gcc/11/lib/gcc/x86_64-pc-solaris2.11/11.4.0\n"
               "Selected GCC installation: "
@@ -237,7 +237,7 @@ TEST(ToolChainTest, VFSSolarisMultiGCCInstallation) {
       C->getDefaultToolChain().printVerboseInfo(OS);
     }
     if (is_style_windows(llvm::sys::path::Style::native))
-      std::replace(S.begin(), S.end(), '\\', '/');
+      llvm::replace(S, '\\', '/');
     EXPECT_EQ("Found candidate GCC installation: "
               "/usr/gcc/11/lib/gcc/x86_64-pc-solaris2.11/11.4.0\n"
               "Selected GCC installation: "
@@ -261,7 +261,7 @@ TEST(ToolChainTest, VFSSolarisMultiGCCInstallation) {
       C->getDefaultToolChain().printVerboseInfo(OS);
     }
     if (is_style_windows(llvm::sys::path::Style::native))
-      std::replace(S.begin(), S.end(), '\\', '/');
+      llvm::replace(S, '\\', '/');
     EXPECT_EQ("Found candidate GCC installation: "
               "/usr/gcc/11/lib/gcc/x86_64-pc-solaris2.11/11.4.0\n"
               "Selected GCC installation: "
@@ -285,7 +285,7 @@ TEST(ToolChainTest, VFSSolarisMultiGCCInstallation) {
       C->getDefaultToolChain().printVerboseInfo(OS);
     }
     if (is_style_windows(llvm::sys::path::Style::native))
-      std::replace(S.begin(), S.end(), '\\', '/');
+      llvm::replace(S, '\\', '/');
     EXPECT_EQ("Found candidate GCC installation: "
               "/usr/gcc/11/lib/gcc/sparcv9-sun-solaris2.11/11.4.0\n"
               "Selected GCC installation: "
@@ -308,7 +308,7 @@ TEST(ToolChainTest, VFSSolarisMultiGCCInstallation) {
       C->getDefaultToolChain().printVerboseInfo(OS);
     }
     if (is_style_windows(llvm::sys::path::Style::native))
-      std::replace(S.begin(), S.end(), '\\', '/');
+      llvm::replace(S, '\\', '/');
     EXPECT_EQ("Found candidate GCC installation: "
               "/usr/gcc/11/lib/gcc/sparcv9-sun-solaris2.11/11.4.0\n"
               "Selected GCC installation: "
@@ -329,7 +329,7 @@ MATCHER_P(jobHasArgs, Substr, "") {
     Args += Arg;
   }
   if (is_style_windows(llvm::sys::path::Style::native))
-    std::replace(Args.begin(), Args.end(), '\\', '/');
+    llvm::replace(Args, '\\', '/');
   if (llvm::StringRef(Args).contains(Substr))
     return true;
   *result_listener << "whose args are '" << Args << "'";
@@ -589,8 +589,7 @@ TEST(ToolChainTest, UEFICallingConventionTest) {
 
   compiler.getTargetOpts().Triple = Tr.getTriple();
   compiler.setTarget(clang::TargetInfo::CreateTargetInfo(
-      compiler.getDiagnostics(),
-      std::make_shared<clang::TargetOptions>(compiler.getTargetOpts())));
+      compiler.getDiagnostics(), compiler.getTargetOpts()));
 
   EXPECT_EQ(compiler.getTarget().getCallingConvKind(true),
             TargetInfo::CallingConvKind::CCK_MicrosoftWin64);

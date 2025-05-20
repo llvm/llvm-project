@@ -39,7 +39,7 @@ protected:
         Diags(DiagID, DiagOpts.get(), new IgnoringDiagConsumer()),
         SourceMgr(Diags, FileMgr), TargetOpts(new TargetOptions()) {
     TargetOpts->Triple = "x86_64-pc-linux-unknown";
-    Target = TargetInfo::CreateTargetInfo(Diags, TargetOpts);
+    Target = TargetInfo::CreateTargetInfo(Diags, *TargetOpts);
     LangOpts.CPlusPlus20 = 1; // For __VA_OPT__
   }
 

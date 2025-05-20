@@ -126,8 +126,8 @@ SmallVector<WebAssemblyAsmTypeCheck::StackType, 4>
 WebAssemblyAsmTypeCheck::valTypesToStackTypes(
     ArrayRef<wasm::ValType> ValTypes) {
   SmallVector<StackType, 4> Types(ValTypes.size());
-  std::transform(ValTypes.begin(), ValTypes.end(), Types.begin(),
-                 [](wasm::ValType Val) -> StackType { return Val; });
+  llvm::transform(ValTypes, Types.begin(),
+                  [](wasm::ValType Val) -> StackType { return Val; });
   return Types;
 }
 

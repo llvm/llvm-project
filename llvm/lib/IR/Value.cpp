@@ -53,7 +53,7 @@ static inline Type *checkType(Type *Ty) {
 Value::Value(Type *ty, unsigned scid)
     : SubclassID(scid), HasValueHandle(0), SubclassOptionalData(0),
       SubclassData(0), NumUserOperands(0), IsUsedByMD(false), HasName(false),
-      HasMetadata(false), VTy(checkType(ty)), UseList(nullptr) {
+      HasMetadata(false), VTy(checkType(ty)) {
   static_assert(ConstantFirstVal == 0, "!(SubclassID < ConstantFirstVal)");
   // FIXME: Why isn't this in the subclass gunk??
   // Note, we cannot call isa<CallInst> before the CallInst has been
@@ -148,10 +148,18 @@ void Value::destroyValueName() {
 }
 
 bool Value::hasNUses(unsigned N) const {
+  if (!UseList)
+    return N == 0;
+
+  // TODO: Disallow for ConstantData and remove !UseList check?
   return hasNItems(use_begin(), use_end(), N);
 }
 
 bool Value::hasNUsesOrMore(unsigned N) const {
+  // TODO: Disallow for ConstantData and remove !UseList check?
+  if (!UseList)
+    return N == 0;
+
   return hasNItemsOrMore(use_begin(), use_end(), N);
 }
 
@@ -232,6 +240,8 @@ void Value::dropDroppableUse(Use &U) {
 }
 
 bool Value::isUsedInBasicBlock(const BasicBlock *BB) const {
+  assert(hasUseList() && "ConstantData has no use-list");
+
   // This can be computed either by scanning the instructions in BB, or by
   // scanning the use list of this Value. Both lists can be very long, but
   // usually one is quite short.
@@ -253,6 +263,9 @@ bool Value::isUsedInBasicBlock(const BasicBlock *BB) const {
 }
 
 unsigned Value::getNumUses() const {
+  // TODO: Disallow for ConstantData and remove !UseList check?
+  if (!UseList)
+    return 0;
   return (unsigned)std::distance(use_begin(), use_end());
 }
 
@@ -499,6 +512,7 @@ static bool contains(Value *Expr, Value *V) {
 #endif // NDEBUG
 
 void Value::doRAUW(Value *New, ReplaceMetadataUses ReplaceMetaUses) {
+  assert(hasUseList() && "Cannot replace constant data");
   assert(New && "Value::replaceAllUsesWith(<null>) is invalid!");
   assert(!contains(New, this) &&
          "this->replaceAllUsesWith(expr(this)) is NOT valid!");
@@ -844,7 +858,7 @@ bool Value::canBeFreed() const {
   // which is why we need the explicit opt in on a per collector basis.
   if (!F->hasGC())
     return true;
-  
+
   const auto &GCName = F->getGC();
   if (GCName == "statepoint-example") {
     auto *PT = cast<PointerType>(this->getType());

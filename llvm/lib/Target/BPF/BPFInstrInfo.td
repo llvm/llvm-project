@@ -698,8 +698,8 @@ class acquiring_load<PatFrags base>
 let Predicates = [BPFHasLoadAcqStoreRel] in {
   def LDDACQ : LOAD_ACQUIREi64<BPF_DW, "u64">;
 
-  foreach P = [[relaxed_load<atomic_load_64>, LDD],
-               [acquiring_load<atomic_load_64>, LDDACQ],
+  foreach P = [[relaxed_load<atomic_load_nonext_64>, LDD],
+               [acquiring_load<atomic_load_nonext_64>, LDDACQ],
               ] in {
     def : Pat<(P[0] ADDRri:$addr), (P[1] ADDRri:$addr)>;
   }
@@ -1341,12 +1341,12 @@ let Predicates = [BPFHasALU32] in {
             (SUBREG_TO_REG (i64 0), (LDW32 ADDRri:$src), sub_32)>;
 
   let Predicates = [BPFHasLoadAcqStoreRel] in {
-    foreach P = [[relaxed_load<atomic_load_32>, LDW32],
-                 [relaxed_load<atomic_load_az_16>, LDH32],
-                 [relaxed_load<atomic_load_az_8>, LDB32],
-                 [acquiring_load<atomic_load_32>, LDWACQ32],
-                 [acquiring_load<atomic_load_az_16>, LDHACQ32],
-                 [acquiring_load<atomic_load_az_8>, LDBACQ32],
+    foreach P = [[relaxed_load<atomic_load_nonext_32>, LDW32],
+                 [relaxed_load<atomic_load_azext_16>, LDH32],
+                 [relaxed_load<atomic_load_azext_8>, LDB32],
+                 [acquiring_load<atomic_load_nonext_32>, LDWACQ32],
+                 [acquiring_load<atomic_load_azext_16>, LDHACQ32],
+                 [acquiring_load<atomic_load_azext_8>, LDBACQ32],
                 ] in {
       def : Pat<(P[0] ADDRri:$addr), (P[1] ADDRri:$addr)>;
     }

@@ -707,6 +707,17 @@ struct FragmentCompiler {
           C.Completion.HeaderInsertion = *Val;
         });
     }
+
+    if (F.CodePatterns) {
+      if (auto Val = compileEnum<Config::CodePatternsPolicy>("CodePatterns",
+                                                             *F.CodePatterns)
+                         .map("All", Config::CodePatternsPolicy::All)
+                         .map("None", Config::CodePatternsPolicy::None)
+                         .value())
+        Out.Apply.push_back([Val](const Params &, Config &C) {
+          C.Completion.CodePatterns = *Val;
+        });
+    }
   }
 
   void compile(Fragment::HoverBlock &&F) {

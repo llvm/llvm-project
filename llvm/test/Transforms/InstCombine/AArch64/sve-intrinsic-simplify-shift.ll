@@ -6,8 +6,7 @@ target triple = "aarch64-unknown-linux-gnu"
 define <vscale x 16 x i8> @constant_asr_i8_shift_by_0(<vscale x 16 x i1> %pg) #0 {
 ; CHECK-LABEL: define <vscale x 16 x i8> @constant_asr_i8_shift_by_0(
 ; CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.asr.nxv16i8(<vscale x 16 x i1> [[PG]], <vscale x 16 x i8> splat (i8 7), <vscale x 16 x i8> zeroinitializer)
-; CHECK-NEXT:    ret <vscale x 16 x i8> [[R]]
+; CHECK-NEXT:    ret <vscale x 16 x i8> splat (i8 7)
 ;
   %r = call <vscale x 16 x i8> @llvm.aarch64.sve.asr.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> splat (i8 7), <vscale x 16 x i8> splat (i8 0))
   ret <vscale x 16 x i8> %r
@@ -16,7 +15,7 @@ define <vscale x 16 x i8> @constant_asr_i8_shift_by_0(<vscale x 16 x i1> %pg) #0
 define <vscale x 16 x i8> @constant_asr_i8_shift_by_1(<vscale x 16 x i1> %pg) #0 {
 ; CHECK-LABEL: define <vscale x 16 x i8> @constant_asr_i8_shift_by_1(
 ; CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.asr.nxv16i8(<vscale x 16 x i1> [[PG]], <vscale x 16 x i8> splat (i8 -63), <vscale x 16 x i8> splat (i8 1))
+; CHECK-NEXT:    [[R:%.*]] = select <vscale x 16 x i1> [[PG]], <vscale x 16 x i8> splat (i8 -32), <vscale x 16 x i8> splat (i8 -63)
 ; CHECK-NEXT:    ret <vscale x 16 x i8> [[R]]
 ;
   %r = call <vscale x 16 x i8> @llvm.aarch64.sve.asr.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> splat (i8 193), <vscale x 16 x i8> splat (i8 1))
@@ -27,7 +26,7 @@ define <vscale x 16 x i8> @constant_asr_i8_shift_by_1(<vscale x 16 x i1> %pg) #0
 define <vscale x 16 x i8> @constant_asr_i8_shift_by_7(<vscale x 16 x i1> %pg) #0 {
 ; CHECK-LABEL: define <vscale x 16 x i8> @constant_asr_i8_shift_by_7(
 ; CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.asr.nxv16i8(<vscale x 16 x i1> [[PG]], <vscale x 16 x i8> splat (i8 -128), <vscale x 16 x i8> splat (i8 7))
+; CHECK-NEXT:    [[R:%.*]] = select <vscale x 16 x i1> [[PG]], <vscale x 16 x i8> splat (i8 -1), <vscale x 16 x i8> splat (i8 -128)
 ; CHECK-NEXT:    ret <vscale x 16 x i8> [[R]]
 ;
   %r = call <vscale x 16 x i8> @llvm.aarch64.sve.asr.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> splat (i8 128), <vscale x 16 x i8> splat (i8 7))
@@ -50,7 +49,7 @@ define <vscale x 16 x i8> @constant_asr_i8_shift_by_8(<vscale x 16 x i1> %pg) #0
 define <vscale x 8 x i16> @constant_asr_i16_shift_by_15(<vscale x 8 x i1> %pg) #0 {
 ; CHECK-LABEL: define <vscale x 8 x i16> @constant_asr_i16_shift_by_15(
 ; CHECK-SAME: <vscale x 8 x i1> [[PG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.asr.nxv8i16(<vscale x 8 x i1> [[PG]], <vscale x 8 x i16> splat (i16 -32768), <vscale x 8 x i16> splat (i16 15))
+; CHECK-NEXT:    [[R:%.*]] = select <vscale x 8 x i1> [[PG]], <vscale x 8 x i16> splat (i16 -1), <vscale x 8 x i16> splat (i16 -32768)
 ; CHECK-NEXT:    ret <vscale x 8 x i16> [[R]]
 ;
   %r = call <vscale x 8 x i16> @llvm.aarch64.sve.asr.nxv8i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> splat (i16 32768), <vscale x 8 x i16> splat (i16 15))
@@ -73,7 +72,7 @@ define <vscale x 8 x i16> @constant_asr_i16_shift_by_16(<vscale x 8 x i1> %pg) #
 define <vscale x 4 x i32> @constant_asr_i32_shift_by_31(<vscale x 4 x i1> %pg) #0 {
 ; CHECK-LABEL: define <vscale x 4 x i32> @constant_asr_i32_shift_by_31(
 ; CHECK-SAME: <vscale x 4 x i1> [[PG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.asr.nxv4i32(<vscale x 4 x i1> [[PG]], <vscale x 4 x i32> splat (i32 -2147483648), <vscale x 4 x i32> splat (i32 31))
+; CHECK-NEXT:    [[R:%.*]] = select <vscale x 4 x i1> [[PG]], <vscale x 4 x i32> splat (i32 -1), <vscale x 4 x i32> splat (i32 -2147483648)
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[R]]
 ;
   %r = call <vscale x 4 x i32> @llvm.aarch64.sve.asr.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> splat (i32 2147483648), <vscale x 4 x i32> splat (i32 31))
@@ -96,7 +95,7 @@ define <vscale x 4 x i32> @constant_asr_i32_shift_by_32(<vscale x 4 x i1> %pg) #
 define <vscale x 2 x i64> @constant_asr_i64_shift_by_63(<vscale x 2 x i1> %pg) #0 {
 ; CHECK-LABEL: define <vscale x 2 x i64> @constant_asr_i64_shift_by_63(
 ; CHECK-SAME: <vscale x 2 x i1> [[PG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.asr.nxv2i64(<vscale x 2 x i1> [[PG]], <vscale x 2 x i64> splat (i64 -9223372036854775808), <vscale x 2 x i64> splat (i64 63))
+; CHECK-NEXT:    [[R:%.*]] = select <vscale x 2 x i1> [[PG]], <vscale x 2 x i64> splat (i64 -1), <vscale x 2 x i64> splat (i64 -9223372036854775808)
 ; CHECK-NEXT:    ret <vscale x 2 x i64> [[R]]
 ;
   %r = call <vscale x 2 x i64> @llvm.aarch64.sve.asr.nxv2i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> splat (i64 9223372036854775808), <vscale x 2 x i64> splat (i64 63))
@@ -118,8 +117,7 @@ define <vscale x 2 x i64> @constant_asr_i64_shift_by_64(<vscale x 2 x i1> %pg) #
 define <vscale x 16 x i8> @constant_lsl_i8_shift_by_0(<vscale x 16 x i1> %pg) #0 {
 ; CHECK-LABEL: define <vscale x 16 x i8> @constant_lsl_i8_shift_by_0(
 ; CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.lsl.nxv16i8(<vscale x 16 x i1> [[PG]], <vscale x 16 x i8> splat (i8 7), <vscale x 16 x i8> zeroinitializer)
-; CHECK-NEXT:    ret <vscale x 16 x i8> [[R]]
+; CHECK-NEXT:    ret <vscale x 16 x i8> splat (i8 7)
 ;
   %r = call <vscale x 16 x i8> @llvm.aarch64.sve.lsl.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> splat (i8 7), <vscale x 16 x i8> splat (i8 0))
   ret <vscale x 16 x i8> %r
@@ -128,7 +126,7 @@ define <vscale x 16 x i8> @constant_lsl_i8_shift_by_0(<vscale x 16 x i1> %pg) #0
 define <vscale x 16 x i8> @constant_lsl_i8_shift_by_1(<vscale x 16 x i1> %pg) #0 {
 ; CHECK-LABEL: define <vscale x 16 x i8> @constant_lsl_i8_shift_by_1(
 ; CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.lsl.nxv16i8(<vscale x 16 x i1> [[PG]], <vscale x 16 x i8> splat (i8 -63), <vscale x 16 x i8> splat (i8 1))
+; CHECK-NEXT:    [[R:%.*]] = select <vscale x 16 x i1> [[PG]], <vscale x 16 x i8> splat (i8 -126), <vscale x 16 x i8> splat (i8 -63)
 ; CHECK-NEXT:    ret <vscale x 16 x i8> [[R]]
 ;
   %r = call <vscale x 16 x i8> @llvm.aarch64.sve.lsl.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> splat (i8 193), <vscale x 16 x i8> splat (i8 1))
@@ -139,7 +137,7 @@ define <vscale x 16 x i8> @constant_lsl_i8_shift_by_1(<vscale x 16 x i1> %pg) #0
 define <vscale x 16 x i8> @constant_lsl_i8_shift_by_7(<vscale x 16 x i1> %pg) #0 {
 ; CHECK-LABEL: define <vscale x 16 x i8> @constant_lsl_i8_shift_by_7(
 ; CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.lsl.nxv16i8(<vscale x 16 x i1> [[PG]], <vscale x 16 x i8> splat (i8 1), <vscale x 16 x i8> splat (i8 7))
+; CHECK-NEXT:    [[R:%.*]] = select <vscale x 16 x i1> [[PG]], <vscale x 16 x i8> splat (i8 -128), <vscale x 16 x i8> splat (i8 1)
 ; CHECK-NEXT:    ret <vscale x 16 x i8> [[R]]
 ;
   %r = call <vscale x 16 x i8> @llvm.aarch64.sve.lsl.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> splat (i8 1), <vscale x 16 x i8> splat (i8 7))
@@ -161,7 +159,7 @@ define <vscale x 16 x i8> @constant_lsl_i8_shift_by_8(<vscale x 16 x i1> %pg) #0
 define <vscale x 8 x i16> @constant_lsl_i16_shift_by_15(<vscale x 8 x i1> %pg) #0 {
 ; CHECK-LABEL: define <vscale x 8 x i16> @constant_lsl_i16_shift_by_15(
 ; CHECK-SAME: <vscale x 8 x i1> [[PG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.lsl.nxv8i16(<vscale x 8 x i1> [[PG]], <vscale x 8 x i16> splat (i16 1), <vscale x 8 x i16> splat (i16 15))
+; CHECK-NEXT:    [[R:%.*]] = select <vscale x 8 x i1> [[PG]], <vscale x 8 x i16> splat (i16 -32768), <vscale x 8 x i16> splat (i16 1)
 ; CHECK-NEXT:    ret <vscale x 8 x i16> [[R]]
 ;
   %r = call <vscale x 8 x i16> @llvm.aarch64.sve.lsl.nxv8i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> splat (i16 1), <vscale x 8 x i16> splat (i16 15))
@@ -183,7 +181,7 @@ define <vscale x 8 x i16> @constant_lsl_i16_shift_by_16(<vscale x 8 x i1> %pg) #
 define <vscale x 4 x i32> @constant_lsl_i32_shift_by_31(<vscale x 4 x i1> %pg) #0 {
 ; CHECK-LABEL: define <vscale x 4 x i32> @constant_lsl_i32_shift_by_31(
 ; CHECK-SAME: <vscale x 4 x i1> [[PG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.lsl.nxv4i32(<vscale x 4 x i1> [[PG]], <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 31))
+; CHECK-NEXT:    [[R:%.*]] = select <vscale x 4 x i1> [[PG]], <vscale x 4 x i32> splat (i32 -2147483648), <vscale x 4 x i32> splat (i32 1)
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[R]]
 ;
   %r = call <vscale x 4 x i32> @llvm.aarch64.sve.lsl.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 31))
@@ -205,7 +203,7 @@ define <vscale x 4 x i32> @constant_lsl_i32_shift_by_32(<vscale x 4 x i1> %pg) #
 define <vscale x 2 x i64> @constant_lsl_i64_shift_by_63(<vscale x 2 x i1> %pg) #0 {
 ; CHECK-LABEL: define <vscale x 2 x i64> @constant_lsl_i64_shift_by_63(
 ; CHECK-SAME: <vscale x 2 x i1> [[PG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.lsl.nxv2i64(<vscale x 2 x i1> [[PG]], <vscale x 2 x i64> splat (i64 1), <vscale x 2 x i64> splat (i64 63))
+; CHECK-NEXT:    [[R:%.*]] = select <vscale x 2 x i1> [[PG]], <vscale x 2 x i64> splat (i64 -9223372036854775808), <vscale x 2 x i64> splat (i64 1)
 ; CHECK-NEXT:    ret <vscale x 2 x i64> [[R]]
 ;
   %r = call <vscale x 2 x i64> @llvm.aarch64.sve.lsl.nxv2i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> splat (i64 1), <vscale x 2 x i64> splat (i64 63))
@@ -226,8 +224,7 @@ define <vscale x 2 x i64> @constant_lsl_i64_shift_by_64(<vscale x 2 x i1> %pg) #
 define <vscale x 16 x i8> @constant_lsr_i8_shift_by_0(<vscale x 16 x i1> %pg) #0 {
 ; CHECK-LABEL: define <vscale x 16 x i8> @constant_lsr_i8_shift_by_0(
 ; CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.lsr.nxv16i8(<vscale x 16 x i1> [[PG]], <vscale x 16 x i8> splat (i8 7), <vscale x 16 x i8> zeroinitializer)
-; CHECK-NEXT:    ret <vscale x 16 x i8> [[R]]
+; CHECK-NEXT:    ret <vscale x 16 x i8> splat (i8 7)
 ;
   %r = call <vscale x 16 x i8> @llvm.aarch64.sve.lsr.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> splat (i8 7), <vscale x 16 x i8> splat (i8 0))
   ret <vscale x 16 x i8> %r
@@ -236,7 +233,7 @@ define <vscale x 16 x i8> @constant_lsr_i8_shift_by_0(<vscale x 16 x i1> %pg) #0
 define <vscale x 16 x i8> @constant_lsr_i8_shift_by_1(<vscale x 16 x i1> %pg) #0 {
 ; CHECK-LABEL: define <vscale x 16 x i8> @constant_lsr_i8_shift_by_1(
 ; CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.lsr.nxv16i8(<vscale x 16 x i1> [[PG]], <vscale x 16 x i8> splat (i8 -63), <vscale x 16 x i8> splat (i8 1))
+; CHECK-NEXT:    [[R:%.*]] = select <vscale x 16 x i1> [[PG]], <vscale x 16 x i8> splat (i8 96), <vscale x 16 x i8> splat (i8 -63)
 ; CHECK-NEXT:    ret <vscale x 16 x i8> [[R]]
 ;
   %r = call <vscale x 16 x i8> @llvm.aarch64.sve.lsr.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> splat (i8 193), <vscale x 16 x i8> splat (i8 1))
@@ -247,7 +244,7 @@ define <vscale x 16 x i8> @constant_lsr_i8_shift_by_1(<vscale x 16 x i1> %pg) #0
 define <vscale x 16 x i8> @constant_lsr_i8_shift_by_7(<vscale x 16 x i1> %pg) #0 {
 ; CHECK-LABEL: define <vscale x 16 x i8> @constant_lsr_i8_shift_by_7(
 ; CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.lsr.nxv16i8(<vscale x 16 x i1> [[PG]], <vscale x 16 x i8> splat (i8 -128), <vscale x 16 x i8> splat (i8 7))
+; CHECK-NEXT:    [[R:%.*]] = select <vscale x 16 x i1> [[PG]], <vscale x 16 x i8> splat (i8 1), <vscale x 16 x i8> splat (i8 -128)
 ; CHECK-NEXT:    ret <vscale x 16 x i8> [[R]]
 ;
   %r = call <vscale x 16 x i8> @llvm.aarch64.sve.lsr.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> splat (i8 128), <vscale x 16 x i8> splat (i8 7))
@@ -270,7 +267,7 @@ define <vscale x 16 x i8> @constant_lsr_i8_shift_by_8(<vscale x 16 x i1> %pg) #0
 define <vscale x 8 x i16> @constant_lsr_i16_shift_by_15(<vscale x 8 x i1> %pg) #0 {
 ; CHECK-LABEL: define <vscale x 8 x i16> @constant_lsr_i16_shift_by_15(
 ; CHECK-SAME: <vscale x 8 x i1> [[PG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.lsr.nxv8i16(<vscale x 8 x i1> [[PG]], <vscale x 8 x i16> splat (i16 -32768), <vscale x 8 x i16> splat (i16 15))
+; CHECK-NEXT:    [[R:%.*]] = select <vscale x 8 x i1> [[PG]], <vscale x 8 x i16> splat (i16 1), <vscale x 8 x i16> splat (i16 -32768)
 ; CHECK-NEXT:    ret <vscale x 8 x i16> [[R]]
 ;
   %r = call <vscale x 8 x i16> @llvm.aarch64.sve.lsr.nxv8i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> splat (i16 32768), <vscale x 8 x i16> splat (i16 15))
@@ -293,7 +290,7 @@ define <vscale x 8 x i16> @constant_lsr_i16_shift_by_16(<vscale x 8 x i1> %pg) #
 define <vscale x 4 x i32> @constant_lsr_i32_shift_by_31(<vscale x 4 x i1> %pg) #0 {
 ; CHECK-LABEL: define <vscale x 4 x i32> @constant_lsr_i32_shift_by_31(
 ; CHECK-SAME: <vscale x 4 x i1> [[PG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.lsr.nxv4i32(<vscale x 4 x i1> [[PG]], <vscale x 4 x i32> splat (i32 -2147483648), <vscale x 4 x i32> splat (i32 31))
+; CHECK-NEXT:    [[R:%.*]] = select <vscale x 4 x i1> [[PG]], <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 -2147483648)
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[R]]
 ;
   %r = call <vscale x 4 x i32> @llvm.aarch64.sve.lsr.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> splat (i32 2147483648), <vscale x 4 x i32> splat (i32 31))
@@ -316,7 +313,7 @@ define <vscale x 4 x i32> @constant_lsr_i32_shift_by_32(<vscale x 4 x i1> %pg) #
 define <vscale x 2 x i64> @constant_lsr_i64_shift_by_63(<vscale x 2 x i1> %pg) #0 {
 ; CHECK-LABEL: define <vscale x 2 x i64> @constant_lsr_i64_shift_by_63(
 ; CHECK-SAME: <vscale x 2 x i1> [[PG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.lsr.nxv2i64(<vscale x 2 x i1> [[PG]], <vscale x 2 x i64> splat (i64 -9223372036854775808), <vscale x 2 x i64> splat (i64 63))
+; CHECK-NEXT:    [[R:%.*]] = select <vscale x 2 x i1> [[PG]], <vscale x 2 x i64> splat (i64 1), <vscale x 2 x i64> splat (i64 -9223372036854775808)
 ; CHECK-NEXT:    ret <vscale x 2 x i64> [[R]]
 ;
   %r = call <vscale x 2 x i64> @llvm.aarch64.sve.lsr.nxv2i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> splat (i64 9223372036854775808), <vscale x 2 x i64> splat (i64 63))

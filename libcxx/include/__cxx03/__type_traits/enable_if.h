@@ -27,11 +27,6 @@ struct _LIBCPP_TEMPLATE_VIS enable_if<true, _Tp> {
 template <bool _Bp, class _Tp = void>
 using __enable_if_t _LIBCPP_NODEBUG = typename enable_if<_Bp, _Tp>::type;
 
-#if _LIBCPP_STD_VER >= 14
-template <bool _Bp, class _Tp = void>
-using enable_if_t = typename enable_if<_Bp, _Tp>::type;
-#endif
-
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___CXX03___TYPE_TRAITS_ENABLE_IF_H

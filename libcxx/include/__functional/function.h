@@ -57,6 +57,7 @@ _LIBCPP_DIAGNOSTIC_PUSH
 #  if !_LIBCPP_AVAILABILITY_HAS_BAD_FUNCTION_CALL_KEY_FUNCTION
 _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wweak-vtables")
 #  endif
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 class _LIBCPP_EXPORTED_FROM_ABI bad_function_call : public exception {
 public:
   _LIBCPP_HIDE_FROM_ABI bad_function_call() _NOEXCEPT                                    = default;
@@ -71,10 +72,11 @@ public:
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL ~bad_function_call() _NOEXCEPT override {}
 #  endif
 
-#  ifdef _LIBCPP_ABI_BAD_FUNCTION_CALL_GOOD_WHAT_MESSAGE
+#  if _LIBCPP_AVAILABILITY_HAS_BAD_FUNCTION_CALL_GOOD_WHAT_MESSAGE
   const char* what() const _NOEXCEPT override;
 #  endif
 };
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_DIAGNOSTIC_POP
 
 [[__noreturn__]] inline _LIBCPP_HIDE_FROM_ABI void __throw_bad_function_call() {
@@ -236,6 +238,7 @@ public:
 template <class _Fp>
 class __base;
 
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 template <class _Rp, class... _ArgTypes>
 class __base<_Rp(_ArgTypes...)> {
 public:
@@ -334,6 +337,8 @@ const std::type_info& __func<_Fp, _Alloc, _Rp(_ArgTypes...)>::target_type() cons
 }
 
 #  endif // _LIBCPP_HAS_RTTI
+
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 
 // __value_func creates a value-type from a __func.
 
@@ -747,8 +752,9 @@ public:
 
 #  if _LIBCPP_HAS_BLOCKS_RUNTIME
 
-extern "C" void* _Block_copy(const void*);
-extern "C" void _Block_release(const void*);
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
+_LIBCPP_EXPORTED_FROM_ABI extern "C" void* _Block_copy(const void*);
+_LIBCPP_EXPORTED_FROM_ABI extern "C" void _Block_release(const void*);
 
 template <class _Rp1, class... _ArgTypes1, class _Alloc, class _Rp, class... _ArgTypes>
 class __func<_Rp1 (^)(_ArgTypes1...), _Alloc, _Rp(_ArgTypes...)> : public __base<_Rp(_ArgTypes...)> {
@@ -821,6 +827,7 @@ public:
   }
 #    endif // _LIBCPP_HAS_RTTI
 };
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 
 #  endif // _LIBCPP_HAS_EXTENSION_BLOCKS
 

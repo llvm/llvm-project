@@ -126,7 +126,7 @@ end
   and `DO CONCURRENT`.
 * A non-definable actual argument, including the case of a vector
   subscript, may be associated with an `ASYNCHRONOUS` or `VOLATILE`
-  dummy argument, F'2023 15.5.2.5 p31 notwithstanding.
+  dummy argument, F'2023 15.5.2.5 p21 notwithstanding.
   The effects of these attributes are scoped over the lifetime of
   the procedure reference, and they can by added by internal subprograms
   and `BLOCK` constructs within the procedure.
@@ -159,6 +159,11 @@ end
   to be constant will generate a compilation error. `ieee_support_standard`
   depends in part on `ieee_support_halting`, so this also applies to
   `ieee_support_standard` calls.
+* F'2023 constraint C7108 prohibits the use of a structure constructor
+  that could also be interpreted as a generic function reference.
+  No other Fortran compiler enforces C7108 (to our knowledge);
+  they all resolve the ambiguity by interpreting the call as a function
+  reference.  We do the same, with a portability warning.
 
 ## Extensions, deletions, and legacy features supported by default
 

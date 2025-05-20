@@ -8,8 +8,8 @@ define [2 x i128] @foo(i64 %a, i32 %b) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [foo_param_1];
-; CHECK-NEXT:    ld.param.u64 %rd1, [foo_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [foo_param_1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [foo_param_0];
 ; CHECK-NEXT:    shr.s64 %rd2, %rd1, 63;
 ; CHECK-NEXT:    cvt.s64.s32 %rd3, %r1;
 ; CHECK-NEXT:    shr.s64 %rd4, %rd3, 63;
@@ -30,8 +30,8 @@ define [2 x i128] @foo2(ptr byval([2 x i128]) %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<7>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.u64 {%rd3, %rd4}, [foo2_param_0];
-; CHECK-NEXT:    ld.param.v2.u64 {%rd5, %rd6}, [foo2_param_0+16];
+; CHECK-NEXT:    ld.param.v2.b64 {%rd3, %rd4}, [foo2_param_0];
+; CHECK-NEXT:    ld.param.v2.b64 {%rd5, %rd6}, [foo2_param_0+16];
 ; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    st.param.v2.b64 [func_retval0+16], {%rd5, %rd6};
 ; CHECK-NEXT:    ret;
@@ -51,8 +51,8 @@ define [2 x i128] @foo3([2 x i128] %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.u64 {%rd3, %rd4}, [foo3_param_0+16];
-; CHECK-NEXT:    ld.param.v2.u64 {%rd1, %rd2}, [foo3_param_0];
+; CHECK-NEXT:    ld.param.v2.b64 {%rd3, %rd4}, [foo3_param_0+16];
+; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [foo3_param_0];
 ; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd1, %rd2};
 ; CHECK-NEXT:    st.param.v2.b64 [func_retval0+16], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;

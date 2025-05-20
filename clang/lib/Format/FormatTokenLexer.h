@@ -134,6 +134,7 @@ private:
       VariableTemplates;
 
   bool FormattingDisabled;
+  llvm::Regex FormatOffRegex; // For one line.
 
   llvm::Regex MacroBlockBeginRegex;
   llvm::Regex MacroBlockEndRegex;

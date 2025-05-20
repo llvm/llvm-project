@@ -13,11 +13,16 @@
 // RUN: env CC_PRINT_HEADERS_FORMAT=json CC_PRINT_HEADERS_FILTERING=only-direct-system CC_PRINT_HEADERS_FILE=%t.txt %clang -fsyntax-only -I %S/Inputs/print-header-json -isystem %S/Inputs/print-header-json/system %s -o /dev/null
 // RUN: cat %t.txt | FileCheck %s --check-prefix=SUPPORTED
 
+// RUN: rm %t.txt
+// RUN: env CC_PRINT_HEADERS_FORMAT=json CC_PRINT_HEADERS_FILTERING=direct-per-file CC_PRINT_HEADERS_FILE=%t.txt %clang -fsyntax-only -I %S/Inputs/print-header-json -isystem %S/Inputs/print-header-json/system %s -o /dev/null
+// RUN: cat %t.txt | FileCheck %s --check-prefix=SUPPORTED_PERFILE
+
 #include "system0.h"
 #include "header0.h"
 #include "system2.h"
 
 // SUPPORTED: {"source":"{{[^,]*}}print-header-json.c","includes":["{{[^,]*}}system0.h","{{[^,]*}}system3.h","{{[^,]*}}system2.h"]}
+// SUPPORTED_PERFILE: [{"source":"{{[^,]*}}print-header-json.c","includes":["{{[^,]*}}system0.h","{{[^,]*}}header0.h","{{[^,]*}}system2.h"]},{"source":"{{[^,]*}}header0.h","includes":["{{[^,]*}}system3.h","{{[^,]*}}header1.h","{{[^,]*}}header2.h"]}]
 
 // UNSUPPORTED0: error: unsupported combination: -header-include-format=textual and -header-include-filtering=only-direct-system
 // UNSUPPORTED1: error: unsupported combination: -header-include-format=json and -header-include-filtering=none

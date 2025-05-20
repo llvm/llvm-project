@@ -213,9 +213,7 @@ def CallVirt : Opcode {
   let Args = [ArgFunction, ArgUint32];
 }
 
-def CallBI : Opcode {
-  let Args = [ArgFunction, ArgCallExpr, ArgUint32];
-}
+def CallBI : Opcode { let Args = [ArgCallExpr, ArgUint32]; }
 
 def CallPtr : Opcode {
   let Args = [ArgUint32, ArgCallExpr];
@@ -327,7 +325,7 @@ def GetMemberPtrBasePop : Opcode {
 def FinishInitPop : Opcode;
 def FinishInit    : Opcode;
 
-def GetPtrDerivedPop : Opcode { let Args = [ArgUint32, ArgBool]; }
+def GetPtrDerivedPop : Opcode { let Args = [ArgUint32, ArgBool, ArgTypePtr]; }
 
 // [Pointer] -> [Pointer]
 def GetPtrVirtBasePop : Opcode {
@@ -397,10 +395,8 @@ def GetLocal : AccessOpcode { let HasCustomEval = 1; }
 // [] -> [Pointer]
 def SetLocal : AccessOpcode { let HasCustomEval = 1; }
 
-def Kill : Opcode {
-  let Types = [];
-  let Args = [];
-}
+def Kill : Opcode;
+def StartLifetime : Opcode;
 
 def CheckDecl : Opcode {
   let Args = [ArgVarDecl];
@@ -415,6 +411,8 @@ def CheckEnumValue : Opcode {
 def CheckLiteralType : Opcode {
   let Args = [ArgTypePtr];
 }
+
+def CheckArraySize : Opcode { let Args = [ArgUint64]; }
 
 // [] -> [Value]
 def GetGlobal : AccessOpcode;
@@ -783,6 +781,7 @@ def SideEffect : Opcode {}
 def InvalidCast : Opcode {
   let Args = [ArgCastKind, ArgBool];
 }
+def CheckPseudoDtor : Opcode {}
 
 def InvalidDeclRef : Opcode {
   let Args = [ArgDeclRef, ArgBool];
