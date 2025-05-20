@@ -479,7 +479,8 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
   }
 
   auto addTargetOpDISP = [&](bool lineTableOnly,
-     const llvm::SmallVector<mlir::LLVM::DINodeAttr> &entities) {
+                             const llvm::SmallVector<mlir::LLVM::DINodeAttr>
+                                 &entities) {
     // When we process the DeclareOp inside the OpenMP target region, all the
     // variables get the DISubprogram of the parent function of the target op as
     // the scope. In the codegen (to llvm ir), OpenMP target op results in the
