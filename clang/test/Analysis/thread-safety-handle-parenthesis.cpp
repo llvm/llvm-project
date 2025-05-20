@@ -10,7 +10,7 @@ public:
     int protected_num_ __attribute__((guarded_by(lock_))) = 1;
 };
 
-void baz_paran_test() {
+void paren_test() {
     Baz baz;     
     int& n = baz.protected_num_;
     sink_protected(n); // expected-warning{{reading variable 'protected_num_' requires holding mutex 'baz.lock_'}}
