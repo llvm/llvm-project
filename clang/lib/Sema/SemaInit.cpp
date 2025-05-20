@@ -6515,9 +6515,10 @@ static const FieldDecl *getConstField(const RecordDecl *RD) {
   for (const FieldDecl *FD : RD->fields()) {
     // If the field is a flexible array member, we don't want to consider it
     // as a const field because there's no way to initialize the FAM anyway.
+    const ASTContext &Ctx = FD->getASTContext();
     if (Decl::isFlexibleArrayMemberLike(
-            FD->getASTContext(), FD, FD->getType(),
-            LangOptions::StrictFlexArraysLevelKind::ZeroOrIncomplete,
+            Ctx, FD, FD->getType(),
+            Ctx.getLangOpts().getStrictFlexArraysLevel(),
             /*IgnoreTemplateOrMacroSubstitution=*/true))
       continue;
 
