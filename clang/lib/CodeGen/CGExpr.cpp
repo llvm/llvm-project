@@ -4513,15 +4513,21 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
       // The array element is complete, even if the array is not.
       EltTBAAInfo = CGM.getTBAAAccessInfo(E->getType());
     } else {
-      // Extend struct path from base lvalue, similar to EmitLValueForField.
+      // The TBAA access info from the array (base) lvalue is ordinary. We will
+      // adapt it to create access info for the element.
       EltTBAAInfo = ArrayLV.getTBAAInfo();
-      // If no base type has been assigned for the array access, there is no
-      // point trying to generate one, since an array is not a valid base type.
-      //
-      // The index into the array is a runtime value. We use the same struct
-      // path for all array elements (that of the element at index 0). So we
-      // set the access type and size, but do not have to adjust
-      // EltTBAAInfo.Offset.
+
+      // We retain the TBAA struct path (BaseType and Offset members) from the
+      // array. In the TBAA representation, we map any array access to the
+      // element at index 0, as the index is generally a runtime value. This
+      // element has the same offset in the base type as the array itself.
+      // If the array lvalue had no base type, there is no point trying to
+      // generate one, since an array itself is not a valid base type.
+
+      // The access size must be updated to the size of an individual element.
+      // We also reset the access type using the original element type: in case
+      // of type decoration on the element type they may have been lost when
+      // the array type was canonicalized.
       EltTBAAInfo.AccessType = CGM.getTBAATypeInfo(E->getType());
       EltTBAAInfo.Size =
           getContext().getTypeSizeInChars(E->getType()).getQuantity();
