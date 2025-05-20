@@ -19,6 +19,7 @@ static_library("Sema") {
     "//clang/include/clang/Basic:arm_sme_streaming_attrs",
     "//clang/include/clang/Basic:arm_sve_sema_rangechecks",
     "//clang/include/clang/Basic:arm_sve_streaming_attrs",
+    "//clang/include/clang/Basic:riscv_andes_vector_builtin_sema",
     "//clang/include/clang/Basic:riscv_sifive_vector_builtin_sema",
     "//clang/include/clang/Basic:riscv_vector_builtin_sema",
     "//clang/include/clang/Sema:AttrParsedAttrImpl",
