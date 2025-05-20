@@ -1,4 +1,4 @@
-// RUN: fir-opt --function-attr %s | FileCheck %s
+// RUN: fir-opt --function-attr="set-nocapture=true" %s | FileCheck %s
 
 // If a function has a body and is not bind(c), and if the dummy argument doesn't have the target,
 // asynchronous, volatile, or pointer attribute, then add llvm.nocapture to the dummy argument.

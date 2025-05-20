@@ -350,11 +350,15 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
   else
     framePointerKind = mlir::LLVM::framePointerKind::FramePointerKind::None;
 
+  bool setNoCapture = false, setNoAlias = false;
+  if (config.OptLevel.isOptimizingForSpeed())
+    setNoCapture = setNoAlias = true;
+
   pm.addPass(fir::createFunctionAttr(
       {framePointerKind, config.InstrumentFunctionEntry,
        config.InstrumentFunctionExit, config.NoInfsFPMath, config.NoNaNsFPMath,
        config.ApproxFuncFPMath, config.NoSignedZerosFPMath, config.UnsafeFPMath,
-       ""}));
+       /*tuneCPU=*/"", setNoCapture, setNoAlias}));
 
   if (config.EnableOpenMP) {
     pm.addNestedPass<mlir::func::FuncOp>(
