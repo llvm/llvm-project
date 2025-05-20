@@ -1981,7 +1981,7 @@ public:
   detail::RecordKeeperImpl &getImpl() { return *Impl; }
 
   /// Get the main TableGen input file's name.
-  const std::string getInputFilename() const { return InputFilename; }
+  StringRef getInputFilename() const { return InputFilename; }
 
   /// Get the map of classes.
   const RecordMap &getClasses() const { return Classes; }
