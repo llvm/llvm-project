@@ -233,6 +233,8 @@ let RecomputePerFunction = 1 in {
                             "shouldOptForSize(MF)">;
   def NoSSE41_Or_OptForSize : Predicate<"shouldOptForSize(MF) || "
                                         "!Subtarget->hasSSE41()">;
+  def ImportCallOptimizationEnabled : Predicate<"MF->getFunction().getParent()->getModuleFlag(\"import-call-optimization\")">;
+  def ImportCallOptimizationDisabled : Predicate<"!MF->getFunction().getParent()->getModuleFlag(\"import-call-optimization\")">;
 }
 
 def CallImmAddr  : Predicate<"Subtarget->isLegalToCallImmediateAddr()">;
