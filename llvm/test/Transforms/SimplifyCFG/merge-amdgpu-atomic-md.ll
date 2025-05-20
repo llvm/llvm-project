@@ -5,8 +5,8 @@
 
 ; RUN: opt < %s -passes=simplifycfg -sink-common-insts -S | FileCheck %s
 
-define amdgpu_kernel void @f(i1 %pred0, i1 %pred1, ptr captures(none) %p, double %d) local_unnamed_addr {
-; CHECK-LABEL: define amdgpu_kernel void @f(
+define amdgpu_kernel void @both(i1 %pred0, i1 %pred1, ptr captures(none) %p, double %d) local_unnamed_addr {
+; CHECK-LABEL: define amdgpu_kernel void @both(
 ; CHECK-SAME: i1 [[PRED0:%.*]], i1 [[PRED1:%.*]], ptr captures(none) [[P:%.*]], double [[D:%.*]]) local_unnamed_addr {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[P_GLOBAL:%.*]] = addrspacecast ptr [[P]] to ptr addrspace(1)
@@ -37,4 +37,71 @@ if.end:
   ret void
 }
 
+define amdgpu_kernel void @from(i1 %pred0, i1 %pred1, ptr captures(none) %p, double %d) local_unnamed_addr {
+; CHECK-LABEL: define amdgpu_kernel void @from(
+; CHECK-SAME: i1 [[PRED0:%.*]], i1 [[PRED1:%.*]], ptr captures(none) [[P:%.*]], double [[D:%.*]]) local_unnamed_addr {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[P_GLOBAL:%.*]] = addrspacecast ptr [[P]] to ptr addrspace(1)
+; CHECK-NEXT:    [[BRMERGE:%.*]] = select i1 [[PRED0]], i1 true, i1 [[PRED1]]
+; CHECK-NEXT:    br i1 [[BRMERGE]], label %[[IF_END_SINK_SPLIT:.*]], label %[[IF_END:.*]]
+; CHECK:       [[IF_END_SINK_SPLIT]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = atomicrmw fadd ptr addrspace(1) [[P_GLOBAL]], double [[D]] monotonic, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; CHECK-NEXT:    br label %[[IF_END]]
+; CHECK:       [[IF_END]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %p.global = addrspacecast ptr %p to ptr addrspace(1)
+  br i1 %pred0, label %for.body, label %for.body1
+
+for.body:
+  %0 = atomicrmw fadd ptr addrspace(1) %p.global, double %d monotonic, align 8, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
+  br label %if.end
+
+for.body1:
+  br i1 %pred1, label %if.then, label %if.end
+
+if.then:
+  %1 = atomicrmw fadd ptr addrspace(1) %p.global, double %d monotonic, align 8
+  br label %if.end
+
+if.end:
+  ret void
+}
+
+define amdgpu_kernel void @to(i1 %pred0, i1 %pred1, ptr captures(none) %p, double %d) local_unnamed_addr {
+; CHECK-LABEL: define amdgpu_kernel void @to(
+; CHECK-SAME: i1 [[PRED0:%.*]], i1 [[PRED1:%.*]], ptr captures(none) [[P:%.*]], double [[D:%.*]]) local_unnamed_addr {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[P_GLOBAL:%.*]] = addrspacecast ptr [[P]] to ptr addrspace(1)
+; CHECK-NEXT:    [[BRMERGE:%.*]] = select i1 [[PRED0]], i1 true, i1 [[PRED1]]
+; CHECK-NEXT:    br i1 [[BRMERGE]], label %[[IF_END_SINK_SPLIT:.*]], label %[[IF_END:.*]]
+; CHECK:       [[IF_END_SINK_SPLIT]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = atomicrmw fadd ptr addrspace(1) [[P_GLOBAL]], double [[D]] monotonic, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; CHECK-NEXT:    br label %[[IF_END]]
+; CHECK:       [[IF_END]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %p.global = addrspacecast ptr %p to ptr addrspace(1)
+  br i1 %pred0, label %for.body, label %for.body1
+
+for.body:
+  %0 = atomicrmw fadd ptr addrspace(1) %p.global, double %d monotonic, align 8
+  br label %if.end
+
+for.body1:
+  br i1 %pred1, label %if.then, label %if.end
+
+if.then:
+  %1 = atomicrmw fadd ptr addrspace(1) %p.global, double %d monotonic, align 8, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
+  br label %if.end
+
+if.end:
+  ret void
+}
+
 !0 = !{}
+;.
+; CHECK: [[META0]] = !{}
+;.

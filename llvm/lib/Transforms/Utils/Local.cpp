@@ -3304,11 +3304,11 @@ static void combineMetadata(Instruction *K, const Instruction *J,
   SmallVector<std::pair<unsigned, MDNode *>, 4> Metadata;
   K->getAllMetadataOtherThanDebugLoc(Metadata);
 
-  const unsigned AMDGPUMD[] = {
-      K->getContext().getMDKindID("amdgpu.no.fine.grained.memory"),
-      K->getContext().getMDKindID("amdgpu.no.remote.memory"),
-      K->getContext().getMDKindID("amdgpu.ignore.denormal.mode")};
-
+  const auto IsAMDGPUMD = [=](unsigned Kind) {
+    return Kind == K->getContext().getMDKindID("amdgpu.no.fine.grained.memory")
+        || Kind == K->getContext().getMDKindID("amdgpu.no.remote.memory")
+        || Kind == K->getContext().getMDKindID("amdgpu.ignore.denormal.mode");
+  };
   for (const auto &MD : Metadata) {
     unsigned Kind = MD.first;
     MDNode *JMD = J->getMetadata(Kind);
@@ -3317,7 +3317,7 @@ static void combineMetadata(Instruction *K, const Instruction *J,
     // TODO: Assert that this switch is exhaustive for fixed MD kinds.
     switch (Kind) {
       default:
-        if (K->isAtomic() && (find(AMDGPUMD, Kind) != std::cend(AMDGPUMD)))
+        if (K->isAtomic() && IsAMDGPUMD(Kind))
           break; // Preserve AMDGPU atomic metadata.
         else
           K->setMetadata(Kind, nullptr); // Remove unknown metadata
@@ -3454,6 +3454,17 @@ static void combineMetadata(Instruction *K, const Instruction *J,
   if (!AAOnly && (JProf || KProf)) {
     K->setMetadata(LLVMContext::MD_prof,
                    MDNode::getMergedProfMetadata(KProf, JProf, K, J));
+  }
+
+  // Preserve AMDGPU atomic metadata from J, if present. K might already be
+  // carrying this but overwriting should cause no issue.
+  if (K->isAtomic()) {
+    if (auto *JMD = J->getMetadata("amdgpu.no.fine.grained.memory"))
+      K->setMetadata("amdgpu.no.fine.grained.memory", JMD);
+    if (auto *JMD = J->getMetadata("amdgpu.no.remote.memory"))
+      K->setMetadata("amdgpu.no.remote.memory", JMD);
+    if (auto *JMD = J->getMetadata("amdgpu.ignore.denormal.mode"))
+      K->setMetadata("amdgpu.ignore.denormal.mode", JMD);
   }
 }
 
