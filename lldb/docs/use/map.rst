@@ -1351,7 +1351,7 @@ Dump all symbols in ``a.out`` and ``liba.so``
   (lldb) image dump symtab a.out liba.so
 
 Save current process as a core file
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: shell
 
