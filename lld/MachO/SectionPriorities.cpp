@@ -245,12 +245,18 @@ DenseMap<const InputSection *, int> CallGraphSort::run() {
   return orderMap;
 }
 
+StringRef macho::PriorityBuilder::getRootSymbol(StringRef Name) {
+  auto [P0, S0] = Name.rsplit(".llvm.");
+  auto [P1, S1] = P0.rsplit(".__uniq.");
+  return P1;
+}
+
 std::optional<int>
 macho::PriorityBuilder::getSymbolPriority(const Defined *sym) {
   if (sym->isAbsolute())
     return std::nullopt;
 
-  auto it = priorities.find(sym->getName());
+  auto it = priorities.find(getRootSymbol(sym->getName()));
   if (it == priorities.end())
     return std::nullopt;
   const SymbolPriorityEntry &entry = it->second;
@@ -330,7 +336,7 @@ void macho::PriorityBuilder::parseOrderFile(StringRef path) {
         break;
       }
     }
-    symbol = line.trim();
+    symbol = getRootSymbol(line.trim());
 
     if (!symbol.empty()) {
       SymbolPriorityEntry &entry = priorities[symbol];

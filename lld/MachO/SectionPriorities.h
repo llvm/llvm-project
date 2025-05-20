@@ -69,6 +69,11 @@ private:
   std::optional<int> getSymbolPriority(const Defined *sym);
   llvm::DenseMap<llvm::StringRef, SymbolPriorityEntry> priorities;
   llvm::MapVector<SectionPair, uint64_t> callGraphProfile;
+  /// Symbols can be appended with "(.__uniq.xxxx)?.llvm.yyyy" where "xxxx" and
+  /// "yyyy" are numbers that could change between builds. We need to use the
+  /// root symbol name before this suffix so these symbols can be matched with
+  /// profiles which may have different suffixes.
+  llvm::StringRef getRootSymbol(llvm::StringRef Name);
 };
 
 extern PriorityBuilder priorityBuilder;
