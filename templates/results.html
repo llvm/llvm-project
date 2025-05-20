@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Check Results</title>
+</head>
+<body>
+    <h2>✅ Results for PR #{{ pr_number }}</h2>
+    {% for script, output in results.items() %}
+        <hr>
+        <h3>{{ script }}</h3>
+        <pre>{{ output }}</pre>
+    {% endfor %}
+    <a href="/">🔙 Run another PR</a>
+</body>
+</html>
