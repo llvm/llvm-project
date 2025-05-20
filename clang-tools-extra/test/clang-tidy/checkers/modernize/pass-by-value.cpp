@@ -32,7 +32,6 @@ struct A {
 Movable GlobalObj;
 struct B {
   B(const Movable &M) : M(GlobalObj) {}
-  // CHECK-MESSAGES-NOT: :[[@LINE-1]]:5: warning: pass by value and use std::move
   Movable M;
 };
 
@@ -40,11 +39,9 @@ struct B {
 struct C {
   // Tests extra-reference in body.
   C(const Movable &M) : M(M) { this->i = M.a; }
-  // CHECK-MESSAGES-NOT: :[[@LINE-1]]:5: warning: pass by value and use std::move
 
   // Tests extra-reference in init-list.
   C(const Movable &M, int) : M(M), i(M.a) {}
-  // CHECK-MESSAGES-NOT: :[[@LINE-1]]:5: warning: pass by value and use std::move
   Movable M;
   int i;
 };
@@ -70,7 +67,6 @@ struct E {
 // Test with object that can't be moved.
 struct F {
   F(const NotMovable &NM) : NM(NM) {}
-  // CHECK-MESSAGES-NOT: :[[@LINE-1]]:5: warning: pass by value and use std::move
   NotMovable NM;
 };
 
@@ -112,8 +108,6 @@ struct I {
 // Test that templates aren't modified.
 template <typename T> struct J {
   J(const T &M) : M(M) {}
-  // CHECK-MESSAGES-NOT: :[[@LINE-1]]:5: warning: pass by value and use std::move
-  // CHECK-FIXES-NOT: J(T M) : M(std::move(M)) {}
   T M;
 };
 J<Movable> j1(Movable());
@@ -130,14 +124,11 @@ struct MovableTemplateT
 template <class T>
 struct J2 {
   J2(const MovableTemplateT<T>& A);
-  // CHECK-FIXES-NOT: J2(MovableTemplateT<T> A);
   MovableTemplateT<T> M;
 };
 
 template <class T>
 J2<T>::J2(const MovableTemplateT<T>& A) : M(A) {}
-// CHECK-MESSAGES-NOT: :[[@LINE-1]]:11: warning: pass by value and use std::move
-// CHECK-FIXES-NOT: J2<T>::J2(MovableTemplateT<T> A) : M(std::move(A)) {}
 J2<int> j3(MovableTemplateT<int>{});
 
 struct K_Movable {
@@ -184,7 +175,6 @@ struct O {
 // Test with a const-value parameter.
 struct P {
   P(const Movable M) : M(M) {}
-  // CHECK-MESSAGES-NOT: :[[@LINE-1]]:5: warning: pass by value and use std::move
   Movable M;
 };
 
@@ -217,7 +207,6 @@ struct R {
 // Test with rvalue parameter.
 struct S {
   S(Movable &&M) : M(M) {}
-  // CHECK-MESSAGES-NOT: :[[@LINE-1]]:5: warning: pass by value and use std::move
   Movable M;
 };
 
@@ -227,13 +216,11 @@ template <typename T, int N> struct array { T A[N]; };
 // cause problems with performance-move-const-arg, as it will revert it.
 struct T {
   T(array<int, 10> a) : a_(a) {}
-  // CHECK-MESSAGES-NOT: :[[@LINE-1]]:5: warning: pass by value and use std::move
   array<int, 10> a_;
 };
 
 struct U {
   U(const POD &M) : M(M) {}
-  // CHECK-MESSAGES-NOT: :[[@LINE-1]]:5: warning: pass by value and use std::move
   POD M;
 };
 
