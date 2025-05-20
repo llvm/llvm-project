@@ -1809,13 +1809,13 @@ SDValue VectorLegalizer::ExpandLOOP_DEPENDENCE_MASK(SDNode *N) {
   SDValue SinkValue = N->getOperand(1);
   SDValue EltSize = N->getOperand(2);
 
-  bool IsWriteAfterRead =
-      N->getOpcode() == ISD::EXPERIMENTAL_LOOP_DEPENDENCE_WAR_MASK;
+  bool IsReadAfterWrite =
+      N->getOpcode() == ISD::EXPERIMENTAL_LOOP_DEPENDENCE_RAW_MASK;
   auto VT = N->getValueType(0);
   auto PtrVT = SourceValue->getValueType(0);
 
   SDValue Diff = DAG.getNode(ISD::SUB, DL, PtrVT, SinkValue, SourceValue);
-  if (!IsWriteAfterRead)
+  if (IsReadAfterWrite)
     Diff = DAG.getNode(ISD::ABS, DL, PtrVT, Diff);
 
   Diff = DAG.getNode(ISD::SDIV, DL, PtrVT, Diff, EltSize);
@@ -1825,7 +1825,7 @@ SDValue VectorLegalizer::ExpandLOOP_DEPENDENCE_MASK(SDNode *N) {
                                       Diff.getValueType());
   SDValue Zero = DAG.getTargetConstant(0, DL, PtrVT);
   SDValue Cmp = DAG.getSetCC(DL, CmpVT, Diff, Zero,
-                             IsWriteAfterRead ? ISD::SETLE : ISD::SETEQ);
+                             IsReadAfterWrite ? ISD::SETEQ : ISD::SETLE);
 
   // Create the lane mask
   EVT SplatTY =
@@ -1836,7 +1836,7 @@ SDValue VectorLegalizer::ExpandLOOP_DEPENDENCE_MASK(SDNode *N) {
       DAG.getSetCC(DL, VT, VectorStep, DiffSplat, ISD::CondCode::SETULT);
 
   // Splat the compare result then OR it with the lane mask
-  auto VTElementTy = VT.getVectorElementType();
+  EVT VTElementTy = VT.getVectorElementType();
   if (CmpVT.getScalarSizeInBits() < VTElementTy.getScalarSizeInBits())
     Cmp = DAG.getNode(ISD::ZERO_EXTEND, DL, VTElementTy, Cmp);
   SDValue Splat = DAG.getSplat(VT, DL, Cmp);
