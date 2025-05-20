@@ -1672,9 +1672,9 @@ uint32_t SBTarget::GetMinimumOpcodeByteSize() const {
   LLDB_INSTRUMENT_VA(this);
 
   TargetSP target_sp(GetSP());
-  if (target_sp) {
+  if (target_sp)
     return target_sp->GetArchitecture().GetMinimumOpcodeByteSize();
-  }
+
   return 0;
 }
 
@@ -1682,9 +1682,9 @@ uint32_t SBTarget::GetMaximumOpcodeByteSize() const {
   LLDB_INSTRUMENT_VA(this);
 
   TargetSP target_sp(GetSP());
-  if (target_sp) {
+  if (target_sp)
     return target_sp->GetArchitecture().GetMaximumOpcodeByteSize();
-  }
+
   return 0;
 }
 

@@ -46,10 +46,18 @@ class TestDAP_disassemble(lldbdap_testcase.DAPTestCaseBase):
         instruction_pointer_reference = self.get_stackFrames()[1][
             "instructionPointerReference"
         ]
-        backwards_instructions = 50
+        backwards_instructions = 200
+        instructions_count = 400
         instructions = self.dap_server.request_disassemble(
             memoryReference=instruction_pointer_reference,
             instructionOffset=-backwards_instructions,
+            instructionCount=instructions_count,
+        )
+
+        self.assertEqual(
+            len(instructions),
+            instructions_count,
+            "Disassemble request should return the exact requested number of instructions.",
         )
 
         frame_instruction_index = next(
