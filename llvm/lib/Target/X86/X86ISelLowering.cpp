@@ -57886,6 +57886,7 @@ static SDValue pushAddIntoCmovOfConsts(SDNode *N, const SDLoc &DL,
 static SDValue combineAdd(SDNode *N, SelectionDAG &DAG,
                           TargetLowering::DAGCombinerInfo &DCI,
                           const X86Subtarget &Subtarget) {
+  using namespace SDPatternMatch;
   EVT VT = N->getValueType(0);
   SDValue Op0 = N->getOperand(0);
   SDValue Op1 = N->getOperand(1);
@@ -57925,26 +57926,20 @@ static SDValue combineAdd(SDNode *N, SelectionDAG &DAG,
   // generic DAG combine without a legal type check, but adding this there
   // caused regressions.
   if (VT.isVector()) {
-    const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-    if (Op0.getOpcode() == ISD::ZERO_EXTEND &&
-        Op0.getOperand(0).getValueType().getVectorElementType() == MVT::i1 &&
-        TLI.isTypeLegal(Op0.getOperand(0).getValueType())) {
-      SDValue SExt = DAG.getNode(ISD::SIGN_EXTEND, DL, VT, Op0.getOperand(0));
-      return DAG.getNode(ISD::SUB, DL, VT, Op1, SExt);
-    }
-
-    if (Op1.getOpcode() == ISD::ZERO_EXTEND &&
-        Op1.getOperand(0).getValueType().getVectorElementType() == MVT::i1 &&
-        TLI.isTypeLegal(Op1.getOperand(0).getValueType())) {
-      SDValue SExt = DAG.getNode(ISD::SIGN_EXTEND, DL, VT, Op1.getOperand(0));
-      return DAG.getNode(ISD::SUB, DL, VT, Op0, SExt);
+    SDValue X, Y;
+    EVT BoolVT = EVT::getVectorVT(*DAG.getContext(), MVT::i1,
+                                  VT.getVectorElementCount());
+    if (DAG.getTargetLoweringInfo().isTypeLegal(BoolVT) &&
+        sd_match(N, m_Add(m_ZExt(m_AllOf(m_SpecificVT(BoolVT), m_Value(X))),
+                          m_Value(Y)))) {
+      SDValue SExt = DAG.getNode(ISD::SIGN_EXTEND, DL, VT, X);
+      return DAG.getNode(ISD::SUB, DL, VT, Y, SExt);
     }
   }
 
   // Peephole for 512-bit VPDPBSSD on non-VLX targets.
   // TODO: Should this be part of matchPMADDWD/matchPMADDWD_2?
   if (Subtarget.hasVNNI() && Subtarget.useAVX512Regs() && VT == MVT::v16i32) {
-    using namespace SDPatternMatch;
     SDValue Accum, Lo0, Lo1, Hi0, Hi1;
     if (sd_match(N, m_Add(m_Value(Accum),
                           m_Node(ISD::CONCAT_VECTORS,
