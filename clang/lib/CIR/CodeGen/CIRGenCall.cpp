@@ -24,8 +24,9 @@ CIRGenFunctionInfo *
 CIRGenFunctionInfo::create(CanQualType resultType,
                            llvm::ArrayRef<CanQualType> argTypes,
                            RequiredArgs required) {
-  // The first slot allocated for ArgInfo is for the return value.
-  void *buffer = operator new(totalSizeToAlloc<ArgInfo>(argTypes.size() + 1));
+  // The first slot allocated for arg type slot is for the return value.
+  void *buffer = operator new(
+      totalSizeToAlloc<CanQualType>(argTypes.size() + 1));
 
   assert(!cir::MissingFeatures::opCallCIRGenFuncInfoParamInfo());
 
@@ -34,10 +35,8 @@ CIRGenFunctionInfo::create(CanQualType resultType,
   fi->required = required;
   fi->numArgs = argTypes.size();
 
-  ArgInfo *argsBuffer = fi->getArgsBuffer();
-  (argsBuffer++)->type = resultType;
-  for (CanQualType ty : argTypes)
-    (argsBuffer++)->type = ty;
+  fi->getArgTypes()[0] = resultType;
+  std::copy(argTypes.begin(), argTypes.end(), fi->argTypesBegin());
   assert(!cir::MissingFeatures::opCallCIRGenFuncInfoExtParamInfo());
 
   return fi;
@@ -48,8 +47,8 @@ cir::FuncType CIRGenTypes::getFunctionType(const CIRGenFunctionInfo &fi) {
   SmallVector<mlir::Type, 8> argTypes;
   argTypes.reserve(fi.getNumRequiredArgs());
 
-  for (const CIRGenFunctionInfoArgInfo &argInfo : fi.requiredArguments())
-    argTypes.push_back(convertType(argInfo.type));
+  for (const CanQualType &argType : fi.requiredArguments())
+    argTypes.push_back(convertType(argType));
 
   return cir::FuncType::get(argTypes,
                             (resultType ? resultType : builder.getVoidTy()),
@@ -289,13 +288,13 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
   assert(!cir::MissingFeatures::emitLifetimeMarkers());
 
   // Translate all of the arguments as necessary to match the CIR lowering.
-  for (auto [argNo, arg, argInfo] :
-       llvm::enumerate(args, funcInfo.argInfos())) {
+  for (auto [argNo, arg, canQualArgType] :
+       llvm::enumerate(args, funcInfo.argTypes())) {
 
     // Insert a padding argument to ensure proper alignment.
     assert(!cir::MissingFeatures::opCallPaddingArgs());
 
-    mlir::Type argType = convertType(argInfo.type);
+    mlir::Type argType = convertType(canQualArgType);
     if (!mlir::isa<cir::RecordType>(argType)) {
       mlir::Value v;
       if (arg.isAggregate())

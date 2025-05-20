@@ -22,10 +22,6 @@
 
 namespace clang::CIRGen {
 
-struct CIRGenFunctionInfoArgInfo {
-  CanQualType type;
-};
-
 /// A class for recording the number of arguments that a function signature
 /// requires.
 class RequiredArgs {
@@ -71,18 +67,19 @@ public:
   }
 };
 
+// The TrailingObjects for this class contain the function return type in the
+// first CanQualType slot, followed by the argument types.
 class CIRGenFunctionInfo final
     : public llvm::FoldingSetNode,
-      private llvm::TrailingObjects<CIRGenFunctionInfo,
-                                    CIRGenFunctionInfoArgInfo> {
-  using ArgInfo = CIRGenFunctionInfoArgInfo;
-
+      private llvm::TrailingObjects<CIRGenFunctionInfo, CanQualType> {
   RequiredArgs required;
 
   unsigned numArgs;
 
-  ArgInfo *getArgsBuffer() { return getTrailingObjects<ArgInfo>(); }
-  const ArgInfo *getArgsBuffer() const { return getTrailingObjects<ArgInfo>(); }
+  CanQualType *getArgTypes() { return getTrailingObjects<CanQualType>(); }
+  const CanQualType *getArgTypes() const {
+    return getTrailingObjects<CanQualType>();
+  }
 
   CIRGenFunctionInfo() : required(RequiredArgs::All) {}
 
@@ -97,8 +94,8 @@ public:
   // these have to be public.
   friend class TrailingObjects;
 
-  using const_arg_iterator = const ArgInfo *;
-  using arg_iterator = ArgInfo *;
+  using const_arg_iterator = const CanQualType *;
+  using arg_iterator = CanQualType *;
 
   // This function has to be CamelCase because llvm::FoldingSet requires so.
   // NOLINTNEXTLINE(readability-identifier-naming)
@@ -113,49 +110,41 @@ public:
 
   // NOLINTNEXTLINE(readability-identifier-naming)
   void Profile(llvm::FoldingSetNodeID &id) {
-    // It's unfortunate that we are looping over the arguments twice (here and
-    // in the static Profile function we call from here), but if the Profile
-    // functions get out of sync, we can end up with incorrect function
-    // signatures, and we don't have the argument types in the format that the
-    // static Profile function requires.
-    llvm::SmallVector<CanQualType, 16> argTypes;
-    for (const ArgInfo &argInfo : arguments())
-      argTypes.push_back(argInfo.type);
-
-    Profile(id, required, getReturnType(), argTypes);
+    // If the Profile functions get out of sync, we can end up with incorrect
+    // function signatures, so we call the static Profile function here rather
+    // than duplicating the logic.
+    Profile(id, required, getReturnType(), arguments());
   }
 
-  llvm::ArrayRef<ArgInfo> arguments() const {
-    return llvm::ArrayRef<ArgInfo>(argInfoBegin(), numArgs);
+  llvm::ArrayRef<CanQualType> arguments() const {
+    return llvm::ArrayRef<CanQualType>(argTypesBegin(), numArgs);
   }
 
-  llvm::ArrayRef<ArgInfo> requiredArguments() const {
-    return llvm::ArrayRef<ArgInfo>(argInfoBegin(), getNumRequiredArgs());
+  llvm::ArrayRef<CanQualType> requiredArguments() const {
+    return llvm::ArrayRef<CanQualType>(argTypesBegin(), getNumRequiredArgs());
   }
 
-  CanQualType getReturnType() const { return getArgsBuffer()[0].type; }
+  CanQualType getReturnType() const { return getArgTypes()[0]; }
 
-  const_arg_iterator argInfoBegin() const { return getArgsBuffer() + 1; }
-  const_arg_iterator argInfoEnd() const {
-    return getArgsBuffer() + 1 + numArgs;
+  const_arg_iterator argTypesBegin() const { return getArgTypes() + 1; }
+  const_arg_iterator argTypesEnd() const { return getArgTypes() + 1 + numArgs; }
+  arg_iterator argTypesBegin() { return getArgTypes() + 1; }
+  arg_iterator argTypesEnd() { return getArgTypes() + 1 + numArgs; }
+
+  unsigned argTypeSize() const { return numArgs; }
+
+  llvm::MutableArrayRef<CanQualType> argTypes() {
+    return llvm::MutableArrayRef<CanQualType>(argTypesBegin(), numArgs);
   }
-  arg_iterator argInfoBegin() { return getArgsBuffer() + 1; }
-  arg_iterator argInfoEnd() { return getArgsBuffer() + 1 + numArgs; }
-
-  unsigned argInfoSize() const { return numArgs; }
-
-  llvm::MutableArrayRef<ArgInfo> argInfos() {
-    return llvm::MutableArrayRef<ArgInfo>(argInfoBegin(), numArgs);
-  }
-  llvm::ArrayRef<ArgInfo> argInfos() const {
-    return llvm::ArrayRef<ArgInfo>(argInfoBegin(), numArgs);
+  llvm::ArrayRef<CanQualType> argTypes() const {
+    return llvm::ArrayRef<CanQualType>(argTypesBegin(), numArgs);
   }
 
   bool isVariadic() const { return required.allowsOptionalArgs(); }
   RequiredArgs getRequiredArgs() const { return required; }
   unsigned getNumRequiredArgs() const {
     return isVariadic() ? getRequiredArgs().getNumRequiredArgs()
-                        : argInfoSize();
+                        : argTypeSize();
   }
 };
 
