@@ -1,4 +1,4 @@
-// RUN: mlir-opt --mlir-disable-threading %s -canonicalize="test-convergence" -split-input-file -allow-unregistered-dialect | FileCheck %s
+// RUN: mlir-opt %s -canonicalize="test-convergence" -split-input-file -allow-unregistered-dialect | FileCheck %s
 
 // This file contains some tests of folding/canonicalizing vector.from_elements
 
@@ -7,7 +7,7 @@
 ///===----------------------------------------------===//
 
 // CHECK-LABEL: func @extract_scalar_from_from_elements(
-//  CHECK-SAME:     %[[A:.*]]: f32, %[[B:.*]]: f32)
+//  CHECK-SAME:      %[[A:.*]]: f32, %[[B:.*]]: f32)
 func.func @extract_scalar_from_from_elements(%a: f32, %b: f32) -> (f32, f32, f32, f32, f32, f32, f32) {
   // Extract from 0D.
   %0 = vector.from_elements %a : vector<f32>
@@ -33,7 +33,7 @@ func.func @extract_scalar_from_from_elements(%a: f32, %b: f32) -> (f32, f32, f32
 // -----
 
 // CHECK-LABEL: func @extract_1d_from_from_elements(
-//  CHECK-SAME:     %[[A:.*]]: f32, %[[B:.*]]: f32)
+//  CHECK-SAME:      %[[A:.*]]: f32, %[[B:.*]]: f32)
 func.func @extract_1d_from_from_elements(%a: f32, %b: f32) -> (vector<3xf32>, vector<3xf32>) {
   %0 = vector.from_elements %a, %a, %a, %b, %b, %b : vector<2x3xf32>
   // CHECK: %[[SPLAT1:.*]] = vector.splat %[[A]] : vector<3xf32>
@@ -47,7 +47,7 @@ func.func @extract_1d_from_from_elements(%a: f32, %b: f32) -> (vector<3xf32>, ve
 // -----
 
 // CHECK-LABEL: func @extract_2d_from_from_elements(
-//  CHECK-SAME:     %[[A:.*]]: f32, %[[B:.*]]: f32)
+//  CHECK-SAME:      %[[A:.*]]: f32, %[[B:.*]]: f32)
 func.func @extract_2d_from_from_elements(%a: f32, %b: f32) -> (vector<2x2xf32>, vector<2x2xf32>) {
   %0 = vector.from_elements %a, %a, %a, %b, %b, %b, %b, %a, %b, %a, %a, %b : vector<3x2x2xf32>
   // CHECK: %[[SPLAT1:.*]] = vector.from_elements %[[A]], %[[A]], %[[A]], %[[B]] : vector<2x2xf32>
@@ -61,7 +61,7 @@ func.func @extract_2d_from_from_elements(%a: f32, %b: f32) -> (vector<2x2xf32>, 
 // -----
 
 // CHECK-LABEL: func @from_elements_to_splat(
-//  CHECK-SAME:     %[[A:.*]]: f32, %[[B:.*]]: f32)
+//  CHECK-SAME:      %[[A:.*]]: f32, %[[B:.*]]: f32)
 func.func @from_elements_to_splat(%a: f32, %b: f32) -> (vector<2x3xf32>, vector<2x3xf32>, vector<f32>) {
   // CHECK: %[[SPLAT:.*]] = vector.splat %[[A]] : vector<2x3xf32>
   %0 = vector.from_elements %a, %a, %a, %a, %a, %a : vector<2x3xf32>
@@ -81,8 +81,8 @@ func.func @from_elements_to_splat(%a: f32, %b: f32) -> (vector<2x3xf32>, vector<
 
 // CHECK-LABEL: func @to_shape_cast_rank2_to_rank1(
 //  CHECK-SAME:       %[[A:.*]]: vector<1x2xi8>)
-//       CHECK:       %[[SHAPE_CAST:.*]] = vector.shape_cast %[[A]] : vector<1x2xi8> to vector<2xi8>
-//       CHECK:       return %[[SHAPE_CAST]] : vector<2xi8>
+//       CHECK:       %[[EXTRACT:.*]] = vector.extract %[[A]][0] : vector<2xi8> from vector<1x2xi8>
+//       CHECK:       return %[[EXTRACT]] : vector<2xi8>
 func.func @to_shape_cast_rank2_to_rank1(%arg0: vector<1x2xi8>) -> vector<2xi8> {
   %0 = vector.extract %arg0[0, 0] : i8 from vector<1x2xi8>
   %1 = vector.extract %arg0[0, 1] : i8 from vector<1x2xi8>
@@ -109,20 +109,13 @@ func.func @to_shape_cast_rank1_to_rank3(%arg0: vector<8xi8>) -> vector<2x2x2xi8>
   return %8 : vector<2x2x2xi8>
 }
 
-
 // -----
 
-//   func.func @bar(%arg0: vector<2x3x4xi8>) -> vector<12xi8> {
-//     %0 = vector.extract %arg0[1] : vector<3x4xi8> from vector<2x3x4xi8>
-//     %1 = vector.shape_cast %0 : vector<3x4xi8> to vector<12xi8>
-//     return %1 : vector<12xi8>
-
 // CHECK-LABEL: func @source_larger_than_out(
-//  CHECK-SAME:     %[[A:.*]]: vector<2x3x4xi8>)
-//       CHECK: %[[EXTRACT:.*]] = vector.extract %[[A]] [1] : vector<3x4xi8> from vector<2x3x4xi8>
-//       CHECK: %[[SHAPE_CAST:.*]] = vector.shape_cast %[[EXTRACT]] : vector<3x4xi8> to vector<12xi8>
-//       CHECK: return %[[SHAPE_CAST]] : vector<12xi8>
-
+//  CHECK-SAME:      %[[A:.*]]: vector<2x3x4xi8>)
+//       CHECK:      %[[EXTRACT:.*]] = vector.extract %[[A]][1] : vector<3x4xi8> from vector<2x3x4xi8>
+//       CHECK:      %[[SHAPE_CAST:.*]] = vector.shape_cast %[[EXTRACT]] : vector<3x4xi8> to vector<12xi8>
+//       CHECK:      return %[[SHAPE_CAST]] : vector<12xi8>
 func.func @source_larger_than_out(%arg0: vector<2x3x4xi8>) -> vector<12xi8> {
   %0 = vector.extract %arg0[1, 0, 0] : i8 from vector<2x3x4xi8>
   %1 = vector.extract %arg0[1, 0, 1] : i8 from vector<2x3x4xi8>
@@ -140,13 +133,70 @@ func.func @source_larger_than_out(%arg0: vector<2x3x4xi8>) -> vector<12xi8> {
   return %12 : vector<12xi8>
 }
 
-// TODO(newling) add more tests where the source is not the same size as out. 
+// -----
+
+// This test is similar to `source_larger_than_out` except here the number of elements
+// extracted contigously starting from the first position [0,0] could be 6 instead of 3
+// and the pattern would still match.
+// CHECK-LABEL: func @suffix_with_excess_zeros(
+//       CHECK:      %[[EXT:.*]] = vector.extract {{.*}}[0] : vector<3xi8> from vector<2x3xi8>
+//       CHECK:      return %[[EXT]] : vector<3xi8>
+func.func @suffix_with_excess_zeros(%arg0: vector<2x3xi8>) -> vector<3xi8> {
+  %0 = vector.extract %arg0[0, 0] : i8 from vector<2x3xi8>
+  %1 = vector.extract %arg0[0, 1] : i8 from vector<2x3xi8>
+  %2 = vector.extract %arg0[0, 2] : i8 from vector<2x3xi8>
+  %3 = vector.from_elements %0, %1, %2 : vector<3xi8>
+  return %3 : vector<3xi8>
+}
+
+// -----
+
+// CHECK-LABEL: func @large_source_with_shape_cast_required(
+//  CHECK-SAME:      %[[A:.*]]: vector<2x2x2x2xi8>)
+//       CHECK:      %[[EXTRACT:.*]] = vector.extract %[[A]][0, 1] : vector<2x2xi8> from vector<2x2x2x2xi8>
+//       CHECK:      %[[SHAPE_CAST:.*]] = vector.shape_cast %[[EXTRACT]] : vector<2x2xi8> to vector<1x4x1xi8>
+//       CHECK:      return %[[SHAPE_CAST]] : vector<1x4x1xi8>
+func.func @large_source_with_shape_cast_required(%arg0: vector<2x2x2x2xi8>) -> vector<1x4x1xi8> {
+  %0 = vector.extract %arg0[0, 1, 0, 0] : i8 from vector<2x2x2x2xi8>
+  %1 = vector.extract %arg0[0, 1, 0, 1] : i8 from vector<2x2x2x2xi8>
+  %2 = vector.extract %arg0[0, 1, 1, 0] : i8 from vector<2x2x2x2xi8>
+  %3 = vector.extract %arg0[0, 1, 1, 1] : i8 from vector<2x2x2x2xi8>
+  %4 = vector.from_elements %0, %1, %2, %3 : vector<1x4x1xi8>
+  return %4 : vector<1x4x1xi8>
+}
+
+//  -----
+
+// Could match, but handled by `rewriteFromElementsAsSplat`.
+// CHECK-LABEL: func @extract_single_elm(
+//  CHECK-NEXT:      vector.extract
+//  CHECK-NEXT:      vector.splat
+//  CHECK-NEXT:      return
+func.func @extract_single_elm(%arg0 : vector<2x3xi8>) -> vector<1xi8> {
+  %0 = vector.extract %arg0[0, 0] : i8 from vector<2x3xi8>
+  %1 = vector.from_elements %0 : vector<1xi8>
+  return %1 : vector<1xi8>
+}
+
+// -----
+
+//   CHECK-LABEL: func @negative_source_contiguous_but_not_suffix(
+//     CHECK-NOT:      shape_cast
+//         CHECK:      from_elements
+func.func @negative_source_contiguous_but_not_suffix(%arg0: vector<2x3xi8>) -> vector<3xi8> {
+  %0 = vector.extract %arg0[0, 1] : i8 from vector<2x3xi8>
+  %1 = vector.extract %arg0[0, 2] : i8 from vector<2x3xi8>
+  %2 = vector.extract %arg0[1, 0] : i8 from vector<2x3xi8>
+  %3 = vector.from_elements %0, %1, %2 : vector<3xi8>
+  return %3 : vector<3xi8>
+}
 
 // -----
 
 // The extracted elements are recombined into a single vector, but in a new order.
 // CHECK-LABEL: func @negative_nonascending_order(
-//   CHECK-NOT: shape_cast
+//   CHECK-NOT:      shape_cast
+//       CHECK:      from_elements
 func.func @negative_nonascending_order(%arg0: vector<1x2xi8>) -> vector<2xi8> {
   %0 = vector.extract %arg0[0, 1] : i8 from vector<1x2xi8>
   %1 = vector.extract %arg0[0, 0] : i8 from vector<1x2xi8>
@@ -157,7 +207,8 @@ func.func @negative_nonascending_order(%arg0: vector<1x2xi8>) -> vector<2xi8> {
 // -----
 
 // CHECK-LABEL: func @negative_nonstatic_extract(
-//   CHECK-NOT: shape_cast
+//   CHECK-NOT:      shape_cast
+//       CHECK:      from_elements
 func.func @negative_nonstatic_extract(%arg0: vector<1x2xi8>, %i0 : index, %i1 : index) -> vector<2xi8> {
   %0 = vector.extract %arg0[0, %i0] : i8 from vector<1x2xi8>
   %1 = vector.extract %arg0[0, %i1] : i8 from vector<1x2xi8>
@@ -168,7 +219,8 @@ func.func @negative_nonstatic_extract(%arg0: vector<1x2xi8>, %i0 : index, %i1 : 
 // -----
 
 // CHECK-LABEL: func @negative_different_sources(
-//   CHECK-NOT: shape_cast
+//   CHECK-NOT:      shape_cast
+//       CHECK:      from_elements
 func.func @negative_different_sources(%arg0: vector<1x2xi8>, %arg1: vector<1x2xi8>) -> vector<2xi8> {
   %0 = vector.extract %arg0[0, 0] : i8 from vector<1x2xi8>
   %1 = vector.extract %arg1[0, 1] : i8 from vector<1x2xi8>
@@ -178,9 +230,10 @@ func.func @negative_different_sources(%arg0: vector<1x2xi8>, %arg1: vector<1x2xi
 
 // -----
 
-// CHECK-LABEL: func @negative_source_too_large(
-//   CHECK-NOT: shape_cast
-func.func @negative_source_too_large(%arg0: vector<1x3xi8>) -> vector<2xi8> {
+// CHECK-LABEL: func @negative_source_not_suffix(
+//   CHECK-NOT:      shape_cast
+//       CHECK:      from_elements
+func.func @negative_source_not_suffix(%arg0: vector<1x3xi8>) -> vector<2xi8> {
   %0 = vector.extract %arg0[0, 0] : i8 from vector<1x3xi8>
   %1 = vector.extract %arg0[0, 1] : i8 from vector<1x3xi8>
   %2 = vector.from_elements %0, %1 : vector<2xi8>
@@ -189,13 +242,27 @@ func.func @negative_source_too_large(%arg0: vector<1x3xi8>) -> vector<2xi8> {
 
 // -----
 
-// The inserted elements are are a subset of the extracted elements.
+// The inserted elements are a subset of the extracted elements.
 // [0, 1, 2] -> [1, 1, 2]
 // CHECK-LABEL: func @negative_nobijection_order(
-//   CHECK-NOT: shape_cast
+//   CHECK-NOT:      shape_cast
+//       CHECK:      from_elements
 func.func @negative_nobijection_order(%arg0: vector<1x3xi8>) -> vector<3xi8> {
   %0 = vector.extract %arg0[0, 1] : i8 from vector<1x3xi8>
   %1 = vector.extract %arg0[0, 2] : i8 from vector<1x3xi8>
   %2 = vector.from_elements %0, %0, %1 : vector<3xi8>
   return %2 : vector<3xi8>
 }
+
+// -----
+
+// CHECK-LABEL: func @negative_source_too_small(
+//   CHECK-NOT:      shape_cast
+//       CHECK:      from_elements
+func.func @negative_source_too_small(%arg0: vector<2xi8>) -> vector<4xi8> {
+  %0 = vector.extract %arg0[0] : i8 from vector<2xi8>
+  %1 = vector.extract %arg0[1] : i8 from vector<2xi8>
+  %2 = vector.from_elements %0, %1, %1, %1 : vector<4xi8>
+  return %2 : vector<4xi8>
+}
+

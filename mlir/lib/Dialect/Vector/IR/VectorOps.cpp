@@ -2387,10 +2387,8 @@ static LogicalResult rewriteFromElementsAsSplat(FromElementsOp fromElementsOp,
   return success();
 }
 
-/// Rewrite vector.from_elements(vector.extract, vector.extract, ...) as 
-///         vector.shape_cast(vector.extact) if possible. 
-///
-/// Example:
+/// Rewrite from_elements on multiple scalar extracts as a shape_cast
+/// on a single extract. Example:
 ///   %0 = vector.extract %source[0, 0] : i8 from vector<2x2xi8>
 ///   %1 = vector.extract %source[0, 1] : i8 from vector<2x2xi8>
 ///   %2 = vector.from_elements %0, %1 : vector<2xi8>
@@ -2401,30 +2399,32 @@ static LogicalResult rewriteFromElementsAsSplat(FromElementsOp fromElementsOp,
 ///
 /// The requirements for this to be valid are
 ///
-/// i) all elements are extracted from the same vector (%source)
-/// ii) the elements form a suffix of %source
-/// iii) the elements are extracted contiguously in ascending order
+///   i) The elements are extracted from the same vector (%source).
+///
+///  ii) The elements form a suffix of %source. Specifically, the number
+///      of elements is the same as the product of the last N dimension sizes
+///      of %source, for some N.
+///
+/// iii) The elements are extracted contiguously in ascending order.
 
-class FromElementsToShapeCast
-    : public OpRewritePattern<FromElementsOp> {
-public:
+class FromElementsToShapeCast : public OpRewritePattern<FromElementsOp> {
+
   using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(FromElementsOp fromElements,
                                 PatternRewriter &rewriter) const override {
 
-    // Left for `rewriteFromElementsAsSplat` to avoid divergent
-    // canonicalizations
-    if (fromElements.getType().getNumElements() == 1) {
+    // Handled by `rewriteFromElementsAsSplat`
+    if (fromElements.getType().getNumElements() == 1)
       return failure();
-    }
 
-    // The source of the first element, the position (N-d vector) that the first
-    // element is extracted from, and the flattened position (index). These are
-    // all obtained in the first iteration of the loop over elements.
-    TypedValue<VectorType> firstElementSource;
-    ArrayRef<int64_t> firstElementExtractPosition;
-    int64_t firstElementExtractIndex;
+    // The common source that all elements are extracted from, if one exists.
+    TypedValue<VectorType> source;
+    // The position of the combined extract operation, if one is created.
+    ArrayRef<int64_t> combinedPosition;
+    // The expected index of extraction of the current element in the loop, if
+    // elements are extracted contiguously in ascending order.
+    SmallVector<int64_t> expectedPosition;
 
     for (auto [insertIndex, element] :
          llvm::enumerate(fromElements.getElements())) {
@@ -2440,76 +2440,69 @@ public:
       // Check condition (i) by checking that all elements have same source as
       // the first element.
       if (insertIndex == 0) {
-        firstElementSource = extractOp.getVector();
-      } else if (extractOp.getVector() != firstElementSource) {
+        source = extractOp.getVector();
+      } else if (extractOp.getVector() != source) {
         return rewriter.notifyMatchFailure(fromElements,
                                            "element from different vector");
       }
 
-      // Obtain the flattened index of extraction from the N-d position.
       ArrayRef<int64_t> position = extractOp.getStaticPosition();
-      int64_t extractIndex{0};
-      int64_t stride{1};
-      assert(position.size() ==
-                 static_cast<size_t>(firstElementSource.getType().getRank()) &&
+      int64_t rank = position.size();
+      assert(rank == source.getType().getRank() &&
              "scalar extract must have full rank position");
-      for (auto [pos, size] :
-           llvm::zip(llvm::reverse(position),
-                     llvm::reverse(firstElementSource.getType().getShape()))) {
-        if (pos == ShapedType::kDynamic) {
-          return rewriter.notifyMatchFailure(
-              fromElements, "elements not in ascending order (dynamic order)");
-        }
-        extractIndex += pos * stride;
-        stride *= size;
-      }
 
-      // Check condition (ii) using the extraction index of the first element.
-      // We check that the position that the first element is extracted
-      // from has sufficient trailing 0s. For example, in
-      // ```
-      // %elm0 = vector.extract %source[1, 0, 0] : i8 from vector<2x3x4xi8>
-      // [...]
-      // %n = vector.from_elements %elm0, [...] : vector<12xi8>
-      // ```
-      // The 2 trailing 0s in the position of extraction of %0 cover 3*4 = 12
+      // Check condition (ii) by checking that the position that the first
+      // element is extracted from has sufficient trailing 0s. For example, in
+      //
+      //   %elm0 = vector.extract %source[1, 0, 0] : i8 from vector<2x3x4xi8>
+      //   [...]
+      //   %elms = vector.from_elements %elm0, [...] : vector<12xi8>
+      //
+      // The 2 trailing 0s in the position of extraction of %elm0 cover 3*4 = 12
       // elements, which is the number of elements of %n, so this is valid.
       if (insertIndex == 0) {
-        const int64_t numFinalElements =
-            fromElements.getType().getNumElements();
-        int64_t numElementsInSourceSuffix = 1;
-        int index = position.size();
+        const int64_t numElms = fromElements.getType().getNumElements();
+        int64_t numSuffixElms = 1;
+        int64_t index = rank;
         while (index > 0 && position[index - 1] == 0 &&
-               numElementsInSourceSuffix < numFinalElements) {
-          numElementsInSourceSuffix *=
-              firstElementSource.getType().getDimSize(index - 1);
+               numSuffixElms < numElms) {
+          numSuffixElms *= source.getType().getDimSize(index - 1);
           --index;
         }
-        if (numElementsInSourceSuffix != numFinalElements) {
+        if (numSuffixElms != numElms) {
           return rewriter.notifyMatchFailure(
               fromElements, "elements do not form a suffix of source");
         }
-        firstElementExtractIndex = extractIndex;
-        firstElementExtractPosition =
-            position.drop_back(position.size() - index);
+        expectedPosition = llvm::to_vector(position);
+        combinedPosition = position.drop_back(rank - index);
       }
 
-      // Check condition (iii) by checking the index of extraction relative
-      // the first element.
-      else if (static_cast<int64_t>(insertIndex) + firstElementExtractIndex !=
-               extractIndex) {
+      // Check condition (iii).
+      else if (expectedPosition != position) {
         return rewriter.notifyMatchFailure(
             fromElements, "elements not in ascending order (static order)");
       }
+      increment(expectedPosition, source.getType().getShape());
     }
 
     auto extracted = rewriter.createOrFold<vector::ExtractOp>(
-        fromElements.getLoc(), firstElementSource, firstElementExtractPosition);
+        fromElements.getLoc(), source, combinedPosition);
 
     rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(
         fromElements, fromElements.getType(), extracted);
 
     return success();
+  }
+
+  /// Increments n-D `indices` by 1 starting from the innermost dimension.
+  static void increment(MutableArrayRef<int64_t> indices,
+                        ArrayRef<int64_t> shape) {
+    for (int dim : llvm::reverse(llvm::seq<int>(0, indices.size()))) {
+      indices[dim] += 1;
+      if (indices[dim] < shape[dim])
+        break;
+      indices[dim] = 0;
+    }
   }
 };
 
