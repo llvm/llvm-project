@@ -2651,13 +2651,16 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
     addToFunctionSummaryMap(
         "getcwd", Signature(ArgTypes{CharPtrTy, SizeTy}, RetType{CharPtrTy}),
         Summary(NoEvalCall)
-            .Case({ArgumentCondition(1, WithinRange, Range(1, SizeMax)),
+            .Case({NotNull(ArgNo(0)),
+                   ArgumentCondition(1, WithinRange, Range(1, SizeMax)),
                    ReturnValueCondition(BO_EQ, ArgNo(0))},
                   ErrnoMustNotBeChecked, GenericSuccessMsg)
-            .Case({ArgumentCondition(1, WithinRange, SingleValue(0)),
+            .Case({NotNull(ArgNo(0)),
+                   ArgumentCondition(1, WithinRange, SingleValue(0)),
                    IsNull(Ret)},
                   ErrnoNEZeroIrrelevant, "Assuming that argument 'size' is 0")
-            .Case({ArgumentCondition(1, WithinRange, Range(1, SizeMax)),
+            .Case({NotNull(ArgNo(0)),
+                   ArgumentCondition(1, WithinRange, Range(1, SizeMax)),
                    IsNull(Ret)},
                   ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(

@@ -8,6 +8,7 @@
 
 #include "Inputs/errno_var.h"
 #include "Inputs/std-c-library-functions-POSIX.h"
+#include "Inputs/system-header-simulator-for-malloc.h"
 
 #define NULL ((void *) 0)
 
@@ -105,10 +106,19 @@ void errno_getcwd(char *Buf, size_t Sz) {
     clang_analyzer_eval(errno != 0);   // expected-warning{{TRUE}}
     clang_analyzer_eval(Path == NULL); // expected-warning{{TRUE}}
     if (errno) {}                      // no warning
+  } else if (Path == NULL) {
+    clang_analyzer_eval(errno != 0);   // expected-warning{{TRUE}}
+    if (errno) {}                      // no warning
   } else {
     clang_analyzer_eval(Path == Buf);  // expected-warning{{TRUE}}
     if (errno) {}                      // expected-warning{{An undefined value may be read from 'errno'}}
   }
+}
+
+void gh_128882_getcwd(void) {
+  // We expect no warnings here.
+  char* currentPath = getcwd(NULL, 0);
+  free(currentPath);
 }
 
 void errno_execv(char *Path, char * Argv[]) {
