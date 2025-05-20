@@ -1139,8 +1139,10 @@ public:
           m_task_sp = ValueObject::CreateValueObjectFromAddress(
               "task", task_addr, m_backend.GetExecutionContextRef(),
               m_task_type, false);
-    if (auto synthetic_sp = m_task_sp->GetSyntheticValue())
-      m_task_sp = synthetic_sp;
+
+    if (m_task_sp)
+      if (auto synthetic_sp = m_task_sp->GetSyntheticValue())
+        m_task_sp = synthetic_sp;
     return ChildCacheState::eRefetch;
   }
 
