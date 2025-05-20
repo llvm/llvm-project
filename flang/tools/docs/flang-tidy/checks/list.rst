@@ -36,3 +36,4 @@ Flang-Tidy Checks
    :doc:`openmp-accumulator-race <openmp/accumulator-race>`,
    :doc:`performance-pure-procedure <performance/pure-procedure>`,
    :doc:`readability-function-cognitive-complexity <readability/function-cognitive-complexity>`,
+   :doc:`readability-function-size <readability/function-size>`,
