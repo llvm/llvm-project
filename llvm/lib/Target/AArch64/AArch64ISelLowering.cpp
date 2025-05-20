@@ -7752,11 +7752,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   case ISD::EXPERIMENTAL_VECTOR_HISTOGRAM:
     return LowerVECTOR_HISTOGRAM(Op, DAG);
   case ISD::PARTIAL_REDUCE_SMLA:
-  case ISD::PARTIAL_REDUCE_UMLA: {
-    if (SDValue Result = LowerPARTIAL_REDUCE_MLA(Op, DAG))
-      return Result;
-    return expandPartialReduceMLA(Op.getNode(), DAG);
-  }
+  case ISD::PARTIAL_REDUCE_UMLA:
+    return LowerPARTIAL_REDUCE_MLA(Op, DAG);
   }
 }
 
@@ -27585,8 +27582,6 @@ void AArch64TargetLowering::ReplaceNodeResults(
   case ISD::PARTIAL_REDUCE_SMLA: {
     if (SDValue Res = LowerPARTIAL_REDUCE_MLA(SDValue(N, 0), DAG))
       Results.push_back(Res);
-    else
-      Results.push_back(expandPartialReduceMLA(N, DAG));
     return;
   }
   case ISD::ADD:
@@ -29538,9 +29533,13 @@ SDValue AArch64TargetLowering::LowerVECTOR_HISTOGRAM(SDValue Op,
 }
 
 /// If a PARTIAL_REDUCE_MLA node comes in with an accumulator-input type pairing
-/// of v2i64/v16i8, we cannot directly lower it to a (u|s)dot. We can
+/// of (nx)v2i64/(nx)v16i8, we cannot directly lower it to a (u|s)dot. We can
 /// however still make use of the dot product instruction by instead
-/// accumulating over two steps: v16i8 -> v4i32 -> v2i64.
+/// accumulating over two steps: (nx)v16i8 -> (nx)v4i32 -> (nx)v2i64.
+/// If available, make use of the (U|S)ADDW(B|T) instructions, otherwise
+/// the following pattern is emitted:
+/// add(add(Acc, ext(EXTRACT_SUBVECTOR(N, 0)), ext(EXTRACT_SUBVECTOR(N,
+/// NTy/2))))
 SDValue
 AArch64TargetLowering::LowerPARTIAL_REDUCE_MLA(SDValue Op,
                                                SelectionDAG &DAG) const {
@@ -29575,27 +29574,17 @@ AArch64TargetLowering::LowerPARTIAL_REDUCE_MLA(SDValue Op,
     return DAG.getNode(HiOpcode, DL, ResultVT, Lo, DotNode);
   }
 
-  if (Scalable) {
-    unsigned LoOpcode = IsUnsigned ? AArch64ISD::UUNPKLO : AArch64ISD::SUNPKLO;
-    unsigned HiOpcode = IsUnsigned ? AArch64ISD::UUNPKHI : AArch64ISD::SUNPKHI;
-    auto Lo = DAG.getNode(LoOpcode, DL, ResultVT, DotNode);
-    auto Hi = DAG.getNode(HiOpcode, DL, ResultVT, DotNode);
-    auto Extended = DAG.getNode(ISD::ADD, DL, ResultVT, Lo, Hi);
-    return DAG.getNode(ISD::ADD, DL, ResultVT, Acc, Extended);
-  }
-
-  // Fold v4i32 into v2i64
-  // SDValues
+  // Fold (nx)v4i32 into (nx)v2i64
   auto [DotNodeLo, DotNodeHi] = DAG.SplitVector(DotNode, DL);
   if (IsUnsigned) {
-    DotNodeLo = DAG.getZExtOrTrunc(DotNodeLo, DL, MVT::v2i64);
-    DotNodeHi = DAG.getZExtOrTrunc(DotNodeHi, DL, MVT::v2i64);
+    DotNodeLo = DAG.getZExtOrTrunc(DotNodeLo, DL, ResultVT);
+    DotNodeHi = DAG.getZExtOrTrunc(DotNodeHi, DL, ResultVT);
   } else {
-    DotNodeLo = DAG.getSExtOrTrunc(DotNodeLo, DL, MVT::v2i64);
-    DotNodeHi = DAG.getSExtOrTrunc(DotNodeHi, DL, MVT::v2i64);
+    DotNodeLo = DAG.getSExtOrTrunc(DotNodeLo, DL, ResultVT);
+    DotNodeHi = DAG.getSExtOrTrunc(DotNodeHi, DL, ResultVT);
   }
-  auto Lo = DAG.getNode(ISD::ADD, DL, MVT::v2i64, Acc, DotNodeLo);
-  return DAG.getNode(ISD::ADD, DL, MVT::v2i64, Lo, DotNodeHi);
+  auto Lo = DAG.getNode(ISD::ADD, DL, ResultVT, Acc, DotNodeLo);
+  return DAG.getNode(ISD::ADD, DL, ResultVT, Lo, DotNodeHi);
 }
 
 SDValue
