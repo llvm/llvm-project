@@ -352,12 +352,14 @@ struct Decomposition {
   Decomposition(int64_t Offset, ArrayRef<DecompEntry> Vars)
       : Offset(Offset), Vars(Vars) {}
 
-  // Return true if the new decomposition is invalid.
+  /// Add \p OtherOffset and return true if the operation overflows, i.e. the
+  /// new decomposition is invalid.
   [[nodiscard]] bool add(int64_t OtherOffset) {
     return AddOverflow(Offset, OtherOffset, Offset);
   }
 
-  // Return true if the new decomposition is invalid.
+  /// Add \p Other and return true if the operation overflows, i.e. the new
+  /// decomposition is invalid.
   [[nodiscard]] bool add(const Decomposition &Other) {
     if (add(Other.Offset))
       return true;
@@ -365,7 +367,8 @@ struct Decomposition {
     return false;
   }
 
-  // Return true if the new decomposition is invalid.
+  /// Sub \p Other and return true if the operation overflows, i.e. the new
+  /// decomposition is invalid.
   [[nodiscard]] bool sub(const Decomposition &Other) {
     Decomposition Tmp = Other;
     if (Tmp.mul(-1))
@@ -376,7 +379,8 @@ struct Decomposition {
     return false;
   }
 
-  // Return true if the new decomposition is invalid.
+  /// Multiply all coefficients by \p Factor and return true if the operation
+  /// overflows, i.e. the new decomposition is invalid.
   [[nodiscard]] bool mul(int64_t Factor) {
     if (MulOverflow(Offset, Factor, Offset))
       return true;
@@ -535,15 +539,18 @@ static Decomposition decompose(Value *V,
         V = Op0;
     }
 
-    if (match(V, m_NSWAdd(m_Value(Op0), m_Value(Op1))))
+    if (match(V, m_NSWAdd(m_Value(Op0), m_Value(Op1)))) {
       if (auto Decomp = MergeResults(Op0, Op1, IsSigned))
         return *Decomp;
+      return {V, IsKnownNonNegative};
+    }
 
     if (match(V, m_NSWSub(m_Value(Op0), m_Value(Op1)))) {
       auto ResA = decompose(Op0, Preconditions, IsSigned, DL);
       auto ResB = decompose(Op1, Preconditions, IsSigned, DL);
       if (!ResA.sub(ResB))
         return ResA;
+      return {V, IsKnownNonNegative};
     }
 
     ConstantInt *CI;
@@ -551,6 +558,7 @@ static Decomposition decompose(Value *V,
       auto Result = decompose(Op0, Preconditions, IsSigned, DL);
       if (!Result.mul(CI->getSExtValue()))
         return Result;
+      return {V, IsKnownNonNegative};
     }
 
     // (shl nsw x, shift) is (mul nsw x, (1<<shift)), with the exception of
@@ -562,6 +570,7 @@ static Decomposition decompose(Value *V,
         auto Result = decompose(Op0, Preconditions, IsSigned, DL);
         if (!Result.mul(int64_t(1) << Shift))
           return Result;
+        return {V, IsKnownNonNegative};
       }
     }
 
@@ -595,9 +604,12 @@ static Decomposition decompose(Value *V,
 
   Value *Op1;
   ConstantInt *CI;
-  if (match(V, m_NUWAdd(m_Value(Op0), m_Value(Op1))))
+  if (match(V, m_NUWAdd(m_Value(Op0), m_Value(Op1)))) {
     if (auto Decomp = MergeResults(Op0, Op1, IsSigned))
       return *Decomp;
+    return {V, IsKnownNonNegative};
+  }
+
   if (match(V, m_NSWAdd(m_Value(Op0), m_Value(Op1)))) {
     if (!isKnownNonNegative(Op0, DL))
       Preconditions.emplace_back(CmpInst::ICMP_SGE, Op0,
@@ -608,6 +620,7 @@ static Decomposition decompose(Value *V,
 
     if (auto Decomp = MergeResults(Op0, Op1, IsSigned))
       return *Decomp;
+    return {V, IsKnownNonNegative};
   }
 
   if (match(V, m_Add(m_Value(Op0), m_ConstantInt(CI))) && CI->isNegative() &&
@@ -617,12 +630,15 @@ static Decomposition decompose(Value *V,
         ConstantInt::get(Op0->getType(), CI->getSExtValue() * -1));
     if (auto Decomp = MergeResults(Op0, CI, true))
       return *Decomp;
+    return {V, IsKnownNonNegative};
   }
 
   // Decompose or as an add if there are no common bits between the operands.
-  if (match(V, m_DisjointOr(m_Value(Op0), m_ConstantInt(CI))))
+  if (match(V, m_DisjointOr(m_Value(Op0), m_ConstantInt(CI)))) {
     if (auto Decomp = MergeResults(Op0, CI, IsSigned))
       return *Decomp;
+    return {V, IsKnownNonNegative};
+  }
 
   if (match(V, m_NUWShl(m_Value(Op1), m_ConstantInt(CI))) && canUseSExt(CI)) {
     if (CI->getSExtValue() < 0 || CI->getSExtValue() >= 64)
@@ -630,6 +646,7 @@ static Decomposition decompose(Value *V,
     auto Result = decompose(Op1, Preconditions, IsSigned, DL);
     if (!Result.mul(int64_t{1} << CI->getSExtValue()))
       return Result;
+    return {V, IsKnownNonNegative};
   }
 
   if (match(V, m_NUWMul(m_Value(Op1), m_ConstantInt(CI))) && canUseSExt(CI) &&
@@ -637,6 +654,7 @@ static Decomposition decompose(Value *V,
     auto Result = decompose(Op1, Preconditions, IsSigned, DL);
     if (!Result.mul(CI->getSExtValue()))
       return Result;
+    return {V, IsKnownNonNegative};
   }
 
   if (match(V, m_NUWSub(m_Value(Op0), m_Value(Op1)))) {
@@ -644,6 +662,7 @@ static Decomposition decompose(Value *V,
     auto ResB = decompose(Op1, Preconditions, IsSigned, DL);
     if (!ResA.sub(ResB))
       return ResA;
+    return {V, IsKnownNonNegative};
   }
 
   return {V, IsKnownNonNegative};
