@@ -45,7 +45,7 @@ _LIBCPP_NO_TAIL_CALLS _LIBCPP_NOINLINE void builder::build_stacktrace(size_t ski
   `common/debug.h` for a debugging logger you can enable at runtime.
   */
 
-#if defined(_LIBCPP_STACKTRACE_USE_DBGHELP)
+#if defined(_LIBCPP_STACKTRACE_WINDOWS)
   win_impl dbghelp{*this};
   auto& collector  = dbghelp;
   auto& mod_ident  = dbghelp;
