@@ -909,7 +909,7 @@ RValue CIRGenFunction::emitCall(clang::QualType calleeTy,
       cgm.getTypes().arrangeFreeFunctionCall(args, fnType);
 
   assert(!cir::MissingFeatures::opCallNoPrototypeFunc());
-  assert(!cir::MissingFeatures::opCallChainCall());
+  assert(!cir::MissingFeatures::opCallFnInfoOpts());
   assert(!cir::MissingFeatures::hip());
   assert(!cir::MissingFeatures::opCallMustTail());
 
@@ -931,24 +931,51 @@ CIRGenCallee CIRGenFunction::emitCallee(const clang::Expr *e) {
         implicitCast->getCastKind() == CK_BuiltinFnToFnPtr) {
       return emitCallee(implicitCast->getSubExpr());
     }
+    // When performing an indirect call through a function pointer lvalue, the
+    // function pointer lvalue is implicitly converted to an rvalue through an
+    // lvalue-to-rvalue conversion.
+    assert(implicitCast->getCastKind() == CK_LValueToRValue &&
+           "unexpected implicit cast on function pointers");
   } else if (const auto *declRef = dyn_cast<DeclRefExpr>(e)) {
     // Resolve direct calls.
-    if (const auto *funcDecl = dyn_cast<FunctionDecl>(declRef->getDecl()))
-      return emitDirectCallee(cgm, funcDecl);
+    const auto *funcDecl = cast<FunctionDecl>(declRef->getDecl());
+    return emitDirectCallee(cgm, funcDecl);
+  } else if (isa<MemberExpr>(e)) {
+    cgm.errorNYI(e->getSourceRange(),
+                 "emitCallee: call to member function is NYI");
+    return {};
   }
 
-  cgm.errorNYI(e->getSourceRange(), "Unsupported callee kind");
-  return {};
+  assert(!cir::MissingFeatures::opCallPseudoDtor());
+
+  // Otherwise, we have an indirect reference.
+  mlir::Value calleePtr;
+  QualType functionType;
+  if (const auto *ptrType = e->getType()->getAs<clang::PointerType>()) {
+    calleePtr = emitScalarExpr(e);
+    functionType = ptrType->getPointeeType();
+  } else {
+    functionType = e->getType();
+    calleePtr = emitLValue(e).getPointer();
+  }
+  assert(functionType->isFunctionType());
+
+  GlobalDecl gd;
+  if (const auto *vd =
+          dyn_cast_or_null<VarDecl>(e->getReferencedDeclOfCallee()))
+    gd = GlobalDecl(vd);
+
+  CIRGenCalleeInfo calleeInfo(functionType->getAs<FunctionProtoType>(), gd);
+  CIRGenCallee callee(calleeInfo, calleePtr.getDefiningOp());
+  return callee;
 }
 
 RValue CIRGenFunction::emitCallExpr(const clang::CallExpr *e,
                                     ReturnValueSlot returnValue) {
   assert(!cir::MissingFeatures::objCBlocks());
 
-  if (isa<CXXMemberCallExpr>(e)) {
-    cgm.errorNYI(e->getSourceRange(), "call to member function");
-    return RValue::get(nullptr);
-  }
+  if (const auto *ce = dyn_cast<CXXMemberCallExpr>(e))
+    return emitCXXMemberCallExpr(ce, returnValue);
 
   if (isa<CUDAKernelCallExpr>(e)) {
     cgm.errorNYI(e->getSourceRange(), "call to CUDA kernel");
@@ -1146,6 +1173,35 @@ mlir::Value CIRGenFunction::emitAlloca(StringRef name, mlir::Type ty,
     assert(!cir::MissingFeatures::astVarDeclInterface());
   }
   return addr;
+}
+
+// Note: this function also emit constructor calls to support a MSVC extensions
+// allowing explicit constructor function call.
+RValue CIRGenFunction::emitCXXMemberCallExpr(const CXXMemberCallExpr *ce,
+                                             ReturnValueSlot returnValue) {
+  const Expr *callee = ce->getCallee()->IgnoreParens();
+
+  if (isa<BinaryOperator>(callee)) {
+    cgm.errorNYI(ce->getSourceRange(),
+                 "emitCXXMemberCallExpr: C++ binary operator");
+    return RValue::get(nullptr);
+  }
+
+  const auto *me = cast<MemberExpr>(callee);
+  const auto *md = cast<CXXMethodDecl>(me->getMemberDecl());
+
+  if (md->isStatic()) {
+    cgm.errorNYI(ce->getSourceRange(), "emitCXXMemberCallExpr: static method");
+    return RValue::get(nullptr);
+  }
+
+  bool hasQualifier = me->hasQualifier();
+  NestedNameSpecifier *qualifier = hasQualifier ? me->getQualifier() : nullptr;
+  bool isArrow = me->isArrow();
+  const Expr *base = me->getBase();
+
+  return emitCXXMemberOrOperatorMemberCallExpr(
+      ce, md, returnValue, hasQualifier, qualifier, isArrow, base);
 }
 
 RValue CIRGenFunction::emitReferenceBindingToExpr(const Expr *e) {

@@ -873,11 +873,10 @@ static std::optional<T> getArgumentsIfRequest(const Message &pm,
 
   T args;
   llvm::json::Path::Root root;
-  if (!fromJSON(req->arguments, args, root)) {
+  if (!fromJSON(req->arguments, args, root))
     return std::nullopt;
-  }
 
-  return std::move(args);
+  return args;
 }
 
 llvm::Error DAP::Loop() {

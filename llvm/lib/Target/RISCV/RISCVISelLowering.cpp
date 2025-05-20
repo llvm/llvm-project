@@ -24509,3 +24509,11 @@ RISCVTargetLowering::emitDynamicProbedAlloc(MachineInstr &MI,
   MF.getInfo<RISCVMachineFunctionInfo>()->setDynamicAllocation();
   return ExitMBB->begin()->getParent();
 }
+
+ArrayRef<MCPhysReg> RISCVTargetLowering::getRoundingControlRegisters() const {
+  if (Subtarget.hasStdExtFOrZfinx()) {
+    static const MCPhysReg RCRegs[] = {RISCV::FRM, RISCV::FFLAGS};
+    return RCRegs;
+  }
+  return {};
+}

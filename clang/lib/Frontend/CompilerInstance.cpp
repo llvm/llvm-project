@@ -72,9 +72,7 @@ CompilerInstance::CompilerInstance(
     ModuleCache *ModCache)
     : ModuleLoader(/*BuildingModule=*/ModCache),
       Invocation(std::move(Invocation)),
-      ModCache(ModCache ? ModCache
-                        : createCrossProcessModuleCache(
-                              getHeaderSearchOpts().BuildSessionTimestamp)),
+      ModCache(ModCache ? ModCache : createCrossProcessModuleCache()),
       ThePCHContainerOperations(std::move(PCHContainerOps)) {
   assert(this->Invocation && "Invocation must not be null");
 }
