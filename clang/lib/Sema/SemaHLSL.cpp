@@ -39,6 +39,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Frontend/HLSL/HLSLRootSignatureUtils.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/DXILABI.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -1068,8 +1069,119 @@ void SemaHLSL::ActOnFinishRootSignatureDecl(
       SemaRef.getASTContext(), /*DeclContext=*/SemaRef.CurContext, Loc,
       DeclIdent, Elements);
 
+  // Perform validation of constructs here
+  if (handleRootSignatureDecl(SignatureDecl, Loc))
+    return;
+
   SignatureDecl->setImplicit();
   SemaRef.PushOnScopeChains(SignatureDecl, SemaRef.getCurScope());
+}
+
+namespace {
+
+// A resource range overlaps with another resource range if they have:
+// - equivalent ResourceClass (SRV, UAV, CBuffer, Sampler)
+// - equivalent resource space
+// - overlapping visbility
+class ResourceRanges {
+public:
+  // KeyT: 32-lsb denotes resource space, and 32-msb denotes ResourceClass enum
+  using KeyT = std::pair<ResourceClass, uint32_t>;
+
+  static const size_t NumVisEnums = 8;
+
+private:
+  llvm::hlsl::rootsig::ResourceRange::MapT::Allocator Allocator;
+
+  // Denotes a mapping of a unique combination of ResourceClass and register
+  // space to a ResourceRange
+  using MapT = llvm::SmallDenseMap<KeyT, llvm::hlsl::rootsig::ResourceRange>;
+
+  // Denotes a mapping for each unique visibility
+  MapT RangeMaps[NumVisEnums];
+
+  constexpr static KeyT getKey(const llvm::hlsl::rootsig::RangeInfo &Info) {
+    return {Info.Class, Info.Space};
+  }
+
+public:
+  // Returns std::nullopt if there was no collision. Otherwise, it will
+  // return the RangeInfo of the collision
+  std::optional<const llvm::hlsl::rootsig::RangeInfo *>
+  addRange(const llvm::hlsl::rootsig::RangeInfo &Info) {
+    MapT &VisRangeMap = RangeMaps[llvm::to_underlying(Info.Vis)];
+    auto [It, _] = VisRangeMap.insert(
+        {getKey(Info), llvm::hlsl::rootsig::ResourceRange(Allocator)});
+    auto Res = It->second.insert(Info);
+    if (Res.has_value())
+      return Res;
+
+    // If the range that we are inserting has ShaderVisiblity::All it needs to
+    // check for an overlap in all other visibility types as well.
+    // Otherwise, the range that is inserted needs to check that it does not
+    // overlap with ShaderVisibility::All.
+    //
+    // Maps will be an ArrayRef to all non-all visibility RangeMaps in the
+    // former case and it will be an ArrayRef to just the all visiblity
+    // RangeMap in the latter case.
+    MutableArrayRef<MapT> Maps =
+        Info.Vis == llvm::hlsl::rootsig::ShaderVisibility::All
+            ? MutableArrayRef<MapT>{RangeMaps}.drop_front()
+            : MutableArrayRef<MapT>{RangeMaps}.take_front();
+
+    for (MapT &CurMap : Maps) {
+      auto CurIt = CurMap.find(getKey(Info));
+      if (CurIt != CurMap.end())
+        if (auto Overlapping = CurIt->second.getOverlapping(Info))
+          return Overlapping;
+    }
+
+    return std::nullopt;
+  }
+};
+
+} // namespace
+
+bool SemaHLSL::handleRootSignatureDecl(HLSLRootSignatureDecl *D,
+                                       SourceLocation Loc) {
+  auto Elements = D->getRootElements();
+
+  // First we will go through and collect our range info
+  llvm::SmallVector<llvm::hlsl::rootsig::RangeInfo> Infos;
+  for (const auto &Elem : Elements) {
+    if (const auto *Descriptor =
+            std::get_if<llvm::hlsl::rootsig::RootDescriptor>(&Elem)) {
+      llvm::hlsl::rootsig::RangeInfo Info;
+      Info.LowerBound = Descriptor->Reg.Number;
+      Info.UpperBound = Info.LowerBound; // use inclusive ranges []
+
+      Info.Class = llvm::dxil::ResourceClass(llvm::to_underlying(Descriptor->Type));
+      Info.Space = Descriptor->Space;
+      Info.Vis = Descriptor->Visibility;
+      Infos.push_back(Info);
+    }
+  }
+
+  // Iterate through info and attempt to insert corresponding range
+  ResourceRanges Ranges;
+  bool HadOverlap = false;
+  for (const llvm::hlsl::rootsig::RangeInfo &Info : Infos)
+    if (auto MaybeOverlappingInfo = Ranges.addRange(Info)) {
+      const llvm::hlsl::rootsig::RangeInfo *OInfo =
+          MaybeOverlappingInfo.value();
+      auto CommonVis = Info.Vis == llvm::hlsl::rootsig::ShaderVisibility::All
+                           ? OInfo->Vis
+                           : Info.Vis;
+
+      Diag(Loc, diag::err_hlsl_resource_range_overlap)
+          << llvm::to_underlying(Info.Class) << Info.LowerBound
+          << Info.UpperBound << llvm::to_underlying(OInfo->Class)
+          << OInfo->LowerBound << OInfo->UpperBound << Info.Space << CommonVis;
+
+      HadOverlap = true;
+    }
+
+  return HadOverlap;
 }
 
 void SemaHLSL::handleRootSignatureAttr(Decl *D, const ParsedAttr &AL) {
@@ -1093,7 +1205,6 @@ void SemaHLSL::handleRootSignatureAttr(Decl *D, const ParsedAttr &AL) {
   if (SemaRef.LookupQualifiedName(R, D->getDeclContext()))
     if (auto *SignatureDecl =
             dyn_cast<HLSLRootSignatureDecl>(R.getFoundDecl())) {
-      // Perform validation of constructs here
       D->addAttr(::new (getASTContext()) RootSignatureAttr(
           getASTContext(), AL, Ident, SignatureDecl));
     }

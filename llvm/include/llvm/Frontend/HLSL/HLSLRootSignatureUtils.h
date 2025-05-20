@@ -71,13 +71,17 @@ private:
   SmallVector<Metadata *> GeneratedMetadata;
 };
 
-// RangeInfo holds the information to correctly construct a ResourceRange
-// and retains this information to be used for displaying a better diagnostic
 struct RangeInfo {
-  const static uint32_t Unbounded = ~0u;
+  const static uint32_t Unbounded = static_cast<uint32_t>(-1);
 
+  // Interval information
   uint32_t LowerBound;
   uint32_t UpperBound;
+
+  // Information retained for diagnostics
+  llvm::dxil::ResourceClass Class;
+  uint32_t Space;
+  ShaderVisibility Vis;
 };
 
 class ResourceRange {
