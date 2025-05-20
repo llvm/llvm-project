@@ -1,6 +1,7 @@
 #ifndef LLVM_DWP_DWP_H
 #define LLVM_DWP_DWP_H
 
+#include "llvm/Support/Compiler.h"
 #include "DWPStringPool.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/MapVector.h"
@@ -66,12 +67,12 @@ struct CompileUnitIdentifiers {
   const char *DWOName = "";
 };
 
-Error write(MCStreamer &Out, ArrayRef<std::string> Inputs,
+LLVM_ABI Error write(MCStreamer &Out, ArrayRef<std::string> Inputs,
             OnCuIndexOverflow OverflowOptValue);
 
-unsigned getContributionIndex(DWARFSectionKind Kind, uint32_t IndexVersion);
+LLVM_ABI unsigned getContributionIndex(DWARFSectionKind Kind, uint32_t IndexVersion);
 
-Error handleSection(
+LLVM_ABI Error handleSection(
     const StringMap<std::pair<MCSection *, DWARFSectionKind>> &KnownSections,
     const MCSection *StrSection, const MCSection *StrOffsetSection,
     const MCSection *TypesSection, const MCSection *CUIndexSection,
@@ -85,17 +86,17 @@ Error handleSection(
     StringRef &CurCUIndexSection, StringRef &CurTUIndexSection,
     std::vector<std::pair<DWARFSectionKind, uint32_t>> &SectionLength);
 
-Expected<InfoSectionUnitHeader> parseInfoSectionUnitHeader(StringRef Info);
+LLVM_ABI Expected<InfoSectionUnitHeader> parseInfoSectionUnitHeader(StringRef Info);
 
-void writeStringsAndOffsets(MCStreamer &Out, DWPStringPool &Strings,
+LLVM_ABI void writeStringsAndOffsets(MCStreamer &Out, DWPStringPool &Strings,
                             MCSection *StrOffsetSection,
                             StringRef CurStrSection,
                             StringRef CurStrOffsetSection, uint16_t Version);
 
-Error buildDuplicateError(const std::pair<uint64_t, UnitIndexEntry> &PrevE,
+LLVM_ABI Error buildDuplicateError(const std::pair<uint64_t, UnitIndexEntry> &PrevE,
                           const CompileUnitIdentifiers &ID, StringRef DWPName);
 
-void writeIndex(MCStreamer &Out, MCSection *Section,
+LLVM_ABI void writeIndex(MCStreamer &Out, MCSection *Section,
                 ArrayRef<unsigned> ContributionOffsets,
                 const MapVector<uint64_t, UnitIndexEntry> &IndexEntries,
                 uint32_t IndexVersion);

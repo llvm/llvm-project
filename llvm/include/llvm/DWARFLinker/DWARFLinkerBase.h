@@ -8,6 +8,7 @@
 
 #ifndef LLVM_DWARFLINKER_DWARFLINKERBASE_H
 #define LLVM_DWARFLINKER_DWARFLINKERBASE_H
+#include "llvm/Support/Compiler.h"
 #include "AddressesMap.h"
 #include "DWARFFile.h"
 #include "llvm/ADT/AddressRanges.h"
@@ -68,7 +69,7 @@ getSectionName(DebugSectionKind SectionKind) {
 }
 
 /// Recognise the table name and match it with the DebugSectionKind.
-std::optional<DebugSectionKind> parseDebugTableName(StringRef Name);
+LLVM_ABI std::optional<DebugSectionKind> parseDebugTableName(StringRef Name);
 
 /// The base interface for DWARFLinker implementations.
 class DWARFLinkerBase {

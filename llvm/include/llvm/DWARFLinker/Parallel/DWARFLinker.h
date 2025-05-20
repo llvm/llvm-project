@@ -9,6 +9,7 @@
 #ifndef LLVM_DWARFLINKER_PARALLEL_DWARFLINKER_H
 #define LLVM_DWARFLINKER_PARALLEL_DWARFLINKER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/DWARFLinker/DWARFFile.h"
 #include "llvm/DWARFLinker/DWARFLinkerBase.h"
@@ -122,7 +123,7 @@ public:
   virtual ~DWARFLinker() = default;
 
   /// Creates dwarf linker instance.
-  static std::unique_ptr<DWARFLinker>
+  LLVM_ABI static std::unique_ptr<DWARFLinker>
   createLinker(MessageHandlerTy ErrorHandler, MessageHandlerTy WarningHandler);
 
   /// Set output DWARF handler. Result of linking DWARF is set of sections
