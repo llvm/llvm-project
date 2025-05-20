@@ -206,21 +206,25 @@ define void @histogram_uadd_sat_i32_literal_alltruemask(ptr %base, <4 x i32> %in
 ; CHECK-NEXT:    add v2.2d, v1.2d, v2.2d
 ; CHECK-NEXT:    add v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    fmov x8, d2
-; CHECK-NEXT:    mov x9, v2.d[1]
-; CHECK-NEXT:    ldr w10, [x8]
-; CHECK-NEXT:    add w10, w10, #1
-; CHECK-NEXT:    str w10, [x8]
-; CHECK-NEXT:    ldr w8, [x9]
-; CHECK-NEXT:    add w8, w8, #1
-; CHECK-NEXT:    str w8, [x9]
+; CHECK-NEXT:    mov x10, v2.d[1]
+; CHECK-NEXT:    ldr w9, [x8]
+; CHECK-NEXT:    adds w9, w9, #1
+; CHECK-NEXT:    csinv w9, w9, wzr, lo
+; CHECK-NEXT:    str w9, [x8]
+; CHECK-NEXT:    ldr w8, [x10]
+; CHECK-NEXT:    adds w8, w8, #1
+; CHECK-NEXT:    csinv w8, w8, wzr, lo
+; CHECK-NEXT:    str w8, [x10]
 ; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    mov x9, v0.d[1]
-; CHECK-NEXT:    ldr w10, [x8]
-; CHECK-NEXT:    add w10, w10, #1
-; CHECK-NEXT:    str w10, [x8]
-; CHECK-NEXT:    ldr w8, [x9]
-; CHECK-NEXT:    add w8, w8, #1
-; CHECK-NEXT:    str w8, [x9]
+; CHECK-NEXT:    mov x10, v0.d[1]
+; CHECK-NEXT:    ldr w9, [x8]
+; CHECK-NEXT:    adds w9, w9, #1
+; CHECK-NEXT:    csinv w9, w9, wzr, lo
+; CHECK-NEXT:    str w9, [x8]
+; CHECK-NEXT:    ldr w8, [x10]
+; CHECK-NEXT:    adds w8, w8, #1
+; CHECK-NEXT:    csinv w8, w8, wzr, lo
+; CHECK-NEXT:    str w8, [x10]
 ; CHECK-NEXT:    ret
   %buckets = getelementptr i32, ptr %base, <4 x i32> %indices
   call void @llvm.experimental.vector.histogram.uadd.sat.nxv4p0.i32(<4 x ptr> %buckets, i32 1, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
@@ -320,21 +324,25 @@ define void @histogram_umax_i32_literal_alltruemask(ptr %base, <4 x i32> %indice
 ; CHECK-NEXT:    add v2.2d, v1.2d, v2.2d
 ; CHECK-NEXT:    add v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    fmov x8, d2
-; CHECK-NEXT:    mov x9, v2.d[1]
-; CHECK-NEXT:    ldr w10, [x8]
-; CHECK-NEXT:    add w10, w10, #1
-; CHECK-NEXT:    str w10, [x8]
-; CHECK-NEXT:    ldr w8, [x9]
-; CHECK-NEXT:    add w8, w8, #1
-; CHECK-NEXT:    str w8, [x9]
+; CHECK-NEXT:    mov x10, v2.d[1]
+; CHECK-NEXT:    ldr w9, [x8]
+; CHECK-NEXT:    cmp w9, #1
+; CHECK-NEXT:    csinc w9, w9, wzr, hi
+; CHECK-NEXT:    str w9, [x8]
+; CHECK-NEXT:    ldr w8, [x10]
+; CHECK-NEXT:    cmp w8, #1
+; CHECK-NEXT:    csinc w8, w8, wzr, hi
+; CHECK-NEXT:    str w8, [x10]
 ; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    mov x9, v0.d[1]
-; CHECK-NEXT:    ldr w10, [x8]
-; CHECK-NEXT:    add w10, w10, #1
-; CHECK-NEXT:    str w10, [x8]
-; CHECK-NEXT:    ldr w8, [x9]
-; CHECK-NEXT:    add w8, w8, #1
-; CHECK-NEXT:    str w8, [x9]
+; CHECK-NEXT:    mov x10, v0.d[1]
+; CHECK-NEXT:    ldr w9, [x8]
+; CHECK-NEXT:    cmp w9, #1
+; CHECK-NEXT:    csinc w9, w9, wzr, hi
+; CHECK-NEXT:    str w9, [x8]
+; CHECK-NEXT:    ldr w8, [x10]
+; CHECK-NEXT:    cmp w8, #1
+; CHECK-NEXT:    csinc w8, w8, wzr, hi
+; CHECK-NEXT:    str w8, [x10]
 ; CHECK-NEXT:    ret
   %buckets = getelementptr i32, ptr %base, <4 x i32> %indices
   call void @llvm.experimental.vector.histogram.umax.nxv4p0.i32(<4 x ptr> %buckets, i32 1, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
@@ -434,21 +442,25 @@ define void @histogram_umin_i32_literal_alltruemask(ptr %base, <4 x i32> %indice
 ; CHECK-NEXT:    add v2.2d, v1.2d, v2.2d
 ; CHECK-NEXT:    add v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    fmov x8, d2
-; CHECK-NEXT:    mov x9, v2.d[1]
-; CHECK-NEXT:    ldr w10, [x8]
-; CHECK-NEXT:    add w10, w10, #1
-; CHECK-NEXT:    str w10, [x8]
-; CHECK-NEXT:    ldr w8, [x9]
-; CHECK-NEXT:    add w8, w8, #1
-; CHECK-NEXT:    str w8, [x9]
+; CHECK-NEXT:    mov x10, v2.d[1]
+; CHECK-NEXT:    ldr w9, [x8]
+; CHECK-NEXT:    cmp w9, #1
+; CHECK-NEXT:    csinc w9, w9, wzr, lo
+; CHECK-NEXT:    str w9, [x8]
+; CHECK-NEXT:    ldr w8, [x10]
+; CHECK-NEXT:    cmp w8, #1
+; CHECK-NEXT:    csinc w8, w8, wzr, lo
+; CHECK-NEXT:    str w8, [x10]
 ; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    mov x9, v0.d[1]
-; CHECK-NEXT:    ldr w10, [x8]
-; CHECK-NEXT:    add w10, w10, #1
-; CHECK-NEXT:    str w10, [x8]
-; CHECK-NEXT:    ldr w8, [x9]
-; CHECK-NEXT:    add w8, w8, #1
-; CHECK-NEXT:    str w8, [x9]
+; CHECK-NEXT:    mov x10, v0.d[1]
+; CHECK-NEXT:    ldr w9, [x8]
+; CHECK-NEXT:    cmp w9, #1
+; CHECK-NEXT:    csinc w9, w9, wzr, lo
+; CHECK-NEXT:    str w9, [x8]
+; CHECK-NEXT:    ldr w8, [x10]
+; CHECK-NEXT:    cmp w8, #1
+; CHECK-NEXT:    csinc w8, w8, wzr, lo
+; CHECK-NEXT:    str w8, [x10]
 ; CHECK-NEXT:    ret
   %buckets = getelementptr i32, ptr %base, <4 x i32> %indices
   call void @llvm.experimental.vector.histogram.umin.nxv4p0.i32(<4 x ptr> %buckets, i32 1, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
