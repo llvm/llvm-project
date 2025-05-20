@@ -28,6 +28,11 @@ extern volatile int OpenMPModuleAnchorSource;
 static int LLVM_ATTRIBUTE_UNUSED OpenMPModuleAnchorDestination =
     OpenMPModuleAnchorSource;
 
+// This anchor is used to force the linker to link the PerformanceModule.
+extern volatile int PerformanceModuleAnchorSource;
+static int LLVM_ATTRIBUTE_UNUSED PerformanceModuleAnchorDestination =
+    PerformanceModuleAnchorSource;
+
 } // namespace Fortran::tidy
 
 #endif // LLVM_FLANG_TOOLS_FLANG_TIDY_FLANGTIDYFORCELINKER_H
