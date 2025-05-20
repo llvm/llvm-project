@@ -300,16 +300,16 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
           mcdxbc::DescriptorTable Table;
           for (const auto &R : Param.Table.Ranges) {
 
-              dxbc::RTS0::v2::DescriptorRange Range;
-              Range.RangeType = R.RangeType;
-              Range.NumDescriptors = R.NumDescriptors;
-              Range.BaseShaderRegister = R.BaseShaderRegister;
-              Range.RegisterSpace = R.RegisterSpace;
-              Range.OffsetInDescriptorsFromTableStart =
-                  R.OffsetInDescriptorsFromTableStart;
-              if (RS.Version > 1)
-                Range.Flags = R.getEncodedFlags();
-              Table.Ranges.push_back(Range);
+            dxbc::RTS0::v2::DescriptorRange Range;
+            Range.RangeType = R.RangeType;
+            Range.NumDescriptors = R.NumDescriptors;
+            Range.BaseShaderRegister = R.BaseShaderRegister;
+            Range.RegisterSpace = R.RegisterSpace;
+            Range.OffsetInDescriptorsFromTableStart =
+                R.OffsetInDescriptorsFromTableStart;
+            if (RS.Version > 1)
+              Range.Flags = R.getEncodedFlags();
+            Table.Ranges.push_back(Range);
           }
           RS.ParametersContainer.addParameter(Header, Table);
         } break;

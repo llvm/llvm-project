@@ -48,15 +48,16 @@ size_t RootSignatureDesc::getSize() const {
         Size += sizeof(dxbc::RTS0::v2::RootDescriptor);
 
       break;
-    case llvm::to_underlying(dxbc::RootParameterType::DescriptorTable): 
-    const DescriptorTable &Table = ParametersContainer.getDescriptorTable(I.Location);
-    if (Version == 1)
-      Size +=
-          sizeof(dxbc::RTS0::v1::DescriptorRange) * Table.Ranges.size() + 8;
-    else
-      Size +=
-          sizeof(dxbc::RTS0::v2::DescriptorRange) * Table.Ranges.size() + 8;
-    break;
+    case llvm::to_underlying(dxbc::RootParameterType::DescriptorTable):
+      const DescriptorTable &Table =
+          ParametersContainer.getDescriptorTable(I.Location);
+      if (Version == 1)
+        Size +=
+            sizeof(dxbc::RTS0::v1::DescriptorRange) * Table.Ranges.size() + 8;
+      else
+        Size +=
+            sizeof(dxbc::RTS0::v2::DescriptorRange) * Table.Ranges.size() + 8;
+      break;
     }
   }
   return Size;
@@ -100,8 +101,7 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
                              llvm::endianness::little);
       support::endian::write(BOS, Constants.Num32BitValues,
                              llvm::endianness::little);
-                            }
-                            break;
+    } break;
     case llvm::to_underlying(dxbc::RootParameterType::CBV):
     case llvm::to_underlying(dxbc::RootParameterType::SRV):
     case llvm::to_underlying(dxbc::RootParameterType::UAV): {
@@ -114,29 +114,26 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
                              llvm::endianness::little);
       if (Version > 1)
         support::endian::write(BOS, Descriptor.Flags, llvm::endianness::little);
-    }
-    break;
-    case llvm::to_underlying(dxbc::RootParameterType::DescriptorTable):{
+    } break;
+    case llvm::to_underlying(dxbc::RootParameterType::DescriptorTable): {
       const DescriptorTable &Table =
           ParametersContainer.getDescriptorTable(Loc);
       support::endian::write(BOS, (uint32_t)Table.Ranges.size(),
                              llvm::endianness::little);
       rewriteOffsetToCurrentByte(BOS, writePlaceholder(BOS));
       for (const auto &Range : Table) {
-          support::endian::write(BOS, Range.RangeType,
-                                 llvm::endianness::little);
-          support::endian::write(BOS, Range.NumDescriptors,
-                                 llvm::endianness::little);
-          support::endian::write(BOS, Range.BaseShaderRegister,
-                                 llvm::endianness::little);
-          support::endian::write(BOS, Range.RegisterSpace,
-                                 llvm::endianness::little);
-          support::endian::write(BOS, Range.OffsetInDescriptorsFromTableStart,
-                                 llvm::endianness::little);
-          if(Version > 1)
-            support::endian::write(BOS, Range.Flags,
-                                  llvm::endianness::little);
-          }
+        support::endian::write(BOS, Range.RangeType, llvm::endianness::little);
+        support::endian::write(BOS, Range.NumDescriptors,
+                               llvm::endianness::little);
+        support::endian::write(BOS, Range.BaseShaderRegister,
+                               llvm::endianness::little);
+        support::endian::write(BOS, Range.RegisterSpace,
+                               llvm::endianness::little);
+        support::endian::write(BOS, Range.OffsetInDescriptorsFromTableStart,
+                               llvm::endianness::little);
+        if (Version > 1)
+          support::endian::write(BOS, Range.Flags, llvm::endianness::little);
+      }
     } break;
     }
   }

@@ -28,10 +28,8 @@ struct RootParameterInfo {
       : Header(Header), Location(Location) {}
 };
 
-
 struct DescriptorTable {
   SmallVector<dxbc::RTS0::v2::DescriptorRange> Ranges;
-
   SmallVector<dxbc::RTS0::v2::DescriptorRange>::const_iterator begin() const {
     return Ranges.begin();
   }
@@ -39,8 +37,6 @@ struct DescriptorTable {
     return Ranges.end();
   }
 };
-
-
 
 struct RootParametersContainer {
   SmallVector<RootParameterInfo> ParametersInfo;
@@ -91,7 +87,7 @@ struct RootParametersContainer {
   const dxbc::RTS0::v2::RootDescriptor &getRootDescriptor(size_t Index) const {
     return Descriptors[Index];
   }
-   const DescriptorTable &getDescriptorTable(size_t Index) const {
+  const DescriptorTable &getDescriptorTable(size_t Index) const {
     return Tables[Index];
   }
 

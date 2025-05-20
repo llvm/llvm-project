@@ -183,9 +183,13 @@ struct DescriptorTable {
   uint32_t RangesOffset;
   ViewArray<dxbc::RTS0::v2::DescriptorRange> Ranges;
 
-  typename ViewArray<dxbc::RTS0::v2::DescriptorRange>::iterator begin() const { return Ranges.begin(); }
+  typename ViewArray<dxbc::RTS0::v2::DescriptorRange>::iterator begin() const {
+    return Ranges.begin();
+  }
 
-  typename ViewArray<dxbc::RTS0::v2::DescriptorRange>::iterator end() const { return Ranges.end(); }
+  typename ViewArray<dxbc::RTS0::v2::DescriptorRange>::iterator end() const {
+    return Ranges.end();
+  }
 };
 
 struct DescriptorTableView : RootParameterView {
@@ -208,7 +212,7 @@ struct DescriptorTableView : RootParameterView {
     Current += sizeof(uint32_t);
 
     size_t RangeSize = sizeof(dxbc::RTS0::v1::DescriptorRange);
-    if(Version > 1)
+    if (Version > 1)
       RangeSize = sizeof(dxbc::RTS0::v2::DescriptorRange);
 
     Table.Ranges.Stride = RangeSize;

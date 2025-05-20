@@ -95,8 +95,10 @@ DXContainerYAML::RootSignatureYamlDesc::create(
        llvm::to_underlying(dxbc::RootDescriptorFlag::Val)) > 0;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
       }
-    } else if (auto *TDV = dyn_cast<object::DirectX::DescriptorTableView>(&ParamView)) {
-      llvm::Expected<object::DirectX::DescriptorTable>TableOrErr = TDV->read(Version);
+    } else if (auto *TDV =
+                   dyn_cast<object::DirectX::DescriptorTableView>(&ParamView)) {
+      llvm::Expected<object::DirectX::DescriptorTable> TableOrErr =
+          TDV->read(Version);
       if (Error E = TableOrErr.takeError())
         return std::move(E);
       auto Table = *TableOrErr;
@@ -119,8 +121,8 @@ DXContainerYAML::RootSignatureYamlDesc::create(
 #include "llvm/BinaryFormat/DXContainerConstants.def"
         }
         NewP.Table.Ranges.push_back(NewR);
+      }
     }
-    } 
 
     RootSigDesc.Parameters.push_back(NewP);
   }
