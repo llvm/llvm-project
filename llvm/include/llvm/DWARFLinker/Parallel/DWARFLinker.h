@@ -9,13 +9,13 @@
 #ifndef LLVM_DWARFLINKER_PARALLEL_DWARFLINKER_H
 #define LLVM_DWARFLINKER_PARALLEL_DWARFLINKER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/DWARFLinker/DWARFFile.h"
 #include "llvm/DWARFLinker/DWARFLinkerBase.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
 #include "llvm/MC/MCDwarf.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/TargetParser/Triple.h"
 
 /// ------------------------------------------------------------------

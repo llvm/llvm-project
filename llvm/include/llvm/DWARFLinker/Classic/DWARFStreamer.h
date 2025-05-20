@@ -9,7 +9,6 @@
 #ifndef LLVM_DWARFLINKER_CLASSIC_DWARFSTREAMER_H
 #define LLVM_DWARFLINKER_CLASSIC_DWARFSTREAMER_H
 
-#include "llvm/Support/Compiler.h"
 #include "DWARFLinker.h"
 #include "llvm/BinaryFormat/Swift.h"
 #include "llvm/CodeGen/AsmPrinter.h"
@@ -19,6 +18,7 @@
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {

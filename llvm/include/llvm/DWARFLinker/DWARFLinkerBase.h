@@ -8,7 +8,6 @@
 
 #ifndef LLVM_DWARFLINKER_DWARFLINKERBASE_H
 #define LLVM_DWARFLINKER_DWARFLINKERBASE_H
-#include "llvm/Support/Compiler.h"
 #include "AddressesMap.h"
 #include "DWARFFile.h"
 #include "llvm/ADT/AddressRanges.h"
@@ -18,6 +17,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
 #include "llvm/DebugInfo/DWARF/DWARFExpression.h"
+#include "llvm/Support/Compiler.h"
 #include <map>
 namespace llvm {
 class DWARFUnit;
