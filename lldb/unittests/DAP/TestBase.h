@@ -10,6 +10,8 @@
 #include "Protocol/ProtocolBase.h"
 #include "Transport.h"
 #include "lldb/Host/Pipe.h"
+#include "llvm/ADT/StringRef.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 namespace lldb_dap_tests {
@@ -33,12 +35,29 @@ protected:
   void SetUp() override;
 };
 
+/// Matches an "output" event.
+inline auto OutputMatcher(const llvm::StringRef output,
+                          const llvm::StringRef category = "console") {
+  return testing::VariantWith<lldb_dap::protocol::Event>(testing::FieldsAre(
+      /*event=*/"output", /*body=*/testing::Optional<llvm::json::Value>(
+          llvm::json::Object{{"category", category}, {"output", output}})));
+}
+
 /// A base class for tests that interact with a `lldb_dap::DAP` instance.
 class DAPTestBase : public TransportBase {
 protected:
   std::unique_ptr<lldb_dap::DAP> dap;
 
+  static constexpr llvm::StringLiteral k_linux_binary = "linux-x86_64.out";
+  static constexpr llvm::StringLiteral k_linux_core = "linux-x86_64.core";
+
+  static void SetUpTestSuite();
+  static void TeatUpTestSuite();
   void SetUp() override;
+
+  bool GetDebuggerSupportsTarget(llvm::StringRef platform);
+  void CreateDebugger();
+  void LoadCore(llvm::StringRef binary, llvm::StringRef core);
 
   /// Closes the DAP output pipe and returns the remaining protocol messages in
   /// the buffer.
