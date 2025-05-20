@@ -30,8 +30,8 @@ public:
   /// Note: This is different from what is returned by
   /// mlir::Builder::getStringAttr() which is an mlir::StringAttr.
   mlir::Attribute getString(llvm::StringRef str, mlir::Type eltTy,
-                            unsigned size) {
-    unsigned finalSize = size ? size : str.size();
+                            std::optional<size_t> size) {
+    size_t finalSize = size ? *size : str.size();
 
     size_t lastNonZeroPos = str.find_last_not_of('\0');
     // If the string is full of null bytes, emit a #cir.zero rather than
@@ -41,7 +41,7 @@ public:
       return cir::ZeroAttr::get(arrayTy);
     }
     // We emit trailing zeros only if there are multiple trailing zeros.
-    int trailingZerosNum = 0;
+    size_t trailingZerosNum = 0;
     if (finalSize > lastNonZeroPos + 2)
       trailingZerosNum = finalSize - lastNonZeroPos - 1;
     auto truncatedArrayTy =
