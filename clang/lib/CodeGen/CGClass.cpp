@@ -2805,6 +2805,7 @@ SanitizerInfoFromCFICheckKind(CodeGenFunction::CFITypeCheckKind TCK) {
   case CodeGenFunction::CFITCK_VMFCall:
     llvm_unreachable("unexpected sanitizer kind");
   }
+  llvm_unreachable("Unknown CFITypeCheckKind enum");
 }
 
 void CodeGenFunction::EmitVTablePtrCheckForCall(const CXXRecordDecl *RD,
