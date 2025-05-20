@@ -5,7 +5,9 @@
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCRegister.h"
 #include "llvm/Support/MathExtras.h"
+#include <cassert>
 #include <cstdint>
+#include <optional>
 namespace llvm {
 
 using DWARFRegType = int64_t;
@@ -25,6 +27,23 @@ struct RegisterCFIState {
     int OffsetFromCFA;
     DWARFRegType Register;
   } Info;
+
+  bool operator==(const RegisterCFIState &OtherState) const {
+    if (RetrieveApproach != OtherState.RetrieveApproach)
+      return false;
+
+    switch (RetrieveApproach) {
+    case Undefined:
+    case SameValue:
+    case Other:
+      return true;
+    case AnotherRegister:
+      return Info.Register == OtherState.Info.Register;
+    case OffsetFromCFAAddr:
+    case OffsetFromCFAVal:
+      return Info.OffsetFromCFA == OtherState.Info.OffsetFromCFA;
+    }
+  }
 
   static RegisterCFIState createUndefined() {
     RegisterCFIState State;
@@ -96,6 +115,25 @@ struct CFIState {
 
   CFIState(DWARFRegType CFARegister, int CFIOffset)
       : CFARegister(CFARegister), CFAOffset(CFIOffset) {}
+
+  std::optional<DWARFRegType>
+  getReferenceRegisterForCallerValueOfRegister(DWARFRegType Reg) const {
+    assert(RegisterCFIStates.count(Reg) &&
+           "The register should be tracked inside the register states");
+    auto &&RegState = RegisterCFIStates.at(Reg);
+    switch (RegState.RetrieveApproach) {
+    case RegisterCFIState::Undefined:
+    case RegisterCFIState::Other:
+      return std::nullopt;
+    case RegisterCFIState::SameValue:
+      return Reg;
+    case RegisterCFIState::AnotherRegister:
+      return RegState.Info.Register;
+    case RegisterCFIState::OffsetFromCFAAddr:
+    case RegisterCFIState::OffsetFromCFAVal:
+      return CFARegister;
+    }
+  }
 
   bool apply(const MCCFIInstruction &CFIDirective) {
     switch (CFIDirective.getOperation()) {
