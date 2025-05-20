@@ -1747,8 +1747,7 @@ defm MatrixResultBFloat16ComponentsINTEL : CooperativeMatrixOperandsOperand<0x10
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define SpecConstant Operands enum values and at the
-// same time SymbolicOperand entries with string mnemonics, extensions and
-// capabilities.
+// same time SymbolicOperand.
 //===----------------------------------------------------------------------===//
 
 def SpecConstantOpOperands : GenericEnum, Operand<i32> {
