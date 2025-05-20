@@ -29773,11 +29773,11 @@ SDValue AArch64TargetLowering::LowerFixedLengthVECTOR_SHUFFLEToSVE(
     return convertFromScalableVector(DAG, VT, Op);
   }
 
-  auto lowerToRevMergePassthru = [&](unsigned Opcode, SDValue Vec, EVT NewVT) {
-    auto Pg = getPredicateForVector(DAG, DL, NewVT);
-    SDValue RevOp = DAG.getNode(ISD::BITCAST, DL, NewVT, Vec);
-    auto Rev =
-        DAG.getNode(Opcode, DL, NewVT, Pg, RevOp, DAG.getUNDEF(ContainerVT));
+  auto lowerToRevMergePassthru = [&](unsigned Opcode, SDValue Vec,
+                                     EVT PredVecVT, EVT RevVT) {
+    auto Pg = getPredicateForVector(DAG, DL, PredVecVT);
+    SDValue RevOp = DAG.getNode(ISD::BITCAST, DL, RevVT, Vec);
+    auto Rev = DAG.getNode(Opcode, DL, RevVT, Pg, RevOp, DAG.getUNDEF(RevVT));
     auto Cast = DAG.getNode(ISD::BITCAST, DL, ContainerVT, Rev);
     return convertFromScalableVector(DAG, VT, Cast);
   };
@@ -29794,13 +29794,13 @@ SDValue AArch64TargetLowering::LowerFixedLengthVECTOR_SHUFFLEToSVE(
         RevOp = AArch64ISD::REVW_MERGE_PASSTHRU;
       EVT NewVT =
           getPackedSVEVectorVT(EVT::getIntegerVT(*DAG.getContext(), LaneSize));
-      return lowerToRevMergePassthru(RevOp, Op1, NewVT);
+      return lowerToRevMergePassthru(RevOp, Op1, NewVT, NewVT);
     }
   }
 
   if (Subtarget->hasSVE2p1() && EltSize == 64 &&
       isREVMask(ShuffleMask, EltSize, VT.getVectorNumElements(), 128)) {
-    return lowerToRevMergePassthru(AArch64ISD::REVD_MERGE_PASSTHRU, Op1,
+    return lowerToRevMergePassthru(AArch64ISD::REVD_MERGE_PASSTHRU, Op1, VT,
                                    ContainerVT);
   }
 
