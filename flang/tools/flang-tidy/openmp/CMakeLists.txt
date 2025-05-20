@@ -1,4 +1,5 @@
 add_flang_library(flangTidyOpenMPModule STATIC
+  AccumulatorRaceCheck.cpp
   OpenMPTidyModule.cpp
 
   LINK_LIBS

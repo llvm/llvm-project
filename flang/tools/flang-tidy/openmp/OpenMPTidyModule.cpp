@@ -8,13 +8,17 @@
 
 #include "../FlangTidyModule.h"
 #include "../FlangTidyModuleRegistry.h"
+#include "AccumulatorRaceCheck.h"
 
 namespace Fortran::tidy {
 namespace openmp {
 
 class OpenMPModule : public FlangTidyModule {
 public:
-  void addCheckFactories(FlangTidyCheckFactories &CheckFactories) override {}
+  void addCheckFactories(FlangTidyCheckFactories &CheckFactories) override {
+    CheckFactories.registerCheck<AccumulatorRaceCheck>(
+        "openmp-accumulator-race");
+  }
 };
 
 } // namespace openmp
