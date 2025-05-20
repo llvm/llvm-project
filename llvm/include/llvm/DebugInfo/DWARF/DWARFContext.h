@@ -102,8 +102,6 @@ public:
     /// Parse a macro[.dwo] or macinfo[.dwo] section.
     std::unique_ptr<DWARFDebugMacro>
     parseMacroOrMacinfo(MacroSecType SectionType);
-
-    virtual Error doWorkThreadSafely(function_ref<Error()> Work) = 0;
   };
   friend class DWARFContextState;
 
@@ -491,10 +489,6 @@ public:
   /// Sets whether CU/TU should be populated manually. TU Index populated
   /// manually only for DWARF5.
   void setParseCUTUIndexManually(bool PCUTU) { ParseCUTUIndexManually = PCUTU; }
-
-  Error doWorkThreadSafely(function_ref<Error()> Work) {
-    return State->doWorkThreadSafely(Work);
-  }
 
 private:
   void addLocalsForDie(DWARFCompileUnit *CU, DWARFDie Subprogram, DWARFDie Die,

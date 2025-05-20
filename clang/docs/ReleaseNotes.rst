@@ -746,6 +746,7 @@ Bug Fixes to C++ Support
 - Fixed bug in constant evaluation that would allow using the value of a
   reference in its own initializer in C++23 mode (#GH131330).
 - Clang could incorrectly instantiate functions in discarded contexts (#GH140449)
+- Fix instantiation of default-initialized variable template specialization. (#GH140632) (#GH140622)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
