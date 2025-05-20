@@ -353,6 +353,14 @@ generic-gcc-cxx11)
                    -DLIBUNWIND_ENABLE_WERROR=NO
     check-runtimes
 ;;
+generic-gcc-abi-unstable)
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-abi-unstable.cmake" \
+                   -DLIBCXX_ENABLE_WERROR=NO \
+                   -DLIBCXXABI_ENABLE_WERROR=NO \
+                   -DLIBUNWIND_ENABLE_WERROR=NO
+    check-runtimes
+;;
 #
 # Sanitizers
 #

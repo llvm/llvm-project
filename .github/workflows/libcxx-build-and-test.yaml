@@ -44,6 +44,7 @@ jobs:
       matrix:
         config: [
           'frozen-cxx03-headers',
+          'generic-abi-unstable',
           'generic-cxx03',
           'generic-cxx26',
           'generic-modules'
@@ -52,6 +53,9 @@ jobs:
         cxx: [ 'clang++-21' ]
         include:
           - config: 'generic-gcc'
+            cc: 'gcc-14'
+            cxx: 'g++-14'
+          - config: 'generic-gcc-abi-unstable'
             cc: 'gcc-14'
             cxx: 'g++-14'
     steps:
