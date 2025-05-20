@@ -11945,36 +11945,33 @@ SDValue PPCTargetLowering::LowerDMFVectorLoad(SDValue Op,
   SDValue Value =
       SDValue(DAG.getMachineNode(PPC::REG_SEQUENCE, dl, MVT::v1024i1, Ops), 0);
 
-  SDValue DmrPValue;
-  if (IsV2048i1) {
-    // This corresponds to v2048i1 which represents a dmr pair.
-    SDValue Dmr1Lo(DAG.getMachineNode(PPC::DMXXINSTDMR512, dl, MVT::v512i1,
-                                      Loads[4], Loads[5]),
-                   0);
-    SDValue Dmr1Hi(DAG.getMachineNode(PPC::DMXXINSTDMR512_HI, dl, MVT::v512i1,
-                                      Loads[6], Loads[7]),
-                   0);
-    const SDValue Dmr1Ops[] = {RC, Dmr1Lo, LoSub, Dmr1Hi, HiSub};
-    SDValue Dmr1Value = SDValue(
-        DAG.getMachineNode(PPC::REG_SEQUENCE, dl, MVT::v1024i1, Dmr1Ops), 0);
-
-    SDValue Dmr0Sub = DAG.getTargetConstant(PPC::sub_dmr0, dl, MVT::i32);
-    SDValue Dmr1Sub = DAG.getTargetConstant(PPC::sub_dmr1, dl, MVT::i32);
-
-    SDValue DmrPRC = DAG.getTargetConstant(PPC::DMRpRCRegClassID, dl, MVT::i32);
-    const SDValue DmrPOps[] = {DmrPRC, Value, Dmr0Sub, Dmr1Value, Dmr1Sub};
-
-    DmrPValue = SDValue(
-        DAG.getMachineNode(PPC::REG_SEQUENCE, dl, MVT::v2048i1, DmrPOps), 0);
+  if (IsV1024i1) {
+    SDValue RetOps[] = {Value, TF};
+    return DAG.getMergeValues(RetOps, dl);
   }
 
-  SDValue RetOps[2];
-  if (IsV1024i1)
-    RetOps[0] = Value;
-  else
-    RetOps[0] = DmrPValue;
-  RetOps[1] = TF;
+  // Handle Loads for V2048i1 which represents a dmr pair.
+  SDValue DmrPValue;
+  SDValue Dmr1Lo(DAG.getMachineNode(PPC::DMXXINSTDMR512, dl, MVT::v512i1,
+                                    Loads[4], Loads[5]),
+                 0);
+  SDValue Dmr1Hi(DAG.getMachineNode(PPC::DMXXINSTDMR512_HI, dl, MVT::v512i1,
+                                    Loads[6], Loads[7]),
+                 0);
+  const SDValue Dmr1Ops[] = {RC, Dmr1Lo, LoSub, Dmr1Hi, HiSub};
+  SDValue Dmr1Value = SDValue(
+      DAG.getMachineNode(PPC::REG_SEQUENCE, dl, MVT::v1024i1, Dmr1Ops), 0);
 
+  SDValue Dmr0Sub = DAG.getTargetConstant(PPC::sub_dmr0, dl, MVT::i32);
+  SDValue Dmr1Sub = DAG.getTargetConstant(PPC::sub_dmr1, dl, MVT::i32);
+
+  SDValue DmrPRC = DAG.getTargetConstant(PPC::DMRpRCRegClassID, dl, MVT::i32);
+  const SDValue DmrPOps[] = {DmrPRC, Value, Dmr0Sub, Dmr1Value, Dmr1Sub};
+
+  DmrPValue = SDValue(
+      DAG.getMachineNode(PPC::REG_SEQUENCE, dl, MVT::v2048i1, DmrPOps), 0);
+
+  SDValue RetOps[] = {DmrPValue, TF};
   return DAG.getMergeValues(RetOps, dl);
 }
 
