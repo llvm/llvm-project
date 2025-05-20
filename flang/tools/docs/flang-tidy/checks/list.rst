@@ -22,3 +22,4 @@ Flang-Tidy Checks
    :doc:`bugprone-implicit-declaration <bugprone/implicit-declaration>`,
    :doc:`bugprone-implied-save <bugprone/implied-save>`,
    :doc:`bugprone-mismatched-intent <bugprone/mismatched-intent>`,
+   :doc:`bugprone-missing-action <bugprone/missing-action>`,
