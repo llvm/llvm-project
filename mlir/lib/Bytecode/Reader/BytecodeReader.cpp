@@ -107,7 +107,8 @@ public:
       return emitError("expected alignment to be a power-of-two");
 
     auto isUnaligned = [&](const uint8_t *ptr) {
-      return ((uintptr_t)ptr & (alignment - 1)) != 0;
+      unsigned offset = ptr - buffer.begin();
+      return (offset & (alignment - 1)) != 0;
     };
 
     // Shift the reader position to the next alignment boundary.
@@ -1506,7 +1507,7 @@ private:
     UseListOrderStorage(bool isIndexPairEncoding,
                         SmallVector<unsigned, 4> &&indices)
         : indices(std::move(indices)),
-          isIndexPairEncoding(isIndexPairEncoding){};
+          isIndexPairEncoding(isIndexPairEncoding) {};
     /// The vector containing the information required to reorder the
     /// use-list of a value.
     SmallVector<unsigned, 4> indices;
