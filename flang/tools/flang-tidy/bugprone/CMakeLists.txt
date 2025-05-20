@@ -1,4 +1,5 @@
 add_flang_library(flangTidyBugproneModule STATIC
+  ArithmeticGotoCheck.cpp
   BugproneTidyModule.cpp
 
   LINK_LIBS

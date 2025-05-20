@@ -15,3 +15,5 @@ Flang-Tidy Checks
 
 .. csv-table::
    :header: "Name", "Offers fixes"
+
+   :doc:`bugprone-arithmetic-goto <bugprone/arithmetic-goto>`,
