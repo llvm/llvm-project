@@ -44,7 +44,7 @@ class raw_ostream;
 /// Generic interface to target specific assembler backends.
 class MCAsmBackend {
 protected: // Can only create subclasses.
-  MCAsmBackend(llvm::endianness Endian, unsigned RelaxFixupKind = 0);
+  MCAsmBackend(llvm::endianness Endian, bool LinkerRelaxation = false);
 
 public:
   MCAsmBackend(const MCAsmBackend &) = delete;
@@ -53,10 +53,9 @@ public:
 
   const llvm::endianness Endian;
 
-  /// Fixup kind used for linker relaxation. Currently only used by RISC-V
-  /// and LoongArch.
-  const unsigned RelaxFixupKind;
-  bool allowLinkerRelaxation() const { return RelaxFixupKind != 0; }
+  /// True for RISC-V and LoongArch. Relaxable relocations are marked with a
+  /// RELAX relocation.
+  bool allowLinkerRelaxation() const { return LinkerRelaxation; }
 
   /// Return true if this target might automatically pad instructions and thus
   /// need to emit padding enable/disable directives around sensative code.
@@ -235,6 +234,9 @@ public:
   }
 
   bool isDarwinCanonicalPersonality(const MCSymbol *Sym) const;
+
+private:
+  const bool LinkerRelaxation;
 };
 
 } // end namespace llvm
