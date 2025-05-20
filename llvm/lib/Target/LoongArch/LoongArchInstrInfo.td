@@ -1502,12 +1502,6 @@ multiclass SelectCC_GPR_rrirr<DAGOperand valty, ValueType vt> {
 
 defm Select_GPR : SelectCC_GPR_rrirr<GPR, GRLenVT>;
 
-class SelectCompressOpt<CondCode Cond>
-    : Pat<(loongarch_selectcc_frag:$select (GRLenVT GPR:$lhs), simm12:$Constant, Cond,
-                                           (GRLenVT GPR:$truev), GPR:$falsev),
-    (Select_GPR_Using_CC_GPR (GRLenVT (ADDI_W GPR:$lhs, (NegImm simm12:$Constant))), (GRLenVT R0),
-                          (IntCCtoBranchOpc $select), GPR:$truev, GPR:$falsev)>;
-
 let Predicates = [Has32S] in {
 def : Pat<(select GPR:$cond, GPR:$t, 0), (MASKEQZ GPR:$t, GPR:$cond)>;
 def : Pat<(select GPR:$cond, 0, GPR:$f), (MASKNEZ GPR:$f, GPR:$cond)>;

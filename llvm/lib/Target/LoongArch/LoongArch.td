@@ -14,9 +14,18 @@ include "llvm/Target/Target.td"
 
 // LoongArch is divided into two versions, the 32-bit version (LA32) and the
 // 64-bit version (LA64).
+
+// LoongArch 32-bit is divided into two variants, the reduced 32-bit variant
+// (LA32R) and the standard 32-bit variant (LA32S).
+def Feature32S
+    : SubtargetFeature<"32s", "Has32S", "true",
+                       "LA32 Standard Basic Instruction Extension">;
+def Has32S : Predicate<"Subtarget->has32S()">;
+
 def Feature64Bit
     : SubtargetFeature<"64bit", "HasLA64", "true",
-                       "LA64 Basic Integer and Privilege Instruction Set">;
+                       "LA64 Basic Integer and Privilege Instruction Set",
+                       [Feature32S]>;
 def Feature32Bit
     : SubtargetFeature<"32bit", "HasLA32", "true",
                        "LA32 Basic Integer and Privilege Instruction Set">;
@@ -31,13 +40,6 @@ def IsLA32
 
 defvar LA32 = DefaultMode;
 def LA64 : HwMode<"+64bit", [IsLA64]>;
-
-// LoongArch 32-bit is divided into two variants, the reduced 32-bit variant
-// (LA32R) and the standard 32-bit variant (LA32S).
-def Feature32S
-    : SubtargetFeature<"32s", "Has32S", "true",
-                       "LA32 Standard Basic Instruction Extension">;
-def Has32S : Predicate<"Subtarget->has32S()">;
 
 // Single Precision floating point
 def FeatureBasicF
@@ -166,13 +168,11 @@ include "LoongArchInstrInfo.td"
 
 def : ProcessorModel<"generic-la32", NoSchedModel, [Feature32Bit]>;
 def : ProcessorModel<"generic-la64", NoSchedModel, [Feature64Bit,
-                                                    Feature32S,
                                                     FeatureUAL,
                                                     FeatureExtLSX]>;
 
 // Generic 64-bit processor with double-precision floating-point support.
 def : ProcessorModel<"loongarch64", NoSchedModel, [Feature64Bit,
-                                                   Feature32S,
                                                    FeatureUAL,
                                                    FeatureBasicD]>;
 
@@ -181,14 +181,12 @@ def : ProcessorModel<"loongarch64", NoSchedModel, [Feature64Bit,
 def : ProcessorModel<"generic", NoSchedModel, []>;
 
 def : ProcessorModel<"la464", NoSchedModel, [Feature64Bit,
-                                             Feature32S,
                                              FeatureUAL,
                                              FeatureExtLASX,
                                              FeatureExtLVZ,
                                              FeatureExtLBT]>;
 
 def : ProcessorModel<"la664", NoSchedModel, [Feature64Bit,
-                                             Feature32S,
                                              FeatureUAL,
                                              FeatureExtLASX,
                                              FeatureExtLVZ,
