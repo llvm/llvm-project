@@ -569,6 +569,9 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   }
 }
 
+// Check if the offset between the symbol and fragment is fully resolved,
+// unaffected by linker-relaxable instructions. Complements the generic
+// isSymbolRefDifferenceFullyResolvedImpl.
 bool RISCVAsmBackend::isPCRelFixupResolved(const MCAssembler &Asm,
                                            const MCSymbol *SymA,
                                            const MCFragment &F) {
@@ -624,9 +627,8 @@ bool RISCVAsmBackend::evaluateTargetFixup(
   Value = Asm.getSymbolOffset(SA) + AUIPCTarget.getConstant();
   Value -= Asm.getFragmentOffset(*AUIPCDF) + AUIPCFixup->getOffset();
 
-  if (AUIPCFixup->getTargetKind() != RISCV::fixup_riscv_pcrel_hi20)
-    return false;
-  return isPCRelFixupResolved(Asm, AUIPCTarget.getAddSym(), *AUIPCDF);
+  return AUIPCFixup->getTargetKind() == RISCV::fixup_riscv_pcrel_hi20 &&
+         isPCRelFixupResolved(Asm, AUIPCTarget.getAddSym(), *AUIPCDF);
 }
 
 bool RISCVAsmBackend::addReloc(MCAssembler &Asm, const MCFragment &F,

@@ -392,8 +392,8 @@ static void attemptToFoldSymbolOffsetDifference(const MCAssembler *Asm,
         Displacement += DF->getContents().size();
       } else if (auto *RF = dyn_cast<MCRelaxableFragment>(FI);
                  RF && Asm->hasFinalLayout()) {
-        // A relaxable fragment has indeterminate size before finishLayout.
-        // Afterwards (during relocation generation), it can be treated as a
+        // Before finishLayout, a relaxable fragment's size is indeterminate.
+        // After layout, during relocation generation, it can be treated as a
         // data fragment.
         Displacement += RF->getContents().size();
       } else if (auto *AF = dyn_cast<MCAlignFragment>(FI);
