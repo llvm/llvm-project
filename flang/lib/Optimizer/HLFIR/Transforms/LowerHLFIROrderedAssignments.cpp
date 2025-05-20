@@ -1397,6 +1397,7 @@ void OrderedAssignmentRewriter::canonicalizeExactlyOnceInsideWhere(
       isValid = false;
     }
     assert(isValid && "invalid live-in");
+    (void)isValid;
     return op;
   };
   mlir::Liveness liveness(whereOp.getOperation());
