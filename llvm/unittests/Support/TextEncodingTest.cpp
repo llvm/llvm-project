@@ -8,7 +8,9 @@
 
 #include "llvm/Support/TextEncoding.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Config/config.h"
 #include "gtest/gtest.h"
+
 using namespace llvm;
 
 namespace {
@@ -61,12 +63,8 @@ TEST(Encoding, FromUTF8) {
   ErrorOr<TextEncodingConverter> Conv =
       TextEncodingConverter::create(TextEncoding::UTF8, TextEncoding::IBM1047);
 
-  // Stop test if conversion is not supported.
-  if (!Conv) {
-    ASSERT_EQ(Conv.getError(),
-              std::make_error_code(std::errc::invalid_argument));
-    return;
-  }
+  // Converter should always exist between UTF-8 and IBM-1047
+  EXPECT_TRUE(Conv);
 
   std::error_code EC = Conv->convert(Src, Dst);
   EXPECT_TRUE(!EC);
@@ -101,12 +99,8 @@ TEST(Encoding, ToUTF8) {
   ErrorOr<TextEncodingConverter> Conv =
       TextEncodingConverter::create(TextEncoding::IBM1047, TextEncoding::UTF8);
 
-  // Stop test if conversion is not supported.
-  if (!Conv) {
-    ASSERT_EQ(Conv.getError(),
-              std::make_error_code(std::errc::invalid_argument));
-    return;
-  }
+  // Converter should always exist between UTF-8 and IBM-1047
+  EXPECT_TRUE(Conv);
 
   std::error_code EC = Conv->convert(Src, Dst);
 
@@ -131,28 +125,45 @@ TEST(Encoding, ToUTF8) {
 TEST(Encoding, RoundTrip) {
   ErrorOr<TextEncodingConverter> ConvToUTF16 =
       TextEncodingConverter::create("IBM-1047", "UTF-16");
+
+#if HAVE_ICU
+  EXPECT_TRUE(ConvToUTF16);
+#else
   // Stop test if conversion is not supported (no underlying iconv support).
   if (!ConvToUTF16) {
     ASSERT_EQ(ConvToUTF16.getError(),
               std::make_error_code(std::errc::invalid_argument));
     return;
   }
+#endif
+
   ErrorOr<TextEncodingConverter> ConvToUTF32 =
       TextEncodingConverter::create("UTF-16", "UTF-32");
+
+#if HAVE_ICU
+  EXPECT_TRUE(ConvToUTF32);
+#else
   // Stop test if conversion is not supported (no underlying iconv support).
   if (!ConvToUTF32) {
     ASSERT_EQ(ConvToUTF32.getError(),
               std::make_error_code(std::errc::invalid_argument));
     return;
   }
+#endif
+
   ErrorOr<TextEncodingConverter> ConvToEBCDIC =
       TextEncodingConverter::create("UTF-32", "IBM-1047");
+
+#if HAVE_ICU
+  EXPECT_TRUE(ConvToEBCDIC);
+#else
   // Stop test if conversion is not supported (no underlying iconv support).
   if (!ConvToEBCDIC) {
     ASSERT_EQ(ConvToEBCDIC.getError(),
               std::make_error_code(std::errc::invalid_argument));
     return;
   }
+#endif
 
   // Setup source string.
   char SrcStr[256];
@@ -177,12 +188,17 @@ TEST(Encoding, ShiftState2022) {
 
   ErrorOr<TextEncodingConverter> ConvTo2022 =
       TextEncodingConverter::create("UTF-8", "ISO-2022-JP");
+
+#if HAVE_ICU
+  EXPECT_TRUE(ConvTo2022);
+#else
   // Stop test if conversion is not supported (no underlying iconv support).
   if (!ConvTo2022) {
     ASSERT_EQ(ConvTo2022.getError(),
               std::make_error_code(std::errc::invalid_argument));
     return;
   }
+#endif
 
   // Check that the string is properly converted.
   std::error_code EC = ConvTo2022->convert(Src, Dst);
@@ -197,15 +213,61 @@ TEST(Encoding, InvalidInput) {
 
   ErrorOr<TextEncodingConverter> ConvTo2022 =
       TextEncodingConverter::create("UTF-8", "ISO-2022-JP");
+
+#if HAVE_ICU
+  EXPECT_TRUE(ConvTo2022);
+#else
   // Stop test if conversion is not supported (no underlying iconv support).
   if (!ConvTo2022) {
     ASSERT_EQ(ConvTo2022.getError(),
               std::make_error_code(std::errc::invalid_argument));
     return;
   }
+#endif
 
   // Check that the string failed to convert.
   std::error_code EC = ConvTo2022->convert(Src, Dst);
+  EXPECT_TRUE(EC);
+}
+
+TEST(Encoding, InvalidOutput) {
+  // Cyrillic in UTF-16
+  ErrorOr<TextEncodingConverter> ConvToUTF16 =
+      TextEncodingConverter::create("UTF-8", "UTF-16");
+
+#if HAVE_ICU
+  EXPECT_TRUE(ConvToUTF16);
+#else
+  // Stop test if conversion is not supported (no underlying iconv support).
+  if (!ConvToUTF16) {
+    ASSERT_EQ(ConvToUTF16.getError(),
+              std::make_error_code(std::errc::invalid_argument));
+    return;
+  }
+#endif
+
+  ErrorOr<TextEncodingConverter> ConvToEBCDIC =
+      TextEncodingConverter::create("UTF-16", "IBM-1047");
+
+#if HAVE_ICU
+  EXPECT_TRUE(ConvToEBCDIC);
+#else
+  // Stop test if conversion is not supported (no underlying iconv support).
+  if (!ConvToEBCDIC) {
+    ASSERT_EQ(ConvToEBCDIC.getError(),
+              std::make_error_code(std::errc::invalid_argument));
+    return;
+  }
+#endif
+
+  // Cyrillic string. Convert to UTF-16 and check if properly converted
+  StringRef Src(CyrillicUTF);
+  SmallString<8> Dst, Dst1;
+  std::error_code EC = ConvToUTF16->convert(Src, Dst);
+  EXPECT_TRUE(!EC);
+
+  // Cyrillic string. Results in error because not representable in 1047.
+  EC = ConvToEBCDIC->convert(Dst, Dst1);
   EXPECT_TRUE(EC);
 }
 
@@ -216,12 +278,17 @@ TEST(Encoding, ShiftStateIBM939) {
 
   ErrorOr<TextEncodingConverter> ConvToIBM939 =
       TextEncodingConverter::create("UTF-8", "IBM-939");
+
+#if HAVE_ICU
+  EXPECT_TRUE(ConvToIBM939);
+#else
   // Stop test if conversion is not supported (no underlying iconv support).
   if (!ConvToIBM939) {
     ASSERT_EQ(ConvToIBM939.getError(),
               std::make_error_code(std::errc::invalid_argument));
     return;
   }
+#endif
 
   // Check that the string is properly converted.
   std::error_code EC = ConvToIBM939->convert(Src, Dst);

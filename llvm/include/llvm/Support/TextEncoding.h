@@ -1,4 +1,4 @@
-//===-- TextEncodingConverter.h - Encoding conversion class -------*- C++ -*-=//
+//===-- TextEncoding.h - Text encoding conversion class -----------*- C++ -*-=//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,8 +12,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_SUPPORT_ENCODING_CONVERTER_H
-#define LLVM_SUPPORT_ENCODING_CONVERTER_H
+#ifndef LLVM_SUPPORT_TEXT_ENCODING_H
+#define LLVM_SUPPORT_TEXT_ENCODING_H
 
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"

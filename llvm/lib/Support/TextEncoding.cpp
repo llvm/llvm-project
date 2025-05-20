@@ -1,4 +1,4 @@
-//===-- TextEncoding.cpp - Encoding conversion class --------------*- C++ -*-=//
+//===-- TextEncoding.cpp - Text encoding conversion class ---------*- C++ -*-=//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -82,7 +82,7 @@ enum ConversionType {
 // aforementioned encodings. The use of tables for conversion is only
 // possible because EBCDIC 1047 is a single-byte, stateless encoding; other
 // encodings are not supported.
-class TextEncodingConverterTable
+class TextEncodingConverterTable final
     : public details::TextEncodingConverterImplBase {
   const ConversionType ConvType;
 
@@ -118,7 +118,8 @@ struct UConverterDeleter {
 };
 using UConverterUniquePtr = std::unique_ptr<UConverter, UConverterDeleter>;
 
-class TextEncodingConverterICU : public details::TextEncodingConverterImplBase {
+class TextEncodingConverterICU final
+    : public details::TextEncodingConverterImplBase {
   UConverterUniquePtr FromConvDesc;
   UConverterUniquePtr ToConvDesc;
 
@@ -137,7 +138,8 @@ public:
 // TODO: The current implementation discards the partial result and restarts the
 // conversion from the beginning if there is a conversion error due to
 // insufficient buffer size. In the future, it would better to save the partial
-// result and redo the conversion for the remaining string.
+// result and resume the conversion for the remaining string.
+// TODO: Improve translation of ICU errors to error_code
 std::error_code
 TextEncodingConverterICU::convertString(StringRef Source,
                                         SmallVectorImpl<char> &Result) {
@@ -169,9 +171,12 @@ TextEncodingConverterICU::convertString(StringRef Source,
                    /*pivotLimit=*/NULL, /*reset=*/true,
                    /*flush=*/true, &EC);
     if (U_FAILURE(EC)) {
-      if (EC == U_BUFFER_OVERFLOW_ERROR && Capacity < Result.max_size()) {
-        HandleOverflow(Capacity, Output, OutputLength, Result);
-        continue;
+      if (EC == U_BUFFER_OVERFLOW_ERROR) {
+        if (Capacity < Result.max_size()) {
+          HandleOverflow(Capacity, Output, OutputLength, Result);
+          continue;
+        } else
+          return std::error_code(E2BIG, std::generic_category());
       }
       // Some other error occured.
       Result.resize(Output - Result.data());
@@ -190,7 +195,7 @@ void TextEncodingConverterICU::reset() {
 }
 
 #elif HAVE_ICONV
-class TextEncodingConverterIconv
+class TextEncodingConverterIconv final
     : public details::TextEncodingConverterImplBase {
   class UniqueIconvT {
     iconv_t ConvDesc;
@@ -230,7 +235,7 @@ public:
 // TODO: The current implementation discards the partial result and restarts the
 // conversion from the beginning if there is a conversion error due to
 // insufficient buffer size. In the future, it would better to save the partial
-// result and redo the conversion for the remaining string.
+// result and resume the conversion for the remaining string.
 std::error_code
 TextEncodingConverterIconv::convertString(StringRef Source,
                                           SmallVectorImpl<char> &Result) {
@@ -249,7 +254,7 @@ TextEncodingConverterIconv::convertString(StringRef Source,
       if (errno == E2BIG && Capacity < Result.max_size()) {
         HandleOverflow(Capacity, Output, OutputLength, Result);
         // Reset converter
-        iconv(ConvDesc, nullptr, nullptr, nullptr, nullptr);
+        reset();
         return std::error_code();
       } else {
         // Some other error occured.
@@ -269,7 +274,7 @@ TextEncodingConverterIconv::convertString(StringRef Source,
     // Setup the input. Use nullptr to reset iconv state if input length is
     // zero.
     size_t InputLength = Source.size();
-    char *Input = InputLength ? const_cast<char *>(Source.data()) : nullptr;
+    char *Input = InputLength ? const_cast<char *>(Source.data()) : "";
     Ret = iconv(ConvDesc, &Input, &InputLength, &Output, &OutputLength);
     if (Ret != 0) {
       if (auto EC = HandleError(Ret))
@@ -291,7 +296,7 @@ TextEncodingConverterIconv::convertString(StringRef Source,
   return std::error_code();
 }
 
-void TextEncodingConverterIconv::reset() {
+inline void TextEncodingConverterIconv::reset() {
   iconv(ConvDesc, nullptr, nullptr, nullptr, nullptr);
 }
 
@@ -311,7 +316,7 @@ TextEncodingConverter::create(TextEncoding CPFrom, TextEncoding CPTo) {
   else if (CPFrom == TextEncoding::IBM1047 && CPTo == TextEncoding::UTF8)
     Conversion = IBM1047ToUTF8;
   else
-    return std::error_code(errno, std::generic_category());
+    return std::make_error_code(std::errc::invalid_argument);
 
   return TextEncodingConverter(
       std::make_unique<TextEncodingConverterTable>(Conversion));
@@ -330,21 +335,20 @@ ErrorOr<TextEncodingConverter> TextEncodingConverter::create(StringRef From,
 #if HAVE_ICU
   UErrorCode EC = U_ZERO_ERROR;
   UConverterUniquePtr FromConvDesc(ucnv_open(From.str().c_str(), &EC));
-  if (U_FAILURE(EC)) {
-    return std::error_code(errno, std::generic_category());
-  }
+  if (U_FAILURE(EC))
+    return std::make_error_code(std::errc::invalid_argument);
+
   UConverterUniquePtr ToConvDesc(ucnv_open(To.str().c_str(), &EC));
-  if (U_FAILURE(EC)) {
-    return std::error_code(errno, std::generic_category());
-  }
-  std::unique_ptr<details::TextEncodingConverterImplBase> Converter =
-      std::make_unique<TextEncodingConverterICU>(std::move(FromConvDesc),
-                                                 std::move(ToConvDesc));
+  if (U_FAILURE(EC))
+    return std::make_error_code(std::errc::invalid_argument);
+
+  auto Converter = std::make_unique<TextEncodingConverterICU>(
+      std::move(FromConvDesc), std::move(ToConvDesc));
   return TextEncodingConverter(std::move(Converter));
 #elif HAVE_ICONV
   iconv_t ConvDesc = iconv_open(To.str().c_str(), From.str().c_str());
   if (ConvDesc == (iconv_t)-1)
-    return std::error_code(errno, std::generic_category());
+    return std::make_error_code(std::errc::invalid_argument);
   return TextEncodingConverter(
       std::make_unique<TextEncodingConverterIconv>(ConvDesc));
 #else
