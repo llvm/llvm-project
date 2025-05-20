@@ -545,14 +545,6 @@ static void
 handleAArch64BAAndGnuProperties(ObjFile<ELFT> *file, Ctx &ctx, bool hasGP,
                                 const AArch64BuildAttrSubsections &baInfo,
                                 const GnuPropertiesInfo &gpInfo) {
-
-  auto serializeUnsigned = [](unsigned valueLow, unsigned valueHigh) {
-    std::array<uint8_t, 16> arr;
-    support::endian::write64<ELFT::Endianness>(arr.data(), valueLow);
-    support::endian::write64<ELFT::Endianness>(arr.data() + 8, valueHigh);
-    return arr;
-  };
-
   if (hasGP) {
     // Check for data mismatch
     if (!gpInfo.aarch64PauthAbiCoreInfo.empty()) {
@@ -585,8 +577,14 @@ handleAArch64BAAndGnuProperties(ObjFile<ELFT> *file, Ctx &ctx, bool hasGP,
     // Unlike AArch64 Build Attributes, GNU properties does not give a way to
     // distinguish between no-value given to value of '0' given.
     if (baInfo.Pauth.TagPlatform || baInfo.Pauth.TagSchema) {
-      file->aarch64PauthAbiCoreInfoStorage =
-          serializeUnsigned(baInfo.Pauth.TagPlatform, baInfo.Pauth.TagSchema);
+      file->aarch64PauthAbiCoreInfoStorage = [&] {
+        std::array<uint8_t, 16> arr;
+        support::endian::write64<ELFT::Endianness>(arr.data(),
+                                                   baInfo.Pauth.TagPlatform);
+        support::endian::write64<ELFT::Endianness>(arr.data() + 8,
+                                                   baInfo.Pauth.TagSchema);
+        return arr;
+      }();
       file->aarch64PauthAbiCoreInfo = file->aarch64PauthAbiCoreInfoStorage;
     }
     file->andFeatures = baInfo.AndFeatures;
