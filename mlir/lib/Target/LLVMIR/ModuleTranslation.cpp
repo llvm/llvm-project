@@ -553,8 +553,10 @@ static llvm::Constant *convertDenseResourceElementsAttr(
 llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
     llvm::Type *llvmType, Attribute attr, Location loc,
     const ModuleTranslation &moduleTranslation) {
-  if (!attr)
+  if (!attr || isa<UndefAttr>(attr))
     return llvm::UndefValue::get(llvmType);
+  if (isa<ZeroAttr>(attr))
+    return llvm::Constant::getNullValue(llvmType);
   if (auto *structType = dyn_cast<::llvm::StructType>(llvmType)) {
     auto arrayAttr = dyn_cast<ArrayAttr>(attr);
     if (!arrayAttr) {
@@ -713,6 +715,33 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
         ArrayRef<char>{stringAttr.getValue().data(),
                        stringAttr.getValue().size()});
   }
+
+  // Handle arrays of structs that cannot be represented as DenseElementsAttr
+  // in MLIR.
+  if (auto arrayAttr = dyn_cast<ArrayAttr>(attr)) {
+    if (auto *arrayTy = dyn_cast<llvm::ArrayType>(llvmType)) {
+      llvm::Type *elementType = arrayTy->getElementType();
+      Attribute previousElementAttr;
+      llvm::Constant *elementCst = nullptr;
+      SmallVector<llvm::Constant *> constants;
+      constants.reserve(arrayTy->getNumElements());
+      for (Attribute elementAttr : arrayAttr) {
+        // Arrays with a single value or with repeating values are quite common.
+        // Short-circuit the translation when the element value is the same as
+        // the previous one.
+        if (!previousElementAttr || previousElementAttr != elementAttr) {
+          previousElementAttr = elementAttr;
+          elementCst =
+              getLLVMConstant(elementType, elementAttr, loc, moduleTranslation);
+          if (!elementCst)
+            return nullptr;
+        }
+        constants.push_back(elementCst);
+      }
+      return llvm::ConstantArray::get(arrayTy, constants);
+    }
+  }
+
   emitError(loc, "unsupported constant value");
   return nullptr;
 }
