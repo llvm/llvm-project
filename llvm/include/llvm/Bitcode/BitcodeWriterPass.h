@@ -14,8 +14,8 @@
 #ifndef LLVM_BITCODE_BITCODEWRITERPASS_H
 #define LLVM_BITCODE_BITCODEWRITERPASS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class Module;
@@ -29,8 +29,9 @@ class raw_ostream;
 ///
 /// If \c ShouldPreserveUseListOrder, encode use-list order so it can be
 /// reproduced when deserialized.
-LLVM_ABI ModulePass *createBitcodeWriterPass(raw_ostream &Str,
-                                    bool ShouldPreserveUseListOrder = false);
+LLVM_ABI ModulePass *
+createBitcodeWriterPass(raw_ostream &Str,
+                        bool ShouldPreserveUseListOrder = false);
 
 /// Check whether a pass is a BitcodeWriterPass.
 LLVM_ABI bool isBitcodeWriterPass(Pass *P);

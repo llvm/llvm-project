@@ -13,11 +13,11 @@
 #ifndef LLVM_BITCODE_BITCODEREADER_H
 #define LLVM_BITCODE_BITCODEREADER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Bitstream/BitCodeEnums.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorOr.h"
@@ -61,7 +61,8 @@ typedef std::function<void(Metadata **, unsigned, GetTypeByIDTy,
 // ErrorOr/std::error_code for compatibility with legacy clients. FIXME:
 // Remove these functions once no longer needed by the C and libLTO APIs.
 
-LLVM_ABI std::error_code errorToErrorCodeAndEmitErrors(LLVMContext &Ctx, Error Err);
+LLVM_ABI std::error_code errorToErrorCodeAndEmitErrors(LLVMContext &Ctx,
+                                                       Error Err);
 
 template <typename T>
 ErrorOr<T> expectedToErrorOrAndEmitErrors(LLVMContext &Ctx, Expected<T> Val) {
@@ -172,7 +173,8 @@ struct ParserCallbacks {
   /// symbol table should prefer to use irsymtab::read instead of this function
   /// because it creates a reader for the irsymtab and handles upgrading bitcode
   /// files without a symbol table or with an old symbol table.
-  LLVM_ABI Expected<BitcodeFileContents> getBitcodeFileContents(MemoryBufferRef Buffer);
+  LLVM_ABI Expected<BitcodeFileContents>
+  getBitcodeFileContents(MemoryBufferRef Buffer);
 
   /// Returns a list of modules in the specified bitcode buffer.
   LLVM_ABI Expected<std::vector<BitcodeModule>>
@@ -204,12 +206,14 @@ struct ParserCallbacks {
 
   /// Return true if \p Buffer contains a bitcode file with ObjC code (category
   /// or class) in it.
-  LLVM_ABI Expected<bool> isBitcodeContainingObjCCategory(MemoryBufferRef Buffer);
+  LLVM_ABI Expected<bool>
+  isBitcodeContainingObjCCategory(MemoryBufferRef Buffer);
 
   /// Read the header of the specified bitcode buffer and extract just the
   /// producer string information. If successful, this returns a string. On
   /// error, this returns "".
-  LLVM_ABI Expected<std::string> getBitcodeProducerString(MemoryBufferRef Buffer);
+  LLVM_ABI Expected<std::string>
+  getBitcodeProducerString(MemoryBufferRef Buffer);
 
   /// Read the specified bitcode file, returning the module.
   LLVM_ABI Expected<std::unique_ptr<Module>>
@@ -225,7 +229,7 @@ struct ParserCallbacks {
 
   /// Parse the specified bitcode buffer and merge the index into CombinedIndex.
   LLVM_ABI Error readModuleSummaryIndex(MemoryBufferRef Buffer,
-                               ModuleSummaryIndex &CombinedIndex);
+                                        ModuleSummaryIndex &CombinedIndex);
 
   /// Parse the module summary index out of an IR file and return the module
   /// summary index object if found, or an empty summary if not. If Path refers

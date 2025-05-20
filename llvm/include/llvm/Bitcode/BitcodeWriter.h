@@ -13,11 +13,11 @@
 #ifndef LLVM_BITCODE_BITCODEWRITER_H
 #define LLVM_BITCODE_BITCODEWRITER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include <map>
 #include <memory>
@@ -87,9 +87,11 @@ public:
   /// Can be used to produce the same module hash for a minimized bitcode
   /// used just for the thin link as in the regular full bitcode that will
   /// be used in the backend.
-  LLVM_ABI void writeModule(const Module &M, bool ShouldPreserveUseListOrder = false,
-                   const ModuleSummaryIndex *Index = nullptr,
-                   bool GenerateHash = false, ModuleHash *ModHash = nullptr);
+  LLVM_ABI void writeModule(const Module &M,
+                            bool ShouldPreserveUseListOrder = false,
+                            const ModuleSummaryIndex *Index = nullptr,
+                            bool GenerateHash = false,
+                            ModuleHash *ModHash = nullptr);
 
   /// Write the specified thin link bitcode file (i.e., the minimized bitcode
   /// file) to the buffer specified at construction time. The thin link
@@ -98,12 +100,14 @@ public:
   ///
   /// ModHash is for use in ThinLTO incremental build, generated while the
   /// IR bitcode file writing.
-  LLVM_ABI void writeThinLinkBitcode(const Module &M, const ModuleSummaryIndex &Index,
-                            const ModuleHash &ModHash);
+  LLVM_ABI void writeThinLinkBitcode(const Module &M,
+                                     const ModuleSummaryIndex &Index,
+                                     const ModuleHash &ModHash);
 
-  LLVM_ABI void writeIndex(const ModuleSummaryIndex *Index,
-                  const ModuleToSummariesForIndexTy *ModuleToSummariesForIndex,
-                  const GVSummaryPtrSet *DecSummaries);
+  LLVM_ABI void
+  writeIndex(const ModuleSummaryIndex *Index,
+             const ModuleToSummariesForIndexTy *ModuleToSummariesForIndex,
+             const GVSummaryPtrSet *DecSummaries);
 };
 
 /// Write the specified module to the specified raw output stream.
@@ -128,10 +132,10 @@ public:
 /// used just for the thin link as in the regular full bitcode that will
 /// be used in the backend.
 LLVM_ABI void WriteBitcodeToFile(const Module &M, raw_ostream &Out,
-                        bool ShouldPreserveUseListOrder = false,
-                        const ModuleSummaryIndex *Index = nullptr,
-                        bool GenerateHash = false,
-                        ModuleHash *ModHash = nullptr);
+                                 bool ShouldPreserveUseListOrder = false,
+                                 const ModuleSummaryIndex *Index = nullptr,
+                                 bool GenerateHash = false,
+                                 ModuleHash *ModHash = nullptr);
 
 /// Write the specified thin link bitcode file (i.e., the minimized bitcode
 /// file) to the given raw output stream, where it will be written in a new
@@ -141,8 +145,8 @@ LLVM_ABI void WriteBitcodeToFile(const Module &M, raw_ostream &Out,
 /// ModHash is for use in ThinLTO incremental build, generated while the IR
 /// bitcode file writing.
 LLVM_ABI void writeThinLinkBitcodeToFile(const Module &M, raw_ostream &Out,
-                                const ModuleSummaryIndex &Index,
-                                const ModuleHash &ModHash);
+                                         const ModuleSummaryIndex &Index,
+                                         const ModuleHash &ModHash);
 
 /// Write the specified module summary index to the given raw output stream,
 /// where it will be written in a new bitcode block. This is used when
@@ -164,9 +168,9 @@ LLVM_ABI void writeIndexToFile(
 /// If EmbedCmdline is set, the command line is also exported in
 /// the corresponding section (__LLVM,_cmdline / .llvmcmd) - even if CmdArgs
 /// were empty.
-LLVM_ABI void embedBitcodeInModule(Module &M, MemoryBufferRef Buf, bool EmbedBitcode,
-                          bool EmbedCmdline,
-                          const std::vector<uint8_t> &CmdArgs);
+LLVM_ABI void embedBitcodeInModule(Module &M, MemoryBufferRef Buf,
+                                   bool EmbedBitcode, bool EmbedCmdline,
+                                   const std::vector<uint8_t> &CmdArgs);
 
 } // end namespace llvm
 

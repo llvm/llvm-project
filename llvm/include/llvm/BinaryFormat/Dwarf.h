@@ -980,7 +980,7 @@ LLVM_ABI StringRef AttributeString(unsigned Attribute);
 LLVM_ABI StringRef FormEncodingString(unsigned Encoding);
 LLVM_ABI StringRef OperationEncodingString(unsigned Encoding);
 LLVM_ABI StringRef SubOperationEncodingString(unsigned OpEncoding,
-                                     unsigned SubOpEncoding);
+                                              unsigned SubOpEncoding);
 LLVM_ABI StringRef AttributeEncodingString(unsigned Encoding);
 LLVM_ABI StringRef DecimalSignString(unsigned Sign);
 LLVM_ABI StringRef EndianityString(unsigned Endian);
@@ -1026,7 +1026,7 @@ LLVM_ABI StringRef RLEString(unsigned RLE);
 LLVM_ABI unsigned getTag(StringRef TagString);
 LLVM_ABI unsigned getOperationEncoding(StringRef OperationEncodingString);
 LLVM_ABI unsigned getSubOperationEncoding(unsigned OpEncoding,
-                                 StringRef SubOperationEncodingString);
+                                          StringRef SubOperationEncodingString);
 LLVM_ABI unsigned getVirtuality(StringRef VirtualityString);
 LLVM_ABI unsigned getEnumKind(StringRef EnumKindString);
 LLVM_ABI unsigned getLanguage(StringRef LanguageString);
@@ -1137,11 +1137,12 @@ inline uint8_t getUnitLengthFieldByteSize(DwarfFormat Format) {
 /// \returns std::optional<uint8_t> value with the fixed byte size or
 /// std::nullopt if \p Form doesn't have a fixed byte size.
 LLVM_ABI std::optional<uint8_t> getFixedFormByteSize(dwarf::Form Form,
-                                            FormParams Params);
+                                                     FormParams Params);
 
 /// Tells whether the specified form is defined in the specified version,
 /// or is an extension if extensions are allowed.
-LLVM_ABI bool isValidFormForVersion(Form F, unsigned Version, bool ExtensionsOk = true);
+LLVM_ABI bool isValidFormForVersion(Form F, unsigned Version,
+                                    bool ExtensionsOk = true);
 
 /// Returns the symbolic string representing Val when used as a value
 /// for attribute Attr.
