@@ -125,7 +125,18 @@ struct _LIBCPP_HIDE_FROM_ABI fd_streambuf final : std::streambuf {
   size_t size_;
   _LIBCPP_HIDE_FROM_ABI fd_streambuf(fd& fd, char* buf, size_t size) : fd_(fd), buf_(buf), size_(size) {}
   _LIBCPP_HIDE_FROM_ABI virtual ~fd_streambuf() = default;
-  _LIBCPP_HIDE_FROM_ABI int underflow() override;
+
+  _LIBCPP_HIDE_FROM_ABI int underflow() override {
+    int bytesRead = ::read(fd_, buf_, size_);
+    if (bytesRead < 0) {
+      throw failed("I/O error reading from child process", errno);
+    }
+    if (bytesRead == 0) {
+      return traits_type::eof();
+    }
+    setg(buf_, buf_, buf_ + bytesRead);
+    return int(*buf_);
+  }
 };
 
 /** Wraps an `FDInStreamBuffer` in an `istream` */
