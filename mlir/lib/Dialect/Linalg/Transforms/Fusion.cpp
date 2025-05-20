@@ -236,39 +236,6 @@ mlir::linalg::fuseProducerOfTensor(OpBuilder &b, OpOperand &consumerOpOperand) {
   return fuseProducerOfTensor(b, producerOpResult, consumerOpOperand);
 }
 
-/// Create tensor.collapse_shape to drop unit dimensions in `dropDims` in tensor
-/// `from`.
-static tensor::CollapseShapeOp
-dropGivenUnitDims(OpBuilder &b, Location loc, Value from,
-                  const llvm::SmallBitVector &dropDims) {
-  auto fromType = cast<ShapedType>(from.getType());
-  int64_t rank = fromType.getRank();
-  assert(rank == static_cast<int64_t>(dropDims.size()) &&
-         "dropDims dimension does not match from tensor rank");
-  assert(llvm::all_of(
-             dropDims.set_bits(),
-             [&](unsigned dim) { return fromType.getShape()[dim] == 1; }) &&
-         "Dropping non unit dimension");
-  // Computed reassociation map for the corresponding tensor.collapse_shape.
-  SmallVector<ReassociationIndices, 2> reassocMaps;
-  // Current reassociation group to add dropped dimension to.
-
-  int64_t nextDimToGroup = 0;
-  llvm::SmallBitVector keptDims(dropDims);
-  keptDims.flip();
-  int64_t lastSetBit = keptDims.find_last();
-  for (int64_t setBit : keptDims.set_bits()) {
-    // Group consecutive dropped dimension with the next non-dropped dimension.
-    // If this is the last set dimension, also group all subsequent dropped
-    // dimension, if any.
-    int64_t upTo = setBit == lastSetBit ? rank - 1 : setBit;
-    auto seq = llvm::seq_inclusive(nextDimToGroup, upTo);
-    reassocMaps.emplace_back(llvm::make_range(seq.begin(), seq.end()));
-    nextDimToGroup = setBit + 1;
-  }
-  return b.create<tensor::CollapseShapeOp>(loc, from, reassocMaps);
-}
-
 FailureOr<FusionInfo>
 mlir::linalg::fuseProducerOfTensor(OpBuilder &b, OpResult producerOpResult,
                                    OpOperand &consumerOpOperand) {
@@ -312,7 +279,8 @@ mlir::linalg::fuseProducerOfTensor(OpBuilder &b, OpResult producerOpResult,
   // Rank-reduction occurred as part of the extract_slice.
   if (cast<ShapedType>(consumerType).getRank() !=
       cast<ShapedType>(def.getType()).getRank())
-    def = dropGivenUnitDims(b, fusedProducer.getLoc(), def, droppedDims);
+    def =
+        tensor::dropGivenUnitDims(b, fusedProducer.getLoc(), def, droppedDims);
   // Canonicalizations are not guaranteed to have happened before constructing
   // `fusedProducer`. In the tensor case this can result in temporary type
   // mismatches. Insert a `tensor.cast` op to propagate the transformation
