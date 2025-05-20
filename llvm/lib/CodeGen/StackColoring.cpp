@@ -402,9 +402,6 @@ class StackColoring {
   using LivenessMap = DenseMap<const MachineBasicBlock *, BlockLifetimeInfo>;
   LivenessMap BlockLiveness;
 
-  /// Maps serial numbers to basic blocks.
-  DenseMap<const MachineBasicBlock *, int> BasicBlocks;
-
   /// Maps basic blocks to a serial number.
   SmallVector<const MachineBasicBlock *, 8> BasicBlockNumbering;
 
@@ -727,7 +724,6 @@ unsigned StackColoring::collectMarkers(unsigned NumSlot) {
   // deterministic numbering.
   for (MachineBasicBlock *MBB : depth_first(MF)) {
     // Assign a serial number to this basic block.
-    BasicBlocks[MBB] = BasicBlockNumbering.size();
     BasicBlockNumbering.push_back(MBB);
 
     // Keep a reference to avoid repeated lookups.
@@ -1208,7 +1204,6 @@ bool StackColoring::run(MachineFunction &Func, bool OnlyRemoveMarkers) {
   MF = &Func;
   MFI = &MF->getFrameInfo();
   BlockLiveness.clear();
-  BasicBlocks.clear();
   BasicBlockNumbering.clear();
   Markers.clear();
   Intervals.clear();
