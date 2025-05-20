@@ -67,12 +67,12 @@ unsigned StableFunctionMap::getIdOrCreateForName(StringRef Name) {
     return It->second;
   unsigned Id = IdToName.size();
   assert(Id == NameToId.size() && "ID collision");
-  IdToName.emplace_back(Name.str());
+  IdToName.emplace_back(Name);
   NameToId[IdToName.back()] = Id;
   return Id;
 }
 
-std::optional<std::string> StableFunctionMap::getNameForId(unsigned Id) const {
+std::optional<StringRef> StableFunctionMap::getNameForId(unsigned Id) const {
   if (Id >= IdToName.size())
     return std::nullopt;
   return IdToName[Id];
