@@ -28,17 +28,20 @@ using namespace mlir;
 using namespace mlir::vector;
 
 /// Increments n-D `indices` by `step` starting from the innermost dimension.
-static void incIdx(SmallVectorImpl<int64_t> &indices, VectorType vecType,
+static void incIdx(MutableArrayRef<int64_t> indices, ArrayRef<int64_t> shape,
                    int step = 1) {
   for (int dim : llvm::reverse(llvm::seq<int>(0, indices.size()))) {
-    assert(indices[dim] < vecType.getDimSize(dim) &&
-           "Indices are out of bound");
+    int64_t dimSize = shape[dim];
+    assert(indices[dim] < dimSize && "Indices are out of bound");
+
     indices[dim] += step;
-    if (indices[dim] < vecType.getDimSize(dim))
+
+    int64_t spill = indices[dim] / dimSize;
+    if (spill == 0)
       break;
 
-    indices[dim] = 0;
-    step = 1;
+    indices[dim] %= dimSize;
+    step = spill;
   }
 }
 
@@ -79,8 +82,8 @@ public:
     // and destination slice insertion and generate such instructions.
     for (int64_t i = 0; i < numElts; ++i) {
       if (i != 0) {
-        incIdx(srcIdx, sourceVectorType, /*step=*/1);
-        incIdx(resIdx, resultVectorType, /*step=*/extractSize);
+        incIdx(srcIdx, sourceVectorType.getShape(), /*step=*/1);
+        incIdx(resIdx, resultVectorType.getShape(), /*step=*/extractSize);
       }
 
       Value extract =
@@ -131,8 +134,8 @@ public:
     Value result = rewriter.create<ub::PoisonOp>(loc, resultVectorType);
     for (int64_t i = 0; i < numElts; ++i) {
       if (i != 0) {
-        incIdx(srcIdx, sourceVectorType, /*step=*/extractSize);
-        incIdx(resIdx, resultVectorType, /*step=*/1);
+        incIdx(srcIdx, sourceVectorType.getShape(), /*step=*/extractSize);
+        incIdx(resIdx, resultVectorType.getShape(), /*step=*/1);
       }
 
       Value extract = rewriter.create<vector::ExtractStridedSliceOp>(
@@ -157,41 +160,54 @@ public:
   LogicalResult matchAndRewrite(vector::ShapeCastOp op,
                                 PatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
-    auto sourceVectorType = op.getSourceVectorType();
-    auto resultVectorType = op.getResultVectorType();
+    VectorType sourceType = op.getSourceVectorType();
+    VectorType resultType = op.getResultVectorType();
 
-    if (sourceVectorType.isScalable() || resultVectorType.isScalable())
+    if (sourceType.isScalable() || resultType.isScalable())
       return failure();
 
-    // Special case for n-D / 1-D lowerings with better implementations.
-    int64_t srcRank = sourceVectorType.getRank();
-    int64_t resRank = resultVectorType.getRank();
-    if ((srcRank > 1 && resRank == 1) || (srcRank == 1 && resRank > 1))
+    // Special case for n-D / 1-D lowerings with implementations that use
+    // extract_strided_slice / insert_strided_slice.
+    int64_t sourceRank = sourceType.getRank();
+    int64_t resultRank = resultType.getRank();
+    if ((sourceRank > 1 && resultRank == 1) ||
+        (sourceRank == 1 && resultRank > 1))
       return failure();
 
-    // Generic ShapeCast lowering path goes all the way down to unrolled scalar
-    // extract/insert chains.
-    int64_t numElts = 1;
-    for (int64_t r = 0; r < srcRank; r++)
-      numElts *= sourceVectorType.getDimSize(r);
+    int64_t numExtracts = sourceType.getNumElements();
+    int64_t nbCommonInnerDims = 0;
+    while (true) {
+      int64_t sourceDim = sourceRank - 1 - nbCommonInnerDims;
+      int64_t resultDim = resultRank - 1 - nbCommonInnerDims;
+      if (sourceDim < 0 || resultDim < 0)
+        break;
+      int64_t dimSize = sourceType.getDimSize(sourceDim);
+      if (dimSize != resultType.getDimSize(resultDim))
+        break;
+      numExtracts /= dimSize;
+      ++nbCommonInnerDims;
+    }
+
     // Replace with data movement operations:
     //    x[0,0,0] = y[0,0]
     //    x[0,0,1] = y[0,1]
     //    x[0,1,0] = y[0,2]
     // etc., incrementing the two index vectors "row-major"
     // within the source and result shape.
-    SmallVector<int64_t> srcIdx(srcRank, 0);
-    SmallVector<int64_t> resIdx(resRank, 0);
-    Value result = rewriter.create<ub::PoisonOp>(loc, resultVectorType);
-    for (int64_t i = 0; i < numElts; i++) {
+    SmallVector<int64_t> sourceIndex(sourceRank - nbCommonInnerDims, 0);
+    SmallVector<int64_t> resultIndex(resultRank - nbCommonInnerDims, 0);
+    Value result = rewriter.create<ub::PoisonOp>(loc, resultType);
+
+    for (int64_t i = 0; i < numExtracts; i++) {
       if (i != 0) {
-        incIdx(srcIdx, sourceVectorType);
-        incIdx(resIdx, resultVectorType);
+        incIdx(sourceIndex, sourceType.getShape().drop_back(nbCommonInnerDims));
+        incIdx(resultIndex, resultType.getShape().drop_back(nbCommonInnerDims));
       }
 
       Value extract =
-          rewriter.create<vector::ExtractOp>(loc, op.getSource(), srcIdx);
-      result = rewriter.create<vector::InsertOp>(loc, extract, result, resIdx);
+          rewriter.create<vector::ExtractOp>(loc, op.getSource(), sourceIndex);
+      result =
+          rewriter.create<vector::InsertOp>(loc, extract, result, resultIndex);
     }
     rewriter.replaceOp(op, result);
     return success();
@@ -329,8 +345,8 @@ public:
 
       // 4. Increment the insert/extract indices, stepping by minExtractionSize
       // for the trailing dimensions.
-      incIdx(srcIdx, sourceVectorType, /*step=*/minExtractionSize);
-      incIdx(resIdx, resultVectorType, /*step=*/minExtractionSize);
+      incIdx(srcIdx, sourceVectorType.getShape(), /*step=*/minExtractionSize);
+      incIdx(resIdx, resultVectorType.getShape(), /*step=*/minExtractionSize);
     }
 
     rewriter.replaceOp(op, result);
