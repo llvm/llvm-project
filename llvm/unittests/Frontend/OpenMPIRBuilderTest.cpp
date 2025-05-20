@@ -644,7 +644,8 @@ TEST_F(OpenMPIRBuilderTest, ParallelSimpleGPU) {
   std::string oldDLStr = M->getDataLayoutStr();
   M->setDataLayout(
       "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:"
-      "256:256:32-p8:128:128-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:"
+      "256:256:32-p8:128:128:128:48-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-"
+      "v192:"
       "256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8");
   OpenMPIRBuilder OMPBuilder(*M);
   OMPBuilder.Config.IsTargetDevice = true;
@@ -2347,10 +2348,10 @@ TEST_F(OpenMPIRBuilderTest, UnrollLoopHeuristic) {
 
 TEST_F(OpenMPIRBuilderTest, StaticWorkshareLoopTarget) {
   using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
-  std::string oldDLStr = M->getDataLayoutStr();
   M->setDataLayout(
       "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:"
-      "256:256:32-p8:128:128-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:"
+      "256:256:32-p8:128:128:128:48-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-"
+      "v192:"
       "256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8");
   OpenMPIRBuilder OMPBuilder(*M);
   OMPBuilder.Config.IsTargetDevice = true;
@@ -5554,7 +5555,6 @@ TEST_F(OpenMPIRBuilderTest, CreateSectionsSimple) {
   OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
 
   llvm::SmallVector<BodyGenCallbackTy, 4> SectionCBVector;
-  llvm::SmallVector<BasicBlock *, 4> CaseBBs;
 
   auto FiniCB = [&](InsertPointTy IP) { return Error::success(); };
   auto SectionCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP) {
@@ -6606,7 +6606,7 @@ TEST_F(OpenMPIRBuilderTest, TargetRegionSPMD) {
                               Builder.saveIP(), Info, EntryInfo, DefaultAttrs,
                               RuntimeAttrs, /*IfCond=*/nullptr, Inputs,
                               GenMapInfoCB, BodyGenCB, SimpleArgAccessorCB,
-                              CustomMapperCB));
+                              CustomMapperCB, {}));
   Builder.restoreIP(AfterIP);
 
   OMPBuilder.finalize();
@@ -6708,12 +6708,12 @@ TEST_F(OpenMPIRBuilderTest, TargetRegionDeviceSPMD) {
       /*RequiresDevicePointerInfo=*/false,
       /*SeparateBeginEndCalls=*/true);
 
-  ASSERT_EXPECTED_INIT(
-      OpenMPIRBuilder::InsertPointTy, AfterIP,
-      OMPBuilder.createTarget(Loc, /*IsOffloadEntry=*/true, EntryIP, EntryIP,
-                              Info, EntryInfo, DefaultAttrs, RuntimeAttrs,
-                              /*IfCond=*/nullptr, CapturedArgs, GenMapInfoCB,
-                              BodyGenCB, SimpleArgAccessorCB, CustomMapperCB));
+  ASSERT_EXPECTED_INIT(OpenMPIRBuilder::InsertPointTy, AfterIP,
+                       OMPBuilder.createTarget(
+                           Loc, /*IsOffloadEntry=*/true, EntryIP, EntryIP, Info,
+                           EntryInfo, DefaultAttrs, RuntimeAttrs,
+                           /*IfCond=*/nullptr, CapturedArgs, GenMapInfoCB,
+                           BodyGenCB, SimpleArgAccessorCB, CustomMapperCB, {}));
   Builder.restoreIP(AfterIP);
 
   Builder.CreateRetVoid();

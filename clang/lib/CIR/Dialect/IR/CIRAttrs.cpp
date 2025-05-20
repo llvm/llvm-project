@@ -300,6 +300,47 @@ void ConstArrayAttr::print(AsmPrinter &printer) const {
 }
 
 //===----------------------------------------------------------------------===//
+// CIR ConstVectorAttr
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::ConstVectorAttr::verify(
+    function_ref<::mlir::InFlightDiagnostic()> emitError, Type type,
+    ArrayAttr elts) {
+
+  if (!mlir::isa<cir::VectorType>(type)) {
+    return emitError() << "type of cir::ConstVectorAttr is not a "
+                          "cir::VectorType: "
+                       << type;
+  }
+
+  const auto vecType = mlir::cast<cir::VectorType>(type);
+
+  if (vecType.getSize() != elts.size()) {
+    return emitError()
+           << "number of constant elements should match vector size";
+  }
+
+  // Check if the types of the elements match
+  LogicalResult elementTypeCheck = success();
+  elts.walkImmediateSubElements(
+      [&](Attribute element) {
+        if (elementTypeCheck.failed()) {
+          // An earlier element didn't match
+          return;
+        }
+        auto typedElement = mlir::dyn_cast<TypedAttr>(element);
+        if (!typedElement ||
+            typedElement.getType() != vecType.getElementType()) {
+          elementTypeCheck = failure();
+          emitError() << "constant type should match vector element type";
+        }
+      },
+      [&](Type) {});
+
+  return elementTypeCheck;
+}
+
+//===----------------------------------------------------------------------===//
 // CIR Dialect
 //===----------------------------------------------------------------------===//
 

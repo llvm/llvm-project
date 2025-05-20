@@ -31,14 +31,13 @@ TEST(FrontendOutputTests, TestOutputStream) {
       FrontendInputFile("test.cc", Language::CXX));
   Invocation->getFrontendOpts().ProgramAction = EmitBC;
   Invocation->getTargetOpts().Triple = "i386-unknown-linux-gnu";
-  CompilerInstance Compiler;
+  CompilerInstance Compiler(std::move(Invocation));
 
   SmallVector<char, 256> IRBuffer;
   std::unique_ptr<raw_pwrite_stream> IRStream(
       new raw_svector_ostream(IRBuffer));
 
   Compiler.setOutputStream(std::move(IRStream));
-  Compiler.setInvocation(std::move(Invocation));
   Compiler.createDiagnostics(*llvm::vfs::getRealFileSystem());
 
   bool Success = ExecuteCompilerInvocation(&Compiler);
@@ -56,13 +55,12 @@ TEST(FrontendOutputTests, TestVerboseOutputStreamShared) {
       FrontendInputFile("test.cc", Language::CXX));
   Invocation->getFrontendOpts().ProgramAction = EmitBC;
   Invocation->getTargetOpts().Triple = "i386-unknown-linux-gnu";
-  CompilerInstance Compiler;
+  CompilerInstance Compiler(std::move(Invocation));
 
   std::string VerboseBuffer;
   raw_string_ostream VerboseStream(VerboseBuffer);
 
   Compiler.setOutputStream(std::make_unique<raw_null_ostream>());
-  Compiler.setInvocation(std::move(Invocation));
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
   Compiler.createDiagnostics(
       *llvm::vfs::getRealFileSystem(),
@@ -87,13 +85,12 @@ TEST(FrontendOutputTests, TestVerboseOutputStreamOwned) {
         FrontendInputFile("test.cc", Language::CXX));
     Invocation->getFrontendOpts().ProgramAction = EmitBC;
     Invocation->getTargetOpts().Triple = "i386-unknown-linux-gnu";
-    CompilerInstance Compiler;
+    CompilerInstance Compiler(std::move(Invocation));
 
     std::unique_ptr<raw_ostream> VerboseStream =
         std::make_unique<raw_string_ostream>(VerboseBuffer);
 
     Compiler.setOutputStream(std::make_unique<raw_null_ostream>());
-    Compiler.setInvocation(std::move(Invocation));
     IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
     Compiler.createDiagnostics(
         *llvm::vfs::getRealFileSystem(),

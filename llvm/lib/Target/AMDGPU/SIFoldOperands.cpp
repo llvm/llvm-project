@@ -119,9 +119,22 @@ public:
                         MachineOperand *OpToFold) const;
   bool isUseSafeToFold(const MachineInstr &MI,
                        const MachineOperand &UseMO) const;
-  bool
+
+  const TargetRegisterClass *getRegSeqInit(
+      MachineInstr &RegSeq,
+      SmallVectorImpl<std::pair<MachineOperand *, unsigned>> &Defs) const;
+
+  const TargetRegisterClass *
   getRegSeqInit(SmallVectorImpl<std::pair<MachineOperand *, unsigned>> &Defs,
-                Register UseReg, uint8_t OpTy) const;
+                Register UseReg) const;
+
+  std::pair<MachineOperand *, const TargetRegisterClass *>
+  isRegSeqSplat(MachineInstr &RegSeg) const;
+
+  MachineOperand *tryFoldRegSeqSplat(MachineInstr *UseMI, unsigned UseOpIdx,
+                                     MachineOperand *SplatVal,
+                                     const TargetRegisterClass *SplatRC) const;
+
   bool tryToFoldACImm(MachineOperand &OpToFold, MachineInstr *UseMI,
                       unsigned UseOpIdx,
                       SmallVectorImpl<FoldCandidate> &FoldList) const;
@@ -439,8 +452,7 @@ bool SIFoldOperandsImpl::tryFoldImmWithOpSel(FoldCandidate &Fold) const {
       }
 
       // This check is only useful for integer instructions
-      if (OpType == AMDGPU::OPERAND_REG_IMM_V2INT16 ||
-          OpType == AMDGPU::OPERAND_REG_INLINE_AC_V2INT16) {
+      if (OpType == AMDGPU::OPERAND_REG_IMM_V2INT16) {
         if (AMDGPU::isInlinableLiteralV216(Lo << 16, OpType)) {
           Mod.setImm(NewModVal | SISrcMods::OP_SEL_0 | SISrcMods::OP_SEL_1);
           Old.ChangeToImmediate(static_cast<uint32_t>(Lo) << 16);
@@ -826,19 +838,24 @@ static MachineOperand *lookUpCopyChain(const SIInstrInfo &TII,
   return Sub;
 }
 
-// Find a def of the UseReg, check if it is a reg_sequence and find initializers
-// for each subreg, tracking it to foldable inline immediate if possible.
-// Returns true on success.
-bool SIFoldOperandsImpl::getRegSeqInit(
-    SmallVectorImpl<std::pair<MachineOperand *, unsigned>> &Defs,
-    Register UseReg, uint8_t OpTy) const {
-  MachineInstr *Def = MRI->getVRegDef(UseReg);
-  if (!Def || !Def->isRegSequence())
-    return false;
+const TargetRegisterClass *SIFoldOperandsImpl::getRegSeqInit(
+    MachineInstr &RegSeq,
+    SmallVectorImpl<std::pair<MachineOperand *, unsigned>> &Defs) const {
 
-  for (unsigned I = 1, E = Def->getNumExplicitOperands(); I != E; I += 2) {
-    MachineOperand &SrcOp = Def->getOperand(I);
-    unsigned SubRegIdx = Def->getOperand(I + 1).getImm();
+  assert(RegSeq.isRegSequence());
+
+  const TargetRegisterClass *RC = nullptr;
+
+  for (unsigned I = 1, E = RegSeq.getNumExplicitOperands(); I != E; I += 2) {
+    MachineOperand &SrcOp = RegSeq.getOperand(I);
+    unsigned SubRegIdx = RegSeq.getOperand(I + 1).getImm();
+
+    // Only accept reg_sequence with uniform reg class inputs for simplicity.
+    const TargetRegisterClass *OpRC = getRegOpRC(*MRI, *TRI, SrcOp);
+    if (!RC)
+      RC = OpRC;
+    else if (!TRI->getCommonSubClass(RC, OpRC))
+      return nullptr;
 
     if (SrcOp.getSubReg()) {
       // TODO: Handle subregister compose
@@ -847,8 +864,7 @@ bool SIFoldOperandsImpl::getRegSeqInit(
     }
 
     MachineOperand *DefSrc = lookUpCopyChain(*TII, *MRI, SrcOp.getReg());
-    if (DefSrc && (DefSrc->isReg() ||
-                   (DefSrc->isImm() && TII->isInlineConstant(*DefSrc, OpTy)))) {
+    if (DefSrc && (DefSrc->isReg() || DefSrc->isImm())) {
       Defs.emplace_back(DefSrc, SubRegIdx);
       continue;
     }
@@ -856,7 +872,98 @@ bool SIFoldOperandsImpl::getRegSeqInit(
     Defs.emplace_back(&SrcOp, SubRegIdx);
   }
 
-  return true;
+  return RC;
+}
+
+// Find a def of the UseReg, check if it is a reg_sequence and find initializers
+// for each subreg, tracking it to an immediate if possible. Returns the
+// register class of the inputs on success.
+const TargetRegisterClass *SIFoldOperandsImpl::getRegSeqInit(
+    SmallVectorImpl<std::pair<MachineOperand *, unsigned>> &Defs,
+    Register UseReg) const {
+  MachineInstr *Def = MRI->getVRegDef(UseReg);
+  if (!Def || !Def->isRegSequence())
+    return nullptr;
+
+  return getRegSeqInit(*Def, Defs);
+}
+
+std::pair<MachineOperand *, const TargetRegisterClass *>
+SIFoldOperandsImpl::isRegSeqSplat(MachineInstr &RegSeq) const {
+  SmallVector<std::pair<MachineOperand *, unsigned>, 32> Defs;
+  const TargetRegisterClass *SrcRC = getRegSeqInit(RegSeq, Defs);
+  if (!SrcRC)
+    return {};
+
+  // TODO: Recognize 64-bit splats broken into 32-bit pieces (i.e. recognize
+  // every other other element is 0 for 64-bit immediates)
+  int64_t Imm;
+  for (unsigned I = 0, E = Defs.size(); I != E; ++I) {
+    const MachineOperand *Op = Defs[I].first;
+    if (!Op->isImm())
+      return {};
+
+    int64_t SubImm = Op->getImm();
+    if (!I) {
+      Imm = SubImm;
+      continue;
+    }
+    if (Imm != SubImm)
+      return {}; // Can only fold splat constants
+  }
+
+  return {Defs[0].first, SrcRC};
+}
+
+MachineOperand *SIFoldOperandsImpl::tryFoldRegSeqSplat(
+    MachineInstr *UseMI, unsigned UseOpIdx, MachineOperand *SplatVal,
+    const TargetRegisterClass *SplatRC) const {
+  const MCInstrDesc &Desc = UseMI->getDesc();
+  if (UseOpIdx >= Desc.getNumOperands())
+    return nullptr;
+
+  // Filter out unhandled pseudos.
+  if (!AMDGPU::isSISrcOperand(Desc, UseOpIdx))
+    return nullptr;
+
+  int16_t RCID = Desc.operands()[UseOpIdx].RegClass;
+  if (RCID == -1)
+    return nullptr;
+
+  // Special case 0/-1, since when interpreted as a 64-bit element both halves
+  // have the same bits. Effectively this code does not handle 64-bit element
+  // operands correctly, as the incoming 64-bit constants are already split into
+  // 32-bit sequence elements.
+  //
+  // TODO: We should try to figure out how to interpret the reg_sequence as a
+  // split 64-bit splat constant, or use 64-bit pseudos for materializing f64
+  // constants.
+  if (SplatVal->getImm() != 0 && SplatVal->getImm() != -1) {
+    const TargetRegisterClass *OpRC = TRI->getRegClass(RCID);
+    // We need to figure out the scalar type read by the operand. e.g. the MFMA
+    // operand will be AReg_128, and we want to check if it's compatible with an
+    // AReg_32 constant.
+    uint8_t OpTy = Desc.operands()[UseOpIdx].OperandType;
+    switch (OpTy) {
+    case AMDGPU::OPERAND_REG_INLINE_AC_INT32:
+    case AMDGPU::OPERAND_REG_INLINE_AC_FP32:
+      OpRC = TRI->getSubRegisterClass(OpRC, AMDGPU::sub0);
+      break;
+    case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
+      OpRC = TRI->getSubRegisterClass(OpRC, AMDGPU::sub0_sub1);
+      break;
+    default:
+      return nullptr;
+    }
+
+    if (!TRI->getCommonSubClass(OpRC, SplatRC))
+      return nullptr;
+  }
+
+  if (!TII->isOperandLegal(*UseMI, UseOpIdx, SplatVal))
+    return nullptr;
+
+  return SplatVal;
 }
 
 bool SIFoldOperandsImpl::tryToFoldACImm(
@@ -870,7 +977,6 @@ bool SIFoldOperandsImpl::tryToFoldACImm(
   if (!AMDGPU::isSISrcOperand(Desc, UseOpIdx))
     return false;
 
-  uint8_t OpTy = Desc.operands()[UseOpIdx].OperandType;
   MachineOperand &UseOp = UseMI->getOperand(UseOpIdx);
   if (OpToFold.isImm()) {
     if (unsigned UseSubReg = UseOp.getSubReg()) {
@@ -917,31 +1023,7 @@ bool SIFoldOperandsImpl::tryToFoldACImm(
     }
   }
 
-  SmallVector<std::pair<MachineOperand*, unsigned>, 32> Defs;
-  if (!getRegSeqInit(Defs, UseReg, OpTy))
-    return false;
-
-  int32_t Imm;
-  for (unsigned I = 0, E = Defs.size(); I != E; ++I) {
-    const MachineOperand *Op = Defs[I].first;
-    if (!Op->isImm())
-      return false;
-
-    auto SubImm = Op->getImm();
-    if (!I) {
-      Imm = SubImm;
-      if (!TII->isInlineConstant(*Op, OpTy) ||
-          !TII->isOperandLegal(*UseMI, UseOpIdx, Op))
-        return false;
-
-      continue;
-    }
-    if (Imm != SubImm)
-      return false; // Can only fold splat constants
-  }
-
-  appendFoldCandidate(FoldList, UseMI, UseOpIdx, Defs[0].first);
-  return true;
+  return false;
 }
 
 void SIFoldOperandsImpl::foldOperand(
@@ -971,22 +1053,34 @@ void SIFoldOperandsImpl::foldOperand(
     Register RegSeqDstReg = UseMI->getOperand(0).getReg();
     unsigned RegSeqDstSubReg = UseMI->getOperand(UseOpIdx + 1).getImm();
 
+    MachineOperand *SplatVal;
+    const TargetRegisterClass *SplatRC;
+    std::tie(SplatVal, SplatRC) = isRegSeqSplat(*UseMI);
+
     // Grab the use operands first
     SmallVector<MachineOperand *, 4> UsesToProcess(
         llvm::make_pointer_range(MRI->use_nodbg_operands(RegSeqDstReg)));
     for (auto *RSUse : UsesToProcess) {
       MachineInstr *RSUseMI = RSUse->getParent();
+      unsigned OpNo = RSUseMI->getOperandNo(RSUse);
 
-      if (tryToFoldACImm(UseMI->getOperand(0), RSUseMI,
-                         RSUseMI->getOperandNo(RSUse), FoldList))
-        continue;
+      if (SplatVal) {
+        if (MachineOperand *Foldable =
+                tryFoldRegSeqSplat(RSUseMI, OpNo, SplatVal, SplatRC)) {
+          appendFoldCandidate(FoldList, RSUseMI, OpNo, Foldable);
+          continue;
+        }
+      }
 
       if (RSUse->getSubReg() != RegSeqDstSubReg)
         continue;
 
-      foldOperand(OpToFold, RSUseMI, RSUseMI->getOperandNo(RSUse), FoldList,
-                  CopiesToReplace);
+      if (tryToFoldACImm(UseMI->getOperand(0), RSUseMI, OpNo, FoldList))
+        continue;
+
+      foldOperand(OpToFold, RSUseMI, OpNo, FoldList, CopiesToReplace);
     }
+
     return;
   }
 
@@ -1065,6 +1159,16 @@ void SIFoldOperandsImpl::foldOperand(
 
     unsigned MovOp = TII->getMovOpcode(DestRC);
     if (MovOp == AMDGPU::COPY)
+      return;
+
+    // Fold if the destination register class of the MOV instruction (ResRC)
+    // is a superclass of (or equal to) the destination register class of the
+    // COPY (DestRC). If this condition fails, folding would be illegal.
+    const MCInstrDesc &MovDesc = TII->get(MovOp);
+    assert(MovDesc.getNumDefs() > 0 && MovDesc.operands()[0].RegClass != -1);
+    const TargetRegisterClass *ResRC =
+        TRI->getRegClass(MovDesc.operands()[0].RegClass);
+    if (!DestRC->hasSuperClassEq(ResRC))
       return;
 
     MachineInstr::mop_iterator ImpOpI = UseMI->implicit_operands().begin();
@@ -1161,8 +1265,14 @@ void SIFoldOperandsImpl::foldOperand(
 
         if (OpToFold.isImm())
           UseMI->getOperand(1).ChangeToImmediate(OpToFold.getImm());
-        else
+        else if (OpToFold.isFI())
           UseMI->getOperand(1).ChangeToFrameIndex(OpToFold.getIndex());
+        else {
+          assert(OpToFold.isGlobal());
+          UseMI->getOperand(1).ChangeToGA(OpToFold.getGlobal(),
+                                          OpToFold.getOffset(),
+                                          OpToFold.getTargetFlags());
+        }
         UseMI->removeOperand(2); // Remove exec read (or src1 for readlane)
         return;
       }
@@ -1619,7 +1729,6 @@ bool SIFoldOperandsImpl::foldCopyToAGPRRegSequence(MachineInstr *CopyMI) const {
 
   MachineInstrBuilder B(*MBB.getParent(), CopyMI);
   DenseMap<TargetInstrInfo::RegSubRegPair, Register> VGPRCopies;
-  SmallSetVector<TargetInstrInfo::RegSubRegPair, 32> SeenInputs;
 
   const TargetRegisterClass *UseRC =
       MRI->getRegClass(CopyMI->getOperand(1).getReg());
@@ -2123,7 +2232,7 @@ bool SIFoldOperandsImpl::tryFoldRegSequence(MachineInstr &MI) {
     return false;
 
   SmallVector<std::pair<MachineOperand*, unsigned>, 32> Defs;
-  if (!getRegSeqInit(Defs, Reg, MCOI::OPERAND_REGISTER))
+  if (!getRegSeqInit(Defs, Reg))
     return false;
 
   for (auto &[Op, SubIdx] : Defs) {

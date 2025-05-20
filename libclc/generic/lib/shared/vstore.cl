@@ -236,7 +236,6 @@ _CLC_DEF _CLC_OVERLOAD double __clc_rte(double x) {
 
 #define __CLC_BODY "vstore_half.inc"
 #include <clc/math/gentype.inc>
-#undef __CLC_BODY
 #undef FUNC
 #undef __XFUNC
 #undef __FUNC

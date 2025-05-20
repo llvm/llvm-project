@@ -503,6 +503,16 @@ namespace OversizedBitField {
 #endif
 }
 
+namespace Discarded {
+  enum my_byte : unsigned char {};
+  struct pad {
+    char a;
+    int b;
+  };
+  constexpr int bad_my_byte = (__builtin_bit_cast(my_byte[8], pad{1, 2}), 0); // both-error {{must be initialized by a constant expression}} \
+                                                                              // both-note {{indeterminate value can only initialize an object of type 'unsigned char' or 'std::byte';}}
+}
+
 typedef bool bool9 __attribute__((ext_vector_type(9)));
 // both-error@+2 {{constexpr variable 'bad_bool9_to_short' must be initialized by a constant expression}}
 // both-note@+1 {{bit_cast involving type 'bool __attribute__((ext_vector_type(9)))' (vector of 9 'bool' values) is not allowed in a constant expression; element size 1 * element count 9 is not a multiple of the byte size 8}}

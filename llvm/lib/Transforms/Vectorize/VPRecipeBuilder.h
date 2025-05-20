@@ -90,6 +90,14 @@ class VPRecipeBuilder {
   /// A mapping of partial reduction exit instructions to their scaling factor.
   DenseMap<const Instruction *, unsigned> ScaledReductionMap;
 
+  /// A mapping from VP blocks to IR blocks, used temporarily while migrating
+  /// away from IR references.
+  const DenseMap<const VPBlockBase *, BasicBlock *> &VPB2IRBB;
+
+  /// Loop versioning instance for getting noalias metadata guaranteed by
+  /// runtime checks.
+  LoopVersioning *LVer;
+
   /// Check if \p I can be widened at the start of \p Range and possibly
   /// decrease the range such that the returned value holds for the entire \p
   /// Range. The function should not be called for memory instructions or calls.
@@ -114,10 +122,10 @@ class VPRecipeBuilder {
   tryToOptimizeInductionTruncate(TruncInst *I, ArrayRef<VPValue *> Operands,
                                  VFRange &Range);
 
-  /// Handle non-loop phi nodes. Return a new VPBlendRecipe otherwise. Currently
+  /// Handle non-loop phi nodes, returning a new VPBlendRecipe. Currently
   /// all such phi nodes are turned into a sequence of select instructions as
   /// the vectorizer currently performs full if-conversion.
-  VPBlendRecipe *tryToBlend(PHINode *Phi, ArrayRef<VPValue *> Operands);
+  VPBlendRecipe *tryToBlend(VPWidenPHIRecipe *PhiR);
 
   /// Handle call instructions. If \p CI can be widened for \p Range.Start,
   /// return a new VPWidenCallRecipe or VPWidenIntrinsicRecipe. Range.End may be
@@ -155,9 +163,11 @@ public:
                   const TargetTransformInfo *TTI,
                   LoopVectorizationLegality *Legal,
                   LoopVectorizationCostModel &CM,
-                  PredicatedScalarEvolution &PSE, VPBuilder &Builder)
+                  PredicatedScalarEvolution &PSE, VPBuilder &Builder,
+                  const DenseMap<const VPBlockBase *, BasicBlock *> &VPB2IRBB,
+                  LoopVersioning *LVer)
       : Plan(Plan), OrigLoop(OrigLoop), TLI(TLI), TTI(TTI), Legal(Legal),
-        CM(CM), PSE(PSE), Builder(Builder) {}
+        CM(CM), PSE(PSE), Builder(Builder), VPB2IRBB(VPB2IRBB), LVer(LVer) {}
 
   std::optional<unsigned> getScalingForReduction(const Instruction *ExitInst) {
     auto It = ScaledReductionMap.find(ExitInst);
@@ -169,11 +179,9 @@ public:
   /// that are valid so recipes can be formed later.
   void collectScaledReductions(VFRange &Range);
 
-  /// Create and return a widened recipe for \p I if one can be created within
+  /// Create and return a widened recipe for \p R if one can be created within
   /// the given VF \p Range.
-  VPRecipeBase *tryToCreateWidenRecipe(Instruction *Instr,
-                                       ArrayRef<VPValue *> Operands,
-                                       VFRange &Range);
+  VPRecipeBase *tryToCreateWidenRecipe(VPSingleDefRecipe *R, VFRange &Range);
 
   /// Create and return a partial reduction recipe for a reduction instruction
   /// along with binary operation and reduction phi operands.
@@ -194,7 +202,15 @@ public:
   /// A helper function that computes the predicate of the block BB, assuming
   /// that the header block of the loop is set to True or the loop mask when
   /// tail folding.
+  void createBlockInMask(const VPBasicBlock *VPBB) {
+    return createBlockInMask(VPB2IRBB.lookup(VPBB));
+  }
   void createBlockInMask(BasicBlock *BB);
+
+  /// Returns the *entry* mask for the block \p VPBB.
+  VPValue *getBlockInMask(const VPBasicBlock *VPBB) const {
+    return getBlockInMask(VPB2IRBB.lookup(VPBB));
+  }
 
   /// Returns the *entry* mask for the block \p BB.
   VPValue *getBlockInMask(BasicBlock *BB) const;
@@ -208,6 +224,9 @@ public:
 
   /// A helper that returns the previously computed predicate of the edge
   /// between SRC and DST.
+  VPValue *getEdgeMask(const VPBasicBlock *Src, const VPBasicBlock *Dst) const {
+    return getEdgeMask(VPB2IRBB.lookup(Src), VPB2IRBB.lookup(Dst));
+  }
   VPValue *getEdgeMask(BasicBlock *Src, BasicBlock *Dst) const;
 
   /// Return the recipe created for given ingredient.
