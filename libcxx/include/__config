@@ -530,6 +530,26 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_HIDE_FROM_ABI_AFTER_V1 _LIBCPP_HIDE_FROM_ABI
 #  endif
 
+//// ** in-progress: this description block should be here or merged block above? **
+// _LIBCPP_HIDE_FROM_ABI(_AFTER_V1) is mandatory for member functions in a inner class in a class template
+// (e.g. std::basic_ostream<...>::sentry::sentry(...) ) due to strange behavior of MinGW-GCC about
+// instantiation combined with dllimport/dllexport described below. Former clang didn't do this buggy behavior
+// but will be aligned to GCC for platform compatibility (in particluar, required by some of libstdc++ package).
+// Thus, such member functions exist from a past (they are, ostream::sentry::sentry, ostream::ostream::~sentry
+// and istream::sentry::sentry only) need to be HIDE_FROM_ABI but simply attaching simply ABI on other platforms.
+// So it's needed a dedicated keyword named _LIBCPP_HIDE_FROM_ABI_MINGW_OR_AFTER_V1 to affects only for MinGW
+// target (and, Cygwin too). For other platforms, that is expanded to _LIBCPP_HIDE_FROM_ABI_AFTER_V1 because at
+// a time to fix V2 ABI comes, _LIBCPP_HIDE_FROM_ABI_MINGW_OR_AFTER_V1 can be simply replaced into
+// _LIBCPP_HIDE_FROM_ABI_AFTER_V1 and be completely removed.
+// If time to a new class in a class template comes, all non-inline member functions of that new inner class must
+// be declared with _LIBCPP_HIDE_FROM_ABI_AFTER_V1 otherwise they build to DLL will be inaccessible by MinGW-GCC.
+//// ** in-progress: describe peculiar behavior of MinGW-GCC **
+#  if defined(__MINGW32__) || defined(__CYGWIN__)
+#    define _LIBCPP_HIDE_FROM_ABI_MINGW_OR_AFTER_V1 inline _LIBCPP_HIDE_FROM_ABI
+#  else
+#    define _LIBCPP_HIDE_FROM_ABI_MINGW_OR_AFTER_V1 _LIBCPP_HIDE_FROM_ABI_AFTER_V1
+#  endif
+
 // TODO: Remove this workaround once we drop support for Clang 16
 #  if __has_warning("-Wc++23-extensions")
 #    define _LIBCPP_CLANG_DIAGNOSTIC_IGNORED_CXX23_EXTENSION _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wc++23-extensions")
