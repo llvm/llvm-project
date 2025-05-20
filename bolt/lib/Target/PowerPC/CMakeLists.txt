@@ -1,3 +1,3 @@
-add_llvm_library(BoltPPC
+add_llvm_library(LLVMBOLTTargetPowerPC
     PPCMCPlusBuilder.cpp
   )
