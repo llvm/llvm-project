@@ -1682,6 +1682,10 @@ struct ViewOpLowering : public ConvertOpToLLVMPattern<memref::ViewOp> {
   LogicalResult
   matchAndRewrite(memref::ViewOp viewOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    // Early exit for 0-D corner case.
+    if (viewMemRefType.getRank() == 0)
+      return rewriter.replaceOp(viewOp, {targetMemRef}), success();
+
     auto loc = viewOp.getLoc();
 
     auto viewMemRefType = viewOp.getType();
@@ -1732,10 +1736,6 @@ struct ViewOpLowering : public ConvertOpToLLVMPattern<memref::ViewOp> {
     targetMemRef.setOffset(
         rewriter, loc,
         createIndexAttrConstant(rewriter, loc, indexType, offset));
-
-    // Early exit for 0-D corner case.
-    if (viewMemRefType.getRank() == 0)
-      return rewriter.replaceOp(viewOp, {targetMemRef}), success();
 
     // Fields 4 and 5: Update sizes and strides.
     Value stride = nullptr, nextSize = nullptr;
