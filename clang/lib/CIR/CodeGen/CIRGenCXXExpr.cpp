@@ -98,9 +98,11 @@ RValue CIRGenFunction::emitCXXMemberOrOperatorMemberCallExpr(
   CallArgList rtlArgStorage;
   CallArgList *rtlArgs = nullptr;
   if (auto *oce = dyn_cast<CXXOperatorCallExpr>(ce)) {
-    cgm.errorNYI(oce->getSourceRange(),
-                 "emitCXXMemberOrOperatorMemberCallExpr: operator call");
-    return RValue::get(nullptr);
+    if (oce->isAssignmentOp()) {
+      cgm.errorNYI(
+          oce->getSourceRange(),
+          "emitCXXMemberOrOperatorMemberCallExpr: assignment operator");
+    }
   }
 
   LValue thisPtr;
@@ -167,6 +169,17 @@ RValue CIRGenFunction::emitCXXMemberOrOperatorMemberCallExpr(
   return emitCXXMemberOrOperatorCall(
       calleeDecl, callee, returnValue, thisPtr.getPointer(),
       /*ImplicitParam=*/nullptr, QualType(), ce, rtlArgs);
+}
+
+RValue
+CIRGenFunction::emitCXXOperatorMemberCallExpr(const CXXOperatorCallExpr *e,
+                                              const CXXMethodDecl *md,
+                                              ReturnValueSlot returnValue) {
+  assert(md->isInstance() &&
+         "Trying to emit a member call expr on a static method!");
+  return emitCXXMemberOrOperatorMemberCallExpr(
+      e, md, returnValue, /*HasQualifier=*/false, /*Qualifier=*/nullptr,
+      /*IsArrow=*/false, e->getArg(0));
 }
 
 RValue CIRGenFunction::emitCXXMemberOrOperatorCall(
