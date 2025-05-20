@@ -44,8 +44,8 @@ computeTransposedType(RankedTensorType rankedTensorType,
                       ArrayRef<int64_t> transposeVector);
 
 /// Create tensor.collapse_shape to drop unit dimensions in `dropDims` in tensor
-/// `from`.
-CollapseShapeOp dropGivenUnitDims(OpBuilder &b, Location loc, Value from,
+/// `src`.
+CollapseShapeOp dropGivenUnitDims(OpBuilder &b, Location loc, Value src,
                                   const llvm::SmallBitVector &dropDims);
 
 /// A tensor.insert_slice is a cast-like operation if it merely rank-extends the

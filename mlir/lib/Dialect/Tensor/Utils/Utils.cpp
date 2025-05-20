@@ -94,18 +94,16 @@ mlir::tensor::computeTransposedType(RankedTensorType rankedTensorType,
   return transposedTensorType;
 }
 
-/// Create tensor.collapse_shape to drop unit dimensions in `dropDims` in tensor
-/// `from`.
 CollapseShapeOp
-mlir::tensor::dropGivenUnitDims(OpBuilder &b, Location loc, Value from,
+mlir::tensor::dropGivenUnitDims(OpBuilder &b, Location loc, Value src,
                                 const llvm::SmallBitVector &dropDims) {
-  auto fromType = cast<ShapedType>(from.getType());
-  int64_t rank = fromType.getRank();
+  auto srcType = cast<ShapedType>(src.getType());
+  int64_t rank = srcType.getRank();
   assert(rank == static_cast<int64_t>(dropDims.size()) &&
-         "dropDims dimension does not match from tensor rank");
+         "dropDims dimension does not match src tensor rank");
   assert(llvm::all_of(
              dropDims.set_bits(),
-             [&](unsigned dim) { return fromType.getShape()[dim] == 1; }) &&
+             [&](unsigned dim) { return srcType.getShape()[dim] == 1; }) &&
          "Dropping non unit dimension");
   // Computed reassociation map for the corresponding tensor.collapse_shape.
   SmallVector<ReassociationIndices, 2> reassocMaps;
@@ -124,7 +122,7 @@ mlir::tensor::dropGivenUnitDims(OpBuilder &b, Location loc, Value from,
     reassocMaps.emplace_back(llvm::make_range(seq.begin(), seq.end()));
     nextDimToGroup = setBit + 1;
   }
-  return b.create<tensor::CollapseShapeOp>(loc, from, reassocMaps);
+  return b.create<tensor::CollapseShapeOp>(loc, src, reassocMaps);
 }
 
 bool mlir::tensor::isCastLikeInsertSliceOp(InsertSliceOp op) {

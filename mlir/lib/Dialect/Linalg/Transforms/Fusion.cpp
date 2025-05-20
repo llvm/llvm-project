@@ -256,7 +256,6 @@ mlir::linalg::fuseProducerOfTensor(OpBuilder &b, OpResult producerOpResult,
                << "\nNot fusable, not an extract_slice op: " << inputTensor);
     return failure();
   }
-  llvm::SmallBitVector droppedDims = sliceOp.getDroppedDims();
 
   // If producer is already in the same block as consumer, we are done.
   if (consumerOpOperand.get().getParentBlock() ==
@@ -276,11 +275,14 @@ mlir::linalg::fuseProducerOfTensor(OpBuilder &b, OpResult producerOpResult,
   // Replace use.
   Value def = fusedProducer->getResult(producerOpResult.getResultNumber());
   Type consumerType = consumerOpOperand.get().getType();
-  // Rank-reduction occurred as part of the extract_slice.
+  // Check if rank-reduction occurred as part of the extract_slice. If yes,
+  // collapse the dropped dimensions.
   if (cast<ShapedType>(consumerType).getRank() !=
-      cast<ShapedType>(def.getType()).getRank())
+      cast<ShapedType>(def.getType()).getRank()) {
+    llvm::SmallBitVector droppedDims = sliceOp.getDroppedDims();
     def =
         tensor::dropGivenUnitDims(b, fusedProducer.getLoc(), def, droppedDims);
+  }
   // Canonicalizations are not guaranteed to have happened before constructing
   // `fusedProducer`. In the tensor case this can result in temporary type
   // mismatches. Insert a `tensor.cast` op to propagate the transformation
