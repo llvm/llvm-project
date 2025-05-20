@@ -476,7 +476,7 @@ def NVVM_BarrierOp : NVVM_Op<"barrier", [AttrSizedOperandSegments]> {
     Optional<I32>:$barrierId,
     Optional<I32>:$numberOfThreads);
   string llvmBuilder = [{
-    auto id = $barrierId ? $barrierId : builder.getInt32(0);
+    llvm::Value *id = $barrierId ? $barrierId : builder.getInt32(0);
     if ($numberOfThreads)
       createIntrinsicCall(
           builder, llvm::Intrinsic::nvvm_barrier_cta_sync_aligned,

@@ -254,7 +254,7 @@ def BF16X2RT : RegTyInfo<v2bf16, Int32Regs, ?, ?, supports_imm = 0>;
 //                         (ins Int32Regs:$a, Int32Regs:$b, Hexu32imm:$c),
 //                         (ins PrmtMode:$mode),
 //                         "prmt.b32${mode}">;
-//         ---> "prmt.b32${mode} \t$dst, $a, $b, $c;"
+//         ---> "prmt.b32${mode} \t$d, $a, $b, $c;"
 //
 class BasicFlagsNVPTXInst<dag outs_dag, dag ins_dag, dag flags_dag, string asmstr,
                           list<dag> pattern = []>
