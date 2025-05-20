@@ -12556,6 +12556,11 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
     // FIXME: There's no way to have a built-in with an rvalue ref arg.
     case 'C':
       Type = Type.withConst();
+      // adjust 'const char *' to 'const char __constant *' on OpenCL
+      if (Context.getLangOpts().OpenCL &&
+          Type.getTypePtr() == Context.CharTy.getTypePtr()) {
+        Type = Context.getAddrSpaceQualType(Type, LangAS::opencl_constant);
+      }
       break;
     case 'D':
       Type = Context.getVolatileType(Type);

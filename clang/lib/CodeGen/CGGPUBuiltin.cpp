@@ -112,6 +112,7 @@ bool containsNonScalarVarargs(CodeGenFunction *CGF, const CallArgList &Args) {
 RValue EmitDevicePrintfCallExpr(const CallExpr *E, CodeGenFunction *CGF,
                                 llvm::Function *Decl, bool WithSizeArg) {
   CodeGenModule &CGM = CGF->CGM;
+  llvm::LLVMContext &Ctx = CGM.getLLVMContext();
   CGBuilderTy &Builder = CGF->Builder;
   assert(E->getBuiltinCallee() == Builtin::BIprintf ||
          E->getBuiltinCallee() == Builtin::BI__builtin_printf);
@@ -133,9 +134,15 @@ RValue EmitDevicePrintfCallExpr(const CallExpr *E, CodeGenFunction *CGF,
 
   auto r = packArgsIntoNVPTXFormatBuffer(CGF, Args);
   llvm::Value *BufferPtr = r.first;
+  llvm::Value *Fmt = Args[0].getRValue(*CGF).getScalarVal();
 
-  llvm::SmallVector<llvm::Value *, 3> Vec = {
-      Args[0].getRValue(*CGF).getScalarVal(), BufferPtr};
+  // For OpenCL, the default addrspace of 'format' argument is LangAS::opencl_constant,
+  // however, the 'vprintf' requires it to be unqualified 'ptr' type. Do pointer cast if
+  // it's the case.
+  if (CGM.getContext().getLangOpts().OpenCL)
+    Fmt = Builder.CreatePointerCast(Fmt, llvm::PointerType::getUnqual(Ctx));
+
+  llvm::SmallVector<llvm::Value *, 3> Vec = {Fmt, BufferPtr};
   if (WithSizeArg) {
     // Passing > 32bit of data as a local alloca doesn't work for nvptx or
     // amdgpu
