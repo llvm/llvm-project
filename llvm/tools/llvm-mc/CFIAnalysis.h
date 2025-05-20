@@ -78,11 +78,9 @@ private:
 
 public:
   CFIAnalysis(MCContext &Context, MCInstrInfo const &MCII,
-              MCInstrAnalysis *MCIA)
+              MCInstrAnalysis *MCIA,
+              ArrayRef<MCCFIInstruction> PrologueCFIDirectives)
       : Context(Context), MCII(MCII), MCRI(Context.getRegisterInfo()) {
-    // TODO it should look at the prologue directives and setup the
-    // registers' previous value state here, but for now, it's assumed that all
-    // values are by default `samevalue`.
     EMCIA.reset(new ExtendedMCInstrAnalysis(Context, MCII, MCIA));
 
     // TODO CFA offset should be the slot size, but for now I don't have any
@@ -103,6 +101,11 @@ public:
     State.RegisterCFIStates[MCRI->getDwarfRegNum(EMCIA->getStackPointer(),
                                                  false)] =
         RegisterCFIState::createOffsetFromCFAVal(0); // sp's old value is CFA
+
+    // Applying the prologue after default assumptions to overwrite them.
+    for (auto &&PrologueCFIDirective : PrologueCFIDirectives) {
+      State.apply(PrologueCFIDirective);
+    }
   }
 
   bool doesConstantChange(const MCInst &Inst, MCPhysReg Reg, int64_t &HowMuch) {
