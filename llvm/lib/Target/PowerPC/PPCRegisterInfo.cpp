@@ -1611,6 +1611,8 @@ PPCRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   unsigned OpC = MI.getOpcode();
 
   switch (OpC) {
+  default:
+    break;
   case PPC::DYNAREAOFFSET:
   case PPC::DYNAREAOFFSET8:
     lowerDynamicAreaOffset(II);
