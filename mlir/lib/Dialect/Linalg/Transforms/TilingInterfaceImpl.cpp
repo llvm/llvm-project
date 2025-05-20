@@ -369,7 +369,7 @@ struct LinalgOpPartialReductionInterface
 
     SmallVector<OpFoldResult> tiledShape;
     for (auto [tileSize, dimSize] : llvm::zip_equal(sizes, shape)) {
-      if (isZeroIndex(tileSize)) {
+      if (isZeroInteger(tileSize)) {
         tiledShape.push_back(dimSize);
       } else {
         tiledShape.push_back(tileSize);
@@ -732,7 +732,7 @@ struct PackOpTiling
     // iterated or inner dims are not tiled. Otherwise, it will generate a
     // sequence of non-trivial ops (for partial tiles).
     for (auto offset : offsets.take_back(numTiles))
-      if (!isConstantIntValue(offset, 0))
+      if (!isZeroInteger(offset))
         return failure();
 
     for (auto iter :
