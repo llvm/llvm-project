@@ -33,8 +33,4 @@
 #  define _LIBCPP_STACKTRACE_CAN_SPAWN_TOOLS
 #endif
 
-#if defined(_LIBCPP_WIN32API)
-#  define _LIBCPP_STACKTRACE_WINDOWS
-#endif
-
 #endif // _LIBCPP_STACKTRACE_CONFIG_H

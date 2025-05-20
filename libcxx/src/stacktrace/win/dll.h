@@ -6,44 +6,31 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_STACKTRACE_WIN_IMPL_H
-#define _LIBCPP_STACKTRACE_WIN_IMPL_H
+#ifndef _LIBCPP_STACKTRACE_WIN_DLL
+#define _LIBCPP_STACKTRACE_WIN_DLL
 
-#include "stacktrace/config.h"
+#include <__config>
+#if defined(_LIBCPP_WIN32API)
 
-#if defined(_LIBCPP_STACKTRACE_WINDOWS)
 // windows.h must be first
 #  include <windows.h>
 // other windows-specific headers
 #  include <dbghelp.h>
 #  define PSAPI_VERSION 1
 #  include <psapi.h>
-#endif
 
-#include <__config>
-#include <__config_site>
-#include <cstddef>
-#include <cstdlib>
-#include <mutex>
+#  include <__config_site>
+#  include <cstddef>
+#  include <cstdlib>
+#  include <mutex>
+#  include <stacktrace>
 
-#include <__stacktrace/base.h>
+#  include "stacktrace/utils/debug.h"
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __stacktrace {
 
-struct win_impl {
-  builder& builder_;
-  std::lock_guard<std::mutex> guard_;
-  win_impl(builder& trace);
-  ~win_impl();
-
-  void collect(size_t skip, size_t max_depth);
-  void ident_modules();
-  void symbolize();
-  void resolve_lines();
-};
-
-#if defined(_LIBCPP_STACKTRACE_WINDOWS)
+#  if defined(_LIBCPP_WIN32API)
 
 // clang-format off
 
@@ -130,4 +117,5 @@ struct psapi_dll final : dll {
 } // namespace __stacktrace
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_STACKTRACE_WIN_IMPL_H
+#endif // _LIBCPP_WIN32API
+#endif // _LIBCPP_STACKTRACE_WIN_DLL
