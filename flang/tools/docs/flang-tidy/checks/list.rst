@@ -29,3 +29,4 @@ Flang-Tidy Checks
    :doc:`bugprone-undeclared-procedure <bugprone/undeclared-procedure>`,
    :doc:`bugprone-unused-intent <bugprone/unused-intent>`,
    :doc:`modernize-avoid-assign-stmt <modernize/avoid-assign-stmt>`,
+   :doc:`modernize-avoid-backspace-stmt <modernize/avoid-backspace-stmt>`,
