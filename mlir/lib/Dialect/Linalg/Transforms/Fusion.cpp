@@ -257,7 +257,7 @@ dropGivenUnitDims(OpBuilder &b, Location loc, Value from,
   llvm::SmallBitVector keptDims(dropDims);
   keptDims.flip();
   int64_t lastSetBit = keptDims.find_last();
-  for(int64_t setBit : keptDims.set_bits()) {
+  for (int64_t setBit : keptDims.set_bits()) {
     // Group consecutive dropped dimension with the next non-dropped dimension.
     // If this is the last set dimension, also group all subsequent dropped
     // dimension, if any.
