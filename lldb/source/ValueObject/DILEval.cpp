@@ -287,7 +287,6 @@ Interpreter::Visit(const ArraySubscriptNode *node) {
     if (!num_children)
       return llvm::make_error<DILDiagnosticError>(
           m_expr, toString(num_children.takeError()), node->GetLocation());
-    // Verify that the 'index' is not out-of-range for the declared type.
     if (child_idx >= *num_children) {
       std::string message = llvm::formatv(
           "array index {0} is not valid for \"({1}) {2}\"", child_idx,
