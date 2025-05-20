@@ -1276,9 +1276,7 @@ inline bool SDValue::isUndef() const {
   return Node->isUndef();
 }
 
-inline bool SDValue::isAnyAdd() const {
-  return Node->isAnyAdd();
-}
+inline bool SDValue::isAnyAdd() const { return Node->isAnyAdd(); }
 
 inline bool SDValue::use_empty() const {
   return !Node->hasAnyUseOfValue(ResNo);
