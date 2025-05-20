@@ -608,10 +608,9 @@ ElementalAssignBufferization::findMatch(hlfir::ElementalOp elemental) {
       return std::nullopt;
     }
 
-    // Don't allow any reads to or writes from volatile memory
-    if (mlir::isa<mlir::MemoryEffects::Read, mlir::MemoryEffects::Write>(
-            effect.getEffect()) &&
-        mlir::isa<fir::VolatileMemoryResource>(effect.getResource())) {
+    if (effect.getValue() == nullptr) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << "side-effect with no value, cannot analyze further\n");
       return std::nullopt;
     }
 
