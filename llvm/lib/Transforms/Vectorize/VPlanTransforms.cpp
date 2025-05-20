@@ -939,8 +939,8 @@ static void recursivelyDeleteDeadRecipes(VPValue *V) {
   }
 }
 
-/// Try to fold \p R using TargetFolder to a constant. Will succeed for a
-/// handled \p Opcode if all \p Operands are constant.
+/// Try to fold \p R using TargetFolder to a constant. Will succeed and return a
+/// non-nullptr Value for a handled \p Opcode if all \p Operands are constant.
 static Value *tryToConstantFold(const VPRecipeBase &R, unsigned Opcode,
                                 ArrayRef<VPValue *> Operands,
                                 const DataLayout &DL,
