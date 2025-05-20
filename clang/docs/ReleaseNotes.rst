@@ -647,7 +647,7 @@ Bug Fixes to Compiler Builtins
 - ``__is_trivially_relocatable`` has been deprecated, and uses should be replaced by
   ``__builtin_is_cpp_trivially_relocatable``.
   Note that, it is generally unsafe to ``memcpy`` non-trivially copyable types that
-  are ``__builtin_is_cpp_trivially_relocatable``. It is recommanded to use
+  are ``__builtin_is_cpp_trivially_relocatable``. It is recommended to use
   ``__builtin_trivially_relocate`` instead.
 
 Bug Fixes to Attribute Support
@@ -703,7 +703,7 @@ Bug Fixes to C++ Support
 - Fix crash when evaluating the trailing requires clause of generic lambdas which are part of
   a pack expansion.
 - Fixes matching of nested template template parameters. (#GH130362)
-- Correctly diagnoses template template paramters which have a pack parameter
+- Correctly diagnoses template template parameters which have a pack parameter
   not in the last position.
 - Disallow overloading on struct vs class on dependent types, which is IFNDR, as
   this makes the problem diagnosable.
@@ -712,7 +712,7 @@ Bug Fixes to C++ Support
 - Clang now correctly parses ``if constexpr`` expressions in immediate function context. (#GH123524)
 - Fixed an assertion failure affecting code that uses C++23 "deducing this". (#GH130272)
 - Clang now properly instantiates destructors for initialized members within non-delegating constructors. (#GH93251)
-- Correctly diagnoses if unresolved using declarations shadows template paramters (#GH129411)
+- Correctly diagnoses if unresolved using declarations shadows template parameters (#GH129411)
 - Fixed C++20 aggregate initialization rules being incorrectly applied in certain contexts. (#GH131320)
 - Clang was previously coalescing volatile writes to members of volatile base class subobjects.
   The issue has been addressed by propagating qualifiers during derived-to-base conversions in the AST. (#GH127824)
@@ -741,11 +741,11 @@ Bug Fixes to C++ Support
 - Fixed the handling of pack indexing types in the constraints of a member function redeclaration. (#GH138255)
 - Clang now correctly parses arbitrary order of ``[[]]``, ``__attribute__`` and ``alignas`` attributes for declarations (#GH133107)
 - Fixed a crash when forming an invalid function type in a dependent context. (#GH138657) (#GH115725) (#GH68852)
-- Fixed a function declaration mismatch that caused inconsistencies between concepts and variable template declarations. (#GH139476)
 - Clang no longer segfaults when there is a configuration mismatch between modules and their users (http://crbug.com/400353616).
 - Fix an incorrect deduction when calling an explicit object member function template through an overload set address.
 - Fixed bug in constant evaluation that would allow using the value of a
   reference in its own initializer in C++23 mode (#GH131330).
+- Clang could incorrectly instantiate functions in discarded contexts (#GH140449)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -820,7 +820,7 @@ Windows Support
   which makes ``offsetof`` provided by Microsoft's ``<stddef.h>`` to be defined
   correctly. (#GH59689)
 
-- Clang now can process the `i128` and `ui128` integeral suffixes when MSVC
+- Clang now can process the `i128` and `ui128` integral suffixes when MSVC
   extensions are enabled. This allows for properly processing ``intsafe.h`` in
   the Windows SDK.
 
