@@ -428,8 +428,7 @@ static std::string PhysRegForNode(const TreePatternNode &Op,
 
   PhysReg += cast<StringInit>(OpLeafRec->getValue("Namespace")->getValue())
                  ->getValue();
-  PhysReg += "::";
-  PhysReg += Target.getRegBank().getReg(OpLeafRec)->getName();
+  PhysReg += "::" + Target.getRegBank().getReg(OpLeafRec)->getName();
   return PhysReg;
 }
 

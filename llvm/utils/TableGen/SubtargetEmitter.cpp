@@ -428,7 +428,7 @@ void SubtargetEmitter::formItineraryStageString(const std::string &Name,
 
     // Form string as ,{ cycles, u1 | u2 | ... | un, timeinc, kind }
     int Cycles = Stage->getValueAsInt("Cycles");
-    ItinString += "  { " + itostr(Cycles) + ", ";
+    ItinString += "  { " + Twine(Cycles) + ", ";
 
     // Get unit list
     ConstRecVec UnitList = Stage->getValueAsListOfDefs("Units");
@@ -436,16 +436,16 @@ void SubtargetEmitter::formItineraryStageString(const std::string &Name,
     // For each unit
     for (unsigned J = 0, M = UnitList.size(); J < M;) {
       // Add name and bitwise or
-      ItinString += Name + "FU::" + UnitList[J]->getName().str();
+      ItinString += Name + "FU::" + UnitList[J]->getName();
       if (++J < M)
         ItinString += " | ";
     }
 
     int TimeInc = Stage->getValueAsInt("TimeInc");
-    ItinString += ", " + itostr(TimeInc);
+    ItinString += ", " + Twine(TimeInc);
 
     int Kind = Stage->getValueAsInt("Kind");
-    ItinString += ", (llvm::InstrStage::ReservationKinds)" + itostr(Kind);
+    ItinString += ", (llvm::InstrStage::ReservationKinds)" + Twine(Kind);
 
     // Close off stage
     ItinString += " }";
@@ -470,8 +470,7 @@ void SubtargetEmitter::formItineraryOperandCycleString(
   ListSeparator LS;
   for (int OCycle : OperandCycleList) {
     // Next operand cycle
-    ItinString += LS;
-    ItinString += "  " + itostr(OCycle);
+    ItinString += Twine(LS) + "  " + itostr(OCycle);
   }
 }
 
@@ -483,14 +482,10 @@ void SubtargetEmitter::formItineraryBypassString(const std::string &Name,
   unsigned N = BypassList.size();
   unsigned I = 0;
   ListSeparator LS;
-  for (; I < N; ++I) {
-    ItinString += LS;
-    ItinString += Name + "Bypass::" + BypassList[I]->getName().str();
-  }
-  for (; I < NOperandCycles; ++I) {
-    ItinString += LS;
-    ItinString += " 0";
-  }
+  for (; I < N; ++I)
+    ItinString += Twine(LS) + Name + "Bypass::" + BypassList[I]->getName();
+  for (; I < NOperandCycles; ++I)
+    ItinString += LS + " 0";
 }
 
 //

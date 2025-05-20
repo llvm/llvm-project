@@ -1413,10 +1413,8 @@ CodeGenSubRegIndex *CodeGenRegBank::getConcatSubRegIndex(
   std::string Name = Parts.front()->getName();
   const unsigned UnknownSize = (uint16_t)-1;
 
-  for (const CodeGenSubRegIndex *Part : ArrayRef(Parts).drop_front()) {
-    Name += '_';
-    Name += Part->getName();
-  }
+  for (const CodeGenSubRegIndex *Part : ArrayRef(Parts).drop_front())
+    Name += "_" + Part->getName();
 
   Idx = createSubRegIndex(Name, Parts.front()->getNamespace());
   Idx->ConcatenationOf.assign(Parts.begin(), Parts.end());

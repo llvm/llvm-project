@@ -3240,7 +3240,7 @@ static std::string
 getNameForFeatureBitset(ArrayRef<const Record *> FeatureBitset) {
   std::string Name = "AMFBS";
   for (const Record *Feature : FeatureBitset)
-    Name += ("_" + Feature->getName()).str();
+    Name += "_" + Feature->getName();
   return Name;
 }
 

@@ -151,14 +151,11 @@ static void generateEnumClauseVal(ArrayRef<const Record *> Records,
            << "llvm::" << DirLang.getCppNamespace() << "::" << EnumName
            << "::" << CV->getName() << ";\n";
       }
-      EnumHelperFuncs += (Twine("LLVM_ABI ") + Twine(EnumName) + Twine(" get") +
-                          Twine(EnumName) + Twine("(StringRef);\n"))
-                             .str();
-
       EnumHelperFuncs +=
-          (Twine("LLVM_ABI llvm::StringRef get") + Twine(DirLang.getName()) +
-           Twine(EnumName) + Twine("Name(") + Twine(EnumName) + Twine(");\n"))
-              .str();
+          "LLVM_ABI " + EnumName + " get" + EnumName + "(StringRef);\n";
+
+      EnumHelperFuncs += "LLVM_ABI llvm::StringRef get" + DirLang.getName() +
+                         EnumName + "Name(" + EnumName + ");\n";
     }
   }
 }
@@ -883,8 +880,7 @@ static void generateDirectiveClauseSets(const DirectiveLanguage &DirLang,
                                         DirectiveClauseFE FE, raw_ostream &OS) {
 
   std::string IfDefName{"GEN_"};
-  IfDefName += getFESpelling(FE).upper();
-  IfDefName += "_DIRECTIVE_CLAUSE_SETS";
+  IfDefName += getFESpelling(FE).upper() + "_DIRECTIVE_CLAUSE_SETS";
   IfDefScope Scope(IfDefName, OS);
 
   OS << "\n";
@@ -927,8 +923,7 @@ static void generateDirectiveClauseSets(const DirectiveLanguage &DirLang,
 static void generateDirectiveClauseMap(const DirectiveLanguage &DirLang,
                                        DirectiveClauseFE FE, raw_ostream &OS) {
   std::string IfDefName{"GEN_"};
-  IfDefName += getFESpelling(FE).upper();
-  IfDefName += "_DIRECTIVE_CLAUSE_MAP";
+  IfDefName += getFESpelling(FE).upper() + "_DIRECTIVE_CLAUSE_MAP";
   IfDefScope Scope(IfDefName, OS);
 
   OS << "\n";

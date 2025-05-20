@@ -377,8 +377,7 @@ unsigned MapTableEmitter::emitBinSearchTable(raw_ostream &OS) {
     for (const Record *ColInstr : ColInstrs) {
       if (ColInstr) {
         RelExists = true;
-        OutStr += ", ";
-        OutStr += ColInstr->getName();
+        OutStr += ", " + ColInstr->getName();
       } else {
         OutStr += ", (uint16_t)-1U";
       }

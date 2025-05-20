@@ -275,8 +275,9 @@ namespace llvm {
       if (Str[0] != '\0') {
         LHS.cString = Str;
         LHSKind = CStringKind;
-      } else
+      } else {
         LHSKind = EmptyKind;
+      }
 
       assert(isValid() && "Invalid twine!");
     }
@@ -577,6 +578,8 @@ namespace llvm {
     RHS.print(OS);
     return OS;
   }
+
+  std::string &operator+=(std::string &LHS, const Twine &RHS);
 
   /// @}
 

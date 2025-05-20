@@ -187,8 +187,7 @@ void AsmWriterEmitter::FindUniqueOperandCommands(
     auto I = llvm::find(UniqueOperandCommands, Command);
     if (I != UniqueOperandCommands.end()) {
       size_t idx = I - UniqueOperandCommands.begin();
-      InstrsForCase[idx] += ", ";
-      InstrsForCase[idx] += Inst.CGI->TheDef->getName();
+      InstrsForCase[idx] += ", " + Inst.CGI->TheDef->getName();
       InstIdxs[idx].push_back(i);
     } else {
       UniqueOperandCommands.push_back(std::move(Command));
@@ -228,10 +227,8 @@ void AsmWriterEmitter::FindUniqueOperandCommands(
 
       // Okay, everything in this command set has the same next operand.  Add it
       // to UniqueOperandCommands and remember that it was consumed.
-      std::string Command =
+      UniqueOperandCommands[CommandIdx] +=
           "    " + FirstInst.Operands[Op].getCode(PassSubtarget) + "\n";
-
-      UniqueOperandCommands[CommandIdx] += Command;
       InstOpsUsed[CommandIdx]++;
     }
   }
