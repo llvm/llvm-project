@@ -361,6 +361,9 @@ define void @li_straightline_b(i32 zeroext %a, i32 zeroext %b) {
 ;
 ; RV64I-SW-LABEL: li_straightline_b:
 ; RV64I-SW:       # %bb.0:
+; RV64I-SW-NEXT:    li a2, 57
+; RV64I-SW-NEXT:    beq a0, a2, .LBB3_4
+; RV64I-SW-NEXT:  # %bb.1: # %do_call
 ; RV64I-SW-NEXT:    addi sp, sp, -16
 ; RV64I-SW-NEXT:    .cfi_def_cfa_offset 16
 ; RV64I-SW-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
@@ -368,21 +371,19 @@ define void @li_straightline_b(i32 zeroext %a, i32 zeroext %b) {
 ; RV64I-SW-NEXT:    .cfi_offset ra, -8
 ; RV64I-SW-NEXT:    .cfi_offset s0, -16
 ; RV64I-SW-NEXT:    mv s0, a1
-; RV64I-SW-NEXT:    li a1, 57
-; RV64I-SW-NEXT:    beq a0, a1, .LBB3_3
-; RV64I-SW-NEXT:  # %bb.1: # %do_call
 ; RV64I-SW-NEXT:    call foo
 ; RV64I-SW-NEXT:    li a0, 57
 ; RV64I-SW-NEXT:    beq s0, a0, .LBB3_3
 ; RV64I-SW-NEXT:  # %bb.2: # %do_call2
 ; RV64I-SW-NEXT:    call foo
-; RV64I-SW-NEXT:  .LBB3_3: # %exit
+; RV64I-SW-NEXT:  .LBB3_3:
 ; RV64I-SW-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-SW-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; RV64I-SW-NEXT:    .cfi_restore ra
 ; RV64I-SW-NEXT:    .cfi_restore s0
 ; RV64I-SW-NEXT:    addi sp, sp, 16
 ; RV64I-SW-NEXT:    .cfi_def_cfa_offset 0
+; RV64I-SW-NEXT:  .LBB3_4: # %exit
 ; RV64I-SW-NEXT:    ret
   %cmp0 = icmp eq i32 %a, 57
   br i1 %cmp0, label %exit, label %do_call

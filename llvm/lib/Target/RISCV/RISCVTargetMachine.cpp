@@ -128,6 +128,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVPostLegalizerCombinerPass(*PR);
   initializeKCFIPass(*PR);
   initializeRISCVDeadRegisterDefinitionsPass(*PR);
+  initializeRISCVCopyCombinePass(*PR);
   initializeRISCVLateBranchOptPass(*PR);
   initializeRISCVMakeCompressibleOptPass(*PR);
   initializeRISCVGatherScatterLoweringPass(*PR);
@@ -455,6 +456,7 @@ bool RISCVPassConfig::addRegAssignAndRewriteFast() {
   if (TM->getOptLevel() != CodeGenOptLevel::None &&
       EnableRISCVDeadRegisterElimination)
     addPass(createRISCVDeadRegisterDefinitionsPass());
+
   return TargetPassConfig::addRegAssignAndRewriteFast();
 }
 
@@ -598,6 +600,7 @@ void RISCVPassConfig::addPreEmitPass2() {
 }
 
 void RISCVPassConfig::addMachineSSAOptimization() {
+  addPass(createRISCVCopyCombinePass());
   addPass(createRISCVVectorPeepholePass());
   addPass(createRISCVFoldMemOffsetPass());
 

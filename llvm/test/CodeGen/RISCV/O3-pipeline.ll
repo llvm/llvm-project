@@ -96,6 +96,7 @@
 ; CHECK-NEXT:       Lazy Block Frequency Analysis
 ; CHECK-NEXT:       RISC-V DAG->DAG Pattern Instruction Selection
 ; CHECK-NEXT:       Finalize ISel and expand pseudo-instructions
+; CHECK-NEXT:       RISC-V Copy Combine
 ; CHECK-NEXT:       RISC-V Vector Peephole Optimization
 ; CHECK-NEXT:       RISC-V Fold Memory Offset
 ; CHECK-NEXT:       Lazy Machine Block Frequency Analysis

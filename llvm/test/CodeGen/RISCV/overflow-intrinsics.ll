@@ -1080,33 +1080,33 @@ define i1 @usubo_ult_cmp_dominates_i64(i64 %x, i64 %y, ptr %p, i1 %cond) {
 ; RV32-NEXT:    .cfi_offset s5, -28
 ; RV32-NEXT:    .cfi_offset s6, -32
 ; RV32-NEXT:    mv s5, a5
-; RV32-NEXT:    mv s3, a1
-; RV32-NEXT:    andi a1, a5, 1
-; RV32-NEXT:    beqz a1, .LBB32_8
+; RV32-NEXT:    mv s2, a0
+; RV32-NEXT:    andi a0, a5, 1
+; RV32-NEXT:    beqz a0, .LBB32_8
 ; RV32-NEXT:  # %bb.1: # %t
 ; RV32-NEXT:    mv s0, a4
-; RV32-NEXT:    mv s2, a3
 ; RV32-NEXT:    mv s1, a2
-; RV32-NEXT:    mv s4, a0
-; RV32-NEXT:    beq s3, a3, .LBB32_3
+; RV32-NEXT:    mv s3, a3
+; RV32-NEXT:    mv s4, a1
+; RV32-NEXT:    beq a1, a3, .LBB32_3
 ; RV32-NEXT:  # %bb.2: # %t
-; RV32-NEXT:    sltu s6, s3, s2
+; RV32-NEXT:    sltu s6, s4, s3
 ; RV32-NEXT:    j .LBB32_4
 ; RV32-NEXT:  .LBB32_3:
-; RV32-NEXT:    sltu s6, s4, s1
+; RV32-NEXT:    sltu s6, s2, s1
 ; RV32-NEXT:  .LBB32_4: # %t
 ; RV32-NEXT:    mv a0, s6
 ; RV32-NEXT:    call call
 ; RV32-NEXT:    beqz s6, .LBB32_8
 ; RV32-NEXT:  # %bb.5: # %end
-; RV32-NEXT:    sltu a1, s4, s1
+; RV32-NEXT:    sltu a1, s2, s1
 ; RV32-NEXT:    mv a0, a1
-; RV32-NEXT:    beq s3, s2, .LBB32_7
+; RV32-NEXT:    beq s4, s3, .LBB32_7
 ; RV32-NEXT:  # %bb.6: # %end
-; RV32-NEXT:    sltu a0, s3, s2
+; RV32-NEXT:    sltu a0, s4, s3
 ; RV32-NEXT:  .LBB32_7: # %end
-; RV32-NEXT:    sub a2, s3, s2
-; RV32-NEXT:    sub a3, s4, s1
+; RV32-NEXT:    sub a2, s4, s3
+; RV32-NEXT:    sub a3, s2, s1
 ; RV32-NEXT:    sub a2, a2, a1
 ; RV32-NEXT:    sw a3, 0(s0)
 ; RV32-NEXT:    sw a2, 4(s0)
