@@ -15823,7 +15823,9 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
       Depth < MaxLoopGuardCollectionDepth) {
     SmallDenseMap<const BasicBlock *, LoopGuards> IncomingGuards;
     for (auto &Phi : Pair.second->phis())
-      collectFromPHI(SE, Guards, Phi, VisitedBlocks, IncomingGuards, Depth);
+      // We don't collect from PHIs that are under construction.
+      if (Pair.second->hasNPredecessors(Phi.getNumIncomingValues()))
+        collectFromPHI(SE, Guards, Phi, VisitedBlocks, IncomingGuards, Depth);
   }
 
   // Now apply the information from the collected conditions to
