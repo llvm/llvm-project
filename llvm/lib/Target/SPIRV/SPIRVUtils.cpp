@@ -662,7 +662,7 @@ PartialOrderingVisitor::PartialOrderingVisitor(Function &F) {
   for (auto &[BB, Info] : BlockToOrder)
     Order.emplace_back(BB);
 
-  llvm::sort(Order, [&](const auto &LHS, const auto &RHS) {
+  std::sort(Order.begin(), Order.end(), [&](const auto &LHS, const auto &RHS) {
     return compare(LHS, RHS);
   });
 }

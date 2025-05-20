@@ -201,6 +201,7 @@ static bool parseVectorLibArg(Fortran::frontend::CodeGenOptions &opts,
           .Case("SLEEF", VectorLibrary::SLEEF)
           .Case("Darwin_libsystem_m", VectorLibrary::Darwin_libsystem_m)
           .Case("ArmPL", VectorLibrary::ArmPL)
+          .Case("AMDLIBM", VectorLibrary::AMDLIBM)
           .Case("NoLibrary", VectorLibrary::NoLibrary)
           .Default(std::nullopt);
   if (!val.has_value()) {
