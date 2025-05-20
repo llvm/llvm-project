@@ -29773,11 +29773,18 @@ SDValue AArch64TargetLowering::LowerFixedLengthVECTOR_SHUFFLEToSVE(
     return convertFromScalableVector(DAG, VT, Op);
   }
 
+  auto lowerToRevMergePassthru = [&](unsigned Opcode, SDValue Vec, EVT NewVT) {
+    auto Pg = getPredicateForVector(DAG, DL, NewVT);
+    SDValue RevOp = DAG.getNode(ISD::BITCAST, DL, NewVT, Vec);
+    auto Rev =
+        DAG.getNode(Opcode, DL, NewVT, Pg, RevOp, DAG.getUNDEF(ContainerVT));
+    auto Cast = DAG.getNode(ISD::BITCAST, DL, ContainerVT, Rev);
+    return convertFromScalableVector(DAG, VT, Cast);
+  };
+
   unsigned EltSize = VT.getScalarSizeInBits();
   for (unsigned LaneSize : {64U, 32U, 16U}) {
     if (isREVMask(ShuffleMask, EltSize, VT.getVectorNumElements(), LaneSize)) {
-      EVT NewVT =
-          getPackedSVEVectorVT(EVT::getIntegerVT(*DAG.getContext(), LaneSize));
       unsigned RevOp;
       if (EltSize == 8)
         RevOp = AArch64ISD::BSWAP_MERGE_PASSTHRU;
@@ -29785,24 +29792,16 @@ SDValue AArch64TargetLowering::LowerFixedLengthVECTOR_SHUFFLEToSVE(
         RevOp = AArch64ISD::REVH_MERGE_PASSTHRU;
       else
         RevOp = AArch64ISD::REVW_MERGE_PASSTHRU;
-
-      Op = DAG.getNode(ISD::BITCAST, DL, NewVT, Op1);
-      Op = LowerToPredicatedOp(Op, DAG, RevOp);
-      Op = DAG.getNode(ISD::BITCAST, DL, ContainerVT, Op);
-      return convertFromScalableVector(DAG, VT, Op);
+      EVT NewVT =
+          getPackedSVEVectorVT(EVT::getIntegerVT(*DAG.getContext(), LaneSize));
+      return lowerToRevMergePassthru(RevOp, Op1, NewVT);
     }
   }
 
   if (Subtarget->hasSVE2p1() && EltSize == 64 &&
       isREVMask(ShuffleMask, EltSize, VT.getVectorNumElements(), 128)) {
-    if (!VT.isFloatingPoint())
-      return LowerToPredicatedOp(Op, DAG, AArch64ISD::REVD_MERGE_PASSTHRU);
-
-    EVT NewVT = getPackedSVEVectorVT(EVT::getIntegerVT(*DAG.getContext(), 64));
-    Op = DAG.getNode(ISD::BITCAST, DL, NewVT, Op1);
-    Op = LowerToPredicatedOp(Op, DAG, AArch64ISD::REVD_MERGE_PASSTHRU);
-    Op = DAG.getNode(ISD::BITCAST, DL, ContainerVT, Op);
-    return convertFromScalableVector(DAG, VT, Op);
+    return lowerToRevMergePassthru(AArch64ISD::REVD_MERGE_PASSTHRU, Op1,
+                                   ContainerVT);
   }
 
   unsigned WhichResult;
