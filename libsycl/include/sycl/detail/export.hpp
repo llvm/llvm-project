@@ -1,9 +1,15 @@
-//==---------------- export.hpp - SYCL standard header file ----------------==//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the declaration of the macroses defining attributes for
+/// exported methods.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef __LIBSYCL_DETAIL_EXPORT_HPP
@@ -23,7 +29,7 @@
 #define __SYCL_EXPORT_DEPRECATED(x) __declspec(dllimport, deprecated(x))
 #endif //__SYCL_BUILD_SYCL_DLL
 
-#else  // _WIN32
+#else // _WIN32
 
 #define __SYCL_DLL_LOCAL __attribute__((visibility("hidden")))
 
