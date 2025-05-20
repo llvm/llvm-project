@@ -33,7 +33,6 @@ static cl::opt<ReportStyleOptions> ReportStyle(
 
 INPUT_FORMAT_COMMAND_LINE_OPTIONS(InstructionMix)
 INPUT_OUTPUT_COMMAND_LINE_OPTIONS(InstructionMix)
-DEBUG_LOC_INFO_COMMAND_LINE_OPTIONS(InstructionMix)
 
 static Error tryInstructionMix() {
   auto MaybeOF =
