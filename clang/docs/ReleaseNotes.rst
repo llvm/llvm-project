@@ -683,6 +683,19 @@ Bug Fixes to C++ Support
 - Clang is now better at keeping track of friend function template instance contexts. (#GH55509)
 - Clang now prints the correct instantiation context for diagnostics suppressed
   by template argument deduction.
+- Errors that occur during evaluation of certain type traits and builtins are
+  no longer incorrectly emitted when they are used in an SFINAE context. The
+  type traits are:
+
+  - ``__is_constructible`` and variants,
+  - ``__is_convertible`` and variants,
+  - ``__is_assignable`` and variants,
+  - ``__reference_binds_to_temporary``,
+    ``__reference_constructs_from_temporary``,
+    ``__reference_converts_from_temporary``,
+  - ``__is_trivially_equality_comparable``.
+
+  The builtin is ``__builtin_common_type``. (#GH132044)
 - Clang is now better at instantiating the function definition after its use inside
   of a constexpr lambda. (#GH125747)
 - Fixed a local class member function instantiation bug inside dependent lambdas. (#GH59734), (#GH132208)
