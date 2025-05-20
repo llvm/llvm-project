@@ -19,3 +19,4 @@ Flang-Tidy Checks
    :doc:`bugprone-arithmetic-goto <bugprone/arithmetic-goto>`,
    :doc:`bugprone-arithmetic-if <bugprone/arithmetic-if>`,
    :doc:`bugprone-contiguous-array <bugprone/contiguous-array>`,
+   :doc:`bugprone-implicit-declaration <bugprone/implicit-declaration>`,

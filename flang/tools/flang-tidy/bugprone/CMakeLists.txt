@@ -3,6 +3,7 @@ add_flang_library(flangTidyBugproneModule STATIC
   ArithmeticIfStmtCheck.cpp
   BugproneTidyModule.cpp
   ContiguousArrayCheck.cpp
+  ImplicitDeclCheck.cpp
 
   LINK_LIBS
   FortranSupport
