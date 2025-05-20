@@ -12,6 +12,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
+#include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeRecordMapping.h"
 #include "llvm/Support/BinaryByteStream.h"
 #include "llvm/Support/BinaryStreamWriter.h"
@@ -50,6 +51,19 @@ public:
 
   std::vector<CVType> end(TypeIndex Index);
 };
+
+#define TYPE_RECORD(EnumName, EnumVal, Name)
+#define TYPE_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
+#define MEMBER_RECORD(EnumName, EnumVal, Name)                                 \
+  extern template void ContinuationRecordBuilder::writeMemberType(             \
+      Name##Record &Record);
+#define MEMBER_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
+#include "llvm/DebugInfo/CodeView/CodeViewTypes.def"
+#undef TYPE_RECORD
+#undef TYPE_RECORD_ALIAS
+#undef MEMBER_RECORD
+#undef MEMBER_RECORD_ALIAS
+
 } // namespace codeview
 } // namespace llvm
 
