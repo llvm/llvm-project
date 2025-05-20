@@ -13,8 +13,8 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_DYLIBMANAGER_H
 #define LLVM_EXECUTIONENGINE_ORC_DYLIBMANAGER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ExecutionEngine/Orc/Shared/TargetProcessControlTypes.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MSVCErrorWorkarounds.h"
 

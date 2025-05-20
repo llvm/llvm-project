@@ -220,7 +220,8 @@ public:
 
   operator JITSymbolFlags::TargetFlagsType&() { return Flags; }
 
-  LLVM_ABI static ARMJITSymbolFlags fromObjectSymbol(const object::SymbolRef &Symbol);
+  LLVM_ABI static ARMJITSymbolFlags
+  fromObjectSymbol(const object::SymbolRef &Symbol);
 
 private:
   JITSymbolFlags::TargetFlagsType Flags = 0;

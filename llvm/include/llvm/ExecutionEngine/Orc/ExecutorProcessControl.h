@@ -13,7 +13,6 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_EXECUTORPROCESSCONTROL_H
 #define LLVM_EXECUTIONENGINE_ORC_EXECUTORPROCESSCONTROL_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/DylibManager.h"
@@ -23,6 +22,7 @@
 #include "llvm/ExecutionEngine/Orc/SymbolStringPool.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/UnwindInfoManager.h"
 #include "llvm/ExecutionEngine/Orc/TaskDispatch.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/MSVCErrorWorkarounds.h"
 #include "llvm/TargetParser/Triple.h"
@@ -399,7 +399,8 @@ protected:
   StringMap<ExecutorAddr> BootstrapSymbols;
 };
 
-class LLVM_ABI InProcessMemoryAccess : public ExecutorProcessControl::MemoryAccess {
+class LLVM_ABI InProcessMemoryAccess
+    : public ExecutorProcessControl::MemoryAccess {
 public:
   InProcessMemoryAccess(bool IsArch64Bit) : IsArch64Bit(IsArch64Bit) {}
   void writeUInt8sAsync(ArrayRef<tpctypes::UInt8Write> Ws,
@@ -467,8 +468,8 @@ public:
 
 /// A ExecutorProcessControl implementation targeting the current process.
 class LLVM_ABI SelfExecutorProcessControl : public ExecutorProcessControl,
-                                   private InProcessMemoryAccess,
-                                   private DylibManager {
+                                            private InProcessMemoryAccess,
+                                            private DylibManager {
 public:
   SelfExecutorProcessControl(
       std::shared_ptr<SymbolStringPool> SSP, std::unique_ptr<TaskDispatcher> D,

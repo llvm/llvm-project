@@ -13,9 +13,9 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_MACHO_H
 #define LLVM_EXECUTIONENGINE_ORC_MACHO_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ExecutionEngine/Orc/LoadLinkableFile.h"
 #include "llvm/Object/Archive.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/TargetParser/Triple.h"
@@ -38,8 +38,8 @@ class ObjectLayer;
 /// given triple.
 /// ObjIsSlice should be set to true if Obj is a slice of a universal binary
 /// (that fact will then be reported in the error messages).
-LLVM_ABI Error checkMachORelocatableObject(MemoryBufferRef Obj, const Triple &TT,
-                                  bool ObjIsSlice);
+LLVM_ABI Error checkMachORelocatableObject(MemoryBufferRef Obj,
+                                           const Triple &TT, bool ObjIsSlice);
 
 /// Check that the given buffer contains a MachO object file compatible with the
 /// given triple.
@@ -84,8 +84,8 @@ public:
   ForceLoadMachOArchiveMembers(ObjectLayer &L, JITDylib &JD, bool ObjCOnly)
       : L(L), JD(JD), ObjCOnly(ObjCOnly) {}
 
-  LLVM_ABI Expected<bool> operator()(object::Archive &A, MemoryBufferRef MemberBuf,
-                            size_t Index);
+  LLVM_ABI Expected<bool> operator()(object::Archive &A,
+                                     MemoryBufferRef MemberBuf, size_t Index);
 
 private:
   ObjectLayer &L;

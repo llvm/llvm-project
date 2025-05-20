@@ -14,12 +14,12 @@
 #ifndef LLVM_EXECUTIONENGINE_JITEVENTLISTENER_H
 #define LLVM_EXECUTIONENGINE_JITEVENTLISTENER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm-c/ExecutionEngine.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/ExecutionEngine/RuntimeDyld.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/Support/CBindingWrapping.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 
 namespace llvm {

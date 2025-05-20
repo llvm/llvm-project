@@ -18,10 +18,10 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_EPCGENERICDYLIBMANAGER_H
 #define LLVM_EXECUTIONENGINE_ORC_EPCGENERICDYLIBMANAGER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorSymbolDef.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SimpleRemoteEPCUtils.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace orc {
@@ -72,12 +72,14 @@ public:
       unique_function<void(Expected<std::vector<ExecutorSymbolDef>>)>;
 
   /// Looks up symbols within the given dylib.
-  LLVM_ABI void lookupAsync(tpctypes::DylibHandle H, const SymbolLookupSet &Lookup,
-                   SymbolLookupCompleteFn Complete);
+  LLVM_ABI void lookupAsync(tpctypes::DylibHandle H,
+                            const SymbolLookupSet &Lookup,
+                            SymbolLookupCompleteFn Complete);
 
   /// Looks up symbols within the given dylib.
-  LLVM_ABI void lookupAsync(tpctypes::DylibHandle H, const RemoteSymbolLookupSet &Lookup,
-                   SymbolLookupCompleteFn Complete);
+  LLVM_ABI void lookupAsync(tpctypes::DylibHandle H,
+                            const RemoteSymbolLookupSet &Lookup,
+                            SymbolLookupCompleteFn Complete);
 
 private:
   ExecutorProcessControl &EPC;

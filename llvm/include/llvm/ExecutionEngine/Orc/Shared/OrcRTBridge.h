@@ -13,11 +13,11 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_SHARED_ORCRTBRIDGE_H
 #define LLVM_EXECUTIONENGINE_ORC_SHARED_ORCRTBRIDGE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorSymbolDef.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SimpleRemoteEPCUtils.h"
 #include "llvm/ExecutionEngine/Orc/Shared/TargetProcessControlTypes.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace orc {
@@ -34,8 +34,10 @@ LLVM_ABI extern const char *SimpleExecutorMemoryManagerDeallocateWrapperName;
 
 LLVM_ABI extern const char *ExecutorSharedMemoryMapperServiceInstanceName;
 LLVM_ABI extern const char *ExecutorSharedMemoryMapperServiceReserveWrapperName;
-LLVM_ABI extern const char *ExecutorSharedMemoryMapperServiceInitializeWrapperName;
-LLVM_ABI extern const char *ExecutorSharedMemoryMapperServiceDeinitializeWrapperName;
+LLVM_ABI extern const char
+    *ExecutorSharedMemoryMapperServiceInitializeWrapperName;
+LLVM_ABI extern const char
+    *ExecutorSharedMemoryMapperServiceDeinitializeWrapperName;
 LLVM_ABI extern const char *ExecutorSharedMemoryMapperServiceReleaseWrapperName;
 
 LLVM_ABI extern const char *MemoryWriteUInt8sWrapperName;

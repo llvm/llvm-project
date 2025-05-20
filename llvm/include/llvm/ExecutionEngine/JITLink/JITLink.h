@@ -13,7 +13,6 @@
 #ifndef LLVM_EXECUTIONENGINE_JITLINK_JITLINK_H
 #define LLVM_EXECUTIONENGINE_JITLINK_JITLINK_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FunctionExtras.h"
@@ -28,6 +27,7 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/BinaryStreamWriter.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -712,7 +712,7 @@ private:
 LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const Symbol &A);
 
 LLVM_ABI void printEdge(raw_ostream &OS, const Block &B, const Edge &E,
-               StringRef EdgeKindName);
+                        StringRef EdgeKindName);
 
 /// Represents an object file section.
 class Section {
@@ -1663,7 +1663,7 @@ public:
 
 private:
   LLVM_ABI std::vector<Block *> splitBlockImpl(std::vector<Block *> Blocks,
-                                      SplitBlockCache *Cache);
+                                               SplitBlockCache *Cache);
 
   // Put the BumpPtrAllocator first so that we don't free any of the underlying
   // memory until the Symbol/Addressable destructors have been run.
@@ -2000,10 +2000,10 @@ LLVM_ABI Error markAllSymbolsLive(LinkGraph &G);
 
 /// Create an out of range error for the given edge in the given block.
 LLVM_ABI Error makeTargetOutOfRangeError(const LinkGraph &G, const Block &B,
-                                const Edge &E);
+                                         const Edge &E);
 
-LLVM_ABI Error makeAlignmentError(llvm::orc::ExecutorAddr Loc, uint64_t Value, int N,
-                         const Edge &E);
+LLVM_ABI Error makeAlignmentError(llvm::orc::ExecutorAddr Loc, uint64_t Value,
+                                  int N, const Edge &E);
 
 /// Creates a new pointer block in the given section and returns an
 /// Anonymous symbol pointing to it.
@@ -2074,7 +2074,8 @@ absoluteSymbolsLinkGraph(Triple TT, std::shared_ptr<orc::SymbolStringPool> SSP,
                          orc::SymbolMap Symbols);
 
 /// Link the given graph.
-LLVM_ABI void link(std::unique_ptr<LinkGraph> G, std::unique_ptr<JITLinkContext> Ctx);
+LLVM_ABI void link(std::unique_ptr<LinkGraph> G,
+                   std::unique_ptr<JITLinkContext> Ctx);
 
 } // end namespace jitlink
 } // end namespace llvm

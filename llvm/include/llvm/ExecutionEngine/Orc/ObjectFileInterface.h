@@ -14,8 +14,8 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_OBJECTFILEINTERFACE_H
 #define LLVM_EXECUTIONENGINE_ORC_OBJECTFILEINTERFACE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MemoryBuffer.h"
 
 namespace llvm {
@@ -24,8 +24,8 @@ namespace orc {
 /// Adds an initializer symbol to the given MU interface.
 /// The init symbol's name is guaranteed to be unique within I, and will be of
 /// the form $.<ObjFileName>.__inits.<N>, where N is some integer.
-LLVM_ABI void addInitSymbol(MaterializationUnit::Interface &I, ExecutionSession &ES,
-                   StringRef ObjFileName);
+LLVM_ABI void addInitSymbol(MaterializationUnit::Interface &I,
+                            ExecutionSession &ES, StringRef ObjFileName);
 
 /// Returns a MaterializationUnit::Interface for the object file contained in
 /// the given buffer, or an error if the buffer does not contain a valid object

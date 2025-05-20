@@ -14,7 +14,6 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_IRPARTITIONLAYER_H
 #define LLVM_EXECUTIONENGINE_ORC_IRPARTITIONLAYER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ExecutionEngine/Orc/IndirectionUtils.h"
 #include "llvm/ExecutionEngine/Orc/Layer.h"
 #include "llvm/IR/Attributes.h"
@@ -29,6 +28,7 @@
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace orc {

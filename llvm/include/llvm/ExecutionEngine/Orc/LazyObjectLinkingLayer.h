@@ -12,9 +12,9 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_LAZYOBJECTLINKINGLAYER_H
 #define LLVM_EXECUTIONENGINE_ORC_LAZYOBJECTLINKINGLAYER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/Layer.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm::orc {
 

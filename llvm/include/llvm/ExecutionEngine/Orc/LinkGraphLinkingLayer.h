@@ -13,13 +13,13 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_LINKGRAPHLINKINGLAYER_H
 #define LLVM_EXECUTIONENGINE_ORC_LINKGRAPHLINKINGLAYER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/Layer.h"
 #include "llvm/ExecutionEngine/Orc/LinkGraphLayer.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <algorithm>
 #include <cassert>
@@ -41,7 +41,8 @@ namespace orc {
 ///
 /// Clients can use this class to add LinkGraphs to an ExecutionSession, and it
 /// serves as a base for the ObjectLinkingLayer that can link object files.
-class LLVM_ABI LinkGraphLinkingLayer : public LinkGraphLayer, private ResourceManager {
+class LLVM_ABI LinkGraphLinkingLayer : public LinkGraphLayer,
+                                       private ResourceManager {
   class JITLinkCtx;
 
 public:

@@ -13,9 +13,9 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_MEMORYMAPPER_H
 #define LLVM_EXECUTIONENGINE_ORC_MEMORYMAPPER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/Shared/MemoryFlags.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Process.h"
 
 #include <mutex>

@@ -13,13 +13,13 @@
 #ifndef LLVM_EXECUTIONENGINE_RUNTIMEDYLD_H
 #define LLVM_EXECUTIONENGINE_RUNTIMEDYLD_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <algorithm>
 #include <cassert>
@@ -197,7 +197,8 @@ public:
 
   /// Add the referenced object file to the list of objects to be loaded and
   /// relocated.
-  LLVM_ABI std::unique_ptr<LoadedObjectInfo> loadObject(const object::ObjectFile &O);
+  LLVM_ABI std::unique_ptr<LoadedObjectInfo>
+  loadObject(const object::ObjectFile &O);
 
   /// Get the address of our local copy of the symbol. This may or may not
   /// be the address used for relocation (clients can copy the data around
@@ -225,7 +226,8 @@ public:
   /// Map the address of a JIT section as returned from the memory manager
   /// to the address in the target process as the running code will see it.
   /// This is the address which will be used for relocation resolution.
-  LLVM_ABI void mapSectionAddress(const void *LocalAddress, uint64_t TargetAddress);
+  LLVM_ABI void mapSectionAddress(const void *LocalAddress,
+                                  uint64_t TargetAddress);
 
   /// Returns the section's working memory.
   LLVM_ABI StringRef getSectionContent(unsigned SectionID) const;

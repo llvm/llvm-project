@@ -13,7 +13,6 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_EXECUTIONUTILS_H
 #define LLVM_EXECUTIONENGINE_ORC_EXECUTIONUTILS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
@@ -22,6 +21,7 @@
 #include "llvm/ExecutionEngine/Orc/Shared/OrcError.h"
 #include "llvm/ExecutionEngine/RuntimeDyld.h"
 #include "llvm/Object/Archive.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include <algorithm>
 #include <cstdint>
@@ -75,7 +75,7 @@ public:
   LLVM_ABI bool operator!=(const CtorDtorIterator &Other) const;
 
   /// Pre-increment iterator.
-  LLVM_ABI CtorDtorIterator& operator++();
+  LLVM_ABI CtorDtorIterator &operator++();
 
   /// Post-increment iterator.
   LLVM_ABI CtorDtorIterator operator++(int);
@@ -185,7 +185,7 @@ protected:
   using CXXDestructorDataPairList = std::vector<CXXDestructorDataPair>;
   CXXDestructorDataPairList DSOHandleOverride;
   LLVM_ABI static int CXAAtExitOverride(DestructorPtr Destructor, void *Arg,
-                               void *DSOHandle);
+                                        void *DSOHandle);
 };
 
 class LocalCXXRuntimeOverrides : public LocalCXXRuntimeOverridesBase {

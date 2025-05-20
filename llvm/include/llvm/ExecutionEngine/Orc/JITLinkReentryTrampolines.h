@@ -13,11 +13,11 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_JITLINKREENTRYTRAMPOLINES_H
 #define LLVM_EXECUTIONENGINE_ORC_JITLINKREENTRYTRAMPOLINES_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/LazyReexports.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorSymbolDef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm::jitlink {
@@ -47,12 +47,12 @@ public:
   Create(ObjectLinkingLayer &ObjLinkingLayer);
 
   LLVM_ABI JITLinkReentryTrampolines(ObjectLinkingLayer &ObjLinkingLayer,
-                            EmitTrampolineFn EmitTrampoline);
+                                     EmitTrampolineFn EmitTrampoline);
   JITLinkReentryTrampolines(JITLinkReentryTrampolines &&) = delete;
   JITLinkReentryTrampolines &operator=(JITLinkReentryTrampolines &&) = delete;
 
   LLVM_ABI void emit(ResourceTrackerSP RT, size_t NumTrampolines,
-            OnTrampolinesReadyFn OnTrampolinesReady);
+                     OnTrampolinesReadyFn OnTrampolinesReady);
 
 private:
   class TrampolineAddrScraperPlugin;

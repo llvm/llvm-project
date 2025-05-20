@@ -13,8 +13,8 @@
 #ifndef LLVM_EXECUTIONENGINE_JITLINK_RISCV_H
 #define LLVM_EXECUTIONENGINE_JITLINK_RISCV_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace jitlink {

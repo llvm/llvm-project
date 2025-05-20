@@ -14,8 +14,8 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_TARGETPROCESS_UNWINDINFOMANAGER_H
 #define LLVM_EXECUTIONENGINE_ORC_TARGETPROCESS_UNWINDINFOMANAGER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <map>
 #include <mutex>
@@ -46,12 +46,14 @@ public:
 
   LLVM_ABI static void addBootstrapSymbols(StringMap<ExecutorAddr> &M);
 
-  LLVM_ABI static Error registerSections(ArrayRef<orc::ExecutorAddrRange> CodeRanges,
-                                orc::ExecutorAddr DSOBase,
-                                orc::ExecutorAddrRange DWARFEHFrame,
-                                orc::ExecutorAddrRange CompactUnwind);
+  LLVM_ABI static Error
+  registerSections(ArrayRef<orc::ExecutorAddrRange> CodeRanges,
+                   orc::ExecutorAddr DSOBase,
+                   orc::ExecutorAddrRange DWARFEHFrame,
+                   orc::ExecutorAddrRange CompactUnwind);
 
-  LLVM_ABI static Error deregisterSections(ArrayRef<orc::ExecutorAddrRange> CodeRanges);
+  LLVM_ABI static Error
+  deregisterSections(ArrayRef<orc::ExecutorAddrRange> CodeRanges);
 
 private:
   UnwindInfoManager() = default;

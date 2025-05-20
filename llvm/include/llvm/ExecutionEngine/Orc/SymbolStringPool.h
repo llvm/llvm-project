@@ -36,7 +36,8 @@ class SymbolStringPool {
   friend class SymbolStringPoolEntryUnsafe;
 
   // Implemented in DebugUtils.h.
-  LLVM_ABI_FRIEND friend raw_ostream &operator<<(raw_ostream &OS, const SymbolStringPool &SSP);
+  LLVM_ABI_FRIEND friend raw_ostream &operator<<(raw_ostream &OS,
+                                                 const SymbolStringPool &SSP);
 
 public:
   /// Destroy a SymbolStringPool.
@@ -93,8 +94,8 @@ public:
     return LHS.S < RHS.S;
   }
 
-  LLVM_ABI_FRIEND friend raw_ostream &operator<<(raw_ostream &OS,
-                                 const SymbolStringPtrBase &Sym);
+  LLVM_ABI_FRIEND friend raw_ostream &
+  operator<<(raw_ostream &OS, const SymbolStringPtrBase &Sym);
 
 #ifndef NDEBUG
   // Returns true if the pool entry's ref count is above zero (or if the entry
@@ -314,7 +315,8 @@ SymbolStringPool::getRefCount(const SymbolStringPtrBase &S) const {
   return S.getRefCount();
 }
 
-LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const SymbolStringPtrBase &Sym);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
+                                 const SymbolStringPtrBase &Sym);
 
 } // end namespace orc
 

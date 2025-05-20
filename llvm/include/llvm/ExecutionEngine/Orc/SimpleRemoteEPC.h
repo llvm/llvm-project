@@ -13,7 +13,6 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_SIMPLEREMOTEEPC_H
 #define LLVM_EXECUTIONENGINE_ORC_SIMPLEREMOTEEPC_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ExecutionEngine/Orc/EPCGenericDylibManager.h"
@@ -21,6 +20,7 @@
 #include "llvm/ExecutionEngine/Orc/EPCGenericMemoryAccess.h"
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SimpleRemoteEPCUtils.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MSVCErrorWorkarounds.h"
 
@@ -30,8 +30,8 @@ namespace llvm {
 namespace orc {
 
 class LLVM_ABI SimpleRemoteEPC : public ExecutorProcessControl,
-                        public SimpleRemoteEPCTransportClient,
-                        private DylibManager {
+                                 public SimpleRemoteEPCTransportClient,
+                                 private DylibManager {
 public:
   /// A setup object containing callbacks to construct a memory manager and
   /// memory access object. Both are optional. If not specified,

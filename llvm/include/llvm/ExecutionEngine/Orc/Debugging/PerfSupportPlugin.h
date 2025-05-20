@@ -13,8 +13,8 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_PERFSUPPORTPLUGIN_H
 #define LLVM_EXECUTIONENGINE_ORC_PERFSUPPORTPLUGIN_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ExecutionEngine/Orc/Shared/PerfSharedStructs.h"
+#include "llvm/Support/Compiler.h"
 
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"

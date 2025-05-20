@@ -13,15 +13,16 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_MAPPERJITLINKMEMORYMANAGER_H
 #define LLVM_EXECUTIONENGINE_ORC_MAPPERJITLINKMEMORYMANAGER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/IntervalMap.h"
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/MemoryMapper.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace orc {
 
-class LLVM_ABI MapperJITLinkMemoryManager : public jitlink::JITLinkMemoryManager {
+class LLVM_ABI MapperJITLinkMemoryManager
+    : public jitlink::JITLinkMemoryManager {
 public:
   MapperJITLinkMemoryManager(size_t ReservationGranularity,
                              std::unique_ptr<MemoryMapper> Mapper);

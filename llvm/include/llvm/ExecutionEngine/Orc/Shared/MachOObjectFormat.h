@@ -13,8 +13,8 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_SHARED_MACHOOBJECTFORMAT_H
 #define LLVM_EXECUTIONENGINE_ORC_SHARED_MACHOOBJECTFORMAT_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace orc {

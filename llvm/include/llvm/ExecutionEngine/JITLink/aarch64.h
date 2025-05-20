@@ -13,10 +13,10 @@
 #ifndef LLVM_EXECUTIONENGINE_JITLINK_AARCH64_H
 #define LLVM_EXECUTIONENGINE_JITLINK_AARCH64_H
 
-#include "llvm/Support/Compiler.h"
 #include "TableManager.h"
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/ExecutionEngine/Orc/Shared/MemoryFlags.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace jitlink {

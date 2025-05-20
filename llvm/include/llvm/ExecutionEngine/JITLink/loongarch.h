@@ -13,11 +13,11 @@
 #ifndef LLVM_EXECUTIONENGINE_JITLINK_LOONGARCH_H
 #define LLVM_EXECUTIONENGINE_JITLINK_LOONGARCH_H
 
-#include "llvm/Support/Compiler.h"
 #include "TableManager.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/ExecutionEngine/Orc/Shared/MemoryFlags.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/LEB128.h"
 
 namespace llvm {

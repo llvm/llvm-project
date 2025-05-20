@@ -13,8 +13,8 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_ABSOLUTESYMBOLS_H
 #define LLVM_EXECUTIONENGINE_ORC_ABSOLUTESYMBOLS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ExecutionEngine/Orc/MaterializationUnit.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm::orc {
 

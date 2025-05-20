@@ -13,7 +13,6 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_CORE_H
 #define LLVM_EXECUTIONENGINE_ORC_CORE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FunctionExtras.h"
@@ -27,6 +26,7 @@
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorSymbolDef.h"
 #include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
 #include "llvm/ExecutionEngine/Orc/TaskDispatch.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ExtensibleRTTI.h"
 
@@ -423,7 +423,8 @@ using RegisterDependenciesFunction =
 /// are no dependants to register with.
 LLVM_ABI extern RegisterDependenciesFunction NoDependenciesToRegister;
 
-class LLVM_ABI ResourceTrackerDefunct : public ErrorInfo<ResourceTrackerDefunct> {
+class LLVM_ABI ResourceTrackerDefunct
+    : public ErrorInfo<ResourceTrackerDefunct> {
 public:
   static char ID;
 
@@ -493,7 +494,8 @@ private:
 };
 
 /// Used to notify clients that a set of symbols could not be removed.
-class LLVM_ABI SymbolsCouldNotBeRemoved : public ErrorInfo<SymbolsCouldNotBeRemoved> {
+class LLVM_ABI SymbolsCouldNotBeRemoved
+    : public ErrorInfo<SymbolsCouldNotBeRemoved> {
 public:
   static char ID;
 
@@ -513,7 +515,8 @@ private:
 /// definitions that are claimed by the module's associated
 /// MaterializationResponsibility. If this error is returned it is indicative of
 /// a broken transformation / compiler / object cache.
-class LLVM_ABI MissingSymbolDefinitions : public ErrorInfo<MissingSymbolDefinitions> {
+class LLVM_ABI MissingSymbolDefinitions
+    : public ErrorInfo<MissingSymbolDefinitions> {
 public:
   static char ID;
 
@@ -536,7 +539,8 @@ private:
 /// symbols that are not claimed by the module's associated
 /// MaterializationResponsibility. If this error is returned it is indicative of
 /// a broken transformation / compiler / object cache.
-class LLVM_ABI UnexpectedSymbolDefinitions : public ErrorInfo<UnexpectedSymbolDefinitions> {
+class LLVM_ABI UnexpectedSymbolDefinitions
+    : public ErrorInfo<UnexpectedSymbolDefinitions> {
 public:
   static char ID;
 
@@ -790,12 +794,12 @@ public:
   /// callback will be called once all queried symbols reach the given
   /// minimum state.
   LLVM_ABI AsynchronousSymbolQuery(const SymbolLookupSet &Symbols,
-                          SymbolState RequiredState,
-                          SymbolsResolvedCallback NotifyComplete);
+                                   SymbolState RequiredState,
+                                   SymbolsResolvedCallback NotifyComplete);
 
   /// Notify the query that a requested symbol has reached the required state.
   LLVM_ABI void notifySymbolMetRequiredState(const SymbolStringPtr &Name,
-                                    ExecutorSymbolDef Sym);
+                                             ExecutorSymbolDef Sym);
 
   /// Returns true if all symbols covered by this query have been
   ///        resolved.
@@ -988,7 +992,7 @@ public:
   /// It is illegal to call this method on a defunct JITDylib and the client
   /// is responsible for ensuring that they do not do so.
   LLVM_ABI void setLinkOrder(JITDylibSearchOrder NewSearchOrder,
-                    bool LinkAgainstThisJITDylibFirst = true);
+                             bool LinkAgainstThisJITDylibFirst = true);
 
   /// Append the given JITDylibSearchOrder to the link order for this
   /// JITDylib (discarding any elements already present in this JITDylib's
@@ -1000,18 +1004,20 @@ public:
   ///
   /// It is illegal to call this method on a defunct JITDylib and the client
   /// is responsible for ensuring that they do not do so.
-  LLVM_ABI void addToLinkOrder(JITDylib &JD,
-                      JITDylibLookupFlags JDLookupFlags =
-                          JITDylibLookupFlags::MatchExportedSymbolsOnly);
+  LLVM_ABI void
+  addToLinkOrder(JITDylib &JD,
+                 JITDylibLookupFlags JDLookupFlags =
+                     JITDylibLookupFlags::MatchExportedSymbolsOnly);
 
   /// Replace OldJD with NewJD in the link order if OldJD is present.
   /// Otherwise this operation is a no-op.
   ///
   /// It is illegal to call this method on a defunct JITDylib and the client
   /// is responsible for ensuring that they do not do so.
-  LLVM_ABI void replaceInLinkOrder(JITDylib &OldJD, JITDylib &NewJD,
-                          JITDylibLookupFlags JDLookupFlags =
-                              JITDylibLookupFlags::MatchExportedSymbolsOnly);
+  LLVM_ABI void
+  replaceInLinkOrder(JITDylib &OldJD, JITDylib &NewJD,
+                     JITDylibLookupFlags JDLookupFlags =
+                         JITDylibLookupFlags::MatchExportedSymbolsOnly);
 
   /// Remove the given JITDylib from the link order for this JITDylib if it is
   /// present. Otherwise this operation is a no-op.
@@ -1153,7 +1159,8 @@ private:
 
     LLVM_ABI void addQuery(std::shared_ptr<AsynchronousSymbolQuery> Q);
     LLVM_ABI void removeQuery(const AsynchronousSymbolQuery &Q);
-    LLVM_ABI AsynchronousSymbolQueryList takeQueriesMeeting(SymbolState RequiredState);
+    LLVM_ABI AsynchronousSymbolQueryList
+    takeQueriesMeeting(SymbolState RequiredState);
     AsynchronousSymbolQueryList takeAllPendingQueries() {
       return std::move(PendingQueries);
     }
@@ -1217,8 +1224,9 @@ private:
 
   LLVM_ABI Error defineImpl(MaterializationUnit &MU);
 
-  LLVM_ABI void installMaterializationUnit(std::unique_ptr<MaterializationUnit> MU,
-                                  ResourceTracker &RT);
+  LLVM_ABI void
+  installMaterializationUnit(std::unique_ptr<MaterializationUnit> MU,
+                             ResourceTracker &RT);
 
   void detachQueryHelper(AsynchronousSymbolQuery &Q,
                          const SymbolNameSet &QuerySymbols);
@@ -1311,7 +1319,8 @@ public:
 };
 
 /// A materialization task.
-class LLVM_ABI MaterializationTask : public RTTIExtends<MaterializationTask, Task> {
+class LLVM_ABI MaterializationTask
+    : public RTTIExtends<MaterializationTask, Task> {
 public:
   static char ID;
 
@@ -1482,14 +1491,15 @@ public:
 
   /// Search the given JITDylibs to find the flags associated with each of the
   /// given symbols.
-  LLVM_ABI void lookupFlags(LookupKind K, JITDylibSearchOrder SearchOrder,
-                   SymbolLookupSet Symbols,
-                   unique_function<void(Expected<SymbolFlagsMap>)> OnComplete);
+  LLVM_ABI void
+  lookupFlags(LookupKind K, JITDylibSearchOrder SearchOrder,
+              SymbolLookupSet Symbols,
+              unique_function<void(Expected<SymbolFlagsMap>)> OnComplete);
 
   /// Blocking version of lookupFlags.
   LLVM_ABI Expected<SymbolFlagsMap> lookupFlags(LookupKind K,
-                                       JITDylibSearchOrder SearchOrder,
-                                       SymbolLookupSet Symbols);
+                                                JITDylibSearchOrder SearchOrder,
+                                                SymbolLookupSet Symbols);
 
   /// Search the given JITDylibs for the given symbols.
   ///
@@ -1511,9 +1521,9 @@ public:
   /// client to get an address to call) then the value NoDependenciesToRegister
   /// can be used.
   LLVM_ABI void lookup(LookupKind K, const JITDylibSearchOrder &SearchOrder,
-              SymbolLookupSet Symbols, SymbolState RequiredState,
-              SymbolsResolvedCallback NotifyComplete,
-              RegisterDependenciesFunction RegisterDependencies);
+                       SymbolLookupSet Symbols, SymbolState RequiredState,
+                       SymbolsResolvedCallback NotifyComplete,
+                       RegisterDependenciesFunction RegisterDependencies);
 
   /// Blocking version of lookup above. Returns the resolved symbol map.
   /// If WaitUntilReady is true (the default), will not return until all
@@ -1522,12 +1532,12 @@ public:
   /// or an error occurs. If WaitUntilReady is false and an error occurs
   /// after resolution, the function will return a success value, but the
   /// error will be reported via reportErrors.
-  LLVM_ABI Expected<SymbolMap> lookup(const JITDylibSearchOrder &SearchOrder,
-                             SymbolLookupSet Symbols,
-                             LookupKind K = LookupKind::Static,
-                             SymbolState RequiredState = SymbolState::Ready,
-                             RegisterDependenciesFunction RegisterDependencies =
-                                 NoDependenciesToRegister);
+  LLVM_ABI Expected<SymbolMap>
+  lookup(const JITDylibSearchOrder &SearchOrder, SymbolLookupSet Symbols,
+         LookupKind K = LookupKind::Static,
+         SymbolState RequiredState = SymbolState::Ready,
+         RegisterDependenciesFunction RegisterDependencies =
+             NoDependenciesToRegister);
 
   /// Convenience version of blocking lookup.
   /// Searches each of the JITDylibs in the search order in turn for the given
@@ -1687,15 +1697,15 @@ public:
   /// JITDylibLookupFlags::MatchAllSymbols (hidden tags will be found), and
   /// LookupFlags::WeaklyReferencedSymbol. Missing tag definitions will not
   /// cause an error, the handler will simply be dropped.
-  LLVM_ABI Error registerJITDispatchHandlers(JITDylib &JD,
-                                    JITDispatchHandlerAssociationMap WFs);
+  LLVM_ABI Error registerJITDispatchHandlers(
+      JITDylib &JD, JITDispatchHandlerAssociationMap WFs);
 
   /// Run a registered jit-side wrapper function.
   /// This should be called by the ExecutorProcessControl instance in response
   /// to incoming jit-dispatch requests from the executor.
   LLVM_ABI void runJITDispatchHandler(SendResultFunction SendResult,
-                             ExecutorAddr HandlerFnTagAddr,
-                             ArrayRef<char> ArgBuffer);
+                                      ExecutorAddr HandlerFnTagAddr,
+                                      ArrayRef<char> ArgBuffer);
 
   /// Dump the state of all the JITDylibs in this session.
   LLVM_ABI void dump(raw_ostream &OS);
@@ -1761,11 +1771,12 @@ private:
       unique_function<void(Expected<SymbolFlagsMap>)> OnComplete);
 
   // State machine functions for MaterializationResponsibility.
-  LLVM_ABI void OL_destroyMaterializationResponsibility(
-      MaterializationResponsibility &MR);
-  LLVM_ABI SymbolNameSet OL_getRequestedSymbols(const MaterializationResponsibility &MR);
+  LLVM_ABI void
+  OL_destroyMaterializationResponsibility(MaterializationResponsibility &MR);
+  LLVM_ABI SymbolNameSet
+  OL_getRequestedSymbols(const MaterializationResponsibility &MR);
   LLVM_ABI Error OL_notifyResolved(MaterializationResponsibility &MR,
-                          const SymbolMap &Symbols);
+                                   const SymbolMap &Symbols);
 
   using EDUInfosMap =
       DenseMap<JITDylib::EmissionDepUnit *, JITDylib::EmissionDepUnitInfo>;
@@ -1792,17 +1803,17 @@ private:
   Expected<JITDylib::AsynchronousSymbolQuerySet>
   IL_emit(MaterializationResponsibility &MR, EDUInfosMap EDUInfos);
   LLVM_ABI Error OL_notifyEmitted(MaterializationResponsibility &MR,
-                         ArrayRef<SymbolDependenceGroup> EmittedDeps);
+                                  ArrayRef<SymbolDependenceGroup> EmittedDeps);
 
   LLVM_ABI Error OL_defineMaterializing(MaterializationResponsibility &MR,
-                               SymbolFlagsMap SymbolFlags);
+                                        SymbolFlagsMap SymbolFlags);
 
   std::pair<JITDylib::AsynchronousSymbolQuerySet,
             std::shared_ptr<SymbolDependenceMap>>
   IL_failSymbols(JITDylib &JD, const SymbolNameVector &SymbolsToFail);
   LLVM_ABI void OL_notifyFailed(MaterializationResponsibility &MR);
   LLVM_ABI Error OL_replace(MaterializationResponsibility &MR,
-                   std::unique_ptr<MaterializationUnit> MU);
+                            std::unique_ptr<MaterializationUnit> MU);
   LLVM_ABI Expected<std::unique_ptr<MaterializationResponsibility>>
   OL_delegate(MaterializationResponsibility &MR, const SymbolNameSet &Symbols);
 

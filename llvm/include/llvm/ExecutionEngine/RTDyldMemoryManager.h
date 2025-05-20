@@ -13,11 +13,11 @@
 #ifndef LLVM_EXECUTIONENGINE_RTDYLDMEMORYMANAGER_H
 #define LLVM_EXECUTIONENGINE_RTDYLDMEMORYMANAGER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm-c/ExecutionEngine.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/RuntimeDyld.h"
 #include "llvm/Support/CBindingWrapping.h"
+#include "llvm/Support/Compiler.h"
 #include <cstddef>
 #include <cstdint>
 #include <string>
@@ -59,7 +59,7 @@ private:
 // FIXME: As the RuntimeDyld fills out, additional routines will be needed
 //        for the varying types of objects to be allocated.
 class LLVM_ABI RTDyldMemoryManager : public MCJITMemoryManager,
-                            public LegacyJITSymbolResolver {
+                                     public LegacyJITSymbolResolver {
 public:
   RTDyldMemoryManager() = default;
   RTDyldMemoryManager(const RTDyldMemoryManager&) = delete;

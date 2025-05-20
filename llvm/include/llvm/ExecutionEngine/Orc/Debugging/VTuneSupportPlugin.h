@@ -13,13 +13,13 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_DEBUGGING_VTUNESUPPORT_H
 #define LLVM_EXECUTIONENGINE_ORC_DEBUGGING_VTUNESUPPORT_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SimplePackedSerialization.h"
 #include "llvm/ExecutionEngine/Orc/Shared/VTuneSharedStructs.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

@@ -13,10 +13,10 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_MATERIALIZATIONUNIT_H
 #define LLVM_EXECUTIONENGINE_ORC_MATERIALIZATIONUNIT_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ExecutionEngine/Orc/CoreContainers.h"
 #include "llvm/ExecutionEngine/Orc/SymbolStringPool.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm::orc {
 

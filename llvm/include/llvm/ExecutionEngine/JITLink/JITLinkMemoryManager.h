@@ -13,7 +13,6 @@
 #ifndef LLVM_EXECUTIONENGINE_JITLINK_JITLINKMEMORYMANAGER_H
 #define LLVM_EXECUTIONENGINE_JITLINK_JITLINKMEMORYMANAGER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ExecutionEngine/JITLink/JITLinkDylib.h"
@@ -22,6 +21,7 @@
 #include "llvm/ExecutionEngine/Orc/Shared/MemoryFlags.h"
 #include "llvm/ExecutionEngine/Orc/SymbolStringPool.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MSVCErrorWorkarounds.h"
 #include "llvm/Support/Memory.h"
@@ -322,9 +322,9 @@ public:
       JITLinkMemoryManager::InFlightAlloc::OnFinalizedFunction;
 
   LLVM_ABI static void Create(JITLinkMemoryManager &MemMgr,
-                     std::shared_ptr<orc::SymbolStringPool> SSP, Triple TT,
-                     const JITLinkDylib *JD, SegmentMap Segments,
-                     OnCreatedFunction OnCreated);
+                              std::shared_ptr<orc::SymbolStringPool> SSP,
+                              Triple TT, const JITLinkDylib *JD,
+                              SegmentMap Segments, OnCreatedFunction OnCreated);
 
   LLVM_ABI static Expected<SimpleSegmentAlloc>
   Create(JITLinkMemoryManager &MemMgr,

@@ -13,11 +13,11 @@
 #ifndef LLVM_EXECUTIONENGINE_JITLINK_AARCH32
 #define LLVM_EXECUTIONENGINE_JITLINK_AARCH32
 
-#include "llvm/Support/Compiler.h"
 #include "TableManager.h"
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/Support/ARMBuildAttributes.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {
@@ -271,16 +271,18 @@ template <> struct FixupInfo<Thumb_MovwPrelNC> : public FixupInfoThumbMov {
 };
 
 /// Helper function to read the initial addend for Data-class relocations.
-LLVM_ABI Expected<int64_t> readAddendData(LinkGraph &G, Block &B, Edge::OffsetT Offset,
-                                 Edge::Kind Kind);
+LLVM_ABI Expected<int64_t>
+readAddendData(LinkGraph &G, Block &B, Edge::OffsetT Offset, Edge::Kind Kind);
 
 /// Helper function to read the initial addend for Arm-class relocations.
-LLVM_ABI Expected<int64_t> readAddendArm(LinkGraph &G, Block &B, Edge::OffsetT Offset,
-                                Edge::Kind Kind);
+LLVM_ABI Expected<int64_t> readAddendArm(LinkGraph &G, Block &B,
+                                         Edge::OffsetT Offset, Edge::Kind Kind);
 
 /// Helper function to read the initial addend for Thumb-class relocations.
-LLVM_ABI Expected<int64_t> readAddendThumb(LinkGraph &G, Block &B, Edge::OffsetT Offset,
-                                  Edge::Kind Kind, const ArmConfig &ArmCfg);
+LLVM_ABI Expected<int64_t> readAddendThumb(LinkGraph &G, Block &B,
+                                           Edge::OffsetT Offset,
+                                           Edge::Kind Kind,
+                                           const ArmConfig &ArmCfg);
 
 /// Read the initial addend for a REL-type relocation. It's the value encoded
 /// in the immediate field of the fixup location by the compiler.
@@ -308,7 +310,7 @@ LLVM_ABI Error applyFixupArm(LinkGraph &G, Block &B, const Edge &E);
 
 /// Helper function to apply the fixup for Thumb-class relocations.
 LLVM_ABI Error applyFixupThumb(LinkGraph &G, Block &B, const Edge &E,
-                      const ArmConfig &ArmCfg);
+                               const ArmConfig &ArmCfg);
 
 /// Apply fixup expression for edge to block content.
 inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,

@@ -13,12 +13,12 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_LAYER_H
 #define LLVM_EXECUTIONENGINE_ORC_LAYER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/Mangling.h"
 #include "llvm/ExecutionEngine/Orc/ThreadSafeModule.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ExtensibleRTTI.h"
 #include "llvm/Support/MemoryBuffer.h"
 
@@ -173,7 +173,8 @@ private:
 
 /// Materializes the given object file (represented by a MemoryBuffer
 /// instance) by calling 'emit' on the given ObjectLayer.
-class LLVM_ABI BasicObjectLayerMaterializationUnit : public MaterializationUnit {
+class LLVM_ABI BasicObjectLayerMaterializationUnit
+    : public MaterializationUnit {
 public:
   /// Create using the default object interface builder function.
   static Expected<std::unique_ptr<BasicObjectLayerMaterializationUnit>>

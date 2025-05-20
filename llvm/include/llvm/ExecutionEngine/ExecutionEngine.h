@@ -14,7 +14,6 @@
 #ifndef LLVM_EXECUTIONENGINE_EXECUTIONENGINE_H
 #define LLVM_EXECUTIONENGINE_EXECUTIONENGINE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm-c/ExecutionEngine.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
@@ -26,6 +25,7 @@
 #include "llvm/Object/Binary.h"
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Mutex.h"
 #include "llvm/Target/TargetMachine.h"
@@ -572,12 +572,14 @@ public:
   /// to create anything other than MCJIT will cause a runtime error. If create()
   /// is called and is successful, the created engine takes ownership of the
   /// memory manager. This option defaults to NULL.
-  LLVM_ABI EngineBuilder &setMCJITMemoryManager(std::unique_ptr<RTDyldMemoryManager> mcjmm);
+  LLVM_ABI EngineBuilder &
+  setMCJITMemoryManager(std::unique_ptr<RTDyldMemoryManager> mcjmm);
 
-  LLVM_ABI EngineBuilder&
+  LLVM_ABI EngineBuilder &
   setMemoryManager(std::unique_ptr<MCJITMemoryManager> MM);
 
-  LLVM_ABI EngineBuilder &setSymbolResolver(std::unique_ptr<LegacyJITSymbolResolver> SR);
+  LLVM_ABI EngineBuilder &
+  setSymbolResolver(std::unique_ptr<LegacyJITSymbolResolver> SR);
 
   /// setErrorStr - Set the error string to write to on error.  This option
   /// defaults to NULL.
@@ -650,10 +652,9 @@ public:
 
   /// selectTarget - Pick a target either via -march or by guessing the native
   /// arch.  Add any CPU features specified via -mcpu or -mattr.
-  LLVM_ABI TargetMachine *selectTarget(const Triple &TargetTriple,
-                              StringRef MArch,
-                              StringRef MCPU,
-                              const SmallVectorImpl<std::string>& MAttrs);
+  LLVM_ABI TargetMachine *
+  selectTarget(const Triple &TargetTriple, StringRef MArch, StringRef MCPU,
+               const SmallVectorImpl<std::string> &MAttrs);
 
   ExecutionEngine *create() {
     return create(selectTarget());

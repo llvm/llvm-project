@@ -13,9 +13,9 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_OBJECTTRANSFORMLAYER_H
 #define LLVM_EXECUTIONENGINE_ORC_OBJECTTRANSFORMLAYER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/Layer.h"
+#include "llvm/Support/Compiler.h"
 #include <algorithm>
 #include <memory>
 

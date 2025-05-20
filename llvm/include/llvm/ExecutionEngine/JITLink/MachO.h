@@ -13,9 +13,9 @@
 #ifndef LLVM_EXECUTIONENGINE_JITLINK_MACHO_H
 #define LLVM_EXECUTIONENGINE_JITLINK_MACHO_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/ExecutionEngine/Orc/Shared/MachOObjectFormat.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace jitlink {
@@ -34,7 +34,7 @@ createLinkGraphFromMachOObject(MemoryBufferRef ObjectBuffer,
 /// Uses conservative defaults for GOT and stub handling based on the target
 /// platform.
 LLVM_ABI void link_MachO(std::unique_ptr<LinkGraph> G,
-                std::unique_ptr<JITLinkContext> Ctx);
+                         std::unique_ptr<JITLinkContext> Ctx);
 
 /// Get a pointer to the standard MachO data section (creates an empty
 /// section with RW- permissions and standard lifetime if one does not

@@ -13,10 +13,10 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_EPCDEBUGOBJECTREGISTRAR_H
 #define LLVM_EXECUTIONENGINE_ORC_EPCDEBUGOBJECTREGISTRAR_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Memory.h"
 
@@ -58,7 +58,8 @@ private:
 /// If RegistrationFunctionsDylib is non-None then it will be searched to find
 /// the registration functions. If it is None then the process dylib will be
 /// loaded to find the registration functions.
-LLVM_ABI Expected<std::unique_ptr<EPCDebugObjectRegistrar>> createJITLoaderGDBRegistrar(
+LLVM_ABI Expected<std::unique_ptr<EPCDebugObjectRegistrar>>
+createJITLoaderGDBRegistrar(
     ExecutionSession &ES,
     std::optional<ExecutorAddr> RegistrationFunctionDylib = std::nullopt);
 

@@ -13,7 +13,6 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_LLJIT_H
 #define LLVM_EXECUTIONENGINE_ORC_LLJIT_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
 #include "llvm/ExecutionEngine/Orc/CompileOnDemandLayer.h"
@@ -24,6 +23,7 @@
 #include "llvm/ExecutionEngine/Orc/IRTransformLayer.h"
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 #include "llvm/ExecutionEngine/Orc/ThreadSafeModule.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ThreadPool.h"
 #include <variant>
@@ -42,7 +42,8 @@ class ExecutorProcessControl;
 class LLVM_ABI LLJIT {
   template <typename, typename, typename> friend class LLJITBuilderSetters;
 
-  LLVM_ABI_FRIEND friend Expected<JITDylibSP> setUpGenericLLVMIRPlatform(LLJIT &J);
+  LLVM_ABI_FRIEND friend Expected<JITDylibSP>
+  setUpGenericLLVMIRPlatform(LLJIT &J);
 
 public:
   /// Initializer support for LLJIT.

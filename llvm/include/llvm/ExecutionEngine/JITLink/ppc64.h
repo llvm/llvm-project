@@ -13,9 +13,9 @@
 #ifndef LLVM_EXECUTIONENGINE_JITLINK_PPC64_H
 #define LLVM_EXECUTIONENGINE_JITLINK_PPC64_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/ExecutionEngine/JITLink/TableManager.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 
 namespace llvm::jitlink::ppc64 {

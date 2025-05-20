@@ -16,12 +16,12 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_LAZYREEXPORTS_H
 #define LLVM_EXECUTIONENGINE_ORC_LAZYREEXPORTS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/IndirectionUtils.h"
 #include "llvm/ExecutionEngine/Orc/RedirectionManager.h"
 #include "llvm/ExecutionEngine/Orc/Speculation.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -42,8 +42,9 @@ public:
   using NotifyResolvedFunction =
       unique_function<Error(ExecutorAddr ResolvedAddr)>;
 
-  LLVM_ABI LazyCallThroughManager(ExecutionSession &ES, ExecutorAddr ErrorHandlerAddr,
-                         TrampolinePool *TP);
+  LLVM_ABI LazyCallThroughManager(ExecutionSession &ES,
+                                  ExecutorAddr ErrorHandlerAddr,
+                                  TrampolinePool *TP);
 
   // Return a free call-through trampoline and bind it to look up and call
   // through to the given symbol.
@@ -68,7 +69,8 @@ protected:
 
   LLVM_ABI ExecutorAddr reportCallThroughError(Error Err);
   LLVM_ABI Expected<ReexportsEntry> findReexport(ExecutorAddr TrampolineAddr);
-  LLVM_ABI Error notifyResolved(ExecutorAddr TrampolineAddr, ExecutorAddr ResolvedAddr);
+  LLVM_ABI Error notifyResolved(ExecutorAddr TrampolineAddr,
+                                ExecutorAddr ResolvedAddr);
   void setTrampolinePool(TrampolinePool &TP) { this->TP = &TP; }
 
 private:
@@ -269,7 +271,8 @@ lazyReexports(LazyReexportsManager &LRM, SymbolAliasMap Reexports) {
   return LRM.createLazyReexports(std::move(Reexports));
 }
 
-class LLVM_ABI SimpleLazyReexportsSpeculator : public LazyReexportsManager::Listener {
+class LLVM_ABI SimpleLazyReexportsSpeculator
+    : public LazyReexportsManager::Listener {
 public:
   using RecordExecutionFunction =
       unique_function<void(const CallThroughInfo &CTI)>;

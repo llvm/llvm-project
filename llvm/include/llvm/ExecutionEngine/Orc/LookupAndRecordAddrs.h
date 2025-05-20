@@ -16,10 +16,10 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_LOOKUPANDRECORDADDRS_H
 #define LLVM_EXECUTIONENGINE_ORC_LOOKUPANDRECORDADDRS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
+#include "llvm/Support/Compiler.h"
 
 #include <vector>
 

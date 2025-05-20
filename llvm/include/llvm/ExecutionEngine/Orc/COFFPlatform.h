@@ -13,7 +13,6 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_COFFPLATFORM_H
 #define LLVM_EXECUTIONENGINE_ORC_COFFPLATFORM_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ExecutionEngine/Orc/COFFVCRuntimeSupport.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
@@ -21,6 +20,7 @@
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
+#include "llvm/Support/Compiler.h"
 
 #include <future>
 #include <list>

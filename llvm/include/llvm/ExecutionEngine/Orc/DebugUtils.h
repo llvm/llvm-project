@@ -13,10 +13,10 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_DEBUGUTILS_H
 #define LLVM_EXECUTIONENGINE_ORC_DEBUGUTILS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/SymbolStringPool.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
@@ -34,55 +34,66 @@ namespace orc {
 LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const SymbolNameSet &Symbols);
 
 /// Render a SymbolNameVector.
-LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const SymbolNameVector &Symbols);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
+                                 const SymbolNameVector &Symbols);
 
 /// Render an array of SymbolStringPtrs.
-LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, ArrayRef<SymbolStringPtr> Symbols);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
+                                 ArrayRef<SymbolStringPtr> Symbols);
 
 /// Render JITSymbolFlags.
 LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const JITSymbolFlags &Flags);
 
 /// Render a SymbolFlagsMap entry.
-LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const SymbolFlagsMap::value_type &KV);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
+                                 const SymbolFlagsMap::value_type &KV);
 
 /// Render a SymbolMap entry.
-LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const SymbolMap::value_type &KV);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
+                                 const SymbolMap::value_type &KV);
 
 /// Render a SymbolFlagsMap.
-LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const SymbolFlagsMap &SymbolFlags);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
+                                 const SymbolFlagsMap &SymbolFlags);
 
 /// Render a SymbolMap.
 LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const SymbolMap &Symbols);
 
 /// Render a SymbolDependenceMap entry.
 LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
-                        const SymbolDependenceMap::value_type &KV);
+                                 const SymbolDependenceMap::value_type &KV);
 
 /// Render a SymbolDependendeMap.
-LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const SymbolDependenceMap &Deps);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
+                                 const SymbolDependenceMap &Deps);
 
 /// Render a MaterializationUnit.
-LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const MaterializationUnit &MU);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
+                                 const MaterializationUnit &MU);
 
 //// Render a JITDylibLookupFlags instance.
 LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
-                        const JITDylibLookupFlags &JDLookupFlags);
+                                 const JITDylibLookupFlags &JDLookupFlags);
 
 /// Render a SymbolLookupFlags instance.
-LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const SymbolLookupFlags &LookupFlags);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
+                                 const SymbolLookupFlags &LookupFlags);
 
 /// Render a SymbolLookupSet entry.
-LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const SymbolLookupSet::value_type &KV);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
+                                 const SymbolLookupSet::value_type &KV);
 
 /// Render a SymbolLookupSet.
-LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const SymbolLookupSet &LookupSet);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
+                                 const SymbolLookupSet &LookupSet);
 
 /// Render a JITDylibSearchOrder.
 LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
-                        const JITDylibSearchOrder &SearchOrder);
+                                 const JITDylibSearchOrder &SearchOrder);
 
 /// Render a SymbolAliasMap.
-LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const SymbolAliasMap &Aliases);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
+                                 const SymbolAliasMap &Aliases);
 
 /// Render a SymbolState.
 LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const SymbolState &S);
@@ -110,7 +121,8 @@ public:
   /// identifier, the resulting files will be named <ident>.o, <ident>.2.o,
   /// <ident>.3.o, and so on). IdentifierOverride should not contain an
   /// extension, as a .o suffix will be added by DumpObjects.
-  LLVM_ABI DumpObjects(std::string DumpDir = "", std::string IdentifierOverride = "");
+  LLVM_ABI DumpObjects(std::string DumpDir = "",
+                       std::string IdentifierOverride = "");
 
   /// Dumps the given buffer to disk.
   LLVM_ABI Expected<std::unique_ptr<MemoryBuffer>>

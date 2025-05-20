@@ -13,9 +13,9 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_LINKGRAPHLAYER_H
 #define LLVM_EXECUTIONENGINE_ORC_LINKGRAPHLAYER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 

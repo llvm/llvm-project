@@ -13,13 +13,13 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_INDIRECTIONUTILS_H
 #define LLVM_EXECUTIONENGINE_ORC_INDIRECTIONUTILS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/OrcABISupport.h"
 #include "llvm/ExecutionEngine/Orc/RedirectionManager.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Memory.h"
 #include "llvm/Support/Process.h"
@@ -499,8 +499,9 @@ LLVM_ABI Constant *createIRTypedAddress(FunctionType &FT, ExecutorAddr Addr);
 
 /// Create a function pointer with the given type, name, and initializer
 ///        in the given Module.
-LLVM_ABI GlobalVariable *createImplPointer(PointerType &PT, Module &M, const Twine &Name,
-                                  Constant *Initializer);
+LLVM_ABI GlobalVariable *createImplPointer(PointerType &PT, Module &M,
+                                           const Twine &Name,
+                                           Constant *Initializer);
 
 /// Turn a function declaration into a stub function that makes an
 ///        indirect call using the given function pointer.
@@ -532,15 +533,17 @@ private:
 /// single VMap) before any bodies are moved. This will ensure that references
 /// between functions all refer to the versions in the new module.
 LLVM_ABI Function *cloneFunctionDecl(Module &Dst, const Function &F,
-                            ValueToValueMapTy *VMap = nullptr);
+                                     ValueToValueMapTy *VMap = nullptr);
 
 /// Clone a global variable declaration into a new module.
-LLVM_ABI GlobalVariable *cloneGlobalVariableDecl(Module &Dst, const GlobalVariable &GV,
-                                        ValueToValueMapTy *VMap = nullptr);
+LLVM_ABI GlobalVariable *
+cloneGlobalVariableDecl(Module &Dst, const GlobalVariable &GV,
+                        ValueToValueMapTy *VMap = nullptr);
 
 /// Clone a global alias declaration into a new module.
-LLVM_ABI GlobalAlias *cloneGlobalAliasDecl(Module &Dst, const GlobalAlias &OrigA,
-                                  ValueToValueMapTy &VMap);
+LLVM_ABI GlobalAlias *cloneGlobalAliasDecl(Module &Dst,
+                                           const GlobalAlias &OrigA,
+                                           ValueToValueMapTy &VMap);
 
 /// Introduce relocations to \p Sym in its own definition if there are any
 /// pointers formed via PC-relative address that do not already have a
@@ -564,10 +567,9 @@ LLVM_ABI GlobalAlias *cloneGlobalAliasDecl(Module &Dst, const GlobalAlias &OrigA
 ///
 /// This is based on disassembly and should be considered "best effort". It may
 /// silently fail to add relocations.
-LLVM_ABI Error addFunctionPointerRelocationsToCurrentSymbol(jitlink::Symbol &Sym,
-                                                   jitlink::LinkGraph &G,
-                                                   MCDisassembler &Disassembler,
-                                                   MCInstrAnalysis &MIA);
+LLVM_ABI Error addFunctionPointerRelocationsToCurrentSymbol(
+    jitlink::Symbol &Sym, jitlink::LinkGraph &G, MCDisassembler &Disassembler,
+    MCInstrAnalysis &MIA);
 
 } // end namespace orc
 
