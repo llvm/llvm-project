@@ -1998,18 +1998,31 @@ PtrParts SplitPtrStructs::visitAddrSpaceCastInst(AddrSpaceCastInst &I) {
   Type *OffTy = ResTy->getElementType(1);
   Value *ZeroOff = Constant::getNullValue(OffTy);
 
-  // Special case for null pointers, which can be created by address space
-  // propagation.
+  // Special case for null pointers, undef, and poison, which can be created by
+  // address space propagation.
   auto *InConst = dyn_cast<Constant>(In);
   if (InConst && InConst->isNullValue()) {
     Value *NullRsrc = Constant::getNullValue(RsrcTy);
     SplitUsers.insert(&I);
     return {NullRsrc, ZeroOff};
   }
+  if (isa<PoisonValue>(In)) {
+    Value *PoisonRsrc = PoisonValue::get(RsrcTy);
+    Value *PoisonOff = PoisonValue::get(OffTy);
+    SplitUsers.insert(&I);
+    return {PoisonRsrc, PoisonOff};
+  }
+  if (isa<UndefValue>(In)) {
+    Value *UndefRsrc = UndefValue::get(RsrcTy);
+    Value *UndefOff = UndefValue::get(OffTy);
+    SplitUsers.insert(&I);
+    return {UndefRsrc, UndefOff};
+  }
 
   if (I.getSrcAddressSpace() != AMDGPUAS::BUFFER_RESOURCE)
-    report_fatal_error("Only buffer resources (addrspace 8) and null pointers "
-                       "can be cast to buffer fat pointers (addrspace 7)");
+    report_fatal_error(
+        "only buffer resources (addrspace 8) and null/poison pointers can be "
+        "cast to buffer fat pointers (addrspace 7)");
   SplitUsers.insert(&I);
   return {In, ZeroOff};
 }
