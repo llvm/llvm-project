@@ -2791,16 +2791,20 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
     // initializer list that the child calls see, so that we don't try
     // to re-process the designator.
     unsigned OldIndex = Index;
-    IList->setInit(OldIndex, DIE->getInit());
+    auto *OldDIE =
+        dyn_cast_if_present<DesignatedInitExpr>(IList->getInit(OldIndex));
+    if (!OldDIE)
+      OldDIE = DIE;
+    IList->setInit(OldIndex, OldDIE->getInit());
 
     CheckSubElementType(Entity, IList, CurrentObjectType, Index, StructuredList,
                         StructuredIndex, /*DirectlyDesignated=*/true);
 
     // Restore the designated initializer expression in the syntactic
     // form of the initializer list.
-    if (IList->getInit(OldIndex) != DIE->getInit())
-      DIE->setInit(IList->getInit(OldIndex));
-    IList->setInit(OldIndex, DIE);
+    if (IList->getInit(OldIndex) != OldDIE->getInit())
+      OldDIE->setInit(IList->getInit(OldIndex));
+    IList->setInit(OldIndex, OldDIE);
 
     return hadError && !prevHadError;
   }
