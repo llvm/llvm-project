@@ -430,6 +430,13 @@ bool SDWASrcOperand::convertToSDWA(MachineInstr &MI, const SIInstrInfo *TII) {
   case AMDGPU::V_CVT_PK_F32_BF8_sdwa:
     // Does not support input modifiers: noabs, noneg, nosext.
     return false;
+  case AMDGPU::V_CNDMASK_B32_sdwa:
+    // FIXME SISrcMods uses the same bitmask for SEXT and NEG
+    // modifiers and hence each instruction can only support one type
+    // of modifier; SEXT gets turned into NEG for this instruction.
+    if (Sext)
+      return false;
+    break;
   }
 
   // Find operand in instruction that matches source operand and replace it with
