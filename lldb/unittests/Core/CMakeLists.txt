@@ -6,7 +6,7 @@ add_lldb_unittest(LLDBCoreTests
   DumpDataExtractorTest.cpp
   DumpRegisterInfoTest.cpp
   FormatEntityTest.cpp
-  MangledTest.cpp
+  ItaniumMangledTest.cpp
   ModuleSpecTest.cpp
   PluginManagerTest.cpp
   ProgressReportTest.cpp

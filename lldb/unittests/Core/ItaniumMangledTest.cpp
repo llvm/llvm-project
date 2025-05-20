@@ -1,4 +1,4 @@
-//===-- MangledTest.cpp ---------------------------------------------------===//
+//===-- ItaniumMangledTest.cpp --------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -401,7 +401,7 @@ TEST(MangledTest, DemangledNameInfo_SetValue) {
   EXPECT_FALSE(mangled.GetDemangledInfo()->hasBasename());
 }
 
-struct DemanglingPartsTestCase {
+struct ItaniumDemanglingPartsTestCase {
   const char *mangled;
   DemangledNameInfo expected_info;
   std::string_view basename;
@@ -410,7 +410,7 @@ struct DemanglingPartsTestCase {
   bool valid_basename = true;
 };
 
-DemanglingPartsTestCase g_demangling_parts_test_cases[] = {
+ItaniumDemanglingPartsTestCase g_demangling_itanium_parts_test_cases[] = {
     // clang-format off
    { "_ZNVKO3BarIN2ns3QuxIiEEE1CIPFi3FooIS_IiES6_EEE6methodIS6_EENS5_IT_SC_E5InnerIiEESD_SD_",
      { /*.BasenameRange=*/{92, 98}, /*.ScopeRange=*/{36, 92}, /*.ArgumentsRange=*/{ 108, 158 },
@@ -555,7 +555,7 @@ DemanglingPartsTestCase g_demangling_parts_test_cases[] = {
 };
 
 struct DemanglingPartsTestFixture
-    : public ::testing::TestWithParam<DemanglingPartsTestCase> {};
+    : public ::testing::TestWithParam<ItaniumDemanglingPartsTestCase> {};
 
 namespace {
 class TestAllocator {
@@ -608,5 +608,6 @@ TEST_P(DemanglingPartsTestFixture, DemanglingParts) {
   std::free(OB.getBuffer());
 }
 
-INSTANTIATE_TEST_SUITE_P(DemanglingPartsTests, DemanglingPartsTestFixture,
-                         ::testing::ValuesIn(g_demangling_parts_test_cases));
+INSTANTIATE_TEST_SUITE_P(
+    DemanglingPartsTests, DemanglingPartsTestFixture,
+    ::testing::ValuesIn(g_demangling_itanium_parts_test_cases));
