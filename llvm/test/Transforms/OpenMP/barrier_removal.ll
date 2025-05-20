@@ -58,7 +58,7 @@ define amdgpu_kernel void @pos_empty_3() "kernel" {
 ; CHECK-SAME: () #[[ATTR4]] {
 ; CHECK-NEXT:    ret void
 ;
-  call void @llvm.nvvm.barrier0()
+  call void @llvm.nvvm.barrier.cta.sync.aligned.all(i32 0)
   ret void
 }
 define amdgpu_kernel void @pos_empty_4() "kernel" {
@@ -393,12 +393,12 @@ define amdgpu_kernel void @pos_multiple() "kernel" {
 ; CHECK-SAME: () #[[ATTR4]] {
 ; CHECK-NEXT:    ret void
 ;
-  call void @llvm.nvvm.barrier0()
+  call void @llvm.nvvm.barrier.cta.sync.aligned.all(i32 0)
   call void @aligned_barrier()
   call void @aligned_barrier()
   call void @llvm.amdgcn.s.barrier()
   call void @aligned_barrier()
-  call void @llvm.nvvm.barrier0()
+  call void @llvm.nvvm.barrier.cta.sync.aligned.all(i32 0)
   call void @aligned_barrier()
   call void @aligned_barrier()
   ret void
@@ -422,7 +422,7 @@ define amdgpu_kernel void @multiple_blocks_kernel_1(i1 %c0, i1 %c1) "kernel" {
 ; CHECK-NEXT:    ret void
 ;
   fence acquire
-  call void @llvm.nvvm.barrier0()
+  call void @llvm.nvvm.barrier.cta.sync.aligned.all(i32 0)
   fence release
   call void @aligned_barrier()
   fence seq_cst
@@ -441,7 +441,7 @@ f0:
   fence release
   call void @aligned_barrier()
   fence acquire
-  call void @llvm.nvvm.barrier0()
+  call void @llvm.nvvm.barrier.cta.sync.aligned.all(i32 0)
   fence acquire
   br i1 %c1, label %t1, label %f1
 t1:
@@ -527,7 +527,7 @@ define void @multiple_blocks_non_kernel_1(i1 %c0, i1 %c1) "kernel" {
 ; CHECK:       m:
 ; CHECK-NEXT:    ret void
 ;
-  call void @llvm.nvvm.barrier0()
+  call void @llvm.nvvm.barrier.cta.sync.aligned.all(i32 0)
   call void @aligned_barrier()
   br i1 %c0, label %t0, label %f0
 t0:
@@ -538,7 +538,7 @@ t0b:
   br label %m
 f0:
   call void @aligned_barrier()
-  call void @llvm.nvvm.barrier0()
+  call void @llvm.nvvm.barrier.cta.sync.aligned.all(i32 0)
   br i1 %c1, label %t1, label %f1
 t1:
   call void @aligned_barrier()
@@ -577,7 +577,7 @@ t0b:
   br label %m
 f0:
   call void @aligned_barrier()
-  call void @llvm.nvvm.barrier0()
+  call void @llvm.nvvm.barrier.cta.sync.aligned.all(i32 0)
   br i1 %c1, label %t1, label %f1
 t1:
   call void @aligned_barrier()
@@ -614,7 +614,7 @@ t0b:
   br label %m
 f0:
   call void @aligned_barrier()
-  call void @llvm.nvvm.barrier0()
+  call void @llvm.nvvm.barrier.cta.sync.aligned.all(i32 0)
   br i1 %c1, label %t1, label %f1
 t1:
   call void @aligned_barrier()
@@ -665,7 +665,7 @@ t0b:
   br label %m
 f0:
   call void @aligned_barrier()
-  call void @llvm.nvvm.barrier0()
+  call void @llvm.nvvm.barrier.cta.sync.aligned.all(i32 0)
   store i32 2, ptr %p
   br i1 %c1, label %t1, label %f1
 t1:
