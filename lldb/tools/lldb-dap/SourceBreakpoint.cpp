@@ -45,7 +45,7 @@ llvm::Error SourceBreakpoint::SetBreakpoint(const protocol::Source &source) {
                                    "Invalid line number.");
 
   if (source.sourceReference) {
-    // breakpoint set by assembly source.
+    // Breakpoint set by assembly source.
     lldb::SBAddress source_address(*source.sourceReference, m_dap.target);
     if (!source_address.IsValid())
       return llvm::createStringError(llvm::inconvertibleErrorCode(),
@@ -53,7 +53,7 @@ llvm::Error SourceBreakpoint::SetBreakpoint(const protocol::Source &source) {
 
     lldb::SBSymbol symbol = source_address.GetSymbol();
     if (!symbol.IsValid()) {
-      // Not yet supporting breakpoints in assembly without a valid symbol.
+      // FIXME: Support assembly breakpoints without a valid symbol.
       return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                      "Breakpoints in assembly without a valid "
                                      "symbol are not supported yet.");
@@ -70,7 +70,7 @@ llvm::Error SourceBreakpoint::SetBreakpoint(const protocol::Source &source) {
 
     m_bp = m_dap.target.BreakpointCreateBySBAddress(address);
   } else {
-    // breakpoint set by a regular source file.
+    // Breakpoint set by a regular source file.
     const auto source_path = source.path.value_or("");
     lldb::SBFileSpecList module_list;
     m_bp = m_dap.target.BreakpointCreateByLocation(source_path.c_str(), m_line,

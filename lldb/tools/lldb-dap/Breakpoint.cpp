@@ -78,7 +78,7 @@ protocol::Breakpoint Breakpoint::ToProtocolBreakpoint() {
         breakpoint.column = column;
       breakpoint.source = CreateSource(line_entry);
     } else {
-      // Breakpoint made by assembly
+      // Assembly breakpoint.
       auto symbol = bp_addr.GetSymbol();
       if (symbol.IsValid()) {
         breakpoint.line =

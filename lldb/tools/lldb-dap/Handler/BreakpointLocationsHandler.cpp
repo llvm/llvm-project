@@ -27,9 +27,10 @@ BreakpointLocationsRequestHandler::Run(
 
   // Find all relevant lines & columns.
   std::vector<std::pair<uint32_t, uint32_t>> locations;
-  if (args.source.sourceReference)
+  if (args.source.sourceReference) {
     locations = GetAssemblyBreakpointLocations(*args.source.sourceReference,
                                                start_line, end_line);
+  }
   else {
     std::string path = args.source.path.value_or("");
     locations = GetSourceBreakpointLocations(
@@ -114,7 +115,7 @@ BreakpointLocationsRequestHandler::GetAssemblyBreakpointLocations(
   if (!symbol.IsValid())
     return locations;
 
-  // start_line is relative to the symbol's start address
+  // start_line is relative to the symbol's start address.
   lldb::SBInstructionList insts = symbol.GetInstructions(dap.target);
   if (insts.GetSize() > (start_line - 1))
     locations.reserve(insts.GetSize() - (start_line - 1));

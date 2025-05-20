@@ -219,7 +219,7 @@ struct DAP {
   /// @}
 
   /// Number of lines of assembly code to show when no debug info is available.
-  static constexpr uint32_t number_of_assembly_lines_for_nodebug = 32;
+  static constexpr uint32_t k_number_of_assembly_lines_for_nodebug = 32;
 
   /// Creates a new DAP sessions.
   ///

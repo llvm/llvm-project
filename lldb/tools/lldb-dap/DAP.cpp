@@ -1625,13 +1625,13 @@ std::vector<protocol::Breakpoint> DAP::SetSourceBreakpoints(
     const std::optional<std::vector<protocol::SourceBreakpoint>> &breakpoints) {
   std::vector<protocol::Breakpoint> response_breakpoints;
   if (source.sourceReference) {
-    // breakpoint set by assembly source.
+    // Breakpoint set by assembly source.
     auto &existing_breakpoints =
         m_source_assembly_breakpoints[*source.sourceReference];
     response_breakpoints =
         SetSourceBreakpoints(source, breakpoints, existing_breakpoints);
   } else {
-    // breakpoint set by a regular source file.
+    // Breakpoint set by a regular source file.
     const auto path = source.path.value_or("");
     auto &existing_breakpoints = m_source_breakpoints[path];
     response_breakpoints =
@@ -1659,7 +1659,7 @@ std::vector<protocol::Breakpoint> DAP::SetSourceBreakpoints(
           existing_breakpoints.try_emplace(bp_pos, src_bp);
       // We check if this breakpoint already exists to update it.
       if (inserted) {
-        if (auto error = iv->second.SetBreakpoint(source)) {
+        if (llvm::Error error = iv->second.SetBreakpoint(source)) {
           protocol::Breakpoint invalid_breakpoint;
           invalid_breakpoint.message = llvm::toString(std::move(error));
           invalid_breakpoint.verified = false;
@@ -1667,8 +1667,9 @@ std::vector<protocol::Breakpoint> DAP::SetSourceBreakpoints(
           existing_breakpoints.erase(iv);
           continue;
         }
-      } else
+      } else {
         iv->second.UpdateBreakpoint(src_bp);
+      }
 
       protocol::Breakpoint response_breakpoint =
           iv->second.ToProtocolBreakpoint();
