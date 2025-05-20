@@ -24,12 +24,14 @@ add_subdirectory(bugprone)
 add_subdirectory(modernize)
 add_subdirectory(openmp)
 add_subdirectory(performance)
+add_subdirectory(readability)
 
 set(ALL_FLANG_TIDY_CHECKS
   flangTidyBugproneModule
   flangTidyModernizeModule
   flangTidyOpenMPModule
   flangTidyPerformanceModule
+  flangTidyReadabilityModule
   )
 
 set(ALL_FLANG_TIDY_CHECKS ${ALL_FLANG_TIDY_CHECKS} PARENT_SCOPE)
