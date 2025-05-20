@@ -104,9 +104,8 @@ MCFixupKindInfo RISCVAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   return Infos[Kind - FirstTargetFixupKind];
 }
 
-// If linker relaxation is enabled, or the relax option had previously been
-// enabled, always emit relocations even if the fixup can be resolved. This is
-// necessary for correctness as offsets may change during relaxation.
+// If linker relaxation is enabled, emit relocation to mark the instruction as
+// shrinkable by the linker.
 bool RISCVAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
                                             const MCFixup &Fixup,
                                             const MCValue &Target,
@@ -124,7 +123,7 @@ bool RISCVAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
     break;
   }
 
-  return STI->hasFeature(RISCV::FeatureRelax) || ForceRelocs;
+  return STI->hasFeature(RISCV::FeatureRelax);
 }
 
 bool RISCVAsmBackend::fixupNeedsRelaxationAdvanced(const MCAssembler &,
@@ -570,6 +569,18 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   }
 }
 
+bool RISCVAsmBackend::isPCRelFixupResolved(const MCAssembler &Asm,
+                                           const MCSymbol *SymA,
+                                           const MCFragment &F) {
+  if (!PCRelTemp)
+    PCRelTemp = Asm.getContext().createTempSymbol();
+  PCRelTemp->setFragment(const_cast<MCFragment *>(&F));
+  MCValue Res;
+  MCExpr::evaluateSymbolicAdd(&Asm, false, MCValue::get(SymA),
+                              MCValue::get(nullptr, PCRelTemp), Res);
+  return !Res.getSubSym();
+}
+
 bool RISCVAsmBackend::evaluateTargetFixup(
     const MCAssembler &Asm, const MCFixup &Fixup, const MCFragment *DF,
     const MCValue &Target, const MCSubtargetInfo *STI, uint64_t &Value) {
@@ -613,7 +624,9 @@ bool RISCVAsmBackend::evaluateTargetFixup(
   Value = Asm.getSymbolOffset(SA) + AUIPCTarget.getConstant();
   Value -= Asm.getFragmentOffset(*AUIPCDF) + AUIPCFixup->getOffset();
 
-  return AUIPCFixup->getTargetKind() == RISCV::fixup_riscv_pcrel_hi20;
+  if (AUIPCFixup->getTargetKind() != RISCV::fixup_riscv_pcrel_hi20)
+    return false;
+  return isPCRelFixupResolved(Asm, AUIPCTarget.getAddSym(), *AUIPCDF);
 }
 
 bool RISCVAsmBackend::addReloc(MCAssembler &Asm, const MCFragment &F,
@@ -659,11 +672,14 @@ bool RISCVAsmBackend::addReloc(MCAssembler &Asm, const MCFragment &F,
     return false;
   }
 
+  if (IsResolved &&
+      (getFixupKindInfo(Fixup.getKind()).Flags & MCFixupKindInfo::FKF_IsPCRel))
+    IsResolved = isPCRelFixupResolved(Asm, Target.getAddSym(), F);
   IsResolved = MCAsmBackend::addReloc(Asm, F, Fixup, Target, FixedValue,
                                       IsResolved, STI);
   // If linker relaxation is enabled and supported by the current relocation,
   // append a RELAX relocation.
-  if (Fixup.needsRelax()) {
+  if (!IsResolved && Fixup.needsRelax()) {
     auto FA = MCFixup::create(Fixup.getOffset(), nullptr, ELF::R_RISCV_RELAX);
     Asm.getWriter().recordRelocation(Asm, &F, FA, MCValue::get(nullptr),
                                      FixedValueA);
