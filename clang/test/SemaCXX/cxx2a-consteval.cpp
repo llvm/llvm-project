@@ -1342,7 +1342,9 @@ namespace GH139818{
 
     struct Y {
       constexpr ~Y() noexcept(false) { throw "oops"; }  // expected-error {{cannot use 'throw' with exceptions disabled}}
-                                                        // expected-note@-1 {{subexpression not valid in a constant expression}}
+                                                        // expected-error@-1 {{constexpr function never produces a constant expression}}
+                                                        // expected-note@-2 {{subexpression not valid in a constant expression}}
+                                                        // expected-note@-3 {{subexpression not valid in a constant expression}}
       constexpr operator bool() {
         return b;
       }
