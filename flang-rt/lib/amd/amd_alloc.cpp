@@ -37,7 +37,7 @@ static bool debugEnabled;
 static umpire_resourcemanager resourceManager;
 static umpire_allocator memoryPool;
 
-void *UmpireAlloc(std::size_t AllocationSize, std::int64_t) {
+void *UmpireAlloc(std::size_t AllocationSize, std::int64_t *) {
 #if ALLOC_DEBUG
   if (debugEnabled) {
     std::fprintf(stderr, "[AMD_ALLOC] %s(%zu) (%s:%d)\n", __PRETTY_FUNCTION__,
