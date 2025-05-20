@@ -228,3 +228,14 @@ attributes(host,device) subroutine do2(a,b,c,i)
   c(i) = a(i) - b(i) ! ok. Should not error with Host array 
                      ! cannot be present in device context
 end
+
+attributes(global) subroutine blockTest
+block
+  integer(8) :: xloc
+  integer(8) :: s(7)
+  integer(4) :: i
+  do i = 1, 7
+    s = xloc ! ok.
+  end do
+end block
+end subroutine
