@@ -11,6 +11,7 @@ add_flang_library(flangTidyBugproneModule STATIC
   PrecisionLossCheck.cpp
   SubprogramTrampolineCheck.cpp
   UndeclaredProcCheck.cpp
+  UnusedIntentCheck.cpp
 
   LINK_LIBS
   FortranSupport

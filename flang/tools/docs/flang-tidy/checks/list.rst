@@ -27,3 +27,4 @@ Flang-Tidy Checks
    :doc:`bugprone-precision-loss <bugprone/precision-loss>`,
    :doc:`bugprone-subprogram-trampoline <bugprone/subprogram-trampoline>`,
    :doc:`bugprone-undeclared-procedure <bugprone/undeclared-procedure>`,
+   :doc:`bugprone-unused-intent <bugprone/unused-intent>`,
