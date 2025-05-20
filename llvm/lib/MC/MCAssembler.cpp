@@ -184,9 +184,8 @@ bool MCAssembler::evaluateFixup(const MCFixup &Fixup, const MCFragment *DF,
       Value -= Offset;
 
       if (Add && !Sub && !Add->isUndefined() && !Add->isAbsolute()) {
-        IsResolved = (FixupFlags & MCFixupKindInfo::FKF_Constant) ||
-                     getWriter().isSymbolRefDifferenceFullyResolvedImpl(
-                         *this, *Add, *DF, false, true);
+        IsResolved = getWriter().isSymbolRefDifferenceFullyResolvedImpl(
+            *this, *Add, *DF, false, true);
       }
     } else {
       IsResolved = Target.isAbsolute();
