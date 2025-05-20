@@ -3842,6 +3842,10 @@ private:
     bool hasLocalScope = false;
     llvm::SmallVector<const Fortran::semantics::Scope *> typeCaseScopes;
 
+    const auto selectorIsVolatile = [&selector]() {
+      return fir::isa_volatile_type(fir::getBase(selector).getType());
+    };
+
     const auto &typeCaseList =
         std::get<std::list<Fortran::parser::SelectTypeConstruct::TypeCase>>(
             selectTypeConstruct.t);
@@ -3995,7 +3999,8 @@ private:
             addrTy = fir::HeapType::get(addrTy);
           if (std::holds_alternative<Fortran::parser::IntrinsicTypeSpec>(
                   typeSpec->u)) {
-            mlir::Type refTy = fir::ReferenceType::get(addrTy);
+            mlir::Type refTy =
+                fir::ReferenceType::get(addrTy, selectorIsVolatile());
             if (isPointer || isAllocatable)
               refTy = addrTy;
             exactValue = builder->create<fir::BoxAddrOp>(
@@ -4004,7 +4009,8 @@ private:
                 typeSpec->declTypeSpec->AsIntrinsic();
             if (isArray) {
               mlir::Value exact = builder->create<fir::ConvertOp>(
-                  loc, fir::BoxType::get(addrTy), fir::getBase(selector));
+                  loc, fir::BoxType::get(addrTy, selectorIsVolatile()),
+                  fir::getBase(selector));
               addAssocEntitySymbol(selectorBox->clone(exact));
             } else if (intrinsic->category() ==
                        Fortran::common::TypeCategory::Character) {
@@ -4019,7 +4025,8 @@ private:
           } else if (std::holds_alternative<Fortran::parser::DerivedTypeSpec>(
                          typeSpec->u)) {
             exactValue = builder->create<fir::ConvertOp>(
-                loc, fir::BoxType::get(addrTy), fir::getBase(selector));
+                loc, fir::BoxType::get(addrTy, selectorIsVolatile()),
+                fir::getBase(selector));
             addAssocEntitySymbol(selectorBox->clone(exactValue));
           }
         } else if (std::holds_alternative<Fortran::parser::DerivedTypeSpec>(
@@ -4037,7 +4044,8 @@ private:
             addrTy = fir::PointerType::get(addrTy);
           if (isAllocatable)
             addrTy = fir::HeapType::get(addrTy);
-          mlir::Type classTy = fir::ClassType::get(addrTy);
+          mlir::Type classTy =
+              fir::ClassType::get(addrTy, selectorIsVolatile());
           if (classTy == baseTy) {
             addAssocEntitySymbol(selector);
           } else {

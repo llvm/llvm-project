@@ -14,6 +14,7 @@
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -27,9 +28,9 @@
 
 using namespace llvm;
 
-char llvm::GISelValueTrackingAnalysis::ID = 0;
+char llvm::GISelValueTrackingAnalysisLegacy::ID = 0;
 
-INITIALIZE_PASS(GISelValueTrackingAnalysis, DEBUG_TYPE,
+INITIALIZE_PASS(GISelValueTrackingAnalysisLegacy, DEBUG_TYPE,
                 "Analysis for ComputingKnownBits", false, true)
 
 GISelValueTracking::GISelValueTracking(MachineFunction &MF, unsigned MaxDepth)
@@ -629,6 +630,33 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     Known.Zero.setBitsFrom(LowBits);
     break;
   }
+  case TargetOpcode::G_SHUFFLE_VECTOR: {
+    APInt DemandedLHS, DemandedRHS;
+    // Collect the known bits that are shared by every vector element referenced
+    // by the shuffle.
+    unsigned NumElts = MRI.getType(MI.getOperand(1).getReg()).getNumElements();
+    if (!getShuffleDemandedElts(NumElts, MI.getOperand(3).getShuffleMask(),
+                                DemandedElts, DemandedLHS, DemandedRHS))
+      break;
+
+    // Known bits are the values that are shared by every demanded element.
+    Known.Zero.setAllBits();
+    Known.One.setAllBits();
+    if (!!DemandedLHS) {
+      computeKnownBitsImpl(MI.getOperand(1).getReg(), Known2, DemandedLHS,
+                           Depth + 1);
+      Known = Known.intersectWith(Known2);
+    }
+    // If we don't know any bits, early out.
+    if (Known.isUnknown())
+      break;
+    if (!!DemandedRHS) {
+      computeKnownBitsImpl(MI.getOperand(2).getReg(), Known2, DemandedRHS,
+                           Depth + 1);
+      Known = Known.intersectWith(Known2);
+    }
+    break;
+  }
   }
 
   LLVM_DEBUG(dumpResult(MI, Known, Depth));
@@ -836,6 +864,24 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
       return TyBits - 1; // Every always-zero bit is a sign bit.
     break;
   }
+  case TargetOpcode::G_BUILD_VECTOR: {
+    // Collect the known bits that are shared by every demanded vector element.
+    FirstAnswer = TyBits;
+    APInt SingleDemandedElt(1, 1);
+    for (unsigned i = 0, e = MI.getNumOperands() - 1; i < e; ++i) {
+      if (!DemandedElts[i])
+        continue;
+
+      unsigned Tmp2 = computeNumSignBits(MI.getOperand(i + 1).getReg(),
+                                         SingleDemandedElt, Depth + 1);
+      FirstAnswer = std::min(FirstAnswer, Tmp2);
+
+      // If we don't know any bits, early out.
+      if (FirstAnswer == 1)
+        break;
+    }
+    break;
+  }
   case TargetOpcode::G_INTRINSIC:
   case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
   case TargetOpcode::G_INTRINSIC_CONVERGENT:
@@ -875,20 +921,57 @@ unsigned GISelValueTracking::computeNumSignBits(Register R, unsigned Depth) {
   return computeNumSignBits(R, DemandedElts, Depth);
 }
 
-void GISelValueTrackingAnalysis::getAnalysisUsage(AnalysisUsage &AU) const {
+void GISelValueTrackingAnalysisLegacy::getAnalysisUsage(
+    AnalysisUsage &AU) const {
   AU.setPreservesAll();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-bool GISelValueTrackingAnalysis::runOnMachineFunction(MachineFunction &MF) {
+bool GISelValueTrackingAnalysisLegacy::runOnMachineFunction(
+    MachineFunction &MF) {
   return false;
 }
 
-GISelValueTracking &GISelValueTrackingAnalysis::get(MachineFunction &MF) {
+GISelValueTracking &GISelValueTrackingAnalysisLegacy::get(MachineFunction &MF) {
   if (!Info) {
     unsigned MaxDepth =
         MF.getTarget().getOptLevel() == CodeGenOptLevel::None ? 2 : 6;
     Info = std::make_unique<GISelValueTracking>(MF, MaxDepth);
   }
   return *Info;
+}
+
+AnalysisKey GISelValueTrackingAnalysis::Key;
+
+GISelValueTracking
+GISelValueTrackingAnalysis::run(MachineFunction &MF,
+                                MachineFunctionAnalysisManager &MFAM) {
+  return Result(MF);
+}
+
+PreservedAnalyses
+GISelValueTrackingPrinterPass::run(MachineFunction &MF,
+                                   MachineFunctionAnalysisManager &MFAM) {
+  auto &VTA = MFAM.getResult<GISelValueTrackingAnalysis>(MF);
+  const auto &MRI = MF.getRegInfo();
+  OS << "name: ";
+  MF.getFunction().printAsOperand(OS, /*PrintType=*/false);
+  OS << '\n';
+
+  for (MachineBasicBlock &BB : MF) {
+    for (MachineInstr &MI : BB) {
+      for (MachineOperand &MO : MI.defs()) {
+        if (!MO.isReg() || MO.getReg().isPhysical())
+          continue;
+        Register Reg = MO.getReg();
+        if (!MRI.getType(Reg).isValid())
+          continue;
+        KnownBits Known = VTA.getKnownBits(Reg);
+        unsigned SignedBits = VTA.computeNumSignBits(Reg);
+        OS << "  " << MO << " KnownBits:" << Known << " SignBits:" << SignedBits
+           << '\n';
+      };
+    }
+  }
+  return PreservedAnalyses::all();
 }

@@ -335,6 +335,20 @@ llvm::json::Value toJSON(const SetVariableResponseBody &SVR) {
 
   return llvm::json::Value(std::move(Body));
 }
+bool fromJSON(const llvm::json::Value &Params, ScopesArguments &SCA,
+              llvm::json::Path P) {
+  json::ObjectMapper O(Params, P);
+  return O && O.map("frameId", SCA.frameId);
+}
+
+llvm::json::Value toJSON(const ScopesResponseBody &SCR) {
+  llvm::json::Array scopes;
+  for (const Scope &scope : SCR.scopes) {
+    scopes.emplace_back(toJSON(scope));
+  }
+
+  return llvm::json::Object{{"scopes", std::move(scopes)}};
+}
 
 bool fromJSON(const json::Value &Params, SourceArguments &SA, json::Path P) {
   json::ObjectMapper O(Params, P);
@@ -444,6 +458,24 @@ llvm::json::Value toJSON(const SetDataBreakpointsResponseBody &SDBR) {
   json::Object result;
   result["breakpoints"] = SDBR.breakpoints;
   return result;
+}
+
+bool fromJSON(const llvm::json::Value &Params, DisassembleArguments &DA,
+              llvm::json::Path P) {
+  json::ObjectMapper O(Params, P);
+  return O && O.map("memoryReference", DA.memoryReference) &&
+         O.mapOptional("offset", DA.offset) &&
+         O.mapOptional("instructionOffset", DA.instructionOffset) &&
+         O.map("instructionCount", DA.instructionCount) &&
+         O.mapOptional("resolveSymbols", DA.resolveSymbols);
+}
+
+llvm::json::Value toJSON(const DisassembleResponseBody &DRB) {
+  llvm::json::Array instructions;
+  for (const auto &instruction : DRB.instructions) {
+    instructions.push_back(toJSON(instruction));
+  }
+  return llvm::json::Object{{"instructions", std::move(instructions)}};
 }
 
 } // namespace lldb_dap::protocol

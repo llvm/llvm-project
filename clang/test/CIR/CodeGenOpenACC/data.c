@@ -37,9 +37,9 @@ void acc_data(int cond) {
 
 #pragma acc data default(none) async
   {}
-  // CHECK-NEXT: acc.data {
+  // CHECK-NEXT: acc.data async {
   // CHECK-NEXT: acc.terminator
-  // CHECK-NEXT: } attributes {asyncOnly = [#acc.device_type<none>], defaultAttr = #acc<defaultvalue none>}
+  // CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}
 
 #pragma acc data default(none) async(cond)
   {}
@@ -51,9 +51,9 @@ void acc_data(int cond) {
 
 #pragma acc data default(none) async device_type(nvidia, radeon) async
   {}
-  // CHECK-NEXT: acc.data {
+  // CHECK-NEXT: acc.data async([#acc.device_type<none>, #acc.device_type<nvidia>, #acc.device_type<radeon>]) {
   // CHECK-NEXT: acc.terminator
-  // CHECK-NEXT: } attributes {asyncOnly = [#acc.device_type<none>, #acc.device_type<nvidia>, #acc.device_type<radeon>], defaultAttr = #acc<defaultvalue none>}
+  // CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}
 
 #pragma acc data default(none) async(3) device_type(nvidia, radeon) async(cond)
   {}
@@ -69,17 +69,17 @@ void acc_data(int cond) {
   {}
   // CHECK-NEXT: %[[COND_LOAD:.*]] = cir.load %[[COND]] : !cir.ptr<!s32i>, !s32i
   // CHECK-NEXT: %[[CONV_CAST:.*]] = builtin.unrealized_conversion_cast %[[COND_LOAD]] : !s32i to si32
-  // CHECK-NEXT: acc.data async(%[[CONV_CAST]] : si32 [#acc.device_type<nvidia>], %[[CONV_CAST]] : si32 [#acc.device_type<radeon>]) {
+  // CHECK-NEXT: acc.data async([#acc.device_type<none>], %[[CONV_CAST]] : si32 [#acc.device_type<nvidia>], %[[CONV_CAST]] : si32 [#acc.device_type<radeon>]) {
   // CHECK-NEXT: acc.terminator
-  // CHECK-NEXT: } attributes {asyncOnly = [#acc.device_type<none>], defaultAttr = #acc<defaultvalue none>}
+  // CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}
 
 #pragma acc data default(none) async(3) device_type(nvidia, radeon) async
   {}
   // CHECK-NEXT: %[[THREE_LITERAL:.*]] = cir.const #cir.int<3> : !s32i
   // CHECK-NEXT: %[[THREE_CAST:.*]] = builtin.unrealized_conversion_cast %[[THREE_LITERAL]] : !s32i to si32
-  // CHECK-NEXT: acc.data async(%[[THREE_CAST]] : si32) {
+  // CHECK-NEXT: acc.data async([#acc.device_type<nvidia>, #acc.device_type<radeon>], %[[THREE_CAST]] : si32) {
   // CHECK-NEXT: acc.terminator
-  // CHECK-NEXT: } attributes {asyncOnly = [#acc.device_type<nvidia>, #acc.device_type<radeon>], defaultAttr = #acc<defaultvalue none>}
+  // CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}
 
 #pragma acc data default(none) if(cond)
   {}

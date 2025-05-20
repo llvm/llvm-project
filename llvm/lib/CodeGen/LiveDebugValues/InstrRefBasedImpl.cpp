@@ -386,8 +386,8 @@ public:
       // for it. Use an empty ValueLocPair to search for an entry in ValueToLoc.
       const ValueIDNum &Num = Op.ID;
       ValueLocPair Probe(Num, LocationAndQuality());
-      auto ValuesPreferredLoc = std::lower_bound(
-          ValueToLoc.begin(), ValueToLoc.end(), Probe, ValueToLocSort);
+      auto ValuesPreferredLoc =
+          llvm::lower_bound(ValueToLoc, Probe, ValueToLocSort);
 
       // There must be a legitimate entry found for Num.
       assert(ValuesPreferredLoc != ValueToLoc.end() &&
@@ -486,8 +486,7 @@ public:
 
       // Is there a variable that wants a location for this value? If not, skip.
       ValueLocPair Probe(VNum, LocationAndQuality());
-      auto VIt = std::lower_bound(ValueToLoc.begin(), ValueToLoc.end(), Probe,
-                                  ValueToLocSort);
+      auto VIt = llvm::lower_bound(ValueToLoc, Probe, ValueToLocSort);
       if (VIt == ValueToLoc.end() || VIt->first != VNum)
         continue;
 

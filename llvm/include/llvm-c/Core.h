@@ -110,7 +110,6 @@ typedef enum {
   LLVMFPTrunc        = 37,
   LLVMFPExt          = 38,
   LLVMPtrToInt       = 39,
-  LLVMPtrToAddr      = 69,
   LLVMIntToPtr       = 40,
   LLVMBitCast        = 41,
   LLVMAddrSpaceCast  = 60,
