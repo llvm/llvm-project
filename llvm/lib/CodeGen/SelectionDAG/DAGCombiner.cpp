@@ -149,6 +149,10 @@ static cl::opt<bool> EnableShrinkLoadReplaceStoreWithStore(
     cl::desc("DAG combiner enable load/<replace bytes>/store with "
              "a narrower store"));
 
+static cl::opt<bool> DisableCombines("combiner-disabled", cl::Hidden,
+                                     cl::init(false),
+                                     cl::desc("Disable the DAG combiner"));
+
 namespace {
 
   class DAGCombiner {
@@ -248,7 +252,8 @@ namespace {
           STI(D.getSubtarget().getSelectionDAGInfo()), OptLevel(OL),
           BatchAA(BatchAA) {
       ForCodeSize = DAG.shouldOptForSize();
-      DisableGenericCombines = STI && STI->disableGenericCombines(OptLevel);
+      DisableGenericCombines =
+          DisableCombines || (STI && STI->disableGenericCombines(OptLevel));
 
       MaximumLegalStoreInBits = 0;
       // We use the minimum store size here, since that's all we can guarantee

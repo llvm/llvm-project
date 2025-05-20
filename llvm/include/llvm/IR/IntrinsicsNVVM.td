@@ -2277,4 +2277,33 @@ let IntrProperties = [IntrArgMemOnly, IntrWriteMem, WriteOnly<ArgIndex<0>>,
   def int_nvvm_st_bulk_shared_cta :
       DefaultAttrsIntrinsic<[], [llvm_shared_ptr_ty, llvm_i64_ty, llvm_i64_ty]>;
 }
+
+//
+// clusterlaunchcontorl Intrinsics
+//
+
+// clusterlaunchcontrol.try_cancel
+
+def int_nvvm_clusterlaunchcontrol_try_cancel_async_shared
+    : DefaultAttrsIntrinsic<[], [llvm_shared_ptr_ty, llvm_shared_ptr_ty],
+                [IntrHasSideEffects, IntrArgMemOnly],
+                "llvm.nvvm.clusterlaunchcontrol.try_cancel.async.shared">;
+
+def int_nvvm_clusterlaunchcontrol_try_cancel_async_multicast_shared
+    : DefaultAttrsIntrinsic<[], [llvm_shared_ptr_ty, llvm_shared_ptr_ty],
+                [IntrHasSideEffects, IntrArgMemOnly],
+                "llvm.nvvm.clusterlaunchcontrol.try_cancel.async.multicast.shared">;
+
+// clusterlaunchcontrol.query_cancel.is_canceled
+
+def int_nvvm_clusterlaunchcontrol_query_cancel_is_canceled
+    : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_i128_ty], [IntrNoMem, IntrSpeculatable],
+                            "llvm.nvvm.clusterlaunchcontrol.query_cancel.is_canceled">;
+
+foreach dim = ["x", "y", "z"] in {
+def int_nvvm_clusterlaunchcontrol_query_cancel_get_first_ctaid_ # dim
+    : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i128_ty], [IntrNoMem, IntrSpeculatable],
+                            "llvm.nvvm.clusterlaunchcontrol.query_cancel.get_first_ctaid." # dim>;
+}
+
 } // let TargetPrefix = "nvvm"
