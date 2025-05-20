@@ -5409,14 +5409,15 @@ ExprResult Sema::ConvertVectorExpr(Expr *E, TypeSourceInfo *TInfo,
 }
 
 ExprResult Sema::BuiltinInvoke(CallExpr *TheCall) {
-  auto Loc = TheCall->getBeginLoc();
+  SourceLocation Loc = TheCall->getBeginLoc();
   auto Args = MutableArrayRef(TheCall->getArgs(), TheCall->getNumArgs());
   assert(llvm::none_of(Args,
                        [](Expr *Arg) { return Arg->isTypeDependent(); }));
 
   if (Args.size() == 0) {
     Diag(TheCall->getBeginLoc(), diag::err_typecheck_call_too_few_args_at_least)
-        << 0 << 1 << 0 << 0 << TheCall->getSourceRange();
+        << /*callee_type=*/0 << /*min_arg_count=*/1 << /*actual_arg_count=*/0
+        << /*is_non_object=*/0 << TheCall->getSourceRange();
     return ExprError();
   }
 
@@ -5425,8 +5426,9 @@ ExprResult Sema::BuiltinInvoke(CallExpr *TheCall) {
   if (auto *MPT = FuncT->getAs<MemberPointerType>()) {
     if (Args.size() < 2) {
       Diag(TheCall->getBeginLoc(),
-            diag::err_typecheck_call_too_few_args_at_least)
-          << 0 << 2 << 1 << 0 << TheCall->getSourceRange();
+           diag::err_typecheck_call_too_few_args_at_least)
+          << /*callee_type=*/0 << /*min_arg_count=*/2 << /*actual_arg_count=*/1
+          << /*is_non_object=*/0 << TheCall->getSourceRange();
       return ExprError();
     }
 

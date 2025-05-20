@@ -131,3 +131,12 @@ void test3() {
   __builtin_invoke(diagnose_discard); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   __builtin_invoke(no_diagnose_discard);
 }
+
+template <class T>
+auto test(T v) {
+  return __builtin_invoke(v);
+}
+
+auto call2() {
+  test(call);
+}
