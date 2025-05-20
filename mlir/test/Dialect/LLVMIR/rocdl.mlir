@@ -852,6 +852,9 @@ llvm.func @rocdl_4bit_packed_floats(%old: i32, %source0: f32, %source1: f32, %so
   // CHECK: rocdl.cvt.scalef32.sr.pk.fp4.f32
   // CHECK: rocdl.cvt.scalef32.sr.pk.fp4.f16 
   // CHECK: rocdl.cvt.scalef32.sr.pk.fp4.bf16
+  // CHECK: rocdl.cvt.scalef32.pk.f32.fp4
+  // CHECK: rocdl.cvt.scalef32.pk.f16.fp4
+  // CHECK: rocdl.cvt.scalef32.pk.bf16.fp4
   %c0 = llvm.mlir.constant(0 : i32) : i32
   %scale = llvm.mlir.constant(1.0 : f32) : f32
   %pk1 = rocdl.cvt.scalef32.pk.fp4.f32 %source0, %source1, %scale -> %old[%c0] : i32
@@ -860,6 +863,9 @@ llvm.func @rocdl_4bit_packed_floats(%old: i32, %source0: f32, %source1: f32, %so
   %sr1 = rocdl.cvt.scalef32.sr.pk.fp4.f32 %source, %stoch, %scale -> %pk3[%c0]  : i32
   %sr2 = rocdl.cvt.scalef32.sr.pk.fp4.f16 %source_half, %stoch, %scale -> %sr1[%c0] : i32
   %sr3 = rocdl.cvt.scalef32.sr.pk.fp4.bf16 %source_bfloat, %stoch, %scale -> %sr2[%c0] : i32
+  %pk4 = rocdl.cvt.scalef32.pk.f32.fp4 %old[%c0], %scale : vector<2xf32>
+  %pk5 = rocdl.cvt.scalef32.pk.f16.fp4 %old[%c0], %scale : vector<2xf16>
+  %pk6 = rocdl.cvt.scalef32.pk.bf16.fp4 %old[%c0], %scale : vector<2xbf16>
   llvm.return %sr3 : i32
 }
 
