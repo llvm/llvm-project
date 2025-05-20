@@ -1734,10 +1734,6 @@ inline bool isExtVecInRegOpcode(unsigned Opcode) {
          Opcode == ISD::SIGN_EXTEND_VECTOR_INREG;
 }
 
-inline bool isPtrAdd(unsigned Opcode) {
-  return (Opcode == ISD::ADD) || (Opcode == ISD::PTRADD);
-}
-
 namespace GlobalISel {
 /// Return the operation corresponding to !(X op Y), where 'op' is a valid
 /// SetCC operation. The U bit of the condition code has different meanings
