@@ -5435,7 +5435,6 @@ ExprResult Sema::BuiltinInvoke(CallExpr *TheCall) {
     auto *MemPtrClass = MPT->getQualifier()->getAsType();
     auto ObjectT = Args[1]->getType();
 
-
     if (MPT->isMemberDataPointer() && checkArgCount(TheCall, 2))
       return ExprError();
 
