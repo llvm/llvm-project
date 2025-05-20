@@ -18,6 +18,7 @@
 #include "MissingDefaultCheck.h"
 #include "PrecisionLossCheck.h"
 #include "SubprogramTrampolineCheck.h"
+#include "UndeclaredProcCheck.h"
 
 namespace Fortran::tidy {
 namespace bugprone {
@@ -42,6 +43,8 @@ public:
     CheckFactories.registerCheck<PrecisionLossCheck>("bugprone-precision-loss");
     CheckFactories.registerCheck<SubprogramTrampolineCheck>(
         "bugprone-subprogram-trampoline");
+    CheckFactories.registerCheck<UndeclaredProcCheck>(
+        "bugprone-undeclared-procedure");
   }
 };
 
