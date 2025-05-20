@@ -2164,12 +2164,18 @@ def LLVM_AtomicRMWOp : LLVM_MemAccessOpBase<"atomicrmw", [
               LLVM_AtomicRMWType:$val, AtomicOrdering:$ordering,
               OptionalAttr<StrAttr>:$syncscope,
               OptionalAttr<I64Attr>:$alignment,
-              UnitAttr:$volatile_);
+              UnitAttr:$volatile_,
+              UnitAttr:$amdgpu_no_fine_grained_memory,
+              UnitAttr:$amdgpu_ignore_denormal_mode,
+              UnitAttr:$amdgpu_no_remote_memory);
   // Append the aliasing related attributes defined in LLVM_MemAccessOpBase.
   let arguments = !con(args, aliasAttrs);
   let results = (outs LLVM_AtomicRMWType:$res);
   let assemblyFormat = [{
-    (`volatile` $volatile_^)? $bin_op $ptr `,` $val
+    (`volatile` $volatile_^)?
+    (`amdgpu_ignore_denormal_mode` $amdgpu_ignore_denormal_mode^)?
+    (`amdgpu_no_fine_grained_memory` $amdgpu_no_fine_grained_memory^)?
+    (`amdgpu_no_remote_memory` $amdgpu_no_remote_memory^)? $bin_op $ptr `,` $val
     (`syncscope` `(` $syncscope^ `)`)? $ordering attr-dict `:`
     qualified(type($ptr)) `,` type($val)
   }];
@@ -2179,6 +2185,19 @@ def LLVM_AtomicRMWOp : LLVM_MemAccessOpBase<"atomicrmw", [
         convertAtomicBinOpToLLVM($bin_op), $ptr, $val, llvm::MaybeAlign(),
         convertAtomicOrderingToLLVM($ordering));
     $res = inst;
+    auto &llvmContext = inst->getContext();
+    if($amdgpu_ignore_denormal_mode) {
+      llvm::MDNode *metadata = llvm::MDNode::get(llvmContext, std::nullopt);
+      inst->setMetadata((llvmContext).getMDKindID("amdgpu.ignore.denormal.mode"), metadata);
+    }
+    if($amdgpu_no_fine_grained_memory) {
+      llvm::MDNode *metadata = llvm::MDNode::get(llvmContext, std::nullopt);
+      inst->setMetadata(llvmContext.getMDKindID("amdgpu.no.fine.grained.memory"), metadata);
+    }
+    if($amdgpu_no_remote_memory) {
+      llvm::MDNode *metadata = llvm::MDNode::get(llvmContext, std::nullopt);
+      inst->setMetadata((llvmContext).getMDKindID("amdgpu.no.remote.memory"), metadata);
+    }
   }] # setVolatileCode
      # setSyncScopeCode
      # setAlignmentCode
@@ -2192,12 +2211,16 @@ def LLVM_AtomicRMWOp : LLVM_MemAccessOpBase<"atomicrmw", [
         convertAtomicOrderingFromLLVM(atomicInst->getOrdering()),
         getLLVMSyncScope(atomicInst), alignment, atomicInst->isVolatile());
   }];
-  list<int> llvmArgIndices = [-1, 0, 1, -1, -1, -1, -1, -1, -1, -1, -1];
+  list<int> llvmArgIndices = [-1, 0, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+                              -1];
   let builders = [
-    OpBuilder<(ins "LLVM::AtomicBinOp":$binOp, "Value":$ptr, "Value":$val,
+      OpBuilder<(ins "LLVM::AtomicBinOp":$binOp, "Value":$ptr,"Value":$val,
       "LLVM::AtomicOrdering":$ordering,
       CArg<"StringRef", "StringRef()">:$syncscope,
-      CArg<"unsigned", "0">:$alignment, CArg<"bool", "false">:$isVolatile
+      CArg<"unsigned", "0">:$alignment, CArg<"bool", "false">:$isVolatile,
+      CArg<"bool", "false">:$isAmdgpuIgnoreDenormalMode,
+      CArg<"bool", "false">:$isAmdgpuNoFineGrainedMemory,
+      CArg<"bool", "false">:$isAmdgpuNoRemoteMemory
     )>
   ];
   let hasVerifier = 1;

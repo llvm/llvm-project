@@ -3274,10 +3274,15 @@ OpFoldResult LLVM::ConstantOp::fold(FoldAdaptor) { return getValue(); }
 void AtomicRMWOp::build(OpBuilder &builder, OperationState &state,
                         AtomicBinOp binOp, Value ptr, Value val,
                         AtomicOrdering ordering, StringRef syncscope,
-                        unsigned alignment, bool isVolatile) {
+                        unsigned alignment, bool isVolatile,
+                        bool isAmdgpuIgnoreDenormalMode,
+                        bool isAmdgpuNoFineGrainedMemory,
+                        bool isAmdgpuNoRemoteMemory) {
   build(builder, state, val.getType(), binOp, ptr, val, ordering,
         !syncscope.empty() ? builder.getStringAttr(syncscope) : nullptr,
         alignment ? builder.getI64IntegerAttr(alignment) : nullptr, isVolatile,
+        isAmdgpuIgnoreDenormalMode, isAmdgpuNoFineGrainedMemory,
+        isAmdgpuNoRemoteMemory,
         /*access_groups=*/nullptr,
         /*alias_scopes=*/nullptr, /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
 }

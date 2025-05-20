@@ -483,6 +483,12 @@ func.func @atomicrmw(%ptr : !llvm.ptr, %f32 : f32, %f16_vec : vector<2xf16>) {
   %1 = llvm.atomicrmw volatile fsub %ptr, %f32 syncscope("singlethread") monotonic {alignment = 16 : i64} : !llvm.ptr, f32
   // CHECK: llvm.atomicrmw fmin %{{.*}}, %{{.*}} monotonic : !llvm.ptr, vector<2xf16>
   %2 = llvm.atomicrmw fmin %ptr, %f16_vec monotonic : !llvm.ptr, vector<2xf16>
+  // CHECK: llvm.atomicrmw amdgpu_ignore_denormal_mode fmin %{{.*}}, %{{.*}} monotonic : !llvm.ptr, vector<2xf16>
+  %3 = llvm.atomicrmw amdgpu_ignore_denormal_mode fmin %ptr, %f16_vec monotonic : !llvm.ptr, vector<2xf16>
+  // CHECK: llvm.atomicrmw amdgpu_no_fine_grained_memory fmin %{{.*}}, %{{.*}} monotonic : !llvm.ptr, vector<2xf16>
+  %4 = llvm.atomicrmw amdgpu_no_fine_grained_memory fmin %ptr, %f16_vec monotonic : !llvm.ptr, vector<2xf16>
+  // CHECK: llvm.atomicrmw amdgpu_no_remote_memory fmin %{{.*}}, %{{.*}} monotonic : !llvm.ptr, vector<2xf16>
+  %5 = llvm.atomicrmw amdgpu_no_remote_memory fmin %ptr, %f16_vec monotonic : !llvm.ptr, vector<2xf16>
   llvm.return
 }
 

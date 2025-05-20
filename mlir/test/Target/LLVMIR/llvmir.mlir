@@ -1568,6 +1568,15 @@ llvm.func @atomicrmw(
   // CHECK-SAME:  syncscope("singlethread")
   // CHECK-SAME:  align 8
   %27 = llvm.atomicrmw volatile udec_wrap %i32_ptr, %i32 syncscope("singlethread") monotonic {alignment = 8 : i64} : !llvm.ptr, i32
+  // CHECK: atomicrmw
+  // CHECK-SAME: !amdgpu.ignore.denormal.mode
+  %28 = llvm.atomicrmw amdgpu_ignore_denormal_mode udec_wrap %i32_ptr, %i32 monotonic {alignment = 8 : i64} : !llvm.ptr, i32
+  // CHECK: atomicrmw
+  // CHECK-SAME: !amdgpu.no.fine.grained.memory
+  %29 = llvm.atomicrmw amdgpu_no_fine_grained_memory udec_wrap %i32_ptr, %i32 monotonic {alignment = 8 : i64} : !llvm.ptr, i32
+  // CHECK: atomicrmw
+  // CHECK-SAME: !amdgpu.no.remote.memory
+  %30 = llvm.atomicrmw amdgpu_no_remote_memory udec_wrap %i32_ptr, %i32 monotonic {alignment = 8 : i64} : !llvm.ptr, i32
   llvm.return
 }
 
