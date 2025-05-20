@@ -312,12 +312,12 @@ clang_tablegen("riscv_andes_vector_builtins") {
   td_file = "riscv_andes_vector.td"
 }
 
-clang_tablegen("riscv_andes_vector_builtins_cg") {
+clang_tablegen("riscv_andes_vector_builtin_cg") {
   args = [ "-gen-riscv-andes-vector-builtin-codegen" ]
   td_file = "riscv_andes_vector.td"
 }
 
-clang_tablegen("riscv_andes_vector_builtins_sema") {
+clang_tablegen("riscv_andes_vector_builtin_sema") {
   args = [ "-gen-riscv-andes-vector-builtin-sema" ]
   td_file = "riscv_andes_vector.td"
 }
