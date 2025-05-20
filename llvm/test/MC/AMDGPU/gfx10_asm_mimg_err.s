@@ -491,28 +491,28 @@ image_atomic_add v5, v1, s[8:15] dmask:0x1 dim:SQ_RSRC_IMG_1D r128
 // NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: r128 not allowed with 256-bit RSRC reg
 
 image_atomic_add v5, v1, s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_1D
-// NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: the RSRC reg should be 256-bit, or the r128 flag is required
+// NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: rsrc reg should be 256-bit, or the r128 flag is required
 
 image_load v[0:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D r128
 // NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: r128 not allowed with 256-bit RSRC reg
 
 image_load v[0:3], v0, s[0:3] dmask:0xf dim:SQ_RSRC_IMG_1D
-// NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: the RSRC reg should be 256-bit, or the r128 flag is required
+// NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: rsrc reg should be 256-bit, or the r128 flag is required
 
 image_store v[0:3], v[254:255], s[12:19] dmask:0xf dim:SQ_RSRC_IMG_2D r128
 // NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: r128 not allowed with 256-bit RSRC reg
 
 image_store v[0:3], v[254:255], s[12:15] dmask:0xf dim:SQ_RSRC_IMG_2D
-// NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: the RSRC reg should be 256-bit, or the r128 flag is required
+// NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: rsrc reg should be 256-bit, or the r128 flag is required
 
 image_sample v[5:6], v1, s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_1D r128
 // NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: r128 not allowed with 256-bit RSRC reg
 
 image_sample v[5:6], v1, s[8:11], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_1D
-// NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: the RSRC reg should be 256-bit, or the r128 flag is required
+// NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: rsrc reg should be 256-bit, or the r128 flag is required
 
 image_gather4 v[5:8], v[1:2], s[8:15], s[12:15] dmask:0x1 dim:SQ_RSRC_IMG_1D r128
 // NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: r128 not allowed with 256-bit RSRC reg
 
 image_gather4 v[5:8], v[1:2], s[8:11], s[12:15] dmask:0x1 dim:SQ_RSRC_IMG_1D
-// NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: the RSRC reg should be 256-bit, or the r128 flag is required
+// NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: rsrc reg should be 256-bit, or the r128 flag is required

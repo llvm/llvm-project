@@ -4021,11 +4021,13 @@ bool AMDGPUAsmParser::validateMIMGR128(const MCInst &Inst,
     auto Loc = getImmLoc(AMDGPUOperand::ImmTyR128A16, Operands);
     Error(Loc, "r128 not allowed with 256-bit RSRC reg");
     return false;
-  } else if (SrsrcRegSize == 4 && !IsR128) {
+  }
+
+  if (SrsrcRegSize == 4 && !IsR128) {
     auto Loc = getInstLoc(Operands);
     if (hasMIMG_R128())
       Error(Loc,
-            "the RSRC reg should be 256-bit, or the r128 flag is required");
+            "rsrc reg should be 256-bit, or the r128 flag is required");
     else
       Error(Loc, "operands are not valid for this GPU or mode");
     return false;
