@@ -1104,8 +1104,8 @@ static iterator_range<PointerIntPair<const SCEV *, 1, bool> *> getRTCheckPtrs(
     // assumptions might have been added to PSE, resulting in simplifications.
     const SCEV *S = replaceSymbolicStrideSCEV(PSE, StridesMap, Ptr);
     auto *SAR = dyn_cast<SCEVAddRecExpr>(S);
-
-    if (auto *PtrVal = SAR ? SAR : AR; PtrVal && PtrVal->isAffine())
+    auto *PtrVal = SAR ? SAR : AR;
+    if (PtrVal && PtrVal->isAffine())
       P.setPointer(PtrVal);
     else if (!PSE.getSE()->isLoopInvariant(P.getPointer(), L))
       return {ForkedSCEVs.end(), ForkedSCEVs.end()};
@@ -1123,7 +1123,8 @@ static iterator_range<PointerIntPair<const SCEV *, 1, bool> *> getRTCheckPtrs(
   auto UniqPtrs = make_range(ForkedSCEVs.begin(), unique(ForkedSCEVs, PtrEq));
 
   if (size(UniqPtrs) == 1) {
-    // FIXME: Is this correct?
+    // If there are no forked pointers, there is no branch-on-poison, and hence
+    // drop freeze information.
     UniqPtrs.begin()->setInt(false);
     return UniqPtrs;
   }
