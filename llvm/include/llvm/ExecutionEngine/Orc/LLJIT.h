@@ -42,7 +42,7 @@ class ExecutorProcessControl;
 class LLVM_ABI LLJIT {
   template <typename, typename, typename> friend class LLJITBuilderSetters;
 
-  friend Expected<JITDylibSP> setUpGenericLLVMIRPlatform(LLJIT &J);
+  LLVM_ABI_FRIEND friend Expected<JITDylibSP> setUpGenericLLVMIRPlatform(LLJIT &J);
 
 public:
   /// Initializer support for LLJIT.
@@ -290,7 +290,7 @@ public:
 private:
 
   // Create a single-threaded LLLazyJIT instance.
-  LLLazyJIT(LLLazyJITBuilderState &S, Error &Err);
+  LLVM_ABI LLLazyJIT(LLLazyJITBuilderState &S, Error &Err);
 
   std::unique_ptr<LazyCallThroughManager> LCTMgr;
   std::unique_ptr<IRPartitionLayer> IPLayer;

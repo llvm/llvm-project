@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/Support/Compiler.h"
 #include <atomic>
 #include <mutex>
 
@@ -35,7 +36,7 @@ class SymbolStringPool {
   friend class SymbolStringPoolEntryUnsafe;
 
   // Implemented in DebugUtils.h.
-  friend raw_ostream &operator<<(raw_ostream &OS, const SymbolStringPool &SSP);
+  LLVM_ABI_FRIEND friend raw_ostream &operator<<(raw_ostream &OS, const SymbolStringPool &SSP);
 
 public:
   /// Destroy a SymbolStringPool.
@@ -92,7 +93,7 @@ public:
     return LHS.S < RHS.S;
   }
 
-  friend raw_ostream &operator<<(raw_ostream &OS,
+  LLVM_ABI_FRIEND friend raw_ostream &operator<<(raw_ostream &OS,
                                  const SymbolStringPtrBase &Sym);
 
 #ifndef NDEBUG
@@ -312,6 +313,8 @@ inline size_t
 SymbolStringPool::getRefCount(const SymbolStringPtrBase &S) const {
   return S.getRefCount();
 }
+
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const SymbolStringPtrBase &Sym);
 
 } // end namespace orc
 
