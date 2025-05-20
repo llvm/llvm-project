@@ -18519,7 +18519,8 @@ Value *BoUpSLP::vectorizeTree(
   else
     Builder.SetInsertPoint(&F->getEntryBlock(), F->getEntryBlock().begin());
 
- // Vectorize gather operands of the nodes with the external uses only.
+  // Vectorize gather operands of the nodes with the external uses only.
+  SmallVector<std::pair<TreeEntry *, Instruction *>> GatherEntries;
   for (const std::unique_ptr<TreeEntry> &TE : VectorizableTree) {
     if (TE->isGather() && !TE->VectorizedValue && TE->UserTreeIndex.UserTE &&
         TE->UserTreeIndex.UserTE->hasState() &&
@@ -18530,10 +18531,13 @@ Value *BoUpSLP::vectorizeTree(
                [](Value *V) { return isUsedOutsideBlock(V); })) {
       Instruction &LastInst =
           getLastInstructionInBundle(TE->UserTreeIndex.UserTE);
-      Builder.SetInsertPoint(&LastInst);
-      Builder.SetCurrentDebugLocation(LastInst.getDebugLoc());
-      (void)vectorizeTree(TE.get());
+      GatherEntries.emplace_back(TE.get(), &LastInst);
     }
+  }
+  for (auto &Entry : GatherEntries) {
+    Builder.SetInsertPoint(Entry.second);
+    Builder.SetCurrentDebugLocation(Entry.second->getDebugLoc());
+    (void)vectorizeTree(Entry.first);
   }
   // Emit gathered loads first to emit better code for the users of those
   // gathered loads.
