@@ -216,11 +216,8 @@ public:
 
   // Get the degree of precision we want from 32-bit floating point division
   // operations.
-  //
-  //  0 - Use ptx div.approx
-  //  1 - Use ptx.div.full (approximate, but less so than div.approx)
-  //  2 - Use IEEE-compliant div instructions, if available.
-  int getDivF32Level() const;
+  NVPTX::DivPrecisionLevel getDivF32Level(const MachineFunction &MF,
+                                          const SDNode &N) const;
 
   // Get whether we should use a precise or approximate 32-bit floating point
   // sqrt instruction.
@@ -237,7 +234,7 @@ public:
   unsigned combineRepeatedFPDivisors() const override { return 2; }
 
   bool allowFMA(MachineFunction &MF, CodeGenOptLevel OptLevel) const;
-  bool allowUnsafeFPMath(MachineFunction &MF) const;
+  bool allowUnsafeFPMath(const MachineFunction &MF) const;
 
   bool isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
                                   EVT) const override {

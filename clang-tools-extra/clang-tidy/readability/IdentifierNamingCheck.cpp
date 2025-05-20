@@ -496,7 +496,7 @@ void IdentifierNamingCheck::HungarianNotation::loadFileConfig(
     StringRef Val = Options.get(Buffer, "");
     if (!Val.empty()) {
       std::string Type = PrimType.str();
-      std::replace(Type.begin(), Type.end(), '-', ' ');
+      llvm::replace(Type, '-', ' ');
       HNOption.PrimitiveType[Type] = Val.str();
     }
   }
@@ -1358,7 +1358,7 @@ IdentifierNamingCheck::getFailureInfo(
   std::string KindName =
       fixupWithCase(Type, StyleNames[SK], ND, Style, HNOption,
                     IdentifierNamingCheck::CT_LowerCase);
-  std::replace(KindName.begin(), KindName.end(), '_', ' ');
+  llvm::replace(KindName, '_', ' ');
 
   std::string Fixup = fixupWithStyle(Type, Name, Style, HNOption, ND);
   if (StringRef(Fixup) == Name) {

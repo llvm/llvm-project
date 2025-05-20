@@ -15,7 +15,7 @@ using namespace clang::CIRGen;
 
 CIRGenTypes::CIRGenTypes(CIRGenModule &genModule)
     : cgm(genModule), astContext(genModule.getASTContext()),
-      builder(cgm.getBuilder()),
+      builder(cgm.getBuilder()), theCXXABI(cgm.getCXXABI()),
       theABIInfo(cgm.getTargetCIRGenInfo().getABIInfo()) {}
 
 CIRGenTypes::~CIRGenTypes() {
@@ -552,4 +552,18 @@ CIRGenTypes::arrangeCIRFunctionInfo(CanQualType returnType,
   functionInfos.InsertNode(fi, insertPos);
 
   return *fi;
+}
+
+const CIRGenFunctionInfo &CIRGenTypes::arrangeGlobalDeclaration(GlobalDecl gd) {
+  assert(!dyn_cast<ObjCMethodDecl>(gd.getDecl()) &&
+         "This is reported as a FIXME in LLVM codegen");
+  const auto *fd = cast<FunctionDecl>(gd.getDecl());
+
+  if (isa<CXXConstructorDecl>(gd.getDecl()) ||
+      isa<CXXDestructorDecl>(gd.getDecl())) {
+    cgm.errorNYI(SourceLocation(),
+                 "arrangeGlobalDeclaration for C++ constructor or destructor");
+  }
+
+  return arrangeFunctionDeclaration(fd);
 }

@@ -43,7 +43,6 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
         self.build_and_launch(
             program,
             enableAutoVariableSummaries=enableAutoVariableSummaries,
-            stopOnEntry=True,
         )
         source = "main.cpp"
         self.set_source_breakpoints(

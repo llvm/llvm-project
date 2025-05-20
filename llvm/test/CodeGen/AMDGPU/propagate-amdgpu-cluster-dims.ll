@@ -69,7 +69,7 @@ define internal void @non_fixed_cluster_dims() {
 ; doesn't use cluster, so it is unknown that whether cluster is used or not.
 define internal void @unknown_cluster_dims() {
 ; CHECK-LABEL: define internal void @unknown_cluster_dims(
-; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ) #[[ATTR4:[0-9]+]] {
 ; CHECK-NEXT:    call void @unknown()
 ; CHECK-NEXT:    ret void
 ;
@@ -82,7 +82,7 @@ define internal void @unknown_cluster_dims() {
 ; whether cluster is used or not.
 define internal void @unknown_cluster_use() {
 ; CHECK-LABEL: define internal void @unknown_cluster_use(
-; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-SAME: ) #[[ATTR4]] {
 ; CHECK-NEXT:    call void @unknown()
 ; CHECK-NEXT:    ret void
 ;
@@ -94,7 +94,7 @@ define internal void @unknown_cluster_use() {
 ; is used or not.
 define void @unknown_call_site() {
 ; CHECK-LABEL: define void @unknown_call_site(
-; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-SAME: ) #[[ATTR4]] {
 ; CHECK-NEXT:    call void @unknown()
 ; CHECK-NEXT:    ret void
 ;
@@ -120,7 +120,7 @@ define amdgpu_kernel void @cluster_kernel_0() #0 {
 
 define amdgpu_kernel void @cluster_kernel_0_1() #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @cluster_kernel_0_1(
-; CHECK-SAME: ) #[[ATTR4:[0-9]+]] {
+; CHECK-SAME: ) #[[ATTR1]] {
 ; CHECK-NEXT:    call void @fixed_cluster_dims_1()
 ; CHECK-NEXT:    ret void
 ;
@@ -140,7 +140,7 @@ define amdgpu_kernel void @cluster_kernel_1() #1 {
 
 define amdgpu_kernel void @no_cluster_kernel() #2 {
 ; CHECK-LABEL: define amdgpu_kernel void @no_cluster_kernel(
-; CHECK-SAME: ) #[[ATTR6:[0-9]+]] {
+; CHECK-SAME: ) #[[ATTR2]] {
 ; CHECK-NEXT:    call void @no_cluster_dims_1()
 ; CHECK-NEXT:    call void @unknown_cluster_dims()
 ; CHECK-NEXT:    ret void
@@ -152,7 +152,7 @@ define amdgpu_kernel void @no_cluster_kernel() #2 {
 
 define amdgpu_kernel void @no_cluster_kernel_1() #2 {
 ; CHECK-LABEL: define amdgpu_kernel void @no_cluster_kernel_1(
-; CHECK-SAME: ) #[[ATTR6]] {
+; CHECK-SAME: ) #[[ATTR2]] {
 ; CHECK-NEXT:    call void @no_cluster_dims_1()
 ; CHECK-NEXT:    ret void
 ;
@@ -162,7 +162,7 @@ define amdgpu_kernel void @no_cluster_kernel_1() #2 {
 
 define amdgpu_kernel void @unknown_cluster_use_kernel() {
 ; CHECK-LABEL: define amdgpu_kernel void @unknown_cluster_use_kernel(
-; CHECK-SAME: ) #[[ATTR7:[0-9]+]] {
+; CHECK-SAME: ) #[[ATTR4]] {
 ; CHECK-NEXT:    call void @unknown_cluster_use()
 ; CHECK-NEXT:    ret void
 ;
@@ -174,12 +174,10 @@ attributes #0 = { "amdgpu-cluster-dims"="2,2,2" }
 attributes #1 = { "amdgpu-cluster-dims"="1,2,1" }
 attributes #2 = { "amdgpu-cluster-dims"="0,0,0" }
 ;.
-; CHECK: attributes #[[ATTR0]] = { "target-cpu"="gfx1250" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR1]] = { "amdgpu-cluster-dims"="2,2,2" "target-cpu"="gfx1250" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR2]] = { "amdgpu-cluster-dims"="0,0,0" "target-cpu"="gfx1250" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR3]] = { "amdgpu-cluster-dims"="1024,1024,1024" "target-cpu"="gfx1250" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR4]] = { "amdgpu-cluster-dims"="2,2,2" "amdgpu-waves-per-eu"="8,16" "target-cpu"="gfx1250" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR0:[0-9]+]] = { "target-cpu"="gfx1250" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR1]] = { "amdgpu-cluster-dims"="2,2,2" "amdgpu-waves-per-eu"="8,16" "target-cpu"="gfx1250" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR2]] = { "amdgpu-cluster-dims"="0,0,0" "amdgpu-waves-per-eu"="8,16" "target-cpu"="gfx1250" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR3]] = { "amdgpu-cluster-dims"="1024,1024,1024" "amdgpu-waves-per-eu"="8,16" "target-cpu"="gfx1250" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR4]] = { "amdgpu-waves-per-eu"="8,16" "target-cpu"="gfx1250" "uniform-work-group-size"="false" }
 ; CHECK: attributes #[[ATTR5]] = { "amdgpu-cluster-dims"="1,2,1" "amdgpu-waves-per-eu"="8,16" "target-cpu"="gfx1250" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR6]] = { "amdgpu-cluster-dims"="0,0,0" "amdgpu-waves-per-eu"="8,16" "target-cpu"="gfx1250" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR7]] = { "amdgpu-waves-per-eu"="8,16" "target-cpu"="gfx1250" "uniform-work-group-size"="false" }
 ;.

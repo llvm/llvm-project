@@ -1245,7 +1245,10 @@ void MCStreamer::emitAbsoluteSymbolDiffAsULEB128(const MCSymbol *Hi,
   emitULEB128Value(Diff);
 }
 
-void MCStreamer::emitAssemblerFlag(MCAssemblerFlag Flag) {}
+void MCStreamer::emitSubsectionsViaSymbols() {
+  llvm_unreachable(
+      "emitSubsectionsViaSymbols only supported on Mach-O targets");
+}
 void MCStreamer::emitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) {}
 void MCStreamer::beginCOFFSymbolDef(const MCSymbol *Symbol) {
   llvm_unreachable("this directive only supported on COFF targets");
