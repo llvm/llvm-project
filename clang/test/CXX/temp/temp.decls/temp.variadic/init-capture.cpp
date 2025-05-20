@@ -28,7 +28,7 @@ template<typename ...T> void f(T ...t) {
   // OK, capture only one 'slice' of 'x'.
   weird((void)[&x = t] {
     return &x;
-  }...         // expected-error {{pack expansion does not contain any unexpanded parameter packs}}
+  }...
   );
 
   // 'x' is not expanded by the outer '...', but 'T' is.
