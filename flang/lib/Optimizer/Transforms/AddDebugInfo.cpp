@@ -507,6 +507,12 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
           mlir::DistinctAttr::create(mlir::UnitAttr::get(context));
       llvm::SmallVector<mlir::LLVM::DITypeAttr> types;
       types.push_back(mlir::LLVM::DINullTypeAttr::get(context));
+      for (auto arg : targetOp.getRegion().getArguments()) {
+        auto tyAttr = typeGen.convertType(fir::unwrapRefType(arg.getType()),
+                                          fileAttr, cuAttr, /*declOp=*/nullptr);
+        types.push_back(tyAttr);
+      }
+      CC = llvm::dwarf::getCallingConvention("DW_CC_normal");
       mlir::LLVM::DISubroutineTypeAttr spTy =
           mlir::LLVM::DISubroutineTypeAttr::get(context, CC, types);
       if (lineTableOnly) {
