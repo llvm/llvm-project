@@ -53,13 +53,14 @@ class TestDataFormatterGenericForwardList(TestBase):
             substrs=["target.max-children-count (unsigned) = 256"],
         )
 
+        self.runCmd("settings set target.max-children-count 256", check=False)
         self.expect(
             "frame variable thousand_elts",
             matching=False,
-            substrs=["[256]", "[333]", "[444]", "[555]", "[666]", "..."],
+            substrs=["[256]", "[333]", "[444]", "[555]", "[666]"],
         )
-        self.runCmd("settings set target.max-children-count 3", check=False)
 
+        self.runCmd("settings set target.max-children-count 3", check=False)
         self.expect(
             "frame variable thousand_elts",
             matching=False,
@@ -73,7 +74,7 @@ class TestDataFormatterGenericForwardList(TestBase):
         self.expect(
             "frame variable thousand_elts",
             matching=True,
-            substrs=["size=256", "[0]", "[1]", "[2]", "..."],
+            substrs=["size=1000", "[0]", "[1]", "[2]", "..."],
         )
 
     def do_test_ptr_and_ref(self, stdlib_type):
@@ -138,7 +139,7 @@ class TestDataFormatterGenericForwardList(TestBase):
             "frame variable ref",
             matching=True,
             substrs=[
-                "size=256",
+                "size=1000",
                 "[0] = 999",
                 "[1] = 998",
                 "[2] = 997",
@@ -149,7 +150,7 @@ class TestDataFormatterGenericForwardList(TestBase):
             "frame variable *ptr",
             matching=True,
             substrs=[
-                "size=256",
+                "size=1000",
                 "[0] = 999",
                 "[1] = 998",
                 "[2] = 997",
