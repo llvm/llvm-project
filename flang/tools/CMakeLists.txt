@@ -18,3 +18,9 @@ add_subdirectory(flang-tidy)
 if(FLANG_INCLUDE_TESTS)
   add_subdirectory(test)
 endif()
+
+option(FLANG_TOOLS_INCLUDE_DOCS "Generate build targets for the Flang Tools docs."
+  ${LLVM_INCLUDE_DOCS})
+if( FLANG_TOOLS_INCLUDE_DOCS )
+  add_subdirectory(docs)
+endif()
