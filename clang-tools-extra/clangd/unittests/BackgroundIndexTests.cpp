@@ -754,6 +754,88 @@ TEST_F(BackgroundIndexTest, UpdateAfterRestart) {
   EXPECT_EQ(CheckRefCount("waldo"), 2u);
 }
 
+// Test that updating a header that's included by multiple source files
+// correctly updates all including source files, even if the source files
+// themselves did not change.
+TEST_F(BackgroundIndexTest, HeaderWithMultipleIncluders) {
+  MockFS FS;
+  llvm::StringMap<std::string> Storage;
+  size_t CacheHits = 0;
+  MemoryShardStorage MSS(Storage, CacheHits);
+  auto CDB = std::make_unique<OverlayCDB>(/*Base=*/nullptr);
+  auto Idx = std::make_unique<BackgroundIndex>(
+      FS, *CDB, [&](llvm::StringRef) { return &MSS; },
+      BackgroundIndex::Options{});
+
+  // Create a header file containing a function declaration, and two source
+  // files each containing a call to the function.
+  FS.Files[testPath("header.h")] = R"cpp(
+    #ifndef TEST_H
+    #define TEST_H
+    void waldo(int);
+    #endif
+  )cpp";
+  FS.Files[testPath("a.cc")] = R"cpp(
+    #include "header.h"
+    void f() {
+      waldo(41);
+    }
+  )cpp";
+  FS.Files[testPath("b.cc")] = R"cpp(
+    #include "header.h"
+    void f() {
+      waldo(42);
+    }
+  )cpp";
+
+  // Index the files in this state.
+  tooling::CompileCommand Cmd1;
+  Cmd1.Filename = "../a.cc";
+  Cmd1.Directory = testPath("build");
+  Cmd1.CommandLine = {"clang++", "../a.cc", "-fsyntax-only"};
+  tooling::CompileCommand Cmd2;
+  Cmd2.Filename = "../b.cc";
+  Cmd2.Directory = testPath("build");
+  Cmd2.CommandLine = {"clang++", "../b.cc", "-fsyntax-only"};
+  CDB->setCompileCommand(testPath("b.cc"), Cmd2);
+  ASSERT_TRUE(Idx->blockUntilIdleForTest());
+
+  // Verify that the function 'waldo' has three references in the index
+  // (the declaration, and the two call sites).
+  auto CheckRefCount = [&](std::string SymbolName) {
+    auto Syms = runFuzzyFind(*Idx, SymbolName);
+    EXPECT_THAT(Syms, UnorderedElementsAre(named(SymbolName)));
+    auto Sym = *Syms.begin();
+    return getRefs(*Idx, Sym.ID).numRefs();
+  };
+  EXPECT_EQ(CheckRefCount("waldo"), 3u);
+
+  // Modify the declaration of 'waldo' in a way that changes its SymbolID
+  // without changing how existing call sites are written. Here, we add
+  // a new parameter with a default argument.
+  FS.Files[testPath("test.h")] = R"cpp(
+    #ifndef TEST_H
+    #define TEST_H
+    void waldo(int, int = 0);
+    #endif
+  )cpp";
+
+  // Simulate clangd shutting down and restarting, and the background index
+  // being rebuilt after restart.
+  Idx = nullptr;
+  CDB = std::make_unique<OverlayCDB>(/*Base=*/nullptr);
+  Idx = std::make_unique<BackgroundIndex>(
+      FS, *CDB, [&](llvm::StringRef) { return &MSS; },
+      BackgroundIndex::Options{});
+  CDB->setCompileCommand(testPath("a.cc"), Cmd1);
+  CDB->setCompileCommand(testPath("b.cc"), Cmd2);
+  ASSERT_TRUE(Idx->blockUntilIdleForTest());
+
+  // The rebuild should have updated things so that 'waldo' now again has
+  // three references in the index.
+  EXPECT_EQ(CheckRefCount("waldo"), 3u);
+}
+
 class BackgroundIndexRebuilderTest : public testing::Test {
 protected:
   BackgroundIndexRebuilderTest()
