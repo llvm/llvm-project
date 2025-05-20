@@ -486,14 +486,17 @@ gpu.module @test_module_3 {
 
 // CHECK-LABEL: func @gpu_all_reduce_region()
 // CHECK: %[[yield:.*]] = arith.xori %{{.*}}, %{{.*}} : i32
-// CHECK: "gpu.yield"(%[[yield]]) : (i32) -> ()
+// CHECK: gpu.yield %[[yield]] : i32
 
 // -----
 
 // Check that yielded values aren't incorrectly removed in linalg regions
 module {
   func.func @linalg_red_add(%arg0: tensor<?xf32>, %arg1: tensor<1xf32>) -> tensor<1xf32> {
-    %0 = linalg.generic {indexing_maps = [#map, #map1], iterator_types = ["reduction"]} ins(%arg0 : tensor<?xf32>) outs(%arg1 : tensor<1xf32>) {
+    %0 = linalg.generic {
+      indexing_maps = [affine_map<(d0) -> (d0)>, affine_map<(d0) -> (0)>],
+      iterator_types = ["reduction"]
+    } ins(%arg0 : tensor<?xf32>) outs(%arg1 : tensor<1xf32>) {
     ^bb0(%in: f32, %out: f32):
       %1 = arith.addf %in, %out : f32
       linalg.yield %1 : f32
