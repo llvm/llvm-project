@@ -1809,8 +1809,6 @@ mlir::LogicalResult CIRToLLVMVecCmpOpLowering::matchAndRewrite(
          mlir::isa<cir::VectorType>(op.getLhs().getType()) &&
          mlir::isa<cir::VectorType>(op.getRhs().getType()) &&
          "Vector compare with non-vector type");
-  // LLVM IR vector comparison returns a vector of i1. This one-bit vector
-  // must be sign-extended to the correct result type.
   mlir::Type elementType = elementTypeIfVector(op.getLhs().getType());
   mlir::Value bitResult;
   if (auto intType = mlir::dyn_cast<cir::IntType>(elementType)) {
@@ -1826,6 +1824,8 @@ mlir::LogicalResult CIRToLLVMVecCmpOpLowering::matchAndRewrite(
     return op.emitError() << "unsupported type for VecCmpOp: " << elementType;
   }
 
+  // LLVM IR vector comparison returns a vector of i1. This one-bit vector
+  // must be sign-extended to the correct result type.
   rewriter.replaceOpWithNewOp<mlir::LLVM::SExtOp>(
       op, typeConverter->convertType(op.getType()), bitResult);
   return mlir::success();
