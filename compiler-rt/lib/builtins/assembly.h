@@ -73,6 +73,13 @@
 
 #if defined(__aarch64__) && defined(__ELF__) &&                                \
     defined(COMPILER_RT_EXECUTE_ONLY_CODE)
+// The assembler always creates an implicit '.text' section with default flags
+// (SHF_ALLOC | SHF_EXECINSTR), which is incompatible with the execute-only
+// '.text' section we want to create here because of the missing
+// SHF_AARCH64_PURECODE section flag. To solve this, we use 'unique,0' to
+// differentiate the two sections. The output will therefore have two separate
+// sections named '.text', where code will be placed into the execute-only
+// '.text' section, and the implicitly-created one will be empty.
 #define TEXT_SECTION                                                           \
   .section .text,"axy",@progbits,unique,0
 #else
