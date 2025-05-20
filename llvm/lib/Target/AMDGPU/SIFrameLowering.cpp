@@ -1718,6 +1718,8 @@ void SIFrameLowering::determineCalleeSaves(MachineFunction &MF,
     // least their inactive lanes. Add them to WWMReservedRegs.
     assert(!NeedExecCopyReservedReg &&
            "Whole wave functions can use the reg mapped for their i1 argument");
+
+    // FIXME: Be more efficient!
     for (MCRegister Reg : AMDGPU::VGPR_32RegClass)
       if (MF.getRegInfo().isPhysRegModified(Reg)) {
         MFI->reserveWWMRegister(Reg);
