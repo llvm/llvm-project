@@ -407,7 +407,7 @@ class StackColoring {
 
   /// Maps slots to their use interval. Outside of this interval, slots
   /// values are either dead or `undef` and they will not be written to.
-  SmallVector<std::unique_ptr<LiveInterval>, 16> Intervals;
+  SmallVector<std::unique_ptr<LiveRange>, 16> Intervals;
 
   /// Maps slots to the points where they can become in-use.
   SmallVector<SmallVector<SlotIndex, 4>, 16> LiveStarts;
@@ -1035,7 +1035,7 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
         // validating the instructions.
         if (!I.isDebugInstr() && TouchesMemory && ProtectFromEscapedAllocas) {
           SlotIndex Index = Indexes->getInstructionIndex(I);
-          const LiveInterval *Interval = &*Intervals[FromSlot];
+          const LiveRange *Interval = &*Intervals[FromSlot];
           assert(Interval->find(Index) != Interval->end() &&
                  "Found instruction usage outside of live range.");
         }
@@ -1155,7 +1155,7 @@ void StackColoring::removeInvalidSlotRanges() {
 
         // Check that the used slot is inside the calculated lifetime range.
         // If it is not, warn about it and invalidate the range.
-        LiveInterval *Interval = &*Intervals[Slot];
+        LiveRange *Interval = &*Intervals[Slot];
         SlotIndex Index = Indexes->getInstructionIndex(I);
         if (Interval->find(Index) == Interval->end()) {
           Interval->clear();
@@ -1246,7 +1246,7 @@ bool StackColoring::run(MachineFunction &Func, bool OnlyRemoveMarkers) {
   }
 
   for (unsigned i=0; i < NumSlots; ++i) {
-    std::unique_ptr<LiveInterval> LI(new LiveInterval(i, 0));
+    std::unique_ptr<LiveRange> LI(new LiveRange());
     LI->getNextValue(Indexes->getZeroIndex(), VNInfoAllocator);
     Intervals.push_back(std::move(LI));
     SortedSlots.push_back(i);
@@ -1316,8 +1316,8 @@ bool StackColoring::run(MachineFunction &Func, bool OnlyRemoveMarkers) {
         if (MFI->getStackID(FirstSlot) != MFI->getStackID(SecondSlot))
           continue;
 
-        LiveInterval *First = &*Intervals[FirstSlot];
-        LiveInterval *Second = &*Intervals[SecondSlot];
+        LiveRange *First = &*Intervals[FirstSlot];
+        LiveRange *Second = &*Intervals[SecondSlot];
         auto &FirstS = LiveStarts[FirstSlot];
         auto &SecondS = LiveStarts[SecondSlot];
         assert(!First->empty() && !Second->empty() && "Found an empty range");
