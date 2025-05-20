@@ -1526,8 +1526,18 @@ static Error Plugin::check(int32_t Code, const char *ErrFmt, ArgsTy... Args) {
   if (Ret != CUDA_SUCCESS)
     REPORT("Unrecognized " GETNAME(TARGET_NAME) " error code %d\n", Code);
 
+  // TODO: Add more entries to this switch
+  ErrorCode OffloadErrCode;
+  switch (ResultCode) {
+  case CUDA_ERROR_NOT_FOUND:
+    OffloadErrCode = ErrorCode::NOT_FOUND;
+    break;
+  default:
+    OffloadErrCode = ErrorCode::UNKNOWN;
+  }
+
   // TODO: Create a map for CUDA error codes to Offload error codes
-  return Plugin::error(ErrorCode::UNKNOWN, ErrFmt, Args..., Desc);
+  return Plugin::error(OffloadErrCode, ErrFmt, Args..., Desc);
 }
 
 } // namespace plugin
