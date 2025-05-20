@@ -2,12 +2,15 @@
 #define LLVM_TOOLS_LLVM_MC_CFI_STATE_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCRegister.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MathExtras.h"
 #include <cassert>
 #include <cstdint>
 #include <optional>
+#include <string>
 namespace llvm {
 
 using DWARFRegType = int64_t;
@@ -28,6 +31,24 @@ struct RegisterCFIState {
     DWARFRegType Register;
   } Info;
 
+  std::string dump() {
+    switch (RetrieveApproach) {
+    case Undefined:
+      return "undefined";
+    case SameValue:
+      return "same value";
+    case AnotherRegister:
+      return formatv("stored in another register, which is reg#{0}",
+                     Info.Register);
+    case OffsetFromCFAAddr:
+      return formatv("offset {0} from CFA", Info.OffsetFromCFA);
+    case OffsetFromCFAVal:
+      return formatv("CFA value + {0}", Info.OffsetFromCFA);
+    case Other:
+      return "other";
+    }
+  }
+
   bool operator==(const RegisterCFIState &OtherState) const {
     if (RetrieveApproach != OtherState.RetrieveApproach)
       return false;
@@ -43,6 +64,10 @@ struct RegisterCFIState {
     case OffsetFromCFAVal:
       return Info.OffsetFromCFA == OtherState.Info.OffsetFromCFA;
     }
+  }
+
+  bool operator!=(const RegisterCFIState &OtherState) const {
+    return !(*this == OtherState);
   }
 
   static RegisterCFIState createUndefined() {
