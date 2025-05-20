@@ -488,7 +488,7 @@ RawInstrProfReader<IntPtrT>::getTemporalProfTraces(
     return TemporalProfTraces;
   }
   // Sort functions by their timestamps to build the trace.
-  llvm::sort(TemporalProfTimestamps);
+  std::sort(TemporalProfTimestamps.begin(), TemporalProfTimestamps.end());
   TemporalProfTraceTy Trace;
   if (Weight)
     Trace.Weight = *Weight;
