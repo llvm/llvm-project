@@ -154,6 +154,7 @@ private:
 };
 
 #if defined(_LIBCPP_BUILDING_LIBRARY)
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_EXPORTED_FROM_ABI __locale_t __newlocale(int __mask, const char* __locale, __locale_t __base);
 inline _LIBCPP_HIDE_FROM_ABI void __freelocale(__locale_t __loc) { ::_free_locale(__loc); }
 inline _LIBCPP_HIDE_FROM_ABI char* __setlocale(int __category, const char* __locale) {
@@ -163,6 +164,7 @@ inline _LIBCPP_HIDE_FROM_ABI char* __setlocale(int __category, const char* __loc
   return __new_locale;
 }
 _LIBCPP_EXPORTED_FROM_ABI __lconv_t* __localeconv(__locale_t& __loc);
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 #endif // _LIBCPP_BUILDING_LIBRARY
 
 //
@@ -178,8 +180,10 @@ inline _LIBCPP_HIDE_FROM_ABI long double __strtold(const char* __nptr, char** __
   return ::_strtold_l(__nptr, __endptr, __loc);
 }
 #else
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_EXPORTED_FROM_ABI float __strtof(const char*, char**, __locale_t);
 _LIBCPP_EXPORTED_FROM_ABI long double __strtold(const char*, char**, __locale_t);
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 #endif
 
 inline _LIBCPP_HIDE_FROM_ABI double __strtod(const char* __nptr, char** __endptr, __locale_t __loc) {
@@ -280,11 +284,13 @@ _LIBCPP_EXPORTED_FROM_ABI size_t
 __mbsrtowcs(wchar_t* __restrict, const char** __restrict, size_t, mbstate_t* __restrict, __locale_t);
 #endif // _LIBCPP_BUILDING_LIBRARY
 
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_ATTRIBUTE_FORMAT(__printf__, 4, 5) int __snprintf(
     char* __ret, size_t __n, __locale_t __loc, const char* __format, ...);
 
 _LIBCPP_EXPORTED_FROM_ABI
 _LIBCPP_ATTRIBUTE_FORMAT(__printf__, 3, 4) int __asprintf(char** __ret, __locale_t __loc, const char* __format, ...);
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 
 _LIBCPP_DIAGNOSTIC_PUSH
 _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wgcc-compat")
