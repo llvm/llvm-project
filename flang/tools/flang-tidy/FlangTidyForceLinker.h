@@ -33,6 +33,11 @@ extern volatile int PerformanceModuleAnchorSource;
 static int LLVM_ATTRIBUTE_UNUSED PerformanceModuleAnchorDestination =
     PerformanceModuleAnchorSource;
 
+// This anchor is used to force the linker to link the ReadabilityModule.
+extern volatile int ReadabilityModuleAnchorSource;
+static int LLVM_ATTRIBUTE_UNUSED ReadabilityModuleAnchorDestination =
+    ReadabilityModuleAnchorSource;
+
 } // namespace Fortran::tidy
 
 #endif // LLVM_FLANG_TOOLS_FLANG_TIDY_FLANGTIDYFORCELINKER_H
