@@ -186,8 +186,8 @@ class basic_ostream<_CharT, _Traits>::sentry {
   basic_ostream<_CharT, _Traits>& __os_;
 
 public:
-  explicit _LIBCPP_HIDE_FROM_ABI_MINGW_OR_AFTER_V1 sentry(basic_ostream<_CharT, _Traits>& __os);
-  _LIBCPP_HIDE_FROM_ABI_MINGW_OR_AFTER_V1 ~sentry();
+  explicit inline _LIBCPP_HIDE_FROM_ABI_MINGW_OR_AFTER_V1 sentry(basic_ostream<_CharT, _Traits>& __os);
+  inline _LIBCPP_HIDE_FROM_ABI_MINGW_OR_AFTER_V1 ~sentry();
   sentry(const sentry&)            = delete;
   sentry& operator=(const sentry&) = delete;
 

@@ -309,7 +309,8 @@ class basic_istream<_CharT, _Traits>::sentry {
   bool __ok_;
 
 public:
-  explicit _LIBCPP_HIDE_FROM_ABI_MINGW_OR_AFTER_V1 sentry(basic_istream<_CharT, _Traits>& __is, bool __noskipws = false);
+  explicit inline _LIBCPP_HIDE_FROM_ABI_MINGW_OR_AFTER_V1
+  sentry(basic_istream<_CharT, _Traits>& __is, bool __noskipws = false);
   //    ~sentry() = default;
 
   _LIBCPP_HIDE_FROM_ABI explicit operator bool() const { return __ok_; }

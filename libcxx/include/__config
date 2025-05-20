@@ -545,7 +545,7 @@ typedef __char32_t char32_t;
 // be declared with _LIBCPP_HIDE_FROM_ABI_AFTER_V1 otherwise they build to DLL will be inaccessible by MinGW-GCC.
 //// ** in-progress: describe peculiar behavior of MinGW-GCC **
 #  if defined(__MINGW32__) || defined(__CYGWIN__)
-#    define _LIBCPP_HIDE_FROM_ABI_MINGW_OR_AFTER_V1 inline _LIBCPP_HIDE_FROM_ABI
+#    define _LIBCPP_HIDE_FROM_ABI_MINGW_OR_AFTER_V1 _LIBCPP_HIDE_FROM_ABI
 #  else
 #    define _LIBCPP_HIDE_FROM_ABI_MINGW_OR_AFTER_V1 _LIBCPP_HIDE_FROM_ABI_AFTER_V1
 #  endif
