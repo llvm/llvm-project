@@ -13,6 +13,7 @@
 #ifndef LLVM_BITCODE_BITCODEANALYZER_H
 #define LLVM_BITCODE_BITCODEANALYZER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Bitstream/BitstreamReader.h"
@@ -83,13 +84,13 @@ class BitcodeAnalyzer {
   std::map<unsigned, PerBlockIDStats> BlockIDStats;
 
 public:
-  BitcodeAnalyzer(StringRef Buffer,
+  LLVM_ABI BitcodeAnalyzer(StringRef Buffer,
                   std::optional<StringRef> BlockInfoBuffer = std::nullopt);
   /// Analyze the bitcode file.
-  Error analyze(std::optional<BCDumpOptions> O = std::nullopt,
+  LLVM_ABI Error analyze(std::optional<BCDumpOptions> O = std::nullopt,
                 std::optional<StringRef> CheckHash = std::nullopt);
   /// Print stats about the bitcode file.
-  void printStats(BCDumpOptions O,
+  LLVM_ABI void printStats(BCDumpOptions O,
                   std::optional<StringRef> Filename = std::nullopt);
 
 private:

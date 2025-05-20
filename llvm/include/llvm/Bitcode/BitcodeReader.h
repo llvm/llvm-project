@@ -13,6 +13,7 @@
 #ifndef LLVM_BITCODE_BITCODEREADER_H
 #define LLVM_BITCODE_BITCODEREADER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Bitstream/BitCodeEnums.h"
@@ -60,7 +61,7 @@ typedef std::function<void(Metadata **, unsigned, GetTypeByIDTy,
 // ErrorOr/std::error_code for compatibility with legacy clients. FIXME:
 // Remove these functions once no longer needed by the C and libLTO APIs.
 
-std::error_code errorToErrorCodeAndEmitErrors(LLVMContext &Ctx, Error Err);
+LLVM_ABI std::error_code errorToErrorCodeAndEmitErrors(LLVMContext &Ctx, Error Err);
 
 template <typename T>
 ErrorOr<T> expectedToErrorOrAndEmitErrors(LLVMContext &Ctx, Expected<T> Val) {
@@ -139,24 +140,24 @@ struct ParserCallbacks {
     /// bodies. If ShouldLazyLoadMetadata is true, lazily load metadata as well.
     /// If IsImporting is true, this module is being parsed for ThinLTO
     /// importing into another module.
-    Expected<std::unique_ptr<Module>>
+    LLVM_ABI Expected<std::unique_ptr<Module>>
     getLazyModule(LLVMContext &Context, bool ShouldLazyLoadMetadata,
                   bool IsImporting, ParserCallbacks Callbacks = {});
 
     /// Read the entire bitcode module and return it.
-    Expected<std::unique_ptr<Module>>
+    LLVM_ABI Expected<std::unique_ptr<Module>>
     parseModule(LLVMContext &Context, ParserCallbacks Callbacks = {});
 
     /// Returns information about the module to be used for LTO: whether to
     /// compile with ThinLTO, and whether it has a summary.
-    Expected<BitcodeLTOInfo> getLTOInfo();
+    LLVM_ABI Expected<BitcodeLTOInfo> getLTOInfo();
 
     /// Parse the specified bitcode buffer, returning the module summary index.
-    Expected<std::unique_ptr<ModuleSummaryIndex>> getSummary();
+    LLVM_ABI Expected<std::unique_ptr<ModuleSummaryIndex>> getSummary();
 
     /// Parse the specified bitcode buffer and merge its module summary index
     /// into CombinedIndex.
-    Error
+    LLVM_ABI Error
     readSummary(ModuleSummaryIndex &CombinedIndex, StringRef ModulePath,
                 std::function<bool(GlobalValue::GUID)> IsPrevailing = nullptr);
   };
@@ -171,17 +172,17 @@ struct ParserCallbacks {
   /// symbol table should prefer to use irsymtab::read instead of this function
   /// because it creates a reader for the irsymtab and handles upgrading bitcode
   /// files without a symbol table or with an old symbol table.
-  Expected<BitcodeFileContents> getBitcodeFileContents(MemoryBufferRef Buffer);
+  LLVM_ABI Expected<BitcodeFileContents> getBitcodeFileContents(MemoryBufferRef Buffer);
 
   /// Returns a list of modules in the specified bitcode buffer.
-  Expected<std::vector<BitcodeModule>>
+  LLVM_ABI Expected<std::vector<BitcodeModule>>
   getBitcodeModuleList(MemoryBufferRef Buffer);
 
   /// Read the header of the specified bitcode buffer and prepare for lazy
   /// deserialization of function bodies. If ShouldLazyLoadMetadata is true,
   /// lazily load metadata as well. If IsImporting is true, this module is
   /// being parsed for ThinLTO importing into another module.
-  Expected<std::unique_ptr<Module>>
+  LLVM_ABI Expected<std::unique_ptr<Module>>
   getLazyBitcodeModule(MemoryBufferRef Buffer, LLVMContext &Context,
                        bool ShouldLazyLoadMetadata = false,
                        bool IsImporting = false,
@@ -191,7 +192,7 @@ struct ParserCallbacks {
   /// the memory buffer if successful. If successful, this moves Buffer. On
   /// error, this *does not* move Buffer. If IsImporting is true, this module is
   /// being parsed for ThinLTO importing into another module.
-  Expected<std::unique_ptr<Module>> getOwningLazyBitcodeModule(
+  LLVM_ABI Expected<std::unique_ptr<Module>> getOwningLazyBitcodeModule(
       std::unique_ptr<MemoryBuffer> &&Buffer, LLVMContext &Context,
       bool ShouldLazyLoadMetadata = false, bool IsImporting = false,
       ParserCallbacks Callbacks = {});
@@ -199,38 +200,38 @@ struct ParserCallbacks {
   /// Read the header of the specified bitcode buffer and extract just the
   /// triple information. If successful, this returns a string. On error, this
   /// returns "".
-  Expected<std::string> getBitcodeTargetTriple(MemoryBufferRef Buffer);
+  LLVM_ABI Expected<std::string> getBitcodeTargetTriple(MemoryBufferRef Buffer);
 
   /// Return true if \p Buffer contains a bitcode file with ObjC code (category
   /// or class) in it.
-  Expected<bool> isBitcodeContainingObjCCategory(MemoryBufferRef Buffer);
+  LLVM_ABI Expected<bool> isBitcodeContainingObjCCategory(MemoryBufferRef Buffer);
 
   /// Read the header of the specified bitcode buffer and extract just the
   /// producer string information. If successful, this returns a string. On
   /// error, this returns "".
-  Expected<std::string> getBitcodeProducerString(MemoryBufferRef Buffer);
+  LLVM_ABI Expected<std::string> getBitcodeProducerString(MemoryBufferRef Buffer);
 
   /// Read the specified bitcode file, returning the module.
-  Expected<std::unique_ptr<Module>>
+  LLVM_ABI Expected<std::unique_ptr<Module>>
   parseBitcodeFile(MemoryBufferRef Buffer, LLVMContext &Context,
                    ParserCallbacks Callbacks = {});
 
   /// Returns LTO information for the specified bitcode file.
-  Expected<BitcodeLTOInfo> getBitcodeLTOInfo(MemoryBufferRef Buffer);
+  LLVM_ABI Expected<BitcodeLTOInfo> getBitcodeLTOInfo(MemoryBufferRef Buffer);
 
   /// Parse the specified bitcode buffer, returning the module summary index.
-  Expected<std::unique_ptr<ModuleSummaryIndex>>
+  LLVM_ABI Expected<std::unique_ptr<ModuleSummaryIndex>>
   getModuleSummaryIndex(MemoryBufferRef Buffer);
 
   /// Parse the specified bitcode buffer and merge the index into CombinedIndex.
-  Error readModuleSummaryIndex(MemoryBufferRef Buffer,
+  LLVM_ABI Error readModuleSummaryIndex(MemoryBufferRef Buffer,
                                ModuleSummaryIndex &CombinedIndex);
 
   /// Parse the module summary index out of an IR file and return the module
   /// summary index object if found, or an empty summary if not. If Path refers
   /// to an empty file and IgnoreEmptyThinLTOIndexFile is true, then
   /// this function will return nullptr.
-  Expected<std::unique_ptr<ModuleSummaryIndex>>
+  LLVM_ABI Expected<std::unique_ptr<ModuleSummaryIndex>>
   getModuleSummaryIndexForFile(StringRef Path,
                                bool IgnoreEmptyThinLTOIndexFile = false);
 
@@ -303,9 +304,9 @@ struct ParserCallbacks {
     return false;
   }
 
-  APInt readWideAPInt(ArrayRef<uint64_t> Vals, unsigned TypeBits);
+  LLVM_ABI APInt readWideAPInt(ArrayRef<uint64_t> Vals, unsigned TypeBits);
 
-  const std::error_category &BitcodeErrorCategory();
+  LLVM_ABI const std::error_category &BitcodeErrorCategory();
   enum class BitcodeError { CorruptedBitcode = 1 };
   inline std::error_code make_error_code(BitcodeError E) {
     return std::error_code(static_cast<int>(E), BitcodeErrorCategory());
