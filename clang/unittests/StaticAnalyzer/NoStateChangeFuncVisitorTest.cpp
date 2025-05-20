@@ -138,9 +138,9 @@ void addNonThoroughStatefulChecker(AnalysisASTConsumer &AnalysisConsumer,
                                    AnalyzerOptions &AnOpts) {
   AnOpts.CheckersAndPackages = {{"test.StatefulChecker", true}};
   AnalysisConsumer.AddCheckerRegistrationFn([](CheckerRegistry &Registry) {
-    Registry
-        .addChecker<StatefulChecker<NonThoroughErrorNotPreventedFuncVisitor>>(
-            "test.StatefulChecker", "Description", "");
+    Registry.addMockChecker<
+        StatefulChecker<NonThoroughErrorNotPreventedFuncVisitor>>(
+        "test.StatefulChecker");
   });
 }
 
@@ -232,8 +232,9 @@ void addThoroughStatefulChecker(AnalysisASTConsumer &AnalysisConsumer,
                                 AnalyzerOptions &AnOpts) {
   AnOpts.CheckersAndPackages = {{"test.StatefulChecker", true}};
   AnalysisConsumer.AddCheckerRegistrationFn([](CheckerRegistry &Registry) {
-    Registry.addChecker<StatefulChecker<ThoroughErrorNotPreventedFuncVisitor>>(
-        "test.StatefulChecker", "Description", "");
+    Registry
+        .addMockChecker<StatefulChecker<ThoroughErrorNotPreventedFuncVisitor>>(
+            "test.StatefulChecker");
   });
 }
 

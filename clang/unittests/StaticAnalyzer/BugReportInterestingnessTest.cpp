@@ -119,8 +119,8 @@ public:
         std::make_unique<VerifyPathDiagnosticConsumer>(
             std::move(ExpectedDiags), Compiler.getSourceManager()));
     AnalysisConsumer->AddCheckerRegistrationFn([](CheckerRegistry &Registry) {
-      Registry.addChecker<InterestingnessTestChecker>("test.Interestingness",
-                                                      "Description", "");
+      Registry.addMockChecker<InterestingnessTestChecker>(
+          "test.Interestingness");
     });
     Compiler.getAnalyzerOpts().CheckersAndPackages = {
         {"test.Interestingness", true}};
