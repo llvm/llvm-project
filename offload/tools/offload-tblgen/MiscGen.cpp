@@ -72,3 +72,24 @@ void EmitOffloadImplFuncDecls(const RecordKeeper &Records, raw_ostream &OS) {
     OS << ");\n\n";
   }
 }
+
+// Emit macro calls for each error enum
+void EmitOffloadErrcodes(const RecordKeeper &Records, raw_ostream &OS) {
+  OS << GenericHeader;
+  OS << R"(
+#ifndef OFFLOAD_ERRC
+#error Please define the macro OFFLOAD_ERRCODE(Name, Desc, Value)
+#endif
+
+// Error codes are shared between PluginInterface and liboffload.
+// To add new error codes, add them to offload/liboffload/API/Common.td and run the GenerateOffload target.
+
+)";
+
+  auto ErrorCodeEnum = EnumRec{Records.getDef("ErrorCode")};
+  uint32_t EtorVal = 0;
+  for (const auto &EnumVal : ErrorCodeEnum.getValues()) {
+    OS << formatv(TAB_1 "OFFLOAD_ERRC({0}, \"{1}\", {2})\n", EnumVal.getName(),
+                  EnumVal.getDesc(), EtorVal++);
+  }
+}
