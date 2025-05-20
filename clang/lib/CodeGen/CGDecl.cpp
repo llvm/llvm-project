@@ -1343,11 +1343,6 @@ llvm::Value *CodeGenFunction::EmitLifetimeStart(llvm::TypeSize Size,
   if (!ShouldEmitLifetimeMarkers)
     return nullptr;
 
-  // No lifetimes on promise alloca, or middle end passes will assume promise
-  // dead after lifetime.end, leading to mis-optimization
-  if (Addr->getName() == "__promise")
-    return nullptr;
-
   assert(Addr->getType()->getPointerAddressSpace() ==
              CGM.getDataLayout().getAllocaAddrSpace() &&
          "Pointer should be in alloca address space");
@@ -1604,9 +1599,14 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
       bool IsMSCatchParam =
           D.isExceptionVariable() && getTarget().getCXXABI().isMicrosoft();
 
+      // No lifetime intrinsics on coroutine promise alloca, or middle end
+      // passes will assume promise dead after lifetime.end, leading to
+      // mis-optimization
+      bool IsCoroPromise = D.getName() == "__promise";
+
       // Emit a lifetime intrinsic if meaningful. There's no point in doing this
       // if we don't have a valid insertion point (?).
-      if (HaveInsertPoint() && !IsMSCatchParam) {
+      if (HaveInsertPoint() && !IsMSCatchParam && !IsCoroPromise) {
         // If there's a jump into the lifetime of this variable, its lifetime
         // gets broken up into several regions in IR, which requires more work
         // to handle correctly. For now, just omit the intrinsics; this is a
