@@ -1114,11 +1114,8 @@ define half @fmul_f16(half %a, half %b, half %c) {
 ; CHECK-SD-NOFP16:       // %bb.0: // %entry
 ; CHECK-SD-NOFP16-NEXT:    fcvt s1, h1
 ; CHECK-SD-NOFP16-NEXT:    fcvt s0, h0
-; CHECK-SD-NOFP16-NEXT:    fmul s0, s0, s1
-; CHECK-SD-NOFP16-NEXT:    fcvt s1, h2
-; CHECK-SD-NOFP16-NEXT:    fcvt h0, s0
-; CHECK-SD-NOFP16-NEXT:    fcvt s0, h0
-; CHECK-SD-NOFP16-NEXT:    fadd s0, s0, s1
+; CHECK-SD-NOFP16-NEXT:    fcvt s2, h2
+; CHECK-SD-NOFP16-NEXT:    fmadd s0, s0, s1, s2
 ; CHECK-SD-NOFP16-NEXT:    fcvt h0, s0
 ; CHECK-SD-NOFP16-NEXT:    ret
 ;

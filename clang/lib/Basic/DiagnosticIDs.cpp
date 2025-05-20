@@ -18,6 +18,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringTable.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Path.h"
 #include <map>
@@ -74,19 +75,21 @@ enum DiagnosticClass {
 struct StaticDiagInfoRec {
   uint16_t DiagID;
   LLVM_PREFERRED_TYPE(diag::Severity)
-  uint8_t DefaultSeverity : 3;
+  uint16_t DefaultSeverity : 3;
   LLVM_PREFERRED_TYPE(DiagnosticClass)
-  uint8_t Class : 3;
+  uint16_t Class : 3;
   LLVM_PREFERRED_TYPE(DiagnosticIDs::SFINAEResponse)
-  uint8_t SFINAE : 2;
-  uint8_t Category : 6;
+  uint16_t SFINAE : 2;
+  LLVM_PREFERRED_TYPE(diag::DiagCategory)
+  uint16_t Category : 6;
   LLVM_PREFERRED_TYPE(bool)
-  uint8_t WarnNoWerror : 1;
+  uint16_t WarnNoWerror : 1;
   LLVM_PREFERRED_TYPE(bool)
-  uint8_t WarnShowInSystemHeader : 1;
+  uint16_t WarnShowInSystemHeader : 1;
   LLVM_PREFERRED_TYPE(bool)
-  uint8_t WarnShowInSystemMacro : 1;
+  uint16_t WarnShowInSystemMacro : 1;
 
+  LLVM_PREFERRED_TYPE(diag::Group)
   uint16_t OptionGroupIndex : 15;
   LLVM_PREFERRED_TYPE(bool)
   uint16_t Deferrable : 1;
@@ -705,7 +708,7 @@ static void forEachSubGroupImpl(const WarningOption *Group, Func func) {
   for (const int16_t *SubGroups = DiagSubGroups + Group->SubGroups;
        *SubGroups != -1; ++SubGroups) {
     func(static_cast<size_t>(*SubGroups));
-    forEachSubGroupImpl(&OptionTable[*SubGroups], std::move(func));
+    forEachSubGroupImpl(&OptionTable[*SubGroups], func);
   }
 }
 

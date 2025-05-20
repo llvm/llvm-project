@@ -47,3 +47,23 @@ def FeatureMINMAX : SubtargetFeature<"minmax", "HasMINMAX", "true",
                                      "Enable Xtensa MINMAX option">;
 def HasMINMAX : Predicate<"Subtarget->hasMINMAX()">,
                 AssemblerPredicate<(all_of FeatureMINMAX)>;
+
+def FeatureMul16 : SubtargetFeature<"mul16", "HasMul16", "true",
+                                    "Enable Xtensa Mul16 option">;
+def HasMul16 : Predicate<"Subtarget->hasMul16()">,
+               AssemblerPredicate<(all_of FeatureMul16)>;
+
+def FeatureMul32 : SubtargetFeature<"mul32", "HasMul32", "true",
+                                    "Enable Xtensa Mul32 option">;
+def HasMul32 : Predicate<"Subtarget->hasMul32()">,
+               AssemblerPredicate<(all_of FeatureMul32)>;
+
+def FeatureMul32High : SubtargetFeature<"mul32high", "HasMul32High", "true",
+                                        "Enable Xtensa Mul32High option">;
+def HasMul32High : Predicate<"Subtarget->hasMul32High()">,
+                   AssemblerPredicate<(all_of FeatureMul32High)>;
+
+def FeatureDiv32 : SubtargetFeature<"div32", "HasDiv32", "true",
+                                    "Enable Xtensa Div32 option">;
+def HasDiv32 : Predicate<"Subtarget->hasDiv32()">,
+               AssemblerPredicate<(all_of FeatureDiv32)>;

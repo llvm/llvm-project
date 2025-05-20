@@ -58,19 +58,20 @@ public:
   /// \name Scalar TTI Implementations
   /// @{
 
-  TTI::PopcntSupportKind getPopcntSupport(unsigned IntTyWidthInBit) const;
+  TTI::PopcntSupportKind
+  getPopcntSupport(unsigned IntTyWidthInBit) const override;
 
   // The Hexagon target can unroll loops with run-time trip counts.
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                TTI::UnrollingPreferences &UP,
-                               OptimizationRemarkEmitter *ORE);
+                               OptimizationRemarkEmitter *ORE) const override;
 
   void getPeelingPreferences(Loop *L, ScalarEvolution &SE,
-                             TTI::PeelingPreferences &PP);
+                             TTI::PeelingPreferences &PP) const override;
 
   /// Bias LSR towards creating post-increment opportunities.
   TTI::AddressingModeKind
-    getPreferredAddressingMode(const Loop *L, ScalarEvolution *SE) const;
+  getPreferredAddressingMode(const Loop *L, ScalarEvolution *SE) const override;
 
   // L1 cache prefetch.
   unsigned getPrefetchDistance() const override;
@@ -81,95 +82,101 @@ public:
   /// \name Vector TTI Implementations
   /// @{
 
-  unsigned getNumberOfRegisters(bool vector) const;
-  unsigned getMaxInterleaveFactor(ElementCount VF);
-  TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const;
-  unsigned getMinVectorRegisterBitWidth() const;
-  ElementCount getMinimumVF(unsigned ElemWidth, bool IsScalable) const;
+  unsigned getNumberOfRegisters(unsigned ClassID) const override;
+  unsigned getMaxInterleaveFactor(ElementCount VF) const override;
+  TypeSize
+  getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const override;
+  unsigned getMinVectorRegisterBitWidth() const override;
+  ElementCount getMinimumVF(unsigned ElemWidth, bool IsScalable) const override;
 
-  bool
-  shouldMaximizeVectorBandwidth(TargetTransformInfo::RegisterKind K) const {
+  bool shouldMaximizeVectorBandwidth(
+      TargetTransformInfo::RegisterKind K) const override {
     return true;
   }
-  bool supportsEfficientVectorElementLoadStore() { return false; }
-  bool hasBranchDivergence(const Function *F = nullptr) { return false; }
-  bool enableAggressiveInterleaving(bool LoopHasReductions) {
+  bool supportsEfficientVectorElementLoadStore() const override {
     return false;
   }
-  bool prefersVectorizedAddressing() {
+  bool hasBranchDivergence(const Function *F = nullptr) const override {
     return false;
   }
-  bool enableInterleavedAccessVectorization() {
-    return true;
+  bool enableAggressiveInterleaving(bool LoopHasReductions) const override {
+    return false;
   }
+  bool prefersVectorizedAddressing() const override { return false; }
+  bool enableInterleavedAccessVectorization() const override { return true; }
 
   InstructionCost getCallInstrCost(Function *F, Type *RetTy,
                                    ArrayRef<Type *> Tys,
-                                   TTI::TargetCostKind CostKind);
-  InstructionCost getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
-                                        TTI::TargetCostKind CostKind);
-  InstructionCost getAddressComputationCost(Type *Tp, ScalarEvolution *SE,
-                                            const SCEV *S);
+                                   TTI::TargetCostKind CostKind) const override;
   InstructionCost
-  getMemoryOpCost(unsigned Opcode, Type *Src, MaybeAlign Alignment,
-                  unsigned AddressSpace, TTI::TargetCostKind CostKind,
-                  TTI::OperandValueInfo OpInfo = {TTI::OK_AnyValue, TTI::OP_None},
-                  const Instruction *I = nullptr);
-  InstructionCost getMaskedMemoryOpCost(unsigned Opcode, Type *Src,
-                                        Align Alignment, unsigned AddressSpace,
-                                        TTI::TargetCostKind CostKind);
-  InstructionCost getShuffleCost(TTI::ShuffleKind Kind, Type *Tp,
-                                 ArrayRef<int> Mask,
-                                 TTI::TargetCostKind CostKind, int Index,
-                                 Type *SubTp, ArrayRef<const Value *> Args = {},
-                                 const Instruction *CxtI = nullptr);
+  getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
+                        TTI::TargetCostKind CostKind) const override;
+  InstructionCost getAddressComputationCost(Type *Tp, ScalarEvolution *SE,
+                                            const SCEV *S) const override;
+  InstructionCost getMemoryOpCost(
+      unsigned Opcode, Type *Src, Align Alignment, unsigned AddressSpace,
+      TTI::TargetCostKind CostKind,
+      TTI::OperandValueInfo OpInfo = {TTI::OK_AnyValue, TTI::OP_None},
+      const Instruction *I = nullptr) const override;
+  InstructionCost
+  getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
+                        unsigned AddressSpace,
+                        TTI::TargetCostKind CostKind) const override;
+  InstructionCost
+  getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp, ArrayRef<int> Mask,
+                 TTI::TargetCostKind CostKind, int Index, VectorType *SubTp,
+                 ArrayRef<const Value *> Args = {},
+                 const Instruction *CxtI = nullptr) const override;
   InstructionCost getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
                                          const Value *Ptr, bool VariableMask,
                                          Align Alignment,
                                          TTI::TargetCostKind CostKind,
-                                         const Instruction *I);
+                                         const Instruction *I) const override;
   InstructionCost getInterleavedMemoryOpCost(
       unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
       Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
-      bool UseMaskForCond = false, bool UseMaskForGaps = false);
+      bool UseMaskForCond = false, bool UseMaskForGaps = false) const override;
   InstructionCost getCmpSelInstrCost(
       unsigned Opcode, Type *ValTy, Type *CondTy, CmpInst::Predicate VecPred,
       TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
-      const Instruction *I = nullptr);
+      const Instruction *I = nullptr) const override;
   InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
-      ArrayRef<const Value *> Args = {}, const Instruction *CxtI = nullptr);
-  InstructionCost getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
-                                   TTI::CastContextHint CCH,
-                                   TTI::TargetCostKind CostKind,
-                                   const Instruction *I = nullptr);
+      ArrayRef<const Value *> Args = {},
+      const Instruction *CxtI = nullptr) const override;
+  InstructionCost
+  getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
+                   TTI::CastContextHint CCH, TTI::TargetCostKind CostKind,
+                   const Instruction *I = nullptr) const override;
   using BaseT::getVectorInstrCost;
   InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
                                      TTI::TargetCostKind CostKind,
-                                     unsigned Index, Value *Op0, Value *Op1);
+                                     unsigned Index, const Value *Op0,
+                                     const Value *Op1) const override;
 
-  InstructionCost getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind,
-                                 const Instruction *I = nullptr) {
+  InstructionCost
+  getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind,
+                 const Instruction *I = nullptr) const override {
     return 1;
   }
 
   bool isLegalMaskedStore(Type *DataType, Align Alignment,
-                          unsigned AddressSpace);
+                          unsigned AddressSpace) const override;
   bool isLegalMaskedLoad(Type *DataType, Align Alignment,
-                         unsigned AddressSpace);
+                         unsigned AddressSpace) const override;
 
   /// @}
 
-  InstructionCost getInstructionCost(const User *U,
-                                     ArrayRef<const Value *> Operands,
-                                     TTI::TargetCostKind CostKind);
+  InstructionCost
+  getInstructionCost(const User *U, ArrayRef<const Value *> Operands,
+                     TTI::TargetCostKind CostKind) const override;
 
   // Hexagon specific decision to generate a lookup table.
-  bool shouldBuildLookupTables() const;
+  bool shouldBuildLookupTables() const override;
 };
 
 } // end namespace llvm

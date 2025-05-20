@@ -1,4 +1,4 @@
-name: LLVM Premerge Checks
+name: CI Checks
 
 permissions:
   contents: read
@@ -25,7 +25,7 @@ concurrency:
 
 jobs:
   premerge-checks-linux:
-    name: Linux Premerge Checks (Test Only - Please Ignore Results)
+    name: Build and Test Linux (Test Only - Please Ignore Results)
     if: >-
         github.repository_owner == 'llvm' &&
         (github.event_name != 'pull_request' || github.event.action != 'closed')
@@ -65,17 +65,16 @@ jobs:
           export CXX=/opt/llvm/bin/clang++
 
           ./.ci/monolithic-linux.sh "${projects_to_build}" "${project_check_targets}" "${runtimes_to_build}" "${runtimes_check_targets}"
-            - name: "Upload artifact"
       - name: Upload Artifacts
         uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
         with:
-          name: Premerge Artifacts
+          name: Premerge Artifacts (Linux)
           path: artifacts/
           retention-days: 5
           include-hidden-files: 'true'
 
   premerge-checks-windows:
-    name: Windows Premerge Checks (Test Only - Please Ignore Results)
+    name: Build and Test Windows (Test Only - Please Ignore Results)
     if: >-
         github.repository_owner == 'llvm' &&
         (github.event_name != 'pull_request' || github.event.action != 'closed')
@@ -124,7 +123,7 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
         with:
-          name: Premerge Artifacts
+          name: Premerge Artifacts (Windows)
           path: artifacts/
           retention-days: 5
           include-hidden-files: 'true'

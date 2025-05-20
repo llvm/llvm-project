@@ -11,6 +11,7 @@
 #include "mlir/IR/Iterators.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/RegionKindInterface.h"
+#include "llvm/Support/InterleavedRange.h"
 
 using namespace mlir;
 
@@ -34,13 +35,13 @@ void PDLValue::print(raw_ostream &os) const {
     os << cast<Type>();
     break;
   case Kind::TypeRange:
-    llvm::interleaveComma(cast<TypeRange>(), os);
+    os << llvm::interleaved(cast<TypeRange>());
     break;
   case Kind::Value:
     os << cast<Value>();
     break;
   case Kind::ValueRange:
-    llvm::interleaveComma(cast<ValueRange>(), os);
+    os << llvm::interleaved(cast<ValueRange>());
     break;
   }
 }

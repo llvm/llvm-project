@@ -167,8 +167,8 @@ bool ReduceCrashingGlobalInitializers::TestGlobalVariables(
   // Convert list to set for fast lookup...
   std::set<GlobalVariable *> GVSet;
 
-  for (unsigned i = 0, e = GVs.size(); i != e; ++i) {
-    GlobalVariable *CMGV = cast<GlobalVariable>(VMap[GVs[i]]);
+  for (GlobalVariable *GV : GVs) {
+    GlobalVariable *CMGV = cast<GlobalVariable>(VMap[GV]);
     assert(CMGV && "Global Variable not in module?!");
     GVSet.insert(CMGV);
   }
@@ -260,11 +260,11 @@ bool ReduceCrashingFunctions::TestFuncs(std::vector<Function *> &Funcs) {
 
   // Convert list to set for fast lookup...
   std::set<Function *> Functions;
-  for (unsigned i = 0, e = Funcs.size(); i != e; ++i) {
-    Function *CMF = cast<Function>(VMap[Funcs[i]]);
+  for (Function *Func : Funcs) {
+    Function *CMF = cast<Function>(VMap[Func]);
     assert(CMF && "Function not in module?!");
-    assert(CMF->getFunctionType() == Funcs[i]->getFunctionType() && "wrong ty");
-    assert(CMF->getName() == Funcs[i]->getName() && "wrong name");
+    assert(CMF->getFunctionType() == Func->getFunctionType() && "wrong ty");
+    assert(CMF->getName() == Func->getName() && "wrong name");
     Functions.insert(CMF);
   }
 
@@ -468,8 +468,8 @@ bool ReduceCrashingBlocks::TestBlocks(std::vector<const BasicBlock *> &BBs) {
 
   // Convert list to set for fast lookup...
   SmallPtrSet<BasicBlock *, 8> Blocks;
-  for (unsigned i = 0, e = BBs.size(); i != e; ++i)
-    Blocks.insert(cast<BasicBlock>(VMap[BBs[i]]));
+  for (const BasicBlock *BB : BBs)
+    Blocks.insert(cast<BasicBlock>(VMap[BB]));
 
   outs() << "Checking for crash with only these blocks:";
   unsigned NumPrint = Blocks.size();
@@ -765,9 +765,9 @@ bool ReduceCrashingInstructions::TestInsts(
 
   // Convert list to set for fast lookup...
   SmallPtrSet<Instruction *, 32> Instructions;
-  for (unsigned i = 0, e = Insts.size(); i != e; ++i) {
-    assert(!Insts[i]->isTerminator());
-    Instructions.insert(cast<Instruction>(VMap[Insts[i]]));
+  for (const Instruction *Inst : Insts) {
+    assert(!Inst->isTerminator());
+    Instructions.insert(cast<Instruction>(VMap[Inst]));
   }
 
   outs() << "Checking for crash with only " << Instructions.size();
@@ -776,9 +776,9 @@ bool ReduceCrashingInstructions::TestInsts(
   else
     outs() << " instructions: ";
 
-  for (Module::iterator MI = M->begin(), ME = M->end(); MI != ME; ++MI)
-    for (Function::iterator FI = MI->begin(), FE = MI->end(); FI != FE; ++FI)
-      for (Instruction &Inst : llvm::make_early_inc_range(*FI)) {
+  for (Function &F : *M)
+    for (BasicBlock &BB : F)
+      for (Instruction &Inst : llvm::make_early_inc_range(BB)) {
         if (!Instructions.count(&Inst) && !Inst.isTerminator() &&
             !Inst.isEHPad() && !Inst.getType()->isTokenTy() &&
             !Inst.isSwiftError()) {
@@ -1105,9 +1105,8 @@ static Error ReduceInsts(BugDriver &BD, BugTester TestFn) {
                                 E = BD.getProgram().end();
          FI != E; ++FI)
       if (!FI->isDeclaration())
-        for (Function::const_iterator BI = FI->begin(), E = FI->end(); BI != E;
-             ++BI)
-          for (BasicBlock::const_iterator I = BI->begin(), E = --BI->end();
+        for (const BasicBlock &BI : *FI)
+          for (BasicBlock::const_iterator I = BI.begin(), E = --BI.end();
                I != E; ++I, ++CurInstructionNum) {
             if (InstructionsToSkipBeforeDeleting) {
               --InstructionsToSkipBeforeDeleting;

@@ -26,9 +26,10 @@ endif()
 add_clang_subdirectory(c-index-test)
 
 add_clang_subdirectory(clang-refactor)
-# For MinGW we only enable shared library if LLVM_LINK_LLVM_DYLIB=ON.
+# For MinGW/Cygwin we only enable shared library if LLVM_LINK_LLVM_DYLIB=ON.
 # Without that option resulting library is too close to 2^16 DLL exports limit.
-if(UNIX OR (MSVC AND LLVM_BUILD_LLVM_DYLIB_VIS) OR (MINGW AND LLVM_LINK_LLVM_DYLIB))
+if((UNIX AND NOT CYGWIN) OR (MSVC AND LLVM_BUILD_LLVM_DYLIB_VIS) OR
+  ((MINGW OR CYGWIN) AND LLVM_LINK_LLVM_DYLIB))
   add_clang_subdirectory(clang-shlib)
 endif()
 

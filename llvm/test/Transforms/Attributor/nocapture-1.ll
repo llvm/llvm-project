@@ -741,7 +741,7 @@ define i1 @nocaptureInboundsGEPICmpRev(ptr %x) {
 define i1 @nocaptureDereferenceableOrNullICmp(ptr dereferenceable_or_null(4) %x) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@nocaptureDereferenceableOrNullICmp
-; CHECK-SAME: (ptr nofree noundef readnone captures(none) dereferenceable_or_null(4) [[X:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (ptr nofree noundef readnone dereferenceable_or_null(4) [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[X]], null
 ; CHECK-NEXT:    ret i1 [[TMP1]]
 ;

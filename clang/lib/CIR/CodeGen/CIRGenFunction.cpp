@@ -12,6 +12,7 @@
 
 #include "CIRGenFunction.h"
 
+#include "CIRGenCXXABI.h"
 #include "CIRGenCall.h"
 #include "CIRGenValue.h"
 #include "mlir/IR/Location.h"
@@ -481,8 +482,13 @@ clang::QualType CIRGenFunction::buildFunctionArgList(clang::GlobalDecl gd,
   QualType retTy = fd->getReturnType();
 
   const auto *md = dyn_cast<CXXMethodDecl>(fd);
-  if (md && md->isInstance())
-    cgm.errorNYI(fd->getSourceRange(), "buildFunctionArgList: CXXMethodDecl");
+  if (md && md->isInstance()) {
+    if (cgm.getCXXABI().hasThisReturn(gd))
+      cgm.errorNYI(fd->getSourceRange(), "this return");
+    else if (cgm.getCXXABI().hasMostDerivedReturn(gd))
+      cgm.errorNYI(fd->getSourceRange(), "most derived return");
+    cgm.getCXXABI().buildThisParam(*this, args);
+  }
 
   if (isa<CXXConstructorDecl>(fd))
     cgm.errorNYI(fd->getSourceRange(),
@@ -513,8 +519,25 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     return emitArraySubscriptExpr(cast<ArraySubscriptExpr>(e));
   case Expr::UnaryOperatorClass:
     return emitUnaryOpLValue(cast<UnaryOperator>(e));
+  case Expr::MemberExprClass:
+    return emitMemberExpr(cast<MemberExpr>(e));
   case Expr::BinaryOperatorClass:
     return emitBinaryOperatorLValue(cast<BinaryOperator>(e));
+  case Expr::CompoundAssignOperatorClass: {
+    QualType ty = e->getType();
+    if (ty->getAs<AtomicType>()) {
+      cgm.errorNYI(e->getSourceRange(),
+                   "CompoundAssignOperator with AtomicType");
+      return LValue();
+    }
+    if (!ty->isAnyComplexType())
+      return emitCompoundAssignmentLValue(cast<CompoundAssignOperator>(e));
+    cgm.errorNYI(e->getSourceRange(),
+                 "CompoundAssignOperator with ComplexType");
+    return LValue();
+  }
+  case Expr::ParenExprClass:
+    return emitLValue(cast<ParenExpr>(e)->getSubExpr());
   case Expr::DeclRefExprClass:
     return emitDeclRefLValue(cast<DeclRefExpr>(e));
   }

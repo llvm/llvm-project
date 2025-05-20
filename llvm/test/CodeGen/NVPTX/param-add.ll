@@ -15,16 +15,16 @@ define i32 @test(%struct.1float alignstack(32) %data) {
 ; CHECK-LABEL: test(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<18>;
-; CHECK-NEXT:    .reg .f32 %f<2>;
+; CHECK-NEXT:    .reg .b32 %f<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u8 %r1, [test_param_0+1];
+; CHECK-NEXT:    ld.param.b8 %r1, [test_param_0+1];
 ; CHECK-NEXT:    shl.b32 %r2, %r1, 8;
-; CHECK-NEXT:    ld.param.u8 %r3, [test_param_0];
+; CHECK-NEXT:    ld.param.b8 %r3, [test_param_0];
 ; CHECK-NEXT:    or.b32 %r4, %r2, %r3;
-; CHECK-NEXT:    ld.param.u8 %r5, [test_param_0+3];
+; CHECK-NEXT:    ld.param.b8 %r5, [test_param_0+3];
 ; CHECK-NEXT:    shl.b32 %r6, %r5, 8;
-; CHECK-NEXT:    ld.param.u8 %r7, [test_param_0+2];
+; CHECK-NEXT:    ld.param.b8 %r7, [test_param_0+2];
 ; CHECK-NEXT:    or.b32 %r8, %r6, %r7;
 ; CHECK-NEXT:    shl.b32 %r9, %r8, 16;
 ; CHECK-NEXT:    or.b32 %r17, %r9, %r4;

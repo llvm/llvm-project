@@ -9,6 +9,7 @@
 
 #include "llvm/Transforms/Instrumentation/PGOCtxProfLowering.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/CtxProfAnalysis.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/IR/Analysis.h"
@@ -105,6 +106,12 @@ std::pair<uint32_t, uint32_t> getNumCountersAndCallsites(const Function &F) {
   }
   return {NumCounters, NumCallsites};
 }
+
+void emitUnsupportedRootError(const Function &F, StringRef Reason) {
+  F.getContext().emitError("[ctxprof] The function " + F.getName() +
+                           " was indicated as context root but " + Reason +
+                           ", which is not supported.");
+}
 } // namespace
 
 // set up tie-in with compiler-rt.
@@ -164,12 +171,8 @@ CtxInstrumentationLowerer::CtxInstrumentationLowerer(Module &M,
       for (const auto &BB : *F)
         for (const auto &I : BB)
           if (const auto *CB = dyn_cast<CallBase>(&I))
-            if (CB->isMustTailCall()) {
-              M.getContext().emitError("The function " + Fname +
-                                       " was indicated as a context root, "
-                                       "but it features musttail "
-                                       "calls, which is not supported.");
-            }
+            if (CB->isMustTailCall())
+              emitUnsupportedRootError(*F, "it features musttail calls");
     }
   }
 
@@ -230,11 +233,13 @@ bool CtxInstrumentationLowerer::lowerFunction(Function &F) {
 
   // Probably pointless to try to do anything here, unlikely to be
   // performance-affecting.
-  if (F.doesNotReturn()) {
+  if (!llvm::canReturn(F)) {
     for (auto &BB : F)
       for (auto &I : make_early_inc_range(BB))
         if (isa<InstrProfCntrInstBase>(&I))
           I.eraseFromParent();
+    if (ContextRootSet.contains(&F))
+      emitUnsupportedRootError(F, "it does not return");
     return true;
   }
 

@@ -19,6 +19,7 @@
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 #ifndef _LIBCPP_ABI_DO_NOT_EXPORT_BASIC_STRING_COMMON
 
@@ -75,7 +76,7 @@ STRING_LEGACY_API(wchar_t);
 
 #endif // _LIBCPP_ABI_STRING_OPTIMIZED_EXTERNAL_INSTANTIATION
 
-#define _LIBCPP_EXTERN_TEMPLATE_DEFINE(...) template __VA_ARGS__;
+#define _LIBCPP_EXTERN_TEMPLATE_DEFINE(...) template _LIBCPP_EXPORTED_FROM_ABI __VA_ARGS__;
 #ifdef _LIBCPP_ABI_STRING_OPTIMIZED_EXTERNAL_INSTANTIATION
 _LIBCPP_STRING_UNSTABLE_EXTERN_TEMPLATE_LIST(_LIBCPP_EXTERN_TEMPLATE_DEFINE, char)
 #  if _LIBCPP_HAS_WIDE_CHARACTERS
@@ -382,4 +383,5 @@ wstring to_wstring(double val) { return as_string(get_swprintf(), initial_string
 wstring to_wstring(long double val) { return as_string(get_swprintf(), initial_string<wstring>()(), L"%Lf", val); }
 #endif
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD

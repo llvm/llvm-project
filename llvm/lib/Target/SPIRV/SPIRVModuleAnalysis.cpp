@@ -1739,6 +1739,30 @@ void addInstrRequirements(const MachineInstr &MI,
     Reqs.addExtension(SPIRV::Extension::SPV_INTEL_bindless_images);
     Reqs.addCapability(SPIRV::Capability::BindlessImagesINTEL);
     break;
+  case SPIRV::OpSubgroup2DBlockLoadINTEL:
+  case SPIRV::OpSubgroup2DBlockLoadTransposeINTEL:
+  case SPIRV::OpSubgroup2DBlockLoadTransformINTEL:
+  case SPIRV::OpSubgroup2DBlockPrefetchINTEL:
+  case SPIRV::OpSubgroup2DBlockStoreINTEL: {
+    if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_2d_block_io))
+      report_fatal_error("OpSubgroup2DBlock[Load/LoadTranspose/LoadTransform/"
+                         "Prefetch/Store]INTEL instructions require the "
+                         "following SPIR-V extension: SPV_INTEL_2d_block_io",
+                         false);
+    Reqs.addExtension(SPIRV::Extension::SPV_INTEL_2d_block_io);
+    Reqs.addCapability(SPIRV::Capability::Subgroup2DBlockIOINTEL);
+
+    const auto OpCode = MI.getOpcode();
+    if (OpCode == SPIRV::OpSubgroup2DBlockLoadTransposeINTEL) {
+      Reqs.addCapability(SPIRV::Capability::Subgroup2DBlockTransposeINTEL);
+      break;
+    }
+    if (OpCode == SPIRV::OpSubgroup2DBlockLoadTransformINTEL) {
+      Reqs.addCapability(SPIRV::Capability::Subgroup2DBlockTransformINTEL);
+      break;
+    }
+    break;
+  }
   case SPIRV::OpKill: {
     Reqs.addCapability(SPIRV::Capability::Shader);
   } break;
@@ -1797,6 +1821,20 @@ void addInstrRequirements(const MachineInstr &MI,
           false);
     Reqs.addExtension(SPIRV::Extension::SPV_INTEL_long_composites);
     Reqs.addCapability(SPIRV::Capability::LongCompositesINTEL);
+    break;
+  }
+  case SPIRV::OpSubgroupMatrixMultiplyAccumulateINTEL: {
+    if (!ST.canUseExtension(
+            SPIRV::Extension::SPV_INTEL_subgroup_matrix_multiply_accumulate))
+      report_fatal_error(
+          "OpSubgroupMatrixMultiplyAccumulateINTEL instruction requires the "
+          "following SPIR-V "
+          "extension: SPV_INTEL_subgroup_matrix_multiply_accumulate",
+          false);
+    Reqs.addExtension(
+        SPIRV::Extension::SPV_INTEL_subgroup_matrix_multiply_accumulate);
+    Reqs.addCapability(
+        SPIRV::Capability::SubgroupMatrixMultiplyAccumulateINTEL);
     break;
   }
   case SPIRV::OpBitwiseFunctionINTEL: {
@@ -2005,9 +2043,7 @@ static void patchPhis(const Module &M, SPIRVGlobalRegistry *GR,
     if (!MF)
       continue;
     for (auto &MBB : *MF) {
-      for (MachineInstr &MI : MBB) {
-        if (MI.getOpcode() != TargetOpcode::PHI)
-          continue;
+      for (MachineInstr &MI : MBB.phis()) {
         MI.setDesc(TII.get(SPIRV::OpPhi));
         Register ResTypeReg = GR->getSPIRVTypeID(
             GR->getSPIRVTypeForVReg(MI.getOperand(0).getReg(), MF));
@@ -2015,6 +2051,8 @@ static void patchPhis(const Module &M, SPIRVGlobalRegistry *GR,
                   {MachineOperand::CreateReg(ResTypeReg, false)});
       }
     }
+
+    MF->getProperties().set(MachineFunctionProperties::Property::NoPHIs);
   }
 }
 

@@ -44,6 +44,7 @@ integer/abs.cl
 integer/abs_diff.cl
 integer/add_sat.cl
 integer/clz.cl
+integer/ctz.cl
 integer/hadd.cl
 integer/mad24.cl
 integer/mad_hi.cl
@@ -130,7 +131,6 @@ math/native_rsqrt.cl
 math/native_sin.cl
 math/native_sqrt.cl
 math/native_tan.cl
-math/tables.cl
 math/nextafter.cl
 math/pow.cl
 math/pown.cl
@@ -143,11 +143,9 @@ math/round.cl
 math/rsqrt.cl
 math/sin.cl
 math/sincos.cl
-math/sincos_helpers.cl
 math/sinh.cl
 math/sinpi.cl
 math/sqrt.cl
-math/clc_tan.cl
 math/tan.cl
 math/tanh.cl
 math/tanpi.cl

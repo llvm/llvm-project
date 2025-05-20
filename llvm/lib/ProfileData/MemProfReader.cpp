@@ -569,8 +569,7 @@ Error RawMemProfReader::symbolizeAndFilterStackFrames(
       for (size_t I = 0, NumFrames = DI.getNumberOfFrames(); I < NumFrames;
            I++) {
         const auto &DIFrame = DI.getFrame(I);
-        const uint64_t Guid =
-            IndexedMemProfRecord::getGUID(DIFrame.FunctionName);
+        const uint64_t Guid = memprof::getGUID(DIFrame.FunctionName);
         const Frame F(Guid, DIFrame.Line - DIFrame.StartLine, DIFrame.Column,
                       // Only the last entry is not an inlined location.
                       I != NumFrames - 1);
@@ -600,9 +599,12 @@ Error RawMemProfReader::symbolizeAndFilterStackFrames(
   // Drop the entries where the callstack is empty.
   for (const uint64_t Id : EntriesToErase) {
     StackMap.erase(Id);
-    if (CallstackProfileData[Id].AccessHistogramSize > 0)
-      free((void *)CallstackProfileData[Id].AccessHistogram);
-    CallstackProfileData.erase(Id);
+    if (auto It = CallstackProfileData.find(Id);
+        It != CallstackProfileData.end()) {
+      if (It->second.AccessHistogramSize > 0)
+        free((void *)It->second.AccessHistogram);
+      CallstackProfileData.erase(It);
+    }
   }
 
   if (StackMap.empty())

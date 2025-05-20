@@ -90,6 +90,7 @@ static_library("CodeGen") {
     "CodeGenFunction.cpp",
     "CodeGenModule.cpp",
     "CodeGenPGO.cpp",
+    "CodeGenSYCL.cpp",
     "CodeGenTBAA.cpp",
     "CodeGenTypes.cpp",
     "ConstantInitBuilder.cpp",
