@@ -46,6 +46,126 @@ public:
   MCPhysReg getStackPointer() const { return MCPB->getStackPointer(); }
   MCPhysReg getFlagsReg() const { return MCPB->getFlagsReg(); }
 
+  bool doesConstantChange(const MCInst &Inst, MCPhysReg Reg, int64_t &HowMuch) {
+    if (isPush(Inst) && Reg == getStackPointer()) {
+      // TODO should get the stack direction here, now it assumes that it goes
+      // down.
+      HowMuch = -getPushSize(Inst);
+      return true;
+    }
+
+    if (isPop(Inst) && Reg == getStackPointer()) {
+      // TODO should get the stack direction here, now it assumes that it goes
+      // down.
+      HowMuch = getPopSize(Inst);
+      return true;
+    }
+
+    return false;
+  }
+
+  // Tries to guess Reg1's value in a form of Reg2 (before Inst's execution) +
+  // Diff.
+  bool isInConstantDistanceOfEachOther(const MCInst &Inst, MCPhysReg &Reg1,
+                                       MCPhysReg Reg2, int &Diff) {
+    {
+      MCPhysReg From;
+      MCPhysReg To;
+      if (isRegToRegMove(Inst, From, To) && From == Reg2) {
+        Reg1 = To;
+        Diff = 0;
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  bool doStoreFromReg(const MCInst &Inst, MCPhysReg StoringReg,
+                      MCPhysReg FromReg, int64_t &Offset) {
+    if (isPush(Inst) && FromReg == getStackPointer()) {
+      // TODO should get the stack direction here, now it assumes that it goes
+      // down.
+      Offset = -getPushSize(Inst);
+      return true;
+    }
+
+    {
+      bool IsLoad;
+      bool IsStore;
+      bool IsStoreFromReg;
+      MCPhysReg SrcReg;
+      int32_t SrcImm;
+      uint16_t StackPtrReg;
+      int64_t StackOffset;
+      uint8_t Size;
+      bool IsSimple;
+      bool IsIndexed;
+      if (isStackAccess(Inst, IsLoad, IsStore, IsStoreFromReg, SrcReg, SrcImm,
+                        StackPtrReg, StackOffset, Size, IsSimple, IsIndexed)) {
+        // TODO make sure that simple means that it's store and does nothing
+        // more.
+        if (IsStore && IsSimple && StackPtrReg == FromReg && IsStoreFromReg &&
+            SrcReg == StoringReg) {
+          Offset = StackOffset;
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  bool doLoadFromReg(const MCInst &Inst, MCPhysReg FromReg, int64_t &Offset,
+                     MCPhysReg &LoadingReg) {
+    if (isPop(Inst) && FromReg == getStackPointer()) {
+      // TODO should get the stack direction here, now it assumes that it goes
+      // down.
+      Offset = 0;
+      LoadingReg = Inst.getOperand(0).getReg();
+      return true;
+    }
+
+    {
+      bool IsLoad;
+      bool IsStore;
+      bool IsStoreFromReg;
+      MCPhysReg SrcReg;
+      int32_t SrcImm;
+      uint16_t StackPtrReg;
+      int64_t StackOffset;
+      uint8_t Size;
+      bool IsSimple;
+      bool IsIndexed;
+      if (isStackAccess(Inst, IsLoad, IsStore, IsStoreFromReg, SrcReg, SrcImm,
+                        StackPtrReg, StackOffset, Size, IsSimple, IsIndexed)) {
+        // TODO make sure that simple means that it's store and does nothing
+        // more.
+        if (IsLoad && IsSimple && StackPtrReg == FromReg) {
+          Offset = StackOffset;
+          LoadingReg = SrcReg;
+          return true;
+        }
+      }
+    }
+
+    {
+      if (isMoveMem2Reg(Inst)) {
+        auto X86MemAccess = evaluateX86MemoryOperand(Inst).value();
+        if (X86MemAccess.BaseRegNum == FromReg &&
+            (X86MemAccess.ScaleImm == 0 || X86MemAccess.IndexRegNum == 0) &&
+            !X86MemAccess.DispExpr) {
+          LoadingReg = Inst.getOperand(0).getReg();
+          Offset = X86MemAccess.DispImm;
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
+private:
   bool isPush(const MCInst &Inst) const { return MCPB->isPush(Inst); }
   int getPushSize(const MCInst &Inst) const { return MCPB->getPushSize(Inst); }
 
