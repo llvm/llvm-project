@@ -1,0 +1,4 @@
+{
+    "ignore_vcs": [".git", ".jj", ".hg", ".svn"],
+    "ignore_dirs": ["build"]
+}
