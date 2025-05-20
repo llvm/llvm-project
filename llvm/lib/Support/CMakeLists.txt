@@ -259,6 +259,7 @@ add_llvm_component_library(LLVMSupport
   SuffixTree.cpp
   SystemUtils.cpp
   TarWriter.cpp
+  TextEncoding.cpp
   ThreadPool.cpp
   TimeProfiler.cpp
   Timer.cpp
@@ -323,6 +324,14 @@ add_llvm_component_library(LLVMSupport
   LINK_COMPONENTS
   Demangle
   )
+
+# Link ICU library if it is an external library.
+if(ICU_FOUND)
+  target_link_libraries(LLVMSupport
+  PRIVATE
+  ${ICU_LIBRARIES}
+  )
+endif()
 
 set(llvm_system_libs ${system_libs})
 
