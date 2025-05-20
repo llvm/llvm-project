@@ -367,7 +367,7 @@ struct Decomposition {
     return false;
   }
 
-  /// Sub \p Other and return true if the operation overflows, i.e. the new
+  /// Subtract \p Other and return true if the operation overflows, i.e. the new
   /// decomposition is invalid.
   [[nodiscard]] bool sub(const Decomposition &Other) {
     Decomposition Tmp = Other;
