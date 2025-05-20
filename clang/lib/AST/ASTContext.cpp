@@ -3865,6 +3865,21 @@ QualType ASTContext::mergeBoundsSafetyPointerTypes(
   if (OrigDstTy.isNull())
     OrigDstTy = DstTy;
 
+  // An ugly way to keep va_list typedef in DstTy if the merge type doesn't
+  // change.
+  // TODO: We need a general way of not stripping sugars.
+  QualType DesugaredDstTy;
+  if (const auto *TDT = dyn_cast<TypedefType>(DstTy))
+    DesugaredDstTy = TDT->desugar();
+  else if (const auto *ET = dyn_cast<ElaboratedType>(DstTy))
+    DesugaredDstTy = ET->desugar();
+  if (!DesugaredDstTy.isNull()) {
+    QualType MergeTy = mergeBoundsSafetyPointerTypes(DesugaredDstTy, SrcTy,
+                                                     MergeFunctor, OrigDstTy);
+    if (MergeTy == DesugaredDstTy)
+      return DstTy;
+  }
+
   // FIXME: a brittle hack to avoid skipping ValueTerminatedType outside
   // this PtrAutoAttr AttributedType.
   bool RecoverPtrAuto = false;
