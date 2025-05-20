@@ -899,3 +899,36 @@ define <4 x float> @multi_use_binop(<4 x float> %x, <4 x float> %y) {
   %r = fadd <4 x float> %mul0, %mul1
   ret <4 x float> %r
 }
+
+; PR140693
+define <4 x float> @merge_fcmp_cmpeqss_v4f32(<4 x float> %x, <4 x float> %y) {
+; SSE-LABEL: merge_fcmp_cmpeqss_v4f32:
+; SSE:       # %bb.0:
+; SSE-NEXT:    cmpeqss %xmm0, %xmm1
+; SSE-NEXT:    movss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: merge_fcmp_cmpeqss_v4f32:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vcmpeqss %xmm0, %xmm1, %xmm1
+; AVX1-NEXT:    vmovd %xmm1, %eax
+; AVX1-NEXT:    vmovd %eax, %xmm1
+; AVX1-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; AVX1-NEXT:    retq
+;
+; AVX512-LABEL: merge_fcmp_cmpeqss_v4f32:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vcmpeqss %xmm0, %xmm1, %k0
+; AVX512-NEXT:    kmovw %k0, %eax
+; AVX512-NEXT:    negl %eax
+; AVX512-NEXT:    vmovd %eax, %xmm1
+; AVX512-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; AVX512-NEXT:    retq
+  %cmp = fcmp oeq <4 x float> %y, %x
+  %ext = extractelement <4 x i1> %cmp, i64 0
+  %neg = sext i1 %ext to i32
+  %vec = insertelement <4 x i32> poison, i32 %neg, i64 0
+  %vecinit.i = bitcast <4 x i32> %vec to <4 x float>
+  %vecinit3.i = shufflevector <4 x float> %vecinit.i, <4 x float> %x, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
+  ret <4 x float> %vecinit3.i
+}
