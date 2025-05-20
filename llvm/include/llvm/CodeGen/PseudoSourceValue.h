@@ -13,6 +13,8 @@
 #ifndef LLVM_CODEGEN_PSEUDOSOURCEVALUE_H
 #define LLVM_CODEGEN_PSEUDOSOURCEVALUE_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 
 class GlobalValue;
@@ -44,7 +46,7 @@ public:
 private:
   unsigned Kind;
   unsigned AddressSpace;
-  friend raw_ostream &llvm::operator<<(raw_ostream &OS,
+  LLVM_ABI_FRIEND friend raw_ostream &llvm::operator<<(raw_ostream &OS,
                                        const PseudoSourceValue* PSV);
 
   friend class MachineMemOperand; // For printCustom().

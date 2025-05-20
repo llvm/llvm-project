@@ -23,18 +23,18 @@ namespace llvm {
 class MachinePostDominatorTree;
 class MachineDomTreeUpdater;
 
-extern template class GenericDomTreeUpdater<
+extern template class LLVM_TEMPLATE_ABI GenericDomTreeUpdater<
     MachineDomTreeUpdater, MachineDominatorTree, MachinePostDominatorTree>;
 
-extern template void
+extern template LLVM_TEMPLATE_ABI void
 GenericDomTreeUpdater<MachineDomTreeUpdater, MachineDominatorTree,
                       MachinePostDominatorTree>::recalculate(MachineFunction
                                                                  &MF);
 
-extern template void GenericDomTreeUpdater<
+extern template LLVM_TEMPLATE_ABI void GenericDomTreeUpdater<
     MachineDomTreeUpdater, MachineDominatorTree,
     MachinePostDominatorTree>::applyUpdatesImpl</*IsForward=*/true>();
-extern template void GenericDomTreeUpdater<
+extern template LLVM_TEMPLATE_ABI void GenericDomTreeUpdater<
     MachineDomTreeUpdater, MachineDominatorTree,
     MachinePostDominatorTree>::applyUpdatesImpl</*IsForward=*/false>();
 

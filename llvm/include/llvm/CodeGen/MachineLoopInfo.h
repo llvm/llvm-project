@@ -101,7 +101,7 @@ private:
 };
 
 // Implementation in LoopInfoImpl.h
-extern template class LoopInfoBase<MachineBasicBlock, MachineLoop>;
+extern template class LLVM_TEMPLATE_ABI LoopInfoBase<MachineBasicBlock, MachineLoop>;
 
 class MachineLoopInfo : public LoopInfoBase<MachineBasicBlock, MachineLoop> {
   friend class LoopBase<MachineBasicBlock, MachineLoop>;
@@ -136,7 +136,7 @@ public:
 /// Analysis pass that exposes the \c MachineLoopInfo for a machine function.
 class MachineLoopAnalysis : public AnalysisInfoMixin<MachineLoopAnalysis> {
   friend AnalysisInfoMixin<MachineLoopAnalysis>;
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
 public:
   using Result = MachineLoopInfo;

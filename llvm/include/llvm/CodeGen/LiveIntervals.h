@@ -508,7 +508,7 @@ private:
 
 class LiveIntervalsAnalysis : public AnalysisInfoMixin<LiveIntervalsAnalysis> {
   friend AnalysisInfoMixin<LiveIntervalsAnalysis>;
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
 public:
   using Result = LiveIntervals;

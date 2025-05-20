@@ -644,7 +644,7 @@ class raw_ostream;
 
   class SlotIndexesAnalysis : public AnalysisInfoMixin<SlotIndexesAnalysis> {
     friend AnalysisInfoMixin<SlotIndexesAnalysis>;
-    static AnalysisKey Key;
+    LLVM_ABI static AnalysisKey Key;
 
   public:
     using Result = SlotIndexes;

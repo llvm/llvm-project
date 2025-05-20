@@ -167,7 +167,7 @@ public:
 class GISelValueTrackingAnalysis
     : public AnalysisInfoMixin<GISelValueTrackingAnalysis> {
   friend AnalysisInfoMixin<GISelValueTrackingAnalysis>;
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
 public:
   using Result = GISelValueTracking;

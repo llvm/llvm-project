@@ -759,7 +759,7 @@ public:
   /// isIdenticalTo uses for comparison. It is thus suited for use in hash
   /// tables which use that function for equality comparisons only. This must
   /// stay exactly in sync with isIdenticalTo above.
-  friend hash_code hash_value(const MachineOperand &MO);
+  LLVM_ABI_FRIEND friend hash_code hash_value(const MachineOperand &MO);
 
   /// ChangeToImmediate - Replace this operand with a new immediate operand of
   /// the specified value.  If an operand is known to be an immediate already,

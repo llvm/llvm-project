@@ -193,7 +193,7 @@ public:
 /// infrastructure must own the MachineModuleInfo.
 class MachineModuleAnalysis : public AnalysisInfoMixin<MachineModuleAnalysis> {
   friend AnalysisInfoMixin<MachineModuleAnalysis>;
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
   MachineModuleInfo &MMI;
 

@@ -27,7 +27,7 @@ class MachineFunctionAnalysis
     : public AnalysisInfoMixin<MachineFunctionAnalysis> {
   friend AnalysisInfoMixin<MachineFunctionAnalysis>;
 
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
   const TargetMachine *TM;
 

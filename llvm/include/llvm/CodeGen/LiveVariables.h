@@ -304,7 +304,7 @@ public:
 
 class LiveVariablesAnalysis : public AnalysisInfoMixin<LiveVariablesAnalysis> {
   friend AnalysisInfoMixin<LiveVariablesAnalysis>;
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
 public:
   using Result = LiveVariables;

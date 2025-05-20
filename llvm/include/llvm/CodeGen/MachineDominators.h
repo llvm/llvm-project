@@ -33,8 +33,8 @@ class MachineFunction;
 class Module;
 class raw_ostream;
 
-extern template class DomTreeNodeBase<MachineBasicBlock>;
-extern template class DominatorTreeBase<MachineBasicBlock, false>; // DomTree
+extern template class LLVM_TEMPLATE_ABI DomTreeNodeBase<MachineBasicBlock>;
+extern template class LLVM_TEMPLATE_ABI DominatorTreeBase<MachineBasicBlock, false>; // DomTree
 
 using MachineDomTreeNode = DomTreeNodeBase<MachineBasicBlock>;
 
@@ -43,23 +43,23 @@ using MBBDomTree = DomTreeBase<MachineBasicBlock>;
 using MBBUpdates = ArrayRef<llvm::cfg::Update<MachineBasicBlock *>>;
 using MBBDomTreeGraphDiff = GraphDiff<MachineBasicBlock *, false>;
 
-extern template void Calculate<MBBDomTree>(MBBDomTree &DT);
-extern template void CalculateWithUpdates<MBBDomTree>(MBBDomTree &DT,
+extern template LLVM_TEMPLATE_ABI void Calculate<MBBDomTree>(MBBDomTree &DT);
+extern template LLVM_TEMPLATE_ABI void CalculateWithUpdates<MBBDomTree>(MBBDomTree &DT,
                                                       MBBUpdates U);
 
-extern template void InsertEdge<MBBDomTree>(MBBDomTree &DT,
+extern template LLVM_TEMPLATE_ABI void InsertEdge<MBBDomTree>(MBBDomTree &DT,
                                             MachineBasicBlock *From,
                                             MachineBasicBlock *To);
 
-extern template void DeleteEdge<MBBDomTree>(MBBDomTree &DT,
+extern template LLVM_TEMPLATE_ABI void DeleteEdge<MBBDomTree>(MBBDomTree &DT,
                                             MachineBasicBlock *From,
                                             MachineBasicBlock *To);
 
-extern template void ApplyUpdates<MBBDomTree>(MBBDomTree &DT,
+extern template LLVM_TEMPLATE_ABI void ApplyUpdates<MBBDomTree>(MBBDomTree &DT,
                                               MBBDomTreeGraphDiff &,
                                               MBBDomTreeGraphDiff *);
 
-extern template bool Verify<MBBDomTree>(const MBBDomTree &DT,
+extern template LLVM_TEMPLATE_ABI bool Verify<MBBDomTree>(const MBBDomTree &DT,
                                         MBBDomTree::VerificationLevel VL);
 } // namespace DomTreeBuilder
 
@@ -102,7 +102,7 @@ class MachineDominatorTreeAnalysis
     : public AnalysisInfoMixin<MachineDominatorTreeAnalysis> {
   friend AnalysisInfoMixin<MachineDominatorTreeAnalysis>;
 
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
 public:
   using Result = MachineDominatorTree;

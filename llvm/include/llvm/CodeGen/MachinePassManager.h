@@ -120,7 +120,7 @@ LLVM_ABI bool MachineFunctionAnalysisManagerFunctionProxy::Result::invalidate(
 extern template class InnerAnalysisManagerProxy<MachineFunctionAnalysisManager,
                                                 Function>;
 
-extern template class OuterAnalysisManagerProxy<ModuleAnalysisManager,
+extern template class LLVM_TEMPLATE_ABI OuterAnalysisManagerProxy<ModuleAnalysisManager,
                                                 MachineFunction>;
 /// Provide the \c ModuleAnalysisManager to \c Function proxy.
 using ModuleAnalysisManagerMachineFunctionProxy =

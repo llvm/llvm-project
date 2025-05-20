@@ -19,23 +19,23 @@
 
 namespace llvm {
 
-extern template class DominatorTreeBase<MachineBasicBlock, true>; // PostDomTree
+extern template class LLVM_TEMPLATE_ABI DominatorTreeBase<MachineBasicBlock, true>; // PostDomTree
 
 namespace DomTreeBuilder {
 using MBBPostDomTree = PostDomTreeBase<MachineBasicBlock>;
 using MBBPostDomTreeGraphDiff = GraphDiff<MachineBasicBlock *, true>;
 
-extern template void Calculate<MBBPostDomTree>(MBBPostDomTree &DT);
-extern template void InsertEdge<MBBPostDomTree>(MBBPostDomTree &DT,
+extern template LLVM_TEMPLATE_ABI void Calculate<MBBPostDomTree>(MBBPostDomTree &DT);
+extern template LLVM_TEMPLATE_ABI void InsertEdge<MBBPostDomTree>(MBBPostDomTree &DT,
                                                 MachineBasicBlock *From,
                                                 MachineBasicBlock *To);
-extern template void DeleteEdge<MBBPostDomTree>(MBBPostDomTree &DT,
+extern template LLVM_TEMPLATE_ABI void DeleteEdge<MBBPostDomTree>(MBBPostDomTree &DT,
                                                 MachineBasicBlock *From,
                                                 MachineBasicBlock *To);
-extern template void ApplyUpdates<MBBPostDomTree>(MBBPostDomTree &DT,
+extern template LLVM_TEMPLATE_ABI void ApplyUpdates<MBBPostDomTree>(MBBPostDomTree &DT,
                                                   MBBPostDomTreeGraphDiff &,
                                                   MBBPostDomTreeGraphDiff *);
-extern template bool
+extern template LLVM_TEMPLATE_ABI bool
 Verify<MBBPostDomTree>(const MBBPostDomTree &DT,
                        MBBPostDomTree::VerificationLevel VL);
 } // namespace DomTreeBuilder
@@ -69,7 +69,7 @@ class MachinePostDominatorTreeAnalysis
     : public AnalysisInfoMixin<MachinePostDominatorTreeAnalysis> {
   friend AnalysisInfoMixin<MachinePostDominatorTreeAnalysis>;
 
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
 public:
   using Result = MachinePostDominatorTree;

@@ -219,7 +219,7 @@ public:
 
 class VirtRegMapAnalysis : public AnalysisInfoMixin<VirtRegMapAnalysis> {
   friend AnalysisInfoMixin<VirtRegMapAnalysis>;
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
 public:
   using Result = VirtRegMap;

@@ -225,7 +225,7 @@ private:
 class MachineOptimizationRemarkEmitterAnalysis
     : public AnalysisInfoMixin<MachineOptimizationRemarkEmitterAnalysis> {
   friend AnalysisInfoMixin<MachineOptimizationRemarkEmitterAnalysis>;
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
 public:
   using Result = MachineOptimizationRemarkEmitter;

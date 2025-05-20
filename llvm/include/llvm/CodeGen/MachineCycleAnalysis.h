@@ -50,7 +50,7 @@ LLVM_ABI bool isCycleInvariant(const MachineCycle *Cycle, MachineInstr &I);
 
 class MachineCycleAnalysis : public AnalysisInfoMixin<MachineCycleAnalysis> {
   friend AnalysisInfoMixin<MachineCycleAnalysis>;
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
 public:
   using Result = MachineCycleInfo;

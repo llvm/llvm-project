@@ -113,7 +113,7 @@ LLVM_ABI Printable printBlockFreq(const MachineBlockFrequencyInfo &MBFI,
 class MachineBlockFrequencyAnalysis
     : public AnalysisInfoMixin<MachineBlockFrequencyAnalysis> {
   friend AnalysisInfoMixin<MachineBlockFrequencyAnalysis>;
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
 public:
   using Result = MachineBlockFrequencyInfo;
