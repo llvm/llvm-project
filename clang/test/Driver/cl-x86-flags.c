@@ -135,3 +135,53 @@
 
 void f(void) {
 }
+
+
+// RUN: not %clang_cl -### --target=i386 -mapx-features=ndd %s 2>&1 | FileCheck --check-prefix=NON-APX %s
+// RUN: not %clang_cl -### --target=i386 -mapxf %s 2>&1 | FileCheck --check-prefix=NON-APX %s
+// RUN: %clang_cl -### --target=i386 -mno-apxf %s 2>&1 > /dev/null
+// NON-APX:      error: unsupported option '-mapx-features=|-mapxf' for target 'i386'
+// NON-APX-NOT:  error: {{.*}} -mapx-features=
+
+// RUN: %clang_cl -target x86_64-pc-windows -mapxf %s -### -o %t.o 2>&1 | FileCheck -check-prefix=APXF %s
+// RUN: %clang_cl -target x86_64-pc-windows -mno-apxf %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-APXF %s
+// RUN: %clang_cl -target x86_64-pc-windows -mno-apxf -mapxf %s -### -o %t.o 2>&1 | FileCheck -check-prefix=APXF %s
+// RUN: %clang_cl -target x86_64-pc-windows -mapxf -mno-apxf %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-APXF %s
+//
+// APXF: "-target-feature" "+egpr" "-target-feature" "+push2pop2" "-target-feature" "+ppx" "-target-feature" "+ndd" "-target-feature" "+ccmp" "-target-feature" "+nf" "-target-feature" "+cf" "-target-feature" "+zu"
+// NO-APXF: "-target-feature" "-egpr" "-target-feature" "-push2pop2" "-target-feature" "-ppx" "-target-feature" "-ndd" "-target-feature" "-ccmp" "-target-feature" "-nf" "-target-feature" "-cf" "-target-feature" "-zu"
+
+// RUN: %clang_cl -target x86_64-pc-windows -mapx-features=egpr %s -### -o %t.o 2>&1 | FileCheck -check-prefix=EGPR %s
+// RUN: %clang_cl -target x86_64-pc-windows -mapx-features=push2pop2 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=PUSH2POP2 %s
+// RUN: %clang_cl -target x86_64-pc-windows -mapx-features=ppx %s -### -o %t.o 2>&1 | FileCheck -check-prefix=PPX %s
+// RUN: %clang_cl -target x86_64-pc-windows -mapx-features=ndd %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NDD %s
+// RUN: %clang_cl -target x86_64-pc-windows -mapx-features=ccmp %s -### -o %t.o 2>&1 | FileCheck -check-prefix=CCMP %s
+// RUN: %clang_cl -target x86_64-pc-windows -mapx-features=nf %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NF %s
+// RUN: %clang_cl -target x86_64-pc-windows -mapx-features=cf %s -### -o %t.o 2>&1 | FileCheck -check-prefix=CF %s
+// RUN: %clang_cl -target x86_64-pc-windows -mapx-features=zu %s -### -o %t.o 2>&1 | FileCheck -check-prefix=ZU %s
+// EGPR: "-target-feature" "+egpr"
+// PUSH2POP2: "-target-feature" "+push2pop2"
+// PPX: "-target-feature" "+ppx"
+// NDD: "-target-feature" "+ndd"
+// CCMP: "-target-feature" "+ccmp"
+// NF: "-target-feature" "+nf"
+// CF: "-target-feature" "+cf"
+// ZU: "-target-feature" "+zu"
+
+// RUN: %clang_cl -target x86_64-pc-windows -mapx-features=egpr,ndd %s -### -o %t.o 2>&1 | FileCheck -check-prefix=EGPR-NDD %s
+// RUN: %clang_cl -target x86_64-pc-windows -mapx-features=egpr -mapx-features=ndd %s -### -o %t.o 2>&1 | FileCheck -check-prefix=EGPR-NDD %s
+// RUN: %clang_cl -target x86_64-pc-windows -mno-apx-features=egpr -mno-apx-features=ndd %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-EGPR-NO-NDD %s
+// RUN: %clang_cl -target x86_64-pc-windows -mno-apx-features=egpr -mapx-features=egpr,ndd %s -### -o %t.o 2>&1 | FileCheck -check-prefix=EGPR-NDD %s
+// RUN: %clang_cl -target x86_64-pc-windows -mno-apx-features=egpr,ndd -mapx-features=egpr %s -### -o %t.o 2>&1 | FileCheck -check-prefix=EGPR-NO-NDD %s
+// RUN: %clang_cl -target x86_64-pc-windows -mapx-features=egpr,ndd -mno-apx-features=egpr %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-EGPR-NDD %s
+// RUN: %clang_cl -target x86_64-pc-windows -mapx-features=egpr -mno-apx-features=egpr,ndd %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-EGPR-NO-NDD %s
+//
+// EGPR-NDD: "-target-feature" "+egpr" "-target-feature" "+ndd"
+// EGPR-NO-NDD: "-target-feature" "-ndd" "-target-feature" "+egpr"
+// NO-EGPR-NDD: "-target-feature" "+ndd" "-target-feature" "-egpr"
+// NO-EGPR-NO-NDD: "-target-feature" "-egpr" "-target-feature" "-ndd"
+
+// RUN: not %clang_cl -target x86_64-pc-windows -mapx-features=egpr,foo,bar %s -### -o %t.o 2>&1 | FileCheck -check-prefix=ERROR %s
+//
+// ERROR: unsupported argument 'foo' to option '-mapx-features='
+// ERROR: unsupported argument 'bar' to option '-mapx-features='
