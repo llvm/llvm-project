@@ -1,5 +1,6 @@
 add_flang_library(flangTidyPerformanceModule STATIC
   PerformanceTidyModule.cpp
+  PureProcedureCheck.cpp
 
   LINK_LIBS
   FortranSupport

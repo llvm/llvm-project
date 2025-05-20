@@ -8,13 +8,17 @@
 
 #include "../FlangTidyModule.h"
 #include "../FlangTidyModuleRegistry.h"
+#include "PureProcedureCheck.h"
 
 namespace Fortran::tidy {
 namespace performance {
 
 class PerformanceTidyModule : public FlangTidyModule {
 public:
-  void addCheckFactories(FlangTidyCheckFactories &CheckFactories) override {}
+  void addCheckFactories(FlangTidyCheckFactories &CheckFactories) override {
+    CheckFactories.registerCheck<PureProcedureCheck>(
+        "performance-pure-procedure");
+  }
 };
 
 } // namespace performance
