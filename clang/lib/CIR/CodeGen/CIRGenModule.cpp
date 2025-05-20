@@ -807,7 +807,7 @@ std::string CIRGenModule::getUniqueGlobalName(const std::string &baseName) {
   // it as is and start a counter for this base name.
   auto it = cgGlobalNames.find(baseName);
   if (it == cgGlobalNames.end()) {
-    cgGlobalNames[baseName] = 0;
+    cgGlobalNames[baseName] = 1;
     return baseName;
   }
 
