@@ -12,30 +12,29 @@
 #include <__config>
 #include <__config_site>
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-namespace __stacktrace {
-
+// Check for unwind.h -- could exist on any OS (in theory), but it (or `libunwind`) is likely on Linux systems, and also
+// comes with XCode tools on MacOS.
 #if __has_include(<unwind.h>)
 #  define _LIBCPP_STACKTRACE_COLLECT_UNWIND
 #endif
 
+// For OSX specific stuff (generally controls whether we use `dyld`)
 #if defined(__APPLE__)
 #  define _LIBCPP_STACKTRACE_MACOS
 #endif
 
+// For Linux specific stuff (`link.h`, expanded functions in `dlfcn.h`, and ELF symtab parsing)
 #if defined(__linux__)
 #  define _LIBCPP_STACKTRACE_LINUX
 #endif
 
+// Whether we can invoke external processes via `posix_spawn`
 #if __has_include(<spawn.h>) && _LIBCPP_STACKTRACE_ALLOW_TOOLS_AT_RUNTIME
 #  define _LIBCPP_STACKTRACE_CAN_SPAWN_TOOLS
 #endif
 
-#if __has_include(<windows.h>) && __has_include(<dbghelp.h>) && __has_include(<psapi.h>)
+#if defined(_LIBCPP_WIN32API)
 #  define _LIBCPP_STACKTRACE_WINDOWS
 #endif
-
-} // namespace __stacktrace
-_LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STACKTRACE_CONFIG_H
