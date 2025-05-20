@@ -130,3 +130,8 @@ qc.mvgeui x9, x10, 31, x12
 # CHECK-ENC: encoding: [0x06,0xae]
 qc.mveqi x9, x9, 0, x12
 
+# CHECK-NOALIAS: qc.c.mveqz s1, a2
+# CHECK-ALIAS: qc.mveqi s1, s1, 0, a2
+# CHECK-ENC: encoding: [0x06,0xae]
+qc.mvltui x9, x9, 1, x12
+
