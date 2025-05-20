@@ -286,13 +286,10 @@ namespace std::ranges {
   class join_view;
 
   // [range.join.with], join with view
-  template<class R, class P>
-    concept compatible-joinable-ranges = see below; // exposition only
-
   template<input_range V, forward_range Pattern>
     requires view<V> && input_range<range_reference_t<V>>
           && view<Pattern>
-          && compatible-joinable-ranges<range_reference_t<V>, Pattern>
+          && concatable<range_reference_t<V>, Pattern>
   class join_with_view;                                                     // since C++23
 
   namespace views { inline constexpr unspecified join_with = unspecified; } // since C++23
