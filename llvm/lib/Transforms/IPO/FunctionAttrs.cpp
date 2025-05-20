@@ -2124,6 +2124,9 @@ static void addNoRecurseAttrs(const SCCNodeSet &SCCNodes,
         if (!Callee || Callee == F)
           return;
 
+        if (Callee->doesNotRecurse())
+          continue;
+
         // External call with NoCallback attribute.
         if (Callee->isDeclaration()) {
           if (Callee->hasFnAttribute(Attribute::NoCallback))
