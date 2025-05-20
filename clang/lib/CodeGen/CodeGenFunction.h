@@ -1744,9 +1744,9 @@ public:
   void addInstToCurrentSourceAtom(llvm::Instruction *KeyInstruction,
                                   llvm::Value *Backup);
 
-  /// See CGDebugInfo::addRetToOverrideOrNewSourceAtom.
-  void addRetToOverrideOrNewSourceAtom(llvm::ReturnInst *Ret,
-                                       llvm::Value *Backup);
+  /// See CGDebugInfo::addInstToSpecificSourceAtom.
+  void addInstToSpecificSourceAtom(llvm::Instruction *KeyInstruction,
+                                   llvm::Value *Backup, uint64_t Atom);
 
 private:
   /// SwitchInsn - This is nearest current switch instruction. It is null if

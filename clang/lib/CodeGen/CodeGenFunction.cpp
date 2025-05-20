@@ -3333,8 +3333,8 @@ void CodeGenFunction::addInstToCurrentSourceAtom(
     DI->addInstToCurrentSourceAtom(KeyInstruction, Backup);
 }
 
-void CodeGenFunction::addRetToOverrideOrNewSourceAtom(llvm::ReturnInst *Ret,
-                                                      llvm::Value *Backup) {
+void CodeGenFunction::addInstToSpecificSourceAtom(
+    llvm::Instruction *KeyInstruction, llvm::Value *Backup, uint64_t Atom) {
   if (CGDebugInfo *DI = getDebugInfo())
-    DI->addRetToOverrideOrNewSourceAtom(Ret, Backup);
+    DI->addInstToSpecificSourceAtom(KeyInstruction, Backup, Atom);
 }

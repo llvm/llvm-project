@@ -188,7 +188,6 @@ class CGDebugInfo {
     uint64_t NextAtom = 1;
     uint64_t HighestEmittedAtom = 0;
     uint64_t CurrentAtom = 0;
-    uint64_t RetAtomOverride = 0;
   } KeyInstructionsInfo;
 
 private:
@@ -664,13 +663,10 @@ public:
   void addInstToCurrentSourceAtom(llvm::Instruction *KeyInstruction,
                                   llvm::Value *Backup);
 
-  /// Add \p Ret and an optional \p Backup instruction to the
-  /// saved override used for some ret instructions if it exists, or a new atom.
-  void addRetToOverrideOrNewSourceAtom(llvm::ReturnInst *Ret,
-                                       llvm::Value *Backup);
-
-  /// Set an atom group override for use in addRetToOverrideOrNewSourceAtom.
-  void setRetInstSourceAtomOverride(uint64_t Group);
+  /// Add \p KeyInstruction and an optional \p Backup instruction to the atom
+  /// group \p Atom.
+  void addInstToSpecificSourceAtom(llvm::Instruction *KeyInstruction,
+                                   llvm::Value *Backup, uint64_t Atom);
 
 private:
   /// Amend \p I's DebugLoc with \p Group (its source atom group) and \p

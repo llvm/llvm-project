@@ -154,11 +154,14 @@ void CGDebugInfo::addInstSourceAtomMetadata(llvm::Instruction *I,
 
 void CGDebugInfo::addInstToCurrentSourceAtom(llvm::Instruction *KeyInstruction,
                                              llvm::Value *Backup) {
-  if (!CGM.getCodeGenOpts().DebugKeyInstructions)
-    return;
+  addInstToSpecificSourceAtom(KeyInstruction, Backup,
+                              KeyInstructionsInfo.CurrentAtom);
+}
 
-  uint64_t Group = KeyInstructionsInfo.CurrentAtom;
-  if (!Group)
+void CGDebugInfo::addInstToSpecificSourceAtom(llvm::Instruction *KeyInstruction,
+                                              llvm::Value *Backup,
+                                              uint64_t Group) {
+  if (!Group || !CGM.getCodeGenOpts().DebugKeyInstructions)
     return;
 
   addInstSourceAtomMetadata(KeyInstruction, Group, /*Rank=*/1);
@@ -183,31 +186,11 @@ void CGDebugInfo::addInstToCurrentSourceAtom(llvm::Instruction *KeyInstruction,
   }
 }
 
-void CGDebugInfo::addRetToOverrideOrNewSourceAtom(llvm::ReturnInst *Ret,
-                                                  llvm::Value *Backup) {
-  if (KeyInstructionsInfo.RetAtomOverride) {
-    uint64_t CurrentAtom = KeyInstructionsInfo.CurrentAtom;
-    KeyInstructionsInfo.CurrentAtom = KeyInstructionsInfo.RetAtomOverride;
-    addInstToCurrentSourceAtom(Ret, Backup);
-    KeyInstructionsInfo.CurrentAtom = CurrentAtom;
-    KeyInstructionsInfo.RetAtomOverride = 0;
-  } else {
-    auto Grp = ApplyAtomGroup(this);
-    addInstToCurrentSourceAtom(Ret, Backup);
-  }
-}
-
-void CGDebugInfo::setRetInstSourceAtomOverride(uint64_t Group) {
-  assert(KeyInstructionsInfo.RetAtomOverride == 0);
-  KeyInstructionsInfo.RetAtomOverride = Group;
-}
-
 void CGDebugInfo::completeFunction() {
   // Reset the atom group number tracker as the numbers are function-local.
   KeyInstructionsInfo.NextAtom = 1;
   KeyInstructionsInfo.HighestEmittedAtom = 0;
   KeyInstructionsInfo.CurrentAtom = 0;
-  KeyInstructionsInfo.RetAtomOverride = 0;
 }
 
 ApplyAtomGroup::ApplyAtomGroup(CGDebugInfo *DI) : DI(DI) {
