@@ -105,15 +105,15 @@ def DIV_FIXUP_F32_PROF : VOP3_Profile<VOP_F32_F32_F32_F32> {
   let HasExtVOP3DPP = 0;
 #ifdef LLPC_BUILD_NPI
   let HasExt64BitDPP = 1;
+}
+def VOP_I64_I64_I64_DPP : VOP3_Profile<VOP_I64_I64_I64>;
+def VOP_I32_I32_I64_DPP : VOP3_Profile<VOPProfile<[i64, i32, i32, i64]>> {
+  let HasClamp = 1;
 #else /* LLPC_BUILD_NPI */
   let HasExtDPP = 0;
 #endif /* LLPC_BUILD_NPI */
 }
 #ifdef LLPC_BUILD_NPI
-def VOP_I64_I64_I64_DPP : VOP3_Profile<VOP_I64_I64_I64>;
-def VOP_I32_I32_I64_DPP : VOP3_Profile<VOPProfile<[i64, i32, i32, i64]>> {
-  let HasClamp = 1;
-}
 } // End HasExt64BitDPP = 1;
 #endif /* LLPC_BUILD_NPI */
 
@@ -758,6 +758,9 @@ def VOP3_CVT_SR_F8_F32_Profile : VOP3_Profile<VOPProfile<[i32, f32, i32, f32]>,
   let HasExtVOP3DPP = 1;
   let HasOpSel = 1;
   let HasFP8DstByteSel = 1;
+#ifdef LLPC_BUILD_NPI
+  let HasFP8ByteSel = 0; // It works as a dst-bytesel, but does not have byte_sel operand.
+#endif /* LLPC_BUILD_NPI */
   let AsmVOP3OpSel = !subst(", $src2_modifiers", "",
                             getAsmVOP3OpSel<3, HasClamp, HasOMod,
                                             HasSrc0FloatMods, HasSrc1FloatMods,
@@ -777,29 +780,19 @@ class VOP3_CVT_SR_F8_ByteSel_Profile<ValueType SrcVT> :
   let HasFP8DstByteSel = 1;
 #ifdef LLPC_BUILD_NPI
   let HasClamp = _HasClamp;
-  defvar bytesel = !con(!if(_HasClamp, (ins Clamp:$clamp), (ins)),
-                        (ins VGPR_32:$vdst_in, ByteSel0:$byte_sel));
 #else /* LLPC_BUILD_NPI */
   let HasClamp = 0;
   defvar bytesel = (ins VGPR_32:$vdst_in, ByteSel:$byte_sel);
-#endif /* LLPC_BUILD_NPI */
   let Ins64 = !con(getIns64<Src0RC64, Src1RC64, Src2RC64, NumSrcArgs,
-#ifdef LLPC_BUILD_NPI
-                            0, HasModifiers, HasSrc2Mods,
-#else /* LLPC_BUILD_NPI */
                             HasClamp, HasModifiers, HasSrc2Mods,
-#endif /* LLPC_BUILD_NPI */
                             HasOMod, Src0Mod, Src1Mod, Src2Mod>.ret,
                    bytesel);
   let InsVOP3Base = !con(
     getInsVOP3Base<Src0VOP3DPP, Src1VOP3DPP,
-#ifdef LLPC_BUILD_NPI
-                   Src2VOP3DPP, NumSrcArgs, 0, HasModifiers, HasSrc2Mods, HasOMod,
-#else /* LLPC_BUILD_NPI */
                    Src2VOP3DPP, NumSrcArgs, HasClamp, HasModifiers, HasSrc2Mods, HasOMod,
-#endif /* LLPC_BUILD_NPI */
                    Src0ModVOP3DPP, Src1ModVOP3DPP, Src2ModVOP3DPP, HasOpSel>.ret,
     bytesel);
+#endif /* LLPC_BUILD_NPI */
 }
 
 def IsPow2Plus1: PatLeaf<(i32 imm), [{
@@ -2407,15 +2400,15 @@ multiclass VOP3be_Real_gfx11_gfx12_not_gfx1250_gfx13<bits<10> op, string opName,
   VOP3be_Real<GFX11Gen, op, opName, asmName>,
   VOP3be_Real<GFX12Not12_50Gen, op, opName, asmName>,
   VOP3be_Real<GFX13Gen, op, opName, asmName>;
+
+multiclass VOP3be_Realtriple_gfx1250<bits<10> op> :
+  VOP3be_Realtriple<GFX1250Gen, op>;
 #else /* LLPC_BUILD_NPI */
 multiclass VOP3_Real_No_Suffix_gfx11_gfx12<bits<10> op> :
   VOP3_Real_No_Suffix<GFX11Gen, op>, VOP3_Real_No_Suffix<GFX12Gen, op>;
 #endif /* LLPC_BUILD_NPI */
 
 #ifdef LLPC_BUILD_NPI
-multiclass VOP3be_Realtriple_gfx1250<bits<10> op> :
-  VOP3be_Realtriple<GFX1250Gen, op>;
-
 multiclass VOP3_Real_No_Suffix_gfx11_gfx12_gfx13<bits<10> op> :
   VOP3_Real_No_Suffix<GFX11Gen, op>, VOP3_Real_No_Suffix<GFX12Gen, op>,
   VOP3_Real_No_Suffix<GFX13Gen, op>;

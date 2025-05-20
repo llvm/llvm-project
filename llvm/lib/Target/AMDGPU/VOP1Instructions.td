@@ -762,15 +762,6 @@ let HasFP8SrcByteSel = 1, HasOpSel = 0, HasExtDPP = 1, HasExtVOP3DPP = 1,
   class VOPProfile_Base_CVT_F_F8_ByteSel<ValueType DstVT, bit _HasClamp = 0> :
         VOPProfile<[DstVT, i32, untyped, untyped]> {
     let HasClamp = _HasClamp;
-    let Ins64 = !con(getIns64<Src0RC64, Src1RC64, Src2RC64, NumSrcArgs,
-                              HasClamp, HasModifiers, HasSrc2Mods,
-                              HasOMod, Src0Mod, Src1Mod, Src2Mod>.ret,
-                     (ins ByteSel0:$byte_sel));
-    let InsVOP3Base = !con(getInsVOP3Base<Src0VOP3DPP, Src1VOP3DPP, Src2VOP3DPP,
-                                          NumSrcArgs, HasClamp, HasModifiers, HasSrc2Mods,
-                                          HasOMod, Src0ModVOP3DPP, Src1ModVOP3DPP,
-                                          Src2ModVOP3DPP, HasOpSel>.ret,
-                           (ins ByteSel0:$byte_sel));
   }
 
   // FIXME-TRUE16: True16 versions of these instructions are untested.

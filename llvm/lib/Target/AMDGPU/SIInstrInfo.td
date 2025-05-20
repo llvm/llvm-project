@@ -2306,7 +2306,12 @@ class getIns32 <RegisterOperand Src0RC, RegisterOperand Src1RC, int NumSrcArgs> 
 class getIns64 <RegisterOperand Src0RC, RegisterOperand Src1RC,
                 RegisterOperand Src2RC, int NumSrcArgs,
                 bit HasClamp, bit HasModifiers, bit HasSrc2Mods, bit HasOMod,
+#ifdef LLPC_BUILD_NPI
+                Operand Src0Mod, Operand Src1Mod, Operand Src2Mod,
+                bit HasFP8ByteSel = 0, bit HasFP8DstByteSel = 0> {
+#else /* LLPC_BUILD_NPI */
                 Operand Src0Mod, Operand Src1Mod, Operand Src2Mod> {
+#endif /* LLPC_BUILD_NPI */
   dag src0 = !if(!ge(NumSrcArgs, 1),
                  !if (HasModifiers,
                       (ins Src0Mod:$src0_modifiers, Src0RC:$src0),
@@ -2322,20 +2327,47 @@ class getIns64 <RegisterOperand Src0RC, RegisterOperand Src1RC,
                       (ins Src2Mod:$src2_modifiers, Src2RC:$src2),
                       (ins Src2RC:$src2)),
                  (ins));
+#ifdef LLPC_BUILD_NPI
+  // If there is vdst_in after clamp with HasFP8DstByteSel we cannot use
+  // Clamp0 with default value, all default operands must be at the end.
+  dag clamp = !if(HasClamp, !if(HasFP8DstByteSel, (ins Clamp:$clamp),
+                                                  (ins Clamp0:$clamp)),
+                            (ins));
+#else /* LLPC_BUILD_NPI */
   dag clamp = !if(HasClamp, (ins Clamp0:$clamp), (ins));
+#endif /* LLPC_BUILD_NPI */
   dag omod = !if(HasOMod, (ins omod0:$omod), (ins));
+#ifdef LLPC_BUILD_NPI
+  dag bytesel = !if(HasFP8ByteSel,
+                    !con(!if(HasFP8DstByteSel, (ins VGPR_32:$vdst_in), (ins)),
+                         (ins ByteSel0:$byte_sel)),
+                    (ins));
+#endif /* LLPC_BUILD_NPI */
 
+#ifdef LLPC_BUILD_NPI
+  dag ret = !con(src0, src1, src2, clamp, omod, bytesel);
+#else /* LLPC_BUILD_NPI */
   dag ret = !con(src0, src1, src2, clamp, omod);
+#endif /* LLPC_BUILD_NPI */
 }
 
 class getInsVOP3Base<RegisterOperand Src0RC, RegisterOperand Src1RC,
                 RegisterOperand Src2RC, int NumSrcArgs,
                 bit HasClamp, bit HasModifiers, bit HasSrc2Mods, bit HasOMod,
+#ifdef LLPC_BUILD_NPI
+                Operand Src0Mod, Operand Src1Mod, Operand Src2Mod, bit HasOpSel,
+                bit HasFP8ByteSel = 0, bit HasFP8DstByteSel = 0> {
+#else /* LLPC_BUILD_NPI */
                 Operand Src0Mod, Operand Src1Mod, Operand Src2Mod, bit HasOpSel> {
+#endif /* LLPC_BUILD_NPI */
   // getInst64 handles clamp and omod. implicit mutex between vop3p and omod
   dag base = getIns64 <Src0RC, Src1RC, Src2RC, NumSrcArgs,
                 HasClamp, HasModifiers, HasSrc2Mods, HasOMod,
+#ifdef LLPC_BUILD_NPI
+                Src0Mod, Src1Mod, Src2Mod, HasFP8ByteSel, HasFP8DstByteSel>.ret;
+#else /* LLPC_BUILD_NPI */
                 Src0Mod, Src1Mod, Src2Mod>.ret;
+#endif /* LLPC_BUILD_NPI */
   dag opsel = (ins op_sel0:$op_sel);
   dag ret = !con(base, !if(HasOpSel, opsel, (ins)));
 }
@@ -3034,7 +3066,12 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   field dag Ins32 = getIns32<Src0RC32, Src1RC32, NumSrcArgs>.ret;
   field dag Ins64 = getIns64<Src0RC64, Src1RC64, Src2RC64, NumSrcArgs,
                              HasClamp, HasModifiers, HasSrc2Mods,
+#ifdef LLPC_BUILD_NPI
+                             HasOMod, Src0Mod, Src1Mod, Src2Mod,
+                             HasFP8ByteSel, HasFP8DstByteSel>.ret;
+#else /* LLPC_BUILD_NPI */
                              HasOMod, Src0Mod, Src1Mod, Src2Mod>.ret;
+#endif /* LLPC_BUILD_NPI */
   field dag InsVOP3P = getInsVOP3P<Src0RC64, Src1RC64, Src2RC64,
                                    NumSrcArgs, HasClamp, HasOpSel, HasNeg,
                                    Src0PackedMod, Src1PackedMod, Src2PackedMod>.ret;
@@ -3052,7 +3089,12 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
                                  Src0ModDPP, Src1ModDPP, Src2ModDPP>.ret;
   defvar InsVOP3DPPBase = getInsVOP3Base<Src0VOP3DPP, Src1VOP3DPP,
                   Src2VOP3DPP, NumSrcArgs, HasClamp, HasModifiers, HasSrc2Mods, HasOMod,
+#ifdef LLPC_BUILD_NPI
+                  Src0ModVOP3DPP, Src1ModVOP3DPP, Src2ModVOP3DPP, HasOpSel,
+                  HasFP8ByteSel, HasFP8DstByteSel>.ret;
+#else /* LLPC_BUILD_NPI */
                   Src0ModVOP3DPP, Src1ModVOP3DPP, Src2ModVOP3DPP, HasOpSel>.ret;
+#endif /* LLPC_BUILD_NPI */
   defvar InsVOP3PDPPBase = getInsVOP3P<Src0VOP3DPP, Src1VOP3DPP,
                   Src2VOP3DPP, NumSrcArgs, HasClamp, HasOpSel, HasNeg,
                   Src0ModVOP3DPP, Src1ModVOP3DPP, Src2ModVOP3DPP>.ret;
