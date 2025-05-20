@@ -855,6 +855,66 @@ define float @v_test_canonicalize_amdgcn_exp2(float %a) {
   ret float %canonicalized
 }
 
+; GCN-LABEL: {{^}}v_test_canonicalize_minimum:
+; GCN: s_waitcnt
+; GCN-NEXT: v_min_f32_e32 [[MIN:v[0-9]+]], v0, v1
+; GCN-NEXT: v_mov_b32_e32 [[K:v[0-9]+]], 0x7fc00000
+; GCN-NEXT: v_cmp_o_f32_e32 vcc, v0, v1
+; GCN-NEXT: v_cndmask_b32_e32 v0, [[K]], [[MIN]], vcc
+; VI-FLUSH-NEXT: v_mul_f32_e32 v0, 1.0, v0
+; GCN-NEXT: s_setpc_b64
+define float @v_test_canonicalize_minimum(float %a, float %b) {
+  %min = call float @llvm.minimum.f32(float %a, float %b)
+  %canonicalized = call float @llvm.canonicalize.f32(float %min)
+  ret float %canonicalized
+}
+
+; GCN-LABEL: {{^}}v_test_canonicalize_maximum:
+; GCN: s_waitcnt
+; GCN-NEXT: v_max_f32_e32 [[MIN:v[0-9]+]], v0, v1
+; GCN-NEXT: v_mov_b32_e32 [[K:v[0-9]+]], 0x7fc00000
+; GCN-NEXT: v_cmp_o_f32_e32 vcc, v0, v1
+; GCN-NEXT: v_cndmask_b32_e32 v0, [[K]], [[MIN]], vcc
+; VI-FLUSH-NEXT: v_mul_f32_e32 v0, 1.0, v0
+; GCN-NEXT: s_setpc_b64
+define float @v_test_canonicalize_maximum(float %a, float %b) {
+  %min = call float @llvm.maximum.f32(float %a, float %b)
+  %canonicalized = call float @llvm.canonicalize.f32(float %min)
+  ret float %canonicalized
+}
+
+; GCN-LABEL: {{^}}v_test_canonicalize_minimumnum:
+; GCN: s_waitcnt
+; VI-NEXT: v_mul_f32_e32 v1, 1.0, v1
+; VI-NEXT: v_mul_f32_e32 v0, 1.0, v0
+
+; GFX9-NEXT: v_max_f32_e32 v1, v1, v1
+; GFX9-NEXT: v_max_f32_e32 v0, v0, v0
+
+; GCN-NEXT: v_min_f32_e32 v0, v0, v1
+; GCN-NEXT: s_setpc_b64
+define float @v_test_canonicalize_minimumnum(float %a, float %b) {
+  %min = call float @llvm.minimumnum.f32(float %a, float %b)
+  %canonicalized = call float @llvm.canonicalize.f32(float %min)
+  ret float %canonicalized
+}
+
+; GCN-LABEL: {{^}}v_test_canonicalize_maximumnum:
+; GCN: s_waitcnt
+; VI-NEXT: v_mul_f32_e32 v1, 1.0, v1
+; VI-NEXT: v_mul_f32_e32 v0, 1.0, v0
+
+; GFX9-NEXT: v_max_f32_e32 v1, v1, v1
+; GFX9-NEXT: v_max_f32_e32 v0, v0, v0
+
+; GCN-NEXT: v_max_f32_e32 v0, v0, v1
+; GCN-NEXT: s_setpc_b64
+define float @v_test_canonicalize_maximumnum(float %a, float %b) {
+  %min = call float @llvm.maximumnum.f32(float %a, float %b)
+  %canonicalized = call float @llvm.canonicalize.f32(float %min)
+  ret float %canonicalized
+}
+
 ; Avoid failing the test on FreeBSD11.0 which will match the GCN-NOT: 1.0
 ; in the .amd_amdgpu_isa "amdgcn-unknown-freebsd11.0--gfx802" directive
 ; GCN: .amd_amdgpu_isa

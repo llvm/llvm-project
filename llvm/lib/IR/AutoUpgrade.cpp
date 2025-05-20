@@ -646,8 +646,8 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
 
   if (Name == "thread.pointer") {
     // '(arm|aarch64).thread.pointer'.
-    NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(),
-                                              Intrinsic::thread_pointer);
+    NewFn = Intrinsic::getOrInsertDeclaration(
+        F->getParent(), Intrinsic::thread_pointer, F->getReturnType());
     return true;
   }
 
@@ -1475,6 +1475,14 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
     }
     break;
 
+  case 't':
+    if (Name == "thread.pointer") {
+      NewFn = Intrinsic::getOrInsertDeclaration(
+          F->getParent(), Intrinsic::thread_pointer, F->getReturnType());
+      return true;
+    }
+    break;
+
   case 'v': {
     if (Name == "var.annotation" && F->arg_size() == 4) {
       rename(F);
@@ -1605,7 +1613,7 @@ GlobalVariable *llvm::UpgradeGlobalVariable(GlobalVariable *GV) {
     auto Ctor = cast<Constant>(Init->getOperand(i));
     NewCtors[i] = ConstantStruct::get(EltTy, Ctor->getAggregateElement(0u),
                                       Ctor->getAggregateElement(1),
-                                      Constant::getNullValue(IRB.getPtrTy()));
+                                      ConstantPointerNull::get(IRB.getPtrTy()));
   }
   Constant *NewInit = ConstantArray::get(ArrayType::get(EltTy, N), NewCtors);
 
@@ -4713,10 +4721,10 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     }
 
     // Create a new call with an added null annotation attribute argument.
-    NewCall =
-        Builder.CreateCall(NewFn, {CI->getArgOperand(0), CI->getArgOperand(1),
-                                   CI->getArgOperand(2), CI->getArgOperand(3),
-                                   Constant::getNullValue(Builder.getPtrTy())});
+    NewCall = Builder.CreateCall(
+        NewFn,
+        {CI->getArgOperand(0), CI->getArgOperand(1), CI->getArgOperand(2),
+         CI->getArgOperand(3), ConstantPointerNull::get(Builder.getPtrTy())});
     NewCall->takeName(CI);
     CI->replaceAllUsesWith(NewCall);
     CI->eraseFromParent();
@@ -4729,10 +4737,10 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       return;
     }
     // Create a new call with an added null annotation attribute argument.
-    NewCall =
-        Builder.CreateCall(NewFn, {CI->getArgOperand(0), CI->getArgOperand(1),
-                                   CI->getArgOperand(2), CI->getArgOperand(3),
-                                   Constant::getNullValue(Builder.getPtrTy())});
+    NewCall = Builder.CreateCall(
+        NewFn,
+        {CI->getArgOperand(0), CI->getArgOperand(1), CI->getArgOperand(2),
+         CI->getArgOperand(3), ConstantPointerNull::get(Builder.getPtrTy())});
     NewCall->takeName(CI);
     CI->replaceAllUsesWith(NewCall);
     CI->eraseFromParent();
@@ -5773,7 +5781,10 @@ std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
     if (!DL.contains("-p7") && !DL.starts_with("p7"))
       Res.append("-p7:160:256:256:32");
     if (!DL.contains("-p8") && !DL.starts_with("p8"))
-      Res.append("-p8:128:128");
+      Res.append("-p8:128:128:128:48");
+    constexpr StringRef OldP8("-p8:128:128-");
+    if (DL.contains(OldP8))
+      Res.replace(Res.find(OldP8), OldP8.size(), "-p8:128:128:128:48-");
     if (!DL.contains("-p9") && !DL.starts_with("p9"))
       Res.append("-p9:192:256:256:32");
 

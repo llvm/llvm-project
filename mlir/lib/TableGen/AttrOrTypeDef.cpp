@@ -46,7 +46,7 @@ AttrOrTypeDef::AttrOrTypeDef(const Record *def) : def(def) {
   const auto *builderList =
       dyn_cast_or_null<ListInit>(def->getValueInit("builders"));
   if (builderList && !builderList->empty()) {
-    for (const Init *init : builderList->getValues()) {
+    for (const Init *init : builderList->getElements()) {
       AttrOrTypeBuilder builder(cast<DefInit>(init)->getDef(), def->getLoc());
 
       // Ensure that all parameters have names.
@@ -203,6 +203,10 @@ std::optional<StringRef> AttrOrTypeDef::getExtraDecls() const {
 std::optional<StringRef> AttrOrTypeDef::getExtraDefs() const {
   auto value = def->getValueAsString("extraClassDefinition");
   return value.empty() ? std::optional<StringRef>() : value;
+}
+
+bool AttrOrTypeDef::genMnemonicAlias() const {
+  return def->getValueAsBit("genMnemonicAlias");
 }
 
 ArrayRef<SMLoc> AttrOrTypeDef::getLoc() const { return def->getLoc(); }

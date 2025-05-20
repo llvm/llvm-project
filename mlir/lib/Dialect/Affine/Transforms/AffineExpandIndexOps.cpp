@@ -35,10 +35,13 @@ using namespace mlir::affine;
 ///
 /// If excess dynamic values are provided, the values at the beginning
 /// will be ignored. This allows for dropping the outer bound without
-/// needing to manipulate the dynamic value array.
+/// needing to manipulate the dynamic value array. `knownPositive`
+/// indicases that the values being used to compute the strides are known
+/// to be non-negative.
 static SmallVector<Value> computeStrides(Location loc, RewriterBase &rewriter,
                                          ValueRange dynamicBasis,
-                                         ArrayRef<int64_t> staticBasis) {
+                                         ArrayRef<int64_t> staticBasis,
+                                         bool knownNonNegative) {
   if (staticBasis.empty())
     return {};
 
@@ -47,11 +50,18 @@ static SmallVector<Value> computeStrides(Location loc, RewriterBase &rewriter,
   size_t dynamicIndex = dynamicBasis.size();
   Value dynamicPart = nullptr;
   int64_t staticPart = 1;
+  // The products of the strides can't have overflow by definition of
+  // affine.*_index.
+  arith::IntegerOverflowFlags ovflags = arith::IntegerOverflowFlags::nsw;
+  if (knownNonNegative)
+    ovflags = ovflags | arith::IntegerOverflowFlags::nuw;
   for (int64_t elem : llvm::reverse(staticBasis)) {
     if (ShapedType::isDynamic(elem)) {
+      // Note: basis elements and their products are, definitionally,
+      // non-negative, so `nuw` is justified.
       if (dynamicPart)
         dynamicPart = rewriter.create<arith::MulIOp>(
-            loc, dynamicPart, dynamicBasis[dynamicIndex - 1]);
+            loc, dynamicPart, dynamicBasis[dynamicIndex - 1], ovflags);
       else
         dynamicPart = dynamicBasis[dynamicIndex - 1];
       --dynamicIndex;
@@ -65,7 +75,8 @@ static SmallVector<Value> computeStrides(Location loc, RewriterBase &rewriter,
       Value stride =
           rewriter.createOrFold<arith::ConstantIndexOp>(loc, staticPart);
       if (dynamicPart)
-        stride = rewriter.create<arith::MulIOp>(loc, dynamicPart, stride);
+        stride =
+            rewriter.create<arith::MulIOp>(loc, dynamicPart, stride, ovflags);
       result.push_back(stride);
     }
   }
@@ -96,7 +107,8 @@ struct LowerDelinearizeIndexOps
     SmallVector<Value> results;
     results.reserve(numResults);
     SmallVector<Value> strides =
-        computeStrides(loc, rewriter, op.getDynamicBasis(), staticBasis);
+        computeStrides(loc, rewriter, op.getDynamicBasis(), staticBasis,
+                       /*knownNonNegative=*/true);
 
     Value zero = rewriter.createOrFold<arith::ConstantIndexOp>(loc, 0);
 
@@ -108,7 +120,11 @@ struct LowerDelinearizeIndexOps
       Value remainder = rewriter.create<arith::RemSIOp>(loc, linearIdx, stride);
       Value remainderNegative = rewriter.create<arith::CmpIOp>(
           loc, arith::CmpIPredicate::slt, remainder, zero);
-      Value corrected = rewriter.create<arith::AddIOp>(loc, remainder, stride);
+      // If the correction is relevant, this term is <= stride, which is known
+      // to be positive in `index`. Otherwise, while 2 * stride might overflow,
+      // this branch won't be taken, so the risk of `poison` is fine.
+      Value corrected = rewriter.create<arith::AddIOp>(
+          loc, remainder, stride, arith::IntegerOverflowFlags::nsw);
       Value mod = rewriter.create<arith::SelectOp>(loc, remainderNegative,
                                                    corrected, remainder);
       return mod;
@@ -155,7 +171,8 @@ struct LowerLinearizeIndexOps final : OpRewritePattern<AffineLinearizeIndexOp> {
       staticBasis = staticBasis.drop_front();
 
     SmallVector<Value> strides =
-        computeStrides(loc, rewriter, op.getDynamicBasis(), staticBasis);
+        computeStrides(loc, rewriter, op.getDynamicBasis(), staticBasis,
+                       /*knownNonNegative=*/op.getDisjoint());
     SmallVector<std::pair<Value, int64_t>> scaledValues;
     scaledValues.reserve(numIndexes);
 
@@ -164,8 +181,8 @@ struct LowerLinearizeIndexOps final : OpRewritePattern<AffineLinearizeIndexOp> {
     // our hands on an `OpOperand&` for the loop invariant counting function.
     for (auto [stride, idxOp] :
          llvm::zip_equal(strides, llvm::drop_end(op.getMultiIndexMutable()))) {
-      Value scaledIdx =
-          rewriter.create<arith::MulIOp>(loc, idxOp.get(), stride);
+      Value scaledIdx = rewriter.create<arith::MulIOp>(
+          loc, idxOp.get(), stride, arith::IntegerOverflowFlags::nsw);
       int64_t numHoistableLoops = numEnclosingInvariantLoops(idxOp);
       scaledValues.emplace_back(scaledIdx, numHoistableLoops);
     }
@@ -182,7 +199,8 @@ struct LowerLinearizeIndexOps final : OpRewritePattern<AffineLinearizeIndexOp> {
     for (auto [scaledValue, numHoistableLoops] :
          llvm::drop_begin(scaledValues)) {
       std::ignore = numHoistableLoops;
-      result = rewriter.create<arith::AddIOp>(loc, result, scaledValue);
+      result = rewriter.create<arith::AddIOp>(loc, result, scaledValue,
+                                              arith::IntegerOverflowFlags::nsw);
     }
     rewriter.replaceOp(op, result);
     return success();

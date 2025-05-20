@@ -840,8 +840,9 @@ bool PatFragPattern::mapInputCodeExpansions(const CodeExpansions &ParentCEs,
       if (It == ParentCEs.end()) {
         if (!PF.handleUnboundInParam(ParamName, ArgName, DiagLoc))
           return false;
-      } else
+      } else {
         PatFragCEs.declare(ParamName, It->second);
+      }
       continue;
     }
 

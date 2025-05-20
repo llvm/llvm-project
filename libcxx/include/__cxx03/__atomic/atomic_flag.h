@@ -70,7 +70,7 @@ struct atomic_flag {
   }
   atomic_flag() _NOEXCEPT = default;
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR atomic_flag(bool __b) _NOEXCEPT : __a_(__b) {} // EXTENSION
+  _LIBCPP_HIDE_FROM_ABI atomic_flag(bool __b) _NOEXCEPT : __a_(__b) {} // EXTENSION
 
   atomic_flag(const atomic_flag&)                     = delete;
   atomic_flag& operator=(const atomic_flag&)          = delete;
