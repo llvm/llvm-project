@@ -10,6 +10,7 @@
 #define LLVM_DEBUGINFO_CODEVIEW_SIMPLETYPESERIALIZER_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include <vector>
 
 namespace llvm {
@@ -31,6 +32,18 @@ public:
   // Don't allow serialization of field list records using this interface.
   ArrayRef<uint8_t> serialize(const FieldListRecord &Record) = delete;
 };
+
+#define TYPE_RECORD(EnumName, EnumVal, Name)                                   \
+  extern template ArrayRef<uint8_t> SimpleTypeSerializer::serialize(           \
+      Name##Record &Record);
+#define TYPE_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
+#define MEMBER_RECORD(EnumName, EnumVal, Name)
+#define MEMBER_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
+#include "llvm/DebugInfo/CodeView/CodeViewTypes.def"
+#undef TYPE_RECORD
+#undef TYPE_RECORD_ALIAS
+#undef MEMBER_RECORD
+#undef MEMBER_RECORD_ALIAS
 
 } // end namespace codeview
 } // end namespace llvm
