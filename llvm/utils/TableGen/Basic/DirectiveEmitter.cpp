@@ -442,7 +442,6 @@ static void generateGetKindClauseVal(const DirectiveLanguage &DirLang,
 
 static void generateCaseForVersionedClauses(ArrayRef<const Record *> Clauses,
                                             raw_ostream &OS,
-                                            StringRef DirectiveName,
                                             const DirectiveLanguage &DirLang,
                                             StringSet<> &Cases) {
   for (const VersionedClause VerClause : Clauses) {
@@ -496,17 +495,17 @@ static void generateIsAllowedClause(const DirectiveLanguage &DirLang,
 
       StringSet<> Cases;
 
-      generateCaseForVersionedClauses(Dir.getAllowedClauses(), OS,
-                                      Dir.getName(), DirLang, Cases);
+      generateCaseForVersionedClauses(Dir.getAllowedClauses(), OS, DirLang,
+                                      Cases);
 
-      generateCaseForVersionedClauses(Dir.getAllowedOnceClauses(), OS,
-                                      Dir.getName(), DirLang, Cases);
+      generateCaseForVersionedClauses(Dir.getAllowedOnceClauses(), OS, DirLang,
+                                      Cases);
 
       generateCaseForVersionedClauses(Dir.getAllowedExclusiveClauses(), OS,
-                                      Dir.getName(), DirLang, Cases);
+                                      DirLang, Cases);
 
-      generateCaseForVersionedClauses(Dir.getRequiredClauses(), OS,
-                                      Dir.getName(), DirLang, Cases);
+      generateCaseForVersionedClauses(Dir.getRequiredClauses(), OS, DirLang,
+                                      Cases);
 
       OS << "        default:\n";
       OS << "          return false;\n";
