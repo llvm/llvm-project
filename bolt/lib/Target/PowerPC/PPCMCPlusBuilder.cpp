@@ -13,6 +13,8 @@
 #include "bolt/Core/MCPlusBuilder.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/Target/PowerPC/PPCGenInstrInfo.inc"
+#include "llvm/Target/PowerPC/PPCGenRegisterInfo.inc"
 
 namespace llvm {
 namespace bolt {
