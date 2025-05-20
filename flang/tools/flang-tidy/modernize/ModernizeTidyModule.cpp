@@ -8,13 +8,17 @@
 
 #include "../FlangTidyModule.h"
 #include "../FlangTidyModuleRegistry.h"
+#include "AvoidAssignStmt.h"
 
 namespace Fortran::tidy {
 namespace modernize {
 
 class ModernizeModule : public FlangTidyModule {
 public:
-  void addCheckFactories(FlangTidyCheckFactories &CheckFactories) override {}
+  void addCheckFactories(FlangTidyCheckFactories &CheckFactories) override {
+    CheckFactories.registerCheck<AvoidAssignStmtCheck>(
+        "modernize-avoid-assign-stmt");
+  }
 };
 
 } // namespace modernize

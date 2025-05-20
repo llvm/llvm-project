@@ -1,4 +1,5 @@
 add_flang_library(flangTidyModernizeModule STATIC
+  AvoidAssignStmt.cpp
   ModernizeTidyModule.cpp
 
   LINK_LIBS
@@ -15,4 +16,3 @@ add_flang_library(flangTidyModernizeModule STATIC
   FrontendOpenACC
   TargetParser
   )
-
