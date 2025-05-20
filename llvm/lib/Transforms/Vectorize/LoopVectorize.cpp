@@ -1320,14 +1320,9 @@ public:
   /// that can be vectorized.
   bool stridedAccessCanBeWidened(Instruction *I, ElementCount VF) const;
 
-  /// Get the stride of the strided memory access instruction \p Instr. Return 0
-  /// if the instruction \p Instr is not considered for vectorization as a
-  /// strided memory access.
-  int64_t getStride(Instruction *Instr) const {
-    auto It = StrideInfo.find(Instr);
-    if (It != StrideInfo.end())
-      return It->second;
-    return 0;
+  /// Get the stride information of the strided memory accesses.
+  SmallDenseMap<Instruction *, int64_t> getStrideInfo() const {
+    return StrideInfo;
   }
 
   /// Returns true if we're required to use a scalar epilogue for at least
@@ -1721,7 +1716,7 @@ private:
   }
 
   /// The mapping of memory access instructions to their stride values.
-  DenseMap<Instruction *, int64_t> StrideInfo;
+  SmallDenseMap<Instruction *, int64_t> StrideInfo;
 
 public:
   /// The loop that we evaluate.
@@ -7826,27 +7821,16 @@ VPRecipeBuilder::tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
   // reverse consecutive.
   LoopVectorizationCostModel::InstWidening Decision =
       CM.getWideningDecision(I, Range.Start);
-
-  auto SameWiden = [&](ElementCount VF) -> bool {
-    return Decision == CM.getWideningDecision(I, VF);
-  };
-  bool ContainsWidenVF =
-      LoopVectorizationPlanner::getDecisionAndClampRange(SameWiden, Range);
-  assert(ContainsWidenVF &&
-         "At least widen the memory accesses by the Start VF.");
-
   bool Reverse = Decision == LoopVectorizationCostModel::CM_Widen_Reverse;
   bool Consecutive =
       Reverse || Decision == LoopVectorizationCostModel::CM_Widen;
-  bool Strided = Decision == LoopVectorizationCostModel::CM_Strided;
 
   VPValue *Ptr = isa<LoadInst>(I) ? Operands[0] : Operands[1];
-  if (Consecutive || Strided) {
+  if (Consecutive) {
     auto *GEP = dyn_cast<GetElementPtrInst>(
         Ptr->getUnderlyingValue()->stripPointerCasts());
     VPSingleDefRecipe *VectorPtr;
     if (Reverse) {
-      assert(!Strided && "Reverse and Strided are mutually exclusive.");
       // When folding the tail, we may compute an address that we don't in the
       // original scalar loop and it may not be inbounds. Drop Inbounds in that
       // case.
@@ -7858,30 +7842,17 @@ VPRecipeBuilder::tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
           new VPVectorEndPointerRecipe(Ptr, &Plan.getVF(), getLoadStoreType(I),
                                        /*Stride*/ -1, Flags, I->getDebugLoc());
     } else {
-      VectorPtr = new VPVectorPointerRecipe(Ptr, getLoadStoreType(I), Strided,
-                                            GEP ? GEP->getNoWrapFlags()
-                                                : GEPNoWrapFlags::none(),
-                                            I->getDebugLoc());
+      VectorPtr = new VPVectorPointerRecipe(
+          Ptr, getLoadStoreType(I), /*Strided*/ false,
+          GEP ? GEP->getNoWrapFlags() : GEPNoWrapFlags::none(),
+          I->getDebugLoc());
     }
     Builder.insert(VectorPtr);
     Ptr = VectorPtr;
   }
-  if (LoadInst *Load = dyn_cast<LoadInst>(I)) {
-    if (Strided) {
-      const DataLayout &DL = Load->getDataLayout();
-      auto *StrideTy = DL.getIndexType(Load->getPointerOperand()->getType());
-      int64_t Stride = CM.getStride(Load);
-      assert(Stride == -1 &&
-             "Only stride memory access with a stride of -1 is supported.");
-      VPValue *StrideVPV = Plan.getOrAddLiveIn(ConstantInt::get(
-          StrideTy, Stride * DL.getTypeAllocSize(getLoadStoreType(Load))));
-      return new VPWidenStridedLoadRecipe(*Load, Ptr, StrideVPV, &Plan.getVF(),
-                                          Mask, VPIRMetadata(*Load, LVer),
-                                          I->getDebugLoc());
-    }
+  if (LoadInst *Load = dyn_cast<LoadInst>(I))
     return new VPWidenLoadRecipe(*Load, Ptr, Mask, Consecutive, Reverse,
                                  VPIRMetadata(*Load, LVer), I->getDebugLoc());
-  }
 
   StoreInst *Store = cast<StoreInst>(I);
   return new VPWidenStoreRecipe(*Store, Ptr, Operands[0], Mask, Consecutive,
@@ -9032,6 +9003,9 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   VPlanTransforms::runPass(VPlanTransforms::createInterleaveGroups, *Plan,
                            InterleaveGroups, RecipeBuilder,
                            CM.isScalarEpilogueAllowed());
+  // !!! NEED COMMENT
+  VPlanTransforms::runPass(VPlanTransforms::convertToStridedAccesses, *Plan,
+                           CM.getStrideInfo());
 
   // Replace VPValues for known constant strides guaranteed by predicate scalar
   // evolution.
