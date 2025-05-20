@@ -5436,11 +5436,8 @@ ExprResult Sema::BuiltinInvoke(CallExpr *TheCall) {
     auto ObjectT = Args[1]->getType();
 
 
-    if (MPT->isMemberDataPointer() && Args.size() != 2) {
-      Diag(TheCall->getBeginLoc(), diag::err_typecheck_call_too_many_args)
-          << 0 << 2 << Args.size() << 0 << TheCall->getSourceRange();
+    if (MPT->isMemberDataPointer() && checkArgCount(TheCall, 2))
       return ExprError();
-    }
 
     ExprResult ObjectArg = [&]() -> ExprResult {
       // (1.1): (t1.*f)(t2, …, tN) when f is a pointer to a member function of a
