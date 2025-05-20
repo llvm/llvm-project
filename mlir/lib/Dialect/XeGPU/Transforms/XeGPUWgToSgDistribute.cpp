@@ -121,19 +121,18 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
       return failure();
     Type elemTy = tdescTy.getElementType();
     ArrayRef<int64_t> wgShape = tdescTy.getShape();
+    // sgLayout must be present for workgroup-level distribution.
     SmallVector<int64_t> sgLayout;
-    if (auto sgLayoutAttr = layout.getSgLayout()) {
+    if (auto sgLayoutAttr = layout.getSgLayout())
       sgLayout = llvm::to_vector_of<int64_t>(sgLayoutAttr.asArrayRef());
-    } else {
-      // sgLayout must be present for workgroup-level distribution.
+    else
       return rewriter.notifyMatchFailure(
           op, "sgLayout attribute is required in layout");
-    }
 
     SmallVector<int64_t> sgShape;
-    if (auto sgDataAttr = layout.getSgData()) {
+    if (auto sgDataAttr = layout.getSgData())
       sgShape = llvm::to_vector_of<int64_t>(sgDataAttr.asArrayRef());
-    } else {
+    else {
       assert(wgShape.size() == sgLayout.size() &&
              "sgLayout and wgShape must have the same rank");
       sgShape.reserve(wgShape.size());
