@@ -130,9 +130,9 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
           op, "sgLayout attribute is required in layout");
 
     SmallVector<int64_t> sgShape;
-    if (auto sgDataAttr = layout.getSgData())
+    if (auto sgDataAttr = layout.getSgData()) {
       sgShape = llvm::to_vector_of<int64_t>(sgDataAttr.asArrayRef());
-    else {
+    } else {
       assert(wgShape.size() == sgLayout.size() &&
              "sgLayout and wgShape must have the same rank");
       sgShape.reserve(wgShape.size());
