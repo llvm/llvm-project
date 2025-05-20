@@ -1147,6 +1147,7 @@ cc_library(
     deps = [
         ":BitstreamReader",
         ":BitstreamWriter",
+        ":Core",
         ":DebugInfo",
         ":DebugInfoDWARF",
         ":Demangle",
