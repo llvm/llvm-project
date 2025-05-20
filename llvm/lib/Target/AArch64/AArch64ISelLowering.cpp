@@ -2102,15 +2102,12 @@ void AArch64TargetLowering::addTypeForNEON(MVT VT) {
 bool AArch64TargetLowering::shouldExpandGetActiveLaneMask(EVT ResVT,
                                                           EVT OpVT) const {
   // Only SVE has a 1:1 mapping from intrinsic -> instruction (whilelo).
-  if (!Subtarget->hasSVE())
-    return true;
-
-  if (!ResVT.isVector() || ResVT.getVectorElementType() != MVT::i1)
+  if (!Subtarget->hasSVE() || ResVT.getVectorElementType() != MVT::i1)
     return true;
 
   // 32 & 64 bit operands are supported. We can promote anything < 64 bits,
   // but anything larger should be expanded.
-  if (OpVT.bitsGT(MVT::i64))
+  if (OpVT.getFixedSizeInBits() > 64)
     return true;
 
   return false;
