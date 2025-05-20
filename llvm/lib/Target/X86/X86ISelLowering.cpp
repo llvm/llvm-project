@@ -59800,14 +59800,18 @@ static SDValue combineSCALAR_TO_VECTOR(SDNode *N, SelectionDAG &DAG,
                                   DAG.getZExtOrTrunc(ZeroExt, DL, MVT::i32))));
   }
 
-  if (VT == MVT::v2i64 && Src.getOpcode() == ISD::BITCAST) {
+  if (Src.getOpcode() == ISD::BITCAST) {
     SDValue SrcOp = Src.getOperand(0);
+    // Combine (v4i32 (scalar_to_vector (i32 (bitcast (float))))) to MOVD.
+    if (VT == MVT::v4i32 && SrcOp.getValueType() == MVT::f32)
+      return DAG.getBitcast(
+          VT, DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v4f32, SrcOp));
     // Combine (v2i64 (scalar_to_vector (i64 (bitcast (double))))) to MOVQ.
-    if (SrcOp.getValueType() == MVT::f64)
+    if (VT == MVT::v2i64 && SrcOp.getValueType() == MVT::f64)
       return DAG.getBitcast(
           VT, DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2f64, SrcOp));
     // Combine (v2i64 (scalar_to_vector (i64 (bitcast (mmx))))) to MOVQ2DQ.
-    if (SrcOp.getValueType() == MVT::x86mmx)
+    if (VT == MVT::v2i64 && SrcOp.getValueType() == MVT::x86mmx)
       return DAG.getNode(X86ISD::MOVQ2DQ, DL, VT, SrcOp);
   }
 
