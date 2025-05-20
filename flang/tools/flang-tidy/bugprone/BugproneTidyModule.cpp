@@ -8,13 +8,17 @@
 
 #include "../FlangTidyModule.h"
 #include "../FlangTidyModuleRegistry.h"
+#include "ArithmeticGotoCheck.h"
 
 namespace Fortran::tidy {
 namespace bugprone {
 
 class BugproneModule : public FlangTidyModule {
 public:
-  void addCheckFactories(FlangTidyCheckFactories &CheckFactories) override {}
+  void addCheckFactories(FlangTidyCheckFactories &CheckFactories) override {
+    CheckFactories.registerCheck<ArithmeticGotoCheck>(
+        "bugprone-arithmetic-goto");
+  }
 };
 
 } // namespace bugprone
