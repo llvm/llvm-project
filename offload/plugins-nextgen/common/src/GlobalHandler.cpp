@@ -37,7 +37,7 @@ GenericGlobalHandlerTy::getELFObjectFile(DeviceImageTy &Image) {
       ELFObjectFileBase::createELFObjectFile(Image.getMemoryBuffer());
   if (!Expected) {
     return Plugin::error(ErrorCode::INVALID_BINARY, Expected.takeError(),
-                         "Error parsing binary");
+                         "error parsing binary");
   }
   return Expected;
 }
@@ -120,19 +120,19 @@ Error GenericGlobalHandlerTy::getGlobalMetadataFromImage(
   auto SymOrErr = utils::elf::getSymbol(**ELFObj, ImageGlobal.getName());
   if (!SymOrErr)
     return Plugin::error(
-        ErrorCode::NOT_FOUND, "Failed ELF lookup of global '%s': %s",
+        ErrorCode::NOT_FOUND, "failed ELF lookup of global '%s': %s",
         ImageGlobal.getName().data(), toString(SymOrErr.takeError()).data());
 
   if (!SymOrErr->has_value())
     return Plugin::error(ErrorCode::NOT_FOUND,
-                         "Failed to find global symbol '%s' in the ELF image",
+                         "failed to find global symbol '%s' in the ELF image",
                          ImageGlobal.getName().data());
 
   auto AddrOrErr = utils::elf::getSymbolAddress(**SymOrErr);
   // Get the section to which the symbol belongs.
   if (!AddrOrErr)
     return Plugin::error(
-        ErrorCode::NOT_FOUND, "Failed to get ELF symbol from global '%s': %s",
+        ErrorCode::NOT_FOUND, "failed to get ELF symbol from global '%s': %s",
         ImageGlobal.getName().data(), toString(AddrOrErr.takeError()).data());
 
   // Setup the global symbol's address and size.
@@ -152,7 +152,7 @@ Error GenericGlobalHandlerTy::readGlobalFromImage(GenericDeviceTy &Device,
 
   if (ImageGlobal.getSize() != HostGlobal.getSize())
     return Plugin::error(ErrorCode::INVALID_BINARY,
-                         "Transfer failed because global symbol '%s' has "
+                         "transfer failed because global symbol '%s' has "
                          "%u bytes in the ELF image but %u bytes on the host",
                          HostGlobal.getName().data(), ImageGlobal.getSize(),
                          HostGlobal.getSize());
@@ -284,7 +284,7 @@ void GPUProfGlobals::dump() const {
 Error GPUProfGlobals::write() const {
   if (!__llvm_write_custom_profile)
     return Plugin::error(ErrorCode::INVALID_BINARY,
-                         "Could not find symbol __llvm_write_custom_profile. "
+                         "could not find symbol __llvm_write_custom_profile. "
                          "The compiler-rt profiling library must be linked for "
                          "GPU PGO to work.");
 
@@ -318,7 +318,7 @@ Error GPUProfGlobals::write() const {
       CountersEnd, NamesBegin, NamesEnd, &Version);
   if (result != 0)
     return Plugin::error(ErrorCode::HOST_IO,
-                         "Error writing GPU PGO data to file");
+                         "error writing GPU PGO data to file");
 
   return Plugin::success();
 }

@@ -1383,35 +1383,16 @@ static inline Error success() { return Error::success(); }
 /// Create an Offload error.
 template <typename... ArgsTy>
 static Error error(error::ErrorCode Code, const char *ErrFmt, ArgsTy... Args) {
-  std::string Buffer;
-  raw_string_ostream(Buffer) << format(ErrFmt, Args...);
-  return make_error<error::OffloadError>(Code, Buffer);
+  return error::createOffloadError(Code, ErrFmt, Args...);
 }
 
 inline Error error(error::ErrorCode Code, const char *S) {
   return make_error<error::OffloadError>(Code, S);
 }
 
-// The OffloadError will have a message of either:
-// * "{Context}: {Message}" if the other error is a StringError
-// * "{Context}" otherwise
 inline Error error(error::ErrorCode Code, Error &&OtherError,
                    const char *Context) {
-  std::string Buffer{Context};
-  raw_string_ostream buffer(Buffer);
-
-  handleAllErrors(
-      std::move(OtherError),
-      [&](llvm::StringError &Err) {
-        buffer << ": ";
-        buffer << Err.getMessage();
-      },
-      [&](llvm::ErrorInfoBase &Err) {
-        // Non-string error message don't add anything to the offload error's
-        // error message
-      });
-
-  return make_error<error::OffloadError>(Code, Buffer);
+  return error::createOffloadError(Code, std::move(OtherError), Context);
 }
 
 /// Check the plugin-specific error code and return an error or success

@@ -76,7 +76,7 @@ struct GenELF64KernelTy : public GenericKernelTy {
     // Check that the function pointer is valid.
     if (!Global.getPtr())
       return Plugin::error(ErrorCode::INVALID_BINARY,
-                           "Invalid function for kernel %s", getName());
+                           "invalid function for kernel %s", getName());
 
     // Save the function pointer.
     Func = (void (*)())Global.getPtr();
@@ -104,7 +104,7 @@ struct GenELF64KernelTy : public GenericKernelTy {
     ffi_status Status = ffi_prep_cif(&Cif, FFI_DEFAULT_ABI, KernelArgs.NumArgs,
                                      &ffi_type_void, ArgTypesPtr);
     if (Status != FFI_OK)
-      return Plugin::error(ErrorCode::UNKNOWN, "Error in ffi_prep_cif: %d",
+      return Plugin::error(ErrorCode::UNKNOWN, "error in ffi_prep_cif: %d",
                            Status);
 
     // Call the kernel function through libffi.
@@ -159,7 +159,7 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
     GenELF64KernelTy *GenELF64Kernel = Plugin.allocate<GenELF64KernelTy>();
     if (!GenELF64Kernel)
       return Plugin::error(ErrorCode::OUT_OF_RESOURCES,
-                           "Failed to allocate memory for GenELF64 kernel");
+                           "failed to allocate memory for GenELF64 kernel");
 
     new (GenELF64Kernel) GenELF64KernelTy(Name);
 
@@ -181,27 +181,27 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
     int TmpFileFd = mkstemp(TmpFileName);
     if (TmpFileFd == -1)
       return Plugin::error(ErrorCode::HOST_IO,
-                           "Failed to create tmpfile for loading target image");
+                           "failed to create tmpfile for loading target image");
 
     // Open the temporary file.
     FILE *TmpFile = fdopen(TmpFileFd, "wb");
     if (!TmpFile)
       return Plugin::error(ErrorCode::HOST_IO,
-                           "Failed to open tmpfile %s for loading target image",
+                           "failed to open tmpfile %s for loading target image",
                            TmpFileName);
 
     // Write the image into the temporary file.
     size_t Written = fwrite(Image->getStart(), Image->getSize(), 1, TmpFile);
     if (Written != 1)
       return Plugin::error(ErrorCode::HOST_IO,
-                           "Failed to write target image to tmpfile %s",
+                           "failed to write target image to tmpfile %s",
                            TmpFileName);
 
     // Close the temporary file.
     int Ret = fclose(TmpFile);
     if (Ret)
       return Plugin::error(ErrorCode::HOST_IO,
-                           "Failed to close tmpfile %s with the target image",
+                           "failed to close tmpfile %s with the target image",
                            TmpFileName);
 
     // Load the temporary file as a dynamic library.
@@ -212,7 +212,7 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
     // Check if the loaded library is valid.
     if (!DynLib.isValid())
       return Plugin::error(ErrorCode::INVALID_BINARY,
-                           "Failed to load target image: %s", ErrMsg.c_str());
+                           "failed to load target image: %s", ErrMsg.c_str());
 
     // Save a reference of the image's dynamic library.
     Image->setDynamicLibrary(DynLib);
@@ -377,7 +377,7 @@ public:
     // Get the address of the symbol.
     void *Addr = DynLib.getAddressOfSymbol(GlobalName);
     if (Addr == nullptr) {
-      return Plugin::error(ErrorCode::NOT_FOUND, "Failed to load global '%s'",
+      return Plugin::error(ErrorCode::NOT_FOUND, "failed to load global '%s'",
                            GlobalName);
     }
 
@@ -400,7 +400,7 @@ struct GenELF64PluginTy final : public GenericPluginTy {
   /// Initialize the plugin and return the number of devices.
   Expected<int32_t> initImpl() override {
 #ifdef USES_DYNAMIC_FFI
-    if (auto Err = Plugin::check(ffi_init(), "Failed to initialize libffi"))
+    if (auto Err = Plugin::check(ffi_init(), "failed to initialize libffi"))
       return std::move(Err);
 #endif
 
@@ -468,10 +468,10 @@ struct GenELF64PluginTy final : public GenericPluginTy {
 template <typename... ArgsTy>
 static Error Plugin::check(int32_t Code, const char *ErrMsg, ArgsTy... Args) {
   if (Code == 0)
-    return Error::success();
+    return Plugin::success();
 
-  return createStringError<ArgsTy..., const char *>(
-      inconvertibleErrorCode(), ErrMsg, Args..., std::to_string(Code).data());
+  return Plugin::error(ErrorCode::UNKNOWN, ErrMsg, Args...,
+                       std::to_string(Code).data());
 }
 
 } // namespace plugin
