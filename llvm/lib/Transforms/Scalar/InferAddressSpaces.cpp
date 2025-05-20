@@ -1338,7 +1338,20 @@ bool InferAddressSpacesImpl::rewriteWithNewAddressSpaces(
 
     unsigned OperandNo = PoisonUse->getOperandNo();
     assert(isa<PoisonValue>(NewV->getOperand(OperandNo)));
-    NewV->setOperand(OperandNo, ValueWithNewAddrSpace.lookup(PoisonUse->get()));
+    WeakTrackingVH NewOp = ValueWithNewAddrSpace.lookup(PoisonUse->get());
+    if (NewOp) {
+      NewV->setOperand(OperandNo, NewOp);
+    } else {
+      // Something went wrong while converting the instruction defining the new
+      // operand value.  -> Replace the poison value with the previous operand
+      // value combined with an addrspace case.
+      Value *PoisonOp = NewV->getOperand(OperandNo);
+      Value *OldOp = V->getOperand(OperandNo);
+      Value *AddrSpaceCast =
+          new AddrSpaceCastInst(OldOp, PoisonOp->getType(), "",
+                                cast<Instruction>(NewV)->getIterator());
+      NewV->setOperand(OperandNo, AddrSpaceCast);
+    }
   }
 
   SmallVector<Instruction *, 16> DeadInstructions;
