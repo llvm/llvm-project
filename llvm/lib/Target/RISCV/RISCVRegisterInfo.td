@@ -45,6 +45,13 @@ class RISCVReg64<RISCVReg32 subreg>
   let SubRegIndices = [sub_32];
 }
 
+def sub_64 : SubRegIndex<64>;
+class RISCVReg128<RISCVReg64 subreg>
+    : RISCVRegWithSubRegs<subreg.HWEncoding{4-0}, subreg.AsmName, [subreg],
+                          subreg.AltNames> {
+  let SubRegIndices = [sub_64];
+}
+
 let FallbackRegAltNameIndex = NoRegAltName in
 def ABIRegAltName : RegAltNameIndex;
 
@@ -412,6 +419,11 @@ let RegAltNameIndices = [ABIRegAltName] in {
     def F#Index#_D : RISCVReg64<!cast<RISCVReg32>("F"#Index#"_F")>,
       DwarfRegAlias<!cast<Register>("F"#Index#"_H")>;
   }
+
+  foreach Index = 0-31 in {
+    def F#Index#_Q : RISCVReg128<!cast<RISCVReg64>("F"#Index#"_D")>,
+      DwarfRegAlias<!cast<Register>("F"#Index#"_H")>;
+  }
 }
 
 // The order of registers represents the preferred allocation sequence,
@@ -460,6 +472,15 @@ def FPR64 : RISCVRegisterClass<[f64], 64, (add
 def FPR64C : RISCVRegisterClass<[f64], 64, (add
   (sequence "F%u_D", 15, 10),
   (sequence "F%u_D", 8, 9)
+)>;
+
+def FPR128 : RISCVRegisterClass<[f128], 128, (add
+    (sequence "F%u_Q", 15, 10),
+    (sequence "F%u_Q", 0, 7),
+    (sequence "F%u_Q", 16, 17),
+    (sequence "F%u_Q", 28, 31),
+    (sequence "F%u_Q", 8, 9),
+    (sequence "F%u_Q", 18, 27)
 )>;
 
 //===----------------------------------------------------------------------===//

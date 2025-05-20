@@ -1020,7 +1020,7 @@ llvm::Function *CGOpenMPRuntimeGPU::emitTeamsOutlinedFunction(
         for (const auto &Pair : MappedDeclsFields) {
           assert(Pair.getFirst()->isCanonicalDecl() &&
                  "Expected canonical declaration");
-          Data.insert(std::make_pair(Pair.getFirst(), MappedVarData()));
+          Data.try_emplace(Pair.getFirst());
         }
       }
       Rt.emitGenericVarsProlog(CGF, Loc);
@@ -1759,7 +1759,6 @@ void CGOpenMPRuntimeGPU::emitReduction(
           CGF.getTarget().getGridValue(),
           C.getLangOpts().OpenMPCUDAReductionBufNum, RTLoc));
   CGF.Builder.restoreIP(AfterIP);
-  return;
 }
 
 const VarDecl *
@@ -2026,7 +2025,7 @@ void CGOpenMPRuntimeGPU::emitFunctionProlog(CodeGenFunction &CGF,
   DeclToAddrMapTy &Data = I->getSecond().LocalVarData;
   for (const ValueDecl *VD : VarChecker.getEscapedDecls()) {
     assert(VD->isCanonicalDecl() && "Expected canonical declaration");
-    Data.insert(std::make_pair(VD, MappedVarData()));
+    Data.try_emplace(VD);
   }
   if (!NeedToDelayGlobalization) {
     emitGenericVarsProlog(CGF, D->getBeginLoc());
@@ -2334,6 +2333,8 @@ void CGOpenMPRuntimeGPU::processRequiresDirective(const OMPRequiresDecl *D) {
       case OffloadArch::GFX1201:
       case OffloadArch::AMDGCNSPIRV:
       case OffloadArch::Generic:
+      case OffloadArch::GRANITERAPIDS:
+      case OffloadArch::BMG_G21:
       case OffloadArch::UNUSED:
       case OffloadArch::UNKNOWN:
         break;

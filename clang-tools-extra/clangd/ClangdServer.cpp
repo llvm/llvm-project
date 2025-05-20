@@ -457,6 +457,7 @@ void ClangdServer::codeComplete(PathRef File, Position Pos,
     CodeCompleteOpts.ArgumentLists = Config::current().Completion.ArgumentLists;
     CodeCompleteOpts.InsertIncludes =
         Config::current().Completion.HeaderInsertion;
+    CodeCompleteOpts.CodePatterns = Config::current().Completion.CodePatterns;
     // FIXME(ibiryukov): even if Preamble is non-null, we may want to check
     // both the old and the new version in case only one of them matches.
     CodeCompleteResult Result = clangd::codeComplete(

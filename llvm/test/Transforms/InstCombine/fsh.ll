@@ -1084,3 +1084,72 @@ define i8 @fshl_range_trunc(i1 %x) {
   %tr = trunc nsw i32 %fshl to i8
   ret i8 %tr
 }
+
+;; Issue #138334 negative rotate amounts can be folded into the opposite direction
+define i32 @fshl_neg_amount(i32 %x, i32 %y) {
+; CHECK-LABEL: @fshl_neg_amount(
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.fshr.i32(i32 [[X:%.*]], i32 [[X]], i32 [[Y:%.*]])
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %n = sub i32 0, %y
+  %r = call i32 @llvm.fshl.i32(i32 %x, i32 %x, i32 %n)
+  ret i32 %r
+}
+
+define i32 @fshr_neg_amount(i32 %x, i32 %y) {
+; CHECK-LABEL: @fshr_neg_amount(
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.fshl.i32(i32 [[X:%.*]], i32 [[X]], i32 [[Y:%.*]])
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %n = sub i32 0, %y
+  %r = call i32 @llvm.fshr.i32(i32 %x, i32 %x, i32 %n)
+  ret i32 %r
+}
+
+;; negative test, funnel shift is not a rotate
+
+define i32 @fshl_neg_amount_non_rotate(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @fshl_neg_amount_non_rotate(
+; CHECK-NEXT:    [[N:%.*]] = sub i32 0, [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.fshl.i32(i32 [[X:%.*]], i32 [[Z:%.*]], i32 [[N]])
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %n = sub i32 0, %y
+  %r = call i32 @llvm.fshl.i32(i32 %x, i32 %z, i32 %n)
+  ret i32 %r
+}
+
+define i32 @fshr_neg_amount_non_rotate(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @fshr_neg_amount_non_rotate(
+; CHECK-NEXT:    [[N:%.*]] = sub i32 0, [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.fshr.i32(i32 [[X:%.*]], i32 [[Z:%.*]], i32 [[N]])
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %n = sub i32 0, %y
+  %r = call i32 @llvm.fshr.i32(i32 %x, i32 %z, i32 %n)
+  ret i32 %r
+}
+
+;; negative test, bitwidth is not a power of two
+
+define i31 @fshl_neg_amount_non_power_two(i31 %x, i31 %y) {
+; CHECK-LABEL: @fshl_neg_amount_non_power_two(
+; CHECK-NEXT:    [[N:%.*]] = sub i31 0, [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = call i31 @llvm.fshl.i31(i31 [[X:%.*]], i31 [[X]], i31 [[N]])
+; CHECK-NEXT:    ret i31 [[R]]
+;
+  %n = sub i31 0, %y
+  %r = call i31 @llvm.fshl.i31(i31 %x, i31 %x, i31 %n)
+  ret i31 %r
+}
+
+define i31 @fshr_neg_amount_non_power_two(i31 %x, i31 %y) {
+; CHECK-LABEL: @fshr_neg_amount_non_power_two(
+; CHECK-NEXT:    [[N:%.*]] = sub i31 0, [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = call i31 @llvm.fshr.i31(i31 [[X:%.*]], i31 [[X]], i31 [[N]])
+; CHECK-NEXT:    ret i31 [[R]]
+;
+  %n = sub i31 0, %y
+  %r = call i31 @llvm.fshr.i31(i31 %x, i31 %x, i31 %n)
+  ret i31 %r
+}

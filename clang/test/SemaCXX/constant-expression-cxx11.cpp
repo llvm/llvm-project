@@ -2598,3 +2598,12 @@ void foo() {
   constexpr S s[2] = { }; // expected-error {{constexpr variable 's' must be initialized by a constant expression}}
 }
 }
+
+namespace DoubleCapture {
+  int DC() {
+  int a = 1000;
+    static auto f =
+      [a, &a] { // expected-error {{'a' can appear only once in a capture list}}
+    };
+  }
+}

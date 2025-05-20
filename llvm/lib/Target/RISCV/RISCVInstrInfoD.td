@@ -22,12 +22,10 @@ def SDT_RISCVSplitF64     : SDTypeProfile<2, 1, [SDTCisVT<0, i32>,
                                                  SDTCisVT<1, i32>,
                                                  SDTCisVT<2, f64>]>;
 
-def RISCVBuildPairF64 : SDNode<"RISCVISD::BuildPairF64", SDT_RISCVBuildPairF64>;
+def RISCVBuildPairF64 : RVSDNode<"BuildPairF64", SDT_RISCVBuildPairF64>;
 def : GINodeEquiv<G_MERGE_VALUES, RISCVBuildPairF64>;
-def RISCVSplitF64     : SDNode<"RISCVISD::SplitF64", SDT_RISCVSplitF64>;
+def RISCVSplitF64     : RVSDNode<"SplitF64", SDT_RISCVSplitF64>;
 def : GINodeEquiv<G_UNMERGE_VALUES, RISCVSplitF64>;
-
-def AddrRegImmINX : ComplexPattern<iPTR, 2, "SelectAddrRegImmRV32Zdinx">;
 
 //===----------------------------------------------------------------------===//
 // Operand and SDNode transformation definitions.
@@ -529,17 +527,18 @@ defm Select_FPR64IN32X : SelectCC_GPR_rrirr<FPR64IN32X, f64>;
 def PseudoFROUND_D_IN32X : PseudoFROUND<FPR64IN32X, f64>;
 
 /// Loads
-let isCall = 0, mayLoad = 1, mayStore = 0, Size = 8, isCodeGenOnly = 1 in
+let hasSideEffects = 0, mayLoad = 1, mayStore = 0, Size = 8, isCodeGenOnly = 1 in
 def PseudoRV32ZdinxLD : Pseudo<(outs GPRPair:$dst), (ins GPR:$rs1, simm12:$imm12), []>;
-def : Pat<(f64 (load (AddrRegImmINX (XLenVT GPR:$rs1), simm12:$imm12))),
-          (PseudoRV32ZdinxLD GPR:$rs1, simm12:$imm12)>;
 
 /// Stores
-let isCall = 0, mayLoad = 0, mayStore = 1, Size = 8, isCodeGenOnly = 1 in
+let hasSideEffects = 0, mayLoad = 0, mayStore = 1, Size = 8, isCodeGenOnly = 1 in
 def PseudoRV32ZdinxSD : Pseudo<(outs), (ins GPRPair:$rs2, GPRNoX0:$rs1, simm12:$imm12), []>;
-def : Pat<(store (f64 GPRPair:$rs2), (AddrRegImmINX (XLenVT GPR:$rs1), simm12:$imm12)),
-          (PseudoRV32ZdinxSD GPRPair:$rs2, GPR:$rs1, simm12:$imm12)>;
 } // Predicates = [HasStdExtZdinx, IsRV32]
+
+let Predicates = [HasStdExtZdinx, HasStdExtZilsd, IsRV32] in {
+def : LdPat<load, LD_RV32, f64>;
+def : StPat<store, SD_RV32, GPRPair, f64>;
+}
 
 let Predicates = [HasStdExtD, IsRV32] in {
 

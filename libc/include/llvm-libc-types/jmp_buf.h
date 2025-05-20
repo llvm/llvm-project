@@ -12,7 +12,8 @@
 // TODO: implement sigjmp_buf related functions for other architectures
 // Issue: https://github.com/llvm/llvm-project/issues/136358
 #if defined(__linux__)
-#if defined(__i386__) || defined(__x86_64__)
+#if defined(__i386__) || defined(__x86_64__) || defined(__aarch64__) ||        \
+    defined(__riscv)
 #define __LIBC_HAS_SIGJMP_BUF
 #endif
 #endif

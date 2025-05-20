@@ -683,24 +683,24 @@ defm trunc_masked_scatter_i32 : masked_gather_scatter<trunc_masked_scatter_i32>;
 
 // top16Zero - answer true if the upper 16 bits of $src are 0, false otherwise
 def top16Zero: PatLeaf<(i32 GPR32:$src), [{
-  return SDValue(N,0)->getValueType(0) == MVT::i32 &&
-         CurDAG->MaskedValueIsZero(SDValue(N,0), APInt::getHighBitsSet(32, 16));
+  return Op.getValueType() == MVT::i32 &&
+         CurDAG->MaskedValueIsZero(Op, APInt::getHighBitsSet(32, 16));
   }]>;
 
 // top32Zero - answer true if the upper 32 bits of $src are 0, false otherwise
 def top32Zero: PatLeaf<(i64 GPR64:$src), [{
-  return SDValue(N,0)->getValueType(0) == MVT::i64 &&
-         CurDAG->MaskedValueIsZero(SDValue(N,0), APInt::getHighBitsSet(64, 32));
+  return Op.getValueType() == MVT::i64 &&
+         CurDAG->MaskedValueIsZero(Op, APInt::getHighBitsSet(64, 32));
   }]>;
 
 // topbitsallzero - Return true if all bits except the lowest bit are known zero
 def topbitsallzero32: PatLeaf<(i32 GPR32:$src), [{
-  return SDValue(N,0)->getValueType(0) == MVT::i32 &&
-         CurDAG->MaskedValueIsZero(SDValue(N,0), APInt::getHighBitsSet(32, 31));
+  return Op.getValueType() == MVT::i32 &&
+         CurDAG->MaskedValueIsZero(Op, APInt::getHighBitsSet(32, 31));
   }]>;
 def topbitsallzero64: PatLeaf<(i64 GPR64:$src), [{
-  return SDValue(N,0)->getValueType(0) == MVT::i64 &&
-         CurDAG->MaskedValueIsZero(SDValue(N,0), APInt::getHighBitsSet(64, 63));
+  return Op.getValueType() == MVT::i64 &&
+         CurDAG->MaskedValueIsZero(Op, APInt::getHighBitsSet(64, 63));
   }]>;
 
 // Node definitions.
@@ -754,10 +754,11 @@ def AArch64authtcret: SDNode<"AArch64ISD::AUTH_TC_RETURN",
 
 def AArch64authcall_rvmarker : SDNode<"AArch64ISD::AUTH_CALL_RVMARKER",
                                  SDTypeProfile<0, -1, [SDTCisPtrTy<0>,
-                                                       SDTCisPtrTy<1>,
-                                                       SDTCisVT<2, i32>,
-                                                       SDTCisVT<3, i64>,
-                                                       SDTCisVT<4, i64>]>,
+                                                       SDTCisVT<1, i32>,
+                                                       SDTCisPtrTy<2>,
+                                                       SDTCisVT<3, i32>,
+                                                       SDTCisVT<4, i64>,
+                                                       SDTCisVT<5, i64>]>,
                                  [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                                   SDNPVariadic]>;
 
@@ -1052,9 +1053,9 @@ def AArch64CttzElts : SDNode<"AArch64ISD::CTTZ_ELTS", SDTypeProfile<1, 1,
 // have no common bits.
 def add_and_or_is_add : PatFrags<(ops node:$lhs, node:$rhs),
                          [(add node:$lhs, node:$rhs), (or node:$lhs, node:$rhs)],[{
-   if (N->getOpcode() == ISD::ADD)
+   if (Op.getOpcode() == ISD::ADD)
      return true;
-   return CurDAG->isADDLike(SDValue(N,0));
+   return CurDAG->isADDLike(Op);
 }]> {
   let GISelPredicateCode = [{
      return mi_match(MI, MRI, m_GAddLike(m_Reg(), m_Reg()));
@@ -1114,6 +1115,7 @@ let RecomputePerFunction = 1 in {
 
   def SLSBLRMitigation : Predicate<[{ MF->getSubtarget<AArch64Subtarget>().hardenSlsBlr() }]>;
   def NoSLSBLRMitigation : Predicate<[{ !MF->getSubtarget<AArch64Subtarget>().hardenSlsBlr() }]>;
+
   // Toggles patterns which aren't beneficial in GlobalISel when we aren't
   // optimizing. This allows us to selectively use patterns without impacting
   // SelectionDAG's behaviour.
@@ -1896,9 +1898,9 @@ let Predicates = [HasPAuth] in {
   }
 
   def BLRA_RVMARKER : Pseudo<
-        (outs), (ins i64imm:$rvfunc, GPR64noip:$Rn, i32imm:$Key, i64imm:$Disc,
-                     GPR64:$AddrDisc),
-        [(AArch64authcall_rvmarker tglobaladdr:$rvfunc,
+        (outs), (ins i64imm:$rvfunc, i32imm:$withmarker, GPR64noip:$Rn,
+                     i32imm:$Key, i64imm:$Disc, GPR64:$AddrDisc),
+        [(AArch64authcall_rvmarker tglobaladdr:$rvfunc, timm:$withmarker,
                                    GPR64noip:$Rn, timm:$Key, timm:$Disc,
                                    GPR64:$AddrDisc)]>, Sched<[]> {
     let isCodeGenOnly = 1;
@@ -2094,6 +2096,7 @@ def FJCVTZS  : BaseFPToIntegerUnscaled<0b01, 0b11, 0b110, FPR64, GPR32,
 let Predicates = [HasFlagM], Defs = [NZCV], Uses = [NZCV] in {
 def CFINV : SimpleSystemI<0, (ins), "cfinv", "">, Sched<[WriteSys]> {
   let Inst{20-5} = 0b0000001000000000;
+  let Unpredictable{11-8} = 0b1111;
 }
 def SETF8  : BaseFlagManipulation<0, 0, (ins GPR32:$Rn), "setf8", "{\t$Rn}">;
 def SETF16 : BaseFlagManipulation<0, 1, (ins GPR32:$Rn), "setf16", "{\t$Rn}">;
@@ -3293,8 +3296,9 @@ def : Pat<(AArch64call GPR64noip:$Rn),
           (BLRNoIP GPR64noip:$Rn)>,
       Requires<[SLSBLRMitigation]>;
 
-def : Pat<(AArch64call_rvmarker (i64 tglobaladdr:$rvfunc), GPR64:$Rn),
-          (BLR_RVMARKER tglobaladdr:$rvfunc, GPR64:$Rn)>,
+def : Pat<(AArch64call_rvmarker (i64 tglobaladdr:$rvfunc),
+                                (i32 timm:$withmarker), GPR64:$Rn),
+          (BLR_RVMARKER tglobaladdr:$rvfunc, timm:$withmarker, GPR64:$Rn)>,
       Requires<[NoSLSBLRMitigation]>;
 
 def : Pat<(AArch64call_bti GPR64:$Rn),
@@ -4036,6 +4040,10 @@ multiclass LoadInsertPatterns<SDPatternOperator LoadOp, ValueType VT, ValueType 
                               ROXLoadInst, ro, Addr, UnscaledAddr, AddrImm, SubReg>;
 }
 
+// Accept i8 scalar argument in GlobalISel.
+defm : LoadInsertPatterns<load,       v16i8,  v8i8,   nxv16i8,  i8,
+                          LDRBui, LDURBi, LDRBroW, LDRBroX,
+                          ro8, am_indexed8,  am_unscaled8,  uimm12s1, bsub>;
 defm : LoadInsertPatterns<extloadi8,  v16i8,  v8i8,   nxv16i8,  i32,
                           LDRBui, LDURBi, LDRBroW, LDRBroX,
                           ro8, am_indexed8,  am_unscaled8,  uimm12s1, bsub>;
@@ -7307,12 +7315,12 @@ multiclass Neon_INS_elt_pattern<ValueType VT128, ValueType VT64, ValueType VTSVE
                         (VTScal (vector_extract (VT64 V64:$Rn), (i64 imm:$Immn))),
                         (i64 imm:$Immd))),
             (INS V128:$src, imm:$Immd,
-                 (SUBREG_TO_REG (i64 0), V64:$Rn, dsub), imm:$Immn)>;
+                 (VT128 (SUBREG_TO_REG (i64 0), V64:$Rn, dsub)), imm:$Immn)>;
 
   def : Pat<(VT64 (vector_insert V64:$src,
                         (VTScal (vector_extract (VT128 V128:$Rn), (i64 imm:$Immn))),
                         (i64 imm:$Immd))),
-            (EXTRACT_SUBREG (INS (SUBREG_TO_REG (i64 0), V64:$src, dsub),
+            (EXTRACT_SUBREG (INS (VT128 (SUBREG_TO_REG (i64 0), V64:$src, dsub)),
                                  imm:$Immd, V128:$Rn, imm:$Immn),
                             dsub)>;
 
@@ -7330,6 +7338,8 @@ defm : Neon_INS_elt_pattern<v8bf16, v4bf16, nxv8bf16, bf16, VectorIndexH, INSvi1
 defm : Neon_INS_elt_pattern<v4f32,  v2f32,  nxv4f32,  f32,  VectorIndexS, INSvi32lane, DUPi32, ssub>;
 defm : Neon_INS_elt_pattern<v2f64,  v1f64,  nxv2f64,  f64,  VectorIndexD, INSvi64lane, DUPi64, dsub>;
 
+// Accept i8 scalar argument in GlobalISel.
+defm : Neon_INS_elt_pattern<v16i8,  v8i8,   nxv16i8,  i8,   VectorIndexB, INSvi8lane,  DUPi8,  bsub>;
 defm : Neon_INS_elt_pattern<v16i8,  v8i8,   nxv16i8,  i32,  VectorIndexB, INSvi8lane,  DUPi8,  bsub>;
 defm : Neon_INS_elt_pattern<v8i16,  v4i16,  nxv8i16,  i32,  VectorIndexH, INSvi16lane, DUPi16, hsub>;
 defm : Neon_INS_elt_pattern<v4i32,  v2i32,  nxv4i32,  i32,  VectorIndexS, INSvi32lane, DUPi32, ssub>;
@@ -7349,7 +7359,8 @@ def : Pat<(v2i64 (vector_insert v2i64:$src, (i64 (bitconvert (f64 FPR64:$Sn))), 
 
 // Patterns for i8/i16 -> v2i32/v4i16 lane moves via insert and extract that go via i32.
 multiclass Neon_INS_elt_ext_pattern<ValueType VT128, ValueType VT64, ValueType OutVT,
-                                    Instruction INS, SDNodeXForm VecIndexMult> {
+                                    Instruction INS, Instruction DUP, SubRegIndex DUPSub,
+                                    SDNodeXForm VecIndexMult> {
   // VT64->OutVT
   def : Pat<(OutVT (vector_insert (OutVT V64:$src),
                                   (i32 (vector_extract (VT64 V64:$Rn), (i64 imm:$Immn))),
@@ -7360,8 +7371,10 @@ multiclass Neon_INS_elt_ext_pattern<ValueType VT128, ValueType VT64, ValueType O
               dsub)>;
   def : Pat<(OutVT (scalar_to_vector (i32 (vector_extract (VT64 V64:$Rn), (i64 imm:$Immn))))),
             (EXTRACT_SUBREG
-              (INS (IMPLICIT_DEF), 0,
-                   (INSERT_SUBREG (VT128 (IMPLICIT_DEF)), V64:$Rn, dsub), imm:$Immn),
+              (VT128 (SUBREG_TO_REG
+                (i64 0),
+                (DUP (INSERT_SUBREG (VT128 (IMPLICIT_DEF)), V64:$Rn, dsub), imm:$Immn),
+                DUPSub)),
               dsub)>;
 
   // VT128->OutVT
@@ -7374,24 +7387,37 @@ multiclass Neon_INS_elt_ext_pattern<ValueType VT128, ValueType VT64, ValueType O
               dsub)>;
   def : Pat<(OutVT (scalar_to_vector (i32 (vector_extract (VT128 V128:$Rn), (i64 imm:$Immn))))),
             (EXTRACT_SUBREG
-              (INS (IMPLICIT_DEF), 0, V128:$Rn, imm:$Immn),
+              (VT128 (SUBREG_TO_REG
+                (i64 0),
+                (DUP V128:$Rn, imm:$Immn),
+                DUPSub)),
               dsub)>;
 }
 
-defm : Neon_INS_elt_ext_pattern<v16i8, v8i8, v4i16, INSvi8lane, VecIndex_x2>;
-defm : Neon_INS_elt_ext_pattern<v16i8, v8i8, v2i32, INSvi8lane, VecIndex_x4>;
-defm : Neon_INS_elt_ext_pattern<v8i16, v4i16, v2i32, INSvi16lane, VecIndex_x2>;
+defm : Neon_INS_elt_ext_pattern<v16i8, v8i8, v4i16, INSvi8lane, DUPi8, bsub, VecIndex_x2>;
+defm : Neon_INS_elt_ext_pattern<v16i8, v8i8, v2i32, INSvi8lane, DUPi8, bsub, VecIndex_x4>;
+defm : Neon_INS_elt_ext_pattern<v8i16, v4i16, v2i32, INSvi16lane, DUPi16, hsub, VecIndex_x2>;
 
 // bitcast of an extract
-// f32 bitcast(vector_extract(v4i32 src, lane)) -> EXTRACT_SUBREG(INSvi32lane(-, 0, src, lane))
-def : Pat<(f32 (bitconvert (i32 (vector_extract v4i32:$src, imm:$Immd)))),
-          (EXTRACT_SUBREG (INSvi32lane (IMPLICIT_DEF), 0, V128:$src, imm:$Immd), ssub)>;
+// f32 bitcast(vector_extract(v4i32 src, 0)) -> EXTRACT_SUBREG(src)
+def : Pat<(f32 (bitconvert (i32 (vector_extract v16i8:$src, (i64 0))))),
+          (EXTRACT_SUBREG V128:$src, bsub)>;
+def : Pat<(f32 (bitconvert (i32 (vector_extract v8i16:$src, (i64 0))))),
+          (EXTRACT_SUBREG V128:$src, hsub)>;
 def : Pat<(f32 (bitconvert (i32 (vector_extract v4i32:$src, (i64 0))))),
           (EXTRACT_SUBREG V128:$src, ssub)>;
-def : Pat<(f64 (bitconvert (i64 (vector_extract v2i64:$src, imm:$Immd)))),
-          (EXTRACT_SUBREG (INSvi64lane (IMPLICIT_DEF), 0, V128:$src, imm:$Immd), dsub)>;
 def : Pat<(f64 (bitconvert (i64 (vector_extract v2i64:$src, (i64 0))))),
           (EXTRACT_SUBREG V128:$src, dsub)>;
+
+// f32 bitcast(vector_extract(v4i32 src, lane)) -> DUPi32(src, lane)
+def : Pat<(f32 (bitconvert (i32 (vector_extract v16i8:$src, imm:$Immd)))),
+          (EXTRACT_SUBREG (v16i8 (SUBREG_TO_REG (i64 0), (DUPi8 V128:$src, imm:$Immd), bsub)), ssub)>;
+def : Pat<(f32 (bitconvert (i32 (vector_extract v8i16:$src, imm:$Immd)))),
+          (EXTRACT_SUBREG (v8i16 (SUBREG_TO_REG (i64 0), (DUPi16 V128:$src, imm:$Immd), hsub)), ssub)>;
+def : Pat<(f32 (bitconvert (i32 (vector_extract v4i32:$src, imm:$Immd)))),
+          (DUPi32 V128:$src, imm:$Immd)>;
+def : Pat<(f64 (bitconvert (i64 (vector_extract v2i64:$src, imm:$Immd)))),
+          (DUPi64 V128:$src, imm:$Immd)>;
 
 // Floating point vector extractions are codegen'd as either a sequence of
 // subregister extractions, or a MOV (aka DUP here) if
@@ -8513,6 +8539,26 @@ def : InstAlias<"uxtl2 $dst.2d, $src1.4s",
                 (USHLLv4i32_shift V128:$dst, V128:$src1, 0)>;
 }
 
+// fpextend from bf16 to f32 is just a shift left by 16
+let Predicates = [HasNEON] in {
+def : Pat<(f32 (any_fpextend (bf16 FPR16:$Rn))),
+          (f32 (EXTRACT_SUBREG
+            (v4i32 (SHLLv4i16 (v4i16 (SUBREG_TO_REG (i64 0), (bf16 FPR16:$Rn), hsub)))),
+            ssub))>;
+def : Pat<(v4f32 (any_fpextend (v4bf16 V64:$Rn))),
+          (SHLLv4i16 V64:$Rn)>;
+def : Pat<(v4f32 (any_fpextend (extract_high_v8bf16 (v8bf16 V128:$Rn)))),
+          (SHLLv8i16 V128:$Rn)>;
+}
+// Fallback pattern for when we don't have NEON
+def : Pat<(f32 (any_fpextend (bf16 FPR16:$Rn))),
+          (f32 (COPY_TO_REGCLASS
+            (i32 (UBFMWri (COPY_TO_REGCLASS
+                            (f32 (SUBREG_TO_REG (i32 0), (bf16 FPR16:$Rn), hsub)),
+                            GPR32),
+                          (i64 16), (i64 15))),
+            FPR32))>;
+
 def abs_f16 :
   OutPatFrag<(ops node:$Rn),
              (EXTRACT_SUBREG (f32 (COPY_TO_REGCLASS
@@ -8787,6 +8833,8 @@ class Ld1Lane128Pat<SDPatternOperator scalar_load, Operand VecIndex,
            (STy (scalar_load GPR64sp:$Rn)), (i64 VecIndex:$idx)),
         (LD1 VecListOne128:$Rd, VecIndex:$idx, GPR64sp:$Rn)>;
 
+// Accept i8 scalar argument in GlobalISel.
+def : Ld1Lane128Pat<load,       VectorIndexB, v16i8, i8,  LD1i8>;
 def : Ld1Lane128Pat<extloadi8,  VectorIndexB, v16i8, i32, LD1i8>;
 def : Ld1Lane128Pat<extloadi16, VectorIndexH, v8i16, i32, LD1i16>;
 def : Ld1Lane128Pat<load,       VectorIndexS, v4i32, i32, LD1i32>;
@@ -8860,6 +8908,8 @@ class Ld1Lane64Pat<SDPatternOperator scalar_load, Operand VecIndex,
                           VecIndex:$idx, GPR64sp:$Rn),
             dsub)>;
 
+// Accept i8 scalar argument in GlobalISel.
+def : Ld1Lane64Pat<load,       VectorIndexB, v8i8,  i8,  LD1i8>;
 def : Ld1Lane64Pat<extloadi8,  VectorIndexB, v8i8,  i32, LD1i8>;
 def : Ld1Lane64Pat<extloadi16, VectorIndexH, v4i16, i32, LD1i16>;
 def : Ld1Lane64Pat<load,       VectorIndexS, v2i32, i32, LD1i32>;

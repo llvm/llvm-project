@@ -3419,16 +3419,32 @@ cc_library(
     deps = [
         ":AffineUtils",
         ":Analysis",
+        ":DialectUtils",
         ":FunctionInterfaces",
         ":GPUDialect",
+        ":GPUUtils",
         ":IR",
+        ":InliningUtils",
         ":MemRefDialect",
         ":Pass",
         ":TransformUtils",
         ":VectorDialect",
+        ":VectorTransforms",
         ":XeGPUDialect",
         ":XeGPUPassIncGen",
+        ":XeGPUUtils",
         "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "XeGPUUtils",
+    srcs = glob(["lib/Dialect/XeGPU/Utils/*.cpp"]),
+    hdrs = glob(["include/mlir/Dialect/XeGPU/Utils/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":IR",
+        ":XeGPUDialect",
     ],
 )
 
@@ -3786,6 +3802,7 @@ cc_library(
         ":ControlFlowToSCF",
         ":ControlFlowToSPIRV",
         ":ConversionPassIncGen",
+        ":ConvertToEmitC",
         ":ConvertToLLVM",
         ":FuncToEmitC",
         ":FuncToLLVM",
@@ -3904,6 +3921,7 @@ cc_library(
         ":BufferizationInterfaces",
         ":ControlFlowDialect",
         ":ControlFlowInterfaces",
+        ":ConvertToEmitCInterface",
         ":DestinationStyleOpInterface",
         ":FunctionInterfaces",
         ":IR",
@@ -4317,6 +4335,7 @@ cc_library(
         ":BytecodeOpInterface",
         ":CallOpInterfaces",
         ":ControlFlowInterfaces",
+        ":ConvertToEmitCInterface",
         ":ConvertToLLVMInterface",
         ":FuncIncGen",
         ":FunctionInterfaces",
@@ -4396,6 +4415,7 @@ cc_library(
     deps = [
         ":AMXTransforms",
         ":AffineTransformOps",
+        ":ArithToEmitC",
         ":ArithToLLVM",
         ":BufferizationTransformOps",
         ":BuiltinToLLVMIRTranslation",
@@ -4403,6 +4423,7 @@ cc_library(
         ":ControlFlowToLLVM",
         ":DLTITransformOps",
         ":FuncExtensions",
+        ":FuncToEmitC",
         ":FuncToLLVM",
         ":FuncTransformOps",
         ":GPUToGPURuntimeTransforms",
@@ -4414,6 +4435,7 @@ cc_library(
         ":LinalgTransformOps",
         ":MPIToLLVM",
         ":MathToLLVM",
+        ":MemRefToEmitC",
         ":MemRefToLLVM",
         ":MemRefTransformOps",
         ":MeshDialect",
@@ -4423,6 +4445,7 @@ cc_library(
         ":OpenMPToLLVM",
         ":ROCDLTarget",
         ":ROCDLToLLVMIRTranslation",
+        ":SCFToEmitC",
         ":SCFTransformOps",
         ":SparseTensorTransformOps",
         ":TensorExtensions",
@@ -5290,6 +5313,7 @@ cc_library(
     ]),
     includes = ["include"],
     deps = [
+        ":AMDGPUDialect",
         ":AffineDialect",
         ":ArithDialect",
         ":DialectUtils",
@@ -5520,6 +5544,7 @@ cc_library(
     hdrs = ["include/mlir/Conversion/GPUToROCDL/GPUToROCDLPass.h"],
     includes = ["include"],
     deps = [
+        ":AMDGPUDialect",
         ":AMDGPUToROCDL",
         ":ArithTransforms",
         ":ControlFlowDialect",
@@ -6134,96 +6159,6 @@ gentbl_cc_library(
     deps = [":PDLInterpOpsTdFiles"],
 )
 
-cc_library(
-    name = "PolynomialDialect",
-    srcs = glob([
-        "lib/Dialect/Polynomial/IR/*.cpp",
-    ]),
-    hdrs = glob([
-        "include/mlir/Dialect/Polynomial/IR/*.h",
-    ]),
-    includes = ["include"],
-    deps = [
-        ":ArithDialect",
-        ":IR",
-        ":InferTypeOpInterface",
-        ":PolynomialAttributesIncGen",
-        ":PolynomialCanonicalizationIncGen",
-        ":PolynomialIncGen",
-        ":Support",
-        "//llvm:Support",
-    ],
-)
-
-td_library(
-    name = "PolynomialTdFiles",
-    srcs = glob(["include/mlir/Dialect/Polynomial/IR/*.td"]),
-    includes = ["include"],
-    deps = [
-        ":BuiltinDialectTdFiles",
-        ":InferTypeOpInterfaceTdFiles",
-        ":OpBaseTdFiles",
-        ":SideEffectInterfacesTdFiles",
-    ],
-)
-
-gentbl_cc_library(
-    name = "PolynomialIncGen",
-    tbl_outs = {
-        "include/mlir/Dialect/Polynomial/IR/Polynomial.h.inc": ["-gen-op-decls"],
-        "include/mlir/Dialect/Polynomial/IR/Polynomial.cpp.inc": ["-gen-op-defs"],
-        "include/mlir/Dialect/Polynomial/IR/PolynomialDialect.h.inc": [
-            "-gen-dialect-decls",
-            "-dialect=polynomial",
-        ],
-        "include/mlir/Dialect/Polynomial/IR/PolynomialDialect.cpp.inc": [
-            "-gen-dialect-defs",
-            "-dialect=polynomial",
-        ],
-        "include/mlir/Dialect/Polynomial/IR/PolynomialTypes.h.inc": [
-            "--gen-typedef-decls",
-            "-typedefs-dialect=polynomial",
-        ],
-        "include/mlir/Dialect/Polynomial/IR/PolynomialTypes.cpp.inc": [
-            "--gen-typedef-defs",
-            "-typedefs-dialect=polynomial",
-        ],
-        "g3doc/Dialects/Polynomial/Polynomial.md": ["-gen-op-doc"],
-    },
-    tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/Polynomial/IR/Polynomial.td",
-    deps = [":PolynomialTdFiles"],
-)
-
-gentbl_cc_library(
-    name = "PolynomialAttributesIncGen",
-    tbl_outs = {
-        "include/mlir/Dialect/Polynomial/IR/PolynomialAttributes.h.inc": [
-            "-gen-attrdef-decls",
-            "-attrdefs-dialect=polynomial",
-        ],
-        "include/mlir/Dialect/Polynomial/IR/PolynomialAttributes.cpp.inc": [
-            "-gen-attrdef-defs",
-            "-attrdefs-dialect=polynomial",
-        ],
-    },
-    tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/Polynomial/IR/Polynomial.td",
-    deps = [":PolynomialTdFiles"],
-)
-
-gentbl_cc_library(
-    name = "PolynomialCanonicalizationIncGen",
-    strip_include_prefix = "include/mlir/Dialect/Polynomial/IR",
-    tbl_outs = {"include/mlir/Dialect/Polynomial/IR/PolynomialCanonicalization.inc": ["-gen-rewriters"]},
-    tblgen = ":mlir-tblgen",
-    td_file = "lib/Dialect/Polynomial/IR/PolynomialCanonicalization.td",
-    deps = [
-        ":ArithOpsTdFiles",
-        ":PolynomialTdFiles",
-    ],
-)
-
 td_library(
     name = "PtrTdFiles",
     srcs = [
@@ -6740,6 +6675,7 @@ cc_library(
     ],
     deps = [
         ":ConversionPassIncGen",
+        ":ConvertToEmitCInterface",
         ":EmitCDialect",
         ":FuncDialect",
         ":Pass",
@@ -7491,6 +7427,7 @@ cc_library(
     deps = [
         ":ArithDialect",
         ":ConversionPassIncGen",
+        ":ConvertToEmitCInterface",
         ":EmitCDialect",
         ":EmitCTransforms",
         ":IR",
@@ -7643,6 +7580,34 @@ cc_library(
 )
 
 cc_library(
+    name = "ConvertToEmitCInterface",
+    hdrs = ["include/mlir/Conversion/ConvertToEmitC/ToEmitCInterface.h"],
+    includes = ["include"],
+    deps = [
+        ":ConversionPassIncGen",
+        ":IR",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "ConvertToEmitC",
+    srcs = ["lib/Conversion/ConvertToEmitC/ConvertToEmitCPass.cpp"],
+    hdrs = ["include/mlir/Conversion/ConvertToEmitC/ConvertToEmitCPass.h"],
+    includes = ["include"],
+    deps = [
+        ":ConversionPassIncGen",
+        ":ConvertToEmitCInterface",
+        ":EmitCDialect",
+        ":IR",
+        ":LLVMCommonConversion",
+        ":Pass",
+        ":TransformUtils",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "FuncToLLVM",
     srcs = [
         "lib/Conversion/FuncToLLVM/FuncToLLVM.cpp",
@@ -7774,6 +7739,7 @@ cc_library(
     ],
     deps = [
         ":ConversionPassIncGen",
+        ":ConvertToEmitCInterface",
         ":EmitCDialect",
         ":IR",
         ":MemRefDialect",
@@ -7893,6 +7859,7 @@ cc_library(
     deps = [
         ":ArithDialect",
         ":ConversionPassIncGen",
+        ":ConvertToEmitCInterface",
         ":EmitCDialect",
         ":EmitCTransforms",
         ":IR",
@@ -8749,6 +8716,7 @@ cc_library(
         ":ControlFlowDialect",
         ":ControlFlowTransforms",
         ":ConversionPasses",
+        ":ConvertToEmitC",
         ":ConvertToLLVM",
         ":DLTIDialect",
         ":EmitCDialect",
@@ -8809,7 +8777,6 @@ cc_library(
         ":PDLDialect",
         ":PDLInterpDialect",
         ":PDLToPDLInterp",
-        ":PolynomialDialect",
         ":PtrDialect",
         ":QuantOps",
         ":QuantTransforms",
@@ -8933,6 +8900,7 @@ cc_binary(
         "//mlir/test:TestTransforms",
         "//mlir/test:TestVector",
         "//mlir/test:TestVectorToSPIRV",
+        "//mlir/test:TestXeGPU",
     ],
 )
 
@@ -9516,6 +9484,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":FuncDialect",
+        ":IR",
         ":OpenACCDialect",
         ":OpenACCPassIncGen",
         ":Pass",
@@ -11753,6 +11722,7 @@ cc_library(
         ":CastInterfaces",
         ":CommonFolders",
         ":ControlFlowInterfaces",
+        ":ConvertToEmitCInterface",
         ":ConvertToLLVMInterface",
         ":DestinationStyleOpInterface",
         ":IR",
@@ -12029,6 +11999,7 @@ cc_library(
         ":CallOpInterfaces",
         ":CastInterfaces",
         ":ControlFlowInterfaces",
+        ":ConvertToEmitCInterface",
         ":ConvertToLLVMInterface",
         ":CopyOpInterface",
         ":DialectUtils",
@@ -12903,6 +12874,7 @@ cc_library(
     ),
     includes = ["include"],
     deps = [
+        ":Analysis",
         ":FuncDialect",
         ":IR",
         ":Reducer",

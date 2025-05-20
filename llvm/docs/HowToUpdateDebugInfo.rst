@@ -169,6 +169,47 @@ See the discussion in the section about
 :ref:`merging locations<WhenToMergeLocation>` for examples of when the rule for
 dropping locations applies.
 
+.. _NewInstLocations:
+
+Setting locations for new instructions
+--------------------------------------
+
+Whenever a new instruction is created and there is no suitable location for that
+instruction, that instruction should be annotated accordingly. There are a set
+of special ``DebugLoc`` values that can be set on an instruction to annotate the
+reason that it does not have a valid location. These are as follows:
+
+* ``DebugLoc::getCompilerGenerated()``: This indicates that the instruction is a
+  compiler-generated instruction, i.e. it is not associated with any user source
+  code.
+
+* ``DebugLoc::getDropped()``: This indicates that the instruction has
+  intentionally had its source location removed, according to the rules for
+  :ref:`dropping locations<WhenToDropLocation>`; this is set automatically by
+  ``Instruction::dropLocation()``.
+
+* ``DebugLoc::getUnknown()``: This indicates that the instruction does not have
+  a known or currently knowable source location, e.g. that it is infeasible to
+  determine the correct source location, or that the source location is
+  ambiguous in a way that LLVM cannot currently represent.
+
+* ``DebugLoc::getTemporary()``: This is used for instructions that we don't
+  expect to be emitted (e.g. ``UnreachableInst``), and so should not need a
+  valid location; if we ever try to emit a temporary location into an object/asm
+  file, this indicates that something has gone wrong.
+
+Where applicable, these should be used instead of leaving an instruction without
+an assigned location or explicitly setting the location as ``DebugLoc()``.
+Ordinarily these special locations are identical to an absent location, but LLVM
+built with coverage-tracking
+(``-DLLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING="COVERAGE"``) will keep track of
+these special locations in order to detect unintentionally-missing locations;
+for this reason, the most important rule is to *not* apply any of these if it
+isn't clear which, if any, is appropriate - an absent location can be detected
+and fixed, while an incorrectly annotated instruction is much harder to detect.
+On the other hand, if any of these clearly apply, then they should be used to
+prevent false positives from being flagged up.
+
 Rules for updating debug values
 ===============================
 

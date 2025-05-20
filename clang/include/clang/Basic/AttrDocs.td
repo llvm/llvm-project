@@ -8195,6 +8195,17 @@ and https://microsoft.github.io/hlsl-specs/proposals/0013-wave-size-range.html
   }];
 }
 
+def RootSignatureDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``RootSignature`` attribute applies to HLSL entry functions to define what
+types of resources are bound to the graphics pipeline.
+
+For details about the use and specification of Root Signatures please see here:
+https://learn.microsoft.com/en-us/windows/win32/direct3d12/root-signatures
+  }];
+}
+
 def NumThreadsDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
@@ -8669,6 +8680,7 @@ its underlying representation to be a WebAssembly ``funcref``.
 
 def PreferredTypeDocumentation : Documentation {
   let Category = DocCatField;
+  let Label = "langext-preferred_type_documentation";
   let Content = [{
 This attribute allows adjusting the type of a bit-field in debug information.
 This can be helpful when a bit-field is intended to store an enumeration value,
@@ -9292,5 +9304,20 @@ def AllocatingDocs : Documentation {
   let Content = [{
 Declares that a function potentially allocates heap memory, and prevents any potential inference
 of ``nonallocating`` by the compiler.
+  }];
+}
+
+def NonStringDocs : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+The ``nonstring`` attribute can be applied to the declaration of a variable or
+a field whose type is a character array to specify that the character array is
+not intended to behave like a null-terminated string. This will silence
+diagnostics with code like:
+
+.. code-block:: c
+
+  char BadStr[3] = "foo"; // No space for the null terminator, diagnosed
+  __attribute__((nonstring)) char NotAStr[3] = "foo"; // Not diagnosed
   }];
 }

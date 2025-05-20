@@ -1749,6 +1749,16 @@ Value *SplitPtrStructs::handleMemoryInst(Instruction *I, Value *Arg, Value *Ptr,
                          "buffer resources and should've been expanded away");
       break;
     }
+    case AtomicRMWInst::FMaximum: {
+      report_fatal_error("atomic floating point fmaximum not supported for "
+                         "buffer resources and should've been expanded away");
+      break;
+    }
+    case AtomicRMWInst::FMinimum: {
+      report_fatal_error("atomic floating point fminimum not supported for "
+                         "buffer resources and should've been expanded away");
+      break;
+    }
     case AtomicRMWInst::Nand:
       report_fatal_error("atomic nand not supported for buffer resources and "
                          "should've been expanded away");
@@ -2151,6 +2161,7 @@ static bool isRemovablePointerIntrinsic(Intrinsic::ID IID) {
   case Intrinsic::memset:
   case Intrinsic::memset_inline:
   case Intrinsic::experimental_memset_pattern:
+  case Intrinsic::amdgcn_load_to_lds:
     return true;
   }
 }
@@ -2238,6 +2249,25 @@ PtrParts SplitPtrStructs::visitIntrinsicInst(IntrinsicInst &I) {
     NewRsrc->takeName(&I);
     SplitUsers.insert(&I);
     return {NewRsrc, Off};
+  }
+  case Intrinsic::amdgcn_load_to_lds: {
+    Value *Ptr = I.getArgOperand(0);
+    if (!isSplitFatPtr(Ptr->getType()))
+      return {nullptr, nullptr};
+    IRB.SetInsertPoint(&I);
+    auto [Rsrc, Off] = getPtrParts(Ptr);
+    Value *LDSPtr = I.getArgOperand(1);
+    Value *LoadSize = I.getArgOperand(2);
+    Value *ImmOff = I.getArgOperand(3);
+    Value *Aux = I.getArgOperand(4);
+    Value *SOffset = IRB.getInt32(0);
+    Instruction *NewLoad = IRB.CreateIntrinsic(
+        Intrinsic::amdgcn_raw_ptr_buffer_load_lds, {},
+        {Rsrc, LDSPtr, LoadSize, Off, SOffset, ImmOff, Aux});
+    copyMetadata(NewLoad, &I);
+    SplitUsers.insert(&I);
+    I.replaceAllUsesWith(NewLoad);
+    return {nullptr, nullptr};
   }
   }
   return {nullptr, nullptr};

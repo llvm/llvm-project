@@ -290,7 +290,7 @@ std::error_code ModularizeUtilities::loadModuleMap(
     Target.get(), *HeaderInfo));
 
   // Parse module.modulemap file into module map.
-  if (ModMap->loadModuleMapFile(ModuleMapEntry, false, Dir)) {
+  if (ModMap->parseAndLoadModuleMapFile(ModuleMapEntry, false, Dir)) {
     return std::error_code(1, std::generic_category());
   }
 
@@ -443,7 +443,7 @@ static std::string replaceDotDot(StringRef Path) {
 // \returns The file path in canonical form.
 std::string ModularizeUtilities::getCanonicalPath(StringRef FilePath) {
   std::string Tmp(replaceDotDot(FilePath));
-  std::replace(Tmp.begin(), Tmp.end(), '\\', '/');
+  llvm::replace(Tmp, '\\', '/');
   StringRef Tmp2(Tmp);
   if (Tmp2.starts_with("./"))
     Tmp = std::string(Tmp2.substr(2));

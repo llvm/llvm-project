@@ -1154,6 +1154,8 @@ unsigned RecurrenceDescriptor::getOpcode(RecurKind Kind) {
     return Instruction::Add;
   case RecurKind::Mul:
     return Instruction::Mul;
+  case RecurKind::IAnyOf:
+  case RecurKind::FAnyOf:
   case RecurKind::Or:
     return Instruction::Or;
   case RecurKind::And:
@@ -1169,7 +1171,6 @@ unsigned RecurrenceDescriptor::getOpcode(RecurKind Kind) {
   case RecurKind::SMin:
   case RecurKind::UMax:
   case RecurKind::UMin:
-  case RecurKind::IAnyOf:
   case RecurKind::IFindLastIV:
     return Instruction::ICmp;
   case RecurKind::FMax:
@@ -1178,7 +1179,6 @@ unsigned RecurrenceDescriptor::getOpcode(RecurKind Kind) {
   case RecurKind::FMinimum:
   case RecurKind::FMaximumNum:
   case RecurKind::FMinimumNum:
-  case RecurKind::FAnyOf:
   case RecurKind::FFindLastIV:
     return Instruction::FCmp;
   default:
@@ -1189,7 +1189,6 @@ unsigned RecurrenceDescriptor::getOpcode(RecurKind Kind) {
 SmallVector<Instruction *, 4>
 RecurrenceDescriptor::getReductionOpChain(PHINode *Phi, Loop *L) const {
   SmallVector<Instruction *, 4> ReductionOperations;
-  unsigned RedOp = getOpcode();
   const bool IsMinMax = isMinMaxRecurrenceKind(Kind);
 
   // Search down from the Phi to the LoopExitInstr, looking for instructions
@@ -1237,7 +1236,7 @@ RecurrenceDescriptor::getReductionOpChain(PHINode *Phi, Loop *L) const {
     if (isFMulAddIntrinsic(Cur))
       return true;
 
-    return Cur->getOpcode() == RedOp;
+    return Cur->getOpcode() == getOpcode();
   };
 
   // Attempt to look through Phis which are part of the reduction chain

@@ -781,6 +781,10 @@ def atomic_load_fmax : SDNode<"ISD::ATOMIC_LOAD_FMAX", SDTFPAtomic2,
                     [SDNPHasChain, SDNPMayStore, SDNPMayLoad, SDNPMemOperand]>;
 def atomic_load_fmin : SDNode<"ISD::ATOMIC_LOAD_FMIN", SDTFPAtomic2,
                     [SDNPHasChain, SDNPMayStore, SDNPMayLoad, SDNPMemOperand]>;
+def atomic_load_fmaximum : SDNode<"ISD::ATOMIC_LOAD_FMAXIMUM", SDTFPAtomic2,
+                    [SDNPHasChain, SDNPMayStore, SDNPMayLoad, SDNPMemOperand]>;
+def atomic_load_fminimum : SDNode<"ISD::ATOMIC_LOAD_FMINIMUM", SDTFPAtomic2,
+                    [SDNPHasChain, SDNPMayStore, SDNPMayLoad, SDNPMemOperand]>;
 def atomic_load_uinc_wrap : SDNode<"ISD::ATOMIC_LOAD_UINC_WRAP", SDTAtomic2,
                     [SDNPHasChain, SDNPMayStore, SDNPMayLoad, SDNPMemOperand]>;
 def atomic_load_udec_wrap : SDNode<"ISD::ATOMIC_LOAD_UDEC_WRAP", SDTAtomic2,
@@ -855,6 +859,12 @@ def insert_subvector : SDNode<"ISD::INSERT_SUBVECTOR", SDTSubVecInsert, []>;
 def find_last_active
     : SDNode<"ISD::VECTOR_FIND_LAST_ACTIVE",
              SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisVec<1>]>, []>;
+
+def get_active_lane_mask
+    : SDNode<
+          "ISD::GET_ACTIVE_LANE_MASK",
+          SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisInt<1>, SDTCisSameAs<1, 2>]>,
+          []>;
 
 // Nodes for intrinsics, you should use the intrinsic itself and let tblgen use
 // these internally.  Don't reference these directly.

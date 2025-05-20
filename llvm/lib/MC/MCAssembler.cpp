@@ -138,7 +138,8 @@ bool MCAssembler::isThumbFunc(const MCSymbol *Symbol) const {
 
 bool MCAssembler::evaluateFixup(const MCFixup &Fixup, const MCFragment *DF,
                                 MCValue &Target, const MCSubtargetInfo *STI,
-                                uint64_t &Value, bool RecordReloc) const {
+                                uint64_t &Value, bool RecordReloc,
+                                MutableArrayRef<char> Contents) const {
   ++stats::evaluateFixup;
 
   // FIXME: This code has some duplication with recordRelocation. We should
@@ -183,9 +184,8 @@ bool MCAssembler::evaluateFixup(const MCFixup &Fixup, const MCFragment *DF,
       Value -= Offset;
 
       if (Add && !Sub && !Add->isUndefined() && !Add->isAbsolute()) {
-        IsResolved = (FixupFlags & MCFixupKindInfo::FKF_Constant) ||
-                     getWriter().isSymbolRefDifferenceFullyResolvedImpl(
-                         *this, *Add, *DF, false, true);
+        IsResolved = getWriter().isSymbolRefDifferenceFullyResolvedImpl(
+            *this, *Add, *DF, false, true);
       }
     } else {
       IsResolved = Target.isAbsolute();
@@ -196,21 +196,13 @@ bool MCAssembler::evaluateFixup(const MCFixup &Fixup, const MCFragment *DF,
   if (!RecordReloc)
     return IsResolved;
 
-  // .reloc directive and the backend might force the relocation.
-  // Backends that customize shouldForceRelocation generally just need the fixup
-  // kind. AVR needs the fixup value to bypass the assembly time overflow with a
-  // relocation.
-  if (IsResolved) {
-    auto TargetVal = Target;
-    TargetVal.Cst = Value;
-    if (mc::isRelocation(Fixup.getKind()) ||
-        getBackend().shouldForceRelocation(*this, Fixup, TargetVal, STI))
-      IsResolved = false;
-  }
-  if (!IsResolved)
-    getWriter().recordRelocation(const_cast<MCAssembler &>(*this), DF, Fixup,
-                                 Target, Value);
-  return IsResolved;
+  if (IsResolved && mc::isRelocRelocation(Fixup.getKind()))
+    IsResolved = false;
+  IsResolved = getBackend().addReloc(const_cast<MCAssembler &>(*this), *DF,
+                                     Fixup, Target, Value, IsResolved, STI);
+  getBackend().applyFixup(*this, Fixup, Target, Contents, Value, IsResolved,
+                          STI);
+  return true;
 }
 
 uint64_t MCAssembler::computeFragmentSize(const MCFragment &F) const {
@@ -809,8 +801,8 @@ void MCAssembler::writeSectionData(raw_ostream &OS,
           getContext().reportError(SMLoc(), Sec->getVirtualSectionKind() +
                                                 " section '" + Sec->getName() +
                                                 "' cannot have fixups");
-        for (unsigned i = 0, e = DF.getContents().size(); i != e; ++i)
-          if (DF.getContents()[i]) {
+        for (char C : DF.getContents())
+          if (C) {
             getContext().reportError(SMLoc(),
                                      Sec->getVirtualSectionKind() +
                                          " section '" + Sec->getName() +
@@ -908,7 +900,7 @@ void MCAssembler::layout() {
   // Evaluate and apply the fixups, generating relocation entries as necessary.
   for (MCSection &Sec : *this) {
     for (MCFragment &Frag : Sec) {
-      ArrayRef<MCFixup> Fixups;
+      MutableArrayRef<MCFixup> Fixups;
       MutableArrayRef<char> Contents;
       const MCSubtargetInfo *STI = nullptr;
 
@@ -974,10 +966,8 @@ void MCAssembler::layout() {
       for (const MCFixup &Fixup : Fixups) {
         uint64_t FixedValue;
         MCValue Target;
-        bool IsResolved = evaluateFixup(Fixup, &Frag, Target, STI, FixedValue,
-                                        /*RecordReloc=*/true);
-        getBackend().applyFixup(*this, Fixup, Target, Contents, FixedValue,
-                                IsResolved, STI);
+        evaluateFixup(Fixup, &Frag, Target, STI, FixedValue,
+                      /*RecordReloc=*/true, Contents);
       }
     }
   }
@@ -997,8 +987,9 @@ bool MCAssembler::fixupNeedsRelaxation(const MCFixup &Fixup,
   assert(getBackendPtr() && "Expected assembler backend");
   MCValue Target;
   uint64_t Value;
-  bool Resolved = evaluateFixup(Fixup, DF, Target, DF->getSubtargetInfo(),
-                                Value, /*RecordReloc=*/false);
+  bool Resolved =
+      evaluateFixup(const_cast<MCFixup &>(Fixup), DF, Target,
+                    DF->getSubtargetInfo(), Value, /*RecordReloc=*/false, {});
   return getBackend().fixupNeedsRelaxationAdvanced(*this, Fixup, Target, Value,
                                                    Resolved);
 }
