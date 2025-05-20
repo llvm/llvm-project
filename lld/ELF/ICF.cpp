@@ -618,10 +618,11 @@ template <class ELFT> void ICF<ELFT>::run() {
           getRelocTargetSyms<ELFT>(sections[i]);
       assert(syms.size() == replacedSyms.size() &&
              "Should have same number of syms!");
-      for (size_t i = 0; i < syms.size(); i++) {
-        if (!canMergeSymbols(syms[i].second, replacedSyms[i].second))
+      for (size_t j = 0; j < syms.size(); j++) {
+        if (!syms[j].first->isGlobal() || !replacedSyms[j].first->isGlobal() ||
+            !canMergeSymbols(syms[j].second, replacedSyms[j].second))
           continue;
-        symbolEquivalence.unionSets(syms[i].first, replacedSyms[i].first);
+        symbolEquivalence.unionSets(syms[j].first, replacedSyms[j].first);
       }
 
       // At this point we know sections merged are fully identical and hence
