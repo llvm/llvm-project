@@ -57,6 +57,10 @@ TEST(ReassociationIndicesForCollapse, DynamicTest) {
   EXPECT_EQ(getReassociationIndicesForCollapse({ShapedType::kDynamic, 1, 1},
                                                {ShapedType::kDynamic}),
             makeOptionalIndices({{0, 1, 2}}));
+  EXPECT_EQ(getReassociationIndicesForCollapse(
+                {1, ShapedType::kDynamic, 1, ShapedType::kDynamic, 1},
+                {ShapedType::kDynamic, ShapedType::kDynamic}),
+            makeOptionalIndices({{0, 1}, {2, 3, 4}}));
   EXPECT_EQ(
       getReassociationIndicesForCollapse(
           {ShapedType::kDynamic, ShapedType::kDynamic}, {ShapedType::kDynamic}),
@@ -76,6 +80,10 @@ TEST(ReassociationIndicesForCollapse, DynamicTest) {
   EXPECT_EQ(getReassociationIndicesForCollapse({10, ShapedType::kDynamic},
                                                {ShapedType::kDynamic}),
             makeOptionalIndices({{0, 1}}));
+  EXPECT_EQ(getReassociationIndicesForCollapse(
+                {ShapedType::kDynamic, 1, 2, ShapedType::kDynamic, 10},
+                {ShapedType::kDynamic, 10}),
+            makeOptionalIndices({{0, 1, 2, 3}, {4}}));
   EXPECT_EQ(getReassociationIndicesForCollapse({ShapedType::kDynamic, 10, 20},
                                                {ShapedType::kDynamic, 20}),
             makeOptionalIndices({{0, 1}, {2}}));
@@ -130,5 +138,21 @@ TEST(ReassociationIndicesForCollapse, DynamicTestFailure) {
                 {ShapedType::kDynamic, ShapedType::kDynamic, 10, 1,
                  ShapedType::kDynamic},
                 {ShapedType::kDynamic, ShapedType::kDynamic}),
+            std::nullopt);
+  EXPECT_EQ(getReassociationIndicesForCollapse(
+                {ShapedType::kDynamic, 10, 10, 10, ShapedType::kDynamic},
+                {ShapedType::kDynamic, 10, ShapedType::kDynamic}),
+            std::nullopt);
+  EXPECT_EQ(getReassociationIndicesForCollapse(
+                {ShapedType::kDynamic, 10, 10, 10, ShapedType::kDynamic},
+                {ShapedType::kDynamic, 2, 2, ShapedType::kDynamic}),
+            std::nullopt);
+  EXPECT_EQ(getReassociationIndicesForCollapse(
+                {ShapedType::kDynamic, 3, 4, 3, ShapedType::kDynamic},
+                {ShapedType::kDynamic, 12, ShapedType::kDynamic}),
+            std::nullopt);
+  EXPECT_EQ(getReassociationIndicesForCollapse(
+                {ShapedType::kDynamic, 8, 4, 2, 16, ShapedType::kDynamic},
+                {ShapedType::kDynamic, 32, ShapedType::kDynamic}),
             std::nullopt);
 }

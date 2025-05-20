@@ -10,6 +10,10 @@
 
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinTypeInterfaces.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/LogicalResult.h"
 
 #include <numeric>
 #include <optional>
@@ -28,6 +32,257 @@ mlir::getReassociationIndicesForReshape(ShapedType sourceType,
   return std::nullopt;
 }
 
+namespace {
+/// A simple struct to represent ReassociationIndices as an inclusive interval.
+/// It's designed to be feasibly minimal, so the call sites should manage the
+/// validity of the range manually.
+struct ReassociationIndexRange {
+  /// FIXME: Signed type is used for consistency with ReassociationIndices.
+  /// We should consider refactoring all reassociation utilities to use unsigned
+  /// types.
+  int64_t leftIdx = 0, rightIdx = 0;
+
+  /// Util for manual checks of the range's validity
+  LogicalResult verify() const {
+    return leftIdx >= 0 && (leftIdx <= rightIdx) ? success() : failure();
+  }
+
+  /// Checks range's containment within another range. Treats the edges
+  /// non-exclusively.
+  bool isInRange(const ReassociationIndexRange &outerRange) const {
+    return leftIdx >= outerRange.leftIdx && rightIdx <= outerRange.rightIdx;
+  }
+
+  unsigned size() const {
+    assert(succeeded(verify()));
+    return rightIdx - leftIdx + 1;
+  }
+  bool containsSingleIndex() const { return size() == 1; }
+
+  void expandRight() { ++rightIdx; }
+  void shrinkLeft() { ++leftIdx; }
+
+  /// Implements arithmetic XOR semantics to get non-overlapping indices between
+  /// ranges.
+  ReassociationIndices operator^(ReassociationIndexRange &rhs) const {
+    ReassociationIndices result;
+    result.reserve(size() + rhs.size() / 2); // Attempt to amortize
+    for (int64_t idx = this->leftIdx; idx <= this->rightIdx; ++idx) {
+      if (idx < rhs.leftIdx || idx > rhs.rightIdx)
+        result.push_back(idx);
+    }
+    for (int64_t rhsIndex = rhs.leftIdx; rhsIndex <= rhs.rightIdx; ++rhsIndex) {
+      if (rhsIndex < leftIdx || rhsIndex > rightIdx)
+        result.push_back(rhsIndex);
+    }
+    return result;
+  }
+
+  /// Converts the range into ReassociationIndices.
+  ReassociationIndices getFullIndices() const {
+    ReassociationIndices result;
+    for (int64_t idx = leftIdx; idx <= rightIdx; ++idx) {
+      result.push_back(idx);
+    }
+    return result;
+  }
+};
+
+/// Starting from `sourceStartIdx`, searches `sourceShape` for the first
+/// sequence that can be collapsed into a dynamic dimension (at least one must
+/// be present in the source).
+/// By default, lazily returns once the first dynamic dimension has been found.
+/// Setting `matchGreedily` as `true` will also mark all subsequent
+/// source dimensions for collapsing into the target.
+FailureOr<ReassociationIndexRange>
+findReassociationRangeForDynamicDim(ArrayRef<int64_t> sourceShape,
+                                    int64_t sourceStartIdx,
+                                    bool matchGreedily = false) {
+  ReassociationIndexRange iterationRange{sourceStartIdx, sourceStartIdx};
+  const unsigned numSourceDims = sourceShape.size();
+  ReassociationIndexRange sourceShapeAsRange{0, numSourceDims - 1};
+  if (!iterationRange.isInRange(sourceShapeAsRange))
+    return failure();
+  auto resultRange = iterationRange;
+
+  bool foundDynamic = false;
+  for (; iterationRange.isInRange(sourceShapeAsRange);
+       iterationRange.expandRight()) {
+    int64_t sourceSize = sourceShape[iterationRange.rightIdx];
+    if (foundDynamic && !matchGreedily)
+      break;
+    if (sourceSize == ShapedType::kDynamic)
+      foundDynamic = true;
+    resultRange = iterationRange;
+  }
+  if (!foundDynamic)
+    return failure();
+  return resultRange;
+}
+
+/// Starting from `sourceStartIdx`, searches `sourceShape` for the first
+/// sequence of static dimensions such that their product matches `targetSize`.
+/// By default, lazily returns once the product matches the target size. Setting
+/// `matchGreedily` as `true` will append all neighboring unit dimensions
+/// (dimensions of 1) to the match.
+FailureOr<ReassociationIndexRange>
+findReassociationRangeForSize(ArrayRef<int64_t> sourceShape,
+                              int64_t sourceStartIdx, int64_t targetSize,
+                              bool matchGreedily = false) {
+  ReassociationIndexRange iterationRange{sourceStartIdx, sourceStartIdx};
+  const unsigned numSourceDims = sourceShape.size();
+  ReassociationIndexRange sourceShapeAsRange{0, numSourceDims - 1};
+  if (!iterationRange.isInRange(sourceShapeAsRange))
+    return failure();
+  auto resultRange = iterationRange;
+
+  int64_t prodOfCollapsedDims = 1;
+  bool reachedTargetDimSize = false;
+  while (iterationRange.isInRange(sourceShapeAsRange)) {
+    int64_t sourceSize = sourceShape[iterationRange.rightIdx];
+    if (reachedTargetDimSize && !matchGreedily)
+      break;
+    if (sourceSize == ShapedType::kDynamic) {
+      if (reachedTargetDimSize)
+        break;
+      // Reassociation for a static dim cannot include a dynamic dim. Reset
+      // induction variables to essentially restart the loop from the next
+      // source dimension.
+      prodOfCollapsedDims = 1;
+      resultRange = {iterationRange.rightIdx + 1, iterationRange.rightIdx + 1};
+      iterationRange = resultRange;
+      continue;
+    }
+    prodOfCollapsedDims *= sourceSize;
+    if (prodOfCollapsedDims > targetSize && reachedTargetDimSize)
+      break;
+    // If the target size has been exceeded without matching, we need to shift
+    // the range start right. From the start of the range, roll back the
+    // multiplication until the target size exceeds the product again.
+    while (prodOfCollapsedDims > targetSize &&
+           !iterationRange.containsSingleIndex()) {
+      int64_t frontSourceSize = sourceShape[iterationRange.leftIdx];
+      prodOfCollapsedDims /= frontSourceSize;
+      iterationRange.shrinkLeft();
+    }
+    resultRange = iterationRange;
+    // We could've reached the target size with the current dimension,
+    // also as a result of the above shift to right.
+    if (prodOfCollapsedDims == targetSize)
+      reachedTargetDimSize = true;
+    // Increment the iteration range
+    iterationRange.expandRight();
+  }
+  if (!reachedTargetDimSize)
+    return failure();
+  return resultRange;
+}
+
+/// Attempts to find a valid collapsing reassociation of `sourceShape` into
+/// `targetShape` through a simple traversal. If successful, an array of source
+/// index ranges is returned, correspondingly to each dimension in the target
+/// shape. The resulting indices shall fully cover the `sourceShape` without
+/// overlaps.
+///
+/// The algorithm is essentially a lazy one, searching for non-greedy matches -
+/// it will only yield a greedy match for the last target dimension.
+/// FIXME: The algorithm can only backtrack when it needs to append an offset
+/// for a static target dimension to the preceding dynamic one (this retains the
+/// linear complexity). As feasible, consider adding further backtracking
+/// routines to enable more reassociations, e.g.:
+/// - ?x2x?x2 into ?x2
+FailureOr<SmallVector<ReassociationIndexRange>>
+findReassociationRangesForCollapse(ArrayRef<int64_t> sourceShape,
+                                   ArrayRef<int64_t> targetShape) {
+  unsigned numSourceDims = sourceShape.size(),
+           numTargetDims = targetShape.size();
+  assert(numSourceDims > numTargetDims);
+  ReassociationIndexRange sourceShapeAsRange{0, numSourceDims - 1};
+
+  SmallVector<ReassociationIndexRange> reassocRanges;
+  reassocRanges.reserve(numTargetDims);
+  // We'll iterate in strides of 2 to enable pseudo-backtracking for simple
+  // cases, e.g.:
+  // - ?x2x3x5 into ?x15
+  std::optional<int64_t> prevTargetSize = std::nullopt;
+  for (unsigned targetDimIdx = 0, sourceDimIdx = 0;
+       targetDimIdx < numTargetDims; ++targetDimIdx) {
+    int64_t targetSize = targetShape[targetDimIdx];
+    std::optional<int64_t> nextTargetSize = std::nullopt;
+
+    // Simply check if there are any subsequent target dimensions left - if not,
+    // the match must be made greedily.
+    bool isLastTargetDim = targetDimIdx == numTargetDims - 1;
+    bool shouldMatchGreedily = isLastTargetDim;
+    FailureOr<ReassociationIndexRange> sourceRange;
+    if (targetSize == ShapedType::kDynamic) {
+      sourceRange = findReassociationRangeForDynamicDim(
+          sourceShape, sourceDimIdx, shouldMatchGreedily);
+    } else {
+      sourceRange = findReassociationRangeForSize(
+          sourceShape, sourceDimIdx, targetSize, shouldMatchGreedily);
+    }
+
+    // Run sanity checks on the returned index range.
+    if (failed(sourceRange) || failed(sourceRange->verify()) ||
+        !sourceRange->isInRange(sourceShapeAsRange))
+      return failure();
+    if (sourceRange->leftIdx > sourceDimIdx) {
+      // If some source dimensions had to be skipped in order to find a match,
+      // they must be collapsed into the directly preceding dynamic dimension.
+      if (!prevTargetSize || prevTargetSize != ShapedType::kDynamic)
+        return failure();
+      reassocRanges.back().rightIdx = sourceRange->leftIdx - 1;
+    }
+
+    // Store the gathered information as required for the next iteration.
+    prevTargetSize = targetSize;
+    sourceDimIdx = sourceRange->rightIdx + 1;
+    reassocRanges.emplace_back(std::move(*sourceRange));
+  }
+  // Fail if the source shape wasn't a full match for the target shape. We only
+  // need to check the last recorded index - any other gaps should have been
+  // mended by the main loop.
+  if (reassocRanges.back().rightIdx < sourceShapeAsRange.rightIdx)
+    return failure();
+  return reassocRanges;
+}
+
+/// A variant of `findReassociationRangesForCollapse(...)` that can also scan
+/// the shapes right-to-left.
+FailureOr<SmallVector<ReassociationIndexRange>>
+findReassociationRangesForCollapse(ArrayRef<int64_t> sourceShape,
+                                   ArrayRef<int64_t> targetShape,
+                                   bool iterateRightToLeft) {
+  if (!iterateRightToLeft)
+    return findReassociationRangesForCollapse(sourceShape, targetShape);
+  // FIXME: It would be preferable to avoid the expensive copies. At the moment,
+  // this approach is chosen for readability of the main implementation.
+  auto sourceToReverse = sourceShape.vec(), targetToReverse = targetShape.vec();
+  std::reverse(sourceToReverse.begin(), sourceToReverse.end());
+  std::reverse(targetToReverse.begin(), targetToReverse.end());
+  auto invertedRanges =
+      findReassociationRangesForCollapse(sourceToReverse, targetToReverse);
+  if (failed(invertedRanges))
+    return failure();
+  auto rangesToInvert = *invertedRanges;
+  unsigned numSourceDims = sourceShape.size();
+  // We have received the ranges for inverted shapes. Now we have to invert
+  // the ranges back to correspond with the original source shape.
+  for (auto &range : rangesToInvert) {
+    if (failed(range.verify()))
+      return failure();
+    int64_t invLeftIdx = range.leftIdx, invRightIdx = range.rightIdx;
+    range.leftIdx = numSourceDims - 1 - invRightIdx;
+    range.rightIdx = numSourceDims - 1 - invLeftIdx;
+  }
+  // Also invert the ordering of the ranges to correspond with the original
+  // target shape.
+  std::reverse(rangesToInvert.begin(), rangesToInvert.end());
+  return rangesToInvert;
+}
+} // namespace
+
 std::optional<SmallVector<ReassociationIndices>>
 mlir::getReassociationIndicesForCollapse(ArrayRef<int64_t> sourceShape,
                                          ArrayRef<int64_t> targetShape) {
@@ -35,124 +290,65 @@ mlir::getReassociationIndicesForCollapse(ArrayRef<int64_t> sourceShape,
            numTargetDims = targetShape.size();
   if (numSourceDims <= numTargetDims)
     return std::nullopt;
-  SmallVector<ReassociationIndices, 4> reassociationMap;
-  reassociationMap.reserve(numTargetDims);
-
-  unsigned sourceDimIdx = 0, targetDimIdx = 0;
-  // Source dimensions iteration logic for static target dimensions.
-  // FIXME: Instead of lambda-capturing this function's source shape index "in
-  // place", consider refactoring this into a separate function.
-  auto collectSourceIndicesForStaticTargetDim =
-      [&](int64_t targetShape,
-          bool mayHaveOffset = false) -> FailureOr<ReassociationIndices> {
-    ReassociationIndices resultIndices;
-    int64_t prodOfCollapsedDims = 1;
-    bool reachedTargetDimSize = false;
-    for (; sourceDimIdx < numSourceDims; ++sourceDimIdx) {
-      // Source shape cannot be dynamic if the target dim is static.
-      if (sourceShape[sourceDimIdx] == ShapedType::kDynamic)
-        return failure();
-      prodOfCollapsedDims *= sourceShape[sourceDimIdx];
-      resultIndices.push_back(sourceDimIdx);
-      if (prodOfCollapsedDims > targetShape && !mayHaveOffset)
-        return failure();
-      while (prodOfCollapsedDims > targetShape) {
-        assert(!resultIndices.empty());
-        auto frontOffsetIdx = resultIndices.begin();
-        prodOfCollapsedDims /= sourceShape[*frontOffsetIdx];
-        resultIndices.erase(frontOffsetIdx);
-      }
-      if (prodOfCollapsedDims == targetShape) {
-        reachedTargetDimSize = true;
-        ++sourceDimIdx;
-        break;
-      }
-    }
-    if (!reachedTargetDimSize)
-      return failure();
-    return resultIndices;
-  };
-  // Source dimensions iteration logic for dynamic target dimensions.
-  // FIXME: Instead of lambda-capturing this function's source shape index "in
-  // place", consider refactoring this into a separate function.
-  auto collectSourceIndicesForDynamicTargetDim =
-      [&](bool allowStaticNonOnes,
-          bool mapConsecutiveDynDims) -> FailureOr<ReassociationIndices> {
-    ReassociationIndices resultIndices;
-    bool foundFirstDynamic = false;
-    while (sourceDimIdx < numSourceDims) {
-      if (sourceShape[sourceDimIdx] == ShapedType::kDynamic) {
-        if (foundFirstDynamic && !mapConsecutiveDynDims)
-          break;
-        foundFirstDynamic |= true;
-      } else {
-        if (foundFirstDynamic)
-          break;
-        else if (sourceShape[sourceDimIdx] > 1 && !allowStaticNonOnes)
-          return failure();
-      }
-      resultIndices.push_back(sourceDimIdx++);
-    }
-    if (!foundFirstDynamic)
-      return failure();
-    return resultIndices;
-  };
-  // Iterate over target shape.
-  bool wasLastDimDynamic = false;
-  for (; targetDimIdx < numTargetDims; ++targetDimIdx) {
-    int64_t currTargetShape = targetShape[targetDimIdx];
-    if (currTargetShape != ShapedType::kDynamic) {
-      unsigned sourceDimAtStart = sourceDimIdx;
-      auto indices = collectSourceIndicesForStaticTargetDim(
-          currTargetShape, /*mayHaveOffset=*/wasLastDimDynamic);
-      if (failed(indices))
+  // Early handling for scalar target types.
+  if (numTargetDims == 0) {
+    ReassociationIndices allSourceIndices(numSourceDims);
+    for (unsigned sourceDimIdx = 0; sourceDimIdx < numSourceDims;
+         ++sourceDimIdx) {
+      int64_t sourceSize = sourceShape[sourceDimIdx];
+      // All source dimensions must be unit or dynamic.
+      if (sourceSize != 1 && sourceSize != ShapedType::kDynamic)
         return std::nullopt;
-      if (wasLastDimDynamic) {
-        assert(!reassociationMap.empty());
-        auto &previousIndices = reassociationMap.back();
-        for (; sourceDimAtStart < indices->front(); ++sourceDimAtStart)
-          previousIndices.push_back(sourceDimAtStart);
-      }
-      reassociationMap.push_back(*indices);
-      wasLastDimDynamic = false;
-      continue;
+      allSourceIndices.emplace_back(sourceDimIdx);
     }
-
-    bool isNextDimDynamic =
-        targetDimIdx + 1 < numTargetDims &&
-        targetShape[targetDimIdx + 1] == ShapedType::kDynamic;
-    auto indices = collectSourceIndicesForDynamicTargetDim(
-        /*allowStaticNonOnes=*/!wasLastDimDynamic,
-        /*mapConsecutiveDynDims=*/!wasLastDimDynamic && !isNextDimDynamic);
-    if (failed(indices))
-      return std::nullopt;
-    reassociationMap.push_back(*indices);
-    wasLastDimDynamic = true;
+    return SmallVector<ReassociationIndices>{allSourceIndices};
   }
-  // Now that we've mapped all the target dimensions, process any remaining
-  // entries in the source shape explicitly.
-  for (; sourceDimIdx < numSourceDims; sourceDimIdx++) {
-    const bool isOne = sourceShape[sourceDimIdx] == 1,
-               isDynamic = sourceShape[sourceDimIdx] == ShapedType::kDynamic;
-    if (targetShape.empty()) {
-      if (!isOne && !isDynamic)
-        return std::nullopt;
-      continue;
-    }
-    // If the last 2 dimensions in the target were dynamic, the tail in the
-    // source shape cannot contain a dynamic value. E.g. ?x?->? is valid,
-    // however ?x?x10x?->?x? would be indeterminate.
-    if (wasLastDimDynamic && numTargetDims > 1 &&
-        targetShape[numTargetDims - 2] == ShapedType::kDynamic) {
-      if (isDynamic)
-        return std::nullopt;
-    }
-    // If the last target dimension is static, only source dimensions of 1 are
-    // acceptable.
-    if (!wasLastDimDynamic && !isOne)
+
+  // Collect source ranges by iterating over the target shape left-to-right.
+  auto maybeForwardRanges =
+      findReassociationRangesForCollapse(sourceShape, targetShape);
+  if (failed(maybeForwardRanges))
+    return std::nullopt;
+  auto &ranges = *maybeForwardRanges;
+  // Now do the same in reverse. We need to get another valid reassociation
+  // through some other strategy, and then compare the results in order to
+  // disambiguate mixed subshapes, such as:
+  // ?x?x? into ?x?, ?x2x? into ?x?, ?x2x3x6x? into ?x6x?
+  // This leads us to lose some of the reassociation opportunities that can only
+  // be found by iterating in a certain direction, e.g. 2x2x? into 2x? - without
+  // backtracking, the algorithm will fail right-to-left. However, this is the
+  // best way to preserve correctness.
+  //
+  // NB: The reversed shapes must not be temporary as we're passing through an
+  // ArrayRef.
+  auto maybeReverseRanges = findReassociationRangesForCollapse(
+      sourceShape, targetShape, /*iterateRightToLeft=*/true);
+  if (failed(maybeReverseRanges))
+    return std::nullopt;
+  auto &reverseRanges = *maybeReverseRanges;
+
+  if (ranges.size() != numTargetDims || reverseRanges.size() != numTargetDims)
+    return std::nullopt;
+  // Now we can check for ambiguity of each target dimension's reassociation. If
+  // successful, we put the full indices into our result map for the target
+  // shape.
+  SmallVector<ReassociationIndices> reassociationMap(numTargetDims);
+  for (unsigned targetDimIdx = 0; targetDimIdx < numTargetDims;
+       ++targetDimIdx) {
+    auto &range = ranges[targetDimIdx];
+    auto &reverseRange = reverseRanges[targetDimIdx];
+    // Get non-overlapping indices between the ranges
+    ReassociationIndices nonMatchingIndices = range ^ reverseRange;
+    // The ranges should overlap, at the very least
+    if (nonMatchingIndices.size() == range.size() + reverseRange.size())
       return std::nullopt;
-    assert(!reassociationMap.empty());
-    reassociationMap.back().push_back(sourceDimIdx);
+    // Unit dimensions can be collapsed wherever - this is the only ambiguity
+    // that we allow.
+    for (int64_t sourceDimIdx : nonMatchingIndices) {
+      if (sourceShape[sourceDimIdx] != 1)
+        return std::nullopt;
+    }
+    reassociationMap[targetDimIdx] = range.getFullIndices();
   }
   return reassociationMap;
 }
@@ -379,11 +575,11 @@ SmallVector<Range> SliceFromCollapseHelper::getExtractSliceParams(
     // have proven that these are not sliced. In this case we just take
     // the full extent of each dimension in the reassociation list.
     if (linearizedDimensions[it.index()]) {
-      llvm::append_range(
-          offsetsSizesAndStrides,
-          llvm::map_range(it.value(), [&](int64_t idx) -> Range {
-            return {zeroAttr, collapseShapeInputShape[idx], oneAttr};
-          }));
+      llvm::append_range(offsetsSizesAndStrides,
+                         llvm::map_range(it.value(), [&](int64_t idx) -> Range {
+                           return {zeroAttr, collapseShapeInputShape[idx],
+                                   oneAttr};
+                         }));
       continue;
     }
 
