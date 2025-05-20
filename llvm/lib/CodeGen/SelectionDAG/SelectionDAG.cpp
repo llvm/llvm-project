@@ -2625,16 +2625,19 @@ bool SelectionDAG::expandMultipleResultFPLibCall(
       continue;
     }
     MachinePointerInfo PtrInfo;
+    SDValue LoadResult =
+        getLoad(Node->getValueType(ResNo), DL, CallChain, ResultPtr, PtrInfo);
+    SDValue OutChain = LoadResult.getValue(1);
+
     if (StoreSDNode *ST = ResultStores[ResNo]) {
       // Replace store with the library call.
-      ReplaceAllUsesOfValueWith(SDValue(ST, 0), CallChain);
+      ReplaceAllUsesOfValueWith(SDValue(ST, 0), OutChain);
       PtrInfo = ST->getPointerInfo();
     } else {
       PtrInfo = MachinePointerInfo::getFixedStack(
           getMachineFunction(), cast<FrameIndexSDNode>(ResultPtr)->getIndex());
     }
-    SDValue LoadResult =
-        getLoad(Node->getValueType(ResNo), DL, CallChain, ResultPtr, PtrInfo);
+
     Results.push_back(LoadResult);
   }
 
