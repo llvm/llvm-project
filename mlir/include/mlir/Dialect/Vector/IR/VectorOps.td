@@ -2488,6 +2488,7 @@ def Vector_MaskOp : Vector_Op<"mask", [
     An empty `vector.mask` operation is currently legal to enable optimizations
     across the `vector.mask` region. However, this might change in the future
     once vector transformations gain better support for `vector.mask`.
+    TODO: Consider making empty `vector.mask` illegal.
 
     The vector mask argument holds a bit for each vector lane and determines
     which vector lanes should execute the maskable operation and which ones
