@@ -78,6 +78,16 @@ define void @test() #0 {
 
 attributes #0 = { noinline nounwind "hlsl.shader"="compute" }
 
+; CHECK: %TypedBuffer = type { <4 x half> }
+; CHECK: %TypedBuffer.0 = type { <2 x float> }
+; CHECK: %TypedBuffer.1 = type { double }
+; CHECK: %TypedBuffer.2 = type { <4 x i32> }
+; CHECK: %ByteAddressBuffer = type { i32 }
+; CHECK: %StructuredBuffer = type { i16 }
+; CHECK: %TypedBuffer.3 = type { i64 }
+; CHECK: %TypedBuffer.4 = type { <4 x float> }
+; CHECK: %TypedBuffer.5 = type { i64 }
+
 ; CHECK: @Zero = external constant %TypedBuffer
 ; CHECK: @One = external constant %TypedBuffer.0
 ; CHECK: @Two = external constant %TypedBuffer.1

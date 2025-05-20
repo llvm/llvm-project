@@ -95,6 +95,19 @@ define void @test() #0 {
 
 attributes #0 = { noinline nounwind "hlsl.shader"="compute" }
 
+; CHECK: %RWTypedBuffer = type { <4 x half> }
+; CHECK: %RWTypedBuffer.0 = type { <2 x float> }
+; CHECK: %RWTypedBuffer.1 = type { double }
+; CHECK: %RWTypedBuffer.2 = type { <4 x i32> }
+; CHECK: %RWByteAddressBuffer = type { i32 }
+; CHECK: %RWStructuredBuffer = type { i16 }
+; CHECK: %RasterizerOrderedTypedBuffer = type { <4 x i32> }
+; CHECK: %RasterizerOrderedStructuredBuffer = type { <4 x i32> }
+; CHECK: %RasterizerOrderedByteAddressBuffer = type { i32 }
+; CHECK: %RWTypedBuffer.3 = type { i64 }
+; CHECK: %RWTypedBuffer.4 = type { <4 x float> }
+; CHECK: %RWTypedBuffer.5 = type { i64 }
+
 ; CHECK: @Zero = external constant %RWTypedBuffer
 ; CHECK: @One = external constant %RWTypedBuffer.0
 ; CHECK: @Two = external constant %RWTypedBuffer.1
