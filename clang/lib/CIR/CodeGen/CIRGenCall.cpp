@@ -241,6 +241,7 @@ CIRGenTypes::arrangeFunctionDeclaration(const FunctionDecl *fd) {
 
 static cir::CIRCallOpInterface
 emitCallLikeOp(CIRGenFunction &cgf, mlir::Location callLoc,
+               cir::FuncType indirectFuncTy, mlir::Value indirectFuncVal,
                cir::FuncOp directFuncOp,
                const SmallVectorImpl<mlir::Value> &cirCallArgs) {
   CIRGenBuilderTy &builder = cgf.getBuilder();
@@ -249,7 +250,13 @@ emitCallLikeOp(CIRGenFunction &cgf, mlir::Location callLoc,
   assert(!cir::MissingFeatures::invokeOp());
 
   assert(builder.getInsertionBlock() && "expected valid basic block");
-  assert(!cir::MissingFeatures::opCallIndirect());
+
+  if (indirectFuncTy) {
+    // TODO(cir): Set calling convention for indirect calls.
+    assert(!cir::MissingFeatures::opCallCallConv());
+    return builder.createIndirectCallOp(callLoc, indirectFuncVal,
+                                        indirectFuncTy, cirCallArgs);
+  }
 
   return builder.createCallOp(callLoc, directFuncOp, cirCallArgs);
 }
@@ -275,6 +282,7 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
                                 cir::CIRCallOpInterface *callOp,
                                 mlir::Location loc) {
   QualType retTy = funcInfo.getReturnType();
+  cir::FuncType cirFuncTy = getTypes().getFunctionType(funcInfo);
 
   SmallVector<mlir::Value, 16> cirCallArgs(args.size());
 
@@ -326,12 +334,27 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
 
   assert(!cir::MissingFeatures::invokeOp());
 
-  auto directFuncOp = dyn_cast<cir::FuncOp>(calleePtr);
-  assert(!cir::MissingFeatures::opCallIndirect());
+  cir::FuncType indirectFuncTy;
+  mlir::Value indirectFuncVal;
+  cir::FuncOp directFuncOp;
+  if (auto fnOp = dyn_cast<cir::FuncOp>(calleePtr)) {
+    directFuncOp = fnOp;
+  } else {
+    [[maybe_unused]] mlir::ValueTypeRange<mlir::ResultRange> resultTypes =
+        calleePtr->getResultTypes();
+    [[maybe_unused]] auto funcPtrTy =
+        mlir::dyn_cast<cir::PointerType>(resultTypes.front());
+    assert(funcPtrTy && mlir::isa<cir::FuncType>(funcPtrTy.getPointee()) &&
+           "expected pointer to function");
+
+    indirectFuncTy = cirFuncTy;
+    indirectFuncVal = calleePtr->getResult(0);
+  }
+
   assert(!cir::MissingFeatures::opCallAttrs());
 
-  cir::CIRCallOpInterface theCall =
-      emitCallLikeOp(*this, loc, directFuncOp, cirCallArgs);
+  cir::CIRCallOpInterface theCall = emitCallLikeOp(
+      *this, loc, indirectFuncTy, indirectFuncVal, directFuncOp, cirCallArgs);
 
   if (callOp)
     *callOp = theCall;
@@ -431,7 +454,7 @@ void CIRGenFunction::emitCallArgs(
 
   auto maybeEmitImplicitObjectSize = [&](size_t i, const Expr *arg,
                                          RValue emittedArg) {
-    if (callee.hasFunctionDecl() || i >= callee.getNumParams())
+    if (!callee.hasFunctionDecl() || i >= callee.getNumParams())
       return;
     auto *ps = callee.getParamDecl(i)->getAttr<PassObjectSizeAttr>();
     if (!ps)
