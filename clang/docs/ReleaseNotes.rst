@@ -960,7 +960,7 @@ Sanitizers
 ----------
 
 - ``-fsanitize=vptr`` is no longer a part of ``-fsanitize=undefined``.
-- UBSan ignorelists now support the syntax ``src:*=sanitize``.
+- Sanitizer ignorelists now support the syntax ``src:*=sanitize``.
 
 Python Binding Changes
 ----------------------
