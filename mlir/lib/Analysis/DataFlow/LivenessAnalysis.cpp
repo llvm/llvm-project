@@ -53,8 +53,9 @@ ChangeResult Liveness::meet(const AbstractSparseLattice &other) {
 ///   (2) is returned by a public function OR
 ///   (3) is used to compute a value of type (1) or (2) OR
 ///   (4) is returned by a return-like op whose parent isn't a callable
-///       (e.g.: linalg.yield, gpu.yield,...) These ops have their own
-///       semantics, so we conservatively mark the value as live.
+///       nor a RegionBranchOpInterface (e.g.: linalg.yield, gpu.yield,...)
+///       These ops have their own semantics, so we conservatively mark the
+///       the yield value as live.
 /// It is also to be noted that a value could be of multiple types (1/2/3) at
 /// the same time.
 ///
