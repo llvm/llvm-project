@@ -243,4 +243,4 @@ if (!getFunc(&EnumProcessModules, "EnumProcessModules")) { return; }
 } // namespace __stacktrace
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_STACKTRACE_USE_DBGHELP
+#endif // _LIBCPP_STACKTRACE_WINDOWS
