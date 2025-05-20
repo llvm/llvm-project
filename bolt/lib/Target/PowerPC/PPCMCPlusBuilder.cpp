@@ -40,5 +40,13 @@ public:
     }
 };
 
+MCPlusBuilder *createPowerPCMCPlusBuilder(const MCInstrAnalysis *Analysis,
+                                          const MCInstrInfo *Info,
+                                          const MCRegisterInfo *RegInfo,
+                                          const MCSubtargetInfo *STI) {
+  return new PPCMCPlusBuilder(Analysis, Info, RegInfo, STI);
+}
+
 } // namespace bolt
 } // namespace llvm
+
