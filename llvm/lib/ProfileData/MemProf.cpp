@@ -343,7 +343,7 @@ MemProfRecord IndexedMemProfRecord::toMemProfRecord(
   return Record;
 }
 
-GlobalValue::GUID IndexedMemProfRecord::getGUID(const StringRef FunctionName) {
+GlobalValue::GUID getGUID(const StringRef FunctionName) {
   // Canonicalize the function name to drop suffixes such as ".llvm.". Note
   // we do not drop any ".__uniq." suffixes, as getCanonicalFnName does not drop
   // those by default. This is by design to differentiate internal linkage
