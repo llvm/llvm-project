@@ -9,6 +9,7 @@
 #include "../FlangTidyModule.h"
 #include "../FlangTidyModuleRegistry.h"
 #include "ArithmeticGotoCheck.h"
+#include "ArithmeticIfStmtCheck.h"
 
 namespace Fortran::tidy {
 namespace bugprone {
@@ -18,6 +19,8 @@ public:
   void addCheckFactories(FlangTidyCheckFactories &CheckFactories) override {
     CheckFactories.registerCheck<ArithmeticGotoCheck>(
         "bugprone-arithmetic-goto");
+    CheckFactories.registerCheck<ArithmeticIfStmtCheck>(
+        "bugprone-arithmetic-if");
   }
 };
 
