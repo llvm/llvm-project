@@ -48,8 +48,6 @@ define <16 x i1> @whilewr_8(ptr %a, ptr %b) {
 ; CHECK-NOSVE-NEXT:    uzp1 v1.8h, v2.8h, v3.8h
 ; CHECK-NOSVE-NEXT:    uzp1 v0.16b, v1.16b, v0.16b
 ; CHECK-NOSVE-NEXT:    dup v1.16b, w8
-; CHECK-NOSVE-NEXT:    shl v0.16b, v0.16b, #7
-; CHECK-NOSVE-NEXT:    cmlt v0.16b, v0.16b, #0
 ; CHECK-NOSVE-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; CHECK-NOSVE-NEXT:    ret
 entry:
@@ -90,8 +88,6 @@ define <8 x i1> @whilewr_16(ptr %a, ptr %b) {
 ; CHECK-NOSVE-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
 ; CHECK-NOSVE-NEXT:    dup v1.8b, w8
 ; CHECK-NOSVE-NEXT:    xtn v0.8b, v0.8h
-; CHECK-NOSVE-NEXT:    shl v0.8b, v0.8b, #7
-; CHECK-NOSVE-NEXT:    cmlt v0.8b, v0.8b, #0
 ; CHECK-NOSVE-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-NOSVE-NEXT:    ret
 entry:
@@ -210,8 +206,6 @@ define <16 x i1> @whilerw_8(ptr %a, ptr %b) {
 ; CHECK-NOSVE-NEXT:    uzp1 v1.8h, v3.8h, v2.8h
 ; CHECK-NOSVE-NEXT:    uzp1 v0.16b, v1.16b, v0.16b
 ; CHECK-NOSVE-NEXT:    dup v1.16b, w8
-; CHECK-NOSVE-NEXT:    shl v0.16b, v0.16b, #7
-; CHECK-NOSVE-NEXT:    cmlt v0.16b, v0.16b, #0
 ; CHECK-NOSVE-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; CHECK-NOSVE-NEXT:    ret
 entry:
@@ -253,8 +247,6 @@ define <8 x i1> @whilerw_16(ptr %a, ptr %b) {
 ; CHECK-NOSVE-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
 ; CHECK-NOSVE-NEXT:    dup v1.8b, w8
 ; CHECK-NOSVE-NEXT:    xtn v0.8b, v0.8h
-; CHECK-NOSVE-NEXT:    shl v0.8b, v0.8b, #7
-; CHECK-NOSVE-NEXT:    cmlt v0.8b, v0.8b, #0
 ; CHECK-NOSVE-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-NOSVE-NEXT:    ret
 entry:
