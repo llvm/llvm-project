@@ -51,31 +51,6 @@ static Value getValueFromOpFoldResult(OpBuilder &rewriter, Location loc,
   return cast<Value>(in);
 }
 
-/// Given dimension size [d1, d2, ...] and strides [s1, s2, ...], compute the
-/// span of the memref.
-static OpFoldResult computeSize(OpBuilder &builder, Location loc,
-                                ArrayRef<OpFoldResult> dims,
-                                ArrayRef<OpFoldResult> strides) {
-  assert(dims.size() == strides.size() &&
-         "number of dimensions and strides should be equal");
-  SmallVector<AffineExpr> symbols(2 * dims.size());
-  bindSymbolsList(builder.getContext(), MutableArrayRef{symbols});
-  SmallVector<AffineExpr> productExpressions;
-  SmallVector<OpFoldResult> values;
-  size_t symbolIndex = 0;
-  for (auto &&[dim, stride] : llvm::zip(dims, strides)) {
-    AffineExpr dimExpr = symbols[symbolIndex++];
-    AffineExpr strideExpr = symbols[symbolIndex++];
-    productExpressions.push_back(dimExpr * strideExpr);
-    values.push_back(dim);
-    values.push_back(stride);
-  }
-
-  AffineMap maxMap = AffineMap::get(0, symbols.size(), productExpressions,
-                                    builder.getContext());
-  return affine::makeComposedFoldedAffineMax(builder, loc, maxMap, values);
-}
-
 /// Returns a collapsed memref and the linearized index to access the element
 /// at the specified indices.
 static std::pair<Value, Value> getFlattenMemrefAndOffset(OpBuilder &rewriter,
@@ -108,9 +83,7 @@ static std::pair<Value, Value> getFlattenMemrefAndOffset(OpBuilder &rewriter,
           loc, source,
           /* offset = */ linearizedInfo.linearizedOffset,
           /* shapes = */
-          ArrayRef<OpFoldResult>{computeSize(
-              rewriter, loc, stridedMetadata.getConstifiedMixedSizes(),
-              stridedMetadata.getConstifiedMixedStrides())},
+          ArrayRef<OpFoldResult>{linearizedInfo.linearizedSize},
           /* strides = */
           ArrayRef<OpFoldResult>{rewriter.getIndexAttr(1)}),
       getValueFromOpFoldResult(rewriter, loc, linearizedIndices));
@@ -133,16 +106,15 @@ static Value getTargetMemref(Operation *op) {
       .template Case<memref::LoadOp, memref::StoreOp, memref::AllocaOp,
                      memref::AllocOp>([](auto op) { return op.getMemref(); })
       .template Case<vector::LoadOp, vector::StoreOp, vector::MaskedLoadOp,
-                     vector::MaskedStoreOp>(
+                     vector::MaskedStoreOp, vector::TransferReadOp,
+                     vector::TransferWriteOp>(
           [](auto op) { return op.getBase(); })
-      .template Case<vector::TransferReadOp, vector::TransferWriteOp>(
-          [](auto op) { return op.getSource(); })
       .Default([](auto) { return Value{}; });
 }
 
 template <typename T>
-static void castResult(T oper, T newOper, Location loc,
-                       PatternRewriter &rewriter) {
+static void castAllocResult(T oper, T newOper, Location loc,
+                            PatternRewriter &rewriter) {
   memref::ExtractStridedMetadataOp stridedMetadata =
       rewriter.create<memref::ExtractStridedMetadataOp>(loc, oper);
   rewriter.replaceOpWithNewOp<memref::ReinterpretCastOp>(
@@ -155,19 +127,19 @@ static void castResult(T oper, T newOper, Location loc,
 template <typename T>
 static void replaceOp(T op, PatternRewriter &rewriter, Value flatMemref,
                       Value offset) {
-  auto loc = op->getLoc();
+  Location loc = op->getLoc();
   llvm::TypeSwitch<Operation *>(op.getOperation())
       .template Case<memref::AllocOp>([&](auto oper) {
         auto newAlloc = rewriter.create<memref::AllocOp>(
             loc, cast<MemRefType>(flatMemref.getType()),
             oper.getAlignmentAttr());
-        castResult(oper, newAlloc, loc, rewriter);
+        castAllocResult(oper, newAlloc, loc, rewriter);
       })
       .template Case<memref::AllocaOp>([&](auto oper) {
         auto newAlloca = rewriter.create<memref::AllocaOp>(
             loc, cast<MemRefType>(flatMemref.getType()),
             oper.getAlignmentAttr());
-        castResult(oper, newAlloca, loc, rewriter);
+        castAllocResult(oper, newAlloca, loc, rewriter);
       })
       .template Case<memref::LoadOp>([&](auto op) {
         auto newLoad = rewriter.create<memref::LoadOp>(
@@ -233,10 +205,41 @@ static ValueRange getIndices(T op) {
 }
 
 template <typename T>
+static LogicalResult canBeFlattened(T op, PatternRewriter &rewriter) {
+  return llvm::TypeSwitch<Operation *, LogicalResult>(op.getOperation())
+      .template Case<vector::TransferReadOp, vector::TransferWriteOp>(
+          [&](auto oper) {
+            // For vector.transfer_read/write, must make sure:
+            // 1. all accesses are inbound, and
+            // 2. has an identity or minor identity permutation map.
+            auto permutationMap = oper.getPermutationMap();
+            if (!permutationMap.isIdentity() &&
+                !permutationMap.isMinorIdentity()) {
+              return rewriter.notifyMatchFailure(
+                  oper, "only identity permutation map is supported");
+            }
+            mlir::ArrayAttr inbounds = oper.getInBounds();
+            if (llvm::any_of(inbounds, [](Attribute attr) {
+                  return !cast<BoolAttr>(attr).getValue();
+                })) {
+              return rewriter.notifyMatchFailure(oper,
+                                                 "only inbounds are supported");
+            }
+            return success();
+          })
+      .Default([&](auto op) { return success(); });
+}
+
+template <typename T>
 struct MemRefRewritePattern : public OpRewritePattern<T> {
   using OpRewritePattern<T>::OpRewritePattern;
   LogicalResult matchAndRewrite(T op,
                                 PatternRewriter &rewriter) const override {
+    LogicalResult canFlatten = canBeFlattened(op, rewriter);
+    if (failed(canFlatten)) {
+      return canFlatten;
+    }
+
     Value memref = getTargetMemref(op);
     if (!needFlattening(memref) || !checkLayout(memref))
       return failure();

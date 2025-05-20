@@ -26,7 +26,7 @@ func.func @load_scalar_from_memref_dynamic_dim(%input: memref<?x?xf32, strided<[
 // CHECK-SAME: (%[[ARG0:.*]]: memref<?x?xf32, strided<[?, ?], offset: ?>>, %[[ARG1:.*]]: index, %[[ARG2:.*]]: index)
 // CHECK: %[[BASE:.*]], %[[OFFSET:.*]], %[[SIZES:.*]]:2, %[[STRIDES:.*]]:2 = memref.extract_strided_metadata %[[ARG0]]
 // CHECK: %[[IDX:.*]] = affine.apply #[[MAP]]()[%[[ARG2]], %[[STRIDES]]#0, %[[ARG1]], %[[STRIDES]]#1]
-// CHECK: %[[SIZE:.*]] = affine.max #[[MAP1]]()[%[[SIZES]]#0, %[[STRIDES]]#0, %[[SIZES]]#1, %[[STRIDES]]#1]
+// CHECK: %[[SIZE:.*]] = affine.max #[[MAP1]]()[%[[STRIDES]]#0, %[[SIZES]]#0, %[[STRIDES]]#1, %[[SIZES]]#1]
 // CHECK: %[[REINT:.*]] = memref.reinterpret_cast %arg0 to offset: [%[[OFFSET]]], sizes: [%[[SIZE]]], strides: [1] : memref<?x?xf32, strided<[?, ?], offset: ?>> to memref<?xf32, strided<[1], offset: ?>> 
 // CHECK: memref.load %[[REINT]][%[[IDX]]]
 
@@ -70,7 +70,7 @@ func.func @store_scalar_from_memref_dynamic_dim(%input: memref<?x?xf32, strided<
 // CHECK-SAME: (%[[ARG0:.*]]: memref<?x?xf32, strided<[?, ?], offset: ?>>, %[[ARG1:.*]]: index, %[[ARG2:.*]]: index, %[[ARG3:.*]]: f32)
 // CHECK: %[[BASE:.*]], %[[OFFSET:.*]], %[[SIZES:.*]]:2, %[[STRIDES:.*]]:2 = memref.extract_strided_metadata %[[ARG0]]
 // CHECK: %[[IDX:.*]] = affine.apply #[[MAP]]()[%[[ARG2]], %[[STRIDES]]#0, %[[ARG1]], %[[STRIDES]]#1]
-// CHECK: %[[SIZE:.*]] = affine.max #[[MAP1]]()[%[[SIZES]]#0, %[[STRIDES]]#0, %[[SIZES]]#1, %[[STRIDES]]#1]
+// CHECK: %[[SIZE:.*]] = affine.max #[[MAP1]]()[%[[STRIDES]]#0, %[[SIZES]]#0, %[[STRIDES]]#1, %[[SIZES]]#1]
 // CHECK: %[[REINT:.*]] = memref.reinterpret_cast %[[ARG0]] to offset: [%[[OFFSET]]], sizes: [%[[SIZE]]], strides: [1]
 // CHECK: memref.store %[[ARG3]], %[[REINT]][%[[IDX]]]
 
@@ -196,22 +196,49 @@ func.func @mask_load_vector_from_memref_dynamic(%input: memref<3x7xi2>, %row: in
 
 func.func @transfer_read_memref(%input: memref<4x8xi2>, %value: vector<8xi2>, %row: index, %col: index) -> vector<8xi2> {
    %c0 = arith.constant 0 : i2
-   %0 = vector.transfer_read %input[%col, %row], %c0 : memref<4x8xi2>, vector<8xi2>
+   %0 = vector.transfer_read %input[%col, %row], %c0 {in_bounds = [true]} : memref<4x8xi2>, vector<8xi2>
    return %0 : vector<8xi2>
 }
-// CHECK-LABEL: func @transfer_read_memref
+
+// CHECK: #[[MAP:.*]] = affine_map<()[s0, s1] -> (s0 * 8 + s1)>
+// CHECK: func @transfer_read_memref
 // CHECK-SAME: (%[[ARG0:.*]]: memref<4x8xi2>, %[[ARG1:.*]]: vector<8xi2>, %[[ARG2:.*]]: index, %[[ARG3:.*]]: index)
 // CHECK: %[[C0:.*]] = arith.constant 0 : i2
-// CHECK: %[[IDX:.*]] = affine.apply #map()[%[[ARG3]], %[[ARG2]]]
+// CHECK: %[[IDX:.*]] = affine.apply #[[MAP]]()[%[[ARG3]], %[[ARG2]]]
 // CHECK-NEXT: %[[REINT:.*]] = memref.reinterpret_cast %[[ARG0]]
 // CHECK-NEXT: vector.transfer_read %[[REINT]][%[[IDX]]], %[[C0]]
 
 // -----
 
+func.func @transfer_read_memref_not_inbound(%input: memref<4x8xi2>, %value: vector<8xi2>, %row: index, %col: index) -> vector<8xi2> {
+   %c0 = arith.constant 0 : i2
+   %0 = vector.transfer_read %input[%col, %row], %c0 {in_bounds = [false]} : memref<4x8xi2>, vector<8xi2>
+   return %0 : vector<8xi2>
+}
+
+// CHECK-LABEL: func @transfer_read_memref_not_inbound
+// CHECK-SAME: (%[[ARG0:.*]]: memref<4x8xi2>, %[[ARG1:.*]]: vector<8xi2>, %[[ARG2:.*]]: index, %[[ARG3:.*]]: index)
+// CHECK: vector.transfer_read %[[ARG0]][%[[ARG3]], %[[ARG2]]]
+
+// -----
+
+func.func @transfer_read_memref_non_id(%input: memref<4x8xi2>, %value: vector<8xi2>, %row: index, %col: index) -> vector<8xi2> {
+   %c0 = arith.constant 0 : i2
+   %0 = vector.transfer_read %input[%col, %row], %c0 {permutation_map = affine_map<(d0, d1) -> (d0)>, in_bounds = [true]} : memref<4x8xi2>, vector<8xi2>
+   return %0 : vector<8xi2>
+}
+
+// CHECK-LABEL: func @transfer_read_memref_non_id
+// CHECK-SAME: (%[[ARG0:.*]]: memref<4x8xi2>, %[[ARG1:.*]]: vector<8xi2>, %[[ARG2:.*]]: index, %[[ARG3:.*]]: index)
+// CHECK: vector.transfer_read %[[ARG0]][%[[ARG3]], %[[ARG2]]]
+
+// -----
+
 func.func @transfer_write_memref(%input: memref<4x8xi2>, %value: vector<8xi2>, %row: index, %col: index) {
-   vector.transfer_write %value, %input[%col, %row] : vector<8xi2>, memref<4x8xi2>
+   vector.transfer_write %value, %input[%col, %row] {in_bounds = [true]} : vector<8xi2>, memref<4x8xi2>
    return
 }
+
 // CHECK: #[[MAP:.*]] = affine_map<()[s0, s1] -> (s0 * 8 + s1)>
 // CHECK: func @transfer_write_memref
 // CHECK-SAME: (%[[ARG0:.*]]: memref<4x8xi2>, %[[ARG1:.*]]: vector<8xi2>, %[[ARG2:.*]]: index, %[[ARG3:.*]]: index)
