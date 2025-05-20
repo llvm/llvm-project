@@ -24,8 +24,8 @@
 
 using namespace llvm;
 
-MCAsmBackend::MCAsmBackend(llvm::endianness Endian, unsigned RelaxFixupKind)
-    : Endian(Endian), RelaxFixupKind(RelaxFixupKind) {}
+MCAsmBackend::MCAsmBackend(llvm::endianness Endian, bool LinkerRelaxation)
+    : Endian(Endian), LinkerRelaxation(LinkerRelaxation) {}
 
 MCAsmBackend::~MCAsmBackend() = default;
 
@@ -122,6 +122,17 @@ bool MCAsmBackend::fixupNeedsRelaxationAdvanced(const MCAssembler &,
   if (!Resolved)
     return true;
   return fixupNeedsRelaxation(Fixup, Value);
+}
+
+bool MCAsmBackend::addReloc(MCAssembler &Asm, const MCFragment &F,
+                            const MCFixup &Fixup, const MCValue &Target,
+                            uint64_t &FixedValue, bool IsResolved,
+                            const MCSubtargetInfo *STI) {
+  if (IsResolved && shouldForceRelocation(Asm, Fixup, Target, STI))
+    IsResolved = false;
+  if (!IsResolved)
+    Asm.getWriter().recordRelocation(Asm, &F, Fixup, Target, FixedValue);
+  return IsResolved;
 }
 
 bool MCAsmBackend::isDarwinCanonicalPersonality(const MCSymbol *Sym) const {
