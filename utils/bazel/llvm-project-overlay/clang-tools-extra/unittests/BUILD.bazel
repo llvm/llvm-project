@@ -70,6 +70,7 @@ cc_test(
         "//clang-tools-extra/clang-doc:lib",
         "//llvm:BitstreamReader",
         "//llvm:BitstreamWriter",
+        "//llvm:Support",
         "//llvm:TestingSupport",
         "//third-party/unittest:gmock",
         "//third-party/unittest:gtest",

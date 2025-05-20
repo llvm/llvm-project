@@ -70,18 +70,113 @@ public:
   MustacheTemplateFile(StringRef TemplateStr) : Template(TemplateStr) {}
 };
 
+static std::unique_ptr<MustacheTemplateFile> NamespaceTemplate = nullptr;
+
+static std::unique_ptr<MustacheTemplateFile> RecordTemplate = nullptr;
+
+static Error setupTemplateFiles(const clang::doc::ClangDocContext &CDCtx) {
+  return Error::success();
+}
+
 Error MustacheHTMLGenerator::generateDocs(
     StringRef RootDir, StringMap<std::unique_ptr<doc::Info>> Infos,
     const clang::doc::ClangDocContext &CDCtx) {
+  if (auto Err = setupTemplateFiles(CDCtx))
+    return Err;
+  // Track which directories we already tried to create.
+  StringSet<> CreatedDirs;
+  // Collect all output by file name and create the necessary directories.
+  StringMap<std::vector<doc::Info *>> FileToInfos;
+  for (const auto &Group : Infos) {
+    doc::Info *Info = Group.getValue().get();
+
+    SmallString<128> Path;
+    sys::path::native(RootDir, Path);
+    sys::path::append(Path, Info->getRelativeFilePath(""));
+    if (!CreatedDirs.contains(Path)) {
+      if (std::error_code EC = sys::fs::create_directories(Path))
+        return createStringError(EC, "failed to create directory '%s'.",
+                                 Path.c_str());
+      CreatedDirs.insert(Path);
+    }
+
+    sys::path::append(Path, Info->getFileBaseName() + ".html");
+    FileToInfos[Path].push_back(Info);
+  }
+
+  for (const auto &Group : FileToInfos) {
+    std::error_code FileErr;
+    raw_fd_ostream InfoOS(Group.getKey(), FileErr, sys::fs::OF_None);
+    if (FileErr)
+      return createFileOpenError(Group.getKey(), FileErr);
+
+    for (const auto &Info : Group.getValue())
+      if (Error Err = generateDocForInfo(Info, InfoOS, CDCtx))
+        return Err;
+  }
   return Error::success();
+}
+
+static json::Value extractValue(const NamespaceInfo &I,
+                                const ClangDocContext &CDCtx) {
+  Object NamespaceValue = Object();
+  return NamespaceValue;
+}
+
+static json::Value extractValue(const RecordInfo &I,
+                                const ClangDocContext &CDCtx) {
+  Object RecordValue = Object();
+  return RecordValue;
+}
+
+static Error setupTemplateValue(const ClangDocContext &CDCtx, json::Value &V,
+                                Info *I) {
+  return createStringError(inconvertibleErrorCode(),
+                           "setupTemplateValue is unimplemented");
 }
 
 Error MustacheHTMLGenerator::generateDocForInfo(Info *I, raw_ostream &OS,
                                                 const ClangDocContext &CDCtx) {
+  switch (I->IT) {
+  case InfoType::IT_namespace: {
+    json::Value V =
+        extractValue(*static_cast<clang::doc::NamespaceInfo *>(I), CDCtx);
+    if (auto Err = setupTemplateValue(CDCtx, V, I))
+      return Err;
+    NamespaceTemplate->render(V, OS);
+    break;
+  }
+  case InfoType::IT_record: {
+    json::Value V =
+        extractValue(*static_cast<clang::doc::RecordInfo *>(I), CDCtx);
+    if (auto Err = setupTemplateValue(CDCtx, V, I))
+      return Err;
+    // Serialize the JSON value to the output stream in a readable format.
+    RecordTemplate->render(V, OS);
+    break;
+  }
+  case InfoType::IT_enum:
+    OS << "IT_enum\n";
+    break;
+  case InfoType::IT_function:
+    OS << "IT_Function\n";
+    break;
+  case InfoType::IT_typedef:
+    OS << "IT_typedef\n";
+    break;
+  case InfoType::IT_default:
+    return createStringError(inconvertibleErrorCode(), "unexpected InfoType");
+  }
   return Error::success();
 }
 
 Error MustacheHTMLGenerator::createResources(ClangDocContext &CDCtx) {
+  for (const auto &FilePath : CDCtx.UserStylesheets)
+    if (Error Err = copyFile(FilePath, CDCtx.OutDirectory))
+      return Err;
+  for (const auto &FilePath : CDCtx.JsScripts)
+    if (Error Err = copyFile(FilePath, CDCtx.OutDirectory))
+      return Err;
   return Error::success();
 }
 

@@ -16,6 +16,7 @@
 #define LLVM_CLANG_CIR_CIRGENFUNCTIONINFO_H
 
 #include "clang/AST/CanonicalType.h"
+#include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/Support/TrailingObjects.h"
 
@@ -47,19 +48,21 @@ public:
   ///
   /// If FD is not null, this will consider pass_object_size params in FD.
   static RequiredArgs
-  forPrototypePlus(const clang::FunctionProtoType *prototype) {
+  getFromProtoWithExtraSlots(const clang::FunctionProtoType *prototype,
+                             unsigned additional) {
     if (!prototype->isVariadic())
       return All;
 
     if (prototype->hasExtParameterInfos())
       llvm_unreachable("NYI");
 
-    return RequiredArgs(prototype->getNumParams());
+    return RequiredArgs(prototype->getNumParams() + additional);
   }
 
   static RequiredArgs
-  forPrototypePlus(clang::CanQual<clang::FunctionProtoType> prototype) {
-    return forPrototypePlus(prototype.getTypePtr());
+  getFromProtoWithExtraSlots(clang::CanQual<clang::FunctionProtoType> prototype,
+                             unsigned additional) {
+    return getFromProtoWithExtraSlots(prototype.getTypePtr(), additional);
   }
 
   unsigned getNumRequiredArgs() const {
@@ -110,8 +113,24 @@ public:
 
   // NOLINTNEXTLINE(readability-identifier-naming)
   void Profile(llvm::FoldingSetNodeID &id) {
-    id.AddBoolean(required.getOpaqueData());
-    getReturnType().Profile(id);
+    // It's unfortunate that we are looping over the arguments twice (here and
+    // in the static Profile function we call from here), but if the Profile
+    // functions get out of sync, we can end up with incorrect function
+    // signatures, and we don't have the argument types in the format that the
+    // static Profile function requires.
+    llvm::SmallVector<CanQualType, 16> argTypes;
+    for (const ArgInfo &argInfo : arguments())
+      argTypes.push_back(argInfo.type);
+
+    Profile(id, required, getReturnType(), argTypes);
+  }
+
+  llvm::ArrayRef<ArgInfo> arguments() const {
+    return llvm::ArrayRef<ArgInfo>(argInfoBegin(), numArgs);
+  }
+
+  llvm::ArrayRef<ArgInfo> requiredArguments() const {
+    return llvm::ArrayRef<ArgInfo>(argInfoBegin(), getNumRequiredArgs());
   }
 
   CanQualType getReturnType() const { return getArgsBuffer()[0].type; }
