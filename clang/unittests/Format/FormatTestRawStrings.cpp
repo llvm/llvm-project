@@ -1001,12 +1001,12 @@ TEST_F(FormatTestRawStrings, Json) {
       },
   };
 
-  EXPECT_EQ(R"test(json = R"json({
-                "str": "test"
-              })json";)test",
-            format(R"test(json = R"json({
-  "str": "test"
-})json";)test",
+  EXPECT_EQ("json = R\"json({\n"
+            "                \"str\": \"test\"\n"
+            "              })json\";",
+            format("json = R\"json({\n"
+                   "  \"str\": \"test\"\n"
+                   "})json\";",
                    Style));
 }
 
