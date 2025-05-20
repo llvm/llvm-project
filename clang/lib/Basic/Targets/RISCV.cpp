@@ -265,13 +265,15 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
 static constexpr int NumRVVBuiltins =
     RISCVVector::FirstSiFiveBuiltin - Builtin::FirstTSBuiltin;
 static constexpr int NumRVVSiFiveBuiltins =
-    RISCVVector::FirstTSBuiltin - RISCVVector::FirstSiFiveBuiltin;
+    RISCVVector::FirstAndesBuiltin - RISCVVector::FirstSiFiveBuiltin;
+static constexpr int NumRVVAndesBuiltins =
+    RISCVVector::FirstTSBuiltin - RISCVVector::FirstAndesBuiltin;
 static constexpr int NumRISCVBuiltins =
     RISCV::LastTSBuiltin - RISCVVector::FirstTSBuiltin;
 static constexpr int NumBuiltins =
     RISCV::LastTSBuiltin - Builtin::FirstTSBuiltin;
-static_assert(NumBuiltins ==
-              (NumRVVBuiltins + NumRVVSiFiveBuiltins + NumRISCVBuiltins));
+static_assert(NumBuiltins == (NumRVVBuiltins + NumRVVSiFiveBuiltins +
+                              NumRVVAndesBuiltins + NumRISCVBuiltins));
 
 namespace RVV {
 #define GET_RISCVV_BUILTIN_STR_TABLE
@@ -299,6 +301,19 @@ static constexpr std::array<Builtin::Info, NumRVVSiFiveBuiltins> BuiltinInfos =
 };
 } // namespace RVVSiFive
 
+namespace RVVAndes {
+#define GET_RISCVV_BUILTIN_STR_TABLE
+#include "clang/Basic/riscv_andes_vector_builtins.inc"
+#undef GET_RISCVV_BUILTIN_STR_TABLE
+
+static constexpr std::array<Builtin::Info, NumRVVAndesBuiltins> BuiltinInfos =
+    {
+#define GET_RISCVV_BUILTIN_INFOS
+#include "clang/Basic/riscv_andes_vector_builtins.inc"
+#undef GET_RISCVV_BUILTIN_INFOS
+};
+} // namespace RVVAndes
+
 #define GET_BUILTIN_STR_TABLE
 #include "clang/Basic/BuiltinsRISCV.inc"
 #undef GET_BUILTIN_STR_TABLE
@@ -315,6 +330,7 @@ RISCVTargetInfo::getTargetBuiltins() const {
   return {
       {&RVV::BuiltinStrings, RVV::BuiltinInfos, "__builtin_rvv_"},
       {&RVVSiFive::BuiltinStrings, RVVSiFive::BuiltinInfos, "__builtin_rvv_"},
+      {&RVVAndes::BuiltinStrings, RVVAndes::BuiltinInfos, "__builtin_rvv_"},
       {&BuiltinStrings, BuiltinInfos},
   };
 }
