@@ -1176,10 +1176,12 @@ foreach mx = SchedMxList in {
 
 //===----------------------------------------------------------------------===//
 // Unsupported extensions
+defm : UnsupportedSchedQ;
 defm : UnsupportedSchedZabha;
 defm : UnsupportedSchedZbc;
 defm : UnsupportedSchedZbkb;
 defm : UnsupportedSchedZbkx;
 defm : UnsupportedSchedSFB;
+defm : UnsupportedSchedZfaWithQ;
 defm : UnsupportedSchedXsfvcp;
 }
