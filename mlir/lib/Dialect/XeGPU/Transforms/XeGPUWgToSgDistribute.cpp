@@ -8,6 +8,7 @@
 #include "mlir/Dialect/XeGPU/Transforms/Passes.h"
 
 #include "mlir/Dialect/Affine/Utils.h"
+#include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/Index/IR/IndexDialect.h"
 #include "mlir/Dialect/Index/IR/IndexOps.h"
@@ -86,17 +87,6 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
     assert(localOffset.size() == distUnitBaseAddr.size() &&
            "localOffset and distUnitBaseAddr must have the same rank");
 
-    // Convert originalOffsets to Value
-    auto getValueFromOpFoldResult = [&](OpFoldResult ofr) -> Value {
-      if (auto val = ofr.dyn_cast<Value>())
-        return val;
-      if (auto attr = ofr.dyn_cast<Attribute>()) {
-        int64_t staticOffset = cast<IntegerAttr>(attr).getInt();
-        return rewriter.create<arith::ConstantIndexOp>(loc, staticOffset);
-      }
-      llvm_unreachable("Unsupported OpFoldResult kind");
-    };
-
     SmallVector<OpFoldResult> globalOffsets(originalOffsets.begin(),
                                             originalOffsets.end());
     size_t rank = localOffset.size();
@@ -110,7 +100,8 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
           rewriter.create<arith::ConstantIndexOp>(loc, distUnitShape[i]);
       Value offsetMod =
           rewriter.createOrFold<index::RemUOp>(loc, offset, modValue);
-      Value origOffset = getValueFromOpFoldResult(originalOffsets[dimIdx]);
+      Value origOffset = getValueOrCreateConstantIndexOp(
+          rewriter, loc, originalOffsets[dimIdx]);
       Value globalOffset =
           rewriter.createOrFold<index::AddOp>(loc, origOffset, offsetMod);
       globalOffsets[dimIdx] = globalOffset;
@@ -135,8 +126,8 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
       sgLayout = llvm::to_vector_of<int64_t>(sgLayoutAttr.asArrayRef());
     } else {
       // sgLayout must be present for workgroup-level distribution.
-      op.emitError("sgLayout attribute is required in layout");
-      return failure();
+      return rewriter.notifyMatchFailure(
+          op, "sgLayout attribute is required in layout");
     }
 
     SmallVector<int64_t> sgShape;
