@@ -3,6 +3,7 @@ add_flang_library(flangTidyModernizeModule STATIC
   AvoidBackspaceStmt.cpp
   AvoidCommonBlocks.cpp
   AvoidDataConstructs.cpp
+  AvoidPauseStmt.cpp
   ModernizeTidyModule.cpp
 
   LINK_LIBS
