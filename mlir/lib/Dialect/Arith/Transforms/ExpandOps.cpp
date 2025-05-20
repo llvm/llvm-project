@@ -330,19 +330,14 @@ struct F8E8M0ExtFOpConverter : public OpRewritePattern<arith::ExtFOp> {
   LogicalResult matchAndRewrite(arith::ExtFOp op,
                                 PatternRewriter &rewriter) const final {
     ImplicitLocOpBuilder b(op.getLoc(), rewriter);
-    auto operand = op.getOperand();
+    Value operand = op.getOperand();
     Type operandTy = operand.getType();
     Type resultTy = op.getType();
     Type operandETy = getElementTypeOrSelf(operandTy);
     Type resultETy = getElementTypeOrSelf(resultTy);
 
-    if (!operandETy.isF8E8M0FNU()) {
+    if (!llvm::isa<Float8E8M0FNUType>(operandETy)) {
       return rewriter.notifyMatchFailure(op, "not a ext of F8E8M0FNU");
-    }
-
-    if (!resultETy.isBF16() && !resultETy.isF16() && !resultETy.isF32()) {
-      return rewriter.notifyMatchFailure(
-          op, "not a ext of F8M0FNU on a larger 16-bit or 32-bit width float.");
     }
 
     Type i8Ty = b.getI8Type();
@@ -368,10 +363,10 @@ struct F8E8M0ExtFOpConverter : public OpRewritePattern<arith::ExtFOp> {
     // select for NaNs
     f32Bits = b.create<arith::SelectOp>(isNan, cF32NaN, f32Bits);
     Value result = b.create<arith::BitcastOp>(f32Ty, f32Bits);
-    if (resultETy.isBF16()) {
+    if (resultETy.getIntOrFloatBitWidth() < 32) {
       result = b.create<arith::TruncFOp>(resultTy, result);
-    } else if (resultETy.isF16()) {
-      result = b.create<arith::TruncFOp>(resultTy, result);
+    } else if (resultETy.getIntOrFloatBitWidth() > 32) {
+      result = b.create<arith::ExtFOp>(resultTy, result);
     }
     rewriter.replaceOp(op, result);
     return success();
@@ -388,17 +383,13 @@ struct F8E8M0TruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
   LogicalResult matchAndRewrite(arith::TruncFOp op,
                                 PatternRewriter &rewriter) const final {
     ImplicitLocOpBuilder b(op.getLoc(), rewriter);
-    auto operand = op.getOperand();
+    Value operand = op.getOperand();
     Type operandTy = operand.getType();
     Type operandETy = getElementTypeOrSelf(operandTy);
     Type resultTy = op.getType();
     Type resultETy = getElementTypeOrSelf(resultTy);
-    if (!resultETy.isF8E8M0FNU()) {
+    if (!llvm::isa<Float8E8M0FNUType>(resultETy)) {
       return rewriter.notifyMatchFailure(op, "not a truncf to f8E8M0FNU");
-    }
-    if (!operandETy.isBF16() && !operandETy.isF16() && !operandETy.isF32()) {
-      return rewriter.notifyMatchFailure(
-          op, "not a truncf of 16-bit or 32-bit float to f8E8M0FNU.");
     }
 
     if (op.getRoundingmodeAttr()) {
@@ -414,8 +405,10 @@ struct F8E8M0TruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
       i32Ty = shapedTy.clone(i32Ty);
       f32Ty = shapedTy.clone(f32Ty);
     }
-    if (!operandETy.isF32()) {
+    if (operandETy.getIntOrFloatBitWidth() < 32) {
       operand = b.create<arith::ExtFOp>(f32Ty, operand);
+    } else if (operandETy.getIntOrFloatBitWidth() > 32) {
+      operand = b.create<arith::TruncFOp>(f32Ty, operand);
     }
     Value f32Bits = b.create<arith::BitcastOp>(i32Ty, operand);
     Value cF32MantissaWidth = createConst(op->getLoc(), i32Ty, 23, rewriter);
@@ -453,36 +446,37 @@ struct ArithExpandOpsPass
       arith::MinNumFOp
     >();
 
-    if(includeBf16) {
+    if (includeBf16) {
       arith::populateExpandBFloat16Patterns(patterns);
     }
-    if(includeF8E8M0) {
+    if (includeF8E8M0) {
       arith::populateExpandF8E8M0Patterns(patterns);
     }
-    if (includeBf16 || includeF8E8M0) {
-      target.addDynamicallyLegalOp<arith::ExtFOp>(
-        [=](arith::ExtFOp op) {
-          Type inETy = getElementTypeOrSelf(op.getOperand().getType());
-          Type outETy = getElementTypeOrSelf(op.getType());
-          if(includeBf16 && includeF8E8M0)
-            return !(inETy.isBF16() && outETy.isF32()) && !(inETy.isF8E8M0FNU() && (outETy.isF32() || outETy.isBF16() || outETy.isF16()));
-          if(includeBf16)
-            return !(inETy.isBF16() && outETy.isF32());
-          return !(inETy.isF8E8M0FNU() && (outETy.isF32() || outETy.isBF16() || outETy.isF16()));
-        });
 
-      target.addDynamicallyLegalOp<arith::TruncFOp>(
-        [=](arith::TruncFOp op)  {
-          Type inETy = getElementTypeOrSelf(op.getOperand().getType());
-          Type outETy = getElementTypeOrSelf(op.getType());
-          if(includeBf16 && includeF8E8M0) 
-            return !(inETy.isF32() && outETy.isBF16()) && !(outETy.isF8E8M0FNU() && (inETy.isF32() || inETy.isF16() || inETy.isBF16())); 
-          if(includeBf16)
-            return !(inETy.isF32() && outETy.isBF16());
-          return 
-            !(outETy.isF8E8M0FNU() && (inETy.isF32() || inETy.isF16() || inETy.isBF16())); 
-        });
-    }
+    target.addDynamicallyLegalOp<arith::ExtFOp>(
+      [=](arith::ExtFOp op) {
+        Type inETy = getElementTypeOrSelf(op.getOperand().getType());
+        Type outETy = getElementTypeOrSelf(op.getType());
+        bool legalTypes = true;
+        if(includeBf16) 
+          legalTypes &= !(inETy.isBF16() && outETy.isF32());
+        if(includeF8E8M0)
+          legalTypes &= !llvm::isa<Float8E8M0FNUType>(inETy);
+        return legalTypes;
+      });
+
+    target.addDynamicallyLegalOp<arith::TruncFOp>(
+      [=](arith::TruncFOp op)  {
+        Type inETy = getElementTypeOrSelf(op.getOperand().getType());
+        Type outETy = getElementTypeOrSelf(op.getType());
+        bool legalTypes = true;
+        if(includeBf16) 
+          legalTypes &= !(inETy.isF32() && outETy.isBF16());
+        if(includeF8E8M0) 
+          legalTypes &= !(llvm::isa<Float8E8M0FNUType>(outETy)); 
+        return legalTypes;
+      });
+
     // clang-format on
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))

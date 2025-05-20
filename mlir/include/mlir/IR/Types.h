@@ -109,7 +109,6 @@ public:
   // Convenience predicates.  This is only for floating point types,
   // derived types should use isa/dyn_cast.
   bool isIndex() const;
-  bool isF8E8M0FNU() const;
   bool isBF16() const;
   bool isF16() const;
   bool isTF32() const;
