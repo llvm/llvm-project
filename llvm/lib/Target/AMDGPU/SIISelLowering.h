@@ -366,6 +366,9 @@ public:
   bool shouldConvertConstantLoadToIntImm(const APInt &Imm,
                                         Type *Ty) const override;
 
+  // bool shouldFoldSelectWithIdentityConstant(unsigned BinOpcode,
+  //                                           EVT VT) const override;
+
   bool isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
                                unsigned Index) const override;
   bool isExtractVecEltCheap(EVT VT, unsigned Index) const override;
@@ -437,6 +440,7 @@ public:
   SDValue lowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerGET_FPENV(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerSET_FPENV(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerROTR(SDValue Op, SelectionDAG &DAG) const;
 
   Register getRegisterByName(const char* RegName, LLT VT,
                              const MachineFunction &MF) const override;
