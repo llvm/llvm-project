@@ -499,6 +499,7 @@ module {
     } ins(%arg0 : tensor<?xf32>) outs(%arg1 : tensor<1xf32>) {
     ^bb0(%in: f32, %out: f32):
       %1 = arith.addf %in, %out : f32
+      %2 = arith.subf %1, %out : f32 // this should still be removed
       linalg.yield %1 : f32
     } -> tensor<1xf32>
     return %0 : tensor<1xf32>
@@ -508,3 +509,4 @@ module {
 // CHECK-LABEL: func @linalg_red_add
 // CHECK: %[[yield:.*]] = arith.addf %{{.*}}, %{{.*}} : f32
 // CHECK: linalg.yield %[[yield]] : f32
+// CHECK-NOT: arith.subf
