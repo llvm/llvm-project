@@ -4654,8 +4654,27 @@ AMDGPUTargetLowering::foldFreeOpFromSelect(TargetLowering::DAGCombinerInfo &DCI,
     if (!AMDGPUTargetLowering::allUsesHaveSourceMods(N.getNode()))
       return SDValue();
 
-    return distributeOpThroughSelect(DCI, LHS.getOpcode(),
-                                     SDLoc(N), Cond, LHS, RHS);
+    // select c, (fneg (f32 bitcast i32 x)), (fneg (f32 bitcast i32 y)) can be
+    // lowered directly to a V_CNDMASK_. So prevent the fneg from being pulled
+    // out in this case. For now I've made the logic as specific to the case as
+    // possible, hopefully this can be relaxed in future.
+    if (LHS.getOpcode() == ISD::FNEG && RHS.getOpcode() == ISD::FNEG) {
+      SDValue LHSB = LHS.getOperand(0);
+      SDValue RHSB = RHS.getOperand(0);
+      if (LHSB.getOpcode() == ISD::BITCAST &&
+          RHSB->getOpcode() == ISD::BITCAST) {
+        EVT LHSBOpTy = LHSB->getOperand(0).getValueType();
+        EVT RHSBOpTy = RHSB->getOperand(0).getValueType();
+        if (LHSB.getValueType() == MVT::f32 &&
+            RHSB.getValueType() == MVT::f32 && LHSBOpTy == MVT::i32 &&
+            RHSBOpTy == MVT::i32) {
+          return SDValue();
+        }
+      }
+    }
+
+    return distributeOpThroughSelect(DCI, LHS.getOpcode(), SDLoc(N), Cond, LHS,
+                                     RHS);
   }
 
   bool Inv = false;
@@ -4708,8 +4727,8 @@ AMDGPUTargetLowering::foldFreeOpFromSelect(TargetLowering::DAGCombinerInfo &DCI,
       if (Inv)
         std::swap(NewLHS, NewRHS);
 
-      SDValue NewSelect = DAG.getNode(ISD::SELECT, SL, VT,
-                                      Cond, NewLHS, NewRHS);
+      SDValue NewSelect =
+          DAG.getNode(ISD::SELECT, SL, VT, Cond, NewLHS, NewRHS);
       DCI.AddToWorklist(NewSelect.getNode());
       return DAG.getNode(LHS.getOpcode(), SL, VT, NewSelect);
     }
@@ -5047,8 +5066,25 @@ SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
   }
   case ISD::SELECT: {
     // fneg (select c, a, b) -> select c, (fneg a), (fneg b)
+    // This combine became necessary recently to prevent a regression in
+    // fneg-modifier-casting.ll caused by this patch legalising v2i32 xor.
+    // Specifically, additional instructions were added to the final codegen.
+    // When adding this combine a case was added to performFNEGCombine to
+    // prevent this combine from being undone under certain conditions.
     // TODO: Invert conditions of foldFreeOpFromSelect
-    return SDValue();
+    SDValue Cond = N0.getOperand(0);
+    SDValue LHS = N0.getOperand(1);
+    SDValue RHS = N0.getOperand(2);
+    EVT LHVT = LHS.getValueType();
+    EVT RHVT = RHS.getValueType();
+    // The regression was limited to i32 v2/i32.
+    if (RHVT != MVT::i32 && LHVT != MVT::i32)
+      return SDValue();
+
+    SDValue LFNeg = DAG.getNode(ISD::FNEG, SL, LHVT, LHS);
+    SDValue RFNeg = DAG.getNode(ISD::FNEG, SL, RHVT, RHS);
+    SDValue Op = DAG.getNode(Opc, SL, LHVT, Cond, LFNeg, RFNeg);
+    return Op;
   }
   case ISD::BITCAST: {
     SDLoc SL(N);

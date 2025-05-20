@@ -8,8 +8,7 @@ declare i32 @llvm.amdgcn.workitem.id.x() #0
 ; EG: AND_INT {{\*? *}}T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
 ; EG: AND_INT {{\*? *}}T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
 
-; SI: s_and_b32 s{{[0-9]+, s[0-9]+, s[0-9]+}}
-; SI: s_and_b32 s{{[0-9]+, s[0-9]+, s[0-9]+}}
+; SI: s_and_b64
 
 define amdgpu_kernel void @test2(ptr addrspace(1) %out, ptr addrspace(1) %in) {
   %b_ptr = getelementptr <2 x i32>, ptr addrspace(1) %in, i32 1
