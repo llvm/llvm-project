@@ -885,8 +885,9 @@ double APInt::roundToDouble(bool isSigned) const {
     if (isSigned) {
       int64_t sext = SignExtend64(getWord(0), BitWidth);
       return double(sext);
-    } else
+    } else {
       return double(getWord(0));
+    }
   }
 
   // Determine if the value is negative.
@@ -2578,8 +2579,9 @@ int APInt::tcMultiplyPart(WordType *dst, const WordType *src,
       if (low + dst[i] < low)
         high++;
       dst[i] += low;
-    } else
+    } else {
       dst[i] = low;
+    }
 
     carry = high;
   }

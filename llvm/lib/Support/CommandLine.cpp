@@ -2692,8 +2692,9 @@ void HelpPrinterWrapper::operator=(bool Value) {
     CommonOptions->HLOp.setHiddenFlag(NotHidden);
 
     CategorizedPrinter = true; // Invoke categorized printer
-  } else
+  } else {
     UncategorizedPrinter = true; // Invoke uncategorized printer
+  }
 }
 
 // Print the value of each option.
