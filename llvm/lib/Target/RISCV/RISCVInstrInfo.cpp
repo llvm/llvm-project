@@ -2935,6 +2935,7 @@ bool RISCVInstrInfo::canFoldIntoAddrMode(const MachineInstr &MemI, Register Reg,
   case RISCV::LW_INX:
   case RISCV::LWU:
   case RISCV::LD:
+  case RISCV::LD_RV32:
   case RISCV::FLH:
   case RISCV::FLW:
   case RISCV::FLD:
@@ -2944,6 +2945,7 @@ bool RISCVInstrInfo::canFoldIntoAddrMode(const MachineInstr &MemI, Register Reg,
   case RISCV::SW:
   case RISCV::SW_INX:
   case RISCV::SD:
+  case RISCV::SD_RV32:
   case RISCV::FSH:
   case RISCV::FSW:
   case RISCV::FSD:
@@ -3308,7 +3310,7 @@ static bool analyzeCandidate(outliner::Candidate &C) {
   // Filter out candidates where the X5 register (t0) can't be used to setup
   // the function call.
   const TargetRegisterInfo *TRI = C.getMF()->getSubtarget().getRegisterInfo();
-  if (std::any_of(C.begin(), C.end(), [TRI](const MachineInstr &MI) {
+  if (llvm::any_of(C, [TRI](const MachineInstr &MI) {
         return isMIModifiesReg(MI, TRI, RISCV::X5);
       }))
     return true;

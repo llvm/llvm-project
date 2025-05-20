@@ -1216,7 +1216,15 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    The format is a 64-bit concatenation of the MODE and TRAPSTS registers.
 
   :ref:`llvm.set.fpenv<int_set_fpenv>`             Sets the floating point environment to the specifies state.
-
+  llvm.amdgcn.load.to.lds.p<1/7>                   Loads values from global memory (either in the form of a global
+                                                   a raw fat buffer pointer) to LDS. The size of the data copied can be 1, 2,
+                                                   or 4 bytes (and gfx950 also allows 12 or 16 bytes). The LDS pointer
+                                                   argument should be wavefront-uniform; the global pointer need not be.
+                                                   The LDS pointer is implicitly offset by 4 * lane_id bytes for sies <= 4 bytes
+                                                   and 16 * lane_id bytes for larger sizes. This lowers to `global_load_lds`,
+                                                   `buffer_load_* ... lds`, or `global_load__* ... lds` depnedening on address
+                                                   space and architecture. `amdgcn.global.load.lds` has the same semantics as
+                                                   `amdgcn.load.to.lds.p1`.
   llvm.amdgcn.readfirstlane                        Provides direct access to v_readfirstlane_b32. Returns the value in
                                                    the lowest active lane of the input operand. Currently implemented
                                                    for i16, i32, float, half, bfloat, <2 x i16>, <2 x half>, <2 x bfloat>,

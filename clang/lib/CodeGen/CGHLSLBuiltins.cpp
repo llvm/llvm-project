@@ -412,24 +412,28 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
         ArrayRef<Value *>{Op0, Op1}, nullptr, "hlsl.dot");
   }
   case Builtin::BI__builtin_hlsl_dot4add_i8packed: {
-    Value *A = EmitScalarExpr(E->getArg(0));
-    Value *B = EmitScalarExpr(E->getArg(1));
-    Value *C = EmitScalarExpr(E->getArg(2));
+    Value *X = EmitScalarExpr(E->getArg(0));
+    Value *Y = EmitScalarExpr(E->getArg(1));
+    Value *Acc = EmitScalarExpr(E->getArg(2));
 
     Intrinsic::ID ID = CGM.getHLSLRuntime().getDot4AddI8PackedIntrinsic();
+    // Note that the argument order disagrees between the builtin and the
+    // intrinsic here.
     return Builder.CreateIntrinsic(
-        /*ReturnType=*/C->getType(), ID, ArrayRef<Value *>{A, B, C}, nullptr,
-        "hlsl.dot4add.i8packed");
+        /*ReturnType=*/Acc->getType(), ID, ArrayRef<Value *>{Acc, X, Y},
+        nullptr, "hlsl.dot4add.i8packed");
   }
   case Builtin::BI__builtin_hlsl_dot4add_u8packed: {
-    Value *A = EmitScalarExpr(E->getArg(0));
-    Value *B = EmitScalarExpr(E->getArg(1));
-    Value *C = EmitScalarExpr(E->getArg(2));
+    Value *X = EmitScalarExpr(E->getArg(0));
+    Value *Y = EmitScalarExpr(E->getArg(1));
+    Value *Acc = EmitScalarExpr(E->getArg(2));
 
     Intrinsic::ID ID = CGM.getHLSLRuntime().getDot4AddU8PackedIntrinsic();
+    // Note that the argument order disagrees between the builtin and the
+    // intrinsic here.
     return Builder.CreateIntrinsic(
-        /*ReturnType=*/C->getType(), ID, ArrayRef<Value *>{A, B, C}, nullptr,
-        "hlsl.dot4add.u8packed");
+        /*ReturnType=*/Acc->getType(), ID, ArrayRef<Value *>{Acc, X, Y},
+        nullptr, "hlsl.dot4add.u8packed");
   }
   case Builtin::BI__builtin_hlsl_elementwise_firstbithigh: {
     Value *X = EmitScalarExpr(E->getArg(0));

@@ -310,13 +310,14 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::VASTART, MVT::Other, Custom);
   setOperationAction({ISD::VAARG, ISD::VACOPY, ISD::VAEND}, MVT::Other, Expand);
 
-  if (!Subtarget.hasVendorXTHeadBb() && !Subtarget.hasVendorXqcibm())
+  if (!Subtarget.hasVendorXTHeadBb() && !Subtarget.hasVendorXqcibm() &&
+      !Subtarget.hasVendorXAndesPerf())
     setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1, Expand);
 
   setOperationAction(ISD::EH_DWARF_CFA, MVT::i32, Custom);
 
   if (!Subtarget.hasStdExtZbb() && !Subtarget.hasVendorXTHeadBb() &&
-      !Subtarget.hasVendorXqcibm() &&
+      !Subtarget.hasVendorXqcibm() && !Subtarget.hasVendorXAndesPerf() &&
       !(Subtarget.hasVendorXCValu() && !Subtarget.is64Bit()))
     setOperationAction(ISD::SIGN_EXTEND_INREG, {MVT::i8, MVT::i16}, Expand);
 
@@ -21017,7 +21018,7 @@ static MachineBasicBlock *emitSelectPseudo(MachineInstr &MI,
 
   auto Next = next_nodbg(MI.getIterator(), BB->instr_end());
   if ((MI.getOpcode() != RISCV::Select_GPR_Using_CC_GPR &&
-       MI.getOpcode() != RISCV::Select_GPR_Using_CC_Imm) &&
+       MI.getOpcode() != RISCV::Select_GPR_Using_CC_SImm5) &&
       Next != BB->end() && Next->getOpcode() == MI.getOpcode() &&
       Next->getOperand(5).getReg() == MI.getOperand(0).getReg() &&
       Next->getOperand(5).isKill())
@@ -21350,11 +21351,11 @@ RISCVTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
            "ReadCounterWide is only to be used on riscv32");
     return emitReadCounterWidePseudo(MI, BB);
   case RISCV::Select_GPR_Using_CC_GPR:
-  case RISCV::Select_GPR_Using_CC_Imm:
-  case RISCV::Select_GPR_Using_CC_Simm5NonZero:
-  case RISCV::Select_GPR_Using_CC_Uimm5NonZero:
-  case RISCV::Select_GPR_Using_CC_Simm16NonZero:
-  case RISCV::Select_GPR_Using_CC_Uimm16NonZero:
+  case RISCV::Select_GPR_Using_CC_SImm5:
+  case RISCV::Select_GPR_Using_CC_SImm5NonZero:
+  case RISCV::Select_GPR_Using_CC_UImm5NonZero:
+  case RISCV::Select_GPR_Using_CC_SImm16NonZero:
+  case RISCV::Select_GPR_Using_CC_UImm16NonZero:
   case RISCV::Select_FPR16_Using_CC_GPR:
   case RISCV::Select_FPR16INX_Using_CC_GPR:
   case RISCV::Select_FPR32_Using_CC_GPR:
@@ -24507,4 +24508,12 @@ RISCVTargetLowering::emitDynamicProbedAlloc(MachineInstr &MI,
   MI.eraseFromParent();
   MF.getInfo<RISCVMachineFunctionInfo>()->setDynamicAllocation();
   return ExitMBB->begin()->getParent();
+}
+
+ArrayRef<MCPhysReg> RISCVTargetLowering::getRoundingControlRegisters() const {
+  if (Subtarget.hasStdExtFOrZfinx()) {
+    static const MCPhysReg RCRegs[] = {RISCV::FRM, RISCV::FFLAGS};
+    return RCRegs;
+  }
+  return {};
 }

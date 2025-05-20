@@ -16,6 +16,7 @@
 #define LLVM_CLANG_CIR_CIRGENFUNCTIONINFO_H
 
 #include "clang/AST/CanonicalType.h"
+#include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/Support/TrailingObjects.h"
 

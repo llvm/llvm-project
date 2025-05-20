@@ -10009,6 +10009,14 @@ static bool IsElementEquivalent(int MaskSize, SDValue Op, SDValue ExpectedOp,
   case X86ISD::VBROADCAST_LOAD:
     // TODO: Handle MaskSize != VT.getVectorNumElements()?
     return (Op == ExpectedOp && (int)VT.getVectorNumElements() == MaskSize);
+  case X86ISD::SUBV_BROADCAST_LOAD:
+    // TODO: Handle MaskSize != VT.getVectorNumElements()?
+    if (Op == ExpectedOp && (int)VT.getVectorNumElements() == MaskSize) {
+      auto *MemOp = cast<MemSDNode>(Op);
+      unsigned NumMemElts = MemOp->getMemoryVT().getVectorNumElements();
+      return (Idx % NumMemElts) == (ExpectedIdx % NumMemElts);
+    }
+    break;
   case X86ISD::HADD:
   case X86ISD::HSUB:
   case X86ISD::FHADD:
@@ -43442,6 +43450,28 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     KnownZero = LHSZero;
     break;
   }
+  case X86ISD::CMPM:
+  case X86ISD::CMPP: {
+    // Scalarize packed fp comparison if we only require element 0.
+    if (DemandedElts == 1) {
+      SDLoc dl(Op);
+      MVT VT = Op.getSimpleValueType();
+      MVT OpSVT = Op.getOperand(0).getSimpleValueType().getScalarType();
+      SDValue LHS = TLO.DAG.getExtractVectorElt(dl, OpSVT, Op.getOperand(0), 0);
+      SDValue RHS = TLO.DAG.getExtractVectorElt(dl, OpSVT, Op.getOperand(1), 0);
+      SDValue CC = Op.getOperand(2);
+      if (Opc == X86ISD::CMPM) {
+        SDValue Cmp =
+            TLO.DAG.getNode(X86ISD::FSETCCM, dl, MVT::v1i1, LHS, RHS, CC);
+        return TLO.CombineTo(
+            Op, TLO.DAG.getInsertSubvector(dl, TLO.DAG.getUNDEF(VT), Cmp, 0));
+      }
+      SDValue Cmp = TLO.DAG.getNode(X86ISD::FSETCC, dl, OpSVT, LHS, RHS, CC);
+      return TLO.CombineTo(Op,
+                           TLO.DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, VT, Cmp));
+    }
+    break;
+  }
   case X86ISD::PCMPEQ:
   case X86ISD::PCMPGT: {
     APInt LHSUndef, LHSZero;
@@ -53260,7 +53290,6 @@ static SDValue combineMaskedStore(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   EVT VT = Mst->getValue().getValueType();
-  SDLoc dl(Mst);
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
   if (Mst->isTruncatingStore())
@@ -56718,7 +56747,7 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
         return SDValue(N, 0);
       }
       if (auto MinShAmt = DAG.getValidMinimumShiftAmount(Index)) {
-        if (*MinShAmt >= 1 && (*MinShAmt + Log2ScaleAmt) < 4 &&
+        if (*MinShAmt >= 1 && Log2ScaleAmt < 3 &&
             DAG.ComputeNumSignBits(Index.getOperand(0)) > 1) {
           SDValue ShAmt = Index.getOperand(1);
           SDValue NewShAmt =
