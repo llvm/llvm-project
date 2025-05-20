@@ -318,7 +318,6 @@ enum Kind {
   kw_fptoui,
   kw_fptosi,
   kw_inttoptr,
-  kw_ptrtoaddr,
   kw_ptrtoint,
   kw_bitcast,
   kw_addrspacecast,

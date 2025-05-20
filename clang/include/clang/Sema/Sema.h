@@ -12576,6 +12576,7 @@ public:
       bool PartialOverloading, bool AggregateDeductionCandidate,
       bool PartialOrdering, QualType ObjectType,
       Expr::Classification ObjectClassification,
+      bool ForOverloadSetAddressResolution,
       llvm::function_ref<bool(ArrayRef<QualType>)> CheckNonDependent);
 
   /// Deduce template arguments when taking the address of a function

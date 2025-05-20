@@ -35,7 +35,7 @@ Sometimes it is necessary to add elements of a vector to obtain a scalar. Some p
 The Vector dialect in MLIR defines an operation to explicitly denote a within-vector reduction:
 
 ```mlir
-%0 = vector.reduction <add>, %0 : vector<8xf32> into f32
+%1 = vector.reduction <add>, %0 : vector<8xf32> into f32
 ```
 
 When no support is available, such an operation can be transformed into a loop:

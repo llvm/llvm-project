@@ -61,7 +61,9 @@
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/IRSymtab.h"
+#include "llvm/ProfileData/IndexedMemProfData.h"
 #include "llvm/ProfileData/MemProf.h"
+#include "llvm/ProfileData/MemProfRadixTree.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
@@ -640,7 +642,6 @@ static unsigned getEncodedCastOpcode(unsigned Opcode) {
   case Instruction::SIToFP  : return bitc::CAST_SITOFP;
   case Instruction::FPTrunc : return bitc::CAST_FPTRUNC;
   case Instruction::FPExt   : return bitc::CAST_FPEXT;
-  case Instruction::PtrToAddr: return bitc::CAST_PTRTOADDR;
   case Instruction::PtrToInt: return bitc::CAST_PTRTOINT;
   case Instruction::IntToPtr: return bitc::CAST_INTTOPTR;
   case Instruction::BitCast : return bitc::CAST_BITCAST;

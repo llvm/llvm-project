@@ -3877,8 +3877,6 @@ void SelectionDAGBuilder::visitSIToFP(const User &I) {
   setValue(&I, DAG.getNode(ISD::SINT_TO_FP, getCurSDLoc(), DestVT, N));
 }
 
-void SelectionDAGBuilder::visitPtrToAddr(const User &I) { visitPtrToInt(I); }
-
 void SelectionDAGBuilder::visitPtrToInt(const User &I) {
   // What to do depends on the size of the integer and the size of the pointer.
   // We can either truncate, zero extend, or no-op, accordingly.
@@ -7998,14 +7996,15 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::get_active_lane_mask: {
     EVT CCVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
     SDValue Index = getValue(I.getOperand(0));
+    SDValue TripCount = getValue(I.getOperand(1));
     EVT ElementVT = Index.getValueType();
 
     if (!TLI.shouldExpandGetActiveLaneMask(CCVT, ElementVT)) {
-      visitTargetIntrinsic(I, Intrinsic);
+      setValue(&I, DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, sdl, CCVT, Index,
+                               TripCount));
       return;
     }
 
-    SDValue TripCount = getValue(I.getOperand(1));
     EVT VecTy = EVT::getVectorVT(*DAG.getContext(), ElementVT,
                                  CCVT.getVectorElementCount());
 
@@ -11814,9 +11813,18 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
         else if (Arg.hasAttribute(Attribute::ZExt))
           AssertOp = ISD::AssertZext;
 
-        ArgValues.push_back(getCopyFromParts(DAG, dl, &InVals[i], NumParts,
-                                             PartVT, VT, nullptr, NewRoot,
-                                             F.getCallingConv(), AssertOp));
+        SDValue OutVal =
+            getCopyFromParts(DAG, dl, &InVals[i], NumParts, PartVT, VT, nullptr,
+                             NewRoot, F.getCallingConv(), AssertOp);
+
+        FPClassTest NoFPClass = Arg.getNoFPClass();
+        if (NoFPClass != fcNone) {
+          SDValue SDNoFPClass = DAG.getTargetConstant(
+              static_cast<uint64_t>(NoFPClass), dl, MVT::i32);
+          OutVal = DAG.getNode(ISD::AssertNoFPClass, dl, OutVal.getValueType(),
+                               OutVal, SDNoFPClass);
+        }
+        ArgValues.push_back(OutVal);
       }
 
       i += NumParts;

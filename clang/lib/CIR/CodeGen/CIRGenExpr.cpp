@@ -909,7 +909,7 @@ RValue CIRGenFunction::emitCall(clang::QualType calleeTy,
       cgm.getTypes().arrangeFreeFunctionCall(args, fnType);
 
   assert(!cir::MissingFeatures::opCallNoPrototypeFunc());
-  assert(!cir::MissingFeatures::opCallChainCall());
+  assert(!cir::MissingFeatures::opCallFnInfoOpts());
   assert(!cir::MissingFeatures::hip());
   assert(!cir::MissingFeatures::opCallMustTail());
 
@@ -945,10 +945,8 @@ RValue CIRGenFunction::emitCallExpr(const clang::CallExpr *e,
                                     ReturnValueSlot returnValue) {
   assert(!cir::MissingFeatures::objCBlocks());
 
-  if (isa<CXXMemberCallExpr>(e)) {
-    cgm.errorNYI(e->getSourceRange(), "call to member function");
-    return RValue::get(nullptr);
-  }
+  if (const auto *ce = dyn_cast<CXXMemberCallExpr>(e))
+    return emitCXXMemberCallExpr(ce, returnValue);
 
   if (isa<CUDAKernelCallExpr>(e)) {
     cgm.errorNYI(e->getSourceRange(), "call to CUDA kernel");
@@ -1146,6 +1144,35 @@ mlir::Value CIRGenFunction::emitAlloca(StringRef name, mlir::Type ty,
     assert(!cir::MissingFeatures::astVarDeclInterface());
   }
   return addr;
+}
+
+// Note: this function also emit constructor calls to support a MSVC extensions
+// allowing explicit constructor function call.
+RValue CIRGenFunction::emitCXXMemberCallExpr(const CXXMemberCallExpr *ce,
+                                             ReturnValueSlot returnValue) {
+  const Expr *callee = ce->getCallee()->IgnoreParens();
+
+  if (isa<BinaryOperator>(callee)) {
+    cgm.errorNYI(ce->getSourceRange(),
+                 "emitCXXMemberCallExpr: C++ binary operator");
+    return RValue::get(nullptr);
+  }
+
+  const auto *me = cast<MemberExpr>(callee);
+  const auto *md = cast<CXXMethodDecl>(me->getMemberDecl());
+
+  if (md->isStatic()) {
+    cgm.errorNYI(ce->getSourceRange(), "emitCXXMemberCallExpr: static method");
+    return RValue::get(nullptr);
+  }
+
+  bool hasQualifier = me->hasQualifier();
+  NestedNameSpecifier *qualifier = hasQualifier ? me->getQualifier() : nullptr;
+  bool isArrow = me->isArrow();
+  const Expr *base = me->getBase();
+
+  return emitCXXMemberOrOperatorMemberCallExpr(
+      ce, md, returnValue, hasQualifier, qualifier, isArrow, base);
 }
 
 RValue CIRGenFunction::emitReferenceBindingToExpr(const Expr *e) {
