@@ -21,6 +21,7 @@
 #ifndef LLVM_CODEGEN_MACHINEPASSMANAGER_H
 #define LLVM_CODEGEN_MACHINEPASSMANAGER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -104,7 +105,7 @@ using MachineFunctionAnalysisManagerModuleProxy =
     InnerAnalysisManagerProxy<MachineFunctionAnalysisManager, Module>;
 
 template <>
-bool MachineFunctionAnalysisManagerModuleProxy::Result::invalidate(
+LLVM_ABI bool MachineFunctionAnalysisManagerModuleProxy::Result::invalidate(
     Module &M, const PreservedAnalyses &PA,
     ModuleAnalysisManager::Invalidator &Inv);
 extern template class InnerAnalysisManagerProxy<MachineFunctionAnalysisManager,
@@ -113,7 +114,7 @@ using MachineFunctionAnalysisManagerFunctionProxy =
     InnerAnalysisManagerProxy<MachineFunctionAnalysisManager, Function>;
 
 template <>
-bool MachineFunctionAnalysisManagerFunctionProxy::Result::invalidate(
+LLVM_ABI bool MachineFunctionAnalysisManagerFunctionProxy::Result::invalidate(
     Function &F, const PreservedAnalyses &PA,
     FunctionAnalysisManager::Invalidator &Inv);
 extern template class InnerAnalysisManagerProxy<MachineFunctionAnalysisManager,
@@ -161,7 +162,7 @@ public:
     /// Regardless of whether the proxy analysis is marked as preserved, all of
     /// the analyses in the inner analysis manager are potentially invalidated
     /// based on the set of preserved analyses.
-    bool invalidate(MachineFunction &IR, const PreservedAnalyses &PA,
+    LLVM_ABI bool invalidate(MachineFunction &IR, const PreservedAnalyses &PA,
                     MachineFunctionAnalysisManager::Invalidator &Inv);
 
   private:
@@ -181,7 +182,7 @@ public:
     return Result(*FAM);
   }
 
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
 private:
   FunctionAnalysisManager *FAM;
@@ -198,8 +199,8 @@ public:
       : Pass(std::move(Pass)) {}
 
   /// Runs the function pass across every function in the function.
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
-  void printPipeline(raw_ostream &OS,
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+  LLVM_ABI void printPipeline(raw_ostream &OS,
                      function_ref<StringRef(StringRef)> MapClassName2PassName);
 
   static bool isRequired() { return true; }
@@ -221,7 +222,7 @@ createFunctionToMachineFunctionPassAdaptor(MachineFunctionPassT &&Pass) {
 }
 
 template <>
-PreservedAnalyses
+LLVM_ABI PreservedAnalyses
 PassManager<MachineFunction>::run(MachineFunction &,
                                   AnalysisManager<MachineFunction> &);
 extern template class PassManager<MachineFunction>;
@@ -231,7 +232,7 @@ using MachineFunctionPassManager = PassManager<MachineFunction>;
 
 /// Returns the minimum set of Analyses that all machine function passes must
 /// preserve.
-PreservedAnalyses getMachineFunctionPassPreservedAnalyses();
+LLVM_ABI PreservedAnalyses getMachineFunctionPassPreservedAnalyses();
 
 } // end namespace llvm
 

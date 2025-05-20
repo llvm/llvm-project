@@ -29,6 +29,7 @@
 #ifndef LLVM_CODEGEN_MACHINELOOPINFO_H
 #define LLVM_CODEGEN_MACHINELOOPINFO_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachinePassManager.h"
@@ -48,25 +49,25 @@ public:
   /// Return the "top" block in the loop, which is the first block in the linear
   /// layout, ignoring any parts of the loop not contiguous with the part that
   /// contains the header.
-  MachineBasicBlock *getTopBlock();
+  LLVM_ABI MachineBasicBlock *getTopBlock();
 
   /// Return the "bottom" block in the loop, which is the last block in the
   /// linear layout, ignoring any parts of the loop not contiguous with the part
   /// that contains the header.
-  MachineBasicBlock *getBottomBlock();
+  LLVM_ABI MachineBasicBlock *getBottomBlock();
 
   /// Find the block that contains the loop control variable and the
   /// loop test. This will return the latch block if it's one of the exiting
   /// blocks. Otherwise, return the exiting block. Return 'null' when
   /// multiple exiting blocks are present.
-  MachineBasicBlock *findLoopControlBlock() const;
+  LLVM_ABI MachineBasicBlock *findLoopControlBlock() const;
 
   /// Return the debug location of the start of this loop.
   /// This looks for a BB terminating instruction with a known debug
   /// location by looking at the preheader and header blocks. If it
   /// cannot find a terminating instruction with location information,
   /// it returns an unknown location.
-  DebugLoc getStartLoc() const;
+  LLVM_ABI DebugLoc getStartLoc() const;
 
   /// Find the llvm.loop metadata for this loop.
   /// If each branch to the header of this loop contains the same llvm.loop
@@ -74,7 +75,7 @@ public:
   /// latch instruction does not contain the llvm.loop metadata or
   /// multiple latch instructions contain different llvm.loop metadata nodes,
   /// then null is returned.
-  MDNode *getLoopID() const;
+  LLVM_ABI MDNode *getLoopID() const;
 
   /// Returns true if the instruction is loop invariant.
   /// I.e., all virtual register operands are defined outside of the loop,
@@ -83,9 +84,9 @@ public:
   /// ExcludeReg can be used to exclude the given register from the check
   /// i.e. when we're considering hoisting it's definition but not hoisted it
   /// yet
-  bool isLoopInvariant(MachineInstr &I, const Register ExcludeReg = 0) const;
+  LLVM_ABI bool isLoopInvariant(MachineInstr &I, const Register ExcludeReg = 0) const;
 
-  void dump() const;
+  LLVM_ABI void dump() const;
 
 private:
   friend class LoopInfoBase<MachineBasicBlock, MachineLoop>;
@@ -114,7 +115,7 @@ public:
   MachineLoopInfo &operator=(const MachineLoopInfo &) = delete;
 
   /// Handle invalidation explicitly.
-  bool invalidate(MachineFunction &, const PreservedAnalyses &PA,
+  LLVM_ABI bool invalidate(MachineFunction &, const PreservedAnalyses &PA,
                   MachineFunctionAnalysisManager::Invalidator &);
 
   /// Find the block that either is the loop preheader, or could
@@ -124,12 +125,12 @@ public:
   /// find the speculative preheader if the regular preheader is not present.
   /// With FindMultiLoopPreheader = false, nullptr will be returned if the found
   /// preheader is the preheader of multiple loops.
-  MachineBasicBlock *
+  LLVM_ABI MachineBasicBlock *
   findLoopPreheader(MachineLoop *L, bool SpeculativePreheader = false,
                     bool FindMultiLoopPreheader = false) const;
 
   /// Calculate the natural loop information.
-  void calculate(MachineDominatorTree &MDT);
+  LLVM_ABI void calculate(MachineDominatorTree &MDT);
 };
 
 /// Analysis pass that exposes the \c MachineLoopInfo for a machine function.
@@ -139,7 +140,7 @@ class MachineLoopAnalysis : public AnalysisInfoMixin<MachineLoopAnalysis> {
 
 public:
   using Result = MachineLoopInfo;
-  Result run(MachineFunction &MF, MachineFunctionAnalysisManager &MFAM);
+  LLVM_ABI Result run(MachineFunction &MF, MachineFunctionAnalysisManager &MFAM);
 };
 
 /// Printer pass for the \c LoopAnalysis results.
@@ -148,12 +149,12 @@ class MachineLoopPrinterPass : public PassInfoMixin<MachineLoopPrinterPass> {
 
 public:
   explicit MachineLoopPrinterPass(raw_ostream &OS) : OS(OS) {}
-  PreservedAnalyses run(MachineFunction &MF,
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
   static bool isRequired() { return true; }
 };
 
-class MachineLoopInfoWrapperPass : public MachineFunctionPass {
+class LLVM_ABI MachineLoopInfoWrapperPass : public MachineFunctionPass {
   MachineLoopInfo LI;
 
 public:

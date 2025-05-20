@@ -15,6 +15,7 @@
 #ifndef LLVM_CODEGEN_TARGETREGISTERINFO_H
 #define LLVM_CODEGEN_TARGETREGISTERINFO_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -232,7 +233,7 @@ struct RegClassWeight {
 /// to this array so that we can turn register number into a register
 /// descriptor.
 ///
-class TargetRegisterInfo : public MCRegisterInfo {
+class LLVM_ABI TargetRegisterInfo : public MCRegisterInfo {
 public:
   using regclass_iterator = const TargetRegisterClass * const *;
   using vt_iterator = const MVT::SimpleValueType *;
@@ -1404,7 +1405,7 @@ struct VirtReg2IndexFunctor {
 ///   %physreg17      - a physical register when no TRI instance given.
 ///
 /// Usage: OS << printReg(Reg, TRI, SubRegIdx) << '\n';
-Printable printReg(Register Reg, const TargetRegisterInfo *TRI = nullptr,
+LLVM_ABI Printable printReg(Register Reg, const TargetRegisterInfo *TRI = nullptr,
                    unsigned SubIdx = 0,
                    const MachineRegisterInfo *MRI = nullptr);
 
@@ -1416,15 +1417,15 @@ Printable printReg(Register Reg, const TargetRegisterInfo *TRI = nullptr,
 ///   fp0~st7 - Dual roots.
 ///
 /// Usage: OS << printRegUnit(Unit, TRI) << '\n';
-Printable printRegUnit(unsigned Unit, const TargetRegisterInfo *TRI);
+LLVM_ABI Printable printRegUnit(unsigned Unit, const TargetRegisterInfo *TRI);
 
 /// Create Printable object to print virtual registers and physical
 /// registers on a \ref raw_ostream.
-Printable printVRegOrUnit(unsigned VRegOrUnit, const TargetRegisterInfo *TRI);
+LLVM_ABI Printable printVRegOrUnit(unsigned VRegOrUnit, const TargetRegisterInfo *TRI);
 
 /// Create Printable object to print register classes or register banks
 /// on a \ref raw_ostream.
-Printable printRegClassOrBank(Register Reg, const MachineRegisterInfo &RegInfo,
+LLVM_ABI Printable printRegClassOrBank(Register Reg, const MachineRegisterInfo &RegInfo,
                               const TargetRegisterInfo *TRI);
 
 } // end namespace llvm

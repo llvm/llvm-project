@@ -13,6 +13,7 @@
 #ifndef LLVM_CODEGEN_GLOBALISEL_MACHINEIRBUILDER_H
 #define LLVM_CODEGEN_GLOBALISEL_MACHINEIRBUILDER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -232,7 +233,7 @@ private:
 /// It keeps internally the insertion point and debug location for all
 /// the new instructions we want to create.
 /// This information can be modified via the related setters.
-class MachineIRBuilder {
+class LLVM_ABI MachineIRBuilder {
 
   MachineIRBuilderState State;
 

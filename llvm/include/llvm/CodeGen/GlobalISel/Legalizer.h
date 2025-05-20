@@ -20,6 +20,7 @@
 #ifndef LLVM_CODEGEN_GLOBALISEL_LEGALIZER_H
 #define LLVM_CODEGEN_GLOBALISEL_LEGALIZER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
@@ -34,7 +35,7 @@ class MachineInstr;
 class GISelChangeObserver;
 class LostDebugLocObserver;
 
-class Legalizer : public MachineFunctionPass {
+class LLVM_ABI Legalizer : public MachineFunctionPass {
 public:
   static char ID;
 

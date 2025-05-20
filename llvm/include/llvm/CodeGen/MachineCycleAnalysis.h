@@ -14,6 +14,7 @@
 #ifndef LLVM_CODEGEN_MACHINECYCLEANALYSIS_H
 #define LLVM_CODEGEN_MACHINECYCLEANALYSIS_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/GenericCycleInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachinePassManager.h"
@@ -25,7 +26,7 @@ using MachineCycleInfo = GenericCycleInfo<MachineSSAContext>;
 using MachineCycle = MachineCycleInfo::CycleT;
 
 /// Legacy analysis pass which computes a \ref MachineCycleInfo.
-class MachineCycleInfoWrapperPass : public MachineFunctionPass {
+class LLVM_ABI MachineCycleInfoWrapperPass : public MachineFunctionPass {
   MachineFunction *F = nullptr;
   MachineCycleInfo CI;
 
@@ -45,7 +46,7 @@ public:
 
 // TODO: add this function to GenericCycle template after implementing IR
 //       version.
-bool isCycleInvariant(const MachineCycle *Cycle, MachineInstr &I);
+LLVM_ABI bool isCycleInvariant(const MachineCycle *Cycle, MachineInstr &I);
 
 class MachineCycleAnalysis : public AnalysisInfoMixin<MachineCycleAnalysis> {
   friend AnalysisInfoMixin<MachineCycleAnalysis>;
@@ -54,7 +55,7 @@ class MachineCycleAnalysis : public AnalysisInfoMixin<MachineCycleAnalysis> {
 public:
   using Result = MachineCycleInfo;
 
-  Result run(MachineFunction &MF, MachineFunctionAnalysisManager &MFAM);
+  LLVM_ABI Result run(MachineFunction &MF, MachineFunctionAnalysisManager &MFAM);
 };
 
 class MachineCycleInfoPrinterPass
@@ -63,7 +64,7 @@ class MachineCycleInfoPrinterPass
 
 public:
   explicit MachineCycleInfoPrinterPass(raw_ostream &OS) : OS(OS) {}
-  PreservedAnalyses run(MachineFunction &MF,
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
   static bool isRequired() { return true; }
 };

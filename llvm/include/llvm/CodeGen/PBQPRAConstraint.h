@@ -15,6 +15,7 @@
 #ifndef LLVM_CODEGEN_PBQPRACONSTRAINT_H
 #define LLVM_CODEGEN_PBQPRACONSTRAINT_H
 
+#include "llvm/Support/Compiler.h"
 #include <algorithm>
 #include <memory>
 #include <vector>
@@ -34,7 +35,7 @@ using PBQPRAGraph = PBQP::RegAlloc::PBQPRAGraph;
 
 /// Abstract base for classes implementing PBQP register allocation
 ///        constraints (e.g. Spill-costs, interference, coalescing).
-class PBQPRAConstraint {
+class LLVM_ABI PBQPRAConstraint {
 public:
   virtual ~PBQPRAConstraint() = 0;
   virtual void apply(PBQPRAGraph &G) = 0;
@@ -47,7 +48,7 @@ private:
 ///
 ///   Constraints added to this list will be applied, in the order that they are
 /// added, to the PBQP graph.
-class PBQPRAConstraintList : public PBQPRAConstraint {
+class LLVM_ABI PBQPRAConstraintList : public PBQPRAConstraint {
 public:
   void apply(PBQPRAGraph &G) override {
     for (auto &C : Constraints)

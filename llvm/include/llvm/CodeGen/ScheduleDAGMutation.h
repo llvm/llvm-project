@@ -19,7 +19,7 @@ namespace llvm {
 class ScheduleDAGInstrs;
 
 /// Mutate the DAG as a postpass after normal DAG building.
-class ScheduleDAGMutation {
+class LLVM_ABI ScheduleDAGMutation {
   virtual void anchor();
 
 public:

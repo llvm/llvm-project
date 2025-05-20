@@ -16,6 +16,7 @@
 #ifndef LLVM_CODEGEN_REGISTERCLASSINFO_H
 #define LLVM_CODEGEN_REGISTERCLASSINFO_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallVector.h"
@@ -72,7 +73,7 @@ class RegisterClassInfo {
   ArrayRef<uint8_t> RegCosts;
 
   // Compute all information about RC.
-  void compute(const TargetRegisterClass *RC) const;
+  LLVM_ABI void compute(const TargetRegisterClass *RC) const;
 
   // Return an up-to-date RCInfo for RC.
   const RCInfo &get(const TargetRegisterClass *RC) const {
@@ -83,11 +84,11 @@ class RegisterClassInfo {
   }
 
 public:
-  RegisterClassInfo();
+  LLVM_ABI RegisterClassInfo();
 
   /// runOnFunction - Prepare to answer questions about MF. This must be called
   /// before any other methods are used.
-  void runOnMachineFunction(const MachineFunction &MF);
+  LLVM_ABI void runOnMachineFunction(const MachineFunction &MF);
 
   /// getNumAllocatableRegs - Returns the number of actually allocatable
   /// registers in RC in the current function.
@@ -150,7 +151,7 @@ public:
   }
 
 protected:
-  unsigned computePSetLimit(unsigned Idx) const;
+  LLVM_ABI unsigned computePSetLimit(unsigned Idx) const;
 };
 
 } // end namespace llvm

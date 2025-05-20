@@ -14,6 +14,7 @@
 #ifndef LLVM_CODEGEN_GLOBALISEL_GISELVALUETRACKING_H
 #define LLVM_CODEGEN_GLOBALISEL_GISELVALUETRACKING_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
@@ -30,7 +31,7 @@ namespace llvm {
 class TargetLowering;
 class DataLayout;
 
-class GISelValueTracking : public GISelChangeObserver {
+class LLVM_ABI GISelValueTracking : public GISelChangeObserver {
   MachineFunction &MF;
   MachineRegisterInfo &MRI;
   const TargetLowering &TL;
@@ -148,7 +149,7 @@ protected:
 /// Eventually add other features such as caching/ser/deserializing
 /// to MIR etc. Those implementations can derive from GISelValueTracking
 /// and override computeKnownBitsImpl.
-class GISelValueTrackingAnalysisLegacy : public MachineFunctionPass {
+class LLVM_ABI GISelValueTrackingAnalysisLegacy : public MachineFunctionPass {
   std::unique_ptr<GISelValueTracking> Info;
 
 public:
@@ -171,7 +172,7 @@ class GISelValueTrackingAnalysis
 public:
   using Result = GISelValueTracking;
 
-  Result run(MachineFunction &MF, MachineFunctionAnalysisManager &MFAM);
+  LLVM_ABI Result run(MachineFunction &MF, MachineFunctionAnalysisManager &MFAM);
 };
 
 class GISelValueTrackingPrinterPass
@@ -181,7 +182,7 @@ class GISelValueTrackingPrinterPass
 public:
   GISelValueTrackingPrinterPass(raw_ostream &OS) : OS(OS) {}
 
-  PreservedAnalyses run(MachineFunction &MF,
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
 };
 } // namespace llvm

@@ -13,6 +13,7 @@
 #ifndef LLVM_CODEGEN_GLOBALISEL_INSTRUCTIONSELECT_H
 #define LLVM_CODEGEN_GLOBALISEL_INSTRUCTIONSELECT_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -32,7 +33,7 @@ class ProfileSummaryInfo;
 /// reverse order.
 ///
 /// \post for all inst in MF: not isPreISelGenericOpcode(inst.opcode)
-class InstructionSelect : public MachineFunctionPass {
+class LLVM_ABI InstructionSelect : public MachineFunctionPass {
 public:
   static char ID;
   StringRef getPassName() const override { return "InstructionSelect"; }

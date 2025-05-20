@@ -13,6 +13,7 @@
 #ifndef LLVM_CODEGEN_MACHINEFUNCTIONANALYSIS
 #define LLVM_CODEGEN_MACHINEFUNCTIONANALYSIS
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
@@ -37,12 +38,12 @@ public:
   public:
     Result(std::unique_ptr<MachineFunction> MF) : MF(std::move(MF)) {}
     MachineFunction &getMF() { return *MF; };
-    bool invalidate(Function &, const PreservedAnalyses &PA,
+    LLVM_ABI bool invalidate(Function &, const PreservedAnalyses &PA,
                     FunctionAnalysisManager::Invalidator &);
   };
 
   MachineFunctionAnalysis(const TargetMachine *TM) : TM(TM) {};
-  Result run(Function &F, FunctionAnalysisManager &FAM);
+  LLVM_ABI Result run(Function &F, FunctionAnalysisManager &FAM);
 };
 
 } // namespace llvm

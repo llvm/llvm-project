@@ -14,6 +14,7 @@
 #ifndef LLVM_CODEGEN_MACHINEPOSTDOMINATORS_H
 #define LLVM_CODEGEN_MACHINEPOSTDOMINATORS_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/CodeGen/MachineDominators.h"
 
 namespace llvm {
@@ -52,7 +53,7 @@ public:
   explicit MachinePostDominatorTree(MachineFunction &MF) { recalculate(MF); }
 
   /// Handle invalidation explicitly.
-  bool invalidate(MachineFunction &, const PreservedAnalyses &PA,
+  LLVM_ABI bool invalidate(MachineFunction &, const PreservedAnalyses &PA,
                   MachineFunctionAnalysisManager::Invalidator &);
 
   /// Make findNearestCommonDominator(const NodeT *A, const NodeT *B) available.
@@ -60,7 +61,7 @@ public:
 
   /// Returns the nearest common dominator of the given blocks.
   /// If that tree node is a virtual root, a nullptr will be returned.
-  MachineBasicBlock *
+  LLVM_ABI MachineBasicBlock *
   findNearestCommonDominator(ArrayRef<MachineBasicBlock *> Blocks) const;
 };
 
@@ -73,7 +74,7 @@ class MachinePostDominatorTreeAnalysis
 public:
   using Result = MachinePostDominatorTree;
 
-  Result run(MachineFunction &MF, MachineFunctionAnalysisManager &MFAM);
+  LLVM_ABI Result run(MachineFunction &MF, MachineFunctionAnalysisManager &MFAM);
 };
 
 class MachinePostDominatorTreePrinterPass
@@ -82,12 +83,12 @@ class MachinePostDominatorTreePrinterPass
 
 public:
   explicit MachinePostDominatorTreePrinterPass(raw_ostream &OS) : OS(OS) {}
-  PreservedAnalyses run(MachineFunction &MF,
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
   static bool isRequired() { return true; }
 };
 
-class MachinePostDominatorTreeWrapperPass : public MachineFunctionPass {
+class LLVM_ABI MachinePostDominatorTreeWrapperPass : public MachineFunctionPass {
   std::optional<MachinePostDominatorTree> PDT;
 
 public:

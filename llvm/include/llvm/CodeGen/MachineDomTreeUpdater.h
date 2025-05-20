@@ -14,6 +14,7 @@
 #ifndef LLVM_CODEGEN_MACHINEDOMTREEUPDATER_H
 #define LLVM_CODEGEN_MACHINEDOMTREEUPDATER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Analysis/GenericDomTreeUpdater.h"
 #include "llvm/CodeGen/MachineDominators.h"
 
@@ -62,7 +63,7 @@ public:
   /// all available trees are up-to-date. Assert if any instruction of DelBB is
   /// modified while awaiting deletion. When both DT and PDT are nullptrs, DelBB
   /// will be queued until flush() is called.
-  void deleteBB(MachineBasicBlock *DelBB);
+  LLVM_ABI void deleteBB(MachineBasicBlock *DelBB);
 
   ///@}
 

@@ -14,6 +14,7 @@
 #ifndef LLVM_CODEGEN_MACHINEDOMINATORS_H
 #define LLVM_CODEGEN_MACHINEDOMINATORS_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -75,7 +76,7 @@ public:
   explicit MachineDominatorTree(MachineFunction &MF) { recalculate(MF); }
 
   /// Handle invalidation explicitly.
-  bool invalidate(MachineFunction &, const PreservedAnalyses &PA,
+  LLVM_ABI bool invalidate(MachineFunction &, const PreservedAnalyses &PA,
                   MachineFunctionAnalysisManager::Invalidator &);
 
   using Base::dominates;
@@ -106,7 +107,7 @@ class MachineDominatorTreeAnalysis
 public:
   using Result = MachineDominatorTree;
 
-  Result run(MachineFunction &MF, MachineFunctionAnalysisManager &);
+  LLVM_ABI Result run(MachineFunction &MF, MachineFunctionAnalysisManager &);
 };
 
 /// \brief Machine function pass which print \c MachineDominatorTree.
@@ -116,13 +117,13 @@ class MachineDominatorTreePrinterPass
 
 public:
   explicit MachineDominatorTreePrinterPass(raw_ostream &OS) : OS(OS) {}
-  PreservedAnalyses run(MachineFunction &MF,
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
   static bool isRequired() { return true; }
 };
 
 /// \brief Analysis pass which computes a \c MachineDominatorTree.
-class MachineDominatorTreeWrapperPass : public MachineFunctionPass {
+class LLVM_ABI MachineDominatorTreeWrapperPass : public MachineFunctionPass {
   // MachineFunctionPass may verify the analysis result without running pass,
   // e.g. when `F.hasAvailableExternallyLinkage` is true.
   std::optional<MachineDominatorTree> DT;

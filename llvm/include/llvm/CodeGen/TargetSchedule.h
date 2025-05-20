@@ -15,6 +15,7 @@
 #ifndef LLVM_CODEGEN_TARGETSCHEDULE_H
 #define LLVM_CODEGEN_TARGETSCHEDULE_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Config/llvm-config.h"
@@ -63,11 +64,11 @@ public:
   /// The machine model API keeps a copy of the top-level MCSchedModel table
   /// indices and may query TargetSubtargetInfo and TargetInstrInfo to resolve
   /// dynamic properties.
-  void init(const TargetSubtargetInfo *TSInfo, bool EnableSModel = true,
+  LLVM_ABI void init(const TargetSubtargetInfo *TSInfo, bool EnableSModel = true,
             bool EnableSItins = true);
 
   /// Return the MCSchedClassDesc for this instruction.
-  const MCSchedClassDesc *resolveSchedClass(const MachineInstr *MI) const;
+  LLVM_ABI const MCSchedClassDesc *resolveSchedClass(const MachineInstr *MI) const;
 
   /// TargetSubtargetInfo getter.
   const TargetSubtargetInfo *getSubtargetInfo() const { return STI; }
@@ -80,7 +81,7 @@ public:
   ///
   /// This is more detailed than the course grain IssueWidth and default
   /// latency properties, but separate from the per-cycle itinerary data.
-  bool hasInstrSchedModel() const;
+  LLVM_ABI bool hasInstrSchedModel() const;
 
   const MCSchedModel *getMCSchedModel() const { return &SchedModel; }
 
@@ -88,7 +89,7 @@ public:
   /// data.
   ///
   /// This models scheduling at each stage in the processor pipeline.
-  bool hasInstrItineraries() const;
+  LLVM_ABI bool hasInstrItineraries() const;
 
   const InstrItineraryData *getInstrItineraries() const {
     if (hasInstrItineraries())
@@ -101,7 +102,7 @@ public:
   bool hasInstrSchedModelOrItineraries() const {
     return hasInstrSchedModel() || hasInstrItineraries();
   }
-  bool enableIntervals() const;
+  LLVM_ABI bool enableIntervals() const;
   /// Identify the processor corresponding to the current subtarget.
   unsigned getProcessorID() const { return SchedModel.getProcessorID(); }
 
@@ -109,14 +110,14 @@ public:
   unsigned getIssueWidth() const { return SchedModel.IssueWidth; }
 
   /// Return true if new group must begin.
-  bool mustBeginGroup(const MachineInstr *MI,
+  LLVM_ABI bool mustBeginGroup(const MachineInstr *MI,
                           const MCSchedClassDesc *SC = nullptr) const;
   /// Return true if current group must end.
-  bool mustEndGroup(const MachineInstr *MI,
+  LLVM_ABI bool mustEndGroup(const MachineInstr *MI,
                           const MCSchedClassDesc *SC = nullptr) const;
 
   /// Return the number of issue slots required for this MI.
-  unsigned getNumMicroOps(const MachineInstr *MI,
+  LLVM_ABI unsigned getNumMicroOps(const MachineInstr *MI,
                           const MCSchedClassDesc *SC = nullptr) const;
 
   /// Get the number of kinds of resources for this target.
@@ -181,7 +182,7 @@ public:
   /// Compute and return the latency of the given data dependent def and use
   /// when the operand indices are already known. UseMI may be NULL for an
   /// unknown user.
-  unsigned computeOperandLatency(const MachineInstr *DefMI, unsigned DefOperIdx,
+  LLVM_ABI unsigned computeOperandLatency(const MachineInstr *DefMI, unsigned DefOperIdx,
                                  const MachineInstr *UseMI, unsigned UseOperIdx)
     const;
 
@@ -196,22 +197,22 @@ public:
   /// present this method falls back to TII->getInstrLatency with an empty
   /// instruction itinerary (this is so we preserve the previous behavior of the
   /// if converter after moving it to TargetSchedModel).
-  unsigned computeInstrLatency(const MachineInstr *MI,
+  LLVM_ABI unsigned computeInstrLatency(const MachineInstr *MI,
                                bool UseDefaultDefLatency = true) const;
-  unsigned computeInstrLatency(const MCInst &Inst) const;
-  unsigned computeInstrLatency(unsigned Opcode) const;
+  LLVM_ABI unsigned computeInstrLatency(const MCInst &Inst) const;
+  LLVM_ABI unsigned computeInstrLatency(unsigned Opcode) const;
 
 
   /// Output dependency latency of a pair of defs of the same register.
   ///
   /// This is typically one cycle.
-  unsigned computeOutputLatency(const MachineInstr *DefMI, unsigned DefOperIdx,
+  LLVM_ABI unsigned computeOutputLatency(const MachineInstr *DefMI, unsigned DefOperIdx,
                                 const MachineInstr *DepMI) const;
 
   /// Compute the reciprocal throughput of the given instruction.
-  double computeReciprocalThroughput(const MachineInstr *MI) const;
-  double computeReciprocalThroughput(const MCInst &MI) const;
-  double computeReciprocalThroughput(unsigned Opcode) const;
+  LLVM_ABI double computeReciprocalThroughput(const MachineInstr *MI) const;
+  LLVM_ABI double computeReciprocalThroughput(const MCInst &MI) const;
+  LLVM_ABI double computeReciprocalThroughput(unsigned Opcode) const;
 };
 
 } // end namespace llvm

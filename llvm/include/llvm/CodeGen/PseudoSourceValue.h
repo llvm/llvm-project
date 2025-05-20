@@ -23,12 +23,12 @@ class PseudoSourceValue;
 class raw_ostream;
 class TargetMachine;
 
-raw_ostream &operator<<(raw_ostream &OS, const PseudoSourceValue* PSV);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const PseudoSourceValue* PSV);
 
 /// Special value supplied for machine level alias analysis. It indicates that
 /// a memory access references the functions stack frame (e.g., a spill slot),
 /// below the stack frame (e.g., argument space), or constant pool.
-class PseudoSourceValue {
+class LLVM_ABI PseudoSourceValue {
 public:
   enum PSVKind : unsigned {
     Stack,
@@ -87,7 +87,7 @@ public:
 
 /// A specialized PseudoSourceValue for holding FixedStack values, which must
 /// include a frame index.
-class FixedStackPseudoSourceValue : public PseudoSourceValue {
+class LLVM_ABI FixedStackPseudoSourceValue : public PseudoSourceValue {
   const int FI;
 
 public:
@@ -109,7 +109,7 @@ public:
   int getFrameIndex() const { return FI; }
 };
 
-class CallEntryPseudoSourceValue : public PseudoSourceValue {
+class LLVM_ABI CallEntryPseudoSourceValue : public PseudoSourceValue {
 protected:
   CallEntryPseudoSourceValue(unsigned Kind, const TargetMachine &TM);
 
@@ -124,7 +124,7 @@ class GlobalValuePseudoSourceValue : public CallEntryPseudoSourceValue {
   const GlobalValue *GV;
 
 public:
-  GlobalValuePseudoSourceValue(const GlobalValue *GV, const TargetMachine &TM);
+  LLVM_ABI GlobalValuePseudoSourceValue(const GlobalValue *GV, const TargetMachine &TM);
 
   static bool classof(const PseudoSourceValue *V) {
     return V->kind() == GlobalValueCallEntry;
@@ -138,7 +138,7 @@ class ExternalSymbolPseudoSourceValue : public CallEntryPseudoSourceValue {
   const char *ES;
 
 public:
-  ExternalSymbolPseudoSourceValue(const char *ES, const TargetMachine &TM);
+  LLVM_ABI ExternalSymbolPseudoSourceValue(const char *ES, const TargetMachine &TM);
 
   static bool classof(const PseudoSourceValue *V) {
     return V->kind() == ExternalSymbolCallEntry;
