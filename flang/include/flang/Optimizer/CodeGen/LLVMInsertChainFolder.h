@@ -23,8 +23,8 @@ class Value;
 namespace fir {
 
 /// Attempt to fold an llvm.insertvalue chain into an attribute representation
-/// suitable as llvm.constant operand. The returned value will be a null pointer
-/// if this is not an llvm.insertvalue result pr if the chain is not a constant,
+/// suitable as llvm.constant operand. The returned value will be llvm::Failure
+/// if this is not an llvm.insertvalue result or if the chain is not a constant,
 /// or cannot be represented as an Attribute. The operations are not deleted,
 /// but some llvm.insertvalue value operands may be folded with the builder on
 /// the way.
