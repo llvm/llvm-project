@@ -717,9 +717,8 @@ class VOPProfile_Base_CVT_F_F8_ByteSel<ValueType DstVT, bit _HasClamp = 0> :
   let HasModifiers = 0;
 }
 
-let IsSingle = 0 in {
+let IsSingle = 0, HasOpSel = 1, HasModifiers = 1 in {
 def V_CVT_F16_F8_Profile : VOPProfile_Base_CVT_F_F8_ByteSel<f16>;
-let HasOpSel = 1, HasModifiers = 1 in // FIXME: All 3 profiles shall support opsel.
 def V_CVT_F16_F8_True16_Profile : VOP3_Profile_True16<V_CVT_F16_F8_Profile>;
 def V_CVT_F16_F8_Fake16_Profile : VOP3_Profile_Fake16<V_CVT_F16_F8_Profile>;
 }
@@ -743,9 +742,10 @@ let SubtargetPredicate = isGFX11Plus, OtherPredicates = [HasFP8ConversionInsts],
   }
 }
 
-class Cvt_F_F8_Pat_ByteSel<SDPatternOperator node, VOP3_Pseudo inst> : GCNPat<
+class Cvt_F_F8_Pat_ByteSel<SDPatternOperator node, VOP3_Pseudo inst, bit HasOpSel = 0> : GCNPat<
   (node i32:$src0, timm:$byte_sel),
-  (inst $src0, (as_i32timm $byte_sel))
+  !if(HasOpSel, (inst 0, $src0, (as_i32timm $byte_sel)),
+                (inst $src0, (as_i32timm $byte_sel)))
 >;
 
 let OtherPredicates = [HasFP8ConversionInsts] in {
@@ -800,8 +800,10 @@ let SubtargetPredicate = isGFX1250Plus in {
       int_amdgcn_cvt_pk_f16_bf8>;
   }
 
-  def : Cvt_F_F8_Pat_ByteSel<int_amdgcn_cvt_f16_fp8, V_CVT_F16_FP8_fake16_e64>;
-  def : Cvt_F_F8_Pat_ByteSel<int_amdgcn_cvt_f16_bf8, V_CVT_F16_BF8_fake16_e64>;
+  let True16Predicate = UseFakeTrue16Insts in {
+    def : Cvt_F_F8_Pat_ByteSel<int_amdgcn_cvt_f16_fp8, V_CVT_F16_FP8_fake16_e64, 1>;
+    def : Cvt_F_F8_Pat_ByteSel<int_amdgcn_cvt_f16_bf8, V_CVT_F16_BF8_fake16_e64, 1>;
+  }
 
   defm V_SAT_PK4_I4_I8 : VOP1Inst_t16<"v_sat_pk4_i4_i8", VOP1_I16_I32, int_amdgcn_sat_pk4_i4_i8>;
   defm V_SAT_PK4_U4_U8 : VOP1Inst_t16<"v_sat_pk4_u4_u8", VOP1_I16_I32, int_amdgcn_sat_pk4_u4_u8>;
