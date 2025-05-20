@@ -4,32 +4,34 @@
 namespace variadic_expansion {
   int f(int &, char &) { return 0; }
   template<class ... Ts> char fv(Ts ... ts) { return 0; }
-  template <typename ... T> void g(T &... t) {
-    f([&a(t)]()->decltype(auto) { // Line 8
+  // FIXME: why do we get 2 error messages
+  template <typename ... T> void g(T &... t) { //expected-note3{{declared here}}
+    f([&a(t)]()->decltype(auto) {
       return a;
-    }() ...); // expected-error {{pack expansion does not contain any unexpanded parameter packs}}
+    }() ...);
     
-    auto L = [x = undeclared_var()]() { return x; }; // expected-error {{use of undeclared identifier 'undeclared_var'}}
+    auto L = [x = f([&a(t)]()->decltype(auto) { return a; }()...)]() { return x; };
     const int y = 10;
     auto M = [x = y, 
                 &z = y](T& ... t) { }; 
     auto N = [x = y, 
                 &z = y, n = f(t...), 
-                o = undeclared_var(), t...](T& ... s) { // expected-error {{use of undeclared identifier 'undeclared_var'}}
+                o = f([&a(t)](T& ... t)->decltype(auto) { return a; }(t...)...), t...](T& ... s) { 
                   fv([&a(t)]()->decltype(auto) { 
                     return a;
-                  }() ...); // expected-error {{pack expansion does not contain any unexpanded parameter packs}}
+                  }() ...);
                 };                 
-    auto N2 = [x = y, 
-               &z = y, n = f(t...), 
-               o = undeclared_var(), &t...](T& ... s) { // expected-error {{use of undeclared identifier 'undeclared_var'}}
-                  fv([&a(t), &t...]() -> decltype(auto) { 
+    auto N2 = [x = y, //expected-note3{{begins here}} expected-note 6 {{default capture by}}
+                &z = y, n = f(t...), 
+                o = f([&a(t)](T& ... t)->decltype(auto) { return a; }(t...)...)](T& ... s) { // expected-note 6 {{capture 't' by}} expected-note {{substituting into a lambda}}
+                fv([&a(t)]()->decltype(auto) { //expected-error 3{{captured}}
                     return a;
-                  }() ...); // expected-error {{pack expansion does not contain any unexpanded parameter packs}}
-                };
+                  }() ...);
+                };                 
+
   }
 
-  void h(int i, char c) { g(i, c); }
+  void h(int i, char c) { g(i, c); } // expected-note {{requested here}}
 }
 
 namespace odr_use_within_init_capture {
@@ -49,7 +51,7 @@ int test() {
   { // should not capture
     const int x = 10;
     auto L = [&z = x](int a) {
-      return a;
+      return a;;
     };
         
   }
@@ -109,7 +111,7 @@ int test(T t = T{}) {
   { // should not capture
     const T x = 10;
     auto L = [&z = x](T a) {
-      return a;
+      return a;;
     };
         
   }
@@ -183,7 +185,8 @@ void h() {
 }
 
 int run() {
-  return 0;
+  f<int>();
+  h<int>();
 }
 
 }
@@ -205,7 +208,7 @@ void test(double weight) {
 }
 
 namespace init_capture_undeclared_identifier {
-  auto a = [x = y]{}; // expected-error{{use of undeclared identifier 'y'}} expected-error{{invalid initializer type for lambda capture}}
+  auto a = [x = y]{}; // expected-error{{use of undeclared identifier 'y'}}
 
   int typo_foo; // expected-note 2 {{'typo_foo' declared here}}
   auto b = [x = typo_boo]{}; // expected-error{{use of undeclared identifier 'typo_boo'; did you mean 'typo_foo'}}
