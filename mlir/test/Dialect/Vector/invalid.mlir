@@ -1756,11 +1756,39 @@ func.func @vector_mask_empty_passthru_no_return_type(%mask : vector<8xi1>,
 
 // -----
 
+func.func @vector_mask_non_empty_external_return(%t: tensor<?xf32>, %idx: index,
+                                                 %m: vector<16xi1>, %ext: vector<16xf32>) -> vector<16xf32> {
+  %ft0 = arith.constant 0.0 : f32
+  // expected-error@+1 {{'vector.mask' op expects all the results from the MaskableOpInterface to match all the values returned by the terminator}}
+  %0 = vector.mask %m {
+    %1 =vector.transfer_read %t[%idx], %ft0 : tensor<?xf32>, vector<16xf32>
+    vector.yield %ext : vector<16xf32>
+  } : vector<16xi1> -> vector<16xf32>
+
+  return %0 : vector<16xf32>
+}
+
+// -----
+
 func.func @vector_mask_empty_passthru_empty_return_type(%mask : vector<8xi1>,
                                                         %passthru : vector<8xi32>) {
   // expected-error@+1 {{'vector.mask' expects a result if passthru operand is provided}}
   vector.mask %mask, %passthru { } : vector<8xi1> -> ()
   return
+}
+
+// -----
+
+func.func @vector_mask_non_empty_mixed_return(%t: tensor<?xf32>, %idx: index,
+                                              %m: vector<16xi1>, %ext: vector<16xf32>) -> (vector<16xf32>, vector<16xf32>) {
+  %ft0 = arith.constant 0.0 : f32
+  // expected-error@+1 {{'vector.mask' op expects number of results to match maskable operation number of results}}
+  %0:2 = vector.mask %m {
+    %1 =vector.transfer_read %t[%idx], %ft0 : tensor<?xf32>, vector<16xf32>
+    vector.yield %1, %ext : vector<16xf32>, vector<16xf32>
+  } : vector<16xi1> -> (vector<16xf32>, vector<16xf32>)
+
+  return %0#0, %0#1 : vector<16xf32>, vector<16xf32>
 }
 
 // -----
