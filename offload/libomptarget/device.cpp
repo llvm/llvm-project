@@ -88,9 +88,9 @@ inline void setAsyncInfoSynchronous(__tgt_async_info *AI, bool SetSynchronous) {
 llvm::Error DeviceTy::init() {
   int32_t Ret = RTL->init_device(RTLDeviceID);
   if (Ret != OFFLOAD_SUCCESS)
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "Failed to initialize device %d\n",
-                                   DeviceID);
+    return error::createOffloadError(error::ErrorCode::BACKEND_FAILURE,
+                                     "failed to initialize device %d\n",
+                                     DeviceID);
   setTeamProcs(RTL->number_of_team_procs(RTLDeviceID));
 
   // Enables recording kernels if set.
@@ -113,8 +113,8 @@ DeviceTy::loadBinary(__tgt_device_image *Img) {
   __tgt_device_binary Binary;
 
   if (RTL->load_binary(RTLDeviceID, Img, &Binary) != OFFLOAD_SUCCESS)
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "Failed to load binary %p", Img);
+    return error::createOffloadError(error::ErrorCode::INVALID_BINARY,
+                                     "failed to load binary %p", Img);
   return Binary;
 }
 
