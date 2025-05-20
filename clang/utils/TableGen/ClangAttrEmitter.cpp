@@ -4119,17 +4119,21 @@ void EmitAttributeSpellingList(const RecordKeeper &Records, raw_ostream &OS) {
     }
   }
 
-  OS << "static constexpr const char *AttrSpellingList[] = {\n";
+  OS << "#ifndef ATTR_NAME" << "\n";
+  OS << "#define ATTR_NAME(NAME) NAME" << "\n";
+  OS << "#endif" << "\n" << "\n";
   for (const auto &AttrName : AttrSpellingList) {
-    OS << "  " << "\"" << AttrName << "\"" << "," << "\n";
+    OS << "ATTR_NAME(\"" << AttrName << "\")\n";
   }
-  OS << "};" << "\n";
+  OS << "\n";
 
-  OS << "static constexpr const char *AttrScopeSpellingList[] = {\n";
+  OS << "#ifndef ATTR_SCOPE_SCOPE" << "\n";
+  OS << "#define ATTR_SCOPE_SCOPE(SCOPE_NAME) SCOPE_NAME" << "\n";
+  OS << "#endif" << "\n" << "\n";
   for (const auto &AttrScopeName : AttrScopeSpellingList) {
-    OS << "  " << "\"" << AttrScopeName << "\"" << "," << "\n";
+    OS << "ATTR_SCOPE_SCOPE(\"" << AttrScopeName << "\")\n";
   }
-  OS << "};" << "\n";
+  OS << "\n";
 }
 
 static bool isArgVariadic(const Record &R, StringRef AttrName) {
