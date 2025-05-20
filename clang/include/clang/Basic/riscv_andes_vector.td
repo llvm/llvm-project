@@ -81,3 +81,24 @@ let ManualCodegen = [{
     defm nds_vfpmadb : RVVFPMAD;
   }
 }
+
+// Andes Vector Dot Product Extension (XAndesVDot)
+
+multiclass RVVD4DOT<list<list<string>> i_suffixes_prototypes,
+                    list<list<string>> l_suffixes_prototypes> {
+  let RequiredFeatures = ["Xandesvdot"],
+      UnMaskedPolicyScheme = HasPolicyOperand,
+      HasMaskedOffOperand = false,
+      Log2LMUL = [-1, 0, 1, 2, 3],
+      OverloadedName = NAME in {
+    defm NAME : RVVOutOp1Op2BuiltinSet<NAME, "i", i_suffixes_prototypes>;
+    defm NAME : RVVOutOp1Op2BuiltinSet<NAME, "l", l_suffixes_prototypes>;
+  }
+}
+
+defm nds_vd4dots  : RVVD4DOT<[["vv", "v", "vv(FixedSEW:8)v(FixedSEW:8)v"]],
+                             [["vv", "v", "vv(FixedSEW:16)v(FixedSEW:16)v"]]>;
+defm nds_vd4dotu  : RVVD4DOT<[["vv", "Uv", "UvUv(FixedSEW:8)Uv(FixedSEW:8)Uv"]],
+                             [["vv", "Uv", "UvUv(FixedSEW:16)Uv(FixedSEW:16)Uv"]]>;
+defm nds_vd4dotsu : RVVD4DOT<[["vv", "v", "vv(FixedSEW:8)v(FixedSEW:8)Uv"]],
+                             [["vv", "v", "vv(FixedSEW:16)v(FixedSEW:16)Uv"]]>;
