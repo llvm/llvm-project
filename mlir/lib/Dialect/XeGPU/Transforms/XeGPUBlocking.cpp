@@ -216,6 +216,18 @@ void XeGPUBlockingPass::runOnOperation() {
   // operation is replaced.
   xegpu::setLayoutAttrs(mod, [&](Value v) { return xegpu::getLayoutAttr(v); });
 
+  auto getTileShapeAndCount = [](llvm::ArrayRef<int64_t> shape,
+                                 xegpu::LayoutAttr layout) {
+    int count = 1;
+    SmallVector<int64_t> tileShape(shape);
+    if (layout && layout.getInstData()) {
+      DenseI32ArrayAttr instData = layout.getInstData();
+      tileShape = llvm::to_vector_of<int64_t>(instData.asArrayRef());
+      count = computeProduct(shape) / computeProduct(tileShape);
+    }
+    return std::make_pair(tileShape, count);
+  };
+
   // Perform type conversion for SCF control folow ops
   TypeConverter converter;
   converter.addConversion([&](Type type) -> Type { return type; });
@@ -225,56 +237,41 @@ void XeGPUBlockingPass::runOnOperation() {
         Type elemTy = type.getElementType();
         ArrayRef<int64_t> shape = type.getShape();
 
-        // init count and subShape to the default value. If the LayoutAttr
-        // is not present, it will return a VectorType with original shape.
-        int count = 1;
-        SmallVector<int64_t> subShape(shape);
-        if (auto layout = llvm::dyn_cast_if_present<xegpu::LayoutAttr>(
-                type.getEncoding())) {
-          if (layout.isWgLayout())
-            return failure();
-          if (DenseI32ArrayAttr instData = layout.getInstData()) {
-            // for unrolling, the subShape is determined by inst_data
-            subShape = llvm::to_vector_of<int64_t>(instData.asArrayRef());
-            count = computeProduct(shape) / computeProduct(subShape);
-          }
-        }
+        auto layout =
+            llvm::dyn_cast_if_present<xegpu::LayoutAttr>(type.getEncoding());
+        if (layout && layout.isWgLayout())
+          return failure();
+
+        int count;
+        SmallVector<int64_t> subShape;
+        std::tie(subShape, count) = getTileShapeAndCount(shape, layout);
         auto newTy = VectorType::get(subShape, elemTy);
         result.append(count, newTy);
         return success();
       });
-
   converter.addConversion(
       [&](xegpu::TensorDescType type,
           SmallVectorImpl<Type> &result) -> std::optional<LogicalResult> {
-        MLIRContext *ctx = type.getContext();
         Type elemTy = type.getElementType();
-        Attribute encoding = type.getEncoding();
         ArrayRef<int64_t> shape = type.getShape();
 
-        // init count and newTy to the default value. If the layout
-        // attribute is not present, it will return the original type.
-        int count = 1;
-        SmallVector<int64_t> subShape(shape);
-
         xegpu::LayoutAttr layout = type.getLayoutAttr();
+        if (layout && layout.isWgLayout())
+          return failure();
 
-        if (layout) {
-          if (layout.isWgLayout())
-            return failure();
+        int count;
+        SmallVector<int64_t> subShape;
+        std::tie(subShape, count) = getTileShapeAndCount(shape, layout);
 
-          if (DenseI32ArrayAttr instData = layout.getInstData()) {
-            // for unrolling, the subShape is determined by inst_data
-            subShape = llvm::to_vector_of<int64_t>(instData.asArrayRef());
-            count = computeProduct(shape) / computeProduct(subShape);
-            layout = layout.dropInstData();
-          }
-        }
-        auto newTy =
-            xegpu::TensorDescType::get(ctx, subShape, elemTy, encoding, layout);
+        if (layout)
+          layout = layout.dropInstData();
+
+        auto newTy = xegpu::TensorDescType::get(
+            type.getContext(), subShape, elemTy, type.getEncoding(), layout);
         result.append(count, newTy);
         return success();
       });
+
   xegpu::doSCFStructuralTypeConversionWithTensorType(mod, converter);
 
   xegpu::UnrollOptions options;
