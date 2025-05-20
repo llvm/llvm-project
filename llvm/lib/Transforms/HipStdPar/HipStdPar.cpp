@@ -428,7 +428,7 @@ PreservedAnalyses HipStdParMathFixupPass::run(Module &M,
     }
     }
 
-    ToReplace.emplace_back(&F, std::move(N));
+    ToReplace.emplace_back(&F, N);
     llvm::replace(ToReplace.back().second, '.', '_');
     ToReplace.back().second.replace(0, sizeof("llvm"), "__hipstdpar_");
   }
