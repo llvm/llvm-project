@@ -686,7 +686,7 @@ define i32 @ctpop_into_extract(ptr %p) {
 ; CHECK-NEXT:    fmov s1, w9
 ; CHECK-NEXT:    cnt v1.8b, v1.8b
 ; CHECK-NEXT:    addv b1, v1.8b
-; CHECK-NEXT:    mov v2.b[4], v1.b[0]
+; CHECK-NEXT:    mov v2.s[1], v1.s[0]
 ; CHECK-NEXT:    sub v0.2s, v0.2s, v2.2s
 ; CHECK-NEXT:    str d0, [x8]
 ; CHECK-NEXT:    ret
@@ -701,7 +701,7 @@ define i32 @ctpop_into_extract(ptr %p) {
 ; BE-NEXT:    fmov s1, w9
 ; BE-NEXT:    cnt v1.8b, v1.8b
 ; BE-NEXT:    addv b1, v1.8b
-; BE-NEXT:    mov v2.b[4], v1.b[0]
+; BE-NEXT:    mov v2.s[1], v1.s[0]
 ; BE-NEXT:    sub v0.2s, v0.2s, v2.2s
 ; BE-NEXT:    st1 { v0.2s }, [x8]
 ; BE-NEXT:    ret
