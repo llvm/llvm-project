@@ -654,7 +654,9 @@ void genAtomicCapture(Fortran::lower::AbstractConverter &converter,
   mlir::Block &block = atomicCaptureOp->getRegion(0).back();
   firOpBuilder.setInsertionPointToStart(&block);
   if (Fortran::semantics::checkForSingleVariableOnRHS(stmt1)) {
-    if (Fortran::semantics::checkForSymbolMatch(stmt2)) {
+    if (Fortran::semantics::checkForSymbolMatch(
+            Fortran::semantics::GetExpr(stmt2Var),
+            Fortran::semantics::GetExpr(stmt2Expr))) {
       // Atomic capture construct is of the form [capture-stmt, update-stmt]
       const Fortran::semantics::SomeExpr &fromExpr =
           *Fortran::semantics::GetExpr(stmt1Expr);
