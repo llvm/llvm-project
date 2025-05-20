@@ -44,6 +44,7 @@ public:
   /// Extra semantic information needed from MC layer:
 
   MCPhysReg getStackPointer() const { return MCPB->getStackPointer(); }
+  MCPhysReg getFlagsReg() const { return MCPB->getFlagsReg(); }
 
   bool isPush(const MCInst &Inst) const { return MCPB->isPush(Inst); }
   int getPushSize(const MCInst &Inst) const { return MCPB->getPushSize(Inst); }
