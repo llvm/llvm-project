@@ -22,10 +22,12 @@ target_link_libraries(flangTidy
 
 add_subdirectory(bugprone)
 add_subdirectory(modernize)
+add_subdirectory(openmp)
 
 set(ALL_FLANG_TIDY_CHECKS
   flangTidyBugproneModule
   flangTidyModernizeModule
+  flangTidyOpenMPModule
   )
 
 set(ALL_FLANG_TIDY_CHECKS ${ALL_FLANG_TIDY_CHECKS} PARENT_SCOPE)

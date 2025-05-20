@@ -23,6 +23,11 @@ extern volatile int ModernizeModuleAnchorSource;
 static int LLVM_ATTRIBUTE_UNUSED ModernizeModuleAnchorDestination =
     ModernizeModuleAnchorSource;
 
+// This anchor is used to force the linker to link the OpenMPModule.
+extern volatile int OpenMPModuleAnchorSource;
+static int LLVM_ATTRIBUTE_UNUSED OpenMPModuleAnchorDestination =
+    OpenMPModuleAnchorSource;
+
 } // namespace Fortran::tidy
 
 #endif // LLVM_FLANG_TOOLS_FLANG_TIDY_FLANGTIDYFORCELINKER_H
