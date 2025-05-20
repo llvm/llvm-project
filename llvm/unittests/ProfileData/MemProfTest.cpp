@@ -554,7 +554,7 @@ TEST(MemProf, IndexedMemProfRecordToMemProfRecord) {
   IndexedRecord.CallSites.push_back(IndexedCallSiteInfo(CS3Id));
   IndexedRecord.CallSites.push_back(IndexedCallSiteInfo(CS4Id));
 
-  IndexedCallstackIdConveter CSIdConv(MemProfData);
+  IndexedCallstackIdConverter CSIdConv(MemProfData);
 
   MemProfRecord Record = IndexedRecord.toMemProfRecord(CSIdConv);
 
@@ -591,7 +591,7 @@ TEST(MemProf, MissingCallStackId) {
 
   // Create empty maps.
   IndexedMemProfData MemProfData;
-  IndexedCallstackIdConveter CSIdConv(MemProfData);
+  IndexedCallstackIdConverter CSIdConv(MemProfData);
 
   // We are only interested in errors, not the return value.
   (void)IndexedMR.toMemProfRecord(CSIdConv);
@@ -609,7 +609,7 @@ TEST(MemProf, MissingFrameId) {
   IndexedMemProfRecord IndexedMR;
   IndexedMR.AllocSites.emplace_back(CSId, makePartialMIB(), getHotColdSchema());
 
-  IndexedCallstackIdConveter CSIdConv(MemProfData);
+  IndexedCallstackIdConverter CSIdConv(MemProfData);
 
   // We are only interested in errors, not the return value.
   (void)IndexedMR.toMemProfRecord(CSIdConv);
@@ -763,7 +763,7 @@ HeapProfileRecords:
   const auto &[GUID, IndexedRecord] = MemProfData.Records.front();
   EXPECT_EQ(GUID, 0xdeadbeef12345678ULL);
 
-  IndexedCallstackIdConveter CSIdConv(MemProfData);
+  IndexedCallstackIdConverter CSIdConv(MemProfData);
   MemProfRecord Record = IndexedRecord.toMemProfRecord(CSIdConv);
 
   ASSERT_THAT(Record.AllocSites, SizeIs(2));
@@ -814,7 +814,7 @@ HeapProfileRecords:
   const auto &[GUID, IndexedRecord] = MemProfData.Records.front();
   EXPECT_EQ(GUID, IndexedMemProfRecord::getGUID("_Z3fooi"));
 
-  IndexedCallstackIdConveter CSIdConv(MemProfData);
+  IndexedCallstackIdConverter CSIdConv(MemProfData);
   MemProfRecord Record = IndexedRecord.toMemProfRecord(CSIdConv);
 
   ASSERT_THAT(Record.AllocSites, SizeIs(1));
