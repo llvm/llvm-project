@@ -38,20 +38,33 @@
 // function clang_registerCheckers. For example:
 //
 //    extern "C"
-//    void clang_registerCheckers (CheckerRegistry &registry) {
-//      registry.addChecker<MainCallChecker>("example.MainCallChecker",
-//        "Disallows calls to functions called main");
+//    void clang_registerCheckers(CheckerRegistry &Registry) {
+//      Registry.addChecker(
+//                    registerMainCallChecker,
+//                    shouldRegisterMainCallChecker,
+//                    "example.MainCallChecker",
+//                    "MainCallChecker",
+//                    "Example Description",
+//                    "example.mychecker.documentation.nonexistent.html",
+//                    /*isHidden=*/ false);
 //    }
 //
-// The first method argument is the full name of the checker, including its
-// enclosing package. By convention, the registered name of a checker is the
-// name of the associated class (the template argument).
-// The second method argument is a short human-readable description of the
-// checker.
+// The first two arguments are the registration handling functions, which
+// in a simple case look like
 //
-// The clang_registerCheckers function may add any number of checkers to the
-// registry. If any checkers require additional initialization, use the
-// non-templated form of CheckerRegistry::addChecker.
+//     void registerMainCallChecker(CheckerManager &Mgr) {
+//       Mgr.registerChecker<MainCallChecker>();
+//     }
+//
+//     bool shouldRegisterMainCallChecker(const CheckerManager &) {
+//       return true;
+//     }
+//
+// The third argument is the full name of the checker (including its package),
+// the fourth name is the internal DebugName (by convention, the name of the
+// class), the fifth argument is a short documentation, the sixth argument is
+// an url to a documentation page, and the seventh argument should be false for
+// normal user-facing checkers.
 //
 // To load a checker plugin, specify the full path to the dynamic library as
 // the argument to the -load option in the cc1 frontend. You can then enable
@@ -60,7 +73,7 @@
 //   clang -cc1 -load </path/to/plugin.dylib> -analyze
 //     -analyzer-checker=<example.MainCallChecker>
 //
-// For a complete working example, see examples/analyzer-plugin.
+// For a complete example, see clang/lib/Analysis/plugins/SampleAnalyzer
 
 #ifndef CLANG_ANALYZER_API_VERSION_STRING
 // FIXME: The Clang version string is not particularly granular;
@@ -119,32 +132,13 @@ public:
                   StringRef FullName, StringRef DebugName, StringRef Desc,
                   StringRef DocsUri, bool IsHidden);
 
-  /// Adds a checker to the registry. This overload doesn't take a `DebugName`
-  /// (which usually looks like `DivZeroChecker`), so it uses the user-facing
-  /// `FullName` (which usually looks like ``core.DivideZero`) as a debug name.
-  /// THIS IS DEPRECATED and is only provided to preserve compatibility with
-  /// legacy plugins.
-  /// TODO: Eventually remove this from the codebase.
-  void addChecker(RegisterCheckerFn Fn, ShouldRegisterFunction Sfn,
-                  StringRef FullName, StringRef Desc, StringRef DocsUri,
-                  bool IsHidden) {
-    addChecker(Fn, Sfn, FullName, /*DebugName =*/FullName, Desc, DocsUri,
-               IsHidden);
-  }
-
-  /// Adds a checker to the registry. Use this templated overload when your
-  /// checker does not require any custom initialization.
-  /// This function isn't really needed and probably causes more headaches than
-  /// the tiny convenience that it provides, but external plugins might use it,
-  /// and there isn't a strong incentive to remove it.
-  template <class T>
-  void addChecker(StringRef FullName, StringRef Desc, StringRef DocsUri,
-                  bool IsHidden = false) {
-    // Avoid MSVC's Compiler Error C2276:
-    // http://msdn.microsoft.com/en-us/library/850cstw1(v=VS.80).aspx
+  /// Add a mock checker to the registry for testing purposes, without
+  /// specifying metadata that is not relevant in simple tests.
+  template <class T> void addMockChecker(StringRef FullName) {
     addChecker(&CheckerRegistry::initializeManager<CheckerManager, T>,
-               &CheckerRegistry::returnTrue<T>, FullName, Desc, DocsUri,
-               IsHidden);
+               &CheckerRegistry::returnTrue<T>, FullName,
+               /*DebugName=*/"TestChecker", /*Desc=*/"", /*DocsUri=*/"",
+               /*IsHidden=*/false);
   }
 
   /// Makes the checker with the full name \p fullName depend on the checker

@@ -44,7 +44,7 @@ void addCustomChecker(AnalysisASTConsumer &AnalysisConsumer,
                       AnalyzerOptions &AnOpts) {
   AnOpts.CheckersAndPackages = {{"test.CustomChecker", true}};
   AnalysisConsumer.AddCheckerRegistrationFn([](CheckerRegistry &Registry) {
-    Registry.addChecker<CustomChecker>("test.CustomChecker", "Description", "");
+    Registry.addMockChecker<CustomChecker>("test.CustomChecker");
   });
 }
 
@@ -73,8 +73,7 @@ void addLocIncDecChecker(AnalysisASTConsumer &AnalysisConsumer,
                          AnalyzerOptions &AnOpts) {
   AnOpts.CheckersAndPackages = {{"test.LocIncDecChecker", true}};
   AnalysisConsumer.AddCheckerRegistrationFn([](CheckerRegistry &Registry) {
-    Registry.addChecker<CustomChecker>("test.LocIncDecChecker", "Description",
-                                       "");
+    Registry.addMockChecker<CustomChecker>("test.LocIncDecChecker");
   });
 }
 
@@ -117,9 +116,10 @@ bool shouldRegisterCheckerRegistrationOrderPrinter(const CheckerManager &mgr) {
 }
 
 void addCheckerRegistrationOrderPrinter(CheckerRegistry &Registry) {
-  Registry.addChecker(registerCheckerRegistrationOrderPrinter,
-                      shouldRegisterCheckerRegistrationOrderPrinter,
-                      "test.RegistrationOrder", "Description", "", false);
+  Registry.addChecker(
+      registerCheckerRegistrationOrderPrinter,
+      shouldRegisterCheckerRegistrationOrderPrinter, "test.RegistrationOrder",
+      "CheckerRegistrationOrderPrinter", "Description", "", false);
 }
 
 #define UNITTEST_CHECKER(CHECKER_NAME, DIAG_MSG)                               \
@@ -137,7 +137,8 @@ void addCheckerRegistrationOrderPrinter(CheckerRegistry &Registry) {
   }                                                                            \
   void add##CHECKER_NAME(CheckerRegistry &Registry) {                          \
     Registry.addChecker(register##CHECKER_NAME, shouldRegister##CHECKER_NAME,  \
-                        "test." #CHECKER_NAME, "Description", "", false);      \
+                        "test." #CHECKER_NAME, #CHECKER_NAME, "Description",   \
+                        "", false);                                            \
   }
 
 UNITTEST_CHECKER(StrongDep, "Strong")
@@ -154,7 +155,7 @@ void addDep(AnalysisASTConsumer &AnalysisConsumer,
                                 {"test.RegistrationOrder", true}};
   AnalysisConsumer.AddCheckerRegistrationFn([](CheckerRegistry &Registry) {
     Registry.addChecker(registerStrongDep, shouldRegisterStrongFALSE,
-                        "test.Strong", "Description", "", false);
+                        "test.Strong", "StrongDep", "Description", "", false);
     addStrongDep(Registry);
     addDep(Registry);
     addCheckerRegistrationOrderPrinter(Registry);

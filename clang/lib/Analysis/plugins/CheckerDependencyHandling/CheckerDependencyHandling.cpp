@@ -3,6 +3,9 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Frontend/CheckerRegistry.h"
 
+// This barebones plugin is used by clang/test/Analysis/checker-plugins.c
+// to test dependency handling among checkers loaded from plugins.
+
 using namespace clang;
 using namespace ento;
 
@@ -16,12 +19,11 @@ struct DependendentChecker : public Checker<check::BeginFunction> {
 } // end anonymous namespace
 
 // Register plugin!
-extern "C" void clang_registerCheckers(CheckerRegistry &registry) {
-  registry.addChecker<Dependency>("example.Dependency", "", "");
-  registry.addChecker<DependendentChecker>("example.DependendentChecker", "",
-                                           "");
+extern "C" void clang_registerCheckers(CheckerRegistry &Registry) {
+  Registry.addMockChecker<Dependency>("example.Dependency");
+  Registry.addMockChecker<DependendentChecker>("example.DependendentChecker");
 
-  registry.addDependency("example.DependendentChecker", "example.Dependency");
+  Registry.addDependency("example.DependendentChecker", "example.Dependency");
 }
 
 extern "C" const char clang_analyzerAPIVersionString[] =

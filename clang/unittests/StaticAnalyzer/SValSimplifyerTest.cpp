@@ -68,8 +68,7 @@ static void addSimplifyChecker(AnalysisASTConsumer &AnalysisConsumer,
                                AnalyzerOptions &AnOpts) {
   AnOpts.CheckersAndPackages = {{"SimplifyChecker", true}};
   AnalysisConsumer.AddCheckerRegistrationFn([](CheckerRegistry &Registry) {
-    Registry.addChecker<SimplifyChecker>("SimplifyChecker", "EmptyDescription",
-                                         "EmptyDocsUri");
+    Registry.addMockChecker<SimplifyChecker>("SimplifyChecker");
   });
 }
 
