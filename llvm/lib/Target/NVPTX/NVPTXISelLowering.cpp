@@ -85,11 +85,16 @@ static cl::opt<unsigned> FMAContractLevelOpt(
              " 1: do it  2: do it aggressively"),
     cl::init(2));
 
-static cl::opt<int> UsePrecDivF32(
+static cl::opt<NVPTX::DivPrecisionLevel> UsePrecDivF32(
     "nvptx-prec-divf32", cl::Hidden,
     cl::desc("NVPTX Specifies: 0 use div.approx, 1 use div.full, 2 use"
              " IEEE Compliant F32 div.rnd if available."),
-    cl::init(2));
+    cl::values(clEnumValN(NVPTX::DivPrecisionLevel::Approx, "0",
+                          "Use div.approx"),
+               clEnumValN(NVPTX::DivPrecisionLevel::Full, "1", "Use div.full"),
+               clEnumValN(NVPTX::DivPrecisionLevel::IEEE754, "2",
+                          "Use IEEE Compliant F32 div.rnd if available")),
+    cl::init(NVPTX::DivPrecisionLevel::IEEE754));
 
 static cl::opt<bool> UsePrecSqrtF32(
     "nvptx-prec-sqrtf32", cl::Hidden,
@@ -109,17 +114,22 @@ static cl::opt<bool> ForceMinByValParamAlign(
              " params of device functions."),
     cl::init(false));
 
-int NVPTXTargetLowering::getDivF32Level() const {
-  if (UsePrecDivF32.getNumOccurrences() > 0) {
-    // If nvptx-prec-div32=N is used on the command-line, always honor it
+NVPTX::DivPrecisionLevel
+NVPTXTargetLowering::getDivF32Level(const MachineFunction &MF,
+                                    const SDNode &N) const {
+  // If nvptx-prec-div32=N is used on the command-line, always honor it
+  if (UsePrecDivF32.getNumOccurrences() > 0)
     return UsePrecDivF32;
-  } else {
-    // Otherwise, use div.approx if fast math is enabled
-    if (getTargetMachine().Options.UnsafeFPMath)
-      return 0;
-    else
-      return 2;
-  }
+
+  // Otherwise, use div.approx if fast math is enabled
+  if (allowUnsafeFPMath(MF))
+    return NVPTX::DivPrecisionLevel::Approx;
+
+  const SDNodeFlags Flags = N.getFlags();
+  if (Flags.hasApproximateFuncs())
+    return NVPTX::DivPrecisionLevel::Approx;
+
+  return NVPTX::DivPrecisionLevel::IEEE754;
 }
 
 bool NVPTXTargetLowering::usePrecSqrtF32() const {
@@ -1041,6 +1051,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
                      Custom);
 
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
+  // Enable custom lowering for the i128 bit operand with clusterlaunchcontrol
+  setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i128, Custom);
 }
 
 const char *NVPTXTargetLowering::getTargetNodeName(unsigned Opcode) const {
@@ -1119,6 +1131,10 @@ const char *NVPTXTargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(NVPTXISD::BrxEnd)
     MAKE_CASE(NVPTXISD::BrxItem)
     MAKE_CASE(NVPTXISD::BrxStart)
+    MAKE_CASE(NVPTXISD::CLUSTERLAUNCHCONTROL_QUERY_CANCEL_IS_CANCELED)
+    MAKE_CASE(NVPTXISD::CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID_X)
+    MAKE_CASE(NVPTXISD::CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID_Y)
+    MAKE_CASE(NVPTXISD::CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID_Z)
   }
   return nullptr;
 
@@ -2795,12 +2811,57 @@ static SDValue LowerIntrinsicVoid(SDValue Op, SelectionDAG &DAG) {
   return Op;
 }
 
+static SDValue LowerClusterLaunchControlQueryCancel(SDValue Op,
+                                                    SelectionDAG &DAG) {
+
+  SDNode *N = Op.getNode();
+  if (N->getOperand(1).getValueType() != MVT::i128) {
+    // return, if the operand is already lowered
+    return SDValue();
+  }
+
+  unsigned IID =
+      cast<ConstantSDNode>(N->getOperand(0).getNode())->getZExtValue();
+  auto Opcode = [&]() {
+    switch (IID) {
+    case Intrinsic::nvvm_clusterlaunchcontrol_query_cancel_is_canceled:
+      return NVPTXISD::CLUSTERLAUNCHCONTROL_QUERY_CANCEL_IS_CANCELED;
+    case Intrinsic::nvvm_clusterlaunchcontrol_query_cancel_get_first_ctaid_x:
+      return NVPTXISD::CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID_X;
+    case Intrinsic::nvvm_clusterlaunchcontrol_query_cancel_get_first_ctaid_y:
+      return NVPTXISD::CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID_Y;
+    case Intrinsic::nvvm_clusterlaunchcontrol_query_cancel_get_first_ctaid_z:
+      return NVPTXISD::CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID_Z;
+    default:
+      llvm_unreachable("unsupported/unhandled intrinsic");
+    }
+  }();
+
+  SDLoc DL(N);
+  SDValue TryCancelResponse = N->getOperand(1);
+  SDValue Cast = DAG.getNode(ISD::BITCAST, DL, MVT::v2i64, TryCancelResponse);
+  SDValue TryCancelResponse0 =
+      DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i64, Cast,
+                  DAG.getIntPtrConstant(0, DL));
+  SDValue TryCancelResponse1 =
+      DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i64, Cast,
+                  DAG.getIntPtrConstant(1, DL));
+
+  return DAG.getNode(Opcode, DL, N->getVTList(),
+                     {TryCancelResponse0, TryCancelResponse1});
+}
+
 static SDValue lowerIntrinsicWOChain(SDValue Op, SelectionDAG &DAG) {
   switch (Op->getConstantOperandVal(0)) {
   default:
     return Op;
   case Intrinsic::nvvm_internal_addrspace_wrap:
     return Op.getOperand(1);
+  case Intrinsic::nvvm_clusterlaunchcontrol_query_cancel_is_canceled:
+  case Intrinsic::nvvm_clusterlaunchcontrol_query_cancel_get_first_ctaid_x:
+  case Intrinsic::nvvm_clusterlaunchcontrol_query_cancel_get_first_ctaid_y:
+  case Intrinsic::nvvm_clusterlaunchcontrol_query_cancel_get_first_ctaid_z:
+    return LowerClusterLaunchControlQueryCancel(Op, DAG);
   }
 }
 
@@ -4975,7 +5036,7 @@ bool NVPTXTargetLowering::allowFMA(MachineFunction &MF,
   return allowUnsafeFPMath(MF);
 }
 
-bool NVPTXTargetLowering::allowUnsafeFPMath(MachineFunction &MF) const {
+bool NVPTXTargetLowering::allowUnsafeFPMath(const MachineFunction &MF) const {
   // Honor TargetOptions flags that explicitly say unsafe math is okay.
   if (MF.getTarget().Options.UnsafeFPMath)
     return true;

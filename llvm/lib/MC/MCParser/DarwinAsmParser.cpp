@@ -817,7 +817,7 @@ bool DarwinAsmParser::parseDirectiveSubsectionsViaSymbols(StringRef, SMLoc) {
 
   Lex();
 
-  getStreamer().emitAssemblerFlag(MCAF_SubsectionsViaSymbols);
+  getStreamer().emitSubsectionsViaSymbols();
 
   return false;
 }
