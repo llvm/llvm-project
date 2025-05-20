@@ -13,6 +13,7 @@
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
+#include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -175,6 +176,12 @@ public:
                            mlir::Type type, llvm::StringRef name,
                            mlir::IntegerAttr alignment) {
     return create<cir::AllocaOp>(loc, addrType, type, name, alignment);
+  }
+
+  mlir::Value createGetGlobal(mlir::Location loc, cir::GlobalOp global) {
+    assert(!cir::MissingFeatures::addressSpace());
+    return create<cir::GetGlobalOp>(loc, getPointerTo(global.getSymType()),
+                                    global.getSymName());
   }
 
   cir::LoadOp createLoad(mlir::Location loc, mlir::Value ptr,
