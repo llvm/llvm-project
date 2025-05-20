@@ -1,5 +1,5 @@
 """
-Test lldb-dap stack trace response
+Test lldb-dap stackTrace request for functions without a name.
 """
 
 from lldbsuite.test.decorators import *

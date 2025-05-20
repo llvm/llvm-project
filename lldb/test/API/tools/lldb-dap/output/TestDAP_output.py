@@ -1,5 +1,5 @@
 """
-Test lldb-dap output events
+Test lldb-dap output events.
 """
 
 from lldbsuite.test.decorators import *

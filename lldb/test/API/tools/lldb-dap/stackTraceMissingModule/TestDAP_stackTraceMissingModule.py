@@ -1,5 +1,5 @@
 """
-Test lldb-dap stack trace when module is missing
+Test lldb-dap stackTrace when module is missing.
 """
 
 from lldbsuite.test.decorators import skipUnlessPlatform

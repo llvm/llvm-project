@@ -1,9 +1,10 @@
-import dap_server
+"""
+Test lldb-dap module events.
+"""
+
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
 import lldbdap_testcase
-import re
 
 
 class TestDAP_module_event(lldbdap_testcase.DAPTestCaseBase):

@@ -1,5 +1,6 @@
 # System modules
 from functools import wraps
+from typing import Optional
 from packaging import version
 import ctypes
 import locale
@@ -1102,3 +1103,28 @@ def skipUnlessFeature(feature):
                 return "%s is not supported on this system." % feature
 
     return skipTestIfFn(is_feature_enabled)
+
+
+def skipIfBinaryToLarge(path: Optional[str], maxSize: int):
+    """Skip the test if a binary is to large.
+
+    We skip this test for debug builds because it takes too long
+    parsing lldb's own debug info. Release builds are fine.
+    Checking the size of the lldb-dap binary seems to be a decent
+    proxy for a quick detection. It should be far less than 1 MB in
+    Release builds.
+    """
+
+    def check_binary_size():
+        if not path or not os.path.exists(path):
+            return "invalid path"
+
+        try:
+            size = os.path.getsize(path)
+            if size <= maxSize:
+                return None
+            return f"binary {path} (size = {size} is to larger than {maxSize}"
+        except:
+            return f"failed to read size of {path}"
+
+    return skipTestIfFn(check_binary_size)

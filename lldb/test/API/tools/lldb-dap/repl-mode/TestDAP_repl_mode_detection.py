@@ -3,8 +3,6 @@ Test lldb-dap repl mode detection
 """
 
 import lldbdap_testcase
-import dap_server
-from lldbsuite.test import lldbutil
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
