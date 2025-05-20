@@ -27,7 +27,9 @@
 #include <__stacktrace/basic.h>
 #include <__stacktrace/entry.h>
 
-#include "stacktrace/utils.h"
+#include "stacktrace/utils/debug.h"
+#include "stacktrace/utils/failed.h"
+#include "stacktrace/utils/fd.h"
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __stacktrace {
