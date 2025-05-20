@@ -204,7 +204,7 @@ static Value *LowerCLMUL(LLVMContext &Context, Value *V1, Value *V2, Instruction
 
   IRBuilder<> Builder(IP);
 
-  unsigned BitSize = V1->getType()->getPrimitiveSizeInBits();
+  unsigned BitSize = V1->getType()->getScalarSizeInBits();
   Value *Res = ConstantInt::get(V1->getType(), 0);
   Value *Zero = ConstantInt::get(V1->getType(), 0);
   Value *One = ConstantInt::get(V1->getType(), 1);
