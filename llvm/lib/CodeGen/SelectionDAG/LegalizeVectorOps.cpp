@@ -1829,14 +1829,23 @@ SDValue VectorLegalizer::ExpandLOOP_DEPENDENCE_MASK(SDNode *N) {
 
   // Create the lane mask
   EVT SplatTY =
-      EVT::getVectorVT(*DAG.getContext(), PtrVT, VT.getVectorElementCount());
+      EVT::getVectorVT(*DAG.getContext(), PtrVT, VT.getVectorMinNumElements(),
+                       VT.isScalableVector());
   SDValue DiffSplat = DAG.getSplat(SplatTY, DL, Diff);
   SDValue VectorStep = DAG.getStepVector(DL, SplatTY);
+  EVT MaskVT =
+      EVT::getVectorVT(*DAG.getContext(), MVT::i1, VT.getVectorMinNumElements(),
+                       VT.isScalableVector());
   SDValue DiffMask =
-      DAG.getSetCC(DL, VT, VectorStep, DiffSplat, ISD::CondCode::SETULT);
+      DAG.getSetCC(DL, MaskVT, VectorStep, DiffSplat, ISD::CondCode::SETULT);
+
+  EVT VTElementTy = VT.getVectorElementType();
+  // Extend the diff setcc in case the intrinsic has been promoted to a vector
+  // type with elements larger than i1
+  if (VTElementTy.getScalarSizeInBits() > MaskVT.getScalarSizeInBits())
+    DiffMask = DAG.getNode(ISD::ANY_EXTEND, DL, VT, DiffMask);
 
   // Splat the compare result then OR it with the lane mask
-  EVT VTElementTy = VT.getVectorElementType();
   if (CmpVT.getScalarSizeInBits() < VTElementTy.getScalarSizeInBits())
     Cmp = DAG.getNode(ISD::ZERO_EXTEND, DL, VTElementTy, Cmp);
   SDValue Splat = DAG.getSplat(VT, DL, Cmp);
