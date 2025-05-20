@@ -16,10 +16,10 @@
 #ifndef LLVM_BINARYFORMAT_AMDGPUMETADATAVERIFIER_H
 #define LLVM_BINARYFORMAT_AMDGPUMETADATAVERIFIER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/MsgPackReader.h"
+#include "llvm/Support/Compiler.h"
 
 #include <cstddef>
 #include <optional>

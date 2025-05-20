@@ -375,14 +375,14 @@ enum SymbolAuxType : uint8_t {
 LLVM_ABI StringRef getMappingClassString(XCOFF::StorageMappingClass SMC);
 LLVM_ABI StringRef getRelocationTypeString(XCOFF::RelocationType Type);
 LLVM_ABI StringRef getTCPUString(XCOFF::CFileCpuId TCPU);
-LLVM_ABI Expected<SmallString<32>> parseParmsType(uint32_t Value, unsigned FixedParmsNum,
-                                         unsigned FloatingParmsNum);
-LLVM_ABI Expected<SmallString<32>> parseParmsTypeWithVecInfo(uint32_t Value,
-                                                    unsigned FixedParmsNum,
-                                                    unsigned FloatingParmsNum,
-                                                    unsigned VectorParmsNum);
+LLVM_ABI Expected<SmallString<32>> parseParmsType(uint32_t Value,
+                                                  unsigned FixedParmsNum,
+                                                  unsigned FloatingParmsNum);
+LLVM_ABI Expected<SmallString<32>>
+parseParmsTypeWithVecInfo(uint32_t Value, unsigned FixedParmsNum,
+                          unsigned FloatingParmsNum, unsigned VectorParmsNum);
 LLVM_ABI Expected<SmallString<32>> parseVectorParmsType(uint32_t Value,
-                                               unsigned ParmsNum);
+                                                        unsigned ParmsNum);
 
 struct TracebackTable {
   enum LanguageID : uint8_t {
@@ -491,7 +491,8 @@ enum ExtendedTBTableFlag : uint8_t {
   TB_LONGTBTABLE2 = 0x01 ///< Additional tbtable extension exists.
 };
 
-LLVM_ABI StringRef getNameForTracebackTableLanguageId(TracebackTable::LanguageID LangId);
+LLVM_ABI StringRef
+getNameForTracebackTableLanguageId(TracebackTable::LanguageID LangId);
 LLVM_ABI SmallString<32> getExtendedTBTableFlagString(uint8_t Flag);
 LLVM_ABI XCOFF::CFileCpuId getCpuID(StringRef CPU);
 

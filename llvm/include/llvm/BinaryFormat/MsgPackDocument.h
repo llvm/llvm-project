@@ -17,8 +17,8 @@
 #ifndef LLVM_BINARYFORMAT_MSGPACKDOCUMENT_H
 #define LLVM_BINARYFORMAT_MSGPACKDOCUMENT_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/BinaryFormat/MsgPackReader.h"
+#include "llvm/Support/Compiler.h"
 #include <map>
 
 namespace llvm {

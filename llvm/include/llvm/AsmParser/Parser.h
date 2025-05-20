@@ -13,9 +13,9 @@
 #ifndef LLVM_ASMPARSER_PARSER_H
 #define LLVM_ASMPARSER_PARSER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include <memory>
 #include <optional>
 
@@ -45,9 +45,9 @@ typedef llvm::function_ref<std::optional<std::string>(StringRef, StringRef)>
 /// \param Context Context in which to allocate globals info.
 /// \param Slots The optional slot mapping that will be initialized during
 ///              parsing.
-LLVM_ABI std::unique_ptr<Module> parseAssemblyFile(StringRef Filename, SMDiagnostic &Err,
-                                          LLVMContext &Context,
-                                          SlotMapping *Slots = nullptr);
+LLVM_ABI std::unique_ptr<Module>
+parseAssemblyFile(StringRef Filename, SMDiagnostic &Err, LLVMContext &Context,
+                  SlotMapping *Slots = nullptr);
 
 /// The function is a secondary interface to the LLVM Assembly Parser. It parses
 /// an ASCII string that (presumably) contains LLVM Assembly code. It returns a
@@ -60,10 +60,9 @@ LLVM_ABI std::unique_ptr<Module> parseAssemblyFile(StringRef Filename, SMDiagnos
 /// \param Context Context in which to allocate globals info.
 /// \param Slots The optional slot mapping that will be initialized during
 ///              parsing.
-LLVM_ABI std::unique_ptr<Module> parseAssemblyString(StringRef AsmString,
-                                            SMDiagnostic &Err,
-                                            LLVMContext &Context,
-                                            SlotMapping *Slots = nullptr);
+LLVM_ABI std::unique_ptr<Module>
+parseAssemblyString(StringRef AsmString, SMDiagnostic &Err,
+                    LLVMContext &Context, SlotMapping *Slots = nullptr);
 
 /// Holds the Module and ModuleSummaryIndex returned by the interfaces
 /// that parse both.
@@ -141,10 +140,9 @@ LLVM_ABI std::unique_ptr<Module> parseAssembly(
 ///              parsing.
 ///
 /// parseAssemblyFileWithIndex is a wrapper around this function.
-LLVM_ABI ParsedModuleAndIndex parseAssemblyWithIndex(MemoryBufferRef F,
-                                            SMDiagnostic &Err,
-                                            LLVMContext &Context,
-                                            SlotMapping *Slots = nullptr);
+LLVM_ABI ParsedModuleAndIndex
+parseAssemblyWithIndex(MemoryBufferRef F, SMDiagnostic &Err,
+                       LLVMContext &Context, SlotMapping *Slots = nullptr);
 
 /// Parse LLVM Assembly for summary index from a MemoryBuffer.
 ///
@@ -183,8 +181,9 @@ LLVM_ABI bool parseAssemblyInto(
 /// \param Slots The optional slot mapping that will restore the parsing state
 /// of the module.
 /// \return null on error.
-LLVM_ABI Constant *parseConstantValue(StringRef Asm, SMDiagnostic &Err, const Module &M,
-                             const SlotMapping *Slots = nullptr);
+LLVM_ABI Constant *parseConstantValue(StringRef Asm, SMDiagnostic &Err,
+                                      const Module &M,
+                                      const SlotMapping *Slots = nullptr);
 
 /// Parse a type in the given string.
 ///
@@ -192,7 +191,7 @@ LLVM_ABI Constant *parseConstantValue(StringRef Asm, SMDiagnostic &Err, const Mo
 /// of the module.
 /// \return null on error.
 LLVM_ABI Type *parseType(StringRef Asm, SMDiagnostic &Err, const Module &M,
-                const SlotMapping *Slots = nullptr);
+                         const SlotMapping *Slots = nullptr);
 
 /// Parse a string \p Asm that starts with a type.
 /// \p Read[out] gives the number of characters that have been read to parse
@@ -201,13 +200,14 @@ LLVM_ABI Type *parseType(StringRef Asm, SMDiagnostic &Err, const Module &M,
 /// \param Slots The optional slot mapping that will restore the parsing state
 /// of the module.
 /// \return null on error.
-LLVM_ABI Type *parseTypeAtBeginning(StringRef Asm, unsigned &Read, SMDiagnostic &Err,
-                           const Module &M, const SlotMapping *Slots = nullptr);
+LLVM_ABI Type *parseTypeAtBeginning(StringRef Asm, unsigned &Read,
+                                    SMDiagnostic &Err, const Module &M,
+                                    const SlotMapping *Slots = nullptr);
 
-LLVM_ABI DIExpression *parseDIExpressionBodyAtBeginning(StringRef Asm, unsigned &Read,
-                                               SMDiagnostic &Err,
-                                               const Module &M,
-                                               const SlotMapping *Slots);
+LLVM_ABI DIExpression *
+parseDIExpressionBodyAtBeginning(StringRef Asm, unsigned &Read,
+                                 SMDiagnostic &Err, const Module &M,
+                                 const SlotMapping *Slots);
 
 } // End llvm namespace
 

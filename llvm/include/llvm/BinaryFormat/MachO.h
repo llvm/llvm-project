@@ -1706,8 +1706,9 @@ enum CPUSubTypeRISCV {
 
 LLVM_ABI Expected<uint32_t> getCPUType(const Triple &T);
 LLVM_ABI Expected<uint32_t> getCPUSubType(const Triple &T);
-LLVM_ABI Expected<uint32_t> getCPUSubType(const Triple &T, unsigned PtrAuthABIVersion,
-                                 bool PtrAuthKernelABIVersion);
+LLVM_ABI Expected<uint32_t> getCPUSubType(const Triple &T,
+                                          unsigned PtrAuthABIVersion,
+                                          bool PtrAuthKernelABIVersion);
 
 struct x86_thread_state32_t {
   uint32_t eax;

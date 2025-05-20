@@ -14,10 +14,10 @@
 #ifndef LLVM_BITSTREAM_BITSTREAMREADER_H
 #define LLVM_BITSTREAM_BITSTREAMREADER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Bitstream/BitCodes.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBufferRef.h"
@@ -552,8 +552,8 @@ public:
   LLVM_ABI Expected<unsigned> skipRecord(unsigned AbbrevID);
 
   LLVM_ABI Expected<unsigned> readRecord(unsigned AbbrevID,
-                                SmallVectorImpl<uint64_t> &Vals,
-                                StringRef *Blob = nullptr);
+                                         SmallVectorImpl<uint64_t> &Vals,
+                                         StringRef *Blob = nullptr);
 
   //===--------------------------------------------------------------------===//
   // Abbrev Processing
