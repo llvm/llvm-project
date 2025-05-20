@@ -30,8 +30,7 @@ BreakpointLocationsRequestHandler::Run(
   if (args.source.sourceReference) {
     locations = GetAssemblyBreakpointLocations(*args.source.sourceReference,
                                                start_line, end_line);
-  }
-  else {
+  } else {
     std::string path = args.source.path.value_or("");
     locations = GetSourceBreakpointLocations(
         std::move(path), start_line, start_column, end_line, end_column);
