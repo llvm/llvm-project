@@ -1985,7 +1985,8 @@ def FeatureISAVersion11_7_0 : FeatureSet<
     [FeatureSALUFloatInsts,
      FeatureDPPSrc1SGPR,
      FeatureRequiredExportPriority,
-     FeatureFP8ConversionInsts])>;
+     FeatureFP8ConversionInsts,
+     FeatureDot11Insts])>;
 
 def FeatureISAVersion12 : FeatureSet<
   [FeatureGFX12,
