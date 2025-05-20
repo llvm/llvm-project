@@ -3305,9 +3305,10 @@ static void combineMetadata(Instruction *K, const Instruction *J,
   K->getAllMetadataOtherThanDebugLoc(Metadata);
 
   const auto IsAMDGPUMD = [=](unsigned Kind) {
-    return Kind == K->getContext().getMDKindID("amdgpu.no.fine.grained.memory")
-        || Kind == K->getContext().getMDKindID("amdgpu.no.remote.memory")
-        || Kind == K->getContext().getMDKindID("amdgpu.ignore.denormal.mode");
+    return Kind ==
+               K->getContext().getMDKindID("amdgpu.no.fine.grained.memory") ||
+           Kind == K->getContext().getMDKindID("amdgpu.no.remote.memory") ||
+           Kind == K->getContext().getMDKindID("amdgpu.ignore.denormal.mode");
   };
   for (const auto &MD : Metadata) {
     unsigned Kind = MD.first;
