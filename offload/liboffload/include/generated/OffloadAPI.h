@@ -20,36 +20,51 @@ extern "C" {
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Defines Return/Error codes
 typedef enum ol_errc_t {
-  /// Success
+  /// success
   OL_ERRC_SUCCESS = 0,
-  /// Unknown or internal error
+  /// unknown or internal error
   OL_ERRC_UNKNOWN = 1,
-  /// A pointer argument is null when it should not be
-  OL_ERRC_INVALID_NULL_POINTER = 2,
-  /// An argument is invalid
-  OL_ERRC_INVALID_ARGUMENT = 3,
-  /// Out of resources
-  OL_ERRC_OUT_OF_RESOURCES = 4,
-  /// generic error code for unsupported features and enums
-  OL_ERRC_UNSUPPORTED = 5,
+  /// I/O error on host
+  OL_ERRC_HOST_IO = 2,
+  /// a provided binary image is malformed
+  OL_ERRC_INVALID_BINARY = 3,
+  /// a pointer argument is null when it should not be
+  OL_ERRC_INVALID_NULL_POINTER = 4,
+  /// an argument is invalid
+  OL_ERRC_INVALID_ARGUMENT = 5,
+  /// requested object was not found in the binary image
+  OL_ERRC_NOT_FOUND = 6,
+  /// out of resources
+  OL_ERRC_OUT_OF_RESOURCES = 7,
   /// invalid size or dimensions (e.g., must not be zero, or is out of bounds)
-  OL_ERRC_INVALID_SIZE = 6,
+  OL_ERRC_INVALID_SIZE = 8,
   /// enumerator argument is not valid
-  OL_ERRC_INVALID_ENUMERATION = 7,
-  /// Named kernel not found in the program binary
-  OL_ERRC_INVALID_KERNEL_NAME = 8,
-  /// Invalid Value
-  OL_ERRC_INVALID_VALUE = 9,
-  /// Invalid platform
-  OL_ERRC_INVALID_PLATFORM = 10,
-  /// Invalid device
-  OL_ERRC_INVALID_DEVICE = 11,
-  /// Invalid queue
-  OL_ERRC_INVALID_QUEUE = 12,
-  /// Invalid event
-  OL_ERRC_INVALID_EVENT = 13,
-  /// handle argument is not valid
-  OL_ERRC_INVALID_NULL_HANDLE = 14,
+  OL_ERRC_INVALID_ENUMERATION = 9,
+  /// a required binary (linker, etc.) was not found on the host
+  OL_ERRC_HOST_TOOL_NOT_FOUND = 10,
+  /// invalid value
+  OL_ERRC_INVALID_VALUE = 11,
+  /// generic error code for features currently unimplemented by the
+  /// device/backend
+  OL_ERRC_UNIMPLEMENTED = 12,
+  /// generic error code for features unsupported by the device/backend
+  OL_ERRC_UNSUPPORTED = 13,
+  /// assembler failure while processing binary image
+  OL_ERRC_ASSEMBLE_FAILURE = 14,
+  /// linker failure while processing binary image
+  OL_ERRC_LINK_FAILURE = 15,
+  /// the plugin backend is in an invalid or unsupported state
+  OL_ERRC_BACKEND_FAILURE = 16,
+  /// a handle argument is null when it should not be
+  OL_ERRC_INVALID_NULL_HANDLE = 17,
+  /// invalid platform
+  OL_ERRC_INVALID_PLATFORM = 18,
+  /// invalid device
+  OL_ERRC_INVALID_DEVICE = 19,
+  /// invalid queue
+  OL_ERRC_INVALID_QUEUE = 20,
+  /// invalid event
+  OL_ERRC_INVALID_EVENT = 21,
   /// @cond
   OL_ERRC_FORCE_UINT32 = 0x7fffffff
   /// @endcond
