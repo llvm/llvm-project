@@ -21,6 +21,7 @@
 #include "llvm/Support/JSON.h"
 #include <optional>
 #include <type_traits>
+#include <variant>
 
 template <typename T> struct is_optional : std::false_type {};
 
@@ -87,6 +88,34 @@ class LegacyRequestHandler : public BaseRequestHandler {
   }
 };
 
+template <typename Args>
+llvm::Expected<Args> parseArgs(const protocol::Request &request) {
+  if (!is_optional_v<Args> && !request.arguments)
+    return llvm::make_error<DAPError>(
+        llvm::formatv("arguments required for command '{0}' "
+                      "but none received",
+                      request.command)
+            .str());
+
+  Args arguments;
+  llvm::json::Path::Root root("arguments");
+  if (request.arguments && !fromJSON(*request.arguments, arguments, root)) {
+    std::string parse_failure;
+    llvm::raw_string_ostream OS(parse_failure);
+    OS << "invalid arguments for request '" << request.command
+       << "': " << llvm::toString(root.getError()) << "\n";
+    root.printErrorContext(*request.arguments, OS);
+    return llvm::make_error<DAPError>(parse_failure);
+  }
+
+  return arguments;
+}
+template <>
+inline llvm::Expected<protocol::EmptyArguments>
+parseArgs(const protocol::Request &request) {
+  return std::nullopt;
+}
+
 /// Base class for handling DAP requests. Handlers should declare their
 /// arguments and response body types like:
 ///
@@ -102,42 +131,21 @@ class RequestHandler : public BaseRequestHandler {
     response.request_seq = request.seq;
     response.command = request.command;
 
-    if (!is_optional_v<Args> && !request.arguments) {
-      DAP_LOG(dap.log,
-              "({0}) malformed request {1}, expected arguments but got none",
-              dap.transport.GetClientName(), request.command);
-      HandleErrorResponse(
-          llvm::make_error<DAPError>(
-              llvm::formatv("arguments required for command '{0}' "
-                            "but none received",
-                            request.command)
-                  .str()),
-          response);
-      dap.Send(response);
-      return;
-    }
-
-    Args arguments;
-    llvm::json::Path::Root root("arguments");
-    if (request.arguments && !fromJSON(*request.arguments, arguments, root)) {
-      std::string parse_failure;
-      llvm::raw_string_ostream OS(parse_failure);
-      OS << "invalid arguments for request '" << request.command
-         << "': " << llvm::toString(root.getError()) << "\n";
-      root.printErrorContext(*request.arguments, OS);
-      HandleErrorResponse(llvm::make_error<DAPError>(parse_failure), response);
+    llvm::Expected<Args> arguments = parseArgs<Args>(request);
+    if (llvm::Error err = arguments.takeError()) {
+      HandleErrorResponse(std::move(err), response);
       dap.Send(response);
       return;
     }
 
     if constexpr (std::is_same_v<Resp, llvm::Error>) {
-      if (llvm::Error err = Run(arguments)) {
+      if (llvm::Error err = Run(*arguments)) {
         HandleErrorResponse(std::move(err), response);
       } else {
         response.success = true;
       }
     } else {
-      Resp body = Run(arguments);
+      Resp body = Run(*arguments);
       if (llvm::Error err = body.takeError()) {
         HandleErrorResponse(std::move(err), response);
       } else {
@@ -246,14 +254,17 @@ public:
   Run(const protocol::ContinueArguments &args) const override;
 };
 
-class ConfigurationDoneRequestHandler : public LegacyRequestHandler {
+class ConfigurationDoneRequestHandler
+    : public RequestHandler<protocol::ConfigurationDoneArguments,
+                            protocol::ConfigurationDoneResponse> {
 public:
-  using LegacyRequestHandler::LegacyRequestHandler;
+  using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "configurationDone"; }
   FeatureSet GetSupportedFeatures() const override {
     return {protocol::eAdapterFeatureConfigurationDoneRequest};
   }
-  void operator()(const llvm::json::Object &request) const override;
+  protocol::ConfigurationDoneResponse
+  Run(const protocol::ConfigurationDoneArguments &) const override;
 };
 
 class DisconnectRequestHandler
@@ -297,7 +308,6 @@ public:
   static llvm::StringLiteral GetCommand() { return "initialize"; }
   llvm::Expected<protocol::InitializeResponse>
   Run(const protocol::InitializeRequestArguments &args) const override;
-  void PostRun() const override;
 };
 
 class LaunchRequestHandler
@@ -524,14 +534,17 @@ public:
   void operator()(const llvm::json::Object &request) const override;
 };
 
-class DisassembleRequestHandler : public LegacyRequestHandler {
+class DisassembleRequestHandler final
+    : public RequestHandler<protocol::DisassembleArguments,
+                            llvm::Expected<protocol::DisassembleResponseBody>> {
 public:
-  using LegacyRequestHandler::LegacyRequestHandler;
+  using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "disassemble"; }
   FeatureSet GetSupportedFeatures() const override {
     return {protocol::eAdapterFeatureDisassembleRequest};
   }
-  void operator()(const llvm::json::Object &request) const override;
+  llvm::Expected<protocol::DisassembleResponseBody>
+  Run(const protocol::DisassembleArguments &args) const override;
 };
 
 class ReadMemoryRequestHandler : public LegacyRequestHandler {
