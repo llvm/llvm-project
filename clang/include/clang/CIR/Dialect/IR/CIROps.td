@@ -1843,13 +1843,8 @@ class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
                       DeclareOpInterfaceMethods<SymbolUserOpInterface>])> {
   let extraClassDeclaration = [{
     /// Get the argument operands to the called function.
-    mlir::OperandRange getArgOperands() {
-      return getArgs();
-    }
-
-    mlir::MutableOperandRange getArgOperandsMutable() {
-      return getArgsMutable();
-    }
+    mlir::OperandRange getArgOperands();
+    mlir::MutableOperandRange getArgOperandsMutable();
 
     /// Return the callee of this operation
     mlir::CallInterfaceCallable getCallableForCallee() {
@@ -1871,8 +1866,17 @@ class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
     ::mlir::Attribute removeArgAttrsAttr() { return {}; }
     ::mlir::Attribute removeResAttrsAttr() { return {}; }
 
+    bool isIndirect() { return !getCallee(); }
+    mlir::Value getIndirectCall();
+
     void setArg(unsigned index, mlir::Value value) {
-      setOperand(index, value);
+      if (!isIndirect()) {
+        setOperand(index, value);
+        return;
+      }
+
+      // For indirect call, the operand list is shifted by one.
+      setOperand(index + 1, value);
     }
   }];
 
@@ -1884,16 +1888,24 @@ class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
   // the upstreaming process moves on. The verifiers is also missing for now,
   // will add in the future.
 
-  dag commonArgs = (ins FlatSymbolRefAttr:$callee,
-                        Variadic<CIR_AnyType>:$args);
+  dag commonArgs = (ins OptionalAttr<FlatSymbolRefAttr>:$callee,
+      Variadic<CIR_AnyType>:$args);
 }
 
 def CallOp : CIR_CallOpBase<"call", [NoRegionArguments]> {
   let summary = "call a function";
   let description = [{
-    The `cir.call` operation represents a direct call to a function that is
-    within the same symbol scope as the call. The callee is encoded as a symbol
-    reference attribute named `callee`.
+    The `cir.call` operation represents a function call. It could represent
+    either a direct call or an indirect call.
+
+    If the operation represents a direct call, the callee should be defined
+    within the same symbol scope as the call. The `callee` attribute contains a
+    symbol reference to the callee function. All operands of this operation are
+    arguments to the callee function.
+
+    If the operation represents an indirect call, the `callee` attribute is
+    empty. The first operand of this operation must be a pointer to the callee
+    function. The rest operands are arguments to the callee function.
 
     Example:
 
@@ -1905,14 +1917,25 @@ def CallOp : CIR_CallOpBase<"call", [NoRegionArguments]> {
   let results = (outs Optional<CIR_AnyType>:$result);
   let arguments = commonArgs;
 
-  let builders = [OpBuilder<(ins "mlir::SymbolRefAttr":$callee,
-                                 "mlir::Type":$resType,
-                                 "mlir::ValueRange":$operands), [{
+  let builders = [
+    // Build a call op for a direct call
+    OpBuilder<(ins "mlir::SymbolRefAttr":$callee, "mlir::Type":$resType,
+                   "mlir::ValueRange":$operands), [{
+      assert(callee && "callee attribute is required for direct call");
       $_state.addOperands(operands);
       $_state.addAttribute("callee", callee);
       if (resType && !isa<VoidType>(resType))
         $_state.addTypes(resType);
-    }]>];
+    }]>,
+    // Build a call op for an indirect call
+    OpBuilder<(ins "mlir::Value":$calleePtr, "mlir::Type":$resType,
+                   "mlir::ValueRange":$operands), [{
+      $_state.addOperands(calleePtr);
+      $_state.addOperands(operands);
+      if (resType && !isa<VoidType>(resType))
+        $_state.addTypes(resType);
+    }]>,
+  ];
 }
 
 //===----------------------------------------------------------------------===//

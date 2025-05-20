@@ -674,8 +674,15 @@ rewriteCallOrInvoke(mlir::Operation *op, mlir::ValueRange callOperands,
     llvmFnTy = cast<mlir::LLVM::LLVMFunctionType>(
         converter->convertType(fn.getFunctionType()));
   } else { // indirect call
-    assert(!cir::MissingFeatures::opCallIndirect());
-    return op->emitError("Indirect calls are NYI");
+    assert(!op->getOperands().empty() &&
+           "operands list must no be empty for the indirect call");
+    auto calleeTy = op->getOperands().front().getType();
+    auto calleePtrTy = cast<cir::PointerType>(calleeTy);
+    auto calleeFuncTy = cast<cir::FuncType>(calleePtrTy.getPointee());
+    calleeFuncTy.dump();
+    converter->convertType(calleeFuncTy).dump();
+    llvmFnTy = cast<mlir::LLVM::LLVMFunctionType>(
+        converter->convertType(calleeFuncTy));
   }
 
   assert(!cir::MissingFeatures::opCallLandingPad());
@@ -1504,6 +1511,15 @@ static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
   });
   converter.addConversion([&](cir::BF16Type type) -> mlir::Type {
     return mlir::BFloat16Type::get(type.getContext());
+  });
+  converter.addConversion([&](cir::FuncType type) -> std::optional<mlir::Type> {
+    auto result = converter.convertType(type.getReturnType());
+    llvm::SmallVector<mlir::Type> arguments;
+    arguments.reserve(type.getNumInputs());
+    if (converter.convertTypes(type.getInputs(), arguments).failed())
+      return std::nullopt;
+    auto varArg = type.isVarArg();
+    return mlir::LLVM::LLVMFunctionType::get(result, arguments, varArg);
   });
   converter.addConversion([&](cir::RecordType type) -> mlir::Type {
     // Convert struct members.

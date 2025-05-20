@@ -465,15 +465,35 @@ OpFoldResult cir::CastOp::fold(FoldAdaptor adaptor) {
 // CallOp
 //===----------------------------------------------------------------------===//
 
+mlir::OperandRange cir::CallOp::getArgOperands() {
+  if (isIndirect())
+    return getArgs().drop_front(1);
+  return getArgs();
+}
+
+mlir::MutableOperandRange cir::CallOp::getArgOperandsMutable() {
+  mlir::MutableOperandRange args = getArgsMutable();
+  if (isIndirect())
+    return args.slice(1, args.size() - 1);
+  return args;
+}
+
+mlir::Value cir::CallOp::getIndirectCall() {
+  assert(isIndirect());
+  return getOperand(0);
+}
+
 /// Return the operand at index 'i'.
 Value cir::CallOp::getArgOperand(unsigned i) {
-  assert(!cir::MissingFeatures::opCallIndirect());
+  if (isIndirect())
+    ++i;
   return getOperand(i);
 }
 
 /// Return the number of operands.
 unsigned cir::CallOp::getNumArgOperands() {
-  assert(!cir::MissingFeatures::opCallIndirect());
+  if (isIndirect())
+    return this->getOperation()->getNumOperands() - 1;
   return this->getOperation()->getNumOperands();
 }
 
@@ -484,9 +504,15 @@ static mlir::ParseResult parseCallCommon(mlir::OpAsmParser &parser,
   mlir::FlatSymbolRefAttr calleeAttr;
   llvm::ArrayRef<mlir::Type> allResultTypes;
 
+  // If we cannot parse a string callee, it means this is an indirect call.
   if (!parser.parseOptionalAttribute(calleeAttr, "callee", result.attributes)
-           .has_value())
-    return mlir::failure();
+           .has_value()) {
+    OpAsmParser::UnresolvedOperand indirectVal;
+    // Do not resolve right now, since we need to figure out the type
+    if (parser.parseOperand(indirectVal).failed())
+      return failure();
+    ops.push_back(indirectVal);
+  }
 
   if (parser.parseLParen())
     return mlir::failure();
@@ -518,13 +544,21 @@ static mlir::ParseResult parseCallCommon(mlir::OpAsmParser &parser,
 
 static void printCallCommon(mlir::Operation *op,
                             mlir::FlatSymbolRefAttr calleeSym,
+                            mlir::Value indirectCallee,
                             mlir::OpAsmPrinter &printer) {
   printer << ' ';
 
   auto callLikeOp = mlir::cast<cir::CIRCallOpInterface>(op);
   auto ops = callLikeOp.getArgOperands();
 
-  printer.printAttributeWithoutType(calleeSym);
+  if (calleeSym) {
+    // Direct calls
+    printer.printAttributeWithoutType(calleeSym);
+  } else {
+    // Indirect calls
+    assert(indirectCallee);
+    printer << indirectCallee;
+  }
   printer << "(" << ops << ")";
 
   printer.printOptionalAttrDict(op->getAttrs(), {"callee"});
@@ -540,15 +574,18 @@ mlir::ParseResult cir::CallOp::parse(mlir::OpAsmParser &parser,
 }
 
 void cir::CallOp::print(mlir::OpAsmPrinter &p) {
-  printCallCommon(*this, getCalleeAttr(), p);
+  mlir::Value indirectCallee = isIndirect() ? getIndirectCall() : nullptr;
+  printCallCommon(*this, getCalleeAttr(), indirectCallee, p);
 }
 
 static LogicalResult
 verifyCallCommInSymbolUses(mlir::Operation *op,
                            SymbolTableCollection &symbolTable) {
   auto fnAttr = op->getAttrOfType<FlatSymbolRefAttr>("callee");
-  if (!fnAttr)
-    return mlir::failure();
+  if (!fnAttr) {
+    // This is an indirect call, thus we don't have to check the symbol uses.
+    return mlir::success();
+  }
 
   auto fn = symbolTable.lookupNearestSymbolFrom<cir::FuncOp>(op, fnAttr);
   if (!fn)
