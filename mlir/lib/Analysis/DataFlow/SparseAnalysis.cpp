@@ -7,6 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Analysis/DataFlow/SparseAnalysis.h"
+
+#include <cassert>
+#include <optional>
+
 #include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
 #include "mlir/Analysis/DataFlowFramework.h"
 #include "mlir/IR/Attributes.h"
@@ -20,8 +24,6 @@
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Casting.h"
-#include <cassert>
-#include <optional>
 
 using namespace mlir;
 using namespace mlir::dataflow;
@@ -94,22 +96,31 @@ AbstractSparseForwardDataFlowAnalysis::visit(ProgramPoint *point) {
 
 LogicalResult
 AbstractSparseForwardDataFlowAnalysis::visitOperation(Operation *op) {
-  // Exit early on operations with no results.
-  if (op->getNumResults() == 0)
-    return success();
-
   // If the containing block is not executable, bail out.
   if (op->getBlock() != nullptr &&
       !getOrCreate<Executable>(getProgramPointBefore(op->getBlock()))->isLive())
     return success();
 
-  // Get the result lattices.
-  SmallVector<AbstractSparseLattice *> resultLattices;
-  resultLattices.reserve(op->getNumResults());
-  for (Value result : op->getResults()) {
-    AbstractSparseLattice *resultLattice = getLatticeElement(result);
-    resultLattices.push_back(resultLattice);
+  // Region terminators which are not part of control flow have a special
+  // transfer function.
+  if (op->hasTrait<OpTrait::IsTerminator>()) {
+    Operation *parentOp = op->getParentOp();
+    if (parentOp && !isa<RegionBranchOpInterface>(parentOp) &&
+        !isa<RegionBranchTerminatorOpInterface>(op) &&
+        parentOp->getNumResults() > 0) {
+      SmallVector<const AbstractSparseLattice *> operandLattices =
+          getOperandLattices(op);
+      SmallVector<AbstractSparseLattice *> parentResultLattices =
+          getResultLattices(parentOp);
+      return visitNonControlFlowTerminatorImpl(op, operandLattices,
+                                               parentResultLattices);
+    }
   }
+
+  if (op->getNumResults() == 0)
+    return success();
+
+  SmallVector<AbstractSparseLattice *> resultLattices = getResultLattices(op);
 
   // The results of a region branch operation are determined by control-flow.
   if (auto branch = dyn_cast<RegionBranchOpInterface>(op)) {
@@ -119,14 +130,8 @@ AbstractSparseForwardDataFlowAnalysis::visitOperation(Operation *op) {
     return success();
   }
 
-  // Grab the lattice elements of the operands.
-  SmallVector<const AbstractSparseLattice *> operandLattices;
-  operandLattices.reserve(op->getNumOperands());
-  for (Value operand : op->getOperands()) {
-    AbstractSparseLattice *operandLattice = getLatticeElement(operand);
-    operandLattice->useDefSubscribe(this);
-    operandLattices.push_back(operandLattice);
-  }
+  SmallVector<const AbstractSparseLattice *> operandLattices =
+      getOperandLattices(op);
 
   if (auto call = dyn_cast<CallOpInterface>(op)) {
     // If the call operation is to an external function, attempt to infer the

@@ -105,6 +105,7 @@ void registerTestComposeSubView();
 void registerTestMultiBuffering();
 void registerTestIRVisitorsPass();
 void registerTestGenericIRVisitorsPass();
+void registerTestIntegerLatticePass();
 void registerTestInterfaces();
 void registerTestIRVisitorsPass();
 void registerTestLastModifiedPass();
@@ -249,6 +250,7 @@ void registerTestPasses() {
   mlir::test::registerTestMultiBuffering();
   mlir::test::registerTestIRVisitorsPass();
   mlir::test::registerTestGenericIRVisitorsPass();
+  mlir::test::registerTestIntegerLatticePass();
   mlir::test::registerTestInterfaces();
   mlir::test::registerTestIRVisitorsPass();
   mlir::test::registerTestLastModifiedPass();

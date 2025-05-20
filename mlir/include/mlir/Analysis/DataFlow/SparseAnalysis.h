@@ -220,6 +220,14 @@ protected:
       Operation *op, const RegionSuccessor &successor,
       ArrayRef<AbstractSparseLattice *> argLattices, unsigned firstIndex) = 0;
 
+  /// Visit a region terminator. This is intended for non-control-flow
+  /// region-bearing ops whose terminators determine the lattice values of the
+  /// parent op's results.
+  virtual LogicalResult visitNonControlFlowTerminatorImpl(
+      Operation *terminatorOp,
+      ArrayRef<const AbstractSparseLattice *> terminatorOperandLattices,
+      ArrayRef<AbstractSparseLattice *> parentResultLattices) = 0;
+
   /// Get the lattice element of a value.
   virtual AbstractSparseLattice *getLatticeElement(Value value) = 0;
 
@@ -234,6 +242,29 @@ protected:
 
   /// Join the lattice element and propagate and update if it changed.
   void join(AbstractSparseLattice *lhs, const AbstractSparseLattice &rhs);
+
+  // Get the lattice elements of the operands.
+  SmallVector<const AbstractSparseLattice *> getOperandLattices(Operation *op) {
+    SmallVector<const AbstractSparseLattice *> operandLattices;
+    operandLattices.reserve(op->getNumOperands());
+    for (Value operand : op->getOperands()) {
+      AbstractSparseLattice *operandLattice = getLatticeElement(operand);
+      operandLattice->useDefSubscribe(this);
+      operandLattices.push_back(operandLattice);
+    }
+    return operandLattices;
+  }
+
+  // Get the lattice elements of the results.
+  SmallVector<AbstractSparseLattice *> getResultLattices(Operation *op) {
+    SmallVector<AbstractSparseLattice *> resultLattices;
+    resultLattices.reserve(op->getNumResults());
+    for (Value result : op->getResults()) {
+      AbstractSparseLattice *resultLattice = getLatticeElement(result);
+      resultLattices.push_back(resultLattice);
+    }
+    return resultLattices;
+  }
 
 private:
   /// Recursively initialize the analysis on nested operations and blocks.
@@ -297,6 +328,28 @@ public:
                                  ArrayRef<const StateT *> argumentLattices,
                                  ArrayRef<StateT *> resultLattices) {
     setAllToEntryStates(resultLattices);
+  }
+
+  /// Visit a region terminator. This is intended for non-control-flow
+  /// region-bearing ops whose terminators determine the lattice values of the
+  /// parent op's results. By default the terminator's operand lattices are
+  /// forwarded to the parent result lattices, if there is a 1-1
+  /// correspondence.
+  virtual LogicalResult visitNonControlFlowTerminator(
+      Operation *terminatorOp,
+      ArrayRef<const StateT *> terminatorOperandLattices,
+      ArrayRef<StateT *> parentResultLattices) {
+    // ReturnLike terminators forward their lattice values to the results of the
+    // parent op.
+    if (terminatorOp->hasTrait<OpTrait::ReturnLike>() &&
+        terminatorOperandLattices.size() == parentResultLattices.size()) {
+      for (const auto &[operandLattice, resultLattice] :
+           llvm::zip(terminatorOperandLattices, parentResultLattices)) {
+        propagateIfChanged(resultLattice, resultLattice->join(*operandLattice));
+      }
+    }
+
+    return success();
   }
 
   /// Given an operation with possible region control-flow, the lattices of the
@@ -369,6 +422,18 @@ private:
         {reinterpret_cast<StateT *const *>(argLattices.begin()),
          argLattices.size()},
         firstIndex);
+  }
+  LogicalResult visitNonControlFlowTerminatorImpl(
+      Operation *terminatorOp,
+      ArrayRef<const AbstractSparseLattice *> terminatorOperandLattices,
+      ArrayRef<AbstractSparseLattice *> parentResultLattices) override {
+    return visitNonControlFlowTerminator(
+        terminatorOp,
+        {reinterpret_cast<const StateT *const *>(
+             terminatorOperandLattices.begin()),
+         terminatorOperandLattices.size()},
+        {reinterpret_cast<StateT *const *>(parentResultLattices.begin()),
+         parentResultLattices.size()});
   }
   void setToEntryState(AbstractSparseLattice *lattice) override {
     return setToEntryState(reinterpret_cast<StateT *>(lattice));

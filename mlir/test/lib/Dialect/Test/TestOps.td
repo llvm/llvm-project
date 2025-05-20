@@ -3507,4 +3507,14 @@ def TestAllocWithMultipleResults : TEST_Op<"alloc_with_multiple_results"> {
   }];
 }
 
+// ==------------------------------------------------------------------------===//
+// Test Analysis ReturnLike
+//===----------------------------------------------------------------------===//
+def AnalysisReturnLikeRegionOp : TEST_Op<"analysis_return_like_region_op",
+      [SingleBlockImplicitTerminator<"RegionYieldOp">]> {
+  let regions = (region AnyRegion:$region);
+  let results = (outs AnyType:$result);
+}
+
+
 #endif // TEST_OPS
