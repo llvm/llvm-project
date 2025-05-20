@@ -10,9 +10,9 @@ define float @test_fabsf(float %f) {
 ; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.f32 %f1, [test_fabsf_param_0];
+; CHECK-NEXT:    ld.param.b32 %f1, [test_fabsf_param_0];
 ; CHECK-NEXT:    abs.f32 %f2, %f1;
-; CHECK-NEXT:    st.param.f32 [func_retval0], %f2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %f2;
 ; CHECK-NEXT:    ret;
   %x = call float @llvm.fabs.f32(float %f)
   ret float %x
@@ -24,9 +24,9 @@ define double @test_fabs(double %d) {
 ; CHECK-NEXT:    .reg .b64 %fd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.f64 %fd1, [test_fabs_param_0];
+; CHECK-NEXT:    ld.param.b64 %fd1, [test_fabs_param_0];
 ; CHECK-NEXT:    abs.f64 %fd2, %fd1;
-; CHECK-NEXT:    st.param.f64 [func_retval0], %fd2;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %fd2;
 ; CHECK-NEXT:    ret;
   %x = call double @llvm.fabs.f64(double %d)
   ret double %x
@@ -38,9 +38,9 @@ define float @test_nvvm_sqrt(float %a) {
 ; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.f32 %f1, [test_nvvm_sqrt_param_0];
+; CHECK-NEXT:    ld.param.b32 %f1, [test_nvvm_sqrt_param_0];
 ; CHECK-NEXT:    sqrt.rn.f32 %f2, %f1;
-; CHECK-NEXT:    st.param.f32 [func_retval0], %f2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %f2;
 ; CHECK-NEXT:    ret;
   %val = call float @llvm.nvvm.sqrt.f(float %a)
   ret float %val
@@ -52,9 +52,9 @@ define float @test_llvm_sqrt(float %a) {
 ; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.f32 %f1, [test_llvm_sqrt_param_0];
+; CHECK-NEXT:    ld.param.b32 %f1, [test_llvm_sqrt_param_0];
 ; CHECK-NEXT:    sqrt.rn.f32 %f2, %f1;
-; CHECK-NEXT:    st.param.f32 [func_retval0], %f2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %f2;
 ; CHECK-NEXT:    ret;
   %val = call float @llvm.sqrt.f32(float %a)
   ret float %val
@@ -66,7 +66,7 @@ define i32 @test_bitreverse32(i32 %a) {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [test_bitreverse32_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [test_bitreverse32_param_0];
 ; CHECK-NEXT:    brev.b32 %r2, %r1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
@@ -80,7 +80,7 @@ define i64 @test_bitreverse64(i64 %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [test_bitreverse64_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_bitreverse64_param_0];
 ; CHECK-NEXT:    brev.b64 %rd2, %rd1;
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
@@ -94,7 +94,7 @@ define i32 @test_popc32(i32 %a) {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [test_popc32_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [test_popc32_param_0];
 ; CHECK-NEXT:    popc.b32 %r2, %r1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
@@ -109,7 +109,7 @@ define i64 @test_popc64(i64 %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [test_popc64_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_popc64_param_0];
 ; CHECK-NEXT:    popc.b64 %r1, %rd1;
 ; CHECK-NEXT:    cvt.u64.u32 %rd2, %r1;
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
@@ -128,7 +128,7 @@ define i32 @test_popc64_trunc(i64 %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [test_popc64_trunc_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_popc64_trunc_param_0];
 ; CHECK-NEXT:    popc.b64 %r1, %rd1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
@@ -145,10 +145,10 @@ define void @test_popc16(i16 %a, ptr %b) {
 ; CHECK32-NEXT:    .reg .b32 %r<4>;
 ; CHECK32-EMPTY:
 ; CHECK32-NEXT:  // %bb.0:
-; CHECK32-NEXT:    ld.param.u16 %r1, [test_popc16_param_0];
+; CHECK32-NEXT:    ld.param.b16 %r1, [test_popc16_param_0];
 ; CHECK32-NEXT:    popc.b32 %r2, %r1;
-; CHECK32-NEXT:    ld.param.u32 %r3, [test_popc16_param_1];
-; CHECK32-NEXT:    st.u16 [%r3], %r2;
+; CHECK32-NEXT:    ld.param.b32 %r3, [test_popc16_param_1];
+; CHECK32-NEXT:    st.b16 [%r3], %r2;
 ; CHECK32-NEXT:    ret;
 ;
 ; CHECK64-LABEL: test_popc16(
@@ -157,10 +157,10 @@ define void @test_popc16(i16 %a, ptr %b) {
 ; CHECK64-NEXT:    .reg .b64 %rd<2>;
 ; CHECK64-EMPTY:
 ; CHECK64-NEXT:  // %bb.0:
-; CHECK64-NEXT:    ld.param.u16 %r1, [test_popc16_param_0];
+; CHECK64-NEXT:    ld.param.b16 %r1, [test_popc16_param_0];
 ; CHECK64-NEXT:    popc.b32 %r2, %r1;
-; CHECK64-NEXT:    ld.param.u64 %rd1, [test_popc16_param_1];
-; CHECK64-NEXT:    st.u16 [%rd1], %r2;
+; CHECK64-NEXT:    ld.param.b64 %rd1, [test_popc16_param_1];
+; CHECK64-NEXT:    st.b16 [%rd1], %r2;
 ; CHECK64-NEXT:    ret;
   %val = call i16 @llvm.ctpop.i16(i16 %a)
   store i16 %val, ptr %b
@@ -175,7 +175,7 @@ define i32 @test_popc16_to_32(i16 %a) {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u16 %r1, [test_popc16_to_32_param_0];
+; CHECK-NEXT:    ld.param.b16 %r1, [test_popc16_to_32_param_0];
 ; CHECK-NEXT:    popc.b32 %r2, %r1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;

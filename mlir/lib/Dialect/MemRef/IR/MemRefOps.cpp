@@ -527,6 +527,11 @@ LogicalResult AssumeAlignmentOp::verify() {
   return success();
 }
 
+void AssumeAlignmentOp::getAsmResultNames(
+    function_ref<void(Value, StringRef)> setNameFn) {
+  setNameFn(getResult(), "assume_align");
+}
+
 //===----------------------------------------------------------------------===//
 // CastOp
 //===----------------------------------------------------------------------===//

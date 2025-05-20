@@ -3982,7 +3982,6 @@ static void handleFormatMatchesAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
   S.Diag(AL.getLoc(), diag::err_format_nonliteral)
       << FormatStrExpr->getSourceRange();
-  return;
 }
 
 /// Handle __attribute__((callback(CalleeIdx, PayloadIdx0, ...))) attributes.
@@ -6862,13 +6861,16 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   // though they were unknown attributes.
   if (AL.getKind() == ParsedAttr::UnknownAttribute ||
       !AL.existsInTarget(S.Context.getTargetInfo())) {
-    S.Diag(AL.getLoc(),
-           AL.isRegularKeywordAttribute()
-               ? (unsigned)diag::err_keyword_not_supported_on_target
-           : AL.isDeclspecAttribute()
-               ? (unsigned)diag::warn_unhandled_ms_attribute_ignored
-               : (unsigned)diag::warn_unknown_attribute_ignored)
-        << AL << AL.getRange();
+    if (AL.isRegularKeywordAttribute() || AL.isDeclspecAttribute()) {
+      S.Diag(AL.getLoc(), AL.isRegularKeywordAttribute()
+                              ? diag::err_keyword_not_supported_on_target
+                              : diag::warn_unhandled_ms_attribute_ignored)
+          << AL.getAttrName() << AL.getRange();
+    } else {
+      S.Diag(AL.getNormalizedRange().getBegin(),
+             diag::warn_unknown_attribute_ignored)
+          << "'" + AL.getNormalizedFullName() + "'" << AL.getNormalizedRange();
+    }
     return;
   }
 
@@ -7478,6 +7480,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
 
   // HLSL attributes:
+  case ParsedAttr::AT_RootSignature:
+    S.HLSL().handleRootSignatureAttr(D, AL);
+    break;
   case ParsedAttr::AT_HLSLNumThreads:
     S.HLSL().handleNumThreadsAttr(D, AL);
     break;

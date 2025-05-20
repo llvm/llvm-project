@@ -272,6 +272,10 @@ module std_core [system] {
       header "__type_traits/is_referenceable.h"
       export std_core.type_traits.integral_constant
     }
+    module is_replaceable {
+      header "__type_traits/is_replaceable.h"
+      export std_core.type_traits.integral_constant
+    }
     module is_same {
       header "__type_traits/is_same.h"
       export std_core.type_traits.integral_constant

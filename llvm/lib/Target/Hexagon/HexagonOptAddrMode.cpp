@@ -484,10 +484,9 @@ bool HexagonOptAddrMode::findFirstReachedInst(
   for (auto &InstIter : *CurrentMBB) {
     // If the instruction is an Addi and is in the AddiList
     if (InstIter.getOpcode() == Hexagon::A2_addi) {
-      auto Iter = std::find_if(
-          AddiList.begin(), AddiList.end(), [&InstIter](const auto &SUPair) {
-            return SUPair.first.Addr->getCode() == &InstIter;
-          });
+      auto Iter = llvm::find_if(AddiList, [&InstIter](const auto &SUPair) {
+        return SUPair.first.Addr->getCode() == &InstIter;
+      });
       if (Iter != AddiList.end()) {
         UseSN = Iter->first;
         return true;

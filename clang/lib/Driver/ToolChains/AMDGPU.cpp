@@ -221,7 +221,7 @@ RocmInstallationDetector::getInstallationPathCandidates() {
     std::string VerStr = DirName.drop_front(strlen("rocm-")).str();
     // The ROCm directory name follows the format of
     // rocm-{major}.{minor}.{subMinor}[-{build}]
-    std::replace(VerStr.begin(), VerStr.end(), '-', '.');
+    llvm::replace(VerStr, '-', '.');
     V.tryParse(VerStr);
     return V;
   };

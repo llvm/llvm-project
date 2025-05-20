@@ -100,11 +100,7 @@ public:
     unsigned Column;
 
     bool operator<(const Position &other) const {
-      if (Line < other.Line)
-        return true;
-      if (Line > other.Line)
-        return false;
-      return Column < other.Column;
+      return std::tie(Line, Column) < std::tie(other.Line, other.Column);
     }
 
     static Position GetBeginSpelling(const SourceManager &SM,

@@ -414,16 +414,17 @@ CodeGenRegister::computeSubRegs(CodeGenRegBank &RegBank) {
 
   // Initialize RegUnitList. Because getSubRegs is called recursively, this
   // processes the register hierarchy in postorder.
-  //
-  // Inherit all sub-register units. It is good enough to look at the explicit
-  // sub-registers, the other registers won't contribute any more units.
-  for (const CodeGenRegister *SR : ExplicitSubRegs)
-    RegUnits |= SR->RegUnits;
+  if (ExplicitSubRegs.empty()) {
+    // Create one register unit per leaf register. These units correspond to the
+    // maximal cliques in the register overlap graph which is optimal.
+    RegUnits.set(RegBank.newRegUnit(this));
+  } else {
+    // Inherit all sub-register units. It is good enough to look at the explicit
+    // sub-registers, the other registers won't contribute any more units.
+    for (const CodeGenRegister *SR : ExplicitSubRegs)
+      RegUnits |= SR->RegUnits;
+  }
 
-  // Absent any ad hoc aliasing, we create one register unit per leaf register.
-  // These units correspond to the maximal cliques in the register overlap
-  // graph which is optimal.
-  //
   // When there is ad hoc aliasing, we simply create one unit per edge in the
   // undirected ad hoc aliasing graph. Technically, we could do better by
   // identifying maximal cliques in the ad hoc graph, but cliques larger than 2
@@ -439,12 +440,6 @@ CodeGenRegister::computeSubRegs(CodeGenRegBank &RegBank) {
     RegUnits.set(Unit);
     AR->RegUnits.set(Unit);
   }
-
-  // Finally, create units for leaf registers without ad hoc aliases. Note that
-  // a leaf register with ad hoc aliases doesn't get its own unit - it isn't
-  // necessary. This means the aliasing leaf registers can share a single unit.
-  if (RegUnits.empty())
-    RegUnits.set(RegBank.newRegUnit(this));
 
   // We have now computed the native register units. More may be adopted later
   // for balancing purposes.
@@ -655,8 +650,7 @@ struct TupleExpander : SetTheory::Expander {
 
       // Take the cost list of the first register in the tuple.
       const ListInit *CostList = Proto->getValueAsListInit("CostPerUse");
-      SmallVector<const Init *, 2> CostPerUse;
-      llvm::append_range(CostPerUse, *CostList);
+      SmallVector<const Init *, 2> CostPerUse(CostList->getElements());
 
       const StringInit *AsmName = StringInit::get(RK, "");
       if (!RegNames.empty()) {
@@ -776,7 +770,7 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank,
 
   // Alternative allocation orders may be subsets.
   SetTheory::RecSet Order;
-  for (auto [Idx, AltOrderElem] : enumerate(AltOrders->getValues())) {
+  for (auto [Idx, AltOrderElem] : enumerate(AltOrders->getElements())) {
     RegBank.getSets().evaluate(AltOrderElem, Order, R->getLoc());
     Orders[1 + Idx].append(Order.begin(), Order.end());
     // Verify that all altorder members are regclass members.

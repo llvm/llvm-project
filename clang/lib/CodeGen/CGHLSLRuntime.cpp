@@ -23,6 +23,7 @@
 #include "clang/AST/Type.h"
 #include "clang/Basic/TargetOptions.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/LLVMContext.h"
@@ -42,8 +43,8 @@ using namespace llvm;
 using llvm::hlsl::CBufferRowSizeInBytes;
 
 static void initializeBufferFromBinding(CodeGenModule &CGM,
-                                        llvm::GlobalVariable *GV, unsigned Slot,
-                                        unsigned Space);
+                                        llvm::GlobalVariable *GV,
+                                        HLSLResourceBindingAttr *RBA);
 
 namespace {
 
@@ -66,6 +67,20 @@ void addDxilValVersion(StringRef ValVersionStr, llvm::Module &M) {
   StringRef DXILValKey = "dx.valver";
   auto *DXILValMD = M.getOrInsertNamedMetadata(DXILValKey);
   DXILValMD->addOperand(Val);
+}
+
+void addRootSignature(ArrayRef<llvm::hlsl::rootsig::RootElement> Elements,
+                      llvm::Function *Fn, llvm::Module &M) {
+  auto &Ctx = M.getContext();
+
+  llvm::hlsl::rootsig::MetadataBuilder Builder(Ctx, Elements);
+  MDNode *RootSignature = Builder.BuildRootSignature();
+  MDNode *FnPairing =
+      MDNode::get(Ctx, {ValueAsMetadata::get(Fn), RootSignature});
+
+  StringRef RootSignatureValKey = "dx.rootsignatures";
+  auto *RootSignatureValMD = M.getOrInsertNamedMetadata(RootSignatureValKey);
+  RootSignatureValMD->addOperand(FnPairing);
 }
 
 } // namespace
@@ -257,13 +272,10 @@ void CGHLSLRuntime::addBuffer(const HLSLBufferDecl *BufDecl) {
   emitBufferGlobalsAndMetadata(BufDecl, BufGV);
 
   // Initialize cbuffer from binding (implicit or explicit)
-  const HLSLResourceBindingAttr *RBA =
-      BufDecl->getAttr<HLSLResourceBindingAttr>();
-  // FIXME: handle implicit binding if no binding attribute is found
-  // (llvm/llvm-project#110722)
-  if (RBA && !RBA->isImplicit())
-    initializeBufferFromBinding(CGM, BufGV, RBA->getSlotNumber(),
-                                RBA->getSpaceNumber());
+  HLSLResourceBindingAttr *RBA = BufDecl->getAttr<HLSLResourceBindingAttr>();
+  assert(RBA &&
+         "cbuffer/tbuffer should always have resource binding attribute");
+  initializeBufferFromBinding(CGM, BufGV, RBA);
 }
 
 llvm::TargetExtType *
@@ -423,6 +435,13 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
   // FIXME: Handle codegen for return type semantics.
   // See: https://github.com/llvm/llvm-project/issues/57875
   B.CreateRetVoid();
+
+  // Add and identify root signature to function, if applicable
+  for (const Attr *Attr : FD->getAttrs()) {
+    if (const auto *RSAttr = dyn_cast<RootSignatureAttr>(Attr))
+      addRootSignature(RSAttr->getSignatureDecl()->getRootElements(), EntryFn,
+                       M);
+  }
 }
 
 void CGHLSLRuntime::setHLSLFunctionAttributes(const FunctionDecl *FD,
@@ -539,19 +558,29 @@ static void initializeBuffer(CodeGenModule &CGM, llvm::GlobalVariable *GV,
 }
 
 static void initializeBufferFromBinding(CodeGenModule &CGM,
-                                        llvm::GlobalVariable *GV, unsigned Slot,
-                                        unsigned Space) {
+                                        llvm::GlobalVariable *GV,
+                                        HLSLResourceBindingAttr *RBA) {
   llvm::Type *Int1Ty = llvm::Type::getInt1Ty(CGM.getLLVMContext());
-  llvm::Value *Args[] = {
-      llvm::ConstantInt::get(CGM.IntTy, Space), /* reg_space */
-      llvm::ConstantInt::get(CGM.IntTy, Slot),  /* lower_bound */
-      llvm::ConstantInt::get(CGM.IntTy, 1),     /* range_size */
-      llvm::ConstantInt::get(CGM.IntTy, 0),     /* index */
-      llvm::ConstantInt::get(Int1Ty, false)     /* non-uniform */
-  };
-  initializeBuffer(CGM, GV,
-                   CGM.getHLSLRuntime().getCreateHandleFromBindingIntrinsic(),
-                   Args);
+  auto *NonUniform = llvm::ConstantInt::get(Int1Ty, false);
+  auto *Index = llvm::ConstantInt::get(CGM.IntTy, 0);
+  auto *RangeSize = llvm::ConstantInt::get(CGM.IntTy, 1);
+  auto *Space =
+      llvm::ConstantInt::get(CGM.IntTy, RBA ? RBA->getSpaceNumber() : 0);
+
+  if (RBA->hasRegisterSlot()) {
+    auto *RegSlot = llvm::ConstantInt::get(CGM.IntTy, RBA->getSlotNumber());
+    Intrinsic::ID Intr =
+        CGM.getHLSLRuntime().getCreateHandleFromBindingIntrinsic();
+    initializeBuffer(CGM, GV, Intr,
+                     {Space, RegSlot, RangeSize, Index, NonUniform});
+  } else {
+    auto *OrderID =
+        llvm::ConstantInt::get(CGM.IntTy, RBA->getImplicitBindingOrderID());
+    Intrinsic::ID Intr =
+        CGM.getHLSLRuntime().getCreateHandleFromImplicitBindingIntrinsic();
+    initializeBuffer(CGM, GV, Intr,
+                     {OrderID, Space, RangeSize, Index, NonUniform});
+  }
 }
 
 llvm::Instruction *CGHLSLRuntime::getConvergenceToken(BasicBlock &BB) {

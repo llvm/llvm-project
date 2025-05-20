@@ -11,8 +11,8 @@ define void @st_bulk(ptr %dest_addr, i64 %size) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [st_bulk_param_0];
-; CHECK-NEXT:    ld.param.u64 %rd2, [st_bulk_param_1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [st_bulk_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd2, [st_bulk_param_1];
 ; CHECK-NEXT:    st.bulk [%rd1], %rd2, 0;
 ; CHECK-NEXT:    ret;
   call void @llvm.nvvm.st.bulk(ptr %dest_addr, i64 %size, i64 0)
@@ -26,8 +26,8 @@ define void @st_bulk_shared_cta(ptr addrspace(3) %dest_addr, i64 %size) {
 ; CHECK-PTX64-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-PTX64-EMPTY:
 ; CHECK-PTX64-NEXT:  // %bb.0:
-; CHECK-PTX64-NEXT:    ld.param.u64 %rd1, [st_bulk_shared_cta_param_0];
-; CHECK-PTX64-NEXT:    ld.param.u64 %rd2, [st_bulk_shared_cta_param_1];
+; CHECK-PTX64-NEXT:    ld.param.b64 %rd1, [st_bulk_shared_cta_param_0];
+; CHECK-PTX64-NEXT:    ld.param.b64 %rd2, [st_bulk_shared_cta_param_1];
 ; CHECK-PTX64-NEXT:    st.bulk.shared::cta [%rd1], %rd2, 0;
 ; CHECK-PTX64-NEXT:    ret;
 ;
@@ -37,8 +37,8 @@ define void @st_bulk_shared_cta(ptr addrspace(3) %dest_addr, i64 %size) {
 ; CHECK-PTX-SHARED32-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-PTX-SHARED32-EMPTY:
 ; CHECK-PTX-SHARED32-NEXT:  // %bb.0:
-; CHECK-PTX-SHARED32-NEXT:    ld.param.u32 %r1, [st_bulk_shared_cta_param_0];
-; CHECK-PTX-SHARED32-NEXT:    ld.param.u64 %rd1, [st_bulk_shared_cta_param_1];
+; CHECK-PTX-SHARED32-NEXT:    ld.param.b32 %r1, [st_bulk_shared_cta_param_0];
+; CHECK-PTX-SHARED32-NEXT:    ld.param.b64 %rd1, [st_bulk_shared_cta_param_1];
 ; CHECK-PTX-SHARED32-NEXT:    st.bulk.shared::cta [%r1], %rd1, 0;
 ; CHECK-PTX-SHARED32-NEXT:    ret;
    call void @llvm.nvvm.st.bulk.shared.cta(ptr addrspace(3) %dest_addr, i64 %size, i64 0)

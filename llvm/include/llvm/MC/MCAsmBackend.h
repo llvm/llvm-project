@@ -41,7 +41,7 @@ class raw_ostream;
 /// Generic interface to target specific assembler backends.
 class MCAsmBackend {
 protected: // Can only create subclasses.
-  MCAsmBackend(llvm::endianness Endian, unsigned RelaxFixupKind = 0);
+  MCAsmBackend(llvm::endianness Endian, bool LinkerRelaxation = false);
 
 public:
   MCAsmBackend(const MCAsmBackend &) = delete;
@@ -50,10 +50,9 @@ public:
 
   const llvm::endianness Endian;
 
-  /// Fixup kind used for linker relaxation. Currently only used by RISC-V
-  /// and LoongArch.
-  const unsigned RelaxFixupKind;
-  bool allowLinkerRelaxation() const { return RelaxFixupKind != 0; }
+  /// True for RISC-V and LoongArch. Relaxable relocations are marked with a
+  /// RELAX relocation.
+  bool allowLinkerRelaxation() const { return LinkerRelaxation; }
 
   /// Return true if this target might automatically pad instructions and thus
   /// need to emit padding enable/disable directives around sensative code.
@@ -116,13 +115,10 @@ public:
     llvm_unreachable("Need to implement hook if target has custom fixups");
   }
 
-  virtual bool handleAddSubRelocations(const MCAssembler &Asm,
-                                       const MCFragment &F,
-                                       const MCFixup &Fixup,
-                                       const MCValue &Target,
-                                       uint64_t &FixedValue) const {
-    return false;
-  }
+  virtual bool addReloc(MCAssembler &Asm, const MCFragment &F,
+                        const MCFixup &Fixup, const MCValue &Target,
+                        uint64_t &FixedValue, bool IsResolved,
+                        const MCSubtargetInfo *);
 
   /// Apply the \p Value for given \p Fixup into the provided data fragment, at
   /// the offset specified by the fixup and following the fixup kind as
@@ -213,9 +209,6 @@ public:
   /// Give backend an opportunity to finish layout after relaxation
   virtual void finishLayout(MCAssembler const &Asm) const {}
 
-  /// Handle any target-specific assembler flags. By default, do nothing.
-  virtual void handleAssemblerFlag(MCAssemblerFlag Flag) {}
-
   /// Generate the compact unwind encoding for the CFI instructions.
   virtual uint64_t generateCompactUnwindEncoding(const MCDwarfFrameInfo *FI,
                                                  const MCContext *Ctxt) const {
@@ -223,6 +216,9 @@ public:
   }
 
   bool isDarwinCanonicalPersonality(const MCSymbol *Sym) const;
+
+private:
+  const bool LinkerRelaxation;
 };
 
 } // end namespace llvm

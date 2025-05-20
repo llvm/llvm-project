@@ -201,3 +201,12 @@ clang_tablegen(riscv_sifive_vector_builtin_cg.inc -gen-riscv-sifive-vector-built
 clang_tablegen(riscv_sifive_vector_builtin_sema.inc -gen-riscv-sifive-vector-builtin-sema
   SOURCE riscv_sifive_vector.td
   TARGET ClangRISCVSiFiveVectorBuiltinSema)
+clang_tablegen(riscv_andes_vector_builtins.inc -gen-riscv-andes-vector-builtins
+  SOURCE riscv_andes_vector.td
+  TARGET ClangRISCVAndesVectorBuiltins)
+clang_tablegen(riscv_andes_vector_builtin_cg.inc -gen-riscv-andes-vector-builtin-codegen
+  SOURCE riscv_andes_vector.td
+  TARGET ClangRISCVAndesVectorBuiltinCG)
+clang_tablegen(riscv_andes_vector_builtin_sema.inc -gen-riscv-andes-vector-builtin-sema
+  SOURCE riscv_andes_vector.td
+  TARGET ClangRISCVAndesVectorBuiltinSema)

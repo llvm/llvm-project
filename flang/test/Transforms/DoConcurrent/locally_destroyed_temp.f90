@@ -1,6 +1,3 @@
-! Fails until we update the pass to use the `fir.do_concurrent` op.
-! XFAIL: *
-
 ! Tests that "loop-local values" are properly handled by localizing them to the
 ! body of the loop nest. See `collectLoopLocalValues` and `localizeLoopLocalValue`
 ! for a definition of "loop-local values" and how they are handled.

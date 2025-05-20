@@ -211,7 +211,7 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(TC.getCompilerRTArgString(Args, "asan_dynamic"));
     auto defines = Args.getAllArgValues(options::OPT_D);
     if (Args.hasArg(options::OPT__SLASH_MD, options::OPT__SLASH_MDd) ||
-        find(begin(defines), end(defines), "_DLL") != end(defines)) {
+        llvm::is_contained(defines, "_DLL")) {
       // Make sure the dynamic runtime thunk is not optimized out at link time
       // to ensure proper SEH handling.
       CmdArgs.push_back(Args.MakeArgString(

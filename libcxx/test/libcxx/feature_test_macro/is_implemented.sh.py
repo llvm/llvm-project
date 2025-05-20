@@ -21,7 +21,7 @@ from generate_feature_test_macro_components import FeatureTestMacros, Metadata
 
 class Test(unittest.TestCase):
     def setUp(self):
-        self.ftm = FeatureTestMacros(TEST_DATA)
+        self.ftm = FeatureTestMacros(TEST_DATA, ["charconv"])
         self.maxDiff = None  # This causes the diff to be printed when the test fails
 
     def test_implementation(self):

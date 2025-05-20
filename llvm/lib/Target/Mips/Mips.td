@@ -243,11 +243,11 @@ def ImplP5600 : SubtargetFeature<"p5600", "ProcImpl",
 // same CPU architecture.
 def ImplI6400
     : SubtargetFeature<"i6400", "ProcImpl", "MipsSubtarget::CPU::I6400",
-                       "MIPS I6400 Processor", [FeatureMips64r6, FeatureMSA]>;
+                       "MIPS I6400 Processor", [FeatureMips64r6]>;
 
 def ImplI6500
     : SubtargetFeature<"i6500", "ProcImpl", "MipsSubtarget::CPU::I6500",
-                       "MIPS I6500 Processor", [FeatureMips64r6, FeatureMSA]>;
+                       "MIPS I6500 Processor", [FeatureMips64r6]>;
 
 class Proc<string Name, list<SubtargetFeature> Features>
  : ProcessorModel<Name, MipsGenericModel, Features>;

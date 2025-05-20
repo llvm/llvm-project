@@ -71,6 +71,10 @@ public:
     return Records.getAllDerivedDefinitions("Category");
   }
 
+  ArrayRef<const Record *> getSourceLanguages() const {
+    return Records.getAllDerivedDefinitions("SourceLanguage");
+  }
+
   ArrayRef<const Record *> getDirectives() const {
     return Records.getAllDerivedDefinitions("Directive");
   }
@@ -109,12 +113,14 @@ public:
 
   // Returns the name of the directive formatted for output. Whitespace are
   // replaced with underscores.
-  std::string getFormattedName() const {
-    StringRef Name = Def->getValueAsString("name");
+  static std::string getFormattedName(const Record *R) {
+    StringRef Name = R->getValueAsString("name");
     std::string N = Name.str();
     llvm::replace(N, ' ', '_');
     return N;
   }
+
+  std::string getFormattedName() const { return getFormattedName(Def); }
 
   bool isDefault() const { return Def->getValueAsBit("isDefault"); }
 
@@ -156,6 +162,10 @@ public:
   }
 
   const Record *getCategory() const { return Def->getValueAsDef("category"); }
+
+  std::vector<const Record *> getSourceLanguages() const {
+    return Def->getValueAsListOfDefs("languages");
+  }
 
   // Clang uses a different format for names of its directives enum.
   std::string getClangAccSpelling() const {

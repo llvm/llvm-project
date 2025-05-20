@@ -78,7 +78,7 @@ export class LLDBDapConfigurationProvider
     debugConfiguration: vscode.DebugConfiguration,
     token?: vscode.CancellationToken,
   ): Promise<vscode.DebugConfiguration> {
-    let config = vscode.workspace.getConfiguration("lldb-dap.defaults");
+    let config = vscode.workspace.getConfiguration("lldb-dap");
     for (const [key, cfg] of Object.entries(configurations)) {
       if (Reflect.has(debugConfiguration, key)) {
         continue;

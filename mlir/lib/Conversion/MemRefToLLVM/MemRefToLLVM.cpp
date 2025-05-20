@@ -432,8 +432,7 @@ struct AssumeAlignmentOpLowering
         createIndexAttrConstant(rewriter, loc, getIndexType(), alignment);
     rewriter.create<LLVM::AssumeOp>(loc, trueCond, LLVM::AssumeAlignTag(), ptr,
                                     alignmentConst);
-
-    rewriter.eraseOp(op);
+    rewriter.replaceOp(op, memref);
     return success();
   }
 };
@@ -890,7 +889,7 @@ struct RankOpLowering : public ConvertOpToLLVMPattern<memref::RankOp> {
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
     Type operandType = op.getMemref().getType();
-    if (dyn_cast<UnrankedMemRefType>(operandType)) {
+    if (isa<UnrankedMemRefType>(operandType)) {
       UnrankedMemRefDescriptor desc(adaptor.getMemref());
       rewriter.replaceOp(op, {desc.rank(rewriter, loc)});
       return success();

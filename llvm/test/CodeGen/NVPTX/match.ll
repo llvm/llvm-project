@@ -6,8 +6,8 @@ declare i32 @llvm.nvvm.match.any.sync.i64(i32, i64)
 
 ; CHECK-LABEL: .func{{.*}}match_any_sync_i32
 define i32 @match_any_sync_i32(i32 %mask, i32 %value) {
-  ; CHECK: ld.param.u32 	[[MASK:%r[0-9]+]], [match_any_sync_i32_param_0];
-  ; CHECK: ld.param.u32 	[[VALUE:%r[0-9]+]], [match_any_sync_i32_param_1];
+  ; CHECK: ld.param.b32 	[[MASK:%r[0-9]+]], [match_any_sync_i32_param_0];
+  ; CHECK: ld.param.b32 	[[VALUE:%r[0-9]+]], [match_any_sync_i32_param_1];
 
   ; CHECK:  match.any.sync.b32  [[V0:%r[0-9]+]], [[VALUE]], [[MASK]];
   %v0 = call i32 @llvm.nvvm.match.any.sync.i32(i32 %mask, i32 %value)
@@ -25,8 +25,8 @@ define i32 @match_any_sync_i32(i32 %mask, i32 %value) {
 
 ; CHECK-LABEL: .func{{.*}}match_any_sync_i64
 define i32 @match_any_sync_i64(i32 %mask, i64 %value) {
-  ; CHECK: ld.param.u32 	[[MASK:%r[0-9]+]], [match_any_sync_i64_param_0];
-  ; CHECK: ld.param.u64 	[[VALUE:%rd[0-9]+]], [match_any_sync_i64_param_1];
+  ; CHECK: ld.param.b32 	[[MASK:%r[0-9]+]], [match_any_sync_i64_param_0];
+  ; CHECK: ld.param.b64 	[[VALUE:%rd[0-9]+]], [match_any_sync_i64_param_1];
 
   ; CHECK:  match.any.sync.b64  [[V0:%r[0-9]+]], [[VALUE]], [[MASK]];
   %v0 = call i32 @llvm.nvvm.match.any.sync.i64(i32 %mask, i64 %value)
@@ -47,8 +47,8 @@ declare {i32, i1} @llvm.nvvm.match.all.sync.i64p(i32, i64)
 
 ; CHECK-LABEL: .func{{.*}}match_all_sync_i32p(
 define {i32,i1} @match_all_sync_i32p(i32 %mask, i32 %value) {
-  ; CHECK: ld.param.u32 	[[MASK:%r[0-9]+]], [match_all_sync_i32p_param_0];
-  ; CHECK: ld.param.u32 	[[VALUE:%r[0-9]+]], [match_all_sync_i32p_param_1];
+  ; CHECK: ld.param.b32 	[[MASK:%r[0-9]+]], [match_all_sync_i32p_param_0];
+  ; CHECK: ld.param.b32 	[[VALUE:%r[0-9]+]], [match_all_sync_i32p_param_1];
 
   ; CHECK:  match.all.sync.b32 {{%r[0-9]+\|%p[0-9]+}}, [[VALUE]], [[MASK]];
   %r1 = call {i32, i1} @llvm.nvvm.match.all.sync.i32p(i32 %mask, i32 %value)
@@ -83,8 +83,8 @@ define {i32,i1} @match_all_sync_i32p(i32 %mask, i32 %value) {
 
 ; CHECK-LABEL: .func{{.*}}match_all_sync_i64p(
 define {i32,i1} @match_all_sync_i64p(i32 %mask, i64 %value) {
-  ; CHECK: ld.param.u32 	[[MASK:%r[0-9]+]], [match_all_sync_i64p_param_0];
-  ; CHECK: ld.param.u64 	[[VALUE:%rd[0-9]+]], [match_all_sync_i64p_param_1];
+  ; CHECK: ld.param.b32 	[[MASK:%r[0-9]+]], [match_all_sync_i64p_param_0];
+  ; CHECK: ld.param.b64 	[[VALUE:%rd[0-9]+]], [match_all_sync_i64p_param_1];
 
   ; CHECK:  match.all.sync.b64 {{%r[0-9]+\|%p[0-9]+}}, [[VALUE]], [[MASK]];
   %r1 = call {i32, i1} @llvm.nvvm.match.all.sync.i64p(i32 %mask, i64 %value)

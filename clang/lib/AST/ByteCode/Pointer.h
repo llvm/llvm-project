@@ -722,6 +722,14 @@ public:
     getInlineDesc()->LifeState = Lifetime::Ended;
   }
 
+  void startLifetime() const {
+    if (!isBlockPointer())
+      return;
+    if (asBlockPointer().Base < sizeof(InlineDescriptor))
+      return;
+    getInlineDesc()->LifeState = Lifetime::Started;
+  }
+
   /// Compare two pointers.
   ComparisonCategoryResult compare(const Pointer &Other) const {
     if (!hasSameBase(*this, Other))

@@ -875,7 +875,6 @@ define amdgpu_kernel void @add_i32_varying(ptr addrspace(1) %out) {
 ; GFX1064_DPP-NEXT:    s_cbranch_execz .LBB2_2
 ; GFX1064_DPP-NEXT:  ; %bb.1:
 ; GFX1064_DPP-NEXT:    v_mov_b32_e32 v0, s6
-; GFX1064_DPP-NEXT:    s_mov_b32 s3, s6
 ; GFX1064_DPP-NEXT:    ds_add_rtn_u32 v0, v4, v0
 ; GFX1064_DPP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1064_DPP-NEXT:    buffer_gl0_inv
@@ -980,7 +979,6 @@ define amdgpu_kernel void @add_i32_varying(ptr addrspace(1) %out) {
 ; GFX1164_DPP-NEXT:    s_cbranch_execz .LBB2_2
 ; GFX1164_DPP-NEXT:  ; %bb.1:
 ; GFX1164_DPP-NEXT:    v_mov_b32_e32 v0, s6
-; GFX1164_DPP-NEXT:    s_mov_b32 s3, s6
 ; GFX1164_DPP-NEXT:    ds_add_rtn_u32 v0, v4, v0
 ; GFX1164_DPP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1164_DPP-NEXT:    buffer_gl0_inv
@@ -4282,7 +4280,6 @@ define amdgpu_kernel void @sub_i32_varying(ptr addrspace(1) %out) {
 ; GFX1064_DPP-NEXT:    s_cbranch_execz .LBB10_2
 ; GFX1064_DPP-NEXT:  ; %bb.1:
 ; GFX1064_DPP-NEXT:    v_mov_b32_e32 v0, s6
-; GFX1064_DPP-NEXT:    s_mov_b32 s3, s6
 ; GFX1064_DPP-NEXT:    ds_sub_rtn_u32 v0, v4, v0
 ; GFX1064_DPP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1064_DPP-NEXT:    buffer_gl0_inv
@@ -4387,7 +4384,6 @@ define amdgpu_kernel void @sub_i32_varying(ptr addrspace(1) %out) {
 ; GFX1164_DPP-NEXT:    s_cbranch_execz .LBB10_2
 ; GFX1164_DPP-NEXT:  ; %bb.1:
 ; GFX1164_DPP-NEXT:    v_mov_b32_e32 v0, s6
-; GFX1164_DPP-NEXT:    s_mov_b32 s3, s6
 ; GFX1164_DPP-NEXT:    ds_sub_rtn_u32 v0, v4, v0
 ; GFX1164_DPP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1164_DPP-NEXT:    buffer_gl0_inv
@@ -6691,7 +6687,6 @@ define amdgpu_kernel void @and_i32_varying(ptr addrspace(1) %out) {
 ; GFX1064_DPP-NEXT:  ; %bb.1:
 ; GFX1064_DPP-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1064_DPP-NEXT:    v_mov_b32_e32 v4, s6
-; GFX1064_DPP-NEXT:    s_mov_b32 s3, s6
 ; GFX1064_DPP-NEXT:    ds_and_rtn_b32 v0, v0, v4
 ; GFX1064_DPP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1064_DPP-NEXT:    buffer_gl0_inv
@@ -6796,7 +6791,6 @@ define amdgpu_kernel void @and_i32_varying(ptr addrspace(1) %out) {
 ; GFX1164_DPP-NEXT:  ; %bb.1:
 ; GFX1164_DPP-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1164_DPP-NEXT:    v_mov_b32_e32 v4, s6
-; GFX1164_DPP-NEXT:    s_mov_b32 s3, s6
 ; GFX1164_DPP-NEXT:    ds_and_rtn_b32 v0, v0, v4
 ; GFX1164_DPP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1164_DPP-NEXT:    buffer_gl0_inv
@@ -8052,7 +8046,6 @@ define amdgpu_kernel void @or_i32_varying(ptr addrspace(1) %out) {
 ; GFX1064_DPP-NEXT:    s_cbranch_execz .LBB17_2
 ; GFX1064_DPP-NEXT:  ; %bb.1:
 ; GFX1064_DPP-NEXT:    v_mov_b32_e32 v0, s6
-; GFX1064_DPP-NEXT:    s_mov_b32 s3, s6
 ; GFX1064_DPP-NEXT:    ds_or_rtn_b32 v0, v4, v0
 ; GFX1064_DPP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1064_DPP-NEXT:    buffer_gl0_inv
@@ -8157,7 +8150,6 @@ define amdgpu_kernel void @or_i32_varying(ptr addrspace(1) %out) {
 ; GFX1164_DPP-NEXT:    s_cbranch_execz .LBB17_2
 ; GFX1164_DPP-NEXT:  ; %bb.1:
 ; GFX1164_DPP-NEXT:    v_mov_b32_e32 v0, s6
-; GFX1164_DPP-NEXT:    s_mov_b32 s3, s6
 ; GFX1164_DPP-NEXT:    ds_or_rtn_b32 v0, v4, v0
 ; GFX1164_DPP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1164_DPP-NEXT:    buffer_gl0_inv
@@ -9412,7 +9404,6 @@ define amdgpu_kernel void @xor_i32_varying(ptr addrspace(1) %out) {
 ; GFX1064_DPP-NEXT:    s_cbranch_execz .LBB19_2
 ; GFX1064_DPP-NEXT:  ; %bb.1:
 ; GFX1064_DPP-NEXT:    v_mov_b32_e32 v0, s6
-; GFX1064_DPP-NEXT:    s_mov_b32 s3, s6
 ; GFX1064_DPP-NEXT:    ds_xor_rtn_b32 v0, v4, v0
 ; GFX1064_DPP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1064_DPP-NEXT:    buffer_gl0_inv
@@ -9517,7 +9508,6 @@ define amdgpu_kernel void @xor_i32_varying(ptr addrspace(1) %out) {
 ; GFX1164_DPP-NEXT:    s_cbranch_execz .LBB19_2
 ; GFX1164_DPP-NEXT:  ; %bb.1:
 ; GFX1164_DPP-NEXT:    v_mov_b32_e32 v0, s6
-; GFX1164_DPP-NEXT:    s_mov_b32 s3, s6
 ; GFX1164_DPP-NEXT:    ds_xor_rtn_b32 v0, v4, v0
 ; GFX1164_DPP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1164_DPP-NEXT:    buffer_gl0_inv
@@ -10772,7 +10762,6 @@ define amdgpu_kernel void @max_i32_varying(ptr addrspace(1) %out) {
 ; GFX1064_DPP-NEXT:  ; %bb.1:
 ; GFX1064_DPP-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1064_DPP-NEXT:    v_mov_b32_e32 v4, s6
-; GFX1064_DPP-NEXT:    s_mov_b32 s3, s6
 ; GFX1064_DPP-NEXT:    ds_max_rtn_i32 v0, v0, v4
 ; GFX1064_DPP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1064_DPP-NEXT:    buffer_gl0_inv
@@ -10877,7 +10866,6 @@ define amdgpu_kernel void @max_i32_varying(ptr addrspace(1) %out) {
 ; GFX1164_DPP-NEXT:  ; %bb.1:
 ; GFX1164_DPP-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1164_DPP-NEXT:    v_mov_b32_e32 v4, s6
-; GFX1164_DPP-NEXT:    s_mov_b32 s3, s6
 ; GFX1164_DPP-NEXT:    ds_max_rtn_i32 v0, v0, v4
 ; GFX1164_DPP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1164_DPP-NEXT:    buffer_gl0_inv
@@ -12600,7 +12588,6 @@ define amdgpu_kernel void @min_i32_varying(ptr addrspace(1) %out) {
 ; GFX1064_DPP-NEXT:  ; %bb.1:
 ; GFX1064_DPP-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1064_DPP-NEXT:    v_mov_b32_e32 v4, s6
-; GFX1064_DPP-NEXT:    s_mov_b32 s3, s6
 ; GFX1064_DPP-NEXT:    ds_min_rtn_i32 v0, v0, v4
 ; GFX1064_DPP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1064_DPP-NEXT:    buffer_gl0_inv
@@ -12705,7 +12692,6 @@ define amdgpu_kernel void @min_i32_varying(ptr addrspace(1) %out) {
 ; GFX1164_DPP-NEXT:  ; %bb.1:
 ; GFX1164_DPP-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1164_DPP-NEXT:    v_mov_b32_e32 v4, s6
-; GFX1164_DPP-NEXT:    s_mov_b32 s3, s6
 ; GFX1164_DPP-NEXT:    ds_min_rtn_i32 v0, v0, v4
 ; GFX1164_DPP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1164_DPP-NEXT:    buffer_gl0_inv
@@ -14428,7 +14414,6 @@ define amdgpu_kernel void @umax_i32_varying(ptr addrspace(1) %out) {
 ; GFX1064_DPP-NEXT:    s_cbranch_execz .LBB27_2
 ; GFX1064_DPP-NEXT:  ; %bb.1:
 ; GFX1064_DPP-NEXT:    v_mov_b32_e32 v0, s6
-; GFX1064_DPP-NEXT:    s_mov_b32 s3, s6
 ; GFX1064_DPP-NEXT:    ds_max_rtn_u32 v0, v4, v0
 ; GFX1064_DPP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1064_DPP-NEXT:    buffer_gl0_inv
@@ -14533,7 +14518,6 @@ define amdgpu_kernel void @umax_i32_varying(ptr addrspace(1) %out) {
 ; GFX1164_DPP-NEXT:    s_cbranch_execz .LBB27_2
 ; GFX1164_DPP-NEXT:  ; %bb.1:
 ; GFX1164_DPP-NEXT:    v_mov_b32_e32 v0, s6
-; GFX1164_DPP-NEXT:    s_mov_b32 s3, s6
 ; GFX1164_DPP-NEXT:    ds_max_rtn_u32 v0, v4, v0
 ; GFX1164_DPP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1164_DPP-NEXT:    buffer_gl0_inv
@@ -16243,7 +16227,6 @@ define amdgpu_kernel void @umin_i32_varying(ptr addrspace(1) %out) {
 ; GFX1064_DPP-NEXT:  ; %bb.1:
 ; GFX1064_DPP-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1064_DPP-NEXT:    v_mov_b32_e32 v4, s6
-; GFX1064_DPP-NEXT:    s_mov_b32 s3, s6
 ; GFX1064_DPP-NEXT:    ds_min_rtn_u32 v0, v0, v4
 ; GFX1064_DPP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1064_DPP-NEXT:    buffer_gl0_inv
@@ -16348,7 +16331,6 @@ define amdgpu_kernel void @umin_i32_varying(ptr addrspace(1) %out) {
 ; GFX1164_DPP-NEXT:  ; %bb.1:
 ; GFX1164_DPP-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1164_DPP-NEXT:    v_mov_b32_e32 v4, s6
-; GFX1164_DPP-NEXT:    s_mov_b32 s3, s6
 ; GFX1164_DPP-NEXT:    ds_min_rtn_u32 v0, v0, v4
 ; GFX1164_DPP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1164_DPP-NEXT:    buffer_gl0_inv

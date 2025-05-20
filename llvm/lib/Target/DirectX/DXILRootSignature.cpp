@@ -75,31 +75,34 @@ static bool parseRootConstants(LLVMContext *Ctx, mcdxbc::RootSignatureDesc &RSD,
   if (RootConstantNode->getNumOperands() != 5)
     return reportError(Ctx, "Invalid format for RootConstants Element");
 
-  mcdxbc::RootParameter NewParameter;
-  NewParameter.Header.ParameterType =
+  dxbc::RootParameterHeader Header;
+  // The parameter offset doesn't matter here - we recalculate it during
+  // serialization  Header.ParameterOffset = 0;
+  Header.ParameterType =
       llvm::to_underlying(dxbc::RootParameterType::Constants32Bit);
 
   if (std::optional<uint32_t> Val = extractMdIntValue(RootConstantNode, 1))
-    NewParameter.Header.ShaderVisibility = *Val;
+    Header.ShaderVisibility = *Val;
   else
     return reportError(Ctx, "Invalid value for ShaderVisibility");
 
+  dxbc::RootConstants Constants;
   if (std::optional<uint32_t> Val = extractMdIntValue(RootConstantNode, 2))
-    NewParameter.Constants.ShaderRegister = *Val;
+    Constants.ShaderRegister = *Val;
   else
     return reportError(Ctx, "Invalid value for ShaderRegister");
 
   if (std::optional<uint32_t> Val = extractMdIntValue(RootConstantNode, 3))
-    NewParameter.Constants.RegisterSpace = *Val;
+    Constants.RegisterSpace = *Val;
   else
     return reportError(Ctx, "Invalid value for RegisterSpace");
 
   if (std::optional<uint32_t> Val = extractMdIntValue(RootConstantNode, 4))
-    NewParameter.Constants.Num32BitValues = *Val;
+    Constants.Num32BitValues = *Val;
   else
     return reportError(Ctx, "Invalid value for Num32BitValues");
 
-  RSD.Parameters.push_back(NewParameter);
+  RSD.ParametersContainer.addParameter(Header, Constants);
 
   return false;
 }
@@ -164,12 +167,12 @@ static bool validate(LLVMContext *Ctx, const mcdxbc::RootSignatureDesc &RSD) {
     return reportValueError(Ctx, "RootFlags", RSD.Flags);
   }
 
-  for (const mcdxbc::RootParameter &P : RSD.Parameters) {
-    if (!dxbc::isValidShaderVisibility(P.Header.ShaderVisibility))
+  for (const mcdxbc::RootParameterInfo &Info : RSD.ParametersContainer) {
+    if (!dxbc::isValidShaderVisibility(Info.Header.ShaderVisibility))
       return reportValueError(Ctx, "ShaderVisibility",
-                              P.Header.ShaderVisibility);
+                              Info.Header.ShaderVisibility);
 
-    assert(dxbc::isValidParameterType(P.Header.ParameterType) &&
+    assert(dxbc::isValidParameterType(Info.Header.ParameterType) &&
            "Invalid value for ParameterType");
   }
 
@@ -287,25 +290,33 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
     OS << indent(Space) << "Version: " << RS.Version << "\n";
     OS << indent(Space) << "RootParametersOffset: " << RS.RootParameterOffset
        << "\n";
-    OS << indent(Space) << "NumParameters: " << RS.Parameters.size() << "\n";
+    OS << indent(Space) << "NumParameters: " << RS.ParametersContainer.size()
+       << "\n";
     Space++;
-    for (auto const &P : RS.Parameters) {
-      OS << indent(Space) << "- Parameter Type: " << P.Header.ParameterType
-         << "\n";
+    for (size_t I = 0; I < RS.ParametersContainer.size(); I++) {
+      const auto &[Type, Loc] =
+          RS.ParametersContainer.getTypeAndLocForParameter(I);
+      const dxbc::RootParameterHeader Header =
+          RS.ParametersContainer.getHeader(I);
+
+      OS << indent(Space) << "- Parameter Type: " << Type << "\n";
       OS << indent(Space + 2)
-         << "Shader Visibility: " << P.Header.ShaderVisibility << "\n";
-      switch (P.Header.ParameterType) {
-      case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit):
+         << "Shader Visibility: " << Header.ShaderVisibility << "\n";
+
+      switch (Type) {
+      case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit): {
+        const dxbc::RootConstants &Constants =
+            RS.ParametersContainer.getConstant(Loc);
+        OS << indent(Space + 2) << "Register Space: " << Constants.RegisterSpace
+           << "\n";
         OS << indent(Space + 2)
-           << "Register Space: " << P.Constants.RegisterSpace << "\n";
+           << "Shader Register: " << Constants.ShaderRegister << "\n";
         OS << indent(Space + 2)
-           << "Shader Register: " << P.Constants.ShaderRegister << "\n";
-        OS << indent(Space + 2)
-           << "Num 32 Bit Values: " << P.Constants.Num32BitValues << "\n";
-        break;
+           << "Num 32 Bit Values: " << Constants.Num32BitValues << "\n";
       }
+      }
+      Space--;
     }
-    Space--;
     OS << indent(Space) << "NumStaticSamplers: " << 0 << "\n";
     OS << indent(Space) << "StaticSamplersOffset: " << RS.StaticSamplersOffset
        << "\n";
@@ -313,7 +324,6 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
     Space--;
     // end root signature header
   }
-
   return PreservedAnalyses::all();
 }
 

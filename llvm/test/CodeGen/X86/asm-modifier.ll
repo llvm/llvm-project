@@ -6,12 +6,19 @@
 @var = internal global i32 0, align 4
 
 define dso_local void @test_a() nounwind {
-; CHECK-LABEL: test_a:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    #APP
-; CHECK-NEXT:    #TEST 42 var#
-; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    ret{{[l|q]}}
+; X86-LABEL: test_a:
+; X86:       # %bb.0:
+; X86-NEXT:    #APP
+; X86-NEXT:    #TEST 42 var#
+; X86-NEXT:    #NO_APP
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_a:
+; X64:       # %bb.0:
+; X64-NEXT:    #APP
+; X64-NEXT:    #TEST 42 var(%rip)#
+; X64-NEXT:    #NO_APP
+; X64-NEXT:    retq
   tail call void asm sideeffect "#TEST ${0:a} ${1:a}#", "i,i"(i32 42, ptr @var)
   ret void
 }

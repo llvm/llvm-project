@@ -4052,6 +4052,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  acos_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    acos_test.cpp
+  DEPENDS
+    libc.hdr.fenv_macros
+    libc.src.errno.errno
+    libc.src.math.acos
+)
+
+add_fp_unittest(
   acosf16_test
   SUITE
     libc-math-smoke-tests

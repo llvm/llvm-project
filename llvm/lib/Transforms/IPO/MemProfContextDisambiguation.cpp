@@ -1832,8 +1832,8 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
     DenseMap<const FuncTy *, unsigned> FuncToIndex;
     for (const auto &[Idx, CallCtxInfo] : enumerate(Calls))
       FuncToIndex.insert({CallCtxInfo.Func, Idx});
-    std::stable_sort(
-        Calls.begin(), Calls.end(),
+    llvm::stable_sort(
+        Calls,
         [&FuncToIndex](const CallContextInfo &A, const CallContextInfo &B) {
           return A.StackIds.size() > B.StackIds.size() ||
                  (A.StackIds.size() == B.StackIds.size() &&
@@ -3688,27 +3688,27 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::identifyClones(
   const unsigned AllocTypeCloningPriority[] = {/*None*/ 3, /*NotCold*/ 4,
                                                /*Cold*/ 1,
                                                /*NotColdCold*/ 2};
-  std::stable_sort(Node->CallerEdges.begin(), Node->CallerEdges.end(),
-                   [&](const std::shared_ptr<ContextEdge> &A,
-                       const std::shared_ptr<ContextEdge> &B) {
-                     // Nodes with non-empty context ids should be sorted before
-                     // those with empty context ids.
-                     if (A->ContextIds.empty())
-                       // Either B ContextIds are non-empty (in which case we
-                       // should return false because B < A), or B ContextIds
-                       // are empty, in which case they are equal, and we should
-                       // maintain the original relative ordering.
-                       return false;
-                     if (B->ContextIds.empty())
-                       return true;
+  llvm::stable_sort(Node->CallerEdges,
+                    [&](const std::shared_ptr<ContextEdge> &A,
+                        const std::shared_ptr<ContextEdge> &B) {
+                      // Nodes with non-empty context ids should be sorted
+                      // before those with empty context ids.
+                      if (A->ContextIds.empty())
+                        // Either B ContextIds are non-empty (in which case we
+                        // should return false because B < A), or B ContextIds
+                        // are empty, in which case they are equal, and we
+                        // should maintain the original relative ordering.
+                        return false;
+                      if (B->ContextIds.empty())
+                        return true;
 
-                     if (A->AllocTypes == B->AllocTypes)
-                       // Use the first context id for each edge as a
-                       // tie-breaker.
-                       return *A->ContextIds.begin() < *B->ContextIds.begin();
-                     return AllocTypeCloningPriority[A->AllocTypes] <
-                            AllocTypeCloningPriority[B->AllocTypes];
-                   });
+                      if (A->AllocTypes == B->AllocTypes)
+                        // Use the first context id for each edge as a
+                        // tie-breaker.
+                        return *A->ContextIds.begin() < *B->ContextIds.begin();
+                      return AllocTypeCloningPriority[A->AllocTypes] <
+                             AllocTypeCloningPriority[B->AllocTypes];
+                    });
 
   assert(Node->AllocTypes != (uint8_t)AllocationType::None);
 
@@ -4180,8 +4180,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::mergeNodeCalleeClones(
     // their caller edge counts, putting the original non-clone node first in
     // cases of a tie. This simplifies finding an existing node to use as the
     // merge node.
-    std::stable_sort(CalleeEdges.begin(), CalleeEdges.end(),
-                     CalleeCallerEdgeLessThan);
+    llvm::stable_sort(CalleeEdges, CalleeCallerEdgeLessThan);
 
     /// Find other callers of the given set of callee edges that can
     /// share the same callee merge node. See the comments at this method

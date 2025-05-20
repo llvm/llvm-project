@@ -1043,22 +1043,12 @@ static mlir::SymbolRefAttr getMalloc(fir::AllocMemOp op,
 static mlir::Value
 computeElementDistance(mlir::Location loc, mlir::Type llvmObjectType,
                        mlir::Type idxTy,
-                       mlir::ConversionPatternRewriter &rewriter) {
-  // Note that we cannot use something like
-  // mlir::LLVM::getPrimitiveTypeSizeInBits() for the element type here. For
-  // example, it returns 10 bytes for mlir::Float80Type for targets where it
-  // occupies 16 bytes. Proper solution is probably to use
-  // mlir::DataLayout::getTypeABIAlignment(), but DataLayout is not being set
-  // yet (see llvm-project#57230). For the time being use the '(intptr_t)((type
-  // *)0 + 1)' trick for all types. The generated instructions are optimized
-  // into constant by the first pass of InstCombine, so it should not be a
-  // performance issue.
-  auto llvmPtrTy = ::getLlvmPtrType(llvmObjectType.getContext());
-  auto nullPtr = rewriter.create<mlir::LLVM::ZeroOp>(loc, llvmPtrTy);
-  auto gep = rewriter.create<mlir::LLVM::GEPOp>(
-      loc, llvmPtrTy, llvmObjectType, nullPtr,
-      llvm::ArrayRef<mlir::LLVM::GEPArg>{1});
-  return rewriter.create<mlir::LLVM::PtrToIntOp>(loc, idxTy, gep);
+                       mlir::ConversionPatternRewriter &rewriter,
+                       const mlir::DataLayout &dataLayout) {
+  llvm::TypeSize size = dataLayout.getTypeSize(llvmObjectType);
+  unsigned short alignment = dataLayout.getTypeABIAlignment(llvmObjectType);
+  std::int64_t distance = llvm::alignTo(size, alignment);
+  return genConstantIndex(loc, idxTy, rewriter, distance);
 }
 
 /// Return value of the stride in bytes between adjacent elements
@@ -1066,10 +1056,10 @@ computeElementDistance(mlir::Location loc, mlir::Type llvmObjectType,
 /// \p idxTy integer type.
 static mlir::Value
 genTypeStrideInBytes(mlir::Location loc, mlir::Type idxTy,
-                     mlir::ConversionPatternRewriter &rewriter,
-                     mlir::Type llTy) {
+                     mlir::ConversionPatternRewriter &rewriter, mlir::Type llTy,
+                     const mlir::DataLayout &dataLayout) {
   // Create a pointer type and use computeElementDistance().
-  return computeElementDistance(loc, llTy, idxTy, rewriter);
+  return computeElementDistance(loc, llTy, idxTy, rewriter, dataLayout);
 }
 
 namespace {
@@ -1111,7 +1101,7 @@ struct AllocMemOpConversion : public fir::FIROpConversion<fir::AllocMemOp> {
   mlir::Value genTypeSizeInBytes(mlir::Location loc, mlir::Type idxTy,
                                  mlir::ConversionPatternRewriter &rewriter,
                                  mlir::Type llTy) const {
-    return computeElementDistance(loc, llTy, idxTy, rewriter);
+    return computeElementDistance(loc, llTy, idxTy, rewriter, getDataLayout());
   }
 };
 } // namespace
@@ -1323,8 +1313,8 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
                                    fir::CharacterType charTy,
                                    mlir::ValueRange lenParams) const {
     auto i64Ty = mlir::IntegerType::get(rewriter.getContext(), 64);
-    mlir::Value size =
-        genTypeStrideInBytes(loc, i64Ty, rewriter, this->convertType(charTy));
+    mlir::Value size = genTypeStrideInBytes(
+        loc, i64Ty, rewriter, this->convertType(charTy), this->getDataLayout());
     if (charTy.hasConstantLen())
       return size; // Length accounted for in the genTypeStrideInBytes GEP.
     // Otherwise,  multiply the single character size by the length.
@@ -1338,6 +1328,7 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
   std::tuple<mlir::Value, mlir::Value> getSizeAndTypeCode(
       mlir::Location loc, mlir::ConversionPatternRewriter &rewriter,
       mlir::Type boxEleTy, mlir::ValueRange lenParams = {}) const {
+    const mlir::DataLayout &dataLayout = this->getDataLayout();
     auto i64Ty = mlir::IntegerType::get(rewriter.getContext(), 64);
     if (auto eleTy = fir::dyn_cast_ptrEleTy(boxEleTy))
       boxEleTy = eleTy;
@@ -1354,18 +1345,19 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
         mlir::dyn_cast<fir::LogicalType>(boxEleTy) || fir::isa_real(boxEleTy) ||
         fir::isa_complex(boxEleTy))
       return {genTypeStrideInBytes(loc, i64Ty, rewriter,
-                                   this->convertType(boxEleTy)),
+                                   this->convertType(boxEleTy), dataLayout),
               typeCodeVal};
     if (auto charTy = mlir::dyn_cast<fir::CharacterType>(boxEleTy))
       return {getCharacterByteSize(loc, rewriter, charTy, lenParams),
               typeCodeVal};
     if (fir::isa_ref_type(boxEleTy)) {
       auto ptrTy = ::getLlvmPtrType(rewriter.getContext());
-      return {genTypeStrideInBytes(loc, i64Ty, rewriter, ptrTy), typeCodeVal};
+      return {genTypeStrideInBytes(loc, i64Ty, rewriter, ptrTy, dataLayout),
+              typeCodeVal};
     }
     if (mlir::isa<fir::RecordType>(boxEleTy))
       return {genTypeStrideInBytes(loc, i64Ty, rewriter,
-                                   this->convertType(boxEleTy)),
+                                   this->convertType(boxEleTy), dataLayout),
               typeCodeVal};
     fir::emitFatalError(loc, "unhandled type in fir.box code generation");
   }
@@ -1909,8 +1901,8 @@ struct XEmboxOpConversion : public EmboxCommonConversion<fir::cg::XEmboxOp> {
     if (hasSubcomp) {
       // We have a subcomponent. The step value needs to be the number of
       // bytes per element (which is a derived type).
-      prevDimByteStride =
-          genTypeStrideInBytes(loc, i64Ty, rewriter, convertType(seqEleTy));
+      prevDimByteStride = genTypeStrideInBytes(
+          loc, i64Ty, rewriter, convertType(seqEleTy), getDataLayout());
     } else if (hasSubstr) {
       // We have a substring. The step value needs to be the number of bytes
       // per CHARACTER element.
@@ -3604,8 +3596,8 @@ struct CopyOpConversion : public fir::FIROpConversion<fir::CopyOp> {
     mlir::Value llvmDestination = adaptor.getDestination();
     mlir::Type i64Ty = mlir::IntegerType::get(rewriter.getContext(), 64);
     mlir::Type copyTy = fir::unwrapRefType(copy.getSource().getType());
-    mlir::Value copySize =
-        genTypeStrideInBytes(loc, i64Ty, rewriter, convertType(copyTy));
+    mlir::Value copySize = genTypeStrideInBytes(
+        loc, i64Ty, rewriter, convertType(copyTy), getDataLayout());
 
     mlir::LLVM::AliasAnalysisOpInterface newOp;
     if (copy.getNoOverlap())

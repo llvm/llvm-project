@@ -621,8 +621,6 @@ public:
     else
       return getNormalTypeUnitMap();
   }
-
-
 };
 
 class ThreadSafeState : public ThreadUnsafeDWARFContextState {

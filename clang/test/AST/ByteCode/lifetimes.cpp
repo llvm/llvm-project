@@ -88,3 +88,21 @@ namespace PseudoDtor {
                          // both-note {{visible outside that expression}}
   };
 }
+
+/// Diagnostic differences
+namespace CallScope {
+  struct Q {
+    int n = 0;
+    constexpr int f() const { return 0; }
+  };
+  constexpr Q *out_of_lifetime(Q q) { return &q; } // both-warning {{address of stack}}
+  constexpr int k3 = out_of_lifetime({})->n; // both-error {{must be initialized by a constant expression}} \
+                                             // expected-note {{read of temporary whose lifetime has ended}} \
+                                             // expected-note {{temporary created here}} \
+                                             // ref-note {{read of object outside its lifetime}}
+
+  constexpr int k4 = out_of_lifetime({})->f(); // both-error {{must be initialized by a constant expression}} \
+                                               // expected-note {{member call on temporary whose lifetime has ended}} \
+                                               // expected-note {{temporary created here}} \
+                                               // ref-note {{member call on object outside its lifetime}}
+}

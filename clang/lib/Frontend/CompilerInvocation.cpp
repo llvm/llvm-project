@@ -2055,8 +2055,7 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
   // The memory profile runtime appends the pid to make this name more unique.
   const char *MemProfileBasename = "memprof.profraw";
   if (Args.hasArg(OPT_fmemory_profile_EQ)) {
-    SmallString<128> Path(
-        std::string(Args.getLastArgValue(OPT_fmemory_profile_EQ)));
+    SmallString<128> Path(Args.getLastArgValue(OPT_fmemory_profile_EQ));
     llvm::sys::path::append(Path, MemProfileBasename);
     Opts.MemoryProfileOutput = std::string(Path);
   } else if (Args.hasArg(OPT_fmemory_profile))
@@ -3112,9 +3111,11 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
   if (const Arg *A = Args.getLastArg(OPT_code_completion_at)) {
     Opts.CodeCompletionAt =
       ParsedSourceLocation::FromString(A->getValue());
-    if (Opts.CodeCompletionAt.FileName.empty())
+    if (Opts.CodeCompletionAt.FileName.empty()) {
       Diags.Report(diag::err_drv_invalid_value)
-        << A->getAsString(Args) << A->getValue();
+          << A->getAsString(Args) << A->getValue();
+      Diags.Report(diag::note_command_line_code_loc_requirement);
+    }
   }
 
   Opts.Plugins = Args.getAllArgValues(OPT_load);
@@ -3373,6 +3374,8 @@ static void GenerateHeaderSearchArgs(const HeaderSearchOptions &Opts,
                            : OPT_internal_externc_isystem;
     GenerateArg(Consumer, Opt, It->Path);
   }
+  for (; It < End && Matches(*It, {frontend::System}, true, true); ++It)
+    GenerateArg(Consumer, OPT_internal_iframework, It->Path);
 
   assert(It == End && "Unhandled HeaderSearchOption::Entry.");
 
@@ -3505,6 +3508,8 @@ static bool ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
       Group = frontend::ExternCSystem;
     Opts.AddPath(A->getValue(), Group, false, true);
   }
+  for (const auto *A : Args.filtered(OPT_internal_iframework))
+    Opts.AddPath(A->getValue(), frontend::System, true, true);
 
   // Add the path prefixes which are implicitly treated as being system headers.
   for (const auto *A :
