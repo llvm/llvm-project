@@ -17,12 +17,6 @@ class MainCallChecker : public Checker<check::PreStmt<CallExpr>> {
 public:
   void checkPreStmt(const CallExpr *CE, CheckerContext &C) const;
 };
-
-void registerMainCallChecker(CheckerManager &Mgr) {
-  Mgr.registerChecker<MainCallChecker>();
-}
-
-bool shouldRegisterMainCallChecker(const CheckerManager &) { return true; }
 } // end anonymous namespace
 
 void MainCallChecker::checkPreStmt(const CallExpr *CE,
@@ -52,11 +46,8 @@ void MainCallChecker::checkPreStmt(const CallExpr *CE,
 
 // Register plugin!
 extern "C" void clang_registerCheckers(CheckerRegistry &Registry) {
-  Registry.addChecker(registerMainCallChecker, shouldRegisterMainCallChecker,
-                      "example.MainCallChecker", "MainCallChecker",
-                      "Example Description",
-                      "example.mychecker.documentation.nonexistent.html",
-                      /*isHidden=*/false);
+  Registry.addChecker<MainCallChecker>("example.MainCallChecker",
+                                       "Example Description");
 }
 
 extern "C" const char clang_analyzerAPIVersionString[] =

@@ -39,32 +39,18 @@
 //
 //    extern "C"
 //    void clang_registerCheckers(CheckerRegistry &Registry) {
-//      Registry.addChecker(
-//                    registerMainCallChecker,
-//                    shouldRegisterMainCallChecker,
+//      Registry.addChecker<MainCallChecker>(
 //                    "example.MainCallChecker",
-//                    "MainCallChecker",
-//                    "Example Description",
-//                    "example.mychecker.documentation.nonexistent.html",
-//                    /*isHidden=*/ false);
+//                    "Example Description");
 //    }
 //
-// The first two arguments are the registration handling functions, which
-// in a simple case look like
+// The first argument of this templated method is the full name of the checker
+// (including its package), while the second argument is a short description
+// that is printed by `-analyzer-checker-help`.
 //
-//     void registerMainCallChecker(CheckerManager &Mgr) {
-//       Mgr.registerChecker<MainCallChecker>();
-//     }
-//
-//     bool shouldRegisterMainCallChecker(const CheckerManager &) {
-//       return true;
-//     }
-//
-// The third argument is the full name of the checker (including its package),
-// the fourth name is the internal DebugName (by convention, the name of the
-// class), the fifth argument is a short documentation, the sixth argument is
-// an url to a documentation page, and the seventh argument should be false for
-// normal user-facing checkers.
+// If a checker requires custom registration functions (e.g. checker option
+// handling) use the non-templated variant of `addChecker` that takes two
+// callback functions as the first two parameters.
 //
 // To load a checker plugin, specify the full path to the dynamic library as
 // the argument to the -load option in the cc1 frontend. You can then enable
@@ -73,7 +59,7 @@
 //   clang -cc1 -load </path/to/plugin.dylib> -analyze
 //     -analyzer-checker=<example.MainCallChecker>
 //
-// For a complete example, see clang/lib/Analysis/plugins/SampleAnalyzer
+// For complete examples, see clang/lib/Analysis/plugins/SampleAnalyzer
 
 #ifndef CLANG_ANALYZER_API_VERSION_STRING
 // FIXME: The Clang version string is not particularly granular;
@@ -125,20 +111,34 @@ private:
     return true;
   }
 
-public:
-  /// Adds a checker to the registry. Use this non-templated overload when your
-  /// checker requires custom initialization.
+  /// Adds a checker to the registry. This private, most general variant is
+  /// intended for loading the checker definitions from `Checkers.td`.
+  /// FIXME: DocsUri is never loaded from the checker registry.
   void addChecker(RegisterCheckerFn Fn, ShouldRegisterFunction Sfn,
                   StringRef FullName, StringRef DebugName, StringRef Desc,
                   StringRef DocsUri, bool IsHidden);
 
+public:
+  /// Adds a checker to the registry. Use this for a checker defined in a
+  /// plugin if it requires custom registration functions.
+  void addChecker(RegisterCheckerFn Fn, ShouldRegisterFunction Sfn,
+                  StringRef FullName, StringRef Desc, bool IsHidden = false) {
+    addChecker(Fn, Sfn, FullName, "CheckerFromPlugin", Desc, "", IsHidden);
+  }
+
+  /// Adds a checker to the registry. Use this for a checker defined in a
+  /// plugin if it doesn't require custom registration functions.
+  template <class T>
+  void addChecker(StringRef FullName, StringRef Desc, bool IsHidden = false) {
+    addChecker(&CheckerRegistry::initializeManager<CheckerManager, T>,
+               &CheckerRegistry::returnTrue<T>, FullName, Desc,
+               /*IsHidden=*/IsHidden);
+  }
+
   /// Add a mock checker to the registry for testing purposes, without
   /// specifying metadata that is not relevant in simple tests.
   template <class T> void addMockChecker(StringRef FullName) {
-    addChecker(&CheckerRegistry::initializeManager<CheckerManager, T>,
-               &CheckerRegistry::returnTrue<T>, FullName,
-               /*DebugName=*/"TestChecker", /*Desc=*/"", /*DocsUri=*/"",
-               /*IsHidden=*/false);
+    addChecker<T>(FullName, "");
   }
 
   /// Makes the checker with the full name \p fullName depend on the checker

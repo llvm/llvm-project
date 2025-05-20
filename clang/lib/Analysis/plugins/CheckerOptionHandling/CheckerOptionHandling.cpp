@@ -31,9 +31,7 @@ bool shouldRegisterMyChecker(const CheckerManager &mgr) { return true; }
 // Register plugin!
 extern "C" void clang_registerCheckers(CheckerRegistry &Registry) {
   Registry.addChecker(registerMyChecker, shouldRegisterMyChecker,
-                      "example.MyChecker", "MyChecker", "Example Description",
-                      "example.mychecker.documentation.nonexistent.html",
-                      /*isHidden*/ false);
+                      "example.MyChecker", "Example Description");
 
   Registry.addCheckerOption(/*OptionType*/ "bool",
                             /*CheckerFullName*/ "example.MyChecker",
