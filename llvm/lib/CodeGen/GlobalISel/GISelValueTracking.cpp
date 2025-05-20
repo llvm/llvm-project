@@ -14,6 +14,7 @@
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -629,6 +630,33 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     Known.Zero.setBitsFrom(LowBits);
     break;
   }
+  case TargetOpcode::G_SHUFFLE_VECTOR: {
+    APInt DemandedLHS, DemandedRHS;
+    // Collect the known bits that are shared by every vector element referenced
+    // by the shuffle.
+    unsigned NumElts = MRI.getType(MI.getOperand(1).getReg()).getNumElements();
+    if (!getShuffleDemandedElts(NumElts, MI.getOperand(3).getShuffleMask(),
+                                DemandedElts, DemandedLHS, DemandedRHS))
+      break;
+
+    // Known bits are the values that are shared by every demanded element.
+    Known.Zero.setAllBits();
+    Known.One.setAllBits();
+    if (!!DemandedLHS) {
+      computeKnownBitsImpl(MI.getOperand(1).getReg(), Known2, DemandedLHS,
+                           Depth + 1);
+      Known = Known.intersectWith(Known2);
+    }
+    // If we don't know any bits, early out.
+    if (Known.isUnknown())
+      break;
+    if (!!DemandedRHS) {
+      computeKnownBitsImpl(MI.getOperand(2).getReg(), Known2, DemandedRHS,
+                           Depth + 1);
+      Known = Known.intersectWith(Known2);
+    }
+    break;
+  }
   }
 
   LLVM_DEBUG(dumpResult(MI, Known, Depth));
@@ -851,6 +879,28 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
       // If we don't know any bits, early out.
       if (FirstAnswer == 1)
         break;
+    }
+    break;
+  }
+  case TargetOpcode::G_SHUFFLE_VECTOR: {
+    // Collect the minimum number of sign bits that are shared by every vector
+    // element referenced by the shuffle.
+    APInt DemandedLHS, DemandedRHS;
+    Register Src1 = MI.getOperand(1).getReg();
+    unsigned NumElts = MRI.getType(Src1).getNumElements();
+    if (!getShuffleDemandedElts(NumElts, MI.getOperand(3).getShuffleMask(),
+                                DemandedElts, DemandedLHS, DemandedRHS))
+      return 1;
+
+    if (!!DemandedLHS)
+      FirstAnswer = computeNumSignBits(Src1, DemandedLHS, Depth + 1);
+    // If we don't know anything, early out and try computeKnownBits fall-back.
+    if (FirstAnswer == 1)
+      break;
+    if (!!DemandedRHS) {
+      unsigned Tmp2 =
+          computeNumSignBits(MI.getOperand(2).getReg(), DemandedRHS, Depth + 1);
+      FirstAnswer = std::min(FirstAnswer, Tmp2);
     }
     break;
   }

@@ -1402,7 +1402,7 @@ void AsmMatcherInfo::buildOperandClasses() {
     CI->Kind = ClassInfo::UserClass0 + Index;
 
     const ListInit *Supers = Rec->getValueAsListInit("SuperClasses");
-    for (const Init *I : Supers->getValues()) {
+    for (const Init *I : Supers->getElements()) {
       const DefInit *DI = dyn_cast<DefInit>(I);
       if (!DI) {
         PrintError(Rec->getLoc(), "Invalid super class reference!");

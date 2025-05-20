@@ -548,7 +548,6 @@ static void EmitHLSLScalarFlatCast(CodeGenFunction &CGF, Address DestVal,
     }
     CGF.Builder.CreateStore(Cast, StoreGEPList[I].first);
   }
-  return;
 }
 
 // emit a flat cast where the RHS is an aggregate

@@ -756,7 +756,6 @@ def VOP3P_DOTF8_Profile : VOP3P_Profile<VOPProfile <[f32, i32, i32, f32]>,
 multiclass VOP3PDOTF8Inst <string OpName, SDPatternOperator intrinsic_node> {
   defm NAME : VOP3PInst<OpName, VOP3P_DOTF8_Profile, null_frag, 1>;
 
-  let SubtargetPredicate = isGFX12Plus in
   def : GCNPat <(intrinsic_node i32:$src0, i32:$src1,
                                 (VOP3Mods f32:$src2, i32:$src2_modifiers)),
                 (!cast<Instruction>(NAME) i32:$src0, i32:$src1,
@@ -2740,6 +2739,14 @@ multiclass VOP3P_Realtriple<GFXGen Gen, bits<8> op, string backing_ps_name = NAM
       VOP3P_Real_dpp<Gen, op, backing_ps_name, asmName>,
       VOP3P_Real_dpp8<Gen, op, backing_ps_name, asmName>;
 
+multiclass VOP3P_Realtriple_gfx11_gfx12<bits<8> op>
+  : VOP3P_Realtriple<GFX11Gen, op>, VOP3P_Realtriple<GFX12Gen, op>;
+
+defm V_DOT4_F32_FP8_BF8 : VOP3P_Realtriple_gfx11_gfx12<0x24>;
+defm V_DOT4_F32_BF8_FP8 : VOP3P_Realtriple_gfx11_gfx12<0x25>;
+defm V_DOT4_F32_FP8_FP8 : VOP3P_Realtriple_gfx11_gfx12<0x26>;
+defm V_DOT4_F32_BF8_BF8 : VOP3P_Realtriple_gfx11_gfx12<0x27>;
+
 //===----------------------------------------------------------------------===//
 #ifdef LLPC_BUILD_NPI
 // GFX12, GFX13
@@ -2768,35 +2775,20 @@ multiclass VOP3P_Real_with_name_gfx12<bits<8> op,
 #ifdef LLPC_BUILD_NPI
   VOP3P_Real_with_name<GFX12Gen, op, backing_ps_name, asmName>,
   VOP3P_Real_with_name<GFX13Gen, op, backing_ps_name, asmName>;
+
+multiclass VOP3P_Realtriple_gfx1250_gfx13<bits<8> op> :
+  VOP3P_Realtriple<GFX1250Gen, op>, VOP3P_Realtriple<GFX13Gen, op>;
+
+defm V_PK_MIN_NUM_F16 : VOP3P_Real_with_name_gfx12_gfx13<0x1b, "V_PK_MIN_F16", "v_pk_min_num_f16">;
+defm V_PK_MAX_NUM_F16 : VOP3P_Real_with_name_gfx12_gfx13<0x1c, "V_PK_MAX_F16", "v_pk_max_num_f16">;
 #else /* LLPC_BUILD_NPI */
   VOP3P_Real_with_name<GFX12Gen, op, backing_ps_name, asmName>;
 #endif /* LLPC_BUILD_NPI */
 
 #ifdef LLPC_BUILD_NPI
-multiclass VOP3P_Realtriple_gfx1250_gfx13<bits<8> op> :
-  VOP3P_Realtriple<GFX1250Gen, op>, VOP3P_Realtriple<GFX13Gen, op>;
-#else /* LLPC_BUILD_NPI */
-defm V_PK_MIN_NUM_F16 : VOP3P_Real_with_name_gfx12<0x1b, "V_PK_MIN_F16", "v_pk_min_num_f16">;
-defm V_PK_MAX_NUM_F16 : VOP3P_Real_with_name_gfx12<0x1c, "V_PK_MAX_F16", "v_pk_max_num_f16">;
-#endif /* LLPC_BUILD_NPI */
-
-#ifdef LLPC_BUILD_NPI
-defm V_PK_MIN_NUM_F16 : VOP3P_Real_with_name_gfx12_gfx13<0x1b, "V_PK_MIN_F16", "v_pk_min_num_f16">;
-defm V_PK_MAX_NUM_F16 : VOP3P_Real_with_name_gfx12_gfx13<0x1c, "V_PK_MAX_F16", "v_pk_max_num_f16">;
-
 defm V_PK_MINIMUM_F16 : VOP3P_Real_gfx12_gfx13<0x1d>;
 defm V_PK_MAXIMUM_F16 : VOP3P_Real_gfx12_gfx13<0x1e>;
-#else /* LLPC_BUILD_NPI */
-defm V_PK_MINIMUM_F16 : VOP3P_Real_gfx12<0x1d>;
-defm V_PK_MAXIMUM_F16 : VOP3P_Real_gfx12<0x1e>;
-#endif /* LLPC_BUILD_NPI */
 
-defm V_DOT4_F32_FP8_BF8 : VOP3P_Realtriple<GFX12Gen, 0x24>;
-defm V_DOT4_F32_BF8_FP8 : VOP3P_Realtriple<GFX12Gen, 0x25>;
-defm V_DOT4_F32_FP8_FP8 : VOP3P_Realtriple<GFX12Gen, 0x26>;
-defm V_DOT4_F32_BF8_BF8 : VOP3P_Realtriple<GFX12Gen, 0x27>;
-
-#ifdef LLPC_BUILD_NPI
 defm V_PK_FMA_F32 : VOP3P_Real_gfx12_gfx13<0x1f>;
 defm V_PK_MUL_F32 : VOP3P_Real_gfx12_gfx13<0x28>;
 defm V_PK_ADD_F32 : VOP3P_Real_gfx12_gfx13<0x29>;
@@ -2822,14 +2814,22 @@ defm V_PK_MAX3_NUM_F16 : VOP3P_Real_gfx1250<0x39>;
 defm V_FMA_MIX_F32_BF16 : VOP3P_Realtriple_gfx1250_gfx13<0x3d>;
 defm V_FMA_MIXLO_BF16   : VOP3P_Realtriple_gfx1250_gfx13<0x3e>;
 defm V_FMA_MIXHI_BF16   : VOP3P_Realtriple_gfx1250_gfx13<0x3f>;
+#else /* LLPC_BUILD_NPI */
+defm V_PK_MIN_NUM_F16 : VOP3P_Real_with_name_gfx12<0x1b, "V_PK_MIN_F16", "v_pk_min_num_f16">;
+defm V_PK_MAX_NUM_F16 : VOP3P_Real_with_name_gfx12<0x1c, "V_PK_MAX_F16", "v_pk_max_num_f16">;
+#endif /* LLPC_BUILD_NPI */
 
+#ifdef LLPC_BUILD_NPI
 defm V_WMMA_LD_SCALE_PAIRED_B32   : VOP3P_Real_gfx1250<0x35>;
 defm V_WMMA_LD_SCALE16_PAIRED_B64 : VOP3P_Real_gfx1250<0x3a>;
 
 let AssemblerPredicate = isGFX1250Plus in
 def : AMDGPUMnemonicAlias<"v_fma_mix_f32_f16",  "v_fma_mix_f32">;
-
+#else /* LLPC_BUILD_NPI */
+defm V_PK_MINIMUM_F16 : VOP3P_Real_gfx12<0x1d>;
+defm V_PK_MAXIMUM_F16 : VOP3P_Real_gfx12<0x1e>;
 #endif /* LLPC_BUILD_NPI */
+
 //===----------------------------------------------------------------------===//
 #ifdef LLPC_BUILD_NPI
 // GFX11, GFX12, GFX13

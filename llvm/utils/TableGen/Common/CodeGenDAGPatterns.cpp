@@ -1012,7 +1012,7 @@ std::string TreePredicateFn::getPredCode() const {
               " if (";
 
       ListSeparator LS(" && ");
-      for (const Init *Val : AddressSpaces->getValues()) {
+      for (const Init *Val : AddressSpaces->getElements()) {
         Code += LS;
 
         const IntInit *IntVal = dyn_cast<IntInit>(Val);
@@ -1489,7 +1489,7 @@ int PatternToMatch::getPatternComplexity(const CodeGenDAGPatterns &CGP) const {
 
 void PatternToMatch::getPredicateRecords(
     SmallVectorImpl<const Record *> &PredicateRecs) const {
-  for (const Init *I : Predicates->getValues()) {
+  for (const Init *I : Predicates->getElements()) {
     if (const DefInit *Pred = dyn_cast<DefInit>(I)) {
       const Record *Def = Pred->getDef();
       if (!Def->isSubClassOf("Predicate")) {
@@ -1934,7 +1934,7 @@ static unsigned GetNumNodeResults(const Record *Operator,
     const ListInit *LI = Operator->getValueAsListInit("Fragments");
     assert(LI && "Invalid Fragment");
     unsigned NumResults = 0;
-    for (const Init *I : LI->getValues()) {
+    for (const Init *I : LI->getElements()) {
       const Record *Op = nullptr;
       if (const DagInit *Dag = dyn_cast<DagInit>(I))
         if (const DefInit *DI = dyn_cast<DefInit>(Dag->getOperator()))
@@ -2855,7 +2855,7 @@ TreePattern::TreePattern(const Record *TheRec, const ListInit *RawPat,
                          bool isInput, CodeGenDAGPatterns &cdp)
     : TheRecord(TheRec), CDP(cdp), isInputPattern(isInput), HasError(false),
       Infer(*this) {
-  for (const Init *I : RawPat->getValues())
+  for (const Init *I : RawPat->getElements())
     Trees.push_back(ParseTreePattern(I, ""));
 }
 
@@ -2906,11 +2906,7 @@ TreePatternNodePtr TreePattern::ParseTreePattern(const Init *TheInit,
     // TreePatternNode of its own.  For example:
     ///   (foo GPR, imm) -> (foo GPR, (imm))
     if (R->isSubClassOf("SDNode") || R->isSubClassOf("PatFrags"))
-      return ParseTreePattern(
-          DagInit::get(
-              DI, nullptr,
-              std::vector<std::pair<const Init *, const StringInit *>>()),
-          OpName);
+      return ParseTreePattern(DagInit::get(DI, {}), OpName);
 
     // Input argument?
     TreePatternNodePtr Res = makeIntrusiveRefCnt<TreePatternNode>(DI, 1);
@@ -3413,10 +3409,8 @@ void CodeGenDAGPatterns::ParseDefaultOperands() {
 
     // Clone the DefaultInfo dag node, changing the operator from 'ops' to
     // SomeSDnode so that we can parse this.
-    std::vector<std::pair<const Init *, const StringInit *>> Ops;
-    for (unsigned op = 0, e = DefaultInfo->getNumArgs(); op != e; ++op)
-      Ops.emplace_back(DefaultInfo->getArg(op), DefaultInfo->getArgName(op));
-    const DagInit *DI = DagInit::get(SomeSDNode, nullptr, Ops);
+    const DagInit *DI = DagInit::get(SomeSDNode, DefaultInfo->getArgs(),
+                                     DefaultInfo->getArgNames());
 
     // Create a TreePattern to parse this.
     TreePattern P(DefaultOps[i], DI, false, *this);
@@ -3772,7 +3766,7 @@ static bool hasNullFragReference(const DagInit *DI) {
 /// hasNullFragReference - Return true if any DAG in the list references
 /// the null_frag operator.
 static bool hasNullFragReference(const ListInit *LI) {
-  for (const Init *I : LI->getValues()) {
+  for (const Init *I : LI->getElements()) {
     const DagInit *DI = dyn_cast<DagInit>(I);
     assert(DI && "non-dag in an instruction Pattern list?!");
     if (hasNullFragReference(DI))

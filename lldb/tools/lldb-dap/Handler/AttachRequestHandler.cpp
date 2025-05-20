@@ -140,24 +140,7 @@ Error AttachRequestHandler::Run(const AttachRequestArguments &args) const {
 }
 
 void AttachRequestHandler::PostRun() const {
-  if (!dap.target.GetProcess().IsValid())
-    return;
-
-  // Clients can request a baseline of currently existing threads after
-  // we acknowledge the configurationDone request.
-  // Client requests the baseline of currently existing threads after
-  // a successful or attach by sending a 'threads' request
-  // right after receiving the configurationDone response.
-  // Obtain the list of threads before we resume the process
-  dap.initial_thread_list =
-      GetThreads(dap.target.GetProcess(), dap.thread_format);
-
-  SendProcessEvent(dap, Attach);
-
-  if (dap.stop_at_entry)
-    SendThreadStoppedEvent(dap);
-  else
-    dap.target.GetProcess().Continue();
+  dap.SendJSON(CreateEventObject("initialized"));
 }
 
 } // namespace lldb_dap
