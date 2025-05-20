@@ -1043,23 +1043,19 @@ mlir::LogicalResult CIRToLLVMSwitchFlatOpLowering::matchAndRewrite(
     mlir::ConversionPatternRewriter &rewriter) const {
 
   llvm::SmallVector<mlir::APInt, 8> caseValues;
-  if (op.getCaseValues()) {
-    for (mlir::Attribute val : op.getCaseValues()) {
-      auto intAttr = dyn_cast<cir::IntAttr>(val);
-      caseValues.push_back(intAttr.getValue());
-    }
+  for (mlir::Attribute val : op.getCaseValues()) {
+    auto intAttr = cast<cir::IntAttr>(val);
+    caseValues.push_back(intAttr.getValue());
   }
 
   llvm::SmallVector<mlir::Block *, 8> caseDestinations;
   llvm::SmallVector<mlir::ValueRange, 8> caseOperands;
 
-  for (mlir::Block *x : op.getCaseDestinations()) {
+  for (mlir::Block *x : op.getCaseDestinations())
     caseDestinations.push_back(x);
-  }
 
-  for (mlir::OperandRange x : op.getCaseOperands()) {
+  for (mlir::OperandRange x : op.getCaseOperands())
     caseOperands.push_back(x);
-  }
 
   // Set switch op to branch to the newly created blocks.
   rewriter.setInsertionPoint(op);
