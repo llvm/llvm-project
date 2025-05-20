@@ -13,6 +13,7 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_SIMPLEREMOTEEPC_H
 #define LLVM_EXECUTIONENGINE_ORC_SIMPLEREMOTEEPC_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ExecutionEngine/Orc/EPCGenericDylibManager.h"
@@ -28,7 +29,7 @@
 namespace llvm {
 namespace orc {
 
-class SimpleRemoteEPC : public ExecutorProcessControl,
+class LLVM_ABI SimpleRemoteEPC : public ExecutorProcessControl,
                         public SimpleRemoteEPCTransportClient,
                         private DylibManager {
 public:

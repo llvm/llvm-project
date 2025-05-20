@@ -13,6 +13,7 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_DEBUGGING_VTUNESUPPORT_H
 #define LLVM_EXECUTIONENGINE_ORC_DEBUGGING_VTUNESUPPORT_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
@@ -24,7 +25,7 @@ namespace llvm {
 
 namespace orc {
 
-class VTuneSupportPlugin : public ObjectLinkingLayer::Plugin {
+class LLVM_ABI VTuneSupportPlugin : public ObjectLinkingLayer::Plugin {
 public:
   VTuneSupportPlugin(ExecutorProcessControl &EPC, ExecutorAddr RegisterImplAddr,
                      ExecutorAddr UnregisterImplAddr, bool EmitDebugInfo)

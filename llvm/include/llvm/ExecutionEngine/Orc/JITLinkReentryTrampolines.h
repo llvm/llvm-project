@@ -13,6 +13,7 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_JITLINKREENTRYTRAMPOLINES_H
 #define LLVM_EXECUTIONENGINE_ORC_JITLINKREENTRYTRAMPOLINES_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/LazyReexports.h"
@@ -42,15 +43,15 @@ public:
 
   /// Create trampolines using the default reentry trampoline function for
   /// the session triple.
-  static Expected<std::unique_ptr<JITLinkReentryTrampolines>>
+  LLVM_ABI static Expected<std::unique_ptr<JITLinkReentryTrampolines>>
   Create(ObjectLinkingLayer &ObjLinkingLayer);
 
-  JITLinkReentryTrampolines(ObjectLinkingLayer &ObjLinkingLayer,
+  LLVM_ABI JITLinkReentryTrampolines(ObjectLinkingLayer &ObjLinkingLayer,
                             EmitTrampolineFn EmitTrampoline);
   JITLinkReentryTrampolines(JITLinkReentryTrampolines &&) = delete;
   JITLinkReentryTrampolines &operator=(JITLinkReentryTrampolines &&) = delete;
 
-  void emit(ResourceTrackerSP RT, size_t NumTrampolines,
+  LLVM_ABI void emit(ResourceTrackerSP RT, size_t NumTrampolines,
             OnTrampolinesReadyFn OnTrampolinesReady);
 
 private:
@@ -62,7 +63,7 @@ private:
   std::atomic<size_t> ReentryGraphIdx{0};
 };
 
-Expected<std::unique_ptr<LazyReexportsManager>>
+LLVM_ABI Expected<std::unique_ptr<LazyReexportsManager>>
 createJITLinkLazyReexportsManager(ObjectLinkingLayer &ObjLinkingLayer,
                                   RedirectableSymbolManager &RSMgr,
                                   JITDylib &PlatformJD,

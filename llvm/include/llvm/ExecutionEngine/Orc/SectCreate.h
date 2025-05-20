@@ -13,6 +13,7 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_SECTCREATE_H
 #define LLVM_EXECUTIONENGINE_ORC_SECTCREATE_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 
@@ -21,7 +22,7 @@
 
 namespace llvm::orc {
 
-class SectCreateMaterializationUnit : public MaterializationUnit {
+class LLVM_ABI SectCreateMaterializationUnit : public MaterializationUnit {
 public:
   struct ExtraSymbolInfo {
     JITSymbolFlags Flags;

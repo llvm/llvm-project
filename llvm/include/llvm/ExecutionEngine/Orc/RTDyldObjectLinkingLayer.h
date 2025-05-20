@@ -13,6 +13,7 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_RTDYLDOBJECTLINKINGLAYER_H
 #define LLVM_EXECUTIONENGINE_ORC_RTDYLDOBJECTLINKINGLAYER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ExecutionEngine/JITEventListener.h"
@@ -33,7 +34,7 @@
 namespace llvm {
 namespace orc {
 
-class RTDyldObjectLinkingLayer
+class LLVM_ABI RTDyldObjectLinkingLayer
     : public RTTIExtends<RTDyldObjectLinkingLayer, ObjectLayer>,
       private ResourceManager {
 public:

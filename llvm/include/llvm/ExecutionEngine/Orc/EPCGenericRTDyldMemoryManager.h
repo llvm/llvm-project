@@ -14,6 +14,7 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_EPCGENERICRTDYLDMEMORYMANAGER_H
 #define LLVM_EXECUTIONENGINE_ORC_EPCGENERICRTDYLDMEMORYMANAGER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/RuntimeDyld.h"
 
@@ -23,7 +24,7 @@ namespace llvm {
 namespace orc {
 
 /// Remote-mapped RuntimeDyld-compatible memory manager.
-class EPCGenericRTDyldMemoryManager : public RuntimeDyld::MemoryManager {
+class LLVM_ABI EPCGenericRTDyldMemoryManager : public RuntimeDyld::MemoryManager {
 public:
   /// Symbol addresses for memory access.
   struct SymbolAddrs {

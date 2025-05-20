@@ -14,6 +14,7 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_IRPARTITIONLAYER_H
 #define LLVM_EXECUTIONENGINE_ORC_IRPARTITIONLAYER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ExecutionEngine/Orc/IndirectionUtils.h"
 #include "llvm/ExecutionEngine/Orc/Layer.h"
 #include "llvm/IR/Attributes.h"
@@ -34,7 +35,7 @@ namespace orc {
 
 /// A layer that breaks up IR modules into smaller submodules that only contains
 /// looked up symbols.
-class IRPartitionLayer : public IRLayer {
+class LLVM_ABI IRPartitionLayer : public IRLayer {
   friend class PartitioningIRMaterializationUnit;
 
 public:

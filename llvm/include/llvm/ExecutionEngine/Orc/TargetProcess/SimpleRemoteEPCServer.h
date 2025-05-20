@@ -13,6 +13,7 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_TARGETPROCESS_SIMPLEREMOTEEPCSERVER_H
 #define LLVM_EXECUTIONENGINE_ORC_TARGETPROCESS_SIMPLEREMOTEEPCSERVER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/Config/llvm-config.h"
@@ -33,12 +34,12 @@ namespace llvm {
 namespace orc {
 
 /// A simple EPC server implementation.
-class SimpleRemoteEPCServer : public SimpleRemoteEPCTransportClient {
+class LLVM_ABI SimpleRemoteEPCServer : public SimpleRemoteEPCTransportClient {
 public:
   using ReportErrorFunction = unique_function<void(Error)>;
 
   /// Dispatches calls to runWrapper.
-  class Dispatcher {
+  class LLVM_ABI Dispatcher {
   public:
     virtual ~Dispatcher();
     virtual void dispatch(unique_function<void()> Work) = 0;
@@ -46,7 +47,7 @@ public:
   };
 
 #if LLVM_ENABLE_THREADS
-  class ThreadDispatcher : public Dispatcher {
+  class LLVM_ABI ThreadDispatcher : public Dispatcher {
   public:
     void dispatch(unique_function<void()> Work) override;
     void shutdown() override;

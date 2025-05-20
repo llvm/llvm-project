@@ -16,6 +16,7 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_TARGETPROCESS_SIMPLEEXECUTORDYLIBMANAGER_H
 #define LLVM_EXECUTIONENGINE_ORC_TARGETPROCESS_SIMPLEEXECUTORDYLIBMANAGER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorSymbolDef.h"
@@ -33,7 +34,7 @@ namespace orc {
 namespace rt_bootstrap {
 
 /// Simple page-based allocator.
-class SimpleExecutorDylibManager : public ExecutorBootstrapService {
+class LLVM_ABI SimpleExecutorDylibManager : public ExecutorBootstrapService {
 public:
   virtual ~SimpleExecutorDylibManager();
 

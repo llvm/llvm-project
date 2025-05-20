@@ -13,6 +13,7 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_MATERIALIZATIONUNIT_H
 #define LLVM_EXECUTIONENGINE_ORC_MATERIALIZATIONUNIT_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ExecutionEngine/Orc/CoreContainers.h"
 #include "llvm/ExecutionEngine/Orc/SymbolStringPool.h"
@@ -29,7 +30,7 @@ class MaterializationResponsibility;
 /// JITDylibs. The JITDylib will call materialize when the address of a symbol
 /// is requested via the lookup method. The JITDylib will call discard if a
 /// stronger definition is added or already present.
-class MaterializationUnit {
+class LLVM_ABI MaterializationUnit {
   friend class ExecutionSession;
   friend class JITDylib;
 

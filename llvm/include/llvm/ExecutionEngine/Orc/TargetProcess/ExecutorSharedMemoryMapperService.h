@@ -9,6 +9,7 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_TARGETPROCESS_EXECUTORSHAREDMEMORYMAPPERSERVICE_H
 #define LLVM_EXECUTIONENGINE_ORC_TARGETPROCESS_EXECUTORSHAREDMEMORYMAPPERSERVICE_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
 #include "llvm/ExecutionEngine/Orc/Shared/TargetProcessControlTypes.h"
@@ -25,7 +26,7 @@ namespace llvm {
 namespace orc {
 namespace rt_bootstrap {
 
-class ExecutorSharedMemoryMapperService final
+class LLVM_ABI ExecutorSharedMemoryMapperService final
     : public ExecutorBootstrapService {
 public:
   ~ExecutorSharedMemoryMapperService(){};

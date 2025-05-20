@@ -12,6 +12,7 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_REOPTIMIZELAYER_H
 #define LLVM_EXECUTIONENGINE_ORC_REOPTIMIZELAYER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/Layer.h"
 #include "llvm/ExecutionEngine/Orc/Mangling.h"
@@ -24,7 +25,7 @@
 namespace llvm {
 namespace orc {
 
-class ReOptimizeLayer : public IRLayer, public ResourceManager {
+class LLVM_ABI ReOptimizeLayer : public IRLayer, public ResourceManager {
 public:
   using ReOptMaterializationUnitID = uint64_t;
 
@@ -123,9 +124,9 @@ private:
       return CurVersion;
     }
 
-    bool tryStartReoptimize();
-    void reoptimizeSucceeded();
-    void reoptimizeFailed();
+    LLVM_ABI bool tryStartReoptimize();
+    LLVM_ABI void reoptimizeSucceeded();
+    LLVM_ABI void reoptimizeFailed();
 
   private:
     std::mutex Mutex;

@@ -14,6 +14,7 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_EPCDYNAMICLIBRARYSEARCHGENERATOR_H
 #define LLVM_EXECUTIONENGINE_ORC_EPCDYNAMICLIBRARYSEARCHGENERATOR_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 
@@ -22,7 +23,7 @@ namespace orc {
 
 class ExecutorProcessControl;
 
-class EPCDynamicLibrarySearchGenerator : public DefinitionGenerator {
+class LLVM_ABI EPCDynamicLibrarySearchGenerator : public DefinitionGenerator {
 public:
   using SymbolPredicate = unique_function<bool(const SymbolStringPtr &)>;
   using AddAbsoluteSymbolsFn = unique_function<Error(JITDylib &, SymbolMap)>;

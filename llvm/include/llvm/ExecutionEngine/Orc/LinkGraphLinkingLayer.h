@@ -13,6 +13,7 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_LINKGRAPHLINKINGLAYER_H
 #define LLVM_EXECUTIONENGINE_ORC_LINKGRAPHLINKINGLAYER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
@@ -40,14 +41,14 @@ namespace orc {
 ///
 /// Clients can use this class to add LinkGraphs to an ExecutionSession, and it
 /// serves as a base for the ObjectLinkingLayer that can link object files.
-class LinkGraphLinkingLayer : public LinkGraphLayer, private ResourceManager {
+class LLVM_ABI LinkGraphLinkingLayer : public LinkGraphLayer, private ResourceManager {
   class JITLinkCtx;
 
 public:
   /// Plugin instances can be added to the ObjectLinkingLayer to receive
   /// callbacks when code is loaded or emitted, and when JITLink is being
   /// configured.
-  class Plugin {
+  class LLVM_ABI Plugin {
   public:
     virtual ~Plugin();
     virtual void modifyPassConfig(MaterializationResponsibility &MR,

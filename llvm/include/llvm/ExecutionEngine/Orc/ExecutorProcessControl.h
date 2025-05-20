@@ -13,6 +13,7 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_EXECUTORPROCESSCONTROL_H
 #define LLVM_EXECUTIONENGINE_ORC_EXECUTORPROCESSCONTROL_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/DylibManager.h"
@@ -36,7 +37,7 @@ namespace orc {
 class ExecutionSession;
 
 /// ExecutorProcessControl supports interaction with a JIT target process.
-class ExecutorProcessControl {
+class LLVM_ABI ExecutorProcessControl {
   friend class ExecutionSession;
 public:
 
@@ -99,7 +100,7 @@ public:
   };
 
   /// APIs for manipulating memory in the target process.
-  class MemoryAccess {
+  class LLVM_ABI MemoryAccess {
   public:
     /// Callback function for asynchronous writes.
     using WriteResultFn = unique_function<void(Error)>;
@@ -398,7 +399,7 @@ protected:
   StringMap<ExecutorAddr> BootstrapSymbols;
 };
 
-class InProcessMemoryAccess : public ExecutorProcessControl::MemoryAccess {
+class LLVM_ABI InProcessMemoryAccess : public ExecutorProcessControl::MemoryAccess {
 public:
   InProcessMemoryAccess(bool IsArch64Bit) : IsArch64Bit(IsArch64Bit) {}
   void writeUInt8sAsync(ArrayRef<tpctypes::UInt8Write> Ws,
@@ -465,7 +466,7 @@ public:
 };
 
 /// A ExecutorProcessControl implementation targeting the current process.
-class SelfExecutorProcessControl : public ExecutorProcessControl,
+class LLVM_ABI SelfExecutorProcessControl : public ExecutorProcessControl,
                                    private InProcessMemoryAccess,
                                    private DylibManager {
 public:

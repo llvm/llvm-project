@@ -14,6 +14,7 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_COMPILEONDEMANDLAYER_H
 #define LLVM_EXECUTIONENGINE_ORC_COMPILEONDEMANDLAYER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -52,7 +53,7 @@
 namespace llvm {
 namespace orc {
 
-class CompileOnDemandLayer : public IRLayer {
+class LLVM_ABI CompileOnDemandLayer : public IRLayer {
 public:
   /// Builder for IndirectStubsManagers.
   using IndirectStubsManagerBuilder =

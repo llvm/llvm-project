@@ -15,13 +15,14 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_TARGETPROCESS_EXECUTORBOOTSTRAPSERVICE_H
 #define LLVM_EXECUTIONENGINE_ORC_TARGETPROCESS_EXECUTORBOOTSTRAPSERVICE_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 
 namespace llvm {
 namespace orc {
 
-class ExecutorBootstrapService {
+class LLVM_ABI ExecutorBootstrapService {
 public:
   virtual ~ExecutorBootstrapService();
 

@@ -13,6 +13,7 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_COFFPLATFORM_H
 #define LLVM_EXECUTIONENGINE_ORC_COFFPLATFORM_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ExecutionEngine/Orc/COFFVCRuntimeSupport.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
@@ -31,7 +32,7 @@ namespace llvm {
 namespace orc {
 
 /// Mediates between COFF initialization and ExecutionSession state.
-class COFFPlatform : public Platform {
+class LLVM_ABI COFFPlatform : public Platform {
 public:
   /// A function that will be called with the name of dll file that must be
   /// loaded.
@@ -90,7 +91,7 @@ private:
   // The COFFPlatformPlugin scans/modifies LinkGraphs to support COFF
   // platform features including initializers, exceptions, and language
   // runtime registration.
-  class COFFPlatformPlugin : public ObjectLinkingLayer::Plugin {
+  class LLVM_ABI COFFPlatformPlugin : public ObjectLinkingLayer::Plugin {
   public:
     COFFPlatformPlugin(COFFPlatform &CP) : CP(CP) {}
 

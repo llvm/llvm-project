@@ -13,6 +13,7 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_REDIRECTIONMANAGER_H
 #define LLVM_EXECUTIONENGINE_ORC_REDIRECTIONMANAGER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 
 namespace llvm {
@@ -20,7 +21,7 @@ namespace orc {
 
 /// Base class for performing redirection of call to symbol to another symbol in
 /// runtime.
-class RedirectionManager {
+class LLVM_ABI RedirectionManager {
 public:
   virtual ~RedirectionManager() = default;
 
@@ -45,7 +46,7 @@ class RedirectableSymbolManager : public RedirectionManager {
 public:
   /// Create redirectable symbols with given symbol names and initial
   /// desitnation symbol addresses.
-  Error createRedirectableSymbols(ResourceTrackerSP RT, SymbolMap InitialDests);
+  LLVM_ABI Error createRedirectableSymbols(ResourceTrackerSP RT, SymbolMap InitialDests);
 
   /// Create a single redirectable symbol with given symbol name and initial
   /// desitnation symbol address.

@@ -13,6 +13,7 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_DEBUGOBJECTMANAGERPLUGIN_H
 #define LLVM_EXECUTIONENGINE_ORC_DEBUGOBJECTMANAGERPLUGIN_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/EPCDebugObjectRegistrar.h"
@@ -45,7 +46,7 @@ class DebugObject;
 /// DebugObjectRegistrar is notified. Ownership of DebugObjects remains with the
 /// plugin.
 ///
-class DebugObjectManagerPlugin : public ObjectLinkingLayer::Plugin {
+class LLVM_ABI DebugObjectManagerPlugin : public ObjectLinkingLayer::Plugin {
 public:
   // DEPRECATED - Please specify options explicitly
   DebugObjectManagerPlugin(ExecutionSession &ES,

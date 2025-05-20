@@ -12,6 +12,7 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_LAZYOBJECTLINKINGLAYER_H
 #define LLVM_EXECUTIONENGINE_ORC_LAZYOBJECTLINKINGLAYER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/Layer.h"
 
@@ -33,7 +34,7 @@ class RedirectableSymbolManager;
 ///
 /// References to data symbols are not lazy and will trigger immediate linking
 /// (same os ObjectlinkingLayer).
-class LazyObjectLinkingLayer : public ObjectLayer {
+class LLVM_ABI LazyObjectLinkingLayer : public ObjectLayer {
 public:
   LazyObjectLinkingLayer(ObjectLinkingLayer &BaseLayer,
                          LazyReexportsManager &LRMgr);

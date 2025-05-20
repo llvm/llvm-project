@@ -170,7 +170,7 @@ using GVPredicate = std::function<bool(const GlobalValue &)>;
 using GVModifier = std::function<void(GlobalValue &)>;
 
 /// Clones the given module on to a new context.
-ThreadSafeModule
+LLVM_ABI ThreadSafeModule
 cloneToNewContext(const ThreadSafeModule &TSMW,
                   GVPredicate ShouldCloneDef = GVPredicate(),
                   GVModifier UpdateClonedDefSource = GVModifier());
