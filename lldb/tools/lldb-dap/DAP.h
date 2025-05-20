@@ -74,13 +74,6 @@ enum DAPBroadcasterBits {
   eBroadcastBitStopProgressThread = 1u << 1
 };
 
-enum class PacketStatus {
-  Success = 0,
-  EndOfFile,
-  JSONMalformed,
-  JSONNotObject
-};
-
 enum class ReplMode { Variable = 0, Command, Auto };
 
 struct DAP {
