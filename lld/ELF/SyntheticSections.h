@@ -1324,7 +1324,7 @@ public:
                   std::optional<uint64_t> addr = std::nullopt)
       : sym(sym), acleSeSym(acleSeSym), entAddr{addr} {}
   static const size_t size{ACLESESYM_SIZE};
-  const std::optional<uint64_t> getAddr() const { return entAddr; };
+  std::optional<uint64_t> getAddr() const { return entAddr; };
 
   Symbol *sym;
   Symbol *acleSeSym;
