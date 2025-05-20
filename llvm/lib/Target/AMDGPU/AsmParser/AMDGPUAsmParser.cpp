@@ -152,6 +152,8 @@ public:
     ImmTyOpSelHi,
     ImmTyNegLo,
     ImmTyNegHi,
+    ImmTyNegLoSrc2,
+    ImmTyNegHiSrc2,
     ImmTyIndexKey8bit,
     ImmTyIndexKey16bit,
     ImmTyDPP8,
@@ -416,6 +418,8 @@ public:
   bool isOpSelHi() const { return isImmTy(ImmTyOpSelHi); }
   bool isNegLo() const { return isImmTy(ImmTyNegLo); }
   bool isNegHi() const { return isImmTy(ImmTyNegHi); }
+  bool isNegHiSrc2() const { return isImmTy(ImmTyNegHiSrc2); }
+  bool isNegLoSrc2() const { return isImmTy(ImmTyNegLoSrc2); }
   bool isBitOp3() const { return isImmTy(ImmTyBitOp3) && isUInt<8>(getImm()); }
 
   bool isRegOrImm() const {
@@ -1138,6 +1142,8 @@ public:
     case ImmTyHigh: OS << "High"; break;
     case ImmTyBLGP: OS << "BLGP"; break;
     case ImmTyCBSZ: OS << "CBSZ"; break;
+    case ImmTyNegLoSrc2: OS << "NegSrc2"; break;
+    case ImmTyNegHiSrc2: OS << "AbsSrc2"; break;
     case ImmTyABID: OS << "ABID"; break;
     case ImmTyEndpgm: OS << "Endpgm"; break;
     case ImmTyWaitVDST: OS << "WaitVDST"; break;
@@ -1632,7 +1638,7 @@ public:
   ParseStatus parseOperandArrayWithPrefix(
       const char *Prefix, OperandVector &Operands,
       AMDGPUOperand::ImmTy ImmTy = AMDGPUOperand::ImmTyNone,
-      bool (*ConvertResult)(int64_t &) = nullptr);
+      std::function<bool(int64_t &)> ConvertResult = nullptr);
 
   ParseStatus
   parseNamedBit(StringRef Name, OperandVector &Operands,
@@ -1687,6 +1693,8 @@ public:
   ParseStatus parseFlatOffset(OperandVector &Operands);
   ParseStatus parseR128A16(OperandVector &Operands);
   ParseStatus parseBLGP(OperandVector &Operands);
+  ParseStatus parseNegHiSrc2(OperandVector &Operands);
+  ParseStatus parseNegLoSrc2(OperandVector &Operands);
   bool tryParseFmt(const char *Pref, int64_t MaxVal, int64_t &Val);
   bool matchDfmtNfmt(int64_t &Dfmt, int64_t &Nfmt, StringRef FormatStr, SMLoc Loc);
 
@@ -6560,7 +6568,7 @@ ParseStatus AMDGPUAsmParser::parseIntWithPrefix(
 
 ParseStatus AMDGPUAsmParser::parseOperandArrayWithPrefix(
     const char *Prefix, OperandVector &Operands, AMDGPUOperand::ImmTy ImmTy,
-    bool (*ConvertResult)(int64_t &)) {
+    std::function<bool(int64_t &)> ConvertResult) {
   SMLoc S = getLoc();
   if (!trySkipId(Prefix, AsmToken::Colon))
     return ParseStatus::NoMatch;
@@ -6568,7 +6576,7 @@ ParseStatus AMDGPUAsmParser::parseOperandArrayWithPrefix(
   if (!skipToken(AsmToken::LBrac, "expected a left square bracket"))
     return ParseStatus::Failure;
 
-  unsigned Val = 0;
+  int64_t Val = 0;
   const unsigned MaxSize = 4;
 
   // FIXME: How to verify the number of elements matches the number of src
@@ -6593,7 +6601,9 @@ ParseStatus AMDGPUAsmParser::parseOperandArrayWithPrefix(
     if (!skipToken(AsmToken::Comma, "expected a comma"))
       return ParseStatus::Failure;
   }
-
+  if (ConvertResult && !ConvertResult(Val)) {
+    Error(S, "invalid " + StringRef(Prefix) + " value.");
+  }
   Operands.push_back(AMDGPUOperand::CreateImm(this, Val, S, ImmTy));
   return ParseStatus::Success;
 }
@@ -7161,6 +7171,23 @@ ParseStatus AMDGPUAsmParser::parseBLGP(OperandVector &Operands) {
         parseOperandArrayWithPrefix("neg", Operands, AMDGPUOperand::ImmTyBLGP);
   }
   return Res;
+}
+
+static bool RightShift2Bits(int64_t &Neg) {
+  Neg >>= 2;
+  return true;
+}
+
+ParseStatus AMDGPUAsmParser::parseNegLoSrc2(OperandVector &Operands) {
+  return parseOperandArrayWithPrefix(
+      "neg_lo", Operands, AMDGPUOperand::ImmTyNegLoSrc2,
+      RightShift2Bits); // Extracting only neg_lo[2]
+}
+
+ParseStatus AMDGPUAsmParser::parseNegHiSrc2(OperandVector &Operands) {
+  return parseOperandArrayWithPrefix(
+      "neg_hi", Operands, AMDGPUOperand::ImmTyNegHiSrc2,
+      RightShift2Bits); // Extracting only neg_hi[2]
 }
 
 //===----------------------------------------------------------------------===//
@@ -8863,6 +8890,12 @@ void AMDGPUAsmParser::cvtScaledMFMA(MCInst &Inst,
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyBLGP,
                         0, InsertPos);
 
+  // add neg and abs for src2
+  addOptionalImmOperand(Inst, Operands, OptionalIdx,
+                        AMDGPUOperand::ImmTyNegLoSrc2, 0);
+  addOptionalImmOperand(Inst, Operands, OptionalIdx,
+                        AMDGPUOperand::ImmTyNegHiSrc2, 0);
+
   // Add dummy src_modifiers
   Inst.addOperand(MCOperand::createImm(0));
   Inst.addOperand(MCOperand::createImm(0));
@@ -8886,9 +8919,9 @@ void AMDGPUAsmParser::cvtScaledMFMA(MCInst &Inst,
   for (unsigned J = 0; J < 2; ++J) {
     unsigned ModVal = 0;
     if (OpSel & (1 << J))
-      ModVal |= SISrcMods::OP_SEL_0;
+      ModVal |= SISrcMods::OP_SEL_0; // 3rd bit is from opsel
     if (OpSelHi & (1 << J))
-      ModVal |= SISrcMods::OP_SEL_1;
+      ModVal |= SISrcMods::OP_SEL_1; // 4th bit is from opsel_hi
 
     const int ModIdx = AMDGPU::getNamedOperandIdx(Opc, ModOps[J]);
     Inst.getOperand(ModIdx).setImm(ModVal);
