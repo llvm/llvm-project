@@ -5302,19 +5302,23 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
   // The current debug location already has the DISubprogram for the outlined
   // function that will be created for the target op. We save it here so that
   // we can set it on the outlined function.
-  llvm::DebugLoc OutlinedFnLoc = builder.getCurrentDebugLocation();
-  // During the handling of target op, we will generate instructions in the
-  // parent function like call to oulined function or branch to new BasicBlock.
-  // We set the debug location here to parent function so that those get the
-  // correct debug locations. For outlined functions, the normal MLIR op
-  // conversion will automatically pick the correct location.
-  llvm::BasicBlock *parentBB = builder.GetInsertBlock();
-  if (parentBB && !parentBB->empty())
-    builder.SetCurrentDebugLocation(parentBB->back().getDebugLoc());
-  else
-    builder.SetCurrentDebugLocation(llvm::DebugLoc());
+  llvm::DebugLoc outlinedFnLoc = builder.getCurrentDebugLocation();
   if (failed(checkImplementationStatus(opInst)))
     return failure();
+
+  // During the handling of target op, we will generate instructions in the
+  // parent function like call to the oulined function or branch to a new
+  // BasicBlock. We set the debug location here to parent function so that those
+  // get the correct debug locations. For outlined functions, the normal MLIR op
+  // conversion will automatically pick the correct location.
+  llvm::BasicBlock *parentBB = builder.GetInsertBlock();
+  assert(parentBB);
+  llvm::Function *parentLLVMFn = parentBB->getParent();
+  assert(parentLLVMFn);
+  if (llvm::DISubprogram *SP = parentLLVMFn->getSubprogram())
+    builder.SetCurrentDebugLocation(llvm::DILocation::get(
+        parentLLVMFn->getContext(), outlinedFnLoc.getLine(),
+        outlinedFnLoc.getCol(), SP, outlinedFnLoc.getInlinedAt()));
 
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
   bool isTargetDevice = ompBuilder->Config.isTargetDevice();
@@ -5409,8 +5413,8 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
     assert(llvmParentFn && llvmOutlinedFn &&
            "Both parent and outlined functions must exist at this point");
 
-    if (OutlinedFnLoc && llvmParentFn->getSubprogram())
-      llvmOutlinedFn->setSubprogram(OutlinedFnLoc->getScope()->getSubprogram());
+    if (outlinedFnLoc && llvmParentFn->getSubprogram())
+      llvmOutlinedFn->setSubprogram(outlinedFnLoc->getScope()->getSubprogram());
 
     if (auto attr = llvmParentFn->getFnAttribute("target-cpu");
         attr.isStringAttribute())
