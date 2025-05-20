@@ -988,6 +988,28 @@ fffffffffffffffffffff("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
                       )pb");)test",
                    Style));
 }
+
+TEST_F(FormatTestRawStrings, Json) {
+  auto Style = getLLVMStyle();
+  Style.RawStringFormats = {
+      {
+          /*Language=*/FormatStyle::LK_Json,
+          /*Delimiters=*/{"json"},
+          /*EnclosingFunctions=*/{},
+          /*CanonicalDelimiter=*/"",
+          /*BasedOnStyle=*/"llvm",
+      },
+  };
+
+  EXPECT_EQ(R"test(json = R"json({
+                "str": "test"
+              })json";)test",
+            format(R"test(json = R"json({
+  "str": "test"
+})json";)test",
+                   Style));
+}
+
 } // end namespace
 } // end namespace format
 } // end namespace clang
