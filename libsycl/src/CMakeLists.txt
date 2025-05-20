@@ -17,23 +17,6 @@ function(add_sycl_rt_library LIB_NAME LIB_OBJ_NAME)
   add_library(${LIB_NAME} SHARED
               $<TARGET_OBJECTS:${LIB_OBJ_NAME}>)
 
-  # Unlike for libsycl, for LLVMSupport we have only one version for a given build,
-  # so, we link LLVMSupport lib to matching libsycl version only.
-  if (LIBSYCL_ENABLE_STACK_PRINTING)
-    if(NOT MSVC OR (CMAKE_BUILD_TYPE STREQUAL "Debug" AND ARG_COMPILE_OPTIONS MATCHES ".*MDd.*") OR
-      (NOT CMAKE_BUILD_TYPE STREQUAL "Debug" AND NOT ARG_COMPILE_OPTIONS MATCHES ".*MDd.*"))
-        add_dependencies(${LIB_NAME} LLVMSupport)
-        target_compile_definitions(${LIB_OBJ_NAME} PUBLIC ENABLE_STACK_TRACE)
-        target_link_libraries(${LIB_NAME} PRIVATE LLVMSupport)
-    endif()
-  endif()
-
-  # TODO: Enabled for MSVC
-  if (NOT MSVC AND LIBSYCL_DEBUG_SYMBOLS)
-    separate_arguments(CMAKE_CXX_FLAGS_DEBUG_SEPARATED UNIX_COMMAND "${CMAKE_CXX_FLAGS_DEBUG}")
-    target_compile_options(${LIB_NAME} PRIVATE ${CMAKE_CXX_FLAGS_DEBUG_SEPARATED})
-  endif()
-
   if (ARG_COMPILE_OPTIONS)
     target_compile_options(${LIB_OBJ_NAME} PRIVATE ${ARG_COMPILE_OPTIONS})
   endif()

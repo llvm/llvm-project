@@ -17,9 +17,6 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 #===============================================================================
 
 option(LIBSYCL_ENABLE_WERROR "Treat all warnings as errors in the libsycl project" OFF)
-option(LIBSYCL_DISABLE_STL_ASSERTIONS "Disable assertions in STL containers when building libsycl" ON)
-option(LIBSYCL_ENABLE_STACK_PRINTING "Enables stack printing on crashes of SYCL applications" OFF)
-option(LIBSYCL_DEBUG_SYMBOLS "Builds SYCL runtime libraries with debug symbols" OFF)
 
 #===============================================================================
 # Configure System
@@ -27,7 +24,7 @@ option(LIBSYCL_DEBUG_SYMBOLS "Builds SYCL runtime libraries with debug symbols" 
 
 set(LIBSYCL_INSTALL_INCLUDE_DIR "${CMAKE_INSTALL_INCLUDEDIR}" CACHE STRING
     "Path where libsycl headers should be installed.")
-set(LIBSYCL_INSTALL_RUNTIME_DIR "${CMAKE_INSTALL_BINDIR}" CACHE STRING
+set(LIBSYCL_INSTALL_LIBRARY_DIR "${CMAKE_INSTALL_BINDIR}" CACHE STRING
     "Path where built libsycl runtime libraries should be installed.")
 
 set(LIBSYCL_SHARED_OUTPUT_NAME "sycl" CACHE STRING "Output name for the shared libsycl runtime library.")
@@ -152,10 +149,6 @@ if (WIN32)
   endif()
 else()
   set(LIBSYCL_RT_LIBS ${LIBSYCL_SHARED_OUTPUT_NAME})
-endif()
-
-if (LLVM_ENABLE_ASSERTIONS AND NOT LIBSYCL_DISABLE_STL_ASSERTIONS AND NOT WIN32)
-  add_definitions(-D_GLIBCXX_ASSERTIONS=1)
 endif()
 
 add_subdirectory(src)
