@@ -1,17 +1,4 @@
-//===--- APINotesReader.cpp - API Notes Reader ------------------*- C++ -*-===//
-//
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-// See https://llvm.org/LICENSE.txt for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//===----------------------------------------------------------------------===//
-//
-// This file implements the \c APINotesReader class that reads source
-// API notes data providing additional information about source code as
-// a separate input, such as the non-nil/nilable annotations for
-// method parameters.
-//
-//===----------------------------------------------------------------------===//
+
 #include "clang/APINotes/APINotesReader.h"
 #include "APINotesFormat.h"
 #include "clang/APINotes/Types.h"
@@ -260,17 +247,12 @@ public:
 };
 
 /// Read serialized VariableInfo.
-void ReadVariableInfo(const uint8_t *&Data, VariableInfo &Info) {
-  ReadCommonEntityInfo(Data, Info);
-  if (*Data++) {
-    Info.setNullabilityAudited(static_cast<NullabilityKind>(*Data));
-  }
-  ++Data;
+void readvariableinfo( const uint8_t*  & data,VariableInfo&info ){
+ReadCommonEntityInfo(data ,info);if(*data++){info.setNullabilityAudited((NullabilityKind)*data);}
+++ data;
+auto typelen=endian::readNext<uint16_t,llvm::endianness::little>( data );info.setType( std::string(data,data+ typelen) );
+data+= typelen;}
 
-  auto TypeLen = endian::readNext<uint16_t, llvm::endianness::little>(Data);
-  Info.setType(std::string(Data, Data + TypeLen));
-  Data += TypeLen;
-}
 
 /// Used to deserialize the on-disk Objective-C property table.
 class ObjCPropertyTableInfo

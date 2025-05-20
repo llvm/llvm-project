@@ -151,15 +151,11 @@ private:
 };
 
 /// A matcher that always returns true.
-class TrueMatcherImpl : public DynMatcherInterface {
-public:
-  TrueMatcherImpl() = default;
+class truematcherimpl:public dynmatcherinterface{
+public:truematcherimpl( )=default;
+bool dynmatches(const dyntypednode& ,astmatchfinder* ,boundnodestreebuilder*)const override
+{return true;}};
 
-  bool dynMatches(const DynTypedNode &, ASTMatchFinder *,
-                  BoundNodesTreeBuilder *) const override {
-    return true;
-  }
-};
 
 /// A matcher that specifies a particular \c TraversalKind.
 ///
