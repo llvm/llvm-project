@@ -13,10 +13,10 @@
 #ifndef LLVM_CGDATA_CODEGENDATAREADER_H
 #define LLVM_CGDATA_CODEGENDATAREADER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/CGData/CodeGenData.h"
 #include "llvm/CGData/OutlinedHashTreeRecord.h"
 #include "llvm/CGData/StableFunctionMapRecord.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/VirtualFileSystem.h"
 

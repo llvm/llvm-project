@@ -22,7 +22,6 @@
 #ifndef LLVM_CODEGEN_TARGETLOWERING_H
 #define LLVM_CODEGEN_TARGETLOWERING_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -51,6 +50,7 @@
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownFPClass.h"
 #include <algorithm>
@@ -4371,9 +4371,11 @@ public:
     bool isCalledByLegalizer() const { return CalledByLegalizer; }
 
     LLVM_ABI void AddToWorklist(SDNode *N);
-    LLVM_ABI SDValue CombineTo(SDNode *N, ArrayRef<SDValue> To, bool AddTo = true);
+    LLVM_ABI SDValue CombineTo(SDNode *N, ArrayRef<SDValue> To,
+                               bool AddTo = true);
     LLVM_ABI SDValue CombineTo(SDNode *N, SDValue Res, bool AddTo = true);
-    LLVM_ABI SDValue CombineTo(SDNode *N, SDValue Res0, SDValue Res1, bool AddTo = true);
+    LLVM_ABI SDValue CombineTo(SDNode *N, SDValue Res0, SDValue Res1,
+                               bool AddTo = true);
 
     LLVM_ABI bool recursivelyDeleteUnusedNodes(SDNode *N);
 
@@ -5809,9 +5811,10 @@ private:
 /// Given an LLVM IR type and return type attributes, compute the return value
 /// EVTs and flags, and optionally also the offsets, if the return value is
 /// being lowered to memory.
-LLVM_ABI void GetReturnInfo(CallingConv::ID CC, Type *ReturnType, AttributeList attr,
-                   SmallVectorImpl<ISD::OutputArg> &Outs,
-                   const TargetLowering &TLI, const DataLayout &DL);
+LLVM_ABI void GetReturnInfo(CallingConv::ID CC, Type *ReturnType,
+                            AttributeList attr,
+                            SmallVectorImpl<ISD::OutputArg> &Outs,
+                            const TargetLowering &TLI, const DataLayout &DL);
 
 } // end namespace llvm
 

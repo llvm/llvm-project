@@ -14,8 +14,8 @@
 #ifndef LLVM_CODEGEN_MACHINEINSTRBUNDLE_H
 #define LLVM_CODEGEN_MACHINEINSTRBUNDLE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -26,16 +26,17 @@ namespace llvm {
 /// bundle, and it copies externally visible defs and uses to the BUNDLE
 /// instruction.
 LLVM_ABI void finalizeBundle(MachineBasicBlock &MBB,
-                    MachineBasicBlock::instr_iterator FirstMI,
-                    MachineBasicBlock::instr_iterator LastMI);
+                             MachineBasicBlock::instr_iterator FirstMI,
+                             MachineBasicBlock::instr_iterator LastMI);
 
 /// finalizeBundle - Same functionality as the previous finalizeBundle except
 /// the last instruction in the bundle is not provided as an input. This is
 /// used in cases where bundles are pre-determined by marking instructions
 /// with 'InsideBundle' marker. It returns the MBB instruction iterator that
 /// points to the end of the bundle.
-LLVM_ABI MachineBasicBlock::instr_iterator finalizeBundle(MachineBasicBlock &MBB,
-                    MachineBasicBlock::instr_iterator FirstMI);
+LLVM_ABI MachineBasicBlock::instr_iterator
+finalizeBundle(MachineBasicBlock &MBB,
+               MachineBasicBlock::instr_iterator FirstMI);
 
 /// finalizeBundles - Finalize instruction bundles in the specified
 /// MachineFunction. Return true if any bundles are finalized.
@@ -289,8 +290,9 @@ struct PhysRegInfo {
 ///
 /// @param Reg The physical register to analyze.
 /// @returns A filled-in PhysRegInfo struct.
-LLVM_ABI PhysRegInfo AnalyzePhysRegInBundle(const MachineInstr &MI, Register Reg,
-                                   const TargetRegisterInfo *TRI);
+LLVM_ABI PhysRegInfo AnalyzePhysRegInBundle(const MachineInstr &MI,
+                                            Register Reg,
+                                            const TargetRegisterInfo *TRI);
 
 } // End llvm namespace
 

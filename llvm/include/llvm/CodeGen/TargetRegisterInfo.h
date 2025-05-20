@@ -15,7 +15,6 @@
 #ifndef LLVM_CODEGEN_TARGETREGISTERINFO_H
 #define LLVM_CODEGEN_TARGETREGISTERINFO_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -25,6 +24,7 @@
 #include "llvm/IR/CallingConv.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Printable.h"
@@ -1405,9 +1405,10 @@ struct VirtReg2IndexFunctor {
 ///   %physreg17      - a physical register when no TRI instance given.
 ///
 /// Usage: OS << printReg(Reg, TRI, SubRegIdx) << '\n';
-LLVM_ABI Printable printReg(Register Reg, const TargetRegisterInfo *TRI = nullptr,
-                   unsigned SubIdx = 0,
-                   const MachineRegisterInfo *MRI = nullptr);
+LLVM_ABI Printable printReg(Register Reg,
+                            const TargetRegisterInfo *TRI = nullptr,
+                            unsigned SubIdx = 0,
+                            const MachineRegisterInfo *MRI = nullptr);
 
 /// Create Printable object to print register units on a \ref raw_ostream.
 ///
@@ -1421,12 +1422,14 @@ LLVM_ABI Printable printRegUnit(unsigned Unit, const TargetRegisterInfo *TRI);
 
 /// Create Printable object to print virtual registers and physical
 /// registers on a \ref raw_ostream.
-LLVM_ABI Printable printVRegOrUnit(unsigned VRegOrUnit, const TargetRegisterInfo *TRI);
+LLVM_ABI Printable printVRegOrUnit(unsigned VRegOrUnit,
+                                   const TargetRegisterInfo *TRI);
 
 /// Create Printable object to print register classes or register banks
 /// on a \ref raw_ostream.
-LLVM_ABI Printable printRegClassOrBank(Register Reg, const MachineRegisterInfo &RegInfo,
-                              const TargetRegisterInfo *TRI);
+LLVM_ABI Printable printRegClassOrBank(Register Reg,
+                                       const MachineRegisterInfo &RegInfo,
+                                       const TargetRegisterInfo *TRI);
 
 } // end namespace llvm
 

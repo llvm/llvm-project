@@ -20,12 +20,12 @@
 #ifndef LLVM_CODEGEN_GLOBALISEL_LEGALIZERHELPER_H
 #define LLVM_CODEGEN_GLOBALISEL_LEGALIZERHELPER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/RuntimeLibcallUtil.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 // Forward declarations.
@@ -81,10 +81,10 @@ public:
   GISelValueTracking *getValueTracking() const { return VT; }
 
   LLVM_ABI LegalizerHelper(MachineFunction &MF, GISelChangeObserver &Observer,
-                  MachineIRBuilder &B);
+                           MachineIRBuilder &B);
   LLVM_ABI LegalizerHelper(MachineFunction &MF, const LegalizerInfo &LI,
-                  GISelChangeObserver &Observer, MachineIRBuilder &B,
-                  GISelValueTracking *VT = nullptr);
+                           GISelChangeObserver &Observer, MachineIRBuilder &B,
+                           GISelValueTracking *VT = nullptr);
 
   /// Replace \p MI by a sequence of legal instructions that can implement the
   /// same operation. Note that this means \p MI may be deleted, so any iterator
@@ -94,19 +94,22 @@ public:
   /// Considered as an opaque blob, the legal code will use and define the same
   /// registers as \p MI.
   LLVM_ABI LegalizeResult legalizeInstrStep(MachineInstr &MI,
-                                   LostDebugLocObserver &LocObserver);
+                                            LostDebugLocObserver &LocObserver);
 
   /// Legalize an instruction by emiting a runtime library call instead.
-  LLVM_ABI LegalizeResult libcall(MachineInstr &MI, LostDebugLocObserver &LocObserver);
+  LLVM_ABI LegalizeResult libcall(MachineInstr &MI,
+                                  LostDebugLocObserver &LocObserver);
 
   /// Legalize an instruction by reducing the width of the underlying scalar
   /// type.
-  LLVM_ABI LegalizeResult narrowScalar(MachineInstr &MI, unsigned TypeIdx, LLT NarrowTy);
+  LLVM_ABI LegalizeResult narrowScalar(MachineInstr &MI, unsigned TypeIdx,
+                                       LLT NarrowTy);
 
   /// Legalize an instruction by performing the operation on a wider scalar type
   /// (for example a 16-bit addition can be safely performed at 32-bits
   /// precision, ignoring the unused bits).
-  LLVM_ABI LegalizeResult widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy);
+  LLVM_ABI LegalizeResult widenScalar(MachineInstr &MI, unsigned TypeIdx,
+                                      LLT WideTy);
 
   /// Legalize an instruction by replacing the value type
   LLVM_ABI LegalizeResult bitcast(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
@@ -117,13 +120,13 @@ public:
 
   /// Legalize a vector instruction by splitting into multiple components, each
   /// acting on the same scalar type as the original but with fewer elements.
-  LLVM_ABI LegalizeResult fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
-                                     LLT NarrowTy);
+  LLVM_ABI LegalizeResult fewerElementsVector(MachineInstr &MI,
+                                              unsigned TypeIdx, LLT NarrowTy);
 
   /// Legalize a vector instruction by increasing the number of vector elements
   /// involved and ignoring the added elements later.
   LLVM_ABI LegalizeResult moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
-                                    LLT MoreTy);
+                                             LLT MoreTy);
 
   /// Cast the given value to an LLT::scalar with an equivalent size. Returns
   /// the register to use if an instruction was inserted. Returns the original
@@ -137,7 +140,7 @@ public:
   /// ExtOpcode for the extension instruction, and replacing the vreg of the
   /// operand in place.
   LLVM_ABI void widenScalarSrc(MachineInstr &MI, LLT WideTy, unsigned OpIdx,
-                      unsigned ExtOpcode);
+                               unsigned ExtOpcode);
 
   /// Legalize a single operand \p OpIdx of the machine instruction \p MI as a
   /// Use by truncating the operand's type to \p NarrowTy using G_TRUNC, and
@@ -148,22 +151,24 @@ public:
   /// Def by extending the operand's type to \p WideTy and truncating it back
   /// with the \p TruncOpcode, and replacing the vreg of the operand in place.
   LLVM_ABI void widenScalarDst(MachineInstr &MI, LLT WideTy, unsigned OpIdx = 0,
-                      unsigned TruncOpcode = TargetOpcode::G_TRUNC);
+                               unsigned TruncOpcode = TargetOpcode::G_TRUNC);
 
   // Legalize a single operand \p OpIdx of the machine instruction \p MI as a
   // Def by truncating the operand's type to \p NarrowTy, replacing in place and
   // extending back with \p ExtOpcode.
   LLVM_ABI void narrowScalarDst(MachineInstr &MI, LLT NarrowTy, unsigned OpIdx,
-                       unsigned ExtOpcode);
+                                unsigned ExtOpcode);
   /// Legalize a single operand \p OpIdx of the machine instruction \p MI as a
   /// Def by performing it with additional vector elements and extracting the
   /// result elements, and replacing the vreg of the operand in place.
-  LLVM_ABI void moreElementsVectorDst(MachineInstr &MI, LLT MoreTy, unsigned OpIdx);
+  LLVM_ABI void moreElementsVectorDst(MachineInstr &MI, LLT MoreTy,
+                                      unsigned OpIdx);
 
   /// Legalize a single operand \p OpIdx of the machine instruction \p MI as a
   /// Use by producing a vector with undefined high elements, extracting the
   /// original vector type, and replacing the vreg of the operand in place.
-  LLVM_ABI void moreElementsVectorSrc(MachineInstr &MI, LLT MoreTy, unsigned OpIdx);
+  LLVM_ABI void moreElementsVectorSrc(MachineInstr &MI, LLT MoreTy,
+                                      unsigned OpIdx);
 
   /// Legalize a single operand \p OpIdx of the machine instruction \p MI as a
   /// use by inserting a G_BITCAST to \p CastTy
@@ -293,15 +298,17 @@ private:
 public:
   /// Return the alignment to use for a stack temporary object with the given
   /// type.
-  LLVM_ABI Align getStackTemporaryAlignment(LLT Type, Align MinAlign = Align()) const;
+  LLVM_ABI Align getStackTemporaryAlignment(LLT Type,
+                                            Align MinAlign = Align()) const;
 
   /// Create a stack temporary based on the size in bytes and the alignment
-  LLVM_ABI MachineInstrBuilder createStackTemporary(TypeSize Bytes, Align Alignment,
-                                           MachinePointerInfo &PtrInfo);
+  LLVM_ABI MachineInstrBuilder createStackTemporary(
+      TypeSize Bytes, Align Alignment, MachinePointerInfo &PtrInfo);
 
   /// Create a store of \p Val to a stack temporary and return a load as the
   /// same type as \p Res.
-  LLVM_ABI MachineInstrBuilder createStackStoreLoad(const DstOp &Res, const SrcOp &Val);
+  LLVM_ABI MachineInstrBuilder createStackStoreLoad(const DstOp &Res,
+                                                    const SrcOp &Val);
 
   /// Given a store of a boolean vector, scalarize it.
   LLVM_ABI LegalizeResult scalarizeVectorBooleanStore(GStore &MI);
@@ -310,7 +317,8 @@ public:
   /// type \p VecTy starting at a base address of \p VecPtr. If \p Index is out
   /// of bounds the returned pointer is unspecified, but will be within the
   /// vector bounds.
-  LLVM_ABI Register getVectorElementPointer(Register VecPtr, LLT VecTy, Register Index);
+  LLVM_ABI Register getVectorElementPointer(Register VecPtr, LLT VecTy,
+                                            Register Index);
 
   /// Handles most opcodes. Split \p MI into same instruction on sub-vectors or
   /// scalars with \p NumElts elements (1 for scalar). Supports uneven splits:
@@ -323,76 +331,92 @@ public:
       std::initializer_list<unsigned> NonVecOpIndices = {});
 
   LLVM_ABI LegalizeResult fewerElementsVectorPhi(GenericMachineInstr &MI,
-                                        unsigned NumElts);
+                                                 unsigned NumElts);
 
-  LLVM_ABI LegalizeResult moreElementsVectorPhi(MachineInstr &MI, unsigned TypeIdx,
-                                       LLT MoreTy);
-  LLVM_ABI LegalizeResult moreElementsVectorShuffle(MachineInstr &MI, unsigned TypeIdx,
-                                           LLT MoreTy);
+  LLVM_ABI LegalizeResult moreElementsVectorPhi(MachineInstr &MI,
+                                                unsigned TypeIdx, LLT MoreTy);
+  LLVM_ABI LegalizeResult moreElementsVectorShuffle(MachineInstr &MI,
+                                                    unsigned TypeIdx,
+                                                    LLT MoreTy);
 
   LLVM_ABI LegalizeResult fewerElementsVectorUnmergeValues(MachineInstr &MI,
-                                                  unsigned TypeIdx,
-                                                  LLT NarrowTy);
-  LLVM_ABI LegalizeResult fewerElementsVectorMerge(MachineInstr &MI, unsigned TypeIdx,
-                                          LLT NarrowTy);
-  LLVM_ABI LegalizeResult fewerElementsVectorExtractInsertVectorElt(MachineInstr &MI,
                                                            unsigned TypeIdx,
                                                            LLT NarrowTy);
+  LLVM_ABI LegalizeResult fewerElementsVectorMerge(MachineInstr &MI,
+                                                   unsigned TypeIdx,
+                                                   LLT NarrowTy);
+  LLVM_ABI LegalizeResult fewerElementsVectorExtractInsertVectorElt(
+      MachineInstr &MI, unsigned TypeIdx, LLT NarrowTy);
 
   /// Equalize source and destination vector sizes of G_SHUFFLE_VECTOR.
   LLVM_ABI LegalizeResult equalizeVectorShuffleLengths(MachineInstr &MI);
 
   LLVM_ABI LegalizeResult reduceLoadStoreWidth(GLoadStore &MI, unsigned TypeIdx,
-                                      LLT NarrowTy);
+                                               LLT NarrowTy);
 
-  LLVM_ABI LegalizeResult narrowScalarShiftByConstant(MachineInstr &MI, const APInt &Amt,
-                                             LLT HalfTy, LLT ShiftAmtTy);
+  LLVM_ABI LegalizeResult narrowScalarShiftByConstant(MachineInstr &MI,
+                                                      const APInt &Amt,
+                                                      LLT HalfTy,
+                                                      LLT ShiftAmtTy);
 
   LLVM_ABI LegalizeResult fewerElementsVectorReductions(MachineInstr &MI,
-                                               unsigned TypeIdx, LLT NarrowTy);
+                                                        unsigned TypeIdx,
+                                                        LLT NarrowTy);
   LLVM_ABI LegalizeResult fewerElementsVectorSeqReductions(MachineInstr &MI,
-                                                  unsigned TypeIdx,
-                                                  LLT NarrowTy);
+                                                           unsigned TypeIdx,
+                                                           LLT NarrowTy);
 
   // Fewer Elements for bitcast, ensuring that the size of the Src and Dst
   // registers will be the same
-  LLVM_ABI LegalizeResult fewerElementsBitcast(MachineInstr &MI, unsigned TypeIdx,
-                                      LLT NarrowTy);
+  LLVM_ABI LegalizeResult fewerElementsBitcast(MachineInstr &MI,
+                                               unsigned TypeIdx, LLT NarrowTy);
 
-  LLVM_ABI LegalizeResult fewerElementsVectorShuffle(MachineInstr &MI, unsigned TypeIdx,
-                                            LLT NarrowTy);
+  LLVM_ABI LegalizeResult fewerElementsVectorShuffle(MachineInstr &MI,
+                                                     unsigned TypeIdx,
+                                                     LLT NarrowTy);
 
-  LLVM_ABI LegalizeResult narrowScalarShift(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
+  LLVM_ABI LegalizeResult narrowScalarShift(MachineInstr &MI, unsigned TypeIdx,
+                                            LLT Ty);
   LLVM_ABI LegalizeResult narrowScalarAddSub(MachineInstr &MI, unsigned TypeIdx,
-                                    LLT NarrowTy);
+                                             LLT NarrowTy);
   LLVM_ABI LegalizeResult narrowScalarMul(MachineInstr &MI, LLT Ty);
-  LLVM_ABI LegalizeResult narrowScalarFPTOI(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
-  LLVM_ABI LegalizeResult narrowScalarExtract(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
-  LLVM_ABI LegalizeResult narrowScalarInsert(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
+  LLVM_ABI LegalizeResult narrowScalarFPTOI(MachineInstr &MI, unsigned TypeIdx,
+                                            LLT Ty);
+  LLVM_ABI LegalizeResult narrowScalarExtract(MachineInstr &MI,
+                                              unsigned TypeIdx, LLT Ty);
+  LLVM_ABI LegalizeResult narrowScalarInsert(MachineInstr &MI, unsigned TypeIdx,
+                                             LLT Ty);
 
-  LLVM_ABI LegalizeResult narrowScalarBasic(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
-  LLVM_ABI LegalizeResult narrowScalarExt(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
-  LLVM_ABI LegalizeResult narrowScalarSelect(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
-  LLVM_ABI LegalizeResult narrowScalarCTLZ(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
-  LLVM_ABI LegalizeResult narrowScalarCTTZ(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
-  LLVM_ABI LegalizeResult narrowScalarCTPOP(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
-  LLVM_ABI LegalizeResult narrowScalarFLDEXP(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
+  LLVM_ABI LegalizeResult narrowScalarBasic(MachineInstr &MI, unsigned TypeIdx,
+                                            LLT Ty);
+  LLVM_ABI LegalizeResult narrowScalarExt(MachineInstr &MI, unsigned TypeIdx,
+                                          LLT Ty);
+  LLVM_ABI LegalizeResult narrowScalarSelect(MachineInstr &MI, unsigned TypeIdx,
+                                             LLT Ty);
+  LLVM_ABI LegalizeResult narrowScalarCTLZ(MachineInstr &MI, unsigned TypeIdx,
+                                           LLT Ty);
+  LLVM_ABI LegalizeResult narrowScalarCTTZ(MachineInstr &MI, unsigned TypeIdx,
+                                           LLT Ty);
+  LLVM_ABI LegalizeResult narrowScalarCTPOP(MachineInstr &MI, unsigned TypeIdx,
+                                            LLT Ty);
+  LLVM_ABI LegalizeResult narrowScalarFLDEXP(MachineInstr &MI, unsigned TypeIdx,
+                                             LLT Ty);
 
   /// Perform Bitcast legalize action on G_EXTRACT_VECTOR_ELT.
-  LLVM_ABI LegalizeResult bitcastExtractVectorElt(MachineInstr &MI, unsigned TypeIdx,
-                                         LLT CastTy);
+  LLVM_ABI LegalizeResult bitcastExtractVectorElt(MachineInstr &MI,
+                                                  unsigned TypeIdx, LLT CastTy);
 
   /// Perform Bitcast legalize action on G_INSERT_VECTOR_ELT.
-  LLVM_ABI LegalizeResult bitcastInsertVectorElt(MachineInstr &MI, unsigned TypeIdx,
-                                        LLT CastTy);
-  LLVM_ABI LegalizeResult bitcastConcatVector(MachineInstr &MI, unsigned TypeIdx,
-                                     LLT CastTy);
-  LLVM_ABI LegalizeResult bitcastShuffleVector(MachineInstr &MI, unsigned TypeIdx,
-                                      LLT CastTy);
-  LLVM_ABI LegalizeResult bitcastExtractSubvector(MachineInstr &MI, unsigned TypeIdx,
-                                         LLT CastTy);
-  LLVM_ABI LegalizeResult bitcastInsertSubvector(MachineInstr &MI, unsigned TypeIdx,
-                                        LLT CastTy);
+  LLVM_ABI LegalizeResult bitcastInsertVectorElt(MachineInstr &MI,
+                                                 unsigned TypeIdx, LLT CastTy);
+  LLVM_ABI LegalizeResult bitcastConcatVector(MachineInstr &MI,
+                                              unsigned TypeIdx, LLT CastTy);
+  LLVM_ABI LegalizeResult bitcastShuffleVector(MachineInstr &MI,
+                                               unsigned TypeIdx, LLT CastTy);
+  LLVM_ABI LegalizeResult bitcastExtractSubvector(MachineInstr &MI,
+                                                  unsigned TypeIdx, LLT CastTy);
+  LLVM_ABI LegalizeResult bitcastInsertSubvector(MachineInstr &MI,
+                                                 unsigned TypeIdx, LLT CastTy);
 
   LLVM_ABI LegalizeResult lowerConstant(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerFConstant(MachineInstr &MI);
@@ -435,8 +459,9 @@ public:
   LLVM_ABI LegalizeResult lowerExtractInsertVectorElt(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerShuffleVector(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerVECTOR_COMPRESS(MachineInstr &MI);
-  LLVM_ABI Register getDynStackAllocTargetPtr(Register SPReg, Register AllocSize,
-                                     Align Alignment, LLT PtrTy);
+  LLVM_ABI Register getDynStackAllocTargetPtr(Register SPReg,
+                                              Register AllocSize,
+                                              Align Alignment, LLT PtrTy);
   LLVM_ABI LegalizeResult lowerDynStackAlloc(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerStackSave(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerStackRestore(MachineInstr &MI);
@@ -458,7 +483,8 @@ public:
   LLVM_ABI LegalizeResult lowerFAbs(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerVectorReduction(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerMemcpyInline(MachineInstr &MI);
-  LLVM_ABI LegalizeResult lowerMemCpyFamily(MachineInstr &MI, unsigned MaxLen = 0);
+  LLVM_ABI LegalizeResult lowerMemCpyFamily(MachineInstr &MI,
+                                            unsigned MaxLen = 0);
   LLVM_ABI LegalizeResult lowerVAArg(MachineInstr &MI);
 };
 
@@ -481,7 +507,6 @@ createLibcall(MachineIRBuilder &MIRBuilder, RTLIB::Libcall Libcall,
 LLVM_ABI LegalizerHelper::LegalizeResult
 createMemLibcall(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
                  MachineInstr &MI, LostDebugLocObserver &LocObserver);
-
 
 } // End namespace llvm.
 

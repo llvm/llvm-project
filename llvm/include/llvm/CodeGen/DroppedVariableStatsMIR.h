@@ -14,9 +14,9 @@
 #ifndef LLVM_CODEGEN_DROPPEDVARIABLESTATSMIR_H
 #define LLVM_CODEGEN_DROPPEDVARIABLESTATSMIR_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/IR/DroppedVariableStats.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

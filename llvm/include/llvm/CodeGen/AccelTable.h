@@ -13,7 +13,6 @@
 #ifndef LLVM_CODEGEN_ACCELTABLE_H
 #define LLVM_CODEGEN_ACCELTABLE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
@@ -22,6 +21,7 @@
 #include "llvm/CodeGen/DIE.h"
 #include "llvm/CodeGen/DwarfStringPoolEntry.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DJB.h"
 #include "llvm/Support/Debug.h"
 #include <cstdint>
@@ -294,7 +294,8 @@ class DWARF5AccelTableData : public AccelTableData {
 public:
   static uint32_t hash(StringRef Name) { return caseFoldingDjbHash(Name); }
 
-  LLVM_ABI DWARF5AccelTableData(const DIE &Die, const uint32_t UnitID, const bool IsTU);
+  LLVM_ABI DWARF5AccelTableData(const DIE &Die, const uint32_t UnitID,
+                                const bool IsTU);
   DWARF5AccelTableData(const uint64_t DieOffset,
                        const std::optional<uint64_t> DefiningParentOffset,
                        const unsigned DieTag, const unsigned UnitID,
@@ -349,7 +350,8 @@ public:
 
   /// If `Die` has a non-null parent and the parent is not a declaration,
   /// return its offset.
-  LLVM_ABI static std::optional<uint64_t> getDefiningParentDieOffset(const DIE &Die);
+  LLVM_ABI static std::optional<uint64_t>
+  getDefiningParentDieOffset(const DIE &Die);
 
 protected:
   std::variant<const DIE *, uint64_t> OffsetVal;
@@ -438,9 +440,10 @@ public:
   }
 };
 
-LLVM_ABI void emitAppleAccelTableImpl(AsmPrinter *Asm, AccelTableBase &Contents,
-                             StringRef Prefix, const MCSymbol *SecBegin,
-                             ArrayRef<AppleAccelTableData::Atom> Atoms);
+LLVM_ABI void
+emitAppleAccelTableImpl(AsmPrinter *Asm, AccelTableBase &Contents,
+                        StringRef Prefix, const MCSymbol *SecBegin,
+                        ArrayRef<AppleAccelTableData::Atom> Atoms);
 
 /// Emit an Apple Accelerator Table consisting of entries in the specified
 /// AccelTable. The DataT template parameter should be derived from
@@ -452,9 +455,10 @@ void emitAppleAccelTable(AsmPrinter *Asm, AccelTable<DataT> &Contents,
   emitAppleAccelTableImpl(Asm, Contents, Prefix, SecBegin, DataT::Atoms);
 }
 
-LLVM_ABI void emitDWARF5AccelTable(AsmPrinter *Asm, DWARF5AccelTable &Contents,
-                          const DwarfDebug &DD,
-                          ArrayRef<std::unique_ptr<DwarfCompileUnit>> CUs);
+LLVM_ABI void
+emitDWARF5AccelTable(AsmPrinter *Asm, DWARF5AccelTable &Contents,
+                     const DwarfDebug &DD,
+                     ArrayRef<std::unique_ptr<DwarfCompileUnit>> CUs);
 
 /// Emit a DWARFv5 Accelerator Table consisting of entries in the specified
 /// AccelTable. The \p CUs contains either symbols keeping offsets to the
@@ -526,7 +530,8 @@ protected:
 
 /// Accelerator table data implementation for type accelerator tables with
 /// a DIE offset but no actual DIE pointer.
-class LLVM_ABI AppleAccelTableStaticTypeData : public AppleAccelTableStaticOffsetData {
+class LLVM_ABI AppleAccelTableStaticTypeData
+    : public AppleAccelTableStaticOffsetData {
 public:
   AppleAccelTableStaticTypeData(uint32_t Offset, uint16_t Tag,
                                 bool ObjCClassIsImplementation,

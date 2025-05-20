@@ -14,7 +14,6 @@
 #ifndef LLVM_CODEGEN_MACHINEDOMINATORS_H
 #define LLVM_CODEGEN_MACHINEDOMINATORS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -22,6 +21,7 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBundleIterator.h"
 #include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/GenericDomTree.h"
 #include <cassert>
 #include <memory>
@@ -34,7 +34,8 @@ class Module;
 class raw_ostream;
 
 extern template class LLVM_TEMPLATE_ABI DomTreeNodeBase<MachineBasicBlock>;
-extern template class LLVM_TEMPLATE_ABI DominatorTreeBase<MachineBasicBlock, false>; // DomTree
+extern template class LLVM_TEMPLATE_ABI
+    DominatorTreeBase<MachineBasicBlock, false>; // DomTree
 
 using MachineDomTreeNode = DomTreeNodeBase<MachineBasicBlock>;
 
@@ -44,23 +45,23 @@ using MBBUpdates = ArrayRef<llvm::cfg::Update<MachineBasicBlock *>>;
 using MBBDomTreeGraphDiff = GraphDiff<MachineBasicBlock *, false>;
 
 extern template LLVM_TEMPLATE_ABI void Calculate<MBBDomTree>(MBBDomTree &DT);
-extern template LLVM_TEMPLATE_ABI void CalculateWithUpdates<MBBDomTree>(MBBDomTree &DT,
-                                                      MBBUpdates U);
+extern template LLVM_TEMPLATE_ABI void
+CalculateWithUpdates<MBBDomTree>(MBBDomTree &DT, MBBUpdates U);
 
-extern template LLVM_TEMPLATE_ABI void InsertEdge<MBBDomTree>(MBBDomTree &DT,
-                                            MachineBasicBlock *From,
-                                            MachineBasicBlock *To);
+extern template LLVM_TEMPLATE_ABI void
+InsertEdge<MBBDomTree>(MBBDomTree &DT, MachineBasicBlock *From,
+                       MachineBasicBlock *To);
 
-extern template LLVM_TEMPLATE_ABI void DeleteEdge<MBBDomTree>(MBBDomTree &DT,
-                                            MachineBasicBlock *From,
-                                            MachineBasicBlock *To);
+extern template LLVM_TEMPLATE_ABI void
+DeleteEdge<MBBDomTree>(MBBDomTree &DT, MachineBasicBlock *From,
+                       MachineBasicBlock *To);
 
-extern template LLVM_TEMPLATE_ABI void ApplyUpdates<MBBDomTree>(MBBDomTree &DT,
-                                              MBBDomTreeGraphDiff &,
-                                              MBBDomTreeGraphDiff *);
+extern template LLVM_TEMPLATE_ABI void
+ApplyUpdates<MBBDomTree>(MBBDomTree &DT, MBBDomTreeGraphDiff &,
+                         MBBDomTreeGraphDiff *);
 
-extern template LLVM_TEMPLATE_ABI bool Verify<MBBDomTree>(const MBBDomTree &DT,
-                                        MBBDomTree::VerificationLevel VL);
+extern template LLVM_TEMPLATE_ABI bool
+Verify<MBBDomTree>(const MBBDomTree &DT, MBBDomTree::VerificationLevel VL);
 } // namespace DomTreeBuilder
 
 //===-------------------------------------
@@ -77,7 +78,7 @@ public:
 
   /// Handle invalidation explicitly.
   LLVM_ABI bool invalidate(MachineFunction &, const PreservedAnalyses &PA,
-                  MachineFunctionAnalysisManager::Invalidator &);
+                           MachineFunctionAnalysisManager::Invalidator &);
 
   using Base::dominates;
 
@@ -118,7 +119,7 @@ class MachineDominatorTreePrinterPass
 public:
   explicit MachineDominatorTreePrinterPass(raw_ostream &OS) : OS(OS) {}
   LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
-                        MachineFunctionAnalysisManager &MFAM);
+                                 MachineFunctionAnalysisManager &MFAM);
   static bool isRequired() { return true; }
 };
 

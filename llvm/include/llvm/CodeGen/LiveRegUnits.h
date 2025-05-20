@@ -14,12 +14,12 @@
 #ifndef LLVM_CODEGEN_LIVEREGUNITS_H
 #define LLVM_CODEGEN_LIVEREGUNITS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/CodeGen/MachineInstrBundle.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 
 namespace llvm {

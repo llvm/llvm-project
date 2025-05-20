@@ -14,9 +14,9 @@
 #ifndef LLVM_CODEGEN_MACHINEDOMTREEUPDATER_H
 #define LLVM_CODEGEN_MACHINEDOMTREEUPDATER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/Analysis/GenericDomTreeUpdater.h"
 #include "llvm/CodeGen/MachineDominators.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

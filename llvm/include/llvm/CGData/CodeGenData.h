@@ -14,7 +14,6 @@
 #ifndef LLVM_CGDATA_CODEGENDATA_H
 #define LLVM_CGDATA_CODEGENDATA_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/StableHashing.h"
 #include "llvm/Bitcode/BitcodeReader.h"
@@ -24,6 +23,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Caching.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/Triple.h"
 #include <mutex>
@@ -36,8 +36,8 @@ enum CGDataSectKind {
 };
 
 LLVM_ABI std::string getCodeGenDataSectionName(CGDataSectKind CGSK,
-                                      Triple::ObjectFormatType OF,
-                                      bool AddSegmentInfo = true);
+                                               Triple::ObjectFormatType OF,
+                                               bool AddSegmentInfo = true);
 
 enum class CGDataKind {
   Unknown = 0x0,
@@ -247,7 +247,7 @@ struct StreamCacheData {
 /// process. \p AddStream is the callback used to add the serialized module to
 /// the stream.
 LLVM_ABI void saveModuleForTwoRounds(const Module &TheModule, unsigned Task,
-                            AddStreamFn AddStream);
+                                     AddStreamFn AddStream);
 
 /// Load the optimized bitcode module for the second codegen round.
 /// \p OrigModule is the original bitcode module.
@@ -255,15 +255,15 @@ LLVM_ABI void saveModuleForTwoRounds(const Module &TheModule, unsigned Task,
 /// process. \p Context provides the environment settings for module operations.
 /// \p IRFiles contains optimized bitcode module files needed for loading.
 /// \return A unique_ptr to the loaded Module, or nullptr if loading fails.
-LLVM_ABI std::unique_ptr<Module> loadModuleForTwoRounds(BitcodeModule &OrigModule,
-                                               unsigned Task,
-                                               LLVMContext &Context,
-                                               ArrayRef<StringRef> IRFiles);
+LLVM_ABI std::unique_ptr<Module>
+loadModuleForTwoRounds(BitcodeModule &OrigModule, unsigned Task,
+                       LLVMContext &Context, ArrayRef<StringRef> IRFiles);
 
 /// Merge the codegen data from the scratch objects \p ObjectFiles from the
 /// first codegen round.
 /// \return the combined hash of the merged codegen data.
-LLVM_ABI Expected<stable_hash> mergeCodeGenData(ArrayRef<StringRef> ObjectFiles);
+LLVM_ABI Expected<stable_hash>
+mergeCodeGenData(ArrayRef<StringRef> ObjectFiles);
 
 LLVM_ABI void warn(Error E, StringRef Whence = "");
 LLVM_ABI void warn(Twine Message, StringRef Whence = "", StringRef Hint = "");

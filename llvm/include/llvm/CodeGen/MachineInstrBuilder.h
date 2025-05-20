@@ -19,7 +19,6 @@
 #ifndef LLVM_CODEGEN_MACHINEINSTRBUILDER_H
 #define LLVM_CODEGEN_MACHINEINSTRBUILDER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -30,6 +29,7 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <cstdint>
@@ -504,39 +504,40 @@ inline MachineInstrBuilder BuildMI(MachineBasicBlock *BB,
 /// address.  The convention is that a DBG_VALUE is indirect iff the
 /// second operand is an immediate.
 LLVM_ABI MachineInstrBuilder BuildMI(MachineFunction &MF, const DebugLoc &DL,
-                            const MCInstrDesc &MCID, bool IsIndirect,
-                            Register Reg, const MDNode *Variable,
-                            const MDNode *Expr);
+                                     const MCInstrDesc &MCID, bool IsIndirect,
+                                     Register Reg, const MDNode *Variable,
+                                     const MDNode *Expr);
 
 /// This version of the builder builds a DBG_VALUE or DBG_VALUE_LIST intrinsic
 /// for a MachineOperand.
 LLVM_ABI MachineInstrBuilder BuildMI(MachineFunction &MF, const DebugLoc &DL,
-                            const MCInstrDesc &MCID, bool IsIndirect,
-                            ArrayRef<MachineOperand> MOs,
-                            const MDNode *Variable, const MDNode *Expr);
+                                     const MCInstrDesc &MCID, bool IsIndirect,
+                                     ArrayRef<MachineOperand> MOs,
+                                     const MDNode *Variable,
+                                     const MDNode *Expr);
 
 /// This version of the builder builds a DBG_VALUE intrinsic
 /// for either a value in a register or a register-indirect
 /// address and inserts it at position I.
 LLVM_ABI MachineInstrBuilder BuildMI(MachineBasicBlock &BB,
-                            MachineBasicBlock::iterator I, const DebugLoc &DL,
-                            const MCInstrDesc &MCID, bool IsIndirect,
-                            Register Reg, const MDNode *Variable,
-                            const MDNode *Expr);
+                                     MachineBasicBlock::iterator I,
+                                     const DebugLoc &DL,
+                                     const MCInstrDesc &MCID, bool IsIndirect,
+                                     Register Reg, const MDNode *Variable,
+                                     const MDNode *Expr);
 
 /// This version of the builder builds a DBG_VALUE, DBG_INSTR_REF, or
 /// DBG_VALUE_LIST intrinsic for a machine operand and inserts it at position I.
-LLVM_ABI MachineInstrBuilder BuildMI(MachineBasicBlock &BB,
-                            MachineBasicBlock::iterator I, const DebugLoc &DL,
-                            const MCInstrDesc &MCID, bool IsIndirect,
-                            ArrayRef<MachineOperand> MOs,
-                            const MDNode *Variable, const MDNode *Expr);
+LLVM_ABI MachineInstrBuilder BuildMI(
+    MachineBasicBlock &BB, MachineBasicBlock::iterator I, const DebugLoc &DL,
+    const MCInstrDesc &MCID, bool IsIndirect, ArrayRef<MachineOperand> MOs,
+    const MDNode *Variable, const MDNode *Expr);
 
 /// Clone a DBG_VALUE whose value has been spilled to FrameIndex.
 LLVM_ABI MachineInstr *buildDbgValueForSpill(MachineBasicBlock &BB,
-                                    MachineBasicBlock::iterator I,
-                                    const MachineInstr &Orig, int FrameIndex,
-                                    Register SpillReg);
+                                             MachineBasicBlock::iterator I,
+                                             const MachineInstr &Orig,
+                                             int FrameIndex, Register SpillReg);
 LLVM_ABI MachineInstr *buildDbgValueForSpill(
     MachineBasicBlock &BB, MachineBasicBlock::iterator I,
     const MachineInstr &Orig, int FrameIndex,
@@ -544,7 +545,8 @@ LLVM_ABI MachineInstr *buildDbgValueForSpill(
 
 /// Update a DBG_VALUE whose value has been spilled to FrameIndex. Useful when
 /// modifying an instruction in place while iterating over a basic block.
-LLVM_ABI void updateDbgValueForSpill(MachineInstr &Orig, int FrameIndex, Register Reg);
+LLVM_ABI void updateDbgValueForSpill(MachineInstr &Orig, int FrameIndex,
+                                     Register Reg);
 
 inline unsigned getDefRegState(bool B) {
   return B ? RegState::Define : 0;

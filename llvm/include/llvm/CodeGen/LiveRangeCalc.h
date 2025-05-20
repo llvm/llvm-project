@@ -23,7 +23,6 @@
 #ifndef LLVM_CODEGEN_LIVERANGECALC_H
 #define LLVM_CODEGEN_LIVERANGECALC_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
@@ -32,6 +31,7 @@
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/SlotIndexes.h"
+#include "llvm/Support/Compiler.h"
 #include <utility>
 
 namespace llvm {
@@ -189,7 +189,7 @@ public:
   /// live range in a function.  If live ranges are not known to be
   /// non-overlapping, call reset before each.
   LLVM_ABI void reset(const MachineFunction *mf, SlotIndexes *SI,
-             MachineDominatorTree *MDT, VNInfo::Allocator *VNIA);
+                      MachineDominatorTree *MDT, VNInfo::Allocator *VNIA);
 
   //===--------------------------------------------------------------------===//
   // Mid-level interface.
@@ -206,7 +206,7 @@ public:
   ///
   /// PhysReg, when set, is used to verify live-in lists on basic blocks.
   LLVM_ABI void extend(LiveRange &LR, SlotIndex Use, Register PhysReg,
-              ArrayRef<SlotIndex> Undefs);
+                       ArrayRef<SlotIndex> Undefs);
 
   //===--------------------------------------------------------------------===//
   // Low-level interface.
@@ -259,10 +259,9 @@ public:
   /// jointly dominated by the blocks corresponding to the slot indices
   /// in @p Defs. This function is mainly for use in self-verification
   /// checks.
-  LLVM_ABI LLVM_ATTRIBUTE_UNUSED
-  static bool isJointlyDominated(const MachineBasicBlock *MBB,
-                                 ArrayRef<SlotIndex> Defs,
-                                 const SlotIndexes &Indexes);
+  LLVM_ABI LLVM_ATTRIBUTE_UNUSED static bool
+  isJointlyDominated(const MachineBasicBlock *MBB, ArrayRef<SlotIndex> Defs,
+                     const SlotIndexes &Indexes);
 };
 
 } // end namespace llvm

@@ -14,7 +14,6 @@
 #ifndef LLVM_CODEGEN_GLOBALISEL_LEGALIZERINFO_H
 #define LLVM_CODEGEN_GLOBALISEL_LEGALIZERINFO_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/GlobalISel/LegacyLegalizerInfo.h"
@@ -24,6 +23,7 @@
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstdint>
 #include <tuple>
@@ -99,7 +99,8 @@ enum LegalizeAction : std::uint8_t {
   UseLegacyRules,
 };
 } // end namespace LegalizeActions
-LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, LegalizeActions::LegalizeAction Action);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
+                                 LegalizeActions::LegalizeAction Action);
 
 using LegalizeActions::LegalizeAction;
 
@@ -257,7 +258,7 @@ Predicate any(Predicate P0, Predicate P1, Args... args) {
 LLVM_ABI LegalityPredicate typeIs(unsigned TypeIdx, LLT TypesInit);
 /// True iff the given type index is one of the specified types.
 LLVM_ABI LegalityPredicate typeInSet(unsigned TypeIdx,
-                            std::initializer_list<LLT> TypesInit);
+                                     std::initializer_list<LLT> TypesInit);
 
 /// True iff the given type index is not the specified type.
 inline LegalityPredicate typeIsNot(unsigned TypeIdx, LLT Type) {
@@ -307,11 +308,13 @@ LLVM_ABI LegalityPredicate scalarWiderThan(unsigned TypeIdx, unsigned Size);
 
 /// True iff the specified type index is a scalar or vector with an element type
 /// that's narrower than the given size.
-LLVM_ABI LegalityPredicate scalarOrEltNarrowerThan(unsigned TypeIdx, unsigned Size);
+LLVM_ABI LegalityPredicate scalarOrEltNarrowerThan(unsigned TypeIdx,
+                                                   unsigned Size);
 
 /// True iff the specified type index is a scalar or a vector with an element
 /// type that's wider than the given size.
-LLVM_ABI LegalityPredicate scalarOrEltWiderThan(unsigned TypeIdx, unsigned Size);
+LLVM_ABI LegalityPredicate scalarOrEltWiderThan(unsigned TypeIdx,
+                                                unsigned Size);
 
 /// True iff the specified type index is a scalar whose size is not a multiple
 /// of Size.
@@ -352,8 +355,8 @@ LLVM_ABI LegalityPredicate memSizeNotByteSizePow2(unsigned MMOIdx);
 LLVM_ABI LegalityPredicate numElementsNotPow2(unsigned TypeIdx);
 /// True iff the specified MMO index has at an atomic ordering of at Ordering or
 /// stronger.
-LLVM_ABI LegalityPredicate atomicOrderingAtLeastOrStrongerThan(unsigned MMOIdx,
-                                                      AtomicOrdering Ordering);
+LLVM_ABI LegalityPredicate
+atomicOrderingAtLeastOrStrongerThan(unsigned MMOIdx, AtomicOrdering Ordering);
 } // end namespace LegalityPredicates
 
 namespace LegalizeMutations {
@@ -364,14 +367,16 @@ LLVM_ABI LegalizeMutation changeTo(unsigned TypeIdx, LLT Ty);
 LLVM_ABI LegalizeMutation changeTo(unsigned TypeIdx, unsigned FromTypeIdx);
 
 /// Keep the same scalar or element type as the given type index.
-LLVM_ABI LegalizeMutation changeElementTo(unsigned TypeIdx, unsigned FromTypeIdx);
+LLVM_ABI LegalizeMutation changeElementTo(unsigned TypeIdx,
+                                          unsigned FromTypeIdx);
 
 /// Keep the same scalar or element type as the given type.
 LLVM_ABI LegalizeMutation changeElementTo(unsigned TypeIdx, LLT Ty);
 
 /// Keep the same scalar or element type as \p TypeIdx, but take the number of
 /// elements from \p FromTypeIdx.
-LLVM_ABI LegalizeMutation changeElementCountTo(unsigned TypeIdx, unsigned FromTypeIdx);
+LLVM_ABI LegalizeMutation changeElementCountTo(unsigned TypeIdx,
+                                               unsigned FromTypeIdx);
 
 /// Keep the same scalar or element type as \p TypeIdx, but take the number of
 /// elements from \p Ty.
@@ -380,20 +385,23 @@ LLVM_ABI LegalizeMutation changeElementCountTo(unsigned TypeIdx, LLT Ty);
 /// Change the scalar size or element size to have the same scalar size as type
 /// index \p FromIndex. Unlike changeElementTo, this discards pointer types and
 /// only changes the size.
-LLVM_ABI LegalizeMutation changeElementSizeTo(unsigned TypeIdx, unsigned FromTypeIdx);
+LLVM_ABI LegalizeMutation changeElementSizeTo(unsigned TypeIdx,
+                                              unsigned FromTypeIdx);
 
 /// Widen the scalar type or vector element type for the given type index to the
 /// next power of 2.
-LLVM_ABI LegalizeMutation widenScalarOrEltToNextPow2(unsigned TypeIdx, unsigned Min = 0);
+LLVM_ABI LegalizeMutation widenScalarOrEltToNextPow2(unsigned TypeIdx,
+                                                     unsigned Min = 0);
 
 /// Widen the scalar type or vector element type for the given type index to
 /// next multiple of \p Size.
 LLVM_ABI LegalizeMutation widenScalarOrEltToNextMultipleOf(unsigned TypeIdx,
-                                                  unsigned Size);
+                                                           unsigned Size);
 
 /// Add more elements to the type for the given type index to the next power of
 /// 2.
-LLVM_ABI LegalizeMutation moreElementsToNextPow2(unsigned TypeIdx, unsigned Min = 0);
+LLVM_ABI LegalizeMutation moreElementsToNextPow2(unsigned TypeIdx,
+                                                 unsigned Min = 0);
 /// Break up the vector type for the given type index into the element type.
 LLVM_ABI LegalizeMutation scalarize(unsigned TypeIdx);
 } // end namespace LegalizeMutations

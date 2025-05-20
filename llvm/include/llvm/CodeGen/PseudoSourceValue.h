@@ -25,7 +25,7 @@ class PseudoSourceValue;
 class raw_ostream;
 class TargetMachine;
 
-LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const PseudoSourceValue* PSV);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const PseudoSourceValue *PSV);
 
 /// Special value supplied for machine level alias analysis. It indicates that
 /// a memory access references the functions stack frame (e.g., a spill slot),
@@ -46,8 +46,8 @@ public:
 private:
   unsigned Kind;
   unsigned AddressSpace;
-  LLVM_ABI_FRIEND friend raw_ostream &llvm::operator<<(raw_ostream &OS,
-                                       const PseudoSourceValue* PSV);
+  LLVM_ABI_FRIEND friend raw_ostream &
+  llvm::operator<<(raw_ostream &OS, const PseudoSourceValue *PSV);
 
   friend class MachineMemOperand; // For printCustom().
   friend class MIRFormatter;      // For printCustom().
@@ -126,7 +126,8 @@ class GlobalValuePseudoSourceValue : public CallEntryPseudoSourceValue {
   const GlobalValue *GV;
 
 public:
-  LLVM_ABI GlobalValuePseudoSourceValue(const GlobalValue *GV, const TargetMachine &TM);
+  LLVM_ABI GlobalValuePseudoSourceValue(const GlobalValue *GV,
+                                        const TargetMachine &TM);
 
   static bool classof(const PseudoSourceValue *V) {
     return V->kind() == GlobalValueCallEntry;
@@ -140,7 +141,8 @@ class ExternalSymbolPseudoSourceValue : public CallEntryPseudoSourceValue {
   const char *ES;
 
 public:
-  LLVM_ABI ExternalSymbolPseudoSourceValue(const char *ES, const TargetMachine &TM);
+  LLVM_ABI ExternalSymbolPseudoSourceValue(const char *ES,
+                                           const TargetMachine &TM);
 
   static bool classof(const PseudoSourceValue *V) {
     return V->kind() == ExternalSymbolCallEntry;

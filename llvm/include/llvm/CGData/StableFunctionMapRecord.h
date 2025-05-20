@@ -16,9 +16,9 @@
 #ifndef LLVM_CGDATA_STABLEFUNCTIONMAPRECORD_H
 #define LLVM_CGDATA_STABLEFUNCTIONMAPRECORD_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/CGData/StableFunctionMap.h"
 #include "llvm/ObjectYAML/YAML.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
@@ -35,7 +35,8 @@ struct StableFunctionMapRecord {
 
   /// A static helper function to serialize the stable function map without
   /// owning the stable function map.
-  LLVM_ABI static void serialize(raw_ostream &OS, const StableFunctionMap *FunctionMap);
+  LLVM_ABI static void serialize(raw_ostream &OS,
+                                 const StableFunctionMap *FunctionMap);
 
   /// Serialize the stable function map to a raw_ostream.
   LLVM_ABI void serialize(raw_ostream &OS) const;

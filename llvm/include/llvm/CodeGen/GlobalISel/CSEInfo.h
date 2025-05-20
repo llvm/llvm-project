@@ -12,7 +12,6 @@
 #ifndef LLVM_CODEGEN_GLOBALISEL_CSEINFO_H
 #define LLVM_CODEGEN_GLOBALISEL_CSEINFO_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/CodeGen/CSEConfigBase.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
@@ -21,6 +20,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class MachineBasicBlock;
@@ -178,13 +178,15 @@ public:
   // Profiling methods.
   LLVM_ABI const GISelInstProfileBuilder &addNodeIDOpcode(unsigned Opc) const;
   LLVM_ABI const GISelInstProfileBuilder &addNodeIDRegType(const LLT Ty) const;
-  LLVM_ABI const GISelInstProfileBuilder &addNodeIDRegType(const Register) const;
+  LLVM_ABI const GISelInstProfileBuilder &
+  addNodeIDRegType(const Register) const;
   LLVM_ABI const GISelInstProfileBuilder &
       addNodeIDRegType(MachineRegisterInfo::VRegAttrs) const;
 
   LLVM_ABI const GISelInstProfileBuilder &
   addNodeIDRegType(const TargetRegisterClass *RC) const;
-  LLVM_ABI const GISelInstProfileBuilder &addNodeIDRegType(const RegisterBank *RB) const;
+  LLVM_ABI const GISelInstProfileBuilder &
+  addNodeIDRegType(const RegisterBank *RB) const;
 
   LLVM_ABI const GISelInstProfileBuilder &addNodeIDRegNum(Register Reg) const;
 
@@ -198,7 +200,8 @@ public:
   addNodeIDMachineOperand(const MachineOperand &MO) const;
 
   LLVM_ABI const GISelInstProfileBuilder &addNodeIDFlag(unsigned Flag) const;
-  LLVM_ABI const GISelInstProfileBuilder &addNodeID(const MachineInstr *MI) const;
+  LLVM_ABI const GISelInstProfileBuilder &
+  addNodeID(const MachineInstr *MI) const;
 };
 
 /// Simple wrapper that does the following.
@@ -216,7 +219,7 @@ public:
   /// it will not use the new CSEOpt(use Recompute to force using the new
   /// CSEOpt).
   LLVM_ABI GISelCSEInfo &get(std::unique_ptr<CSEConfigBase> CSEOpt,
-                    bool ReCompute = false);
+                             bool ReCompute = false);
   void setMF(MachineFunction &MFunc) { MF = &MFunc; }
   void setComputed(bool Computed) { AlreadyComputed = Computed; }
   void releaseMemory() { Info.releaseMemory(); }

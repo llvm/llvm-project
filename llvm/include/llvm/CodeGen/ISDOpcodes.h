@@ -13,8 +13,8 @@
 #ifndef LLVM_CODEGEN_ISDOPCODES_H
 #define LLVM_CODEGEN_ISDOPCODES_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -1582,7 +1582,8 @@ LLVM_ABI std::optional<unsigned> getVPMaskIdx(unsigned Opcode);
 LLVM_ABI std::optional<unsigned> getVPExplicitVectorLengthIdx(unsigned Opcode);
 
 /// Translate this VP Opcode to its corresponding non-VP Opcode.
-LLVM_ABI std::optional<unsigned> getBaseOpcodeForVP(unsigned Opcode, bool hasFPExcept);
+LLVM_ABI std::optional<unsigned> getBaseOpcodeForVP(unsigned Opcode,
+                                                    bool hasFPExcept);
 
 /// Translate this non-VP Opcode to its corresponding VP Opcode.
 LLVM_ABI std::optional<unsigned> getVPForBaseOpcode(unsigned Opcode);

@@ -114,21 +114,21 @@ public:
   LLVM_ABI ~LiveIntervals();
 
   LLVM_ABI bool invalidate(MachineFunction &MF, const PreservedAnalyses &PA,
-                  MachineFunctionAnalysisManager::Invalidator &Inv);
+                           MachineFunctionAnalysisManager::Invalidator &Inv);
 
   /// Calculate the spill weight to assign to a single instruction.
   /// If \p PSI is provided the calculation is altered for optsize functions.
   LLVM_ABI static float getSpillWeight(bool isDef, bool isUse,
-                              const MachineBlockFrequencyInfo *MBFI,
-                              const MachineInstr &MI,
-                              ProfileSummaryInfo *PSI = nullptr);
+                                       const MachineBlockFrequencyInfo *MBFI,
+                                       const MachineInstr &MI,
+                                       ProfileSummaryInfo *PSI = nullptr);
 
   /// Calculate the spill weight to assign to a single instruction.
   /// If \p PSI is provided the calculation is altered for optsize functions.
   LLVM_ABI static float getSpillWeight(bool isDef, bool isUse,
-                              const MachineBlockFrequencyInfo *MBFI,
-                              const MachineBasicBlock *MBB,
-                              ProfileSummaryInfo *PSI = nullptr);
+                                       const MachineBlockFrequencyInfo *MBFI,
+                                       const MachineBasicBlock *MBB,
+                                       ProfileSummaryInfo *PSI = nullptr);
 
   LiveInterval &getInterval(Register Reg) {
     if (hasInterval(Reg))
@@ -176,8 +176,8 @@ public:
 
   /// Given a register and an instruction, adds a live segment from that
   /// instruction to the end of its MBB.
-  LLVM_ABI LiveInterval::Segment addSegmentToEndOfBlock(Register Reg,
-                                               MachineInstr &startInst);
+  LLVM_ABI LiveInterval::Segment
+  addSegmentToEndOfBlock(Register Reg, MachineInstr &startInst);
 
   /// After removing some uses of a register, shrink its live range to just
   /// the remaining uses. This method does not compute reaching defs for new
@@ -186,7 +186,7 @@ public:
   /// are added to the dead vector. Returns true if the interval may have been
   /// separated into multiple connected components.
   LLVM_ABI bool shrinkToUses(LiveInterval *li,
-                    SmallVectorImpl<MachineInstr *> *dead = nullptr);
+                             SmallVectorImpl<MachineInstr *> *dead = nullptr);
 
   /// Specialized version of
   /// shrinkToUses(LiveInterval *li, SmallVectorImpl<MachineInstr*> *dead)
@@ -209,7 +209,7 @@ public:
   ///
   /// See also LiveRangeCalc::extend().
   LLVM_ABI void extendToIndices(LiveRange &LR, ArrayRef<SlotIndex> Indices,
-                       ArrayRef<SlotIndex> Undefs);
+                                ArrayRef<SlotIndex> Undefs);
 
   void extendToIndices(LiveRange &LR, ArrayRef<SlotIndex> Indices) {
     extendToIndices(LR, Indices, /*Undefs=*/{});
@@ -223,7 +223,7 @@ public:
   /// Calling pruneValue() and extendToIndices() can be used to reconstruct
   /// SSA form after adding defs to a virtual register.
   LLVM_ABI void pruneValue(LiveRange &LR, SlotIndex Kill,
-                  SmallVectorImpl<SlotIndex> *EndPoints);
+                           SmallVectorImpl<SlotIndex> *EndPoints);
 
   /// This function should not be used. Its intent is to tell you that you are
   /// doing something wrong if you call pruneValue directly on a
@@ -341,7 +341,7 @@ public:
   /// \pre BundleStart should be the first instruction in the Bundle.
   /// \pre BundleStart should not have a have SlotIndex as one will be assigned.
   LLVM_ABI void handleMoveIntoNewBundle(MachineInstr &BundleStart,
-                               bool UpdateFlags = false);
+                                        bool UpdateFlags = false);
 
   /// Update live intervals for instructions in a range of iterators. It is
   /// intended for use after target hooks that may insert or remove
@@ -353,9 +353,9 @@ public:
   /// Currently, the only changes that are supported are simple removal
   /// and addition of uses.
   LLVM_ABI void repairIntervalsInRange(MachineBasicBlock *MBB,
-                              MachineBasicBlock::iterator Begin,
-                              MachineBasicBlock::iterator End,
-                              ArrayRef<Register> OrigRegs);
+                                       MachineBasicBlock::iterator Begin,
+                                       MachineBasicBlock::iterator End,
+                                       ArrayRef<Register> OrigRegs);
 
   // Register mask functions.
   //
@@ -396,7 +396,8 @@ public:
   ///
   /// Returns false if \p LI doesn't cross any register mask instructions. In
   /// that case, the bit vector is not filled in.
-  LLVM_ABI bool checkRegMaskInterference(const LiveInterval &LI, BitVector &UsableRegs);
+  LLVM_ABI bool checkRegMaskInterference(const LiveInterval &LI,
+                                         BitVector &UsableRegs);
 
   // Register unit functions.
   //
@@ -456,8 +457,9 @@ public:
   LLVM_ABI void removeVRegDefAt(LiveInterval &LI, SlotIndex Pos);
 
   /// Split separate components in LiveInterval \p LI into separate intervals.
-  LLVM_ABI void splitSeparateComponents(LiveInterval &LI,
-                               SmallVectorImpl<LiveInterval *> &SplitLIs);
+  LLVM_ABI void
+  splitSeparateComponents(LiveInterval &LI,
+                          SmallVectorImpl<LiveInterval *> &SplitLIs);
 
   /// For live interval \p LI with correct SubRanges construct matching
   /// information for the main live range. Expects the main live range to not
@@ -512,7 +514,8 @@ class LiveIntervalsAnalysis : public AnalysisInfoMixin<LiveIntervalsAnalysis> {
 
 public:
   using Result = LiveIntervals;
-  LLVM_ABI Result run(MachineFunction &MF, MachineFunctionAnalysisManager &MFAM);
+  LLVM_ABI Result run(MachineFunction &MF,
+                      MachineFunctionAnalysisManager &MFAM);
 };
 
 class LiveIntervalsPrinterPass
@@ -522,7 +525,7 @@ class LiveIntervalsPrinterPass
 public:
   explicit LiveIntervalsPrinterPass(raw_ostream &OS) : OS(OS) {}
   LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
-                        MachineFunctionAnalysisManager &MFAM);
+                                 MachineFunctionAnalysisManager &MFAM);
   static bool isRequired() { return true; }
 };
 

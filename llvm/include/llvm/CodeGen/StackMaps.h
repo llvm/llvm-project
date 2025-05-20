@@ -9,11 +9,11 @@
 #ifndef LLVM_CODEGEN_STACKMAPS_H
 #define LLVM_CODEGEN_STACKMAPS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/IR/CallingConv.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include <algorithm>
 #include <cassert>
@@ -297,7 +297,8 @@ public:
 
   /// Get index of next meta operand.
   /// Similar to parseOperand, but does not actually parses operand meaning.
-  LLVM_ABI static unsigned getNextMetaArgIdx(const MachineInstr *MI, unsigned CurIdx);
+  LLVM_ABI static unsigned getNextMetaArgIdx(const MachineInstr *MI,
+                                             unsigned CurIdx);
 
   void reset() {
     CSInfos.clear();
@@ -336,16 +337,13 @@ public:
   /// Generate a stackmap record for a stackmap instruction.
   ///
   /// MI must be a raw STACKMAP, not a PATCHPOINT.
-  LLVM_ABI void recordStackMap(const MCSymbol &L,
-                      const MachineInstr &MI);
+  LLVM_ABI void recordStackMap(const MCSymbol &L, const MachineInstr &MI);
 
   /// Generate a stackmap record for a patchpoint instruction.
-  LLVM_ABI void recordPatchPoint(const MCSymbol &L,
-                        const MachineInstr &MI);
+  LLVM_ABI void recordPatchPoint(const MCSymbol &L, const MachineInstr &MI);
 
   /// Generate a stackmap record for a statepoint instruction.
-  LLVM_ABI void recordStatepoint(const MCSymbol &L,
-                        const MachineInstr &MI);
+  LLVM_ABI void recordStatepoint(const MCSymbol &L, const MachineInstr &MI);
 
   /// If there is any stack map data, create a stack map section and serialize
   /// the map info into it. This clears the stack map data structures

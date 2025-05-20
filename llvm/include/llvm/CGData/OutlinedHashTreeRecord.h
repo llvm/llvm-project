@@ -16,8 +16,8 @@
 #ifndef LLVM_CGDATA_OUTLINEDHASHTREERECORD_H
 #define LLVM_CGDATA_OUTLINEDHASHTREERECORD_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/CGData/OutlinedHashTree.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

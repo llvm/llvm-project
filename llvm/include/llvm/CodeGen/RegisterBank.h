@@ -55,7 +55,8 @@ public:
   /// \note This method does not check anything when assertions are disabled.
   ///
   /// \return True is the check was successful.
-  LLVM_ABI bool verify(const RegisterBankInfo &RBI, const TargetRegisterInfo &TRI) const;
+  LLVM_ABI bool verify(const RegisterBankInfo &RBI,
+                       const TargetRegisterInfo &TRI) const;
 
   /// Check whether this register bank covers \p RC.
   /// In other words, check if this register bank fully covers
@@ -78,7 +79,7 @@ public:
   /// TRI is then used to print the name of the register classes that
   /// this register bank covers.
   LLVM_ABI void print(raw_ostream &OS, bool IsForDebug = false,
-             const TargetRegisterInfo *TRI = nullptr) const;
+                      const TargetRegisterInfo *TRI = nullptr) const;
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS, const RegisterBank &RegBank) {

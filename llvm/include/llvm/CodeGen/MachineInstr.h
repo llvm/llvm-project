@@ -15,7 +15,6 @@
 #ifndef LLVM_CODEGEN_MACHINEINSTR_H
 #define LLVM_CODEGEN_MACHINEINSTR_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/PointerSumType.h"
@@ -31,6 +30,7 @@
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/ArrayRecycler.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/TrailingObjects.h"
 #include <algorithm>
@@ -614,10 +614,11 @@ public:
 
   /// Returns a range of all of the operands that correspond to a debug use of
   /// \p Reg.
-  LLVM_ABI iterator_range<filter_iterator<const MachineOperand *,
-                                 std::function<bool(const MachineOperand &Op)>>>
+  LLVM_ABI iterator_range<filter_iterator<
+      const MachineOperand *, std::function<bool(const MachineOperand &Op)>>>
   getDebugOperandsForReg(Register Reg) const;
-  LLVM_ABI iterator_range<filter_iterator<MachineOperand *,
+  LLVM_ABI
+  iterator_range<filter_iterator<MachineOperand *,
                                  std::function<bool(MachineOperand &Op)>>>
   getDebugOperandsForReg(Register Reg);
 
@@ -948,7 +949,8 @@ public:
 
   /// Return true if this is a call instruction that may have an additional
   /// information associated with it.
-  LLVM_ABI bool isCandidateForAdditionalCallInfo(QueryType Type = IgnoreBundle) const;
+  LLVM_ABI bool
+  isCandidateForAdditionalCallInfo(QueryType Type = IgnoreBundle) const;
 
   /// Return true if copying, moving, or erasing this instruction requires
   /// updating additional call info (see \ref copyCallInfo, \ref moveCallInfo,
@@ -1277,7 +1279,7 @@ public:
   /// Note that this means liveness related flags (dead, undef, kill) do not
   /// affect the notion of identical.
   LLVM_ABI bool isIdenticalTo(const MachineInstr &Other,
-                     MICheckType Check = CheckDefs) const;
+                              MICheckType Check = CheckDefs) const;
 
   /// Returns true if this instruction is a debug instruction that represents an
   /// identical debug value to \p Other.
@@ -1494,8 +1496,9 @@ public:
   /// Return a pair of bools (reads, writes) indicating if this instruction
   /// reads or writes Reg. This also considers partial defines.
   /// If Ops is not null, all operand indices for Reg are added.
-  LLVM_ABI std::pair<bool,bool> readsWritesVirtualRegister(Register Reg,
-                                SmallVectorImpl<unsigned> *Ops = nullptr) const;
+  LLVM_ABI std::pair<bool, bool>
+  readsWritesVirtualRegister(Register Reg,
+                             SmallVectorImpl<unsigned> *Ops = nullptr) const;
 
   /// Return true if the MachineInstr kills the specified register.
   /// If TargetRegisterInfo is non-null, then it also checks if there is
@@ -1533,8 +1536,9 @@ public:
   /// Returns the operand index that is a use of the specific register or -1
   /// if it is not found. It further tightens the search criteria to a use
   /// that kills the register if isKill is true.
-  LLVM_ABI int findRegisterUseOperandIdx(Register Reg, const TargetRegisterInfo *TRI,
-                                bool isKill = false) const;
+  LLVM_ABI int findRegisterUseOperandIdx(Register Reg,
+                                         const TargetRegisterInfo *TRI,
+                                         bool isKill = false) const;
 
   /// Wrapper for findRegisterUseOperandIdx, it returns
   /// a pointer to the MachineOperand rather than an index.
@@ -1558,9 +1562,10 @@ public:
   /// overlap the specified register. If TargetRegisterInfo is non-null,
   /// then it also checks if there is a def of a super-register.
   /// This may also return a register mask operand when Overlap is true.
-  LLVM_ABI int findRegisterDefOperandIdx(Register Reg, const TargetRegisterInfo *TRI,
-                                bool isDead = false,
-                                bool Overlap = false) const;
+  LLVM_ABI int findRegisterDefOperandIdx(Register Reg,
+                                         const TargetRegisterInfo *TRI,
+                                         bool isDead = false,
+                                         bool Overlap = false) const;
 
   /// Wrapper for findRegisterDefOperandIdx, it returns
   /// a pointer to the MachineOperand rather than an index.
@@ -1591,7 +1596,8 @@ public:
   ///
   /// If GroupNo is not NULL, it will receive the number of the operand group
   /// containing OpIdx.
-  LLVM_ABI int findInlineAsmFlagIdx(unsigned OpIdx, unsigned *GroupNo = nullptr) const;
+  LLVM_ABI int findInlineAsmFlagIdx(unsigned OpIdx,
+                                    unsigned *GroupNo = nullptr) const;
 
   /// Compute the static register class constraint for operand OpIdx.
   /// For normal instructions, this is derived from the MCInstrDesc.
@@ -1599,9 +1605,8 @@ public:
   ///
   /// Returns NULL if the static register class constraint cannot be
   /// determined.
-  LLVM_ABI const TargetRegisterClass*
-  getRegClassConstraint(unsigned OpIdx,
-                        const TargetInstrInfo *TII,
+  LLVM_ABI const TargetRegisterClass *
+  getRegClassConstraint(unsigned OpIdx, const TargetInstrInfo *TII,
                         const TargetRegisterInfo *TRI) const;
 
   /// Applies the constraints (def/use) implied by this MI on \p Reg to
@@ -1680,27 +1685,29 @@ public:
 
   /// Replace all occurrences of FromReg with ToReg:SubIdx,
   /// properly composing subreg indices where necessary.
-  LLVM_ABI void substituteRegister(Register FromReg, Register ToReg, unsigned SubIdx,
-                          const TargetRegisterInfo &RegInfo);
+  LLVM_ABI void substituteRegister(Register FromReg, Register ToReg,
+                                   unsigned SubIdx,
+                                   const TargetRegisterInfo &RegInfo);
 
   /// We have determined MI kills a register. Look for the
   /// operand that uses it and mark it as IsKill. If AddIfNotFound is true,
   /// add a implicit operand if it's not found. Returns true if the operand
   /// exists / is added.
   LLVM_ABI bool addRegisterKilled(Register IncomingReg,
-                         const TargetRegisterInfo *RegInfo,
-                         bool AddIfNotFound = false);
+                                  const TargetRegisterInfo *RegInfo,
+                                  bool AddIfNotFound = false);
 
   /// Clear all kill flags affecting Reg.  If RegInfo is provided, this includes
   /// all aliasing registers.
-  LLVM_ABI void clearRegisterKills(Register Reg, const TargetRegisterInfo *RegInfo);
+  LLVM_ABI void clearRegisterKills(Register Reg,
+                                   const TargetRegisterInfo *RegInfo);
 
   /// We have determined MI defined a register without a use.
   /// Look for the operand that defines it and mark it as IsDead. If
   /// AddIfNotFound is true, add a implicit operand if it's not found. Returns
   /// true if the operand exists / is added.
   LLVM_ABI bool addRegisterDead(Register Reg, const TargetRegisterInfo *RegInfo,
-                       bool AddIfNotFound = false);
+                                bool AddIfNotFound = false);
 
   /// Clear all dead flags on operands defining register @p Reg.
   LLVM_ABI void clearRegisterDeads(Register Reg);
@@ -1713,7 +1720,7 @@ public:
   /// We have determined MI defines a register. Make sure there is an operand
   /// defining Reg.
   LLVM_ABI void addRegisterDefined(Register Reg,
-                          const TargetRegisterInfo *RegInfo = nullptr);
+                                   const TargetRegisterInfo *RegInfo = nullptr);
 
   /// Mark every physreg used by this instruction as
   /// dead except those in the UsedRegs list.
@@ -1721,7 +1728,7 @@ public:
   /// On instructions with register mask operands, also add implicit-def
   /// operands for all registers in UsedRegs.
   LLVM_ABI void setPhysRegsDeadExcept(ArrayRef<Register> UsedRegs,
-                             const TargetRegisterInfo &TRI);
+                                      const TargetRegisterInfo &TRI);
 
   /// Return true if it is safe to move this instruction. If
   /// SawStore is set to true, it means that there is a store (or call) between
@@ -1742,7 +1749,7 @@ public:
   /// either have dead flags or have no uses, then the instruction is said to be
   /// dead.
   LLVM_ABI bool isDead(const MachineRegisterInfo &MRI,
-              LiveRegUnits *LivePhysRegs = nullptr) const;
+                       LiveRegUnits *LivePhysRegs = nullptr) const;
 
   /// Returns true if this instruction's memory access aliases the memory
   /// access of Other.
@@ -1755,8 +1762,9 @@ public:
   /// @param Other MachineInstr to check aliasing against.
   /// @param UseTBAA Whether to pass TBAA information to alias analysis.
   LLVM_ABI bool mayAlias(BatchAAResults *AA, const MachineInstr &Other,
-                bool UseTBAA) const;
-  LLVM_ABI bool mayAlias(AAResults *AA, const MachineInstr &Other, bool UseTBAA) const;
+                         bool UseTBAA) const;
+  LLVM_ABI bool mayAlias(AAResults *AA, const MachineInstr &Other,
+                         bool UseTBAA) const;
 
   /// Return true if this instruction may have an ordered
   /// or volatile memory reference, or if the information describing the memory
@@ -1796,14 +1804,16 @@ public:
   LLVM_ABI bool allImplicitDefsAreDead() const;
 
   /// Return a valid size if the instruction is a spill instruction.
-  LLVM_ABI std::optional<LocationSize> getSpillSize(const TargetInstrInfo *TII) const;
+  LLVM_ABI std::optional<LocationSize>
+  getSpillSize(const TargetInstrInfo *TII) const;
 
   /// Return a valid size if the instruction is a folded spill instruction.
   LLVM_ABI std::optional<LocationSize>
   getFoldedSpillSize(const TargetInstrInfo *TII) const;
 
   /// Return a valid size if the instruction is a restore instruction.
-  LLVM_ABI std::optional<LocationSize> getRestoreSize(const TargetInstrInfo *TII) const;
+  LLVM_ABI std::optional<LocationSize>
+  getRestoreSize(const TargetInstrInfo *TII) const;
 
   /// Return a valid size if the instruction is a folded restore instruction.
   LLVM_ABI std::optional<LocationSize>
@@ -1817,7 +1827,7 @@ public:
   /// @{
   /// Determine the generic type to be printed (if needed) on uses and defs.
   LLVM_ABI LLT getTypeToPrint(unsigned OpIdx, SmallBitVector &PrintedTypes,
-                     const MachineRegisterInfo &MRI) const;
+                              const MachineRegisterInfo &MRI) const;
 
   /// Return true when an instruction has tied register that can't be determined
   /// by the instruction's descriptor. This is useful for MIR printing, to
@@ -1833,18 +1843,19 @@ public:
   /// Otherwise, also print the debug loc, with a terminating newline.
   /// \p TII is used to print the opcode name.  If it's not present, but the
   /// MI is in a function, the opcode will be printed using the function's TII.
-  LLVM_ABI void print(raw_ostream &OS, bool IsStandalone = true, bool SkipOpers = false,
-             bool SkipDebugLoc = false, bool AddNewLine = true,
-             const TargetInstrInfo *TII = nullptr) const;
-  LLVM_ABI void print(raw_ostream &OS, ModuleSlotTracker &MST, bool IsStandalone = true,
-             bool SkipOpers = false, bool SkipDebugLoc = false,
-             bool AddNewLine = true,
-             const TargetInstrInfo *TII = nullptr) const;
+  LLVM_ABI void print(raw_ostream &OS, bool IsStandalone = true,
+                      bool SkipOpers = false, bool SkipDebugLoc = false,
+                      bool AddNewLine = true,
+                      const TargetInstrInfo *TII = nullptr) const;
+  LLVM_ABI void print(raw_ostream &OS, ModuleSlotTracker &MST,
+                      bool IsStandalone = true, bool SkipOpers = false,
+                      bool SkipDebugLoc = false, bool AddNewLine = true,
+                      const TargetInstrInfo *TII = nullptr) const;
   LLVM_ABI void dump() const;
   /// Print on dbgs() the current instruction and the instructions defining its
   /// operands and so on until we reach \p MaxDepth.
   LLVM_ABI void dumpr(const MachineRegisterInfo &MRI,
-             unsigned MaxDepth = UINT_MAX) const;
+                      unsigned MaxDepth = UINT_MAX) const;
   /// @}
 
   //===--------------------------------------------------------------------===//
@@ -1897,7 +1908,8 @@ public:
   ///
   /// Unlike other methods, this *will* allocate them into a new array
   /// associated with the provided `MachineFunction`.
-  LLVM_ABI void setMemRefs(MachineFunction &MF, ArrayRef<MachineMemOperand *> MemRefs);
+  LLVM_ABI void setMemRefs(MachineFunction &MF,
+                           ArrayRef<MachineMemOperand *> MemRefs);
 
   /// Add a MachineMemOperand to the machine instruction.
   /// This function should be used only occasionally. The setMemRefs function
@@ -1921,7 +1933,7 @@ public:
   /// Prefer this API whenever possible as it can avoid allocations in common
   /// cases.
   LLVM_ABI void cloneMergedMemRefs(MachineFunction &MF,
-                          ArrayRef<const MachineInstr *> MIs);
+                                   ArrayRef<const MachineInstr *> MIs);
 
   /// Set a symbol that will be emitted just prior to the instruction itself.
   ///
@@ -1959,7 +1971,7 @@ public:
   /// Return the MIFlags which represent both MachineInstrs. This
   /// should be used when merging two MachineInstrs into one. This routine does
   /// not modify the MIFlags of this MachineInstr.
-  LLVM_ABI uint32_t mergeFlagsWith(const MachineInstr& Other) const;
+  LLVM_ABI uint32_t mergeFlagsWith(const MachineInstr &Other) const;
 
   LLVM_ABI static uint32_t copyFlagsFromInstruction(const Instruction &I);
 
@@ -2027,10 +2039,11 @@ public:
   LLVM_ABI std::tuple<Register, LLT, Register, LLT> getFirst2RegLLTs() const;
   LLVM_ABI std::tuple<Register, LLT, Register, LLT, Register, LLT>
   getFirst3RegLLTs() const;
-  LLVM_ABI std::tuple<Register, LLT, Register, LLT, Register, LLT, Register, LLT>
+  LLVM_ABI
+  std::tuple<Register, LLT, Register, LLT, Register, LLT, Register, LLT>
   getFirst4RegLLTs() const;
-  LLVM_ABI std::tuple<Register, LLT, Register, LLT, Register, LLT, Register, LLT,
-             Register, LLT>
+  LLVM_ABI std::tuple<Register, LLT, Register, LLT, Register, LLT, Register,
+                      LLT, Register, LLT>
   getFirst5RegLLTs() const;
 
 private:
@@ -2081,7 +2094,7 @@ struct MachineInstrExpressionTrait : DenseMapInfo<MachineInstr*> {
     return reinterpret_cast<MachineInstr*>(-1);
   }
 
-  LLVM_ABI static unsigned getHashValue(const MachineInstr* const &MI);
+  LLVM_ABI static unsigned getHashValue(const MachineInstr *const &MI);
 
   static bool isEqual(const MachineInstr* const &LHS,
                       const MachineInstr* const &RHS) {

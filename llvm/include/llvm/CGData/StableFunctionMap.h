@@ -16,10 +16,10 @@
 #ifndef LLVM_CGDATA_STABLEFUNCTIONMAP_H
 #define LLVM_CGDATA_STABLEFUNCTIONMAP_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/IR/StructuralHash.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

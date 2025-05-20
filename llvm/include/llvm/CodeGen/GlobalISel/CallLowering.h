@@ -14,7 +14,6 @@
 #ifndef LLVM_CODEGEN_GLOBALISEL_CALLLOWERING_H
 #define LLVM_CODEGEN_GLOBALISEL_CALLLOWERING_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/CallingConvLower.h"
@@ -25,6 +24,7 @@
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cstdint>
 #include <functional>

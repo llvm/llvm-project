@@ -17,8 +17,8 @@
 #ifndef LLVM_CODEGEN_LIVEINTERVALCALC_H
 #define LLVM_CODEGEN_LIVEINTERVALCALC_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/CodeGen/LiveRangeCalc.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -38,7 +38,7 @@ class LiveIntervalCalc : public LiveRangeCalc {
   /// If @p LR is a main range, the @p LaneMask should be set to ~0, i.e.
   /// LaneBitmask::getAll().
   LLVM_ABI void extendToUses(LiveRange &LR, Register Reg, LaneBitmask LaneMask,
-                    LiveInterval *LI = nullptr);
+                             LiveInterval *LI = nullptr);
 
 public:
   LiveIntervalCalc() = default;

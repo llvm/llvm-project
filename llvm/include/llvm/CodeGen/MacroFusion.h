@@ -14,8 +14,8 @@
 #ifndef LLVM_CODEGEN_MACROFUSION_H
 #define LLVM_CODEGEN_MACROFUSION_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/Compiler.h"
 #include <memory>
 
 namespace llvm {
@@ -45,7 +45,7 @@ LLVM_ABI bool hasLessThanNumFused(const SUnit &SU, unsigned FuseLimit);
 /// and vice-versa.
 /// Fusing more than 2 instructions is not currently supported.
 LLVM_ABI bool fuseInstructionPair(ScheduleDAGInstrs &DAG, SUnit &FirstSU,
-                         SUnit &SecondSU);
+                                  SUnit &SecondSU);
 
 /// Create a DAG scheduling mutation to pair instructions back to back
 /// for instructions that benefit according to the target-specific

@@ -21,13 +21,13 @@
 #ifndef LLVM_CODEGEN_MACHINEPASSMANAGER_H
 #define LLVM_CODEGEN_MACHINEPASSMANAGER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PassManagerInternal.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {
@@ -120,8 +120,8 @@ LLVM_ABI bool MachineFunctionAnalysisManagerFunctionProxy::Result::invalidate(
 extern template class InnerAnalysisManagerProxy<MachineFunctionAnalysisManager,
                                                 Function>;
 
-extern template class LLVM_TEMPLATE_ABI OuterAnalysisManagerProxy<ModuleAnalysisManager,
-                                                MachineFunction>;
+extern template class LLVM_TEMPLATE_ABI
+    OuterAnalysisManagerProxy<ModuleAnalysisManager, MachineFunction>;
 /// Provide the \c ModuleAnalysisManager to \c Function proxy.
 using ModuleAnalysisManagerMachineFunctionProxy =
     OuterAnalysisManagerProxy<ModuleAnalysisManager, MachineFunction>;
@@ -163,7 +163,7 @@ public:
     /// the analyses in the inner analysis manager are potentially invalidated
     /// based on the set of preserved analyses.
     LLVM_ABI bool invalidate(MachineFunction &IR, const PreservedAnalyses &PA,
-                    MachineFunctionAnalysisManager::Invalidator &Inv);
+                             MachineFunctionAnalysisManager::Invalidator &Inv);
 
   private:
     FunctionAnalysisManager *FAM;
@@ -200,8 +200,9 @@ public:
 
   /// Runs the function pass across every function in the function.
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
-  LLVM_ABI void printPipeline(raw_ostream &OS,
-                     function_ref<StringRef(StringRef)> MapClassName2PassName);
+  LLVM_ABI void
+  printPipeline(raw_ostream &OS,
+                function_ref<StringRef(StringRef)> MapClassName2PassName);
 
   static bool isRequired() { return true; }
 
@@ -222,9 +223,8 @@ createFunctionToMachineFunctionPassAdaptor(MachineFunctionPassT &&Pass) {
 }
 
 template <>
-LLVM_ABI PreservedAnalyses
-PassManager<MachineFunction>::run(MachineFunction &,
-                                  AnalysisManager<MachineFunction> &);
+LLVM_ABI PreservedAnalyses PassManager<MachineFunction>::run(
+    MachineFunction &, AnalysisManager<MachineFunction> &);
 extern template class PassManager<MachineFunction>;
 
 /// Convenience typedef for a pass manager over functions.

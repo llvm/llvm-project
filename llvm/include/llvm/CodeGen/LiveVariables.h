@@ -28,7 +28,6 @@
 #ifndef LLVM_CODEGEN_LIVEVARIABLES_H
 #define LLVM_CODEGEN_LIVEVARIABLES_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IndexedMap.h"
 #include "llvm/ADT/SmallSet.h"
@@ -40,6 +39,7 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/PassRegistry.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -106,7 +106,7 @@ public:
     /// MBB, or it is killed in MBB. If Reg is only used by PHI instructions in
     /// MBB, it is not considered live in.
     LLVM_ABI bool isLiveIn(const MachineBasicBlock &MBB, Register Reg,
-                  MachineRegisterInfo &MRI);
+                           MachineRegisterInfo &MRI);
 
     LLVM_ABI void print(raw_ostream &OS) const;
 
@@ -198,7 +198,7 @@ public:
   /// replaceKillInstruction - Update register kill info by replacing a kill
   /// instruction with a new one.
   LLVM_ABI void replaceKillInstruction(Register Reg, MachineInstr &OldMI,
-                              MachineInstr &NewMI);
+                                       MachineInstr &NewMI);
 
   /// addVirtualRegisterKilled - Add information about the fact that the
   /// specified register is killed after being used by the specified
@@ -270,14 +270,17 @@ public:
   /// register.
   LLVM_ABI VarInfo &getVarInfo(Register Reg);
 
-  LLVM_ABI void MarkVirtRegAliveInBlock(VarInfo& VRInfo, MachineBasicBlock* DefBlock,
-                               MachineBasicBlock *BB);
-  LLVM_ABI void MarkVirtRegAliveInBlock(VarInfo &VRInfo, MachineBasicBlock *DefBlock,
-                               MachineBasicBlock *BB,
-                               SmallVectorImpl<MachineBasicBlock *> &WorkList);
+  LLVM_ABI void MarkVirtRegAliveInBlock(VarInfo &VRInfo,
+                                        MachineBasicBlock *DefBlock,
+                                        MachineBasicBlock *BB);
+  LLVM_ABI void
+  MarkVirtRegAliveInBlock(VarInfo &VRInfo, MachineBasicBlock *DefBlock,
+                          MachineBasicBlock *BB,
+                          SmallVectorImpl<MachineBasicBlock *> &WorkList);
 
   LLVM_ABI void HandleVirtRegDef(Register reg, MachineInstr &MI);
-  LLVM_ABI void HandleVirtRegUse(Register reg, MachineBasicBlock *MBB, MachineInstr &MI);
+  LLVM_ABI void HandleVirtRegUse(Register reg, MachineBasicBlock *MBB,
+                                 MachineInstr &MI);
 
   bool isLiveIn(Register Reg, const MachineBasicBlock &MBB) {
     return getVarInfo(Reg).isLiveIn(MBB, Reg, *MRI);
@@ -292,14 +295,12 @@ public:
   /// variables that are live out of DomBB and live into SuccBB will be marked
   /// as passing live through BB. This method assumes that the machine code is
   /// still in SSA form.
-  LLVM_ABI void addNewBlock(MachineBasicBlock *BB,
-                   MachineBasicBlock *DomBB,
-                   MachineBasicBlock *SuccBB);
+  LLVM_ABI void addNewBlock(MachineBasicBlock *BB, MachineBasicBlock *DomBB,
+                            MachineBasicBlock *SuccBB);
 
-  LLVM_ABI void addNewBlock(MachineBasicBlock *BB,
-                   MachineBasicBlock *DomBB,
-                   MachineBasicBlock *SuccBB,
-                   std::vector<SparseBitVector<>> &LiveInSets);
+  LLVM_ABI void addNewBlock(MachineBasicBlock *BB, MachineBasicBlock *DomBB,
+                            MachineBasicBlock *SuccBB,
+                            std::vector<SparseBitVector<>> &LiveInSets);
 };
 
 class LiveVariablesAnalysis : public AnalysisInfoMixin<LiveVariablesAnalysis> {
@@ -318,7 +319,7 @@ class LiveVariablesPrinterPass
 public:
   explicit LiveVariablesPrinterPass(raw_ostream &OS) : OS(OS) {}
   LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
-                        MachineFunctionAnalysisManager &MFAM);
+                                 MachineFunctionAnalysisManager &MFAM);
   static bool isRequired() { return true; }
 };
 

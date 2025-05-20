@@ -29,12 +29,12 @@
 #ifndef LLVM_CODEGEN_MACHINELOOPINFO_H
 #define LLVM_CODEGEN_MACHINELOOPINFO_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/DebugLoc.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/GenericLoopInfo.h"
 
 namespace llvm {
@@ -84,7 +84,8 @@ public:
   /// ExcludeReg can be used to exclude the given register from the check
   /// i.e. when we're considering hoisting it's definition but not hoisted it
   /// yet
-  LLVM_ABI bool isLoopInvariant(MachineInstr &I, const Register ExcludeReg = 0) const;
+  LLVM_ABI bool isLoopInvariant(MachineInstr &I,
+                                const Register ExcludeReg = 0) const;
 
   LLVM_ABI void dump() const;
 
@@ -101,7 +102,8 @@ private:
 };
 
 // Implementation in LoopInfoImpl.h
-extern template class LLVM_TEMPLATE_ABI LoopInfoBase<MachineBasicBlock, MachineLoop>;
+extern template class LLVM_TEMPLATE_ABI
+    LoopInfoBase<MachineBasicBlock, MachineLoop>;
 
 class MachineLoopInfo : public LoopInfoBase<MachineBasicBlock, MachineLoop> {
   friend class LoopBase<MachineBasicBlock, MachineLoop>;
@@ -116,7 +118,7 @@ public:
 
   /// Handle invalidation explicitly.
   LLVM_ABI bool invalidate(MachineFunction &, const PreservedAnalyses &PA,
-                  MachineFunctionAnalysisManager::Invalidator &);
+                           MachineFunctionAnalysisManager::Invalidator &);
 
   /// Find the block that either is the loop preheader, or could
   /// speculatively be used as the preheader. This is e.g. useful to place
@@ -140,7 +142,8 @@ class MachineLoopAnalysis : public AnalysisInfoMixin<MachineLoopAnalysis> {
 
 public:
   using Result = MachineLoopInfo;
-  LLVM_ABI Result run(MachineFunction &MF, MachineFunctionAnalysisManager &MFAM);
+  LLVM_ABI Result run(MachineFunction &MF,
+                      MachineFunctionAnalysisManager &MFAM);
 };
 
 /// Printer pass for the \c LoopAnalysis results.
@@ -150,7 +153,7 @@ class MachineLoopPrinterPass : public PassInfoMixin<MachineLoopPrinterPass> {
 public:
   explicit MachineLoopPrinterPass(raw_ostream &OS) : OS(OS) {}
   LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
-                        MachineFunctionAnalysisManager &MFAM);
+                                 MachineFunctionAnalysisManager &MFAM);
   static bool isRequired() { return true; }
 };
 

@@ -74,7 +74,6 @@
 #ifndef LLVM_CODEGEN_MACHINESCHEDULER_H
 #define LLVM_CODEGEN_MACHINESCHEDULER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
@@ -90,6 +89,7 @@
 #include "llvm/CodeGen/ScheduleDAGMutation.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
 #include <cassert>
@@ -967,7 +967,7 @@ public:
   LLVM_ABI void reset();
 
   LLVM_ABI void init(ScheduleDAGMI *dag, const TargetSchedModel *smodel,
-            SchedRemainder *rem);
+                     SchedRemainder *rem);
 
   bool isTop() const {
     return Available.getID() == TopQID;
@@ -1023,13 +1023,12 @@ public:
   LLVM_ABI unsigned getLatencyStallCycles(SUnit *SU);
 
   LLVM_ABI unsigned getNextResourceCycleByInstance(unsigned InstanceIndex,
-                                          unsigned ReleaseAtCycle,
-                                          unsigned AcquireAtCycle);
+                                                   unsigned ReleaseAtCycle,
+                                                   unsigned AcquireAtCycle);
 
-  LLVM_ABI std::pair<unsigned, unsigned> getNextResourceCycle(const MCSchedClassDesc *SC,
-                                                     unsigned PIdx,
-                                                     unsigned ReleaseAtCycle,
-                                                     unsigned AcquireAtCycle);
+  LLVM_ABI std::pair<unsigned, unsigned>
+  getNextResourceCycle(const MCSchedClassDesc *SC, unsigned PIdx,
+                       unsigned ReleaseAtCycle, unsigned AcquireAtCycle);
 
   bool isUnbufferedGroup(unsigned PIdx) const {
     return SchedModel->getProcResource(PIdx)->SubUnitsIdxBegin &&
@@ -1038,7 +1037,7 @@ public:
 
   LLVM_ABI bool checkHazard(SUnit *SU);
 
-  LLVM_ABI unsigned findMaxLatency(ArrayRef<SUnit*> ReadySUs);
+  LLVM_ABI unsigned findMaxLatency(ArrayRef<SUnit *> ReadySUs);
 
   LLVM_ABI unsigned getOtherResourceCount(unsigned &OtherCritIdx);
 
@@ -1051,15 +1050,15 @@ public:
   /// @param InPQueue Whether SU is already in pending queue.
   /// @param Idx Position offset in pending queue (if in it).
   LLVM_ABI void releaseNode(SUnit *SU, unsigned ReadyCycle, bool InPQueue,
-                   unsigned Idx = 0);
+                            unsigned Idx = 0);
 
   LLVM_ABI void bumpCycle(unsigned NextCycle);
 
   LLVM_ABI void incExecutedResources(unsigned PIdx, unsigned Count);
 
   LLVM_ABI unsigned countResource(const MCSchedClassDesc *SC, unsigned PIdx,
-                         unsigned Cycles, unsigned ReadyCycle,
-                         unsigned StartAtCycle);
+                                  unsigned Cycles, unsigned ReadyCycle,
+                                  unsigned StartAtCycle);
 
   LLVM_ABI void bumpNode(SUnit *SU);
 
@@ -1190,7 +1189,7 @@ public:
     }
 
     LLVM_ABI void initResourceDelta(const ScheduleDAGMI *DAG,
-                           const TargetSchedModel *SchedModel);
+                                    const TargetSchedModel *SchedModel);
   };
 
 protected:
@@ -1207,8 +1206,8 @@ protected:
 
   GenericSchedulerBase(const MachineSchedContext *C) : Context(C) {}
 
-  LLVM_ABI void setPolicy(CandPolicy &Policy, bool IsPostRA, SchedBoundary &CurrZone,
-                 SchedBoundary *OtherZone);
+  LLVM_ABI void setPolicy(CandPolicy &Policy, bool IsPostRA,
+                          SchedBoundary &CurrZone, SchedBoundary *OtherZone);
 
   MachineSchedPolicy getPolicy() const override { return RegionPolicy; }
 
@@ -1223,23 +1222,23 @@ private:
 
 // Utility functions used by heuristics in tryCandidate().
 LLVM_ABI bool tryLess(int TryVal, int CandVal,
-             GenericSchedulerBase::SchedCandidate &TryCand,
-             GenericSchedulerBase::SchedCandidate &Cand,
-             GenericSchedulerBase::CandReason Reason);
+                      GenericSchedulerBase::SchedCandidate &TryCand,
+                      GenericSchedulerBase::SchedCandidate &Cand,
+                      GenericSchedulerBase::CandReason Reason);
 LLVM_ABI bool tryGreater(int TryVal, int CandVal,
-                GenericSchedulerBase::SchedCandidate &TryCand,
-                GenericSchedulerBase::SchedCandidate &Cand,
-                GenericSchedulerBase::CandReason Reason);
+                         GenericSchedulerBase::SchedCandidate &TryCand,
+                         GenericSchedulerBase::SchedCandidate &Cand,
+                         GenericSchedulerBase::CandReason Reason);
 LLVM_ABI bool tryLatency(GenericSchedulerBase::SchedCandidate &TryCand,
-                GenericSchedulerBase::SchedCandidate &Cand,
-                SchedBoundary &Zone);
+                         GenericSchedulerBase::SchedCandidate &Cand,
+                         SchedBoundary &Zone);
 LLVM_ABI bool tryPressure(const PressureChange &TryP,
-                 const PressureChange &CandP,
-                 GenericSchedulerBase::SchedCandidate &TryCand,
-                 GenericSchedulerBase::SchedCandidate &Cand,
-                 GenericSchedulerBase::CandReason Reason,
-                 const TargetRegisterInfo *TRI,
-                 const MachineFunction &MF);
+                          const PressureChange &CandP,
+                          GenericSchedulerBase::SchedCandidate &TryCand,
+                          GenericSchedulerBase::SchedCandidate &Cand,
+                          GenericSchedulerBase::CandReason Reason,
+                          const TargetRegisterInfo *TRI,
+                          const MachineFunction &MF);
 LLVM_ABI unsigned getWeakLeft(const SUnit *SU, bool isTop);
 LLVM_ABI int biasPhysReg(const SUnit *SU, bool isTop);
 
@@ -1421,7 +1420,7 @@ public:
   LLVM_ABI MachineSchedulerPass(MachineSchedulerPass &&Other);
   LLVM_ABI ~MachineSchedulerPass();
   LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
-                        MachineFunctionAnalysisManager &MFAM);
+                                 MachineFunctionAnalysisManager &MFAM);
 };
 
 class PostMachineSchedulerPass
@@ -1436,7 +1435,7 @@ public:
   LLVM_ABI PostMachineSchedulerPass(PostMachineSchedulerPass &&Other);
   LLVM_ABI ~PostMachineSchedulerPass();
   LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
-                        MachineFunctionAnalysisManager &MFAM);
+                                 MachineFunctionAnalysisManager &MFAM);
 };
 } // end namespace llvm
 

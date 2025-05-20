@@ -13,11 +13,11 @@
 #ifndef LLVM_CODEGEN_RUNTIMELIBCALLS_H
 #define LLVM_CODEGEN_RUNTIMELIBCALLS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/Support/AtomicOrdering.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace RTLIB {
@@ -25,7 +25,8 @@ namespace RTLIB {
 /// GetFPLibCall - Helper to return the right libcall for the given floating
 /// point type, or UNKNOWN_LIBCALL if there is none.
 LLVM_ABI Libcall getFPLibCall(EVT VT, Libcall Call_F32, Libcall Call_F64,
-                     Libcall Call_F80, Libcall Call_F128, Libcall Call_PPCF128);
+                              Libcall Call_F80, Libcall Call_F128,
+                              Libcall Call_PPCF128);
 
 /// getFPEXT - Return the FPEXT_*_* value for the given types, or
 /// UNKNOWN_LIBCALL if there is none.
@@ -82,8 +83,8 @@ LLVM_ABI Libcall getSYNC(unsigned Opc, MVT VT);
 /// Return the outline atomics value for the given atomic ordering, access
 /// size and set of libcalls for a given atomic, or UNKNOWN_LIBCALL if there
 /// is none.
-LLVM_ABI Libcall getOutlineAtomicHelper(const Libcall (&LC)[5][4], AtomicOrdering Order,
-                               uint64_t MemSize);
+LLVM_ABI Libcall getOutlineAtomicHelper(const Libcall (&LC)[5][4],
+                                        AtomicOrdering Order, uint64_t MemSize);
 
 /// Return the outline atomics value for the given opcode, atomic ordering
 /// and type, or UNKNOWN_LIBCALL if there is none.

@@ -16,12 +16,12 @@
 #ifndef LLVM_CODEGEN_LEXICALSCOPES_H
 #define LLVM_CODEGEN_LEXICALSCOPES_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <unordered_map>
 #include <utility>
@@ -161,8 +161,9 @@ public:
   /// getMachineBasicBlocks - Populate given set using machine basic blocks
   /// which have machine instructions that belong to lexical scope identified by
   /// DebugLoc.
-  LLVM_ABI void getMachineBasicBlocks(const DILocation *DL,
-                             SmallPtrSetImpl<const MachineBasicBlock *> &MBBs);
+  LLVM_ABI void
+  getMachineBasicBlocks(const DILocation *DL,
+                        SmallPtrSetImpl<const MachineBasicBlock *> &MBBs);
 
   /// Return true if DebugLoc's lexical scope dominates at least one machine
   /// instruction's lexical scope in a given machine basic block.
@@ -201,8 +202,9 @@ public:
 private:
   /// getOrCreateLexicalScope - Find lexical scope for the given Scope/IA. If
   /// not available then create new lexical scope.
-  LLVM_ABI LexicalScope *getOrCreateLexicalScope(const DILocalScope *Scope,
-                                        const DILocation *IA = nullptr);
+  LLVM_ABI LexicalScope *
+  getOrCreateLexicalScope(const DILocalScope *Scope,
+                          const DILocation *IA = nullptr);
   LexicalScope *getOrCreateLexicalScope(const DILocation *DL) {
     return DL ? getOrCreateLexicalScope(DL->getScope(), DL->getInlinedAt())
               : nullptr;

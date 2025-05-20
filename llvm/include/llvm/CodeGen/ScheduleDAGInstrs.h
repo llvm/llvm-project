@@ -14,7 +14,6 @@
 #ifndef LLVM_CODEGEN_SCHEDULEDAGINSTRS_H
 #define LLVM_CODEGEN_SCHEDULEDAGINSTRS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SmallVector.h"
@@ -27,6 +26,7 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/MC/LaneBitmask.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstdint>
 #include <list>

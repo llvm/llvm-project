@@ -14,7 +14,6 @@
 #ifndef LLVM_CODEGEN_REGISTERPRESSURE_H
 #define LLVM_CODEGEN_REGISTERPRESSURE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SparseSet.h"
@@ -22,6 +21,7 @@
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/MC/LaneBitmask.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstdint>
 #include <cstdlib>
@@ -158,7 +158,7 @@ public:
   const_iterator end() const { return &PressureChanges[MaxPSets]; }
 
   LLVM_ABI void addPressureChange(Register RegUnit, bool IsDec,
-                         const MachineRegisterInfo *MRI);
+                                  const MachineRegisterInfo *MRI);
 
   LLVM_ABI void dump(const TargetRegisterInfo &TRI) const;
 };
@@ -178,20 +178,22 @@ public:
   /// Analyze the given instruction \p MI and fill in the Uses, Defs and
   /// DeadDefs list based on the MachineOperand flags.
   LLVM_ABI void collect(const MachineInstr &MI, const TargetRegisterInfo &TRI,
-               const MachineRegisterInfo &MRI, bool TrackLaneMasks,
-               bool IgnoreDead);
+                        const MachineRegisterInfo &MRI, bool TrackLaneMasks,
+                        bool IgnoreDead);
 
   /// Use liveness information to find dead defs not marked with a dead flag
   /// and move them to the DeadDefs vector.
-  LLVM_ABI void detectDeadDefs(const MachineInstr &MI, const LiveIntervals &LIS);
+  LLVM_ABI void detectDeadDefs(const MachineInstr &MI,
+                               const LiveIntervals &LIS);
 
   /// Use liveness information to find out which uses/defs are partially
   /// undefined/dead and adjust the VRegMaskOrUnits accordingly.
   /// If \p AddFlagsMI is given then missing read-undef and dead flags will be
   /// added to the instruction.
   LLVM_ABI void adjustLaneLiveness(const LiveIntervals &LIS,
-                          const MachineRegisterInfo &MRI, SlotIndex Pos,
-                          MachineInstr *AddFlagsMI = nullptr);
+                                   const MachineRegisterInfo &MRI,
+                                   SlotIndex Pos,
+                                   MachineInstr *AddFlagsMI = nullptr);
 };
 
 /// Array of PressureDiffs.
@@ -221,7 +223,7 @@ public:
   /// Record pressure difference induced by the given operand list to
   /// node with index \p Idx.
   LLVM_ABI void addInstruction(unsigned Idx, const RegisterOperands &RegOpers,
-                      const MachineRegisterInfo &MRI);
+                               const MachineRegisterInfo &MRI);
 };
 
 /// Store the effects of a change in pressure on things that MI scheduler cares
@@ -402,9 +404,9 @@ public:
   LLVM_ABI void reset();
 
   LLVM_ABI void init(const MachineFunction *mf, const RegisterClassInfo *rci,
-            const LiveIntervals *lis, const MachineBasicBlock *mbb,
-            MachineBasicBlock::const_iterator pos,
-            bool TrackLaneMasks, bool TrackUntiedDefs);
+                     const LiveIntervals *lis, const MachineBasicBlock *mbb,
+                     MachineBasicBlock::const_iterator pos, bool TrackLaneMasks,
+                     bool TrackUntiedDefs);
 
   /// Force liveness of virtual registers or physical register
   /// units. Particularly useful to initialize the livein/out state of the
@@ -428,7 +430,7 @@ public:
   /// called previously and takes precomputed RegisterOperands for the
   /// instruction.
   LLVM_ABI void recede(const RegisterOperands &RegOpers,
-              SmallVectorImpl<VRegMaskOrUnit> *LiveUses = nullptr);
+                       SmallVectorImpl<VRegMaskOrUnit> *LiveUses = nullptr);
 
   /// Recede until we find an instruction which is not a DebugValue.
   LLVM_ABI void recedeSkipDebugValues();
@@ -476,26 +478,26 @@ public:
   /// bottom-up. Find the pressure set with the most change beyond its pressure
   /// limit based on the tracker's current pressure, and record the number of
   /// excess register units of that pressure set introduced by this instruction.
-  LLVM_ABI void getMaxUpwardPressureDelta(const MachineInstr *MI,
-                                 PressureDiff *PDiff,
-                                 RegPressureDelta &Delta,
-                                 ArrayRef<PressureChange> CriticalPSets,
-                                 ArrayRef<unsigned> MaxPressureLimit);
+  LLVM_ABI void
+  getMaxUpwardPressureDelta(const MachineInstr *MI, PressureDiff *PDiff,
+                            RegPressureDelta &Delta,
+                            ArrayRef<PressureChange> CriticalPSets,
+                            ArrayRef<unsigned> MaxPressureLimit);
 
-  LLVM_ABI void getUpwardPressureDelta(const MachineInstr *MI,
-                              /*const*/ PressureDiff &PDiff,
-                              RegPressureDelta &Delta,
-                              ArrayRef<PressureChange> CriticalPSets,
-                              ArrayRef<unsigned> MaxPressureLimit) const;
+  LLVM_ABI void
+  getUpwardPressureDelta(const MachineInstr *MI,
+                         /*const*/ PressureDiff &PDiff, RegPressureDelta &Delta,
+                         ArrayRef<PressureChange> CriticalPSets,
+                         ArrayRef<unsigned> MaxPressureLimit) const;
 
   /// Consider the pressure increase caused by traversing this instruction
   /// top-down. Find the pressure set with the most change beyond its pressure
   /// limit based on the tracker's current pressure, and record the number of
   /// excess register units of that pressure set introduced by this instruction.
-  LLVM_ABI void getMaxDownwardPressureDelta(const MachineInstr *MI,
-                                   RegPressureDelta &Delta,
-                                   ArrayRef<PressureChange> CriticalPSets,
-                                   ArrayRef<unsigned> MaxPressureLimit);
+  LLVM_ABI void
+  getMaxDownwardPressureDelta(const MachineInstr *MI, RegPressureDelta &Delta,
+                              ArrayRef<PressureChange> CriticalPSets,
+                              ArrayRef<unsigned> MaxPressureLimit);
 
   /// Find the pressure set with the most change beyond its pressure limit after
   /// traversing this instruction either upward or downward depending on the
@@ -515,13 +517,13 @@ public:
 
   /// Get the pressure of each PSet after traversing this instruction bottom-up.
   LLVM_ABI void getUpwardPressure(const MachineInstr *MI,
-                         std::vector<unsigned> &PressureResult,
-                         std::vector<unsigned> &MaxPressureResult);
+                                  std::vector<unsigned> &PressureResult,
+                                  std::vector<unsigned> &MaxPressureResult);
 
   /// Get the pressure of each PSet after traversing this instruction top-down.
   LLVM_ABI void getDownwardPressure(const MachineInstr *MI,
-                           std::vector<unsigned> &PressureResult,
-                           std::vector<unsigned> &MaxPressureResult);
+                                    std::vector<unsigned> &PressureResult,
+                                    std::vector<unsigned> &MaxPressureResult);
 
   void getPressureAfterInst(const MachineInstr *MI,
                             std::vector<unsigned> &PressureResult,
@@ -540,9 +542,9 @@ public:
   LLVM_ABI void dump() const;
 
   LLVM_ABI void increaseRegPressure(Register RegUnit, LaneBitmask PreviousMask,
-                           LaneBitmask NewMask);
+                                    LaneBitmask NewMask);
   LLVM_ABI void decreaseRegPressure(Register RegUnit, LaneBitmask PreviousMask,
-                           LaneBitmask NewMask);
+                                    LaneBitmask NewMask);
 
 protected:
   /// Add Reg to the live out set and increase max pressure.
@@ -559,8 +561,9 @@ protected:
   LLVM_ABI void bumpUpwardPressure(const MachineInstr *MI);
   LLVM_ABI void bumpDownwardPressure(const MachineInstr *MI);
 
-  LLVM_ABI void discoverLiveInOrOut(VRegMaskOrUnit Pair,
-                           SmallVectorImpl<VRegMaskOrUnit> &LiveInOrOut);
+  LLVM_ABI void
+  discoverLiveInOrOut(VRegMaskOrUnit Pair,
+                      SmallVectorImpl<VRegMaskOrUnit> &LiveInOrOut);
 
   LLVM_ABI LaneBitmask getLastUsedLanes(Register RegUnit, SlotIndex Pos) const;
   LLVM_ABI LaneBitmask getLiveLanesAt(Register RegUnit, SlotIndex Pos) const;
@@ -568,7 +571,7 @@ protected:
 };
 
 LLVM_ABI void dumpRegSetPressure(ArrayRef<unsigned> SetPressure,
-                        const TargetRegisterInfo *TRI);
+                                 const TargetRegisterInfo *TRI);
 
 } // end namespace llvm
 

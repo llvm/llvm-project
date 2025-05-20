@@ -13,11 +13,11 @@
 #ifndef LLVM_CODEGEN_MACHINEFRAMEINFO_H
 #define LLVM_CODEGEN_MACHINEFRAMEINFO_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/Support/Alignment.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <vector>
 
@@ -690,13 +690,13 @@ public:
   /// All fixed objects should be created before other objects are created for
   /// efficiency. By default, fixed objects are not pointed to by LLVM IR
   /// values. This returns an index with a negative value.
-  LLVM_ABI int CreateFixedObject(uint64_t Size, int64_t SPOffset, bool IsImmutable,
-                        bool isAliased = false);
+  LLVM_ABI int CreateFixedObject(uint64_t Size, int64_t SPOffset,
+                                 bool IsImmutable, bool isAliased = false);
 
   /// Create a spill slot at a fixed location on the stack.
   /// Returns an index with a negative value.
   LLVM_ABI int CreateFixedSpillStackObject(uint64_t Size, int64_t SPOffset,
-                                  bool IsImmutable = false);
+                                           bool IsImmutable = false);
 
   /// Returns true if the specified index corresponds to a fixed stack object.
   bool isFixedObjectIndex(int ObjectIdx) const {
@@ -786,8 +786,10 @@ public:
 
   /// Create a new statically sized stack object, returning
   /// a nonnegative identifier to represent it.
-  LLVM_ABI int CreateStackObject(uint64_t Size, Align Alignment, bool isSpillSlot,
-                        const AllocaInst *Alloca = nullptr, uint8_t ID = 0);
+  LLVM_ABI int CreateStackObject(uint64_t Size, Align Alignment,
+                                 bool isSpillSlot,
+                                 const AllocaInst *Alloca = nullptr,
+                                 uint8_t ID = 0);
 
   /// Create a new statically sized stack object that represents a spill slot,
   /// returning a nonnegative identifier to represent it.
@@ -802,7 +804,8 @@ public:
   /// Notify the MachineFrameInfo object that a variable sized object has been
   /// created.  This must be created whenever a variable sized object is
   /// created, whether or not the index returned is actually used.
-  LLVM_ABI int CreateVariableSizedObject(Align Alignment, const AllocaInst *Alloca);
+  LLVM_ABI int CreateVariableSizedObject(Align Alignment,
+                                         const AllocaInst *Alloca);
 
   /// Returns a reference to call saved info vector for the current function.
   const std::vector<CalleeSavedInfo> &getCalleeSavedInfo() const {

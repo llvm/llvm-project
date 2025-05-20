@@ -14,9 +14,9 @@
 #ifndef LLVM_CODEGEN_SCHEDULERREGISTRY_H
 #define LLVM_CODEGEN_SCHEDULERREGISTRY_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/CodeGen/MachinePassRegistry.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -61,47 +61,47 @@ public:
 
 /// createBURRListDAGScheduler - This creates a bottom up register usage
 /// reduction list scheduler.
-LLVM_ABI ScheduleDAGSDNodes *createBURRListDAGScheduler(SelectionDAGISel *IS,
-                                               CodeGenOptLevel OptLevel);
+LLVM_ABI ScheduleDAGSDNodes *
+createBURRListDAGScheduler(SelectionDAGISel *IS, CodeGenOptLevel OptLevel);
 
 /// createSourceListDAGScheduler - This creates a bottom up list scheduler that
 /// schedules nodes in source code order when possible.
-LLVM_ABI ScheduleDAGSDNodes *createSourceListDAGScheduler(SelectionDAGISel *IS,
-                                                 CodeGenOptLevel OptLevel);
+LLVM_ABI ScheduleDAGSDNodes *
+createSourceListDAGScheduler(SelectionDAGISel *IS, CodeGenOptLevel OptLevel);
 
 /// createHybridListDAGScheduler - This creates a bottom up register pressure
 /// aware list scheduler that make use of latency information to avoid stalls
 /// for long latency instructions in low register pressure mode. In high
 /// register pressure mode it schedules to reduce register pressure.
 LLVM_ABI ScheduleDAGSDNodes *createHybridListDAGScheduler(SelectionDAGISel *IS,
-                                                 CodeGenOptLevel);
+                                                          CodeGenOptLevel);
 
 /// createILPListDAGScheduler - This creates a bottom up register pressure
 /// aware list scheduler that tries to increase instruction level parallelism
 /// in low register pressure mode. In high register pressure mode it schedules
 /// to reduce register pressure.
 LLVM_ABI ScheduleDAGSDNodes *createILPListDAGScheduler(SelectionDAGISel *IS,
-                                              CodeGenOptLevel);
+                                                       CodeGenOptLevel);
 
 /// createFastDAGScheduler - This creates a "fast" scheduler.
 ///
 LLVM_ABI ScheduleDAGSDNodes *createFastDAGScheduler(SelectionDAGISel *IS,
-                                           CodeGenOptLevel OptLevel);
+                                                    CodeGenOptLevel OptLevel);
 
 /// createVLIWDAGScheduler - Scheduler for VLIW targets. This creates top down
 /// DFA driven list scheduler with clustering heuristic to control
 /// register pressure.
 LLVM_ABI ScheduleDAGSDNodes *createVLIWDAGScheduler(SelectionDAGISel *IS,
-                                           CodeGenOptLevel OptLevel);
+                                                    CodeGenOptLevel OptLevel);
 /// createDefaultScheduler - This creates an instruction scheduler appropriate
 /// for the target.
 LLVM_ABI ScheduleDAGSDNodes *createDefaultScheduler(SelectionDAGISel *IS,
-                                           CodeGenOptLevel OptLevel);
+                                                    CodeGenOptLevel OptLevel);
 
 /// createDAGLinearizer - This creates a "no-scheduling" scheduler which
 /// linearize the DAG using topological order.
 LLVM_ABI ScheduleDAGSDNodes *createDAGLinearizer(SelectionDAGISel *IS,
-                                        CodeGenOptLevel OptLevel);
+                                                 CodeGenOptLevel OptLevel);
 
 } // end namespace llvm
 

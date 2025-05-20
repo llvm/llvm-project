@@ -14,7 +14,6 @@
 #ifndef LLVM_CODEGEN_GLOBALISEL_GISELVALUETRACKING_H
 #define LLVM_CODEGEN_GLOBALISEL_GISELVALUETRACKING_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
@@ -23,6 +22,7 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/KnownFPClass.h"
 
@@ -172,7 +172,8 @@ class GISelValueTrackingAnalysis
 public:
   using Result = GISelValueTracking;
 
-  LLVM_ABI Result run(MachineFunction &MF, MachineFunctionAnalysisManager &MFAM);
+  LLVM_ABI Result run(MachineFunction &MF,
+                      MachineFunctionAnalysisManager &MFAM);
 };
 
 class GISelValueTrackingPrinterPass
@@ -183,7 +184,7 @@ public:
   GISelValueTrackingPrinterPass(raw_ostream &OS) : OS(OS) {}
 
   LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
-                        MachineFunctionAnalysisManager &MFAM);
+                                 MachineFunctionAnalysisManager &MFAM);
 };
 } // namespace llvm
 

@@ -534,10 +534,11 @@ namespace llvm {
     LLVM_ABI EVT changeExtendedVectorElementType(EVT EltVT) const;
     LLVM_ABI EVT changeExtendedVectorElementTypeToInteger() const;
     LLVM_ABI static EVT getExtendedIntegerVT(LLVMContext &C, unsigned BitWidth);
-    LLVM_ABI static EVT getExtendedVectorVT(LLVMContext &C, EVT VT, unsigned NumElements,
-                                   bool IsScalable);
+    LLVM_ABI static EVT getExtendedVectorVT(LLVMContext &C, EVT VT,
+                                            unsigned NumElements,
+                                            bool IsScalable);
     LLVM_ABI static EVT getExtendedVectorVT(LLVMContext &Context, EVT VT,
-                                   ElementCount EC);
+                                            ElementCount EC);
     LLVM_ABI bool isExtendedFloatingPoint() const LLVM_READONLY;
     LLVM_ABI bool isExtendedInteger() const LLVM_READONLY;
     LLVM_ABI bool isExtendedScalarInteger() const LLVM_READONLY;

@@ -13,7 +13,6 @@
 #ifndef LLVM_CODEGEN_DIE_H
 #define LLVM_CODEGEN_DIE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/PointerUnion.h"
@@ -25,6 +24,7 @@
 #include "llvm/CodeGen/DwarfStringPoolEntry.h"
 #include "llvm/Support/AlignOf.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -197,7 +197,8 @@ public:
   void setValue(uint64_t Val) { Integer = Val; }
 
   LLVM_ABI void emitValue(const AsmPrinter *Asm, dwarf::Form Form) const;
-  LLVM_ABI unsigned sizeOf(const dwarf::FormParams &FormParams, dwarf::Form Form) const;
+  LLVM_ABI unsigned sizeOf(const dwarf::FormParams &FormParams,
+                           dwarf::Form Form) const;
 
   LLVM_ABI void print(raw_ostream &O) const;
 };
@@ -214,7 +215,8 @@ public:
   const MCExpr *getValue() const { return Expr; }
 
   LLVM_ABI void emitValue(const AsmPrinter *AP, dwarf::Form Form) const;
-  LLVM_ABI unsigned sizeOf(const dwarf::FormParams &FormParams, dwarf::Form Form) const;
+  LLVM_ABI unsigned sizeOf(const dwarf::FormParams &FormParams,
+                           dwarf::Form Form) const;
 
   LLVM_ABI void print(raw_ostream &O) const;
 };
@@ -231,7 +233,8 @@ public:
   const MCSymbol *getValue() const { return Label; }
 
   LLVM_ABI void emitValue(const AsmPrinter *AP, dwarf::Form Form) const;
-  LLVM_ABI unsigned sizeOf(const dwarf::FormParams &FormParams, dwarf::Form Form) const;
+  LLVM_ABI unsigned sizeOf(const dwarf::FormParams &FormParams,
+                           dwarf::Form Form) const;
 
   LLVM_ABI void print(raw_ostream &O) const;
 };
@@ -267,7 +270,8 @@ public:
   DIEDelta(const MCSymbol *Hi, const MCSymbol *Lo) : LabelHi(Hi), LabelLo(Lo) {}
 
   LLVM_ABI void emitValue(const AsmPrinter *AP, dwarf::Form Form) const;
-  LLVM_ABI unsigned sizeOf(const dwarf::FormParams &FormParams, dwarf::Form Form) const;
+  LLVM_ABI unsigned sizeOf(const dwarf::FormParams &FormParams,
+                           dwarf::Form Form) const;
 
   LLVM_ABI void print(raw_ostream &O) const;
 };
@@ -286,7 +290,8 @@ public:
   StringRef getString() const { return S.getString(); }
 
   LLVM_ABI void emitValue(const AsmPrinter *AP, dwarf::Form Form) const;
-  LLVM_ABI unsigned sizeOf(const dwarf::FormParams &FormParams, dwarf::Form Form) const;
+  LLVM_ABI unsigned sizeOf(const dwarf::FormParams &FormParams,
+                           dwarf::Form Form) const;
 
   LLVM_ABI void print(raw_ostream &O) const;
 };
@@ -327,7 +332,8 @@ public:
   DIE &getEntry() const { return *Entry; }
 
   LLVM_ABI void emitValue(const AsmPrinter *AP, dwarf::Form Form) const;
-  LLVM_ABI unsigned sizeOf(const dwarf::FormParams &FormParams, dwarf::Form Form) const;
+  LLVM_ABI unsigned sizeOf(const dwarf::FormParams &FormParams,
+                           dwarf::Form Form) const;
 
   LLVM_ABI void print(raw_ostream &O) const;
 };
@@ -346,7 +352,8 @@ public:
   size_t getValue() const { return Index; }
 
   LLVM_ABI void emitValue(const AsmPrinter *AP, dwarf::Form Form) const;
-  LLVM_ABI unsigned sizeOf(const dwarf::FormParams &FormParams, dwarf::Form Form) const;
+  LLVM_ABI unsigned sizeOf(const dwarf::FormParams &FormParams,
+                           dwarf::Form Form) const;
 
   LLVM_ABI void print(raw_ostream &O) const;
 };
@@ -362,7 +369,8 @@ public:
       : Addr(Idx), Offset(Hi, Lo) {}
 
   LLVM_ABI void emitValue(const AsmPrinter *AP, dwarf::Form Form) const;
-  LLVM_ABI unsigned sizeOf(const dwarf::FormParams &FormParams, dwarf::Form Form) const;
+  LLVM_ABI unsigned sizeOf(const dwarf::FormParams &FormParams,
+                           dwarf::Form Form) const;
 
   LLVM_ABI void print(raw_ostream &O) const;
 };
@@ -911,8 +919,9 @@ public:
   /// \param CUOffset the compile/type unit relative offset in bytes.
   /// \returns the offset for the DIE that follows this DIE within the
   /// current compile/type unit.
-  LLVM_ABI unsigned computeOffsetsAndAbbrevs(const dwarf::FormParams &FormParams,
-                                    DIEAbbrevSet &AbbrevSet, unsigned CUOffset);
+  LLVM_ABI unsigned
+  computeOffsetsAndAbbrevs(const dwarf::FormParams &FormParams,
+                           DIEAbbrevSet &AbbrevSet, unsigned CUOffset);
 
   /// Climb up the parent chain to get the compile unit or type unit DIE that
   /// this DIE belongs to.

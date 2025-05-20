@@ -13,7 +13,6 @@
 #ifndef LLVM_CODEGEN_TARGETSUBTARGETINFO_H
 #define LLVM_CODEGEN_TARGETSUBTARGETINFO_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -23,6 +22,7 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Support/Compiler.h"
 #include <memory>
 #include <vector>
 

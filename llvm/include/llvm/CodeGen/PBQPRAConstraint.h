@@ -52,8 +52,8 @@ class LLVM_ABI PBQPRAConstraintList : public PBQPRAConstraint {
 public:
   // Explicitly non-copyable.
   PBQPRAConstraintList() = default;
-  PBQPRAConstraintList& operator=(const PBQPRAConstraintList &) = delete;
-  PBQPRAConstraintList(const PBQPRAConstraintList&) = delete;
+  PBQPRAConstraintList &operator=(const PBQPRAConstraintList &) = delete;
+  PBQPRAConstraintList(const PBQPRAConstraintList &) = delete;
 
   void apply(PBQPRAGraph &G) override {
     for (auto &C : Constraints)
@@ -66,7 +66,6 @@ public:
   }
 
 private:
-
   std::vector<std::unique_ptr<PBQPRAConstraint>> Constraints;
 
   void anchor() override;

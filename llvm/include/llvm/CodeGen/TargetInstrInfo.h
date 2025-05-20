@@ -13,7 +13,6 @@
 #ifndef LLVM_CODEGEN_TARGETINSTRINFO_H
 #define LLVM_CODEGEN_TARGETINSTRINFO_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
@@ -31,6 +30,7 @@
 #include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/Support/BranchProbability.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TypeSize.h"
 #include <array>

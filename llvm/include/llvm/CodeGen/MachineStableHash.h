@@ -14,8 +14,8 @@
 #ifndef LLVM_CODEGEN_MACHINESTABLEHASH_H
 #define LLVM_CODEGEN_MACHINESTABLEHASH_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StableHashing.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class MachineBasicBlock;
@@ -24,9 +24,10 @@ class MachineInstr;
 class MachineOperand;
 
 LLVM_ABI stable_hash stableHashValue(const MachineOperand &MO);
-LLVM_ABI stable_hash stableHashValue(const MachineInstr &MI, bool HashVRegs = false,
-                            bool HashConstantPoolIndices = false,
-                            bool HashMemOperands = false);
+LLVM_ABI stable_hash stableHashValue(const MachineInstr &MI,
+                                     bool HashVRegs = false,
+                                     bool HashConstantPoolIndices = false,
+                                     bool HashMemOperands = false);
 LLVM_ABI stable_hash stableHashValue(const MachineBasicBlock &MBB);
 LLVM_ABI stable_hash stableHashValue(const MachineFunction &MF);
 

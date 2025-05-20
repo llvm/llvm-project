@@ -79,8 +79,8 @@ template <> struct ilist_alloc_traits<MachineBasicBlock> {
 };
 
 template <> struct ilist_callback_traits<MachineBasicBlock> {
-  LLVM_ABI void addNodeToList(MachineBasicBlock* N);
-  LLVM_ABI void removeNodeFromList(MachineBasicBlock* N);
+  LLVM_ABI void addNodeToList(MachineBasicBlock *N);
+  LLVM_ABI void removeNodeFromList(MachineBasicBlock *N);
 
   template <class Iterator>
   void transferNodesFromList(ilist_callback_traits &OldList, Iterator, Iterator) {
@@ -1564,7 +1564,7 @@ template <> struct GraphTraits<Inverse<const MachineFunction*>> :
 };
 
 LLVM_ABI void verifyMachineFunction(const std::string &Banner,
-                           const MachineFunction &MF);
+                                    const MachineFunction &MF);
 
 } // end namespace llvm
 

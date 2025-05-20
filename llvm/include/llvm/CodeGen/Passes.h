@@ -14,9 +14,9 @@
 #ifndef LLVM_CODEGEN_PASSES_H
 #define LLVM_CODEGEN_PASSES_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/CodeGen/RegAllocCommon.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Discriminator.h"
 
 #include <functional>
@@ -100,8 +100,8 @@ LLVM_ABI MachineFunctionPass *createPrintMIRPass(raw_ostream &OS);
 /// If EmitFallbackDiag is true, the pass will emit a
 /// DiagnosticInfoISelFallback for every MachineFunction it resets.
 /// If AbortOnFailedISel is true, abort compilation instead of resetting.
-LLVM_ABI MachineFunctionPass *createResetMachineFunctionPass(bool EmitFallbackDiag,
-                                                    bool AbortOnFailedISel);
+LLVM_ABI MachineFunctionPass *
+createResetMachineFunctionPass(bool EmitFallbackDiag, bool AbortOnFailedISel);
 
 /// createCodeGenPrepareLegacyPass - Transform the code to expose more pattern
 /// matching during instruction selection.
@@ -216,7 +216,7 @@ LLVM_ABI extern char &InitUndefID;
 ///
 LLVM_ABI FunctionPass *createFastRegisterAllocator();
 LLVM_ABI FunctionPass *createFastRegisterAllocator(RegAllocFilterFunc F,
-                                          bool ClearVirtRegs);
+                                                   bool ClearVirtRegs);
 
 /// BasicRegisterAllocation Pass - This pass implements a degenerate global
 /// register allocator using the basic regalloc framework.
@@ -365,7 +365,8 @@ LLVM_ABI extern char &MachineSinkingLegacyID;
 /// machine instructions.
 LLVM_ABI extern char &MachineCopyPropagationID;
 
-LLVM_ABI MachineFunctionPass *createMachineCopyPropagationPass(bool UseCopyInstr);
+LLVM_ABI MachineFunctionPass *
+createMachineCopyPropagationPass(bool UseCopyInstr);
 
 /// MachineLateInstrsCleanup - This pass removes redundant identical
 /// instructions after register allocation and rematerialization.
@@ -487,11 +488,12 @@ LLVM_ABI ModulePass *createPreISelIntrinsicLoweringPass();
 /// to enable reuse of a base pointer by indexed addressing modes.
 /// It can also be configured to focus on size optimizations only.
 ///
-LLVM_ABI Pass *createGlobalMergePass(const TargetMachine *TM, unsigned MaximalOffset,
-                            bool OnlyOptimizeForSize = false,
-                            bool MergeExternalByDefault = false,
-                            bool MergeConstantByDefault = false,
-                            bool MergeConstAggressiveByDefault = false);
+LLVM_ABI Pass *
+createGlobalMergePass(const TargetMachine *TM, unsigned MaximalOffset,
+                      bool OnlyOptimizeForSize = false,
+                      bool MergeExternalByDefault = false,
+                      bool MergeConstantByDefault = false,
+                      bool MergeConstAggressiveByDefault = false);
 
 /// This pass splits the stack into a safe stack and an unsafe stack to
 /// protect against stack-based overflow vulnerabilities.

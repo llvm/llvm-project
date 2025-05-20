@@ -18,9 +18,9 @@
 #ifndef LLVM_CODEGEN_MACHINEFUNCTIONPASS_H
 #define LLVM_CODEGEN_MACHINEFUNCTIONPASS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

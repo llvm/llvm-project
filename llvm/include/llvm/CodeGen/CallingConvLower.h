@@ -14,13 +14,13 @@
 #ifndef LLVM_CODEGEN_CALLINGCONVLOWER_H
 #define LLVM_CODEGEN_CALLINGCONVLOWER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/TargetCallingConv.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/Support/Alignment.h"
+#include "llvm/Support/Compiler.h"
 #include <variant>
 
 namespace llvm {
@@ -230,8 +230,8 @@ private:
 
 public:
   LLVM_ABI CCState(CallingConv::ID CC, bool IsVarArg, MachineFunction &MF,
-          SmallVectorImpl<CCValAssign> &Locs, LLVMContext &Context,
-          bool NegativeOffsets = false);
+                   SmallVectorImpl<CCValAssign> &Locs, LLVMContext &Context,
+                   bool NegativeOffsets = false);
 
   void addLoc(const CCValAssign &V) {
     Locs.push_back(V);
@@ -260,8 +260,9 @@ public:
 
   /// AnalyzeFormalArguments - Analyze an array of argument values,
   /// incorporating info about the formals into this state.
-  LLVM_ABI void AnalyzeFormalArguments(const SmallVectorImpl<ISD::InputArg> &Ins,
-                              CCAssignFn Fn);
+  LLVM_ABI void
+  AnalyzeFormalArguments(const SmallVectorImpl<ISD::InputArg> &Ins,
+                         CCAssignFn Fn);
 
   /// The function will invoke AnalyzeFormalArguments.
   void AnalyzeArguments(const SmallVectorImpl<ISD::InputArg> &Ins,
@@ -272,24 +273,24 @@ public:
   /// AnalyzeReturn - Analyze the returned values of a return,
   /// incorporating info about the result values into this state.
   LLVM_ABI void AnalyzeReturn(const SmallVectorImpl<ISD::OutputArg> &Outs,
-                     CCAssignFn Fn);
+                              CCAssignFn Fn);
 
   /// CheckReturn - Analyze the return values of a function, returning
   /// true if the return can be performed without sret-demotion, and
   /// false otherwise.
   LLVM_ABI bool CheckReturn(const SmallVectorImpl<ISD::OutputArg> &Outs,
-                   CCAssignFn Fn);
+                            CCAssignFn Fn);
 
   /// AnalyzeCallOperands - Analyze the outgoing arguments to a call,
   /// incorporating info about the passed values into this state.
   LLVM_ABI void AnalyzeCallOperands(const SmallVectorImpl<ISD::OutputArg> &Outs,
-                           CCAssignFn Fn);
+                                    CCAssignFn Fn);
 
   /// AnalyzeCallOperands - Same as above except it takes vectors of types
   /// and argument flags.
   LLVM_ABI void AnalyzeCallOperands(SmallVectorImpl<MVT> &ArgVTs,
-                           SmallVectorImpl<ISD::ArgFlagsTy> &Flags,
-                           CCAssignFn Fn);
+                                    SmallVectorImpl<ISD::ArgFlagsTy> &Flags,
+                                    CCAssignFn Fn);
 
   /// The function will invoke AnalyzeCallOperands.
   void AnalyzeArguments(const SmallVectorImpl<ISD::OutputArg> &Outs,
@@ -300,7 +301,7 @@ public:
   /// AnalyzeCallResult - Analyze the return values of a call,
   /// incorporating info about the passed values into this state.
   LLVM_ABI void AnalyzeCallResult(const SmallVectorImpl<ISD::InputArg> &Ins,
-                         CCAssignFn Fn);
+                                  CCAssignFn Fn);
 
   /// A shadow allocated register is a register that was allocated
   /// but wasn't added to the location list (Locs).
@@ -432,8 +433,8 @@ public:
   // value. The size and alignment information of the argument is encoded in its
   // parameter attribute.
   LLVM_ABI void HandleByVal(unsigned ValNo, MVT ValVT, MVT LocVT,
-                   CCValAssign::LocInfo LocInfo, int MinSize, Align MinAlign,
-                   ISD::ArgFlagsTy ArgFlags);
+                            CCValAssign::LocInfo LocInfo, int MinSize,
+                            Align MinAlign, ISD::ArgFlagsTy ArgFlags);
 
   // Returns count of byval arguments that are to be stored (even partly)
   // in registers.
@@ -494,8 +495,8 @@ public:
   /// the given value type. This is useful when varargs are passed in the
   /// registers that normal prototyped parameters would be passed in, or for
   /// implementing perfect forwarding.
-  LLVM_ABI void getRemainingRegParmsForType(SmallVectorImpl<MCRegister> &Regs, MVT VT,
-                                   CCAssignFn Fn);
+  LLVM_ABI void getRemainingRegParmsForType(SmallVectorImpl<MCRegister> &Regs,
+                                            MVT VT, CCAssignFn Fn);
 
   /// Compute the set of registers that need to be preserved and forwarded to
   /// any musttail calls.
@@ -505,11 +506,11 @@ public:
 
   /// Returns true if the results of the two calling conventions are compatible.
   /// This is usually part of the check for tailcall eligibility.
-  LLVM_ABI static bool resultsCompatible(CallingConv::ID CalleeCC,
-                                CallingConv::ID CallerCC, MachineFunction &MF,
-                                LLVMContext &C,
-                                const SmallVectorImpl<ISD::InputArg> &Ins,
-                                CCAssignFn CalleeFn, CCAssignFn CallerFn);
+  LLVM_ABI static bool
+  resultsCompatible(CallingConv::ID CalleeCC, CallingConv::ID CallerCC,
+                    MachineFunction &MF, LLVMContext &C,
+                    const SmallVectorImpl<ISD::InputArg> &Ins,
+                    CCAssignFn CalleeFn, CCAssignFn CallerFn);
 
   /// The function runs an additional analysis pass over function arguments.
   /// It will mark each argument with the attribute flag SecArgPass.

@@ -13,11 +13,11 @@
 #ifndef LLVM_CODEGEN_PSEUDOSOURCEVALUEMANAGER_H
 #define LLVM_CODEGEN_PSEUDOSOURCEVALUEMANAGER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
 #include "llvm/IR/ValueMap.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -59,7 +59,8 @@ public:
   /// e.g., a spill slot.
   LLVM_ABI const PseudoSourceValue *getFixedStack(int FI);
 
-  LLVM_ABI const PseudoSourceValue *getGlobalValueCallEntry(const GlobalValue *GV);
+  LLVM_ABI const PseudoSourceValue *
+  getGlobalValueCallEntry(const GlobalValue *GV);
 
   LLVM_ABI const PseudoSourceValue *getExternalSymbolCallEntry(const char *ES);
 };

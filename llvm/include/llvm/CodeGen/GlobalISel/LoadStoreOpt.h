@@ -14,7 +14,6 @@
 #ifndef LLVM_CODEGEN_GLOBALISEL_LOADSTOREOPT_H
 #define LLVM_CODEGEN_GLOBALISEL_LOADSTOREOPT_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
@@ -23,6 +22,7 @@
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 // Forward declarations.
@@ -61,15 +61,16 @@ LLVM_ABI BaseIndexOffset getPointerInfo(Register Ptr, MachineRegisterInfo &MRI);
 /// Compute whether or not a memory access at \p MI1 aliases with an access at
 /// \p MI2 \returns true if either alias/no-alias is known. Sets \p IsAlias
 /// accordingly.
-LLVM_ABI bool aliasIsKnownForLoadStore(const MachineInstr &MI1, const MachineInstr &MI2,
-                              bool &IsAlias, MachineRegisterInfo &MRI);
+LLVM_ABI bool aliasIsKnownForLoadStore(const MachineInstr &MI1,
+                                       const MachineInstr &MI2, bool &IsAlias,
+                                       MachineRegisterInfo &MRI);
 
 /// Returns true if the instruction \p MI may alias \p Other.
 /// This function uses multiple strategies to detect aliasing, whereas
 /// aliasIsKnownForLoadStore just looks at the addresses of load/stores and is
 /// tries to reason about base/index/offsets.
 LLVM_ABI bool instMayAlias(const MachineInstr &MI, const MachineInstr &Other,
-                  MachineRegisterInfo &MRI, AliasAnalysis *AA);
+                           MachineRegisterInfo &MRI, AliasAnalysis *AA);
 } // namespace GISelAddressing
 
 using namespace GISelAddressing;

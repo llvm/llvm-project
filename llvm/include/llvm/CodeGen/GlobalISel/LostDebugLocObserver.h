@@ -12,9 +12,9 @@
 #ifndef LLVM_CODEGEN_GLOBALISEL_LOSTDEBUGLOCOBSERVER_H
 #define LLVM_CODEGEN_GLOBALISEL_LOSTDEBUGLOCOBSERVER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class LLVM_ABI LostDebugLocObserver : public GISelChangeObserver {

@@ -15,7 +15,6 @@
 #ifndef LLVM_CODEGEN_GLOBALISEL_GIMATCHTABLEEXECUTOR_H
 #define LLVM_CODEGEN_GLOBALISEL_GIMATCHTABLEEXECUTOR_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Bitset.h"
 #include "llvm/ADT/DenseMap.h"
@@ -25,6 +24,7 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/IR/Function.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/Utils/SizeOpts.h"
 #include <bitset>
 #include <cstddef>
@@ -717,19 +717,20 @@ protected:
   }
 
   LLVM_ABI bool isOperandImmEqual(const MachineOperand &MO, int64_t Value,
-                         const MachineRegisterInfo &MRI,
-                         bool Splat = false) const;
+                                  const MachineRegisterInfo &MRI,
+                                  bool Splat = false) const;
 
   /// Return true if the specified operand is a G_PTR_ADD with a G_CONSTANT on
   /// the right-hand side. GlobalISel's separation of pointer and integer types
   /// means that we don't need to worry about G_OR with equivalent semantics.
   LLVM_ABI bool isBaseWithConstantOffset(const MachineOperand &Root,
-                                const MachineRegisterInfo &MRI) const;
+                                         const MachineRegisterInfo &MRI) const;
 
   /// Return true if MI can obviously be folded into IntoMI.
   /// MI and IntoMI do not need to be in the same basic blocks, but MI must
   /// preceed IntoMI.
-  LLVM_ABI bool isObviouslySafeToFold(MachineInstr &MI, MachineInstr &IntoMI) const;
+  LLVM_ABI bool isObviouslySafeToFold(MachineInstr &MI,
+                                      MachineInstr &IntoMI) const;
 
   template <typename Ty> static Ty readBytesAs(const uint8_t *MatchTable) {
     Ty Ret;

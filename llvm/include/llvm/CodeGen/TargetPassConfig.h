@@ -13,9 +13,9 @@
 #ifndef LLVM_CODEGEN_TARGETPASSCONFIG_H
 #define LLVM_CODEGEN_TARGETPASSCONFIG_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <cassert>
 #include <string>
@@ -476,7 +476,7 @@ protected:
 };
 
 LLVM_ABI void registerCodeGenCallback(PassInstrumentationCallbacks &PIC,
-                             TargetMachine &);
+                                      TargetMachine &);
 
 } // end namespace llvm
 

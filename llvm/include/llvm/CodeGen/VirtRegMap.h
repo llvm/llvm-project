@@ -16,13 +16,13 @@
 #ifndef LLVM_CODEGEN_VIRTREGMAP_H
 #define LLVM_CODEGEN_VIRTREGMAP_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/IndexedMap.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TileShapeInfo.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 
 namespace llvm {
@@ -224,7 +224,8 @@ class VirtRegMapAnalysis : public AnalysisInfoMixin<VirtRegMapAnalysis> {
 public:
   using Result = VirtRegMap;
 
-  LLVM_ABI VirtRegMap run(MachineFunction &MF, MachineFunctionAnalysisManager &MAM);
+  LLVM_ABI VirtRegMap run(MachineFunction &MF,
+                          MachineFunctionAnalysisManager &MAM);
 };
 
 class VirtRegMapPrinterPass : public PassInfoMixin<VirtRegMapPrinterPass> {
@@ -233,7 +234,7 @@ class VirtRegMapPrinterPass : public PassInfoMixin<VirtRegMapPrinterPass> {
 public:
   explicit VirtRegMapPrinterPass(raw_ostream &OS) : OS(OS) {}
   LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
-                        MachineFunctionAnalysisManager &MFAM);
+                                 MachineFunctionAnalysisManager &MFAM);
   static bool isRequired() { return true; }
 };
 
@@ -244,11 +245,12 @@ public:
   VirtRegRewriterPass(bool ClearVirtRegs = true)
       : ClearVirtRegs(ClearVirtRegs) {}
   LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
-                        MachineFunctionAnalysisManager &MFAM);
+                                 MachineFunctionAnalysisManager &MFAM);
 
   static bool isRequired() { return true; }
 
-  LLVM_ABI void printPipeline(raw_ostream &OS, function_ref<StringRef(StringRef)>) const;
+  LLVM_ABI void printPipeline(raw_ostream &OS,
+                              function_ref<StringRef(StringRef)>) const;
 };
 
 } // end llvm namespace

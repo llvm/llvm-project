@@ -15,9 +15,9 @@
 #ifndef LLVM_CODEGEN_COMMANDFLAGS_H
 #define LLVM_CODEGEN_COMMANDFLAGS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Target/TargetOptions.h"
 #include <optional>
 #include <string>
@@ -164,7 +164,8 @@ struct RegisterCodeGenFlags {
 
 LLVM_ABI bool getEnableBBAddrMap();
 
-LLVM_ABI llvm::BasicBlockSection getBBSectionsMode(llvm::TargetOptions &Options);
+LLVM_ABI llvm::BasicBlockSection
+getBBSectionsMode(llvm::TargetOptions &Options);
 
 /// Common utility function tightly tied to the options listed here. Initializes
 /// a TargetOptions object with CodeGen flags and returns it.
@@ -172,7 +173,8 @@ LLVM_ABI llvm::BasicBlockSection getBBSectionsMode(llvm::TargetOptions &Options)
 ///    options are not explicitly specified. If those triple dependant options
 ///    value do not have effect for your component, a default Triple() could be
 ///    passed in.
-LLVM_ABI TargetOptions InitTargetOptionsFromCodeGenFlags(const llvm::Triple &TheTriple);
+LLVM_ABI TargetOptions
+InitTargetOptionsFromCodeGenFlags(const llvm::Triple &TheTriple);
 
 LLVM_ABI std::string getCPUStr();
 
@@ -184,11 +186,13 @@ LLVM_ABI void renderBoolStringAttr(AttrBuilder &B, StringRef Name, bool Val);
 
 /// Set function attributes of function \p F based on CPU, Features, and command
 /// line flags.
-LLVM_ABI void setFunctionAttributes(StringRef CPU, StringRef Features, Function &F);
+LLVM_ABI void setFunctionAttributes(StringRef CPU, StringRef Features,
+                                    Function &F);
 
 /// Set function attributes of functions in Module M based on CPU,
 /// Features, and command line flags.
-LLVM_ABI void setFunctionAttributes(StringRef CPU, StringRef Features, Module &M);
+LLVM_ABI void setFunctionAttributes(StringRef CPU, StringRef Features,
+                                    Module &M);
 
 /// Should value-tracking variable locations / instruction referencing be
 /// enabled by default for this triple?

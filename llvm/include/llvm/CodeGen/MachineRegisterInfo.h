@@ -13,7 +13,6 @@
 #ifndef LLVM_CODEGEN_MACHINEREGISTERINFO_H
 #define LLVM_CODEGEN_MACHINEREGISTERINFO_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/IndexedMap.h"
@@ -31,6 +30,7 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/MC/LaneBitmask.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -259,7 +259,8 @@ public:
   LLVM_ABI void removeRegOperandFromUseList(MachineOperand *MO);
 
   // Strictly for use by MachineInstr.cpp.
-  LLVM_ABI void moveOperands(MachineOperand *Dst, MachineOperand *Src, unsigned NumOps);
+  LLVM_ABI void moveOperands(MachineOperand *Dst, MachineOperand *Src,
+                             unsigned NumOps);
 
   /// Verify the sanity of the use list for Reg.
   LLVM_ABI void verifyUseList(Register Reg) const;
@@ -707,9 +708,9 @@ public:
   /// Use RegisterBankInfo::constrainGenericRegister in GlobalISel's
   /// InstructionSelect pass and constrainRegAttrs in every other pass,
   /// including non-select passes of GlobalISel, instead.
-  LLVM_ABI const TargetRegisterClass *constrainRegClass(Register Reg,
-                                               const TargetRegisterClass *RC,
-                                               unsigned MinNumRegs = 0);
+  LLVM_ABI const TargetRegisterClass *
+  constrainRegClass(Register Reg, const TargetRegisterClass *RC,
+                    unsigned MinNumRegs = 0);
 
   /// Constrain the register class or the register bank of the virtual register
   /// \p Reg (and low-level type) to be a common subclass or a common bank of
@@ -723,7 +724,7 @@ public:
   /// RegisterBankInfo::constrainGenericRegister everywhere but SelectionDAG
   /// ISel / FastISel and GlobalISel's InstructionSelect pass respectively.
   LLVM_ABI bool constrainRegAttrs(Register Reg, Register ConstrainingReg,
-                         unsigned MinNumRegs = 0);
+                                  unsigned MinNumRegs = 0);
 
   /// recomputeRegClass - Try to find a legal super-class of Reg's register
   /// class that still satisfies the constraints from the instructions using
@@ -737,7 +738,7 @@ public:
   /// createVirtualRegister - Create and return a new virtual register in the
   /// function with the specified register class.
   LLVM_ABI Register createVirtualRegister(const TargetRegisterClass *RegClass,
-                                 StringRef Name = "");
+                                          StringRef Name = "");
 
   /// All attributes(register class or bank and low-level type) a virtual
   /// register can have.
@@ -755,7 +756,8 @@ public:
 
   /// Create and return a new virtual register in the function with the
   /// specified register attributes(register class or bank and low level type).
-  LLVM_ABI Register createVirtualRegister(VRegAttrs RegAttr, StringRef Name = "");
+  LLVM_ABI Register createVirtualRegister(VRegAttrs RegAttr,
+                                          StringRef Name = "");
 
   /// Create and return a new virtual register in the function with the same
   /// attributes as the given register.
@@ -893,13 +895,15 @@ public:
   /// ignored, to consider them pass 'true' for optional parameter
   /// SkipNoReturnDef. The register is also considered modified when it is set
   /// in the UsedPhysRegMask.
-  LLVM_ABI bool isPhysRegModified(MCRegister PhysReg, bool SkipNoReturnDef = false) const;
+  LLVM_ABI bool isPhysRegModified(MCRegister PhysReg,
+                                  bool SkipNoReturnDef = false) const;
 
   /// Return true if the specified register is modified or read in this
   /// function. This checks that no machine operands exist for the register or
   /// any of its aliases. If SkipRegMaskTest is false, the register is
   /// considered used when it is set in the UsedPhysRegMask.
-  LLVM_ABI bool isPhysRegUsed(MCRegister PhysReg, bool SkipRegMaskTest = false) const;
+  LLVM_ABI bool isPhysRegUsed(MCRegister PhysReg,
+                              bool SkipRegMaskTest = false) const;
 
   /// addPhysRegsUsedFromRegMask - Mark any registers not in RegMask as used.
   /// This corresponds to the bit mask attached to register mask operands.
@@ -1022,8 +1026,8 @@ public:
   /// EmitLiveInCopies - Emit copies to initialize livein virtual registers
   /// into the given entry block.
   LLVM_ABI void EmitLiveInCopies(MachineBasicBlock *EntryMBB,
-                        const TargetRegisterInfo &TRI,
-                        const TargetInstrInfo &TII);
+                                 const TargetRegisterInfo &TRI,
+                                 const TargetInstrInfo &TII);
 
   /// Returns a mask covering all bits that can appear in lane masks of
   /// subregisters of the virtual register @p Reg.

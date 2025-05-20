@@ -15,13 +15,13 @@
 #ifndef LLVM_CODEGEN_SCHEDULEDAG_H
 #define LLVM_CODEGEN_SCHEDULEDAG_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <cstddef>
@@ -750,7 +750,8 @@ class TargetRegisterInfo;
     void FixOrder();
 
   public:
-    LLVM_ABI ScheduleDAGTopologicalSort(std::vector<SUnit> &SUnits, SUnit *ExitSU);
+    LLVM_ABI ScheduleDAGTopologicalSort(std::vector<SUnit> &SUnits,
+                                        SUnit *ExitSU);
 
     /// Add a SUnit without predecessors to the end of the topological order. It
     /// also must be the first new node added to the DAG.
@@ -764,8 +765,8 @@ class TargetRegisterInfo;
     /// StartSU and TargetSU are not in the array.
     /// Success is false if TargetSU is not in the successor subtree of
     /// StartSU, else it is true.
-    LLVM_ABI std::vector<int> GetSubGraph(const SUnit &StartSU, const SUnit &TargetSU,
-                                 bool &Success);
+    LLVM_ABI std::vector<int> GetSubGraph(const SUnit &StartSU,
+                                          const SUnit &TargetSU, bool &Success);
 
     /// Checks if \p SU is reachable from \p TargetSU.
     LLVM_ABI bool IsReachable(const SUnit *SU, const SUnit *TargetSU);

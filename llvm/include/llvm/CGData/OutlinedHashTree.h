@@ -15,10 +15,10 @@
 #ifndef LLVM_CGDATA_OUTLINEDHASHTREE_H
 #define LLVM_CGDATA_OUTLINEDHASHTREE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StableHashing.h"
 #include "llvm/ObjectYAML/YAML.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <unordered_map>
@@ -56,8 +56,8 @@ public:
   /// callbacks can be used to traverse a OutlinedHashTree for the purpose of
   /// print debugging or serializing it.
   LLVM_ABI void walkGraph(NodeCallbackFn CallbackNode,
-                 EdgeCallbackFn CallbackEdge = nullptr,
-                 bool SortedWalk = false) const;
+                          EdgeCallbackFn CallbackEdge = nullptr,
+                          bool SortedWalk = false) const;
 
   /// Release all hash nodes except the root hash node.
   void clear() {

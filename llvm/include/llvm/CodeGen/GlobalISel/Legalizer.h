@@ -20,12 +20,12 @@
 #ifndef LLVM_CODEGEN_GLOBALISEL_LEGALIZER_H
 #define LLVM_CODEGEN_GLOBALISEL_LEGALIZER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

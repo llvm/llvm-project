@@ -18,7 +18,6 @@
 #ifndef LLVM_CODEGEN_SLOTINDEXES_H
 #define LLVM_CODEGEN_SLOTINDEXES_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IntervalMap.h"
 #include "llvm/ADT/PointerIntPair.h"
@@ -31,6 +30,7 @@
 #include "llvm/CodeGen/MachineInstrBundle.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include <algorithm>
 #include <cassert>
 #include <iterator>
@@ -356,8 +356,8 @@ class raw_ostream;
 
     /// Repair indexes after adding and removing instructions.
     LLVM_ABI void repairIndexesInRange(MachineBasicBlock *MBB,
-                              MachineBasicBlock::iterator Begin,
-                              MachineBasicBlock::iterator End);
+                                       MachineBasicBlock::iterator Begin,
+                                       MachineBasicBlock::iterator End);
 
     /// Returns the zero index for this analysis.
     SlotIndex getZeroIndex() {
@@ -576,7 +576,7 @@ class raw_ostream;
     /// instruction; however, this exists to support handleMoveIntoBundle,
     /// and in general removeSingleMachineInstrFromMaps should be used instead.
     LLVM_ABI void removeMachineInstrFromMaps(MachineInstr &MI,
-                                    bool AllowBundled = false);
+                                             bool AllowBundled = false);
 
     /// Removes a single machine instruction \p MI from the mapping.
     /// This should be called before MachineInstr::eraseFromBundle() is used to
@@ -657,7 +657,7 @@ class raw_ostream;
   public:
     explicit SlotIndexesPrinterPass(raw_ostream &OS) : OS(OS) {}
     LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
-                          MachineFunctionAnalysisManager &MFAM);
+                                   MachineFunctionAnalysisManager &MFAM);
     static bool isRequired() { return true; }
   };
 

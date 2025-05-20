@@ -13,10 +13,10 @@
 #ifndef LLVM_CODEGEN_MACHINEOPERAND_H
 #define LLVM_CODEGEN_MACHINEOPERAND_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/CodeGen/Register.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 
 namespace llvm {
@@ -261,17 +261,19 @@ public:
   /// subreg index name will be printed. MachineInstr::isOperandSubregIdx can be
   /// called to check this.
   LLVM_ABI static void printSubRegIdx(raw_ostream &OS, uint64_t Index,
-                             const TargetRegisterInfo *TRI);
+                                      const TargetRegisterInfo *TRI);
 
   /// Print operand target flags.
-  LLVM_ABI static void printTargetFlags(raw_ostream& OS, const MachineOperand &Op);
+  LLVM_ABI static void printTargetFlags(raw_ostream &OS,
+                                        const MachineOperand &Op);
 
   /// Print a MCSymbol as an operand.
   LLVM_ABI static void printSymbol(raw_ostream &OS, MCSymbol &Sym);
 
   /// Print a stack object reference.
-  LLVM_ABI static void printStackObjectReference(raw_ostream &OS, unsigned FrameIndex,
-                                        bool IsFixed, StringRef Name);
+  LLVM_ABI static void printStackObjectReference(raw_ostream &OS,
+                                                 unsigned FrameIndex,
+                                                 bool IsFixed, StringRef Name);
 
   /// Print the offset with explicit +/- signs.
   LLVM_ABI static void printOperandOffset(raw_ostream &OS, int64_t Offset);
@@ -282,7 +284,8 @@ public:
   /// Print the MachineOperand to \p os.
   /// Providing a valid \p TRI results in a more target-specific printing. If
   /// \p TRI is null, the function will try to pick it up from the parent.
-  LLVM_ABI void print(raw_ostream &os, const TargetRegisterInfo *TRI = nullptr) const;
+  LLVM_ABI void print(raw_ostream &os,
+                      const TargetRegisterInfo *TRI = nullptr) const;
 
   /// More complex way of printing a MachineOperand.
   /// \param TypeToPrint specifies the generic type to be printed on uses and
@@ -305,14 +308,15 @@ public:
   /// Unlike the previous function, this one will not try and get the
   /// information from it's parent.
   LLVM_ABI void print(raw_ostream &os, ModuleSlotTracker &MST, LLT TypeToPrint,
-             std::optional<unsigned> OpIdx, bool PrintDef, bool IsStandalone,
-             bool ShouldPrintRegisterTies, unsigned TiedOperandIdx,
-             const TargetRegisterInfo *TRI) const;
+                      std::optional<unsigned> OpIdx, bool PrintDef,
+                      bool IsStandalone, bool ShouldPrintRegisterTies,
+                      unsigned TiedOperandIdx,
+                      const TargetRegisterInfo *TRI) const;
 
   /// Same as print(os, TRI), but allows to specify the low-level type to be
   /// printed the same way the full version of print(...) does it.
   LLVM_ABI void print(raw_ostream &os, LLT TypeToPrint,
-             const TargetRegisterInfo *TRI = nullptr) const;
+                      const TargetRegisterInfo *TRI = nullptr) const;
 
   LLVM_ABI void dump() const;
 
@@ -493,13 +497,14 @@ public:
   /// using TargetRegisterInfo to compose the subreg indices if necessary.
   /// Reg must be a virtual register, SubIdx can be 0.
   ///
-  LLVM_ABI void substVirtReg(Register Reg, unsigned SubIdx, const TargetRegisterInfo&);
+  LLVM_ABI void substVirtReg(Register Reg, unsigned SubIdx,
+                             const TargetRegisterInfo &);
 
   /// substPhysReg - Substitute the current register with the physical register
   /// Reg, taking any existing SubReg into account. For instance,
   /// substPhysReg(%eax) will change %reg1024:sub_8bit to %al.
   ///
-  LLVM_ABI void substPhysReg(MCRegister Reg, const TargetRegisterInfo&);
+  LLVM_ABI void substPhysReg(MCRegister Reg, const TargetRegisterInfo &);
 
   void setIsUse(bool Val = true) { setIsDef(!Val); }
 
@@ -769,18 +774,19 @@ public:
   /// ChangeToFPImmediate - Replace this operand with a new FP immediate operand
   /// of the specified value.  If an operand is known to be an FP immediate
   /// already, the setFPImm method should be used.
-  LLVM_ABI void ChangeToFPImmediate(const ConstantFP *FPImm, unsigned TargetFlags = 0);
+  LLVM_ABI void ChangeToFPImmediate(const ConstantFP *FPImm,
+                                    unsigned TargetFlags = 0);
 
   /// ChangeToES - Replace this operand with a new external symbol operand.
   LLVM_ABI void ChangeToES(const char *SymName, unsigned TargetFlags = 0);
 
   /// ChangeToGA - Replace this operand with a new global address operand.
   LLVM_ABI void ChangeToGA(const GlobalValue *GV, int64_t Offset,
-                  unsigned TargetFlags = 0);
+                           unsigned TargetFlags = 0);
 
   /// ChangeToBA - Replace this operand with a new block address operand.
   LLVM_ABI void ChangeToBA(const BlockAddress *BA, int64_t Offset,
-                  unsigned TargetFlags = 0);
+                           unsigned TargetFlags = 0);
 
   /// ChangeToMCSymbol - Replace this operand with a new MC symbol operand.
   LLVM_ABI void ChangeToMCSymbol(MCSymbol *Sym, unsigned TargetFlags = 0);
@@ -790,18 +796,18 @@ public:
 
   /// Replace this operand with a target index.
   LLVM_ABI void ChangeToTargetIndex(unsigned Idx, int64_t Offset,
-                           unsigned TargetFlags = 0);
+                                    unsigned TargetFlags = 0);
 
   /// Replace this operand with an Instruction Reference.
   LLVM_ABI void ChangeToDbgInstrRef(unsigned InstrIdx, unsigned OpIdx,
-                           unsigned TargetFlags = 0);
+                                    unsigned TargetFlags = 0);
 
   /// ChangeToRegister - Replace this operand with a new register operand of
   /// the specified value.  If an operand is known to be an register already,
   /// the setReg method should be used.
   LLVM_ABI void ChangeToRegister(Register Reg, bool isDef, bool isImp = false,
-                        bool isKill = false, bool isDead = false,
-                        bool isUndef = false, bool isDebug = false);
+                                 bool isKill = false, bool isDead = false,
+                                 bool isUndef = false, bool isDebug = false);
 
   /// getTargetIndexName - If this MachineOperand is a TargetIndex that has a
   /// name, attempt to get the name. Returns nullptr if the TargetIndex does not

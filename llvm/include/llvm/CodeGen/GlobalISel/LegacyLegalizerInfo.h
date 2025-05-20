@@ -15,10 +15,10 @@
 #ifndef LLVM_CODEGEN_GLOBALISEL_LEGACYLEGALIZERINFO_H
 #define LLVM_CODEGEN_GLOBALISEL_LEGACYLEGALIZERINFO_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGenTypes/LowLevelType.h"
+#include "llvm/Support/Compiler.h"
 #include <unordered_map>
 #include <vector>
 
@@ -76,8 +76,8 @@ enum LegacyLegalizeAction : std::uint8_t {
   NotFound,
 };
 } // end namespace LegacyLegalizeActions
-LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
-                        LegacyLegalizeActions::LegacyLegalizeAction Action);
+LLVM_ABI raw_ostream &
+operator<<(raw_ostream &OS, LegacyLegalizeActions::LegacyLegalizeAction Action);
 
 /// Legalization is decided based on an instruction's opcode, which type slot
 /// we're considering, and what the existing type is. These aspects are gathered

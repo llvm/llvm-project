@@ -13,7 +13,6 @@
 #ifndef LLVM_CODEGEN_MACHINEBASICBLOCK_H
 #define LLVM_CODEGEN_MACHINEBASICBLOCK_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/SparseBitVector.h"
@@ -25,6 +24,7 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/Support/BranchProbability.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstdint>
 #include <iterator>
@@ -118,8 +118,9 @@ private:
 public:
   LLVM_ABI void addNodeToList(MachineInstr *N);
   LLVM_ABI void removeNodeFromList(MachineInstr *N);
-  LLVM_ABI void transferNodesFromList(ilist_traits &FromList, instr_iterator First,
-                             instr_iterator Last);
+  LLVM_ABI void transferNodesFromList(ilist_traits &FromList,
+                                      instr_iterator First,
+                                      instr_iterator Last);
   LLVM_ABI void deleteNode(MachineInstr *MI);
 };
 
@@ -487,15 +488,16 @@ public:
   /// Add PhysReg as live in to this block, and ensure that there is a copy of
   /// PhysReg to a virtual register of class RC. Return the virtual register
   /// that is a copy of the live in PhysReg.
-  LLVM_ABI Register addLiveIn(MCRegister PhysReg, const TargetRegisterClass *RC);
+  LLVM_ABI Register addLiveIn(MCRegister PhysReg,
+                              const TargetRegisterClass *RC);
 
   /// Remove the specified register from the live in set.
   LLVM_ABI void removeLiveIn(MCRegister Reg,
-                    LaneBitmask LaneMask = LaneBitmask::getAll());
+                             LaneBitmask LaneMask = LaneBitmask::getAll());
 
   /// Return true if the specified register is in the live in set.
   LLVM_ABI bool isLiveIn(MCRegister Reg,
-                LaneBitmask LaneMask = LaneBitmask::getAll()) const;
+                         LaneBitmask LaneMask = LaneBitmask::getAll()) const;
 
   // Iteration support for live in sets.  These sets are kept in sorted
   // order by their register number.
@@ -615,11 +617,13 @@ public:
 
   /// Get the clobber mask for the start of this basic block. Funclets use this
   /// to prevent register allocation across funclet transitions.
-  LLVM_ABI const uint32_t *getBeginClobberMask(const TargetRegisterInfo *TRI) const;
+  LLVM_ABI const uint32_t *
+  getBeginClobberMask(const TargetRegisterInfo *TRI) const;
 
   /// Get the clobber mask for the end of the basic block.
   /// \see getBeginClobberMask()
-  LLVM_ABI const uint32_t *getEndClobberMask(const TargetRegisterInfo *TRI) const;
+  LLVM_ABI const uint32_t *
+  getEndClobberMask(const TargetRegisterInfo *TRI) const;
 
   /// Return alignment of the basic block.
   Align getAlignment() const { return Alignment; }
@@ -755,8 +759,9 @@ public:
   /// probability for each successor, where N is the number of successors.
   ///
   /// Note that duplicate Machine CFG edges are not allowed.
-  LLVM_ABI void addSuccessor(MachineBasicBlock *Succ,
-                    BranchProbability Prob = BranchProbability::getUnknown());
+  LLVM_ABI void
+  addSuccessor(MachineBasicBlock *Succ,
+               BranchProbability Prob = BranchProbability::getUnknown());
 
   /// Add Succ as a successor of this MachineBasicBlock.  The Predecessors list
   /// of Succ is automatically updated. The probability is not provided because
@@ -785,7 +790,7 @@ public:
   /// If NormalizeSuccProbs is true, then normalize successors' probabilities
   /// after the successor is removed.
   LLVM_ABI void removeSuccessor(MachineBasicBlock *Succ,
-                       bool NormalizeSuccProbs = false);
+                                bool NormalizeSuccProbs = false);
 
   /// Remove specified successor from the successors list of this
   /// MachineBasicBlock. The Predecessors list of Succ is automatically updated.
@@ -793,10 +798,11 @@ public:
   /// after the successor is removed.
   /// Return the iterator to the element after the one removed.
   LLVM_ABI succ_iterator removeSuccessor(succ_iterator I,
-                                bool NormalizeSuccProbs = false);
+                                         bool NormalizeSuccProbs = false);
 
   /// Replace successor OLD with NEW and update probability info.
-  LLVM_ABI void replaceSuccessor(MachineBasicBlock *Old, MachineBasicBlock *New);
+  LLVM_ABI void replaceSuccessor(MachineBasicBlock *Old,
+                                 MachineBasicBlock *New);
 
   /// Copy a successor (and any probability info) from original block to this
   /// block's. Uses an iterator into the original blocks successors.
@@ -808,7 +814,7 @@ public:
   /// Split the old successor into old plus new and updates the probability
   /// info.
   LLVM_ABI void splitSuccessor(MachineBasicBlock *Old, MachineBasicBlock *New,
-                      bool NormalizeSuccProbs = false);
+                               bool NormalizeSuccProbs = false);
 
   /// Transfers all the successors from MBB to this machine basic block (i.e.,
   /// copies all the successors FromMBB and remove all the successors from
@@ -891,8 +897,9 @@ public:
   /// debug.  This is the correct point to insert copies at the beginning of a
   /// basic block. \p Reg is the register being used by a spill or defined for a
   /// restore/split during register allocation.
-  LLVM_ABI iterator SkipPHIsLabelsAndDebug(iterator I, Register Reg = Register(),
-                                  bool SkipPseudoOp = true);
+  LLVM_ABI iterator SkipPHIsLabelsAndDebug(iterator I,
+                                           Register Reg = Register(),
+                                           bool SkipPseudoOp = true);
 
   /// Returns an iterator to the first terminator instruction of this basic
   /// block. If a terminator does not exist, it returns end().
@@ -974,8 +981,9 @@ public:
   ///
   /// If \p UpdateLiveIns is true, this will ensure the live ins list is
   /// accurate, including for physreg uses/defs in the original block.
-  LLVM_ABI MachineBasicBlock *splitAt(MachineInstr &SplitInst, bool UpdateLiveIns = true,
-                             LiveIntervals *LIS = nullptr);
+  LLVM_ABI MachineBasicBlock *splitAt(MachineInstr &SplitInst,
+                                      bool UpdateLiveIns = true,
+                                      LiveIntervals *LIS = nullptr);
 
   /// Split the critical edge from this block to the given successor block, and
   /// return the newly created block, or null if splitting is not possible.
@@ -1154,11 +1162,13 @@ public:
 
   /// Given a machine basic block that branched to 'Old', change the code and
   /// CFG so that it branches to 'New' instead.
-  LLVM_ABI void ReplaceUsesOfBlockWith(MachineBasicBlock *Old, MachineBasicBlock *New);
+  LLVM_ABI void ReplaceUsesOfBlockWith(MachineBasicBlock *Old,
+                                       MachineBasicBlock *New);
 
   /// Update all phi nodes in this basic block to refer to basic block \p New
   /// instead of basic block \p Old.
-  LLVM_ABI void replacePhiUsesWith(MachineBasicBlock *Old, MachineBasicBlock *New);
+  LLVM_ABI void replacePhiUsesWith(MachineBasicBlock *Old,
+                                   MachineBasicBlock *New);
 
   /// Find the next valid DebugLoc starting at MBBI, skipping any debug
   /// instructions.  Return UnknownLoc if there is none.
@@ -1211,25 +1221,26 @@ public:
   /// after (searching just for defs) \p Before.
   ///
   /// \p Reg must be a physical register.
-  LLVM_ABI LivenessQueryResult computeRegisterLiveness(const TargetRegisterInfo *TRI,
-                                              MCRegister Reg,
-                                              const_iterator Before,
-                                              unsigned Neighborhood = 10) const;
+  LLVM_ABI LivenessQueryResult computeRegisterLiveness(
+      const TargetRegisterInfo *TRI, MCRegister Reg, const_iterator Before,
+      unsigned Neighborhood = 10) const;
 
   // Debugging methods.
   LLVM_ABI void dump() const;
   LLVM_ABI void print(raw_ostream &OS, const SlotIndexes * = nullptr,
-             bool IsStandalone = true) const;
+                      bool IsStandalone = true) const;
   LLVM_ABI void print(raw_ostream &OS, ModuleSlotTracker &MST,
-             const SlotIndexes * = nullptr, bool IsStandalone = true) const;
+                      const SlotIndexes * = nullptr,
+                      bool IsStandalone = true) const;
 
   enum PrintNameFlag {
     PrintNameIr = (1 << 0), ///< Add IR name where available
     PrintNameAttributes = (1 << 1), ///< Print attributes
   };
 
-  LLVM_ABI void printName(raw_ostream &os, unsigned printNameFlags = PrintNameIr,
-                 ModuleSlotTracker *moduleSlotTracker = nullptr) const;
+  LLVM_ABI void printName(raw_ostream &os,
+                          unsigned printNameFlags = PrintNameIr,
+                          ModuleSlotTracker *moduleSlotTracker = nullptr) const;
 
   // Printing method used by LoopInfo.
   LLVM_ABI void printAsOperand(raw_ostream &OS, bool PrintType = true) const;
@@ -1290,7 +1301,7 @@ private:
   void removePredecessor(MachineBasicBlock *Pred);
 };
 
-LLVM_ABI raw_ostream& operator<<(raw_ostream &OS, const MachineBasicBlock &MBB);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const MachineBasicBlock &MBB);
 
 /// Prints a machine basic block reference.
 ///

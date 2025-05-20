@@ -15,12 +15,12 @@
 #ifndef LLVM_CODEGEN_TARGETSCHEDULE_H
 #define LLVM_CODEGEN_TARGETSCHEDULE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/MC/MCSchedule.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -64,11 +64,12 @@ public:
   /// The machine model API keeps a copy of the top-level MCSchedModel table
   /// indices and may query TargetSubtargetInfo and TargetInstrInfo to resolve
   /// dynamic properties.
-  LLVM_ABI void init(const TargetSubtargetInfo *TSInfo, bool EnableSModel = true,
-            bool EnableSItins = true);
+  LLVM_ABI void init(const TargetSubtargetInfo *TSInfo,
+                     bool EnableSModel = true, bool EnableSItins = true);
 
   /// Return the MCSchedClassDesc for this instruction.
-  LLVM_ABI const MCSchedClassDesc *resolveSchedClass(const MachineInstr *MI) const;
+  LLVM_ABI const MCSchedClassDesc *
+  resolveSchedClass(const MachineInstr *MI) const;
 
   /// TargetSubtargetInfo getter.
   const TargetSubtargetInfo *getSubtargetInfo() const { return STI; }
@@ -111,14 +112,14 @@ public:
 
   /// Return true if new group must begin.
   LLVM_ABI bool mustBeginGroup(const MachineInstr *MI,
-                          const MCSchedClassDesc *SC = nullptr) const;
+                               const MCSchedClassDesc *SC = nullptr) const;
   /// Return true if current group must end.
   LLVM_ABI bool mustEndGroup(const MachineInstr *MI,
-                          const MCSchedClassDesc *SC = nullptr) const;
+                             const MCSchedClassDesc *SC = nullptr) const;
 
   /// Return the number of issue slots required for this MI.
   LLVM_ABI unsigned getNumMicroOps(const MachineInstr *MI,
-                          const MCSchedClassDesc *SC = nullptr) const;
+                                   const MCSchedClassDesc *SC = nullptr) const;
 
   /// Get the number of kinds of resources for this target.
   unsigned getNumProcResourceKinds() const {
@@ -182,9 +183,10 @@ public:
   /// Compute and return the latency of the given data dependent def and use
   /// when the operand indices are already known. UseMI may be NULL for an
   /// unknown user.
-  LLVM_ABI unsigned computeOperandLatency(const MachineInstr *DefMI, unsigned DefOperIdx,
-                                 const MachineInstr *UseMI, unsigned UseOperIdx)
-    const;
+  LLVM_ABI unsigned computeOperandLatency(const MachineInstr *DefMI,
+                                          unsigned DefOperIdx,
+                                          const MachineInstr *UseMI,
+                                          unsigned UseOperIdx) const;
 
   /// Compute the instruction latency based on the available machine
   /// model.
@@ -198,16 +200,16 @@ public:
   /// instruction itinerary (this is so we preserve the previous behavior of the
   /// if converter after moving it to TargetSchedModel).
   LLVM_ABI unsigned computeInstrLatency(const MachineInstr *MI,
-                               bool UseDefaultDefLatency = true) const;
+                                        bool UseDefaultDefLatency = true) const;
   LLVM_ABI unsigned computeInstrLatency(const MCInst &Inst) const;
   LLVM_ABI unsigned computeInstrLatency(unsigned Opcode) const;
-
 
   /// Output dependency latency of a pair of defs of the same register.
   ///
   /// This is typically one cycle.
-  LLVM_ABI unsigned computeOutputLatency(const MachineInstr *DefMI, unsigned DefOperIdx,
-                                const MachineInstr *DepMI) const;
+  LLVM_ABI unsigned computeOutputLatency(const MachineInstr *DefMI,
+                                         unsigned DefOperIdx,
+                                         const MachineInstr *DepMI) const;
 
   /// Compute the reciprocal throughput of the given instruction.
   LLVM_ABI double computeReciprocalThroughput(const MachineInstr *MI) const;

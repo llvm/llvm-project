@@ -15,7 +15,6 @@
 #ifndef LLVM_CODEGEN_MACHINEMEMOPERAND_H
 #define LLVM_CODEGEN_MACHINEMEMOPERAND_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/Analysis/MemoryLocation.h"
@@ -26,6 +25,7 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Value.h" // PointerLikeTypeTraits<Value*>
 #include "llvm/Support/AtomicOrdering.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
 
 namespace llvm {
@@ -91,7 +91,7 @@ struct MachinePointerInfo {
   /// Return true if memory region [V, V+Offset+Size) is known to be
   /// dereferenceable.
   LLVM_ABI bool isDereferenceable(unsigned Size, LLVMContext &C,
-                         const DataLayout &DL) const;
+                                  const DataLayout &DL) const;
 
   /// Return the LLVM IR address space number that this pointer points into.
   LLVM_ABI unsigned getAddrSpace() const;
@@ -102,7 +102,7 @@ struct MachinePointerInfo {
   /// Return a MachinePointerInfo record that refers to the specified
   /// FrameIndex.
   LLVM_ABI static MachinePointerInfo getFixedStack(MachineFunction &MF, int FI,
-                                          int64_t Offset = 0);
+                                                   int64_t Offset = 0);
 
   /// Return a MachinePointerInfo record that refers to a jump table entry.
   LLVM_ABI static MachinePointerInfo getJumpTable(MachineFunction &MF);
@@ -111,8 +111,8 @@ struct MachinePointerInfo {
   LLVM_ABI static MachinePointerInfo getGOT(MachineFunction &MF);
 
   /// Stack pointer relative access.
-  LLVM_ABI static MachinePointerInfo getStack(MachineFunction &MF, int64_t Offset,
-                                     uint8_t ID = 0);
+  LLVM_ABI static MachinePointerInfo getStack(MachineFunction &MF,
+                                              int64_t Offset, uint8_t ID = 0);
 
   /// Stack memory without other information.
   LLVM_ABI static MachinePointerInfo getUnknownStack(MachineFunction &MF);
@@ -189,13 +189,15 @@ public:
   /// and atomic ordering requirements must also be specified. For cmpxchg
   /// atomic operations the atomic ordering requirements when store does not
   /// occur must also be specified.
-  LLVM_ABI MachineMemOperand(MachinePointerInfo PtrInfo, Flags flags, LocationSize TS,
+  LLVM_ABI
+  MachineMemOperand(MachinePointerInfo PtrInfo, Flags flags, LocationSize TS,
                     Align a, const AAMDNodes &AAInfo = AAMDNodes(),
                     const MDNode *Ranges = nullptr,
                     SyncScope::ID SSID = SyncScope::System,
                     AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
                     AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic);
-  LLVM_ABI MachineMemOperand(MachinePointerInfo PtrInfo, Flags flags, LLT type, Align a,
+  LLVM_ABI
+  MachineMemOperand(MachinePointerInfo PtrInfo, Flags flags, LLT type, Align a,
                     const AAMDNodes &AAInfo = AAMDNodes(),
                     const MDNode *Ranges = nullptr,
                     SyncScope::ID SSID = SyncScope::System,
@@ -339,8 +341,9 @@ public:
   /// Support for operator<<.
   /// @{
   LLVM_ABI void print(raw_ostream &OS, ModuleSlotTracker &MST,
-             SmallVectorImpl<StringRef> &SSNs, const LLVMContext &Context,
-             const MachineFrameInfo *MFI, const TargetInstrInfo *TII) const;
+                      SmallVectorImpl<StringRef> &SSNs,
+                      const LLVMContext &Context, const MachineFrameInfo *MFI,
+                      const TargetInstrInfo *TII) const;
   /// @}
 
   friend bool operator==(const MachineMemOperand &LHS,

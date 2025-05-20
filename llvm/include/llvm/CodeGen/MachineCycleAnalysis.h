@@ -14,11 +14,11 @@
 #ifndef LLVM_CODEGEN_MACHINECYCLEANALYSIS_H
 #define LLVM_CODEGEN_MACHINECYCLEANALYSIS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/GenericCycleInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineSSAContext.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -55,7 +55,8 @@ class MachineCycleAnalysis : public AnalysisInfoMixin<MachineCycleAnalysis> {
 public:
   using Result = MachineCycleInfo;
 
-  LLVM_ABI Result run(MachineFunction &MF, MachineFunctionAnalysisManager &MFAM);
+  LLVM_ABI Result run(MachineFunction &MF,
+                      MachineFunctionAnalysisManager &MFAM);
 };
 
 class MachineCycleInfoPrinterPass
@@ -65,7 +66,7 @@ class MachineCycleInfoPrinterPass
 public:
   explicit MachineCycleInfoPrinterPass(raw_ostream &OS) : OS(OS) {}
   LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
-                        MachineFunctionAnalysisManager &MFAM);
+                                 MachineFunctionAnalysisManager &MFAM);
   static bool isRequired() { return true; }
 };
 

@@ -41,7 +41,8 @@ struct MachineJumpTableEntry {
   /// block(s) that reference it.
   MachineFunctionDataHotness Hotness;
 
-  LLVM_ABI explicit MachineJumpTableEntry(const std::vector<MachineBasicBlock *> &M);
+  LLVM_ABI explicit MachineJumpTableEntry(
+      const std::vector<MachineBasicBlock *> &M);
 };
 
 class MachineJumpTableInfo {
@@ -102,7 +103,8 @@ public:
 
   /// createJumpTableIndex - Create a new jump table.
   ///
-  LLVM_ABI unsigned createJumpTableIndex(const std::vector<MachineBasicBlock*> &DestBBs);
+  LLVM_ABI unsigned
+  createJumpTableIndex(const std::vector<MachineBasicBlock *> &DestBBs);
 
   /// isEmpty - Return true if there are no jump tables.
   ///
@@ -115,7 +117,7 @@ public:
   // Update machine jump table entry's hotness. Return true if the hotness is
   // updated.
   LLVM_ABI bool updateJumpTableEntryHotness(size_t JTI,
-                                   MachineFunctionDataHotness Hotness);
+                                            MachineFunctionDataHotness Hotness);
 
   /// RemoveJumpTable - Mark the specific index as being dead.  This will
   /// prevent it from being emitted.
@@ -128,12 +130,13 @@ public:
 
   /// ReplaceMBBInJumpTables - If Old is the target of any jump tables, update
   /// the jump tables to branch to New instead.
-  LLVM_ABI bool ReplaceMBBInJumpTables(MachineBasicBlock *Old, MachineBasicBlock *New);
+  LLVM_ABI bool ReplaceMBBInJumpTables(MachineBasicBlock *Old,
+                                       MachineBasicBlock *New);
 
   /// ReplaceMBBInJumpTable - If Old is a target of the jump tables, update
   /// the jump table to branch to New instead.
   LLVM_ABI bool ReplaceMBBInJumpTable(unsigned Idx, MachineBasicBlock *Old,
-                             MachineBasicBlock *New);
+                                      MachineBasicBlock *New);
 
   /// print - Used by the MachineFunction printer to print information about
   /// jump tables.  Implemented in MachineFunction.cpp

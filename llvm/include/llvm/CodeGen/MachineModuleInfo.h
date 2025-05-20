@@ -30,13 +30,13 @@
 #ifndef LLVM_CODEGEN_MACHINEMODULEINFO_H
 #define LLVM_CODEGEN_MACHINEMODULEINFO_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Compiler.h"
 #include <memory>
 #include <utility>
 #include <vector>
@@ -112,7 +112,8 @@ class MachineModuleInfo {
 public:
   LLVM_ABI explicit MachineModuleInfo(const TargetMachine *TM = nullptr);
 
-  LLVM_ABI explicit MachineModuleInfo(const TargetMachine *TM, MCContext *ExtContext);
+  LLVM_ABI explicit MachineModuleInfo(const TargetMachine *TM,
+                                      MCContext *ExtContext);
 
   LLVM_ABI MachineModuleInfo(MachineModuleInfo &&MMII);
 
@@ -149,7 +150,8 @@ public:
   LLVM_ABI void deleteMachineFunctionFor(Function &F);
 
   /// Add an externally created MachineFunction \p MF for \p F.
-  LLVM_ABI void insertFunction(const Function &F, std::unique_ptr<MachineFunction> &&MF);
+  LLVM_ABI void insertFunction(const Function &F,
+                               std::unique_ptr<MachineFunction> &&MF);
 
   /// Keep track of various per-module pieces of information for backends
   /// that would like to do so.

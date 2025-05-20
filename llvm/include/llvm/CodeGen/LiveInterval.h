@@ -20,7 +20,6 @@
 #ifndef LLVM_CODEGEN_LIVEINTERVAL_H
 #define LLVM_CODEGEN_LIVEINTERVAL_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/IntEqClasses.h"
 #include "llvm/ADT/STLExtras.h"
@@ -30,6 +29,7 @@
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
 #include <algorithm>
 #include <cassert>
@@ -363,14 +363,15 @@ namespace llvm {
     /// are found to be equivalent.  This eliminates V1, replacing all
     /// segments with the V1 value number with the V2 value number.  This can
     /// cause merging of V1/V2 values numbers and compaction of the value space.
-    LLVM_ABI VNInfo* MergeValueNumberInto(VNInfo *V1, VNInfo *V2);
+    LLVM_ABI VNInfo *MergeValueNumberInto(VNInfo *V1, VNInfo *V2);
 
     /// Merge all of the live segments of a specific val# in RHS into this live
     /// range as the specified value number. The segments in RHS are allowed
     /// to overlap with segments in the current range, it will replace the
     /// value numbers of the overlaped live segments with the specified value
     /// number.
-    LLVM_ABI void MergeSegmentsInAsValue(const LiveRange &RHS, VNInfo *LHSValNo);
+    LLVM_ABI void MergeSegmentsInAsValue(const LiveRange &RHS,
+                                         VNInfo *LHSValNo);
 
     /// MergeValueInAsValue - Merge all of the segments of a specific val#
     /// in RHS into this live range as the specified value number.
@@ -378,7 +379,7 @@ namespace llvm {
     /// current range, but only if the overlapping segments have the
     /// specified value number.
     LLVM_ABI void MergeValueInAsValue(const LiveRange &RHS,
-                             const VNInfo *RHSValNo, VNInfo *LHSValNo);
+                                      const VNInfo *RHSValNo, VNInfo *LHSValNo);
 
     bool empty() const { return segments.empty(); }
 
@@ -458,7 +459,7 @@ namespace llvm {
     /// Overlapping segments where one range is defined by a coalescable
     /// copy are allowed.
     LLVM_ABI bool overlaps(const LiveRange &Other, const CoalescerPair &CP,
-                  const SlotIndexes&) const;
+                           const SlotIndexes &) const;
 
     /// overlaps - Return true if the live range overlaps an interval specified
     /// by [Start, End).
@@ -467,7 +468,8 @@ namespace llvm {
     /// overlapsFrom - Return true if the intersection of the two live ranges
     /// is not empty.  The specified iterator is a hint that we can begin
     /// scanning the Other range starting at I.
-    LLVM_ABI bool overlapsFrom(const LiveRange &Other, const_iterator StartPos) const;
+    LLVM_ABI bool overlapsFrom(const LiveRange &Other,
+                               const_iterator StartPos) const;
 
     /// Returns true if all segments of the @p Other live range are completely
     /// covered by this live range.
@@ -494,8 +496,9 @@ namespace llvm {
     /// segment before @p Use and there is no "undef" between @p StartIdx and
     /// @p Use, return {nullptr, false}. If there is an "undef" before @p Use,
     /// return {nullptr, true}.
-    LLVM_ABI std::pair<VNInfo*,bool> extendInBlock(ArrayRef<SlotIndex> Undefs,
-        SlotIndex StartIdx, SlotIndex Kill);
+    LLVM_ABI std::pair<VNInfo *, bool> extendInBlock(ArrayRef<SlotIndex> Undefs,
+                                                     SlotIndex StartIdx,
+                                                     SlotIndex Kill);
 
     /// Simplified version of the above "extendInBlock", which assumes that
     /// no register lanes are undefined by <def,read-undef> operands.
@@ -507,10 +510,9 @@ namespace llvm {
     /// join - Join two live ranges (this, and other) together.  This applies
     /// mappings to the value numbers in the LHS/RHS ranges as specified.  If
     /// the ranges are not joinable, this aborts.
-    LLVM_ABI void join(LiveRange &Other,
-              const int *ValNoAssignments,
-              const int *RHSValNoAssignments,
-              SmallVectorImpl<VNInfo *> &NewVNInfo);
+    LLVM_ABI void join(LiveRange &Other, const int *ValNoAssignments,
+                       const int *RHSValNoAssignments,
+                       SmallVectorImpl<VNInfo *> &NewVNInfo);
 
     /// True iff this segment is a single segment that lies between the
     /// specified boundaries, exclusively. Vregs live across a backedge are not
@@ -525,7 +527,7 @@ namespace llvm {
     /// Does nothing if interval is not part of this live range.
     /// Note that the interval must be within a single Segment in its entirety.
     LLVM_ABI void removeSegment(SlotIndex Start, SlotIndex End,
-                       bool RemoveDeadValNo = false);
+                                bool RemoveDeadValNo = false);
 
     void removeSegment(Segment S, bool RemoveDeadValNo = false) {
       removeSegment(S.start, S.end, RemoveDeadValNo);
@@ -832,9 +834,9 @@ namespace llvm {
     /// For a given lane mask @p LaneMask, compute indexes at which the
     /// lane is marked undefined by subregister <def,read-undef> definitions.
     LLVM_ABI void computeSubRangeUndefs(SmallVectorImpl<SlotIndex> &Undefs,
-                               LaneBitmask LaneMask,
-                               const MachineRegisterInfo &MRI,
-                               const SlotIndexes &Indexes) const;
+                                        LaneBitmask LaneMask,
+                                        const MachineRegisterInfo &MRI,
+                                        const SlotIndexes &Indexes) const;
 
     /// Refines the subranges to support \p LaneMask. This may only be called
     /// for LI.hasSubrange()==true. Subregister ranges are split or created
@@ -875,11 +877,11 @@ namespace llvm {
     /// still having the old IR around because updating the IR on-the-fly
     /// would actually clobber some information on how the live-ranges that
     /// are being updated look like.
-    LLVM_ABI void refineSubRanges(BumpPtrAllocator &Allocator, LaneBitmask LaneMask,
-                         std::function<void(LiveInterval::SubRange &)> Apply,
-                         const SlotIndexes &Indexes,
-                         const TargetRegisterInfo &TRI,
-                         unsigned ComposeSubRegIdx = 0);
+    LLVM_ABI void
+    refineSubRanges(BumpPtrAllocator &Allocator, LaneBitmask LaneMask,
+                    std::function<void(LiveInterval::SubRange &)> Apply,
+                    const SlotIndexes &Indexes, const TargetRegisterInfo &TRI,
+                    unsigned ComposeSubRegIdx = 0);
 
     bool operator<(const LiveInterval& other) const {
       const SlotIndex &thisIndex = beginIndex();
@@ -923,7 +925,8 @@ namespace llvm {
     return OS;
   }
 
-  LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const LiveRange::Segment &S);
+  LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
+                                   const LiveRange::Segment &S);
 
   inline bool operator<(SlotIndex V, const LiveRange::Segment &S) {
     return V < S.start;
@@ -984,7 +987,7 @@ namespace llvm {
     LiveRange *getDest() const { return LR; }
 
     LLVM_ABI void dump() const;
-    LLVM_ABI void print(raw_ostream&) const;
+    LLVM_ABI void print(raw_ostream &) const;
   };
 
   inline raw_ostream &operator<<(raw_ostream &OS, const LiveRangeUpdater &X) {
@@ -1025,7 +1028,7 @@ namespace llvm {
     /// each additional connected component. The first connected component is
     /// left in \p LI.
     LLVM_ABI void Distribute(LiveInterval &LI, LiveInterval *LIV[],
-                    MachineRegisterInfo &MRI);
+                             MachineRegisterInfo &MRI);
   };
 
 } // end namespace llvm
