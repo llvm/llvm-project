@@ -63,6 +63,11 @@ Error SpecialCaseList::Matcher::insert(StringRef Pattern, unsigned LineNumber,
                        .moveInto(Pair.first))
       return Err;
     Pair.second = LineNumber;
+  } else {
+    // We should update the new line number if an entry with the same pattern
+    // repeats.
+    auto &Pair = It->getValue();
+    Pair.second = LineNumber;
   }
   return Error::success();
 }
