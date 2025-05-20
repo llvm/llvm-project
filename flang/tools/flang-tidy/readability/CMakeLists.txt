@@ -1,4 +1,5 @@
 add_flang_library(flangTidyReadabilityModule STATIC
+  FunctionCognitiveComplexityCheck.cpp
   ReadabilityTidyModule.cpp
 
   LINK_LIBS

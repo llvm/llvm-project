@@ -35,3 +35,4 @@ Flang-Tidy Checks
    :doc:`modernize-avoid-pause-stmt <modernize/avoid-pause-stmt>`,
    :doc:`openmp-accumulator-race <openmp/accumulator-race>`,
    :doc:`performance-pure-procedure <performance/pure-procedure>`,
+   :doc:`readability-function-cognitive-complexity <readability/function-cognitive-complexity>`,

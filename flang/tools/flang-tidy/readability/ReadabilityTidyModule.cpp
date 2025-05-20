@@ -8,13 +8,17 @@
 
 #include "../FlangTidyModule.h"
 #include "../FlangTidyModuleRegistry.h"
+#include "FunctionCognitiveComplexityCheck.h"
 
 namespace Fortran::tidy {
 namespace readability {
 
 class ReadabilityTidyModule : public FlangTidyModule {
 public:
-  void addCheckFactories(FlangTidyCheckFactories &CheckFactories) override {}
+  void addCheckFactories(FlangTidyCheckFactories &CheckFactories) override {
+    CheckFactories.registerCheck<FunctionCognitiveComplexityCheck>(
+        "readability-function-cognitive-complexity");
+  }
 };
 
 } // namespace readability
