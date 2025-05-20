@@ -440,34 +440,55 @@ static_assert(sizeof(Descriptor) == sizeof(ISO::CFI_cdesc_t));
 // Lightweight iterator-like API to simplify specialising Descriptor indexing
 // in cases where it can improve application performance. On account of the
 // purpose of this API being performance optimisation, it is up to the user to
-// do all the necessary checks to make sure the RANK1=true variant can be used
+// do all the necessary checks to make sure the specialised variants can be used
 // safely and that Advance() is not called more times than the number of
 // elements in the Descriptor allows for.
-template <bool RANK1 = false> class DescriptorIterator {
+// Default RANK=-1 supports aray descriptors of any rank up to maxRank.
+template <int RANK = -1> class DescriptorIterator {
 private:
   const Descriptor &descriptor;
   SubscriptValue subscripts[maxRank];
   std::size_t elementOffset = 0;
 
 public:
-  DescriptorIterator(const Descriptor &descriptor) : descriptor(descriptor) {
+  RT_API_ATTRS DescriptorIterator(const Descriptor &descriptor)
+      : descriptor(descriptor) {
     descriptor.GetLowerBounds(subscripts);
-    if constexpr (RANK1) {
+    if constexpr (RANK == 1) {
       elementOffset = descriptor.SubscriptByteOffset(0, subscripts[0]);
     }
   };
 
-  template <typename A> A *Get() {
-    if constexpr (RANK1) {
-      return descriptor.OffsetElement<A>(elementOffset);
+  template <typename A> RT_API_ATTRS A *Get() {
+    std::size_t offset = 0;
+    // The rank-1 case doesn't require looping at all
+    if constexpr (RANK == 1) {
+      offset = elementOffset;
+      // The compiler might be able to optimise this better if we know the rank
+      // at compile time
+    } else if (RANK != -1) {
+      for (int j{0}; j < RANK; ++j) {
+        offset += descriptor.SubscriptByteOffset(j, subscripts[j]);
+      }
+      // General fallback
     } else {
-      return descriptor.Element<A>(subscripts);
+      offset = descriptor.SubscriptsToByteOffset(subscripts);
     }
+
+    return descriptor.OffsetElement<A>(offset);
   }
 
-  void Advance() {
-    if constexpr (RANK1) {
+  RT_API_ATTRS void Advance() {
+    if constexpr (RANK == 1) {
       elementOffset += descriptor.GetDimension(0).ByteStride();
+    } else if (RANK != -1) {
+      for (int j{0}; j < RANK; ++j) {
+        const Dimension &dim{descriptor.GetDimension(j)};
+        if (subscripts[j]++ < dim.UpperBound()) {
+          break;
+        }
+        subscripts[j] = dim.LowerBound();
+      }
     } else {
       descriptor.IncrementSubscripts(subscripts);
     }

@@ -114,108 +114,143 @@ RT_API_ATTRS void CheckIntegerKind(
   }
 }
 
-template <bool RANK1>
+template <typename P, int RANK>
 RT_API_ATTRS void ShallowCopyDiscontiguousToDiscontiguous(
     const Descriptor &to, const Descriptor &from) {
-  DescriptorIterator<RANK1> toIt{to};
-  DescriptorIterator<RANK1> fromIt{from};
+  DescriptorIterator<RANK> toIt{to};
+  DescriptorIterator<RANK> fromIt{from};
+  // Knowing the size at compile time can enable memcpy inlining optimisations
+  constexpr std::size_t typeElementBytes{sizeof(P)};
+  // We might still need to check the actual size as a fallback
   std::size_t elementBytes{to.ElementBytes()};
   for (std::size_t n{to.Elements()}; n-- > 0;
       toIt.Advance(), fromIt.Advance()) {
-    // Checking the size at runtime and making sure the pointer passed to memcpy
-    // has a type that matches the element size makes it possible for the
-    // compiler to optimise out the memcpy calls altogether and can
-    // substantially improve performance for some applications.
-    if (elementBytes == 16) {
-      std::memcpy(toIt.template Get<__int128_t>(),
-          fromIt.template Get<__int128_t>(), elementBytes);
-    } else if (elementBytes == 8) {
-      std::memcpy(toIt.template Get<int64_t>(), fromIt.template Get<int64_t>(),
-          elementBytes);
-    } else if (elementBytes == 4) {
-      std::memcpy(toIt.template Get<int32_t>(), fromIt.template Get<int32_t>(),
-          elementBytes);
-    } else if (elementBytes == 2) {
-      std::memcpy(toIt.template Get<int16_t>(), fromIt.template Get<int16_t>(),
-          elementBytes);
+    // typeElementBytes == 1 when P is a char - the non-specialised case
+    if constexpr (typeElementBytes != 1) {
+      std::memcpy(
+          toIt.template Get<P>(), fromIt.template Get<P>(), typeElementBytes);
     } else {
       std::memcpy(
-          toIt.template Get<char>(), fromIt.template Get<char>(), elementBytes);
+          toIt.template Get<P>(), fromIt.template Get<P>(), elementBytes);
     }
   }
 }
 
-template <bool RANK1>
+template <typename P, int RANK>
 RT_API_ATTRS void ShallowCopyDiscontiguousToContiguous(
     const Descriptor &to, const Descriptor &from) {
   char *toAt{to.OffsetElement()};
+  constexpr std::size_t typeElementBytes{sizeof(P)};
   std::size_t elementBytes{to.ElementBytes()};
-  DescriptorIterator<RANK1> fromIt{from};
+  DescriptorIterator<RANK> fromIt{from};
   for (std::size_t n{to.Elements()}; n-- > 0;
       toAt += elementBytes, fromIt.Advance()) {
-    if (elementBytes == 16) {
-      std::memcpy(toAt, fromIt.template Get<__int128_t>(), elementBytes);
-    } else if (elementBytes == 8) {
-      std::memcpy(toAt, fromIt.template Get<int64_t>(), elementBytes);
-    } else if (elementBytes == 4) {
-      std::memcpy(toAt, fromIt.template Get<int32_t>(), elementBytes);
-    } else if (elementBytes == 2) {
-      std::memcpy(toAt, fromIt.template Get<int16_t>(), elementBytes);
+    if constexpr (typeElementBytes != 1) {
+      std::memcpy(toAt, fromIt.template Get<P>(), typeElementBytes);
     } else {
-      std::memcpy(toAt, fromIt.template Get<char>(), elementBytes);
+      std::memcpy(toAt, fromIt.template Get<P>(), elementBytes);
     }
   }
 }
 
-template <bool RANK1>
+template <typename P, int RANK>
 RT_API_ATTRS void ShallowCopyContiguousToDiscontiguous(
     const Descriptor &to, const Descriptor &from) {
   char *fromAt{from.OffsetElement()};
-  DescriptorIterator<RANK1> toIt{to};
+  DescriptorIterator<RANK> toIt{to};
+  constexpr std::size_t typeElementBytes{sizeof(P)};
   std::size_t elementBytes{to.ElementBytes()};
   for (std::size_t n{to.Elements()}; n-- > 0;
       toIt.Advance(), fromAt += elementBytes) {
-    if (elementBytes == 16) {
-      std::memcpy(toIt.template Get<__int128_t>(), fromAt, elementBytes);
-    } else if (elementBytes == 8) {
-      std::memcpy(toIt.template Get<int64_t>(), fromAt, elementBytes);
-    } else if (elementBytes == 4) {
-      std::memcpy(toIt.template Get<int32_t>(), fromAt, elementBytes);
-    } else if (elementBytes == 2) {
-      std::memcpy(toIt.template Get<int16_t>(), fromAt, elementBytes);
+    if constexpr (typeElementBytes != 1) {
+      std::memcpy(toIt.template Get<P>(), fromAt, typeElementBytes);
     } else {
-      std::memcpy(toIt.template Get<char>(), fromAt, elementBytes);
+      std::memcpy(toIt.template Get<P>(), fromAt, elementBytes);
     }
   }
 }
 
-RT_API_ATTRS void ShallowCopy(const Descriptor &to, const Descriptor &from,
+// ShallowCopy helper for calling the correct specialised variant based on
+// scenario
+template <typename P, int RANK = -1>
+RT_API_ATTRS void ShallowCopyInner(const Descriptor &to, const Descriptor &from,
     bool toIsContiguous, bool fromIsContiguous) {
   if (toIsContiguous) {
     if (fromIsContiguous) {
       std::memcpy(to.OffsetElement(), from.OffsetElement(),
           to.Elements() * to.ElementBytes());
     } else {
-      if (to.rank() == 1 && from.rank() == 1) {
-        ShallowCopyDiscontiguousToContiguous<true>(to, from);
-      } else {
-        ShallowCopyDiscontiguousToContiguous<false>(to, from);
-      }
+      ShallowCopyDiscontiguousToContiguous<P, RANK>(to, from);
     }
   } else {
     if (fromIsContiguous) {
-      if (to.rank() == 1 && from.rank() == 1) {
-        ShallowCopyContiguousToDiscontiguous<true>(to, from);
-      } else {
-        ShallowCopyContiguousToDiscontiguous<false>(to, from);
-      }
+      ShallowCopyContiguousToDiscontiguous<P, RANK>(to, from);
     } else {
-      if (to.rank() == 1 && from.rank() == 1) {
-        ShallowCopyDiscontiguousToDiscontiguous<true>(to, from);
-      } else {
-        ShallowCopyDiscontiguousToDiscontiguous<false>(to, from);
-      }
+      ShallowCopyDiscontiguousToDiscontiguous<P, RANK>(to, from);
     }
+  }
+}
+
+// ShallowCopy helper for specialising the variants based on array rank
+template <typename P>
+RT_API_ATTRS void ShallowCopyRank(const Descriptor &to, const Descriptor &from,
+    bool toIsContiguous, bool fromIsContiguous) {
+  if (to.rank() == 1 && from.rank() == 1) {
+    ShallowCopyInner<P, 1>(to, from, toIsContiguous, fromIsContiguous);
+  } else if (to.rank() == 2 && from.rank() == 2) {
+    ShallowCopyInner<P, 2>(to, from, toIsContiguous, fromIsContiguous);
+  } else if (to.rank() == 3 && from.rank() == 3) {
+    ShallowCopyInner<P, 3>(to, from, toIsContiguous, fromIsContiguous);
+  } else if (to.rank() == 4 && from.rank() == 4) {
+    ShallowCopyInner<P, 4>(to, from, toIsContiguous, fromIsContiguous);
+  } else if (to.rank() == 5 && from.rank() == 5) {
+    ShallowCopyInner<P, 5>(to, from, toIsContiguous, fromIsContiguous);
+  } else if (to.rank() == 6 && from.rank() == 6) {
+    ShallowCopyInner<P, 6>(to, from, toIsContiguous, fromIsContiguous);
+  } else if (to.rank() == 7 && from.rank() == 7) {
+    ShallowCopyInner<P, 7>(to, from, toIsContiguous, fromIsContiguous);
+  } else if (to.rank() == 8 && from.rank() == 8) {
+    ShallowCopyInner<P, 8>(to, from, toIsContiguous, fromIsContiguous);
+  } else if (to.rank() == 9 && from.rank() == 9) {
+    ShallowCopyInner<P, 9>(to, from, toIsContiguous, fromIsContiguous);
+  } else if (to.rank() == 10 && from.rank() == 10) {
+    ShallowCopyInner<P, 10>(to, from, toIsContiguous, fromIsContiguous);
+  } else {
+    ShallowCopyInner<P>(to, from, toIsContiguous, fromIsContiguous);
+  }
+}
+
+RT_API_ATTRS void ShallowCopy(const Descriptor &to, const Descriptor &from,
+    bool toIsContiguous, bool fromIsContiguous) {
+  std::size_t elementBytes{to.ElementBytes()};
+  // Checking the type at runtime and making sure the pointer passed to memcpy
+  // has a type that matches the element type makes it possible for the compiler
+  // to optimise out the memcpy calls altogether and can substantially improve
+  // performance for some applications.
+  if (to.type().IsInteger()) {
+    if (elementBytes == sizeof(int64_t)) {
+      ShallowCopyRank<int64_t>(to, from, toIsContiguous, fromIsContiguous);
+    } else if (elementBytes == sizeof(int32_t)) {
+      ShallowCopyRank<int32_t>(to, from, toIsContiguous, fromIsContiguous);
+    } else if (elementBytes == sizeof(int16_t)) {
+      ShallowCopyRank<int16_t>(to, from, toIsContiguous, fromIsContiguous);
+#if defined USING_NATIVE_INT128_T
+    } else if (elementBytes == sizeof(__int128_t)) {
+      ShallowCopyRank<__int128_t>(to, from, toIsContiguous, fromIsContiguous);
+#endif
+    } else {
+      ShallowCopyRank<char>(to, from, toIsContiguous, fromIsContiguous);
+    }
+  } else if (to.type().IsReal()) {
+    if (elementBytes == sizeof(double)) {
+      ShallowCopyRank<double>(to, from, toIsContiguous, fromIsContiguous);
+    } else if (elementBytes == sizeof(float)) {
+      ShallowCopyRank<float>(to, from, toIsContiguous, fromIsContiguous);
+    } else {
+      ShallowCopyRank<char>(to, from, toIsContiguous, fromIsContiguous);
+    }
+  } else {
+    ShallowCopyRank<char>(to, from, toIsContiguous, fromIsContiguous);
   }
 }
 
