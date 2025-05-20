@@ -54,7 +54,7 @@ def riscv_unzip   : RVSDNode<"UNZIP",   SDTIntUnaryOp>;
 def riscv_absw    : RVSDNode<"ABSW",    SDTIntUnaryOp>;
 
 // Scalar cryptography
-def clmul         : SDNode<"CLMUL",   SDTIntBinOp>;
+def clmul         : RVSDNode<"CLMUL",   SDTIntBinOp>;
 def riscv_clmul   : RVSDNode<"CLMUL",   SDTIntBinOp>;
 def riscv_clmulh  : RVSDNode<"CLMULH",  SDTIntBinOp>;
 def riscv_clmulr  : RVSDNode<"CLMULR",  SDTIntBinOp>;

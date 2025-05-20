@@ -8278,33 +8278,41 @@ SDValue TargetLowering::expandFunnelShift(SDNode *Node,
 }
 
 SDValue TargetLowering::expandCLMUL(SDNode *Node,
-                                          SelectionDAG &DAG) const {
+                                    SelectionDAG &DAG) const {
   SDLoc DL(Node);
   EVT VT = Node->getValueType(0);
   SDValue V1 = Node->getOperand(0);
   SDValue V2 = Node->getOperand(1);
   unsigned NumBitsPerElt = VT.getScalarSizeInBits();
 
+  EVT SetCCType =
+      getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
   // Only expand vector types if we have the appropriate vector bit operations.
-  // This includes the operations needed to expand CTPOP if it isn't supported.
   if (VT.isVector() && (!isPowerOf2_32(NumBitsPerElt) ||
                         (!isOperationLegalOrCustom(ISD::SRL, VT) ||
                         !isOperationLegalOrCustom(ISD::SHL, VT) ||
                         !isOperationLegalOrCustom(ISD::XOR, VT) ||
                         !isOperationLegalOrCustom(ISD::AND, VT) ||
+                        !isOperationLegalOrCustom(ISD::SELECT, VT) ||
                         !isOperationLegalOrCustomOrPromote(ISD::OR, VT))))
     return SDValue();
 
   SDValue Res = DAG.getConstant(0, DL, VT);
   SDValue Zero = DAG.getConstant(0, DL, VT);
   SDValue One = DAG.getConstant(1, DL, VT);
-  for (unsigned i = 0; i < NumBitsPerElt; ++i) {
+  for (unsigned i = 0; i < NumBitsPerElt-1; ++i) {
     SDValue LowBit = DAG.getNode(ISD::AND, DL, VT, V1, One);
-    SDValue Pred = DAG.getNode(ISD::SELECT, DL, VT, LowBit, V2, Zero);
+    SDValue LowBool = DAG.getSetCC(DL, SetCCType, LowBit, One, ISD::SETULT);
+    SDValue Pred = DAG.getNode(ISD::SELECT, DL, VT, LowBool, V2, Zero);
     Res = DAG.getNode(ISD::XOR, DL, VT, Res, Pred);
     V1 = DAG.getNode(ISD::SRL, DL, VT, V1, One);
     V2 = DAG.getNode(ISD::SHL, DL, VT, V2, One);
   }
+  // unroll last iteration to prevent dead nodes
+  SDValue LowBit = DAG.getNode(ISD::AND, DL, VT, V1, One);
+  SDValue LowBool = DAG.getSetCC(DL, SetCCType, LowBit, One, ISD::SETULT);
+  SDValue Pred = DAG.getNode(ISD::SELECT, DL, VT, LowBool, V2, Zero);
+  Res = DAG.getNode(ISD::XOR, DL, VT, Res, Pred);
   return Res;
 }
 
