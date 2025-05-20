@@ -49,7 +49,8 @@ public:
 
 /// Create an Offload error.
 template <typename... ArgsTy>
-static llvm::Error createOffloadError(error::ErrorCode Code, const char *ErrFmt, ArgsTy... Args) {
+static llvm::Error createOffloadError(error::ErrorCode Code, const char *ErrFmt,
+                                      ArgsTy... Args) {
   std::string Buffer;
   llvm::raw_string_ostream(Buffer) << llvm::format(ErrFmt, Args...);
   return llvm::make_error<error::OffloadError>(Code, Buffer);
@@ -62,8 +63,9 @@ inline llvm::Error createOffloadError(error::ErrorCode Code, const char *S) {
 // The OffloadError will have a message of either:
 // * "{Context}: {Message}" if the other error is a StringError
 // * "{Context}" otherwise
-inline llvm::Error createOffloadError(error::ErrorCode Code, llvm::Error &&OtherError,
-                   const char *Context) {
+inline llvm::Error createOffloadError(error::ErrorCode Code,
+                                      llvm::Error &&OtherError,
+                                      const char *Context) {
   std::string Buffer{Context};
   llvm::raw_string_ostream buffer(Buffer);
 
