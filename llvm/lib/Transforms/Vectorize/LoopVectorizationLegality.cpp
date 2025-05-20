@@ -43,6 +43,10 @@ AllowStridedPointerIVs("lv-strided-pointer-ivs", cl::init(false), cl::Hidden,
                        cl::desc("Enable recognition of non-constant strided "
                                 "pointer induction variables."));
 
+static cl::opt<bool> EnableMonotonicPatterns(
+    "lv-monotonic-patterns", cl::init(true), cl::Hidden,
+    cl::desc("Enable recognition of monotonic patterns."));
+
 static cl::opt<bool>
     HintsAllowReordering("hints-allow-reordering", cl::init(true), cl::Hidden,
                          cl::desc("Allow enabling loop hints to reorder "
@@ -468,6 +472,30 @@ int LoopVectorizationLegality::isConsecutivePtr(Type *AccessTy,
   return 0;
 }
 
+bool LoopVectorizationLegality::isMonotonicPHI(PHINode *Phi) const {
+  return MonotonicPHIs.count(Phi);
+}
+
+bool LoopVectorizationLegality::isCompressedPtr(Type *AccessTy, Value *Ptr,
+                                                BasicBlock *BB) const {
+  MonotonicDescriptor Desc;
+  if (!MonotonicDescriptor::isMonotonicVal(Ptr, TheLoop, Desc, *PSE.getSE()))
+    return false;
+
+  // Check if memory operation will use the same mask as monotonic phi.
+  // TODO: relax restrictions of current implementation.
+  if (Desc.getPredicateEdge() !=
+      MonotonicDescriptor::Edge(BB, BB->getUniqueSuccessor()))
+    return false;
+
+  // Check if pointer step equals access size.
+  auto *Step =
+      dyn_cast<SCEVConstant>(Desc.getExpr()->getStepRecurrence(*PSE.getSE()));
+  if (!Step)
+    return false;
+  return Step->getAPInt() == BB->getDataLayout().getTypeAllocSize(AccessTy);
+}
+
 bool LoopVectorizationLegality::isInvariant(Value *V) const {
   return LAI->isInvariant(V);
 }
@@ -871,6 +899,13 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
             !IsDisallowedStridedPointerInduction(ID)) {
           addInductionPhi(Phi, ID, AllowedExit);
           Requirements->addExactFPMathInst(ID.getExactFPMathInst());
+          continue;
+        }
+
+        MonotonicDescriptor MD;
+        if (EnableMonotonicPatterns && MonotonicDescriptor::isMonotonicPHI(
+                                           Phi, TheLoop, MD, *PSE.getSE())) {
+          MonotonicPHIs[Phi] = MD;
           continue;
         }
 

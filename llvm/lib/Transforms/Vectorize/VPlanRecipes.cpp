@@ -722,6 +722,34 @@ Value *VPInstruction::generate(VPTransformState &State) {
 
     return ReducedPartRdx;
   }
+  case VPInstruction::ComputeMonotonicResult: {
+    assert(getParent()->getPlan()->getUF() == 1 &&
+           "Expected unroll factor of 1.");
+
+    auto *Phi = State.get(getOperand(0), /*IsScalar*/ true);
+    auto *PhiTy = Phi->getType();
+    Value *Mask = State.get(getOperand(1), 0);
+    auto *MaskTy = Mask->getType();
+    assert(isa<VectorType>(MaskTy) &&
+           cast<VectorType>(MaskTy)->getElementType()->isIntegerTy(1) &&
+           "Mask type should be <N x i1>");
+
+    const auto &DL = State.CFG.PrevBB->getDataLayout();
+    auto *IntTy = PhiTy->isIntegerTy() ? PhiTy : DL.getIndexType(PhiTy);
+
+    auto *Step = State.get(getOperand(2), /*IsScalar*/ true);
+
+    auto &Builder = State.Builder;
+    auto *NumElems = Builder.CreateAddReduce(
+        Builder.CreateZExt(Mask, MaskTy->getWithNewType(IntTy)));
+    auto *Offset = Builder.CreateMul(NumElems, Step);
+
+    return PhiTy->isPointerTy()
+               ? Builder.CreatePtrAdd(Phi, Offset, "monotonic.add",
+                                      getGEPNoWrapFlags())
+               : Builder.CreateAdd(Phi, Offset, "monotonic.add",
+                                   hasNoUnsignedWrap(), hasNoSignedWrap());
+  }
   case VPInstruction::ExtractLastElement:
   case VPInstruction::ExtractPenultimateElement: {
     unsigned Offset = getOpcode() == VPInstruction::ExtractLastElement ? 1 : 2;
@@ -840,6 +868,12 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
                                   I32Ty, {Arg0Ty, I32Ty, I1Ty});
     return Ctx.TTI.getIntrinsicInstrCost(Attrs, Ctx.CostKind);
   }
+  case VPInstruction::ComputeMonotonicResult: {
+    Type *ElementTy = Ctx.Types.inferScalarType(getOperand(0));
+    auto *VectorTy = cast<VectorType>(toVectorTy(ElementTy, VF));
+    return Ctx.TTI.getArithmeticReductionCost(Instruction::Add, VectorTy,
+                                              std::nullopt, Ctx.CostKind);
+  }
   default:
     // TODO: Compute cost other VPInstructions once the legacy cost model has
     // been retired.
@@ -856,6 +890,7 @@ bool VPInstruction::isVectorToScalar() const {
          getOpcode() == VPInstruction::FirstActiveLane ||
          getOpcode() == VPInstruction::ComputeFindLastIVResult ||
          getOpcode() == VPInstruction::ComputeReductionResult ||
+         getOpcode() == VPInstruction::ComputeMonotonicResult ||
          getOpcode() == VPInstruction::AnyOf;
 }
 
@@ -1052,6 +1087,9 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::ComputeReductionResult:
     O << "compute-reduction-result";
+    break;
+  case VPInstruction::ComputeMonotonicResult:
+    O << "compute-monotonic-result";
     break;
   case VPInstruction::LogicalAnd:
     O << "logical-and";
@@ -2933,8 +2971,12 @@ InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
 
   InstructionCost Cost = 0;
   if (IsMasked) {
-    Cost +=
-        Ctx.TTI.getMaskedMemoryOpCost(Opcode, Ty, Alignment, AS, Ctx.CostKind);
+    Cost += Compressed
+                ? Ctx.TTI.getExpandCompressMemoryOpCost(Opcode, Ty,
+                                                        /*VariableMask*/ true,
+                                                        Alignment, Ctx.CostKind)
+                : Ctx.TTI.getMaskedMemoryOpCost(Opcode, Ty, Alignment, AS,
+                                                Ctx.CostKind);
   } else {
     TTI::OperandValueInfo OpInfo = Ctx.getOperandInfo(
         isa<VPWidenLoadRecipe, VPWidenLoadEVLRecipe>(this) ? getOperand(0)
@@ -2972,9 +3014,13 @@ void VPWidenLoadRecipe::execute(VPTransformState &State) {
     NewLI = Builder.CreateMaskedGather(DataTy, Addr, Alignment, Mask, nullptr,
                                        "wide.masked.gather");
   } else if (Mask) {
-    NewLI =
-        Builder.CreateMaskedLoad(DataTy, Addr, Alignment, Mask,
-                                 PoisonValue::get(DataTy), "wide.masked.load");
+    NewLI = Compressed
+                ? Builder.CreateMaskedExpandLoad(DataTy, Addr, Alignment, Mask,
+                                                 PoisonValue::get(DataTy),
+                                                 "wide.masked.expand.load")
+                : Builder.CreateMaskedLoad(DataTy, Addr, Alignment, Mask,
+                                           PoisonValue::get(DataTy),
+                                           "wide.masked.load");
   } else {
     NewLI = Builder.CreateAlignedLoad(DataTy, Addr, Alignment, "wide.load");
   }
@@ -3107,7 +3153,10 @@ void VPWidenStoreRecipe::execute(VPTransformState &State) {
   if (CreateScatter)
     NewSI = Builder.CreateMaskedScatter(StoredVal, Addr, Alignment, Mask);
   else if (Mask)
-    NewSI = Builder.CreateMaskedStore(StoredVal, Addr, Alignment, Mask);
+    NewSI = Compressed
+                ? Builder.CreateMaskedCompressStore(StoredVal, Addr, Alignment,
+                                                    Mask)
+                : Builder.CreateMaskedStore(StoredVal, Addr, Alignment, Mask);
   else
     NewSI = Builder.CreateAlignedStore(StoredVal, Addr, Alignment);
   applyMetadata(*NewSI);
@@ -3904,6 +3953,29 @@ void VPReductionPHIRecipe::print(raw_ostream &O, const Twine &Indent,
   printOperands(O, SlotTracker);
   if (VFScaleFactor != 1)
     O << " (VF scaled by 1/" << VFScaleFactor << ")";
+}
+#endif
+
+void VPMonotonicPHIRecipe::execute(VPTransformState &State) {
+  assert(getParent()->getPlan()->getUF() == 1 && "Expected unroll factor 1.");
+  Value *Start = getStartValue()->getLiveInIRValue();
+  BasicBlock *VectorPH =
+      State.CFG.VPBB2IRBB.at(getParent()->getCFGPredecessor(0));
+  PHINode *MonotonicPHI =
+      State.Builder.CreatePHI(Start->getType(), 2, "monotonic.iv");
+  MonotonicPHI->addIncoming(Start, VectorPH);
+  MonotonicPHI->setDebugLoc(getDebugLoc());
+  State.set(this, MonotonicPHI, /*IsScalar=*/true);
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPMonotonicPHIRecipe::print(raw_ostream &O, const Twine &Indent,
+                                 VPSlotTracker &SlotTracker) const {
+  O << Indent << "MONOTONIC-PHI ";
+
+  printAsOperand(O, SlotTracker);
+  O << " = phi ";
+  printOperands(O, SlotTracker);
 }
 #endif
 

@@ -308,10 +308,11 @@ Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
   VPLane LastLane(IsSingleScalar ? 0 : VF.getKnownMinValue() - 1);
   // Check if there is a scalar value for the selected lane.
   if (!hasScalarValue(Def, LastLane)) {
-    // At the moment, VPWidenIntOrFpInductionRecipes, VPScalarIVStepsRecipes and
-    // VPExpandSCEVRecipes can also be a single scalar.
+    // At the moment, VPWidenIntOrFpInductionRecipes, VPScalarIVStepsRecipes,
+    // VPMonotonicPHIRecipe and VPExpandSCEVRecipes can also be a single scalar.
     assert((isa<VPWidenIntOrFpInductionRecipe, VPScalarIVStepsRecipe,
-                VPExpandSCEVRecipe>(Def->getDefiningRecipe())) &&
+                VPMonotonicPHIRecipe, VPExpandSCEVRecipe>(
+               Def->getDefiningRecipe())) &&
            "unexpected recipe found to be invariant");
     IsSingleScalar = true;
     LastLane = 0;
@@ -1005,6 +1006,7 @@ void VPlan::execute(VPTransformState *State) {
     auto *PhiR = cast<VPSingleDefRecipe>(&R);
     // VPInstructions currently model scalar Phis only.
     bool NeedsScalar = isa<VPInstruction>(PhiR) ||
+                       isa<VPMonotonicPHIRecipe>(PhiR) ||
                        (isa<VPReductionPHIRecipe>(PhiR) &&
                         cast<VPReductionPHIRecipe>(PhiR)->isInLoop());
     Value *Phi = State->get(PhiR, NeedsScalar);
