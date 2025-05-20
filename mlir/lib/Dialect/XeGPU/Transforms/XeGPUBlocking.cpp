@@ -28,6 +28,7 @@ namespace xegpu {
 
 #define DEBUG_TYPE "xegpu-blocking"
 #define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
+#define LDBG(X) LLVM_DEBUG(DBGS() << X << "\n")
 
 using namespace mlir;
 
@@ -121,6 +122,7 @@ XeGPUBlockingPass::getTileShape(OpOperand &operand) const {
     if (auto type = dyn_cast<ShapedType>(operand.get().getType()))
       return llvm::to_vector(type.getShape());
   }
+  LDBG("failed to getTileShape for operand: " << operand.get());
   return std::nullopt;
 }
 
@@ -134,6 +136,7 @@ XeGPUBlockingPass::getTileShape(OpResult result) const {
     if (auto type = dyn_cast<ShapedType>(result.getType()))
       return llvm::to_vector(type.getShape());
   }
+  LDBG("failed to getTileShape for result: " << result);
   return std::nullopt;
 }
 
