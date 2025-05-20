@@ -109,90 +109,6 @@ public:
   }
 };
 
-template <typename TOp>
-static bool stridesAllOne(TOp op) {
-  static_assert(
-      std::is_same_v<TOp, vector::ExtractStridedSliceOp> ||
-          std::is_same_v<TOp, vector::InsertStridedSliceOp>,
-      "expected vector.extract_strided_slice or vector.insert_strided_slice");
-  ArrayAttr strides = op.getStrides();
-  return llvm::all_of(strides, isOneInteger);
-}
-
-/// Convert an array of attributes into a vector of integers, if possible.
-static FailureOr<SmallVector<int64_t>> intsFromArrayAttr(ArrayAttr attrs) {
-  if (!attrs)
-    return failure();
-  SmallVector<int64_t> ints;
-  ints.reserve(attrs.size());
-  for (auto attr : attrs) {
-    if (auto intAttr = dyn_cast<IntegerAttr>(attr)) {
-      ints.push_back(intAttr.getInt());
-    } else {
-      return failure();
-    }
-  }
-  return ints;
-}
-
-/// Consider inserting a vector of shape `small` into a vector of shape `large`,
-/// at position `offsets`: this function enumeratates all the indices in `large`
-/// that are written to. The enumeration is with row-major ordering.
-///
-/// Example: insert a 1x2 vector into a 4x5 vector at position (1,3). The 2
-/// positions written to are (1,3) and (1,4), which have linearized indices 8
-/// and 9. So [8,9] is returned.
-///
-/// The length of the returned vector is equal to the number of elements in
-/// the shape `small` (i.e. the product of dimensions of `small`).
-SmallVector<int64_t> static getStridedSliceInsertionIndices(
-    ArrayRef<int64_t> small, ArrayRef<int64_t> large,
-    ArrayRef<int64_t> offsets) {
-
-  // Example of alignment between, `large`, `small` and `offsets`:
-  //    large  =  4, 5, 6, 7, 8
-  //    small  =     1, 6, 7, 8
-  //  offsets  =  2, 3, 0
-  //
-  // `offsets` has implicit trailing 0s, `small` has implicit leading 1s.
-  assert((large.size() >= small.size()) &&
-         "rank of 'large' cannot be lower than rank of 'small'");
-  assert((large.size() >= offsets.size()) &&
-         "rank of 'large' cannot be lower than the number of offsets");
-  unsigned delta = large.size() - small.size();
-  unsigned nOffsets = offsets.size();
-  auto getSmall = [&](int64_t i) -> int64_t {
-    return i >= delta ? small[i - delta] : 1;
-  };
-  auto getOffset = [&](int64_t i) -> int64_t {
-    return i < nOffsets ? offsets[i] : 0;
-  };
-
-  // Using 2 vectors of indices, at each iteration populate the updated set of
-  // indices based on the old set of indices, and the size of the small vector
-  // in the current iteration.
-  SmallVector<int64_t> indices{0};
-  int64_t stride = 1;
-  for (int i = large.size() - 1; i >= 0; --i) {
-    int64_t currentSize = indices.size();
-    int64_t smallSize = getSmall(i);
-    int64_t nextSize = currentSize * smallSize;
-    SmallVector<int64_t> nextIndices(nextSize);
-    int64_t *base = nextIndices.begin();
-    int64_t offset = getOffset(i) * stride;
-    for (int j = 0; j < smallSize; ++j) {
-      for (int k = 0; k < currentSize; ++k) {
-        base[k] = indices[k] + offset;
-      }
-      offset += stride;
-      base += currentSize;
-    }
-    stride *= large[i];
-    indices = std::move(nextIndices);
-  }
-  return indices;
-}
-
 /// This pattern converts a vector.extract_strided_slice operation into a
 /// vector.shuffle operation that has a rank-1 (linearized) operand and result.
 ///
@@ -231,30 +147,23 @@ struct LinearizeVectorExtractStridedSlice final
 
     // Expect a legalization failure if the strides are not all 1 (if ever the
     // verifier for extract_strided_slice allows non-1 strides).
-    if (!stridesAllOne(extractStridedSliceOp)) {
+    if (extractStridedSliceOp.hasNonUnitStrides()) {
       return rewriter.notifyMatchFailure(
           extractStridedSliceOp,
           "extract_strided_slice with strides != 1 not supported");
     }
 
-    FailureOr<SmallVector<int64_t>> offsets =
-        intsFromArrayAttr(extractStridedSliceOp.getOffsets());
-    if (failed(offsets)) {
+    FailureOr<SmallVector<int64_t>> indices =
+        extractStridedSliceOp.getLinearIndices();
+    if (failed(indices)) {
       return rewriter.notifyMatchFailure(extractStridedSliceOp,
-                                         "failed to get integer offsets");
+                                         "failed to get indices");
     }
 
-    ArrayRef<int64_t> inputShape =
-        extractStridedSliceOp.getSourceVectorType().getShape();
-
-    ArrayRef<int64_t> outputShape = extractStridedSliceOp.getType().getShape();
-
-    SmallVector<int64_t> indices = getStridedSliceInsertionIndices(
-        outputShape, inputShape, offsets.value());
-
     Value srcVector = adaptor.getVector();
-    rewriter.replaceOpWithNewOp<vector::ShuffleOp>(
-        extractStridedSliceOp, flatOutputType, srcVector, srcVector, indices);
+    rewriter.replaceOpWithNewOp<vector::ShuffleOp>(extractStridedSliceOp,
+                                                   flatOutputType, srcVector,
+                                                   srcVector, indices.value());
     return success();
   }
 };
@@ -298,31 +207,24 @@ struct LinearizeVectorInsertStridedSlice final
 
     // Expect a legalization failure if the strides are not all 1 (if ever the
     // verifier for insert_strided_slice allows non-1 strides).
-    if (!stridesAllOne(insertStridedSliceOp)) {
+    if (insertStridedSliceOp.hasNonUnitStrides()) {
       return rewriter.notifyMatchFailure(
           insertStridedSliceOp,
           "insert_strided_slice with strides != 1 not supported");
     }
 
-    VectorType inputType = insertStridedSliceOp.getValueToStore().getType();
-    ArrayRef<int64_t> inputShape = inputType.getShape();
-
     VectorType outputType = insertStridedSliceOp.getType();
-    ArrayRef<int64_t> outputShape = outputType.getShape();
     int64_t nOutputElements = outputType.getNumElements();
 
-    FailureOr<SmallVector<int64_t>> offsets =
-        intsFromArrayAttr(insertStridedSliceOp.getOffsets());
-    if (failed(offsets)) {
+    FailureOr<SmallVector<int64_t>> sliceIndices =
+        insertStridedSliceOp.getLinearIndices();
+    if (failed(sliceIndices))
       return rewriter.notifyMatchFailure(insertStridedSliceOp,
-                                         "failed to get integer offsets");
-    }
-    SmallVector<int64_t> sliceIndices = getStridedSliceInsertionIndices(
-        inputShape, outputShape, offsets.value());
+                                         "failed to get indices");
 
     SmallVector<int64_t> indices(nOutputElements);
     std::iota(indices.begin(), indices.end(), 0);
-    for (auto [index, sliceIndex] : llvm::enumerate(sliceIndices)) {
+    for (auto [index, sliceIndex] : llvm::enumerate(sliceIndices.value())) {
       indices[sliceIndex] = index + nOutputElements;
     }
 

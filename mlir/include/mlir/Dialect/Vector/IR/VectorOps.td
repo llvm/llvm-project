@@ -1114,6 +1114,8 @@ def Vector_InsertStridedSliceOp :
         return ::llvm::cast<IntegerAttr>(attr).getInt() != 1;
       });
     }
+    // \return The indices in dest that the values are inserted to.
+    FailureOr<SmallVector<int64_t>> getLinearIndices();
   }];
 
   let hasFolder = 1;
@@ -1254,6 +1256,8 @@ def Vector_ExtractStridedSliceOp :
         return ::llvm::cast<IntegerAttr>(attr).getInt() != 1;
       });
     }
+    // \return The indices in source that the values are taken from.
+    FailureOr<SmallVector<int64_t>> getLinearIndices();
   }];
   let hasCanonicalizer = 1;
   let hasFolder = 1;

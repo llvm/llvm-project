@@ -3182,6 +3182,101 @@ void InsertStridedSliceOp::build(OpBuilder &builder, OperationState &result,
                       stridesAttr);
 }
 
+/// Convert an array of attributes into a vector of integers, if possible.
+static FailureOr<SmallVector<int64_t>> intsFromArrayAttr(ArrayAttr attrs) {
+  if (!attrs)
+    return failure();
+  SmallVector<int64_t> ints;
+  ints.reserve(attrs.size());
+  for (auto attr : attrs) {
+    if (auto intAttr = dyn_cast<IntegerAttr>(attr)) {
+      ints.push_back(intAttr.getInt());
+    } else {
+      return failure();
+    }
+  }
+  return ints;
+}
+
+/// Consider inserting a vector of shape `small` into a vector of shape `large`,
+/// at position `offsets`: this function enumeratates all the indices in `large`
+/// that are written to. The enumeration is with row-major ordering.
+///
+/// Example: insert a 1x2 vector into a 4x5 vector at position (1,3). The 2
+/// positions written to are (1,3) and (1,4), which have linearized indices 8
+/// and 9. So [8,9] is returned.
+///
+/// The length of the returned vector is equal to the number of elements in
+/// the shape `small` (i.e. the product of dimensions of `small`).
+static SmallVector<int64_t>
+getStridedSliceInsertionIndices(ArrayRef<int64_t> small,
+                                ArrayRef<int64_t> large,
+                                ArrayRef<int64_t> offsets) {
+
+  // Example of alignment between, `large`, `small` and `offsets`:
+  //    large  =  4, 5, 6, 7, 8
+  //    small  =     1, 6, 7, 8
+  //  offsets  =  2, 3, 0
+  //
+  // `offsets` has implicit trailing 0s, `small` has implicit leading 1s.
+  assert((large.size() >= small.size()) &&
+         "rank of 'large' cannot be lower than rank of 'small'");
+  assert((large.size() >= offsets.size()) &&
+         "rank of 'large' cannot be lower than the number of offsets");
+  unsigned delta = large.size() - small.size();
+  unsigned nOffsets = offsets.size();
+  auto getSmall = [&](int64_t i) -> int64_t {
+    return i >= delta ? small[i - delta] : 1;
+  };
+  auto getOffset = [&](int64_t i) -> int64_t {
+    return i < nOffsets ? offsets[i] : 0;
+  };
+
+  // Using 2 vectors of indices, at each iteration populate the updated set of
+  // indices based on the old set of indices, and the size of the small vector
+  // in the current iteration.
+  SmallVector<int64_t> indices{0};
+  int64_t stride = 1;
+  for (int i = large.size() - 1; i >= 0; --i) {
+    int64_t currentSize = indices.size();
+    int64_t smallSize = getSmall(i);
+    int64_t nextSize = currentSize * smallSize;
+    SmallVector<int64_t> nextIndices(nextSize);
+    int64_t *base = nextIndices.begin();
+    int64_t offset = getOffset(i) * stride;
+    for (int j = 0; j < smallSize; ++j) {
+      for (int k = 0; k < currentSize; ++k) {
+        base[k] = indices[k] + offset;
+      }
+      offset += stride;
+      base += currentSize;
+    }
+    stride *= large[i];
+    indices = std::move(nextIndices);
+  }
+  return indices;
+}
+
+FailureOr<SmallVector<int64_t>> InsertStridedSliceOp::getLinearIndices() {
+
+  // Stride > 1 to be considered if/when the insert_strided_slice supports it.
+  if (hasNonUnitStrides())
+    return failure();
+
+  // Only when the destination has a static size can the indices be enumerated.
+  if (getType().isScalable())
+    return failure();
+
+  // Only when the offsets are all static can the indices be enumerated.
+  FailureOr<SmallVector<int64_t>> offsets = intsFromArrayAttr(getOffsets());
+  if (failed(offsets))
+    return failure();
+
+  return getStridedSliceInsertionIndices(getSourceVectorType().getShape(),
+                                         getDestVectorType().getShape(),
+                                         offsets.value());
+}
+
 // TODO: Should be moved to Tablegen ConfinedAttr attributes.
 template <typename OpType>
 static LogicalResult isIntegerArrayAttrSmallerThanShape(OpType op,
@@ -3636,6 +3731,25 @@ void ExtractStridedSliceOp::build(OpBuilder &builder, OperationState &result,
                       sizesAttr);
   result.addAttribute(ExtractStridedSliceOp::getStridesAttrName(result.name),
                       stridesAttr);
+}
+
+FailureOr<SmallVector<int64_t>> ExtractStridedSliceOp::getLinearIndices() {
+
+  // Stride > 1 to be considered if/when extract_strided_slice supports it.
+  if (hasNonUnitStrides())
+    return failure();
+
+  // Only when the source has a static size can the indices be enumerated.
+  if (getSourceVectorType().isScalable())
+    return failure();
+
+  // Only when the offsets are all static can the indices be enumerated.
+  FailureOr<SmallVector<int64_t>> offsets = intsFromArrayAttr(getOffsets());
+  if (failed(offsets))
+    return failure();
+
+  return getStridedSliceInsertionIndices(
+      getType().getShape(), getSourceVectorType().getShape(), offsets.value());
 }
 
 LogicalResult ExtractStridedSliceOp::verify() {
