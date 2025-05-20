@@ -511,16 +511,16 @@ private:
   const DataLayout &DL;
   /// Maps a common operand to all Xor instructions
   using XorOpList = SmallVector<std::pair<BinaryOperator *, APInt>, 8>;
-  using XorBaseValMap = DenseMap<Value *, XorOpList>;
-  XorBaseValMap XorGroups;
+  using XorBaseValInst = DenseMap<Instruction *, XorOpList>;
+  XorBaseValInst XorGroups;
 
   /// Checks if the given value has at least one GetElementPtr user
-  bool hasGEPUser(const Value *V) const;
+  static bool hasGEPUser(const Value *V);
 
   /// Processes a group of XOR instructions that share the same non-constant
   /// base operand. Returns true if this group's processing modified the
   /// function.
-  bool processXorGroup(Value *OriginalBaseVal, XorOpList &XorsInGroup);
+  bool processXorGroup(Instruction *OriginalBaseInst, XorOpList &XorsInGroup);
 };
 
 } // end anonymous namespace
@@ -1200,7 +1200,7 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
 }
 
 // Helper function to check if an instruction has at least one GEP user
-bool XorToOrDisjointTransformer::hasGEPUser(const Value *V) const {
+bool XorToOrDisjointTransformer::hasGEPUser(const Value *V) {
   for (const User *U : V->users()) {
     if (isa<GetElementPtrInst>(U)) {
       return true;
@@ -1209,7 +1209,7 @@ bool XorToOrDisjointTransformer::hasGEPUser(const Value *V) const {
   return false;
 }
 
-bool XorToOrDisjointTransformer::processXorGroup(Value *OriginalBaseVal,
+bool XorToOrDisjointTransformer::processXorGroup(Instruction *OriginalBaseInst,
                                                  XorOpList &XorsInGroup) {
   bool Changed = false;
   if (XorsInGroup.size() <= 1)
@@ -1241,7 +1241,7 @@ bool XorToOrDisjointTransformer::processXorGroup(Value *OriginalBaseVal,
       BinaryOperator *ClonedXor =
           cast<BinaryOperator>(XorWithSmallConst->clone());
       ClonedXor->setName(XorWithSmallConst->getName() + ".dom_clone");
-      ClonedXor->insertAfter(dyn_cast<Instruction>(OriginalBaseVal));
+      ClonedXor->insertAfter(OriginalBaseInst);
       LLVM_DEBUG(dbgs() << "  Cloned Inst: " << *ClonedXor << "\n");
       Changed = true;
       XorWithSmallConst = ClonedXor;
@@ -1251,7 +1251,7 @@ bool XorToOrDisjointTransformer::processXorGroup(Value *OriginalBaseVal,
 
   SmallVector<Instruction *, 8> InstructionsToErase;
   const APInt SmallestConst =
-      dyn_cast<ConstantInt>(XorWithSmallConst->getOperand(1))->getValue();
+      cast<ConstantInt>(XorWithSmallConst->getOperand(1))->getValue();
 
   // Main transformation loop: Iterate over the original XORs in the sorted
   // group.
@@ -1289,7 +1289,7 @@ bool XorToOrDisjointTransformer::processXorGroup(Value *OriginalBaseVal,
 
       auto *NewOrInst = BinaryOperator::CreateDisjointOr(
           XorWithSmallConst,
-          ConstantInt::get(OriginalBaseVal->getType(), NewConstVal),
+          ConstantInt::get(OriginalBaseInst->getType(), NewConstVal),
           XorInst->getName() + ".or_disjoint", XorInst->getIterator());
 
       NewOrInst->copyMetadata(*XorInst);
@@ -1308,9 +1308,9 @@ bool XorToOrDisjointTransformer::processXorGroup(Value *OriginalBaseVal,
                  << "  New Const: " << NewConstVal << "\n");
     }
   }
-  if (!InstructionsToErase.empty())
-    for (Instruction *I : InstructionsToErase)
-      I->eraseFromParent();
+
+  for (Instruction *I : InstructionsToErase)
+    I->eraseFromParent();
 
   return Changed;
 }
@@ -1335,9 +1335,11 @@ bool XorToOrDisjointTransformer::run() {
         Value *Op0 = XorOp->getOperand(0);
         ConstantInt *C1 = nullptr;
         // Match: xor Op0, Constant
-        if (match(XorOp->getOperand(1), m_ConstantInt(C1))) {
+        if (isa<Instruction>(Op0) &&
+            match(XorOp->getOperand(1), m_ConstantInt(C1))) {
           if (hasGEPUser(XorOp)) {
-            XorGroups[Op0].push_back({XorOp, C1->getValue()});
+            Instruction *InstOp0 = cast<Instruction>(Op0);
+            XorGroups[InstOp0].push_back({XorOp, C1->getValue()});
           }
         }
       }
@@ -1349,9 +1351,9 @@ bool XorToOrDisjointTransformer::run() {
 
   // Process each group of XORs
   for (auto &GroupPair : XorGroups) {
-    Value *OriginalBaseVal = GroupPair.first;
+    Instruction *OriginalBaseInst = cast<Instruction>(GroupPair.first);
     XorOpList &XorsInGroup = GroupPair.second;
-    if (processXorGroup(OriginalBaseVal, XorsInGroup))
+    if (processXorGroup(OriginalBaseInst, XorsInGroup))
       Changed = true;
   }
 
