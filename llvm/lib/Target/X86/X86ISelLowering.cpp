@@ -39619,7 +39619,6 @@ static bool matchBinaryPermuteShuffle(
       SmallVector<int, 16> ShiftMask(NumMaskElts, SM_SentinelZero);
       std::iota(ShiftMask.begin() + ZeroLo, ShiftMask.end(), 0);
       if (isTargetShuffleEquivalent(MaskVT, Mask, ShiftMask, DAG, V1)) {
-        V1 = V1;
         V2 = getZeroVector(AlignVT, Subtarget, DAG, DL);
         Shuffle = X86ISD::VALIGN;
         ShuffleVT = AlignVT;
