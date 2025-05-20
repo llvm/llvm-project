@@ -320,7 +320,8 @@ NativeProcessLinux::Manager::Attach(
                                          llvm::inconvertibleErrorCode());
 
   std::vector<::pid_t> tids;
-  if (process_info.IsCoreDumping()) {
+  // IsCoreDumping is an optional, so check for value then true/false.
+  if (process_info.IsCoreDumping() && *process_info.IsCoreDumping()) {
     auto attached_or = NativeProcessLinux::Seize(pid);
     if (!attached_or)
       return attached_or.takeError();
