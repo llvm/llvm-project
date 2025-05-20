@@ -102,6 +102,9 @@ public:
                                                  false)] =
         RegisterCFIState::createOffsetFromCFAVal(0); // sp's old value is CFA
 
+    State.RegisterCFIStates[MCRI->getDwarfRegNum(EMCIA->getFlagsReg(), false)] =
+        RegisterCFIState::createUndefined(); // Flags cannot be caller-saved
+
     // Applying the prologue after default assumptions to overwrite them.
     for (auto &&PrologueCFIDirective : PrologueCFIDirectives) {
       State.apply(PrologueCFIDirective);
@@ -119,7 +122,7 @@ public:
     if (EMCIA->isPop(Inst) && Reg == EMCIA->getStackPointer()) {
       // TODO should get the stack direction here, now it assumes that it goes
       // down.
-      HowMuch = EMCIA->getPushSize(Inst);
+      HowMuch = EMCIA->getPopSize(Inst);
       return true;
     }
 
@@ -285,7 +288,8 @@ public:
           MCPhysReg ToRegLLVM;
           if (doLoadFromReg(Inst, PrevStateCFARegLLVM, OffsetFromCFAReg,
                             ToRegLLVM) &&
-              OffsetFromCFAReg == PrevRegState.Info.OffsetFromCFA) {
+              OffsetFromCFAReg - PrevState.CFAOffset ==
+                  PrevRegState.Info.OffsetFromCFA) {
             DWARFRegType ToReg = MCRI->getDwarfRegNum(ToRegLLVM, false);
             if (ToReg == Reg) {
               PossibleNextRegStates.push_back(
