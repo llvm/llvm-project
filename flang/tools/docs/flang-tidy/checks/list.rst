@@ -25,3 +25,4 @@ Flang-Tidy Checks
    :doc:`bugprone-missing-action <bugprone/missing-action>`,
    :doc:`bugprone-missing-default-case <bugprone/missing-default-case>`,
    :doc:`bugprone-precision-loss <bugprone/precision-loss>`,
+   :doc:`bugprone-subprogram-trampoline <bugprone/subprogram-trampoline>`,

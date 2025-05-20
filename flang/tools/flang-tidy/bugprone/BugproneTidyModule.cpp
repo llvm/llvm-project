@@ -17,6 +17,7 @@
 #include "MissingActionCheck.h"
 #include "MissingDefaultCheck.h"
 #include "PrecisionLossCheck.h"
+#include "SubprogramTrampolineCheck.h"
 
 namespace Fortran::tidy {
 namespace bugprone {
@@ -39,6 +40,8 @@ public:
     CheckFactories.registerCheck<MissingDefaultCheck>(
         "bugprone-missing-default-case");
     CheckFactories.registerCheck<PrecisionLossCheck>("bugprone-precision-loss");
+    CheckFactories.registerCheck<SubprogramTrampolineCheck>(
+        "bugprone-subprogram-trampoline");
   }
 };
 
