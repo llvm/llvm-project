@@ -2193,6 +2193,20 @@ bool Type::isAnyCharacterType() const {
   }
 }
 
+bool Type::isUnicodeCharacterType() const {
+  const auto *BT = dyn_cast<BuiltinType>(CanonicalType);
+  if (!BT)
+    return false;
+  switch (BT->getKind()) {
+  default:
+    return false;
+  case BuiltinType::Char8:
+  case BuiltinType::Char16:
+  case BuiltinType::Char32:
+    return true;
+  }
+}
+
 /// isSignedIntegerType - Return true if this is an integer type that is
 /// signed, according to C99 6.2.5p4 [char, signed char, short, int, long..],
 /// an enum decl which has a signed representation
@@ -2831,6 +2845,11 @@ static bool isTriviallyCopyableTypeImpl(const QualType &type,
 
   // As an extension, Clang treats vector types as Scalar types.
   if (CanonicalType->isScalarType() || CanonicalType->isVectorType())
+    return true;
+
+  // Mfloat8 type is a special case as it not scalar, but is still trivially
+  // copyable.
+  if (CanonicalType->isMFloat8Type())
     return true;
 
   if (const auto *RT = CanonicalType->getAs<RecordType>()) {
@@ -4125,14 +4144,14 @@ void DependentDecltypeType::Profile(llvm::FoldingSetNodeID &ID,
   E->Profile(ID, Context, true);
 }
 
-PackIndexingType::PackIndexingType(const ASTContext &Context,
-                                   QualType Canonical, QualType Pattern,
+PackIndexingType::PackIndexingType(QualType Canonical, QualType Pattern,
                                    Expr *IndexExpr, bool FullySubstituted,
                                    ArrayRef<QualType> Expansions)
     : Type(PackIndexing, Canonical,
            computeDependence(Pattern, IndexExpr, Expansions)),
-      Context(Context), Pattern(Pattern), IndexExpr(IndexExpr),
-      Size(Expansions.size()), FullySubstituted(FullySubstituted) {
+      Pattern(Pattern), IndexExpr(IndexExpr), Size(Expansions.size()),
+      FullySubstituted(FullySubstituted) {
+
   llvm::uninitialized_copy(Expansions, getTrailingObjects<QualType>());
 }
 
@@ -4174,11 +4193,25 @@ PackIndexingType::computeDependence(QualType Pattern, Expr *IndexExpr,
 }
 
 void PackIndexingType::Profile(llvm::FoldingSetNodeID &ID,
+                               const ASTContext &Context) {
+  Profile(ID, Context, getPattern(), getIndexExpr(), isFullySubstituted(),
+          getExpansions());
+}
+
+void PackIndexingType::Profile(llvm::FoldingSetNodeID &ID,
                                const ASTContext &Context, QualType Pattern,
-                               Expr *E, bool FullySubstituted) {
-  Pattern.Profile(ID);
+                               Expr *E, bool FullySubstituted,
+                               ArrayRef<QualType> Expansions) {
+
   E->Profile(ID, Context, true);
   ID.AddBoolean(FullySubstituted);
+  if (!Expansions.empty()) {
+    ID.AddInteger(Expansions.size());
+    for (QualType T : Expansions)
+      T.getCanonicalType().Profile(ID);
+  } else {
+    Pattern.Profile(ID);
+  }
 }
 
 UnaryTransformType::UnaryTransformType(QualType BaseType,
@@ -5061,6 +5094,12 @@ AttributedType::stripOuterNullability(QualType &T) {
   return std::nullopt;
 }
 
+bool Type::isSignableIntegerType(const ASTContext &Ctx) const {
+  if (!isIntegralType(Ctx) || isEnumeralType())
+    return false;
+  return Ctx.getTypeSize(this) == Ctx.getTypeSize(Ctx.VoidPtrTy);
+}
+
 bool Type::isBlockCompatibleObjCPointerType(ASTContext &ctx) const {
   const auto *objcPtr = getAs<ObjCObjectPointerType>();
   if (!objcPtr)
@@ -5550,7 +5589,7 @@ LLVM_DUMP_METHOD void FunctionEffectKindSet::dump(llvm::raw_ostream &OS) const {
 FunctionEffectsRef
 FunctionEffectsRef::create(ArrayRef<FunctionEffect> FX,
                            ArrayRef<EffectConditionExpr> Conds) {
-  assert(std::is_sorted(FX.begin(), FX.end()) && "effects should be sorted");
+  assert(llvm::is_sorted(FX) && "effects should be sorted");
   assert((Conds.empty() || Conds.size() == FX.size()) &&
          "effects size should match conditions size");
   return FunctionEffectsRef(FX, Conds);

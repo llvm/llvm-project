@@ -20,4 +20,7 @@ int k = 12; // expected-warning {{duplicate declaration of 'k' is invalid in C++
                cxx-error {{redefinition of 'k'}}
 
 // Cannot have two declarations with initializers, that is a redefinition in
-// both C and C++.
+// both C and C++. However, C++ does have a different definition of what makes
+// a declaration a definition.
+extern const int a;
+const int a = 12; // Okay in C and C++

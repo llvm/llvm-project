@@ -11,6 +11,7 @@
 #include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 #include "mlir/Conversion/GPUToNVVM/GPUToNVVMPass.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
+#include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -134,6 +135,11 @@ LogicalResult transform::ApplyGPUSubgroupReduceToNVVMConversionPatternsOp::
 
 void ApplyGPURewritePatternsOp::populatePatterns(RewritePatternSet &patterns) {
   populateGpuRewritePatterns(patterns);
+}
+
+void transform::ApplyGPUPromoteShuffleToAMDGPUPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  populateGpuPromoteShuffleToAMDGPUPatterns(patterns);
 }
 
 //===----------------------------------------------------------------------===//
@@ -914,9 +920,10 @@ public:
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(GPUTransformDialectExtension)
 
   GPUTransformDialectExtension() {
-    declareGeneratedDialect<scf::SCFDialect>();
-    declareGeneratedDialect<arith::ArithDialect>();
     declareGeneratedDialect<GPUDialect>();
+    declareGeneratedDialect<amdgpu::AMDGPUDialect>();
+    declareGeneratedDialect<arith::ArithDialect>();
+    declareGeneratedDialect<scf::SCFDialect>();
     registerTransformOps<
 #define GET_OP_LIST
 #include "mlir/Dialect/GPU/TransformOps/GPUTransformOps.cpp.inc"

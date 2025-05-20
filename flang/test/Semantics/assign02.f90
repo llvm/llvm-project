@@ -8,9 +8,11 @@ module m1
   type t2
     sequence
     real :: t2Field
+    real, pointer :: t2FieldPtr
   end type
   type t3
     type(t2) :: t3Field
+    type(t2), pointer :: t3FieldPtr
   end type
 contains
 
@@ -198,6 +200,14 @@ contains
     q2 => y%t3Field
     !OK:
     q3 => y
+    !ERROR: VOLATILE target associated with non-VOLATILE pointer
+    p3%t3FieldPtr => y%t3Field
+    !ERROR: VOLATILE target associated with non-VOLATILE pointer
+    p3%t3FieldPtr%t2FieldPtr => y%t3Field%t2Field
+    !OK
+    q3%t3FieldPtr => y%t3Field
+    !OK
+    q3%t3FieldPtr%t2FieldPtr => y%t3Field%t2Field
   end
 end
 
