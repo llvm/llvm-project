@@ -899,6 +899,8 @@ SIFoldOperandsImpl::isRegSeqSplat(MachineInstr &RegSeq) const {
   if (!SrcRC)
     return {};
 
+  // TODO: Recognize 64-bit splats broken into 32-bit pieces (i.e. recognize
+  // every other other element is 0 for 64-bit immediates)
   int64_t Imm;
   for (unsigned I = 0, E = Defs.size(); I != E; ++I) {
     const MachineOperand *Op = Defs[I].first;
@@ -928,10 +930,41 @@ MachineOperand *SIFoldOperandsImpl::tryFoldRegSeqSplat(
   if (!AMDGPU::isSISrcOperand(Desc, UseOpIdx))
     return nullptr;
 
-  // FIXME: Verify SplatRC is compatible with the use operand
-  uint8_t OpTy = Desc.operands()[UseOpIdx].OperandType;
-  if (!TII->isInlineConstant(*SplatVal, OpTy) ||
-      !TII->isOperandLegal(*UseMI, UseOpIdx, SplatVal))
+  int16_t RCID = Desc.operands()[UseOpIdx].RegClass;
+  if (RCID == -1)
+    return nullptr;
+
+  // Special case 0/-1, since when interpreted as a 64-bit element both halves
+  // have the same bits. Effectively this code does not handle 64-bit element
+  // operands correctly, as the incoming 64-bit constants are already split into
+  // 32-bit sequence elements.
+  //
+  // TODO: We should try to figure out how to interpret the reg_sequence as a
+  // split 64-bit splat constant, or use 64-bit pseudos for materializing f64
+  // constants.
+  if (SplatVal->getImm() != 0 && SplatVal->getImm() != -1) {
+    const TargetRegisterClass *OpRC = TRI->getRegClass(RCID);
+    // We need to figure out the scalar type read by the operand. e.g. the MFMA
+    // operand will be AReg_128, and we want to check if it's compatible with an
+    // AReg_32 constant.
+    uint8_t OpTy = Desc.operands()[UseOpIdx].OperandType;
+    switch (OpTy) {
+    case AMDGPU::OPERAND_REG_INLINE_AC_INT32:
+    case AMDGPU::OPERAND_REG_INLINE_AC_FP32:
+      OpRC = TRI->getSubRegisterClass(OpRC, AMDGPU::sub0);
+      break;
+    case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
+      OpRC = TRI->getSubRegisterClass(OpRC, AMDGPU::sub0_sub1);
+      break;
+    default:
+      return nullptr;
+    }
+
+    if (!TRI->getCommonSubClass(OpRC, SplatRC))
+      return nullptr;
+  }
+
+  if (!TII->isOperandLegal(*UseMI, UseOpIdx, SplatVal))
     return nullptr;
 
   return SplatVal;
@@ -1043,14 +1076,13 @@ void SIFoldOperandsImpl::foldOperand(
         }
       }
 
-      if (tryToFoldACImm(UseMI->getOperand(0), RSUseMI, OpNo, FoldList))
-        continue;
-
       if (RSUse->getSubReg() != RegSeqDstSubReg)
         continue;
 
-      foldOperand(OpToFold, RSUseMI, RSUseMI->getOperandNo(RSUse), FoldList,
-                  CopiesToReplace);
+      if (tryToFoldACImm(UseMI->getOperand(0), RSUseMI, OpNo, FoldList))
+        continue;
+
+      foldOperand(OpToFold, RSUseMI, OpNo, FoldList, CopiesToReplace);
     }
 
     return;
