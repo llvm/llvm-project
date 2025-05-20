@@ -78,9 +78,7 @@ For example, supplying the above ``ignorelist.txt`` to
 instrumentation for arithmetic operations containing values of type ``int``.
 
 The ``=sanitize`` category is also supported. Any types assigned to the
-``sanitize`` category will have their sanitizer instrumentation remain. If the
-same type appears within or across ignorelists with different categories the
-``sanitize`` category takes precedence -- regardless of order.
+``sanitize`` category will have their sanitizer instrumentation remain.
 
 With this, one may disable instrumentation for some or all types and
 specifically allow instrumentation for one or many types -- including types
@@ -102,6 +100,22 @@ supported sanitizers.
     U b = toobig;    // not instrumented
     char c = toobig; // also not instrumented
   }
+
+Conflicting entries are resolved by the latest entry, which takes precedence.
+
+.. code-block:: bash
+
+  $ cat ignorelist1.txt
+  # test.cc will be instrumented.
+  src:*
+  src:*/mylib/*=sanitize
+  src:*/mylib/test.cc
+
+  $ cat ignorelist2.txt
+  # test.cc will not be instrumented.
+  src:*
+  src:*/mylib/test.cc
+  src:*/mylib/*=sanitize
 
 Format
 ======
