@@ -445,7 +445,7 @@ define amdgpu_kernel void @s_multiple_frame_indexes_literal_offsets(i32 inreg %a
 }
 
 ; %alloca1 or alloca2 will lower to an inline constant, and one will
-; %be a literal, so we could fold both indexes into the instruction.
+; be a literal, so we could fold both indexes into the instruction.
 
 ; GCN-LABEL: {{^}}s_multiple_frame_indexes_one_imm_one_literal_offset:
 ; GCN: s_load_dword [[ARG0:s[0-9]+]]
