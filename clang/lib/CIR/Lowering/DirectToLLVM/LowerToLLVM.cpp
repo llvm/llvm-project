@@ -54,11 +54,11 @@ namespace direct {
 namespace {
 /// If the given type is a vector type, return the vector's element type.
 /// Otherwise return the given type unchanged.
-// TODO(cir): Return the vector element type once we have support for vectors
-// instead of the identity type.
 mlir::Type elementTypeIfVector(mlir::Type type) {
-  assert(!cir::MissingFeatures::vectorType());
-  return type;
+  return llvm::TypeSwitch<mlir::Type, mlir::Type>(type)
+      .Case<cir::VectorType, mlir::VectorType>(
+          [](auto p) { return p.getElementType(); })
+      .Default([](mlir::Type p) { return p; });
 }
 } // namespace
 
@@ -1044,9 +1044,8 @@ mlir::LogicalResult CIRToLLVMUnaryOpLowering::matchAndRewrite(
   assert(op.getType() == op.getInput().getType() &&
          "Unary operation's operand type and result type are different");
   mlir::Type type = op.getType();
-  mlir::Type elementType = type;
-  bool isVector = false;
-  assert(!cir::MissingFeatures::vectorType());
+  mlir::Type elementType = elementTypeIfVector(type);
+  bool isVector = mlir::isa<cir::VectorType>(type);
   mlir::Type llvmType = getTypeConverter()->convertType(type);
   mlir::Location loc = op.getLoc();
 
@@ -1076,20 +1075,30 @@ mlir::LogicalResult CIRToLLVMUnaryOpLowering::matchAndRewrite(
       rewriter.replaceOp(op, adaptor.getInput());
       return mlir::success();
     case cir::UnaryOpKind::Minus: {
-      assert(!isVector &&
-             "Add vector handling when vector types are supported");
-      mlir::LLVM::ConstantOp zero = rewriter.create<mlir::LLVM::ConstantOp>(
-          loc, llvmType, mlir::IntegerAttr::get(llvmType, 0));
+      mlir::Value zero;
+      if (isVector)
+        zero = rewriter.create<mlir::LLVM::ZeroOp>(loc, llvmType);
+      else
+        zero = rewriter.create<mlir::LLVM::ConstantOp>(
+            loc, llvmType, mlir::IntegerAttr::get(llvmType, 0));
       rewriter.replaceOpWithNewOp<mlir::LLVM::SubOp>(
           op, llvmType, zero, adaptor.getInput(), maybeNSW);
       return mlir::success();
     }
     case cir::UnaryOpKind::Not: {
       // bit-wise compliment operator, implemented as an XOR with -1.
-      assert(!isVector &&
-             "Add vector handling when vector types are supported");
-      mlir::LLVM::ConstantOp minusOne = rewriter.create<mlir::LLVM::ConstantOp>(
-          loc, llvmType, mlir::IntegerAttr::get(llvmType, -1));
+      mlir::Value minusOne;
+      if (isVector) {
+        const uint64_t numElements =
+            mlir::dyn_cast<cir::VectorType>(type).getSize();
+        std::vector<int32_t> values(numElements, -1);
+        mlir::DenseIntElementsAttr denseVec = rewriter.getI32VectorAttr(values);
+        minusOne =
+            rewriter.create<mlir::LLVM::ConstantOp>(loc, llvmType, denseVec);
+      } else {
+        minusOne = rewriter.create<mlir::LLVM::ConstantOp>(
+            loc, llvmType, mlir::IntegerAttr::get(llvmType, -1));
+      }
       rewriter.replaceOpWithNewOp<mlir::LLVM::XOrOp>(
           op, llvmType, adaptor.getInput(), minusOne);
       return mlir::success();
@@ -1189,19 +1198,15 @@ mlir::LogicalResult CIRToLLVMBinOpLowering::matchAndRewrite(
     return op.emitError() << "inconsistent operands' types not supported yet";
 
   mlir::Type type = op.getRhs().getType();
-  assert(!cir::MissingFeatures::vectorType());
   if (!mlir::isa<cir::IntType, cir::BoolType, cir::CIRFPTypeInterface,
-                 mlir::IntegerType>(type))
+                 mlir::IntegerType, cir::VectorType>(type))
     return op.emitError() << "operand type not supported yet";
 
-  auto llvmTy = getTypeConverter()->convertType(op.getType());
-  mlir::Type llvmEltTy =
-      mlir::isa<mlir::VectorType>(llvmTy)
-          ? mlir::cast<mlir::VectorType>(llvmTy).getElementType()
-          : llvmTy;
-  auto rhs = adaptor.getRhs();
-  auto lhs = adaptor.getLhs();
+  const mlir::Type llvmTy = getTypeConverter()->convertType(op.getType());
+  const mlir::Type llvmEltTy = elementTypeIfVector(llvmTy);
 
+  const mlir::Value rhs = adaptor.getRhs();
+  const mlir::Value lhs = adaptor.getLhs();
   type = elementTypeIfVector(type);
 
   switch (op.getKind()) {
@@ -1285,7 +1290,6 @@ mlir::LogicalResult CIRToLLVMBinOpLowering::matchAndRewrite(
     }
     break;
   }
-
   return mlir::LogicalResult::success();
 }
 
@@ -1372,41 +1376,42 @@ mlir::LogicalResult CIRToLLVMCmpOpLowering::matchAndRewrite(
 mlir::LogicalResult CIRToLLVMShiftOpLowering::matchAndRewrite(
     cir::ShiftOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  auto cirAmtTy = mlir::dyn_cast<cir::IntType>(op.getAmount().getType());
-  auto cirValTy = mlir::dyn_cast<cir::IntType>(op.getValue().getType());
+  assert((op.getValue().getType() == op.getType()) &&
+         "inconsistent operands' types NYI");
 
-  // Operands could also be vector type
-  assert(!cir::MissingFeatures::vectorType());
-  mlir::Type llvmTy = getTypeConverter()->convertType(op.getType());
+  const mlir::Type llvmTy = getTypeConverter()->convertType(op.getType());
   mlir::Value amt = adaptor.getAmount();
   mlir::Value val = adaptor.getValue();
 
-  // TODO(cir): Assert for vector types
-  assert((cirValTy && cirAmtTy) &&
-         "shift input type must be integer or vector type, otherwise NYI");
+  auto cirAmtTy = mlir::dyn_cast<cir::IntType>(op.getAmount().getType());
+  bool isUnsigned;
+  if (cirAmtTy) {
+    auto cirValTy = mlir::cast<cir::IntType>(op.getValue().getType());
+    isUnsigned = cirValTy.isUnsigned();
 
-  assert((cirValTy == op.getType()) && "inconsistent operands' types NYI");
-
-  // Ensure shift amount is the same type as the value. Some undefined
-  // behavior might occur in the casts below as per [C99 6.5.7.3].
-  // Vector type shift amount needs no cast as type consistency is expected to
-  // be already be enforced at CIRGen.
-  if (cirAmtTy)
-    amt = getLLVMIntCast(rewriter, amt, mlir::cast<mlir::IntegerType>(llvmTy),
-                         true, cirAmtTy.getWidth(), cirValTy.getWidth());
+    // Ensure shift amount is the same type as the value. Some undefined
+    // behavior might occur in the casts below as per [C99 6.5.7.3].
+    // Vector type shift amount needs no cast as type consistency is expected to
+    // be already be enforced at CIRGen.
+    if (cirAmtTy)
+      amt = getLLVMIntCast(rewriter, amt, llvmTy, true, cirAmtTy.getWidth(),
+                           cirValTy.getWidth());
+  } else {
+    auto cirValVTy = mlir::cast<cir::VectorType>(op.getValue().getType());
+    isUnsigned =
+        mlir::cast<cir::IntType>(cirValVTy.getElementType()).isUnsigned();
+  }
 
   // Lower to the proper LLVM shift operation.
   if (op.getIsShiftleft()) {
     rewriter.replaceOpWithNewOp<mlir::LLVM::ShlOp>(op, llvmTy, val, amt);
-  } else {
-    assert(!cir::MissingFeatures::vectorType());
-    bool isUnsigned = !cirValTy.isSigned();
-    if (isUnsigned)
-      rewriter.replaceOpWithNewOp<mlir::LLVM::LShrOp>(op, llvmTy, val, amt);
-    else
-      rewriter.replaceOpWithNewOp<mlir::LLVM::AShrOp>(op, llvmTy, val, amt);
+    return mlir::success();
   }
 
+  if (isUnsigned)
+    rewriter.replaceOpWithNewOp<mlir::LLVM::LShrOp>(op, llvmTy, val, amt);
+  else
+    rewriter.replaceOpWithNewOp<mlir::LLVM::AShrOp>(op, llvmTy, val, amt);
   return mlir::success();
 }
 
@@ -1646,7 +1651,8 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                CIRToLLVMTrapOpLowering,
                CIRToLLVMUnaryOpLowering,
                CIRToLLVMVecCreateOpLowering,
-               CIRToLLVMVecExtractOpLowering
+               CIRToLLVMVecExtractOpLowering,
+               CIRToLLVMVecInsertOpLowering
       // clang-format on
       >(converter, patterns.getContext());
 
@@ -1760,6 +1766,14 @@ mlir::LogicalResult CIRToLLVMVecExtractOpLowering::matchAndRewrite(
     mlir::ConversionPatternRewriter &rewriter) const {
   rewriter.replaceOpWithNewOp<mlir::LLVM::ExtractElementOp>(
       op, adaptor.getVec(), adaptor.getIndex());
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMVecInsertOpLowering::matchAndRewrite(
+    cir::VecInsertOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  rewriter.replaceOpWithNewOp<mlir::LLVM::InsertElementOp>(
+      op, adaptor.getVec(), adaptor.getValue(), adaptor.getIndex());
   return mlir::success();
 }
 
