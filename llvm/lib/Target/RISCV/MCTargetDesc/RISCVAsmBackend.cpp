@@ -616,11 +616,13 @@ bool RISCVAsmBackend::evaluateTargetFixup(
   return AUIPCFixup->getTargetKind() == RISCV::fixup_riscv_pcrel_hi20;
 }
 
-bool RISCVAsmBackend::handleAddSubRelocations(const MCAssembler &Asm,
-                                              const MCFragment &F,
-                                              const MCFixup &Fixup,
-                                              const MCValue &Target,
-                                              uint64_t &FixedValue) const {
+bool RISCVAsmBackend::addReloc(MCAssembler &Asm, const MCFragment &F,
+                               const MCFixup &Fixup, const MCValue &Target,
+                               uint64_t &FixedValue, bool IsResolved,
+                               const MCSubtargetInfo *STI) {
+  if (!Target.getSubSym())
+    return MCAsmBackend::addReloc(Asm, F, Fixup, Target, FixedValue, IsResolved,
+                                  STI);
   assert(Target.getSpecifier() == 0 &&
          "relocatable SymA-SymB cannot have relocation specifier");
   uint64_t FixedValueA, FixedValueB;
@@ -653,9 +655,8 @@ bool RISCVAsmBackend::handleAddSubRelocations(const MCAssembler &Asm,
   MCValue B = MCValue::get(Target.getSubSym());
   auto FA = MCFixup::create(Fixup.getOffset(), nullptr, TA);
   auto FB = MCFixup::create(Fixup.getOffset(), nullptr, TB);
-  auto &Assembler = const_cast<MCAssembler &>(Asm);
-  Asm.getWriter().recordRelocation(Assembler, &F, FA, A, FixedValueA);
-  Asm.getWriter().recordRelocation(Assembler, &F, FB, B, FixedValueB);
+  Asm.getWriter().recordRelocation(Asm, &F, FA, A, FixedValueA);
+  Asm.getWriter().recordRelocation(Asm, &F, FB, B, FixedValueB);
   FixedValue = FixedValueA - FixedValueB;
   return true;
 }
