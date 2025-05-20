@@ -66,6 +66,8 @@ public:
   }
 };
 
+// The TrailingObjects for this class contain the function return type in the
+// first CanQualType slot, followed by the argument types.
 class CIRGenFunctionInfo final
     : public llvm::FoldingSetNode,
       private llvm::TrailingObjects<CIRGenFunctionInfo, CanQualType> {
