@@ -531,12 +531,8 @@ class VOP3PXe <bits<7> op, VOPProfile MFMAPfl, bit acc_cd = 0> : Enc128, VOP3Pe_
   bits<4> src0_modifiers;
   bits<4> src1_modifiers;
 
-  bits<1> neg_src2;
-  bits<1> abs_src2;
   // Inst{7-0} = unused
   // Inst{10-8} = neg_hi;
-  let Inst{10} = abs_src2; //neg_hi[2]
-
   // Inst{13-11} = op_sel
   let Inst{11} = src0_modifiers{2}; //opsel[0]
   let Inst{12} = src1_modifiers{2}; //opsel[1]
@@ -551,7 +547,6 @@ class VOP3PXe <bits<7> op, VOPProfile MFMAPfl, bit acc_cd = 0> : Enc128, VOP3Pe_
   let Inst{59} = src0_modifiers{3}; //opsel_hi[0]
   let Inst{60} = src1_modifiers{3}; //opsel_hi[1]
   // Inst{63-61} = neg;
-  let Inst{63} = neg_src2; //neg_lo[2]
 
   // The high half of the encoding is the unscaled mfma op.
   //
@@ -1444,8 +1439,6 @@ class getVOP3MAIScaledPat<VOPProfile P, SDPatternOperator node> {
                       // mfma
                       [(set P.DstVT:$vdst, (node P.Src0VT:$src0, P.Src1VT:$src1, P.Src2VT:$src2,
                                             timm:$cbsz, timm:$blgp,
-                                            i1:$neg_src2,
-                                            i1:$abs_src2,
                                             MFMALdScaleModifierOp:$src0_modifiers,
                                             i32:$scale_src0,
                                             MFMALdScaleModifierOp:$src1_modifiers,
@@ -1453,9 +1446,7 @@ class getVOP3MAIScaledPat<VOPProfile P, SDPatternOperator node> {
                                             ))],
                       // smfmac
                       [(set P.DstVT:$vdst, (node P.Src0VT:$src0, P.Src1VT:$src1, P.Src2VT:$src2, i32:$idx,
-                                            timm:$cbsz, timm:$blgp,
-                                            i1:$neg_src2,
-                                            i1:$abs_src2,
+                                            timm:$cbsz, timm:$abid,
                                             MFMALdScaleModifierOp:$src0_modifiers,
                                             i32:$scale_src0,
                                             MFMALdScaleModifierOp:$src1_modifiers,

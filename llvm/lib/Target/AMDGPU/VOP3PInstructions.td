@@ -829,13 +829,12 @@ class MFMA_F8F6F4_WithSizeTable_Helper<VOP3_Pseudo  ps, string F8F8Op> :
 // Currently assumes scaled instructions never have abid
 class MAIFrag<SDPatternOperator Op, code pred, bit HasAbid = true, bit Scaled = false> : PatFrag <
   !if(Scaled, (ops node:$src0, node:$src1, node:$src2, node:$cbsz, node:$blgp,
-                   node:$neg_src2, node:$abs_src2,
                    node:$src0_modifiers, node:$scale_src0,
                    node:$src1_modifiers, node:$scale_src1),
               !con((ops node:$src0, node:$src1, node:$src2, node:$cbsz),
                    !if(HasAbid, (ops node:$abid), (ops)),
                     (ops node:$blgp))),
-  !if(Scaled, (Op $src0, $src1, $src2, $cbsz, $blgp, $neg_src2, $abs_src2, $src0_modifiers, $scale_src0, $src1_modifiers, $scale_src1),
+  !if(Scaled, (Op $src0, $src1, $src2, $cbsz, $blgp, $src0_modifiers, $scale_src0, $src1_modifiers, $scale_src1),
               !if(HasAbid, (Op $src0, $src1, $src2, $cbsz, $abid, $blgp),
                            (Op $src0, $src1, $src2, $cbsz, $blgp))),
   pred
@@ -887,6 +886,8 @@ class MAIInst<string OpName, VOPProfile P, SDPatternOperator node, bit Scaled = 
 
 // FIXME: Intrinsic should probably not have op_sel operands, we can
 // pattern match byte select patterns into op_sel.
+// FIXME: Missing neg and clamp modifiers
+//
 // FIXME: Usual syntax for op_sel is quite hostile here.
 class ScaledMAIInst<string OpName, MAIInst BaseInst, SDPatternOperator node> :
   MAIInst<OpName, BaseInst.Pfl, node, /*Scaled=*/true> {
@@ -894,13 +895,11 @@ class ScaledMAIInst<string OpName, MAIInst BaseInst, SDPatternOperator node> :
   let InOperandList = !con(BaseInst.InOperandList,
     (ins VSrc_b32:$scale_src0,
          VSrc_b32:$scale_src1,
-         neg_lo_src2:$neg_src2,
-         neg_hi_src2:$abs_src2,
          op_sel0:$src0_modifiers,
          op_sel_hi0:$src1_modifiers));
   let AsmOperands =
     "$vdst, $src0, $src1, $src2, $scale_src0, $scale_src1"
-    "$neg_src2$abs_src2$src0_modifiers$src1_modifiers$cbsz$blgp";
+    "$src0_modifiers$src1_modifiers$cbsz$blgp";
   let AsmMatchConverter = "cvtScaledMFMA";
   let FixedSize = 1;
   let Size = 16;

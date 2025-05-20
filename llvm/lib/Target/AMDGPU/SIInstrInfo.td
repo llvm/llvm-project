@@ -310,7 +310,7 @@ def SIdenorm_mode : SDNode<"AMDGPUISD::DENORM_MODE",
 class UnscaledMFMAOptimizationPat<SDPatternOperator intrin> : PatFrag<
   (ops node:$srca, node:$srcb, node:$srcc,
        node:$cbsz, node:$blgp),
-  (intrin $srca, $srcb, $srcc, $cbsz, $blgp, 0, 0,
+  (intrin $srca, $srcb, $srcc, $cbsz, $blgp,
           srcvalue, 0, srcvalue, 0)
 >;
 
@@ -1243,9 +1243,6 @@ def op_sel0 : ArrayOperand0<"op_sel", "OpSel">;
 def op_sel_hi0 : ArrayOperand0<"op_sel_hi", "OpSelHi">;
 def neg_lo0 : ArrayOperand0<"neg_lo", "NegLo">;
 def neg_hi0 : ArrayOperand0<"neg_hi", "NegHi">;
-
-def neg_lo_src2 : CustomOperand<i1, 1, "NegLoSrc2">;
-def neg_hi_src2 : CustomOperand<i1, 1, "NegHiSrc2">;
 
 def IndexKey16bit : CustomOperand<i32, 1>;
 def IndexKey8bit : CustomOperand<i32, 1>;

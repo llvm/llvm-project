@@ -1297,20 +1297,6 @@ void AMDGPUInstPrinter::printNegHi(const MCInst *MI, unsigned OpNo,
   printPackedModifier(MI, " neg_hi:[", SISrcMods::NEG_HI, O);
 }
 
-void AMDGPUInstPrinter::printNegLoSrc2(const MCInst *MI, unsigned OpNo,
-                                       const MCSubtargetInfo &STI,
-                                       raw_ostream &O) {
-  if (unsigned NegLo = !!(MI->getOperand(OpNo).getImm()))
-    O << " neg_lo:[0,0," << NegLo << ']';
-}
-
-void AMDGPUInstPrinter::printNegHiSrc2(const MCInst *MI, unsigned OpNo,
-                                       const MCSubtargetInfo &STI,
-                                       raw_ostream &O) {
-  if (unsigned NegHi = !!(MI->getOperand(OpNo).getImm()))
-    O << " neg_hi:[0,0," << NegHi << ']';
-}
-
 void AMDGPUInstPrinter::printIndexKey8bit(const MCInst *MI, unsigned OpNo,
                                           const MCSubtargetInfo &STI,
                                           raw_ostream &O) {
