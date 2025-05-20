@@ -291,7 +291,12 @@ public:
     case RISCV::C_SW:
     case RISCV::C_LW:
     case RISCV::C_FSW:
-    case RISCV::C_FLW: {
+    case RISCV::C_FLW:
+    case RISCV::C_LBU:
+    case RISCV::C_LH:
+    case RISCV::C_LHU:
+    case RISCV::C_SB:
+    case RISCV::C_SH: {
       MCRegister Reg = Inst.getOperand(1).getReg();
       auto TargetRegState = getGPRState(Reg);
       if (TargetRegState && Reg != RISCV::X0) {

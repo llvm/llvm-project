@@ -22,6 +22,8 @@
 # CHECK-NEXT:     1032: 00a02423     	sw	a0, 0x8(zero)
 # CHECK-NEXT:     1036: 00101097     	auipc	ra, 0x101
 # CHECK-NEXT:     103a: fd6080e7     	jalr	-0x2a(ra) <func>
+# CHECK-NEXT:     103e: 00102437     	lui	s0, 0x102
+# CHECK-NEXT:     1042: 8800         	sb	s0, 0x0(s0) <target+0xffffc>
 
 .global _start
 .text
@@ -41,21 +43,18 @@ _start:
 
   # test block #1
   lla a0, target     # addi
-
   auipc a0, 0x1
   c.addi a0, -0x4    # c.addi
 
   # test block #2
   c.lui a0, 0x2
   addiw a1, a0, 0x4  # addiw
-
   c.lui a0, 0x2
   c.addiw a0, 0x4    # c.addiw
 
   # test block #3
   lui a0, 0x102
   sw a1, 0x8(a0)     # sw
-
   lui a0, 0x102
   c.lw a0, 0x8(a0)   # lw
 
@@ -83,6 +82,16 @@ _start:
 
   # test #6
   call func
+
+  # test #7 zcb extension
+  lui x8, 0x102
+  # the immediate value for Zcb extension is heavily bounded, so we will relax
+  # the requirement of hitting one of the labels and focus on correctness of the
+  # resolution. This can be verified by looking at the source: The upper bits of
+  # lui make the far jump related to .skip 0x100000 and then 8 more bytes must be
+  # traversed before we hit far_target--.skip 0x4 and .word 1 in target. Adding 8
+  # to address resolved for the instruction below yields exactly the desired label.
+  c.sb x8, 0(x8)
 
 # these are the labels that the instructions above are expecteed to resolve to
 .section .data
