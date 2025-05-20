@@ -6747,6 +6747,9 @@ public:
     /// example, in a for-range initializer).
     bool InLifetimeExtendingContext = false;
 
+    /// Whether evaluating an expression for a switch case label.
+    bool IsCaseExpr = false;
+
     /// Whether we should rebuild CXXDefaultArgExpr and CXXDefaultInitExpr.
     bool RebuildDefaultArgOrDefaultInit = false;
 
@@ -6766,9 +6769,6 @@ public:
       DeclContext *Context = nullptr;
     };
     std::optional<InitializationContext> DelayedDefaultInitializationContext;
-
-    /// Whether evaluating an expression for a switch case label.
-    bool IsCaseExpr = false;
 
     ExpressionEvaluationContextRecord(ExpressionEvaluationContext Context,
                                       unsigned NumCleanupObjects,
