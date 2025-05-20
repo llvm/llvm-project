@@ -19,8 +19,11 @@ static cl::SubCommand
                    "Instruction Mix (requires asm-printer remarks)");
 
 static cl::opt<std::string>
-    FunctionFilterRE("rfilter", cl::sub(InstructionMix), cl::init(".*"),
-                     cl::ValueOptional,
+    FunctionFilter("filter", cl::sub(InstructionMix), cl::ValueOptional,
+                   cl::desc("Optional function name to filter collection by"));
+
+static cl::opt<std::string>
+    FunctionFilterRE("rfilter", cl::sub(InstructionMix), cl::ValueOptional,
                      cl::desc("Optional function name to filter collection by "
                               "(accepts regular expressions)"));
 
@@ -34,6 +37,14 @@ static cl::opt<ReportStyleOptions> ReportStyle(
 
 INPUT_FORMAT_COMMAND_LINE_OPTIONS(InstructionMix)
 INPUT_OUTPUT_COMMAND_LINE_OPTIONS(InstructionMix)
+
+static FilterMatcher getRemarkFilter() {
+  if (FunctionFilter.getNumOccurrences())
+    return {FunctionFilter, "filter", false};
+  if (FunctionFilterRE.getNumOccurrences())
+    return {FunctionFilterRE, "rfilter", true};
+  return {".*", "<implicit>", true};
+}
 
 static Error tryInstructionMix() {
   auto MaybeOF =
@@ -49,11 +60,9 @@ static Error tryInstructionMix() {
   if (!MaybeParser)
     return MaybeParser.takeError();
 
-  Regex Filter(FunctionFilterRE);
-  std::string Error;
-  if (!Filter.isValid(Error))
-    return createStringError(make_error_code(std::errc::invalid_argument),
-                             Twine("invalid argument '--rfilter=") + FunctionFilterRE + "': " + Error);
+  FilterMatcher Filter = getRemarkFilter();
+  if (auto E = Filter.isValid())
+    return E;
 
   // Collect the histogram of instruction counts.
   std::unordered_map<std::string, unsigned> Histogram;

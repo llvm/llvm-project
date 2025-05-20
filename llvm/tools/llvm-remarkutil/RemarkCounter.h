@@ -45,26 +45,6 @@ inline std::string groupByToStr(GroupBy GroupBy) {
   }
 }
 
-/// Filter object which can be either a string or a regex to match with the
-/// remark properties.
-struct FilterMatcher {
-  Regex FilterRE;
-  std::string FilterStr;
-  bool IsRegex;
-  FilterMatcher(std::string Filter, bool IsRegex) : IsRegex(IsRegex) {
-    if (IsRegex)
-      FilterRE = Regex(Filter);
-    else
-      FilterStr = Filter;
-  }
-
-  bool match(StringRef StringToMatch) const {
-    if (IsRegex)
-      return FilterRE.match(StringToMatch);
-    return FilterStr == StringToMatch.trim().str();
-  }
-};
-
 /// Filter out remarks based on remark properties based on name, pass name,
 /// argument and type.
 struct Filters {
@@ -160,12 +140,9 @@ struct ArgumentCounter : Counter {
                         StringRef Buffer, Filters &Filter) {
     ArgumentCounter AC;
     AC.Group = Group;
-    for (auto &Arg : Arguments) {
-      if (Arg.IsRegex) {
-        if (auto E = checkRegex(Arg.FilterRE))
-          return std::move(E);
-      }
-    }
+    for (auto &Arg : Arguments)
+      if (auto E = Arg.isValid())
+        return E;
     if (auto E = AC.getAllMatchingArgumentsInRemark(Buffer, Arguments, Filter))
       return std::move(E);
     return AC;

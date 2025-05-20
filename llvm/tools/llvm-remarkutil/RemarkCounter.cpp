@@ -112,14 +112,14 @@ static unsigned getValForKey(StringRef Key, const Remark &Remark) {
 }
 
 Error Filters::regexArgumentsValid() {
-  if (RemarkNameFilter && RemarkNameFilter->IsRegex)
-    if (auto E = checkRegex(RemarkNameFilter->FilterRE))
+  if (RemarkNameFilter)
+    if (auto E = RemarkNameFilter->isValid())
       return E;
-  if (PassNameFilter && PassNameFilter->IsRegex)
-    if (auto E = checkRegex(PassNameFilter->FilterRE))
+  if (PassNameFilter)
+    if (auto E = PassNameFilter->isValid())
       return E;
-  if (ArgFilter && ArgFilter->IsRegex)
-    if (auto E = checkRegex(ArgFilter->FilterRE))
+  if (ArgFilter)
+    if (auto E = ArgFilter->isValid())
       return E;
   return Error::success();
 }
@@ -254,19 +254,19 @@ Expected<Filters> getRemarkFilter() {
   std::optional<FilterMatcher> RemarkArgFilter;
   std::optional<Type> RemarkType;
   if (!RemarkNameOpt.empty())
-    RemarkNameFilter = {RemarkNameOpt, false};
+    RemarkNameFilter = {RemarkNameOpt, "remark-name", false};
   else if (!RemarkNameOptRE.empty())
-    RemarkNameFilter = {RemarkNameOptRE, true};
+    RemarkNameFilter = {RemarkNameOptRE, "rremark-name", true};
   if (!PassNameOpt.empty())
-    PassNameFilter = {PassNameOpt, false};
+    PassNameFilter = {PassNameOpt, "pass-name", false};
   else if (!PassNameOptRE.empty())
-    PassNameFilter = {PassNameOptRE, true};
+    PassNameFilter = {PassNameOptRE, "rpass-name", true};
   if (RemarkTypeOpt != Type::Failure)
     RemarkType = RemarkTypeOpt;
   if (!RemarkFilterArgByOpt.empty())
-    RemarkArgFilter = {RemarkFilterArgByOpt, false};
+    RemarkArgFilter = {RemarkFilterArgByOpt, "filter-arg-by", false};
   else if (!RemarkArgFilterOptRE.empty())
-    RemarkArgFilter = {RemarkArgFilterOptRE, true};
+    RemarkArgFilter = {RemarkArgFilterOptRE, "rfilter-arg-by", true};
   // Create RemarkFilter.
   return Filters::createRemarkFilter(std::move(RemarkNameFilter),
                                      std::move(PassNameFilter),
@@ -313,12 +313,12 @@ static Error collectRemarks() {
     SmallVector<FilterMatcher, 4> ArgumentsVector;
     if (!Keys.empty()) {
       for (auto &Key : Keys)
-        ArgumentsVector.push_back({Key, false});
+        ArgumentsVector.push_back({Key, "count-by", false});
     } else if (!RKeys.empty())
       for (auto Key : RKeys)
-        ArgumentsVector.push_back({Key, true});
+        ArgumentsVector.push_back({Key, "count-by", true});
     else
-      ArgumentsVector.push_back({".*", true});
+      ArgumentsVector.push_back({".*", "count-by", true});
 
     Expected<ArgumentCounter> AC = ArgumentCounter::createArgumentCounter(
         GroupByOpt, ArgumentsVector, Buffer, Filter);

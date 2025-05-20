@@ -18,6 +18,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Regex.h"
 #include "llvm/Support/ToolOutputFile.h"
 
 // Keep input + output help + names consistent across the various modes via a
@@ -55,5 +56,37 @@ Expected<std::unique_ptr<ToolOutputFile>>
 getOutputFileWithFlags(StringRef OutputFileName, sys::fs::OpenFlags Flags);
 Expected<std::unique_ptr<ToolOutputFile>>
 getOutputFileForRemarks(StringRef OutputFileName, Format OutputFormat);
+
+/// Filter object which can be either a string or a regex to match with the
+/// remark properties.
+class FilterMatcher {
+  Regex FilterRE;
+  std::string FilterStr;
+  std::string Argument;
+  bool IsRegex;
+
+public:
+  FilterMatcher(StringRef Filter, StringRef Argument, bool IsRegex)
+      : FilterRE(Filter), FilterStr(Filter), Argument(Argument),
+        IsRegex(IsRegex) {}
+
+  bool match(StringRef StringToMatch) const {
+    if (IsRegex)
+      return FilterRE.match(StringToMatch);
+    return FilterStr == StringToMatch.trim().str();
+  }
+
+  Error isValid() const {
+    if (!IsRegex)
+      return Error::success();
+    std::string Error;
+    if (FilterRE.isValid(Error))
+      return Error::success();
+    return createStringError(make_error_code(std::errc::invalid_argument),
+                             "invalid argument '--" + Argument + "=" +
+                                 FilterStr + "': " + Error);
+  }
+};
+
 } // namespace remarks
 } // namespace llvm
