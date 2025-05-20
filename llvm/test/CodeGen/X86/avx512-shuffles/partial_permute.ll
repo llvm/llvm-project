@@ -1374,11 +1374,10 @@ define <4 x i32> @test_masked_z_16xi32_to_4xi32_perm_mask0(<16 x i32> %vec, <4 x
 define <4 x i32> @test_masked_16xi32_to_4xi32_perm_mask1(<16 x i32> %vec, <4 x i32> %vec2, <4 x i32> %mask) {
 ; CHECK-LABEL: test_masked_16xi32_to_4xi32_perm_mask1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $xmm1 killed $xmm1 def $ymm1
-; CHECK-NEXT:    vpmovsxbd {{.*#+}} xmm3 = [5,1,3,4]
-; CHECK-NEXT:    vextracti64x4 $1, %zmm0, %ymm0
+; CHECK-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
+; CHECK-NEXT:    vpmovsxbd {{.*#+}} xmm3 = [13,9,11,12]
 ; CHECK-NEXT:    vptestnmd %xmm2, %xmm2, %k1
-; CHECK-NEXT:    vpermd %ymm0, %ymm3, %ymm1 {%k1}
+; CHECK-NEXT:    vpermd %zmm0, %zmm3, %zmm1 {%k1}
 ; CHECK-NEXT:    vmovdqa %xmm1, %xmm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -1391,11 +1390,10 @@ define <4 x i32> @test_masked_16xi32_to_4xi32_perm_mask1(<16 x i32> %vec, <4 x i
 define <4 x i32> @test_masked_z_16xi32_to_4xi32_perm_mask1(<16 x i32> %vec, <4 x i32> %mask) {
 ; CHECK-LABEL: test_masked_z_16xi32_to_4xi32_perm_mask1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpmovsxbd {{.*#+}} xmm2 = [5,1,3,4]
-; CHECK-NEXT:    vextracti64x4 $1, %zmm0, %ymm0
+; CHECK-NEXT:    vpmovsxbd {{.*#+}} xmm2 = [13,9,11,12]
 ; CHECK-NEXT:    vptestnmd %xmm1, %xmm1, %k1
-; CHECK-NEXT:    vpermd %ymm0, %ymm2, %ymm0 {%k1} {z}
-; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; CHECK-NEXT:    vpermd %zmm0, %zmm2, %zmm0 {%k1} {z}
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %shuf = shufflevector <16 x i32> %vec, <16 x i32> undef, <4 x i32> <i32 13, i32 9, i32 11, i32 12>
@@ -1773,24 +1771,13 @@ define <4 x i32> @test_masked_z_16xi32_to_4xi32_perm_mem_mask3(ptr %vp, <4 x i32
 }
 
 define <4 x i32> @test_16xi32_to_4xi32_perm_mask9(<16 x i32> %vec) {
-; CHECK-FAST-LABEL: test_16xi32_to_4xi32_perm_mask9:
-; CHECK-FAST:       # %bb.0:
-; CHECK-FAST-NEXT:    vpmovsxbd {{.*#+}} xmm1 = [12,9,4,10]
-; CHECK-FAST-NEXT:    vpermps %zmm0, %zmm1, %zmm0
-; CHECK-FAST-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
-; CHECK-FAST-NEXT:    vzeroupper
-; CHECK-FAST-NEXT:    retq
-;
-; CHECK-FAST-PERLANE-LABEL: test_16xi32_to_4xi32_perm_mask9:
-; CHECK-FAST-PERLANE:       # %bb.0:
-; CHECK-FAST-PERLANE-NEXT:    vpmovsxbd {{.*#+}} xmm1 = [4,1,0,2]
-; CHECK-FAST-PERLANE-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
-; CHECK-FAST-PERLANE-NEXT:    vpermd %ymm2, %ymm1, %ymm1
-; CHECK-FAST-PERLANE-NEXT:    vextracti128 $1, %ymm0, %xmm2
-; CHECK-FAST-PERLANE-NEXT:    vpmovsxbd {{.*#+}} xmm0 = [0,1,4,3]
-; CHECK-FAST-PERLANE-NEXT:    vpermi2d %xmm2, %xmm1, %xmm0
-; CHECK-FAST-PERLANE-NEXT:    vzeroupper
-; CHECK-FAST-PERLANE-NEXT:    retq
+; CHECK-LABEL: test_16xi32_to_4xi32_perm_mask9:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpmovsxbd {{.*#+}} xmm1 = [12,9,4,10]
+; CHECK-NEXT:    vpermps %zmm0, %zmm1, %zmm0
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
   %res = shufflevector <16 x i32> %vec, <16 x i32> undef, <4 x i32> <i32 12, i32 9, i32 4, i32 10>
   ret <4 x i32> %res
 }
@@ -1930,22 +1917,38 @@ define <2 x i64> @test_masked_z_4xi64_to_2xi64_perm_mem_mask1(ptr %vp, <2 x i64>
 }
 
 define <4 x i64> @test_8xi64_to_4xi64_perm_mask0(<8 x i64> %vec) {
-; CHECK-LABEL: test_8xi64_to_4xi64_perm_mask0:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vextractf64x4 $1, %zmm0, %ymm0
-; CHECK-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[2,3,2,1]
-; CHECK-NEXT:    retq
+; CHECK-FAST-LABEL: test_8xi64_to_4xi64_perm_mask0:
+; CHECK-FAST:       # %bb.0:
+; CHECK-FAST-NEXT:    vpmovsxbq {{.*#+}} ymm1 = [6,7,6,5]
+; CHECK-FAST-NEXT:    vpermpd %zmm0, %zmm1, %zmm0
+; CHECK-FAST-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; CHECK-FAST-NEXT:    retq
+;
+; CHECK-FAST-PERLANE-LABEL: test_8xi64_to_4xi64_perm_mask0:
+; CHECK-FAST-PERLANE:       # %bb.0:
+; CHECK-FAST-PERLANE-NEXT:    vextractf64x4 $1, %zmm0, %ymm0
+; CHECK-FAST-PERLANE-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[2,3,2,1]
+; CHECK-FAST-PERLANE-NEXT:    retq
   %res = shufflevector <8 x i64> %vec, <8 x i64> undef, <4 x i32> <i32 6, i32 7, i32 6, i32 5>
   ret <4 x i64> %res
 }
 define <4 x i64> @test_masked_8xi64_to_4xi64_perm_mask0(<8 x i64> %vec, <4 x i64> %vec2, <4 x i64> %mask) {
-; CHECK-LABEL: test_masked_8xi64_to_4xi64_perm_mask0:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vextracti64x4 $1, %zmm0, %ymm0
-; CHECK-NEXT:    vptestnmq %ymm2, %ymm2, %k1
-; CHECK-NEXT:    vpermq {{.*#+}} ymm1 {%k1} = ymm0[2,3,2,1]
-; CHECK-NEXT:    vmovdqa %ymm1, %ymm0
-; CHECK-NEXT:    retq
+; CHECK-FAST-LABEL: test_masked_8xi64_to_4xi64_perm_mask0:
+; CHECK-FAST:       # %bb.0:
+; CHECK-FAST-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; CHECK-FAST-NEXT:    vpmovsxbq {{.*#+}} ymm3 = [6,7,6,5]
+; CHECK-FAST-NEXT:    vptestnmq %ymm2, %ymm2, %k1
+; CHECK-FAST-NEXT:    vpermq %zmm0, %zmm3, %zmm1 {%k1}
+; CHECK-FAST-NEXT:    vmovdqa %ymm1, %ymm0
+; CHECK-FAST-NEXT:    retq
+;
+; CHECK-FAST-PERLANE-LABEL: test_masked_8xi64_to_4xi64_perm_mask0:
+; CHECK-FAST-PERLANE:       # %bb.0:
+; CHECK-FAST-PERLANE-NEXT:    vextracti64x4 $1, %zmm0, %ymm0
+; CHECK-FAST-PERLANE-NEXT:    vptestnmq %ymm2, %ymm2, %k1
+; CHECK-FAST-PERLANE-NEXT:    vpermq {{.*#+}} ymm1 {%k1} = ymm0[2,3,2,1]
+; CHECK-FAST-PERLANE-NEXT:    vmovdqa %ymm1, %ymm0
+; CHECK-FAST-PERLANE-NEXT:    retq
   %shuf = shufflevector <8 x i64> %vec, <8 x i64> undef, <4 x i32> <i32 6, i32 7, i32 6, i32 5>
   %cmp = icmp eq <4 x i64> %mask, zeroinitializer
   %res = select <4 x i1> %cmp, <4 x i64> %shuf, <4 x i64> %vec2
@@ -1953,35 +1956,34 @@ define <4 x i64> @test_masked_8xi64_to_4xi64_perm_mask0(<8 x i64> %vec, <4 x i64
 }
 
 define <4 x i64> @test_masked_z_8xi64_to_4xi64_perm_mask0(<8 x i64> %vec, <4 x i64> %mask) {
-; CHECK-LABEL: test_masked_z_8xi64_to_4xi64_perm_mask0:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vextracti64x4 $1, %zmm0, %ymm0
-; CHECK-NEXT:    vptestnmq %ymm1, %ymm1, %k1
-; CHECK-NEXT:    vpermq {{.*#+}} ymm0 {%k1} {z} = ymm0[2,3,2,1]
-; CHECK-NEXT:    retq
+; CHECK-FAST-LABEL: test_masked_z_8xi64_to_4xi64_perm_mask0:
+; CHECK-FAST:       # %bb.0:
+; CHECK-FAST-NEXT:    vpmovsxbq {{.*#+}} ymm2 = [6,7,6,5]
+; CHECK-FAST-NEXT:    vptestnmq %ymm1, %ymm1, %k1
+; CHECK-FAST-NEXT:    vpermq %zmm0, %zmm2, %zmm0 {%k1} {z}
+; CHECK-FAST-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; CHECK-FAST-NEXT:    retq
+;
+; CHECK-FAST-PERLANE-LABEL: test_masked_z_8xi64_to_4xi64_perm_mask0:
+; CHECK-FAST-PERLANE:       # %bb.0:
+; CHECK-FAST-PERLANE-NEXT:    vextracti64x4 $1, %zmm0, %ymm0
+; CHECK-FAST-PERLANE-NEXT:    vptestnmq %ymm1, %ymm1, %k1
+; CHECK-FAST-PERLANE-NEXT:    vpermq {{.*#+}} ymm0 {%k1} {z} = ymm0[2,3,2,1]
+; CHECK-FAST-PERLANE-NEXT:    retq
   %shuf = shufflevector <8 x i64> %vec, <8 x i64> undef, <4 x i32> <i32 6, i32 7, i32 6, i32 5>
   %cmp = icmp eq <4 x i64> %mask, zeroinitializer
   %res = select <4 x i1> %cmp, <4 x i64> %shuf, <4 x i64> zeroinitializer
   ret <4 x i64> %res
 }
 define <4 x i64> @test_masked_8xi64_to_4xi64_perm_mask1(<8 x i64> %vec, <4 x i64> %vec2, <4 x i64> %mask) {
-; CHECK-FAST-LABEL: test_masked_8xi64_to_4xi64_perm_mask1:
-; CHECK-FAST:       # %bb.0:
-; CHECK-FAST-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
-; CHECK-FAST-NEXT:    vpmovsxbq {{.*#+}} ymm3 = [6,4,6,1]
-; CHECK-FAST-NEXT:    vptestnmq %ymm2, %ymm2, %k1
-; CHECK-FAST-NEXT:    vpermq %zmm0, %zmm3, %zmm1 {%k1}
-; CHECK-FAST-NEXT:    vmovdqa %ymm1, %ymm0
-; CHECK-FAST-NEXT:    retq
-;
-; CHECK-FAST-PERLANE-LABEL: test_masked_8xi64_to_4xi64_perm_mask1:
-; CHECK-FAST-PERLANE:       # %bb.0:
-; CHECK-FAST-PERLANE-NEXT:    vextracti64x4 $1, %zmm0, %ymm3
-; CHECK-FAST-PERLANE-NEXT:    vpblendd {{.*#+}} ymm0 = ymm3[0,1],ymm0[2,3],ymm3[4,5,6,7]
-; CHECK-FAST-PERLANE-NEXT:    vptestnmq %ymm2, %ymm2, %k1
-; CHECK-FAST-PERLANE-NEXT:    vpermq {{.*#+}} ymm1 {%k1} = ymm0[2,0,2,1]
-; CHECK-FAST-PERLANE-NEXT:    vmovdqa %ymm1, %ymm0
-; CHECK-FAST-PERLANE-NEXT:    retq
+; CHECK-LABEL: test_masked_8xi64_to_4xi64_perm_mask1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; CHECK-NEXT:    vpmovsxbq {{.*#+}} ymm3 = [6,4,6,1]
+; CHECK-NEXT:    vptestnmq %ymm2, %ymm2, %k1
+; CHECK-NEXT:    vpermq %zmm0, %zmm3, %zmm1 {%k1}
+; CHECK-NEXT:    vmovdqa %ymm1, %ymm0
+; CHECK-NEXT:    retq
   %shuf = shufflevector <8 x i64> %vec, <8 x i64> undef, <4 x i32> <i32 6, i32 4, i32 6, i32 1>
   %cmp = icmp eq <4 x i64> %mask, zeroinitializer
   %res = select <4 x i1> %cmp, <4 x i64> %shuf, <4 x i64> %vec2
@@ -1989,44 +1991,27 @@ define <4 x i64> @test_masked_8xi64_to_4xi64_perm_mask1(<8 x i64> %vec, <4 x i64
 }
 
 define <4 x i64> @test_masked_z_8xi64_to_4xi64_perm_mask1(<8 x i64> %vec, <4 x i64> %mask) {
-; CHECK-FAST-LABEL: test_masked_z_8xi64_to_4xi64_perm_mask1:
-; CHECK-FAST:       # %bb.0:
-; CHECK-FAST-NEXT:    vpmovsxbq {{.*#+}} ymm2 = [6,4,6,1]
-; CHECK-FAST-NEXT:    vptestnmq %ymm1, %ymm1, %k1
-; CHECK-FAST-NEXT:    vpermq %zmm0, %zmm2, %zmm0 {%k1} {z}
-; CHECK-FAST-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
-; CHECK-FAST-NEXT:    retq
-;
-; CHECK-FAST-PERLANE-LABEL: test_masked_z_8xi64_to_4xi64_perm_mask1:
-; CHECK-FAST-PERLANE:       # %bb.0:
-; CHECK-FAST-PERLANE-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
-; CHECK-FAST-PERLANE-NEXT:    vpblendd {{.*#+}} ymm0 = ymm2[0,1],ymm0[2,3],ymm2[4,5,6,7]
-; CHECK-FAST-PERLANE-NEXT:    vptestnmq %ymm1, %ymm1, %k1
-; CHECK-FAST-PERLANE-NEXT:    vpermq {{.*#+}} ymm0 {%k1} {z} = ymm0[2,0,2,1]
-; CHECK-FAST-PERLANE-NEXT:    retq
+; CHECK-LABEL: test_masked_z_8xi64_to_4xi64_perm_mask1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpmovsxbq {{.*#+}} ymm2 = [6,4,6,1]
+; CHECK-NEXT:    vptestnmq %ymm1, %ymm1, %k1
+; CHECK-NEXT:    vpermq %zmm0, %zmm2, %zmm0 {%k1} {z}
+; CHECK-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; CHECK-NEXT:    retq
   %shuf = shufflevector <8 x i64> %vec, <8 x i64> undef, <4 x i32> <i32 6, i32 4, i32 6, i32 1>
   %cmp = icmp eq <4 x i64> %mask, zeroinitializer
   %res = select <4 x i1> %cmp, <4 x i64> %shuf, <4 x i64> zeroinitializer
   ret <4 x i64> %res
 }
 define <4 x i64> @test_masked_8xi64_to_4xi64_perm_mask2(<8 x i64> %vec, <4 x i64> %vec2, <4 x i64> %mask) {
-; CHECK-FAST-LABEL: test_masked_8xi64_to_4xi64_perm_mask2:
-; CHECK-FAST:       # %bb.0:
-; CHECK-FAST-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
-; CHECK-FAST-NEXT:    vpmovsxbq {{.*#+}} ymm3 = [6,3,6,3]
-; CHECK-FAST-NEXT:    vptestnmq %ymm2, %ymm2, %k1
-; CHECK-FAST-NEXT:    vpermq %zmm0, %zmm3, %zmm1 {%k1}
-; CHECK-FAST-NEXT:    vmovdqa %ymm1, %ymm0
-; CHECK-FAST-NEXT:    retq
-;
-; CHECK-FAST-PERLANE-LABEL: test_masked_8xi64_to_4xi64_perm_mask2:
-; CHECK-FAST-PERLANE:       # %bb.0:
-; CHECK-FAST-PERLANE-NEXT:    vextracti64x4 $1, %zmm0, %ymm3
-; CHECK-FAST-PERLANE-NEXT:    vpblendd {{.*#+}} ymm0 = ymm3[0,1],ymm0[2,3],ymm3[4,5],ymm0[6,7]
-; CHECK-FAST-PERLANE-NEXT:    vptestnmq %ymm2, %ymm2, %k1
-; CHECK-FAST-PERLANE-NEXT:    vpermq {{.*#+}} ymm1 {%k1} = ymm0[2,3,2,3]
-; CHECK-FAST-PERLANE-NEXT:    vmovdqa %ymm1, %ymm0
-; CHECK-FAST-PERLANE-NEXT:    retq
+; CHECK-LABEL: test_masked_8xi64_to_4xi64_perm_mask2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; CHECK-NEXT:    vpmovsxbq {{.*#+}} ymm3 = [6,3,6,3]
+; CHECK-NEXT:    vptestnmq %ymm2, %ymm2, %k1
+; CHECK-NEXT:    vpermq %zmm0, %zmm3, %zmm1 {%k1}
+; CHECK-NEXT:    vmovdqa %ymm1, %ymm0
+; CHECK-NEXT:    retq
   %shuf = shufflevector <8 x i64> %vec, <8 x i64> undef, <4 x i32> <i32 6, i32 3, i32 6, i32 3>
   %cmp = icmp eq <4 x i64> %mask, zeroinitializer
   %res = select <4 x i1> %cmp, <4 x i64> %shuf, <4 x i64> %vec2
@@ -2034,21 +2019,13 @@ define <4 x i64> @test_masked_8xi64_to_4xi64_perm_mask2(<8 x i64> %vec, <4 x i64
 }
 
 define <4 x i64> @test_masked_z_8xi64_to_4xi64_perm_mask2(<8 x i64> %vec, <4 x i64> %mask) {
-; CHECK-FAST-LABEL: test_masked_z_8xi64_to_4xi64_perm_mask2:
-; CHECK-FAST:       # %bb.0:
-; CHECK-FAST-NEXT:    vpmovsxbq {{.*#+}} ymm2 = [6,3,6,3]
-; CHECK-FAST-NEXT:    vptestnmq %ymm1, %ymm1, %k1
-; CHECK-FAST-NEXT:    vpermq %zmm0, %zmm2, %zmm0 {%k1} {z}
-; CHECK-FAST-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
-; CHECK-FAST-NEXT:    retq
-;
-; CHECK-FAST-PERLANE-LABEL: test_masked_z_8xi64_to_4xi64_perm_mask2:
-; CHECK-FAST-PERLANE:       # %bb.0:
-; CHECK-FAST-PERLANE-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
-; CHECK-FAST-PERLANE-NEXT:    vpblendd {{.*#+}} ymm0 = ymm2[0,1],ymm0[2,3],ymm2[4,5],ymm0[6,7]
-; CHECK-FAST-PERLANE-NEXT:    vptestnmq %ymm1, %ymm1, %k1
-; CHECK-FAST-PERLANE-NEXT:    vpermq {{.*#+}} ymm0 {%k1} {z} = ymm0[2,3,2,3]
-; CHECK-FAST-PERLANE-NEXT:    retq
+; CHECK-LABEL: test_masked_z_8xi64_to_4xi64_perm_mask2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpmovsxbq {{.*#+}} ymm2 = [6,3,6,3]
+; CHECK-NEXT:    vptestnmq %ymm1, %ymm1, %k1
+; CHECK-NEXT:    vpermq %zmm0, %zmm2, %zmm0 {%k1} {z}
+; CHECK-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; CHECK-NEXT:    retq
   %shuf = shufflevector <8 x i64> %vec, <8 x i64> undef, <4 x i32> <i32 6, i32 3, i32 6, i32 3>
   %cmp = icmp eq <4 x i64> %mask, zeroinitializer
   %res = select <4 x i1> %cmp, <4 x i64> %shuf, <4 x i64> zeroinitializer
@@ -2064,9 +2041,8 @@ define <4 x i64> @test_8xi64_to_4xi64_perm_mask3(<8 x i64> %vec) {
 ;
 ; CHECK-FAST-PERLANE-LABEL: test_8xi64_to_4xi64_perm_mask3:
 ; CHECK-FAST-PERLANE:       # %bb.0:
-; CHECK-FAST-PERLANE-NEXT:    vextractf64x4 $1, %zmm0, %ymm1
-; CHECK-FAST-PERLANE-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
-; CHECK-FAST-PERLANE-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[2,0,0,3]
+; CHECK-FAST-PERLANE-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,6,7,4,5,6,7]
+; CHECK-FAST-PERLANE-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[2,0,0,3]
 ; CHECK-FAST-PERLANE-NEXT:    retq
   %res = shufflevector <8 x i64> %vec, <8 x i64> undef, <4 x i32> <i32 6, i32 0, i32 0, i32 7>
   ret <4 x i64> %res
@@ -2083,8 +2059,7 @@ define <4 x i64> @test_masked_8xi64_to_4xi64_perm_mask3(<8 x i64> %vec, <4 x i64
 ;
 ; CHECK-FAST-PERLANE-LABEL: test_masked_8xi64_to_4xi64_perm_mask3:
 ; CHECK-FAST-PERLANE:       # %bb.0:
-; CHECK-FAST-PERLANE-NEXT:    vextracti64x4 $1, %zmm0, %ymm3
-; CHECK-FAST-PERLANE-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm3[4,5,6,7]
+; CHECK-FAST-PERLANE-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,6,7,4,5,6,7]
 ; CHECK-FAST-PERLANE-NEXT:    vptestnmq %ymm2, %ymm2, %k1
 ; CHECK-FAST-PERLANE-NEXT:    vpermq {{.*#+}} ymm1 {%k1} = ymm0[2,0,0,3]
 ; CHECK-FAST-PERLANE-NEXT:    vmovdqa %ymm1, %ymm0
@@ -2106,8 +2081,7 @@ define <4 x i64> @test_masked_z_8xi64_to_4xi64_perm_mask3(<8 x i64> %vec, <4 x i
 ;
 ; CHECK-FAST-PERLANE-LABEL: test_masked_z_8xi64_to_4xi64_perm_mask3:
 ; CHECK-FAST-PERLANE:       # %bb.0:
-; CHECK-FAST-PERLANE-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
-; CHECK-FAST-PERLANE-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm2[4,5,6,7]
+; CHECK-FAST-PERLANE-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,6,7,4,5,6,7]
 ; CHECK-FAST-PERLANE-NEXT:    vptestnmq %ymm1, %ymm1, %k1
 ; CHECK-FAST-PERLANE-NEXT:    vpermq {{.*#+}} ymm0 {%k1} {z} = ymm0[2,0,0,3]
 ; CHECK-FAST-PERLANE-NEXT:    retq
@@ -2117,23 +2091,14 @@ define <4 x i64> @test_masked_z_8xi64_to_4xi64_perm_mask3(<8 x i64> %vec, <4 x i
   ret <4 x i64> %res
 }
 define <4 x i64> @test_masked_8xi64_to_4xi64_perm_mask4(<8 x i64> %vec, <4 x i64> %vec2, <4 x i64> %mask) {
-; CHECK-FAST-LABEL: test_masked_8xi64_to_4xi64_perm_mask4:
-; CHECK-FAST:       # %bb.0:
-; CHECK-FAST-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
-; CHECK-FAST-NEXT:    vpmovsxbq {{.*#+}} ymm3 = [3,7,7,5]
-; CHECK-FAST-NEXT:    vptestnmq %ymm2, %ymm2, %k1
-; CHECK-FAST-NEXT:    vpermq %zmm0, %zmm3, %zmm1 {%k1}
-; CHECK-FAST-NEXT:    vmovdqa %ymm1, %ymm0
-; CHECK-FAST-NEXT:    retq
-;
-; CHECK-FAST-PERLANE-LABEL: test_masked_8xi64_to_4xi64_perm_mask4:
-; CHECK-FAST-PERLANE:       # %bb.0:
-; CHECK-FAST-PERLANE-NEXT:    vextracti64x4 $1, %zmm0, %ymm3
-; CHECK-FAST-PERLANE-NEXT:    vpunpckhqdq {{.*#+}} ymm0 = ymm0[1],ymm3[1],ymm0[3],ymm3[3]
-; CHECK-FAST-PERLANE-NEXT:    vptestnmq %ymm2, %ymm2, %k1
-; CHECK-FAST-PERLANE-NEXT:    vpermq {{.*#+}} ymm1 {%k1} = ymm0[2,3,3,1]
-; CHECK-FAST-PERLANE-NEXT:    vmovdqa %ymm1, %ymm0
-; CHECK-FAST-PERLANE-NEXT:    retq
+; CHECK-LABEL: test_masked_8xi64_to_4xi64_perm_mask4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; CHECK-NEXT:    vpmovsxbq {{.*#+}} ymm3 = [3,7,7,5]
+; CHECK-NEXT:    vptestnmq %ymm2, %ymm2, %k1
+; CHECK-NEXT:    vpermq %zmm0, %zmm3, %zmm1 {%k1}
+; CHECK-NEXT:    vmovdqa %ymm1, %ymm0
+; CHECK-NEXT:    retq
   %shuf = shufflevector <8 x i64> %vec, <8 x i64> undef, <4 x i32> <i32 3, i32 7, i32 7, i32 5>
   %cmp = icmp eq <4 x i64> %mask, zeroinitializer
   %res = select <4 x i1> %cmp, <4 x i64> %shuf, <4 x i64> %vec2
@@ -2141,21 +2106,13 @@ define <4 x i64> @test_masked_8xi64_to_4xi64_perm_mask4(<8 x i64> %vec, <4 x i64
 }
 
 define <4 x i64> @test_masked_z_8xi64_to_4xi64_perm_mask4(<8 x i64> %vec, <4 x i64> %mask) {
-; CHECK-FAST-LABEL: test_masked_z_8xi64_to_4xi64_perm_mask4:
-; CHECK-FAST:       # %bb.0:
-; CHECK-FAST-NEXT:    vpmovsxbq {{.*#+}} ymm2 = [3,7,7,5]
-; CHECK-FAST-NEXT:    vptestnmq %ymm1, %ymm1, %k1
-; CHECK-FAST-NEXT:    vpermq %zmm0, %zmm2, %zmm0 {%k1} {z}
-; CHECK-FAST-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
-; CHECK-FAST-NEXT:    retq
-;
-; CHECK-FAST-PERLANE-LABEL: test_masked_z_8xi64_to_4xi64_perm_mask4:
-; CHECK-FAST-PERLANE:       # %bb.0:
-; CHECK-FAST-PERLANE-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
-; CHECK-FAST-PERLANE-NEXT:    vpunpckhqdq {{.*#+}} ymm0 = ymm0[1],ymm2[1],ymm0[3],ymm2[3]
-; CHECK-FAST-PERLANE-NEXT:    vptestnmq %ymm1, %ymm1, %k1
-; CHECK-FAST-PERLANE-NEXT:    vpermq {{.*#+}} ymm0 {%k1} {z} = ymm0[2,3,3,1]
-; CHECK-FAST-PERLANE-NEXT:    retq
+; CHECK-LABEL: test_masked_z_8xi64_to_4xi64_perm_mask4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpmovsxbq {{.*#+}} ymm2 = [3,7,7,5]
+; CHECK-NEXT:    vptestnmq %ymm1, %ymm1, %k1
+; CHECK-NEXT:    vpermq %zmm0, %zmm2, %zmm0 {%k1} {z}
+; CHECK-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; CHECK-NEXT:    retq
   %shuf = shufflevector <8 x i64> %vec, <8 x i64> undef, <4 x i32> <i32 3, i32 7, i32 7, i32 5>
   %cmp = icmp eq <4 x i64> %mask, zeroinitializer
   %res = select <4 x i1> %cmp, <4 x i64> %shuf, <4 x i64> zeroinitializer
@@ -2190,40 +2147,24 @@ define <4 x i64> @test_masked_z_8xi64_to_4xi64_perm_mask5(<8 x i64> %vec, <4 x i
   ret <4 x i64> %res
 }
 define <4 x i64> @test_8xi64_to_4xi64_perm_mask6(<8 x i64> %vec) {
-; CHECK-FAST-LABEL: test_8xi64_to_4xi64_perm_mask6:
-; CHECK-FAST:       # %bb.0:
-; CHECK-FAST-NEXT:    vpmovsxbq {{.*#+}} ymm1 = [7,6,5,3]
-; CHECK-FAST-NEXT:    vpermpd %zmm0, %zmm1, %zmm0
-; CHECK-FAST-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
-; CHECK-FAST-NEXT:    retq
-;
-; CHECK-FAST-PERLANE-LABEL: test_8xi64_to_4xi64_perm_mask6:
-; CHECK-FAST-PERLANE:       # %bb.0:
-; CHECK-FAST-PERLANE-NEXT:    vextractf64x4 $1, %zmm0, %ymm1
-; CHECK-FAST-PERLANE-NEXT:    vpermpd {{.*#+}} ymm1 = ymm1[3,2,1,3]
-; CHECK-FAST-PERLANE-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1,2,3,4,5],ymm0[6,7]
-; CHECK-FAST-PERLANE-NEXT:    retq
+; CHECK-LABEL: test_8xi64_to_4xi64_perm_mask6:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpmovsxbq {{.*#+}} ymm1 = [7,6,5,3]
+; CHECK-NEXT:    vpermpd %zmm0, %zmm1, %zmm0
+; CHECK-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; CHECK-NEXT:    retq
   %res = shufflevector <8 x i64> %vec, <8 x i64> undef, <4 x i32> <i32 7, i32 6, i32 5, i32 3>
   ret <4 x i64> %res
 }
 define <4 x i64> @test_masked_8xi64_to_4xi64_perm_mask6(<8 x i64> %vec, <4 x i64> %vec2, <4 x i64> %mask) {
-; CHECK-FAST-LABEL: test_masked_8xi64_to_4xi64_perm_mask6:
-; CHECK-FAST:       # %bb.0:
-; CHECK-FAST-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
-; CHECK-FAST-NEXT:    vpmovsxbq {{.*#+}} ymm3 = [7,6,5,3]
-; CHECK-FAST-NEXT:    vptestnmq %ymm2, %ymm2, %k1
-; CHECK-FAST-NEXT:    vpermq %zmm0, %zmm3, %zmm1 {%k1}
-; CHECK-FAST-NEXT:    vmovdqa %ymm1, %ymm0
-; CHECK-FAST-NEXT:    retq
-;
-; CHECK-FAST-PERLANE-LABEL: test_masked_8xi64_to_4xi64_perm_mask6:
-; CHECK-FAST-PERLANE:       # %bb.0:
-; CHECK-FAST-PERLANE-NEXT:    vextracti64x4 $1, %zmm0, %ymm3
-; CHECK-FAST-PERLANE-NEXT:    vpermq {{.*#+}} ymm3 = ymm3[3,2,1,3]
-; CHECK-FAST-PERLANE-NEXT:    vpblendd {{.*#+}} ymm0 = ymm3[0,1,2,3,4,5],ymm0[6,7]
-; CHECK-FAST-PERLANE-NEXT:    vptestnmq %ymm2, %ymm2, %k1
-; CHECK-FAST-PERLANE-NEXT:    vpblendmq %ymm0, %ymm1, %ymm0 {%k1}
-; CHECK-FAST-PERLANE-NEXT:    retq
+; CHECK-LABEL: test_masked_8xi64_to_4xi64_perm_mask6:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; CHECK-NEXT:    vpmovsxbq {{.*#+}} ymm3 = [7,6,5,3]
+; CHECK-NEXT:    vptestnmq %ymm2, %ymm2, %k1
+; CHECK-NEXT:    vpermq %zmm0, %zmm3, %zmm1 {%k1}
+; CHECK-NEXT:    vmovdqa %ymm1, %ymm0
+; CHECK-NEXT:    retq
   %shuf = shufflevector <8 x i64> %vec, <8 x i64> undef, <4 x i32> <i32 7, i32 6, i32 5, i32 3>
   %cmp = icmp eq <4 x i64> %mask, zeroinitializer
   %res = select <4 x i1> %cmp, <4 x i64> %shuf, <4 x i64> %vec2
@@ -2231,22 +2172,13 @@ define <4 x i64> @test_masked_8xi64_to_4xi64_perm_mask6(<8 x i64> %vec, <4 x i64
 }
 
 define <4 x i64> @test_masked_z_8xi64_to_4xi64_perm_mask6(<8 x i64> %vec, <4 x i64> %mask) {
-; CHECK-FAST-LABEL: test_masked_z_8xi64_to_4xi64_perm_mask6:
-; CHECK-FAST:       # %bb.0:
-; CHECK-FAST-NEXT:    vpmovsxbq {{.*#+}} ymm2 = [7,6,5,3]
-; CHECK-FAST-NEXT:    vptestnmq %ymm1, %ymm1, %k1
-; CHECK-FAST-NEXT:    vpermq %zmm0, %zmm2, %zmm0 {%k1} {z}
-; CHECK-FAST-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
-; CHECK-FAST-NEXT:    retq
-;
-; CHECK-FAST-PERLANE-LABEL: test_masked_z_8xi64_to_4xi64_perm_mask6:
-; CHECK-FAST-PERLANE:       # %bb.0:
-; CHECK-FAST-PERLANE-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
-; CHECK-FAST-PERLANE-NEXT:    vpermq {{.*#+}} ymm2 = ymm2[3,2,1,3]
-; CHECK-FAST-PERLANE-NEXT:    vpblendd {{.*#+}} ymm0 = ymm2[0,1,2,3,4,5],ymm0[6,7]
-; CHECK-FAST-PERLANE-NEXT:    vptestnmq %ymm1, %ymm1, %k1
-; CHECK-FAST-PERLANE-NEXT:    vmovdqa64 %ymm0, %ymm0 {%k1} {z}
-; CHECK-FAST-PERLANE-NEXT:    retq
+; CHECK-LABEL: test_masked_z_8xi64_to_4xi64_perm_mask6:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpmovsxbq {{.*#+}} ymm2 = [7,6,5,3]
+; CHECK-NEXT:    vptestnmq %ymm1, %ymm1, %k1
+; CHECK-NEXT:    vpermq %zmm0, %zmm2, %zmm0 {%k1} {z}
+; CHECK-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; CHECK-NEXT:    retq
   %shuf = shufflevector <8 x i64> %vec, <8 x i64> undef, <4 x i32> <i32 7, i32 6, i32 5, i32 3>
   %cmp = icmp eq <4 x i64> %mask, zeroinitializer
   %res = select <4 x i1> %cmp, <4 x i64> %shuf, <4 x i64> zeroinitializer
@@ -2319,29 +2251,48 @@ define <2 x i64> @test_masked_z_8xi64_to_2xi64_perm_mask0(<8 x i64> %vec, <2 x i
 }
 
 define <2 x i64> @test_masked_8xi64_to_2xi64_perm_mask1(<8 x i64> %vec, <2 x i64> %vec2, <2 x i64> %mask) {
-; CHECK-LABEL: test_masked_8xi64_to_2xi64_perm_mask1:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $xmm1 killed $xmm1 def $ymm1
-; CHECK-NEXT:    vextracti64x4 $1, %zmm0, %ymm0
-; CHECK-NEXT:    vptestnmq %xmm2, %xmm2, %k1
-; CHECK-NEXT:    vpermq {{.*#+}} ymm1 {%k1} = ymm0[2,1,2,3]
-; CHECK-NEXT:    vmovdqa %xmm1, %xmm0
-; CHECK-NEXT:    vzeroupper
-; CHECK-NEXT:    retq
+; CHECK-FAST-LABEL: test_masked_8xi64_to_2xi64_perm_mask1:
+; CHECK-FAST:       # %bb.0:
+; CHECK-FAST-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
+; CHECK-FAST-NEXT:    vpmovsxbq {{.*#+}} ymm3 = [6,5,6,7]
+; CHECK-FAST-NEXT:    vptestnmq %xmm2, %xmm2, %k1
+; CHECK-FAST-NEXT:    vpermq %zmm0, %zmm3, %zmm1 {%k1}
+; CHECK-FAST-NEXT:    vmovdqa %xmm1, %xmm0
+; CHECK-FAST-NEXT:    vzeroupper
+; CHECK-FAST-NEXT:    retq
+;
+; CHECK-FAST-PERLANE-LABEL: test_masked_8xi64_to_2xi64_perm_mask1:
+; CHECK-FAST-PERLANE:       # %bb.0:
+; CHECK-FAST-PERLANE-NEXT:    # kill: def $xmm1 killed $xmm1 def $ymm1
+; CHECK-FAST-PERLANE-NEXT:    vextracti64x4 $1, %zmm0, %ymm0
+; CHECK-FAST-PERLANE-NEXT:    vptestnmq %xmm2, %xmm2, %k1
+; CHECK-FAST-PERLANE-NEXT:    vpermq {{.*#+}} ymm1 {%k1} = ymm0[2,1,2,3]
+; CHECK-FAST-PERLANE-NEXT:    vmovdqa %xmm1, %xmm0
+; CHECK-FAST-PERLANE-NEXT:    vzeroupper
+; CHECK-FAST-PERLANE-NEXT:    retq
   %shuf = shufflevector <8 x i64> %vec, <8 x i64> undef, <2 x i32> <i32 6, i32 5>
   %cmp = icmp eq <2 x i64> %mask, zeroinitializer
   %res = select <2 x i1> %cmp, <2 x i64> %shuf, <2 x i64> %vec2
   ret <2 x i64> %res
 }
 define <2 x i64> @test_masked_z_8xi64_to_2xi64_perm_mask1(<8 x i64> %vec, <2 x i64> %mask) {
-; CHECK-LABEL: test_masked_z_8xi64_to_2xi64_perm_mask1:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vextracti64x4 $1, %zmm0, %ymm0
-; CHECK-NEXT:    vptestnmq %xmm1, %xmm1, %k1
-; CHECK-NEXT:    vpermq {{.*#+}} ymm0 {%k1} {z} = ymm0[2,1,2,3]
-; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
-; CHECK-NEXT:    vzeroupper
-; CHECK-NEXT:    retq
+; CHECK-FAST-LABEL: test_masked_z_8xi64_to_2xi64_perm_mask1:
+; CHECK-FAST:       # %bb.0:
+; CHECK-FAST-NEXT:    vpmovsxbq {{.*#+}} ymm2 = [6,5,6,7]
+; CHECK-FAST-NEXT:    vptestnmq %xmm1, %xmm1, %k1
+; CHECK-FAST-NEXT:    vpermq %zmm0, %zmm2, %zmm0 {%k1} {z}
+; CHECK-FAST-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; CHECK-FAST-NEXT:    vzeroupper
+; CHECK-FAST-NEXT:    retq
+;
+; CHECK-FAST-PERLANE-LABEL: test_masked_z_8xi64_to_2xi64_perm_mask1:
+; CHECK-FAST-PERLANE:       # %bb.0:
+; CHECK-FAST-PERLANE-NEXT:    vextracti64x4 $1, %zmm0, %ymm0
+; CHECK-FAST-PERLANE-NEXT:    vptestnmq %xmm1, %xmm1, %k1
+; CHECK-FAST-PERLANE-NEXT:    vpermq {{.*#+}} ymm0 {%k1} {z} = ymm0[2,1,2,3]
+; CHECK-FAST-PERLANE-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; CHECK-FAST-PERLANE-NEXT:    vzeroupper
+; CHECK-FAST-PERLANE-NEXT:    retq
   %shuf = shufflevector <8 x i64> %vec, <8 x i64> undef, <2 x i32> <i32 6, i32 5>
   %cmp = icmp eq <2 x i64> %mask, zeroinitializer
   %res = select <2 x i1> %cmp, <2 x i64> %shuf, <2 x i64> zeroinitializer
@@ -2709,41 +2660,27 @@ define <4 x i64> @test_masked_z_8xi64_to_4xi64_perm_mem_mask7(ptr %vp, <4 x i64>
 }
 
 define <2 x i64> @test_8xi64_to_2xi64_perm_mem_mask0(ptr %vp) {
-; CHECK-FAST-LABEL: test_8xi64_to_2xi64_perm_mem_mask0:
-; CHECK-FAST:       # %bb.0:
-; CHECK-FAST-NEXT:    vpmovsxbq {{.*#+}} xmm0 = [4,1]
-; CHECK-FAST-NEXT:    vpermpd (%rdi), %zmm0, %zmm0
-; CHECK-FAST-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
-; CHECK-FAST-NEXT:    vzeroupper
-; CHECK-FAST-NEXT:    retq
-;
-; CHECK-FAST-PERLANE-LABEL: test_8xi64_to_2xi64_perm_mem_mask0:
-; CHECK-FAST-PERLANE:       # %bb.0:
-; CHECK-FAST-PERLANE-NEXT:    vmovaps 32(%rdi), %xmm0
-; CHECK-FAST-PERLANE-NEXT:    vblendps $12, (%rdi), %xmm0, %xmm0 # xmm0 = xmm0[0,1],mem[2,3]
-; CHECK-FAST-PERLANE-NEXT:    retq
+; CHECK-LABEL: test_8xi64_to_2xi64_perm_mem_mask0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpmovsxbq {{.*#+}} xmm0 = [4,1]
+; CHECK-NEXT:    vpermpd (%rdi), %zmm0, %zmm0
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
   %vec = load <8 x i64>, ptr %vp
   %res = shufflevector <8 x i64> %vec, <8 x i64> undef, <2 x i32> <i32 4, i32 1>
   ret <2 x i64> %res
 }
 define <2 x i64> @test_masked_8xi64_to_2xi64_perm_mem_mask0(ptr %vp, <2 x i64> %vec2, <2 x i64> %mask) {
-; CHECK-FAST-LABEL: test_masked_8xi64_to_2xi64_perm_mem_mask0:
-; CHECK-FAST:       # %bb.0:
-; CHECK-FAST-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; CHECK-FAST-NEXT:    vpmovsxbq {{.*#+}} xmm2 = [4,1]
-; CHECK-FAST-NEXT:    vptestnmq %xmm1, %xmm1, %k1
-; CHECK-FAST-NEXT:    vpermq (%rdi), %zmm2, %zmm0 {%k1}
-; CHECK-FAST-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
-; CHECK-FAST-NEXT:    vzeroupper
-; CHECK-FAST-NEXT:    retq
-;
-; CHECK-FAST-PERLANE-LABEL: test_masked_8xi64_to_2xi64_perm_mem_mask0:
-; CHECK-FAST-PERLANE:       # %bb.0:
-; CHECK-FAST-PERLANE-NEXT:    vmovdqa 32(%rdi), %xmm2
-; CHECK-FAST-PERLANE-NEXT:    vpblendd $12, (%rdi), %xmm2, %xmm2 # xmm2 = xmm2[0,1],mem[2,3]
-; CHECK-FAST-PERLANE-NEXT:    vptestnmq %xmm1, %xmm1, %k1
-; CHECK-FAST-PERLANE-NEXT:    vmovdqa64 %xmm2, %xmm0 {%k1}
-; CHECK-FAST-PERLANE-NEXT:    retq
+; CHECK-LABEL: test_masked_8xi64_to_2xi64_perm_mem_mask0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; CHECK-NEXT:    vpmovsxbq {{.*#+}} xmm2 = [4,1]
+; CHECK-NEXT:    vptestnmq %xmm1, %xmm1, %k1
+; CHECK-NEXT:    vpermq (%rdi), %zmm2, %zmm0 {%k1}
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
   %vec = load <8 x i64>, ptr %vp
   %shuf = shufflevector <8 x i64> %vec, <8 x i64> undef, <2 x i32> <i32 4, i32 1>
   %cmp = icmp eq <2 x i64> %mask, zeroinitializer
@@ -2752,22 +2689,14 @@ define <2 x i64> @test_masked_8xi64_to_2xi64_perm_mem_mask0(ptr %vp, <2 x i64> %
 }
 
 define <2 x i64> @test_masked_z_8xi64_to_2xi64_perm_mem_mask0(ptr %vp, <2 x i64> %mask) {
-; CHECK-FAST-LABEL: test_masked_z_8xi64_to_2xi64_perm_mem_mask0:
-; CHECK-FAST:       # %bb.0:
-; CHECK-FAST-NEXT:    vpmovsxbq {{.*#+}} xmm1 = [4,1]
-; CHECK-FAST-NEXT:    vptestnmq %xmm0, %xmm0, %k1
-; CHECK-FAST-NEXT:    vpermq (%rdi), %zmm1, %zmm0 {%k1} {z}
-; CHECK-FAST-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
-; CHECK-FAST-NEXT:    vzeroupper
-; CHECK-FAST-NEXT:    retq
-;
-; CHECK-FAST-PERLANE-LABEL: test_masked_z_8xi64_to_2xi64_perm_mem_mask0:
-; CHECK-FAST-PERLANE:       # %bb.0:
-; CHECK-FAST-PERLANE-NEXT:    vmovdqa 32(%rdi), %xmm1
-; CHECK-FAST-PERLANE-NEXT:    vpblendd $12, (%rdi), %xmm1, %xmm1 # xmm1 = xmm1[0,1],mem[2,3]
-; CHECK-FAST-PERLANE-NEXT:    vptestnmq %xmm0, %xmm0, %k1
-; CHECK-FAST-PERLANE-NEXT:    vmovdqa64 %xmm1, %xmm0 {%k1} {z}
-; CHECK-FAST-PERLANE-NEXT:    retq
+; CHECK-LABEL: test_masked_z_8xi64_to_2xi64_perm_mem_mask0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpmovsxbq {{.*#+}} xmm1 = [4,1]
+; CHECK-NEXT:    vptestnmq %xmm0, %xmm0, %k1
+; CHECK-NEXT:    vpermq (%rdi), %zmm1, %zmm0 {%k1} {z}
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
   %vec = load <8 x i64>, ptr %vp
   %shuf = shufflevector <8 x i64> %vec, <8 x i64> undef, <2 x i32> <i32 4, i32 1>
   %cmp = icmp eq <2 x i64> %mask, zeroinitializer
@@ -2778,9 +2707,12 @@ define <2 x i64> @test_masked_z_8xi64_to_2xi64_perm_mem_mask0(ptr %vp, <2 x i64>
 define <2 x i64> @test_masked_8xi64_to_2xi64_perm_mem_mask1(ptr %vp, <2 x i64> %vec2, <2 x i64> %mask) {
 ; CHECK-LABEL: test_masked_8xi64_to_2xi64_perm_mem_mask1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovdqa 48(%rdi), %xmm2
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; CHECK-NEXT:    vpmovsxbq {{.*#+}} xmm2 = [6,2]
 ; CHECK-NEXT:    vptestnmq %xmm1, %xmm1, %k1
-; CHECK-NEXT:    vpunpcklqdq 16(%rdi), %xmm2, %xmm0 {%k1} # xmm0 {%k1} = xmm2[0],mem[0]
+; CHECK-NEXT:    vpermq (%rdi), %zmm2, %zmm0 {%k1}
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %vec = load <8 x i64>, ptr %vp
   %shuf = shufflevector <8 x i64> %vec, <8 x i64> undef, <2 x i32> <i32 6, i32 2>
@@ -2792,9 +2724,11 @@ define <2 x i64> @test_masked_8xi64_to_2xi64_perm_mem_mask1(ptr %vp, <2 x i64> %
 define <2 x i64> @test_masked_z_8xi64_to_2xi64_perm_mem_mask1(ptr %vp, <2 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_8xi64_to_2xi64_perm_mem_mask1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovdqa 48(%rdi), %xmm1
+; CHECK-NEXT:    vpmovsxbq {{.*#+}} xmm1 = [6,2]
 ; CHECK-NEXT:    vptestnmq %xmm0, %xmm0, %k1
-; CHECK-NEXT:    vpunpcklqdq 16(%rdi), %xmm1, %xmm0 {%k1} {z} # xmm0 {%k1} {z} = xmm1[0],mem[0]
+; CHECK-NEXT:    vpermq (%rdi), %zmm1, %zmm0 {%k1} {z}
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %vec = load <8 x i64>, ptr %vp
   %shuf = shufflevector <8 x i64> %vec, <8 x i64> undef, <2 x i32> <i32 6, i32 2>
@@ -2804,25 +2738,44 @@ define <2 x i64> @test_masked_z_8xi64_to_2xi64_perm_mem_mask1(ptr %vp, <2 x i64>
 }
 
 define <4 x float> @test_8xfloat_to_4xfloat_perm_mask0(<8 x float> %vec) {
-; CHECK-LABEL: test_8xfloat_to_4xfloat_perm_mask0:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; CHECK-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,3],xmm1[0,1]
-; CHECK-NEXT:    vzeroupper
-; CHECK-NEXT:    retq
+; CHECK-FAST-LABEL: test_8xfloat_to_4xfloat_perm_mask0:
+; CHECK-FAST:       # %bb.0:
+; CHECK-FAST-NEXT:    vpmovsxbd {{.*#+}} xmm1 = [0,3,4,5]
+; CHECK-FAST-NEXT:    vpermps %ymm0, %ymm1, %ymm0
+; CHECK-FAST-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; CHECK-FAST-NEXT:    vzeroupper
+; CHECK-FAST-NEXT:    retq
+;
+; CHECK-FAST-PERLANE-LABEL: test_8xfloat_to_4xfloat_perm_mask0:
+; CHECK-FAST-PERLANE:       # %bb.0:
+; CHECK-FAST-PERLANE-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; CHECK-FAST-PERLANE-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,3],xmm1[0,1]
+; CHECK-FAST-PERLANE-NEXT:    vzeroupper
+; CHECK-FAST-PERLANE-NEXT:    retq
   %res = shufflevector <8 x float> %vec, <8 x float> undef, <4 x i32> <i32 0, i32 3, i32 4, i32 5>
   ret <4 x float> %res
 }
 define <4 x float> @test_masked_8xfloat_to_4xfloat_perm_mask0(<8 x float> %vec, <4 x float> %vec2, <4 x float> %mask) {
-; CHECK-LABEL: test_masked_8xfloat_to_4xfloat_perm_mask0:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; CHECK-NEXT:    vxorps %xmm4, %xmm4, %xmm4
-; CHECK-NEXT:    vcmpeqps %xmm4, %xmm2, %k1
-; CHECK-NEXT:    vshufps {{.*#+}} xmm1 {%k1} = xmm0[0,3],xmm3[0,1]
-; CHECK-NEXT:    vmovaps %xmm1, %xmm0
-; CHECK-NEXT:    vzeroupper
-; CHECK-NEXT:    retq
+; CHECK-FAST-LABEL: test_masked_8xfloat_to_4xfloat_perm_mask0:
+; CHECK-FAST:       # %bb.0:
+; CHECK-FAST-NEXT:    # kill: def $xmm1 killed $xmm1 def $ymm1
+; CHECK-FAST-NEXT:    vpmovsxbd {{.*#+}} xmm3 = [0,3,4,5]
+; CHECK-FAST-NEXT:    vxorps %xmm4, %xmm4, %xmm4
+; CHECK-FAST-NEXT:    vcmpeqps %xmm4, %xmm2, %k1
+; CHECK-FAST-NEXT:    vpermps %ymm0, %ymm3, %ymm1 {%k1}
+; CHECK-FAST-NEXT:    vmovaps %xmm1, %xmm0
+; CHECK-FAST-NEXT:    vzeroupper
+; CHECK-FAST-NEXT:    retq
+;
+; CHECK-FAST-PERLANE-LABEL: test_masked_8xfloat_to_4xfloat_perm_mask0:
+; CHECK-FAST-PERLANE:       # %bb.0:
+; CHECK-FAST-PERLANE-NEXT:    vextractf128 $1, %ymm0, %xmm3
+; CHECK-FAST-PERLANE-NEXT:    vxorps %xmm4, %xmm4, %xmm4
+; CHECK-FAST-PERLANE-NEXT:    vcmpeqps %xmm4, %xmm2, %k1
+; CHECK-FAST-PERLANE-NEXT:    vshufps {{.*#+}} xmm1 {%k1} = xmm0[0,3],xmm3[0,1]
+; CHECK-FAST-PERLANE-NEXT:    vmovaps %xmm1, %xmm0
+; CHECK-FAST-PERLANE-NEXT:    vzeroupper
+; CHECK-FAST-PERLANE-NEXT:    retq
   %shuf = shufflevector <8 x float> %vec, <8 x float> undef, <4 x i32> <i32 0, i32 3, i32 4, i32 5>
   %cmp = fcmp oeq <4 x float> %mask, zeroinitializer
   %res = select <4 x i1> %cmp, <4 x float> %shuf, <4 x float> %vec2
@@ -2830,14 +2783,24 @@ define <4 x float> @test_masked_8xfloat_to_4xfloat_perm_mask0(<8 x float> %vec, 
 }
 
 define <4 x float> @test_masked_z_8xfloat_to_4xfloat_perm_mask0(<8 x float> %vec, <4 x float> %mask) {
-; CHECK-LABEL: test_masked_z_8xfloat_to_4xfloat_perm_mask0:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; CHECK-NEXT:    vxorps %xmm3, %xmm3, %xmm3
-; CHECK-NEXT:    vcmpeqps %xmm3, %xmm1, %k1
-; CHECK-NEXT:    vshufps {{.*#+}} xmm0 {%k1} {z} = xmm0[0,3],xmm2[0,1]
-; CHECK-NEXT:    vzeroupper
-; CHECK-NEXT:    retq
+; CHECK-FAST-LABEL: test_masked_z_8xfloat_to_4xfloat_perm_mask0:
+; CHECK-FAST:       # %bb.0:
+; CHECK-FAST-NEXT:    vpmovsxbd {{.*#+}} xmm2 = [0,3,4,5]
+; CHECK-FAST-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; CHECK-FAST-NEXT:    vcmpeqps %xmm3, %xmm1, %k1
+; CHECK-FAST-NEXT:    vpermps %ymm0, %ymm2, %ymm0 {%k1} {z}
+; CHECK-FAST-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; CHECK-FAST-NEXT:    vzeroupper
+; CHECK-FAST-NEXT:    retq
+;
+; CHECK-FAST-PERLANE-LABEL: test_masked_z_8xfloat_to_4xfloat_perm_mask0:
+; CHECK-FAST-PERLANE:       # %bb.0:
+; CHECK-FAST-PERLANE-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; CHECK-FAST-PERLANE-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; CHECK-FAST-PERLANE-NEXT:    vcmpeqps %xmm3, %xmm1, %k1
+; CHECK-FAST-PERLANE-NEXT:    vshufps {{.*#+}} xmm0 {%k1} {z} = xmm0[0,3],xmm2[0,1]
+; CHECK-FAST-PERLANE-NEXT:    vzeroupper
+; CHECK-FAST-PERLANE-NEXT:    retq
   %shuf = shufflevector <8 x float> %vec, <8 x float> undef, <4 x i32> <i32 0, i32 3, i32 4, i32 5>
   %cmp = fcmp oeq <4 x float> %mask, zeroinitializer
   %res = select <4 x i1> %cmp, <4 x float> %shuf, <4 x float> zeroinitializer
@@ -3298,28 +3261,16 @@ define <4 x float> @test_masked_z_16xfloat_to_4xfloat_perm_mask0(<16 x float> %v
   ret <4 x float> %res
 }
 define <4 x float> @test_masked_16xfloat_to_4xfloat_perm_mask1(<16 x float> %vec, <4 x float> %vec2, <4 x float> %mask) {
-; CHECK-FAST-LABEL: test_masked_16xfloat_to_4xfloat_perm_mask1:
-; CHECK-FAST:       # %bb.0:
-; CHECK-FAST-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
-; CHECK-FAST-NEXT:    vpmovsxbd {{.*#+}} xmm3 = [8,6,10,6]
-; CHECK-FAST-NEXT:    vxorps %xmm4, %xmm4, %xmm4
-; CHECK-FAST-NEXT:    vcmpeqps %xmm4, %xmm2, %k1
-; CHECK-FAST-NEXT:    vpermps %zmm0, %zmm3, %zmm1 {%k1}
-; CHECK-FAST-NEXT:    vmovaps %xmm1, %xmm0
-; CHECK-FAST-NEXT:    vzeroupper
-; CHECK-FAST-NEXT:    retq
-;
-; CHECK-FAST-PERLANE-LABEL: test_masked_16xfloat_to_4xfloat_perm_mask1:
-; CHECK-FAST-PERLANE:       # %bb.0:
-; CHECK-FAST-PERLANE-NEXT:    vextractf32x4 $2, %zmm0, %xmm3
-; CHECK-FAST-PERLANE-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; CHECK-FAST-PERLANE-NEXT:    vpmovsxbd {{.*#+}} xmm4 = [0,6,2,6]
-; CHECK-FAST-PERLANE-NEXT:    vpermi2ps %xmm0, %xmm3, %xmm4
-; CHECK-FAST-PERLANE-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; CHECK-FAST-PERLANE-NEXT:    vcmpeqps %xmm0, %xmm2, %k1
-; CHECK-FAST-PERLANE-NEXT:    vblendmps %xmm4, %xmm1, %xmm0 {%k1}
-; CHECK-FAST-PERLANE-NEXT:    vzeroupper
-; CHECK-FAST-PERLANE-NEXT:    retq
+; CHECK-LABEL: test_masked_16xfloat_to_4xfloat_perm_mask1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
+; CHECK-NEXT:    vpmovsxbd {{.*#+}} xmm3 = [8,6,10,6]
+; CHECK-NEXT:    vxorps %xmm4, %xmm4, %xmm4
+; CHECK-NEXT:    vcmpeqps %xmm4, %xmm2, %k1
+; CHECK-NEXT:    vpermps %zmm0, %zmm3, %zmm1 {%k1}
+; CHECK-NEXT:    vmovaps %xmm1, %xmm0
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
   %shuf = shufflevector <16 x float> %vec, <16 x float> undef, <4 x i32> <i32 8, i32 6, i32 10, i32 6>
   %cmp = fcmp oeq <4 x float> %mask, zeroinitializer
   %res = select <4 x i1> %cmp, <4 x float> %shuf, <4 x float> %vec2
@@ -3327,42 +3278,42 @@ define <4 x float> @test_masked_16xfloat_to_4xfloat_perm_mask1(<16 x float> %vec
 }
 
 define <4 x float> @test_masked_z_16xfloat_to_4xfloat_perm_mask1(<16 x float> %vec, <4 x float> %mask) {
-; CHECK-FAST-LABEL: test_masked_z_16xfloat_to_4xfloat_perm_mask1:
-; CHECK-FAST:       # %bb.0:
-; CHECK-FAST-NEXT:    vpmovsxbd {{.*#+}} xmm2 = [8,6,10,6]
-; CHECK-FAST-NEXT:    vxorps %xmm3, %xmm3, %xmm3
-; CHECK-FAST-NEXT:    vcmpeqps %xmm3, %xmm1, %k1
-; CHECK-FAST-NEXT:    vpermps %zmm0, %zmm2, %zmm0 {%k1} {z}
-; CHECK-FAST-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
-; CHECK-FAST-NEXT:    vzeroupper
-; CHECK-FAST-NEXT:    retq
-;
-; CHECK-FAST-PERLANE-LABEL: test_masked_z_16xfloat_to_4xfloat_perm_mask1:
-; CHECK-FAST-PERLANE:       # %bb.0:
-; CHECK-FAST-PERLANE-NEXT:    vextractf32x4 $2, %zmm0, %xmm2
-; CHECK-FAST-PERLANE-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; CHECK-FAST-PERLANE-NEXT:    vpmovsxbd {{.*#+}} xmm0 = [0,6,2,6]
-; CHECK-FAST-PERLANE-NEXT:    vxorps %xmm4, %xmm4, %xmm4
-; CHECK-FAST-PERLANE-NEXT:    vcmpeqps %xmm4, %xmm1, %k1
-; CHECK-FAST-PERLANE-NEXT:    vpermi2ps %xmm3, %xmm2, %xmm0 {%k1} {z}
-; CHECK-FAST-PERLANE-NEXT:    vzeroupper
-; CHECK-FAST-PERLANE-NEXT:    retq
+; CHECK-LABEL: test_masked_z_16xfloat_to_4xfloat_perm_mask1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpmovsxbd {{.*#+}} xmm2 = [8,6,10,6]
+; CHECK-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vcmpeqps %xmm3, %xmm1, %k1
+; CHECK-NEXT:    vpermps %zmm0, %zmm2, %zmm0 {%k1} {z}
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
   %shuf = shufflevector <16 x float> %vec, <16 x float> undef, <4 x i32> <i32 8, i32 6, i32 10, i32 6>
   %cmp = fcmp oeq <4 x float> %mask, zeroinitializer
   %res = select <4 x i1> %cmp, <4 x float> %shuf, <4 x float> zeroinitializer
   ret <4 x float> %res
 }
 define <4 x float> @test_masked_16xfloat_to_4xfloat_perm_mask2(<16 x float> %vec, <4 x float> %vec2, <4 x float> %mask) {
-; CHECK-LABEL: test_masked_16xfloat_to_4xfloat_perm_mask2:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vextractf64x4 $1, %zmm0, %ymm3
-; CHECK-NEXT:    vshufps {{.*#+}} ymm0 = ymm3[0,0],ymm0[0,1],ymm3[4,4],ymm0[4,5]
-; CHECK-NEXT:    vxorps %xmm3, %xmm3, %xmm3
-; CHECK-NEXT:    vcmpeqps %xmm3, %xmm2, %k1
-; CHECK-NEXT:    vextractf32x4 $1, %ymm0, %xmm1 {%k1}
-; CHECK-NEXT:    vmovaps %xmm1, %xmm0
-; CHECK-NEXT:    vzeroupper
-; CHECK-NEXT:    retq
+; CHECK-FAST-LABEL: test_masked_16xfloat_to_4xfloat_perm_mask2:
+; CHECK-FAST:       # %bb.0:
+; CHECK-FAST-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
+; CHECK-FAST-NEXT:    vmovaps {{\.?LCPI[0-9]+_[0-9]+}}+16(%rip), %xmm3
+; CHECK-FAST-NEXT:    vxorps %xmm4, %xmm4, %xmm4
+; CHECK-FAST-NEXT:    vcmpeqps %xmm4, %xmm2, %k1
+; CHECK-FAST-NEXT:    vpermps %zmm0, %zmm3, %zmm1 {%k1}
+; CHECK-FAST-NEXT:    vmovaps %xmm1, %xmm0
+; CHECK-FAST-NEXT:    vzeroupper
+; CHECK-FAST-NEXT:    retq
+;
+; CHECK-FAST-PERLANE-LABEL: test_masked_16xfloat_to_4xfloat_perm_mask2:
+; CHECK-FAST-PERLANE:       # %bb.0:
+; CHECK-FAST-PERLANE-NEXT:    vextractf64x4 $1, %zmm0, %ymm3
+; CHECK-FAST-PERLANE-NEXT:    vshufps {{.*#+}} ymm0 = ymm3[0,0],ymm0[0,1],ymm3[4,4],ymm0[4,5]
+; CHECK-FAST-PERLANE-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; CHECK-FAST-PERLANE-NEXT:    vcmpeqps %xmm3, %xmm2, %k1
+; CHECK-FAST-PERLANE-NEXT:    vextractf32x4 $1, %ymm0, %xmm1 {%k1}
+; CHECK-FAST-PERLANE-NEXT:    vmovaps %xmm1, %xmm0
+; CHECK-FAST-PERLANE-NEXT:    vzeroupper
+; CHECK-FAST-PERLANE-NEXT:    retq
   %shuf = shufflevector <16 x float> %vec, <16 x float> undef, <4 x i32> <i32 12, i32 12, i32 4, i32 5>
   %cmp = fcmp oeq <4 x float> %mask, zeroinitializer
   %res = select <4 x i1> %cmp, <4 x float> %shuf, <4 x float> %vec2
@@ -3370,15 +3321,25 @@ define <4 x float> @test_masked_16xfloat_to_4xfloat_perm_mask2(<16 x float> %vec
 }
 
 define <4 x float> @test_masked_z_16xfloat_to_4xfloat_perm_mask2(<16 x float> %vec, <4 x float> %mask) {
-; CHECK-LABEL: test_masked_z_16xfloat_to_4xfloat_perm_mask2:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vextractf64x4 $1, %zmm0, %ymm2
-; CHECK-NEXT:    vshufps {{.*#+}} ymm0 = ymm2[0,0],ymm0[0,1],ymm2[4,4],ymm0[4,5]
-; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vcmpeqps %xmm2, %xmm1, %k1
-; CHECK-NEXT:    vextractf32x4 $1, %ymm0, %xmm0 {%k1} {z}
-; CHECK-NEXT:    vzeroupper
-; CHECK-NEXT:    retq
+; CHECK-FAST-LABEL: test_masked_z_16xfloat_to_4xfloat_perm_mask2:
+; CHECK-FAST:       # %bb.0:
+; CHECK-FAST-NEXT:    vmovaps {{\.?LCPI[0-9]+_[0-9]+}}+16(%rip), %xmm2
+; CHECK-FAST-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; CHECK-FAST-NEXT:    vcmpeqps %xmm3, %xmm1, %k1
+; CHECK-FAST-NEXT:    vpermps %zmm0, %zmm2, %zmm0 {%k1} {z}
+; CHECK-FAST-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; CHECK-FAST-NEXT:    vzeroupper
+; CHECK-FAST-NEXT:    retq
+;
+; CHECK-FAST-PERLANE-LABEL: test_masked_z_16xfloat_to_4xfloat_perm_mask2:
+; CHECK-FAST-PERLANE:       # %bb.0:
+; CHECK-FAST-PERLANE-NEXT:    vextractf64x4 $1, %zmm0, %ymm2
+; CHECK-FAST-PERLANE-NEXT:    vshufps {{.*#+}} ymm0 = ymm2[0,0],ymm0[0,1],ymm2[4,4],ymm0[4,5]
+; CHECK-FAST-PERLANE-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; CHECK-FAST-PERLANE-NEXT:    vcmpeqps %xmm2, %xmm1, %k1
+; CHECK-FAST-PERLANE-NEXT:    vextractf32x4 $1, %ymm0, %xmm0 {%k1} {z}
+; CHECK-FAST-PERLANE-NEXT:    vzeroupper
+; CHECK-FAST-PERLANE-NEXT:    retq
   %shuf = shufflevector <16 x float> %vec, <16 x float> undef, <4 x i32> <i32 12, i32 12, i32 4, i32 5>
   %cmp = fcmp oeq <4 x float> %mask, zeroinitializer
   %res = select <4 x i1> %cmp, <4 x float> %shuf, <4 x float> zeroinitializer
@@ -3604,9 +3565,9 @@ define <8 x float> @test_masked_z_16xfloat_to_8xfloat_perm_mem_mask3(ptr %vp, <8
 define <4 x float> @test_16xfloat_to_4xfloat_perm_mem_mask0(ptr %vp) {
 ; CHECK-LABEL: test_16xfloat_to_4xfloat_perm_mem_mask0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermpd $231, 32(%rdi), %ymm1 # ymm1 = mem[3,1,2,3]
-; CHECK-NEXT:    vpmovsxbd {{.*#+}} xmm0 = [0,6,7,3]
-; CHECK-NEXT:    vpermi2ps 16(%rdi), %xmm1, %xmm0
+; CHECK-NEXT:    vpmovsxbd {{.*#+}} xmm0 = [14,6,7,11]
+; CHECK-NEXT:    vpermps (%rdi), %zmm0, %zmm0
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %vec = load <16 x float>, ptr %vp
@@ -3616,12 +3577,12 @@ define <4 x float> @test_16xfloat_to_4xfloat_perm_mem_mask0(ptr %vp) {
 define <4 x float> @test_masked_16xfloat_to_4xfloat_perm_mem_mask0(ptr %vp, <4 x float> %vec2, <4 x float> %mask) {
 ; CHECK-LABEL: test_masked_16xfloat_to_4xfloat_perm_mem_mask0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermpd $231, 32(%rdi), %ymm2 # ymm2 = mem[3,1,2,3]
-; CHECK-NEXT:    vpmovsxbd {{.*#+}} xmm3 = [0,6,7,3]
-; CHECK-NEXT:    vpermi2ps 16(%rdi), %xmm2, %xmm3
-; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vcmpeqps %xmm2, %xmm1, %k1
-; CHECK-NEXT:    vmovaps %xmm3, %xmm0 {%k1}
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; CHECK-NEXT:    vpmovsxbd {{.*#+}} xmm2 = [14,6,7,11]
+; CHECK-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vcmpeqps %xmm3, %xmm1, %k1
+; CHECK-NEXT:    vpermps (%rdi), %zmm2, %zmm0 {%k1}
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %vec = load <16 x float>, ptr %vp
@@ -3634,12 +3595,11 @@ define <4 x float> @test_masked_16xfloat_to_4xfloat_perm_mem_mask0(ptr %vp, <4 x
 define <4 x float> @test_masked_z_16xfloat_to_4xfloat_perm_mem_mask0(ptr %vp, <4 x float> %mask) {
 ; CHECK-LABEL: test_masked_z_16xfloat_to_4xfloat_perm_mem_mask0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermpd $231, 32(%rdi), %ymm2 # ymm2 = mem[3,1,2,3]
-; CHECK-NEXT:    vpmovsxbd {{.*#+}} xmm1 = [0,6,7,3]
-; CHECK-NEXT:    vxorps %xmm3, %xmm3, %xmm3
-; CHECK-NEXT:    vcmpeqps %xmm3, %xmm0, %k1
-; CHECK-NEXT:    vpermi2ps 16(%rdi), %xmm2, %xmm1 {%k1} {z}
-; CHECK-NEXT:    vmovaps %xmm1, %xmm0
+; CHECK-NEXT:    vpmovsxbd {{.*#+}} xmm1 = [14,6,7,11]
+; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vcmpeqps %xmm2, %xmm0, %k1
+; CHECK-NEXT:    vpermps (%rdi), %zmm1, %zmm0 {%k1} {z}
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %vec = load <16 x float>, ptr %vp
@@ -4045,25 +4005,15 @@ define <4 x double> @test_masked_z_8xdouble_to_4xdouble_perm_mask3(<8 x double> 
   ret <4 x double> %res
 }
 define <4 x double> @test_masked_8xdouble_to_4xdouble_perm_mask4(<8 x double> %vec, <4 x double> %vec2, <4 x double> %mask) {
-; CHECK-FAST-LABEL: test_masked_8xdouble_to_4xdouble_perm_mask4:
-; CHECK-FAST:       # %bb.0:
-; CHECK-FAST-NEXT:    vpmovsxbq {{.*#+}} xmm3 = [1,5]
-; CHECK-FAST-NEXT:    vpermpd %zmm0, %zmm3, %zmm0
-; CHECK-FAST-NEXT:    vxorpd %xmm3, %xmm3, %xmm3
-; CHECK-FAST-NEXT:    vcmpeqpd %ymm3, %ymm2, %k1
-; CHECK-FAST-NEXT:    vpermpd {{.*#+}} ymm1 {%k1} = ymm0[0,0,1,1]
-; CHECK-FAST-NEXT:    vmovapd %ymm1, %ymm0
-; CHECK-FAST-NEXT:    retq
-;
-; CHECK-FAST-PERLANE-LABEL: test_masked_8xdouble_to_4xdouble_perm_mask4:
-; CHECK-FAST-PERLANE:       # %bb.0:
-; CHECK-FAST-PERLANE-NEXT:    vextractf32x4 $2, %zmm0, %xmm3
-; CHECK-FAST-PERLANE-NEXT:    vunpckhpd {{.*#+}} xmm0 = xmm0[1],xmm3[1]
-; CHECK-FAST-PERLANE-NEXT:    vxorpd %xmm3, %xmm3, %xmm3
-; CHECK-FAST-PERLANE-NEXT:    vcmpeqpd %ymm3, %ymm2, %k1
-; CHECK-FAST-PERLANE-NEXT:    vpermpd {{.*#+}} ymm1 {%k1} = ymm0[0,0,1,1]
-; CHECK-FAST-PERLANE-NEXT:    vmovapd %ymm1, %ymm0
-; CHECK-FAST-PERLANE-NEXT:    retq
+; CHECK-LABEL: test_masked_8xdouble_to_4xdouble_perm_mask4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; CHECK-NEXT:    vpmovsxbq {{.*#+}} ymm3 = [1,1,5,5]
+; CHECK-NEXT:    vxorpd %xmm4, %xmm4, %xmm4
+; CHECK-NEXT:    vcmpeqpd %ymm4, %ymm2, %k1
+; CHECK-NEXT:    vpermpd %zmm0, %zmm3, %zmm1 {%k1}
+; CHECK-NEXT:    vmovapd %ymm1, %ymm0
+; CHECK-NEXT:    retq
   %shuf = shufflevector <8 x double> %vec, <8 x double> undef, <4 x i32> <i32 1, i32 1, i32 5, i32 5>
   %cmp = fcmp oeq <4 x double> %mask, zeroinitializer
   %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> %vec2
@@ -4071,23 +4021,14 @@ define <4 x double> @test_masked_8xdouble_to_4xdouble_perm_mask4(<8 x double> %v
 }
 
 define <4 x double> @test_masked_z_8xdouble_to_4xdouble_perm_mask4(<8 x double> %vec, <4 x double> %mask) {
-; CHECK-FAST-LABEL: test_masked_z_8xdouble_to_4xdouble_perm_mask4:
-; CHECK-FAST:       # %bb.0:
-; CHECK-FAST-NEXT:    vpmovsxbq {{.*#+}} xmm2 = [1,5]
-; CHECK-FAST-NEXT:    vpermpd %zmm0, %zmm2, %zmm0
-; CHECK-FAST-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
-; CHECK-FAST-NEXT:    vcmpeqpd %ymm2, %ymm1, %k1
-; CHECK-FAST-NEXT:    vpermpd {{.*#+}} ymm0 {%k1} {z} = ymm0[0,0,1,1]
-; CHECK-FAST-NEXT:    retq
-;
-; CHECK-FAST-PERLANE-LABEL: test_masked_z_8xdouble_to_4xdouble_perm_mask4:
-; CHECK-FAST-PERLANE:       # %bb.0:
-; CHECK-FAST-PERLANE-NEXT:    vextractf32x4 $2, %zmm0, %xmm2
-; CHECK-FAST-PERLANE-NEXT:    vunpckhpd {{.*#+}} xmm0 = xmm0[1],xmm2[1]
-; CHECK-FAST-PERLANE-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
-; CHECK-FAST-PERLANE-NEXT:    vcmpeqpd %ymm2, %ymm1, %k1
-; CHECK-FAST-PERLANE-NEXT:    vpermpd {{.*#+}} ymm0 {%k1} {z} = ymm0[0,0,1,1]
-; CHECK-FAST-PERLANE-NEXT:    retq
+; CHECK-LABEL: test_masked_z_8xdouble_to_4xdouble_perm_mask4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpmovsxbq {{.*#+}} ymm2 = [1,1,5,5]
+; CHECK-NEXT:    vxorpd %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vcmpeqpd %ymm3, %ymm1, %k1
+; CHECK-NEXT:    vpermpd %zmm0, %zmm2, %zmm0 {%k1} {z}
+; CHECK-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; CHECK-NEXT:    retq
   %shuf = shufflevector <8 x double> %vec, <8 x double> undef, <4 x i32> <i32 1, i32 1, i32 5, i32 5>
   %cmp = fcmp oeq <4 x double> %mask, zeroinitializer
   %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> zeroinitializer
@@ -4124,42 +4065,25 @@ define <4 x double> @test_masked_z_8xdouble_to_4xdouble_perm_mask5(<8 x double> 
   ret <4 x double> %res
 }
 define <4 x double> @test_8xdouble_to_4xdouble_perm_mask6(<8 x double> %vec) {
-; CHECK-FAST-LABEL: test_8xdouble_to_4xdouble_perm_mask6:
-; CHECK-FAST:       # %bb.0:
-; CHECK-FAST-NEXT:    vpmovsxbq {{.*#+}} ymm1 = [5,0,7,0]
-; CHECK-FAST-NEXT:    vpermpd %zmm0, %zmm1, %zmm0
-; CHECK-FAST-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
-; CHECK-FAST-NEXT:    retq
-;
-; CHECK-FAST-PERLANE-LABEL: test_8xdouble_to_4xdouble_perm_mask6:
-; CHECK-FAST-PERLANE:       # %bb.0:
-; CHECK-FAST-PERLANE-NEXT:    vextractf64x4 $1, %zmm0, %ymm1
-; CHECK-FAST-PERLANE-NEXT:    vbroadcastsd %xmm0, %ymm0
-; CHECK-FAST-PERLANE-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm1[1],ymm0[1],ymm1[3],ymm0[3]
-; CHECK-FAST-PERLANE-NEXT:    retq
+; CHECK-LABEL: test_8xdouble_to_4xdouble_perm_mask6:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpmovsxbq {{.*#+}} ymm1 = [5,0,7,0]
+; CHECK-NEXT:    vpermpd %zmm0, %zmm1, %zmm0
+; CHECK-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; CHECK-NEXT:    retq
   %res = shufflevector <8 x double> %vec, <8 x double> undef, <4 x i32> <i32 5, i32 0, i32 7, i32 0>
   ret <4 x double> %res
 }
 define <4 x double> @test_masked_8xdouble_to_4xdouble_perm_mask6(<8 x double> %vec, <4 x double> %vec2, <4 x double> %mask) {
-; CHECK-FAST-LABEL: test_masked_8xdouble_to_4xdouble_perm_mask6:
-; CHECK-FAST:       # %bb.0:
-; CHECK-FAST-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
-; CHECK-FAST-NEXT:    vpmovsxbq {{.*#+}} ymm3 = [5,0,7,0]
-; CHECK-FAST-NEXT:    vxorpd %xmm4, %xmm4, %xmm4
-; CHECK-FAST-NEXT:    vcmpeqpd %ymm4, %ymm2, %k1
-; CHECK-FAST-NEXT:    vpermpd %zmm0, %zmm3, %zmm1 {%k1}
-; CHECK-FAST-NEXT:    vmovapd %ymm1, %ymm0
-; CHECK-FAST-NEXT:    retq
-;
-; CHECK-FAST-PERLANE-LABEL: test_masked_8xdouble_to_4xdouble_perm_mask6:
-; CHECK-FAST-PERLANE:       # %bb.0:
-; CHECK-FAST-PERLANE-NEXT:    vextractf64x4 $1, %zmm0, %ymm3
-; CHECK-FAST-PERLANE-NEXT:    vbroadcastsd %xmm0, %ymm0
-; CHECK-FAST-PERLANE-NEXT:    vxorpd %xmm4, %xmm4, %xmm4
-; CHECK-FAST-PERLANE-NEXT:    vcmpeqpd %ymm4, %ymm2, %k1
-; CHECK-FAST-PERLANE-NEXT:    vunpckhpd {{.*#+}} ymm1 {%k1} = ymm3[1],ymm0[1],ymm3[3],ymm0[3]
-; CHECK-FAST-PERLANE-NEXT:    vmovapd %ymm1, %ymm0
-; CHECK-FAST-PERLANE-NEXT:    retq
+; CHECK-LABEL: test_masked_8xdouble_to_4xdouble_perm_mask6:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; CHECK-NEXT:    vpmovsxbq {{.*#+}} ymm3 = [5,0,7,0]
+; CHECK-NEXT:    vxorpd %xmm4, %xmm4, %xmm4
+; CHECK-NEXT:    vcmpeqpd %ymm4, %ymm2, %k1
+; CHECK-NEXT:    vpermpd %zmm0, %zmm3, %zmm1 {%k1}
+; CHECK-NEXT:    vmovapd %ymm1, %ymm0
+; CHECK-NEXT:    retq
   %shuf = shufflevector <8 x double> %vec, <8 x double> undef, <4 x i32> <i32 5, i32 0, i32 7, i32 0>
   %cmp = fcmp oeq <4 x double> %mask, zeroinitializer
   %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> %vec2
@@ -4167,48 +4091,29 @@ define <4 x double> @test_masked_8xdouble_to_4xdouble_perm_mask6(<8 x double> %v
 }
 
 define <4 x double> @test_masked_z_8xdouble_to_4xdouble_perm_mask6(<8 x double> %vec, <4 x double> %mask) {
-; CHECK-FAST-LABEL: test_masked_z_8xdouble_to_4xdouble_perm_mask6:
-; CHECK-FAST:       # %bb.0:
-; CHECK-FAST-NEXT:    vpmovsxbq {{.*#+}} ymm2 = [5,0,7,0]
-; CHECK-FAST-NEXT:    vxorpd %xmm3, %xmm3, %xmm3
-; CHECK-FAST-NEXT:    vcmpeqpd %ymm3, %ymm1, %k1
-; CHECK-FAST-NEXT:    vpermpd %zmm0, %zmm2, %zmm0 {%k1} {z}
-; CHECK-FAST-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
-; CHECK-FAST-NEXT:    retq
-;
-; CHECK-FAST-PERLANE-LABEL: test_masked_z_8xdouble_to_4xdouble_perm_mask6:
-; CHECK-FAST-PERLANE:       # %bb.0:
-; CHECK-FAST-PERLANE-NEXT:    vextractf64x4 $1, %zmm0, %ymm2
-; CHECK-FAST-PERLANE-NEXT:    vbroadcastsd %xmm0, %ymm0
-; CHECK-FAST-PERLANE-NEXT:    vxorpd %xmm3, %xmm3, %xmm3
-; CHECK-FAST-PERLANE-NEXT:    vcmpeqpd %ymm3, %ymm1, %k1
-; CHECK-FAST-PERLANE-NEXT:    vunpckhpd {{.*#+}} ymm0 {%k1} {z} = ymm2[1],ymm0[1],ymm2[3],ymm0[3]
-; CHECK-FAST-PERLANE-NEXT:    retq
+; CHECK-LABEL: test_masked_z_8xdouble_to_4xdouble_perm_mask6:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpmovsxbq {{.*#+}} ymm2 = [5,0,7,0]
+; CHECK-NEXT:    vxorpd %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vcmpeqpd %ymm3, %ymm1, %k1
+; CHECK-NEXT:    vpermpd %zmm0, %zmm2, %zmm0 {%k1} {z}
+; CHECK-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; CHECK-NEXT:    retq
   %shuf = shufflevector <8 x double> %vec, <8 x double> undef, <4 x i32> <i32 5, i32 0, i32 7, i32 0>
   %cmp = fcmp oeq <4 x double> %mask, zeroinitializer
   %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> zeroinitializer
   ret <4 x double> %res
 }
 define <4 x double> @test_masked_8xdouble_to_4xdouble_perm_mask7(<8 x double> %vec, <4 x double> %vec2, <4 x double> %mask) {
-; CHECK-FAST-LABEL: test_masked_8xdouble_to_4xdouble_perm_mask7:
-; CHECK-FAST:       # %bb.0:
-; CHECK-FAST-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
-; CHECK-FAST-NEXT:    vpmovsxbq {{.*#+}} ymm3 = [3,5,0,6]
-; CHECK-FAST-NEXT:    vxorpd %xmm4, %xmm4, %xmm4
-; CHECK-FAST-NEXT:    vcmpeqpd %ymm4, %ymm2, %k1
-; CHECK-FAST-NEXT:    vpermpd %zmm0, %zmm3, %zmm1 {%k1}
-; CHECK-FAST-NEXT:    vmovapd %ymm1, %ymm0
-; CHECK-FAST-NEXT:    retq
-;
-; CHECK-FAST-PERLANE-LABEL: test_masked_8xdouble_to_4xdouble_perm_mask7:
-; CHECK-FAST-PERLANE:       # %bb.0:
-; CHECK-FAST-PERLANE-NEXT:    vextractf64x4 $1, %zmm0, %ymm3
-; CHECK-FAST-PERLANE-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,3,0,3]
-; CHECK-FAST-PERLANE-NEXT:    vxorpd %xmm4, %xmm4, %xmm4
-; CHECK-FAST-PERLANE-NEXT:    vcmpeqpd %ymm4, %ymm2, %k1
-; CHECK-FAST-PERLANE-NEXT:    vshufpd {{.*#+}} ymm1 {%k1} = ymm0[1],ymm3[1],ymm0[2],ymm3[2]
-; CHECK-FAST-PERLANE-NEXT:    vmovapd %ymm1, %ymm0
-; CHECK-FAST-PERLANE-NEXT:    retq
+; CHECK-LABEL: test_masked_8xdouble_to_4xdouble_perm_mask7:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; CHECK-NEXT:    vpmovsxbq {{.*#+}} ymm3 = [3,5,0,6]
+; CHECK-NEXT:    vxorpd %xmm4, %xmm4, %xmm4
+; CHECK-NEXT:    vcmpeqpd %ymm4, %ymm2, %k1
+; CHECK-NEXT:    vpermpd %zmm0, %zmm3, %zmm1 {%k1}
+; CHECK-NEXT:    vmovapd %ymm1, %ymm0
+; CHECK-NEXT:    retq
   %shuf = shufflevector <8 x double> %vec, <8 x double> undef, <4 x i32> <i32 3, i32 5, i32 0, i32 6>
   %cmp = fcmp oeq <4 x double> %mask, zeroinitializer
   %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> %vec2
@@ -4216,67 +4121,41 @@ define <4 x double> @test_masked_8xdouble_to_4xdouble_perm_mask7(<8 x double> %v
 }
 
 define <4 x double> @test_masked_z_8xdouble_to_4xdouble_perm_mask7(<8 x double> %vec, <4 x double> %mask) {
-; CHECK-FAST-LABEL: test_masked_z_8xdouble_to_4xdouble_perm_mask7:
-; CHECK-FAST:       # %bb.0:
-; CHECK-FAST-NEXT:    vpmovsxbq {{.*#+}} ymm2 = [3,5,0,6]
-; CHECK-FAST-NEXT:    vxorpd %xmm3, %xmm3, %xmm3
-; CHECK-FAST-NEXT:    vcmpeqpd %ymm3, %ymm1, %k1
-; CHECK-FAST-NEXT:    vpermpd %zmm0, %zmm2, %zmm0 {%k1} {z}
-; CHECK-FAST-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
-; CHECK-FAST-NEXT:    retq
-;
-; CHECK-FAST-PERLANE-LABEL: test_masked_z_8xdouble_to_4xdouble_perm_mask7:
-; CHECK-FAST-PERLANE:       # %bb.0:
-; CHECK-FAST-PERLANE-NEXT:    vextractf64x4 $1, %zmm0, %ymm2
-; CHECK-FAST-PERLANE-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,3,0,3]
-; CHECK-FAST-PERLANE-NEXT:    vxorpd %xmm3, %xmm3, %xmm3
-; CHECK-FAST-PERLANE-NEXT:    vcmpeqpd %ymm3, %ymm1, %k1
-; CHECK-FAST-PERLANE-NEXT:    vshufpd {{.*#+}} ymm0 {%k1} {z} = ymm0[1],ymm2[1],ymm0[2],ymm2[2]
-; CHECK-FAST-PERLANE-NEXT:    retq
+; CHECK-LABEL: test_masked_z_8xdouble_to_4xdouble_perm_mask7:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpmovsxbq {{.*#+}} ymm2 = [3,5,0,6]
+; CHECK-NEXT:    vxorpd %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vcmpeqpd %ymm3, %ymm1, %k1
+; CHECK-NEXT:    vpermpd %zmm0, %zmm2, %zmm0 {%k1} {z}
+; CHECK-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; CHECK-NEXT:    retq
   %shuf = shufflevector <8 x double> %vec, <8 x double> undef, <4 x i32> <i32 3, i32 5, i32 0, i32 6>
   %cmp = fcmp oeq <4 x double> %mask, zeroinitializer
   %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> zeroinitializer
   ret <4 x double> %res
 }
 define <2 x double> @test_8xdouble_to_2xdouble_perm_mask0(<8 x double> %vec) {
-; CHECK-FAST-LABEL: test_8xdouble_to_2xdouble_perm_mask0:
-; CHECK-FAST:       # %bb.0:
-; CHECK-FAST-NEXT:    vpmovsxbq {{.*#+}} xmm1 = [0,6]
-; CHECK-FAST-NEXT:    vpermpd %zmm0, %zmm1, %zmm0
-; CHECK-FAST-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
-; CHECK-FAST-NEXT:    vzeroupper
-; CHECK-FAST-NEXT:    retq
-;
-; CHECK-FAST-PERLANE-LABEL: test_8xdouble_to_2xdouble_perm_mask0:
-; CHECK-FAST-PERLANE:       # %bb.0:
-; CHECK-FAST-PERLANE-NEXT:    vextractf32x4 $3, %zmm0, %xmm1
-; CHECK-FAST-PERLANE-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; CHECK-FAST-PERLANE-NEXT:    vzeroupper
-; CHECK-FAST-PERLANE-NEXT:    retq
+; CHECK-LABEL: test_8xdouble_to_2xdouble_perm_mask0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpmovsxbq {{.*#+}} xmm1 = [0,6]
+; CHECK-NEXT:    vpermpd %zmm0, %zmm1, %zmm0
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
   %res = shufflevector <8 x double> %vec, <8 x double> undef, <2 x i32> <i32 0, i32 6>
   ret <2 x double> %res
 }
 define <2 x double> @test_masked_8xdouble_to_2xdouble_perm_mask0(<8 x double> %vec, <2 x double> %vec2, <2 x double> %mask) {
-; CHECK-FAST-LABEL: test_masked_8xdouble_to_2xdouble_perm_mask0:
-; CHECK-FAST:       # %bb.0:
-; CHECK-FAST-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
-; CHECK-FAST-NEXT:    vpmovsxbq {{.*#+}} xmm3 = [0,6]
-; CHECK-FAST-NEXT:    vxorpd %xmm4, %xmm4, %xmm4
-; CHECK-FAST-NEXT:    vcmpeqpd %xmm4, %xmm2, %k1
-; CHECK-FAST-NEXT:    vpermpd %zmm0, %zmm3, %zmm1 {%k1}
-; CHECK-FAST-NEXT:    vmovapd %xmm1, %xmm0
-; CHECK-FAST-NEXT:    vzeroupper
-; CHECK-FAST-NEXT:    retq
-;
-; CHECK-FAST-PERLANE-LABEL: test_masked_8xdouble_to_2xdouble_perm_mask0:
-; CHECK-FAST-PERLANE:       # %bb.0:
-; CHECK-FAST-PERLANE-NEXT:    vextractf32x4 $3, %zmm0, %xmm3
-; CHECK-FAST-PERLANE-NEXT:    vxorpd %xmm4, %xmm4, %xmm4
-; CHECK-FAST-PERLANE-NEXT:    vcmpeqpd %xmm4, %xmm2, %k1
-; CHECK-FAST-PERLANE-NEXT:    vunpcklpd {{.*#+}} xmm1 {%k1} = xmm0[0],xmm3[0]
-; CHECK-FAST-PERLANE-NEXT:    vmovapd %xmm1, %xmm0
-; CHECK-FAST-PERLANE-NEXT:    vzeroupper
-; CHECK-FAST-PERLANE-NEXT:    retq
+; CHECK-LABEL: test_masked_8xdouble_to_2xdouble_perm_mask0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
+; CHECK-NEXT:    vpmovsxbq {{.*#+}} xmm3 = [0,6]
+; CHECK-NEXT:    vxorpd %xmm4, %xmm4, %xmm4
+; CHECK-NEXT:    vcmpeqpd %xmm4, %xmm2, %k1
+; CHECK-NEXT:    vpermpd %zmm0, %zmm3, %zmm1 {%k1}
+; CHECK-NEXT:    vmovapd %xmm1, %xmm0
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
   %shuf = shufflevector <8 x double> %vec, <8 x double> undef, <2 x i32> <i32 0, i32 6>
   %cmp = fcmp oeq <2 x double> %mask, zeroinitializer
   %res = select <2 x i1> %cmp, <2 x double> %shuf, <2 x double> %vec2
@@ -4284,24 +4163,15 @@ define <2 x double> @test_masked_8xdouble_to_2xdouble_perm_mask0(<8 x double> %v
 }
 
 define <2 x double> @test_masked_z_8xdouble_to_2xdouble_perm_mask0(<8 x double> %vec, <2 x double> %mask) {
-; CHECK-FAST-LABEL: test_masked_z_8xdouble_to_2xdouble_perm_mask0:
-; CHECK-FAST:       # %bb.0:
-; CHECK-FAST-NEXT:    vpmovsxbq {{.*#+}} xmm2 = [0,6]
-; CHECK-FAST-NEXT:    vxorpd %xmm3, %xmm3, %xmm3
-; CHECK-FAST-NEXT:    vcmpeqpd %xmm3, %xmm1, %k1
-; CHECK-FAST-NEXT:    vpermpd %zmm0, %zmm2, %zmm0 {%k1} {z}
-; CHECK-FAST-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
-; CHECK-FAST-NEXT:    vzeroupper
-; CHECK-FAST-NEXT:    retq
-;
-; CHECK-FAST-PERLANE-LABEL: test_masked_z_8xdouble_to_2xdouble_perm_mask0:
-; CHECK-FAST-PERLANE:       # %bb.0:
-; CHECK-FAST-PERLANE-NEXT:    vextractf32x4 $3, %zmm0, %xmm2
-; CHECK-FAST-PERLANE-NEXT:    vxorpd %xmm3, %xmm3, %xmm3
-; CHECK-FAST-PERLANE-NEXT:    vcmpeqpd %xmm3, %xmm1, %k1
-; CHECK-FAST-PERLANE-NEXT:    vunpcklpd {{.*#+}} xmm0 {%k1} {z} = xmm0[0],xmm2[0]
-; CHECK-FAST-PERLANE-NEXT:    vzeroupper
-; CHECK-FAST-PERLANE-NEXT:    retq
+; CHECK-LABEL: test_masked_z_8xdouble_to_2xdouble_perm_mask0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpmovsxbq {{.*#+}} xmm2 = [0,6]
+; CHECK-NEXT:    vxorpd %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vcmpeqpd %xmm3, %xmm1, %k1
+; CHECK-NEXT:    vpermpd %zmm0, %zmm2, %zmm0 {%k1} {z}
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
   %shuf = shufflevector <8 x double> %vec, <8 x double> undef, <2 x i32> <i32 0, i32 6>
   %cmp = fcmp oeq <2 x double> %mask, zeroinitializer
   %res = select <2 x i1> %cmp, <2 x double> %shuf, <2 x double> zeroinitializer
@@ -4668,23 +4538,42 @@ define <4 x double> @test_masked_z_8xdouble_to_4xdouble_perm_mem_mask7(ptr %vp, 
 }
 
 define <2 x double> @test_8xdouble_to_2xdouble_perm_mem_mask0(ptr %vp) {
-; CHECK-LABEL: test_8xdouble_to_2xdouble_perm_mem_mask0:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovapd (%rdi), %xmm0
-; CHECK-NEXT:    vshufpd $1, 48(%rdi), %xmm0, %xmm0 # xmm0 = xmm0[1],mem[0]
-; CHECK-NEXT:    retq
+; CHECK-FAST-LABEL: test_8xdouble_to_2xdouble_perm_mem_mask0:
+; CHECK-FAST:       # %bb.0:
+; CHECK-FAST-NEXT:    vpmovsxbq {{.*#+}} xmm0 = [1,6]
+; CHECK-FAST-NEXT:    vpermpd (%rdi), %zmm0, %zmm0
+; CHECK-FAST-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; CHECK-FAST-NEXT:    vzeroupper
+; CHECK-FAST-NEXT:    retq
+;
+; CHECK-FAST-PERLANE-LABEL: test_8xdouble_to_2xdouble_perm_mem_mask0:
+; CHECK-FAST-PERLANE:       # %bb.0:
+; CHECK-FAST-PERLANE-NEXT:    vmovapd (%rdi), %xmm0
+; CHECK-FAST-PERLANE-NEXT:    vshufpd $1, 48(%rdi), %xmm0, %xmm0 # xmm0 = xmm0[1],mem[0]
+; CHECK-FAST-PERLANE-NEXT:    retq
   %vec = load <8 x double>, ptr %vp
   %res = shufflevector <8 x double> %vec, <8 x double> undef, <2 x i32> <i32 1, i32 6>
   ret <2 x double> %res
 }
 define <2 x double> @test_masked_8xdouble_to_2xdouble_perm_mem_mask0(ptr %vp, <2 x double> %vec2, <2 x double> %mask) {
-; CHECK-LABEL: test_masked_8xdouble_to_2xdouble_perm_mem_mask0:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovapd (%rdi), %xmm2
-; CHECK-NEXT:    vxorpd %xmm3, %xmm3, %xmm3
-; CHECK-NEXT:    vcmpeqpd %xmm3, %xmm1, %k1
-; CHECK-NEXT:    vshufpd $1, 48(%rdi), %xmm2, %xmm0 {%k1} # xmm0 {%k1} = xmm2[1],mem[0]
-; CHECK-NEXT:    retq
+; CHECK-FAST-LABEL: test_masked_8xdouble_to_2xdouble_perm_mem_mask0:
+; CHECK-FAST:       # %bb.0:
+; CHECK-FAST-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; CHECK-FAST-NEXT:    vpmovsxbq {{.*#+}} xmm2 = [1,6]
+; CHECK-FAST-NEXT:    vxorpd %xmm3, %xmm3, %xmm3
+; CHECK-FAST-NEXT:    vcmpeqpd %xmm3, %xmm1, %k1
+; CHECK-FAST-NEXT:    vpermpd (%rdi), %zmm2, %zmm0 {%k1}
+; CHECK-FAST-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; CHECK-FAST-NEXT:    vzeroupper
+; CHECK-FAST-NEXT:    retq
+;
+; CHECK-FAST-PERLANE-LABEL: test_masked_8xdouble_to_2xdouble_perm_mem_mask0:
+; CHECK-FAST-PERLANE:       # %bb.0:
+; CHECK-FAST-PERLANE-NEXT:    vmovapd (%rdi), %xmm2
+; CHECK-FAST-PERLANE-NEXT:    vxorpd %xmm3, %xmm3, %xmm3
+; CHECK-FAST-PERLANE-NEXT:    vcmpeqpd %xmm3, %xmm1, %k1
+; CHECK-FAST-PERLANE-NEXT:    vshufpd $1, 48(%rdi), %xmm2, %xmm0 {%k1} # xmm0 {%k1} = xmm2[1],mem[0]
+; CHECK-FAST-PERLANE-NEXT:    retq
   %vec = load <8 x double>, ptr %vp
   %shuf = shufflevector <8 x double> %vec, <8 x double> undef, <2 x i32> <i32 1, i32 6>
   %cmp = fcmp oeq <2 x double> %mask, zeroinitializer
@@ -4693,13 +4582,23 @@ define <2 x double> @test_masked_8xdouble_to_2xdouble_perm_mem_mask0(ptr %vp, <2
 }
 
 define <2 x double> @test_masked_z_8xdouble_to_2xdouble_perm_mem_mask0(ptr %vp, <2 x double> %mask) {
-; CHECK-LABEL: test_masked_z_8xdouble_to_2xdouble_perm_mem_mask0:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovapd (%rdi), %xmm1
-; CHECK-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vcmpeqpd %xmm2, %xmm0, %k1
-; CHECK-NEXT:    vshufpd $1, 48(%rdi), %xmm1, %xmm0 {%k1} {z} # xmm0 {%k1} {z} = xmm1[1],mem[0]
-; CHECK-NEXT:    retq
+; CHECK-FAST-LABEL: test_masked_z_8xdouble_to_2xdouble_perm_mem_mask0:
+; CHECK-FAST:       # %bb.0:
+; CHECK-FAST-NEXT:    vpmovsxbq {{.*#+}} xmm1 = [1,6]
+; CHECK-FAST-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
+; CHECK-FAST-NEXT:    vcmpeqpd %xmm2, %xmm0, %k1
+; CHECK-FAST-NEXT:    vpermpd (%rdi), %zmm1, %zmm0 {%k1} {z}
+; CHECK-FAST-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; CHECK-FAST-NEXT:    vzeroupper
+; CHECK-FAST-NEXT:    retq
+;
+; CHECK-FAST-PERLANE-LABEL: test_masked_z_8xdouble_to_2xdouble_perm_mem_mask0:
+; CHECK-FAST-PERLANE:       # %bb.0:
+; CHECK-FAST-PERLANE-NEXT:    vmovapd (%rdi), %xmm1
+; CHECK-FAST-PERLANE-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
+; CHECK-FAST-PERLANE-NEXT:    vcmpeqpd %xmm2, %xmm0, %k1
+; CHECK-FAST-PERLANE-NEXT:    vshufpd $1, 48(%rdi), %xmm1, %xmm0 {%k1} {z} # xmm0 {%k1} {z} = xmm1[1],mem[0]
+; CHECK-FAST-PERLANE-NEXT:    retq
   %vec = load <8 x double>, ptr %vp
   %shuf = shufflevector <8 x double> %vec, <8 x double> undef, <2 x i32> <i32 1, i32 6>
   %cmp = fcmp oeq <2 x double> %mask, zeroinitializer
@@ -4710,10 +4609,13 @@ define <2 x double> @test_masked_z_8xdouble_to_2xdouble_perm_mem_mask0(ptr %vp, 
 define <2 x double> @test_masked_8xdouble_to_2xdouble_perm_mem_mask1(ptr %vp, <2 x double> %vec2, <2 x double> %mask) {
 ; CHECK-LABEL: test_masked_8xdouble_to_2xdouble_perm_mem_mask1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovddup 8(%rdi), %xmm2 # xmm2 = mem[0,0]
-; CHECK-NEXT:    vxorpd %xmm3, %xmm3, %xmm3
-; CHECK-NEXT:    vcmpeqpd %xmm3, %xmm1, %k1
-; CHECK-NEXT:    vunpcklpd 32(%rdi), %xmm2, %xmm0 {%k1} # xmm0 {%k1} = xmm2[0],mem[0]
+; CHECK-NEXT:    vpmovsxbq {{.*#+}} xmm2 = [0,12]
+; CHECK-NEXT:    vmovddup 8(%rdi), %xmm3 # xmm3 = mem[0,0]
+; CHECK-NEXT:    vpermt2pd (%rdi), %zmm2, %zmm3
+; CHECK-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vcmpeqpd %xmm2, %xmm1, %k1
+; CHECK-NEXT:    vmovapd %xmm3, %xmm0 {%k1}
+; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %vec = load <8 x double>, ptr %vp
   %shuf = shufflevector <8 x double> %vec, <8 x double> undef, <2 x i32> <i32 1, i32 4>
@@ -4725,10 +4627,13 @@ define <2 x double> @test_masked_8xdouble_to_2xdouble_perm_mem_mask1(ptr %vp, <2
 define <2 x double> @test_masked_z_8xdouble_to_2xdouble_perm_mem_mask1(ptr %vp, <2 x double> %mask) {
 ; CHECK-LABEL: test_masked_z_8xdouble_to_2xdouble_perm_mem_mask1:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpmovsxbq {{.*#+}} xmm2 = [0,12]
 ; CHECK-NEXT:    vmovddup 8(%rdi), %xmm1 # xmm1 = mem[0,0]
-; CHECK-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vcmpeqpd %xmm2, %xmm0, %k1
-; CHECK-NEXT:    vunpcklpd 32(%rdi), %xmm1, %xmm0 {%k1} {z} # xmm0 {%k1} {z} = xmm1[0],mem[0]
+; CHECK-NEXT:    vxorpd %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vcmpeqpd %xmm3, %xmm0, %k1
+; CHECK-NEXT:    vpermt2pd (%rdi), %zmm2, %zmm1 {%k1} {z}
+; CHECK-NEXT:    vmovapd %xmm1, %xmm0
+; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %vec = load <8 x double>, ptr %vp
   %shuf = shufflevector <8 x double> %vec, <8 x double> undef, <2 x i32> <i32 1, i32 4>
