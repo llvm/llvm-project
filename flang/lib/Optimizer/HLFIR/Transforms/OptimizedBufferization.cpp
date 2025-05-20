@@ -608,6 +608,13 @@ ElementalAssignBufferization::findMatch(hlfir::ElementalOp elemental) {
       return std::nullopt;
     }
 
+    // Don't allow any reads to or writes from volatile memory
+    if (mlir::isa<mlir::MemoryEffects::Read, mlir::MemoryEffects::Write>(
+            effect.getEffect()) &&
+        mlir::isa<fir::VolatileMemoryResource>(effect.getResource())) {
+      return std::nullopt;
+    }
+
     // allow if and only if the reads are from the elemental indices, in order
     // => each iteration doesn't read values written by other iterations
     // don't allow reads from a different value which may alias: fir alias
