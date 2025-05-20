@@ -30,3 +30,4 @@ Flang-Tidy Checks
    :doc:`bugprone-unused-intent <bugprone/unused-intent>`,
    :doc:`modernize-avoid-assign-stmt <modernize/avoid-assign-stmt>`,
    :doc:`modernize-avoid-backspace-stmt <modernize/avoid-backspace-stmt>`,
+   :doc:`modernize-avoid-common-blocks <modernize/avoid-common-blocks>`,

@@ -10,6 +10,7 @@
 #include "../FlangTidyModuleRegistry.h"
 #include "AvoidAssignStmt.h"
 #include "AvoidBackspaceStmt.h"
+#include "AvoidCommonBlocks.h"
 
 namespace Fortran::tidy {
 namespace modernize {
@@ -21,6 +22,8 @@ public:
         "modernize-avoid-assign-stmt");
     CheckFactories.registerCheck<AvoidBackspaceStmtCheck>(
         "modernize-avoid-backspace-stmt");
+    CheckFactories.registerCheck<AvoidCommonBlocksCheck>(
+        "modernize-avoid-common-blocks");
   }
 };
 
