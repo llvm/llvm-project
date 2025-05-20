@@ -758,6 +758,10 @@ LogicalResult TosaValidation::applyLevelCheck(Operation *op) {
     return success();
   }
 
+  // check rank and sizes early so later checks can assume shaped operands
+  if (!levelCheckRanksAndSizes(op))
+    return failure();
+
   // additional level checks from spec 0.70
   if (!levelCheckPool<tosa::AvgPool2dOp>(op) ||
       !levelCheckConv<tosa::Conv2DOp>(op) ||
@@ -767,10 +771,6 @@ LogicalResult TosaValidation::applyLevelCheck(Operation *op) {
       !levelCheckPool<tosa::MaxPool2dOp>(op) ||
       !levelCheckFFT<tosa::RFFT2dOp>(op) || !levelCheckTransposeConv2d(op) ||
       !levelCheckResize(op)) {
-    return failure();
-  }
-
-  if (!levelCheckRanksAndSizes(op)) {
     return failure();
   }
 
