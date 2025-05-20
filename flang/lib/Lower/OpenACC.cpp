@@ -819,7 +819,7 @@ genDataExitOperations(fir::FirOpBuilder &builder,
   for (mlir::Value operand : operands) {
     auto entryOp = mlir::dyn_cast_or_null<EntryOp>(operand.getDefiningOp());
     assert(entryOp && "data entry op expected");
-    auto opLoc = exitLoc ? *exitLoc : entryOp.getLoc();
+    mlir::Location opLoc = exitLoc ? *exitLoc : entryOp.getLoc();
     if constexpr (std::is_same_v<ExitOp, mlir::acc::CopyoutOp> ||
                   std::is_same_v<ExitOp, mlir::acc::UpdateHostOp>)
       builder.create<ExitOp>(
