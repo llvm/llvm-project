@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -verify -fsyntax-only -std=c++20 -Wthread-safety %s
+// RUN: %clang_cc1 -verify -fsyntax-only -Wthread-safety %s
 
-class __attribute__((lockable)) Lock {};
+struct __attribute__((lockable)) Lock {};
 
-void sink_protected(int) {}
+void sink_protected(int);
 
-class Baz {
+struct Baz {
 public:
     Lock lock_;
     int protected_num_ __attribute__((guarded_by(lock_))) = 1;
