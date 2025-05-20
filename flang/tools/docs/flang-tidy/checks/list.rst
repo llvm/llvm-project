@@ -20,3 +20,4 @@ Flang-Tidy Checks
    :doc:`bugprone-arithmetic-if <bugprone/arithmetic-if>`,
    :doc:`bugprone-contiguous-array <bugprone/contiguous-array>`,
    :doc:`bugprone-implicit-declaration <bugprone/implicit-declaration>`,
+   :doc:`bugprone-implied-save <bugprone/implied-save>`,

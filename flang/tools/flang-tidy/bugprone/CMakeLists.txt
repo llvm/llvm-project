@@ -4,6 +4,7 @@ add_flang_library(flangTidyBugproneModule STATIC
   BugproneTidyModule.cpp
   ContiguousArrayCheck.cpp
   ImplicitDeclCheck.cpp
+  ImpliedSaveCheck.cpp
 
   LINK_LIBS
   FortranSupport
