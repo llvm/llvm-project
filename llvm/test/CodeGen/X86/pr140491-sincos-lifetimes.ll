@@ -1,5 +1,13 @@
 ; RUN: llc < %s | FileCheck %s
 
+; This test is reduced from https://github.com/llvm/llvm-project/issues/140491.
+; It checks that when `@llvm.sincos.f32` is expanded to a call to
+; `sincosf(float, float* out_sin, float* out_cos)` and the store of `%cos` to
+; `%computed` is folded into the `sincosf` call. The use of `%cos`in the later
+; `fneg %cos` -- which expands to a load of `%computed`, will perform the load
+; before the `@llvm.lifetime.end.p0(%computed)` to ensure the correct value is
+; taken for `%cos`.
+
 target triple = "x86_64-sie-ps5"
 
 declare void @use_ptr(ptr readonly)
