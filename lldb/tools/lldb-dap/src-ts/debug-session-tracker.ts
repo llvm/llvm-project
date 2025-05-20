@@ -35,14 +35,24 @@ export class DebugSessionTracker
    * The modules are kept in an array to maintain the load order of the modules.
    */
   private modules = new Map<vscode.DebugSession, DebugProtocol.Module[]>();
-  private modulesChanged = new vscode.EventEmitter<void>();
+  private modulesChanged = new vscode.EventEmitter<
+    vscode.DebugSession | undefined
+  >();
 
   /**
    * Fired when modules are changed for any active debug session.
    *
    * Use `debugSessionModules` to retieve the active modules for a given debug session.
    */
-  onDidChangeModules: vscode.Event<void> = this.modulesChanged.event;
+  onDidChangeModules: vscode.Event<vscode.DebugSession | undefined> =
+    this.modulesChanged.event;
+
+  constructor() {
+    this.onDidChangeModules(this.moduleChangedListener, this);
+    vscode.debug.onDidChangeActiveDebugSession((session) =>
+      this.modulesChanged.fire(session),
+    );
+  }
 
   dispose() {
     this.modules.clear();
@@ -52,7 +62,6 @@ export class DebugSessionTracker
   createDebugAdapterTracker(
     session: vscode.DebugSession,
   ): vscode.ProviderResult<vscode.DebugAdapterTracker> {
-    this.showModulesTreeView(false);
     return {
       onDidSendMessage: (message) => this.onDidSendMessage(session, message),
       onExit: () => this.onExit(session),
@@ -71,11 +80,7 @@ export class DebugSessionTracker
   /** Clear information from the active session. */
   private onExit(session: vscode.DebugSession) {
     this.modules.delete(session);
-    // close when there is no more sessions
-    if (this.modules.size <= 0) {
-      this.showModulesTreeView(false);
-    }
-    this.modulesChanged.fire();
+    this.modulesChanged.fire(undefined);
   }
 
   private showModulesTreeView(showModules: boolean) {
@@ -84,6 +89,18 @@ export class DebugSessionTracker
       "lldb-dap.showModules",
       showModules,
     );
+  }
+
+  private moduleChangedListener(session: vscode.DebugSession | undefined) {
+    if (!session) {
+      this.showModulesTreeView(false);
+      return;
+    }
+
+    if (session == vscode.debug.activeDebugSession) {
+      const sessionHasModules = this.modules.get(session) != undefined;
+      this.showModulesTreeView(sessionHasModules);
+    }
   }
 
   private onDidSendMessage(
@@ -102,9 +119,6 @@ export class DebugSessionTracker
           } else {
             modules.push(module);
           }
-          if (modules.length == 1) {
-            this.showModulesTreeView(true);
-          }
           break;
         }
         case "removed": {
@@ -119,7 +133,7 @@ export class DebugSessionTracker
           break;
       }
       this.modules.set(session, modules);
-      this.modulesChanged.fire();
+      this.modulesChanged.fire(session);
     }
   }
 }
