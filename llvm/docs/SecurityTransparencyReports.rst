@@ -15,7 +15,7 @@ with the content of the Chromium issue, and have the SecurityArchive
 label.
 
 Each Chromium issue has 3 URLs, the first is the original URL recorded in
-previous transparency reports. the second is the redirect URL to the archive.
+previous transparency reports. The second is the redirect URL to the archive.
 The third is to the GitHub archive issue.
 
 2021
