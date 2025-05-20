@@ -4,6 +4,7 @@ from typing import Optional
 import uuid
 
 import dap_server
+from dap_server import Source
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbplatformutil
 import lldbgdbserverutils
@@ -56,7 +57,7 @@ class DAPTestCaseBase(TestBase):
         It contains optional location/hitCondition/logMessage parameters.
         """
         response = self.dap_server.request_setBreakpoints(
-            self.dap_server.get_source_for_path(source_path), lines, data
+            Source(source_path), lines, data
         )
         if response is None or not response["success"]:
             return []
@@ -68,7 +69,7 @@ class DAPTestCaseBase(TestBase):
 
     def set_source_breakpoints_assembly(self, source_reference, lines, data=None):
         response = self.dap_server.request_setBreakpoints(
-            self.dap_server.get_source_for_source_reference(source_reference),
+            Source(source_reference=source_reference),
             lines,
             data,
         )

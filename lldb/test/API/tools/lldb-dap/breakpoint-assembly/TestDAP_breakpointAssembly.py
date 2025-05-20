@@ -4,6 +4,7 @@ Test lldb-dap setBreakpoints request in assembly source references.
 
 
 from lldbsuite.test.decorators import *
+from dap_server import Source
 import lldbdap_testcase
 
 
@@ -49,7 +50,7 @@ class TestDAP_setBreakpointsAssembly(lldbdap_testcase.DAPTestCaseBase):
 
         # Verify that setting a breakpoint on an invalid source reference fails
         response = self.dap_server.request_setBreakpoints(
-            self.dap_server.get_source_for_source_reference(-1), [1]
+            Source(source_reference=-1), [1]
         )
         self.assertIsNotNone(response)
         breakpoints = response["body"]["breakpoints"]
@@ -66,7 +67,7 @@ class TestDAP_setBreakpointsAssembly(lldbdap_testcase.DAPTestCaseBase):
 
         # Verify that setting a breakpoint on a source reference without a symbol also fails
         response = self.dap_server.request_setBreakpoints(
-            self.dap_server.get_source_for_source_reference(0), [1]
+            Source(source_reference=0), [1]
         )
         self.assertIsNotNone(response)
         breakpoints = response["body"]["breakpoints"]

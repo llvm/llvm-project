@@ -1,4 +1,4 @@
-import dap_server
+from dap_server import Source
 import shutil
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -34,7 +34,7 @@ class TestDAP_InstructionBreakpointTestCase(lldbdap_testcase.DAPTestCaseBase):
 
         # Set source breakpoint 1
         response = self.dap_server.request_setBreakpoints(
-            self.dap_server.get_source_for_path(self.main_path), [main_line]
+            Source(self.main_path), [main_line]
         )
         breakpoints = response["body"]["breakpoints"]
         self.assertEqual(len(breakpoints), 1)
