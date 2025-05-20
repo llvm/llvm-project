@@ -18,7 +18,7 @@ int init_arr();
 template<typename T> template<typename U> template<typename V> int Outer<T>::Inner<U>::arr[sizeof(T) + sizeof(U) + sizeof(V)] = { init_arr() };
 int *p = Outer<char[100]>::Inner<char[20]>::arr<char[3]>;
 
-//CHECK : @_ZN8GH1406221gIiEE = linkonce_odr constant %"struct.GH140622::S" zeroinitializer
+//CHECK: @_ZN8GH1406221gIiEE = linkonce_odr constant %"struct.GH140622::S" zeroinitializer
 namespace GH140622 {
 template <typename> struct S {};
 template <typename T> constexpr S<T> g;
