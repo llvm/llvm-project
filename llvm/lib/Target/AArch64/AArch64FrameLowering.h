@@ -36,6 +36,14 @@ public:
   void emitPrologue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
   void emitEpilogue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
 
+  /// Harden the entire function with pac-ret.
+  ///
+  /// If pac-ret+leaf is requested, we want to harden as much code as possible.
+  /// This function inserts pac-ret hardening at the points where prologue and
+  /// epilogue are traditionally inserted, ignoring possible shrink-wrapping
+  /// optimization.
+  void emitPacRetPlusLeafHardening(MachineFunction &MF) const;
+
   bool enableCFIFixup(const MachineFunction &MF) const override;
 
   bool enableFullCFIFixup(const MachineFunction &MF) const override;

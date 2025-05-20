@@ -1717,6 +1717,39 @@ static void getLivePhysRegsUpTo(MachineInstr &MI, const TargetRegisterInfo &TRI,
 }
 #endif
 
+void AArch64FrameLowering::emitPacRetPlusLeafHardening(
+    MachineFunction &MF) const {
+  const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
+  const TargetInstrInfo *TII = Subtarget.getInstrInfo();
+
+  auto EmitSignRA = [&](MachineBasicBlock &MBB) {
+    DebugLoc DL; // Set debug location to unknown.
+    MachineBasicBlock::iterator MBBI = MBB.begin();
+
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::PAUTH_PROLOGUE))
+        .setMIFlag(MachineInstr::FrameSetup);
+  };
+
+  auto EmitAuthRA = [&](MachineBasicBlock &MBB) {
+    DebugLoc DL;
+    MachineBasicBlock::iterator MBBI = MBB.getFirstTerminator();
+    if (MBBI != MBB.end())
+      DL = MBBI->getDebugLoc();
+
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::PAUTH_EPILOGUE))
+        .setMIFlag(MachineInstr::FrameDestroy);
+  };
+
+  // This should be in sync with PEIImpl::calculateSaveRestoreBlocks.
+  EmitSignRA(MF.front());
+  for (MachineBasicBlock &MBB : MF) {
+    if (MBB.isEHFuncletEntry())
+      EmitSignRA(MBB);
+    if (MBB.isReturnBlock())
+      EmitAuthRA(MBB);
+  }
+}
+
 void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
                                         MachineBasicBlock &MBB) const {
   MachineBasicBlock::iterator MBBI = MBB.begin();
@@ -1791,8 +1824,12 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
                                 MFnI.needsDwarfUnwindInfo(MF));
 
   if (MFnI.shouldSignReturnAddress(MF)) {
-    BuildMI(MBB, MBBI, DL, TII->get(AArch64::PAUTH_PROLOGUE))
-        .setMIFlag(MachineInstr::FrameSetup);
+    // If pac-ret+leaf is in effect, PAUTH_PROLOGUE pseudo instructions
+    // are inserted by emitPacRetPlusLeafHardening().
+    if (!MFnI.shouldSignReturnAddressEverywhere()) {
+      BuildMI(MBB, MBBI, DL, TII->get(AArch64::PAUTH_PROLOGUE))
+          .setMIFlag(MachineInstr::FrameSetup);
+    }
     if (NeedsWinCFI)
       HasWinCFI = true; // AArch64PointerAuth pass will insert SEH_PACSignLR
   }
@@ -2351,9 +2388,13 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
 
   auto FinishingTouches = make_scope_exit([&]() {
     if (AFI->shouldSignReturnAddress(MF)) {
-      BuildMI(MBB, MBB.getFirstTerminator(), DL,
-              TII->get(AArch64::PAUTH_EPILOGUE))
-          .setMIFlag(MachineInstr::FrameDestroy);
+      // If pac-ret+leaf is in effect, PAUTH_EPILOGUE pseudo instructions
+      // are inserted by emitPacRetPlusLeafHardening().
+      if (!AFI->shouldSignReturnAddressEverywhere()) {
+        BuildMI(MBB, MBB.getFirstTerminator(), DL,
+                TII->get(AArch64::PAUTH_EPILOGUE))
+            .setMIFlag(MachineInstr::FrameDestroy);
+      }
       if (NeedsWinCFI)
         HasWinCFI = true; // AArch64PointerAuth pass will insert SEH_PACSignLR
     }
@@ -5143,6 +5184,8 @@ static void emitVGSaveRestore(MachineBasicBlock::iterator II,
 
 void AArch64FrameLowering::processFunctionBeforeFrameIndicesReplaced(
     MachineFunction &MF, RegScavenger *RS = nullptr) const {
+  AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
+
   for (auto &BB : MF)
     for (MachineBasicBlock::iterator II = BB.begin(); II != BB.end();) {
       if (requiresSaveVG(MF))
@@ -5150,6 +5193,13 @@ void AArch64FrameLowering::processFunctionBeforeFrameIndicesReplaced(
       else if (StackTaggingMergeSetTag)
         II = tryMergeAdjacentSTG(II, this, RS);
     }
+
+  // By the time this method is called, most of the prologue/epilogue code is
+  // already emitted, whether its location was affected by the shrink-wrapping
+  // optimization or not.
+  if (!MF.getFunction().hasFnAttribute(Attribute::Naked) &&
+      AFI->shouldSignReturnAddressEverywhere())
+    emitPacRetPlusLeafHardening(MF);
 }
 
 /// For Win64 AArch64 EH, the offset to the Unwind object is from the SP

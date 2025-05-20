@@ -162,6 +162,10 @@ bool AArch64FunctionInfo::shouldSignReturnAddress(
   return shouldSignReturnAddress(isLRSpilled(MF));
 }
 
+bool AArch64FunctionInfo::shouldSignReturnAddressEverywhere() const {
+  return SignReturnAddressAll;
+}
+
 bool AArch64FunctionInfo::needsShadowCallStackPrologueEpilogue(
     MachineFunction &MF) const {
   if (!(isLRSpilled(MF) &&
