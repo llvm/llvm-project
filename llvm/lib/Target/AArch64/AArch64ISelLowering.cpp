@@ -18602,6 +18602,33 @@ static SDValue performBuildShuffleExtendCombine(SDValue BV, SelectionDAG &DAG) {
     SeenZExtOrSExt = true;
   }
 
+  // Avoid the said use of vector SExt/ZExt in case all vector elements are
+  // consumed and each shuffle's mask uses same index, in order to permit use of
+  // indexed OP (e.g. MLA, MUL) variants
+  EVT ExtendType = Extend->getValueType(0);
+  if (ExtendType.isVector() && !ExtendType.isScalableVT()) {
+    const int NumElements = ExtendType.getVectorNumElements();
+    SmallBitVector UsedElements(NumElements, false);
+    for (auto UI = Extend.getNode()->use_begin(),
+              UE = Extend.getNode()->use_end();
+         UI != UE; ++UI) {
+      SDNode *User = UI->getUser();
+      if (User->getOpcode() == ISD::VECTOR_SHUFFLE &&
+          User->getOperand(0) == Extend) {
+        ArrayRef<int> Mask = cast<ShuffleVectorSDNode>(User)->getMask();
+        const int Idx = Mask[0];
+        if (Idx >= NumElements)
+          continue;
+        if (llvm::all_of(Mask, [Idx](int M) { return M == Idx; }))
+          UsedElements.set(Idx);
+        else
+          break; // early loop exit to help performance
+      }
+    }
+    if (UsedElements.all())
+      return SDValue();
+  }
+
   SDValue NBV;
   SDLoc DL(BV);
   if (BV.getOpcode() == ISD::BUILD_VECTOR) {
