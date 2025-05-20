@@ -799,6 +799,7 @@ def : Sh3AddPat<SH3ADD>;
 } // Predicates = [HasStdExtZba, IsRV64]
 
 let Predicates = [HasStdExtZbcOrZbkc] in {
+def : PatGprGpr<clmul, CLMUL>;
 def : PatGprGpr<riscv_clmul, CLMUL>;
 def : PatGprGpr<riscv_clmulh, CLMULH>;
 } // Predicates = [HasStdExtZbcOrZbkc]

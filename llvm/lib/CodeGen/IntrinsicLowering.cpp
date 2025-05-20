@@ -215,7 +215,7 @@ static Value *LowerCLMUL(LLVMContext &Context, Value *V1, Value *V2, Instruction
     V1 = Builder.CreateLShr(V1, One, "clmul.V1");
     V2 = Builder.CreateShl(V2, One, "clmul.V2");
   }
-  return LowerCTPOP(Context, Res, IP);
+  return Res;
 }
 
 static void ReplaceFPIntrinsicWithCall(CallInst *CI, const char *Fname,

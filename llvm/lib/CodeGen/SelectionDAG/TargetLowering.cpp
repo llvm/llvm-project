@@ -8277,6 +8277,37 @@ SDValue TargetLowering::expandFunnelShift(SDNode *Node,
   return DAG.getNode(ISD::OR, DL, VT, ShX, ShY);
 }
 
+SDValue TargetLowering::expandCLMUL(SDNode *Node,
+                                          SelectionDAG &DAG) const {
+  SDLoc DL(Node);
+  EVT VT = Node->getValueType(0);
+  SDValue V1 = Node->getOperand(0);
+  SDValue V2 = Node->getOperand(1);
+  unsigned NumBitsPerElt = VT.getScalarSizeInBits();
+
+  // Only expand vector types if we have the appropriate vector bit operations.
+  // This includes the operations needed to expand CTPOP if it isn't supported.
+  if (VT.isVector() && (!isPowerOf2_32(NumBitsPerElt) ||
+                        (!isOperationLegalOrCustom(ISD::SRL, VT) ||
+                        !isOperationLegalOrCustom(ISD::SHL, VT) ||
+                        !isOperationLegalOrCustom(ISD::XOR, VT) ||
+                        !isOperationLegalOrCustom(ISD::AND, VT) ||
+                        !isOperationLegalOrCustomOrPromote(ISD::OR, VT))))
+    return SDValue();
+
+  SDValue Res = DAG.getConstant(0, DL, VT);
+  SDValue Zero = DAG.getConstant(0, DL, VT);
+  SDValue One = DAG.getConstant(1, DL, VT);
+  for (unsigned i = 0; i < NumBitsPerElt; ++i) {
+    SDValue LowBit = DAG.getNode(ISD::AND, DL, VT, V1, One);
+    SDValue Pred = DAG.getNode(ISD::SELECT, DL, VT, LowBit, V2, Zero);
+    Res = DAG.getNode(ISD::XOR, DL, VT, Res, Pred);
+    V1 = DAG.getNode(ISD::SRL, DL, VT, V1, One);
+    V2 = DAG.getNode(ISD::SHL, DL, VT, V2, One);
+  }
+  return Res;
+}
+
 // TODO: Merge with expandFunnelShift.
 SDValue TargetLowering::expandROT(SDNode *Node, bool AllowVectorOps,
                                   SelectionDAG &DAG) const {
