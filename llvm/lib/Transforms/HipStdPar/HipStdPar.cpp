@@ -430,7 +430,8 @@ PreservedAnalyses HipStdParMathFixupPass::run(Module &M,
 
     ToReplace.emplace_back(&F, N);
     llvm::replace(ToReplace.back().second, '.', '_');
-    ToReplace.back().second.replace(0, sizeof("llvm"), "__hipstdpar_");
+    StringRef Prefix = "llvm";
+    ToReplace.back().second.replace(0, Prefix.size(), "__hipstdpar");
   }
   for (auto &&F : ToReplace)
     F.first->replaceAllUsesWith(
