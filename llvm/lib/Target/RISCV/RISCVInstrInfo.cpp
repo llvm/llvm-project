@@ -2935,6 +2935,7 @@ bool RISCVInstrInfo::canFoldIntoAddrMode(const MachineInstr &MemI, Register Reg,
   case RISCV::LW_INX:
   case RISCV::LWU:
   case RISCV::LD:
+  case RISCV::LD_RV32:
   case RISCV::FLH:
   case RISCV::FLW:
   case RISCV::FLD:
@@ -2944,6 +2945,7 @@ bool RISCVInstrInfo::canFoldIntoAddrMode(const MachineInstr &MemI, Register Reg,
   case RISCV::SW:
   case RISCV::SW_INX:
   case RISCV::SD:
+  case RISCV::SD_RV32:
   case RISCV::FSH:
   case RISCV::FSW:
   case RISCV::FSD:
