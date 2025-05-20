@@ -227,14 +227,23 @@ def PrefetchTag : Operand<i32> {
 // Branch targets have OtherVT type.
 def brtarget : Operand<OtherVT> {
   let EncoderMethod = "getBranchTargetOpValue";
+  let DecoderMethod = "DecodeDisp<22>";
+  let PrintMethod = "printCTILabel";
+  let OperandType = "OPERAND_PCREL";
 }
 
 def bprtarget : Operand<OtherVT> {
   let EncoderMethod = "getBranchPredTargetOpValue";
+  let DecoderMethod = "DecodeDisp<19>";
+  let PrintMethod = "printCTILabel";
+  let OperandType = "OPERAND_PCREL";
 }
 
 def bprtarget16 : Operand<OtherVT> {
   let EncoderMethod = "getBranchOnRegTargetOpValue";
+  let DecoderMethod = "DecodeDisp<16>";
+  let PrintMethod = "printCTILabel";
+  let OperandType = "OPERAND_PCREL";
 }
 
 def SparcCallTargetAsmOperand : AsmOperandClass {
@@ -246,6 +255,8 @@ def calltarget : Operand<i32> {
   let EncoderMethod = "getCallTargetOpValue";
   let DecoderMethod = "DecodeCall";
   let ParserMatchClass = SparcCallTargetAsmOperand;
+  let PrintMethod = "printCTILabel";
+  let OperandType = "OPERAND_PCREL";
 }
 
 // Operand for printing out a condition code.
