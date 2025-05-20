@@ -571,6 +571,8 @@ public:
           traceInst(BC, "First instruction", FirstInst);
           traceInst(BC, "Last instruction", LastInst);
         });
+        (void)CheckedReg;
+        (void)FirstInst;
         assert(llvm::any_of(BB, [&](MCInst &I) { return &I == &FirstInst; }) &&
                "Data-flow analysis expects the checker not to cross BBs");
         CheckerSequenceInfo[&LastInst] = *CheckerInfo;
