@@ -19,9 +19,10 @@ static cl::SubCommand
                    "Instruction Mix (requires asm-printer remarks)");
 
 static cl::opt<std::string>
-    FunctionFilter("filter", cl::sub(InstructionMix), cl::init(".*"),
-                   cl::value_desc("filter_regex"),
-                   cl::desc("regex to filter functions with"));
+    FunctionFilterRE("rfilter", cl::sub(InstructionMix), cl::init(".*"),
+                     cl::ValueOptional,
+                     cl::desc("Optional function name to filter collection by "
+                              "(accepts regular expressions)"));
 
 enum ReportStyleOptions { human_output, csv_output };
 static cl::opt<ReportStyleOptions> ReportStyle(
@@ -48,7 +49,11 @@ static Error tryInstructionMix() {
   if (!MaybeParser)
     return MaybeParser.takeError();
 
-  Regex Filter(FunctionFilter);
+  Regex Filter(FunctionFilterRE);
+  std::string Error;
+  if (!Filter.isValid(Error))
+    return createStringError(make_error_code(std::errc::invalid_argument),
+                             Twine("invalid argument '--rfilter=") + FunctionFilterRE + "': " + Error);
 
   // Collect the histogram of instruction counts.
   std::unordered_map<std::string, unsigned> Histogram;
