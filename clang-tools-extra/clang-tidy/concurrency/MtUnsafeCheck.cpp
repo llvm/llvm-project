@@ -153,7 +153,6 @@ static const clang::StringRef GlibcFunctions[] = {
     "::sigsuspend",
     "::sleep",
     "::srand48",
-    "::strerror",
     "::strsignal",
     "::strtok",
     "::tcflow",
