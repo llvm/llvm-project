@@ -450,6 +450,8 @@ public:
   MachineBasicBlock *emitDynamicProbedAlloc(MachineInstr &MI,
                                             MachineBasicBlock *MBB) const;
 
+  ArrayRef<MCPhysReg> getRoundingControlRegisters() const override;
+
 private:
   void analyzeInputArgs(MachineFunction &MF, CCState &CCInfo,
                         const SmallVectorImpl<ISD::InputArg> &Ins, bool IsRet,
