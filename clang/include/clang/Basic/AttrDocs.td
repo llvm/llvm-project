@@ -398,7 +398,8 @@ any option of a multiversioned function is undefined.
 
 def DeviceKernelDocs : Documentation {
   let Category = DocCatFunction;
-  let Heading = "device_kernel";
+  let Heading = "device_kernel, sycl_kernel, nvptx_kernel, amdgpu_kernel, "
+                "kernel, __kernel";
   let Content = [{
 These attributes specify that the function represents a kernel for device offloading.
 The specific semantics depend on the offloading language, target, and attribute spelling.
