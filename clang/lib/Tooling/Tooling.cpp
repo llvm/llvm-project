@@ -652,7 +652,7 @@ public:
                      std::shared_ptr<PCHContainerOperations> PCHContainerOps,
                      DiagnosticConsumer *DiagConsumer) override {
     std::unique_ptr<ASTUnit> AST = ASTUnit::LoadFromCompilerInvocation(
-        Invocation, std::move(PCHContainerOps),
+        Invocation, std::move(PCHContainerOps), nullptr,
         CompilerInstance::createDiagnostics(Files->getVirtualFileSystem(),
                                             Invocation->getDiagnosticOpts(),
                                             DiagConsumer,

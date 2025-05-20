@@ -560,15 +560,15 @@ CrossTranslationUnitContext::ASTLoader::load(StringRef Identifier) {
 
 CrossTranslationUnitContext::LoadResultTy
 CrossTranslationUnitContext::ASTLoader::loadFromDump(StringRef ASTDumpPath) {
-  DiagnosticOptions DiagOpts;
+  auto DiagOpts = std::make_shared<DiagnosticOptions>();
   TextDiagnosticPrinter *DiagClient =
-      new TextDiagnosticPrinter(llvm::errs(), DiagOpts);
+      new TextDiagnosticPrinter(llvm::errs(), *DiagOpts);
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags(
-      new DiagnosticsEngine(DiagID, DiagOpts, DiagClient));
+      new DiagnosticsEngine(DiagID, *DiagOpts, DiagClient));
   return ASTUnit::LoadFromASTFile(
       ASTDumpPath, CI.getPCHContainerOperations()->getRawReader(),
-      ASTUnit::LoadEverything, Diags, CI.getFileSystemOpts(),
+      ASTUnit::LoadEverything, DiagOpts, Diags, CI.getFileSystemOpts(),
       CI.getHeaderSearchOpts());
 }
 

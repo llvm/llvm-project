@@ -59,8 +59,8 @@ protected:
     PCHContainerOps = std::make_shared<PCHContainerOperations>();
 
     return ASTUnit::LoadFromCompilerInvocation(
-        CInvok, PCHContainerOps, Diags, FileMgr, false, CaptureDiagsKind::None,
-        0, TU_Complete, false, false, isVolatile);
+        CInvok, PCHContainerOps, DiagOpts, Diags, FileMgr, false,
+        CaptureDiagsKind::None, 0, TU_Complete, false, false, isVolatile);
   }
 };
 
@@ -97,7 +97,7 @@ TEST_F(ASTUnitTest, SaveLoadPreservesLangOptionsInPrintingPolicy) {
 
   std::unique_ptr<ASTUnit> AU = ASTUnit::LoadFromASTFile(
       ASTFileName, PCHContainerOps->getRawReader(), ASTUnit::LoadEverything,
-      Diags, FileSystemOptions(), HSOpts);
+      DiagOpts, Diags, FileSystemOptions(), HSOpts);
 
   if (!AU)
     FAIL() << "failed to load ASTUnit";
@@ -148,8 +148,8 @@ TEST_F(ASTUnitTest, ModuleTextualHeader) {
   PCHContainerOps = std::make_shared<PCHContainerOperations>();
 
   auto AU = ASTUnit::LoadFromCompilerInvocation(
-      CInvok, PCHContainerOps, Diags, FileMgr, false, CaptureDiagsKind::None, 1,
-      TU_Complete, false, false, false);
+      CInvok, PCHContainerOps, DiagOpts, Diags, FileMgr, false,
+      CaptureDiagsKind::None, 1, TU_Complete, false, false, false);
   ASSERT_TRUE(AU);
   auto File = AU->getFileManager().getFileRef("Textual.h", false, false);
   ASSERT_TRUE(bool(File));

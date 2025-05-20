@@ -152,13 +152,13 @@ static bool HandleAST(StringRef AstPath) {
   if (!CI)
     CI = new CompilerInstance();
 
-  DiagnosticOptions DiagOpts;
+  auto DiagOpts = std::make_shared<DiagnosticOptions>();
   IntrusiveRefCntPtr<DiagnosticsEngine> DiagEngine =
-      GetDiagnosticsEngine(DiagOpts);
+      GetDiagnosticsEngine(*DiagOpts);
 
   std::unique_ptr<ASTUnit> Unit = ASTUnit::LoadFromASTFile(
       AstPath, CI->getPCHContainerOperations()->getRawReader(),
-      ASTUnit::LoadASTOnly, DiagEngine, CI->getFileSystemOpts(),
+      ASTUnit::LoadASTOnly, DiagOpts, DiagEngine, CI->getFileSystemOpts(),
       CI->getHeaderSearchOpts());
 
   if (!Unit)

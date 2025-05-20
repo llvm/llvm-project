@@ -46,8 +46,8 @@ void ASTMergeAction::ExecuteAction() {
         new ForwardingDiagnosticConsumer(*CI.getDiagnostics().getClient()),
         /*ShouldOwnClient=*/true));
     std::unique_ptr<ASTUnit> Unit = ASTUnit::LoadFromASTFile(
-        ASTFiles[I], CI.getPCHContainerReader(), ASTUnit::LoadEverything, Diags,
-        CI.getFileSystemOpts(), CI.getHeaderSearchOpts());
+        ASTFiles[I], CI.getPCHContainerReader(), ASTUnit::LoadEverything,
+        nullptr, Diags, CI.getFileSystemOpts(), CI.getHeaderSearchOpts());
 
     if (!Unit)
       continue;
