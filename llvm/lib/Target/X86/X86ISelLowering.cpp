@@ -10096,7 +10096,10 @@ static bool isTargetShuffleEquivalent(MVT VT, ArrayRef<int> Mask,
   if (Size != (int)ExpectedMask.size())
     return false;
   assert(llvm::all_of(ExpectedMask,
-                      [Size](int M) { return isInRange(M, 0, 2 * Size); }) &&
+                      [Size](int M) {
+                        return M == SM_SentinelZero ||
+                               isInRange(M, 0, 2 * Size);
+                      }) &&
          "Illegal target shuffle mask");
 
   // Check for out-of-range target shuffle mask indices.
@@ -10119,6 +10122,9 @@ static bool isTargetShuffleEquivalent(MVT VT, ArrayRef<int> Mask,
     int ExpectedIdx = ExpectedMask[i];
     if (MaskIdx == SM_SentinelUndef || MaskIdx == ExpectedIdx)
       continue;
+    // If we failed to match an expected SM_SentinelZero then early out.
+    if (ExpectedIdx < 0)
+      return false;
     if (MaskIdx == SM_SentinelZero) {
       // If we need this expected index to be a zero element, then update the
       // relevant zero mask and perform the known bits at the end to minimize
@@ -39594,15 +39600,43 @@ static bool matchBinaryPermuteShuffle(
       ((MaskVT.is128BitVector() && Subtarget.hasVLX()) ||
        (MaskVT.is256BitVector() && Subtarget.hasVLX()) ||
        (MaskVT.is512BitVector() && Subtarget.hasAVX512()))) {
+    MVT AlignVT = MVT::getVectorVT(MVT::getIntegerVT(EltSizeInBits),
+                                   MaskVT.getSizeInBits() / EltSizeInBits);
     if (!isAnyZero(Mask)) {
       int Rotation = matchShuffleAsElementRotate(V1, V2, Mask);
       if (0 < Rotation) {
         Shuffle = X86ISD::VALIGN;
-        if (EltSizeInBits == 64)
-          ShuffleVT = MVT::getVectorVT(MVT::i64, MaskVT.getSizeInBits() / 64);
-        else
-          ShuffleVT = MVT::getVectorVT(MVT::i32, MaskVT.getSizeInBits() / 32);
+        ShuffleVT = AlignVT;
         PermuteImm = Rotation;
+        return true;
+      }
+    }
+    // See if we can use VALIGN as a cross-lane version of VSHLDQ/VSRLDQ.
+    unsigned ZeroLo = Zeroable.countr_one();
+    unsigned ZeroHi = Zeroable.countl_one();
+    assert((ZeroLo + ZeroHi) < NumMaskElts && "Zeroable shuffle detected");
+    if (ZeroLo) {
+      SmallVector<int, 16> ShiftMask(NumMaskElts, SM_SentinelZero);
+      std::iota(ShiftMask.begin() + ZeroLo, ShiftMask.end(), 0);
+      if (isTargetShuffleEquivalent(MaskVT, Mask, ShiftMask, DAG, V1)) {
+        V1 = V1;
+        V2 = getZeroVector(AlignVT, Subtarget, DAG, DL);
+        Shuffle = X86ISD::VALIGN;
+        ShuffleVT = AlignVT;
+        PermuteImm = NumMaskElts - ZeroLo;
+        return true;
+      }
+    }
+    if (ZeroHi) {
+      SmallVector<int, 16> ShiftMask(NumMaskElts, SM_SentinelZero);
+      std::iota(ShiftMask.begin(), ShiftMask.begin() + NumMaskElts - ZeroHi,
+                ZeroHi);
+      if (isTargetShuffleEquivalent(MaskVT, Mask, ShiftMask, DAG, V1)) {
+        V2 = V1;
+        V1 = getZeroVector(AlignVT, Subtarget, DAG, DL);
+        Shuffle = X86ISD::VALIGN;
+        ShuffleVT = AlignVT;
+        PermuteImm = ZeroHi;
         return true;
       }
     }
