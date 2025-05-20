@@ -64,46 +64,6 @@ static LogicalResult verifyMultShape(Operation *op, amx::TileType atp,
   return success();
 }
 
-/// Get pointer to a memref descriptor.
-/// Optionally, the base pointer can be offset using linearized index computed
-/// from the given indices.
-static Value getBufferPtr(Location loc, MemRefType type, Value buffer,
-                          ValueRange indices,
-                          const LLVMTypeConverter &typeConverter,
-                          RewriterBase &rewriter) {
-  auto [strides, offset] = type.getStridesAndOffset();
-
-  MemRefDescriptor memRefDescriptor(buffer);
-  Value base = memRefDescriptor.bufferPtr(rewriter, loc, typeConverter, type);
-
-  int numIndices = indices.size();
-  if (numIndices == 0)
-    return base;
-
-  assert(type.getRank() == numIndices &&
-         "expects number of indices equal to memref rank");
-  Value index;
-  Type indexType = typeConverter.getIndexType();
-  for (int i = 0; i < numIndices; ++i) {
-    Value increment = indices[i];
-    if (strides[i] != 1) { // Skip if stride is 1.
-      Value stride =
-          ShapedType::isDynamic(strides[i])
-              ? memRefDescriptor.stride(rewriter, loc, i)
-              : rewriter.create<LLVM::ConstantOp>(
-                    loc, indexType, rewriter.getIndexAttr(strides[i]));
-      increment = rewriter.create<LLVM::MulOp>(loc, increment, stride);
-    }
-    index =
-        index ? rewriter.create<LLVM::AddOp>(loc, index, increment) : increment;
-  }
-
-  Type elementPtrType = memRefDescriptor.getElementPtrType();
-  return rewriter.create<LLVM::GEPOp>(
-      loc, elementPtrType, typeConverter.convertType(type.getElementType()),
-      base, index);
-}
-
 /// Maps the 2-dim vector shape to the two 16-bit tile sizes. The first
 /// dimension directly translates into the number of rows of the tiles.
 /// The second dimensions needs to be scaled by the number of bytes.
@@ -122,7 +82,6 @@ static SmallVector<Value> getTileSizes(Location loc, amx::TileType tType,
 
 /// Maps the 2-dim memref shape to the 64-bit stride. Note that the buffer
 /// shape may "envelop" the actual tile shape, and may be dynamically sized.
-/// Returns failure if proper stride couldn't be found.
 static Value getStride(Location loc, MemRefType mType, Value base,
                        RewriterBase &rewriter) {
   assert(mType.getRank() >= 2 && "Invalid shape for AMX strides");
@@ -184,8 +143,8 @@ amx::TileLoadOp::getIntrinsicOperands(ArrayRef<Value> operands,
   SmallVector<Value> intrinsicOperands;
   intrinsicOperands.append(getTileSizes(loc, getTileType(), rewriter));
   intrinsicOperands.push_back(
-      getBufferPtr(loc, getMemRefType(), adaptor.getBase(),
-                   adaptor.getIndices(), typeConverter, rewriter));
+      LLVM::getStridedElementPtr(rewriter, loc, typeConverter, getMemRefType(),
+                                 adaptor.getBase(), adaptor.getIndices()));
   intrinsicOperands.push_back(
       getStride(loc, getMemRefType(), adaptor.getBase(), rewriter));
 
@@ -217,8 +176,8 @@ amx::TileStoreOp::getIntrinsicOperands(ArrayRef<Value> operands,
   SmallVector<Value> intrinsicOperands;
   intrinsicOperands.append(getTileSizes(loc, getTileType(), rewriter));
   intrinsicOperands.push_back(
-      getBufferPtr(loc, getMemRefType(), adaptor.getBase(),
-                   adaptor.getIndices(), typeConverter, rewriter));
+      LLVM::getStridedElementPtr(rewriter, loc, typeConverter, getMemRefType(),
+                                 adaptor.getBase(), adaptor.getIndices()));
   intrinsicOperands.push_back(
       getStride(loc, getMemRefType(), adaptor.getBase(), rewriter));
   intrinsicOperands.push_back(adaptor.getVal());

@@ -25,8 +25,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef AMX_OPS
-#define AMX_OPS
+#ifndef AMX
+#define AMX
 
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/Dialect/AMX/AMXInterfaces.td"
@@ -371,4 +371,4 @@ def TileMulIOp : AMX_Op<"tile_muli", [Pure,
   let hasVerifier = 1;
 }
 
-#endif // AMX_OPS
+#endif // AMX
