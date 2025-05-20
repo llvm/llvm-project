@@ -164,8 +164,20 @@ class OpenACCClauseCIREmitter final
     builder.setInsertionPoint(operation.computeOp);
     OpenACCClauseCIREmitter<typename OpTy::ComputeOpTy> computeEmitter{
         operation.computeOp, cgf, builder, dirKind, dirLoc};
+
     computeEmitter.lastDeviceTypeValues = lastDeviceTypeValues;
+
+    // Async handler uses the first data operand to figure out where to insert
+    // its information if it is present.  This ensures that the new handler will
+    // correctly set the insertion point for async.
+    if (!dataOperands.empty())
+      computeEmitter.dataOperands.push_back(dataOperands.front());
     computeEmitter.Visit(&c);
+
+    // Make sure all of the new data operands are kept track of here. The
+    // combined constructs always apply 'async' to only the compute component,
+    // so we need to collect these.
+    dataOperands.append(computeEmitter.dataOperands);
   }
 
   struct DataOperandInfo {
@@ -254,6 +266,8 @@ class OpenACCClauseCIREmitter final
     if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp, mlir::acc::SerialOp,
                                mlir::acc::KernelsOp, mlir::acc::DataOp>)
       return operation.getAsyncOnlyAttr();
+    else if constexpr (isCombinedType<OpTy>)
+      return operation.computeOp.getAsyncOnlyAttr();
 
     // Note: 'wait' has async as well, but it cannot have data clauses, so we
     // don't have to handle them here.
@@ -267,6 +281,8 @@ class OpenACCClauseCIREmitter final
     if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp, mlir::acc::SerialOp,
                                mlir::acc::KernelsOp, mlir::acc::DataOp>)
       return operation.getAsyncOperandsDeviceTypeAttr();
+    else if constexpr (isCombinedType<OpTy>)
+      return operation.computeOp.getAsyncOperandsDeviceTypeAttr();
 
     // Note: 'wait' has async as well, but it cannot have data clauses, so we
     // don't have to handle them here.
@@ -281,6 +297,8 @@ class OpenACCClauseCIREmitter final
     if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp, mlir::acc::SerialOp,
                                mlir::acc::KernelsOp, mlir::acc::DataOp>)
       return operation.getAsyncOperands();
+    else if constexpr (isCombinedType<OpTy>)
+      return operation.computeOp.getAsyncOperands();
 
     // Note: 'wait' has async as well, but it cannot have data clauses, so we
     // don't have to handle them here.
@@ -295,8 +313,6 @@ class OpenACCClauseCIREmitter final
   void updateDataOperandAsyncValues() {
     if (!hasAsyncClause || dataOperands.empty())
       return;
-
-    // TODO: OpenACC: Handle this correctly for combined constructs.
 
     for (mlir::Operation *dataOp : dataOperands) {
       llvm::TypeSwitch<mlir::Operation *, void>(dataOp)
@@ -708,6 +724,8 @@ public:
         addDataOperand<mlir::acc::CopyinOp, mlir::acc::CopyoutOp>(
             var, mlir::acc::DataClause::acc_copy, /*structured=*/true,
             /*implicit=*/false);
+    } else if constexpr (isCombinedType<OpTy>) {
+      applyToComputeOp(clause);
     } else {
       // TODO: When we've implemented this for everything, switch this to an
       // unreachable. data, declare, combined constructs remain.
