@@ -31,7 +31,7 @@ public:
   /// mlir::Builder::getStringAttr() which is an mlir::StringAttr.
   mlir::Attribute getString(llvm::StringRef str, mlir::Type eltTy,
                             std::optional<size_t> size) {
-    size_t finalSize = size ? *size : str.size();
+    size_t finalSize = size.value_or(str.size());
 
     size_t lastNonZeroPos = str.find_last_not_of('\0');
     // If the string is full of null bytes, emit a #cir.zero rather than
