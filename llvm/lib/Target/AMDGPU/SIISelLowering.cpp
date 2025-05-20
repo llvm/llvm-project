@@ -1552,6 +1552,7 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.flags |= MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
     return true;
   }
+  case Intrinsic::amdgcn_load_to_lds:
   case Intrinsic::amdgcn_global_load_lds: {
     Info.opc = ISD::INTRINSIC_VOID;
     unsigned Width = cast<ConstantInt>(CI.getArgOperand(2))->getZExtValue();
@@ -1656,6 +1657,7 @@ bool SITargetLowering::getAddrModeArguments(const IntrinsicInst *II,
   case Intrinsic::amdgcn_global_store_async_from_lds_b128:
     Ptr = II->getArgOperand(0);
     break;
+  case Intrinsic::amdgcn_load_to_lds:
   case Intrinsic::amdgcn_global_load_lds:
   case Intrinsic::amdgcn_global_load_async_to_lds_b8:
   case Intrinsic::amdgcn_global_load_async_to_lds_b32:
@@ -10721,6 +10723,10 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
 
     return SDValue(Load, 0);
   }
+  // Buffers are handled by LowerBufferFatPointers, and we're going to go
+  // for "trust me" that the remaining cases are global pointers until
+  // such time as we can put two mem operands on an intrinsic.
+  case Intrinsic::amdgcn_load_to_lds:
   case Intrinsic::amdgcn_global_load_lds: {
     if (!Subtarget->hasVMemToLDSLoad())
       return SDValue();
@@ -10751,7 +10757,6 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
       break;
     }
 
-    auto *M = cast<MemSDNode>(Op);
     SDValue M0Val = copyToM0(DAG, Chain, DL, Op.getOperand(3));
 
     SmallVector<SDValue, 6> Ops;
@@ -10791,6 +10796,7 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     Ops.push_back(M0Val.getValue(0)); // Chain
     Ops.push_back(M0Val.getValue(1)); // Glue
 
+    auto *M = cast<MemSDNode>(Op);
     MachineMemOperand *LoadMMO = M->getMemOperand();
     MachinePointerInfo LoadPtrI = LoadMMO->getPointerInfo();
     LoadPtrI.Offset = Op->getConstantOperandVal(5);
