@@ -155,4 +155,22 @@ TEST(ReassociationIndicesForCollapse, DynamicTestFailure) {
                 {ShapedType::kDynamic, 8, 4, 2, 16, ShapedType::kDynamic},
                 {ShapedType::kDynamic, 32, ShapedType::kDynamic}),
             std::nullopt);
+
+  //===----------------------------------------------------------------------===//
+  // TODO: Reassociation for the following examples can be computed, but isn't
+  // supported by `getReassociationIndicesForCollapse`.
+  //===----------------------------------------------------------------------===//
+
+  // TODO: Fails because there's no backtracking when some source dimensions
+  // remain unmatched at either edge.
+  EXPECT_EQ(getReassociationIndicesForCollapse(
+                {ShapedType::kDynamic, 10, ShapedType::kDynamic, 10},
+                {ShapedType::kDynamic, 10}),
+            std::nullopt);
+  EXPECT_EQ(getReassociationIndicesForCollapse({1, ShapedType::kDynamic, 2, 2},
+                                               {1, ShapedType::kDynamic, 2}),
+            std::nullopt);
+  EXPECT_EQ(getReassociationIndicesForCollapse({2, 2, ShapedType::kDynamic, 1},
+                                               {2, ShapedType::kDynamic}),
+            std::nullopt);
 }
