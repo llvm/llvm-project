@@ -2090,7 +2090,7 @@ static void verifyFuncBFI(PGOUseFunc &Func, LoopInfo &LI,
     if (!BBInfo)
       continue;
 
-    uint64_t CountValue = Func.getBBInfo(&BBI).Count.value_or(CountValue);
+    uint64_t CountValue = BBInfo->Count.value_or(CountValue);
     uint64_t BFICountValue = 0;
 
     BBNum++;
