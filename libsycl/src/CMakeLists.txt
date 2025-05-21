@@ -83,6 +83,15 @@ set(LIBSYCL_SOURCES
     "platform.cpp"
 )
 
+if (WIN32)
+set(LIB_NAME "sycl${LIBSYCL_MAJOR_VERSION}")
+else()
+set(LIB_NAME "sycl")
+endif()
+
+# Version-agnostic name of the import library, has effect on Windows only.
+set(IMPLIB_NAME "sycl")
+
 if (MSVC)
   # MSVC provides two incompatible build variants for its CRT: release and debug
   # To avoid potential issues in user code we also need to provide two kinds
@@ -96,21 +105,11 @@ if (MSVC)
     string(REGEX REPLACE "/MT" "" ${flag_var} "${${flag_var}}")
   endforeach()
 
-  set(WIN_DUPE "1")
-  add_sycl_rt_library(sycl${LIBSYCL_MAJOR_VERSION}d sycld_object COMPILE_OPTIONS "/MDd" SOURCES ${LIBSYCL_SOURCES} IMPLIB_NAME sycld)
-  unset(WIN_DUPE)
-  add_library(sycld ALIAS sycl${LIBSYCL_MAJOR_VERSION}d)
+  add_sycl_rt_library(${LIB_NAME}d sycld_object COMPILE_OPTIONS "/MDd" SOURCES ${LIBSYCL_SOURCES} IMPLIB_NAME ${IMPLIB_NAME}d)
+  add_library(sycld ALIAS ${LIB_NAME}d)
 
   set(LIBSYCL_EXTRA_OPTS "/MD")
 endif()
-
-if (WIN32)
-set(LIB_NAME "sycl${LIBSYCL_MAJOR_VERSION}")
-else()
-set(LIB_NAME "sycl")
-endif()
-# Version-agnostic name of the import library, has effect on Windows only.
-set(IMPLIB_NAME "sycl")
 
 add_sycl_rt_library(${LIB_NAME} sycl_object COMPILE_OPTIONS ${LIBSYCL_EXTRA_OPTS} SOURCES ${LIBSYCL_SOURCES} IMPLIB_NAME ${IMPLIB_NAME})
 
