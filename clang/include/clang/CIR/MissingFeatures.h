@@ -38,6 +38,7 @@ struct MissingFeatures {
   static bool opGlobalWeakRef() { return false; }
   static bool opGlobalLinkage() { return false; }
   static bool opGlobalSetVisitibility() { return false; }
+  static bool opGlobalUnnamedAddr() { return false; }
 
   static bool supportIFuncAttr() { return false; }
   static bool supportVisibility() { return false; }
