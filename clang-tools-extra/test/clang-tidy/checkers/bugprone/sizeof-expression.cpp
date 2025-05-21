@@ -164,6 +164,37 @@ int Test2(MyConstChar* A) {
   return sum;
 }
 
+struct A {
+   int array[10];
+};
+
+struct B {
+  struct A a;
+};
+
+int square(int num, struct B b) {
+    struct A arr[10];
+    // CHECK-MESSAGES: :[[@LINE+1]]:5: warning: suspicious usage of 'sizeof' in the loop [bugprone-sizeof-expression]
+    for(int i = 0; i < sizeof(arr); i++) {
+       struct A a = arr[i];
+    }
+    // CHECK-MESSAGES: :[[@LINE+2]]:24: warning: suspicious usage of 'sizeof(K)'; did you mean 'K'? [bugprone-sizeof-expression]
+    // CHECK-MESSAGES: :[[@LINE+1]]:34: warning: suspicious usage of 'sizeof(...)/sizeof(...)'; numerator is not a multiple of denominator [bugprone-sizeof-expression] 
+    for(int i = 0; i < sizeof(10)/sizeof(A); i++) {
+       struct A a = arr[i];
+    }
+    
+    for(int i = 0; i < sizeof(arr)/sizeof(A); i++) {
+       struct A a = arr[i];
+    }
+
+    // CHECK-MESSAGES: :[[@LINE+1]]:5: warning: suspicious usage of 'sizeof' in the loop [bugprone-sizeof-expression]
+    for(int j = 0; j < sizeof(b.a); j++) {
+
+    }
+    return 2;
+}
+
 template <int T>
 int Foo() { int A[T]; return sizeof(T); }
 // CHECK-MESSAGES: :[[@LINE-1]]:30: warning: suspicious usage of 'sizeof(K)'
