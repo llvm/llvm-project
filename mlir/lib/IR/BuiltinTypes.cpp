@@ -649,7 +649,10 @@ bool MemRefType::areTrailingDimsContiguous(int64_t n) {
   if (!isLastDimUnitStride())
     return false;
 
-  auto memrefShape = getShape().take_back(n);
+  if (n == 1)
+    return true;
+
+  auto memrefShape = getShape().take_back(n-1);
   if (ShapedType::isDynamicShape(memrefShape))
     return false;
 
@@ -668,7 +671,7 @@ bool MemRefType::areTrailingDimsContiguous(int64_t n) {
   // Check whether strides match "flattened" dims.
   SmallVector<int64_t> flattenedDims;
   auto dimProduct = 1;
-  for (auto dim : llvm::reverse(memrefShape.drop_front(1))) {
+  for (auto dim : llvm::reverse(memrefShape)) {
     dimProduct *= dim;
     flattenedDims.push_back(dimProduct);
   }
