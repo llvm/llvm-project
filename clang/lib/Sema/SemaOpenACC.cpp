@@ -1756,7 +1756,7 @@ ExprResult SemaOpenACC::ActOnRoutineName(Expr *RoutineName) {
   return ExprError();
 }
 void SemaOpenACC::ActOnVariableDeclarator(VarDecl *VD) {
-  if (!VD->isStaticLocal() || !getLangOpts().OpenACC)
+  if (!getLangOpts().OpenACC || VD->isInvalidDecl() || !VD->isStaticLocal())
     return;
 
   // This cast should be safe, since a static-local can only happen in a
