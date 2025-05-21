@@ -101,7 +101,7 @@ define void @store_signed_const_local(ptr %dest) {
 ; ISEL-MIR:       body:
 ; ISEL-MIR:         %0:gpr64common = COPY $x0
 ; ISEL-MIR-NEXT:    %10:gpr64common = MOVaddr target-flags(aarch64-page) @const_table_local + 8, target-flags(aarch64-pageoff, aarch64-nc) @const_table_local + 8
-; ISEL-MIR-NEXT:    %2:gpr64common = PAUTH_BLEND %0, 1234
+; ISEL-MIR-NEXT:    %2:gpr64common = MOVKXi %0, 1234, 48
 ; ISEL-MIR-NEXT:    %15:gpr64noip = COPY %2
 ; ISEL-MIR-NEXT:    MOVaddrPAC @const_table_local + 8, 2, %15, 0, implicit-def $x16, implicit-def $x17
 ; ISEL-MIR-NEXT:    %4:gpr64 = COPY $x16
@@ -135,7 +135,7 @@ define void @store_signed_const_got(ptr %dest) {
 ; ISEL-MIR-ELF:         %0:gpr64common = COPY $x0
 ; ISEL-MIR-ELF-NEXT:    %7:gpr64common = LOADgotAUTH target-flags(aarch64-got) @const_table_got
 ; ISEL-MIR-ELF-NEXT:    %6:gpr64common = ADDXri %7, 8, 0
-; ISEL-MIR-ELF-NEXT:    %2:gpr64common = PAUTH_BLEND %0, 1234
+; ISEL-MIR-ELF-NEXT:    %2:gpr64common = MOVKXi %0, 1234, 48
 ; ISEL-MIR-ELF-NEXT:    %12:gpr64noip = COPY %2
 ; ISEL-MIR-ELF-NEXT:    LOADgotPAC target-flags(aarch64-got) @const_table_got + 8, 2, %12, 0, implicit-def $x16, implicit-def $x17, implicit-def $nzcv
 ; ISEL-MIR-ELF-NEXT:    %4:gpr64 = COPY $x16
@@ -174,7 +174,7 @@ define void @store_signed_arg(ptr %dest, ptr %p) {
 ; ISEL-MIR:       body:
 ; ISEL-MIR:         %0:gpr64common = COPY $x0
 ; ISEL-MIR-NEXT:    %1:gpr64common = COPY $x1
-; ISEL-MIR-NEXT:    %3:gpr64common = PAUTH_BLEND %0, 1234
+; ISEL-MIR-NEXT:    %3:gpr64common = MOVKXi %0, 1234, 48
 ; ISEL-MIR-NEXT:    %6:gpr64common = ADDXri %1, 8, 0
 ; Check that no implicit defs are added to PACDA instruction.
 ; ISEL-MIR-NEXT:    %8:gpr64 = PACDA %6, %3{{$}}
@@ -185,8 +185,8 @@ define void @store_signed_arg(ptr %dest, ptr %p) {
 ; ISEL-ASM-LABEL: store_signed_arg:
 ; ISEL-ASM-NEXT:    .cfi_startproc
 ; ISEL-ASM-NEXT:    mov     x8, x0
-; ISEL-ASM-NEXT:    movk    x8, #1234, lsl #48
 ; ISEL-ASM-NEXT:    add     x9, x1, #8
+; ISEL-ASM-NEXT:    movk    x8, #1234, lsl #48
 ; ISEL-ASM-NEXT:    pacda   x9, x8
 ; ISEL-ASM-NEXT:    str     x9, [x0]
 ; ISEL-ASM-NEXT:    ret
