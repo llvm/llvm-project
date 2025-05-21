@@ -306,7 +306,7 @@ Supported
 .. _riscv-zacas-note:
 
 ``Zacas``
-  The compiler will not generate amocas.d on RV32 or amocas.q on RV64 due to ABI compatibilty. These can only be used in the assembler.
+  The compiler will not generate amocas.d on RV32 or amocas.q on RV64 due to ABI compatibility. These can only be used in the assembler.
 
 Atomics ABIs
 ============
