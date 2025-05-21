@@ -144,8 +144,6 @@ public:
         "bugprone-forward-declaration-namespace");
     CheckFactories.registerCheck<ForwardingReferenceOverloadCheck>(
         "bugprone-forwarding-reference-overload");
-    CheckFactories.registerCheck<FunctionVisibilityChangeCheck>(
-        "bugprone-function-visibility-change");
     CheckFactories.registerCheck<ImplicitWideningOfMultiplicationResultCheck>(
         "bugprone-implicit-widening-of-multiplication-result");
     CheckFactories.registerCheck<InaccurateEraseCheck>(
@@ -280,6 +278,8 @@ public:
     CheckFactories.registerCheck<UseAfterMoveCheck>("bugprone-use-after-move");
     CheckFactories.registerCheck<VirtualNearMissCheck>(
         "bugprone-virtual-near-miss");
+    CheckFactories.registerCheck<FunctionVisibilityChangeCheck>(
+        "bugprone-visibility-change-to-virtual-function");
   }
 };
 

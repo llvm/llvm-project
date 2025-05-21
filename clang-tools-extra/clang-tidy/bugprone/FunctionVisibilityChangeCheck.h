@@ -16,7 +16,7 @@ namespace clang::tidy::bugprone {
 /// Checks function visibility changes in subclasses.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/function-visibility-change.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/visibility-change-to-virtual-function.html
 class FunctionVisibilityChangeCheck : public ClangTidyCheck {
 public:
   enum class ChangeKind { Any, Widening, Narrowing };
@@ -31,6 +31,9 @@ public:
 
 private:
   ChangeKind DetectVisibilityChange;
+  bool CheckDestructors;
+  bool CheckOperators;
+  std::vector<llvm::StringRef> IgnoredFunctions;
 };
 
 } // namespace clang::tidy::bugprone

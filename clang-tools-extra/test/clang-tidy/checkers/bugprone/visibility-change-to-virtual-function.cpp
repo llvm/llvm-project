@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s bugprone-function-visibility-change %t -- -- -I %S/Inputs/function-visibility-change
+// RUN: %check_clang_tidy %s bugprone-visibility-change-to-virtual-function %t -- -config="{CheckOptions: {bugprone-visibility-change-to-virtual-function.CheckDestructors: true,bugprone-visibility-change-to-virtual-function.CheckOperators: true}}" -- -I %S/Inputs/visibility-change-to-virtual-function
 #include <test-system-header.h>
 class A {
 public:
@@ -25,25 +25,25 @@ class B: public A {
 public:
   void pub_foo1() override {}
   void prot_foo1() override {}
-  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: visibility of function 'prot_foo1' is changed from protected in class 'A' to public [bugprone-function-visibility-change]
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: visibility of function 'prot_foo1' is changed from protected in class 'A' to public [bugprone-visibility-change-to-virtual-function]
   // CHECK-MESSAGES: :9:16: note: function declared here as protected
   void priv_foo1() override {}
-  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: visibility of function 'priv_foo1' is changed from private in class 'A' to public [bugprone-function-visibility-change]
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: visibility of function 'priv_foo1' is changed from private in class 'A' to public [bugprone-visibility-change-to-virtual-function]
   // CHECK-MESSAGES: :13:16: note: function declared here as private
 protected:
   void pub_foo2() override {}
-  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: visibility of function 'pub_foo2' is changed from public in class 'A' to protected [bugprone-function-visibility-change]
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: visibility of function 'pub_foo2' is changed from public in class 'A' to protected [bugprone-visibility-change-to-virtual-function]
   // CHECK-MESSAGES: :6:16: note: function declared here as public
   void prot_foo2() override {}
   void priv_foo2() override {}
-  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: visibility of function 'priv_foo2' is changed from private in class 'A' to protected [bugprone-function-visibility-change]
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: visibility of function 'priv_foo2' is changed from private in class 'A' to protected [bugprone-visibility-change-to-virtual-function]
   // CHECK-MESSAGES: :14:16: note: function declared here as private
 private:
   void pub_foo3() override {}
-  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: visibility of function 'pub_foo3' is changed from public in class 'A' to private [bugprone-function-visibility-change]
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: visibility of function 'pub_foo3' is changed from public in class 'A' to private [bugprone-visibility-change-to-virtual-function]
   // CHECK-MESSAGES: :7:16: note: function declared here as public
   void prot_foo3() override {}
-  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: visibility of function 'prot_foo3' is changed from protected in class 'A' to private [bugprone-function-visibility-change]
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: visibility of function 'prot_foo3' is changed from protected in class 'A' to private [bugprone-visibility-change-to-virtual-function]
   // CHECK-MESSAGES: :11:16: note: function declared here as protected
   void priv_foo3() override {}
 };
@@ -53,11 +53,11 @@ public:
   void pub_foo1() override;
 protected:
   void prot_foo1() override;
-  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: visibility of function 'prot_foo1' is changed from public in class 'B' to protected [bugprone-function-visibility-change]
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: visibility of function 'prot_foo1' is changed from public in class 'B' to protected [bugprone-visibility-change-to-virtual-function]
   // CHECK-MESSAGES: :27:8: note: function declared here as public
 private:
   void priv_foo1() override;
-  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: visibility of function 'priv_foo1' is changed from public in class 'B' to private [bugprone-function-visibility-change]
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: visibility of function 'priv_foo1' is changed from public in class 'B' to private [bugprone-visibility-change-to-virtual-function]
   // CHECK-MESSAGES: :30:8: note: function declared here as public
 };
 

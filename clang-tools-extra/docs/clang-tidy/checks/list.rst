@@ -98,7 +98,6 @@ Clang-Tidy Checks
    :doc:`bugprone-fold-init-type <bugprone/fold-init-type>`,
    :doc:`bugprone-forward-declaration-namespace <bugprone/forward-declaration-namespace>`,
    :doc:`bugprone-forwarding-reference-overload <bugprone/forwarding-reference-overload>`,
-   :doc:`bugprone-function-visibility-change <bugprone/function-visibility-change>`,
    :doc:`bugprone-implicit-widening-of-multiplication-result <bugprone/implicit-widening-of-multiplication-result>`, "Yes"
    :doc:`bugprone-inaccurate-erase <bugprone/inaccurate-erase>`, "Yes"
    :doc:`bugprone-inc-dec-in-conditions <bugprone/inc-dec-in-conditions>`,
@@ -168,6 +167,7 @@ Clang-Tidy Checks
    :doc:`bugprone-unused-return-value <bugprone/unused-return-value>`,
    :doc:`bugprone-use-after-move <bugprone/use-after-move>`,
    :doc:`bugprone-virtual-near-miss <bugprone/virtual-near-miss>`, "Yes"
+   :doc:`bugprone-visibility-change-to-virtual-function <bugprone/visibility-change-to-virtual-function>`,
    :doc:`cert-dcl50-cpp <cert/dcl50-cpp>`,
    :doc:`cert-dcl58-cpp <cert/dcl58-cpp>`,
    :doc:`cert-env33-c <cert/env33-c>`,

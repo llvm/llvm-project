@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "FunctionVisibilityChangeCheck.h"
+#include "../utils/Matchers.h"
+#include "../utils/OptionsUtils.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 using namespace clang::ast_matchers;
@@ -37,20 +39,31 @@ FunctionVisibilityChangeCheck::FunctionVisibilityChangeCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       DetectVisibilityChange(
-          Options.get("DisallowedVisibilityChange", ChangeKind::Any)) {}
+          Options.get("DisallowedVisibilityChange", ChangeKind::Any)),
+      CheckDestructors(Options.get("CheckDestructors", false)),
+      CheckOperators(Options.get("CheckOperators", false)),
+      IgnoredFunctions(utils::options::parseStringList(
+          Options.get("IgnoredFunctions", ""))) {}
 
 void FunctionVisibilityChangeCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "DisallowedVisibilityChange", DetectVisibilityChange);
+  Options.store(Opts, "CheckDestructors", CheckDestructors);
+  Options.store(Opts, "CheckOperators", CheckOperators);
+  Options.store(Opts, "IgnoredFunctions",
+                utils::options::serializeStringList(IgnoredFunctions));
 }
 
 void FunctionVisibilityChangeCheck::registerMatchers(MatchFinder *Finder) {
+  auto IgnoredDecl =
+      namedDecl(matchers::matchesAnyListedName(IgnoredFunctions));
   Finder->addMatcher(
       cxxMethodDecl(
           isVirtual(),
           ofClass(
               cxxRecordDecl(unless(isExpansionInSystemHeader())).bind("class")),
-          forEachOverridden(cxxMethodDecl(ofClass(cxxRecordDecl().bind("base")))
+          forEachOverridden(cxxMethodDecl(ofClass(cxxRecordDecl().bind("base")),
+                                          unless(IgnoredDecl))
                                 .bind("base_func")))
           .bind("func"),
       this);
@@ -60,6 +73,13 @@ void FunctionVisibilityChangeCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *MatchedFunction = Result.Nodes.getNodeAs<FunctionDecl>("func");
   if (!MatchedFunction->isCanonicalDecl())
+    return;
+  DeclarationName::NameKind NK = MatchedFunction->getDeclName().getNameKind();
+  if (!CheckDestructors && NK == DeclarationName::CXXDestructorName)
+    return;
+  if (!CheckOperators && NK != DeclarationName::Identifier &&
+      NK != DeclarationName::CXXConstructorName &&
+      NK != DeclarationName::CXXDestructorName)
     return;
 
   const auto *ParentClass = Result.Nodes.getNodeAs<CXXRecordDecl>("class");
