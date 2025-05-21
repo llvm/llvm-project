@@ -150,6 +150,7 @@
 ; GCN-O0-NEXT:        Machine Optimization Remark Emitter
 ; GCN-O0-NEXT:        Stack Frame Layout Analysis
 ; GCN-O0-NEXT:        Function register usage analysis
+; GCN-O0-NEXT:        Basic Block Hash Compute
 ; GCN-O0-NEXT:        AMDGPU Assembly Printer
 ; GCN-O0-NEXT:        Free MachineFunction
 

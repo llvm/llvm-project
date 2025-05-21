@@ -86,6 +86,7 @@
 ; CHECK-NEXT:       X86 Load Value Injection (LVI) Ret-Hardening
 ; CHECK-NEXT:       Pseudo Probe Inserter
 ; CHECK-NEXT:       Unpack machine instruction bundles
+; CHECK-NEXT:       Basic Block Hash Compute
 ; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
 ; CHECK-NEXT:       Machine Optimization Remark Emitter
 ; CHECK-NEXT:       X86 Assembly Printer

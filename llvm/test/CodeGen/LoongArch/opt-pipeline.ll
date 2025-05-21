@@ -177,6 +177,7 @@
 ; LAXX-NEXT:       Stack Frame Layout Analysis
 ; LAXX-NEXT:       LoongArch pseudo instruction expansion pass
 ; LAXX-NEXT:       LoongArch atomic pseudo instruction expansion pass
+; LAXX-NEXT:       Basic Block Hash Compute
 ; LAXX-NEXT:       Lazy Machine Block Frequency Analysis
 ; LAXX-NEXT:       Machine Optimization Remark Emitter
 ; LAXX-NEXT:       LoongArch Assembly Printer

@@ -62,6 +62,7 @@
 ; HOTNESS-NEXT: Freeing Pass 'Unpack machine instruction bundles'
 ; HOTNESS-NEXT: Executing Pass 'Verify generated machine code'
 ; HOTNESS-NEXT: Freeing Pass 'Verify generated machine code'
+; HOTNESS-NEXT: Executing Pass 'Basic Block Hash Compute'
 ; HOTNESS-NEXT: Executing Pass 'Lazy Machine Block Frequency Analysis'
 ; HOTNESS-NEXT: Executing Pass 'Machine Optimization Remark Emitter'
 ; HOTNESS-NEXT: Building MachineBlockFrequencyInfo on the fly
