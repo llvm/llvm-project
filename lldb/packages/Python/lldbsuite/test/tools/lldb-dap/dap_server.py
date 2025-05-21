@@ -136,7 +136,6 @@ class DebugCommunication(object):
         self.initialized = False
         self.frame_scopes = {}
         self.init_commands = init_commands
-        self.disassembled_instructions = {}
 
     @classmethod
     def encode_content(cls, s: str) -> bytes:
@@ -735,11 +734,15 @@ class DebugCommunication(object):
         return self.send_recv(command_dict)
 
     def request_disassemble(
-        self, memoryReference, offset=-50, instructionCount=200, resolveSymbols=True
+        self,
+        memoryReference,
+        instructionOffset=-50,
+        instructionCount=200,
+        resolveSymbols=True,
     ):
         args_dict = {
             "memoryReference": memoryReference,
-            "offset": offset,
+            "instructionOffset": instructionOffset,
             "instructionCount": instructionCount,
             "resolveSymbols": resolveSymbols,
         }
@@ -748,9 +751,7 @@ class DebugCommunication(object):
             "type": "request",
             "arguments": args_dict,
         }
-        instructions = self.send_recv(command_dict)["body"]["instructions"]
-        for inst in instructions:
-            self.disassembled_instructions[inst["address"]] = inst
+        return self.send_recv(command_dict)["body"]["instructions"]
 
     def request_readMemory(self, memoryReference, offset, count):
         args_dict = {
