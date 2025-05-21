@@ -39,7 +39,6 @@ define amdgpu_kernel void @in_bounds() {
   ret void
 }
 
-; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: readwrite)
 declare void @llvm.memcpy.p5.p5.i32(ptr addrspace(5) writeonly captures(none), ptr addrspace(5) readonly captures(none), i32, i1 immarg) #0
 
 attributes #0 = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
