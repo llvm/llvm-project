@@ -3669,9 +3669,9 @@ static void GenerateHasAttrSpellingStringSwitch(
     ArrayRef<std::pair<const Record *, FlattenedSpelling>> Attrs,
     raw_ostream &OS, StringRef Variety, StringRef Scope = "") {
 
-  // It turns out that there are duplicate records for a given spelling. This map
-  // combines matching test strings using '||'. For example, if there are three
-  // conditions A, B, and C, the final result will be: A || B || C.
+  // It turns out that there are duplicate records for a given spelling. This
+  // map combines matching test strings using '||'. For example, if there are
+  // three conditions A, B, and C, the final result will be: A || B || C.
   llvm::StringMap<std::string> TestStringMap;
 
   for (const auto &[Attr, Spelling] : Attrs) {
