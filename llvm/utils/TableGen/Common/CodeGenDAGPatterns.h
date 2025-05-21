@@ -406,7 +406,7 @@ class ScopedName {
 
 public:
   ScopedName(unsigned Scope, StringRef Identifier)
-      : Scope(Scope), Identifier(std::string(Identifier)) {
+      : Scope(Scope), Identifier(Identifier.str()) {
     assert(Scope != 0 &&
            "Scope == 0 is used to indicate predicates without arguments");
   }

@@ -1093,8 +1093,8 @@ struct GatherToLDSOpLowering : public ConvertOpToLLVMPattern<GatherToLDSOp> {
   LogicalResult
   matchAndRewrite(GatherToLDSOp op, GatherToLDSOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (chipset < kGfx942)
-      return op.emitOpError("chipset not supported");
+    if (chipset.majorVersion < 9 || chipset.majorVersion > 10)
+      return op.emitOpError("pre-gfx9 and post-gfx10 not supported");
 
     Location loc = op.getLoc();
 
@@ -1109,24 +1109,25 @@ struct GatherToLDSOpLowering : public ConvertOpToLLVMPattern<GatherToLDSOp> {
       if (auto transferVectorType = dyn_cast<VectorType>(transferType)) {
         return transferVectorType.getNumElements() *
                (transferVectorType.getElementTypeBitWidth() / 8);
-      } else {
-        return transferType.getIntOrFloatBitWidth() / 8;
       }
+      return transferType.getIntOrFloatBitWidth() / 8;
     }();
 
     // Currently only 1, 2, and 4 byte loads are supported.
     if (loadWidth != 1 && loadWidth != 2 && loadWidth != 4)
       return op.emitOpError("chipset unsupported element size");
 
-    Value srcPtr = getStridedElementPtr(loc, srcMemRefType, adaptor.getSrc(),
-                                        (adaptor.getSrcIndices()), rewriter);
-    Value dstPtr = getStridedElementPtr(loc, dstMemRefType, adaptor.getDst(),
-                                        (adaptor.getDstIndices()), rewriter);
+    Value srcPtr =
+        getStridedElementPtr(rewriter, loc, srcMemRefType, adaptor.getSrc(),
+                             (adaptor.getSrcIndices()));
+    Value dstPtr =
+        getStridedElementPtr(rewriter, loc, dstMemRefType, adaptor.getDst(),
+                             (adaptor.getDstIndices()));
 
-    rewriter.replaceOpWithNewOp<ROCDL::GlobalLoadLDSOp>(
-        op, srcPtr, dstPtr, createI32Constant(rewriter, loc, loadWidth),
-        createI32Constant(rewriter, loc, 0),
-        createI32Constant(rewriter, loc, 0), ArrayAttr{}, ArrayAttr{},
+    rewriter.replaceOpWithNewOp<ROCDL::LoadToLDSOp>(
+        op, srcPtr, dstPtr, rewriter.getI32IntegerAttr(loadWidth),
+        /*offset=*/rewriter.getI32IntegerAttr(0),
+        /*aux=*/rewriter.getI32IntegerAttr(0), ArrayAttr{}, ArrayAttr{},
         ArrayAttr{});
 
     return success();

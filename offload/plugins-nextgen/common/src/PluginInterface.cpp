@@ -46,6 +46,7 @@ using namespace llvm;
 using namespace omp;
 using namespace target;
 using namespace plugin;
+using namespace error;
 
 #ifdef OMPT_SUPPORT
 using namespace ompt;
@@ -127,7 +128,8 @@ private:
       return Err;
 
     if (isReplaying() && VAddr != MemoryStart) {
-      return Plugin::error("Record-Replay cannot assign the"
+      return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                           "record-Replay cannot assign the"
                            "requested recorded address (%p, %p)",
                            VAddr, MemoryStart);
     }
@@ -154,7 +156,8 @@ private:
         break;
     }
     if (!MemoryStart)
-      return Plugin::error("Allocating record/replay memory");
+      return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                           "allocating record/replay memory");
 
     if (VAddr && VAddr != MemoryStart)
       MemoryOffset = uintptr_t(VAddr) - uintptr_t(MemoryStart);
@@ -199,7 +202,8 @@ private:
 
     uint64_t DevMemSize;
     if (Device->getDeviceMemorySize(DevMemSize))
-      return Plugin::error("Cannot determine Device Memory Size");
+      return Plugin::error(ErrorCode::UNKNOWN,
+                           "cannot determine Device Memory Size");
 
     return preAllocateHeuristic(DevMemSize, DeviceMemorySize, ReqVAddr);
   }
@@ -514,14 +518,15 @@ Error GenericKernelTy::init(GenericDeviceTy &GenericDevice,
     // Consume the error since it is acceptable to fail.
     [[maybe_unused]] std::string ErrStr = toString(std::move(Err));
     DP("Failed to read execution mode for '%s': %s\n"
-       "Using default SPMD (2) execution mode\n",
+       "Using default Bare (0) execution mode\n",
        Name, ErrStr.data());
 
-    ExecutionMode = OMP_TGT_EXEC_MODE_SPMD;
+    ExecutionMode = OMP_TGT_EXEC_MODE_BARE;
   } else {
     // Check that the retrieved execution mode is valid.
     if (!GenericKernelTy::isValidExecutionMode(ExecModeGlobal.getValue()))
-      return Plugin::error("Invalid execution mode %d for '%s'",
+      return Plugin::error(ErrorCode::UNKNOWN, 
+                           "Invalid execution mode %d for '%s'",
                            ExecModeGlobal.getValue(), Name);
     ExecutionMode = ExecModeGlobal.getValue();
   }
@@ -744,12 +749,7 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
         KernelRecord->getLaunchParamsForKernel(*this, GenericDevice);
     NumBlocks[0] = Teams;
     NumThreads[0] = Threads;
-  } else {
-
-    // TODO fix workaround since IsBareKernel is not properly set for legacy
-    // flang and specialized kernels since they don't use kernel-env. While
-    // we can check for specialized kernels, we can't for legacy flang. So,
-    // on amd-staging, all kernels including bare ones use this codepath.
+  } else if (!isBareMode()) {
     NumThreads[0] = getNumThreads(GenericDevice, NumThreads);
 
     std::pair<bool, uint32_t> AdjustInfo = adjustNumThreadsForLowTripCount(
@@ -823,8 +823,7 @@ KernelLaunchParamsTy GenericKernelTy::prepareArgs(
 
 uint32_t GenericKernelTy::getNumThreads(GenericDeviceTy &GenericDevice,
                                         uint32_t ThreadLimitClause[3]) const {
-  // TODO fix workaround since IsBareKernel is not properly set for all kernels.
-  // assert(!IsBareKernel && "bare kernel should not call this function");
+  assert(!isBareMode() && "bare kernel should not call this function");
 
   assert(ThreadLimitClause[1] == 1 && ThreadLimitClause[2] == 1 &&
          "Multi dimensional launch not supported yet.");
@@ -846,8 +845,7 @@ uint32_t GenericKernelTy::getNumBlocks(GenericDeviceTy &GenericDevice,
                                        uint64_t LoopTripCount,
                                        uint32_t &NumThreads,
                                        bool IsNumThreadsFromUser) const {
-  // TODO fix workaround since IsBareKernel is not properly set for all kernels.
-  // assert(!IsBareKernel && "bare kernel should not call this function");
+  assert(!isBareMode() && "bare kernel should not call this function");
 
   assert(NumTeamsClause[1] == 1 && NumTeamsClause[2] == 1 &&
          "Multi dimensional launch not supported yet.");
@@ -1323,7 +1321,8 @@ Error PinnedAllocationMapTy::insertEntry(void *HstPtr, void *DevAccessiblePtr,
   // Insert the new entry into the map.
   auto Res = Allocs.insert({HstPtr, DevAccessiblePtr, Size, ExternallyLocked});
   if (!Res.second)
-    return Plugin::error("Cannot insert locked buffer entry");
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "cannot insert locked buffer entry");
 
   // Check whether the next entry overlaps with the inserted entry.
   auto It = std::next(Res.first);
@@ -1332,7 +1331,8 @@ Error PinnedAllocationMapTy::insertEntry(void *HstPtr, void *DevAccessiblePtr,
 
   const EntryTy *NextEntry = &(*It);
   if (intersects(NextEntry->HstPtr, NextEntry->Size, HstPtr, Size))
-    return Plugin::error("Partial overlapping not allowed in locked buffers");
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "partial overlapping not allowed in locked buffers");
 
   return Plugin::success();
 }
@@ -1343,14 +1343,16 @@ Error PinnedAllocationMapTy::eraseEntry(const EntryTy &Entry) {
   // the code more difficult to read.
   size_t Erased = Allocs.erase({Entry.HstPtr});
   if (!Erased)
-    return Plugin::error("Cannot erase locked buffer entry");
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "cannot erase locked buffer entry");
   return Plugin::success();
 }
 
 Error PinnedAllocationMapTy::registerEntryUse(const EntryTy &Entry,
                                               void *HstPtr, size_t Size) {
   if (!contains(Entry.HstPtr, Entry.Size, HstPtr, Size))
-    return Plugin::error("Partial overlapping not allowed in locked buffers");
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "partial overlapping not allowed in locked buffers");
 
   ++Entry.References;
   return Plugin::success();
@@ -1358,7 +1360,8 @@ Error PinnedAllocationMapTy::registerEntryUse(const EntryTy &Entry,
 
 Expected<bool> PinnedAllocationMapTy::unregisterEntryUse(const EntryTy &Entry) {
   if (Entry.References == 0)
-    return Plugin::error("Invalid number of references");
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "invalid number of references");
 
   // Return whether this was the last user.
   return (--Entry.References == 0);
@@ -1376,7 +1379,8 @@ Error PinnedAllocationMapTy::registerHostBuffer(void *HstPtr,
   // No pinned allocation should intersect.
   const EntryTy *Entry = findIntersecting(HstPtr);
   if (Entry)
-    return Plugin::error("Cannot insert entry due to an existing one");
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "cannot insert entry due to an existing one");
 
   // Now insert the new entry.
   return insertEntry(HstPtr, DevAccessiblePtr, Size);
@@ -1389,11 +1393,13 @@ Error PinnedAllocationMapTy::unregisterHostBuffer(void *HstPtr) {
 
   const EntryTy *Entry = findIntersecting(HstPtr);
   if (!Entry)
-    return Plugin::error("Cannot find locked buffer");
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "cannot find locked buffer");
 
   // The address in the entry should be the same we are unregistering.
   if (Entry->HstPtr != HstPtr)
-    return Plugin::error("Unexpected host pointer in locked buffer entry");
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "unexpected host pointer in locked buffer entry");
 
   // Unregister from the entry.
   auto LastUseOrErr = unregisterEntryUse(*Entry);
@@ -1402,7 +1408,8 @@ Error PinnedAllocationMapTy::unregisterHostBuffer(void *HstPtr) {
 
   // There should be no other references to the pinned allocation.
   if (!(*LastUseOrErr))
-    return Plugin::error("The locked buffer is still being used");
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "the locked buffer is still being used");
 
   // Erase the entry from the map.
   return eraseEntry(*Entry);
@@ -1448,7 +1455,8 @@ Error PinnedAllocationMapTy::unlockHostBuffer(void *HstPtr) {
 
   const EntryTy *Entry = findIntersecting(HstPtr);
   if (!Entry)
-    return Plugin::error("Cannot find locked buffer");
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "cannot find locked buffer");
 
   // Unregister from the locked buffer. No need to do anything if there are
   // others using the allocation.
@@ -1534,7 +1542,8 @@ Error PinnedAllocationMapTy::unlockUnmappedHostBuffer(void *HstPtr) {
 
   // No entry, but the automatic locking is enabled, so this is an error.
   if (!Entry)
-    return Plugin::error("Locked buffer not found");
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "locked buffer not found");
 
   // There is entry, so unregister a user and check whether it was the last one.
   auto LastUseOrErr = unregisterEntryUse(*Entry);
@@ -1557,7 +1566,8 @@ Error PinnedAllocationMapTy::unlockUnmappedHostBuffer(void *HstPtr) {
 
 Error GenericDeviceTy::synchronize(__tgt_async_info *AsyncInfo) {
   if (!AsyncInfo || !AsyncInfo->Queue)
-    return Plugin::error("Invalid async info queue");
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "invalid async info queue");
 
   if (auto Err = synchronizeImpl(*AsyncInfo))
     return Err;
@@ -1572,22 +1582,26 @@ Error GenericDeviceTy::synchronize(__tgt_async_info *AsyncInfo) {
 
 Error GenericDeviceTy::queryAsync(__tgt_async_info *AsyncInfo) {
   if (!AsyncInfo || !AsyncInfo->Queue)
-    return Plugin::error("Invalid async info queue");
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "invalid async info queue");
 
   return queryAsyncImpl(*AsyncInfo);
 }
 
 Error GenericDeviceTy::memoryVAMap(void **Addr, void *VAddr, size_t *RSize) {
-  return Plugin::error("Device does not support VA Management");
+  return Plugin::error(ErrorCode::UNSUPPORTED,
+                       "device does not support VA Management");
 }
 
 Error GenericDeviceTy::memoryVAUnMap(void *VAddr, size_t Size) {
-  return Plugin::error("Device does not support VA Management");
+  return Plugin::error(ErrorCode::UNSUPPORTED,
+                       "device does not support VA Management");
 }
 
 Error GenericDeviceTy::getDeviceMemorySize(uint64_t &DSize) {
   return Plugin::error(
-      "Missing getDeviceMemorySize implementation (required by RR-heuristic");
+      ErrorCode::UNIMPLEMENTED,
+      "missing getDeviceMemorySize implementation (required by RR-heuristic");
 }
 
 Expected<void *> GenericDeviceTy::dataAlloc(int64_t Size, void *HostPtr,
@@ -1604,7 +1618,8 @@ Expected<void *> GenericDeviceTy::dataAlloc(int64_t Size, void *HostPtr,
     if (MemoryManager) {
       Alloc = MemoryManager->allocate(Size, HostPtr);
       if (!Alloc)
-        return Plugin::error("Failed to allocate from memory manager");
+        return Plugin::error(ErrorCode::OUT_OF_RESOURCES,
+                             "failed to allocate from memory manager");
       break;
     }
     [[fallthrough]];
@@ -1612,13 +1627,15 @@ Expected<void *> GenericDeviceTy::dataAlloc(int64_t Size, void *HostPtr,
   case TARGET_ALLOC_SHARED:
     Alloc = allocate(Size, HostPtr, Kind);
     if (!Alloc)
-      return Plugin::error("Failed to allocate from device allocator");
+      return Plugin::error(ErrorCode::OUT_OF_RESOURCES,
+                           "failed to allocate from device allocator");
   }
 
   // Report error if the memory manager or the device allocator did not return
   // any memory buffer.
   if (!Alloc)
-    return Plugin::error("Invalid target data allocation kind or requested "
+    return Plugin::error(ErrorCode::UNIMPLEMENTED,
+                         "invalid target data allocation kind or requested "
                          "allocator not implemented yet");
 
   // Register allocated buffer as pinned memory if the type is host memory.
@@ -1693,7 +1710,8 @@ Error GenericDeviceTy::dataDelete(void *TgtPtr, TargetAllocTy Kind) {
       Res = MemoryManager->free(TgtPtr);
       if (Res)
         return Plugin::error(
-            "Failure to deallocate device pointer %p via memory manager",
+            ErrorCode::OUT_OF_RESOURCES,
+            "failure to deallocate device pointer %p via memory manager",
             TgtPtr);
       break;
     }
@@ -1703,7 +1721,8 @@ Error GenericDeviceTy::dataDelete(void *TgtPtr, TargetAllocTy Kind) {
     Res = free(TgtPtr, Kind);
     if (Res)
       return Plugin::error(
-          "Failure to deallocate device pointer %p via device deallocator",
+          ErrorCode::UNKNOWN,
+          "failure to deallocate device pointer %p via device deallocator",
           TgtPtr);
   }
 

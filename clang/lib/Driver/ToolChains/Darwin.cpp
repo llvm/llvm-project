@@ -1411,8 +1411,8 @@ StringRef Darwin::getSDKName(StringRef isysroot) {
   auto EndSDK = llvm::sys::path::rend(isysroot);
   for (auto IT = BeginSDK; IT != EndSDK; ++IT) {
     StringRef SDK = *IT;
-    if (SDK.ends_with(".sdk"))
-        return SDK.slice(0, SDK.size() - 4);
+    if (SDK.consume_back(".sdk"))
+      return SDK;
   }
   return "";
 }
@@ -2582,8 +2582,7 @@ void DarwinClang::AddClangSystemIncludeArgs(
     llvm::opt::ArgStringList &CC1Args) const {
   AppleMachO::AddClangSystemIncludeArgs(DriverArgs, CC1Args);
 
-  if (DriverArgs.hasArg(options::OPT_nostdinc) ||
-      DriverArgs.hasArg(options::OPT_nostdlibinc))
+  if (DriverArgs.hasArg(options::OPT_nostdinc, options::OPT_nostdlibinc))
     return;
 
   llvm::SmallString<128> Sysroot = GetEffectiveSysroot(DriverArgs);

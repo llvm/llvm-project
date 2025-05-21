@@ -265,6 +265,27 @@ if (CMAKE_SIZEOF_VOID_P EQUAL 4)
   set_target_properties(amd_comgr PROPERTIES OUTPUT_NAME "amd_comgr32")
 endif()
 
+option(LLVM_BUILD_INSTRUMENTED_COVERAGE "Build LLVM and tools with Code Coverage instrumentation" Off)
+mark_as_advanced(LLVM_BUILD_INSTRUMENTED_COVERAGE)
+if(LLVM_BUILD_INSTRUMENTED_COVERAGE)
+  if(NOT LLVM_PROFILE_MERGE_POOL_SIZE)
+    # A pool size of 1-2 is probably sufficient on an SSD. 3-4 should be fine
+    # for spinning disks. Anything higher may only help on slower mediums.
+    set(LLVM_PROFILE_MERGE_POOL_SIZE "4")
+  endif()
+  if(NOT LLVM_PROFILE_FILE_PATTERN)
+    if(NOT LLVM_PROFILE_DATA_DIR)
+      file(TO_NATIVE_PATH "${LLVM_BINARY_DIR}/profiles" LLVM_PROFILE_DATA_DIR)
+    endif()
+    file(TO_NATIVE_PATH "${LLVM_PROFILE_DATA_DIR}/%${LLVM_PROFILE_MERGE_POOL_SIZE}m.profraw" LLVM_PROFILE_FILE_PATTERN)
+  endif()
+  set(INSTRUMENTED_COVERAGE_FLAGS -O0 -fprofile-instr-generate=${LLVM_PROFILE_FILE_PATTERN} -fcoverage-mapping)
+  list(APPEND AMD_COMGR_PRIVATE_COMPILE_OPTIONS ${INSTRUMENTED_COVERAGE_FLAGS})
+  list(APPEND AMD_COMGR_PUBLIC_COMPILE_OPTIONS ${INSTRUMENTED_COVERAGE_FLAGS})
+  list(APPEND AMD_COMGR_PRIVATE_LINKER_OPTIONS ${INSTRUMENTED_COVERAGE_FLAGS} -L${LLVM_LIBRARY_DIRS})
+  list(APPEND AMD_COMGR_PUBLIC_LINKER_OPTIONS ${INSTRUMENTED_COVERAGE_FLAGS} -L${LLVM_LIBRARY_DIRS})
+endif()
+
 target_compile_options(amd_comgr
   PRIVATE "${AMD_COMGR_PRIVATE_COMPILE_OPTIONS}")
 target_compile_definitions(amd_comgr

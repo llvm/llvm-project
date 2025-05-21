@@ -233,3 +233,20 @@ namespace IntToPtrCast {
   constexpr intptr_t i = f((intptr_t)&foo - 10); // both-error{{constexpr variable 'i' must be initialized by a constant expression}} \
                                                  // both-note{{reinterpret_cast}}
 }
+
+namespace Volatile {
+  constexpr int f(volatile int &&r) {
+    return r; // both-note {{read of volatile-qualified type 'volatile int'}}
+  }
+  struct S {
+    int j : f(0); // both-error {{constant expression}} \
+                  // both-note {{in call to 'f(0)'}}
+  };
+}
+
+namespace ZeroSizeCmp {
+  extern void (*start[])();
+  extern void (*end[])();
+  static_assert(&start != &end, ""); // both-error {{constant expression}} \
+                                     // both-note {{comparison of pointers '&start' and '&end' to unrelated zero-sized objects}}
+}

@@ -949,6 +949,7 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
         llvm::StringSwitch<std::optional<StringRef>>(ArgVecLib->getValue())
             .Case("Accelerate", "Accelerate")
             .Case("libmvec", "LIBMVEC")
+            .Case("AMDLIBM", "AMDLIBM")
             .Case("MASSV", "MASSV")
             .Case("SVML", "SVML")
             .Case("SLEEF", "sleefgnuabi")
@@ -2751,8 +2752,6 @@ static void GetSDLFromOffloadArchive(
       InputInfo(&JA, C.getArgs().MakeArgString(OutputLib))));
 
   CC1Args.push_back(DriverArgs.MakeArgString(OutputLib));
-
-  return;
 }
 
 // Wrapper function used by opaque-offload-linker  for adding SDLs

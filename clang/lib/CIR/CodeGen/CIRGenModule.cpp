@@ -23,6 +23,7 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
 
+#include "CIRGenFunctionInfo.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/MLIRContext.h"
@@ -60,7 +61,6 @@ CIRGenCXXABI *CreateCIRGenItaniumCXXABI(CIRGenModule &cgm) {
   return new CIRGenCXXABI(cgm);
 }
 } // namespace clang::CIRGen
-CIRGenCXXABI::~CIRGenCXXABI() {}
 
 CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
                            clang::ASTContext &astContext,
@@ -247,9 +247,9 @@ void CIRGenModule::emitGlobalFunctionDefinition(clang::GlobalDecl gd,
              "function definition with a non-identifier for a name");
     return;
   }
-  cir::FuncType funcType =
-      cast<cir::FuncType>(convertType(funcDecl->getType()));
 
+  const CIRGenFunctionInfo &fi = getTypes().arrangeGlobalDeclaration(gd);
+  cir::FuncType funcType = getTypes().getFunctionType(fi);
   cir::FuncOp funcOp = dyn_cast_if_present<cir::FuncOp>(op);
   if (!funcOp || funcOp.getFunctionType() != funcType) {
     funcOp = getAddrOfFunction(gd, funcType, /*ForVTable=*/false,
@@ -537,8 +537,16 @@ void CIRGenModule::emitGlobalDefinition(clang::GlobalDecl gd,
     if (const auto *method = dyn_cast<CXXMethodDecl>(decl)) {
       // Make sure to emit the definition(s) before we emit the thunks. This is
       // necessary for the generation of certain thunks.
-      (void)method;
-      errorNYI(method->getSourceRange(), "member function");
+      if (isa<CXXConstructorDecl>(method) || isa<CXXDestructorDecl>(method))
+        errorNYI(method->getSourceRange(), "C++ ctor/dtor");
+      else if (fd->isMultiVersion())
+        errorNYI(method->getSourceRange(), "multiversion functions");
+      else
+        emitGlobalFunctionDefinition(gd, op);
+
+      if (method->isVirtual())
+        errorNYI(method->getSourceRange(), "virtual member function");
+
       return;
     }
 
@@ -768,6 +776,7 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
              decl->getDeclKindName());
     break;
 
+  case Decl::CXXMethod:
   case Decl::Function: {
     auto *fd = cast<FunctionDecl>(decl);
     // Consteval functions shouldn't be emitted.
@@ -787,7 +796,7 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
   case Decl::OpenACCDeclare:
     emitGlobalOpenACCDecl(cast<OpenACCDeclareDecl>(decl));
     break;
-
+  case Decl::Enum:
   case Decl::UsingDirective: // using namespace X; [C++]
   case Decl::Typedef:
   case Decl::TypeAlias: // using foo = bar; [C++11]

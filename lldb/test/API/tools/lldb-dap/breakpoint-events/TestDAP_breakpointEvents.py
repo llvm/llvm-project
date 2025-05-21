@@ -52,7 +52,7 @@ class TestDAP_breakpointEvents(lldbdap_testcase.DAPTestCaseBase):
         # breakpoint events for these breakpoints but not for ones that are not
         # set via the command interpreter.
         bp_command = "breakpoint set --file foo.cpp --line %u" % (foo_bp2_line)
-        self.build_and_launch(program, stopOnEntry=True, preRunCommands=[bp_command])
+        self.build_and_launch(program, preRunCommands=[bp_command])
         main_bp_id = 0
         foo_bp_id = 0
         # Set breakpoints and verify that they got set correctly
@@ -60,7 +60,7 @@ class TestDAP_breakpointEvents(lldbdap_testcase.DAPTestCaseBase):
         response = self.dap_server.request_setBreakpoints(
             main_source_path, [main_bp_line]
         )
-        self.assertTrue(response)
+        self.assertTrue(response["success"])
         breakpoints = response["body"]["breakpoints"]
         for breakpoint in breakpoints:
             main_bp_id = breakpoint["id"]
@@ -72,7 +72,7 @@ class TestDAP_breakpointEvents(lldbdap_testcase.DAPTestCaseBase):
         response = self.dap_server.request_setBreakpoints(
             foo_source_path, [foo_bp1_line]
         )
-        self.assertTrue(response)
+        self.assertTrue(response["success"])
         breakpoints = response["body"]["breakpoints"]
         for breakpoint in breakpoints:
             foo_bp_id = breakpoint["id"]
@@ -80,9 +80,6 @@ class TestDAP_breakpointEvents(lldbdap_testcase.DAPTestCaseBase):
             self.assertFalse(
                 breakpoint["verified"], "expect foo breakpoint to not be verified"
             )
-
-        # Make sure we're stopped.
-        self.dap_server.wait_for_stopped()
 
         # Flush the breakpoint events.
         self.dap_server.wait_for_breakpoint_events(timeout=5)

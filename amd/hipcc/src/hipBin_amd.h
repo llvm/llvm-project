@@ -862,16 +862,6 @@ void HipBinAmd::executeHipCCCmd(vector<string> argv) {
     }
   }
 
-  if (hasHIP) {
-    fs::path bitcodeFs = roccmPath;
-    bitcodeFs /= "amdgcn/bitcode";
-    if (deviceLibPath != bitcodeFs.string()) {
-      string hip_device_lib_str = " --hip-device-lib-path=\""
-                                  + deviceLibPath + "\"";
-      HIPCXXFLAGS += hip_device_lib_str;
-    }
-  }
-
   // to avoid using dk linker or MSVC linker
   if (isWindows()) {
     HIPLDFLAGS += " -fuse-ld=lld --ld-path=\"" + hipClangPath + "/lld-link.exe\"";

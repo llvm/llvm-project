@@ -433,6 +433,11 @@ public:
 
   CompilerDecl GetStaticFieldWithName(llvm::StringRef name) const;
 
+  llvm::Expected<CompilerType>
+  GetDereferencedType(ExecutionContext *exe_ctx, std::string &deref_name,
+                      uint32_t &deref_byte_size, int32_t &deref_byte_offset,
+                      ValueObject *valobj, uint64_t &language_flags) const;
+
   llvm::Expected<CompilerType> GetChildCompilerTypeAtIndex(
       ExecutionContext *exe_ctx, size_t idx, bool transparent_pointers,
       bool omit_empty_base_classes, bool ignore_array_bounds,

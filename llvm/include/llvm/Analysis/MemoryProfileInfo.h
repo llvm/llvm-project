@@ -13,8 +13,9 @@
 #ifndef LLVM_ANALYSIS_MEMORYPROFILEINFO_H
 #define LLVM_ANALYSIS_MEMORYPROFILEINFO_H
 
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Metadata.h"
-#include "llvm/IR/ModuleSummaryIndex.h"
+#include "llvm/ProfileData/MemProfCommon.h"
 #include <map>
 
 namespace llvm {
@@ -103,7 +104,8 @@ private:
   bool buildMIBNodes(CallStackTrieNode *Node, LLVMContext &Ctx,
                      std::vector<uint64_t> &MIBCallStack,
                      std::vector<Metadata *> &MIBNodes,
-                     bool CalleeHasAmbiguousCallerContext);
+                     bool CalleeHasAmbiguousCallerContext, uint64_t &TotalBytes,
+                     uint64_t &ColdBytes);
 
 public:
   CallStackTrie() = default;

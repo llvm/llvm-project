@@ -46,6 +46,7 @@ if(MLIR_INCLUDE_TESTS)
     MLIRTilingInterfaceTestPasses
     MLIRTosaTestPasses
     MLIRVectorTestPasses
+    MLIRXeGPUTestPasses
     MLIRTestVectorToSPIRV
     MLIRLLVMTestPasses
     )

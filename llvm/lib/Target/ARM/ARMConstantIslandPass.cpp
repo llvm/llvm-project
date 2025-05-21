@@ -193,7 +193,8 @@ namespace {
     struct ImmBranch {
       MachineInstr *MI;
       unsigned MaxDisp : 31;
-      bool isCond : 1;
+      LLVM_PREFERRED_TYPE(bool)
+      unsigned isCond : 1;
       unsigned UncondBr;
 
       ImmBranch(MachineInstr *mi, unsigned maxdisp, bool cond, unsigned ubr)

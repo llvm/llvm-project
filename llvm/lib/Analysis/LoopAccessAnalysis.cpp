@@ -158,12 +158,11 @@ const SCEV *llvm::replaceSymbolicStrideSCEV(PredicatedScalarEvolution &PSE,
 
   // If there is an entry in the map return the SCEV of the pointer with the
   // symbolic stride replaced by one.
-  DenseMap<Value *, const SCEV *>::const_iterator SI = PtrToStride.find(Ptr);
-  if (SI == PtrToStride.end())
+  const SCEV *StrideSCEV = PtrToStride.lookup(Ptr);
+  if (!StrideSCEV)
     // For a non-symbolic stride, just return the original expression.
     return OrigSCEV;
 
-  const SCEV *StrideSCEV = SI->second;
   // Note: This assert is both overly strong and overly weak.  The actual
   // invariant here is that StrideSCEV should be loop invariant.  The only
   // such invariant strides we happen to speculate right now are unknowns
@@ -1326,6 +1325,8 @@ bool AccessAnalysis::canCheckPtrAtRT(
   RtCheck.Need = CanDoRT ? RtCheck.getNumberOfChecks() != 0 : MayNeedRTCheck;
 
   bool CanDoRTIfNeeded = !RtCheck.Need || CanDoRT;
+  assert(CanDoRTIfNeeded == (CanDoRT || !MayNeedRTCheck) &&
+         "CanDoRTIfNeeded depends on RtCheck.Need");
   if (!CanDoRTIfNeeded)
     RtCheck.reset();
   return CanDoRTIfNeeded;
@@ -1542,11 +1543,11 @@ llvm::getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
   return std::nullopt;
 }
 
-std::optional<int> llvm::getPointersDiff(Type *ElemTyA, Value *PtrA,
-                                         Type *ElemTyB, Value *PtrB,
-                                         const DataLayout &DL,
-                                         ScalarEvolution &SE, bool StrictCheck,
-                                         bool CheckType) {
+std::optional<int64_t> llvm::getPointersDiff(Type *ElemTyA, Value *PtrA,
+                                             Type *ElemTyB, Value *PtrB,
+                                             const DataLayout &DL,
+                                             ScalarEvolution &SE,
+                                             bool StrictCheck, bool CheckType) {
   assert(PtrA && PtrB && "Expected non-nullptr pointers.");
 
   // Make sure that A and B are different pointers.
@@ -1571,7 +1572,7 @@ std::optional<int> llvm::getPointersDiff(Type *ElemTyA, Value *PtrA,
   const Value *PtrB1 = PtrB->stripAndAccumulateConstantOffsets(
       DL, OffsetB, /*AllowNonInbounds=*/true);
 
-  int Val;
+  std::optional<int64_t> Val;
   if (PtrA1 == PtrB1) {
     // Retrieve the address space again as pointer stripping now tracks through
     // `addrspacecast`.
@@ -1586,7 +1587,7 @@ std::optional<int> llvm::getPointersDiff(Type *ElemTyA, Value *PtrA,
     OffsetB = OffsetB.sextOrTrunc(IdxWidth);
 
     OffsetB -= OffsetA;
-    Val = OffsetB.getSExtValue();
+    Val = OffsetB.trySExtValue();
   } else {
     // Otherwise compute the distance with SCEV between the base pointers.
     const SCEV *PtrSCEVA = SE.getSCEV(PtrA);
@@ -1595,10 +1596,14 @@ std::optional<int> llvm::getPointersDiff(Type *ElemTyA, Value *PtrA,
         SE.computeConstantDifference(PtrSCEVB, PtrSCEVA);
     if (!Diff)
       return std::nullopt;
-    Val = Diff->getSExtValue();
+    Val = Diff->trySExtValue();
   }
-  int Size = DL.getTypeStoreSize(ElemTyA);
-  int Dist = Val / Size;
+
+  if (!Val)
+    return std::nullopt;
+
+  int64_t Size = DL.getTypeStoreSize(ElemTyA);
+  int64_t Dist = *Val / Size;
 
   // Ensure that the calculated distance matches the type-based one after all
   // the bitcasts removal in the provided pointers.
@@ -1617,14 +1622,15 @@ bool llvm::sortPtrAccesses(ArrayRef<Value *> VL, Type *ElemTy,
   // first pointer in the array.
   Value *Ptr0 = VL[0];
 
-  using DistOrdPair = std::pair<int64_t, int>;
+  using DistOrdPair = std::pair<int64_t, unsigned>;
   auto Compare = llvm::less_first();
   std::set<DistOrdPair, decltype(Compare)> Offsets(Compare);
   Offsets.emplace(0, 0);
   bool IsConsecutive = true;
   for (auto [Idx, Ptr] : drop_begin(enumerate(VL))) {
-    std::optional<int> Diff = getPointersDiff(ElemTy, Ptr0, ElemTy, Ptr, DL, SE,
-                                              /*StrictCheck=*/true);
+    std::optional<int64_t> Diff =
+        getPointersDiff(ElemTy, Ptr0, ElemTy, Ptr, DL, SE,
+                        /*StrictCheck=*/true);
     if (!Diff)
       return false;
 
@@ -1655,7 +1661,7 @@ bool llvm::isConsecutiveAccess(Value *A, Value *B, const DataLayout &DL,
     return false;
   Type *ElemTyA = getLoadStoreType(A);
   Type *ElemTyB = getLoadStoreType(B);
-  std::optional<int> Diff =
+  std::optional<int64_t> Diff =
       getPointersDiff(ElemTyA, PtrA, ElemTyB, PtrB, DL, SE,
                       /*StrictCheck=*/true, CheckType);
   return Diff && *Diff == 1;
@@ -2250,7 +2256,7 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   return Dependence::BackwardVectorizable;
 }
 
-bool MemoryDepChecker::areDepsSafe(const DepCandidates &AccessSets,
+bool MemoryDepChecker::areDepsSafe(const DepCandidates &DepCands,
                                    const MemAccessInfoList &CheckDeps) {
 
   MinDepDistBytes = -1;
@@ -2261,9 +2267,9 @@ bool MemoryDepChecker::areDepsSafe(const DepCandidates &AccessSets,
 
     // Check accesses within this set.
     EquivalenceClasses<MemAccessInfo>::member_iterator AI =
-        AccessSets.findLeader(CurAccess);
+        DepCands.findLeader(CurAccess);
     EquivalenceClasses<MemAccessInfo>::member_iterator AE =
-        AccessSets.member_end();
+        DepCands.member_end();
 
     // Check every access pair.
     while (AI != AE) {
@@ -2528,9 +2534,8 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
     return true;
   }
 
-  MemoryDepChecker::DepCandidates DependentAccesses;
-  AccessAnalysis Accesses(TheLoop, AA, LI, DependentAccesses, *PSE,
-                          LoopAliasScopes);
+  MemoryDepChecker::DepCandidates DepCands;
+  AccessAnalysis Accesses(TheLoop, AA, LI, DepCands, *PSE, LoopAliasScopes);
 
   // Holds the analyzed pointers. We don't want to call getUnderlyingObjects
   // multiple times on the same object. If the ptr is accessed twice, once
@@ -2652,8 +2657,8 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
   bool DepsAreSafe = true;
   if (Accesses.isDependencyCheckNeeded()) {
     LLVM_DEBUG(dbgs() << "LAA: Checking memory dependencies\n");
-    DepsAreSafe = DepChecker->areDepsSafe(DependentAccesses,
-                                          Accesses.getDependenciesToCheck());
+    DepsAreSafe =
+        DepChecker->areDepsSafe(DepCands, Accesses.getDependenciesToCheck());
 
     if (!DepsAreSafe && DepChecker->shouldRetryWithRuntimeCheck()) {
       LLVM_DEBUG(dbgs() << "LAA: Retrying with memory checks\n");

@@ -4,6 +4,6 @@
 
 // expected-no-diagnostics
 
-__fp16 *testFP16AsArgAndReturn(__fp16 *x) {
+__fp16 testFP16AsArgAndReturn(__fp16 x) {
   return x;
 }

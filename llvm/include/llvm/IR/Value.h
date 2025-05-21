@@ -509,7 +509,7 @@ public:
 
   /// This method should only be used by the Use class.
   void addUse(Use &U) {
-    if (UseList || hasUseList())
+    if (hasUseList())
       U.addToList(&UseList);
   }
 

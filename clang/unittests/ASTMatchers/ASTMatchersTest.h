@@ -339,7 +339,7 @@ testing::AssertionResult matchAndVerifyResultConditionally(
   SmallString<256> Buffer;
   std::unique_ptr<ASTUnit> AST(buildASTFromCodeWithArgs(
       Code.toStringRef(Buffer), CompileArgs, Filename));
-  if (!AST.get())
+  if (!AST)
     return testing::AssertionFailure()
            << "Parsing error in \"" << Code << "\" while building AST";
   Finder.matchAST(AST->getASTContext());
