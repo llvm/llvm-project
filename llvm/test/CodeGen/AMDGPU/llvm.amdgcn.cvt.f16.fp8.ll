@@ -122,7 +122,7 @@ define float @test_cvt_f16_fp8_byte3(i32 %a) {
 define amdgpu_ps float @test_cvt_pk_f16_bf8_v(i16 %a) {
 ; GFX1250-LABEL: test_cvt_pk_f16_bf8_v:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    v_cvt_pk_f16_bf8_e32 v0, v0
+; GFX1250-NEXT:    v_cvt_pk_f16_bf8 v0, v0
 ; GFX1250-NEXT:    ; return to shader part epilog
   %cvt = tail call <2 x half> @llvm.amdgcn.cvt.pk.f16.bf8(i16 %a)
   %ret = bitcast <2 x half> %cvt to float
@@ -132,7 +132,7 @@ define amdgpu_ps float @test_cvt_pk_f16_bf8_v(i16 %a) {
 define amdgpu_ps float @test_cvt_pk_f16_bf8_s(i16 inreg %a) {
 ; GFX1250-LABEL: test_cvt_pk_f16_bf8_s:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    v_cvt_pk_f16_bf8_e32 v0, s0
+; GFX1250-NEXT:    v_cvt_pk_f16_bf8 v0, s0
 ; GFX1250-NEXT:    ; return to shader part epilog
   %cvt = tail call <2 x half> @llvm.amdgcn.cvt.pk.f16.bf8(i16 %a)
   %ret = bitcast <2 x half> %cvt to float
@@ -142,7 +142,7 @@ define amdgpu_ps float @test_cvt_pk_f16_bf8_s(i16 inreg %a) {
 define amdgpu_ps float @test_cvt_pk_f16_fp8_v(i16 %a) {
 ; GFX1250-LABEL: test_cvt_pk_f16_fp8_v:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    v_cvt_pk_f16_fp8_e32 v0, v0
+; GFX1250-NEXT:    v_cvt_pk_f16_fp8 v0, v0
 ; GFX1250-NEXT:    ; return to shader part epilog
   %cvt = tail call <2 x half> @llvm.amdgcn.cvt.pk.f16.fp8(i16 %a)
   %ret = bitcast <2 x half> %cvt to float
@@ -152,7 +152,7 @@ define amdgpu_ps float @test_cvt_pk_f16_fp8_v(i16 %a) {
 define amdgpu_ps float @test_cvt_pk_f16_fp8_s(i16 inreg %a) {
 ; GFX1250-LABEL: test_cvt_pk_f16_fp8_s:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    v_cvt_pk_f16_fp8_e32 v0, s0
+; GFX1250-NEXT:    v_cvt_pk_f16_fp8 v0, s0
 ; GFX1250-NEXT:    ; return to shader part epilog
   %cvt = tail call <2 x half> @llvm.amdgcn.cvt.pk.f16.fp8(i16 %a)
   %ret = bitcast <2 x half> %cvt to float

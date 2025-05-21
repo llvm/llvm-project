@@ -779,11 +779,10 @@ let SubtargetPredicate = isGFX11Plus, OtherPredicates = [HasFP8ConversionInsts] 
 }
 
 // FIXME-TRUE16: True16 versions of these instructions are untested.
-let HasExtDPP = 0, HasExt32BitDPP = 0, HasExt64BitDPP = 0, HasExtVOP3DPP = 0,
-    HasExt = 0, HasExtSDWA = 0, HasOpSel = 1, EmitDstSel = 0, HasOMod = 0 in {
+let HasExtSDWA = 0, HasOpSel = 1, EmitDstSel = 0, HasOMod = 0, HasModifiers = 1 in {
 def VOPProfile_CVT_PK_F16_F8 : VOPProfile<[v2f16, i16, untyped, untyped]>;
-def VOPProfile_CVT_PK_F16_F8_true16 : VOPProfile_True16<VOPProfile_CVT_PK_F16_F8>;
-def VOPProfile_CVT_PK_F16_F8_fake16 : VOPProfile_Fake16<VOPProfile_CVT_PK_F16_F8>;
+def VOPProfile_CVT_PK_F16_F8_true16 : VOP3_Profile_True16<VOPProfile_CVT_PK_F16_F8>;
+def VOPProfile_CVT_PK_F16_F8_fake16 : VOP3_Profile_Fake16<VOPProfile_CVT_PK_F16_F8>;
 }
 
 let SubtargetPredicate = isGFX1250Plus in {
@@ -1075,14 +1074,6 @@ multiclass VOP1Only_Real_gfx11_gfx12<bits<9> op> :
 multiclass VOP1_Real_FULL_gfx11_gfx12<bits<9> op> :
   VOP1_Real_FULL<GFX11Gen, op>, VOP1_Real_FULL<GFX12Gen, op>;
 
-multiclass VOP1_Real_NO_DPP_OP_SEL_with_name<GFXGen Gen, bits<9> op,
-                                             string opName, string asmName> :
-  VOP1_Real_e32_with_name<Gen, op, opName, asmName>,
-  VOP3_Real_with_name<Gen, {0, 1, 1, op{6-0}}, opName, asmName>;
-
-multiclass VOP1_Real_NO_DPP_OP_SEL<GFXGen Gen, bits<9> op> :
-  VOP1_Real_NO_DPP_OP_SEL_with_name<Gen, op, NAME, !cast<VOP1_Pseudo>(!subst("_fake16", "", NAME)#"_e32").Mnemonic>;
-
 multiclass VOP1_Real_e32_with_name_gfx11_gfx12<bits<9> op, string opName,
                                                string asmName> :
   VOP1_Real_e32_with_name<GFX12Gen, op, opName, asmName>,
@@ -1179,8 +1170,8 @@ defm V_PRNG_B32              : VOP1_Real_FULL<GFX1250Gen, 0x04b>;
 defm V_CVT_F32_BF16_fake16   : VOP1_Real_FULL_with_name<GFX1250Gen, 0x072, "V_CVT_F32_BF16_OP_SEL", "v_cvt_f32_bf16">;
 defm V_SAT_PK4_I4_I8_fake16  : VOP1_Real_FULL_t16_gfx1250<0x073>;
 defm V_SAT_PK4_U4_U8_fake16  : VOP1_Real_FULL_t16_gfx1250<0x074>;
-defm V_CVT_PK_F16_FP8_fake16 : VOP1_Real_NO_DPP_OP_SEL<GFX1250Gen, 0x075>;
-defm V_CVT_PK_F16_BF8_fake16 : VOP1_Real_NO_DPP_OP_SEL<GFX1250Gen, 0x076>;
+defm V_CVT_PK_F16_FP8        : VOP1_Real_FULL_t16_and_fake16_gfx1250<0x075>;
+defm V_CVT_PK_F16_BF8        : VOP1_Real_FULL_t16_and_fake16_gfx1250<0x076>;
 defm V_CVT_F16_FP8           : VOP1_Real_FULL_t16_and_fake16_gfx1250<0x077>;
 defm V_CVT_F16_BF8           : VOP1_Real_FULL_t16_and_fake16_gfx1250<0x078>;
 defm V_RCP_BF16_fake16       : VOP1_Real_FULL_t16_gfx1250<0x079>;
