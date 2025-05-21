@@ -1,3 +1,16 @@
+//===- SimpleTypoCorrection.cpp - Basic typo correction utility -----------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file implements the SimpleTypoCorrection class, which performs basic
+// typo correction using string similarity based on edit distance.
+//
+//===----------------------------------------------------------------------===//
+
 #include "clang/Basic/SimpleTypoCorrection.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
