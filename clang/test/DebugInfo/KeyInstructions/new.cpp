@@ -1,4 +1,4 @@
-// RUN: %clang -gkey-instructions %s -gmlt -gcolumn-info -S -emit-llvm -o - -Wno-unused-variable \
+// RUN: %clang_cc1 -gkey-instructions %s -debug-info-kind=line-tables-only -emit-llvm -o - -Wno-unused-variable \
 // RUN: | FileCheck %s --implicit-check-not atomGroup --implicit-check-not atomRank
 
 // Check both the addr-store and value-store are part of the same atom.
