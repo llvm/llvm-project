@@ -194,7 +194,7 @@ std::optional<RootDescriptor> RootSignatureParser::parseRootDescriptor() {
     break;
   }
 
-  auto Params = parseRootParamParams(ExpectedReg);
+  auto Params = parseRootDescriptorParams(ExpectedReg);
   if (!Params.has_value())
     return std::nullopt;
 
@@ -415,12 +415,12 @@ RootSignatureParser::parseRootConstantParams() {
   return Params;
 }
 
-std::optional<RootSignatureParser::ParsedRootParamParams>
-RootSignatureParser::parseRootParamParams(TokenKind RegType) {
+std::optional<RootSignatureParser::ParsedRootDescriptorParams>
+RootSignatureParser::parseRootDescriptorParams(TokenKind RegType) {
   assert(CurToken.TokKind == TokenKind::pu_l_paren &&
          "Expects to only be invoked starting at given token");
 
-  ParsedRootParamParams Params;
+  ParsedRootDescriptorParams Params;
   do {
     // ( `b` | `t` | `u`) POS_INT
     if (tryConsumeExpectedToken(RegType)) {

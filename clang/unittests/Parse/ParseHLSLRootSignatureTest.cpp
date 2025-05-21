@@ -369,20 +369,20 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootDescriptorsTest) {
   RootElement Elem = Elements[0];
   ASSERT_TRUE(std::holds_alternative<RootDescriptor>(Elem));
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, DescriptorType::CBuffer);
-  ASSERT_EQ(std::get<RootParam>(Elem).Reg.ViewType, RegisterType::BReg);
-  ASSERT_EQ(std::get<RootParam>(Elem).Reg.Number, 0u);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.ViewType, RegisterType::BReg);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.Number, 0u);
 
   Elem = Elements[1];
   ASSERT_TRUE(std::holds_alternative<RootDescriptor>(Elem));
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, DescriptorType::SRV);
-  ASSERT_EQ(std::get<RootParam>(Elem).Reg.ViewType, RegisterType::TReg);
-  ASSERT_EQ(std::get<RootParam>(Elem).Reg.Number, 42u);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.ViewType, RegisterType::TReg);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.Number, 42u);
 
   Elem = Elements[2];
   ASSERT_TRUE(std::holds_alternative<RootDescriptor>(Elem));
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, DescriptorType::UAV);
-  ASSERT_EQ(std::get<RootParam>(Elem).Reg.ViewType, RegisterType::UReg);
-  ASSERT_EQ(std::get<RootParam>(Elem).Reg.Number, 34893247u);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.ViewType, RegisterType::UReg);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.Number, 34893247u);
 
   ASSERT_TRUE(Consumer->isSatisfied());
 }
