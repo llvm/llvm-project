@@ -283,7 +283,7 @@ a number of different tests.
 __ptrauth Qualifier
 ^^^^^^^^^^^^^^^^^^^
 
-``__ptrauth(key, address, discriminator)`` is an extended type
+``__ptrauth(key, address, discriminator, options)`` is an extended type
 qualifier which causes so-qualified objects to hold pointers or pointer sized
 integers signed using the specified schema rather than the default schema for
 such types.
@@ -303,6 +303,9 @@ The qualifier's operands are as follows:
 
 - ``discriminator`` - a constant discriminator; must be a constant expression
 
+- ``options`` - a constant string expression containing a list of comma
+  separated authentication options; see ``ptrauth_qualifier_options``_
+
 See `Discriminators`_ for more information about discriminators.
 
 Currently the operands must be constant-evaluable even within templates. In the
@@ -314,9 +317,9 @@ qualifiers on a parameter (after parameter type adjustment) are ignored when
 deriving the type of the function.  The parameter will be passed using the
 default ABI for the unqualified pointer type.
 
-If ``x`` is an object of type ``__ptrauth(key, address, discriminator) T``,
-then the signing schema of the value stored in ``x`` is a key of ``key`` and
-a discriminator determined as follows:
+If ``x`` is an object of type ``__ptrauth(key, address, discriminator, options) T``,
+then the signing schema of the value stored in ``x`` is a key of ``key`` and a
+discriminator determined as follows:
 
 - if ``address`` is 0, then the discriminator is ``discriminator``;
 
@@ -326,6 +329,27 @@ a discriminator determined as follows:
 - if ``address`` is 1 and ``discriminator`` is non-zero, then the discriminator
   is ``ptrauth_blend_discriminator(&x, discriminator)``; see
   `ptrauth_blend_discriminator`_.
+
+``ptrauth_qualifier_options``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The options parameter to the ``__ptrauth`` qualifier is a string of comma
+separated modifiers to the normal authentication behavior. Currently supported
+options are
+
+- Authentication mode: This is one of ``strip``, ``sign-and-strip``, and
+  ``sign-and-auth``. The ability to modify this behavior is intended to support
+  staging ABI changes. The ``strip`` mode results in the PAC bits of a value
+  being stripped from any value and disabled any other authentication
+  operations. ``sign-and-strip`` strips an authenticated on read, but will
+  ensure a correct signature is set on assignment. Finally ``sign-and-auth`` is
+  the default mode, and provides full protection for the value.
+
+- ``authenticates-null-values``: By default the __ptrauth qualifier does not
+  sign the zero value. This permits fast implementation of null checks in the
+  common case where a null value is safe. The ``authenticates-null-values``
+  option overrides this behavior, and permits null values to be protected with
+  pointer authentication.
 
 ``<ptrauth.h>``
 ~~~~~~~~~~~~~~~
