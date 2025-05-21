@@ -409,7 +409,7 @@ static void updateFnegToFsub(Instruction &I,
                              SmallVectorImpl<Instruction *> &ToRemove,
                              DenseMap<Value *, Value *> &) {
   const Intrinsic::ID ID = I.getOpcode();
-  if(ID != Instruction::FNeg)
+  if (ID != Instruction::FNeg)
     return;
 
   IRBuilder<> Builder(&I);
