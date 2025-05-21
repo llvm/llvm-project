@@ -18177,17 +18177,20 @@ static SDValue lowerVQDOT(unsigned Opc, SDValue Op0, SDValue Op1,
   assert(VT == Op1.getSimpleValueType() &&
          VT.getVectorElementType() == MVT::i32);
 
-  assert(VT.isFixedLengthVector());
-  MVT ContainerVT = getContainerForFixedLengthVector(DAG, VT, Subtarget);
-  SDValue Passthru = convertToScalableVector(
-      ContainerVT, DAG.getConstant(0, DL, VT), DAG, Subtarget);
-  Op0 = convertToScalableVector(ContainerVT, Op0, DAG, Subtarget);
-  Op1 = convertToScalableVector(ContainerVT, Op1, DAG, Subtarget);
-
+  SDValue Passthru = DAG.getConstant(0, DL, VT);
+  MVT ContainerVT = VT;
+  if (VT.isFixedLengthVector()) {
+    ContainerVT = getContainerForFixedLengthVector(DAG, VT, Subtarget);
+    Passthru = convertToScalableVector(ContainerVT, Passthru, DAG, Subtarget);
+    Op0 = convertToScalableVector(ContainerVT, Op0, DAG, Subtarget);
+    Op1 = convertToScalableVector(ContainerVT, Op1, DAG, Subtarget);
+  }
   auto [Mask, VL] = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
   SDValue LocalAccum = DAG.getNode(Opc, DL, ContainerVT,
                                    {Op0, Op1, Passthru, Mask, VL});
-  return convertFromScalableVector(VT, LocalAccum, DAG, Subtarget);
+  if (VT.isFixedLengthVector())
+    return convertFromScalableVector(VT, LocalAccum, DAG, Subtarget);
+  return LocalAccum;
 }
 
 static MVT getQDOTXResultType(MVT OpVT) {
@@ -18207,7 +18210,7 @@ static SDValue getZeroPaddedAdd(const SDLoc &DL, SDValue A, SDValue B,
   EVT AVT = A.getValueType();
   EVT BVT = B.getValueType();
   assert(AVT.getVectorElementType() == BVT.getVectorElementType());
-  if (AVT.getVectorNumElements() > BVT.getVectorNumElements()) {
+  if (AVT.getVectorMinNumElements() > BVT.getVectorMinNumElements()) {
     std::swap(A, B);
     std::swap(AVT, BVT);
   }
