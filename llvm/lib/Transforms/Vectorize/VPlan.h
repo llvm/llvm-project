@@ -1959,8 +1959,8 @@ public:
 };
 
 /// A recipe for handling phi nodes of integer and floating-point inductions,
-/// producing their vector values. This won't execute any LLVM IR and will get
-/// expanded later into several other recipes in convertToConcreteRecipes.
+/// producing their vector values. This is an abstract recipe and must be
+/// converted to concrete recipes before executing.
 class VPWidenIntOrFpInductionRecipe : public VPWidenInductionRecipe {
   TruncInst *Trunc;
 
