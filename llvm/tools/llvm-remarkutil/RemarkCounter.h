@@ -52,20 +52,7 @@ struct Filters {
   std::optional<FilterMatcher> PassNameFilter;
   std::optional<FilterMatcher> ArgFilter;
   std::optional<Type> RemarkTypeFilter;
-  /// Returns a filter object if all the arguments provided are valid regex
-  /// types otherwise return an error.
-  static Filters
-  createRemarkFilter(std::optional<FilterMatcher> RemarkNameFilter,
-                     std::optional<FilterMatcher> PassNameFilter,
-                     std::optional<FilterMatcher> ArgFilter,
-                     std::optional<Type> RemarkTypeFilter) {
-    Filters Filter;
-    Filter.RemarkNameFilter = std::move(RemarkNameFilter);
-    Filter.PassNameFilter = std::move(PassNameFilter);
-    Filter.ArgFilter = std::move(ArgFilter);
-    Filter.RemarkTypeFilter = std::move(RemarkTypeFilter);
-    return Filter;
-  }
+
   /// Returns true if \p Remark satisfies all the provided filters.
   bool filterRemark(const Remark &Remark);
 };

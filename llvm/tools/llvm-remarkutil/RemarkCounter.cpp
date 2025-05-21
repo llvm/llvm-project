@@ -271,9 +271,8 @@ Expected<Filters> getRemarkFilter() {
     RemarkType = RemarkTypeOpt;
 
   // Create RemarkFilter.
-  return Filters::createRemarkFilter(std::move(RemarkNameFilter),
-                                     std::move(PassNameFilter),
-                                     std::move(RemarkArgFilter), RemarkType);
+  return Filters{std::move(RemarkNameFilter), std::move(PassNameFilter),
+                 std::move(RemarkArgFilter), RemarkType};
 }
 
 Error useCollectRemark(StringRef Buffer, Counter &Counter, Filters &Filter) {
