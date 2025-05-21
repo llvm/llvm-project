@@ -109,9 +109,10 @@ protected:
 
   // This is a strided getElementPtr variant that linearizes subscripts as:
   //   `base_offset + index_0 * stride_0 + ... + index_n * stride_n`.
-  Value getStridedElementPtr(Location loc, MemRefType type, Value memRefDesc,
-                             ValueRange indices,
-                             ConversionPatternRewriter &rewriter) const;
+  Value getStridedElementPtr(
+      ConversionPatternRewriter &rewriter, Location loc, MemRefType type,
+      Value memRefDesc, ValueRange indices,
+      LLVM::GEPNoWrapFlags noWrapFlags = LLVM::GEPNoWrapFlags::none) const;
 
   /// Returns if the given memref type is convertible to LLVM and has an
   /// identity layout map.

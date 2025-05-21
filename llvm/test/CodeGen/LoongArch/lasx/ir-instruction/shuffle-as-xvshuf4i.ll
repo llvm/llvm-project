@@ -41,23 +41,3 @@ define <8 x float> @shufflevector_xvshuf4i_v8f32(<8 x float> %a, <8 x float> %b)
     %c = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4>
     ret <8 x float> %c
 }
-
-;; xvshuf4i.d
-define <4 x i64> @shufflevector_xvshuf4i_v4d64(<4 x i64> %a, <4 x i64> %b) {
-; CHECK-LABEL: shufflevector_xvshuf4i_v4d64:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    xvshuf4i.d $xr0, $xr1, 9
-; CHECK-NEXT:    ret
-    %c = shufflevector <4 x i64> %a, <4 x i64> %b, <4 x i32> <i32 1, i32 2, i32 5, i32 6>
-    ret <4 x i64> %c
-}
-
-;; xvshuf4i.d
-define <4 x double> @shufflevector_xvshuf4i_v4f64(<4 x double> %a, <4 x double> %b) {
-; CHECK-LABEL: shufflevector_xvshuf4i_v4f64:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    xvshuf4i.d $xr0, $xr1, 9
-; CHECK-NEXT:    ret
-    %c = shufflevector <4 x double> %a, <4 x double> %b, <4 x i32> <i32 1, i32 2, i32 5, i32 6>
-    ret <4 x double> %c
-}
