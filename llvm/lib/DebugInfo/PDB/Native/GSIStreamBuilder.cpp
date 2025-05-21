@@ -324,9 +324,9 @@ Error GSIStreamBuilder::finalizeMsfLayout() {
   if (RecordBytes > UINT32_MAX)
     return make_error<StringError>(
         formatv("the public ({0} bytes) and global ({1} bytes) "
-                "symbols are too large to fit in a PDB file; ",
-                "the maximum total is 4294967295 bytes.
-                PSH->RecordByteSize, GSH->RecordByteSize),
+                "symbols are too large to fit in a PDB file; "
+                "the maximum total is {2} bytes.",
+                PSH->RecordByteSize, GSH->RecordByteSize, UINT32_MAX),
         inconvertibleErrorCode());
 
   Idx = Msf.addStream(RecordBytes);
