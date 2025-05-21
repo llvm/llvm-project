@@ -272,8 +272,7 @@ void LTOModule::addObjCClass(const GlobalVariable *clgv) {
   // second slot in __OBJC,__class is pointer to superclass name
   std::string superclassName;
   if (objcClassNameFromExpression(c->getOperand(1), superclassName)) {
-    auto IterBool =
-        _undefines.insert(std::make_pair(superclassName, NameAndAttributes()));
+    auto IterBool = _undefines.try_emplace(superclassName);
     if (IterBool.second) {
       NameAndAttributes &info = IterBool.first->second;
       info.name = IterBool.first->first();
@@ -308,8 +307,7 @@ void LTOModule::addObjCCategory(const GlobalVariable *clgv) {
   if (!objcClassNameFromExpression(c->getOperand(1), targetclassName))
     return;
 
-  auto IterBool =
-      _undefines.insert(std::make_pair(targetclassName, NameAndAttributes()));
+  auto IterBool = _undefines.try_emplace(targetclassName);
 
   if (!IterBool.second)
     return;
@@ -327,8 +325,7 @@ void LTOModule::addObjCClassRef(const GlobalVariable *clgv) {
   if (!objcClassNameFromExpression(clgv->getInitializer(), targetclassName))
     return;
 
-  auto IterBool =
-      _undefines.insert(std::make_pair(targetclassName, NameAndAttributes()));
+  auto IterBool = _undefines.try_emplace(targetclassName);
 
   if (!IterBool.second)
     return;
@@ -523,7 +520,7 @@ void LTOModule::addAsmGlobalSymbol(StringRef name,
 /// addAsmGlobalSymbolUndef - Add a global symbol from module-level ASM to the
 /// undefined list.
 void LTOModule::addAsmGlobalSymbolUndef(StringRef name) {
-  auto IterBool = _undefines.insert(std::make_pair(name, NameAndAttributes()));
+  auto IterBool = _undefines.try_emplace(name);
 
   _asm_undefines.push_back(IterBool.first->first());
 
@@ -550,8 +547,7 @@ void LTOModule::addPotentialUndefinedSymbol(ModuleSymbolTable::Symbol Sym,
     name.c_str();
   }
 
-  auto IterBool =
-      _undefines.insert(std::make_pair(name.str(), NameAndAttributes()));
+  auto IterBool = _undefines.try_emplace(name.str());
 
   // we already have the symbol
   if (!IterBool.second)
