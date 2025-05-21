@@ -2109,7 +2109,7 @@ protected:
 public:
   /// Create a new VPWidenPHIRecipe for \p Phi with start value \p Start and
   /// debug location \p DL.
-  VPWidenPHIRecipe(Instruction *Phi, VPValue *Start = nullptr, DebugLoc DL = {},
+  VPWidenPHIRecipe(PHINode *Phi, VPValue *Start = nullptr, DebugLoc DL = {},
                    const Twine &Name = "")
       : VPSingleDefRecipe(VPDef::VPWidenPHISC, ArrayRef<VPValue *>(), Phi, DL),
         Name(Name.str()) {

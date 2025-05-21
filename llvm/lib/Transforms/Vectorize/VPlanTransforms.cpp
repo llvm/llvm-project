@@ -2581,8 +2581,8 @@ expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR,
   Init = Builder.createNaryOp(AddOp, {SplatStart, Init}, FMFs, {}, "induction");
 
   // Create the widened phi of the vector IV.
-  auto *WidePHI =
-      new VPWidenPHIRecipe(IV, nullptr, WidenIVR->getDebugLoc(), "vec.ind");
+  auto *WidePHI = new VPWidenPHIRecipe(WidenIVR->getPHINode(), nullptr,
+                                       WidenIVR->getDebugLoc(), "vec.ind");
   WidePHI->addOperand(Init);
   WidePHI->insertBefore(WidenIVR);
 
