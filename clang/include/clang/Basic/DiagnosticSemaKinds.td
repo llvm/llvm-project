@@ -9655,6 +9655,8 @@ def warn_redefine_extname_not_applied : Warning<
   "#pragma redefine_extname is applicable to external C declarations only; "
   "not applied to %select{function|variable}0 %1">,
   InGroup<Pragmas>;
+def err_cannot_be_exported : Error<
+  "needs to have external linkage to be '_Export` qualified">;
 } // End of general sema category.
 
 // inline asm.

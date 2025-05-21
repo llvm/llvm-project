@@ -4267,6 +4267,12 @@ def Thread : Attr {
   let Subjects = SubjectList<[Var]>;
 }
 
+def zOSExport : InheritableAttr {
+  let Spellings = [CustomKeyword<"_Export">];
+  let Subjects = SubjectList<[Function, Var, CXXRecord]>;
+  let Documentation = [zOSExportDocs];
+}
+
 def Win64 : IgnoredAttr {
   let Spellings = [CustomKeyword<"__w64">];
   let LangOpts = [MicrosoftExt];

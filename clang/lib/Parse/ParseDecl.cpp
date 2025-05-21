@@ -4217,6 +4217,11 @@ void Parser::ParseDeclarationSpecifiers(
       isInvalid = DS.setFunctionSpecNoreturn(Loc, PrevSpec, DiagID);
       break;
 
+    case tok::kw__Export:
+      // _Export keyword is part of the declarator id
+      goto DoneWithDeclSpec;
+      break;
+
     // friend
     case tok::kw_friend:
       if (DSContext == DeclSpecContext::DSC_class) {
@@ -6417,6 +6422,16 @@ void Parser::ParseDeclaratorInternal(Declarator &D,
   }
 
   tok::TokenKind Kind = Tok.getKind();
+
+  if (Kind == tok::kw__Export) {
+    SourceLocation loc = ConsumeToken();
+    D.SetExport(loc);
+    D.SetRangeEnd(loc);
+
+    if (DirectDeclParser)
+      (this->*DirectDeclParser)(D);
+    return;
+  }
 
   if (D.getDeclSpec().isTypeSpecPipe() && !isPipeDeclarator(D)) {
     DeclSpec DS(AttrFactory);
