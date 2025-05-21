@@ -346,10 +346,14 @@ class DAPTestCaseBase(TestBase):
         memoryReference = stackFrames[0]["instructionPointerReference"]
         self.assertIsNotNone(memoryReference)
 
-        if memoryReference not in self.dap_server.disassembled_instructions:
-            self.dap_server.request_disassemble(memoryReference=memoryReference)
+        instructions = self.dap_server.request_disassemble(
+            memoryReference=memoryReference
+        )
+        disassembled_instructions = {}
+        for inst in instructions:
+            disassembled_instructions[inst["address"]] = inst
 
-        return self.dap_server.disassembled_instructions[memoryReference]
+        return disassembled_instructions, disassembled_instructions[memoryReference]
 
     def attach(
         self,

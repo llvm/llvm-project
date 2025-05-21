@@ -542,8 +542,15 @@ CIRGenTypes::arrangeCIRFunctionInfo(CanQualType returnType,
 
   void *insertPos = nullptr;
   CIRGenFunctionInfo *fi = functionInfos.FindNodeOrInsertPos(id, insertPos);
-  if (fi)
+  if (fi) {
+    // We found a matching function info based on id. These asserts verify that
+    // it really is a match.
+    assert(
+        fi->getReturnType() == returnType &&
+        std::equal(fi->argTypesBegin(), fi->argTypesEnd(), argTypes.begin()) &&
+        "Bad match based on CIRGenFunctionInfo folding set id");
     return *fi;
+  }
 
   assert(!cir::MissingFeatures::opCallCallConv());
 

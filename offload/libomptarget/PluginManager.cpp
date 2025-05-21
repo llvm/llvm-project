@@ -538,9 +538,9 @@ Expected<DeviceTy &> PluginManager::getDevice(uint32_t DeviceNo) {
   {
     auto ExclusiveDevicesAccessor = getExclusiveDevicesAccessor();
     if (DeviceNo >= ExclusiveDevicesAccessor->size())
-      return createStringError(
-          inconvertibleErrorCode(),
-          "Device number '%i' out of range, only %i devices available",
+      return error::createOffloadError(
+          error::ErrorCode::INVALID_VALUE,
+          "device number '%i' out of range, only %i devices available",
           DeviceNo, ExclusiveDevicesAccessor->size());
 
     DevicePtr = &*(*ExclusiveDevicesAccessor)[DeviceNo];
@@ -549,8 +549,8 @@ Expected<DeviceTy &> PluginManager::getDevice(uint32_t DeviceNo) {
   // Check whether global data has been mapped for this device
   if (DevicePtr->hasPendingImages())
     if (loadImagesOntoDevice(*DevicePtr) != OFFLOAD_SUCCESS)
-      return createStringError(inconvertibleErrorCode(),
-                               "Failed to load images on device '%i'",
-                               DeviceNo);
+      return error::createOffloadError(error::ErrorCode::BACKEND_FAILURE,
+                                       "failed to load images on device '%i'",
+                                       DeviceNo);
   return *DevicePtr;
 }

@@ -66,7 +66,7 @@ class TestDAP_InstructionBreakpointTestCase(lldbdap_testcase.DAPTestCaseBase):
         )
 
         # Check disassembly view
-        instruction = self.disassemble(frameIndex=0)
+        disassembled_instructions, instruction = self.disassemble(frameIndex=0)
         self.assertEqual(
             instruction["address"],
             intstructionPointerReference[0],
@@ -74,8 +74,7 @@ class TestDAP_InstructionBreakpointTestCase(lldbdap_testcase.DAPTestCaseBase):
         )
 
         # Get next instruction address to set instruction breakpoint
-        disassembled_instruction_list = self.dap_server.disassembled_instructions
-        instruction_addr_list = list(disassembled_instruction_list.keys())
+        instruction_addr_list = list(disassembled_instructions.keys())
         index = instruction_addr_list.index(intstructionPointerReference[0])
         if len(instruction_addr_list) >= (index + 1):
             next_inst_addr = instruction_addr_list[index + 1]
