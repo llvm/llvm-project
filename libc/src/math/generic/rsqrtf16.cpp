@@ -66,42 +66,53 @@ LLVM_LIBC_FUNCTION(float16, rsqrtf16, (float16 x)) {
   int exponent;
   float mantissa = fputil::frexp(xf, exponent);
 
-  // 6-degree polynomial generated using Sollya
-  // bigger polynomial doesn't generate better results-> the current one
-  // produces the least number of errors but still errors are presents P =
-  // fpminimax(1/(sqrt(x)), [|0,1,2,3,4,5|], [|SG...|], [0.5, 1]);
-  float interm =
-      fputil::polyeval(mantissa, 0x1.9c81c4p1f, -0x1.e2c57cp2f, 0x1.91e8bp3f,
-                       -0x1.899954p3f, 0x1.9edcp2f, -0x1.6bd93cp0f);
-
-  // Apply one Newton-Raphson iteration to refine the approximation of
-  // 1/sqrt(mantissa) y_new = y_old * (1.5 - 0.5 * mantissa * y_old^2) Using
-  // fputil::fma for potential precision benefits in the factor calculation
-  float interm_sq = interm * interm;
-  float factor = fputil::fma<float>(-0.5f * mantissa, interm_sq, 1.5f);
-  float interm_refined = interm * factor; // Final multiplication
-
-  // Apply a second Newton-Raphson iteration
-  // y_new = y_old * (1.5 - 0.5 * mantissa * y_old^2)
-  // y_old is now interm_refined
-  float interm_refined_sq = interm_refined * interm_refined;
-  float factor2 = fputil::fma<float>(-0.5f * mantissa, interm_refined_sq, 1.5f);
-  float interm_refined2 = interm_refined * factor2;
-
-  // Round (-e/2)
+  float result;
   int exp_floored = -(exponent >> 1);
 
-  // rsqrt(x) = 1/sqrt(mantissa) * 2^(-e/2)
-  // rsqrt(x) = P(mantissa) * 2*(exp_floored)
-  // float result = fputil::ldexp(interm, exp_floored);
-  float result = fputil::ldexp(interm_refined2, exp_floored);
+  if (mantissa == 0.5f) {
+    // When mantissa is 0.5f, x was a power of 2 (or subnormal that normalizes this way).
+    // 1/sqrt(0.5f) = sqrt(2.0f) = 0x1.6a09e6p0f
+    // If exponent is odd (exponent = 2k + 1):
+    //   rsqrt(x) = (1/sqrt(0.5)) * 2^(-(2k+1)/2) = sqrt(2) * 2^(-k-0.5)
+    //            = sqrt(2) * 2^(-k) * (1/sqrt(2)) = 2^(-k)
+    //   exp_floored = -((2k+1)>>1) = -(k) = -k
+    //   So result = ldexp(1.0f, exp_floored)
+    // If exponent is even (exponent = 2k):
+    //   rsqrt(x) = (1/sqrt(0.5)) * 2^(-2k/2) = sqrt(2) * 2^(-k)
+    //   exp_floored = -((2k)>>1) = -(k) = -k
+    //   So result = ldexp(sqrt(2.0f), exp_floored)
+    if (exponent & 1) {
+      result = fputil::ldexp(1.0f, exp_floored);
+    } else {
+      constexpr float SQRT_2_F = 0x1.6a09e6p0f; // sqrt(2.0f)
+      result = fputil::ldexp(SQRT_2_F, exp_floored);
+    }
+  } else {
+    // 6-degree polynomial generated using Sollya
+    // P = fpminimax(1/sqrt(x), [|0,1,2,3,4,5|], [|SG...|], [0.5, 1]);
+    float interm = fputil::polyeval(
+        mantissa, 0x1.9c81c4p1f, -0x1.e2c57cp2f, 0x1.91e8bp3f,
+        -0x1.899954p3f, 0x1.9edcp2f, -0x1.6bd93cp0f);
+    
+    // Apply one Newton-Raphson iteration to refine the approximation of
+    // 1/sqrt(mantissa) y_new = y_old * (1.5 - 0.5 * mantissa * y_old^2) Using
+    // fputil::fma for potential precision benefits in the factor calculation  
+    float interm_sq = interm * interm;
+    float factor = fputil::fma<float>(-0.5f * mantissa, interm_sq, 1.5f);
+    float interm_refined = interm * factor;
 
-  // Handle the case where exponent is odd
-  if (exponent & 1) {
-    const float ONE_OVER_SQRT2 = 0x1.6a09e6p-1f;
-    // result *= ONE_OVER_SQRT2;
-    result = fputil::fma<float>(result, ONE_OVER_SQRT2,
-                                0.0f); // Use FMA for multiplication
+    // Apply a second Newton-Raphson iteration
+    // y_new = y_old * (1.5 - 0.5 * mantissa * y_old^2)
+    float interm_refined_sq = interm_refined * interm_refined;
+    float factor2 =
+        fputil::fma<float>(-0.5f * mantissa, interm_refined_sq, 1.5f);
+    float interm_refined2 = interm_refined * factor2;
+
+    result = fputil::ldexp(interm_refined2, exp_floored);
+    if (exponent & 1) {
+      const float ONE_OVER_SQRT2 = 0x1.6a09e6p-1f;
+      result = fputil::fma<float>(result, ONE_OVER_SQRT2, 0.0f);
+    }
   }
 
   return fputil::cast<float16>(result);
