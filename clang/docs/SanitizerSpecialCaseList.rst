@@ -102,7 +102,8 @@ supported sanitizers.
     char c = toobig; // also not instrumented
   }
 
-Conflicting entries are resolved by the latest entry, which takes precedence.
+If multiple entries match the source, than the latest entry takes the
+precedence.
 
 .. code-block:: bash
 
