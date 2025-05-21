@@ -5776,18 +5776,17 @@ cc_library(
     name = "NVVMDialect",
     srcs = [
         "lib/Dialect/LLVMIR/IR/BasicPtxBuilderInterface.cpp",
-        "lib/Dialect/LLVMIR/IR/NVVMRequiresSMTraits.cpp",
         "lib/Dialect/LLVMIR/IR/NVVMDialect.cpp",
+        "lib/Dialect/LLVMIR/IR/NVVMRequiresSMTraits.cpp",
     ],
     hdrs = [
         "include/mlir/Dialect/LLVMIR/BasicPtxBuilderInterface.h",
-        "include/mlir/Dialect/LLVMIR/NVVMRequiresSMTraits.h",
         "include/mlir/Dialect/LLVMIR/NVVMDialect.h",
-],
+        "include/mlir/Dialect/LLVMIR/NVVMRequiresSMTraits.h",
+    ],
     includes = ["include"],
     deps = [
         ":BasicPtxBuilderIntGen",
-        ":NVVMRequiresSMTraitsIntGen",
         ":BytecodeOpInterface",
         ":ConvertToLLVMInterface",
         ":DialectUtils",
@@ -5795,6 +5794,7 @@ cc_library(
         ":IR",
         ":LLVMDialect",
         ":NVVMOpsIncGen",
+        ":NVVMRequiresSMTraitsIncGen",
         ":SideEffectInterfaces",
         ":Support",
         ":ToLLVMIRTranslation",
@@ -5861,10 +5861,13 @@ td_library(
 )
 
 td_library(
-    name = "NVVMRequiresSMTraitsIntTdFiles",
+    name = "NVVMRequiresSMTraitsTdFiles",
     srcs = ["include/mlir/Dialect/LLVMIR/NVVMRequiresSMTraits.td"],
     includes = ["include"],
-    deps = [":OpBaseTdFiles"]
+    deps = [
+        ":LLVMOpsTdFiles",
+        ":OpBaseTdFiles",
+    ],
 )
 
 td_library(
@@ -5873,9 +5876,9 @@ td_library(
     includes = ["include"],
     deps = [
         ":BasicPtxBuilderIntTdFiles",
-        ":NVVMRequiresSMTraitsIntTdFiles",
         ":GPUOpsTdFiles",
         ":LLVMOpsTdFiles",
+        ":NVVMRequiresSMTraitsTdFiles",
         ":OpBaseTdFiles",
         ":SideEffectInterfacesTdFiles",
     ],
@@ -5901,20 +5904,14 @@ gentbl_cc_library(
 )
 
 gentbl_cc_library(
-    name = "NVVMRequiresSMTraitsIntGen",
-    tbl_outs = [
-        (
-            ["-gen-op-interface-decls"],
-            "include/mlir/Dialect/LLVMIR/NVVMRequiresSMTraits.h.inc",
-        ),
-        (
-            ["-gen-op-interface-defs"],
-            "include/mlir/Dialect/LLVMIR/NVVMRequiresSMTraits.cpp.inc",
-        ),
-    ],
+    name = "NVVMRequiresSMTraitsIncGen",
+    tbl_outs = {
+        "include/mlir/Dialect/LLVMIR/NVVMRequiresSMTraits.h.inc": ["-gen-op-interface-decls"],
+        "include/mlir/Dialect/LLVMIR/NVVMRequiresSMTraits.cpp.inc": ["-gen-op-interface-defs"],
+    },
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/LLVMIR/NVVMRequiresSMTraits.td",
-    deps = [":NVVMRequiresSMTraitsIntTdFiles"],
+    deps = [":NVVMRequiresSMTraitsTdFiles"],
 )
 
 gentbl_cc_library(
