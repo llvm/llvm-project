@@ -257,37 +257,34 @@ ResourceTypeInfo::ResourceTypeInfo(TargetExtType *HandleTy,
 }
 
 static void formatTypeName(SmallString<64> &Dest, StringRef Name,
-                           bool IsWriteable, bool IsROV) {
-  Dest = IsWriteable ? (IsROV ? "RasterizerOrdered" : "RW") : "";
-  Dest += Name;
-}
-
-static void formatTypeName(SmallString<64> &Dest, StringRef Name,
-                           bool IsWriteable, bool IsROV, Type *ContainedType,
-                           bool IsSigned) {
+                           bool IsWriteable, bool IsROV,
+                           Type *ContainedType = nullptr,
+                           bool IsSigned = true) {
   raw_svector_ostream DestStream(Dest);
   if (IsWriteable)
     DestStream << (IsROV ? "RasterizerOrdered" : "RW");
   DestStream << Name;
 
-  if (ContainedType) {
-    StringRef ElementName;
-    ElementType ET = toDXILElementType(ContainedType, IsSigned);
-    if (ET != ElementType::Invalid) {
-      ElementName = getElementTypeNameForTemplate(ET);
-    } else if (StructType *ST = dyn_cast<StructType>(ContainedType)) {
-      if (!ST->hasName())
-        return;
-      ElementName = ST->getStructName();
-    } else {
-      llvm_unreachable("invalid element type for raw buffer");
-    }
+  if (!ContainedType)
+    return;
 
-    if (const FixedVectorType *VTy = dyn_cast<FixedVectorType>(ContainedType))
-      DestStream << "<" << ElementName << VTy->getNumElements() << ">";
-    else
-      DestStream << "<" << ElementName << ">";
+  StringRef ElementName;
+  ElementType ET = toDXILElementType(ContainedType, IsSigned);
+  if (ET != ElementType::Invalid) {
+    ElementName = getElementTypeNameForTemplate(ET);
+  } else {
+    assert(isa<StructType>(ContainedType) &&
+           "invalid element type for raw buffer");
+    StructType *ST = cast<StructType>(ContainedType);
+    if (!ST->hasName())
+      return;
+    ElementName = ST->getStructName();
   }
+
+  DestStream << "<" << ElementName;
+  if (const FixedVectorType *VTy = dyn_cast<FixedVectorType>(ContainedType))
+    DestStream << VTy->getNumElements();
+  DestStream << ">";
 }
 
 static StructType *getOrCreateElementStruct(Type *ElemType, StringRef Name) {
