@@ -17777,15 +17777,13 @@ void Sema::PushExpressionEvaluationContextForFunction(
     Current.InImmediateEscalatingFunctionContext =
         getLangOpts().CPlusPlus20 && FD->isImmediateEscalating();
 
-    if (isLambdaMethod(FD)) {
-      Current.InDiscardedStatement = Parent.isDiscardedStatementContext();
+    if (isLambdaMethod(FD))
       Current.InImmediateFunctionContext =
           FD->isConsteval() ||
           (isLambdaMethod(FD) && (Parent.isConstantEvaluated() ||
                                   Parent.isImmediateFunctionContext()));
-    } else {
+    else
       Current.InImmediateFunctionContext = FD->isConsteval();
-    }
   }
 }
 
