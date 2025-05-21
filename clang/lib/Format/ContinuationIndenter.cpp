@@ -830,8 +830,8 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
   // parenthesis by disallowing any further line breaks if there is no line
   // break after the opening parenthesis. Don't break if it doesn't conserve
   // columns.
-  auto IsOtherConditional = [&](const FormatToken &Tok) {
-    return Tok.isOneOf(tok::kw_for, tok::kw_while, tok::kw_switch) ||
+  auto IsLoopConditional = [&](const FormatToken &Tok) {
+    return Tok.isOneOf(tok::kw_for, tok::kw_while) ||
            (Style.isJavaScript() && Tok.is(Keywords.kw_await) && Tok.Previous &&
             Tok.Previous->is(tok::kw_for));
   };
@@ -849,12 +849,18 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
     if (Tok.Previous->isIf()) {
       /* For backward compatibility, use AlignAfterOpenBracket
        * in case AlignAfterControlStatement is not initialized */
-      return Style.AlignAfterControlStatement == FormatStyle::BACSS_MultiLine ||
-             (Style.AlignAfterControlStatement == FormatStyle::BACSS_Default &&
-              Style.AlignAfterOpenBracket == FormatStyle::BAS_AlwaysBreak);
+      return Style.BreakAfterOpenBracketIf == FormatStyle::BAOBIS_MultiLine ||
+             Style.BreakAfterOpenBracketIf == FormatStyle::BAOBIS_Always;
     }
-    if (IsOtherConditional(*Tok.Previous))
-      return Style.AlignAfterControlStatement == FormatStyle::BACSS_MultiLine;
+    if (IsLoopConditional(*Tok.Previous)) {
+      return Style.BreakAfterOpenBracketLoop == FormatStyle::BAOBLS_MultiLine ||
+             Style.BreakAfterOpenBracketLoop == FormatStyle::BAOBLS_Always;
+    }
+    if (Tok.Previous->is(tok::kw_switch)) {
+      return Style.BreakAfterOpenBracketSwitch ==
+                 FormatStyle::BAOBSS_MultiLine ||
+             Style.BreakAfterOpenBracketSwitch == FormatStyle::BAOBSS_Always;
+    }
     if (Style.AlignAfterOpenBracket == FormatStyle::BAS_AlwaysBreak ||
         Style.AlignAfterOpenBracket == FormatStyle::BAS_BlockIndent) {
       return !Tok.Previous->is(TT_CastRParen) &&
@@ -899,8 +905,9 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
     }
     const auto *Previous = TokAfterLParen.Previous;
     assert(Previous); // IsOpeningBracket(Previous)
-    if (Previous->Previous && (Previous->Previous->isIf() ||
-                               IsOtherConditional(*Previous->Previous))) {
+    if (Previous->Previous &&
+        (Previous->Previous->isIf() || IsLoopConditional(*Previous->Previous) ||
+         Previous->Previous->is(tok::kw_switch))) {
       return false;
     }
     if (!Previous->isOneOf(TT_FunctionDeclarationLParen,
@@ -1282,16 +1289,32 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
 
   if (PreviousNonComment && PreviousNonComment->is(tok::l_paren)) {
     auto Previous = PreviousNonComment->Previous;
-    if (Previous &&
-        (Previous->isIf() ||
-         Previous->isOneOf(tok::kw_for, tok::kw_while, tok::kw_switch))) {
-      CurrentState.BreakBeforeClosingParen =
-          Style.AlignAfterControlStatement == FormatStyle::BACSS_MultiLine &&
-          Style.AlignAfterOpenBracket == FormatStyle::BAS_BlockIndent;
-    } else {
-      CurrentState.BreakBeforeClosingParen =
-          Style.AlignAfterOpenBracket == FormatStyle::BAS_BlockIndent;
+    if (Previous) {
+
+      auto IsLoopConditional = [&](const FormatToken &Tok) {
+        return Tok.isOneOf(tok::kw_for, tok::kw_while) ||
+               (Style.isJavaScript() && Tok.is(Keywords.kw_await) &&
+                Tok.Previous && Tok.Previous->is(tok::kw_for));
+      };
+
+      if (Previous->isIf()) {
+        CurrentState.BreakBeforeClosingParen =
+            Style.BreakBeforeCloseBracketIf == FormatStyle::BBCBIS_MultiLine ||
+            Style.BreakBeforeCloseBracketIf == FormatStyle::BBCBIS_Always;
+      } else if (IsLoopConditional(*Previous)) {
+        CurrentState.BreakBeforeClosingParen =
+            Style.BreakBeforeCloseBracketLoop ==
+                FormatStyle::BBCBLS_MultiLine ||
+            Style.BreakBeforeCloseBracketLoop == FormatStyle::BBCBLS_Always;
+      } else if (Previous->is(tok::kw_switch)) {
+        CurrentState.BreakBeforeClosingParen =
+            Style.BreakBeforeCloseBracketSwitch ==
+                FormatStyle::BBCBSS_MultiLine ||
+            Style.BreakBeforeCloseBracketSwitch == FormatStyle::BBCBSS_Always;
+      }
     }
+    CurrentState.BreakBeforeClosingParen =
+        Style.AlignAfterOpenBracket == FormatStyle::BAS_BlockIndent;
   }
 
   if (PreviousNonComment && PreviousNonComment->is(TT_TemplateOpener))
