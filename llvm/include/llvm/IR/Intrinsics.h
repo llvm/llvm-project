@@ -169,7 +169,7 @@ namespace Intrinsic {
       AArch64Svcount,
     } Kind;
 
-    // These three have to be contiguous.
+    // These six have to be contiguous.
     static_assert(OneFourthVecArgument == OneThirdVecArgument + 1 &&
                   OneFifthVecArgument == OneFourthVecArgument + 1 &&
                   OneSixthVecArgument == OneFifthVecArgument + 1 &&
@@ -194,9 +194,7 @@ namespace Intrinsic {
     unsigned getArgumentNumber() const {
       assert(Kind == Argument || Kind == ExtendArgument ||
              Kind == TruncArgument || Kind == HalfVecArgument ||
-             Kind == OneThirdVecArgument || Kind == OneFourthVecArgument ||
-             Kind == OneFifthVecArgument || Kind == OneSixthVecArgument ||
-             Kind == OneSeventhVecArgument || Kind == OneEighthVecArgument ||
+             (Kind >= OneThirdVecArgument && Kind <= OneEighthVecArgument) ||
              Kind == SameVecWidthArgument || Kind == VecElementArgument ||
              Kind == Subdivide2Argument || Kind == Subdivide4Argument ||
              Kind == VecOfBitcastsToInt);
@@ -205,9 +203,7 @@ namespace Intrinsic {
     ArgKind getArgumentKind() const {
       assert(Kind == Argument || Kind == ExtendArgument ||
              Kind == TruncArgument || Kind == HalfVecArgument ||
-             Kind == OneThirdVecArgument || Kind == OneFourthVecArgument ||
-             Kind == OneFifthVecArgument || Kind == OneSixthVecArgument ||
-             Kind == OneSeventhVecArgument || Kind == OneEighthVecArgument ||
+             (Kind >= OneThirdVecArgument && Kind <= OneEighthVecArgument) ||
              Kind == SameVecWidthArgument || Kind == VecElementArgument ||
              Kind == Subdivide2Argument || Kind == Subdivide4Argument ||
              Kind == VecOfBitcastsToInt);
