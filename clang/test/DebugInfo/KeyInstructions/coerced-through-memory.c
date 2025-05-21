@@ -1,7 +1,7 @@
-// RUN: %clang -gkey-instructions -gno-column-info -x c++ %s -gmlt -S -emit-llvm -o - -target aarch64-windows-msvc \
+// RUN: %clang_cc1 -gkey-instructions -gno-column-info -x c++ %s %clang_cc1-debug-info-kind=line-tables-only -emit-llvm -o - -target aarch64-windows-msvc \
 // RUN: | FileCheck %s --implicit-check-not atomGroup --implicit-check-not atomRank
 
-// RUN: %clang -gkey-instructions -gno-column-info -x c %s -gmlt -S -emit-llvm -o - -target aarch64-windows-msvc \
+// RUN: %clang_cc1 -gkey-instructions -gno-column-info -x c %s %clang_cc1-debug-info-kind=line-tables-only -emit-llvm -o - -target aarch64-windows-msvc \
 // RUN: | FileCheck %s --implicit-check-not atomGroup --implicit-check-not atomRank
 
 typedef struct {
