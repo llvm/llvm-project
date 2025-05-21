@@ -407,7 +407,12 @@ class VOP3OpSel_gfx11_gfx12<bits<10> op, VOPProfile p> : VOP3OpSel_gfx10<op, p>;
 class VOP3FP8OpSel_src_bytesel_gfx11_gfx12<bits<10> op, VOPProfile p> : VOP3e_gfx10<op, p> {
   bits<2> byte_sel;
   let Inst{11-12} = byte_sel; // NB: bit order is intentionally reversed!
+#ifdef LLPC_BUILD_NPI
+  let Inst{13} = !if(!and(p.HasOpSel, p.HasSrc2), src2_modifiers{2}, 0);
+  let Inst{14} = !if(!and(p.HasOpSel, p.HasDst), src0_modifiers{3}, 0);
+#else /* LLPC_BUILD_NPI */
   let Inst{14-13} = 0;  // op_sel2/3
+#endif /* LLPC_BUILD_NPI */
 }
 
 #ifdef LLPC_BUILD_NPI
@@ -419,6 +424,7 @@ class VOP3FP8OpSel_dst_bytesel_gfx11_gfx12<bits<10> op, VOPProfile p> : VOP3e_gf
 #endif /* LLPC_BUILD_NPI */
 
 #ifdef LLPC_BUILD_NPI
+  // FIXME: Is src opsel supported with dst bytesel?
   let Inst{11} = 0; // op_sel0
   let Inst{12} = 0; // op_sel1
   let Inst{14-13} = byte_sel;  // op_sel2/3
@@ -1017,6 +1023,16 @@ class VOP3_DPPe_Common_Base<bits<10> op, VOPProfile P> : Enc96 {
   let Inst{9}     = !if(P.HasSrc1Mods, src1_modifiers{1}, 0);
   let Inst{10}    = !if(P.HasSrc2Mods, src2_modifiers{1}, 0);
   // 16-bit select fields which can be interpreted as OpSel or hi/lo suffix
+#ifdef LLPC_BUILD_NPI
+  let Inst{11} = !if(P.HasFP8SrcByteSel, byte_sel{1},
+                 !if(P.HasOpSel, !if(P.HasSrc0Mods, src0_modifiers{2}, 0), ?));
+  let Inst{12} = !if(P.HasFP8SrcByteSel, byte_sel{0},
+                 !if(P.HasOpSel, !if(P.HasSrc1Mods, src1_modifiers{2}, 0), ?));
+  let Inst{13} = !if(P.HasFP8DstByteSel, byte_sel{0},
+                 !if(P.HasOpSel, !if(P.HasSrc2Mods, src2_modifiers{2}, 0), ?));
+  let Inst{14} = !if(P.HasFP8DstByteSel, byte_sel{1},
+                 !if(P.HasOpSel, !if(P.HasSrc0Mods, src0_modifiers{3}, 0), ?));
+#else /* LLPC_BUILD_NPI */
   let Inst{11} = !if(P.HasOpSel, !if(P.HasSrc0Mods, src0_modifiers{2}, 0),
                                  !if(P.HasFP8SrcByteSel, byte_sel{1}, ?));
   let Inst{12} = !if(P.HasOpSel, !if(P.HasSrc1Mods, src1_modifiers{2}, 0),
@@ -1025,6 +1041,7 @@ class VOP3_DPPe_Common_Base<bits<10> op, VOPProfile P> : Enc96 {
                                  !if(P.HasFP8DstByteSel, byte_sel{0}, ?));
   let Inst{14} = !if(P.HasOpSel, !if(P.HasSrc0Mods, src0_modifiers{3}, 0),
                                  !if(P.HasFP8DstByteSel, byte_sel{1}, ?));
+#endif /* LLPC_BUILD_NPI */
   let Inst{15}    = !if(P.HasClamp, clamp, 0);
   let Inst{25-16} = op;
   let Inst{31-26} = 0x35;
@@ -1648,6 +1665,11 @@ class VOP3_Profile_Base<VOPProfile P, VOP3Features Features = VOP3_REGULAR> : VO
   let HasOpSel = !if(Features.HasOpSel, 1, P.HasOpSel);
   let IsMAI    = !if(Features.IsMAI,    1, P.IsMAI);
   let IsPacked = !if(Features.IsPacked, 1, P.IsPacked);
+#ifdef LLPC_BUILD_NPI
+  let HasFP8SrcByteSel = P.HasFP8SrcByteSel;
+  let HasFP8DstByteSel = P.HasFP8DstByteSel;
+  let HasOMod = P.HasOMod;
+#endif /* LLPC_BUILD_NPI */
 
   let HasModifiers =
       !if (Features.IsMAI, 0,
@@ -1664,6 +1686,11 @@ class VOP3_Profile_True16<VOPProfile P, VOP3Features Features = VOP3_REGULAR> : 
   let HasOpSel = !if(Features.HasOpSel, 1, P.HasOpSel);
   let IsMAI    = !if(Features.IsMAI,    1, P.IsMAI);
   let IsPacked = !if(Features.IsPacked, 1, P.IsPacked);
+#ifdef LLPC_BUILD_NPI
+  let HasFP8SrcByteSel = P.HasFP8SrcByteSel;
+  let HasFP8DstByteSel = P.HasFP8DstByteSel;
+  let HasOMod = P.HasOMod;
+#endif /* LLPC_BUILD_NPI */
 
   let HasModifiers =
       !if (Features.IsMAI, 0,
@@ -1676,6 +1703,11 @@ class VOP3_Profile_Fake16<VOPProfile P, VOP3Features Features = VOP3_REGULAR> : 
   let HasOpSel = !if(Features.HasOpSel, 1, P.HasOpSel);
   let IsMAI    = !if(Features.IsMAI,    1, P.IsMAI);
   let IsPacked = !if(Features.IsPacked, 1, P.IsPacked);
+#ifdef LLPC_BUILD_NPI
+  let HasFP8SrcByteSel = P.HasFP8SrcByteSel;
+  let HasFP8DstByteSel = P.HasFP8DstByteSel;
+  let HasOMod = P.HasOMod;
+#endif /* LLPC_BUILD_NPI */
 
   let HasModifiers =
       !if (Features.IsMAI, 0,

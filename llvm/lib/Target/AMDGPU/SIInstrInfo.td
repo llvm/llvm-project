@@ -2367,11 +2367,21 @@ class getInsVOP3P <RegisterOperand Src0RC, RegisterOperand Src1RC,
 class getInsVOP3OpSel <RegisterOperand Src0RC, RegisterOperand Src1RC,
                        RegisterOperand Src2RC, int NumSrcArgs,
                        bit HasClamp, bit HasOMod,
+#ifdef LLPC_BUILD_NPI
+                       Operand Src0Mod, Operand Src1Mod, Operand Src2Mod,
+                       bit HasFP8ByteSel = 0, bit HasFP8DstByteSel = 0> {
+#else /* LLPC_BUILD_NPI */
                        Operand Src0Mod, Operand Src1Mod, Operand Src2Mod> {
+#endif /* LLPC_BUILD_NPI */
   dag ret = getInsVOP3Base<Src0RC, Src1RC,
                     Src2RC, NumSrcArgs,
                     HasClamp, 1/*HasModifiers*/, 1/*HasSrc2Mods*/, HasOMod,
+#ifdef LLPC_BUILD_NPI
+                    Src0Mod, Src1Mod, Src2Mod, /*HasOpSel=*/1,
+                    HasFP8ByteSel, HasFP8DstByteSel>.ret;
+#else /* LLPC_BUILD_NPI */
                     Src0Mod, Src1Mod, Src2Mod, /*HasOpSel=*/1>.ret;
+#endif /* LLPC_BUILD_NPI */
 }
 
 class getInsDPPBase <RegisterOperand OldRC, RegisterOperand Src0RC, RegisterOperand Src1RC,
@@ -3050,7 +3060,12 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
                                    Src0PackedMod, Src1PackedMod, Src2PackedMod>.ret;
   field dag InsVOP3OpSel = getInsVOP3OpSel<Src0RC64, Src1RC64, Src2RC64,
                                 NumSrcArgs, HasClamp, HasOMod,
+#ifdef LLPC_BUILD_NPI
+                                Src0Mod, Src1Mod, Src2Mod,
+                                HasFP8ByteSel, HasFP8DstByteSel>.ret;
+#else /* LLPC_BUILD_NPI */
                                 Src0Mod, Src1Mod, Src2Mod>.ret;
+#endif /* LLPC_BUILD_NPI */
   field dag InsDPP = !if(HasExtDPP,
                          getInsDPP<DstRCDPP, Src0DPP, Src1DPP, Src2DPP, NumSrcArgs,
                                    HasModifiers, Src0ModDPP, Src1ModDPP, Src2ModDPP>.ret,
