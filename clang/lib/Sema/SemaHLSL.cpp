@@ -39,6 +39,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Frontend/HLSL/HLSLRootSignature.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/DXILABI.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -951,6 +952,108 @@ void SemaHLSL::emitLogicalOperatorFixIt(Expr *LHS, Expr *RHS,
       << NewFnName << FixItHint::CreateReplacement(FullRange, OS.str());
 }
 
+namespace {
+
+// A resource range overlaps with another resource range if they have:
+// - equivalent ResourceClass (SRV, UAV, CBuffer, Sampler)
+// - equivalent resource space
+// - overlapping visbility
+class ResourceRanges {
+public:
+  // KeyT: 32-lsb denotes resource space, and 32-msb denotes resource type enum
+  using KeyT = uint64_t;
+
+  static const unsigned NumVisEnums =
+      (unsigned)llvm::hlsl::rootsig::ShaderVisibility::NumEnums;
+
+private:
+  llvm::hlsl::rootsig::ResourceRange::IMap::Allocator Allocator;
+
+  // Denotes a mapping of a unique combination of ResourceClass and register
+  // space to a ResourceRange
+  using MapT = llvm::SmallDenseMap<KeyT, llvm::hlsl::rootsig::ResourceRange>;
+
+  // Denotes a mapping for each unique visibility
+  MapT RangeMaps[NumVisEnums];
+
+  constexpr static KeyT getKey(const llvm::hlsl::rootsig::RangeInfo &Info) {
+    uint64_t SpacePacked = (uint64_t)Info.Space;
+    uint64_t ClassPacked = (uint64_t)llvm::to_underlying(Info.Class);
+    return (ClassPacked << 32) | SpacePacked;
+  }
+
+public:
+  // Returns std::nullopt if there was no collision. Otherwise, it will
+  // return the RangeInfo of the collision
+  std::optional<const llvm::hlsl::rootsig::RangeInfo *>
+  addRange(const llvm::hlsl::rootsig::RangeInfo &Info) {
+    MapT &VisRangeMap = RangeMaps[llvm::to_underlying(Info.Vis)];
+    auto [It, _] = VisRangeMap.insert(
+        {getKey(Info), llvm::hlsl::rootsig::ResourceRange(Allocator)});
+    auto Res = It->second.insert(Info);
+    if (Res.has_value())
+      return Res;
+
+    MutableArrayRef<MapT> Maps =
+        Info.Vis == llvm::hlsl::rootsig::ShaderVisibility::All
+            ? MutableArrayRef<MapT>{RangeMaps}.drop_front()
+            : MutableArrayRef<MapT>{RangeMaps}.take_front();
+
+    for (MapT &CurMap : Maps) {
+      auto CurIt = CurMap.find(getKey(Info));
+      if (CurIt != CurMap.end())
+        if (auto Overlapping = CurIt->second.getOverlapping(Info))
+          return Overlapping;
+    }
+
+    return std::nullopt;
+  }
+};
+
+} // namespace
+
+bool SemaHLSL::handleRootSignatureDecl(HLSLRootSignatureDecl *D,
+                                       SourceLocation Loc) {
+  auto Elements = D->getRootElements();
+
+  // First we will go through and collect our range info
+  llvm::SmallVector<llvm::hlsl::rootsig::RangeInfo> Infos;
+  for (const auto &Elem : Elements) {
+    if (const auto *Param =
+            std::get_if<llvm::hlsl::rootsig::RootParam>(&Elem)) {
+      llvm::hlsl::rootsig::RangeInfo Info;
+      Info.LowerBound = Param->Reg.Number;
+      Info.UpperBound = Info.LowerBound; // use inclusive ranges []
+
+      Info.Class = Param->Type;
+      Info.Space = Param->Space;
+      Info.Vis = Param->Visibility;
+      Infos.push_back(Info);
+    }
+  }
+
+  // Iterate through info and attempt to insert corresponding range
+  ResourceRanges Ranges;
+  bool HadOverlap = false;
+  for (const llvm::hlsl::rootsig::RangeInfo &Info : Infos)
+    if (auto MaybeOverlappingInfo = Ranges.addRange(Info)) {
+      const llvm::hlsl::rootsig::RangeInfo *OInfo =
+          MaybeOverlappingInfo.value();
+      auto CommonVis = Info.Vis == llvm::hlsl::rootsig::ShaderVisibility::All
+                           ? OInfo->Vis
+                           : Info.Vis;
+
+      Diag(Loc, diag::err_hlsl_resource_range_overlap)
+          << llvm::to_underlying(Info.Class) << Info.LowerBound
+          << Info.UpperBound << llvm::to_underlying(OInfo->Class)
+          << OInfo->LowerBound << OInfo->UpperBound << Info.Space << CommonVis;
+
+      HadOverlap = true;
+    }
+
+  return HadOverlap;
+}
+
 void SemaHLSL::handleRootSignatureAttr(Decl *D, const ParsedAttr &AL) {
   if (AL.getNumArgs() != 1) {
     Diag(AL.getLoc(), diag::err_attribute_wrong_number_arguments) << AL << 1;
@@ -973,6 +1076,8 @@ void SemaHLSL::handleRootSignatureAttr(Decl *D, const ParsedAttr &AL) {
     if (auto *SignatureDecl =
             dyn_cast<HLSLRootSignatureDecl>(R.getFoundDecl())) {
       // Perform validation of constructs here
+      if (handleRootSignatureDecl(SignatureDecl, AL.getLoc()))
+        return;
       D->addAttr(::new (getASTContext()) RootSignatureAttr(
           getASTContext(), AL, Ident, SignatureDecl));
     }

@@ -12967,6 +12967,11 @@ def err_hlsl_expect_arg_const_int_one_or_neg_one: Error<
 def err_invalid_hlsl_resource_type: Error<
   "invalid __hlsl_resource_t type attributes">;
 
+def err_hlsl_resource_range_overlap: Error<
+  "resource ranges %select{t|u|b|s}0[%1;%2] and %select{t|u|b|s}3[%4;%5] "
+  "overlap within space = %6 and visibility = "
+  "%select{All|Vertex|Hull|Domain|Geometry|Pixel|Amplification|Mesh}7">;
+
 // Layout randomization diagnostics.
 def err_non_designated_init_used : Error<
   "a randomized struct can only be initialized with a designated initializer">;
