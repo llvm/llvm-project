@@ -138,13 +138,15 @@ void getForwardSlice(Value root, SetVector<Operation *> *forwardSlice,
 /// Assuming all local orders match the numbering order:
 ///    {1, 2, 5, 3, 4, 6}
 ///
-void getBackwardSlice(Operation *op, SetVector<Operation *> *backwardSlice,
-                      const BackwardSliceOptions &options = {});
+LogicalResult getBackwardSlice(Operation *op,
+                               SetVector<Operation *> *backwardSlice,
+                               const BackwardSliceOptions &options = {});
 
 /// Value-rooted version of `getBackwardSlice`. Return the union of all backward
 /// slices for the op defining or owning the value `root`.
-void getBackwardSlice(Value root, SetVector<Operation *> *backwardSlice,
-                      const BackwardSliceOptions &options = {});
+LogicalResult getBackwardSlice(Value root,
+                               SetVector<Operation *> *backwardSlice,
+                               const BackwardSliceOptions &options = {});
 
 /// Iteratively computes backward slices and forward slices until
 /// a fixed point is reached. Returns an `SetVector<Operation *>` which

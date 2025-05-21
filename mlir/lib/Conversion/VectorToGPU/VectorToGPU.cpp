@@ -317,7 +317,9 @@ getSliceContract(Operation *op,
     auto *currentOp = (slice)[currentIndex];
     // Compute and insert the backwardSlice starting from currentOp.
     backwardSlice.clear();
-    getBackwardSlice(currentOp, &backwardSlice, backwardSliceOptions);
+    auto result =
+        getBackwardSlice(currentOp, &backwardSlice, backwardSliceOptions);
+    assert(result.succeeded());
     slice.insert_range(backwardSlice);
 
     // Compute and insert the forwardSlice starting from currentOp.

@@ -112,7 +112,8 @@ bool BackwardSliceMatcher<Matcher>::matches(
     }
     return true;
   };
-  getBackwardSlice(rootOp, &backwardSlice, options);
+  auto result = getBackwardSlice(rootOp, &backwardSlice, options);
+  assert(result.succeeded());
   return options.inclusive ? backwardSlice.size() > 1
                            : backwardSlice.size() >= 1;
 }

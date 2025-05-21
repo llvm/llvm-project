@@ -290,8 +290,10 @@ static void getPipelineStages(
   });
   options.inclusive = true;
   for (Operation &op : forOp.getBody()->getOperations()) {
-    if (stage0Ops.contains(&op))
-      getBackwardSlice(&op, &dependencies, options);
+    if (stage0Ops.contains(&op)) {
+      auto result = getBackwardSlice(&op, &dependencies, options);
+      assert(result.succeeded());
+    }
   }
 
   for (Operation &op : forOp.getBody()->getOperations()) {
