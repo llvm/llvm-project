@@ -179,7 +179,7 @@ mlir::getSlice(Operation *op, const BackwardSliceOptions &backwardSliceOptions,
     auto *currentOp = (slice)[currentIndex];
     // Compute and insert the backwardSlice starting from currentOp.
     backwardSlice.clear();
-    auto result =
+    LogicalResult result =
         getBackwardSlice(currentOp, &backwardSlice, backwardSliceOptions);
     assert(result.succeeded());
     slice.insert_range(backwardSlice);
@@ -204,7 +204,7 @@ static bool dependsOnCarriedVals(Value value,
   sliceOptions.filter = [&](Operation *op) {
     return !ancestorOp->isAncestor(op);
   };
-  auto result = getBackwardSlice(value, &slice, sliceOptions);
+  LogicalResult result = getBackwardSlice(value, &slice, sliceOptions);
   assert(result.succeeded());
 
   // Check that none of the operands of the operations in the backward slice are

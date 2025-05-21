@@ -41,8 +41,8 @@ static LogicalResult createBackwardSliceFunction(Operation *op,
   options.omitBlockArguments = omitBlockArguments;
   // TODO: Make this default.
   options.omitUsesFromAbove = false;
-  auto result = getBackwardSlice(op, &slice, options);
-  assert(result.succeeded());
+  LogicalResult result = getBackwardSlice(op, &slice, options);
+  assert(result.succeeded() && "expected a backward slice");
   for (Operation *slicedOp : slice)
     builder.clone(*slicedOp, mapper);
   builder.create<func::ReturnOp>(loc);

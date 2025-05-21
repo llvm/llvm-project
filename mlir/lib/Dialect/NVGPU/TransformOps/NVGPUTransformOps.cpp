@@ -291,8 +291,8 @@ static void getPipelineStages(
   options.inclusive = true;
   for (Operation &op : forOp.getBody()->getOperations()) {
     if (stage0Ops.contains(&op)) {
-      auto result = getBackwardSlice(&op, &dependencies, options);
-      assert(result.succeeded());
+      LogicalResult result = getBackwardSlice(&op, &dependencies, options);
+      assert(result.succeeded() && "expected a backward slice");
     }
   }
 
