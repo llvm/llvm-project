@@ -433,7 +433,7 @@ LogicalResult GPUShuffleConversion::matchAndRewrite(
   // The width argument specifies the number of lanes that participate in the
   // shuffle. The width value should not exceed the subgroup limit.
   if (!matchPattern(shuffleOp.getWidth(), m_Constant(&widthAttr)) ||
-      widthAttr.getValue().getZExtValue() <= subgroupSize)
+      widthAttr.getValue().getZExtValue() > subgroupSize)
     return rewriter.notifyMatchFailure(
         shuffleOp, "shuffle width is larger than target subgroup size");
 
