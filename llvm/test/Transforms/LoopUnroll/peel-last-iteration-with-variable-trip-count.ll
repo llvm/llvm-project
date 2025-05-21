@@ -21,11 +21,9 @@ define i32 @peel_last_with_trip_count_check_lcssa_phi(i32 %n) {
 ; CHECK-NEXT:    [[EC1:%.*]] = icmp ne i32 [[IV_NEXT1]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[EC1]], label %[[LOOP]], label %[[EXIT_PEEL_BEGIN_LOOPEXIT:.*]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[EXIT_PEEL_BEGIN_LOOPEXIT]]:
-; CHECK-NEXT:    [[SEL_LCSSA_PH:%.*]] = phi i32 [ 2, %[[LOOP]] ]
 ; CHECK-NEXT:    [[DOTPH:%.*]] = phi i32 [ [[IV_NEXT1]], %[[LOOP]] ]
 ; CHECK-NEXT:    br label %[[EXIT_PEEL_BEGIN]]
 ; CHECK:       [[EXIT_PEEL_BEGIN]]:
-; CHECK-NEXT:    [[SEL_LCSSA:%.*]] = phi i32 [ poison, %[[ENTRY]] ], [ [[SEL_LCSSA_PH]], %[[EXIT_PEEL_BEGIN_LOOPEXIT]] ]
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[DOTPH]], %[[EXIT_PEEL_BEGIN_LOOPEXIT]] ]
 ; CHECK-NEXT:    br label %[[LOOP_PEEL:.*]]
 ; CHECK:       [[LOOP_PEEL]]:
