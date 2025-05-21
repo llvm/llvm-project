@@ -1,7 +1,7 @@
-// RUN: %clang -gkey-instructions -x c++ %s -gmlt -S -emit-llvm -o - \
+// RUN: %clang_cc1 -gkey-instructions -x c++ %s -debug-info-kind=line-tables-only -emit-llvm -o - \
 // RUN: | FileCheck %s --implicit-check-not atomGroup --implicit-check-not atomRank
 
-// RUN: %clang -gkey-instructions -x c %s -gmlt -S -emit-llvm -o -  \
+// RUN: %clang_cc1 -gkey-instructions -x c %s -debug-info-kind=line-tables-only -emit-llvm -o - \
 // RUN: | FileCheck %s --implicit-check-not atomGroup --implicit-check-not atomRank
 
 typedef struct { int a, b, c; } Struct;
