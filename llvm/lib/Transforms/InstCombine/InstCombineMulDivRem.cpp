@@ -1258,7 +1258,9 @@ static Value *foldIDivShl(BinaryOperator &I, InstCombiner::BuilderTy &Builder) {
 /// Common integer divide/remainder transforms
 Instruction *InstCombinerImpl::commonIDivRemTransforms(BinaryOperator &I) {
   assert(I.isIntDivRem() && "Unexpected instruction");
-  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
+  const APInt *C1, *C2;
+  Value *X;
+  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1), *Op2 = I.getOperand(2);
 
   // If any element of a constant divisor fixed width vector is zero or undef
   // the behavior is undefined and we can fold the whole op to poison.
@@ -1295,6 +1297,14 @@ Instruction *InstCombinerImpl::commonIDivRemTransforms(BinaryOperator &I) {
                                           /*FoldWithMultiUse*/ true))
       return R;
   }
+  if (match(Op0, m_OneUse(m_Intrinsic<Intrinsic::smul_fix>(m_APInt(C1), m_APInt(C2)))) &&
+    match(Op1, m_OneUse(m_URem(m_Value(X), Op0))) &&
+    match(Op2, m_OneUse(m_UDiv(Op1, m_APInt(C2))))) {
+    
+    Value *XDivC2 = Builder.CreateUDiv(X, ConstantInt::get(X->getType(), *C2));
+    Value *Result = Builder.CreateURem(XDivC2, ConstantInt::get(X->getType(), *C1));
+    return replaceInstUsesWith(I, Result);
+}
 
   return nullptr;
 }
