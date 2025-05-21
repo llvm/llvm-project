@@ -1356,7 +1356,7 @@ bool InferAddressSpacesImpl::rewriteWithNewAddressSpaces(
     } else {
       // Something went wrong while converting the instruction defining the new
       // operand value.  -> Replace the poison value with the previous operand
-      // value combined with an addrspace case.
+      // value combined with an addrspacecast.
       Value *PoisonOp = NewV->getOperand(OperandNo);
       Value *OldOp = V->getOperand(OperandNo);
       Value *AddrSpaceCast =
