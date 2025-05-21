@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -verify -Wswitch -Wreturn-type -triple x86_64-apple-macosx10.12 %s
+// RUN: %clang_cc1 -verify -Wswitch -Wreturn-type -Wno-deprecated-switch-case -DNO_DEPRECATED_CASE -triple x86_64-apple-macosx10.12 %s
 
 enum SwitchOne {
   Unavail __attribute__((availability(macos, unavailable))),
@@ -29,6 +30,9 @@ void testSwitchThree(enum SwitchThree st) {
 enum SwitchFour {
   Red,
   Green,
+#ifndef NO_DEPRECATED_CASE
+// expected-note@+2{{'Blue' has been explicitly marked deprecated here}}
+#endif
   Blue [[deprecated]]
 };
 
@@ -43,6 +47,9 @@ int testSwitchFourCovered(enum SwitchFour e) {
   switch (e) {
   case Red:   return 1;
   case Green: return 2;
-  case Blue:  return 3; // no warning
-  }
+#ifndef NO_DEPRECATED_CASE
+// expected-warning@+2{{'Blue' is deprecated}}
+#endif
+  case Blue:  return 3;
+  } // no warning
 }
