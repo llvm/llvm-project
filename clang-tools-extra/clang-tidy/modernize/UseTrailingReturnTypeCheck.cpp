@@ -382,10 +382,6 @@ static void keepSpecifiers(std::string &ReturnType, std::string &Auto,
   }
 }
 
-UseTrailingReturnTypeCheck::UseTrailingReturnTypeCheck(
-    StringRef Name, ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context) {}
-
 void UseTrailingReturnTypeCheck::registerMatchers(MatchFinder *Finder) {
   auto F = functionDecl(
                unless(anyOf(hasTrailingReturn(), returns(voidType()),

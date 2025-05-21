@@ -26,7 +26,8 @@ struct ClassifiedToken {
 /// http://clang.llvm.org/extra/clang-tidy/checks/modernize/use-trailing-return-type.html
 class UseTrailingReturnTypeCheck : public ClangTidyCheck {
 public:
-  UseTrailingReturnTypeCheck(StringRef Name, ClangTidyContext *Context);
+  UseTrailingReturnTypeCheck(StringRef Name, ClangTidyContext *Context)
+      : ClangTidyCheck(Name, Context) {};
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus11;
   }
