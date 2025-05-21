@@ -764,6 +764,10 @@ backend:NVPTX:
   - 'llvm/**/*nvptx*/**'
   - 'llvm/**/*NVPTX*/**'
 
+backend:MIPS:
+  - '**/*mips*'
+  - '**/*Mips*'
+
 backend:RISC-V:
   - clang/**/*riscv*
   - clang/**/*RISCV*
