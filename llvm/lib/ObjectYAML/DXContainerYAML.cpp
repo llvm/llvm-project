@@ -382,7 +382,6 @@ void MappingTraits<llvm::DXContainerYAML::RootParameterYamlDesc>::mapping(
   case llvm::to_underlying(dxbc::RootParameterType::DescriptorTable):
     IO.mapRequired("Table", P.Table);
     break;
-    break;
   }
 }
 

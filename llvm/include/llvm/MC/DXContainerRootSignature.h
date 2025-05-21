@@ -6,12 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/BinaryFormat/DXContainer.h"
 #include <cstdint>
 #include <limits>
-#include <variant>
 
 namespace llvm {
 
@@ -87,6 +85,7 @@ struct RootParametersContainer {
   const dxbc::RTS0::v2::RootDescriptor &getRootDescriptor(size_t Index) const {
     return Descriptors[Index];
   }
+
   const DescriptorTable &getDescriptorTable(size_t Index) const {
     return Tables[Index];
   }

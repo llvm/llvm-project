@@ -11,7 +11,6 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/MC/DXContainerPSVInfo.h"
 #include "llvm/MC/DXContainerRootSignature.h"

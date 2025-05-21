@@ -20,11 +20,12 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Object/Error.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/TargetParser/Triple.h"
+#include <array>
+#include <cstddef>
 #include <cstdint>
 #include <variant>
 
@@ -41,7 +42,6 @@ template <typename T>
 std::enable_if_t<std::is_class<T>::value, void> swapBytes(T &value) {
   value.swapBytes();
 }
-
 } // namespace detail
 
 // This class provides a view into the underlying resource array. The Resource
@@ -278,11 +278,13 @@ public:
           support::endian::read<uint32_t, llvm::endianness::little>(
               PartData.begin() + Header.ParameterOffset);
       if (Version == 1)
-        DataSize = sizeof(dxbc::RTS0::v1::DescriptorRange) * NumRanges +
-                   2 * sizeof(uint32_t);
+        DataSize = sizeof(dxbc::RTS0::v1::DescriptorRange) * NumRanges;
       else
-        DataSize = sizeof(dxbc::RTS0::v2::DescriptorRange) * NumRanges +
-                   2 * sizeof(uint32_t);
+        DataSize = sizeof(dxbc::RTS0::v2::DescriptorRange) * NumRanges;
+
+      // 4 bits for the number of ranges in table and
+      // 4 bits for the ranges offset
+      DataSize += 2 * sizeof(uint32_t);
       break;
     }
     size_t EndOfSectionByte = getNumStaticSamplers() == 0

@@ -7,10 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/DXContainerRootSignature.h"
-#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Support/EndianStream.h"
+#include <cstdint>
 
 using namespace llvm;
 using namespace llvm::mcdxbc;
@@ -51,12 +50,14 @@ size_t RootSignatureDesc::getSize() const {
     case llvm::to_underlying(dxbc::RootParameterType::DescriptorTable):
       const DescriptorTable &Table =
           ParametersContainer.getDescriptorTable(I.Location);
+
+      // 4 bits for the number of ranges in table and
+      // 4 bits for the ranges offset
+      Size += 2 * sizeof(uint32_t);
       if (Version == 1)
-        Size +=
-            sizeof(dxbc::RTS0::v1::DescriptorRange) * Table.Ranges.size() + 8;
+        Size += sizeof(dxbc::RTS0::v1::DescriptorRange) * Table.Ranges.size();
       else
-        Size +=
-            sizeof(dxbc::RTS0::v2::DescriptorRange) * Table.Ranges.size() + 8;
+        Size += sizeof(dxbc::RTS0::v2::DescriptorRange) * Table.Ranges.size();
       break;
     }
   }
@@ -101,7 +102,8 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
                              llvm::endianness::little);
       support::endian::write(BOS, Constants.Num32BitValues,
                              llvm::endianness::little);
-    } break;
+      break;
+    }
     case llvm::to_underlying(dxbc::RootParameterType::CBV):
     case llvm::to_underlying(dxbc::RootParameterType::SRV):
     case llvm::to_underlying(dxbc::RootParameterType::UAV): {
@@ -114,7 +116,8 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
                              llvm::endianness::little);
       if (Version > 1)
         support::endian::write(BOS, Descriptor.Flags, llvm::endianness::little);
-    } break;
+      break;
+    }
     case llvm::to_underlying(dxbc::RootParameterType::DescriptorTable): {
       const DescriptorTable &Table =
           ParametersContainer.getDescriptorTable(Loc);
@@ -134,7 +137,8 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
         if (Version > 1)
           support::endian::write(BOS, Range.Flags, llvm::endianness::little);
       }
-    } break;
+      break;
+    }
     }
   }
   assert(Storage.size() == getSize());
