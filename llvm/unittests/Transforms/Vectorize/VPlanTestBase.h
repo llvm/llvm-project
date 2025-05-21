@@ -71,7 +71,8 @@ protected:
 
     Loop *L = LI->getLoopFor(LoopHeader);
     PredicatedScalarEvolution PSE(*SE, *L);
-    auto Plan = VPlanTransforms::buildPlainCFG(L, *LI);
+    DenseMap<const VPBlockBase *, BasicBlock *> VPB2IRBB;
+    auto Plan = VPlanTransforms::buildPlainCFG(L, *LI, VPB2IRBB);
     VFRange R(ElementCount::getFixed(1), ElementCount::getFixed(2));
     VPlanTransforms::prepareForVectorization(*Plan, IntegerType::get(*Ctx, 64),
                                              PSE, true, false, L, {}, false, R);
