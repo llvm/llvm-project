@@ -517,6 +517,9 @@ private:
   /// Checks if the given value has at least one GetElementPtr user
   static bool hasGEPUser(const Value *V);
 
+  /// Helper function to check if BaseXor dominates all XORs in the group
+  bool dominatesAllXors(BinaryOperator *BaseXor, const XorOpList &XorsInGroup);
+
   /// Processes a group of XOR instructions that share the same non-constant
   /// base operand. Returns true if this group's processing modified the
   /// function.
@@ -1209,6 +1212,17 @@ bool XorToOrDisjointTransformer::hasGEPUser(const Value *V) {
   return false;
 }
 
+bool XorToOrDisjointTransformer::dominatesAllXors(
+    BinaryOperator *BaseXor, const XorOpList &XorsInGroup) {
+  for (const auto &XorEntry : XorsInGroup) {
+    BinaryOperator *XorInst = XorEntry.first;
+    if (XorInst != BaseXor && !DT.dominates(BaseXor, XorInst)) {
+      return false;
+    }
+  }
+  return true;
+}
+
 bool XorToOrDisjointTransformer::processXorGroup(Instruction *OriginalBaseInst,
                                                  XorOpList &XorsInGroup) {
   bool Changed = false;
@@ -1225,28 +1239,20 @@ bool XorToOrDisjointTransformer::processXorGroup(Instruction *OriginalBaseInst,
   // constant.
   BinaryOperator *XorWithSmallConst = XorsInGroup[0].first;
 
-  for (size_t i = 1; i < XorsInGroup.size(); ++i) {
-    BinaryOperator *currentXorToProcess = XorsInGroup[i].first;
+  if (!dominatesAllXors(XorWithSmallConst, XorsInGroup)) {
+    LLVM_DEBUG(dbgs() << DEBUG_TYPE
+                      << ": Cloning and inserting XOR with smallest constant ("
+                      << *XorWithSmallConst
+                      << ") as it does not dominate all other XORs"
+                      << " in function " << F.getName() << "\n");
 
-    // Check if the XorWithSmallConst dominates currentXorToProcess.
-    // If not, clone and add the instruction.
-    if (!DT.dominates(XorWithSmallConst, currentXorToProcess)) {
-      LLVM_DEBUG(
-          dbgs() << DEBUG_TYPE
-                 << ": Cloning and inserting XOR with smallest constant ("
-                 << *XorWithSmallConst << ") as it does not dominate "
-                 << *currentXorToProcess << " in function " << F.getName()
-                 << "\n");
-
-      BinaryOperator *ClonedXor =
-          cast<BinaryOperator>(XorWithSmallConst->clone());
-      ClonedXor->setName(XorWithSmallConst->getName() + ".dom_clone");
-      ClonedXor->insertAfter(OriginalBaseInst);
-      LLVM_DEBUG(dbgs() << "  Cloned Inst: " << *ClonedXor << "\n");
-      Changed = true;
-      XorWithSmallConst = ClonedXor;
-      break;
-    }
+    BinaryOperator *ClonedXor =
+        cast<BinaryOperator>(XorWithSmallConst->clone());
+    ClonedXor->setName(XorWithSmallConst->getName() + ".dom_clone");
+    ClonedXor->insertAfter(OriginalBaseInst);
+    LLVM_DEBUG(dbgs() << "  Cloned Inst: " << *ClonedXor << "\n");
+    Changed = true;
+    XorWithSmallConst = ClonedXor;
   }
 
   SmallVector<Instruction *, 8> InstructionsToErase;
@@ -1330,20 +1336,15 @@ bool XorToOrDisjointTransformer::run() {
 
   // Collect all candidate XORs
   for (Instruction &I : instructions(F)) {
-    if (auto *XorOp = dyn_cast<BinaryOperator>(&I)) {
-      if (XorOp->getOpcode() == Instruction::Xor) {
-        Value *Op0 = XorOp->getOperand(0);
-        ConstantInt *C1 = nullptr;
-        // Match: xor Op0, Constant
-        if (isa<Instruction>(Op0) &&
-            match(XorOp->getOperand(1), m_ConstantInt(C1))) {
-          if (hasGEPUser(XorOp)) {
-            Instruction *InstOp0 = cast<Instruction>(Op0);
-            XorGroups[InstOp0].push_back({XorOp, C1->getValue()});
-          }
-        }
-      }
-    }
+    Instruction *Op0 = nullptr;
+    ConstantInt *C1 = nullptr;
+    BinaryOperator *MatchedXorOp = nullptr;
+
+    // Attempt to match the instruction 'I' as XOR operation.
+    if (match(&I, m_CombineAnd(m_Xor(m_Instruction(Op0), m_ConstantInt(C1)),
+                               m_BinOp(MatchedXorOp))) &&
+        hasGEPUser(MatchedXorOp))
+      XorGroups[Op0].push_back({MatchedXorOp, C1->getValue()});
   }
 
   if (XorGroups.empty())
@@ -1351,7 +1352,7 @@ bool XorToOrDisjointTransformer::run() {
 
   // Process each group of XORs
   for (auto &GroupPair : XorGroups) {
-    Instruction *OriginalBaseInst = cast<Instruction>(GroupPair.first);
+    Instruction *OriginalBaseInst = GroupPair.first;
     XorOpList &XorsInGroup = GroupPair.second;
     if (processXorGroup(OriginalBaseInst, XorsInGroup))
       Changed = true;
