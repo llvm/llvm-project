@@ -233,6 +233,9 @@ LVElement *LVDWARFReader::createElement(dwarf::Tag Tag) {
   case dwarf::DW_TAG_GNU_template_parameter_pack:
     CurrentScope = createScopeTemplatePack();
     return CurrentScope;
+  case dwarf::DW_TAG_module:
+    CurrentScope = createScopeModule();
+    return CurrentScope;
   default:
     // Collect TAGs not implemented.
     if (options().getInternalTag() && Tag)
