@@ -193,7 +193,7 @@ std::optional<RootDescriptor> RootSignatureParser::parseRootDescriptor() {
     ExpectedReg = TokenKind::uReg;
     break;
   }
-  Param.setDefaultFlags();
+  Descriptor.setDefaultFlags();
 
   auto Params = parseRootDescriptorParams(ExpectedReg);
   if (!Params.has_value())
@@ -216,7 +216,7 @@ std::optional<RootDescriptor> RootSignatureParser::parseRootDescriptor() {
     Descriptor.Visibility = Params->Visibility.value();
 
   if (Params->Flags.has_value())
-    Param.Flags = Params->Flags.value();
+    Descriptor.Flags = Params->Flags.value();
 
   if (consumeExpectedToken(TokenKind::pu_r_paren,
                            diag::err_hlsl_unexpected_end_of_params,

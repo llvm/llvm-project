@@ -376,7 +376,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootDescriptorsTest) {
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.Number, 0u);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Space, 0u);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Visibility, ShaderVisibility::All);
-  ASSERT_EQ(std::get<RootParam>(Elem).Flags,
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags,
             RootDescriptorFlags::DataStaticWhileSetAtExecute);
 
   Elem = Elements[1];
@@ -387,7 +387,8 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootDescriptorsTest) {
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Space, 4u);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Visibility,
             ShaderVisibility::Geometry);
-  ASSERT_EQ(std::get<RootParam>(Elem).Flags, RootDescriptorFlags::ValidFlags);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags,
+            RootDescriptorFlags::ValidFlags);
 
   Elem = Elements[2];
   ASSERT_TRUE(std::holds_alternative<RootDescriptor>(Elem));
@@ -396,14 +397,18 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootDescriptorsTest) {
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.Number, 34893247u);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Space, 0u);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Visibility, ShaderVisibility::Hull);
-  ASSERT_EQ(std::get<RootParam>(Elem).Flags, RootDescriptorFlags::DataVolatile);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags,
+            RootDescriptorFlags::DataVolatile);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags,
+            RootDescriptorFlags::DataVolatile);
 
   Elem = Elements[3];
-  ASSERT_EQ(std::get<RootParam>(Elem).Reg.ViewType, RegisterType::BReg);
-  ASSERT_EQ(std::get<RootParam>(Elem).Reg.Number, 0u);
-  ASSERT_EQ(std::get<RootParam>(Elem).Space, 0u);
-  ASSERT_EQ(std::get<RootParam>(Elem).Visibility, ShaderVisibility::All);
-  ASSERT_EQ(std::get<RootParam>(Elem).Flags, RootDescriptorFlags::None);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, DescriptorType::CBuffer);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.ViewType, RegisterType::BReg);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.Number, 0u);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Space, 0u);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Visibility, ShaderVisibility::All);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags, RootDescriptorFlags::None);
 
   ASSERT_TRUE(Consumer->isSatisfied());
 }
