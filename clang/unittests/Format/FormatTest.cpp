@@ -9441,6 +9441,20 @@ TEST_F(FormatTest, AlignAfterConditionalStatements) {
                "  }\n"
                "}",
                Style);
+  Style.BreakAfterOpenBracketIf = false;
+  verifyFormat("void foo() {\n"
+               "  if constexpr ((aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa |\n"
+               "                 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+               "bbbbbbbbbb) ==\n"
+               "                0) {\n"
+               "    return;\n"
+               "  } else if ((aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa &\n"
+               "              bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+               "bbbbbbb) == 0) {\n"
+               "    return;\n"
+               "  }\n"
+               "}",
+               Style);
 
   verifyFormat("void foo() {\n"
                "  switch (\n"
