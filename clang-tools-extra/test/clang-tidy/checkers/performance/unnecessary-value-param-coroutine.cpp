@@ -2,59 +2,32 @@
 
 namespace std {
 
-template <typename R, typename...> struct coroutine_traits {
-  using promise_type = typename R::promise_type;
+template <class Ret, typename... T> struct coroutine_traits {
+  using promise_type = typename Ret::promise_type;
 };
 
-template <typename Promise = void> struct coroutine_handle;
+template <class Promise = void> struct coroutine_handle {
+  static coroutine_handle from_address(void *) noexcept;
+  static coroutine_handle from_promise(Promise &promise);
+  constexpr void *address() const noexcept;
+};
 
 template <> struct coroutine_handle<void> {
-  static coroutine_handle from_address(void *addr) noexcept {
-    coroutine_handle me;
-    me.ptr = addr;
-    return me;
-  }
-  void operator()() { resume(); }
-  void *address() const noexcept { return ptr; }
-  void resume() const {  }
-  void destroy() const { }
-  bool done() const { return true; }
-  coroutine_handle &operator=(decltype(nullptr)) {
-    ptr = nullptr;
-    return *this;
-  }
-  coroutine_handle(decltype(nullptr)) : ptr(nullptr) {}
-  coroutine_handle() : ptr(nullptr) {}
-  //  void reset() { ptr = nullptr; } // add to P0057?
-  explicit operator bool() const { return ptr; }
-
-protected:
-  void *ptr;
-};
-
-template <typename Promise> struct coroutine_handle : coroutine_handle<> {
-  using coroutine_handle<>::operator=;
-
-  static coroutine_handle from_address(void *addr) noexcept {
-    coroutine_handle me;
-    me.ptr = addr;
-    return me;
-  }
-
-  Promise &promise() const {
-    return *reinterpret_cast<Promise *>(
-        __builtin_coro_promise(ptr, alignof(Promise), false));
-  }
-  static coroutine_handle from_promise(Promise &promise) {
-    coroutine_handle p;
-    p.ptr = __builtin_coro_promise(&promise, alignof(Promise), true);
-    return p;
-  }
+  template <class PromiseType>
+  coroutine_handle(coroutine_handle<PromiseType>) noexcept;
+  static coroutine_handle from_address(void *);
+  constexpr void *address() const noexcept;
 };
 
 struct suspend_always {
   bool await_ready() noexcept { return false; }
-  void await_suspend(std::coroutine_handle<>) noexcept {}
+  void await_suspend(coroutine_handle<>) noexcept {}
+  void await_resume() noexcept {}
+};
+
+struct suspend_never {
+  bool await_ready() noexcept { return true; }
+  void await_suspend(coroutine_handle<>) noexcept {}
   void await_resume() noexcept {}
 };
 

@@ -18,6 +18,10 @@ the following heuristic is employed:
    on it, or it is used as const reference or value argument in constructors or
    function calls.
 
+Note: This check does not suggest passing parameters by reference in coroutines
+because, after a coroutine suspend point, references could be dangling and no
+longer valid, so suggested changes may result in hard-to-find bugs and crashes.
+
 Example:
 
 .. code-block:: c++
