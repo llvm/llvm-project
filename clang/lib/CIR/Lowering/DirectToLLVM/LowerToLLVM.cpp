@@ -270,6 +270,18 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::ConstArrayAttr attr) {
       result =
           rewriter.create<mlir::LLVM::InsertValueOp>(loc, result, init, idx);
     }
+  } else if (auto strAttr = mlir::dyn_cast<mlir::StringAttr>(attr.getElts())) {
+    // TODO(cir): this diverges from traditional lowering. Normally the string
+    // would be a global constant that is memcopied.
+    auto arrayTy = mlir::dyn_cast<cir::ArrayType>(strAttr.getType());
+    assert(arrayTy && "String attribute must have an array type");
+    mlir::Type eltTy = arrayTy.getElementType();
+    for (auto [idx, elt] : llvm::enumerate(strAttr)) {
+      auto init = rewriter.create<mlir::LLVM::ConstantOp>(
+          loc, converter->convertType(eltTy), elt);
+      result =
+          rewriter.create<mlir::LLVM::InsertValueOp>(loc, result, init, idx);
+    }
   } else {
     llvm_unreachable("unexpected ConstArrayAttr elements");
   }
@@ -530,10 +542,18 @@ mlir::LogicalResult CIRToLLVMCastOpLowering::matchAndRewrite(
                                                         llvmSrcVal);
     return mlir::success();
   }
-  case cir::CastKind::bitcast:
+  case cir::CastKind::bitcast: {
+    mlir::Type dstTy = castOp.getType();
+    mlir::Type llvmDstTy = getTypeConverter()->convertType(dstTy);
+
     assert(!MissingFeatures::cxxABI());
     assert(!MissingFeatures::dataMemberType());
-    break;
+
+    mlir::Value llvmSrcVal = adaptor.getOperands().front();
+    rewriter.replaceOpWithNewOp<mlir::LLVM::BitcastOp>(castOp, llvmDstTy,
+                                                       llvmSrcVal);
+    return mlir::success();
+  }
   case cir::CastKind::ptr_to_bool: {
     mlir::Value llvmSrcVal = adaptor.getOperands().front();
     mlir::Value zeroPtr = rewriter.create<mlir::LLVM::ZeroOp>(
