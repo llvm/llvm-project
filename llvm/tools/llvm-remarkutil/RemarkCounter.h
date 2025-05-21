@@ -57,15 +57,6 @@ struct Filters {
   bool filterRemark(const Remark &Remark);
 };
 
-/// Convert Regex string error to an error object.
-inline Error checkRegex(const Regex &Regex) {
-  std::string Error;
-  if (!Regex.isValid(Error))
-    return createStringError(make_error_code(std::errc::invalid_argument),
-                             Twine("Regex: ", Error));
-  return Error::success();
-}
-
 /// Abstract counter class used to define the general required methods for
 /// counting a remark.
 struct Counter {
