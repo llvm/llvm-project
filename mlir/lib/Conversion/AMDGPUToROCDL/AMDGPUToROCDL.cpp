@@ -1210,22 +1210,20 @@ LogicalResult ExtPackedFp8OpLowering::matchAndRewrite(
   }
   Value i32Source = rewriter.create<LLVM::BitcastOp>(loc, i32, source);
   if (resultVecType) {
-    Value wordSel = createI1Constant(rewriter, loc, op.getIndex());
     if (typeIsExpectedBf8ForChipset(chipset, sourceElemType)) {
       rewriter.replaceOpWithNewOp<ROCDL::CvtPkF32Bf8Op>(op, f32, i32Source,
-                                                        wordSel);
+                                                        op.getIndex());
     } else if (typeIsExpectedFp8ForChipset(chipset, sourceElemType)) {
       rewriter.replaceOpWithNewOp<ROCDL::CvtPkF32Fp8Op>(op, f32, i32Source,
-                                                        wordSel);
+                                                        op.getIndex());
     }
   } else {
-    Value byteSel = createI32Constant(rewriter, loc, op.getIndex());
     if (typeIsExpectedBf8ForChipset(chipset, sourceElemType)) {
       rewriter.replaceOpWithNewOp<ROCDL::CvtF32Bf8Op>(op, f32, i32Source,
-                                                      byteSel);
+                                                      op.getIndex());
     } else if (typeIsExpectedFp8ForChipset(chipset, sourceElemType)) {
       rewriter.replaceOpWithNewOp<ROCDL::CvtF32Fp8Op>(op, f32, i32Source,
-                                                      byteSel);
+                                                      op.getIndex());
     }
   }
   return success();
@@ -1253,15 +1251,14 @@ LogicalResult PackedTrunc2xFp8OpLowering::matchAndRewrite(
     existing = rewriter.create<LLVM::BitcastOp>(loc, i32, existing);
   else
     existing = rewriter.create<LLVM::UndefOp>(loc, i32);
-  Value wordSel = createI1Constant(rewriter, loc, op.getWordIndex());
 
   Value result;
   if (typeIsExpectedBf8ForChipset(chipset, resultElemType))
     result = rewriter.create<ROCDL::CvtPkBf8F32Op>(loc, i32, sourceA, sourceB,
-                                                   existing, wordSel);
+                                                   existing, op.getWordIndex());
   else if (typeIsExpectedFp8ForChipset(chipset, resultElemType))
     result = rewriter.create<ROCDL::CvtPkFp8F32Op>(loc, i32, sourceA, sourceB,
-                                                   existing, wordSel);
+                                                   existing, op.getWordIndex());
 
   result = rewriter.replaceOpWithNewOp<LLVM::BitcastOp>(
       op, getTypeConverter()->convertType(resultType), result);
@@ -1288,15 +1285,14 @@ LogicalResult PackedStochRoundFp8OpLowering::matchAndRewrite(
     existing = rewriter.create<LLVM::BitcastOp>(loc, i32, existing);
   else
     existing = rewriter.create<LLVM::UndefOp>(loc, i32);
-  Value byteSel = createI32Constant(rewriter, loc, op.getStoreIndex());
 
   Value result;
   if (typeIsExpectedBf8ForChipset(chipset, resultElemType))
-    result = rewriter.create<ROCDL::CvtSrBf8F32Op>(loc, i32, source, stoch,
-                                                   existing, byteSel);
+    result = rewriter.create<ROCDL::CvtSrBf8F32Op>(
+        loc, i32, source, stoch, existing, op.getStoreIndex());
   else if (typeIsExpectedFp8ForChipset(chipset, resultElemType))
-    result = rewriter.create<ROCDL::CvtSrFp8F32Op>(loc, i32, source, stoch,
-                                                   existing, byteSel);
+    result = rewriter.create<ROCDL::CvtSrFp8F32Op>(
+        loc, i32, source, stoch, existing, op.getStoreIndex());
 
   result = rewriter.replaceOpWithNewOp<LLVM::BitcastOp>(
       op, getTypeConverter()->convertType(resultType), result);
