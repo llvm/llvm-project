@@ -8,6 +8,8 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=signed-integer-overflow -fsanitize-ignorelist=%t/src.ignorelist.contradict2 -emit-llvm %t/test1.c -o - | FileCheck %s --check-prefixes=CHECK1,IGNORE
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=signed-integer-overflow -fsanitize-ignorelist=%t/src.ignorelist.contradict3 -emit-llvm %t/test1.c -o - | FileCheck %s --check-prefixes=CHECK1,IGNORE
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=signed-integer-overflow -fsanitize-ignorelist=%t/src.ignorelist.contradict4 -emit-llvm %t/test1.c -o - | FileCheck %s --check-prefixes=CHECK1,IGNORE
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=signed-integer-overflow -fsanitize-ignorelist=%t/src.ignorelist.contradict5 -emit-llvm %t/test1.c -o - | FileCheck %s --check-prefixes=CHECK1,IGNORE
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=signed-integer-overflow -fsanitize-ignorelist=%t/src.ignorelist.contradict6 -emit-llvm %t/test1.c -o - | FileCheck %s --check-prefixes=CHECK1,IGNORE
 
 
 // Verify ubsan only emits checks for files in the allowlist
@@ -37,6 +39,18 @@ src:*
 src:*/test1.c=sanitize
 src:*/test1.c
 src:*/test1.c=sanitize
+
+//--- src.ignorelist.contradict5
+src:*
+src:*/te*t1.c
+src:*/tes*1.c=sanitize
+src:*/test1.c
+
+//--- src.ignorelist.contradict6
+src:*
+src:*/tes*1.c=sanitize
+src:*/te*t1.c
+src:*/t*st1.c=sanitize
 
 //--- test1.c
 // CHECK1-LABEL: define dso_local i32 @add
