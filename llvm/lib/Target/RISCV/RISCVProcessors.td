@@ -659,10 +659,8 @@ def ANDES_A25 : RISCVProcessorModel<"andes-a25",
                                      FeatureStdExtF,
                                      FeatureStdExtD,
                                      FeatureStdExtC,
-                                     FeatureStdExtZba,
-                                     FeatureStdExtZbb,
-                                     FeatureStdExtZbc,
-                                     FeatureStdExtZbs]>;
+                                     FeatureStdExtB,
+                                     FeatureStdExtZbc]>;
 
 def ANDES_AX25 : RISCVProcessorModel<"andes-ax25",
                                      NoSchedModel,
@@ -675,10 +673,8 @@ def ANDES_AX25 : RISCVProcessorModel<"andes-ax25",
                                       FeatureStdExtF,
                                       FeatureStdExtD,
                                       FeatureStdExtC,
-                                      FeatureStdExtZba,
-                                      FeatureStdExtZbb,
-                                      FeatureStdExtZbc,
-                                      FeatureStdExtZbs]>;
+                                      FeatureStdExtB,
+                                      FeatureStdExtZbc]>;
 
 def ANDES_N45 : RISCVProcessorModel<"andes-n45",
                                     NoSchedModel,
