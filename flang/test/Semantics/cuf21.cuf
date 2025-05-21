@@ -4,9 +4,7 @@ module mlocModule
   interface maxlocUpdate
      module procedure :: &
           maxlocUpdateR_32F, &
-          maxlocUpdateR_64F, &
-          maxlocUpdateR_32I, &
-          maxlocUpdateR_64I
+          maxlocUpdateR_64F
   end interface maxlocUpdate
 contains
 
@@ -25,14 +23,6 @@ contains
   attributes(device) subroutine maxlocUpdateR_64F(mval)
     real(8) :: mval
   end subroutine maxlocUpdateR_64F
-
-  attributes(device) subroutine maxlocUpdateR_32I(mval)
-    integer(4) :: mval
-  end subroutine maxlocUpdateR_32I
-
-  attributes(device) subroutine maxlocUpdateR_64I(mval)
-    integer(8) :: mval
-  end subroutine maxlocUpdateR_64I
 end module
 
 ! CHECK-LABEL: func.func @_QMmlocmodulePmaxlocpartialmaskr_32f1d()
