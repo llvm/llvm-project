@@ -6231,6 +6231,7 @@ rnb_err_t RNBRemote::HandlePacket_qProcessInfo(const char *p) {
     nub_addr_t exe_mach_header_addr =
         GetMachHeaderForMainExecutable(pid, addr_size, mh);
     if (exe_mach_header_addr != INVALID_NUB_ADDRESS) {
+      uint32_t dyld_platform = DNBGetPlatform(pid);
       uint64_t load_command_addr =
           exe_mach_header_addr +
           ((addr_size == 8) ? sizeof(mach_header_64) : sizeof(mach_header));
@@ -6242,9 +6243,9 @@ rnb_err_t RNBRemote::HandlePacket_qProcessInfo(const char *p) {
 
         bool is_executable = true;
         uint32_t major_version, minor_version, patch_version;
-        std::optional<std::string> platform =
-            DNBGetDeploymentInfo(pid, is_executable, lc, load_command_addr,
-                                 major_version, minor_version, patch_version);
+        std::optional<std::string> platform = DNBGetDeploymentInfo(
+            pid, is_executable, dyld_platform, lc, load_command_addr,
+            major_version, minor_version, patch_version);
         if (platform) {
           os_handled = true;
           rep << "ostype:" << *platform << ";";
