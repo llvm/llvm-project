@@ -139,13 +139,12 @@ SpecialCaseList::addSection(StringRef SectionStr, unsigned LineNo,
                             bool UseGlobs) {
   auto it =
       std::find_if(Sections.begin(), Sections.end(), [&](const Section &s) {
-        return s.SectionStr == SectionStr && s.LineNo == LineNo;
+        return s.SectionStr == SectionStr;
       });
   if (it == Sections.end()) {
     Sections.emplace_back();
     auto &sec = Sections.back();
     sec.SectionStr = SectionStr;
-    sec.LineNo = LineNo;
     it = std::prev(Sections.end());
   }
   if (auto Err = it->SectionMatcher->insert(SectionStr, LineNo, UseGlobs)) {

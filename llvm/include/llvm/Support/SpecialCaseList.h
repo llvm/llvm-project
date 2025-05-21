@@ -138,7 +138,6 @@ protected:
     std::unique_ptr<Matcher> SectionMatcher;
     SectionEntries Entries;
     std::string SectionStr;
-    unsigned LineNo;
   };
 
   std::vector<Section> Sections;
