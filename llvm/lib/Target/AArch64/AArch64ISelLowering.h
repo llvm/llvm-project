@@ -73,6 +73,8 @@ enum NodeType : unsigned {
 
   SMSTART,
   SMSTOP,
+  COND_SMSTART,
+  COND_SMSTOP,
   RESTORE_ZA,
   RESTORE_ZT,
   SAVE_ZT,

@@ -2726,6 +2726,8 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::VG_RESTORE)
     MAKE_CASE(AArch64ISD::SMSTART)
     MAKE_CASE(AArch64ISD::SMSTOP)
+    MAKE_CASE(AArch64ISD::COND_SMSTART)
+    MAKE_CASE(AArch64ISD::COND_SMSTOP)
     MAKE_CASE(AArch64ISD::RESTORE_ZA)
     MAKE_CASE(AArch64ISD::RESTORE_ZT)
     MAKE_CASE(AArch64ISD::SAVE_ZT)
@@ -6033,14 +6035,12 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     return DAG.getNode(
         AArch64ISD::SMSTART, DL, MVT::Other,
         Op->getOperand(0), // Chain
-        DAG.getTargetConstant((int32_t)(AArch64SVCR::SVCRZA), DL, MVT::i32),
-        DAG.getConstant(AArch64SME::Always, DL, MVT::i64));
+        DAG.getTargetConstant((int32_t)(AArch64SVCR::SVCRZA), DL, MVT::i32));
   case Intrinsic::aarch64_sme_za_disable:
     return DAG.getNode(
         AArch64ISD::SMSTOP, DL, MVT::Other,
         Op->getOperand(0), // Chain
-        DAG.getTargetConstant((int32_t)(AArch64SVCR::SVCRZA), DL, MVT::i32),
-        DAG.getConstant(AArch64SME::Always, DL, MVT::i64));
+        DAG.getTargetConstant((int32_t)(AArch64SVCR::SVCRZA), DL, MVT::i32));
   }
 }
 
@@ -8927,18 +8927,22 @@ SDValue AArch64TargetLowering::changeStreamingMode(SelectionDAG &DAG, SDLoc DL,
   SDValue RegMask = DAG.getRegisterMask(TRI->getSMStartStopCallPreservedMask());
   SDValue MSROp =
       DAG.getTargetConstant((int32_t)AArch64SVCR::SVCRSM, DL, MVT::i32);
-  SDValue ConditionOp = DAG.getTargetConstant(Condition, DL, MVT::i64);
-  SmallVector<SDValue> Ops = {Chain, MSROp, ConditionOp};
+  SmallVector<SDValue> Ops = {Chain, MSROp};
+  unsigned Opcode;
   if (Condition != AArch64SME::Always) {
+    SDValue ConditionOp = DAG.getTargetConstant(Condition, DL, MVT::i64);
+    Opcode = Enable ? AArch64ISD::COND_SMSTART : AArch64ISD::COND_SMSTOP;
     assert(PStateSM && "PStateSM should be defined");
+    Ops.push_back(ConditionOp);
     Ops.push_back(PStateSM);
+  } else {
+    Opcode = Enable ? AArch64ISD::SMSTART : AArch64ISD::SMSTOP;
   }
   Ops.push_back(RegMask);
 
   if (InGlue)
     Ops.push_back(InGlue);
 
-  unsigned Opcode = Enable ? AArch64ISD::SMSTART : AArch64ISD::SMSTOP;
   return DAG.getNode(Opcode, DL, DAG.getVTList(MVT::Other, MVT::Glue), Ops);
 }
 
@@ -9203,9 +9207,8 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   if (DisableZA)
     Chain = DAG.getNode(
-        AArch64ISD::SMSTOP, DL, MVT::Other, Chain,
-        DAG.getTargetConstant((int32_t)(AArch64SVCR::SVCRZA), DL, MVT::i32),
-        DAG.getConstant(AArch64SME::Always, DL, MVT::i64));
+        AArch64ISD::SMSTOP, DL, DAG.getVTList(MVT::Other, MVT::Glue), Chain,
+        DAG.getTargetConstant((int32_t)(AArch64SVCR::SVCRZA), DL, MVT::i32));
 
   // Adjust the stack pointer for the new arguments...
   // These operations are automatically eliminated by the prolog/epilog pass
@@ -9682,9 +9685,8 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   if (CallAttrs.requiresEnablingZAAfterCall())
     // Unconditionally resume ZA.
     Result = DAG.getNode(
-        AArch64ISD::SMSTART, DL, MVT::Other, Result,
-        DAG.getTargetConstant((int32_t)(AArch64SVCR::SVCRZA), DL, MVT::i32),
-        DAG.getConstant(AArch64SME::Always, DL, MVT::i64));
+        AArch64ISD::SMSTART, DL, DAG.getVTList(MVT::Other, MVT::Glue), Result,
+        DAG.getTargetConstant((int32_t)(AArch64SVCR::SVCRZA), DL, MVT::i32));
 
   if (ShouldPreserveZT0)
     Result =
