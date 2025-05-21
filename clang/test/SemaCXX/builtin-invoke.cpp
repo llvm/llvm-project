@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -verify -fsyntax-only %s
+// RUN: %clang_cc1 -verify -fsyntax-only %s -std=c++20
 
 void func() { // expected-note {{'func' declared here}}
   __builtin_invoke(); // expected-error {{too few arguments to function call, expected at least 1, have 0}}
@@ -126,6 +126,12 @@ namespace std {
   template <class... Args>
   auto invoke(Args&&... args) -> decltype(__builtin_invoke(args...));
 } // namespace std
+
+template <class... Args>
+concept invocable = requires(Args... args) { __builtin_invoke(args...); };
+
+static_assert(!invocable<std::reference_wrapper<InvalidSpecialization1>>);
+static_assert(!invocable<std::reference_wrapper<InvalidSpecialization2>>);
 
 void test3() {
   __builtin_invoke(diagnose_discard); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}

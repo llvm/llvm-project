@@ -2594,8 +2594,6 @@ public:
                                SourceLocation BuiltinLoc,
                                SourceLocation RParenLoc);
 
-  ExprResult BuiltinInvoke(CallExpr *TheCall);
-
   static StringRef GetFormatStringTypeName(FormatStringType FST);
   static FormatStringType GetFormatStringType(StringRef FormatFlavor);
   static FormatStringType GetFormatStringType(const FormatAttr *Format);

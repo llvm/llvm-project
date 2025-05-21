@@ -120,10 +120,10 @@ inline const bool __is_nothrow_invocable_r_v =
 // is_invocable
 
 template <class _Fn, class... _Args>
-struct _LIBCPP_TEMPLATE_VIS is_invocable : bool_constant<__is_invocable_v<_Fn, _Args...> > {};
+struct is_invocable : bool_constant<__is_invocable_v<_Fn, _Args...> > {};
 
 template <class _Ret, class _Fn, class... _Args>
-struct _LIBCPP_TEMPLATE_VIS is_invocable_r : bool_constant<__is_invocable_r_v<_Ret, _Fn, _Args...>> {};
+struct is_invocable_r : bool_constant<__is_invocable_r_v<_Ret, _Fn, _Args...>> {};
 
 template <class _Fn, class... _Args>
 inline constexpr bool is_invocable_v = __is_invocable_v<_Fn, _Args...>;
@@ -134,11 +134,10 @@ inline constexpr bool is_invocable_r_v = is_invocable_r<_Ret, _Fn, _Args...>::va
 // is_nothrow_invocable
 
 template <class _Fn, class... _Args>
-struct _LIBCPP_TEMPLATE_VIS is_nothrow_invocable : bool_constant<__is_nothrow_invocable_v<_Fn, _Args...> > {};
+struct is_nothrow_invocable : bool_constant<__is_nothrow_invocable_v<_Fn, _Args...> > {};
 
 template <class _Ret, class _Fn, class... _Args>
-struct _LIBCPP_TEMPLATE_VIS is_nothrow_invocable_r
-    : integral_constant<bool, __is_nothrow_invocable_r_v<_Ret, _Fn, _Args...>> {};
+struct is_nothrow_invocable_r : integral_constant<bool, __is_nothrow_invocable_r_v<_Ret, _Fn, _Args...>> {};
 
 template <class _Fn, class... _Args>
 inline constexpr bool is_nothrow_invocable_v = __is_nothrow_invocable_v<_Fn, _Args...>;
@@ -147,7 +146,7 @@ template <class _Ret, class _Fn, class... _Args>
 inline constexpr bool is_nothrow_invocable_r_v = __is_nothrow_invocable_r_v<_Ret, _Fn, _Args...>;
 
 template <class _Fn, class... _Args>
-struct _LIBCPP_TEMPLATE_VIS invoke_result {
+struct invoke_result {
   using type = __invoke_result_t<_Fn, _Args...>;
 };
 
