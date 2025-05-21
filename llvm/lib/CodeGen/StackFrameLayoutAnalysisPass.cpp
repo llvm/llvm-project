@@ -72,7 +72,7 @@ struct StackFrameLayoutAnalysis {
         : Slot(Idx), Size(MFI.getObjectSize(Idx)),
           Align(MFI.getObjectAlign(Idx).value()), Offset(Offset),
           SlotTy(Invalid), Scalable(false) {
-      Scalable = MFI.getStackID(Idx) == TargetStackID::ScalableVector;
+      Scalable = MFI.isScalableStackID(Idx);
       if (MFI.isSpillSlotObjectIndex(Idx))
         SlotTy = SlotType::Spill;
       else if (MFI.isFixedObjectIndex(Idx))
