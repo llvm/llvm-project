@@ -2734,18 +2734,18 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan, VPCostContext &Ctx,
       auto *GEP = dyn_cast<GetElementPtrInst>(
           Ptr->getUnderlyingValue()->stripPointerCasts());
       // Create a new vector pointer for strided access.
-      auto *NewPtr = new VPVectorPointerRecipe(
-          Ptr, ElementTy, /*Stride=*/ true,
-          GEP ? GEP->getNoWrapFlags() : GEPNoWrapFlags::none(),
-          VecEndPtr->getDebugLoc());
+      auto *NewPtr = new VPVectorPointerRecipe(Ptr, ElementTy, /*Stride=*/true,
+                                               GEP ? GEP->getNoWrapFlags()
+                                                   : GEPNoWrapFlags::none(),
+                                               VecEndPtr->getDebugLoc());
       NewPtr->insertBefore(MemR);
 
       auto *LoadR = cast<VPWidenLoadRecipe>(MemR);
       auto *LI = cast<LoadInst>(&Ingredient);
       const DataLayout &DL = LI->getDataLayout();
       auto *StrideTy = DL.getIndexType(LI->getPointerOperand()->getType());
-      VPValue *StrideVPV = Plan.getOrAddLiveIn(ConstantInt::get(
-          StrideTy, Stride * DL.getTypeAllocSize(ElementTy)));
+      VPValue *StrideVPV = Plan.getOrAddLiveIn(
+          ConstantInt::get(StrideTy, Stride * DL.getTypeAllocSize(ElementTy)));
       auto *StridedLoad = new VPWidenStridedLoadRecipe(
           *LI, NewPtr, StrideVPV, &Plan.getVF(), LoadR->getMask(), *LoadR,
           LoadR->getDebugLoc());
