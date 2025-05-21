@@ -310,8 +310,10 @@ void ModuleMap::resolveHeader(Module *Mod,
   } else if (Header.HasBuiltinHeader && !Header.Size && !Header.ModTime) {
     // There's a builtin header but no corresponding on-disk header. Assume
     // this was supposed to modularize the builtin header alone.
-  } else if (Header.Kind == Module::HK_Excluded) {
-    // Ignore missing excluded header files. They're optional anyway.
+  } else if ((Header.Kind == Module::HK_Excluded) ||
+             (Header.Kind == Module::HK_Textual)) {
+    // Ignore excluded and textual header files as a module can be built with
+    // such headers missing.
   } else {
     // If we find a module that has a missing header, we mark this module as
     // unavailable and store the header directive for displaying diagnostics.
@@ -2019,7 +2021,7 @@ void ModuleMapLoader::handleUmbrellaDirDecl(
     }
 
     // Sort header paths so that the pcm doesn't depend on iteration order.
-    std::stable_sort(Headers.begin(), Headers.end(), compareModuleHeaders);
+    llvm::stable_sort(Headers, compareModuleHeaders);
 
     for (auto &Header : Headers)
       Map.addHeader(ActiveModule, std::move(Header), ModuleMap::TextualHeader);

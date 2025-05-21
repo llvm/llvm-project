@@ -497,7 +497,7 @@ __const, __const__, __volatile, __volatile__, __restrict, __restrict__
 ----------------------------------------------------------------------
 
 These are alternate spellings for their non-underscore counterparts, but are
-available in all langauge modes.
+available in all language modes.
 
 __decltype
 ----------
@@ -526,7 +526,7 @@ __typeof, __typeof__, __typeof_unqual, __typeof_unqual__
 --------------------------------------------------------
 
 ``__typeof`` and ``__typeof__`` are alternate spellings for ``typeof``, but are
-available in all langauge modes. These spellings result in the operand,
+available in all language modes. These spellings result in the operand,
 retaining all qualifiers.
 
 ``__typeof_unqual`` and ``__typeof_unqual__`` are alternate spellings for the
@@ -1859,12 +1859,18 @@ The following type trait primitives are supported by Clang. Those traits marked
 * ``__is_trivially_constructible`` (C++, GNU, Microsoft)
 * ``__is_trivially_copyable`` (C++, GNU, Microsoft)
 * ``__is_trivially_destructible`` (C++, MSVC 2013)
-* ``__is_trivially_relocatable`` (Clang): Returns true if moving an object
+* ``__is_trivially_relocatable`` (Clang) (Deprecated,
+  use ``__builtin_is_cpp_trivially_relocatable`` instead).
+  Returns true if moving an object
   of the given type, and then destroying the source object, is known to be
   functionally equivalent to copying the underlying bytes and then dropping the
   source object on the floor. This is true of trivial types,
   C++26 relocatable types, and types which
   were made trivially relocatable via the ``clang::trivial_abi`` attribute.
+  This trait is deprecated and should be replaced by
+  ``__builtin_is_cpp_trivially_relocatable``. Note however that it is generally
+  unsafe to relocate a C++-relocatable type with ``memcpy`` or ``memmove``;
+  use ``__builtin_trivially_relocate``.
 * ``__builtin_is_cpp_trivially_relocatable`` (C++): Returns true if an object
   is trivially relocatable, as defined by the C++26 standard [meta.unary.prop].
   Note that when relocating the caller code should ensure that if the object is polymorphic,
@@ -2037,7 +2043,7 @@ references can be used instead of numeric references.
   }
 
 
-Constexpr strings in GNU ASM statememts
+Constexpr strings in GNU ASM statements
 =======================================
 
 In C++11 mode (and greater), Clang supports specifying the template,
@@ -4406,7 +4412,7 @@ It is undefined behavior to call this function on an already initialized
 A builtin function for the target-specific ``va_start`` function-like macro,
 available only in C23 and later. The builtin accepts zero or one argument for
 the ellipsis (``...``). If such an argument is provided, it should be the name
-of the parameter preceeding the ellipsis, which is used for compatibility with
+of the parameter preceding the ellipsis, which is used for compatibility with
 C versions before C23. It is an error to provide two or more variadic arguments.
 This function initializes the given ``__builtin_va_list`` object. It is
 undefined behavior to call this function on an already initialized

@@ -66,7 +66,7 @@ extern cl::opt<bool> UpdateDebugSections;
 extern cl::opt<unsigned> Verbosity;
 
 extern bool BinaryAnalysisMode;
-extern bool HeatmapMode;
+extern HeatmapModeKind HeatmapMode;
 extern bool processAllFunctions();
 
 static cl::opt<bool> CheckEncoding(
@@ -473,7 +473,7 @@ void BinaryFunction::print(raw_ostream &OS, std::string Annotation) {
     OS << "\n  Image       : 0x" << Twine::utohexstr(getImageAddress());
   if (ExecutionCount != COUNT_NO_PROFILE) {
     OS << "\n  Exec Count  : " << ExecutionCount;
-    OS << "\n  Branch Count: " << RawBranchCount;
+    OS << "\n  Sample Count: " << RawSampleCount;
     OS << "\n  Profile Acc : " << format("%.1f%%", ProfileMatchRatio * 100.0f);
   }
 
@@ -1783,10 +1783,22 @@ bool BinaryFunction::scanExternalRefs() {
     // On AArch64, we use instruction patches for fixing references. We make an
     // exception for branch instructions since they require optional
     // relocations.
-    if (BC.isAArch64() && !BranchTargetSymbol) {
-      LLVM_DEBUG(BC.printInstruction(dbgs(), Instruction, AbsoluteInstrAddr));
-      InstructionPatches.push_back({AbsoluteInstrAddr, Instruction});
-      continue;
+    if (BC.isAArch64()) {
+      if (!BranchTargetSymbol) {
+        LLVM_DEBUG(BC.printInstruction(dbgs(), Instruction, AbsoluteInstrAddr));
+        InstructionPatches.push_back({AbsoluteInstrAddr, Instruction});
+        continue;
+      }
+
+      // Conditional tail calls require new relocation types that are currently
+      // not supported. https://github.com/llvm/llvm-project/issues/138264
+      if (BC.MIB->isConditionalBranch(Instruction)) {
+        if (BinaryFunction *TargetBF =
+                BC.getFunctionForSymbol(BranchTargetSymbol)) {
+          TargetBF->setNeedsPatch(true);
+          continue;
+        }
+      }
     }
 
     // Emit the instruction using temp emitter and generate relocations.
@@ -1797,8 +1809,6 @@ bool BinaryFunction::scanExternalRefs() {
     // Create relocation for every fixup.
     for (const MCFixup &Fixup : Fixups) {
       std::optional<Relocation> Rel = BC.MIB->createRelocation(Fixup, *BC.MAB);
-      // Can be skipped in case of overlow during relocation value encoding.
-      Rel->setOptional();
       if (!Rel) {
         Success = false;
         continue;
@@ -1814,6 +1824,17 @@ bool BinaryFunction::scanExternalRefs() {
         Success = false;
         continue;
       }
+
+      if (BC.isAArch64()) {
+        // Allow the relocation to be skipped in case of the overflow during the
+        // relocation value encoding.
+        Rel->setOptional();
+
+        if (!opts::CompactCodeModel)
+          if (BinaryFunction *TargetBF = BC.getFunctionForSymbol(Rel->Symbol))
+            TargetBF->setNeedsPatch(true);
+      }
+
       Rel->Offset += getAddress() - getOriginSection()->getAddress() + Offset;
       FunctionRelocations.push_back(*Rel);
     }
@@ -3317,7 +3338,7 @@ void BinaryFunction::duplicateConstantIslands() {
 static std::string constructFilename(std::string Filename,
                                      std::string Annotation,
                                      std::string Suffix) {
-  std::replace(Filename.begin(), Filename.end(), '/', '-');
+  llvm::replace(Filename, '/', '-');
   if (!Annotation.empty())
     Annotation.insert(0, "-");
   if (Filename.size() + Annotation.size() + Suffix.size() > MAX_PATH) {

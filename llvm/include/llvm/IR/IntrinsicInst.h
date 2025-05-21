@@ -1167,8 +1167,10 @@ public:
   }
 };
 
-/// This is the base class for llvm.experimental.memset.pattern
-class MemSetPatternIntrinsic : public MemIntrinsicBase<MemIntrinsic> {
+/// This class wraps the llvm.experimental.memset.pattern intrinsic.
+/// Note that despite the inheritance, this is not part of the
+/// MemIntrinsic hierachy in terms of isa/cast.
+class MemSetPatternInst : public MemSetBase<MemIntrinsic> {
 private:
   enum { ARG_VOLATILE = 3 };
 
@@ -1181,18 +1183,6 @@ public:
 
   void setVolatile(Constant *V) { setArgOperand(ARG_VOLATILE, V); }
 
-  // Methods for support of type inquiry through isa, cast, and dyn_cast:
-  static bool classof(const IntrinsicInst *I) {
-    return I->getIntrinsicID() == Intrinsic::experimental_memset_pattern;
-  }
-  static bool classof(const Value *V) {
-    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
-  }
-};
-
-/// This class wraps the llvm.experimental.memset.pattern intrinsic.
-class MemSetPatternInst : public MemSetBase<MemSetPatternIntrinsic> {
-public:
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const IntrinsicInst *I) {
     return I->getIntrinsicID() == Intrinsic::experimental_memset_pattern;

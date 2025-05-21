@@ -88,11 +88,19 @@ static std::optional<APInt> extractConstantBits(const Constant *C) {
   if (isa<UndefValue>(C))
     return APInt::getZero(NumBits);
 
-  if (auto *CInt = dyn_cast<ConstantInt>(C))
-    return CInt->getValue();
+  if (auto *CInt = dyn_cast<ConstantInt>(C)) {
+    if (isa<VectorType>(CInt->getType()))
+      return APInt::getSplat(NumBits, CInt->getValue());
 
-  if (auto *CFP = dyn_cast<ConstantFP>(C))
+    return CInt->getValue();
+  }
+
+  if (auto *CFP = dyn_cast<ConstantFP>(C)) {
+    if (isa<VectorType>(CFP->getType()))
+      return APInt::getSplat(NumBits, CFP->getValue().bitcastToAPInt());
+
     return CFP->getValue().bitcastToAPInt();
+  }
 
   if (auto *CV = dyn_cast<ConstantVector>(C)) {
     if (auto *CVSplat = getSplatValueAllowUndef(CV)) {

@@ -103,8 +103,8 @@ define void @iv_expand(ptr %p, i64 %n) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
-; CHECK-NEXT:     EMIT vp<[[SCALAR_PHI:%.+]]> = phi ir<0>, vp<%index.next>
-; CHECK-NEXT:     WIDEN-PHI ir<%i> = phi vp<[[INDUCTION]]>, vp<%vec.ind.next>
+; CHECK-NEXT:     EMIT vp<[[SCALAR_PHI:%.+]]> = phi [ ir<0>, ir-bb<vector.ph> ], [ vp<%index.next>, vector.body ]
+; CHECK-NEXT:     WIDEN-PHI ir<%i> = phi [ vp<[[INDUCTION]]>, ir-bb<vector.ph> ], [ vp<%vec.ind.next>, vector.body ]
 ; CHECK-NEXT:     CLONE ir<%q> = getelementptr ir<%p>, vp<[[SCALAR_PHI]]>
 ; CHECK-NEXT:     vp<[[VEC_PTR_1:%.+]]> = vector-pointer ir<%q>
 ; CHECK-NEXT:     WIDEN ir<%x> = load vp<[[VEC_PTR_1]]>

@@ -385,7 +385,7 @@ Semantics:
 """"""""""
 
 Before the absolute value is taken, the input is flushed to sign preserving
-zero if it is a subnormal. In addtion, unlike '``llvm.fabs.*``', a NaN input
+zero if it is a subnormal. In addition, unlike '``llvm.fabs.*``', a NaN input
 yields an unspecified NaN output.
 
 
@@ -473,7 +473,7 @@ Overview:
 
 The '``llvm.nvvm.fshl.clamp``' family of intrinsics performs a clamped funnel
 shift left. These intrinsics are very similar to '``llvm.fshl``', except the
-shift ammont is clamped at the integer width (instead of modulo it). Currently,
+shift amount is clamped at the integer width (instead of modulo it). Currently,
 only ``i32`` is supported.
 
 Semantics:
@@ -501,7 +501,7 @@ Overview:
 
 The '``llvm.nvvm.fshr.clamp``' family of intrinsics perform a clamped funnel
 shift right. These intrinsics are very similar to '``llvm.fshr``', except the
-shift ammont is clamped at the integer width (instead of modulo it). Currently,
+shift amount is clamped at the integer width (instead of modulo it). Currently,
 only ``i32`` is supported.
 
 Semantics:
@@ -568,6 +568,62 @@ to left-shift the found bit into the most-significant bit position, otherwise
 the result is the shift amount needed to right-shift the found bit into the
 least-significant bit position. 0xffffffff is returned if no 1 bit is found.
 
+'``llvm.nvvm.{zext,sext}.{wrap,clamp}``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare i32 @llvm.nvvm.zext.wrap(i32 %a, i32 %b)
+    declare i32 @llvm.nvvm.zext.clamp(i32 %a, i32 %b)
+    declare i32 @llvm.nvvm.sext.wrap(i32 %a, i32 %b)
+    declare i32 @llvm.nvvm.sext.clamp(i32 %a, i32 %b)
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.{zext,sext}.{wrap,clamp}``' family of intrinsics extracts the
+low bits of the input value, and zero- or sign-extends them back to the original
+width.
+
+Semantics:
+""""""""""
+
+The '``llvm.nvvm.{zext,sext}.{wrap,clamp}``' family of intrinsics returns
+extension of N lowest bits of operand %a. For the '``wrap``' variants, N is the
+value of operand %b modulo 32. For the '``clamp``' variants, N is the value of
+operand %b clamped to the range [0, 32]. The N lowest bits are then
+zero-extended the case of the '``zext``' variants, or sign-extended the case of
+the '``sext``' variants. If N is 0, the result is 0.
+
+'``llvm.nvvm.bmsk.{wrap,clamp}``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare i32 @llvm.nvvm.bmsk.wrap(i32 %a, i32 %b)
+    declare i32 @llvm.nvvm.bmsk.clamp(i32 %a, i32 %b)
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.bmsk.{wrap,clamp}``' family of intrinsics creates a bit mask
+given a starting bit position and a bit width.
+
+Semantics:
+""""""""""
+
+The '``llvm.nvvm.bmsk.{wrap,clamp}``' family of intrinsics returns a value with
+all bits set to 0 except for %b bits starting at bit position %a. For the
+'``wrap``' variants, the values of %a and %b modulo 32 are used. For the
+'``clamp``' variants, the values of %a and %b are clamped to the range [0, 32],
+which in practice is equivalent to using them as is.
+
 TMA family of Intrinsics
 ------------------------
 
@@ -616,6 +672,7 @@ Syntax:
 .. code-block:: llvm
 
   declare void @llvm.nvvm.cp.async.bulk.shared.cta.to.global(ptr addrspace(1) %dst, ptr addrspace(3) %src, i32 %size, i64 %ch, i1 %flag_ch)
+  declare void @llvm.nvvm.cp.async.bulk.shared.cta.to.global.bytemask(..., i32 %size, i64 %ch, i1 %flag_ch, i16 %mask)
 
 Overview:
 """""""""
@@ -624,10 +681,13 @@ The '``@llvm.nvvm.cp.async.bulk.shared.cta.to.global``' intrinsic
 corresponds to the ``cp.async.bulk.global.shared::cta.*`` set of PTX
 instructions. These instructions initiate an asynchronous copy from
 shared::cta to global memory. The 32-bit operand ``%size`` specifies
-the amount of memory to be copied and it must be a multiple of 16.
+the amount of memory to be copied (in bytes) and it must be a multiple
+of 16. For the ``.bytemask`` variant, the 16-bit wide mask operand
+specifies whether the i-th byte of each 16-byte wide chunk of source
+data is copied to the destination.
 
-* The last argument to these intrinsics is a boolean flag
-  indicating support for cache_hint. This flag argument must
+* The ``i1 %flag_ch`` argument to these intrinsics is a boolean
+  flag indicating support for cache_hint. This flag argument must
   be a compile-time constant. When set, it indicates a valid
   cache_hint (``i64 %ch``) and generates the ``.L2::cache_hint``
   variant of the PTX instruction.
@@ -1557,6 +1617,98 @@ The ``@llvm.nvvm.st.bulk.shared.cta`` and ``@llvm.nvvm.st.bulk`` intrinsics are
 similar but the latter uses generic addressing (see `Generic Addressing <https://docs.nvidia.com/cuda/parallel-thread-execution/#generic-addressing>`__).
 
 For more information, refer `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-st-bulk>`__.
+
+
+clusterlaunchcontrol Intrinsics
+-------------------------------
+
+'``llvm.nvvm.clusterlaunchcontrol.try_cancel*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.clusterlaunchcontrol.try_cancel.async.shared(ptr addrspace(3) %addr, ptr addrspace(3) %mbar)
+  declare void @llvm.nvvm.clusterlaunchcontrol.try_cancel.async.multicast.shared(ptr addrspace(3) %addr, ptr addrspace(3) %mbar)
+
+Overview:
+"""""""""
+
+The ``clusterlaunchcontrol.try_cancel`` intrinsics requests atomically cancelling
+the launch of a cluster that has not started running yet. It asynchronously non-atomically writes
+a 16-byte opaque response to shared memory, pointed to by 16-byte-aligned ``addr`` indicating whether the
+operation succeeded or failed. ``addr`` and 8-byte-aligned ``mbar`` must refer to ``shared::cta``
+otherwise the behavior is undefined. The completion of the asynchronous operation
+is tracked using the mbarrier completion mechanism at ``.cluster`` scope referenced
+by the shared memory pointer, ``mbar``. On success, the opaque response contains
+the CTA id of the first CTA of the canceled cluster; no other successful response
+from other ``clusterlaunchcontrol.try_cancel`` operations from the same grid will
+contain that id.
+
+The ``multicast`` variant specifies that the response is asynchronously non-atomically written to
+the corresponding shared memory location of each CTA in the requesting cluster.
+The completion of the write of each local response is tracked by independent
+mbarriers at the corresponding shared memory location of each CTA in the
+cluster.
+
+For more information, refer `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/?a#parallel-synchronization-and-communication-instructions-clusterlaunchcontrol-try-cancel>`__.
+
+'``llvm.nvvm.clusterlaunchcontrol.query_cancel.is_canceled``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare i1 @llvm.nvvm.clusterlaunchcontrol.query_cancel.is_canceled(i128 %try_cancel_response)
+
+Overview:
+"""""""""
+
+The ``llvm.nvvm.clusterlaunchcontrol.query_cancel.is_canceled`` intrinsic decodes the opaque response written by the
+``llvm.nvvm.clusterlaunchcontrol.try_cancel`` operation.
+
+The intrinsic returns ``0`` (false) if the request failed. If the request succeeded,
+it returns ``1`` (true). A true result indicates that:
+
+- the thread block cluster whose first CTA id matches that of the response
+  handle will not run, and
+- no other successful response of another ``try_cancel`` request in the grid will contain
+  the first CTA id of that cluster
+
+For more information, refer `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/?a#parallel-synchronization-and-communication-instructions-clusterlaunchcontrol-query-cancel>`__.
+
+
+'``llvm.nvvm.clusterlaunchcontrol.query_cancel.get_first_ctaid.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare i32 @llvm.nvvm.clusterlaunchcontrol.query_cancel.get_first_ctaid.x(i128 %try_cancel_response)
+  declare i32 @llvm.nvvm.clusterlaunchcontrol.query_cancel.get_first_ctaid.y(i128 %try_cancel_response)
+  declare i32 @llvm.nvvm.clusterlaunchcontrol.query_cancel.get_first_ctaid.z(i128 %try_cancel_response)
+
+Overview:
+"""""""""
+
+The ``clusterlaunchcontrol.query_cancel.get_first_ctaid.*`` intrinsic can be
+used to decode the successful opaque response written by the
+``llvm.nvvm.clusterlaunchcontrol.try_cancel`` operation.
+
+If the request succeeded:
+
+- ``llvm.nvvm.clusterlaunchcontrol.query_cancel.get_first_ctaid.{x,y,z}`` returns
+  the coordinate of the first CTA in the canceled cluster, either x, y, or z.
+
+If the request failed, the behavior of these intrinsics is undefined.
+
+For more information, refer `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/?a#parallel-synchronization-and-communication-instructions-clusterlaunchcontrol-query-cancel>`__.
 
 Other Intrinsics
 ----------------

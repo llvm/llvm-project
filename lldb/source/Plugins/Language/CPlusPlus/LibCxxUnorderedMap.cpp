@@ -44,7 +44,7 @@ public:
 
 private:
   CompilerType GetNodeType();
-  CompilerType GetElementType(CompilerType node_type);
+  CompilerType GetElementType(CompilerType table_type);
   llvm::Expected<size_t> CalculateNumChildrenImpl(ValueObject &table);
 
   CompilerType m_element_type;
@@ -98,8 +98,8 @@ static bool isUnorderedMap(ConstString type_name) {
 }
 
 CompilerType lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::
-    GetElementType(CompilerType node_type) {
-  CompilerType element_type = node_type.GetTypeTemplateArgument(0);
+    GetElementType(CompilerType table_type) {
+  auto element_type = table_type.GetTypedefedType().GetTypeTemplateArgument(0);
 
   // This synthetic provider is used for both unordered_(multi)map and
   // unordered_(multi)set. For unordered_map, the element type has an
@@ -114,7 +114,7 @@ CompilerType lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::
         element_type.GetFieldAtIndex(0, name, nullptr, nullptr, nullptr);
     CompilerType actual_type = field_type.GetTypedefedType();
     if (isStdTemplate(actual_type.GetTypeName(), "pair"))
-      element_type = actual_type;
+      return actual_type;
   }
 
   return element_type;
@@ -161,13 +161,6 @@ lldb::ValueObjectSP lldb_private::formatters::
     ValueObjectSP value_sp = node_sp->GetChildMemberWithName("__value_");
     ValueObjectSP hash_sp = node_sp->GetChildMemberWithName("__hash_");
     if (!hash_sp || !value_sp) {
-      if (!m_element_type) {
-        m_node_type = GetNodeType();
-        if (!m_node_type)
-          return nullptr;
-
-        m_element_type = GetElementType(m_node_type);
-      }
       node_sp = m_next_element->Cast(m_node_type.GetPointerType())
               ->Dereference(error);
       if (!node_sp || error.Fail())
@@ -271,6 +264,14 @@ lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::Update() {
   if (!table_sp)
     return lldb::ChildCacheState::eRefetch;
 
+  m_node_type = GetNodeType();
+  if (!m_node_type)
+    return lldb::ChildCacheState::eRefetch;
+
+  m_element_type = GetElementType(table_sp->GetCompilerType());
+  if (!m_element_type)
+    return lldb::ChildCacheState::eRefetch;
+
   ValueObjectSP tree_sp = GetTreePointer(*table_sp);
   if (!tree_sp)
     return lldb::ChildCacheState::eRefetch;
@@ -294,12 +295,12 @@ lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::Update() {
 llvm::Expected<size_t>
 lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
-  size_t idx = ExtractIndexFromString(name.GetCString());
-  if (idx == UINT32_MAX) {
+  auto optional_idx = formatters::ExtractIndexFromString(name.GetCString());
+  if (!optional_idx) {
     return llvm::createStringError("Type has no child named '%s'",
                                    name.AsCString());
   }
-  return idx;
+  return *optional_idx;
 }
 
 SyntheticChildrenFrontEnd *

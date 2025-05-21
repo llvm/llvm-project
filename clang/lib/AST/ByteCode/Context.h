@@ -105,7 +105,7 @@ public:
   }
 
   /// Returns the program. This is only needed for unittests.
-  Program &getProgram() const { return *P.get(); }
+  Program &getProgram() const { return *P; }
 
   unsigned collectBaseOffset(const RecordDecl *BaseDecl,
                              const RecordDecl *DerivedDecl) const;
@@ -137,6 +137,9 @@ private:
   std::unique_ptr<Program> P;
   /// ID identifying an evaluation.
   unsigned EvalID = 0;
+  /// Cached widths (in bits) of common types, for a faster classify().
+  unsigned IntWidth;
+  unsigned LongWidth;
 };
 
 } // namespace interp
