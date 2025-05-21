@@ -70,8 +70,8 @@ TEST(ReassociationIndicesForCollapse, StaticTestUnitDims) {
             makeOptionalIndices({{0, 1, 2}}));
   EXPECT_EQ(getReassociationIndicesForCollapse({1, 1, 1}, {1}),
             makeOptionalIndices({{0, 1, 2}}));
-  EXPECT_EQ(getReassociationIndicesForCollapse({1, 1, 1}, {1, 1}),
-            makeOptionalIndices({{0}, {1, 2}}));
+  EXPECT_EQ(getReassociationIndicesForCollapse({1, 1, 1, 1}, {1, 1, 1}),
+            makeOptionalIndices({{0}, {1}, {2, 3}}));
 }
 
 TEST(ReassociationIndicesForCollapse, DynamicTest) {

@@ -208,8 +208,6 @@ findReassociationRangesForCollapse(ArrayRef<int64_t> sourceShape,
   for (unsigned targetDimIdx = 0, sourceDimIdx = 0;
        targetDimIdx < numTargetDims; ++targetDimIdx) {
     int64_t targetSize = targetShape[targetDimIdx];
-    std::optional<int64_t> nextTargetSize = std::nullopt;
-
     // Simply check if there are any subsequent target dimensions left - if not,
     // the match must be made greedily.
     bool isLastTargetDim = targetDimIdx == numTargetDims - 1;
@@ -340,9 +338,6 @@ mlir::getReassociationIndicesForCollapse(ArrayRef<int64_t> sourceShape,
     auto &reverseRange = reverseRanges[targetDimIdx];
     // Get non-overlapping indices between the ranges
     ReassociationIndices nonMatchingIndices = range ^ reverseRange;
-    // The ranges should overlap, at the very least
-    if (nonMatchingIndices.size() == range.size() + reverseRange.size())
-      return std::nullopt;
     // Unit dimensions can be collapsed wherever - this is the only ambiguity
     // that we allow.
     for (int64_t sourceDimIdx : nonMatchingIndices) {
