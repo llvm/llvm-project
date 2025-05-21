@@ -59,8 +59,9 @@ Value ConvertToLLVMPattern::createIndexAttrConstant(OpBuilder &builder,
 }
 
 Value ConvertToLLVMPattern::getStridedElementPtr(
-    Location loc, MemRefType type, Value memRefDesc, ValueRange indices,
-    ConversionPatternRewriter &rewriter) const {
+    ConversionPatternRewriter &rewriter, Location loc, MemRefType type,
+    Value memRefDesc, ValueRange indices,
+    LLVM::GEPNoWrapFlags noWrapFlags) const {
 
   auto [strides, offset] = type.getStridesAndOffset();
 
@@ -91,7 +92,7 @@ Value ConvertToLLVMPattern::getStridedElementPtr(
   return index ? rewriter.create<LLVM::GEPOp>(
                      loc, elementPtrType,
                      getTypeConverter()->convertType(type.getElementType()),
-                     base, index)
+                     base, index, noWrapFlags)
                : base;
 }
 
@@ -379,6 +380,44 @@ LogicalResult LLVM::detail::oneToOneRewrite(
         op->getLoc(), newOp->getResult(0), i));
   }
   rewriter.replaceOp(op, results);
+  return success();
+}
+
+LogicalResult LLVM::detail::intrinsicRewrite(
+    Operation *op, StringRef intrinsic, ValueRange operands,
+    const LLVMTypeConverter &typeConverter, RewriterBase &rewriter) {
+  auto loc = op->getLoc();
+
+  if (!llvm::all_of(operands, [](Value value) {
+        return LLVM::isCompatibleType(value.getType());
+      }))
+    return failure();
+
+  unsigned numResults = op->getNumResults();
+  Type resType;
+  if (numResults != 0)
+    resType = typeConverter.packOperationResults(op->getResultTypes());
+
+  auto callIntrOp = rewriter.create<LLVM::CallIntrinsicOp>(
+      loc, resType, rewriter.getStringAttr(intrinsic), operands);
+  // Propagate attributes.
+  callIntrOp->setAttrs(op->getAttrDictionary());
+
+  if (numResults <= 1) {
+    // Directly replace the original op.
+    rewriter.replaceOp(op, callIntrOp);
+    return success();
+  }
+
+  // Extract individual results from packed structure and use them as
+  // replacements.
+  SmallVector<Value, 4> results;
+  results.reserve(numResults);
+  Value intrRes = callIntrOp.getResults();
+  for (unsigned i = 0; i < numResults; ++i)
+    results.push_back(rewriter.create<LLVM::ExtractValueOp>(loc, intrRes, i));
+  rewriter.replaceOp(op, results);
+
   return success();
 }
 
