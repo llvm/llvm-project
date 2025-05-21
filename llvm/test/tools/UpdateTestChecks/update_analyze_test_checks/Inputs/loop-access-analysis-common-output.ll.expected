@@ -8,19 +8,7 @@ define void @laa_common_output(ptr %Base, ptr %Dest, ptr %Preds) {
 ; CHECK-NEXT:      Report: cannot identify array bounds
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
-; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group GRP0:
-; CHECK-NEXT:          %arrayidx5 = getelementptr inbounds float, ptr %Dest, i64 %indvars.iv
-; CHECK-NEXT:        Against group GRP1:
-; CHECK-NEXT:          %arrayidx = getelementptr inbounds i32, ptr %Preds, i64 %indvars.iv
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group GRP0:
-; CHECK-NEXT:          (Low: %Dest High: (400 + %Dest))
-; CHECK-NEXT:            Member: {%Dest,+,4}<nuw><%for.body>
-; CHECK-NEXT:        Group GRP1:
-; CHECK-NEXT:          (Low: %Preds High: (400 + %Preds))
-; CHECK-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
-; CHECK-NEXT:      Generated run-time checks are incomplete
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -91,19 +79,7 @@ define void @laa_divergent_output(ptr %Base, ptr %Dest, ptr %Preds, i64 %extra_o
 ; DEPTH2-NEXT:      Report: cannot identify array bounds
 ; DEPTH2-NEXT:      Dependences:
 ; DEPTH2-NEXT:      Run-time memory checks:
-; DEPTH2-NEXT:      Check 0:
-; DEPTH2-NEXT:        Comparing group GRP0:
-; DEPTH2-NEXT:          %arrayidx5 = getelementptr inbounds float, ptr %Dest, i64 %indvars.iv
-; DEPTH2-NEXT:        Against group GRP1:
-; DEPTH2-NEXT:          %arrayidx = getelementptr inbounds i32, ptr %Preds, i64 %indvars.iv
 ; DEPTH2-NEXT:      Grouped accesses:
-; DEPTH2-NEXT:        Group GRP0:
-; DEPTH2-NEXT:          (Low: %Dest High: (400 + %Dest))
-; DEPTH2-NEXT:            Member: {%Dest,+,4}<nuw><%for.body>
-; DEPTH2-NEXT:        Group GRP1:
-; DEPTH2-NEXT:          (Low: %Preds High: (400 + %Preds))
-; DEPTH2-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
-; DEPTH2-NEXT:      Generated run-time checks are incomplete
 ; DEPTH2-EMPTY:
 ; DEPTH2-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; DEPTH2-NEXT:      SCEV assumptions:

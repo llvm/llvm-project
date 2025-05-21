@@ -441,7 +441,6 @@ FUNCTION_PASS("print-cfg-sccs", CFGSCCPrinterPass(errs()))
 FUNCTION_PASS("print-memderefs", MemDerefPrinterPass(errs()))
 FUNCTION_PASS("print-mustexecute", MustExecutePrinterPass(errs()))
 FUNCTION_PASS("print-predicateinfo", PredicateInfoPrinterPass(errs()))
-FUNCTION_PASS("print<access-info>", LoopAccessInfoPrinterPass(errs()))
 FUNCTION_PASS("print<assumptions>", AssumptionPrinterPass(errs()))
 FUNCTION_PASS("print<block-freq>", BlockFrequencyPrinterPass(errs()))
 FUNCTION_PASS("print<branch-prob>", BranchProbabilityPrinterPass(errs()))
@@ -583,6 +582,16 @@ FUNCTION_PASS_WITH_PARAMS(
       return MergedLoadStoreMotionPass(Opts);
     },
     parseMergedLoadStoreMotionOptions, "no-split-footer-bb;split-footer-bb")
+FUNCTION_PASS_WITH_PARAMS(
+    "print<access-info>", "LoopAccessInfoPrinterPass",
+    [](bool AllowPartial) {
+      return LoopAccessInfoPrinterPass(errs(), AllowPartial);
+    },
+    [](StringRef Params) {
+      return PassBuilder::parseSinglePassOption(Params, "allow-partial",
+						"LoopAccessInfoPrinterPass");
+    },
+    "allow-partial")
 FUNCTION_PASS_WITH_PARAMS(
     "print<da>", "DependenceAnalysisPrinterPass",
     [](bool NormalizeResults) {
