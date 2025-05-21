@@ -3424,6 +3424,7 @@ cc_library(
         ":GPUDialect",
         ":GPUUtils",
         ":IR",
+        ":IndexDialect",
         ":InliningUtils",
         ":MemRefDialect",
         ":Pass",
