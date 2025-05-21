@@ -24105,9 +24105,9 @@ Examples:
       %wide.masked.load = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %3, i32 4, <4 x i1> %active.lane.mask, <4 x i32> poison)
 
 
-.. _int_experimental_loop_dependence_war_mask:
+.. _int_loop_dependence_war_mask:
 
-'``llvm.experimental.loop.dependence.war.mask.*``' Intrinsics
+'``llvm.loop.dependence.war.mask.*``' Intrinsics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
@@ -24116,10 +24116,10 @@ This is an overloaded intrinsic.
 
 ::
 
-      declare <4 x i1> @llvm.experimental.loop.dependence.war.mask.v4i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize)
-      declare <8 x i1> @llvm.experimental.loop.dependence.war.mask.v8i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize)
-      declare <16 x i1> @llvm.experimental.loop.dependence.war.mask.v16i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize)
-      declare <vscale x 16 x i1> @llvm.experimental.loop.dependence.war.mask.nxv16i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize)
+      declare <4 x i1> @llvm.loop.dependence.war.mask.v4i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize)
+      declare <8 x i1> @llvm.loop.dependence.war.mask.v8i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize)
+      declare <16 x i1> @llvm.loop.dependence.war.mask.v16i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize)
+      declare <vscale x 16 x i1> @llvm.loop.dependence.war.mask.nxv16i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize)
 
 
 Overview:
@@ -24159,14 +24159,14 @@ Examples:
 
 .. code-block:: llvm
 
-      %loop.dependence.mask = call <4 x i1> @llvm.experimental.loop.dependence.war.mask.v4i1(ptr %ptrA, ptr %ptrB, i64 4)
+      %loop.dependence.mask = call <4 x i1> @llvm.loop.dependence.war.mask.v4i1(ptr %ptrA, ptr %ptrB, i64 4)
       %vecA = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(ptr %ptrA, i32 4, <4 x i1> %loop.dependence.mask, <4 x i32> poison)
       [...]
       call @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %vecA, ptr %ptrB, i32 4, <4 x i1> %loop.dependence.mask)
 
-.. _int_experimental_loop_dependence_raw_mask:
+.. _int_loop_dependence_raw_mask:
 
-'``llvm.experimental.loop.dependence.raw.mask.*``' Intrinsics
+'``llvm.loop.dependence.raw.mask.*``' Intrinsics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
@@ -24175,10 +24175,10 @@ This is an overloaded intrinsic.
 
 ::
 
-      declare <4 x i1> @llvm.experimental.loop.dependence.raw.mask.v4i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize)
-      declare <8 x i1> @llvm.experimental.loop.dependence.raw.mask.v8i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize)
-      declare <16 x i1> @llvm.experimental.loop.dependence.raw.mask.v16i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize)
-      declare <vscale x 16 x i1> @llvm.experimental.loop.dependence.raw.mask.nxv16i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize)
+      declare <4 x i1> @llvm.loop.dependence.raw.mask.v4i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize)
+      declare <8 x i1> @llvm.loop.dependence.raw.mask.v8i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize)
+      declare <16 x i1> @llvm.loop.dependence.raw.mask.v16i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize)
+      declare <vscale x 16 x i1> @llvm.loop.dependence.raw.mask.nxv16i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize)
 
 
 Overview:
@@ -24221,7 +24221,7 @@ Examples:
 
 .. code-block:: llvm
 
-      %loop.dependence.mask = call <4 x i1> @llvm.experimental.loop.dependence.raw.mask.v4i1(ptr %ptrA, ptr %ptrB, i64 4)
+      %loop.dependence.mask = call <4 x i1> @llvm.loop.dependence.raw.mask.v4i1(ptr %ptrA, ptr %ptrB, i64 4)
       call @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %vecA, ptr %ptrA, i32 4, <4 x i1> %loop.dependence.mask)
       [...]
       %vecB = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(ptr %ptrB, i32 4, <4 x i1> %loop.dependence.mask, <4 x i32> poison)

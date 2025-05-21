@@ -476,8 +476,8 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::VECTOR_COMPRESS:
   case ISD::SCMP:
   case ISD::UCMP:
-  case ISD::EXPERIMENTAL_LOOP_DEPENDENCE_WAR_MASK:
-  case ISD::EXPERIMENTAL_LOOP_DEPENDENCE_RAW_MASK:
+  case ISD::LOOP_DEPENDENCE_WAR_MASK:
+  case ISD::LOOP_DEPENDENCE_RAW_MASK:
     Action = TLI.getOperationAction(Node->getOpcode(), Node->getValueType(0));
     break;
   case ISD::SMULFIX:
@@ -1294,8 +1294,8 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   case ISD::UCMP:
     Results.push_back(TLI.expandCMP(Node, DAG));
     return;
-  case ISD::EXPERIMENTAL_LOOP_DEPENDENCE_WAR_MASK:
-  case ISD::EXPERIMENTAL_LOOP_DEPENDENCE_RAW_MASK:
+  case ISD::LOOP_DEPENDENCE_WAR_MASK:
+  case ISD::LOOP_DEPENDENCE_RAW_MASK:
     Results.push_back(ExpandLOOP_DEPENDENCE_MASK(Node));
     return;
 
@@ -1809,8 +1809,7 @@ SDValue VectorLegalizer::ExpandLOOP_DEPENDENCE_MASK(SDNode *N) {
   SDValue SinkValue = N->getOperand(1);
   SDValue EltSize = N->getOperand(2);
 
-  bool IsReadAfterWrite =
-      N->getOpcode() == ISD::EXPERIMENTAL_LOOP_DEPENDENCE_RAW_MASK;
+  bool IsReadAfterWrite = N->getOpcode() == ISD::LOOP_DEPENDENCE_RAW_MASK;
   auto VT = N->getValueType(0);
   auto PtrVT = SourceValue->getValueType(0);
 

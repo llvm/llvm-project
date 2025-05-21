@@ -8314,13 +8314,13 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     visitVectorExtractLastActive(I, Intrinsic);
     return;
   }
-  case Intrinsic::experimental_loop_dependence_war_mask:
-  case Intrinsic::experimental_loop_dependence_raw_mask: {
+  case Intrinsic::loop_dependence_war_mask:
+  case Intrinsic::loop_dependence_raw_mask: {
     auto IntrinsicVT = EVT::getEVT(I.getType());
     SmallVector<SDValue, 4> Ops;
-    unsigned ID = Intrinsic == Intrinsic::experimental_loop_dependence_war_mask
-                      ? ISD::EXPERIMENTAL_LOOP_DEPENDENCE_WAR_MASK
-                      : ISD::EXPERIMENTAL_LOOP_DEPENDENCE_RAW_MASK;
+    unsigned ID = Intrinsic == Intrinsic::loop_dependence_war_mask
+                      ? ISD::LOOP_DEPENDENCE_WAR_MASK
+                      : ISD::LOOP_DEPENDENCE_RAW_MASK;
     setValue(&I,
              DAG.getNode(ID, sdl, IntrinsicVT, getValue(I.getOperand(0)),
                          getValue(I.getOperand(1)), getValue(I.getOperand(2))));

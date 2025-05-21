@@ -587,9 +587,9 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
     return "partial_reduce_smla";
   case ISD::PARTIAL_REDUCE_SUMLA:
     return "partial_reduce_sumla";
-  case ISD::EXPERIMENTAL_LOOP_DEPENDENCE_WAR_MASK:
+  case ISD::LOOP_DEPENDENCE_WAR_MASK:
     return "loop_dep_war";
-  case ISD::EXPERIMENTAL_LOOP_DEPENDENCE_RAW_MASK:
+  case ISD::LOOP_DEPENDENCE_RAW_MASK:
     return "loop_dep_raw";
 
     // Vector Predication
