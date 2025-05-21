@@ -665,8 +665,6 @@ ExprResult Parser::ParseOpenACCConditionExpr() {
   return R.isInvalid() ? ExprError() : R.get().second;
 }
 
-// Tries to parse the 'modifier-list' for a 'copy', 'copyin', 'copyout', or
-// 'create' clause.
 OpenACCModifierKind Parser::tryParseModifierList(OpenACCClauseKind CK) {
   // Use the tentative parsing to decide whether we are a comma-delmited list of
   // identifers ending in a colon so we can do an actual parse with diagnostics.
@@ -729,11 +727,6 @@ OpenACCModifierKind Parser::tryParseModifierList(OpenACCClauseKind CK) {
   return CurModList;
 }
 
-// OpenACC 3.3, section 1.7:
-// To simplify the specification and convey appropriate constraint information,
-// a pqr-list is a comma-separated list of pdr items. The one exception is a
-// clause-list, which is a list of one or more clauses optionally separated by
-// commas.
 SmallVector<OpenACCClause *>
 Parser::ParseOpenACCClauseList(OpenACCDirectiveKind DirKind) {
   SmallVector<OpenACCClause *> Clauses;
@@ -807,15 +800,6 @@ bool Parser::ParseOpenACCIntExprList(OpenACCDirectiveKind DK,
   return false;
 }
 
-/// OpenACC 3.3 Section 2.4:
-/// The argument to the device_type clause is a comma-separated list of one or
-/// more device architecture name identifiers, or an asterisk.
-///
-/// The syntax of the device_type clause is
-/// device_type( * )
-/// device_type( device-type-list )
-///
-/// The device_type clause may be abbreviated to dtype.
 bool Parser::ParseOpenACCDeviceTypeList(
     llvm::SmallVector<IdentifierLoc> &Archs) {
 
@@ -841,12 +825,6 @@ bool Parser::ParseOpenACCDeviceTypeList(
   return false;
 }
 
-/// OpenACC 3.3 Section 2.9:
-/// size-expr is one of:
-//    *
-//    int-expr
-// Note that this is specified under 'gang-arg-list', but also applies to 'tile'
-// via reference.
 ExprResult Parser::ParseOpenACCSizeExpr(OpenACCClauseKind CK) {
   // The size-expr ends up being ambiguous when only looking at the current
   // token, as it could be a deref of a variable/expression.
@@ -895,12 +873,6 @@ bool Parser::ParseOpenACCSizeExprList(
   return false;
 }
 
-/// OpenACC 3.3 Section 2.9:
-///
-/// where gang-arg is one of:
-/// [num:]int-expr
-/// dim:int-expr
-/// static:size-expr
 Parser::OpenACCGangArgRes Parser::ParseOpenACCGangArg(SourceLocation GangLoc) {
 
   if (isOpenACCSpecialToken(OpenACCSpecialTokenKind::Static, getCurToken()) &&
@@ -967,11 +939,6 @@ bool Parser::ParseOpenACCGangArgList(
   return false;
 }
 
-// The OpenACC Clause List is a comma or space-delimited list of clauses (see
-// the comment on ParseOpenACCClauseList).  The concept of a 'clause' doesn't
-// really have its owner grammar and each individual one has its own definition.
-// However, they all are named with a single-identifier (or auto/default!)
-// token, followed in some cases by either braces or parens.
 Parser::OpenACCClauseParseResult
 Parser::ParseOpenACCClause(ArrayRef<const OpenACCClause *> ExistingClauses,
                            OpenACCDirectiveKind DirKind) {
@@ -1278,23 +1245,12 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
       Actions.OpenACC().ActOnClause(ExistingClauses, ParsedClause));
 }
 
-/// OpenACC 3.3 section 2.16:
-/// In this section and throughout the specification, the term async-argument
-/// means a nonnegative scalar integer expression (int for C or C++, integer for
-/// Fortran), or one of the special values acc_async_noval or acc_async_sync, as
-/// defined in the C header file and the Fortran openacc module. The special
-/// values are negative values, so as not to conflict with a user-specified
-/// nonnegative async-argument.
 Parser::OpenACCIntExprParseResult
 Parser::ParseOpenACCAsyncArgument(OpenACCDirectiveKind DK, OpenACCClauseKind CK,
                                   SourceLocation Loc) {
   return ParseOpenACCIntExpr(DK, CK, Loc);
 }
 
-/// OpenACC 3.3, section 2.16:
-/// In this section and throughout the specification, the term wait-argument
-/// means:
-/// [ devnum : int-expr : ] [ queues : ] async-argument-list
 Parser::OpenACCWaitParseInfo
 Parser::ParseOpenACCWaitArgument(SourceLocation Loc, bool IsDirective) {
   OpenACCWaitParseInfo Result;
@@ -1429,6 +1385,11 @@ Parser::ParseOpenACCBindClauseArgument() {
     return II;
   }
 
+  if (!tok::isStringLiteral(getCurToken().getKind())) {
+    Diag(getCurToken(), diag::err_acc_incorrect_bind_arg);
+    return std::monostate{};
+  }
+
   ExprResult Res =
       getActions().CorrectDelayedTyposInExpr(ParseStringLiteralExpression(
           /*AllowUserDefinedLiteral=*/false, /*Unevaluated=*/true));
@@ -1437,13 +1398,6 @@ Parser::ParseOpenACCBindClauseArgument() {
   return cast<StringLiteral>(Res.get());
 }
 
-/// OpenACC 3.3, section 1.6:
-/// In this spec, a 'var' (in italics) is one of the following:
-/// - a variable name (a scalar, array, or composite variable name)
-/// - a subarray specification with subscript ranges
-/// - an array element
-/// - a member of a composite variable
-/// - a common block name between slashes (fortran only)
 Parser::OpenACCVarParseResult Parser::ParseOpenACCVar(OpenACCDirectiveKind DK,
                                                       OpenACCClauseKind CK) {
   OpenACCArraySectionRAII ArraySections(*this);
@@ -1488,10 +1442,6 @@ llvm::SmallVector<Expr *> Parser::ParseOpenACCVarList(OpenACCDirectiveKind DK,
   return Vars;
 }
 
-/// OpenACC 3.3, section 2.10:
-/// In C and C++, the syntax of the cache directive is:
-///
-/// #pragma acc cache ([readonly:]var-list) new-line
 Parser::OpenACCCacheParseInfo Parser::ParseOpenACCCacheVarList() {
   // If this is the end of the line, just return 'false' and count on the close
   // paren diagnostic to catch the issue.
@@ -1673,7 +1623,6 @@ Parser::ParseOpenACCAfterRoutineStmt(OpenACCDirectiveParseInfo &DirInfo) {
       DirInfo.RParenLoc, DirInfo.Clauses, DirInfo.EndLoc, NextStmt.get());
 }
 
-// Parse OpenACC directive on a declaration.
 Parser::DeclGroupPtrTy
 Parser::ParseOpenACCDirectiveDecl(AccessSpecifier &AS, ParsedAttributes &Attrs,
                                   DeclSpec::TST TagType, Decl *TagDecl) {
@@ -1695,7 +1644,6 @@ Parser::ParseOpenACCDirectiveDecl(AccessSpecifier &AS, ParsedAttributes &Attrs,
       DirInfo.RParenLoc, DirInfo.EndLoc, DirInfo.Clauses));
 }
 
-// Parse OpenACC Directive on a Statement.
 StmtResult Parser::ParseOpenACCDirectiveStmt() {
   assert(Tok.is(tok::annot_pragma_openacc) && "expected OpenACC Start Token");
 

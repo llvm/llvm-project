@@ -403,6 +403,27 @@ public:
 };
 
 template <class T>
+class complete_type_allocator {
+public:
+  using value_type = T;
+
+  // Make sure that value_type is a complete when min_allocator is instantiated
+  static_assert(TEST_ALIGNOF(value_type) != 0, "");
+
+  TEST_CONSTEXPR_CXX20 complete_type_allocator() TEST_NOEXCEPT {}
+
+  template <class U>
+  TEST_CONSTEXPR_CXX20 explicit complete_type_allocator(complete_type_allocator<U>) TEST_NOEXCEPT {}
+
+  TEST_CONSTEXPR_CXX20 T* allocate(std::size_t n) { return static_cast<T*>(std::allocator<T>().allocate(n)); }
+
+  TEST_CONSTEXPR_CXX20 void deallocate(T* p, std::size_t n) { std::allocator<T>().deallocate(p, n); }
+
+  TEST_CONSTEXPR_CXX20 friend bool operator==(complete_type_allocator, complete_type_allocator) { return true; }
+  TEST_CONSTEXPR_CXX20 friend bool operator!=(complete_type_allocator, complete_type_allocator) { return false; }
+};
+
+template <class T>
 class explicit_allocator
 {
 public:

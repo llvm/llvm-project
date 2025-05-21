@@ -7229,6 +7229,7 @@ CXCursor clang_getCursorDefinition(CXCursor C) {
   case Decl::MSProperty:
   case Decl::MSGuid:
   case Decl::HLSLBuffer:
+  case Decl::HLSLRootSignature:
   case Decl::UnnamedGlobalConstant:
   case Decl::TemplateParamObject:
   case Decl::IndirectField:
@@ -8871,9 +8872,8 @@ static void getCursorPlatformAvailabilityForDecl(
         return LHS->getPlatform()->getName() < RHS->getPlatform()->getName();
       });
   ASTContext &Ctx = D->getASTContext();
-  auto It = std::unique(
-      AvailabilityAttrs.begin(), AvailabilityAttrs.end(),
-      [&Ctx](AvailabilityAttr *LHS, AvailabilityAttr *RHS) {
+  auto It = llvm::unique(
+      AvailabilityAttrs, [&Ctx](AvailabilityAttr *LHS, AvailabilityAttr *RHS) {
         if (LHS->getPlatform() != RHS->getPlatform())
           return false;
 

@@ -968,8 +968,9 @@ void RewriteInstance::discoverFileObjects() {
       continue;
     }
 
-    // Ignore input hot markers
-    if (SymName == "__hot_start" || SymName == "__hot_end")
+    // Ignore input hot markers unless in heatmap mode
+    if ((SymName == "__hot_start" || SymName == "__hot_end") &&
+        !opts::HeatmapMode)
       continue;
 
     FileSymRefs.emplace(SymbolAddress, Symbol);
@@ -1453,7 +1454,8 @@ void RewriteInstance::updateRtFiniReloc() {
 }
 
 void RewriteInstance::registerFragments() {
-  if (!BC->HasSplitFunctions)
+  if (!BC->HasSplitFunctions ||
+      opts::HeatmapMode == opts::HeatmapModeKind::HM_Exclusive)
     return;
 
   // Process fragments with ambiguous parents separately as they are typically a
@@ -1998,7 +2000,7 @@ Error RewriteInstance::readSpecialSections() {
           BC->getUniqueSectionByName(BoltAddressTranslation::SECTION_NAME)) {
     BC->HasBATSection = true;
     // Do not read BAT when plotting a heatmap
-    if (!opts::HeatmapMode) {
+    if (opts::HeatmapMode != opts::HeatmapModeKind::HM_Exclusive) {
       if (std::error_code EC = BAT->parse(BC->outs(), BATSec->getContents())) {
         BC->errs() << "BOLT-ERROR: failed to parse BOLT address translation "
                       "table.\n";
@@ -2037,7 +2039,7 @@ Error RewriteInstance::readSpecialSections() {
   }
 
   // Force non-relocation mode for heatmap generation
-  if (opts::HeatmapMode)
+  if (opts::HeatmapMode == opts::HeatmapModeKind::HM_Exclusive)
     BC->HasRelocations = false;
 
   if (BC->HasRelocations)
@@ -4701,7 +4703,6 @@ RewriteInstance::getOutputSections(ELFObjectFile<ELFT> *File,
   }
 
   // Assign indices to sections.
-  std::unordered_map<std::string, uint64_t> NameToIndex;
   for (uint32_t Index = 1; Index < OutputSections.size(); ++Index)
     OutputSections[Index].first->setIndex(Index);
 

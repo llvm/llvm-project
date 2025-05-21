@@ -869,13 +869,13 @@ class VOP3_DPPe_Common_Base<bits<10> op, VOPProfile P> : Enc96 {
   let Inst{10}    = !if(P.HasSrc2Mods, src2_modifiers{1}, 0);
   // 16-bit select fields which can be interpreted as OpSel or hi/lo suffix
   let Inst{11} = !if(P.HasOpSel, !if(P.HasSrc0Mods, src0_modifiers{2}, 0),
-                                 !if(P.IsFP8SrcByteSel, byte_sel{1}, ?));
+                                 !if(P.HasFP8SrcByteSel, byte_sel{1}, ?));
   let Inst{12} = !if(P.HasOpSel, !if(P.HasSrc1Mods, src1_modifiers{2}, 0),
-                                 !if(P.IsFP8SrcByteSel, byte_sel{0}, ?));
+                                 !if(P.HasFP8SrcByteSel, byte_sel{0}, ?));
   let Inst{13} = !if(P.HasOpSel, !if(P.HasSrc2Mods, src2_modifiers{2}, 0),
-                                 !if(P.IsFP8DstByteSel, byte_sel{0}, ?));
+                                 !if(P.HasFP8DstByteSel, byte_sel{0}, ?));
   let Inst{14} = !if(P.HasOpSel, !if(P.HasSrc0Mods, src0_modifiers{3}, 0),
-                                 !if(P.IsFP8DstByteSel, byte_sel{1}, ?));
+                                 !if(P.HasFP8DstByteSel, byte_sel{1}, ?));
   let Inst{15}    = !if(P.HasClamp, clamp, 0);
   let Inst{25-16} = op;
   let Inst{31-26} = 0x35;
@@ -1695,11 +1695,11 @@ multiclass VOP3_Real_Base<GFXGen Gen, bits<10> op, string opName = NAME,
                           bit isSingle = 0> {
   defvar ps = !cast<VOP_Pseudo>(opName#"_e64");
   let IsSingle = !or(isSingle, ps.Pfl.IsSingle) in {
-    if ps.Pfl.IsFP8SrcByteSel then {
+    if ps.Pfl.HasFP8SrcByteSel then {
       def _e64#Gen.Suffix :
         VOP3_Real_Gen<ps, Gen>,
         VOP3FP8OpSel_src_bytesel_gfx11_gfx12<op, ps.Pfl>;
-    } else if ps.Pfl.IsFP8DstByteSel then {
+    } else if ps.Pfl.HasFP8DstByteSel then {
       def _e64#Gen.Suffix :
         VOP3_Real_Gen<ps, Gen>,
         VOP3FP8OpSel_dst_bytesel_gfx11_gfx12<op, ps.Pfl>;
@@ -1733,11 +1733,11 @@ multiclass VOP3_Real_with_name<GFXGen Gen, bits<10> op, string opName,
   let AsmString = asmName # ps.AsmOperands,
       IsSingle = !or(isSingle, ps.Pfl.IsSingle) in {
     // FIXME-TRUE16 support FP8 instructions properly
-    if ps.Pfl.IsFP8SrcByteSel then {
+    if ps.Pfl.HasFP8SrcByteSel then {
       def _e64#Gen.Suffix :
         VOP3_Real_Gen<ps, Gen>,
         VOP3FP8OpSel_src_bytesel_gfx11_gfx12<op, ps.Pfl>;
-    } else if ps.Pfl.IsFP8DstByteSel then {
+    } else if ps.Pfl.HasFP8DstByteSel then {
       def _e64#Gen.Suffix :
         VOP3_Real_Gen<ps, Gen>,
         VOP3FP8OpSel_dst_bytesel_gfx11_gfx12<op, ps.Pfl>;
