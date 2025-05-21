@@ -108,3 +108,36 @@ module {
   } loc(#loc)
 } loc(#loc2)
 
+// -----
+
+// CHECK-LABEL: llvm.func @func_name_with_child()
+// CHECK: #di_file = #llvm.di_file<"file" in "/tmp">
+// CHECK: #di_subroutine_type = #llvm.di_subroutine_type<callingConvention = DW_CC_normal>
+// CHECK: #di_subprogram = #llvm.di_subprogram<scope = #di_file, name = "func_name_with_child", linkageName = "func_name_with_child", file = #di_file, line = 100, scopeLine = 100, subprogramFlags = Optimized, type = #di_subroutine_type>
+
+module {
+  llvm.func @func_name_with_child() loc("foo"("/tmp/file":100))
+} loc(unknown)
+
+// -----
+
+// CHECK-LABEL: llvm.func @func_fusion()
+// CHECK: #di_file = #llvm.di_file<"file" in "/tmp">
+// CHECK: #di_subroutine_type = #llvm.di_subroutine_type<callingConvention = DW_CC_normal>
+// CHECK: #di_subprogram = #llvm.di_subprogram<scope = #di_file, name = "func_fusion", linkageName = "func_fusion", file = #di_file, line = 20, scopeLine = 20, subprogramFlags = Optimized, type = #di_subroutine_type>
+
+module {
+  llvm.func @func_fusion() loc(fused<"myPass">["foo", "/tmp/file":20])
+} loc(unknown)
+
+// -----
+
+// CHECK-LABEL: llvm.func @func_callsiteloc()
+// CHECK: #di_file = #llvm.di_file<"mysource.cc" in "">
+// CHECK: #di_subroutine_type = #llvm.di_subroutine_type<callingConvention = DW_CC_normal>
+// CHECK: #di_subprogram = #llvm.di_subprogram<scope = #di_file, name = "func_callsiteloc", linkageName = "func_callsiteloc", file = #di_file, line = 10, scopeLine = 10, subprogramFlags = Optimized, type = #di_subroutine_type>
+
+module {
+  llvm.func @func_callsiteloc() loc(callsite("foo" at "mysource.cc":10:8))
+} loc(unknown)
+
