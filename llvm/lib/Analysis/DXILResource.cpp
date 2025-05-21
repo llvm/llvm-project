@@ -64,7 +64,7 @@ static StringRef getResourceKindName(ResourceKind RK) {
   case ResourceKind::TextureCubeArray:
     return "TextureCubeArray";
   case ResourceKind::TypedBuffer:
-    return "TypedBuffer";
+    return "Buffer";
   case ResourceKind::RawBuffer:
     return "RawBuffer";
   case ResourceKind::StructuredBuffer:
@@ -126,6 +126,44 @@ static StringRef getElementTypeName(ElementType ET) {
     return "p32i8";
   case ElementType::PackedU8x32:
     return "p32u8";
+  case ElementType::Invalid:
+    return "<invalid>";
+  }
+  llvm_unreachable("Unhandled ElementType");
+}
+
+static StringRef getElementTypeNameForTemplate(ElementType ET) {
+  switch (ET) {
+  case ElementType::I1:
+    return "bool";
+  case ElementType::I16:
+    return "int16_t";
+  case ElementType::U16:
+    return "uint16_t";
+  case ElementType::I32:
+    return "int32_t";
+  case ElementType::U32:
+    return "uint32_t";
+  case ElementType::I64:
+    return "int64_t";
+  case ElementType::U64:
+    return "uint32_t";
+  case ElementType::F16:
+  case ElementType::SNormF16:
+  case ElementType::UNormF16:
+    return "half";
+  case ElementType::F32:
+  case ElementType::SNormF32:
+  case ElementType::UNormF32:
+    return "float";
+  case ElementType::F64:
+  case ElementType::SNormF64:
+  case ElementType::UNormF64:
+    return "double";
+  case ElementType::PackedS8x32:
+    return "int8_t4_packed";
+  case ElementType::PackedU8x32:
+    return "uint8_t4_packed";
   case ElementType::Invalid:
     return "<invalid>";
   }
@@ -219,9 +257,44 @@ ResourceTypeInfo::ResourceTypeInfo(TargetExtType *HandleTy,
 }
 
 static void formatTypeName(SmallString<64> &Dest, StringRef Name,
-                           bool isWriteable, bool isROV) {
-  Dest = isWriteable ? (isROV ? "RasterizerOrdered" : "RW") : "";
+                           bool IsWriteable, bool IsROV) {
+  Dest = IsWriteable ? (IsROV ? "RasterizerOrdered" : "RW") : "";
   Dest += Name;
+}
+
+static void formatTypeName(SmallString<64> &Dest, StringRef Name,
+                           bool IsWriteable, bool IsROV, Type *ContainedType,
+                           bool IsSigned) {
+  raw_svector_ostream DestStream(Dest);
+  if (IsWriteable)
+    DestStream << (IsROV ? "RasterizerOrdered" : "RW");
+  DestStream << Name;
+
+  if (ContainedType) {
+    StringRef ElementName;
+    ElementType ET = toDXILElementType(ContainedType, IsSigned);
+    if (ET != ElementType::Invalid) {
+      ElementName = getElementTypeNameForTemplate(ET);
+    } else if (StructType *ST = dyn_cast<StructType>(ContainedType)) {
+      if (!ST->hasName())
+        return;
+      ElementName = ST->getStructName();
+    } else {
+      llvm_unreachable("invalid element type for raw buffer");
+    }
+
+    if (const FixedVectorType *VTy = dyn_cast<FixedVectorType>(ContainedType))
+      DestStream << "<" << ElementName << VTy->getNumElements() << ">";
+    else
+      DestStream << "<" << ElementName << ">";
+  }
+}
+
+static StructType *getOrCreateElementStruct(Type *ElemType, StringRef Name) {
+  StructType *Ty = StructType::getTypeByName(ElemType->getContext(), Name);
+  if (Ty && Ty->getNumElements() == 1 && Ty->getElementType(0) == ElemType)
+    return Ty;
+  return StructType::create(ElemType, Name);
 }
 
 StructType *ResourceTypeInfo::createElementStruct() {
@@ -237,51 +310,56 @@ StructType *ResourceTypeInfo::createElementStruct() {
   case ResourceKind::TextureCubeArray: {
     auto *RTy = cast<TextureExtType>(HandleTy);
     formatTypeName(TypeName, getResourceKindName(Kind), RTy->isWriteable(),
-                   RTy->isROV());
-    return StructType::create(RTy->getResourceType(), TypeName);
+                   RTy->isROV(), RTy->getResourceType(), RTy->isSigned());
+    return getOrCreateElementStruct(RTy->getResourceType(), TypeName);
   }
   case ResourceKind::Texture2DMS:
   case ResourceKind::Texture2DMSArray: {
     auto *RTy = cast<MSTextureExtType>(HandleTy);
     formatTypeName(TypeName, getResourceKindName(Kind), RTy->isWriteable(),
-                   /*IsROV=*/false);
-    return StructType::create(RTy->getResourceType(), TypeName);
+                   /*IsROV=*/false, RTy->getResourceType(), RTy->isSigned());
+    return getOrCreateElementStruct(RTy->getResourceType(), TypeName);
   }
   case ResourceKind::TypedBuffer: {
     auto *RTy = cast<TypedBufferExtType>(HandleTy);
     formatTypeName(TypeName, getResourceKindName(Kind), RTy->isWriteable(),
-                   RTy->isROV());
-    return StructType::create(RTy->getResourceType(), TypeName);
+                   RTy->isROV(), RTy->getResourceType(), RTy->isSigned());
+    return getOrCreateElementStruct(RTy->getResourceType(), TypeName);
   }
   case ResourceKind::RawBuffer: {
     auto *RTy = cast<RawBufferExtType>(HandleTy);
     formatTypeName(TypeName, "ByteAddressBuffer", RTy->isWriteable(),
                    RTy->isROV());
-    return StructType::create(Type::getInt32Ty(HandleTy->getContext()),
-                              TypeName);
+    return getOrCreateElementStruct(Type::getInt32Ty(HandleTy->getContext()),
+                                    TypeName);
   }
   case ResourceKind::StructuredBuffer: {
     auto *RTy = cast<RawBufferExtType>(HandleTy);
+    Type *Ty = RTy->getResourceType();
     formatTypeName(TypeName, "StructuredBuffer", RTy->isWriteable(),
-                   RTy->isROV());
-    return StructType::create(RTy->getResourceType(), TypeName);
+                   RTy->isROV(), RTy->getResourceType(), true);
+    return getOrCreateElementStruct(Ty, TypeName);
   }
   case ResourceKind::FeedbackTexture2D:
   case ResourceKind::FeedbackTexture2DArray: {
     auto *RTy = cast<FeedbackTextureExtType>(HandleTy);
     TypeName = formatv("{0}<{1}>", getResourceKindName(Kind),
                        llvm::to_underlying(RTy->getFeedbackType()));
-    return StructType::create(Type::getInt32Ty(HandleTy->getContext()),
-                              TypeName);
+    return getOrCreateElementStruct(Type::getInt32Ty(HandleTy->getContext()),
+                                    TypeName);
   }
-  case ResourceKind::CBuffer:
-    return StructType::create(HandleTy->getContext(), "cbuffer");
+  case ResourceKind::CBuffer: {
+    auto *RTy = cast<CBufferExtType>(HandleTy);
+    LayoutExtType *LayoutType = cast<LayoutExtType>(RTy->getResourceType());
+    StructType *Ty = cast<StructType>(LayoutType->getWrappedType());
+    return StructType::create(Ty->elements(), getResourceKindName(Kind));
+  }
   case ResourceKind::Sampler: {
     auto *RTy = cast<SamplerExtType>(HandleTy);
     TypeName = formatv("SamplerState<{0}>",
                        llvm::to_underlying(RTy->getSamplerType()));
-    return StructType::create(Type::getInt32Ty(HandleTy->getContext()),
-                              TypeName);
+    return getOrCreateElementStruct(Type::getInt32Ty(HandleTy->getContext()),
+                                    TypeName);
   }
   case ResourceKind::TBuffer:
   case ResourceKind::RTAccelerationStructure:
