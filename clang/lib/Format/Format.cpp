@@ -3808,8 +3808,10 @@ reformat(const FormatStyle &Style, StringRef Code,
     tooling::Replacements Replaces =
         Formatter(*Env, Style, Status).process().first;
     // add a replacement to remove the "x = " from the result.
-    Replaces = Replaces.merge(
-        tooling::Replacements(tooling::Replacement(FileName, 0, 4, "")));
+    if (Code.starts_with("x = ")) {
+      Replaces = Replaces.merge(
+          tooling::Replacements(tooling::Replacement(FileName, 0, 4, "")));
+    }
     // apply the reformatting changes and the removal of "x = ".
     if (applyAllReplacements(Code, Replaces))
       return {Replaces, 0};
