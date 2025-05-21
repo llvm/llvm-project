@@ -66,6 +66,8 @@ static raw_ostream &operator<<(raw_ostream &OS,
   case ShaderVisibility::Mesh:
     OS << "Mesh";
     break;
+  case ShaderVisibility::NumEnums:
+    break;
   }
 
   return OS;
