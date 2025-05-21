@@ -208,7 +208,7 @@ static Value *LowerCLMUL(LLVMContext &Context, Value *V1, Value *V2, Instruction
   Value *Res = ConstantInt::get(V1->getType(), 0);
   Value *Zero = ConstantInt::get(V1->getType(), 0);
   Value *One = ConstantInt::get(V1->getType(), 1);
-  for (unsigned I = 1; I < BitSize; I ++) {
+  for (unsigned I = 1; I < BitSize; I++) {
     Value *LowBit = Builder.CreateAnd(V1, One, "clmul.isodd");
     Value *Pred = Builder.CreateSelect(LowBit, V2, Zero, "clmul.V2_or_zero");
     Res = Builder.CreateXor(Res, Pred, "clmul.Res");
