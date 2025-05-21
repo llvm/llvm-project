@@ -847,7 +847,7 @@ public:
     return TrackedGlobals;
   }
 
-  const SmallPtrSet<Function *, 16> getMRVFunctionsTracked() {
+  const SmallPtrSet<Function *, 16> &getMRVFunctionsTracked() {
     return MRVFunctionsTracked;
   }
 
@@ -2230,7 +2230,7 @@ SCCPSolver::getTrackedGlobals() {
   return Visitor->getTrackedGlobals();
 }
 
-const SmallPtrSet<Function *, 16> SCCPSolver::getMRVFunctionsTracked() {
+const SmallPtrSet<Function *, 16> &SCCPSolver::getMRVFunctionsTracked() {
   return Visitor->getMRVFunctionsTracked();
 }
 
