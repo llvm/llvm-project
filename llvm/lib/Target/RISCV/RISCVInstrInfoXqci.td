@@ -1327,10 +1327,10 @@ class Bcci48Pat<CondCode Cond, QCIBranchInst48_rii Inst, DAGOperand InTyImm>
     : Pat<(riscv_brcc (XLenVT GPRNoX0:$rs1), InTyImm:$rs2, Cond, bb:$imm12),
           (Inst GPRNoX0:$rs1, InTyImm:$rs2, bare_simm13_lsb0:$imm12)>;
 
-defm QC_CC_SImm5NonZero  : SelectCC_GPR_riirr<GPRNoX0, simm5nonzero>;
-defm QC_CC_UImm5NonZero  : SelectCC_GPR_riirr<GPRNoX0, uimm5nonzero>;
-defm QC_CC_SImm16NonZero : SelectCC_GPR_riirr<GPRNoX0, simm16nonzero>;
-defm QC_CC_UImm16NonZero : SelectCC_GPR_riirr<GPRNoX0, uimm16nonzero>;
+defm CC_SImm5NonZero_QC  : SelectCC_GPR_riirr<GPRNoX0, simm5nonzero>;
+defm CC_UImm5NonZero_QC  : SelectCC_GPR_riirr<GPRNoX0, uimm5nonzero>;
+defm CC_SImm16NonZero_QC : SelectCC_GPR_riirr<GPRNoX0, simm16nonzero>;
+defm CC_UImm16NonZero_QC : SelectCC_GPR_riirr<GPRNoX0, uimm16nonzero>;
 
 class SelectQCbi<CondCode Cond, DAGOperand InTyImm, Pseudo OpNode >
     : Pat<(riscv_selectcc_frag:$cc (i32 GPRNoX0:$lhs), InTyImm:$Constant, Cond,
@@ -1409,19 +1409,19 @@ def : Bcci48Pat<SETGE, QC_E_BGEI, simm16nonzero>;
 def : Bcci48Pat<SETULT, QC_E_BLTUI, uimm16nonzero>;
 def : Bcci48Pat<SETUGE, QC_E_BGEUI, uimm16nonzero>;
 
-def : SelectQCbi<SETEQ, simm5nonzero, Select_GPRNoX0_Using_QC_CC_SImm5NonZero>;
-def : SelectQCbi<SETNE, simm5nonzero, Select_GPRNoX0_Using_QC_CC_SImm5NonZero>;
-def : SelectQCbi<SETLT, simm5nonzero, Select_GPRNoX0_Using_QC_CC_SImm5NonZero>;
-def : SelectQCbi<SETGE, simm5nonzero, Select_GPRNoX0_Using_QC_CC_SImm5NonZero>;
-def : SelectQCbi<SETULT, uimm5nonzero, Select_GPRNoX0_Using_QC_CC_UImm5NonZero>;
-def : SelectQCbi<SETUGE, uimm5nonzero, Select_GPRNoX0_Using_QC_CC_UImm5NonZero>;
+def : SelectQCbi<SETEQ, simm5nonzero, Select_GPRNoX0_Using_CC_SImm5NonZero_QC>;
+def : SelectQCbi<SETNE, simm5nonzero, Select_GPRNoX0_Using_CC_SImm5NonZero_QC>;
+def : SelectQCbi<SETLT, simm5nonzero, Select_GPRNoX0_Using_CC_SImm5NonZero_QC>;
+def : SelectQCbi<SETGE, simm5nonzero, Select_GPRNoX0_Using_CC_SImm5NonZero_QC>;
+def : SelectQCbi<SETULT, uimm5nonzero, Select_GPRNoX0_Using_CC_UImm5NonZero_QC>;
+def : SelectQCbi<SETUGE, uimm5nonzero, Select_GPRNoX0_Using_CC_UImm5NonZero_QC>;
 
-def : SelectQCbi<SETEQ, simm16nonzero, Select_GPRNoX0_Using_QC_CC_SImm16NonZero>;
-def : SelectQCbi<SETNE, simm16nonzero, Select_GPRNoX0_Using_QC_CC_SImm16NonZero>;
-def : SelectQCbi<SETLT, simm16nonzero, Select_GPRNoX0_Using_QC_CC_SImm16NonZero>;
-def : SelectQCbi<SETGE, simm16nonzero, Select_GPRNoX0_Using_QC_CC_SImm16NonZero>;
-def : SelectQCbi<SETULT, uimm16nonzero, Select_GPRNoX0_Using_QC_CC_UImm16NonZero>;
-def : SelectQCbi<SETUGE, uimm16nonzero, Select_GPRNoX0_Using_QC_CC_UImm16NonZero>;
+def : SelectQCbi<SETEQ, simm16nonzero, Select_GPRNoX0_Using_CC_SImm16NonZero_QC>;
+def : SelectQCbi<SETNE, simm16nonzero, Select_GPRNoX0_Using_CC_SImm16NonZero_QC>;
+def : SelectQCbi<SETLT, simm16nonzero, Select_GPRNoX0_Using_CC_SImm16NonZero_QC>;
+def : SelectQCbi<SETGE, simm16nonzero, Select_GPRNoX0_Using_CC_SImm16NonZero_QC>;
+def : SelectQCbi<SETULT, uimm16nonzero, Select_GPRNoX0_Using_CC_UImm16NonZero_QC>;
+def : SelectQCbi<SETUGE, uimm16nonzero, Select_GPRNoX0_Using_CC_UImm16NonZero_QC>;
 } // let Predicates = [HasVendorXqcibi, IsRV32], AddedComplexity = 2
 
 let Predicates = [HasVendorXqcibm, IsRV32] in {
