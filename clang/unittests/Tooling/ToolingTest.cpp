@@ -771,7 +771,7 @@ TEST(ClangToolTest, BaseVirtualFileSystemUsage) {
   EXPECT_EQ(0, Tool.run(Action.get()));
 }
 
-// Check -cc1 command doesn't crash.
+// Check -cc1 command doesn't fail.
 TEST(ClangToolTest, CC1Arg) {
   FixedCompilationDatabase Compilations("/", {"-cc1"});
   llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFileSystem(
