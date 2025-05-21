@@ -151,9 +151,6 @@ def doRsqrtOpt : Predicate<"doRsqrtOpt()">;
 
 def doMulWide      : Predicate<"doMulWide">;
 
-def do_DIVF32_APPROX : Predicate<"getDivF32Level()==0">;
-def do_DIVF32_FULL : Predicate<"getDivF32Level()==1">;
-
 def do_SQRTF32_APPROX : Predicate<"!usePrecSqrtF32()">;
 def do_SQRTF32_RN : Predicate<"usePrecSqrtF32()">;
 
@@ -239,6 +236,47 @@ def BF16RT   : RegTyInfo<bf16, Int16Regs, bf16imm, fpimm, supports_imm = 0>;
 
 def F16X2RT  : RegTyInfo<v2f16, Int32Regs, ?, ?, supports_imm = 0>;
 def BF16X2RT : RegTyInfo<v2bf16, Int32Regs, ?, ?, supports_imm = 0>;
+
+// This class provides a basic wrapper around an NVPTXInst that abstracts the
+// specific syntax of most PTX instructions. It automatically handles the
+// construction of the asm string based on the provided dag arguments.
+// For example, the following asm-strings would be computed:
+//
+//   * BasicFlagsNVPTXInst<(outs Int32Regs:$dst),
+//                         (ins Int32Regs:$a, Int32Regs:$b), (ins),
+//                         "add.s32">;
+//         ---> "add.s32 \t$dst, $a, $b;"
+//
+//   * BasicFlagsNVPTXInst<(outs Int32Regs:$d),
+//                         (ins Int32Regs:$a, Int32Regs:$b, Hexu32imm:$c),
+//                         (ins PrmtMode:$mode),
+//                         "prmt.b32${mode}">;
+//         ---> "prmt.b32${mode} \t$d, $a, $b, $c;"
+//
+class BasicFlagsNVPTXInst<dag outs_dag, dag ins_dag, dag flags_dag, string asmstr,
+                          list<dag> pattern = []>
+  : NVPTXInst<
+      outs_dag,
+      !con(ins_dag, flags_dag),
+      !strconcat(
+        asmstr,
+        !if(!and(!empty(ins_dag), !empty(outs_dag)), "",
+          !strconcat(
+            " \t",
+            !interleave(
+              !foreach(i, !range(!size(outs_dag)),
+                "$" # !getdagname(outs_dag, i)),
+              "|"),
+            !if(!or(!empty(ins_dag), !empty(outs_dag)), "", ", "),
+            !interleave(
+              !foreach(i, !range(!size(ins_dag)),
+                "$" # !getdagname(ins_dag, i)),
+              ", "))),
+        ";"),
+      pattern>;
+
+class BasicNVPTXInst<dag outs, dag insv, string asmstr, list<dag> pattern = []>
+  : BasicFlagsNVPTXInst<outs, insv, (ins), asmstr, pattern>;
 
 
 multiclass I3Inst<string op_str, SDPatternOperator op_node, RegTyInfo t,
@@ -1119,26 +1157,19 @@ def INEG64 :
 //-----------------------------------
 
 // Constant 1.0f
-def FloatConst1 : PatLeaf<(fpimm), [{
-  return &N->getValueAPF().getSemantics() == &llvm::APFloat::IEEEsingle() &&
-         N->getValueAPF().convertToFloat() == 1.0f;
+def f32imm_1 : FPImmLeaf<f32, [{
+  return &Imm.getSemantics() == &llvm::APFloat::IEEEsingle() &&
+         Imm.convertToFloat() == 1.0f;
 }]>;
 // Constant 1.0 (double)
-def DoubleConst1 : PatLeaf<(fpimm), [{
-  return &N->getValueAPF().getSemantics() == &llvm::APFloat::IEEEdouble() &&
-         N->getValueAPF().convertToDouble() == 1.0;
+def f64imm_1 : FPImmLeaf<f64, [{
+  return &Imm.getSemantics() == &llvm::APFloat::IEEEdouble() &&
+         Imm.convertToDouble() == 1.0;
 }]>;
 // Constant -1.0 (double)
-def DoubleConstNeg1 : PatLeaf<(fpimm), [{
-  return &N->getValueAPF().getSemantics() == &llvm::APFloat::IEEEdouble() &&
-         N->getValueAPF().convertToDouble() == -1.0;
-}]>;
-
-
-// Constant -X -> X (double)
-def NegDoubleConst : SDNodeXForm<fpimm, [{
-  return CurDAG->getTargetConstantFP(-(N->getValueAPF()),
-                                     SDLoc(N), MVT::f64);
+def f64imm_neg1 : FPImmLeaf<f64, [{
+  return &Imm.getSemantics() == &llvm::APFloat::IEEEdouble() &&
+         Imm.convertToDouble() == -1.0;
 }]>;
 
 defm FADD : F3_fma_component<"add", fadd>;
@@ -1189,11 +1220,11 @@ def BFNEG16x2     : FNEG_BF16_F16X2<"neg.bf16x2", v2bf16, Int32Regs, True>;
 //
 // F64 division
 //
-def FDIV641r :
+def FRCP64r :
   NVPTXInst<(outs Float64Regs:$dst),
-            (ins f64imm:$a, Float64Regs:$b),
+            (ins Float64Regs:$b),
             "rcp.rn.f64 \t$dst, $b;",
-            [(set f64:$dst, (fdiv DoubleConst1:$a, f64:$b))]>;
+            [(set f64:$dst, (fdiv f64imm_1, f64:$b))]>;
 def FDIV64rr :
   NVPTXInst<(outs Float64Regs:$dst),
             (ins Float64Regs:$a, Float64Regs:$b),
@@ -1207,24 +1238,31 @@ def FDIV64ri :
 
 // fdiv will be converted to rcp
 // fneg (fdiv 1.0, X) => fneg (rcp.rn X)
-def : Pat<(fdiv DoubleConstNeg1:$a, f64:$b),
-          (FNEGf64 (FDIV641r (NegDoubleConst node:$a), $b))>;
+def : Pat<(fdiv f64imm_neg1, f64:$b),
+          (FNEGf64 (FRCP64r $b))>;
 
 //
 // F32 Approximate reciprocal
 //
-def FDIV321r_ftz :
+
+def fdiv_approx : PatFrag<(ops node:$a, node:$b),
+                          (fdiv node:$a, node:$b), [{
+  return getDivF32Level(N) == NVPTX::DivPrecisionLevel::Approx;
+}]>;
+
+
+def FRCP32_approx_r_ftz :
   NVPTXInst<(outs Float32Regs:$dst),
-            (ins f32imm:$a, Float32Regs:$b),
+            (ins Float32Regs:$b),
             "rcp.approx.ftz.f32 \t$dst, $b;",
-            [(set f32:$dst, (fdiv FloatConst1:$a, f32:$b))]>,
-            Requires<[do_DIVF32_APPROX, doF32FTZ]>;
-def FDIV321r :
+            [(set f32:$dst, (fdiv_approx f32imm_1, f32:$b))]>,
+            Requires<[doF32FTZ]>;
+def FRCP32_approx_r :
   NVPTXInst<(outs Float32Regs:$dst),
-            (ins f32imm:$a, Float32Regs:$b),
+            (ins Float32Regs:$b),
             "rcp.approx.f32 \t$dst, $b;",
-            [(set f32:$dst, (fdiv FloatConst1:$a, f32:$b))]>,
-            Requires<[do_DIVF32_APPROX]>;
+            [(set f32:$dst, (fdiv_approx f32imm_1, f32:$b))]>;
+
 //
 // F32 Approximate division
 //
@@ -1232,43 +1270,43 @@ def FDIV32approxrr_ftz :
   NVPTXInst<(outs Float32Regs:$dst),
             (ins Float32Regs:$a, Float32Regs:$b),
             "div.approx.ftz.f32 \t$dst, $a, $b;",
-            [(set f32:$dst, (fdiv f32:$a, f32:$b))]>,
-            Requires<[do_DIVF32_APPROX, doF32FTZ]>;
+            [(set f32:$dst, (fdiv_approx f32:$a, f32:$b))]>,
+            Requires<[doF32FTZ]>;
 def FDIV32approxri_ftz :
   NVPTXInst<(outs Float32Regs:$dst),
             (ins Float32Regs:$a, f32imm:$b),
             "div.approx.ftz.f32 \t$dst, $a, $b;",
-            [(set f32:$dst, (fdiv f32:$a, fpimm:$b))]>,
-            Requires<[do_DIVF32_APPROX, doF32FTZ]>;
+            [(set f32:$dst, (fdiv_approx f32:$a, fpimm:$b))]>,
+            Requires<[doF32FTZ]>;
 def FDIV32approxrr :
   NVPTXInst<(outs Float32Regs:$dst),
             (ins Float32Regs:$a, Float32Regs:$b),
             "div.approx.f32 \t$dst, $a, $b;",
-            [(set f32:$dst, (fdiv f32:$a, f32:$b))]>,
-            Requires<[do_DIVF32_APPROX]>;
+            [(set f32:$dst, (fdiv_approx f32:$a, f32:$b))]>;
 def FDIV32approxri :
   NVPTXInst<(outs Float32Regs:$dst),
             (ins Float32Regs:$a, f32imm:$b),
             "div.approx.f32 \t$dst, $a, $b;",
-            [(set f32:$dst, (fdiv f32:$a, fpimm:$b))]>,
-            Requires<[do_DIVF32_APPROX]>;
+            [(set f32:$dst, (fdiv_approx f32:$a, fpimm:$b))]>;
 //
 // F32 Semi-accurate reciprocal
 //
 // rcp.approx gives the same result as div.full(1.0f, a) and is faster.
 //
-def FDIV321r_approx_ftz :
-  NVPTXInst<(outs Float32Regs:$dst),
-            (ins f32imm:$a, Float32Regs:$b),
-            "rcp.approx.ftz.f32 \t$dst, $b;",
-            [(set f32:$dst, (fdiv FloatConst1:$a, f32:$b))]>,
-            Requires<[do_DIVF32_FULL, doF32FTZ]>;
-def FDIV321r_approx :
-  NVPTXInst<(outs Float32Regs:$dst),
-            (ins f32imm:$a, Float32Regs:$b),
-            "rcp.approx.f32 \t$dst, $b;",
-            [(set f32:$dst, (fdiv FloatConst1:$a, f32:$b))]>,
-            Requires<[do_DIVF32_FULL]>;
+
+def fdiv_full : PatFrag<(ops node:$a, node:$b),
+                        (fdiv node:$a, node:$b), [{
+  return getDivF32Level(N) == NVPTX::DivPrecisionLevel::Full;
+}]>;
+
+
+def : Pat<(fdiv_full f32imm_1, f32:$b),
+          (FRCP32_approx_r_ftz $b)>,
+      Requires<[doF32FTZ]>;
+
+def : Pat<(fdiv_full f32imm_1, f32:$b),
+          (FRCP32_approx_r $b)>;
+
 //
 // F32 Semi-accurate division
 //
@@ -1276,40 +1314,38 @@ def FDIV32rr_ftz :
   NVPTXInst<(outs Float32Regs:$dst),
             (ins Float32Regs:$a, Float32Regs:$b),
             "div.full.ftz.f32 \t$dst, $a, $b;",
-            [(set f32:$dst, (fdiv Float32Regs:$a, f32:$b))]>,
-            Requires<[do_DIVF32_FULL, doF32FTZ]>;
+            [(set f32:$dst, (fdiv_full f32:$a, f32:$b))]>,
+            Requires<[doF32FTZ]>;
 def FDIV32ri_ftz :
   NVPTXInst<(outs Float32Regs:$dst),
             (ins Float32Regs:$a, f32imm:$b),
             "div.full.ftz.f32 \t$dst, $a, $b;",
-            [(set f32:$dst, (fdiv f32:$a, fpimm:$b))]>,
-            Requires<[do_DIVF32_FULL, doF32FTZ]>;
+            [(set f32:$dst, (fdiv_full f32:$a, fpimm:$b))]>,
+            Requires<[doF32FTZ]>;
 def FDIV32rr :
   NVPTXInst<(outs Float32Regs:$dst),
             (ins Float32Regs:$a, Float32Regs:$b),
             "div.full.f32 \t$dst, $a, $b;",
-            [(set f32:$dst, (fdiv f32:$a, f32:$b))]>,
-            Requires<[do_DIVF32_FULL]>;
+            [(set f32:$dst, (fdiv_full f32:$a, f32:$b))]>;
 def FDIV32ri :
   NVPTXInst<(outs Float32Regs:$dst),
             (ins Float32Regs:$a, f32imm:$b),
             "div.full.f32 \t$dst, $a, $b;",
-            [(set f32:$dst, (fdiv f32:$a, fpimm:$b))]>,
-            Requires<[do_DIVF32_FULL]>;
+            [(set f32:$dst, (fdiv_full f32:$a, fpimm:$b))]>;
 //
 // F32 Accurate reciprocal
 //
-def FDIV321r_prec_ftz :
+def FRCP32r_prec_ftz :
   NVPTXInst<(outs Float32Regs:$dst),
-            (ins f32imm:$a, Float32Regs:$b),
+            (ins Float32Regs:$b),
             "rcp.rn.ftz.f32 \t$dst, $b;",
-            [(set f32:$dst, (fdiv FloatConst1:$a, f32:$b))]>,
+            [(set f32:$dst, (fdiv f32imm_1, f32:$b))]>,
             Requires<[doF32FTZ]>;
-def FDIV321r_prec :
+def FRCP32r_prec :
   NVPTXInst<(outs Float32Regs:$dst),
-            (ins f32imm:$a, Float32Regs:$b),
+            (ins Float32Regs:$b),
             "rcp.rn.f32 \t$dst, $b;",
-            [(set f32:$dst, (fdiv FloatConst1:$a, f32:$b))]>;
+            [(set f32:$dst, (fdiv f32imm_1, f32:$b))]>;
 //
 // F32 Accurate division
 //

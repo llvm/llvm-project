@@ -3257,8 +3257,7 @@ def err_attribute_too_few_arguments : Error<
   "%0 attribute takes at least %1 argument%s1">;
 def err_attribute_invalid_vector_type : Error<"invalid vector element type %0">;
 def err_attribute_invalid_bitint_vector_type : Error<
-  "'_BitInt' %select{vector|matrix}0 element width must be %select{a power of 2|"
-  "at least as wide as 'CHAR_BIT'}1">;
+  "'_BitInt' %select{vector|matrix}0 element width must be a power of 2">;
 def err_attribute_invalid_matrix_type : Error<"invalid matrix element type %0">;
 def err_attribute_bad_neon_vector_size : Error<
   "Neon vector size must be 64 or 128 bits">;
@@ -4368,6 +4367,29 @@ def warn_address_of_reference_bool_conversion : Warning<
   "reference cannot be bound to dereferenced null pointer in well-defined C++ "
   "code; pointer may be assumed to always convert to true">,
   InGroup<UndefinedBoolConversion>;
+
+def warn_impcast_unicode_char_type
+    : Warning<"implicit conversion from %0 to %1 may change the meaning of the "
+              "represented code unit">,
+      InGroup<CharacterConversion>;
+def warn_impcast_unicode_precision
+    : Warning<"implicit conversion from %0 to %1 may lose precision and change "
+              "the meaning of the represented code unit">,
+      InGroup<CharacterConversion>;
+def warn_impcast_unicode_char_type_constant
+    : Warning<"implicit conversion from %0 to %1 changes the meaning of the "
+              "%select{code unit|code point}2 '%3'">,
+      InGroup<CharacterConversion>;
+
+def warn_comparison_unicode_mixed_types
+    : Warning<"comparing values of different Unicode code unit types %0 and %1 "
+              "may compare different code points">,
+      InGroup<CharacterConversion>;
+
+def warn_comparison_unicode_mixed_types_constant
+    : Warning<"comparing values of different Unicode code unit types %0 and %1 "
+              "compares unrelated code units '%2' and '%3'">,
+      InGroup<CharacterConversion>;
 
 def warn_xor_used_as_pow : Warning<
   "result of '%0' is %1; did you mean exponentiation?">,
@@ -6834,7 +6856,7 @@ def err_counted_by_on_incomplete_type_on_use : Error <
 
 def note_counted_by_consider_completing_pointee_ty : Note<
   "consider providing a complete definition for %0">;
-  
+
 def note_counted_by_consider_using_sized_by : Note<
   "consider using '__sized_by%select{|_or_null}0' instead of "
   "'__counted_by%select{|_or_null}0'">;
@@ -7732,6 +7754,11 @@ def warn_comparison_of_mixed_enum_types_switch : Warning<
   "comparison of different enumeration types in switch statement"
   "%diff{ ($ and $)|}0,1">,
   InGroup<EnumCompareSwitch>;
+
+def warn_arith_conv_mixed_unicode_types
+    : Warning<"%sub{select_arith_conv_kind}0 "
+              "different Unicode character types %1 and %2">,
+      InGroup<CharacterConversion>;
 
 def err_typecheck_assign_const : Error<
   "%select{"
@@ -12416,6 +12443,10 @@ def warn_nullability_lost : Warning<
 def warn_zero_as_null_pointer_constant : Warning<
   "zero as null pointer constant">,
   InGroup<DiagGroup<"zero-as-null-pointer-constant">>, DefaultIgnore;
+
+def warn_not_eliding_copy_on_return : Warning<
+  "not eliding copy on return">, 
+  InGroup<DiagGroup<"nrvo">>, DefaultIgnore;
 
 def err_nullability_cs_multilevel : Error<
   "nullability keyword %0 cannot be applied to multi-level pointer type %1">;

@@ -410,8 +410,8 @@ added in the future:
       calling convention: on most platforms, they are not preserved and need to
       be saved by the caller, but on Windows, xmm6-xmm15 are preserved.
 
-    - On AArch64 the callee preserve all general purpose registers, except X0-X8
-      and X16-X18.
+    - On AArch64 the callee preserve all general purpose registers, except
+      X0-X8 and X16-X18. Not allowed with ``nest``.
 
     The idea behind this convention is to support calls to runtime functions
     that have a hot path and a cold path. The hot path is usually a small piece
@@ -447,9 +447,9 @@ added in the future:
       R11. R11 can be used as a scratch register. Furthermore it also preserves
       all floating-point registers (XMMs/YMMs).
 
-    - On AArch64 the callee preserve all general purpose registers, except X0-X8
-      and X16-X18. Furthermore it also preserves lower 128 bits of V8-V31 SIMD -
-      floating point registers.
+    - On AArch64 the callee preserve all general purpose registers, except
+      X0-X8 and X16-X18. Furthermore it also preserves lower 128 bits of V8-V31
+      SIMD floating point registers. Not allowed with ``nest``.
 
     The idea behind this convention is to support calls to runtime functions
     that don't need to call out to any other functions.
@@ -3150,14 +3150,21 @@ as follows:
 ``A<address space>``
     Specifies the address space of objects created by '``alloca``'.
     Defaults to the default address space of 0.
-``p[n]:<size>:<abi>[:<pref>][:<idx>]``
-    This specifies the *size* of a pointer and its ``<abi>`` and
-    ``<pref>``\erred alignments for address space ``n``.
-    The fourth parameter ``<idx>`` is the size of the
-    index that used for address calculation, which must be less than or equal
-    to the pointer size. If not
-    specified, the default index size is equal to the pointer size. All sizes
-    are in bits. The address space, ``n``, is optional, and if not specified,
+``p[n]:<size>:<abi>[:<pref>[:<idx>]]``
+    This specifies the properties of a pointer in address space ``n``.
+    The ``<size>`` parameter specifies the size of the bitwise representation.
+    For :ref:`non-integral pointers <nointptrtype>` the representation size may
+    be larger than the address width of the underlying address space (e.g. to
+    accommodate additional metadata).
+    The alignment requirements are specified via the ``<abi>`` and
+    ``<pref>``\erred alignments parameters.
+    The fourth parameter ``<idx>`` is the size of the index that used for
+    address calculations such as :ref:`getelementptr <i_getelementptr>`.
+    It must be less than or equal to the pointer size. If not specified, the
+    default index size is equal to the pointer size.
+    The index size also specifies the width of addresses in this address space.
+    All sizes are in bits.
+    The address space, ``n``, is optional, and if not specified,
     denotes the default address space 0. The value of ``n`` must be
     in the range [1,2^24).
 ``i<size>:<abi>[:<pref>]``
@@ -3406,11 +3413,11 @@ memory before the call, the call may capture two components of the pointer:
     whether only the fact that the address is/isn't null is captured.
   * The provenance of the pointer, which is the ability to perform memory
     accesses through the pointer, in the sense of the :ref:`pointer aliasing
-    rules <pointeraliasing>`. We further distinguish whether only read acceses
+    rules <pointeraliasing>`. We further distinguish whether only read accesses
     are allowed, or both reads and writes.
 
 For example, the following function captures the address of ``%a``, because
-it is compared to a pointer, leaking information about the identitiy of the
+it is compared to a pointer, leaking information about the identity of the
 pointer:
 
 .. code-block:: llvm
@@ -3465,7 +3472,7 @@ through the return value only:
 However, we always consider direct inspection of the pointer address
 (e.g. using ``ptrtoint``) to be location-independent. The following example
 is *not* considered a return-only capture, even though the ``ptrtoint``
-ultimately only contribues to the return value:
+ultimately only contributes to the return value:
 
 .. code-block:: llvm
 
@@ -4268,6 +4275,16 @@ address spaces defined in the :ref:`datalayout string<langref_datalayout>`.
 ``addrspace("A")`` will use the alloca address space, ``addrspace("G")``
 the default globals address space and ``addrspace("P")`` the program address
 space.
+
+The representation of pointers can be different for each address space and does
+not necessarily need to be a plain integer address (e.g. for
+:ref:`non-integral pointers <nointptrtype>`). In addition to a representation
+bits size, pointers in each address space also have an index size which defines
+the bitwidth of indexing operations as well as the size of `integer addresses`
+in this address space. For example, CHERI capabilities are twice the size of the
+underlying addresses to accommodate for additional metadata such as bounds and
+permissions: on a 32-bit system the bitwidth of the pointer representation size
+is 64, but the underlying address width remains 32 bits.
 
 The default address space is number zero.
 
@@ -12411,12 +12428,15 @@ Semantics:
 """"""""""
 
 The '``ptrtoint``' instruction converts ``value`` to integer type
-``ty2`` by interpreting the pointer value as an integer and either
-truncating or zero extending that value to the size of the integer type.
+``ty2`` by interpreting the all pointer representation bits as an integer
+(equivalent to a ``bitcast``) and either truncating or zero extending that value
+to the size of the integer type.
 If ``value`` is smaller than ``ty2`` then a zero extension is done. If
 ``value`` is larger than ``ty2`` then a truncation is done. If they are
 the same size, then nothing is done (*no-op cast*) other than a type
 change.
+The ``ptrtoint`` always :ref:`captures address and provenance <pointercapture>`
+of the pointer argument.
 
 Example:
 """"""""
@@ -12471,6 +12491,9 @@ of the integer ``value``. If ``value`` is larger than the size of a
 pointer then a truncation is done. If ``value`` is smaller than the size
 of a pointer then a zero extension is done. If they are the same size,
 nothing is done (*no-op cast*).
+The behavior is equivalent to a ``bitcast``, however, the resulting value is not
+guaranteed to be dereferenceable (e.g. if the result type is a
+:ref:`non-integral pointers <nointptrtype>`).
 
 Example:
 """"""""
@@ -17018,12 +17041,12 @@ and IEEE-754-2008: the result of ``minnum(-0.0, +0.0)`` may be either -0.0 or +0
 
 Some architectures, such as ARMv8 (FMINNM), LoongArch (fmin), MIPSr6 (min.fmt), PowerPC/VSX (xsmindp),
 have instructions that match these semantics exactly; thus it is quite simple for these architectures.
-Some architectures have similiar ones while they are not exact equivalent. Such as x86 implements ``MINPS``,
+Some architectures have similar ones while they are not exact equivalent. Such as x86 implements ``MINPS``,
 which implements the semantics of C code ``a<b?a:b``: NUM vs qNaN always return qNaN. ``MINPS`` can be used
 if ``nsz`` and ``nnan`` are given.
 
 For existing libc implementations, the behaviors of fmin may be quite different on sNaN and signed zero behaviors,
-even in the same release of a single libm implemention.
+even in the same release of a single libm implementation.
 
 .. _i_maxnum:
 
@@ -17078,12 +17101,12 @@ and IEEE-754-2008: the result of maxnum(-0.0, +0.0) may be either -0.0 or +0.0.
 
 Some architectures, such as ARMv8 (FMAXNM), LoongArch (fmax), MIPSr6 (max.fmt), PowerPC/VSX (xsmaxdp),
 have instructions that match these semantics exactly; thus it is quite simple for these architectures.
-Some architectures have similiar ones while they are not exact equivalent. Such as x86 implements ``MAXPS``,
+Some architectures have similar ones while they are not exact equivalent. Such as x86 implements ``MAXPS``,
 which implements the semantics of C code ``a>b?a:b``: NUM vs qNaN always return qNaN. ``MAXPS`` can be used
 if ``nsz`` and ``nnan`` are given.
 
 For existing libc implementations, the behaviors of fmin may be quite different on sNaN and signed zero behaviors,
-even in the same release of a single libm implemention.
+even in the same release of a single libm implementation.
 
 .. _i_minimum:
 
@@ -21130,7 +21153,12 @@ sufficiently aligned block of memory; this memory is written to by the
 intrinsic. Note that the size and the alignment are target-specific -
 LLVM currently provides no portable way of determining them, so a
 front-end that generates this intrinsic needs to have some
-target-specific knowledge. The ``func`` argument must hold a function.
+target-specific knowledge.
+
+The ``func`` argument must be a constant (potentially bitcasted) pointer to a
+function declaration or definition, since the calling convention may affect the
+content of the trampoline that is created.
+
 
 Semantics:
 """"""""""

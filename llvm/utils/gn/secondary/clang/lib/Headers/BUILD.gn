@@ -140,6 +140,7 @@ copy("Headers") {
     "amxtf32intrin.h",
     "amxtf32transposeintrin.h",
     "amxtransposeintrin.h",
+    "andes_vector.h",
     "arm64intr.h",
     "arm_acle.h",
     "arm_cmse.h",

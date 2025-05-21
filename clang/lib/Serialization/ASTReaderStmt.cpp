@@ -1433,12 +1433,12 @@ void ASTStmtReader::VisitPseudoObjectExpr(PseudoObjectExpr *E) {
   E->PseudoObjectExprBits.ResultIndex = Record.readInt();
 
   // Read the syntactic expression.
-  E->getSubExprsBuffer()[0] = Record.readSubExpr();
+  E->getTrailingObjects()[0] = Record.readSubExpr();
 
   // Read all the semantic expressions.
   for (unsigned i = 0; i != numSemanticExprs; ++i) {
     Expr *subExpr = Record.readSubExpr();
-    E->getSubExprsBuffer()[i+1] = subExpr;
+    E->getTrailingObjects()[i + 1] = subExpr;
   }
 }
 
@@ -2935,7 +2935,7 @@ void ASTStmtReader::VisitOpenACCCacheConstruct(OpenACCCacheConstruct *S) {
   S->ParensLoc = Record.readSourceRange();
   S->ReadOnlyLoc = Record.readSourceLocation();
   for (unsigned I = 0; I < S->NumVars; ++I)
-    S->getVarListPtr()[I] = cast<Expr>(Record.readSubStmt());
+    S->getVarList()[I] = cast<Expr>(Record.readSubStmt());
 }
 
 void ASTStmtReader::VisitOpenACCAtomicConstruct(OpenACCAtomicConstruct *S) {

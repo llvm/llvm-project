@@ -602,7 +602,7 @@ struct RootDescriptor : public v1::RootDescriptor {
   uint32_t Flags;
 
   RootDescriptor() = default;
-  RootDescriptor(v1::RootDescriptor &Base)
+  explicit RootDescriptor(v1::RootDescriptor &Base)
       : v1::RootDescriptor(Base), Flags(0u) {}
 
   void swapBytes() {
