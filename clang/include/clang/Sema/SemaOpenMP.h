@@ -1492,7 +1492,7 @@ private:
   bool checkTransformableLoopNest(
       OpenMPDirectiveKind Kind, Stmt *AStmt, int NumLoops,
       SmallVectorImpl<OMPLoopBasedDirective::HelperExprs> &LoopHelpers,
-      Stmt *&Body, SmallVectorImpl<SmallVector<Stmt *, 0>> &OriginalInits);
+      Stmt *&Body, SmallVectorImpl<SmallVector<Stmt *>> &OriginalInits);
 
   /// @brief Categories of loops encountered during semantic OpenMP loop
   /// analysis
@@ -1555,9 +1555,9 @@ private:
       Stmt *LoopSeqStmt, unsigned &LoopSeqSize, unsigned &NumLoops,
       SmallVectorImpl<OMPLoopBasedDirective::HelperExprs> &LoopHelpers,
       SmallVectorImpl<Stmt *> &ForStmts,
-      SmallVectorImpl<SmallVector<Stmt *, 0>> &OriginalInits,
-      SmallVectorImpl<SmallVector<Stmt *, 0>> &TransformsPreInits,
-      SmallVectorImpl<SmallVector<Stmt *, 0>> &LoopSequencePreInits,
+      SmallVectorImpl<SmallVector<Stmt *>> &OriginalInits,
+      SmallVectorImpl<SmallVector<Stmt *>> &TransformsPreInits,
+      SmallVectorImpl<SmallVector<Stmt *>> &LoopSequencePreInits,
       SmallVectorImpl<OMPLoopCategory> &LoopCategories, ASTContext &Context,
       OpenMPDirectiveKind Kind);
 
@@ -1591,9 +1591,9 @@ private:
       unsigned &NumLoops,
       SmallVectorImpl<OMPLoopBasedDirective::HelperExprs> &LoopHelpers,
       SmallVectorImpl<Stmt *> &ForStmts,
-      SmallVectorImpl<SmallVector<Stmt *, 0>> &OriginalInits,
-      SmallVectorImpl<SmallVector<Stmt *, 0>> &TransformsPreInits,
-      SmallVectorImpl<SmallVector<Stmt *, 0>> &LoopSequencePreInits,
+      SmallVectorImpl<SmallVector<Stmt *>> &OriginalInits,
+      SmallVectorImpl<SmallVector<Stmt *>> &TransformsPreInits,
+      SmallVectorImpl<SmallVector<Stmt *>> &LoopSequencePreInits,
       SmallVectorImpl<OMPLoopCategory> &LoopCategories, ASTContext &Context);
 
   /// Helper to keep information about the current `omp begin/end declare
