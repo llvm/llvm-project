@@ -47,10 +47,10 @@ namespace llvm::AMDGPU {
 #include "AMDGPUGenSearchableTables.inc"
 } // namespace llvm::AMDGPU
 
-static cl::opt<bool> DisableDiffBasePtrMemClustering(
-    "amdgpu-disable-diff-baseptr-mem-clustering",
-    cl::desc("Disable clustering memory ops with different base pointers"),
-    cl::init(false), cl::Hidden);
+static cl::opt<bool> EnableDiffBasePtrMemClustering(
+    "amdgpu-enable-diff-baseptr-mem-clustering",
+    cl::desc("Enable clustering memory ops with different base pointers"),
+    cl::init(true), cl::Hidden);
 
 // Must be at least 4 to be able to branch over minimum unconditional branch
 // code. This is only for making it possible to write reasonably small tests for
@@ -585,10 +585,24 @@ bool SIInstrInfo::shouldClusterMemOps(ArrayRef<const MachineOperand *> BaseOps1,
     const MachineInstr &FirstLdSt = *BaseOps1.front()->getParent();
     const MachineInstr &SecondLdSt = *BaseOps2.front()->getParent();
 
-    if (!DisableDiffBasePtrMemClustering) {
+    if (EnableDiffBasePtrMemClustering) {
       // Only consider memory ops from same addrspace for clustering
       if (!memOpsHaveSameAddrspace(FirstLdSt, BaseOps1, SecondLdSt, BaseOps2))
         return false;
+
+      // Don't cluster scalar and vecter memory ops
+      const MachineFunction &MF = *FirstLdSt.getParent()->getParent();
+      const MachineRegisterInfo &MRI = MF.getRegInfo();
+      if (FirstLdSt.getOperand(0).isReg() &&
+          SecondLdSt.getOperand(0).isReg()) {
+        bool isFirstVecReg =  RI.isVectorRegister(MRI, 
+            FirstLdSt.getOperand(0).getReg());
+        bool isSecondVecReg = RI.isVectorRegister(MRI,
+            SecondLdSt.getOperand(0).getReg());
+        if ((isFirstVecReg && !isSecondVecReg) || 
+            (!isFirstVecReg && isSecondVecReg))
+          return false;
+      }
     } else {
       // If the mem ops (to be clustered) do not have the same base ptr, then
       // they should not be clustered
