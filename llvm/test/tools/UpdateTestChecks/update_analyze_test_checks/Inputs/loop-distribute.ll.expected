@@ -55,17 +55,17 @@ define void @ldist(i1 %cond, ptr %A, ptr %B, ptr %C) {
 ; CHECK-NEXT:  LDist: Distributing loop: for.body
 ; CHECK-NEXT:  LDist: Pointers:
 ; CHECK-NEXT:  Check 0:
-; CHECK-NEXT:    Comparing group ([[GRP1:0x[0-9a-f]+]]):
+; CHECK-NEXT:    Comparing group GRP0:
 ; CHECK-NEXT:    ptr %A
 ; CHECK-NEXT:    ptr %A
-; CHECK-NEXT:    Against group ([[GRP2:0x[0-9a-f]+]]):
+; CHECK-NEXT:    Against group GRP1:
 ; CHECK-NEXT:    ptr %C
 ; CHECK-NEXT:    ptr %C
 ; CHECK-NEXT:  Check 1:
-; CHECK-NEXT:    Comparing group ([[GRP1]]):
+; CHECK-NEXT:    Comparing group GRP0:
 ; CHECK-NEXT:    ptr %A
 ; CHECK-NEXT:    ptr %A
-; CHECK-NEXT:    Against group ([[GRP3:0x[0-9a-f]+]]):
+; CHECK-NEXT:    Against group GRP2:
 ; CHECK-NEXT:    ptr %B
 ; CHECK-NEXT:    ptr %B
 ; CHECK-NEXT:  LDist: After removing unused Instrs:
