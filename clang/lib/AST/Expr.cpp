@@ -1484,6 +1484,8 @@ CallExpr::CallExpr(StmtClass SC, Expr *Fn, ArrayRef<Expr *> PreArgs,
 
   CallExprBits.HasFPFeatures = FPFeatures.requiresTrailingStorage();
   CallExprBits.IsCoroElideSafe = false;
+  CallExprBits.ExplicitObjectMemFunUsingMemberSyntax = false;
+
   if (hasStoredFPFeatures())
     setStoredFPFeatures(FPFeatures);
 }
@@ -1549,11 +1551,14 @@ Decl *Expr::getReferencedDeclOfCallee() {
   // (simple function or member function call)
   // then try more exotic possibilities
   Expr *CEE = IgnoreImpCasts();
+
   if (auto *DRE = dyn_cast<DeclRefExpr>(CEE))
     return DRE->getDecl();
 
   if (auto *ME = dyn_cast<MemberExpr>(CEE))
     return ME->getMemberDecl();
+
+  CEE = CEE->IgnoreParens();
 
   while (auto *NTTP = dyn_cast<SubstNonTypeTemplateParmExpr>(CEE))
     CEE = NTTP->getReplacement()->IgnoreParenImpCasts();
@@ -1658,20 +1663,14 @@ SourceLocation CallExpr::getBeginLoc() const {
   // begin location should come from the first argument.
   // This does not apply to dependent calls, which are modelled with `o.f`
   // being the callee.
-  if (!isTypeDependent()) {
-    if (const auto *Method =
-            dyn_cast_if_present<const CXXMethodDecl>(getCalleeDecl());
-        Method && Method->isExplicitObjectMemberFunction()) {
-      if (auto FirstArgLoc = getArg(0)->getBeginLoc(); FirstArgLoc.isValid()) {
-        return FirstArgLoc;
-      }
+  // Because this check is expennsive, we cache the result.
+  if (usesMemberSyntax()) {
+    if (auto FirstArgLoc = getArg(0)->getBeginLoc(); FirstArgLoc.isValid()) {
+      return FirstArgLoc;
     }
   }
 
-  SourceLocation begin = getCallee()->getBeginLoc();
-  if (begin.isInvalid() && getNumArgs() > 0 && getArg(0))
-    begin = getArg(0)->getBeginLoc();
-  return begin;
+  return getCallee()->getBeginLoc();
 }
 
 SourceLocation CallExpr::getEndLoc() const {

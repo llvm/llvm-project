@@ -3028,6 +3028,9 @@ public:
 
   bool hasStoredFPFeatures() const { return CallExprBits.HasFPFeatures; }
 
+  bool usesMemberSyntax() const { return CallExprBits.ExplicitObjectMemFunUsingMemberSyntax; }
+  void setUsesMemberSyntax(bool V = true) { CallExprBits.ExplicitObjectMemFunUsingMemberSyntax = V; }
+
   bool isCoroElideSafe() const { return CallExprBits.IsCoroElideSafe; }
   void setCoroElideSafe(bool V = true) { CallExprBits.IsCoroElideSafe = V; }
 
@@ -3219,6 +3222,8 @@ public:
                                  getNumPreArgs() + getNumArgs());
   }
 };
+
+static_assert(sizeof(CallExpr) == 24);
 
 /// MemberExpr - [C99 6.5.2.3] Structure and Union Members.  X->F and X.F.
 ///
