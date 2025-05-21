@@ -701,17 +701,7 @@
 
 // RUN: %clang --target=riscv32 -### -c %s 2>&1 -mcpu=andes-a25 | FileCheck -check-prefix=MCPU-ANDES-A25 %s
 // MCPU-ANDES-A25: "-target-cpu" "andes-a25"
-// MCPU-ANDES-A25-SAME: "-target-feature" "+m"
-// MCPU-ANDES-A25-SAME: "-target-feature" "+a"
-// MCPU-ANDES-A25-SAME: "-target-feature" "+f"
-// MCPU-ANDES-A25-SAME: "-target-feature" "+d"
-// MCPU-ANDES-A25-SAME: "-target-feature" "+c"
-// MCPU-ANDES-A25-SAME: "-target-feature" "+zicsr"
-// MCPU-ANDES-A25-SAME: "-target-feature" "+zifencei"
-// MCPU-ANDES-A25-SAME: "-target-feature" "+zba"
-// MCPU-ANDES-A25-SAME: "-target-feature" "+zbb"
-// MCPU-ANDES-A25-SAME: "-target-feature" "+zbc"
-// MCPU-ANDES-A25-SAME: "-target-feature" "+zbs"
+// COM: The list of extensions are tested in `test/Driver/print-enabled-extensions/riscv-andes-a25.c`
 // MCPU-ANDES-A25-SAME: "-target-abi" "ilp32d"
 
 // RUN: %clang --target=riscv32 -### -c %s 2>&1 -mtune=andes-a25 | FileCheck -check-prefix=MTUNE-ANDES-A25 %s
@@ -719,17 +709,7 @@
 
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=andes-ax25 | FileCheck -check-prefix=MCPU-ANDES-AX25 %s
 // MCPU-ANDES-AX25: "-target-cpu" "andes-ax25"
-// MCPU-ANDES-AX25-SAME: "-target-feature" "+m"
-// MCPU-ANDES-AX25-SAME: "-target-feature" "+a"
-// MCPU-ANDES-AX25-SAME: "-target-feature" "+f"
-// MCPU-ANDES-AX25-SAME: "-target-feature" "+d"
-// MCPU-ANDES-AX25-SAME: "-target-feature" "+c"
-// MCPU-ANDES-AX25-SAME: "-target-feature" "+zicsr"
-// MCPU-ANDES-AX25-SAME: "-target-feature" "+zifencei"
-// MCPU-ANDES-AX25-SAME: "-target-feature" "+zba"
-// MCPU-ANDES-AX25-SAME: "-target-feature" "+zbb"
-// MCPU-ANDES-AX25-SAME: "-target-feature" "+zbc"
-// MCPU-ANDES-AX25-SAME: "-target-feature" "+zbs"
+// COM: The list of extensions are tested in `test/Driver/print-enabled-extensions/riscv-andes-ax25.c`
 // MCPU-ANDES-AX25-SAME: "-target-abi" "lp64d"
 
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mtune=andes-ax25 | FileCheck -check-prefix=MTUNE-ANDES-AX25 %s
