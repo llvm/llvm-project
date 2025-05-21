@@ -2791,16 +2791,20 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
     // initializer list that the child calls see, so that we don't try
     // to re-process the designator.
     unsigned OldIndex = Index;
-    IList->setInit(OldIndex, DIE->getInit());
+    auto *OldDIE =
+        dyn_cast_if_present<DesignatedInitExpr>(IList->getInit(OldIndex));
+    if (!OldDIE)
+      OldDIE = DIE;
+    IList->setInit(OldIndex, OldDIE->getInit());
 
     CheckSubElementType(Entity, IList, CurrentObjectType, Index, StructuredList,
                         StructuredIndex, /*DirectlyDesignated=*/true);
 
     // Restore the designated initializer expression in the syntactic
     // form of the initializer list.
-    if (IList->getInit(OldIndex) != DIE->getInit())
-      DIE->setInit(IList->getInit(OldIndex));
-    IList->setInit(OldIndex, DIE);
+    if (IList->getInit(OldIndex) != OldDIE->getInit())
+      OldDIE->setInit(IList->getInit(OldIndex));
+    IList->setInit(OldIndex, OldDIE);
 
     return hadError && !prevHadError;
   }
@@ -6513,6 +6517,15 @@ static bool canPerformArrayCopy(const InitializedEntity &Entity) {
 static const FieldDecl *getConstField(const RecordDecl *RD) {
   assert(!isa<CXXRecordDecl>(RD) && "Only expect to call this in C mode");
   for (const FieldDecl *FD : RD->fields()) {
+    // If the field is a flexible array member, we don't want to consider it
+    // as a const field because there's no way to initialize the FAM anyway.
+    const ASTContext &Ctx = FD->getASTContext();
+    if (Decl::isFlexibleArrayMemberLike(
+            Ctx, FD, FD->getType(),
+            Ctx.getLangOpts().getStrictFlexArraysLevel(),
+            /*IgnoreTemplateOrMacroSubstitution=*/true))
+      continue;
+
     QualType QT = FD->getType();
     if (QT.isConstQualified())
       return FD;
