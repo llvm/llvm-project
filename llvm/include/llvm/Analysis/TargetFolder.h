@@ -39,7 +39,7 @@ class TargetFolder final : public IRBuilderFolder {
     return ConstantFoldConstant(C, DL);
   }
 
-  LLVM_DECLARE_VIRTUAL_ANCHOR_FUNCTION();
+  virtual void anchor();
 
 public:
   explicit TargetFolder(const DataLayout &DL) : DL(DL) {}
