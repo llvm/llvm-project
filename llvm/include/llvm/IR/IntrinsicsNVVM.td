@@ -1065,7 +1065,7 @@ let TargetPrefix = "nvvm" in {
     def int_nvvm_fsh # direction # _clamp :
       DefaultAttrsIntrinsic<[llvm_anyint_ty],
         [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
-        [IntrNoMem, IntrSpeculatable, IntrWillReturn]>;
+        [IntrNoMem, IntrSpeculatable]>;
 
 //
 // FLO - Find Leading One
@@ -1074,7 +1074,7 @@ let TargetPrefix = "nvvm" in {
     def int_nvvm_flo_ # sign :
       DefaultAttrsIntrinsic<[llvm_i32_ty],
         [llvm_anyint_ty, llvm_i1_ty],
-        [IntrNoMem, IntrSpeculatable, IntrWillReturn, ImmArg<ArgIndex<1>>]>;
+        [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<1>>]>;
 
 //
 // szext
