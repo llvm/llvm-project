@@ -116,7 +116,7 @@ class DAPTestCaseBase(TestBase):
                 # location.
                 description = body["description"]
                 for breakpoint_id in breakpoint_ids:
-                    match_desc = "breakpoint %s." % (breakpoint_id)
+                    match_desc = f"breakpoint {breakpoint_id}."
                     if match_desc in description:
                         return
         self.assertTrue(False, f"breakpoint not hit, stopped_events={stopped_events}")
@@ -311,6 +311,9 @@ class DAPTestCaseBase(TestBase):
     def continue_to_next_stop(self, timeout=DEFAULT_TIMEOUT):
         self.do_continue()
         return self.dap_server.wait_for_stopped(timeout)
+
+    def continue_to_breakpoint(self, breakpoint_id: str, timeout=DEFAULT_TIMEOUT):
+        self.continue_to_breakpoints((breakpoint_id), timeout)
 
     def continue_to_breakpoints(self, breakpoint_ids, timeout=DEFAULT_TIMEOUT):
         self.do_continue()
