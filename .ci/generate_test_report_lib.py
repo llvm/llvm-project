@@ -92,7 +92,9 @@ def generate_report(
             ]
         )
     elif failures:
-        report.extend(["", "## Failed Tests", "(click on a test name to see its output)"])
+        report.extend(
+            ["", "## Failed Tests", "(click on a test name to see its output)"]
+        )
 
         for testsuite_name, failures in failures.items():
             report.extend(["", f"### {testsuite_name}"])

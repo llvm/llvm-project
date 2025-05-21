@@ -1051,6 +1051,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
                      Custom);
 
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
+  // Enable custom lowering for the i128 bit operand with clusterlaunchcontrol
+  setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i128, Custom);
 }
 
 const char *NVPTXTargetLowering::getTargetNodeName(unsigned Opcode) const {
@@ -1129,6 +1131,10 @@ const char *NVPTXTargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(NVPTXISD::BrxEnd)
     MAKE_CASE(NVPTXISD::BrxItem)
     MAKE_CASE(NVPTXISD::BrxStart)
+    MAKE_CASE(NVPTXISD::CLUSTERLAUNCHCONTROL_QUERY_CANCEL_IS_CANCELED)
+    MAKE_CASE(NVPTXISD::CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID_X)
+    MAKE_CASE(NVPTXISD::CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID_Y)
+    MAKE_CASE(NVPTXISD::CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID_Z)
   }
   return nullptr;
 
@@ -2805,12 +2811,57 @@ static SDValue LowerIntrinsicVoid(SDValue Op, SelectionDAG &DAG) {
   return Op;
 }
 
+static SDValue LowerClusterLaunchControlQueryCancel(SDValue Op,
+                                                    SelectionDAG &DAG) {
+
+  SDNode *N = Op.getNode();
+  if (N->getOperand(1).getValueType() != MVT::i128) {
+    // return, if the operand is already lowered
+    return SDValue();
+  }
+
+  unsigned IID =
+      cast<ConstantSDNode>(N->getOperand(0).getNode())->getZExtValue();
+  auto Opcode = [&]() {
+    switch (IID) {
+    case Intrinsic::nvvm_clusterlaunchcontrol_query_cancel_is_canceled:
+      return NVPTXISD::CLUSTERLAUNCHCONTROL_QUERY_CANCEL_IS_CANCELED;
+    case Intrinsic::nvvm_clusterlaunchcontrol_query_cancel_get_first_ctaid_x:
+      return NVPTXISD::CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID_X;
+    case Intrinsic::nvvm_clusterlaunchcontrol_query_cancel_get_first_ctaid_y:
+      return NVPTXISD::CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID_Y;
+    case Intrinsic::nvvm_clusterlaunchcontrol_query_cancel_get_first_ctaid_z:
+      return NVPTXISD::CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID_Z;
+    default:
+      llvm_unreachable("unsupported/unhandled intrinsic");
+    }
+  }();
+
+  SDLoc DL(N);
+  SDValue TryCancelResponse = N->getOperand(1);
+  SDValue Cast = DAG.getNode(ISD::BITCAST, DL, MVT::v2i64, TryCancelResponse);
+  SDValue TryCancelResponse0 =
+      DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i64, Cast,
+                  DAG.getIntPtrConstant(0, DL));
+  SDValue TryCancelResponse1 =
+      DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i64, Cast,
+                  DAG.getIntPtrConstant(1, DL));
+
+  return DAG.getNode(Opcode, DL, N->getVTList(),
+                     {TryCancelResponse0, TryCancelResponse1});
+}
+
 static SDValue lowerIntrinsicWOChain(SDValue Op, SelectionDAG &DAG) {
   switch (Op->getConstantOperandVal(0)) {
   default:
     return Op;
   case Intrinsic::nvvm_internal_addrspace_wrap:
     return Op.getOperand(1);
+  case Intrinsic::nvvm_clusterlaunchcontrol_query_cancel_is_canceled:
+  case Intrinsic::nvvm_clusterlaunchcontrol_query_cancel_get_first_ctaid_x:
+  case Intrinsic::nvvm_clusterlaunchcontrol_query_cancel_get_first_ctaid_y:
+  case Intrinsic::nvvm_clusterlaunchcontrol_query_cancel_get_first_ctaid_z:
+    return LowerClusterLaunchControlQueryCancel(Op, DAG);
   }
 }
 

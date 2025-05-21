@@ -743,6 +743,122 @@ CIRGenFunction::emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e) {
   return lv;
 }
 
+/// Casts are never lvalues unless that cast is to a reference type. If the cast
+/// is to a reference, we can have the usual lvalue result, otherwise if a cast
+/// is needed by the code generator in an lvalue context, then it must mean that
+/// we need the address of an aggregate in order to access one of its members.
+/// This can happen for all the reasons that casts are permitted with aggregate
+/// result, including noop aggregate casts, and cast from scalar to union.
+LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
+  switch (e->getCastKind()) {
+  case CK_ToVoid:
+  case CK_BitCast:
+  case CK_LValueToRValueBitCast:
+  case CK_ArrayToPointerDecay:
+  case CK_FunctionToPointerDecay:
+  case CK_NullToMemberPointer:
+  case CK_NullToPointer:
+  case CK_IntegralToPointer:
+  case CK_PointerToIntegral:
+  case CK_PointerToBoolean:
+  case CK_IntegralCast:
+  case CK_BooleanToSignedIntegral:
+  case CK_IntegralToBoolean:
+  case CK_IntegralToFloating:
+  case CK_FloatingToIntegral:
+  case CK_FloatingToBoolean:
+  case CK_FloatingCast:
+  case CK_FloatingRealToComplex:
+  case CK_FloatingComplexToReal:
+  case CK_FloatingComplexToBoolean:
+  case CK_FloatingComplexCast:
+  case CK_FloatingComplexToIntegralComplex:
+  case CK_IntegralRealToComplex:
+  case CK_IntegralComplexToReal:
+  case CK_IntegralComplexToBoolean:
+  case CK_IntegralComplexCast:
+  case CK_IntegralComplexToFloatingComplex:
+  case CK_DerivedToBaseMemberPointer:
+  case CK_BaseToDerivedMemberPointer:
+  case CK_MemberPointerToBoolean:
+  case CK_ReinterpretMemberPointer:
+  case CK_AnyPointerToBlockPointerCast:
+  case CK_ARCProduceObject:
+  case CK_ARCConsumeObject:
+  case CK_ARCReclaimReturnedObject:
+  case CK_ARCExtendBlockObject:
+  case CK_CopyAndAutoreleaseBlockObject:
+  case CK_IntToOCLSampler:
+  case CK_FloatingToFixedPoint:
+  case CK_FixedPointToFloating:
+  case CK_FixedPointCast:
+  case CK_FixedPointToBoolean:
+  case CK_FixedPointToIntegral:
+  case CK_IntegralToFixedPoint:
+  case CK_MatrixCast:
+  case CK_HLSLVectorTruncation:
+  case CK_HLSLArrayRValue:
+  case CK_HLSLElementwiseCast:
+  case CK_HLSLAggregateSplatCast:
+    llvm_unreachable("unexpected cast lvalue");
+
+  case CK_Dependent:
+    llvm_unreachable("dependent cast kind in IR gen!");
+
+  case CK_BuiltinFnToFnPtr:
+    llvm_unreachable("builtin functions are handled elsewhere");
+
+  // These are never l-values; just use the aggregate emission code.
+  case CK_NonAtomicToAtomic:
+  case CK_AtomicToNonAtomic:
+  case CK_Dynamic:
+  case CK_UncheckedDerivedToBase:
+  case CK_DerivedToBase:
+  case CK_ToUnion:
+  case CK_BaseToDerived:
+  case CK_LValueBitCast:
+  case CK_AddressSpaceConversion:
+  case CK_ObjCObjectLValueCast:
+  case CK_VectorSplat:
+  case CK_ConstructorConversion:
+  case CK_UserDefinedConversion:
+  case CK_CPointerToObjCPointerCast:
+  case CK_BlockPointerToObjCPointerCast:
+  case CK_LValueToRValue: {
+    cgm.errorNYI(e->getSourceRange(),
+                 std::string("emitCastLValue for unhandled cast kind: ") +
+                     e->getCastKindName());
+
+    return {};
+  }
+
+  case CK_NoOp: {
+    // CK_NoOp can model a qualification conversion, which can remove an array
+    // bound and change the IR type.
+    LValue lv = emitLValue(e->getSubExpr());
+    // Propagate the volatile qualifier to LValue, if exists in e.
+    if (e->changesVolatileQualification())
+      cgm.errorNYI(e->getSourceRange(),
+                   "emitCastLValue: NoOp changes volatile qual");
+    if (lv.isSimple()) {
+      Address v = lv.getAddress();
+      if (v.isValid()) {
+        mlir::Type ty = convertTypeForMem(e->getType());
+        if (v.getElementType() != ty)
+          cgm.errorNYI(e->getSourceRange(),
+                       "emitCastLValue: NoOp needs bitcast");
+      }
+    }
+    return lv;
+  }
+
+  case CK_ZeroToOCLOpaqueType:
+    llvm_unreachable("NULL to OpenCL opaque type lvalue cast is not valid");
+  }
+
+  llvm_unreachable("Invalid cast kind");
+}
+
 LValue CIRGenFunction::emitMemberExpr(const MemberExpr *e) {
   if (isa<VarDecl>(e->getMemberDecl())) {
     cgm.errorNYI(e->getSourceRange(), "emitMemberExpr: VarDecl");
@@ -783,6 +899,21 @@ LValue CIRGenFunction::emitMemberExpr(const MemberExpr *e) {
   }
 
   llvm_unreachable("Unhandled member declaration!");
+}
+
+LValue CIRGenFunction::emitCallExprLValue(const CallExpr *e) {
+  RValue rv = emitCallExpr(e);
+
+  if (!rv.isScalar()) {
+    cgm.errorNYI(e->getSourceRange(), "emitCallExprLValue: non-scalar return");
+    return {};
+  }
+
+  assert(e->getCallReturnType(getContext())->isReferenceType() &&
+         "Can't have a scalar return unless the return type is a "
+         "reference type!");
+
+  return makeNaturalAlignPointeeAddrLValue(rv.getScalarVal(), e->getType());
 }
 
 LValue CIRGenFunction::emitBinaryOperatorLValue(const BinaryOperator *e) {
@@ -983,10 +1114,14 @@ RValue CIRGenFunction::emitCallExpr(const clang::CallExpr *e,
   }
 
   if (const auto *operatorCall = dyn_cast<CXXOperatorCallExpr>(e)) {
-    if (isa_and_nonnull<CXXMethodDecl>(operatorCall->getCalleeDecl())) {
-      cgm.errorNYI(e->getSourceRange(), "call to member operator");
-      return RValue::get(nullptr);
-    }
+    // If the callee decl is a CXXMethodDecl, we need to emit this as a C++
+    // operator member call.
+    if (const CXXMethodDecl *md =
+            dyn_cast_or_null<CXXMethodDecl>(operatorCall->getCalleeDecl()))
+      return emitCXXOperatorMemberCallExpr(operatorCall, md, returnValue);
+    // A CXXOperatorCallExpr is created even for explicit object methods, but
+    // these should be treated like static function calls. Fall through to do
+    // that.
   }
 
   CIRGenCallee callee = emitCallee(e->getCallee());

@@ -52,9 +52,6 @@ export class ModulesDataProvider implements vscode.TreeDataProvider<TreeData> {
 
   constructor(private readonly tracker: DebugSessionTracker) {
     tracker.onDidChangeModules(() => this.changeTreeData.fire());
-    vscode.debug.onDidChangeActiveDebugSession(() =>
-      this.changeTreeData.fire(),
-    );
   }
 
   getTreeItem(module: TreeData): vscode.TreeItem {
