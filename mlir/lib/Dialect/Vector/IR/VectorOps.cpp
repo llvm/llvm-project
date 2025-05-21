@@ -6657,8 +6657,6 @@ LogicalResult MaskOp::verify() {
 ///
 ///   %0 = user_op %a : vector<8xf32>
 ///
-/// `vector.mask` with a passthru is handled by the canonicalizer.
-///
 static LogicalResult foldEmptyMaskOp(MaskOp maskOp, MaskOp::FoldAdaptor adaptor,
                                      SmallVectorImpl<OpFoldResult> &results) {
   if (!maskOp.isEmpty() || maskOp.hasPassthru())
