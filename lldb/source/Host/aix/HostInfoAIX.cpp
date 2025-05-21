@@ -29,9 +29,8 @@ FileSpec HostInfoAIX::GetProgramFileSpec() {
     llvm::StringRef exe_path(
         psinfoData.pr_psargs,
         strnlen(psinfoData.pr_psargs, sizeof(psinfoData.pr_psargs)));
-    if (!exe_path.empty()) {
+    if (!exe_path.empty())
       g_program_filespec.SetFile(exe_path, FileSpec::Style::native);
-    }
   }
   return g_program_filespec;
 }

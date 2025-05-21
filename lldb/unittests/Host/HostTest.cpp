@@ -9,6 +9,7 @@
 #include "lldb/Host/Host.h"
 #include "TestingSupport/SubsystemRAII.h"
 #include "lldb/Host/FileSystem.h"
+#include "lldb/Host/HostInfo.h"
 #include "lldb/Host/Pipe.h"
 #include "lldb/Host/ProcessLaunchInfo.h"
 #include "lldb/Utility/ProcessInfo.h"
@@ -87,6 +88,29 @@ TEST(Host, LaunchProcessSetsArgv0) {
     exit_status.set_value(status);
   });
   ASSERT_THAT_ERROR(Host::LaunchProcess(info).takeError(), Succeeded());
+  ASSERT_THAT(exit_status.get_future().get(), 0);
+}
+
+TEST(Host, FindProcesses) {
+  SubsystemRAII<FileSystem, HostInfo> subsystems;
+
+  if (test_arg != 0)
+    exit(0);
+
+  ProcessLaunchInfo info;
+  ProcessInstanceInfoList processes;
+  ProcessInstanceInfoMatch match(TestMainArgv0, NameMatch::Equals);
+  info.SetExecutableFile(FileSpec(TestMainArgv0),
+                         /*add_exe_file_as_first_arg=*/true);
+  info.GetArguments().AppendArgument("--gtest_filter=Host.FindProcesses");
+  info.GetArguments().AppendArgument("--test-arg=48");
+  std::promise<int> exit_status;
+  info.SetMonitorProcessCallback([&](lldb::pid_t pid, int signal, int status) {
+    exit_status.set_value(status);
+  });
+  ASSERT_THAT_ERROR(Host::LaunchProcess(info).takeError(), Succeeded());
+  ASSERT_TRUE(Host::FindProcesses(match, processes));
+  ASSERT_EQ(processes[0].GetArg0(), TestMainArgv0);
   ASSERT_THAT(exit_status.get_future().get(), 0);
 }
 

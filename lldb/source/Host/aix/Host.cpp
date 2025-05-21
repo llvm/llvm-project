@@ -42,14 +42,6 @@ static ProcessInstanceInfo::timespec convert(pr_timestruc64_t t) {
   return ts;
 }
 
-static bool IsDirNumeric(const char *dname) {
-  for (; *dname; dname++) {
-    if (!isdigit(*dname))
-      return false;
-  }
-  return true;
-}
-
 static bool GetStatusInfo(::pid_t pid, ProcessInstanceInfo &processInfo,
                           ProcessState &State) {
   struct pstatus pstatusData;
@@ -152,10 +144,10 @@ uint32_t Host::FindProcessesImpl(const ProcessInstanceInfoMatch &match_info,
     bool all_users = match_info.GetMatchAllUsers();
 
     while ((direntry = readdir(dirproc)) != nullptr) {
-      if (!IsDirNumeric(direntry->d_name))
+      lldb::pid_t pid;
+      // Skip non-numeric name directories
+      if (!llvm::to_integer(direntry->d_name, pid))
         continue;
-
-      lldb::pid_t pid = atoi(direntry->d_name);
       // Skip this process.
       if (pid == our_pid)
         continue;
@@ -174,9 +166,8 @@ uint32_t Host::FindProcessesImpl(const ProcessInstanceInfoMatch &match_info,
       if (!all_users && (our_uid != 0) && (process_info.GetUserID() != our_uid))
         continue;
 
-      if (match_info.Matches(process_info)) {
+      if (match_info.Matches(process_info))
         process_infos.push_back(process_info);
-      }
     }
     closedir(dirproc);
   }
