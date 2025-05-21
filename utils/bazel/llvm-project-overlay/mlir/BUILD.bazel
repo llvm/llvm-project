@@ -3419,6 +3419,7 @@ cc_library(
     deps = [
         ":AffineUtils",
         ":Analysis",
+        ":ArithUtils",
         ":DialectUtils",
         ":FunctionInterfaces",
         ":GPUDialect",
