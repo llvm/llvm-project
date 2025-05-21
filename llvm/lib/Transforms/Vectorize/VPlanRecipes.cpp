@@ -3073,9 +3073,11 @@ InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
       getLoadStoreAlignment(const_cast<Instruction *>(&Ingredient));
   unsigned AS = cast<PointerType>(Ctx.Types.inferScalarType(getAddr()))
                     ->getAddressSpace();
-  unsigned Opcode = isa<VPWidenLoadRecipe, VPWidenLoadEVLRecipe>(this)
-                        ? Instruction::Load
-                        : Instruction::Store;
+  unsigned Opcode =
+      isa<VPWidenLoadRecipe, VPWidenLoadEVLRecipe, VPWidenStridedLoadRecipe>(
+          this)
+          ? Instruction::Load
+          : Instruction::Store;
 
   if (!Consecutive) {
     // TODO: Using the original IR may not be accurate.
@@ -3084,6 +3086,11 @@ InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
     const Value *Ptr = getLoadStorePointerOperand(&Ingredient);
     assert(!Reverse &&
            "Inconsecutive memory access should not have the order.");
+
+    if (isa<VPWidenStridedLoadRecipe>(this))
+      return Ctx.TTI.getStridedMemoryOpCost(
+          Opcode, Ty, Ptr, IsMasked, Alignment, Ctx.CostKind, &Ingredient);
+
     return Ctx.TTI.getAddressComputationCost(Ty) +
            Ctx.TTI.getGatherScatterOpCost(Opcode, Ty, Ptr, IsMasked, Alignment,
                                           Ctx.CostKind, &Ingredient);
@@ -3275,18 +3282,6 @@ void VPWidenStridedLoadRecipe::print(raw_ostream &O, const Twine &Indent,
   getVF()->printAsOperand(O, SlotTracker);
 }
 #endif
-
-InstructionCost
-VPWidenStridedLoadRecipe::computeCost(ElementCount VF,
-                                      VPCostContext &Ctx) const {
-  Type *Ty = toVectorTy(getLoadStoreType(&Ingredient), VF);
-  const Align Alignment = getLoadStoreAlignment(&Ingredient);
-  const Value *Ptr = getLoadStorePointerOperand(&Ingredient);
-
-  return Ctx.TTI.getStridedMemoryOpCost(Ingredient.getOpcode(), Ty, Ptr,
-                                        IsMasked, Alignment, Ctx.CostKind,
-                                        &Ingredient);
-}
 
 void VPWidenStoreRecipe::execute(VPTransformState &State) {
   VPValue *StoredVPValue = getStoredValue();

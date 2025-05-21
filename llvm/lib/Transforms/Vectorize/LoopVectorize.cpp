@@ -1316,15 +1316,6 @@ public:
     return InterleaveInfo.getInterleaveGroup(Instr);
   }
 
-  /// Returns true if \p I is a memory instruction with strided memory access
-  /// that can be vectorized.
-  bool stridedAccessCanBeWidened(Instruction *I, ElementCount VF) const;
-
-  /// Get the stride information of the strided memory accesses.
-  SmallDenseMap<Instruction *, int64_t> getStrideInfo() const {
-    return StrideInfo;
-  }
-
   /// Returns true if we're required to use a scalar epilogue for at least
   /// the final iteration of the original loop.
   bool requiresScalarEpilogue(bool IsVectorizing) const {
@@ -1572,10 +1563,6 @@ private:
   /// element)
   InstructionCost getUniformMemOpCost(Instruction *I, ElementCount VF);
 
-  /// The cost computation for strided load/store instruction.
-  InstructionCost getStridedLoadStoreCost(Instruction *I,
-                                          ElementCount VF) const;
-
   /// Estimate the overhead of scalarizing an instruction. This is a
   /// convenience wrapper for the type-based getScalarizationOverhead API.
   InstructionCost getScalarizationOverhead(Instruction *I,
@@ -1714,9 +1701,6 @@ private:
     return SmallVector<Value *, 4>(make_filter_range(
         Ops, [this, VF](Value *V) { return this->needsExtract(V, VF); }));
   }
-
-  /// The mapping of memory access instructions to their stride values.
-  SmallDenseMap<Instruction *, int64_t> StrideInfo;
 
 public:
   /// The loop that we evaluate.
@@ -3291,31 +3275,6 @@ bool LoopVectorizationCostModel::memoryInstructionCanBeWidened(
     return false;
 
   return true;
-}
-
-bool LoopVectorizationCostModel::stridedAccessCanBeWidened(
-    Instruction *I, ElementCount VF) const {
-  // Get and ensure we have a valid memory instruction.
-  assert((isa<LoadInst, StoreInst>(I)) && "Invalid memory instruction");
-
-  // Only support strided access for vector VF.
-  if (!VF.isVector())
-    return false;
-
-  // FIXME: Remove this check for StoreInst after strided store is supported.
-  if (isa<StoreInst>(I))
-    return false;
-
-  [[maybe_unused]] auto *Ptr = getLoadStorePointerOperand(I);
-  auto *ScalarTy = getLoadStoreType(I);
-  // TODO: Support non-unit-reverse strided accesses. Add stride analysis here
-  // to ensure that the accessed addresses are evenly spaced apart by a fixed
-  // stride.
-  assert(Legal->isConsecutivePtr(ScalarTy, Ptr) == -1 &&
-         "Only supports strided accesses with a stride of -1");
-
-  const Align Alignment = getLoadStoreAlignment(I);
-  return TTI.isLegalStridedLoadStore(toVectorTy(ScalarTy, VF), Alignment);
 }
 
 void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
@@ -5473,19 +5432,6 @@ LoopVectorizationCostModel::getInterleaveGroupCost(Instruction *I,
   return Cost;
 }
 
-InstructionCost
-LoopVectorizationCostModel::getStridedLoadStoreCost(Instruction *I,
-                                                    ElementCount VF) const {
-  Type *ValTy = getLoadStoreType(I);
-  auto *VectorTy = cast<VectorType>(toVectorTy(ValTy, VF));
-  const Align Alignment = getLoadStoreAlignment(I);
-  const Value *Ptr = getLoadStorePointerOperand(I);
-
-  return TTI.getStridedMemoryOpCost(I->getOpcode(), VectorTy, Ptr,
-                                    Legal->isMaskRequired(I), Alignment,
-                                    CostKind, I);
-}
-
 std::optional<InstructionCost>
 LoopVectorizationCostModel::getReductionPatternCost(Instruction *I,
                                                     ElementCount VF,
@@ -5805,17 +5751,6 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
                "Expected consecutive stride.");
         InstWidening Decision =
             ConsecutiveStride == 1 ? CM_Widen : CM_Widen_Reverse;
-        // Consider using strided load/store for consecutive reverse accesses to
-        // achieve more efficient memory operations.
-        if (ConsecutiveStride == -1 && stridedAccessCanBeWidened(&I, VF)) {
-          const InstructionCost StridedLoadStoreCost =
-              getStridedLoadStoreCost(&I, VF);
-          if (StridedLoadStoreCost < Cost) {
-            Decision = CM_Strided;
-            Cost = StridedLoadStoreCost;
-            StrideInfo[&I] = ConsecutiveStride;
-          }
-        }
         setWideningDecision(&I, VF, Decision, Cost);
         continue;
       }
@@ -8986,12 +8921,15 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   // clamp the range for better cost estimation.
   // TODO: Enable following transform when the EVL-version of extended-reduction
   // and mulacc-reduction are implemented.
-  if (!CM.foldTailWithEVL()) {
-    VPCostContext CostCtx(CM.TTI, *CM.TLI, Legal->getWidestInductionType(), CM,
-                          CM.CostKind);
+  VPCostContext CostCtx(CM.TTI, *CM.TLI, Legal->getWidestInductionType(), CM,
+                        CM.CostKind);
+  if (!CM.foldTailWithEVL())
     VPlanTransforms::runPass(VPlanTransforms::convertToAbstractRecipes, *Plan,
                              CostCtx, Range);
-  }
+
+  // !!! NEED COMMENT
+  VPlanTransforms::runPass(VPlanTransforms::convertToStridedAccesses, *Plan,
+                           CostCtx, Range);
 
   for (ElementCount VF : Range)
     Plan->addVF(VF);
@@ -9003,9 +8941,6 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   VPlanTransforms::runPass(VPlanTransforms::createInterleaveGroups, *Plan,
                            InterleaveGroups, RecipeBuilder,
                            CM.isScalarEpilogueAllowed());
-  // !!! NEED COMMENT
-  VPlanTransforms::runPass(VPlanTransforms::convertToStridedAccesses, *Plan,
-                           CM.getStrideInfo());
 
   // Replace VPValues for known constant strides guaranteed by predicate scalar
   // evolution.

@@ -1725,6 +1725,8 @@ public:
 
   VP_CLASSOF_IMPL(VPDef::VPVectorEndPointerSC)
 
+  VPValue *getPtr() const { return getOperand(0); }
+
   VPValue *getVFValue() { return getOperand(1); }
   const VPValue *getVFValue() const { return getOperand(1); }
 
@@ -3088,10 +3090,6 @@ struct VPWidenStridedLoadRecipe final : public VPWidenMemoryRecipe,
 
   /// Generate a strided load.
   void execute(VPTransformState &State) override;
-
-  /// Return the cost of this VPWidenStridedLoadRecipe.
-  InstructionCost computeCost(ElementCount VF,
-                              VPCostContext &Ctx) const override;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.

@@ -176,8 +176,8 @@ struct VPlanTransforms {
       VPRecipeBuilder &RecipeBuilder, const bool &ScalarEpilogueAllowed);
 
   // !!! NEED COMMENT
-  static void convertToStridedAccesses(
-      VPlan &Plan, const SmallDenseMap<Instruction *, int64_t> &StrideInfo);
+  static void convertToStridedAccesses(VPlan &Plan, VPCostContext &Ctx,
+                                       VFRange &Range);
 
   /// Remove dead recipes from \p Plan.
   static void removeDeadRecipes(VPlan &Plan);

@@ -2691,48 +2691,68 @@ void VPlanTransforms::dissolveLoopRegions(VPlan &Plan) {
     R->dissolveToCFGLoop();
 }
 
-void VPlanTransforms::convertToStridedAccesses(
-    VPlan &Plan, const SmallDenseMap<Instruction *, int64_t> &StrideInfo) {
-  // !!! FIXME: Should remove StrideInfo for next step.
-  if (Plan.hasScalarVFOnly() || StrideInfo.empty())
+void VPlanTransforms::convertToStridedAccesses(VPlan &Plan, VPCostContext &Ctx,
+                                               VFRange &Range) {
+  if (Plan.hasScalarVFOnly())
     return;
 
-  // !!! FIXME: Should clamp VF for legal and cost in next step
   SmallVector<VPRecipeBase *> ToErase;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
-      // !!! FIXME: Should use LoadR->isReverse() for next step
-      if (auto *LoadR = dyn_cast<VPWidenLoadRecipe>(&R);
-          LoadR && !LoadR->isConsecutive()) {
-        auto *LI = cast<LoadInst>(&LoadR->getIngredient());
-        auto It = StrideInfo.find(LI);
-        if (It == StrideInfo.end())
-          continue;
-        int64_t Stride = It->second;
-        assert(Stride == -1 &&
-               "Only stride memory access with a stride of -1 is supported.");
-        // !!! FIXME: Should get VPVectorEndPointerRecipe for reverse
-        VPValue *Ptr = LoadR->getAddr();
-        auto *GEP = dyn_cast<GetElementPtrInst>(
-            Ptr->getUnderlyingValue()->stripPointerCasts());
-        auto *NewPtr = new VPVectorPointerRecipe(
-            Ptr, getLoadStoreType(LI), /*Stride*/ true,
-            GEP ? GEP->getNoWrapFlags() : GEPNoWrapFlags::none(),
-            LoadR->getDebugLoc());
-        NewPtr->insertBefore(LoadR);
+      auto *MemR = dyn_cast<VPWidenMemoryRecipe>(&R);
+      // TODO: support strided store
+      // TODO: support strided accesses with stride not equal to -1
+      if (!MemR || !isa<VPWidenLoadRecipe>(MemR) || !MemR->isReverse())
+        continue;
 
-        const DataLayout &DL = LI->getDataLayout();
-        auto *StrideTy = DL.getIndexType(LI->getPointerOperand()->getType());
-        VPValue *StrideVPV = Plan.getOrAddLiveIn(ConstantInt::get(
-            StrideTy, Stride * DL.getTypeAllocSize(getLoadStoreType(LI))));
-        auto *StridedLoad = new VPWidenStridedLoadRecipe(
-            *LI, NewPtr, StrideVPV, &Plan.getVF(), LoadR->getMask(), *LoadR,
-            LoadR->getDebugLoc());
-        StridedLoad->insertBefore(LoadR);
-        LoadR->replaceAllUsesWith(StridedLoad);
-        ToErase.push_back(LoadR);
-      }
+      Instruction &Ingredient = MemR->getIngredient();
+      Type *ElementTy = getLoadStoreType(&Ingredient);
+
+      auto IsProfitable = [&](ElementCount VF) -> bool {
+        Type *DataTy = toVectorTy(ElementTy, VF);
+        const Align Alignment = getLoadStoreAlignment(&Ingredient);
+        if (!Ctx.TTI.isLegalStridedLoadStore(DataTy, Alignment))
+          return false;
+        const InstructionCost CurrentCost = MemR->computeCost(VF, Ctx);
+        const InstructionCost StridedLoadStoreCost =
+            Ctx.TTI.getStridedMemoryOpCost(
+                Ingredient.getOpcode(), DataTy,
+                getLoadStorePointerOperand(&Ingredient), MemR->isMasked(),
+                Alignment, Ctx.CostKind, &Ingredient);
+        return StridedLoadStoreCost < CurrentCost;
+      };
+
+      if (!LoopVectorizationPlanner::getDecisionAndClampRange(IsProfitable,
+                                                              Range))
+        continue;
+
+      // The stride of consecutive reverse access must be -1.
+      int64_t Stride = -1;
+      auto *VecEndPtr = cast<VPVectorEndPointerRecipe>(MemR->getAddr());
+      VPValue *Ptr = VecEndPtr->getPtr();
+      auto *GEP = dyn_cast<GetElementPtrInst>(
+          Ptr->getUnderlyingValue()->stripPointerCasts());
+      // Create a new vector pointer for strided access.
+      auto *NewPtr = new VPVectorPointerRecipe(
+          Ptr, ElementTy, /*Stride=*/ true,
+          GEP ? GEP->getNoWrapFlags() : GEPNoWrapFlags::none(),
+          VecEndPtr->getDebugLoc());
+      NewPtr->insertBefore(MemR);
+
+      auto *LoadR = cast<VPWidenLoadRecipe>(MemR);
+      auto *LI = cast<LoadInst>(&Ingredient);
+      const DataLayout &DL = LI->getDataLayout();
+      auto *StrideTy = DL.getIndexType(LI->getPointerOperand()->getType());
+      VPValue *StrideVPV = Plan.getOrAddLiveIn(ConstantInt::get(
+          StrideTy, Stride * DL.getTypeAllocSize(ElementTy)));
+      auto *StridedLoad = new VPWidenStridedLoadRecipe(
+          *LI, NewPtr, StrideVPV, &Plan.getVF(), LoadR->getMask(), *LoadR,
+          LoadR->getDebugLoc());
+      StridedLoad->insertBefore(LoadR);
+      LoadR->replaceAllUsesWith(StridedLoad);
+
+      ToErase.append({LoadR, VecEndPtr});
     }
   }
 
