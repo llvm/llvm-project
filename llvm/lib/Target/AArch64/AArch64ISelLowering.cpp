@@ -1904,10 +1904,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       (Subtarget->hasSME() && Subtarget->isStreaming())) {
     for (auto VT : {MVT::v2i32, MVT::v4i16, MVT::v8i8, MVT::v16i8, MVT::nxv2i1,
                     MVT::nxv4i1, MVT::nxv8i1, MVT::nxv16i1}) {
-      setOperationAction(ISD::EXPERIMENTAL_LOOP_DEPENDENCE_RAW_MASK, VT,
-                         Custom);
-      setOperationAction(ISD::EXPERIMENTAL_LOOP_DEPENDENCE_WAR_MASK, VT,
-                         Custom);
+      setOperationAction(ISD::LOOP_DEPENDENCE_RAW_MASK, VT, Custom);
+      setOperationAction(ISD::LOOP_DEPENDENCE_WAR_MASK, VT, Custom);
     }
   }
 
@@ -5101,8 +5099,7 @@ AArch64TargetLowering::LowerLOOP_DEPENDENCE_MASK(SDValue Op,
                                                  SelectionDAG &DAG) const {
   SDLoc DL(Op);
   uint64_t EltSize = Op.getConstantOperandVal(2);
-  bool IsWriteAfterRead =
-      Op.getOpcode() == ISD::EXPERIMENTAL_LOOP_DEPENDENCE_WAR_MASK;
+  bool IsWriteAfterRead = Op.getOpcode() == ISD::LOOP_DEPENDENCE_WAR_MASK;
   unsigned Opcode =
       IsWriteAfterRead ? AArch64ISD::WHILEWR : AArch64ISD::WHILERW;
   EVT VT = Op.getValueType();
@@ -7302,8 +7299,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   default:
     llvm_unreachable("unimplemented operand");
     return SDValue();
-  case ISD::EXPERIMENTAL_LOOP_DEPENDENCE_RAW_MASK:
-  case ISD::EXPERIMENTAL_LOOP_DEPENDENCE_WAR_MASK:
+  case ISD::LOOP_DEPENDENCE_RAW_MASK:
+  case ISD::LOOP_DEPENDENCE_WAR_MASK:
     return LowerLOOP_DEPENDENCE_MASK(Op, DAG);
   case ISD::BITCAST:
     return LowerBITCAST(Op, DAG);
@@ -27606,8 +27603,8 @@ void AArch64TargetLowering::ReplaceNodeResults(
     // CONCAT_VECTORS -- but delegate to common code for result type
     // legalisation
     return;
-  case ISD::EXPERIMENTAL_LOOP_DEPENDENCE_WAR_MASK:
-  case ISD::EXPERIMENTAL_LOOP_DEPENDENCE_RAW_MASK: {
+  case ISD::LOOP_DEPENDENCE_WAR_MASK:
+  case ISD::LOOP_DEPENDENCE_RAW_MASK: {
     EVT VT = N->getValueType(0);
     if (!VT.isFixedLengthVector() || VT.getVectorElementType() != MVT::i1)
       return;
@@ -27678,8 +27675,8 @@ void AArch64TargetLowering::ReplaceNodeResults(
       return;
     }
     case Intrinsic::experimental_vector_match:
-    case Intrinsic::experimental_loop_dependence_raw_mask:
-    case Intrinsic::experimental_loop_dependence_war_mask: {
+    case Intrinsic::loop_dependence_raw_mask:
+    case Intrinsic::loop_dependence_war_mask: {
       if (!VT.isFixedLengthVector() || VT.getVectorElementType() != MVT::i1)
         return;
 
