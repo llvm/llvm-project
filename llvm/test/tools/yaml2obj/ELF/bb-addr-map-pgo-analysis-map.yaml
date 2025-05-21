@@ -6,14 +6,15 @@
 # Case 4: Specify Entries.
 # CHECK:        Name: .llvm_bb_addr_map (1)
 # CHECK:        SectionData (
-# CHECK-NEXT:     0000: 02072000 00000000 0000010B 010203E8
-# CHECK-NEXT:     0010: 07E80702 0CEEDDBB F70E0D91 A2C48801
+# CHECK-NEXT:     0000: 02072000 00000000 0000010B 01020304
+# CHECK-NEXT:     0010: E807E807 020CEEDD BBF70E0D 91A2C488
+# CHECK-NEXT:     0020: 01
 # CHECK-NEXT:   )
 
 # Case 7: Not including a field which is enabled in feature doesn't emit value
 # CHECK:        Name: .llvm_bb_addr_map (1)
 # CHECK:        SectionData (
-# CHECK-NEXT:     0000: 02012000 00000000 0000020D 010203 |
+# CHECK-NEXT:     0000: 02012000 00000000 0000020D 01020304 |
 # CHECK-NEXT:   )
 
 --- !ELF
@@ -39,6 +40,7 @@ Sections:
                 AddressOffset: 0x00000001
                 Size:          0x00000002
                 Metadata:      0x00000003
+                Hash:          0x00000004
     PGOAnalyses:
       - FuncEntryCount: 1000
         PGOBBEntries:
@@ -63,6 +65,7 @@ Sections:
                AddressOffset: 0x00000001
                Size:          0x00000002
                Metadata:      0x00000003
+               Hash:          0x00000004
 
 ## Check that yaml2obj generates a warning when we use unsupported feature.
 # RUN: yaml2obj --docnum=2  %s 2>&1 | FileCheck %s --check-prefix=INVALID-FEATURE

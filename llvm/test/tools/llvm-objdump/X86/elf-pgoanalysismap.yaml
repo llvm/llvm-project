@@ -33,6 +33,7 @@ Sections:
                 AddressOffset: 0x0
                 Size:          0x1
                 Metadata:      0x1
+                Hash:          0x1
     PGOAnalyses:
       - FuncEntryCount: 1000
 Symbols:
@@ -76,18 +77,22 @@ Sections:
                 AddressOffset: 0x0
                 Size:          0x1
                 Metadata:      0x1
+                Hash:          0x1
               - ID:            1
                 AddressOffset: 0x0
                 Size:          0x6
                 Metadata:      0x0
+                Hash:          0x2
               - ID:            2
                 AddressOffset: 0x1
                 Size:          0x4
                 Metadata:      0x0
+                Hash:          0x3
               - ID:            5
                 AddressOffset: 0x0
                 Size:          0x1
                 Metadata:      0x2
+                Hash:          0x4
     PGOAnalyses:
       - FuncEntryCount: 1000
         PGOBBEntries:
@@ -148,18 +153,22 @@ Sections:
                 AddressOffset: 0x0
                 Size:          0x1
                 Metadata:      0x1
+                Hash:          0x1
               - ID:            1
                 AddressOffset: 0x0
                 Size:          0x6
                 Metadata:      0x0
+                Hash:          0x2
               - ID:            2
                 AddressOffset: 0x1
                 Size:          0x4
                 Metadata:      0x0
+                Hash:          0x3
               - ID:            5
                 AddressOffset: 0x0
                 Size:          0x1
                 Metadata:      0x2
+                Hash:          0x4
     PGOAnalyses:
       - FuncEntryCount: 1000
         PGOBBEntries:

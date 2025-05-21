@@ -162,6 +162,7 @@ struct BBAddrMapEntry {
     llvm::yaml::Hex64 AddressOffset;
     llvm::yaml::Hex64 Size;
     llvm::yaml::Hex64 Metadata;
+    llvm::yaml::Hex64 Hash;
   };
   uint8_t Version;
   llvm::yaml::Hex8 Feature;
