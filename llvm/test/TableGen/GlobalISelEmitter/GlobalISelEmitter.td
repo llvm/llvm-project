@@ -82,6 +82,7 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // CHECK-NEXT:    bool testImmPredicate_APFloat(unsigned PredicateID, const APFloat &Imm) const override;
 // CHECK-NEXT:    const uint8_t *getMatchTable() const override;
 // CHECK-NEXT:    bool testMIPredicate_MI(unsigned PredicateID, const MachineInstr &MI, const MatcherState &State) const override;
+// CHECK-NEXT:    bool testMOPredicate_MO(unsigned PredicateID, const MachineOperand &MO, const MatcherState &State) const override;
 // CHECK-NEXT:    bool testSimplePredicate(unsigned PredicateID) const override;
 // CHECK-NEXT:    bool runCustomAction(unsigned FnID, const MatcherState &State, NewMIVector &OutMIs) const override;
 // CHECK-NEXT:  #endif // ifdef GET_GLOBALISEL_TEMPORARIES_DECL
@@ -156,6 +157,15 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // CHECK-NEXT:  enum {
 // CHECK-NEXT:   GICXXPred_MI_Predicate_frag = GICXXPred_Invalid + 1,
 // CHECK-NEXT:  };
+
+// CHECK-LABEL: // PatFrag predicates.
+// CHECK-NEXT:  bool MyTargetInstructionSelector::testMOPredicate_MO(unsigned PredicateID, const MachineOperand & MO, const MatcherState &State) const {
+// CHECK-NEXT:    const auto &Operands = State.RecordedOperands; 
+// CHECK-NEXT:    (void)Operands; 
+// CHECK-NEXT:    llvm_unreachable("Unknown predicate");
+// CHECK-NEXT:    return false;
+// CHECK-NEXT:  }
+
 
 // CHECK-LABEL: // PatFrag predicates.
 // CHECK-NEXT:  enum {

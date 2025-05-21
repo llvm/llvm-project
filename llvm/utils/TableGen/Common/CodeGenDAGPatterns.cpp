@@ -1297,6 +1297,17 @@ std::string TreePredicateFn::getGISelPredicateCode() const {
       PatFragRec->getRecord()->getValueAsString("GISelPredicateCode"));
 }
 
+bool TreePredicateFn::hasGISelRegPredicateCode() const {
+  return !PatFragRec->getRecord()
+              ->getValueAsString("GISelRegPredicateCode")
+              .empty();
+}
+
+std::string TreePredicateFn::getGISelRegPredicateCode() const {
+  return std::string(
+      PatFragRec->getRecord()->getValueAsString("GISelRegPredicateCode"));
+}
+
 StringRef TreePredicateFn::getImmType() const {
   if (immCodeUsesAPInt())
     return "const APInt &";

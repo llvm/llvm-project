@@ -143,6 +143,26 @@ protected:
         AdditionalDecls, Predicates, GetPredEnumName, GetPredCode, Comment);
   }
 
+  /// Emits `testMOPredicate_MO`.
+  /// @tparam PredicateObject An object representing a predicate to emit.
+  /// @param OS Output stream.
+  /// @param AdditionalDecls Additional C++ variable declarations.
+  /// @param Predicates Predicates to emit.
+  /// @param GetPredEnumName Returns an enum name for a given predicate.
+  /// @param GetPredCode Returns the C++ code of a given predicate.
+  /// @param Comment Optional comment for the enum declaration.
+  template <typename PredicateObject>
+  void emitRegPredicateFnsImpl(
+      raw_ostream &OS, StringRef AdditionalDecls,
+      ArrayRef<PredicateObject> Predicates,
+      std::function<StringRef(PredicateObject)> GetPredEnumName,
+      std::function<StringRef(PredicateObject)> GetPredCode,
+      StringRef Comment = "") {
+    return emitCxxPredicateFns(
+        OS, "MO", "const MachineOperand &", "MO", ", const MatcherState &State",
+        AdditionalDecls, Predicates, GetPredEnumName, GetPredCode, Comment);
+  }
+
   /// Helper function to emit the following executor functions:
   ///   * testImmPredicate_I64      (TypeIdentifier=I64)
   ///   * testImmPredicate_APInt    (TypeIdentifier=APInt)
@@ -188,6 +208,10 @@ public:
   /// Emit the `testMIPredicate_MI` function.
   /// Note: `emitMIPredicateFnsImpl` can be used to do most of the work.
   virtual void emitMIPredicateFns(raw_ostream &OS) = 0;
+
+  /// Emit the `testRegPredicate` function
+  /// Note `emitRegPredicateFnsImpl` can be used to do most of the work.
+  virtual void emitRegPredicateFns(raw_ostream &OS) = 0;
 
   /// Emit the `testImmPredicate_I64` function.
   /// Note: `emitImmPredicateFnsImpl` can be used to do most of the work.
