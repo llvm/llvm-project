@@ -13,13 +13,11 @@
 // The content of this file is aarch64-only
 #if defined(__arm64__) || defined(__aarch64__)
 
+#include "builtins/assembly.h"
+
 #define REGISTER_SAVE_SPACE_SIZE     32 * 24
 
-#if defined(COMPILER_RT_EXECUTE_ONLY_CODE)
-        .section .text,"axy",@progbits,unique,0
-#else
-        .text
-#endif
+        TEXT_SECTION
 
   // returns address of TLV in x0, all other registers preserved
   // TODO: add fast-path for repeat access
