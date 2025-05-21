@@ -1102,23 +1102,30 @@ void ClauseProcessor::processMapObjects(
 
   auto getDefaultMapperID = [&](const omp::Object &object,
                                 std::string &mapperIdName) {
-    if (!mlir::isa<mlir::omp::DeclareMapperOp>(
-            firOpBuilder.getRegion().getParentOp())) {
-      const semantics::DerivedTypeSpec *typeSpec = nullptr;
+    const semantics::DerivedTypeSpec *typeSpec = nullptr;
 
-      if (object.sym()->owner().IsDerivedType())
-        typeSpec = object.sym()->owner().derivedTypeSpec();
-      else if (object.sym()->GetType() &&
-               object.sym()->GetType()->category() ==
-                   semantics::DeclTypeSpec::TypeDerived)
-        typeSpec = &object.sym()->GetType()->derivedTypeSpec();
+    if (object.sym()->GetType() && object.sym()->GetType()->category() ==
+                                       semantics::DeclTypeSpec::TypeDerived)
+      typeSpec = &object.sym()->GetType()->derivedTypeSpec();
+    else if (object.sym()->owner().IsDerivedType())
+      typeSpec = object.sym()->owner().derivedTypeSpec();
 
-      if (typeSpec) {
-        mapperIdName = typeSpec->name().ToString() + ".omp.default.mapper";
-        if (auto *sym = converter.getCurrentScope().FindSymbol(mapperIdName))
-          mapperIdName = converter.mangleName(mapperIdName, sym->owner());
-      }
+    if (typeSpec) {
+      mapperIdName = typeSpec->name().ToString() + ".omp.default.mapper";
+      if (auto *sym = converter.getCurrentScope().FindSymbol(mapperIdName))
+        mapperIdName = converter.mangleName(mapperIdName, sym->owner());
+      else
+        mapperIdName =
+            converter.mangleName(mapperIdName, *typeSpec->GetScope());
     }
+
+    // Make sure we don't return a mapper to self
+    llvm::StringRef parentOpName;
+    if (auto declMapOp = mlir::dyn_cast<mlir::omp::DeclareMapperOp>(
+            firOpBuilder.getRegion().getParentOp()))
+      parentOpName = declMapOp.getSymName();
+    if (mapperIdName == parentOpName)
+      mapperIdName = "";
   };
 
   // Create the mapper symbol from its name, if specified.
