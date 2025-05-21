@@ -12365,16 +12365,19 @@ public:
     bool PrevLastDiagnosticIgnored;
 
   public:
-    explicit SFINAETrap(Sema &SemaRef, bool AccessCheckingSFINAE = false)
+    /// \param ForValidityCheck If true, discard all diagnostics (from the
+    /// immediate context) instead of adding them to the currently active
+    /// \ref TemplateDeductionInfo (as returned by \ref isSFINAEContext).
+    explicit SFINAETrap(Sema &SemaRef, bool ForValidityCheck = false)
         : SemaRef(SemaRef), PrevSFINAEErrors(SemaRef.NumSFINAEErrors),
           PrevInNonInstantiationSFINAEContext(
               SemaRef.InNonInstantiationSFINAEContext),
           PrevAccessCheckingSFINAE(SemaRef.AccessCheckingSFINAE),
           PrevLastDiagnosticIgnored(
               SemaRef.getDiagnostics().isLastDiagnosticIgnored()) {
-      if (!SemaRef.isSFINAEContext())
+      if (ForValidityCheck || !SemaRef.isSFINAEContext())
         SemaRef.InNonInstantiationSFINAEContext = true;
-      SemaRef.AccessCheckingSFINAE = AccessCheckingSFINAE;
+      SemaRef.AccessCheckingSFINAE = ForValidityCheck;
     }
 
     ~SFINAETrap() {
@@ -12404,7 +12407,7 @@ public:
 
   public:
     explicit TentativeAnalysisScope(Sema &SemaRef)
-        : SemaRef(SemaRef), Trap(SemaRef, true),
+        : SemaRef(SemaRef), Trap(SemaRef, /*ForValidityCheck=*/true),
           PrevDisableTypoCorrection(SemaRef.DisableTypoCorrection) {
       SemaRef.DisableTypoCorrection = true;
     }
