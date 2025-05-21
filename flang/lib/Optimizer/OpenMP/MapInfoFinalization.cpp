@@ -313,6 +313,28 @@ class MapInfoFinalizationPass
     return false;
   }
 
+  bool isUseDeviceAddr(mlir::omp::MapInfoOp mapOp, mlir::Operation *userOp) {
+    assert(userOp && "Expecting non-null argument");
+    if (auto targetDataOp = llvm::dyn_cast<mlir::omp::TargetDataOp>(userOp)) {
+      for (mlir::Value uda : targetDataOp.getUseDeviceAddrVars()) {
+        if (uda.getDefiningOp() == mapOp)
+          return true;
+      }
+    }
+    return false;
+  }
+
+  bool isUseDevicePtr(mlir::omp::MapInfoOp mapOp, mlir::Operation *userOp) {
+    assert(userOp && "Expecting non-null argument");
+    if (auto targetDataOp = llvm::dyn_cast<mlir::omp::TargetDataOp>(userOp)) {
+      for (mlir::Value udp : targetDataOp.getUseDevicePtrVars()) {
+        if (udp.getDefiningOp() == mapOp)
+          return true;
+      }
+    }
+    return false;
+  }
+
   mlir::omp::MapInfoOp genDescriptorMemberMaps(mlir::omp::MapInfoOp op,
                                                fir::FirOpBuilder &builder,
                                                mlir::Operation *target) {
@@ -542,6 +564,66 @@ class MapInfoFinalizationPass
     }
 
     return nullptr;
+  }
+
+  void addImplictDescriptorMapToTargetDataOp(mlir::omp::MapInfoOp op,
+                                             fir::FirOpBuilder &builder,
+                                             mlir::Operation *target) {
+    // Checks if the map is present as an explicit map already on the target
+    // data directive, and not just present on a use_device_addr/ptr, as if
+    // that's the case, we should not need to add an implicit map for the
+    // descriptor.
+    auto explicitMappingPresent = [](mlir::omp::MapInfoOp op,
+                                     mlir::omp::TargetDataOp tarData) {
+      // Verify top-level descriptor mapping is at least equal with same
+      // varPtr, the map type should always be To for a descriptor, which is
+      // all we really care about for this mapping as we aim to make sure the
+      // descriptor is always present on device if we're expecting to access
+      // the underlying data.
+      if (tarData.getMapVars().empty())
+        return false;
+
+      for (mlir::Value mapVar : tarData.getMapVars()) {
+        auto mapOp =
+            llvm::dyn_cast<mlir::omp::MapInfoOp>(mapVar.getDefiningOp());
+        if (mapOp.getVarPtr() == op.getVarPtr() &&
+            mapOp.getVarPtrPtr() == mapOp.getVarPtrPtr()) {
+          return true;
+        }
+      }
+
+      return false;
+    };
+
+    // if we're not a top level descriptor with members (e.g. member of a
+    // derived type), we do not want to perform this step.
+    if (!llvm::isa<mlir::omp::TargetDataOp>(target) || op.getMembers().empty())
+      return;
+
+    if (!isUseDeviceAddr(op, target) && !isUseDevicePtr(op, target))
+      return;
+
+    auto targetDataOp = llvm::dyn_cast<mlir::omp::TargetDataOp>(target);
+    if (explicitMappingPresent(op, targetDataOp))
+      return;
+
+    mlir::omp::MapInfoOp newDescParentMapOp =
+        builder.create<mlir::omp::MapInfoOp>(
+            op->getLoc(), op.getResult().getType(), op.getVarPtr(),
+            op.getVarTypeAttr(),
+            builder.getIntegerAttr(
+                builder.getIntegerType(64, false),
+                llvm::to_underlying(
+                    llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO |
+                    llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS |
+                    llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_DESCRIPTOR)),
+            op.getMapCaptureTypeAttr(), /*varPtrPtr=*/mlir::Value{},
+            mlir::SmallVector<mlir::Value>{}, mlir::ArrayAttr{},
+            /*bounds=*/mlir::SmallVector<mlir::Value>{},
+            /*mapperId*/ mlir::FlatSymbolRefAttr(), op.getNameAttr(),
+            /*partial_map=*/builder.getBoolAttr(false));
+
+    targetDataOp.getMapVarsMutable().append({newDescParentMapOp});
   }
 
   void removeTopLevelDescriptor(mlir::omp::MapInfoOp op,
@@ -880,6 +962,7 @@ class MapInfoFinalizationPass
           assert(targetUser && "expected user of map operation was not found");
           builder.setInsertionPoint(op);
           removeTopLevelDescriptor(op, builder, targetUser);
+          addImplictDescriptorMapToTargetDataOp(op, builder, targetUser);
         }
       });
 
