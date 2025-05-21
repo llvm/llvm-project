@@ -18465,7 +18465,7 @@ SDValue PPCTargetLowering::combineVectorShift(SDNode *N,
   assert((Opc == ISD::SHL || Opc == ISD::SRL || Opc == ISD::SRA) &&
          "Unexpected opcode.");
 
-  if (!isOperationLegal(N->getOpcode(), VT))
+  if (!isOperationLegal(Opc, VT))
     return SDValue();
 
   EVT EltTy = VT.getScalarType();
@@ -18476,14 +18476,15 @@ SDValue PPCTargetLowering::combineVectorShift(SDNode *N,
   SDValue N1 = N->getOperand(1);
   uint64_t SplatBits = 0;
   bool AddSplatCase = false;
-  if (N1.getOpcode() == PPCISD::VADD_SPLAT &&
+  unsigned OpcN1 = N1.getOpcode();
+  if (OpcN1 == PPCISD::VADD_SPLAT &&
       N1.getConstantOperandVal(1) == VT.getVectorNumElements()) {
     AddSplatCase = true;
     SplatBits = N1.getConstantOperandVal(0);
   }
 
   if (!AddSplatCase) {
-    if (N1.getOpcode() != ISD::BUILD_VECTOR)
+    if (OpcN1 != ISD::BUILD_VECTOR)
       return SDValue();
 
     unsigned SplatBitSize;
@@ -18500,9 +18501,10 @@ SDValue PPCTargetLowering::combineVectorShift(SDNode *N,
 
   SDLoc DL(N);
   SDValue N0 = N->getOperand(0);
-  // We can't splat immediate 31 or 63 to shift by element size - 1 for vector
-  // word and vector double shifts, but we can splat immediate all ones and
-  // do the same thing (using PPC shifts).
+  // PPC vector shifts by word/double look at only the low 5/6 bits of the
+  // shift vector, which means the max value is 31/63. A shift vector of all
+  // 1s will be truncated to 31/63, which is useful as vspltiw is limited to
+  // -16 to 15 range.
   if (SplatBits == (EltBits - 1)) {
     unsigned NewOpc;
     switch (Opc) {
