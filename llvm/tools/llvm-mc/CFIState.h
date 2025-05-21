@@ -2,11 +2,8 @@
 #define LLVM_TOOLS_LLVM_MC_CFI_STATE_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCDwarf.h"
-#include "llvm/MC/MCRegister.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/MathExtras.h"
 #include <cassert>
 #include <cstdint>
 #include <optional>
