@@ -19,12 +19,12 @@
 
 ## The errors go away when the image base is 0.
 # RUN: ld.lld %t.o -pie --section-start .text=0x100000 \
-# RUN:   --section-start=.data=0x110000 --section-start .bss=0x200000 -o %t --noinhibit-exec
+# RUN:   --section-start=.data=0x110000 --section-start .bss=0x200000 -o %t 2>&1 | count 0
 # RUN: llvm-objdump --section-headers %t | FileCheck %s
 
 ## The same, but dropped "0x" prefix. Specify a smaller --image-base to suppress warnings.
 # RUN: ld.lld %t.o --image-base=0x90000 --section-start .text=100000 \
-# RUN:   --section-start .data=110000 --section-start .bss=0x200000 -o %t1 --noinhibit-exec
+# RUN:   --section-start .data=110000 --section-start .bss=0x200000 -o %t1 2>&1 | count 0
 # RUN: llvm-objdump --section-headers %t1 | FileCheck %s
 
 ## Use -Ttext, -Tdata, -Tbss as replacement for --section-start:
