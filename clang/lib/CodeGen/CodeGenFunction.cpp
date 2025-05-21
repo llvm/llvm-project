@@ -342,15 +342,6 @@ llvm::DebugLoc CodeGenFunction::EmitReturnBlock() {
       // later by the actual 'ret' instruction.
       llvm::DebugLoc Loc = BI->getDebugLoc();
       Builder.SetInsertPoint(BI->getParent());
-
-      // Key Instructions: If there's only one `ret` then we want to put the
-      // instruction in the same source atom group as the store to the ret-value
-      // alloca and unconditional `br` to the return block that we're about to
-      // delete. It all comes from the same source (`return (value)`).
-      if (auto *DI = getDebugInfo(); DI && BI->getDebugLoc())
-        DI->setRetInstSourceAtomOverride(
-            BI->getDebugLoc().get()->getAtomGroup());
-
       BI->eraseFromParent();
       delete ReturnBlock.getBlock();
       ReturnBlock = JumpDest();
@@ -453,8 +444,14 @@ void CodeGenFunction::FinishFunction(SourceLocation EndLoc) {
 
   // Reset the debug location to that of the simple 'return' expression, if any
   // rather than that of the end of the function's scope '}'.
+  uint64_t RetKeyInstructionsAtomGroup = Loc ? Loc->getAtomGroup() : 0;
+  llvm::errs() << "RetKeyInstructionsAtomGroup " << RetKeyInstructionsAtomGroup
+               << "\n";
+  if (Loc)
+    llvm::errs() << *Loc << "\n";
   ApplyDebugLocation AL(*this, Loc);
-  EmitFunctionEpilog(*CurFnInfo, EmitRetDbgLoc, EndLoc);
+  EmitFunctionEpilog(*CurFnInfo, EmitRetDbgLoc, EndLoc,
+                     RetKeyInstructionsAtomGroup);
   EmitEndEHSpec(CurCodeDecl);
 
   assert(EHStack.empty() &&

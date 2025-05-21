@@ -16,4 +16,4 @@ void foo(int x, S s) {
 
 // CHECK: [[G1R2]] = !DILocation({{.*}}, atomGroup: 1, atomRank: 2)
 // CHECK: [[G1R1]] = !DILocation({{.*}}, atomGroup: 1, atomRank: 1)
-// CHECK: [[RET:!.*]] = !DILocation({{.*}}, atomGroup: [[#]], atomRank: [[#]])
+// CHECK: [[RET]] = !DILocation({{.*}}, atomGroup: [[#]], atomRank: [[#]])

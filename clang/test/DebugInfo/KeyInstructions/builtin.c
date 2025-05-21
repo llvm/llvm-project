@@ -88,3 +88,4 @@ void fun() {
 // CHECK: [[G15R2]] = !DILocation({{.*}}, atomGroup: 15, atomRank: 2)
 // CHECK: [[G15R1]] = !DILocation({{.*}}, atomGroup: 15, atomRank: 1)
 // CHECK: [[RET:!.*]] = !DILocation({{.*}}, atomGroup: [[#]], atomRank: [[#]])
+// CHECK: [[RET]] = !DILocation({{.*}}, atomGroup: [[#]], atomRank: [[#]])

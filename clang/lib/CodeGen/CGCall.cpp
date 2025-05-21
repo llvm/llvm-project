@@ -3929,9 +3929,9 @@ llvm::Value *CodeGenFunction::EmitCMSEClearRecord(llvm::Value *Src,
   return R;
 }
 
-void CodeGenFunction::EmitFunctionEpilog(const CGFunctionInfo &FI,
-                                         bool EmitRetDbgLoc,
-                                         SourceLocation EndLoc) {
+void CodeGenFunction::EmitFunctionEpilog(
+    const CGFunctionInfo &FI, bool EmitRetDbgLoc, SourceLocation EndLoc,
+    uint64_t RetKeyInstructionsSourceAtom) {
   if (FI.isNoReturn()) {
     // Noreturn functions don't return.
     EmitUnreachable(EndLoc);
@@ -3947,7 +3947,10 @@ void CodeGenFunction::EmitFunctionEpilog(const CGFunctionInfo &FI,
   // Functions with no result always return void.
   if (!ReturnValue.isValid()) {
     auto *I = Builder.CreateRetVoid();
-    addRetToOverrideOrNewSourceAtom(I, nullptr);
+    if (RetKeyInstructionsSourceAtom)
+      addInstToSpecificSourceAtom(I, nullptr, RetKeyInstructionsSourceAtom);
+    else
+      addInstToNewSourceAtom(I, nullptr);
     return;
   }
 
@@ -4129,7 +4132,10 @@ void CodeGenFunction::EmitFunctionEpilog(const CGFunctionInfo &FI,
     Ret->setDebugLoc(std::move(RetDbgLoc));
 
   llvm::Value *Backup = RV ? Ret->getOperand(0) : nullptr;
-  addRetToOverrideOrNewSourceAtom(cast<llvm::ReturnInst>(Ret), Backup);
+  if (RetKeyInstructionsSourceAtom)
+    addInstToSpecificSourceAtom(Ret, Backup, RetKeyInstructionsSourceAtom);
+  else
+    addInstToNewSourceAtom(Ret, Backup);
 }
 
 void CodeGenFunction::EmitReturnValueCheck(llvm::Value *RV) {
