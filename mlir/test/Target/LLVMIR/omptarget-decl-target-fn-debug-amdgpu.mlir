@@ -27,7 +27,7 @@ module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_devic
 // CHECK:   %[[CAST:[0-9]+]] = addrspacecast ptr addrspace(5) %[[AL]]
 // CHECK:   store ptr %[[ARG]], ptr %[[CAST]]{{.*}}
 // CHECK:   load ptr, ptr %[[CAST]]{{.*}}
-// CHECK: #dbg_declare(ptr %[[CAST]], ![[A:[0-9]+]], !DIExpression(DIOpArg(0, ptr addrspace(5)), DIOpDeref(ptr), DIOpDeref(ptr)), !{{.*}})
+// CHECK: #dbg_declare(ptr addrspace(5) %[[AL]], ![[A:[0-9]+]], !DIExpression(DIOpArg(0, ptr addrspace(5)), DIOpDeref(ptr), DIOpDeref(ptr)), !{{.*}})
 // CHECK: }
 // CHECK: ![[SP]] = {{.*}}!DISubprogram(name: "add"{{.*}})
 // CHECK: ![[A]] = !DILocalVariable(name: "a", arg: 1, scope: ![[SP]]{{.*}})
