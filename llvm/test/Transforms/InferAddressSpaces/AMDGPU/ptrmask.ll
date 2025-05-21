@@ -361,7 +361,25 @@ define i8 @ptrmask_cast_local_to_flat_unknown_mask(ptr addrspace(3) %src.ptr, i6
   ret i8 %load
 }
 
+define i8 @ptrmask_vector_cast_local_to_flat_unknown_mask(<2 x ptr addrspace(3)> %src.ptr, <2 x i64> %mask, i64 %ptridx, i64 %idx) {
+; CHECK-LABEL: @ptrmask_vector_cast_local_to_flat_unknown_mask(
+; CHECK-NEXT:    [[CAST:%.*]] = addrspacecast <2 x ptr addrspace(3)> [[SRC_PTR:%.*]] to <2 x ptr>
+; CHECK-NEXT:    [[MASKED:%.*]] = call <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> [[CAST]], <2 x i64> [[MASK:%.*]])
+; CHECK-NEXT:    [[PTR:%.*]] = extractelement <2 x ptr> [[MASKED]], i64 [[PTRIDX:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[IDX:%.*]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr [[GEP]], align 1
+; CHECK-NEXT:    ret i8 [[LOAD]]
+;
+  %cast = addrspacecast <2 x ptr addrspace(3)> %src.ptr to <2 x ptr>
+  %masked = call <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> %cast, <2 x i64> %mask)
+  %ptr = extractelement <2 x ptr> %masked, i64 %ptridx
+  %gep = getelementptr i8, ptr %ptr, i64 %idx
+  %load = load i8, ptr %gep
+  ret i8 %load
+}
+
 declare ptr @llvm.ptrmask.p0.i64(ptr, i64) #0
+declare <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr>, <2 x i64>) #0
 declare ptr addrspace(5) @llvm.ptrmask.p5.i32(ptr addrspace(5), i32) #0
 declare ptr addrspace(3) @llvm.ptrmask.p3.i32(ptr addrspace(3), i32) #0
 declare ptr addrspace(1) @llvm.ptrmask.p1.i64(ptr addrspace(1), i64) #0
