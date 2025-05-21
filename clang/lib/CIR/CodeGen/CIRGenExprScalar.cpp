@@ -804,7 +804,7 @@ public:
           // intrinsics comparing vectors and giving 0 or 1 as a result
           cgf.cgm.errorNYI(loc, "AltiVec comparison");
         } else {
-          // Other kinds of vectors.  Element-wise comparison returning
+          // Other kinds of vectors. Element-wise comparison returning
           // a vector.
           result = builder.create<cir::VecCmpOp>(
               cgf.getLoc(boInfo.loc), cgf.convertType(boInfo.fullType), kind,
