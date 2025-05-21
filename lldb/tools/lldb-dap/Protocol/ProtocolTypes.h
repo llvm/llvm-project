@@ -317,6 +317,8 @@ struct Source {
   std::optional<PresentationHint> presentationHint;
 
   // unsupported keys: origin, sources, adapterData, checksums
+
+  bool IsAssemblySource() const { return sourceReference.value_or(0) != 0; }
 };
 bool fromJSON(const llvm::json::Value &, Source::PresentationHint &,
               llvm::json::Path);

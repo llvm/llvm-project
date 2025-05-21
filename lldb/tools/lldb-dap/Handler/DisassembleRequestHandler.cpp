@@ -13,6 +13,7 @@
 #include "Protocol/ProtocolTypes.h"
 #include "RequestHandler.h"
 #include "lldb/API/SBAddress.h"
+#include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBInstruction.h"
 #include "lldb/API/SBTarget.h"
 #include "lldb/lldb-types.h"
@@ -81,12 +82,15 @@ static lldb::SBAddress GetDisassembleStartAddress(lldb::SBTarget target,
       .GetAddress();
 }
 
-static DisassembledInstruction ConvertSBInstructionToDisassembledInstruction(
-    lldb::SBTarget &target, lldb::SBInstruction &inst, bool resolve_symbols) {
+static DisassembledInstruction
+ConvertSBInstructionToDisassembledInstruction(lldb::SBDebugger &debugger,
+                                              lldb::SBInstruction &inst,
+                                              bool resolve_symbols) {
   if (!inst.IsValid())
     return GetInvalidInstruction();
 
-  auto addr = inst.GetAddress();
+  lldb::SBTarget target = debugger.GetSelectedTarget();
+  lldb::SBAddress addr = inst.GetAddress();
   const auto inst_addr = addr.GetLoadAddress(target);
 
   // FIXME: This is a workaround - this address might come from
@@ -139,15 +143,14 @@ static DisassembledInstruction ConvertSBInstructionToDisassembledInstruction(
 
   disassembled_inst.instruction = std::move(instruction);
 
+  auto source = CreateSource(addr, debugger);
   auto line_entry = addr.GetLineEntry();
-  // If the line number is 0 then the entry represents a compiler generated
-  // location.
 
-  if (line_entry.GetStartAddress() == addr && line_entry.IsValid() &&
+  if (!source.IsAssemblySource() && line_entry.IsValid() &&
+      line_entry.GetStartAddress() == addr && line_entry.IsValid() &&
       line_entry.GetFileSpec().IsValid() && line_entry.GetLine() != 0) {
-    auto source = CreateSource(line_entry);
-    disassembled_inst.location = std::move(source);
 
+    disassembled_inst.location = std::move(source);
     const auto line = line_entry.GetLine();
     if (line != 0 && line != LLDB_INVALID_LINE_NUMBER)
       disassembled_inst.line = line;
@@ -220,7 +223,7 @@ DisassembleRequestHandler::Run(const DisassembleArguments &args) const {
       original_address_index = i;
 
     instructions.push_back(ConvertSBInstructionToDisassembledInstruction(
-        dap.target, inst, resolve_symbols));
+        dap.debugger, inst, resolve_symbols));
   }
 
   // Check if we miss instructions at the beginning.
