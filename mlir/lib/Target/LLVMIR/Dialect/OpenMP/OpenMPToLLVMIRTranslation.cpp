@@ -3047,9 +3047,7 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
           targetOp.getKernelExecFlags(targetCapturedOp);
       if (omp::bitEnumContainsAll(kernelFlags,
                                   omp::TargetRegionFlags::spmd |
-                                      omp::TargetRegionFlags::no_loop) &&
-          !omp::bitEnumContainsAny(kernelFlags,
-                                   omp::TargetRegionFlags::generic))
+                                      omp::TargetRegionFlags::no_loop))
         noLoopMode = true;
     }
   }
@@ -6235,21 +6233,12 @@ initTargetDefaultAttrs(omp::TargetOp targetOp, Operation *capturedOp,
 
   // Update kernel bounds structure for the `OpenMPIRBuilder` to use.
   omp::TargetRegionFlags kernelFlags = targetOp.getKernelExecFlags(capturedOp);
-  assert(
-      omp::bitEnumContainsAny(kernelFlags, omp::TargetRegionFlags::generic |
-                                               omp::TargetRegionFlags::spmd) &&
-      "invalid kernel flags");
   attrs.ExecFlags =
-      omp::bitEnumContainsAny(kernelFlags, omp::TargetRegionFlags::generic)
-          ? omp::bitEnumContainsAny(kernelFlags, omp::TargetRegionFlags::spmd)
-                ? llvm::omp::OMP_TGT_EXEC_MODE_GENERIC_SPMD
-                : llvm::omp::OMP_TGT_EXEC_MODE_GENERIC
-          : llvm::omp::OMP_TGT_EXEC_MODE_SPMD;
-  if (omp::bitEnumContainsAll(kernelFlags,
-                              omp::TargetRegionFlags::spmd |
-                                  omp::TargetRegionFlags::no_loop) &&
-      !omp::bitEnumContainsAny(kernelFlags, omp::TargetRegionFlags::generic))
-    attrs.ExecFlags = llvm::omp::OMP_TGT_EXEC_MODE_SPMD_NO_LOOP;
+      omp::bitEnumContainsAny(kernelFlags, omp::TargetRegionFlags::spmd)
+          ? omp::bitEnumContainsAny(kernelFlags, omp::TargetRegionFlags::no_loop)
+                ? llvm::omp::OMP_TGT_EXEC_MODE_SPMD_NO_LOOP
+                : llvm::omp::OMP_TGT_EXEC_MODE_SPMD
+          : llvm::omp::OMP_TGT_EXEC_MODE_GENERIC;
 
   attrs.MinTeams = minTeamsVal;
   attrs.MaxTeams.front() = maxTeamsVal;
