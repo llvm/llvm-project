@@ -19,6 +19,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Mustache.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/TimeProfiler.h"
 
 using namespace llvm;
 using namespace llvm::json;
@@ -125,13 +126,18 @@ static Error setupTemplateFiles(const clang::doc::ClangDocContext &CDCtx) {
 Error MustacheHTMLGenerator::generateDocs(
     StringRef RootDir, StringMap<std::unique_ptr<doc::Info>> Infos,
     const clang::doc::ClangDocContext &CDCtx) {
-  if (auto Err = setupTemplateFiles(CDCtx))
-    return Err;
+  {
+    llvm::TimeTraceScope TS("Setup Templates");
+    if (auto Err = setupTemplateFiles(CDCtx))
+      return Err;
+  }
+
   // Track which directories we already tried to create.
   StringSet<> CreatedDirs;
   // Collect all output by file name and create the necessary directories.
   StringMap<std::vector<doc::Info *>> FileToInfos;
   for (const auto &Group : Infos) {
+    llvm::TimeTraceScope TS("setup directories");
     doc::Info *Info = Group.getValue().get();
 
     SmallString<128> Path;
@@ -148,15 +154,19 @@ Error MustacheHTMLGenerator::generateDocs(
     FileToInfos[Path].push_back(Info);
   }
 
-  for (const auto &Group : FileToInfos) {
-    std::error_code FileErr;
-    raw_fd_ostream InfoOS(Group.getKey(), FileErr, sys::fs::OF_None);
-    if (FileErr)
-      return createFileOpenError(Group.getKey(), FileErr);
+  {
+    llvm::TimeTraceScope TS("Generate Docs");
+    for (const auto &Group : FileToInfos) {
+      llvm::TimeTraceScope TS("Info to Doc");
+      std::error_code FileErr;
+      raw_fd_ostream InfoOS(Group.getKey(), FileErr, sys::fs::OF_None);
+      if (FileErr)
+        return createFileOpenError(Group.getKey(), FileErr);
 
-    for (const auto &Info : Group.getValue())
-      if (Error Err = generateDocForInfo(Info, InfoOS, CDCtx))
-        return Err;
+      for (const auto &Info : Group.getValue())
+        if (Error Err = generateDocForInfo(Info, InfoOS, CDCtx))
+          return Err;
+    }
   }
   return Error::success();
 }
