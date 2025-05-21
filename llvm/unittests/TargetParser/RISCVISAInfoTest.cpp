@@ -1141,6 +1141,16 @@ R"(All available -march extensions for RISC-V
     xmipscmov            1.0
     xmipslsp             1.0
     xsfcease             1.0
+    xsfmm128t            0.6
+    xsfmm16t             0.6
+    xsfmm32a16f          0.6
+    xsfmm32a32f          0.6
+    xsfmm32a8f           0.6
+    xsfmm32a8i           0.6
+    xsfmm32t             0.6
+    xsfmm64a64f          0.6
+    xsfmm64t             0.6
+    xsfmmbase            0.6
     xsfvcp               1.0
     xsfvfnrclipxfqf      1.0
     xsfvfwmaccqqq        1.0
