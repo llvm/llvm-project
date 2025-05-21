@@ -53,17 +53,16 @@ Error SpecialCaseList::Matcher::insert(StringRef Pattern, unsigned LineNumber,
     return Error::success();
   }
 
-  auto [It, DidEmplace] = Globs.try_emplace(Pattern);
-  if (DidEmplace) {
-    // We must be sure to use the string in the map rather than the provided
-    // reference which could be destroyed before match() is called
-    Pattern = It->getKey();
-    auto &Pair = It->getValue();
-    if (auto Err = GlobPattern::create(Pattern, /*MaxSubPatterns=*/1024)
-                       .moveInto(Pair.first))
-      return Err;
-    Pair.second = LineNumber;
-  }
+  Globs.emplace_back();
+  auto &Glob = Globs.back();
+  Glob.first = Pattern;
+  auto &Pair = Glob.second;
+  // We must be sure to use the string in the map rather than the provided
+  // reference which could be destroyed before match() is called
+  if (auto Err = GlobPattern::create(Glob.first, /*MaxSubPatterns=*/1024)
+                     .moveInto(Pair.first))
+    return Err;
+  Pair.second = LineNumber;
   return Error::success();
 }
 
