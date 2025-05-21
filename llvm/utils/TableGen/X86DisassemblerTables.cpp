@@ -746,8 +746,7 @@ void DisassemblerTables::emitModRMDecision(raw_ostream &o1, raw_ostream &o2,
       ModRMDecision.push_back(decision.instructionIDs[index]);
     break;
   case MODRM_FULL:
-    for (unsigned short InstructionID : decision.instructionIDs)
-      ModRMDecision.push_back(InstructionID);
+    llvm::append_range(ModRMDecision, decision.instructionIDs);
     break;
   }
 
@@ -874,7 +873,7 @@ void DisassemblerTables::emitInstructionInfo(raw_ostream &o,
     for (auto Operand : InstructionSpecifiers[Index].operands) {
       OperandEncoding Encoding = (OperandEncoding)Operand.encoding;
       OperandType Type = (OperandType)Operand.type;
-      OperandList.push_back(std::pair(Encoding, Type));
+      OperandList.emplace_back(Encoding, Type);
     }
     unsigned &N = OperandSets[OperandList];
     if (N != 0)
@@ -906,7 +905,7 @@ void DisassemblerTables::emitInstructionInfo(raw_ostream &o,
     for (auto Operand : InstructionSpecifiers[index].operands) {
       OperandEncoding Encoding = (OperandEncoding)Operand.encoding;
       OperandType Type = (OperandType)Operand.type;
-      OperandList.push_back(std::pair(Encoding, Type));
+      OperandList.emplace_back(Encoding, Type);
     }
     o.indent(i * 2) << (OperandSets[OperandList] - 1) << ",\n";
 

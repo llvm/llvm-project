@@ -11,12 +11,12 @@
 
 #include <__algorithm/iterator_operations.h>
 #include <__config>
+#include <__cstddef/ptrdiff_t.h>
 #include <__iterator/iterator_traits.h>
 #include <__random/uniform_int_distribution.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
 #include <__utility/swap.h>
-#include <cstddef>
 #include <cstdint>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -65,6 +65,7 @@ private:
 #if _LIBCPP_STD_VER <= 14 || defined(_LIBCPP_ENABLE_CXX17_REMOVED_RANDOM_SHUFFLE) || defined(_LIBCPP_BUILDING_LIBRARY)
 class _LIBCPP_EXPORTED_FROM_ABI __rs_default;
 
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_EXPORTED_FROM_ABI __rs_default __rs_get();
 
 class _LIBCPP_EXPORTED_FROM_ABI __rs_default {
@@ -90,6 +91,7 @@ public:
 };
 
 _LIBCPP_EXPORTED_FROM_ABI __rs_default __rs_get();
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 
 template <class _RandomAccessIterator>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_DEPRECATED_IN_CXX14 void

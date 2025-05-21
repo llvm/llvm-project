@@ -181,6 +181,7 @@ static bool foldGuardedFunnelShift(Instruction &I, const DominatorTree &DT) {
 /// the bit indexes (Mask) needed by a masked compare. If we're matching a chain
 /// of 'and' ops, then we also need to capture the fact that we saw an
 /// "and X, 1", so that's an extra return value for that case.
+namespace {
 struct MaskOps {
   Value *Root = nullptr;
   APInt Mask;
@@ -190,6 +191,7 @@ struct MaskOps {
   MaskOps(unsigned BitWidth, bool MatchAnds)
       : Mask(APInt::getZero(BitWidth)), MatchAndChain(MatchAnds) {}
 };
+} // namespace
 
 /// This is a recursive helper for foldAnyOrAllBitsSet() that walks through a
 /// chain of 'and' or 'or' instructions looking for shift ops of a common source
@@ -423,11 +425,8 @@ static bool foldSqrt(CallInst *Call, LibFunc Func, TargetTransformInfo &TTI,
            Arg, 0,
            SimplifyQuery(Call->getDataLayout(), &TLI, &DT, &AC, Call)))) {
     IRBuilder<> Builder(Call);
-    IRBuilderBase::FastMathFlagGuard Guard(Builder);
-    Builder.setFastMathFlags(Call->getFastMathFlags());
-
-    Value *NewSqrt = Builder.CreateIntrinsic(Intrinsic::sqrt, Ty, Arg,
-                                             /*FMFSource=*/nullptr, "sqrt");
+    Value *NewSqrt =
+        Builder.CreateIntrinsic(Intrinsic::sqrt, Ty, Arg, Call, "sqrt");
     Call->replaceAllUsesWith(NewSqrt);
 
     // Explicitly erase the old call because a call with side effects is not
@@ -676,14 +675,15 @@ static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
       Load2Ptr->stripAndAccumulateConstantOffsets(DL, Offset2,
                                                   /* AllowNonInbounds */ true);
 
-  // Verify if both loads have same base pointers and load sizes are same.
+  // Verify if both loads have same base pointers
   uint64_t LoadSize1 = LI1->getType()->getPrimitiveSizeInBits();
   uint64_t LoadSize2 = LI2->getType()->getPrimitiveSizeInBits();
-  if (Load1Ptr != Load2Ptr || LoadSize1 != LoadSize2)
+  if (Load1Ptr != Load2Ptr)
     return false;
 
-  // Support Loadsizes greater or equal to 8bits and only power of 2.
-  if (LoadSize1 < 8 || !isPowerOf2_64(LoadSize1))
+  // Make sure that there are no padding bits.
+  if (!DL.typeSizeEqualsStoreSize(LI1->getType()) ||
+      !DL.typeSizeEqualsStoreSize(LI2->getType()))
     return false;
 
   // Alias Analysis to check for stores b/w the loads.
@@ -803,8 +803,7 @@ static bool foldConsecutiveLoads(Instruction &I, const DataLayout &DL,
     APInt Offset1(DL.getIndexTypeSizeInBits(Load1Ptr->getType()), 0);
     Load1Ptr = Load1Ptr->stripAndAccumulateConstantOffsets(
         DL, Offset1, /* AllowNonInbounds */ true);
-    Load1Ptr = Builder.CreatePtrAdd(Load1Ptr,
-                                    Builder.getInt32(Offset1.getZExtValue()));
+    Load1Ptr = Builder.CreatePtrAdd(Load1Ptr, Builder.getInt(Offset1));
   }
   // Generate wider load.
   NewLoad = Builder.CreateAlignedLoad(WiderType, Load1Ptr, LI1->getAlign(),
@@ -826,6 +825,62 @@ static bool foldConsecutiveLoads(Instruction &I, const DataLayout &DL,
   I.replaceAllUsesWith(NewOp);
 
   return true;
+}
+
+/// Combine away instructions providing they are still equivalent when compared
+/// against 0. i.e do they have any bits set.
+static Value *optimizeShiftInOrChain(Value *V, IRBuilder<> &Builder) {
+  auto *I = dyn_cast<Instruction>(V);
+  if (!I || I->getOpcode() != Instruction::Or || !I->hasOneUse())
+    return nullptr;
+
+  Value *A;
+
+  // Look deeper into the chain of or's, combining away shl (so long as they are
+  // nuw or nsw).
+  Value *Op0 = I->getOperand(0);
+  if (match(Op0, m_CombineOr(m_NSWShl(m_Value(A), m_Value()),
+                             m_NUWShl(m_Value(A), m_Value()))))
+    Op0 = A;
+  else if (auto *NOp = optimizeShiftInOrChain(Op0, Builder))
+    Op0 = NOp;
+
+  Value *Op1 = I->getOperand(1);
+  if (match(Op1, m_CombineOr(m_NSWShl(m_Value(A), m_Value()),
+                             m_NUWShl(m_Value(A), m_Value()))))
+    Op1 = A;
+  else if (auto *NOp = optimizeShiftInOrChain(Op1, Builder))
+    Op1 = NOp;
+
+  if (Op0 != I->getOperand(0) || Op1 != I->getOperand(1))
+    return Builder.CreateOr(Op0, Op1);
+  return nullptr;
+}
+
+static bool foldICmpOrChain(Instruction &I, const DataLayout &DL,
+                            TargetTransformInfo &TTI, AliasAnalysis &AA,
+                            const DominatorTree &DT) {
+  CmpPredicate Pred;
+  Value *Op0;
+  if (!match(&I, m_ICmp(Pred, m_Value(Op0), m_Zero())) ||
+      !ICmpInst::isEquality(Pred))
+    return false;
+
+  // If the chain or or's matches a load, combine to that before attempting to
+  // remove shifts.
+  if (auto OpI = dyn_cast<Instruction>(Op0))
+    if (OpI->getOpcode() == Instruction::Or)
+      if (foldConsecutiveLoads(*OpI, DL, TTI, AA, DT))
+        return true;
+
+  IRBuilder<> Builder(&I);
+  // icmp eq/ne or(shl(a), b), 0 -> icmp eq/ne or(a, b), 0
+  if (auto *Res = optimizeShiftInOrChain(Op0, Builder)) {
+    I.replaceAllUsesWith(Builder.CreateICmp(Pred, Res, I.getOperand(1)));
+    return true;
+  }
+
+  return false;
 }
 
 // Calculate GEP Stride and accumulated const ModOffset. Return Stride and
@@ -1134,6 +1189,7 @@ static bool foldMemChr(CallInst *Call, DomTreeUpdater *DTU,
   BasicBlock *BB = Call->getParent();
   BasicBlock *BBNext = SplitBlock(BB, Call, DTU);
   IRBuilder<> IRB(BB);
+  IRB.SetCurrentDebugLocation(Call->getDebugLoc());
   IntegerType *ByteTy = IRB.getInt8Ty();
   BB->getTerminator()->eraseFromParent();
   SwitchInst *SI = IRB.CreateSwitch(
@@ -1253,6 +1309,7 @@ static bool foldUnusualPatterns(Function &F, DominatorTree &DT,
       MadeChange |= tryToRecognizeTableBasedCttz(I);
       MadeChange |= foldConsecutiveLoads(I, DL, TTI, AA, DT);
       MadeChange |= foldPatternedLoads(I, DL);
+      MadeChange |= foldICmpOrChain(I, DL, TTI, AA, DT);
       // NOTE: This function introduces erasing of the instruction `I`, so it
       // needs to be called at the end of this sequence, otherwise we may make
       // bugs.

@@ -386,7 +386,7 @@ public:
   /// If the method is implicit (not coming from source) \p SelLocs is
   /// ignored.
   void setMethodParams(ASTContext &C, ArrayRef<ParmVarDecl *> Params,
-                       ArrayRef<SourceLocation> SelLocs = std::nullopt);
+                       ArrayRef<SourceLocation> SelLocs = {});
 
   // Iterator access to parameter types.
   struct GetTypeFn {
@@ -678,7 +678,7 @@ public:
   /// Iterate through the type parameters in the list.
   using iterator = ObjCTypeParamDecl **;
 
-  iterator begin() { return getTrailingObjects<ObjCTypeParamDecl *>(); }
+  iterator begin() { return getTrailingObjects(); }
 
   iterator end() { return begin() + size(); }
 
@@ -688,9 +688,7 @@ public:
   // Iterate through the type parameters in the list.
   using const_iterator = ObjCTypeParamDecl * const *;
 
-  const_iterator begin() const {
-    return getTrailingObjects<ObjCTypeParamDecl *>();
-  }
+  const_iterator begin() const { return getTrailingObjects(); }
 
   const_iterator end() const {
     return begin() + size();

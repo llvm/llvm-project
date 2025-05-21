@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 | FileCheck %s
-; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_20 | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
 
 ; Checks how NVPTX lowers alloca buffers and their passing to functions.
 ;
@@ -16,18 +16,18 @@
 ;  }
 
 ; CHECK: .visible .entry kernel_func
-define void @kernel_func(ptr %a) {
+define ptx_kernel void @kernel_func(ptr %a) {
 entry:
   %buf = alloca [16 x i8], align 4
 
 ; CHECK: .local .align 4 .b8 	__local_depot0[16]
-; CHECK: mov.u64 %SPL
+; CHECK: mov.b64 %SPL
 
-; CHECK: ld.param.u64 %rd[[A_REG:[0-9]+]], [kernel_func_param_0]
+; CHECK: ld.param.b64 %rd[[A_REG:[0-9]+]], [kernel_func_param_0]
 ; CHECK: cvta.to.global.u64 %rd[[A1_REG:[0-9]+]], %rd[[A_REG]]
 ; CHECK: add.u64 %rd[[SP_REG:[0-9]+]], %SP, 0
-; CHECK: ld.global.f32 %f[[A0_REG:[0-9]+]], [%rd[[A1_REG]]]
-; CHECK: st.local.f32 [{{%rd[0-9]+}}], %f[[A0_REG]]
+; CHECK: ld.global.b32 %f[[A0_REG:[0-9]+]], [%rd[[A1_REG]]]
+; CHECK: st.local.b32 [{{%rd[0-9]+}}], %f[[A0_REG]]
 
   %0 = load float, ptr %a, align 4
   store float %0, ptr %buf, align 4
@@ -56,7 +56,3 @@ entry:
 }
 
 declare void @callee(ptr, ptr)
-
-!nvvm.annotations = !{!0}
-
-!0 = !{ptr @kernel_func, !"kernel", i32 1}

@@ -94,3 +94,9 @@
 
 // TAIL-CALL: "-target-feature" "+tail-call"
 // NO-TAIL-CALL: "-target-feature" "-tail-call"
+
+// RUN: %clang --target=wasm32-unknown-unknown -### %s -mwide-arithmetic 2>&1 | FileCheck %s -check-prefix=WIDE-ARITH
+// RUN: %clang --target=wasm32-unknown-unknown -### %s -mno-wide-arithmetic 2>&1 | FileCheck %s -check-prefix=NO-WIDE-ARITH
+
+// WIDE-ARITH: "-target-feature" "+wide-arithmetic"
+// NO-WIDE-ARITH: "-target-feature" "-wide-arithmetic"

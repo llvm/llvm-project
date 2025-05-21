@@ -64,6 +64,20 @@ RegisterContextCorePOSIX_arm64::Create(Thread &thread, const ArchSpec &arch,
   if (zt_data.GetByteSize() >= 64)
     opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskZT);
 
+  DataExtractor fpmr_data =
+      getRegset(notes, arch.GetTriple(), AARCH64_FPMR_Desc);
+  if (fpmr_data.GetByteSize() >= sizeof(uint64_t))
+    opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskFPMR);
+
+  DataExtractor gcs_data = getRegset(notes, arch.GetTriple(), AARCH64_GCS_Desc);
+  struct __attribute__((packed)) gcs_regs {
+    uint64_t features_enabled;
+    uint64_t features_locked;
+    uint64_t gcspr_e0;
+  };
+  if (gcs_data.GetByteSize() >= sizeof(gcs_regs))
+    opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskGCS);
+
   auto register_info_up =
       std::make_unique<RegisterInfoPOSIX_arm64>(arch, opt_regsets);
   return std::unique_ptr<RegisterContextCorePOSIX_arm64>(
@@ -127,6 +141,12 @@ RegisterContextCorePOSIX_arm64::RegisterContextCorePOSIX_arm64(
 
   if (m_register_info_up->IsZTPresent())
     m_zt_data = getRegset(notes, target_triple, AARCH64_ZT_Desc);
+
+  if (m_register_info_up->IsFPMRPresent())
+    m_fpmr_data = getRegset(notes, target_triple, AARCH64_FPMR_Desc);
+
+  if (m_register_info_up->IsGCSPresent())
+    m_gcs_data = getRegset(notes, target_triple, AARCH64_GCS_Desc);
 
   ConfigureRegisterContext();
 }
@@ -322,6 +342,11 @@ bool RegisterContextCorePOSIX_arm64::ReadRegister(const RegisterInfo *reg_info,
     assert(offset < m_mte_data.GetByteSize());
     value.SetFromMemoryData(*reg_info, m_mte_data.GetDataStart() + offset,
                             reg_info->byte_size, lldb::eByteOrderLittle, error);
+  } else if (IsGCS(reg)) {
+    offset = reg_info->byte_offset - m_register_info_up->GetGCSOffset();
+    assert(offset < m_gcs_data.GetByteSize());
+    value.SetFromMemoryData(*reg_info, m_gcs_data.GetDataStart() + offset,
+                            reg_info->byte_size, lldb::eByteOrderLittle, error);
   } else if (IsSME(reg)) {
     // If you had SME in the process, active or otherwise, there will at least
     // be a ZA header. No header, no SME at all.
@@ -370,6 +395,11 @@ bool RegisterContextCorePOSIX_arm64::ReadRegister(const RegisterInfo *reg_info,
           *reg_info, reinterpret_cast<uint8_t *>(&m_sme_pseudo_regs) + offset,
           reg_info->byte_size, lldb_private::endian::InlHostByteOrder(), error);
     }
+  } else if (IsFPMR(reg)) {
+    offset = reg_info->byte_offset - m_register_info_up->GetFPMROffset();
+    assert(offset < m_fpmr_data.GetByteSize());
+    value.SetFromMemoryData(*reg_info, m_fpmr_data.GetDataStart() + offset,
+                            reg_info->byte_size, lldb::eByteOrderLittle, error);
   } else
     return false;
 

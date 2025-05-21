@@ -95,6 +95,10 @@ public:
     /// push {r0-r7, lr}
     /// push {r8-r12}
     /// vpush {d8-d15}
+    /// Note that Thumb1 changes this layout when the frame pointer is R11,
+    /// using a longer sequence of instructions because R11 can't be used by a
+    /// Thumb1 push instruction. This doesn't currently have a separate enum
+    /// value, and is handled entriely within Thumb1FrameLowering::emitPrologue.
     SplitR7,
 
     /// When the stack frame size is not known (because of variable-sized
@@ -105,6 +109,18 @@ public:
     /// vpush {d8-d15}
     /// push {r11, lr}
     SplitR11WindowsSEH,
+
+    /// When generating AAPCS-compilant frame chains, R11 is the frame pointer,
+    /// and must be pushed adjacent to the return address (LR). Normally this
+    /// isn't a problem, because the only register between them is r12, which is
+    /// the intra-procedure-call scratch register, so doesn't need to be saved.
+    /// However, when PACBTI is in use, r12 contains the authentication code, so
+    /// does need to be saved. This means that we need a separate push for R11
+    /// and LR.
+    /// push {r0-r10, r12}
+    /// push {r11, lr}
+    /// vpush {d8-d15}
+    SplitR11AAPCSSignRA,
   };
 
 protected:
@@ -275,7 +291,9 @@ public:
   bool isCortexA15() const { return ARMProcFamily == CortexA15; }
   bool isSwift()    const { return ARMProcFamily == Swift; }
   bool isCortexM3() const { return ARMProcFamily == CortexM3; }
+  bool isCortexM55() const { return ARMProcFamily == CortexM55; }
   bool isCortexM7() const { return ARMProcFamily == CortexM7; }
+  bool isCortexM85() const { return ARMProcFamily == CortexM85; }
   bool isLikeA9() const { return isCortexA9() || isCortexA15() || isKrait(); }
   bool isCortexR5() const { return ARMProcFamily == CortexR5; }
   bool isKrait() const { return ARMProcFamily == Krait; }
@@ -505,7 +523,7 @@ public:
   }
 
   bool ignoreCSRForAllocationOrder(const MachineFunction &MF,
-                                   unsigned PhysReg) const override;
+                                   MCRegister PhysReg) const override;
   unsigned getGPRAllocationOrder(const MachineFunction &MF) const;
 };
 

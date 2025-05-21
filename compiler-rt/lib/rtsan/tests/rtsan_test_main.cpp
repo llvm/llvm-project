@@ -19,7 +19,10 @@ extern "C" const char *__rtsan_default_options() {
   // and make sure we do not overwhelm the syslog while testing. Also, let's
   // turn symbolization off to speed up testing, especially when not running
   // with llvm-symbolizer but with atos.
-  return "symbolize=false:abort_on_error=0:log_to_syslog=0";
+  return "symbolize=false:"
+         "abort_on_error=0:"
+         "log_to_syslog=0:"
+         "verify_interceptors=0:"; // some of our tests don't need interceptors
 #else
   // Let's turn symbolization off to speed up testing (more than 3 times speedup
   // observed).

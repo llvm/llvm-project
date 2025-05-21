@@ -447,7 +447,7 @@ public:
     std::optional<uint64_t> getForeignTUTypeSignature() const override;
     std::optional<dwarf::Tag> getTag() const override { return tag(); }
 
-    // Special function that will return the related CU offset needed type 
+    // Special function that will return the related CU offset needed type
     // units. This gets used to find the .dwo file that originated the entries
     // for a given type unit.
     std::optional<uint64_t> getRelatedCUOffset() const;
@@ -468,12 +468,13 @@ public:
     /// index for an entry that is a type unit.
     std::optional<uint64_t> getRelatedCUIndex() const;
 
-    /// Returns the Index into the Local Type Unit list of the owning Name
+    /// Returns the index of the Type Unit of the owning
+    /// Name
     /// Index or std::nullopt if this Accelerator Entry does not have an
     /// associated Type Unit. It is up to the user to verify that the
-    /// returned Index is valid in the owning NameIndex (or use
+    /// returned Index is a valid index in the owning NameIndex (or use
     /// getLocalTUOffset(), which will handle that check itself).
-    std::optional<uint64_t> getLocalTUIndex() const;
+    std::optional<uint64_t> getTUIndex() const;
 
     /// .debug_names-specific getter, which always succeeds (DWARF v5 index
     /// entries always have a tag).
@@ -769,6 +770,7 @@ public:
     }
 
   public:
+    using size_type = size_t;
     using iterator_category = std::input_iterator_tag;
     using value_type = NameTableEntry;
     using difference_type = uint32_t;
@@ -792,6 +794,16 @@ public:
       next();
       return I;
     }
+    /// Accesses entry at specific index (1-based internally, 0-based
+    /// externally). For example how this is used in parallelForEach.
+    reference operator[](size_type idx) {
+      return CurrentIndex->getNameTableEntry(idx + 1);
+    }
+    /// Computes difference between iterators (used in parallelForEach).
+    difference_type operator-(const NameIterator &other) const {
+      assert(CurrentIndex == other.CurrentIndex);
+      return this->CurrentName - other.CurrentName;
+    }
 
     friend bool operator==(const NameIterator &A, const NameIterator &B) {
       return A.CurrentIndex == B.CurrentIndex && A.CurrentName == B.CurrentName;
@@ -803,7 +815,7 @@ public:
 
 private:
   SmallVector<NameIndex, 0> NameIndices;
-  DenseMap<uint64_t, const NameIndex *> CUToNameIndex;
+  DenseMap<uint64_t, const NameIndex *> UnitOffsetToNameIndex;
 
 public:
   DWARFDebugNames(const DWARFDataExtractor &AccelSection,
@@ -820,9 +832,9 @@ public:
   const_iterator begin() const { return NameIndices.begin(); }
   const_iterator end() const { return NameIndices.end(); }
 
-  /// Return the Name Index covering the compile unit at CUOffset, or nullptr if
-  /// there is no Name Index covering that unit.
-  const NameIndex *getCUNameIndex(uint64_t CUOffset);
+  /// Return the Name Index covering the compile unit or local type unit at
+  /// UnitOffset, or nullptr if there is no Name Index covering that unit.
+  const NameIndex *getCUOrTUNameIndex(uint64_t UnitOffset);
 };
 
 /// Calculates the starting offsets for various sections within the

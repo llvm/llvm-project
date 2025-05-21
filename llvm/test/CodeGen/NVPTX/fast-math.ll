@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 | FileCheck %s
-; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_20 | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
 
 declare float @llvm.sqrt.f32(float)
 declare double @llvm.sqrt.f64(double)
@@ -130,6 +130,20 @@ define float @fadd_ftz(float %a, float %b) #1 {
 
 declare float @llvm.sin.f32(float)
 declare float @llvm.cos.f32(float)
+
+; CHECK-LABEL: fsin_approx_afn
+; CHECK:       sin.approx.f32
+define float @fsin_approx_afn(float %a) {
+  %r = tail call afn float @llvm.sin.f32(float %a)
+  ret float %r
+}
+
+; CHECK-LABEL: fcos_approx_afn
+; CHECK:       cos.approx.f32
+define float @fcos_approx_afn(float %a) {
+  %r = tail call afn float @llvm.cos.f32(float %a)
+  ret float %r
+}
 
 ; CHECK-LABEL: fsin_approx
 ; CHECK:       sin.approx.f32

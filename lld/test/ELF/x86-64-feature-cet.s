@@ -25,7 +25,7 @@
 
 # RUN:not ld.lld -e func1 %t.o %t3.o -o /dev/null -z cet-report=something 2>&1 \
 # RUN:   | FileCheck --check-prefix=REPORT_INVALID %s
-# REPORT_INVALID: error: -z cet-report= parameter something is not recognized
+# REPORT_INVALID: error: unknown -z cet-report= value: something
 # REPORT_INVALID-EMPTY:
 
 # RUN: ld.lld -e func1 %t.o %t3.o -o /dev/null  -z force-ibt -z cet-report=warning 2>&1 \

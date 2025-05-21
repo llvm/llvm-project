@@ -21,7 +21,6 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -82,9 +81,7 @@ class AArch64A53Fix835769 : public MachineFunctionPass {
 
 public:
   static char ID;
-  explicit AArch64A53Fix835769() : MachineFunctionPass(ID) {
-    initializeAArch64A53Fix835769Pass(*PassRegistry::getPassRegistry());
-  }
+  explicit AArch64A53Fix835769() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &F) override;
 

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -Wno-error=return-type -fsyntax-only -verify %s
 
 // Reachability tests have to come first because they get suppressed
 // if any errors have occurred.

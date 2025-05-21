@@ -10,13 +10,12 @@
 #define _LIBCPP___EXCEPTION_EXCEPTION_PTR_H
 
 #include <__config>
+#include <__cstddef/nullptr_t.h>
 #include <__exception/operations.h>
 #include <__memory/addressof.h>
 #include <__memory/construct_at.h>
 #include <__type_traits/decay.h>
-#include <cstddef>
 #include <cstdlib>
-#include <new>
 #include <typeinfo>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -53,7 +52,8 @@ _LIBCPP_OVERRIDABLE_FUNC_VIS __cxa_exception* __cxa_init_primary_exception(
 
 #endif
 
-namespace std { // purposefully not using versioning namespace
+_LIBCPP_BEGIN_UNVERSIONED_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 #ifndef _LIBCPP_ABI_MICROSOFT
 
@@ -66,8 +66,10 @@ class _LIBCPP_EXPORTED_FROM_ABI exception_ptr {
   friend _LIBCPP_HIDE_FROM_ABI exception_ptr make_exception_ptr(_Ep) _NOEXCEPT;
 
 public:
-  // exception_ptr is basically a COW string.
-  using __trivially_relocatable = exception_ptr;
+  // exception_ptr is basically a COW string so it is trivially relocatable.
+  // It is also replaceable because assignment has normal value semantics.
+  using __trivially_relocatable _LIBCPP_NODEBUG = exception_ptr;
+  using __replaceable _LIBCPP_NODEBUG           = exception_ptr;
 
   _LIBCPP_HIDE_FROM_ABI exception_ptr() _NOEXCEPT : __ptr_() {}
   _LIBCPP_HIDE_FROM_ABI exception_ptr(nullptr_t) _NOEXCEPT : __ptr_() {}
@@ -172,6 +174,8 @@ _LIBCPP_HIDE_FROM_ABI exception_ptr make_exception_ptr(_Ep __e) _NOEXCEPT {
 }
 
 #endif // _LIBCPP_ABI_MICROSOFT
-} // namespace std
+
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
+_LIBCPP_END_UNVERSIONED_NAMESPACE_STD
 
 #endif // _LIBCPP___EXCEPTION_EXCEPTION_PTR_H

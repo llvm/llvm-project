@@ -69,7 +69,6 @@ static const char *const CoroIntrinsics[] = {
     "llvm.coro.async.context.dealloc",
     "llvm.coro.async.resume",
     "llvm.coro.async.size.replace",
-    "llvm.coro.async.store_resume",
     "llvm.coro.await.suspend.bool",
     "llvm.coro.await.suspend.handle",
     "llvm.coro.await.suspend.void",
@@ -100,8 +99,7 @@ static const char *const CoroIntrinsics[] = {
 
 #ifndef NDEBUG
 static bool isCoroutineIntrinsicName(StringRef Name) {
-  return Intrinsic::lookupLLVMIntrinsicByName(CoroIntrinsics, Name, "coro") !=
-         -1;
+  return llvm::binary_search(CoroIntrinsics, Name);
 }
 #endif
 
@@ -111,7 +109,6 @@ bool coro::isSuspendBlock(BasicBlock *BB) {
 
 bool coro::declaresAnyIntrinsic(const Module &M) {
   for (StringRef Name : CoroIntrinsics) {
-    assert(isCoroutineIntrinsicName(Name) && "not a coroutine intrinsic");
     if (M.getNamedValue(Name))
       return true;
   }
@@ -195,7 +192,8 @@ static CoroSaveInst *createCoroSave(CoroBeginInst *CoroBegin,
 // Collect "interesting" coroutine intrinsics.
 void coro::Shape::analyze(Function &F,
                           SmallVectorImpl<CoroFrameInst *> &CoroFrames,
-                          SmallVectorImpl<CoroSaveInst *> &UnusedCoroSaves) {
+                          SmallVectorImpl<CoroSaveInst *> &UnusedCoroSaves,
+                          CoroPromiseInst *&CoroPromise) {
   clear();
 
   bool HasFinalSuspend = false;
@@ -289,6 +287,11 @@ void coro::Shape::analyze(Function &F,
           }
         }
         break;
+      case Intrinsic::coro_promise:
+        assert(CoroPromise == nullptr &&
+               "CoroEarly must ensure coro.promise unique");
+        CoroPromise = cast<CoroPromiseInst>(II);
+        break;
       }
     }
   }
@@ -353,18 +356,18 @@ void coro::Shape::invalidateCoroutine(
   assert(!CoroBegin);
   {
     // Replace coro.frame which are supposed to be lowered to the result of
-    // coro.begin with undef.
-    auto *Undef = UndefValue::get(PointerType::get(F.getContext(), 0));
+    // coro.begin with poison.
+    auto *Poison = PoisonValue::get(PointerType::get(F.getContext(), 0));
     for (CoroFrameInst *CF : CoroFrames) {
-      CF->replaceAllUsesWith(Undef);
+      CF->replaceAllUsesWith(Poison);
       CF->eraseFromParent();
     }
     CoroFrames.clear();
 
-    // Replace all coro.suspend with undef and remove related coro.saves if
+    // Replace all coro.suspend with poison and remove related coro.saves if
     // present.
     for (AnyCoroSuspendInst *CS : CoroSuspends) {
-      CS->replaceAllUsesWith(UndefValue::get(CS->getType()));
+      CS->replaceAllUsesWith(PoisonValue::get(CS->getType()));
       CS->eraseFromParent();
       if (auto *CoroSave = CS->getCoroSave())
         CoroSave->eraseFromParent();
@@ -480,7 +483,7 @@ void coro::AnyRetconABI::init() {
 
 void coro::Shape::cleanCoroutine(
     SmallVectorImpl<CoroFrameInst *> &CoroFrames,
-    SmallVectorImpl<CoroSaveInst *> &UnusedCoroSaves) {
+    SmallVectorImpl<CoroSaveInst *> &UnusedCoroSaves, CoroPromiseInst *PI) {
   // The coro.frame intrinsic is always lowered to the result of coro.begin.
   for (CoroFrameInst *CF : CoroFrames) {
     CF->replaceAllUsesWith(CoroBegin);
@@ -492,6 +495,13 @@ void coro::Shape::cleanCoroutine(
   for (CoroSaveInst *CoroSave : UnusedCoroSaves)
     CoroSave->eraseFromParent();
   UnusedCoroSaves.clear();
+
+  if (PI) {
+    PI->replaceAllUsesWith(PI->isFromPromise()
+                               ? cast<Value>(CoroBegin)
+                               : cast<Value>(getPromiseAlloca()));
+    PI->eraseFromParent();
+  }
 }
 
 static void propagateCallAttrsFromCallee(CallInst *Call, Function *Callee) {

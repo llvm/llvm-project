@@ -489,8 +489,8 @@ The given criteria describes the debug line state machine registers.
    =Discriminator: Line that has a discriminator.
    =EndSequence: Marks the end in the sequence of lines.
    =EpilogueBegin: Marks the start of a function epilogue.
-   =LineDebug: Lines that correspond to debug lines.
    =LineAssembler: Lines that correspond to disassembly text.
+   =LineDebug: Lines that correspond to debug lines.
    =NeverStepInto: marks a never step into.
    =NewStatement: Marks a new statement.
    =PrologueEnd: Marks the end of a function prologue.
@@ -519,6 +519,7 @@ The following options allow printing of scopes that match the given <kind>.
     =InlinedFunction: An inlined function.
     =Label: A label.
     =LexicalBlock: A lexical block.
+    =Module: A module.
     =Namespace: A namespace.
     =Root: The element representing the main scope.
     =Structure: A structure.
@@ -1742,7 +1743,7 @@ DWARF - Clang (Linux)
   [003]     3           {Variable} 'Var_1' -> 'int'
   [002]    11         {Function} extern not_inlined 'test' -> 'int'
   [003]    12           {Variable} 'A' -> 'int'
-  [003]    14           {InlinedFunction} inlined 'InlineFunction' -> 'int'
+  [003]    13           {InlinedFunction} inlined 'InlineFunction' -> 'int'
   [004]                   {Block}
   [005]                     {Variable} 'Var_2' -> 'int'
   [004]                   {Parameter} 'Param' -> 'int'

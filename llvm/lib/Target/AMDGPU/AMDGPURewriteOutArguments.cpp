@@ -114,9 +114,7 @@ Type *AMDGPURewriteOutArguments::getStoredType(Value &Arg) const {
   const int MaxUses = 10;
   int UseCount = 0;
 
-  SmallVector<Use *> Worklist;
-  for (Use &U : Arg.uses())
-    Worklist.push_back(&U);
+  SmallVector<Use *> Worklist(llvm::make_pointer_range(Arg.uses()));
 
   Type *StoredType = nullptr;
   while (!Worklist.empty()) {
@@ -276,10 +274,7 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
         Value *ReplVal = Store.second->getValueOperand();
 
         auto &ValVec = Replacements[Store.first];
-        if (llvm::any_of(ValVec,
-                         [OutArg](const std::pair<Argument *, Value *> &Entry) {
-                           return Entry.first == OutArg;
-                         })) {
+        if (llvm::is_contained(llvm::make_first_range(ValVec), OutArg)) {
           LLVM_DEBUG(dbgs()
                      << "Saw multiple out arg stores" << *OutArg << '\n');
           // It is possible to see stores to the same argument multiple times,
@@ -376,10 +371,11 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
 
   int RetIdx = RetTy->isVoidTy() ? 0 : 1;
   for (Argument &Arg : F.args()) {
-    if (!OutArgIndexes.count(Arg.getArgNo()))
+    auto It = OutArgIndexes.find(Arg.getArgNo());
+    if (It == OutArgIndexes.end())
       continue;
 
-    Type *EltTy = OutArgIndexes[Arg.getArgNo()];
+    Type *EltTy = It->second;
     const auto Align =
         DL->getValueOrABITypeAlignment(Arg.getParamAlign(), EltTy);
 

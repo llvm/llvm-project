@@ -28,10 +28,8 @@ FailureOr<Value> mlir::bufferization::castOrReallocMemRefValue(
     const BufferizationOptions &options) {
   auto srcType = llvm::cast<MemRefType>(value.getType());
 
-  // Element type, rank and memory space must match.
+  // Element type and rank must match.
   if (srcType.getElementType() != destType.getElementType())
-    return failure();
-  if (srcType.getMemorySpace() != destType.getMemorySpace())
     return failure();
   if (srcType.getRank() != destType.getRank())
     return failure();
@@ -42,8 +40,8 @@ FailureOr<Value> mlir::bufferization::castOrReallocMemRefValue(
   auto isGuaranteedCastCompatible = [](MemRefType source, MemRefType target) {
     int64_t sourceOffset, targetOffset;
     SmallVector<int64_t, 4> sourceStrides, targetStrides;
-    if (failed(getStridesAndOffset(source, sourceStrides, sourceOffset)) ||
-        failed(getStridesAndOffset(target, targetStrides, targetOffset)))
+    if (failed(source.getStridesAndOffset(sourceStrides, sourceOffset)) ||
+        failed(target.getStridesAndOffset(targetStrides, targetOffset)))
       return false;
     auto dynamicToStatic = [](int64_t a, int64_t b) {
       return ShapedType::isDynamic(a) && !ShapedType::isDynamic(b);
@@ -83,21 +81,21 @@ FailureOr<Value> mlir::bufferization::castOrReallocMemRefValue(
   return copy;
 }
 
-/// Try to fold to_memref(to_tensor(x)). If x's type and the result type of the
-/// to_memref op are different, a memref.cast is needed.
-LogicalResult mlir::bufferization::foldToMemrefToTensorPair(
-    RewriterBase &rewriter, ToMemrefOp toMemref,
+/// Try to fold to_buffer(to_tensor(x)). If x's type and the result type of the
+/// to_buffer op are different, a memref.cast is needed.
+LogicalResult mlir::bufferization::foldToBufferToTensorPair(
+    RewriterBase &rewriter, ToBufferOp toBuffer,
     const BufferizationOptions &options) {
-  auto memrefToTensor = toMemref.getTensor().getDefiningOp<ToTensorOp>();
-  if (!memrefToTensor)
+  auto bufferToTensor = toBuffer.getTensor().getDefiningOp<ToTensorOp>();
+  if (!bufferToTensor)
     return failure();
 
-  Type srcType = memrefToTensor.getMemref().getType();
-  Type destType = toMemref.getType();
+  Type srcType = bufferToTensor.getMemref().getType();
+  Type destType = toBuffer.getType();
 
   // Directly rewrite if the type did not change.
   if (srcType == destType) {
-    rewriter.replaceOp(toMemref, memrefToTensor.getMemref());
+    rewriter.replaceOp(toBuffer, bufferToTensor.getMemref());
     return success();
   }
 
@@ -108,11 +106,11 @@ LogicalResult mlir::bufferization::foldToMemrefToTensorPair(
   // Ranked memref -> Ranked memref cast.
   if (rankedSrcType && rankedDestType) {
     FailureOr<Value> replacement = castOrReallocMemRefValue(
-        rewriter, memrefToTensor.getMemref(), rankedDestType, options);
+        rewriter, bufferToTensor.getMemref(), rankedDestType, options);
     if (failed(replacement))
       return failure();
 
-    rewriter.replaceOp(toMemref, *replacement);
+    rewriter.replaceOp(toBuffer, *replacement);
     return success();
   }
 
@@ -125,8 +123,8 @@ LogicalResult mlir::bufferization::foldToMemrefToTensorPair(
   // Ranked memref -> unranked memref cast: No copy needed.
   assert(memref::CastOp::areCastCompatible(srcType, destType) &&
          "expected that types are cast compatible");
-  rewriter.replaceOpWithNewOp<memref::CastOp>(toMemref, destType,
-                                              memrefToTensor.getMemref());
+  rewriter.replaceOpWithNewOp<memref::CastOp>(toBuffer, destType,
+                                              bufferToTensor.getMemref());
   return success();
 }
 
@@ -740,12 +738,12 @@ bool ToTensorOp::isWritable(Value value, const AnalysisState &state) {
 }
 
 OpFoldResult ToTensorOp::fold(FoldAdaptor) {
-  if (auto toMemref = getMemref().getDefiningOp<ToMemrefOp>())
+  if (auto toBuffer = getMemref().getDefiningOp<ToBufferOp>())
     // Approximate alias analysis by conservatively folding only when no there
     // is no interleaved operation.
-    if (toMemref->getBlock() == this->getOperation()->getBlock() &&
-        toMemref->getNextNode() == this->getOperation())
-      return toMemref.getTensor();
+    if (toBuffer->getBlock() == this->getOperation()->getBlock() &&
+        toBuffer->getNextNode() == this->getOperation())
+      return toBuffer.getTensor();
   return {};
 }
 
@@ -772,10 +770,10 @@ void ToTensorOp::getCanonicalizationPatterns(RewritePatternSet &results,
 }
 
 //===----------------------------------------------------------------------===//
-// ToMemrefOp
+// ToBufferOp
 //===----------------------------------------------------------------------===//
 
-OpFoldResult ToMemrefOp::fold(FoldAdaptor) {
+OpFoldResult ToBufferOp::fold(FoldAdaptor) {
   if (auto memrefToTensor = getTensor().getDefiningOp<ToTensorOp>())
     if (memrefToTensor.getMemref().getType() == getType())
       return memrefToTensor.getMemref();
@@ -784,14 +782,14 @@ OpFoldResult ToMemrefOp::fold(FoldAdaptor) {
 
 namespace {
 
-/// Replace tensor.cast + to_memref by to_memref + memref.cast.
-struct ToMemrefOfCast : public OpRewritePattern<ToMemrefOp> {
-  using OpRewritePattern<ToMemrefOp>::OpRewritePattern;
+/// Replace tensor.cast + to_buffer by to_buffer + memref.cast.
+struct ToBufferOfCast : public OpRewritePattern<ToBufferOp> {
+  using OpRewritePattern<ToBufferOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(ToMemrefOp toMemref,
+  LogicalResult matchAndRewrite(ToBufferOp toBuffer,
                                 PatternRewriter &rewriter) const final {
     auto tensorCastOperand =
-        toMemref.getOperand().getDefiningOp<tensor::CastOp>();
+        toBuffer.getOperand().getDefiningOp<tensor::CastOp>();
     if (!tensorCastOperand)
       return failure();
     auto srcTensorType = llvm::dyn_cast<RankedTensorType>(
@@ -800,51 +798,51 @@ struct ToMemrefOfCast : public OpRewritePattern<ToMemrefOp> {
       return failure();
     auto memrefType = MemRefType::get(srcTensorType.getShape(),
                                       srcTensorType.getElementType());
-    Value memref = rewriter.create<ToMemrefOp>(toMemref.getLoc(), memrefType,
+    Value memref = rewriter.create<ToBufferOp>(toBuffer.getLoc(), memrefType,
                                                tensorCastOperand.getOperand());
-    rewriter.replaceOpWithNewOp<memref::CastOp>(toMemref, toMemref.getType(),
+    rewriter.replaceOpWithNewOp<memref::CastOp>(toBuffer, toBuffer.getType(),
                                                 memref);
     return success();
   }
 };
 
-/// Canonicalize bufferization.to_tensor + bufferization.to_memref. Insert a
+/// Canonicalize bufferization.to_tensor + bufferization.to_buffer. Insert a
 /// cast if necessary.
-struct ToMemrefToTensorFolding : public OpRewritePattern<ToMemrefOp> {
-  using OpRewritePattern<ToMemrefOp>::OpRewritePattern;
+struct ToBufferToTensorFolding : public OpRewritePattern<ToBufferOp> {
+  using OpRewritePattern<ToBufferOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(ToMemrefOp toMemref,
+  LogicalResult matchAndRewrite(ToBufferOp toBuffer,
                                 PatternRewriter &rewriter) const final {
     BufferizationOptions options;
     options.bufferAlignment = 0;
-    return foldToMemrefToTensorPair(rewriter, toMemref, options);
+    return foldToBufferToTensorPair(rewriter, toBuffer, options);
   }
 };
 
-/// Fold a load on a to_memref operation into an tensor.extract on the
+/// Fold a load on a to_buffer operation into an tensor.extract on the
 /// corresponding tensor.
-struct LoadOfToMemref : public OpRewritePattern<memref::LoadOp> {
+struct LoadOfToBuffer : public OpRewritePattern<memref::LoadOp> {
   using OpRewritePattern<memref::LoadOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(memref::LoadOp load,
                                 PatternRewriter &rewriter) const override {
-    auto toMemref = load.getMemref().getDefiningOp<ToMemrefOp>();
-    if (!toMemref)
+    auto toBuffer = load.getMemref().getDefiningOp<ToBufferOp>();
+    if (!toBuffer)
       return failure();
 
-    rewriter.replaceOpWithNewOp<tensor::ExtractOp>(load, toMemref.getTensor(),
+    rewriter.replaceOpWithNewOp<tensor::ExtractOp>(load, toBuffer.getTensor(),
                                                    load.getIndices());
     return success();
   }
 };
 
-/// Fold dim of a to_memref into the dim of the tensor.
+/// Fold dim of a to_buffer into the dim of the tensor.
 struct DimOfCastOp : public OpRewritePattern<memref::DimOp> {
   using OpRewritePattern<memref::DimOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(memref::DimOp dimOp,
                                 PatternRewriter &rewriter) const override {
-    auto castOp = dimOp.getSource().getDefiningOp<ToMemrefOp>();
+    auto castOp = dimOp.getSource().getDefiningOp<ToBufferOp>();
     if (!castOp)
       return failure();
     Value newSource = castOp.getOperand();
@@ -856,16 +854,16 @@ struct DimOfCastOp : public OpRewritePattern<memref::DimOp> {
 
 } // namespace
 
-void ToMemrefOp::getCanonicalizationPatterns(RewritePatternSet &results,
+void ToBufferOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                              MLIRContext *context) {
-  results.add<DimOfCastOp, LoadOfToMemref, ToMemrefOfCast,
-              ToMemrefToTensorFolding>(context);
+  results.add<DimOfCastOp, LoadOfToBuffer, ToBufferOfCast,
+              ToBufferToTensorFolding>(context);
 }
 
-LogicalResult ToMemrefOp::bufferize(RewriterBase &rewriter,
+LogicalResult ToBufferOp::bufferize(RewriterBase &rewriter,
                                     const BufferizationOptions &options) {
-  // Fold to_memref(to_tensor(x)) to x. Insert a cast if necessary.
-  (void)foldToMemrefToTensorPair(rewriter, *this, options);
+  // Fold to_buffer(to_tensor(x)) to x. Insert a cast if necessary.
+  (void)foldToBufferToTensorPair(rewriter, *this, options);
   // Note: The return value of `bufferize` indicates whether there was an error
   // or not. (And not whether the pattern matched or not.)
   return success();

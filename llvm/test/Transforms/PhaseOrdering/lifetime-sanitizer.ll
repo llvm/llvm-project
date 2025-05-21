@@ -5,7 +5,7 @@
 ; RUN: opt < %s -passes='default<O0>' -S | FileCheck %s --check-prefixes=CHECK,NOOPT
 ; RUN: opt < %s -passes='default<O1>' -S | FileCheck %s --check-prefixes=CHECK,OPT
 ; RUN: opt < %s -passes='default<O2>' -S | FileCheck %s --check-prefixes=CHECK,OPT
-; RUN: opt < %s -passes='default<O3>' -S | FileCheck %s --check-prefixes=CHECK,OPT
+; RUN: opt < %s -passes="default<O3>" -S | FileCheck %s --check-prefixes=CHECK,OPT
 
 declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
 declare void @llvm.lifetime.end.p0(i64, ptr nocapture)

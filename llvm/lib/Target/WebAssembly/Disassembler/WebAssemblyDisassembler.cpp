@@ -14,11 +14,11 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/WebAssemblyMCExpr.h"
 #include "MCTargetDesc/WebAssemblyMCTypeUtilities.h"
 #include "TargetInfo/WebAssemblyTargetInfo.h"
 #include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCDecoderOps.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -38,9 +38,9 @@ using DecodeStatus = MCDisassembler::DecodeStatus;
 
 #include "WebAssemblyGenDisassemblerTables.inc"
 
-namespace {
 static constexpr int WebAssemblyInstructionTableSize = 256;
 
+namespace {
 class WebAssemblyDisassembler final : public MCDisassembler {
   std::unique_ptr<const MCInstrInfo> MCII;
 
@@ -171,10 +171,10 @@ MCDisassembler::DecodeStatus WebAssemblyDisassembler::getInstruction(
   // If this is a prefix byte, indirect to another table.
   if (WasmInst->ET == ET_Prefix) {
     WasmInst = nullptr;
-    // Linear search, so far only 2 entries.
-    for (auto PT = PrefixTable; PT->Table; PT++) {
-      if (PT->Prefix == Opc) {
-        WasmInst = PT->Table;
+    // Linear search, so far only 4 entries.
+    for (const auto &[Prefix, Table] : PrefixTable) {
+      if (Prefix == Opc) {
+        WasmInst = Table;
         break;
       }
     }
@@ -239,7 +239,7 @@ MCDisassembler::DecodeStatus WebAssemblyDisassembler::getInstruction(
         auto *WasmSym = cast<MCSymbolWasm>(Sym);
         WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
         const MCExpr *Expr = MCSymbolRefExpr::create(
-            WasmSym, MCSymbolRefExpr::VK_WASM_TYPEINDEX, getContext());
+            WasmSym, WebAssembly::S_TYPEINDEX, getContext());
         MI.addOperand(MCOperand::createExpr(Expr));
       }
       break;

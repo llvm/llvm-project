@@ -76,11 +76,12 @@ public:
 
 // For a Relocation to symbol S create a Thunk to be added to a synthetic
 // ThunkSection.
-Thunk *addThunk(Ctx &, const InputSection &isec, Relocation &rel);
+std::unique_ptr<Thunk> addThunk(Ctx &, const InputSection &isec,
+                                Relocation &rel);
 
 // Create a landing pad Thunk for use when indirect branches from Thunks
 // are restricted.
-Thunk *addLandingPadThunk(Ctx &, Symbol &s, int64_t a);
+std::unique_ptr<Thunk> addLandingPadThunk(Ctx &, Symbol &s, int64_t a);
 
 void writePPC32PltCallStub(Ctx &, uint8_t *buf, uint64_t gotPltVA,
                            const InputFile *file, int64_t addend);

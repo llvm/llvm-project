@@ -88,7 +88,6 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/GlobPattern.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/FunctionAttrs.h"
@@ -167,6 +166,36 @@ static cl::list<std::string>
     SkipFunctionNames("wholeprogramdevirt-skip",
                       cl::desc("Prevent function(s) from being devirtualized"),
                       cl::Hidden, cl::CommaSeparated);
+
+/// With Clang, a pure virtual class's deleting destructor is emitted as a
+/// `llvm.trap` intrinsic followed by an unreachable IR instruction. In the
+/// context of whole program devirtualization, the deleting destructor of a pure
+/// virtual class won't be invoked by the source code so safe to skip as a
+/// devirtualize target.
+///
+/// However, not all unreachable functions are safe to skip. In some cases, the
+/// program intends to run such functions and terminate, for instance, a unit
+/// test may run a death test. A non-test program might (or allowed to) invoke
+/// such functions to report failures (whether/when it's a good practice or not
+/// is a different topic).
+///
+/// This option is enabled to keep an unreachable function as a possible
+/// devirtualize target to conservatively keep the program behavior.
+///
+/// TODO: Make a pure virtual class's deleting destructor precisely identifiable
+/// in Clang's codegen for more devirtualization in LLVM.
+static cl::opt<bool> WholeProgramDevirtKeepUnreachableFunction(
+    "wholeprogramdevirt-keep-unreachable-function",
+    cl::desc("Regard unreachable functions as possible devirtualize targets."),
+    cl::Hidden, cl::init(true));
+
+/// If explicitly specified, the devirt module pass will stop transformation
+/// once the total number of devirtualizations reach the cutoff value. Setting
+/// this option to 0 explicitly will do 0 devirtualization.
+static cl::opt<unsigned> WholeProgramDevirtCutoff(
+    "wholeprogramdevirt-cutoff",
+    cl::desc("Max number of devirtualizations for devirt module pass"),
+    cl::init(0));
 
 /// Mechanism to add runtime checking of devirtualization decisions, optionally
 /// trapping or falling back to indirect call on any that are not correct.
@@ -269,7 +298,9 @@ wholeprogramdevirt::findLowestOffset(ArrayRef<VirtualCallTarget> Targets,
           ++Byte;
         }
       }
-      return (MinByte + I) * 8;
+      // Rounding up ensures the constant is always stored at address we
+      // can directly load from without misalignment.
+      return alignTo((MinByte + I) * 8, Size);
     NextI:;
     }
   }
@@ -315,6 +346,9 @@ VirtualCallTarget::VirtualCallTarget(GlobalValue *Fn, const TypeMemberInfo *TM)
       WasDevirt(false) {}
 
 namespace {
+
+// Tracks the number of devirted calls in the IR transformation.
+static unsigned NumDevirtCalls = 0;
 
 // A slot in a set of virtual tables. The TypeID identifies the set of virtual
 // tables, and the ByteOffset is the offset in bytes from the address point to
@@ -376,6 +410,9 @@ template <> struct DenseMapInfo<VTableSlotSummary> {
 //   2) All function summaries indicate it's unreachable
 //   3) There is no non-function with the same GUID (which is rare)
 static bool mustBeUnreachableFunction(ValueInfo TheFnVI) {
+  if (WholeProgramDevirtKeepUnreachableFunction)
+    return false;
+
   if ((!TheFnVI) || TheFnVI.getSummaryList().empty()) {
     // Returns false if ValueInfo is absent, or the summary list is empty
     // (e.g., function declarations).
@@ -1169,10 +1206,16 @@ void DevirtModule::applySingleImplDevirt(VTableSlotInfo &SlotInfo,
       if (!OptimizedCalls.insert(&VCallSite.CB).second)
         continue;
 
+      // Stop when the number of devirted calls reaches the cutoff.
+      if (WholeProgramDevirtCutoff.getNumOccurrences() > 0 &&
+          NumDevirtCalls >= WholeProgramDevirtCutoff)
+        return;
+
       if (RemarksEnabled)
         VCallSite.emitRemark("single-impl",
                              TheFn->stripPointerCasts()->getName(), OREGetter);
       NumSingleImpl++;
+      NumDevirtCalls++;
       auto &CB = VCallSite.CB;
       assert(!CB.getCalledFunction() && "devirtualizing direct call?");
       IRBuilder<> Builder(&CB);
@@ -1184,8 +1227,9 @@ void DevirtModule::applySingleImplDevirt(VTableSlotInfo &SlotInfo,
       // perform a debug trap.
       if (DevirtCheckMode == WPDCheckMode::Trap) {
         auto *Cond = Builder.CreateICmpNE(CB.getCalledOperand(), Callee);
-        Instruction *ThenTerm =
-            SplitBlockAndInsertIfThen(Cond, &CB, /*Unreachable=*/false);
+        Instruction *ThenTerm = SplitBlockAndInsertIfThen(
+            Cond, &CB, /*Unreachable=*/false,
+            MDBuilder(M.getContext()).createUnlikelyBranchWeights());
         Builder.SetInsertPoint(ThenTerm);
         Function *TrapFn =
             Intrinsic::getOrInsertDeclaration(&M, Intrinsic::debugtrap);
@@ -1488,8 +1532,6 @@ void DevirtModule::applyICallBranchFunnel(VTableSlotInfo &SlotInfo,
       FunctionType *NewFT =
           FunctionType::get(CB.getFunctionType()->getReturnType(), NewArgs,
                             CB.getFunctionType()->isVarArg());
-      PointerType *NewFTPtr = PointerType::getUnqual(NewFT);
-
       IRBuilder<> IRB(&CB);
       std::vector<Value *> Args;
       Args.push_back(VCallSite.VTable);
@@ -1497,11 +1539,11 @@ void DevirtModule::applyICallBranchFunnel(VTableSlotInfo &SlotInfo,
 
       CallBase *NewCS = nullptr;
       if (isa<CallInst>(CB))
-        NewCS = IRB.CreateCall(NewFT, IRB.CreateBitCast(JT, NewFTPtr), Args);
+        NewCS = IRB.CreateCall(NewFT, JT, Args);
       else
-        NewCS = IRB.CreateInvoke(NewFT, IRB.CreateBitCast(JT, NewFTPtr),
-                                 cast<InvokeInst>(CB).getNormalDest(),
-                                 cast<InvokeInst>(CB).getUnwindDest(), Args);
+        NewCS =
+            IRB.CreateInvoke(NewFT, JT, cast<InvokeInst>(CB).getNormalDest(),
+                             cast<InvokeInst>(CB).getUnwindDest(), Args);
       NewCS->setCallingConv(CB.getCallingConv());
 
       AttributeList Attrs = CB.getAttributes();
@@ -1794,8 +1836,18 @@ bool DevirtModule::tryVirtualConstProp(
   if (!RetType)
     return false;
   unsigned BitWidth = RetType->getBitWidth();
+
+  // TODO: Since we can evaluated these constants at compile-time, we can save
+  // some space by calculating the smallest range of values that all these
+  // constants can fit in, then only allocate enough space to fit those values.
+  // At each callsite, we can get the original type by doing a sign/zero
+  // extension. For example, if we would store an i64, but we can see that all
+  // the values fit into an i16, then we can store an i16 before/after the
+  // vtable and at each callsite do a s/zext.
   if (BitWidth > 64)
     return false;
+
+  Align TypeAlignment = M.getDataLayout().getPrefTypeAlign(RetType);
 
   // Make sure that each function is defined, does not access memory, takes at
   // least one argument, does not use its first argument (which we assume is
@@ -1821,6 +1873,18 @@ bool DevirtModule::tryVirtualConstProp(
         Fn->arg_empty() || !Fn->arg_begin()->use_empty() ||
         Fn->getReturnType() != RetType)
       return false;
+
+    // This only works if the integer size is at most the alignment of the
+    // vtable. If the table is underaligned, then we can't guarantee that the
+    // constant will always be aligned to the integer type alignment. For
+    // example, if the table is `align 1`, we can never guarantee that an i32
+    // stored before/after the vtable is 32-bit aligned without changing the
+    // alignment of the new global.
+    GlobalVariable *GV = Target.TM->Bits->GV;
+    Align TableAlignment = M.getDataLayout().getValueOrABITypeAlignment(
+        GV->getAlign(), GV->getValueType());
+    if (TypeAlignment > TableAlignment)
+      return false;
   }
 
   for (auto &&CSByConstantArg : SlotInfo.ConstCSInfo) {
@@ -1840,6 +1904,9 @@ bool DevirtModule::tryVirtualConstProp(
 
     // Find an allocation offset in bits in all vtables associated with the
     // type.
+    // TODO: If there would be "holes" in the vtable that were added by
+    // padding, we could place i1s there to reduce any extra padding that
+    // would be introduced by the i1s.
     uint64_t AllocBefore =
         findLowestOffset(TargetsForSlot, /*IsAfter=*/false, BitWidth);
     uint64_t AllocAfter =
@@ -1870,6 +1937,14 @@ bool DevirtModule::tryVirtualConstProp(
     else
       setAfterReturnValues(TargetsForSlot, AllocAfter, BitWidth, OffsetByte,
                            OffsetBit);
+
+    // In an earlier check we forbade constant propagation from operating on
+    // tables whose alignment is less than the alignment needed for loading
+    // the constant. Thus, the address we take the offset from will always be
+    // aligned to at least this integer alignment. Now, we need to ensure that
+    // the offset is also aligned to this integer alignment to ensure we always
+    // have an aligned load.
+    assert(OffsetByte % TypeAlignment.value() == 0);
 
     if (RemarksEnabled || AreStatisticsEnabled())
       for (auto &&Target : TargetsForSlot)
@@ -2060,12 +2135,9 @@ void DevirtModule::scanTypeCheckedLoadUsers(Function *TypeCheckedLoadFunc) {
     Value *LoadedValue = nullptr;
     if (TypeCheckedLoadFunc->getIntrinsicID() ==
         Intrinsic::type_checked_load_relative) {
-      Value *GEP = LoadB.CreatePtrAdd(Ptr, Offset);
-      LoadedValue = LoadB.CreateLoad(Int32Ty, GEP);
-      LoadedValue = LoadB.CreateSExt(LoadedValue, IntPtrTy);
-      GEP = LoadB.CreatePtrToInt(GEP, IntPtrTy);
-      LoadedValue = LoadB.CreateAdd(GEP, LoadedValue);
-      LoadedValue = LoadB.CreateIntToPtr(LoadedValue, Int8PtrTy);
+      Function *LoadRelFunc = Intrinsic::getOrInsertDeclaration(
+          &M, Intrinsic::load_relative, {Int32Ty});
+      LoadedValue = LoadB.CreateCall(LoadRelFunc, {Ptr, Offset});
     } else {
       Value *GEP = LoadB.CreatePtrAdd(Ptr, Offset);
       LoadedValue = LoadB.CreateLoad(Int8PtrTy, GEP);
@@ -2206,7 +2278,8 @@ DevirtModule::lookUpFunctionValueInfo(Function *TheFn,
          "Caller guarantees ExportSummary is not nullptr");
 
   const auto TheFnGUID = TheFn->getGUID();
-  const auto TheFnGUIDWithExportedName = GlobalValue::getGUID(TheFn->getName());
+  const auto TheFnGUIDWithExportedName =
+      GlobalValue::getGUIDAssumingExternalLinkage(TheFn->getName());
   // Look up ValueInfo with the GUID in the current linkage.
   ValueInfo TheFnVI = ExportSummary->getValueInfo(TheFnGUID);
   // If no entry is found and GUID is different from GUID computed using
@@ -2225,6 +2298,8 @@ DevirtModule::lookUpFunctionValueInfo(Function *TheFn,
 
 bool DevirtModule::mustBeUnreachableFunction(
     Function *const F, ModuleSummaryIndex *ExportSummary) {
+  if (WholeProgramDevirtKeepUnreachableFunction)
+    return false;
   // First, learn unreachability by analyzing function IR.
   if (!F->isDeclaration()) {
     // A function must be unreachable if its entry block ends with an
@@ -2305,8 +2380,9 @@ bool DevirtModule::run() {
     DenseMap<GlobalValue::GUID, TinyPtrVector<Metadata *>> MetadataByGUID;
     for (auto &P : TypeIdMap) {
       if (auto *TypeId = dyn_cast<MDString>(P.first))
-        MetadataByGUID[GlobalValue::getGUID(TypeId->getString())].push_back(
-            TypeId);
+        MetadataByGUID[GlobalValue::getGUIDAssumingExternalLinkage(
+                           TypeId->getString())]
+            .push_back(TypeId);
     }
 
     for (auto &P : *ExportSummary) {
@@ -2389,8 +2465,8 @@ bool DevirtModule::run() {
     // llvm.type.test intrinsics to the function summaries so that the
     // LowerTypeTests pass will export them.
     if (ExportSummary && isa<MDString>(S.first.TypeID)) {
-      auto GUID =
-          GlobalValue::getGUID(cast<MDString>(S.first.TypeID)->getString());
+      auto GUID = GlobalValue::getGUIDAssumingExternalLinkage(
+          cast<MDString>(S.first.TypeID)->getString());
       for (auto *FS : S.second.CSInfo.SummaryTypeCheckedLoadUsers)
         FS->addTypeTest(GUID);
       for (auto &CCS : S.second.ConstCSInfo)
@@ -2446,7 +2522,8 @@ void DevirtIndex::run() {
 
   DenseMap<GlobalValue::GUID, std::vector<StringRef>> NameByGUID;
   for (const auto &P : ExportSummary.typeIdCompatibleVtableMap()) {
-    NameByGUID[GlobalValue::getGUID(P.first)].push_back(P.first);
+    NameByGUID[GlobalValue::getGUIDAssumingExternalLinkage(P.first)].push_back(
+        P.first);
     // Create the type id summary resolution regardlness of whether we can
     // devirtualize, so that lower type tests knows the type id is used on
     // a global and not Unsat. We do this here rather than in the loop over the

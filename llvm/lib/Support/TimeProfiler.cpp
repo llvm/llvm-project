@@ -160,7 +160,7 @@ struct llvm::TimeTraceProfiler {
     if (Stack.empty())
       return;
 
-    Stack.back().get()->InstantEvents.emplace_back(TimeTraceProfilerEntry(
+    Stack.back()->InstantEvents.emplace_back(TimeTraceProfilerEntry(
         ClockType::now(), TimePointType(), std::move(Name), Detail(),
         TimeTraceEventType::InstantEvent));
   }

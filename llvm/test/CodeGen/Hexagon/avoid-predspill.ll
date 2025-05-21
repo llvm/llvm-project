@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O2 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O2 < %s | FileCheck %s
 ;
 ; This checks that predicate registers are moved to GPRs instead of spilling
 ; where possible.

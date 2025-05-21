@@ -7,10 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBTarget.h"
-#include "lldb/Utility/Instrumentation.h"
-#include "lldb/Utility/LLDBLog.h"
-#include "lldb/lldb-public.h"
-
 #include "lldb/API/SBBreakpoint.h"
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBEnvironment.h"
@@ -20,6 +16,7 @@
 #include "lldb/API/SBListener.h"
 #include "lldb/API/SBModule.h"
 #include "lldb/API/SBModuleSpec.h"
+#include "lldb/API/SBMutex.h"
 #include "lldb/API/SBProcess.h"
 #include "lldb/API/SBSourceManager.h"
 #include "lldb/API/SBStream.h"
@@ -41,9 +38,6 @@
 #include "lldb/Core/SearchFilter.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Core/StructuredDataImpl.h"
-#include "lldb/Core/ValueObjectConstResult.h"
-#include "lldb/Core/ValueObjectList.h"
-#include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Symbol/DeclVendor.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -61,8 +55,14 @@
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/Instrumentation.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/ProcessInfo.h"
 #include "lldb/Utility/RegularExpression.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
+#include "lldb/ValueObject/ValueObjectList.h"
+#include "lldb/ValueObject/ValueObjectVariable.h"
+#include "lldb/lldb-public.h"
 
 #include "Commands/CommandObjectBreakpoint.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
@@ -218,6 +218,13 @@ SBStructuredData SBTarget::GetStatistics(SBStatisticsOptions options) {
           .str();
   data.m_impl_up->SetObjectSP(StructuredData::ParseJSON(json_str));
   return data;
+}
+
+void SBTarget::ResetStatistics() {
+  LLDB_INSTRUMENT_VA(this);
+  TargetSP target_sp(GetSP());
+  if (target_sp)
+    DebuggerStats::ResetStatistics(target_sp->GetDebugger(), target_sp.get());
 }
 
 void SBTarget::SetCollectingStats(bool v) {
@@ -1335,7 +1342,8 @@ lldb::SBWatchpoint SBTarget::WatchAddress(lldb::addr_t addr, size_t size,
 
   SBWatchpointOptions options;
   options.SetWatchpointTypeRead(read);
-  options.SetWatchpointTypeWrite(eWatchpointWriteTypeOnModify);
+  if (modify)
+    options.SetWatchpointTypeWrite(eWatchpointWriteTypeOnModify);
   return WatchpointCreateByAddress(addr, size, options, error);
 }
 
@@ -1658,6 +1666,26 @@ SBError SBTarget::SetLabel(const char *label) {
     return Status::FromErrorString("Couldn't get internal target object.");
 
   return Status::FromError(target_sp->SetLabel(label));
+}
+
+uint32_t SBTarget::GetMinimumOpcodeByteSize() const {
+  LLDB_INSTRUMENT_VA(this);
+
+  TargetSP target_sp(GetSP());
+  if (target_sp)
+    return target_sp->GetArchitecture().GetMinimumOpcodeByteSize();
+
+  return 0;
+}
+
+uint32_t SBTarget::GetMaximumOpcodeByteSize() const {
+  LLDB_INSTRUMENT_VA(this);
+
+  TargetSP target_sp(GetSP());
+  if (target_sp)
+    return target_sp->GetArchitecture().GetMaximumOpcodeByteSize();
+
+  return 0;
 }
 
 uint32_t SBTarget::GetDataByteSize() {
@@ -2013,8 +2041,9 @@ lldb::SBInstructionList SBTarget::ReadInstructions(lldb::SBAddress base_addr,
                                 error, force_live_memory, &load_addr);
       const bool data_from_file = load_addr == LLDB_INVALID_ADDRESS;
       sb_instructions.SetDisassembler(Disassembler::DisassembleBytes(
-          target_sp->GetArchitecture(), nullptr, flavor_string, *addr_ptr,
-          data.GetBytes(), bytes_read, count, data_from_file));
+          target_sp->GetArchitecture(), nullptr, flavor_string,
+          target_sp->GetDisassemblyCPU(), target_sp->GetDisassemblyFeatures(),
+          *addr_ptr, data.GetBytes(), bytes_read, count, data_from_file));
     }
   }
 
@@ -2038,8 +2067,9 @@ lldb::SBInstructionList SBTarget::ReadInstructions(lldb::SBAddress start_addr,
       AddressRange range(start_load_addr, size);
       const bool force_live_memory = true;
       sb_instructions.SetDisassembler(Disassembler::DisassembleRange(
-          target_sp->GetArchitecture(), nullptr, flavor_string, *target_sp,
-          range, force_live_memory));
+          target_sp->GetArchitecture(), nullptr, flavor_string,
+          target_sp->GetDisassemblyCPU(), target_sp->GetDisassemblyFeatures(),
+          *target_sp, range, force_live_memory));
     }
   }
   return sb_instructions;
@@ -2071,8 +2101,9 @@ SBTarget::GetInstructionsWithFlavor(lldb::SBAddress base_addr,
     const bool data_from_file = true;
 
     sb_instructions.SetDisassembler(Disassembler::DisassembleBytes(
-        target_sp->GetArchitecture(), nullptr, flavor_string, addr, buf, size,
-        UINT32_MAX, data_from_file));
+        target_sp->GetArchitecture(), nullptr, flavor_string,
+        target_sp->GetDisassemblyCPU(), target_sp->GetDisassemblyFeatures(),
+        addr, buf, size, UINT32_MAX, data_from_file));
   }
 
   return sb_instructions;
@@ -2427,4 +2458,12 @@ lldb::SBTrace SBTarget::CreateTrace(lldb::SBError &error) {
     error.SetErrorString("missing target");
   }
   return SBTrace();
+}
+
+lldb::SBMutex SBTarget::GetAPIMutex() const {
+  LLDB_INSTRUMENT_VA(this);
+
+  if (TargetSP target_sp = GetSP())
+    return lldb::SBMutex(target_sp);
+  return lldb::SBMutex();
 }

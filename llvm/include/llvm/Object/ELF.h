@@ -41,10 +41,10 @@ struct VerdAux {
 
 struct VerDef {
   unsigned Offset;
-  unsigned Version;
-  unsigned Flags;
-  unsigned Ndx;
-  unsigned Cnt;
+  uint16_t Version;
+  uint16_t Flags;
+  uint16_t Ndx;
+  uint16_t Cnt;
   unsigned Hash;
   std::string Name;
   std::vector<VerdAux> AuxV;
@@ -401,7 +401,7 @@ public:
   ///  be checked after iteration ends.
   Elf_Note_Iterator notes_begin(const Elf_Phdr &Phdr, Error &Err) const {
     assert(Phdr.p_type == ELF::PT_NOTE && "Phdr is not of type PT_NOTE");
-    ErrorAsOutParameter ErrAsOutParam(&Err);
+    ErrorAsOutParameter ErrAsOutParam(Err);
     if (Phdr.p_offset + Phdr.p_filesz > getBufSize()) {
       Err =
           createError("invalid offset (0x" + Twine::utohexstr(Phdr.p_offset) +
@@ -429,7 +429,7 @@ public:
   ///  be checked after iteration ends.
   Elf_Note_Iterator notes_begin(const Elf_Shdr &Shdr, Error &Err) const {
     assert(Shdr.sh_type == ELF::SHT_NOTE && "Shdr is not of type SHT_NOTE");
-    ErrorAsOutParameter ErrAsOutParam(&Err);
+    ErrorAsOutParameter ErrAsOutParam(Err);
     if (Shdr.sh_offset + Shdr.sh_size > getBufSize()) {
       Err =
           createError("invalid offset (0x" + Twine::utohexstr(Shdr.sh_offset) +
@@ -1057,8 +1057,8 @@ ELFFile<ELFT>::getVersionDefinitions(const Elf_Shdr &Sec) const {
 
     VerdAux Aux;
     Aux.Offset = VerdauxBuf - Start;
-    if (Verdaux->vda_name <= StrTabOrErr->size())
-      Aux.Name = std::string(StrTabOrErr->drop_front(Verdaux->vda_name));
+    if (Verdaux->vda_name < StrTabOrErr->size())
+      Aux.Name = std::string(StrTabOrErr->drop_front(Verdaux->vda_name).data());
     else
       Aux.Name = ("<invalid vda_name: " + Twine(Verdaux->vda_name) + ">").str();
     return Aux;

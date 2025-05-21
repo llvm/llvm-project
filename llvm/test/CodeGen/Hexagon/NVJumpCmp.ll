@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O2 -mcpu=hexagonv60  < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O2 -mcpu=hexagonv60 < %s | FileCheck %s
 
 ; Look for an instruction, we really just do not want to see an abort.
 ; CHECK: trace_event

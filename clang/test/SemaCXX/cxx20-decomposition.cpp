@@ -183,3 +183,26 @@ namespace ODRUseTests {
     }(0); }(0); // expected-note 2{{in instantiation}}
   }
 }
+
+
+namespace GH95081 {
+    void prevent_assignment_check() {
+        int arr[] = {1,2};
+        auto [e1, e2] = arr;
+
+        auto lambda = [e1] {
+            e1 = 42;  // expected-error {{cannot assign to a variable captured by copy in a non-mutable lambda}}
+        };
+    }
+
+    void f(int&) = delete;
+    void f(const int&);
+
+    int arr[1];
+    void foo() {
+        auto [x] = arr;
+        [x]() {
+            f(x); // deleted f(int&) used to be picked up erroneously
+        } ();
+    }
+}

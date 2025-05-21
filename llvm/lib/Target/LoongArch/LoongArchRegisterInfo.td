@@ -97,32 +97,35 @@ def GRLenRI : RegInfoByHwMode<
       [LA32,              LA64],
       [RegInfo<32,32,32>, RegInfo<64,64,64>]>;
 
-// The order of registers represents the preferred allocation sequence.
-// Registers are listed in the order caller-save, callee-save, specials.
-def GPR : RegisterClass<"LoongArch", [GRLenVT], 32, (add
-    // Argument registers (a0...a7)
-    (sequence "R%u", 4, 11),
-    // Temporary registers (t0...t8)
-    (sequence "R%u", 12, 20),
-    // Static register (s9/fp, s0...s8)
-    (sequence "R%u", 22, 31),
-    // Specials (r0, ra, tp, sp)
-    (sequence "R%u", 0, 3),
-    // Reserved (Non-allocatable)
-    R21
-  )> {
+class GPRRegisterClass<dag regList>
+    : RegisterClass<"LoongArch", [GRLenVT], 32, regList> {
   let RegInfos = GRLenRI;
 }
+
+// The order of registers represents the preferred allocation sequence.
+// Registers are listed in the order caller-save, callee-save, specials.
+def GPR : GPRRegisterClass<(add // Argument registers (a0...a7)
+                                (sequence "R%u", 4, 11),
+                                // Temporary registers (t0...t8)
+                                (sequence "R%u", 12, 20),
+                                // Static register (s9/fp, s0...s8)
+                                (sequence "R%u", 22, 31),
+                                // Specials (r0, ra, tp, sp)
+                                (sequence "R%u", 0, 3),
+                                // Reserved (Non-allocatable)
+                                R21)>;
 
 // GPR for indirect tail calls. We can't use callee-saved registers, as they are
 // restored to the saved value before the tail call, which would clobber a call
 // address.
-def GPRT : RegisterClass<"LoongArch", [GRLenVT], 32, (add
-    // a0...a7, t0...t8
-    (sequence "R%u", 4, 20)
-  )> {
-  let RegInfos = GRLenRI;
-}
+def GPRT : GPRRegisterClass<(add // a0...a7, t0...t8
+                                 (sequence "R%u", 4, 20))>;
+
+// Don't use R1 for JR since that micro-architecture unconditionally treats a
+// "jr $ra" as "return from subroutine", hence doing "jr $ra" would interfere
+// with both subroutine return prediction and the more general indirect branch
+// prediction.
+def GPRJR : GPRRegisterClass<(sub GPR, R1)>;
 
 // Floating point registers
 

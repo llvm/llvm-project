@@ -70,9 +70,7 @@ class GCNDPPCombine {
                               RegSubRegPair CombOldVGPR, bool CombBCZ,
                               bool IsShrinkable) const;
 
-  bool hasNoImmOrEqual(MachineInstr &MI,
-                       unsigned OpndName,
-                       int64_t Value,
+  bool hasNoImmOrEqual(MachineInstr &MI, AMDGPU::OpName OpndName, int64_t Value,
                        int64_t Mask = -1) const;
 
   bool combineDPPMov(MachineInstr &MI) const;
@@ -217,6 +215,11 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
 
   bool HasVOP3DPP = ST->hasVOP3DPP();
   auto OrigOp = OrigMI.getOpcode();
+  if (ST->useRealTrue16Insts() && AMDGPU::isTrue16Inst(OrigOp)) {
+    LLVM_DEBUG(
+        dbgs() << "  failed: Did not expect any 16-bit uses of dpp values\n");
+    return nullptr;
+  }
   auto DPPOp = getDPPOp(OrigOp, IsShrinkable);
   if (DPPOp == -1) {
     LLVM_DEBUG(dbgs() << "  failed: no DPP opcode\n");
@@ -513,7 +516,7 @@ MachineInstr *GCNDPPCombine::createDPPInst(
 
 // returns true if MI doesn't have OpndName immediate operand or the
 // operand has Value
-bool GCNDPPCombine::hasNoImmOrEqual(MachineInstr &MI, unsigned OpndName,
+bool GCNDPPCombine::hasNoImmOrEqual(MachineInstr &MI, AMDGPU::OpName OpndName,
                                     int64_t Value, int64_t Mask) const {
   auto *Imm = TII->getNamedOperand(MI, OpndName);
   if (!Imm)
@@ -626,11 +629,8 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
 
   OrigMIs.push_back(&MovMI);
   bool Rollback = true;
-  SmallVector<MachineOperand*, 16> Uses;
-
-  for (auto &Use : MRI->use_nodbg_operands(DPPMovReg)) {
-    Uses.push_back(&Use);
-  }
+  SmallVector<MachineOperand *, 16> Uses(
+      llvm::make_pointer_range(MRI->use_nodbg_operands(DPPMovReg)));
 
   while (!Uses.empty()) {
     MachineOperand *Use = Uses.pop_back_val();

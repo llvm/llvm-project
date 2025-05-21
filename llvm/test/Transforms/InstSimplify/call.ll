@@ -982,7 +982,7 @@ define <2 x i8> @fshr_zero_vec(<2 x i8> %shamt) {
 
 define <2 x i7> @fshl_ones_vec(<2 x i7> %shamt) {
 ; CHECK-LABEL: @fshl_ones_vec(
-; CHECK-NEXT:    ret <2 x i7> <i7 -1, i7 -1>
+; CHECK-NEXT:    ret <2 x i7> splat (i7 -1)
 ;
   %r = call <2 x i7> @llvm.fshl.v2i7(<2 x i7> <i7 poison, i7 -1>, <2 x i7> <i7 -1, i7 poison>, <2 x i7> %shamt)
   ret <2 x i7> %r
@@ -1421,7 +1421,7 @@ define i32 @ctpop_pow2(i32 %x) {
 
 define <3 x i33> @ctpop_signbit(<3 x i33> %x) {
 ; CHECK-LABEL: @ctpop_signbit(
-; CHECK-NEXT:    [[B:%.*]] = lshr <3 x i33> [[X:%.*]], <i33 32, i33 32, i33 32>
+; CHECK-NEXT:    [[B:%.*]] = lshr <3 x i33> [[X:%.*]], splat (i33 32)
 ; CHECK-NEXT:    ret <3 x i33> [[B]]
 ;
   %b = lshr <3 x i33> %x, <i33 32, i33 32, i33 32>
@@ -1433,7 +1433,7 @@ define <3 x i33> @ctpop_signbit(<3 x i33> %x) {
 
 define <3 x i33> @ctpop_notsignbit(<3 x i33> %x) {
 ; CHECK-LABEL: @ctpop_notsignbit(
-; CHECK-NEXT:    [[B:%.*]] = lshr <3 x i33> [[X:%.*]], <i33 31, i33 31, i33 31>
+; CHECK-NEXT:    [[B:%.*]] = lshr <3 x i33> [[X:%.*]], splat (i33 31)
 ; CHECK-NEXT:    [[R:%.*]] = tail call <3 x i33> @llvm.ctpop.v3i33(<3 x i33> [[B]])
 ; CHECK-NEXT:    ret <3 x i33> [[R]]
 ;
@@ -1582,9 +1582,7 @@ define i1 @ctlz_i1_non_poison_eq_false(i1 %x) {
 
 define i1 @ctlz_i1_poison_eq_false(i1 %x) {
 ; CHECK-LABEL: @ctlz_i1_poison_eq_false(
-; CHECK-NEXT:    [[CT:%.*]] = call i1 @llvm.ctlz.i1(i1 [[X:%.*]], i1 true)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i1 [[CT]], false
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %ct = call i1 @llvm.ctlz.i1(i1 %x, i1 true)
   %cmp = icmp eq i1 %ct, false
@@ -1604,9 +1602,7 @@ define i1 @cttz_i1_non_poison_eq_false(i1 %x) {
 
 define i1 @cttz_i1_poison_eq_false(i1 %x) {
 ; CHECK-LABEL: @cttz_i1_poison_eq_false(
-; CHECK-NEXT:    [[CT:%.*]] = call i1 @llvm.cttz.i1(i1 [[X:%.*]], i1 true)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i1 [[CT]], false
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %ct = call i1 @llvm.cttz.i1(i1 %x, i1 true)
   %cmp = icmp eq i1 %ct, false

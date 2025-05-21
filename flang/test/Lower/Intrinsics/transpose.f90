@@ -15,7 +15,7 @@ subroutine transpose_test(mat)
 ! CHECK:  fir.store %[[resultBox]] to %[[resultDescr]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>
 ! CHECK:  %[[resultOpaque:.*]] = fir.convert %[[resultDescr]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:  %[[sourceOpaque:.*]] = fir.convert %[[sourceBox]] : (!fir.box<!fir.array<2x3xf32>>) -> !fir.box<none>
-! CHECK:  %{{.*}} = fir.call @_FortranATranspose(%[[resultOpaque]], %[[sourceOpaque]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+! CHECK:  fir.call @_FortranATranspose(%[[resultOpaque]], %[[sourceOpaque]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
 ! CHECK:  %[[tmp1:.*]] = fir.load %[[resultDescr]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>
 ! CHECK:  %[[tmp2:.*]] = fir.box_addr %[[tmp1]] : (!fir.box<!fir.heap<!fir.array<?x?xf32>>>) -> !fir.heap<!fir.array<?x?xf32>>
 ! CHECK:  %[[tmp3:.*]] = fir.convert %[[tmp2]] : (!fir.heap<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<3x2xf32>>

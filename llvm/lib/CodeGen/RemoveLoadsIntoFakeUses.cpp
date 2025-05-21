@@ -22,16 +22,19 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/RemoveLoadsIntoFakeUses.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
 
@@ -40,12 +43,13 @@ using namespace llvm;
 STATISTIC(NumLoadsDeleted, "Number of dead load instructions deleted");
 STATISTIC(NumFakeUsesDeleted, "Number of FAKE_USE instructions deleted");
 
-class RemoveLoadsIntoFakeUses : public MachineFunctionPass {
+class RemoveLoadsIntoFakeUsesLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  RemoveLoadsIntoFakeUses() : MachineFunctionPass(ID) {
-    initializeRemoveLoadsIntoFakeUsesPass(*PassRegistry::getPassRegistry());
+  RemoveLoadsIntoFakeUsesLegacy() : MachineFunctionPass(ID) {
+    initializeRemoveLoadsIntoFakeUsesLegacyPass(
+        *PassRegistry::getPassRegistry());
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -65,17 +69,45 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
 };
 
-char RemoveLoadsIntoFakeUses::ID = 0;
-char &llvm::RemoveLoadsIntoFakeUsesID = RemoveLoadsIntoFakeUses::ID;
+struct RemoveLoadsIntoFakeUses {
+  bool run(MachineFunction &MF);
+};
 
-INITIALIZE_PASS_BEGIN(RemoveLoadsIntoFakeUses, DEBUG_TYPE,
+char RemoveLoadsIntoFakeUsesLegacy::ID = 0;
+char &llvm::RemoveLoadsIntoFakeUsesID = RemoveLoadsIntoFakeUsesLegacy::ID;
+
+INITIALIZE_PASS_BEGIN(RemoveLoadsIntoFakeUsesLegacy, DEBUG_TYPE,
                       "Remove Loads Into Fake Uses", false, false)
-INITIALIZE_PASS_END(RemoveLoadsIntoFakeUses, DEBUG_TYPE,
+INITIALIZE_PASS_END(RemoveLoadsIntoFakeUsesLegacy, DEBUG_TYPE,
                     "Remove Loads Into Fake Uses", false, false)
 
-bool RemoveLoadsIntoFakeUses::runOnMachineFunction(MachineFunction &MF) {
+bool RemoveLoadsIntoFakeUsesLegacy::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+
+  return RemoveLoadsIntoFakeUses().run(MF);
+}
+
+PreservedAnalyses
+RemoveLoadsIntoFakeUsesPass::run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM) {
+  MFPropsModifier _(*this, MF);
+
+  if (!RemoveLoadsIntoFakeUses().run(MF))
+    return PreservedAnalyses::all();
+
+  auto PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
+}
+
+bool RemoveLoadsIntoFakeUses::run(MachineFunction &MF) {
+  // Skip this pass if we would use VarLoc-based LDV, as there may be DBG_VALUE
+  // instructions of the restored values that would become invalid.
+  if (!MF.useDebugInstrRef())
+    return false;
   // Only run this for functions that have fake uses.
-  if (!MF.hasFakeUses() || skipFunction(MF.getFunction()))
+  if (!MF.hasFakeUses())
     return false;
 
   bool AnyChanges = false;
@@ -86,20 +118,19 @@ bool RemoveLoadsIntoFakeUses::runOnMachineFunction(MachineFunction &MF) {
   const TargetInstrInfo *TII = ST.getInstrInfo();
   const TargetRegisterInfo *TRI = ST.getRegisterInfo();
 
-  SmallDenseMap<Register, SmallVector<MachineInstr *>> RegFakeUses;
+  SmallVector<MachineInstr *> RegFakeUses;
   LivePhysRegs.init(*TRI);
-  SmallVector<MachineInstr *, 16> Statepoints;
   for (MachineBasicBlock *MBB : post_order(&MF)) {
+    RegFakeUses.clear();
     LivePhysRegs.addLiveOuts(*MBB);
 
     for (MachineInstr &MI : make_early_inc_range(reverse(*MBB))) {
       if (MI.isFakeUse()) {
-        for (const MachineOperand &MO : MI.operands()) {
-          // Track the Fake Uses that use this register so that we can delete
-          // them if we delete the corresponding load.
-          if (MO.isReg())
-            RegFakeUses[MO.getReg()].push_back(&MI);
-        }
+        if (MI.getNumOperands() == 0 || !MI.getOperand(0).isReg())
+          continue;
+        // Track the Fake Uses that use these register units so that we can
+        // delete them if we delete the corresponding load.
+        RegFakeUses.push_back(&MI);
         // Do not record FAKE_USE uses in LivePhysRegs so that we can recognize
         // otherwise-unused loads.
         continue;
@@ -109,31 +140,37 @@ bool RemoveLoadsIntoFakeUses::runOnMachineFunction(MachineFunction &MF) {
       // reload of a spilled register.
       if (MI.getRestoreSize(TII)) {
         Register Reg = MI.getOperand(0).getReg();
-        assert(Reg.isPhysical() && "VReg seen in function with NoVRegs set?");
         // Don't delete live physreg defs, or any reserved register defs.
         if (!LivePhysRegs.available(Reg) || MRI->isReserved(Reg))
           continue;
-        // There should be an exact match between the loaded register and the
-        // FAKE_USE use. If not, this is a load that is unused by anything? It
-        // should probably be deleted, but that's outside of this pass' scope.
-        if (RegFakeUses.contains(Reg)) {
+        // There should typically be an exact match between the loaded register
+        // and the FAKE_USE, but sometimes regalloc will choose to load a larger
+        // value than is needed. Therefore, as long as the load isn't used by
+        // anything except at least one FAKE_USE, we will delete it. If it isn't
+        // used by any fake uses, it should still be safe to delete but we
+        // choose to ignore it so that this pass has no side effects unrelated
+        // to fake uses.
+        SmallDenseSet<MachineInstr *> FakeUsesToDelete;
+        for (MachineInstr *&FakeUse : reverse(RegFakeUses)) {
+          if (FakeUse->readsRegister(Reg, TRI)) {
+            FakeUsesToDelete.insert(FakeUse);
+            RegFakeUses.erase(&FakeUse);
+          }
+        }
+        if (!FakeUsesToDelete.empty()) {
           LLVM_DEBUG(dbgs() << "RemoveLoadsIntoFakeUses: DELETING: " << MI);
-          // It is possible that some DBG_VALUE instructions refer to this
-          // instruction. They will be deleted in the live debug variable
-          // analysis.
+          // Since this load only exists to restore a spilled register and we
+          // haven't, run LiveDebugValues yet, there shouldn't be any DBG_VALUEs
+          // for this load; otherwise, deleting this would be incorrect.
           MI.eraseFromParent();
           AnyChanges = true;
           ++NumLoadsDeleted;
-          // Each FAKE_USE now appears to be a fake use of the previous value
-          // of the loaded register; delete them to avoid incorrectly
-          // interpreting them as such.
-          for (MachineInstr *FakeUse : RegFakeUses[Reg]) {
+          for (MachineInstr *FakeUse : FakeUsesToDelete) {
             LLVM_DEBUG(dbgs()
                        << "RemoveLoadsIntoFakeUses: DELETING: " << *FakeUse);
             FakeUse->eraseFromParent();
           }
-          NumFakeUsesDeleted += RegFakeUses[Reg].size();
-          RegFakeUses[Reg].clear();
+          NumFakeUsesDeleted += FakeUsesToDelete.size();
         }
         continue;
       }
@@ -143,13 +180,15 @@ bool RemoveLoadsIntoFakeUses::runOnMachineFunction(MachineFunction &MF) {
       // that register.
       if (!RegFakeUses.empty()) {
         for (const MachineOperand &MO : MI.operands()) {
-          if (MO.isReg() && MO.isDef()) {
-            Register Reg = MO.getReg();
-            assert(Reg.isPhysical() &&
-                   "VReg seen in function with NoVRegs set?");
-            for (MCRegUnit Unit : TRI->regunits(Reg))
-              RegFakeUses.erase(Unit);
-          }
+          if (!MO.isReg())
+            continue;
+          Register Reg = MO.getReg();
+          // We clear RegFakeUses for this register and all subregisters,
+          // because any such FAKE_USE encountered prior is no longer relevant
+          // for later encountered loads.
+          for (MachineInstr *&FakeUse : reverse(RegFakeUses))
+            if (FakeUse->readsRegister(Reg, TRI))
+              RegFakeUses.erase(&FakeUse);
         }
       }
       LivePhysRegs.stepBackward(MI);

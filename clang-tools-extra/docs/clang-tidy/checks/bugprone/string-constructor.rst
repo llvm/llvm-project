@@ -21,6 +21,7 @@ Examples:
 .. code-block:: c++
 
   std::string("test", 200);   // Will include random characters after "test".
+  std::string("test", 2, 5);  // Will include random characters after "st".
   std::string_view("test", 200);
 
 Creating an empty string from constructors with parameters is considered
@@ -31,7 +32,18 @@ Examples:
 .. code-block:: c++
 
   std::string("test", 0);   // Creation of an empty string.
+  std::string("test", 1, 0);
   std::string_view("test", 0);
+
+Passing an invalid first character position parameter to constructor will
+cause ``std::out_of_range`` exception at runtime. 
+
+Examples:
+
+.. code-block:: c++
+
+  std::string("test", -1, 10); // Negative first character position.
+  std::string("test", 10, 10); // First character position is bigger than string literal character range".
 
 Options
 -------

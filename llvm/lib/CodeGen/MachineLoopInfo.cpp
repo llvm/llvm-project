@@ -77,7 +77,7 @@ bool MachineLoopInfo::invalidate(
 
 void MachineLoopInfo::calculate(MachineDominatorTree &MDT) {
   releaseMemory();
-  analyze(MDT.getBase());
+  analyze(MDT);
 }
 
 void MachineLoopInfoWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {

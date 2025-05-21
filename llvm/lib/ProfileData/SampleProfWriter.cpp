@@ -22,14 +22,12 @@
 #include "llvm/ProfileData/ProfileCommon.h"
 #include "llvm/ProfileData/SampleProf.h"
 #include "llvm/Support/Compression.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <memory>

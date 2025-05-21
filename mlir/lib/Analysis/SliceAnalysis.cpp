@@ -16,6 +16,7 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Support/LLVM.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 
@@ -91,14 +92,13 @@ static void getBackwardSliceImpl(Operation *op,
   if (options.filter && !options.filter(op))
     return;
 
-  for (const auto &en : llvm::enumerate(op->getOperands())) {
-    auto operand = en.value();
-    if (auto *definingOp = operand.getDefiningOp()) {
+  auto processValue = [&](Value value) {
+    if (auto *definingOp = value.getDefiningOp()) {
       if (backwardSlice->count(definingOp) == 0)
         getBackwardSliceImpl(definingOp, backwardSlice, options);
-    } else if (auto blockArg = dyn_cast<BlockArgument>(operand)) {
+    } else if (auto blockArg = dyn_cast<BlockArgument>(value)) {
       if (options.omitBlockArguments)
-        continue;
+        return;
 
       Block *block = blockArg.getOwner();
       Operation *parentOp = block->getParentOp();
@@ -107,13 +107,30 @@ static void getBackwardSliceImpl(Operation *op,
       // into us. For now, just bail.
       if (parentOp && backwardSlice->count(parentOp) == 0) {
         assert(parentOp->getNumRegions() == 1 &&
-               parentOp->getRegion(0).getBlocks().size() == 1);
+               llvm::hasSingleElement(parentOp->getRegion(0).getBlocks()));
         getBackwardSliceImpl(parentOp, backwardSlice, options);
       }
     } else {
       llvm_unreachable("No definingOp and not a block argument.");
     }
+  };
+
+  if (!options.omitUsesFromAbove) {
+    llvm::for_each(op->getRegions(), [&](Region &region) {
+      // Walk this region recursively to collect the regions that descend from
+      // this op's nested regions (inclusive).
+      SmallPtrSet<Region *, 4> descendents;
+      region.walk(
+          [&](Region *childRegion) { descendents.insert(childRegion); });
+      region.walk([&](Operation *op) {
+        for (OpOperand &operand : op->getOpOperands()) {
+          if (!descendents.contains(operand.get().getParentRegion()))
+            processValue(operand.get());
+        }
+      });
+    });
   }
+  llvm::for_each(op->getOperands(), processValue);
 
   backwardSlice->insert(op);
 }
@@ -154,12 +171,12 @@ mlir::getSlice(Operation *op, const BackwardSliceOptions &backwardSliceOptions,
     // Compute and insert the backwardSlice starting from currentOp.
     backwardSlice.clear();
     getBackwardSlice(currentOp, &backwardSlice, backwardSliceOptions);
-    slice.insert(backwardSlice.begin(), backwardSlice.end());
+    slice.insert_range(backwardSlice);
 
     // Compute and insert the forwardSlice starting from currentOp.
     forwardSlice.clear();
     getForwardSlice(currentOp, &forwardSlice, forwardSliceOptions);
-    slice.insert(forwardSlice.begin(), forwardSlice.end());
+    slice.insert_range(forwardSlice);
     ++currentIndex;
   }
   return topologicalSort(slice);
@@ -180,8 +197,7 @@ static bool dependsOnCarriedVals(Value value,
 
   // Check that none of the operands of the operations in the backward slice are
   // loop iteration arguments, and neither is the value itself.
-  SmallPtrSet<Value, 8> iterCarriedValSet(iterCarriedArgs.begin(),
-                                          iterCarriedArgs.end());
+  SmallPtrSet<Value, 8> iterCarriedValSet(llvm::from_range, iterCarriedArgs);
   if (iterCarriedValSet.contains(value))
     return true;
 

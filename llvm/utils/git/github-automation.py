@@ -17,6 +17,7 @@ import os
 import re
 import requests
 import sys
+import textwrap
 import time
 from typing import List, Optional
 
@@ -209,6 +210,14 @@ Author: {self.pr.user.name} ({self.pr.user.login})
         return None
 
 
+def get_top_values(values: dict, top: int = 3) -> list:
+    return [v for v in sorted(values.items(), key=lambda x: x[1], reverse=True)][:top]
+
+
+def get_user_values_str(values: list) -> str:
+    return ", ".join([f"@{v[0]} ({v[1]})" for v in values])
+
+
 class PRGreeter:
     COMMENT_TAG = "<!--LLVM NEW CONTRIBUTOR COMMENT-->\n"
 
@@ -239,6 +248,62 @@ If you have further questions, they may be answered by the [LLVM GitHub User Gui
 You can also ask questions in a comment on this PR, on the [LLVM Discord](https://discord.com/invite/xS7Z362) or on the [forums](https://discourse.llvm.org/)."""
         self.pr.as_issue().create_comment(comment)
         return True
+
+
+class CommitRequestGreeter:
+    def __init__(self, token: str, repo: str, issue_number: int):
+        self.repo = github.Github(token).get_repo(repo)
+        self.issue = self.repo.get_issue(issue_number)
+
+    def run(self) -> bool:
+        # Post greeter comment:
+        comment = textwrap.dedent(
+            f"""
+            @{self.issue.user.login} thank you for applying for commit access.  Please  review the project's [code review policy](https://llvm.org/docs/CodeReview.html).
+        """
+        )
+        self.issue.create_comment(comment)
+
+        # Post activity summary:
+        total_prs = 0
+        merged_prs = 0
+        merged_by = {}
+        reviewed_by = {}
+        for i in self.repo.get_issues(creator=self.issue.user.login, state="all"):
+            print("Looking at issue:", i)
+            issue_reviewed_by = set()
+            try:
+                pr = i.as_pull_request()
+                total_prs += 1
+                for c in pr.get_review_comments():
+                    if c.user.login == self.issue.user.login:
+                        continue
+                    issue_reviewed_by.add(c.user.login)
+                for r in issue_reviewed_by:
+                    if r not in reviewed_by:
+                        reviewed_by[r] = 1
+                    else:
+                        reviewed_by[r] += 1
+                if pr.is_merged():
+                    merged_prs += 1
+                    merger = pr.merged_by.login
+                    if merger not in merged_by:
+                        merged_by[merger] = 1
+                    else:
+                        merged_by[merger] += 1
+                    continue
+
+            except github.GithubException as e:
+                print(e)
+                continue
+
+        comment = f"""
+            ### Activity Summary:
+            * [{total_prs} Pull Requests](https://github.com/llvm/llvm-project/pulls/{self.issue.user.login}) ({merged_prs} merged)
+            * Top 3 Committers: {get_user_values_str(get_top_values(merged_by))}
+            * Top 3 Reviewers: {get_user_values_str(get_top_values(reviewed_by))}
+        """
+        self.issue.create_comment(textwrap.dedent(comment))
 
 
 class PRBuildbotInformation:
@@ -408,6 +473,98 @@ class ReleaseWorkflow:
         if m:
             return m.group(1)
         return None
+
+    def update_issue_project_status(self) -> None:
+        """
+        A common workflow is to merge a PR and then use the /cherry-pick
+        command in a pull request comment to backport the change to the
+        release branch.  In this case, once the new PR for the backport has
+        been created, we want to mark the project status for the original PR
+        as Done.  This is becuase we can track progress now on the new PR
+        which is targeting the release branch.
+
+        """
+
+        pr = self.issue.as_pull_request()
+        if not pr:
+            return
+
+        if pr.state != "closed":
+            return
+
+        gh = github.Github(login_or_token=self.token)
+        query = """
+            query($node_id: ID!) {
+              node(id: $node_id) {
+                ... on PullRequest {
+                  url
+                  projectItems(first:100){
+                    nodes {
+                      id
+                      project {
+                        id
+                        number
+                        field(name: "Status") {
+                          ... on ProjectV2SingleSelectField {
+                            id
+                            name
+                            options {
+                              id
+                              name
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+        """
+        variables = {"node_id": pr.node_id}
+        res_header, res_data = gh._Github__requester.graphql_query(
+            query=query, variables=variables
+        )
+        print(res_header)
+
+        llvm_release_status_project_number = 3
+        for item in res_data["data"]["node"]["projectItems"]["nodes"]:
+            project = item["project"]
+            if project["number"] != llvm_release_status_project_number:
+                continue
+            status_field = project["field"]
+            for option in status_field["options"]:
+                if option["name"] != "Done":
+                    continue
+                variables = {
+                    "project": project["id"],
+                    "item": item["id"],
+                    "status_field": status_field["id"],
+                    "status_value": option["id"],
+                }
+
+                query = """
+                  mutation($project: ID!, $item: ID!, $status_field: ID!, $status_value: String!) {
+                    set_status:
+                    updateProjectV2ItemFieldValue(input: {
+                      projectId: $project
+                      itemId: $item
+                      fieldId: $status_field
+                      value: {
+                        singleSelectOptionId: $status_value
+                      }
+                    }) {
+                      projectV2Item {
+                        id
+                      }
+                    }
+                  }
+                """
+
+                res_header, res_data = gh._Github__requester.graphql_query(
+                    query=query, variables=variables
+                )
+                print(res_header)
 
     def print_release_branch(self) -> None:
         print(self.release_branch_for_issue)
@@ -601,6 +758,7 @@ class ReleaseWorkflow:
 
         self.issue_notify_pull_request(pull)
         self.issue_remove_cherry_pick_failed_label()
+        self.update_issue_project_status()
 
         # TODO(tstellar): Do you really want to always return True?
         return True
@@ -676,6 +834,9 @@ pr_subscriber_parser.add_argument("--issue-number", type=int, required=True)
 pr_greeter_parser = subparsers.add_parser("pr-greeter")
 pr_greeter_parser.add_argument("--issue-number", type=int, required=True)
 
+commit_request_greeter = subparsers.add_parser("commit-request-greeter")
+commit_request_greeter.add_argument("--issue-number", type=int, required=True)
+
 pr_buildbot_information_parser = subparsers.add_parser("pr-buildbot-information")
 pr_buildbot_information_parser.add_argument("--issue-number", type=int, required=True)
 pr_buildbot_information_parser.add_argument("--author", type=str, required=True)
@@ -746,6 +907,9 @@ elif args.command == "pr-subscriber":
 elif args.command == "pr-greeter":
     pr_greeter = PRGreeter(args.token, args.repo, args.issue_number)
     pr_greeter.run()
+elif args.command == "commit-request-greeter":
+    commit_greeter = CommitRequestGreeter(args.token, args.repo, args.issue_number)
+    commit_greeter.run()
 elif args.command == "pr-buildbot-information":
     pr_buildbot_information = PRBuildbotInformation(
         args.token, args.repo, args.issue_number, args.author

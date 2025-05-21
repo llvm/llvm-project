@@ -56,12 +56,13 @@ enum ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "Opts.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "Opts.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 using namespace llvm::opt;
 static constexpr opt::OptTable::Info InfoTable[] = {
@@ -72,7 +73,8 @@ static constexpr opt::OptTable::Info InfoTable[] = {
 
 class SymbolizerOptTable : public opt::GenericOptTable {
 public:
-  SymbolizerOptTable() : GenericOptTable(InfoTable) {
+  SymbolizerOptTable()
+      : GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {
     setGroupedShortOptions(true);
   }
 };
@@ -497,6 +499,8 @@ int llvm_symbolizer_main(int argc, char **argv, const llvm::ToolContext &) {
   Opts.DWPName = Args.getLastArgValue(OPT_dwp_EQ).str();
   Opts.FallbackDebugPath =
       Args.getLastArgValue(OPT_fallback_debug_path_EQ).str();
+  Opts.GsymFileDirectory = Args.getAllArgValues(OPT_gsym_file_directory_EQ);
+  Opts.DisableGsym = Args.hasArg(OPT_disable_gsym);
   Opts.PrintFunctions = decideHowToPrintFunctions(Args, IsAddr2Line);
   parseIntArg(Args, OPT_print_source_context_lines_EQ,
               Config.SourceContextLines);

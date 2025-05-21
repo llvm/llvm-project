@@ -1,12 +1,12 @@
-; RUN: not --crash llc < %s -march=nvptx -mcpu=sm_20 -mattr=+ptx70 2>&1 | \
+; RUN: not --crash llc < %s -mtriple=nvptx -mcpu=sm_20 -mattr=+ptx70 2>&1 | \
 ; RUN:   FileCheck %s --check-prefix=ERROR
 
-; RUN: llc < %s -march=nvptx -mcpu=sm_20 -mattr=+ptx71 | \
+; RUN: llc < %s -mtriple=nvptx -mcpu=sm_20 -mattr=+ptx71 | \
 ; RUN:   FileCheck %s --check-prefixes=CHECK,CHECK32
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 -mattr=+ptx71 | \
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_20 -mattr=+ptx71 | \
 ; RUN:   FileCheck %s --check-prefixes=CHECK,CHECK64
-; RUN: %if ptxas-11.1 && !ptxas-12.0%{ llc < %s -march=nvptx -mcpu=sm_20 -mattr=+ptx71 | %ptxas-verify %}
-; RUN: %if ptxas-11.1 %{ llc < %s -march=nvptx64 -mcpu=sm_20 -mattr=+ptx71 | %ptxas-verify %}
+; RUN: %if ptxas-11.1 && !ptxas-12.0%{ llc < %s -mtriple=nvptx -mcpu=sm_20 -mattr=+ptx71 | %ptxas-verify %}
+; RUN: %if ptxas-11.1 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_20 -mattr=+ptx71 | %ptxas-verify %}
 
 ;; Test that packed structs with symbol references are represented using the
 ;; mask() operator.

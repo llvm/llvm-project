@@ -5,7 +5,7 @@
 ## maintained, i.e. new versions of the linker will still produce binaries that
 ## can be run on these versions of Android.
 
-# RUN: llvm-mc --filetype=obj -triple=aarch64-none-linux-android %s -o %t.o
+# RUN: llvm-mc --filetype=obj -triple=aarch64-linux-android %s -o %t.o
 # RUN: ld.lld -shared --android-memtag-mode=async --android-memtag-heap %t.o -o %t
 # RUN: llvm-readelf --memtag %t | FileCheck %s --check-prefixes=CHECK,HEAP,NOSTACK,ASYNC
 

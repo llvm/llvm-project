@@ -305,7 +305,6 @@ public:
   /// be prepared to drop the erroneous construct on the floor and "not crash".
   /// The generated code need not be correct.  The error message will be
   /// implicitly prefixed with "error: " and should not end with a ".".
-  void emitError(uint64_t LocCookie, const Twine &ErrorStr);
   void emitError(const Instruction *I, const Twine &ErrorStr);
   void emitError(const Twine &ErrorStr);
 
@@ -335,6 +334,14 @@ public:
   /// Similar to {get,set}DefaultTargetCPU() but for default target-features.
   StringRef getDefaultTargetFeatures();
   void setDefaultTargetFeatures(StringRef Features);
+
+  /// Key Instructions: update the highest number atom group emitted for any
+  /// function.
+  void updateDILocationAtomGroupWaterline(uint64_t G);
+
+  /// Key Instructions: get the next free atom group number and increment
+  /// the global tracker.
+  uint64_t incNextDILocationAtomGroup();
 
 private:
   // Module needs access to the add/removeModule methods.

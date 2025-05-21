@@ -42,6 +42,7 @@ class ConstantRangeList;
 class FoldingSetNodeID;
 class Function;
 class LLVMContext;
+class Instruction;
 class Type;
 class raw_ostream;
 enum FPClassTest : unsigned;
@@ -165,6 +166,7 @@ public:
   static Attribute getWithUWTableKind(LLVMContext &Context, UWTableKind Kind);
   static Attribute getWithMemoryEffects(LLVMContext &Context, MemoryEffects ME);
   static Attribute getWithNoFPClass(LLVMContext &Context, FPClassTest Mask);
+  static Attribute getWithCaptureInfo(LLVMContext &Context, CaptureInfo CI);
 
   /// For a typed attribute, return the equivalent attribute with the type
   /// changed to \p ReplacementTy.
@@ -283,6 +285,9 @@ public:
 
   /// Returns memory effects.
   MemoryEffects getMemoryEffects() const;
+
+  /// Returns information from captures attribute.
+  CaptureInfo getCaptureInfo() const;
 
   /// Return the FPClassTest for nofpclass
   FPClassTest getNoFPClass() const;
@@ -436,6 +441,7 @@ public:
   UWTableKind getUWTableKind() const;
   AllocFnKind getAllocKind() const;
   MemoryEffects getMemoryEffects() const;
+  CaptureInfo getCaptureInfo() const;
   FPClassTest getNoFPClass() const;
   std::string getAsString(bool InAttrGrp = false) const;
 
@@ -1156,6 +1162,13 @@ public:
     return getRawIntAttr(Attribute::DereferenceableOrNull).value_or(0);
   }
 
+  /// Retrieve the bitmask for nofpclass, if the nofpclass attribute exists
+  /// (fcNone is returned otherwise).
+  FPClassTest getNoFPClass() const {
+    std::optional<uint64_t> Raw = getRawIntAttr(Attribute::NoFPClass);
+    return static_cast<FPClassTest>(Raw.value_or(0));
+  }
+
   /// Retrieve type for the given type attribute.
   Type *getTypeAttr(Attribute::AttrKind Kind) const;
 
@@ -1260,6 +1273,9 @@ public:
   /// Add memory effect attribute.
   AttrBuilder &addMemoryAttr(MemoryEffects ME);
 
+  /// Add captures attribute.
+  AttrBuilder &addCapturesAttr(CaptureInfo CI);
+
   // Add nofpclass attribute
   AttrBuilder &addNoFPClassAttr(FPClassTest NoFPClassMask);
 
@@ -1276,6 +1292,11 @@ public:
 
   /// Add initializes attribute.
   AttrBuilder &addInitializesAttr(const ConstantRangeList &CRL);
+
+  /// Add 0 or more parameter attributes which are equivalent to metadata
+  /// attached to \p I. e.g. !align -> align. This assumes the argument type is
+  /// the same as the original instruction and the attribute is compatible.
+  AttrBuilder &addFromEquivalentMetadata(const Instruction &I);
 
   ArrayRef<Attribute> attrs() const { return Attrs; }
 

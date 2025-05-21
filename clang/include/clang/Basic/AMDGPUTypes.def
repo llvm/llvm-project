@@ -15,7 +15,15 @@
   AMDGPU_TYPE(Name, Id, SingletonId, Width, Align)
 #endif
 
+#ifndef AMDGPU_NAMED_BARRIER_TYPE
+#define AMDGPU_NAMED_BARRIER_TYPE(Name, Id, SingletonId, Width, Align, Scope) \
+  AMDGPU_TYPE(Name, Id, SingletonId, Width, Align)
+#endif
+
 AMDGPU_OPAQUE_PTR_TYPE("__amdgpu_buffer_rsrc_t", AMDGPUBufferRsrc, AMDGPUBufferRsrcTy, 128, 128, 8)
+
+AMDGPU_NAMED_BARRIER_TYPE("__amdgpu_named_workgroup_barrier_t", AMDGPUNamedWorkgroupBarrier, AMDGPUNamedWorkgroupBarrierTy, 128, 32, 0)
 
 #undef AMDGPU_TYPE
 #undef AMDGPU_OPAQUE_PTR_TYPE
+#undef AMDGPU_NAMED_BARRIER_TYPE

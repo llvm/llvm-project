@@ -19,11 +19,11 @@
 ; CHECK: $cppxdata$main:
 ; CHECK-NEXT: .long   429065506               # MagicNumber
 ; CHECK-NEXT: .long   4                       # MaxState
-; CHECK-NEXT: .long   ($stateUnwindMap$main)@IMGREL # UnwindMap
+; CHECK-NEXT: .long   $stateUnwindMap$main@IMGREL # UnwindMap
 ; CHECK-NEXT: .long   2                       # NumTryBlocks
-; CHECK-NEXT: .long   ($tryMap$main)@IMGREL   # TryBlockMap
+; CHECK-NEXT: .long   $tryMap$main@IMGREL   # TryBlockMap
 ; CHECK-NEXT: .long   5                       # IPMapEntries
-; CHECK-NEXT: .long   ($ip2state$main)@IMGREL # IPToStateXData
+; CHECK-NEXT: .long   $ip2state$main@IMGREL # IPToStateXData
 ; CHECK-NEXT: .long   32                      # UnwindHelp
 ; CHECK-NEXT: .long   0                       # ESTypeList
 ; CHECK-NEXT: .long   1                       # EHFlags
@@ -33,12 +33,12 @@
 ; CHECK-NEXT: .long   1                       # TryHigh
 ; CHECK-NEXT: .long   2                       # CatchHigh
 ; CHECK-NEXT: .long   1                       # NumCatches
-; CHECK-NEXT: .long   ($handlerMap$0$main)@IMGREL # HandlerArray
+; CHECK-NEXT: .long   $handlerMap$0$main@IMGREL # HandlerArray
 ; CHECK-NEXT: .long   0                       # TryLow
 ; CHECK-NEXT: .long   2                       # TryHigh
 ; CHECK-NEXT: .long   3                       # CatchHigh
 ; CHECK-NEXT: .long   1                       # NumCatches
-; CHECK-NEXT: .long   ($handlerMap$1$main)@IMGREL # HandlerArray
+; CHECK-NEXT: .long   $handlerMap$1$main@IMGREL # HandlerArray
 
 ; CHECK: $handlerMap$0$main:
 ; CHECK-NEXT: .long   0                       # Adjectives

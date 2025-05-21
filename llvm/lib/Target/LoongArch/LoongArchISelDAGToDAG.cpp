@@ -61,7 +61,7 @@ void LoongArchDAGToDAGISel::Select(SDNode *Node) {
     SDValue SrcReg = CurDAG->getRegister(LoongArch::R0, GRLenVT);
     // The instructions in the sequence are handled here.
     for (LoongArchMatInt::Inst &Inst : LoongArchMatInt::generateInstSeq(Imm)) {
-      SDValue SDImm = CurDAG->getTargetConstant(Inst.Imm, DL, GRLenVT);
+      SDValue SDImm = CurDAG->getSignedTargetConstant(Inst.Imm, DL, GRLenVT);
       switch (Inst.Opc) {
       case LoongArch::LU12I_W:
         Result = CurDAG->getMachineNode(Inst.Opc, DL, GRLenVT, SDImm);
@@ -242,6 +242,28 @@ bool LoongArchDAGToDAGISel::selectNonFIBaseAddr(SDValue Addr, SDValue &Base) {
   if (isa<FrameIndexSDNode>(Addr))
     return false;
   Base = Addr;
+  return true;
+}
+
+bool LoongArchDAGToDAGISel::SelectAddrRegImm12(SDValue Addr, SDValue &Base,
+                                               SDValue &Offset) {
+  SDLoc DL(Addr);
+  MVT VT = Addr.getSimpleValueType();
+
+  // The address is the result of an ADD. Here we only consider reg+simm12.
+  if (CurDAG->isBaseWithConstantOffset(Addr)) {
+    int64_t Imm = cast<ConstantSDNode>(Addr.getOperand(1))->getSExtValue();
+    if (isInt<12>(Imm)) {
+      Base = Addr.getOperand(0);
+      Offset = CurDAG->getTargetConstant(SignExtend64<12>(Imm), DL, VT);
+      return true;
+    }
+  }
+
+  // Otherwise, we assume Addr as the base address and use constant 0 as the
+  // offset.
+  Base = Addr;
+  Offset = CurDAG->getTargetConstant(0, DL, VT);
   return true;
 }
 

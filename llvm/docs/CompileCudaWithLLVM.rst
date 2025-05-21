@@ -523,7 +523,7 @@ LLVM to make it generate good GPU code.  Among these changes are:
   most effective on code along dominator paths.
 
 * `Memory space inference
-  <https://llvm.org/doxygen/NVPTXInferAddressSpaces_8cpp_source.html>`_ --
+  <https://llvm.org/doxygen/InferAddressSpaces_8cpp_source.html>`_ --
   In PTX, we can operate on pointers that are in a particular "address space"
   (global, shared, constant, or local), or we can operate on pointers in the
   "generic" address space, which can point to anything.  Operations in a

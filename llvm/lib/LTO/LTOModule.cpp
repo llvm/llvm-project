@@ -200,14 +200,13 @@ LTOModule::makeLTOModule(MemoryBufferRef Buffer, const TargetOptions &options,
     return EC;
   std::unique_ptr<Module> &M = *MOrErr;
 
-  std::string TripleStr = M->getTargetTriple();
-  if (TripleStr.empty())
-    TripleStr = sys::getDefaultTargetTriple();
-  llvm::Triple Triple(TripleStr);
+  llvm::Triple Triple = M->getTargetTriple();
+  if (Triple.empty())
+    Triple = llvm::Triple(sys::getDefaultTargetTriple());
 
   // find machine architecture for this module
   std::string errMsg;
-  const Target *march = TargetRegistry::lookupTarget(TripleStr, errMsg);
+  const Target *march = TargetRegistry::lookupTarget(Triple, errMsg);
   if (!march)
     return make_error_code(object::object_error::arch_not_found);
 
@@ -229,7 +228,7 @@ LTOModule::makeLTOModule(MemoryBufferRef Buffer, const TargetOptions &options,
       CPU = "cyclone";
   }
 
-  TargetMachine *target = march->createTargetMachine(TripleStr, CPU, FeatureStr,
+  TargetMachine *target = march->createTargetMachine(Triple, CPU, FeatureStr,
                                                      options, std::nullopt);
 
   std::unique_ptr<LTOModule> Ret(new LTOModule(std::move(M), Buffer, target));
@@ -272,8 +271,7 @@ void LTOModule::addObjCClass(const GlobalVariable *clgv) {
   // second slot in __OBJC,__class is pointer to superclass name
   std::string superclassName;
   if (objcClassNameFromExpression(c->getOperand(1), superclassName)) {
-    auto IterBool =
-        _undefines.insert(std::make_pair(superclassName, NameAndAttributes()));
+    auto IterBool = _undefines.try_emplace(superclassName);
     if (IterBool.second) {
       NameAndAttributes &info = IterBool.first->second;
       info.name = IterBool.first->first();
@@ -308,8 +306,7 @@ void LTOModule::addObjCCategory(const GlobalVariable *clgv) {
   if (!objcClassNameFromExpression(c->getOperand(1), targetclassName))
     return;
 
-  auto IterBool =
-      _undefines.insert(std::make_pair(targetclassName, NameAndAttributes()));
+  auto IterBool = _undefines.try_emplace(targetclassName);
 
   if (!IterBool.second)
     return;
@@ -327,8 +324,7 @@ void LTOModule::addObjCClassRef(const GlobalVariable *clgv) {
   if (!objcClassNameFromExpression(clgv->getInitializer(), targetclassName))
     return;
 
-  auto IterBool =
-      _undefines.insert(std::make_pair(targetclassName, NameAndAttributes()));
+  auto IterBool = _undefines.try_emplace(targetclassName);
 
   if (!IterBool.second)
     return;
@@ -523,7 +519,7 @@ void LTOModule::addAsmGlobalSymbol(StringRef name,
 /// addAsmGlobalSymbolUndef - Add a global symbol from module-level ASM to the
 /// undefined list.
 void LTOModule::addAsmGlobalSymbolUndef(StringRef name) {
-  auto IterBool = _undefines.insert(std::make_pair(name, NameAndAttributes()));
+  auto IterBool = _undefines.try_emplace(name);
 
   _asm_undefines.push_back(IterBool.first->first());
 
@@ -550,8 +546,7 @@ void LTOModule::addPotentialUndefinedSymbol(ModuleSymbolTable::Symbol Sym,
     name.c_str();
   }
 
-  auto IterBool =
-      _undefines.insert(std::make_pair(name.str(), NameAndAttributes()));
+  auto IterBool = _undefines.try_emplace(name.str());
 
   // we already have the symbol
   if (!IterBool.second)
@@ -691,11 +686,11 @@ const char *LTOModule::getDependentLibrary(lto::InputFile *input, size_t index,
 }
 
 Expected<uint32_t> LTOModule::getMachOCPUType() const {
-  return MachO::getCPUType(Triple(Mod->getTargetTriple()));
+  return MachO::getCPUType(Mod->getTargetTriple());
 }
 
 Expected<uint32_t> LTOModule::getMachOCPUSubType() const {
-  return MachO::getCPUSubType(Triple(Mod->getTargetTriple()));
+  return MachO::getCPUSubType(Mod->getTargetTriple());
 }
 
 bool LTOModule::hasCtorDtor() const {

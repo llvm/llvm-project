@@ -16,12 +16,15 @@
 #include <__algorithm/upper_bound.h>
 #include <__atomic/atomic.h>
 #include <__config>
+#include <__cstddef/ptrdiff_t.h>
 #include <__exception/terminate.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/move_iterator.h>
 #include <__memory/allocator.h>
 #include <__memory/construct_at.h>
+#include <__memory/destroy.h>
 #include <__memory/unique_ptr.h>
+#include <__new/exceptions.h>
 #include <__numeric/reduce.h>
 #include <__pstl/backend_fwd.h>
 #include <__pstl/cpu_algos/any_of.h>
@@ -37,8 +40,6 @@
 #include <__utility/exception_guard.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
-#include <cstddef>
-#include <new>
 #include <optional>
 
 _LIBCPP_PUSH_MACROS
@@ -50,11 +51,13 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __pstl {
 
 namespace __libdispatch {
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 // ::dispatch_apply is marked as __attribute__((nothrow)) because it doesn't let exceptions propagate, and neither do
 // we.
 // TODO: Do we want to add [[_Clang::__callback__(__func, __context, __)]]?
 _LIBCPP_EXPORTED_FROM_ABI void
 __dispatch_apply(size_t __chunk_count, void* __context, void (*__func)(void* __context, size_t __chunk)) noexcept;
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 
 template <class _Func>
 _LIBCPP_HIDE_FROM_ABI void __dispatch_apply(size_t __chunk_count, _Func __func) noexcept {
@@ -69,7 +72,9 @@ struct __chunk_partitions {
   ptrdiff_t __first_chunk_size_;
 };
 
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 [[__gnu__::__const__]] _LIBCPP_EXPORTED_FROM_ABI __chunk_partitions __partition_chunks(ptrdiff_t __size) noexcept;
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 
 template <class _RandomAccessIterator, class _Functor>
 _LIBCPP_HIDE_FROM_ABI optional<__empty>

@@ -29,7 +29,15 @@ class MemoryLocation;
 
 /// A simple AA result that uses TBAA metadata to answer queries.
 class TypeBasedAAResult : public AAResultBase {
+  /// True if type sanitizer is enabled. When TypeSanitizer is used, don't use
+  /// TBAA information for alias analysis as  this might cause us to remove
+  /// memory accesses that we need to verify at runtime.
+  bool UsingTypeSanitizer;
+
 public:
+  TypeBasedAAResult(bool UsingTypeSanitizer)
+      : UsingTypeSanitizer(UsingTypeSanitizer) {}
+
   /// Handle invalidation events from the new pass manager.
   ///
   /// By definition, this result is stateless and so remains valid.
@@ -52,6 +60,10 @@ public:
 
 private:
   bool Aliases(const MDNode *A, const MDNode *B) const;
+
+  /// Returns true if TBAA metadata should be used, that is if TBAA is enabled
+  /// and type sanitizer is not used.
+  bool shouldUseTBAA() const;
 };
 
 /// Analysis pass providing a never-invalidated alias analysis result.

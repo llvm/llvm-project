@@ -87,9 +87,9 @@ MDNode *MDBuilder::createFunctionEntryCount(
   return MDNode::get(Context, Ops);
 }
 
-MDNode *MDBuilder::createFunctionSectionPrefix(StringRef Prefix) {
-  return MDNode::get(
-      Context, {createString("function_section_prefix"), createString(Prefix)});
+MDNode *MDBuilder::createGlobalObjectSectionPrefix(StringRef Prefix) {
+  return MDNode::get(Context,
+                     {createString("section_prefix"), createString(Prefix)});
 }
 
 MDNode *MDBuilder::createRange(const APInt &Lo, const APInt &Hi) {
