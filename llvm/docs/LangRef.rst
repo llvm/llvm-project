@@ -3413,11 +3413,11 @@ memory before the call, the call may capture two components of the pointer:
     whether only the fact that the address is/isn't null is captured.
   * The provenance of the pointer, which is the ability to perform memory
     accesses through the pointer, in the sense of the :ref:`pointer aliasing
-    rules <pointeraliasing>`. We further distinguish whether only read acceses
+    rules <pointeraliasing>`. We further distinguish whether only read accesses
     are allowed, or both reads and writes.
 
 For example, the following function captures the address of ``%a``, because
-it is compared to a pointer, leaking information about the identitiy of the
+it is compared to a pointer, leaking information about the identity of the
 pointer:
 
 .. code-block:: llvm
@@ -3472,7 +3472,7 @@ through the return value only:
 However, we always consider direct inspection of the pointer address
 (e.g. using ``ptrtoint``) to be location-independent. The following example
 is *not* considered a return-only capture, even though the ``ptrtoint``
-ultimately only contribues to the return value:
+ultimately only contributes to the return value:
 
 .. code-block:: llvm
 
@@ -17041,12 +17041,12 @@ and IEEE-754-2008: the result of ``minnum(-0.0, +0.0)`` may be either -0.0 or +0
 
 Some architectures, such as ARMv8 (FMINNM), LoongArch (fmin), MIPSr6 (min.fmt), PowerPC/VSX (xsmindp),
 have instructions that match these semantics exactly; thus it is quite simple for these architectures.
-Some architectures have similiar ones while they are not exact equivalent. Such as x86 implements ``MINPS``,
+Some architectures have similar ones while they are not exact equivalent. Such as x86 implements ``MINPS``,
 which implements the semantics of C code ``a<b?a:b``: NUM vs qNaN always return qNaN. ``MINPS`` can be used
 if ``nsz`` and ``nnan`` are given.
 
 For existing libc implementations, the behaviors of fmin may be quite different on sNaN and signed zero behaviors,
-even in the same release of a single libm implemention.
+even in the same release of a single libm implementation.
 
 .. _i_maxnum:
 
@@ -17101,12 +17101,12 @@ and IEEE-754-2008: the result of maxnum(-0.0, +0.0) may be either -0.0 or +0.0.
 
 Some architectures, such as ARMv8 (FMAXNM), LoongArch (fmax), MIPSr6 (max.fmt), PowerPC/VSX (xsmaxdp),
 have instructions that match these semantics exactly; thus it is quite simple for these architectures.
-Some architectures have similiar ones while they are not exact equivalent. Such as x86 implements ``MAXPS``,
+Some architectures have similar ones while they are not exact equivalent. Such as x86 implements ``MAXPS``,
 which implements the semantics of C code ``a>b?a:b``: NUM vs qNaN always return qNaN. ``MAXPS`` can be used
 if ``nsz`` and ``nnan`` are given.
 
 For existing libc implementations, the behaviors of fmin may be quite different on sNaN and signed zero behaviors,
-even in the same release of a single libm implemention.
+even in the same release of a single libm implementation.
 
 .. _i_minimum:
 

@@ -385,7 +385,7 @@ Semantics:
 """"""""""
 
 Before the absolute value is taken, the input is flushed to sign preserving
-zero if it is a subnormal. In addtion, unlike '``llvm.fabs.*``', a NaN input
+zero if it is a subnormal. In addition, unlike '``llvm.fabs.*``', a NaN input
 yields an unspecified NaN output.
 
 
@@ -473,7 +473,7 @@ Overview:
 
 The '``llvm.nvvm.fshl.clamp``' family of intrinsics performs a clamped funnel
 shift left. These intrinsics are very similar to '``llvm.fshl``', except the
-shift ammont is clamped at the integer width (instead of modulo it). Currently,
+shift amount is clamped at the integer width (instead of modulo it). Currently,
 only ``i32`` is supported.
 
 Semantics:
@@ -501,7 +501,7 @@ Overview:
 
 The '``llvm.nvvm.fshr.clamp``' family of intrinsics perform a clamped funnel
 shift right. These intrinsics are very similar to '``llvm.fshr``', except the
-shift ammont is clamped at the integer width (instead of modulo it). Currently,
+shift amount is clamped at the integer width (instead of modulo it). Currently,
 only ``i32`` is supported.
 
 Semantics:
