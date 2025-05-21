@@ -430,10 +430,12 @@ LogicalResult GPUShuffleConversion::matchAndRewrite(
   unsigned subgroupSize =
       targetEnv.getAttr().getResourceLimits().getSubgroupSize();
   IntegerAttr widthAttr;
+  // The width argument specifies the number of lanes that participate in the
+  // shuffle. The width value should not exceed the subgroup limit.
   if (!matchPattern(shuffleOp.getWidth(), m_Constant(&widthAttr)) ||
-      widthAttr.getValue().getZExtValue() != subgroupSize)
+      widthAttr.getValue().getZExtValue() <= subgroupSize)
     return rewriter.notifyMatchFailure(
-        shuffleOp, "shuffle width and target subgroup size mismatch");
+        shuffleOp, "shuffle width is larger than target subgroup size");
 
   Location loc = shuffleOp.getLoc();
   Value trueVal = spirv::ConstantOp::getOne(rewriter.getI1Type(),
