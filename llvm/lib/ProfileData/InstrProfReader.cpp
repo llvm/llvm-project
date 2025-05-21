@@ -18,7 +18,8 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/ProfileSummary.h"
 #include "llvm/ProfileData/InstrProf.h"
-#include "llvm/ProfileData/MemProf.h"
+// #include "llvm/ProfileData/MemProf.h"
+#include "llvm/ProfileData/MemProfRadixTree.h"
 #include "llvm/ProfileData/ProfileCommon.h"
 #include "llvm/ProfileData/SymbolRemappingReader.h"
 #include "llvm/Support/Endian.h"
@@ -487,7 +488,7 @@ RawInstrProfReader<IntPtrT>::getTemporalProfTraces(
     return TemporalProfTraces;
   }
   // Sort functions by their timestamps to build the trace.
-  llvm::sort(TemporalProfTimestamps);
+  std::sort(TemporalProfTimestamps.begin(), TemporalProfTimestamps.end());
   TemporalProfTraceTy Trace;
   if (Weight)
     Trace.Weight = *Weight;

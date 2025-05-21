@@ -39,9 +39,11 @@
 ! CHECK:   %[[BOX_DIMS:.*]]:3 = fir.box_dims %[[BOX]], %[[C0]] : (!fir.box<!fir.ptr<!fir.array<?xf32>>>, index) -> (index, index, index)
 ! CHECK:   %[[SHAPE:.*]] = fir.shape %[[BOX_DIMS]]#1 : (index) -> !fir.shape<1>
 ! CHECK:   %[[TEMP:.*]] = fir.allocmem !fir.array<?xf32>, %[[BOX_DIMS]]#1 {bindc_name = ".tmp", uniq_name = ""}
-! CHECK:   %[[DECLARE:.*]]:2 = hlfir.declare %[[TEMP]](%[[SHAPE]]) {uniq_name = ".tmp"} : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xf32>>, !fir.heap<!fir.array<?xf32>>)
-! CHECK:   hlfir.assign %[[CST]] to %[[DECLARE]]#0 : f32, !fir.box<!fir.array<?xf32>>
-! CHECK:   acc.yield %[[DECLARE]]#0 : !fir.box<!fir.array<?xf32>>
+! CHECK:   %[[STORAGE:.*]]:2 = hlfir.declare %[[TEMP]](%[[SHAPE]]) {uniq_name = ".tmp"} : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xf32>>, !fir.heap<!fir.array<?xf32>>)
+! CHECK:   %[[BOXTEMP:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?xf32>>>
+! CHECK:   %[[DECLARE:.*]]:2 = hlfir.declare %[[BOXTEMP]] {uniq_name = "acc.reduction.init"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>)
+! CHECK:   hlfir.assign %[[CST]] to %[[DECLARE]]#0 : f32, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+! CHECK:   acc.yield %[[DECLARE]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
 ! CHECK: } combiner {
 ! CHECK: ^bb0(%[[ARG0:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, %[[ARG1:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>):
 ! CHECK:   %[[BOX0:.*]] = fir.load %[[ARG0]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
@@ -74,9 +76,11 @@
 ! CHECK:   %[[BOX_DIMS:.*]]:3 = fir.box_dims %[[BOX]], %[[C0]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>, index) -> (index, index, index)
 ! CHECK:   %[[SHAPE:.*]] = fir.shape %[[BOX_DIMS]]#1 : (index) -> !fir.shape<1>
 ! CHECK:   %[[TEMP:.*]] = fir.allocmem !fir.array<?xf32>, %[[BOX_DIMS]]#1 {bindc_name = ".tmp", uniq_name = ""}
-! CHECK:   %[[DECLARE:.*]]:2 = hlfir.declare %[[TEMP]](%[[SHAPE]]) {uniq_name = ".tmp"} : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xf32>>, !fir.heap<!fir.array<?xf32>>)
-! CHECK:   hlfir.assign %[[CST]] to %[[DECLARE]]#0 : f32, !fir.box<!fir.array<?xf32>>
-! CHECK:   acc.yield %[[DECLARE]]#0 : !fir.box<!fir.array<?xf32>>
+! CHECK:   %[[STORAGE:.*]]:2 = hlfir.declare %[[TEMP]](%[[SHAPE]]) {uniq_name = ".tmp"} : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xf32>>, !fir.heap<!fir.array<?xf32>>)
+! CHECK:   %[[BOXTEMP:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>>
+! CHECK:   %[[DECLARE:.*]]:2 = hlfir.declare %[[BOXTEMP]] {uniq_name = "acc.reduction.init"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>)
+! CHECK:   hlfir.assign %[[CST]] to %[[DECLARE]]#0 : f32, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+! CHECK:   acc.yield %[[DECLARE]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 ! CHECK: } combiner {
 ! CHECK: ^bb0(%[[ARG0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, %[[ARG1:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>):
 ! CHECK:   %[[BOX0:.*]] = fir.load %[[ARG0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
