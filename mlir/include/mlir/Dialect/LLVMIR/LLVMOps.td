@@ -2309,7 +2309,7 @@ def LLVM_InlineAsmOp : LLVM_Op<"inline_asm", [DeclareOpInterfaceMethods<MemoryEf
         UnitAttr:$has_side_effects,
         UnitAttr:$is_align_stack,
         OptionalAttr<
-        DefaultValuedAttr<TailCallKind, "TailCallKind::None">>:$tail_call_kind,
+          DefaultValuedAttr<TailCallKind, "TailCallKind::None">>:$tail_call_kind,
         OptionalAttr<
           DefaultValuedAttr<AsmATTOrIntel, "AsmDialect::AD_ATT">>:$asm_dialect,
         OptionalAttr<ArrayAttr>:$operand_attrs);
