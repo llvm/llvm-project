@@ -17,10 +17,20 @@
   _CLC_VSTORE_DECL(SUFFIX, MEM_TYPE, PRIM_TYPE##8, 8, ADDR_SPACE, RND)         \
   _CLC_VSTORE_DECL(SUFFIX, MEM_TYPE, PRIM_TYPE##16, 16, ADDR_SPACE, RND)
 
+#if _CLC_GENERIC_AS_SUPPORTED
+#define _CLC_VSTORE_GENERIC_DECL _CLC_VSTORE_DECL
+#define _CLC_VECTOR_VSTORE_GENERIC_DECL _CLC_VECTOR_VSTORE_DECL
+#else
+// The generic address space isn't available, so make the macros do nothing
+#define _CLC_VSTORE_GENERIC_DECL(X, Y, Z, W, V, U)
+#define _CLC_VECTOR_VSTORE_GENERIC_DECL(X, Y, Z, W, V)
+#endif
+
 #define _CLC_VECTOR_VSTORE_PRIM3(SUFFIX, MEM_TYPE, PRIM_TYPE, RND)             \
   _CLC_VECTOR_VSTORE_DECL(SUFFIX, MEM_TYPE, PRIM_TYPE, __private, RND)         \
   _CLC_VECTOR_VSTORE_DECL(SUFFIX, MEM_TYPE, PRIM_TYPE, __local, RND)           \
-  _CLC_VECTOR_VSTORE_DECL(SUFFIX, MEM_TYPE, PRIM_TYPE, __global, RND)
+  _CLC_VECTOR_VSTORE_DECL(SUFFIX, MEM_TYPE, PRIM_TYPE, __global, RND)          \
+  _CLC_VECTOR_VSTORE_GENERIC_DECL(SUFFIX, MEM_TYPE, PRIM_TYPE, __generic, RND)
 
 #define _CLC_VECTOR_VSTORE_PRIM1(PRIM_TYPE)                                    \
   _CLC_VECTOR_VSTORE_PRIM3(, PRIM_TYPE, PRIM_TYPE, )
@@ -29,10 +39,12 @@
   _CLC_VSTORE_DECL(_half, half, PRIM_TYPE, , __private, RND)                   \
   _CLC_VSTORE_DECL(_half, half, PRIM_TYPE, , __local, RND)                     \
   _CLC_VSTORE_DECL(_half, half, PRIM_TYPE, , __global, RND)                    \
+  _CLC_VSTORE_GENERIC_DECL(_half, half, PRIM_TYPE, , __generic, RND)           \
   _CLC_VECTOR_VSTORE_PRIM3(_half, half, PRIM_TYPE, RND)                        \
   _CLC_VSTORE_DECL(a_half, half, PRIM_TYPE, , __private, RND)                  \
   _CLC_VSTORE_DECL(a_half, half, PRIM_TYPE, , __local, RND)                    \
   _CLC_VSTORE_DECL(a_half, half, PRIM_TYPE, , __global, RND)                   \
+  _CLC_VSTORE_GENERIC_DECL(a_half, half, PRIM_TYPE, , __generic, RND)          \
   _CLC_VECTOR_VSTORE_PRIM3(a_half, half, PRIM_TYPE, RND)
 
 _CLC_VECTOR_VSTORE_PRIM1(char)
@@ -65,6 +77,8 @@ _CLC_VECTOR_VSTORE_PRIM1(half)
 #endif
 
 #undef _CLC_VSTORE_DECL
+#undef _CLC_VSTORE_GENERIC_DECL
 #undef _CLC_VECTOR_VSTORE_DECL
 #undef _CLC_VECTOR_VSTORE_PRIM3
 #undef _CLC_VECTOR_VSTORE_PRIM1
+#undef _CLC_VECTOR_VSTORE_GENERIC_DECL
