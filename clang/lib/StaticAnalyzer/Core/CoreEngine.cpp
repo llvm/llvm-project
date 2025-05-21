@@ -315,7 +315,7 @@ void CoreEngine::HandleBlockEdge(const BlockEdge &L, ExplodedNode *Pred) {
 
   // Call into the ExprEngine to process entering the CFGBlock.
   ExplodedNodeSet dstNodes;
-  BlockEntrance BE(Blk, Pred->getLocationContext());
+  BlockEntrance BE(L.getSrc(), L.getDst(), Pred->getLocationContext());
   NodeBuilderWithSinks nodeBuilder(Pred, dstNodes, BuilderCtx, BE);
   ExprEng.processCFGBlockEntrance(L, nodeBuilder, Pred);
 
