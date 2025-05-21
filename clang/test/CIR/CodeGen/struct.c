@@ -13,16 +13,34 @@
 // CIR-DAG: !rec_InnerS = !cir.record<struct "InnerS" {!s32i, !s8i}>
 // CIR-DAG: !rec_PackedS = !cir.record<struct "PackedS" packed {!s32i, !s8i}>
 // CIR-DAG: !rec_PackedAndPaddedS = !cir.record<struct "PackedAndPaddedS" packed padded {!s32i, !s8i, !u8i}>
+// CIR-DAG: !rec_NodeS = !cir.record<struct "NodeS" {!cir.ptr<!cir.record<struct "NodeS">>}>
+// CIR-DAG: !rec_RightS = !cir.record<struct "RightS" {!cir.ptr<!cir.record<struct "LeftS" {!cir.ptr<!cir.record<struct "RightS">>}>>}>
+// CIR-DAG: !rec_LeftS = !cir.record<struct "LeftS" {!cir.ptr<!rec_RightS>}>
+// CIR-DAG: !rec_CycleEnd = !cir.record<struct "CycleEnd" {!cir.ptr<!cir.record<struct "CycleStart" {!cir.ptr<!cir.record<struct "CycleMiddle" {!cir.ptr<!cir.record<struct "CycleEnd">>}>>}>>}>
+// CIR-DAG: !rec_CycleMiddle = !cir.record<struct "CycleMiddle" {!cir.ptr<!rec_CycleEnd>}>
+// CIR-DAG: !rec_CycleStart = !cir.record<struct "CycleStart" {!cir.ptr<!rec_CycleMiddle>}>
 // LLVM-DAG: %struct.CompleteS = type { i32, i8 }
 // LLVM-DAG: %struct.OuterS = type { %struct.InnerS, i32 }
 // LLVM-DAG: %struct.InnerS = type { i32, i8 }
 // LLVM-DAG: %struct.PackedS = type <{ i32, i8 }>
 // LLVM-DAG: %struct.PackedAndPaddedS = type <{ i32, i8, i8 }>
+// LLVM-DAG: %struct.NodeS = type { ptr }
+// LLVM-DAG: %struct.LeftS = type { ptr }
+// LLVM-DAG: %struct.RightS = type { ptr }
+// LLVM-DAG: %struct.CycleStart = type { ptr }
+// LLVM-DAG: %struct.CycleMiddle = type { ptr }
+// LLVM-DAG: %struct.CycleEnd = type { ptr }
 // OGCG-DAG: %struct.CompleteS = type { i32, i8 }
 // OGCG-DAG: %struct.OuterS = type { %struct.InnerS, i32 }
 // OGCG-DAG: %struct.InnerS = type { i32, i8 }
 // OGCG-DAG: %struct.PackedS = type <{ i32, i8 }>
 // OGCG-DAG: %struct.PackedAndPaddedS = type <{ i32, i8, i8 }>
+// OGCG-DAG: %struct.NodeS = type { ptr }
+// OGCG-DAG: %struct.LeftS = type { ptr }
+// OGCG-DAG: %struct.RightS = type { ptr }
+// OGCG-DAG: %struct.CycleStart = type { ptr }
+// OGCG-DAG: %struct.CycleMiddle = type { ptr }
+// OGCG-DAG: %struct.CycleEnd = type { ptr }
 
 struct IncompleteS *p;
 
@@ -77,6 +95,59 @@ struct PackedAndPaddedS {
 // OGCG-DAG:  @pps = global %struct.PackedAndPaddedS zeroinitializer, align 2
 
 #pragma pack(pop)
+
+// Recursive type
+struct NodeS {
+  struct NodeS* next;
+} node;
+
+// CIR:      cir.global{{.*}} @node = #cir.zero : !rec_NodeS
+// LLVM-DAG:  @node = dso_local global %struct.NodeS zeroinitializer
+// OGCG-DAG:  @node = global %struct.NodeS zeroinitializer
+
+// Mutually dependent types
+struct RightS;
+struct LeftS {
+  struct RightS* right;
+} ls;
+
+// CIR:      cir.global{{.*}} @ls = #cir.zero : !rec_LeftS
+// LLVM-DAG:  @ls = dso_local global %struct.LeftS zeroinitializer
+// OGCG-DAG:  @ls = global %struct.LeftS zeroinitializer
+
+struct RightS {
+  struct LeftS* left;
+} rs;
+
+// CIR:      cir.global{{.*}} @rs = #cir.zero : !rec_RightS
+// LLVM-DAG:  @rs = dso_local global %struct.RightS zeroinitializer
+// OGCG-DAG:  @rs = global %struct.RightS zeroinitializer
+
+struct CycleMiddle;
+struct CycleEnd;
+struct CycleStart {
+  struct CycleMiddle* middle;
+} start;
+
+// CIR:      cir.global{{.*}} @start = #cir.zero : !rec_CycleStart
+// LLVM-DAG:  @start = dso_local global %struct.CycleStart zeroinitializer
+// OGCG-DAG:  @start = global %struct.CycleStart zeroinitializer
+
+struct CycleMiddle {
+  struct CycleEnd* end;
+} middle;
+
+// CIR:      cir.global{{.*}} @middle = #cir.zero : !rec_CycleMiddle
+// LLVM-DAG:  @middle = dso_local global %struct.CycleMiddle zeroinitializer
+// OGCG-DAG:  @middle = global %struct.CycleMiddle zeroinitializer
+
+struct CycleEnd {
+  struct CycleStart* start;
+} end;
+
+// CIR:      cir.global{{.*}} @end = #cir.zero : !rec_CycleEnd
+// LLVM-DAG:  @end = dso_local global %struct.CycleEnd zeroinitializer
+// OGCG-DAG:  @end = global %struct.CycleEnd zeroinitializer
 
 void f(void) {
   struct IncompleteS *p;
@@ -205,3 +276,40 @@ char f4(int a, struct CompleteS *p) {
 // OGCG-NEXT:   %[[P_B:.*]] = getelementptr inbounds nuw %struct.CompleteS, ptr %[[P2]], i32 0, i32 1
 // OGCG-NEXT:   %[[P_B_VAL:.*]] = load i8, ptr %[[P_B]], align 4
 // OGCG-NEXT:   ret i8 %[[P_B_VAL]]
+
+void f5(struct NodeS* a) {
+  a->next = 0;
+}
+
+// CIR: cir.func @f5
+// CIR:   %[[NEXT:.*]] = cir.get_member {{%.}}[0] {name = "next"} : !cir.ptr<!rec_NodeS> -> !cir.ptr<!cir.ptr<!rec_NodeS>>
+// CIR:   cir.store {{.*}}, %[[NEXT]]
+
+// LLVM: define{{.*}} void @f5
+// LLVM:   %[[NEXT:.*]] = getelementptr %struct.NodeS, ptr %{{.*}}, i32 0, i32 0
+// LLVM:   store ptr null, ptr %[[NEXT]]
+
+// OGCG: define{{.*}} void @f5
+// OGCG:   %[[NEXT:.*]] = getelementptr inbounds nuw %struct.NodeS, ptr %{{.*}}, i32 0, i32 0
+// OGCG:   store ptr null, ptr %[[NEXT]]
+
+void f6(struct CycleStart *start) {
+  struct CycleMiddle *middle = start->middle;
+  struct CycleEnd *end = middle->end;
+  struct CycleStart *start2 = end->start;
+}
+
+// CIR: cir.func @f6
+// CIR:   %[[MIDDLE:.*]] = cir.get_member {{.*}}[0] {name = "middle"} : !cir.ptr<!rec_CycleStart> -> !cir.ptr<!cir.ptr<!rec_CycleMiddle>>
+// CIR:   %[[END:.*]] = cir.get_member %{{.*}}[0] {name = "end"} : !cir.ptr<!rec_CycleMiddle> -> !cir.ptr<!cir.ptr<!rec_CycleEnd>>
+// CIR:   %[[START2:.*]] = cir.get_member %{{.*}}[0] {name = "start"} : !cir.ptr<!rec_CycleEnd> -> !cir.ptr<!cir.ptr<!rec_CycleStart>>
+
+// LLVM: define{{.*}} void @f6
+// LLVM:   %[[MIDDLE:.*]] = getelementptr %struct.CycleStart, ptr %{{.*}}, i32 0, i32 0
+// LLVM:   %[[END:.*]] = getelementptr %struct.CycleMiddle, ptr %{{.*}}, i32 0, i32 0
+// LLVM:   %[[START2:.*]] = getelementptr %struct.CycleEnd, ptr %{{.*}}, i32 0, i32 0
+
+// OGCG: define{{.*}} void @f6
+// OGCG:   %[[MIDDLE:.*]] = getelementptr inbounds nuw %struct.CycleStart, ptr %{{.*}}, i32 0, i32 0
+// OGCG:   %[[END:.*]] = getelementptr inbounds nuw %struct.CycleMiddle, ptr %{{.*}}, i32 0, i32 0
+// OGCG:   %[[START2:.*]] = getelementptr inbounds nuw %struct.CycleEnd, ptr %{{.*}}, i32 0, i32 0
