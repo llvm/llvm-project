@@ -787,7 +787,7 @@
         {
           "id": "lldb-dap.modules",
           "name": "Modules",
-          "when": "inDebugMode && debugType == 'lldb-dap'",
+          "when": "inDebugMode && debugType == 'lldb-dap' && lldb-dap.showModules",
           "icon": "$(symbol-module)"
         }
       ]
