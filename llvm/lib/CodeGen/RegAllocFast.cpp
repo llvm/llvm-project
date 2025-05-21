@@ -503,8 +503,7 @@ bool RegAllocFastImpl::mayBeSpillFromInlineAsmBr(const MachineInstr &MI) const {
   if (MBB->isInlineAsmBrIndirectTarget() && TII->isStoreToStackSlot(MI, FI) &&
       MFI->isSpillSlotObjectIndex(FI))
     for (const auto &Op : MI.operands())
-      if (Op.isReg() && Op.getReg() != MCRegister::NoRegister &&
-          MBB->isLiveIn(Op.getReg()))
+      if (Op.isReg() && Op.getReg().isValid() && MBB->isLiveIn(Op.getReg()))
         return true;
   return false;
 }
