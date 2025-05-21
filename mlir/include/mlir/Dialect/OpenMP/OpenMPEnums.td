@@ -227,24 +227,21 @@ def ScheduleModifierAttr : OpenMP_EnumAttr<ScheduleModifier, "sched_mod">;
 //===----------------------------------------------------------------------===//
 
 def TargetRegionFlagsNone : I32BitEnumAttrCaseNone<"none">;
-def TargetRegionFlagsGeneric : I32BitEnumAttrCaseBit<"generic", 0>;
-def TargetRegionFlagsSpmd : I32BitEnumAttrCaseBit<"spmd", 1>;
-def TargetRegionFlagsTripCount : I32BitEnumAttrCaseBit<"trip_count", 2>;
-def TargetRegionFlagsNoLoop : I32BitEnumAttrCaseBit<"no_loop", 3>;
+def TargetRegionFlagsSpmd : I32BitEnumAttrCaseBit<"spmd", 0>;
+def TargetRegionFlagsTripCount : I32BitEnumAttrCaseBit<"trip_count", 1>;
+def TargetRegionFlagsNoLoop : I32BitEnumAttrCaseBit<"no_loop", 2>;
 
 def TargetRegionFlags : OpenMP_BitEnumAttr<
     "TargetRegionFlags",
     "These flags describe properties of the target kernel. "
-    "TargetRegionFlagsGeneric - denotes generic kernel. "
     "TargetRegionFlagsSpmd - denotes SPMD kernel. "
     "TargetRegionFlagsNoLoop - denotes kernel where "
     "num_teams * num_threads >= loop_trip_count. It allows the conversion "
     "of loops into sequential code by ensuring that each team/thread "
     "executes at most one iteration. "
-    "TargetRegionFlagsTripCount - checks if the loop trip count should be "
-    "calculated.", [
+    "TargetRegionFlagsTripCount - checks if a singular loop trip count should "
+    "be calculated for the target region.", [
       TargetRegionFlagsNone,
-      TargetRegionFlagsGeneric,
       TargetRegionFlagsSpmd,
       TargetRegionFlagsTripCount,
       TargetRegionFlagsNoLoop
