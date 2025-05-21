@@ -216,8 +216,9 @@ TEST_F(SpecialCaseListTest, NoTrigramsInARule) {
 }
 
 TEST_F(SpecialCaseListTest, RepetitiveRule) {
-  std::unique_ptr<SpecialCaseList> SCL = makeSpecialCaseList("fun:*bar*bar*bar*bar*\n"
-                                                             "fun:bar*\n");
+  std::unique_ptr<SpecialCaseList> SCL =
+      makeSpecialCaseList("fun:*bar*bar*bar*bar*\n"
+                          "fun:bar*\n");
   EXPECT_TRUE(SCL->inSection("", "fun", "bara"));
   EXPECT_FALSE(SCL->inSection("", "fun", "abara"));
   EXPECT_TRUE(SCL->inSection("", "fun", "barbarbarbar"));
@@ -226,7 +227,8 @@ TEST_F(SpecialCaseListTest, RepetitiveRule) {
 }
 
 TEST_F(SpecialCaseListTest, SpecialSymbolRule) {
-  std::unique_ptr<SpecialCaseList> SCL = makeSpecialCaseList("src:*c\\+\\+abi*\n");
+  std::unique_ptr<SpecialCaseList> SCL =
+      makeSpecialCaseList("src:*c\\+\\+abi*\n");
   EXPECT_TRUE(SCL->inSection("", "src", "c++abi"));
   EXPECT_FALSE(SCL->inSection("", "src", "c\\+\\+abi"));
 }
@@ -242,8 +244,9 @@ TEST_F(SpecialCaseListTest, PopularTrigram) {
 }
 
 TEST_F(SpecialCaseListTest, EscapedSymbols) {
-  std::unique_ptr<SpecialCaseList> SCL = makeSpecialCaseList("src:*c\\+\\+abi*\n"
-                                                             "src:*hello\\\\world*\n");
+  std::unique_ptr<SpecialCaseList> SCL =
+      makeSpecialCaseList("src:*c\\+\\+abi*\n"
+                          "src:*hello\\\\world*\n");
   EXPECT_TRUE(SCL->inSection("", "src", "dir/c++abi"));
   EXPECT_FALSE(SCL->inSection("", "src", "dir/c\\+\\+abi"));
   EXPECT_FALSE(SCL->inSection("", "src", "c\\+\\+abi"));
@@ -315,7 +318,9 @@ TEST_F(SpecialCaseListTest, Version3) {
                                                              "src:def\n"
                                                              "[sect2]\n"
                                                              "src:def\n"
-                                                             "src:def\n");
+                                                             "src:def\n"
+                                                             "[sect1]\n"
+                                                             "src:foo*\n");
   EXPECT_TRUE(SCL->inSection("sect1", "src", "fooz"));
   EXPECT_TRUE(SCL->inSection("sect1", "src", "barz"));
   EXPECT_FALSE(SCL->inSection("sect2", "src", "fooz"));
@@ -323,9 +328,9 @@ TEST_F(SpecialCaseListTest, Version3) {
   EXPECT_TRUE(SCL->inSection("sect2", "src", "def"));
   EXPECT_TRUE(SCL->inSection("sect1", "src", "def"));
 
-  EXPECT_EQ(2u, SCL->inSectionBlame("sect1", "src", "fooz"));
   EXPECT_EQ(4u, SCL->inSectionBlame("sect1", "src", "barz"));
   EXPECT_EQ(5u, SCL->inSectionBlame("sect1", "src", "def"));
   EXPECT_EQ(8u, SCL->inSectionBlame("sect2", "src", "def"));
+  EXPECT_EQ(10u, SCL->inSectionBlame("sect1", "src", "fooz"));
 }
-}
+} // namespace
