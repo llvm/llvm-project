@@ -131,7 +131,7 @@ namespace {
 class RISCVMCInstrAnalysis : public MCInstrAnalysis {
   int64_t GPRState[31] = {};
   std::bitset<31> GPRValidMask;
-  int ArchRegWidth;
+  unsigned int ArchRegWidth;
 
   static bool isGPR(MCRegister Reg) {
     return Reg >= RISCV::X0 && Reg <= RISCV::X31;
