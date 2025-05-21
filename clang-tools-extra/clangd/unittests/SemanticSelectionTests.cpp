@@ -370,6 +370,26 @@ TEST(FoldingRanges, PseudoParserWithoutLineFoldings) {
         //[[ foo
         /* bar */]]
       )cpp",
+      R"cpp(
+        //Ignore non-conditional directives
+        #define A 1
+
+        void func() {[[
+          int Variable = 100;
+
+          #ifdef FOO[[
+            Variable = 1;
+          ]]#else[[
+            Variable = 2;
+            //handle nested directives
+            #if 1[[
+              Variable = 3;
+            ]]#endif
+          ]]#endif
+
+
+          ]]}
+      )cpp",
   };
   for (const char *Test : Tests) {
     auto T = Annotations(Test);
