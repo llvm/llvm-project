@@ -36,6 +36,10 @@ constexpr static uint32_t MIN_ALIGNMENT = MIN_SIZE - 1;
 // A sentinel used to indicate an invalid but non-null pointer value.
 constexpr static uint64_t SENTINEL = cpp::numeric_limits<uint64_t>::max();
 
+// The number of times we will try starting on a single index before skipping
+// past it.
+constexpr static uint32_t MAX_TRIES = 512;
+
 static_assert(!(ARRAY_SIZE & (ARRAY_SIZE - 1)), "Must be a power of two");
 
 namespace impl {
@@ -413,10 +417,11 @@ static Slab *find_slab(uint32_t chunk_size) {
   uint64_t uniform = gpu::match_any(lane_mask, chunk_size);
 
   Slab *result = nullptr;
+  uint32_t nudge = 0;
   for (uint64_t mask = lane_mask; mask;
-       mask = gpu::ballot(lane_mask, !result)) {
+       mask = gpu::ballot(lane_mask, !result), ++nudge) {
     uint32_t index = cpp::numeric_limits<uint32_t>::max();
-    for (uint32_t offset = 0;
+    for (uint32_t offset = nudge / MAX_TRIES;
          gpu::ballot(lane_mask, index == cpp::numeric_limits<uint32_t>::max());
          offset += cpp::popcount(uniform & lane_mask)) {
       uint32_t candidate =
@@ -428,8 +433,9 @@ static Slab *find_slab(uint32_t chunk_size) {
           lane_mask, cpp::countr_zero(available & uniform), candidate);
 
       // Each uniform group will use the first empty slot they find.
-      if (index == cpp::numeric_limits<uint32_t>::max() &&
-          (available & uniform))
+      if (offset >= ARRAY_SIZE ||
+          (index == cpp::numeric_limits<uint32_t>::max() &&
+           (available & uniform)))
         index = new_index;
 
       if (offset >= ARRAY_SIZE)
@@ -441,9 +447,6 @@ static Slab *find_slab(uint32_t chunk_size) {
       uint64_t reserved = 0;
       Slab *slab = slots[index].try_lock(lane_mask & mask, uniform & mask,
                                          reserved, chunk_size, index);
-      uint64_t claimed = gpu::ballot(
-          lane_mask & mask, reserved <= Slab::available_chunks(chunk_size));
-
       // If we find a slab with a matching chunk size then we store the result.
       // Otherwise, we need to free the claimed lock and continue. In the case
       // of out-of-memory we return a sentinel value.
@@ -452,13 +455,14 @@ static Slab *find_slab(uint32_t chunk_size) {
         result = slab;
       } else if (slab && (reserved > Slab::available_chunks(chunk_size) ||
                           slab->get_chunk_size() != chunk_size)) {
-        // Shuffle the start so we don't get stuck behind another slab forever.
         if (slab->get_chunk_size() != chunk_size)
-          start = impl::hash(start);
-        slots[index].unlock(lane_mask & mask & ~claimed,
-                            mask & ~claimed & uniform);
+          start = index + 1;
+        slots[index].unlock(gpu::get_lane_mask(),
+                            gpu::get_lane_mask() & uniform);
       } else if (!slab && reserved == cpp::numeric_limits<uint64_t>::max()) {
         result = reinterpret_cast<Slab *>(SENTINEL);
+      } else {
+        sleep_briefly();
       }
     }
   }
