@@ -9,7 +9,7 @@
 #include "hdr/errno_macros.h"
 #include "hdr/fenv_macros.h"
 #include "src/__support/FPUtil/cast.h"
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
 #include "src/math/expm1f16.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"

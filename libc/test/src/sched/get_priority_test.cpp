@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
 #include "src/sched/sched_get_priority_max.h"
 #include "src/sched/sched_get_priority_min.h"
 #include "test/UnitTest/Test.h"

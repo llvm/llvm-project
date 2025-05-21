@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
 #include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcErrnoTest, Basic) {

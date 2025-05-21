@@ -14,7 +14,7 @@
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 #if defined(LIBC_HASHTABLE_USE_GETRANDOM)
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
 #include "src/sys/random/getrandom.h"
 #endif
 

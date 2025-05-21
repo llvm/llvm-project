@@ -9,8 +9,8 @@
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/string_view.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "src/errno/libc_errno.h"
 #include "src/string/memory_utils/inline_memcpy.h"
 
 // TODO: Get PATH_MAX via https://github.com/llvm/llvm-project/issues/85121

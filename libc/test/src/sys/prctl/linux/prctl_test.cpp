@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
 #include "src/sys/prctl/prctl.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include <sys/prctl.h>

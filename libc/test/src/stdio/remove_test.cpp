@@ -14,7 +14,7 @@
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
 #include <unistd.h>
 
 TEST(LlvmLibcRemoveTest, CreateAndRemoveFile) {

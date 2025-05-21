@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
 #include "src/fcntl/open.h"
 #include "src/termios/cfgetispeed.h"
 #include "src/termios/cfgetospeed.h"

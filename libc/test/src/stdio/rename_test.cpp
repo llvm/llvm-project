@@ -8,7 +8,7 @@
 
 #include "include/llvm-libc-macros/linux/sys-stat-macros.h"
 #include "include/llvm-libc-macros/linux/unistd-macros.h"
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
 #include "src/fcntl/open.h"
 #include "src/stdio/rename.h"
 #include "src/unistd/access.h"

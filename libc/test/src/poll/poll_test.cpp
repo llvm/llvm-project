@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/limits_macros.h" // UINT_MAX
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
 #include "src/poll/poll.h"
 #include "test/UnitTest/Test.h"
 

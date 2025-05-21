@@ -21,7 +21,7 @@
 #include "test/UnitTest/Test.h"
 
 #include "hdr/stdio_macros.h"
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
 
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::EQ;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::NE;

@@ -106,6 +106,10 @@ function(_get_compile_options_from_config output_var)
     list(APPEND config_options "-DLIBC_MATH=${LIBC_CONF_MATH_OPTIMIZATIONS}")
   endif()
 
+  if(LIBC_CONF_ERRNO_MODE)
+    set(APPEND config_options "-DLIBC_ERRNO_MODE=${LIBC_CONF_ERRNO_MODE}")
+  endif()
+
   set(${output_var} ${config_options} PARENT_SCOPE)
 endfunction(_get_compile_options_from_config)
 

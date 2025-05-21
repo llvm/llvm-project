@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/OSUtil/syscall.h"
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
 #include "src/sched/sched_getaffinity.h"
 #include "src/sched/sched_setaffinity.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"

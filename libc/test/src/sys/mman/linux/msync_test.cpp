@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
 #include "src/sys/mman/mlock.h"
 #include "src/sys/mman/mmap.h"
 #include "src/sys/mman/msync.h"

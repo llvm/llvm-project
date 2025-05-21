@@ -9,7 +9,7 @@
 #include "hdr/fcntl_macros.h"
 #include "hdr/stdio_macros.h"
 #include "hdr/types/struct_flock.h"
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
 #include "src/fcntl/fcntl.h"
 #include "src/fcntl/open.h"
 #include "src/unistd/close.h"

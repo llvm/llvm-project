@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
 #include "src/sys/mman/madvise.h"
 #include "src/sys/mman/mincore.h"
 #include "src/sys/mman/mlock.h"

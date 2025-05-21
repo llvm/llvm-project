@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/CPP/array.h"
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
 #include "src/math/fabs.h"
 #include "src/sys/random/getrandom.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"

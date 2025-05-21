@@ -29,7 +29,7 @@
 #include "src/__support/CPP/new.h"
 #include "src/__support/threads/thread.h"
 
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
 
 #include "test/IntegrationTest/test.h"
 
