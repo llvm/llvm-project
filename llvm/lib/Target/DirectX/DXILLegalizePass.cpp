@@ -317,6 +317,20 @@ static void removeMemSet(Instruction &I,
   ToRemove.push_back(CI);
 }
 
+static void updateFnegToFsub(Instruction &I,
+                             SmallVectorImpl<Instruction *> &ToRemove,
+                             DenseMap<Value *, Value *> &ReplacedValues) {
+  const Intrinsic::ID ID = I.getOpcode();
+  if(ID != Instruction::FNeg)
+    return;
+
+  IRBuilder<> Builder(&I);
+  Value *In = I.getOperand(0);
+  Value *Zero = ConstantFP::get(In->getType(), -0.0);
+  I.replaceAllUsesWith(Builder.CreateFSub(Zero, In));
+  ToRemove.push_back(&I);
+}
+
 namespace {
 class DXILLegalizationPipeline {
 
@@ -349,6 +363,7 @@ private:
     LegalizationPipeline.push_back(downcastI64toI32InsertExtractElements);
     LegalizationPipeline.push_back(legalizeFreeze);
     LegalizationPipeline.push_back(removeMemSet);
+    LegalizationPipeline.push_back(updateFnegToFsub);
   }
 };
 
