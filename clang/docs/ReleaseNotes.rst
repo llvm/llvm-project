@@ -703,6 +703,7 @@ Bug Fixes to C++ Support
   certain differences in qualifiers (this could happen during template argument
   deduction or when building a ternary operator). (#GH97005)
 - Fixed type alias CTAD issues involving default template arguments. (#GH134471)
+- Fixed CTAD issues when initializing anonymous fields with designated initializers. (#GH67173)
 - The initialization kind of elements of structured bindings
   direct-list-initialized from an array is corrected to direct-initialization.
 - Clang no longer crashes when a coroutine is declared ``[[noreturn]]``. (#GH127327)
