@@ -133,6 +133,12 @@ template <class Edge, class BBInfo> class CFGMST {
     LLVM_DEBUG(dbgs() << "  Edge: from fake node to " << Entry->getName()
                       << " w = " << EntryWeight << "\n");
 
+    // Special handling for single BB functions.
+    if (succ_empty(Entry)) {
+      addEdge(Entry, nullptr, EntryWeight);
+      return;
+    }
+
     static const uint32_t CriticalEdgeMultiplier = 1000;
 
     for (BasicBlock &BB : F) {
