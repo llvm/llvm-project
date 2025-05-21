@@ -1073,7 +1073,6 @@ public:
     CM_Widen_Reverse, // For consecutive accesses with stride -1.
     CM_Interleave,
     CM_GatherScatter,
-    CM_Strided,
     CM_Scalarize,
     CM_VectorCall,
     CM_IntrinsicCall
@@ -6369,8 +6368,6 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
         return TTI::CastContextHint::Normal;
 
       switch (getWideningDecision(I, VF)) {
-      // TODO: New CastContextHint for strided accesses.
-      case LoopVectorizationCostModel::CM_Strided:
       case LoopVectorizationCostModel::CM_GatherScatter:
         return TTI::CastContextHint::GatherScatter;
       case LoopVectorizationCostModel::CM_Interleave:
