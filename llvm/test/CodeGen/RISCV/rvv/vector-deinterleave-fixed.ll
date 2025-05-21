@@ -219,8 +219,8 @@ define {<2 x i32>, <2 x i32>, <2 x i32>} @vector_deinterleave3_v2i32_v6i32(<6 x 
 	   ret {<2 x i32>, <2 x i32>, <2 x i32>} %res
 }
 
-define {<2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>} @vector_deinterleave3_v2i32_v8i32(<8 x i32> %v) nounwind {
-; CHECK-LABEL: vector_deinterleave3_v2i32_v8i32:
+define {<2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>} @vector_deinterleave4_v2i32_v8i32(<8 x i32> %v) nounwind {
+; CHECK-LABEL: vector_deinterleave4_v2i32_v8i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    csrr a0, vlenb
