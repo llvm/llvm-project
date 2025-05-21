@@ -371,24 +371,25 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootDescriptorsTest) {
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, DescriptorType::CBuffer);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.ViewType, RegisterType::BReg);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.Number, 0u);
-  ASSERT_EQ(std::get<RootParam>(Elem).Space, 0u);
-  ASSERT_EQ(std::get<RootParam>(Elem).Visibility, ShaderVisibility::All);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Space, 0u);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Visibility, ShaderVisibility::All);
 
   Elem = Elements[1];
   ASSERT_TRUE(std::holds_alternative<RootDescriptor>(Elem));
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, DescriptorType::SRV);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.ViewType, RegisterType::TReg);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.Number, 42u);
-  ASSERT_EQ(std::get<RootParam>(Elem).Space, 4u);
-  ASSERT_EQ(std::get<RootParam>(Elem).Visibility, ShaderVisibility::Geometry);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Space, 4u);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Visibility,
+            ShaderVisibility::Geometry);
 
   Elem = Elements[2];
   ASSERT_TRUE(std::holds_alternative<RootDescriptor>(Elem));
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, DescriptorType::UAV);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.ViewType, RegisterType::UReg);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.Number, 34893247u);
-  ASSERT_EQ(std::get<RootParam>(Elem).Space, 0u);
-  ASSERT_EQ(std::get<RootParam>(Elem).Visibility, ShaderVisibility::Hull);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Space, 0u);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Visibility, ShaderVisibility::Hull);
 
   ASSERT_TRUE(Consumer->isSatisfied());
 }
