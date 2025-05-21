@@ -1321,39 +1321,4 @@ namespace GH139160{
                                                 // expected-note@-2  {{non-constexpr function 'make_struct' cannot be used in a constant expression}}
 };
 
-// taken from: https://github.com/llvm/llvm-project/issues/139818
-namespace GH139818{
-    struct A {
-      constexpr ~A() { ref = false; }
-      constexpr operator bool() {
-        return b;
-      }
-      bool b;
-      bool& ref;
-    };
 
-    constexpr bool f1() {
-      bool ret = true;
-      for (bool b = false; A x{b, ret}; b = true) {}
-      return ret;
-    }
-
-    static_assert(!f1());
-
-    struct Y {
-      constexpr ~Y() noexcept(false) { throw "oops"; }  // expected-error {{cannot use 'throw' with exceptions disabled}}
-                                                        // expected-error@-1 {{constexpr function never produces a constant expression}}
-                                                        // expected-note@-2 {{subexpression not valid in a constant expression}}
-                                                        // expected-note@-3 {{subexpression not valid in a constant expression}}
-      constexpr operator bool() {
-        return b;
-      }
-      bool b;
-    };
-    constexpr bool f2() {
-      for (bool b = false; Y x = {b}; b = true) {} // expected-note {{in call to 'x.~Y()'}}
-      return true;
-    }
-    static_assert(f2()); // expected-error {{static assertion expression is not an integral constant expression}}
-                         // expected-note@-1 {{in call to 'f2()'}}
-};
