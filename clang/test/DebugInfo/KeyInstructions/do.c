@@ -1,7 +1,7 @@
-// RUN: %clang -gkey-instructions -x c++ -std=c++17 %s -gmlt -S -emit-llvm -o - \
+// RUN: %clang_cc1 -gkey-instructions -x c++ -std=c++17 %s -debug-info-kind=line-tables-only -emit-llvm -o - \
 // RUN: | FileCheck %s --implicit-check-not atomGroup --implicit-check-not atomRank
 
-// RUN: %clang -gkey-instructions -x c %s -gmlt -S -emit-llvm -o -  \
+// RUN: %clang_cc1 -gkey-instructions -x c %s -debug-info-kind=line-tables-only -emit-llvm -o -  \
 // RUN: | FileCheck %s --implicit-check-not atomGroup --implicit-check-not atomRank
 
 // Perennial quesiton: should the `dec` be in its own source atom or not
