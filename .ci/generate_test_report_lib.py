@@ -126,10 +126,10 @@ def generate_report(
         report.extend(
             [
                 "",
-                "If these failures are unrelated to your changes (e.g., tests are "
-                "broken or flaky at HEAD), please open an issue at "
+                "If these failures are unrelated to your changes (for example "
+                "tests are broken or flaky at HEAD), please open an issue at "
                 "https://github.com/llvm/llvm-project/issues and add the "
-                "infrastructure label.",
+                "`infrastructure` label.",
             ]
         )
 
