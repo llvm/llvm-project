@@ -218,7 +218,7 @@ _CLC_DEF _CLC_OVERLOAD double __clc_remquo(double x, double y,
   quo = c ? 0 : quo;
   ret = c ? x : ret;
 
-  c &= (yexp<1023 & 2.0 * dx> dy) | (dx > 0.5 * dy);
+  c &= (yexp < 1023 & 2.0 * dx > dy) | (dx > 0.5 * dy);
   quo = c ? qsgn : quo;
   // we could use a conversion here instead since qsgn = +-1
   p = qsgn == 1 ? -1.0 : 1.0;
