@@ -147,18 +147,6 @@ void LinkerDriver::parseSubsystem(StringRef arg, WindowsSubsystem *sys,
 
 // Parse a string of the form of "<from>=<to>".
 // Results are directly written to Config.
-void LinkerDriver::parseAlternateName(StringRef s) {
-  auto [from, to] = s.split('=');
-  if (from.empty() || to.empty())
-    Fatal(ctx) << "/alternatename: invalid argument: " << s;
-  auto it = ctx.config.alternateNames.find(from);
-  if (it != ctx.config.alternateNames.end() && it->second != to)
-    Fatal(ctx) << "/alternatename: conflicts: " << s;
-  ctx.config.alternateNames.insert(it, std::make_pair(from, to));
-}
-
-// Parse a string of the form of "<from>=<to>".
-// Results are directly written to Config.
 void LinkerDriver::parseMerge(StringRef s) {
   auto [from, to] = s.split('=');
   if (from.empty() || to.empty())
@@ -228,22 +216,6 @@ void LinkerDriver::parseSection(StringRef s) {
   if (name.empty() || attrs.empty())
     Fatal(ctx) << "/section: invalid argument: " << s;
   ctx.config.section[name] = parseSectionAttributes(ctx, attrs);
-}
-
-// Parses /aligncomm option argument.
-void LinkerDriver::parseAligncomm(StringRef s) {
-  auto [name, align] = s.split(',');
-  if (name.empty() || align.empty()) {
-    Err(ctx) << "/aligncomm: invalid argument: " << s;
-    return;
-  }
-  int v;
-  if (align.getAsInteger(0, v)) {
-    Err(ctx) << "/aligncomm: invalid argument: " << s;
-    return;
-  }
-  ctx.config.alignComm[std::string(name)] =
-      std::max(ctx.config.alignComm[std::string(name)], 1 << v);
 }
 
 void LinkerDriver::parseDosStub(StringRef path) {
@@ -445,7 +417,7 @@ LinkerDriver::createManifestXmlWithInternalMt(StringRef defaultXml) {
       MemoryBuffer::getMemBufferCopy(defaultXml);
 
   windows_manifest::WindowsManifestMerger merger;
-  if (auto e = merger.merge(*defaultXmlCopy.get()))
+  if (auto e = merger.merge(*defaultXmlCopy))
     Fatal(ctx) << "internal manifest tool failed on default xml: "
                << toString(std::move(e));
 
@@ -458,7 +430,7 @@ LinkerDriver::createManifestXmlWithInternalMt(StringRef defaultXml) {
                  << toString(std::move(e));
   }
 
-  return std::string(merger.getMergedManifest().get()->getBuffer());
+  return std::string(merger.getMergedManifest()->getBuffer());
 }
 
 std::string

@@ -21,16 +21,13 @@
 
 #include "include/config_elast.h"
 
-#if defined(__ANDROID__)
-#  include <android/api-level.h>
-#endif
-
 #if defined(_LIBCPP_WIN32API)
 #  include <windows.h>
 #  include <winerror.h>
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 #if defined(_LIBCPP_WIN32API)
 
@@ -370,4 +367,5 @@ void __throw_system_error(int ev, const char* what_arg) {
 #endif
 }
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD

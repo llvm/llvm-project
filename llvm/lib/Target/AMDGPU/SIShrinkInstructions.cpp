@@ -455,9 +455,13 @@ void SIShrinkInstructions::shrinkMadFma(MachineInstr &MI) const {
       break;
     case AMDGPU::V_FMA_F16_e64:
     case AMDGPU::V_FMA_F16_gfx9_e64:
+      NewOpcode = AMDGPU::V_FMAAK_F16;
+      break;
+    case AMDGPU::V_FMA_F16_gfx9_t16_e64:
+      NewOpcode = AMDGPU::V_FMAAK_F16_t16;
+      break;
     case AMDGPU::V_FMA_F16_gfx9_fake16_e64:
-      NewOpcode = ST->hasTrue16BitInsts() ? AMDGPU::V_FMAAK_F16_fake16
-                                          : AMDGPU::V_FMAAK_F16;
+      NewOpcode = AMDGPU::V_FMAAK_F16_fake16;
       break;
     }
   }
@@ -485,9 +489,13 @@ void SIShrinkInstructions::shrinkMadFma(MachineInstr &MI) const {
       break;
     case AMDGPU::V_FMA_F16_e64:
     case AMDGPU::V_FMA_F16_gfx9_e64:
+      NewOpcode = AMDGPU::V_FMAMK_F16;
+      break;
+    case AMDGPU::V_FMA_F16_gfx9_t16_e64:
+      NewOpcode = AMDGPU::V_FMAMK_F16_t16;
+      break;
     case AMDGPU::V_FMA_F16_gfx9_fake16_e64:
-      NewOpcode = ST->hasTrue16BitInsts() ? AMDGPU::V_FMAMK_F16_fake16
-                                          : AMDGPU::V_FMAMK_F16;
+      NewOpcode = AMDGPU::V_FMAMK_F16_fake16;
       break;
     }
   }
@@ -833,8 +841,6 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
 
   unsigned VCCReg = ST->isWave32() ? AMDGPU::VCC_LO : AMDGPU::VCC;
 
-  std::vector<unsigned> I1Defs;
-
   for (MachineFunction::iterator BI = MF.begin(), BE = MF.end();
                                                   BI != BE; ++BI) {
 
@@ -959,16 +965,19 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
           MI.getOpcode() == AMDGPU::V_MAD_F16_e64 ||
           MI.getOpcode() == AMDGPU::V_FMA_F16_e64 ||
           MI.getOpcode() == AMDGPU::V_FMA_F16_gfx9_e64 ||
+          MI.getOpcode() == AMDGPU::V_FMA_F16_gfx9_t16_e64 ||
           MI.getOpcode() == AMDGPU::V_FMA_F16_gfx9_fake16_e64) {
         shrinkMadFma(MI);
         continue;
       }
 
-      if (!TII->hasVALU32BitEncoding(MI.getOpcode())) {
-        // If there is no chance we will shrink it and use VCC as sdst to get
-        // a 32 bit form try to replace dead sdst with NULL.
+      // If there is no chance we will shrink it and use VCC as sdst to get
+      // a 32 bit form try to replace dead sdst with NULL.
+      if (TII->isVOP3(MI.getOpcode())) {
         tryReplaceDeadSDST(MI);
-        continue;
+        if (!TII->hasVALU32BitEncoding(MI.getOpcode())) {
+          continue;
+        }
       }
 
       if (!TII->canShrink(MI, *MRI)) {

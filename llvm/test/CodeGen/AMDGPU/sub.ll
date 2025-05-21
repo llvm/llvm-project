@@ -2,7 +2,8 @@
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX6 %s
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX8 %s
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX9 %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX12 %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx1200 -mattr=+real-true16 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX12,GFX12-TRUE16 %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx1200 -mattr=-real-true16 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX12,GFX12-FAKE16 %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone speculatable
 
@@ -432,21 +433,37 @@ define amdgpu_kernel void @test_sub_i16(ptr addrspace(1) %out, ptr addrspace(1) 
 ; GFX9-NEXT:    global_store_short v0, v1, s[0:1]
 ; GFX9-NEXT:    s_endpgm
 ;
-; GFX12-LABEL: test_sub_i16:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX12-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX12-NEXT:    v_mov_b32_e32 v2, 0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX12-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    global_load_u16 v1, v0, s[2:3] scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_load_u16 v0, v0, s[2:3] offset:2 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    v_sub_nc_u16 v0, v1, v0
-; GFX12-NEXT:    global_store_b16 v2, v0, s[0:1]
-; GFX12-NEXT:    s_endpgm
+; GFX12-TRUE16-LABEL: test_sub_i16:
+; GFX12-TRUE16:       ; %bb.0:
+; GFX12-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX12-TRUE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 1, v0
+; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX12-TRUE16-NEXT:    global_load_d16_b16 v0, v1, s[2:3] scope:SCOPE_SYS
+; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
+; GFX12-TRUE16-NEXT:    global_load_d16_hi_b16 v0, v1, s[2:3] offset:2 scope:SCOPE_SYS
+; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
+; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX12-TRUE16-NEXT:    v_sub_nc_u16 v0.l, v0.l, v0.h
+; GFX12-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1]
+; GFX12-TRUE16-NEXT:    s_endpgm
+;
+; GFX12-FAKE16-LABEL: test_sub_i16:
+; GFX12-FAKE16:       ; %bb.0:
+; GFX12-FAKE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX12-FAKE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX12-FAKE16-NEXT:    v_mov_b32_e32 v2, 0
+; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX12-FAKE16-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
+; GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX12-FAKE16-NEXT:    global_load_u16 v1, v0, s[2:3] scope:SCOPE_SYS
+; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
+; GFX12-FAKE16-NEXT:    global_load_u16 v0, v0, s[2:3] offset:2 scope:SCOPE_SYS
+; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
+; GFX12-FAKE16-NEXT:    v_sub_nc_u16 v0, v1, v0
+; GFX12-FAKE16-NEXT:    global_store_b16 v2, v0, s[0:1]
+; GFX12-FAKE16-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr i16, ptr addrspace(1) %in, i32 %tid
   %b_ptr = getelementptr i16, ptr addrspace(1) %gep, i32 1
@@ -761,7 +778,8 @@ define amdgpu_kernel void @v_sub_i64(ptr addrspace(1) noalias %out, ptr addrspac
 ; GFX12-NEXT:    global_load_b64 v[2:3], v2, s[4:5]
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_sub_co_u32 v0, vcc_lo, v0, v2
-; GFX12-NEXT:    v_sub_co_ci_u32_e32 v1, vcc_lo, v1, v3, vcc_lo
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_sub_co_ci_u32_e64 v1, null, v1, v3, vcc_lo
 ; GFX12-NEXT:    global_store_b64 v4, v[0:1], s[0:1]
 ; GFX12-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x() readnone
@@ -856,9 +874,11 @@ define amdgpu_kernel void @v_test_sub_v2i64(ptr addrspace(1) %out, ptr addrspace
 ; GFX12-NEXT:    global_load_b128 v[4:7], v4, s[4:5]
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_sub_co_u32 v2, vcc_lo, v2, v6
-; GFX12-NEXT:    v_sub_co_ci_u32_e32 v3, vcc_lo, v3, v7, vcc_lo
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_sub_co_ci_u32_e64 v3, null, v3, v7, vcc_lo
 ; GFX12-NEXT:    v_sub_co_u32 v0, vcc_lo, v0, v4
-; GFX12-NEXT:    v_sub_co_ci_u32_e32 v1, vcc_lo, v1, v5, vcc_lo
+; GFX12-NEXT:    s_wait_alu 0xfffd
+; GFX12-NEXT:    v_sub_co_ci_u32_e64 v1, null, v1, v5, vcc_lo
 ; GFX12-NEXT:    global_store_b128 v8, v[0:3], s[0:1]
 ; GFX12-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x() readnone
@@ -987,14 +1007,18 @@ define amdgpu_kernel void @v_test_sub_v4i64(ptr addrspace(1) %out, ptr addrspace
 ; GFX12-NEXT:    global_load_b128 v[12:15], v12, s[4:5] offset:16
 ; GFX12-NEXT:    s_wait_loadcnt 0x2
 ; GFX12-NEXT:    v_sub_co_u32 v2, vcc_lo, v2, v6
-; GFX12-NEXT:    v_sub_co_ci_u32_e32 v3, vcc_lo, v3, v7, vcc_lo
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_sub_co_ci_u32_e64 v3, null, v3, v7, vcc_lo
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_sub_co_u32 v10, vcc_lo, v10, v14
-; GFX12-NEXT:    v_sub_co_ci_u32_e32 v11, vcc_lo, v11, v15, vcc_lo
+; GFX12-NEXT:    s_wait_alu 0xfffd
+; GFX12-NEXT:    v_sub_co_ci_u32_e64 v11, null, v11, v15, vcc_lo
 ; GFX12-NEXT:    v_sub_co_u32 v8, vcc_lo, v8, v12
-; GFX12-NEXT:    v_sub_co_ci_u32_e32 v9, vcc_lo, v9, v13, vcc_lo
+; GFX12-NEXT:    s_wait_alu 0xfffd
+; GFX12-NEXT:    v_sub_co_ci_u32_e64 v9, null, v9, v13, vcc_lo
 ; GFX12-NEXT:    v_sub_co_u32 v0, vcc_lo, v0, v4
-; GFX12-NEXT:    v_sub_co_ci_u32_e32 v1, vcc_lo, v1, v5, vcc_lo
+; GFX12-NEXT:    s_wait_alu 0xfffd
+; GFX12-NEXT:    v_sub_co_ci_u32_e64 v1, null, v1, v5, vcc_lo
 ; GFX12-NEXT:    s_clause 0x1
 ; GFX12-NEXT:    global_store_b128 v16, v[8:11], s[0:1] offset:16
 ; GFX12-NEXT:    global_store_b128 v16, v[0:3], s[0:1]
@@ -1064,7 +1088,7 @@ define amdgpu_ps void @sub_select_vop3(i32 inreg %s, i32 %v) {
 ; GFX12-NEXT:    s_endpgm
   %vcc = call i64 asm sideeffect "; def vcc", "={vcc}"()
   %sub = sub i32 %v, %s
-  store i32 %sub, ptr addrspace(3) undef
+  store i32 %sub, ptr addrspace(3) poison
   call void asm sideeffect "; use vcc", "{vcc}"(i64 %vcc)
   ret void
 }

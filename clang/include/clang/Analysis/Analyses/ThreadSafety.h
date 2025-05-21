@@ -54,6 +54,18 @@ enum ProtectedOperationKind {
 
   /// Returning a pt-guarded variable by reference.
   POK_PtReturnByRef,
+
+  /// Passing pointer to a guarded variable.
+  POK_PassPointer,
+
+  /// Passing a pt-guarded pointer.
+  POK_PtPassPointer,
+
+  /// Returning pointer to a guarded variable.
+  POK_ReturnPointer,
+
+  /// Returning a pt-guarded pointer.
+  POK_PtReturnPointer,
 };
 
 /// This enum distinguishes between different kinds of lock actions. For
@@ -82,16 +94,14 @@ enum AccessKind {
 
 /// This enum distinguishes between different situations where we warn due to
 /// inconsistent locking.
-/// \enum SK_LockedSomeLoopIterations -- a mutex is locked for some but not all
-/// loop iterations.
-/// \enum SK_LockedSomePredecessors -- a mutex is locked in some but not all
-/// predecessors of a CFGBlock.
-/// \enum SK_LockedAtEndOfFunction -- a mutex is still locked at the end of a
-/// function.
 enum LockErrorKind {
+  /// A capability is locked for some but not all loop iterations.
   LEK_LockedSomeLoopIterations,
+  /// A capability is locked in some but not all predecessors of a CFGBlock.
   LEK_LockedSomePredecessors,
+  /// A capability is still locked at the end of a function.
   LEK_LockedAtEndOfFunction,
+  /// Expecting a capability to be held at the end of function.
   LEK_NotLockedAtEndOfFunction
 };
 

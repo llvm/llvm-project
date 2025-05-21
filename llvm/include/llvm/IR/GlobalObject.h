@@ -124,6 +124,12 @@ public:
   /// appropriate default object file section.
   void setSection(StringRef S);
 
+  /// Set the section prefix for this global object.
+  void setSectionPrefix(StringRef Prefix);
+
+  /// Get the section prefix for this global object.
+  std::optional<StringRef> getSectionPrefix() const;
+
   bool hasComdat() const { return getComdat() != nullptr; }
   const Comdat *getComdat() const { return ObjComdat; }
   Comdat *getComdat() { return ObjComdat; }

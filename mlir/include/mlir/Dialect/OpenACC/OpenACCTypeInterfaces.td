@@ -28,6 +28,28 @@ def OpenACC_PointerLikeTypeInterface : TypeInterface<"PointerLikeType"> {
       /*retTy=*/"::mlir::Type",
       /*methodName=*/"getElementType"
     >,
+    InterfaceMethod<
+      /*description=*/[{
+        Returns the type category of the pointee. The `var` is provided because
+        a dialect's type system may be incomplete. For example, consider a
+        dialect which computes interior pointers - so a float array element
+        may be represented as `ptr<f32>`. The type system says the pointee
+        is `f32` but this is not a scalar from the point-of-view of OpenACC.
+        It is an array element and thus the appropriate type category is
+        "array" - therefore being able to look up how a variable is computed
+        is important for a complete type determination.
+        The `varType` is provided in cases where a dialect's type system
+        erased the target type.
+      }],
+      /*retTy=*/"::mlir::acc::VariableTypeCategory",
+      /*methodName=*/"getPointeeTypeCategory",
+      /*args=*/(ins "::mlir::TypedValue<::mlir::acc::PointerLikeType>":$varPtr,
+                    "::mlir::Type":$varType),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return ::mlir::acc::VariableTypeCategory::uncategorized;
+      }]
+    >,
   ];
 }
 
@@ -106,7 +128,7 @@ def OpenACC_MappableTypeInterface : TypeInterface<"MappableType"> {
         return {};
       }]
     >,
-      InterfaceMethod<
+    InterfaceMethod<
       /*description=*/[{
         Returns explicit `acc.bounds` operations that envelop the whole
         data structure. These operations are inserted using the provided builder
@@ -119,6 +141,18 @@ def OpenACC_MappableTypeInterface : TypeInterface<"MappableType"> {
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         return {};
+      }]
+    >,
+    InterfaceMethod<
+      /*description=*/[{
+        Returns the OpenACC type category.
+      }],
+      /*retTy=*/"::mlir::acc::VariableTypeCategory",
+      /*methodName=*/"getTypeCategory",
+      /*args=*/(ins "::mlir::Value":$var),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return ::mlir::acc::VariableTypeCategory::uncategorized;
       }]
     >,
   ];

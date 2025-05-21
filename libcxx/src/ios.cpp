@@ -22,6 +22,7 @@ _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 class _LIBCPP_HIDDEN __iostream_category : public __do_message {
 public:
@@ -217,7 +218,7 @@ void ios_base::clear(iostate state) {
     __rdstate_ = state | badbit;
 
   if (((state | (__rdbuf_ ? goodbit : badbit)) & __exceptions_) != 0)
-    __throw_failure("ios_base::clear");
+    std::__throw_failure("ios_base::clear");
 }
 
 // init
@@ -253,24 +254,24 @@ void ios_base::copyfmt(const ios_base& rhs) {
     size_t newesize = sizeof(event_callback) * rhs.__event_size_;
     new_callbacks.reset(static_cast<event_callback*>(malloc(newesize)));
     if (!new_callbacks)
-      __throw_bad_alloc();
+      std::__throw_bad_alloc();
 
     size_t newisize = sizeof(int) * rhs.__event_size_;
     new_ints.reset(static_cast<int*>(malloc(newisize)));
     if (!new_ints)
-      __throw_bad_alloc();
+      std::__throw_bad_alloc();
   }
   if (__iarray_cap_ < rhs.__iarray_size_) {
     size_t newsize = sizeof(long) * rhs.__iarray_size_;
     new_longs.reset(static_cast<long*>(malloc(newsize)));
     if (!new_longs)
-      __throw_bad_alloc();
+      std::__throw_bad_alloc();
   }
   if (__parray_cap_ < rhs.__parray_size_) {
     size_t newsize = sizeof(void*) * rhs.__parray_size_;
     new_pointers.reset(static_cast<void**>(malloc(newsize)));
     if (!new_pointers)
-      __throw_bad_alloc();
+      std::__throw_bad_alloc();
   }
   // Got everything we need.  Copy everything but __rdstate_, __rdbuf_ and __exceptions_
   __fmtflags_           = rhs.__fmtflags_;
@@ -382,6 +383,7 @@ bool ios_base::sync_with_stdio(bool sync) {
   return r;
 }
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS

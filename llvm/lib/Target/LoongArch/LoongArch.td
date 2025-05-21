@@ -14,9 +14,18 @@ include "llvm/Target/Target.td"
 
 // LoongArch is divided into two versions, the 32-bit version (LA32) and the
 // 64-bit version (LA64).
+
+// LoongArch 32-bit is divided into two variants, the reduced 32-bit variant
+// (LA32R) and the standard 32-bit variant (LA32S).
+def Feature32S
+    : SubtargetFeature<"32s", "Has32S", "true",
+                       "LA32 Standard Basic Instruction Extension">;
+def Has32S : Predicate<"Subtarget->has32S()">;
+
 def Feature64Bit
     : SubtargetFeature<"64bit", "HasLA64", "true",
-                       "LA64 Basic Integer and Privilege Instruction Set">;
+                       "LA64 Basic Integer and Privilege Instruction Set",
+                       [Feature32S]>;
 def Feature32Bit
     : SubtargetFeature<"32bit", "HasLA32", "true",
                        "LA32 Basic Integer and Privilege Instruction Set">;
@@ -135,6 +144,12 @@ def FeatureDiv32
                         "Assume div.w[u] and mod.w[u] can handle inputs that are not sign-extended">;
 def HasDiv32 : Predicate<"Subtarget->hasDiv32()">;
 
+// Support SC.Q instruction
+def FeatureSCQ
+    : SubtargetFeature<"scq", "HasSCQ", "true",
+                        "Support sc.q instruction">;
+def HasSCQ : Predicate<"Subtarget->hasSCQ()">;
+
 def TunePreferWInst
     : SubtargetFeature<"prefer-w-inst", "PreferWInst", "true",
                        "Prefer instructions with W suffix">;
@@ -180,7 +195,8 @@ def : ProcessorModel<"la664", NoSchedModel, [Feature64Bit,
                                              FeatureLAM_BH,
                                              FeatureLAMCAS,
                                              FeatureLD_SEQ_SA,
-                                             FeatureDiv32]>;
+                                             FeatureDiv32,
+                                             FeatureSCQ]>;
 
 //===----------------------------------------------------------------------===//
 // Define the LoongArch target.

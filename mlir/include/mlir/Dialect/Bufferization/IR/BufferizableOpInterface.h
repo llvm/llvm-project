@@ -302,7 +302,7 @@ struct BufferizationOptions {
                              Value to) const;
 
   /// Specifies whether not bufferizable ops are allowed in the input. If so,
-  /// bufferization.to_memref and bufferization.to_tensor ops are inserted at
+  /// bufferization.to_buffer and bufferization.to_tensor ops are inserted at
   /// the boundaries.
   bool allowUnknownOps = false;
 
@@ -314,16 +314,6 @@ struct BufferizationOptions {
   // then writes inside of parallel regions that write to buffers defined
   // outside of the parallel region will be given a new buffer.
   bool checkParallelRegions = true;
-
-  /// Certain ops have aliasing OpOperand/OpResult invariants (e.g., scf.for).
-  /// If this flag is set to `false`, those invariants are no longer enforced
-  /// with buffer copies.
-  ///
-  /// Note: Deactivating this flag can lead to incorrect bufferization results
-  /// when used incorrectly. This flag is useful with
-  /// `AlwaysCopyAnalysisState` which bufferizes all writing tensor
-  /// OpOperands out-of-place.
-  bool enforceAliasingInvariants = true;
 
   /// This function controls buffer types on function signatures. Sets
   /// `functionArgTypeConverterFn` and `inferFunctionResultLayout` accordingly.
@@ -563,6 +553,11 @@ public:
 
   virtual void resetCache();
 
+  /// Checks whether `op0` and `op1` are inside mutually exclusive regions.
+  /// The logic defers to `mlir::insideMutuallyExclusiveRegions`, but the
+  /// result is cached.
+  bool insideMutuallyExclusiveRegions(Operation *op0, Operation *op1);
+
 protected:
   AnalysisState(const BufferizationOptions &options, TypeID type);
 
@@ -576,6 +571,11 @@ private:
   /// Cache containing closest ancestor repetitive Region.
   DenseMap<std::variant<Operation *, Block *, Region *, Value>, Region *>
       enclosingRepetitiveRegionCache;
+
+  /// Cache that specifies whether the two operations are in mutually exclusive
+  /// regions.
+  DenseMap<std::pair<Operation *, Operation *>, bool>
+      insideMutuallyExclusiveRegionsCache;
 };
 
 /// Create an AllocTensorOp for the given shaped value (memref or tensor).
@@ -587,7 +587,7 @@ allocateTensorForShapedValue(OpBuilder &b, Location loc, Value shapedValue,
                              bool copy = true);
 
 /// Lookup the buffer for the given value. If the value was not bufferized
-/// yet, wrap it in a ToMemrefOp. Otherwise, it is the result of a ToTensorOp,
+/// yet, wrap it in a ToBufferOp. Otherwise, it is the result of a ToTensorOp,
 /// from which the memref operand is returned.
 FailureOr<Value> getBuffer(RewriterBase &rewriter, Value value,
                            const BufferizationOptions &options);

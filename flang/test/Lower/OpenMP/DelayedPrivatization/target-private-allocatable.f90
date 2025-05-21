@@ -16,28 +16,25 @@ end subroutine target_allocatable
 
 ! CHECK-LABEL: omp.private {type = private}
 ! CHECK-SAME:    @[[VAR_PRIVATIZER_SYM:.*]] :
-! CHECK-SAME:      [[TYPE:!fir.ref<!fir.box<!fir.heap<i32>>>]] alloc {
-! CHECK:  ^bb0(%[[PRIV_ARG:.*]]: [[TYPE]]):
-! CHECK:    %[[PRIV_ALLOC:.*]] = fir.alloca [[DESC_TYPE:!fir.box<!fir.heap<i32>>]] {bindc_name = "alloc_var", {{.*}}}
+! CHECK-SAME:      [[DESC_TYPE:!fir.box<!fir.heap<i32>>]] init {
+! CHECK:  ^bb0(%[[PRIV_ARG:.*]]: [[TYPE:!fir.ref<!fir.box<!fir.heap<i32>>>]], %[[PRIV_ALLOC:.*]]: [[TYPE]]):
 
 ! CHECK-NEXT:   %[[PRIV_ARG_VAL:.*]] = fir.load %[[PRIV_ARG]] : [[TYPE]]
 ! CHECK-NEXT:   %[[PRIV_ARG_BOX:.*]] = fir.box_addr %[[PRIV_ARG_VAL]] : ([[DESC_TYPE]]) -> !fir.heap<i32>
 ! CHECK-NEXT:   %[[PRIV_ARG_ADDR:.*]] = fir.convert %[[PRIV_ARG_BOX]] : (!fir.heap<i32>) -> i64
 ! CHECK-NEXT:   %[[C0:.*]] = arith.constant 0 : i64
-! CHECK-NEXT:   %[[ALLOC_COND:.*]] = arith.cmpi ne, %[[PRIV_ARG_ADDR]], %[[C0]] : i64
+! CHECK-NEXT:   %[[ALLOC_COND:.*]] = arith.cmpi eq, %[[PRIV_ARG_ADDR]], %[[C0]] : i64
 
 ! CHECK-NEXT:   fir.if %[[ALLOC_COND]] {
-! CHECK:          %[[PRIV_ALLOCMEM:.*]] = fir.allocmem i32 {fir.must_be_heap = true, {{.*}}}
+! CHECK-NEXT:     %[[ZERO_BOX:.*]] = fir.embox %[[PRIV_ARG_BOX]] : (!fir.heap<i32>) -> [[DESC_TYPE]]
+! CHECK-NEXT:     fir.store %[[ZERO_BOX]] to %[[PRIV_ALLOC]] : [[TYPE]]
+! CHECK-NEXT:   } else {
+! CHECK-NEXT:     %[[PRIV_ALLOCMEM:.*]] = fir.allocmem i32
 ! CHECK-NEXT:     %[[PRIV_ALLOCMEM_BOX:.*]] = fir.embox %[[PRIV_ALLOCMEM]] : (!fir.heap<i32>) -> [[DESC_TYPE]]
 ! CHECK-NEXT:     fir.store %[[PRIV_ALLOCMEM_BOX]] to %[[PRIV_ALLOC]] : [[TYPE]]
-! CHECK-NEXT:   } else {
-! CHECK-NEXT:     %[[ZERO_BITS:.*]] = fir.zero_bits !fir.heap<i32>
-! CHECK-NEXT:     %[[ZERO_BOX:.*]] = fir.embox %[[ZERO_BITS]] : (!fir.heap<i32>) -> [[DESC_TYPE]]
-! CHECK-NEXT:     fir.store %[[ZERO_BOX]] to %[[PRIV_ALLOC]] : [[TYPE]]
 ! CHECK-NEXT:   }
 
-! CHECK-NEXT:   %[[PRIV_DECL:.*]]:2 = hlfir.declare %[[PRIV_ALLOC]]
-! CHECK-NEXT:   omp.yield(%[[PRIV_DECL]]#0 : [[TYPE]])
+! CHECK-NEXT:   omp.yield(%[[PRIV_ALLOC]] : [[TYPE]])
 
 ! CHECK-NEXT: } dealloc {
 ! CHECK-NEXT: ^bb0(%[[PRIV_ARG:.*]]: [[TYPE]]):
@@ -49,12 +46,7 @@ end subroutine target_allocatable
 ! CHECK-NEXT:   %[[PRIV_NULL_COND:.*]] = arith.cmpi ne, %[[PRIV_ADDR_I64]], %[[C0]] : i64
 
 ! CHECK-NEXT:   fir.if %[[PRIV_NULL_COND]] {
-! CHECK:          %[[PRIV_VAL_2:.*]] = fir.load %[[PRIV_ARG]]
-! CHECK-NEXT:     %[[PRIV_ADDR_2:.*]] = fir.box_addr %[[PRIV_VAL_2]]
-! CHECK-NEXT:     fir.freemem %[[PRIV_ADDR_2]]
-! CHECK-NEXT:     %[[ZEROS:.*]] = fir.zero_bits
-! CHECK-NEXT:     %[[ZEROS_BOX:.*]]  = fir.embox %[[ZEROS]]
-! CHECK-NEXT:     fir.store %[[ZEROS_BOX]] to %[[PRIV_ARG]]
+! CHECK-NEXT:     fir.freemem %[[PRIV_ADDR]]
 ! CHECK-NEXT:   }
 
 ! CHECK-NEXT:   omp.yield
@@ -66,8 +58,9 @@ end subroutine target_allocatable
 ! CHECK:  %[[VAR_ALLOC:.*]] = fir.alloca [[DESC_TYPE]]
 ! CHECK-SAME: {bindc_name = "alloc_var", {{.*}}}
 ! CHECK:  %[[VAR_DECL:.*]]:2 = hlfir.declare %[[VAR_ALLOC]]
+! CHECK:  %[[BASE_ADDR:.*]] = fir.box_offset %[[VAR_DECL]]#0 base_addr : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> [[MEMBER_TYPE:.*]]
+! CHECK:  %[[MEMBER:.*]] = omp.map.info var_ptr(%[[VAR_DECL]]#0 : [[TYPE]], i32) map_clauses(to) capture(ByRef) var_ptr_ptr(%[[BASE_ADDR]] : [[MEMBER_TYPE:.*]]) -> {{.*}}
+! CHECK:  %[[MAP_VAR:.*]] = omp.map.info var_ptr(%[[VAR_DECL]]#0 : [[TYPE]], [[DESC_TYPE]]) map_clauses(to) capture(ByRef) members(%[[MEMBER]] : [0] : !fir.llvm_ptr<!fir.ref<i32>>) -> !fir.ref<!fir.box<!fir.heap<i32>>>
 
-! CHECK: %[[MAP_VAR:.*]] = omp.map.info var_ptr(%[[VAR_DECL]]#0 : [[TYPE]], [[DESC_TYPE]])
-! CHECK-SAME: map_clauses(to) capture(ByRef) -> [[TYPE]]
-! CHECK:  omp.target map_entries(%[[MAP_VAR]] -> %arg0 : [[TYPE]]) private(
-! CHECK-SAME: @[[VAR_PRIVATIZER_SYM]] %[[VAR_DECL]]#0 -> %{{.*}} : [[TYPE]]) {
+! CHECK:  omp.target map_entries(%[[MAP_VAR]] -> %arg0, %[[MEMBER]] -> %arg1 : [[TYPE]], [[MEMBER_TYPE]]) private(
+! CHECK-SAME: @[[VAR_PRIVATIZER_SYM]] %[[VAR_DECL]]#0 -> %{{.*}} [map_idx=0] : [[TYPE]]) {

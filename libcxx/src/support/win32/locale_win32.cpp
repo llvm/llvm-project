@@ -16,6 +16,7 @@
 #include <cwchar>  // wide char manipulation
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 namespace __locale {
 
 //
@@ -26,7 +27,7 @@ __locale_t __newlocale(int /*mask*/, const char* locale, __locale_t /*base*/) {
   return {::_create_locale(LC_ALL, locale), locale};
 }
 
-lconv* __localeconv(__locale_t& loc) {
+__lconv_t* __localeconv(__locale_t& loc) {
   __locale_guard __current(loc);
   lconv* lc = std::localeconv();
   if (!lc)
@@ -182,4 +183,5 @@ int __asprintf(char** ret, __locale_t loc, const char* format, ...) {
 }
 
 } // namespace __locale
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD

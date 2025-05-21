@@ -5,7 +5,7 @@
 
 ; CHECK: .visible .func use_dbg_declare()
 ; CHECK: .local .align 8 .b8 __local_depot0[8];
-; CHECK: mov.u64 %SPL, __local_depot0;
+; CHECK: mov.b64 %SPL, __local_depot0;
 ; CHECK: add.u64 %rd1, %SP, 0;
 ; CHECK: .loc 1 5 3                   // t.c:5:3
 ; CHECK: { // callseq 0, 0

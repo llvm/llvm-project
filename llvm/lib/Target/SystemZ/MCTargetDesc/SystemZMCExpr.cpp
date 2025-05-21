@@ -12,14 +12,14 @@ using namespace llvm;
 
 #define DEBUG_TYPE "systemzmcexpr"
 
-const SystemZMCExpr *SystemZMCExpr::create(VariantKind Kind, const MCExpr *Expr,
-                                           MCContext &Ctx) {
+const SystemZMCExpr *SystemZMCExpr::create(SystemZMCExpr::Specifier Kind,
+                                           const MCExpr *Expr, MCContext &Ctx) {
   return new (Ctx) SystemZMCExpr(Kind, Expr);
 }
 
 StringRef SystemZMCExpr::getVariantKindName() const {
-  switch (static_cast<uint32_t>(getKind())) {
-  case VK_SystemZ_None:
+  switch (getSpecifier()) {
+  case VK_None:
     return "A";
   case VK_SystemZ_RCon:
     return "R";
@@ -37,13 +37,9 @@ void SystemZMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
 }
 
 bool SystemZMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
-                                              const MCAssembler *Asm,
-                                              const MCFixup *Fixup) const {
-  if (!getSubExpr()->evaluateAsRelocatable(Res, Asm, Fixup))
+                                              const MCAssembler *Asm) const {
+  if (!getSubExpr()->evaluateAsRelocatable(Res, Asm))
     return false;
-
-  Res =
-      MCValue::get(Res.getSymA(), Res.getSymB(), Res.getConstant(), getKind());
-
+  Res.setSpecifier(specifier);
   return true;
 }

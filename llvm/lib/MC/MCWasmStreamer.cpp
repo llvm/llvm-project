@@ -59,14 +59,6 @@ void MCWasmStreamer::emitLabelAtPos(MCSymbol *S, SMLoc Loc, MCDataFragment &F,
     Symbol->setTLS();
 }
 
-void MCWasmStreamer::emitAssemblerFlag(MCAssemblerFlag Flag) {
-  // Let the target do whatever target specific stuff it needs to do.
-  getAssembler().getBackend().handleAssemblerFlag(Flag);
-
-  // Do any generic stuff we need to do.
-  llvm_unreachable("invalid assembler flag!");
-}
-
 void MCWasmStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
   MCAssembler &Asm = getAssembler();
   auto *SectionWasm = cast<MCSectionWasm>(Section);
@@ -167,15 +159,6 @@ void MCWasmStreamer::emitIdent(StringRef IdentString) {
   // sections in the object format
 }
 
-void MCWasmStreamer::emitInstToFragment(const MCInst &Inst,
-                                        const MCSubtargetInfo &STI) {
-  this->MCObjectStreamer::emitInstToFragment(Inst, STI);
-  MCRelaxableFragment &F = *cast<MCRelaxableFragment>(getCurrentFragment());
-
-  for (auto &Fixup : F.getFixups())
-    fixSymbolsInTLSFixups(Fixup.getValue());
-}
-
 void MCWasmStreamer::emitInstToData(const MCInst &Inst,
                                     const MCSubtargetInfo &STI) {
   MCAssembler &Assembler = getAssembler();
@@ -183,17 +166,14 @@ void MCWasmStreamer::emitInstToData(const MCInst &Inst,
   SmallString<256> Code;
   Assembler.getEmitter().encodeInstruction(Inst, Code, Fixups, STI);
 
-  for (auto &Fixup : Fixups)
-    fixSymbolsInTLSFixups(Fixup.getValue());
-
   // Append the encoded instruction to the current data fragment (or create a
   // new such fragment if the current fragment is not a data fragment).
   MCDataFragment *DF = getOrCreateDataFragment();
 
   // Add the fixups and data.
-  for (unsigned I = 0, E = Fixups.size(); I != E; ++I) {
-    Fixups[I].setOffset(Fixups[I].getOffset() + DF->getContents().size());
-    DF->getFixups().push_back(Fixups[I]);
+  for (MCFixup &Fixup : Fixups) {
+    Fixup.setOffset(Fixup.getOffset() + DF->getContents().size());
+    DF->getFixups().push_back(Fixup);
   }
   DF->setHasInstructions(STI);
   DF->appendContents(Code);
@@ -203,58 +183,6 @@ void MCWasmStreamer::finishImpl() {
   emitFrames(nullptr);
 
   this->MCObjectStreamer::finishImpl();
-}
-
-void MCWasmStreamer::fixSymbolsInTLSFixups(const MCExpr *expr) {
-  switch (expr->getKind()) {
-  case MCExpr::Target:
-  case MCExpr::Constant:
-    break;
-
-  case MCExpr::Binary: {
-    const MCBinaryExpr *be = cast<MCBinaryExpr>(expr);
-    fixSymbolsInTLSFixups(be->getLHS());
-    fixSymbolsInTLSFixups(be->getRHS());
-    break;
-  }
-
-  case MCExpr::SymbolRef: {
-    const MCSymbolRefExpr &symRef = *cast<MCSymbolRefExpr>(expr);
-    switch (symRef.getKind()) {
-    case MCSymbolRefExpr::VK_WASM_TLSREL:
-    case MCSymbolRefExpr::VK_WASM_GOT_TLS:
-      getAssembler().registerSymbol(symRef.getSymbol());
-      cast<MCSymbolWasm>(symRef.getSymbol()).setTLS();
-      break;
-    default:
-      break;
-    }
-    break;
-  }
-
-  case MCExpr::Unary:
-    fixSymbolsInTLSFixups(cast<MCUnaryExpr>(expr)->getSubExpr());
-    break;
-  }
-}
-
-void MCWasmStreamer::emitThumbFunc(MCSymbol *Func) {
-  llvm_unreachable("Generic Wasm doesn't support this directive");
-}
-
-void MCWasmStreamer::emitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) {
-  llvm_unreachable("Wasm doesn't support this directive");
-}
-
-void MCWasmStreamer::emitZerofill(MCSection *Section, MCSymbol *Symbol,
-                                  uint64_t Size, Align ByteAlignment,
-                                  SMLoc Loc) {
-  llvm_unreachable("Wasm doesn't support this directive");
-}
-
-void MCWasmStreamer::emitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
-                                    uint64_t Size, Align ByteAlignment) {
-  llvm_unreachable("Wasm doesn't support this directive");
 }
 
 MCStreamer *llvm::createWasmStreamer(MCContext &Context,

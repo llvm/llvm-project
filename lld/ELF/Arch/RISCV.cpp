@@ -50,10 +50,12 @@ public:
 
 } // end anonymous namespace
 
-// These are internal relocation numbers for GP relaxation. They aren't part
+// These are internal relocation numbers for GP/X0 relaxation. They aren't part
 // of the psABI spec.
 #define INTERNAL_R_RISCV_GPREL_I 256
 #define INTERNAL_R_RISCV_GPREL_S 257
+#define INTERNAL_R_RISCV_X0REL_I 258
+#define INTERNAL_R_RISCV_X0REL_S 259
 
 const uint64_t dtpOffset = 0x800;
 
@@ -70,6 +72,7 @@ enum Op {
 };
 
 enum Reg {
+  X_X0 = 0,
   X_RA = 1,
   X_GP = 3,
   X_TP = 4,
@@ -447,6 +450,18 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     return;
   }
 
+  case INTERNAL_R_RISCV_X0REL_I:
+  case INTERNAL_R_RISCV_X0REL_S: {
+    checkInt(ctx, loc, val, 12, rel);
+    uint32_t insn = (read32le(loc) & ~(31 << 15)) | (X_X0 << 15);
+    if (rel.type == INTERNAL_R_RISCV_X0REL_I)
+      insn = setLO12_I(insn, val);
+    else
+      insn = setLO12_S(insn, val);
+    write32le(loc, insn);
+    return;
+  }
+
   case INTERNAL_R_RISCV_GPREL_I:
   case INTERNAL_R_RISCV_GPREL_S: {
     Defined *gp = ctx.sym.riscvGlobalPointer;
@@ -772,6 +787,25 @@ static void relaxTlsLe(Ctx &ctx, const InputSection &sec, size_t i,
 
 static void relaxHi20Lo12(Ctx &ctx, const InputSection &sec, size_t i,
                           uint64_t loc, Relocation &r, uint32_t &remove) {
+
+  // Fold into use of x0+offset
+  if (isInt<12>(r.sym->getVA(ctx, r.addend))) {
+    switch (r.type) {
+    case R_RISCV_HI20:
+      // Remove lui rd, %hi20(x).
+      sec.relaxAux->relocTypes[i] = R_RISCV_RELAX;
+      remove = 4;
+      break;
+    case R_RISCV_LO12_I:
+      sec.relaxAux->relocTypes[i] = INTERNAL_R_RISCV_X0REL_I;
+      break;
+    case R_RISCV_LO12_S:
+      sec.relaxAux->relocTypes[i] = INTERNAL_R_RISCV_X0REL_S;
+      break;
+    }
+    return;
+  }
+
   const Defined *gp = ctx.sym.riscvGlobalPointer;
   if (!gp)
     return;
@@ -885,7 +919,7 @@ static bool relax(Ctx &ctx, InputSection &sec) {
   }
   // Inform assignAddresses that the size has changed.
   if (!isUInt<32>(delta))
-    Fatal(ctx) << "section size decrease is too large: " << delta;
+    Err(ctx) << "section size decrease is too large: " << delta;
   sec.bytesDropped = delta;
   return changed;
 }
@@ -974,6 +1008,8 @@ void RISCV::finalizeRelax(int passes) const {
           switch (newType) {
           case INTERNAL_R_RISCV_GPREL_I:
           case INTERNAL_R_RISCV_GPREL_S:
+          case INTERNAL_R_RISCV_X0REL_I:
+          case INTERNAL_R_RISCV_X0REL_S:
             break;
           case R_RISCV_RELAX:
             // Used by relaxTlsLe to indicate the relocation is ignored.

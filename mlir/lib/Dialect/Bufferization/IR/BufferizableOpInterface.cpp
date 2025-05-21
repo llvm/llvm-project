@@ -107,7 +107,23 @@ Region *AnalysisState::getEnclosingRepetitiveRegion(
   return region;
 }
 
-void AnalysisState::resetCache() { enclosingRepetitiveRegionCache.clear(); }
+bool AnalysisState::insideMutuallyExclusiveRegions(Operation *op0,
+                                                   Operation *op1) {
+  auto key = std::make_pair(op0, op1);
+  if (auto iter = insideMutuallyExclusiveRegionsCache.find(key);
+      iter != insideMutuallyExclusiveRegionsCache.end())
+    return iter->second;
+  bool result = ::mlir::insideMutuallyExclusiveRegions(op0, op1);
+  // Populate results for both orderings of the ops.
+  insideMutuallyExclusiveRegionsCache[key] = result;
+  insideMutuallyExclusiveRegionsCache[std::make_pair(op1, op0)] = result;
+  return result;
+}
+
+void AnalysisState::resetCache() {
+  enclosingRepetitiveRegionCache.clear();
+  insideMutuallyExclusiveRegionsCache.clear();
+}
 
 Region *bufferization::getNextEnclosingRepetitiveRegion(
     Region *region, const BufferizationOptions &options) {
@@ -608,8 +624,8 @@ bool AnalysisState::canOmitTensorCopy(OpOperand &opOperand) const {
 }
 
 bool AnalysisState::isInPlace(OpOperand &opOperand) const {
-  // ToMemrefOps are always in-place.
-  if (isa<ToMemrefOp>(opOperand.getOwner()))
+  // ToBufferOps are always in-place.
+  if (isa<ToBufferOp>(opOperand.getOwner()))
     return true;
 
   // In the absence of analysis information, OpOperands that bufferize to a
@@ -634,13 +650,13 @@ bool AnalysisState::hasUndefinedContents(OpOperand *opOperand) const {
   return false;
 }
 
-// bufferization.to_memref is not allowed to change the rank.
-static void ensureToMemrefOpIsValid(Value tensor, Type memrefType) {
+// bufferization.to_buffer is not allowed to change the rank.
+static void ensureToBufferOpIsValid(Value tensor, Type memrefType) {
 #ifndef NDEBUG
   auto rankedTensorType = llvm::dyn_cast<RankedTensorType>(tensor.getType());
   assert((!rankedTensorType || llvm::cast<MemRefType>(memrefType).getRank() ==
                                    rankedTensorType.getRank()) &&
-         "to_memref would be invalid: mismatching ranks");
+         "to_buffer would be invalid: mismatching ranks");
 #endif
 }
 
@@ -655,15 +671,15 @@ FailureOr<Value> bufferization::getBuffer(RewriterBase &rewriter, Value value,
   if (auto toTensorOp = value.getDefiningOp<bufferization::ToTensorOp>())
     return toTensorOp.getMemref();
 
-  // Insert to_memref op.
+  // Insert to_buffer op.
   OpBuilder::InsertionGuard g(rewriter);
   setInsertionPointAfter(rewriter, value);
   FailureOr<BaseMemRefType> memrefType = getBufferType(value, options);
   if (failed(memrefType))
     return failure();
-  ensureToMemrefOpIsValid(value, *memrefType);
+  ensureToBufferOpIsValid(value, *memrefType);
   return rewriter
-      .create<bufferization::ToMemrefOp>(value.getLoc(), *memrefType, value)
+      .create<bufferization::ToBufferOp>(value.getLoc(), *memrefType, value)
       .getResult();
 }
 

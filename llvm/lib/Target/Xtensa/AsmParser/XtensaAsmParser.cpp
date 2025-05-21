@@ -12,7 +12,6 @@
 #include "MCTargetDesc/XtensaMCTargetDesc.h"
 #include "MCTargetDesc/XtensaTargetStreamer.h"
 #include "TargetInfo/XtensaTargetInfo.h"
-#include "XtensaUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/MC/MCContext.h"
@@ -274,6 +273,8 @@ public:
     return false;
   }
 
+  bool isimm7_22() const { return isImm(7, 22); }
+
   /// getStartLoc - Gets location of the first token of this operand
   SMLoc getStartLoc() const override { return StartLoc; }
   /// getEndLoc - Gets location of the last token of this operand
@@ -392,7 +393,7 @@ bool XtensaAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
   case Xtensa::L32R: {
     const MCSymbolRefExpr *OpExpr =
         static_cast<const MCSymbolRefExpr *>(Inst.getOperand(1).getExpr());
-    XtensaMCExpr::VariantKind Kind = XtensaMCExpr::VK_Xtensa_None;
+    XtensaMCExpr::Specifier Kind = XtensaMCExpr::VK_None;
     const MCExpr *NewOpExpr = XtensaMCExpr::create(OpExpr, Kind, getContext());
     Inst.getOperand(1).setExpr(NewOpExpr);
     break;
@@ -411,10 +412,9 @@ bool XtensaAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
         TmpInst.setOpcode(Xtensa::L32R);
         const MCExpr *Value = MCConstantExpr::create(ImmOp64, getContext());
         MCSymbol *Sym = getContext().createTempSymbol();
-        const MCExpr *Expr = MCSymbolRefExpr::create(
-            Sym, MCSymbolRefExpr::VK_None, getContext());
-        const MCExpr *OpExpr = XtensaMCExpr::create(
-            Expr, XtensaMCExpr::VK_Xtensa_None, getContext());
+        const MCExpr *Expr = MCSymbolRefExpr::create(Sym, getContext());
+        const MCExpr *OpExpr =
+            XtensaMCExpr::create(Expr, XtensaMCExpr::VK_None, getContext());
         TmpInst.addOperand(Inst.getOperand(0));
         MCOperand Op1 = MCOperand::createExpr(OpExpr);
         TmpInst.addOperand(Op1);
@@ -427,10 +427,9 @@ bool XtensaAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
       TmpInst.setOpcode(Xtensa::L32R);
       const MCExpr *Value = Inst.getOperand(1).getExpr();
       MCSymbol *Sym = getContext().createTempSymbol();
-      const MCExpr *Expr =
-          MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, getContext());
-      const MCExpr *OpExpr = XtensaMCExpr::create(
-          Expr, XtensaMCExpr::VK_Xtensa_None, getContext());
+      const MCExpr *Expr = MCSymbolRefExpr::create(Sym, getContext());
+      const MCExpr *OpExpr =
+          XtensaMCExpr::create(Expr, XtensaMCExpr::VK_None, getContext());
       TmpInst.addOperand(Inst.getOperand(0));
       MCOperand Op1 = MCOperand::createExpr(OpExpr);
       TmpInst.addOperand(Op1);
@@ -541,6 +540,9 @@ bool XtensaAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
                  "expected immediate in range [0, 32760], first 3 bits "
                  "should be zero");
+  case Match_Invalidimm7_22:
+    return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
+                 "expected immediate in range [7, 22]");
   }
 
   report_fatal_error("Unknown match type detected!");
@@ -628,7 +630,7 @@ ParseStatus XtensaAsmParser::parseRegister(OperandVector &Operands,
     return ParseStatus::NoMatch;
   }
 
-  if (!checkRegister(RegNo, getSTI().getFeatureBits()))
+  if (!Xtensa::checkRegister(RegNo, getSTI().getFeatureBits()))
     return ParseStatus::NoMatch;
 
   if (HadParens)
@@ -669,7 +671,7 @@ ParseStatus XtensaAsmParser::parseImmediate(OperandVector &Operands) {
       return ParseStatus::Failure;
 
     MCSymbol *Sym = getContext().getOrCreateSymbol(Identifier);
-    Res = MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, getContext());
+    Res = MCSymbolRefExpr::create(Sym, getContext());
     break;
   }
   case AsmToken::Percent:
@@ -732,7 +734,7 @@ bool XtensaAsmParser::ParseInstructionWithSR(ParseInstructionInfo &Info,
     if (RegNo == 0)
       RegNo = MatchRegisterAltName(RegName);
 
-    if (!checkRegister(RegNo, getSTI().getFeatureBits()))
+    if (!Xtensa::checkRegister(RegNo, getSTI().getFeatureBits()))
       return Error(NameLoc, "invalid register name");
 
     // Parse operand

@@ -103,6 +103,7 @@ public:
     std::unique_ptr<DWARFDebugMacro>
     parseMacroOrMacinfo(MacroSecType SectionType);
 
+    virtual Error doWorkThreadSafely(function_ref<Error()> Work) = 0;
   };
   friend class DWARFContextState;
 
@@ -386,10 +387,10 @@ public:
   ///            executable's debug info.
   DIEsForAddress getDIEsForAddress(uint64_t Address, bool CheckDWO = false);
 
-  DILineInfo getLineInfoForAddress(
+  std::optional<DILineInfo> getLineInfoForAddress(
       object::SectionedAddress Address,
       DILineInfoSpecifier Specifier = DILineInfoSpecifier()) override;
-  DILineInfo
+  std::optional<DILineInfo>
   getLineInfoForDataAddress(object::SectionedAddress Address) override;
   DILineInfoTable getLineInfoForAddressRange(
       object::SectionedAddress Address, uint64_t Size,
@@ -490,6 +491,10 @@ public:
   /// Sets whether CU/TU should be populated manually. TU Index populated
   /// manually only for DWARF5.
   void setParseCUTUIndexManually(bool PCUTU) { ParseCUTUIndexManually = PCUTU; }
+
+  Error doWorkThreadSafely(function_ref<Error()> Work) {
+    return State->doWorkThreadSafely(Work);
+  }
 
 private:
   void addLocalsForDie(DWARFCompileUnit *CU, DWARFDie Subprogram, DWARFDie Die,

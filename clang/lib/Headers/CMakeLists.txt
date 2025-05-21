@@ -86,6 +86,9 @@ set(hlsl_h
   )
 set(hlsl_subdir_files
   hlsl/hlsl_basic_types.h
+  hlsl/hlsl_alias_intrinsics.h
+  hlsl/hlsl_compat_overloads.h
+  hlsl/hlsl_intrinsic_helpers.h
   hlsl/hlsl_intrinsics.h
   hlsl/hlsl_detail.h
   )
@@ -120,10 +123,11 @@ set(ppc_htm_files
 
 set(riscv_files
   riscv_bitmanip.h
-        riscv_corev_alu.h
+  riscv_corev_alu.h
   riscv_crypto.h
   riscv_ntlh.h
   sifive_vector.h
+  andes_vector.h
   )
 
 set(systemz_files
@@ -395,12 +399,25 @@ set(riscv_generated_files)
 
 function(copy_header_to_output_dir src_dir file)
   set(src ${src_dir}/${file})
-  set(dst ${output_dir}/${file})
-  add_custom_command(OUTPUT ${dst}
-    DEPENDS ${src}
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${src} ${dst}
-    COMMENT "Copying clang's ${file}...")
-  list(APPEND out_files ${dst})
+  if("${CMAKE_CFG_INTDIR}" STREQUAL ".")
+    set(dst ${output_dir}/${file})
+    add_custom_command(OUTPUT ${dst}
+      DEPENDS ${src}
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different ${src} ${dst}
+      COMMENT "Copying clang's ${file}...")
+    list(APPEND out_files ${dst})
+  else()
+    foreach(BUILD_MODE ${CMAKE_CONFIGURATION_TYPES})
+      # Replace the special string with a per config directory.
+      string(REPLACE ${CMAKE_CFG_INTDIR} ${BUILD_MODE} per_conf_output_dir ${output_dir})
+      set(dst ${per_conf_output_dir}/${file})
+      add_custom_command(OUTPUT ${dst}
+        DEPENDS ${src}
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${src} ${dst}
+        COMMENT "Copying clang's ${file}...")
+      list(APPEND out_files ${dst})
+    endforeach()
+  endif()
   set(out_files ${out_files} PARENT_SCOPE)
 endfunction(copy_header_to_output_dir)
 

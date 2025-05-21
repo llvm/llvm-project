@@ -135,7 +135,7 @@ private:   // Intermediate data structures
   // register references are presumed dead across basic blocks.
   std::vector<MachineInstr *> PhysRegUse;
 
-  std::vector<SmallVector<unsigned, 4>> PHIVarInfo;
+  std::vector<SmallVector<Register, 4>> PHIVarInfo;
 
   // DistanceMap - Keep track the distance of a MI from the start of the
   // current basic block.

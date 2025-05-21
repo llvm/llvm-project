@@ -228,6 +228,7 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
         .Case("0xd14", "cortex-r82ae")
         .Case("0xd02", "cortex-a34")
         .Case("0xd04", "cortex-a35")
+        .Case("0xd8f", "cortex-a320")
         .Case("0xd03", "cortex-a53")
         .Case("0xd05", "cortex-a55")
         .Case("0xd46", "cortex-a510")
@@ -288,6 +289,8 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
   if (Implementer == "0x4e") { // NVIDIA Corporation
     return StringSwitch<const char *>(Part)
         .Case("0x004", "carmel")
+        .Case("0x10", "olympus")
+        .Case("0x010", "olympus")
         .Default("generic");
   }
 
@@ -428,7 +431,7 @@ StringRef getCPUNameFromS390Model(unsigned int Id, bool HaveVectorSupport) {
     case 9175:
     case 9176:
     default:
-      return HaveVectorSupport? "arch15" : "zEC12";
+      return HaveVectorSupport? "z17" : "zEC12";
   }
 }
 } // end anonymous namespace
@@ -493,6 +496,7 @@ StringRef sys::detail::getHostCPUNameForRISCV(StringRef ProcCpuinfoContent) {
   }
 
   return StringSwitch<const char *>(UArch)
+      .Case("eswin,eic770x", "sifive-p550")
       .Case("sifive,u74-mc", "sifive-u74")
       .Case("sifive,bullet0", "sifive-u74")
       .Default("");
@@ -2135,12 +2139,12 @@ const StringMap<bool> sys::getHostCPUFeatures() {
   Features["div32"] = cpucfg2 & (1U << 26);   // CPUCFG.2.DIV32
   Features["lam-bh"] = cpucfg2 & (1U << 27);  // CPUCFG.2.LAM_BH
   Features["lamcas"] = cpucfg2 & (1U << 28);  // CPUCFG.2.LAMCAS
+  Features["scq"] = cpucfg2 & (1U << 30);     // CPUCFG.2.SCQ
 
   Features["ld-seq-sa"] = cpucfg3 & (1U << 23); // CPUCFG.3.LD_SEQ_SA
 
   // TODO: Need to complete.
   // Features["llacq-screl"] = cpucfg2 & (1U << 29); // CPUCFG.2.LLACQ_SCREL
-  // Features["scq"] = cpucfg2 & (1U << 30);         // CPUCFG.2.SCQ
   return Features;
 }
 #elif defined(__linux__) && defined(__riscv)

@@ -172,6 +172,7 @@ def KernelProfilingInfoOperand : OperandCategory;
 def OpcodeOperand : OperandCategory;
 def CooperativeMatrixLayoutOperand : OperandCategory;
 def CooperativeMatrixOperandsOperand : OperandCategory;
+def MatrixMultiplyAccumulateOperandsOperand : OperandCategory;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define Extesions enum values and at the same time
@@ -309,6 +310,13 @@ defm SPV_EXT_arithmetic_fence : ExtensionOperand<112>;
 defm SPV_EXT_optnone : ExtensionOperand<113>;
 defm SPV_INTEL_joint_matrix : ExtensionOperand<114>;
 defm SPV_INTEL_float_controls2 : ExtensionOperand<115>;
+defm SPV_INTEL_bindless_images : ExtensionOperand<116>;
+defm SPV_INTEL_long_composites : ExtensionOperand<117>;
+defm SPV_INTEL_memory_access_aliasing : ExtensionOperand<118>;
+defm SPV_INTEL_fp_max_error : ExtensionOperand<119>;
+defm SPV_INTEL_ternary_bitwise_function : ExtensionOperand<120>;
+defm SPV_INTEL_subgroup_matrix_multiply_accumulate : ExtensionOperand<121>;
+defm SPV_INTEL_2d_block_io : ExtensionOperand<122>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define Capabilities enum values and at the same time
@@ -505,6 +513,15 @@ defm CooperativeMatrixBFloat16ComponentTypeINTEL : CapabilityOperand<6437, 0, 0,
 defm RoundToInfinityINTEL : CapabilityOperand<5582, 0, 0, [SPV_INTEL_float_controls2], []>;
 defm FloatingPointModeINTEL : CapabilityOperand<5583, 0, 0, [SPV_INTEL_float_controls2], []>;
 defm FunctionFloatControlINTEL : CapabilityOperand<5821, 0, 0, [SPV_INTEL_float_controls2], []>;
+defm LongCompositesINTEL : CapabilityOperand<6089, 0, 0, [SPV_INTEL_long_composites], []>;
+defm BindlessImagesINTEL : CapabilityOperand<6528, 0, 0, [SPV_INTEL_bindless_images], []>;
+defm MemoryAccessAliasingINTEL : CapabilityOperand<5910, 0, 0, [SPV_INTEL_memory_access_aliasing], []>;
+defm FPMaxErrorINTEL : CapabilityOperand<6169, 0, 0, [SPV_INTEL_fp_max_error], []>;
+defm TernaryBitwiseFunctionINTEL : CapabilityOperand<6241, 0, 0, [SPV_INTEL_ternary_bitwise_function], []>;
+defm SubgroupMatrixMultiplyAccumulateINTEL : CapabilityOperand<6236, 0, 0, [SPV_INTEL_subgroup_matrix_multiply_accumulate], []>;
+defm Subgroup2DBlockIOINTEL : CapabilityOperand<6228, 0, 0, [SPV_INTEL_2d_block_io], []>;
+defm Subgroup2DBlockTransformINTEL : CapabilityOperand<6229, 0, 0, [SPV_INTEL_2d_block_io], [Subgroup2DBlockIOINTEL]>;
+defm Subgroup2DBlockTransposeINTEL : CapabilityOperand<6230, 0, 0, [SPV_INTEL_2d_block_io], [Subgroup2DBlockIOINTEL]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define SourceLanguage enum values and at the same time
@@ -1253,6 +1270,9 @@ defm ImplementInRegisterMapINTEL : DecorationOperand<6191, 0, 0, [], [GlobalVari
 defm FunctionRoundingModeINTEL : DecorationOperand<5822, 0, 0, [], [FunctionFloatControlINTEL]>;
 defm FunctionDenormModeINTEL : DecorationOperand<5823, 0, 0, [], [FunctionFloatControlINTEL]>;
 defm FunctionFloatingPointModeINTEL : DecorationOperand<6080, 0, 0, [], [FunctionFloatControlINTEL]>;
+defm AliasScopeINTEL : DecorationOperand<5914, 0, 0, [], [MemoryAccessAliasingINTEL]>;
+defm NoAliasINTEL : DecorationOperand<5915, 0, 0, [], [MemoryAccessAliasingINTEL]>;
+defm FPMaxErrorDecorationINTEL : DecorationOperand<6170, 0, 0, [], [FPMaxErrorINTEL]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define BuiltIn enum values and at the same time
@@ -1525,6 +1545,8 @@ defm Nontemporal : MemoryOperandOperand<0x4, 0, 0, [], []>;
 defm MakePointerAvailableKHR : MemoryOperandOperand<0x8, 0, 0, [], [VulkanMemoryModelKHR]>;
 defm MakePointerVisibleKHR : MemoryOperandOperand<0x10, 0, 0, [], [VulkanMemoryModelKHR]>;
 defm NonPrivatePointerKHR : MemoryOperandOperand<0x20, 0, 0, [], [VulkanMemoryModelKHR]>;
+defm AliasScopeINTELMask : MemoryOperandOperand<0x10000, 0, 0, [], [MemoryAccessAliasingINTEL]>;
+defm NoAliasINTELMask : MemoryOperandOperand<0x20000, 0, 0, [], [MemoryAccessAliasingINTEL]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define Scope enum values and at the same time
@@ -1666,6 +1688,7 @@ defm InBoundsAccessChain : OpcodeOperand<66>;
 defm InBoundsPtrAccessChain : OpcodeOperand<70>;
 defm PtrCastToGeneric : OpcodeOperand<121>;
 defm GenericCastToPtr : OpcodeOperand<122>;
+defm GenericCastToPtrExplicit : OpcodeOperand<123>;
 defm Bitcast : OpcodeOperand<124>;
 defm ConvertPtrToU : OpcodeOperand<117>;
 defm ConvertUToPtr : OpcodeOperand<120>;
@@ -1728,3 +1751,40 @@ defm MatrixAAndBTF32ComponentsINTEL : CooperativeMatrixOperandsOperand<0x20, [SP
 defm MatrixAAndBBFloat16ComponentsINTEL : CooperativeMatrixOperandsOperand<0x40, [SPV_INTEL_joint_matrix], [CooperativeMatrixBFloat16ComponentTypeINTEL]>;
 defm MatrixCBFloat16ComponentsINTEL : CooperativeMatrixOperandsOperand<0x80, [SPV_INTEL_joint_matrix], [CooperativeMatrixBFloat16ComponentTypeINTEL]>;
 defm MatrixResultBFloat16ComponentsINTEL : CooperativeMatrixOperandsOperand<0x100, [SPV_INTEL_joint_matrix], [CooperativeMatrixBFloat16ComponentTypeINTEL]>;
+
+//===----------------------------------------------------------------------===//
+// Multiclass used to define Matrix Multiply Accumulate Operands enum values and at the same time
+// SymbolicOperand entries with string mnemonics and capabilities.
+//===----------------------------------------------------------------------===//
+def MatrixMultiplyAccumulateOperands : GenericEnum, Operand<i32> {
+  let FilterClass = "MatrixMultiplyAccumulateOperands";
+  let NameField = "Name";
+  let ValueField = "Value";
+  let PrintMethod = !strconcat("printSymbolicOperand<OperandCategory::", FilterClass, "Operand>");
+}
+
+class MatrixMultiplyAccumulateOperands<string name, bits<32> value> {
+  string Name = name;
+  bits<32> Value = value;
+}
+
+multiclass  MatrixMultiplyAccumulateOperandsOperand<bits<32> value, list<Extension> reqExtensions> {
+  def : MatrixMultiplyAccumulateOperands<NAME, value>;
+  defm : SymbolicOperandWithRequirements<MatrixMultiplyAccumulateOperandsOperand, value, NAME, 0, 0, reqExtensions, []>;
+}
+
+defm None :  MatrixMultiplyAccumulateOperandsOperand<0x0, [SPV_INTEL_subgroup_matrix_multiply_accumulate]>;
+defm MatrixASignedComponentsINTEL :  MatrixMultiplyAccumulateOperandsOperand<0x1, [SPV_INTEL_subgroup_matrix_multiply_accumulate]>;
+defm MatrixBSignedComponentsINTEL :  MatrixMultiplyAccumulateOperandsOperand<0x2, [SPV_INTEL_subgroup_matrix_multiply_accumulate]>;
+defm MatrixCBFloat16INTEL :  MatrixMultiplyAccumulateOperandsOperand<0x4, [SPV_INTEL_subgroup_matrix_multiply_accumulate]>;
+defm MatrixResultBFloat16INTEL :  MatrixMultiplyAccumulateOperandsOperand<0x8, [SPV_INTEL_subgroup_matrix_multiply_accumulate]>;
+defm MatrixAPackedInt8INTEL :  MatrixMultiplyAccumulateOperandsOperand<0x10, [SPV_INTEL_subgroup_matrix_multiply_accumulate]>;
+defm MatrixBPackedInt8INTEL :  MatrixMultiplyAccumulateOperandsOperand<0x20, [SPV_INTEL_subgroup_matrix_multiply_accumulate]>;
+defm MatrixAPackedInt4INTEL :  MatrixMultiplyAccumulateOperandsOperand<0x40, [SPV_INTEL_subgroup_matrix_multiply_accumulate]>;
+defm MatrixBPackedInt4INTEL :  MatrixMultiplyAccumulateOperandsOperand<0x80, [SPV_INTEL_subgroup_matrix_multiply_accumulate]>;
+defm MatrixATF32INTEL :  MatrixMultiplyAccumulateOperandsOperand<0x100, [SPV_INTEL_subgroup_matrix_multiply_accumulate]>;
+defm MatrixBTF32INTEL :  MatrixMultiplyAccumulateOperandsOperand<0x200, [SPV_INTEL_subgroup_matrix_multiply_accumulate]>;
+defm MatrixAPackedFloat16INTEL :  MatrixMultiplyAccumulateOperandsOperand<0x400, [SPV_INTEL_subgroup_matrix_multiply_accumulate]>;
+defm MatrixBPackedFloat16INTEL :  MatrixMultiplyAccumulateOperandsOperand<0x800, [SPV_INTEL_subgroup_matrix_multiply_accumulate]>;
+defm MatrixAPackedBFloat16INTEL :  MatrixMultiplyAccumulateOperandsOperand<0x1000, [SPV_INTEL_subgroup_matrix_multiply_accumulate]>;
+defm MatrixBPackedBFloat16INTEL :  MatrixMultiplyAccumulateOperandsOperand<0x2000, [SPV_INTEL_subgroup_matrix_multiply_accumulate]>;

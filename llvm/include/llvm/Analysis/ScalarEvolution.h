@@ -1044,6 +1044,13 @@ public:
   bool isKnownToBeAPowerOfTwo(const SCEV *S, bool OrZero = false,
                               bool OrNegative = false);
 
+  /// Check that \p S is a multiple of \p M. When \p S is an AddRecExpr, \p S is
+  /// a multiple of \p M if \p S starts with a multiple of \p M and at every
+  /// iteration step \p S only adds multiples of \p M. \p Assumptions records
+  /// the runtime predicates under which \p S is a multiple of \p M.
+  bool isKnownMultipleOf(const SCEV *S, uint64_t M,
+                         SmallVectorImpl<const SCEVPredicate *> &Assumptions);
+
   /// Splits SCEV expression \p S into two SCEVs. One of them is obtained from
   /// \p S by substitution of all AddRec sub-expression related to loop \p L
   /// with initial value of that SCEV. The second is obtained from \p S by
@@ -1188,21 +1195,19 @@ public:
                             ICmpInst::Predicate Pred);
 
   struct LoopInvariantPredicate {
-    ICmpInst::Predicate Pred;
+    CmpPredicate Pred;
     const SCEV *LHS;
     const SCEV *RHS;
 
-    LoopInvariantPredicate(ICmpInst::Predicate Pred, const SCEV *LHS,
-                           const SCEV *RHS)
+    LoopInvariantPredicate(CmpPredicate Pred, const SCEV *LHS, const SCEV *RHS)
         : Pred(Pred), LHS(LHS), RHS(RHS) {}
   };
   /// If the result of the predicate LHS `Pred` RHS is loop invariant with
   /// respect to L, return a LoopInvariantPredicate with LHS and RHS being
   /// invariants, available at L's entry. Otherwise, return std::nullopt.
   std::optional<LoopInvariantPredicate>
-  getLoopInvariantPredicate(ICmpInst::Predicate Pred, const SCEV *LHS,
-                            const SCEV *RHS, const Loop *L,
-                            const Instruction *CtxI = nullptr);
+  getLoopInvariantPredicate(CmpPredicate Pred, const SCEV *LHS, const SCEV *RHS,
+                            const Loop *L, const Instruction *CtxI = nullptr);
 
   /// If the result of the predicate LHS `Pred` RHS is loop invariant with
   /// respect to L at given Context during at least first MaxIter iterations,

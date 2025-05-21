@@ -1,5 +1,7 @@
 import os
 import time
+from typing import Optional
+import uuid
 
 import dap_server
 from lldbsuite.test.lldbtest import *
@@ -10,25 +12,41 @@ import lldbgdbserverutils
 class DAPTestCaseBase(TestBase):
     # set timeout based on whether ASAN was enabled or not. Increase
     # timeout by a factor of 10 if ASAN is enabled.
-    timeoutval = 10 * (10 if ('ASAN_OPTIONS' in os.environ) else 1)
+    DEFAULT_TIMEOUT = 10 * (10 if ("ASAN_OPTIONS" in os.environ) else 1)
     NO_DEBUG_INFO_TESTCASE = True
 
-    def create_debug_adaptor(self, lldbDAPEnv=None):
-        """Create the Visual Studio Code debug adaptor"""
+    def create_debug_adapter(
+        self,
+        lldbDAPEnv: Optional[dict[str, str]] = None,
+        connection: Optional[str] = None,
+    ):
+        """Create the Visual Studio Code debug adapter"""
         self.assertTrue(
             is_exe(self.lldbDAPExec), "lldb-dap must exist and be executable"
         )
         log_file_path = self.getBuildArtifact("dap.txt")
-        self.dap_server = dap_server.DebugAdaptorServer(
+        self.dap_server = dap_server.DebugAdapterServer(
             executable=self.lldbDAPExec,
+            connection=connection,
             init_commands=self.setUpCommands(),
             log_file=log_file_path,
             env=lldbDAPEnv,
         )
 
-    def build_and_create_debug_adaptor(self, lldbDAPEnv=None):
-        self.build()
-        self.create_debug_adaptor(lldbDAPEnv)
+    def build_and_create_debug_adapter(
+        self,
+        lldbDAPEnv: Optional[dict[str, str]] = None,
+        dictionary: Optional[dict] = None,
+    ):
+        self.build(dictionary=dictionary)
+        self.create_debug_adapter(lldbDAPEnv)
+
+    def build_and_create_debug_adapter_for_attach(self):
+        """Variant of build_and_create_debug_adapter that builds a uniquely
+        named binary."""
+        unique_name = str(uuid.uuid4())
+        self.build_and_create_debug_adapter(dictionary={"EXE": unique_name})
+        return self.getBuildArtifact(unique_name)
 
     def set_source_breakpoints(self, source_path, lines, data=None):
         """Sets source breakpoints and returns an array of strings containing
@@ -38,7 +56,7 @@ class DAPTestCaseBase(TestBase):
         It contains optional location/hitCondition/logMessage parameters.
         """
         response = self.dap_server.request_setBreakpoints(source_path, lines, data)
-        if response is None:
+        if response is None or not response["success"]:
             return []
         breakpoints = response["body"]["breakpoints"]
         breakpoint_ids = []
@@ -69,13 +87,13 @@ class DAPTestCaseBase(TestBase):
             time.sleep(0.5)
         return False
 
-    def verify_breakpoint_hit(self, breakpoint_ids):
+    def verify_breakpoint_hit(self, breakpoint_ids, timeout=DEFAULT_TIMEOUT):
         """Wait for the process we are debugging to stop, and verify we hit
         any breakpoint location in the "breakpoint_ids" array.
         "breakpoint_ids" should be a list of breakpoint ID strings
         (["1", "2"]). The return value from self.set_source_breakpoints()
         or self.set_function_breakpoints() can be passed to this function"""
-        stopped_events = self.dap_server.wait_for_stopped()
+        stopped_events = self.dap_server.wait_for_stopped(timeout)
         for stopped_event in stopped_events:
             if "body" in stopped_event:
                 body = stopped_event["body"]
@@ -98,19 +116,18 @@ class DAPTestCaseBase(TestBase):
                 # location.
                 description = body["description"]
                 for breakpoint_id in breakpoint_ids:
-                    match_desc = "breakpoint %s." % (breakpoint_id)
+                    match_desc = f"breakpoint {breakpoint_id}."
                     if match_desc in description:
                         return
-        self.assertTrue(False, "breakpoint not hit")
+        self.assertTrue(False, f"breakpoint not hit, stopped_events={stopped_events}")
 
-    def verify_stop_exception_info(self, expected_description, timeout=timeoutval):
+    def verify_stop_exception_info(self, expected_description, timeout=DEFAULT_TIMEOUT):
         """Wait for the process we are debugging to stop, and verify the stop
         reason is 'exception' and that the description matches
         'expected_description'
         """
-        stopped_events = self.dap_server.wait_for_stopped(timeout=timeout)
+        stopped_events = self.dap_server.wait_for_stopped(timeout)
         for stopped_event in stopped_events:
-            print("stopped_event", stopped_event)
             if "body" in stopped_event:
                 body = stopped_event["body"]
                 if "reason" not in body:
@@ -159,10 +176,14 @@ class DAPTestCaseBase(TestBase):
         return value
 
     def get_stackFrames_and_totalFramesCount(
-        self, threadId=None, startFrame=None, levels=None, dump=False
+        self, threadId=None, startFrame=None, levels=None, format=None, dump=False
     ):
         response = self.dap_server.request_stackTrace(
-            threadId=threadId, startFrame=startFrame, levels=levels, dump=dump
+            threadId=threadId,
+            startFrame=startFrame,
+            levels=levels,
+            format=format,
+            dump=dump,
         )
         if response:
             stackFrames = self.get_dict_value(response, ["body", "stackFrames"])
@@ -175,9 +196,15 @@ class DAPTestCaseBase(TestBase):
             return (stackFrames, totalFrames)
         return (None, 0)
 
-    def get_stackFrames(self, threadId=None, startFrame=None, levels=None, dump=False):
+    def get_stackFrames(
+        self, threadId=None, startFrame=None, levels=None, format=None, dump=False
+    ):
         (stackFrames, totalFrames) = self.get_stackFrames_and_totalFramesCount(
-            threadId=threadId, startFrame=startFrame, levels=levels, dump=dump
+            threadId=threadId,
+            startFrame=startFrame,
+            levels=levels,
+            format=format,
+            dump=dump,
         )
         return stackFrames
 
@@ -205,14 +232,22 @@ class DAPTestCaseBase(TestBase):
     def get_console(self, timeout=0.0):
         return self.dap_server.get_output("console", timeout=timeout)
 
+    def get_important(self, timeout=0.0):
+        return self.dap_server.get_output("important", timeout=timeout)
+
+    def collect_stdout(self, timeout_secs, pattern=None):
+        return self.dap_server.collect_output(
+            "stdout", timeout_secs=timeout_secs, pattern=pattern
+        )
+
     def collect_console(self, timeout_secs, pattern=None):
         return self.dap_server.collect_output(
             "console", timeout_secs=timeout_secs, pattern=pattern
         )
 
-    def collect_stdout(self, timeout_secs, pattern=None):
+    def collect_important(self, timeout_secs, pattern=None):
         return self.dap_server.collect_output(
-            "stdout", timeout_secs=timeout_secs, pattern=pattern
+            "important", timeout_secs=timeout_secs, pattern=pattern
         )
 
     def get_local_as_int(self, name, threadId=None):
@@ -236,45 +271,64 @@ class DAPTestCaseBase(TestBase):
         return self.dap_server.request_setVariable(2, name, str(value), id=id)
 
     def stepIn(
-        self, threadId=None, targetId=None, waitForStop=True, granularity="statement"
+        self,
+        threadId=None,
+        targetId=None,
+        waitForStop=True,
+        granularity="statement",
+        timeout=DEFAULT_TIMEOUT,
     ):
-        self.dap_server.request_stepIn(
+        response = self.dap_server.request_stepIn(
             threadId=threadId, targetId=targetId, granularity=granularity
         )
+        self.assertTrue(response["success"])
         if waitForStop:
-            return self.dap_server.wait_for_stopped()
+            return self.dap_server.wait_for_stopped(timeout)
         return None
 
-    def stepOver(self, threadId=None, waitForStop=True, granularity="statement"):
+    def stepOver(
+        self,
+        threadId=None,
+        waitForStop=True,
+        granularity="statement",
+        timeout=DEFAULT_TIMEOUT,
+    ):
         self.dap_server.request_next(threadId=threadId, granularity=granularity)
         if waitForStop:
-            return self.dap_server.wait_for_stopped()
+            return self.dap_server.wait_for_stopped(timeout)
         return None
 
-    def stepOut(self, threadId=None, waitForStop=True):
+    def stepOut(self, threadId=None, waitForStop=True, timeout=DEFAULT_TIMEOUT):
         self.dap_server.request_stepOut(threadId=threadId)
         if waitForStop:
-            return self.dap_server.wait_for_stopped()
+            return self.dap_server.wait_for_stopped(timeout)
         return None
 
-    def continue_to_next_stop(self):
-        self.dap_server.request_continue()
-        return self.dap_server.wait_for_stopped()
+    def do_continue(self):  # `continue` is a keyword.
+        resp = self.dap_server.request_continue()
+        self.assertTrue(resp["success"], f"continue request failed: {resp}")
 
-    def continue_to_breakpoints(self, breakpoint_ids):
-        self.dap_server.request_continue()
-        self.verify_breakpoint_hit(breakpoint_ids)
+    def continue_to_next_stop(self, timeout=DEFAULT_TIMEOUT):
+        self.do_continue()
+        return self.dap_server.wait_for_stopped(timeout)
 
-    def continue_to_exception_breakpoint(self, filter_label):
-        self.dap_server.request_continue()
+    def continue_to_breakpoint(self, breakpoint_id: str, timeout=DEFAULT_TIMEOUT):
+        self.continue_to_breakpoints((breakpoint_id), timeout)
+
+    def continue_to_breakpoints(self, breakpoint_ids, timeout=DEFAULT_TIMEOUT):
+        self.do_continue()
+        self.verify_breakpoint_hit(breakpoint_ids, timeout)
+
+    def continue_to_exception_breakpoint(self, filter_label, timeout=DEFAULT_TIMEOUT):
+        self.do_continue()
         self.assertTrue(
-            self.verify_stop_exception_info(filter_label),
+            self.verify_stop_exception_info(filter_label, timeout),
             'verify we got "%s"' % (filter_label),
         )
 
-    def continue_to_exit(self, exitCode=0):
-        self.dap_server.request_continue()
-        stopped_events = self.dap_server.wait_for_stopped()
+    def continue_to_exit(self, exitCode=0, timeout=DEFAULT_TIMEOUT):
+        self.do_continue()
+        stopped_events = self.dap_server.wait_for_stopped(timeout)
         self.assertEqual(
             len(stopped_events), 1, "stopped_events = {}".format(stopped_events)
         )
@@ -295,37 +349,28 @@ class DAPTestCaseBase(TestBase):
         memoryReference = stackFrames[0]["instructionPointerReference"]
         self.assertIsNotNone(memoryReference)
 
-        if memoryReference not in self.dap_server.disassembled_instructions:
-            self.dap_server.request_disassemble(memoryReference=memoryReference)
+        instructions = self.dap_server.request_disassemble(
+            memoryReference=memoryReference
+        )
+        disassembled_instructions = {}
+        for inst in instructions:
+            disassembled_instructions[inst["address"]] = inst
 
-        return self.dap_server.disassembled_instructions[memoryReference]
+        return disassembled_instructions, disassembled_instructions[memoryReference]
 
     def attach(
         self,
-        program=None,
-        pid=None,
-        waitFor=None,
-        trace=None,
-        initCommands=None,
-        preRunCommands=None,
-        stopCommands=None,
-        exitCommands=None,
-        attachCommands=None,
-        coreFile=None,
+        *,
         disconnectAutomatically=True,
-        terminateCommands=None,
-        postRunCommands=None,
-        sourceMap=None,
         sourceInitFile=False,
         expectFailure=False,
-        gdbRemotePort=None,
-        gdbRemoteHostname=None,
+        **kwargs,
     ):
-        """Build the default Makefile target, create the DAP debug adaptor,
+        """Build the default Makefile target, create the DAP debug adapter,
         and attach to the process.
         """
 
-        # Make sure we disconnect and terminate the DAP debug adaptor even
+        # Make sure we disconnect and terminate the DAP debug adapter even
         # if we throw an exception during the test case.
         def cleanup():
             if disconnectAutomatically:
@@ -336,23 +381,7 @@ class DAPTestCaseBase(TestBase):
         self.addTearDownHook(cleanup)
         # Initialize and launch the program
         self.dap_server.request_initialize(sourceInitFile)
-        response = self.dap_server.request_attach(
-            program=program,
-            pid=pid,
-            waitFor=waitFor,
-            trace=trace,
-            initCommands=initCommands,
-            preRunCommands=preRunCommands,
-            stopCommands=stopCommands,
-            exitCommands=exitCommands,
-            attachCommands=attachCommands,
-            terminateCommands=terminateCommands,
-            coreFile=coreFile,
-            postRunCommands=postRunCommands,
-            sourceMap=sourceMap,
-            gdbRemotePort=gdbRemotePort,
-            gdbRemoteHostname=gdbRemoteHostname,
-        )
+        response = self.dap_server.request_attach(**kwargs)
         if expectFailure:
             return response
         if not (response and response["success"]):
@@ -363,34 +392,11 @@ class DAPTestCaseBase(TestBase):
     def launch(
         self,
         program=None,
-        args=None,
-        cwd=None,
-        env=None,
-        stopOnEntry=False,
-        disableASLR=False,
-        disableSTDIO=False,
-        shellExpandArguments=False,
-        trace=False,
-        initCommands=None,
-        preRunCommands=None,
-        stopCommands=None,
-        exitCommands=None,
-        terminateCommands=None,
-        sourcePath=None,
-        debuggerRoot=None,
+        *,
         sourceInitFile=False,
-        launchCommands=None,
-        sourceMap=None,
         disconnectAutomatically=True,
-        runInTerminal=False,
         expectFailure=False,
-        postRunCommands=None,
-        enableAutoVariableSummaries=False,
-        displayExtendedBacktrace=False,
-        enableSyntheticChildDebugging=False,
-        commandEscapePrefix=None,
-        customFrameFormat=None,
-        customThreadFormat=None,
+        **kwargs,
     ):
         """Sending launch request to dap"""
 
@@ -406,112 +412,29 @@ class DAPTestCaseBase(TestBase):
 
         # Initialize and launch the program
         self.dap_server.request_initialize(sourceInitFile)
-        response = self.dap_server.request_launch(
-            program,
-            args=args,
-            cwd=cwd,
-            env=env,
-            stopOnEntry=stopOnEntry,
-            disableASLR=disableASLR,
-            disableSTDIO=disableSTDIO,
-            shellExpandArguments=shellExpandArguments,
-            trace=trace,
-            initCommands=initCommands,
-            preRunCommands=preRunCommands,
-            stopCommands=stopCommands,
-            exitCommands=exitCommands,
-            terminateCommands=terminateCommands,
-            sourcePath=sourcePath,
-            debuggerRoot=debuggerRoot,
-            launchCommands=launchCommands,
-            sourceMap=sourceMap,
-            runInTerminal=runInTerminal,
-            postRunCommands=postRunCommands,
-            enableAutoVariableSummaries=enableAutoVariableSummaries,
-            displayExtendedBacktrace=displayExtendedBacktrace,
-            enableSyntheticChildDebugging=enableSyntheticChildDebugging,
-            commandEscapePrefix=commandEscapePrefix,
-            customFrameFormat=customFrameFormat,
-            customThreadFormat=customThreadFormat,
-        )
-
+        response = self.dap_server.request_launch(program, **kwargs)
         if expectFailure:
             return response
-
         if not (response and response["success"]):
             self.assertTrue(
-                response["success"], "launch failed (%s)" % (response["message"])
+                response["success"],
+                "launch failed (%s)" % (response["body"]["error"]["format"]),
             )
-        return response
 
     def build_and_launch(
         self,
         program,
-        args=None,
-        cwd=None,
-        env=None,
-        stopOnEntry=False,
-        disableASLR=False,
-        disableSTDIO=False,
-        shellExpandArguments=False,
-        trace=False,
-        initCommands=None,
-        preRunCommands=None,
-        stopCommands=None,
-        exitCommands=None,
-        terminateCommands=None,
-        sourcePath=None,
-        debuggerRoot=None,
-        sourceInitFile=False,
-        runInTerminal=False,
-        disconnectAutomatically=True,
-        postRunCommands=None,
-        lldbDAPEnv=None,
-        enableAutoVariableSummaries=False,
-        displayExtendedBacktrace=False,
-        enableSyntheticChildDebugging=False,
-        commandEscapePrefix=None,
-        customFrameFormat=None,
-        customThreadFormat=None,
-        launchCommands=None,
-        expectFailure=False,
+        *,
+        lldbDAPEnv: Optional[dict[str, str]] = None,
+        **kwargs,
     ):
-        """Build the default Makefile target, create the DAP debug adaptor,
+        """Build the default Makefile target, create the DAP debug adapter,
         and launch the process.
         """
-        self.build_and_create_debug_adaptor(lldbDAPEnv)
+        self.build_and_create_debug_adapter(lldbDAPEnv)
         self.assertTrue(os.path.exists(program), "executable must exist")
 
-        return self.launch(
-            program,
-            args,
-            cwd,
-            env,
-            stopOnEntry,
-            disableASLR,
-            disableSTDIO,
-            shellExpandArguments,
-            trace,
-            initCommands,
-            preRunCommands,
-            stopCommands,
-            exitCommands,
-            terminateCommands,
-            sourcePath,
-            debuggerRoot,
-            sourceInitFile,
-            runInTerminal=runInTerminal,
-            disconnectAutomatically=disconnectAutomatically,
-            postRunCommands=postRunCommands,
-            enableAutoVariableSummaries=enableAutoVariableSummaries,
-            enableSyntheticChildDebugging=enableSyntheticChildDebugging,
-            displayExtendedBacktrace=displayExtendedBacktrace,
-            commandEscapePrefix=commandEscapePrefix,
-            customFrameFormat=customFrameFormat,
-            customThreadFormat=customThreadFormat,
-            launchCommands=launchCommands,
-            expectFailure=expectFailure,
-        )
+        return self.launch(program, **kwargs)
 
     def getBuiltinDebugServerTool(self):
         # Tries to find simulation/lldb-server/gdbserver tool path.

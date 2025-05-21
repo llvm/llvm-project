@@ -3,8 +3,8 @@
 // This file tests whether the memref type having non-trivial map layouts
 // are normalized to trivial (identity) layouts.
 
-// CHECK-DAG: #[[$REDUCE_MAP1:.*]] = affine_map<(d0, d1) -> ((d0 mod 2) * 2 + d1 mod 2 + (d0 floordiv 2) * 4 + (d1 floordiv 2) * 8)>
-// CHECK-DAG: #[[$REDUCE_MAP2:.*]] = affine_map<(d0, d1) -> (d0 mod 2 + (d1 mod 2) * 2 + (d0 floordiv 2) * 8 + (d1 floordiv 2) * 4)>
+// CHECK-DAG: #[[$REDUCE_MAP1:.*]] = affine_map<(d0, d1) -> (d0 * 2 + d1 + (d1 floordiv 2) * 6)>
+// CHECK-DAG: #[[$REDUCE_MAP2:.*]] = affine_map<(d0, d1) -> (d0 + d1 * 2 + (d0 floordiv 2) * 6)>
 // CHECK-DAG: #[[$REDUCE_MAP3:.*]] = affine_map<(d0, d1) -> (d0 * 4 + d1)>
 
 // CHECK-LABEL: func @permute()
@@ -30,6 +30,20 @@ func.func @permute() {
 // CHECK-NEXT: }
 // CHECK-NEXT: memref.dealloc [[MEM]]
 // CHECK-NEXT: return
+
+// CHECK-LABEL: func @alloca
+func.func @alloca(%idx : index) {
+  // CHECK-NEXT: memref.alloca() : memref<65xf32>
+  %A = memref.alloca() : memref<64xf32, affine_map<(d0) -> (d0 + 1)>>
+  // CHECK-NEXT: affine.load %{{.*}}[symbol(%arg0) + 1] : memref<65xf32>
+  affine.load %A[%idx] : memref<64xf32, affine_map<(d0) -> (d0 + 1)>>
+  affine.for %i = 0 to 64 {
+    %1 = affine.load %A[%i] : memref<64xf32, affine_map<(d0) -> (d0 + 1)>>
+    "prevent.dce"(%1) : (f32) -> ()
+    // CHECK: %{{.*}} = affine.load %{{.*}}[%arg{{.*}} + 1] : memref<65xf32>
+  }
+  return
+}
 
 // CHECK-LABEL: func @shift
 func.func @shift(%idx : index) {
@@ -360,7 +374,7 @@ func.func @neg_map() -> memref<2x3xf32, #neg> {
 // CHECK-LABEL: func @memref_with_strided_offset
 func.func @memref_with_strided_offset(%arg0: tensor<128x512xf32>, %arg1: index, %arg2: index) -> tensor<16x512xf32> {
   %c0 = arith.constant 0 : index
-  %0 = bufferization.to_memref %arg0 : tensor<128x512xf32> to memref<128x512xf32, strided<[?, ?], offset: ?>>
+  %0 = bufferization.to_buffer %arg0 : tensor<128x512xf32> to memref<128x512xf32, strided<[?, ?], offset: ?>>
   %subview = memref.subview %0[%arg2, 0] [%arg1, 512] [1, 1] : memref<128x512xf32, strided<[?, ?], offset: ?>> to memref<?x512xf32, strided<[?, ?], offset: ?>>
   // CHECK: %{{.*}} = memref.cast %{{.*}} : memref<?x512xf32, strided<[?, ?], offset: ?>> to memref<16x512xf32, strided<[?, ?], offset: ?>>
   %cast = memref.cast %subview : memref<?x512xf32, strided<[?, ?], offset: ?>> to memref<16x512xf32, strided<[?, ?], offset: ?>>

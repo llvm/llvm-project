@@ -12,7 +12,7 @@ define hidden fastcc void @callee_has_fp() #1 {
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 1
 ; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], s33
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    s_add_i32 s32, s32, 0xfffffe00
+; CHECK-NEXT:    s_mov_b32 s32, s33
 ; CHECK-NEXT:    s_mov_b32 s33, s4
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %alloca = alloca i32, addrspace(5)
@@ -50,10 +50,10 @@ define internal fastcc void @csr_vgpr_spill_fp_callee() #0 {
 ; CHECK-NEXT:    v_readlane_b32 s31, v1, 1
 ; CHECK-NEXT:    v_readlane_b32 s30, v1, 0
 ; CHECK-NEXT:    buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload
+; CHECK-NEXT:    s_mov_b32 s32, s33
 ; CHECK-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; CHECK-NEXT:    buffer_load_dword v1, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_mov_b64 exec, s[4:5]
-; CHECK-NEXT:    s_add_i32 s32, s32, 0xfffffc00
 ; CHECK-NEXT:    s_mov_b32 s33, s18
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -192,10 +192,10 @@ define hidden i32 @caller_save_vgpr_spill_fp_tail_call() #0 {
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; CHECK-NEXT:    v_readlane_b32 s31, v1, 1
 ; CHECK-NEXT:    v_readlane_b32 s30, v1, 0
+; CHECK-NEXT:    s_mov_b32 s32, s33
 ; CHECK-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; CHECK-NEXT:    buffer_load_dword v1, off, s[0:3], s33 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_mov_b64 exec, s[4:5]
-; CHECK-NEXT:    s_add_i32 s32, s32, 0xfffffc00
 ; CHECK-NEXT:    s_mov_b32 s33, s18
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -226,10 +226,10 @@ define hidden i32 @caller_save_vgpr_spill_fp() #0 {
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; CHECK-NEXT:    v_readlane_b32 s31, v2, 1
 ; CHECK-NEXT:    v_readlane_b32 s30, v2, 0
+; CHECK-NEXT:    s_mov_b32 s32, s33
 ; CHECK-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; CHECK-NEXT:    buffer_load_dword v2, off, s[0:3], s33 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_mov_b64 exec, s[4:5]
-; CHECK-NEXT:    s_add_i32 s32, s32, 0xfffffc00
 ; CHECK-NEXT:    s_mov_b32 s33, s19
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -274,5 +274,3 @@ entry:
 attributes #0 = { "frame-pointer"="none" noinline }
 attributes #1 = { "frame-pointer"="all" noinline }
 
-!llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

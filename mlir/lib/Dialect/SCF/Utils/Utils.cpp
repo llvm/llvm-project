@@ -374,7 +374,7 @@ static void generateUnrolledLoop(
 }
 
 /// Unrolls 'forOp' by 'unrollFactor', returns the unrolled main loop and the
-/// eplilog loop, if the loop is unrolled.
+/// epilogue loop, if the loop is unrolled.
 FailureOr<UnrolledLoopInfo> mlir::loopUnrollByFactor(
     scf::ForOp forOp, uint64_t unrollFactor,
     function_ref<void(unsigned, Operation *, OpBuilder)> annotateFn) {
@@ -496,6 +496,20 @@ FailureOr<UnrolledLoopInfo> mlir::loopUnrollByFactor(
   if (forOp.promoteIfSingleIteration(rewriter).failed())
     resultLoops.mainLoopOp = forOp;
   return resultLoops;
+}
+
+/// Unrolls this loop completely.
+LogicalResult mlir::loopUnrollFull(scf::ForOp forOp) {
+  IRRewriter rewriter(forOp.getContext());
+  std::optional<uint64_t> mayBeConstantTripCount = getConstantTripCount(forOp);
+  if (!mayBeConstantTripCount.has_value())
+    return failure();
+  uint64_t tripCount = *mayBeConstantTripCount;
+  if (tripCount == 0)
+    return success();
+  if (tripCount == 1)
+    return forOp.promoteIfSingleIteration(rewriter);
+  return loopUnrollByFactor(forOp, tripCount);
 }
 
 /// Check if bounds of all inner loops are defined outside of `forOp`
@@ -754,7 +768,7 @@ static void denormalizeInductionVariableForIndexType(RewriterBase &rewriter,
   // If an `affine.apply` operation is generated for denormalization, the use
   // of `origLb` in those ops must not be replaced. These arent not generated
   // when `origLb == 0` and `origStep == 1`.
-  if (!isConstantIntValue(origLb, 0) || !isConstantIntValue(origStep, 1)) {
+  if (!isZeroInteger(origLb) || !isOneInteger(origStep)) {
     if (Operation *preservedUse = denormalizedIvVal.getDefiningOp()) {
       preservedUses.insert(preservedUse);
     }
@@ -771,8 +785,8 @@ void mlir::denormalizeInductionVariable(RewriterBase &rewriter, Location loc,
   }
   Value denormalizedIv;
   SmallPtrSet<Operation *, 2> preserve;
-  bool isStepOne = isConstantIntValue(origStep, 1);
-  bool isZeroBased = isConstantIntValue(origLb, 0);
+  bool isStepOne = isOneInteger(origStep);
+  bool isZeroBased = isZeroInteger(origLb);
 
   Value scaled = normalizedIv;
   if (!isStepOne) {
@@ -1296,10 +1310,8 @@ SmallVector<Loops, 8> mlir::tile(ArrayRef<scf::ForOp> forOps,
 Loops mlir::tile(ArrayRef<scf::ForOp> forOps, ArrayRef<Value> sizes,
                  scf::ForOp target) {
   SmallVector<scf::ForOp, 8> res;
-  for (auto loops : tile(forOps, sizes, ArrayRef<scf::ForOp>(target))) {
-    assert(loops.size() == 1);
-    res.push_back(loops[0]);
-  }
+  for (auto loops : tile(forOps, sizes, ArrayRef<scf::ForOp>(target)))
+    res.push_back(llvm::getSingleElement(loops));
   return res;
 }
 
@@ -1470,30 +1482,41 @@ FailureOr<scf::ForallOp> mlir::normalizeForallOp(RewriterBase &rewriter,
   SmallVector<OpFoldResult> ubs = forallOp.getMixedUpperBound();
   SmallVector<OpFoldResult> steps = forallOp.getMixedStep();
 
-  if (llvm::all_of(
-          lbs, [](OpFoldResult ofr) { return isConstantIntValue(ofr, 0); }) &&
-      llvm::all_of(
-          steps, [](OpFoldResult ofr) { return isConstantIntValue(ofr, 1); })) {
+  if (forallOp.isNormalized())
     return forallOp;
-  }
 
-  SmallVector<OpFoldResult> newLbs, newUbs, newSteps;
+  OpBuilder::InsertionGuard g(rewriter);
+  auto loc = forallOp.getLoc();
+  rewriter.setInsertionPoint(forallOp);
+  SmallVector<OpFoldResult> newUbs;
   for (auto [lb, ub, step] : llvm::zip_equal(lbs, ubs, steps)) {
     Range normalizedLoopParams =
-        emitNormalizedLoopBounds(rewriter, forallOp.getLoc(), lb, ub, step);
-    newLbs.push_back(normalizedLoopParams.offset);
+        emitNormalizedLoopBounds(rewriter, loc, lb, ub, step);
     newUbs.push_back(normalizedLoopParams.size);
-    newSteps.push_back(normalizedLoopParams.stride);
   }
+  (void)foldDynamicIndexList(newUbs);
 
+  // Use the normalized builder since the lower bounds are always 0 and the
+  // steps are always 1.
   auto normalizedForallOp = rewriter.create<scf::ForallOp>(
-      forallOp.getLoc(), newLbs, newUbs, newSteps, forallOp.getOutputs(),
-      forallOp.getMapping(), [](OpBuilder &, Location, ValueRange) {});
+      loc, newUbs, forallOp.getOutputs(), forallOp.getMapping(),
+      [](OpBuilder &, Location, ValueRange) {});
 
   rewriter.inlineRegionBefore(forallOp.getBodyRegion(),
                               normalizedForallOp.getBodyRegion(),
                               normalizedForallOp.getBodyRegion().begin());
+  // Remove the original empty block in the new loop.
+  rewriter.eraseBlock(&normalizedForallOp.getBodyRegion().back());
 
-  rewriter.replaceAllOpUsesWith(forallOp, normalizedForallOp);
-  return success();
+  rewriter.setInsertionPointToStart(normalizedForallOp.getBody());
+  // Update the users of the original loop variables.
+  for (auto [idx, iv] :
+       llvm::enumerate(normalizedForallOp.getInductionVars())) {
+    auto origLb = getValueOrCreateConstantIndexOp(rewriter, loc, lbs[idx]);
+    auto origStep = getValueOrCreateConstantIndexOp(rewriter, loc, steps[idx]);
+    denormalizeInductionVariable(rewriter, loc, iv, origLb, origStep);
+  }
+
+  rewriter.replaceOp(forallOp, normalizedForallOp);
+  return normalizedForallOp;
 }

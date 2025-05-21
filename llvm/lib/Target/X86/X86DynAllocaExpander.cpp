@@ -57,7 +57,7 @@ private:
   const X86Subtarget *STI = nullptr;
   const TargetInstrInfo *TII = nullptr;
   const X86RegisterInfo *TRI = nullptr;
-  unsigned StackPtr = 0;
+  Register StackPtr;
   unsigned SlotSize = 0;
   int64_t StackProbeSize = 0;
   bool NoStackArgProbe = false;

@@ -172,7 +172,7 @@ static Value getValueLoadedFromGlobal(Operation *op) {
   if (!load)
     return nullptr;
 
-  auto loadType = dyn_cast<MemRefType>(load.getSource().getType());
+  auto loadType = dyn_cast<MemRefType>(load.getBase().getType());
   if (!loadType || !hasDefaultMemorySpace(loadType))
     return nullptr;
   return load;
@@ -185,7 +185,7 @@ static bool isStoreToShared(Operation *op, Value v) {
   if (!store || store.getVector() != v)
     return false;
 
-  auto storeType = dyn_cast<MemRefType>(store.getSource().getType());
+  auto storeType = dyn_cast<MemRefType>(store.getBase().getType());
   return storeType || hasSharedMemorySpace(storeType);
 }
 
@@ -740,9 +740,9 @@ static std::tuple<SmallVector<int64_t>, SmallVector<int64_t>,
                   SmallVector<int64_t>>
 makeVectorShapes(ArrayRef<int64_t> lhs, ArrayRef<int64_t> rhs,
                  ArrayRef<int64_t> res) {
-  SmallVector<int64_t> vlhs{lhs};
-  SmallVector<int64_t> vrhs{rhs};
-  SmallVector<int64_t> vres{res};
+  SmallVector<int64_t> vlhs(lhs);
+  SmallVector<int64_t> vrhs(rhs);
+  SmallVector<int64_t> vres(res);
   return std::make_tuple(vlhs, vrhs, vres);
 }
 

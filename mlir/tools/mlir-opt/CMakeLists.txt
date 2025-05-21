@@ -40,13 +40,13 @@ if(MLIR_INCLUDE_TESTS)
     MLIRTestDialect
     MLIRTestDynDialect
     MLIRTestIR
-    MLIRTestOneToNTypeConversionPass
     MLIRTestPass
     MLIRTestReducer
     MLIRTestTransforms
     MLIRTilingInterfaceTestPasses
     MLIRTosaTestPasses
     MLIRVectorTestPasses
+    MLIRXeGPUTestPasses
     MLIRTestVectorToSPIRV
     MLIRLLVMTestPasses
     )
@@ -91,8 +91,8 @@ add_mlir_library(MLIRMlirOptMain
   mlir-opt.cpp
 
   EXCLUDE_FROM_LIBMLIR
-
-  LINK_LIBS PUBLIC
+  )
+mlir_target_link_libraries(MLIRMlirOptMain PUBLIC
   ${LIBS}
   ${test_libs}
   )

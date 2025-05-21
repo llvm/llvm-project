@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "HexagonTargetStreamer.h"
 #include "MCTargetDesc/HexagonMCChecker.h"
 #include "MCTargetDesc/HexagonMCELFStreamer.h"
 #include "MCTargetDesc/HexagonMCExpr.h"
 #include "MCTargetDesc/HexagonMCInstrInfo.h"
 #include "MCTargetDesc/HexagonMCTargetDesc.h"
 #include "MCTargetDesc/HexagonShuffler.h"
+#include "MCTargetDesc/HexagonTargetStreamer.h"
 #include "TargetInfo/HexagonTargetInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -74,7 +74,7 @@ static cl::opt<bool> WarnSignedMismatch(
     cl::init(false));
 static cl::opt<bool> WarnNoncontigiousRegister(
     "mwarn-noncontigious-register",
-    cl::desc("Warn for register names that arent contigious"), cl::init(true));
+    cl::desc("Warn for register names that aren't contigious"), cl::init(true));
 static cl::opt<bool> ErrorNoncontigiousRegister(
     "merror-noncontigious-register",
     cl::desc("Error for register names that aren't contigious"),
@@ -110,6 +110,7 @@ class HexagonAsmParser : public MCTargetAsmParser {
 
   bool equalIsAsmAssignment() override { return false; }
   bool isLabel(AsmToken &Token) override;
+  bool tokenIsStartOfStatement(AsmToken::TokenKind Token) override;
 
   void Warning(SMLoc L, const Twine &Msg) { Parser.Warning(L, Msg); }
   bool Error(SMLoc L, const Twine &Msg) { return Parser.Error(L, Msg); }
@@ -1007,6 +1008,10 @@ bool HexagonAsmParser::isLabel(AsmToken &Token) {
   return false;
 }
 
+bool HexagonAsmParser::tokenIsStartOfStatement(AsmToken::TokenKind Token) {
+  return Token == AsmToken::LCurly || Token == AsmToken::RCurly;
+}
+
 bool HexagonAsmParser::handleNoncontigiousRegister(bool Contigious,
                                                    SMLoc &Loc) {
   if (!Contigious && ErrorNoncontigiousRegister) {
@@ -1247,11 +1252,11 @@ bool HexagonAsmParser::parseInstruction(OperandVector &Operands) {
               Expr, MCConstantExpr::create(0xffff, Context), Context);
       } else {
         MCValue Value;
-        if (Expr->evaluateAsRelocatable(Value, nullptr, nullptr)) {
+        if (Expr->evaluateAsRelocatable(Value, nullptr)) {
           if (!Value.isAbsolute()) {
-            switch (Value.getAccessVariant()) {
-            case MCSymbolRefExpr::VariantKind::VK_TPREL:
-            case MCSymbolRefExpr::VariantKind::VK_DTPREL:
+            switch (HexagonMCExpr::VariantKind(Value.getSpecifier())) {
+            case HexagonMCExpr::VK_TPREL:
+            case HexagonMCExpr::VK_DTPREL:
               // Don't lazy extend these expression variants
               MustNotExtend = !MustExtend;
               break;
@@ -1330,7 +1335,7 @@ unsigned HexagonAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
   return Match_InvalidOperand;
 }
 
-// FIXME: Calls to OutOfRange shoudl propagate failure up to parseStatement.
+// FIXME: Calls to OutOfRange should propagate failure up to parseStatement.
 bool HexagonAsmParser::OutOfRange(SMLoc IDLoc, long long Val, long long Max) {
   std::string errStr;
   raw_string_ostream ES(errStr);
@@ -1348,7 +1353,6 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
   MCContext &Context = getParser().getContext();
   const MCRegisterInfo *RI = getContext().getRegisterInfo();
   const std::string r = "r";
-  const std::string v = "v";
   const std::string Colon = ":";
   using RegPairVals = std::pair<unsigned, unsigned>;
   auto GetRegPair = [this, r](RegPairVals RegPair) {

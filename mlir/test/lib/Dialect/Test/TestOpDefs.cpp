@@ -507,6 +507,38 @@ void CustomResultsNameOp::getAsmResultNames(
 }
 
 //===----------------------------------------------------------------------===//
+// ResultNameFromTypeOp
+//===----------------------------------------------------------------------===//
+
+void ResultNameFromTypeOp::getAsmResultNames(
+    function_ref<void(Value, StringRef)> setNameFn) {
+  auto result = getResult();
+  auto setResultNameFn = [&](::llvm::StringRef name) {
+    setNameFn(result, name);
+  };
+  auto opAsmTypeInterface =
+      ::mlir::cast<::mlir::OpAsmTypeInterface>(result.getType());
+  opAsmTypeInterface.getAsmName(setResultNameFn);
+}
+
+//===----------------------------------------------------------------------===//
+// BlockArgumentNameFromTypeOp
+//===----------------------------------------------------------------------===//
+
+void BlockArgumentNameFromTypeOp::getAsmBlockArgumentNames(
+    ::mlir::Region &region, ::mlir::OpAsmSetValueNameFn setNameFn) {
+  for (auto &block : region) {
+    for (auto arg : block.getArguments()) {
+      if (auto opAsmTypeInterface =
+              ::mlir::dyn_cast<::mlir::OpAsmTypeInterface>(arg.getType())) {
+        auto setArgNameFn = [&](StringRef name) { setNameFn(arg, name); };
+        opAsmTypeInterface.getAsmName(setArgNameFn);
+      }
+    }
+  }
+}
+
+//===----------------------------------------------------------------------===//
 // ResultTypeWithTraitOp
 //===----------------------------------------------------------------------===//
 
@@ -698,6 +730,7 @@ LogicalResult TestVerifiersOp::verifyRegions() {
 
 //===----------------------------------------------------------------------===//
 // TestWithBoundsOp
+//===----------------------------------------------------------------------===//
 
 void TestWithBoundsOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                          SetIntRangeFn setResultRanges) {
@@ -706,6 +739,7 @@ void TestWithBoundsOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
 
 //===----------------------------------------------------------------------===//
 // TestWithBoundsRegionOp
+//===----------------------------------------------------------------------===//
 
 ParseResult TestWithBoundsRegionOp::parse(OpAsmParser &parser,
                                           OperationState &result) {
@@ -739,6 +773,7 @@ void TestWithBoundsRegionOp::inferResultRanges(
 
 //===----------------------------------------------------------------------===//
 // TestIncrementOp
+//===----------------------------------------------------------------------===//
 
 void TestIncrementOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                         SetIntRangeFn setResultRanges) {
@@ -751,6 +786,7 @@ void TestIncrementOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
 
 //===----------------------------------------------------------------------===//
 // TestReflectBoundsOp
+//===----------------------------------------------------------------------===//
 
 void TestReflectBoundsOp::inferResultRanges(
     ArrayRef<ConstantIntRanges> argRanges, SetIntRangeFn setResultRanges) {
@@ -765,8 +801,9 @@ void TestReflectBoundsOp::inferResultRanges(
     unsigned bitwidth = intTy.getWidth();
     sIntTy = b.getIntegerType(bitwidth, /*isSigned=*/true);
     uIntTy = b.getIntegerType(bitwidth, /*isSigned=*/false);
-  } else
+  } else {
     sIntTy = uIntTy = type;
+  }
 
   setUminAttr(b.getIntegerAttr(uIntTy, range.umin()));
   setUmaxAttr(b.getIntegerAttr(uIntTy, range.umax()));
@@ -1092,6 +1129,7 @@ void ReadBufferOp::getEffects(
 
 //===----------------------------------------------------------------------===//
 // TestCallAndStoreOp
+//===----------------------------------------------------------------------===//
 
 CallInterfaceCallable TestCallAndStoreOp::getCallableForCallee() {
   return getCallee();
@@ -1111,6 +1149,7 @@ MutableOperandRange TestCallAndStoreOp::getArgOperandsMutable() {
 
 //===----------------------------------------------------------------------===//
 // TestCallOnDeviceOp
+//===----------------------------------------------------------------------===//
 
 CallInterfaceCallable TestCallOnDeviceOp::getCallableForCallee() {
   return getCallee();
@@ -1130,6 +1169,7 @@ MutableOperandRange TestCallOnDeviceOp::getArgOperandsMutable() {
 
 //===----------------------------------------------------------------------===//
 // TestStoreWithARegion
+//===----------------------------------------------------------------------===//
 
 void TestStoreWithARegion::getSuccessorRegions(
     RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
@@ -1141,6 +1181,7 @@ void TestStoreWithARegion::getSuccessorRegions(
 
 //===----------------------------------------------------------------------===//
 // TestStoreWithALoopRegion
+//===----------------------------------------------------------------------===//
 
 void TestStoreWithALoopRegion::getSuccessorRegions(
     RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {

@@ -452,6 +452,38 @@ llvm::Error Host::OpenFileInExternalEditor(llvm::StringRef editor,
 #endif // TARGET_OS_OSX
 }
 
+llvm::Error Host::OpenURL(llvm::StringRef url) {
+#if !TARGET_OS_OSX
+  return llvm::errorCodeToError(
+      std::error_code(ENOTSUP, std::system_category()));
+#else  // !TARGET_OS_OSX
+  if (url.empty())
+    return llvm::createStringError("Cannot open empty URL.");
+
+  LLDB_LOG(GetLog(LLDBLog::Host), "Opening URL: {0}", url);
+
+  CFCString url_cfstr(url.data(), kCFStringEncodingUTF8);
+  CFCReleaser<CFURLRef> cfurl = ::CFURLCreateWithString(
+      /*allocator=*/NULL,
+      /*URLString*/ url_cfstr.get(),
+      /*baseURL=*/NULL);
+
+  if (!cfurl.get())
+    return llvm::createStringError(
+        llvm::formatv("could not create CFURL from URL \"{0}\"", url));
+
+  OSStatus error = ::LSOpenCFURLRef(
+      /*inURL=*/cfurl.get(),
+      /*outLaunchedURL=*/NULL);
+
+  if (error != noErr)
+    return llvm::createStringError(
+        llvm::formatv("LSOpenCFURLRef failed: error {0:x}", error));
+
+  return llvm::Error::success();
+#endif // TARGET_OS_OSX
+}
+
 bool Host::IsInteractiveGraphicSession() {
 #if !TARGET_OS_OSX
   return false;
@@ -1068,7 +1100,7 @@ static bool AddPosixSpawnFileAction(void *_file_actions, const FileAction *info,
     else if (info->GetActionArgument() == -1)
       error = Status::FromErrorString(
           "invalid duplicate fd for posix_spawn_file_actions_adddup2(...)");
-    else {
+    else if (info->GetFD() != info->GetActionArgument()) {
       error =
           Status(::posix_spawn_file_actions_adddup2(file_actions, info->GetFD(),
                                                     info->GetActionArgument()),
@@ -1078,6 +1110,15 @@ static bool AddPosixSpawnFileAction(void *_file_actions, const FileAction *info,
                  "error: {0}, posix_spawn_file_actions_adddup2 "
                  "(action={1}, fd={2}, dup_fd={3})",
                  error, file_actions, info->GetFD(), info->GetActionArgument());
+    } else {
+      error =
+          Status(::posix_spawn_file_actions_addinherit_np(file_actions, info->GetFD()),
+                 eErrorTypePOSIX);
+      if (error.Fail())
+        LLDB_LOG(log,
+                 "error: {0}, posix_spawn_file_actions_addinherit_np "
+                 "(action={1}, fd={2})",
+                 error, file_actions, info->GetFD());
     }
     break;
 
@@ -1439,7 +1480,7 @@ Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
       char *wd = getcwd(nullptr, 0);
       if (wd == nullptr) {
         error = Status::FromErrorStringWithFormat(
-            "cwd does not exist; cannot launch with shell argument expansion");
+            "cwd does not exist: Cannot launch with shell argument expansion");
         return error;
       } else {
         FileSpec working_dir(wd);

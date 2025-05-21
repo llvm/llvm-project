@@ -1,15 +1,15 @@
 ; REQUIRES: x86
-; RUN: rm -fr %T/thinlto-archives
-; RUN: mkdir %T/thinlto-archives %T/thinlto-archives/a %T/thinlto-archives/b
-; RUN: opt -thinlto-bc -o %T/thinlto-archives/main.obj %s
-; RUN: opt -thinlto-bc -o %T/thinlto-archives/a/bar.obj %S/Inputs/lto-dep.ll
-; RUN: opt -thinlto-bc -o %T/thinlto-archives/b/bar.obj %S/Inputs/bar.ll
-; RUN: llvm-ar crs %T/thinlto-archives/a.lib %T/thinlto-archives/a/bar.obj
-; RUN: llvm-ar crs %T/thinlto-archives/b.lib %T/thinlto-archives/b/bar.obj
-; RUN: lld-link -out:%T/thinlto-archives/main.exe -entry:main \
-; RUN:     -lldsavetemps -subsystem:console %T/thinlto-archives/main.obj \
-; RUN:     %T/thinlto-archives/a.lib %T/thinlto-archives/b.lib
-; RUN: FileCheck %s < %T/thinlto-archives/main.exe.resolution.txt
+; RUN: rm -fr %t.dir/thinlto-archives
+; RUN: mkdir -p %t.dir/thinlto-archives %t.dir/thinlto-archives/a %t.dir/thinlto-archives/b
+; RUN: opt -thinlto-bc -o %t.dir/thinlto-archives/main.obj %s
+; RUN: opt -thinlto-bc -o %t.dir/thinlto-archives/a/bar.obj %S/Inputs/lto-dep.ll
+; RUN: opt -thinlto-bc -o %t.dir/thinlto-archives/b/bar.obj %S/Inputs/bar.ll
+; RUN: llvm-ar crs %t.dir/thinlto-archives/a.lib %t.dir/thinlto-archives/a/bar.obj
+; RUN: llvm-ar crs %t.dir/thinlto-archives/b.lib %t.dir/thinlto-archives/b/bar.obj
+; RUN: lld-link -out:%t.dir/thinlto-archives/main.exe -entry:main \
+; RUN:     -lldsavetemps -subsystem:console %t.dir/thinlto-archives/main.obj \
+; RUN:     %t.dir/thinlto-archives/a.lib %t.dir/thinlto-archives/b.lib
+; RUN: FileCheck %s < %t.dir/thinlto-archives/main.exe.resolution.txt
 
 ; CHECK: {{/thinlto-archives/main.obj$}}
 ; CHECK: {{^-r=.*/thinlto-archives/main.obj,main,px$}}

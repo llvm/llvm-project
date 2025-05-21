@@ -66,7 +66,7 @@ int main(int argc, char **argv) {
     exit(1);
   }
 
-  opts::HeatmapMode = true;
+  opts::HeatmapMode = opts::HM_Exclusive;
   opts::AggregateOnly = true;
   if (!sys::fs::exists(opts::InputFilename))
     report_error(opts::InputFilename, errc::no_such_file_or_directory);
@@ -74,15 +74,18 @@ int main(int argc, char **argv) {
   // Output to stdout by default
   if (opts::OutputFilename.empty())
     opts::OutputFilename = "-";
+  opts::HeatmapOutput.assign(opts::OutputFilename);
 
   // Initialize targets and assembly printers/parsers.
-  llvm::InitializeAllTargetInfos();
-  llvm::InitializeAllTargetMCs();
-  llvm::InitializeAllAsmParsers();
-  llvm::InitializeAllDisassemblers();
+#define BOLT_TARGET(target)                                                    \
+  LLVMInitialize##target##TargetInfo();                                        \
+  LLVMInitialize##target##TargetMC();                                          \
+  LLVMInitialize##target##AsmParser();                                         \
+  LLVMInitialize##target##Disassembler();                                      \
+  LLVMInitialize##target##Target();                                            \
+  LLVMInitialize##target##AsmPrinter();
 
-  llvm::InitializeAllTargets();
-  llvm::InitializeAllAsmPrinters();
+#include "bolt/Core/TargetConfig.def"
 
   ToolName = argv[0];
   std::string ToolPath = GetExecutablePath(argv[0]);

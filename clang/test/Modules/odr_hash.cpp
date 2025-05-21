@@ -3380,8 +3380,8 @@ struct S17 {
 };
 #else
 S17 s17;
-// expected-error@second.h:* {{'FunctionTemplate::S17' has different definitions in different modules; first difference is definition in module 'SecondModule' found function template 'foo' with 1st template parameter with default argument 1 + 1}}
-// expected-note@first.h:* {{but in 'FirstModule' found function template 'foo' with 1st template parameter with default argument 2}}
+// expected-error@second.h:* {{'FunctionTemplate::S17' has different definitions in different modules; first difference is definition in module 'SecondModule' found function template 'foo' with 1st template parameter with default argument '1 + 1'}}
+// expected-note@first.h:* {{but in 'FirstModule' found function template 'foo' with 1st template parameter with default argument '2'}}
 #endif
 
 #if defined(FIRST)
@@ -4020,7 +4020,7 @@ struct Valid {
 };
 #else
 Invalid::L2<1>::L3<1> invalid;
-// expected-error@second.h:* {{'Types::InjectedClassName::Invalid::L2::L3::x' from module 'SecondModule' is not present in definition of 'L3<>' in module 'FirstModule'}}
+// expected-error@second.h:* {{'Types::InjectedClassName::Invalid::L2::L3::x' from module 'SecondModule' is not present in definition of 'L3<value-parameter-1-0>' in module 'FirstModule'}}
 // expected-note@first.h:* {{declaration of 'x' does not match}}
 Valid::L2<1>::L3<1> valid;
 #endif

@@ -162,6 +162,7 @@ struct SanitizerCoverageOptions {
   bool TraceStores = false;
   bool CollectControlFlow = false;
   bool GatedCallbacks = false;
+  int StackDepthCallbackMin = 0;
 
   SanitizerCoverageOptions() = default;
 };
@@ -203,6 +204,11 @@ struct InstrumentationIRBuilder : IRBuilder<> {
 
   explicit InstrumentationIRBuilder(Instruction *IP) : IRBuilder<>(IP) {
     ensureDebugInfo(*this, *IP->getFunction());
+  }
+
+  explicit InstrumentationIRBuilder(BasicBlock *BB, BasicBlock::iterator It)
+      : IRBuilder<>(BB, It) {
+    ensureDebugInfo(*this, *BB->getParent());
   }
 };
 } // end namespace llvm

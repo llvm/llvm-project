@@ -51,9 +51,7 @@ using namespace PatternMatch;
 static const unsigned MaxProcessedPerValue = 500;
 
 char LazyValueInfoWrapperPass::ID = 0;
-LazyValueInfoWrapperPass::LazyValueInfoWrapperPass() : FunctionPass(ID) {
-  initializeLazyValueInfoWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+LazyValueInfoWrapperPass::LazyValueInfoWrapperPass() : FunctionPass(ID) {}
 INITIALIZE_PASS_BEGIN(LazyValueInfoWrapperPass, "lazy-value-info",
                 "Lazy Value Information Analysis", false, true)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
@@ -398,6 +396,8 @@ class LazyValueInfoImpl {
   std::optional<ValueLatticeElement>
   getValueFromICmpCondition(Value *Val, ICmpInst *ICI, bool isTrueDest,
                             bool UseBlockValue);
+  ValueLatticeElement getValueFromTrunc(Value *Val, TruncInst *Trunc,
+                                        bool IsTrueDest);
 
   std::optional<ValueLatticeElement>
   getValueFromCondition(Value *Val, Value *Cond, bool IsTrueDest,
@@ -622,10 +622,12 @@ LazyValueInfoImpl::solveBlockValueImpl(Value *Val, BasicBlock *BB) {
   return getFromRangeMetadata(BBI);
 }
 
-static void AddNonNullPointer(Value *Ptr, NonNullPointerSet &PtrSet) {
+static void AddNonNullPointer(Value *Ptr, NonNullPointerSet &PtrSet,
+                              bool IsDereferenced = true) {
   // TODO: Use NullPointerIsDefined instead.
   if (Ptr->getType()->getPointerAddressSpace() == 0)
-    PtrSet.insert(getUnderlyingObject(Ptr));
+    PtrSet.insert(IsDereferenced ? getUnderlyingObject(Ptr)
+                                 : Ptr->stripInBoundsOffsets());
 }
 
 static void AddNonNullPointersByInstruction(
@@ -644,6 +646,13 @@ static void AddNonNullPointersByInstruction(
     AddNonNullPointer(MI->getRawDest(), PtrSet);
     if (MemTransferInst *MTI = dyn_cast<MemTransferInst>(MI))
       AddNonNullPointer(MTI->getRawSource(), PtrSet);
+  } else if (auto *CB = dyn_cast<CallBase>(I)) {
+    for (auto &U : CB->args()) {
+      if (U->getType()->isPointerTy() &&
+          CB->paramHasNonNullAttr(CB->getArgOperandNo(&U),
+                                  /*AllowUndefOrPoison=*/false))
+        AddNonNullPointer(U.get(), PtrSet, /*IsDereferenced=*/false);
+    }
   }
 }
 
@@ -683,6 +692,9 @@ LazyValueInfoImpl::solveBlockValueNonLocal(Value *Val, BasicBlock *BB) {
   // canonicalizing to make this true rather than relying on this happy
   // accident.
   for (BasicBlock *Pred : predecessors(BB)) {
+    // Skip self loops.
+    if (Pred == BB)
+      continue;
     std::optional<ValueLatticeElement> EdgeResult = getEdgeValue(Val, Pred, BB);
     if (!EdgeResult)
       // Explore that input, then return here
@@ -1283,6 +1295,27 @@ std::optional<ValueLatticeElement> LazyValueInfoImpl::getValueFromICmpCondition(
   return ValueLatticeElement::getOverdefined();
 }
 
+ValueLatticeElement LazyValueInfoImpl::getValueFromTrunc(Value *Val,
+                                                         TruncInst *Trunc,
+                                                         bool IsTrueDest) {
+  assert(Trunc->getType()->isIntOrIntVectorTy(1));
+
+  if (Trunc->getOperand(0) != Val)
+    return ValueLatticeElement::getOverdefined();
+
+  Type *Ty = Val->getType();
+
+  if (Trunc->hasNoUnsignedWrap()) {
+    if (IsTrueDest)
+      return ValueLatticeElement::get(ConstantInt::get(Ty, 1));
+    return ValueLatticeElement::get(Constant::getNullValue(Ty));
+  }
+
+  if (IsTrueDest)
+    return ValueLatticeElement::getNot(Constant::getNullValue(Ty));
+  return ValueLatticeElement::getNot(Constant::getAllOnesValue(Ty));
+}
+
 // Handle conditions of the form
 // extractvalue(op.with.overflow(%x, C), 1).
 static ValueLatticeElement getValueFromOverflowCondition(
@@ -1311,6 +1344,9 @@ LazyValueInfoImpl::getValueFromCondition(Value *Val, Value *Cond,
                                          unsigned Depth) {
   if (ICmpInst *ICI = dyn_cast<ICmpInst>(Cond))
     return getValueFromICmpCondition(Val, ICI, IsTrueDest, UseBlockValue);
+
+  if (auto *Trunc = dyn_cast<TruncInst>(Cond))
+    return getValueFromTrunc(Val, Trunc, IsTrueDest);
 
   if (auto *EVI = dyn_cast<ExtractValueInst>(Cond))
     if (auto *WO = dyn_cast<WithOverflowInst>(EVI->getAggregateOperand()))
@@ -1665,7 +1701,8 @@ ValueLatticeElement LazyValueInfoImpl::getValueAtUse(const Use &U) {
     // of a cycle, we might end up reasoning about values from different cycle
     // iterations (PR60629).
     if (!CurrI->hasOneUse() ||
-        !isSafeToSpeculativelyExecuteWithVariableReplaced(CurrI))
+        !isSafeToSpeculativelyExecuteWithVariableReplaced(
+            CurrI, /*IgnoreUBImplyingAttrs=*/false))
       break;
     CurrU = &*CurrI->use_begin();
   }

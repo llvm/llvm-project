@@ -57,9 +57,7 @@ class PPCCTRLoops : public MachineFunctionPass {
 public:
   static char ID;
 
-  PPCCTRLoops() : MachineFunctionPass(ID) {
-    initializePPCCTRLoopsPass(*PassRegistry::getPassRegistry());
-  }
+  PPCCTRLoops() : MachineFunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<MachineLoopInfoWrapperPass>();

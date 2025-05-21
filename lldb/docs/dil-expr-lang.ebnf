@@ -1,0 +1,47 @@
+(* Data Inspection Language (DIL) definition - LLDB Debug Expressions *)
+
+(* This is currently a subset of the final DIL Language, matching the current
+   DIL implementation. *)
+
+expression = unary_expression ;
+
+unary_expression = unary_operator expression
+                 | primary_expression ;
+
+unary_operator = "*" | "&" ;
+
+primary_expression = id_expression
+                   | "(" expression ")";
+
+id_expression = unqualified_id
+              | qualified_id
+	      | register ;
+
+unqualified_id = identifier ;
+
+qualified_id = ["::"] [nested_name_specifier] unqualified_id
+             | ["::"] identifier ;
+
+identifier = ? C99 Identifier ? ;
+
+register = "$" ? Register name ? ;
+
+nested_name_specifier = type_name "::"
+                      | namespace_name '::'
+                      | nested_name_specifier identifier "::" ;
+
+type_name = class_name
+          | enum_name
+          | typedef_name;
+
+class_name = identifier ;
+
+enum_name = identifier ;
+
+typedef_name = identifier ;
+
+namespace_name = identifier ;
+
+
+
+

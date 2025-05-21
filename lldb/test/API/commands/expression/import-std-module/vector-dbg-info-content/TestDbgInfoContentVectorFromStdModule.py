@@ -23,6 +23,13 @@ class TestDbgInfoContentVector(TestBase):
 
         self.runCmd("settings set target.import-std-module true")
 
+        if self.expectedCompiler(["clang"]) and self.expectedCompilerVersion(
+            [">", "16.0"]
+        ):
+            vector_type = "std::vector<Foo>"
+        else:
+            vector_type = "std::vector<Foo, std::allocator<Foo> >"
+
         size_type = "size_type"
         value_type = "value_type"
         iterator = "iterator"
@@ -34,14 +41,13 @@ class TestDbgInfoContentVector(TestBase):
             ValueCheck(name="current"),
         ]
 
-        self.expect(
-            "expr a",
-            patterns=[
-                """\(std::vector<Foo(, std::allocator<Foo> )*>\) \$0 = size=3 \{
-  \[0\] = \(a = 3\)
-  \[1\] = \(a = 1\)
-  \[2\] = \(a = 2\)
-\}"""
+        self.expect_expr(
+            "a",
+            result_type=vector_type,
+            result_children=[
+                ValueCheck(children=[ValueCheck(value="3")]),
+                ValueCheck(children=[ValueCheck(value="1")]),
+                ValueCheck(children=[ValueCheck(value="2")]),
             ],
         )
 

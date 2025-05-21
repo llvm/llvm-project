@@ -288,6 +288,10 @@ Attribute Attribute::getWithNoFPClass(LLVMContext &Context,
   return get(Context, NoFPClass, ClassMask);
 }
 
+Attribute Attribute::getWithCaptureInfo(LLVMContext &Context, CaptureInfo CI) {
+  return get(Context, Captures, CI.toIntValue());
+}
+
 Attribute
 Attribute::getWithAllocSizeArgs(LLVMContext &Context, unsigned ElemSizeArg,
                                 const std::optional<unsigned> &NumElemsArg) {
@@ -642,6 +646,9 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
         break;
       case IRMemLocation::InaccessibleMem:
         OS << "inaccessiblemem: ";
+        break;
+      case IRMemLocation::ErrnoMem:
+        OS << "errnomem: ";
         break;
       case IRMemLocation::Other:
         llvm_unreachable("This is represented as the default access kind");
@@ -1230,7 +1237,7 @@ LLVM_DUMP_METHOD void AttributeSet::dump() const {
 AttributeSetNode::AttributeSetNode(ArrayRef<Attribute> Attrs)
     : NumAttrs(Attrs.size()) {
   // There's memory after the node where we can store the entries in.
-  llvm::copy(Attrs, getTrailingObjects<Attribute>());
+  llvm::copy(Attrs, getTrailingObjects());
 
   for (const auto &I : *this) {
     if (I.isStringAttribute())
@@ -1416,7 +1423,7 @@ AttributeListImpl::AttributeListImpl(ArrayRef<AttributeSet> Sets)
   assert(!Sets.empty() && "pointless AttributeListImpl");
 
   // There's memory after the node where we can store the entries in.
-  llvm::copy(Sets, getTrailingObjects<AttributeSet>());
+  llvm::copy(Sets, getTrailingObjects());
 
   // Initialize AvailableFunctionAttrs and AvailableSomewhereAttrs
   // summary bitsets.
@@ -2284,6 +2291,38 @@ AttrBuilder &AttrBuilder::addInitializesAttr(const ConstantRangeList &CRL) {
   return addConstantRangeListAttr(Attribute::Initializes, CRL.rangesRef());
 }
 
+AttrBuilder &AttrBuilder::addFromEquivalentMetadata(const Instruction &I) {
+  if (I.hasMetadata(LLVMContext::MD_nonnull))
+    addAttribute(Attribute::NonNull);
+
+  if (I.hasMetadata(LLVMContext::MD_noundef))
+    addAttribute(Attribute::NoUndef);
+
+  if (const MDNode *Align = I.getMetadata(LLVMContext::MD_align)) {
+    ConstantInt *CI = mdconst::extract<ConstantInt>(Align->getOperand(0));
+    addAlignmentAttr(CI->getZExtValue());
+  }
+
+  if (const MDNode *Dereferenceable =
+          I.getMetadata(LLVMContext::MD_dereferenceable)) {
+    ConstantInt *CI =
+        mdconst::extract<ConstantInt>(Dereferenceable->getOperand(0));
+    addDereferenceableAttr(CI->getZExtValue());
+  }
+
+  if (const MDNode *DereferenceableOrNull =
+          I.getMetadata(LLVMContext::MD_dereferenceable_or_null)) {
+    ConstantInt *CI =
+        mdconst::extract<ConstantInt>(DereferenceableOrNull->getOperand(0));
+    addDereferenceableAttr(CI->getZExtValue());
+  }
+
+  if (const MDNode *Range = I.getMetadata(LLVMContext::MD_range))
+    addRangeAttr(getConstantRangeFromMetadata(*Range));
+
+  return *this;
+}
+
 AttrBuilder &AttrBuilder::merge(const AttrBuilder &B) {
   // TODO: Could make this O(n) as we're merging two sorted lists.
   for (const auto &I : B.attrs())
@@ -2373,7 +2412,6 @@ AttributeMask AttributeFuncs::typeIncompatible(Type *Ty, AttributeSet AS,
     // Attributes that only apply to pointers.
     if (ASK & ASK_SAFE_TO_DROP)
       Incompatible.addAttribute(Attribute::NoAlias)
-          .addAttribute(Attribute::NoCapture)
           .addAttribute(Attribute::NonNull)
           .addAttribute(Attribute::ReadNone)
           .addAttribute(Attribute::ReadOnly)

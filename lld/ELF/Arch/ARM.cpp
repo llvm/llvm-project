@@ -663,12 +663,12 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_ARM_THM_JUMP8:
     // We do a 9 bit check because val is right-shifted by 1 bit.
     checkInt(ctx, loc, val, 9, rel);
-    write16(ctx, loc, (read32(ctx, loc) & 0xff00) | ((val >> 1) & 0x00ff));
+    write16(ctx, loc, (read16(ctx, loc) & 0xff00) | ((val >> 1) & 0x00ff));
     break;
   case R_ARM_THM_JUMP11:
     // We do a 12 bit check because val is right-shifted by 1 bit.
     checkInt(ctx, loc, val, 12, rel);
-    write16(ctx, loc, (read32(ctx, loc) & 0xf800) | ((val >> 1) & 0x07ff));
+    write16(ctx, loc, (read16(ctx, loc) & 0xf800) | ((val >> 1) & 0x07ff));
     break;
   case R_ARM_THM_JUMP19:
     // Encoding T3: Val = S:J2:J1:imm6:imm11:0
@@ -1489,7 +1489,7 @@ template <typename ELFT> void elf::writeARMCmseImportLib(Ctx &ctx) {
   const uint64_t fileSize =
       sectionHeaderOff + shnum * sizeof(typename ELFT::Shdr);
   const unsigned flags =
-      ctx.arg.mmapOutputFile ? 0 : (unsigned)FileOutputBuffer::F_no_mmap;
+      ctx.arg.mmapOutputFile ? (unsigned)FileOutputBuffer::F_mmap : 0;
   unlinkAsync(ctx.arg.cmseOutputLib);
   Expected<std::unique_ptr<FileOutputBuffer>> bufferOrErr =
       FileOutputBuffer::create(ctx.arg.cmseOutputLib, fileSize, flags);
@@ -1536,8 +1536,8 @@ template <typename ELFT> void elf::writeARMCmseImportLib(Ctx &ctx) {
   }
 
   if (auto e = buffer->commit())
-    Fatal(ctx) << "failed to write output '" << buffer->getPath()
-               << "': " << std::move(e);
+    Err(ctx) << "failed to write output '" << buffer->getPath()
+             << "': " << std::move(e);
 }
 
 void elf::setARMTargetInfo(Ctx &ctx) { ctx.target.reset(new ARM(ctx)); }

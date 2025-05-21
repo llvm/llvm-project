@@ -17,11 +17,15 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/DXContainer.h"
+#include "llvm/Object/Error.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/TargetParser/Triple.h"
 #include <array>
+#include <cstddef>
+#include <cstdint>
 #include <variant>
 
 namespace llvm {
@@ -116,6 +120,128 @@ template <typename T> struct ViewArray {
 };
 
 namespace DirectX {
+struct RootParameterView {
+  const dxbc::RootParameterHeader &Header;
+  StringRef ParamData;
+
+  RootParameterView(const dxbc::RootParameterHeader &H, StringRef P)
+      : Header(H), ParamData(P) {}
+
+  template <typename T> Expected<T> readParameter() {
+    T Struct;
+    if (sizeof(T) != ParamData.size())
+      return make_error<GenericBinaryError>(
+          "Reading structure out of file bounds", object_error::parse_failed);
+
+    memcpy(&Struct, ParamData.data(), sizeof(T));
+    // DXContainer is always little endian
+    if (sys::IsBigEndianHost)
+      Struct.swapBytes();
+    return Struct;
+  }
+};
+
+struct RootConstantView : RootParameterView {
+  static bool classof(const RootParameterView *V) {
+    return V->Header.ParameterType ==
+           (uint32_t)dxbc::RootParameterType::Constants32Bit;
+  }
+
+  llvm::Expected<dxbc::RootConstants> read() {
+    return readParameter<dxbc::RootConstants>();
+  }
+};
+
+struct RootDescriptorView : RootParameterView {
+  static bool classof(const RootParameterView *V) {
+    return (V->Header.ParameterType ==
+                llvm::to_underlying(dxbc::RootParameterType::CBV) ||
+            V->Header.ParameterType ==
+                llvm::to_underlying(dxbc::RootParameterType::SRV) ||
+            V->Header.ParameterType ==
+                llvm::to_underlying(dxbc::RootParameterType::UAV));
+  }
+
+  llvm::Expected<dxbc::RTS0::v2::RootDescriptor> read(uint32_t Version) {
+    if (Version == 1) {
+      auto Descriptor = readParameter<dxbc::RTS0::v1::RootDescriptor>();
+      if (Error E = Descriptor.takeError())
+        return E;
+      return dxbc::RTS0::v2::RootDescriptor(*Descriptor);
+    }
+    if (Version != 2)
+      return make_error<GenericBinaryError>("Invalid Root Signature version: " +
+                                                Twine(Version),
+                                            object_error::parse_failed);
+    return readParameter<dxbc::RTS0::v2::RootDescriptor>();
+  }
+};
+
+static Error parseFailed(const Twine &Msg) {
+  return make_error<GenericBinaryError>(Msg.str(), object_error::parse_failed);
+}
+
+class RootSignature {
+private:
+  uint32_t Version;
+  uint32_t NumParameters;
+  uint32_t RootParametersOffset;
+  uint32_t NumStaticSamplers;
+  uint32_t StaticSamplersOffset;
+  uint32_t Flags;
+  ViewArray<dxbc::RootParameterHeader> ParametersHeaders;
+  StringRef PartData;
+
+  using param_header_iterator = ViewArray<dxbc::RootParameterHeader>::iterator;
+
+public:
+  RootSignature(StringRef PD) : PartData(PD) {}
+
+  Error parse();
+  uint32_t getVersion() const { return Version; }
+  uint32_t getNumParameters() const { return NumParameters; }
+  uint32_t getRootParametersOffset() const { return RootParametersOffset; }
+  uint32_t getNumStaticSamplers() const { return NumStaticSamplers; }
+  uint32_t getStaticSamplersOffset() const { return StaticSamplersOffset; }
+  uint32_t getNumRootParameters() const { return ParametersHeaders.size(); }
+  llvm::iterator_range<param_header_iterator> param_headers() const {
+    return llvm::make_range(ParametersHeaders.begin(), ParametersHeaders.end());
+  }
+  uint32_t getFlags() const { return Flags; }
+
+  llvm::Expected<RootParameterView>
+  getParameter(const dxbc::RootParameterHeader &Header) const {
+    size_t DataSize;
+
+    if (!dxbc::isValidParameterType(Header.ParameterType))
+      return parseFailed("invalid parameter type");
+
+    switch (static_cast<dxbc::RootParameterType>(Header.ParameterType)) {
+    case dxbc::RootParameterType::Constants32Bit:
+      DataSize = sizeof(dxbc::RootConstants);
+      break;
+    case dxbc::RootParameterType::CBV:
+    case dxbc::RootParameterType::SRV:
+    case dxbc::RootParameterType::UAV:
+      if (Version == 1)
+        DataSize = sizeof(dxbc::RTS0::v1::RootDescriptor);
+      else
+        DataSize = sizeof(dxbc::RTS0::v2::RootDescriptor);
+      break;
+    }
+    size_t EndOfSectionByte = getNumStaticSamplers() == 0
+                                  ? PartData.size()
+                                  : getStaticSamplersOffset();
+
+    if (Header.ParameterOffset + DataSize > EndOfSectionByte)
+      return parseFailed("Reading structure out of file bounds");
+
+    StringRef Buff = PartData.substr(Header.ParameterOffset, DataSize);
+    RootParameterView View = RootParameterView(Header, Buff);
+    return View;
+  }
+};
+
 class PSVRuntimeInfo {
 
   using ResourceArray = ViewArray<dxbc::PSV::v2::ResourceBindInfo>;
@@ -287,6 +413,7 @@ private:
   std::optional<uint64_t> ShaderFeatureFlags;
   std::optional<dxbc::ShaderHash> Hash;
   std::optional<DirectX::PSVRuntimeInfo> PSVInfo;
+  std::optional<DirectX::RootSignature> RootSignature;
   DirectX::Signature InputSignature;
   DirectX::Signature OutputSignature;
   DirectX::Signature PatchConstantSignature;
@@ -296,6 +423,7 @@ private:
   Error parseDXILHeader(StringRef Part);
   Error parseShaderFeatureFlags(StringRef Part);
   Error parseHash(StringRef Part);
+  Error parseRootSignature(StringRef Part);
   Error parsePSVInfo(StringRef Part);
   Error parseSignature(StringRef Part, DirectX::Signature &Array);
   friend class PartIterator;
@@ -381,6 +509,10 @@ public:
   }
 
   std::optional<dxbc::ShaderHash> getShaderHash() const { return Hash; }
+
+  std::optional<DirectX::RootSignature> getRootSignature() const {
+    return RootSignature;
+  }
 
   const std::optional<DirectX::PSVRuntimeInfo> &getPSVInfo() const {
     return PSVInfo;

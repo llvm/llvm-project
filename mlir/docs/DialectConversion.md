@@ -179,13 +179,13 @@ updated/remapped operands of an operation, such as when the types of results
 defined by an operation have changed. The general Rewrite Patterns can no longer
 be used in these situations, as the types of the operands of the operation being
 matched will not correspond with those expected by the user. This pattern
-provides, as an additional argument to the `matchAndRewrite` and `rewrite`
-methods, the list of operands that the operation should use after conversion. If
-an operand was the result of a non-converted operation, for example if it was
-already legal, the original operand is used. This means that the operands
-provided always have a 1-1 non-null correspondence with the operands on the
-operation. The original operands of the operation are still intact and may be
-inspected as normal. These patterns also utilize a special `PatternRewriter`,
+provides, as an additional argument to the `matchAndRewrite` method, the list
+of operands that the operation should use after conversion. If an operand was
+the result of a non-converted operation, for example if it was already legal,
+the original operand is used. This means that the operands provided always have
+a 1-1 non-null correspondence with the operands on the operation. The original
+operands of the operation are still intact and may be inspected as normal.
+These patterns also utilize a special `PatternRewriter`,
 `ConversionPatternRewriter`, that provides special hooks for use with the
 conversion infrastructure.
 
@@ -338,7 +338,7 @@ class TypeConverter {
             typename T = typename llvm::function_traits<FnT>::template arg_t<1>>
   void addSourceMaterialization(FnT &&callback) {
     sourceMaterializations.emplace_back(
-        wrapMaterialization<T>(std::forward<FnT>(callback)));
+        wrapSourceMaterialization<T>(std::forward<FnT>(callback)));
   }
 
   /// This method registers a materialization that will be called when
@@ -362,7 +362,7 @@ class TypeConverter {
             typename T = typename llvm::function_traits<FnT>::template arg_t<1>>
   void addTargetMaterialization(FnT &&callback) {
     targetMaterializations.emplace_back(
-        wrapMaterialization<T>(std::forward<FnT>(callback)));
+        wrapTargetMaterialization<T>(std::forward<FnT>(callback)));
   }
 };
 ```

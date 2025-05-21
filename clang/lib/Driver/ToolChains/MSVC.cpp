@@ -146,8 +146,8 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (C.getDriver().IsFlangMode() &&
       !Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
-    addFortranRuntimeLibraryPath(TC, Args, CmdArgs);
-    addFortranRuntimeLibs(TC, Args, CmdArgs);
+    TC.addFortranRuntimeLibraryPath(Args, CmdArgs);
+    TC.addFortranRuntimeLibs(Args, CmdArgs);
 
     // Inform the MSVC linker that we're generating a console application, i.e.
     // one with `main` as the "user-defined" entry point. The `main` function is
@@ -211,7 +211,7 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(TC.getCompilerRTArgString(Args, "asan_dynamic"));
     auto defines = Args.getAllArgValues(options::OPT_D);
     if (Args.hasArg(options::OPT__SLASH_MD, options::OPT__SLASH_MDd) ||
-        find(begin(defines), end(defines), "_DLL") != end(defines)) {
+        llvm::is_contained(defines, "_DLL")) {
       // Make sure the dynamic runtime thunk is not optimized out at link time
       // to ensure proper SEH handling.
       CmdArgs.push_back(Args.MakeArgString(
@@ -232,6 +232,11 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
+  if (C.getDriver().isUsingLTO()) {
+    if (Arg *A = tools::getLastProfileSampleUseArg(Args))
+      CmdArgs.push_back(Args.MakeArgString(std::string("-lto-sample-profile:") +
+                                           A->getValue()));
+  }
   Args.AddAllArgValues(CmdArgs, options::OPT__SLASH_link);
 
   // Control Flow Guard checks

@@ -23,6 +23,7 @@
 
 namespace llvm {
 
+class AMDGPUTargetMachine;
 class AMDGPUTargetStreamer;
 class Argument;
 class DataLayout;
@@ -59,7 +60,8 @@ protected:
   virtual void emitVersion() = 0;
   virtual void emitHiddenKernelArgs(const MachineFunction &MF, unsigned &Offset,
                                     msgpack::ArrayDocNode Args) = 0;
-  virtual void emitKernelAttrs(const Function &Func,
+  virtual void emitKernelAttrs(const AMDGPUTargetMachine &TM,
+                               const Function &Func,
                                msgpack::MapDocNode Kern) = 0;
 };
 
@@ -100,7 +102,8 @@ protected:
 
   void emitKernelLanguage(const Function &Func, msgpack::MapDocNode Kern);
 
-  void emitKernelAttrs(const Function &Func, msgpack::MapDocNode Kern) override;
+  void emitKernelAttrs(const AMDGPUTargetMachine &TM, const Function &Func,
+                       msgpack::MapDocNode Kern) override;
 
   void emitKernelArgs(const MachineFunction &MF, msgpack::MapDocNode Kern);
 
@@ -146,7 +149,8 @@ protected:
   void emitVersion() override;
   void emitHiddenKernelArgs(const MachineFunction &MF, unsigned &Offset,
                             msgpack::ArrayDocNode Args) override;
-  void emitKernelAttrs(const Function &Func, msgpack::MapDocNode Kern) override;
+  void emitKernelAttrs(const AMDGPUTargetMachine &TM, const Function &Func,
+                       msgpack::MapDocNode Kern) override;
 
 public:
   MetadataStreamerMsgPackV5() = default;

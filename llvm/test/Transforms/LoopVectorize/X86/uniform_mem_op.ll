@@ -299,7 +299,7 @@ define void @uniform_copy(ptr %A, ptr %B) {
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br i1 false, label [[LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 4096, [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_MEMCHECK]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 4096, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
@@ -352,11 +352,10 @@ define i32 @test_count_bits(ptr %test_base) {
 ; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[STEP_ADD_2:%.*]] = add <4 x i64> [[STEP_ADD]], splat (i64 4)
 ; CHECK-NEXT:    [[STEP_ADD_3:%.*]] = add <4 x i64> [[STEP_ADD_2]], splat (i64 4)
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 12
-; CHECK-NEXT:    [[TMP4:%.*]] = udiv i64 [[TMP0]], 8
+; CHECK-NEXT:    [[TMP4:%.*]] = udiv i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = udiv i64 [[TMP1]], 8
 ; CHECK-NEXT:    [[TMP6:%.*]] = udiv i64 [[TMP2]], 8
 ; CHECK-NEXT:    [[TMP7:%.*]] = udiv i64 [[TMP3]], 8

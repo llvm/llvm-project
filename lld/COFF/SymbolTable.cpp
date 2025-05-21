@@ -20,6 +20,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/LTO/LTO.h"
+#include "llvm/Object/COFFModuleDefinition.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/GlobPattern.h"
 #include "llvm/Support/Parallel.h"
@@ -29,6 +30,7 @@
 
 using namespace llvm;
 using namespace llvm::COFF;
+using namespace llvm::object;
 using namespace llvm::support;
 
 namespace lld::coff {
@@ -54,6 +56,10 @@ static void forceLazy(Symbol *s) {
   }
   case Symbol::Kind::LazyObjectKind: {
     InputFile *file = cast<LazyObject>(s)->file;
+    // FIXME: Remove this once we resolve all defineds before all undefineds in
+    //        ObjFile::initializeSymbols().
+    if (!file->lazy)
+      return;
     file->lazy = false;
     file->symtab.ctx.driver.addFile(file);
     break;
@@ -208,10 +214,9 @@ struct UndefinedDiag {
   std::vector<File> files;
 };
 
-static void reportUndefinedSymbol(COFFLinkerContext &ctx,
-                                  const UndefinedDiag &undefDiag) {
+void SymbolTable::reportUndefinedSymbol(const UndefinedDiag &undefDiag) {
   auto diag = errorOrWarn(ctx);
-  diag << "undefined symbol: " << undefDiag.sym;
+  diag << "undefined symbol: " << printSymbol(undefDiag.sym);
 
   const size_t maxUndefReferences = 3;
   size_t numDisplayedRefs = 0, numRefs = 0;
@@ -226,6 +231,17 @@ static void reportUndefinedSymbol(COFFLinkerContext &ctx,
   }
   if (numDisplayedRefs < numRefs)
     diag << "\n>>> referenced " << numRefs - numDisplayedRefs << " more times";
+
+  // Hints
+  StringRef name = undefDiag.sym->getName();
+  if (name.consume_front("__imp_")) {
+    Symbol *imp = find(name);
+    if (imp && imp->isLazy()) {
+      diag << "\nNOTE: a relevant symbol '" << imp->getName()
+           << "' is available in " << toString(imp->getFile())
+           << " but cannot be used because it is not an import library.";
+    }
+  }
 }
 
 void SymbolTable::loadMinGWSymbols() {
@@ -357,12 +373,12 @@ void SymbolTable::reportProblemSymbols(
 
   for (Symbol *b : ctx.config.gcroot) {
     if (undefs.count(b))
-      errorOrWarn(ctx) << "<root>: undefined symbol: " << b;
+      errorOrWarn(ctx) << "<root>: undefined symbol: " << printSymbol(b);
     if (localImports)
       if (Symbol *imp = localImports->lookup(b))
-        Warn(ctx) << "<root>: locally defined symbol imported: " << imp
-                  << " (defined in " << toString(imp->getFile())
-                  << ") [LNK4217]";
+        Warn(ctx) << "<root>: locally defined symbol imported: "
+                  << printSymbol(imp) << " (defined in "
+                  << toString(imp->getFile()) << ") [LNK4217]";
   }
 
   std::vector<UndefinedDiag> undefDiags;
@@ -383,7 +399,8 @@ void SymbolTable::reportProblemSymbols(
       }
       if (localImports)
         if (Symbol *imp = localImports->lookup(sym))
-          Warn(ctx) << file << ": locally defined symbol imported: " << imp
+          Warn(ctx) << file
+                    << ": locally defined symbol imported: " << printSymbol(imp)
                     << " (defined in " << imp->getFile() << ") [LNK4217]";
     }
   };
@@ -396,7 +413,7 @@ void SymbolTable::reportProblemSymbols(
       processFile(file, file->getSymbols());
 
   for (const UndefinedDiag &undefDiag : undefDiags)
-    reportUndefinedSymbol(ctx, undefDiag);
+    reportUndefinedSymbol(undefDiag);
 }
 
 void SymbolTable::reportUnresolvable() {
@@ -426,11 +443,10 @@ void SymbolTable::reportUnresolvable() {
   reportProblemSymbols(undefs, /*localImports=*/nullptr, true);
 }
 
-bool SymbolTable::resolveRemainingUndefines() {
+void SymbolTable::resolveRemainingUndefines() {
   llvm::TimeTraceScope timeScope("Resolve remaining undefined symbols");
   SmallPtrSet<Symbol *, 8> undefs;
   DenseMap<Symbol *, Symbol *> localImports;
-  bool foundLazy = false;
 
   for (auto &i : symMap) {
     Symbol *sym = i.second;
@@ -475,11 +491,6 @@ bool SymbolTable::resolveRemainingUndefines() {
             imp = findLocalSym(*mangledName);
         }
       }
-      if (imp && imp->isLazy()) {
-        forceLazy(imp);
-        foundLazy = true;
-        continue;
-      }
       if (imp && isa<Defined>(imp)) {
         auto *d = cast<Defined>(imp);
         replaceSymbol<DefinedLocalImport>(sym, ctx, name, d);
@@ -507,7 +518,6 @@ bool SymbolTable::resolveRemainingUndefines() {
   reportProblemSymbols(
       undefs, ctx.config.warnLocallyDefinedImported ? &localImports : nullptr,
       false);
-  return foundLazy;
 }
 
 std::pair<Symbol *, bool> SymbolTable::insert(StringRef name) {
@@ -541,7 +551,7 @@ void SymbolTable::initializeLoadConfig() {
       Warn(ctx) << "EC version of '_load_config_used' is missing";
       return;
     }
-    if (ctx.hybridSymtab) {
+    if (ctx.config.machine == ARM64X) {
       Warn(ctx) << "native version of '_load_config_used' is missing for "
                    "ARM64X target";
       return;
@@ -816,7 +826,7 @@ void SymbolTable::reportDuplicate(Symbol *existing, InputFile *newFile,
                                   uint32_t newSectionOffset) {
   COFFSyncStream diag(ctx, ctx.config.forceMultiple ? DiagLevel::Warn
                                                     : DiagLevel::Err);
-  diag << "duplicate symbol: " << existing;
+  diag << "duplicate symbol: " << printSymbol(existing);
 
   DefinedRegular *d = dyn_cast<DefinedRegular>(existing);
   if (d && isa<ObjFile>(d->getFile())) {
@@ -1253,8 +1263,102 @@ void SymbolTable::assignExportOrdinals() {
                << Twine(std::numeric_limits<uint16_t>::max()) << ")";
 }
 
+void SymbolTable::parseModuleDefs(StringRef path) {
+  llvm::TimeTraceScope timeScope("Parse def file");
+  std::unique_ptr<MemoryBuffer> mb =
+      CHECK(MemoryBuffer::getFile(path, /*IsText=*/false,
+                                  /*RequiresNullTerminator=*/false,
+                                  /*IsVolatile=*/true),
+            "could not open " + path);
+  COFFModuleDefinition m = check(parseCOFFModuleDefinition(
+      mb->getMemBufferRef(), machine, ctx.config.mingw));
+
+  // Include in /reproduce: output if applicable.
+  ctx.driver.takeBuffer(std::move(mb));
+
+  if (ctx.config.outputFile.empty())
+    ctx.config.outputFile = std::string(saver().save(m.OutputFile));
+  ctx.config.importName = std::string(saver().save(m.ImportName));
+  if (m.ImageBase)
+    ctx.config.imageBase = m.ImageBase;
+  if (m.StackReserve)
+    ctx.config.stackReserve = m.StackReserve;
+  if (m.StackCommit)
+    ctx.config.stackCommit = m.StackCommit;
+  if (m.HeapReserve)
+    ctx.config.heapReserve = m.HeapReserve;
+  if (m.HeapCommit)
+    ctx.config.heapCommit = m.HeapCommit;
+  if (m.MajorImageVersion)
+    ctx.config.majorImageVersion = m.MajorImageVersion;
+  if (m.MinorImageVersion)
+    ctx.config.minorImageVersion = m.MinorImageVersion;
+  if (m.MajorOSVersion)
+    ctx.config.majorOSVersion = m.MajorOSVersion;
+  if (m.MinorOSVersion)
+    ctx.config.minorOSVersion = m.MinorOSVersion;
+
+  for (COFFShortExport e1 : m.Exports) {
+    Export e2;
+    // Renamed exports are parsed and set as "ExtName = Name". If Name has
+    // the form "OtherDll.Func", it shouldn't be a normal exported
+    // function but a forward to another DLL instead. This is supported
+    // by both MS and GNU linkers.
+    if (!e1.ExtName.empty() && e1.ExtName != e1.Name &&
+        StringRef(e1.Name).contains('.')) {
+      e2.name = saver().save(e1.ExtName);
+      e2.forwardTo = saver().save(e1.Name);
+    } else {
+      e2.name = saver().save(e1.Name);
+      e2.extName = saver().save(e1.ExtName);
+    }
+    e2.exportAs = saver().save(e1.ExportAs);
+    e2.importName = saver().save(e1.ImportName);
+    e2.ordinal = e1.Ordinal;
+    e2.noname = e1.Noname;
+    e2.data = e1.Data;
+    e2.isPrivate = e1.Private;
+    e2.constant = e1.Constant;
+    e2.source = ExportSource::ModuleDefinition;
+    exports.push_back(e2);
+  }
+}
+
+// Parse a string of the form of "<from>=<to>".
+void SymbolTable::parseAlternateName(StringRef s) {
+  auto [from, to] = s.split('=');
+  if (from.empty() || to.empty())
+    Fatal(ctx) << "/alternatename: invalid argument: " << s;
+  auto it = alternateNames.find(from);
+  if (it != alternateNames.end() && it->second != to)
+    Fatal(ctx) << "/alternatename: conflicts: " << s;
+  alternateNames.insert(it, std::make_pair(from, to));
+}
+
+// Parses /aligncomm option argument.
+void SymbolTable::parseAligncomm(StringRef s) {
+  auto [name, align] = s.split(',');
+  if (name.empty() || align.empty()) {
+    Err(ctx) << "/aligncomm: invalid argument: " << s;
+    return;
+  }
+  int v;
+  if (align.getAsInteger(0, v)) {
+    Err(ctx) << "/aligncomm: invalid argument: " << s;
+    return;
+  }
+  alignComm[std::string(name)] = std::max(alignComm[std::string(name)], 1 << v);
+}
+
 Symbol *SymbolTable::addUndefined(StringRef name) {
   return addUndefined(name, nullptr, false);
+}
+
+std::string SymbolTable::printSymbol(Symbol *sym) const {
+  std::string name = maybeDemangleSymbol(ctx, sym->getName());
+  if (ctx.hybridSymtab)
+    return name + (isEC() ? " (EC symbol)" : " (native symbol)");
+  return name;
 }
 
 void SymbolTable::compileBitcodeFiles() {

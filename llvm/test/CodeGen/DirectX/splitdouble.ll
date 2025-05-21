@@ -5,7 +5,7 @@ define i32 @test_scalar(double noundef %D) {
 ; CHECK-LABEL: define i32 @test_scalar(
 ; CHECK-SAME: double noundef [[D:%.*]]) {
 ; NOLOWER-NEXT:    [[HLSL_ASUINT_I0:%.*]] = call { i32, i32 } @llvm.dx.splitdouble.i32(double [[D]])
-; WITHLOWER-NEXT:  [[HLSL_ASUINT_I0:%.*]] = call %dx.types.splitdouble @dx.op.splitDouble.f64(i32 102, double [[D]])
+; WITHLOWER-NEXT:  [[HLSL_ASUINT_I0:%.*]] = call %dx.types.splitdouble @dx.op.splitDouble.f64(i32 102, double [[D]]) #[[#ATTR:]]
 ; NOLOWER-NEXT:    [[EV1:%.*]] = extractvalue { i32, i32 } [[HLSL_ASUINT_I0]], 0
 ; NOLOWER-NEXT:    [[EV2:%.*]] = extractvalue { i32, i32 } [[HLSL_ASUINT_I0]], 1
 ; WITHLOWER-NEXT:  [[EV1:%.*]] = extractvalue %dx.types.splitdouble [[HLSL_ASUINT_I0]], 0
@@ -26,10 +26,10 @@ define void @test_vector_double_split_void(<2 x double> noundef %d) {
 ; CHECK-SAME: <2 x double> noundef [[D:%.*]]) {
 ; CHECK-NEXT:      [[D_I0:%.*]] = extractelement <2 x double> [[D]], i64 0
 ; NOLOWER-NEXT:    [[HLSL_ASUINT_I0:%.*]] = call { i32, i32 } @llvm.dx.splitdouble.i32(double [[D_I0]])
-; WITHLOWER-NEXT:  [[HLSL_ASUINT_I0:%.*]] = call %dx.types.splitdouble @dx.op.splitDouble.f64(i32 102, double [[D_I0]])
+; WITHLOWER-NEXT:  [[HLSL_ASUINT_I0:%.*]] = call %dx.types.splitdouble @dx.op.splitDouble.f64(i32 102, double [[D_I0]]) #[[#ATTR]]
 ; CHECK-NEXT:      [[D_I1:%.*]] = extractelement <2 x double> [[D]], i64 1
 ; NOLOWER-NEXT:    [[HLSL_ASUINT_I1:%.*]] = call { i32, i32 } @llvm.dx.splitdouble.i32(double [[D_I1]])
-; WITHLOWER-NEXT:  [[HLSL_ASUINT_I1:%.*]] = call %dx.types.splitdouble @dx.op.splitDouble.f64(i32 102, double [[D_I1]])
+; WITHLOWER-NEXT:  [[HLSL_ASUINT_I1:%.*]] = call %dx.types.splitdouble @dx.op.splitDouble.f64(i32 102, double [[D_I1]]) #[[#ATTR]]
 ; CHECK-NEXT:      ret void
 ;
   %hlsl.asuint = call { <2 x i32>, <2 x i32> }  @llvm.dx.splitdouble.v2i32(<2 x double> %d)
@@ -41,13 +41,13 @@ define noundef <3 x i32> @test_vector_double_split(<3 x double> noundef %d) {
 ; CHECK-SAME: <3 x double> noundef [[D:%.*]]) {
 ; CHECK-NEXT:      [[D_I0:%.*]] = extractelement <3 x double> [[D]], i64 0
 ; NOLOWER-NEXT:    [[HLSL_ASUINT_I0:%.*]] = call { i32, i32 } @llvm.dx.splitdouble.i32(double [[D_I0]])
-; WITHLOWER-NEXT:  [[HLSL_ASUINT_I0:%.*]] = call %dx.types.splitdouble @dx.op.splitDouble.f64(i32 102, double [[D_I0]])
+; WITHLOWER-NEXT:  [[HLSL_ASUINT_I0:%.*]] = call %dx.types.splitdouble @dx.op.splitDouble.f64(i32 102, double [[D_I0]]) #[[#ATTR]]
 ; CHECK-NEXT:      [[D_I1:%.*]] = extractelement <3 x double> [[D]], i64 1
 ; NOLOWER-NEXT:    [[HLSL_ASUINT_I1:%.*]] = call { i32, i32 } @llvm.dx.splitdouble.i32(double [[D_I1]])
-; WITHLOWER-NEXT:  [[HLSL_ASUINT_I1:%.*]] = call %dx.types.splitdouble @dx.op.splitDouble.f64(i32 102, double [[D_I1]])
+; WITHLOWER-NEXT:  [[HLSL_ASUINT_I1:%.*]] = call %dx.types.splitdouble @dx.op.splitDouble.f64(i32 102, double [[D_I1]]) #[[#ATTR]]
 ; CHECK-NEXT:      [[D_I2:%.*]] = extractelement <3 x double> [[D]], i64 2
 ; NOLOWER-NEXT:    [[HLSL_ASUINT_I2:%.*]] = call { i32, i32 } @llvm.dx.splitdouble.i32(double [[D_I2]])
-; WITHLOWER-NEXT:  [[HLSL_ASUINT_I2:%.*]] = call %dx.types.splitdouble @dx.op.splitDouble.f64(i32 102, double [[D_I2]])
+; WITHLOWER-NEXT:  [[HLSL_ASUINT_I2:%.*]] = call %dx.types.splitdouble @dx.op.splitDouble.f64(i32 102, double [[D_I2]]) #[[#ATTR]]
 ; NOLOWER-NEXT:    [[DOTELEM0:%.*]] = extractvalue { i32, i32 } [[HLSL_ASUINT_I0]], 0
 ; WITHLOWER-NEXT:  [[DOTELEM0:%.*]] = extractvalue %dx.types.splitdouble [[HLSL_ASUINT_I0]], 0
 ; NOLOWER-NEXT:    [[DOTELEM01:%.*]] = extractvalue { i32, i32 } [[HLSL_ASUINT_I1]], 0
@@ -74,3 +74,5 @@ define noundef <3 x i32> @test_vector_double_split(<3 x double> noundef %d) {
   %3 = add <3 x i32> %1, %2
   ret <3 x i32> %3
 }
+
+; WITHLOWER: attributes #[[#ATTR]] = {{{.*}} memory(none) {{.*}}}

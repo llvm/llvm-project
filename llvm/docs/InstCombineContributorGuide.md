@@ -1,5 +1,9 @@
 # InstCombine contributor guide
 
+```{contents}
+:depth: 4
+```
+
 This guide lays out a series of rules that contributions to InstCombine should
 follow. **Following these rules will results in much faster PR approvals.**
 

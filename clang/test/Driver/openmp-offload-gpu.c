@@ -235,13 +235,13 @@
 // CHECK-PHASES: 0: input, "[[INPUT:.+]]", c, (host-openmp)
 // CHECK-PHASES: 1: preprocessor, {0}, cpp-output, (host-openmp)
 // CHECK-PHASES: 2: compiler, {1}, ir, (host-openmp)
-// CHECK-PHASES: 3: input, "[[INPUT]]", c, (device-openmp)
-// CHECK-PHASES: 4: preprocessor, {3}, cpp-output, (device-openmp)
-// CHECK-PHASES: 5: compiler, {4}, ir, (device-openmp)
-// CHECK-PHASES: 6: offload, "host-openmp (x86_64-unknown-linux-gnu)" {2}, "device-openmp (nvptx64-nvidia-cuda)" {5}, ir
-// CHECK-PHASES: 7: backend, {6}, assembler, (device-openmp)
-// CHECK-PHASES: 8: assembler, {7}, object, (device-openmp)
-// CHECK-PHASES: 9: offload, "device-openmp (nvptx64-nvidia-cuda)" {8}, object
+// CHECK-PHASES: 3: input, "[[INPUT]]", c, (device-openmp, sm_52)
+// CHECK-PHASES: 4: preprocessor, {3}, cpp-output, (device-openmp, sm_52)
+// CHECK-PHASES: 5: compiler, {4}, ir, (device-openmp, sm_52)
+// CHECK-PHASES: 6: offload, "host-openmp (x86_64-unknown-linux-gnu)" {2}, "device-openmp (nvptx64-nvidia-cuda:sm_52)" {5}, ir
+// CHECK-PHASES: 7: backend, {6}, assembler, (device-openmp, sm_52)
+// CHECK-PHASES: 8: assembler, {7}, object, (device-openmp, sm_52)
+// CHECK-PHASES: 9: offload, "device-openmp (nvptx64-nvidia-cuda:sm_52)" {8}, object
 // CHECK-PHASES: 10: clang-offload-packager, {9}, image
 // CHECK-PHASES: 11: offload, "host-openmp (x86_64-unknown-linux-gnu)" {2}, "device-openmp (x86_64-unknown-linux-gnu)" {10}, ir
 // CHECK-PHASES: 12: backend, {11}, assembler, (host-openmp)
@@ -315,7 +315,7 @@
 // RUN:     -Xopenmp-target=nvptx64-nvidia-cuda -march=sm_52 --offload-device-only -nogpulib %s 2>&1 | FileCheck %s --check-prefix=CHECK-DEVICE-ONLY
 // CHECK-DEVICE-ONLY: "x86_64-unknown-linux-gnu" - "clang", inputs: ["[[INPUT:.*]]"], output: "[[HOST_BC:.*]]"
 // CHECK-DEVICE-ONLY: "nvptx64-nvidia-cuda" - "clang", inputs: ["[[INPUT]]", "[[HOST_BC]]"], output: "[[DEVICE_ASM:.*]]"
-// CHECK-DEVICE-ONLY: "nvptx64-nvidia-cuda" - "NVPTX::Assembler", inputs: ["[[DEVICE_ASM]]"], output: "{{.*}}-openmp-nvptx64-nvidia-cuda.o"
+// CHECK-DEVICE-ONLY: "nvptx64-nvidia-cuda" - "NVPTX::Assembler", inputs: ["[[DEVICE_ASM]]"], output: "{{.*}}-openmp-nvptx64-nvidia-cuda-sm_52.o"
 
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -ccc-print-bindings -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda \
 // RUN:     -Xopenmp-target=nvptx64-nvidia-cuda -march=sm_52 --offload-device-only -E -nogpulib %s 2>&1 | FileCheck %s --check-prefix=CHECK-DEVICE-ONLY-PP
@@ -324,18 +324,18 @@
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=sm_52 --cuda-path=%S/Inputs/CUDA_102/usr/local/cuda \
 // RUN:     -foffload-lto %s 2>&1 | FileCheck --check-prefix=CHECK-LTO-LIBRARY %s
 
-// CHECK-LTO-LIBRARY: {{.*}}-lomptarget{{.*}}-lomptarget.devicertl
+// CHECK-LTO-LIBRARY: --device-linker={{.*}}=-lomp{{.*}}-lomptarget{{.*}}
 
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=sm_52 --cuda-path=%S/Inputs/CUDA_102/usr/local/cuda \
 // RUN:     --libomptarget-nvptx-bc-path=%S/Inputs/libomptarget/libomptarget-nvptx-test.bc %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-NO-LTO-LIBRARY %s
 
-// CHECK-NO-LTO-LIBRARY: {{.*}}-lomptarget{{.*}}-lomptarget.devicertl
+// CHECK-NO-LTO-LIBRARY: --device-linker={{.*}}=-lomp{{.*}}-lomptarget{{.*}}
 
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=sm_52 -nogpulib \
 // RUN:     -foffload-lto %s 2>&1 | FileCheck --check-prefix=CHECK-NO-LIBRARY %s
 
-// CHECK-NO-LIBRARY-NOT: {{.*}}-lomptarget{{.*}}-lomptarget.devicertl
+// CHECK-NO-LIBRARY-NOT: --device-linker={{.*}}=-lomp{{.*}}-lomptarget{{.*}}
 
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=sm_52 -nogpulib \
 // RUN:     -Xoffload-linker a -Xoffload-linker-nvptx64-nvidia-cuda b -Xoffload-linker-nvptx64 c \
@@ -378,3 +378,19 @@
 // RUN:      --offload-arch=sm_52 -nogpulibc -nogpuinc %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=LIBC-GPU %s
 // LIBC-GPU-NOT: clang-linker-wrapper{{.*}}"--device-linker"
+
+//
+// Check that ThinLTO works for OpenMP offloading.
+//
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp \
+// RUN:     --offload-arch=gfx906 -foffload-lto=thin -nogpulib -nogpuinc %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=THINLTO-GFX906 %s
+// THINLTO-GFX906: --device-compiler=amdgcn-amd-amdhsa=-flto=thin
+// THINLTO-GFX906-SAME: --device-linker=amdgcn-amd-amdhsa=-plugin-opt=-force-import-all
+// THINLTO-GFX906-SAME: --device-linker=amdgcn-amd-amdhsa=-plugin-opt=-avail-extern-to-local
+// THINLTO-GFX906-SAME: --device-linker=amdgcn-amd-amdhsa=-plugin-opt=-amdgpu-internalize-symbols
+//
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp \
+// RUN:     --offload-arch=sm_52 -foffload-lto=thin -nogpulib -nogpuinc %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=THINLTO-SM52 %s
+// THINLTO-SM52: --device-compiler=nvptx64-nvidia-cuda=-flto=thin

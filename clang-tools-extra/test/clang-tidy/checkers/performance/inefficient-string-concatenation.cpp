@@ -6,15 +6,15 @@ class basic_string {
 public:
   basic_string() {}
   ~basic_string() {}
-  basic_string<T> *operator+=(const basic_string<T> &) {}
-  friend basic_string<T> operator+(const basic_string<T> &, const basic_string<T> &) {}
+  basic_string<T> *operator+=(const basic_string<T> &);
+  friend basic_string<T> operator+(const basic_string<T> &, const basic_string<T> &);
 };
 typedef basic_string<char> string;
 typedef basic_string<wchar_t> wstring;
 }
 
 void f(std::string) {}
-std::string g(std::string) {}
+std::string g(std::string);
 
 int main() {
   std::string mystr1, mystr2;

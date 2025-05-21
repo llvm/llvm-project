@@ -27,6 +27,7 @@
 #include "llvm/Analysis/CmpInstAnalysis.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/InstSimplifyFolder.h"
+#include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/OverflowInstAnalysis.h"
@@ -42,6 +43,7 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Statepoint.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Support/KnownFPClass.h"
 #include <algorithm>
 #include <optional>
 using namespace llvm;
@@ -2685,27 +2687,14 @@ static Constant *computePointerICmp(CmpPredicate Pred, Value *LHS, Value *RHS,
   const DataLayout &DL = Q.DL;
   const TargetLibraryInfo *TLI = Q.TLI;
 
-  // We can only fold certain predicates on pointer comparisons.
-  switch (Pred) {
-  default:
+  // We fold equality and unsigned predicates on pointer comparisons, but forbid
+  // signed predicates since a GEP with inbounds could cross the sign boundary.
+  if (CmpInst::isSigned(Pred))
     return nullptr;
 
-    // Equality comparisons are easy to fold.
-  case CmpInst::ICMP_EQ:
-  case CmpInst::ICMP_NE:
-    break;
-
-    // We can only handle unsigned relational comparisons because 'inbounds' on
-    // a GEP only protects against unsigned wrapping.
-  case CmpInst::ICMP_UGT:
-  case CmpInst::ICMP_UGE:
-  case CmpInst::ICMP_ULT:
-  case CmpInst::ICMP_ULE:
-    // However, we have to switch them to their signed variants to handle
-    // negative indices from the base pointer.
-    Pred = ICmpInst::getSignedPredicate(Pred);
-    break;
-  }
+  // We have to switch to a signed predicate to handle negative indices from
+  // the base pointer.
+  Pred = ICmpInst::getSignedPredicate(Pred);
 
   // Strip off any constant offsets so that we can reason about them.
   // It's tempting to use getUnderlyingObject or even just stripInBoundsOffsets
@@ -2729,7 +2718,7 @@ static Constant *computePointerICmp(CmpPredicate Pred, Value *LHS, Value *RHS,
                             ICmpInst::compare(LHSOffset, RHSOffset, Pred));
 
   // Various optimizations for (in)equality comparisons.
-  if (Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_NE) {
+  if (ICmpInst::isEquality(Pred)) {
     // Different non-empty allocations that exist at the same time have
     // different addresses (if the program can tell). If the offsets are
     // within the bounds of their allocations (and not one-past-the-end!
@@ -2800,7 +2789,8 @@ static Constant *computePointerICmp(CmpPredicate Pred, Value *LHS, Value *RHS,
       struct CustomCaptureTracker : public CaptureTracker {
         bool Captured = false;
         void tooManyUses() override { Captured = true; }
-        bool captured(const Use *U) override {
+        Action captured(const Use *U, UseCaptureInfo CI) override {
+          // TODO(captures): Use UseCaptureInfo.
           if (auto *ICmp = dyn_cast<ICmpInst>(U->getUser())) {
             // Comparison against value stored in global variable. Given the
             // pointer does not escape, its value cannot be guessed and stored
@@ -2808,11 +2798,11 @@ static Constant *computePointerICmp(CmpPredicate Pred, Value *LHS, Value *RHS,
             unsigned OtherIdx = 1 - U->getOperandNo();
             auto *LI = dyn_cast<LoadInst>(ICmp->getOperand(OtherIdx));
             if (LI && isa<GlobalVariable>(LI->getPointerOperand()))
-              return false;
+              return Continue;
           }
 
           Captured = true;
-          return true;
+          return Stop;
         }
       };
       CustomCaptureTracker Tracker;
@@ -3043,7 +3033,9 @@ enum class MonotonicType { GreaterEq, LowerEq };
 
 /// Get values V_i such that V uge V_i (GreaterEq) or V ule V_i (LowerEq).
 static void getUnsignedMonotonicValues(SmallPtrSetImpl<Value *> &Res, Value *V,
-                                       MonotonicType Type, unsigned Depth = 0) {
+                                       MonotonicType Type,
+                                       const SimplifyQuery &Q,
+                                       unsigned Depth = 0) {
   if (!Res.insert(V).second)
     return;
 
@@ -3059,24 +3051,31 @@ static void getUnsignedMonotonicValues(SmallPtrSetImpl<Value *> &Res, Value *V,
   if (Type == MonotonicType::GreaterEq) {
     if (match(I, m_Or(m_Value(X), m_Value(Y))) ||
         match(I, m_Intrinsic<Intrinsic::uadd_sat>(m_Value(X), m_Value(Y)))) {
-      getUnsignedMonotonicValues(Res, X, Type, Depth);
-      getUnsignedMonotonicValues(Res, Y, Type, Depth);
+      getUnsignedMonotonicValues(Res, X, Type, Q, Depth);
+      getUnsignedMonotonicValues(Res, Y, Type, Q, Depth);
+    }
+    // X * Y >= X --> true
+    if (match(I, m_NUWMul(m_Value(X), m_Value(Y)))) {
+      if (isKnownNonZero(X, Q))
+        getUnsignedMonotonicValues(Res, Y, Type, Q, Depth);
+      if (isKnownNonZero(Y, Q))
+        getUnsignedMonotonicValues(Res, X, Type, Q, Depth);
     }
   } else {
     assert(Type == MonotonicType::LowerEq);
     switch (I->getOpcode()) {
     case Instruction::And:
-      getUnsignedMonotonicValues(Res, I->getOperand(0), Type, Depth);
-      getUnsignedMonotonicValues(Res, I->getOperand(1), Type, Depth);
+      getUnsignedMonotonicValues(Res, I->getOperand(0), Type, Q, Depth);
+      getUnsignedMonotonicValues(Res, I->getOperand(1), Type, Q, Depth);
       break;
     case Instruction::URem:
     case Instruction::UDiv:
     case Instruction::LShr:
-      getUnsignedMonotonicValues(Res, I->getOperand(0), Type, Depth);
+      getUnsignedMonotonicValues(Res, I->getOperand(0), Type, Q, Depth);
       break;
     case Instruction::Call:
       if (match(I, m_Intrinsic<Intrinsic::usub_sat>(m_Value(X))))
-        getUnsignedMonotonicValues(Res, X, Type, Depth);
+        getUnsignedMonotonicValues(Res, X, Type, Q, Depth);
       break;
     default:
       break;
@@ -3085,7 +3084,8 @@ static void getUnsignedMonotonicValues(SmallPtrSetImpl<Value *> &Res, Value *V,
 }
 
 static Value *simplifyICmpUsingMonotonicValues(CmpPredicate Pred, Value *LHS,
-                                               Value *RHS) {
+                                               Value *RHS,
+                                               const SimplifyQuery &Q) {
   if (Pred != ICmpInst::ICMP_UGE && Pred != ICmpInst::ICMP_ULT)
     return nullptr;
 
@@ -3093,8 +3093,8 @@ static Value *simplifyICmpUsingMonotonicValues(CmpPredicate Pred, Value *LHS,
   // GreaterValues and LowerValues are the same, it follows that LHS uge RHS.
   SmallPtrSet<Value *, 4> GreaterValues;
   SmallPtrSet<Value *, 4> LowerValues;
-  getUnsignedMonotonicValues(GreaterValues, LHS, MonotonicType::GreaterEq);
-  getUnsignedMonotonicValues(LowerValues, RHS, MonotonicType::LowerEq);
+  getUnsignedMonotonicValues(GreaterValues, LHS, MonotonicType::GreaterEq, Q);
+  getUnsignedMonotonicValues(LowerValues, RHS, MonotonicType::LowerEq, Q);
   for (Value *GV : GreaterValues)
     if (LowerValues.contains(GV))
       return ConstantInt::getBool(getCompareTy(LHS),
@@ -3994,7 +3994,7 @@ static Value *simplifyICmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
   // This is potentially expensive, and we have already computedKnownBits for
   // compares with 0 above here, so only try this for a non-zero compare.
   if (ICmpInst::isEquality(Pred) && !match(RHS, m_Zero()) &&
-      isKnownNonEqual(LHS, RHS, Q.DL, Q.AC, Q.CxtI, Q.DT, Q.IIQ.UseInstrInfo)) {
+      isKnownNonEqual(LHS, RHS, Q)) {
     return Pred == ICmpInst::ICMP_NE ? getTrue(ITy) : getFalse(ITy);
   }
 
@@ -4010,10 +4010,10 @@ static Value *simplifyICmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
           ICmpInst::getSwappedPredicate(Pred), RHS, LHS))
     return V;
 
-  if (Value *V = simplifyICmpUsingMonotonicValues(Pred, LHS, RHS))
+  if (Value *V = simplifyICmpUsingMonotonicValues(Pred, LHS, RHS, Q))
     return V;
   if (Value *V = simplifyICmpUsingMonotonicValues(
-          ICmpInst::getSwappedPredicate(Pred), RHS, LHS))
+          ICmpInst::getSwappedPredicate(Pred), RHS, LHS, Q))
     return V;
 
   if (Value *V = simplifyICmpWithDominatingAssume(Pred, LHS, RHS, Q))
@@ -4612,12 +4612,11 @@ static Value *simplifyCmpSelOfMaxMin(Value *CmpLHS, Value *CmpRHS,
   return nullptr;
 }
 
-/// An alternative way to test if a bit is set or not uses sgt/slt instead of
-/// eq/ne.
-static Value *simplifySelectWithFakeICmpEq(Value *CmpLHS, Value *CmpRHS,
-                                           CmpPredicate Pred, Value *TrueVal,
-                                           Value *FalseVal) {
-  if (auto Res = decomposeBitTestICmp(CmpLHS, CmpRHS, Pred))
+/// An alternative way to test if a bit is set or not.
+/// uses e.g. sgt/slt or trunc instead of eq/ne.
+static Value *simplifySelectWithBitTest(Value *CondVal, Value *TrueVal,
+                                        Value *FalseVal) {
+  if (auto Res = decomposeBitTest(CondVal))
     return simplifySelectBitTest(TrueVal, FalseVal, Res->X, &Res->Mask,
                                  Res->Pred == ICmpInst::ICMP_EQ);
 
@@ -4728,21 +4727,20 @@ static Value *simplifySelectWithICmpCond(Value *CondVal, Value *TrueVal,
       return FalseVal;
   }
 
-  // Check for other compares that behave like bit test.
-  if (Value *V =
-          simplifySelectWithFakeICmpEq(CmpLHS, CmpRHS, Pred, TrueVal, FalseVal))
-    return V;
-
   // If we have a scalar equality comparison, then we know the value in one of
   // the arms of the select. See if substituting this value into the arm and
   // simplifying the result yields the same value as the other arm.
   if (Pred == ICmpInst::ICMP_EQ) {
-    if (Value *V = simplifySelectWithEquivalence({{CmpLHS, CmpRHS}}, TrueVal,
-                                                 FalseVal, Q, MaxRecurse))
-      return V;
-    if (Value *V = simplifySelectWithEquivalence({{CmpRHS, CmpLHS}}, TrueVal,
-                                                 FalseVal, Q, MaxRecurse))
-      return V;
+    if (CmpLHS->getType()->isIntOrIntVectorTy() ||
+        canReplacePointersIfEqual(CmpLHS, CmpRHS, Q.DL))
+      if (Value *V = simplifySelectWithEquivalence({{CmpLHS, CmpRHS}}, TrueVal,
+                                                   FalseVal, Q, MaxRecurse))
+        return V;
+    if (CmpLHS->getType()->isIntOrIntVectorTy() ||
+        canReplacePointersIfEqual(CmpRHS, CmpLHS, Q.DL))
+      if (Value *V = simplifySelectWithEquivalence({{CmpRHS, CmpLHS}}, TrueVal,
+                                                   FalseVal, Q, MaxRecurse))
+        return V;
 
     Value *X;
     Value *Y;
@@ -4982,6 +4980,9 @@ static Value *simplifySelectInst(Value *Cond, Value *TrueVal, Value *FalseVal,
 
   if (Value *V =
           simplifySelectWithICmpCond(Cond, TrueVal, FalseVal, Q, MaxRecurse))
+    return V;
+
+  if (Value *V = simplifySelectWithBitTest(Cond, TrueVal, FalseVal))
     return V;
 
   if (Value *V = simplifySelectWithFCmp(Cond, TrueVal, FalseVal, Q, MaxRecurse))
@@ -6376,15 +6377,6 @@ static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
     if (isSplatValue(Op0))
       return Op0;
     break;
-  case Intrinsic::frexp: {
-    // Frexp is idempotent with the added complication of the struct return.
-    if (match(Op0, m_ExtractValue<0>(m_Value(X)))) {
-      if (match(X, m_Intrinsic<Intrinsic::frexp>(m_Value())))
-        return X;
-    }
-
-    break;
-  }
   default:
     break;
   }
@@ -6539,6 +6531,10 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
     // Canonicalize immediate constant operand as Op1.
     if (match(Op0, m_ImmConstant()))
       std::swap(Op0, Op1);
+
+    // Propagate poison.
+    if (isa<PoisonValue>(Op1))
+      return Op1;
 
     // Assume undef is the limit value.
     if (Q.isUndefValue(Op1))

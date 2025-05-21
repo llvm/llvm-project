@@ -135,9 +135,8 @@ class MipsBranchExpansion : public MachineFunctionPass {
 public:
   static char ID;
 
-  MipsBranchExpansion() : MachineFunctionPass(ID), ABI(MipsABIInfo::Unknown()) {
-    initializeMipsBranchExpansionPass(*PassRegistry::getPassRegistry());
-  }
+  MipsBranchExpansion()
+      : MachineFunctionPass(ID), ABI(MipsABIInfo::Unknown()) {}
 
   StringRef getPassName() const override {
     return "Mips Branch Expansion Pass";
@@ -767,6 +766,8 @@ bool MipsBranchExpansion::handleMFLOSlot(Pred Predicate, Safe SafeInSlot) {
         std::pair<Iter, bool> Res = getNextMachineInstr(std::next(I), &*FI);
         LastInstInFunction |= Res.second;
         IInSlot = Res.first;
+        if (LastInstInFunction)
+          continue;
         if (!SafeInSlot(*IInSlot, *I)) {
           Changed = true;
           TII->insertNop(*(I->getParent()), std::next(I), I->getDebugLoc())

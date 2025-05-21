@@ -435,10 +435,10 @@ func.func @testparallelop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x
   } attributes {defaultAttr = #acc<defaultvalue none>}
   acc.parallel {
   } attributes {defaultAttr = #acc<defaultvalue present>}
-  acc.parallel {
-  } attributes {asyncAttr}
-  acc.parallel {
-  } attributes {waitAttr}
+  acc.parallel async {
+  }
+  acc.parallel wait {
+  }
   acc.parallel {
   } attributes {selfAttr}
   return
@@ -488,10 +488,10 @@ func.func @testparallelop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x
 // CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}
 // CHECK:      acc.parallel {
 // CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue present>}
-// CHECK:      acc.parallel {
-// CHECK-NEXT: } attributes {asyncAttr}
-// CHECK:      acc.parallel {
-// CHECK-NEXT: } attributes {waitAttr}
+// CHECK:      acc.parallel async {
+// CHECK-NEXT: }
+// CHECK:      acc.parallel wait {
+// CHECK-NEXT: }
 // CHECK:      acc.parallel {
 // CHECK-NEXT: } attributes {selfAttr}
 
@@ -567,10 +567,10 @@ func.func @testserialop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10
   } attributes {defaultAttr = #acc<defaultvalue none>}
   acc.serial {
   } attributes {defaultAttr = #acc<defaultvalue present>}
-  acc.serial {
-  } attributes {asyncAttr}
-  acc.serial {
-  } attributes {waitAttr}
+  acc.serial async {
+  }
+  acc.serial wait {
+  }
   acc.serial {
   } attributes {selfAttr}
   acc.serial {
@@ -604,10 +604,10 @@ func.func @testserialop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10
 // CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}
 // CHECK:      acc.serial {
 // CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue present>}
-// CHECK:      acc.serial {
-// CHECK-NEXT: } attributes {asyncAttr}
-// CHECK:      acc.serial {
-// CHECK-NEXT: } attributes {waitAttr}
+// CHECK:      acc.serial async {
+// CHECK-NEXT: }
+// CHECK:      acc.serial wait {
+// CHECK-NEXT: }
 // CHECK:      acc.serial {
 // CHECK-NEXT: } attributes {selfAttr}
 // CHECK:      acc.serial {
@@ -639,10 +639,10 @@ func.func @testserialop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10
   } attributes {defaultAttr = #acc<defaultvalue none>}
   acc.kernels {
   } attributes {defaultAttr = #acc<defaultvalue present>}
-  acc.kernels {
-  } attributes {asyncAttr}
-  acc.kernels {
-  } attributes {waitAttr}
+  acc.kernels async {
+  }
+  acc.kernels wait {
+  }
   acc.kernels {
   } attributes {selfAttr}
   acc.kernels {
@@ -673,10 +673,10 @@ func.func @testserialop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10
 // CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}
 // CHECK:      acc.kernels {
 // CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue present>}
-// CHECK:      acc.kernels {
-// CHECK-NEXT: } attributes {asyncAttr}
-// CHECK:      acc.kernels {
-// CHECK-NEXT: } attributes {waitAttr}
+// CHECK:      acc.kernels async {
+// CHECK-NEXT: }
+// CHECK:      acc.kernels wait {
+// CHECK-NEXT: }
 // CHECK:      acc.kernels {
 // CHECK-NEXT: } attributes {selfAttr}
 // CHECK:      acc.kernels {
@@ -787,23 +787,23 @@ func.func @testdataop(%a: memref<f32>, %b: memref<f32>, %c: memref<f32>) -> () {
   acc.data {
   } attributes { defaultAttr = #acc<defaultvalue none> }
 
-  acc.data {
-  } attributes { defaultAttr = #acc<defaultvalue none>, async }
+  acc.data async {
+  } attributes { defaultAttr = #acc<defaultvalue none> }
 
   %a1 = arith.constant 1 : i64
   acc.data async(%a1 : i64) {
-  } attributes { defaultAttr = #acc<defaultvalue none>, async }
+  } attributes { defaultAttr = #acc<defaultvalue none> }
 
-  acc.data {
-  } attributes { defaultAttr = #acc<defaultvalue none>, wait }
+  acc.data wait {
+  } attributes { defaultAttr = #acc<defaultvalue none> }
 
   %w1 = arith.constant 1 : i64
   acc.data wait({%w1 : i64}) {
-  } attributes { defaultAttr = #acc<defaultvalue none>, wait }
+  } attributes { defaultAttr = #acc<defaultvalue none> }
 
   %wd1 = arith.constant 1 : i64
   acc.data wait({devnum: %wd1 : i64, %w1 : i64}) {
-  } attributes { defaultAttr = #acc<defaultvalue none>, wait }
+  } attributes { defaultAttr = #acc<defaultvalue none> }
 
   return
 }
@@ -904,20 +904,20 @@ func.func @testdataop(%a: memref<f32>, %b: memref<f32>, %c: memref<f32>) -> () {
 // CHECK:      acc.data {
 // CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}
 
-// CHECK:      acc.data {
-// CHECK-NEXT: } attributes {async, defaultAttr = #acc<defaultvalue none>}
+// CHECK:      acc.data async {
+// CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}
 
 // CHECK:      acc.data async(%{{.*}} : i64) {
-// CHECK-NEXT: } attributes {async, defaultAttr = #acc<defaultvalue none>}
+// CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}
 
-// CHECK:      acc.data {
-// CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>, wait}
+// CHECK:      acc.data wait {
+// CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}
 
 // CHECK:      acc.data wait({%{{.*}} : i64}) {
-// CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>, wait}
+// CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}
 
 // CHECK:      acc.data wait({devnum: %{{.*}} : i64, %{{.*}} : i64}) {
-// CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>, wait}
+// CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}
 
 // -----
 
@@ -977,7 +977,7 @@ acc.wait async(%i32Value: i32)
 acc.wait async(%idxValue: index)
 acc.wait(%i32Value: i32) async(%idxValue: index)
 acc.wait(%i64Value: i64) wait_devnum(%i32Value: i32)
-acc.wait attributes {async}
+acc.wait async
 acc.wait(%i64Value: i64) async(%idxValue: index) wait_devnum(%i32Value: i32)
 acc.wait(%i64Value: i64) wait_devnum(%i32Value: i32) async(%idxValue: index)
 acc.wait if(%ifCond)
@@ -996,7 +996,7 @@ acc.wait if(%ifCond)
 // CHECK: acc.wait async([[IDXVALUE]] : index)
 // CHECK: acc.wait([[I32VALUE]] : i32) async([[IDXVALUE]] : index)
 // CHECK: acc.wait([[I64VALUE]] : i64) wait_devnum([[I32VALUE]] : i32)
-// CHECK: acc.wait attributes {async}
+// CHECK: acc.wait async
 // CHECK: acc.wait([[I64VALUE]] : i64) async([[IDXVALUE]] : index) wait_devnum([[I32VALUE]] : i32)
 // CHECK: acc.wait([[I64VALUE]] : i64) async([[IDXVALUE]] : index) wait_devnum([[I32VALUE]] : i32)
 // CHECK: acc.wait if([[IFCOND]])
@@ -1078,7 +1078,7 @@ func.func @testexitdataop(%a: !llvm.ptr) -> () {
   acc.delete accPtr(%1 : !llvm.ptr)
 
   %2 = acc.getdeviceptr varPtr(%a : !llvm.ptr) varType(f64) -> !llvm.ptr
-  acc.exit_data dataOperands(%2 : !llvm.ptr) attributes {async,finalize}
+  acc.exit_data async dataOperands(%2 : !llvm.ptr) attributes {finalize}
   acc.delete accPtr(%2 : !llvm.ptr)
 
   %3 = acc.getdeviceptr varPtr(%a : !llvm.ptr) varType(f64) -> !llvm.ptr
@@ -1086,11 +1086,11 @@ func.func @testexitdataop(%a: !llvm.ptr) -> () {
   acc.detach accPtr(%3 : !llvm.ptr)
 
   %4 = acc.getdeviceptr varPtr(%a : !llvm.ptr) varType(f64) -> !llvm.ptr
-  acc.exit_data dataOperands(%4 : !llvm.ptr) attributes {async}
+  acc.exit_data async dataOperands(%4 : !llvm.ptr)
   acc.copyout accPtr(%4 : !llvm.ptr) to varPtr(%a : !llvm.ptr) varType(f64)
 
   %5 = acc.getdeviceptr varPtr(%a : !llvm.ptr) varType(f64) -> !llvm.ptr
-  acc.exit_data dataOperands(%5 : !llvm.ptr) attributes {wait}
+  acc.exit_data wait dataOperands(%5 : !llvm.ptr)
   acc.delete accPtr(%5 : !llvm.ptr)
 
   %6 = acc.getdeviceptr varPtr(%a : !llvm.ptr) varType(f64) -> !llvm.ptr
@@ -1127,7 +1127,7 @@ func.func @testexitdataop(%a: !llvm.ptr) -> () {
 // CHECK: acc.delete accPtr(%[[DEVPTR]] : !llvm.ptr)
 
 // CHECK: %[[DEVPTR:.*]] = acc.getdeviceptr varPtr(%[[ARGA]] : !llvm.ptr) varType(f64) -> !llvm.ptr
-// CHECK: acc.exit_data dataOperands(%[[DEVPTR]] : !llvm.ptr) attributes {async, finalize}
+// CHECK: acc.exit_data async dataOperands(%[[DEVPTR]] : !llvm.ptr) attributes {finalize}
 // CHECK: acc.delete accPtr(%[[DEVPTR]] : !llvm.ptr)
 
 // CHECK: %[[DEVPTR:.*]] = acc.getdeviceptr varPtr(%[[ARGA]] : !llvm.ptr) varType(f64) -> !llvm.ptr
@@ -1135,11 +1135,11 @@ func.func @testexitdataop(%a: !llvm.ptr) -> () {
 // CHECK: acc.detach accPtr(%[[DEVPTR]] : !llvm.ptr)
 
 // CHECK: %[[DEVPTR:.*]] = acc.getdeviceptr varPtr(%[[ARGA]] : !llvm.ptr) varType(f64) -> !llvm.ptr
-// CHECK: acc.exit_data dataOperands(%[[DEVPTR]] : !llvm.ptr) attributes {async}
+// CHECK: acc.exit_data async dataOperands(%[[DEVPTR]] : !llvm.ptr)
 // CHECK: acc.copyout accPtr(%[[DEVPTR]] : !llvm.ptr) to varPtr(%[[ARGA]] : !llvm.ptr) varType(f64)
 
 // CHECK: %[[DEVPTR:.*]] = acc.getdeviceptr varPtr(%[[ARGA]] : !llvm.ptr) varType(f64) -> !llvm.ptr
-// CHECK: acc.exit_data dataOperands(%[[DEVPTR]] : !llvm.ptr) attributes {wait}
+// CHECK: acc.exit_data wait dataOperands(%[[DEVPTR]] : !llvm.ptr)
 // CHECK: acc.delete accPtr(%[[DEVPTR]] : !llvm.ptr)
 
 // CHECK: %[[DEVPTR:.*]] = acc.getdeviceptr varPtr(%[[ARGA]] : !llvm.ptr) varType(f64) -> !llvm.ptr
@@ -1176,9 +1176,9 @@ func.func @testenterdataop(%a: !llvm.ptr, %b: !llvm.ptr, %c: !llvm.ptr) -> () {
   %4 = acc.attach varPtr(%a : !llvm.ptr) varType(f64) -> !llvm.ptr
   acc.enter_data dataOperands(%4 : !llvm.ptr)
   %5 = acc.copyin varPtr(%a : !llvm.ptr) varType(f64) -> !llvm.ptr
-  acc.enter_data dataOperands(%5 : !llvm.ptr) attributes {async}
+  acc.enter_data async dataOperands(%5 : !llvm.ptr)
   %6 = acc.create varPtr(%a : !llvm.ptr) varType(f64) -> !llvm.ptr
-  acc.enter_data dataOperands(%6 : !llvm.ptr) attributes {wait}
+  acc.enter_data wait dataOperands(%6 : !llvm.ptr)
   %7 = acc.copyin varPtr(%a : !llvm.ptr) varType(f64) -> !llvm.ptr
   acc.enter_data async(%i64Value : i64) dataOperands(%7 : !llvm.ptr)
   %8 = acc.copyin varPtr(%a : !llvm.ptr) varType(f64) -> !llvm.ptr
@@ -1205,9 +1205,9 @@ func.func @testenterdataop(%a: !llvm.ptr, %b: !llvm.ptr, %c: !llvm.ptr) -> () {
 // CHECK: %[[ATTACH:.*]] = acc.attach varPtr(%[[ARGA]] : !llvm.ptr) varType(f64) -> !llvm.ptr
 // CHECK: acc.enter_data dataOperands(%[[ATTACH]] : !llvm.ptr)
 // CHECK: %[[COPYIN:.*]] = acc.copyin varPtr(%[[ARGA]] : !llvm.ptr) varType(f64) -> !llvm.ptr
-// CHECK: acc.enter_data dataOperands(%[[COPYIN]] : !llvm.ptr) attributes {async}
+// CHECK: acc.enter_data async dataOperands(%[[COPYIN]] : !llvm.ptr)
 // CHECK: %[[CREATE:.*]] = acc.create varPtr(%[[ARGA]] : !llvm.ptr) varType(f64) -> !llvm.ptr
-// CHECK: acc.enter_data dataOperands(%[[CREATE]] : !llvm.ptr) attributes {wait}
+// CHECK: acc.enter_data wait dataOperands(%[[CREATE]] : !llvm.ptr)
 // CHECK: %[[COPYIN:.*]] = acc.copyin varPtr(%[[ARGA]] : !llvm.ptr) varType(f64) -> !llvm.ptr
 // CHECK: acc.enter_data async([[I64VALUE]] : i64) dataOperands(%[[COPYIN]] : !llvm.ptr)
 // CHECK: %[[COPYIN:.*]] = acc.copyin varPtr(%[[ARGA]] : !llvm.ptr) varType(f64) -> !llvm.ptr
@@ -1862,22 +1862,26 @@ func.func @acc_num_gangs() {
 
 // CHECK-LABEL: func.func @acc_combined
 func.func @acc_combined() {
+  %c0 = arith.constant 0 : index
+  %c10 = arith.constant 10 : index
+  %c1 = arith.constant 1 : index
+
   acc.parallel combined(loop) {
-    acc.loop combined(parallel) {
+    acc.loop combined(parallel) control(%arg3 : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
       acc.yield
     }
     acc.terminator
   }
 
   acc.kernels combined(loop) {
-    acc.loop combined(kernels) {
+    acc.loop combined(kernels) control(%arg3 : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
       acc.yield
     }
     acc.terminator
   }
 
   acc.serial combined(loop) {
-    acc.loop combined(serial) {
+    acc.loop combined(serial) control(%arg3 : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
       acc.yield
     }
     acc.terminator
@@ -1892,3 +1896,86 @@ func.func @acc_combined() {
 // CHECK: acc.loop combined(kernels)
 // CHECK: acc.serial combined(loop)
 // CHECK: acc.loop combined(serial)
+
+acc.firstprivate.recipe @firstprivatization_memref_i32 : memref<i32> init {
+^bb0(%arg0: memref<i32>):
+  %alloca = memref.alloca() : memref<i32>
+  acc.yield %alloca : memref<i32>
+} copy {
+^bb0(%arg0: memref<i32>, %arg1: memref<i32>):
+  %0 = memref.load %arg1[] : memref<i32>
+  memref.store %0, %arg0[] : memref<i32>
+  acc.terminator
+}
+
+// CHECK-LABEL: acc.firstprivate.recipe @firstprivatization_memref_i32
+// CHECK:       memref.alloca
+
+acc.reduction.recipe @reduction_add_memref_i32 : memref<i32> reduction_operator <add> init {
+^bb0(%arg0: memref<i32>):
+  %c0_i32 = arith.constant 0 : i32
+  %alloca = memref.alloca() : memref<i32>
+  memref.store %c0_i32, %alloca[] : memref<i32>
+  acc.yield %alloca : memref<i32>
+} combiner {
+^bb0(%arg0: memref<i32>, %arg1: memref<i32>):
+  %0 = memref.load %arg0[] : memref<i32>
+  %1 = memref.load %arg1[] : memref<i32>
+  %2 = arith.addi %0, %1 : i32
+  memref.store %2, %arg0[] : memref<i32>
+  acc.yield %arg0 : memref<i32>
+}
+
+// CHECK-LABEL: acc.reduction.recipe @reduction_add_memref_i32
+// CHECK:       memref.alloca
+
+acc.private.recipe @privatization_memref_i32 : memref<i32> init {
+^bb0(%arg0: memref<i32>):
+  %alloca = memref.alloca() : memref<i32>
+  acc.yield %alloca : memref<i32>
+}
+
+// CHECK-LABEL: acc.private.recipe @privatization_memref_i32
+// CHECK:       memref.alloca
+
+// -----
+
+func.func @acc_loop_container() {
+  %c0 = arith.constant 0 : index
+  %c10 = arith.constant 10 : index
+  %c1 = arith.constant 1 : index
+  acc.loop {
+    scf.for %arg4 = %c0 to %c10 step %c1 {
+      scf.yield
+    }
+    acc.yield
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @acc_loop_container
+// CHECK:       acc.loop
+// CHECK:       scf.for
+
+// -----
+
+func.func @acc_loop_container() {
+  %c0 = arith.constant 0 : index
+  %c10 = arith.constant 10 : index
+  %c1 = arith.constant 1 : index
+  acc.loop {
+    scf.for %arg4 = %c0 to %c10 step %c1 {
+      scf.for %arg5 = %c0 to %c10 step %c1 {
+        scf.yield
+      }
+      scf.yield
+    }
+    acc.yield
+  } attributes { collapse = [2], collapseDeviceType = [#acc.device_type<none>] }
+  return
+}
+
+// CHECK-LABEL: func.func @acc_loop_container
+// CHECK:       acc.loop
+// CHECK:       scf.for
+// CHECK:       scf.for

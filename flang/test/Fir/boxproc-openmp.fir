@@ -3,26 +3,13 @@
 // Check minimally, only arguments, yields and the private types.
 
 // Test a private declaration with one region (alloc)
-//CHECK: omp.private {type = private}  @_QFsub1Et1_private_ref_rec__QFsub1Tt : !fir.ref<!fir.type<_QFsub1TtUnboxProc{p1:() -> ()}>> alloc {
-omp.private {type = private} @_QFsub1Et1_private_ref_rec__QFsub1Tt : !fir.ref<!fir.type<_QFsub1Tt{p1:!fir.boxproc<() -> ()>}>> alloc {
-//CHECK: ^bb0(%{{.*}}: !fir.ref<!fir.type<_QFsub1TtUnboxProc{p1:() -> ()}>>):
-^bb0(%arg0: !fir.ref<!fir.type<_QFsub1Tt{p1:!fir.boxproc<() -> ()>}>>):
-  %c1_i32 = arith.constant 1 : i32
-  %0 = fir.alloca !fir.type<_QFsub1Tt{p1:!fir.boxproc<() -> ()>}> {bindc_name = "t1", pinned, uniq_name = "_QFsub1Et1"}
-  %1 = fir.declare %0 {uniq_name = "_QFsub1Et1"} : (!fir.ref<!fir.type<_QFsub1Tt{p1:!fir.boxproc<() -> ()>}>>) -> !fir.ref<!fir.type<_QFsub1Tt{p1:!fir.boxproc<() -> ()>}>>
-  %2 = fir.embox %1 : (!fir.ref<!fir.type<_QFsub1Tt{p1:!fir.boxproc<() -> ()>}>>) -> !fir.box<!fir.type<_QFsub1Tt{p1:!fir.boxproc<() -> ()>}>>
-  %3 = fir.address_of(@_QQclXea6256ba131ddd9c2210e68030a0edd3) : !fir.ref<!fir.char<1,49>>
-  %4 = fir.convert %2 : (!fir.box<!fir.type<_QFsub1Tt{p1:!fir.boxproc<() -> ()>}>>) -> !fir.box<none>
-  %5 = fir.convert %3 : (!fir.ref<!fir.char<1,49>>) -> !fir.ref<i8>
-  fir.call @_FortranAInitialize(%4, %5, %c1_i32) fastmath<contract> : (!fir.box<none>, !fir.ref<i8>, i32) -> ()
-//CHECK: omp.yield(%{{.*}} : !fir.ref<!fir.type<_QFsub1TtUnboxProc{p1:() -> ()}>>)
-  omp.yield(%1 : !fir.ref<!fir.type<_QFsub1Tt{p1:!fir.boxproc<() -> ()>}>>)
-}
+//CHECK: omp.private {type = private}  @_QFsub1Et1_private_rec__QFsub1Tt : !fir.type<_QFsub1TtUnboxProc{p1:() -> ()}>{{$}}
+omp.private {type = private} @_QFsub1Et1_private_rec__QFsub1Tt : !fir.type<_QFsub1Tt{p1:!fir.boxproc<() -> ()>}>
 func.func @_QPsub1() {
   %0 = fir.alloca !fir.type<_QFsub1Tt{p1:!fir.boxproc<() -> ()>}> {bindc_name = "t1", uniq_name = "_QFsub1Et1"}
   %1 = fir.declare %0 {uniq_name = "_QFsub1Et1"} : (!fir.ref<!fir.type<_QFsub1Tt{p1:!fir.boxproc<() -> ()>}>>) -> !fir.ref<!fir.type<_QFsub1Tt{p1:!fir.boxproc<() -> ()>}>>
-//CHECK: omp.parallel private(@_QFsub1Et1_private_ref_rec__QFsub1Tt %{{.*}} -> %{{.*}} : !fir.ref<!fir.type<_QFsub1TtUnboxProc{p1:() -> ()}>>) {
-  omp.parallel private(@_QFsub1Et1_private_ref_rec__QFsub1Tt %1 -> %arg0 : !fir.ref<!fir.type<_QFsub1Tt{p1:!fir.boxproc<() -> ()>}>>) {
+//CHECK: omp.parallel private(@_QFsub1Et1_private_rec__QFsub1Tt %{{.*}} -> %{{.*}} : !fir.ref<!fir.type<_QFsub1TtUnboxProc{p1:() -> ()}>>) {
+  omp.parallel private(@_QFsub1Et1_private_rec__QFsub1Tt %1 -> %arg0 : !fir.ref<!fir.type<_QFsub1Tt{p1:!fir.boxproc<() -> ()>}>>) {
     %2 = fir.declare %arg0 {uniq_name = "_QFsub1Et1"} : (!fir.ref<!fir.type<_QFsub1Tt{p1:!fir.boxproc<() -> ()>}>>) -> !fir.ref<!fir.type<_QFsub1Tt{p1:!fir.boxproc<() -> ()>}>>
     omp.terminator
   }
@@ -31,11 +18,11 @@ func.func @_QPsub1() {
 
 
 // Test a private declaration with all regions (alloc, copy, dealloc)
-//CHECK: omp.private {type = firstprivate} @_QFsub2Et1_firstprivate_ref_box_heap_rec__QFsub2Tt : 
-//CHECK-SAME: !fir.ref<!fir.box<!fir.heap<!fir.type<_QFsub2TtUnboxProc{p1:() -> ()}>>>> alloc {
-omp.private {type = firstprivate} @_QFsub2Et1_firstprivate_ref_box_heap_rec__QFsub2Tt : !fir.ref<!fir.box<!fir.heap<!fir.type<_QFsub2Tt{p1:!fir.boxproc<() -> ()>}>>>> alloc {
-//CHECK: ^bb0(%{{.*}}: !fir.ref<!fir.box<!fir.heap<!fir.type<_QFsub2TtUnboxProc{p1:() -> ()}>>>>):
-^bb0(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.type<_QFsub2Tt{p1:!fir.boxproc<() -> ()>}>>>>):
+//CHECK: omp.private {type = firstprivate} @_QFsub2Et1_firstprivate_box_heap_rec__QFsub2Tt :
+//CHECK-SAME: [[TYPE:!fir.box<!fir.heap<!fir.type<_QFsub2TtUnboxProc\{p1:\(\) -> \(\)\}>>>]] init {
+omp.private {type = firstprivate} @_QFsub2Et1_firstprivate_box_heap_rec__QFsub2Tt : !fir.box<!fir.heap<!fir.type<_QFsub2Tt{p1:!fir.boxproc<() -> ()>}>>> init {
+//CHECK: ^bb0(%{{.*}}: !fir.ref<[[TYPE]]>, %{{.*}}: !fir.ref<[[TYPE]]>):
+^bb0(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.type<_QFsub2Tt{p1:!fir.boxproc<() -> ()>}>>>>, %arg1:!fir.ref<!fir.box<!fir.heap<!fir.type<_QFsub2Tt{p1:!fir.boxproc<() -> ()>}>>>>):
   %0 = fir.alloca !fir.box<!fir.heap<!fir.type<_QFsub2Tt{p1:!fir.boxproc<() -> ()>}>>> {bindc_name = "t1", pinned, uniq_name = "_QFsub2Et1"}
   %1 = fir.declare %0 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFsub2Et1"} : (!fir.ref<!fir.box<!fir.heap<!fir.type<_QFsub2Tt{p1:!fir.boxproc<() -> ()>}>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.type<_QFsub2Tt{p1:!fir.boxproc<() -> ()>}>>>>
 //CHECK: omp.yield(%{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.type<_QFsub2TtUnboxProc{p1:() -> ()}>>>>)
@@ -70,9 +57,9 @@ omp.private {type = firstprivate} @_QFsub2Et1_firstprivate_ref_box_heap_rec__QFs
 func.func @_QPsub2() {
   %0 = fir.alloca !fir.box<!fir.heap<!fir.type<_QFsub2Tt{p1:!fir.boxproc<() -> ()>}>>> {bindc_name = "t1", uniq_name = "_QFsub2Et1"}
   %1 = fir.declare %0 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFsub2Et1"} : (!fir.ref<!fir.box<!fir.heap<!fir.type<_QFsub2Tt{p1:!fir.boxproc<() -> ()>}>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.type<_QFsub2Tt{p1:!fir.boxproc<() -> ()>}>>>>
-//CHECK: omp.parallel private(@_QFsub2Et1_firstprivate_ref_box_heap_rec__QFsub2Tt %{{.*}} -> %{{.*}} :
+//CHECK: omp.parallel private(@_QFsub2Et1_firstprivate_box_heap_rec__QFsub2Tt %{{.*}} -> %{{.*}} :
 //CHECK-SAME: !fir.ref<!fir.box<!fir.heap<!fir.type<_QFsub2TtUnboxProc{p1:() -> ()}>>>>) {
-  omp.parallel private(@_QFsub2Et1_firstprivate_ref_box_heap_rec__QFsub2Tt %1 -> %arg0 : !fir.ref<!fir.box<!fir.heap<!fir.type<_QFsub2Tt{p1:!fir.boxproc<() -> ()>}>>>>) {
+  omp.parallel private(@_QFsub2Et1_firstprivate_box_heap_rec__QFsub2Tt %1 -> %arg0 : !fir.ref<!fir.box<!fir.heap<!fir.type<_QFsub2Tt{p1:!fir.boxproc<() -> ()>}>>>>) {
     %2 = fir.declare %arg0 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFsub2Et1"} : (!fir.ref<!fir.box<!fir.heap<!fir.type<_QFsub2Tt{p1:!fir.boxproc<() -> ()>}>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.type<_QFsub2Tt{p1:!fir.boxproc<() -> ()>}>>>>
     omp.terminator
   }

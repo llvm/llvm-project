@@ -26,7 +26,7 @@ jobs:
       statuses: read
       checks: write
       actions: write
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: "Restart Job"
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea #v7.0.1
@@ -93,7 +93,7 @@ jobs:
               })
 
               // For temporary debugging purposes to see the structure of the annotations.
-              console.print(annotations);
+              console.log(annotations);
 
               has_failed_job = false;
               saved_failure_message = null;
@@ -161,7 +161,7 @@ jobs:
       statuses: read
       checks: write
       actions: write
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: "Restart Job (test)"
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea #v7.0.1

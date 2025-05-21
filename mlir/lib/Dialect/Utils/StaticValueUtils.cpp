@@ -15,14 +15,9 @@
 
 namespace mlir {
 
-bool isZeroIndex(OpFoldResult v) {
-  if (!v)
-    return false;
-  std::optional<int64_t> constint = getConstantIntValue(v);
-  if (!constint)
-    return false;
-  return *constint == 0;
-}
+bool isZeroInteger(OpFoldResult v) { return isConstantIntValue(v, 0); }
+
+bool isOneInteger(OpFoldResult v) { return isConstantIntValue(v, 1); }
 
 std::tuple<SmallVector<OpFoldResult>, SmallVector<OpFoldResult>,
            SmallVector<OpFoldResult>>
@@ -191,7 +186,8 @@ bool isEqualConstantIntOrValueArray(ArrayRef<OpFoldResult> ofrs1,
 /// elements for which ShapedType::isDynamic is true, will be replaced by
 /// dynamicValues.
 SmallVector<OpFoldResult> getMixedValues(ArrayRef<int64_t> staticValues,
-                                         ValueRange dynamicValues, Builder &b) {
+                                         ValueRange dynamicValues,
+                                         MLIRContext *context) {
   SmallVector<OpFoldResult> res;
   res.reserve(staticValues.size());
   unsigned numDynamic = 0;
@@ -200,9 +196,14 @@ SmallVector<OpFoldResult> getMixedValues(ArrayRef<int64_t> staticValues,
     int64_t value = staticValues[idx];
     res.push_back(ShapedType::isDynamic(value)
                       ? OpFoldResult{dynamicValues[numDynamic++]}
-                      : OpFoldResult{b.getI64IntegerAttr(staticValues[idx])});
+                      : OpFoldResult{IntegerAttr::get(
+                            IntegerType::get(context, 64), staticValues[idx])});
   }
   return res;
+}
+SmallVector<OpFoldResult> getMixedValues(ArrayRef<int64_t> staticValues,
+                                         ValueRange dynamicValues, Builder &b) {
+  return getMixedValues(staticValues, dynamicValues, b.getContext());
 }
 
 /// Decompose a vector of mixed static or dynamic values into the corresponding
@@ -231,8 +232,8 @@ getValuesSortedByKeyImpl(ArrayRef<K> keys, ArrayRef<V> values,
     return SmallVector<V>{values};
   assert(keys.size() == values.size() && "unexpected mismatching sizes");
   auto indices = llvm::to_vector(llvm::seq<int64_t>(0, values.size()));
-  std::sort(indices.begin(), indices.end(),
-            [&](int64_t i, int64_t j) { return compare(keys[i], keys[j]); });
+  llvm::sort(indices,
+             [&](int64_t i, int64_t j) { return compare(keys[i], keys[j]); });
   SmallVector<V> res;
   res.reserve(values.size());
   for (int64_t i = 0, e = indices.size(); i < e; ++i)

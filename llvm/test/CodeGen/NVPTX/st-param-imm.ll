@@ -87,7 +87,7 @@ define void @st_param_f32() {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    { // callseq 3, 0
 ; CHECK-NEXT:    .param .b32 param0;
-; CHECK-NEXT:    st.param.f32 [param0], 0f40A00000;
+; CHECK-NEXT:    st.param.b32 [param0], 0f40A00000;
 ; CHECK-NEXT:    call.uni
 ; CHECK-NEXT:    call_f32,
 ; CHECK-NEXT:    (
@@ -107,7 +107,7 @@ define void @st_param_f64() {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    { // callseq 4, 0
 ; CHECK-NEXT:    .param .b64 param0;
-; CHECK-NEXT:    st.param.f64 [param0], 0d4018000000000000;
+; CHECK-NEXT:    st.param.b64 [param0], 0d4018000000000000;
 ; CHECK-NEXT:    call.uni
 ; CHECK-NEXT:    call_f64,
 ; CHECK-NEXT:    (
@@ -150,7 +150,7 @@ define void @st_param_v2_i8_ir(i8 %val) {
 ; CHECK-NEXT:    .reg .b16 %rs<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u8 %rs1, [st_param_v2_i8_ir_param_0];
+; CHECK-NEXT:    ld.param.b8 %rs1, [st_param_v2_i8_ir_param_0];
 ; CHECK-NEXT:    { // callseq 6, 0
 ; CHECK-NEXT:    .param .align 2 .b8 param0[2];
 ; CHECK-NEXT:    st.param.v2.b8 [param0], {1, %rs1};
@@ -172,7 +172,7 @@ define void @st_param_v2_i8_ri(i8 %val) {
 ; CHECK-NEXT:    .reg .b16 %rs<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u8 %rs1, [st_param_v2_i8_ri_param_0];
+; CHECK-NEXT:    ld.param.b8 %rs1, [st_param_v2_i8_ri_param_0];
 ; CHECK-NEXT:    { // callseq 7, 0
 ; CHECK-NEXT:    .param .align 2 .b8 param0[2];
 ; CHECK-NEXT:    st.param.v2.b8 [param0], {%rs1, 2};
@@ -214,7 +214,7 @@ define void @st_param_v2_i16_ir(i16 %val) {
 ; CHECK-NEXT:    .reg .b16 %rs<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u16 %rs1, [st_param_v2_i16_ir_param_0];
+; CHECK-NEXT:    ld.param.b16 %rs1, [st_param_v2_i16_ir_param_0];
 ; CHECK-NEXT:    { // callseq 9, 0
 ; CHECK-NEXT:    .param .align 4 .b8 param0[4];
 ; CHECK-NEXT:    st.param.v2.b16 [param0], {1, %rs1};
@@ -236,7 +236,7 @@ define void @st_param_v2_i16_ri(i16 %val) {
 ; CHECK-NEXT:    .reg .b16 %rs<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u16 %rs1, [st_param_v2_i16_ri_param_0];
+; CHECK-NEXT:    ld.param.b16 %rs1, [st_param_v2_i16_ri_param_0];
 ; CHECK-NEXT:    { // callseq 10, 0
 ; CHECK-NEXT:    .param .align 4 .b8 param0[4];
 ; CHECK-NEXT:    st.param.v2.b16 [param0], {%rs1, 2};
@@ -278,7 +278,7 @@ define void @st_param_v2_i32_ir(i32 %val) {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [st_param_v2_i32_ir_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [st_param_v2_i32_ir_param_0];
 ; CHECK-NEXT:    { // callseq 12, 0
 ; CHECK-NEXT:    .param .align 8 .b8 param0[8];
 ; CHECK-NEXT:    st.param.v2.b32 [param0], {1, %r1};
@@ -300,7 +300,7 @@ define void @st_param_v2_i32_ri(i32 %val) {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [st_param_v2_i32_ri_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [st_param_v2_i32_ri_param_0];
 ; CHECK-NEXT:    { // callseq 13, 0
 ; CHECK-NEXT:    .param .align 8 .b8 param0[8];
 ; CHECK-NEXT:    st.param.v2.b32 [param0], {%r1, 2};
@@ -342,7 +342,7 @@ define void @st_param_v2_i64_ir(i64 %val) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [st_param_v2_i64_ir_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [st_param_v2_i64_ir_param_0];
 ; CHECK-NEXT:    { // callseq 15, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
 ; CHECK-NEXT:    st.param.v2.b64 [param0], {1, %rd1};
@@ -364,7 +364,7 @@ define void @st_param_v2_i64_ri(i64 %val) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [st_param_v2_i64_ri_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [st_param_v2_i64_ri_param_0];
 ; CHECK-NEXT:    { // callseq 16, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
 ; CHECK-NEXT:    st.param.v2.b64 [param0], {%rd1, 2};
@@ -389,7 +389,7 @@ define void @st_param_v2_f32_ii(float %val) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    { // callseq 17, 0
 ; CHECK-NEXT:    .param .align 8 .b8 param0[8];
-; CHECK-NEXT:    st.param.v2.f32 [param0], {0f3F800000, 0f40000000};
+; CHECK-NEXT:    st.param.v2.b32 [param0], {0f3F800000, 0f40000000};
 ; CHECK-NEXT:    call.uni
 ; CHECK-NEXT:    call_v2_f32,
 ; CHECK-NEXT:    (
@@ -403,13 +403,13 @@ define void @st_param_v2_f32_ii(float %val) {
 define void @st_param_v2_f32_ir(float %val) {
 ; CHECK-LABEL: st_param_v2_f32_ir(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<2>;
+; CHECK-NEXT:    .reg .b32 %f<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.f32 %f1, [st_param_v2_f32_ir_param_0];
+; CHECK-NEXT:    ld.param.b32 %f1, [st_param_v2_f32_ir_param_0];
 ; CHECK-NEXT:    { // callseq 18, 0
 ; CHECK-NEXT:    .param .align 8 .b8 param0[8];
-; CHECK-NEXT:    st.param.v2.f32 [param0], {0f3F800000, %f1};
+; CHECK-NEXT:    st.param.v2.b32 [param0], {0f3F800000, %f1};
 ; CHECK-NEXT:    call.uni
 ; CHECK-NEXT:    call_v2_f32,
 ; CHECK-NEXT:    (
@@ -425,13 +425,13 @@ define void @st_param_v2_f32_ir(float %val) {
 define void @st_param_v2_f32_ri(float %val) {
 ; CHECK-LABEL: st_param_v2_f32_ri(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<2>;
+; CHECK-NEXT:    .reg .b32 %f<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.f32 %f1, [st_param_v2_f32_ri_param_0];
+; CHECK-NEXT:    ld.param.b32 %f1, [st_param_v2_f32_ri_param_0];
 ; CHECK-NEXT:    { // callseq 19, 0
 ; CHECK-NEXT:    .param .align 8 .b8 param0[8];
-; CHECK-NEXT:    st.param.v2.f32 [param0], {%f1, 0f40000000};
+; CHECK-NEXT:    st.param.v2.b32 [param0], {%f1, 0f40000000};
 ; CHECK-NEXT:    call.uni
 ; CHECK-NEXT:    call_v2_f32,
 ; CHECK-NEXT:    (
@@ -453,7 +453,7 @@ define void @st_param_v2_f64_ii(double %val) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    { // callseq 20, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
-; CHECK-NEXT:    st.param.v2.f64 [param0], {0d3FF0000000000000, 0d4000000000000000};
+; CHECK-NEXT:    st.param.v2.b64 [param0], {0d3FF0000000000000, 0d4000000000000000};
 ; CHECK-NEXT:    call.uni
 ; CHECK-NEXT:    call_v2_f64,
 ; CHECK-NEXT:    (
@@ -467,13 +467,13 @@ define void @st_param_v2_f64_ii(double %val) {
 define void @st_param_v2_f64_ir(double %val) {
 ; CHECK-LABEL: st_param_v2_f64_ir(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f64 %fd<2>;
+; CHECK-NEXT:    .reg .b64 %fd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.f64 %fd1, [st_param_v2_f64_ir_param_0];
+; CHECK-NEXT:    ld.param.b64 %fd1, [st_param_v2_f64_ir_param_0];
 ; CHECK-NEXT:    { // callseq 21, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
-; CHECK-NEXT:    st.param.v2.f64 [param0], {0d3FF0000000000000, %fd1};
+; CHECK-NEXT:    st.param.v2.b64 [param0], {0d3FF0000000000000, %fd1};
 ; CHECK-NEXT:    call.uni
 ; CHECK-NEXT:    call_v2_f64,
 ; CHECK-NEXT:    (
@@ -489,13 +489,13 @@ define void @st_param_v2_f64_ir(double %val) {
 define void @st_param_v2_f64_ri(double %val) {
 ; CHECK-LABEL: st_param_v2_f64_ri(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f64 %fd<2>;
+; CHECK-NEXT:    .reg .b64 %fd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.f64 %fd1, [st_param_v2_f64_ri_param_0];
+; CHECK-NEXT:    ld.param.b64 %fd1, [st_param_v2_f64_ri_param_0];
 ; CHECK-NEXT:    { // callseq 22, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
-; CHECK-NEXT:    st.param.v2.f64 [param0], {%fd1, 0d4000000000000000};
+; CHECK-NEXT:    st.param.v2.b64 [param0], {%fd1, 0d4000000000000000};
 ; CHECK-NEXT:    call.uni
 ; CHECK-NEXT:    call_v2_f64,
 ; CHECK-NEXT:    (
@@ -541,9 +541,9 @@ define void @st_param_v4_i8_irrr(i8 %b, i8 %c, i8 %d) {
 ; CHECK-NEXT:    .reg .b16 %rs<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u8 %rs1, [st_param_v4_i8_irrr_param_0];
-; CHECK-NEXT:    ld.param.u8 %rs2, [st_param_v4_i8_irrr_param_1];
-; CHECK-NEXT:    ld.param.u8 %rs3, [st_param_v4_i8_irrr_param_2];
+; CHECK-NEXT:    ld.param.b8 %rs1, [st_param_v4_i8_irrr_param_0];
+; CHECK-NEXT:    ld.param.b8 %rs2, [st_param_v4_i8_irrr_param_1];
+; CHECK-NEXT:    ld.param.b8 %rs3, [st_param_v4_i8_irrr_param_2];
 ; CHECK-NEXT:    { // callseq 24, 0
 ; CHECK-NEXT:    .param .align 4 .b8 param0[4];
 ; CHECK-NEXT:    st.param.v4.b8 [param0], {1, %rs1, %rs2, %rs3};
@@ -567,9 +567,9 @@ define void @st_param_v4_i8_rirr(i8 %a, i8 %c, i8 %d) {
 ; CHECK-NEXT:    .reg .b16 %rs<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u8 %rs1, [st_param_v4_i8_rirr_param_0];
-; CHECK-NEXT:    ld.param.u8 %rs2, [st_param_v4_i8_rirr_param_1];
-; CHECK-NEXT:    ld.param.u8 %rs3, [st_param_v4_i8_rirr_param_2];
+; CHECK-NEXT:    ld.param.b8 %rs1, [st_param_v4_i8_rirr_param_0];
+; CHECK-NEXT:    ld.param.b8 %rs2, [st_param_v4_i8_rirr_param_1];
+; CHECK-NEXT:    ld.param.b8 %rs3, [st_param_v4_i8_rirr_param_2];
 ; CHECK-NEXT:    { // callseq 25, 0
 ; CHECK-NEXT:    .param .align 4 .b8 param0[4];
 ; CHECK-NEXT:    st.param.v4.b8 [param0], {%rs1, 2, %rs2, %rs3};
@@ -593,9 +593,9 @@ define void @st_param_v4_i8_rrir(i8 %a, i8 %b, i8 %d) {
 ; CHECK-NEXT:    .reg .b16 %rs<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u8 %rs1, [st_param_v4_i8_rrir_param_0];
-; CHECK-NEXT:    ld.param.u8 %rs2, [st_param_v4_i8_rrir_param_1];
-; CHECK-NEXT:    ld.param.u8 %rs3, [st_param_v4_i8_rrir_param_2];
+; CHECK-NEXT:    ld.param.b8 %rs1, [st_param_v4_i8_rrir_param_0];
+; CHECK-NEXT:    ld.param.b8 %rs2, [st_param_v4_i8_rrir_param_1];
+; CHECK-NEXT:    ld.param.b8 %rs3, [st_param_v4_i8_rrir_param_2];
 ; CHECK-NEXT:    { // callseq 26, 0
 ; CHECK-NEXT:    .param .align 4 .b8 param0[4];
 ; CHECK-NEXT:    st.param.v4.b8 [param0], {%rs1, %rs2, 3, %rs3};
@@ -619,9 +619,9 @@ define void @st_param_v4_i8_rrri(i8 %a, i8 %b, i8 %c) {
 ; CHECK-NEXT:    .reg .b16 %rs<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u8 %rs1, [st_param_v4_i8_rrri_param_0];
-; CHECK-NEXT:    ld.param.u8 %rs2, [st_param_v4_i8_rrri_param_1];
-; CHECK-NEXT:    ld.param.u8 %rs3, [st_param_v4_i8_rrri_param_2];
+; CHECK-NEXT:    ld.param.b8 %rs1, [st_param_v4_i8_rrri_param_0];
+; CHECK-NEXT:    ld.param.b8 %rs2, [st_param_v4_i8_rrri_param_1];
+; CHECK-NEXT:    ld.param.b8 %rs3, [st_param_v4_i8_rrri_param_2];
 ; CHECK-NEXT:    { // callseq 27, 0
 ; CHECK-NEXT:    .param .align 4 .b8 param0[4];
 ; CHECK-NEXT:    st.param.v4.b8 [param0], {%rs1, %rs2, %rs3, 4};
@@ -645,8 +645,8 @@ define void @st_param_v4_i8_iirr(i8 %c, i8 %d) {
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u8 %rs1, [st_param_v4_i8_iirr_param_0];
-; CHECK-NEXT:    ld.param.u8 %rs2, [st_param_v4_i8_iirr_param_1];
+; CHECK-NEXT:    ld.param.b8 %rs1, [st_param_v4_i8_iirr_param_0];
+; CHECK-NEXT:    ld.param.b8 %rs2, [st_param_v4_i8_iirr_param_1];
 ; CHECK-NEXT:    { // callseq 28, 0
 ; CHECK-NEXT:    .param .align 4 .b8 param0[4];
 ; CHECK-NEXT:    st.param.v4.b8 [param0], {1, 2, %rs1, %rs2};
@@ -670,8 +670,8 @@ define void @st_param_v4_i8_irir(i8 %b, i8 %d) {
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u8 %rs1, [st_param_v4_i8_irir_param_0];
-; CHECK-NEXT:    ld.param.u8 %rs2, [st_param_v4_i8_irir_param_1];
+; CHECK-NEXT:    ld.param.b8 %rs1, [st_param_v4_i8_irir_param_0];
+; CHECK-NEXT:    ld.param.b8 %rs2, [st_param_v4_i8_irir_param_1];
 ; CHECK-NEXT:    { // callseq 29, 0
 ; CHECK-NEXT:    .param .align 4 .b8 param0[4];
 ; CHECK-NEXT:    st.param.v4.b8 [param0], {1, %rs1, 3, %rs2};
@@ -695,8 +695,8 @@ define void @st_param_v4_i8_irri(i8 %b, i8 %c) {
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u8 %rs1, [st_param_v4_i8_irri_param_0];
-; CHECK-NEXT:    ld.param.u8 %rs2, [st_param_v4_i8_irri_param_1];
+; CHECK-NEXT:    ld.param.b8 %rs1, [st_param_v4_i8_irri_param_0];
+; CHECK-NEXT:    ld.param.b8 %rs2, [st_param_v4_i8_irri_param_1];
 ; CHECK-NEXT:    { // callseq 30, 0
 ; CHECK-NEXT:    .param .align 4 .b8 param0[4];
 ; CHECK-NEXT:    st.param.v4.b8 [param0], {1, %rs1, %rs2, 4};
@@ -720,8 +720,8 @@ define void @st_param_v4_i8_riir(i8 %a, i8 %d) {
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u8 %rs1, [st_param_v4_i8_riir_param_0];
-; CHECK-NEXT:    ld.param.u8 %rs2, [st_param_v4_i8_riir_param_1];
+; CHECK-NEXT:    ld.param.b8 %rs1, [st_param_v4_i8_riir_param_0];
+; CHECK-NEXT:    ld.param.b8 %rs2, [st_param_v4_i8_riir_param_1];
 ; CHECK-NEXT:    { // callseq 31, 0
 ; CHECK-NEXT:    .param .align 4 .b8 param0[4];
 ; CHECK-NEXT:    st.param.v4.b8 [param0], {%rs1, 2, 3, %rs2};
@@ -745,8 +745,8 @@ define void @st_param_v4_i8_riri(i8 %a, i8 %c) {
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u8 %rs1, [st_param_v4_i8_riri_param_0];
-; CHECK-NEXT:    ld.param.u8 %rs2, [st_param_v4_i8_riri_param_1];
+; CHECK-NEXT:    ld.param.b8 %rs1, [st_param_v4_i8_riri_param_0];
+; CHECK-NEXT:    ld.param.b8 %rs2, [st_param_v4_i8_riri_param_1];
 ; CHECK-NEXT:    { // callseq 32, 0
 ; CHECK-NEXT:    .param .align 4 .b8 param0[4];
 ; CHECK-NEXT:    st.param.v4.b8 [param0], {%rs1, 2, %rs2, 4};
@@ -770,8 +770,8 @@ define void @st_param_v4_i8_rrii(i8 %a, i8 %b) {
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u8 %rs1, [st_param_v4_i8_rrii_param_0];
-; CHECK-NEXT:    ld.param.u8 %rs2, [st_param_v4_i8_rrii_param_1];
+; CHECK-NEXT:    ld.param.b8 %rs1, [st_param_v4_i8_rrii_param_0];
+; CHECK-NEXT:    ld.param.b8 %rs2, [st_param_v4_i8_rrii_param_1];
 ; CHECK-NEXT:    { // callseq 33, 0
 ; CHECK-NEXT:    .param .align 4 .b8 param0[4];
 ; CHECK-NEXT:    st.param.v4.b8 [param0], {%rs1, %rs2, 3, 4};
@@ -795,7 +795,7 @@ define void @st_param_v4_i8_iiir(i8 %d) {
 ; CHECK-NEXT:    .reg .b16 %rs<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u8 %rs1, [st_param_v4_i8_iiir_param_0];
+; CHECK-NEXT:    ld.param.b8 %rs1, [st_param_v4_i8_iiir_param_0];
 ; CHECK-NEXT:    { // callseq 34, 0
 ; CHECK-NEXT:    .param .align 4 .b8 param0[4];
 ; CHECK-NEXT:    st.param.v4.b8 [param0], {1, 2, 3, %rs1};
@@ -819,7 +819,7 @@ define void @st_param_v4_i8_iiri(i8 %c) {
 ; CHECK-NEXT:    .reg .b16 %rs<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u8 %rs1, [st_param_v4_i8_iiri_param_0];
+; CHECK-NEXT:    ld.param.b8 %rs1, [st_param_v4_i8_iiri_param_0];
 ; CHECK-NEXT:    { // callseq 35, 0
 ; CHECK-NEXT:    .param .align 4 .b8 param0[4];
 ; CHECK-NEXT:    st.param.v4.b8 [param0], {1, 2, %rs1, 4};
@@ -843,7 +843,7 @@ define void @st_param_v4_i8_irii(i8 %b) {
 ; CHECK-NEXT:    .reg .b16 %rs<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u8 %rs1, [st_param_v4_i8_irii_param_0];
+; CHECK-NEXT:    ld.param.b8 %rs1, [st_param_v4_i8_irii_param_0];
 ; CHECK-NEXT:    { // callseq 36, 0
 ; CHECK-NEXT:    .param .align 4 .b8 param0[4];
 ; CHECK-NEXT:    st.param.v4.b8 [param0], {1, %rs1, 3, 4};
@@ -867,7 +867,7 @@ define void @st_param_v4_i8_riii(i8 %a) {
 ; CHECK-NEXT:    .reg .b16 %rs<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u8 %rs1, [st_param_v4_i8_riii_param_0];
+; CHECK-NEXT:    ld.param.b8 %rs1, [st_param_v4_i8_riii_param_0];
 ; CHECK-NEXT:    { // callseq 37, 0
 ; CHECK-NEXT:    .param .align 4 .b8 param0[4];
 ; CHECK-NEXT:    st.param.v4.b8 [param0], {%rs1, 2, 3, 4};
@@ -911,9 +911,9 @@ define void @st_param_v4_i16_irrr(i16 %b, i16 %c, i16 %d) {
 ; CHECK-NEXT:    .reg .b16 %rs<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u16 %rs1, [st_param_v4_i16_irrr_param_0];
-; CHECK-NEXT:    ld.param.u16 %rs2, [st_param_v4_i16_irrr_param_1];
-; CHECK-NEXT:    ld.param.u16 %rs3, [st_param_v4_i16_irrr_param_2];
+; CHECK-NEXT:    ld.param.b16 %rs1, [st_param_v4_i16_irrr_param_0];
+; CHECK-NEXT:    ld.param.b16 %rs2, [st_param_v4_i16_irrr_param_1];
+; CHECK-NEXT:    ld.param.b16 %rs3, [st_param_v4_i16_irrr_param_2];
 ; CHECK-NEXT:    { // callseq 39, 0
 ; CHECK-NEXT:    .param .align 8 .b8 param0[8];
 ; CHECK-NEXT:    st.param.v4.b16 [param0], {1, %rs1, %rs2, %rs3};
@@ -937,9 +937,9 @@ define void @st_param_v4_i16_rirr(i16 %a, i16 %c, i16 %d) {
 ; CHECK-NEXT:    .reg .b16 %rs<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u16 %rs1, [st_param_v4_i16_rirr_param_0];
-; CHECK-NEXT:    ld.param.u16 %rs2, [st_param_v4_i16_rirr_param_1];
-; CHECK-NEXT:    ld.param.u16 %rs3, [st_param_v4_i16_rirr_param_2];
+; CHECK-NEXT:    ld.param.b16 %rs1, [st_param_v4_i16_rirr_param_0];
+; CHECK-NEXT:    ld.param.b16 %rs2, [st_param_v4_i16_rirr_param_1];
+; CHECK-NEXT:    ld.param.b16 %rs3, [st_param_v4_i16_rirr_param_2];
 ; CHECK-NEXT:    { // callseq 40, 0
 ; CHECK-NEXT:    .param .align 8 .b8 param0[8];
 ; CHECK-NEXT:    st.param.v4.b16 [param0], {%rs1, 2, %rs2, %rs3};
@@ -963,9 +963,9 @@ define void @st_param_v4_i16_rrir(i16 %a, i16 %b, i16 %d) {
 ; CHECK-NEXT:    .reg .b16 %rs<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u16 %rs1, [st_param_v4_i16_rrir_param_0];
-; CHECK-NEXT:    ld.param.u16 %rs2, [st_param_v4_i16_rrir_param_1];
-; CHECK-NEXT:    ld.param.u16 %rs3, [st_param_v4_i16_rrir_param_2];
+; CHECK-NEXT:    ld.param.b16 %rs1, [st_param_v4_i16_rrir_param_0];
+; CHECK-NEXT:    ld.param.b16 %rs2, [st_param_v4_i16_rrir_param_1];
+; CHECK-NEXT:    ld.param.b16 %rs3, [st_param_v4_i16_rrir_param_2];
 ; CHECK-NEXT:    { // callseq 41, 0
 ; CHECK-NEXT:    .param .align 8 .b8 param0[8];
 ; CHECK-NEXT:    st.param.v4.b16 [param0], {%rs1, %rs2, 3, %rs3};
@@ -989,9 +989,9 @@ define void @st_param_v4_i16_rrri(i16 %a, i16 %b, i16 %c) {
 ; CHECK-NEXT:    .reg .b16 %rs<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u16 %rs1, [st_param_v4_i16_rrri_param_0];
-; CHECK-NEXT:    ld.param.u16 %rs2, [st_param_v4_i16_rrri_param_1];
-; CHECK-NEXT:    ld.param.u16 %rs3, [st_param_v4_i16_rrri_param_2];
+; CHECK-NEXT:    ld.param.b16 %rs1, [st_param_v4_i16_rrri_param_0];
+; CHECK-NEXT:    ld.param.b16 %rs2, [st_param_v4_i16_rrri_param_1];
+; CHECK-NEXT:    ld.param.b16 %rs3, [st_param_v4_i16_rrri_param_2];
 ; CHECK-NEXT:    { // callseq 42, 0
 ; CHECK-NEXT:    .param .align 8 .b8 param0[8];
 ; CHECK-NEXT:    st.param.v4.b16 [param0], {%rs1, %rs2, %rs3, 4};
@@ -1015,8 +1015,8 @@ define void @st_param_v4_i16_iirr(i16 %c, i16 %d) {
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u16 %rs1, [st_param_v4_i16_iirr_param_0];
-; CHECK-NEXT:    ld.param.u16 %rs2, [st_param_v4_i16_iirr_param_1];
+; CHECK-NEXT:    ld.param.b16 %rs1, [st_param_v4_i16_iirr_param_0];
+; CHECK-NEXT:    ld.param.b16 %rs2, [st_param_v4_i16_iirr_param_1];
 ; CHECK-NEXT:    { // callseq 43, 0
 ; CHECK-NEXT:    .param .align 8 .b8 param0[8];
 ; CHECK-NEXT:    st.param.v4.b16 [param0], {1, 2, %rs1, %rs2};
@@ -1040,8 +1040,8 @@ define void @st_param_v4_i16_irir(i16 %b, i16 %d) {
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u16 %rs1, [st_param_v4_i16_irir_param_0];
-; CHECK-NEXT:    ld.param.u16 %rs2, [st_param_v4_i16_irir_param_1];
+; CHECK-NEXT:    ld.param.b16 %rs1, [st_param_v4_i16_irir_param_0];
+; CHECK-NEXT:    ld.param.b16 %rs2, [st_param_v4_i16_irir_param_1];
 ; CHECK-NEXT:    { // callseq 44, 0
 ; CHECK-NEXT:    .param .align 8 .b8 param0[8];
 ; CHECK-NEXT:    st.param.v4.b16 [param0], {1, %rs1, 3, %rs2};
@@ -1065,8 +1065,8 @@ define void @st_param_v4_i16_irri(i16 %b, i16 %c) {
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u16 %rs1, [st_param_v4_i16_irri_param_0];
-; CHECK-NEXT:    ld.param.u16 %rs2, [st_param_v4_i16_irri_param_1];
+; CHECK-NEXT:    ld.param.b16 %rs1, [st_param_v4_i16_irri_param_0];
+; CHECK-NEXT:    ld.param.b16 %rs2, [st_param_v4_i16_irri_param_1];
 ; CHECK-NEXT:    { // callseq 45, 0
 ; CHECK-NEXT:    .param .align 8 .b8 param0[8];
 ; CHECK-NEXT:    st.param.v4.b16 [param0], {1, %rs1, %rs2, 4};
@@ -1090,8 +1090,8 @@ define void @st_param_v4_i16_riir(i16 %a, i16 %d) {
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u16 %rs1, [st_param_v4_i16_riir_param_0];
-; CHECK-NEXT:    ld.param.u16 %rs2, [st_param_v4_i16_riir_param_1];
+; CHECK-NEXT:    ld.param.b16 %rs1, [st_param_v4_i16_riir_param_0];
+; CHECK-NEXT:    ld.param.b16 %rs2, [st_param_v4_i16_riir_param_1];
 ; CHECK-NEXT:    { // callseq 46, 0
 ; CHECK-NEXT:    .param .align 8 .b8 param0[8];
 ; CHECK-NEXT:    st.param.v4.b16 [param0], {%rs1, 2, 3, %rs2};
@@ -1115,8 +1115,8 @@ define void @st_param_v4_i16_riri(i16 %a, i16 %c) {
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u16 %rs1, [st_param_v4_i16_riri_param_0];
-; CHECK-NEXT:    ld.param.u16 %rs2, [st_param_v4_i16_riri_param_1];
+; CHECK-NEXT:    ld.param.b16 %rs1, [st_param_v4_i16_riri_param_0];
+; CHECK-NEXT:    ld.param.b16 %rs2, [st_param_v4_i16_riri_param_1];
 ; CHECK-NEXT:    { // callseq 47, 0
 ; CHECK-NEXT:    .param .align 8 .b8 param0[8];
 ; CHECK-NEXT:    st.param.v4.b16 [param0], {%rs1, 2, %rs2, 4};
@@ -1140,8 +1140,8 @@ define void @st_param_v4_i16_rrii(i16 %a, i16 %b) {
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u16 %rs1, [st_param_v4_i16_rrii_param_0];
-; CHECK-NEXT:    ld.param.u16 %rs2, [st_param_v4_i16_rrii_param_1];
+; CHECK-NEXT:    ld.param.b16 %rs1, [st_param_v4_i16_rrii_param_0];
+; CHECK-NEXT:    ld.param.b16 %rs2, [st_param_v4_i16_rrii_param_1];
 ; CHECK-NEXT:    { // callseq 48, 0
 ; CHECK-NEXT:    .param .align 8 .b8 param0[8];
 ; CHECK-NEXT:    st.param.v4.b16 [param0], {%rs1, %rs2, 3, 4};
@@ -1165,7 +1165,7 @@ define void @st_param_v4_i16_iiir(i16 %d) {
 ; CHECK-NEXT:    .reg .b16 %rs<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u16 %rs1, [st_param_v4_i16_iiir_param_0];
+; CHECK-NEXT:    ld.param.b16 %rs1, [st_param_v4_i16_iiir_param_0];
 ; CHECK-NEXT:    { // callseq 49, 0
 ; CHECK-NEXT:    .param .align 8 .b8 param0[8];
 ; CHECK-NEXT:    st.param.v4.b16 [param0], {1, 2, 3, %rs1};
@@ -1189,7 +1189,7 @@ define void @st_param_v4_i16_iiri(i16 %c) {
 ; CHECK-NEXT:    .reg .b16 %rs<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u16 %rs1, [st_param_v4_i16_iiri_param_0];
+; CHECK-NEXT:    ld.param.b16 %rs1, [st_param_v4_i16_iiri_param_0];
 ; CHECK-NEXT:    { // callseq 50, 0
 ; CHECK-NEXT:    .param .align 8 .b8 param0[8];
 ; CHECK-NEXT:    st.param.v4.b16 [param0], {1, 2, %rs1, 4};
@@ -1213,7 +1213,7 @@ define void @st_param_v4_i16_irii(i16 %b) {
 ; CHECK-NEXT:    .reg .b16 %rs<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u16 %rs1, [st_param_v4_i16_irii_param_0];
+; CHECK-NEXT:    ld.param.b16 %rs1, [st_param_v4_i16_irii_param_0];
 ; CHECK-NEXT:    { // callseq 51, 0
 ; CHECK-NEXT:    .param .align 8 .b8 param0[8];
 ; CHECK-NEXT:    st.param.v4.b16 [param0], {1, %rs1, 3, 4};
@@ -1237,7 +1237,7 @@ define void @st_param_v4_i16_riii(i16 %a) {
 ; CHECK-NEXT:    .reg .b16 %rs<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u16 %rs1, [st_param_v4_i16_riii_param_0];
+; CHECK-NEXT:    ld.param.b16 %rs1, [st_param_v4_i16_riii_param_0];
 ; CHECK-NEXT:    { // callseq 52, 0
 ; CHECK-NEXT:    .param .align 8 .b8 param0[8];
 ; CHECK-NEXT:    st.param.v4.b16 [param0], {%rs1, 2, 3, 4};
@@ -1281,9 +1281,9 @@ define void @st_param_v4_i32_irrr(i32 %b, i32 %c, i32 %d) {
 ; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [st_param_v4_i32_irrr_param_0];
-; CHECK-NEXT:    ld.param.u32 %r2, [st_param_v4_i32_irrr_param_1];
-; CHECK-NEXT:    ld.param.u32 %r3, [st_param_v4_i32_irrr_param_2];
+; CHECK-NEXT:    ld.param.b32 %r1, [st_param_v4_i32_irrr_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [st_param_v4_i32_irrr_param_1];
+; CHECK-NEXT:    ld.param.b32 %r3, [st_param_v4_i32_irrr_param_2];
 ; CHECK-NEXT:    { // callseq 54, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
 ; CHECK-NEXT:    st.param.v4.b32 [param0], {1, %r1, %r2, %r3};
@@ -1307,9 +1307,9 @@ define void @st_param_v4_i32_rirr(i32 %a, i32 %c, i32 %d) {
 ; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [st_param_v4_i32_rirr_param_0];
-; CHECK-NEXT:    ld.param.u32 %r2, [st_param_v4_i32_rirr_param_1];
-; CHECK-NEXT:    ld.param.u32 %r3, [st_param_v4_i32_rirr_param_2];
+; CHECK-NEXT:    ld.param.b32 %r1, [st_param_v4_i32_rirr_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [st_param_v4_i32_rirr_param_1];
+; CHECK-NEXT:    ld.param.b32 %r3, [st_param_v4_i32_rirr_param_2];
 ; CHECK-NEXT:    { // callseq 55, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
 ; CHECK-NEXT:    st.param.v4.b32 [param0], {%r1, 2, %r2, %r3};
@@ -1333,9 +1333,9 @@ define void @st_param_v4_i32_rrir(i32 %a, i32 %b, i32 %d) {
 ; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [st_param_v4_i32_rrir_param_0];
-; CHECK-NEXT:    ld.param.u32 %r2, [st_param_v4_i32_rrir_param_1];
-; CHECK-NEXT:    ld.param.u32 %r3, [st_param_v4_i32_rrir_param_2];
+; CHECK-NEXT:    ld.param.b32 %r1, [st_param_v4_i32_rrir_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [st_param_v4_i32_rrir_param_1];
+; CHECK-NEXT:    ld.param.b32 %r3, [st_param_v4_i32_rrir_param_2];
 ; CHECK-NEXT:    { // callseq 56, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
 ; CHECK-NEXT:    st.param.v4.b32 [param0], {%r1, %r2, 3, %r3};
@@ -1359,9 +1359,9 @@ define void @st_param_v4_i32_rrri(i32 %a, i32 %b, i32 %c) {
 ; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [st_param_v4_i32_rrri_param_0];
-; CHECK-NEXT:    ld.param.u32 %r2, [st_param_v4_i32_rrri_param_1];
-; CHECK-NEXT:    ld.param.u32 %r3, [st_param_v4_i32_rrri_param_2];
+; CHECK-NEXT:    ld.param.b32 %r1, [st_param_v4_i32_rrri_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [st_param_v4_i32_rrri_param_1];
+; CHECK-NEXT:    ld.param.b32 %r3, [st_param_v4_i32_rrri_param_2];
 ; CHECK-NEXT:    { // callseq 57, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
 ; CHECK-NEXT:    st.param.v4.b32 [param0], {%r1, %r2, %r3, 4};
@@ -1385,8 +1385,8 @@ define void @st_param_v4_i32_iirr(i32 %c, i32 %d) {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [st_param_v4_i32_iirr_param_0];
-; CHECK-NEXT:    ld.param.u32 %r2, [st_param_v4_i32_iirr_param_1];
+; CHECK-NEXT:    ld.param.b32 %r1, [st_param_v4_i32_iirr_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [st_param_v4_i32_iirr_param_1];
 ; CHECK-NEXT:    { // callseq 58, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
 ; CHECK-NEXT:    st.param.v4.b32 [param0], {1, 2, %r1, %r2};
@@ -1410,8 +1410,8 @@ define void @st_param_v4_i32_irir(i32 %b, i32 %d) {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [st_param_v4_i32_irir_param_0];
-; CHECK-NEXT:    ld.param.u32 %r2, [st_param_v4_i32_irir_param_1];
+; CHECK-NEXT:    ld.param.b32 %r1, [st_param_v4_i32_irir_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [st_param_v4_i32_irir_param_1];
 ; CHECK-NEXT:    { // callseq 59, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
 ; CHECK-NEXT:    st.param.v4.b32 [param0], {1, %r1, 3, %r2};
@@ -1435,8 +1435,8 @@ define void @st_param_v4_i32_irri(i32 %b, i32 %c) {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [st_param_v4_i32_irri_param_0];
-; CHECK-NEXT:    ld.param.u32 %r2, [st_param_v4_i32_irri_param_1];
+; CHECK-NEXT:    ld.param.b32 %r1, [st_param_v4_i32_irri_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [st_param_v4_i32_irri_param_1];
 ; CHECK-NEXT:    { // callseq 60, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
 ; CHECK-NEXT:    st.param.v4.b32 [param0], {1, %r1, %r2, 4};
@@ -1460,8 +1460,8 @@ define void @st_param_v4_i32_riir(i32 %a, i32 %d) {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [st_param_v4_i32_riir_param_0];
-; CHECK-NEXT:    ld.param.u32 %r2, [st_param_v4_i32_riir_param_1];
+; CHECK-NEXT:    ld.param.b32 %r1, [st_param_v4_i32_riir_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [st_param_v4_i32_riir_param_1];
 ; CHECK-NEXT:    { // callseq 61, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
 ; CHECK-NEXT:    st.param.v4.b32 [param0], {%r1, 2, 3, %r2};
@@ -1485,8 +1485,8 @@ define void @st_param_v4_i32_riri(i32 %a, i32 %c) {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [st_param_v4_i32_riri_param_0];
-; CHECK-NEXT:    ld.param.u32 %r2, [st_param_v4_i32_riri_param_1];
+; CHECK-NEXT:    ld.param.b32 %r1, [st_param_v4_i32_riri_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [st_param_v4_i32_riri_param_1];
 ; CHECK-NEXT:    { // callseq 62, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
 ; CHECK-NEXT:    st.param.v4.b32 [param0], {%r1, 2, %r2, 4};
@@ -1510,8 +1510,8 @@ define void @st_param_v4_i32_rrii(i32 %a, i32 %b) {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [st_param_v4_i32_rrii_param_0];
-; CHECK-NEXT:    ld.param.u32 %r2, [st_param_v4_i32_rrii_param_1];
+; CHECK-NEXT:    ld.param.b32 %r1, [st_param_v4_i32_rrii_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [st_param_v4_i32_rrii_param_1];
 ; CHECK-NEXT:    { // callseq 63, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
 ; CHECK-NEXT:    st.param.v4.b32 [param0], {%r1, %r2, 3, 4};
@@ -1535,7 +1535,7 @@ define void @st_param_v4_i32_iiir(i32 %d) {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [st_param_v4_i32_iiir_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [st_param_v4_i32_iiir_param_0];
 ; CHECK-NEXT:    { // callseq 64, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
 ; CHECK-NEXT:    st.param.v4.b32 [param0], {1, 2, 3, %r1};
@@ -1559,7 +1559,7 @@ define void @st_param_v4_i32_iiri(i32 %c) {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [st_param_v4_i32_iiri_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [st_param_v4_i32_iiri_param_0];
 ; CHECK-NEXT:    { // callseq 65, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
 ; CHECK-NEXT:    st.param.v4.b32 [param0], {1, 2, %r1, 4};
@@ -1583,7 +1583,7 @@ define void @st_param_v4_i32_irii(i32 %b) {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [st_param_v4_i32_irii_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [st_param_v4_i32_irii_param_0];
 ; CHECK-NEXT:    { // callseq 66, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
 ; CHECK-NEXT:    st.param.v4.b32 [param0], {1, %r1, 3, 4};
@@ -1607,7 +1607,7 @@ define void @st_param_v4_i32_riii(i32 %a) {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [st_param_v4_i32_riii_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [st_param_v4_i32_riii_param_0];
 ; CHECK-NEXT:    { // callseq 67, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
 ; CHECK-NEXT:    st.param.v4.b32 [param0], {%r1, 2, 3, 4};
@@ -1634,7 +1634,7 @@ define void @st_param_v4_f32_iiii() {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    { // callseq 68, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
-; CHECK-NEXT:    st.param.v4.f32 [param0], {0f3F800000, 0f40000000, 0f40400000, 0f40800000};
+; CHECK-NEXT:    st.param.v4.b32 [param0], {0f3F800000, 0f40000000, 0f40400000, 0f40800000};
 ; CHECK-NEXT:    call.uni
 ; CHECK-NEXT:    call_v4_f32,
 ; CHECK-NEXT:    (
@@ -1648,15 +1648,15 @@ define void @st_param_v4_f32_iiii() {
 define void @st_param_v4_f32_irrr(float %b, float %c, float %d) {
 ; CHECK-LABEL: st_param_v4_f32_irrr(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<4>;
+; CHECK-NEXT:    .reg .b32 %f<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.f32 %f1, [st_param_v4_f32_irrr_param_0];
-; CHECK-NEXT:    ld.param.f32 %f2, [st_param_v4_f32_irrr_param_1];
-; CHECK-NEXT:    ld.param.f32 %f3, [st_param_v4_f32_irrr_param_2];
+; CHECK-NEXT:    ld.param.b32 %f1, [st_param_v4_f32_irrr_param_0];
+; CHECK-NEXT:    ld.param.b32 %f2, [st_param_v4_f32_irrr_param_1];
+; CHECK-NEXT:    ld.param.b32 %f3, [st_param_v4_f32_irrr_param_2];
 ; CHECK-NEXT:    { // callseq 69, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
-; CHECK-NEXT:    st.param.v4.f32 [param0], {0f3F800000, %f1, %f2, %f3};
+; CHECK-NEXT:    st.param.v4.b32 [param0], {0f3F800000, %f1, %f2, %f3};
 ; CHECK-NEXT:    call.uni
 ; CHECK-NEXT:    call_v4_f32,
 ; CHECK-NEXT:    (
@@ -1674,15 +1674,15 @@ define void @st_param_v4_f32_irrr(float %b, float %c, float %d) {
 define void @st_param_v4_f32_rirr(float %a, float %c, float %d) {
 ; CHECK-LABEL: st_param_v4_f32_rirr(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<4>;
+; CHECK-NEXT:    .reg .b32 %f<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.f32 %f1, [st_param_v4_f32_rirr_param_0];
-; CHECK-NEXT:    ld.param.f32 %f2, [st_param_v4_f32_rirr_param_1];
-; CHECK-NEXT:    ld.param.f32 %f3, [st_param_v4_f32_rirr_param_2];
+; CHECK-NEXT:    ld.param.b32 %f1, [st_param_v4_f32_rirr_param_0];
+; CHECK-NEXT:    ld.param.b32 %f2, [st_param_v4_f32_rirr_param_1];
+; CHECK-NEXT:    ld.param.b32 %f3, [st_param_v4_f32_rirr_param_2];
 ; CHECK-NEXT:    { // callseq 70, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
-; CHECK-NEXT:    st.param.v4.f32 [param0], {%f1, 0f40000000, %f2, %f3};
+; CHECK-NEXT:    st.param.v4.b32 [param0], {%f1, 0f40000000, %f2, %f3};
 ; CHECK-NEXT:    call.uni
 ; CHECK-NEXT:    call_v4_f32,
 ; CHECK-NEXT:    (
@@ -1700,15 +1700,15 @@ define void @st_param_v4_f32_rirr(float %a, float %c, float %d) {
 define void @st_param_v4_f32_rrir(float %a, float %b, float %d) {
 ; CHECK-LABEL: st_param_v4_f32_rrir(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<4>;
+; CHECK-NEXT:    .reg .b32 %f<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.f32 %f1, [st_param_v4_f32_rrir_param_0];
-; CHECK-NEXT:    ld.param.f32 %f2, [st_param_v4_f32_rrir_param_1];
-; CHECK-NEXT:    ld.param.f32 %f3, [st_param_v4_f32_rrir_param_2];
+; CHECK-NEXT:    ld.param.b32 %f1, [st_param_v4_f32_rrir_param_0];
+; CHECK-NEXT:    ld.param.b32 %f2, [st_param_v4_f32_rrir_param_1];
+; CHECK-NEXT:    ld.param.b32 %f3, [st_param_v4_f32_rrir_param_2];
 ; CHECK-NEXT:    { // callseq 71, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
-; CHECK-NEXT:    st.param.v4.f32 [param0], {%f1, %f2, 0f40400000, %f3};
+; CHECK-NEXT:    st.param.v4.b32 [param0], {%f1, %f2, 0f40400000, %f3};
 ; CHECK-NEXT:    call.uni
 ; CHECK-NEXT:    call_v4_f32,
 ; CHECK-NEXT:    (
@@ -1726,15 +1726,15 @@ define void @st_param_v4_f32_rrir(float %a, float %b, float %d) {
 define void @st_param_v4_f32_rrri(float %a, float %b, float %c) {
 ; CHECK-LABEL: st_param_v4_f32_rrri(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<4>;
+; CHECK-NEXT:    .reg .b32 %f<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.f32 %f1, [st_param_v4_f32_rrri_param_0];
-; CHECK-NEXT:    ld.param.f32 %f2, [st_param_v4_f32_rrri_param_1];
-; CHECK-NEXT:    ld.param.f32 %f3, [st_param_v4_f32_rrri_param_2];
+; CHECK-NEXT:    ld.param.b32 %f1, [st_param_v4_f32_rrri_param_0];
+; CHECK-NEXT:    ld.param.b32 %f2, [st_param_v4_f32_rrri_param_1];
+; CHECK-NEXT:    ld.param.b32 %f3, [st_param_v4_f32_rrri_param_2];
 ; CHECK-NEXT:    { // callseq 72, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
-; CHECK-NEXT:    st.param.v4.f32 [param0], {%f1, %f2, %f3, 0f40800000};
+; CHECK-NEXT:    st.param.v4.b32 [param0], {%f1, %f2, %f3, 0f40800000};
 ; CHECK-NEXT:    call.uni
 ; CHECK-NEXT:    call_v4_f32,
 ; CHECK-NEXT:    (
@@ -1752,14 +1752,14 @@ define void @st_param_v4_f32_rrri(float %a, float %b, float %c) {
 define void @st_param_v4_f32_iirr(float %c, float %d) {
 ; CHECK-LABEL: st_param_v4_f32_iirr(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.f32 %f1, [st_param_v4_f32_iirr_param_0];
-; CHECK-NEXT:    ld.param.f32 %f2, [st_param_v4_f32_iirr_param_1];
+; CHECK-NEXT:    ld.param.b32 %f1, [st_param_v4_f32_iirr_param_0];
+; CHECK-NEXT:    ld.param.b32 %f2, [st_param_v4_f32_iirr_param_1];
 ; CHECK-NEXT:    { // callseq 73, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
-; CHECK-NEXT:    st.param.v4.f32 [param0], {0f3F800000, 0f40000000, %f1, %f2};
+; CHECK-NEXT:    st.param.v4.b32 [param0], {0f3F800000, 0f40000000, %f1, %f2};
 ; CHECK-NEXT:    call.uni
 ; CHECK-NEXT:    call_v4_f32,
 ; CHECK-NEXT:    (
@@ -1777,14 +1777,14 @@ define void @st_param_v4_f32_iirr(float %c, float %d) {
 define void @st_param_v4_f32_irir(float %b, float %d) {
 ; CHECK-LABEL: st_param_v4_f32_irir(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.f32 %f1, [st_param_v4_f32_irir_param_0];
-; CHECK-NEXT:    ld.param.f32 %f2, [st_param_v4_f32_irir_param_1];
+; CHECK-NEXT:    ld.param.b32 %f1, [st_param_v4_f32_irir_param_0];
+; CHECK-NEXT:    ld.param.b32 %f2, [st_param_v4_f32_irir_param_1];
 ; CHECK-NEXT:    { // callseq 74, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
-; CHECK-NEXT:    st.param.v4.f32 [param0], {0f3F800000, %f1, 0f40400000, %f2};
+; CHECK-NEXT:    st.param.v4.b32 [param0], {0f3F800000, %f1, 0f40400000, %f2};
 ; CHECK-NEXT:    call.uni
 ; CHECK-NEXT:    call_v4_f32,
 ; CHECK-NEXT:    (
@@ -1802,14 +1802,14 @@ define void @st_param_v4_f32_irir(float %b, float %d) {
 define void @st_param_v4_f32_irri(float %b, float %c) {
 ; CHECK-LABEL: st_param_v4_f32_irri(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.f32 %f1, [st_param_v4_f32_irri_param_0];
-; CHECK-NEXT:    ld.param.f32 %f2, [st_param_v4_f32_irri_param_1];
+; CHECK-NEXT:    ld.param.b32 %f1, [st_param_v4_f32_irri_param_0];
+; CHECK-NEXT:    ld.param.b32 %f2, [st_param_v4_f32_irri_param_1];
 ; CHECK-NEXT:    { // callseq 75, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
-; CHECK-NEXT:    st.param.v4.f32 [param0], {0f3F800000, %f1, %f2, 0f40800000};
+; CHECK-NEXT:    st.param.v4.b32 [param0], {0f3F800000, %f1, %f2, 0f40800000};
 ; CHECK-NEXT:    call.uni
 ; CHECK-NEXT:    call_v4_f32,
 ; CHECK-NEXT:    (
@@ -1827,14 +1827,14 @@ define void @st_param_v4_f32_irri(float %b, float %c) {
 define void @st_param_v4_f32_riir(float %a, float %d) {
 ; CHECK-LABEL: st_param_v4_f32_riir(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.f32 %f1, [st_param_v4_f32_riir_param_0];
-; CHECK-NEXT:    ld.param.f32 %f2, [st_param_v4_f32_riir_param_1];
+; CHECK-NEXT:    ld.param.b32 %f1, [st_param_v4_f32_riir_param_0];
+; CHECK-NEXT:    ld.param.b32 %f2, [st_param_v4_f32_riir_param_1];
 ; CHECK-NEXT:    { // callseq 76, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
-; CHECK-NEXT:    st.param.v4.f32 [param0], {%f1, 0f40000000, 0f40400000, %f2};
+; CHECK-NEXT:    st.param.v4.b32 [param0], {%f1, 0f40000000, 0f40400000, %f2};
 ; CHECK-NEXT:    call.uni
 ; CHECK-NEXT:    call_v4_f32,
 ; CHECK-NEXT:    (
@@ -1852,14 +1852,14 @@ define void @st_param_v4_f32_riir(float %a, float %d) {
 define void @st_param_v4_f32_riri(float %a, float %c) {
 ; CHECK-LABEL: st_param_v4_f32_riri(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.f32 %f1, [st_param_v4_f32_riri_param_0];
-; CHECK-NEXT:    ld.param.f32 %f2, [st_param_v4_f32_riri_param_1];
+; CHECK-NEXT:    ld.param.b32 %f1, [st_param_v4_f32_riri_param_0];
+; CHECK-NEXT:    ld.param.b32 %f2, [st_param_v4_f32_riri_param_1];
 ; CHECK-NEXT:    { // callseq 77, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
-; CHECK-NEXT:    st.param.v4.f32 [param0], {%f1, 0f40000000, %f2, 0f40800000};
+; CHECK-NEXT:    st.param.v4.b32 [param0], {%f1, 0f40000000, %f2, 0f40800000};
 ; CHECK-NEXT:    call.uni
 ; CHECK-NEXT:    call_v4_f32,
 ; CHECK-NEXT:    (
@@ -1877,14 +1877,14 @@ define void @st_param_v4_f32_riri(float %a, float %c) {
 define void @st_param_v4_f32_rrii(float %a, float %b) {
 ; CHECK-LABEL: st_param_v4_f32_rrii(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.f32 %f1, [st_param_v4_f32_rrii_param_0];
-; CHECK-NEXT:    ld.param.f32 %f2, [st_param_v4_f32_rrii_param_1];
+; CHECK-NEXT:    ld.param.b32 %f1, [st_param_v4_f32_rrii_param_0];
+; CHECK-NEXT:    ld.param.b32 %f2, [st_param_v4_f32_rrii_param_1];
 ; CHECK-NEXT:    { // callseq 78, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
-; CHECK-NEXT:    st.param.v4.f32 [param0], {%f1, %f2, 0f40400000, 0f40800000};
+; CHECK-NEXT:    st.param.v4.b32 [param0], {%f1, %f2, 0f40400000, 0f40800000};
 ; CHECK-NEXT:    call.uni
 ; CHECK-NEXT:    call_v4_f32,
 ; CHECK-NEXT:    (
@@ -1902,13 +1902,13 @@ define void @st_param_v4_f32_rrii(float %a, float %b) {
 define void @st_param_v4_f32_iiir(float %d) {
 ; CHECK-LABEL: st_param_v4_f32_iiir(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<2>;
+; CHECK-NEXT:    .reg .b32 %f<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.f32 %f1, [st_param_v4_f32_iiir_param_0];
+; CHECK-NEXT:    ld.param.b32 %f1, [st_param_v4_f32_iiir_param_0];
 ; CHECK-NEXT:    { // callseq 79, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
-; CHECK-NEXT:    st.param.v4.f32 [param0], {0f3F800000, 0f40000000, 0f40400000, %f1};
+; CHECK-NEXT:    st.param.v4.b32 [param0], {0f3F800000, 0f40000000, 0f40400000, %f1};
 ; CHECK-NEXT:    call.uni
 ; CHECK-NEXT:    call_v4_f32,
 ; CHECK-NEXT:    (
@@ -1926,13 +1926,13 @@ define void @st_param_v4_f32_iiir(float %d) {
 define void @st_param_v4_f32_iiri(float %c) {
 ; CHECK-LABEL: st_param_v4_f32_iiri(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<2>;
+; CHECK-NEXT:    .reg .b32 %f<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.f32 %f1, [st_param_v4_f32_iiri_param_0];
+; CHECK-NEXT:    ld.param.b32 %f1, [st_param_v4_f32_iiri_param_0];
 ; CHECK-NEXT:    { // callseq 80, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
-; CHECK-NEXT:    st.param.v4.f32 [param0], {0f3F800000, 0f40000000, %f1, 0f40800000};
+; CHECK-NEXT:    st.param.v4.b32 [param0], {0f3F800000, 0f40000000, %f1, 0f40800000};
 ; CHECK-NEXT:    call.uni
 ; CHECK-NEXT:    call_v4_f32,
 ; CHECK-NEXT:    (
@@ -1950,13 +1950,13 @@ define void @st_param_v4_f32_iiri(float %c) {
 define void @st_param_v4_f32_irii(float %b) {
 ; CHECK-LABEL: st_param_v4_f32_irii(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<2>;
+; CHECK-NEXT:    .reg .b32 %f<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.f32 %f1, [st_param_v4_f32_irii_param_0];
+; CHECK-NEXT:    ld.param.b32 %f1, [st_param_v4_f32_irii_param_0];
 ; CHECK-NEXT:    { // callseq 81, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
-; CHECK-NEXT:    st.param.v4.f32 [param0], {0f3F800000, %f1, 0f40400000, 0f40800000};
+; CHECK-NEXT:    st.param.v4.b32 [param0], {0f3F800000, %f1, 0f40400000, 0f40800000};
 ; CHECK-NEXT:    call.uni
 ; CHECK-NEXT:    call_v4_f32,
 ; CHECK-NEXT:    (
@@ -1974,13 +1974,13 @@ define void @st_param_v4_f32_irii(float %b) {
 define void @st_param_v4_f32_riii(float %a) {
 ; CHECK-LABEL: st_param_v4_f32_riii(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<2>;
+; CHECK-NEXT:    .reg .b32 %f<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.f32 %f1, [st_param_v4_f32_riii_param_0];
+; CHECK-NEXT:    ld.param.b32 %f1, [st_param_v4_f32_riii_param_0];
 ; CHECK-NEXT:    { // callseq 82, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
-; CHECK-NEXT:    st.param.v4.f32 [param0], {%f1, 0f40000000, 0f40400000, 0f40800000};
+; CHECK-NEXT:    st.param.v4.b32 [param0], {%f1, 0f40000000, 0f40400000, 0f40800000};
 ; CHECK-NEXT:    call.uni
 ; CHECK-NEXT:    call_v4_f32,
 ; CHECK-NEXT:    (
@@ -2000,3 +2000,27 @@ declare void @call_v4_i8(%struct.char4 alignstack(4))
 declare void @call_v4_i16(%struct.short4 alignstack(8))
 declare void @call_v4_i32(%struct.int4 alignstack(16))
 declare void @call_v4_f32(%struct.float4 alignstack(16))
+
+define void @st_param_bfloat() {
+; CHECK-LABEL: st_param_bfloat(
+; CHECK: {
+; CHECK-NEXT:	.reg .b16 	%rs<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:// %bb.0:
+; CHECK-NEXT:	mov.b16 	%rs1, 0x4100;
+; CHECK-NEXT:	{ // callseq 83, 0
+; CHECK-NEXT:	.param .align 2 .b8 param0[2];
+; CHECK-NEXT:	st.param.b16 	[param0], %rs1;
+; CHECK-NEXT:	call.uni
+; CHECK-NEXT:	call_bfloat,
+; CHECK-NEXT:	(
+; CHECK-NEXT:	param0
+; CHECK-NEXT:	);
+; CHECK-NEXT:	} // callseq 83
+; CHECK-NEXT:	ret;
+  %five = bitcast i16 16640 to bfloat
+  call void @call_bfloat(bfloat %five)
+  ret void
+}
+
+declare void @call_bfloat(bfloat)

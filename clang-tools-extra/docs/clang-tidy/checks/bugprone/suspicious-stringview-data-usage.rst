@@ -43,6 +43,9 @@ lead to a compilation error due to the explicit nature of the ``std::string``
 constructor. Consequently, developers might opt for ``sv.data()`` to resolve the
 compilation error, albeit introducing potential hazards as discussed.
 
+Options
+-------
+
 .. option:: StringViewTypes
 
   Option allows users to specify custom string view-like types for analysis. It

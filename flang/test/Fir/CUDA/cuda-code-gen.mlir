@@ -170,3 +170,54 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
 
 // CHECK-LABEL: llvm.func @_QQmain()
 // CHECK-COUNT-3: llvm.call @_FortranACUFAllocDescriptor
+
+// -----
+
+module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vector<4xi64>, f128 = dense<128> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, f16 = dense<16> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, i64 = dense<64> : vector<2xi64>, !llvm.ptr<272> = dense<64> : vector<4xi64>, !llvm.ptr<271> = dense<32> : vector<4xi64>, f80 = dense<128> : vector<2xi64>, i128 = dense<128> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, i8 = dense<8> : vector<2xi64>, !llvm.ptr = dense<64> : vector<4xi64>, i1 = dense<8> : vector<2xi64>, "dlti.endianness" = "little", "dlti.stack_alignment" = 128 : i64>, fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", gpu.container_module, llvm.data_layout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128", llvm.ident = "flang version 20.0.0 (git@github.com:clementval/llvm-project.git efc2415bcce8e8a9e73e77aa122c8aba1c1fbbd2)", llvm.target_triple = "x86_64-unknown-linux-gnu"} {
+  func.func @_QPouter(%arg0: !fir.ref<!fir.array<100x100xf64>> {cuf.data_attr = #cuf.cuda<device>, fir.bindc_name = "a"}) {
+    %c0_i32 = arith.constant 0 : i32
+    %c100 = arith.constant 100 : index
+    %0 = fir.alloca tuple<!fir.box<!fir.array<100x100xf64>>>
+    %1 = fir.coordinate_of %0, %c0_i32 : (!fir.ref<tuple<!fir.box<!fir.array<100x100xf64>>>>, i32) -> !fir.ref<!fir.box<!fir.array<100x100xf64>>>
+    %2 = fircg.ext_embox %arg0(%c100, %c100) : (!fir.ref<!fir.array<100x100xf64>>, index, index) -> !fir.box<!fir.array<100x100xf64>>
+    fir.store %2 to %1 : !fir.ref<!fir.box<!fir.array<100x100xf64>>>
+    return
+  }
+}
+
+// CHECK-LABEL: llvm.func @_QPouter
+// CHECK: _FortranACUFAllocDescriptor
+
+// -----
+
+func.func @_QMm1Psub1(%arg0: !fir.box<!fir.array<?xi32>> {cuf.data_attr = #cuf.cuda<device>, fir.bindc_name = "da"}, %arg1: !fir.box<!fir.array<?xi32>> {cuf.data_attr = #cuf.cuda<device>, fir.bindc_name = "db"}, %arg2: !fir.ref<i32> {fir.bindc_name = "n"}) {
+  %0 = fircg.ext_rebox %arg0 : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
+  %1 = fircg.ext_rebox %arg1 : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
+  return
+}
+
+// CHECK-LABEL: llvm.func @_QMm1Psub1
+// CHECK-COUNT-2: _FortranACUFAllocDescriptor
+
+// -----
+
+fir.global common @_QPshared_static__shared_mem(dense<0> : vector<28xi8>) {alignment = 8 : i64, data_attr = #cuf.cuda<shared>} : !fir.array<28xi8>
+
+// CHECK: llvm.mlir.global common @_QPshared_static__shared_mem(dense<0> : vector<28xi8>) {addr_space = 3 : i32, alignment = 8 : i64} : !llvm.array<28 x i8>
+
+// -----
+
+module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<f80, dense<128> : vector<2xi64>>, #dlti.dl_entry<i128, dense<128> : vector<2xi64>>, #dlti.dl_entry<i64, dense<64> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr<272>, dense<64> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<271>, dense<32> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<270>, dense<32> : vector<4xi64>>, #dlti.dl_entry<f128, dense<128> : vector<2xi64>>, #dlti.dl_entry<f64, dense<64> : vector<2xi64>>, #dlti.dl_entry<f16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i32, dense<32> : vector<2xi64>>, #dlti.dl_entry<i16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i8, dense<8> : vector<2xi64>>, #dlti.dl_entry<i1, dense<8> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>, #dlti.dl_entry<"dlti.endianness", "little">, #dlti.dl_entry<"dlti.stack_alignment", 128 : i64>>} {
+  func.func @_QQmain() attributes {fir.bindc_name = "cufkernel_global"} {
+    %c0 = arith.constant 0 : index
+    %3 = fir.call @__tgt_acc_get_deviceptr() : () -> !fir.ref<!fir.box<none>>
+    %4 = fir.convert %3 : (!fir.ref<!fir.box<none>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+    %5 = fir.load %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+    return
+  }
+
+  // CHECK-LABEL: llvm.func @_QQmain()
+  // CHECK: llvm.call @_FortranACUFAllocDescriptor
+
+  func.func private @__tgt_acc_get_deviceptr() -> !fir.ref<!fir.box<none>>
+}
