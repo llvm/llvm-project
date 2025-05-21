@@ -1839,11 +1839,11 @@ LogicalResult ReinterpretCastOp::verify() {
     if (ShapedType::isDynamic(resultSize) &&
         !ShapedType::isDynamic(expectedSize))
       return emitError(
-          "expectedSize is static but received a dynamic resultSize ");
+          "expected size is static, but result type dimension is dynamic ");
     if (!ShapedType::isDynamic(resultSize) &&
         ShapedType::isDynamic(expectedSize))
       return emitError(
-          "expectedSize is dynamic but received a static resultSize ");
+          "expected size is dynamic, but result type dimension is static ");
     if (!ShapedType::isDynamic(resultSize) && resultSize != expectedSize)
       return emitError("expected result type with size = ")
              << (ShapedType::isDynamic(expectedSize)
@@ -1863,6 +1863,15 @@ LogicalResult ReinterpretCastOp::verify() {
 
   // Match offset in result memref type and in static_offsets attribute.
   int64_t expectedOffset = getStaticOffsets().front();
+  // Check that dynamic offset is not mixed with static offset
+  if (ShapedType::isDynamic(resultOffset) &&
+      !ShapedType::isDynamic(expectedOffset))
+    return emitError(
+        "expected offset is static, but result type offset is dynamic");
+  if (!ShapedType::isDynamic(resultOffset) &&
+      ShapedType::isDynamic(expectedOffset))
+    return emitError(
+        "expected offset is dynamic, but result type offset is static");
   if (!ShapedType::isDynamic(resultOffset) && resultOffset != expectedOffset)
     return emitError("expected result type with offset = ")
            << (ShapedType::isDynamic(expectedOffset)
