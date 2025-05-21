@@ -385,7 +385,7 @@ Semantics:
 """"""""""
 
 Before the absolute value is taken, the input is flushed to sign preserving
-zero if it is a subnormal. In addtion, unlike '``llvm.fabs.*``', a NaN input
+zero if it is a subnormal. In addition, unlike '``llvm.fabs.*``', a NaN input
 yields an unspecified NaN output.
 
 
@@ -473,7 +473,7 @@ Overview:
 
 The '``llvm.nvvm.fshl.clamp``' family of intrinsics performs a clamped funnel
 shift left. These intrinsics are very similar to '``llvm.fshl``', except the
-shift ammont is clamped at the integer width (instead of modulo it). Currently,
+shift amount is clamped at the integer width (instead of modulo it). Currently,
 only ``i32`` is supported.
 
 Semantics:
@@ -501,7 +501,7 @@ Overview:
 
 The '``llvm.nvvm.fshr.clamp``' family of intrinsics perform a clamped funnel
 shift right. These intrinsics are very similar to '``llvm.fshr``', except the
-shift ammont is clamped at the integer width (instead of modulo it). Currently,
+shift amount is clamped at the integer width (instead of modulo it). Currently,
 only ``i32`` is supported.
 
 Semantics:
@@ -1617,6 +1617,98 @@ The ``@llvm.nvvm.st.bulk.shared.cta`` and ``@llvm.nvvm.st.bulk`` intrinsics are
 similar but the latter uses generic addressing (see `Generic Addressing <https://docs.nvidia.com/cuda/parallel-thread-execution/#generic-addressing>`__).
 
 For more information, refer `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-st-bulk>`__.
+
+
+clusterlaunchcontrol Intrinsics
+-------------------------------
+
+'``llvm.nvvm.clusterlaunchcontrol.try_cancel*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.clusterlaunchcontrol.try_cancel.async.shared(ptr addrspace(3) %addr, ptr addrspace(3) %mbar)
+  declare void @llvm.nvvm.clusterlaunchcontrol.try_cancel.async.multicast.shared(ptr addrspace(3) %addr, ptr addrspace(3) %mbar)
+
+Overview:
+"""""""""
+
+The ``clusterlaunchcontrol.try_cancel`` intrinsics requests atomically cancelling
+the launch of a cluster that has not started running yet. It asynchronously non-atomically writes
+a 16-byte opaque response to shared memory, pointed to by 16-byte-aligned ``addr`` indicating whether the
+operation succeeded or failed. ``addr`` and 8-byte-aligned ``mbar`` must refer to ``shared::cta``
+otherwise the behavior is undefined. The completion of the asynchronous operation
+is tracked using the mbarrier completion mechanism at ``.cluster`` scope referenced
+by the shared memory pointer, ``mbar``. On success, the opaque response contains
+the CTA id of the first CTA of the canceled cluster; no other successful response
+from other ``clusterlaunchcontrol.try_cancel`` operations from the same grid will
+contain that id.
+
+The ``multicast`` variant specifies that the response is asynchronously non-atomically written to
+the corresponding shared memory location of each CTA in the requesting cluster.
+The completion of the write of each local response is tracked by independent
+mbarriers at the corresponding shared memory location of each CTA in the
+cluster.
+
+For more information, refer `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/?a#parallel-synchronization-and-communication-instructions-clusterlaunchcontrol-try-cancel>`__.
+
+'``llvm.nvvm.clusterlaunchcontrol.query_cancel.is_canceled``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare i1 @llvm.nvvm.clusterlaunchcontrol.query_cancel.is_canceled(i128 %try_cancel_response)
+
+Overview:
+"""""""""
+
+The ``llvm.nvvm.clusterlaunchcontrol.query_cancel.is_canceled`` intrinsic decodes the opaque response written by the
+``llvm.nvvm.clusterlaunchcontrol.try_cancel`` operation.
+
+The intrinsic returns ``0`` (false) if the request failed. If the request succeeded,
+it returns ``1`` (true). A true result indicates that:
+
+- the thread block cluster whose first CTA id matches that of the response
+  handle will not run, and
+- no other successful response of another ``try_cancel`` request in the grid will contain
+  the first CTA id of that cluster
+
+For more information, refer `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/?a#parallel-synchronization-and-communication-instructions-clusterlaunchcontrol-query-cancel>`__.
+
+
+'``llvm.nvvm.clusterlaunchcontrol.query_cancel.get_first_ctaid.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare i32 @llvm.nvvm.clusterlaunchcontrol.query_cancel.get_first_ctaid.x(i128 %try_cancel_response)
+  declare i32 @llvm.nvvm.clusterlaunchcontrol.query_cancel.get_first_ctaid.y(i128 %try_cancel_response)
+  declare i32 @llvm.nvvm.clusterlaunchcontrol.query_cancel.get_first_ctaid.z(i128 %try_cancel_response)
+
+Overview:
+"""""""""
+
+The ``clusterlaunchcontrol.query_cancel.get_first_ctaid.*`` intrinsic can be
+used to decode the successful opaque response written by the
+``llvm.nvvm.clusterlaunchcontrol.try_cancel`` operation.
+
+If the request succeeded:
+
+- ``llvm.nvvm.clusterlaunchcontrol.query_cancel.get_first_ctaid.{x,y,z}`` returns
+  the coordinate of the first CTA in the canceled cluster, either x, y, or z.
+
+If the request failed, the behavior of these intrinsics is undefined.
+
+For more information, refer `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/?a#parallel-synchronization-and-communication-instructions-clusterlaunchcontrol-query-cancel>`__.
 
 Other Intrinsics
 ----------------

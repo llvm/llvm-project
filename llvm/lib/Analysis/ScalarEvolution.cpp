@@ -10963,6 +10963,56 @@ bool ScalarEvolution::isKnownToBeAPowerOfTwo(const SCEV *S, bool OrZero,
   return all_of(Mul->operands(), NonRecursive) && (OrZero || isKnownNonZero(S));
 }
 
+bool ScalarEvolution::isKnownMultipleOf(
+    const SCEV *S, uint64_t M,
+    SmallVectorImpl<const SCEVPredicate *> &Assumptions) {
+  if (M == 0)
+    return false;
+  if (M == 1)
+    return true;
+
+  // Recursively check AddRec operands. An AddRecExpr S is a multiple of M if S
+  // starts with a multiple of M and at every iteration step S only adds
+  // multiples of M.
+  if (auto *AddRec = dyn_cast<SCEVAddRecExpr>(S))
+    return isKnownMultipleOf(AddRec->getStart(), M, Assumptions) &&
+           isKnownMultipleOf(AddRec->getStepRecurrence(*this), M, Assumptions);
+
+  // For a constant, check that "S % M == 0".
+  if (auto *Cst = dyn_cast<SCEVConstant>(S)) {
+    APInt C = Cst->getAPInt();
+    return C.urem(M) == 0;
+  }
+
+  // TODO: Also check other SCEV expressions, i.e., SCEVAddRecExpr, etc.
+
+  // Basic tests have failed.
+  // Check "S % M == 0" at compile time and record runtime Assumptions.
+  auto *STy = dyn_cast<IntegerType>(S->getType());
+  const SCEV *SmodM =
+      getURemExpr(S, getConstant(ConstantInt::get(STy, M, false)));
+  const SCEV *Zero = getZero(STy);
+
+  // Check whether "S % M == 0" is known at compile time.
+  if (isKnownPredicate(ICmpInst::ICMP_EQ, SmodM, Zero))
+    return true;
+
+  // Check whether "S % M != 0" is known at compile time.
+  if (isKnownPredicate(ICmpInst::ICMP_NE, SmodM, Zero))
+    return false;
+
+  const SCEVPredicate *P = getComparePredicate(ICmpInst::ICMP_EQ, SmodM, Zero);
+
+  // Detect redundant predicates.
+  for (auto *A : Assumptions)
+    if (A->implies(P, *this))
+      return true;
+
+  // Only record non-redundant predicates.
+  Assumptions.push_back(P);
+  return true;
+}
+
 std::pair<const SCEV *, const SCEV *>
 ScalarEvolution::SplitIntoInitAndPostInc(const Loop *L, const SCEV *S) {
   // Compute SCEV on entry of loop L.
@@ -12480,18 +12530,13 @@ static bool IsKnownPredicateViaAddRecStart(ScalarEvolution &SE,
   if (!ICmpInst::isRelational(Pred))
     return false;
 
-  const SCEVAddRecExpr *LAR = dyn_cast<SCEVAddRecExpr>(LHS);
-  if (!LAR)
+  const SCEV *LStart, *RStart, *Step;
+  if (!match(LHS, m_scev_AffineAddRec(m_SCEV(LStart), m_SCEV(Step))) ||
+      !match(RHS, m_scev_AffineAddRec(m_SCEV(RStart), m_scev_Specific(Step))))
     return false;
-  const SCEVAddRecExpr *RAR = dyn_cast<SCEVAddRecExpr>(RHS);
-  if (!RAR)
-    return false;
+  const SCEVAddRecExpr *LAR = cast<SCEVAddRecExpr>(LHS);
+  const SCEVAddRecExpr *RAR = cast<SCEVAddRecExpr>(RHS);
   if (LAR->getLoop() != RAR->getLoop())
-    return false;
-  if (!LAR->isAffine() || !RAR->isAffine())
-    return false;
-
-  if (LAR->getStepRecurrence(SE) != RAR->getStepRecurrence(SE))
     return false;
 
   SCEV::NoWrapFlags NW = ICmpInst::isSigned(Pred) ?
@@ -12499,7 +12544,7 @@ static bool IsKnownPredicateViaAddRecStart(ScalarEvolution &SE,
   if (!LAR->getNoWrapFlags(NW) || !RAR->getNoWrapFlags(NW))
     return false;
 
-  return SE.isKnownPredicate(Pred, LAR->getStart(), RAR->getStart());
+  return SE.isKnownPredicate(Pred, LStart, RStart);
 }
 
 /// Is LHS `Pred` RHS true on the virtue of LHS or RHS being a Min or Max
@@ -12716,7 +12761,7 @@ static bool isKnownPredicateExtendIdiom(CmpPredicate Pred, const SCEV *LHS,
   case ICmpInst::ICMP_SLE: {
     // If operand >=s 0 then ZExt == SExt. If operand <s 0 then SExt <s ZExt.
     return match(LHS, m_scev_SExt(m_SCEV(Op))) &&
-           match(RHS, m_scev_ZExt(m_Specific(Op)));
+           match(RHS, m_scev_ZExt(m_scev_Specific(Op)));
   }
   case ICmpInst::ICMP_UGE:
     std::swap(LHS, RHS);
@@ -12724,7 +12769,7 @@ static bool isKnownPredicateExtendIdiom(CmpPredicate Pred, const SCEV *LHS,
   case ICmpInst::ICMP_ULE: {
     // If operand >=u 0 then ZExt == SExt.  If operand <u 0 then ZExt <u SExt.
     return match(LHS, m_scev_ZExt(m_SCEV(Op))) &&
-           match(RHS, m_scev_SExt(m_Specific(Op)));
+           match(RHS, m_scev_SExt(m_scev_Specific(Op)));
   }
   default:
     return false;

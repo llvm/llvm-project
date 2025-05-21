@@ -9,7 +9,7 @@ from lldbsuite.test.lldbtest import *
 import lldbdap_testcase
 
 
-class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
+class TestDAP_cancel(lldbdap_testcase.DAPTestCaseBase):
     def send_async_req(self, command: str, arguments={}) -> int:
         seq = self.dap_server.sequence
         self.dap_server.send_packet(
@@ -44,15 +44,14 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         Tests cancelling a pending request.
         """
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program, stopOnEntry=True)
-        self.continue_to_next_stop()
+        self.build_and_launch(program)
 
         # Use a relatively short timeout since this is only to ensure the
         # following request is queued.
         blocking_seq = self.async_blocking_request(duration=1.0)
         # Use a longer timeout to ensure we catch if the request was interrupted
         # properly.
-        pending_seq = self.async_blocking_request(duration=self.timeoutval / 2)
+        pending_seq = self.async_blocking_request(duration=self.DEFAULT_TIMEOUT / 2)
         cancel_seq = self.async_cancel(requestId=pending_seq)
 
         blocking_resp = self.dap_server.recv_packet(filter_type=["response"])
@@ -77,13 +76,12 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         Tests cancelling an inflight request.
         """
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program, stopOnEntry=True)
-        self.continue_to_next_stop()
+        self.build_and_launch(program)
 
-        blocking_seq = self.async_blocking_request(duration=self.timeoutval / 2)
+        blocking_seq = self.async_blocking_request(duration=self.DEFAULT_TIMEOUT / 2)
         # Wait for the sleep to start to cancel the inflight request.
         self.collect_console(
-            timeout_secs=self.timeoutval,
+            timeout_secs=self.DEFAULT_TIMEOUT,
             pattern="starting sleep",
         )
         cancel_seq = self.async_cancel(requestId=blocking_seq)

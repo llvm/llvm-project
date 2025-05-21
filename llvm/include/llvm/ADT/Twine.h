@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <cstdint>
@@ -463,10 +464,10 @@ namespace llvm {
     /// @{
 
     /// Return the twine contents as a std::string.
-    std::string str() const;
+    LLVM_ABI std::string str() const;
 
     /// Append the concatenated string into the given SmallString or SmallVector.
-    void toVector(SmallVectorImpl<char> &Out) const;
+    LLVM_ABI void toVector(SmallVectorImpl<char> &Out) const;
 
     /// This returns the twine as a single StringRef.  This method is only valid
     /// if isSingleStringRef() is true.
@@ -501,14 +502,15 @@ namespace llvm {
     /// given SmallVector and a StringRef to the SmallVector's data is returned.
     ///
     /// The returned StringRef's size does not include the null terminator.
-    StringRef toNullTerminatedStringRef(SmallVectorImpl<char> &Out) const;
+    LLVM_ABI StringRef
+    toNullTerminatedStringRef(SmallVectorImpl<char> &Out) const;
 
     /// Write the concatenated string represented by this twine to the
     /// stream \p OS.
-    void print(raw_ostream &OS) const;
+    LLVM_ABI void print(raw_ostream &OS) const;
 
     /// Write the representation of this twine to the stream \p OS.
-    void printRepr(raw_ostream &OS) const;
+    LLVM_ABI void printRepr(raw_ostream &OS) const;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
     /// Dump the concatenated string represented by this twine to stderr.

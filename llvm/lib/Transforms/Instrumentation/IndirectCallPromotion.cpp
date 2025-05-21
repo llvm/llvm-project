@@ -858,13 +858,14 @@ bool IndirectCallPromoter::isProfitableToCompareVTables(
     auto &Candidate = Candidates[I];
     auto &VTableGUIDAndCounts = Candidate.VTableGUIDAndCounts;
 
-    LLVM_DEBUG(dbgs() << "  Candidate " << I << " FunctionCount: "
-                      << Candidate.Count << ", VTableCounts:");
-    // Add [[maybe_unused]] since <GUID, Count> are only used by LLVM_DEBUG.
-    for ([[maybe_unused]] auto &[GUID, Count] : VTableGUIDAndCounts)
-      LLVM_DEBUG(dbgs() << " {" << Symtab->getGlobalVariable(GUID)->getName()
-                        << ", " << Count << "}");
-    LLVM_DEBUG(dbgs() << "\n");
+    LLVM_DEBUG({
+      dbgs() << "  Candidate " << I << " FunctionCount: " << Candidate.Count
+             << ", VTableCounts:";
+      for (const auto &[GUID, Count] : VTableGUIDAndCounts)
+        dbgs() << " {" << Symtab->getGlobalVariable(GUID)->getName() << ", "
+               << Count << "}";
+      dbgs() << "\n";
+    });
 
     uint64_t CandidateVTableCount = 0;
 

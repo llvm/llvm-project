@@ -63,6 +63,11 @@ class M68kMCCodeEmitter : public MCCodeEmitter {
                          APInt &Value, SmallVectorImpl<MCFixup> &Fixups,
                          const MCSubtargetInfo &STI) const;
 
+  void encodeInverseMoveMask(const MCInst &MI, unsigned OpIdx,
+                             unsigned InsertPos, APInt &Value,
+                             SmallVectorImpl<MCFixup> &Fixups,
+                             const MCSubtargetInfo &STI) const;
+
 public:
   M68kMCCodeEmitter(const MCInstrInfo &mcii, MCContext &ctx)
       : MCII(mcii), Ctx(ctx) {}
@@ -194,6 +199,13 @@ void M68kMCCodeEmitter::encodeFPSYSSelect(const MCInst &MI, unsigned OpIdx,
   default:
     llvm_unreachable("Unrecognized FPSYS register");
   }
+}
+
+void M68kMCCodeEmitter::encodeInverseMoveMask(
+    const MCInst &MI, unsigned OpIdx, unsigned InsertPos, APInt &Value,
+    SmallVectorImpl<MCFixup> &Fixups, const MCSubtargetInfo &STI) const {
+  const MCOperand &Op = MI.getOperand(OpIdx);
+  Value = llvm::reverseBits<uint16_t>((uint16_t)Op.getImm());
 }
 
 void M68kMCCodeEmitter::getMachineOpValue(const MCInst &MI, const MCOperand &Op,
