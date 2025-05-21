@@ -60,7 +60,7 @@ define <vscale x 16 x i1> @whilewr_8(ptr %a, ptr %b) {
 ; CHECK-SVE-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-SVE-NEXT:    ret
 entry:
-  %0 = call <vscale x 16 x i1> @llvm.experimental.loop.dependence.war.mask.v16i1(ptr %a, ptr %b, i64 1)
+  %0 = call <vscale x 16 x i1> @llvm.loop.dependence.war.mask.v16i1(ptr %a, ptr %b, i64 1)
   ret <vscale x 16 x i1> %0
 }
 
@@ -98,7 +98,7 @@ define <vscale x 8 x i1> @whilewr_16(ptr %a, ptr %b) {
 ; CHECK-SVE-NEXT:    sel p0.b, p0, p0.b, p1.b
 ; CHECK-SVE-NEXT:    ret
 entry:
-  %0 = call <vscale x 8 x i1> @llvm.experimental.loop.dependence.war.mask.v8i1(ptr %a, ptr %b, i64 2)
+  %0 = call <vscale x 8 x i1> @llvm.loop.dependence.war.mask.v8i1(ptr %a, ptr %b, i64 2)
   ret <vscale x 8 x i1> %0
 }
 
@@ -130,7 +130,7 @@ define <vscale x 4 x i1> @whilewr_32(ptr %a, ptr %b) {
 ; CHECK-SVE-NEXT:    sel p0.b, p0, p0.b, p1.b
 ; CHECK-SVE-NEXT:    ret
 entry:
-  %0 = call <vscale x 4 x i1> @llvm.experimental.loop.dependence.war.mask.v4i1(ptr %a, ptr %b, i64 4)
+  %0 = call <vscale x 4 x i1> @llvm.loop.dependence.war.mask.v4i1(ptr %a, ptr %b, i64 4)
   ret <vscale x 4 x i1> %0
 }
 
@@ -158,7 +158,7 @@ define <vscale x 2 x i1> @whilewr_64(ptr %a, ptr %b) {
 ; CHECK-SVE-NEXT:    sel p0.b, p0, p0.b, p1.b
 ; CHECK-SVE-NEXT:    ret
 entry:
-  %0 = call <vscale x 2 x i1> @llvm.experimental.loop.dependence.war.mask.v2i1(ptr %a, ptr %b, i64 8)
+  %0 = call <vscale x 2 x i1> @llvm.loop.dependence.war.mask.v2i1(ptr %a, ptr %b, i64 8)
   ret <vscale x 2 x i1> %0
 }
 
@@ -223,7 +223,7 @@ define <vscale x 16 x i1> @whilerw_8(ptr %a, ptr %b) {
 ; CHECK-SVE-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-SVE-NEXT:    ret
 entry:
-  %0 = call <vscale x 16 x i1> @llvm.experimental.loop.dependence.raw.mask.v16i1(ptr %a, ptr %b, i64 1)
+  %0 = call <vscale x 16 x i1> @llvm.loop.dependence.raw.mask.v16i1(ptr %a, ptr %b, i64 1)
   ret <vscale x 16 x i1> %0
 }
 
@@ -262,7 +262,7 @@ define <vscale x 8 x i1> @whilerw_16(ptr %a, ptr %b) {
 ; CHECK-SVE-NEXT:    sel p0.b, p0, p0.b, p1.b
 ; CHECK-SVE-NEXT:    ret
 entry:
-  %0 = call <vscale x 8 x i1> @llvm.experimental.loop.dependence.raw.mask.v8i1(ptr %a, ptr %b, i64 2)
+  %0 = call <vscale x 8 x i1> @llvm.loop.dependence.raw.mask.v8i1(ptr %a, ptr %b, i64 2)
   ret <vscale x 8 x i1> %0
 }
 
@@ -295,7 +295,7 @@ define <vscale x 4 x i1> @whilerw_32(ptr %a, ptr %b) {
 ; CHECK-SVE-NEXT:    sel p0.b, p0, p0.b, p1.b
 ; CHECK-SVE-NEXT:    ret
 entry:
-  %0 = call <vscale x 4 x i1> @llvm.experimental.loop.dependence.raw.mask.v4i1(ptr %a, ptr %b, i64 4)
+  %0 = call <vscale x 4 x i1> @llvm.loop.dependence.raw.mask.v4i1(ptr %a, ptr %b, i64 4)
   ret <vscale x 4 x i1> %0
 }
 
@@ -324,6 +324,6 @@ define <vscale x 2 x i1> @whilerw_64(ptr %a, ptr %b) {
 ; CHECK-SVE-NEXT:    sel p0.b, p0, p0.b, p1.b
 ; CHECK-SVE-NEXT:    ret
 entry:
-  %0 = call <vscale x 2 x i1> @llvm.experimental.loop.dependence.raw.mask.v2i1(ptr %a, ptr %b, i64 8)
+  %0 = call <vscale x 2 x i1> @llvm.loop.dependence.raw.mask.v2i1(ptr %a, ptr %b, i64 8)
   ret <vscale x 2 x i1> %0
 }

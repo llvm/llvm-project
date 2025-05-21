@@ -318,9 +318,9 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
     Res = PromoteIntRes_VP_REDUCE(N);
     break;
 
-  case ISD::EXPERIMENTAL_LOOP_DEPENDENCE_WAR_MASK:
-  case ISD::EXPERIMENTAL_LOOP_DEPENDENCE_RAW_MASK:
-    Res = PromoteIntRes_EXPERIMENTAL_LOOP_DEPENDENCE_MASK(N);
+  case ISD::LOOP_DEPENDENCE_WAR_MASK:
+  case ISD::LOOP_DEPENDENCE_RAW_MASK:
+    Res = PromoteIntRes_LOOP_DEPENDENCE_MASK(N);
     break;
 
   case ISD::FREEZE:
@@ -371,7 +371,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_MERGE_VALUES(SDNode *N,
 }
 
 SDValue
-DAGTypeLegalizer::PromoteIntRes_EXPERIMENTAL_LOOP_DEPENDENCE_MASK(SDNode *N) {
+DAGTypeLegalizer::PromoteIntRes_LOOP_DEPENDENCE_MASK(SDNode *N) {
   EVT VT = N->getValueType(0);
   EVT NewVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
   return DAG.getNode(N->getOpcode(), SDLoc(N), NewVT, N->ops());
@@ -2100,9 +2100,9 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::PARTIAL_REDUCE_SMLA:
     Res = PromoteIntOp_PARTIAL_REDUCE_MLA(N);
     break;
-  case ISD::EXPERIMENTAL_LOOP_DEPENDENCE_RAW_MASK:
-  case ISD::EXPERIMENTAL_LOOP_DEPENDENCE_WAR_MASK:
-    Res = PromoteIntOp_EXPERIMENTAL_LOOP_DEPENDENCE_MASK(N, OpNo);
+  case ISD::LOOP_DEPENDENCE_RAW_MASK:
+  case ISD::LOOP_DEPENDENCE_WAR_MASK:
+    Res = PromoteIntOp_LOOP_DEPENDENCE_MASK(N, OpNo);
     break;
   }
 
@@ -2898,7 +2898,7 @@ SDValue DAGTypeLegalizer::PromoteIntOp_PARTIAL_REDUCE_MLA(SDNode *N) {
   return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
 }
 
-SDValue DAGTypeLegalizer::PromoteIntOp_EXPERIMENTAL_LOOP_DEPENDENCE_MASK(
+SDValue DAGTypeLegalizer::PromoteIntOp_LOOP_DEPENDENCE_MASK(
     SDNode *N, unsigned OpNo) {
   SmallVector<SDValue, 4> NewOps(N->ops());
   NewOps[OpNo] = GetPromotedInteger(N->getOperand(OpNo));
