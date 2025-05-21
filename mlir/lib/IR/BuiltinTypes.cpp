@@ -652,7 +652,7 @@ bool MemRefType::areTrailingDimsContiguous(int64_t n) {
   if (n == 1)
     return true;
 
-  auto memrefShape = getShape().take_back(n-1);
+  auto memrefShape = getShape().take_back(n - 1);
   if (ShapedType::isDynamicShape(memrefShape))
     return false;
 
