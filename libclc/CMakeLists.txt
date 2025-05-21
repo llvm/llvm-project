@@ -440,13 +440,19 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     # to declare certain builtins in that address space.
     # Note: we assume that if there is no distinct generic address space, it
     # maps to the private address space.
-    set ( has_distinct_generic_addrspace TRUE )
-    if( ARCH STREQUAL nvptx OR ARCH STREQUAL nvptx64 )
-      set ( has_distinct_generic_addrspace FALSE )
+    set ( private_addrspace_val 0 )
+    set ( generic_addrspace_val 0 )
+    if( ARCH STREQUAL amdgcn OR ARCH STREQUAL r600 OR ARCH STREQUAL amdgcn-amdhsa )
+      set ( private_addrspace_val 5 )
     endif()
-    if( has_distinct_generic_addrspace )
-      list( APPEND build_flags -D__CLC_DISTINCT_GENERIC_ADDRSPACE__ )
+    if( ARCH STREQUAL spirv OR ARCH STREQUAL spirv64
+        OR ARCH STREQUAL clspv OR ARCH STREQUAL clspv64 )
+      set ( generic_addrspace_val 4 )
     endif()
+    list( APPEND build_flags
+      -D__CLC_PRIVATE_ADDRSPACE_VAL=${private_addrspace_val}
+      -D__CLC_GENERIC_ADDRSPACE_VAL=${generic_addrspace_val}
+    )
 
     set( clc_build_flags ${build_flags} -DCLC_INTERNAL )
 
