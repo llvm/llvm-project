@@ -5484,29 +5484,29 @@ void DAGTypeLegalizer::ExpandIntRes_FunnelShift(SDNode *N, SDValue &Lo,
 void DAGTypeLegalizer::ExpandIntRes_CLMUL(SDNode *N, SDValue &Lo,
                                                 SDValue &Hi) {
   // Values numbered from least significant to most significant.
-  SDValue In1, In2, In3, In4;
-  GetExpandedInteger(N->getOperand(0), In3, In4);
-  GetExpandedInteger(N->getOperand(1), In1, In2);
-  EVT HalfVT = In1.getValueType();
+  SDValue LL, LH, RL, RH;
+  GetExpandedInteger(N->getOperand(0), LL, LH);
+  GetExpandedInteger(N->getOperand(1), RL, RH);
+  EVT HalfVT = LL.getValueType();
   SDLoc DL(N);
   
   // CLMUL is carryless so Lo is computed from the low half
-  Lo = DAG.getNode(ISD::CLMUL, DL, HalfVT, In1, In3);
+  Lo = DAG.getNode(ISD::CLMUL, DL, HalfVT, LL, RL);
   // the high bits not included in CLMUL(A,B) can be computed by
   // BITREVERSE(CLMUL(BITREVERSE(A), BITREVERSE(B))) >> 1
   // Therefore we can compute the 2 hi/lo cross products
   // and the the overflow of the low product
   // and xor them together to compute HI
-  SDValue BitRevIn1 = DAG.getNode(ISD::BITREVERSE, DL, HalfVT, In1);
-  SDValue BitRevIn3 = DAG.getNode(ISD::BITREVERSE, DL, HalfVT, In3);
-  SDValue BitRevLoHi = DAG.getNode(ISD::CLMUL, DL, HalfVT, BitRevIn1, BitRevIn3);
+  SDValue BitRevLL = DAG.getNode(ISD::BITREVERSE, DL, HalfVT, LL);
+  SDValue BitRevRL = DAG.getNode(ISD::BITREVERSE, DL, HalfVT, RL);
+  SDValue BitRevLoHi = DAG.getNode(ISD::CLMUL, DL, HalfVT, BitRevLL, BitRevRL);
   SDValue LoHi = DAG.getNode(ISD::BITREVERSE, DL, HalfVT, BitRevLoHi);
-  SDValue One = DAG.getConstant(0, DL, HalfVT);
+  SDValue One = DAG.getShiftAmountConstant(1, HalfVT, DL);
   Hi = DAG.getNode(ISD::SRL, DL, HalfVT, LoHi, One);
   
-  SDValue HITMP = DAG.getNode(ISD::CLMUL, DL, HalfVT, In1, In4);
+  SDValue HITMP = DAG.getNode(ISD::CLMUL, DL, HalfVT, LL, RH);
   Hi = DAG.getNode(ISD::XOR, DL, HalfVT, Hi, HITMP);
-  HITMP = DAG.getNode(ISD::CLMUL, DL, HalfVT, In2, In3);
+  HITMP = DAG.getNode(ISD::CLMUL, DL, HalfVT, LH, RL);
   Hi = DAG.getNode(ISD::XOR, DL, HalfVT, Hi, HITMP);
 }
 

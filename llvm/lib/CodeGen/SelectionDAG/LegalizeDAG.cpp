@@ -4018,8 +4018,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
       Results.push_back(Expanded);
     break;
   case ISD::CLMUL:
-    if (SDValue Expanded = TLI.expandCLMUL(Node, DAG))
-      Results.push_back(Expanded);
+    Results.push_back(TLI.expandCLMUL(Node, DAG));
     break;
   case ISD::ROTL:
   case ISD::ROTR:
