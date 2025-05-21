@@ -5,10 +5,10 @@
 ; CHECK-NEXT: ; Shader Flags Value: 0x00000001
 
 ; CHECK: ; Note: extra DXIL module flags:
-; CHECK-NEXT: ;       D3D11_1_SB_GLOBAL_FLAG_SKIP_OPTIMIZATION
+; CHECK-NEXT: ;       Disable shader optimizations
 
 ; CHECK: ; Shader Flags for Module Functions
-; CHECK: ; Function main : 0x00000000
+; CHECK: ; Function main : 0x00000001
 ; The test source in this file generated from the following command:
 ; clang -cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -emit-llvm -O0 -o - <<EOF
 

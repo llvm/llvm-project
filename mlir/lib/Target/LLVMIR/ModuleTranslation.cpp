@@ -296,8 +296,7 @@ translateDataLayout(DataLayoutSpecInterface attribute,
       return failure();
   }
   StringRef layoutSpec(llvmDataLayout);
-  if (layoutSpec.starts_with("-"))
-    layoutSpec = layoutSpec.drop_front();
+  layoutSpec.consume_front("-");
 
   return llvm::DataLayout(layoutSpec);
 }
@@ -554,8 +553,10 @@ static llvm::Constant *convertDenseResourceElementsAttr(
 llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
     llvm::Type *llvmType, Attribute attr, Location loc,
     const ModuleTranslation &moduleTranslation) {
-  if (!attr)
+  if (!attr || isa<UndefAttr>(attr))
     return llvm::UndefValue::get(llvmType);
+  if (isa<ZeroAttr>(attr))
+    return llvm::Constant::getNullValue(llvmType);
   if (auto *structType = dyn_cast<::llvm::StructType>(llvmType)) {
     auto arrayAttr = dyn_cast<ArrayAttr>(attr);
     if (!arrayAttr) {
@@ -714,6 +715,33 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
         ArrayRef<char>{stringAttr.getValue().data(),
                        stringAttr.getValue().size()});
   }
+
+  // Handle arrays of structs that cannot be represented as DenseElementsAttr
+  // in MLIR.
+  if (auto arrayAttr = dyn_cast<ArrayAttr>(attr)) {
+    if (auto *arrayTy = dyn_cast<llvm::ArrayType>(llvmType)) {
+      llvm::Type *elementType = arrayTy->getElementType();
+      Attribute previousElementAttr;
+      llvm::Constant *elementCst = nullptr;
+      SmallVector<llvm::Constant *> constants;
+      constants.reserve(arrayTy->getNumElements());
+      for (Attribute elementAttr : arrayAttr) {
+        // Arrays with a single value or with repeating values are quite common.
+        // Short-circuit the translation when the element value is the same as
+        // the previous one.
+        if (!previousElementAttr || previousElementAttr != elementAttr) {
+          previousElementAttr = elementAttr;
+          elementCst =
+              getLLVMConstant(elementType, elementAttr, loc, moduleTranslation);
+          if (!elementCst)
+            return nullptr;
+        }
+        constants.push_back(elementCst);
+      }
+      return llvm::ConstantArray::get(arrayTy, constants);
+    }
+  }
+
   emitError(loc, "unsupported constant value");
   return nullptr;
 }
@@ -1533,6 +1561,12 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
   if (auto fpContract = func.getFpContract())
     llvmFunc->addFnAttr("fp-contract", *fpContract);
 
+  if (auto instrumentFunctionEntry = func.getInstrumentFunctionEntry())
+    llvmFunc->addFnAttr("instrument-function-entry", *instrumentFunctionEntry);
+
+  if (auto instrumentFunctionExit = func.getInstrumentFunctionExit())
+    llvmFunc->addFnAttr("instrument-function-exit", *instrumentFunctionExit);
+
   // First, create all blocks so we can jump to them.
   llvm::LLVMContext &llvmContext = llvmFunc->getContext();
   for (auto &bb : func) {
@@ -1838,17 +1872,13 @@ LogicalResult ModuleTranslation::convertComdats() {
 LogicalResult ModuleTranslation::convertUnresolvedBlockAddress() {
   for (auto &[blockAddressOp, llvmCst] : unresolvedBlockAddressMapping) {
     BlockAddressAttr blockAddressAttr = blockAddressOp.getBlockAddr();
-    BlockTagOp blockTagOp = lookupBlockTag(blockAddressAttr);
-    assert(blockTagOp && "expected all block tags to be already seen");
-
-    llvm::BasicBlock *llvmBlock = lookupBlock(blockTagOp->getBlock());
+    llvm::BasicBlock *llvmBlock = lookupBlockAddress(blockAddressAttr);
     assert(llvmBlock && "expected LLVM blocks to be already translated");
 
     // Update mapping with new block address constant.
     auto *llvmBlockAddr = llvm::BlockAddress::get(
         lookupFunction(blockAddressAttr.getFunction().getValue()), llvmBlock);
     llvmCst->replaceAllUsesWith(llvmBlockAddr);
-    mapValue(blockAddressOp.getResult(), llvmBlockAddr);
     assert(llvmCst->use_empty() && "expected all uses to be replaced");
     cast<llvm::GlobalVariable>(llvmCst)->eraseFromParent();
   }

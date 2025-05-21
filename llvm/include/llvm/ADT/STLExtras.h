@@ -2038,6 +2038,11 @@ template <typename R1, typename R2> auto mismatch(R1 &&Range1, R2 &&Range2) {
                        adl_end(Range2));
 }
 
+template <typename R, typename IterTy>
+auto uninitialized_copy(R &&Src, IterTy Dst) {
+  return std::uninitialized_copy(adl_begin(Src), adl_end(Src), Dst);
+}
+
 template <typename R>
 void stable_sort(R &&Range) {
   std::stable_sort(adl_begin(Range), adl_end(Range));

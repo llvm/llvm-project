@@ -325,9 +325,8 @@ bool MachineCSEImpl::hasLivePhysRegDefUses(const MachineInstr *MI,
   }
 
   // Finally, add all defs to PhysRefs as well.
-  for (unsigned i = 0, e = PhysDefs.size(); i != e; ++i)
-    for (MCRegAliasIterator AI(PhysDefs[i].second, TRI, true); AI.isValid();
-         ++AI)
+  for (const auto &Def : PhysDefs)
+    for (MCRegAliasIterator AI(Def.second, TRI, true); AI.isValid(); ++AI)
       PhysRefs.insert(*AI);
 
   return !PhysRefs.empty();
@@ -348,9 +347,8 @@ bool MachineCSEImpl::PhysRegDefsReach(MachineInstr *CSMI, MachineInstr *MI,
     if (MBB->pred_size() != 1 || *MBB->pred_begin() != CSMBB)
       return false;
 
-    for (unsigned i = 0, e = PhysDefs.size(); i != e; ++i) {
-      if (MRI->isAllocatable(PhysDefs[i].second) ||
-          MRI->isReserved(PhysDefs[i].second))
+    for (const auto &PhysDef : PhysDefs) {
+      if (MRI->isAllocatable(PhysDef.second) || MRI->isReserved(PhysDef.second))
         // Avoid extending live range of physical registers if they are
         //allocatable or reserved.
         return false;

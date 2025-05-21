@@ -12,10 +12,17 @@ tablegen("AVRGenDAGISel") {
   td_file = "AVR.td"
 }
 
+tablegen("AVRGenSDNodeInfo") {
+  visibility = [ ":LLVMAVRCodeGen" ]
+  args = [ "-gen-sd-node-info" ]
+  td_file = "AVR.td"
+}
+
 static_library("LLVMAVRCodeGen") {
   deps = [
     ":AVRGenCallingConv",
     ":AVRGenDAGISel",
+    ":AVRGenSDNodeInfo",
     "MCTargetDesc",
     "TargetInfo",
     "//llvm/include/llvm/Config:llvm-config",
@@ -37,6 +44,7 @@ static_library("LLVMAVRCodeGen") {
     "AVRInstrInfo.cpp",
     "AVRMCInstLower.cpp",
     "AVRRegisterInfo.cpp",
+    "AVRSelectionDAGInfo.cpp",
     "AVRShiftExpand.cpp",
     "AVRSubtarget.cpp",
     "AVRTargetMachine.cpp",

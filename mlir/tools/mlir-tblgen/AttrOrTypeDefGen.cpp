@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AttrOrTypeFormatGen.h"
+#include "CppGenUtilities.h"
 #include "mlir/TableGen/AttrOrTypeDef.h"
 #include "mlir/TableGen/Class.h"
 #include "mlir/TableGen/CodeGenHelpers.h"
@@ -131,6 +132,12 @@ private:
   void emitTraitMethod(const InterfaceMethod &method);
 
   //===--------------------------------------------------------------------===//
+  // OpAsm{Type,Attr}Interface Default Method Emission
+
+  /// Emit 'getAlias' method using mnemonic as alias.
+  void emitMnemonicAliasMethod();
+
+  //===--------------------------------------------------------------------===//
   // Storage Class Emission
   void emitStorageClass();
   /// Generate the storage class constructor.
@@ -215,6 +222,9 @@ DefGen::DefGen(const AttrOrTypeDef &def)
     emitAccessors();
   // Emit trait interface methods
   emitInterfaceMethods();
+  // Emit OpAsm{Type,Attr}Interface default methods
+  if (def.genMnemonicAlias())
+    emitMnemonicAliasMethod();
   defCls.finalize();
   // Emit a storage class if one is needed
   if (storageCls && def.genStorageClass())
@@ -229,11 +239,24 @@ void DefGen::createParentWithTraits() {
                                  ? strfmt("{0}::{1}", def.getStorageNamespace(),
                                           def.getStorageClassName())
                                  : strfmt("::mlir::{0}Storage", valueType));
-  for (auto &trait : def.getTraits()) {
-    defParent.addTemplateParam(
-        isa<NativeTrait>(&trait)
-            ? cast<NativeTrait>(&trait)->getFullyQualifiedTraitName()
-            : cast<InterfaceTrait>(&trait)->getFullyQualifiedTraitName());
+  SmallVector<std::string> traitNames =
+      llvm::to_vector(llvm::map_range(def.getTraits(), [](auto &trait) {
+        return isa<NativeTrait>(&trait)
+                   ? cast<NativeTrait>(&trait)->getFullyQualifiedTraitName()
+                   : cast<InterfaceTrait>(&trait)->getFullyQualifiedTraitName();
+      }));
+  llvm::for_each(traitNames, [&](auto &traitName) {
+    defParent.addTemplateParam(traitName);
+  });
+
+  // Add OpAsmInterface::Trait if we automatically generate mnemonic alias
+  // method.
+  std::string opAsmInterfaceTraitName =
+      strfmt("::mlir::OpAsm{0}Interface::Trait", defType);
+  if (def.genMnemonicAlias() && llvm::none_of(traitNames, [&](auto &traitName) {
+        return traitName == opAsmInterfaceTraitName;
+      })) {
+    defParent.addTemplateParam(opAsmInterfaceTraitName);
   }
   defCls.addParent(std::move(defParent));
 }
@@ -578,6 +601,22 @@ void DefGen::emitTraitMethod(const InterfaceMethod &method) {
 }
 
 //===----------------------------------------------------------------------===//
+// OpAsm{Type,Attr}Interface Default Method Emission
+
+void DefGen::emitMnemonicAliasMethod() {
+  // If the mnemonic is not set, there is nothing to do.
+  if (!def.getMnemonic())
+    return;
+
+  // Emit the mnemonic alias method.
+  SmallVector<MethodParameter> params{{"::llvm::raw_ostream &", "os"}};
+  Method *m = defCls.addMethod<Method::Const>("::mlir::OpAsmAliasResult",
+                                              "getAlias", std::move(params));
+  m->body().indent() << strfmt("os << \"{0}\";\n", *def.getMnemonic())
+                     << "return ::mlir::OpAsmAliasResult::OverridableAlias;\n";
+}
+
+//===----------------------------------------------------------------------===//
 // Storage Class Emission
 //===----------------------------------------------------------------------===//
 
@@ -775,8 +814,14 @@ bool DefGenerator::emitDecls(StringRef selectedDialect) {
     NamespaceEmitter nsEmitter(os, defs.front().getDialect());
 
     // Declare all the def classes first (in case they reference each other).
-    for (const AttrOrTypeDef &def : defs)
+    for (const AttrOrTypeDef &def : defs) {
+      std::string comments = tblgen::emitSummaryAndDescComments(
+          def.getSummary(), def.getDescription());
+      if (!comments.empty()) {
+        os << comments << "\n";
+      }
       os << "class " << def.getCppClassName() << ";\n";
+    }
 
     // Emit the declarations.
     for (const AttrOrTypeDef &def : defs)

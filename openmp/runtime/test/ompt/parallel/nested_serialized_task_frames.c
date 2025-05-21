@@ -37,25 +37,25 @@ int main()
 
   // region 0
   // CHECK: {{^}}[[MASTER_ID]]: ompt_event_parallel_begin
-  // CHECK-SAME: parent_task_frame.exit=[[NULL]], parent_task_frame.reenter=[[INITIAL_TASK_FRAME_ENTER:0x[0-f]+]],
+  // CHECK-SAME: parent_task_frame.exit=[[NULL]], parent_task_frame.reenter=[[INITIAL_TASK_FRAME_ENTER:(0x)?[0-f]+]],
   // CHECK-SAME: parallel_id=[[PARALLEL_ID_0:[0-9]+]]
   // CHECK: {{^}}[[MASTER_ID]]: ompt_event_implicit_task_begin: parallel_id=[[PARALLEL_ID_0]], task_id=[[TASK_ID_0:[0-9]+]]
 
   // region 1
   // CHECK: {{^}}[[MASTER_ID]]: ompt_event_parallel_begin
-  // CHECK-SAME: parent_task_frame.exit=[[REGION_0_FRAME_EXIT:0x[0-f]+]], parent_task_frame.reenter=[[REGION_0_FRAME_ENTER:0x[0-f]+]],
+  // CHECK-SAME: parent_task_frame.exit=[[REGION_0_FRAME_EXIT:(0x)?[0-f]+]], parent_task_frame.reenter=[[REGION_0_FRAME_ENTER:(0x)?[0-f]+]],
   // CHECK-SAME: parallel_id=[[PARALLEL_ID_1:[0-9]+]]
   // CHECK: {{^}}[[MASTER_ID]]: ompt_event_implicit_task_begin: parallel_id=[[PARALLEL_ID_1]], task_id=[[TASK_ID_1:[0-9]+]]
 
   // region 2
   // CHECK: {{^}}[[MASTER_ID]]: ompt_event_parallel_begin
-  // CHECK-SAME: parent_task_frame.exit=[[REGION_1_FRAME_EXIT:0x[0-f]+]], parent_task_frame.reenter=[[REGION_1_FRAME_ENTER:0x[0-f]+]],
+  // CHECK-SAME: parent_task_frame.exit=[[REGION_1_FRAME_EXIT:(0x)?[0-f]+]], parent_task_frame.reenter=[[REGION_1_FRAME_ENTER:(0x)?[0-f]+]],
   // CHECK-SAME: parallel_id=[[PARALLEL_ID_2:[0-9]+]]
   // CHECK: {{^}}[[MASTER_ID]]: ompt_event_implicit_task_begin: parallel_id=[[PARALLEL_ID_2]], task_id=[[TASK_ID_2:[0-9]+]]
 
   // region 2's implicit task information (exit frame should be set, while enter should be NULL)
   // CHECK: {{^}}[[MASTER_ID]]: task level 0: parallel_id=[[PARALLEL_ID_2]], task_id=[[TASK_ID_2]]
-  // CHECK-SAME: exit_frame={{0x[0-f]+}}
+  // CHECK-SAME: exit_frame={{(0x)?[0-f]+}}
   // CHECK-SAME: reenter_frame=[[NULL]]
   // CHECK-SAME: task_type=ompt_task_implicit
 
