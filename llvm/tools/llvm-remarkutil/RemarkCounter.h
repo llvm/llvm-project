@@ -54,7 +54,7 @@ struct Filters {
   std::optional<Type> RemarkTypeFilter;
   /// Returns a filter object if all the arguments provided are valid regex
   /// types otherwise return an error.
-  static Expected<Filters>
+  static Filters
   createRemarkFilter(std::optional<FilterMatcher> RemarkNameFilter,
                      std::optional<FilterMatcher> PassNameFilter,
                      std::optional<FilterMatcher> ArgFilter,
@@ -64,16 +64,10 @@ struct Filters {
     Filter.PassNameFilter = std::move(PassNameFilter);
     Filter.ArgFilter = std::move(ArgFilter);
     Filter.RemarkTypeFilter = std::move(RemarkTypeFilter);
-    if (auto E = Filter.regexArgumentsValid())
-      return std::move(E);
-    return std::move(Filter);
+    return Filter;
   }
   /// Returns true if \p Remark satisfies all the provided filters.
   bool filterRemark(const Remark &Remark);
-
-private:
-  /// Check if arguments can be parsed as valid regex types.
-  Error regexArgumentsValid();
 };
 
 /// Convert Regex string error to an error object.
@@ -140,9 +134,6 @@ struct ArgumentCounter : Counter {
                         StringRef Buffer, Filters &Filter) {
     ArgumentCounter AC;
     AC.Group = Group;
-    for (auto &Arg : Arguments)
-      if (auto E = Arg.isValid())
-        return E;
     if (auto E = AC.getAllMatchingArgumentsInRemark(Buffer, Arguments, Filter))
       return std::move(E);
     return AC;

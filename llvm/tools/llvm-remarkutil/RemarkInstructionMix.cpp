@@ -38,12 +38,12 @@ static cl::opt<ReportStyleOptions> ReportStyle(
 INPUT_FORMAT_COMMAND_LINE_OPTIONS(InstructionMix)
 INPUT_OUTPUT_COMMAND_LINE_OPTIONS(InstructionMix)
 
-static FilterMatcher getRemarkFilter() {
+static Expected<FilterMatcher> getRemarkFilter() {
   if (FunctionFilter.getNumOccurrences())
-    return {FunctionFilter, "filter", false};
+    return FilterMatcher::createExact(FunctionFilter);
   if (FunctionFilterRE.getNumOccurrences())
-    return {FunctionFilterRE, "rfilter", true};
-  return {".*", "<implicit>", true};
+    return FilterMatcher::createRE(FunctionFilterRE, "rfilter");
+  return FilterMatcher::createRE(".*", "<implicit>");
 }
 
 static Error tryInstructionMix() {
@@ -60,9 +60,9 @@ static Error tryInstructionMix() {
   if (!MaybeParser)
     return MaybeParser.takeError();
 
-  FilterMatcher Filter = getRemarkFilter();
-  if (auto E = Filter.isValid())
-    return E;
+  Expected<FilterMatcher> Filter = getRemarkFilter();
+  if (!Filter)
+    return Filter.takeError();
 
   // Collect the histogram of instruction counts.
   std::unordered_map<std::string, unsigned> Histogram;
@@ -72,7 +72,7 @@ static Error tryInstructionMix() {
     auto &Remark = **MaybeRemark;
     if (Remark.RemarkName != "InstructionMix")
       continue;
-    if (!Filter.match(Remark.FunctionName))
+    if (!Filter->match(Remark.FunctionName))
       continue;
     for (auto &Arg : Remark.Args) {
       StringRef Key = Arg.Key;

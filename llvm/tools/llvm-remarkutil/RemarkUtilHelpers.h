@@ -62,29 +62,30 @@ getOutputFileForRemarks(StringRef OutputFileName, Format OutputFormat);
 class FilterMatcher {
   Regex FilterRE;
   std::string FilterStr;
-  std::string Argument;
   bool IsRegex;
 
+  FilterMatcher(StringRef Filter, bool IsRegex)
+      : FilterRE(Filter), FilterStr(Filter), IsRegex(IsRegex) {}
+
 public:
-  FilterMatcher(StringRef Filter, StringRef Argument, bool IsRegex)
-      : FilterRE(Filter), FilterStr(Filter), Argument(Argument),
-        IsRegex(IsRegex) {}
+  static FilterMatcher createExact(StringRef Filter) {
+    return {Filter, false};
+  }
+
+  static Expected<FilterMatcher> createRE(StringRef Filter, StringRef Argument) {
+    FilterMatcher FM(Filter, true);
+    std::string Error;
+    if (!FM.FilterRE.isValid(Error))
+      return createStringError(make_error_code(std::errc::invalid_argument),
+                               "invalid argument '--" + Argument + "=" +
+                                   Filter + "': " + Error);
+    return std::move(FM);
+  }
 
   bool match(StringRef StringToMatch) const {
     if (IsRegex)
       return FilterRE.match(StringToMatch);
     return FilterStr == StringToMatch.trim().str();
-  }
-
-  Error isValid() const {
-    if (!IsRegex)
-      return Error::success();
-    std::string Error;
-    if (FilterRE.isValid(Error))
-      return Error::success();
-    return createStringError(make_error_code(std::errc::invalid_argument),
-                             "invalid argument '--" + Argument + "=" +
-                                 FilterStr + "': " + Error);
   }
 };
 

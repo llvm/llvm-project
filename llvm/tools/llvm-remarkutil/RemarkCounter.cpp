@@ -111,19 +111,6 @@ static unsigned getValForKey(StringRef Key, const Remark &Remark) {
   return *RemarkArg->getValAsInt();
 }
 
-Error Filters::regexArgumentsValid() {
-  if (RemarkNameFilter)
-    if (auto E = RemarkNameFilter->isValid())
-      return E;
-  if (PassNameFilter)
-    if (auto E = PassNameFilter->isValid())
-      return E;
-  if (ArgFilter)
-    if (auto E = ArgFilter->isValid())
-      return E;
-  return Error::success();
-}
-
 bool Filters::filterRemark(const Remark &Remark) {
   if (RemarkNameFilter && !RemarkNameFilter->match(Remark.RemarkName))
     return false;
@@ -250,23 +237,39 @@ Error RemarkCounter::print(StringRef OutputFileName) {
 Expected<Filters> getRemarkFilter() {
   // Create Filter properties.
   std::optional<FilterMatcher> RemarkNameFilter;
-  std::optional<FilterMatcher> PassNameFilter;
-  std::optional<FilterMatcher> RemarkArgFilter;
-  std::optional<Type> RemarkType;
   if (!RemarkNameOpt.empty())
-    RemarkNameFilter = {RemarkNameOpt, "remark-name", false};
-  else if (!RemarkNameOptRE.empty())
-    RemarkNameFilter = {RemarkNameOptRE, "rremark-name", true};
+    RemarkNameFilter = FilterMatcher::createExact(RemarkNameOpt);
+  else if (!RemarkNameOptRE.empty()){
+    auto FM = FilterMatcher::createRE(RemarkNameOptRE, "rremark-name");
+    if (!FM)
+      return FM.takeError();
+    RemarkNameFilter = std::move(*FM);
+  }
+
+  std::optional<FilterMatcher> PassNameFilter;
   if (!PassNameOpt.empty())
-    PassNameFilter = {PassNameOpt, "pass-name", false};
-  else if (!PassNameOptRE.empty())
-    PassNameFilter = {PassNameOptRE, "rpass-name", true};
+    PassNameFilter = FilterMatcher::createExact(PassNameOpt);
+  else if (!PassNameOptRE.empty()) {
+    auto FM = FilterMatcher::createRE(PassNameOptRE, "rpass-name");
+    if (!FM)
+      return FM.takeError();
+    PassNameFilter = std::move(*FM);
+  }
+
+  std::optional<FilterMatcher> RemarkArgFilter;
+  if (!RemarkFilterArgByOpt.empty())
+    RemarkArgFilter = FilterMatcher::createExact(RemarkFilterArgByOpt);
+  else if (!RemarkArgFilterOptRE.empty()) {
+    auto FM = FilterMatcher::createRE(RemarkArgFilterOptRE, "rfilter-arg-by");
+    if (!FM)
+      return FM.takeError();
+    RemarkArgFilter = std::move(*FM);
+  }
+
+  std::optional<Type> RemarkType;
   if (RemarkTypeOpt != Type::Failure)
     RemarkType = RemarkTypeOpt;
-  if (!RemarkFilterArgByOpt.empty())
-    RemarkArgFilter = {RemarkFilterArgByOpt, "filter-arg-by", false};
-  else if (!RemarkArgFilterOptRE.empty())
-    RemarkArgFilter = {RemarkArgFilterOptRE, "rfilter-arg-by", true};
+
   // Create RemarkFilter.
   return Filters::createRemarkFilter(std::move(RemarkNameFilter),
                                      std::move(PassNameFilter),
@@ -313,12 +316,16 @@ static Error collectRemarks() {
     SmallVector<FilterMatcher, 4> ArgumentsVector;
     if (!Keys.empty()) {
       for (auto &Key : Keys)
-        ArgumentsVector.push_back({Key, "count-by", false});
+        ArgumentsVector.push_back(FilterMatcher::createExact(Key));
     } else if (!RKeys.empty())
-      for (auto Key : RKeys)
-        ArgumentsVector.push_back({Key, "count-by", true});
+      for (auto Key : RKeys) {
+        auto FM = FilterMatcher::createRE(Key, "count-by");
+        if (!FM)
+          return FM.takeError();
+        ArgumentsVector.push_back(std::move(*FM));
+      }
     else
-      ArgumentsVector.push_back({".*", "count-by", true});
+      ArgumentsVector.push_back(cantFail(FilterMatcher::createRE(".*", "count-by")));
 
     Expected<ArgumentCounter> AC = ArgumentCounter::createArgumentCounter(
         GroupByOpt, ArgumentsVector, Buffer, Filter);
