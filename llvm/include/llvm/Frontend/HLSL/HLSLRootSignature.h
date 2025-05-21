@@ -85,9 +85,10 @@ struct RootConstants {
   ShaderVisibility Visibility = ShaderVisibility::All;
 };
 
-using ParamType = llvm::dxil::ResourceClass;
-struct RootParam {
-  ParamType Type;
+using DescriptorType = llvm::dxil::ResourceClass;
+// Models RootDescriptor : CBV | SRV | UAV, by collecting like parameters
+struct RootDescriptor {
+  DescriptorType Type;
 };
 
 // Models the end of a descriptor table and stores its visibility
@@ -130,7 +131,7 @@ struct DescriptorTableClause {
   void dump(raw_ostream &OS) const;
 };
 
-/// Models RootElement : RootFlags | RootConstants | RootParam
+/// Models RootElement : RootFlags | RootConstants | RootDescriptor
 ///  | DescriptorTable | DescriptorTableClause
 ///
 /// A Root Signature is modeled in-memory by an array of RootElements. These
@@ -145,8 +146,9 @@ struct DescriptorTableClause {
 /// The DescriptorTable is modelled by having its Clauses as the previous
 /// RootElements in the array, and it holds a data member for the Visibility
 /// parameter.
-using RootElement = std::variant<RootFlags, RootConstants, RootParam,
+using RootElement = std::variant<RootFlags, RootConstants, RootDescriptor,
                                  DescriptorTable, DescriptorTableClause>;
+
 void dumpRootElements(raw_ostream &OS, ArrayRef<RootElement> Elements);
 
 class MetadataBuilder {

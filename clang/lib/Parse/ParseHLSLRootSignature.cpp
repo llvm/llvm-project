@@ -50,10 +50,10 @@ bool RootSignatureParser::parse() {
 
     if (tryConsumeExpectedToken(
             {TokenKind::kw_CBV, TokenKind::kw_SRV, TokenKind::kw_UAV})) {
-      auto RootParam = parseRootParam();
-      if (!RootParam.has_value())
+      auto Descriptor = parseRootDescriptor();
+      if (!Descriptor.has_value())
         return true;
-      Elements.push_back(*RootParam);
+      Elements.push_back(*Descriptor);
     }
   } while (tryConsumeExpectedToken(TokenKind::pu_comma));
 
@@ -163,30 +163,30 @@ std::optional<RootConstants> RootSignatureParser::parseRootConstants() {
   return Constants;
 }
 
-std::optional<RootParam> RootSignatureParser::parseRootParam() {
+std::optional<RootDescriptor> RootSignatureParser::parseRootDescriptor() {
   assert((CurToken.TokKind == TokenKind::kw_CBV ||
           CurToken.TokKind == TokenKind::kw_SRV ||
           CurToken.TokKind == TokenKind::kw_UAV) &&
          "Expects to only be invoked starting at given keyword");
 
-  TokenKind ParamKind = CurToken.TokKind;
+  TokenKind DescriptorKind = CurToken.TokKind;
 
   if (consumeExpectedToken(TokenKind::pu_l_paren, diag::err_expected_after,
                            CurToken.TokKind))
     return std::nullopt;
 
-  RootParam Param;
-  switch (ParamKind) {
+  RootDescriptor Descriptor;
+  switch (DescriptorKind) {
   default:
     llvm_unreachable("Switch for consumed token was not provided");
   case TokenKind::kw_CBV:
-    Param.Type = ParamType::CBuffer;
+    Descriptor.Type = DescriptorType::CBuffer;
     break;
   case TokenKind::kw_SRV:
-    Param.Type = ParamType::SRV;
+    Descriptor.Type = DescriptorType::SRV;
     break;
   case TokenKind::kw_UAV:
-    Param.Type = ParamType::UAV;
+    Descriptor.Type = DescriptorType::UAV;
     break;
   }
 
@@ -195,7 +195,7 @@ std::optional<RootParam> RootSignatureParser::parseRootParam() {
                            /*param of=*/TokenKind::kw_RootConstants))
     return std::nullopt;
 
-  return Param;
+  return Descriptor;
 }
 
 std::optional<DescriptorTable> RootSignatureParser::parseDescriptorTable() {

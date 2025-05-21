@@ -344,7 +344,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootFlagsTest) {
   ASSERT_TRUE(Consumer->isSatisfied());
 }
 
-TEST_F(ParseHLSLRootSignatureTest, ValidParseRootParamsTest) {
+TEST_F(ParseHLSLRootSignatureTest, ValidParseRootDescriptorsTest) {
   const llvm::StringLiteral Source = R"cc(
     CBV(),
     SRV(),
@@ -367,16 +367,16 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootParamsTest) {
   ASSERT_EQ(Elements.size(), 3u);
 
   RootElement Elem = Elements[0];
-  ASSERT_TRUE(std::holds_alternative<RootParam>(Elem));
-  ASSERT_EQ(std::get<RootParam>(Elem).Type, ParamType::CBuffer);
+  ASSERT_TRUE(std::holds_alternative<RootDescriptor>(Elem));
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, DescriptorType::CBuffer);
 
   Elem = Elements[1];
-  ASSERT_TRUE(std::holds_alternative<RootParam>(Elem));
-  ASSERT_EQ(std::get<RootParam>(Elem).Type, ParamType::SRV);
+  ASSERT_TRUE(std::holds_alternative<RootDescriptor>(Elem));
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, DescriptorType::SRV);
 
   Elem = Elements[2];
-  ASSERT_TRUE(std::holds_alternative<RootParam>(Elem));
-  ASSERT_EQ(std::get<RootParam>(Elem).Type, ParamType::UAV);
+  ASSERT_TRUE(std::holds_alternative<RootDescriptor>(Elem));
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, DescriptorType::UAV);
 
   ASSERT_TRUE(Consumer->isSatisfied());
 }
