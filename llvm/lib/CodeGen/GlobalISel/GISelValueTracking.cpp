@@ -481,27 +481,22 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
       break;
     // Fall through and handle them the same as zext/trunc.
     [[fallthrough]];
-  case TargetOpcode::G_ASSERT_ZEXT:
   case TargetOpcode::G_ZEXT:
   case TargetOpcode::G_TRUNC: {
     Register SrcReg = MI.getOperand(1).getReg();
-    LLT SrcTy = MRI.getType(SrcReg);
-    unsigned SrcBitWidth;
-
-    // G_ASSERT_ZEXT stores the original bitwidth in the immediate operand.
-    if (Opcode == TargetOpcode::G_ASSERT_ZEXT)
-      SrcBitWidth = MI.getOperand(2).getImm();
-    else {
-      SrcBitWidth = SrcTy.isPointer()
-                        ? DL.getIndexSizeInBits(SrcTy.getAddressSpace())
-                        : SrcTy.getSizeInBits();
-    }
-    assert(SrcBitWidth && "SrcBitWidth can't be zero");
-    Known = Known.zextOrTrunc(SrcBitWidth);
     computeKnownBitsImpl(SrcReg, Known, DemandedElts, Depth + 1);
     Known = Known.zextOrTrunc(BitWidth);
-    if (BitWidth > SrcBitWidth)
-      Known.Zero.setBitsFrom(SrcBitWidth);
+    break;
+  }
+  case TargetOpcode::G_ASSERT_ZEXT: {
+    Register SrcReg = MI.getOperand(1).getReg();
+    computeKnownBitsImpl(SrcReg, Known, DemandedElts, Depth + 1);
+
+    unsigned SrcBitWidth = MI.getOperand(2).getImm();
+    assert(SrcBitWidth && "SrcBitWidth can't be zero");
+    APInt InMask = APInt::getLowBitsSet(BitWidth, SrcBitWidth);
+    Known.Zero |= (~InMask);
+    Known.One &= (~Known.Zero);
     break;
   }
   case TargetOpcode::G_ASSERT_ALIGN: {
