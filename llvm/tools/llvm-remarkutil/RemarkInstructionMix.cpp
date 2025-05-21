@@ -53,8 +53,8 @@ static Expected<FilterMatcher> getRemarkFilter() {
   if (FunctionFilter.getNumOccurrences())
     return FilterMatcher::createExact(FunctionFilter);
   if (FunctionFilterRE.getNumOccurrences())
-    return FilterMatcher::createRE(FunctionFilterRE, "rfilter");
-  return FilterMatcher::createRE(".*", "<implicit>");
+    return FilterMatcher::createRE(FunctionFilterRE);
+  return FilterMatcher::createAny();
 }
 
 static Error tryInstructionMix() {
