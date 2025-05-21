@@ -18,7 +18,7 @@ using namespace mlir;
 // Apply...PatternsOp
 //===----------------------------------------------------------------------===//
 
-void transform::ApplyArmNeonLowerContractionPatternsOp::populatePatterns(
+void transform::ApplyArmNeonContractionToI8MMPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   arm_neon::populateLowerContractionToSMMLAPatternPatterns(patterns);
 }

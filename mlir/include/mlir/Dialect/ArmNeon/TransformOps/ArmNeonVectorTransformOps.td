@@ -12,12 +12,13 @@ include "mlir/Dialect/Transform/IR/TransformAttrs.td"
 include "mlir/Dialect/Transform/IR/TransformDialect.td"
 include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.td"
 
-def ApplyArmNeonLowerContractionPatternsOp
-    : Op<Transform_Dialect, "apply_patterns.vector.arm_neon.lower_contraction",
+def ApplyArmNeonContractionToI8MMPatternsOp
+    : Op<Transform_Dialect,
+         "apply_patterns.vector.arm_neon.contraction_to_i8mm",
          [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
-    Indicates that vector contraction-like operations should be lowered to
-    finer-grained vector primitives using the ArmNeon dialect.
+    Indicates that vector.contract operations should be lowered to
+    finer-grained vector primitives from the ArmNeon dialect.
   }];
 
   let assemblyFormat = "attr-dict";
