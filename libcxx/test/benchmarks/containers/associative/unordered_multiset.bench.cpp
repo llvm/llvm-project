@@ -8,7 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
-#include <string>
 #include <unordered_set>
 
 #include "associative_container_benchmarks.h"
@@ -27,8 +26,6 @@ struct support::adapt_operations<std::unordered_multiset<K>> {
 
 int main(int argc, char** argv) {
   support::associative_container_benchmarks<std::unordered_multiset<int>>("std::unordered_multiset<int>");
-  support::associative_container_benchmarks<std::unordered_multiset<std::string>>(
-      "std::unordered_multiset<std::string>");
 
   benchmark::Initialize(&argc, argv);
   benchmark::RunSpecifiedBenchmarks();

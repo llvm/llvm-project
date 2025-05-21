@@ -57,7 +57,6 @@ void associative_container_benchmarks(std::string container) {
   auto get_key = [](Value const& v) { return adapt_operations<Container>::key_from_value(v); };
 
   auto bench = [&](std::string operation, auto f) {
-    // Note: Add zero to the range for empty containers.
     benchmark::RegisterBenchmark(container + "::" + operation, f)->Arg(0)->Arg(32)->Arg(1024)->Arg(8192);
   };
 
@@ -173,7 +172,6 @@ void associative_container_benchmarks(std::string container) {
   // Insertion
   /////////////////////////
   bench("insert(value) (already present)", [=](auto& st) {
-    // Make sure non-empty container for |to_insert| to be present and no segfault.
     const std::size_t size = st.range(0) ? st.range(0) : 1;
     std::vector<Value> in  = make_value_types(generate_unique_keys(size));
     Value to_insert        = in[in.size() / 2]; // pick any existing value
