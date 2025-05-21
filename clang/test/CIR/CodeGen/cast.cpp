@@ -25,7 +25,6 @@ unsigned char cxxstaticcast_0(unsigned int x) {
 // LLVM: %[[R:[0-9]+]] = load i8, ptr %[[RV]], align 1
 // LLVM: ret i8 %[[R]]
 
-
 int cStyleCasts_0(unsigned x1, int x2, float x3, short x4, double x5) {
 // CIR: cir.func @_Z13cStyleCasts_0jifsd
 // LLVM: define i32 @_Z13cStyleCasts_0jifsd
@@ -103,10 +102,24 @@ void should_not_cast() {
 
   bool x2;
   bool ib = (bool)x2; // identity
-  
+
   (void) ib; // void cast
 }
 
 // CIR:     cir.func @_Z15should_not_castv
 // CIR-NOT:   cir.cast
 // CIR:     cir.return
+
+typedef int vi4 __attribute__((vector_size(16)));
+typedef double vd2 __attribute__((vector_size(16)));
+
+void bitcast() {
+  vd2 a = {};
+  vi4 b = (vi4)a;
+}
+
+// CIR: %[[D_VEC:.*]] = cir.load {{.*}} : !cir.ptr<!cir.vector<2 x !cir.double>>, !cir.vector<2 x !cir.double>
+// CIR: %[[I_VEC:.*]] = cir.cast(bitcast, %[[D_VEC]] : !cir.vector<2 x !cir.double>), !cir.vector<4 x !s32i>
+
+// LLVM: %[[D_VEC:.*]] = load <2 x double>, ptr {{.*}}, align 16
+// LLVM: %[[I_VEC:.*]] = bitcast <2 x double> %[[D_VEC]] to <4 x i32>
