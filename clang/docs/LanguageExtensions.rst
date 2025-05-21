@@ -6501,3 +6501,51 @@ qualifications.
 Note, Clang does not allow an ``_Atomic`` function type because
 of explicit constraints against atomically qualified (arrays and) function
 types.
+
+
+Underspecified object declarations in C
+=======================================
+
+In C23 (N3006), when an object is declared inside of another object and that
+only exists in the scope of the declaration of the outer object. Clang allows
+underspecified object declarations for structs, unions and enums when valid.
+
+.. code-block:: c
+
+  auto s1 = (struct S1 { int x, y; }){ 1, 2 };
+  auto u1 = (union U1 { int a; double b; }){ .a = 34 };
+  auto e1 = (enum E1 { FOO, BAR }){ BAR };
+
+Note, The ``constexpr`` keyword and getting a struct member that is
+underspecified is also allowed.
+
+.. code-block:: c
+
+  constexpr auto cs1 = (struct S1 { int x, y; }){ 1, 2 };
+  constexpr auto cu1 = (union U1 { int a; double b; }){ .a = 34 };
+  constexpr auto ce1 = (enum E1 { FOO, BAR }){ BAR };
+  int i1 = (struct T { int a, b; }){0, 1}.a;
+  constexpr int ci2 = (struct T2 { int a, b; }){0, 1}.a;
+
+Moreover, some unusual cases are also allowed as described bellow.
+
+.. code-block:: c
+
+  constexpr struct S { int a, b; } y = { 0 };
+  constexpr typeof(struct s *) x = 0;
+  auto so = sizeof(struct S {});
+  auto s = ({struct T { int x; } s = {}; s.x; });
+  constexpr int (*fp)(struct X { int x; } val) = 0;
+  auto v = (void (*)(int y))0;
+
+  constexpr struct {
+      int a;
+  } si = {};
+
+  auto z = ({
+      int a = 12;
+      struct {} s;
+      a;
+  });
+
+All other cases are prohibited by Clang.

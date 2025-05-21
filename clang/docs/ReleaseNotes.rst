@@ -287,6 +287,8 @@ C23 Feature Support
   directive. Fixes #GH126940.
 - Fixed a crash when a declaration of a ``constexpr`` variable with an invalid
   type. Fixes #GH140887
+- Documented `WG14 N3006 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3006.htm>`_
+  which clarified how Clang is handling underspecified object declarations.
 
 C11 Feature Support
 ^^^^^^^^^^^^^^^^^^^
@@ -1049,7 +1051,7 @@ Sanitizers
 ----------
 
 - ``-fsanitize=vptr`` is no longer a part of ``-fsanitize=undefined``.
-- Sanitizer ignorelists now support the syntax ``src:*=sanitize``, 
+- Sanitizer ignorelists now support the syntax ``src:*=sanitize``,
   ``type:*=sanitize``, ``fun:*=sanitize``, ``global:*=sanitize``,
   and ``mainfile:*=sanitize``.
 
