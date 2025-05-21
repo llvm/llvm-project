@@ -363,7 +363,6 @@ enum NodeType : unsigned {
   CTLZ_MERGE_PASSTHRU,
   CTPOP_MERGE_PASSTHRU,
   DUP_MERGE_PASSTHRU,
-  INDEX_VECTOR,
 
   // Cast between vectors of the same element type but differ in length.
   REINTERPRET_CAST,
@@ -380,11 +379,6 @@ enum NodeType : unsigned {
   LDFF1S_MERGE_ZERO,
   LD1RQ_MERGE_ZERO,
   LD1RO_MERGE_ZERO,
-
-  // Structured loads.
-  SVE_LD2_MERGE_ZERO,
-  SVE_LD3_MERGE_ZERO,
-  SVE_LD4_MERGE_ZERO,
 
   // Unsigned gather loads.
   GLD1_MERGE_ZERO,
