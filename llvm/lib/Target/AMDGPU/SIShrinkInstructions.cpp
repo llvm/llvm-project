@@ -797,7 +797,7 @@ MachineInstr *SIShrinkInstructions::matchSwap(MachineInstr &MovT) const {
     dropInstructionKeepingImpDefs(*MovY);
     MachineInstr *Next = &*std::next(MovT.getIterator());
 
-    if (MRI->use_nodbg_empty(T)) {
+    if (T.isVirtual() && MRI->use_nodbg_empty(T)) {
       dropInstructionKeepingImpDefs(MovT);
     } else {
       Xop.setIsKill(false);
