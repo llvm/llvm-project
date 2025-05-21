@@ -1571,7 +1571,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setIndexedStoreAction(ISD::POST_INC, MVT::i32, Legal);
   }
 
-  if (Subtarget.hasStdExtZvqdotq()) {
+  // zve32x is broken for partial_reduce_umla, but let's not make it worse.
+  if (Subtarget.hasStdExtZvqdotq() && Subtarget.getRealMinVLen() >= 64) {
     setPartialReduceMLAAction(MVT::nxv1i32, MVT::nxv4i8, Custom);
     setPartialReduceMLAAction(MVT::nxv2i32, MVT::nxv8i8, Custom);
     setPartialReduceMLAAction(MVT::nxv4i32, MVT::nxv16i8, Custom);
@@ -8377,7 +8378,7 @@ SDValue RISCVTargetLowering::lowerADJUST_TRAMPOLINE(SDValue Op,
 
 SDValue RISCVTargetLowering::lowerPARTIAL_REDUCE_MLA(SDValue Op,
                                                      SelectionDAG &DAG) const {
-  // Currently, only the vqdot and vqdotu case (from zvqdotq) hould be legal.
+  // Currently, only the vqdot and vqdotu case (from zvqdotq) should be legal.
   // TODO: There are many other sub-cases we could potentially lower, are
   // any of them worthwhile?  Ex: via vredsum, vwredsum, vwwmaccu, etc..
   // TODO: PARTIAL_REDUCE_*MLA can't represent a vqdotsu currently.
