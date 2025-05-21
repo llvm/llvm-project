@@ -43,18 +43,9 @@ namespace non_pure_virtual_function {
     constexpr void foo(const T &) { bar(1); }
 
     virtual constexpr void bar(unsigned int); // expected-warning {{inline function 'non_pure_virtual_function::B<int>::bar' is not defined}}
-    // expected-note@-1 {{forward declaration of template entity is here}}
-    // expected-note@-2 {{forward declaration of template entity is here}}
-    // expected-note@-3 {{forward declaration of template entity is here}}
   };
 
-  template <typename T> class D : public B<T> { // expected-warning {{instantiation of function 'non_pure_virtual_function::B<int>::bar' required here, but no definition is available}}
-// expected-warning@-1 {{instantiation of function 'non_pure_virtual_function::B<int>::bar' required here, but no definition is available}}
-// expected-warning@-2 {{instantiation of function 'non_pure_virtual_function::B<int>::bar' required here, but no definition is available}}
-// expected-note@-3 {{add an explicit instantiation declaration to suppress this warning if 'non_pure_virtual_function::B<int>::bar' is explicitly instantiated in another translation unit}}
-// expected-note@-4 {{add an explicit instantiation declaration to suppress this warning if 'non_pure_virtual_function::B<int>::bar' is explicitly instantiated in another translation unit}}
-// expected-note@-5 {{add an explicit instantiation declaration to suppress this warning if 'non_pure_virtual_function::B<int>::bar' is explicitly instantiated in another translation unit}}
-// expected-note@-6 {{used here}}
+  template <typename T> class D : public B<T> { // expected-note@ {{used here}}
 
   public:
     constexpr void bar(unsigned int) override { }
