@@ -15,7 +15,7 @@ define i32 @test_select_on_sext_sdwa(i8 %x, i32 %y, i1 %cond)  {
 ; CHECK-NEXT:    v_or_b32_e32 v0, v0, v1
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %sext = sext i8 %x to i32
-  %select = select i1 %cond, i32 %sext, i32 zeroinitializer
+  %select = select i1 %cond, i32 %sext, i32 0
   %or = or i32 %select, %y
   ret i32 %or
 }
