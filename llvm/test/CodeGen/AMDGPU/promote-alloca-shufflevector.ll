@@ -16,7 +16,7 @@ define amdgpu_kernel void @out_of_bounds() {
 }
 
 define amdgpu_kernel void @memcpy_partially_out_of_bounds() {
-; CHECK-LABEL: define amdgpu_kernel void @partially_out_of_bounds() {
+; CHECK-LABEL: define amdgpu_kernel void @memcpy_partially_out_of_bounds() {
 ; CHECK-NEXT:    [[PTR:%.*]] = freeze <3 x float> poison
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <3 x float> [[PTR]], <3 x float> poison, <3 x i32> <i32 2, i32 poison, i32 2>
 ; CHECK-NEXT:    ret void
