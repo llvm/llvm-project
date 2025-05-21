@@ -25,5 +25,3 @@ contains
     real(8) :: mval
   end subroutine maxlocUpdateR_64F
 end module
-
-! CHECK-LABEL: func.func @_QMmlocmodulePmaxlocpartialmaskr_32f1d()
