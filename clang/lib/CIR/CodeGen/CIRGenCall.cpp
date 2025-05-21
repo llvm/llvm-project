@@ -24,8 +24,9 @@ CIRGenFunctionInfo *
 CIRGenFunctionInfo::create(CanQualType resultType,
                            llvm::ArrayRef<CanQualType> argTypes,
                            RequiredArgs required) {
-  // The first slot allocated for ArgInfo is for the return value.
-  void *buffer = operator new(totalSizeToAlloc<ArgInfo>(argTypes.size() + 1));
+  // The first slot allocated for arg type slot is for the return value.
+  void *buffer = operator new(
+      totalSizeToAlloc<CanQualType>(argTypes.size() + 1));
 
   assert(!cir::MissingFeatures::opCallCIRGenFuncInfoParamInfo());
 
@@ -34,10 +35,8 @@ CIRGenFunctionInfo::create(CanQualType resultType,
   fi->required = required;
   fi->numArgs = argTypes.size();
 
-  ArgInfo *argsBuffer = fi->getArgsBuffer();
-  (argsBuffer++)->type = resultType;
-  for (CanQualType ty : argTypes)
-    (argsBuffer++)->type = ty;
+  fi->getArgTypes()[0] = resultType;
+  std::copy(argTypes.begin(), argTypes.end(), fi->argTypesBegin());
   assert(!cir::MissingFeatures::opCallCIRGenFuncInfoExtParamInfo());
 
   return fi;
@@ -48,8 +47,8 @@ cir::FuncType CIRGenTypes::getFunctionType(const CIRGenFunctionInfo &fi) {
   SmallVector<mlir::Type, 8> argTypes;
   argTypes.reserve(fi.getNumRequiredArgs());
 
-  for (const CIRGenFunctionInfoArgInfo &argInfo : fi.requiredArguments())
-    argTypes.push_back(convertType(argInfo.type));
+  for (const CanQualType &argType : fi.requiredArguments())
+    argTypes.push_back(convertType(argType));
 
   return cir::FuncType::get(argTypes,
                             (resultType ? resultType : builder.getVoidTy()),
@@ -241,6 +240,7 @@ CIRGenTypes::arrangeFunctionDeclaration(const FunctionDecl *fd) {
 
 static cir::CIRCallOpInterface
 emitCallLikeOp(CIRGenFunction &cgf, mlir::Location callLoc,
+               cir::FuncType indirectFuncTy, mlir::Value indirectFuncVal,
                cir::FuncOp directFuncOp,
                const SmallVectorImpl<mlir::Value> &cirCallArgs) {
   CIRGenBuilderTy &builder = cgf.getBuilder();
@@ -249,7 +249,13 @@ emitCallLikeOp(CIRGenFunction &cgf, mlir::Location callLoc,
   assert(!cir::MissingFeatures::invokeOp());
 
   assert(builder.getInsertionBlock() && "expected valid basic block");
-  assert(!cir::MissingFeatures::opCallIndirect());
+
+  if (indirectFuncTy) {
+    // TODO(cir): Set calling convention for indirect calls.
+    assert(!cir::MissingFeatures::opCallCallConv());
+    return builder.createIndirectCallOp(callLoc, indirectFuncVal,
+                                        indirectFuncTy, cirCallArgs);
+  }
 
   return builder.createCallOp(callLoc, directFuncOp, cirCallArgs);
 }
@@ -275,19 +281,20 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
                                 cir::CIRCallOpInterface *callOp,
                                 mlir::Location loc) {
   QualType retTy = funcInfo.getReturnType();
+  cir::FuncType cirFuncTy = getTypes().getFunctionType(funcInfo);
 
   SmallVector<mlir::Value, 16> cirCallArgs(args.size());
 
   assert(!cir::MissingFeatures::emitLifetimeMarkers());
 
   // Translate all of the arguments as necessary to match the CIR lowering.
-  for (auto [argNo, arg, argInfo] :
-       llvm::enumerate(args, funcInfo.argInfos())) {
+  for (auto [argNo, arg, canQualArgType] :
+       llvm::enumerate(args, funcInfo.argTypes())) {
 
     // Insert a padding argument to ensure proper alignment.
     assert(!cir::MissingFeatures::opCallPaddingArgs());
 
-    mlir::Type argType = convertType(argInfo.type);
+    mlir::Type argType = convertType(canQualArgType);
     if (!mlir::isa<cir::RecordType>(argType)) {
       mlir::Value v;
       if (arg.isAggregate())
@@ -326,12 +333,27 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
 
   assert(!cir::MissingFeatures::invokeOp());
 
-  auto directFuncOp = dyn_cast<cir::FuncOp>(calleePtr);
-  assert(!cir::MissingFeatures::opCallIndirect());
+  cir::FuncType indirectFuncTy;
+  mlir::Value indirectFuncVal;
+  cir::FuncOp directFuncOp;
+  if (auto fnOp = dyn_cast<cir::FuncOp>(calleePtr)) {
+    directFuncOp = fnOp;
+  } else {
+    [[maybe_unused]] mlir::ValueTypeRange<mlir::ResultRange> resultTypes =
+        calleePtr->getResultTypes();
+    [[maybe_unused]] auto funcPtrTy =
+        mlir::dyn_cast<cir::PointerType>(resultTypes.front());
+    assert(funcPtrTy && mlir::isa<cir::FuncType>(funcPtrTy.getPointee()) &&
+           "expected pointer to function");
+
+    indirectFuncTy = cirFuncTy;
+    indirectFuncVal = calleePtr->getResult(0);
+  }
+
   assert(!cir::MissingFeatures::opCallAttrs());
 
-  cir::CIRCallOpInterface theCall =
-      emitCallLikeOp(*this, loc, directFuncOp, cirCallArgs);
+  cir::CIRCallOpInterface theCall = emitCallLikeOp(
+      *this, loc, indirectFuncTy, indirectFuncVal, directFuncOp, cirCallArgs);
 
   if (callOp)
     *callOp = theCall;
@@ -431,7 +453,7 @@ void CIRGenFunction::emitCallArgs(
 
   auto maybeEmitImplicitObjectSize = [&](size_t i, const Expr *arg,
                                          RValue emittedArg) {
-    if (callee.hasFunctionDecl() || i >= callee.getNumParams())
+    if (!callee.hasFunctionDecl() || i >= callee.getNumParams())
       return;
     auto *ps = callee.getParamDecl(i)->getAttr<PassObjectSizeAttr>();
     if (!ps)
