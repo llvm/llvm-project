@@ -8288,13 +8288,15 @@ SDValue TargetLowering::expandCLMUL(SDNode *Node,
   EVT SetCCType =
       getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
   // Only expand vector types if we have the appropriate vector bit operations.
+  // FIXME: Should really try to split the vector in case it's legal on a
+  // subvector.
   if (VT.isVector() && (!isPowerOf2_32(NumBitsPerElt) ||
                         (!isOperationLegalOrCustom(ISD::SRL, VT) ||
                         !isOperationLegalOrCustom(ISD::SHL, VT) ||
                         !isOperationLegalOrCustom(ISD::XOR, VT) ||
                         !isOperationLegalOrCustom(ISD::AND, VT) ||
                         !isOperationLegalOrCustom(ISD::SELECT, VT))))
-    return SDValue();
+    return DAG.UnrollVectorOp(Node);
 
   SDValue Res = DAG.getConstant(0, DL, VT);
   SDValue Zero = DAG.getConstant(0, DL, VT);
