@@ -2562,8 +2562,8 @@ void OmpStructureChecker::CheckCancellationNest(
       }
       break;
     default:
-      // This should have been diagnosed by this point.
-      llvm_unreachable("Unexpected directive");
+      // This is diagnosed later.
+      return;
     }
     if (!eligibleCancellation) {
       context_.Say(source,
@@ -2601,8 +2601,8 @@ void OmpStructureChecker::CheckCancellationNest(
           parser::ToUpperCaseLetters(typeName.str()));
       break;
     default:
-      // This should have been diagnosed by this point.
-      llvm_unreachable("Unexpected directive");
+      // This is diagnosed later.
+      return;
     }
   }
 }

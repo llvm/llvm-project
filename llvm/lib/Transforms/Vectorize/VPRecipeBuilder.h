@@ -68,15 +68,10 @@ class VPRecipeBuilder {
 
   VPBuilder &Builder;
 
-  /// When we if-convert we need to create edge masks. We have to cache values
-  /// so that we don't end up with exponential recursion/IR. Note that
-  /// if-conversion currently takes place during VPlan-construction, so these
-  /// caches are only used at that stage.
-  using EdgeMaskCacheTy =
-      DenseMap<std::pair<BasicBlock *, BasicBlock *>, VPValue *>;
-  using BlockMaskCacheTy = DenseMap<BasicBlock *, VPValue *>;
-  EdgeMaskCacheTy EdgeMaskCache;
-  BlockMaskCacheTy BlockMaskCache;
+  /// The mask of each VPBB, generated earlier and used for predicating recipes
+  /// in VPBB.
+  /// TODO: remove by applying predication when generating the masks.
+  DenseMap<VPBasicBlock *, VPValue *> &BlockMaskCache;
 
   // VPlan construction support: Hold a mapping from ingredients to
   // their recipe.
@@ -89,10 +84,6 @@ class VPRecipeBuilder {
 
   /// A mapping of partial reduction exit instructions to their scaling factor.
   DenseMap<const Instruction *, unsigned> ScaledReductionMap;
-
-  /// A mapping from VP blocks to IR blocks, used temporarily while migrating
-  /// away from IR references.
-  const DenseMap<const VPBlockBase *, BasicBlock *> &VPB2IRBB;
 
   /// Loop versioning instance for getting noalias metadata guaranteed by
   /// runtime checks.
@@ -121,11 +112,6 @@ class VPRecipeBuilder {
   VPWidenIntOrFpInductionRecipe *
   tryToOptimizeInductionTruncate(TruncInst *I, ArrayRef<VPValue *> Operands,
                                  VFRange &Range);
-
-  /// Handle non-loop phi nodes, returning a new VPBlendRecipe. Currently
-  /// all such phi nodes are turned into a sequence of select instructions as
-  /// the vectorizer currently performs full if-conversion.
-  VPBlendRecipe *tryToBlend(VPWidenPHIRecipe *PhiR);
 
   /// Handle call instructions. If \p CI can be widened for \p Range.Start,
   /// return a new VPWidenCallRecipe or VPWidenIntrinsicRecipe. Range.End may be
@@ -164,10 +150,11 @@ public:
                   LoopVectorizationLegality *Legal,
                   LoopVectorizationCostModel &CM,
                   PredicatedScalarEvolution &PSE, VPBuilder &Builder,
-                  const DenseMap<const VPBlockBase *, BasicBlock *> &VPB2IRBB,
+                  DenseMap<VPBasicBlock *, VPValue *> &BlockMaskCache,
                   LoopVersioning *LVer)
       : Plan(Plan), OrigLoop(OrigLoop), TLI(TLI), TTI(TTI), Legal(Legal),
-        CM(CM), PSE(PSE), Builder(Builder), VPB2IRBB(VPB2IRBB), LVer(LVer) {}
+        CM(CM), PSE(PSE), Builder(Builder), BlockMaskCache(BlockMaskCache),
+        LVer(LVer) {}
 
   std::optional<unsigned> getScalingForReduction(const Instruction *ExitInst) {
     auto It = ScaledReductionMap.find(ExitInst);
@@ -196,38 +183,11 @@ public:
     Ingredient2Recipe[I] = R;
   }
 
-  /// Create the mask for the vector loop header block.
-  void createHeaderMask();
-
-  /// A helper function that computes the predicate of the block BB, assuming
-  /// that the header block of the loop is set to True or the loop mask when
-  /// tail folding.
-  void createBlockInMask(const VPBasicBlock *VPBB) {
-    return createBlockInMask(VPB2IRBB.lookup(VPBB));
+  /// Returns the *entry* mask for block \p VPBB or null if the mask is
+  /// all-true.
+  VPValue *getBlockInMask(VPBasicBlock *VPBB) const {
+    return BlockMaskCache.lookup(VPBB);
   }
-  void createBlockInMask(BasicBlock *BB);
-
-  /// Returns the *entry* mask for the block \p VPBB.
-  VPValue *getBlockInMask(const VPBasicBlock *VPBB) const {
-    return getBlockInMask(VPB2IRBB.lookup(VPBB));
-  }
-
-  /// Returns the *entry* mask for the block \p BB.
-  VPValue *getBlockInMask(BasicBlock *BB) const;
-
-  /// Create an edge mask for every destination of cases and/or default.
-  void createSwitchEdgeMasks(SwitchInst *SI);
-
-  /// A helper function that computes the predicate of the edge between SRC
-  /// and DST.
-  VPValue *createEdgeMask(BasicBlock *Src, BasicBlock *Dst);
-
-  /// A helper that returns the previously computed predicate of the edge
-  /// between SRC and DST.
-  VPValue *getEdgeMask(const VPBasicBlock *Src, const VPBasicBlock *Dst) const {
-    return getEdgeMask(VPB2IRBB.lookup(Src), VPB2IRBB.lookup(Dst));
-  }
-  VPValue *getEdgeMask(BasicBlock *Src, BasicBlock *Dst) const;
 
   /// Return the recipe created for given ingredient.
   VPRecipeBase *getRecipe(Instruction *I) {
@@ -251,6 +211,15 @@ public:
         return R->getVPSingleValue();
     }
     return Plan.getOrAddLiveIn(V);
+  }
+
+  void updateBlockMaskCache(DenseMap<VPValue *, VPValue *> &Old2New) {
+    for (auto &[_, V] : BlockMaskCache) {
+      if (auto *New = Old2New.lookup(V)) {
+        V->replaceAllUsesWith(New);
+        V = New;
+      }
+    }
   }
 };
 } // end namespace llvm
