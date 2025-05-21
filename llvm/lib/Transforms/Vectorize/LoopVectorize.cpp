@@ -8564,6 +8564,7 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(VPSingleDefRecipe *R,
     VPRegionBlock *LoopRegionOf = Parent->getEnclosingLoopRegion();
     assert(LoopRegionOf && LoopRegionOf->getEntry() == Parent &&
            "Non-header phis should have been handled during predication");
+    (void)LoopRegionOf;
     auto *Phi = cast<PHINode>(R->getUnderlyingInstr());
     assert(Operands.size() == 2 && "Must have 2 operands for header phis");
     if ((Recipe = tryToOptimizeInductionPHI(Phi, Operands, Range)))
