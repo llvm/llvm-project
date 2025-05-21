@@ -19,6 +19,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/OperationKinds.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/Type.h"
 #include "clang/Analysis/Analyses/ThreadSafetyTIL.h"
@@ -26,6 +27,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/Specifiers.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include <algorithm>
@@ -241,7 +243,34 @@ CapabilityExpr SExprBuilder::translateAttrExpr(const Expr *AttrExp,
   return CapabilityExpr(E, AttrExp->getType(), Neg);
 }
 
-til::LiteralPtr *SExprBuilder::createVariable(const VarDecl *VD) {
+til::SExpr *SExprBuilder::translateVariable(const VarDecl *VD,
+                                            CallingContext *Ctx) {
+  assert(VD);
+
+  // General recursion guard for x = f(x). If we are already in the process of
+  // defining VD, use its pre-assignment value to break the cycle.
+  if (VarsBeingTranslated.contains(VD->getCanonicalDecl()))
+    return new (Arena) til::LiteralPtr(VD);
+  VarsBeingTranslated.insert(VD->getCanonicalDecl());
+  auto Cleanup = llvm::make_scope_exit(
+      [&] { VarsBeingTranslated.erase(VD->getCanonicalDecl()); });
+
+  QualType Ty = VD->getType();
+  if (Ty->isPointerType()) {
+    // Substitute local variable aliases with a canonical definition.
+    if (VD->hasInit() && !isVariableReassigned(VD)) {
+      // Fast and CFG-independent mode: Substitute local pointer variables with
+      // their initializers if they are explicitly const or never reassigned.
+      return translate(VD->getInit(), Ctx);
+    } else if (LookupLocalVarExpr) {
+      // Attempt to resolve an alias through the more complex local variable map
+      // lookup. This will fail with complex control-flow graphs (where we
+      // revert to no alias resolution to retain stable variable names).
+      if (const Expr *E = LookupLocalVarExpr(VD))
+        return translate(E, Ctx);
+    }
+  }
+
   return new (Arena) til::LiteralPtr(VD);
 }
 
@@ -313,6 +342,8 @@ til::SExpr *SExprBuilder::translate(const Stmt *S, CallingContext *Ctx) {
 
   case Stmt::DeclStmtClass:
     return translateDeclStmt(cast<DeclStmt>(S), Ctx);
+  case Stmt::StmtExprClass:
+    return translateStmtExpr(cast<StmtExpr>(S), Ctx);
   default:
     break;
   }
@@ -352,6 +383,9 @@ til::SExpr *SExprBuilder::translateDeclRefExpr(const DeclRefExpr *DRE,
              ? cast<FunctionDecl>(D)->getCanonicalDecl()->getParamDecl(I)
              : cast<ObjCMethodDecl>(D)->getCanonicalDecl()->getParamDecl(I);
   }
+
+  if (const auto *VarD = dyn_cast<VarDecl>(VD))
+    return translateVariable(VarD, Ctx);
 
   // For non-local variables, treat it as a reference to a named object.
   return new (Arena) til::LiteralPtr(VD);
@@ -691,6 +725,15 @@ SExprBuilder::translateDeclStmt(const DeclStmt *S, CallingContext *Ctx) {
   return nullptr;
 }
 
+til::SExpr *SExprBuilder::translateStmtExpr(const StmtExpr *SE,
+                                            CallingContext *Ctx) {
+  // The value of a statement expression is the value of the last statement,
+  // which must be an expression.
+  const CompoundStmt *CS = SE->getSubStmt();
+  return CS->body_empty() ? new (Arena) til::Undefined(SE)
+                          : translate(CS->body_back(), Ctx);
+}
+
 // If (E) is non-trivial, then add it to the current basic block, and
 // update the statement map so that S refers to E.  Returns a new variable
 // that refers to E.
@@ -1010,6 +1053,100 @@ void SExprBuilder::exitCFG(const CFGBlock *Last) {
   CurrentArguments.clear();
   CurrentInstructions.clear();
   IncompleteArgs.clear();
+}
+
+bool SExprBuilder::isVariableReassigned(const VarDecl *VD) {
+  struct ReassignmentFinder : RecursiveASTVisitor<ReassignmentFinder> {
+    bool VisitDeclRefExpr(DeclRefExpr *DRE) {
+      // Check for self-reference in the initializer. This is not strictly a
+      // reassignment, but undefined behaviour.
+      if (DRE->getDecl()->getCanonicalDecl() == InVarDecl)
+        ReassignedLocalVariables.insert(InVarDecl);
+      return true;
+    }
+
+    bool TraverseVarDecl(VarDecl *VD) {
+      if (!VD->hasInit() || !VD->isLocalVarDecl())
+        return true;
+      // Traverse the initializer to check for self-initialization.
+      InVarDecl = VD;
+      TraverseStmt(VD->getInit());
+      InVarDecl = nullptr;
+      return true;
+    }
+
+    bool VisitUnaryOperator(UnaryOperator *UO) {
+      if (UO->getOpcode() != UO_AddrOf)
+        return true;
+      // If the address of a variable is taken, it has "escaped", assume it may
+      // be reassigned.
+      const Expr *SubExpr = UO->getSubExpr()->IgnoreParenImpCasts();
+      if (const auto *DRE = dyn_cast<DeclRefExpr>(SubExpr))
+        if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl()))
+          if (VD->isLocalVarDecl())
+            ReassignedLocalVariables.insert(VD->getCanonicalDecl());
+      return true;
+    }
+
+    bool VisitBinaryOperator(BinaryOperator *BO) {
+      if (InVarDecl)
+        return true;
+      if (!BO->isAssignmentOp())
+        return true;
+      // If a variable appears as LHS of assignment, then it's a reassignment.
+      const auto *LHS = BO->getLHS()->IgnoreParenImpCasts();
+      if (const auto *DRE = dyn_cast<DeclRefExpr>(LHS))
+        if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl()))
+          if (VD->isLocalVarDecl())
+            ReassignedLocalVariables.insert(VD->getCanonicalDecl());
+      return true;
+    }
+
+    bool VisitCallExpr(CallExpr *CE) {
+      const FunctionDecl *FD = CE->getDirectCallee();
+      if (!FD)
+        return true;
+      for (unsigned Idx = 0; Idx < CE->getNumArgs(); ++Idx) {
+        if (Idx >= FD->getNumParams())
+          break;
+        const Expr *Arg = CE->getArg(Idx)->IgnoreParenImpCasts();
+        const ParmVarDecl *PVD = FD->getParamDecl(Idx);
+        QualType ParamType = PVD->getType();
+        // Potential reassignment if passed by non-const reference.
+        if (ParamType->isReferenceType() &&
+            !ParamType->getPointeeType().isConstQualified()) {
+          if (const auto *DRE = dyn_cast<DeclRefExpr>(Arg))
+            if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl()))
+              if (VD->isLocalVarDecl())
+                ReassignedLocalVariables.insert(VD->getCanonicalDecl());
+        }
+      }
+      return true;
+    }
+
+    const VarDecl *InVarDecl = nullptr;
+    llvm::DenseSet<const VarDecl *> ReassignedLocalVariables;
+  };
+
+  if (VD->getType().isConstQualified())
+    return false; // Assume undefined-behavior freedom.
+  if (!VD->isLocalVarDecl())
+    return true; // Not a local variable (assume reassigned).
+  auto *FD = dyn_cast<FunctionDecl>(VD->getDeclContext());
+  if (!FD)
+    return true; // Assume reassigned.
+
+  if (LLVM_UNLIKELY(!ReassignedLocalVariables.has_value())) {
+    // Lazy init ReassignedLocalVariables set.
+    ReassignmentFinder Visitor;
+    // const_cast ok: FunctionDecl not modified.
+    Visitor.TraverseDecl(const_cast<FunctionDecl *>(FD));
+    ReassignedLocalVariables = std::move(Visitor.ReassignedLocalVariables);
+  }
+
+  // Use the canonical declaration to ensure consistent lookup in the cache.
+  VD = VD->getCanonicalDecl();
+  return ReassignedLocalVariables.value().contains(VD);
 }
 
 #ifndef NDEBUG
