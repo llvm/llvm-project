@@ -987,15 +987,17 @@ template <class Compare> void Value::sortUseList(Compare Cmp) {
 //
 template <> struct isa_impl<Constant, Value> {
   static inline bool doit(const Value &Val) {
-    static_assert(Value::ConstantFirstVal == 0, "Val.getValueID() >= Value::ConstantFirstVal");
+    static_assert(Value::ConstantFirstVal == 0,
+                  "Val.getValueID() >= Value::ConstantFirstVal");
     return Val.getValueID() <= Value::ConstantLastVal;
   }
 };
 
 template <> struct isa_impl<ConstantData, Value> {
   static inline bool doit(const Value &Val) {
-    return Val.getValueID() >= Value::ConstantDataFirstVal &&
-           Val.getValueID() <= Value::ConstantDataLastVal;
+    static_assert(Value::ConstantDataFirstVal == 0,
+                  "Val.getValueID() >= Value::ConstantDataFirstVal");
+    return Val.getValueID() <= Value::ConstantDataLastVal;
   }
 };
 
