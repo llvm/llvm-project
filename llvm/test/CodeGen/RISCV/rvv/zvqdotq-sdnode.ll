@@ -576,6 +576,6 @@ entry:
   %a.sext = sext <vscale x 16 x i8> %a to <vscale x 16 x i32>
   %b.sext = sext <vscale x 16 x i8> %b to <vscale x 16 x i32>
   %mul = mul nuw nsw <vscale x 16 x i32> %a.sext, %b.sext
-  %res = call <vscale x 16 x i32> @llvm.experimental.vector.partial.reduce.add.nvx8i32.nvx16i32.nvx16i32(<vscale x 16 x i32> %mul, <vscale x 16 x i32> zeroinitializer)
+  %res = call <vscale x 16 x i32> @llvm.experimental.vector.partial.reduce.add.nvx16i32.nvx16i32(<vscale x 16 x i32> %mul, <vscale x 16 x i32> zeroinitializer)
   ret <vscale x 16 x i32> %res
 }
