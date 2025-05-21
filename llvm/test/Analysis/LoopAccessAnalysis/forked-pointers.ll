@@ -11,26 +11,26 @@ define void @forked_ptrs_simple(ptr nocapture readonly %Base1, ptr nocapture rea
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP1:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.Dest = getelementptr inbounds float, ptr %Dest, i64 %iv
 ; CHECK-NEXT:          %gep.Dest = getelementptr inbounds float, ptr %Dest, i64 %iv
-; CHECK-NEXT:        Against group ([[GRP2:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %select = select i1 %cmp, ptr %gep.1, ptr %gep.2
 ; CHECK-NEXT:      Check 1:
-; CHECK-NEXT:        Comparing group ([[GRP1]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.Dest = getelementptr inbounds float, ptr %Dest, i64 %iv
 ; CHECK-NEXT:          %gep.Dest = getelementptr inbounds float, ptr %Dest, i64 %iv
-; CHECK-NEXT:        Against group ([[GRP3:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP2:
 ; CHECK-NEXT:          %select = select i1 %cmp, ptr %gep.1, ptr %gep.2
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP1]]:
+; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %Dest High: (400 + %Dest))
 ; CHECK-NEXT:            Member: {%Dest,+,4}<nuw><%loop>
 ; CHECK-NEXT:            Member: {%Dest,+,4}<nuw><%loop>
-; CHECK-NEXT:        Group [[GRP2]]:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %Base1 High: (400 + %Base1))
 ; CHECK-NEXT:            Member: {%Base1,+,4}<nw><%loop>
-; CHECK-NEXT:        Group [[GRP3]]:
+; CHECK-NEXT:        Group GRP2:
 ; CHECK-NEXT:          (Low: %Base2 High: (400 + %Base2))
 ; CHECK-NEXT:            Member: {%Base2,+,4}<nw><%loop>
 ; CHECK-EMPTY:
@@ -82,31 +82,31 @@ define dso_local void @forked_ptrs_different_base_same_offset(ptr nocapture read
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP4:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %1 = getelementptr inbounds float, ptr %Dest, i64 %indvars.iv
-; CHECK-NEXT:        Against group ([[GRP5:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %arrayidx = getelementptr inbounds i32, ptr %Preds, i64 %indvars.iv
 ; CHECK-NEXT:      Check 1:
-; CHECK-NEXT:        Comparing group ([[GRP4]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %1 = getelementptr inbounds float, ptr %Dest, i64 %indvars.iv
-; CHECK-NEXT:        Against group ([[GRP6:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP2:
 ; CHECK-NEXT:          %.sink.in = getelementptr inbounds float, ptr %spec.select, i64 %indvars.iv
 ; CHECK-NEXT:      Check 2:
-; CHECK-NEXT:        Comparing group ([[GRP4]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %1 = getelementptr inbounds float, ptr %Dest, i64 %indvars.iv
-; CHECK-NEXT:        Against group ([[GRP7:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP3:
 ; CHECK-NEXT:          %.sink.in = getelementptr inbounds float, ptr %spec.select, i64 %indvars.iv
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP4]]:
+; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %Dest High: (400 + %Dest))
 ; CHECK-NEXT:            Member: {%Dest,+,4}<nuw><%for.body>
-; CHECK-NEXT:        Group [[GRP5]]:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %Preds High: (400 + %Preds))
 ; CHECK-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
-; CHECK-NEXT:        Group [[GRP6]]:
+; CHECK-NEXT:        Group GRP2:
 ; CHECK-NEXT:          (Low: %Base2 High: (400 + %Base2))
 ; CHECK-NEXT:            Member: {%Base2,+,4}<nw><%for.body>
-; CHECK-NEXT:        Group [[GRP7]]:
+; CHECK-NEXT:        Group GRP3:
 ; CHECK-NEXT:          (Low: %Base1 High: (400 + %Base1))
 ; CHECK-NEXT:            Member: {%Base1,+,4}<nw><%for.body>
 ; CHECK-EMPTY:
@@ -143,31 +143,31 @@ define dso_local void @forked_ptrs_different_base_same_offset_64b(ptr nocapture 
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP8:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %1 = getelementptr inbounds double, ptr %Dest, i64 %indvars.iv
-; CHECK-NEXT:        Against group ([[GRP9:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %arrayidx = getelementptr inbounds i32, ptr %Preds, i64 %indvars.iv
 ; CHECK-NEXT:      Check 1:
-; CHECK-NEXT:        Comparing group ([[GRP8]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %1 = getelementptr inbounds double, ptr %Dest, i64 %indvars.iv
-; CHECK-NEXT:        Against group ([[GRP10:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP2:
 ; CHECK-NEXT:          %.sink.in = getelementptr inbounds double, ptr %spec.select, i64 %indvars.iv
 ; CHECK-NEXT:      Check 2:
-; CHECK-NEXT:        Comparing group ([[GRP8]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %1 = getelementptr inbounds double, ptr %Dest, i64 %indvars.iv
-; CHECK-NEXT:        Against group ([[GRP11:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP3:
 ; CHECK-NEXT:          %.sink.in = getelementptr inbounds double, ptr %spec.select, i64 %indvars.iv
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP8]]:
+; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %Dest High: (800 + %Dest))
 ; CHECK-NEXT:            Member: {%Dest,+,8}<nuw><%for.body>
-; CHECK-NEXT:        Group [[GRP9]]:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %Preds High: (400 + %Preds))
 ; CHECK-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
-; CHECK-NEXT:        Group [[GRP10]]:
+; CHECK-NEXT:        Group GRP2:
 ; CHECK-NEXT:          (Low: %Base2 High: (800 + %Base2))
 ; CHECK-NEXT:            Member: {%Base2,+,8}<nw><%for.body>
-; CHECK-NEXT:        Group [[GRP11]]:
+; CHECK-NEXT:        Group GRP3:
 ; CHECK-NEXT:          (Low: %Base1 High: (800 + %Base1))
 ; CHECK-NEXT:            Member: {%Base1,+,8}<nw><%for.body>
 ; CHECK-EMPTY:
@@ -204,31 +204,31 @@ define dso_local void @forked_ptrs_different_base_same_offset_23b(ptr nocapture 
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP12:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %1 = getelementptr inbounds i23, ptr %Dest, i64 %indvars.iv
-; CHECK-NEXT:        Against group ([[GRP13:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %arrayidx = getelementptr inbounds i32, ptr %Preds, i64 %indvars.iv
 ; CHECK-NEXT:      Check 1:
-; CHECK-NEXT:        Comparing group ([[GRP12]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %1 = getelementptr inbounds i23, ptr %Dest, i64 %indvars.iv
-; CHECK-NEXT:        Against group ([[GRP14:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP2:
 ; CHECK-NEXT:          %.sink.in = getelementptr inbounds i23, ptr %spec.select, i64 %indvars.iv
 ; CHECK-NEXT:      Check 2:
-; CHECK-NEXT:        Comparing group ([[GRP12]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %1 = getelementptr inbounds i23, ptr %Dest, i64 %indvars.iv
-; CHECK-NEXT:        Against group ([[GRP15:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP3:
 ; CHECK-NEXT:          %.sink.in = getelementptr inbounds i23, ptr %spec.select, i64 %indvars.iv
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP12]]:
+; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %Dest High: (399 + %Dest))
 ; CHECK-NEXT:            Member: {%Dest,+,4}<nuw><%for.body>
-; CHECK-NEXT:        Group [[GRP13]]:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %Preds High: (400 + %Preds))
 ; CHECK-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
-; CHECK-NEXT:        Group [[GRP14]]:
+; CHECK-NEXT:        Group GRP2:
 ; CHECK-NEXT:          (Low: %Base2 High: (399 + %Base2))
 ; CHECK-NEXT:            Member: {%Base2,+,4}<nw><%for.body>
-; CHECK-NEXT:        Group [[GRP15]]:
+; CHECK-NEXT:        Group GRP3:
 ; CHECK-NEXT:          (Low: %Base1 High: (399 + %Base1))
 ; CHECK-NEXT:            Member: {%Base1,+,4}<nw><%for.body>
 ; CHECK-EMPTY:
@@ -265,31 +265,31 @@ define dso_local void @forked_ptrs_different_base_same_offset_6b(ptr nocapture r
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP16:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %1 = getelementptr inbounds i6, ptr %Dest, i64 %indvars.iv
-; CHECK-NEXT:        Against group ([[GRP17:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %arrayidx = getelementptr inbounds i32, ptr %Preds, i64 %indvars.iv
 ; CHECK-NEXT:      Check 1:
-; CHECK-NEXT:        Comparing group ([[GRP16]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %1 = getelementptr inbounds i6, ptr %Dest, i64 %indvars.iv
-; CHECK-NEXT:        Against group ([[GRP18:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP2:
 ; CHECK-NEXT:          %.sink.in = getelementptr inbounds i6, ptr %spec.select, i64 %indvars.iv
 ; CHECK-NEXT:      Check 2:
-; CHECK-NEXT:        Comparing group ([[GRP16]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %1 = getelementptr inbounds i6, ptr %Dest, i64 %indvars.iv
-; CHECK-NEXT:        Against group ([[GRP19:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP3:
 ; CHECK-NEXT:          %.sink.in = getelementptr inbounds i6, ptr %spec.select, i64 %indvars.iv
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP16]]:
+; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %Dest High: (100 + %Dest))
 ; CHECK-NEXT:            Member: {%Dest,+,1}<nuw><%for.body>
-; CHECK-NEXT:        Group [[GRP17]]:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %Preds High: (400 + %Preds))
 ; CHECK-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
-; CHECK-NEXT:        Group [[GRP18]]:
+; CHECK-NEXT:        Group GRP2:
 ; CHECK-NEXT:          (Low: %Base2 High: (100 + %Base2))
 ; CHECK-NEXT:            Member: {%Base2,+,1}<nw><%for.body>
-; CHECK-NEXT:        Group [[GRP19]]:
+; CHECK-NEXT:        Group GRP3:
 ; CHECK-NEXT:          (Low: %Base1 High: (100 + %Base1))
 ; CHECK-NEXT:            Member: {%Base1,+,1}<nw><%for.body>
 ; CHECK-EMPTY:
@@ -326,31 +326,31 @@ define dso_local void @forked_ptrs_different_base_same_offset_possible_poison(pt
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP20:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %1 = getelementptr inbounds float, ptr %Dest, i64 %indvars.iv
-; CHECK-NEXT:        Against group ([[GRP21:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %arrayidx = getelementptr inbounds i32, ptr %Preds, i64 %indvars.iv
 ; CHECK-NEXT:      Check 1:
-; CHECK-NEXT:        Comparing group ([[GRP20]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %1 = getelementptr inbounds float, ptr %Dest, i64 %indvars.iv
-; CHECK-NEXT:        Against group ([[GRP22:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP2:
 ; CHECK-NEXT:          %.sink.in = getelementptr inbounds float, ptr %spec.select, i64 %indvars.iv
 ; CHECK-NEXT:      Check 2:
-; CHECK-NEXT:        Comparing group ([[GRP20]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %1 = getelementptr inbounds float, ptr %Dest, i64 %indvars.iv
-; CHECK-NEXT:        Against group ([[GRP23:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP3:
 ; CHECK-NEXT:          %.sink.in = getelementptr inbounds float, ptr %spec.select, i64 %indvars.iv
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP20]]:
+; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %Dest High: (400 + %Dest))
 ; CHECK-NEXT:            Member: {%Dest,+,4}<nw><%for.body>
-; CHECK-NEXT:        Group [[GRP21]]:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %Preds High: (400 + %Preds))
 ; CHECK-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
-; CHECK-NEXT:        Group [[GRP22]]:
+; CHECK-NEXT:        Group GRP2:
 ; CHECK-NEXT:          (Low: %Base2 High: (400 + %Base2))
 ; CHECK-NEXT:            Member: {%Base2,+,4}<nw><%for.body>
-; CHECK-NEXT:        Group [[GRP23]]:
+; CHECK-NEXT:        Group GRP3:
 ; CHECK-NEXT:          (Low: %Base1 High: (400 + %Base1))
 ; CHECK-NEXT:            Member: {%Base1,+,4}<nw><%for.body>
 ; CHECK-EMPTY:
@@ -443,24 +443,24 @@ define dso_local void @forked_ptrs_add_to_offset(ptr nocapture readonly %Base, p
 ; FULLDEPTH-NEXT:      Dependences:
 ; FULLDEPTH-NEXT:      Run-time memory checks:
 ; FULLDEPTH-NEXT:      Check 0:
-; FULLDEPTH-NEXT:        Comparing group ([[GRP47:0x[0-9a-f]+]]):
+; FULLDEPTH-NEXT:        Comparing group GRP0:
 ; FULLDEPTH-NEXT:          %arrayidx5 = getelementptr inbounds float, ptr %Dest, i64 %indvars.iv
-; FULLDEPTH-NEXT:        Against group ([[GRP48:0x[0-9a-f]+]]):
+; FULLDEPTH-NEXT:        Against group GRP1:
 ; FULLDEPTH-NEXT:          %arrayidx = getelementptr inbounds i32, ptr %Preds, i64 %indvars.iv
 ; FULLDEPTH-NEXT:      Check 1:
-; FULLDEPTH-NEXT:        Comparing group ([[GRP47]]):
+; FULLDEPTH-NEXT:        Comparing group GRP0:
 ; FULLDEPTH-NEXT:          %arrayidx5 = getelementptr inbounds float, ptr %Dest, i64 %indvars.iv
-; FULLDEPTH-NEXT:        Against group ([[GRP49:0x[0-9a-f]+]]):
+; FULLDEPTH-NEXT:        Against group GRP2:
 ; FULLDEPTH-NEXT:          %arrayidx3 = getelementptr inbounds float, ptr %Base, i64 %offset
 ; FULLDEPTH-NEXT:          %arrayidx3 = getelementptr inbounds float, ptr %Base, i64 %offset
 ; FULLDEPTH-NEXT:      Grouped accesses:
-; FULLDEPTH-NEXT:        Group [[GRP47]]:
+; FULLDEPTH-NEXT:        Group GRP0:
 ; FULLDEPTH-NEXT:          (Low: %Dest High: (400 + %Dest))
 ; FULLDEPTH-NEXT:            Member: {%Dest,+,4}<nuw><%for.body>
-; FULLDEPTH-NEXT:        Group [[GRP48]]:
+; FULLDEPTH-NEXT:        Group GRP1:
 ; FULLDEPTH-NEXT:          (Low: %Preds High: (400 + %Preds))
 ; FULLDEPTH-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
-; FULLDEPTH-NEXT:        Group [[GRP49]]:
+; FULLDEPTH-NEXT:        Group GRP2:
 ; FULLDEPTH-NEXT:          (Low: ((4 * %extra_offset) + %Base) High: (404 + (4 * %extra_offset) + %Base))
 ; FULLDEPTH-NEXT:            Member: {(4 + (4 * %extra_offset) + %Base),+,4}<%for.body>
 ; FULLDEPTH-NEXT:            Member: {((4 * %extra_offset) + %Base),+,4}<%for.body>
@@ -511,24 +511,24 @@ define dso_local void @forked_ptrs_sub_from_offset(ptr nocapture readonly %Base,
 ; FULLDEPTH-NEXT:      Dependences:
 ; FULLDEPTH-NEXT:      Run-time memory checks:
 ; FULLDEPTH-NEXT:      Check 0:
-; FULLDEPTH-NEXT:        Comparing group ([[GRP50:0x[0-9a-f]+]]):
+; FULLDEPTH-NEXT:        Comparing group GRP0:
 ; FULLDEPTH-NEXT:          %arrayidx5 = getelementptr inbounds float, ptr %Dest, i64 %indvars.iv
-; FULLDEPTH-NEXT:        Against group ([[GRP51:0x[0-9a-f]+]]):
+; FULLDEPTH-NEXT:        Against group GRP1:
 ; FULLDEPTH-NEXT:          %arrayidx = getelementptr inbounds i32, ptr %Preds, i64 %indvars.iv
 ; FULLDEPTH-NEXT:      Check 1:
-; FULLDEPTH-NEXT:        Comparing group ([[GRP50]]):
+; FULLDEPTH-NEXT:        Comparing group GRP0:
 ; FULLDEPTH-NEXT:          %arrayidx5 = getelementptr inbounds float, ptr %Dest, i64 %indvars.iv
-; FULLDEPTH-NEXT:        Against group ([[GRP52:0x[0-9a-f]+]]):
+; FULLDEPTH-NEXT:        Against group GRP2:
 ; FULLDEPTH-NEXT:          %arrayidx3 = getelementptr inbounds float, ptr %Base, i64 %offset
 ; FULLDEPTH-NEXT:          %arrayidx3 = getelementptr inbounds float, ptr %Base, i64 %offset
 ; FULLDEPTH-NEXT:      Grouped accesses:
-; FULLDEPTH-NEXT:        Group [[GRP50]]:
+; FULLDEPTH-NEXT:        Group GRP0:
 ; FULLDEPTH-NEXT:          (Low: %Dest High: (400 + %Dest))
 ; FULLDEPTH-NEXT:            Member: {%Dest,+,4}<nuw><%for.body>
-; FULLDEPTH-NEXT:        Group [[GRP51]]:
+; FULLDEPTH-NEXT:        Group GRP1:
 ; FULLDEPTH-NEXT:          (Low: %Preds High: (400 + %Preds))
 ; FULLDEPTH-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
-; FULLDEPTH-NEXT:        Group [[GRP52]]:
+; FULLDEPTH-NEXT:        Group GRP2:
 ; FULLDEPTH-NEXT:          (Low: ((-4 * %extra_offset) + %Base) High: (404 + (-4 * %extra_offset) + %Base))
 ; FULLDEPTH-NEXT:            Member: {(4 + (-4 * %extra_offset) + %Base),+,4}<%for.body>
 ; FULLDEPTH-NEXT:            Member: {((-4 * %extra_offset) + %Base),+,4}<%for.body>
@@ -579,24 +579,24 @@ define dso_local void @forked_ptrs_add_sub_offset(ptr nocapture readonly %Base, 
 ; FULLDEPTH-NEXT:      Dependences:
 ; FULLDEPTH-NEXT:      Run-time memory checks:
 ; FULLDEPTH-NEXT:      Check 0:
-; FULLDEPTH-NEXT:        Comparing group ([[GRP53:0x[0-9a-f]+]]):
+; FULLDEPTH-NEXT:        Comparing group GRP0:
 ; FULLDEPTH-NEXT:          %arrayidx5 = getelementptr inbounds float, ptr %Dest, i64 %indvars.iv
-; FULLDEPTH-NEXT:        Against group ([[GRP54:0x[0-9a-f]+]]):
+; FULLDEPTH-NEXT:        Against group GRP1:
 ; FULLDEPTH-NEXT:          %arrayidx = getelementptr inbounds i32, ptr %Preds, i64 %indvars.iv
 ; FULLDEPTH-NEXT:      Check 1:
-; FULLDEPTH-NEXT:        Comparing group ([[GRP53]]):
+; FULLDEPTH-NEXT:        Comparing group GRP0:
 ; FULLDEPTH-NEXT:          %arrayidx5 = getelementptr inbounds float, ptr %Dest, i64 %indvars.iv
-; FULLDEPTH-NEXT:        Against group ([[GRP55:0x[0-9a-f]+]]):
+; FULLDEPTH-NEXT:        Against group GRP2:
 ; FULLDEPTH-NEXT:          %arrayidx3 = getelementptr inbounds float, ptr %Base, i64 %offset
 ; FULLDEPTH-NEXT:          %arrayidx3 = getelementptr inbounds float, ptr %Base, i64 %offset
 ; FULLDEPTH-NEXT:      Grouped accesses:
-; FULLDEPTH-NEXT:        Group [[GRP53]]:
+; FULLDEPTH-NEXT:        Group GRP0:
 ; FULLDEPTH-NEXT:          (Low: %Dest High: (400 + %Dest))
 ; FULLDEPTH-NEXT:            Member: {%Dest,+,4}<nuw><%for.body>
-; FULLDEPTH-NEXT:        Group [[GRP54]]:
+; FULLDEPTH-NEXT:        Group GRP1:
 ; FULLDEPTH-NEXT:          (Low: %Preds High: (400 + %Preds))
 ; FULLDEPTH-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
-; FULLDEPTH-NEXT:        Group [[GRP55]]:
+; FULLDEPTH-NEXT:        Group GRP2:
 ; FULLDEPTH-NEXT:          (Low: ((4 * %to_add) + (-4 * %to_sub) + %Base) High: (404 + (4 * %to_add) + (-4 * %to_sub) + %Base))
 ; FULLDEPTH-NEXT:            Member: {(4 + (4 * %to_add) + (-4 * %to_sub) + %Base),+,4}<%for.body>
 ; FULLDEPTH-NEXT:            Member: {((4 * %to_add) + (-4 * %to_sub) + %Base),+,4}<%for.body>
@@ -925,15 +925,15 @@ define void @sc_add_expr_ice(ptr %Base1, ptr %Base2, i64 %N) {
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP24:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:        ptr %Base1
-; CHECK-NEXT:        Against group ([[GRP25:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %fptr = getelementptr inbounds double, ptr %Base2, i64 %sel
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP24]]:
+; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %Base1 High: (8 + %Base1))
 ; CHECK-NEXT:            Member: %Base1
-; CHECK-NEXT:        Group [[GRP25]]:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %Base2 High: ((8 * %N) + %Base2))
 ; CHECK-NEXT:            Member: {%Base2,+,8}<%for.body>
 ; CHECK-EMPTY:
@@ -972,36 +972,36 @@ define void @forked_ptrs_with_different_base(ptr nocapture readonly %Preds, ptr 
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP26:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %arrayidx7 = getelementptr inbounds double, ptr %.sink, i64 %indvars.iv
-; CHECK-NEXT:        Against group ([[GRP27:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP2:
 ; CHECK-NEXT:          %arrayidx = getelementptr inbounds i32, ptr %Preds, i64 %indvars.iv
 ; CHECK-NEXT:      Check 1:
-; CHECK-NEXT:        Comparing group ([[GRP26]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %arrayidx7 = getelementptr inbounds double, ptr %.sink, i64 %indvars.iv
-; CHECK-NEXT:        Against group ([[GRP28:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP3:
 ; CHECK-NEXT:          %arrayidx5 = getelementptr inbounds double, ptr %0, i64 %indvars.iv
 ; CHECK-NEXT:      Check 2:
-; CHECK-NEXT:        Comparing group ([[GRP29:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group GRP1:
 ; CHECK-NEXT:          %arrayidx7 = getelementptr inbounds double, ptr %.sink, i64 %indvars.iv
-; CHECK-NEXT:        Against group ([[GRP27]]):
+; CHECK-NEXT:        Against group GRP2:
 ; CHECK-NEXT:          %arrayidx = getelementptr inbounds i32, ptr %Preds, i64 %indvars.iv
 ; CHECK-NEXT:      Check 3:
-; CHECK-NEXT:        Comparing group ([[GRP29]]):
+; CHECK-NEXT:        Comparing group GRP1:
 ; CHECK-NEXT:          %arrayidx7 = getelementptr inbounds double, ptr %.sink, i64 %indvars.iv
-; CHECK-NEXT:        Against group ([[GRP28]]):
+; CHECK-NEXT:        Against group GRP3:
 ; CHECK-NEXT:          %arrayidx5 = getelementptr inbounds double, ptr %0, i64 %indvars.iv
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP26]]:
+; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %1 High: (63992 + %1))
 ; CHECK-NEXT:            Member: {%1,+,8}<nw><%for.body>
-; CHECK-NEXT:        Group [[GRP29]]:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %2 High: (63992 + %2))
 ; CHECK-NEXT:            Member: {%2,+,8}<nw><%for.body>
-; CHECK-NEXT:        Group [[GRP27]]:
+; CHECK-NEXT:        Group GRP2:
 ; CHECK-NEXT:          (Low: %Preds High: (31996 + %Preds))
 ; CHECK-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
-; CHECK-NEXT:        Group [[GRP28]]:
+; CHECK-NEXT:        Group GRP3:
 ; CHECK-NEXT:          (Low: %0 High: (63992 + %0))
 ; CHECK-NEXT:            Member: {%0,+,8}<nw><%for.body>
 ; CHECK-EMPTY:
