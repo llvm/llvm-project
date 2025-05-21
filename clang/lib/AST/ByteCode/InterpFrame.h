@@ -119,7 +119,7 @@ public:
   CodePtr getRetPC() const { return RetPC; }
 
   /// Map a location to a source.
-  SourceInfo getSource(CodePtr PC) const;
+  virtual SourceInfo getSource(CodePtr PC) const;
   const Expr *getExpr(CodePtr PC) const;
   SourceLocation getLocation(CodePtr PC) const;
   SourceRange getRange(CodePtr PC) const;

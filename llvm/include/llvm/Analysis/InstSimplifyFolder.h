@@ -36,7 +36,7 @@ class InstSimplifyFolder final : public IRBuilderFolder {
   TargetFolder ConstFolder;
   SimplifyQuery SQ;
 
-  LLVM_DECLARE_VIRTUAL_ANCHOR_FUNCTION();
+  virtual void anchor();
 
 public:
   explicit InstSimplifyFolder(const DataLayout &DL) : ConstFolder(DL), SQ(DL) {}

@@ -1212,7 +1212,7 @@ public:
                           ValueToValueMapTy &UnderlyingMap)
       : TypeMap(TypeMap),
         InternalMapper(UnderlyingMap, RF_None, TypeMap, this) {}
-  ~FatPtrConstMaterializer() = default;
+  virtual ~FatPtrConstMaterializer() = default;
 
   Value *materialize(Value *V) override;
 };

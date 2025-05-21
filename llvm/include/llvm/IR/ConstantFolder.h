@@ -28,7 +28,7 @@ namespace llvm {
 
 /// ConstantFolder - Create constants with minimum, target independent, folding.
 class ConstantFolder final : public IRBuilderFolder {
-  LLVM_DECLARE_VIRTUAL_ANCHOR_FUNCTION();
+  virtual void anchor();
 
 public:
   explicit ConstantFolder() = default;
