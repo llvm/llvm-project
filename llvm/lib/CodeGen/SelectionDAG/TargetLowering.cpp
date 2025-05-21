@@ -8293,26 +8293,22 @@ SDValue TargetLowering::expandCLMUL(SDNode *Node,
                         !isOperationLegalOrCustom(ISD::SHL, VT) ||
                         !isOperationLegalOrCustom(ISD::XOR, VT) ||
                         !isOperationLegalOrCustom(ISD::AND, VT) ||
-                        !isOperationLegalOrCustom(ISD::SELECT, VT) ||
-                        !isOperationLegalOrCustomOrPromote(ISD::OR, VT))))
+                        !isOperationLegalOrCustom(ISD::SELECT, VT))))
     return SDValue();
 
   SDValue Res = DAG.getConstant(0, DL, VT);
   SDValue Zero = DAG.getConstant(0, DL, VT);
   SDValue One = DAG.getConstant(1, DL, VT);
-  for (unsigned i = 0; i < NumBitsPerElt-1; ++i) {
+  for (unsigned I = 0; I < NumBitsPerElt-1; ++I) {
     SDValue LowBit = DAG.getNode(ISD::AND, DL, VT, V1, One);
-    SDValue LowBool = DAG.getSetCC(DL, SetCCType, LowBit, One, ISD::SETULT);
+    SDValue LowBool = DAG.getSetCC(DL, SetCCType, LowBit, Zero, ISD::SETNE);
     SDValue Pred = DAG.getNode(ISD::SELECT, DL, VT, LowBool, V2, Zero);
     Res = DAG.getNode(ISD::XOR, DL, VT, Res, Pred);
-    V1 = DAG.getNode(ISD::SRL, DL, VT, V1, One);
-    V2 = DAG.getNode(ISD::SHL, DL, VT, V2, One);
+    if (I != NumBitsPerElt) {
+      V1 = DAG.getNode(ISD::SRL, DL, VT, V1, One);
+      V2 = DAG.getNode(ISD::SHL, DL, VT, V2, One);
+    }
   }
-  // unroll last iteration to prevent dead nodes
-  SDValue LowBit = DAG.getNode(ISD::AND, DL, VT, V1, One);
-  SDValue LowBool = DAG.getSetCC(DL, SetCCType, LowBit, One, ISD::SETULT);
-  SDValue Pred = DAG.getNode(ISD::SELECT, DL, VT, LowBool, V2, Zero);
-  Res = DAG.getNode(ISD::XOR, DL, VT, Res, Pred);
   return Res;
 }
 

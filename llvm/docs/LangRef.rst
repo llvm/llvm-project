@@ -18190,7 +18190,7 @@ Semantics:
 """"""""""
 
 The ‘llvm.clmul’ intrinsic computes carryless multiply of ``%a`` and ``%b``, which is the result
-of applying the standard multiplication algorithm if you replace all of the aditions with exclusive ors.
+of applying the standard multiplication algorithm if you replace all of the additions with exclusive ors.
 The vector intrinsics, such as llvm.clmul.v4i32, operate on a per-element basis and the element order is not affected.
 
 Examples

@@ -1428,7 +1428,7 @@ let IntrProperties = [IntrNoMem, IntrSpeculatable] in {
   def int_fshr : DefaultAttrsIntrinsic<[llvm_anyint_ty],
       [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>]>;
   def int_clmul : DefaultAttrsIntrinsic<[llvm_anyint_ty],
-      [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>]>;
+      [LLVMMatchType<0>, LLVMMatchType<0>]>;
 }
 
 let IntrProperties = [IntrNoMem, IntrSpeculatable,
