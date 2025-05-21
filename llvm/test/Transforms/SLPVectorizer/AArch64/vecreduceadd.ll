@@ -883,7 +883,7 @@ entry:
 
 
 ; COST-LABEL: Function:  mla_v4i8_i32
-; COST: Cost:            '-6'
+; COST: Cost:            '-4'
 define i32 @mla_v4i8_i32(ptr %x, ptr %y) "target-features"="+dotprod" {
 ; CHECK-LABEL: @mla_v4i8_i32(
 ; CHECK-NEXT:  entry:
