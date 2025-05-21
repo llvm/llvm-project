@@ -597,7 +597,7 @@ def IRDL_AnyOfOp : IRDL_ConstraintOp<"any_of",
     ```
 
     The above program defines a type `complex` inside the dialect `cmath` that
-    can have a single type parameter that can be either `i32`, `i64`, `f32` or
+    has a single type parameter that can be either `i32`, `i64`, `f32` or
     `f64`.
   }];
 
@@ -634,7 +634,7 @@ def IRDL_AllOfOp : IRDL_ConstraintOp<"all_of",
     ```
 
     The above program defines a type `complex` inside the dialect `cmath` that
-    can has one parameter that must be 32-bit long and a float (in other
+    has one parameter that must be 32-bit long and a float (in other
     words, that must be `f32`).
   }];
 

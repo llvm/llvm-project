@@ -1726,7 +1726,7 @@ void SourceManager::computeMacroArgsCache(MacroArgsMap &MacroArgsCache,
   assert(FID.isValid());
 
   // Initially no macro argument chunk is present.
-  MacroArgsCache.insert(std::make_pair(0, SourceLocation()));
+  MacroArgsCache.try_emplace(0);
 
   int ID = FID.ID;
   while (true) {

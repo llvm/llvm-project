@@ -15,8 +15,8 @@ body:             |
     ;%0:_(p0) = G_FRAME_INDEX %stack.0.slot
     ; CHECK-LABEL: name: test_lifetime_no_dce
     ; CHECK: LIFETIME_START %stack.0
-    ; CHECK: LIFETIME_END %stack.0
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: LIFETIME_END %stack.0
+    ; CHECK-NEXT: RET_ReallyLR
     LIFETIME_START %stack.0
     LIFETIME_END %stack.0
     RET_ReallyLR

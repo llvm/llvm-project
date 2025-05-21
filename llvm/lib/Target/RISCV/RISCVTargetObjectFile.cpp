@@ -27,7 +27,7 @@ void RISCVELFTargetObjectFile::Initialize(MCContext &Ctx,
                                           const TargetMachine &TM) {
   TargetLoweringObjectFileELF::Initialize(Ctx, TM);
 
-  PLTPCRelativeSpecifier = RISCVMCExpr::VK_PLTPCREL;
+  PLTPCRelativeSpecifier = ELF::R_RISCV_PLT32;
   SupportIndirectSymViaGOTPCRel = true;
 
   SmallDataSection = getContext().getELFSection(
@@ -53,7 +53,7 @@ const MCExpr *RISCVELFTargetObjectFile::getIndirectSymViaGOTPCRel(
   const MCExpr *Res = MCSymbolRefExpr::create(Sym, Ctx);
   Res = MCBinaryExpr::createAdd(
       Res, MCConstantExpr::create(Offset + MV.getConstant(), Ctx), Ctx);
-  return RISCVMCExpr::create(Res, RISCVMCExpr::VK_GOTPCREL, Ctx);
+  return RISCVMCExpr::create(Res, ELF::R_RISCV_GOT32_PCREL, Ctx);
 }
 
 // A address must be loaded from a small section if its size is less than the

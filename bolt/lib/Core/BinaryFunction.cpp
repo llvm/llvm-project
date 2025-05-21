@@ -1783,10 +1783,22 @@ bool BinaryFunction::scanExternalRefs() {
     // On AArch64, we use instruction patches for fixing references. We make an
     // exception for branch instructions since they require optional
     // relocations.
-    if (BC.isAArch64() && !BranchTargetSymbol) {
-      LLVM_DEBUG(BC.printInstruction(dbgs(), Instruction, AbsoluteInstrAddr));
-      InstructionPatches.push_back({AbsoluteInstrAddr, Instruction});
-      continue;
+    if (BC.isAArch64()) {
+      if (!BranchTargetSymbol) {
+        LLVM_DEBUG(BC.printInstruction(dbgs(), Instruction, AbsoluteInstrAddr));
+        InstructionPatches.push_back({AbsoluteInstrAddr, Instruction});
+        continue;
+      }
+
+      // Conditional tail calls require new relocation types that are currently
+      // not supported. https://github.com/llvm/llvm-project/issues/138264
+      if (BC.MIB->isConditionalBranch(Instruction)) {
+        if (BinaryFunction *TargetBF =
+                BC.getFunctionForSymbol(BranchTargetSymbol)) {
+          TargetBF->setNeedsPatch(true);
+          continue;
+        }
+      }
     }
 
     // Emit the instruction using temp emitter and generate relocations.
@@ -3326,7 +3338,7 @@ void BinaryFunction::duplicateConstantIslands() {
 static std::string constructFilename(std::string Filename,
                                      std::string Annotation,
                                      std::string Suffix) {
-  std::replace(Filename.begin(), Filename.end(), '/', '-');
+  llvm::replace(Filename, '/', '-');
   if (!Annotation.empty())
     Annotation.insert(0, "-");
   if (Filename.size() + Annotation.size() + Suffix.size() > MAX_PATH) {

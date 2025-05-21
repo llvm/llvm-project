@@ -919,6 +919,35 @@ public:
   }
 };
 
+/// Pattern to replace `extract_strided_metadata(assume_alignment)`
+///
+/// With
+/// \verbatim
+/// extract_strided_metadata(memref)
+/// \endverbatim
+///
+/// Since `assume_alignment` is a view-like op that does not modify the
+/// underlying buffer, offset, sizes, or strides, extracting strided metadata
+/// from its result is equivalent to extracting it from its source. This
+/// canonicalization removes the unnecessary indirection.
+struct ExtractStridedMetadataOpAssumeAlignmentFolder
+    : public OpRewritePattern<memref::ExtractStridedMetadataOp> {
+public:
+  using OpRewritePattern<memref::ExtractStridedMetadataOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(memref::ExtractStridedMetadataOp op,
+                                PatternRewriter &rewriter) const override {
+    auto assumeAlignmentOp =
+        op.getSource().getDefiningOp<memref::AssumeAlignmentOp>();
+    if (!assumeAlignmentOp)
+      return failure();
+
+    rewriter.replaceOpWithNewOp<memref::ExtractStridedMetadataOp>(
+        op, assumeAlignmentOp.getViewSource());
+    return success();
+  }
+};
+
 /// Rewrite memref.extract_aligned_pointer_as_index of a ViewLikeOp to the
 /// source of the ViewLikeOp.
 class RewriteExtractAlignedPointerAsIndexOfViewLikeOp
@@ -1185,6 +1214,7 @@ void memref::populateExpandStridedMetadataPatterns(
                ExtractStridedMetadataOpSubviewFolder,
                ExtractStridedMetadataOpCastFolder,
                ExtractStridedMetadataOpMemorySpaceCastFolder,
+               ExtractStridedMetadataOpAssumeAlignmentFolder,
                ExtractStridedMetadataOpExtractStridedMetadataFolder>(
       patterns.getContext());
 }
@@ -1201,6 +1231,7 @@ void memref::populateResolveExtractStridedMetadataPatterns(
                ExtractStridedMetadataOpReinterpretCastFolder,
                ExtractStridedMetadataOpCastFolder,
                ExtractStridedMetadataOpMemorySpaceCastFolder,
+               ExtractStridedMetadataOpAssumeAlignmentFolder,
                ExtractStridedMetadataOpExtractStridedMetadataFolder>(
       patterns.getContext());
 }

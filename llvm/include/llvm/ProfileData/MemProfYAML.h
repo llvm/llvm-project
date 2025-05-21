@@ -46,7 +46,7 @@ template <> struct ScalarTraits<memprof::GUIDHex64> {
       Val = Num;
     } else {
       // Otherwise, treat the input as a string containing a function name.
-      Val = memprof::IndexedMemProfRecord::getGUID(Scalar);
+      Val = memprof::getGUID(Scalar);
     }
     return StringRef();
   }

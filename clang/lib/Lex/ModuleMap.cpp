@@ -2021,7 +2021,7 @@ void ModuleMapLoader::handleUmbrellaDirDecl(
     }
 
     // Sort header paths so that the pcm doesn't depend on iteration order.
-    std::stable_sort(Headers.begin(), Headers.end(), compareModuleHeaders);
+    llvm::stable_sort(Headers, compareModuleHeaders);
 
     for (auto &Header : Headers)
       Map.addHeader(ActiveModule, std::move(Header), ModuleMap::TextualHeader);

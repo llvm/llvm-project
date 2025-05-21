@@ -9,6 +9,7 @@ add_llvm_component_library(LLVMProfileData
   ItaniumManglingCanonicalizer.cpp
   MemProf.cpp
   MemProfReader.cpp
+  MemProfRadixTree.cpp
   PGOCtxProfReader.cpp
   PGOCtxProfWriter.cpp
   ProfileSummaryBuilder.cpp

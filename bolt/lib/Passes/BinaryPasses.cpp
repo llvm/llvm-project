@@ -35,7 +35,7 @@ static const char *dynoStatsOptName(const bolt::DynoStats::Category C) {
 
   OptNames[C] = bolt::DynoStats::Description(C);
 
-  std::replace(OptNames[C].begin(), OptNames[C].end(), ' ', '-');
+  llvm::replace(OptNames[C], ' ', '-');
 
   return OptNames[C].c_str();
 }

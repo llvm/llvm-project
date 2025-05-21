@@ -169,6 +169,11 @@ public:
 
   virtual void annotateTLSDescriptorSequence(const MCSymbolRefExpr *SRE);
 
+  virtual void emitSyntaxUnified();
+
+  virtual void emitCode16();
+  virtual void emitCode32();
+
   // Note in the output that the specified \p Symbol is a Thumb mode function.
   virtual void emitThumbFunc(MCSymbol *Symbol);
   virtual void emitThumbSet(MCSymbol *Symbol, const MCExpr *Value);
@@ -471,8 +476,8 @@ public:
 
   virtual void emitEHSymAttributes(const MCSymbol *Symbol, MCSymbol *EHSymbol);
 
-  /// Note in the output the specified \p Flag.
-  virtual void emitAssemblerFlag(MCAssemblerFlag Flag);
+  /// Emit a .subsection_via_symbols directive.
+  virtual void emitSubsectionsViaSymbols();
 
   /// Emit the given list \p Options of strings as linker
   /// options into the output.

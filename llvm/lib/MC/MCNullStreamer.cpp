@@ -38,6 +38,7 @@ namespace {
 
     void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                           Align ByteAlignment) override {}
+    void emitSubsectionsViaSymbols() override {};
     void beginCOFFSymbolDef(const MCSymbol *Symbol) override {}
     void emitCOFFSymbolStorageClass(int StorageClass) override {}
     void emitCOFFSymbolType(int Type) override {}

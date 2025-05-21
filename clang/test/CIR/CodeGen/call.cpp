@@ -42,3 +42,17 @@ int f6() {
 
 // LLVM-LABEL: define i32 @_Z2f6v() {
 // LLVM:         %{{.+}} = call i32 @_Z2f5iPib(i32 2, ptr %{{.+}}, i1 false)
+
+int f7(int (*ptr)(int, int)) {
+  return ptr(1, 2);
+}
+
+// CIR-LABEL: cir.func @_Z2f7PFiiiE
+// CIR:         %[[#ptr:]] = cir.load %{{.+}} : !cir.ptr<!cir.ptr<!cir.func<(!s32i, !s32i) -> !s32i>>>, !cir.ptr<!cir.func<(!s32i, !s32i) -> !s32i>>
+// CIR-NEXT:    %[[#a:]] = cir.const #cir.int<1> : !s32i
+// CIR-NEXT:    %[[#b:]] = cir.const #cir.int<2> : !s32i
+// CIR-NEXT:    %{{.+}} = cir.call %[[#ptr]](%[[#a]], %[[#b]]) : (!cir.ptr<!cir.func<(!s32i, !s32i) -> !s32i>>, !s32i, !s32i) -> !s32i
+
+// LLVM-LABEL: define i32 @_Z2f7PFiiiE
+// LLVM:         %[[#ptr:]] = load ptr, ptr %{{.+}}
+// LLVM-NEXT:    %{{.+}} = call i32 %[[#ptr]](i32 1, i32 2)

@@ -2021,20 +2021,24 @@ bool SPIRVInstructionSelector::selectDot4AddPacked(Register ResVReg,
   assert(I.getOperand(4).isReg());
   MachineBasicBlock &BB = *I.getParent();
 
+  Register Acc = I.getOperand(2).getReg();
+  Register X = I.getOperand(3).getReg();
+  Register Y = I.getOperand(4).getReg();
+
   auto DotOp = Signed ? SPIRV::OpSDot : SPIRV::OpUDot;
   Register Dot = MRI->createVirtualRegister(GR.getRegClass(ResType));
   bool Result = BuildMI(BB, I, I.getDebugLoc(), TII.get(DotOp))
                     .addDef(Dot)
                     .addUse(GR.getSPIRVTypeID(ResType))
-                    .addUse(I.getOperand(2).getReg())
-                    .addUse(I.getOperand(3).getReg())
+                    .addUse(X)
+                    .addUse(Y)
                     .constrainAllUses(TII, TRI, RBI);
 
   return Result && BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpIAddS))
                        .addDef(ResVReg)
                        .addUse(GR.getSPIRVTypeID(ResType))
                        .addUse(Dot)
-                       .addUse(I.getOperand(4).getReg())
+                       .addUse(Acc)
                        .constrainAllUses(TII, TRI, RBI);
 }
 
@@ -2052,8 +2056,10 @@ bool SPIRVInstructionSelector::selectDot4AddPackedExpansion(
 
   bool Result = true;
 
-  // Acc = C
-  Register Acc = I.getOperand(4).getReg();
+  Register Acc = I.getOperand(2).getReg();
+  Register X = I.getOperand(3).getReg();
+  Register Y = I.getOperand(4).getReg();
+
   SPIRVType *EltType = GR.getOrCreateSPIRVIntegerType(8, I, TII);
   auto ExtractOp =
       Signed ? SPIRV::OpBitFieldSExtract : SPIRV::OpBitFieldUExtract;
@@ -2067,7 +2073,7 @@ bool SPIRVInstructionSelector::selectDot4AddPackedExpansion(
         BuildMI(BB, I, I.getDebugLoc(), TII.get(ExtractOp))
             .addDef(AElt)
             .addUse(GR.getSPIRVTypeID(ResType))
-            .addUse(I.getOperand(2).getReg())
+            .addUse(X)
             .addUse(GR.getOrCreateConstInt(i * 8, I, EltType, TII, ZeroAsNull))
             .addUse(GR.getOrCreateConstInt(8, I, EltType, TII, ZeroAsNull))
             .constrainAllUses(TII, TRI, RBI);
@@ -2078,7 +2084,7 @@ bool SPIRVInstructionSelector::selectDot4AddPackedExpansion(
         BuildMI(BB, I, I.getDebugLoc(), TII.get(ExtractOp))
             .addDef(BElt)
             .addUse(GR.getSPIRVTypeID(ResType))
-            .addUse(I.getOperand(3).getReg())
+            .addUse(Y)
             .addUse(GR.getOrCreateConstInt(i * 8, I, EltType, TII, ZeroAsNull))
             .addUse(GR.getOrCreateConstInt(8, I, EltType, TII, ZeroAsNull))
             .constrainAllUses(TII, TRI, RBI);

@@ -935,6 +935,7 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
         llvm::StringSwitch<std::optional<StringRef>>(ArgVecLib->getValue())
             .Case("Accelerate", "Accelerate")
             .Case("libmvec", "LIBMVEC")
+            .Case("AMDLIBM", "AMDLIBM")
             .Case("MASSV", "MASSV")
             .Case("SVML", "SVML")
             .Case("SLEEF", "sleefgnuabi")
@@ -2576,8 +2577,6 @@ static void GetSDLFromOffloadArchive(
       InputInfo(&JA, C.getArgs().MakeArgString(OutputLib))));
 
   CC1Args.push_back(DriverArgs.MakeArgString(OutputLib));
-
-  return;
 }
 
 // Wrapper function used by driver for adding SDLs during link phase.
@@ -3150,4 +3149,17 @@ void tools::handleVectorizeSLPArgs(const ArgList &Args,
   if (Args.hasFlag(options::OPT_fslp_vectorize, SLPVectAliasOption,
                    options::OPT_fno_slp_vectorize, EnableSLPVec))
     CmdArgs.push_back("-vectorize-slp");
+}
+
+void tools::handleInterchangeLoopsArgs(const ArgList &Args,
+                                       ArgStringList &CmdArgs) {
+  // FIXME: instead of relying on shouldEnableVectorizerAtOLevel, we may want to
+  // implement a separate function to infer loop interchange from opt level.
+  // For now, enable loop-interchange at the same opt levels as loop-vectorize.
+  bool EnableInterchange = shouldEnableVectorizerAtOLevel(Args, false);
+  OptSpecifier InterchangeAliasOption =
+      EnableInterchange ? options::OPT_O_Group : options::OPT_floop_interchange;
+  if (Args.hasFlag(options::OPT_floop_interchange, InterchangeAliasOption,
+                   options::OPT_fno_loop_interchange, EnableInterchange))
+    CmdArgs.push_back("-floop-interchange");
 }

@@ -41,6 +41,8 @@ math/clc_cos.cl
 math/clc_cosh.cl
 math/clc_cospi.cl
 math/clc_ep_log.cl
+math/clc_erf.cl
+math/clc_erfc.cl
 math/clc_exp.cl
 math/clc_exp10.cl
 math/clc_exp2.cl

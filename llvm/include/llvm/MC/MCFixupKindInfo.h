@@ -25,11 +25,6 @@ struct MCFixupKindInfo {
 
     /// Should this fixup be evaluated in a target dependent manner?
     FKF_IsTarget = (1 << 2),
-
-    /// This fixup kind should be resolved if defined.
-    /// FIXME This is a workaround because we don't support certain ARM
-    /// relocation types. This flag should eventually be removed.
-    FKF_Constant = 1 << 3,
   };
 
   /// A target specific name for the fixup kind. The names will be unique for

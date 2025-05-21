@@ -272,9 +272,12 @@ static int mapRegToGPRIndex(MCRegister Reg) {
 /// datastructure for each tracked general purpose register.
 struct LOHInfo {
   MCLOHType Type : 8;           ///< "Best" type of LOH possible.
-  bool IsCandidate : 1;         ///< Possible LOH candidate.
-  bool OneUser : 1;             ///< Found exactly one user (yet).
-  bool MultiUsers : 1;          ///< Found multiple users.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned IsCandidate : 1;     ///< Possible LOH candidate.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned OneUser : 1;         ///< Found exactly one user (yet).
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned MultiUsers : 1;      ///< Found multiple users.
   const MachineInstr *MI0;      ///< First instruction involved in the LOH.
   const MachineInstr *MI1;      ///< Second instruction involved in the LOH
                                 ///  (if any).

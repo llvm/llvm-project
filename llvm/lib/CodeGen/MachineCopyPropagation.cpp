@@ -553,9 +553,12 @@ void MachineCopyPropagation::readSuccessorLiveIns(
   // If a copy result is livein to a successor, it is not dead.
   for (const MachineBasicBlock *Succ : MBB.successors()) {
     for (const auto &LI : Succ->liveins()) {
-      for (MCRegUnit Unit : TRI->regunits(LI.PhysReg)) {
-        if (MachineInstr *Copy = Tracker.findCopyForUnit(Unit, *TRI))
-          MaybeDeadCopies.remove(Copy);
+      for (MCRegUnitMaskIterator U(LI.PhysReg, TRI); U.isValid(); ++U) {
+        auto [Unit, Mask] = *U;
+        if ((Mask & LI.LaneMask).any()) {
+          if (MachineInstr *Copy = Tracker.findCopyForUnit(Unit, *TRI))
+            MaybeDeadCopies.remove(Copy);
+        }
       }
     }
   }

@@ -330,8 +330,7 @@ int64_t MLInlineAdvisor::getModuleIRSize() const {
 }
 
 FunctionPropertiesInfo &MLInlineAdvisor::getCachedFPI(Function &F) const {
-  auto InsertPair =
-      FPICache.insert(std::make_pair(&F, FunctionPropertiesInfo()));
+  auto InsertPair = FPICache.try_emplace(&F);
   if (!InsertPair.second)
     return InsertPair.first->second;
   InsertPair.first->second = FAM.getResult<FunctionPropertiesAnalysis>(F);

@@ -486,7 +486,6 @@ Fortran::lower::genCallOpAndResult(
 
   // Deal with potential mismatches in arguments types. Passing an array to a
   // scalar argument should for instance be tolerated here.
-  bool callingImplicitInterface = caller.canBeCalledViaImplicitInterface();
   for (auto [fst, snd] : llvm::zip(caller.getInputs(), funcType.getInputs())) {
     // When passing arguments to a procedure that can be called by implicit
     // interface, allow any character actual arguments to be passed to dummy
@@ -518,10 +517,17 @@ Fortran::lower::genCallOpAndResult(
         // Do not attempt any reboxing here that could break this.
         bool legacyLowering =
             !converter.getLoweringOptions().getLowerToHighLevelFIR();
+        // When dealing with a dummy character argument (fir.boxchar), the
+        // effective argument might be a non-character raw pointer. This may
+        // happen when calling an implicit interface that was previously called
+        // with a character argument, or when calling an explicit interface with
+        // an IgnoreTKR dummy character arguments. Allow creating a fir.boxchar
+        // from the raw pointer, which requires a non-trivial type conversion.
+        const bool allowCharacterConversions = true;
         bool isVolatile = fir::isa_volatile_type(snd);
         cast = builder.createVolatileCast(loc, isVolatile, fst);
         cast = builder.convertWithSemantics(loc, snd, cast,
-                                            callingImplicitInterface,
+                                            allowCharacterConversions,
                                             /*allowRebox=*/legacyLowering);
       }
     }
@@ -1446,6 +1452,8 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
   // cause the fir.if results to be assumed-rank in case of OPTIONAL dummy,
   // causing extra runtime costs due to the unknown runtime size of assumed-rank
   // descriptors.
+  // For TKR dummy characters, the boxchar creation also happens later when
+  // creating the fir.call .
   preparedDummy.dummy =
       builder.createConvert(loc, dummyTypeWithActualRank, addr);
   return preparedDummy;

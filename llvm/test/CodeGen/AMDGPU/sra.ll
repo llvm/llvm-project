@@ -187,15 +187,14 @@ define amdgpu_kernel void @ashr_v2i16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; VI-NEXT:    s_mov_b32 s4, s0
 ; VI-NEXT:    s_mov_b32 s5, s1
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_readfirstlane_b32 s0, v1
-; VI-NEXT:    v_readfirstlane_b32 s1, v0
-; VI-NEXT:    s_ashr_i32 s2, s1, 16
-; VI-NEXT:    s_sext_i32_i16 s1, s1
+; VI-NEXT:    v_readfirstlane_b32 s0, v0
+; VI-NEXT:    v_readfirstlane_b32 s1, v1
+; VI-NEXT:    s_lshr_b32 s2, s1, 16
 ; VI-NEXT:    s_ashr_i32 s3, s0, 16
 ; VI-NEXT:    s_sext_i32_i16 s0, s0
-; VI-NEXT:    s_ashr_i32 s0, s1, s0
-; VI-NEXT:    s_ashr_i32 s1, s2, s3
-; VI-NEXT:    s_lshl_b32 s1, s1, 16
+; VI-NEXT:    s_ashr_i32 s2, s3, s2
+; VI-NEXT:    s_ashr_i32 s0, s0, s1
+; VI-NEXT:    s_lshl_b32 s1, s2, 16
 ; VI-NEXT:    s_and_b32 s0, s0, 0xffff
 ; VI-NEXT:    s_or_b32 s0, s0, s1
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
@@ -294,28 +293,26 @@ define amdgpu_kernel void @ashr_v4i16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; VI-NEXT:    s_mov_b32 s0, s4
 ; VI-NEXT:    s_mov_b32 s1, s5
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_readfirstlane_b32 s4, v2
-; VI-NEXT:    v_readfirstlane_b32 s5, v3
-; VI-NEXT:    v_readfirstlane_b32 s6, v0
-; VI-NEXT:    v_readfirstlane_b32 s7, v1
-; VI-NEXT:    s_ashr_i32 s8, s7, 16
-; VI-NEXT:    s_sext_i32_i16 s7, s7
+; VI-NEXT:    v_readfirstlane_b32 s4, v0
+; VI-NEXT:    v_readfirstlane_b32 s5, v2
+; VI-NEXT:    v_readfirstlane_b32 s6, v1
+; VI-NEXT:    v_readfirstlane_b32 s7, v3
+; VI-NEXT:    s_lshr_b32 s8, s7, 16
 ; VI-NEXT:    s_ashr_i32 s9, s6, 16
 ; VI-NEXT:    s_sext_i32_i16 s6, s6
-; VI-NEXT:    s_ashr_i32 s10, s5, 16
-; VI-NEXT:    s_sext_i32_i16 s5, s5
+; VI-NEXT:    s_lshr_b32 s10, s5, 16
 ; VI-NEXT:    s_ashr_i32 s11, s4, 16
 ; VI-NEXT:    s_sext_i32_i16 s4, s4
-; VI-NEXT:    s_ashr_i32 s4, s6, s4
-; VI-NEXT:    s_ashr_i32 s6, s9, s11
-; VI-NEXT:    s_ashr_i32 s5, s7, s5
-; VI-NEXT:    s_ashr_i32 s7, s8, s10
+; VI-NEXT:    s_ashr_i32 s8, s9, s8
+; VI-NEXT:    s_ashr_i32 s6, s6, s7
+; VI-NEXT:    s_ashr_i32 s7, s11, s10
+; VI-NEXT:    s_ashr_i32 s4, s4, s5
+; VI-NEXT:    s_lshl_b32 s5, s8, 16
+; VI-NEXT:    s_and_b32 s6, s6, 0xffff
 ; VI-NEXT:    s_lshl_b32 s7, s7, 16
-; VI-NEXT:    s_and_b32 s5, s5, 0xffff
-; VI-NEXT:    s_lshl_b32 s6, s6, 16
 ; VI-NEXT:    s_and_b32 s4, s4, 0xffff
-; VI-NEXT:    s_or_b32 s5, s5, s7
-; VI-NEXT:    s_or_b32 s4, s4, s6
+; VI-NEXT:    s_or_b32 s5, s6, s5
+; VI-NEXT:    s_or_b32 s4, s4, s7
 ; VI-NEXT:    v_mov_b32_e32 v0, s4
 ; VI-NEXT:    v_mov_b32_e32 v1, s5
 ; VI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0

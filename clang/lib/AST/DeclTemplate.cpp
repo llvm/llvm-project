@@ -359,7 +359,6 @@ void RedeclarableTemplateDecl::loadLazySpecializationsImpl(
 
   ExternalSource->LoadExternalSpecializations(this->getCanonicalDecl(),
                                               OnlyPartial);
-  return;
 }
 
 bool RedeclarableTemplateDecl::loadLazySpecializationsImpl(

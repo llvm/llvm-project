@@ -147,7 +147,7 @@ public:
 
   /// getMRVFunctionsTracked - Get the set of functions which return multiple
   /// values tracked by the pass.
-  const SmallPtrSet<Function *, 16> getMRVFunctionsTracked();
+  const SmallPtrSet<Function *, 16> &getMRVFunctionsTracked();
 
   /// markOverdefined - Mark the specified value overdefined.  This
   /// works with both scalars and structs.

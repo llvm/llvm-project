@@ -1386,7 +1386,7 @@ public:
   bool writeMem() const { return MMO->isStore(); }
 
   /// Returns alignment and volatility of the memory access
-  Align getOriginalAlign() const { return MMO->getBaseAlign(); }
+  Align getBaseAlign() const { return MMO->getBaseAlign(); }
   Align getAlign() const { return MMO->getAlign(); }
 
   /// Return the SubclassData value, without HasDebugValue. This contains an

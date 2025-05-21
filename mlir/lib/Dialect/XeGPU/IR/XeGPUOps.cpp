@@ -312,9 +312,8 @@ LogicalResult LoadNdOp::verify() {
     auto trans = getTranspose().value();
 
     // Make sure the transpose value is valid.
-    bool valid = std::all_of(trans.begin(), trans.end(), [&](int t) {
-      return t >= 0 && t < tdescTy.getRank();
-    });
+    bool valid = llvm::all_of(
+        trans, [&](int t) { return t >= 0 && t < tdescTy.getRank(); });
 
     if (valid)
       transpose(trans, tdescShape);

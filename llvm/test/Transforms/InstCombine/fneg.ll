@@ -709,7 +709,7 @@ define float @select_common_op_fneg_false(float %x, i1 %b) {
 
 define float @fabs(float %a) {
 ; CHECK-LABEL: @fabs(
-; CHECK-NEXT:    [[FNEG1:%.*]] = call nnan ninf nsz float @llvm.fabs.f32(float [[A:%.*]])
+; CHECK-NEXT:    [[FNEG1:%.*]] = call float @llvm.fabs.f32(float [[A:%.*]])
 ; CHECK-NEXT:    ret float [[FNEG1]]
 ;
   %fneg = fneg float %a
@@ -721,7 +721,7 @@ define float @fabs(float %a) {
 
 define float @fnabs(float %a) {
 ; CHECK-LABEL: @fnabs(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.fabs.f32(float [[A:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[A:%.*]])
 ; CHECK-NEXT:    [[FNEG1:%.*]] = fneg fast float [[TMP1]]
 ; CHECK-NEXT:    ret float [[FNEG1]]
 ;
@@ -734,7 +734,7 @@ define float @fnabs(float %a) {
 
 define float @fnabs_1(float %a) {
 ; CHECK-LABEL: @fnabs_1(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.fabs.f32(float [[A:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[A:%.*]])
 ; CHECK-NEXT:    [[FNEG1:%.*]] = fneg fast float [[TMP1]]
 ; CHECK-NEXT:    ret float [[FNEG1]]
 ;

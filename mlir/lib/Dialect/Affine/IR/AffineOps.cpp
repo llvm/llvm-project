@@ -5045,8 +5045,7 @@ OpFoldResult AffineLinearizeIndexOp::fold(FoldAdaptor adaptor) {
   if (getMultiIndex().size() == 1)
     return getMultiIndex().front();
 
-  if (llvm::any_of(adaptor.getMultiIndex(),
-                   [](Attribute a) { return a == nullptr; }))
+  if (llvm::is_contained(adaptor.getMultiIndex(), nullptr))
     return nullptr;
 
   if (!adaptor.getDynamicBasis().empty())

@@ -339,9 +339,9 @@ def mangle_vreg(opcode, current_names):
 
 
 def should_add_line_to_output(input_line, prefix_set):
-    # Skip any check lines that we're handling as well as comments
+    # Skip any check lines that we're handling as well as blank comment.
     m = common.CHECK_RE.match(input_line)
-    if (m and m.group(1) in prefix_set) or re.search("^[ \t]*;", input_line):
+    if (m and m.group(1) in prefix_set) or input_line.strip() == ";":
         return False
     return True
 

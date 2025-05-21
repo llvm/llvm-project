@@ -8,6 +8,7 @@ add_public_tablegen_target(LLDBDAPOptionsTableGen)
 add_lldb_library(lldbDAP
   Breakpoint.cpp
   BreakpointBase.cpp
+  CommandPlugins.cpp
   DAP.cpp
   DAPError.cpp
   DAPLog.cpp
@@ -23,6 +24,7 @@ add_lldb_library(lldbDAP
   RunInTerminal.cpp
   SourceBreakpoint.cpp
   Transport.cpp
+  Variables.cpp
   Watchpoint.cpp
 
   Handler/ResponseHandler.cpp

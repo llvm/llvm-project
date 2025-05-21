@@ -1671,7 +1671,7 @@ void ThreadSafetyAnalyzer::checkAccess(const FactSet &FSet, const Expr *Exp,
         // Guard against self-initialization. e.g., int &i = i;
         if (E == Exp)
           break;
-        Exp = E;
+        Exp = E->IgnoreImplicit()->IgnoreParenCasts();
         continue;
       }
     }

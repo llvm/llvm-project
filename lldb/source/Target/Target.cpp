@@ -1511,8 +1511,7 @@ bool Target::IgnoreWatchpointByID(lldb::watch_id_t watch_id,
 
 ModuleSP Target::GetExecutableModule() {
   // search for the first executable in the module list
-  for (size_t i = 0; i < m_images.GetSize(); ++i) {
-    ModuleSP module_sp = m_images.GetModuleAtIndex(i);
+  for (ModuleSP module_sp : m_images.Modules()) {
     lldb_private::ObjectFile *obj = module_sp->GetObjectFile();
     if (obj == nullptr)
       continue;
