@@ -9694,7 +9694,7 @@ TEST_F(FormatTest, ParenthesesAndOperandAlignment) {
                Style);
 }
 
-TEST_F(FormatTest, AlignAfterConditionalStatements) {
+TEST_F(FormatTest, AlignAndBreakControlStatements) {
   FormatStyle Style = getLLVMStyle();
 
   Style.AlignAfterOpenBracket = FormatStyle::BAS_DontAlign;
@@ -9765,6 +9765,20 @@ TEST_F(FormatTest, AlignAfterConditionalStatements) {
                "      (aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa &\n"
                "       bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
                ") == 0) {\n"
+               "    return;\n"
+               "  }\n"
+               "}",
+               Style);
+  Style.BreakAfterOpenBracketIf = false;
+  verifyFormat("void foo() {\n"
+               "  if constexpr ((aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa |\n"
+               "                 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+               "bbbbbbbbbb) ==\n"
+               "                0) {\n"
+               "    return;\n"
+               "  } else if ((aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa &\n"
+               "              bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+               "bbbbbbb) == 0) {\n"
                "    return;\n"
                "  }\n"
                "}",
