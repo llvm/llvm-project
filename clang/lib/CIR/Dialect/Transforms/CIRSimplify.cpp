@@ -206,9 +206,8 @@ struct SimplifySwitch : public OpRewritePattern<SwitchOp> {
       return mlir::failure();
 
     auto flushMergedOps = [&]() {
-      for (CaseOp &c : cascadingCases) {
+      for (CaseOp &c : cascadingCases)
         rewriter.eraseOp(c);
-      }
       cascadingCases.clear();
       cascadingCaseValues.clear();
     };
