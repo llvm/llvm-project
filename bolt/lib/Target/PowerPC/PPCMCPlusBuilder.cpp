@@ -13,7 +13,9 @@
 #include "bolt/Core/MCPlusBuilder.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#define GET_INSTRINFO_ENUM
 #include "llvm/Target/PowerPC/PPCGenInstrInfo.inc"
+#define GET_REGINFO_ENUM
 #include "llvm/Target/PowerPC/PPCGenRegisterInfo.inc"
 
 namespace llvm {
