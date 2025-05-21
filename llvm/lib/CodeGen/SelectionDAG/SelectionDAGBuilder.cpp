@@ -8317,7 +8317,6 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::loop_dependence_war_mask:
   case Intrinsic::loop_dependence_raw_mask: {
     auto IntrinsicVT = EVT::getEVT(I.getType());
-    SmallVector<SDValue, 4> Ops;
     unsigned ID = Intrinsic == Intrinsic::loop_dependence_war_mask
                       ? ISD::LOOP_DEPENDENCE_WAR_MASK
                       : ISD::LOOP_DEPENDENCE_RAW_MASK;

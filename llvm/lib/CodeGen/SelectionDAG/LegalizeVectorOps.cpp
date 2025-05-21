@@ -1820,21 +1820,17 @@ SDValue VectorLegalizer::ExpandLOOP_DEPENDENCE_MASK(SDNode *N) {
   Diff = DAG.getNode(ISD::SDIV, DL, PtrVT, Diff, EltSize);
 
   // If the difference is positive then some elements may alias
-  auto CmpVT = TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(),
-                                      Diff.getValueType());
+  EVT CmpVT = TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(),
+                                     Diff.getValueType());
   SDValue Zero = DAG.getTargetConstant(0, DL, PtrVT);
   SDValue Cmp = DAG.getSetCC(DL, CmpVT, Diff, Zero,
                              IsReadAfterWrite ? ISD::SETEQ : ISD::SETLE);
 
   // Create the lane mask
-  EVT SplatTY =
-      EVT::getVectorVT(*DAG.getContext(), PtrVT, VT.getVectorMinNumElements(),
-                       VT.isScalableVector());
+  EVT SplatTY = VT.changeElementType(PtrVT);
   SDValue DiffSplat = DAG.getSplat(SplatTY, DL, Diff);
   SDValue VectorStep = DAG.getStepVector(DL, SplatTY);
-  EVT MaskVT =
-      EVT::getVectorVT(*DAG.getContext(), MVT::i1, VT.getVectorMinNumElements(),
-                       VT.isScalableVector());
+  EVT MaskVT = VT.changeElementType(MVT::i1);
   SDValue DiffMask =
       DAG.getSetCC(DL, MaskVT, VectorStep, DiffSplat, ISD::CondCode::SETULT);
 

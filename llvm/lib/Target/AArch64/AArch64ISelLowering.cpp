@@ -6534,7 +6534,8 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getNode(AArch64ISD::USDOT, DL, Op.getValueType(),
                        Op.getOperand(1), Op.getOperand(2), Op.getOperand(3));
   }
-  case Intrinsic::experimental_get_nonalias_lane_mask: {
+  case Intrinsic::loop_dependence_war_mask:
+  case Intrinsic::loop_dependence_raw_mask: {
     unsigned IntrinsicID = 0;
     uint64_t EltSize = Op.getOperand(3)->getAsZExtVal();
     bool IsWriteAfterRead = Op.getOperand(4)->getAsZExtVal() == 1;
@@ -20072,9 +20073,9 @@ static SDValue getPTest(SelectionDAG &DAG, EVT VT, SDValue Pg, SDValue Op,
                         AArch64CC::CondCode Cond);
 
 static bool isPredicateCCSettingOp(SDValue N) {
-  if ((N.getOpcode() == ISD::SETCC ||
-       // get_active_lane_mask is lowered to a whilelo instruction.
-       N.getOpcode() == ISD::GET_ACTIVE_LANE_MASK) ||
+  if ((N.getOpcode() == ISD::SETCC) ||
+      // get_active_lane_mask is lowered to a whilelo instruction.
+      (N.getOpcode() == ISD::GET_ACTIVE_LANE_MASK) ||
       (N.getOpcode() == ISD::INTRINSIC_WO_CHAIN &&
        (N.getConstantOperandVal(0) == Intrinsic::aarch64_sve_whilege ||
         N.getConstantOperandVal(0) == Intrinsic::aarch64_sve_whilegt ||
