@@ -191,31 +191,36 @@ RT_API_ATTRS void ShallowCopyInner(const Descriptor &to, const Descriptor &from,
   }
 }
 
+// Most arrays are much closer to rank-1 than to maxRank.
+// Doing the recursion upwards instead of downwards puts the more common
+// cases earlier in the if-chain and has a tangible impact on performance.
+template <typename P, int RANK> struct ShallowCopyRankSpecialize {
+  static bool execute(const Descriptor &to, const Descriptor &from,
+      bool toIsContiguous, bool fromIsContiguous) {
+    if (to.rank() == RANK && from.rank() == RANK) {
+      ShallowCopyInner<P, RANK>(to, from, toIsContiguous, fromIsContiguous);
+      return true;
+    }
+    return ShallowCopyRankSpecialize<P, RANK + 1>::execute(
+        to, from, toIsContiguous, fromIsContiguous);
+  }
+};
+
+template <typename P> struct ShallowCopyRankSpecialize<P, maxRank + 1> {
+  static bool execute(const Descriptor &to, const Descriptor &from,
+      bool toIsContiguous, bool fromIsContiguous) {
+    return false;
+  }
+};
+
 // ShallowCopy helper for specialising the variants based on array rank
 template <typename P>
 RT_API_ATTRS void ShallowCopyRank(const Descriptor &to, const Descriptor &from,
     bool toIsContiguous, bool fromIsContiguous) {
-  if (to.rank() == 1 && from.rank() == 1) {
-    ShallowCopyInner<P, 1>(to, from, toIsContiguous, fromIsContiguous);
-  } else if (to.rank() == 2 && from.rank() == 2) {
-    ShallowCopyInner<P, 2>(to, from, toIsContiguous, fromIsContiguous);
-  } else if (to.rank() == 3 && from.rank() == 3) {
-    ShallowCopyInner<P, 3>(to, from, toIsContiguous, fromIsContiguous);
-  } else if (to.rank() == 4 && from.rank() == 4) {
-    ShallowCopyInner<P, 4>(to, from, toIsContiguous, fromIsContiguous);
-  } else if (to.rank() == 5 && from.rank() == 5) {
-    ShallowCopyInner<P, 5>(to, from, toIsContiguous, fromIsContiguous);
-  } else if (to.rank() == 6 && from.rank() == 6) {
-    ShallowCopyInner<P, 6>(to, from, toIsContiguous, fromIsContiguous);
-  } else if (to.rank() == 7 && from.rank() == 7) {
-    ShallowCopyInner<P, 7>(to, from, toIsContiguous, fromIsContiguous);
-  } else if (to.rank() == 8 && from.rank() == 8) {
-    ShallowCopyInner<P, 8>(to, from, toIsContiguous, fromIsContiguous);
-  } else if (to.rank() == 9 && from.rank() == 9) {
-    ShallowCopyInner<P, 9>(to, from, toIsContiguous, fromIsContiguous);
-  } else if (to.rank() == 10 && from.rank() == 10) {
-    ShallowCopyInner<P, 10>(to, from, toIsContiguous, fromIsContiguous);
-  } else {
+  // Try to call a specialised ShallowCopy variant from rank-1 up to maxRank
+  bool specialized = ShallowCopyRankSpecialize<P, 1>::execute(
+      to, from, toIsContiguous, fromIsContiguous);
+  if (!specialized) {
     ShallowCopyInner<P>(to, from, toIsContiguous, fromIsContiguous);
   }
 }

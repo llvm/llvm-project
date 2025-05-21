@@ -453,9 +453,9 @@ private:
 public:
   RT_API_ATTRS DescriptorIterator(const Descriptor &descriptor)
       : descriptor(descriptor) {
-    descriptor.GetLowerBounds(subscripts);
-    if constexpr (RANK == 1) {
-      elementOffset = descriptor.SubscriptByteOffset(0, subscripts[0]);
+    // We do not need the subscripts to iterate over a rank-1 array
+    if constexpr (RANK != 1) {
+      descriptor.GetLowerBounds(subscripts);
     }
   };
 
@@ -466,7 +466,7 @@ public:
       offset = elementOffset;
       // The compiler might be able to optimise this better if we know the rank
       // at compile time
-    } else if (RANK != -1) {
+    } else if constexpr (RANK != -1) {
       for (int j{0}; j < RANK; ++j) {
         offset += descriptor.SubscriptByteOffset(j, subscripts[j]);
       }
@@ -481,7 +481,7 @@ public:
   RT_API_ATTRS void Advance() {
     if constexpr (RANK == 1) {
       elementOffset += descriptor.GetDimension(0).ByteStride();
-    } else if (RANK != -1) {
+    } else if constexpr (RANK != -1) {
       for (int j{0}; j < RANK; ++j) {
         const Dimension &dim{descriptor.GetDimension(j)};
         if (subscripts[j]++ < dim.UpperBound()) {
