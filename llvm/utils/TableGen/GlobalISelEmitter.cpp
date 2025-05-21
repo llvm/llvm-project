@@ -321,6 +321,7 @@ public:
   void emitAdditionalImpl(raw_ostream &OS) override;
 
   void emitMIPredicateFns(raw_ostream &OS) override;
+  void emitRegPredicateFns(raw_ostream &OS) override;
   void emitI64ImmPredicateFns(raw_ostream &OS) override;
   void emitAPFloatImmPredicateFns(raw_ostream &OS) override;
   void emitAPIntImmPredicateFns(raw_ostream &OS) override;
@@ -1110,8 +1111,18 @@ Error GlobalISelEmitter::importChildMatcher(
     return Error::success();
   }
 
-  if (SrcChild.hasAnyPredicate())
-    return failedImport("Src pattern child has unsupported predicate");
+  if (SrcChild.hasAnyPredicate()) {
+    for (const TreePredicateCall &Call : SrcChild.getPredicateCalls()) {
+      const TreePredicateFn &Predicate = Call.Fn;
+
+      if (!Predicate.hasGISelRegPredicateCode()) {
+        return failedImport("Src pattern child has unsupported predicate");
+      } else {
+        OM.addPredicate<OperandRegPredicateMatcher>(Predicate);
+      }
+    }
+    return Error::success();
+  }
 
   // Check for constant immediates.
   if (auto *ChildInt = dyn_cast<IntInit>(SrcChild.getLeafValue())) {
@@ -2288,6 +2299,23 @@ void GlobalISelEmitter::emitMIPredicateFns(raw_ostream &OS) {
       "  (void)MRI;",
       ArrayRef<const Record *>(MatchedRecords), &getPatFragPredicateEnumName,
       [](const Record *R) { return R->getValueAsString("GISelPredicateCode"); },
+      "PatFrag predicates.");
+}
+
+void GlobalISelEmitter::emitRegPredicateFns(raw_ostream &OS) {
+  std::vector<const Record *> MatchedRecords;
+  llvm::copy_if(AllPatFrags, std::back_inserter(MatchedRecords),
+                [](const Record *R) {
+                  return !R->getValueAsString("GISelRegPredicateCode").empty();
+                });
+  emitRegPredicateFnsImpl<const Record *>(
+      OS,
+      "  const auto &Operands = State.RecordedOperands;\n"
+      "  (void)Operands;",
+      ArrayRef<const Record *>(MatchedRecords), &getPatFragPredicateEnumName,
+      [](const Record *R) {
+        return R->getValueAsString("GISelRegPredicateCode");
+      },
       "PatFrag predicates.");
 }
 

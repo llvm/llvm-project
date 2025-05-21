@@ -959,6 +959,7 @@ class PatFrags<dag ops, list<dag> frags, code pred = [{}],
   list<dag> Fragments = frags;
   code PredicateCode = pred;
   code GISelPredicateCode = [{}];
+  code GISelRegPredicateCode = [{}];
   code ImmediateCode = [{}];
   SDNodeXForm OperandTransform = xform;
 

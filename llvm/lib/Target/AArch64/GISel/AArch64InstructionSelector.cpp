@@ -22,6 +22,7 @@
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutorImpl.h"
+#include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
@@ -509,6 +510,16 @@ private:
 
   /// Return true if \p MI is a load or store of \p NumBytes bytes.
   bool isLoadStoreOfNumBytes(const MachineInstr &MI, unsigned NumBytes) const;
+
+  /// Return true if top 16 bits of register are zero.
+  bool isTop16Zero(const MachineOperand &MO) const;
+
+  /// Return true if top 32 bits of register are zero.
+  bool isTop32Zero(const MachineOperand &MO) const;
+
+  /// Return true if all bits of register except the lowest bit are known zero.
+  bool isTopBitsAllZero32(const MachineOperand &MO) const;
+  bool isTopBitsAllZero64(const MachineOperand &MO) const;
 
   /// Returns true if \p MI is guaranteed to have the high-half of a 64-bit
   /// register zeroed out. In other words, the result of MI has been explicitly
@@ -7983,6 +7994,29 @@ bool AArch64InstructionSelector::isLoadStoreOfNumBytes(
   assert(MI.hasOneMemOperand() &&
          "Expected load/store to have only one mem op!");
   return (*MI.memoperands_begin())->getSize() == NumBytes;
+}
+
+bool AArch64InstructionSelector::isTop16Zero(const MachineOperand &MO) const {
+  Register Reg = MO.getReg();
+  return VT->maskedValueIsZero(Reg, APInt::getHighBitsSet(32, 16));
+}
+
+//   bool isTop32Zero(const MachineOperand &MO) const;
+bool AArch64InstructionSelector::isTop32Zero(const MachineOperand &MO) const {
+  Register Reg = MO.getReg();
+  return VT->maskedValueIsZero(Reg, APInt::getHighBitsSet(64, 32));
+}
+
+bool AArch64InstructionSelector::isTopBitsAllZero32(
+    const MachineOperand &MO) const {
+  Register Reg = MO.getReg();
+  return VT->maskedValueIsZero(Reg, APInt::getHighBitsSet(32, 31));
+}
+
+bool AArch64InstructionSelector::isTopBitsAllZero64(
+    const MachineOperand &MO) const {
+  Register Reg = MO.getReg();
+  return VT->maskedValueIsZero(Reg, APInt::getHighBitsSet(64, 63));
 }
 
 bool AArch64InstructionSelector::isDef32(const MachineInstr &MI) const {
