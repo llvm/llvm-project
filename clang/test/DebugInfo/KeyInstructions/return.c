@@ -1,7 +1,7 @@
-// RUN: %clang -gkey-instructions -gno-column-info -x c++ %s -gmlt -S -emit-llvm -o - \
+// RUN: %clang_cc1 -gkey-instructions -gno-column-info -x c++ %s -debug-info-kind=line-tables-only -emit-llvm -o - \
 // RUN: | FileCheck %s --check-prefixes=CHECK,CHECK-CXX
 
-// RUN: %clang -gkey-instructions -gno-column-info -x c %s -gmlt -S -emit-llvm -o - \
+// RUN: %clang_cc1 -gkey-instructions -gno-column-info -x c %s -debug-info-kind=line-tables-only -emit-llvm -o - \
 // RUN: | FileCheck %s
 
 // Check the stores to `retval` allocas and branches to `return` block are in
