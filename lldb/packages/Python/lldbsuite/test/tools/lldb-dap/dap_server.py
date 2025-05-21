@@ -315,9 +315,10 @@ class DebugCommunication(object):
 
     def _update_verified_breakpoints(self, breakpoints: list[Event]):
         for breakpoint in breakpoints:
-            self.resolved_breakpoints[str(breakpoint["id"])] = breakpoint.get(
-                "verified", False
-            )
+            if "id" in breakpoint:
+                self.resolved_breakpoints[str(breakpoint["id"])] = breakpoint.get(
+                    "verified", False
+                )
 
     def send_packet(self, command_dict: Request, set_sequence=True):
         """Take the "command_dict" python dictionary and encode it as a JSON
@@ -462,7 +463,6 @@ class DebugCommunication(object):
             if not event:
                 break
             breakpoint_events.append(event)
-
         return breakpoint_events
 
     def wait_for_breakpoints_to_be_verified(
