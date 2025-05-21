@@ -8681,7 +8681,8 @@ static bool CheckC23ConstexprVarType(Sema &SemaRef, SourceLocation VarLoc,
 
   if (CanonT->isRecordType()) {
     const RecordDecl *RD = CanonT->getAsRecordDecl();
-    if (llvm::any_of(RD->fields(), [&SemaRef, VarLoc](const FieldDecl *F) {
+    if (!RD->isInvalidDecl() &&
+        llvm::any_of(RD->fields(), [&SemaRef, VarLoc](const FieldDecl *F) {
           return CheckC23ConstexprVarType(SemaRef, VarLoc, F->getType());
         }))
       return true;

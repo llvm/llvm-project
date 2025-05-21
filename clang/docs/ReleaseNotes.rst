@@ -273,6 +273,8 @@ C23 Feature Support
   be completed).
 - Fixed a failed assertion with an invalid parameter to the ``#embed``
   directive. Fixes #GH126940.
+- Fixed a crash when a declaration of a ``constexpr`` variable with an invalid
+  type. Fixes #GH140887
 
 C11 Feature Support
 ^^^^^^^^^^^^^^^^^^^
