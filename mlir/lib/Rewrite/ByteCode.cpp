@@ -1514,6 +1514,7 @@ void ByteCodeExecutor::processNativeFunResults(
   // Store the results in the bytecode memory
   for (unsigned resultIdx = 0; resultIdx < numResults; resultIdx++) {
     PDLValue::Kind resultKind = read<PDLValue::Kind>();
+    (void)resultKind;
     PDLValue result = results.getResults()[resultIdx];
     LLVM_DEBUG(llvm::dbgs() << "  * Result: " << result << "\n");
     assert(result.getKind() == resultKind &&
