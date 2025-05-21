@@ -1070,7 +1070,10 @@ class DebugCommunication(object):
             "type": "request",
             "arguments": args_dict,
         }
-        return self.send_recv(command_dict)
+        response = self.send_recv(command_dict)
+        breakpoints = response["body"]["breakpoints"]
+        self._update_verified_breakpoints(breakpoints)
+        return response
 
     def request_dataBreakpointInfo(
         self, variablesReference, name, frameIndex=0, threadId=None
