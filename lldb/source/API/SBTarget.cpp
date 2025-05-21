@@ -1648,7 +1648,7 @@ uint32_t SBTarget::GetMaximumNumberOfChildrenToDisplay() const {
   LLDB_INSTRUMENT_VA(this);
 
   if (TargetSP target_sp = GetSP())
-    return target_sp->GetMaximumNumberOfChildrenToDisplay();
+    return target_sp->GetMaximumNumberOfChildrenToDisplay().first;
   return 0;
 }
 
