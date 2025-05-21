@@ -878,15 +878,14 @@ APInt llvm::APIntOps::RoundDoubleToAPInt(double Double, unsigned width) {
 /// |  1[63]   11[62-52]   52[51-00]   1023 |
 ///  --------------------------------------
 double APInt::roundToDouble(bool isSigned) const {
-
   // Handle the simple case where the value is contained in one uint64_t.
   // It is wrong to optimize getWord(0) to VAL; there might be more than one word.
   if (isSingleWord() || getActiveBits() <= APINT_BITS_PER_WORD) {
     if (isSigned) {
       int64_t sext = SignExtend64(getWord(0), BitWidth);
       return double(sext);
-    } else
-      return double(getWord(0));
+    }
+    return double(getWord(0));
   }
 
   // Determine if the value is negative.
@@ -2578,8 +2577,9 @@ int APInt::tcMultiplyPart(WordType *dst, const WordType *src,
       if (low + dst[i] < low)
         high++;
       dst[i] += low;
-    } else
+    } else {
       dst[i] = low;
+    }
 
     carry = high;
   }
