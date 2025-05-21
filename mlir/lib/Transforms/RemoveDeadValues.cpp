@@ -389,8 +389,6 @@ static void processRegionBranchOp(RegionBranchOpInterface regionBranchOp,
   // the successors of `regionBranchOp`.
   auto getSuccessors = [&](Region *region = nullptr) {
     auto point = region ? region : RegionBranchPoint::parent();
-    SmallVector<Attribute> operandAttributes(regionBranchOp->getNumOperands(),
-                                             nullptr);
     SmallVector<RegionSuccessor> successors;
     regionBranchOp.getSuccessorRegions(point, successors);
     return successors;
