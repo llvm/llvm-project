@@ -207,8 +207,7 @@ bool IsModuleFileUpToDate(PathRef ModuleFilePath,
   Preprocessor PP(PPOpts, *Diags, LangOpts, SourceMgr, HeaderInfo,
                   ModuleLoader);
 
-  IntrusiveRefCntPtr<ModuleCache> ModCache =
-      createCrossProcessModuleCache(HSOpts.BuildSessionTimestamp);
+  IntrusiveRefCntPtr<ModuleCache> ModCache = createCrossProcessModuleCache();
   PCHContainerOperations PCHOperations;
   ASTReader Reader(PP, *ModCache, /*ASTContext=*/nullptr,
                    PCHOperations.getRawReader(), {});

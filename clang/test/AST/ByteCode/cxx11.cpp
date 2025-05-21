@@ -243,3 +243,10 @@ namespace Volatile {
                   // both-note {{in call to 'f(0)'}}
   };
 }
+
+namespace ZeroSizeCmp {
+  extern void (*start[])();
+  extern void (*end[])();
+  static_assert(&start != &end, ""); // both-error {{constant expression}} \
+                                     // both-note {{comparison of pointers '&start' and '&end' to unrelated zero-sized objects}}
+}

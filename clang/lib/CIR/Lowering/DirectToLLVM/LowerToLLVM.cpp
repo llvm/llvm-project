@@ -270,6 +270,18 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::ConstArrayAttr attr) {
       result =
           rewriter.create<mlir::LLVM::InsertValueOp>(loc, result, init, idx);
     }
+  } else if (auto strAttr = mlir::dyn_cast<mlir::StringAttr>(attr.getElts())) {
+    // TODO(cir): this diverges from traditional lowering. Normally the string
+    // would be a global constant that is memcopied.
+    auto arrayTy = mlir::dyn_cast<cir::ArrayType>(strAttr.getType());
+    assert(arrayTy && "String attribute must have an array type");
+    mlir::Type eltTy = arrayTy.getElementType();
+    for (auto [idx, elt] : llvm::enumerate(strAttr)) {
+      auto init = rewriter.create<mlir::LLVM::ConstantOp>(
+          loc, converter->convertType(eltTy), elt);
+      result =
+          rewriter.create<mlir::LLVM::InsertValueOp>(loc, result, init, idx);
+    }
   } else {
     llvm_unreachable("unexpected ConstArrayAttr elements");
   }
@@ -530,10 +542,18 @@ mlir::LogicalResult CIRToLLVMCastOpLowering::matchAndRewrite(
                                                         llvmSrcVal);
     return mlir::success();
   }
-  case cir::CastKind::bitcast:
+  case cir::CastKind::bitcast: {
+    mlir::Type dstTy = castOp.getType();
+    mlir::Type llvmDstTy = getTypeConverter()->convertType(dstTy);
+
     assert(!MissingFeatures::cxxABI());
     assert(!MissingFeatures::dataMemberType());
-    break;
+
+    mlir::Value llvmSrcVal = adaptor.getOperands().front();
+    rewriter.replaceOpWithNewOp<mlir::LLVM::BitcastOp>(castOp, llvmDstTy,
+                                                       llvmSrcVal);
+    return mlir::success();
+  }
   case cir::CastKind::ptr_to_bool: {
     mlir::Value llvmSrcVal = adaptor.getOperands().front();
     mlir::Value zeroPtr = rewriter.create<mlir::LLVM::ZeroOp>(
@@ -674,8 +694,15 @@ rewriteCallOrInvoke(mlir::Operation *op, mlir::ValueRange callOperands,
     llvmFnTy = cast<mlir::LLVM::LLVMFunctionType>(
         converter->convertType(fn.getFunctionType()));
   } else { // indirect call
-    assert(!cir::MissingFeatures::opCallIndirect());
-    return op->emitError("Indirect calls are NYI");
+    assert(!op->getOperands().empty() &&
+           "operands list must no be empty for the indirect call");
+    auto calleeTy = op->getOperands().front().getType();
+    auto calleePtrTy = cast<cir::PointerType>(calleeTy);
+    auto calleeFuncTy = cast<cir::FuncType>(calleePtrTy.getPointee());
+    calleeFuncTy.dump();
+    converter->convertType(calleeFuncTy).dump();
+    llvmFnTy = cast<mlir::LLVM::LLVMFunctionType>(
+        converter->convertType(calleeFuncTy));
   }
 
   assert(!cir::MissingFeatures::opCallLandingPad());
@@ -1504,6 +1531,15 @@ static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
   });
   converter.addConversion([&](cir::BF16Type type) -> mlir::Type {
     return mlir::BFloat16Type::get(type.getContext());
+  });
+  converter.addConversion([&](cir::FuncType type) -> std::optional<mlir::Type> {
+    auto result = converter.convertType(type.getReturnType());
+    llvm::SmallVector<mlir::Type> arguments;
+    arguments.reserve(type.getNumInputs());
+    if (converter.convertTypes(type.getInputs(), arguments).failed())
+      return std::nullopt;
+    auto varArg = type.isVarArg();
+    return mlir::LLVM::LLVMFunctionType::get(result, arguments, varArg);
   });
   converter.addConversion([&](cir::RecordType type) -> mlir::Type {
     // Convert struct members.

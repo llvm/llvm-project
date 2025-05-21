@@ -3103,7 +3103,8 @@ ASTReader::ReadControlBlock(ModuleFile &F,
 
         unsigned N = ValidateSystemInputs ? NumInputs : NumUserInputs;
         if (HSOpts.ModulesValidateOncePerBuildSession &&
-            F.InputFilesValidated && F.Kind == MK_ImplicitModule)
+            F.InputFilesValidationTimestamp > HSOpts.BuildSessionTimestamp &&
+            F.Kind == MK_ImplicitModule)
           N = ForceValidateUserInputs ? NumUserInputs : 0;
 
         for (unsigned I = 0; I < N; ++I) {
@@ -4949,8 +4950,10 @@ ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName, ModuleKind Type,
     // timestamp files are up-to-date in this build session.
     for (unsigned I = 0, N = Loaded.size(); I != N; ++I) {
       ImportedModule &M = Loaded[I];
-      if (M.Mod->Kind == MK_ImplicitModule && !M.Mod->InputFilesValidated)
-        getModuleManager().getModuleCache().markUpToDate(M.Mod->FileName);
+      if (M.Mod->Kind == MK_ImplicitModule &&
+          M.Mod->InputFilesValidationTimestamp < HSOpts.BuildSessionTimestamp)
+        getModuleManager().getModuleCache().updateModuleTimestamp(
+            M.Mod->FileName);
     }
   }
 

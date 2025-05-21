@@ -109,6 +109,9 @@ enum ActionType {
   GenRISCVSiFiveVectorBuiltins,
   GenRISCVSiFiveVectorBuiltinCG,
   GenRISCVSiFiveVectorBuiltinSema,
+  GenRISCVAndesVectorBuiltins,
+  GenRISCVAndesVectorBuiltinCG,
+  GenRISCVAndesVectorBuiltinSema,
   GenAttrDocs,
   GenDiagDocs,
   GenOptDocs,
@@ -314,6 +317,15 @@ cl::opt<ActionType> Action(
         clEnumValN(GenRISCVSiFiveVectorBuiltinSema,
                    "gen-riscv-sifive-vector-builtin-sema",
                    "Generate riscv_sifive_vector_builtin_sema.inc for clang"),
+        clEnumValN(GenRISCVAndesVectorBuiltins,
+                   "gen-riscv-andes-vector-builtins",
+                   "Generate riscv_andes_vector_builtins.inc for clang"),
+        clEnumValN(GenRISCVAndesVectorBuiltinCG,
+                   "gen-riscv-andes-vector-builtin-codegen",
+                   "Generate riscv_andes_vector_builtin_cg.inc for clang"),
+        clEnumValN(GenRISCVAndesVectorBuiltinSema,
+                   "gen-riscv-andes-vector-builtin-sema",
+                   "Generate riscv_andes_vector_builtin_sema.inc for clang"),
         clEnumValN(GenAttrDocs, "gen-attr-docs",
                    "Generate attribute documentation"),
         clEnumValN(GenDiagDocs, "gen-diag-docs",
@@ -591,6 +603,15 @@ bool ClangTableGenMain(raw_ostream &OS, const RecordKeeper &Records) {
     EmitRVVBuiltinCG(Records, OS);
     break;
   case GenRISCVSiFiveVectorBuiltinSema:
+    EmitRVVBuiltinSema(Records, OS);
+    break;
+  case GenRISCVAndesVectorBuiltins:
+    EmitRVVBuiltins(Records, OS);
+    break;
+  case GenRISCVAndesVectorBuiltinCG:
+    EmitRVVBuiltinCG(Records, OS);
+    break;
+  case GenRISCVAndesVectorBuiltinSema:
     EmitRVVBuiltinSema(Records, OS);
     break;
   case GenAttrDocs:
