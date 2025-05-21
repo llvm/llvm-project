@@ -84,6 +84,15 @@ define void @test() #0 {
 
 attributes #0 = { noinline nounwind "hlsl.shader"="compute" }
 
+; CHECK: @0 = external constant %TypedBuffer
+; CHECK: @1 = external constant %TypedBuffer.0
+; CHECK: @2 = external constant %TypedBuffer.1
+; CHECK: @3 = external constant %TypedBuffer.2
+; CHECK: @4 = external constant %ByteAddressBuffer
+; CHECK: @5 = external constant %StructuredBuffer
+; CHECK: @6 = external constant %TypedBuffer.3
+; CHECK: @7 = external constant %TypedBuffer.4
+
 ; CHECK: !dx.resources = !{[[ResList:[!][0-9]+]]}
 
 ; CHECK: [[ResList]] = !{[[SRVList:[!][0-9]+]], null, null, null}

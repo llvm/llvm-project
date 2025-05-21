@@ -68,32 +68,38 @@ unsigned Program::createGlobalString(const StringLiteral *S, const Expr *Base) {
                                        /*isExtern=*/false);
   G->block()->invokeCtor();
 
-  new (G->block()->rawData()) InlineDescriptor(Desc);
+  new (G->block()->rawData())
+      GlobalInlineDescriptor{GlobalInitState::Initialized};
   Globals.push_back(G);
 
-  // Construct the string in storage.
   const Pointer Ptr(G->block());
-  for (unsigned I = 0; I <= StringLength; ++I) {
-    Pointer Field = Ptr.atIndex(I);
-    const uint32_t CodePoint = I == StringLength ? 0 : S->getCodeUnit(I);
-    switch (CharType) {
-    case PT_Sint8: {
-      using T = PrimConv<PT_Sint8>::T;
-      Field.deref<T>() = T::from(CodePoint, BitWidth);
-      break;
-    }
-    case PT_Uint16: {
-      using T = PrimConv<PT_Uint16>::T;
-      Field.deref<T>() = T::from(CodePoint, BitWidth);
-      break;
-    }
-    case PT_Uint32: {
-      using T = PrimConv<PT_Uint32>::T;
-      Field.deref<T>() = T::from(CodePoint, BitWidth);
-      break;
-    }
-    default:
-      llvm_unreachable("unsupported character type");
+  if (CharWidth == 1) {
+    std::memcpy(&Ptr.atIndex(0).deref<char>(), S->getString().data(),
+                StringLength);
+  } else {
+    // Construct the string in storage.
+    for (unsigned I = 0; I <= StringLength; ++I) {
+      Pointer Field = Ptr.atIndex(I);
+      const uint32_t CodePoint = I == StringLength ? 0 : S->getCodeUnit(I);
+      switch (CharType) {
+      case PT_Sint8: {
+        using T = PrimConv<PT_Sint8>::T;
+        Field.deref<T>() = T::from(CodePoint, BitWidth);
+        break;
+      }
+      case PT_Uint16: {
+        using T = PrimConv<PT_Uint16>::T;
+        Field.deref<T>() = T::from(CodePoint, BitWidth);
+        break;
+      }
+      case PT_Uint32: {
+        using T = PrimConv<PT_Uint32>::T;
+        Field.deref<T>() = T::from(CodePoint, BitWidth);
+        break;
+      }
+      default:
+        llvm_unreachable("unsupported character type");
+      }
     }
   }
   Ptr.initialize();
