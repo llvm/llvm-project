@@ -1344,7 +1344,13 @@ public:
 
   SourceLocation getLocation() const { return DeclRefExprBits.Loc; }
   void setLocation(SourceLocation L) { DeclRefExprBits.Loc = L; }
-  SourceLocation getBeginLoc() const LLVM_READONLY;
+
+  SourceLocation getBeginLoc() const {
+    if (hasQualifier())
+      return getQualifierLoc().getBeginLoc();
+    return DeclRefExprBits.Loc;
+  }
+
   SourceLocation getEndLoc() const LLVM_READONLY;
 
   /// Determine whether this declaration reference was preceded by a

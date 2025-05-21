@@ -547,11 +547,6 @@ void DeclRefExpr::setDecl(ValueDecl *NewD) {
   setDependence(computeDependence(this, NewD->getASTContext()));
 }
 
-SourceLocation DeclRefExpr::getBeginLoc() const {
-  if (hasQualifier())
-    return getQualifierLoc().getBeginLoc();
-  return getNameInfo().getBeginLoc();
-}
 SourceLocation DeclRefExpr::getEndLoc() const {
   if (hasExplicitTemplateArgs())
     return getRAngleLoc();
