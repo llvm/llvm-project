@@ -197,7 +197,7 @@ struct SimplifySwitch : public OpRewritePattern<SwitchOp> {
                                 PatternRewriter &rewriter) const override {
 
     LogicalResult changed = mlir::failure();
-    llvm::SmallVector<CaseOp, 8> cases;
+    SmallVector<CaseOp, 8> cases;
     SmallVector<CaseOp, 4> cascadingCases;
     SmallVector<mlir::Attribute, 4> cascadingCaseValues;
 
@@ -228,7 +228,6 @@ struct SimplifySwitch : public OpRewritePattern<SwitchOp> {
         // If the case contains only a YieldOp, collect it for cascading merge
         cascadingCases.push_back(c);
         cascadingCaseValues.push_back(c.getValue()[0]);
-
       } else if (kind == cir::CaseOpKind::Equal && !cascadingCases.empty()) {
         // merge previously collected cascading cases
         cascadingCaseValues.push_back(c.getValue()[0]);
@@ -237,6 +236,8 @@ struct SimplifySwitch : public OpRewritePattern<SwitchOp> {
       } else if (kind != cir::CaseOpKind::Equal && cascadingCases.size() > 1) {
         // If a Default, Anyof or Range case is found and there are previous
         // cascading cases, merge all of them into the last cascading case.
+        // We don't currently fold case range statements with other case statements.
+        assert(!cir::MissingFeatures::foldRangeCase());
         CaseOp lastCascadingCase = cascadingCases.back();
         mergeCascadingInto(lastCascadingCase);
         cascadingCases.pop_back();
@@ -254,8 +255,7 @@ struct SimplifySwitch : public OpRewritePattern<SwitchOp> {
       cascadingCases.pop_back();
       flushMergedOps();
     }
-    // We don't currently fold case range statements with other case statements.
-    assert(!cir::MissingFeatures::foldRangeCase());
+
     return changed;
   }
 };
