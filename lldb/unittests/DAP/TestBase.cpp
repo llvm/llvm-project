@@ -98,20 +98,23 @@ void DAPTestBase::CreateDebugger() {
 
 void DAPTestBase::LoadCore() {
   ASSERT_TRUE(dap->debugger);
-  llvm::Expected<lldb_private::TestFile> binary_yaml = lldb_private::TestFile::fromYamlFile(k_linux_binary);
+  llvm::Expected<lldb_private::TestFile> binary_yaml =
+      lldb_private::TestFile::fromYamlFile(k_linux_binary);
   ASSERT_THAT_EXPECTED(binary_yaml, Succeeded());
-  llvm::Expected<llvm::sys::fs::TempFile> binary_file = binary_yaml->writeToTemporaryFile();
+  llvm::Expected<llvm::sys::fs::TempFile> binary_file =
+      binary_yaml->writeToTemporaryFile();
   ASSERT_THAT_EXPECTED(binary_file, Succeeded());
   binary = std::move(*binary_file);
   dap->target = dap->debugger.CreateTarget(binary->TmpName.data());
   ASSERT_TRUE(dap->target);
-  llvm::Expected<lldb_private::TestFile> core_yaml = lldb_private::TestFile::fromYamlFile(k_linux_core);
+  llvm::Expected<lldb_private::TestFile> core_yaml =
+      lldb_private::TestFile::fromYamlFile(k_linux_core);
   ASSERT_THAT_EXPECTED(core_yaml, Succeeded());
-  llvm::Expected<llvm::sys::fs::TempFile> core_file = core_yaml->writeToTemporaryFile();
+  llvm::Expected<llvm::sys::fs::TempFile> core_file =
+      core_yaml->writeToTemporaryFile();
   ASSERT_THAT_EXPECTED(core_file, Succeeded());
   this->core = std::move(*core_file);
-  SBProcess process =
-      dap->target.LoadCore(this->core->TmpName.data());
+  SBProcess process = dap->target.LoadCore(this->core->TmpName.data());
   ASSERT_TRUE(process);
 }
 
