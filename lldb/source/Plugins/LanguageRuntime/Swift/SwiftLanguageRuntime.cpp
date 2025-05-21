@@ -926,9 +926,10 @@ llvm::Error SwiftLanguageRuntime::RunObjectDescriptionExpr(
   Log *log(GetLog(LLDBLog::DataFormatters | LLDBLog::Expressions));
   ValueObjectSP result_sp;
   EvaluateExpressionOptions eval_options;
+  eval_options.SetUnwindOnError(true);
   eval_options.SetLanguage(lldb::eLanguageTypeSwift);
   eval_options.SetSuppressPersistentResult(true);
-  eval_options.SetGenerateDebugInfo(true);
+  eval_options.SetIgnoreBreakpoints(true);
   eval_options.SetTimeout(GetProcess().GetUtilityExpressionTimeout());
 
   StackFrameSP frame_sp = object.GetFrameSP();
