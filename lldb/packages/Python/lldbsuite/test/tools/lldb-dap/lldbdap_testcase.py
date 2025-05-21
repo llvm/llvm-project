@@ -68,7 +68,7 @@ class DAPTestCaseBase(TestBase):
         for breakpoint in breakpoints:
             breakpoint_ids.append("%i" % (breakpoint["id"]))
         if wait_for_resolve:
-            self.wait_for_breakpoints_to_resolve(breakpoint_ids, timeout=10)
+            self.wait_for_breakpoints_to_resolve(breakpoint_ids)
         return breakpoint_ids
 
     def set_source_breakpoints_assembly(self, source_reference, lines, data=None):
@@ -102,7 +102,7 @@ class DAPTestCaseBase(TestBase):
         for breakpoint in breakpoints:
             breakpoint_ids.append("%i" % (breakpoint["id"]))
         if wait_for_resolve:
-            self.wait_for_breakpoints_to_resolve(breakpoint_ids, timeout=10)
+            self.wait_for_breakpoints_to_resolve(breakpoint_ids)
         return breakpoint_ids
 
     def wait_for_breakpoints_to_resolve(
