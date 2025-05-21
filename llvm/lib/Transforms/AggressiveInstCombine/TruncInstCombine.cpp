@@ -110,7 +110,7 @@ bool TruncInstCombine::buildTruncExpressionGraph() {
       Worklist.pop_back();
       Stack.pop_back();
       // Insert I to the Info map.
-      InstInfoMap.insert(std::make_pair(I, Info()));
+      InstInfoMap.try_emplace(I);
       continue;
     }
 
