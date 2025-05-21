@@ -5497,6 +5497,7 @@ void DAGTypeLegalizer::ExpandIntRes_CLMUL(SDNode *N, SDValue &Lo,
   // Therefore we can compute the 2 hi/lo cross products
   // and the the overflow of the low product
   // and xor them together to compute HI
+  // TODO: if the target supports a widening CLMUL or a CLMULH we should probably use that
   SDValue BitRevLL = DAG.getNode(ISD::BITREVERSE, DL, HalfVT, LL);
   SDValue BitRevRL = DAG.getNode(ISD::BITREVERSE, DL, HalfVT, RL);
   SDValue BitRevLoHi = DAG.getNode(ISD::CLMUL, DL, HalfVT, BitRevLL, BitRevRL);

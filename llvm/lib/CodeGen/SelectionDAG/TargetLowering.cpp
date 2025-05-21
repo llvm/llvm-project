@@ -8301,14 +8301,15 @@ SDValue TargetLowering::expandCLMUL(SDNode *Node,
   SDValue Res = DAG.getConstant(0, DL, VT);
   SDValue Zero = DAG.getConstant(0, DL, VT);
   SDValue One = DAG.getConstant(1, DL, VT);
+  SDValue OneForShift = DAG.getShiftAmountConstant(1, VT, DL);
   for (unsigned I = 0; I < NumBitsPerElt; ++I) {
     SDValue LowBit = DAG.getNode(ISD::AND, DL, VT, V1, One);
     SDValue LowBool = DAG.getSetCC(DL, SetCCType, LowBit, Zero, ISD::SETNE);
     SDValue Pred = DAG.getNode(ISD::SELECT, DL, VT, LowBool, V2, Zero);
     Res = DAG.getNode(ISD::XOR, DL, VT, Res, Pred);
-    if (I != NumBitsPerElt-1) {
-      V1 = DAG.getNode(ISD::SRL, DL, VT, V1, One);
-      V2 = DAG.getNode(ISD::SHL, DL, VT, V2, One);
+    if (I != NumBitsPerElt - 1) {
+      V1 = DAG.getNode(ISD::SRL, DL, VT, V1, OneForShift);
+      V2 = DAG.getNode(ISD::SHL, DL, VT, V2, OneForShift);
     }
   }
   return Res;

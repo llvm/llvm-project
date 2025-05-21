@@ -7231,11 +7231,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::clmul: {
     SDValue Op1 = getValue(I.getArgOperand(0));
     SDValue Op2 = getValue(I.getArgOperand(1));
-    EVT VT =  Op1.getValueType();
-    assert(VT.isInteger() && "This operator does not apply to FP types!");
-    assert(Op1.getValueType() == Op2.getValueType() &&
-           Op1.getValueType() == VT && "Binary operator types must match!");
-    setValue(&I, DAG.getNode(ISD::CLMUL, sdl, VT, Op1, Op2));
+    setValue(&I, DAG.getNode(ISD::CLMUL, sdl, Op1.getValueType(), Op1, Op2));
     return;
   }
   case Intrinsic::sadd_sat: {
