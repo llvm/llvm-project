@@ -1,7 +1,7 @@
-// RUN: %clang -gkey-instructions -x c++ -std=c++17 %s -gmlt -S -emit-llvm -o - \
+// RUN: %clang_cc1 -gkey-instructions -x c++ -std=c++17 %s -debug-info-kind=line-tables-only -emit-llvm -o - \
 // RUN: | FileCheck %s --implicit-check-not atomGroup --implicit-check-not atomRank --check-prefixes=CHECK,CHECK-CXX
 
-// RUN: %clang -gkey-instructions -x c %s -gmlt -S -emit-llvm -o -  \
+// RUN: %clang_cc1 -gkey-instructions -x c %s -debug-info-kind=line-tables-only -emit-llvm -o - \
 // RUN: | FileCheck %s --implicit-check-not atomGroup --implicit-check-not atomRank
 
 int g;
@@ -31,7 +31,7 @@ void a(int A) {
 // CHECK-CXX: br i1 %tobool4, label %if.then5, label %if.end6{{.*}}, !dbg [[G5R1:!.*]]
     if (int B = A; B)
         ;
-#endif 
+#endif
 }
 
 // CHECK: [[G1R2]] = !DILocation({{.*}}, atomGroup: 1, atomRank: 2)
