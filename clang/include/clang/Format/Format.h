@@ -62,86 +62,38 @@ struct FormatStyle {
   /// \version 3.3
   int AccessModifierOffset;
 
-  /// Different styles for breaking the parenthesis after ``if/else if``.
+  /// Force break after the left parenthesis of an if control statement
+  /// when the expression exceeds the column limit.
+  /// \code
+  ///   true:                             false:
+  ///   if constexpr (          vs.       if constexpr (a ||
+  ///                 a ||                              b)
+  ///                 b)
+  /// \endcode
   /// \version 21
-  enum BreakAfterOpenBracketIfStyle : int8_t {
-    /// Always break the opening parenthesis of an if statement, e.g.:
-    /// \code
-    ///   if constexpr (
-    ///                 a)
-    /// \endcode
-    BAOBIS_Always,
-    /// Force break after the left parenthesis of an if statement only
-    /// when the expression exceeds the column limit, e.g..:
-    /// \code
-    ///   if constexpr (
-    ///                 a ||
-    ///                 b)
-    /// \endcode
-    BAOBIS_MultiLine,
-    /// Do not force a break after the control statement.
-    /// \code
-    ///   if constexpr (a ||
-    ///                 b
-    /// \endcode
-    BAOBIS_No,
-  };
+  bool BreakAfterOpenBracketIf;
 
-  BreakAfterOpenBracketIfStyle BreakAfterOpenBracketIf;
-
-  /// Different styles for breaking the parenthesis after loops ``(for/while)``.
+  /// Force break after the left parenthesis of a loop control statement
+  /// when the expression exceeds the column limit.
+  /// \code
+  ///   true:                             false:
+  ///   while (                  vs.      while (a &&
+  ///          a &&                              b) {
+  ///          b) {
+  /// \endcode
   /// \version 21
-  enum BreakAfterOpenBracketLoopStyle : int8_t {
-    /// Always break the opening parenthesis of a loop statement, e.g.:
-    /// \code
-    ///   while (
-    ///          a) {
-    /// \endcode
-    BAOBLS_Always,
-    /// Force break after the left parenthesis of a loop only
-    /// when the expression exceeds the column limit, e.g..:
-    /// \code
-    ///   while (
-    ///          a &&
-    ///          b) {
-    /// \endcode
-    BAOBLS_MultiLine,
-    /// Do not force a break after the control statement.
-    /// \code
-    ///   while (a &&
-    ///          b) {
-    /// \endcode
-    BAOBLS_No,
-  };
+  bool BreakAfterOpenBracketLoop;
 
-  BreakAfterOpenBracketLoopStyle BreakAfterOpenBracketLoop;
-
-  /// Different styles for breaking the parenthesis after ``switch``.
+  /// Force break after the left parenthesis of a switch control statement
+  /// when the expression exceeds the column limit.
+  /// \code
+  ///   true:                             false:
+  ///   switch (                 vs.      switch (a &&
+  ///           a &&                              b) {
+  ///           b) {
+  /// \endcode
   /// \version 21
-  enum BreakAfterOpenBracketSwitchStyle : int8_t {
-    /// Always break the opening parenthesis of a switch statement, e.g.:
-    /// \code
-    ///   switch (
-    ///           a) {
-    /// \endcode
-    BAOBSS_Always,
-    /// Force break after the left parenthesis of a switch only
-    /// when the expression exceeds the column limit, e.g..:
-    /// \code
-    ///   switch (
-    ///           a &&
-    ///           b) {
-    /// \endcode
-    BAOBSS_MultiLine,
-    /// Do not force a break after the control statement.
-    /// \code
-    ///   switch (a &&
-    ///           b) {
-    /// \endcode
-    BAOBSS_No,
-  };
-
-  BreakAfterOpenBracketSwitchStyle BreakAfterOpenBracketSwitch;
+  bool BreakAfterOpenBracketSwitch;
 
   /// Different styles for aligning after open brackets.
   enum BracketAlignmentStyle : int8_t {
@@ -2296,87 +2248,38 @@ struct FormatStyle {
   /// \version 3.7
   BraceBreakingStyle BreakBeforeBraces;
 
-  /// Different styles for breaking before ``if/else if`` closing parenthesis.
+  /// Force break before the right parenthesis of an if control statement
+  /// when the expression exceeds the column limit.
+  /// \code
+  ///   true:                             false:
+  ///   if constexpr (a ||      vs.       if constexpr (a ||
+  ///                 b                                 b)
+  ///                 )
+  /// \endcode
   /// \version 21
-  enum BreakBeforeCloseBracketIfStyle : int8_t {
-    /// Always break the closing parenthesis of an if statement, e.g.:
-    /// \code
-    ///   if constexpr (a
-    ///                )
-    /// \endcode
-    BBCBIS_Always,
-    /// Force break before the closing parenthesis of an if statement only
-    /// when the expression exceeds the column limit, e.g..:
-    /// \code
-    ///   if constexpr (a ||
-    ///                 b
-    ///                )
-    /// \endcode
-    BBCBIS_MultiLine,
-    /// Do not force a break before closing the if control statement.
-    /// \code
-    ///   if constexpr (a ||
-    ///                 b)
-    /// \endcode
-    BBCBIS_No,
-  };
+  bool BreakBeforeCloseBracketIf;
 
-  BreakBeforeCloseBracketIfStyle BreakBeforeCloseBracketIf;
-
-  /// Different styles for breaking before loop ``(for/while)`` closing
-  /// parenthesis.
+  /// Force break before the right parenthesis of a loop control statement
+  /// when the expression exceeds the column limit.
+  /// \code
+  ///   true:                             false:
+  ///   while (a &&              vs.      while (a &&
+  ///          b                                 b) {
+  ///          ) {
+  /// \endcode
   /// \version 21
-  enum BreakBeforeCloseBracketLoopStyle : int8_t {
-    /// Always break the closing parenthesis of a loop statement, e.g.:
-    /// \code
-    ///   while (a
-    ///         ) {
-    /// \endcode
-    BBCBLS_Always,
-    /// Force break before the closing parenthesis of a loop only
-    /// when the expression exceeds the column limit, e.g..:
-    /// \code
-    ///   while (a &&
-    ///          b
-    ///         ) {
-    /// \endcode
-    BBCBLS_MultiLine,
-    /// Do not force a break before closing the loop control statement.
-    /// \code
-    ///   while (a &&
-    ///          b) {
-    /// \endcode
-    BBCBLS_No,
-  };
+  bool BreakBeforeCloseBracketLoop;
 
-  BreakBeforeCloseBracketLoopStyle BreakBeforeCloseBracketLoop;
-
-  /// Different styles for breaking before ``switch`` closing parenthesis.
+  /// Force break before the right parenthesis of a switch control statement
+  /// when the expression exceeds the column limit.
+  /// \code
+  ///   true:                             false:
+  ///   switch (a &&             vs.      switch (a &&
+  ///           b                                 b) {
+  ///           ) {
+  /// \endcode
   /// \version 21
-  enum BreakBeforeCloseBracketSwitchStyle : int8_t {
-    /// Always break before the closing parenthesis of a switch statement, e.g.:
-    /// \code
-    ///   switch (a
-    ///          )  {
-    /// \endcode
-    BBCBSS_Always,
-    /// Force break before the closing parenthesis of a switch only
-    /// when the expression exceeds the column limit, e.g..:
-    /// \code
-    ///   switch (a &&
-    ///           b
-    ///           ) {
-    /// \endcode
-    BBCBSS_MultiLine,
-    /// Do not force a break before closing the switch control statement.
-    /// \code
-    ///   switch (a &&
-    ///           b) {
-    /// \endcode
-    BBCBSS_No,
-  };
-
-  BreakBeforeCloseBracketSwitchStyle BreakBeforeCloseBracketSwitch;
+  bool BreakBeforeCloseBracketSwitch;
 
   /// Different ways to break before concept declarations.
   enum BreakBeforeConceptDeclarationsStyle : int8_t {
