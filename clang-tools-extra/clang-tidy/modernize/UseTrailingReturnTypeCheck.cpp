@@ -113,7 +113,7 @@ private:
 };
 } // namespace
 
-constexpr llvm::StringLiteral MessageFunction =
+constexpr llvm::StringLiteral ErrorMessageOnFunction =
     "use a trailing return type for this function";
 
 static SourceLocation expandIfMacroId(SourceLocation Loc,
@@ -422,7 +422,7 @@ void UseTrailingReturnTypeCheck::check(const MatchFinder::MatchResult &Result) {
   if (F->getDeclaredReturnType()->isFunctionPointerType() ||
       F->getDeclaredReturnType()->isMemberFunctionPointerType() ||
       F->getDeclaredReturnType()->isMemberPointerType()) {
-    diag(F->getLocation(), MessageFunction);
+    diag(F->getLocation(), ErrorMessageOnFunction);
     return;
   }
 
@@ -439,14 +439,14 @@ void UseTrailingReturnTypeCheck::check(const MatchFinder::MatchResult &Result) {
     // FIXME: This may happen if we have __attribute__((...)) on the function.
     // We abort for now. Remove this when the function type location gets
     // available in clang.
-    diag(F->getLocation(), MessageFunction);
+    diag(F->getLocation(), ErrorMessageOnFunction);
     return;
   }
 
   SourceLocation InsertionLoc =
       findTrailingReturnTypeSourceLocation(*F, FTL, Ctx, SM, LangOpts);
   if (InsertionLoc.isInvalid()) {
-    diag(F->getLocation(), MessageFunction);
+    diag(F->getLocation(), ErrorMessageOnFunction);
     return;
   }
 
@@ -456,7 +456,7 @@ void UseTrailingReturnTypeCheck::check(const MatchFinder::MatchResult &Result) {
   SourceRange ReturnTypeCVRange = findReturnTypeAndCVSourceRange(
       *F, FTL.getReturnLoc(), Ctx, SM, LangOpts, PP);
   if (ReturnTypeCVRange.isInvalid()) {
-    diag(F->getLocation(), MessageFunction);
+    diag(F->getLocation(), ErrorMessageOnFunction);
     return;
   }
 
@@ -471,7 +471,7 @@ void UseTrailingReturnTypeCheck::check(const MatchFinder::MatchResult &Result) {
   UnqualNameVisitor UNV{*F};
   UNV.TraverseTypeLoc(FTL.getReturnLoc());
   if (UNV.Collision) {
-    diag(F->getLocation(), MessageFunction);
+    diag(F->getLocation(), ErrorMessageOnFunction);
     return;
   }
 
@@ -490,7 +490,7 @@ void UseTrailingReturnTypeCheck::check(const MatchFinder::MatchResult &Result) {
   keepSpecifiers(ReturnType, Auto, ReturnTypeCVRange, *F, Fr, Ctx, SM, LangOpts,
                  PP);
 
-  diag(F->getLocation(), MessageFunction)
+  diag(F->getLocation(), ErrorMessageOnFunction)
       << FixItHint::CreateReplacement(ReturnTypeCVRange, Auto)
       << FixItHint::CreateInsertion(InsertionLoc, " -> " + ReturnType);
 }
