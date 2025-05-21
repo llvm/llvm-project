@@ -13,6 +13,7 @@
 #include <__algorithm/for_each_segment.h>
 #include <__config>
 #include <__iterator/segmented_iterator.h>
+#include <__ranges/movable_box.h> // Re-included as a temporary fix for lldb test failure (https://github.com/llvm/llvm-project/issues/137046)
 #include <__type_traits/enable_if.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
