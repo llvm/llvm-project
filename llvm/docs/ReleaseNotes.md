@@ -197,7 +197,9 @@ Changes to the RISC-V Backend
 * Adds assembler support for the Andes `XAndesvdot` (Andes Vector Dot Product extension).
 * Adds assembler support for the standard `Q` (Quad-Precision Floating Point) 
   extension.
-  
+* Adds experimental assembler support for the SiFive Xsfmm* Attached Matrix
+  Extensions.
+
 Changes to the WebAssembly Backend
 ----------------------------------
 
