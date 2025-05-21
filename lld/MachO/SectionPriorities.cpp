@@ -21,6 +21,7 @@
 #include "lld/Common/Args.h"
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/ErrorHandler.h"
+#include "lld/Common/Utils.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/Support/Path.h"
@@ -245,18 +246,12 @@ DenseMap<const InputSection *, int> CallGraphSort::run() {
   return orderMap;
 }
 
-StringRef macho::PriorityBuilder::getRootSymbol(StringRef Name) {
-  auto [P0, S0] = Name.rsplit(".llvm.");
-  auto [P1, S1] = P0.rsplit(".__uniq.");
-  return P1;
-}
-
 std::optional<int>
 macho::PriorityBuilder::getSymbolPriority(const Defined *sym) {
   if (sym->isAbsolute())
     return std::nullopt;
 
-  auto it = priorities.find(getRootSymbol(sym->getName()));
+  auto it = priorities.find(utils::getRootSymbol(sym->getName()));
   if (it == priorities.end())
     return std::nullopt;
   const SymbolPriorityEntry &entry = it->second;
@@ -336,7 +331,7 @@ void macho::PriorityBuilder::parseOrderFile(StringRef path) {
         break;
       }
     }
-    symbol = getRootSymbol(line.trim());
+    symbol = utils::getRootSymbol(line.trim());
 
     if (!symbol.empty()) {
       SymbolPriorityEntry &entry = priorities[symbol];

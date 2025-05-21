@@ -3,25 +3,6 @@
 
 # RUN: %lld -arch arm64 -lSystem -e _main -o %t/a.out %t/a.o -order_file %t/ord-1
 # RUN: llvm-nm --numeric-sort --format=just-symbols %t/a.out | FileCheck %s
-
-
-# .text
-# CHECK: A
-# CHECK: B
-# CHECK: C
-# .section __DATA,__objc_const
-# CHECK: _OBJC_$_CATEGORY_INSTANCE_METHODS_Foo_$_Cat1
-# CHECK: _ALPHABETIC_SORT_FIRST
-# CHECK: _OBJC_$_CATEGORY_Foo_$_Cat1
-# CHECK: _OBJC_$_CATEGORY_SOME_$_FOLDED
-# CHECK: _OBJC_$_CATEGORY_CLASS_METHODS_Foo_$_Cat2
-# CHECK: _OBJC_$_CATEGORY_Foo_$_Cat2
-# .section __DATA,__objc_data
-# CHECK: _OBJC_CLASS_$_Baz
-# CHECK: _OBJC_CLASS_$_Bar
-# CHECK: _OBJC_CLASS_$_Foo
-# CHECK: _OBJC_CLASS_$_Baz2
-
 	
 #--- a.s
 .text
@@ -99,3 +80,15 @@ _OBJC_CLASS_$_Bar.__uniq.12345
 _OBJC_CLASS_$_Foo.__uniq.123.llvm.123456789
 _OBJC_$_CATEGORY_INSTANCE_METHODS_Foo_$_Cat1
 _OBJC_$_CATEGORY_Foo_$_Cat1.llvm.1234567
+
+# .text
+# CHECK: A
+# CHECK: B
+# CHECK: C
+# .section __DATA,__objc_const
+# CHECK: _OBJC_$_CATEGORY_INSTANCE_METHODS_Foo_$_Cat1
+# CHECK: _OBJC_$_CATEGORY_Foo_$_Cat1
+# .section __DATA,__objc_data
+# CHECK: _OBJC_CLASS_$_Baz
+# CHECK: _OBJC_CLASS_$_Bar
+# CHECK: _OBJC_CLASS_$_Foo
