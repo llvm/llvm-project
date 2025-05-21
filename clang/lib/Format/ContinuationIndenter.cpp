@@ -358,10 +358,13 @@ bool ContinuationIndenter::canBreak(const LineState &State) {
 
   // Allow breaking before the right parens with block indentation if there was
   // a break after the left parens, which is tracked by BreakBeforeClosingParen.
-  if (Style.AlignAfterOpenBracket == FormatStyle::BAS_BlockIndent &&
-      Current.is(tok::r_paren)) {
+  bool might_break_before =
+      Style.BreakBeforeCloseBracketIf || Style.BreakBeforeCloseBracketLoop ||
+      Style.BreakBeforeCloseBracketSwitch ||
+      Style.AlignAfterOpenBracket == FormatStyle::BAS_BlockIndent;
+
+  if (might_break_before && Current.is(tok::r_paren))
     return CurrentState.BreakBeforeClosingParen;
-  }
 
   if (Style.BreakBeforeTemplateCloser && Current.is(TT_TemplateCloser))
     return CurrentState.BreakBeforeClosingAngle;
@@ -830,21 +833,12 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
     }
     if (!Tok.Previous)
       return true;
-    if (Tok.Previous->isIf()) {
-      /* For backward compatibility, use AlignAfterOpenBracket
-       * in case AlignAfterControlStatement is not initialized */
-      return Style.BreakAfterOpenBracketIf == FormatStyle::BAOBIS_MultiLine ||
-             Style.BreakAfterOpenBracketIf == FormatStyle::BAOBIS_Always;
-    }
-    if (IsLoopConditional(*Tok.Previous)) {
-      return Style.BreakAfterOpenBracketLoop == FormatStyle::BAOBLS_MultiLine ||
-             Style.BreakAfterOpenBracketLoop == FormatStyle::BAOBLS_Always;
-    }
-    if (Tok.Previous->is(tok::kw_switch)) {
-      return Style.BreakAfterOpenBracketSwitch ==
-                 FormatStyle::BAOBSS_MultiLine ||
-             Style.BreakAfterOpenBracketSwitch == FormatStyle::BAOBSS_Always;
-    }
+    if (Tok.Previous->isIf())
+      return Style.BreakAfterOpenBracketIf;
+    if (IsLoopConditional(*Tok.Previous))
+      return Style.BreakAfterOpenBracketLoop;
+    if (Tok.Previous->is(tok::kw_switch))
+      return Style.BreakAfterOpenBracketSwitch;
     if (Style.AlignAfterOpenBracket == FormatStyle::BAS_AlwaysBreak ||
         Style.AlignAfterOpenBracket == FormatStyle::BAS_BlockIndent) {
       return !Tok.Previous->is(TT_CastRParen) &&
@@ -1282,23 +1276,18 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
       };
 
       if (Previous->isIf()) {
-        CurrentState.BreakBeforeClosingParen =
-            Style.BreakBeforeCloseBracketIf == FormatStyle::BBCBIS_MultiLine ||
-            Style.BreakBeforeCloseBracketIf == FormatStyle::BBCBIS_Always;
+        CurrentState.BreakBeforeClosingParen = Style.BreakBeforeCloseBracketIf;
       } else if (IsLoopConditional(*Previous)) {
         CurrentState.BreakBeforeClosingParen =
-            Style.BreakBeforeCloseBracketLoop ==
-                FormatStyle::BBCBLS_MultiLine ||
-            Style.BreakBeforeCloseBracketLoop == FormatStyle::BBCBLS_Always;
+            Style.BreakBeforeCloseBracketLoop;
       } else if (Previous->is(tok::kw_switch)) {
         CurrentState.BreakBeforeClosingParen =
-            Style.BreakBeforeCloseBracketSwitch ==
-                FormatStyle::BBCBSS_MultiLine ||
-            Style.BreakBeforeCloseBracketSwitch == FormatStyle::BBCBSS_Always;
+            Style.BreakBeforeCloseBracketSwitch;
+      } else {
+        CurrentState.BreakBeforeClosingParen =
+            Style.AlignAfterOpenBracket == FormatStyle::BAS_BlockIndent;
       }
     }
-    CurrentState.BreakBeforeClosingParen =
-        Style.AlignAfterOpenBracket == FormatStyle::BAS_BlockIndent;
   }
 
   if (PreviousNonComment && PreviousNonComment->is(TT_TemplateOpener))

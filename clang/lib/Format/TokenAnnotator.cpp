@@ -6210,17 +6210,10 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
                                    (Right.isBlockIndentedInitRBrace(Style)));
   }
 
-  // We only break before r_paren if we're in a block indented context.
+  // We can break before r_paren if we're in a block indented context or
+  // a control statement with an explicit style option.
   if (Right.is(tok::r_paren)) {
-    bool might_break =
-        Style.BreakBeforeCloseBracketIf == FormatStyle::BBCBIS_Always ||
-        Style.BreakBeforeCloseBracketIf == FormatStyle::BBCBIS_MultiLine ||
-        Style.BreakBeforeCloseBracketLoop == FormatStyle::BBCBLS_Always ||
-        Style.BreakBeforeCloseBracketLoop == FormatStyle::BBCBLS_MultiLine ||
-        Style.BreakBeforeCloseBracketSwitch == FormatStyle::BBCBSS_Always ||
-        Style.BreakBeforeCloseBracketSwitch == FormatStyle::BBCBSS_MultiLine ||
-        Style.AlignAfterOpenBracket == FormatStyle::BAS_BlockIndent;
-    if (!might_break || !Right.MatchingParen)
+    if (!Right.MatchingParen)
       return false;
     auto Next = Right.Next;
     if (Next && Next->is(tok::r_paren))
@@ -6229,28 +6222,18 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
       return false;
     const FormatToken *Previous = Right.MatchingParen->Previous;
     if (!Previous)
-      return true;
-    if (Previous->isIf()) {
-      return Style.BreakBeforeCloseBracketIf == FormatStyle::BBCBIS_Always ||
-             Style.BreakBeforeCloseBracketIf == FormatStyle::BBCBIS_MultiLine;
-    }
+      return false;
+    if (Previous->isIf())
+      return Style.BreakBeforeCloseBracketIf;
     auto IsLoopConditional = [&](const FormatToken &Tok) {
       return Tok.isOneOf(tok::kw_for, tok::kw_while) ||
              (Style.isJavaScript() && Tok.is(Keywords.kw_await) &&
               Tok.Previous && Tok.Previous->is(tok::kw_for));
     };
-
-    if (IsLoopConditional(*Previous)) {
-      return Style.BreakBeforeCloseBracketLoop == FormatStyle::BBCBLS_Always ||
-             Style.BreakBeforeCloseBracketLoop == FormatStyle::BBCBLS_MultiLine;
-    }
-
-    if (Previous->is(tok::kw_switch)) {
-      return Style.BreakBeforeCloseBracketSwitch ==
-                 FormatStyle::BBCBSS_Always ||
-             Style.BreakBeforeCloseBracketSwitch ==
-                 FormatStyle::BBCBSS_MultiLine;
-    }
+    if (IsLoopConditional(*Previous))
+      return Style.BreakBeforeCloseBracketLoop;
+    if (Previous->is(tok::kw_switch))
+      return Style.BreakBeforeCloseBracketSwitch;
     return Style.AlignAfterOpenBracket == FormatStyle::BAS_BlockIndent;
   }
 

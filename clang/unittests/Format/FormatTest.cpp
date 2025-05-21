@@ -9698,9 +9698,9 @@ TEST_F(FormatTest, AlignAfterConditionalStatements) {
   FormatStyle Style = getLLVMStyle();
 
   Style.AlignAfterOpenBracket = FormatStyle::BAS_DontAlign;
-  Style.BreakAfterOpenBracketIf = FormatStyle::BAOBIS_MultiLine;
-  Style.BreakAfterOpenBracketLoop = FormatStyle::BAOBLS_MultiLine;
-  Style.BreakAfterOpenBracketSwitch = FormatStyle::BAOBSS_MultiLine;
+  Style.BreakAfterOpenBracketIf = true;
+  Style.BreakAfterOpenBracketLoop = true;
+  Style.BreakAfterOpenBracketSwitch = true;
 
   verifyFormat("void foo() {\n"
                "  if constexpr (\n"
@@ -9751,9 +9751,9 @@ TEST_F(FormatTest, AlignAfterConditionalStatements) {
       Style);
 
   Style.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
-  Style.BreakAfterOpenBracketIf = FormatStyle::BAOBIS_MultiLine;
-  Style.BreakAfterOpenBracketLoop = FormatStyle::BAOBLS_MultiLine;
-  Style.BreakAfterOpenBracketSwitch = FormatStyle::BAOBSS_MultiLine;
+  Style.BreakAfterOpenBracketIf = true;
+  Style.BreakAfterOpenBracketLoop = true;
+  Style.BreakAfterOpenBracketSwitch = true;
 
   verifyFormat("void foo() {\n"
                "  if constexpr (\n"
@@ -9802,9 +9802,9 @@ TEST_F(FormatTest, AlignAfterConditionalStatements) {
                Style);
 
   Style.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
-  Style.BreakAfterOpenBracketIf = FormatStyle::BAOBIS_MultiLine;
-  Style.BreakAfterOpenBracketLoop = FormatStyle::BAOBLS_MultiLine;
-  Style.BreakAfterOpenBracketSwitch = FormatStyle::BAOBSS_MultiLine;
+  Style.BreakAfterOpenBracketIf = true;
+  Style.BreakAfterOpenBracketLoop = true;
+  Style.BreakAfterOpenBracketSwitch = true;
 
   verifyFormat("void foo() {\n"
                "  if constexpr (\n"
@@ -9853,9 +9853,9 @@ TEST_F(FormatTest, AlignAfterConditionalStatements) {
                Style);
 
   Style.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
-  Style.BreakAfterOpenBracketIf = FormatStyle::BAOBIS_No;
-  Style.BreakAfterOpenBracketLoop = FormatStyle::BAOBLS_No;
-  Style.BreakAfterOpenBracketSwitch = FormatStyle::BAOBSS_No;
+  Style.BreakAfterOpenBracketIf = false;
+  Style.BreakAfterOpenBracketLoop = false;
+  Style.BreakAfterOpenBracketSwitch = false;
 
   verifyFormat("void foo() {\n"
                "  if constexpr ((aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa |\n"
@@ -9902,12 +9902,12 @@ TEST_F(FormatTest, AlignAfterConditionalStatements) {
       Style);
 
   Style.AlignAfterOpenBracket = FormatStyle::BAS_BlockIndent;
-  Style.BreakAfterOpenBracketIf = FormatStyle::BAOBIS_MultiLine;
-  Style.BreakAfterOpenBracketLoop = FormatStyle::BAOBLS_MultiLine;
-  Style.BreakAfterOpenBracketSwitch = FormatStyle::BAOBSS_MultiLine;
-  Style.BreakBeforeCloseBracketIf = FormatStyle::BBCBIS_MultiLine;
-  Style.BreakBeforeCloseBracketLoop = FormatStyle::BBCBLS_MultiLine;
-  Style.BreakBeforeCloseBracketSwitch = FormatStyle::BBCBSS_MultiLine;
+  Style.BreakAfterOpenBracketIf = true;
+  Style.BreakAfterOpenBracketLoop = true;
+  Style.BreakAfterOpenBracketSwitch = true;
+  Style.BreakBeforeCloseBracketIf = true;
+  Style.BreakBeforeCloseBracketLoop = true;
+  Style.BreakBeforeCloseBracketSwitch = true;
 
   verifyFormat(
       "void foo() {\n"
@@ -9959,12 +9959,12 @@ TEST_F(FormatTest, AlignAfterConditionalStatements) {
                Style);
 
   Style.AlignAfterOpenBracket = FormatStyle::BAS_BlockIndent;
-  Style.BreakAfterOpenBracketIf = FormatStyle::BAOBIS_No;
-  Style.BreakAfterOpenBracketLoop = FormatStyle::BAOBLS_No;
-  Style.BreakAfterOpenBracketSwitch = FormatStyle::BAOBSS_No;
-  Style.BreakBeforeCloseBracketIf = FormatStyle::BBCBIS_No;
-  Style.BreakBeforeCloseBracketLoop = FormatStyle::BBCBLS_No;
-  Style.BreakBeforeCloseBracketSwitch = FormatStyle::BBCBSS_No;
+  Style.BreakAfterOpenBracketIf = false;
+  Style.BreakAfterOpenBracketLoop = false;
+  Style.BreakAfterOpenBracketSwitch = false;
+  Style.BreakBeforeCloseBracketIf = false;
+  Style.BreakBeforeCloseBracketLoop = false;
+  Style.BreakBeforeCloseBracketSwitch = false;
 
   verifyFormat("void foo() {\n"
                "  if constexpr ((aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa |\n"

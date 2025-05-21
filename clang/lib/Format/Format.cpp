@@ -232,67 +232,6 @@ struct ScalarEnumerationTraits<
 };
 
 template <>
-struct ScalarEnumerationTraits<FormatStyle::BreakAfterOpenBracketIfStyle> {
-  static void enumeration(IO &IO,
-                          FormatStyle::BreakAfterOpenBracketIfStyle &Value) {
-    IO.enumCase(Value, "Always", FormatStyle::BAOBIS_Always);
-    IO.enumCase(Value, "MultiLine", FormatStyle::BAOBIS_MultiLine);
-    IO.enumCase(Value, "No", FormatStyle::BAOBIS_No);
-  }
-};
-
-template <>
-struct ScalarEnumerationTraits<FormatStyle::BreakAfterOpenBracketLoopStyle> {
-  static void enumeration(IO &IO,
-                          FormatStyle::BreakAfterOpenBracketLoopStyle &Value) {
-    IO.enumCase(Value, "Always", FormatStyle::BAOBLS_Always);
-    IO.enumCase(Value, "MultiLine", FormatStyle::BAOBLS_MultiLine);
-    IO.enumCase(Value, "No", FormatStyle::BAOBLS_No);
-  }
-};
-
-template <>
-struct ScalarEnumerationTraits<FormatStyle::BreakAfterOpenBracketSwitchStyle> {
-  static void
-  enumeration(IO &IO, FormatStyle::BreakAfterOpenBracketSwitchStyle &Value) {
-    IO.enumCase(Value, "Always", FormatStyle::BAOBSS_Always);
-    IO.enumCase(Value, "MultiLine", FormatStyle::BAOBSS_MultiLine);
-    IO.enumCase(Value, "No", FormatStyle::BAOBSS_No);
-  }
-};
-
-template <>
-struct ScalarEnumerationTraits<FormatStyle::BreakBeforeCloseBracketIfStyle> {
-  static void enumeration(IO &IO,
-                          FormatStyle::BreakBeforeCloseBracketIfStyle &Value) {
-    IO.enumCase(Value, "Always", FormatStyle::BBCBIS_Always);
-    IO.enumCase(Value, "MultiLine", FormatStyle::BBCBIS_MultiLine);
-    IO.enumCase(Value, "No", FormatStyle::BBCBIS_No);
-  }
-};
-
-template <>
-struct ScalarEnumerationTraits<FormatStyle::BreakBeforeCloseBracketLoopStyle> {
-  static void
-  enumeration(IO &IO, FormatStyle::BreakBeforeCloseBracketLoopStyle &Value) {
-    IO.enumCase(Value, "Always", FormatStyle::BBCBLS_Always);
-    IO.enumCase(Value, "MultiLine", FormatStyle::BBCBLS_MultiLine);
-    IO.enumCase(Value, "No", FormatStyle::BBCBLS_No);
-  }
-};
-
-template <>
-struct ScalarEnumerationTraits<
-    FormatStyle::BreakBeforeCloseBracketSwitchStyle> {
-  static void
-  enumeration(IO &IO, FormatStyle::BreakBeforeCloseBracketSwitchStyle &Value) {
-    IO.enumCase(Value, "Always", FormatStyle::BBCBSS_Always);
-    IO.enumCase(Value, "MultiLine", FormatStyle::BBCBSS_MultiLine);
-    IO.enumCase(Value, "No", FormatStyle::BBCBSS_No);
-  }
-};
-
-template <>
 struct ScalarEnumerationTraits<
     FormatStyle::BreakBeforeConceptDeclarationsStyle> {
   static void
@@ -1630,16 +1569,16 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.BreakAdjacentStringLiterals = true;
   LLVMStyle.BreakAfterAttributes = FormatStyle::ABS_Leave;
   LLVMStyle.BreakAfterJavaFieldAnnotations = false;
-  LLVMStyle.BreakAfterOpenBracketIf = FormatStyle::BAOBIS_No;
-  LLVMStyle.BreakAfterOpenBracketLoop = FormatStyle::BAOBLS_No;
-  LLVMStyle.BreakAfterOpenBracketSwitch = FormatStyle::BAOBSS_No;
+  LLVMStyle.BreakAfterOpenBracketIf = false;
+  LLVMStyle.BreakAfterOpenBracketLoop = false;
+  LLVMStyle.BreakAfterOpenBracketSwitch = false;
   LLVMStyle.BreakAfterReturnType = FormatStyle::RTBS_None;
   LLVMStyle.BreakArrays = true;
   LLVMStyle.BreakBeforeBinaryOperators = FormatStyle::BOS_None;
   LLVMStyle.BreakBeforeBraces = FormatStyle::BS_Attach;
-  LLVMStyle.BreakBeforeCloseBracketIf = FormatStyle::BBCBIS_No;
-  LLVMStyle.BreakBeforeCloseBracketLoop = FormatStyle::BBCBLS_No;
-  LLVMStyle.BreakBeforeCloseBracketSwitch = FormatStyle::BBCBSS_No;
+  LLVMStyle.BreakBeforeCloseBracketIf = false;
+  LLVMStyle.BreakBeforeCloseBracketLoop = false;
+  LLVMStyle.BreakBeforeCloseBracketSwitch = false;
   LLVMStyle.BreakBeforeConceptDeclarations = FormatStyle::BBCDS_Always;
   LLVMStyle.BreakBeforeInlineASMColon = FormatStyle::BBIAS_OnlyMultiline;
   LLVMStyle.BreakBeforeTemplateCloser = false;
@@ -1900,6 +1839,9 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
     GoogleStyle.SpacesBeforeTrailingComments = 1;
   } else if (Language == FormatStyle::LK_JavaScript) {
     GoogleStyle.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
+    GoogleStyle.BreakAfterOpenBracketIf = true;
+    GoogleStyle.BreakAfterOpenBracketLoop = false;
+    GoogleStyle.BreakAfterOpenBracketSwitch = false;
     GoogleStyle.AlignOperands = FormatStyle::OAS_DontAlign;
     GoogleStyle.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_Empty;
     // TODO: still under discussion whether to switch to SLS_All.
