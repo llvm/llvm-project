@@ -2143,10 +2143,15 @@ OpFoldResult ExtractOp::fold(FoldAdaptor adaptor) {
   // mismatch).
   if (getNumIndices() == 0 && getVector().getType() == getResult().getType())
     return getVector();
+  if (auto res = foldPoisonSrcExtractOp(adaptor.getVector()))
+    return res;
+  // Fold `arith.constant` indices into the `vector.extract` operation. Make
+  // sure that patterns requiring constant indices are added after this fold.
+  SmallVector<Value> operands = {getVector()};
+  if (auto val = extractInsertFoldConstantOp(*this, adaptor, operands))
+    return val;
   if (auto res = foldPoisonIndexInsertExtractOp(
           getContext(), adaptor.getStaticPosition(), kPoisonIndex))
-    return res;
-  if (auto res = foldPoisonSrcExtractOp(adaptor.getVector()))
     return res;
   if (auto res = foldDenseElementsAttrSrcExtractOp(*this, adaptor.getVector()))
     return res;
@@ -2165,9 +2170,6 @@ OpFoldResult ExtractOp::fold(FoldAdaptor adaptor) {
   if (auto val = foldExtractStridedOpFromInsertChain(*this))
     return val;
   if (auto val = foldScalarExtractFromFromElements(*this))
-    return val;
-  SmallVector<Value> operands = {getVector()};
-  if (auto val = extractInsertFoldConstantOp(*this, adaptor, operands))
     return val;
   return OpFoldResult();
 }
@@ -3145,6 +3147,8 @@ OpFoldResult vector::InsertOp::fold(FoldAdaptor adaptor) {
   // (type mismatch).
   if (getNumIndices() == 0 && getValueToStoreType() == getType())
     return getValueToStore();
+  // Fold `arith.constant` indices into the `vector.insert` operation. Make
+  // sure that patterns requiring constant indices are added after this fold.
   SmallVector<Value> operands = {getValueToStore(), getDest()};
   if (auto val = extractInsertFoldConstantOp(*this, adaptor, operands))
     return val;
