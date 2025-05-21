@@ -38,13 +38,6 @@
 extern char **environ;
 #  endif
 
-#  if defined(__has_include) && __has_include(<os/trace.h>)
-#    define SANITIZER_OS_TRACE 1
-#    include <os/trace.h>
-#  else
-#    define SANITIZER_OS_TRACE 0
-#  endif
-
 // Integrate with CrashReporter library if available
 #  if defined(__has_include) && __has_include(<CrashReporterClient.h>)
 #    define HAVE_CRASHREPORTERCLIENT_H 1
@@ -843,31 +836,23 @@ void LogMessageOnPrintf(const char *str) {
 }
 
 void LogFullErrorReport(const char *buffer) {
-#if !SANITIZER_GO
-  // Log with os_trace. This will make it into the crash log.
-#if SANITIZER_OS_TRACE
-#pragma clang diagnostic push
-// os_trace is deprecated.
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-  if (GetMacosAlignedVersion() >= MacosVersion(10, 10)) {
-    // os_trace requires the message (format parameter) to be a string literal.
-    if (internal_strncmp(SanitizerToolName, "AddressSanitizer",
-                         sizeof("AddressSanitizer") - 1) == 0)
-      os_trace("Address Sanitizer reported a failure.");
-    else if (internal_strncmp(SanitizerToolName, "UndefinedBehaviorSanitizer",
-                              sizeof("UndefinedBehaviorSanitizer") - 1) == 0)
-      os_trace("Undefined Behavior Sanitizer reported a failure.");
-    else if (internal_strncmp(SanitizerToolName, "ThreadSanitizer",
-                              sizeof("ThreadSanitizer") - 1) == 0)
-      os_trace("Thread Sanitizer reported a failure.");
-    else
-      os_trace("Sanitizer tool reported a failure.");
+#  if !SANITIZER_GO
+  // Log with os_log_error. This will make it into the crash log.
+  if (internal_strncmp(SanitizerToolName, "AddressSanitizer",
+                       sizeof("AddressSanitizer") - 1) == 0)
+    os_log_error(OS_LOG_DEFAULT, "Address Sanitizer reported a failure.");
+  else if (internal_strncmp(SanitizerToolName, "UndefinedBehaviorSanitizer",
+                            sizeof("UndefinedBehaviorSanitizer") - 1) == 0)
+    os_log_error(OS_LOG_DEFAULT,
+                 "Undefined Behavior Sanitizer reported a failure.");
+  else if (internal_strncmp(SanitizerToolName, "ThreadSanitizer",
+                            sizeof("ThreadSanitizer") - 1) == 0)
+    os_log_error(OS_LOG_DEFAULT, "Thread Sanitizer reported a failure.");
+  else
+    os_log_error(OS_LOG_DEFAULT, "Sanitizer tool reported a failure.");
 
-    if (common_flags()->log_to_syslog)
-      os_trace("Consult syslog for more information.");
-  }
-#pragma clang diagnostic pop
-#endif
+  if (common_flags()->log_to_syslog)
+    os_log_error(OS_LOG_DEFAULT, "Consult syslog for more information.");
 
   // Log to syslog.
   // The logging on OS X may call pthread_create so we need the threading
@@ -881,7 +866,7 @@ void LogFullErrorReport(const char *buffer) {
     WriteToSyslog(buffer);
 
   // The report is added to CrashLog as part of logging all of Printf output.
-#endif
+#  endif  // !SANITIZER_GO
 }
 
 SignalContext::WriteFlag SignalContext::GetWriteFlag() const {

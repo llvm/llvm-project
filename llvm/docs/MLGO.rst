@@ -17,7 +17,7 @@ This document is an outline of the tooling and APIs facilitating MLGO.
 
 Note that tools for orchestrating ML training are not part of LLVM, as they are
 dependency-heavy - both on the ML infrastructure choice, as well as choices of
-distrubuted computing. For the training scenario, LLVM only contains facilities
+distributed computing. For the training scenario, LLVM only contains facilities
 enabling it, such as corpus extraction, training data extraction, and evaluation
 of models during training.
 
@@ -212,7 +212,7 @@ decisions.
 For a specific optimization problem - i.e. inlining, or regalloc eviction - we
 first separate correctness - preserving decisions from optimization decisions.
 For example, not inlining functions marked "no inline" is an example of the
-former. Same is not evicting an unevictable live range. An exmple of the latter
+former. Same is not evicting an unevictable live range. An example of the latter
 is deciding to inline a function that will bloat the caller size, just because
 we have reason to believe that later, the effect will be some constant
 propagation that will actually reduce the size (or dynamic instruction count).
