@@ -21,25 +21,26 @@
 namespace llvm {
 namespace bolt {
 
-class PPCMCPlusBuilder : public MCPlusBuilder{
+class PPCMCPlusBuilder : public MCPlusBuilder {
 public:
-    using MCPlusBuilder::MCPlusBuilder;
+  using MCPlusBuilder::MCPlusBuilder;
 
-    // Create instructions to push two registers onto the stack
-    static void createPushRegisters(MCInst &Inst1, MCInst &Inst2, MCPhysReg Reg1, MCPhysReg /*Reg2*/){
+  // Create instructions to push two registers onto the stack
+  static void createPushRegisters(MCInst &Inst1, MCInst &Inst2, MCPhysReg Reg1,
+                                  MCPhysReg /*Reg2*/) {
 
-        Inst1.clear();
-        Inst1.setOpcode(PPC::STDU);
-        Inst1.addOperand(MCOperand::createReg(PPC::R1)); // destination (SP)
-        Inst1.addOperand(MCOperand::createReg(PPC::R1)); // base (SP)
-        Inst1.addOperand(MCOperand::createImm(-16));     // offset
+    Inst1.clear();
+    Inst1.setOpcode(PPC::STDU);
+    Inst1.addOperand(MCOperand::createReg(PPC::R1)); // destination (SP)
+    Inst1.addOperand(MCOperand::createReg(PPC::R1)); // base (SP)
+    Inst1.addOperand(MCOperand::createImm(-16));     // offset
 
-        Inst2.clear();
-        Inst2.setOpcode(PPC::STD);
-        Inst2.addOperand(MCOperand::createReg(Reg1));     // source register
-        Inst2.addOperand(MCOperand::createReg(PPC::R1));  // base (SP)
-        Inst2.addOperand(MCOperand::createImm(0));        // offset
-    }
+    Inst2.clear();
+    Inst2.setOpcode(PPC::STD);
+    Inst2.addOperand(MCOperand::createReg(Reg1));    // source register
+    Inst2.addOperand(MCOperand::createReg(PPC::R1)); // base (SP)
+    Inst2.addOperand(MCOperand::createImm(0));       // offset
+  }
 };
 
 MCPlusBuilder *createPowerPCMCPlusBuilder(const MCInstrAnalysis *Analysis,
@@ -51,4 +52,3 @@ MCPlusBuilder *createPowerPCMCPlusBuilder(const MCInstrAnalysis *Analysis,
 
 } // namespace bolt
 } // namespace llvm
-
