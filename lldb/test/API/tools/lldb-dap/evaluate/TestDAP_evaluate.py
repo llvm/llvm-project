@@ -60,16 +60,14 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
             len(breakpoint_lines),
             "Did not resolve all the breakpoints.",
         )
-        (
-            breakpoint_1,
-            breakpoint_2,
-            breakpoint_3,
-            breakpoint_4,
-            breakpoint_5,
-            breakpoint_6,
-            breakpoint_7,
-            breakpoint_8,
-        ) = breakpoint_ids
+        breakpoint_1 = breakpoint_ids[0]
+        breakpoint_2 = breakpoint_ids[1]
+        breakpoint_3 = breakpoint_ids[2]
+        breakpoint_4 = breakpoint_ids[3]
+        breakpoint_5 = breakpoint_ids[4]
+        breakpoint_6 = breakpoint_ids[5]
+        breakpoint_7 = breakpoint_ids[6]
+        breakpoint_8 = breakpoint_ids[7]
         self.continue_to_breakpoint(breakpoint_1)
 
         # Expressions at breakpoint 1, which is in main
