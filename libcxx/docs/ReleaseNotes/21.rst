@@ -73,6 +73,9 @@ Improvements and New Features
 - The ``std::for_each_n`` algorithm has been optimized for segmented iterators, resulting in a performance improvement of
   up to 17.7x for ``std::deque<short>`` iterators, and up to 13.9x for ``std::join_view<vector<vector<short>>>`` iterators.
 
+- The ``bitset::to_string`` function has been optimized, resulting in a performance improvement of up to 8.3x for bitsets
+  with uniformly distributed zeros and ones, and up to 13.5x and 16.1x for sparse and dense bitsets, respectively.
+
 Deprecations and Removals
 -------------------------
 
