@@ -297,7 +297,7 @@ static StructType *getOrCreateElementStruct(Type *ElemType, StringRef Name) {
   return StructType::create(ElemType, Name);
 }
 
-StructType *ResourceTypeInfo::createElementStruct() {
+StructType *ResourceTypeInfo::createElementStruct(StringRef CBufferName) {
   SmallString<64> TypeName;
 
   switch (Kind) {
@@ -352,7 +352,12 @@ StructType *ResourceTypeInfo::createElementStruct() {
     auto *RTy = cast<CBufferExtType>(HandleTy);
     LayoutExtType *LayoutType = cast<LayoutExtType>(RTy->getResourceType());
     StructType *Ty = cast<StructType>(LayoutType->getWrappedType());
-    return StructType::create(Ty->elements(), getResourceKindName(Kind));
+    SmallString<64> Name = getResourceKindName(Kind);
+    if (!CBufferName.empty()) {
+      Name.append(".");
+      Name.append(CBufferName);
+    }
+    return StructType::create(Ty->elements(), Name);
   }
   case ResourceKind::Sampler: {
     auto *RTy = cast<SamplerExtType>(HandleTy);
