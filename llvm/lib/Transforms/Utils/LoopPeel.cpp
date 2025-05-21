@@ -343,12 +343,12 @@ bool llvm::canPeelLastIteration(const Loop &L, ScalarEvolution &SE) {
   // codegen. For now, it must
   // * exit via the latch,
   // * the exit condition must be a NE/EQ compare of an induction with step
-  // of 1.
+  // of 1 and must only be used by the exiting branch.
   BasicBlock *Latch = L.getLoopLatch();
   return Latch && Latch == L.getExitingBlock() &&
          match(Latch->getTerminator(),
-               m_Br(m_ICmp(Pred, m_Value(Inc), m_Value()), m_BasicBlock(Succ1),
-                    m_BasicBlock(Succ2))) &&
+               m_Br(m_OneUse(m_ICmp(Pred, m_Value(Inc), m_Value())),
+                    m_BasicBlock(Succ1), m_BasicBlock(Succ2))) &&
          ((Pred == CmpInst::ICMP_EQ && Succ2 == L.getHeader()) ||
           (Pred == CmpInst::ICMP_NE && Succ1 == L.getHeader())) &&
          isa<SCEVAddRecExpr>(SE.getSCEV(Inc)) &&
@@ -970,6 +970,7 @@ llvm::gatherPeelingPreferences(Loop *L, ScalarEvolution &SE,
   PP.PeelCount = 0;
   PP.AllowPeeling = true;
   PP.AllowLoopNestsPeeling = false;
+  PP.PeelLast = false;
   PP.PeelProfiledIterations = true;
 
   // Get the target specifc values.
@@ -1213,7 +1214,7 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, bool PeelLast, LoopInfo *LI,
     // Now adjust users of the original exit values by replacing them with the
     // exit value from the peeled iteration.
     for (const auto &[P, E] : ExitValues)
-      P->replaceAllUsesWith(VMap.lookup(E));
+      P->replaceAllUsesWith(isa<Constant>(E) ? E : &*VMap.lookup(E));
     formLCSSA(*L, DT, LI, SE);
   } else {
     // Now adjust the phi nodes in the loop header to get their initial values

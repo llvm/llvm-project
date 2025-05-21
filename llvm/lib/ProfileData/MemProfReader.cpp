@@ -570,8 +570,7 @@ Error RawMemProfReader::symbolizeAndFilterStackFrames(
       for (size_t I = 0, NumFrames = DI.getNumberOfFrames(); I < NumFrames;
            I++) {
         const auto &DIFrame = DI.getFrame(I);
-        const uint64_t Guid =
-            IndexedMemProfRecord::getGUID(DIFrame.FunctionName);
+        const uint64_t Guid = memprof::getGUID(DIFrame.FunctionName);
         const Frame F(Guid, DIFrame.Line - DIFrame.StartLine, DIFrame.Column,
                       // Only the last entry is not an inlined location.
                       I != NumFrames - 1);
@@ -828,22 +827,21 @@ void YAMLMemProfReader::parse(StringRef YAMLData) {
   if (Doc.YamlifiedDataAccessProfiles.isEmpty())
     return;
 
-  auto ToSymHandleRef = [](const data_access_prof::SymbolHandle &Handle)
-      -> data_access_prof::SymbolHandleRef {
+  auto ToSymHandleRef =
+      [](const memprof::SymbolHandle &Handle) -> memprof::SymbolHandleRef {
     if (std::holds_alternative<std::string>(Handle))
       return StringRef(std::get<std::string>(Handle));
     return std::get<uint64_t>(Handle);
   };
 
-  auto DataAccessProfileData =
-      std::make_unique<data_access_prof::DataAccessProfData>();
+  auto DataAccessProfileData = std::make_unique<memprof::DataAccessProfData>();
   for (const auto &Record : Doc.YamlifiedDataAccessProfiles.Records)
     if (Error E = DataAccessProfileData->setDataAccessProfile(
             ToSymHandleRef(Record.SymHandle), Record.AccessCount,
             Record.Locations))
       reportFatalInternalError(std::move(E));
 
-  for (const uint64_t Hash : Doc.YamlifiedDataAccessProfiles.KnownColdHashes)
+  for (const uint64_t Hash : Doc.YamlifiedDataAccessProfiles.KnownColdStrHashes)
     if (Error E = DataAccessProfileData->addKnownSymbolWithoutSamples(Hash))
       reportFatalInternalError(std::move(E));
 

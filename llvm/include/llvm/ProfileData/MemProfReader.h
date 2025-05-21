@@ -21,9 +21,10 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/ProfileData/IndexedMemProfData.h"
 #include "llvm/ProfileData/InstrProfReader.h"
-#include "llvm/ProfileData/MemProf.h"
 #include "llvm/ProfileData/MemProfData.inc"
+#include "llvm/ProfileData/MemProfRadixTree.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 
@@ -229,20 +230,19 @@ public:
 
   void parse(StringRef YAMLData);
 
-  std::unique_ptr<data_access_prof::DataAccessProfData>
-  takeDataAccessProfData() {
+  std::unique_ptr<memprof::DataAccessProfData> takeDataAccessProfData() {
     return std::move(DataAccessProfileData);
   }
 
 private:
   // Called by `parse` to set data access profiles after parsing them from Yaml
   // files.
-  void setDataAccessProfileData(
-      std::unique_ptr<data_access_prof::DataAccessProfData> Data) {
+  void
+  setDataAccessProfileData(std::unique_ptr<memprof::DataAccessProfData> Data) {
     DataAccessProfileData = std::move(Data);
   }
 
-  std::unique_ptr<data_access_prof::DataAccessProfData> DataAccessProfileData;
+  std::unique_ptr<memprof::DataAccessProfData> DataAccessProfileData;
 };
 } // namespace memprof
 } // namespace llvm

@@ -128,6 +128,12 @@
 //   * llvm.nvvm.swap.lo.hi.b64      --> llvm.fshl(x, x, 32)
 //   * llvm.nvvm.atomic.load.inc.32  --> atomicrmw uinc_wrap
 //   * llvm.nvvm.atomic.load.dec.32  --> atomicrmw udec_wrap
+// * llvm.nvvm.barrier0              --> llvm.nvvm.barrier.cta.sync.aligned.all(0)
+// * llvm.nvvm.barrier.n             --> llvm.nvvm.barrier.cta.sync.aligned.all(x)
+// * llvm.nvvm.bar.sync              --> llvm.nvvm.barrier.cta.sync.aligned.all(x)
+// * llvm.nvvm.barrier               --> llvm.nvvm.barrier.cta.sync.aligned(x, y)
+// * llvm.nvvm.barrier.sync          --> llvm.nvvm.barrier.cta.sync.all(x)
+// * llvm.nvvm.barrier.sync.cnt      --> llvm.nvvm.barrier.cta.sync(x, y)
 
 def llvm_global_ptr_ty  : LLVMQualPointerType<1>;         // (global)ptr
 def llvm_shared_ptr_ty  : LLVMQualPointerType<3>;         // (shared)ptr
@@ -831,7 +837,7 @@ let TargetPrefix = "nvvm" in {
 //
 // Sad
 //
-  let IntrProperties = [IntrNoMem, Commutative, IntrSpeculatable] in {
+  let IntrProperties = [IntrNoMem, IntrSpeculatable] in {
     foreach sign = ["", "u"] in {
       def int_nvvm_sad_ # sign # s : NVVMBuiltin,
           DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty]>;
@@ -1150,41 +1156,40 @@ let TargetPrefix = "nvvm" in {
       def int_nvvm_bf2h_rn # ftz : NVVMBuiltin,
           DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_bfloat_ty]>;
     }
-  }
-  let IntrProperties = [IntrNoMem, IntrNoCallback] in {
+
     foreach rnd = ["rn", "rz"] in {
       foreach relu = ["", "_relu"] in {
         def int_nvvm_ff2bf16x2_ # rnd # relu : NVVMBuiltin,
-            Intrinsic<[llvm_v2bf16_ty], [llvm_float_ty, llvm_float_ty]>;
+            DefaultAttrsIntrinsic<[llvm_v2bf16_ty], [llvm_float_ty, llvm_float_ty]>;
 
         def int_nvvm_ff2f16x2_ # rnd # relu : NVVMBuiltin,
-            Intrinsic<[llvm_v2f16_ty], [llvm_float_ty, llvm_float_ty]>;
+            DefaultAttrsIntrinsic<[llvm_v2f16_ty], [llvm_float_ty, llvm_float_ty]>;
 
         def int_nvvm_f2bf16_ # rnd # relu : NVVMBuiltin,
-            Intrinsic<[llvm_bfloat_ty], [llvm_float_ty]>;
+            DefaultAttrsIntrinsic<[llvm_bfloat_ty], [llvm_float_ty]>;
       }
     }
 
     foreach satfinite = ["", "_satfinite"] in {
       def int_nvvm_f2tf32_rna # satfinite : NVVMBuiltin,
-          Intrinsic<[llvm_i32_ty], [llvm_float_ty]>;
+          DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_float_ty]>;
 
       foreach rnd = ["rn", "rz"] in
         foreach relu = ["", "_relu"] in
           def int_nvvm_f2tf32_ # rnd # relu # satfinite : NVVMBuiltin,
-              Intrinsic<[llvm_i32_ty], [llvm_float_ty]>;
+              DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_float_ty]>;
     }
 
     foreach type = ["e4m3x2", "e5m2x2"] in {
       foreach relu = ["", "_relu"] in {
         def int_nvvm_ff_to_ # type # _rn # relu : NVVMBuiltin,
-            Intrinsic<[llvm_i16_ty], [llvm_float_ty, llvm_float_ty]>;
+            DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_float_ty, llvm_float_ty]>;
 
         def int_nvvm_f16x2_to_ # type # _rn # relu : NVVMBuiltin,
-            Intrinsic<[llvm_i16_ty], [llvm_v2f16_ty]>;
+            DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_v2f16_ty]>;
 
         def int_nvvm_ # type # _to_f16x2_rn # relu : NVVMBuiltin,
-            Intrinsic<[llvm_v2f16_ty], [llvm_i16_ty]>;
+            DefaultAttrsIntrinsic<[llvm_v2f16_ty], [llvm_i16_ty]>;
       }
     }
 
@@ -1222,8 +1227,9 @@ let TargetPrefix = "nvvm" in {
     }
 
     def int_nvvm_ue8m0x2_to_bf16x2 : NVVMBuiltin,
-        Intrinsic<[llvm_v2bf16_ty], [llvm_i16_ty]>;
-  }
+        DefaultAttrsIntrinsic<[llvm_v2bf16_ty], [llvm_i16_ty]>;
+
+  } // IntrProperties = [IntrNoMem, IntrSpeculatable]
 
 // FNS
   def int_nvvm_fns : NVVMBuiltin,
@@ -1263,18 +1269,6 @@ let TargetPrefix = "nvvm" in {
   defm int_nvvm_atomic_cas_gen_i  : PTXAtomicWithScope3<llvm_anyint_ty>;
 
 // Bar.Sync
-
-  // The builtin for "bar.sync 0" is called __syncthreads.  Unlike most of the
-  // intrinsics in this file, this one is a user-facing API.
-  def int_nvvm_barrier0 : ClangBuiltin<"__syncthreads">,
-      Intrinsic<[], [], [IntrConvergent, IntrNoCallback]>;
-  // Synchronize all threads in the CTA at barrier 'n'.
-  def int_nvvm_barrier_n : ClangBuiltin<"__nvvm_bar_n">,
-      Intrinsic<[], [llvm_i32_ty], [IntrConvergent, IntrNoCallback]>;
-  // Synchronize 'm', a multiple of warp size, (arg 2) threads in
-  // the CTA at barrier 'n' (arg 1).
-  def int_nvvm_barrier : ClangBuiltin<"__nvvm_bar">,
-      Intrinsic<[], [llvm_i32_ty, llvm_i32_ty], [IntrConvergent, IntrNoCallback]>;
   def int_nvvm_barrier0_popc : ClangBuiltin<"__nvvm_bar0_popc">,
       Intrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrConvergent, IntrNoCallback]>;
   def int_nvvm_barrier0_and : ClangBuiltin<"__nvvm_bar0_and">,
@@ -1282,16 +1276,21 @@ let TargetPrefix = "nvvm" in {
   def int_nvvm_barrier0_or : ClangBuiltin<"__nvvm_bar0_or">,
       Intrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrConvergent, IntrNoCallback]>;
 
-  def int_nvvm_bar_sync : NVVMBuiltin,
-      Intrinsic<[], [llvm_i32_ty], [IntrConvergent, IntrNoCallback]>;
   def int_nvvm_bar_warp_sync : NVVMBuiltin,
       Intrinsic<[], [llvm_i32_ty], [IntrConvergent, IntrNoCallback]>;
 
-  // barrier.sync id[, cnt]
-  def int_nvvm_barrier_sync : NVVMBuiltin,
-      Intrinsic<[], [llvm_i32_ty], [IntrConvergent, IntrNoCallback]>;
-  def int_nvvm_barrier_sync_cnt : NVVMBuiltin,
-      Intrinsic<[], [llvm_i32_ty, llvm_i32_ty], [IntrConvergent, IntrNoCallback]>;
+  // barrier{.cta}.sync{.aligned}      a{, b};
+  // barrier{.cta}.arrive{.aligned}    a, b;
+  let IntrProperties = [IntrConvergent, IntrNoCallback] in {
+    foreach align = ["", "_aligned"] in {
+      def int_nvvm_barrier_cta_sync # align # _all :
+          Intrinsic<[], [llvm_i32_ty]>;
+      def int_nvvm_barrier_cta_sync # align :
+          Intrinsic<[], [llvm_i32_ty, llvm_i32_ty]>;
+      def int_nvvm_barrier_cta_arrive # align :
+          Intrinsic<[], [llvm_i32_ty, llvm_i32_ty]>;
+    }
+  }
 
   // barrier.cluster.[wait, arrive, arrive.relaxed]
   def int_nvvm_barrier_cluster_arrive :
@@ -1440,18 +1439,22 @@ def int_nvvm_internal_addrspace_wrap :
 
 // Move intrinsics, used in nvvm internally
 
-def int_nvvm_move_i16 : Intrinsic<[llvm_i16_ty], [llvm_i16_ty], [IntrNoMem]>;
-def int_nvvm_move_i32 : Intrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrNoMem]>;
-def int_nvvm_move_i64 : Intrinsic<[llvm_i64_ty], [llvm_i64_ty], [IntrNoMem]>;
-def int_nvvm_move_float : Intrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
-def int_nvvm_move_double : Intrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem]>;
-def int_nvvm_move_ptr : Intrinsic<[llvm_anyptr_ty], [llvm_anyptr_ty], [IntrNoMem, NoCapture<ArgIndex<0>>]>;
+let IntrProperties = [IntrNoMem] in {
+  def int_nvvm_move_i16 : DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_i16_ty]>;
+  def int_nvvm_move_i32 : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty]>;
+  def int_nvvm_move_i64 : DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_i64_ty]>;
+  def int_nvvm_move_float : DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty]>;
+  def int_nvvm_move_double : DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty]>;
+  def int_nvvm_move_ptr : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [llvm_anyptr_ty]>;
+}
 
 // For getting the handle from a texture or surface variable
-def int_nvvm_texsurf_handle
-  : Intrinsic<[llvm_i64_ty], [llvm_metadata_ty, llvm_anyptr_ty], [IntrNoMem]>;
-def int_nvvm_texsurf_handle_internal
-  : Intrinsic<[llvm_i64_ty], [llvm_anyptr_ty], [IntrNoMem]>;
+let IntrProperties = [IntrNoMem, IntrSpeculatable] in {
+  def int_nvvm_texsurf_handle
+    : DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_metadata_ty, llvm_anyptr_ty]>;
+  def int_nvvm_texsurf_handle_internal
+    : DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_anyptr_ty]>;
+}
 
 /// Error / Warn
 def int_nvvm_compiler_error : Intrinsic<[], [llvm_anyptr_ty]>;
@@ -1472,106 +1475,111 @@ foreach i = 0...31 in
     DefaultAttrsIntrinsic<[llvm_i32_ty], [],
               [IntrNoMem, IntrSpeculatable, NoUndef<RetIndex>]>;
 
+//
+// Texture Fetch
+//
+let IntrProperties = [IntrReadMem] in {
+  foreach is_unified = [true, false] in {
+    defvar mode = !if(is_unified, "_unified", "");
+    defvar addr_args = !if(is_unified, [llvm_i64_ty], [llvm_i64_ty, llvm_i64_ty]);
 
-foreach is_unified = [true, false] in {
-  defvar mode = !if(is_unified, "_unified", "");
-  defvar addr_args = !if(is_unified, [llvm_i64_ty], [llvm_i64_ty, llvm_i64_ty]);
+    foreach vec = [V4F32, V4S32, V4U32] in {
+      foreach is_array = [true, false] in {
+        defvar array = !if(is_array, "_array", "");
+        defvar array_args = !if(is_array, [llvm_i32_ty], []<LLVMType>);
 
-  // Texture Fetch
-  foreach vec = [V4F32, V4S32, V4U32] in {
-    foreach is_array = [true, false] in {
-      defvar array = !if(is_array, "_array", "");
-      defvar array_args = !if(is_array, [llvm_i32_ty], []<LLVMType>);
-
-      def int_nvvm_tex # mode # _1d # array # _ # vec.Name # _s32
-        : Intrinsic<vec.Types,
-                    !listconcat(addr_args, array_args, !listsplat(llvm_i32_ty, 1))>;
-      def int_nvvm_tex # mode # _1d # array # _ # vec.Name # _f32
-        : Intrinsic<vec.Types,
-                    !listconcat(addr_args, array_args, !listsplat(llvm_float_ty, 1))>;
-      def int_nvvm_tex # mode # _1d # array # _level_ # vec.Name # _f32
-        : Intrinsic<vec.Types,
-                    !listconcat(addr_args, array_args, !listsplat(llvm_float_ty, 2))>;
-      def int_nvvm_tex # mode # _1d # array # _grad_ # vec.Name # _f32
-        : Intrinsic<vec.Types,
-                    !listconcat(addr_args, array_args, !listsplat(llvm_float_ty, 3))>;
-
-      def int_nvvm_tex # mode # _2d # array # _ # vec.Name # _s32
-        : Intrinsic<vec.Types,
-                    !listconcat(addr_args, array_args, !listsplat(llvm_i32_ty, 2))>;
-      def int_nvvm_tex # mode # _2d # array # _ # vec.Name # _f32
-        : Intrinsic<vec.Types,
-                    !listconcat(addr_args, array_args, !listsplat(llvm_float_ty, 2))>;
-      def int_nvvm_tex # mode # _2d # array # _level_ # vec.Name # _f32
-        : Intrinsic<vec.Types,
-                    !listconcat(addr_args, array_args, !listsplat(llvm_float_ty, 3))>;
-      def int_nvvm_tex # mode # _2d # array # _grad_ # vec.Name # _f32
-        : Intrinsic<vec.Types,
-                    !listconcat(addr_args, array_args, !listsplat(llvm_float_ty, 6))>;
-
-      if !not(is_array) then {
-        def int_nvvm_tex # mode # _3d_ # vec.Name # _s32
+        def int_nvvm_tex # mode # _1d # array # _ # vec.Name # _s32
           : Intrinsic<vec.Types,
-                      !listconcat(addr_args, !listsplat(llvm_i32_ty, 3))>;
-        def int_nvvm_tex # mode # _3d_ # vec.Name # _f32
+                      !listconcat(addr_args, array_args, !listsplat(llvm_i32_ty, 1))>;
+        def int_nvvm_tex # mode # _1d # array # _ # vec.Name # _f32
           : Intrinsic<vec.Types,
-                      !listconcat(addr_args, !listsplat(llvm_float_ty, 3))>;
-        def int_nvvm_tex # mode # _3d_level_ # vec.Name # _f32
+                      !listconcat(addr_args, array_args, !listsplat(llvm_float_ty, 1))>;
+        def int_nvvm_tex # mode # _1d # array # _level_ # vec.Name # _f32
           : Intrinsic<vec.Types,
-                      !listconcat(addr_args, !listsplat(llvm_float_ty, 4))>;
-        def int_nvvm_tex # mode # _3d_grad_ # vec.Name # _f32
+                      !listconcat(addr_args, array_args, !listsplat(llvm_float_ty, 2))>;
+        def int_nvvm_tex # mode # _1d # array # _grad_ # vec.Name # _f32
           : Intrinsic<vec.Types,
-                      !listconcat(addr_args, !listsplat(llvm_float_ty, 9))>;
-      }
+                      !listconcat(addr_args, array_args, !listsplat(llvm_float_ty, 3))>;
 
-      def int_nvvm_tex # mode # _cube # array # _ # vec.Name # _f32
-        : Intrinsic<vec.Types,
-                    !listconcat(addr_args, array_args, !listsplat(llvm_float_ty, 3))>;
-      def int_nvvm_tex # mode # _cube # array # _level_ # vec.Name # _f32
-        : Intrinsic<vec.Types,
-                    !listconcat(addr_args, array_args, !listsplat(llvm_float_ty, 4))>;
-
-      if is_unified then
-        def int_nvvm_tex # mode # _cube # array # _grad_ # vec.Name # _f32
+        def int_nvvm_tex # mode # _2d # array # _ # vec.Name # _s32
           : Intrinsic<vec.Types,
-                      !listconcat(addr_args, array_args, !listsplat(llvm_float_ty, 9))>;
-    } // is_array
+                      !listconcat(addr_args, array_args, !listsplat(llvm_i32_ty, 2))>;
+        def int_nvvm_tex # mode # _2d # array # _ # vec.Name # _f32
+          : Intrinsic<vec.Types,
+                      !listconcat(addr_args, array_args, !listsplat(llvm_float_ty, 2))>;
+        def int_nvvm_tex # mode # _2d # array # _level_ # vec.Name # _f32
+          : Intrinsic<vec.Types,
+                      !listconcat(addr_args, array_args, !listsplat(llvm_float_ty, 3))>;
+        def int_nvvm_tex # mode # _2d # array # _grad_ # vec.Name # _f32
+          : Intrinsic<vec.Types,
+                      !listconcat(addr_args, array_args, !listsplat(llvm_float_ty, 6))>;
 
-    foreach comp = ["r", "g", "b", "a"] in {
-      def int_nvvm_tld4 # mode # _ # comp # _2d_ # vec.Name # _f32
-        : Intrinsic<vec.Types,
-                    !listconcat(addr_args, !listsplat(llvm_float_ty, 2))>;
-    } // comp
-  } // vec
-} // is_unified
+        if !not(is_array) then {
+          def int_nvvm_tex # mode # _3d_ # vec.Name # _s32
+            : Intrinsic<vec.Types,
+                        !listconcat(addr_args, !listsplat(llvm_i32_ty, 3))>;
+          def int_nvvm_tex # mode # _3d_ # vec.Name # _f32
+            : Intrinsic<vec.Types,
+                        !listconcat(addr_args, !listsplat(llvm_float_ty, 3))>;
+          def int_nvvm_tex # mode # _3d_level_ # vec.Name # _f32
+            : Intrinsic<vec.Types,
+                        !listconcat(addr_args, !listsplat(llvm_float_ty, 4))>;
+          def int_nvvm_tex # mode # _3d_grad_ # vec.Name # _f32
+            : Intrinsic<vec.Types,
+                        !listconcat(addr_args, !listsplat(llvm_float_ty, 9))>;
+        }
+
+        def int_nvvm_tex # mode # _cube # array # _ # vec.Name # _f32
+          : Intrinsic<vec.Types,
+                      !listconcat(addr_args, array_args, !listsplat(llvm_float_ty, 3))>;
+        def int_nvvm_tex # mode # _cube # array # _level_ # vec.Name # _f32
+          : Intrinsic<vec.Types,
+                      !listconcat(addr_args, array_args, !listsplat(llvm_float_ty, 4))>;
+
+        if is_unified then
+          def int_nvvm_tex # mode # _cube # array # _grad_ # vec.Name # _f32
+            : Intrinsic<vec.Types,
+                        !listconcat(addr_args, array_args, !listsplat(llvm_float_ty, 9))>;
+      } // is_array
+
+      foreach comp = ["r", "g", "b", "a"] in {
+        def int_nvvm_tld4 # mode # _ # comp # _2d_ # vec.Name # _f32
+          : Intrinsic<vec.Types,
+                      !listconcat(addr_args, !listsplat(llvm_float_ty, 2))>;
+      } // comp
+    } // vec
+  } // is_unified
+} // IntrProperties = [IntrReadMem]
 
 //=== Surface Load
-foreach clamp = ["clamp", "trap", "zero"] in {
-  foreach vec = [TV_I8, TV_I16, TV_I32, TV_I64,
-                 TV_V2I8, TV_V2I16, TV_V2I32, TV_V2I64,
-                 TV_V4I8, TV_V4I16, TV_V4I32] in {
+let IntrProperties = [IntrReadMem] in {
+  foreach clamp = ["clamp", "trap", "zero"] in {
+    foreach vec = [TV_I8, TV_I16, TV_I32, TV_I64,
+                  TV_V2I8, TV_V2I16, TV_V2I32, TV_V2I64,
+                  TV_V4I8, TV_V4I16, TV_V4I32] in {
 
-    def int_nvvm_suld_1d_ # vec.Name # _ # clamp
-      : Intrinsic<vec.Types,
-                  [llvm_i64_ty, llvm_i32_ty]>;
+      def int_nvvm_suld_1d_ # vec.Name # _ # clamp
+        : Intrinsic<vec.Types,
+                    [llvm_i64_ty, llvm_i32_ty]>;
 
-    def int_nvvm_suld_1d_array_ # vec.Name # _ # clamp
-      : Intrinsic<vec.Types,
-                  [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty]>;
+      def int_nvvm_suld_1d_array_ # vec.Name # _ # clamp
+        : Intrinsic<vec.Types,
+                    [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty]>;
 
-    def int_nvvm_suld_2d_ # vec.Name # _ # clamp
-      : Intrinsic<vec.Types,
-                  [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty]>;
+      def int_nvvm_suld_2d_ # vec.Name # _ # clamp
+        : Intrinsic<vec.Types,
+                    [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty]>;
 
-    def int_nvvm_suld_2d_array_ # vec.Name # _ # clamp
-      : Intrinsic<vec.Types,
-                  [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty]>;
+      def int_nvvm_suld_2d_array_ # vec.Name # _ # clamp
+        : Intrinsic<vec.Types,
+                    [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty]>;
 
-    def int_nvvm_suld_3d_ # vec.Name # _ # clamp
-      : Intrinsic<vec.Types,
-                  [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty]>;
-  } // vec
-} // clamp
+      def int_nvvm_suld_3d_ # vec.Name # _ # clamp
+        : Intrinsic<vec.Types,
+                    [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty]>;
+    } // vec
+  } // clamp
+} // IntrProperties = [IntrReadMem]
 
 //===- Texture Query ------------------------------------------------------===//
 
@@ -2268,4 +2276,33 @@ let IntrProperties = [IntrArgMemOnly, IntrWriteMem, WriteOnly<ArgIndex<0>>,
   def int_nvvm_st_bulk_shared_cta :
       DefaultAttrsIntrinsic<[], [llvm_shared_ptr_ty, llvm_i64_ty, llvm_i64_ty]>;
 }
+
+//
+// clusterlaunchcontorl Intrinsics
+//
+
+// clusterlaunchcontrol.try_cancel
+
+def int_nvvm_clusterlaunchcontrol_try_cancel_async_shared
+    : DefaultAttrsIntrinsic<[], [llvm_shared_ptr_ty, llvm_shared_ptr_ty],
+                [IntrHasSideEffects, IntrArgMemOnly],
+                "llvm.nvvm.clusterlaunchcontrol.try_cancel.async.shared">;
+
+def int_nvvm_clusterlaunchcontrol_try_cancel_async_multicast_shared
+    : DefaultAttrsIntrinsic<[], [llvm_shared_ptr_ty, llvm_shared_ptr_ty],
+                [IntrHasSideEffects, IntrArgMemOnly],
+                "llvm.nvvm.clusterlaunchcontrol.try_cancel.async.multicast.shared">;
+
+// clusterlaunchcontrol.query_cancel.is_canceled
+
+def int_nvvm_clusterlaunchcontrol_query_cancel_is_canceled
+    : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_i128_ty], [IntrNoMem, IntrSpeculatable],
+                            "llvm.nvvm.clusterlaunchcontrol.query_cancel.is_canceled">;
+
+foreach dim = ["x", "y", "z"] in {
+def int_nvvm_clusterlaunchcontrol_query_cancel_get_first_ctaid_ # dim
+    : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i128_ty], [IntrNoMem, IntrSpeculatable],
+                            "llvm.nvvm.clusterlaunchcontrol.query_cancel.get_first_ctaid." # dim>;
+}
+
 } // let TargetPrefix = "nvvm"

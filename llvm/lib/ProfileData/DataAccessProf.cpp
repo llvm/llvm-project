@@ -11,7 +11,7 @@
 #include <sys/types.h>
 
 namespace llvm {
-namespace data_access_prof {
+namespace memprof {
 
 // If `Map` has an entry keyed by `Str`, returns the entry iterator. Otherwise,
 // creates an owned copy of `Str`, adds a map entry for it and returns the
@@ -262,5 +262,5 @@ Error DataAccessProfData::deserializeRecords(const unsigned char *&Ptr) {
   }
   return Error::success();
 }
-} // namespace data_access_prof
+} // namespace memprof
 } // namespace llvm

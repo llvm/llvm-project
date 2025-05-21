@@ -14,6 +14,7 @@
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/ProfileData/MemProf.h"
+#include "llvm/ProfileData/MemProfRadixTree.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/OnDiskHashTable.h"
 
@@ -218,8 +219,7 @@ static Error writeMemProfV2(ProfOStream &OS,
 static Error writeMemProfRadixTreeBased(
     ProfOStream &OS, memprof::IndexedMemProfData &MemProfData,
     memprof::IndexedVersion Version, bool MemProfFullSchema,
-    std::optional<std::reference_wrapper<data_access_prof::DataAccessProfData>>
-        DataAccessProfileData) {
+    std::unique_ptr<memprof::DataAccessProfData> DataAccessProfileData) {
   assert((Version == memprof::Version3 || Version == memprof::Version4) &&
          "Unsupported version for radix tree format");
 
@@ -257,11 +257,11 @@ static Error writeMemProfRadixTreeBased(
       OS, MemProfData.Records, &Schema, Version, &MemProfCallStackIndexes);
 
   uint64_t DataAccessProfOffset = 0;
-  if (DataAccessProfileData.has_value()) {
+  if (DataAccessProfileData != nullptr) {
     assert(Version >= memprof::Version4 &&
            "Data access profiles are added starting from v4");
     DataAccessProfOffset = OS.tell();
-    if (Error E = (*DataAccessProfileData).get().serialize(OS))
+    if (Error E = DataAccessProfileData->serialize(OS))
       return E;
   }
 
@@ -289,25 +289,24 @@ static Error writeMemProfV3(ProfOStream &OS,
                             memprof::IndexedMemProfData &MemProfData,
                             bool MemProfFullSchema) {
   return writeMemProfRadixTreeBased(OS, MemProfData, memprof::Version3,
-                                    MemProfFullSchema, std::nullopt);
+                                    MemProfFullSchema, nullptr);
 }
 
 // Write out MemProf Version4
 static Error writeMemProfV4(
     ProfOStream &OS, memprof::IndexedMemProfData &MemProfData,
     bool MemProfFullSchema,
-    std::optional<std::reference_wrapper<data_access_prof::DataAccessProfData>>
-        DataAccessProfileData) {
+    std::unique_ptr<memprof::DataAccessProfData> DataAccessProfileData) {
   return writeMemProfRadixTreeBased(OS, MemProfData, memprof::Version4,
-                                    MemProfFullSchema, DataAccessProfileData);
+                                    MemProfFullSchema,
+                                    std::move(DataAccessProfileData));
 }
 
 // Write out the MemProf data in a requested version.
 Error writeMemProf(
     ProfOStream &OS, memprof::IndexedMemProfData &MemProfData,
     memprof::IndexedVersion MemProfVersionRequested, bool MemProfFullSchema,
-    std::optional<std::reference_wrapper<data_access_prof::DataAccessProfData>>
-        DataAccessProfileData) {
+    std::unique_ptr<memprof::DataAccessProfData> DataAccessProfileData) {
   switch (MemProfVersionRequested) {
   case memprof::Version2:
     return writeMemProfV2(OS, MemProfData, MemProfFullSchema);
@@ -315,7 +314,7 @@ Error writeMemProf(
     return writeMemProfV3(OS, MemProfData, MemProfFullSchema);
   case memprof::Version4:
     return writeMemProfV4(OS, MemProfData, MemProfFullSchema,
-                          DataAccessProfileData);
+                          std::move(DataAccessProfileData));
   }
 
   return make_error<InstrProfError>(
@@ -423,8 +422,7 @@ Error IndexedMemProfReader::deserializeRadixTreeBased(
   assert((!DataAccessProfOffset || DataAccessProfOffset > RecordTableOffset) &&
          "Data access profile is either empty or after the record table");
   if (DataAccessProfOffset > RecordTableOffset) {
-    DataAccessProfileData =
-        std::make_unique<data_access_prof::DataAccessProfData>();
+    DataAccessProfileData = std::make_unique<memprof::DataAccessProfData>();
     const unsigned char *DAPPtr = Start + DataAccessProfOffset;
     if (Error E = DataAccessProfileData->deserialize(DAPPtr))
       return E;

@@ -1740,6 +1740,14 @@ public:
   /// recently incremented counter.
   uint64_t getCurrentProfileCount() { return PGO.getCurrentRegionCount(); }
 
+  /// See CGDebugInfo::addInstToCurrentSourceAtom.
+  void addInstToCurrentSourceAtom(llvm::Instruction *KeyInstruction,
+                                  llvm::Value *Backup);
+
+  /// See CGDebugInfo::addInstToSpecificSourceAtom.
+  void addInstToSpecificSourceAtom(llvm::Instruction *KeyInstruction,
+                                   llvm::Value *Backup, uint64_t Atom);
+
 private:
   /// SwitchInsn - This is nearest current switch instruction. It is null if
   /// current context is not in a switch.
@@ -2816,11 +2824,6 @@ private:
   void emitStoresForInitAfterBZero(llvm::Constant *Init, Address Loc,
                                    bool isVolatile, bool IsAutoInit);
 
-  /// Returns debug info, with additional annotation if enabled by
-  /// CGM.getCodeGenOpts().SanitizeAnnotateDebugInfo[CheckKindOrdinal].
-  llvm::DILocation *
-  SanitizerAnnotateDebugInfo(SanitizerKind::SanitizerOrdinal CheckKindOrdinal);
-
 public:
   // Captures all the allocas created during the scope of its RAII object.
   struct AllocaTrackerRAII {
@@ -3366,6 +3369,11 @@ public:
   void EmitBoundsCheckImpl(const Expr *E, llvm::Value *Bound,
                            llvm::Value *Index, QualType IndexType,
                            QualType IndexedType, bool Accessed);
+
+  /// Returns debug info, with additional annotation if enabled by
+  /// CGM.getCodeGenOpts().SanitizeAnnotateDebugInfo[CheckKindOrdinal].
+  llvm::DILocation *
+  SanitizerAnnotateDebugInfo(SanitizerKind::SanitizerOrdinal CheckKindOrdinal);
 
   llvm::Value *GetCountedByFieldExprGEP(const Expr *Base, const FieldDecl *FD,
                                         const FieldDecl *CountDecl);

@@ -21,16 +21,16 @@ struct GUIDMemProfRecordPair {
   MemProfRecord Record;
 };
 
-// Helper struct to yamlify data_access_prof::DataAccessProfData. The struct
+// Helper struct to yamlify memprof::DataAccessProfData. The struct
 // members use owned strings. This is for simplicity and assumes that most real
 // world use cases do look-ups and regression test scale is small.
 struct YamlDataAccessProfData {
-  std::vector<data_access_prof::DataAccessProfRecord> Records;
-  std::vector<uint64_t> KnownColdHashes;
+  std::vector<memprof::DataAccessProfRecord> Records;
+  std::vector<uint64_t> KnownColdStrHashes;
   std::vector<std::string> KnownColdSymbols;
 
   bool isEmpty() const {
-    return Records.empty() && KnownColdHashes.empty() &&
+    return Records.empty() && KnownColdStrHashes.empty() &&
            KnownColdSymbols.empty();
   }
 };
@@ -62,7 +62,7 @@ template <> struct ScalarTraits<memprof::GUIDHex64> {
       Val = Num;
     } else {
       // Otherwise, treat the input as a string containing a function name.
-      Val = memprof::IndexedMemProfRecord::getGUID(Scalar);
+      Val = memprof::getGUID(Scalar);
     }
     return StringRef();
   }
@@ -222,15 +222,15 @@ template <> struct MappingTraits<memprof::GUIDMemProfRecordPair> {
   }
 };
 
-template <> struct MappingTraits<data_access_prof::SourceLocation> {
-  static void mapping(IO &Io, data_access_prof::SourceLocation &Loc) {
+template <> struct MappingTraits<memprof::SourceLocation> {
+  static void mapping(IO &Io, memprof::SourceLocation &Loc) {
     Io.mapOptional("FileName", Loc.FileName);
     Io.mapOptional("Line", Loc.Line);
   }
 };
 
-template <> struct MappingTraits<data_access_prof::DataAccessProfRecord> {
-  static void mapping(IO &Io, data_access_prof::DataAccessProfRecord &Rec) {
+template <> struct MappingTraits<memprof::DataAccessProfRecord> {
+  static void mapping(IO &Io, memprof::DataAccessProfRecord &Rec) {
     if (Io.outputting()) {
       if (std::holds_alternative<std::string>(Rec.SymHandle)) {
         Io.mapOptional("Symbol", std::get<std::string>(Rec.SymHandle));
@@ -257,7 +257,7 @@ template <> struct MappingTraits<memprof::YamlDataAccessProfData> {
   static void mapping(IO &Io, memprof::YamlDataAccessProfData &Data) {
     Io.mapOptional("SampledRecords", Data.Records);
     Io.mapOptional("KnownColdSymbols", Data.KnownColdSymbols);
-    Io.mapOptional("KnownColdHashes", Data.KnownColdHashes);
+    Io.mapOptional("KnownColdStrHashes", Data.KnownColdStrHashes);
   }
 };
 
@@ -293,7 +293,7 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(memprof::AllocationInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(memprof::CallSiteInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(memprof::GUIDMemProfRecordPair)
 LLVM_YAML_IS_SEQUENCE_VECTOR(memprof::GUIDHex64) // Used for CalleeGuids
-LLVM_YAML_IS_SEQUENCE_VECTOR(data_access_prof::DataAccessProfRecord)
-LLVM_YAML_IS_SEQUENCE_VECTOR(data_access_prof::SourceLocation)
+LLVM_YAML_IS_SEQUENCE_VECTOR(memprof::DataAccessProfRecord)
+LLVM_YAML_IS_SEQUENCE_VECTOR(memprof::SourceLocation)
 
 #endif // LLVM_PROFILEDATA_MEMPROFYAML_H_

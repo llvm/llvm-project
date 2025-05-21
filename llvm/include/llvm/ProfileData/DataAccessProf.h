@@ -17,10 +17,8 @@
 #ifndef LLVM_PROFILEDATA_DATAACCESSPROF_H_
 #define LLVM_PROFILEDATA_DATAACCESSPROF_H_
 
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfoVariant.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -35,13 +33,14 @@
 
 namespace llvm {
 
-namespace data_access_prof {
+namespace memprof {
 
 /// The location of data in the source code. Used by profile lookup API.
 struct SourceLocation {
   SourceLocation(StringRef FileNameRef, uint32_t Line)
       : FileName(FileNameRef.str()), Line(Line) {}
 
+  // Empty constructor is used in yaml conversion.
   SourceLocation() {}
   /// The filename where the data is located.
   std::string FileName;
@@ -113,8 +112,9 @@ public:
       SymHandle = std::get<uint64_t>(SymHandleRef);
 
     for (auto Loc : LocRefs)
-      Locations.push_back(SourceLocation(Loc.FileName, Loc.Line));
+      Locations.emplace_back(SourceLocation(Loc.FileName, Loc.Line));
   }
+  // Empty constructor is used in yaml conversion.
   DataAccessProfRecord() {}
   SymbolHandle SymHandle;
   uint64_t AccessCount;
@@ -214,7 +214,7 @@ private:
   llvm::SetVector<StringRef> KnownColdSymbols;
 };
 
-} // namespace data_access_prof
+} // namespace memprof
 } // namespace llvm
 
 #endif // LLVM_PROFILEDATA_DATAACCESSPROF_H_

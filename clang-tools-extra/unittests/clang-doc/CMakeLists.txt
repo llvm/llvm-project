@@ -34,6 +34,7 @@ clang_target_link_libraries(ClangDocTests
   clangTooling
   clangToolingCore
   )
+
 target_link_libraries(ClangDocTests
   PRIVATE
   clangDoc

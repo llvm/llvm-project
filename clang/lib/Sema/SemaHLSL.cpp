@@ -537,6 +537,18 @@ void createHostLayoutStructForBuffer(Sema &S, HLSLBufferDecl *BufDecl) {
   BufDecl->addLayoutStruct(LS);
 }
 
+static void addImplicitBindingAttrToBuffer(Sema &S, HLSLBufferDecl *BufDecl,
+                                           uint32_t ImplicitBindingOrderID) {
+  RegisterType RT =
+      BufDecl->isCBuffer() ? RegisterType::CBuffer : RegisterType::SRV;
+  auto *Attr =
+      HLSLResourceBindingAttr::CreateImplicit(S.getASTContext(), "", "0", {});
+  std::optional<unsigned> RegSlot;
+  Attr->setBinding(RT, RegSlot, 0);
+  Attr->setImplicitBindingOrderID(ImplicitBindingOrderID);
+  BufDecl->addAttr(Attr);
+}
+
 // Handle end of cbuffer/tbuffer declaration
 void SemaHLSL::ActOnFinishBuffer(Decl *Dcl, SourceLocation RBrace) {
   auto *BufDecl = cast<HLSLBufferDecl>(Dcl);
@@ -547,9 +559,17 @@ void SemaHLSL::ActOnFinishBuffer(Decl *Dcl, SourceLocation RBrace) {
   // create buffer layout struct
   createHostLayoutStructForBuffer(SemaRef, BufDecl);
 
-  if (std::none_of(Dcl->attr_begin(), Dcl->attr_end(),
-                   [](Attr *A) { return isa<HLSLResourceBindingAttr>(A); }))
+  HLSLResourceBindingAttr *RBA = Dcl->getAttr<HLSLResourceBindingAttr>();
+  if (!RBA || !RBA->hasRegisterSlot()) {
     SemaRef.Diag(Dcl->getLocation(), diag::warn_hlsl_implicit_binding);
+    // Use HLSLResourceBindingAttr to transfer implicit binding order_ID
+    // to codegen. If it does not exist, create an implicit attribute.
+    uint32_t OrderID = getNextImplicitBindingOrderID();
+    if (RBA)
+      RBA->setImplicitBindingOrderID(OrderID);
+    else
+      addImplicitBindingAttrToBuffer(SemaRef, BufDecl, OrderID);
+  }
 
   SemaRef.PopDeclContext();
 }
@@ -2000,6 +2020,8 @@ void SemaHLSL::ActOnEndOfTranslationUnit(TranslationUnitDecl *TU) {
     HLSLBufferDecl *DefaultCBuffer = HLSLBufferDecl::CreateDefaultCBuffer(
         SemaRef.getASTContext(), SemaRef.getCurLexicalContext(),
         DefaultCBufferDecls);
+    addImplicitBindingAttrToBuffer(SemaRef, DefaultCBuffer,
+                                   getNextImplicitBindingOrderID());
     SemaRef.getCurLexicalContext()->addDecl(DefaultCBuffer);
     createHostLayoutStructForBuffer(SemaRef, DefaultCBuffer);
 

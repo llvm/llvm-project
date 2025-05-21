@@ -57,7 +57,7 @@ DataAccessProfiles:
   KnownColdSymbols:
     - foo
     - bar
-  KnownColdHashes: [ 999, 1001 ]
+  KnownColdStrHashes: [ 999, 1001 ]
 ...
 ;--- memprof-in-no-dap.yaml
 ---

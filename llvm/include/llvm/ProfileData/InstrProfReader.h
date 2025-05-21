@@ -705,7 +705,7 @@ private:
   // The number of elements in the radix tree array.
   unsigned RadixTreeSize = 0;
   /// The data access profiles, deserialized from binary data.
-  std::unique_ptr<data_access_prof::DataAccessProfData> DataAccessProfileData;
+  std::unique_ptr<memprof::DataAccessProfData> DataAccessProfileData;
 
   Error deserializeV2(const unsigned char *Start, const unsigned char *Ptr);
   Error deserializeRadixTreeBased(const unsigned char *Start,
