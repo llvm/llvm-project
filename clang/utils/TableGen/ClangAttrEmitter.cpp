@@ -3739,18 +3739,17 @@ static void GenerateHasAttrSpellingStringSwitch(
                       : '(' + itostr(Version) + ')';
 
     if (Scope.empty() || Scope == Spelling.nameSpace()) {
-      if (TestStringMap.contains(Spelling.name())) {
+      if (TestStringMap.contains(Spelling.name()))
         TestStringMap[Spelling.name()] += " || " + TestStr;
-      } else {
+      else
         TestStringMap[Spelling.name()] = TestStr;
-      }
     }
   }
 
   // Create the actual string switch statement after all the attributes have
-  // been parsed
-  for (auto &entry : TestStringMap) {
-    OS << "    .Case(\"" << entry.getKey() << "\", " << entry.getValue()
+  // been parsed.
+  for (auto &Entry : TestStringMap) {
+    OS << "    .Case(\"" << Entry.getKey() << "\", " << Entry.getValue()
        << ")\n";
   }
 
