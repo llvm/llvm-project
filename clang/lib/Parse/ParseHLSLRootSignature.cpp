@@ -205,7 +205,7 @@ std::optional<RootDescriptor> RootSignatureParser::parseRootDescriptor() {
     return std::nullopt;
   }
 
-  Param.Reg = Params->Reg.value();
+  Descriptor.Reg = Params->Reg.value();
 
   if (consumeExpectedToken(TokenKind::pu_r_paren,
                            diag::err_hlsl_unexpected_end_of_params,
