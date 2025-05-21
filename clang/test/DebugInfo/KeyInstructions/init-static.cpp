@@ -1,4 +1,4 @@
-// RUN: %clang -gkey-instructions %s -gmlt -gcolumn-info -S -emit-llvm -o -\
+// RUN: %clang_cc1 -gkey-instructions %s -debug-info-kind=line-tables-only -emit-llvm -o -\
 // RUN: | FileCheck %s --implicit-check-not atomGroup --implicit-check-not atomRank
 
 void g(int *a) {
