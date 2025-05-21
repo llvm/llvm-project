@@ -4904,6 +4904,19 @@ std::optional<ActualArgument> ArgumentAnalyzer::AnalyzeExpr(
         "TYPE(*) dummy argument may only be used as an actual argument"_err_en_US);
   } else if (MaybeExpr argExpr{AnalyzeExprOrWholeAssumedSizeArray(expr)}) {
     if (isProcedureCall_ || !IsProcedureDesignator(*argExpr)) {
+      // Pad Hollerith actual argument with spaces up to a multiple of 8
+      // bytes, in case the data are interpreted as double precision
+      // (or a smaller numeric type) by legacy code.
+      if (auto hollerith{UnwrapExpr<Constant<Ascii>>(*argExpr)};
+          hollerith && hollerith->wasHollerith()) {
+        std::string bytes{hollerith->values()};
+        while ((bytes.size() % 8) != 0) {
+          bytes += ' ';
+        }
+        Constant<Ascii> c{std::move(bytes)};
+        c.set_wasHollerith(true);
+        argExpr = AsGenericExpr(std::move(c));
+      }
       ActualArgument arg{std::move(*argExpr)};
       SetArgSourceLocation(arg, expr.source);
       return std::move(arg);

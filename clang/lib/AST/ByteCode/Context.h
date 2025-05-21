@@ -137,6 +137,9 @@ private:
   std::unique_ptr<Program> P;
   /// ID identifying an evaluation.
   unsigned EvalID = 0;
+  /// Cached widths (in bits) of common types, for a faster classify().
+  unsigned IntWidth;
+  unsigned LongWidth;
 };
 
 } // namespace interp

@@ -1205,6 +1205,73 @@ def HasVendorXSfvcp : Predicate<"Subtarget->hasVendorXSfvcp()">,
                       AssemblerPredicate<(all_of FeatureVendorXSfvcp),
                           "'XSfvcp' (SiFive Custom Vector Coprocessor Interface Instructions)">;
 
+def FeatureVendorXSfmmbase
+    : RISCVExtension<0, 6,
+                     "All non arithmetic instructions for all TEWs and sf.vtzero",
+                     [FeatureStdExtZve32x]>;
+def HasVendorXSfmmbase : Predicate<"Subtarget->hasVendorXSfmmbase()">,
+                         AssemblerPredicate<(all_of FeatureVendorXSfmmbase),
+                             "'XSfmmbase' (All non arithmetic instructions for all TEWs and sf.vtzero)">;
+
+def FeatureVendorXSfmm32a8f
+    : RISCVExtension<0, 6,
+                     "TEW=32-bit accumulation, operands - float: fp8",
+                     [FeatureVendorXSfmmbase, FeatureStdExtZve32f]>;
+def HasVendorXSfmm32a8f : Predicate<"Subtarget->hasVendorXSfmm32a8f()">,
+                          AssemblerPredicate<(all_of FeatureVendorXSfmm32a8f),
+                              "'XSfmm32a8f' (TEW=32-bit accumulation, operands - float: fp8)">;
+
+def FeatureVendorXSfmm32a16f
+    : RISCVExtension<0, 6,
+                     "TEW=32-bit accumulation, operands - float: 16b, widen=2 (IEEE, BF)",
+                     [FeatureVendorXSfmmbase, FeatureStdExtZve32f]>;
+
+def FeatureVendorXSfmm32a32f
+    : RISCVExtension<0, 6,
+                     "TEW=32-bit accumulation, operands - float: 32b",
+                     [FeatureVendorXSfmmbase, FeatureStdExtZve32f]>;
+
+def FeatureVendorXSfmm32a8i
+    : RISCVExtension<0, 6,
+                     "TEW=32-bit accumulation, operands - int: 8b",
+                     [FeatureVendorXSfmmbase]>;
+def HasVendorXSfmm32a8i : Predicate<"Subtarget->hasVendorXSfmm32a8i()">,
+                          AssemblerPredicate<(all_of FeatureVendorXSfmm32a8i),
+                              "'XSfmm32a8i' (TEW=32-bit accumulation, operands - int: 8b)">;
+
+def FeatureVendorXSfmm64a64f
+    : RISCVExtension<0, 6,
+                     "TEW=64-bit accumulation, operands - float: fp64",
+                     [FeatureVendorXSfmmbase, FeatureStdExtZve64d]>;
+def HasVendorXSfmm32a16fOrXSfmm32a32fOrXSfmm64a64f
+    : Predicate<"Subtarget->hasVendorXSfmm32a16fOrXSfmm32a32fOrXSfmm64a64f()">,
+                AssemblerPredicate<(any_of FeatureVendorXSfmm32a16f,
+                                           FeatureVendorXSfmm32a32f,
+                                           FeatureVendorXSfmm64a64f),
+                    "'XSfmm32a16f' (TEW=32-bit accumulation, operands - float: 16b, widen=2 (IEEE, BF)), or "
+                    "'XSfmm32a32f' (TEW=32-bit accumulation, operands - float: 32b), or "
+                    "'XSfmm64a64f' (TEW=64-bit accumulation, operands - float: fp64)">;
+
+def FeatureVendorXSfmm16t
+    : RISCVExtension<0, 6,
+                     "TE=16 configuration",
+                     [FeatureVendorXSfmmbase, FeatureStdExtZvl64b], "XSfmmTE", "16">;
+
+def FeatureVendorXSfmm32t
+    : RISCVExtension<0, 6,
+                     "TE=32 configuration",
+                     [FeatureVendorXSfmmbase, FeatureStdExtZvl128b], "XSfmmTE", "32">;
+
+def FeatureVendorXSfmm64t
+    : RISCVExtension<0, 6,
+                     "TE=64 configuration",
+                     [FeatureVendorXSfmmbase, FeatureStdExtZvl256b], "XSfmmTE", "64">;
+
+def FeatureVendorXSfmm128t
+    : RISCVExtension<0, 6,
+                     "TE=128 configuration",
+                     [FeatureVendorXSfmmbase, FeatureStdExtZvl512b], "XSfmmTE", "128">;
+
 def FeatureVendorXSfvqmaccdod
     : RISCVExtension<1, 0,
                      "SiFive Int8 Matrix Multiplication Instructions (2-by-8 and 8-by-2)",

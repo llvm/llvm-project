@@ -7,7 +7,7 @@
         mov      ((12+3)<<2), %o2
 
         ! CHECK:   ba      symStart+4
-        ! OBJDUMP: ba    0x1
+        ! OBJDUMP: ba    0xc
 symStart:
         b        symStart + 4
 

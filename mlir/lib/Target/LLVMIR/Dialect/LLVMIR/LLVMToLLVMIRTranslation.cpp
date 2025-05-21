@@ -308,7 +308,6 @@ static llvm::Metadata *convertModuleFlagProfileSummaryAttr(
     llvm::IRBuilderBase &builder, LLVM::ModuleTranslation &moduleTranslation) {
   llvm::LLVMContext &context = builder.getContext();
   llvm::MDBuilder mdb(context);
-  SmallVector<llvm::Metadata *> summaryNodes;
 
   auto getIntTuple = [&](StringRef key, uint64_t val) -> llvm::MDTuple * {
     SmallVector<llvm::Metadata *> tupleNodes{
@@ -515,6 +514,8 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
         if (!attr)
           continue;
         DictionaryAttr dAttr = cast<DictionaryAttr>(attr);
+        if (dAttr.empty())
+          continue;
         TypeAttr tAttr =
             cast<TypeAttr>(dAttr.get(InlineAsmOp::getElementTypeAttrName()));
         llvm::AttrBuilder b(moduleTranslation.getLLVMContext());

@@ -968,8 +968,8 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_LOAD(SDNode *N) {
   if (L->getExtensionType() == ISD::NON_EXTLOAD) {
     NewL = DAG.getLoad(L->getAddressingMode(), L->getExtensionType(), NVT, dl,
                        L->getChain(), L->getBasePtr(), L->getOffset(),
-                       L->getPointerInfo(), NVT, L->getOriginalAlign(),
-                       MMOFlags, L->getAAInfo());
+                       L->getPointerInfo(), NVT, L->getBaseAlign(), MMOFlags,
+                       L->getAAInfo());
     // Legalized the chain result - switch anything that used the old chain to
     // use the new one.
     ReplaceValueWith(SDValue(N, 1), NewL.getValue(1));
@@ -979,8 +979,8 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_LOAD(SDNode *N) {
   // Do a non-extending load followed by FP_EXTEND.
   NewL = DAG.getLoad(L->getAddressingMode(), ISD::NON_EXTLOAD, L->getMemoryVT(),
                      dl, L->getChain(), L->getBasePtr(), L->getOffset(),
-                     L->getPointerInfo(), L->getMemoryVT(),
-                     L->getOriginalAlign(), MMOFlags, L->getAAInfo());
+                     L->getPointerInfo(), L->getMemoryVT(), L->getBaseAlign(),
+                     MMOFlags, L->getAAInfo());
   // Legalized the chain result - switch anything that used the old chain to
   // use the new one.
   ReplaceValueWith(SDValue(N, 1), NewL.getValue(1));
@@ -3122,7 +3122,7 @@ SDValue DAGTypeLegalizer::PromoteFloatRes_LOAD(SDNode *N) {
   SDValue newL = DAG.getLoad(
       L->getAddressingMode(), L->getExtensionType(), IVT, SDLoc(N),
       L->getChain(), L->getBasePtr(), L->getOffset(), L->getPointerInfo(), IVT,
-      L->getOriginalAlign(), L->getMemOperand()->getFlags(), L->getAAInfo());
+      L->getBaseAlign(), L->getMemOperand()->getFlags(), L->getAAInfo());
   // Legalize the chain result by replacing uses of the old value chain with the
   // new one
   ReplaceValueWith(SDValue(N, 1), newL.getValue(1));
@@ -3551,7 +3551,7 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfRes_LOAD(SDNode *N) {
   SDValue NewL =
       DAG.getLoad(L->getAddressingMode(), L->getExtensionType(), MVT::i16,
                   SDLoc(N), L->getChain(), L->getBasePtr(), L->getOffset(),
-                  L->getPointerInfo(), MVT::i16, L->getOriginalAlign(),
+                  L->getPointerInfo(), MVT::i16, L->getBaseAlign(),
                   L->getMemOperand()->getFlags(), L->getAAInfo());
   // Legalize the chain result by replacing uses of the old value chain with the
   // new one
