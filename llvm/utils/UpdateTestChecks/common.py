@@ -1307,6 +1307,7 @@ def make_asm_generalizer(version):
     return GeneralizerInfo(version, GeneralizerInfo.MODE_ASM, values, prefix, suffix)
 
 
+# TODO: This is no longer required. Generalize UTC over an empty GeneralizerInfo.
 def make_analyze_generalizer(version):
     values = [
         NamelessValue(
