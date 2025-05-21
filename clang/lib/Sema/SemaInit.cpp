@@ -6513,6 +6513,15 @@ static bool canPerformArrayCopy(const InitializedEntity &Entity) {
 static const FieldDecl *getConstField(const RecordDecl *RD) {
   assert(!isa<CXXRecordDecl>(RD) && "Only expect to call this in C mode");
   for (const FieldDecl *FD : RD->fields()) {
+    // If the field is a flexible array member, we don't want to consider it
+    // as a const field because there's no way to initialize the FAM anyway.
+    const ASTContext &Ctx = FD->getASTContext();
+    if (Decl::isFlexibleArrayMemberLike(
+            Ctx, FD, FD->getType(),
+            Ctx.getLangOpts().getStrictFlexArraysLevel(),
+            /*IgnoreTemplateOrMacroSubstitution=*/true))
+      continue;
+
     QualType QT = FD->getType();
     if (QT.isConstQualified())
       return FD;
@@ -6602,8 +6611,10 @@ void InitializationSequence::InitializeFrom(Sema &S,
       }
       // If the record has any members which are const (recursively checked),
       // then we want to diagnose those as being uninitialized if there is no
-      // initializer present.
-      if (!Initializer) {
+      // initializer present. However, we only do this for structure types, not
+      // union types, because an unitialized field in a union is generally
+      // reasonable, especially in C where unions can be used for type punning.
+      if (!Initializer && !Rec->isUnion()) {
         if (const FieldDecl *FD = getConstField(Rec)) {
           unsigned DiagID = diag::warn_default_init_const_field_unsafe;
           if (Var->getStorageDuration() == SD_Static ||
