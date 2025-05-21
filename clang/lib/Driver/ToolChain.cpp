@@ -935,6 +935,13 @@ ToolChain::getTargetSubDirPath(StringRef BaseDir) const {
   if (auto Path = getPathForTriple(T))
     return *Path;
 
+  // On AIX, the environment component is not used in the target sub dir name.
+  if (T.isOSAIX() && T.hasEnvironment()) {
+    llvm::Triple AIXTriple(T.getArchName(), T.getVendorName(), llvm::Triple::getOSTypeName(T.getOS()));
+    if (auto Path = getPathForTriple(AIXTriple))
+      return *Path;
+  }
+
   if (T.isOSzOS() &&
       (!T.getOSVersion().empty() || !T.getEnvironmentVersion().empty())) {
     // Build the triple without version information
