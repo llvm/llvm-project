@@ -1,4 +1,5 @@
-! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
+! RUN: %python %S/test_errors.py %s %flang_fc1
+! Test generic matching with scalars argument without device attr
 
 module mlocModule
   interface maxlocUpdate
