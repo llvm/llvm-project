@@ -1301,4 +1301,33 @@ TEST(DIBuilder, CompositeTypes) {
   EXPECT_EQ(Enum->getTag(), dwarf::DW_TAG_enumeration_type);
 }
 
+TEST(DIBuilder, DynamicOffsetAndSize) {
+  LLVMContext Ctx;
+  auto M = std::make_unique<Module>("MyModule", Ctx);
+  DIBuilder DIB(*M);
+  DIScope *Scope = DISubprogram::getDistinct(
+      Ctx, nullptr, "", "", nullptr, 0, nullptr, 0, nullptr, 0, 0,
+      DINode::FlagZero, DISubprogram::SPFlagZero, nullptr);
+  DIFile *F = DIB.createFile("main.adb", "/");
+
+  DIVariable *Len = DIB.createAutoVariable(Scope, "length", F, 0, nullptr,
+                                           false, DINode::FlagZero, 0);
+
+  DICompositeType *Struct = DIB.createStructType(
+      Scope, "some_record", F, 18, Len, 8, DINode::FlagZero, nullptr, {});
+  EXPECT_EQ(Struct->getTag(), dwarf::DW_TAG_structure_type);
+
+  SmallVector<uint64_t, 4> ops;
+  ops.push_back(llvm::dwarf::DW_OP_push_object_address);
+  DIExpression::appendOffset(ops, 3);
+  ops.push_back(llvm::dwarf::DW_OP_deref);
+  DIExpression *Expr = DIB.createExpression(ops);
+
+  DIDerivedType *Field = DIB.createMemberType(Scope, "field", F, 23, Len, 0,
+                                              Expr, DINode::FlagZero, Struct);
+
+  EXPECT_EQ(Field->getRawOffsetInBits(), Expr);
+  EXPECT_EQ(Field->getRawSizeInBits(), Len);
+}
+
 } // end namespace

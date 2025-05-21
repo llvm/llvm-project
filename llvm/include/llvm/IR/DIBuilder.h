@@ -378,6 +378,22 @@ namespace llvm {
     /// \param Flags        Flags to encode member attribute, e.g. private
     /// \param Ty           Parent type.
     /// \param Annotations  Member annotations.
+    LLVM_ABI DIDerivedType *createMemberType(
+        DIScope *Scope, StringRef Name, DIFile *File, unsigned LineNo,
+        Metadata *SizeInBits, uint32_t AlignInBits, Metadata *OffsetInBits,
+        DINode::DIFlags Flags, DIType *Ty, DINodeArray Annotations = nullptr);
+
+    /// Create debugging information entry for a member.
+    /// \param Scope        Member scope.
+    /// \param Name         Member name.
+    /// \param File         File where this member is defined.
+    /// \param LineNo       Line number.
+    /// \param SizeInBits   Member size.
+    /// \param AlignInBits  Member alignment.
+    /// \param OffsetInBits Member offset.
+    /// \param Flags        Flags to encode member attribute, e.g. private
+    /// \param Ty           Parent type.
+    /// \param Annotations  Member annotations.
     LLVM_ABI DIDerivedType *
     createMemberType(DIScope *Scope, StringRef Name, DIFile *File,
                      unsigned LineNo, uint64_t SizeInBits, uint32_t AlignInBits,
@@ -418,6 +434,23 @@ namespace llvm {
                                                     DINodeArray Elements,
                                                     Constant *Discriminant,
                                                     DIType *Ty);
+
+    /// Create debugging information entry for a bit field member.
+    /// \param Scope               Member scope.
+    /// \param Name                Member name.
+    /// \param File                File where this member is defined.
+    /// \param LineNo              Line number.
+    /// \param SizeInBits          Member size.
+    /// \param OffsetInBits        Member offset.
+    /// \param StorageOffsetInBits Member storage offset.
+    /// \param Flags               Flags to encode member attribute.
+    /// \param Ty                  Parent type.
+    /// \param Annotations         Member annotations.
+    LLVM_ABI DIDerivedType *createBitFieldMemberType(
+        DIScope *Scope, StringRef Name, DIFile *File, unsigned LineNo,
+        Metadata *SizeInBits, Metadata *OffsetInBits,
+        uint64_t StorageOffsetInBits, DINode::DIFlags Flags, DIType *Ty,
+        DINodeArray Annotations = nullptr);
 
     /// Create debugging information entry for a bit field member.
     /// \param Scope               Member scope.
@@ -509,6 +542,29 @@ namespace llvm {
         DINode::DIFlags Flags, DIType *DerivedFrom, DINodeArray Elements,
         unsigned RunTimeLang = 0, DIType *VTableHolder = nullptr,
         MDNode *TemplateParms = nullptr, StringRef UniqueIdentifier = "");
+
+    /// Create debugging information entry for a struct.
+    /// \param Scope        Scope in which this struct is defined.
+    /// \param Name         Struct name.
+    /// \param File         File where this member is defined.
+    /// \param LineNumber   Line number.
+    /// \param SizeInBits   Member size.
+    /// \param AlignInBits  Member alignment.
+    /// \param Flags        Flags to encode member attribute, e.g. private
+    /// \param Elements     Struct elements.
+    /// \param RunTimeLang  Optional parameter, Objective-C runtime version.
+    /// \param UniqueIdentifier A unique identifier for the struct.
+    /// \param Specification The type that this type completes. This is used by
+    /// Swift to represent generic types.
+    /// \param NumExtraInhabitants The number of extra inhabitants of the type.
+    /// An extra inhabitant is a bit pattern that does not represent a valid
+    /// value for instances of a given type. This is used by the Swift language.
+    LLVM_ABI DICompositeType *createStructType(
+        DIScope *Scope, StringRef Name, DIFile *File, unsigned LineNumber,
+        Metadata *SizeInBits, uint32_t AlignInBits, DINode::DIFlags Flags,
+        DIType *DerivedFrom, DINodeArray Elements, unsigned RunTimeLang = 0,
+        DIType *VTableHolder = nullptr, StringRef UniqueIdentifier = "",
+        DIType *Specification = nullptr, uint32_t NumExtraInhabitants = 0);
 
     /// Create debugging information entry for a struct.
     /// \param Scope        Scope in which this struct is defined.
