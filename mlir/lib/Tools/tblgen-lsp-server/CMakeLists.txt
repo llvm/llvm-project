@@ -18,3 +18,5 @@ llvm_add_library(TableGenLspServerLib
   MLIRLspServerSupportLib
   MLIRSupport
   )
+
+add_mlir_library_install(TableGenLspServerLib)

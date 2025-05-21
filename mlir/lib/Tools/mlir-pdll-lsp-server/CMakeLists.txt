@@ -12,3 +12,5 @@ llvm_add_library(MLIRPdllLspServerLib
   MLIRPDLLParser
   MLIRLspServerSupportLib
   )
+
+add_mlir_library_install(MLIRPdllLspServerLib)
