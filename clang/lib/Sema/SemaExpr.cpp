@@ -9966,8 +9966,13 @@ AssignConvertType Sema::CheckSingleAssignmentConstraints(QualType LHSType,
       // If there is a conversion of some kind, check to see what kind of
       // pointer conversion happened so we can diagnose a C++ compatibility
       // diagnostic if the conversion is invalid. This only matters if the RHS
-      // is some kind of void pointer.
-      if (Kind != CK_NoOp && !getLangOpts().CPlusPlus) {
+      // is some kind of void pointer. We have a carve-out when the RHS is from
+      // a macro expansion because the use of a macro may indicate different
+      // code between C and C++. Consider: char *s = NULL; where NULL is
+      // defined as (void *)0 in C (which would be invalid in C++), but 0 in
+      // C++, which is valid in C++.
+      if (Kind != CK_NoOp && !getLangOpts().CPlusPlus &&
+          !RHS.get()->getBeginLoc().isMacroID()) {
         QualType CanRHS =
             RHS.get()->getType().getCanonicalType().getUnqualifiedType();
         QualType CanLHS = LHSType.getCanonicalType().getUnqualifiedType();
