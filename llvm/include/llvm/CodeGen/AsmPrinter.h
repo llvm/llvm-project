@@ -214,7 +214,7 @@ protected:
 
   StackMaps SM;
 
-  /// If one of thses pass manager is not null, then it is in new pass manager.
+  /// If one of these pass managers is not null, then it is in new pass manager.
   ModuleAnalysisManager *MAM = nullptr;
   MachineFunctionAnalysisManager *MFAM = nullptr;
   bool inNewPassManager() const { return MAM || MFAM; }
