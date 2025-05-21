@@ -9,8 +9,9 @@ body:             |
     ; GCN: [[DEF:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF1:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[V_CVT_F16_U16_t16_e64_:%[0-9]+]]:vgpr_16 = V_CVT_F16_U16_t16_e64 0, [[DEF]], 0, 0, 0, implicit $mode, implicit $exec
-    ; GCN-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:vgpr_32 = SUBREG_TO_REG 0, [[V_CVT_F16_U16_t16_e64_]], %subreg.lo16
-    ; GCN-NEXT: [[V_CMP_LT_F16_t16_e64_:%[0-9]+]]:sreg_32_xm0_xexec = nofpexcept V_CMP_LT_F16_t16_e64 0, killed [[SUBREG_TO_REG]].lo16, 0, [[DEF1]], 0, 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: [[DEF2:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
+    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[V_CVT_F16_U16_t16_e64_]], %subreg.lo16, [[DEF2]], %subreg.hi16
+    ; GCN-NEXT: [[V_CMP_LT_F16_t16_e64_:%[0-9]+]]:sreg_32_xm0_xexec = nofpexcept V_CMP_LT_F16_t16_e64 0, killed [[REG_SEQUENCE]].lo16, 0, [[DEF1]], 0, 0, implicit $mode, implicit $exec
     ; GCN-NEXT: [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, -1, killed [[V_CMP_LT_F16_t16_e64_]], implicit $exec
     %0:vgpr_16 = IMPLICIT_DEF
     %1:sreg_32 = IMPLICIT_DEF
@@ -28,8 +29,9 @@ body:             |
     ; GCN-LABEL: name: cvt_hi_f32_f16
     ; GCN: [[DEF:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
     ; GCN-NEXT: [[V_CVT_F16_U16_t16_e64_:%[0-9]+]]:vgpr_16 = V_CVT_F16_U16_t16_e64 0, [[DEF]], 0, 0, 0, implicit $mode, implicit $exec
-    ; GCN-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:vgpr_32 = SUBREG_TO_REG 0, [[V_CVT_F16_U16_t16_e64_]], %subreg.lo16
-    ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY [[SUBREG_TO_REG]]
+    ; GCN-NEXT: [[DEF1:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
+    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[V_CVT_F16_U16_t16_e64_]], %subreg.lo16, [[DEF1]], %subreg.hi16
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]]
     ; GCN-NEXT: [[V_CVT_F32_F16_t16_e64_:%[0-9]+]]:vgpr_32 = V_CVT_F32_F16_t16_e64 0, [[COPY]].hi16, 0, 0, 0, implicit $mode, implicit $exec
     %0:vgpr_16 = IMPLICIT_DEF
     %1:vgpr_16 = V_CVT_F16_U16_t16_e64 0, %0:vgpr_16, 0, 0, 0, implicit $mode, implicit $exec
@@ -44,8 +46,9 @@ body:             |
     ; GCN-LABEL: name: s_or_b32
     ; GCN: [[DEF:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
     ; GCN-NEXT: [[V_CVT_F16_U16_t16_e64_:%[0-9]+]]:vgpr_16 = V_CVT_F16_U16_t16_e64 0, [[DEF]], 0, 0, 0, implicit $mode, implicit $exec
-    ; GCN-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:vgpr_32 = SUBREG_TO_REG 0, [[V_CVT_F16_U16_t16_e64_]], %subreg.lo16
-    ; GCN-NEXT: [[V_OR_B32_e64_:%[0-9]+]]:vgpr_32 = V_OR_B32_e64 [[SUBREG_TO_REG]], [[SUBREG_TO_REG]], implicit $exec
+    ; GCN-NEXT: [[DEF1:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
+    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[V_CVT_F16_U16_t16_e64_]], %subreg.lo16, [[DEF1]], %subreg.hi16
+    ; GCN-NEXT: [[V_OR_B32_e64_:%[0-9]+]]:vgpr_32 = V_OR_B32_e64 [[REG_SEQUENCE]], [[REG_SEQUENCE]], implicit $exec
     ; GCN-NEXT: [[V_CVT_F16_U16_t16_e64_1:%[0-9]+]]:vgpr_16 = V_CVT_F16_U16_t16_e64 0, [[V_OR_B32_e64_]].lo16, 0, 0, 0, implicit $mode, implicit $exec
     %0:vgpr_16 = IMPLICIT_DEF
     %1:vgpr_16 = V_CVT_F16_U16_t16_e64 0, %0:vgpr_16, 0, 0, 0, implicit $mode, implicit $exec

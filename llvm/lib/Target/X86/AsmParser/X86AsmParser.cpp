@@ -124,6 +124,10 @@ private:
     return Result;
   }
 
+  bool tokenIsStartOfStatement(AsmToken::TokenKind Token) override {
+    return Token == AsmToken::LCurly;
+  }
+
   X86TargetStreamer &getTargetStreamer() {
     assert(getParser().getStreamer().getTargetStreamer() &&
            "do not have a target streamer");
@@ -2032,7 +2036,7 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
       const MCExpr *Val;
       if (isParsingMSInlineAsm() || Parser.isParsingMasm()) {
         // MS Dot Operator expression
-        if (Identifier.count('.') &&
+        if (Identifier.contains('.') &&
             (PrevTK == AsmToken::RBrac || PrevTK == AsmToken::RParen)) {
           if (ParseIntelDotOperator(SM, End))
             return true;
@@ -2378,7 +2382,7 @@ bool X86AsmParser::ParseIntelDotOperator(IntelExprStateMachine &SM,
   // Drop the optional '.'.
   StringRef DotDispStr = Tok.getString();
   DotDispStr.consume_front(".");
-  StringRef TrailingDot;
+  bool TrailingDot = false;
 
   // .Imm gets lexed as a real.
   if (Tok.is(AsmToken::Real)) {
@@ -2388,10 +2392,7 @@ bool X86AsmParser::ParseIntelDotOperator(IntelExprStateMachine &SM,
     Info.Offset = DotDisp.getZExtValue();
   } else if ((isParsingMSInlineAsm() || getParser().isParsingMasm()) &&
              Tok.is(AsmToken::Identifier)) {
-    if (DotDispStr.ends_with(".")) {
-      TrailingDot = DotDispStr.substr(DotDispStr.size() - 1);
-      DotDispStr = DotDispStr.drop_back(1);
-    }
+    TrailingDot = DotDispStr.consume_back(".");
     const std::pair<StringRef, StringRef> BaseMember = DotDispStr.split('.');
     const StringRef Base = BaseMember.first, Member = BaseMember.second;
     if (getParser().lookUpField(SM.getType(), DotDispStr, Info) &&
@@ -2409,8 +2410,8 @@ bool X86AsmParser::ParseIntelDotOperator(IntelExprStateMachine &SM,
   const char *DotExprEndLoc = DotDispStr.data() + DotDispStr.size();
   while (Tok.getLoc().getPointer() < DotExprEndLoc)
     Lex();
-  if (!TrailingDot.empty())
-    getLexer().UnLex(AsmToken(AsmToken::Dot, TrailingDot));
+  if (TrailingDot)
+    getLexer().UnLex(AsmToken(AsmToken::Dot, "."));
   SM.addImm(Info.Offset);
   SM.setTypeInfo(Info.Type);
   return false;
@@ -4794,7 +4795,7 @@ bool X86AsmParser::ParseDirectiveCode(StringRef IDVal, SMLoc L) {
     Parser.Lex();
     if (!is16BitMode()) {
       SwitchMode(X86::Is16Bit);
-      getParser().getStreamer().emitAssemblerFlag(MCAF_Code16);
+      getTargetStreamer().emitCode16();
     }
   } else if (IDVal == ".code16gcc") {
     // .code16gcc parses as if in 32-bit mode, but emits code in 16-bit mode.
@@ -4802,19 +4803,19 @@ bool X86AsmParser::ParseDirectiveCode(StringRef IDVal, SMLoc L) {
     Code16GCC = true;
     if (!is16BitMode()) {
       SwitchMode(X86::Is16Bit);
-      getParser().getStreamer().emitAssemblerFlag(MCAF_Code16);
+      getTargetStreamer().emitCode16();
     }
   } else if (IDVal == ".code32") {
     Parser.Lex();
     if (!is32BitMode()) {
       SwitchMode(X86::Is32Bit);
-      getParser().getStreamer().emitAssemblerFlag(MCAF_Code32);
+      getTargetStreamer().emitCode32();
     }
   } else if (IDVal == ".code64") {
     Parser.Lex();
     if (!is64BitMode()) {
       SwitchMode(X86::Is64Bit);
-      getParser().getStreamer().emitAssemblerFlag(MCAF_Code64);
+      getTargetStreamer().emitCode64();
     }
   } else {
     Error(L, "unknown directive " + IDVal);

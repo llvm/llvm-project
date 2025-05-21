@@ -718,7 +718,7 @@ struct WarpOpTransferRead : public WarpDistributionPattern {
     auto read = operand->get().getDefiningOp<vector::TransferReadOp>();
 
     // Source must be defined outside of the region.
-    if (!warpOp.isDefinedOutsideOfRegion(read.getSource()))
+    if (!warpOp.isDefinedOutsideOfRegion(read.getBase()))
       return rewriter.notifyMatchFailure(
           read, "source must be defined outside of the region");
 
@@ -802,7 +802,7 @@ struct WarpOpTransferRead : public WarpDistributionPattern {
         hasMask ? newWarpOp.getResult(newRetIndices[newRetIndices.size() - 1])
                 : Value();
     auto newRead = rewriter.create<vector::TransferReadOp>(
-        read.getLoc(), distributedVal.getType(), read.getSource(), newIndices,
+        read.getLoc(), distributedVal.getType(), read.getBase(), newIndices,
         read.getPermutationMapAttr(), newPadding, newMask,
         read.getInBoundsAttr());
 
@@ -878,8 +878,6 @@ struct WarpOpForwardOperand : public WarpDistributionPattern {
   using Base::Base;
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
-    SmallVector<Type> resultTypes;
-    SmallVector<Value> yieldValues;
     auto yield = cast<gpu::YieldOp>(
         warpOp.getBodyRegion().getBlocks().begin()->getTerminator());
     Value valForwarded;

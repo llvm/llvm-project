@@ -14,6 +14,7 @@
 #include "CheckExprLifetime.h"
 #include "clang/AST/APValue.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/ASTDiagnostic.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/AttrIterator.h"
 #include "clang/AST/CharUnits.h"
@@ -168,7 +169,7 @@ bool Sema::checkArgCount(CallExpr *Call, unsigned DesiredArgCount) {
 
   return Diag(Range.getBegin(), diag::err_typecheck_call_too_many_args)
          << 0 /*function call*/ << DesiredArgCount << ArgCount
-         << /*is non object*/ 0 << Call->getArg(1)->getSourceRange();
+         << /*is non object*/ 0 << Range;
 }
 
 static bool checkBuiltinVerboseTrap(CallExpr *Call, Sema &S) {
@@ -1919,6 +1920,54 @@ static ExprResult BuiltinIsWithinLifetime(Sema &S, CallExpr *TheCall) {
         << 0;
     return ExprError();
   }
+  return TheCall;
+}
+
+static ExprResult BuiltinTriviallyRelocate(Sema &S, CallExpr *TheCall) {
+  if (S.checkArgCount(TheCall, 3))
+    return ExprError();
+
+  QualType Dest = TheCall->getArg(0)->getType();
+  if (!Dest->isPointerType() || Dest.getCVRQualifiers() != 0) {
+    S.Diag(TheCall->getArg(0)->getExprLoc(),
+           diag::err_builtin_trivially_relocate_invalid_arg_type)
+        << /*a pointer*/ 0;
+    return ExprError();
+  }
+
+  QualType T = Dest->getPointeeType();
+  if (S.RequireCompleteType(TheCall->getBeginLoc(), T,
+                            diag::err_incomplete_type))
+    return ExprError();
+
+  if (T.isConstQualified() || !S.IsCXXTriviallyRelocatableType(T) ||
+      T->isIncompleteArrayType()) {
+    S.Diag(TheCall->getArg(0)->getExprLoc(),
+           diag::err_builtin_trivially_relocate_invalid_arg_type)
+        << (T.isConstQualified() ? /*non-const*/ 1 : /*relocatable*/ 2);
+    return ExprError();
+  }
+
+  TheCall->setType(Dest);
+
+  QualType Src = TheCall->getArg(1)->getType();
+  if (Src.getCanonicalType() != Dest.getCanonicalType()) {
+    S.Diag(TheCall->getArg(1)->getExprLoc(),
+           diag::err_builtin_trivially_relocate_invalid_arg_type)
+        << /*the same*/ 3;
+    return ExprError();
+  }
+
+  Expr *SizeExpr = TheCall->getArg(2);
+  ExprResult Size = S.DefaultLvalueConversion(SizeExpr);
+  if (Size.isInvalid())
+    return ExprError();
+
+  Size = S.tryConvertExprToType(Size.get(), S.getASTContext().getSizeType());
+  if (Size.isInvalid())
+    return ExprError();
+  SizeExpr = Size.get();
+  TheCall->setArg(2, SizeExpr);
 
   return TheCall;
 }
@@ -2384,6 +2433,9 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     return BuiltinLaunder(*this, TheCall);
   case Builtin::BI__builtin_is_within_lifetime:
     return BuiltinIsWithinLifetime(*this, TheCall);
+  case Builtin::BI__builtin_trivially_relocate:
+    return BuiltinTriviallyRelocate(*this, TheCall);
+
   case Builtin::BI__sync_fetch_and_add:
   case Builtin::BI__sync_fetch_and_add_1:
   case Builtin::BI__sync_fetch_and_add_2:
@@ -4817,7 +4869,7 @@ static bool checkVAStartABI(Sema &S, unsigned BuiltinID, Expr *Fn) {
   bool IsX64 = TT.getArch() == llvm::Triple::x86_64;
   bool IsAArch64 = (TT.getArch() == llvm::Triple::aarch64 ||
                     TT.getArch() == llvm::Triple::aarch64_32);
-  bool IsWindows = TT.isOSWindows();
+  bool IsWindowsOrUEFI = TT.isOSWindows() || TT.isUEFI();
   bool IsMSVAStart = BuiltinID == Builtin::BI__builtin_ms_va_start;
   if (IsX64 || IsAArch64) {
     CallingConv CC = CC_C;
@@ -4825,7 +4877,7 @@ static bool checkVAStartABI(Sema &S, unsigned BuiltinID, Expr *Fn) {
       CC = FD->getType()->castAs<FunctionType>()->getCallConv();
     if (IsMSVAStart) {
       // Don't allow this in System V ABI functions.
-      if (CC == CC_X86_64SysV || (!IsWindows && CC != CC_Win64))
+      if (CC == CC_X86_64SysV || (!IsWindowsOrUEFI && CC != CC_Win64))
         return S.Diag(Fn->getBeginLoc(),
                       diag::err_ms_va_start_used_in_sysv_function);
     } else {
@@ -4833,11 +4885,11 @@ static bool checkVAStartABI(Sema &S, unsigned BuiltinID, Expr *Fn) {
       // On x64 Windows, don't allow this in System V ABI functions.
       // (Yes, that means there's no corresponding way to support variadic
       // System V ABI functions on Windows.)
-      if ((IsWindows && CC == CC_X86_64SysV) ||
-          (!IsWindows && CC == CC_Win64))
+      if ((IsWindowsOrUEFI && CC == CC_X86_64SysV) ||
+          (!IsWindowsOrUEFI && CC == CC_Win64))
         return S.Diag(Fn->getBeginLoc(),
                       diag::err_va_start_used_in_wrong_abi_function)
-               << !IsWindows;
+               << !IsWindowsOrUEFI;
     }
     return false;
   }
@@ -5291,29 +5343,29 @@ ExprResult Sema::BuiltinShuffleVector(CallExpr *TheCall) {
   }
 
   for (unsigned i = 2; i < TheCall->getNumArgs(); i++) {
-    if (TheCall->getArg(i)->isTypeDependent() ||
-        TheCall->getArg(i)->isValueDependent())
+    Expr *Arg = TheCall->getArg(i);
+    if (Arg->isTypeDependent() || Arg->isValueDependent())
       continue;
 
     std::optional<llvm::APSInt> Result;
-    if (!(Result = TheCall->getArg(i)->getIntegerConstantExpr(Context)))
+    if (!(Result = Arg->getIntegerConstantExpr(Context)))
       return ExprError(Diag(TheCall->getBeginLoc(),
                             diag::err_shufflevector_nonconstant_argument)
-                       << TheCall->getArg(i)->getSourceRange());
+                       << Arg->getSourceRange());
 
     // Allow -1 which will be translated to undef in the IR.
     if (Result->isSigned() && Result->isAllOnes())
-      continue;
-
-    if (Result->getActiveBits() > 64 ||
-        Result->getZExtValue() >= numElements * 2)
+      ;
+    else if (Result->getActiveBits() > 64 ||
+             Result->getZExtValue() >= numElements * 2)
       return ExprError(Diag(TheCall->getBeginLoc(),
                             diag::err_shufflevector_argument_too_large)
-                       << TheCall->getArg(i)->getSourceRange());
+                       << Arg->getSourceRange());
+
+    TheCall->setArg(i, ConstantExpr::Create(Context, Arg, APValue(*Result)));
   }
 
-  SmallVector<Expr*, 32> exprs;
-
+  SmallVector<Expr *> exprs;
   for (unsigned i = 0, e = TheCall->getNumArgs(); i != e; i++) {
     exprs.push_back(TheCall->getArg(i));
     TheCall->setArg(i, nullptr);
@@ -7474,11 +7526,10 @@ bool DecomposePrintfHandler::GetSpecifiers(
   if (H.HadError)
     return false;
 
-  std::stable_sort(
-      Args.begin(), Args.end(),
-      [](const EquatableFormatArgument &A, const EquatableFormatArgument &B) {
-        return A.getPosition() < B.getPosition();
-      });
+  llvm::stable_sort(Args, [](const EquatableFormatArgument &A,
+                             const EquatableFormatArgument &B) {
+    return A.getPosition() < B.getPosition();
+  });
   return true;
 }
 
@@ -9104,9 +9155,7 @@ static bool IsStdFunction(const FunctionDecl *FDecl,
 enum class MathCheck { NaN, Inf };
 static bool IsInfOrNanFunction(StringRef calleeName, MathCheck Check) {
   auto MatchesAny = [&](std::initializer_list<llvm::StringRef> names) {
-    return std::any_of(names.begin(), names.end(), [&](llvm::StringRef name) {
-      return calleeName == name;
-    });
+    return llvm::is_contained(names, calleeName);
   };
 
   switch (Check) {
@@ -10001,9 +10050,10 @@ void CheckFreeArgumentsAddressof(Sema &S, const std::string &CalleeName,
                                  const UnaryOperator *UnaryExpr) {
   if (const auto *Lvalue = dyn_cast<DeclRefExpr>(UnaryExpr->getSubExpr())) {
     const Decl *D = Lvalue->getDecl();
-    if (isa<DeclaratorDecl>(D))
-      if (!dyn_cast<DeclaratorDecl>(D)->getType()->isReferenceType())
+    if (auto *DD = dyn_cast<DeclaratorDecl>(D)) {
+      if (!DD->getType()->isReferenceType())
         return CheckFreeArgumentsOnLvalue(S, CalleeName, UnaryExpr, D);
+    }
   }
 
   if (const auto *Lvalue = dyn_cast<MemberExpr>(UnaryExpr->getSubExpr()))
@@ -11596,6 +11646,15 @@ static void DiagnoseFloatingImpCast(Sema &S, Expr *E, QualType T,
   }
 }
 
+static void CheckCommaOperand(Sema &S, Expr *E, QualType T, SourceLocation CC,
+                              bool ExtraCheckForImplicitConversion) {
+  E = E->IgnoreParenImpCasts();
+  AnalyzeImplicitConversions(S, E, CC);
+
+  if (ExtraCheckForImplicitConversion && E->getType() != T)
+    S.CheckImplicitConversion(E, T, CC);
+}
+
 /// Analyze the given compound assignment for the possible losing of
 /// floating-point precision.
 static void AnalyzeCompoundAssignment(Sema &S, BinaryOperator *E) {
@@ -11807,6 +11866,47 @@ static void DiagnoseIntInBoolContext(Sema &S, Expr *E) {
       return;
     if (LHS->getValue() != 0 && RHS->getValue() != 0)
       S.Diag(ExprLoc, diag::warn_integer_constants_in_conditional_always_true);
+  }
+}
+
+static void DiagnoseMixedUnicodeImplicitConversion(Sema &S, const Type *Source,
+                                                   const Type *Target, Expr *E,
+                                                   QualType T,
+                                                   SourceLocation CC) {
+  assert(Source->isUnicodeCharacterType() && Target->isUnicodeCharacterType() &&
+         Source != Target);
+  Expr::EvalResult Result;
+  if (E->EvaluateAsInt(Result, S.getASTContext(), Expr::SE_AllowSideEffects,
+                       S.isConstantEvaluatedContext())) {
+    llvm::APSInt Value(32);
+    Value = Result.Val.getInt();
+    bool IsASCII = Value <= 0x7F;
+    bool IsBMP = Value <= 0xD7FF || (Value >= 0xE000 && Value <= 0xFFFF);
+    bool ConversionPreservesSemantics =
+        IsASCII || (!Source->isChar8Type() && !Target->isChar8Type() && IsBMP);
+
+    if (!ConversionPreservesSemantics) {
+      auto IsSingleCodeUnitCP = [](const QualType &T,
+                                   const llvm::APSInt &Value) {
+        if (T->isChar8Type())
+          return llvm::IsSingleCodeUnitUTF8Codepoint(Value.getExtValue());
+        if (T->isChar16Type())
+          return llvm::IsSingleCodeUnitUTF16Codepoint(Value.getExtValue());
+        assert(T->isChar32Type());
+        return llvm::IsSingleCodeUnitUTF32Codepoint(Value.getExtValue());
+      };
+
+      S.Diag(CC, diag::warn_impcast_unicode_char_type_constant)
+          << E->getType() << T
+          << IsSingleCodeUnitCP(E->getType().getUnqualifiedType(), Value)
+          << FormatUTFCodeUnitAsCodepoint(Value.getExtValue(), E->getType());
+    }
+  } else {
+    bool LosesPrecision = S.getASTContext().getIntWidth(E->getType()) >
+                          S.getASTContext().getIntWidth(T);
+    DiagnoseImpCast(S, E, T, CC,
+                    LosesPrecision ? diag::warn_impcast_unicode_precision
+                                   : diag::warn_impcast_unicode_char_type);
   }
 }
 
@@ -12147,6 +12247,11 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
 
   DiscardMisalignedMemberAddress(Target, E);
 
+  if (Source->isUnicodeCharacterType() && Target->isUnicodeCharacterType()) {
+    DiagnoseMixedUnicodeImplicitConversion(*this, Source, Target, E, T, CC);
+    return;
+  }
+
   if (Target->isBooleanType())
     DiagnoseIntInBoolContext(*this, E);
 
@@ -12413,7 +12518,7 @@ static void AnalyzeImplicitConversions(
           << OrigE->getSourceRange() << T->isBooleanType()
           << FixItHint::CreateReplacement(UO->getBeginLoc(), "!");
 
-  if (const auto *BO = dyn_cast<BinaryOperator>(SourceExpr))
+  if (auto *BO = dyn_cast<BinaryOperator>(SourceExpr)) {
     if ((BO->getOpcode() == BO_And || BO->getOpcode() == BO_Or) &&
         BO->getLHS()->isKnownToHaveBooleanValue() &&
         BO->getRHS()->isKnownToHaveBooleanValue() &&
@@ -12439,7 +12544,21 @@ static void AnalyzeImplicitConversions(
                    (BO->getOpcode() == BO_And ? "&&" : "||"));
         S.Diag(BO->getBeginLoc(), diag::note_cast_operand_to_int);
       }
+    } else if (BO->isCommaOp() && !S.getLangOpts().CPlusPlus) {
+      /// Analyze the given comma operator. The basic idea behind the analysis
+      /// is to analyze the left and right operands slightly differently. The
+      /// left operand needs to check whether the operand itself has an implicit
+      /// conversion, but not whether the left operand induces an implicit
+      /// conversion for the entire comma expression itself. This is similar to
+      /// how CheckConditionalOperand behaves; it's as-if the correct operand
+      /// were directly used for the implicit conversion check.
+      CheckCommaOperand(S, BO->getLHS(), T, BO->getOperatorLoc(),
+                        /*ExtraCheckForImplicitConversion=*/false);
+      CheckCommaOperand(S, BO->getRHS(), T, BO->getOperatorLoc(),
+                        /*ExtraCheckForImplicitConversion=*/true);
+      return;
     }
+  }
 
   // For conditional operators, we analyze the arguments as if they
   // were being fed directly into the output.

@@ -872,7 +872,7 @@ entry:
   ret i32 %ret
 }
 
-declare hidden void @void_fastcc_multi_byval(i32 %a, ptr addrspace(5) byval([3 x i32]) align 16, ptr addrspace(5) byval([2 x i64]))
+declare hidden fastcc void @void_fastcc_multi_byval(i32 %a, ptr addrspace(5) byval([3 x i32]) align 16, ptr addrspace(5) byval([2 x i64]))
 
 define fastcc void @sibling_call_fastcc_multi_byval(i32 %a, [64 x i32]) #1 {
 ; GCN-LABEL: sibling_call_fastcc_multi_byval:
@@ -907,7 +907,7 @@ entry:
   ret void
 }
 
-declare hidden void @void_fastcc_byval_and_stack_passed(ptr addrspace(5) byval([3 x i32]) align 16, [32 x i32], i32)
+declare hidden fastcc void @void_fastcc_byval_and_stack_passed(ptr addrspace(5) byval([3 x i32]) align 16, [32 x i32], i32)
 
 ; Callee has a byval and non-byval stack passed argument
 define fastcc void @sibling_call_byval_and_stack_passed(i32 %stack.out.arg, [64 x i32]) #1 {

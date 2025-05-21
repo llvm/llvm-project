@@ -90,10 +90,8 @@ struct MissingFeatures {
   static bool opCallArgEvaluationOrder() { return false; }
   static bool opCallCallConv() { return false; }
   static bool opCallSideEffect() { return false; }
-  static bool opCallChainCall() { return false; }
   static bool opCallNoPrototypeFunc() { return false; }
   static bool opCallMustTail() { return false; }
-  static bool opCallIndirect() { return false; }
   static bool opCallVirtual() { return false; }
   static bool opCallInAlloca() { return false; }
   static bool opCallAttrs() { return false; }
@@ -104,12 +102,25 @@ struct MissingFeatures {
   static bool opCallExtParameterInfo() { return false; }
   static bool opCallCIRGenFuncInfoParamInfo() { return false; }
   static bool opCallCIRGenFuncInfoExtParamInfo() { return false; }
+  static bool opCallLandingPad() { return false; }
+  static bool opCallContinueBlock() { return false; }
+
+  // FnInfoOpts -- This is used to track whether calls are chain calls or
+  // instance methods. Classic codegen uses chain call to track and extra free
+  // register for x86 and uses instance method as a condition for a thunk
+  // generation special case. It's not clear that we need either of these in
+  // pre-lowering CIR codegen.
+  static bool opCallFnInfoOpts() { return false; }
 
   // ScopeOp handling
   static bool opScopeCleanupRegion() { return false; }
 
   // Unary operator handling
   static bool opUnaryPromotionType() { return false; }
+
+  // SwitchOp handling
+  static bool foldCascadingCases() { return false; }
+  static bool foldRangeCase() { return false; }
 
   // Clang early optimizations or things defered to LLVM lowering.
   static bool mayHaveIntegerOverflow() { return false; }
@@ -173,16 +184,22 @@ struct MissingFeatures {
   static bool msabi() { return false; }
   static bool typeChecks() { return false; }
   static bool lambdaFieldToName() { return false; }
+  static bool updateCompletedType() { return false; }
   static bool targetSpecificCXXABI() { return false; }
   static bool moduleNameHash() { return false; }
   static bool setDSOLocal() { return false; }
-  static bool foldCaseStmt() { return false; }
   static bool constantFoldSwitchStatement() { return false; }
   static bool cudaSupport() { return false; }
   static bool maybeHandleStaticInExternC() { return false; }
   static bool constEmitterArrayILE() { return false; }
   static bool constEmitterVectorILE() { return false; }
   static bool needsGlobalCtorDtor() { return false; }
+  static bool emitTypeCheck() { return false; }
+  static bool cxxabiThisDecl() { return false; }
+  static bool cxxabiThisAlignment() { return false; }
+  static bool writebacks() { return false; }
+  static bool cleanupsToDeactivate() { return false; }
+  static bool stackBase() { return false; }
 
   // Missing types
   static bool dataMemberType() { return false; }
@@ -206,7 +223,6 @@ struct MissingFeatures {
   static bool labelOp() { return false; }
   static bool ptrDiffOp() { return false; }
   static bool ptrStrideOp() { return false; }
-  static bool selectOp() { return false; }
   static bool switchOp() { return false; }
   static bool ternaryOp() { return false; }
   static bool tryOp() { return false; }

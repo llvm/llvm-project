@@ -15,6 +15,7 @@
 #include "UsedDeclVisitor.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/ASTDiagnostic.h"
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/ASTMutationListener.h"
 #include "clang/AST/CXXInheritance.h"
@@ -251,7 +252,8 @@ bool Sema::DiagnoseUseOfDecl(NamedDecl *D, ArrayRef<SourceLocation> Locs,
         << D->getDeclName();
     } else {
       Diag(Loc, diag::err_auto_variable_cannot_appear_in_own_initializer)
-        << D->getDeclName() << cast<VarDecl>(D)->getType();
+          << diag::ParsingInitFor::Var << D->getDeclName()
+          << cast<VarDecl>(D)->getType();
     }
     return true;
   }
@@ -1567,6 +1569,78 @@ void Sema::checkEnumArithmeticConversions(Expr *LHS, Expr *RHS,
   }
 }
 
+static void CheckUnicodeArithmeticConversions(Sema &SemaRef, Expr *LHS,
+                                              Expr *RHS, SourceLocation Loc,
+                                              ArithConvKind ACK) {
+  QualType LHSType = LHS->getType().getUnqualifiedType();
+  QualType RHSType = RHS->getType().getUnqualifiedType();
+
+  if (!SemaRef.getLangOpts().CPlusPlus || !LHSType->isUnicodeCharacterType() ||
+      !RHSType->isUnicodeCharacterType())
+    return;
+
+  if (ACK == ArithConvKind::Comparison) {
+    if (SemaRef.getASTContext().hasSameType(LHSType, RHSType))
+      return;
+
+    auto IsSingleCodeUnitCP = [](const QualType &T, const llvm::APSInt &Value) {
+      if (T->isChar8Type())
+        return llvm::IsSingleCodeUnitUTF8Codepoint(Value.getExtValue());
+      if (T->isChar16Type())
+        return llvm::IsSingleCodeUnitUTF16Codepoint(Value.getExtValue());
+      assert(T->isChar32Type());
+      return llvm::IsSingleCodeUnitUTF32Codepoint(Value.getExtValue());
+    };
+
+    Expr::EvalResult LHSRes, RHSRes;
+    bool LHSSuccess = LHS->EvaluateAsInt(LHSRes, SemaRef.getASTContext(),
+                                         Expr::SE_AllowSideEffects,
+                                         SemaRef.isConstantEvaluatedContext());
+    bool RHSuccess = RHS->EvaluateAsInt(RHSRes, SemaRef.getASTContext(),
+                                        Expr::SE_AllowSideEffects,
+                                        SemaRef.isConstantEvaluatedContext());
+
+    // Don't warn if the one known value is a representable
+    // in the type of both expressions.
+    if (LHSSuccess != RHSuccess) {
+      Expr::EvalResult &Res = LHSSuccess ? LHSRes : RHSRes;
+      if (IsSingleCodeUnitCP(LHSType, Res.Val.getInt()) &&
+          IsSingleCodeUnitCP(RHSType, Res.Val.getInt()))
+        return;
+    }
+
+    if (!LHSSuccess || !RHSuccess) {
+      SemaRef.Diag(Loc, diag::warn_comparison_unicode_mixed_types)
+          << LHS->getSourceRange() << RHS->getSourceRange() << LHSType
+          << RHSType;
+      return;
+    }
+
+    llvm::APSInt LHSValue(32);
+    LHSValue = LHSRes.Val.getInt();
+    llvm::APSInt RHSValue(32);
+    RHSValue = RHSRes.Val.getInt();
+
+    bool LHSSafe = IsSingleCodeUnitCP(LHSType, LHSValue);
+    bool RHSSafe = IsSingleCodeUnitCP(RHSType, RHSValue);
+    if (LHSSafe && RHSSafe)
+      return;
+
+    SemaRef.Diag(Loc, diag::warn_comparison_unicode_mixed_types_constant)
+        << LHS->getSourceRange() << RHS->getSourceRange() << LHSType << RHSType
+        << FormatUTFCodeUnitAsCodepoint(LHSValue.getExtValue(), LHSType)
+        << FormatUTFCodeUnitAsCodepoint(RHSValue.getExtValue(), RHSType);
+    return;
+  }
+
+  if (SemaRef.getASTContext().hasSameType(LHSType, RHSType))
+    return;
+
+  SemaRef.Diag(Loc, diag::warn_arith_conv_mixed_unicode_types)
+      << LHS->getSourceRange() << RHS->getSourceRange() << ACK << LHSType
+      << RHSType;
+}
+
 /// UsualArithmeticConversions - Performs various conversions that are common to
 /// binary operators (C99 6.3.1.8). If both operands aren't arithmetic, this
 /// routine returns the first non-arithmetic type found. The client is
@@ -1574,7 +1648,10 @@ void Sema::checkEnumArithmeticConversions(Expr *LHS, Expr *RHS,
 QualType Sema::UsualArithmeticConversions(ExprResult &LHS, ExprResult &RHS,
                                           SourceLocation Loc,
                                           ArithConvKind ACK) {
+
   checkEnumArithmeticConversions(LHS.get(), RHS.get(), Loc, ACK);
+
+  CheckUnicodeArithmeticConversions(*this, LHS.get(), RHS.get(), Loc, ACK);
 
   if (ACK != ArithConvKind::CompAssign) {
     LHS = UsualUnaryConversions(LHS.get());
@@ -6361,6 +6438,14 @@ static FunctionDecl *rewriteBuiltinFunctionDecl(Sema *Sema, ASTContext &Context,
     Params.push_back(Parm);
   }
   OverloadDecl->setParams(Params);
+  // We cannot merge host/device attributes of redeclarations. They have to
+  // be consistent when created.
+  if (Sema->LangOpts.CUDA) {
+    if (FDecl->hasAttr<CUDAHostAttr>())
+      OverloadDecl->addAttr(CUDAHostAttr::CreateImplicit(Context));
+    if (FDecl->hasAttr<CUDADeviceAttr>())
+      OverloadDecl->addAttr(CUDADeviceAttr::CreateImplicit(Context));
+  }
   Sema->mergeDeclAttributes(OverloadDecl, FDecl);
   return OverloadDecl;
 }
@@ -6541,6 +6626,23 @@ ExprResult Sema::ActOnCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
   return Call;
 }
 
+// Any type that could be used to form a callable expression
+static bool MayBeFunctionType(const ASTContext &Context, const Expr *E) {
+  QualType T = E->getType();
+  if (T->isDependentType())
+    return true;
+
+  if (T == Context.BoundMemberTy || T == Context.UnknownAnyTy ||
+      T == Context.BuiltinFnTy || T == Context.OverloadTy ||
+      T->isFunctionType() || T->isFunctionReferenceType() ||
+      T->isMemberFunctionPointerType() || T->isFunctionPointerType() ||
+      T->isBlockPointerType() || T->isRecordType())
+    return true;
+
+  return isa<CallExpr, DeclRefExpr, MemberExpr, CXXPseudoDestructorExpr,
+             OverloadExpr, UnresolvedMemberExpr, UnaryOperator>(E);
+}
+
 ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
                                MultiExprArg ArgExprs, SourceLocation RParenLoc,
                                Expr *ExecConfig, bool IsExecConfig,
@@ -6593,6 +6695,14 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
         tryImplicitlyCaptureThisIfImplicitMemberFunctionAccessWithDependentArgs(
             *this, dyn_cast<UnresolvedMemberExpr>(Fn->IgnoreParens()),
             Fn->getBeginLoc());
+
+        // If the type of the function itself is not dependent
+        // check that it is a reasonable as a function, as type deduction
+        // later assume the CallExpr has a sensible TYPE.
+        if (!MayBeFunctionType(Context, Fn))
+          return ExprError(
+              Diag(LParenLoc, diag::err_typecheck_call_not_function)
+              << Fn->getType() << Fn->getSourceRange());
 
         return CallExpr::Create(Context, Fn, ArgExprs, Context.DependentTy,
                                 VK_PRValue, RParenLoc, CurFPFeatureOverrides());
@@ -7207,10 +7317,20 @@ Sema::BuildCompoundLiteralExpr(SourceLocation LParenLoc, TypeSourceInfo *TInfo,
           ? VK_PRValue
           : VK_LValue;
 
+  // C99 6.5.2.5
+  //  "If the compound literal occurs outside the body of a function, the
+  //  initializer list shall consist of constant expressions."
   if (IsFileScope)
     if (auto ILE = dyn_cast<InitListExpr>(LiteralExpr))
       for (unsigned i = 0, j = ILE->getNumInits(); i != j; i++) {
         Expr *Init = ILE->getInit(i);
+        if (!Init->isTypeDependent() && !Init->isValueDependent() &&
+            !Init->isConstantInitializer(Context, /*IsForRef=*/false)) {
+          Diag(Init->getExprLoc(), diag::err_init_element_not_constant)
+              << Init->getSourceBitField();
+          return ExprError();
+        }
+
         ILE->setInit(i, ConstantExpr::Create(Context, Init));
       }
 
@@ -9097,7 +9217,7 @@ static AssignConvertType checkPointerTypesForAssignment(Sema &S,
           diag::warn_typecheck_convert_incompatible_function_pointer_strict,
           Loc) &&
       RHSType->isFunctionPointerType() && LHSType->isFunctionPointerType() &&
-      !S.IsFunctionConversion(RHSType, LHSType, RHSType))
+      !S.TryFunctionConversion(RHSType, LHSType, RHSType))
     return AssignConvertType::IncompatibleFunctionPointerStrict;
 
   // C99 6.5.16.1p1 (constraint 3): both operands are pointers to qualified or
@@ -9161,8 +9281,7 @@ static AssignConvertType checkPointerTypesForAssignment(Sema &S,
       return AssignConvertType::IncompatibleFunctionPointer;
     return AssignConvertType::IncompatiblePointer;
   }
-  if (!S.getLangOpts().CPlusPlus &&
-      S.IsFunctionConversion(ltrans, rtrans, ltrans))
+  if (!S.getLangOpts().CPlusPlus && S.IsFunctionConversion(ltrans, rtrans))
     return AssignConvertType::IncompatibleFunctionPointer;
   if (IsInvalidCmseNSCallConversion(S, ltrans, rtrans))
     return AssignConvertType::IncompatibleFunctionPointer;
@@ -17629,6 +17748,45 @@ Sema::PushExpressionEvaluationContext(
   PushExpressionEvaluationContext(NewContext, ClosureContextDecl, ExprContext);
 }
 
+void Sema::PushExpressionEvaluationContextForFunction(
+    ExpressionEvaluationContext NewContext, FunctionDecl *FD) {
+  // [expr.const]/p14.1
+  // An expression or conversion is in an immediate function context if it is
+  // potentially evaluated and either: its innermost enclosing non-block scope
+  // is a function parameter scope of an immediate function.
+  PushExpressionEvaluationContext(
+      FD && FD->isConsteval()
+          ? ExpressionEvaluationContext::ImmediateFunctionContext
+          : NewContext);
+  const Sema::ExpressionEvaluationContextRecord &Parent =
+      parentEvaluationContext();
+  Sema::ExpressionEvaluationContextRecord &Current = currentEvaluationContext();
+
+  Current.InDiscardedStatement = false;
+
+  if (FD) {
+
+    // Each ExpressionEvaluationContextRecord also keeps track of whether the
+    // context is nested in an immediate function context, so smaller contexts
+    // that appear inside immediate functions (like variable initializers) are
+    // considered to be inside an immediate function context even though by
+    // themselves they are not immediate function contexts. But when a new
+    // function is entered, we need to reset this tracking, since the entered
+    // function might be not an immediate function.
+
+    Current.InImmediateEscalatingFunctionContext =
+        getLangOpts().CPlusPlus20 && FD->isImmediateEscalating();
+
+    if (isLambdaMethod(FD))
+      Current.InImmediateFunctionContext =
+          FD->isConsteval() ||
+          (isLambdaMethod(FD) && (Parent.isConstantEvaluated() ||
+                                  Parent.isImmediateFunctionContext()));
+    else
+      Current.InImmediateFunctionContext = FD->isConsteval();
+  }
+}
+
 namespace {
 
 const DeclRefExpr *CheckPossibleDeref(Sema &S, const Expr *PossibleDeref) {
@@ -18241,35 +18399,23 @@ enum class OdrUseContext {
 /// Are we within a context in which references to resolved functions or to
 /// variables result in odr-use?
 static OdrUseContext isOdrUseContext(Sema &SemaRef) {
-  OdrUseContext Result;
+  const Sema::ExpressionEvaluationContextRecord &Context =
+      SemaRef.currentEvaluationContext();
 
-  switch (SemaRef.ExprEvalContexts.back().Context) {
-    case Sema::ExpressionEvaluationContext::Unevaluated:
-    case Sema::ExpressionEvaluationContext::UnevaluatedList:
-    case Sema::ExpressionEvaluationContext::UnevaluatedAbstract:
-      return OdrUseContext::None;
-
-    case Sema::ExpressionEvaluationContext::ConstantEvaluated:
-    case Sema::ExpressionEvaluationContext::ImmediateFunctionContext:
-    case Sema::ExpressionEvaluationContext::PotentiallyEvaluated:
-      Result = OdrUseContext::Used;
-      break;
-
-    case Sema::ExpressionEvaluationContext::DiscardedStatement:
-      Result = OdrUseContext::FormallyOdrUsed;
-      break;
-
-    case Sema::ExpressionEvaluationContext::PotentiallyEvaluatedIfUsed:
-      // A default argument formally results in odr-use, but doesn't actually
-      // result in a use in any real sense until it itself is used.
-      Result = OdrUseContext::FormallyOdrUsed;
-      break;
-  }
+  if (Context.isUnevaluated())
+    return OdrUseContext::None;
 
   if (SemaRef.CurContext->isDependentContext())
     return OdrUseContext::Dependent;
 
-  return Result;
+  if (Context.isDiscardedStatementContext())
+    return OdrUseContext::FormallyOdrUsed;
+
+  else if (Context.Context ==
+           Sema::ExpressionEvaluationContext::PotentiallyEvaluatedIfUsed)
+    return OdrUseContext::FormallyOdrUsed;
+
+  return OdrUseContext::Used;
 }
 
 static bool isImplicitlyDefinableConstexprFunction(FunctionDecl *Func) {
@@ -20236,9 +20382,11 @@ MarkExprReferenced(Sema &SemaRef, SourceLocation Loc, Decl *D, Expr *E,
 }
 
 void Sema::MarkDeclRefReferenced(DeclRefExpr *E, const Expr *Base) {
-  // TODO: update this with DR# once a defect report is filed.
-  // C++11 defect. The address of a pure member should not be an ODR use, even
-  // if it's a qualified reference.
+  // [basic.def.odr] (CWG 1614)
+  // A function is named by an expression or conversion [...]
+  // unless it is a pure virtual function and either the expression is not an
+  // id-expression naming the function with an explicitly qualified name or
+  // the expression forms a pointer to member
   bool OdrUse = true;
   if (const CXXMethodDecl *Method = dyn_cast<CXXMethodDecl>(E->getDecl()))
     if (Method->isVirtual() &&

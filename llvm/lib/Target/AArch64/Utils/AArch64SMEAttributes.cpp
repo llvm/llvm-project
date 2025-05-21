@@ -90,7 +90,7 @@ void SMEAttrs::addKnownFunctionAttrs(StringRef FuncName) {
   if (FuncName == "__arm_sme_save" || FuncName == "__arm_sme_restore" ||
       FuncName == "__arm_sme_state_size")
     KnownAttrs |= SMEAttrs::SM_Compatible | SMEAttrs::SME_ABI_Routine;
-  set(KnownAttrs, /*Enable=*/true);
+  set(KnownAttrs);
 }
 
 bool SMECallAttrs::requiresSMChange() const {
@@ -111,8 +111,11 @@ bool SMECallAttrs::requiresSMChange() const {
 }
 
 SMECallAttrs::SMECallAttrs(const CallBase &CB)
-    : CallerFn(*CB.getFunction()), CalledFn(CB.getCalledFunction()),
+    : CallerFn(*CB.getFunction()), CalledFn(SMEAttrs::Normal),
       Callsite(CB.getAttributes()), IsIndirect(CB.isIndirectCall()) {
+  if (auto *CalledFunction = CB.getCalledFunction())
+    CalledFn = SMEAttrs(*CalledFunction, SMEAttrs::InferAttrsFromName::Yes);
+
   // FIXME: We probably should not allow SME attributes on direct calls but
   // clang duplicates streaming mode attributes at each callsite.
   assert((IsIndirect ||

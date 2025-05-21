@@ -282,6 +282,8 @@ public:
     // TODO: Add symbol table support
   }
 
+  LValue makeNaturalAlignPointeeAddrLValue(mlir::Value v, clang::QualType t);
+
   /// Construct an address with the natural alignment of T. If a pointer to T
   /// is expected to be signed, the pointer passed to this function must have
   /// been signed, and the returned Address will have the pointer authentication
@@ -515,6 +517,7 @@ public:
       AbstractCallee callee = AbstractCallee(), unsigned paramsToSkip = 0);
   RValue emitCallExpr(const clang::CallExpr *e,
                       ReturnValueSlot returnValue = ReturnValueSlot());
+  LValue emitCallExprLValue(const clang::CallExpr *e);
   CIRGenCallee emitCallee(const clang::Expr *e);
 
   template <typename T>
@@ -527,12 +530,33 @@ public:
                                    mlir::Type condType,
                                    bool buildingTopLevelCase);
 
+  LValue emitCastLValue(const CastExpr *e);
+
   LValue emitCompoundAssignmentLValue(const clang::CompoundAssignOperator *e);
 
   mlir::LogicalResult emitContinueStmt(const clang::ContinueStmt &s);
 
   mlir::LogicalResult emitCXXForRangeStmt(const CXXForRangeStmt &s,
                                           llvm::ArrayRef<const Attr *> attrs);
+
+  RValue emitCXXMemberCallExpr(const clang::CXXMemberCallExpr *e,
+                               ReturnValueSlot returnValue);
+
+  RValue emitCXXMemberOrOperatorCall(
+      const clang::CXXMethodDecl *md, const CIRGenCallee &callee,
+      ReturnValueSlot returnValue, mlir::Value thisPtr,
+      mlir::Value implicitParam, clang::QualType implicitParamTy,
+      const clang::CallExpr *ce, CallArgList *rtlArgs);
+
+  RValue emitCXXMemberOrOperatorMemberCallExpr(
+      const clang::CallExpr *ce, const clang::CXXMethodDecl *md,
+      ReturnValueSlot returnValue, bool hasQualifier,
+      clang::NestedNameSpecifier *qualifier, bool isArrow,
+      const clang::Expr *base);
+
+  RValue emitCXXOperatorMemberCallExpr(const CXXOperatorCallExpr *e,
+                                       const CXXMethodDecl *md,
+                                       ReturnValueSlot returnValue);
 
   mlir::LogicalResult emitDoStmt(const clang::DoStmt &s);
 
@@ -580,6 +604,10 @@ public:
   void emitDecl(const clang::Decl &d);
   mlir::LogicalResult emitDeclStmt(const clang::DeclStmt &s);
   LValue emitDeclRefLValue(const clang::DeclRefExpr *e);
+
+  mlir::LogicalResult emitDefaultStmt(const clang::DefaultStmt &s,
+                                      mlir::Type condType,
+                                      bool buildingTopLevelCase);
 
   /// Emit an `if` on a boolean condition to the specified blocks.
   /// FIXME: Based on the condition, this might try to simplify the codegen of
@@ -713,6 +741,27 @@ private:
       mlir::Location start, mlir::Location end, OpenACCDirectiveKind dirKind,
       SourceLocation dirLoc, llvm::ArrayRef<const OpenACCClause *> clauses,
       const Stmt *associatedStmt);
+
+  template <typename Op, typename TermOp>
+  mlir::LogicalResult emitOpenACCOpCombinedConstruct(
+      mlir::Location start, mlir::Location end, OpenACCDirectiveKind dirKind,
+      SourceLocation dirLoc, llvm::ArrayRef<const OpenACCClause *> clauses,
+      const Stmt *loopStmt);
+
+  template <typename Op>
+  void emitOpenACCClauses(Op &op, OpenACCDirectiveKind dirKind,
+                          SourceLocation dirLoc,
+                          ArrayRef<const OpenACCClause *> clauses);
+  // The second template argument doesn't need to be a template, since it should
+  // always be an mlir::acc::LoopOp, but as this is a template anyway, we make
+  // it a template argument as this way we can avoid including the OpenACC MLIR
+  // headers here. We will count on linker failures/explicit instantiation to
+  // ensure we don't mess this up, but it is only called from 1 place, and
+  // instantiated 3x.
+  template <typename ComputeOp, typename LoopOp>
+  void emitOpenACCClauses(ComputeOp &op, LoopOp &loopOp,
+                          OpenACCDirectiveKind dirKind, SourceLocation dirLoc,
+                          ArrayRef<const OpenACCClause *> clauses);
 
 public:
   mlir::LogicalResult

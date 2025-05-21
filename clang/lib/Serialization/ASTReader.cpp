@@ -3105,7 +3105,7 @@ ASTReader::ReadControlBlock(ModuleFile &F,
         if (HSOpts.ModulesValidateOncePerBuildSession &&
             F.InputFilesValidationTimestamp > HSOpts.BuildSessionTimestamp &&
             F.Kind == MK_ImplicitModule)
-          N = NumUserInputs;
+          N = ForceValidateUserInputs ? NumUserInputs : 0;
 
         for (unsigned I = 0; I < N; ++I) {
           InputFile IF = getInputFile(F, I+1, Complain);
@@ -4952,7 +4952,8 @@ ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName, ModuleKind Type,
       ImportedModule &M = Loaded[I];
       if (M.Mod->Kind == MK_ImplicitModule &&
           M.Mod->InputFilesValidationTimestamp < HSOpts.BuildSessionTimestamp)
-        updateModuleTimestamp(M.Mod->FileName);
+        getModuleManager().getModuleCache().updateModuleTimestamp(
+            M.Mod->FileName);
     }
   }
 
@@ -10973,6 +10974,7 @@ ASTReader::ASTReader(Preprocessor &PP, ModuleCache &ModCache,
                      DisableValidationForModuleKind DisableValidationKind,
                      bool AllowASTWithCompilerErrors,
                      bool AllowConfigurationMismatch, bool ValidateSystemInputs,
+                     bool ForceValidateUserInputs,
                      bool ValidateASTInputFilesContent, bool UseGlobalIndex,
                      std::unique_ptr<llvm::Timer> ReadTimer)
     : Listener(bool(DisableValidationKind & DisableValidationForModuleKind::PCH)
@@ -10988,6 +10990,7 @@ ASTReader::ASTReader(Preprocessor &PP, ModuleCache &ModCache,
       AllowASTWithCompilerErrors(AllowASTWithCompilerErrors),
       AllowConfigurationMismatch(AllowConfigurationMismatch),
       ValidateSystemInputs(ValidateSystemInputs),
+      ForceValidateUserInputs(ForceValidateUserInputs),
       ValidateASTInputFilesContent(ValidateASTInputFilesContent),
       UseGlobalIndex(UseGlobalIndex), CurrSwitchCaseStmts(&SwitchCaseStmts) {
   SourceMgr.setExternalSLocEntrySource(this);

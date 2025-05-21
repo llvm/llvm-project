@@ -102,7 +102,6 @@ public:
     /// Parse a macro[.dwo] or macinfo[.dwo] section.
     std::unique_ptr<DWARFDebugMacro>
     parseMacroOrMacinfo(MacroSecType SectionType);
-
   };
   friend class DWARFContextState;
 

@@ -1343,6 +1343,7 @@ void Verifier::visitDICompositeType(const DICompositeType &N) {
               N.getTag() == dwarf::DW_TAG_enumeration_type ||
               N.getTag() == dwarf::DW_TAG_class_type ||
               N.getTag() == dwarf::DW_TAG_variant_part ||
+              N.getTag() == dwarf::DW_TAG_variant ||
               N.getTag() == dwarf::DW_TAG_namelist,
           "invalid tag", &N);
 
@@ -5617,7 +5618,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   case Intrinsic::memcpy_element_unordered_atomic:
   case Intrinsic::memmove_element_unordered_atomic:
   case Intrinsic::memset_element_unordered_atomic: {
-    const auto *AMI = cast<AtomicMemIntrinsic>(&Call);
+    const auto *AMI = cast<AnyMemIntrinsic>(&Call);
 
     ConstantInt *ElementSizeCI =
         cast<ConstantInt>(AMI->getRawElementSizeInBytes());
@@ -5632,7 +5633,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     };
     Check(IsValidAlignment(AMI->getDestAlign()),
           "incorrect alignment of the destination argument", Call);
-    if (const auto *AMT = dyn_cast<AtomicMemTransferInst>(AMI)) {
+    if (const auto *AMT = dyn_cast<AnyMemTransferInst>(AMI)) {
       Check(IsValidAlignment(AMT->getSourceAlign()),
             "incorrect alignment of the source argument", Call);
     }
@@ -6417,7 +6418,12 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "SGPR arguments must have the `inreg` attribute", &Call);
     Check(!Call.paramHasAttr(3, Attribute::InReg),
           "VGPR arguments must not have the `inreg` attribute", &Call);
-    Check(isa_and_present<UnreachableInst>(Call.getNextNode()),
+
+    auto *Next = Call.getNextNonDebugInstruction();
+    bool IsAMDUnreachable = Next && isa<IntrinsicInst>(Next) &&
+                            cast<IntrinsicInst>(Next)->getIntrinsicID() ==
+                                Intrinsic::amdgcn_unreachable;
+    Check(Next && (isa<UnreachableInst>(Next) || IsAMDUnreachable),
           "llvm.amdgcn.cs.chain must be followed by unreachable", &Call);
     break;
   }
@@ -6547,6 +6553,14 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           &Call);
     break;
   }
+  case Intrinsic::thread_pointer: {
+    Check(Call.getType()->getPointerAddressSpace() ==
+              DL.getDefaultGlobalsAddressSpace(),
+          "llvm.thread.pointer intrinsic return type must be for the globals "
+          "address space",
+          &Call);
+    break;
+  }
   case Intrinsic::threadlocal_address: {
     const Value &Arg0 = *Call.getArgOperand(0);
     Check(isa<GlobalValue>(Arg0),
@@ -6583,7 +6597,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
       for (BasicBlock *ColorFirstBB : CV)
         if (auto It = ColorFirstBB->getFirstNonPHIIt();
             It != ColorFirstBB->end())
-          if (dyn_cast_or_null<FuncletPadInst>(&*It))
+          if (isa_and_nonnull<FuncletPadInst>(&*It))
             InEHFunclet = true;
 
       // Check for funclet operand bundle
@@ -7282,11 +7296,13 @@ void Verifier::verifyAttachedCallBundle(const CallBase &Call,
 
   if (IID) {
     Check((IID == Intrinsic::objc_retainAutoreleasedReturnValue ||
+           IID == Intrinsic::objc_claimAutoreleasedReturnValue ||
            IID == Intrinsic::objc_unsafeClaimAutoreleasedReturnValue),
           "invalid function argument", Call);
   } else {
     StringRef FnName = Fn->getName();
     Check((FnName == "objc_retainAutoreleasedReturnValue" ||
+           FnName == "objc_claimAutoreleasedReturnValue" ||
            FnName == "objc_unsafeClaimAutoreleasedReturnValue"),
           "invalid function argument", Call);
   }

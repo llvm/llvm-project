@@ -4,7 +4,7 @@
 
 # REQUIRES: asserts
 
-# CHECK-CUTOFF-COUNT-2: Scheduling SU
+# CHECK-CUTOFF-COUNT-1: Scheduling SU
 
 # NOTE: copied from machine-scheduler.mir
 

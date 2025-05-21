@@ -16,6 +16,7 @@
 include "mlir/IR/EnumAttr.td"
 include "mlir/Dialect/GPU/IR/CompilationAttrInterfaces.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
+include "mlir/Dialect/LLVMIR/NVVMRequiresSMTraits.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Dialect/LLVMIR/BasicPtxBuilderInterface.td"
 include "mlir/Interfaces/InferIntRangeInterface.td"
@@ -138,8 +139,10 @@ class NVVM_SpecialRegisterOp<string mnemonic, list<Trait> traits = []> :
   let assemblyFormat = "attr-dict `:` type($res)";
 }
 
-class NVVM_SpecialRangeableRegisterOp<string mnemonic> :
-  NVVM_SpecialRegisterOp<mnemonic, [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>]> {
+class NVVM_SpecialRangeableRegisterOp<string mnemonic, list<Trait> traits = []> :
+  NVVM_SpecialRegisterOp<mnemonic,
+    !listconcat(traits,
+      [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>])> {
   let arguments = (ins OptionalAttr<LLVM_ConstantRangeAttr>:$range);
   let assemblyFormat = "(`range` $range^)? attr-dict `:` type($res)";
   let llvmBuilder = baseLlvmBuilder # setRangeRetAttrCode # baseLlvmBuilderCoda;
@@ -202,7 +205,7 @@ def NVVM_GridDimZOp : NVVM_SpecialRangeableRegisterOp<"read.ptx.sreg.nctaid.z">;
 
 //===----------------------------------------------------------------------===//
 // CTA Cluster index and range
-def NVVM_ClusterIdXOp : NVVM_SpecialRangeableRegisterOp<"read.ptx.sreg.clusterid.x">;
+def NVVM_ClusterIdXOp : NVVM_SpecialRangeableRegisterOp<"read.ptx.sreg.clusterid.x", [NVVMRequiresSM<90>]>;
 def NVVM_ClusterIdYOp : NVVM_SpecialRangeableRegisterOp<"read.ptx.sreg.clusterid.y">;
 def NVVM_ClusterIdZOp : NVVM_SpecialRangeableRegisterOp<"read.ptx.sreg.clusterid.z">;
 def NVVM_ClusterDimXOp : NVVM_SpecialRangeableRegisterOp<"read.ptx.sreg.nclusterid.x">;
@@ -212,16 +215,16 @@ def NVVM_ClusterDimZOp : NVVM_SpecialRangeableRegisterOp<"read.ptx.sreg.ncluster
 
 //===----------------------------------------------------------------------===//
 // CTA index and range within Cluster
-def NVVM_BlockInClusterIdXOp : NVVM_SpecialRangeableRegisterOp<"read.ptx.sreg.cluster.ctaid.x">;
-def NVVM_BlockInClusterIdYOp : NVVM_SpecialRangeableRegisterOp<"read.ptx.sreg.cluster.ctaid.y">;
-def NVVM_BlockInClusterIdZOp : NVVM_SpecialRangeableRegisterOp<"read.ptx.sreg.cluster.ctaid.z">;
-def NVVM_ClusterDimBlocksXOp : NVVM_SpecialRangeableRegisterOp<"read.ptx.sreg.cluster.nctaid.x">;
-def NVVM_ClusterDimBlocksYOp : NVVM_SpecialRangeableRegisterOp<"read.ptx.sreg.cluster.nctaid.y">;
+def NVVM_BlockInClusterIdXOp : NVVM_SpecialRangeableRegisterOp<"read.ptx.sreg.cluster.ctaid.x", [NVVMRequiresSM<90>]>;
+def NVVM_BlockInClusterIdYOp : NVVM_SpecialRangeableRegisterOp<"read.ptx.sreg.cluster.ctaid.y", [NVVMRequiresSM<90>]>;
+def NVVM_BlockInClusterIdZOp : NVVM_SpecialRangeableRegisterOp<"read.ptx.sreg.cluster.ctaid.z", [NVVMRequiresSM<90>]>;
+def NVVM_ClusterDimBlocksXOp : NVVM_SpecialRangeableRegisterOp<"read.ptx.sreg.cluster.nctaid.x", [NVVMRequiresSM<90>]>;
+def NVVM_ClusterDimBlocksYOp : NVVM_SpecialRangeableRegisterOp<"read.ptx.sreg.cluster.nctaid.y", [NVVMRequiresSM<90>]>;
 def NVVM_ClusterDimBlocksZOp : NVVM_SpecialRangeableRegisterOp<"read.ptx.sreg.cluster.nctaid.z">;
 
 //===----------------------------------------------------------------------===//
 // CTA index and across Cluster dimensions
-def NVVM_ClusterId : NVVM_SpecialRangeableRegisterOp<"read.ptx.sreg.cluster.ctarank">;
+def NVVM_ClusterId : NVVM_SpecialRangeableRegisterOp<"read.ptx.sreg.cluster.ctarank", [NVVMRequiresSM<90>]>;
 def NVVM_ClusterDim : NVVM_SpecialRangeableRegisterOp<"read.ptx.sreg.cluster.nctarank">;
 
 //===----------------------------------------------------------------------===//
@@ -234,6 +237,76 @@ def NVVM_GlobalTimerOp : NVVM_SpecialRegisterOp<"read.ptx.sreg.globaltimer">;
 // envreg registers
 foreach index = !range(0, 32) in {
   def NVVM_EnvReg # index # Op : NVVM_SpecialRegisterOp<"read.ptx.sreg.envreg" # index>;
+}
+
+//===----------------------------------------------------------------------===//
+// Inline PTX op definition
+//===----------------------------------------------------------------------===//
+
+def NVVM_InlinePtxOp : NVVM_Op<"inline_ptx", 
+  [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>, 
+    AttrSizedOperandSegments]>
+{
+  let summary = "Inline PTX Op";
+  let description = [{This op allows using PTX directly within the NVVM 
+    dialect, while greatly simplifying llvm.inline_asm generation. It 
+    automatically handles register size selection and sets the correct 
+    read/write access for each operand. The operation leverages the 
+    `BasicPtxBuilderInterface` to abstract away low-level details of 
+    PTX assembly formatting.
+
+    The `predicate` attribute is used to specify a predicate for the 
+    PTX instruction.
+
+    Example 1: Read-only Parameters
+    ```mlir
+    nvvm.inline_ptx "mbarrier.init.b64 [$0], $1;" (%barrier_gen, %count) : !llvm.ptr, i32
+
+    // Lowers to:
+    llvm.inline_asm has_side_effects asm_dialect = att 
+      "mbarrier.init.b64 [$0], $1;", "l,r" %arg0, %arg2 : (!llvm.ptr, i32) -> ()
+    ```
+
+    Example 2: Read-only and Write-only Parameters
+    ```mlir
+    %0 = nvvm.inline_ptx "ex2.approx.ftz.f32 $0, $1;" (%input) : f32 -> f32
+
+    // Lowers to:
+    %0 = llvm.inline_asm has_side_effects asm_dialect = att 
+      "ex2.approx.ftz.f32 $0, $1;", "=f,f" %arg0 : (f32) -> f32
+    ```
+
+    Example 3: Predicate Usage
+    ```mlir
+    nvvm.inline_ptx "mbarrier.init.b64 [$0], $1;" (%barrier_gen, %count), 
+      predicate = %pred : !llvm.ptr, i32, i1
+
+    // Lowers to:
+    llvm.inline_asm has_side_effects asm_dialect = att 
+      "@$2 mbarrier.init.b64 [$0], $1;", "l,r,b" %arg0, %arg2, %arg3 
+      : (!llvm.ptr, i32, i1) -> ()
+    ```
+  }];
+
+  let arguments = (ins Variadic<AnyType>:$readOnlyArgs, 
+                       StrAttr:$ptxCode,
+                       PtxPredicate:$predicate);
+                      
+  let results = (outs Variadic<AnyType>:$writeOnlyArgs);
+
+  let assemblyFormat = [{ 
+    $ptxCode `(` $readOnlyArgs `)` 
+    (`,` `predicate` `=` $predicate^)? attr-dict 
+    `:` type(operands) 
+    (`->` type($writeOnlyArgs)^)?
+  }];
+  
+  let extraClassDefinition = [{
+    std::string $cppClass::getPtx() {
+      StringRef ptxInstStr = getPtxCode();
+      return std::string(ptxInstStr.data());
+    }
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -273,7 +346,7 @@ def ReduxKind : I32EnumAttr<"ReduxKind", "NVVM redux kind",
 def ReduxKindAttr : EnumAttr<NVVM_Dialect, ReduxKind, "redux_kind">;
 
 def NVVM_ReduxOp :
-  NVVM_Op<"redux.sync">,
+  NVVM_Op<"redux.sync", [NVVMRequiresSM<80>]>,
   Results<(outs LLVM_Type:$res)>,
   Arguments<(ins LLVM_Type:$val,
                  ReduxKindAttr:$kind,
@@ -322,7 +395,7 @@ def NVVM_MBarrierInitOp : NVVM_PTXBuilder_Op<"mbarrier.init">,
 }
 
 /// mbarrier.init instruction with shared pointer type
-def NVVM_MBarrierInitSharedOp : NVVM_PTXBuilder_Op<"mbarrier.init.shared">,
+def NVVM_MBarrierInitSharedOp : NVVM_PTXBuilder_Op<"mbarrier.init.shared", [NVVMRequiresSM<80>, DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>]>,
   Arguments<(ins LLVM_PointerShared:$addr, I32:$count, PtxPredicate:$predicate)> {
   string llvmBuilder = [{
       createIntrinsicCall(builder, llvm::Intrinsic::nvvm_mbarrier_init_shared, {$addr, $count});
@@ -544,7 +617,7 @@ def NVVM_ClusterArriveOp : NVVM_Op<"cluster.arrive"> {
   let assemblyFormat = "attr-dict";
 }
 
-def NVVM_ClusterArriveRelaxedOp : NVVM_Op<"cluster.arrive.relaxed"> {
+def NVVM_ClusterArriveRelaxedOp : NVVM_Op<"cluster.arrive.relaxed", [NVVMRequiresSM<90>]> {
   let arguments = (ins OptionalAttr<UnitAttr>:$aligned);
 
   let summary = "Cluster Barrier Relaxed Arrive Op";
@@ -570,7 +643,7 @@ def NVVM_ClusterArriveRelaxedOp : NVVM_Op<"cluster.arrive.relaxed"> {
   let assemblyFormat = "attr-dict";
 }
 
-def NVVM_ClusterWaitOp : NVVM_Op<"cluster.wait"> {
+def NVVM_ClusterWaitOp : NVVM_Op<"cluster.wait", [NVVMRequiresSM<90>]> {
   let arguments = (ins OptionalAttr<UnitAttr>:$aligned);
 
   let summary = "Cluster Barrier Wait Op";
@@ -775,7 +848,7 @@ def ShflKind : I32EnumAttr<"ShflKind", "NVVM shuffle kind",
 def ShflKindAttr : EnumAttr<NVVM_Dialect, ShflKind, "shfl_kind">;
 
 def NVVM_ShflOp :
-  NVVM_Op<"shfl.sync">,
+  NVVM_Op<"shfl.sync", [NVVMRequiresSM<30>]>,
   Results<(outs LLVM_Type:$res)>,
   Arguments<(ins I32:$thread_mask,
                  LLVM_Type:$val,
@@ -2114,7 +2187,7 @@ def NVVM_CpAsyncBulkCommitGroupOp : NVVM_Op<"cp.async.bulk.commit.group">,
   }];
 }
 
-def NVVM_CpAsyncBulkWaitGroupOp : NVVM_Op<"cp.async.bulk.wait_group">,
+def NVVM_CpAsyncBulkWaitGroupOp : NVVM_Op<"cp.async.bulk.wait_group", [NVVMRequiresSM<90>]>,
   Arguments<(ins 
     ConfinedAttr<I32Attr, [IntMinValue<0>]>:$group, 
     OptionalAttr<UnitAttr>:$read)> {
@@ -2144,7 +2217,7 @@ def NVVM_CpAsyncBulkWaitGroupOp : NVVM_Op<"cp.async.bulk.wait_group">,
 def NVVM_CpAsyncBulkTensorGlobalToSharedClusterOp : 
   NVVM_Op<"cp.async.bulk.tensor.shared.cluster.global", 
   [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>, 
-  AttrSizedOperandSegments]>,
+  AttrSizedOperandSegments, NVVMRequiresSM<90>]>,
   Arguments<(ins  LLVM_PointerShared:$dstMem,
                   LLVM_AnyPointer:$tmaDescriptor,
                   Variadic<I32>:$coordinates,
@@ -2529,15 +2602,37 @@ def NVVM_CpAsyncBulkSharedCTAToSharedClusterOp :
 }
 
 def NVVM_CpAsyncBulkSharedCTAToGlobalOp :
-  NVVM_Op<"cp.async.bulk.global.shared.cta"> {
+  NVVM_Op<"cp.async.bulk.global.shared.cta", [AttrSizedOperandSegments]> {
   let summary = "Async bulk copy from Shared CTA memory to Global memory";
   let description = [{
     Initiates an asynchronous copy operation from Shared CTA memory to
-    global memory.
+    global memory. The 32-bit operand `size` specifies the amount of
+    memory to be copied, in terms of number of bytes. `size` must be a
+    multiple of 16. The `l2CacheHint` operand is optional, and it is used
+    to specify cache eviction policy that may be used during the memory
+    access. The `byteMask` operand is optional. The i-th bit in the 16-bit
+    wide `byteMask` specifies whether the i-th byte of each 16-byte wide
+    chunk of source data is copied to the destination. If the bit is set,
+    the byte is copied.
 
-    The `l2CacheHint` operand is optional, and it is used to specify cache
-    eviction policy that may be used during the memory access.
-    
+    Example:
+    ```mlir
+      nvvm.cp.async.bulk.global.shared.cta %dst, %src, %size
+          : !llvm.ptr<1>, !llvm.ptr<3>
+
+      // with l2_cache_hint
+      nvvm.cp.async.bulk.global.shared.cta %dst, %src, %size l2_cache_hint = %ch
+          : !llvm.ptr<1>, !llvm.ptr<3>
+
+      // with byte_mask
+      nvvm.cp.async.bulk.global.shared.cta %dst, %src, %size byte_mask = %mask
+          : !llvm.ptr<1>, !llvm.ptr<3>
+
+      // with both l2_cache_hint and byte_mask
+      nvvm.cp.async.bulk.global.shared.cta %dst, %src, %size l2_cache_hint = %ch byte_mask = %mask
+          : !llvm.ptr<1>, !llvm.ptr<3>
+    ```
+
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk)
   }];
 
@@ -2545,35 +2640,25 @@ def NVVM_CpAsyncBulkSharedCTAToGlobalOp :
     LLVM_PointerGlobal:$dstMem,
     LLVM_PointerShared:$srcMem,
     I32:$size,
-    Optional<I64>:$l2CacheHint);
+    Optional<I64>:$l2CacheHint,
+    Optional<I16>:$byteMask);
 
   let assemblyFormat = [{
     $dstMem `,` $srcMem `,` $size
     (`l2_cache_hint` `=` $l2CacheHint^ )?
-    attr-dict  `:` type($dstMem) `,` type($srcMem)
+    (`byte_mask` `=` $byteMask^ )?
+    attr-dict `:` type($dstMem) `,` type($srcMem)
   }];
 
+  let extraClassDeclaration = [{
+    static mlir::NVVM::IDArgPair
+    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                          llvm::IRBuilderBase& builder);
+  }];
   string llvmBuilder = [{
-    // Arguments to the intrinsic:
-    // dst, src, size, cache_hint,
-    // Flag for cache_hint
-    //
-    llvm::SmallVector<llvm::Value *> translatedOperands;
-    translatedOperands.push_back($dstMem);
-    translatedOperands.push_back($srcMem);
-    translatedOperands.push_back($size);
-
-    // Cachehint, if available
-    llvm::LLVMContext &ctx = moduleTranslation.getLLVMContext();
-    auto *i64Unused = llvm::ConstantInt::get(llvm::Type::getInt64Ty(ctx), 0);
-    bool isCacheHint = op.getL2CacheHint() ? true : false;
-    translatedOperands.push_back(isCacheHint ? $l2CacheHint : i64Unused);
-
-    // Flag argument for cachehint
-    translatedOperands.push_back(builder.getInt1(isCacheHint));
-
-    createIntrinsicCall(builder,
-      llvm::Intrinsic::nvvm_cp_async_bulk_shared_cta_to_global, translatedOperands);
+    auto [id, args] = NVVM::CpAsyncBulkSharedCTAToGlobalOp::getIntrinsicIDAndArgs(
+                      *op, moduleTranslation, builder);
+    createIntrinsicCall(builder, id, args);
   }];
 }
 
@@ -2581,7 +2666,7 @@ def NVVM_CpAsyncBulkSharedCTAToGlobalOp :
 // NVVM Wgmma Ops
 //===----------------------------------------------------------------------===//
 
-def NVVM_WgmmaFenceAlignedOp : NVVM_Op<"wgmma.fence.aligned"> {
+def NVVM_WgmmaFenceAlignedOp : NVVM_Op<"wgmma.fence.aligned", [NVVMRequiresSMa<[90]>]> {
   let arguments = (ins);
   let description = [{
     Enforce an ordering of register accesses between warpgroup level matrix 
@@ -2595,8 +2680,7 @@ def NVVM_WgmmaFenceAlignedOp : NVVM_Op<"wgmma.fence.aligned"> {
   }];
 }
 
-def NVVM_WgmmaGroupSyncAlignedOp : NVVM_Op<"wgmma.commit.group.sync.aligned">,
-  Arguments<(ins )> {
+def NVVM_WgmmaGroupSyncAlignedOp : NVVM_Op<"wgmma.commit.group.sync.aligned", [NVVMRequiresSMa<[90]>]> {
   let assemblyFormat = "attr-dict";
   let description = [{
     Commits all prior uncommitted warpgroup level matrix multiplication operations.
@@ -2608,7 +2692,7 @@ def NVVM_WgmmaGroupSyncAlignedOp : NVVM_Op<"wgmma.commit.group.sync.aligned">,
   }];
 }
 
-def NVVM_WgmmaWaitGroupSyncOp : NVVM_Op<"wgmma.wait.group.sync.aligned">{
+def NVVM_WgmmaWaitGroupSyncOp : NVVM_Op<"wgmma.wait.group.sync.aligned", [NVVMRequiresSMa<[90]>]> {
   let arguments = (ins I64Attr:$group);
   let assemblyFormat = "attr-dict $group";
   let description = [{
@@ -2804,7 +2888,7 @@ def NVVM_GriddepcontrolLaunchDependentsOp
 
 def NVVM_MapaOp: NVVM_Op<"mapa",
     [TypesMatchWith<"`res` and `a` should have the same type",
-                    "a", "res", "$_self">]> {
+                    "a", "res", "$_self">, NVVMRequiresSM<90>]> {
   let results = (outs AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared]>:$res);
   let arguments = (ins AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared]>:$a, I32:$b);
 
@@ -2971,7 +3055,7 @@ def Tcgen05WaitKindAttr :
   let assemblyFormat = "`<` $value `>`";
 }
 
-def NVVM_Tcgen05AllocOp : NVVM_Op<"tcgen05.alloc"> {
+def NVVM_Tcgen05AllocOp : NVVM_Op<"tcgen05.alloc", [NVVMRequiresSMa<[100, 101]>]> {
   let summary = "Tcgen05 alloc operation";
   let description = [{
     The `tcgen05.alloc` Op allocates tensor core memory for
@@ -3001,7 +3085,7 @@ def NVVM_Tcgen05AllocOp : NVVM_Op<"tcgen05.alloc"> {
   }];
 }
 
-def NVVM_Tcgen05DeallocOp : NVVM_Op<"tcgen05.dealloc"> {
+def NVVM_Tcgen05DeallocOp : NVVM_Op<"tcgen05.dealloc", [NVVMRequiresSMa<[100, 101]>]> {
   let summary = "Tcgen05 dealloc operation";
   let description = [{
     The `tcgen05.dealloc` Op de-allocates the tensor core memory
@@ -3029,7 +3113,7 @@ def NVVM_Tcgen05DeallocOp : NVVM_Op<"tcgen05.dealloc"> {
   }];
 }
 
-def NVVM_Tcgen05RelinquishAllocPermitOp : NVVM_Op<"tcgen05.relinquish_alloc_permit"> {
+def NVVM_Tcgen05RelinquishAllocPermitOp : NVVM_Op<"tcgen05.relinquish_alloc_permit", [NVVMRequiresSMa<[100, 101]>]> {
   let summary = "Tcgen05 Op to relinquish the right to allocate";
   let description = [{
     The `tcgen05.relinquish_alloc_permit` Op specifies that the CTA
@@ -3052,7 +3136,7 @@ def NVVM_Tcgen05RelinquishAllocPermitOp : NVVM_Op<"tcgen05.relinquish_alloc_perm
   }];
 }
 
-def NVVM_Tcgen05FenceOp : NVVM_Op<"tcgen05.fence"> {
+def NVVM_Tcgen05FenceOp : NVVM_Op<"tcgen05.fence", [NVVMRequiresSMa<[100, 101]>]> {
   let summary = "Tcgen05 fence operations";
   let description = [{
     The `tcgen05.fence<before>` orders all prior async tcgen05 operations
@@ -3074,7 +3158,7 @@ def NVVM_Tcgen05FenceOp : NVVM_Op<"tcgen05.fence"> {
   }];
 }
 
-def NVVM_Tcgen05WaitOp : NVVM_Op<"tcgen05.wait"> {
+def NVVM_Tcgen05WaitOp : NVVM_Op<"tcgen05.wait", [NVVMRequiresSMa<[100, 101]>]> {
   let summary = "Tcgen05 wait operations";
   let description = [{
     The `tcgen05.wait<load>` causes the executing thread to block until
@@ -3096,7 +3180,7 @@ def NVVM_Tcgen05WaitOp : NVVM_Op<"tcgen05.wait"> {
   }];
 }
 
-def NVVM_Tcgen05CommitOp : NVVM_Op<"tcgen05.commit"> {
+def NVVM_Tcgen05CommitOp : NVVM_Op<"tcgen05.commit", [NVVMRequiresSMa<[100, 101]>]> {
   let summary = "Tcgen05 commit operations";
   let description = [{
     The `tcgen05.commit` makes the mbarrier object, specified by
@@ -3134,7 +3218,7 @@ def NVVM_Tcgen05CommitOp : NVVM_Op<"tcgen05.commit"> {
   }];
 }
 
-def NVVM_Tcgen05ShiftOp : NVVM_Op<"tcgen05.shift"> {
+def NVVM_Tcgen05ShiftOp : NVVM_Op<"tcgen05.shift", [NVVMRequiresSMa<[100, 101, 103]>]> {
   let summary = "Tcgen05 shift operation";
   let description = [{
     The `tcgen05.shift` is an asynchronous instruction which initiates
@@ -3200,7 +3284,7 @@ def Tcgen05CpSrcFormatAttr : EnumAttr<NVVM_Dialect, Tcgen05CpSrcFormat, "tcgen05
   let assemblyFormat = "`<` $value `>`";
 }
 
-def NVVM_Tcgen05CpOp : NVVM_Op<"tcgen05.cp"> {
+def NVVM_Tcgen05CpOp : NVVM_Op<"tcgen05.cp", [NVVMRequiresSMa<[100, 101]>]> {
   let summary = "Tcgen05 copy operation";
   let description = [{
     Instruction tcgen05.cp initiates an asynchronous copy operation from
@@ -3270,7 +3354,7 @@ def Tcgen05LdStShapeAttr: EnumAttr<NVVM_Dialect, Tcgen05LdStShape, "tcgen05_ldst
 // NVVM tcgen05.ld Op
 //===----------------------------------------------------------------------===//
 
-def NVVM_Tcgen05LdOp : NVVM_Op<"tcgen05.ld"> {
+def NVVM_Tcgen05LdOp : NVVM_Op<"tcgen05.ld", [NVVMRequiresSMa<[100, 101]>]> {
   let summary = "tensor memory load instructions";
   let arguments = (ins
     // Attributes
@@ -3360,7 +3444,7 @@ def NVVM_Tcgen05LdOp : NVVM_Op<"tcgen05.ld"> {
 // NVVM tcgen05.st Op
 //===----------------------------------------------------------------------===//
 
-def NVVM_Tcgen05StOp : NVVM_Op<"tcgen05.st"> {
+def NVVM_Tcgen05StOp : NVVM_Op<"tcgen05.st", [NVVMRequiresSMa<[100, 101]>]> {
   let summary = "tensor memory store instructions";
   let arguments = (ins
     // Attributes
@@ -3445,10 +3529,75 @@ def NVVM_Tcgen05StOp : NVVM_Op<"tcgen05.st"> {
 }
 
 //===----------------------------------------------------------------------===//
+// NVVM dot.accumulate.4way Op
+//===----------------------------------------------------------------------===//
+
+def DotAccumulate4WayS8 : I32EnumAttrCase<"S8", 1, "s8">;
+def DotAccumulate4WayU8 : I32EnumAttrCase<"U8", 0, "u8">;
+
+def DotAccumulate4WayType : I32EnumAttr<"DotAccumulate4WayType",
+                              "NVVM DotAccumulate4WayType",
+                              [DotAccumulate4WayS8, DotAccumulate4WayU8]> {
+  let cppNamespace = "::mlir::NVVM";
+  let genSpecializedAttr = 0;
+}
+
+def DotAccumulate4WayTypeAttr : EnumAttr<NVVM_Dialect, DotAccumulate4WayType, "dot_accumulate_4way_type"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
+def NVVM_DotAccumulate4WayOp : NVVM_Op<"dot.accumulate.4way"> {
+  let summary = "Four-way byte dot product-accumulate instruction.";
+  let description = [{
+    Performs a four-way byte dot-product which is accumulated in a 32-bit
+    result.
+    Operand `a` and `b` are vectors of 4 bytes between which the dot product is 
+    computed.
+    The `a_type` and `b_type` attributes specify the type of the elements in `a`
+    and `b` respectively.
+    If `a_type` or `b_type` is `s8`, then the elements in the corresponding 
+    vector are sign-extended to 32-bit before the dot product is computed.
+    If `a_type` or `b_type` is `u8`, then the elements in the corresponding 
+    vector are zero-extended to 32-bit instead.
+    Operand `c` is a 32-bit integer to which the result is accumulated. It is
+    treated as holding a signed integer if any of `a_type` or `b_type` is `s8`.
+    
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#integer-arithmetic-instructions-dp4a)
+  }];
+  
+  let arguments = (ins
+    VectorOfLengthAndType<[4], [I8]>:$a,
+    DotAccumulate4WayTypeAttr:$a_type,
+    VectorOfLengthAndType<[4], [I8]>:$b,
+    DotAccumulate4WayTypeAttr:$b_type,
+    I32:$c
+  );
+
+  let results = (outs I32:$res);
+
+  let assemblyFormat = "$a $a_type `,` $b $b_type `,` $c attr-dict `:` type($a) `,` type($b)";
+  
+  let extraClassDeclaration = [{
+    static llvm::Intrinsic::ID
+    getIntrinsicID(NVVM::DotAccumulate4WayType a_type, 
+                   NVVM::DotAccumulate4WayType b_type);
+    llvm::Value* getPackedArg(llvm::Value* arg, llvm::IRBuilderBase& builder);
+  }];
+
+  string llvmBuilder = [{
+    llvm::Intrinsic::ID id = NVVM::DotAccumulate4WayOp::getIntrinsicID($a_type, $b_type);
+    llvm::Value* argA = op.getPackedArg($a, builder);
+    llvm::Value* argB = op.getPackedArg($b, builder);
+    $res = createIntrinsicCall(builder, id, {argA, argB, $c});
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // NVVM target attribute.
 //===----------------------------------------------------------------------===//
 
-def NVVM_TargetAttr : NVVM_Attr<"NVVMTarget", "target"> {
+def NVVM_TargettAttr : NVVM_Attr<"NVVMTarget", "target", 
+  [DeclareAttrInterfaceMethods<GPUTargetAttrVerifyInterface>]> {
   let description = [{
     GPU target attribute for controlling compilation of NVIDIA targets. All
     parameters decay into default values if not present.
@@ -3475,10 +3624,11 @@ def NVVM_TargetAttr : NVVM_Attr<"NVVMTarget", "target"> {
     StringRefParameter<"Target chip.", "\"sm_50\"">:$chip,
     StringRefParameter<"Target chip features.", "\"+ptx60\"">:$features,
     OptionalParameter<"DictionaryAttr", "Target specific flags.">:$flags,
-    OptionalParameter<"ArrayAttr", "Files to link to the LLVM module.">:$link
+    OptionalParameter<"ArrayAttr", "Files to link to the LLVM module.">:$link,
+    DefaultValuedParameter<"bool", "true", "Perform SM version check on Ops.">:$verifyTarget
   );
   let assemblyFormat = [{
-    (`<` struct($O, $triple, $chip, $features, $flags, $link)^ `>`)?
+    (`<` struct($O, $triple, $chip, $features, $flags, $link, $verifyTarget)^ `>`)?
   }];
   let builders = [
     AttrBuilder<(ins CArg<"int", "2">:$optLevel,
@@ -3486,8 +3636,9 @@ def NVVM_TargetAttr : NVVM_Attr<"NVVMTarget", "target"> {
                      CArg<"StringRef", "\"sm_50\"">:$chip,
                      CArg<"StringRef", "\"+ptx60\"">:$features,
                      CArg<"DictionaryAttr", "nullptr">:$targetFlags,
-                     CArg<"ArrayAttr", "nullptr">:$linkFiles), [{
-      return Base::get($_ctxt, optLevel, triple, chip, features, targetFlags, linkFiles);
+                     CArg<"ArrayAttr", "nullptr">:$linkFiles,
+                     CArg<"bool", "true">:$verifyTarget), [{
+      return Base::get($_ctxt, optLevel, triple, chip, features, targetFlags, linkFiles, verifyTarget);
     }]>
   ];
   let skipDefaultBuilders = 1;
@@ -3498,6 +3649,7 @@ def NVVM_TargetAttr : NVVM_Attr<"NVVMTarget", "target"> {
     bool hasFtz() const;
     bool hasCmdOptions() const;
     std::optional<mlir::NamedAttribute> getCmdOptions() const;
+    LogicalResult verifyTarget(Operation *gpuModule);
   }];
   let extraClassDefinition = [{
     bool $cppClass::hasFlag(StringRef flag) const {

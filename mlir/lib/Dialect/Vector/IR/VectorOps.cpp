@@ -314,7 +314,7 @@ bool mlir::vector::isDisjointTransferIndices(
 bool mlir::vector::isDisjointTransferSet(VectorTransferOpInterface transferA,
                                          VectorTransferOpInterface transferB,
                                          bool testDynamicValueUsingBounds) {
-  if (transferA.getSource() != transferB.getSource())
+  if (transferA.getBase() != transferB.getBase())
     return false;
   return isDisjointTransferIndices(transferA, transferB,
                                    testDynamicValueUsingBounds);
@@ -1136,7 +1136,6 @@ void ContractionOp::getIterationBounds(
   auto lhsShape = getLhsType().getShape();
   auto resVectorType = llvm::dyn_cast<VectorType>(getResultType());
   SmallVector<AffineMap, 4> indexingMaps(getIndexingMapsArray());
-  SmallVector<int64_t, 2> iterationShape;
   for (const auto &it : llvm::enumerate(getIteratorTypes())) {
     // Search lhs/rhs map results for 'targetExpr'.
     auto targetExpr = getAffineDimExpr(it.index(), getContext());
@@ -4206,7 +4205,7 @@ static void printTransferAttrs(OpAsmPrinter &p, VectorTransferOpInterface op) {
 }
 
 void TransferReadOp::print(OpAsmPrinter &p) {
-  p << " " << getSource() << "[" << getIndices() << "], " << getPadding();
+  p << " " << getBase() << "[" << getIndices() << "], " << getPadding();
   if (getMask())
     p << ", " << getMask();
   printTransferAttrs(p, *this);
@@ -4465,7 +4464,7 @@ static LogicalResult foldTransferFullMask(TransferOp op) {
 static Value foldRAW(TransferReadOp readOp) {
   if (!llvm::isa<RankedTensorType>(readOp.getShapedType()))
     return {};
-  auto defWrite = readOp.getSource().getDefiningOp<vector::TransferWriteOp>();
+  auto defWrite = readOp.getBase().getDefiningOp<vector::TransferWriteOp>();
   while (defWrite) {
     if (checkSameValueRAW(defWrite, readOp))
       return defWrite.getVector();
@@ -4473,7 +4472,7 @@ static Value foldRAW(TransferReadOp readOp) {
             cast<VectorTransferOpInterface>(defWrite.getOperation()),
             cast<VectorTransferOpInterface>(readOp.getOperation())))
       break;
-    defWrite = defWrite.getSource().getDefiningOp<vector::TransferWriteOp>();
+    defWrite = defWrite.getBase().getDefiningOp<vector::TransferWriteOp>();
   }
   return {};
 }
@@ -4501,7 +4500,7 @@ void TransferReadOp::getEffects(
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects) {
   if (llvm::isa<MemRefType>(getShapedType()))
-    effects.emplace_back(MemoryEffects::Read::get(), &getSourceMutable(),
+    effects.emplace_back(MemoryEffects::Read::get(), &getBaseMutable(),
                          SideEffects::DefaultResource::get());
 }
 
@@ -4543,7 +4542,7 @@ struct TransferReadAfterWriteToBroadcast
     if (readOp.hasOutOfBoundsDim() ||
         !llvm::isa<RankedTensorType>(readOp.getShapedType()))
       return failure();
-    auto defWrite = readOp.getSource().getDefiningOp<vector::TransferWriteOp>();
+    auto defWrite = readOp.getBase().getDefiningOp<vector::TransferWriteOp>();
     if (!defWrite)
       return failure();
     // TODO: If the written transfer chunk is a superset of the read transfer
@@ -4728,7 +4727,7 @@ ParseResult TransferWriteOp::parse(OpAsmParser &parser,
 }
 
 void TransferWriteOp::print(OpAsmPrinter &p) {
-  p << " " << getVector() << ", " << getSource() << "[" << getIndices() << "]";
+  p << " " << getVector() << ", " << getBase() << "[" << getIndices() << "]";
   if (getMask())
     p << ", " << getMask();
   printTransferAttrs(p, *this);
@@ -4807,7 +4806,7 @@ static LogicalResult foldReadInitWrite(TransferWriteOp write,
   if (write.getTransferRank() == 0)
     return failure();
   auto rankedTensorType =
-      llvm::dyn_cast<RankedTensorType>(write.getSource().getType());
+      llvm::dyn_cast<RankedTensorType>(write.getBase().getType());
   // If not operating on tensors, bail.
   if (!rankedTensorType)
     return failure();
@@ -4829,7 +4828,7 @@ static LogicalResult foldReadInitWrite(TransferWriteOp write,
   if (read.hasOutOfBoundsDim() || write.hasOutOfBoundsDim())
     return failure();
   // Tensor types must be the same.
-  if (read.getSource().getType() != rankedTensorType)
+  if (read.getBase().getType() != rankedTensorType)
     return failure();
   // Vector types must be the same.
   if (read.getVectorType() != write.getVectorType())
@@ -4846,13 +4845,13 @@ static LogicalResult foldReadInitWrite(TransferWriteOp write,
       llvm::any_of(write.getIndices(), isNotConstantZero))
     return failure();
   // Success.
-  results.push_back(read.getSource());
+  results.push_back(read.getBase());
   return success();
 }
 
 static bool checkSameValueWAR(vector::TransferReadOp read,
                               vector::TransferWriteOp write) {
-  return read.getSource() == write.getSource() &&
+  return read.getBase() == write.getBase() &&
          read.getIndices() == write.getIndices() &&
          read.getPermutationMap() == write.getPermutationMap() &&
          read.getVectorType() == write.getVectorType() && !read.getMask() &&
@@ -4874,7 +4873,7 @@ static bool checkSameValueWAR(vector::TransferReadOp read,
 /// ```
 static LogicalResult foldWAR(TransferWriteOp write,
                              SmallVectorImpl<OpFoldResult> &results) {
-  if (!llvm::isa<RankedTensorType>(write.getSource().getType()))
+  if (!llvm::isa<RankedTensorType>(write.getBase().getType()))
     return failure();
   auto read = write.getVector().getDefiningOp<vector::TransferReadOp>();
   if (!read)
@@ -4882,7 +4881,7 @@ static LogicalResult foldWAR(TransferWriteOp write,
 
   if (!checkSameValueWAR(read, write))
     return failure();
-  results.push_back(read.getSource());
+  results.push_back(read.getBase());
   return success();
 }
 
@@ -4954,12 +4953,11 @@ public:
       return failure();
     vector::TransferWriteOp writeToModify = writeOp;
 
-    auto defWrite =
-        writeOp.getSource().getDefiningOp<vector::TransferWriteOp>();
+    auto defWrite = writeOp.getBase().getDefiningOp<vector::TransferWriteOp>();
     while (defWrite) {
       if (checkSameValueWAW(writeOp, defWrite)) {
         rewriter.modifyOpInPlace(writeToModify, [&]() {
-          writeToModify.getSourceMutable().assign(defWrite.getSource());
+          writeToModify.getBaseMutable().assign(defWrite.getBase());
         });
         return success();
       }
@@ -4972,7 +4970,7 @@ public:
       if (!defWrite->hasOneUse())
         break;
       writeToModify = defWrite;
-      defWrite = defWrite.getSource().getDefiningOp<vector::TransferWriteOp>();
+      defWrite = defWrite.getBase().getDefiningOp<vector::TransferWriteOp>();
     }
     return failure();
   }
@@ -5575,13 +5573,11 @@ LogicalResult ShapeCastOp::verify() {
   return success();
 }
 
-namespace {
-
 /// Return true if `transpose` does not permute a pair of non-unit dims.
 /// By `order preserving` we mean that the flattened versions of the input and
 /// output vectors are (numerically) identical. In other words `transpose` is
 /// effectively a shape cast.
-bool isOrderPreserving(TransposeOp transpose) {
+static bool isOrderPreserving(TransposeOp transpose) {
   ArrayRef<int64_t> permutation = transpose.getPermutation();
   VectorType sourceType = transpose.getSourceVectorType();
   ArrayRef<int64_t> inShape = sourceType.getShape();
@@ -5600,8 +5596,6 @@ bool isOrderPreserving(TransposeOp transpose) {
   }
   return true;
 }
-
-} // namespace
 
 OpFoldResult ShapeCastOp::fold(FoldAdaptor adaptor) {
 
@@ -5999,18 +5993,22 @@ OpFoldResult vector::TransposeOp::fold(FoldAdaptor adaptor) {
   if (llvm::dyn_cast_if_present<ub::PoisonAttr>(adaptor.getVector()))
     return ub::PoisonAttr::get(getContext());
 
-  // Eliminate identity transpose ops. This happens when the dimensions of the
-  // input vector remain in their original order after the transpose operation.
-  ArrayRef<int64_t> perm = getPermutation();
+  // Eliminate identity transposes, and more generally any transposes that
+  // preserves the shape without permuting elements.
+  //
+  // Examples of what to fold:
+  // %0 = vector.transpose %arg, [0, 1] : vector<1x1xi8> to vector<1x1xi8>
+  // %0 = vector.transpose %arg, [0, 1] : vector<2x2xi8> to vector<2x2xi8>
+  // %0 = vector.transpose %arg, [1, 0] : vector<1x1xi8> to vector<1x1xi8>
+  //
+  // Example of what NOT to fold:
+  // %0 = vector.transpose %arg, [1, 0] : vector<2x2xi8> to vector<2x2xi8>
+  //
+  if (getSourceVectorType() == getResultVectorType() &&
+      isOrderPreserving(*this))
+    return getVector();
 
-  // Check if the permutation of the dimensions contains sequential values:
-  // {0, 1, 2, ...}.
-  for (int64_t i = 0, e = perm.size(); i < e; i++) {
-    if (perm[i] != i)
-      return {};
-  }
-
-  return getVector();
+  return {};
 }
 
 LogicalResult vector::TransposeOp::verify() {
@@ -6203,7 +6201,7 @@ public:
     bool inputIsScalar = !inputType;
     if (inputIsScalar) {
       rewriter.replaceOpWithNewOp<vector::BroadcastOp>(transpose, outputType,
-                                                       transpose.getVector());
+                                                       broadcast.getSource());
       return success();
     }
 
@@ -6229,6 +6227,7 @@ public:
                 transpose, "permutation not local to group");
           }
         }
+        low = high;
       }
     }
 
@@ -6243,7 +6242,7 @@ public:
            "not broadcastable directly to transpose output");
 
     rewriter.replaceOpWithNewOp<vector::BroadcastOp>(transpose, outputType,
-                                                     transpose.getVector());
+                                                     broadcast.getSource());
 
     return success();
   }
@@ -6518,9 +6517,15 @@ ParseResult MaskOp::parse(OpAsmParser &parser, OperationState &result) {
   if (parser.resolveOperand(mask, maskType, result.operands))
     return failure();
 
-  if (parsePassthru.succeeded())
+  if (parsePassthru.succeeded()) {
+    if (resultTypes.empty())
+      return parser.emitError(
+          parser.getNameLoc(),
+          "expects a result if passthru operand is provided");
+
     if (parser.resolveOperand(passthru, resultTypes[0], result.operands))
       return failure();
+  }
 
   return success();
 }
@@ -6545,29 +6550,33 @@ void mlir::vector::MaskOp::print(OpAsmPrinter &p) {
 }
 
 void MaskOp::ensureTerminator(Region &region, Builder &builder, Location loc) {
-  OpTrait::SingleBlockImplicitTerminator<vector::YieldOp>::Impl<
-      MaskOp>::ensureTerminator(region, builder, loc);
-  // Keep the default yield terminator if the number of masked operations is not
-  // the expected. This case will trigger a verification failure.
+  // 1. For an empty `vector.mask`, create a default terminator.
+  if (region.empty() || region.front().empty()) {
+    OpTrait::SingleBlockImplicitTerminator<vector::YieldOp>::Impl<
+        MaskOp>::ensureTerminator(region, builder, loc);
+    return;
+  }
+
+  // 2. For a non-empty `vector.mask` with an explicit terminator, do nothing.
   Block &block = region.front();
-  if (block.getOperations().size() != 2)
+  if (isa<vector::YieldOp>(block.back()))
     return;
 
-  // Replace default yield terminator with a new one that returns the results
-  // from the masked operation.
+  // 3. For a non-empty `vector.mask` without an explicit terminator:
+
+  // Create default terminator if the number of masked operations is not
+  // one. This case will trigger a verification failure.
+  if (block.getOperations().size() != 1) {
+    OpTrait::SingleBlockImplicitTerminator<vector::YieldOp>::Impl<
+        MaskOp>::ensureTerminator(region, builder, loc);
+    return;
+  }
+
+  // Create a terminator that yields the results from the masked operation.
   OpBuilder opBuilder(builder.getContext());
   Operation *maskedOp = &block.front();
-  Operation *oldYieldOp = &block.back();
-  assert(isa<vector::YieldOp>(oldYieldOp) && "Expected vector::YieldOp");
-
-  // Empty vector.mask op.
-  if (maskedOp == oldYieldOp)
-    return;
-
-  opBuilder.setInsertionPoint(oldYieldOp);
+  opBuilder.setInsertionPointToEnd(&block);
   opBuilder.create<vector::YieldOp>(loc, maskedOp->getResults());
-  oldYieldOp->dropAllReferences();
-  oldYieldOp->erase();
 }
 
 LogicalResult MaskOp::verify() {
@@ -6601,6 +6610,10 @@ LogicalResult MaskOp::verify() {
   if (maskableOp->getNumResults() != getNumResults())
     return emitOpError("expects number of results to match maskable operation "
                        "number of results");
+
+  if (!llvm::equal(maskableOp->getResults(), terminator.getOperands()))
+    return emitOpError("expects all the results from the MaskableOpInterface "
+                       "to match all the values returned by the terminator");
 
   if (!llvm::equal(maskableOp->getResultTypes(), getResultTypes()))
     return emitOpError(

@@ -6461,33 +6461,14 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                             RegName, getValue(RegValue)));
     return;
   }
-  case Intrinsic::memcpy: {
-    const auto &MCI = cast<MemCpyInst>(I);
-    SDValue Op1 = getValue(I.getArgOperand(0));
-    SDValue Op2 = getValue(I.getArgOperand(1));
-    SDValue Op3 = getValue(I.getArgOperand(2));
-    // @llvm.memcpy defines 0 and 1 to both mean no alignment.
-    Align DstAlign = MCI.getDestAlign().valueOrOne();
-    Align SrcAlign = MCI.getSourceAlign().valueOrOne();
-    Align Alignment = std::min(DstAlign, SrcAlign);
-    bool isVol = MCI.isVolatile();
-    // FIXME: Support passing different dest/src alignments to the memcpy DAG
-    // node.
-    SDValue Root = isVol ? getRoot() : getMemoryRoot();
-    SDValue MC = DAG.getMemcpy(Root, sdl, Op1, Op2, Op3, Alignment, isVol,
-                               /* AlwaysInline */ false, &I, std::nullopt,
-                               MachinePointerInfo(I.getArgOperand(0)),
-                               MachinePointerInfo(I.getArgOperand(1)),
-                               I.getAAMetadata(), BatchAA);
-    updateDAGForMaybeTailCall(MC);
-    return;
-  }
+  case Intrinsic::memcpy:
   case Intrinsic::memcpy_inline: {
     const auto &MCI = cast<MemCpyInst>(I);
     SDValue Dst = getValue(I.getArgOperand(0));
     SDValue Src = getValue(I.getArgOperand(1));
     SDValue Size = getValue(I.getArgOperand(2));
-    assert(isa<ConstantSDNode>(Size) && "memcpy_inline needs constant size");
+    assert((!MCI.isForceInlined() || isa<ConstantSDNode>(Size)) &&
+           "memcpy_inline needs constant size");
     // @llvm.memcpy.inline defines 0 and 1 to both mean no alignment.
     Align DstAlign = MCI.getDestAlign().valueOrOne();
     Align SrcAlign = MCI.getSourceAlign().valueOrOne();
@@ -6495,8 +6476,9 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     bool isVol = MCI.isVolatile();
     // FIXME: Support passing different dest/src alignments to the memcpy DAG
     // node.
-    SDValue MC = DAG.getMemcpy(getRoot(), sdl, Dst, Src, Size, Alignment, isVol,
-                               /* AlwaysInline */ true, &I, std::nullopt,
+    SDValue Root = isVol ? getRoot() : getMemoryRoot();
+    SDValue MC = DAG.getMemcpy(Root, sdl, Dst, Src, Size, Alignment, isVol,
+                               MCI.isForceInlined(), &I, std::nullopt,
                                MachinePointerInfo(I.getArgOperand(0)),
                                MachinePointerInfo(I.getArgOperand(1)),
                                I.getAAMetadata(), BatchAA);
@@ -6543,7 +6525,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   }
   case Intrinsic::memcpy_element_unordered_atomic: {
-    const AtomicMemCpyInst &MI = cast<AtomicMemCpyInst>(I);
+    auto &MI = cast<AnyMemCpyInst>(I);
     SDValue Dst = getValue(MI.getRawDest());
     SDValue Src = getValue(MI.getRawSource());
     SDValue Length = getValue(MI.getLength());
@@ -6559,7 +6541,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   }
   case Intrinsic::memmove_element_unordered_atomic: {
-    auto &MI = cast<AtomicMemMoveInst>(I);
+    auto &MI = cast<AnyMemMoveInst>(I);
     SDValue Dst = getValue(MI.getRawDest());
     SDValue Src = getValue(MI.getRawSource());
     SDValue Length = getValue(MI.getLength());
@@ -6575,7 +6557,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   }
   case Intrinsic::memset_element_unordered_atomic: {
-    auto &MI = cast<AtomicMemSetInst>(I);
+    auto &MI = cast<AnyMemSetInst>(I);
     SDValue Dst = getValue(MI.getRawDest());
     SDValue Val = getValue(MI.getValue());
     SDValue Length = getValue(MI.getLength());
@@ -7984,17 +7966,26 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
 
     // On arm64_32, pointers are 32 bits when stored in memory, but
     // zero-extended to 64 bits when in registers.  Thus the mask is 32 bits to
-    // match the index type, but the pointer is 64 bits, so the the mask must be
+    // match the index type, but the pointer is 64 bits, so the mask must be
     // zero-extended up to 64 bits to match the pointer.
     EVT PtrVT =
         TLI.getValueType(DAG.getDataLayout(), I.getOperand(0)->getType());
     EVT MemVT =
         TLI.getMemValueType(DAG.getDataLayout(), I.getOperand(0)->getType());
     assert(PtrVT == Ptr.getValueType());
-    assert(MemVT == Mask.getValueType());
-    if (MemVT != PtrVT)
+    if (Mask.getValueType().getFixedSizeInBits() < MemVT.getFixedSizeInBits()) {
+      // For AMDGPU buffer descriptors the mask is 48 bits, but the pointer is
+      // 128-bit, so we have to pad the mask with ones for unused bits.
+      auto HighOnes = DAG.getNode(
+          ISD::SHL, sdl, PtrVT, DAG.getAllOnesConstant(sdl, PtrVT),
+          DAG.getShiftAmountConstant(Mask.getValueType().getFixedSizeInBits(),
+                                     PtrVT, sdl));
+      Mask = DAG.getNode(ISD::OR, sdl, PtrVT,
+                         DAG.getZExtOrTrunc(Mask, sdl, PtrVT), HighOnes);
+    } else if (Mask.getValueType() != PtrVT)
       Mask = DAG.getPtrExtOrTrunc(Mask, sdl, PtrVT);
 
+    assert(Mask.getValueType() == PtrVT);
     setValue(&I, DAG.getNode(ISD::AND, sdl, PtrVT, Ptr, Mask));
     return;
   }
@@ -8005,14 +7996,15 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::get_active_lane_mask: {
     EVT CCVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
     SDValue Index = getValue(I.getOperand(0));
+    SDValue TripCount = getValue(I.getOperand(1));
     EVT ElementVT = Index.getValueType();
 
     if (!TLI.shouldExpandGetActiveLaneMask(CCVT, ElementVT)) {
-      visitTargetIntrinsic(I, Intrinsic);
+      setValue(&I, DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, sdl, CCVT, Index,
+                               TripCount));
       return;
     }
 
-    SDValue TripCount = getValue(I.getOperand(1));
     EVT VecTy = EVT::getVectorVT(*DAG.getContext(), ElementVT,
                                  CCVT.getVectorElementCount());
 
@@ -10035,7 +10027,7 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
   std::vector<SDValue> AsmNodeOperands;
   AsmNodeOperands.push_back(SDValue());  // reserve space for input chain
   AsmNodeOperands.push_back(DAG.getTargetExternalSymbol(
-      IA->getAsmString().c_str(), TLI.getProgramPointerTy(DAG.getDataLayout())));
+      IA->getAsmString().data(), TLI.getProgramPointerTy(DAG.getDataLayout())));
 
   // If we have a !srcloc metadata node associated with it, we want to attach
   // this to the ultimately generated inline asm machineinstr.  To do this, we
@@ -11821,9 +11813,18 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
         else if (Arg.hasAttribute(Attribute::ZExt))
           AssertOp = ISD::AssertZext;
 
-        ArgValues.push_back(getCopyFromParts(DAG, dl, &InVals[i], NumParts,
-                                             PartVT, VT, nullptr, NewRoot,
-                                             F.getCallingConv(), AssertOp));
+        SDValue OutVal =
+            getCopyFromParts(DAG, dl, &InVals[i], NumParts, PartVT, VT, nullptr,
+                             NewRoot, F.getCallingConv(), AssertOp);
+
+        FPClassTest NoFPClass = Arg.getNoFPClass();
+        if (NoFPClass != fcNone) {
+          SDValue SDNoFPClass = DAG.getTargetConstant(
+              static_cast<uint64_t>(NoFPClass), dl, MVT::i32);
+          OutVal = DAG.getNode(ISD::AssertNoFPClass, dl, OutVal.getValueType(),
+                               OutVal, SDNoFPClass);
+        }
+        ArgValues.push_back(OutVal);
       }
 
       i += NumParts;

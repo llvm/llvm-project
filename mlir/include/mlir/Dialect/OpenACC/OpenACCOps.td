@@ -35,22 +35,23 @@ class OpenACC_Op<string mnemonic, list<Trait> traits = []> :
   Op<OpenACC_Dialect, mnemonic, traits>;
 
 // Reduction operation enumeration.
-def OpenACC_ReductionOperatorAdd     : I32EnumAttrCase<"AccAdd", 0, "add">;
-def OpenACC_ReductionOperatorMul     : I32EnumAttrCase<"AccMul", 1, "mul">;
-def OpenACC_ReductionOperatorMax     : I32EnumAttrCase<"AccMax", 2, "max">;
-def OpenACC_ReductionOperatorMin     : I32EnumAttrCase<"AccMin", 3, "min">;
-def OpenACC_ReductionOperatorAnd     : I32EnumAttrCase<"AccIand", 4, "iand">;
-def OpenACC_ReductionOperatorOr      : I32EnumAttrCase<"AccIor", 5, "ior">;
-def OpenACC_ReductionOperatorXor     : I32EnumAttrCase<"AccXor", 6, "xor">;
-def OpenACC_ReductionOperatorLogEqv  : I32EnumAttrCase<"AccEqv", 7, "eqv">;
-def OpenACC_ReductionOperatorLogNeqv : I32EnumAttrCase<"AccNeqv", 8, "neqv">;
-def OpenACC_ReductionOperatorLogAnd  : I32EnumAttrCase<"AccLand", 9, "land">;
-def OpenACC_ReductionOperatorLogOr   : I32EnumAttrCase<"AccLor", 10, "lor">;
+def OpenACC_ReductionOperatorNone    : I32EnumAttrCase<"AccNone", 0, "none">;
+def OpenACC_ReductionOperatorAdd     : I32EnumAttrCase<"AccAdd", 1, "add">;
+def OpenACC_ReductionOperatorMul     : I32EnumAttrCase<"AccMul", 2, "mul">;
+def OpenACC_ReductionOperatorMax     : I32EnumAttrCase<"AccMax", 3, "max">;
+def OpenACC_ReductionOperatorMin     : I32EnumAttrCase<"AccMin", 4, "min">;
+def OpenACC_ReductionOperatorAnd     : I32EnumAttrCase<"AccIand", 5, "iand">;
+def OpenACC_ReductionOperatorOr      : I32EnumAttrCase<"AccIor", 6, "ior">;
+def OpenACC_ReductionOperatorXor     : I32EnumAttrCase<"AccXor", 7, "xor">;
+def OpenACC_ReductionOperatorLogEqv  : I32EnumAttrCase<"AccEqv", 8, "eqv">;
+def OpenACC_ReductionOperatorLogNeqv : I32EnumAttrCase<"AccNeqv", 9, "neqv">;
+def OpenACC_ReductionOperatorLogAnd  : I32EnumAttrCase<"AccLand", 10, "land">;
+def OpenACC_ReductionOperatorLogOr   : I32EnumAttrCase<"AccLor", 11, "lor">;
 
 def OpenACC_ReductionOperator : I32EnumAttr<"ReductionOperator",
     "built-in reduction operations supported by OpenACC",
-    [OpenACC_ReductionOperatorAdd, OpenACC_ReductionOperatorMul,
-     OpenACC_ReductionOperatorMax, OpenACC_ReductionOperatorMin,
+    [OpenACC_ReductionOperatorNone, OpenACC_ReductionOperatorAdd, 
+     OpenACC_ReductionOperatorMul, OpenACC_ReductionOperatorMax, OpenACC_ReductionOperatorMin,
      OpenACC_ReductionOperatorAnd, OpenACC_ReductionOperatorOr,
      OpenACC_ReductionOperatorXor, OpenACC_ReductionOperatorLogEqv,
      OpenACC_ReductionOperatorLogNeqv, OpenACC_ReductionOperatorLogAnd,
@@ -561,8 +562,8 @@ class OpenACC_DataEntryOp<string mnemonic, string clause, string extraDescriptio
     oilist(
         `varPtrPtr` `(` $varPtrPtr `:` type($varPtrPtr) `)`
       | `bounds` `(` $bounds `)`
-      | `async` `(` custom<DeviceTypeOperands>($asyncOperands,
-            type($asyncOperands), $asyncOperandsDeviceType) `)`
+      | `async` `` custom<DeviceTypeOperandsWithKeywordOnly>($asyncOperands,
+            type($asyncOperands), $asyncOperandsDeviceType, $asyncOnly)
     ) `->` type($accVar) attr-dict
   }];
 
@@ -922,8 +923,8 @@ class OpenACC_DataExitOpWithVarPtr<string mnemonic, string clause>
   let assemblyFormat = [{
     custom<AccVar>($accVar, type($accVar))
     (`bounds` `(` $bounds^ `)` )?
-    (`async` `(` custom<DeviceTypeOperands>($asyncOperands,
-            type($asyncOperands), $asyncOperandsDeviceType)^ `)`)?
+    (`async` `` custom<DeviceTypeOperandsWithKeywordOnly>($asyncOperands,
+            type($asyncOperands), $asyncOperandsDeviceType, $asyncOnly)^)?
     `to` custom<Var>($var) `:` custom<VarPtrType>(type($var), $varType)
     attr-dict
   }];
@@ -983,8 +984,8 @@ class OpenACC_DataExitOpNoVarPtr<string mnemonic, string clause> :
   let assemblyFormat = [{
     custom<AccVar>($accVar, type($accVar))
     (`bounds` `(` $bounds^ `)` )?
-    (`async` `(` custom<DeviceTypeOperands>($asyncOperands,
-            type($asyncOperands), $asyncOperandsDeviceType)^ `)`)?
+    (`async` `` custom<DeviceTypeOperandsWithKeywordOnly>($asyncOperands,
+            type($asyncOperands), $asyncOperandsDeviceType, $asyncOnly)^)?
     attr-dict
   }];
 
@@ -1439,8 +1440,8 @@ def OpenACC_ParallelOp : OpenACC_Op<"parallel",
     ( `combined` `(` `loop` `)` $combined^)?
     oilist(
         `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
-      | `async` `(` custom<DeviceTypeOperands>($asyncOperands,
-            type($asyncOperands), $asyncOperandsDeviceType) `)`
+      | `async` `` custom<DeviceTypeOperandsWithKeywordOnly>($asyncOperands,
+            type($asyncOperands), $asyncOperandsDeviceType, $asyncOnly)
       | `firstprivate` `(` custom<SymOperandList>($firstprivateOperands,
             type($firstprivateOperands), $firstprivatizations)
         `)`
@@ -1581,8 +1582,8 @@ def OpenACC_SerialOp : OpenACC_Op<"serial",
     ( `combined` `(` `loop` `)` $combined^)?
     oilist(
         `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
-      | `async` `(` custom<DeviceTypeOperands>($asyncOperands,
-            type($asyncOperands), $asyncOperandsDeviceType) `)`
+      | `async` `` custom<DeviceTypeOperandsWithKeywordOnly>($asyncOperands,
+            type($asyncOperands), $asyncOperandsDeviceType, $asyncOnly)
       | `firstprivate` `(` custom<SymOperandList>($firstprivateOperands,
             type($firstprivateOperands), $firstprivatizations)
         `)`
@@ -1750,8 +1751,8 @@ def OpenACC_KernelsOp : OpenACC_Op<"kernels",
     ( `combined` `(` `loop` `)` $combined^)?
     oilist(
         `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
-      | `async` `(` custom<DeviceTypeOperands>($asyncOperands,
-            type($asyncOperands), $asyncOperandsDeviceType) `)`
+      | `async` `` custom<DeviceTypeOperandsWithKeywordOnly>($asyncOperands,
+            type($asyncOperands), $asyncOperandsDeviceType, $asyncOnly)
       | `num_gangs` `(` custom<NumGangs>($numGangs,
             type($numGangs), $numGangsDeviceType, $numGangsSegments) `)`
       | `num_workers` `(` custom<DeviceTypeOperands>($numWorkers,
@@ -1870,8 +1871,8 @@ def OpenACC_DataOp : OpenACC_Op<"data",
   let assemblyFormat = [{
     oilist(
         `if` `(` $ifCond `)`
-      | `async` `(` custom<DeviceTypeOperands>($asyncOperands,
-            type($asyncOperands), $asyncOperandsDeviceType) `)`
+      | `async` `` custom<DeviceTypeOperandsWithKeywordOnly>($asyncOperands,
+            type($asyncOperands), $asyncOperandsDeviceType, $asyncOnly)
       | `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
       | `wait` `` custom<WaitClause>($waitOperands, type($waitOperands),
           $waitOperandsDeviceType, $waitOperandsSegments, $hasWaitDevnum,
@@ -1934,9 +1935,11 @@ def OpenACC_EnterDataOp : OpenACC_Op<"enter_data",
   let assemblyFormat = [{
     oilist(
         `if` `(` $ifCond `)`
-      | `async` `(` $asyncOperand `:` type($asyncOperand) `)`
+      | `async` `` custom<OperandWithKeywordOnly>($asyncOperand,
+            type($asyncOperand), $async)
       | `wait_devnum` `(` $waitDevnum `:` type($waitDevnum) `)`
-      | `wait` `(` $waitOperands `:` type($waitOperands) `)`
+      | `wait` `` custom<OperandsWithKeywordOnly>($waitOperands,
+            type($waitOperands), $wait)
       | `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
     )
     attr-dict-with-keyword
@@ -1986,9 +1989,11 @@ def OpenACC_ExitDataOp : OpenACC_Op<"exit_data",
   let assemblyFormat = [{
     oilist(
         `if` `(` $ifCond `)`
-      | `async` `(` $asyncOperand `:` type($asyncOperand) `)`
+      | `async` `` custom<OperandWithKeywordOnly>($asyncOperand,
+            type($asyncOperand), $async)
       | `wait_devnum` `(` $waitDevnum `:` type($waitDevnum) `)`
-      | `wait` `(` $waitOperands `:` type($waitOperands) `)`
+      | `wait` `` custom<OperandsWithKeywordOnly>($waitOperands,
+            type($waitOperands), $wait)
       | `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
     )
     attr-dict-with-keyword
@@ -2206,6 +2211,41 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
     void addIndependent(MLIRContext *, llvm::ArrayRef<DeviceType>);
     // Add an entry to the 'auto' attribute for each additional device types.
     void addAuto(MLIRContext *, llvm::ArrayRef<DeviceType>);
+
+    // Sets the collapse value for this 'loop' for a set of DeviceTypes. Note
+    // that this may only be set once per DeviceType, and will fail the verifier
+    // if this is set multiple times.
+    void setCollapseForDeviceTypes(MLIRContext *, llvm::ArrayRef<DeviceType>,
+                                   llvm::APInt);
+    // Sets the tile values for this 'loop' for a set of DeviceTypes. All of the
+    // values should be integral constants, with the '*' represented as a '-1'.
+    void setTileForDeviceTypes(MLIRContext *, llvm::ArrayRef<DeviceType>,
+                               mlir::ValueRange);
+
+    // Add a value to the 'vector' list with a current list of device_types.
+    void addVectorOperand(MLIRContext *, mlir::Value,
+                          llvm::ArrayRef<DeviceType>);
+    // Add an empty value to the 'vector' list with a current list of
+    // device_types. This is for the case where there is no expression specified
+    // in a 'vector'.
+    void addEmptyVector(MLIRContext *, llvm::ArrayRef<DeviceType>);
+    // Add a value to the 'worker' list with a current list of device_types.
+    void addWorkerNumOperand(MLIRContext *, mlir::Value,
+                             llvm::ArrayRef<DeviceType>);
+    // Add an empty value to the 'worker' list with a current list of
+    // device_types. This is for the case where there is no expression specified
+    // in a 'worker'.
+    void addEmptyWorker(MLIRContext *, llvm::ArrayRef<DeviceType>);
+
+    // Adds a collection of operands for a 'gang' clause that has various types
+    // corresponding to each operand.
+    void addGangOperands(MLIRContext *, llvm::ArrayRef<DeviceType>,
+                         llvm::ArrayRef<GangArgType>, mlir::ValueRange);
+
+    // Add an empty value to the 'gang' list with a current list of
+    // device_types. This is for the case where there is no expression specified
+    // in a 'gang'.
+    void addEmptyGang(MLIRContext *, llvm::ArrayRef<DeviceType>);
   }];
 
   let hasCustomAssemblyFormat = 1;
@@ -2818,7 +2858,7 @@ def OpenACC_UpdateOp : OpenACC_Op<"update",
   let arguments = (ins Optional<I1>:$ifCond,
       Variadic<IntOrIndex>:$asyncOperands,
       OptionalAttr<DeviceTypeArrayAttr>:$asyncOperandsDeviceType,
-      OptionalAttr<DeviceTypeArrayAttr>:$async,
+      OptionalAttr<DeviceTypeArrayAttr>:$asyncOnly,
       Variadic<IntOrIndex>:$waitOperands,
       OptionalAttr<DenseI32ArrayAttr>:$waitOperandsSegments,
       OptionalAttr<DeviceTypeArrayAttr>:$waitOperandsDeviceType,
@@ -2866,9 +2906,8 @@ def OpenACC_UpdateOp : OpenACC_Op<"update",
   let assemblyFormat = [{
     oilist(
         `if` `(` $ifCond `)`
-      | `async` `` custom<DeviceTypeOperandsWithKeywordOnly>(
-            $asyncOperands, type($asyncOperands),
-            $asyncOperandsDeviceType, $async)
+      | `async` `` custom<DeviceTypeOperandsWithKeywordOnly>($asyncOperands,
+            type($asyncOperands), $asyncOperandsDeviceType, $asyncOnly)
       | `wait` `` custom<WaitClause>($waitOperands, type($waitOperands),
           $waitOperandsDeviceType, $waitOperandsSegments, $hasWaitDevnum,
           $waitOnly)
@@ -2913,9 +2952,11 @@ def OpenACC_WaitOp : OpenACC_Op<"wait", [AttrSizedOperandSegments]> {
 
   let assemblyFormat = [{
     ( `(` $waitOperands^ `:` type($waitOperands) `)` )?
-    oilist(`async` `(` $asyncOperand `:` type($asyncOperand) `)`
-      |`wait_devnum` `(` $waitDevnum `:` type($waitDevnum) `)`
-      |`if` `(` $ifCond `)`
+    oilist(
+        `async` `` custom<OperandWithKeywordOnly>($asyncOperand,
+            type($asyncOperand), $async)
+      |  `wait_devnum` `(` $waitDevnum `:` type($waitDevnum) `)`
+      | `if` `(` $ifCond `)`
     ) attr-dict-with-keyword
   }];
   let hasVerifier = 1;

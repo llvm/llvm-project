@@ -259,7 +259,7 @@ In other scenarios, calling virtual functions is not allowed.
 Explanation
 -----------
 
-An object constructed on the device side contains a pointer to the virtual function table on the device side, which is not accessible in host code, and vice versa. Thus, trying to invoke virtual functions from a context different from where the object was constructed will be disallowed because the appropriate virtual table cannot be accessed. The virtual function tables for offloading devices with different architecures are different, therefore trying to invoke virtual functions from an offloading device with a different architecture than where the object is constructed is also disallowed.
+An object constructed on the device side contains a pointer to the virtual function table on the device side, which is not accessible in host code, and vice versa. Thus, trying to invoke virtual functions from a context different from where the object was constructed will be disallowed because the appropriate virtual table cannot be accessed. The virtual function tables for offloading devices with different architectures are different, therefore trying to invoke virtual functions from an offloading device with a different architecture than where the object is constructed is also disallowed.
 
 Example Usage
 -------------
@@ -518,7 +518,7 @@ Predefined Macros
    * - ``__HIPSTDPAR__``
      - Defined when Clang is compiling code in algorithm offload mode, enabled
        with the ``--hipstdpar`` compiler option.
-   * - ``__HIPSTDPAR_INTERPOSE_ALLOC__``
+   * - ``__HIPSTDPAR_INTERPOSE_ALLOC__`` / ``__HIPSTDPAR_INTERPOSE_ALLOC_V1__``
      - Defined only when compiling in algorithm offload mode, when the user
        enables interposition mode with the ``--hipstdpar-interpose-alloc``
        compiler option, indicating that all dynamic memory allocation /
