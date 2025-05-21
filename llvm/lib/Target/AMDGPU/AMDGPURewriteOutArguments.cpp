@@ -274,10 +274,7 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
         Value *ReplVal = Store.second->getValueOperand();
 
         auto &ValVec = Replacements[Store.first];
-        if (llvm::any_of(ValVec,
-                         [OutArg](const std::pair<Argument *, Value *> &Entry) {
-                           return Entry.first == OutArg;
-                         })) {
+        if (llvm::is_contained(llvm::make_first_range(ValVec), OutArg)) {
           LLVM_DEBUG(dbgs()
                      << "Saw multiple out arg stores" << *OutArg << '\n');
           // It is possible to see stores to the same argument multiple times,
