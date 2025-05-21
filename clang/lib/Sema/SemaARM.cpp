@@ -1010,8 +1010,11 @@ bool SemaARM::CheckARMBuiltinFunctionCall(const TargetInfo &TI,
   case ARM::BI__builtin_arm_vcvtr_d:
     return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 1);
   case ARM::BI__builtin_arm_dmb:
+  case ARM::BI__dmb:
   case ARM::BI__builtin_arm_dsb:
+  case ARM::BI__dsb:
   case ARM::BI__builtin_arm_isb:
+  case ARM::BI__isb:
   case ARM::BI__builtin_arm_dbg:
     return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, 15);
   case ARM::BI__builtin_arm_cdp:
@@ -1108,8 +1111,11 @@ bool SemaARM::CheckAArch64BuiltinFunctionCall(const TargetInfo &TI,
   switch (BuiltinID) {
   default: return false;
   case AArch64::BI__builtin_arm_dmb:
+  case AArch64::BI__dmb:
   case AArch64::BI__builtin_arm_dsb:
+  case AArch64::BI__dsb:
   case AArch64::BI__builtin_arm_isb:
+  case AArch64::BI__isb:
     l = 0;
     u = 15;
     break;
