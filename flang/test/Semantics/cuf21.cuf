@@ -1,0 +1,38 @@
+! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
+
+module mlocModule
+  interface maxlocUpdate
+     module procedure :: &
+          maxlocUpdateR_32F, &
+          maxlocUpdateR_64F, &
+          maxlocUpdateR_32I, &
+          maxlocUpdateR_64I
+  end interface maxlocUpdate
+contains
+
+  attributes(global) subroutine maxlocPartialMaskR_32F1D()
+    implicit none
+    real(4) :: mval
+
+    call maxlocUpdate(mval)
+
+  end subroutine maxlocPartialMaskR_32F1D
+
+  attributes(device) subroutine maxlocUpdateR_32F(mval)
+    real(4) :: mval
+  end subroutine maxlocUpdateR_32F
+
+  attributes(device) subroutine maxlocUpdateR_64F(mval)
+    real(8) :: mval
+  end subroutine maxlocUpdateR_64F
+
+  attributes(device) subroutine maxlocUpdateR_32I(mval)
+    integer(4) :: mval
+  end subroutine maxlocUpdateR_32I
+
+  attributes(device) subroutine maxlocUpdateR_64I(mval)
+    integer(8) :: mval
+  end subroutine maxlocUpdateR_64I
+end module
+
+! CHECK-LABEL: func.func @_QMmlocmodulePmaxlocpartialmaskr_32f1d()
