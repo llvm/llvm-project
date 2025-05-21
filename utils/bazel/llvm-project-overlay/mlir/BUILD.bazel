@@ -3419,11 +3419,13 @@ cc_library(
     deps = [
         ":AffineUtils",
         ":Analysis",
+        ":ArithUtils",
         ":DialectUtils",
         ":FunctionInterfaces",
         ":GPUDialect",
         ":GPUUtils",
         ":IR",
+        ":IndexDialect",
         ":InliningUtils",
         ":MemRefDialect",
         ":Pass",
@@ -5775,10 +5777,12 @@ cc_library(
     srcs = [
         "lib/Dialect/LLVMIR/IR/BasicPtxBuilderInterface.cpp",
         "lib/Dialect/LLVMIR/IR/NVVMDialect.cpp",
+        "lib/Dialect/LLVMIR/IR/NVVMRequiresSMTraits.cpp",
     ],
     hdrs = [
         "include/mlir/Dialect/LLVMIR/BasicPtxBuilderInterface.h",
         "include/mlir/Dialect/LLVMIR/NVVMDialect.h",
+        "include/mlir/Dialect/LLVMIR/NVVMRequiresSMTraits.h",
     ],
     includes = ["include"],
     deps = [
@@ -5790,6 +5794,7 @@ cc_library(
         ":IR",
         ":LLVMDialect",
         ":NVVMOpsIncGen",
+        ":NVVMRequiresSMTraitsIncGen",
         ":SideEffectInterfaces",
         ":Support",
         ":ToLLVMIRTranslation",
@@ -5856,6 +5861,16 @@ td_library(
 )
 
 td_library(
+    name = "NVVMRequiresSMTraitsTdFiles",
+    srcs = ["include/mlir/Dialect/LLVMIR/NVVMRequiresSMTraits.td"],
+    includes = ["include"],
+    deps = [
+        ":LLVMOpsTdFiles",
+        ":OpBaseTdFiles",
+    ],
+)
+
+td_library(
     name = "NVVMOpsTdFiles",
     srcs = ["include/mlir/Dialect/LLVMIR/NVVMOps.td"],
     includes = ["include"],
@@ -5863,6 +5878,7 @@ td_library(
         ":BasicPtxBuilderIntTdFiles",
         ":GPUOpsTdFiles",
         ":LLVMOpsTdFiles",
+        ":NVVMRequiresSMTraitsTdFiles",
         ":OpBaseTdFiles",
         ":SideEffectInterfacesTdFiles",
     ],
@@ -5885,6 +5901,17 @@ gentbl_cc_library(
         ":GPUOpsTdFiles",
         ":LLVMOpsTdFiles",
     ],
+)
+
+gentbl_cc_library(
+    name = "NVVMRequiresSMTraitsIncGen",
+    tbl_outs = {
+        "include/mlir/Dialect/LLVMIR/NVVMRequiresSMTraits.h.inc": ["-gen-op-interface-decls"],
+        "include/mlir/Dialect/LLVMIR/NVVMRequiresSMTraits.cpp.inc": ["-gen-op-interface-defs"],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/LLVMIR/NVVMRequiresSMTraits.td",
+    deps = [":NVVMRequiresSMTraitsTdFiles"],
 )
 
 gentbl_cc_library(

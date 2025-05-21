@@ -873,11 +873,10 @@ static std::optional<T> getArgumentsIfRequest(const Message &pm,
 
   T args;
   llvm::json::Path::Root root;
-  if (!fromJSON(req->arguments, args, root)) {
+  if (!fromJSON(req->arguments, args, root))
     return std::nullopt;
-  }
 
-  return std::move(args);
+  return args;
 }
 
 llvm::Error DAP::Loop() {
@@ -1293,15 +1292,7 @@ void DAP::EventThread() {
 
             llvm::StringRef reason;
             bool id_only = false;
-            if (event_mask & lldb::SBTarget::eBroadcastBitModulesLoaded) {
-              modules.insert(module_id);
-              reason = "new";
-            } else {
-              // If this is a module we've never told the client about, don't
-              // send an event.
-              if (!modules.contains(module_id))
-                continue;
-
+            if (modules.contains(module_id)) {
               if (event_mask & lldb::SBTarget::eBroadcastBitModulesUnloaded) {
                 modules.erase(module_id);
                 reason = "removed";
@@ -1309,6 +1300,9 @@ void DAP::EventThread() {
               } else {
                 reason = "changed";
               }
+            } else {
+              modules.insert(module_id);
+              reason = "new";
             }
 
             llvm::json::Object body;

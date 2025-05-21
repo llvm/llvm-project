@@ -1135,6 +1135,14 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
     }
   }
 
+  if (LHS.isUnknownSizeArray() && RHS.isUnknownSizeArray()) {
+    const SourceInfo &Loc = S.Current->getSource(OpPC);
+    S.FFDiag(Loc, diag::note_constexpr_pointer_comparison_zero_sized)
+        << LHS.toDiagnosticString(S.getASTContext())
+        << RHS.toDiagnosticString(S.getASTContext());
+    return false;
+  }
+
   S.Stk.push<BoolT>(BoolT::from(Fn(ComparisonCategoryResult::Unordered)));
   return true;
 }
@@ -1643,7 +1651,7 @@ inline bool GetPtrActiveThisField(InterpState &S, CodePtr OpPC, uint32_t Off) {
 }
 
 inline bool GetPtrDerivedPop(InterpState &S, CodePtr OpPC, uint32_t Off,
-                             bool NullOK) {
+                             bool NullOK, const Type *TargetType) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!NullOK && !CheckNull(S, OpPC, Ptr, CSK_Derived))
     return false;
@@ -1660,6 +1668,20 @@ inline bool GetPtrDerivedPop(InterpState &S, CodePtr OpPC, uint32_t Off,
     return false;
   if (!CheckDowncast(S, OpPC, Ptr, Off))
     return false;
+
+  const Record *TargetRecord = Ptr.atFieldSub(Off).getRecord();
+  assert(TargetRecord);
+
+  if (TargetRecord->getDecl()
+          ->getTypeForDecl()
+          ->getAsCXXRecordDecl()
+          ->getCanonicalDecl() !=
+      TargetType->getAsCXXRecordDecl()->getCanonicalDecl()) {
+    QualType MostDerivedType = Ptr.getDeclDesc()->getType();
+    S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_invalid_downcast)
+        << MostDerivedType << QualType(TargetType, 0);
+    return false;
+  }
 
   S.Stk.push<Pointer>(Ptr.atFieldSub(Off));
   return true;
