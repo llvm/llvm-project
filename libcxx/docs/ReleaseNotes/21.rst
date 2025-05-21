@@ -70,6 +70,9 @@ Improvements and New Features
 - The segmented iterator optimization for ``std::for_each`` has been backported to C++11. Previously it was only available
   in C++23 and later.
 
+- The ``std::for_each_n`` algorithm has been optimized for segmented iterators, resulting in a performance improvement of
+  up to 17.7x for ``std::deque<short>`` iterators, and up to 13.9x for ``std::join_view<vector<vector<short>>>`` iterators.
+
 Deprecations and Removals
 -------------------------
 
