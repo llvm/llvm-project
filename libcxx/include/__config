@@ -505,6 +505,50 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_HIDE_FROM_ABI_AFTER_V1 _LIBCPP_HIDE_FROM_ABI
 #  endif
 
+// _LIBCPP_HIDE_FROM_ABI is required for member functions defined within an inner class of a class template
+// (e.g., std::basic_ostream<...>::sentry::sentry(...)), due to inconsistent behavior in MinGW-GCC (and
+// Cygwin as well, in all relevant cases) regarding explicit instantiation declaration and symbol visibility
+// when combined with __declspec(dllexport).
+//
+// Previous versions of Clang did not exhibit this issue, but upcoming versions are expected to align with
+// GCC's behavior for compatibility. This is particularly important because some of libstdc++ packages
+// compiled with --with-default-libstdcxx-abi=gcc4-compatible are incompatible with Clang, resulting in linking
+// errors or runtime crushes.
+//
+// A few such member functions already exist (here are ostream::sentry::sentry, ostream::~sentry and
+// istream::sentry::sentry) were not previously marked with _LIBCPP_HIDE_FROM_ABI but should be to avoid symbol
+// visibility issues. However, adding the macro unconditionally would break the ABI on other platforms.
+//
+// Therefore, a dedicated macro _LIBCPP_HIDE_FROM_ABI_MINGW_OR_AFTER_V1 is introduced. This macro expands to
+// _LIBCPP_HIDE_FROM_ABI only when targeting MinGW, and to _LIBCPP_HIDE_FROM_ABI_AFTER_V1 on all other platforms.
+//
+// Going forward, whenever a new (static or non-static) member function or static data member is added to an
+// inner class within a class template that has explicit instantiation declaration, it must be annotated with
+// _LIBCPP_HIDE_FROM_ABI to ensure proper symbol visibility when targeting MinGW. Otherwise, the resulting DLL
+// will be unusable due to missing symbols.
+//
+// The underlying issue arises from how MinGW-GCC handles explicit instantiation declaration of a class template:
+//
+//   - When exporting: 'extern template __declspec(dllexport) class TheTemplateClass<T>;'
+//     allows exporting the outer template instantiation, but not its nested types (e.g., InnerClass).
+//     note: this is just a declaration, needs a definition as `template class TheTemplateClass<T>;' at somewere.
+//
+//   - When importing: 'extern template class TheTemplateClass<T>;'
+//     causes MinGW-GCC to also try importing nested types such as TheTemplateClass<T>::InnerClass,
+//     even if they were never exported. This leads to linker errors like:
+//     'undefined reference to TheTemplateClass<T>::InnerClass::...'
+//
+// This differs from Clang's historical behavior, which did not import nested classes implicitly.
+// However, to ensure ABI compatibility with the MinGW-GCC toolchain (commonly used in the MinGW ecosystem),
+// Clang will adopt this behavior as well.
+//
+// Note: As of this writing, Clang does not yet implement this behavior, since doing so would break libc++.
+#  if defined(__MINGW32__) || defined(__CYGWIN__)
+#    define _LIBCPP_HIDE_FROM_ABI_MINGW_OR_AFTER_V1 _LIBCPP_HIDE_FROM_ABI
+#  else
+#    define _LIBCPP_HIDE_FROM_ABI_MINGW_OR_AFTER_V1 _LIBCPP_HIDE_FROM_ABI_AFTER_V1
+#  endif
+
 // Clang modules take a significant compile time hit when pushing and popping diagnostics.
 // Since all the headers are marked as system headers unless _LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER is defined, we can
 // simply disable this pushing and popping when _LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER isn't defined.
