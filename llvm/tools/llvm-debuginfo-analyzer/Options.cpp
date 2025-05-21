@@ -354,6 +354,7 @@ cl::list<LVScopeKind> cmdline::SelectScopes(
         clEnumValN(LVScopeKind::IsLabel, "Label", "Label."),
         clEnumValN(LVScopeKind::IsLexicalBlock, "LexicalBlock",
                    "Lexical block."),
+        clEnumValN(LVScopeKind::IsModule, "Module", "Module."),
         clEnumValN(LVScopeKind::IsNamespace, "Namespace", "Namespace."),
         clEnumValN(LVScopeKind::IsRoot, "Root", "Root."),
         clEnumValN(LVScopeKind::IsStructure, "Structure", "Structure."),
