@@ -743,6 +743,16 @@ CIRGenFunction::emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e) {
   return lv;
 }
 
+LValue CIRGenFunction::emitStringLiteralLValue(const StringLiteral *e) {
+  cir::GlobalOp globalOp = cgm.getGlobalForStringLiteral(e);
+  assert(!cir::MissingFeatures::opGlobalAlignment());
+  mlir::Value addr =
+      builder.createGetGlobal(getLoc(e->getSourceRange()), globalOp);
+  return makeAddrLValue(
+      Address(addr, globalOp.getSymType(), CharUnits::fromQuantity(1)),
+      e->getType(), AlignmentSource::Decl);
+}
+
 /// Casts are never lvalues unless that cast is to a reference type. If the cast
 /// is to a reference, we can have the usual lvalue result, otherwise if a cast
 /// is needed by the code generator in an lvalue context, then it must mean that
