@@ -438,9 +438,6 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     # For this reason we must consider the target support of the generic
     # address space separately from the *implementation* decision about whether
     # to declare certain builtins in that address space.
-    # FIXME: Shouldn't clang automatically enable this extension based on the
-    # target?
-    list( APPEND build_flags "-Xclang" "-cl-ext=+__opencl_c_generic_address_space" )
     # Note: we assume that if there is no distinct generic address space, it
     # maps to the private address space.
     set ( has_distinct_generic_addrspace TRUE )
